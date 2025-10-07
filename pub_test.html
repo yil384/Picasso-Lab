@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Publications</title>
+  <style>
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      margin: 20px auto;
+      line-height: 1.6;
+      color: #333;
+      padding: 0 15px;
+      width: 90%;
+      box-sizing: border-box;
+    }
+
+    /* 顶部选择区域 */
+    .topic-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .topic-label {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin-right: 10px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Section Title */
+    .section-title {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+
+    /* Paper 列表 */
+    .paper {
+      padding: 2px;
+      border-radius: 6px;
+      margin-bottom: 1px;
+      transition: background-color 0.3s ease;
+      position: relative; /* 必须加，保证卡片绝对定位 */
+    }
+
+    .paper a {
+      color: #FF8C00; /* 链接橙黄色 */
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .paper a:hover {
+      text-decoration: underline;
+    }
+
+    /* Preview Card */
+    .preview-card {
+      position: absolute;
+      left: 0;
+      top: 90%;
+      width: 800px;
+      max-width: 90vw;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      padding: 16px;
+      display: flex;        /* 横向布局 */
+      gap: 16px;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 999;
+    }
+
+    .paper:hover .preview-card {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+      transition-delay: 0.3s;
+    }
+
+    .preview-images {
+      flex: 1;              /* 左侧占1/3 */
+      max-width: 33.33%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preview-images img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .preview-info {
+      flex: 2;              /* 右侧占2/3 */
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preview-info h4 {
+      margin: 0;
+      font-size: 18px;
+      color: #222;
+    }
+
+    .preview-info p {
+      margin: 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    /* 按钮样式 */
+    .button-18 {
+      align-items: center;
+      background-color: #0A66C2;
+      border: 0;
+      border-radius: 100px;
+      color: #ffffff;
+      cursor: pointer;
+      display: inline-flex;
+      font-size: 16px;
+      font-weight: 600;
+      justify-content: center;
+      line-height: 20px;
+      width: 200px;
+      min-height: 40px;
+      padding: 0 20px;
+      text-align: center;
+      transition: background-color 0.2s ease;
+    }
+
+    .button-18:hover {
+      background-color: #16437E;
+    }
+
+    .button-16 {
+      align-items: center;
+      background-color: #FBB917;
+      border: 0;
+      border-radius: 100px;
+      color: #ffffff;
+      cursor: pointer;
+      display: inline-flex;
+      font-size: 16px;
+      font-weight: 600;
+      justify-content: center;
+      line-height: 20px;
+      width: 200px;
+      min-height: 40px;
+      padding: 0 20px;
+      text-align: center;
+      transition: background-color 0.2s ease;
+    }
+
+    .button-16:hover {
+      background-color: #EE9A4D;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 900px) {
+      .preview-card {
+        flex-direction: column;
+        width: 95vw;
+      }
+      .preview-images img {
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部选择区域 -->
+  <div class="topic-bar">
+    <span class="topic-label">Select by topic:</span>
+    <div class="button-group">
+      <button class="button-18" onclick="changeml();" role="button">Machine Learning</button>
+      <button class="button-16" onclick="change();" role="button">Quantum Computing</button>
+    </div>
+  </div>
+
+  <h1 class="section-title">Conference Papers</h1>
+
+  <!-- Paper 示例 -->
+  <div class="sqs-block-content machinelearning paper">
+    <p style="white-space:pre-wrap;">
+      <b>[NeurIPS'25] (To appear)</b> <i>KVFlow: Efficient Prefix Caching for Accelerating LLM-based Multi-Agent Workflows.</i> 
+      Zaifeng Pan, ...
+    </p>
+    <div class="preview-card">
+      <!-- 左侧图片 -->
+      <div class="preview-images">
+        <img src="https://images.squarespace-cdn.com/content/6303b35a3219fa5da06b52a9/652a978a-e820-46a1-a9d4-2aae567e3e58/guanyue.jpg?content-type=image%2Fjpeg" alt="Preview image">
+      </div>
+      <!-- 右侧摘要 -->
+      <div class="preview-info">
+        <h4>KVFlow: Efficient Prefix Caching for Accelerating LLM-based Multi-Agent Workflows</h4>
+        <p><b>Authors:</b> Zaifeng Pan, Ajjkumar Patel, Zhengding Hu, ...</p>
+        <p><b>Abstract:</b> We propose a novel method for caching prefixes in multi-agent workflows using LLMs, improving efficiency and reducing latency across pipelines...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paper 示例 -->
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[USENIX ATC'25] </b> <i style="font-weight:bold">GMI-DRL: Empowering Multi-GPU Deep Reinforcement Learning with Adaptive-Grained Parallelism.</i> Yuke Wang, Boyuan Feng, Zheng Wang, Guyue Huang, Tong Geng, Ang Li, Yufei Ding. [<a href="https://www.usenix.org/conference/atc25/presentation/wang-yuke">paper</a>] </p>
+    <!-- 如果你的 paper 可以预览图片和摘要，可以参考下面的结构 -->
+    <div class="preview-card">
+      <!-- 左侧视频（图片/视频/GIF 可以加多张，需要注意格式和排列） -->
+      <div class="preview-images">
+        <!-- 使用iframe嵌入YouTube视频 -->
+        <iframe src="https://www.youtube.com/embed/W32K7smh-_o" 
+                title="GMI-DRL Video" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+        </iframe>
+      </div>
+      <!-- 右侧摘要（也可以换成其他内容，<a>链接等，可以自定义字体或者大小） -->
+      <div class="preview-info">
+        <p><b>Abstract:</b>With the increasing popularity of robotics in industrial control and autonomous driving, deep reinforcement learning (DRL) raises the attention of various fields. However, DRL computation on the modern powerful multi-GPU platform is still inefficient due to its heterogeneous tasks and complicated inter-task interactions. To this end, we propose GMI-DRL, the first systematic design for scaling multi-GPU DRL via adaptive-grained parallelism. To facilitate such a new parallelism scheme, GMI-DRL introduces a new concept – GPU Multiplexing Instance (GMI), a unified resource-adjustable sub-GPU design for heterogeneous tasks in DRL scaling. Besides, GMI-DRL introduces an adaptive Coordinator to effectively manage workloads and resources for better system performance. GMI-DRL also incorporates a specialized Communicator with highly efficient inter-GMI communication support to meet diverse communication demands. Extensive experiments demonstrate that GMI-DRL outperforms state-of-the-art DRL accelerating solutions in training throughput (up to 2.34x) and GPU utilization (up to 40.8% improvement) on the DGX-A100 platform.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function changeml(){
+      var papers = document.getElementsByClassName('paper');
+      for (var i = 0; i < papers.length; i++){
+        papers[i].style.backgroundColor='#FFFFFF';
+      }
+      var ml = document.getElementsByClassName('machinelearning');
+      for (var i = 0; i < ml.length; i++){
+        ml[i].style.backgroundColor='#E0FFFF';
+      }
+    }
+
+    function change(){
+      var papers = document.getElementsByClassName('paper');
+      for (var i = 0; i < papers.length; i++){
+        papers[i].style.backgroundColor='#FFFFFF';
+      }
+      var qc = document.getElementsByClassName('quantum');
+      for (var i = 0; i < qc.length; i++){
+        qc[i].style.backgroundColor='#FFFACD';
+      }
+    }
+  </script>
+
+</body>
+</html>

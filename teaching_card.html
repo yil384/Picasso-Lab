@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSE 291: Quantum Computing Systems</title>
+  <style>
+    body {
+      font-family: 'Georgia', serif;
+      background: #f9f9fb;
+      color: #2a2a2a;
+      margin: 0;
+      padding: 40px;
+      line-height: 1.6;
+    }
+    h1 {
+      font-size: 2.5rem;
+      text-align: center;
+      color: #0a2f5a;
+      margin-bottom: 10px;
+      animation: fadeIn 1.2s ease-in-out;
+    }
+    h2 {
+      color: #0a2f5a;
+      border-left: 4px solid #3b82f6;
+      padding-left: 10px;
+      margin-top: 40px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+    }
+    .card {
+      background: #f3f4f6;   /* 柔和浅灰色 */
+      border-radius: 20px;   /* 更大的圆角 */
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 20px 30px;
+      margin: 20px auto;
+      max-width: 800px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      animation: fadeInUp 0.8s ease-in-out;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td {
+      padding: 8px 12px;
+      vertical-align: top;
+    }
+    td:first-child {
+      font-weight: bold;
+      color: #0a2f5a;
+      width: 25%;
+    }
+    a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .badge {
+      background: #2563eb;
+      color: white;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 4px 10px;
+      border-radius: 12px;
+      margin-left: 10px;
+      animation: fadeIn 1.5s ease-in-out;
+    }
+    /* 动画 */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <h1>CSE 291P: Quantum Computing Systems</h1>
+
+  <div class="card">
+    <h2>
+      Course Information 
+      <span class="badge">Fall 2025</span>
+    </h2>
+    <table>
+      <tr>
+        <td>Instructor:</td>
+        <td>Prof. Yufei Ding, CSE 3208</td>
+      </tr>
+      <tr>
+        <td>Email:</td>
+        <td><a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a></td>
+      </tr>
+      <tr>
+        <td>Course Website:</td>
+        <td><a href="https://cse.ucsd.edu/~yufeiding/CSE291QC/" target="_blank">Official Page</a></td>
+      </tr>
+      <tr>
+        <td>Time:</td>
+        <td>Tue & Thu 2:00pm - 3:20pm</td>
+      </tr>
+      <tr>
+        <td>Location:</td>
+        <td>RCLAS R35</td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

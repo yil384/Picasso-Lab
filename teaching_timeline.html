@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quantum Computing Lecture Series</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: white;   /* 建议不用加引号 */
+      margin: 0;
+      padding: 0 40px; /* 左右保留 40px，上下 0 */
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 50px;
+      color: #2c3e50;
+    }
+
+    .timeline {
+      position: relative;
+      margin: 0 auto;
+      padding: 10px 0;
+      max-width: 800px;
+      border-left: 4px solid #1976d2;
+    }
+
+    .event {
+      margin: 20px 0 20px 30px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      position: relative;
+    }
+
+    .event::before {
+      content: "";
+      position: absolute;
+      left: -38px;
+      top: 20px;
+      width: 16px;
+      height: 16px;
+      background: #1976d2;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 0 0 3px #1976d2;
+    }
+
+    .event h2 {
+      margin-top: 0;
+      color: #1976d2;
+      font-size: 20px;
+    }
+
+    .event p {
+      margin: 8px 0 0;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="timeline">
+    <div class="event">
+      <h2>Lecture 1: Introduction to the Principles of Quantum Computation</h2>
+      <p>Qubit states, Hilbert space, unitary gates, quantum measurements</p>
+    </div>
+
+    <div class="event">
+      <h2>Lecture 2: Classical Computing vs. Quantum Computing</h2>
+      <p>Reversible logic, quantum oracles, speedup from parallelism and interference</p>
+    </div>
+
+    <div class="event">
+      <h2>Lecture 3: Quantum Algorithms</h2>
+      <p>Deutsch–Jozsa, Simon’s, Shor’s factoring, Grover’s search</p>
+    </div>
+
+    <div class="event">
+      <h2>Lecture 4: Quantum Compiler for Gate Synthesis</h2>
+      <p>Native gates across platforms, synthesis, compiler optimizations</p>
+    </div>
+
+    <div class="event">
+      <h2>Lecture 5: Quantum Compiler for Qubit Mapping</h2>
+      <p>Mapping problem, hardware layout constraints, heuristic and optimization techniques</p>
+    </div>
+
+    <div class="event">
+      <h2>Lecture 6: Quantum Error Correction Codes</h2>
+      <p>Classical vs. quantum error correction, stabilizer codes, logical gate constructions (transversal, magic state distillation, code conversion)</p>
+    </div>
+
+    <div class="event">
+      <h2>Lecture 7: Fault-Tolerant Quantum Computation</h2>
+      <p>Threshold theorem, Shor’s FT scheme, alternative FT approaches</p>
+    </div>
+  </div>
+</body>
+</html>

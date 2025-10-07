@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>响应式圆形头像</title>
+<style>
+  .avatar-container {
+    width: 100vw;          /* 宽度占满视口宽度 */
+    max-width: 350px;      /* 最大宽度限制 */
+    height: auto;         /* 高度自动 */
+    max-height: 350px;   /* 最大高度限制 */
+    aspect-ratio: 1 / 1;   /* 高度自动等于宽度，保持正方形 */
+    border-radius: 50%;    /* 圆形 */
+    overflow: hidden;      /* 超出部分裁剪 */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    background-image: url('https://images.squarespace-cdn.com/content/6303b35a3219fa5da06b52a9/d692733a-72a6-4014-9a6d-1ff9431f638d/Yufei+Ding+%281%29.jpeg');
+    background-size: cover;     /* 保证图片填充容器 */
+    background-position: center;/* 图片居中显示 */
+    background-repeat: no-repeat;
+    margin: 20px auto;         /* 居中显示 */
+  }
+
+  /* 可选：竖屏时缩小一点 */
+  @media (max-width: 600px) {
+    .avatar-container {
+      width: 60vw;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="avatar-container"></div>
+
+</body>
+</html>

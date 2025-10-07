@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Publications</title>
+  <style>
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      margin: 20px auto;
+      line-height: 1.6;
+      color: #333;
+      padding: 0 15px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* 顶部选择区域 */
+    .topic-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .topic-label {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin-right: 10px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Section Title */
+    .section-title {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+
+    /* Paper 列表 */
+    .paper {
+      padding: 2px;
+      border-radius: 12px;
+      margin-bottom: 1px;
+      transition: background-color 0.3s ease;
+      position: relative; /* 必须加，保证卡片绝对定位 */
+    }
+
+    /* 添加悬停效果 */
+    .paper:hover {
+      background-color: #f5f5f5 !important; /* 浅灰色背景 */
+      border-radius: 12px; /* 圆角效果 */
+    }
+
+    .paper a {
+      color: #FF8C00; /* 链接橙黄色 */
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .paper a:hover {
+      text-decoration: underline;
+    }
+
+    /* Preview Card */
+    .preview-card {
+      position: absolute;
+      left: 0;
+      top: 94%;
+      width: 94vw;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      padding: 16px;
+      display: flex;        /* 横向布局 */
+      gap: 16px;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 999;
+    }
+
+    .paper:hover .preview-card {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+      transition-delay: 0.3s;
+    }
+
+    .preview-images {
+      flex: 2;              /* 左侧占2/5 */
+      max-width: 40%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preview-images img {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .preview-images iframe {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .preview-info {
+      flex: 3;              /* 右侧占3/5 */
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preview-info h4 {
+      margin: 0;
+      font-size: 18px;
+      color: #222;
+    }
+
+    .preview-info p {
+      margin: 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    /* 按钮样式 */
+    .button-18 {
+      align-items: center;
+      background-color: #0A66C2;
+      border: 0;
+      border-radius: 100px;
+      color: #ffffff;
+      cursor: pointer;
+      display: inline-flex;
+      font-size: 16px;
+      font-weight: 600;
+      justify-content: center;
+      line-height: 20px;
+      width: 200px;
+      min-height: 40px;
+      padding: 0 20px;
+      text-align: center;
+      transition: background-color 0.2s ease;
+    }
+
+    .button-18:hover {
+      background-color: #16437E;
+    }
+
+    .button-16 {
+      align-items: center;
+      background-color: #FBB917;
+      border: 0;
+      border-radius: 100px;
+      color: #ffffff;
+      cursor: pointer;
+      display: inline-flex;
+      font-size: 16px;
+      font-weight: 600;
+      justify-content: center;
+      line-height: 20px;
+      width: 200px;
+      min-height: 40px;
+      padding: 0 20px;
+      text-align: center;
+      transition: background-color 0.2s ease;
+    }
+
+    .button-16:hover {
+      background-color: #EE9A4D;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 600px) {
+      body {
+        font-size: 16px;
+        line-height: 1.5;
+        width: 100%;
+        padding: 0 10px;
+      }
+
+      .button-18, .button-16 {
+        width: auto;
+        flex: 1;
+      }
+
+      .topic-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 1100px) {
+      .preview-card {
+        flex-direction: column;
+        width: 100vw;
+      }
+      .preview-images img {
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部选择区域 -->
+  <div class="topic-bar">
+    <span class="topic-label">Select by topic:</span>
+    <div class="button-group">
+      <button class="button-18" onclick="changeml();" role="button">Machine Learning</button>
+      <button class="button-16" onclick="change();" role="button">Quantum Computing</button>
+    </div>
+  </div>
+
+  <!-- 大标题 -->
+  <h1 class="section-title">Conference Papers</h1>
+
+  <!-- 论文列表 -->
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[NeurIPS'25] (To appear)</b> <i style="font-weight:bold">KVFlow: Efficient Prefix Caching for Accelerating LLM-based Multi-Agent Workflows. </i> Zaifeng Pan, Ajjkumar Patel, Zhengding Hu, Yipeng Shen, Yue Guan, Wan-Lu Li, Lianhui Qin, Yida Wang, Yufei Ding.</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[NeurIPS'25] (To appear)</b> <i style="font-weight:bold">Yggdrasil: Bridging Dynamic Speculation and Static Runtime for Latency-Optimal Tree-Based LLM Decoding. </i> Yue Guan, Changming Yu, Shihan Fang, Weiming Hu, Zaifeng Pan, Zheng Wang, Zihan Liu, Yangjie Zhou, Yufei Ding, Minyi Guo, Jingwen Leng.</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[MICRO'25] (To appear)</b> <i style="font-weight:bold">OneAdapt: Resource-adaptive Compilation of Photonic One-way Quantum Computing. </i> Hezi Zhang, Jixuan Ruan, Dean Tullsen, Yufei Ding, Ang Li, Travis Humble.</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[SOSP'25] (To appear)</b> <i style="font-weight:bold">HedraRAG: Co-Optimizing Generation and Retrieval for Heterogeneous Retrieval-Augmented Generation Workflows.</i> Zhengding Hu, Vibha Murthy, Zaifeng Pan, Wanlu Li, Xiaoyi Fang, Yufei Ding, Yuke Wang. </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[SOSP'25] (To appear)</b> <i style="font-weight:bold">Mercury: Unlocking Multi-GPU Operator Optimization for Large Language Models via Remote Memory Scheduling.</i> Yue Guan, Xinwei Qiang, Zaifeng Pan, Daniels Johnson, Yuanwei Fang, Keren Zhou, Yuke Wang, Wanlu Li, Yufei Ding, Adnan Aziz. </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'25] (To appear)</b> <i style="font-weight:bold">PowerMove: Optimizing Compilation for Neutral Atom Quantum Computers with Zoned Architecture.</i> Jixuan Ruan*, Xiang Fang*, Hezi Zhang, Ang Li, Travis Humble, Yufei Ding.</p>
+  </div>
+  <!-- Paper 示例 -->
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[USENIX ATC'25] </b> <i style="font-weight:bold">GMI-DRL: Empowering Multi-GPU Deep Reinforcement Learning with Adaptive-Grained Parallelism.</i> Yuke Wang, Boyuan Feng, Zheng Wang, Guyue Huang, Tong Geng, Ang Li, Yufei Ding. [<a href="https://www.usenix.org/conference/atc25/presentation/wang-yuke">paper</a>] </p>
+    <!-- 如果你的 paper 可以预览图片和摘要，可以参考下面的结构 -->
+    <div class="preview-card">
+      <!-- 左侧视频（图片/视频/GIF 可以加多张，需要注意格式和排列） -->
+      <div class="preview-images">
+        <!-- 使用iframe嵌入YouTube视频 -->
+        <iframe src="https://www.youtube.com/embed/W32K7smh-_o" 
+                title="GMI-DRL Video" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+        </iframe>
+      </div>
+      <!-- 右侧摘要（也可以换成其他内容，<a>链接等，可以自定义字体或者大小） -->
+      <div class="preview-info">
+        <p><b>Abstract: </b>With the increasing popularity of robotics in industrial control and autonomous driving, deep reinforcement learning (DRL) raises the attention of various fields. However, DRL computation on the modern powerful multi-GPU platform is still inefficient due to its heterogeneous tasks and complicated inter-task interactions. To this end, we propose GMI-DRL, the first systematic design for scaling multi-GPU DRL via adaptive-grained parallelism. To facilitate such a new parallelism scheme, GMI-DRL introduces a new concept – GPU Multiplexing Instance (GMI), a unified resource-adjustable sub-GPU design for heterogeneous tasks in DRL scaling. Besides, GMI-DRL introduces an adaptive Coordinator to effectively manage workloads and resources for better system performance. GMI-DRL also incorporates a specialized Communicator with highly efficient inter-GMI communication support to meet diverse communication demands. Extensive experiments demonstrate that GMI-DRL outperforms state-of-the-art DRL accelerating solutions in training throughput (up to 2.34x) and GPU utilization (up to 40.8% improvement) on the DGX-A100 platform.</p>
+      </div>
+    </div>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[OSDI'25] </b> <i style="font-weight:bold">WLB-LLM: Workload-Balanced 4D Parallelism for Large Language Model Training.</i> Zheng Wang, Anna Cai, Xinfeng Xie, Zaifeng Pan, Yue Guan, Weiwei Chu, Jie Wang, Shikai Li, Jianyu Huang, Chris Cai, Yuchen Hao, Yufei Ding. [<a href="https://www.usenix.org/conference/osdi25/presentation/wang-zheng">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[OSDI'25] </b> <i style="font-weight:bold">KPerfIR: Towards a Open and Compiler-centric Ecosystem for GPU Kernel Performance Tooling on Modern AI Workloads.</i> Yue Guan, Yuanwei Fang, Keren Zhou, Corbin Robeck, Manman Ren, Zhongkai Yu, Yufei Ding, Adnan Aziz. [<a href="https://arxiv.org/abs/2505.21661">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'25] </b> <i style="font-weight:bold">SwitchQNet: Optimizing Distributed Quantum Computing for Quantum Data Centers with Switch Networks.</i> Hezi Zhang, Yiran Xu, Haotian Hu, Keyi Yin, Hassan Shapourian, Jiapeng Zhao, Ramana Rao Kompella, Reza Nejabati, Yufei Ding. [<a href="https://dl.acm.org/doi/10.1145/3695053.3731046">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'25] </b> <i style="font-weight:bold">TRACI: Network Acceleration of Input-Dynamic Communication for Large-Scale Deep Learning Recommendation Model.</i> Guyue Huang, Hao Li, Le Qin, Jiayi Huang, Yangwook Kang, Yufei Ding, Yuan Xie. [<a href="https://dl.acm.org/doi/10.1145/3695053.3731105">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'25] </b> <i style="font-weight:bold">CaliQEC: In-situ Qubit Calibration for Surface Code Quantum Error Correction.</i> Xiang Fang, Keyi Yin, Yuchen Zhu, Jixuan Ruan, Dean Tullsen, Zhiding Liang, Andrew Sornborger, Ang Li, Travis Humble, Yufei Ding, Yunong Shi. [<a href="https://dl.acm.org/doi/10.1145/3695053.3731042">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'25] </b> <i style="font-weight:bold">Hardware-aware Calibration Protocol for Quantum Computers.</i> Yuchen Zhu, Jinglei Cheng, Boxi Li, Kecheng Liu, Yidong Zhou, Hanrui Wang, Yufei Ding, Zhiding Liang. [<a href="https://dl.acm.org/doi/10.1145/3695053.3731036">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[MLSys'25] </b> <i style="font-weight:bold">FastTree: Optimizing Attention Kernel and Runtime for Tree-Structured Large Language Model Inference.</i> Zaifeng Pan, Yitong Ding, Yue Guan, Zheng Wang, Zhongkai Yu, Xulong Tang, Yida Wang, Yufei Ding. [<a href="https://openreview.net/pdf?id=BwvHcHZ3kJ">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[HPCA'25] </b> <i style="font-weight:bold">Push Multicast: A Speculative and Coherent Interconnect for Mitigating Manycore CPU Communication Bottleneck.</i> Jiayi Huang, Yanhua Chen, Zhe Wang, Christopher J. Hughes, Yufei Ding, Yuan Xie. [<a href="https://ieeexplore.ieee.org/document/10946822">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICLR'25] </b> <i style="font-weight:bold">Mutual Effort for Efficiency: A Similarity-based Token Pruning for Vision Transformers in Self-Supervised Learning.</i> Sheng Li, Qitao Tan, Yue Dai, Zhenglun Kong, Tianyu Wang, Jun Liu, Ao Li, Ninghao Liu, Yufei Ding, Xulong Tang, Geng Yuan. [<a href="https://iclr.cc/virtual/2025/poster/30276">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'25] </b> <i style="font-weight:bold">HetEC: Architectures for Heterogeneous Quantum Error Correction Codes.</i> Samuel Stein, Shifan Xu, Andrew W. Cross, Ted Yoder, Ali Javadi-Abhari, Chenxu Liu, Kun Liu, Victor Zhou, Charlie Guinn, Yufei Ding, Yongshan Ding, Ang Li. [<a href="https://dl.acm.org/doi/10.1145/3676641.3716001">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'25] </b> <i style="font-weight:bold">QECC-Synth: A Layout Synthesizer for Quantum Error Correction Codes on Sparse Architectures.</i> Keyi Yin, Hezi Zhang, Xiang Fang, Yunong Shi, Travis Humble, Ang Li, Yufei Ding. [<a href="https://dl.acm.org/doi/10.1145/3669940.3707236">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[MICRO'24]</b> <i style="font-weight:bold">Surf-Deformer: Mitigating Dynamic Defects on Surface Code via Adaptive Deformation.</i> Keyi Yin, Xiang Fang, Travis Humble, Ang Li, Yunong Shi, Yufei Ding. [<a href="https://www.computer.org/csdl/proceedings-article/micro/2024/505700a750/22nitjkWGBi">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[SC'24]</b> <i style="font-weight:bold">RecFlex: Enabling Feature Heterogeneity-Aware Optimization for Deep Recommendation Models with Flexible Schedules.</i> Zaifeng Pan, Zhen Zheng, Feng Zhang,Bing Xie, Ruofan Wu, Shaden Smith, Chuanjie Liu, Olatunji Ruwase, Xiaoyong Du, Yufei Ding. [<a href="https://www.computer.org/csdl/proceedings-article/sc/2024/529100a643/21HUVzP70li">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[USENIX ATC'24]</b> <I style="font-weight:bold">OPER: Optimality-Guided Embedding Table Parallelization for Large-scale Recommendation Model.</I> Zheng Wang, Yuke Wang, Boyuan Feng, Guyue Huang, Dheevatsa Mudigere, Bharath Muthiah, Ang Li, Yufei Ding. [<a href="https://www.usenix.org/conference/atc24/presentation/wang">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'24] </b> <I style="font-weight:bold">Soter: Analytical Tensor-Architecture Modeling and Automatic Tensor Program Tuning for Spatial Accelerators.</I> Fuyu Wang, Minghua Shen, Yufei Ding, Nong Xiao. [<a href="https://www.computer.org/csdl/proceedings-article/isca/2024/265800a991/1Z3pARIsu3e">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'24][Distinguished Artifact Award]</b> <I style="font-weight:bold">OnePerc: A Randomness-aware Compiler for Photonic Quantum Computing.</I> Hezi Zhang, Jixuan Ruan, Hassan Shapourian, Ramana Rao Kompella, Yufei Ding. [<a href="https://dl.acm.org/doi/10.1145/3620666.3651372">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'24][Distinguished Artifact Award]</b> <I style="font-weight:bold">EVT: Accelerating Deep Learning Training with Epilogue Visitor Tree.</I> Zhaodong Chen, Andrew Kerr, Richard Cai, Jack Kosaian, Haicheng Wu, Yufei Ding, Yuan Xie. [<a href="https://dl.acm.org/doi/10.1145/3620666.3651369">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'24]</b> <I style="font-weight:bold">MECH: Multi-Entry Communication Highway for Superconducting Quantum Chiplets.</I> Hezi Zhang, Keyi Yin, Anbang Wu, Hassan Shapourian, Alireza Shabani, Yufei Ding. [<a href="https://dl.acm.org/doi/10.1145/3620665.3640377">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'24]</b> <I style="font-weight:bold">RAP: Resource-aware Automated GPU Sharing for Multi-GPU Recommendation Model Training and Input Preprocessing.</I> Zheng Wang, Yuke Wang, Jiaqi Deng, Da Zheng, Ang Li, Yufei Ding. [<a href="https://dl.acm.org/doi/10.1145/3620665.3640406">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'24] </b> <I style="font-weight:bold">ZENO: A Type-based Optimization Framework for Zero Knowledge Neural Network Inference.</I> Boyuan Feng, Zheng Wang, Yuke Wang, Shu Yang, Yufei Ding. [<a href="https://dl.acm.org/doi/10.1145/3617232.3624852">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[MICRO'23] </b> <I style="font-weight:bold">QuComm: Optimizing Collective Communication for Distributed Quantum Computing.</I> Anbang Wu, Yufei Ding, Ang Li. [<a href="https://dl.acm.org/doi/pdf/10.1145/3613424.3614253">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[MICRO'23] </b> <I style="font-weight:bold">RM-STC: Row-Merge Dataflow Inspired GPU Sparse Tensor Core for Energy-Efficient Sparse Acceleration.</I> Guyue Huang, Zhengyang Wang, Po-An Tsai, Chen Zhang, Yufei Ding, Yuan Xie. [<a href="https://dl.acm.org/doi/fullHtml/10.1145/3613424.3623775">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[USENIX ATC'23] </b> <I style="font-weight:bold">TC-GNN: Bridging Sparse GNN Computation and Dense Tensor Cores on GPUs.</I> Yuke Wang, Boyuan Feng, Zheng Wang, Guyue Huang, Yufei Ding.  [<a href="https://www.usenix.org/system/files/atc23-wang-yuke.pdf">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[OSDI'23] </b> <I style="font-weight:bold">MGG: Accelerating Graph Neural Networks with Fine-grained intra-kernel Communication-Computation Pipelining on Multi-GPU Platforms.</I> Yuke Wang, Boyuan Feng, Zheng Wang, Tong Geng, Ang Li, Kevin Barker, Yufei Ding.  [<a href="https://www.usenix.org/system/files/osdi23-wang-yuke.pdf">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'23] </b> <I style="font-weight:bold">OneQ: A Compilation Framework for Photonic One-Way Quantum Computation.</I> Hezi Zhang, Anbang Wu, Yuke Wang, Gushu Li, Hassan Shapourian,  Alireza Shabani, Yufei Ding. [<a href="https://dl.acm.org/doi/abs/10.1145/3579371.3589047">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'23] </b> <I style="font-weight:bold">Q-BEEP: Quantum Bayesian Error Mitigation Employing Poisson Modeling over the Hamming Spectrum.</I> Samuel Stein, Nathan Wiebe, Yufei Ding, James Ang, Ang Li. [<a href="https://dl.acm.org/doi/pdf/10.1145/3579371.3589043">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'23] </b> <I style="font-weight:bold"> ECSSD: Hardware/Data Layout Co-Designed In-Storage-Computing Architecture for Extreme Classification.</I> Siqi Li, Fengbin Tu, Liu Liu, Jilan Lin, Zheng Wang, Yangwook Kang, Yufei Ding, Yuan Xie. [<a href="https://dl.acm.org/doi/pdf/10.1145/3579371.3589093">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[MLSys'23] </b> <I style="font-weight:bold"> ALCOP: Automatic Load-Compute Pipelining in Deep Learning Compiler for AI-GPUs.</I> Guyue Huang, Yang Bai, Liu Liu, Yuke Wang, Bei Yu, Yufei Ding, Yuan Xie. [<a href="https://proceedings.mlsys.org/paper_files/paper/2023/file/12a304a31e42dfefa21c82431e849124-Paper-mlsys2023.pdf">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[VLDB'23] </b> <I style="font-weight:bold"> SPG: Structure-Private Graph Database via SqueezePIR.</I> Ling Liang, Jilan Lin, Zheng Qu, Ishtiyaque Ahmad, Liu Liu, Fengbin Tu, Trinabh Gupta, Yufei Ding, Yuan Xie.  [<a href="https://www.vldb.org/pvldb/vol16/p1615-liang.pdf">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[PPoPP'23]</b> <I style="font-weight:bold"> Dynamic N:M Fine-grained Structured Sparse Attention Mechanism.</I> Zhaodong Chen, Zheng Qu, Yuying Quan, Liu Liu, Yufei Ding, Yuan Xie. [<a href="https://dl.acm.org/doi/abs/10.1145/3572848.3577500">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[NeurIPS'22]</b> <I style="font-weight:bold"> Biologically Inspired Dynamic Thresholds for Spiking Neural Networks.</I> Jianchuan Ding, Bo Dong, Felix Heide, Yufei Ding, Yunduo Zhou, Baocai Yin, Xin Yang.  [<a href="https://arxiv.org/abs/2206.04426#:~:text=Biologically%20Inspired%20Dynamic%20Thresholds%20for%20Spiking%20Neural%20Networks,-Jianchuan%20Ding%2C%20Bo&text=The%20dynamic%20membrane%20potential%20threshold,firing%20rate%20of%20a%20neuron.">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[MICRO'22]</b> <I style="font-weight:bold"> AutoComm: A Framework for Enabling Efficient Communication in Distributed Quantum Program.</I> Anbang Wu, Hezi Zhang, Gushu Li , Alireza Shabani, Yuan Xie, and Yufei Ding. [<a href="https://arxiv.org/abs/2207.11674#:~:text=AutoComm%3A%20A%20Framework%20for%20Enabling%20Efficient%20Communication%20in%20Distributed%20Quantum%20Programs,-Anbang%20Wu%2C%20Hezi&text=Distributed%20quantum%20computing%20(DQC)%20is,of%20near%2Dterm%20quantum%20devices.">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[SC'22]</b> <I style="font-weight:bold"> EL-Rec: Efficient Large-scale Recommendation Model Training via Tensor-train Embedding.</I> Zheng Wang, Yuke Wang, Boyuan Feng, Dheevatsa Mudigere, Bharath Muthiah, Yufei Ding. [<a href="https://dl.acm.org/doi/abs/10.5555/3571885.3571978">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[SC'22] </b> <I style="font-weight:bold"> LightSeq2: Accelerated Training for Transformer-Based Models on GPUs. </I> Xiaohui Wang, Yang Wei, Ying Xiong, Guyue Huang, Xian Qian, Yufei Ding, Mingxuan Wang, Lei Li. [<a href="https://arxiv.org/abs/2110.05722">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[USENIX ATC'22] </b> <I style="font-weight:bold"> Faith: An Efficient Framework for Transformer Verification on GPUs. </I> Boyuan Feng, Tianqi Tang, Yuke Wang, Zhaodong Chen, Zheng Wang, Shu Yang, Yuan Xie, Yufei Ding.  [<a href="https://www.usenix.org/system/files/atc22-feng.pdf">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'22] </b> <I style="font-weight:bold"> A Synthesis Framework for Stitching Surface Code with Superconducting Quantum Devices. </I> Anbang Wu, Gushu LI, Hezi Zhang, Gian Giacomo Guerreschi, Yufei Ding, and Yuan Xie.  [<a href="https://dl.acm.org/doi/abs/10.1145/3470496.3527381">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'22][Best Paper Nominee] </b> <I style="font-weight:bold"> EQC : Ensembled Quantum Computing for Variational Quantum Algorithms. </I> Samuel Stein, Nathan Wiebe, Yufei Ding, Peng Bo, Karol Kowalski, Nathan Baker, James Ang, and Ang Li. [<a href="https://dl.acm.org/doi/abs/10.1145/3470496.3527434">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'22] </b> <I style="font-weight:bold"> INSPIRE: In-Storage Private Information Retrieval via Protocol and Architecture Co-design. </I> Jilan Lin, Ling Liang, Zheng Qu, Ishtiyaque Ahmad, Liu Liu, Fengbin Tu, Trinabh Gupta, Yufei Ding, Yuan Xie. [<a href="https://dl.acm.org/doi/10.1145/3470496.3527433">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[DAC'22] </b> <I style="font-weight:bold"> Shfl-BW: Accelerating Deep Neural Network Inference with Tensor-Core Aware Weight Pruning. </I> Guyue Huang, Haoran Li, Minghai Qin, Fei Sun, Yufei Ding and Yuan Xie.  [<a href="https://arxiv.org/abs/2203.05016">paper</a>] [<a href="https://github.com/hgyhungry/ShflBW_Sparse_NN">code</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[DAC'22][Best Paper Nominee]</b> <I style="font-weight:bold"> Heuristic Adaptability to Input Dynamics for SpMM on GPUs. </I> Guohao Dai, Guyue Huang, Shang Yang, Zhongming Yu, Hengrui Zhang, Yufei Ding, Yuan Xie, Huazhong Yang, Yu Wang.  [<a href="https://arxiv.org/abs/2202.08556">paper</a>] [<a href="https://github.com/hgyhungry/dgSPARSE-Library/tree/main/example">code</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[MLSys'22]</b> <I style="font-weight:bold"> Understanding GNN Computational Graph: A Coordinated Computation, IO, and Memory Perspective. </I> Hengrui Zhang, Zhongming Yu, Guohao Dai, Guyue Huang, Yufei Ding, Yuan Xie, Yu Wang.  [<a href="https://arxiv.org/abs/2110.09524">paper</a>] [<a href="https://github.com/dgSPARSE/dgNN">code</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[PPoPP'22] </b> <I style="font-weight:bold"> QGTC: Accelerating Quantized GNN via GPU Tensor Core GPUs. </I> Yuke Wang*, Boyuan Feng*, Yufei Ding. (* co-primary authors) [<a href="https://dl.acm.org/doi/abs/10.1145/3503221.3508408">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'22] </b> <I style="font-weight:bold"> Paulihedral: A Generalized Block-Wise Compiler Optimization Framework For Quantum Simulation Kernels. </I> Gushu Li, Anbang Wu, Yunong Shii, Ali Javadi-Abhari, Yufei Ding, Yuan Xie.  [<a href="https://dl.acm.org/doi/10.1145/3503222.3507715">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'22] </b> <I style="font-weight:bold"> DOTA: Detect and Omit Weak Attentions for Scalable Transformer Acceleration. </I> Zheng Qu, Liu Liu, Fengbin Tu, Zhaodong Chen, Yufei Ding, Yuan Xie.  [<a href="https://dl.acm.org/doi/10.1145/3503222.3507738">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ISSCC'22] </b> <I style="font-weight:bold"> A 28nm 15.59μJ/Token Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes. </I> Fengbin Tu, Zihan Wu, Yiqi Wang, Ling Liang, Liu Liu, Yufei Ding, Leibo Liu , Shaojun Wei, Yuan Xie, Shouyi Yin.  [<a href="https://ieeexplore.ieee.org/document/9731645">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[CIKM'21][Spotlight] </b> <I style="font-weight:bold"> An Efficient Quantitative Approach for Optimizing Convolutional Neural Networks. </I> Yuke Wang, Boyuan Feng, Xueqiao Peng, Yufei Ding.  [<a href="https://arxiv.org/abs/2009.05236">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[NanoCom'21](Invited) </b> <I style="font-weight:bold"> On the Co-Design of Quantum Software and Hardware. </I> Gushu Li, Anbang Wu, Yunong Shii, Ali Javadi-Abhari, Yufei Ding, Yuan Xie.  [<a href="https://dl.acm.org/doi/abs/10.1145/3477206.3477464">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[SC'21] </b> <I style="font-weight:bold"> APNN-TC: Accelerating Arbitrary-Precision Neural Networks on Tensor Cores. </I> Boyuan Feng*, Yuke Wang*, Tong Geng, Ang Li, Yufei Ding (* co-primary authors).  [<a href="https://dl.acm.org/doi/10.1145/3458817.3476157">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[SC'21] </b> <I style="font-weight:bold"> Efficient Tensor Core-based GPU Kernels for Structured Sparsity under Reduced Precision.</I> Zhaodong Chen*, Zheng Qu*, Liu Liu, Yufei Ding, Yuan Xie (* co-primary authors).  [<a href="https://dl.acm.org/doi/10.1145/3458817.3476182">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[USENIX ATC'21] </b> <I style="font-weight:bold"> Palleon: A Runtime System for Efficient Video Processing toward Dynamic Class Skew. </I> Boyuan Feng, Yuke Wang, Gushu Li, Yuan Xie, Yufei Ding.  [<a href="https://www.usenix.org/system/files/atc21-feng-boyuan.pdf">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[CCGrid'21] </b> <I style="font-weight:bold"> TiAcc: Triangle-inequality based Hardware Accelerator for K-means on FPGAs. </I> Yuke Wang, Boyuan Feng, Gushu Li, Georgios Tzimpragos, Lei Deng, Yuan Xie, Yufei Ding.  [<a href="https://ieeexplore.ieee.org/abstract/document/9499568">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[OSDI '21] </b> <I style="font-weight:bold"> GNNAdvisor: An Adaptive and Efficient Runtime System for GNN Acceleration on GPUs. </I> Yuke Wang, Boyuan Feng, Gushu Li, Shuangchen Li, Lei Deng, Yuan Xie, Yufei Ding.  [<a href="https://www.usenix.org/system/files/osdi21-wang-yuke.pdf">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[IPDPS'21] </b> <I style="font-weight:bold"> DSXplore: Optimizing Convolutional Neural Networks via Sliding-Channel Convolution. </I> Yuke Wang, Boyuan Feng, Yufei Ding. [<a href="https://ieeexplore.ieee.org/document/9460557">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[PPoPP'21] </b> <I style="font-weight:bold"> EGEMM-TC: Accelerating Scientific Computing on Tensor Cores with Extended Precision. </I> Boyuan Feng, Yuke Wang, Guoyang Chen, Weifeng Zhang, Yuan Xie, Yufei Ding.  [<a href="https://dl.acm.org/doi/10.1145/3437801.3441599">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[AAAI'21] </b> <I style="font-weight:bold"> UAG: Uncertainty-aware Attention Graph Neural Network for Defending Adversarial Attacks. </I> Boyuan Feng, Yuke Wang, Yufei Ding. [<a href="https://ojs.aaai.org/index.php/AAAI/article/view/16908/16715">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICASSP'21] </b> <I style="font-weight:bold"> SAGA: Sparse Adversarial Attack on EEG-based Brain Computer Interface. </I> Boyuan Feng, Yuke Wang, Yufei Ding. [<a href="https://ieeexplore.ieee.org/document/9413507">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[MICRO'21]</b> <I style="font-weight:bold">ENMC: Extreme Near-Memory Classification via Approximate Screening. </I> Liu Liu*, Jilan Lin*, Zheng Qu, Yufei Ding, Yuan Xie (* co-primary authors).  [<a href="https://dl.acm.org/doi/10.1145/3466752.3480090">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[MICRO'21] </b> <I style="font-weight:bold"> Improving Streaming Graph Processing Performance Using Input Knowledge. </I> Abanti Basak, Zheng Qu, Jilan Lin, Alaa R. Alameldeen, Zeshan Chishti, Yufei Ding, Yuan Xie.  [<a href="https://dl.acm.org/doi/10.1145/3466752.3480096">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICCAD'21] </b> <I style="font-weight:bold"> Overcoming the Memory Hierarchy Inefficiencies in Graph Processing Applications. </I> Jilan Lin, Shuangchen Li, Yufei Ding, Yuan Xie. [<a href="https://ieeexplore.ieee.org/document/9643434">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[AAAI '20] </b> <I style="font-weight:bold"> Weighted-Sampling Audio Adversarial Example Attack. </I> Xiaolei Liu, Kun Wan, Yufei Ding, Xiaosong Zhang, Qingxin Zhu. [<a href="https://ojs.aaai.org/index.php/AAAI/article/view/5928/5784">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICTAI'20] </b> <I style="font-weight:bold"> SGQuant: Squeezing the Last Bit on Graph Neural Networks with Specialized Quantization. </I> Boyuan Feng*, Yuke Wang*, Xu Li, Shu Yang, Xueqiao Peng, Yufei Ding (* co-primary authors).  [<a href="https://ieeexplore.ieee.org/document/9288186">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[NPC'20] </b> <I style="font-weight:bold"> A Close Look at Multi-Tenant Parallel CNN Inference for Autonomous Driving. </I> Yitong Huang, Yu Zhang, Boyuan Feng, Xing Guo, Yanyong Zhang, Yufei Ding.  [<a href="https://link.springer.com/chapter/10.1007/978-3-030-79478-1_8">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[OOPSLA'20][Distinguished Paper Award] </b> <I style="font-weight:bold"> Projection-based Runtime Assertions for Testing and Debugging Quantum Programs. </I> Gushu Li, Li Zhou, Nengkun Yu, Yufei Ding, Mingsheng Ying, Yuan Xie.  [<a href="https://dl.acm.org/doi/10.1145/3428218">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[MICRO'20] </b> <I style="font-weight:bold"> DUET: Boosting Deep Neural Network Efficiency on Dual-Module Architecture. </I> Liu Liu, Zheng Qu, Lei Deng, Fengbin Tu, Shuangchen Li, Xing Hu, Zhenyu Gu, Yufei Ding, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/9251991">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICML'20] </b> <I style="font-weight:bold"> Boosting Deep Neural Network Efficiency with Dual-Module Inference. </I> Liu Liu, Lei Deng, Zhaodong Chen, Yuke Wang, Shuangchen Li, Jingwei Zhang, Yihua Yang, Zhenyu Gu, Xing Hu, Yufei Ding, Yuan Xie.  [<a href="http://proceedings.mlr.press/v119/liu20c/liu20c.pdf">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[DAC'20] </b> <I style="font-weight:bold"> Eliminating Redundant Computation in Noisy Quantum Computing Simulation. </I> Gushu Li, Yufei Ding, Yuan Xie. [<a href="https://ieeexplore.ieee.org/document/9218666">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ISCA'20] </b> <I style="font-weight:bold"> iPIM: Programmable In-Memory Image Processing Accelerator Using Near-Bank Architecture. </I> Peng Gu, Xinfeng Xie, Yufei Ding, Guoyang Chen, Weifeng Zhang, Dimin Niu, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/9138985">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'20] </b> <I style="font-weight:bold"> Towards Efficient Superconducting Quantum Processor Architecture Design. </I> Gushu Li, Yufei Ding, Yuan Xie. [<a href="https://dl.acm.org/doi/abs/10.1145/3373376.3378500">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'20] </b> <I style="font-weight:bold"> DeepSniffer: a DNN Model Extraction Framework based on Learning Architectural Hints. </I> Xing Hu, Ling Liang, Lei Deng, Shuangchen Li, Xinfeng Xie, Yu Ji, Yufei Ding, Chang Liu, Timothy Sherwood, Yuan Xie.  [<a href="https://dl.acm.org/doi/abs/10.1145/3373376.3378460">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICTAI'19]</b> <I style="font-weight:bold">Reconciling Feature-Reuse and Overfitting in DenseNet with Specialized Dropout. </I> Kun Wan, Shu Yang, Boyuan Feng, Lingwei Xie, Yufei Ding. [<a href="https://arxiv.org/abs/1810.00091">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[FCCM'19](Poster)</b> <I style="font-weight:bold">KPynq: A Work-Efficient Triangle-Inequality based K-means on FPGA. </I> Yuke Wang, Zhaorui Zeng, Boyuan Feng, Lei Deng, Yufei Ding.  [<a href="https://ieeexplore.ieee.org/document/8735545">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'19] </b> <I style="font-weight:bold"> Tackling the Qubit Mapping Problem for NISQ-Era Quantum Devices. </I> Gushu Li, Yufei Ding, Yuan Xie. [<a href="https://dl.acm.org/doi/10.1145/3297858.3304023">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICLR'19] </b> <I style="font-weight:bold"> Dynamic Sparse Graph for Efficient Deep Learning. </I> Liu Liu, Lei Deng, Xing Hu, Maohua Zhu, Guoqi Li, Yufei Ding, Yuan Xie. [<a href="https://openreview.net/pdf?id=H1goBoR9F7">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[NSF'18] </b> <I style="font-weight:bold"> Inter-Disciplinary Research Challenges in Computer Systems for the 2020s. </I> Albert Cohen, Xipeng Shen, Josep Torrellas, James Tuck, Yuanyuan Zhou, et al. Technical Report, National Science Foundation, USA, December, 2018.  [<a href="https://picassolab.squarespace.com/publications">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[SysML'18] </b> <I style="font-weight:bold"> TOP: A Compiler-Based Framework for Optimizing Machine Learning Algorithms through Generalized Triangle Inequality. </I> Yufei Ding, Lin Ning, Hui Guan, Xipeng Shen, Madanlal Musuvathi, Todd Mytkowicz.  [<a href="https://mlsys.org/Conferences/doc/2018/152.pdf">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICDE'18] </b> <I style="font-weight:bold"> Reuse-Centric K-Means Configuration. </I> Hui Guan, Yufei Ding, Xipeng Shen, Hamid Krim. [<a href="https://ieeexplore.ieee.org/document/8509337">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[OOPSLA'17] </b> <I style="font-weight:bold"> GLORE: Generalized Loop Redundancy Elimination upon LER-Notation. </I> Yufei Ding, Xipeng Shen. [<a href="https://dl.acm.org/doi/10.1145/3133898">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[PLDI'17] </b> <I style="font-weight:bold"> Generalizations of the Theory and Deployment of Triangular Inequality for Compiler-Based Strength Reduction. </I> Yufei Ding, Lin Ning, Hui Guan, Xipeng Shen.  [<a href="https://dl.acm.org/doi/abs/10.1145/3062341.3062377">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICDE '17] </b> <I style="font-weight:bold"> Sweet KNN: An Efficient KNN on GPU through Reconciliation of Redundancy and Regularity. </I> Guoyang Chen, Yufei Ding, Xipeng Shen. [<a href="https://ieeexplore.ieee.org/document/7930012">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[PLDI'15] </b> <I style="font-weight:bold"> Autotuning algorithmic choice for input sensitivity. </I> Yufei Ding, Jason Ansel, Kalyan Veeramachaneni, Xipeng Shen, Una-May O'Reilly, Saman Amarasinghe.  [<a href="https://dl.acm.org/doi/10.1145/2737924.2737969">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICML'15] </b> <I style="font-weight:bold"> Yinyang K-Means: A Drop-In Replacement of the Classic K-Means with Consistent Speedup. </I> Yufei Ding, Yue Zhao, Xipeng Shen, Madan Musuvathi, Todd Mytkowicz.  [<a href="http://proceedings.mlr.press/v37/ding15.pdf">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[VLDB'15] </b> <I style="font-weight:bold">TOP: A Framework for Enabling Algorithmic Optimizations for Distance-Related Problems. </I> Yufei Ding, Xipeng Shen, Madan Musuvathi, Todd Mytkowicz.  [<a href="https://dl.acm.org/doi/10.14778/2794367.2794374">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'14] </b> <I style="font-weight:bold"> Finding the Limit: Examining the Potential and Complexity of Compilation Scheduling for JIT-Based Runtime System. </I> Yufei Ding, Mingzhou Zhou, Zhijia Zhao, Sarah Eisenstat, Xipeng Shen.  [<a href="https://dl.acm.org/doi/10.1145/2654822.2541945">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[OOPSLA'14] </b> <I style="font-weight:bold"> Call Sequence Prediction through Probabilistic Calling Automata. </I> Zhijia Zhao, Bo Wu, Mingzhou Zhou, Yufei Ding, Jianhua Sun, Xipeng Shen, Youfeng Wu.  [<a href="https://dl.acm.org/doi/10.1145/2660193.2660221">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[CGO'13]</b> <I style="font-weight:bold">ProfMig: A Framework for Flexible Migration of Program Profiles Across Software Versions. </I> Mingzhou Zhou, Bo Wu, Yufei Ding, and Xipeng Shen.  [<a href="https://ieeexplore.ieee.org/document/6494984">paper</a>] </p>
+  </div>
+
+
+  
+  <h1 class="section-title" style="margin-top: 100px;">Journals</h1>
+
+  <div class="sqs-block-content quantum paper" >
+    <p style="white-space:pre-wrap;"><b>[AVS Quantum Science'25] </b><I style="font-weight:bold"> S-QGPU: Shared Quantum Gate Processing Unit for Distributed Quantum Computing. </I> Shengwang Du, Yufei Ding, Chunming Qiao. [<a href="https://arxiv.org/abs/2309.08736">paper</a>]</p>
+    <!-- 如果你的 paper 可以预览图片和摘要，可以参考下面的结构 -->
+    <div class="preview-card">
+      <!-- 左侧图片（图片/视频/GIF 可以加多张，需要注意格式和排列） -->
+      <div class="preview-images">
+        <img src="https://arxiv.org/html/2309.08736v3/x1.png" alt="Preview image">
+      </div>
+      <!-- 右侧摘要（也可以换成其他内容，<a>链接等，可以自定义字体或者大小） -->
+      <div class="preview-info">
+        <p><b>Abstract: </b>We propose a distributed quantum computing (DQC) architecture in which individual small-sized quantum computers are connected to a shared quantum gate processing unit (S-QGPU). The S-QGPU comprises a collection of hybrid two-qubit gate modules for remote gate operations. In contrast to conventional DQC systems, where each quantum computer is equipped with dedicated communication qubits, S-QGPU effectively pools the resources (e.g., the communication qubits) together for remote gate operations, and thus significantly reduces the cost of not only the local quantum computers but also the overall distributed system. Our preliminary analysis and simulation show that S-QGPU’s shared resources for remote gate operations enable efficient resource utilization. When not all computing qubits (also called data qubits) in the system require simultaneous remote gate operations, S-QGPU-based DQC architecture demands fewer communication qubits, further decreasing the overall cost. Alternatively, with the same number of communication qubits, it can support a larger number of simultaneous remote gate operations more efficiently, especially when these operations occur in a burst mode.</p>
+      </div>
+    </div>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TACO'23] </b><I style="font-weight:bold"> MPU: Memory-Centric SIMT Processor via In-DRAM Near-Bank Computing. </I> Xinfeng Xie, Peng Gu, Yufei Ding, Dimin Niu, Hongzhong Zheng, Yuan Xie. [<a href="https://dl.acm.org/doi/10.1145/3603113">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[JSSC'23]</b><I style="font-weight:bold"> TranCIM: Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes. </I> Fengbin Tu, Zihan Wu, Yiqi Wang, Ling Liang, Liu Liu, Yufei Ding, Leibo Liu, Shaojun Wei, Yuan Xie, Shouyi Yin.  [<a href="https://ieeexplore.ieee.org/document/9931922">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TCAD'22] </b> <I style="font-weight:bold"> SDP: Co-Designing Algorithm, Dataflow, and Architecture for in-SRAM Sparse NN Acceleration. </I> Fengbin Tu, Yiqi Wang, Ling Liang, Yufei Ding, Leibo Liu, Shaojun Wei, Shouyi Yin, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/9768124">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TC'22] </b> <I style="font-weight:bold"> Dynamic Sparse Attention for Scalable Transformer Acceleration. </I> Liu Liu, Zheng Qu, Zhaodong Chen, Fengbin Tu, Yufei Ding, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/9896137">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TC'22] </b> <I style="font-weight:bold"> A Systematic View of Model Leakage Risks in Deep Neural Network Systems. </I> Xing Hu, Ling Liang, Xiaobing Chen, Lei Deng, Yu Ji, Yufei Ding, Zidong Du, Qi Guo, Timothy Sherwood, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/9705069">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TCAD'21] </b> <I style="font-weight:bold"> STPAcc: Structural TI-based Pruning for Accelerating Distance-related Algorithms on CPU-FPGA Platforms. </I> Yuke Wang, Boyuan Feng, Gushu Li, Lei Deng, Yuan Xie, Yufei Ding.  [<a href="https://ieeexplore.ieee.org/document/9467295">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TNNLS'21] </b> <I style="font-weight:bold"> Exploring Adversarial Attack in Spiking Neural Networks with Spike-Compatible Gradient. </I> Ling Liang, Xing Hu, Lei Deng, Yujie Wu, Guoqi Li, Yufei Ding, Peng Li, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/9527394">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[Information Systems'21] </b> <I style="font-weight:bold"> Reuse-centric K-means Configuration. </I> Lijun Zhang, Hui Guan, Yufei Ding, Xipeng Shen, Hamid Krim. [<a href="https://www.sciencedirect.com/science/article/abs/pii/S0306437921000430">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TCAD'21] </b> <I style="font-weight:bold"> Rubik: A Hierarchical Architecture for Efficient Graph Neural Network Training. </I> Xiaobing Chen, Yuke Wang, Xinfeng Xie, Xing Hu, Abanti Basak, Ling Liang, Mingyu Yan, Lei Deng, Yufei Ding, Zidong Du, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/9428002">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[BIOINF'20] </b> <I style="font-weight:bold"> Domain-Adversarial Multi-Task Framework for Novel Therapeutic Property Prediction of Compounds. </I> Lingwei Xie, Song He, Zhongnan Zhang, Kunhui Lin, Xiaochen Bo, Shu Yang, Boyuan Feng, Kun Wan, Kang Yang, Jie Yang, Yufei Ding.  [<a href="https://arxiv.org/abs/1810.00867">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[JAMT'20] </b> <I style="font-weight:bold"> Chatter detection in high-speed milling processes based on ON-LSTM and PBT. </I> Fei Shi, Hongrui Cao, Yuke Wang, Boyuan Feng, Yufei Ding.  [<a href="https://link.springer.com/article/10.1007/s00170-020-06292-9">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TNNLS'20] </b> <I style="font-weight:bold"> Comprehensive SNN Compression Using ADMM Optimization and Activity Regularization. </I> Lei Deng, Yujie Wu, Yifan Hu, Ling Liang, Guoqi Li, Xing Hu, Yufei Ding, Peng Li, Yuan Xie.  [<a href="https://arxiv.org/abs/1911.00822">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TNNLS'20] </b> <I style="font-weight:bold"> Effective and Efﬁcient Batch Normalization Using Few Uncorrelated Data for Statistics Estimation. </I> Zhaodong Chen, Lei Deng, Guoqi Li, Jiawei Sun, Ling Liang, Xing Hu, Yufei Ding, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/9046854">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[JSSC'20] </b> <I style="font-weight:bold"> Tianjic: A Unified and Scalable Chip Bridging Neuroscience and Deep Learning. </I> Li Deng, Guanrui Wang, Guoqi Li, Shuangchen Li, Ling Liang, Maohua Zhu, Yujie Wu, Jing Pei, Zhenzhi Wu, Xing Hu, Yufei Ding, Wei He, Yuan Xie, Luping Shi.  [<a href="https://ieeexplore.ieee.org/abstract/document/8998338">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[Neural Networks'19] </b> <I style="font-weight:bold"> Rethinking the Performance Comparison between SNNs and ANNs. </I> Lei Deng, Yujie Wu, Xing Hu, Ling Liang, Yufei Ding, Guoqi Li, Guangshe Zhao, Peng Li, Yuan Xie. [<a href="https://www.sciencedirect.com/science/article/pii/S0893608019302667">paper</a>] </p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TVLSI'19] </b> <I style="font-weight:bold"> DASM: DAta-Streaming Based Computing in Non-Volatile Memory Architecture for Embedded System. </I> Liang Chang, Xin Ma, Zhaohao Wang, Youguang Zhang, Yufei Ding, Weisheng Zhao, Yuan Xie.  [<a href="https://ieeexplore.ieee.org/document/8710263">paper</a>] </p>
+  </div>
+
+
+
+  <h1 class="section-title" style="margin-top: 100px;">Patents</h1>
+
+  <div class="sqs-block-content paper">
+    <p style="white-space:pre-wrap;"><b>[US Patent]</b> <i style="font-weight:bold">Machine learning through parallelized stochastic gradient descent.</i> Madanlal S. Musuvathi, Todd D. Mytkowicz, Yufei Ding.</p>
+  </div>
+  <div class="sqs-block-content paper">
+    <p style="white-space:pre-wrap;"><b>[US Patent]</b> <i style="font-weight:bold">Determining a course of action based on aggregated data.</i> Madanlal S. Musuvathi, Todd D. Mytkowicz, Saeed Maleki, Yufei Ding.</p>
+  </div>
+  <div class="sqs-block-content paper">
+    <p style="white-space:pre-wrap;"><b>[US Patent]</b> <i style="font-weight:bold">Implementing network security measures in response to a detected cyber attack.</i> Madanlal S. Musuvathi, Todd D. Mytkowicz, Saeed Maleki, Yufei Ding.</p>
+  </div>
+  <div class="sqs-block-content paper">
+    <p style="white-space:pre-wrap;"><b>[US Patent]</b> <i style="font-weight:bold">Determining a likelihood of a resource experiencing a problem based on telemetry data.</i> Madanlal S. Musuvathi, Todd D. Mytkowicz, Saeed Maleki, Yufei Ding.</p>
+  </div>
+  <div class="sqs-block-content paper">
+    <p style="white-space:pre-wrap;"><b>[US Patent]</b> <i style="font-weight:bold">Determining a likelihood of a user interaction with a content element.</i> Madanlal S. Musuvathi, Todd D. Mytkowicz, Saeed Maleki, Yufei Ding.</p>
+  </div>
+
+  <script>
+    function changeml(){
+      var papers = document.getElementsByClassName('paper');
+      for (var i = 0; i < papers.length; i++){
+        papers[i].style.backgroundColor='#FFFFFF';
+      }
+      var ml = document.getElementsByClassName('machinelearning');
+      for (var i = 0; i < ml.length; i++){
+        ml[i].style.backgroundColor='#E0FFFF';
+      }
+    }
+
+    function change(){
+      var papers = document.getElementsByClassName('paper');
+      for (var i = 0; i < papers.length; i++){
+        papers[i].style.backgroundColor='#FFFFFF';
+      }
+      var qc = document.getElementsByClassName('quantum');
+      for (var i = 0; i < qc.length; i++){
+        qc[i].style.backgroundColor='#FFFACD';
+      }
+    }
+  </script>
+
+</body>
+</html>
