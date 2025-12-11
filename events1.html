@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<style>
+    /* CSS样式 - 你可以把这部分放到你的 .css 文件中 */
+    .event-card {
+        display: flex;
+        background-color: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.2s;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .event-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .event-image {
+        flex: 0 0 200px; /* 图片宽度固定 */
+        background-color: #f4f4f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .event-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* 保持图片比例填充 */
+    }
+
+    .event-content {
+        padding: 20px;
+        flex: 1;
+    }
+
+    .event-date {
+        font-size: 0.85em;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+    }
+
+    .event-title {
+        margin: 0 0 10px 0;
+        font-size: 1.25em;
+        color: #333;
+        font-weight: 600;
+    }
+
+    .event-text {
+        font-size: 0.95em;
+        color: #444;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+
+    .read-more {
+        text-decoration: none;
+        color: #0056b3; /* 经典的学术蓝 */
+        font-weight: 500;
+        font-size: 0.9em;
+    }
+
+    .read-more:hover {
+        text-decoration: underline;
+    }
+
+    /* 手机端适配 */
+    @media (max-width: 600px) {
+        .event-card {
+            flex-direction: column;
+        }
+        .event-image {
+            height: 200px; /* 手机上图片的高度 */
+            flex: none;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="event-card">
+    <div class="event-image">
+        <img src="path/to/zheng-wang-photo.jpg" alt="Zheng Wang Defense"> 
+    </div>
+    <div class="event-content">
+        <div class="event-date">December 10, 2025</div> <h3 class="event-title">Congratulations to Zheng Wang on Successfully Defending His PhD Thesis!</h3>
+        <p class="event-text">
+            We are thrilled to announce that our group member, Zheng Wang, has successfully passed the final defense for his doctoral dissertation titled "<strong>Overcoming Input Irregularity: Balanced and Efficient System Designs for Large Scale Model Training</strong>". 
+            <br><br>
+            Dr. Wang has made significant contributions to <strong>high-performance system design and optimization for Deep Learning</strong> (specifically LLMs and Recommendation Systems) during his time with us. We wish Zheng all the best in his future endeavors!
+        </p>
+        <a href="#" class="read-more">Read Thesis Abstract &rarr;</a>
+    </div>
+</div>
+</body>
+</html>
