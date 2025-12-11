@@ -1,8 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab Events</title>
 <style>
-    /* CSS样式 - 你可以把这部分放到你的 .css 文件中 */
+    /* =========================================
+       新加的部分：无缝滚动横幅 (Seamless News Ticker)
+       ========================================= */
+    .news-banner {
+        background-color: #f8f9fa; /* 给个淡淡的背景色区分 */
+        color: #555;
+        height: 40px;
+        position: relative;
+        overflow: hidden; /* 隐藏超出部分 */
+        display: flex;
+        align-items: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 0.9em;
+        margin-bottom: 5px;
+    }
+
+    /* 滚动的轨道：包含两组完全一样的内容 */
+    .ticker-track {
+        display: flex;
+        /* 这里的宽带不需要设为100%，让它根据内容自动撑开 */
+        animation: scroll 40s linear infinite; 
+    }
+
+    /* 核心动画：只移动 -50% */
+    @keyframes scroll {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); } 
+    }
+
+    /* 鼠标悬停暂停 */
+    .news-banner:hover .ticker-track {
+        animation-play-state: paused;
+    }
+
+    /*每一组内容的容器*/
+    .ticker-content {
+        display: flex;
+        align-items: center;
+        white-space: nowrap; /* 强制不换行 */
+        padding-right: 50px; /* 这一组和下一组之间的间距 */
+    }
+
+    .ticker-item {
+        margin-right: 3rem; /* 每个新闻之间的间距 */
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ticker-tag {
+        font-weight: bold;
+        color: #0056b3;
+        margin-right: 6px;
+    }
+
+    /* =========================================
+       卡片样式保持不变
+       ========================================= */
     .event-card {
         display: flex;
         background-color: #fff;
@@ -86,6 +145,48 @@
 </style>
 </head>
 <body>
+
+<div class="news-banner">
+    <div class="ticker-track">
+        
+        <div class="ticker-content">
+            <div class="ticker-item">
+                <span class="ticker-tag">🎉 Congrats:</span> Zheng Wang successfully defended his PhD Thesis!
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">📃 NeurIPS:</span> Check out Zaifeng Pan's poster #808 on "KVFlow".
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🎵 Media:</span> Xiang Fang's song featured on "Infinity and Beyond" (Hunan TV).
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🥘 Life:</span> Lab Thanksgiving lunch at Haidilao Hot Pot.
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">📅 Reminder:</span> PhD application deadline is Dec 15th. Apply now!
+            </div>
+        </div>
+
+        <div class="ticker-content" aria-hidden="true">
+            <div class="ticker-item">
+                <span class="ticker-tag">🎉 Congrats:</span> Zheng Wang successfully defended his PhD Thesis!
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">📃 NeurIPS:</span> Check out Zaifeng Pan's poster #808 on "KVFlow".
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🎵 Media:</span> Xiang Fang's song featured on "Infinity and Beyond" (Hunan TV).
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🥘 Life:</span> Lab Thanksgiving lunch at Haidilao Hot Pot.
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">📅 Reminder:</span> PhD application deadline is Dec 15th. Apply now!
+            </div>
+        </div>
+
+    </div>
+</div>
 
 <div class="event-card">
     <div class="event-image">
