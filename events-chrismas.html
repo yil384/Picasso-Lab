@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab Events - Holiday Edition</title>
+<style>
+    /* =========================================
+       🎄 1. 圣诞特供：鼠标光标改为圣诞树
+       使用 SVG Data URI，无需外部图片链接
+       ========================================= */
+    body {
+        /* 备用方案：如果不支持SVG光标，显示默认指针 */
+        cursor: auto; 
+        /* 设置光标为圣诞树 emoji */
+        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="28" font-size="28">🎄</text></svg>') 16 16, auto;
+    }
+
+    /* 链接悬停时，光标变成圣诞老人 🎅 */
+    a:hover, .read-more:hover, .event-card:hover {
+        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="28" font-size="28">🎅</text></svg>') 16 16, pointer;
+    }
+
+    /* =========================================
+       ❄️ 2. 圣诞特供：飘雪特效样式
+       ========================================= */
+    #snow-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none; /* 关键：让雪花不阻挡鼠标点击 */
+        z-index: 9999;
+        overflow: hidden;
+    }
+
+    .snowflake {
+        position: absolute;
+        top: -10px;
+        color: #b0dce8; /* 雪花的颜色，淡蓝白色 */
+        font-size: 1em;
+        font-family: Arial, sans-serif;
+        text-shadow: 0 0 5px #000;
+        user-select: none;
+        animation-name: fall;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+    }
+
+    @keyframes fall {
+        0% { transform: translateY(-10vh) translateX(0); opacity: 1; }
+        100% { transform: translateY(105vh) translateX(20px); opacity: 0.3; }
+    }
+
+    /* =========================================
+       原有样式 (原有基础上微调)
+       ========================================= */
+    .news-banner {
+        /* 修改：把背景色改成很淡的红色，增加节日感，原为 #f8f9fa */
+        background-color: #fff0f0; 
+        color: #555;
+        height: 40px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 0.9em;
+        margin-bottom: 5px;
+        border-bottom: 2px solid #d42426; /* 圣诞红分割线 */
+    }
+
+    .ticker-track {
+        display: flex;
+        animation: scroll 40s linear infinite; 
+    }
+
+    @keyframes scroll {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); } 
+    }
+
+    .news-banner:hover .ticker-track {
+        animation-play-state: paused;
+    }
+
+    .ticker-content {
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        padding-right: 50px;
+    }
+
+    .ticker-item {
+        margin-right: 3rem;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ticker-tag {
+        font-weight: bold;
+        /* 修改：把标签颜色改成圣诞红 */
+        color: #d42426; 
+        margin-right: 6px;
+    }
+
+    .event-card {
+        display: flex;
+        background-color: #fff;
+        border: 1px solid #e0e0e0;
+        /* 修改：给卡片顶部加一个装饰性的红色边框 */
+        border-top: 4px solid #d42426; 
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.2s;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .event-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .event-image {
+        flex: 0 0 200px;
+        background-color: #f4f4f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .event-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .event-content {
+        padding: 20px;
+        flex: 1;
+    }
+
+    .event-date {
+        font-size: 0.85em;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+    }
+
+    .event-title {
+        margin: 0 0 10px 0;
+        font-size: 1.25em;
+        color: #333;
+        font-weight: 600;
+    }
+
+    .event-text {
+        font-size: 0.95em;
+        color: #444;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+
+    .read-more {
+        text-decoration: none;
+        color: #0056b3;
+        font-weight: 500;
+        font-size: 0.9em;
+    }
+
+    .read-more:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+        .event-card {
+            flex-direction: column;
+        }
+        .event-image {
+            height: 200px;
+            flex: none;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div id="snow-container"></div>
+
+<div class="news-banner">
+    <div class="ticker-track">
+        <div class="ticker-content">
+            <div class="ticker-item">
+                <span class="ticker-tag">🎄 Merry Xmas:</span> Happy Holidays from Picasso Lab!
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🎉 Congrats:</span> Zheng Wang successfully defended his PhD Thesis!
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">📃 NeurIPS:</span> Check out Zaifeng Pan's poster #808 on "KVFlow".
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🎵 Media:</span> Xiang Fang's song featured on "Infinity and Beyond" (Hunan TV).
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🥘 Life:</span> Lab Thanksgiving lunch at Haidilao Hot Pot.
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">📅 Reminder:</span> PhD application deadline is Dec 15th. Apply now!
+            </div>
+        </div>
+
+        <div class="ticker-content" aria-hidden="true">
+            <div class="ticker-item">
+                <span class="ticker-tag">🎄 Merry Xmas:</span> Happy Holidays from Picasso Lab!
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🎉 Congrats:</span> Zheng Wang successfully defended his PhD Thesis!
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">📃 NeurIPS:</span> Check out Zaifeng Pan's poster #808 on "KVFlow".
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🎵 Media:</span> Xiang Fang's song featured on "Infinity and Beyond" (Hunan TV).
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">🥘 Life:</span> Lab Thanksgiving lunch at Haidilao Hot Pot.
+            </div>
+            <div class="ticker-item">
+                <span class="ticker-tag">📅 Reminder:</span> PhD application deadline is Dec 15th. Apply now!
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="event-card">
+    <div class="event-image">
+        <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang2.jpg?raw=true" alt="Zheng Wang Defense"> 
+    </div>
+    <div class="event-content">
+        <div class="event-date">December 10, 2025</div> <h3 class="event-title">🎉 Congratulations to Zheng Wang on Successfully Defending His PhD Thesis!</h3>
+        <p class="event-text">
+            We are thrilled to announce that our group member, Zheng Wang, has successfully passed the final defense for his doctoral dissertation titled "<strong>Overcoming Input Irregularity: Balanced and Efficient System Designs for Large Scale Model Training</strong>". 
+            <br><br>
+            Dr. Wang has made significant contributions to <strong>high-performance system design and optimization for Deep Learning</strong> (specifically LLMs and Recommendation Systems) during his time with us. We wish Zheng all the best in his future endeavors!
+        </p>
+        <a href="https://www.usenix.org/conference/osdi25/presentation/wang-zheng" class="read-more">Read Thesis Abstract &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card">
+    <div class="event-image">
+        <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/neurips%23808-zaifeng2.jpg?raw=true" alt="NeurIPS Poster Presentation"> 
+    </div>
+    <div class="event-content">
+        <div class="event-date">December 4, 2026</div> 
+        <h3 class="event-title">📃 NeurIPS 2026: Visit Poster #808 (Session 3)</h3>
+        <p class="event-text">
+            We invite you to visit our poster at the San Diego convention center! <strong>Zaifeng Pan</strong> (2nd-year PhD student) will present our latest work: "<strong>KVFlow: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows</strong>".
+            <br><br>
+            KVFlow introduces a workflow-aware KV cache management framework that replaces traditional LRU policies. By using an <em>Agent Step Graph</em> to anticipate future usage, it achieves up to <strong>2.19× speedup</strong> over SGLang for concurrent agentic workloads. Come say hi!
+        </p>
+        <a href="https://arxiv.org/abs/2507.07400" class="read-more">Read Paper &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card">
+    <div class="event-image">
+        <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/thxgiving-lunch.jpg?raw=true" alt="Thanksgiving Hot Pot Dinner"> 
+    </div>
+    <div class="event-content">
+        <div class="event-date">November 27, 2025</div> 
+        <h3 class="event-title">🥘 Thanksgiving Team Lunch at Haidilao</h3>
+        <p class="event-text">
+            Our lab group gathered for a wonderful Thanksgiving celebration at <strong>Haidilao Hot Pot</strong> in UTC, San Diego. 
+            <br><br>
+            It was a fantastic opportunity for the team to bond over delicious food and festive spirits. A special thank you to <strong>Prof. Yufei Ding</strong> for hosting this lunch and treating the team!
+        </p>
+        <a href="https://github.com/yil384/Picasso-Lab/blob/main/static/events/thxgiving-lunch.jpg" class="read-more">View Event Photos &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card">
+    <div class="event-image">
+        <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/xiangfang.jpg?raw=true" alt="Infinity and Beyond Stage"> 
+    </div>
+    <div class="event-content">
+        <div class="event-date">November 24, 2025</div> 
+        <h3 class="event-title">🎵 Xiang Fang's Composition Performed by Stars on Hunan TV!</h3>
+        <p class="event-text">
+            We are incredibly proud to announce that "<strong>再遗忘</strong>", an original song composed by our group member <strong>Xiang Fang</strong>, will be performed by famous singers <strong>Zhang Yuan (张远)</strong> and <strong>Huang Xiaoyun (黄霄云)</strong> on Episode 4 of <em>"Infinity and Beyond: Chinese Wave" (声生不息：华流季)</em>.
+            <br><br>
+            Xiang represents the perfect balance of science and art: a 2nd-year PhD student researching <strong>Quantum Error Correction (QEC)</strong> by day, and a talented songwriter recognized by mainstream media by night. Tune in to Mango TV to hear his work!
+        </p>
+        <a href="https://so.mgtv.com/so?k=%E5%A3%B0%E7%94%9F%E4%B8%8D%E6%81%AF%E5%8D%8E%E6%B5%81%E5%AD%A3" class="read-more">Watch Performance on Mango TV &rarr;</a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const snowContainer = document.getElementById('snow-container');
+        const snowflakeChars = ['❄', '❅', '❆', '•']; // 雪花的形状
+        
+        function createSnowflake() {
+            const snowflake = document.createElement('div');
+            snowflake.classList.add('snowflake');
+            snowflake.textContent = snowflakeChars[Math.floor(Math.random() * snowflakeChars.length)];
+            
+            // 随机位置和大小
+            snowflake.style.left = Math.random() * 100 + 'vw';
+            snowflake.style.fontSize = (Math.random() * 10 + 10) + 'px';
+            snowflake.style.opacity = Math.random();
+            
+            // 随机动画时间 (下落速度)
+            const duration = Math.random() * 3 + 2 + 's';
+            snowflake.style.animationDuration = duration;
+            
+            snowContainer.appendChild(snowflake);
+            
+            // 动画结束后移除元素，防止内存泄漏
+            setTimeout(() => {
+                snowflake.remove();
+            }, parseFloat(duration) * 1000);
+        }
+
+        // 每 100 毫秒生成一片雪花
+        setInterval(createSnowflake, 100);
+    });
+</script>
+
+</body>
+</html>
