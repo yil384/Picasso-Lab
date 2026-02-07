@@ -3,19 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lab Events - Data Stream</title>
+<title>Lab Events - Live Danmaku</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
 <style>
     /* =========================================
-       全局设置：纯白背景
+       全局设置
        ========================================= */
     body { 
         margin: 0; 
         overflow-x: hidden; 
-        background-color: #ffffff; /* 纯白背景 */
+        background-color: #ffffff;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         color: #333;
+        padding-bottom: 80px; /* 给底部输入框留位置 */
     }
 
     /* === 特效：Canvas 背景 === */
@@ -25,12 +26,95 @@
         left: 0; 
         width: 100%; 
         height: 100%;
-        z-index: -1; /* 放在最底层 */
-        opacity: 0.15; /* 低透明度，淡淡的背景效果，不干扰阅读 */
+        z-index: -1;
+        opacity: 0.15;
     }
 
     /* =========================================
-       无缝滚动横幅 (恢复原始样式)
+       弹幕层样式 (Danmaku Layer)
+       ========================================= */
+    #danmaku-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none; /* 让点击穿透 */
+        z-index: 9999;
+        overflow: hidden;
+    }
+
+    .danmaku-item {
+        position: absolute;
+        white-space: nowrap;
+        font-weight: bold;
+        font-size: 24px; /* 字体稍微大一点 */
+        color: #000;
+        text-shadow: 2px 2px 0px white, -1px -1px 0px white; /* 白色描边增强可读性 */
+        will-change: transform;
+        transform: translateX(100vw); /* 初始位置 */
+        font-family: "SimHei", "Microsoft YaHei", sans-serif;
+        opacity: 0.9;
+    }
+
+    /* 定义弹幕动画 */
+    @keyframes moveLeft {
+        from { transform: translateX(100vw); }
+        to { transform: translateX(-100%); }
+    }
+
+    /* =========================================
+       底部输入框样式
+       ========================================= */
+    .danmaku-input-area {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    }
+
+    .danmaku-input-wrapper {
+        display: flex;
+        width: 90%;
+        max-width: 600px;
+        gap: 10px;
+    }
+
+    #dm-input {
+        flex: 1;
+        padding: 10px 15px;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        outline: none;
+        transition: border 0.3s;
+        font-size: 16px;
+    }
+    #dm-input:focus { border-color: #0056b3; }
+
+    #dm-send-btn {
+        padding: 0 25px;
+        background: #0056b3;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background 0.3s;
+        font-size: 14px;
+    }
+    #dm-send-btn:hover { background: #004494; }
+
+    /* =========================================
+       原有样式保持不变
        ========================================= */
     .news-banner {
         background-color: #f8f9fa;
@@ -44,169 +128,55 @@
         border-bottom: 1px solid #eaeaea;
     }
 
-    .ticker-track {
-        display: flex;
-        animation: scroll 40s linear infinite; 
-    }
+    .ticker-track { display: flex; animation: scroll 40s linear infinite; }
+    @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .news-banner:hover .ticker-track { animation-play-state: paused; }
+    .ticker-content { display: flex; align-items: center; white-space: nowrap; padding-right: 50px; }
+    .ticker-item { margin-right: 3rem; display: inline-flex; align-items: center; }
+    .ticker-tag { font-weight: bold; color: #0056b3; margin-right: 6px; }
 
-    @keyframes scroll {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(-50%); } 
-    }
-
-    .news-banner:hover .ticker-track {
-        animation-play-state: paused;
-    }
-
-    .ticker-content {
-        display: flex;
-        align-items: center;
-        white-space: nowrap;
-        padding-right: 50px;
-    }
-
-    .ticker-item {
-        margin-right: 3rem;
-        display: inline-flex;
-        align-items: center;
-    }
-
-    .ticker-tag {
-        font-weight: bold;
-        color: #0056b3;
-        margin-right: 6px;
-    }
-
-    /* =========================================
-       卡片样式 (恢复原始样式)
-       ========================================= */
     .event-card {
         display: flex;
         background-color: #fff;
         border: 1px solid #e0e0e0;
         border-radius: 8px;
         overflow: hidden;
-        margin: 20px auto; /* 居中显示 */
-        max-width: 900px;  /* 限制最大宽度 */
+        margin: 20px auto;
+        max-width: 900px;
         height: 250px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         transition: transform 0.2s, box-shadow 0.2s;
     }
+    .event-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 
-    .event-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
+    .cursor-bbq { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍖%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-party { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎉%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-paper { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E📝%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-hotpot { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍲%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-music { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎸%3C/text%3E%3C/svg%3E") 16 16, pointer; }
 
-    /* =========================================
-       自定义光标区域 (保留贴纸风格)
-       ========================================= */
-    .cursor-bbq {
-        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍖%3C/text%3E%3C/svg%3E") 16 16, pointer; 
-    }
-    .cursor-party {
-        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎉%3C/text%3E%3C/svg%3E") 16 16, pointer;
-    }
-    .cursor-paper {
-        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E📝%3C/text%3E%3C/svg%3E") 16 16, pointer;
-    }
-    .cursor-hotpot {
-        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍲%3C/text%3E%3C/svg%3E") 16 16, pointer;
-    }
-    .cursor-music {
-        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎸%3C/text%3E%3C/svg%3E") 16 16, pointer;
-    }
-
-    /* =========================================
-       内容区域布局 (恢复原始样式)
-       ========================================= */
-    .event-image {
-        flex: 0 0 300px;
-        background-color: #f4f4f4;
-        position: relative;
-        height: 100%;
-    }
-
-    .swiper-slide img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-
-    .swiper-pagination-bullet {
-        background: rgba(255, 255, 255, 0.8);
-        opacity: 1;
-        width: 8px;
-        height: 8px;
-        transition: all 0.3s;
-    }
-
-    .swiper-pagination-bullet-active {
-        background: #0056b3;
-        width: 18px;
-        border-radius: 4px;
-    }
-
-    .event-content {
-        padding: 20px;
-        flex: 1;
-        overflow-y: auto;
-    }
-
-    .event-date {
-        font-size: 0.85em;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 8px;
-    }
-
-    .event-title {
-        margin: 0 0 10px 0;
-        font-size: 1.25em;
-        color: #333;
-        font-weight: 600;
-    }
-
-    .event-text {
-        font-size: 0.95em;
-        color: #444;
-        line-height: 1.6;
-        margin-bottom: 15px;
-    }
-    
-    .event-text strong {
-        font-weight: 600;
-        color: #333;
-    }
-
-    .read-more {
-        text-decoration: none;
-        color: #0056b3;
-        font-weight: 500;
-        font-size: 0.9em;
-        cursor: pointer; 
-    }
-
-    .read-more:hover {
-        text-decoration: underline;
-    }
+    .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; }
+    .swiper-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .swiper-pagination-bullet { background: rgba(255, 255, 255, 0.8); opacity: 1; width: 8px; height: 8px; transition: all 0.3s; }
+    .swiper-pagination-bullet-active { background: #0056b3; width: 18px; border-radius: 4px; }
+    .event-content { padding: 20px; flex: 1; overflow-y: auto; }
+    .event-date { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .event-title { margin: 0 0 10px 0; font-size: 1.25em; color: #333; font-weight: 600; }
+    .event-text { font-size: 0.95em; color: #444; line-height: 1.6; margin-bottom: 15px; }
+    .event-text strong { font-weight: 600; color: #333; }
+    .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
+    .read-more:hover { text-decoration: underline; }
 
     @media (max-width: 600px) {
-        .event-card {
-            flex-direction: column;
-            height: auto;
-        }
-        .event-image {
-            width: 100%;
-            height: 220px;
-            flex: none;
-        }
+        .event-card { flex-direction: column; height: auto; }
+        .event-image { width: 100%; height: 220px; flex: none; }
+        .danmaku-item { font-size: 18px; } 
     }
 </style>
 </head>
 <body>
+
+<div id="danmaku-container"></div>
 
 <canvas id="matrix"></canvas>
 
@@ -231,27 +201,51 @@
     </div>
 </div>
 
-<div class="event-card cursor-bbq">
+<div class="event-card cursor-party">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/1.jpg?raw=true" alt="Christmas Party at Fire Spot">
+                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-birth/1.jpg?raw=true" alt="Happy Birthday Zaifeng">
             </div>
             <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/2.jpg?raw=true" alt="Fire Spot BBQ">
-            </div>
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/3.jpg?raw=true" alt="Fire Spot BBQ">
+                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-birth/2.jpg?raw=true" alt="Zaifeng at Work">
             </div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
     <div class="event-content">
+        <div class="event-date">February 6, 2026</div> 
+        <h3 class="event-title">🎂 Happy Birthday to Zaifeng Pan!</h3>
+        <p class="event-text">
+            Today we celebrate the birthday of our amazing team member, <strong>Zaifeng Pan</strong>! 
+            Besides being a prefix-caching expert and KVFlow creator, he's also the life of the lab. 
+            Wishing you a year full of groundbreaking research and endless joy!
+        </p>
+        <a href="#" class="read-more">Send Birthday Wishes &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card cursor-bbq">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+        <div class="swiper-slide">
+            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/1.jpg?raw=true" alt="Christmas Party at Fire Spot">
+        </div>
+        <div class="swiper-slide">
+            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/2.jpg?raw=true" alt="Fire Spot BBQ">
+        </div>
+        <div class="swiper-slide">
+            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/3.jpg?raw=true" alt="Fire Spot BBQ">
+        </div>
+    </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
         <div class="event-date">December 13, 2025</div> 
         <h3 class="event-title">🎄 Christmas Team Celebration at Fire Spot</h3>
-        <p class="event-text">
-            To celebrate the holiday season, our lab enjoyed a fantastic Christmas lunch at <strong>Fire Spot</strong>. It was a great time to relax, enjoy some Korean BBQ, and celebrate our achievements this year!
-        </p>
+    <p class="event-text">
+        To celebrate the holiday season, our lab enjoyed a fantastic Christmas lunch at <strong>Fire Spot</strong>. It was a great time to relax, enjoy some Korean BBQ, and celebrate our achievements this year!
+    </p>
         <a href="https://github.com/yil384/Picasso-Lab/tree/main/static/events/chrismas" class="read-more">View Group Photos &rarr;</a>
     </div>
 </div>
@@ -259,29 +253,29 @@
 <div class="event-card cursor-party">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/1.jpg?raw=true" alt="Zheng Wang Defense">
-            </div>
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/2.jpg?raw=true" alt="Thesis Presentation Slide">
-            </div>
-             <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/3.jpg?raw=true" alt="Group Photo">
-            </div>
+        <div class="swiper-slide">
+            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/1.jpg?raw=true" alt="Zheng Wang Defense">
         </div>
+        <div class="swiper-slide">
+            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/2.jpg?raw=true" alt="Thesis Presentation Slide">
+        </div>
+            <div class="swiper-slide">
+            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/3.jpg?raw=true" alt="Group Photo">
+        </div>
+    </div>
         <div class="swiper-pagination"></div>
     </div>
     <div class="event-content">
         <div class="event-date">December 10, 2025</div> 
-        <h3 class="event-title">🎉 Congratulations to Zheng Wang on Successfully Defending His PhD Thesis!</h3>
-        <p class="event-text">
-            We are thrilled to announce that our group member, <strong>Zheng Wang</strong>, has successfully passed the final defense. Dr. Wang has made significant contributions to high-performance system design for Deep Learning.
-        </p>
+    <h3 class="event-title">🎉 Congratulations to Zheng Wang on Successfully Defending His PhD Thesis!</h3>
+    <p class="event-text">
+        We are thrilled to announce that our group member, <strong>Zheng Wang</strong>, has successfully passed the final defense. Dr. Wang has made significant contributions to high-performance system design for Deep Learning.
+    </p>
         <a href="https://www.usenix.org/conference/osdi25/presentation/wang-zheng" class="read-more">Read Thesis Abstract &rarr;</a>
     </div>
 </div>
 
-<div class="event-card cursor-paper">
+    <div class="event-card cursor-paper">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide">
@@ -295,9 +289,9 @@
     </div>
     <div class="event-content">
         <div class="event-date">December 4, 2026</div> 
-        <h3 class="event-title">📃 NeurIPS 2026: Visit Poster #808 (Session 3)</h3>
+    <h3 class="event-title">📃 NeurIPS 2026: Visit Poster #808 (Session 3)</h3>
         <p class="event-text">
-            <strong>Zaifeng Pan</strong> will present "<strong>KVFlow</strong>: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows". It achieves up to 2.19× speedup over SGLang.
+        <strong>Zaifeng Pan</strong> will present "<strong>KVFlow</strong>: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows". It achieves up to 2.19× speedup over SGLang.
         </p>
         <a href="https://arxiv.org/abs/2507.07400" class="read-more">Read Paper &rarr;</a>
     </div>
@@ -344,73 +338,157 @@
     </div>
 </div>
 
+<div class="danmaku-input-area">
+    <div class="danmaku-input-wrapper">
+        <input type="text" id="dm-input" placeholder="Send a danmaku to the lab... (Enter to send)" maxlength="50">
+        <button id="dm-send-btn">Send</button>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
-<script>
-    // 1. Swiper 初始化 (保持不变)
-    var swiper = new Swiper(".mySwiper", {
-      slidesPerView: 1,     
-      spaceBetween: 0,      
-      loop: true,           
-      effect: "slide",      
-      autoplay: {
-        delay: 3500,        
-        disableOnInteraction: false, 
-      },
-      pagination: {
-        el: ".swiper-pagination",
-        clickable: true,    
-      },
+<script type="module">
+    // -----------------------------------------------------------------
+    // 1. 引入 Firebase SDK (版本 12.8.0)
+    // -----------------------------------------------------------------
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+    // -----------------------------------------------------------------
+    // 2. Firebase 配置 (已填入您的配置)
+    // -----------------------------------------------------------------
+    const firebaseConfig = {
+        apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
+        authDomain: "yichen-5e23e.firebaseapp.com",
+        databaseURL: "https://yichen-5e23e-default-rtdb.firebaseio.com",
+        projectId: "yichen-5e23e",
+        storageBucket: "yichen-5e23e.firebasestorage.app",
+        messagingSenderId: "495540025061",
+        appId: "1:495540025061:web:733590e8781d90e866060c",
+        measurementId: "G-ZMREJCJL1G"
+    };
+
+    // 初始化 Firebase
+    let app, db, danmakuRef;
+    
+    try {
+        app = initializeApp(firebaseConfig);
+        db = getDatabase(app);
+        danmakuRef = ref(db, 'danmaku'); // 数据存储在 'danmaku' 路径下
+        
+        console.log("Firebase initialized successfully!");
+
+        // 监听新弹幕 (一旦数据库有新数据，这里会立即触发)
+        onChildAdded(danmakuRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.text) {
+                createDanmaku(data.text);
+            }
+        });
+        
+    } catch (e) {
+        console.error("Firebase 初始化失败，请检查控制台。", e);
+        setTimeout(() => createDanmaku("Error connecting to database!"), 1000);
+    }
+
+    // -----------------------------------------------------------------
+    // 3. 发送弹幕逻辑
+    // -----------------------------------------------------------------
+    const input = document.getElementById('dm-input');
+    const sendBtn = document.getElementById('dm-send-btn');
+
+    function sendDanmaku() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        if (danmakuRef) {
+            // 推送到云端数据库
+            push(danmakuRef, {
+                text: text,
+                timestamp: Date.now()
+            }).catch(error => {
+                console.error("发送失败:", error);
+                alert("Send failed! Please check Firebase Database Rules.");
+            });
+        }
+        
+        input.value = ''; // 清空输入框
+    }
+
+    sendBtn.addEventListener('click', sendDanmaku);
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendDanmaku();
     });
 
-    // 2. Matrix Rain 脚本 (适配白色背景)
+    // -----------------------------------------------------------------
+    // 4. 弹幕动画渲染逻辑 (B站风格)
+    // -----------------------------------------------------------------
+    const container = document.getElementById('danmaku-container');
+    // 颜色池：黑、深红、深蓝、深绿、橙红、深紫
+    const colors = ['#000000', '#D32F2F', '#1976D2', '#388E3C', '#E64A19', '#512DA8']; 
+
+    function createDanmaku(text) {
+        const el = document.createElement('div');
+        el.className = 'danmaku-item';
+        el.innerText = text;
+        
+        // 随机高度 (Top: 5% ~ 75%) 
+        const top = Math.floor(Math.random() * 70) + 5; 
+        el.style.top = top + '%';
+        
+        // 随机颜色
+        el.style.color = colors[Math.floor(Math.random() * colors.length)];
+        
+        // 随机速度 (8s ~ 15s) - 越长的文字可能看起来越快，给个随机区间
+        const duration = Math.floor(Math.random() * 7) + 8;
+        el.style.animation = `moveLeft ${duration}s linear`;
+        
+        container.appendChild(el);
+
+        // 动画结束后移除 DOM 元素
+        el.addEventListener('animationend', () => {
+            el.remove();
+        });
+    }
+
+    // -----------------------------------------------------------------
+    // 5. 其他原有逻辑 (Swiper & Matrix)
+    // -----------------------------------------------------------------
+    // Swiper
+    new Swiper(".mySwiper", {
+      slidesPerView: 1, spaceBetween: 0, loop: true, effect: "slide",
+      autoplay: { delay: 3500, disableOnInteraction: false },
+      pagination: { el: ".swiper-pagination", clickable: true },
+    });
+
+    // Matrix Rain (适配白底)
     const canvas = document.getElementById('matrix');
     const ctx = canvas.getContext('2d');
-
-    function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
-
     const chars = '01ABCDEFXYZ'; 
     const letters = chars.split('');
     const fontSize = 14;
-    
     let columns = canvas.width / fontSize;
     let drops = [];
-
-    function initDrops() {
-        columns = canvas.width / fontSize;
-        drops = [];
-        for(let x = 0; x < columns; x++) drops[x] = 1;
-    }
+    function initDrops() { columns = canvas.width / fontSize; drops = []; for(let x=0; x<columns; x++) drops[x]=1; }
     initDrops();
     window.addEventListener('resize', initDrops);
-
     function draw() {
-        // 关键修改：在白色背景上，我们需要填充半透明的白色来制造拖尾淡出效果
         ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 关键修改：字体颜色改为黑色（或深灰色），以便在白底上显示
         ctx.fillStyle = '#000000'; 
         ctx.font = fontSize + 'px monospace';
-
-        for(let i = 0; i < drops.length; i++) {
+        for(let i=0; i<drops.length; i++) {
             const text = letters[Math.floor(Math.random() * letters.length)];
             ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-            if(drops[i] * fontSize > canvas.height && Math.random() > 0.975)
-                drops[i] = 0;
-            
+            if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         }
     }
     setInterval(draw, 33);
-</script>
 
+</script>
 </body>
 </html>
