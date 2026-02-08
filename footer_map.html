@@ -1,0 +1,68 @@
+<div class="tracker-container">
+    
+    <div class="tracker-left">
+        <a href="https://clustrmaps.com/site/1bq02" target="_blank" title="Visit tracker">
+            <img src="//clustrmaps.com/map_v2.png?cl=192e93&w=800&t=n&d=6PjJaEDNVIug7egXt3z0wHVETPHDIlKxbZgGKZTqEQQ&co=041b2b&ct=e5dbdb" alt="visitor map"/>
+        </a>
+    </div>
+
+    <div class="tracker-right">
+        <script type="text/javascript" id="clstr_globe" src="//clustrmaps.com/globe.js?d=6PjJaEDNVIug7egXt3z0wHVETPHDIlKxbZgGKZTqEQQ"></script>
+    </div>
+
+</div>
+
+<style>
+    /* 1. 容器：使用比例控制高度 */
+    .tracker-container {
+        display: flex;
+        width: 100%;            /* 宽度跟随你的网页容器 */
+        
+        /* 【核心代码】纵横比 */
+        /* 4 / 1 表示：宽400px时高100px；宽800px时高200px */
+        aspect-ratio: 4 / 1;    
+        
+        /* 【安全限制】防止在手机上太矮，或在超大屏上太高 */
+        min-height: 150px;      
+        max-height: 400px;
+        
+        margin: 0 auto;
+        background: transparent;
+        overflow: hidden;
+        gap: 10px;              /* 中间间距 */
+    }
+
+    /* 2. 左侧 */
+    .tracker-left {
+        flex: 65;               /* 保持 65% 宽度占比 */
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    .tracker-left a {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    .tracker-left img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;      /* 无论怎么缩放，铺满格子 */
+    }
+
+    /* 3. 右侧 */
+    .tracker-right {
+        flex: 35;               /* 保持 35% 宽度占比 */
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+</style>
