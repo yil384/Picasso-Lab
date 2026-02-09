@@ -9,75 +9,88 @@
 
 <style>
     /* =========================================
-       全局设置
+       1. 全局设置
        ========================================= */
     body { 
         margin: 0; 
         overflow-x: hidden; 
-        background-color: #ffffff;
+        background-color: #ffffff; 
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         color: #333;
-        padding-bottom: 80px; /* 给底部输入框留位置 */
+        padding-bottom: 80px; 
     }
 
-    /* === 特效：Canvas 背景 === */
     canvas#matrix {
-        position: fixed; 
-        top: 0; 
-        left: 0; 
-        width: 100%; 
-        height: 100%;
-        z-index: -1;
-        opacity: 0.15;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: -1; opacity: 0.15;
     }
 
     /* =========================================
-       2. 🆕 弹幕系统升级 (UI 美化 + 防重叠)
+       2. 弹幕系统 (限制高度 + 模式样式)
        ========================================= */
     #danmaku-container {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 100%;
+        height: 40%; /* 仅在上半部分显示 */
         pointer-events: none;
         z-index: 9999;
         overflow: hidden;
+        mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
     }
 
-    /* 弹幕胶囊样式 */
+    /* 弹幕胶囊基础样式 */
     .danmaku-item {
         position: absolute;
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 5px 12px 5px 5px; /* 左侧留给头像/图片 */
-        background: rgba(0, 0, 0, 0.65); /* 深色半透明背景，对比度更好 */
+        gap: 8px; 
+        /* 默认 padding，适合有文字的情况 */
+        padding: 5px 12px 5px 5px; 
+        background: rgba(0, 0, 0, 0.65);
         backdrop-filter: blur(4px);
-        border-radius: 50px; /* 胶囊圆角 */
+        border-radius: 50px; 
         white-space: nowrap;
         font-size: 16px;
-        color: #fff; /* 白字 */
+        color: #fff;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         will-change: transform;
-        /* 初始在屏幕外，JS 控制动画 */
         transform: translateX(100vw); 
+        border: 1px solid rgba(255,255,255,0.2);
     }
 
-    /* 弹幕中的图片 */
+    /* 🔥 特殊修饰：只有图片时，减少 padding 让它变成一个紧凑的圆角矩形 */
+    .danmaku-item.image-only {
+        padding: 5px; 
+        border-radius: 12px; /* 图片模式稍微方一点 */
+        background: rgba(0, 0, 0, 0.5); /* 稍微淡一点 */
+    }
+
+    /* 弹幕图片 */
     .danmaku-img-content {
-        height: 80px; /* 图片高度 */
-        border-radius: 4px;
-        border: 1px solid rgba(255,255,255,0.3);
+        height: 45px; /* 图片高度固定 */
+        width: auto;
+        border-radius: 6px;
         display: block;
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    /* 图文混排时的图片样式 */
+    .danmaku-item.mixed-content .danmaku-img-content {
+        height: 35px; /* 混排时图片稍微小一点 */
+        border-radius: 50%; /* 混排时图片变成圆形，类似头像 */
+        width: 35px;
+        object-fit: cover;
     }
 
-    /* 弹幕头像 (纯文本时显示) */
+    /* 弹幕头像 (仅纯文字模式显示) */
     .danmaku-avatar {
         width: 28px;
         height: 28px;
         border-radius: 50%;
-        background: #0056b3; /* 默认蓝底 */
+        background: #0056b3;
         color: white;
         display: flex;
         align-items: center;
@@ -85,11 +98,10 @@
         font-size: 12px;
         font-weight: bold;
         flex-shrink: 0;
-        border: 1px solid rgba(255,255,255,0.5);
     }
 
     /* =========================================
-       3. 🆕 底部输入框 (支持图片发送)
+       3. 底部输入框
        ========================================= */
     .danmaku-input-area {
         position: fixed;
@@ -97,12 +109,12 @@
         left: 50%;
         transform: translateX(-50%);
         width: 90%;
-        max-width: 600px; /* 稍微宽一点 */
+        max-width: 600px;
         height: 50px;
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border: 1px solid #ddd;
-        border-radius: 25px; /* 更圆润 */
+        border-radius: 25px;
         display: flex;
         align-items: center;
         padding: 0 5px;
@@ -110,7 +122,6 @@
         box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     }
 
-    /* 图片上传按钮 */
     .img-upload-btn {
         width: 40px;
         height: 40px;
@@ -124,9 +135,10 @@
         margin-left: 5px;
     }
     .img-upload-btn:hover { background: #f0f0f0; color: #0056b3; }
-    #dm-file-input { display: none; } /* 隐藏原生文件框 */
+    .img-upload-btn.has-file { color: #28a745; background: #e6ffed; }
 
-    /* 图片预览气泡 */
+    #dm-file-input { display: none; }
+
     #img-preview-container {
         position: absolute;
         bottom: 60px;
@@ -161,7 +173,6 @@
         border: 2px solid white;
     }
 
-    /* 输入框本体 */
     #dm-input {
         flex: 1;
         border: none;
@@ -172,7 +183,6 @@
         padding: 0 10px;
     }
 
-    /* 发送按钮 */
     #dm-send-btn {
         padding: 6px 20px;
         background: #0056b3;
@@ -188,38 +198,17 @@
     #dm-send-btn:hover { background: #004494; }
 
     /* =========================================
-       4. 原有样式 (Banner & Cards 保持不变)
+       4. 原有页面样式 (保持不变)
        ========================================= */
-    .news-banner {
-        background-color: #f8f9fa; /* 保持原样 */
-        color: #555;
-        height: 40px;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        font-size: 0.9em;
-        border-bottom: 1px solid #eaeaea;
-    }
+    .news-banner { background-color: #f8f9fa; color: #555; height: 40px; display: flex; align-items: center; overflow: hidden; border-bottom: 1px solid #eaeaea; }
     .ticker-track { display: flex; animation: scroll 40s linear infinite; }
     @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     .news-banner:hover .ticker-track { animation-play-state: paused; }
     .ticker-content { display: flex; align-items: center; white-space: nowrap; padding-right: 50px; }
-    .ticker-item { margin-right: 3rem; display: inline-flex; align-items: center; }
+    .ticker-item { margin-right: 3rem; display: inline-flex; align-items: center; font-size: 0.9em; }
     .ticker-tag { font-weight: bold; color: #0056b3; margin-right: 6px; }
 
-    .event-card {
-        display: flex;
-        background-color: #fff;
-        border: 1px solid #e0e0e0; /* 保持原样 */
-        border-radius: 8px;
-        overflow: hidden;
-        margin: 20px auto;
-        max-width: 900px;
-        height: 250px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 保持原样 */
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
+    .event-card { display: flex; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; margin: 20px auto; max-width: 900px; height: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
     .event-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 
     .cursor-bbq { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍖%3C/text%3E%3C/svg%3E") 16 16, pointer; }
@@ -243,13 +232,13 @@
     @media (max-width: 600px) {
         .event-card { flex-direction: column; height: auto; }
         .event-image { width: 100%; height: 220px; flex: none; }
+        #danmaku-container { height: 45%; }
     }
 </style>
 </head>
 <body>
 
 <div id="danmaku-container"></div>
-
 <canvas id="matrix"></canvas>
 
 <div class="news-banner">
@@ -390,23 +379,20 @@
         <img id="img-preview-target" src="" alt="preview">
     </div>
 
-    <label for="dm-file-input" class="img-upload-btn" title="Send Image">
+    <label for="dm-file-input" class="img-upload-btn" id="upload-icon-label" title="Add Image">
         <i class="far fa-image fa-lg"></i>
     </label>
     <input type="file" id="dm-file-input" accept="image/*">
 
-    <input type="text" id="dm-input" placeholder="Type a message..." maxlength="50">
+    <input type="text" id="dm-input" placeholder="Say something..." maxlength="50">
     <button id="dm-send-btn">Send</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
 <script type="module">
-    // -----------------------------------------------------------------
-    // Firebase 初始化 (保持不变)
-    // -----------------------------------------------------------------
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
@@ -420,23 +406,166 @@
     };
 
     let db, danmakuRef;
+    const danmakuPool = [];
+    let isInitialLoad = true;
+
     try {
         const app = initializeApp(firebaseConfig);
         db = getDatabase(app);
         danmakuRef = ref(db, 'danmaku');
-        onChildAdded(danmakuRef, (snapshot) => {
+        
+        const recentPosts = query(danmakuRef, limitToLast(100));
+        
+        onChildAdded(recentPosts, (snapshot) => {
             const data = snapshot.val();
-            if (data) renderDanmaku(data);
+            if (data) {
+                danmakuPool.push(data);
+                if (!isInitialLoad) {
+                    fireDanmaku(data, true);
+                }
+            }
         });
-        console.log("Firebase initialized");
+
+        setTimeout(() => {
+            isInitialLoad = false;
+            startCycleEngine();
+        }, 1500);
+
     } catch (e) {
         console.error("Firebase Error", e);
     }
 
     // -----------------------------------------------------------------
-    // 🆕 图片处理逻辑 (Base64 压缩)
+    // 🔄 Cycle Engine
+    // -----------------------------------------------------------------
+    let cycleState = 'IDLE';
+    const CYCLE_COOLDOWN = 5000;
+    
+    function startCycleEngine() {
+        if (cycleState !== 'IDLE') return;
+        runCycle();
+    }
+
+    async function runCycle() {
+        if (danmakuPool.length === 0) {
+            setTimeout(runCycle, 1000);
+            return;
+        }
+
+        cycleState = 'PLAYING';
+        
+        // Fisher-Yates Shuffle
+        const currentBatch = [...danmakuPool]; 
+        for (let i = currentBatch.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentBatch[i], currentBatch[j]] = [currentBatch[j], currentBatch[i]];
+        }
+
+        for (const item of currentBatch) {
+            fireDanmaku(item, false); 
+            // Random Gap
+            const gap = Math.random() * 1500 + 800; 
+            await new Promise(r => setTimeout(r, gap));
+        }
+
+        cycleState = 'COOLDOWN';
+        setTimeout(() => {
+            cycleState = 'IDLE';
+            runCycle();
+        }, CYCLE_COOLDOWN);
+    }
+
+    // -----------------------------------------------------------------
+    // 🎨 Render Logic (FIXED FOR 3 MODES)
+    // -----------------------------------------------------------------
+    const container = document.getElementById('danmaku-container');
+    const trackHeight = 50; 
+    let tracks = []; 
+
+    function initTracks() {
+        const containerH = window.innerHeight * 0.4; // 40% height
+        const maxTracks = Math.floor(containerH / trackHeight);
+        tracks = [];
+        for(let i=0; i<maxTracks; i++) tracks[i] = { available: true };
+    }
+    initTracks();
+    window.addEventListener('resize', initTracks);
+
+    function getAvailableTrack() {
+        const avail = tracks.map((t, i) => t.available ? i : -1).filter(i => i !== -1);
+        if (avail.length > 0) return avail[Math.floor(Math.random() * avail.length)];
+        return Math.floor(Math.random() * tracks.length);
+    }
+
+    // 🔥 核心修复函数：分情况渲染
+    function fireDanmaku(data, isPriority) {
+        const el = document.createElement('div');
+        el.className = 'danmaku-item';
+        
+        if (isPriority) {
+            el.style.zIndex = 10001;
+            el.style.border = "1px solid #ffd700";
+        }
+
+        let hasImage = !!data.image;
+        let hasText = !!data.text;
+
+        // --- 场景 1: 只有图片 (Only Image) ---
+        if (hasImage && !hasText) {
+            el.classList.add('image-only'); // 添加特殊类，去掉多余padding
+            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" />`;
+        }
+        // --- 场景 2: 图文混排 (Text + Image) ---
+        else if (hasImage && hasText) {
+            el.classList.add('mixed-content');
+            // 图片在前，文字在后
+            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" /><span>${data.text}</span>`;
+        }
+        // --- 场景 3: 只有文字 (Only Text) ---
+        else if (hasText) {
+            // 生成随机头像背景色
+            const avatar = data.text.charAt(0).toUpperCase();
+            const colors = ['#007bff', '#28a745', '#dc3545', '#fd7e14', '#6610f2'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            el.innerHTML = `<div class="danmaku-avatar" style="background:${color}">${avatar}</div><span>${data.text}</span>`;
+        }
+        // --- 场景 4: 数据为空 (防御性代码) ---
+        else {
+            return; // 只有空数据不渲染
+        }
+
+        // 轨道与位置
+        const trackIdx = getAvailableTrack();
+        // 如果轨道没初始化好（极少数情况），默认0
+        const safeTrackIdx = trackIdx !== undefined ? trackIdx : 0;
+        
+        el.style.top = (safeTrackIdx * trackHeight + 10) + 'px';
+        
+        if (tracks[safeTrackIdx]) {
+            tracks[safeTrackIdx].available = false;
+            setTimeout(() => { if(tracks[safeTrackIdx]) tracks[safeTrackIdx].available = true; }, 1000);
+        }
+
+        container.appendChild(el);
+
+        // 动画
+        const w = el.offsetWidth;
+        const screenW = window.innerWidth;
+        const duration = (screenW + w) / 120 + Math.random(); 
+        
+        el.getBoundingClientRect(); 
+        el.style.transition = `transform ${duration}s linear`;
+        el.style.transform = `translateX(-${w + 50}px)`;
+
+        el.addEventListener('transitionend', () => el.remove());
+    }
+
+    // -----------------------------------------------------------------
+    // 📷 Image Handling
     // -----------------------------------------------------------------
     const fileInput = document.getElementById('dm-file-input');
+    const uploadLabel = document.getElementById('upload-icon-label');
     const imgPreviewContainer = document.getElementById('img-preview-container');
     const imgPreviewTarget = document.getElementById('img-preview-target');
     const clearImgBtn = document.getElementById('clear-img-btn');
@@ -450,7 +579,6 @@
         reader.onload = function(event) {
             const img = new Image();
             img.onload = function() {
-                // 压缩图片以适应 Firebase
                 const MAX_SIZE = 300;
                 let w = img.width, h = img.height;
                 if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
@@ -461,100 +589,52 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
 
-                currentImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                currentImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
                 imgPreviewTarget.src = currentImageBase64;
                 imgPreviewContainer.style.display = 'block';
+                uploadLabel.classList.add('has-file');
             }
             img.src = event.target.result;
         }
         reader.readAsDataURL(file);
     });
 
-    clearImgBtn.addEventListener('click', () => {
+    function clearImage() {
         fileInput.value = '';
         currentImageBase64 = null;
         imgPreviewContainer.style.display = 'none';
-    });
+        uploadLabel.classList.remove('has-file');
+    }
+    clearImgBtn.addEventListener('click', clearImage);
 
     // -----------------------------------------------------------------
-    // 🆕 发送逻辑 (图文支持)
+    // 🚀 Send Logic
     // -----------------------------------------------------------------
     const input = document.getElementById('dm-input');
     const sendBtn = document.getElementById('dm-send-btn');
 
     function sendDanmaku() {
         const text = input.value.trim();
-        if (currentImageBase64) {
-            push(danmakuRef, { type: 'image', content: currentImageBase64, timestamp: Date.now() });
-            fileInput.value = '';
-            currentImageBase64 = null;
-            imgPreviewContainer.style.display = 'none';
-        } else if (text) {
-            push(danmakuRef, { type: 'text', content: text, timestamp: Date.now() });
-            input.value = '';
-        }
+        // 只要有 文本 或者 图片 其中之一，就可以发送
+        if (!text && !currentImageBase64) return;
+
+        const payload = { timestamp: Date.now() };
+        
+        // 明确赋值，如果有文字就传文字，有图片就传图片
+        if (text) payload.text = text;
+        if (currentImageBase64) payload.image = currentImageBase64;
+
+        push(danmakuRef, payload);
+
+        input.value = '';
+        clearImage();
     }
+
     sendBtn.addEventListener('click', sendDanmaku);
     input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendDanmaku(); });
 
     // -----------------------------------------------------------------
-    // 🆕 渲染逻辑 (胶囊样式 + 智能防重叠)
-    // -----------------------------------------------------------------
-    const container = document.getElementById('danmaku-container');
-    const trackHeight = 45; // 轨道高度
-    const tracks = []; 
-
-    function initTracks() {
-        const max = Math.floor(window.innerHeight / trackHeight);
-        for(let i=0; i<max; i++) tracks[i] = { available: true };
-    }
-    initTracks();
-    window.addEventListener('resize', initTracks);
-
-    function getAvailableTrack() {
-        const avail = tracks.map((t, i) => t.available ? i : -1).filter(i => i !== -1);
-        if (avail.length > 0) return avail[Math.floor(Math.random() * avail.length)];
-        return Math.floor(Math.random() * tracks.length);
-    }
-
-    function renderDanmaku(data) {
-        const el = document.createElement('div');
-        el.className = 'danmaku-item';
-        
-        if (data.type === 'image') {
-            el.innerHTML = `<img src="${data.content}" class="danmaku-img-content" />`;
-            el.style.borderRadius = "8px"; // 图片模式稍微方一点
-        } else {
-            const text = data.content || data.text;
-            const avatar = text.charAt(0).toUpperCase();
-            // 头像背景色池
-            const colors = ['#007bff', '#28a745', '#dc3545', '#fd7e14', '#6610f2'];
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            el.innerHTML = `<div class="danmaku-avatar" style="background:${color}">${avatar}</div><span>${text}</span>`;
-        }
-
-        const trackIdx = getAvailableTrack();
-        el.style.top = (trackIdx * trackHeight + 20) + 'px';
-        
-        // 简单防重叠：1.5秒后该轨道才可用
-        tracks[trackIdx].available = false;
-        setTimeout(() => tracks[trackIdx].available = true, 1500);
-
-        container.appendChild(el);
-
-        // 动画计算
-        const w = el.offsetWidth;
-        const duration = (window.innerWidth + w) / 150 + Math.random(); // 基础速度150px/s
-        
-        el.getBoundingClientRect(); // 强制重绘
-        el.style.transition = `transform ${duration}s linear`;
-        el.style.transform = `translateX(-${w + 50}px)`;
-
-        el.addEventListener('transitionend', () => el.remove());
-    }
-
-    // -----------------------------------------------------------------
-    // 原有逻辑 (Swiper & Matrix)
+    // Swiper & Matrix
     // -----------------------------------------------------------------
     new Swiper(".mySwiper", {
         slidesPerView: 1, spaceBetween: 0, loop: true, effect: "slide",
