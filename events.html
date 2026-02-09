@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lab Events - Live Danmaku</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
     /* =========================================
@@ -31,7 +32,7 @@
     }
 
     /* =========================================
-       弹幕层样式 (Danmaku Layer)
+       2. 🆕 弹幕系统升级 (UI 美化 + 防重叠)
        ========================================= */
     #danmaku-container {
         position: fixed;
@@ -39,85 +40,158 @@
         left: 0;
         width: 100%;
         height: 100%;
-        pointer-events: none; /* 让点击穿透 */
+        pointer-events: none;
         z-index: 9999;
         overflow: hidden;
     }
 
+    /* 弹幕胶囊样式 */
     .danmaku-item {
         position: absolute;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px 5px 5px; /* 左侧留给头像/图片 */
+        background: rgba(0, 0, 0, 0.65); /* 深色半透明背景，对比度更好 */
+        backdrop-filter: blur(4px);
+        border-radius: 50px; /* 胶囊圆角 */
         white-space: nowrap;
-        font-weight: bold;
-        font-size: 24px; /* 字体稍微大一点 */
-        color: #000;
-        text-shadow: 2px 2px 0px white, -1px -1px 0px white; /* 白色描边增强可读性 */
+        font-size: 16px;
+        color: #fff; /* 白字 */
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         will-change: transform;
-        transform: translateX(100vw); /* 初始位置 */
-        font-family: "SimHei", "Microsoft YaHei", sans-serif;
-        opacity: 0.9;
+        /* 初始在屏幕外，JS 控制动画 */
+        transform: translateX(100vw); 
     }
 
-    /* 定义弹幕动画 */
-    @keyframes moveLeft {
-        from { transform: translateX(100vw); }
-        to { transform: translateX(-100%); }
+    /* 弹幕中的图片 */
+    .danmaku-img-content {
+        height: 80px; /* 图片高度 */
+        border-radius: 4px;
+        border: 1px solid rgba(255,255,255,0.3);
+        display: block;
     }
 
-    /* =========================================
-       底部输入框样式
-       ========================================= */
-    .danmaku-input-area {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 60px;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid #ddd;
+    /* 弹幕头像 (纯文本时显示) */
+    .danmaku-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #0056b3; /* 默认蓝底 */
+        color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 10000;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        font-size: 12px;
+        font-weight: bold;
+        flex-shrink: 0;
+        border: 1px solid rgba(255,255,255,0.5);
     }
 
-    .danmaku-input-wrapper {
-        display: flex;
+    /* =========================================
+       3. 🆕 底部输入框 (支持图片发送)
+       ========================================= */
+    .danmaku-input-area {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
         width: 90%;
-        max-width: 600px;
-        gap: 10px;
+        max-width: 600px; /* 稍微宽一点 */
+        height: 50px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid #ddd;
+        border-radius: 25px; /* 更圆润 */
+        display: flex;
+        align-items: center;
+        padding: 0 5px;
+        z-index: 10000;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     }
 
+    /* 图片上传按钮 */
+    .img-upload-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #666;
+        transition: all 0.2s;
+        margin-left: 5px;
+    }
+    .img-upload-btn:hover { background: #f0f0f0; color: #0056b3; }
+    #dm-file-input { display: none; } /* 隐藏原生文件框 */
+
+    /* 图片预览气泡 */
+    #img-preview-container {
+        position: absolute;
+        bottom: 60px;
+        left: 0;
+        background: white;
+        padding: 5px;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        display: none;
+        border: 1px solid #eee;
+    }
+    #img-preview-target {
+        max-width: 100px;
+        max-height: 100px;
+        border-radius: 4px;
+        display: block;
+    }
+    #clear-img-btn {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ff4d4f;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 2px solid white;
+    }
+
+    /* 输入框本体 */
     #dm-input {
         flex: 1;
-        padding: 10px 15px;
-        border: 1px solid #ccc;
-        border-radius: 20px;
+        border: none;
+        background: transparent;
+        height: 100%;
+        font-size: 15px;
         outline: none;
-        transition: border 0.3s;
-        font-size: 16px;
+        padding: 0 10px;
     }
-    #dm-input:focus { border-color: #0056b3; }
 
+    /* 发送按钮 */
     #dm-send-btn {
-        padding: 0 25px;
+        padding: 6px 20px;
         background: #0056b3;
         color: white;
         border: none;
         border-radius: 20px;
         cursor: pointer;
         font-weight: bold;
-        transition: background 0.3s;
         font-size: 14px;
+        margin-right: 5px;
+        transition: background 0.3s;
     }
     #dm-send-btn:hover { background: #004494; }
 
     /* =========================================
-       原有样式保持不变
+       4. 原有样式 (Banner & Cards 保持不变)
        ========================================= */
     .news-banner {
-        background-color: #f8f9fa;
+        background-color: #f8f9fa; /* 保持原样 */
         color: #555;
         height: 40px;
         position: relative;
@@ -127,7 +201,6 @@
         font-size: 0.9em;
         border-bottom: 1px solid #eaeaea;
     }
-
     .ticker-track { display: flex; animation: scroll 40s linear infinite; }
     @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     .news-banner:hover .ticker-track { animation-play-state: paused; }
@@ -138,13 +211,13 @@
     .event-card {
         display: flex;
         background-color: #fff;
-        border: 1px solid #e0e0e0;
+        border: 1px solid #e0e0e0; /* 保持原样 */
         border-radius: 8px;
         overflow: hidden;
         margin: 20px auto;
         max-width: 900px;
         height: 250px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 保持原样 */
         transition: transform 0.2s, box-shadow 0.2s;
     }
     .event-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -170,7 +243,6 @@
     @media (max-width: 600px) {
         .event-card { flex-direction: column; height: auto; }
         .event-image { width: 100%; height: 220px; flex: none; }
-        .danmaku-item { font-size: 18px; } 
     }
 </style>
 </head>
@@ -204,12 +276,8 @@
 <div class="event-card cursor-party">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-birth/1.jpg?raw=true" alt="Happy Birthday Zaifeng">
-            </div>
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-birth/2.jpg?raw=true" alt="Zaifeng at Work">
-            </div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-birth/1.jpg?raw=true" alt="Happy Birthday Zaifeng"></div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-birth/2.jpg?raw=true" alt="Zaifeng at Work"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -228,16 +296,10 @@
 <div class="event-card cursor-bbq">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-        <div class="swiper-slide">
-            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/1.jpg?raw=true" alt="Christmas Party at Fire Spot">
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/1.jpg?raw=true" alt="Christmas Party"></div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/2.jpg?raw=true" alt="Fire Spot BBQ"></div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/3.jpg?raw=true" alt="Fire Spot BBQ"></div>
         </div>
-        <div class="swiper-slide">
-            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/2.jpg?raw=true" alt="Fire Spot BBQ">
-        </div>
-        <div class="swiper-slide">
-            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/3.jpg?raw=true" alt="Fire Spot BBQ">
-        </div>
-    </div>
         <div class="swiper-pagination"></div>
     </div>
     <div class="event-content">
@@ -253,15 +315,9 @@
 <div class="event-card cursor-party">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-        <div class="swiper-slide">
-            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/1.jpg?raw=true" alt="Zheng Wang Defense">
-        </div>
-        <div class="swiper-slide">
-            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/2.jpg?raw=true" alt="Thesis Presentation Slide">
-        </div>
-            <div class="swiper-slide">
-            <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/3.jpg?raw=true" alt="Group Photo">
-        </div>
+        <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/1.jpg?raw=true" alt="Zheng Wang Defense"></div>
+        <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/2.jpg?raw=true" alt="Thesis Presentation"></div>
+        <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/3.jpg?raw=true" alt="Group Photo"></div>
     </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -278,12 +334,8 @@
     <div class="event-card cursor-paper">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-nips/1.jpg?raw=true" alt="NeurIPS Poster">
-            </div>
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-nips/2.jpg?raw=true" alt="Conference Hall">
-            </div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-nips/1.jpg?raw=true" alt="NeurIPS Poster"></div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-nips/2.jpg?raw=true" alt="Conference Hall"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -300,9 +352,7 @@
 <div class="event-card cursor-hotpot">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/thxgiving-lunch.jpg?raw=true" alt="Thanksgiving Hot Pot">
-            </div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/thxgiving-lunch.jpg?raw=true" alt="Thanksgiving Hot Pot"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -319,12 +369,8 @@
 <div class="event-card cursor-music">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/xiang/1.jpg?raw=true" alt="Infinity and Beyond Stage">
-            </div>
-            <div class="swiper-slide">
-                <img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/xiang/2.jpg?raw=true" alt="Xiang Fang composing">
-            </div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/xiang/1.jpg?raw=true" alt="Infinity and Beyond Stage"></div>
+            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/xiang/2.jpg?raw=true" alt="Xiang Fang composing"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -339,24 +385,29 @@
 </div>
 
 <div class="danmaku-input-area">
-    <div class="danmaku-input-wrapper">
-        <input type="text" id="dm-input" placeholder="Send a danmaku to the lab... (Enter to send)" maxlength="50">
-        <button id="dm-send-btn">Send</button>
+    <div id="img-preview-container">
+        <div id="clear-img-btn">×</div>
+        <img id="img-preview-target" src="" alt="preview">
     </div>
+
+    <label for="dm-file-input" class="img-upload-btn" title="Send Image">
+        <i class="far fa-image fa-lg"></i>
+    </label>
+    <input type="file" id="dm-file-input" accept="image/*">
+
+    <input type="text" id="dm-input" placeholder="Type a message..." maxlength="50">
+    <button id="dm-send-btn">Send</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
 <script type="module">
     // -----------------------------------------------------------------
-    // 1. 引入 Firebase SDK (版本 12.8.0)
+    // Firebase 初始化 (保持不变)
     // -----------------------------------------------------------------
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
 
-    // -----------------------------------------------------------------
-    // 2. Firebase 配置 (已填入您的配置)
-    // -----------------------------------------------------------------
     const firebaseConfig = {
         apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
         authDomain: "yichen-5e23e.firebaseapp.com",
@@ -368,127 +419,171 @@
         measurementId: "G-ZMREJCJL1G"
     };
 
-    // 初始化 Firebase
-    let app, db, danmakuRef;
-    
+    let db, danmakuRef;
     try {
-        app = initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
         db = getDatabase(app);
-        danmakuRef = ref(db, 'danmaku'); // 数据存储在 'danmaku' 路径下
-        
-        console.log("Firebase initialized successfully!");
-
-        // 监听新弹幕 (一旦数据库有新数据，这里会立即触发)
+        danmakuRef = ref(db, 'danmaku');
         onChildAdded(danmakuRef, (snapshot) => {
             const data = snapshot.val();
-            if (data && data.text) {
-                createDanmaku(data.text);
-            }
+            if (data) renderDanmaku(data);
         });
-        
+        console.log("Firebase initialized");
     } catch (e) {
-        console.error("Firebase 初始化失败，请检查控制台。", e);
-        setTimeout(() => createDanmaku("Error connecting to database!"), 1000);
+        console.error("Firebase Error", e);
     }
 
     // -----------------------------------------------------------------
-    // 3. 发送弹幕逻辑
+    // 🆕 图片处理逻辑 (Base64 压缩)
+    // -----------------------------------------------------------------
+    const fileInput = document.getElementById('dm-file-input');
+    const imgPreviewContainer = document.getElementById('img-preview-container');
+    const imgPreviewTarget = document.getElementById('img-preview-target');
+    const clearImgBtn = document.getElementById('clear-img-btn');
+    let currentImageBase64 = null;
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                // 压缩图片以适应 Firebase
+                const MAX_SIZE = 300;
+                let w = img.width, h = img.height;
+                if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+                else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+
+                currentImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                imgPreviewTarget.src = currentImageBase64;
+                imgPreviewContainer.style.display = 'block';
+            }
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    });
+
+    clearImgBtn.addEventListener('click', () => {
+        fileInput.value = '';
+        currentImageBase64 = null;
+        imgPreviewContainer.style.display = 'none';
+    });
+
+    // -----------------------------------------------------------------
+    // 🆕 发送逻辑 (图文支持)
     // -----------------------------------------------------------------
     const input = document.getElementById('dm-input');
     const sendBtn = document.getElementById('dm-send-btn');
 
     function sendDanmaku() {
         const text = input.value.trim();
-        if (!text) return;
-
-        if (danmakuRef) {
-            // 推送到云端数据库
-            push(danmakuRef, {
-                text: text,
-                timestamp: Date.now()
-            }).catch(error => {
-                console.error("发送失败:", error);
-                alert("Send failed! Please check Firebase Database Rules.");
-            });
+        if (currentImageBase64) {
+            push(danmakuRef, { type: 'image', content: currentImageBase64, timestamp: Date.now() });
+            fileInput.value = '';
+            currentImageBase64 = null;
+            imgPreviewContainer.style.display = 'none';
+        } else if (text) {
+            push(danmakuRef, { type: 'text', content: text, timestamp: Date.now() });
+            input.value = '';
         }
-        
-        input.value = ''; // 清空输入框
     }
-
     sendBtn.addEventListener('click', sendDanmaku);
-    input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendDanmaku();
-    });
+    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendDanmaku(); });
 
     // -----------------------------------------------------------------
-    // 4. 弹幕动画渲染逻辑 (B站风格)
+    // 🆕 渲染逻辑 (胶囊样式 + 智能防重叠)
     // -----------------------------------------------------------------
     const container = document.getElementById('danmaku-container');
-    // 颜色池：黑、深红、深蓝、深绿、橙红、深紫
-    const colors = ['#000000', '#D32F2F', '#1976D2', '#388E3C', '#E64A19', '#512DA8']; 
+    const trackHeight = 45; // 轨道高度
+    const tracks = []; 
 
-    function createDanmaku(text) {
+    function initTracks() {
+        const max = Math.floor(window.innerHeight / trackHeight);
+        for(let i=0; i<max; i++) tracks[i] = { available: true };
+    }
+    initTracks();
+    window.addEventListener('resize', initTracks);
+
+    function getAvailableTrack() {
+        const avail = tracks.map((t, i) => t.available ? i : -1).filter(i => i !== -1);
+        if (avail.length > 0) return avail[Math.floor(Math.random() * avail.length)];
+        return Math.floor(Math.random() * tracks.length);
+    }
+
+    function renderDanmaku(data) {
         const el = document.createElement('div');
         el.className = 'danmaku-item';
-        el.innerText = text;
         
-        // 随机高度 (Top: 5% ~ 75%) 
-        const top = Math.floor(Math.random() * 70) + 5; 
-        el.style.top = top + '%';
+        if (data.type === 'image') {
+            el.innerHTML = `<img src="${data.content}" class="danmaku-img-content" />`;
+            el.style.borderRadius = "8px"; // 图片模式稍微方一点
+        } else {
+            const text = data.content || data.text;
+            const avatar = text.charAt(0).toUpperCase();
+            // 头像背景色池
+            const colors = ['#007bff', '#28a745', '#dc3545', '#fd7e14', '#6610f2'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            el.innerHTML = `<div class="danmaku-avatar" style="background:${color}">${avatar}</div><span>${text}</span>`;
+        }
+
+        const trackIdx = getAvailableTrack();
+        el.style.top = (trackIdx * trackHeight + 20) + 'px';
         
-        // 随机颜色
-        el.style.color = colors[Math.floor(Math.random() * colors.length)];
-        
-        // 随机速度 (8s ~ 15s) - 越长的文字可能看起来越快，给个随机区间
-        const duration = Math.floor(Math.random() * 7) + 8;
-        el.style.animation = `moveLeft ${duration}s linear`;
-        
+        // 简单防重叠：1.5秒后该轨道才可用
+        tracks[trackIdx].available = false;
+        setTimeout(() => tracks[trackIdx].available = true, 1500);
+
         container.appendChild(el);
 
-        // 动画结束后移除 DOM 元素
-        el.addEventListener('animationend', () => {
-            el.remove();
-        });
+        // 动画计算
+        const w = el.offsetWidth;
+        const duration = (window.innerWidth + w) / 150 + Math.random(); // 基础速度150px/s
+        
+        el.getBoundingClientRect(); // 强制重绘
+        el.style.transition = `transform ${duration}s linear`;
+        el.style.transform = `translateX(-${w + 50}px)`;
+
+        el.addEventListener('transitionend', () => el.remove());
     }
 
     // -----------------------------------------------------------------
-    // 5. 其他原有逻辑 (Swiper & Matrix)
+    // 原有逻辑 (Swiper & Matrix)
     // -----------------------------------------------------------------
-    // Swiper
     new Swiper(".mySwiper", {
-      slidesPerView: 1, spaceBetween: 0, loop: true, effect: "slide",
-      autoplay: { delay: 3500, disableOnInteraction: false },
-      pagination: { el: ".swiper-pagination", clickable: true },
+        slidesPerView: 1, spaceBetween: 0, loop: true, effect: "slide",
+        autoplay: { delay: 3500, disableOnInteraction: false },
+        pagination: { el: ".swiper-pagination", clickable: true },
     });
 
-    // Matrix Rain (适配白底)
-    const canvas = document.getElementById('matrix');
-    const ctx = canvas.getContext('2d');
-    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-    const chars = '01ABCDEFXYZ'; 
-    const letters = chars.split('');
-    const fontSize = 14;
-    let columns = canvas.width / fontSize;
-    let drops = [];
-    function initDrops() { columns = canvas.width / fontSize; drops = []; for(let x=0; x<columns; x++) drops[x]=1; }
+    const cvs = document.getElementById('matrix');
+    const ctx = cvs.getContext('2d');
+    function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
+    window.addEventListener('resize', resize);
+    resize();
+    const chars = '01ABCDEFXYZ'; const letters = chars.split(''); const fs = 14;
+    let cols = cvs.width / fs; let drops = [];
+    function initDrops() { cols = cvs.width / fs; drops = []; for(let x=0; x<cols; x++) drops[x]=1; }
     initDrops();
-    window.addEventListener('resize', initDrops);
     function draw() {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#000000'; 
-        ctx.font = fontSize + 'px monospace';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(0, 0, cvs.width, cvs.height);
+        ctx.fillStyle = '#000000';
+        ctx.font = fs + 'px monospace';
         for(let i=0; i<drops.length; i++) {
-            const text = letters[Math.floor(Math.random() * letters.length)];
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            const t = letters[Math.floor(Math.random()*letters.length)];
+            ctx.fillText(t, i*fs, drops[i]*fs);
+            if(drops[i]*fs > cvs.height && Math.random()>0.975) drops[i]=0;
             drops[i]++;
         }
     }
     setInterval(draw, 33);
-
 </script>
 </body>
 </html>
