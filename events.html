@@ -26,19 +26,26 @@
     }
 
     /* =========================================
-       2. 弹幕系统 (限制高度 + 模式样式)
+       2. 弹幕系统 (互动升级版)
        ========================================= */
     #danmaku-container {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 40%; /* 仅在上半部分显示 */
-        pointer-events: none;
+        height: 45%; /* 稍微加高一点区域 */
+        pointer-events: none; /* 关键：允许鼠标穿透容器点击下方的网页 */
         z-index: 9999;
         overflow: hidden;
-        mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+        /* 遮罩，让弹幕在进入和离开时有淡入淡出效果 */
+        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    }
+
+    /* 定义弹幕移动动画关键帧 */
+    @keyframes danmaku-slide {
+        from { transform: translateX(100vw); }
+        to { transform: translateX(-100%); }
     }
 
     /* 弹幕胶囊基础样式 */
@@ -47,7 +54,6 @@
         display: inline-flex;
         align-items: center;
         gap: 8px; 
-        /* 默认 padding，适合有文字的情况 */
         padding: 5px 12px 5px 5px; 
         background: rgba(0, 0, 0, 0.65);
         backdrop-filter: blur(4px);
@@ -56,36 +62,59 @@
         font-size: 16px;
         color: #fff;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        will-change: transform;
-        transform: translateX(100vw); 
         border: 1px solid rgba(255,255,255,0.2);
+        
+        /* 交互核心设置 */
+        pointer-events: auto; /* 允许捕获鼠标事件 */
+        user-select: text;    /* 允许选中文字 */
+        cursor: default;      /* 默认指针 */
+        
+        /* 动画设置 */
+        will-change: transform;
+        animation-name: danmaku-slide;
+        animation-timing-function: linear;
+        animation-fill-mode: forwards;
     }
 
-    /* 🔥 特殊修饰：只有图片时，减少 padding 让它变成一个紧凑的圆角矩形 */
+    /* 🔥 核心功能：鼠标悬停暂停 + 样式增强 */
+    .danmaku-item:hover {
+        animation-play-state: paused !important; /* 暂停动画 */
+        z-index: 100000; /* 提升层级，防止被遮挡 */
+        background: rgba(0, 0, 0, 0.85); /* 颜色加深方便阅读 */
+        border-color: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    /* 图片模式修饰 */
     .danmaku-item.image-only {
         padding: 5px; 
-        border-radius: 12px; /* 图片模式稍微方一点 */
-        background: rgba(0, 0, 0, 0.5); /* 稍微淡一点 */
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.5);
     }
 
-    /* 弹幕图片 */
+    /* 弹幕内的图片 */
     .danmaku-img-content {
-        height: 45px; /* 图片高度固定 */
+        height: 45px;
         width: auto;
         border-radius: 6px;
         display: block;
         border: 1px solid rgba(255,255,255,0.3);
+        cursor: zoom-in; /* 提示可放大 */
+        transition: transform 0.2s;
     }
     
-    /* 图文混排时的图片样式 */
+    .danmaku-img-content:hover {
+        transform: scale(1.05);
+    }
+    
+    /* 混排模式 */
     .danmaku-item.mixed-content .danmaku-img-content {
-        height: 35px; /* 混排时图片稍微小一点 */
-        border-radius: 50%; /* 混排时图片变成圆形，类似头像 */
+        height: 35px;
         width: 35px;
+        border-radius: 50%;
         object-fit: cover;
     }
 
-    /* 弹幕头像 (仅纯文字模式显示) */
     .danmaku-avatar {
         width: 28px;
         height: 28px;
@@ -98,10 +127,51 @@
         font-size: 12px;
         font-weight: bold;
         flex-shrink: 0;
+        user-select: none; /* 头像不给选，防止复制时干扰 */
     }
 
     /* =========================================
-       3. 底部输入框
+       3. 图片预览 Modal (Lightbox)
+       ========================================= */
+    #lightbox-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85);
+        z-index: 20000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.3s;
+        backdrop-filter: blur(5px);
+    }
+    #lightbox-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+    #lightbox-img {
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 8px;
+        box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+        transform: scale(0.9);
+        transition: transform 0.3s;
+    }
+    #lightbox-overlay.active #lightbox-img {
+        transform: scale(1);
+    }
+    #lightbox-close {
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        color: white;
+        font-size: 40px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    /* =========================================
+       4. 底部输入框
        ========================================= */
     .danmaku-input-area {
         position: fixed;
@@ -198,7 +268,7 @@
     #dm-send-btn:hover { background: #004494; }
 
     /* =========================================
-       4. 原有页面样式 (保持不变)
+       5. 原有页面样式 (保持不变)
        ========================================= */
     .news-banner { background-color: #f8f9fa; color: #555; height: 40px; display: flex; align-items: center; overflow: hidden; border-bottom: 1px solid #eaeaea; }
     .ticker-track { display: flex; animation: scroll 40s linear infinite; }
@@ -241,13 +311,17 @@
 <div id="danmaku-container"></div>
 <canvas id="matrix"></canvas>
 
+<div id="lightbox-overlay">
+    <div id="lightbox-close">&times;</div>
+    <img id="lightbox-img" src="" alt="Full view">
+</div>
+
 <div class="news-banner">
     <div class="ticker-track">
         <div class="ticker-content">
             <div class="ticker-item"><span class="ticker-tag">📊 ICML:</span> ICML 2026 submission just ended.</div>
             <div class="ticker-item"><span class="ticker-tag">🎄 Christmas:</span> Christmas lunch at Fire Spot.</div>
             <div class="ticker-item"><span class="ticker-tag">🎉 Congrats:</span> Zheng Wang defended his PhD Thesis!</div>
-            <div class="ticker-item"><span class="ticker-tag">📃 NeurIPS:</span> Zaifeng Pan's poster #808 "KVFlow".</div>
             <div class="ticker-item"><span class="ticker-tag">🎵 Media:</span> Xiang Fang's song on Hunan TV.</div>
             <div class="ticker-item"><span class="ticker-tag">🥘 Life:</span> Thanksgiving lunch at Haidilao.</div>
         </div>
@@ -275,7 +349,6 @@
         <h3 class="event-title">🎂 Happy Birthday to Zaifeng Pan!</h3>
         <p class="event-text">
             Today we celebrate the birthday of our amazing team member, <strong>Zaifeng Pan</strong>! 
-            Besides being a prefix-caching expert and KVFlow creator, he's also the life of the lab. 
             Wishing you a year full of groundbreaking research and endless joy!
         </p>
         <a href="#" class="read-more">Send Birthday Wishes &rarr;</a>
@@ -317,24 +390,6 @@
         We are thrilled to announce that our group member, <strong>Zheng Wang</strong>, has successfully passed the final defense. Dr. Wang has made significant contributions to high-performance system design for Deep Learning.
     </p>
         <a href="https://www.usenix.org/conference/osdi25/presentation/wang-zheng" class="read-more">Read Thesis Abstract &rarr;</a>
-    </div>
-</div>
-
-    <div class="event-card cursor-paper">
-    <div class="event-image swiper mySwiper">
-        <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-nips/1.jpg?raw=true" alt="NeurIPS Poster"></div>
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-nips/2.jpg?raw=true" alt="Conference Hall"></div>
-        </div>
-        <div class="swiper-pagination"></div>
-    </div>
-    <div class="event-content">
-        <div class="event-date">December 4, 2026</div> 
-    <h3 class="event-title">📃 NeurIPS 2026: Visit Poster #808 (Session 3)</h3>
-        <p class="event-text">
-        <strong>Zaifeng Pan</strong> will present "<strong>KVFlow</strong>: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows". It achieves up to 2.19× speedup over SGLang.
-        </p>
-        <a href="https://arxiv.org/abs/2507.07400" class="read-more">Read Paper &rarr;</a>
     </div>
 </div>
 
@@ -476,14 +531,14 @@
     }
 
     // -----------------------------------------------------------------
-    // 🎨 Render Logic (FIXED FOR 3 MODES)
+    // 🎨 Render Logic (Upgraded)
     // -----------------------------------------------------------------
     const container = document.getElementById('danmaku-container');
     const trackHeight = 50; 
     let tracks = []; 
 
     function initTracks() {
-        const containerH = window.innerHeight * 0.4; // 40% height
+        const containerH = window.innerHeight * 0.45; 
         const maxTracks = Math.floor(containerH / trackHeight);
         tracks = [];
         for(let i=0; i<maxTracks; i++) tracks[i] = { available: true };
@@ -497,7 +552,6 @@
         return Math.floor(Math.random() * tracks.length);
     }
 
-    // 🔥 核心修复函数：分情况渲染
     function fireDanmaku(data, isPriority) {
         const el = document.createElement('div');
         el.className = 'danmaku-item';
@@ -510,34 +564,38 @@
         let hasImage = !!data.image;
         let hasText = !!data.text;
 
-        // --- 场景 1: 只有图片 (Only Image) ---
+        // 场景渲染逻辑
         if (hasImage && !hasText) {
-            el.classList.add('image-only'); // 添加特殊类，去掉多余padding
-            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" />`;
+            el.classList.add('image-only'); 
+            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" alt="danmaku image" />`;
         }
-        // --- 场景 2: 图文混排 (Text + Image) ---
         else if (hasImage && hasText) {
             el.classList.add('mixed-content');
-            // 图片在前，文字在后
-            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" /><span>${data.text}</span>`;
+            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" alt="danmaku image" /><span>${data.text}</span>`;
         }
-        // --- 场景 3: 只有文字 (Only Text) ---
         else if (hasText) {
-            // 生成随机头像背景色
             const avatar = data.text.charAt(0).toUpperCase();
             const colors = ['#007bff', '#28a745', '#dc3545', '#fd7e14', '#6610f2'];
             const color = colors[Math.floor(Math.random() * colors.length)];
             
             el.innerHTML = `<div class="danmaku-avatar" style="background:${color}">${avatar}</div><span>${data.text}</span>`;
         }
-        // --- 场景 4: 数据为空 (防御性代码) ---
         else {
-            return; // 只有空数据不渲染
+            return; 
+        }
+
+        // 绑定点击事件：如果是图片，打开灯箱
+        const imgEl = el.querySelector('img');
+        if (imgEl) {
+            imgEl.addEventListener('click', (e) => {
+                // 停止冒泡，防止触发其他潜在事件
+                e.stopPropagation(); 
+                openLightbox(data.image);
+            });
         }
 
         // 轨道与位置
         const trackIdx = getAvailableTrack();
-        // 如果轨道没初始化好（极少数情况），默认0
         const safeTrackIdx = trackIdx !== undefined ? trackIdx : 0;
         
         el.style.top = (safeTrackIdx * trackHeight + 10) + 'px';
@@ -549,17 +607,40 @@
 
         container.appendChild(el);
 
-        // 动画
-        const w = el.offsetWidth;
+        // 动画参数计算
+        const w = 200; // 估算宽度，实际宽度由内容决定
         const screenW = window.innerWidth;
-        const duration = (screenW + w) / 120 + Math.random(); 
+        // 动画持续时间
+        const duration = (screenW + w) / 100 + Math.random() * 2; 
         
-        el.getBoundingClientRect(); 
-        el.style.transition = `transform ${duration}s linear`;
-        el.style.transform = `translateX(-${w + 50}px)`;
+        el.style.animationDuration = duration + 's';
 
-        el.addEventListener('transitionend', () => el.remove());
+        // 动画结束后移除元素
+        el.addEventListener('animationend', () => el.remove());
     }
+
+    // -----------------------------------------------------------------
+    // 💡 Lightbox Logic
+    // -----------------------------------------------------------------
+    const lightbox = document.getElementById('lightbox-overlay');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxClose = document.getElementById('lightbox-close');
+
+    function openLightbox(src) {
+        lightboxImg.src = src;
+        lightbox.classList.add('active');
+        // 暂停背景的弹幕动画（可选，但通常保持背景动比较有氛围）
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove('active');
+        setTimeout(() => lightboxImg.src = '', 300); // 清理src
+    }
+
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+    });
 
     // -----------------------------------------------------------------
     // 📷 Image Handling
@@ -615,12 +696,9 @@
 
     function sendDanmaku() {
         const text = input.value.trim();
-        // 只要有 文本 或者 图片 其中之一，就可以发送
         if (!text && !currentImageBase64) return;
 
         const payload = { timestamp: Date.now() };
-        
-        // 明确赋值，如果有文字就传文字，有图片就传图片
         if (text) payload.text = text;
         if (currentImageBase64) payload.image = currentImageBase64;
 
