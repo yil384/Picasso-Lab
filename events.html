@@ -26,29 +26,26 @@
     }
 
     /* =========================================
-       2. 弹幕系统 (互动升级版)
+       2. 弹幕系统
        ========================================= */
     #danmaku-container {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 45%; /* 稍微加高一点区域 */
-        pointer-events: none; /* 关键：允许鼠标穿透容器点击下方的网页 */
+        height: 45%; /* 设定弹幕区域高度 */
+        pointer-events: none; 
         z-index: 9999;
         overflow: hidden;
-        /* 遮罩，让弹幕在进入和离开时有淡入淡出效果 */
         mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
         -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
     }
 
-    /* 定义弹幕移动动画关键帧 */
     @keyframes danmaku-slide {
         from { transform: translateX(100vw); }
         to { transform: translateX(-100%); }
     }
 
-    /* 弹幕胶囊基础样式 */
     .danmaku-item {
         position: absolute;
         display: inline-flex;
@@ -63,51 +60,43 @@
         color: #fff;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         border: 1px solid rgba(255,255,255,0.2);
-        
-        /* 交互核心设置 */
-        pointer-events: auto; /* 允许捕获鼠标事件 */
-        user-select: text;    /* 允许选中文字 */
-        cursor: default;      /* 默认指针 */
-        
-        /* 动画设置 */
+        pointer-events: auto; 
+        user-select: text;    
+        cursor: default;      
         will-change: transform;
         animation-name: danmaku-slide;
         animation-timing-function: linear;
         animation-fill-mode: forwards;
     }
 
-    /* 🔥 核心功能：鼠标悬停暂停 + 样式增强 */
     .danmaku-item:hover {
-        animation-play-state: paused !important; /* 暂停动画 */
-        z-index: 100000; /* 提升层级，防止被遮挡 */
-        background: rgba(0, 0, 0, 0.85); /* 颜色加深方便阅读 */
-        border-color: rgba(255, 255, 255, 0.8);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        animation-play-state: paused !important; 
+        z-index: 100000; 
+        background: rgba(0, 0, 0, 0.9); 
+        border-color: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
 
-    /* 图片模式修饰 */
     .danmaku-item.image-only {
         padding: 5px; 
         border-radius: 12px;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.6);
     }
 
-    /* 弹幕内的图片 */
     .danmaku-img-content {
         height: 45px;
         width: auto;
         border-radius: 6px;
         display: block;
         border: 1px solid rgba(255,255,255,0.3);
-        cursor: zoom-in; /* 提示可放大 */
+        cursor: zoom-in; 
         transition: transform 0.2s;
     }
     
     .danmaku-img-content:hover {
-        transform: scale(1.05);
+        transform: scale(1.1);
     }
     
-    /* 混排模式 */
     .danmaku-item.mixed-content .danmaku-img-content {
         height: 35px;
         width: 35px;
@@ -127,47 +116,67 @@
         font-size: 12px;
         font-weight: bold;
         flex-shrink: 0;
-        user-select: none; /* 头像不给选，防止复制时干扰 */
+        user-select: none; 
     }
 
     /* =========================================
-       3. 图片预览 Modal (Lightbox)
+       3. 图片预览 Modal (Lightbox) - 修改版
        ========================================= */
     #lightbox-overlay {
         position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.85);
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 45%; /* 🔥 关键修改：高度限制为 45%，与弹幕区一致 */
+        background: rgba(0,0,0,0.9); /* 背景更深一点，突出图片 */
         z-index: 20000;
         display: none;
         justify-content: center;
         align-items: center;
         opacity: 0;
         transition: opacity 0.3s;
-        backdrop-filter: blur(5px);
+        backdrop-filter: blur(8px);
+        border-bottom: 2px solid rgba(255,255,255,0.1); /* 底部加个分割线 */
     }
+
     #lightbox-overlay.active {
         display: flex;
         opacity: 1;
     }
+
     #lightbox-img {
-        max-width: 90%;
-        max-height: 90%;
+        max-width: 95%; /* 稍微大一点 */
+        max-height: 90%; /* 限制高度，留出边距 */
         border-radius: 8px;
-        box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+        box-shadow: 0 5px 30px rgba(0,0,0,0.8);
         transform: scale(0.9);
-        transition: transform 0.3s;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        object-fit: contain;
     }
+
     #lightbox-overlay.active #lightbox-img {
         transform: scale(1);
     }
+
     #lightbox-close {
         position: absolute;
-        top: 20px;
-        right: 30px;
+        top: 15px;
+        right: 20px;
         color: white;
-        font-size: 40px;
+        background: rgba(255,255,255,0.2);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
         cursor: pointer;
         user-select: none;
+        transition: background 0.2s;
+    }
+    #lightbox-close:hover {
+        background: rgba(255,255,255,0.4);
     }
 
     /* =========================================
@@ -268,7 +277,7 @@
     #dm-send-btn:hover { background: #004494; }
 
     /* =========================================
-       5. 原有页面样式 (保持不变)
+       5. 原有页面样式
        ========================================= */
     .news-banner { background-color: #f8f9fa; color: #555; height: 40px; display: flex; align-items: center; overflow: hidden; border-bottom: 1px solid #eaeaea; }
     .ticker-track { display: flex; animation: scroll 40s linear infinite; }
@@ -302,7 +311,7 @@
     @media (max-width: 600px) {
         .event-card { flex-direction: column; height: auto; }
         .event-image { width: 100%; height: 220px; flex: none; }
-        #danmaku-container { height: 45%; }
+        #danmaku-container, #lightbox-overlay { height: 45%; } /* 移动端也同步高度 */
     }
 </style>
 </head>
@@ -531,7 +540,7 @@
     }
 
     // -----------------------------------------------------------------
-    // 🎨 Render Logic (Upgraded)
+    // 🎨 Render Logic (Updated)
     // -----------------------------------------------------------------
     const container = document.getElementById('danmaku-container');
     const trackHeight = 50; 
@@ -564,7 +573,6 @@
         let hasImage = !!data.image;
         let hasText = !!data.text;
 
-        // 场景渲染逻辑
         if (hasImage && !hasText) {
             el.classList.add('image-only'); 
             el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" alt="danmaku image" />`;
@@ -584,17 +592,15 @@
             return; 
         }
 
-        // 绑定点击事件：如果是图片，打开灯箱
-        const imgEl = el.querySelector('img');
+        // 绑定点击事件：打开灯箱，不阻止弹幕继续运动
+        const imgEl = el.querySelector('.danmaku-img-content');
         if (imgEl) {
             imgEl.addEventListener('click', (e) => {
-                // 停止冒泡，防止触发其他潜在事件
                 e.stopPropagation(); 
                 openLightbox(data.image);
             });
         }
 
-        // 轨道与位置
         const trackIdx = getAvailableTrack();
         const safeTrackIdx = trackIdx !== undefined ? trackIdx : 0;
         
@@ -607,20 +613,17 @@
 
         container.appendChild(el);
 
-        // 动画参数计算
-        const w = 200; // 估算宽度，实际宽度由内容决定
+        const w = 200; 
         const screenW = window.innerWidth;
-        // 动画持续时间
         const duration = (screenW + w) / 100 + Math.random() * 2; 
         
         el.style.animationDuration = duration + 's';
 
-        // 动画结束后移除元素
         el.addEventListener('animationend', () => el.remove());
     }
 
     // -----------------------------------------------------------------
-    // 💡 Lightbox Logic
+    // 💡 Lightbox Logic (Restricted to Top)
     // -----------------------------------------------------------------
     const lightbox = document.getElementById('lightbox-overlay');
     const lightboxImg = document.getElementById('lightbox-img');
@@ -629,12 +632,11 @@
     function openLightbox(src) {
         lightboxImg.src = src;
         lightbox.classList.add('active');
-        // 暂停背景的弹幕动画（可选，但通常保持背景动比较有氛围）
     }
 
     function closeLightbox() {
         lightbox.classList.remove('active');
-        setTimeout(() => lightboxImg.src = '', 300); // 清理src
+        setTimeout(() => lightboxImg.src = '', 300); 
     }
 
     lightboxClose.addEventListener('click', closeLightbox);
