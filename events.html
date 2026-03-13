@@ -11,13 +11,21 @@
     /* =========================================
        1. 全局设置
        ========================================= */
+    html {
+        height: 100%;
+        overflow: hidden;
+    }
+
     body { 
         margin: 0; 
-        overflow-x: hidden; 
+        height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         background-color: #ffffff; 
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         color: #333;
-        padding-bottom: 80px; 
+        padding-bottom: 80px;
     }
 
     canvas#matrix {
@@ -314,9 +322,54 @@
         .event-image { width: 100%; height: 220px; flex: none; }
         #danmaku-container, #lightbox-overlay { height: 45%; } /* 移动端也同步高度 */
     }
+
+    /* =========================================
+       6. 背景音乐控制按钮 (右上角)
+       ========================================= */
+    .music-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 40px;
+        height: 40px;
+        background-color: rgba(255, 255, 255, 0.7); /* 半透明白底，融入背景 */
+        color: #0056b3; /* 匹配你网站的主题蓝 */
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 20000; /* 保证不被灯箱或弹幕遮挡 */
+        font-size: 16px;
+        user-select: none;
+        backdrop-filter: blur(8px); /* 毛玻璃效果，和你的底部输入框呼应 */
+        transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+
+    .music-btn:hover {
+        transform: scale(1.1);
+        background-color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* 播放时的平滑旋转动画 */
+    .music-playing i {
+        animation: spin-music 4s linear infinite;
+    }
+
+    @keyframes spin-music {
+        100% { transform: rotate(360deg); }
+    }
 </style>
 </head>
 <body>
+
+<audio loop id="bg-music">
+    <source src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/Background_music.mp3" type="audio/mpeg">
+</audio>
+<div id="music-btn" class="music-btn" title="Play/Pause Music">
+    <i class="fas fa-music"></i>
+</div>
 
 <div id="danmaku-container"></div>
 <canvas id="matrix"></canvas>
@@ -351,9 +404,9 @@
 <div class="event-card cursor-cny">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/cny-2026/1.jpg?raw=true" alt="CNY Eve Dinner"></div>
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/cny-2026/2.jpg?raw=true" alt="Star Anise Thai Food"></div>
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/cny-2026/3.jpg?raw=true" alt="Star Anise Thai Food"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/cny-2026/1.jpg" alt="CNY Eve Dinner"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/cny-2026/2.jpg" alt="Star Anise Thai Food"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/cny-2026/3.jpg" alt="Star Anise Thai Food"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -370,8 +423,8 @@
 <div class="event-card cursor-party">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-birth/1.jpg?raw=true" alt="Happy Birthday Zaifeng"></div>
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zaifeng-birth/2.jpg?raw=true" alt="Zaifeng at Work"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/zaifeng-birth/1.jpg" alt="Happy Birthday Zaifeng"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/zaifeng-birth/2.jpg" alt="Zaifeng at Work"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -389,9 +442,9 @@
 <div class="event-card cursor-bbq">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/1.jpg?raw=true" alt="Christmas Party"></div>
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/2.jpg?raw=true" alt="Fire Spot BBQ"></div>
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/chrismas/3.jpg?raw=true" alt="Fire Spot BBQ"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/chrismas/1.jpg" alt="Christmas Party"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/chrismas/2.jpg" alt="Fire Spot BBQ"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/chrismas/3.jpg" alt="Fire Spot BBQ"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -408,9 +461,9 @@
 <div class="event-card cursor-party">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-        <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/1.jpg?raw=true" alt="Zheng Wang Defense"></div>
-        <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/2.jpg?raw=true" alt="Thesis Presentation"></div>
-        <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/zhengwang/3.jpg?raw=true" alt="Group Photo"></div>
+        <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/zhengwang/1.jpg" alt="Zheng Wang Defense"></div>
+        <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/zhengwang/2.jpg" alt="Thesis Presentation"></div>
+        <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/zhengwang/3.jpg" alt="Group Photo"></div>
     </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -427,7 +480,7 @@
 <div class="event-card cursor-hotpot">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/thxgiving-lunch.jpg?raw=true" alt="Thanksgiving Hot Pot"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/thxgiving-lunch.jpg" alt="Thanksgiving Hot Pot"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -444,8 +497,8 @@
 <div class="event-card cursor-music">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/xiang/1.jpg?raw=true" alt="Infinity and Beyond Stage"></div>
-            <div class="swiper-slide"><img src="https://github.com/yil384/Picasso-Lab/blob/main/static/events/xiang/2.jpg?raw=true" alt="Xiang Fang composing"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/xiang/1.jpg" alt="Infinity and Beyond Stage"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/events/xiang/2.jpg" alt="Xiang Fang composing"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -766,6 +819,27 @@
         }
     }
     setInterval(draw, 33);
+
+    // -----------------------------------------------------------------
+    // 🎵 Background Music Logic (Top Right)
+    // -----------------------------------------------------------------
+    const musicBtn = document.getElementById('music-btn');
+    const bgMusic = document.getElementById('bg-music');
+    let isMusicPlaying = false;
+
+    musicBtn.addEventListener('click', () => {
+        if (isMusicPlaying) {
+            bgMusic.pause();
+            musicBtn.classList.remove('music-playing');
+        } else {
+            bgMusic.play().then(() => {
+                musicBtn.classList.add('music-playing');
+            }).catch((error) => {
+                console.error("Playback failed:", error);
+            });
+        }
+        isMusicPlaying = !isMusicPlaying;
+    });
 </script>
 </body>
 </html>
