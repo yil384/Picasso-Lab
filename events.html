@@ -328,33 +328,60 @@
        ========================================= */
     .music-btn {
         position: fixed;
-        top: 20px;
-        right: 20px;
-        width: 40px;
-        height: 40px;
-        background-color: rgba(255, 255, 255, 0.7); /* 半透明白底，融入背景 */
-        color: #0056b3; /* 匹配你网站的主题蓝 */
+        top: 18px;
+        right: 18px;
+        width: 45px;
+        height: 45px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
+        border: 1px solid rgba(255,255,255,0.25);
         border-radius: 50%;
+        padding: 0;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.3);
+        z-index: 20000;
+        user-select: none;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        overflow: visible;
         display: flex;
         justify-content: center;
         align-items: center;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        z-index: 20000; /* 保证不被灯箱或弹幕遮挡 */
-        font-size: 16px;
-        user-select: none;
-        backdrop-filter: blur(8px); /* 毛玻璃效果，和你的底部输入框呼应 */
-        transition: transform 0.2s ease, background-color 0.2s ease;
     }
 
     .music-btn:hover {
-        transform: scale(1.1);
-        background-color: rgba(255, 255, 255, 0.95);
+        transform: scale(1.08);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4);
     }
 
-    /* 播放时的平滑旋转动画 */
-    .music-playing i {
-        animation: spin-music 4s linear infinite;
+    .music-btn .vinyl-icon {
+        width: 44px;
+        height: 44px;
+        display: block;
+        overflow: visible;
+    }
+
+    .music-btn .vinyl-disc {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: spin-music 6s linear infinite;
+        animation-play-state: paused;
+    }
+
+    .music-btn .vinyl-arm {
+        transform-box: fill-box;
+        transform-origin: 90% 8%;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: rotate(-18deg);
+    }
+
+    /* 播放时唱片旋转 + 唱针落下 */
+    .music-playing .vinyl-disc {
+        animation-play-state: running;
+    }
+
+    .music-playing .vinyl-arm {
+        transform: rotate(0deg);
     }
 
     @keyframes spin-music {
@@ -365,10 +392,84 @@
 <body>
 
 <audio loop id="bg-music">
-    <source src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/Background_music.mp3" type="audio/mpeg">
+    <source src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/static/Shapes-in-the-Blue.mp3" type="audio/mpeg">
 </audio>
 <div id="music-btn" class="music-btn" title="Play/Pause Music">
-    <i class="fas fa-music"></i>
+    <svg class="vinyl-icon" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <radialGradient id="vg" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#555"/>
+                <stop offset="27%" stop-color="#222"/>
+                <stop offset="30%" stop-color="#1c1c1c"/><stop offset="33%" stop-color="#282828"/>
+                <stop offset="36%" stop-color="#1c1c1c"/><stop offset="39%" stop-color="#282828"/>
+                <stop offset="42%" stop-color="#1c1c1c"/><stop offset="45%" stop-color="#282828"/>
+                <stop offset="48%" stop-color="#1c1c1c"/><stop offset="51%" stop-color="#282828"/>
+                <stop offset="54%" stop-color="#1c1c1c"/><stop offset="57%" stop-color="#282828"/>
+                <stop offset="60%" stop-color="#1c1c1c"/><stop offset="63%" stop-color="#282828"/>
+                <stop offset="66%" stop-color="#1c1c1c"/><stop offset="69%" stop-color="#282828"/>
+                <stop offset="72%" stop-color="#1c1c1c"/><stop offset="75%" stop-color="#282828"/>
+                <stop offset="78%" stop-color="#1c1c1c"/><stop offset="81%" stop-color="#282828"/>
+                <stop offset="84%" stop-color="#1c1c1c"/><stop offset="87%" stop-color="#252525"/>
+                <stop offset="92%" stop-color="#1c1c1c"/>
+                <stop offset="100%" stop-color="#181818"/>
+            </radialGradient>
+            <radialGradient id="lg" cx="40%" cy="36%" r="65%">
+                <stop offset="0%" stop-color="#e8b840"/>
+                <stop offset="45%" stop-color="#c8921c"/>
+                <stop offset="100%" stop-color="#96680e"/>
+            </radialGradient>
+            <linearGradient id="hl" x1="15%" y1="10%" x2="85%" y2="90%">
+                <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
+                <stop offset="30%" stop-color="rgba(255,255,255,0.05)"/>
+                <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+            </linearGradient>
+        </defs>
+        <!-- disc centered at 75,75 -->
+        <g class="vinyl-disc">
+            <circle cx="75" cy="75" r="64" fill="#080808" stroke="#3a3a3a" stroke-width="0.6"/>
+            <circle cx="75" cy="75" r="62" fill="url(#vg)"/>
+            <!-- shimmer rings -->
+            <circle cx="75" cy="75" r="57" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.4"/>
+            <circle cx="75" cy="75" r="50" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.4"/>
+            <circle cx="75" cy="75" r="43" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.4"/>
+            <circle cx="75" cy="75" r="36" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.4"/>
+            <!-- PICASSO LAB — each letter radially oriented -->
+            <g fill="rgba(255,255,255,0.35)" font-size="18.5" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="800" text-anchor="middle" dominant-baseline="central">
+                <text x="75" y="31" transform="rotate(0,75,75)">P</text>
+                <text x="75" y="31" transform="rotate(30,75,75)">I</text>
+                <text x="75" y="31" transform="rotate(60,75,75)">C</text>
+                <text x="75" y="31" transform="rotate(90,75,75)">A</text>
+                <text x="75" y="31" transform="rotate(120,75,75)">S</text>
+                <text x="75" y="31" transform="rotate(150,75,75)">S</text>
+                <text x="75" y="31" transform="rotate(180,75,75)">O</text>
+                <text x="75" y="31" transform="rotate(210,75,75)" font-size="9.5">&#9679;</text>
+                <text x="75" y="31" transform="rotate(240,75,75)">L</text>
+                <text x="75" y="31" transform="rotate(270,75,75)">A</text>
+                <text x="75" y="31" transform="rotate(300,75,75)">B</text>
+            </g>
+            <!-- gold center label -->
+            <circle cx="75" cy="75" r="21" fill="url(#lg)"/>
+            <circle cx="75" cy="75" r="20.5" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="0.3"/>
+            <circle cx="75" cy="75" r="17.5" fill="none" stroke="rgba(170,110,15,0.3)" stroke-width="0.2"/>
+            <!-- center hole (frosted glass) -->
+            <circle cx="75" cy="75" r="8" fill="rgba(255,255,255,0.45)" stroke="rgba(255,255,255,0.6)" stroke-width="0.5"/>
+            <circle cx="75" cy="75" r="6" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.3"/>
+        </g>
+        <!-- specular highlight (fixed) -->
+        <ellipse cx="63" cy="62" rx="40" ry="37" fill="url(#hl)" opacity="0.5" pointer-events="none"/>
+        <!-- tonearm -->
+        <g class="vinyl-arm">
+            <circle cx="139" cy="14" r="6" fill="#999"/>
+            <circle cx="139" cy="14" r="3.8" fill="#aaa" stroke="#888" stroke-width="0.3"/>
+            <circle cx="139" cy="14" r="1.6" fill="#ccc"/>
+            <circle cx="145" cy="9" r="4.5" fill="#888" stroke="#666" stroke-width="0.3"/>
+            <line x1="139" y1="14" x2="97" y2="56" stroke="#bbb" stroke-width="2.4" stroke-linecap="round"/>
+            <line x1="139" y1="14" x2="97" y2="56" stroke="rgba(255,255,255,0.1)" stroke-width="0.7"/>
+            <line x1="97" y1="56" x2="90" y2="66" stroke="#ccc" stroke-width="1.8" stroke-linecap="round"/>
+            <rect x="88" y="65.5" width="4.5" height="7" rx="0.8" fill="#ddd" stroke="#aaa" stroke-width="0.3"/>
+            <line x1="90.2" y1="72.5" x2="90.2" y2="76" stroke="#fff" stroke-width="0.5" stroke-linecap="round"/>
+        </g>
+    </svg>
 </div>
 
 <div id="danmaku-container"></div>
