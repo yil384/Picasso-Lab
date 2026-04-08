@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab Events - Live Danmaku</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    /* =========================================
+       1. 全局设置
+       ========================================= */
+    html {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body { 
+        margin: 0; 
+        height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        background-color: #ffffff; 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #333;
+        padding-bottom: 80px;
+    }
+
+    canvas#matrix {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: -1; opacity: 0.15;
+    }
+
+    /* =========================================
+       2. 弹幕系统
+       ========================================= */
+    #danmaku-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 45%; /* 设定弹幕区域高度 */
+        pointer-events: none; 
+        z-index: 9999;
+        overflow: hidden;
+        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    }
+
+    @keyframes danmaku-slide {
+        from { transform: translateX(100vw); }
+        to { transform: translateX(-100%); }
+    }
+
+    .danmaku-item {
+        position: absolute;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px; 
+        padding: 5px 12px 5px 5px; 
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        border-radius: 50px; 
+        white-space: nowrap;
+        font-size: 16px;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.2);
+        pointer-events: auto; 
+        user-select: text;    
+        cursor: default;      
+        will-change: transform;
+        animation-name: danmaku-slide;
+        animation-timing-function: linear;
+        animation-fill-mode: forwards;
+    }
+
+    .danmaku-item:hover {
+        animation-play-state: paused !important; 
+        z-index: 100000; 
+        background: rgba(0, 0, 0, 0.9); 
+        border-color: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    .danmaku-item.image-only {
+        padding: 5px; 
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.6);
+    }
+
+    .danmaku-img-content {
+        height: 45px;
+        width: auto;
+        border-radius: 6px;
+        display: block;
+        border: 1px solid rgba(255,255,255,0.3);
+        cursor: zoom-in; 
+        transition: transform 0.2s;
+    }
+    
+    .danmaku-img-content:hover {
+        transform: scale(1.1);
+    }
+    
+    .danmaku-item.mixed-content .danmaku-img-content {
+        height: 35px;
+        width: 35px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .danmaku-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #0056b3;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        flex-shrink: 0;
+        user-select: none; 
+    }
+
+    /* =========================================
+       3. 图片预览 Modal (Lightbox) - 修改版
+       ========================================= */
+    #lightbox-overlay {
+        position: fixed;
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 45%; /* 🔥 关键修改：高度限制为 45%，与弹幕区一致 */
+        background: rgba(0,0,0,0.9); /* 背景更深一点，突出图片 */
+        z-index: 20000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.3s;
+        backdrop-filter: blur(8px);
+        border-bottom: 2px solid rgba(255,255,255,0.1); /* 底部加个分割线 */
+    }
+
+    #lightbox-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    #lightbox-img {
+        max-width: 95%; /* 稍微大一点 */
+        max-height: 90%; /* 限制高度，留出边距 */
+        border-radius: 8px;
+        box-shadow: 0 5px 30px rgba(0,0,0,0.8);
+        transform: scale(0.9);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        object-fit: contain;
+    }
+
+    #lightbox-overlay.active #lightbox-img {
+        transform: scale(1);
+    }
+
+    #lightbox-close {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        color: white;
+        background: rgba(255,255,255,0.2);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s;
+    }
+    #lightbox-close:hover {
+        background: rgba(255,255,255,0.4);
+    }
+
+    /* =========================================
+       4. 底部输入框
+       ========================================= */
+    .danmaku-input-area {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 600px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid #ddd;
+        border-radius: 25px;
+        display: flex;
+        align-items: center;
+        padding: 0 5px;
+        z-index: 10000;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+
+    .img-upload-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #666;
+        transition: all 0.2s;
+        margin-left: 5px;
+    }
+    .img-upload-btn:hover { background: #f0f0f0; color: #0056b3; }
+    .img-upload-btn.has-file { color: #28a745; background: #e6ffed; }
+
+    #dm-file-input { display: none; }
+
+    #img-preview-container {
+        position: absolute;
+        bottom: 60px;
+        left: 0;
+        background: white;
+        padding: 5px;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        display: none;
+        border: 1px solid #eee;
+    }
+    #img-preview-target {
+        max-width: 100px;
+        max-height: 100px;
+        border-radius: 4px;
+        display: block;
+    }
+    #clear-img-btn {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ff4d4f;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 2px solid white;
+    }
+
+    #dm-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        height: 100%;
+        font-size: 15px;
+        outline: none;
+        padding: 0 10px;
+    }
+
+    #dm-send-btn {
+        padding: 6px 20px;
+        background: #0056b3;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        margin-right: 5px;
+        transition: background 0.3s;
+    }
+    #dm-send-btn:hover { background: #004494; }
+
+    /* =========================================
+       5. 原有页面样式
+       ========================================= */
+    .news-banner { background-color: #f8f9fa; color: #555; height: 40px; display: flex; align-items: center; overflow: hidden; border-bottom: 1px solid #eaeaea; }
+    .ticker-track { display: flex; animation: scroll 40s linear infinite; }
+    @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .news-banner:hover .ticker-track { animation-play-state: paused; }
+    .ticker-content { display: flex; align-items: center; white-space: nowrap; padding-right: 50px; }
+    .ticker-item { margin-right: 3rem; display: inline-flex; align-items: center; font-size: 0.9em; }
+    .ticker-tag { font-weight: bold; color: #0056b3; margin-right: 6px; }
+
+    .event-card { display: flex; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; margin: 20px auto; max-width: 900px; height: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
+    .event-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+
+    .cursor-cny { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🧧%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-bbq { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍖%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-party { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎉%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-paper { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E📝%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-hotpot { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍲%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-music { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎸%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+
+    .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; }
+    .swiper-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .swiper-pagination-bullet { background: rgba(255, 255, 255, 0.8); opacity: 1; width: 8px; height: 8px; transition: all 0.3s; }
+    .swiper-pagination-bullet-active { background: #0056b3; width: 18px; border-radius: 4px; }
+    .event-content { padding: 20px; flex: 1; overflow-y: auto; }
+    .event-date { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .event-title { margin: 0 0 10px 0; font-size: 1.25em; color: #333; font-weight: 600; }
+    .event-text { font-size: 0.95em; color: #444; line-height: 1.6; margin-bottom: 15px; }
+    .event-text strong { font-weight: 600; color: #333; }
+    .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
+    .read-more:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+        .event-card { flex-direction: column; height: auto; }
+        .event-image { width: 100%; height: 220px; flex: none; }
+        #danmaku-container, #lightbox-overlay { height: 45%; } /* 移动端也同步高度 */
+    }
+
+    /* =========================================
+       6. 背景音乐控制按钮 (右上角)
+       ========================================= */
+    .music-btn {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        width: 38px;
+        height: 38px;
+        background: none;
+        border: none;
+        border-radius: 50%;
+        padding: 0;
+        cursor: pointer;
+        box-shadow: none;
+        z-index: 20000;
+        user-select: none;
+        transition: transform 0.2s ease;
+        overflow: visible;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        perspective: 600px;
+    }
+
+    .music-btn:hover {
+        transform: scale(1.08);
+    }
+
+    .music-btn .vinyl-icon {
+        width: 44px;
+        height: 44px;
+        display: block;
+        overflow: visible;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-style: preserve-3d;
+    }
+
+    .music-btn .vinyl-disc {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: spin-music 6s linear infinite;
+        animation-play-state: paused;
+    }
+
+    .music-btn .vinyl-arm {
+        transform-box: fill-box;
+        transform-origin: 90% 8%;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: rotate(-18deg);
+    }
+
+    .music-playing .vinyl-disc {
+        animation-play-state: running;
+    }
+
+    .music-playing .vinyl-arm {
+        transform: rotate(0deg);
+    }
+
+    @keyframes spin-music {
+        100% { transform: rotate(360deg); }
+    }
+
+    /* 3D翻转动画 */
+    @keyframes vinyl-flip {
+        0%   { transform: rotateY(0deg); }
+        50%  { transform: rotateY(90deg); }
+        100% { transform: rotateY(0deg); }
+    }
+
+    .vinyl-flipping .vinyl-icon {
+        animation: vinyl-flip 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 歌曲名提示 */
+    .song-title-toast {
+        position: fixed;
+        top: 62px;
+        right: 18px;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #fff;
+        font-size: 11px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.15);
+        z-index: 20001;
+        opacity: 0;
+        transform: translateY(-6px);
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        pointer-events: none;
+        white-space: nowrap;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .song-title-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+</style>
+</head>
+<body>
+
+<audio loop id="bg-music">
+    <source src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/Shapes-in-the-Blue.mp3" type="audio/mpeg">
+</audio>
+<div id="song-title-toast" class="song-title-toast"></div>
+<div id="music-btn" class="music-btn" title="Click: Play/Pause · Double-click: Switch song">
+        <svg class="vinyl-icon" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <radialGradient id="vg" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#555"/>
+                    <stop offset="27%" stop-color="#222"/>
+                    <stop offset="30%" stop-color="#1c1c1c"/><stop offset="33%" stop-color="#282828"/>
+                    <stop offset="36%" stop-color="#1c1c1c"/><stop offset="39%" stop-color="#282828"/>
+                    <stop offset="42%" stop-color="#1c1c1c"/><stop offset="45%" stop-color="#282828"/>
+                    <stop offset="48%" stop-color="#1c1c1c"/><stop offset="51%" stop-color="#282828"/>
+                    <stop offset="54%" stop-color="#1c1c1c"/><stop offset="57%" stop-color="#282828"/>
+                    <stop offset="60%" stop-color="#1c1c1c"/><stop offset="63%" stop-color="#282828"/>
+                    <stop offset="66%" stop-color="#1c1c1c"/><stop offset="69%" stop-color="#282828"/>
+                    <stop offset="72%" stop-color="#1c1c1c"/><stop offset="75%" stop-color="#282828"/>
+                    <stop offset="78%" stop-color="#1c1c1c"/><stop offset="81%" stop-color="#282828"/>
+                    <stop offset="84%" stop-color="#1c1c1c"/><stop offset="87%" stop-color="#252525"/>
+                    <stop offset="92%" stop-color="#1c1c1c"/>
+                    <stop offset="100%" stop-color="#181818"/>
+                </radialGradient>
+                <linearGradient id="hl" x1="15%" y1="10%" x2="85%" y2="90%">
+                    <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
+                    <stop offset="30%" stop-color="rgba(255,255,255,0.05)"/>
+                    <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+                </linearGradient>
+            </defs>
+            <g class="vinyl-disc">
+                <circle cx="75" cy="75" r="64" fill="#080808" stroke="#3a3a3a" stroke-width="0.6"/>
+                <circle cx="75" cy="75" r="62" fill="url(#vg)"/>
+                <circle cx="75" cy="75" r="57" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.4"/>
+                <circle cx="75" cy="75" r="50" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.4"/>
+                <circle cx="75" cy="75" r="43" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.4"/>
+                <circle cx="75" cy="75" r="36" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.4"/>
+                <g class="vinyl-label-text" fill="rgba(255,255,255,0.35)" font-size="21" font-family="'Helvetica Neue',Arial,sans-serif" font-weight="800" text-anchor="middle" dominant-baseline="central">
+                    <text x="75" y="31" transform="rotate(0,75,75)">P</text>
+                    <text x="75" y="31" transform="rotate(30,75,75)">I</text>
+                    <text x="75" y="31" transform="rotate(60,75,75)">C</text>
+                    <text x="75" y="31" transform="rotate(90,75,75)">A</text>
+                    <text x="75" y="31" transform="rotate(120,75,75)">S</text>
+                    <text x="75" y="31" transform="rotate(150,75,75)">S</text>
+                    <text x="75" y="31" transform="rotate(180,75,75)">O</text>
+                    <text x="75" y="31" transform="rotate(210,75,75)" font-size="16">&#9679;</text>
+                    <text x="75" y="31" transform="rotate(240,75,75)">L</text>
+                    <text x="75" y="31" transform="rotate(270,75,75)">A</text>
+                    <text x="75" y="31" transform="rotate(300,75,75)">B</text>
+                </g>
+                <circle class="vinyl-center" cx="75" cy="75" r="21" fill="#c8921c"/>
+                <circle cx="75" cy="75" r="20.5" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="0.3"/>
+                <circle cx="75" cy="75" r="17.5" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="0.2"/>
+                <circle cx="75" cy="75" r="8" fill="rgba(255,255,255,0.45)" stroke="rgba(255,255,255,0.6)" stroke-width="0.5"/>
+                <circle cx="75" cy="75" r="6" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.3"/>
+            </g>
+            <ellipse cx="63" cy="62" rx="40" ry="37" fill="url(#hl)" opacity="0.5" pointer-events="none"/>
+            <g class="vinyl-arm">
+                <circle cx="139" cy="14" r="6" fill="#999"/>
+                <circle cx="139" cy="14" r="3.8" fill="#aaa" stroke="#888" stroke-width="0.3"/>
+                <circle cx="139" cy="14" r="1.6" fill="#ccc"/>
+                <circle cx="145" cy="9" r="4.5" fill="#888" stroke="#666" stroke-width="0.3"/>
+                <line x1="139" y1="14" x2="97" y2="56" stroke="#bbb" stroke-width="2.4" stroke-linecap="round"/>
+                <line x1="139" y1="14" x2="97" y2="56" stroke="rgba(255,255,255,0.1)" stroke-width="0.7"/>
+                <line x1="97" y1="56" x2="90" y2="66" stroke="#ccc" stroke-width="1.8" stroke-linecap="round"/>
+                <rect x="88" y="65.5" width="4.5" height="7" rx="0.8" fill="#ddd" stroke="#aaa" stroke-width="0.3"/>
+                <line x1="90.2" y1="72.5" x2="90.2" y2="76" stroke="#fff" stroke-width="0.5" stroke-linecap="round"/>
+            </g>
+        </svg>
+</div>
+
+<div id="danmaku-container"></div>
+<canvas id="matrix"></canvas>
+
+<div id="lightbox-overlay">
+    <div id="lightbox-close">&times;</div>
+    <img id="lightbox-img" src="" alt="Full view">
+</div>
+
+<div class="news-banner">
+    <div class="ticker-track">
+        <div class="ticker-content">
+            <div class="ticker-item"><span class="ticker-tag">🧧 CNY:</span> Lab lunch at Star Anise Thai Cuisine!</div>
+            <div class="ticker-item"><span class="ticker-tag">📊 ICML:</span> ICML 2026 submission just ended.</div>
+            <div class="ticker-item"><span class="ticker-tag">🎄 Christmas:</span> Christmas lunch at Fire Spot.</div>
+            <div class="ticker-item"><span class="ticker-tag">🎉 Congrats:</span> Zheng Wang defended his PhD Thesis!</div>
+            <div class="ticker-item"><span class="ticker-tag">🎵 Media:</span> Xiang Fang's song on Hunan TV.</div>
+            <div class="ticker-item"><span class="ticker-tag">🥘 Life:</span> Thanksgiving lunch at Haidilao.</div>
+        </div>
+        <div class="ticker-content" aria-hidden="true">
+            <div class="ticker-item"><span class="ticker-tag">🧧 CNY:</span> Lab lunch at Star Anise Thai Cuisine!</div>
+            <div class="ticker-item"><span class="ticker-tag">📊 ICML:</span> ICML 2026 submission just ended.</div>
+            <div class="ticker-item"><span class="ticker-tag">🎄 Christmas:</span> Christmas lunch at Fire Spot.</div>
+            <div class="ticker-item"><span class="ticker-tag">🎉 Congrats:</span> Zheng Wang defended his PhD Thesis!</div>
+            <div class="ticker-item"><span class="ticker-tag">📃 NeurIPS:</span> Zaifeng Pan's poster #808 "KVFlow".</div>
+            <div class="ticker-item"><span class="ticker-tag">🎵 Media:</span> Xiang Fang's song on Hunan TV.</div>
+            <div class="ticker-item"><span class="ticker-tag">🥘 Life:</span> Thanksgiving lunch at Haidilao.</div>
+        </div>
+    </div>
+</div>
+
+<div class="event-card cursor-bbq">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zhuo_magic_kitchen/1.jpg" alt="Cheers at Dinner"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zhuo_magic_kitchen/2.jpg" alt="Homemade Feast"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zhuo_magic_kitchen/3.jpg" alt="Cheers Together"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zhuo_magic_kitchen/4.jpg" alt="Group Dinner"></div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
+        <div class="event-date">March 15, 2026</div>
+        <h3 class="event-title">🍖 Dorm Team-Building Dinner at Zhuo's Magic Kitchen</h3>
+        <p class="event-text">
+            <strong>Zhuo Chen & Yichen Lin</strong> and <strong>Zhongkai Yu & Zaifeng Pan</strong> got together for a cozy dorm team-building dinner at <strong>Zhuo Chen's Magic Kitchen</strong>. The chef served up amazing braised chicken drumsticks, pan-seared steak with tomatoes, and roasted carrots — a homemade feast to remember!
+        </p>
+        <a href="#" class="read-more">View Dinner Photos &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card cursor-cny">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/cny-2026/1.jpg" alt="CNY Eve Dinner"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/cny-2026/2.jpg" alt="Star Anise Thai Food"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/cny-2026/3.jpg" alt="Star Anise Thai Food"></div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
+        <div class="event-date">February 16, 2026</div> 
+        <h3 class="event-title">🧧 Chinese New Year's Eve Dinner at Star Anise Thai Cuisine</h3>
+        <p class="event-text">
+            To welcome the Year of the Horse, our lab gathered on <strong>Chinese New Year's Eve</strong> for a wonderful dinner at <strong>Star Anise Thai Cuisine</strong>. A huge thank you to <strong>Prof. Yufei Ding</strong> for treating us to such a delicious meal and bringing the team together for the celebration!
+        </p>
+        <a href="#" class="read-more">View Dinner Photos &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card cursor-party">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zaifeng-birth/1.jpg" alt="Happy Birthday Zaifeng"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zaifeng-birth/2.jpg" alt="Zaifeng at Work"></div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
+        <div class="event-date">February 6, 2026</div> 
+        <h3 class="event-title">🎂 Happy Birthday to Zaifeng Pan!</h3>
+        <p class="event-text">
+            Today we celebrate the birthday of our amazing team member, <strong>Zaifeng Pan</strong>! 
+            Wishing you a year full of groundbreaking research and endless joy!
+        </p>
+        <a href="#" class="read-more">Send Birthday Wishes &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card cursor-bbq">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/chrismas/1.jpg" alt="Christmas Party"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/chrismas/2.jpg" alt="Fire Spot BBQ"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/chrismas/3.jpg" alt="Fire Spot BBQ"></div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
+        <div class="event-date">December 13, 2025</div> 
+        <h3 class="event-title">🎄 Christmas Team Celebration at Fire Spot</h3>
+    <p class="event-text">
+        To celebrate the holiday season, our lab enjoyed a fantastic Christmas lunch at <strong>Fire Spot</strong>. It was a great time to relax, enjoy some Korean BBQ, and celebrate our achievements this year!
+    </p>
+        <a href="https://github.com/yil384/Picasso-Web/tree/main/events/static/chrismas" class="read-more">View Group Photos &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card cursor-party">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+        <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zhengwang/1.jpg" alt="Zheng Wang Defense"></div>
+        <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zhengwang/2.jpg" alt="Thesis Presentation"></div>
+        <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/zhengwang/3.jpg" alt="Group Photo"></div>
+    </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
+        <div class="event-date">December 10, 2025</div> 
+    <h3 class="event-title">🎉 Congratulations to Zheng Wang on Successfully Defending His PhD Thesis!</h3>
+    <p class="event-text">
+        We are thrilled to announce that our group member, <strong>Zheng Wang</strong>, has successfully passed the final defense. Dr. Wang has made significant contributions to high-performance system design for Deep Learning.
+    </p>
+        <a href="https://www.usenix.org/conference/osdi25/presentation/wang-zheng" class="read-more">Read Thesis Abstract &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card cursor-hotpot">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/thxgiving-lunch.jpg" alt="Thanksgiving Hot Pot"></div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
+        <div class="event-date">November 27, 2025</div> 
+        <h3 class="event-title">🥘 Thanksgiving Team Lunch at Haidilao</h3>
+        <p class="event-text">
+            Our lab group gathered for a wonderful Thanksgiving celebration at Haidilao Hot Pot in UTC, San Diego. A special thank you to Prof. Yufei Ding for hosting!
+        </p>
+        <a href="#" class="read-more">View Event Photos &rarr;</a>
+    </div>
+</div>
+
+<div class="event-card cursor-music">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/xiang/1.jpg" alt="Infinity and Beyond Stage"></div>
+            <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/xiang/2.jpg" alt="Xiang Fang composing"></div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
+        <div class="event-date">November 24, 2025</div> 
+        <h3 class="event-title">🎵 Xiang Fang's Composition Performed on Hunan TV!</h3>
+        <p class="event-text">
+            "<strong>再遗忘</strong>", an original song by <strong>Xiang Fang</strong> (2nd-year PhD student in QEC), was performed on <em>"Infinity and Beyond: Chinese Wave"</em>.
+        </p>
+        <a href="https://www.youtube.com/watch?v=94rhgou5Uy0" class="read-more">Watch Performance &rarr;</a>
+    </div>
+</div>
+
+<div class="danmaku-input-area">
+    <div id="img-preview-container">
+        <div id="clear-img-btn">×</div>
+        <img id="img-preview-target" src="" alt="preview">
+    </div>
+
+    <label for="dm-file-input" class="img-upload-btn" id="upload-icon-label" title="Add Image">
+        <i class="far fa-image fa-lg"></i>
+    </label>
+    <input type="file" id="dm-file-input" accept="image/*">
+
+    <input type="text" id="dm-input" placeholder="Say something..." maxlength="50">
+    <button id="dm-send-btn">Send</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
+        authDomain: "yichen-5e23e.firebaseapp.com",
+        databaseURL: "https://yichen-5e23e-default-rtdb.firebaseio.com",
+        projectId: "yichen-5e23e",
+        storageBucket: "yichen-5e23e.firebasestorage.app",
+        messagingSenderId: "495540025061",
+        appId: "1:495540025061:web:733590e8781d90e866060c",
+        measurementId: "G-ZMREJCJL1G"
+    };
+
+    let db, danmakuRef;
+    const danmakuPool = [];
+    let isInitialLoad = true;
+
+    try {
+        const app = initializeApp(firebaseConfig);
+        db = getDatabase(app);
+        danmakuRef = ref(db, 'danmaku');
+        
+        const recentPosts = query(danmakuRef, limitToLast(100));
+        
+        onChildAdded(recentPosts, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                danmakuPool.push(data);
+                if (!isInitialLoad) {
+                    fireDanmaku(data, true);
+                }
+            }
+        });
+
+        setTimeout(() => {
+            isInitialLoad = false;
+            startCycleEngine();
+        }, 1500);
+
+    } catch (e) {
+        console.error("Firebase Error", e);
+    }
+
+    // -----------------------------------------------------------------
+    // 🔄 Cycle Engine
+    // -----------------------------------------------------------------
+    let cycleState = 'IDLE';
+    const CYCLE_COOLDOWN = 5000;
+    
+    function startCycleEngine() {
+        if (cycleState !== 'IDLE') return;
+        runCycle();
+    }
+
+    async function runCycle() {
+        if (danmakuPool.length === 0) {
+            setTimeout(runCycle, 1000);
+            return;
+        }
+
+        cycleState = 'PLAYING';
+        
+        // Fisher-Yates Shuffle
+        const currentBatch = [...danmakuPool]; 
+        for (let i = currentBatch.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentBatch[i], currentBatch[j]] = [currentBatch[j], currentBatch[i]];
+        }
+
+        for (const item of currentBatch) {
+            fireDanmaku(item, false); 
+            // Random Gap
+            const gap = Math.random() * 1500 + 800; 
+            await new Promise(r => setTimeout(r, gap));
+        }
+
+        cycleState = 'COOLDOWN';
+        setTimeout(() => {
+            cycleState = 'IDLE';
+            runCycle();
+        }, CYCLE_COOLDOWN);
+    }
+
+    // -----------------------------------------------------------------
+    // 🎨 Render Logic (Updated)
+    // -----------------------------------------------------------------
+    const container = document.getElementById('danmaku-container');
+    const trackHeight = 50; 
+    let tracks = []; 
+
+    function initTracks() {
+        const containerH = window.innerHeight * 0.45; 
+        const maxTracks = Math.floor(containerH / trackHeight);
+        tracks = [];
+        for(let i=0; i<maxTracks; i++) tracks[i] = { available: true };
+    }
+    initTracks();
+    window.addEventListener('resize', initTracks);
+
+    function getAvailableTrack() {
+        const avail = tracks.map((t, i) => t.available ? i : -1).filter(i => i !== -1);
+        if (avail.length > 0) return avail[Math.floor(Math.random() * avail.length)];
+        return Math.floor(Math.random() * tracks.length);
+    }
+
+    function fireDanmaku(data, isPriority) {
+        const el = document.createElement('div');
+        el.className = 'danmaku-item';
+        
+        if (isPriority) {
+            el.style.zIndex = 10001;
+            el.style.border = "1px solid #ffd700";
+        }
+
+        let hasImage = !!data.image;
+        let hasText = !!data.text;
+
+        if (hasImage && !hasText) {
+            el.classList.add('image-only'); 
+            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" alt="danmaku image" />`;
+        }
+        else if (hasImage && hasText) {
+            el.classList.add('mixed-content');
+            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" alt="danmaku image" /><span>${data.text}</span>`;
+        }
+        else if (hasText) {
+            const avatar = data.text.charAt(0).toUpperCase();
+            const colors = ['#007bff', '#28a745', '#dc3545', '#fd7e14', '#6610f2'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            el.innerHTML = `<div class="danmaku-avatar" style="background:${color}">${avatar}</div><span>${data.text}</span>`;
+        }
+        else {
+            return; 
+        }
+
+        // 绑定点击事件：打开灯箱，不阻止弹幕继续运动
+        const imgEl = el.querySelector('.danmaku-img-content');
+        if (imgEl) {
+            imgEl.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                openLightbox(data.image);
+            });
+        }
+
+        const trackIdx = getAvailableTrack();
+        const safeTrackIdx = trackIdx !== undefined ? trackIdx : 0;
+        
+        el.style.top = (safeTrackIdx * trackHeight + 10) + 'px';
+        
+        if (tracks[safeTrackIdx]) {
+            tracks[safeTrackIdx].available = false;
+            setTimeout(() => { if(tracks[safeTrackIdx]) tracks[safeTrackIdx].available = true; }, 1000);
+        }
+
+        container.appendChild(el);
+
+        const w = 200; 
+        const screenW = window.innerWidth;
+        const duration = (screenW + w) / 100 + Math.random() * 2; 
+        
+        el.style.animationDuration = duration + 's';
+
+        el.addEventListener('animationend', () => el.remove());
+    }
+
+    // -----------------------------------------------------------------
+    // 💡 Lightbox Logic (Restricted to Top)
+    // -----------------------------------------------------------------
+    const lightbox = document.getElementById('lightbox-overlay');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxClose = document.getElementById('lightbox-close');
+
+    function openLightbox(src) {
+        lightboxImg.src = src;
+        lightbox.classList.add('active');
+    }
+
+    function closeLightbox() {
+        lightbox.classList.remove('active');
+        setTimeout(() => lightboxImg.src = '', 300); 
+    }
+
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+    });
+
+    // -----------------------------------------------------------------
+    // 📷 Image Handling
+    // -----------------------------------------------------------------
+    const fileInput = document.getElementById('dm-file-input');
+    const uploadLabel = document.getElementById('upload-icon-label');
+    const imgPreviewContainer = document.getElementById('img-preview-container');
+    const imgPreviewTarget = document.getElementById('img-preview-target');
+    const clearImgBtn = document.getElementById('clear-img-btn');
+    let currentImageBase64 = null;
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                const MAX_SIZE = 300;
+                let w = img.width, h = img.height;
+                if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+                else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+
+                currentImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                imgPreviewTarget.src = currentImageBase64;
+                imgPreviewContainer.style.display = 'block';
+                uploadLabel.classList.add('has-file');
+            }
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+    });
+
+    function clearImage() {
+        fileInput.value = '';
+        currentImageBase64 = null;
+        imgPreviewContainer.style.display = 'none';
+        uploadLabel.classList.remove('has-file');
+    }
+    clearImgBtn.addEventListener('click', clearImage);
+
+    // -----------------------------------------------------------------
+    // 🚀 Send Logic
+    // -----------------------------------------------------------------
+    const input = document.getElementById('dm-input');
+    const sendBtn = document.getElementById('dm-send-btn');
+
+    function sendDanmaku() {
+        const text = input.value.trim();
+        if (!text && !currentImageBase64) return;
+
+        const payload = { timestamp: Date.now() };
+        if (text) payload.text = text;
+        if (currentImageBase64) payload.image = currentImageBase64;
+
+        push(danmakuRef, payload);
+
+        input.value = '';
+        clearImage();
+    }
+
+    sendBtn.addEventListener('click', sendDanmaku);
+    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendDanmaku(); });
+
+    // -----------------------------------------------------------------
+    // Swiper & Matrix
+    // -----------------------------------------------------------------
+    new Swiper(".mySwiper", {
+        slidesPerView: 1, spaceBetween: 0, loop: true, effect: "slide",
+        autoplay: { delay: 3500, disableOnInteraction: false },
+        pagination: { el: ".swiper-pagination", clickable: true },
+    });
+
+    const cvs = document.getElementById('matrix');
+    const ctx = cvs.getContext('2d');
+    function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
+    window.addEventListener('resize', resize);
+    resize();
+    const chars = '01ABCDEFXYZ'; const letters = chars.split(''); const fs = 14;
+    let cols = cvs.width / fs; let drops = [];
+    function initDrops() { cols = cvs.width / fs; drops = []; for(let x=0; x<cols; x++) drops[x]=1; }
+    initDrops();
+    function draw() {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(0, 0, cvs.width, cvs.height);
+        ctx.fillStyle = '#000000';
+        ctx.font = fs + 'px monospace';
+        for(let i=0; i<drops.length; i++) {
+            const t = letters[Math.floor(Math.random()*letters.length)];
+            ctx.fillText(t, i*fs, drops[i]*fs);
+            if(drops[i]*fs > cvs.height && Math.random()>0.975) drops[i]=0;
+            drops[i]++;
+        }
+    }
+    setInterval(draw, 33);
+
+    // -----------------------------------------------------------------
+    // 🎵 Playlist + Double-click Flip to Switch
+    // -----------------------------------------------------------------
+    const playlist = [
+        {
+            title: 'Shapes in the Blue',
+            src: 'https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/Shapes-in-the-Blue.mp3',
+            centerColor: '#c8921c',   // gold
+            label: 'PICASSO●LAB'
+        },
+        {
+            title: '多梦症',
+            src: 'https://raw.githubusercontent.com/yil384/Picasso-Web/main/events/static/%E5%A4%9A%E6%A2%A6%E7%97%87.mp3',
+            centerColor: '#b04050',   // ruby red
+            label: '多梦症●Laymen'
+        }
+    ];
+
+    let currentTrack = 0;
+    let isMusicPlaying = false;
+    let isFlipping = false;
+
+    const musicBtn = document.getElementById('music-btn');
+    const bgMusic = document.getElementById('bg-music');
+    const songToast = document.getElementById('song-title-toast');
+    const vinylCenter = musicBtn.querySelector('.vinyl-center');
+    const vinylIcon = musicBtn.querySelector('.vinyl-icon');
+    const vinylLabelGroup = musicBtn.querySelector('.vinyl-label-text');
+
+    // --- 更新唱片上的环形文字 ---
+    function updateVinylLabel(label) {
+        const chars = label.split('');
+        const n = chars.length;
+        // 中文字符间隔更大(45度)，其他保持30度
+        let angles = [];
+        let cumAngle = 0;
+        for (let i = 0; i < n; i++) {
+            angles.push(cumAngle);
+            if (i < n - 1) {
+                const isCJK = /[\u4e00-\u9fff]/.test(chars[i]);
+                const nextCJK = /[\u4e00-\u9fff]/.test(chars[i + 1]);
+                cumAngle += (isCJK && nextCJK) ? 36 : 30;
+            }
+        }
+        const totalAngle = cumAngle;
+        const offset = -totalAngle / 2;
+        vinylLabelGroup.innerHTML = '';
+        chars.forEach((ch, i) => {
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', '75');
+            text.setAttribute('y', '31');
+            text.setAttribute('transform', `rotate(${offset + angles[i]},75,75)`);
+            if (/[\u4e00-\u9fff]/.test(ch)) {
+                text.setAttribute('font-size', '21');
+            } else if (ch === '●') {
+                text.setAttribute('font-size', '16');
+            }
+            text.textContent = ch;
+            vinylLabelGroup.appendChild(text);
+        });
+    }
+
+    // --- Toast ---
+    let toastTimer = null;
+    function showSongTitle(title) {
+        songToast.textContent = '♪ ' + title;
+        songToast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => songToast.classList.remove('show'), 2200);
+    }
+
+    // --- 翻转切歌 ---
+    function flipToNextTrack() {
+        if (isFlipping) return;
+        isFlipping = true;
+
+        const nextIndex = (currentTrack + 1) % playlist.length;
+        const track = playlist[nextIndex];
+        const wasPlaying = isMusicPlaying;
+
+        // 启动翻转动画
+        musicBtn.classList.add('vinyl-flipping');
+
+        // 在翻转到一半 (背面朝向用户) 时换颜色和文字
+        setTimeout(() => {
+            vinylCenter.setAttribute('fill', track.centerColor);
+            updateVinylLabel(track.label);
+        }, 300);
+
+        // 翻转结束后切音源
+        vinylIcon.addEventListener('animationend', function handler() {
+            vinylIcon.removeEventListener('animationend', handler);
+            musicBtn.classList.remove('vinyl-flipping');
+            isFlipping = false;
+
+            bgMusic.pause();
+            bgMusic.src = track.src;
+            bgMusic.load();
+
+            if (wasPlaying) {
+                bgMusic.play().then(() => {
+                    musicBtn.classList.add('music-playing');
+                }).catch(e => console.error('Playback failed:', e));
+            }
+
+            currentTrack = nextIndex;
+        });
+
+        showSongTitle(track.title);
+    }
+
+    // --- 单击 = 播放/暂停, 双击 = 翻转切歌 ---
+    let clickTimer = null;
+    musicBtn.addEventListener('click', (e) => {
+        if (isFlipping) return;
+
+        if (clickTimer) {
+            // 双击 — 取消单击定时器，执行切歌
+            clearTimeout(clickTimer);
+            clickTimer = null;
+            flipToNextTrack();
+        } else {
+            // 等一下看是不是双击
+            clickTimer = setTimeout(() => {
+                clickTimer = null;
+                // 单击 — 播放/暂停
+                if (isMusicPlaying) {
+                    bgMusic.pause();
+                    musicBtn.classList.remove('music-playing');
+                } else {
+                    bgMusic.play().then(() => {
+                        musicBtn.classList.add('music-playing');
+                        showSongTitle(playlist[currentTrack].title);
+                    }).catch((error) => {
+                        console.error("Playback failed:", error);
+                    });
+                }
+                isMusicPlaying = !isMusicPlaying;
+            }, 250);
+        }
+    });
+</script>
+</body>
+</html>

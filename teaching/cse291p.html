@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSE 291P: LLM System Optimization</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* ===== @property for animated gradient angle ===== */
+        @property --gradient-angle {
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+        }
+        @property --ring-angle {
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+        }
+
+        :root {
+            --bg-primary: #faf9f7;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f5f3f0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --text-muted: #6b6b6b;
+            --accent-primary: #2563eb;
+            --accent-secondary: #7c3aed;
+            --accent-tertiary: #059669;
+            --border-color: #e5e3df;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+            --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --label-bg: #3b82f6;
+            --label-survey: #f59e0b;
+            --label-reading: #10b981;
+            --sidebar-bg: #ffffff;
+            --glass-bg: rgba(255,255,255,0.65);
+            --glass-border: rgba(255,255,255,0.3);
+
+            --timeline-line: #e0dfe4;
+            --timeline-node: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f0f14;
+            --bg-secondary: #1a1a24;
+            --bg-tertiary: #252532;
+            --text-primary: #e8e6e3;
+            --text-secondary: #b8b5b0;
+            --text-muted: #8a8780;
+            --accent-primary: #60a5fa;
+            --accent-secondary: #a78bfa;
+            --accent-tertiary: #34d399;
+            --border-color: #2d2d3a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.3);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.4);
+            --gradient-hero: linear-gradient(135deg, #4f46e5 0%, #6b21a8 100%);
+            --sidebar-bg: #13131c;
+            --glass-bg: rgba(26,26,36,0.75);
+            --glass-border: rgba(255,255,255,0.08);
+            --hero-bg: #08070f;
+            --timeline-line: #2d2d3a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: background 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* ===== Scroll Progress Bar (C) ===== */
+        #scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #ec4899);
+            z-index: 9999;
+            transition: width 0.05s linear;
+        }
+
+        /* ===== LEFT SIDEBAR ===== */
+        header {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 200px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .header-content {
+            height: 100%;
+            padding: 1.5rem 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+        }
+        .logo span {
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            width: 100%;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.55rem 0.8rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.92rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+        nav a svg {
+            width: 16px; height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+        nav a:hover, nav a.active {
+            color: var(--accent-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .nav-right {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .external-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            width: 100%;
+        }
+        .external-links a {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.7rem;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .external-links a:hover { color: var(--accent-primary); }
+        .external-links a svg {
+            width: 14px; height: 14px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 0.8rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.25s ease;
+            width: 100%;
+            text-align: center;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .theme-toggle svg {
+            width: 16px; height: 16px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .theme-toggle:hover { background: var(--accent-primary); color: #fff; }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-primary);
+            padding: 0.5rem;
+        }
+        .mobile-menu-btn svg {
+            width: 24px; height: 24px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        main {
+            margin-left: 250px;
+            max-width: 1100px;
+            padding: 0 2rem 4rem;
+            min-height: 100vh;
+        }
+
+        .page { display: none; animation: fadeIn 0.4s ease; }
+        .page.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== HERO with Neural Network Canvas (A) ===== */
+        .hero-wrapper {
+            position: relative;
+            margin: 0 -2rem;
+            padding: 0;
+            overflow: hidden;
+            border-radius: 24px;
+            margin-bottom: 2.5rem;
+            background: var(--gradient-hero);
+        }
+        /* Animated mesh gradient blobs */
+        .hero-mesh {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden; z-index: 0;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4c1d95 70%, #581c87 100%);
+        }
+        .hero-mesh .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            animation: blobFloat 12s ease-in-out infinite alternate;
+        }
+        .hero-mesh .blob:nth-child(1) {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, #667eea, transparent 70%);
+            top: -10%; left: -5%;
+            animation-duration: 14s;
+        }
+        .hero-mesh .blob:nth-child(2) {
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, #a78bfa, transparent 70%);
+            top: 20%; right: -8%;
+            animation-duration: 10s;
+            animation-delay: -3s;
+        }
+        .hero-mesh .blob:nth-child(3) {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, #ec4899, transparent 70%);
+            bottom: -15%; left: 30%;
+            animation-duration: 16s;
+            animation-delay: -7s;
+        }
+        .hero-mesh .blob:nth-child(4) {
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, #818cf8, transparent 70%);
+            top: 50%; left: 60%;
+            animation-duration: 11s;
+            animation-delay: -5s;
+        }
+        @keyframes blobFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -25px) scale(1.1); }
+            66% { transform: translate(-20px, 15px) scale(0.95); }
+            100% { transform: translate(15px, -10px) scale(1.05); }
+        }
+        .hero-overlay {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 5rem 2rem 4rem;
+        }
+        .hero-overlay h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            line-height: 1.25;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+        }
+        .hero-overlay h1 .grad {
+            background: linear-gradient(135deg, #c4b5fd, #f9a8d4, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-overlay .subtitle {
+            font-size: 1.15rem;
+            color: rgba(255,255,255,0.85);
+            margin-bottom: 0.5rem;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            text-shadow: 0 1px 8px rgba(0,0,0,0.2);
+        }
+        .hero-overlay .instructor {
+            color: rgba(255,255,255,0.6);
+            font-size: 1rem;
+        }
+
+        /* ===== Animated Metrics Bar (B) ===== */
+        .metrics-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: -2rem 0 2.5rem;
+            position: relative;
+            z-index: 2;
+        }
+        .metric-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+        }
+        .metric-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+        }
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ===== Section Headers with SVG icons ===== */
+        .section-header {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .section-header svg {
+            width: 28px; height: 28px;
+            stroke: var(--accent-primary);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        /* ===== 3D Tilt Cards (D) ===== */
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: transform 0.15s ease, box-shadow 0.2s ease;
+            transform-style: preserve-3d;
+            perspective: 800px;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.06) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .card:hover::before { opacity: 1; }
+        .card > * { position: relative; z-index: 1; }
+
+        .card h2, .card h3 {
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        .card h2 { font-size: 1.6rem; }
+        .card h3 { font-size: 1.3rem; }
+
+        /* ===== Animated Gradient Border Announcements (E) ===== */
+        .announcement {
+            position: relative;
+            background: var(--bg-secondary);
+            border: none;
+            overflow: visible;
+        }
+        .announcement::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 5px;
+            height: 100%;
+            border-radius: 16px 0 0 16px;
+            background: conic-gradient(from var(--gradient-angle), #667eea, #764ba2, #ec4899, #667eea);
+            animation: rotateGradient 3s linear infinite;
+            z-index: 2;
+        }
+        @keyframes rotateGradient {
+            to { --gradient-angle: 360deg; }
+        }
+
+        .announcement-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .announcement-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: var(--bg-tertiary);
+            padding: 0.25rem 0.7rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .announcement ul { padding-left: 1.5rem; }
+        .announcement li { margin-bottom: 0.5rem; }
+
+        /* ===== Schedule Timeline (F) ===== */
+        .timeline {
+            position: relative;
+            padding-left: 3rem;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 14px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--timeline-line);
+            border-radius: 2px;
+        }
+        .timeline-week {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        .timeline-week-label {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-secondary);
+            margin-bottom: 0.8rem;
+            position: relative;
+        }
+        .timeline-week-label::before {
+            content: '';
+            position: absolute;
+            left: -3rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--timeline-node);
+            border: 3px solid var(--bg-primary);
+            box-shadow: 0 0 0 3px var(--accent-secondary);
+            z-index: 1;
+        }
+        .timeline-week.latest .timeline-week-label::before {
+            animation: pulseNode 2s ease infinite;
+            box-shadow: 0 0 0 3px var(--accent-secondary), 0 0 15px rgba(124,58,237,0.5);
+        }
+        @keyframes pulseNode {
+            0%, 100% { box-shadow: 0 0 0 3px var(--accent-secondary), 0 0 8px rgba(124,58,237,0.3); }
+            50% { box-shadow: 0 0 0 5px var(--accent-secondary), 0 0 20px rgba(124,58,237,0.6); }
+        }
+
+        .timeline-lecture {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.6rem;
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .timeline-lecture:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-hover);
+        }
+        .lecture-date {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1.05rem;
+            margin-bottom: 0.3rem;
+        }
+        .lecture-date-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-left: 0.5rem;
+        }
+        .lecture-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+        .label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.15rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            background: var(--label-bg);
+            min-width: 22px;
+        }
+        .label-survey { background: var(--label-survey); }
+        .label-reading { background: var(--label-reading); }
+
+        .lecture-links {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            margin-top: 0.3rem;
+        }
+        .lecture-links a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-size: 0.88rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: color 0.2s;
+        }
+        .lecture-links a:hover { color: var(--accent-secondary); text-decoration: none; }
+        .lecture-links a svg {
+            width: 14px; height: 14px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        .readings { margin-top: 0.5rem; padding-left: 1rem; font-size: 0.93rem; color: var(--text-secondary); }
+        .readings ul { padding-left: 1rem; margin-top: 0.3rem; }
+        .readings li { margin-bottom: 0.3rem; }
+
+        /* ===== Staff Cards with Gradient Ring (I) ===== */
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .staff-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .staff-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+        .staff-avatar {
+            width: 110px; height: 110px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .staff-avatar::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: conic-gradient(from var(--ring-angle), #667eea, #764ba2, #ec4899, #f59e0b, #667eea);
+            animation: ringRotate 4s linear infinite;
+            z-index: 0;
+        }
+        @keyframes ringRotate {
+            to { --ring-angle: 360deg; }
+        }
+        .staff-avatar img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            position: relative;
+            z-index: 1;
+            border: 3px solid var(--bg-secondary);
+        }
+        .staff-avatar .initials {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: var(--gradient-hero);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            color: white;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+            border: 3px solid var(--bg-secondary);
+        }
+        .staff-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        .staff-name a { color: var(--text-primary); text-decoration: none; }
+        .staff-name a:hover { color: var(--accent-primary); }
+        .staff-role {
+            color: var(--accent-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+        .staff-pronouns {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+        .staff-bio {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+        .staff-contact {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            align-items: center;
+        }
+        .staff-contact a { color: var(--accent-primary); }
+        .staff-contact span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .staff-contact svg {
+            width: 13px; height: 13px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        /* ===== Tables ===== */
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background: var(--bg-tertiary); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        tr:hover { background: var(--bg-tertiary); }
+        .grading-table { border: 1px solid var(--border-color); }
+        .grading-table td, .grading-table th { border: 1px solid var(--border-color); }
+
+        /* ===== FAQ Accordion ===== */
+        .faq-item { margin-bottom: 0.75rem; }
+        .faq-question {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.1rem 1.3rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .faq-question:hover { background: var(--bg-tertiary); }
+        .faq-question svg {
+            width: 20px; height: 20px;
+            stroke: var(--accent-primary); fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+        .faq-item.open .faq-question svg { transform: rotate(45deg); }
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, padding 0.3s ease;
+            padding: 0 1.3rem;
+        }
+        .faq-item.open .faq-answer { max-height: 600px; padding: 1rem 1.3rem; }
+
+        /* ===== TOC ===== */
+        .toc {
+            background: var(--bg-tertiary);
+            padding: 1.25rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        .toc h3 { margin-bottom: 0.75rem; font-size: 1rem; font-weight: 700; }
+        .toc ul { list-style: none; padding-left: 0; }
+        .toc li { margin-bottom: 0.4rem; }
+        .toc a { color: var(--text-secondary); font-size: 0.95rem; }
+        .toc a:hover { color: var(--accent-primary); }
+
+        /* ===== Alert boxes ===== */
+        .alert { padding: 1rem 1.5rem; border-radius: 12px; margin: 1rem 0; }
+        .alert-info { background: rgba(37,99,235,0.08); border: 1px solid var(--accent-primary); }
+        .alert-warning { background: rgba(245,158,11,0.08); border: 1px solid var(--label-survey); }
+
+        /* ===== Calendar ===== */
+        .calendar-container {
+            position: relative;
+            padding-bottom: 75%;
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+        .calendar-container iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+        }
+
+        /* ===== General ===== */
+        a { color: var(--accent-primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-size: 0.88em;
+        }
+        pre { background: var(--bg-tertiary); padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        pre code { background: none; padding: 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin-bottom: 0.5rem; }
+        .highlight { background: linear-gradient(120deg, #ffeaa7 0%, #fdcb6e 100%); padding: 0 0.2rem; border-radius: 3px; }
+        [data-theme="dark"] .highlight { background: linear-gradient(120deg, #6c5ce7 0%, #a29bfe 100%); }
+
+        /* ===== Floating Quick Links (H) ===== */
+        .floating-links {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.4rem;
+        }
+        .floating-links-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            align-items: flex-end;
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .floating-links.open .floating-links-items {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .floating-link-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 0.9rem;
+            border-radius: 24px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-decoration: none;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .floating-link-item:hover {
+            color: var(--accent-primary);
+            box-shadow: var(--shadow-hover);
+            text-decoration: none;
+        }
+        .floating-link-item svg {
+            width: 14px; height: 14px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .floating-trigger {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: var(--gradient-hero);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(102,126,234,0.4);
+            transition: transform 0.3s ease;
+        }
+        .floating-trigger:hover { transform: scale(1.1); }
+        .floating-links.open .floating-trigger { transform: rotate(45deg); }
+        .floating-trigger svg {
+            width: 22px; height: 22px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        /* ===== Scroll Reveal (G) ===== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ===== Footer ===== */
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 4rem;
+            font-size: 0.9rem;
+        }
+        footer a { color: var(--accent-primary); }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 900px) {
+            header {
+                position: fixed;
+                width: 100%; height: 60px;
+                bottom: auto; top: 0;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                flex-direction: row;
+            }
+            .header-content {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 1rem;
+                height: 60px;
+            }
+            nav {
+                display: none;
+                position: absolute;
+                top: 60px; left: 0; right: 0;
+                background: var(--sidebar-bg);
+                padding: 1rem;
+                border-bottom: 1px solid var(--border-color);
+                z-index: 999;
+            }
+            nav.open { display: flex; }
+            .mobile-menu-btn { display: block; }
+            .nav-right { display: none; }
+            main { margin-left: 0; padding: 76px 1rem 2rem; }
+            .hero-wrapper { margin: 0 -1rem; border-radius: 16px; }
+            .hero-overlay { padding: 3rem 1rem 2.5rem; }
+            .hero-overlay h1 { font-size: 1.8rem; }
+            .metrics-bar { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+            .metric-number { font-size: 1.6rem; }
+            .timeline { padding-left: 2.2rem; }
+            .timeline::before { left: 10px; }
+            .timeline-week-label::before { left: -2.2rem; width: 10px; height: 10px; }
+            .floating-links { bottom: 1rem; right: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll Progress Bar (C) -->
+    <div id="scroll-progress"></div>
+
+    <!-- LEFT SIDEBAR -->
+    <header>
+        <div class="header-content">
+            <a class="logo" onclick="showPage('home', this)"><span>CSE 291P</span></a>
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <nav id="mainNav">
+                <a onclick="showPage('home', this)" class="active">
+                    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    Home
+                </a>
+                <a onclick="showPage('syllabus', this)">
+                    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    Syllabus
+                </a>
+                <a onclick="showPage('assignments', this)">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    Assignments
+                </a>
+                <a onclick="showPage('schedule', this)">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Schedule
+                </a>
+                <a onclick="showPage('resources', this)">
+                    <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Resources
+                </a>
+                <a onclick="showPage('faq', this)">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    FAQs
+                </a>
+                <a onclick="showPage('staff', this)">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Staff
+                </a>
+                <a onclick="showPage('officehours', this)">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Office Hours
+                </a>
+            </nav>
+            <div class="nav-right">
+                <div class="external-links">
+                    <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Instructor
+                    </a>
+                    <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">
+                        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        Piazza
+                    </a>
+                    <a href="https://www.gradescope.com/courses/1211750" target="_blank">
+                        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Gradescope
+                    </a>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+                    <svg viewBox="0 0 24 24" class="icon-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <span>Dark Mode</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        <!-- ======== HOME PAGE ======== -->
+        <div id="page-home" class="page active">
+            <!-- Animated Mesh Gradient Hero -->
+            <div class="hero-wrapper">
+                <div class="hero-mesh">
+                    <div class="blob"></div>
+                    <div class="blob"></div>
+                    <div class="blob"></div>
+                    <div class="blob"></div>
+                </div>
+                <div class="hero-overlay">
+                    <h1>CSE 291P: <span class="grad">LLM System Optimization</span></h1>
+                    <p class="subtitle">Systems optimization for large language models: training parallelism, inference efficiency, and systems bottlenecks</p>
+                    <p class="instructor">Instructor: Yufei Ding (UC San Diego) &bull; Winter 2026</p>
+                </div>
+            </div>
+
+            <!-- Animated Metrics Bar (B) -->
+            <div class="metrics-bar reveal">
+                <div class="metric-card">
+                    <div class="metric-number" data-target="13">0</div>
+                    <div class="metric-label">Lectures</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" data-target="10">0</div>
+                    <div class="metric-label">Worksheets</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" data-target="3">0</div>
+                    <div class="metric-label">Guest Talks</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" data-target="70" data-suffix="%">0</div>
+                    <div class="metric-label">Project Weight</div>
+                </div>
+            </div>
+
+            <h2 class="section-header reveal">
+                <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                Announcements
+            </h2>
+
+            <div class="card announcement reveal">
+                <div class="announcement-title">
+                    <h3>Welcome</h3>
+                    <span class="announcement-date">Winter 2026</span>
+                </div>
+                <ul>
+                    <li><strong>Grading</strong>: in-class participation + worksheets (30%) and a <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">team project</a> (70%, teams of 5-7 students). A 5% Piazza bonus will be awarded to the top five students with the most active and high-quality question responses.</li>
+                    <li><strong>Gradescope</strong>: upload a photo of your completed worksheet within 1 hour after class (Entry Code: <code>RV7PED</code>).</li>
+                    <li><strong>Final project report deadline</strong>: <strong>March 18</strong> (see class/Gradescope announcements for any updates).</li>
+                </ul>
+            </div>
+
+            <div class="card announcement reveal">
+                <div class="announcement-title">
+                    <h3>Office Hours</h3>
+                    <span class="announcement-date">Weekly</span>
+                </div>
+                <ul>
+                    <li><strong>Zaifeng Pan</strong>: Monday 4:00-5:00pm @ B270A (Email: <a href="mailto:zapan@ucsd.edu">zapan@ucsd.edu</a>)</li>
+                    <li><strong>Zhongkai Yu</strong>: Monday 5:00-6:00pm @ B270A (Email: <a href="mailto:zhy055@ucsd.edu">zhy055@ucsd.edu</a>)</li>
+                </ul>
+            </div>
+
+            <div class="card announcement reveal">
+                <div class="announcement-title">
+                    <h3>Course Schedule (Tentative)</h3>
+                    <span class="announcement-date">Subject to change</span>
+                </div>
+                <ul>
+                    <li><strong>Lecture window</strong>: roughly Jan 4 - Feb 17/19 (13-15 lectures), followed by project preparation and presentations.</li>
+                    <li><strong>Project presentations</strong>: roughly Feb 26 - Mar 13 (see in-class announcements for details).</li>
+                    <li><strong>Recordings</strong>: available via Canvas Podcast.</li>
+                </ul>
+            </div>
+
+            <h2 class="section-header reveal" style="margin-top: 2.5rem;">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Course Schedule
+            </h2>
+
+            <!-- Timeline Schedule (F) -->
+            <div class="timeline">
+                <!-- Week 1 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 1</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 1 <span class="lecture-date-text">Jan 6, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">1</span>
+                            <strong>Introduction: LLM API Usage + Tokenization</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1XGxzGOK6LSmJ9ZpWzGVnlG6O9WksN4Cf/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/1" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet1</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 2 <span class="lecture-date-text">Jan 8, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">2</span>
+                            <strong>Transformer Model Architecture Variants</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1vq6X-zhqY1w-PtKh1Gt8k0nCmbNXapVL/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/2" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet2</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 2 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 2</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 3 <span class="lecture-date-text">Jan 13, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">3</span>
+                            <strong>Transformer Model Architecture Variants (Part II)</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1Ug-_rPRCcTmCzNdPHQQaMJCt8vz-FdnE/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/3" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet3</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 4 <span class="lecture-date-text">Jan 15, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">4</span>
+                            <strong>Distributed LLM Training: Foundations</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1MEW5-pAsxJH3TCeRKtsHOOW38zVPs8kC/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/4" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeUzIj2ADAqO_qdVc6qVDL9nhCBveiwWGjRnZbI-ENqRLsjNA/viewform" target="_blank"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Survey</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 3 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 3</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 5 <span class="lecture-date-text">Jan 20, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">5</span>
+                            <strong>Distributed Training: Data Parallelism (ZeRO-1/2/3)</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1S-TZUZlATf68euuiuMS6GVv7izSk3w0l/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/5" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet5</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 6 <span class="lecture-date-text">Jan 22, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">6</span>
+                            <strong>Distributed Training: Pipeline Parallelism + Tensor Parallelism</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/12GjbjYBGK-TaPRIH1jNoDcmhlJVLm1rM/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/6" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet6</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 4 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 4</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 7 <span class="lecture-date-text">Jan 27, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">7</span>
+                            <strong>Distributed Training: Context Parallelism (CP)</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1H6WzDcwTr8HQgAoU8-NckFLhXOG7-zA4/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/7" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet7</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 8 <span class="lecture-date-text">Jan 29, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">8</span>
+                            <strong>LLM Serving: Speculative Decoding</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1Q-u3rZ7eGYswraWN_IzM8eae4hcj2kZh/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/8" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet8</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 5 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 5</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 9 <span class="lecture-date-text">Feb 3, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">9</span>
+                            <strong>Invited Talk: Machine Learning Compiler (Yue Guan)</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1vb_NgUaqZEtKFoWpIoc3mbKWq4eLxCL7/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://drive.google.com/file/d/1rY4ayVpOoeq8VtCX2iVlMO4f5gwT8MGM/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 10 <span class="lecture-date-text">Feb 5, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">10</span>
+                            <strong>Invited Talk: RL Intro for System Designers (Guyue Huang)</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1PvUas_rAGgcfAwYDnruQrjQbCB0GkrWa/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://drive.google.com/file/d/1tk4YQ6zyfoIEsH5YrgjqRJ3XzsznZkLp/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 6 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 6</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 11 <span class="lecture-date-text">Feb 10, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">11</span>
+                            <strong>Invited Talk: FlexAttention and CUDAGraph (Boyuan Feng)</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1oOY4G1_4-prjDjUASPz2YFe5QEZXE5lL/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 12 <span class="lecture-date-text">Feb 12, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">12</span>
+                            <strong>LLM Quantization</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1u8d8e3w3j--0SYCnhZ8TrGqzKu6VTbZj/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/12" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet9</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 7 (latest) -->
+                <div class="timeline-week latest reveal">
+                    <div class="timeline-week-label">Week 7</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 13 <span class="lecture-date-text">Feb 17, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">13</span>
+                            <strong>LLM Serving: Scheduling, KV Management, and Kernel Optimization</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/14mKviGdvY-6HvFGnHGsgNiy0aUMcuc6-/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/13" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet10</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== SYLLABUS PAGE ======== -->
+        <div id="page-syllabus" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Syllabus
+            </h1>
+
+            <div class="toc reveal">
+                <h3>Table of Contents</h3>
+                <ul>
+                    <li><a href="#logistics">Logistics</a></li>
+                    <li><a href="#prerequisites">Pre-requisites</a></li>
+                    <li><a href="#content">Course Content and Format</a></li>
+                    <li><a href="#grading">Grading</a></li>
+                    <li><a href="#rules">Classroom Rules</a></li>
+                </ul>
+            </div>
+
+            <div class="alert alert-info reveal">
+                <strong>This course focuses on systems optimization for LLMs: training/inference bottlenecks (compute, memory, communication) and how key techniques have evolved.</strong>
+            </div>
+
+            <div class="card reveal">
+                <p><strong>Course objectives</strong> (adapted from the slides):</p>
+                <ul>
+                    <li>Understand major systems bottlenecks in LLM training and inference (compute, memory, latency, etc.).</li>
+                    <li>Gain a broad view of key research topics and trends in LLM efficiency, and be able to read and critically evaluate recent papers.</li>
+                    <li>Understand how state-of-the-art techniques evolved over time and the trade-offs behind them.</li>
+                </ul>
+                <p><strong>Course structure (tentative)</strong>: Foundation models (~3 lectures) + Training (~4 lectures) + project preparation and presentations.</p>
+            </div>
+
+            <h2 id="logistics" class="reveal" style="margin-top:1.5rem;">Logistics</h2>
+            <div class="card reveal">
+                <ul>
+                    <li><strong>Course</strong>: CSE 291P -- LLM System Optimization</li>
+                    <li><strong>Instructor</strong>: <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Yufei Ding</a> (Email: <a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a>, by appointment)</li>
+                    <li><strong>Podcast</strong>: <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Canvas Podcast</a></li>
+                    <li><strong>Piazza</strong>: <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Course Q&amp;A / announcements</a></li>
+                </ul>
+            </div>
+
+            <h2 id="prerequisites" class="reveal">Pre-requisites</h2>
+            <div class="card reveal">
+                <p>This class is an interdisciplinary class covering many up-to-date topics and developments in machine learning, data, and systems. If you have never taken any of the following classes (or equivalent), you might need to allocate more time to prepare yourself.</p>
+                <ul>
+                    <li>MATH 18 (Linear Algebra) or equivalent</li>
+                    <li>CSE 151B (Deep Learning) or equivalent</li>
+                    <li>CSE 132C or CSE 120 (Operating Systems) or equivalent</li>
+                    <li>DSC 102 (Systems for Scalable Analytics) or equivalent; or substantial practical experience with scalable data systems and ML algorithms</li>
+                    <li>Proficiency in Python programming</li>
+                    <li>Knowledge of deep learning and frameworks such as Tensor, PyTorch, HuggingFace</li>
+                </ul>
+                <p><strong>Highly preferred (not required):</strong></p>
+                <ul>
+                    <li>DSC 204A (Scalable Data Analytics)</li>
+                    <li>DSC 240 (Machine Learning)</li>
+                </ul>
+            </div>
+
+            <h2 id="content" class="reveal">Course Content and Format</h2>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Lectures</h3>
+            <div class="card reveal">
+                <ul>
+                    <li>Approximately 13-15 instructor-led lectures from early January to mid/late February, followed by project preparation and presentations.</li>
+                    <li>Lecture recordings are provided via <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Canvas Podcast</a>.</li>
+                    <li>Course announcements and Q&amp;A are handled on <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a>.</li>
+                </ul>
+            </div>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">In-class Worksheets</h3>
+            <div class="card reveal">
+                <ul>
+                    <li>Paper worksheets are distributed in class; upload a photo to Gradescope within 1 hour after each lecture.</li>
+                    <li>Gradescope Entry Code: <code>RV7PED</code></li>
+                    <li>Grading: Participation 20% + Worksheet scores 10% (only the top-5 worksheet scores are counted).</li>
+                    <li>Piazza bonus: A 5% Piazza bonus will be awarded to the top five students with the most active and high-quality question responses.</li>
+                </ul>
+            </div>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Course Project</h3>
+            <div class="card reveal">
+                <ul>
+                    <li><strong>Project spec (Google Doc)</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a> (also see <code>CSE291P Project.md</code> in this repo).</li>
+                    <li><strong>Team size</strong>: 5-7 students (subject to the latest course announcement).</li>
+                    <li><strong>Project categories</strong>: Survey / Tool Development / Exploration Project; self-proposed topics are allowed with TA approval.</li>
+                    <li><strong>Proposal for self-proposed topics</strong>: up to 2 pages, due <strong>Feb 6</strong>.</li>
+                    <li><strong>Grading</strong>: Presentation 30% (20% of which is from in-class peer evaluation) + Report 30% (10% of which is from within-team peer grading) + 10% participation in peer grading activities.</li>
+                    <li><strong>Survey score cap</strong>: Survey projects can receive at most 60% of the 70% project component.</li>
+                </ul>
+            </div>
+
+            <h2 id="grading" class="reveal">Grading</h2>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Components</h3>
+            <div class="card reveal">
+                <ul>
+                    <li><strong>Course Participation + Worksheet</strong>: 30%</li>
+                    <li><strong>Course Project</strong> (group of 5-7): 70%</li>
+                </ul>
+            </div>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Notes</h3>
+            <div class="card reveal">
+                <ul>
+                    <li>Worksheet: only the top-5 worksheet scores count; all other details follow in-class and Gradescope announcements.</li>
+                    <li>Project: includes in-class presentation, final report, and peer grading (see "Course Project" above).</li>
+                </ul>
+            </div>
+
+            <h2 id="rules" class="reveal">Classroom Rules</h2>
+            <div class="card reveal">
+                <ul>
+                    <li>Students are encouraged to actively participate in class and on <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a>.</li>
+                    <li>Worksheet uploads and project submission policies follow in-class and Gradescope announcements.</li>
+                    <li>Please review UCSD's honor code and policies on <a href="https://academicintegrity.ucsd.edu/" target="_blank">academic integrity</a></li>
+                    <li>Please review UCSD's <a href="https://ucsd.edu/about/principles.html" target="_blank">principles of community</a></li>
+                    <li>Harassment, discrimination, or intimidation of any form will not be tolerated</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ======== ASSIGNMENTS PAGE ======== -->
+        <div id="page-assignments" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Worksheets &amp; Project
+            </h1>
+
+            <div class="card reveal">
+                <h3>In-class Worksheets (30%)</h3>
+                <ul>
+                    <li><strong>Submission</strong>: upload a photo of your worksheet to Gradescope within 1 hour after class.</li>
+                    <li><strong>Entry Code</strong>: <code>RV7PED</code></li>
+                    <li><strong>Scoring</strong>: Participation 20% + Worksheets 10% (only top-5 worksheet scores are counted).</li>
+                    <li><strong>Piazza bonus</strong>: the top 5 most active and helpful students on Piazza receive a 5% bonus (for participation).</li>
+                </ul>
+            </div>
+
+            <div class="card reveal">
+                <h3>Course Project (70%, group of 5-7)</h3>
+                <ul>
+                    <li><strong>Categories</strong>: Paper Survey / Paper Reproduction / Self-proposed topic.</li>
+                    <li><strong>Project Spec</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a> (also see <code>CSE291P Project.md</code>).</li>
+                    <li><strong>Team size</strong>: 5-7 students.</li>
+                    <li><strong>Proposal (for self-proposed topics)</strong>: up to 2 pages, due <strong>Feb 6</strong>.</li>
+                    <li><strong>Team registration</strong>: <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">Presentation slot sign-up</a>.</li>
+                    <li><strong>Topic list</strong>: <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">Candidate topics</a>.</li>
+                    <li><strong>Presentation</strong>: 30% (20% of the presentation score is based on in-class peer evaluation).</li>
+                    <li><strong>Final report (due March 18)</strong>: 30% (10% of the report score is based on within-team peer grading).</li>
+                    <li><strong>Participation in peer grading</strong>: 10% (for contributing to peer evaluations).</li>
+                </ul>
+            </div>
+
+            <h2 class="reveal">Instructions and Caveats</h2>
+            <div class="card reveal">
+                <h3>Academic Integrity</h3>
+                <ul>
+                    <li>It is fine to discuss the project and papers at a conceptual level, but do not share implementation code or post your full solutions publicly.</li>
+                    <li>Do not go searching for any code posted online by other students or prior editions.</li>
+                    <li>We will use advanced program analysis tools to compare your code submissions. These go well beyond basic string or syntactic comparisons to catch plagiarism.</li>
+                    <li>If plagiarism is detected in your code or if any other form of academic integrity violation is identified, you will get zero for that component of your score and get downgraded substantially. I will also notify the University authorities for appropriate disciplinary action to be taken, up to and including expulsion from the University.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ======== SCHEDULE PAGE ======== -->
+        <div id="page-schedule" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Tentative Schedule
+            </h1>
+
+            <div class="card reveal">
+                <ul>
+                    <li>This schedule is tentative and subject to change.</li>
+                    <li>Lecture PDFs are stored under Google Drive.</li>
+                    <li>We expect about 13-15 lectures (roughly early January-mid/late February), followed by project preparation and student presentations (roughly late February-mid March).</li>
+                </ul>
+            </div>
+
+            <div class="card reveal">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Week</th>
+                            <th>Topic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>L1</td><td>LLM API Usage + Tokenization</td></tr>
+                        <tr><td>L2</td><td>Transformer Model Architecture Variants</td></tr>
+                        <tr><td>L3</td><td>Transformer Model Architecture Variants (Part II)</td></tr>
+                        <tr><td>L4</td><td>Distributed LLM Training: Foundations</td></tr>
+                        <tr><td>L5</td><td>Distributed Training: Data Parallelism (ZeRO-1/2/3)</td></tr>
+                        <tr><td>L6</td><td>Distributed Training: Pipeline Parallelism + Tensor Parallelism</td></tr>
+                        <tr><td>L7</td><td>Distributed Training: Context Parallelism (CP)</td></tr>
+                        <tr><td>L8</td><td>Distributed Training: Tensor Parallelism (TP)</td></tr>
+                        <tr><td>L9</td><td>Invited Talk: Machine Learning Compiler (Yue Guan)</td></tr>
+                        <tr><td>L10</td><td>Invited Talk: RL Intro for System Designers (Guyue Huang)</td></tr>
+                        <tr><td>L11</td><td>Invited Talk: FlexAttention and CUDAGraph (Boyuan Feng)</td></tr>
+                        <tr><td>L12</td><td>LLM Quantization</td></tr>
+                        <tr><td>L13</td><td>LLM Serving: Scheduling, KV Management, and Kernel Optimization</td></tr>
+                        <tr><td>--</td><td>Project preparation &amp; student presentations (details in announcements)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ======== RESOURCES PAGE ======== -->
+        <div id="page-resources" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                Resources
+            </h1>
+
+            <div class="toc reveal">
+                <h3>Table of Contents</h3>
+                <ul>
+                    <li><a href="#books">Book, Related Documentation, and Courses</a></li>
+                    <li><a href="#materials">Materials</a></li>
+                    <li><a href="#wellness">Wellness Resources</a></li>
+                </ul>
+            </div>
+
+            <h2 id="books" class="reveal">Book, Related Documentation, and Courses</h2>
+            <div class="card reveal">
+                <ul>
+                    <li><a href="https://www.youtube.com/watch?v=SQ3fZ1sAqXI&list=PLoROMvodv4rOY23Y0BoGoBGgQ1zmU_MT_" target="_blank">Stanford CS336: Language Modeling from Scratch</a></li>
+                    <li><a href="https://www.youtube.com/watch?v=ti6yPE2VPZc&list=PLS01nW3RtgorL3AW8REU9nGkzhvtn6Egn" target="_blank">UC Berkeley CS294: Advanced LLM Agents</a></li>
+                    <li><a href="https://www.youtube.com/watch?v=rCFvPEQTxKI&list=PL80kAHvQbh-pT4lCkDT53zT8DKmhE0idB" target="_blank">MIT 6.5940: Efficient ML/AI</a></li>
+                    <li><a href="https://jalammar.github.io/illustrated-transformer/" target="_blank">The Illustrated Transformer</a></li>
+                    <li><a href="https://developer.nvidia.com/nccl" target="_blank">NVIDIA NCCL (collective communication)</a></li>
+                    <li><a href="https://docs.nvidia.com/nemo/megatron-bridge/latest/parallelisms.html" target="_blank">NVIDIA NeMo Megatron parallelisms</a></li>
+                </ul>
+            </div>
+
+            <h2 id="materials" class="reveal">Materials</h2>
+            <div class="card reveal">
+                <h3>Slides &amp; Project Docs</h3>
+                <p>Slides are available in this repo under <code>cse291p-w26/</code>. Project spec: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>. Lecture recordings: <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Podcast</a>.</p>
+            </div>
+
+            <h2 id="wellness" class="reveal">Wellness Resources</h2>
+            <div class="card reveal">
+                <p>Your wellbeing matters. If you need support, please reach out to the instructor / TAs or use the campus resources below.</p>
+                <ul>
+                    <li><a href="https://studenthealth.ucsd.edu/" target="_blank">University Health Services</a></li>
+                    <li><a href="https://caps.ucsd.edu/" target="_blank">UHS Counseling and Psychological Services (CAPS)</a></li>
+                    <li><a href="https://osd.ucsd.edu/" target="_blank">Office For Students with Disabilities</a></li>
+                    <li><a href="https://asadvocacy.ucsd.edu/" target="_blank">Office of Student Advocacy</a></li>
+                    <li><a href="https://basicneeds.ucsd.edu/" target="_blank">Basic Needs Center</a></li>
+                    <li><a href="https://studenthealth.ucsd.edu/services/mental-health/index.html" target="_blank">Mental Health Resources Guide</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ======== FAQ PAGE ======== -->
+        <div id="page-faq" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Frequently Asked Questions
+            </h1>
+
+            <h2 class="reveal">Course Requirements and Prerequisites</h2>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: What are the prerequisites for this course?
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>You need to have completed either:</p>
+                    <ul>
+                        <li>A course on ML algorithms (e.g., CSE 151) is absolutely necessary.</li>
+                        <li>A course on either database systems internals (e.g., CSE 132C) or operating systems (e.g., CSE 120) is also necessary.</li>
+                        <li>DSC 102 suffices as a prerequisite for both of the above aspects.</li>
+                        <li>Substantial project or industrial experience on relevant topics can be substituted for prior coursework, subject to the instructor's consent. Email the instructor if you would like to enroll but are unsure if you satisfy the prerequisites.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: I have relevant industry experience but haven't taken the prerequisite courses. Can I still enroll?
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Yes, substantial project or industrial experience can be considered as a substitute for prerequisites. Email the instructor directly to discuss your background and eligibility.</p>
+                </div>
+            </div>
+
+            <h2 class="reveal">Course Content and Structure</h2>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: What is the main focus of this course?
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>This is a research-based course that explores systems for machine learning, combining elements of ML/AI and systems. In this year, we will focus more on LLMs, its related system support, optimizations, deployment challenges, and emerging problems.</p>
+                </div>
+            </div>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: Who is this course designed for?
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>The course is primarily tailored for:</p>
+                    <ul>
+                        <li>MS students</li>
+                        <li>PhD students</li>
+                        <li>Advanced undergraduate students who are interested in systems for scalable data science and ML engineering.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: What are the suggested readings for this course?
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p><strong>Suggested Textbooks:</strong></p>
+                    <ul>
+                        <li>Recommended: <em>Data Management in Machine Learning Systems</em>, by Matthias Boehm, Arun Kumar, and Jun Yang (<a href="https://www.morganclaypool.com/doi/10.2200/S00895ED1V01Y201901DTM057" target="_blank">Free ebook</a> via UCSD VPN).</li>
+                        <li>Additional (optional) for background/foundations:
+                            <ul>
+                                <li><em>Machine Learning</em>, by Tom Mitchell (McGraw Hill)</li>
+                                <li><em>Deep Learning</em>, by Ian Goodfellow, Yoshua Bengio, and Aaron Courville (MIT Press)</li>
+                                <li><em>Operating Systems: Three Easy Pieces</em>, by Remzi and Andrea Arpaci-Dusseau (<a href="https://pages.cs.wisc.edu/~remzi/OSTEP/" target="_blank">Free ebook</a>)</li>
+                                <li><a href="https://mlsysbook.ai/" target="_blank">mlsysbook.ai</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2 class="reveal">Course Support and Communication</h2>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: What is the best way to get help in this course?
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Your best avenues are to go to office hours held by the course staff, or to ask questions on Piazza. Course staff will be monitoring Piazza frequently and will try to answer your question quickly and thoroughly.</p>
+                </div>
+            </div>
+
+            <h2 class="reveal">Grading and Assessment</h2>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: Where will our grades for assignments be displayed for the course?
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Grades will be displayed on Gradescope for the written and autograded portions for all assignments (homeworks, reading summaries, and exams).</p>
+                </div>
+            </div>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: I noticed a mistake in the grading of the written portion of my homework. How can I get this fixed?
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>To get this fixed, you must submit a regrade request via Gradescope before the regrade deadline. This is known as the regrade request window. We unfortunately will not accept any regrades after the window has closed. All regrade deadline dates are posted on the same Ed post that releases the assignment grades and solutions.</p>
+                </div>
+            </div>
+
+            <div class="faq-item reveal">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Q: This is my first time being a scribe. I'm not too sure what my role is.
+                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>First off, we're glad that you're taking some time to understand our expectations! The expectations from a scribe are simple: the scribe should faithfully capture the professor's explanations in the lecture. We expect the notes to have the same structure/main sections as the slides, and many similar wordings as well. Additionally, the notes should also have helpful examples given by the professor in the class, additional context for different topics when needed, etc. The TAs will assess your notes based on the contents in the slides.</p>
+                    <p>You should not, however, try to rearrange the content as you see fit, or add in material from the additional readings provided. The scribe notes do not have to be a self-contained document on the topic - we're only looking for you to capture what was taught in class.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== STAFF PAGE ======== -->
+        <div id="page-staff" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Staff
+            </h1>
+
+            <h2 class="reveal">Instructor</h2>
+            <div class="staff-grid reveal">
+                <div class="staff-card">
+                    <div class="staff-avatar"><img src="https://images.squarespace-cdn.com/content/6303b35a3219fa5da06b52a9/d692733a-72a6-4014-9a6d-1ff9431f638d/Yufei+Ding+%281%29.jpeg?content-type=image%2Fjpeg" alt="Yufei Ding"></div>
+                    <div class="staff-name"><a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Yufei Ding</a></div>
+                    <div class="staff-role">Instructor</div>
+                    <div class="staff-pronouns">Associate Professor (CSE)</div>
+                    <div class="staff-bio">Research interests include system optimization (especially compilers) for machine learning and quantum computing.</div>
+                    <div class="staff-contact">
+                        <span><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> <a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a></span>
+                        <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> By appointment</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="reveal" style="margin-top:2rem;">Teaching Assistants</h2>
+            <div class="staff-grid reveal">
+                <div class="staff-card">
+                    <div class="staff-avatar"><img src="https://images.squarespace-cdn.com/content/6303b35a3219fa5da06b52a9/b761dcb9-51bd-4702-96af-a3be5afd1ea8/zaifeng.jpg?content-type=image%2Fjpeg" alt="Zaifeng Pan"></div>
+                    <div class="staff-name">Zaifeng Pan</div>
+                    <div class="staff-role">Teaching Assistant</div>
+                    <div class="staff-pronouns">Full TA (office hour + project guidance)</div>
+                    <div class="staff-contact">
+                        <span><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> <a href="mailto:zapan@ucsd.edu">zapan@ucsd.edu</a></span>
+                        <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Monday 4:00-5:00 pm @B270A</span>
+                    </div>
+                </div>
+
+                <div class="staff-card">
+                    <div class="staff-avatar"><img src="https://images.squarespace-cdn.com/content/6303b35a3219fa5da06b52a9/5140ef02-af1f-4189-8846-d114cc262db8/zhongkai.jpg?content-type=image%2Fjpeg" alt="Zhongkai Yu"></div>
+                    <div class="staff-name">Zhongkai Yu</div>
+                    <div class="staff-role">Teaching Assistant</div>
+                    <div class="staff-pronouns">Full TA (office hour + project guidance)</div>
+                    <div class="staff-contact">
+                        <span><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> <a href="mailto:zhy055@ucsd.edu">zhy055@ucsd.edu</a></span>
+                        <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Monday 5:00-6:00 pm @B270A</span>
+                    </div>
+                </div>
+
+                <div class="staff-card">
+                    <div class="staff-avatar"><img src="https://images.squarespace-cdn.com/content/6303b35a3219fa5da06b52a9/511e49f5-4ae6-4284-bd00-7393bca0182f/jixuan.jpg?content-type=image%2Fjpeg" alt="Jixuan Ruan"></div>
+                    <div class="staff-name">Jixuan Ruan</div>
+                    <div class="staff-role">Teaching Assistant</div>
+                    <div class="staff-pronouns">Half TA (grading + system development)</div>
+                    <div class="staff-contact">
+                        <span><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> <a href="mailto:j3ruan@ucsd.edu">j3ruan@ucsd.edu</a></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== OFFICE HOURS PAGE ======== -->
+        <div id="page-officehours" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Office Hours
+            </h1>
+
+            <div class="card reveal">
+                <p>You are welcome to show up to any office hours. Please see the calendar for office hour times and locations.</p>
+            </div>
+
+            <h2 class="reveal">Office Hours Calendar</h2>
+            <div class="calendar-container reveal">
+                <iframe
+                    src="https://calendar.google.com/calendar/embed?src=linyichen.thu.cs%40gmail.com&ctz=America%2FLos_Angeles"
+                    style="border: 0"
+                    width="800"
+                    height="600"
+                    frameborder="0"
+                    scrolling="no">
+                </iframe>
+            </div>
+
+            <h2 class="reveal" style="margin-top: 2rem;">Quick Reference</h2>
+            <div class="card reveal">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Staff</th>
+                            <th>Day/Time</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Yufei Ding (Instructor)</td>
+                            <td>By appointment</td>
+                            <td>--</td>
+                        </tr>
+                        <tr>
+                            <td>Zaifeng Pan</td>
+                            <td>Monday 4:00-5:00 pm</td>
+                            <td>B270A</td>
+                        </tr>
+                        <tr>
+                            <td>Zhongkai Yu</td>
+                            <td>Monday 5:00-6:00 pm</td>
+                            <td>B270A</td>
+                        </tr>
+                        <tr>
+                            <td>Jixuan Ruan</td>
+                            <td>--</td>
+                            <td>--</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>CSE 291P: LLM System Optimization | Winter 2026 | UC San Diego</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem;">
+            <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Instructor</a> &bull;
+            <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a> &bull;
+            <a href="https://canvas.ucsd.edu/courses/71228/external_tools/5826" target="_blank">Podcast</a> &bull;
+            <a href="https://www.gradescope.com/courses/1211750" target="_blank">Gradescope (Entry Code: RV7PED)</a>
+        </p>
+    </footer>
+
+    <!-- Floating Quick Links (H) -->
+    <div class="floating-links" id="floatingLinks">
+        <div class="floating-links-items">
+            <a class="floating-link-item" href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Piazza
+            </a>
+            <a class="floating-link-item" href="https://www.gradescope.com/courses/1211750" target="_blank">
+                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Gradescope
+            </a>
+            <a class="floating-link-item" href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">
+                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Podcast
+            </a>
+        </div>
+        <button class="floating-trigger" onclick="document.getElementById('floatingLinks').classList.toggle('open')">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+    </div>
+
+    <script>
+    // Hero is now pure CSS animated mesh gradient -- no canvas JS needed.
+
+    // ===== Scroll Progress Bar (C) =====
+    window.addEventListener('scroll', function() {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        document.getElementById('scroll-progress').style.width = progress + '%';
+    });
+
+    // ===== Animated Counter (B) =====
+    function animateCounters() {
+        document.querySelectorAll('.metric-number').forEach(function(el) {
+            const target = parseInt(el.dataset.target);
+            const suffix = el.dataset.suffix || '';
+            const duration = 1200;
+            const start = performance.now();
+            function step(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                // ease out cubic
+                const ease = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(target * ease) + suffix;
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        });
+    }
+
+    // ===== 3D Tilt Cards (D) =====
+    document.addEventListener('mousemove', function(e) {
+        document.querySelectorAll('.card').forEach(function(card) {
+            const rect = card.getBoundingClientRect();
+            // Check if mouse is near the card
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const dx = e.clientX - cx;
+            const dy = e.clientY - cy;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < 400) {
+                const rotateX = -(dy / rect.height) * 3;
+                const rotateY = (dx / rect.width) * 3;
+                card.style.transform = 'perspective(800px) rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg)';
+                // Light reflection
+                const px = ((e.clientX - rect.left) / rect.width) * 100;
+                const py = ((e.clientY - rect.top) / rect.height) * 100;
+                card.style.setProperty('--mouse-x', px + '%');
+                card.style.setProperty('--mouse-y', py + '%');
+            } else {
+                card.style.transform = '';
+            }
+        });
+    });
+
+    // ===== Scroll Reveal (G) =====
+    const revealObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+    function initReveal() {
+        document.querySelectorAll('.reveal').forEach(function(el) {
+            revealObserver.observe(el);
+        });
+    }
+
+    // ===== Page Navigation (SPA) =====
+    function showPage(pageId, el) {
+        document.querySelectorAll('.page').forEach(function(page) { page.classList.remove('active'); });
+        document.getElementById('page-' + pageId).classList.add('active');
+        document.querySelectorAll('nav a').forEach(function(link) { link.classList.remove('active'); });
+        if (el) el.classList.add('active');
+        window.scrollTo(0, 0);
+        document.getElementById('mainNav').classList.remove('open');
+
+        // Re-trigger reveal for newly visible page
+        document.querySelectorAll('.reveal').forEach(function(r) {
+            r.classList.remove('visible');
+            revealObserver.unobserve(r);
+            revealObserver.observe(r);
+        });
+
+        // Re-animate counters on home page
+        if (pageId === 'home') {
+            setTimeout(animateCounters, 200);
+        }
+    }
+
+    // ===== Theme Toggle =====
+    function toggleTheme() {
+        const body = document.body;
+        const btn = document.getElementById('themeBtn');
+        if (body.getAttribute('data-theme') === 'dark') {
+            body.removeAttribute('data-theme');
+            btn.querySelector('span').textContent = 'Dark Mode';
+            btn.querySelector('svg').innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+            localStorage.setItem('theme', 'light');
+        } else {
+            body.setAttribute('data-theme', 'dark');
+            btn.querySelector('span').textContent = 'Light Mode';
+            btn.querySelector('svg').innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+            localStorage.setItem('theme', 'dark');
+        }
+    }
+
+    // ===== Mobile Menu =====
+    function toggleMobileMenu() {
+        document.getElementById('mainNav').classList.toggle('open');
+    }
+
+    // ===== FAQ Accordion =====
+    function toggleFaq(element) {
+        element.parentElement.classList.toggle('open');
+    }
+
+    // ===== Init =====
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+            const btn = document.getElementById('themeBtn');
+            btn.querySelector('span').textContent = 'Light Mode';
+            btn.querySelector('svg').innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        }
+
+        // Init scroll reveal
+        initReveal();
+
+        // Animate counters on first load
+        setTimeout(animateCounters, 400);
+
+        // Hash navigation
+        if (window.location.hash) {
+            const hash = window.location.hash.substring(1);
+            if (document.getElementById('page-' + hash)) {
+                document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+                document.getElementById('page-' + hash).classList.add('active');
+                // Update nav active
+                document.querySelectorAll('nav a').forEach(function(a) {
+                    a.classList.remove('active');
+                    if (a.textContent.trim().toLowerCase().replace(/\s+/g,'') === hash) a.classList.add('active');
+                });
+            }
+        }
+    });
+
+    window.addEventListener('hashchange', function() {
+        const hash = window.location.hash.substring(1);
+        if (hash && document.getElementById('page-' + hash)) {
+            showPage(hash);
+        }
+    });
+    </script>
+</body>
+</html>
