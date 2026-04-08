@@ -5,7 +5,7 @@ Official website for the **Picasso Lab** at UC San Diego, led by Prof. Yufei Din
 ## Project Structure
 
 ```
-Picasso-Web/
+Picasso-Lab/
 ├── home/              # Lab homepage
 │   └── static/        # Logos, background music, hero assets
 ├── people/            # Lab members & alumni
@@ -41,7 +41,7 @@ npx serve .
 **Static asset convention:** Each directory owns its assets in a local `static/` subfolder. Image/media URLs in HTML use GitHub raw content paths for CDN delivery:
 
 ```
-https://raw.githubusercontent.com/yil384/Picasso-Web/main/{section}/static/{file}
+https://raw.githubusercontent.com/yil384/Picasso-Lab/main/{section}/static/{file}
 ```
 
 ## Deployment
@@ -51,4 +51,4 @@ The site is hosted via GitHub Pages from the `main` branch. Push to `main` to de
 ## Links
 
 - **Lab website:** [yufeiding.ucsd.edu](https://yufeiding.ucsd.edu)
-- **GitHub:** [github.com/yil384/Picasso-Web](https://github.com/yil384/Picasso-Web)
+- **GitHub:** [github.com/yil384/Picasso-Lab](https://github.com/yil384/Picasso-Lab)
