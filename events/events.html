@@ -424,6 +424,118 @@
         opacity: 1;
         transform: translateY(0);
     }
+
+    /* =========================================
+       Holographic Concert Mode
+       ========================================= */
+    .holo-overlay {
+        position: fixed; inset: 0; z-index: 99999;
+        background: rgba(0,0,0,0.95);
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        cursor: pointer;
+        overflow: hidden;
+    }
+    .holo-overlay.active { opacity: 1; }
+
+    /* Scan lines */
+    .holo-scanlines {
+        position: absolute; inset: 0; pointer-events: none;
+        background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0,255,255,0.03) 2px,
+            rgba(0,255,255,0.03) 4px
+        );
+        animation: holo-scan-scroll 8s linear infinite;
+    }
+    @keyframes holo-scan-scroll {
+        0% { background-position: 0 0; }
+        100% { background-position: 0 200px; }
+    }
+
+    /* Pulsing radial glow */
+    .holo-glow {
+        position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(ellipse at center, rgba(180,0,255,0.12) 0%, transparent 70%);
+        animation: holo-pulse 3s ease-in-out infinite;
+    }
+    @keyframes holo-pulse {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.08); }
+    }
+
+    /* Large spinning vinyl */
+    .holo-vinyl {
+        width: 300px; height: 300px;
+        animation: holo-spin 4s linear infinite;
+        filter: drop-shadow(0 0 40px rgba(0,255,255,0.3)) drop-shadow(0 0 80px rgba(180,0,255,0.2));
+        position: relative; z-index: 2;
+    }
+    @keyframes holo-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Visualizer container (semicircle of bars around bottom of record) */
+    .holo-visualizer {
+        position: absolute;
+        width: 380px; height: 190px;
+        left: 50%; top: 50%;
+        transform: translate(-50%, -10px);
+        pointer-events: none; z-index: 1;
+    }
+    .holo-bar {
+        position: absolute;
+        bottom: 0; left: 50%;
+        width: 4px;
+        border-radius: 2px;
+        transform-origin: bottom center;
+        background: linear-gradient(to top, #a855f7, #ec4899, #06b6d4);
+        opacity: 0.85;
+    }
+
+    /* Song info */
+    .holo-info {
+        position: relative; z-index: 2;
+        text-align: center;
+        margin-top: 30px;
+    }
+    .holo-info .holo-title {
+        font-size: 36px; font-weight: 700;
+        color: #fff;
+        text-shadow: 0 0 20px rgba(0,255,255,0.8), 0 0 40px rgba(180,0,255,0.5);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        letter-spacing: 6px;
+    }
+    .holo-info .holo-artist {
+        font-size: 18px; font-weight: 400;
+        color: rgba(255,255,255,0.6);
+        margin-top: 8px;
+        text-shadow: 0 0 10px rgba(0,255,255,0.4);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        letter-spacing: 3px;
+    }
+
+    /* Floating particles */
+    .holo-particle {
+        position: absolute;
+        width: 3px; height: 3px;
+        border-radius: 50%;
+        background: rgba(0,255,255,0.7);
+        box-shadow: 0 0 6px rgba(0,255,255,0.5);
+        pointer-events: none;
+        animation: holo-float linear infinite;
+    }
+    @keyframes holo-float {
+        0% { transform: translateY(0) scale(1); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 0.6; }
+        100% { transform: translateY(-100vh) scale(0.3); opacity: 0; }
+    }
 </style>
 </head>
 <body>
@@ -1078,10 +1190,29 @@
         showSongTitle(track.title);
     }
 
-    // --- 单击 = 播放/暂停, 双击 = 翻转切歌 ---
+    // --- 单击 = 播放/暂停, 双击 = 翻转切歌, 三击(多梦症) = 全息演唱会 ---
     let clickTimer = null;
+    let clickCount = 0;
+    let clickResetTimer = null;
+
     musicBtn.addEventListener('click', (e) => {
         if (isFlipping) return;
+        clickCount++;
+        clearTimeout(clickResetTimer);
+
+        if (clickCount === 3) {
+            // Triple click — holographic concert mode
+            clickCount = 0;
+            clearTimeout(clickTimer);
+            clickTimer = null;
+            clearTimeout(clickResetTimer);
+            if (currentTrack === 1 && isMusicPlaying) {
+                enterHolographicMode();
+            }
+            return;
+        }
+
+        clickResetTimer = setTimeout(() => { clickCount = 0; }, 600);
 
         if (clickTimer) {
             // 双击 — 取消单击定时器，执行切歌
@@ -1108,6 +1239,208 @@
             }, 250);
         }
     });
+
+    // =========================================
+    // Holographic Concert Mode
+    // =========================================
+    let holoActive = false;
+    let holoAudioCtx = null;
+    let holoAnalyser = null;
+    let holoSource = null;
+    let holoAnimFrame = null;
+
+    function enterHolographicMode() {
+        if (holoActive) return;
+        holoActive = true;
+
+        // --- Create overlay DOM ---
+        const overlay = document.createElement('div');
+        overlay.className = 'holo-overlay';
+        overlay.id = 'holo-overlay';
+
+        // Scan lines
+        const scanlines = document.createElement('div');
+        scanlines.className = 'holo-scanlines';
+        overlay.appendChild(scanlines);
+
+        // Pulsing glow
+        const glow = document.createElement('div');
+        glow.className = 'holo-glow';
+        glow.id = 'holo-glow';
+        overlay.appendChild(glow);
+
+        // Floating particles (30)
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'holo-particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.bottom = -(Math.random() * 20) + '%';
+            p.style.animationDuration = (6 + Math.random() * 8) + 's';
+            p.style.animationDelay = (Math.random() * 8) + 's';
+            const colors = ['rgba(0,255,255,0.7)', 'rgba(180,0,255,0.6)', 'rgba(236,72,153,0.6)', 'rgba(255,255,255,0.5)'];
+            p.style.background = colors[Math.floor(Math.random() * colors.length)];
+            p.style.width = (2 + Math.random() * 3) + 'px';
+            p.style.height = p.style.width;
+            overlay.appendChild(p);
+        }
+
+        // Vinyl wrapper (for positioning visualizer relative to vinyl)
+        const vinylWrap = document.createElement('div');
+        vinylWrap.style.cssText = 'position:relative; display:flex; align-items:center; justify-content:center;';
+
+        // Large vinyl SVG (clone from existing, with 多梦症 colors)
+        const svgClone = vinylIcon.cloneNode(true);
+        svgClone.classList.remove('vinyl-icon');
+        svgClone.classList.add('holo-vinyl');
+        // Ensure center is the ruby red
+        const cloneCenter = svgClone.querySelector('.vinyl-center');
+        if (cloneCenter) cloneCenter.setAttribute('fill', '#b04050');
+        // Update label text to 多梦症●Laymen
+        const cloneLabel = svgClone.querySelector('.vinyl-label-text');
+        if (cloneLabel) {
+            const labelStr = '多梦症●Laymen';
+            const chars = labelStr.split('');
+            let angles = [], cumAngle = 0;
+            for (let i = 0; i < chars.length; i++) {
+                angles.push(cumAngle);
+                if (i < chars.length - 1) {
+                    const isCJK = /[\u4e00-\u9fff]/.test(chars[i]);
+                    const nextCJK = /[\u4e00-\u9fff]/.test(chars[i + 1]);
+                    cumAngle += (isCJK && nextCJK) ? 36 : 30;
+                }
+            }
+            const offset = -cumAngle / 2;
+            cloneLabel.innerHTML = '';
+            chars.forEach((ch, i) => {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', '75');
+                text.setAttribute('y', '31');
+                text.setAttribute('transform', 'rotate(' + (angles[i] + offset) + ',75,75)');
+                text.textContent = ch;
+                cloneLabel.appendChild(text);
+            });
+        }
+        // Remove tonearm from clone
+        const cloneArm = svgClone.querySelector('.vinyl-arm');
+        if (cloneArm) cloneArm.remove();
+        // Give unique gradient IDs to avoid conflicts
+        svgClone.querySelectorAll('[id]').forEach(el => {
+            el.id = 'holo-' + el.id;
+        });
+        svgClone.querySelectorAll('[fill^="url(#"]').forEach(el => {
+            const old = el.getAttribute('fill');
+            el.setAttribute('fill', old.replace('url(#', 'url(#holo-'));
+        });
+        vinylWrap.appendChild(svgClone);
+
+        // Visualizer bars container
+        const vizContainer = document.createElement('div');
+        vizContainer.className = 'holo-visualizer';
+        vizContainer.id = 'holo-visualizer';
+        const NUM_BARS = 40;
+        for (let i = 0; i < NUM_BARS; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'holo-bar';
+            // Arrange in semicircle (180 deg) around bottom
+            const angle = -90 + (180 / (NUM_BARS - 1)) * i;
+            const rad = angle * Math.PI / 180;
+            const radius = 170;
+            const x = Math.cos(rad) * radius;
+            const y = -Math.sin(rad) * radius;
+            bar.style.transform = 'translate(-50%, 0) translate(' + x + 'px, ' + y + 'px) rotate(' + (-angle) + 'deg)';
+            bar.style.height = '5px';
+            vizContainer.appendChild(bar);
+        }
+        vinylWrap.appendChild(vizContainer);
+        overlay.appendChild(vinylWrap);
+
+        // Song info
+        const info = document.createElement('div');
+        info.className = 'holo-info';
+        info.innerHTML = '<div class="holo-title">\u591A\u68A6\u75C7</div><div class="holo-artist">Laymen</div>';
+        overlay.appendChild(info);
+
+        document.body.appendChild(overlay);
+
+        // Fade in
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                overlay.classList.add('active');
+            });
+        });
+
+        // --- Web Audio API for visualizer ---
+        try {
+            if (!holoAudioCtx) {
+                holoAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (holoAudioCtx.state === 'suspended') {
+                holoAudioCtx.resume();
+            }
+            if (!holoSource) {
+                holoSource = holoAudioCtx.createMediaElementSource(bgMusic);
+                holoAnalyser = holoAudioCtx.createAnalyser();
+                holoAnalyser.fftSize = 128;
+                holoSource.connect(holoAnalyser);
+                holoAnalyser.connect(holoAudioCtx.destination);
+            }
+        } catch (err) {
+            console.warn('Web Audio API not available for visualizer:', err);
+        }
+
+        // --- Animation loop ---
+        const bars = vizContainer.querySelectorAll('.holo-bar');
+        const bufferLength = holoAnalyser ? holoAnalyser.frequencyBinCount : 0;
+        const dataArray = new Uint8Array(bufferLength);
+
+        function animateViz() {
+            if (!holoActive) return;
+            holoAnimFrame = requestAnimationFrame(animateViz);
+
+            if (holoAnalyser) {
+                holoAnalyser.getByteFrequencyData(dataArray);
+            }
+
+            const step = Math.max(1, Math.floor(bufferLength / NUM_BARS));
+            let avgEnergy = 0;
+            for (let i = 0; i < NUM_BARS; i++) {
+                const idx = Math.min(i * step, bufferLength - 1);
+                const val = holoAnalyser ? dataArray[idx] : 0;
+                const h = Math.max(3, (val / 255) * 100);
+                bars[i].style.height = h + 'px';
+                avgEnergy += val;
+            }
+            // Pulse the glow based on average energy
+            if (holoAnalyser && bufferLength > 0) {
+                avgEnergy /= NUM_BARS;
+                const glowEl = document.getElementById('holo-glow');
+                if (glowEl) {
+                    const intensity = 0.2 + (avgEnergy / 255) * 0.8;
+                    glowEl.style.opacity = intensity;
+                }
+            }
+        }
+        animateViz();
+
+        // --- Exit handlers ---
+        function exitHolo() {
+            if (!holoActive) return;
+            holoActive = false;
+            cancelAnimationFrame(holoAnimFrame);
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                overlay.remove();
+            }, 500);
+            document.removeEventListener('keydown', escHandler);
+        }
+
+        overlay.addEventListener('click', exitHolo);
+
+        function escHandler(e) {
+            if (e.key === 'Escape') exitHolo();
+        }
+        document.addEventListener('keydown', escHandler);
+    }
 </script>
 </body>
 </html>
