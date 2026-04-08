@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; overflow: auto; }
+    html { height: 100%; overflow: hidden; }
 
     body {
       font-family: 'Inter', -apple-system, sans-serif;
@@ -15,10 +15,14 @@
       line-height: 1.6;
       background: #ffffff;
       -webkit-font-smoothing: antialiased;
-      padding: 36px 40px 60px;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
-    .wrapper { max-width: 760px; margin: 0 auto; }
+    .wrapper { max-width: 760px; margin: 0 auto; padding: 36px 40px 60px; }
+    /* When showing article, go full-width with no padding */
+    body.article-mode .wrapper { max-width: none; padding: 0; }
 
     /* ── Header ── */
     .blog-header {
@@ -123,7 +127,7 @@
       display: inline-flex; align-items: center; gap: 6px;
       font-size: .85rem; font-weight: 600; color: #182B49;
       background: none; border: none; cursor: pointer;
-      padding: 0 0 20px; font-family: inherit;
+      padding: 16px 24px 8px; font-family: inherit;
     }
     .back-btn:hover { text-decoration: underline; }
     .back-btn svg {
@@ -131,9 +135,8 @@
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
 
-    #article-content {
-      /* Article HTML will be injected here -- its own styles come with it */
-    }
+    /* The injected article content fills the page */
+    #article-content { }
 
     .loading {
       text-align: center; padding: 60px 0; color: #8690a8; font-size: .9rem;
@@ -147,7 +150,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 600px) {
-      body { padding: 24px 20px 40px; }
+      .wrapper { padding: 24px 20px 40px; }
       .blog-header h1 { font-size: 1.3rem; }
       .card-title { font-size: 1rem; }
       .card-footer { flex-direction: column; align-items: flex-start; }
@@ -221,6 +224,7 @@ async function openArticle(idx) {
   // Switch view
   listEl.classList.add('hidden');
   articleEl.classList.add('active');
+  document.body.classList.add('article-mode');
   container.innerHTML = '<div class="loading"><span class="loading-spinner"></span>Loading article...</div>';
   window.scrollTo(0, 0);
 
@@ -266,6 +270,7 @@ async function openArticle(idx) {
 function showIndex() {
   document.getElementById('blog-list').classList.remove('hidden');
   document.getElementById('article-view').classList.remove('active');
+  document.body.classList.remove('article-mode');
   document.getElementById('article-content').innerHTML = '';
   window.scrollTo(0, 0);
 }
