@@ -1191,39 +1191,28 @@
     }
 
     // --- 单击 = 播放/暂停, 双击 = 翻转切歌, 三击(多梦症) = 全息演唱会 ---
-    let clickTimer = null;
+    // 用一个统一计数器，等 400ms 窗口结束后再根据点击次数决定行为
     let clickCount = 0;
-    let clickResetTimer = null;
+    let clickDecideTimer = null;
 
     musicBtn.addEventListener('click', (e) => {
         if (isFlipping) return;
         clickCount++;
-        clearTimeout(clickResetTimer);
+        clearTimeout(clickDecideTimer);
 
-        if (clickCount === 3) {
-            // Triple click — holographic concert mode
+        // 等 400ms 看用户还点不点
+        clickDecideTimer = setTimeout(() => {
+            const n = clickCount;
             clickCount = 0;
-            clearTimeout(clickTimer);
-            clickTimer = null;
-            clearTimeout(clickResetTimer);
-            if (currentTrack === 1 && isMusicPlaying) {
+
+            if (n >= 3 && currentTrack === 1 && isMusicPlaying) {
+                // 三击 + 正在播放多梦症 → 全息演唱会
                 enterHolographicMode();
-            }
-            return;
-        }
-
-        clickResetTimer = setTimeout(() => { clickCount = 0; }, 600);
-
-        if (clickTimer) {
-            // 双击 — 取消单击定时器，执行切歌
-            clearTimeout(clickTimer);
-            clickTimer = null;
-            flipToNextTrack();
-        } else {
-            // 等一下看是不是双击
-            clickTimer = setTimeout(() => {
-                clickTimer = null;
-                // 单击 — 播放/暂停
+            } else if (n === 2) {
+                // 双击 → 翻转切歌
+                flipToNextTrack();
+            } else {
+                // 单击 → 播放/暂停
                 if (isMusicPlaying) {
                     bgMusic.pause();
                     musicBtn.classList.remove('music-playing');
@@ -1236,8 +1225,8 @@
                     });
                 }
                 isMusicPlaying = !isMusicPlaying;
-            }, 250);
-        }
+            }
+        }, 400);
     });
 
     // =========================================
