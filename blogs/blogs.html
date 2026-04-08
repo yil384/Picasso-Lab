@@ -3,973 +3,248 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blog – Picasso Lab @ UCSD</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <title>Blog – Picasso Lab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --sidebar-bg: #06080f;
-      --sidebar-text: rgba(255,255,255,.5);
-      --sidebar-text-hover: #fff;
-      --sidebar-active-bg: rgba(255,255,255,.07);
-      --sidebar-width: 220px;
-
-      --bg: #f5f6fa;
-      --bg-card: #ffffff;
-      --bg-elevated: #eef0f6;
-      --text: #111319;
-      --text-secondary: #3d4259;
-      --text-muted: #7c829e;
-      --accent: #4f6df5;
-      --accent-rgb: 79,109,245;
-      --accent-light: rgba(79,109,245,.08);
-      --accent-glow: rgba(79,109,245,.25);
-      --accent2: #a855f7;
-      --accent2-rgb: 168,85,247;
-      --accent3: #06b6d4;
-      --accent3-rgb: 6,182,212;
-      --border: #e2e5ee;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
-      --shadow: 0 4px 24px rgba(0,0,0,.06);
-      --shadow-lg: 0 12px 48px rgba(0,0,0,.1);
-      --radius: 16px;
-      --radius-sm: 8px;
-    }
-
-    [data-theme="dark"] {
-      --bg: #08090e;
-      --bg-card: rgba(20,22,34,.8);
-      --bg-elevated: rgba(28,31,48,.6);
-      --text: #e4e6f0;
-      --text-secondary: #9499b3;
-      --text-muted: #5c6280;
-      --accent: #6d8afa;
-      --accent-rgb: 109,138,250;
-      --accent-light: rgba(109,138,250,.1);
-      --accent-glow: rgba(109,138,250,.2);
-      --accent2: #c084fc;
-      --accent2-rgb: 192,132,252;
-      --accent3: #22d3ee;
-      --accent3-rgb: 34,211,238;
-      --border: rgba(255,255,255,.06);
-      --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
-      --shadow: 0 4px 24px rgba(0,0,0,.3);
-      --shadow-lg: 0 12px 48px rgba(0,0,0,.4);
-    }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.65;
+      font-family: 'Inter', -apple-system, sans-serif;
+      color: #1a1d2e;
+      line-height: 1.6;
+      background: #fff;
       -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
     }
 
-    /* ── Icon system ── */
-    .icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex-shrink: 0; }
-    .icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .icon-sm { width: 14px; height: 14px; }
-    .icon-lg { width: 22px; height: 22px; }
-    .icon-xl { width: 28px; height: 28px; }
-
-    /* ── Sidebar ── */
-    header {
-      position: fixed; top: 0; left: 0; bottom: 0;
-      width: var(--sidebar-width);
-      background: var(--sidebar-bg);
-      z-index: 1000;
-      display: flex; flex-direction: column;
-      overflow-y: auto; overflow-x: hidden;
-      border-right: 1px solid rgba(255,255,255,.04);
-    }
-
-    .sidebar-top { padding: 28px 18px 16px; }
-
-    .logo {
-      display: flex; align-items: center; gap: 10px;
-      text-decoration: none; cursor: pointer;
-    }
-    .logo-mark {
-      width: 34px; height: 34px; border-radius: 10px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-weight: 800; font-size: 11px;
-      letter-spacing: -.5px; flex-shrink: 0;
-      box-shadow: 0 4px 16px rgba(var(--accent-rgb),.4);
-    }
-    .logo-text { font-weight: 700; font-size: 1rem; color: #fff; letter-spacing: -.02em; }
-    .logo-sub { font-size: .66rem; color: rgba(255,255,255,.3); font-weight: 400; padding-left: 44px; margin-top: -2px; }
-
-    nav { padding: 12px 10px 0; flex: 1; }
-
-    .nav-label {
-      font-size: .6rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .1em; color: rgba(255,255,255,.2);
-      padding: 18px 10px 6px;
-    }
-
-    nav a {
-      display: flex; align-items: center; gap: 10px;
-      color: var(--sidebar-text); text-decoration: none;
-      padding: 7px 10px; border-radius: 8px;
-      font-size: .84rem; font-weight: 500;
-      transition: all .15s; cursor: pointer;
-    }
-    nav a:hover { color: var(--sidebar-text-hover); background: var(--sidebar-active-bg); }
-    nav a.active { color: #fff; background: rgba(var(--accent-rgb),.2); }
-    nav a .icon { opacity: .5; }
-    nav a.active .icon, nav a:hover .icon { opacity: 1; }
-
-    .sidebar-bottom { padding: 14px 10px 18px; border-top: 1px solid rgba(255,255,255,.04); }
-
-    .ext-links { display: flex; flex-direction: column; gap: 1px; }
-    .ext-links a {
-      display: flex; align-items: center; gap: 7px;
-      font-size: .78rem; color: var(--sidebar-text);
-      text-decoration: none; padding: 5px 10px; border-radius: 6px;
-      transition: all .15s;
-    }
-    .ext-links a:hover { color: #fff; background: var(--sidebar-active-bg); }
-
-    .theme-toggle {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      width: 100%; margin-top: 10px; padding: 7px;
-      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
-      border-radius: 8px; cursor: pointer;
-      color: var(--sidebar-text); font-size: .76rem;
-      font-family: inherit; transition: all .15s;
-    }
-    .theme-toggle:hover { background: rgba(255,255,255,.1); color: #fff; }
-
-    .mobile-menu-btn {
-      display: none; position: fixed; top: 14px; left: 14px; z-index: 1100;
-      background: var(--sidebar-bg); border: 1px solid rgba(255,255,255,.1);
-      color: #fff; cursor: pointer; padding: 8px; border-radius: 8px;
-    }
-
-    /* ── Main ── */
-    main {
-      margin-left: var(--sidebar-width);
-      min-height: 100vh;
-    }
-
-    /* ── Hero ── */
-    .hero-wrap {
-      position: relative;
-      background: var(--sidebar-bg);
-      overflow: hidden;
-      min-height: 340px;
-      display: flex;
-      align-items: center;
-    }
-
-    #heroCanvas {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%;
-      opacity: .6;
-    }
-    [data-theme="dark"] #heroCanvas { opacity: .35; }
-
-    .hero-gradient {
-      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-      background:
-        radial-gradient(ellipse 80% 60% at 20% 80%, rgba(var(--accent-rgb),.2) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(var(--accent2-rgb),.15) 0%, transparent 60%);
-    }
-
-    .hero-content {
-      position: relative; z-index: 2;
-      padding: 60px 56px;
-      max-width: 720px;
-    }
-
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 14px;
-      background: rgba(var(--accent-rgb),.15);
-      border: 1px solid rgba(var(--accent-rgb),.2);
-      color: var(--accent3);
-      border-radius: 20px; font-size: .72rem; font-weight: 600;
-      letter-spacing: .02em;
-      margin-bottom: 20px;
-      backdrop-filter: blur(8px);
-    }
-
-    .hero-content h1 {
-      font-size: 2.6rem; font-weight: 900;
-      letter-spacing: -.04em; line-height: 1.1;
-      color: #fff;
-      margin-bottom: 14px;
-    }
-    .hero-content h1 .gradient-text {
-      background: linear-gradient(135deg, #6d8afa, #c084fc, #22d3ee);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero-content .subtitle {
-      font-size: 1.02rem; color: rgba(255,255,255,.55);
-      max-width: 540px; line-height: 1.7;
-    }
-
-    /* ── Stats bar ── */
-    .hero-stats {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      z-index: 3;
-      display: flex;
-      background: rgba(0,0,0,.3);
-      backdrop-filter: blur(16px);
-      border-top: 1px solid rgba(255,255,255,.06);
-    }
-    .stat {
-      flex: 1; padding: 14px 24px;
-      border-right: 1px solid rgba(255,255,255,.06);
-      text-align: center;
-    }
-    .stat:last-child { border-right: none; }
-    .stat-value {
-      font-size: 1.3rem; font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-      letter-spacing: -.02em;
-    }
-    .stat-value.c1 { color: var(--accent3); }
-    .stat-value.c2 { color: #a78bfa; }
-    .stat-value.c3 { color: #f472b6; }
-    .stat-label {
-      font-size: .68rem; color: rgba(255,255,255,.35);
-      text-transform: uppercase; letter-spacing: .06em;
-      font-weight: 600; margin-top: 2px;
-    }
-
-    /* ── Content area ── */
-    .content-area {
-      padding: 40px 48px 80px;
-      max-width: 1100px;
-    }
-
-    /* ── Section header ── */
-    .section-header {
-      display: flex; align-items: center; gap: 14px;
-      margin: 40px 0 24px; position: relative;
-    }
-    .section-header h2 {
-      font-size: 1.3rem; font-weight: 700;
-      color: var(--text); letter-spacing: -.02em;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .section-header h2 .icon { color: var(--accent); }
-
-    /* ── Blog Cards Grid ── */
-    .blog-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 24px;
-    }
+    /* ── Index View ── */
+    #blog-index { padding: 0; }
 
     .blog-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0;
-      overflow: hidden;
+      display: flex;
+      gap: 28px;
+      padding: 28px 0;
+      border-bottom: 1px solid #eef0f4;
       cursor: pointer;
-      transition: all .3s cubic-bezier(.4,0,.2,1);
-      box-shadow: var(--shadow-sm);
-      position: relative;
-      opacity: 0;
-      transform: translateY(24px);
+      transition: background .15s;
+      text-decoration: none;
+      color: inherit;
     }
-    .blog-card.visible {
-      opacity: 1;
-      transform: translateY(0);
-      transition: opacity .6s cubic-bezier(.4,0,.2,1), transform .6s cubic-bezier(.4,0,.2,1), box-shadow .3s, border-color .3s;
+    .blog-card:last-child { border-bottom: none; }
+    .blog-card:hover { background: #f8f9fc; }
+    .blog-card:hover .card-title { color: #4f6df5; }
+
+    .card-num {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
     }
 
-    .blog-card::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
-      opacity: 0;
-      transition: opacity .3s;
-    }
-    .blog-card:hover::before { opacity: 1; }
+    .card-body { flex: 1; min-width: 0; }
 
-    .blog-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-      border-color: rgba(var(--accent-rgb),.25);
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: .78rem;
+      color: #8690a8;
     }
-
-    .blog-card-inner { padding: 28px 28px 24px; }
-
-    .blog-card-meta {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 14px;
-      font-size: .76rem; color: var(--text-muted); font-weight: 500;
+    .card-meta svg {
+      width: 13px; height: 13px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      vertical-align: -2px;
     }
-
-    .blog-card-date {
-      display: flex; align-items: center; gap: 5px;
-    }
-    .blog-card-source {
-      display: flex; align-items: center; gap: 5px;
-      padding: 2px 8px;
-      background: var(--accent-light);
-      border-radius: 4px;
-      color: var(--accent);
-      font-weight: 600;
+    .card-source {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      color: #4f6df5;
+      font-weight: 500;
     }
 
-    .blog-card-title {
-      font-size: 1.18rem; font-weight: 700;
-      color: var(--text);
-      letter-spacing: -.02em;
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1a1d2e;
+      margin-bottom: 6px;
+      transition: color .15s;
       line-height: 1.35;
+    }
+
+    .card-desc {
+      font-size: .88rem;
+      color: #5c6280;
+      line-height: 1.55;
       margin-bottom: 10px;
-      transition: color .2s;
-    }
-    .blog-card:hover .blog-card-title { color: var(--accent); }
-
-    .blog-card-authors {
-      font-size: .82rem; color: var(--text-secondary);
-      margin-bottom: 12px;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .blog-card-authors .icon { color: var(--text-muted); }
-
-    .blog-card-desc {
-      font-size: .88rem; color: var(--text-muted);
-      line-height: 1.6;
-      margin-bottom: 18px;
       display: -webkit-box;
-      -webkit-line-clamp: 3;
+      -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
 
-    .blog-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-
-    .tag-pill {
-      display: inline-flex; align-items: center;
-      font-size: .7rem; font-weight: 600;
-      padding: 3px 10px;
-      border-radius: 20px;
-      letter-spacing: .01em;
-      border: 1px solid transparent;
-      transition: all .2s;
-    }
-    .tag-pill.t-blue {
-      background: rgba(var(--accent-rgb),.08);
-      color: var(--accent);
-      border-color: rgba(var(--accent-rgb),.12);
-    }
-    .tag-pill.t-purple {
-      background: rgba(var(--accent2-rgb),.08);
-      color: var(--accent2);
-      border-color: rgba(var(--accent2-rgb),.12);
-    }
-    .tag-pill.t-cyan {
-      background: rgba(var(--accent3-rgb),.08);
-      color: var(--accent3);
-      border-color: rgba(var(--accent3-rgb),.12);
+    .card-authors {
+      font-size: .8rem;
+      color: #8690a8;
     }
 
-    .blog-card-footer {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 28px;
-      background: var(--bg-elevated);
-      border-top: 1px solid var(--border);
-      font-size: .78rem; font-weight: 600;
-      color: var(--accent);
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
     }
-    .blog-card-footer .read-label {
-      display: flex; align-items: center; gap: 6px;
-      transition: gap .2s;
+    .tag {
+      font-size: .7rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 4px;
+      background: #f0f1f7;
+      color: #5c6280;
+      letter-spacing: .02em;
     }
-    .blog-card:hover .blog-card-footer .read-label { gap: 10px; }
 
-    .blog-card-footer .read-time {
-      color: var(--text-muted);
-      font-weight: 500;
-      display: flex; align-items: center; gap: 5px;
+    .card-arrow {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      color: #c5c9d6;
+      transition: color .15s, transform .15s;
     }
+    .card-arrow svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .blog-card:hover .card-arrow { color: #4f6df5; transform: translateX(3px); }
 
     /* ── Article View ── */
-    .article-view {
+    #blog-article {
       display: none;
-      position: relative;
     }
-    .article-view.active {
+    #blog-article.active {
       display: block;
-      animation: fadeInView .4s cubic-bezier(.4,0,.2,1);
     }
-
-    @keyframes fadeInView {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .blog-listing {
-      transition: opacity .3s, transform .3s;
-    }
-    .blog-listing.hidden {
-      opacity: 0;
-      transform: translateY(-8px);
-      pointer-events: none;
-      position: absolute;
-      visibility: hidden;
+    #blog-index.hidden {
+      display: none;
     }
 
     .back-btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 20px;
-      margin: 24px 48px 0;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-family: inherit;
-      font-size: .85rem; font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .85rem;
+      font-weight: 600;
+      color: #4f6df5;
+      background: none;
+      border: none;
       cursor: pointer;
-      transition: all .2s;
-      box-shadow: var(--shadow-sm);
+      padding: 8px 0;
+      margin-bottom: 8px;
+      font-family: inherit;
+      transition: gap .15s;
     }
-    .back-btn:hover {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-      box-shadow: 0 4px 16px rgba(var(--accent-rgb),.3);
-    }
-
-    .article-iframe-wrap {
-      padding: 0 48px 80px;
-      margin-top: 16px;
+    .back-btn:hover { gap: 8px; }
+    .back-btn svg {
+      width: 16px; height: 16px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
 
-    .article-iframe {
+    #article-frame {
       width: 100%;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: #fff;
-      min-height: 80vh;
-      box-shadow: var(--shadow);
+      border: none;
+      min-height: 600px;
     }
 
     /* ── Empty state ── */
-    .empty-state {
-      text-align: center;
-      padding: 80px 40px;
-      color: var(--text-muted);
-    }
-    .empty-state .icon-xl { margin-bottom: 16px; color: var(--accent); }
-    .empty-state h3 { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 6px; }
-    .empty-state p { font-size: .88rem; }
-
-    /* ── Search / Filter bar ── */
-    .filter-bar {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 28px; flex-wrap: wrap;
-    }
-    .search-box {
-      flex: 1; min-width: 200px;
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      transition: all .2s;
-    }
-    .search-box:focus-within {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.1);
-    }
-    .search-box .icon { color: var(--text-muted); flex-shrink: 0; }
-    .search-box input {
-      border: none; outline: none; background: none;
-      font-family: inherit; font-size: .88rem; color: var(--text);
-      width: 100%;
-    }
-    .search-box input::placeholder { color: var(--text-muted); }
-
-    .filter-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-    .filter-tag {
-      padding: 6px 14px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: .78rem; font-weight: 600;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all .2s;
-      font-family: inherit;
-    }
-    .filter-tag:hover, .filter-tag.active {
-      background: rgba(var(--accent-rgb),.1);
-      border-color: rgba(var(--accent-rgb),.3);
-      color: var(--accent);
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 860px) {
-      header { transform: translateX(-100%); transition: transform .3s; }
-      header.open { transform: translateX(0); }
-      .mobile-menu-btn { display: flex; }
-      main { margin-left: 0; }
-      .hero-content { padding: 48px 28px; }
-      .hero-content h1 { font-size: 1.8rem; }
-      .content-area { padding: 28px 20px 60px; }
-      .blog-grid { grid-template-columns: 1fr; }
-      .hero-stats { flex-wrap: wrap; }
-      .stat { min-width: 33.3%; }
-      .back-btn { margin: 16px 20px 0; }
-      .article-iframe-wrap { padding: 0 20px 60px; }
-    }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(var(--accent-rgb),.2); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(var(--accent-rgb),.4); }
-
-    /* ── Noise texture overlay ── */
-    .noise {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none; z-index: 9999; opacity: .018;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      background-repeat: repeat;
-    }
+    .empty { text-align: center; padding: 60px 20px; color: #8690a8; font-size: .9rem; }
   </style>
 </head>
 <body>
-  <div class="noise"></div>
 
-  <!-- Mobile menu button -->
-  <button class="mobile-menu-btn" onclick="document.querySelector('header').classList.toggle('open')" aria-label="Menu">
-    <span class="icon icon-lg"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
+<!-- Blog listing -->
+<div id="blog-index"></div>
+
+<!-- Article view -->
+<div id="blog-article">
+  <button class="back-btn" onclick="closeArticle()">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to all posts
   </button>
+  <iframe id="article-frame" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+</div>
 
-  <!-- ── Sidebar ── -->
-  <header>
-    <div class="sidebar-top">
-      <a class="logo" href="../home/home.html">
-        <div class="logo-mark">PL</div>
-        <div class="logo-text">Picasso Lab</div>
-      </a>
-      <div class="logo-sub">UC San Diego</div>
-    </div>
+<script>
+// ── Blog data (add new posts here) ──
+const POSTS = [
+  {
+    title: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes",
+    file: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes – qec.Codes.html",
+    date: "September 16, 2025",
+    source: "qec.codes",
+    sourceUrl: "https://qec.codes/blog/autdec/",
+    authors: "Stergios Koutsioumpas, Joschka Roffe",
+    desc: "Automorphism ensemble decoding (AutDEC) on NVIDIA A100 GPU achieves >2x accuracy and 50% fewer iterations for quantum LDPC codes under realistic circuit-level noise.",
+    tags: ["Decoding", "GPU", "Quantum LDPC"]
+  }
+];
 
-    <nav>
-      <div class="nav-label">Navigate</div>
-      <a href="../home/home.html">
-        <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
-        Home
-      </a>
-      <a href="../people/people.html">
-        <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-        People
-      </a>
-      <a href="../pub/pub.html">
-        <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
-        Publications
-      </a>
-      <a href="../teaching/teaching.html">
-        <span class="icon"><svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
-        Teaching
-      </a>
-      <a class="active" href="#">
-        <span class="icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
-        Blog
-      </a>
-      <a href="../events/events.html">
-        <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-        Events
-      </a>
-    </nav>
-
-    <div class="sidebar-bottom">
-      <div class="ext-links">
-        <a href="https://github.com/pisa-lab" target="_blank" rel="noopener">
-          <span class="icon icon-sm"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></span>
-          GitHub
-        </a>
-        <a href="https://scholar.google.com" target="_blank" rel="noopener">
-          <span class="icon icon-sm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
-          Scholar
-        </a>
+// ── Render ──
+function renderIndex() {
+  const el = document.getElementById('blog-index');
+  if (!POSTS.length) {
+    el.innerHTML = '<div class="empty">No posts yet.</div>';
+    return;
+  }
+  el.innerHTML = POSTS.map((p, i) => `
+    <a class="blog-card" onclick="openArticle(${i}); return false;" href="#">
+      <div class="card-num">${String(i + 1).padStart(2, '0')}</div>
+      <div class="card-body">
+        <div class="card-meta">
+          <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${p.date}</span>
+          ${p.source ? `<a class="card-source" href="${p.sourceUrl}" target="_blank" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> ${p.source}</a>` : ''}
+        </div>
+        <div class="card-title">${p.title}</div>
+        <div class="card-desc">${p.desc}</div>
+        <div class="card-authors">${p.authors}</div>
+        <div class="card-tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
       </div>
-      <button class="theme-toggle" onclick="toggleTheme()">
-        <span class="icon icon-sm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
-        Toggle Theme
-      </button>
-    </div>
-  </header>
+      <div class="card-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </a>
+  `).join('');
+}
 
-  <!-- ── Main ── -->
-  <main>
-    <!-- ── Hero ── -->
-    <div class="hero-wrap">
-      <canvas id="heroCanvas"></canvas>
-      <div class="hero-gradient"></div>
-      <div class="hero-content">
-        <div class="hero-badge">
-          <span class="icon icon-sm"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
-          Research Blog
-        </div>
-        <h1>Picasso Lab <span class="gradient-text">Blog</span></h1>
-        <p class="subtitle">
-          Insights, tutorials, and deep dives from our research at the intersection of
-          compilers, systems, and quantum computing at UC San Diego.
-        </p>
-      </div>
-      <div class="hero-stats">
-        <div class="stat">
-          <div class="stat-value c1" id="stat-posts">1</div>
-          <div class="stat-label">Posts</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value c2" id="stat-topics">3</div>
-          <div class="stat-label">Topics</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value c3" id="stat-authors">2</div>
-          <div class="stat-label">Authors</div>
-        </div>
-      </div>
-    </div>
+function openArticle(idx) {
+  const post = POSTS[idx];
+  document.getElementById('blog-index').classList.add('hidden');
+  document.getElementById('blog-article').classList.add('active');
+  const frame = document.getElementById('article-frame');
+  frame.src = post.file;
 
-    <!-- ── Blog Listing ── -->
-    <div class="blog-listing" id="blogListing">
-      <div class="content-area">
-        <div class="section-header">
-          <h2>
-            <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
-            All Posts
-          </h2>
-        </div>
-
-        <!-- Filter bar -->
-        <div class="filter-bar">
-          <div class="search-box">
-            <span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-            <input type="text" id="searchInput" placeholder="Search posts..." oninput="filterPosts()">
-          </div>
-          <div class="filter-tags" id="filterTags"></div>
-        </div>
-
-        <!-- Blog grid -->
-        <div class="blog-grid" id="blogGrid"></div>
-
-        <!-- Empty state -->
-        <div class="empty-state" id="emptyState" style="display:none">
-          <span class="icon icon-xl"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-          <h3>No posts found</h3>
-          <p>Try adjusting your search or filter criteria.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Article View ── -->
-    <div class="article-view" id="articleView">
-      <button class="back-btn" onclick="showListing()">
-        <span class="icon"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span>
-        Back to all posts
-      </button>
-      <div class="article-iframe-wrap">
-        <iframe class="article-iframe" id="articleIframe" title="Blog article"></iframe>
-      </div>
-    </div>
-  </main>
-
-  <script>
-    /* ========================================================
-       Blog entries — add new posts here
-       ======================================================== */
-    const BLOG_POSTS = [
-      {
-        id: 'autdec-gpu',
-        title: 'GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes',
-        file: 'GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes – qec.Codes.html',
-        authors: ['Stergios Koutsioumpas', 'Joschka Roffe'],
-        date: '2025-09-16',
-        tags: ['Decoding', 'GPU', 'Quantum LDPC'],
-        source: 'qec.codes',
-        sourceUrl: 'https://qec.codes/blog/autdec/',
-        description: 'Showcasing automorphism ensemble decoding (AutDEC) for BP-OSD on NVIDIA A100 GPU, achieving >2x accuracy gains and 50% fewer iterations for quantum LDPC codes under circuit-level noise.',
-        readTime: '12 min read',
-      },
-    ];
-
-    /* ── Tag color cycling ── */
-    const TAG_CLASSES = ['t-blue', 't-purple', 't-cyan'];
-    function tagClass(i) { return TAG_CLASSES[i % TAG_CLASSES.length]; }
-
-    /* ── Collect all unique tags ── */
-    const allTags = [...new Set(BLOG_POSTS.flatMap(p => p.tags))];
-    let activeTag = null;
-
-    /* ── Render filter tags ── */
-    function renderFilterTags() {
-      const container = document.getElementById('filterTags');
-      container.innerHTML = allTags.map(t =>
-        `<button class="filter-tag" data-tag="${t}" onclick="toggleTag('${t}')">${t}</button>`
-      ).join('');
+  // Auto-resize iframe
+  frame.onload = function() {
+    try {
+      frame.style.height = frame.contentDocument.body.scrollHeight + 40 + 'px';
+    } catch(e) {
+      frame.style.height = '2000px';
     }
+  };
+}
 
-    function toggleTag(tag) {
-      activeTag = activeTag === tag ? null : tag;
-      document.querySelectorAll('.filter-tag').forEach(el => {
-        el.classList.toggle('active', el.dataset.tag === activeTag);
-      });
-      filterPosts();
-    }
+function closeArticle() {
+  document.getElementById('blog-article').classList.remove('active');
+  document.getElementById('blog-index').classList.remove('hidden');
+  document.getElementById('article-frame').src = '';
+}
 
-    /* ── Render blog cards ── */
-    function renderCards() {
-      const grid = document.getElementById('blogGrid');
-      grid.innerHTML = BLOG_POSTS.map((post, idx) => `
-        <article class="blog-card" data-id="${post.id}" data-index="${idx}" onclick="openArticle('${post.id}')">
-          <div class="blog-card-inner">
-            <div class="blog-card-meta">
-              <span class="blog-card-date">
-                <span class="icon icon-sm"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-                ${formatDate(post.date)}
-              </span>
-              ${post.source ? `<span class="blog-card-source">
-                <span class="icon icon-sm"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
-                ${post.source}
-              </span>` : ''}
-            </div>
-            <div class="blog-card-title">${post.title}</div>
-            <div class="blog-card-authors">
-              <span class="icon icon-sm"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-              ${post.authors.join(', ')}
-            </div>
-            <div class="blog-card-desc">${post.description}</div>
-            <div class="blog-card-tags">
-              ${post.tags.map((t, i) => `<span class="tag-pill ${tagClass(i)}">${t}</span>`).join('')}
-            </div>
-          </div>
-          <div class="blog-card-footer">
-            <span class="read-label">
-              Read article
-              <span class="icon icon-sm"><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
-            </span>
-            <span class="read-time">
-              <span class="icon icon-sm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
-              ${post.readTime}
-            </span>
-          </div>
-        </article>
-      `).join('');
-
-      // Trigger IntersectionObserver
-      observeCards();
-    }
-
-    function formatDate(dateStr) {
-      const d = new Date(dateStr + 'T00:00:00');
-      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    }
-
-    /* ── Filter posts ── */
-    function filterPosts() {
-      const query = document.getElementById('searchInput').value.toLowerCase();
-      const cards = document.querySelectorAll('.blog-card');
-      let visible = 0;
-
-      cards.forEach(card => {
-        const idx = parseInt(card.dataset.index);
-        const post = BLOG_POSTS[idx];
-        const matchesSearch = !query ||
-          post.title.toLowerCase().includes(query) ||
-          post.description.toLowerCase().includes(query) ||
-          post.authors.some(a => a.toLowerCase().includes(query)) ||
-          post.tags.some(t => t.toLowerCase().includes(query));
-        const matchesTag = !activeTag || post.tags.includes(activeTag);
-
-        const show = matchesSearch && matchesTag;
-        card.style.display = show ? '' : 'none';
-        if (show) visible++;
-      });
-
-      document.getElementById('emptyState').style.display = visible === 0 ? '' : 'none';
-    }
-
-    /* ── Article view ── */
-    function openArticle(id) {
-      const post = BLOG_POSTS.find(p => p.id === id);
-      if (!post) return;
-
-      const listing = document.getElementById('blogListing');
-      const articleView = document.getElementById('articleView');
-      const iframe = document.getElementById('articleIframe');
-
-      listing.classList.add('hidden');
-      setTimeout(() => {
-        articleView.classList.add('active');
-        iframe.src = post.file;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 200);
-
-      // Auto-resize iframe
-      iframe.onload = function() {
-        try {
-          const doc = iframe.contentDocument || iframe.contentWindow.document;
-          iframe.style.height = doc.documentElement.scrollHeight + 40 + 'px';
-          // Re-check after images load
-          const imgs = doc.querySelectorAll('img');
-          if (imgs.length) {
-            let loaded = 0;
-            imgs.forEach(img => {
-              if (img.complete) { loaded++; }
-              else { img.addEventListener('load', () => { loaded++; if (loaded >= imgs.length) resizeIframe(); }); }
-            });
-            if (loaded >= imgs.length) resizeIframe();
-          }
-        } catch(e) {
-          // Cross-origin: fall back to generous height
-          iframe.style.height = '200vh';
-        }
-      };
-
-      function resizeIframe() {
-        try {
-          const doc = iframe.contentDocument || iframe.contentWindow.document;
-          iframe.style.height = doc.documentElement.scrollHeight + 40 + 'px';
-        } catch(e) {}
-      }
-    }
-
-    function showListing() {
-      const listing = document.getElementById('blogListing');
-      const articleView = document.getElementById('articleView');
-      const iframe = document.getElementById('articleIframe');
-
-      articleView.classList.remove('active');
-      iframe.src = '';
-      listing.classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    /* ── IntersectionObserver for scroll fade-in ── */
-    function observeCards() {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry, i) => {
-          if (entry.isIntersecting) {
-            setTimeout(() => {
-              entry.target.classList.add('visible');
-            }, i * 80);
-            observer.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.08 });
-
-      document.querySelectorAll('.blog-card').forEach(card => observer.observe(card));
-    }
-
-    /* ── Update stats ── */
-    function updateStats() {
-      document.getElementById('stat-posts').textContent = BLOG_POSTS.length;
-      document.getElementById('stat-topics').textContent = allTags.length;
-      const authors = new Set(BLOG_POSTS.flatMap(p => p.authors));
-      document.getElementById('stat-authors').textContent = authors.size;
-    }
-
-    /* ── Theme toggle ── */
-    function toggleTheme() {
-      const html = document.documentElement;
-      const current = html.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-    }
-
-    (function initTheme() {
-      const saved = localStorage.getItem('theme');
-      if (saved) {
-        document.documentElement.setAttribute('data-theme', saved);
-      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-
-    /* ── Hero Canvas — flowing particles ── */
-    (function initHeroCanvas() {
-      const canvas = document.getElementById('heroCanvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      let w, h, particles = [], animId;
-
-      function resize() {
-        const rect = canvas.parentElement.getBoundingClientRect();
-        w = canvas.width = rect.width;
-        h = canvas.height = rect.height;
-      }
-
-      function createParticles() {
-        particles = [];
-        const count = Math.floor((w * h) / 6000);
-        for (let i = 0; i < count; i++) {
-          particles.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
-            vx: (Math.random() - 0.5) * 0.4,
-            vy: (Math.random() - 0.5) * 0.4,
-            r: Math.random() * 1.5 + 0.5,
-            color: ['rgba(109,138,250,', 'rgba(192,132,252,', 'rgba(34,211,238,'][Math.floor(Math.random() * 3)],
-            alpha: Math.random() * 0.5 + 0.2,
-          });
-        }
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, w, h);
-        const maxDist = 120;
-
-        for (let i = 0; i < particles.length; i++) {
-          const p = particles[i];
-          p.x += p.vx;
-          p.y += p.vy;
-          if (p.x < 0 || p.x > w) p.vx *= -1;
-          if (p.y < 0 || p.y > h) p.vy *= -1;
-
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = p.color + p.alpha + ')';
-          ctx.fill();
-
-          // Draw connections
-          for (let j = i + 1; j < particles.length; j++) {
-            const q = particles[j];
-            const dx = p.x - q.x;
-            const dy = p.y - q.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < maxDist) {
-              ctx.beginPath();
-              ctx.moveTo(p.x, p.y);
-              ctx.lineTo(q.x, q.y);
-              ctx.strokeStyle = p.color + (0.08 * (1 - dist / maxDist)) + ')';
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
-          }
-        }
-        animId = requestAnimationFrame(draw);
-      }
-
-      window.addEventListener('resize', () => { resize(); createParticles(); });
-      resize();
-      createParticles();
-      draw();
-    })();
-
-    /* ── Init ── */
-    renderFilterTags();
-    renderCards();
-    updateStats();
-  </script>
+renderIndex();
+</script>
 </body>
 </html>
