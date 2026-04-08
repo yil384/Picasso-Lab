@@ -132,36 +132,7 @@
     }
     .blog-card:hover .card-read svg { transform: translateX(3px); }
 
-    /* ── Article View ── */
-    #blog-article { display: none; }
-    #blog-article.active { display: block; }
-    #blog-index.hidden { display: none; }
-
-    .back-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: .85rem;
-      font-weight: 600;
-      color: #4f6df5;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0 0 16px;
-      font-family: inherit;
-    }
-    .back-btn:hover { text-decoration: underline; }
-    .back-btn svg {
-      width: 16px; height: 16px;
-      stroke: currentColor; fill: none;
-      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-    }
-
-    #article-frame {
-      width: 100%;
-      border: none;
-      min-height: 600px;
-    }
+    /* (no article view needed -- opens in new tab) */
 
     @media (max-width: 640px) {
       body { padding: 24px 20px 40px; }
@@ -174,20 +145,13 @@
 
 <div class="wrapper">
   <div id="blog-index"></div>
-  <div id="blog-article">
-    <button class="back-btn" onclick="closeArticle()">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      Back to all posts
-    </button>
-    <iframe id="article-frame" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
-  </div>
 </div>
 
 <script>
 const POSTS = [
   {
     title: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes",
-    file: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes – qec.Codes.html",
+    url: "https://qec.codes/blog/autdec/",
     date: "September 16, 2025",
     source: "qec.codes",
     sourceUrl: "https://qec.codes/blog/autdec/",
@@ -200,7 +164,7 @@ const POSTS = [
 function renderIndex() {
   const el = document.getElementById('blog-index');
   el.innerHTML = POSTS.map((p, i) => `
-    <div class="blog-card" onclick="openArticle(${i})">
+    <a class="blog-card" href="${p.url}" target="_blank" rel="noopener">
       <div class="card-top">
         <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${p.date}</span>
         ${p.source ? `<span>&middot;</span><a class="card-source" href="${p.sourceUrl}" target="_blank" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${p.source}</a>` : ''}
@@ -212,26 +176,8 @@ function renderIndex() {
         <div class="card-tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
       </div>
       <div class="card-read">Read post <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </div>
+    </a>
   `).join('');
-}
-
-function openArticle(idx) {
-  document.getElementById('blog-index').classList.add('hidden');
-  document.getElementById('blog-article').classList.add('active');
-  const frame = document.getElementById('article-frame');
-  frame.src = POSTS[idx].file;
-  frame.onload = function() {
-    try { frame.style.height = frame.contentDocument.body.scrollHeight + 40 + 'px'; } catch(e) { frame.style.height = '2000px'; }
-  };
-  window.scrollTo(0, 0);
-}
-
-function closeArticle() {
-  document.getElementById('blog-article').classList.remove('active');
-  document.getElementById('blog-index').classList.remove('hidden');
-  document.getElementById('article-frame').src = '';
-  window.scrollTo(0, 0);
 }
 
 renderIndex();
