@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Courses Taught – Card Overview</title>
+  <style>
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: #ffffff;
+      color: #1f2933;
+      margin: 0;
+      padding: 40px 20px 60px;
+      line-height: 1.6;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .page-title {
+      font-size: 2.6rem;
+      text-align: center;
+      color: #0a2f5a;
+      margin-bottom: 8px;
+      animation: fadeIn 1.2s ease-in-out;
+    }
+
+    .page-subtitle {
+      text-align: center;
+      color: #6b7280;
+      margin-bottom: 32px;
+      font-size: 0.95rem;
+    }
+
+    .course-grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: rgba(240, 244, 255, 0.45);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+      padding: 22px 26px 24px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+      animation: fadeInUp 0.8s ease-in-out;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255,255,255,0.9);
+      background: rgba(240, 244, 255, 0.6);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #111827;
+    }
+
+    .card-subtitle {
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+
+    td {
+      padding: 4px 0;
+      vertical-align: top;
+      font-size: 0.92rem;
+    }
+
+    td:first-child {
+      font-weight: bold;
+      color: #0a2f5a;
+      width: 34%;
+      padding-right: 8px;
+    }
+
+    a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .badge {
+      background: rgba(59, 130, 246, 0.12);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #2563eb;
+      font-size: 0.78rem;
+      font-weight: bold;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-left: 8px;
+      white-space: nowrap;
+      animation: fadeIn 1.5s ease-in-out;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .badge.term {
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 24px 14px 40px;
+      }
+      .course-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">Courses Taught</h1>
+  <p class="page-subtitle">All courses taught are summarized below as cards. Click “Course Website” to open the corresponding course page.</p>
+
+  <div class="course-grid">
+    
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">CSE 291P: Machine Learning System</div>
+          <div class="card-subtitle">UC San Diego</div>
+        </div>
+        <span class="badge term">Winter 2026</span>
+      </div>
+      <table>
+        <tr>
+          <td>Instructor:</td>
+          <td>Prof. Yufei Ding, CSE 3208</td>
+        </tr>
+        <tr>
+          <td>Email:</td>
+          <td><a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a></td>
+        </tr>
+        <tr>
+          <td>Course Website:</td>
+          <td><a href="https://yufeiding.ucsd.edu/teaching/cse291p-w26" target="_blank">Course Page</a></td>
+        </tr>
+        <tr>
+          <td>Time:</td>
+          <td>Tue &amp; Thu 3:30p – 4:50p</td>
+        </tr>
+        <tr>
+          <td>Location:</td>
+          <td>CENTR 119</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">CSE 131: Compiler Construction</div>
+          <div class="card-subtitle">UC San Diego</div>
+        </div>
+        <span class="badge term">Winter 2026</span>
+      </div>
+      <table>
+        <tr>
+          <td>Instructor:</td>
+          <td>Prof. Yufei Ding</td>
+        </tr>
+        <tr>
+          <td>Email:</td>
+          <td><a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a></td>
+        </tr>
+        <tr>
+          <td>Course Website:</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Time:</td>
+          <td>Tue &amp; Thu 12:30p – 1:50p</td>
+        </tr>
+        <tr>
+          <td>Location:</td>
+          <td>PCYNH 120</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">CSE 290: Sem/Computer Sci & Engineering</div>
+          <div class="card-subtitle">UC San Diego</div>
+        </div>
+        <span class="badge term">Winter 2026</span>
+      </div>
+      <table>
+        <tr>
+          <td>Instructor:</td>
+          <td>Prof. Yufei Ding</td>
+        </tr>
+        <tr>
+          <td>Email:</td>
+          <td><a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a></td>
+        </tr>
+        <tr>
+          <td>Course Website:</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Time:</td>
+          <td>Tue 9:30a – 10:50a</td>
+        </tr>
+        <tr>
+          <td>Location:</td>
+          <td>EBU3B 4258</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">CSE 291P: Quantum Computing Systems</div>
+          <div class="card-subtitle">UC Santa Barbara / UC San Diego</div>
+        </div>
+        <span class="badge term">Fall 2025</span>
+      </div>
+      <table>
+        <tr>
+          <td>Instructor:</td>
+          <td>Prof. Yufei Ding, CSE 3208</td>
+        </tr>
+        <tr>
+          <td>Email:</td>
+          <td><a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a></td>
+        </tr>
+        <tr>
+          <td>Course Website:</td>
+          <td><a href="https://cse.ucsd.edu/~yufeiding/CSE291QC/" target="_blank">Official Page</a></td>
+        </tr>
+        <tr>
+          <td>Time:</td>
+          <td>Tue &amp; Thu 2:00pm – 3:20pm</td>
+        </tr>
+        <tr>
+          <td>Location:</td>
+          <td>RCLAS R35</td>
+        </tr>
+      </table>
+    </div>
+
+  </div>
+</body>
+</html>
