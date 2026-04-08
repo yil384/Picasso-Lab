@@ -71,13 +71,9 @@
     .blog-card:hover .card-title { color: #4f46e5; }
 
     .card-meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-      font-size: .78rem;
-      color: #8690a8;
+      display: flex; flex-wrap: wrap; align-items: center;
+      gap: 10px; margin-bottom: 10px;
+      font-size: .78rem; color: #8690a8;
     }
     .card-meta svg {
       width: 13px; height: 13px;
@@ -89,63 +85,66 @@
       display: inline-flex; align-items: center; gap: 3px;
       color: #4f46e5; font-weight: 500;
     }
-
     .card-title {
-      font-size: 1.12rem;
-      font-weight: 700;
-      color: #1a1d2e;
-      line-height: 1.4;
-      margin-bottom: 8px;
-      transition: color .15s;
+      font-size: 1.12rem; font-weight: 700; color: #1a1d2e;
+      line-height: 1.4; margin-bottom: 8px; transition: color .15s;
     }
-
     .card-desc {
-      font-size: .87rem;
-      color: #5c6280;
-      line-height: 1.65;
-      margin-bottom: 14px;
+      font-size: .87rem; color: #5c6280; line-height: 1.65; margin-bottom: 14px;
     }
-
     .card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
     }
-    .card-authors {
-      font-size: .8rem;
-      color: #8690a8;
-      font-style: italic;
-    }
+    .card-authors { font-size: .8rem; color: #8690a8; font-style: italic; }
     .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
     .tag {
-      font-size: .68rem;
-      font-weight: 600;
-      padding: 3px 9px;
-      border-radius: 4px;
-      background: #f0f1f7;
-      color: #5c6280;
-      text-transform: uppercase;
-      letter-spacing: .03em;
+      font-size: .68rem; font-weight: 600; padding: 3px 9px;
+      border-radius: 4px; background: #f0f1f7; color: #5c6280;
+      text-transform: uppercase; letter-spacing: .03em;
     }
-
     .card-cta {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 14px;
-      font-size: .82rem;
-      font-weight: 600;
-      color: #4f46e5;
+      display: flex; align-items: center; gap: 4px;
+      margin-top: 14px; font-size: .82rem; font-weight: 600; color: #4f46e5;
     }
     .card-cta svg {
-      width: 14px; height: 14px;
-      stroke: currentColor; fill: none;
+      width: 14px; height: 14px; stroke: currentColor; fill: none;
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
       transition: transform .15s;
     }
     .blog-card:hover .card-cta svg { transform: translateX(3px); }
+
+    /* ── Article view ── */
+    #article-view { display: none; }
+    #article-view.active { display: block; }
+    #blog-list.hidden { display: none; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .85rem; font-weight: 600; color: #4f46e5;
+      background: none; border: none; cursor: pointer;
+      padding: 0 0 20px; font-family: inherit;
+    }
+    .back-btn:hover { text-decoration: underline; }
+    .back-btn svg {
+      width: 16px; height: 16px; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    #article-content {
+      /* Article HTML will be injected here -- its own styles come with it */
+    }
+
+    .loading {
+      text-align: center; padding: 60px 0; color: #8690a8; font-size: .9rem;
+    }
+    .loading-spinner {
+      display: inline-block; width: 20px; height: 20px;
+      border: 2px solid #e0e0e0; border-top-color: #4f46e5;
+      border-radius: 50%; animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 600px) {
       body { padding: 24px 20px 40px; }
@@ -158,29 +157,45 @@
 <body>
 
 <div class="wrapper">
-  <div class="blog-header">
-    <h1>Research Blog</h1>
-    <p>Insights, tutorials, and deep dives from our research.</p>
+  <!-- Blog list -->
+  <div id="blog-list">
+    <div class="blog-header">
+      <h1>Research Blog</h1>
+      <p>Insights, tutorials, and deep dives from our research.</p>
+    </div>
+    <div id="blog-index"></div>
   </div>
-  <div id="blog-index"></div>
+
+  <!-- Article view (injected content) -->
+  <div id="article-view">
+    <button class="back-btn" onclick="showIndex()">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to all posts
+    </button>
+    <div id="article-content"></div>
+  </div>
 </div>
 
 <script>
+// GitHub raw base URL for fetching blog HTML files
+const RAW_BASE = 'https://raw.githubusercontent.com/yil384/Picasso-Lab/main/blogs/';
+
 const POSTS = [
   {
     title: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes",
-    url: "https://qec.codes/blog/autdec/",
+    file: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes – qec.Codes.html",
     date: "Sep 16, 2025",
     source: "qec.codes",
+    sourceUrl: "https://qec.codes/blog/autdec/",
     authors: "S. Koutsioumpas, J. Roffe",
-    desc: "Showcasing automorphism ensemble decoding (AutDEC) for BP-OSD on NVIDIA A100 GPU — achieving >2x accuracy gains and 50% fewer decoder iterations for bivariate bicycle codes under realistic circuit-level noise.",
+    desc: "Automorphism ensemble decoding (AutDEC) on NVIDIA A100 GPU — >2x accuracy gains and 50% fewer iterations for quantum LDPC codes under circuit-level noise.",
     tags: ["Decoding", "GPU", "Quantum LDPC"]
   }
 ];
 
-function render() {
-  document.getElementById('blog-index').innerHTML = POSTS.map(p => `
-    <div class="blog-card" onclick="window.open('${p.url}', '_blank')">
+function renderIndex() {
+  document.getElementById('blog-index').innerHTML = POSTS.map((p, i) => `
+    <div class="blog-card" onclick="openArticle(${i})">
       <div class="card-meta">
         <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${p.date}</span>
         <span style="color:#d0d4e0">|</span>
@@ -196,7 +211,66 @@ function render() {
     </div>
   `).join('');
 }
-render();
+
+async function openArticle(idx) {
+  const post = POSTS[idx];
+  const container = document.getElementById('article-content');
+  const listEl = document.getElementById('blog-list');
+  const articleEl = document.getElementById('article-view');
+
+  // Switch view
+  listEl.classList.add('hidden');
+  articleEl.classList.add('active');
+  container.innerHTML = '<div class="loading"><span class="loading-spinner"></span>Loading article...</div>';
+  window.scrollTo(0, 0);
+
+  try {
+    // Fetch the raw HTML from GitHub
+    const url = RAW_BASE + encodeURIComponent(post.file);
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('Failed to fetch');
+    const html = await resp.text();
+
+    // Parse and extract <head> styles + <body> content
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // Collect <style> tags from the article's <head>
+    const styles = [...doc.querySelectorAll('head style')].map(s => s.outerHTML).join('\n');
+
+    // Collect <script> tags (for MathJax etc.)
+    const scripts = [...doc.querySelectorAll('head script')].map(s => {
+      if (s.src) return `<script src="${s.src}" async><\/script>`;
+      return `<script>${s.textContent}<\/script>`;
+    }).join('\n');
+
+    // Get the body content
+    const body = doc.body.innerHTML;
+
+    // Inject styles + body content
+    container.innerHTML = styles + body;
+
+    // Execute MathJax if referenced
+    if (html.includes('mathjax')) {
+      const mjScript = document.createElement('script');
+      mjScript.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js';
+      mjScript.async = true;
+      document.head.appendChild(mjScript);
+    }
+
+  } catch (e) {
+    container.innerHTML = `<div class="loading" style="color:#e04040">Failed to load article. <a href="${post.sourceUrl}" target="_blank" style="color:#4f46e5">View original &rarr;</a></div>`;
+  }
+}
+
+function showIndex() {
+  document.getElementById('blog-list').classList.remove('hidden');
+  document.getElementById('article-view').classList.remove('active');
+  document.getElementById('article-content').innerHTML = '';
+  window.scrollTo(0, 0);
+}
+
+renderIndex();
 </script>
 </body>
 </html>
