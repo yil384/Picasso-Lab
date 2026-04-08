@@ -7,7 +7,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { height: 100%; overflow: hidden; }
 
     body {
       font-family: 'Inter', -apple-system, sans-serif;
@@ -15,9 +14,6 @@
       line-height: 1.6;
       background: #ffffff;
       -webkit-font-smoothing: antialiased;
-      height: 100%;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
     }
 
     .wrapper { max-width: 760px; margin: 0 auto; padding: 36px 40px 60px; }
@@ -62,7 +58,7 @@
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 3px;
-      background: linear-gradient(180deg, #006A96, #C69214);
+      background: linear-gradient(180deg, #00629B, #FFCD00);
       opacity: 0;
       transition: opacity .2s;
     }
@@ -72,7 +68,7 @@
       transform: translateY(-1px);
     }
     .blog-card:hover::before { opacity: 1; }
-    .blog-card:hover .card-title { color: #006A96; }
+    .blog-card:hover .card-title { color: #00629B; }
 
     .card-meta {
       display: flex; flex-wrap: wrap; align-items: center;
@@ -87,7 +83,7 @@
     }
     .card-source {
       display: inline-flex; align-items: center; gap: 3px;
-      color: #006A96; font-weight: 500;
+      color: #00629B; font-weight: 500;
     }
     .card-title {
       font-size: 1.12rem; font-weight: 700; color: #1a1d2e;
@@ -109,7 +105,7 @@
     }
     .card-cta {
       display: flex; align-items: center; gap: 4px;
-      margin-top: 14px; font-size: .82rem; font-weight: 600; color: #006A96;
+      margin-top: 14px; font-size: .82rem; font-weight: 600; color: #00629B;
     }
     .card-cta svg {
       width: 14px; height: 14px; stroke: currentColor; fill: none;
@@ -125,7 +121,7 @@
 
     .back-btn {
       display: inline-flex; align-items: center; gap: 6px;
-      font-size: .85rem; font-weight: 600; color: #006A96;
+      font-size: .85rem; font-weight: 600; color: #00629B;
       background: none; border: none; cursor: pointer;
       padding: 16px 24px 8px; font-family: inherit;
     }
@@ -143,7 +139,7 @@
     }
     .loading-spinner {
       display: inline-block; width: 20px; height: 20px;
-      border: 2px solid #e0e0e0; border-top-color: #006A96;
+      border: 2px solid #e0e0e0; border-top-color: #00629B;
       border-radius: 50%; animation: spin .6s linear infinite;
       vertical-align: middle; margin-right: 8px;
     }
@@ -263,7 +259,7 @@ async function openArticle(idx) {
     }
 
   } catch (e) {
-    container.innerHTML = `<div class="loading" style="color:#e04040">Failed to load article. <a href="${post.sourceUrl}" target="_blank" style="color:#006A96">View original &rarr;</a></div>`;
+    container.innerHTML = `<div class="loading" style="color:#e04040">Failed to load article. <a href="${post.sourceUrl}" target="_blank" style="color:#00629B">View original &rarr;</a></div>`;
   }
 }
 
