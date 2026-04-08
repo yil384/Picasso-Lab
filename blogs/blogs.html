@@ -4,136 +4,138 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blog – Picasso Lab</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
 
     body {
       font-family: 'Inter', -apple-system, sans-serif;
       color: #1a1d2e;
       line-height: 1.6;
-      background: #fff;
+      background: #ffffff;
       -webkit-font-smoothing: antialiased;
+      padding: 40px 48px 60px;
     }
 
-    /* ── Index View ── */
-    #blog-index { padding: 0; }
+    .wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+    }
 
+    /* ── Blog card ── */
     .blog-card {
-      display: flex;
-      gap: 28px;
-      padding: 28px 0;
-      border-bottom: 1px solid #eef0f4;
-      cursor: pointer;
-      transition: background .15s;
+      display: block;
+      padding: 28px;
+      margin-bottom: 20px;
+      border-radius: 14px;
+      border: 1px solid #ebedf3;
+      background: #fff;
       text-decoration: none;
       color: inherit;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
     }
-    .blog-card:last-child { border-bottom: none; }
-    .blog-card:hover { background: #f8f9fc; }
+    .blog-card:hover {
+      border-color: #c7cde0;
+      box-shadow: 0 4px 20px rgba(0,0,0,.06);
+    }
     .blog-card:hover .card-title { color: #4f6df5; }
 
-    .card-num {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: #fff;
-      font-weight: 700;
-      font-size: 1.1rem;
+    .card-top {
       display: flex;
       align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .card-body { flex: 1; min-width: 0; }
-
-    .card-meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-      font-size: .78rem;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-size: .8rem;
       color: #8690a8;
     }
-    .card-meta svg {
-      width: 13px; height: 13px;
+    .card-top svg {
+      width: 14px; height: 14px;
       stroke: currentColor; fill: none;
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
       vertical-align: -2px;
+      flex-shrink: 0;
     }
     .card-source {
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 4px;
       color: #4f6df5;
       font-weight: 500;
+      text-decoration: none;
     }
+    .card-source:hover { text-decoration: underline; }
 
     .card-title {
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: #1a1d2e;
-      margin-bottom: 6px;
-      transition: color .15s;
       line-height: 1.35;
+      margin-bottom: 8px;
+      transition: color .15s;
     }
 
     .card-desc {
-      font-size: .88rem;
+      font-size: .9rem;
       color: #5c6280;
-      line-height: 1.55;
-      margin-bottom: 10px;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .card-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .card-authors {
-      font-size: .8rem;
+      font-size: .82rem;
       color: #8690a8;
     }
 
     .card-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 5px;
-      margin-top: 10px;
+      gap: 6px;
     }
     .tag {
       font-size: .7rem;
       font-weight: 600;
-      padding: 3px 9px;
-      border-radius: 4px;
-      background: #f0f1f7;
+      padding: 3px 10px;
+      border-radius: 5px;
+      background: #f0f2f8;
       color: #5c6280;
-      letter-spacing: .02em;
     }
 
-    .card-arrow {
-      display: flex;
+    .card-read {
+      display: inline-flex;
       align-items: center;
-      flex-shrink: 0;
-      color: #c5c9d6;
-      transition: color .15s, transform .15s;
+      gap: 4px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #4f6df5;
+      margin-top: 14px;
     }
-    .card-arrow svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .blog-card:hover .card-arrow { color: #4f6df5; transform: translateX(3px); }
+    .card-read svg {
+      width: 15px; height: 15px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      transition: transform .15s;
+    }
+    .blog-card:hover .card-read svg { transform: translateX(3px); }
 
     /* ── Article View ── */
-    #blog-article {
-      display: none;
-    }
-    #blog-article.active {
-      display: block;
-    }
-    #blog-index.hidden {
-      display: none;
-    }
+    #blog-article { display: none; }
+    #blog-article.active { display: block; }
+    #blog-index.hidden { display: none; }
 
     .back-btn {
       display: inline-flex;
@@ -145,12 +147,10 @@
       background: none;
       border: none;
       cursor: pointer;
-      padding: 8px 0;
-      margin-bottom: 8px;
+      padding: 0 0 16px;
       font-family: inherit;
-      transition: gap .15s;
     }
-    .back-btn:hover { gap: 8px; }
+    .back-btn:hover { text-decoration: underline; }
     .back-btn svg {
       width: 16px; height: 16px;
       stroke: currentColor; fill: none;
@@ -163,26 +163,27 @@
       min-height: 600px;
     }
 
-    /* ── Empty state ── */
-    .empty { text-align: center; padding: 60px 20px; color: #8690a8; font-size: .9rem; }
+    @media (max-width: 640px) {
+      body { padding: 24px 20px 40px; }
+      .card-title { font-size: 1.05rem; }
+      .card-bottom { flex-direction: column; align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
 
-<!-- Blog listing -->
-<div id="blog-index"></div>
-
-<!-- Article view -->
-<div id="blog-article">
-  <button class="back-btn" onclick="closeArticle()">
-    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    Back to all posts
-  </button>
-  <iframe id="article-frame" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+<div class="wrapper">
+  <div id="blog-index"></div>
+  <div id="blog-article">
+    <button class="back-btn" onclick="closeArticle()">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to all posts
+    </button>
+    <iframe id="article-frame" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+  </div>
 </div>
 
 <script>
-// ── Blog data (add new posts here) ──
 const POSTS = [
   {
     title: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes",
@@ -196,52 +197,41 @@ const POSTS = [
   }
 ];
 
-// ── Render ──
 function renderIndex() {
   const el = document.getElementById('blog-index');
-  if (!POSTS.length) {
-    el.innerHTML = '<div class="empty">No posts yet.</div>';
-    return;
-  }
   el.innerHTML = POSTS.map((p, i) => `
-    <a class="blog-card" onclick="openArticle(${i}); return false;" href="#">
-      <div class="card-num">${String(i + 1).padStart(2, '0')}</div>
-      <div class="card-body">
-        <div class="card-meta">
-          <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${p.date}</span>
-          ${p.source ? `<a class="card-source" href="${p.sourceUrl}" target="_blank" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> ${p.source}</a>` : ''}
-        </div>
-        <div class="card-title">${p.title}</div>
-        <div class="card-desc">${p.desc}</div>
+    <div class="blog-card" onclick="openArticle(${i})">
+      <div class="card-top">
+        <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${p.date}</span>
+        ${p.source ? `<span>&middot;</span><a class="card-source" href="${p.sourceUrl}" target="_blank" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${p.source}</a>` : ''}
+      </div>
+      <div class="card-title">${p.title}</div>
+      <div class="card-desc">${p.desc}</div>
+      <div class="card-bottom">
         <div class="card-authors">${p.authors}</div>
         <div class="card-tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
       </div>
-      <div class="card-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </a>
+      <div class="card-read">Read post <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
   `).join('');
 }
 
 function openArticle(idx) {
-  const post = POSTS[idx];
   document.getElementById('blog-index').classList.add('hidden');
   document.getElementById('blog-article').classList.add('active');
   const frame = document.getElementById('article-frame');
-  frame.src = post.file;
-
-  // Auto-resize iframe
+  frame.src = POSTS[idx].file;
   frame.onload = function() {
-    try {
-      frame.style.height = frame.contentDocument.body.scrollHeight + 40 + 'px';
-    } catch(e) {
-      frame.style.height = '2000px';
-    }
+    try { frame.style.height = frame.contentDocument.body.scrollHeight + 40 + 'px'; } catch(e) { frame.style.height = '2000px'; }
   };
+  window.scrollTo(0, 0);
 }
 
 function closeArticle() {
   document.getElementById('blog-article').classList.remove('active');
   document.getElementById('blog-index').classList.remove('hidden');
   document.getElementById('article-frame').src = '';
+  window.scrollTo(0, 0);
 }
 
 renderIndex();
