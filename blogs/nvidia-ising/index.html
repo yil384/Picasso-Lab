@@ -209,6 +209,75 @@
       border-radius: 4px;
     }
 
+    /* Reference citation badges */
+    a[href^="#ref-"] {
+      display: inline-block;
+      font-size: 0.75em;
+      font-weight: 700;
+      color: #00629B;
+      background: #e8f1f8;
+      padding: 0.1em 0.45em;
+      border-radius: 3px;
+      vertical-align: super;
+      line-height: 1;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    a[href^="#ref-"]:hover {
+      background: #00629B;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    /* Key question callout */
+    .key-question {
+      background: linear-gradient(135deg, #e8f4fc, #f0f7ff);
+      border: 1px solid #c8ddf0;
+      border-left: 4px solid #00629B;
+      border-radius: 0 8px 8px 0;
+      padding: 1.2rem 1.5rem;
+      margin: 1.5rem 0;
+      font-size: 1.08rem;
+      color: #1a3a5c;
+      font-weight: 500;
+    }
+
+    /* Summary / "In short" highlight box */
+    .summary-box {
+      background: #fffdf0;
+      border: 1px solid #f0e6b0;
+      border-left: 4px solid #FFCD00;
+      border-radius: 0 8px 8px 0;
+      padding: 1rem 1.5rem;
+      margin: 1.5rem 0;
+      font-size: 1rem;
+      color: #3a3000;
+    }
+
+    /* Transition callout (bold section breaks) */
+    .transition-callout {
+      background: linear-gradient(135deg, #00629B, #004a76);
+      color: #fff;
+      padding: 1.2rem 1.5rem;
+      border-radius: 8px;
+      margin: 2rem 0;
+      font-size: 1.02rem;
+      font-weight: 500;
+      line-height: 1.6;
+    }
+    .transition-callout em { color: #FFCD00; }
+
+    /* Ordered list colored numbers */
+    ol { counter-reset: ol-counter; list-style: none; }
+    ol > li { counter-increment: ol-counter; position: relative; padding-left: 0.5rem; }
+    ol > li::before {
+      content: counter(ol-counter) ".";
+      color: #00629B;
+      font-weight: 700;
+      position: absolute;
+      left: -1.5rem;
+    }
+
     /* ── Figures ── */
     figure {
       margin: 2rem auto;
@@ -294,9 +363,9 @@
       color: #fff;
       border-bottom: 2px solid #ccc;
     }
-    tr:hover {
-      background: #fafafa;
-    }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tr:hover { background: #eef4f8; }
+    td strong { color: #b8860b; } /* gold for highlighted values like 4.0x */
 
     /* ── References ── */
     .references {
@@ -312,16 +381,24 @@
     /* ── Pipeline display ── */
     .pipeline {
       text-align: center;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       margin: 1.5rem 0;
-      padding: 1rem;
-      background: #f7f9fc;
-      border-radius: 8px;
+      padding: 1.1rem 1.5rem;
+      background: linear-gradient(135deg, #f0f5fa, #f7f9fc);
+      border: 1px solid #dce5ee;
+      border-radius: 10px;
       font-weight: 500;
+      letter-spacing: 0.02em;
+      color: #444;
     }
     .pipeline span {
-      color: #00629B;
+      display: inline-block;
+      color: #fff;
+      background: #00629B;
+      padding: 0.15em 0.6em;
+      border-radius: 4px;
       font-weight: 600;
+      font-size: 0.92em;
     }
 
     /* ── Attribution ── */
@@ -395,7 +472,7 @@
 
       <p>Surface codes, however, carry a fundamental encoding rate limitation: <em>d</em><sup>2</sup> data qubits per logical qubit. <strong>Quantum LDPC codes</strong> &mdash; particularly <strong>bivariate bicycle (BB) codes</strong> <a href="#ref-1">[1]</a> &mdash; break this barrier with dramatically better encoding rates. But their non-local, non-planar check connectivity means the CNN pre-decoder, designed for the surface code's regular grid, cannot directly apply.</p>
 
-      <p>This raises the question we set out to test: <strong>can neural pre-decoders be effective for codes that don't live on a regular lattice?</strong></p>
+      <div class="key-question">This raises the question we set out to test: <strong>can neural pre-decoders be effective for codes that don't live on a regular lattice?</strong></div>
 
       <p>We first benchmark the CNN pre-decoder on surface codes, then test a simple MLP pre-decoder on BB codes &mdash; implementing BB code construction, BP-OSD decoding, and evaluating end-to-end performance. By comparing both settings, we identify what works, what doesn't, and where the gaps are.</p>
 
@@ -461,9 +538,9 @@
         <li><strong>A random CNN would make things worse, confirming this is learned behavior.</strong> If the CNN added noise instead of removing it, the residual would be denser and PyMatching would degrade. The improvement scales with model capacity (R=13 > R=9), further confirming the CNN is exploiting real structure in the noise.</li>
       </ol>
 
-      <p>In short: MWPM is near-optimal given its DEM, but the DEM is an approximation. The CNN bridges the gap between the true noise and the DEM's model of it.</p>
+      <div class="summary-box">In short: MWPM is near-optimal given its DEM, but the DEM is an approximation. The CNN bridges the gap between the true noise and the DEM's model of it.</div>
 
-      <p><strong>But surface codes store just 1 logical qubit in <em>d</em><sup>2</sup> data qubits. The real test: does neural pre-decoding work for codes with better encoding rates?</strong></p>
+      <div class="transition-callout">But surface codes store just 1 logical qubit in <em>d</em><sup>2</sup> data qubits. The real test: does neural pre-decoding work for codes with better encoding rates?</div>
 
       <!-- Part II -->
       <h2 id="part-ii">Part II: Bivariate Bicycle Codes</h2>
@@ -591,7 +668,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
 
       <p>The surface code CNN delivers <strong>consistent improvement across all noise rates</strong> because the convolutional architecture is perfectly matched to the code's lattice &mdash; every layer captures meaningful local correlations. The BB code MLP shows <strong>moderate gains at low <em>p</em> that vanish above threshold</strong> because it treats the syndrome as a flat vector, with no inductive bias for the code's long-range connectivity. Above threshold the MLP's predictions actually degrade performance slightly (0.95x at <em>p</em>=0.06).</p>
 
-      <p>This gap points to a clear conclusion: the MLP test shows that syndrome-conditioned soft information can help BP-OSD, but the improvement is fragile without structural alignment. The CNN test proves that architecture-code alignment is what makes pre-decoding robust. <strong>The next step: test pre-decoders that are structurally aligned with qLDPC codes.</strong></p>
+      <div class="summary-box">This gap points to a clear conclusion: the MLP test shows that syndrome-conditioned soft information can help BP-OSD, but the improvement is fragile without structural alignment. The CNN test proves that architecture-code alignment is what makes pre-decoding robust. <strong>The next step: test pre-decoders that are structurally aligned with qLDPC codes.</strong></div>
 
       <!-- Future Work -->
       <h2 id="future-work">Future Work: What We Plan to Test Next</h2>
