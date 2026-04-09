@@ -249,22 +249,29 @@
 
     /* ── Tables ── */
     .table-wrap {
-      margin: 2rem 0;
+      margin: 2.5rem auto;
+      max-width: 90%;
+      text-align: center;
     }
     .table-caption {
-      font-size: 0.88rem;
-      color: #444;
-      margin-bottom: 0.5rem;
-      line-height: 1.5;
+      font-size: 0.85rem;
+      color: #666;
+      font-style: italic;
+      margin-top: 0.75rem;
+      line-height: 1.55;
+      text-align: left;
+      padding: 0 1rem;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 1.5rem 0;
+      margin: 0;
       font-size: 0.9rem;
       overflow-x: auto;
-      display: block;
+      display: table;
       border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      border: 1px solid #eee;
     }
     thead {
       background: #00629B;
@@ -401,7 +408,6 @@
       </figure>
 
       <div class="table-wrap">
-        <p class="table-caption"><strong>Table 1:</strong> Decoding speedup and LER reduction across code distances using the R=13 model at \(p = 0.004\).</p>
         <table>
           <thead>
             <tr><th>Distance</th><th>PyMatching Speedup</th><th>LER Reduction</th></tr>
@@ -412,6 +418,7 @@
             <tr><td>\(d = 9\)</td><td>2.12x</td><td>1.56x</td></tr>
           </tbody>
         </table>
+        <p class="table-caption"><strong>Table 1:</strong> Decoding speedup and LER reduction across code distances using the R=13 model at \(p = 0.004\).</p>
       </div>
 
       <p>The results confirm consistent improvements: <strong>up to 2.12x faster decoding</strong> and <strong>up to 1.66x lower LER</strong>, with the speedup growing at larger distances.</p>
@@ -436,7 +443,6 @@
       <p>qLDPC codes offer a fundamentally different tradeoff [8]. BB codes [1] strike an attractive balance:</p>
 
       <div class="table-wrap">
-        <p class="table-caption"><strong>Table 2:</strong> Encoding rate comparison between bivariate bicycle codes and surface codes.</p>
         <table>
           <thead>
             <tr><th>Code</th><th>\(n\)</th><th>\(k\)</th><th>\(d\)</th><th>Rate \(k/n\)</th></tr>
@@ -448,6 +454,7 @@
             <tr><td>Surface \(d=12\)</td><td>144</td><td>1</td><td>12</td><td>0.7%</td></tr>
           </tbody>
         </table>
+        <p class="table-caption"><strong>Table 2:</strong> Encoding rate comparison between bivariate bicycle codes and surface codes.</p>
       </div>
 
       <figure>
@@ -494,7 +501,6 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
       </figure>
 
       <div class="table-wrap">
-        <p class="table-caption"><strong>Table 3:</strong> MLP pre-decoder vs. BP-OSD alone on [[144,12,12]] across physical error rates.</p>
         <table>
           <thead>
             <tr><th>\(p\)</th><th>BP-OSD</th><th>Pre-Dec + BP-OSD</th><th>Improvement</th></tr>
@@ -507,13 +513,13 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
             <tr><td>0.06</td><td>0.0823</td><td>0.0869</td><td>0.95x</td></tr>
           </tbody>
         </table>
+        <p class="table-caption"><strong>Table 3:</strong> MLP pre-decoder vs. BP-OSD alone on [[144,12,12]] across physical error rates.</p>
       </div>
 
       <!-- Analysis -->
       <h2 id="analysis">Analysis: What the Tests Reveal About Architecture-Code Alignment</h2>
 
       <div class="table-wrap">
-        <p class="table-caption"><strong>Table 4:</strong> Architecture-code alignment comparison between the two pre-decoders.</p>
         <table>
           <thead>
             <tr><th></th><th>Surface Code CNN</th><th>BB Code MLP</th></tr>
@@ -525,6 +531,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
             <tr><td><strong>Noise Model</strong></td><td>25-param circuit-level</td><td>Code-capacity (i.i.d.)</td></tr>
           </tbody>
         </table>
+        <p class="table-caption"><strong>Table 4:</strong> Architecture-code alignment comparison between the two pre-decoders.</p>
       </div>
 
       <p>The surface code CNN delivers consistent improvement because the architecture matches the code's lattice. The BB code MLP shows moderate gains at low \(p\) that vanish above threshold.</p>
