@@ -425,25 +425,42 @@
         transform: translateY(0);
     }
 
-    /* Holographic overlay (loads external page) */
-    .holo-frame-overlay {
-        position: fixed; inset: 0; z-index: 99999;
-        background: #000; opacity: 0;
-        transition: opacity 0.5s ease;
+    /* Combo dots for holographic mode activation */
+    .combo-dots {
+        position: fixed;
+        bottom: 95px; left: 20px;
+        display: flex; gap: 5px;
+        z-index: 10000;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.3s, transform 0.3s;
+        pointer-events: none;
     }
-    .holo-frame-overlay.active { opacity: 1; }
-    .holo-frame-overlay iframe {
-        width: 100%; height: 100%; border: none;
+    .combo-dots.visible {
+        opacity: 1;
+        transform: translateY(0);
     }
-    .holo-close-btn {
-        position: fixed; top: 20px; right: 20px; z-index: 100000;
-        width: 40px; height: 40px; border-radius: 50%;
-        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-        color: #fff; font-size: 20px; cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        backdrop-filter: blur(8px); transition: background 0.2s;
+    .combo-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.25);
+        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .holo-close-btn:hover { background: rgba(255,255,255,0.25); }
+    .combo-dot.lit {
+        background: #00fff2;
+        border-color: #00fff2;
+        box-shadow: 0 0 8px #00fff2, 0 0 16px rgba(0,255,242,0.4);
+        transform: scale(1.3);
+    }
+    .combo-dots.complete .combo-dot.lit {
+        animation: comboPulse 0.4s ease;
+    }
+    @keyframes comboPulse {
+        0% { transform: scale(1.3); }
+        50% { transform: scale(1.8); box-shadow: 0 0 16px #00fff2, 0 0 30px rgba(0,255,242,0.6); }
+        100% { transform: scale(1.3); }
+    }
 </style>
 </head>
 <body>
@@ -1098,92 +1115,93 @@
         showSongTitle(track.title);
     }
 
-    // --- 单击 = 播放/暂停, 双击 = 翻转切歌, 三击(多梦症) = 全息演唱会 ---
-    // 用一个统一计数器，等 400ms 窗口结束后再根据点击次数决定行为
-    let clickCount = 0;
-    let clickDecideTimer = null;
+    // --- Combo dots UI for holographic activation ---
+    const comboDots = document.createElement('div');
+    comboDots.className = 'combo-dots';
+    for (let i = 0; i < 5; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'combo-dot';
+        comboDots.appendChild(dot);
+    }
+    document.body.appendChild(comboDots);
+
+    let comboCount = 0;
+    let comboResetTimer = null;
+
+    function updateComboDots(count) {
+        const dots = comboDots.querySelectorAll('.combo-dot');
+        dots.forEach((d, i) => d.classList.toggle('lit', i < count));
+        comboDots.classList.toggle('visible', count > 0);
+        comboDots.classList.remove('complete');
+    }
+
+    function resetCombo() {
+        comboCount = 0;
+        updateComboDots(0);
+    }
+
+    // --- 单击 = 播放/暂停, 双击 = 翻转切歌, 连击5次(多梦症) = 全息演唱会 ---
+    let clickTimer = null;
 
     musicBtn.addEventListener('click', (e) => {
         if (isFlipping) return;
-        clickCount++;
-        clearTimeout(clickDecideTimer);
 
-        // 等 400ms 看用户还点不点
-        clickDecideTimer = setTimeout(() => {
-            const n = clickCount;
-            clickCount = 0;
+        // If on 多梦症 and playing, track combo hits
+        if (currentTrack === 1 && isMusicPlaying) {
+            comboCount++;
+            clearTimeout(comboResetTimer);
+            updateComboDots(comboCount);
+            comboResetTimer = setTimeout(resetCombo, 1200);
 
-            if (n >= 3 && currentTrack === 1 && isMusicPlaying) {
-                // 三击 + 正在播放多梦症 → 全息演唱会
-                enterHolographicMode();
-            } else if (n === 2) {
-                // 双击 → 翻转切歌
-                flipToNextTrack();
-            } else {
-                // 单击 → 播放/暂停
-                if (isMusicPlaying) {
-                    bgMusic.pause();
-                    musicBtn.classList.remove('music-playing');
-                } else {
-                    bgMusic.play().then(() => {
-                        musicBtn.classList.add('music-playing');
-                        showSongTitle(playlist[currentTrack].title);
-                    }).catch((error) => {
-                        console.error("Playback failed:", error);
-                    });
-                }
-                isMusicPlaying = !isMusicPlaying;
+            if (comboCount >= 5) {
+                // Combo complete! Flash dots then launch
+                comboDots.classList.add('complete');
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                setTimeout(() => {
+                    resetCombo();
+                    enterHolographicMode();
+                }, 400);
+                return;
             }
-        }, 400);
+        }
+
+        // Normal single/double click logic with delay
+        clearTimeout(clickTimer);
+        clickTimer = setTimeout(() => {
+            clickTimer = null;
+            // Single click — play/pause
+            if (isMusicPlaying) {
+                bgMusic.pause();
+                musicBtn.classList.remove('music-playing');
+            } else {
+                bgMusic.play().then(() => {
+                    musicBtn.classList.add('music-playing');
+                    showSongTitle(playlist[currentTrack].title);
+                }).catch((error) => {
+                    console.error("Playback failed:", error);
+                });
+            }
+            isMusicPlaying = !isMusicPlaying;
+        }, 280);
+    });
+
+    // Double-click still flips track
+    musicBtn.addEventListener('dblclick', (e) => {
+        if (isFlipping) return;
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        flipToNextTrack();
     });
 
     // =========================================
-    // Holographic Concert Mode — loads external page
+    // Holographic Concert Mode — opens in new tab
     // =========================================
-    let holoActive = false;
+    const HOLO_URL = 'https://raw.githack.com/yil384/Picasso-Lab/main/events/holographic-concert.html';
 
     function enterHolographicMode() {
-        if (holoActive) return;
-        holoActive = true;
-
-        // Create fullscreen overlay with iframe loading external holographic page
-        const overlay = document.createElement('div');
-        overlay.className = 'holo-frame-overlay';
-
-        // Pass the music src as a URL parameter so the holographic page can play it
         const musicSrc = bgMusic.src || playlist[1].src;
-        const holoUrl = 'holographic-concert.html?music=' + encodeURIComponent(musicSrc);
-
-        const iframe = document.createElement('iframe');
-        iframe.src = holoUrl;
-        iframe.allow = 'autoplay';
-        overlay.appendChild(iframe);
-
-        // Close button
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'holo-close-btn';
-        closeBtn.innerHTML = '&times;';
-        closeBtn.onclick = exitHolo;
-        overlay.appendChild(closeBtn);
-
-        document.body.appendChild(overlay);
-
-        // Fade in
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => overlay.classList.add('active'));
-        });
-
-        function exitHolo() {
-            holoActive = false;
-            overlay.classList.remove('active');
-            setTimeout(() => overlay.remove(), 500);
-            document.removeEventListener('keydown', escHandler);
-        }
-
-        function escHandler(e) {
-            if (e.key === 'Escape') exitHolo();
-        }
-        document.addEventListener('keydown', escHandler);
+        window.open(HOLO_URL + '?music=' + encodeURIComponent(musicSrc), '_blank');
     }
 </script>
 </body>
