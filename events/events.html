@@ -425,22 +425,25 @@
         transform: translateY(0);
     }
 
-    /* =========================================
-       Holographic Concert Mode (canvas-based)
-       ========================================= */
-    .holo-canvas-overlay {
+    /* Holographic overlay (loads external page) */
+    .holo-frame-overlay {
         position: fixed; inset: 0; z-index: 99999;
-        background: #000;
-        cursor: pointer;
-        opacity: 0;
-        transition: opacity 0.6s ease;
+        background: #000; opacity: 0;
+        transition: opacity 0.5s ease;
     }
-    .holo-canvas-overlay.active { opacity: 1; }
-    .holo-canvas-overlay.collapsing {
-        transition: opacity 0.5s ease, transform 0.5s ease;
-        opacity: 0;
-        transform: scale(0.3);
+    .holo-frame-overlay.active { opacity: 1; }
+    .holo-frame-overlay iframe {
+        width: 100%; height: 100%; border: none;
     }
+    .holo-close-btn {
+        position: fixed; top: 20px; right: 20px; z-index: 100000;
+        width: 40px; height: 40px; border-radius: 50%;
+        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-size: 20px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(8px); transition: background 0.2s;
+    }
+    .holo-close-btn:hover { background: rgba(255,255,255,0.25); }
 </style>
 </head>
 <body>
@@ -1135,582 +1138,47 @@
     });
 
     // =========================================
-    // Holographic Concert Mode (Iron Man / Sci-Fi 3D Canvas)
+    // Holographic Concert Mode — loads external page
     // =========================================
     let holoActive = false;
-    let holoAudioCtx = null;
-    let holoAnalyser = null;
-    let holoSource = null;
-    let holoAnimFrame = null;
 
     function enterHolographicMode() {
         if (holoActive) return;
         holoActive = true;
 
-        // --- Create fullscreen overlay with canvas ---
+        // Create fullscreen overlay with iframe loading external holographic page
         const overlay = document.createElement('div');
-        overlay.className = 'holo-canvas-overlay';
-        overlay.id = 'holo-overlay';
+        overlay.className = 'holo-frame-overlay';
 
-        const canvas = document.createElement('canvas');
-        canvas.style.cssText = 'width:100%;height:100%;display:block;';
-        overlay.appendChild(canvas);
+        // Pass the music src as a URL parameter so the holographic page can play it
+        const musicSrc = bgMusic.src || playlist[1].src;
+        const holoUrl = 'holographic-concert.html?music=' + encodeURIComponent(musicSrc);
+
+        const iframe = document.createElement('iframe');
+        iframe.src = holoUrl;
+        iframe.allow = 'autoplay';
+        overlay.appendChild(iframe);
+
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'holo-close-btn';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.onclick = exitHolo;
+        overlay.appendChild(closeBtn);
+
         document.body.appendChild(overlay);
-
-        const ctx = canvas.getContext('2d');
-        let W, H;
-        function resize() {
-            W = canvas.width = window.innerWidth;
-            H = canvas.height = window.innerHeight;
-        }
-        resize();
-        window.addEventListener('resize', resize);
 
         // Fade in
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                overlay.classList.add('active');
-            });
+            requestAnimationFrame(() => overlay.classList.add('active'));
         });
 
-        // --- Web Audio API ---
-        let bufferLength = 0;
-        let dataArray = new Uint8Array(0);
-        try {
-            if (!holoAudioCtx) {
-                holoAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (holoAudioCtx.state === 'suspended') {
-                holoAudioCtx.resume();
-            }
-            if (!holoSource) {
-                holoSource = holoAudioCtx.createMediaElementSource(bgMusic);
-                holoAnalyser = holoAudioCtx.createAnalyser();
-                holoAnalyser.fftSize = 256;
-                holoSource.connect(holoAnalyser);
-                holoAnalyser.connect(holoAudioCtx.destination);
-            }
-            if (holoAnalyser) {
-                bufferLength = holoAnalyser.frequencyBinCount;
-                dataArray = new Uint8Array(bufferLength);
-            }
-        } catch (err) {
-            console.warn('Web Audio API not available:', err);
-        }
-
-        // --- Scene constants ---
-        const CYAN = '#00fff2';
-        const CYAN_DIM = 'rgba(0,255,242,0.4)';
-        const SCAN_ALPHA = 0.04;
-        const GRID_ALPHA = 0.06;
-
-        // --- Particles ---
-        const particles = [];
-        for (let i = 0; i < 80; i++) {
-            particles.push({
-                x: Math.random(),
-                y: Math.random(),
-                speed: 0.0005 + Math.random() * 0.002,
-                size: 1 + Math.random() * 2.5,
-                alpha: 0.3 + Math.random() * 0.7
-            });
-        }
-
-        // --- Audience lightsticks ---
-        const NUM_AUDIENCE = 260;
-        const audience = [];
-        for (let i = 0; i < NUM_AUDIENCE; i++) {
-            const row = Math.floor(Math.random() * 8);
-            const col = Math.random();
-            const colors = ['#ff69b4','#00fff2','#ffff00','#ffffff','#ff4500','#7b68ee'];
-            audience.push({
-                row: row,
-                col: col,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                phase: Math.random() * Math.PI * 2,
-                flickerSpeed: 1 + Math.random() * 3,
-                isStick: Math.random() < 0.45
-            });
-        }
-
-        // --- Glitch state ---
-        let glitchTimer = 0;
-        let glitchOffset = 0;
-        let nextGlitch = 120 + Math.random() * 200;
-
-        // --- Time ---
-        let frame = 0;
-
-        // --- Helper: draw with chromatic aberration ---
-        function drawWithAberration(drawFn, offsetAmt) {
-            ctx.save();
-            ctx.globalCompositeOperation = 'screen';
-            // Red channel offset
-            ctx.save();
-            ctx.translate(-offsetAmt, 0);
-            ctx.globalAlpha = 0.3;
-            drawFn('rgba(255,0,0,0.5)');
-            ctx.restore();
-            // Blue channel offset
-            ctx.save();
-            ctx.translate(offsetAmt, 0);
-            ctx.globalAlpha = 0.3;
-            drawFn('rgba(0,100,255,0.5)');
-            ctx.restore();
-            // Main cyan
-            ctx.globalAlpha = 1;
-            drawFn(CYAN);
-            ctx.restore();
-        }
-
-        // --- Draw grid background (Iron Man HUD) ---
-        function drawGrid() {
-            ctx.save();
-            ctx.globalAlpha = GRID_ALPHA;
-            ctx.strokeStyle = CYAN;
-            ctx.lineWidth = 0.5;
-            const gridSize = 40;
-            for (let x = 0; x < W; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, H);
-                ctx.stroke();
-            }
-            for (let y = 0; y < H; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(W, y);
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        // --- Draw scan lines ---
-        function drawScanLines() {
-            ctx.save();
-            const scrollOffset = (frame * 0.5) % 4;
-            ctx.globalAlpha = SCAN_ALPHA;
-            ctx.fillStyle = CYAN;
-            for (let y = scrollOffset; y < H; y += 4) {
-                ctx.fillRect(0, y, W, 1);
-            }
-            // Brighter moving scan line
-            const scanY = (frame * 1.5) % H;
-            ctx.globalAlpha = 0.08;
-            ctx.fillRect(0, scanY, W, 2);
-            ctx.restore();
-        }
-
-        // --- Draw holographic base disc ---
-        function drawBaseDisc(cx, baseY, discW, discH, rotation) {
-            ctx.save();
-            ctx.translate(cx, baseY);
-
-            // Draw concentric elliptical rings
-            for (let r = 0; r < 6; r++) {
-                const rx = (discW * 0.5) * (1 - r * 0.14);
-                const ry = (discH * 0.5) * (1 - r * 0.14);
-                if (rx <= 0 || ry <= 0) continue;
-                const alpha = 0.15 + r * 0.04 + Math.sin(frame * 0.03 + r) * 0.05;
-                ctx.save();
-                ctx.globalAlpha = alpha;
-                ctx.strokeStyle = CYAN;
-                ctx.shadowColor = CYAN;
-                ctx.shadowBlur = 10 + r * 3;
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            // Rotating ticks on outer ring
-            ctx.save();
-            ctx.globalAlpha = 0.25;
-            ctx.strokeStyle = CYAN;
-            ctx.lineWidth = 1;
-            for (let a = 0; a < 36; a++) {
-                const angle = (a / 36) * Math.PI * 2 + rotation;
-                const cos = Math.cos(angle);
-                const sin = Math.sin(angle);
-                const r1 = discW * 0.48;
-                const r2 = discW * 0.52;
-                ctx.beginPath();
-                ctx.moveTo(cos * r1, sin * (r1 * discH / discW));
-                ctx.lineTo(cos * r2, sin * (r2 * discH / discW));
-                ctx.stroke();
-            }
-            ctx.restore();
-
-            // Center glow
-            const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, discW * 0.3);
-            grd.addColorStop(0, 'rgba(0,255,242,0.12)');
-            grd.addColorStop(1, 'rgba(0,255,242,0)');
-            ctx.fillStyle = grd;
-            ctx.fillRect(-discW * 0.5, -discH * 0.5, discW, discH);
-
-            ctx.restore();
-        }
-
-        // --- Draw stadium / audience ---
-        function drawAudience(cx, stageTop, stageW, bassEnergy) {
-            const audienceTop = stageTop - H * 0.32;
-            const audienceH = stageTop - audienceTop - 30;
-            const audienceW = stageW * 1.6;
-
-            for (let i = 0; i < NUM_AUDIENCE; i++) {
-                const a = audience[i];
-                const rowFrac = a.row / 8;
-                // Curved row arrangement (semicircle)
-                const angle = -Math.PI * 0.15 + a.col * Math.PI * 0.3;
-                const rowRadius = (audienceW * 0.5) * (0.5 + rowFrac * 0.55);
-                const ax = cx + Math.cos(angle) * rowRadius * (0.6 + rowFrac * 0.4);
-                const ay = audienceTop + rowFrac * audienceH;
-
-                // Base dot (audience member)
-                ctx.save();
-                ctx.globalAlpha = 0.25 + rowFrac * 0.15;
-                ctx.fillStyle = CYAN_DIM;
-                ctx.beginPath();
-                ctx.arc(ax, ay, 1.2, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-
-                // Lightstick glow
-                if (a.isStick) {
-                    const beat = bassEnergy / 255;
-                    const flicker = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(frame * 0.05 * a.flickerSpeed + a.phase + beat * 2));
-                    ctx.save();
-                    ctx.globalAlpha = flicker * (0.5 + beat * 0.5);
-                    ctx.shadowColor = a.color;
-                    ctx.shadowBlur = 6 + beat * 8;
-                    ctx.fillStyle = a.color;
-                    // Stick line
-                    ctx.fillRect(ax - 0.5, ay - 5 - beat * 3, 1, 5 + beat * 3);
-                    // Glow tip
-                    ctx.beginPath();
-                    ctx.arc(ax, ay - 5 - beat * 3, 1.5 + beat, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                }
-            }
-        }
-
-        // --- Draw stage ---
-        function drawStage(cx, stageY, stageW, stageH) {
-            ctx.save();
-            // Stage platform
-            ctx.globalAlpha = 0.3;
-            ctx.strokeStyle = CYAN;
-            ctx.shadowColor = CYAN;
-            ctx.shadowBlur = 8;
-            ctx.lineWidth = 1.5;
-            // Trapezoidal stage
-            ctx.beginPath();
-            ctx.moveTo(cx - stageW * 0.5, stageY);
-            ctx.lineTo(cx + stageW * 0.5, stageY);
-            ctx.lineTo(cx + stageW * 0.4, stageY + stageH);
-            ctx.lineTo(cx - stageW * 0.4, stageY + stageH);
-            ctx.closePath();
-            ctx.stroke();
-            // Fill with dim glow
-            ctx.globalAlpha = 0.05;
-            ctx.fillStyle = CYAN;
-            ctx.fill();
-            ctx.restore();
-        }
-
-        // --- Draw spotlight cone ---
-        function drawSpotlight(x, topY, bottomY, spread, energy) {
-            ctx.save();
-            const alpha = 0.04 + (energy / 255) * 0.12;
-            ctx.globalAlpha = alpha;
-            const grd = ctx.createLinearGradient(x, topY, x, bottomY);
-            grd.addColorStop(0, 'rgba(0,255,242,0.6)');
-            grd.addColorStop(0.5, 'rgba(0,255,242,0.15)');
-            grd.addColorStop(1, 'rgba(0,255,242,0)');
-            ctx.fillStyle = grd;
-            ctx.beginPath();
-            ctx.moveTo(x - 3, topY);
-            ctx.lineTo(x + 3, topY);
-            ctx.lineTo(x + spread, bottomY);
-            ctx.lineTo(x - spread, bottomY);
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-        }
-
-        // --- Draw wireframe figure ---
-        function drawFigure(x, y, scale, sway, hasGuitar) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.scale(scale, scale);
-            // Sway
-            ctx.rotate(Math.sin(frame * 0.02 + (hasGuitar ? 1 : 0)) * sway);
-
-            ctx.strokeStyle = CYAN;
-            ctx.shadowColor = CYAN;
-            ctx.shadowBlur = 12;
-            ctx.lineWidth = 1.8;
-            ctx.globalAlpha = 0.85;
-            ctx.lineCap = 'round';
-
-            // Head
-            ctx.beginPath();
-            ctx.arc(0, -55, 8, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Body
-            ctx.beginPath();
-            ctx.moveTo(0, -47);
-            ctx.lineTo(0, -15);
-            ctx.stroke();
-
-            // Legs
-            const legSway = Math.sin(frame * 0.03) * 3;
-            ctx.beginPath();
-            ctx.moveTo(0, -15);
-            ctx.lineTo(-8 + legSway, 10);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(0, -15);
-            ctx.lineTo(8 - legSway, 10);
-            ctx.stroke();
-
-            if (hasGuitar) {
-                // Left arm holding guitar neck
-                const armSway = Math.sin(frame * 0.04) * 2;
-                ctx.beginPath();
-                ctx.moveTo(0, -42);
-                ctx.lineTo(-18 + armSway, -28);
-                ctx.lineTo(-25 + armSway, -35);
-                ctx.stroke();
-                // Right arm strumming
-                const strum = Math.sin(frame * 0.08) * 4;
-                ctx.beginPath();
-                ctx.moveTo(0, -42);
-                ctx.lineTo(12, -25 + strum);
-                ctx.stroke();
-                // Guitar body (ellipse)
-                ctx.beginPath();
-                ctx.ellipse(5, -25, 10, 7, 0.3, 0, Math.PI * 2);
-                ctx.stroke();
-                // Guitar neck
-                ctx.beginPath();
-                ctx.moveTo(-5, -28);
-                ctx.lineTo(-25 + armSway, -38);
-                ctx.stroke();
-            } else {
-                // Singer: left arm down, right arm holding mic up
-                const armSway = Math.sin(frame * 0.025) * 3;
-                // Left arm
-                ctx.beginPath();
-                ctx.moveTo(0, -42);
-                ctx.lineTo(-15 + armSway, -22);
-                ctx.stroke();
-                // Right arm with mic
-                ctx.beginPath();
-                ctx.moveTo(0, -42);
-                ctx.lineTo(10, -48);
-                ctx.lineTo(12, -55);
-                ctx.stroke();
-                // Mic head
-                ctx.beginPath();
-                ctx.arc(12, -57, 3, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-
-            ctx.restore();
-        }
-
-        // --- Draw floating particles ---
-        function drawParticles() {
-            ctx.save();
-            for (const p of particles) {
-                p.y -= p.speed;
-                if (p.y < -0.05) {
-                    p.y = 1.05;
-                    p.x = Math.random();
-                }
-                const px = p.x * W;
-                const py = p.y * H;
-                const fadeIn = Math.min(1, (1 - p.y) * 3);
-                const fadeOut = Math.min(1, p.y * 5);
-                ctx.globalAlpha = p.alpha * fadeIn * fadeOut * 0.6;
-                ctx.fillStyle = CYAN;
-                ctx.shadowColor = CYAN;
-                ctx.shadowBlur = 4;
-                ctx.beginPath();
-                ctx.arc(px, py, p.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        // --- Draw song info text ---
-        function drawSongInfo(cx, y) {
-            ctx.save();
-
-            // Title: 多梦症
-            ctx.font = 'bold 38px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-
-            // Chromatic aberration on text
-            ctx.globalAlpha = 0.3;
-            ctx.fillStyle = 'rgba(255,0,0,0.6)';
-            ctx.fillText('\u591A\u68A6\u75C7', cx - 2, y);
-            ctx.fillStyle = 'rgba(0,100,255,0.6)';
-            ctx.fillText('\u591A\u68A6\u75C7', cx + 2, y);
-
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = '#fff';
-            ctx.shadowColor = CYAN;
-            ctx.shadowBlur = 25;
-            ctx.fillText('\u591A\u68A6\u75C7', cx, y);
-
-            // Artist: Laymen
-            ctx.font = '400 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.globalAlpha = 0.6;
-            ctx.shadowBlur = 10;
-            ctx.fillStyle = 'rgba(0,255,242,0.8)';
-            ctx.fillText('Laymen', cx, y + 50);
-
-            ctx.restore();
-        }
-
-        // --- Main render loop ---
-        function render() {
-            if (!holoActive) return;
-            holoAnimFrame = requestAnimationFrame(render);
-            frame++;
-
-            // Get audio data
-            let bassEnergy = 0;
-            let midEnergy = 0;
-            if (holoAnalyser) {
-                holoAnalyser.getByteFrequencyData(dataArray);
-                // Bass: first ~10 bins
-                for (let i = 0; i < Math.min(10, bufferLength); i++) bassEnergy += dataArray[i];
-                bassEnergy = bufferLength > 0 ? bassEnergy / Math.min(10, bufferLength) : 0;
-                // Mid: bins 10-40
-                for (let i = 10; i < Math.min(40, bufferLength); i++) midEnergy += dataArray[i];
-                midEnergy = bufferLength > 0 ? midEnergy / Math.min(30, bufferLength - 10) : 0;
-            }
-
-            // Glitch logic
-            glitchTimer++;
-            if (glitchTimer > nextGlitch) {
-                glitchOffset = (Math.random() - 0.5) * 20;
-                if (glitchTimer > nextGlitch + 3) {
-                    glitchOffset = 0;
-                    glitchTimer = 0;
-                    nextGlitch = 120 + Math.random() * 200;
-                }
-            }
-
-            // Flicker
-            const flicker = 0.88 + Math.sin(frame * 0.15) * 0.06 + Math.random() * 0.04;
-
-            // Clear
-            ctx.clearRect(0, 0, W, H);
-            ctx.save();
-            ctx.globalAlpha = flicker;
-
-            // Apply glitch
-            if (glitchOffset !== 0) {
-                ctx.translate(glitchOffset, 0);
-            }
-
-            // Background grid
-            drawGrid();
-
-            // Layout calculations
-            const cx = W / 2;
-            const discCenterY = H * 0.82;
-            const discW = Math.min(W * 0.6, 500);
-            const discH = discW * 0.22; // perspective squish
-            const rotation = frame * 0.015;
-
-            // Holographic base disc
-            drawBaseDisc(cx, discCenterY, discW, discH, rotation);
-
-            // Projection beam (cone from disc upward)
-            ctx.save();
-            const beamGrd = ctx.createLinearGradient(cx, discCenterY, cx, H * 0.08);
-            beamGrd.addColorStop(0, 'rgba(0,255,242,0.07)');
-            beamGrd.addColorStop(0.3, 'rgba(0,255,242,0.03)');
-            beamGrd.addColorStop(1, 'rgba(0,255,242,0)');
-            ctx.fillStyle = beamGrd;
-            ctx.beginPath();
-            ctx.moveTo(cx - discW * 0.45, discCenterY);
-            ctx.lineTo(cx - W * 0.35, H * 0.08);
-            ctx.lineTo(cx + W * 0.35, H * 0.08);
-            ctx.lineTo(cx + discW * 0.45, discCenterY);
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-
-            // Stage area
-            const stageW = discW * 0.8;
-            const stageY = discCenterY - discH - 20;
-            const stageH = 25;
-            drawStage(cx, stageY - stageH, stageW, stageH);
-
-            // Spotlights (3 cones from top)
-            const spotTopY = H * 0.05;
-            drawSpotlight(cx, spotTopY, stageY, stageW * 0.2, bassEnergy);
-            drawSpotlight(cx - stageW * 0.3, spotTopY + 20, stageY, stageW * 0.15, midEnergy);
-            drawSpotlight(cx + stageW * 0.3, spotTopY + 20, stageY, stageW * 0.15, midEnergy);
-
-            // Audience (above stage)
-            drawAudience(cx, stageY - stageH - 5, stageW, bassEnergy);
-
-            // Figures on stage
-            const figureScale = Math.min(W, H) / 600;
-            const figureBaseY = stageY - stageH + 5;
-            // Singer (center)
-            drawWithAberration((color) => {
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                drawFigure(cx - stageW * 0.05, figureBaseY, figureScale * 1.1, 0.04, false);
-            }, 1.5);
-            // Guitarist (right)
-            drawWithAberration((color) => {
-                ctx.strokeStyle = color;
-                ctx.shadowColor = color;
-                drawFigure(cx + stageW * 0.22, figureBaseY + 3, figureScale * 0.95, 0.035, true);
-            }, 1.5);
-
-            // Floating particles
-            drawParticles();
-
-            // Scan lines (on top of everything)
-            drawScanLines();
-
-            // Song info at bottom
-            drawSongInfo(cx, discCenterY + discH + 15);
-
-            ctx.restore(); // end flicker + glitch
-        }
-        render();
-
-        // --- Exit handlers ---
         function exitHolo() {
-            if (!holoActive) return;
             holoActive = false;
-            cancelAnimationFrame(holoAnimFrame);
-            window.removeEventListener('resize', resize);
-            // Collapse animation
-            overlay.classList.add('collapsing');
             overlay.classList.remove('active');
-            setTimeout(() => {
-                overlay.remove();
-            }, 550);
+            setTimeout(() => overlay.remove(), 500);
             document.removeEventListener('keydown', escHandler);
         }
-
-        overlay.addEventListener('click', exitHolo);
 
         function escHandler(e) {
             if (e.key === 'Escape') exitHolo();
