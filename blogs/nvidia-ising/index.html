@@ -364,7 +364,7 @@
       border-bottom: 2px solid #ccc;
     }
     tbody tr:nth-child(even) { background: #f8fafc; }
-    tr:hover { background: #eef4f8; }
+    tbody tr:hover { background: #e0edf6; }
     td strong { color: #b8860b; } /* gold for highlighted values like 4.0x */
 
     /* ── References ── */
@@ -595,13 +595,13 @@
     <!-- Content -->
     <article class="content-area">
 
-      <p class="intro-lead">Quantum error correction (QEC) is essential for fault-tolerant quantum computing &mdash; but decoding must keep pace with the hardware. As part of the <strong>NVIDIA Ising</strong> open model family, a <strong>neural pre-decoder</strong> using a 3D CNN was released to reduce syndrome density in surface code decoding workflows. In this post, we put it to the test &mdash; evaluating its impact on logical error rates and decoding speed, then pushing the idea further to see how well neural pre-decoding generalizes to qLDPC codes.</p>
+      <p class="intro-lead"><span class="hl-term">Quantum error correction (QEC)</span> is essential for <span class="hl-purple">fault-tolerant quantum computing</span> &mdash; but decoding must keep pace with the hardware. As part of the <strong class="hl-blue">NVIDIA Ising</strong> open model family, a <strong class="hl-blue">neural pre-decoder</strong> using a <span class="hl-model">3D CNN</span> was released to reduce <span class="hl-term">syndrome</span> density in <span class="hl-gold">surface code</span> decoding workflows. In this post, we put it to the test &mdash; evaluating its impact on <span class="hl-green">logical error rates</span> and <span class="hl-green">decoding speed</span>, then pushing the idea further to see how well neural pre-decoding generalizes to <span class="hl-gold">qLDPC codes</span>.</p>
 
-      <p>Surface codes, however, carry a fundamental encoding rate limitation: <em>d</em><sup>2</sup> data qubits per logical qubit. <strong>Quantum LDPC codes</strong> &mdash; particularly <strong>bivariate bicycle (BB) codes</strong> <a href="#ref-1">[1]</a> &mdash; break this barrier with dramatically better encoding rates. But their non-local, non-planar check connectivity means the CNN pre-decoder, designed for the surface code's regular grid, cannot directly apply.</p>
+      <p><span class="hl-gold">Surface codes</span>, however, carry a fundamental encoding rate limitation: <em>d</em><sup>2</sup> data qubits per logical qubit. <strong class="hl-purple">Quantum LDPC codes</strong> &mdash; particularly <strong class="hl-purple">bivariate bicycle (BB) codes</strong> <a href="#ref-1">[1]</a> &mdash; break this barrier with dramatically better encoding rates. But their <span class="hl-red">non-local, non-planar</span> check connectivity means the CNN pre-decoder, designed for the surface code's regular grid, <span class="hl-warn">cannot directly apply</span>.</p>
 
       <div class="key-question">This raises the question we set out to test: <strong>can neural pre-decoders be effective for codes that don't live on a regular lattice?</strong></div>
 
-      <p>We first benchmark the CNN pre-decoder on surface codes, then test a simple MLP pre-decoder on BB codes &mdash; implementing BB code construction, <span class="hl-model">BP-OSD</span> decoding, and evaluating end-to-end performance. By comparing both settings, we identify what works, what doesn't, and where the gaps are.</p>
+      <p>We first benchmark the <span class="hl-model">CNN</span> pre-decoder on surface codes, then test a simple <span class="hl-model">MLP</span> pre-decoder on BB codes &mdash; implementing BB code construction, <span class="hl-model">BP-OSD</span> decoding, and evaluating end-to-end performance. By comparing both settings, we identify <span class="hl-green">what works</span>, <span class="hl-red">what doesn't</span>, and where the gaps are.</p>
 
       <!-- Part I -->
       <h2 id="part-i" data-num="01">Part I: Testing the CNN Pre-Decoder on Surface Codes</h2>
