@@ -141,8 +141,8 @@
       font-size: 1.5rem;
       font-weight: 700;
       margin: 3rem 0 1rem;
-      color: #111;
-      border-bottom: 1px solid #e5e5e5;
+      color: #00629B;
+      border-bottom: 2px solid #e5e5e5;
       padding-bottom: 0.5rem;
     }
     h2:first-child {
@@ -153,7 +153,7 @@
       font-size: 1.35rem;
       font-weight: 600;
       margin: 2.5rem 0 1rem;
-      color: #111;
+      color: #1a3a5c;
     }
 
     p {
@@ -162,11 +162,11 @@
     }
 
     blockquote {
-      border-left: 4px solid #00629B;
+      border-left: 4px solid #FFCD00;
       margin: 0 0 1.5rem;
       padding: 0.75rem 1.25rem;
-      background: #f7f9fc;
-      color: #333;
+      background: #fffdf0;
+      color: #3a3000;
       font-style: italic;
     }
     blockquote p { margin: 0; }
@@ -179,9 +179,12 @@
       margin-bottom: 0.5rem;
       font-size: 1.05rem;
     }
+    li strong {
+      color: #00629B;
+    }
 
     a { color: #00629B; text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    a:hover { text-decoration: underline; color: #004a76; }
 
     strong { font-weight: 600; }
 
@@ -189,6 +192,21 @@
       font-size: 1.1rem;
       color: #333;
       line-height: 1.8;
+      border-left: 3px solid #00629B;
+      padding-left: 1rem;
+    }
+
+    /* Key findings highlight */
+    em { color: #1a3a5c; }
+
+    /* Inline code with accent */
+    code {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.88em;
+      background: #eef4f8;
+      color: #00629B;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
     }
 
     /* ── Figures ── */
@@ -213,6 +231,7 @@
       font-style: italic;
       padding: 0 1rem;
     }
+    figcaption strong { color: #00629B; }
 
     /* ── Code blocks ── */
     pre {
@@ -226,13 +245,6 @@
       line-height: 1.55;
       overflow-x: auto;
       margin: 0 0 1.5rem;
-    }
-    code {
-      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-      font-size: 0.88em;
-      background: #f0f0f0;
-      padding: 0.15em 0.35em;
-      border-radius: 3px;
     }
     pre code {
       background: none;
@@ -256,6 +268,7 @@
       text-align: left;
       padding: 0 1rem;
     }
+    .table-caption strong { color: #00629B; }
     table {
       width: 100%;
       border-collapse: collapse;
