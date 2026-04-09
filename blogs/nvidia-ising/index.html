@@ -380,26 +380,55 @@
 
     /* ── Pipeline display ── */
     .pipeline {
-      text-align: center;
-      font-size: 1.05rem;
-      margin: 1.5rem 0;
-      padding: 1.1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+      margin: 2rem 0;
+      padding: 1.5rem 1rem;
       background: linear-gradient(135deg, #f0f5fa, #f7f9fc);
       border: 1px solid #dce5ee;
-      border-radius: 10px;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      color: #444;
+      border-radius: 12px;
     }
-    .pipeline span {
-      display: inline-block;
-      color: #fff;
-      background: #00629B;
-      padding: 0.2em 0.7em;
-      margin: 0.15em 0;
-      border-radius: 4px;
+    .pipeline .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.6rem 1rem;
+      min-width: 80px;
+      text-align: center;
+    }
+    .pipeline .step-label {
+      font-size: 0.6rem;
       font-weight: 600;
-      font-size: 0.92em;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #8690a8;
+      margin-bottom: 0.3rem;
+    }
+    .pipeline .step-box {
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .pipeline .step-data {
+      background: #fff;
+      border: 1.5px solid #d0dae6;
+      color: #333;
+    }
+    .pipeline .step-model {
+      background: #00629B;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,98,155,.25);
+    }
+    .pipeline .arrow {
+      color: #b0bec5;
+      font-size: 1.2rem;
+      padding: 0 0.2rem;
+      line-height: 1;
     }
 
     /* ── Attribution ── */
@@ -604,7 +633,17 @@
 
       <p>A pre-decoder is a lightweight neural network that <strong>preprocesses syndromes before the main decoder runs</strong>. It does not replace the decoder &mdash; it makes the decoder's job easier:</p>
 
-      <div class="pipeline">Syndrome &rarr; <span>Neural Net</span> &rarr; Sparser Residual Syndrome &rarr; <span>Decoder (e.g., PyMatching)</span> &rarr; Final Decision</div>
+      <div class="pipeline">
+        <div class="step"><span class="step-label">Input</span><span class="step-box step-data">Syndrome</span></div>
+        <span class="arrow">&rarr;</span>
+        <div class="step"><span class="step-label">Pre-decoder</span><span class="step-box step-model">Neural Net</span></div>
+        <span class="arrow">&rarr;</span>
+        <div class="step"><span class="step-label">Reduced</span><span class="step-box step-data">Sparser Residual</span></div>
+        <span class="arrow">&rarr;</span>
+        <div class="step"><span class="step-label">Decoder</span><span class="step-box step-model">PyMatching</span></div>
+        <span class="arrow">&rarr;</span>
+        <div class="step"><span class="step-label">Output</span><span class="step-box step-data">Final Decision</span></div>
+      </div>
 
       <p>The neural network learns to identify and correct local, high-confidence errors from the raw syndrome. What remains &mdash; the residual &mdash; is sparser and contains only the harder, ambiguous errors. The main decoder then operates on this reduced problem, achieving both <strong class="hl-result">lower logical error rates</strong> and <strong class="hl-result">faster decode times</strong>.</p>
 
