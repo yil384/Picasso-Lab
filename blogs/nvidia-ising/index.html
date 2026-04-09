@@ -410,6 +410,134 @@
       color: #666;
     }
 
+    /* ── Metrics row ── */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .metric-card {
+      background: linear-gradient(135deg, #f0f7ff, #f8fbff);
+      border: 1px solid #d0e2f0;
+      border-radius: 10px;
+      padding: 1.2rem 1.4rem;
+      text-align: center;
+    }
+    .metric-card .metric-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #00629B;
+      line-height: 1.2;
+    }
+    .metric-card .metric-label {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 0.3rem;
+      font-weight: 500;
+    }
+
+    /* ── Comparison cards ── */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    .compare-card {
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid #e0e0e0;
+    }
+    .compare-card.card-blue {
+      background: linear-gradient(180deg, #f0f7ff, #fff);
+      border-color: #c0d8f0;
+    }
+    .compare-card.card-gold {
+      background: linear-gradient(180deg, #fffdf0, #fff);
+      border-color: #e8dca0;
+    }
+    .compare-card h4 {
+      font-size: 1.1rem;
+      margin: 0 0 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .compare-card.card-blue h4 { color: #00629B; }
+    .compare-card.card-gold h4 { color: #b8860b; }
+    .compare-card .compare-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid rgba(0,0,0,.06);
+      font-size: 0.9rem;
+    }
+    .compare-card .compare-item:last-child { border-bottom: none; }
+    .compare-card .compare-key { color: #666; font-weight: 500; }
+    .compare-card .compare-val { font-weight: 600; color: #333; }
+    .badge-yes { color: #16a34a; font-weight: 600; }
+    .badge-no { color: #dc2626; font-weight: 600; }
+
+    /* ── Section number decorations ── */
+    h2 { position: relative; padding-left: 0; }
+    h2::before {
+      content: attr(data-num);
+      display: inline-block;
+      background: #00629B;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      margin-right: 0.6rem;
+      vertical-align: middle;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Reading progress bar ── */
+    .reading-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #00629B, #FFCD00);
+      z-index: 9999;
+      transition: width 0.1s linear;
+      width: 0%;
+    }
+
+    /* ── Code block header with language label ── */
+    .code-block-wrap {
+      position: relative;
+      margin: 0 0 1.5rem;
+    }
+    .code-block-wrap .code-lang {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: #334155;
+      color: #94a3b8;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.3rem 0.8rem;
+      border-radius: 0 8px 0 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .code-block-wrap pre {
+      margin: 0;
+    }
+
+    /* ── Smooth hover on figures ── */
+    figure img {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    figure:hover img {
+      transform: scale(1.02);
+      box-shadow: 0 6px 24px rgba(0,0,0,.12);
+    }
+
     /* ── Responsive ── */
     @media (max-width: 768px) {
       .title-banner { padding: 2.5rem 1.25rem 2rem; }
@@ -429,10 +557,13 @@
       h2 { font-size: 1.25rem; }
       h3 { font-size: 1.15rem; }
       figure { max-width: 100%; }
+      .comparison-grid { grid-template-columns: 1fr; }
+      .metrics-row { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 <body>
+<div class="reading-progress" id="reading-progress"></div>
 
   <!-- Banner -->
   <div class="title-banner">
@@ -477,7 +608,7 @@
       <p>We first benchmark the CNN pre-decoder on surface codes, then test a simple MLP pre-decoder on BB codes &mdash; implementing BB code construction, BP-OSD decoding, and evaluating end-to-end performance. By comparing both settings, we identify what works, what doesn't, and where the gaps are.</p>
 
       <!-- Part I -->
-      <h2 id="part-i">Part I: Testing the CNN Pre-Decoder on Surface Codes</h2>
+      <h2 id="part-i" data-num="01">Part I: Testing the CNN Pre-Decoder on Surface Codes</h2>
 
       <figure>
         <img src="figures/surface_code.png" alt="Surface Code Lattice">
@@ -522,6 +653,21 @@
 
       <p>The results confirm consistent improvements: <strong>up to 2.12x faster decoding</strong> and <strong>up to 1.66x lower LER</strong>, with the speedup growing at larger distances.</p>
 
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-value">2.12&times;</div>
+          <div class="metric-label">Faster Decoding</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">1.66&times;</div>
+          <div class="metric-label">Lower LER</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">50%</div>
+          <div class="metric-label">Syndrome Reduction</div>
+        </div>
+      </div>
+
       <h3 id="why-predecoder">Why Can a Pre-Decoder Beat PyMatching?</h3>
 
       <p>At first glance, this is counter-intuitive: PyMatching implements minimum-weight perfect matching (MWPM) on the detector error model (DEM), which is near-optimal for independent errors. How can a heuristic CNN improve on that?</p>
@@ -543,7 +689,7 @@
       <div class="transition-callout">But surface codes store just 1 logical qubit in <em>d</em><sup>2</sup> data qubits. The real test: does neural pre-decoding work for codes with better encoding rates?</div>
 
       <!-- Part II -->
-      <h2 id="part-ii">Part II: Bivariate Bicycle Codes</h2>
+      <h2 id="part-ii" data-num="02">Part II: Bivariate Bicycle Codes</h2>
 
       <h3 id="encoding-rate">The Encoding Rate Problem</h3>
 
@@ -581,11 +727,11 @@
 
       <p>The CSS condition H<sub>X</sub>H<sub>Z</sub><sup>T</sup> = 0 follows from the commutativity of the group algebra. Construction is straightforward:</p>
 
-      <pre><code># [[72, 12, 6]]: l=6, m=6
+      <div class="code-block-wrap"><span class="code-lang">Python</span><pre><code># [[72, 12, 6]]: l=6, m=6
 A = poly_to_matrix([(3,0), (0,1), (0,2)], 6, 6)
 B = poly_to_matrix([(0,3), (1,0), (2,0)], 6, 6)
 Hx = sp.hstack([A, B])      # 36 x 72
-Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
+Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
 
       <h3 id="degeneracy">Decoding: The Degeneracy Challenge</h3>
 
@@ -603,13 +749,13 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
       <p>At <em>p</em> = 0.03, the [[144,12,12]] code achieves block LER &asymp; 0.004 while encoding 12 logical qubits &mdash; a 12&times; improvement in encoding rate over a surface code at the same distance.</p>
 
       <!-- Part III -->
-      <h2 id="part-iii">Part III: Testing a Neural Pre-Decoder for BB Codes</h2>
+      <h2 id="part-iii" data-num="03">Part III: Testing a Neural Pre-Decoder for BB Codes</h2>
 
       <p>The surface code CNN reduces syndrome density by exploiting the regular T &times; D &times; D grid. For BB codes, this doesn't work &mdash; the check-qubit connectivity is <strong>non-local and non-planar</strong>, and a CNN's local receptive field would miss long-range correlations entirely.</p>
 
       <p>As a first test, we implement an <strong>MLP pre-decoder</strong> that takes the full syndrome as input and outputs <strong>refined per-qubit error probabilities</strong> for BP-OSD:</p>
 
-      <pre><code>Syndrome &rarr; MLP &rarr; Refined Channel Probs &rarr; BP-OSD &rarr; Correction</code></pre>
+      <div class="code-block-wrap"><span class="code-lang">Pipeline</span><pre><code>Syndrome &rarr; MLP &rarr; Refined Channel Probs &rarr; BP-OSD &rarr; Correction</code></pre></div>
 
       <p>The output is interpolated with the uniform prior (&alpha; = 0.4) for stability. The MLP doesn't need to decode &mdash; it just provides better soft information than the flat prior <em>p</em>.</p>
 
@@ -645,25 +791,39 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
 
       <p>The improvement is moderate at low <em>p</em> and fades entirely above threshold, where the MLP's predictions add noise rather than useful information. This is expected: the MLP treats the syndrome as a flat vector with no inductive bias for the code's non-local connectivity. It provides a mild warm start for BP at low error rates, but cannot capture the long-range correlations needed at higher noise.</p>
 
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-value">4.0&times;</div>
+          <div class="metric-label">LER Reduction at p=0.02</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">2.1&times;</div>
+          <div class="metric-label">LER Reduction at p=0.03</div>
+        </div>
+      </div>
+
       <!-- Analysis -->
-      <h2 id="analysis">Analysis: What the Tests Reveal About Architecture-Code Alignment</h2>
+      <h2 id="analysis" data-num="04">Analysis: What the Tests Reveal About Architecture-Code Alignment</h2>
 
       <p>Comparing the two pre-decoders across our tests reveals the central finding:</p>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th></th><th>Surface Code (CNN)</th><th>BB Code (MLP)</th></tr>
-          </thead>
-          <tbody>
-            <tr><td><strong>Architecture</strong></td><td>3D CNN (ResBlocks)</td><td>Flat MLP</td></tr>
-            <tr><td><strong>Matches code structure?</strong></td><td>Yes &mdash; regular lattice</td><td>No &mdash; ignores connectivity</td></tr>
-            <tr><td><strong>LER reduction</strong></td><td>1.4&ndash;1.7x (consistent)</td><td>2&ndash;4x at low <em>p</em>, ~1x at high <em>p</em></td></tr>
-            <tr><td><strong>Speedup</strong></td><td>Up to 2.12x</td><td>Comparable (slight overhead)</td></tr>
-            <tr><td><strong>Noise model</strong></td><td>25-param circuit-level</td><td>Code-capacity (i.i.d.)</td></tr>
-          </tbody>
-        </table>
-        <p class="table-caption"><strong>Table 4:</strong> Architecture-code alignment comparison between the two pre-decoders.</p>
+      <div class="comparison-grid">
+        <div class="compare-card card-blue">
+          <h4>&#9654; Surface Code — CNN</h4>
+          <div class="compare-item"><span class="compare-key">Architecture</span><span class="compare-val">3D CNN (ResBlocks)</span></div>
+          <div class="compare-item"><span class="compare-key">Matches structure?</span><span class="compare-val badge-yes">Yes — regular lattice</span></div>
+          <div class="compare-item"><span class="compare-key">LER reduction</span><span class="compare-val">1.4–1.7× (consistent)</span></div>
+          <div class="compare-item"><span class="compare-key">Speedup</span><span class="compare-val">Up to 2.12×</span></div>
+          <div class="compare-item"><span class="compare-key">Noise model</span><span class="compare-val">25-param circuit-level</span></div>
+        </div>
+        <div class="compare-card card-gold">
+          <h4>&#9654; BB Code — MLP</h4>
+          <div class="compare-item"><span class="compare-key">Architecture</span><span class="compare-val">Flat MLP</span></div>
+          <div class="compare-item"><span class="compare-key">Matches structure?</span><span class="compare-val badge-no">No — ignores connectivity</span></div>
+          <div class="compare-item"><span class="compare-key">LER reduction</span><span class="compare-val">2–4× at low <em>p</em>, ~1× at high <em>p</em></span></div>
+          <div class="compare-item"><span class="compare-key">Speedup</span><span class="compare-val">Comparable (slight overhead)</span></div>
+          <div class="compare-item"><span class="compare-key">Noise model</span><span class="compare-val">Code-capacity (i.i.d.)</span></div>
+        </div>
       </div>
 
       <p>The surface code CNN delivers <strong>consistent improvement across all noise rates</strong> because the convolutional architecture is perfectly matched to the code's lattice &mdash; every layer captures meaningful local correlations. The BB code MLP shows <strong>moderate gains at low <em>p</em> that vanish above threshold</strong> because it treats the syndrome as a flat vector, with no inductive bias for the code's long-range connectivity. Above threshold the MLP's predictions actually degrade performance slightly (0.95x at <em>p</em>=0.06).</p>
@@ -671,7 +831,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
       <div class="summary-box">This gap points to a clear conclusion: the MLP test shows that syndrome-conditioned soft information can help BP-OSD, but the improvement is fragile without structural alignment. The CNN test proves that architecture-code alignment is what makes pre-decoding robust. <strong>The next step: test pre-decoders that are structurally aligned with qLDPC codes.</strong></div>
 
       <!-- Future Work -->
-      <h2 id="future-work">Future Work: What We Plan to Test Next</h2>
+      <h2 id="future-work" data-num="05">Future Work: What We Plan to Test Next</h2>
 
       <p>Our evaluation points to several promising directions &mdash; each requiring further testing:</p>
 
@@ -685,9 +845,9 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
       <p>Just as the CNN pre-decoder succeeds by matching architecture to the surface code's spatial structure, future qLDPC pre-decoders should be <strong>designed from the code's Tanner graph outward</strong> &mdash; and rigorously tested to verify the gains hold.</p>
 
       <!-- Try It Yourself -->
-      <h2 id="try-it">Try It Yourself</h2>
+      <h2 id="try-it" data-num="06">Try It Yourself</h2>
 
-      <pre><code>pip install numpy scipy ldpc torch
+      <div class="code-block-wrap"><span class="code-lang">Bash</span><pre><code>pip install numpy scipy ldpc torch
 
 # Surface code pre-decoder (requires GPU)
 WORKFLOW=inference bash code/scripts/local_run.sh
@@ -696,12 +856,12 @@ WORKFLOW=inference bash code/scripts/local_run.sh
 python blog/bb_code_demo.py --shots 10000 --mode ler
 
 # BB code: pre-decoder comparison (Figures 4-5)
-python blog/bb_code_demo.py --shots 10000 --mode compare</code></pre>
+python blog/bb_code_demo.py --shots 10000 --mode compare</code></pre></div>
 
       <p>All code &mdash; including the surface code CNN pre-decoder with pre-trained models and the BB code MLP pre-decoder &mdash; is available as part of the <strong>NVIDIA Ising</strong> open model family.</p>
 
       <!-- References -->
-      <h2 id="references">References</h2>
+      <h2 id="references" data-num="REF">References</h2>
 
       <div class="references">
         <div class="csl-entry" id="ref-1">[1] S. Bravyi, A. Cross, J. Gambetta, D. Maslov, P. Rall, and T. Yoder, &ldquo;High-threshold and low-overhead fault-tolerant quantum memory,&rdquo; <em>Nature</em> 627, 778&ndash;782 (2024). <a href="https://doi.org/10.1038/s41586-024-07107-7">https://doi.org/10.1038/s41586-024-07107-7</a>.</div>
@@ -716,10 +876,10 @@ python blog/bb_code_demo.py --shots 10000 --mode compare</code></pre>
       </div>
 
       <!-- Citation section -->
-      <h2 id="citation">Citation</h2>
+      <h2 id="citation" data-num="CITE">Citation</h2>
 
       <p><strong>BibTeX citation:</strong></p>
-      <pre><code>@online{ruan2026nvidia,
+      <div class="code-block-wrap"><span class="code-lang">BibTeX</span><pre><code>@online{ruan2026nvidia,
   author = {Yin, Keyi and Ruan, Jixuan and Lin, Yichen},
   title = {Testing {NVIDIA} {Ising}: Evaluating Neural
     Pre-Decoding from Surface Codes to Bivariate
@@ -727,7 +887,7 @@ python blog/bb_code_demo.py --shots 10000 --mode compare</code></pre>
   date = {2026-04-08},
   url = {https://yufeiding.ucsd.edu},
   langid = {en}
-}</code></pre>
+}</code></pre></div>
 
       <p><strong>For attribution, please cite this work as:</strong></p>
       <blockquote>
@@ -763,6 +923,13 @@ python blog/bb_code_demo.py --shots 10000 --mode compare</code></pre>
 
       sections.forEach(section => observer.observe(section));
     })();
+  </script>
+  <script>
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = h > 0 ? (window.scrollY / h) * 100 : 0;
+    document.getElementById('reading-progress').style.width = pct + '%';
+  });
   </script>
 </body>
 </html>
