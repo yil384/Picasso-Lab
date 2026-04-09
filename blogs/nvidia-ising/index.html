@@ -479,21 +479,17 @@
     .badge-yes { color: #16a34a; font-weight: 600; }
     .badge-no { color: #dc2626; font-weight: 600; }
 
-    /* ── Section number decorations ── */
-    h2 { position: relative; padding-left: 0; }
-    h2::before {
-      content: attr(data-num);
-      display: inline-block;
-      background: #00629B;
-      color: #fff;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      margin-right: 0.6rem;
-      vertical-align: middle;
-      letter-spacing: 0.03em;
-    }
+    /* ── Rich text inline highlight classes ── */
+    .hl-blue { color: #00629B; font-weight: 600; }
+    .hl-gold { color: #b8860b; font-weight: 600; }
+    .hl-green { color: #16a34a; font-weight: 600; }
+    .hl-red { color: #dc2626; font-weight: 600; }
+    .hl-purple { color: #7c3aed; font-weight: 600; }
+    .hl-num { color: #00629B; font-weight: 700; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.95em; }
+    .hl-term { color: #7c3aed; font-style: italic; }
+    .hl-model { background: #eef4f8; color: #00629B; padding: 0.1em 0.4em; border-radius: 3px; font-weight: 600; font-size: 0.93em; }
+    .hl-result { background: linear-gradient(135deg, #e8f5e9, #f1f8e9); color: #2e7d32; padding: 0.1em 0.5em; border-radius: 3px; font-weight: 700; }
+    .hl-warn { background: #fff3e0; color: #e65100; padding: 0.1em 0.5em; border-radius: 3px; font-weight: 600; }
 
     /* ── Reading progress bar ── */
     .reading-progress {
@@ -605,7 +601,7 @@
 
       <div class="key-question">This raises the question we set out to test: <strong>can neural pre-decoders be effective for codes that don't live on a regular lattice?</strong></div>
 
-      <p>We first benchmark the CNN pre-decoder on surface codes, then test a simple MLP pre-decoder on BB codes &mdash; implementing BB code construction, BP-OSD decoding, and evaluating end-to-end performance. By comparing both settings, we identify what works, what doesn't, and where the gaps are.</p>
+      <p>We first benchmark the CNN pre-decoder on surface codes, then test a simple MLP pre-decoder on BB codes &mdash; implementing BB code construction, <span class="hl-model">BP-OSD</span> decoding, and evaluating end-to-end performance. By comparing both settings, we identify what works, what doesn't, and where the gaps are.</p>
 
       <!-- Part I -->
       <h2 id="part-i" data-num="01">Part I: Testing the CNN Pre-Decoder on Surface Codes</h2>
@@ -615,9 +611,9 @@
         <figcaption><strong>Figure 1:</strong> The rotated surface code: data qubits (black dots) sit on a regular 2D grid, with X stabilizers (red) and Z stabilizers (blue) forming a planar checkerboard pattern. Logical operators X<sub>L</sub> and Z<sub>L</sub> span the code as string-like paths. This regular structure is what makes 3D CNNs a natural fit &mdash; every local patch looks the same.</figcaption>
       </figure>
 
-      <p>The NVIDIA Ising surface code pre-decoder is a <strong>3D CNN</strong> that operates on detector syndrome tensors of shape (B, 4, T, D, D) &mdash; four channels (X/Z syndromes + presence masks) across T measurement rounds and a D &times; D spatial grid. The network processes this tensor through residual 3D convolutional blocks, outputting corrected syndromes with reduced density. These are then passed to PyMatching (MWPM) for the final logical error decision.</p>
+      <p>The NVIDIA Ising surface code pre-decoder is a <strong class="hl-blue">3D CNN</strong> that operates on detector <span class="hl-term">syndrome</span> tensors of shape (B, 4, T, D, D) &mdash; four channels (X/Z syndromes + presence masks) across T measurement rounds and a D &times; D spatial grid. The network processes this tensor through residual 3D convolutional blocks, outputting corrected syndromes with reduced density. These are then passed to <span class="hl-model">PyMatching</span> (<span class="hl-model">MWPM</span>) for the final logical error decision.</p>
 
-      <p>The architecture exploits the surface code's regular lattice: each convolutional layer captures local spatiotemporal error correlations within its receptive field R = 1 + &Sigma;(k<sub>i</sub> &minus; 1), and the regular grid means every spatial position is treated uniformly. Two pre-trained models are available &mdash; R=9 (4 layers, ~913K params) and R=13 (6 layers, ~1.8M params), trained with a 25-parameter circuit-level noise model <a href="#ref-3">[3]</a> <a href="#ref-5">[5]</a>.</p>
+      <p>The architecture exploits the surface code's regular lattice: each convolutional layer captures local spatiotemporal error correlations within its receptive field R = 1 + &Sigma;(k<sub>i</sub> &minus; 1), and the regular grid means every spatial position is treated uniformly. Two pre-trained models are available &mdash; <span class="hl-model">R=9</span> (4 layers, ~<span class="hl-num">913K</span> params) and <span class="hl-model">R=13</span> (6 layers, ~<span class="hl-num">1.8M</span> params), trained with a 25-parameter circuit-level noise model <a href="#ref-3">[3]</a> <a href="#ref-5">[5]</a>.</p>
 
       <h3>Test 1: LER Across Physical Error Rates</h3>
 
@@ -630,7 +626,7 @@
 
       <h3>Test 2: Decoding Speedup Across Distances</h3>
 
-      <p>By reducing syndrome density, the pre-decoder should make PyMatching's job easier &mdash; sparser syndromes mean fewer matching edges and lower decode latency. We measure this directly:</p>
+      <p>By reducing syndrome density, the pre-decoder should make <span class="hl-model">PyMatching</span>'s job easier &mdash; sparser syndromes mean fewer matching edges and lower decode latency. We measure this directly:</p>
 
       <figure>
         <img src="figures/fig3_speedup.png" alt="Surface Code Speedup">
@@ -651,7 +647,7 @@
         <p class="table-caption"><strong>Table 1:</strong> Decoding speedup and LER reduction across code distances using the R=13 model at <em>p</em> = 0.004.</p>
       </div>
 
-      <p>The results confirm consistent improvements: <strong>up to 2.12x faster decoding</strong> and <strong>up to 1.66x lower LER</strong>, with the speedup growing at larger distances.</p>
+      <p>The results confirm consistent improvements: <strong><span class="hl-result">2.12x faster decoding</span></strong> and <strong><span class="hl-result">1.66x lower LER</span></strong>, with the speedup growing at larger distances.</p>
 
       <div class="metrics-row">
         <div class="metric-card">
@@ -670,21 +666,21 @@
 
       <h3 id="why-predecoder">Why Can a Pre-Decoder Beat PyMatching?</h3>
 
-      <p>At first glance, this is counter-intuitive: PyMatching implements minimum-weight perfect matching (MWPM) on the detector error model (DEM), which is near-optimal for independent errors. How can a heuristic CNN improve on that?</p>
+      <p>At first glance, this is counter-intuitive: <span class="hl-model">PyMatching</span> implements minimum-weight perfect matching (<span class="hl-model">MWPM</span>) on the detector error model (DEM), which is near-optimal for independent errors. How can a heuristic CNN improve on that?</p>
 
-      <p>The key is that <strong>the pre-decoder is not replacing PyMatching &mdash; it is reducing the problem's complexity before PyMatching runs</strong>. The pipeline is:</p>
+      <p>The key is that <strong>the pre-decoder is not replacing <span class="hl-model">PyMatching</span> &mdash; it is reducing the problem's complexity before <span class="hl-model">PyMatching</span> runs</strong>. The pipeline is:</p>
 
       <div class="pipeline">Syndrome &rarr; <span>CNN</span> &rarr; Sparser Residual &rarr; <span>PyMatching</span> &rarr; Final Decision</div>
 
       <p>Three factors make this work:</p>
 
       <ol>
-        <li><strong>Circuit-level noise has spatiotemporal correlations that the DEM only approximates.</strong> The 25-parameter noise model includes correlated CNOT errors, idle depolarization, and SPAM noise. When PyMatching builds its matching graph via <code>approximate_disjoint_errors=True</code>, it decomposes these into independent error mechanisms &mdash; a lossy approximation. The 3D CNN, trained end-to-end on this noise, learns the correlations directly within its receptive field.</li>
-        <li><strong>The CNN solves the easy part; PyMatching solves the hard part.</strong> Most errors are local and fall within the CNN's receptive field (R=9 or R=13). The CNN corrects these, leaving only long-range or ambiguous errors in the residual syndrome. PyMatching then operates on a sparser, simpler matching problem &mdash; which it solves more accurately (and faster).</li>
-        <li><strong>A random CNN would make things worse, confirming this is learned behavior.</strong> If the CNN added noise instead of removing it, the residual would be denser and PyMatching would degrade. The improvement scales with model capacity (R=13 > R=9), further confirming the CNN is exploiting real structure in the noise.</li>
+        <li><strong>Circuit-level noise has spatiotemporal correlations that the DEM only approximates.</strong> The 25-parameter noise model includes correlated CNOT errors, idle depolarization, and SPAM noise. When <span class="hl-model">PyMatching</span> builds its matching graph via <code>approximate_disjoint_errors=True</code>, it decomposes these into independent error mechanisms &mdash; a lossy approximation. The 3D CNN, trained end-to-end on this noise, learns the correlations directly within its receptive field.</li>
+        <li><strong>The CNN solves the easy part; PyMatching solves the hard part.</strong> Most errors are local and fall within the CNN's receptive field (<span class="hl-model">R=9</span> or <span class="hl-model">R=13</span>). The CNN corrects these, leaving only long-range or ambiguous errors in the residual syndrome. <span class="hl-model">PyMatching</span> then operates on a sparser, simpler matching problem &mdash; which it solves more accurately (and faster).</li>
+        <li><strong>A random CNN would make things worse, confirming this is learned behavior.</strong> If the CNN added noise instead of removing it, the residual would be denser and <span class="hl-model">PyMatching</span> would degrade. The improvement scales with model capacity (<span class="hl-model">R=13</span> &gt; <span class="hl-model">R=9</span>), further confirming the CNN is exploiting real structure in the noise.</li>
       </ol>
 
-      <div class="summary-box">In short: MWPM is near-optimal given its DEM, but the DEM is an approximation. The CNN bridges the gap between the true noise and the DEM's model of it.</div>
+      <div class="summary-box">In short: <span class="hl-model">MWPM</span> is near-optimal given its DEM, but the DEM is an approximation. The CNN bridges the gap between the true noise and the DEM's model of it.</div>
 
       <div class="transition-callout">But surface codes store just 1 logical qubit in <em>d</em><sup>2</sup> data qubits. The real test: does neural pre-decoding work for codes with better encoding rates?</div>
 
@@ -712,7 +708,7 @@
         <p class="table-caption"><strong>Table 2:</strong> Encoding rate comparison between bivariate bicycle codes and surface codes.</p>
       </div>
 
-      <p>The BB [[72,12,6]] code stores <strong>12 logical qubits</strong> in 72 physical qubits &mdash; twice what a d=6 surface code uses for just <strong>1</strong>. The [[144,12,12]] code achieves distance 12 with the same qubit count as a d=12 surface code, but encodes <strong>12 logicals</strong> instead of 1.</p>
+      <p>The BB [[72,12,6]] code stores <strong><span class="hl-num">12</span> logical qubits</strong> in 72 physical qubits &mdash; twice what a d=6 surface code uses for just <strong>1</strong>. The [[144,12,12]] code achieves distance 12 with the same qubit count as a d=12 surface code, but encodes <strong>12 logicals</strong> instead of 1.</p>
 
       <figure>
         <img src="figures/bb_code.png" alt="BB Code Structure">
@@ -735,11 +731,11 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
 
       <h3 id="degeneracy">Decoding: The Degeneracy Challenge</h3>
 
-      <p>Unlike surface codes where MWPM works well, BB codes require <strong>belief propagation (BP)</strong> <a href="#ref-9">[9]</a> &mdash; but quantum <strong>degeneracy</strong> causes BP to oscillate between equivalent error configurations instead of converging <a href="#ref-2">[2]</a> <a href="#ref-6">[6]</a>. <strong>BP-OSD</strong> addresses this with Ordered Statistics Decoding as a fallback <a href="#ref-7">[7]</a>: when BP fails, OSD uses BP's soft information to guide a deterministic search.</p>
+      <p>Unlike surface codes where <span class="hl-model">MWPM</span> works well, BB codes require <strong><span class="hl-term">belief propagation</span> (BP)</strong> <a href="#ref-9">[9]</a> &mdash; but quantum <strong><span class="hl-term">degeneracy</span></strong> causes BP to oscillate between equivalent error configurations instead of converging <a href="#ref-2">[2]</a> <a href="#ref-6">[6]</a>. <strong><span class="hl-model">BP-OSD</span></strong> addresses this with Ordered Statistics Decoding as a fallback <a href="#ref-7">[7]</a>: when BP fails, <span class="hl-model">OSD</span> uses BP's soft information to guide a deterministic search.</p>
 
       <h3 id="test-3">Test 3: BP-OSD Baseline on BB Codes</h3>
 
-      <p>We evaluate both BB codes under code-capacity noise with BP-OSD (5,000 shots per point) to establish baseline performance:</p>
+      <p>We evaluate both BB codes under code-capacity noise with <span class="hl-model">BP-OSD</span> (<span class="hl-num">5,000</span> shots per point) to establish baseline performance:</p>
 
       <figure>
         <img src="figures/fig4_bb_code_ler.png" alt="BB Code LER">
@@ -753,7 +749,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
 
       <p>The surface code CNN reduces syndrome density by exploiting the regular T &times; D &times; D grid. For BB codes, this doesn't work &mdash; the check-qubit connectivity is <strong>non-local and non-planar</strong>, and a CNN's local receptive field would miss long-range correlations entirely.</p>
 
-      <p>As a first test, we implement an <strong>MLP pre-decoder</strong> that takes the full syndrome as input and outputs <strong>refined per-qubit error probabilities</strong> for BP-OSD:</p>
+      <p>As a first test, we implement an <strong class="hl-blue">MLP pre-decoder</strong> that takes the full syndrome as input and outputs <strong>refined per-qubit error probabilities</strong> for <span class="hl-model">BP-OSD</span>:</p>
 
       <div class="code-block-wrap"><span class="code-lang">Pipeline</span><pre><code>Syndrome &rarr; MLP &rarr; Refined Channel Probs &rarr; BP-OSD &rarr; Correction</code></pre></div>
 
@@ -761,7 +757,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
 
       <h3 id="test-4">Test 4: MLP Pre-Decoder vs. BP-OSD Alone</h3>
 
-      <p>We compare BP-OSD alone vs. MLP pre-decoder + BP-OSD on [[144,12,12]] (5,000 shots per point, same error samples for both decoders):</p>
+      <p>We compare <span class="hl-model">BP-OSD</span> alone vs. MLP pre-decoder + <span class="hl-model">BP-OSD</span> on [[144,12,12]] (<span class="hl-num">5,000</span> shots per point, same error samples for both decoders):</p>
 
       <figure>
         <img src="figures/fig5_predecoder_ler.png" alt="Pre-Decoder LER">
@@ -783,7 +779,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
             <tr><td>0.03</td><td>0.0025</td><td>0.0012</td><td><strong>2.1x</strong></td></tr>
             <tr><td>0.04</td><td>0.0119</td><td>0.0105</td><td>1.13x</td></tr>
             <tr><td>0.05</td><td>0.0319</td><td>0.0312</td><td>~1.0x</td></tr>
-            <tr><td>0.06</td><td>0.0823</td><td>0.0869</td><td>0.95x</td></tr>
+            <tr><td>0.06</td><td>0.0823</td><td>0.0869</td><td><span class="hl-warn">0.95x</span></td></tr>
           </tbody>
         </table>
         <p class="table-caption"><strong>Table 3:</strong> MLP pre-decoder vs. BP-OSD alone on [[144,12,12]] across physical error rates.</p>
@@ -803,7 +799,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
       </div>
 
       <!-- Analysis -->
-      <h2 id="analysis" data-num="04">Analysis: What the Tests Reveal About Architecture-Code Alignment</h2>
+      <h2 id="analysis" data-num="04">Analysis: What the Tests Reveal About <span class="hl-purple">Architecture-Code Alignment</span></h2>
 
       <p>Comparing the two pre-decoders across our tests reveals the central finding:</p>
 
@@ -826,9 +822,9 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
         </div>
       </div>
 
-      <p>The surface code CNN delivers <strong>consistent improvement across all noise rates</strong> because the convolutional architecture is perfectly matched to the code's lattice &mdash; every layer captures meaningful local correlations. The BB code MLP shows <strong>moderate gains at low <em>p</em> that vanish above threshold</strong> because it treats the syndrome as a flat vector, with no inductive bias for the code's long-range connectivity. Above threshold the MLP's predictions actually degrade performance slightly (0.95x at <em>p</em>=0.06).</p>
+      <p>The surface code CNN delivers <strong>consistent improvement across all noise rates</strong> because the convolutional architecture is perfectly matched to the code's lattice &mdash; every layer captures meaningful local correlations. The BB code MLP shows <strong>moderate gains at low <em>p</em> that vanish above threshold</strong> because it treats the syndrome as a flat vector, with no inductive bias for the code's long-range connectivity. Above threshold the MLP's predictions actually degrade performance slightly (<span class="hl-warn">0.95x</span> at <em>p</em>=0.06).</p>
 
-      <div class="summary-box">This gap points to a clear conclusion: the MLP test shows that syndrome-conditioned soft information can help BP-OSD, but the improvement is fragile without structural alignment. The CNN test proves that architecture-code alignment is what makes pre-decoding robust. <strong>The next step: test pre-decoders that are structurally aligned with qLDPC codes.</strong></div>
+      <div class="summary-box">This gap points to a clear conclusion: the MLP test shows that syndrome-conditioned soft information can help <span class="hl-model">BP-OSD</span>, but the improvement is fragile without structural alignment. The CNN test proves that <span class="hl-purple">architecture-code alignment</span> is what makes pre-decoding robust. <strong>The next step: test pre-decoders that are structurally aligned with qLDPC codes.</strong></div>
 
       <!-- Future Work -->
       <h2 id="future-work" data-num="05">Future Work: What We Plan to Test Next</h2>
@@ -837,7 +833,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
 
       <ul>
         <li><strong>CNN + MLP hybrids</strong>: BB codes have quasi-cyclic structure from &#8484;<sub>&ell;</sub> &times; &#8484;<sub>m</sub>. Within each cyclic block, connectivity is regular (processable by small CNNs); inter-block long-range connections can be handled by MLP or attention layers. This mirrors how the surface code CNN exploits spatial regularity, but adapted for BB codes' block-cyclic topology.</li>
-        <li><strong>Graph neural networks on the Tanner graph</strong>: GNNs operate directly on the check-qubit graph, learning message-passing rules that respect the actual connectivity <a href="#ref-9">[9]</a> &mdash; a trainable BP with learned update functions. Quasi-cyclic weight sharing across &#8484;<sub>&ell;</sub> &times; &#8484;<sub>m</sub> would reduce parameters and enable transfer across code sizes.</li>
+        <li><strong>Graph neural networks on the <span class="hl-term">Tanner graph</span></strong>: GNNs operate directly on the check-qubit graph, learning message-passing rules that respect the actual connectivity <a href="#ref-9">[9]</a> &mdash; a trainable BP with learned update functions. Quasi-cyclic weight sharing across &#8484;<sub>&ell;</sub> &times; &#8484;<sub>m</sub> would reduce parameters and enable transfer across code sizes.</li>
         <li><strong>Learned symmetry breaking</strong>: The degeneracy problem is fundamentally about Tanner graph symmetry <a href="#ref-2">[2]</a>. Neural networks can implicitly break these symmetries through nonlinear activations &mdash; testing whether the training loss drives commitment to specific corrections rather than degenerate oscillation.</li>
         <li><strong>Hardware-aware adaptation</strong>: Real devices have non-uniform noise. Combining neural pre-decoding with hardware-specific layout synthesis <a href="#ref-5">[5]</a> and adaptive encoding <a href="#ref-4">[4]</a> could yield end-to-end optimized systems calibrated to actual device noise profiles.</li>
       </ul>
@@ -858,7 +854,7 @@ python blog/bb_code_demo.py --shots 10000 --mode ler
 # BB code: pre-decoder comparison (Figures 4-5)
 python blog/bb_code_demo.py --shots 10000 --mode compare</code></pre></div>
 
-      <p>All code &mdash; including the surface code CNN pre-decoder with pre-trained models and the BB code MLP pre-decoder &mdash; is available as part of the <strong>NVIDIA Ising</strong> open model family.</p>
+      <p>All code &mdash; including the surface code CNN pre-decoder with pre-trained models and the BB code MLP pre-decoder &mdash; is available as part of the <strong class="hl-blue">NVIDIA Ising</strong> open model family.</p>
 
       <!-- References -->
       <h2 id="references" data-num="REF">References</h2>
