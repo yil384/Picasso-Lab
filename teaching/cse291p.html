@@ -25,14 +25,14 @@
             --text-primary: #1a1a1a;
             --text-secondary: #4a4a4a;
             --text-muted: #6b6b6b;
-            --accent-primary: #2563eb;
-            --accent-secondary: #7c3aed;
+            --accent-primary: #00629B;
+            --accent-secondary: #FFCD00;
             --accent-tertiary: #059669;
             --border-color: #e5e3df;
             --shadow: 0 4px 20px rgba(0,0,0,0.06);
             --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
-            --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --label-bg: #3b82f6;
+            --gradient-hero: linear-gradient(135deg, #00629B 0%, #0080b3 100%);
+            --label-bg: #00629B;
             --label-survey: #f59e0b;
             --label-reading: #10b981;
             --sidebar-bg: #ffffff;
@@ -40,7 +40,7 @@
             --glass-border: rgba(255,255,255,0.3);
 
             --timeline-line: #e0dfe4;
-            --timeline-node: linear-gradient(135deg, #667eea, #764ba2);
+            --timeline-node: linear-gradient(135deg, #00629B, #FFCD00);
         }
 
         [data-theme="dark"] {
@@ -50,13 +50,13 @@
             --text-primary: #e8e6e3;
             --text-secondary: #b8b5b0;
             --text-muted: #8a8780;
-            --accent-primary: #60a5fa;
-            --accent-secondary: #a78bfa;
+            --accent-primary: #4db8e8;
+            --accent-secondary: #FFD633;
             --accent-tertiary: #34d399;
             --border-color: #2d2d3a;
             --shadow: 0 4px 20px rgba(0,0,0,0.3);
             --shadow-hover: 0 8px 30px rgba(0,0,0,0.4);
-            --gradient-hero: linear-gradient(135deg, #4f46e5 0%, #6b21a8 100%);
+            --gradient-hero: linear-gradient(135deg, #004d7a 0%, #0080b3 100%);
             --sidebar-bg: #13131c;
             --glass-bg: rgba(26,26,36,0.75);
             --glass-border: rgba(255,255,255,0.08);
@@ -82,7 +82,7 @@
             left: 0;
             width: 0%;
             height: 3px;
-            background: linear-gradient(90deg, #667eea, #764ba2, #ec4899);
+            background: linear-gradient(90deg, #00629B, #FFCD00, #FFE066);
             z-index: 9999;
             transition: width 0.05s linear;
         }
@@ -259,7 +259,7 @@
         .hero-mesh {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             overflow: hidden; z-index: 0;
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4c1d95 70%, #581c87 100%);
+            background: linear-gradient(135deg, #003d5c 0%, #00629B 40%, #0080b3 70%, #0090c8 100%);
         }
         .hero-mesh .blob {
             position: absolute;
@@ -270,27 +270,27 @@
         }
         .hero-mesh .blob:nth-child(1) {
             width: 400px; height: 400px;
-            background: radial-gradient(circle, #667eea, transparent 70%);
+            background: radial-gradient(circle, #0090c8, transparent 70%);
             top: -10%; left: -5%;
             animation-duration: 14s;
         }
         .hero-mesh .blob:nth-child(2) {
             width: 350px; height: 350px;
-            background: radial-gradient(circle, #a78bfa, transparent 70%);
+            background: radial-gradient(circle, #FFCD00, transparent 70%);
             top: 20%; right: -8%;
             animation-duration: 10s;
             animation-delay: -3s;
         }
         .hero-mesh .blob:nth-child(3) {
             width: 300px; height: 300px;
-            background: radial-gradient(circle, #ec4899, transparent 70%);
+            background: radial-gradient(circle, #FFE066, transparent 70%);
             bottom: -15%; left: 30%;
             animation-duration: 16s;
             animation-delay: -7s;
         }
         .hero-mesh .blob:nth-child(4) {
             width: 250px; height: 250px;
-            background: radial-gradient(circle, #818cf8, transparent 70%);
+            background: radial-gradient(circle, #0080b8, transparent 70%);
             top: 50%; left: 60%;
             animation-duration: 11s;
             animation-delay: -5s;
@@ -317,7 +317,7 @@
             text-shadow: 0 2px 20px rgba(0,0,0,0.3);
         }
         .hero-overlay h1 .grad {
-            background: linear-gradient(135deg, #a78bfa, #ec4899, #f59e0b);
+            background: linear-gradient(135deg, #FFCD00, #FFE066, #fff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -445,7 +445,7 @@
             width: 4px;
             height: 100%;
             border-radius: 16px 0 0 16px;
-            background: linear-gradient(180deg, #667eea, #764ba2);
+            background: linear-gradient(180deg, #00629B, #FFCD00);
             z-index: 2;
         }
 
@@ -623,7 +623,7 @@
             position: absolute;
             inset: -4px;
             border-radius: 50%;
-            background: conic-gradient(from var(--ring-angle), #667eea, #764ba2, #ec4899, #f59e0b, #667eea);
+            background: conic-gradient(from var(--ring-angle), #00629B, #FFCD00, #FFE066, #0090c8, #00629B);
             animation: ringRotate 4s linear infinite;
             z-index: 0;
         }
