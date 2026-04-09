@@ -29,45 +29,45 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    article {
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 2rem 5%;
+    /* Banner header */
+    .title-banner {
+      background: #023e8a;
+      padding: 3rem 5% 2.5rem;
+      margin-bottom: 2rem;
     }
-
-    header {
-      margin-bottom: 2.5rem;
-      border-bottom: 1px solid #e5e5e5;
-      padding-bottom: 2rem;
-    }
-
-    header h1 {
-      font-size: 2rem;
+    .title-banner h1 {
+      font-size: 2.2rem;
       font-weight: 700;
       line-height: 1.25;
       margin: 0 0 1rem;
-      color: #111;
+      color: #fff;
+      max-width: 800px;
     }
-
-    .meta {
+    .title-banner .meta {
       font-size: 0.9rem;
-      color: #555;
+      color: rgba(255,255,255,.7);
       line-height: 1.6;
     }
-
-    .meta a { color: #0066cc; text-decoration: none; }
-    .meta a:hover { text-decoration: underline; }
-
-    .authors { margin-bottom: 0.25rem; }
-    .tags { margin-top: 0.5rem; }
-    .tags span {
+    .title-banner .meta a { color: rgba(255,255,255,.85); text-decoration: none; }
+    .title-banner .meta a:hover { text-decoration: underline; color: #fff; }
+    .title-banner .authors { margin-bottom: 0.25rem; }
+    .title-banner .tags { margin-top: 0.75rem; }
+    .title-banner .tags span {
       display: inline-block;
-      background: #f0f0f0;
-      color: #444;
-      font-size: 0.8rem;
-      padding: 0.15rem 0.6rem;
-      border-radius: 3px;
+      background: rgba(255,255,255,.15);
+      color: rgba(255,255,255,.9);
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 0.2rem 0.7rem;
+      border-radius: 4px;
       margin-right: 0.4rem;
+      border: 1px solid rgba(255,255,255,.2);
+    }
+
+    article {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 0 5% 3rem;
     }
 
     h2 {
@@ -118,30 +118,34 @@
     strong { font-weight: 600; }
 
     figure {
-      margin: 2rem 0;
+      margin: 2.5rem 0;
       text-align: center;
     }
 
     figure img {
       max-width: 100%;
       height: auto;
-      border-radius: 4px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      border: 1px solid #eee;
     }
 
     figcaption {
       margin-top: 0.75rem;
-      font-size: 0.88rem;
-      color: #555;
-      line-height: 1.5;
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.55;
       text-align: left;
       font-style: italic;
+      padding: 0 1rem;
     }
 
     pre {
-      background: #f5f5f5;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      padding: 1rem 1.25rem;
+      background: #1e293b;
+      color: #e2e8f0;
+      border: none;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
       font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
       font-size: 0.88rem;
       line-height: 1.55;
@@ -161,30 +165,33 @@
       background: none;
       padding: 0;
       border-radius: 0;
+      color: #e2e8f0;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
       margin: 1.5rem 0;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       overflow-x: auto;
       display: block;
+      border-radius: 8px;
     }
 
     thead {
-      background: #f7f9fc;
+      background: #023e8a;
+      color: #fff;
     }
 
     th, td {
-      padding: 0.65rem 1rem;
+      padding: 0.7rem 1rem;
       text-align: left;
-      border-bottom: 1px solid #e5e5e5;
+      border-bottom: 1px solid #e8eaf0;
     }
 
     th {
       font-weight: 600;
-      color: #333;
+      color: #fff;
       border-bottom: 2px solid #ccc;
     }
 
@@ -226,22 +233,22 @@
   </style>
 </head>
 <body>
-  <article>
-    <header>
-      <h1>Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes</h1>
-      <div class="meta">
-        <div class="authors">
-          Keyi Yin, Xiang Fang, Jixuan Ruan, Yichen Lin &mdash; Picasso Lab, UC San Diego
-        </div>
-        <div>April 8, 2026</div>
-        <div class="tags">
-          <span>Quantum Error Correction</span>
-          <span>Neural Decoding</span>
-          <span>NVIDIA Ising</span>
-          <span>LDPC Codes</span>
-        </div>
+  <div class="title-banner">
+    <h1>Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes</h1>
+    <div class="meta">
+      <div class="authors">
+        Keyi Yin, Xiang Fang, Jixuan Ruan, Yichen Lin &mdash; Picasso Lab, UC San Diego
       </div>
-    </header>
+      <div>April 8, 2026</div>
+      <div class="tags">
+        <span>Quantum Error Correction</span>
+        <span>Neural Decoding</span>
+        <span>NVIDIA Ising</span>
+        <span>LDPC Codes</span>
+      </div>
+    </div>
+  </div>
+  <article>
 
     <p class="intro-lead">Quantum error correction (QEC) is essential for fault-tolerant quantum computing &mdash; but decoding must keep pace with the hardware. As part of the <strong>NVIDIA Ising</strong> open model family, a <strong>neural pre-decoder</strong> using a 3D CNN was released to reduce syndrome density in surface code decoding workflows. In this post, we put it to the test &mdash; evaluating its impact on logical error rates and decoding speed, then pushing the idea further to see how well neural pre-decoding generalizes to qLDPC codes.</p>
 
