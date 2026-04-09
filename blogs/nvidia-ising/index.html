@@ -380,37 +380,38 @@
 
     /* ── Pipeline display ── */
     .pipeline {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto auto auto auto auto auto auto auto auto;
       align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
-      gap: 0;
-      margin: 2rem 0;
-      padding: 1.5rem 1rem;
+      gap: 0.4rem 0;
+      margin: 2rem auto;
+      padding: 1.5rem 1.5rem;
       background: linear-gradient(135deg, #f0f5fa, #f7f9fc);
       border: 1px solid #dce5ee;
       border-radius: 12px;
+      max-width: 100%;
+      overflow-x: auto;
     }
     .pipeline .step {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0.6rem 1rem;
-      min-width: 80px;
+      padding: 0 0.5rem;
       text-align: center;
     }
     .pipeline .step-label {
-      font-size: 0.6rem;
+      font-size: 0.58rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: #8690a8;
-      margin-bottom: 0.3rem;
+      margin-bottom: 0.25rem;
     }
     .pipeline .step-box {
-      padding: 0.4rem 0.9rem;
+      padding: 0.4rem 0.8rem;
       border-radius: 6px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 600;
       white-space: nowrap;
     }
@@ -426,9 +427,10 @@
     }
     .pipeline .arrow {
       color: #b0bec5;
-      font-size: 1.2rem;
-      padding: 0 0.2rem;
+      font-size: 1.1rem;
+      padding: 0 0.15rem;
       line-height: 1;
+      padding-top: 1rem;
     }
 
     /* ── Attribution ── */
