@@ -248,6 +248,15 @@
     }
 
     /* ── Tables ── */
+    .table-wrap {
+      margin: 2rem 0;
+    }
+    .table-caption {
+      font-size: 0.88rem;
+      color: #444;
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -329,7 +338,7 @@
         <span>NVIDIA Ising</span>
         <span>LDPC Codes</span>
       </div>
-      <div class="banner-meta"><strong>Keyi Yin, Xiang Fang, Jixuan Ruan, Yichen Lin</strong> &middot; Picasso Lab, UC San Diego &middot; April 8, 2026</div>
+      <div class="banner-meta"><strong>Jixuan Ruan</strong> &middot; Picasso Lab, UC San Diego &middot; April 8, 2026</div>
     </div>
   </div>
 
@@ -366,7 +375,7 @@
 
       <figure>
         <img src="figures/surface_code.png" alt="Surface Code Lattice">
-        <figcaption>The rotated surface code: data qubits (black dots) sit on a regular 2D grid, with X stabilizers (red) and Z stabilizers (blue) forming a planar checkerboard pattern. Logical operators \(X_L\) and \(Z_L\) span the code as string-like paths. This regular structure is what makes 3D CNNs a natural fit &mdash; every local patch looks the same.</figcaption>
+        <figcaption><strong>Figure 1:</strong> The rotated surface code: data qubits (black dots) sit on a regular 2D grid, with X stabilizers (red) and Z stabilizers (blue) forming a planar checkerboard pattern. Logical operators \(X_L\) and \(Z_L\) span the code as string-like paths. This regular structure is what makes 3D CNNs a natural fit &mdash; every local patch looks the same.</figcaption>
       </figure>
 
       <p>The NVIDIA Ising surface code pre-decoder is a <strong>3D CNN</strong> that operates on detector syndrome tensors of shape \((B, 4, T, D, D)\) &mdash; four channels (X/Z syndromes + presence masks) across \(T\) measurement rounds and a \(D \times D\) spatial grid. The network processes this tensor through residual 3D convolutional blocks, outputting corrected syndromes with reduced density. These are then passed to PyMatching (MWPM) for the final logical error decision.</p>
@@ -379,7 +388,7 @@
 
       <figure>
         <img src="figures/fig2_ler_sweep.png" alt="Surface Code LER">
-        <figcaption>Figure 1: LER vs. physical error rate for the surface code at \(d = 9\). Both the \(R=9\) (blue) and \(R=13\) (orange) pre-decoder models reduce LER compared to the PyMatching baseline (gray dashed). The \(R=13\) model achieves a 1.39x LER reduction at \(p = 0.008\).</figcaption>
+        <figcaption><strong>Figure 2:</strong> LER vs. physical error rate for the surface code at \(d = 9\). Both the \(R=9\) (blue) and \(R=13\) (orange) pre-decoder models reduce LER compared to the PyMatching baseline (gray dashed). The \(R=13\) model achieves a 1.39x LER reduction at \(p = 0.008\).</figcaption>
       </figure>
 
       <h3>Test 2: Decoding Speedup Across Distances</h3>
@@ -388,19 +397,22 @@
 
       <figure>
         <img src="figures/fig3_speedup.png" alt="Surface Code Speedup">
-        <figcaption>Figure 2: PyMatching speedup and LER reduction at \(p = 0.004\) across code distances, using the \(R=13\) model.</figcaption>
+        <figcaption><strong>Figure 3:</strong> PyMatching speedup and LER reduction at \(p = 0.004\) across code distances, using the \(R=13\) model.</figcaption>
       </figure>
 
-      <table>
-        <thead>
-          <tr><th>Distance</th><th>PyMatching Speedup</th><th>LER Reduction</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>\(d = 5\)</td><td>1.47x</td><td>1.50x</td></tr>
-          <tr><td>\(d = 7\)</td><td>2.03x</td><td>1.66x</td></tr>
-          <tr><td>\(d = 9\)</td><td>2.12x</td><td>1.56x</td></tr>
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <p class="table-caption"><strong>Table 1:</strong> Decoding speedup and LER reduction across code distances using the R=13 model at \(p = 0.004\).</p>
+        <table>
+          <thead>
+            <tr><th>Distance</th><th>PyMatching Speedup</th><th>LER Reduction</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>\(d = 5\)</td><td>1.47x</td><td>1.50x</td></tr>
+            <tr><td>\(d = 7\)</td><td>2.03x</td><td>1.66x</td></tr>
+            <tr><td>\(d = 9\)</td><td>2.12x</td><td>1.56x</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <p>The results confirm consistent improvements: <strong>up to 2.12x faster decoding</strong> and <strong>up to 1.66x lower LER</strong>, with the speedup growing at larger distances.</p>
 
@@ -423,21 +435,24 @@
 
       <p>qLDPC codes offer a fundamentally different tradeoff [8]. BB codes [1] strike an attractive balance:</p>
 
-      <table>
-        <thead>
-          <tr><th>Code</th><th>\(n\)</th><th>\(k\)</th><th>\(d\)</th><th>Rate \(k/n\)</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>BB-72</td><td>72</td><td>12</td><td>6</td><td>16.7%</td></tr>
-          <tr><td>BB-144</td><td>144</td><td>12</td><td>12</td><td>8.3%</td></tr>
-          <tr><td>Surface \(d=6\)</td><td>36</td><td>1</td><td>6</td><td>2.8%</td></tr>
-          <tr><td>Surface \(d=12\)</td><td>144</td><td>1</td><td>12</td><td>0.7%</td></tr>
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <p class="table-caption"><strong>Table 2:</strong> Encoding rate comparison between bivariate bicycle codes and surface codes.</p>
+        <table>
+          <thead>
+            <tr><th>Code</th><th>\(n\)</th><th>\(k\)</th><th>\(d\)</th><th>Rate \(k/n\)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>BB-72</td><td>72</td><td>12</td><td>6</td><td>16.7%</td></tr>
+            <tr><td>BB-144</td><td>144</td><td>12</td><td>12</td><td>8.3%</td></tr>
+            <tr><td>Surface \(d=6\)</td><td>36</td><td>1</td><td>6</td><td>2.8%</td></tr>
+            <tr><td>Surface \(d=12\)</td><td>144</td><td>1</td><td>12</td><td>0.7%</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <figure>
         <img src="figures/bb_code.png" alt="BB Code Structure">
-        <figcaption>Tanner graph of a bivariate bicycle code. The non-local connectivity is what gives BB codes their encoding advantage &mdash; and what makes decoding harder.</figcaption>
+        <figcaption><strong>Figure 4:</strong> Tanner graph of a bivariate bicycle code. The non-local connectivity is what gives BB codes their encoding advantage &mdash; and what makes decoding harder.</figcaption>
       </figure>
 
       <h3>Code Construction</h3>
@@ -456,7 +471,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
 
       <figure>
         <img src="figures/fig4_bb_code_ler.png" alt="BB Code LER">
-        <figcaption>Figure 3: LER vs. physical error rate for BB codes with BP-OSD. The [[144,12,12]] code achieves ~10x lower LER than [[72,12,6]] at \(p = 0.03\).</figcaption>
+        <figcaption><strong>Figure 5:</strong> LER vs. physical error rate for BB codes with BP-OSD. The [[144,12,12]] code achieves ~10x lower LER than [[72,12,6]] at \(p = 0.03\).</figcaption>
       </figure>
 
       <!-- Part III -->
@@ -470,41 +485,47 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
 
       <figure>
         <img src="figures/fig5_predecoder_ler.png" alt="Pre-Decoder LER">
-        <figcaption>Figure 4: The MLP pre-decoder (orange) reduces LER vs. BP-OSD alone (gray) in the sub-threshold regime.</figcaption>
+        <figcaption><strong>Figure 6:</strong> The MLP pre-decoder (orange) reduces LER vs. BP-OSD alone (gray) in the sub-threshold regime.</figcaption>
       </figure>
 
       <figure>
         <img src="figures/fig6_predecoder_tradeoff.png" alt="Pre-Decoder Tradeoff">
-        <figcaption>Figure 5: LER reduction factor and latency comparison across physical error rates.</figcaption>
+        <figcaption><strong>Figure 7:</strong> LER reduction factor and latency comparison across physical error rates.</figcaption>
       </figure>
 
-      <table>
-        <thead>
-          <tr><th>\(p\)</th><th>BP-OSD</th><th>Pre-Dec + BP-OSD</th><th>Improvement</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>0.02</td><td>0.0004</td><td>0.0001</td><td>4.0x</td></tr>
-          <tr><td>0.03</td><td>0.0025</td><td>0.0012</td><td>2.1x</td></tr>
-          <tr><td>0.04</td><td>0.0119</td><td>0.0105</td><td>1.13x</td></tr>
-          <tr><td>0.05</td><td>0.0319</td><td>0.0312</td><td>~1.0x</td></tr>
-          <tr><td>0.06</td><td>0.0823</td><td>0.0869</td><td>0.95x</td></tr>
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <p class="table-caption"><strong>Table 3:</strong> MLP pre-decoder vs. BP-OSD alone on [[144,12,12]] across physical error rates.</p>
+        <table>
+          <thead>
+            <tr><th>\(p\)</th><th>BP-OSD</th><th>Pre-Dec + BP-OSD</th><th>Improvement</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>0.02</td><td>0.0004</td><td>0.0001</td><td><strong>4.0x</strong></td></tr>
+            <tr><td>0.03</td><td>0.0025</td><td>0.0012</td><td><strong>2.1x</strong></td></tr>
+            <tr><td>0.04</td><td>0.0119</td><td>0.0105</td><td>1.13x</td></tr>
+            <tr><td>0.05</td><td>0.0319</td><td>0.0312</td><td>~1.0x</td></tr>
+            <tr><td>0.06</td><td>0.0823</td><td>0.0869</td><td>0.95x</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- Analysis -->
       <h2 id="analysis">Analysis: What the Tests Reveal About Architecture-Code Alignment</h2>
 
-      <table>
-        <thead>
-          <tr><th></th><th>Surface Code CNN</th><th>BB Code MLP</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><strong>Architecture</strong></td><td>3D CNN (local, grid-aligned)</td><td>MLP (global, unstructured)</td></tr>
-          <tr><td><strong>LER Reduction</strong></td><td>Up to 1.66x (consistent)</td><td>Up to 4.0x (low \(p\) only)</td></tr>
-          <tr><td><strong>Speedup</strong></td><td>Up to 2.12x</td><td>Moderate overhead</td></tr>
-          <tr><td><strong>Noise Model</strong></td><td>25-param circuit-level</td><td>Code-capacity (i.i.d.)</td></tr>
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <p class="table-caption"><strong>Table 4:</strong> Architecture-code alignment comparison between the two pre-decoders.</p>
+        <table>
+          <thead>
+            <tr><th></th><th>Surface Code CNN</th><th>BB Code MLP</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Architecture</strong></td><td>3D CNN (local, grid-aligned)</td><td>MLP (global, unstructured)</td></tr>
+            <tr><td><strong>LER Reduction</strong></td><td>Up to 1.66x (consistent)</td><td>Up to 4.0x (low \(p\) only)</td></tr>
+            <tr><td><strong>Speedup</strong></td><td>Up to 2.12x</td><td>Moderate overhead</td></tr>
+            <tr><td><strong>Noise Model</strong></td><td>25-param circuit-level</td><td>Code-capacity (i.i.d.)</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <p>The surface code CNN delivers consistent improvement because the architecture matches the code's lattice. The BB code MLP shows moderate gains at low \(p\) that vanish above threshold.</p>
 
