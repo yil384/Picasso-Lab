@@ -187,14 +187,14 @@ const RAW_BASE = 'https://raw.githubusercontent.com/yil384/Picasso-Lab/main/blog
 
 const POSTS = [
   {
-    title: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes",
-    file: "GPU-Accelerated Automorphism Ensemble Decoding of Quantum LDPC Codes – qec.Codes.html",
-    date: "Sep 16, 2025",
-    source: "qec.codes",
-    sourceUrl: "https://qec.codes/blog/autdec/",
-    authors: "S. Koutsioumpas, J. Roffe",
-    desc: "Automorphism ensemble decoding (AutDEC) on NVIDIA A100 GPU — >2x accuracy gains and 50% fewer iterations for quantum LDPC codes under circuit-level noise.",
-    tags: ["Decoding", "GPU", "Quantum LDPC"]
+    title: "Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes",
+    file: "nvidia-ising/index.html",
+    date: "Apr 8, 2026",
+    source: "Picasso Lab",
+    sourceUrl: "https://yufeiding.ucsd.edu",
+    authors: "K. Yin, X. Fang, J. Ruan, Y. Lin",
+    desc: "We benchmark NVIDIA's CNN pre-decoder on surface codes (up to 2.12x speedup), then test an MLP pre-decoder on bivariate bicycle qLDPC codes — revealing that architecture-code alignment is the key to robust neural pre-decoding.",
+    tags: ["QEC", "Neural Decoding", "NVIDIA Ising", "LDPC"]
   }
 ];
 
@@ -232,10 +232,16 @@ async function openArticle(idx) {
 
   try {
     // Fetch the raw HTML from GitHub
-    const url = RAW_BASE + encodeURIComponent(post.file);
+    // For nested paths like "nvidia-ising/index.html", encode each segment
+    const filePath = post.file.split('/').map(encodeURIComponent).join('/');
+    const url = RAW_BASE + filePath;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('Failed to fetch');
     const html = await resp.text();
+
+    // Determine the base path for relative image URLs
+    const fileDir = post.file.substring(0, post.file.lastIndexOf('/') + 1);
+    const imgBase = RAW_BASE + fileDir.split('/').map(encodeURIComponent).join('/');
 
     // Parse and extract <head> styles + <body> content
     const parser = new DOMParser();
@@ -244,13 +250,15 @@ async function openArticle(idx) {
     // Collect <style> tags from the article's <head>
     const styles = [...doc.querySelectorAll('head style')].map(s => s.outerHTML).join('\n');
 
-    // Collect <script> tags (for MathJax etc.)
-    const scripts = [...doc.querySelectorAll('head script')].map(s => {
-      if (s.src) return `<script src="${s.src}" async><\/script>`;
-      return `<script>${s.textContent}<\/script>`;
-    }).join('\n');
+    // Rewrite relative image src to absolute GitHub raw URLs
+    doc.querySelectorAll('img').forEach(img => {
+      const src = img.getAttribute('src');
+      if (src && !src.startsWith('http') && !src.startsWith('data:')) {
+        img.setAttribute('src', imgBase + src.split('/').map(encodeURIComponent).join('/'));
+      }
+    });
 
-    // Get the body content
+    // Get the body content (with rewritten image paths)
     const body = doc.body.innerHTML;
 
     // Inject styles + body content
