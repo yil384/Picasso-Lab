@@ -425,42 +425,6 @@
         transform: translateY(0);
     }
 
-    /* Combo dots for holographic mode activation */
-    .combo-dots {
-        position: fixed;
-        bottom: 95px; left: 20px;
-        display: flex; gap: 5px;
-        z-index: 10000;
-        opacity: 0;
-        transform: translateY(8px);
-        transition: opacity 0.3s, transform 0.3s;
-        pointer-events: none;
-    }
-    .combo-dots.visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    .combo-dot {
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.15);
-        border: 1px solid rgba(255,255,255,0.25);
-        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .combo-dot.lit {
-        background: #00fff2;
-        border-color: #00fff2;
-        box-shadow: 0 0 8px #00fff2, 0 0 16px rgba(0,255,242,0.4);
-        transform: scale(1.3);
-    }
-    .combo-dots.complete .combo-dot.lit {
-        animation: comboPulse 0.4s ease;
-    }
-    @keyframes comboPulse {
-        0% { transform: scale(1.3); }
-        50% { transform: scale(1.8); box-shadow: 0 0 16px #00fff2, 0 0 30px rgba(0,255,242,0.6); }
-        100% { transform: scale(1.3); }
-    }
 </style>
 </head>
 <body>
@@ -1115,55 +1079,12 @@
         showSongTitle(track.title);
     }
 
-    // --- Combo dots for holographic (3 rapid clicks on 多梦症) ---
-    const comboDots = document.createElement('div');
-    comboDots.className = 'combo-dots';
-    for (let i = 0; i < 3; i++) {
-        const dot = document.createElement('div');
-        dot.className = 'combo-dot';
-        comboDots.appendChild(dot);
-    }
-    document.body.appendChild(comboDots);
-
-    let comboCount = 0;
-    let comboResetTimer = null;
-    let comboClickTimes = [];
-
-    function updateComboDots(count) {
-        const dots = comboDots.querySelectorAll('.combo-dot');
-        dots.forEach((d, i) => d.classList.toggle('lit', i < count));
-        comboDots.classList.toggle('visible', count > 0);
-        comboDots.classList.remove('complete');
-    }
-    function resetCombo() { comboCount = 0; comboClickTimes = []; updateComboDots(0); }
-
-    // --- 单击 = 播放/暂停, 双击 = 翻转切歌 (original behavior restored) ---
+    // --- 单击 = 播放/暂停, 双击 = 翻转切歌 ---
     let clickTimer = null;
 
     musicBtn.addEventListener('click', (e) => {
         if (isFlipping) return;
 
-        // Track rapid clicks for combo (only on 多梦症 while playing)
-        const now = Date.now();
-        if (currentTrack === 1 && isMusicPlaying) {
-            comboClickTimes.push(now);
-            // Keep only clicks within last 1.5s
-            comboClickTimes = comboClickTimes.filter(t => now - t < 1500);
-            comboCount = comboClickTimes.length;
-            clearTimeout(comboResetTimer);
-            updateComboDots(comboCount);
-            comboResetTimer = setTimeout(resetCombo, 1500);
-
-            if (comboCount >= 3) {
-                comboDots.classList.add('complete');
-                clearTimeout(clickTimer);
-                clickTimer = null;
-                setTimeout(() => { resetCombo(); enterHolographicMode(); }, 400);
-                return;
-            }
-        }
-
-        // Normal single/double click: use timer to distinguish
         if (clickTimer) {
             // Double click — flip track
             clearTimeout(clickTimer);
@@ -1184,6 +1105,14 @@
                 }
                 isMusicPlaying = !isMusicPlaying;
             }, 250);
+        }
+    });
+
+    // --- Right-click on vinyl while playing 多梦症 = holographic mode ---
+    musicBtn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (currentTrack === 1 && isMusicPlaying) {
+            enterHolographicMode();
         }
     });
 
