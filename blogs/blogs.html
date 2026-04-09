@@ -320,8 +320,7 @@ async function openArticle(idx) {
   document.querySelector('.blog-hero').style.display = 'none';
   container.innerHTML = '<div class="loading"><span class="loading-spinner"></span>Loading article...</div>';
   window.scrollTo(0, 0);
-  // Remember which article is open
-  try { window.location.hash = 'article-' + idx; } catch(e) {}
+  try { localStorage.setItem('blog_open', idx); } catch(e) {}
 
   try {
     const filePath = post.file.split('/').map(encodeURIComponent).join('/');
@@ -409,21 +408,21 @@ function showIndex() {
   document.body.style.height = '';
   document.getElementById('article-content').innerHTML = '';
   window.scrollTo(0, 0);
-  try { window.location.hash = ''; } catch(e) {}
+  try { localStorage.removeItem('blog_open'); } catch(e) {}
 }
 
 renderIndex();
 
-// On page load, check hash to restore article view
-(function() {
-  const h = window.location.hash;
-  if (h && h.startsWith('#article-')) {
-    const idx = parseInt(h.replace('#article-', ''));
+// On page load, restore article if it was open before refresh
+try {
+  const saved = localStorage.getItem('blog_open');
+  if (saved !== null) {
+    const idx = parseInt(saved);
     if (!isNaN(idx) && idx >= 0 && idx < POSTS.length) {
       openArticle(idx);
     }
   }
-})();
+} catch(e) {}
 </script>
 </body>
 </html>
