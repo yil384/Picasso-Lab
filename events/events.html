@@ -1150,27 +1150,26 @@
         if (currentTrack === 1 && isMusicPlaying) {
             comboCount++;
             clearTimeout(comboResetTimer);
+            clearTimeout(clickTimer); // suppress play/pause during combo
+            clickTimer = null;
             updateComboDots(comboCount);
             comboResetTimer = setTimeout(resetCombo, 1200);
 
             if (comboCount >= 5) {
                 // Combo complete! Flash dots then launch
                 comboDots.classList.add('complete');
-                clearTimeout(clickTimer);
-                clickTimer = null;
                 setTimeout(() => {
                     resetCombo();
                     enterHolographicMode();
                 }, 400);
-                return;
             }
+            return; // don't fall through to play/pause
         }
 
-        // Normal single/double click logic with delay
+        // Normal single click logic (only when NOT in combo)
         clearTimeout(clickTimer);
         clickTimer = setTimeout(() => {
             clickTimer = null;
-            // Single click — play/pause
             if (isMusicPlaying) {
                 bgMusic.pause();
                 musicBtn.classList.remove('music-playing');
@@ -1186,9 +1185,9 @@
         }, 280);
     });
 
-    // Double-click still flips track
+    // Double-click flips track (only when NOT in combo)
     musicBtn.addEventListener('dblclick', (e) => {
-        if (isFlipping) return;
+        if (isFlipping || comboCount > 0) return;
         clearTimeout(clickTimer);
         clickTimer = null;
         flipToNextTrack();
