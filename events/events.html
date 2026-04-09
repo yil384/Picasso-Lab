@@ -1115,10 +1115,10 @@
         showSongTitle(track.title);
     }
 
-    // --- Combo dots UI for holographic activation ---
+    // --- Combo dots for holographic (3 rapid clicks on 多梦症) ---
     const comboDots = document.createElement('div');
     comboDots.className = 'combo-dots';
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
         const dot = document.createElement('div');
         dot.className = 'combo-dot';
         comboDots.appendChild(dot);
@@ -1127,6 +1127,7 @@
 
     let comboCount = 0;
     let comboResetTimer = null;
+    let comboClickTimes = [];
 
     function updateComboDots(count) {
         const dots = comboDots.querySelectorAll('.combo-dot');
@@ -1134,69 +1135,62 @@
         comboDots.classList.toggle('visible', count > 0);
         comboDots.classList.remove('complete');
     }
+    function resetCombo() { comboCount = 0; comboClickTimes = []; updateComboDots(0); }
 
-    function resetCombo() {
-        comboCount = 0;
-        updateComboDots(0);
-    }
-
-    // --- 单击 = 播放/暂停, 双击 = 翻转切歌, 连击5次(多梦症) = 全息演唱会 ---
+    // --- 单击 = 播放/暂停, 双击 = 翻转切歌 (original behavior restored) ---
     let clickTimer = null;
 
     musicBtn.addEventListener('click', (e) => {
         if (isFlipping) return;
 
-        // If on 多梦症 and playing, track combo hits
+        // Track rapid clicks for combo (only on 多梦症 while playing)
+        const now = Date.now();
         if (currentTrack === 1 && isMusicPlaying) {
-            comboCount++;
+            comboClickTimes.push(now);
+            // Keep only clicks within last 1.5s
+            comboClickTimes = comboClickTimes.filter(t => now - t < 1500);
+            comboCount = comboClickTimes.length;
             clearTimeout(comboResetTimer);
-            clearTimeout(clickTimer); // suppress play/pause during combo
-            clickTimer = null;
             updateComboDots(comboCount);
-            comboResetTimer = setTimeout(resetCombo, 1200);
+            comboResetTimer = setTimeout(resetCombo, 1500);
 
-            if (comboCount >= 5) {
-                // Combo complete! Flash dots then launch
+            if (comboCount >= 3) {
                 comboDots.classList.add('complete');
-                setTimeout(() => {
-                    resetCombo();
-                    enterHolographicMode();
-                }, 400);
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                setTimeout(() => { resetCombo(); enterHolographicMode(); }, 400);
+                return;
             }
-            return; // don't fall through to play/pause
         }
 
-        // Normal single click logic (only when NOT in combo)
-        clearTimeout(clickTimer);
-        clickTimer = setTimeout(() => {
+        // Normal single/double click: use timer to distinguish
+        if (clickTimer) {
+            // Double click — flip track
+            clearTimeout(clickTimer);
             clickTimer = null;
-            if (isMusicPlaying) {
-                bgMusic.pause();
-                musicBtn.classList.remove('music-playing');
-            } else {
-                bgMusic.play().then(() => {
-                    musicBtn.classList.add('music-playing');
-                    showSongTitle(playlist[currentTrack].title);
-                }).catch((error) => {
-                    console.error("Playback failed:", error);
-                });
-            }
-            isMusicPlaying = !isMusicPlaying;
-        }, 280);
-    });
-
-    // Double-click flips track (only when NOT in combo)
-    musicBtn.addEventListener('dblclick', (e) => {
-        if (isFlipping || comboCount > 0) return;
-        clearTimeout(clickTimer);
-        clickTimer = null;
-        flipToNextTrack();
+            flipToNextTrack();
+        } else {
+            clickTimer = setTimeout(() => {
+                clickTimer = null;
+                // Single click — play/pause
+                if (isMusicPlaying) {
+                    bgMusic.pause();
+                    musicBtn.classList.remove('music-playing');
+                } else {
+                    bgMusic.play().then(() => {
+                        musicBtn.classList.add('music-playing');
+                        showSongTitle(playlist[currentTrack].title);
+                    }).catch(err => console.error("Playback failed:", err));
+                }
+                isMusicPlaying = !isMusicPlaying;
+            }, 250);
+        }
     });
 
     // =========================================
     // Holographic Concert Mode — opens in new tab
     // =========================================
-    const HOLO_URL = 'https://raw.githack.com/yil384/Picasso-Lab/main/events/holographic-concert.html';
+    const HOLO_URL = 'https://cdn.jsdelivr.net/gh/yil384/Picasso-Lab@main/events/holographic-concert.html';
 
     function enterHolographicMode() {
         const musicSrc = bgMusic.src || playlist[1].src;
