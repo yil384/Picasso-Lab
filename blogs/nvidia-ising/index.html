@@ -9,12 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <script>
-    window.MathJax = {
-      tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] }
-    };
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -345,7 +339,7 @@
         <span>NVIDIA Ising</span>
         <span>LDPC Codes</span>
       </div>
-      <div class="banner-meta"><strong>Jixuan Ruan, Keyi Yin</strong> &middot; Picasso Lab, UC San Diego &middot; April 8, 2026</div>
+      <div class="banner-meta"><strong>Keyi Yin, Jixuan Ruan, Yichen Lin</strong> &middot; Picasso Lab, UC San Diego &middot; April 8, 2026</div>
     </div>
   </div>
 
@@ -371,7 +365,7 @@
 
       <p class="intro-lead">Quantum error correction (QEC) is essential for fault-tolerant quantum computing &mdash; but decoding must keep pace with the hardware. As part of the <strong>NVIDIA Ising</strong> open model family, a <strong>neural pre-decoder</strong> using a 3D CNN was released to reduce syndrome density in surface code decoding workflows. In this post, we put it to the test &mdash; evaluating its impact on logical error rates and decoding speed, then pushing the idea further to see how well neural pre-decoding generalizes to qLDPC codes.</p>
 
-      <p>Surface codes, however, carry a fundamental encoding rate limitation: \(d^2\) data qubits per logical qubit. <strong>Quantum LDPC codes</strong> &mdash; particularly <strong>bivariate bicycle (BB) codes</strong> [1] &mdash; break this barrier with dramatically better encoding rates. But their non-local, non-planar check connectivity means the CNN pre-decoder, designed for the surface code's regular grid, cannot directly apply.</p>
+      <p>Surface codes, however, carry a fundamental encoding rate limitation: <em>d</em><sup>2</sup> data qubits per logical qubit. <strong>Quantum LDPC codes</strong> &mdash; particularly <strong>bivariate bicycle (BB) codes</strong> [1] &mdash; break this barrier with dramatically better encoding rates. But their non-local, non-planar check connectivity means the CNN pre-decoder, designed for the surface code's regular grid, cannot directly apply.</p>
 
       <p>This raises the question we set out to test: <strong>can neural pre-decoders be effective for codes that don't live on a regular lattice?</strong></p>
 
@@ -382,20 +376,20 @@
 
       <figure>
         <img src="figures/surface_code.png" alt="Surface Code Lattice">
-        <figcaption><strong>Figure 1:</strong> The rotated surface code: data qubits (black dots) sit on a regular 2D grid, with X stabilizers (red) and Z stabilizers (blue) forming a planar checkerboard pattern. Logical operators \(X_L\) and \(Z_L\) span the code as string-like paths. This regular structure is what makes 3D CNNs a natural fit &mdash; every local patch looks the same.</figcaption>
+        <figcaption><strong>Figure 1:</strong> The rotated surface code: data qubits (black dots) sit on a regular 2D grid, with X stabilizers (red) and Z stabilizers (blue) forming a planar checkerboard pattern. Logical operators X<sub>L</sub> and Z<sub>L</sub> span the code as string-like paths. This regular structure is what makes 3D CNNs a natural fit &mdash; every local patch looks the same.</figcaption>
       </figure>
 
-      <p>The NVIDIA Ising surface code pre-decoder is a <strong>3D CNN</strong> that operates on detector syndrome tensors of shape \((B, 4, T, D, D)\) &mdash; four channels (X/Z syndromes + presence masks) across \(T\) measurement rounds and a \(D \times D\) spatial grid. The network processes this tensor through residual 3D convolutional blocks, outputting corrected syndromes with reduced density. These are then passed to PyMatching (MWPM) for the final logical error decision.</p>
+      <p>The NVIDIA Ising surface code pre-decoder is a <strong>3D CNN</strong> that operates on detector syndrome tensors of shape (B, 4, T, D, D) &mdash; four channels (X/Z syndromes + presence masks) across T measurement rounds and a D &times; D spatial grid. The network processes this tensor through residual 3D convolutional blocks, outputting corrected syndromes with reduced density. These are then passed to PyMatching (MWPM) for the final logical error decision.</p>
 
-      <p>The architecture exploits the surface code's regular lattice: each convolutional layer captures local spatiotemporal error correlations within its receptive field \(R = 1 + \Sigma(k_i - 1)\), and the regular grid means every spatial position is treated uniformly. Two pre-trained models are available &mdash; \(R=9\) (4 layers, ~913K params) and \(R=13\) (6 layers, ~1.8M params), trained with a 25-parameter circuit-level noise model [3][5].</p>
+      <p>The architecture exploits the surface code's regular lattice: each convolutional layer captures local spatiotemporal error correlations within its receptive field R = 1 + &Sigma;(k<sub>i</sub> &minus; 1), and the regular grid means every spatial position is treated uniformly. Two pre-trained models are available &mdash; R=9 (4 layers, ~913K params) and R=13 (6 layers, ~1.8M params), trained with a 25-parameter circuit-level noise model [3][5].</p>
 
       <h3>Test 1: LER Across Physical Error Rates</h3>
 
-      <p>We sweep the physical error rate \(p\) from 0.001 to 0.008 and measure LER at distance 9:</p>
+      <p>We sweep the physical error rate <em>p</em> from 0.001 to 0.008 and measure LER at distance 9:</p>
 
       <figure>
         <img src="figures/fig2_ler_sweep.png" alt="Surface Code LER">
-        <figcaption><strong>Figure 2:</strong> LER vs. physical error rate for the surface code at \(d = 9\). Both the \(R=9\) (blue) and \(R=13\) (orange) pre-decoder models reduce LER compared to the PyMatching baseline (gray dashed). The \(R=13\) model achieves a 1.39x LER reduction at \(p = 0.008\).</figcaption>
+        <figcaption><strong>Figure 2:</strong> LER vs. physical error rate for the surface code at <em>d</em> = 9. Both the R=9 (blue) and R=13 (orange) pre-decoder models reduce LER compared to the PyMatching baseline (gray dashed). The R=13 model achieves a 1.39x LER reduction at <em>p</em> = 0.008.</figcaption>
       </figure>
 
       <h3>Test 2: Decoding Speedup Across Distances</h3>
@@ -404,7 +398,7 @@
 
       <figure>
         <img src="figures/fig3_speedup.png" alt="Surface Code Speedup">
-        <figcaption><strong>Figure 3:</strong> PyMatching speedup and LER reduction at \(p = 0.004\) across code distances, using the \(R=13\) model.</figcaption>
+        <figcaption><strong>Figure 3:</strong> PyMatching speedup and LER reduction at <em>p</em> = 0.004 across code distances, using the R=13 model.</figcaption>
       </figure>
 
       <div class="table-wrap">
@@ -413,12 +407,12 @@
             <tr><th>Distance</th><th>PyMatching Speedup</th><th>LER Reduction</th></tr>
           </thead>
           <tbody>
-            <tr><td>\(d = 5\)</td><td>1.47x</td><td>1.50x</td></tr>
-            <tr><td>\(d = 7\)</td><td>2.03x</td><td>1.66x</td></tr>
-            <tr><td>\(d = 9\)</td><td>2.12x</td><td>1.56x</td></tr>
+            <tr><td>d = 5</td><td>1.47x</td><td>1.50x</td></tr>
+            <tr><td>d = 7</td><td>2.03x</td><td>1.66x</td></tr>
+            <tr><td>d = 9</td><td>2.12x</td><td>1.56x</td></tr>
           </tbody>
         </table>
-        <p class="table-caption"><strong>Table 1:</strong> Decoding speedup and LER reduction across code distances using the R=13 model at \(p = 0.004\).</p>
+        <p class="table-caption"><strong>Table 1:</strong> Decoding speedup and LER reduction across code distances using the R=13 model at <em>p</em> = 0.004.</p>
       </div>
 
       <p>The results confirm consistent improvements: <strong>up to 2.12x faster decoding</strong> and <strong>up to 1.66x lower LER</strong>, with the speedup growing at larger distances.</p>
@@ -445,13 +439,13 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Code</th><th>\(n\)</th><th>\(k\)</th><th>\(d\)</th><th>Rate \(k/n\)</th></tr>
+            <tr><th>Code</th><th>n</th><th>k</th><th>d</th><th>Rate k/n</th></tr>
           </thead>
           <tbody>
             <tr><td>BB-72</td><td>72</td><td>12</td><td>6</td><td>16.7%</td></tr>
             <tr><td>BB-144</td><td>144</td><td>12</td><td>12</td><td>8.3%</td></tr>
-            <tr><td>Surface \(d=6\)</td><td>36</td><td>1</td><td>6</td><td>2.8%</td></tr>
-            <tr><td>Surface \(d=12\)</td><td>144</td><td>1</td><td>12</td><td>0.7%</td></tr>
+            <tr><td>Surface d=6</td><td>36</td><td>1</td><td>6</td><td>2.8%</td></tr>
+            <tr><td>Surface d=12</td><td>144</td><td>1</td><td>12</td><td>0.7%</td></tr>
           </tbody>
         </table>
         <p class="table-caption"><strong>Table 2:</strong> Encoding rate comparison between bivariate bicycle codes and surface codes.</p>
@@ -464,9 +458,9 @@
 
       <h3>Code Construction</h3>
 
-      <p>A BB code is defined over \(\mathbb{Z}_\ell \times \mathbb{Z}_m\) with polynomials \(A(x,y)\) and \(B(x,y)\):</p>
+      <p>A BB code is defined over &#8484;<sub>&ell;</sub> &times; &#8484;<sub>m</sub> with polynomials A(x,y) and B(x,y):</p>
 
-      <p>\[ H_X = [A \mid B], \quad H_Z = [B^T \mid A^T] \]</p>
+      <p style="text-align:center;font-size:1.1rem;margin:1.5rem 0"><em>H<sub>X</sub> = [A | B], &nbsp; H<sub>Z</sub> = [B<sup>T</sup> | A<sup>T</sup>]</em></p>
 
       <pre><code># [[72, 12, 6]]: l=6, m=6
 A = poly_to_matrix([(3,0), (0,1), (0,2)], 6, 6)
@@ -478,7 +472,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
 
       <figure>
         <img src="figures/fig4_bb_code_ler.png" alt="BB Code LER">
-        <figcaption><strong>Figure 5:</strong> LER vs. physical error rate for BB codes with BP-OSD. The [[144,12,12]] code achieves ~10x lower LER than [[72,12,6]] at \(p = 0.03\).</figcaption>
+        <figcaption><strong>Figure 5:</strong> LER vs. physical error rate for BB codes with BP-OSD. The [[144,12,12]] code achieves ~10x lower LER than [[72,12,6]] at <em>p</em> = 0.03.</figcaption>
       </figure>
 
       <!-- Part III -->
@@ -503,7 +497,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>\(p\)</th><th>BP-OSD</th><th>Pre-Dec + BP-OSD</th><th>Improvement</th></tr>
+            <tr><th>p</th><th>BP-OSD</th><th>Pre-Dec + BP-OSD</th><th>Improvement</th></tr>
           </thead>
           <tbody>
             <tr><td>0.02</td><td>0.0004</td><td>0.0001</td><td><strong>4.0x</strong></td></tr>
@@ -526,7 +520,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
           </thead>
           <tbody>
             <tr><td><strong>Architecture</strong></td><td>3D CNN (local, grid-aligned)</td><td>MLP (global, unstructured)</td></tr>
-            <tr><td><strong>LER Reduction</strong></td><td>Up to 1.66x (consistent)</td><td>Up to 4.0x (low \(p\) only)</td></tr>
+            <tr><td><strong>LER Reduction</strong></td><td>Up to 1.66x (consistent)</td><td>Up to 4.0x (low <em>p</em> only)</td></tr>
             <tr><td><strong>Speedup</strong></td><td>Up to 2.12x</td><td>Moderate overhead</td></tr>
             <tr><td><strong>Noise Model</strong></td><td>25-param circuit-level</td><td>Code-capacity (i.i.d.)</td></tr>
           </tbody>
@@ -534,7 +528,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre>
         <p class="table-caption"><strong>Table 4:</strong> Architecture-code alignment comparison between the two pre-decoders.</p>
       </div>
 
-      <p>The surface code CNN delivers consistent improvement because the architecture matches the code's lattice. The BB code MLP shows moderate gains at low \(p\) that vanish above threshold.</p>
+      <p>The surface code CNN delivers consistent improvement because the architecture matches the code's lattice. The BB code MLP shows moderate gains at low <em>p</em> that vanish above threshold.</p>
 
       <p><strong>The next step: test pre-decoders that are structurally aligned with qLDPC codes.</strong></p>
 
@@ -584,7 +578,7 @@ python blog/bb_code_demo.py --shots 10000 --mode compare</code></pre>
 
       <p><strong>BibTeX citation:</strong></p>
       <pre><code>@online{ruan2026nvidia,
-  author = {Ruan, Jixuan and Yin, Keyi},
+  author = {Yin, Keyi and Ruan, Jixuan and Lin, Yichen},
   title = {Testing {NVIDIA} {Ising}: Evaluating Neural
     Pre-Decoding from Surface Codes to Bivariate
     Bicycle Codes},
@@ -595,7 +589,7 @@ python blog/bb_code_demo.py --shots 10000 --mode compare</code></pre>
 
       <p><strong>For attribution, please cite this work as:</strong></p>
       <blockquote>
-        <p>Ruan, Jixuan, and Keyi Yin. 2026. &ldquo;Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes.&rdquo; April 8, 2026.</p>
+        <p>Yin, Keyi, Jixuan Ruan, and Yichen Lin. 2026. &ldquo;Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes.&rdquo; April 8, 2026.</p>
       </blockquote>
 
       <div class="attribution">
