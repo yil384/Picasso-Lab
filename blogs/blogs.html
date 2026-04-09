@@ -321,6 +321,7 @@ async function openArticle(idx) {
   container.innerHTML = '<div class="loading"><span class="loading-spinner"></span>Loading article...</div>';
   window.scrollTo(0, 0);
   try { localStorage.setItem('blog_open', idx); } catch(e) {}
+  try { document.cookie = 'blog_open=' + idx + ';path=/;max-age=3600'; } catch(e) {}
 
   try {
     const filePath = post.file.split('/').map(encodeURIComponent).join('/');
@@ -409,20 +410,27 @@ function showIndex() {
   document.getElementById('article-content').innerHTML = '';
   window.scrollTo(0, 0);
   try { localStorage.removeItem('blog_open'); } catch(e) {}
+  try { document.cookie = 'blog_open=;path=/;max-age=0'; } catch(e) {}
 }
 
 renderIndex();
 
 // On page load, restore article if it was open before refresh
-try {
-  const saved = localStorage.getItem('blog_open');
-  if (saved !== null) {
-    const idx = parseInt(saved);
-    if (!isNaN(idx) && idx >= 0 && idx < POSTS.length) {
-      openArticle(idx);
-    }
+(function() {
+  var idx = null;
+  // Try localStorage first
+  try { var s = localStorage.getItem('blog_open'); if (s !== null) idx = parseInt(s); } catch(e) {}
+  // Fallback to cookie
+  if (idx === null) {
+    try {
+      var m = document.cookie.match(/blog_open=(\d+)/);
+      if (m) idx = parseInt(m[1]);
+    } catch(e) {}
   }
-} catch(e) {}
+  if (idx !== null && !isNaN(idx) && idx >= 0 && idx < POSTS.length) {
+    openArticle(idx);
+  }
+})();
 </script>
 </body>
 </html>
