@@ -17,8 +17,14 @@
     }
 
     .wrapper { max-width: 760px; margin: 0 auto; padding: 36px 40px 60px; }
-    /* When showing article, go full-width with no padding */
+    /* When showing article, go full-width */
     body.article-mode .wrapper { max-width: none; padding: 0; }
+    /* Override injected article styles to fill the embed width */
+    body.article-mode #article-content article {
+      max-width: none !important;
+      padding-left: 5% !important;
+      padding-right: 5% !important;
+    }
 
     /* ── Header ── */
     .blog-header {
@@ -249,6 +255,15 @@ async function openArticle(idx) {
 
     // Inject styles + body content
     container.innerHTML = styles + body;
+
+    // Force document height to grow so Google Sites embed shows full content
+    requestAnimationFrame(() => {
+      const h = document.body.scrollHeight;
+      document.documentElement.style.height = h + 'px';
+      document.body.style.height = h + 'px';
+      // Try to tell parent to resize (Google Sites)
+      try { window.parent.postMessage({ type: 'resize', height: h }, '*'); } catch(e) {}
+    });
 
     // Execute MathJax if referenced
     if (html.includes('mathjax')) {
