@@ -425,6 +425,61 @@
         transform: translateY(0);
     }
 
+    /* Holographic fullscreen overlay */
+    .holo-overlay {
+        position: fixed; inset: 0; z-index: 99999;
+        background: rgba(0,0,0,0.92);
+        opacity: 0; transition: opacity 0.6s ease;
+        cursor: pointer;
+    }
+    .holo-overlay.active { opacity: 1; }
+    .holo-overlay video {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 88%; height: 88%;
+        object-fit: contain;
+        opacity: 0.85;
+        border-radius: 8px;
+        filter: drop-shadow(0 0 40px rgba(0,255,242,0.3));
+    }
+    .holo-overlay canvas {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+    }
+    .holo-overlay .holo-scanlines {
+        position: absolute; inset: 0; pointer-events: none;
+        background: repeating-linear-gradient(0deg, rgba(0,255,242,0.015) 0px, transparent 1px, transparent 3px);
+    }
+    .holo-overlay .holo-vignette {
+        position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%);
+    }
+    .holo-overlay .holo-info {
+        position: absolute; bottom: 28px; left: 0; right: 0;
+        text-align: center; pointer-events: none;
+    }
+    .holo-overlay .holo-title {
+        font-family: -apple-system, sans-serif;
+        font-size: 28px; font-weight: 700; color: #fff;
+        text-shadow: 0 0 20px rgba(0,255,242,0.8), 0 0 50px rgba(0,255,242,0.3);
+        letter-spacing: 0.2em;
+    }
+    .holo-overlay .holo-artist {
+        font-family: -apple-system, sans-serif;
+        font-size: 12px; font-weight: 300;
+        color: rgba(0,255,242,0.6); margin-top: 4px;
+        letter-spacing: 0.25em;
+    }
+    .holo-close {
+        position: absolute; top: 16px; right: 16px; z-index: 100000;
+        width: 36px; height: 36px; border-radius: 50%;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+        color: rgba(255,255,255,0.6); font-size: 18px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        pointer-events: auto; transition: background 0.2s;
+    }
+    .holo-close:hover { background: rgba(255,255,255,0.2); color: #fff; }
 </style>
 </head>
 <body>
@@ -1117,13 +1172,143 @@
     });
 
     // =========================================
-    // Holographic Concert Mode — opens in new tab
+    // Holographic Concert Mode — fullscreen overlay with video + quantum particles
     // =========================================
-    const HOLO_URL = 'https://yil384.github.io/Picasso-Lab/events/holographic-concert.html';
+    let holoActive = false;
 
     function enterHolographicMode() {
-        const musicSrc = bgMusic.src || playlist[1].src;
-        window.open(HOLO_URL + '?music=' + encodeURIComponent(musicSrc), '_blank');
+        if (holoActive) return;
+        holoActive = true;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'holo-overlay';
+
+        // Video
+        const video = document.createElement('video');
+        video.src = 'https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/Laymen.mp4';
+        video.autoplay = true; video.loop = true; video.muted = true; video.playsInline = true;
+        overlay.appendChild(video);
+
+        // Quantum particle canvas
+        const canvas = document.createElement('canvas');
+        overlay.appendChild(canvas);
+
+        // Scan lines + vignette
+        const scan = document.createElement('div'); scan.className = 'holo-scanlines'; overlay.appendChild(scan);
+        const vig = document.createElement('div'); vig.className = 'holo-vignette'; overlay.appendChild(vig);
+
+        // Song info
+        const info = document.createElement('div'); info.className = 'holo-info';
+        info.innerHTML = '<div class="holo-title">多 梦 症</div><div class="holo-artist">L A Y M E N</div>';
+        overlay.appendChild(info);
+
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'holo-close'; closeBtn.innerHTML = '&times;';
+        closeBtn.onclick = (e) => { e.stopPropagation(); exitHolo(); };
+        overlay.appendChild(closeBtn);
+
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('active')));
+
+        // ── Quantum 3D particles ──
+        const ctx = canvas.getContext('2d');
+        let W, H, animId;
+        const particles = [];
+        const PARTICLE_COUNT = 150;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            particles.push({
+                x: Math.random() * 2 - 1,
+                y: Math.random() * 2 - 1,
+                z: Math.random() * 2,
+                speed: 0.002 + Math.random() * 0.006,
+                size: Math.random() * 2 + 0.5,
+                hue: Math.random() < 0.7 ? 180 : (Math.random() < 0.5 ? 300 : 50),
+                alpha: 0.3 + Math.random() * 0.5,
+                orbit: Math.random() * Math.PI * 2,
+                orbitSpeed: (Math.random() - 0.5) * 0.01,
+                orbitR: 0.3 + Math.random() * 0.7,
+            });
+        }
+
+        let time = 0;
+        function drawParticles() {
+            if (!holoActive) return;
+            animId = requestAnimationFrame(drawParticles);
+            time += 0.016;
+            ctx.clearRect(0, 0, W, H);
+
+            for (const p of particles) {
+                p.y -= p.speed;
+                p.orbit += p.orbitSpeed;
+                if (p.y < -1.2) { p.y = 1.2; p.x = Math.random() * 2 - 1; }
+
+                // 3D projection
+                const perspective = 1.5 / (p.z + 1.5);
+                const ox = Math.cos(p.orbit) * p.orbitR * 0.05;
+                const px = (p.x + ox) * perspective * W * 0.4 + W / 2;
+                const py = p.y * perspective * H * 0.4 + H / 2;
+                const sz = p.size * perspective;
+                const fadeEdge = Math.min(1, (1 - Math.abs(p.y)) * 2);
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha * fadeEdge * (0.6 + 0.4 * Math.sin(time * 3 + p.orbit));
+                ctx.shadowColor = `hsla(${p.hue}, 100%, 70%, 0.8)`;
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = `hsla(${p.hue}, 100%, 70%, 1)`;
+                ctx.beginPath();
+                ctx.arc(px, py, sz, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Occasional connecting lines between nearby particles (quantum entanglement effect)
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0, 255, 242, 0.06)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < particles.length; i += 3) {
+                const a = particles[i];
+                const pa = 1.5 / (a.z + 1.5);
+                const ax = (a.x) * pa * W * 0.4 + W / 2;
+                const ay = a.y * pa * H * 0.4 + H / 2;
+                for (let j = i + 1; j < Math.min(i + 8, particles.length); j++) {
+                    const b = particles[j];
+                    const pb = 1.5 / (b.z + 1.5);
+                    const bx = (b.x) * pb * W * 0.4 + W / 2;
+                    const by = b.y * pb * H * 0.4 + H / 2;
+                    const dist = Math.hypot(ax - bx, ay - by);
+                    if (dist < 80) {
+                        ctx.globalAlpha = (1 - dist / 80) * 0.15;
+                        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+                    }
+                }
+            }
+            ctx.restore();
+        }
+        drawParticles();
+
+        // Exit
+        overlay.addEventListener('click', exitHolo);
+        function escHandler(e) { if (e.key === 'Escape') exitHolo(); }
+        document.addEventListener('keydown', escHandler);
+
+        function exitHolo() {
+            if (!holoActive) return;
+            holoActive = false;
+            cancelAnimationFrame(animId);
+            window.removeEventListener('resize', resize);
+            document.removeEventListener('keydown', escHandler);
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.remove(), 600);
+        }
     }
 </script>
 </body>
