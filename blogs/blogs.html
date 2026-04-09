@@ -320,8 +320,6 @@ async function openArticle(idx) {
   document.querySelector('.blog-hero').style.display = 'none';
   container.innerHTML = '<div class="loading"><span class="loading-spinner"></span>Loading article...</div>';
   window.scrollTo(0, 0);
-  try { localStorage.setItem('blog_open', idx); } catch(e) {}
-  try { document.cookie = 'blog_open=' + idx + ';path=/;max-age=3600'; } catch(e) {}
 
   try {
     const filePath = post.file.split('/').map(encodeURIComponent).join('/');
@@ -409,28 +407,9 @@ function showIndex() {
   document.body.style.height = '';
   document.getElementById('article-content').innerHTML = '';
   window.scrollTo(0, 0);
-  try { localStorage.removeItem('blog_open'); } catch(e) {}
-  try { document.cookie = 'blog_open=;path=/;max-age=0'; } catch(e) {}
 }
 
 renderIndex();
-
-// On page load, restore article if it was open before refresh
-(function() {
-  var idx = null;
-  // Try localStorage first
-  try { var s = localStorage.getItem('blog_open'); if (s !== null) idx = parseInt(s); } catch(e) {}
-  // Fallback to cookie
-  if (idx === null) {
-    try {
-      var m = document.cookie.match(/blog_open=(\d+)/);
-      if (m) idx = parseInt(m[1]);
-    } catch(e) {}
-  }
-  if (idx !== null && !isNaN(idx) && idx >= 0 && idx < POSTS.length) {
-    openArticle(idx);
-  }
-})();
 </script>
 </body>
 </html>
