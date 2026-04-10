@@ -78,12 +78,29 @@
     }
 
     .danmaku-item:hover {
-        animation-play-state: paused !important; 
-        z-index: 100000; 
-        background: rgba(0, 0, 0, 0.9); 
+        animation-play-state: paused !important;
+        z-index: 100000;
+        background: rgba(0, 0, 0, 0.9);
         border-color: rgba(255, 255, 255, 0.9);
         box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
+    .danmaku-delete {
+        position: absolute;
+        top: -6px; right: -6px;
+        width: 18px; height: 18px;
+        border-radius: 50%;
+        background: rgba(220,40,40,0.85);
+        color: #fff;
+        font-size: 11px;
+        line-height: 18px;
+        text-align: center;
+        cursor: pointer;
+        display: none;
+        z-index: 100001;
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+    .danmaku-item:hover .danmaku-delete { display: block; }
+    .danmaku-delete:hover { background: #dc2626; transform: scale(1.15); }
 
     .danmaku-item.image-only {
         padding: 5px; 
@@ -191,20 +208,18 @@
        4. 底部输入框
        ========================================= */
     .danmaku-input-area {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: relative;
+        margin: 20px auto 40px;
         width: 90%;
         max-width: 600px;
-        height: 50px;
+        min-height: 50px;
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border: 1px solid #ddd;
         border-radius: 25px;
         display: flex;
-        align-items: center;
-        padding: 0 5px;
+        align-items: flex-end;
+        padding: 5px 5px;
         z-index: 10000;
         box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     }
@@ -264,10 +279,15 @@
         flex: 1;
         border: none;
         background: transparent;
-        height: 100%;
         font-size: 15px;
+        font-family: inherit;
         outline: none;
-        padding: 0 10px;
+        padding: 8px 10px;
+        resize: none;
+        overflow: hidden;
+        min-height: 36px;
+        max-height: 120px;
+        line-height: 1.4;
     }
 
     #dm-send-btn {
@@ -726,7 +746,7 @@
     </label>
     <input type="file" id="dm-file-input" accept="image/*">
 
-    <input type="text" id="dm-input" placeholder="Say something..." maxlength="50">
+    <textarea id="dm-input" placeholder="Say something..." rows="1"></textarea>
     <button id="dm-send-btn">Send</button>
 </div>
 
@@ -870,6 +890,16 @@
             return; 
         }
 
+        // Delete button
+        const delBtn = document.createElement('div');
+        delBtn.className = 'danmaku-delete';
+        delBtn.textContent = '×';
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            el.remove();
+        });
+        el.appendChild(delBtn);
+
         // 绑定点击事件：打开灯箱，不阻止弹幕继续运动
         const imgEl = el.querySelector('.danmaku-img-content');
         if (imgEl) {
@@ -974,6 +1004,12 @@
     const input = document.getElementById('dm-input');
     const sendBtn = document.getElementById('dm-send-btn');
 
+    // Auto-resize textarea
+    input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+
     function sendDanmaku() {
         const text = input.value.trim();
         if (!text && !currentImageBase64) return;
@@ -985,11 +1021,14 @@
         push(danmakuRef, payload);
 
         input.value = '';
+        input.style.height = 'auto';
         clearImage();
     }
 
     sendBtn.addEventListener('click', sendDanmaku);
-    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendDanmaku(); });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDanmaku(); }
+    });
 
     // -----------------------------------------------------------------
     // Swiper & Matrix
