@@ -753,7 +753,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+    import { getDatabase, ref, push, remove, child, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
@@ -780,6 +780,7 @@
         onChildAdded(recentPosts, (snapshot) => {
             const data = snapshot.val();
             if (data) {
+                data._key = snapshot.key;
                 danmakuPool.push(data);
                 if (!isInitialLoad) {
                     fireDanmaku(data, true);
@@ -889,13 +890,16 @@
             return; 
         }
 
-        // Delete button
+        // Delete button (removes from Firebase + DOM)
         const delBtn = document.createElement('div');
         delBtn.className = 'danmaku-delete';
         delBtn.textContent = '×';
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             el.remove();
+            if (data._key && danmakuRef) {
+                remove(child(danmakuRef, data._key)).catch(() => {});
+            }
         });
         el.appendChild(delBtn);
 
