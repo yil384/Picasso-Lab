@@ -805,7 +805,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
 
       <h3 id="test-4">Test 4: MLP Pre-Decoder vs. BP-OSD Alone</h3>
 
-      <p>We compare <span class="hl-model">BP-OSD</span> alone vs. MLP pre-decoder + <span class="hl-model">BP-OSD</span> on [[144,12,12]] (<span class="hl-num">5,000</span> shots per point, same error samples for both decoders):</p>
+      <p>We compare <span class="hl-model">BP-OSD</span> alone vs. MLP pre-decoder + <span class="hl-model">BP-OSD</span> on [[144,12,12]] (<span class="hl-num">100,000</span> shots per point per basis, same error samples for both decoders):</p>
 
       <figure>
         <img src="figures/fig5_predecoder_ler.png" alt="Pre-Decoder LER">
@@ -823,11 +823,13 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
             <tr><th><em>p</em></th><th>BP-OSD</th><th>Pre-Dec + BP-OSD</th><th>Improvement</th></tr>
           </thead>
           <tbody>
-            <tr><td>0.02</td><td>0.0004</td><td>0.0001</td><td><strong>4.0x</strong></td></tr>
-            <tr><td>0.03</td><td>0.0025</td><td>0.0012</td><td><strong>2.1x</strong></td></tr>
-            <tr><td>0.04</td><td>0.0119</td><td>0.0105</td><td>1.13x</td></tr>
-            <tr><td>0.05</td><td>0.0319</td><td>0.0312</td><td>~1.0x</td></tr>
-            <tr><td>0.06</td><td>0.0823</td><td>0.0869</td><td><span class="hl-warn">0.95x</span></td></tr>
+            <tr><td>0.01</td><td>7.0e-5</td><td>5.0e-6</td><td><strong>14.00x</strong></td></tr>
+            <tr><td>0.02</td><td>6.9e-4</td><td>1.3e-4</td><td><strong>5.31x</strong></td></tr>
+            <tr><td>0.03</td><td>3.0e-3</td><td>1.5e-3</td><td><strong>1.95x</strong></td></tr>
+            <tr><td>0.04</td><td>1.02e-2</td><td>9.02e-3</td><td>1.13x</td></tr>
+            <tr><td>0.05</td><td>3.17e-2</td><td>3.25e-2</td><td><span class="hl-warn">0.97x</span></td></tr>
+            <tr><td>0.06</td><td>8.21e-2</td><td>8.69e-2</td><td><span class="hl-warn">0.94x</span></td></tr>
+            <tr><td>0.07</td><td>0.168</td><td>0.178</td><td><span class="hl-warn">0.95x</span></td></tr>
           </tbody>
         </table>
         <p class="table-caption"><strong>Table 3:</strong> MLP pre-decoder vs. BP-OSD alone on [[144,12,12]] across physical error rates.</p>
@@ -837,12 +839,12 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
 
       <div class="metrics-row">
         <div class="metric-card">
-          <div class="metric-value">4.0&times;</div>
-          <div class="metric-label">LER Reduction at p=0.02</div>
+          <div class="metric-value">14&times;</div>
+          <div class="metric-label">LER Reduction at p=0.01</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">2.1&times;</div>
-          <div class="metric-label">LER Reduction at p=0.03</div>
+          <div class="metric-value">5.3&times;</div>
+          <div class="metric-label">LER Reduction at p=0.02</div>
         </div>
       </div>
 
