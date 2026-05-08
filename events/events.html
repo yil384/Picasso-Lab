@@ -336,7 +336,7 @@
     .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
     .read-more:hover { text-decoration: underline; }
 
-    /* ── Academician Detector ── */
+    /* ── Academician Detector v3 ── */
     .detector-slide {
         position: relative;
         width: 100%; height: 100%;
@@ -346,131 +346,203 @@
         width: 100%; height: 100%;
         object-fit: cover; display: block;
     }
+
     /* Scan line */
     .detector-scan {
         position: absolute; top: 0; left: 0;
         width: 2px; height: 100%;
-        background: linear-gradient(to bottom, transparent 10%, rgba(0,200,255,0.9) 50%, transparent 90%);
-        box-shadow: 0 0 8px rgba(0,200,255,0.7), 0 0 20px rgba(0,200,255,0.3);
-        z-index: 2;
-        animation: det-scan 4s ease-in-out infinite;
+        background: linear-gradient(to bottom, transparent 5%, rgba(0,220,255,0.9) 50%, transparent 95%);
+        box-shadow: 0 0 10px rgba(0,220,255,0.8), 0 0 25px rgba(0,220,255,0.3);
+        z-index: 5;
+        animation: det-scan 5s ease-in-out infinite;
+    }
+    /* Scan glow trail */
+    .detector-scan::after {
+        content: '';
+        position: absolute; top: 0; right: 0;
+        width: 30px; height: 100%;
+        background: linear-gradient(to left, rgba(0,220,255,0.12), transparent);
     }
     @keyframes det-scan {
-        0% { left: -2%; opacity: 0.8; }
-        35% { left: 32%; opacity: 1; }
-        40% { left: 32%; opacity: 0; }
+        0% { left: -2%; opacity: 0; }
+        5% { opacity: 1; }
+        30% { left: 32%; opacity: 1; }
+        35% { left: 32%; opacity: 0; }
         100% { left: 32%; opacity: 0; }
     }
-    /* Grid overlay during scan */
+
+    /* Grid overlay */
     .detector-grid {
         position: absolute; inset: 0;
-        background: linear-gradient(90deg, rgba(0,200,255,0.04) 1px, transparent 1px),
-                    linear-gradient(rgba(0,200,255,0.04) 1px, transparent 1px);
-        background-size: 15px 15px;
+        background: linear-gradient(90deg, rgba(0,220,255,0.03) 1px, transparent 1px),
+                    linear-gradient(rgba(0,220,255,0.03) 1px, transparent 1px);
+        background-size: 12px 12px;
         z-index: 1; pointer-events: none;
-        animation: det-grid 4s ease-in-out infinite;
+        animation: det-grid 5s ease-in-out infinite;
     }
     @keyframes det-grid {
-        0%, 35% { opacity: 0.8; }
-        45%, 100% { opacity: 0; }
+        0% { opacity: 0; }
+        5%, 30% { opacity: 0.7; }
+        40%, 100% { opacity: 0; }
     }
-    /* Crosshair reticle — circle around head */
+
+    /* ── Body contour — animated traced outline ── */
+    .detector-body {
+        position: absolute;
+        /* Person 5 body region: shoulders to feet */
+        top: 22%; left: 27%;
+        width: 42px; height: 72%;
+        z-index: 3;
+        opacity: 0;
+        animation: det-body-appear 5s ease-in-out infinite;
+    }
+    .detector-body svg {
+        width: 100%; height: 100%;
+        overflow: visible;
+    }
+    .detector-body-outline {
+        fill: none;
+        stroke: url(#bodyGrad);
+        stroke-width: 1.5;
+        stroke-dasharray: 300;
+        stroke-dashoffset: 300;
+        animation: det-trace 5s ease-in-out infinite;
+        filter: drop-shadow(0 0 4px rgba(0,220,255,0.6));
+    }
+    .detector-body-glow {
+        fill: rgba(0,220,255,0.06);
+        stroke: none;
+        animation: det-body-appear 5s ease-in-out infinite;
+    }
+    @keyframes det-trace {
+        0%, 30% { stroke-dashoffset: 300; }
+        50% { stroke-dashoffset: 0; }
+        80% { stroke-dashoffset: 0; }
+        95%, 100% { stroke-dashoffset: -300; }
+    }
+    @keyframes det-body-appear {
+        0%, 30% { opacity: 0; }
+        38% { opacity: 1; }
+        82% { opacity: 1; }
+        92%, 100% { opacity: 0; }
+    }
+
+    /* ── Face reticle ── */
     .detector-reticle {
         position: absolute;
-        top: 16%; left: 28.5%;
-        width: 36px; height: 36px;
-        z-index: 3;
+        top: 26%; left: 29%;
+        width: 28px; height: 28px;
+        z-index: 4;
         opacity: 0;
-        animation: det-lock 4s ease-in-out infinite;
+        animation: det-lock 5s ease-in-out infinite;
     }
     @keyframes det-lock {
-        0%, 36% { opacity: 0; transform: scale(2.5) rotate(0deg); }
-        42% { opacity: 1; transform: scale(1) rotate(90deg); }
-        80% { opacity: 1; transform: scale(1) rotate(90deg); }
-        90%, 100% { opacity: 0; transform: scale(0.8) rotate(90deg); }
+        0%, 32% { opacity: 0; transform: scale(2.2) rotate(0deg); }
+        40% { opacity: 1; transform: scale(1) rotate(90deg); }
+        82% { opacity: 1; transform: scale(1) rotate(90deg); }
+        92%, 100% { opacity: 0; transform: scale(0.8) rotate(90deg); }
     }
     .detector-reticle svg { width: 100%; height: 100%; }
-    /* Connecting line from reticle to label */
+
+    /* Pulsing ring around face */
+    .detector-pulse {
+        position: absolute;
+        top: 24%; left: 27.5%;
+        width: 32px; height: 32px;
+        border: 1px solid rgba(0,220,255,0.4);
+        border-radius: 50%;
+        z-index: 3;
+        opacity: 0;
+        animation: det-pulse 5s ease-in-out infinite;
+    }
+    @keyframes det-pulse {
+        0%, 38% { opacity: 0; transform: scale(0.8); }
+        42% { opacity: 0.8; transform: scale(1); }
+        50% { opacity: 0; transform: scale(1.8); }
+        55% { opacity: 0.6; transform: scale(1); }
+        63% { opacity: 0; transform: scale(1.6); }
+        68% { opacity: 0.4; transform: scale(1); }
+        82% { opacity: 0.4; transform: scale(1); }
+        92%, 100% { opacity: 0; }
+    }
+
+    /* Connecting line */
     .detector-line {
         position: absolute;
-        top: 22%; left: 47%;
-        width: 40px; height: 1px;
-        background: rgba(0,200,255,0.6);
-        z-index: 3;
-        transform-origin: left center;
-        opacity: 0;
-        animation: det-line 4s ease-in-out infinite;
+        top: 30%; left: 43%;
+        width: 0; height: 1px;
+        background: rgba(0,220,255,0.5);
+        z-index: 4;
+        transform-origin: left;
+        animation: det-line 5s ease-in-out infinite;
     }
     @keyframes det-line {
-        0%, 43% { opacity: 0; width: 0; }
-        50% { opacity: 1; width: 40px; }
-        80% { opacity: 1; }
-        90%, 100% { opacity: 0; }
+        0%, 42% { width: 0; opacity: 0; }
+        50% { width: 35px; opacity: 1; }
+        82% { width: 35px; opacity: 1; }
+        92%, 100% { opacity: 0; }
     }
+
     /* Label */
     .detector-label {
         position: absolute;
-        top: 16%; left: 61%;
-        background: rgba(0,15,30,0.85);
-        backdrop-filter: blur(4px);
-        color: #00d4ff;
+        top: 24%; left: 56%;
+        background: rgba(0,12,25,0.88);
+        backdrop-filter: blur(6px);
+        color: #00dcff;
         font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
         font-size: 8px;
         font-weight: 600;
-        padding: 4px 8px;
+        padding: 5px 9px;
         border-radius: 2px;
-        border-left: 2px solid #00d4ff;
+        border-left: 2px solid #00dcff;
         white-space: nowrap;
-        z-index: 4;
+        z-index: 6;
         opacity: 0;
-        animation: det-label 4s ease-in-out infinite;
+        animation: det-label 5s ease-in-out infinite;
         letter-spacing: 1px;
-        text-shadow: 0 0 6px rgba(0,200,255,0.5);
-        line-height: 1.5;
+        text-shadow: 0 0 8px rgba(0,220,255,0.6);
+        line-height: 1.6;
     }
     @keyframes det-label {
-        0%, 48% { opacity: 0; transform: translateX(-4px); }
-        55% { opacity: 1; transform: translateX(0); }
-        80% { opacity: 1; }
-        90%, 100% { opacity: 0; }
+        0%, 46% { opacity: 0; transform: translateX(-5px); }
+        54% { opacity: 1; transform: translateX(0); }
+        82% { opacity: 1; }
+        92%, 100% { opacity: 0; }
     }
-    /* Bottom HUD bar */
+
+    /* HUD bottom bar */
     .detector-hud {
         position: absolute;
         bottom: 0; left: 0; right: 0;
-        height: 20px;
-        background: linear-gradient(to top, rgba(0,10,20,0.85), transparent);
-        display: flex;
-        align-items: flex-end;
-        padding: 0 8px 3px;
-        gap: 10px;
-        z-index: 4;
-        opacity: 0;
-        animation: det-label 4s ease-in-out infinite;
+        height: 22px;
+        background: linear-gradient(to top, rgba(0,8,18,0.9), transparent);
+        display: flex; align-items: flex-end;
+        padding: 0 8px 3px; gap: 8px;
+        z-index: 6; opacity: 0;
+        animation: det-label 5s ease-in-out infinite;
     }
     .detector-hud span {
         font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-        font-size: 7px;
-        color: rgba(0,200,255,0.6);
+        font-size: 7px; color: rgba(0,220,255,0.5);
         letter-spacing: 0.5px;
     }
     .detector-hud .hud-bar {
-        flex: 1; max-width: 60px; height: 3px;
-        background: rgba(0,200,255,0.15);
-        border-radius: 2px;
-        overflow: hidden;
+        flex: 1; max-width: 50px; height: 3px;
+        background: rgba(0,220,255,0.12);
+        border-radius: 2px; overflow: hidden;
         margin-bottom: 2px;
     }
     .detector-hud .hud-bar-fill {
         height: 100%; width: 0;
-        background: linear-gradient(90deg, #00d4ff, #00ff88);
+        background: linear-gradient(90deg, #00dcff, #00ff88);
         border-radius: 2px;
-        animation: det-bar 4s ease-in-out infinite;
+        animation: det-bar 5s ease-in-out infinite;
     }
     @keyframes det-bar {
-        0%, 36% { width: 0; }
-        55% { width: 99%; }
-        80%, 100% { width: 99%; }
+        0%, 32% { width: 0; }
+        50% { width: 99%; }
+        82%, 100% { width: 99%; }
     }
 
     @media (max-width: 600px) {
@@ -751,7 +823,7 @@
     </div>
     <div class="event-content">
         <div class="event-date">April 29, 2026</div>
-        <h3 class="event-title">🎂 Happy Birthday to Zhongkai Yu — ISCA Best Paper Candidate! <video src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/birthday-zhongkai-2026/emoji.MP4" autoplay loop muted playsinline style="display:inline-block;width:1.2em;height:1.2em;object-fit:cover;vertical-align:middle;border-radius:50%;"></video></h3>
+        <h3 class="event-title">🎂 Happy Birthday to Zhongkai Yu — ISCA Best Paper Candidate! <video src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/birthday-zhongkai-2026/emoji.MP4" autoplay loop muted playsinline style="display:inline-block;width:1.2em;height:1.2em;object-fit:cover;vertical-align:-0.15em;"></video></h3>
         <p class="event-text">
             We celebrated <strong>Zhongkai Yu</strong>'s birthday right here in the lab! On top of the cake and candles, we also toasted his <strong>ISCA 2026 Best Paper Candidate</strong> nomination — what a way to celebrate. Happy birthday, Zhongkai!
         </p>
@@ -767,15 +839,30 @@
                     <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/1.jpg" alt="Fire Spot Dinner">
                     <div class="detector-grid"></div>
                     <div class="detector-scan"></div>
+                    <!-- Body contour -->
+                    <div class="detector-body">
+                        <svg viewBox="0 0 42 180" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#00ffcc"/>
+                                    <stop offset="50%" stop-color="#00dcff"/>
+                                    <stop offset="100%" stop-color="#0088ff"/>
+                                </linearGradient>
+                            </defs>
+                            <path class="detector-body-glow" d="M21,8 C28,8 32,14 32,20 C32,26 28,30 26,34 L30,42 C34,48 38,56 38,70 L38,120 C38,128 36,134 34,140 L32,160 C32,168 28,176 21,176 C14,176 10,168 10,160 L8,140 C6,134 4,128 4,120 L4,70 C4,56 8,48 12,42 L16,34 C14,30 10,26 10,20 C10,14 14,8 21,8Z"/>
+                            <path class="detector-body-outline" d="M21,8 C28,8 32,14 32,20 C32,26 28,30 26,34 L30,42 C34,48 38,56 38,70 L38,120 C38,128 36,134 34,140 L32,160 C32,168 28,176 21,176 C14,176 10,168 10,160 L8,140 C6,134 4,128 4,120 L4,70 C4,56 8,48 12,42 L16,34 C14,30 10,26 10,20 C10,14 14,8 21,8Z"/>
+                        </svg>
+                    </div>
+                    <!-- Face reticle -->
+                    <div class="detector-pulse"></div>
                     <div class="detector-reticle">
-                        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="20" cy="20" r="15" stroke="#00d4ff" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.8"/>
-                            <circle cx="20" cy="20" r="10" stroke="#00d4ff" stroke-width="0.6" opacity="0.4"/>
-                            <line x1="20" y1="2" x2="20" y2="10" stroke="#00d4ff" stroke-width="0.8"/>
-                            <line x1="20" y1="30" x2="20" y2="38" stroke="#00d4ff" stroke-width="0.8"/>
-                            <line x1="2" y1="20" x2="10" y2="20" stroke="#00d4ff" stroke-width="0.8"/>
-                            <line x1="30" y1="20" x2="38" y2="20" stroke="#00d4ff" stroke-width="0.8"/>
-                            <circle cx="20" cy="20" r="2" fill="#00d4ff" opacity="0.6"/>
+                        <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="15" cy="15" r="11" stroke="#00dcff" stroke-width="1" stroke-dasharray="3 2.5" opacity="0.9"/>
+                            <line x1="15" y1="1" x2="15" y2="7" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
+                            <line x1="15" y1="23" x2="15" y2="29" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
+                            <line x1="1" y1="15" x2="7" y2="15" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
+                            <line x1="23" y1="15" x2="29" y2="15" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
+                            <circle cx="15" cy="15" r="1.5" fill="#00dcff" opacity="0.8"/>
                         </svg>
                     </div>
                     <div class="detector-line"></div>
@@ -792,15 +879,28 @@
                     <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/2.jpg" alt="Fire Spot Group Photo">
                     <div class="detector-grid"></div>
                     <div class="detector-scan"></div>
+                    <div class="detector-body">
+                        <svg viewBox="0 0 42 180" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="bodyGrad2" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#00ffcc"/>
+                                    <stop offset="50%" stop-color="#00dcff"/>
+                                    <stop offset="100%" stop-color="#0088ff"/>
+                                </linearGradient>
+                            </defs>
+                            <path class="detector-body-glow" d="M21,8 C28,8 32,14 32,20 C32,26 28,30 26,34 L30,42 C34,48 38,56 38,70 L38,120 C38,128 36,134 34,140 L32,160 C32,168 28,176 21,176 C14,176 10,168 10,160 L8,140 C6,134 4,128 4,120 L4,70 C4,56 8,48 12,42 L16,34 C14,30 10,26 10,20 C10,14 14,8 21,8Z"/>
+                            <path class="detector-body-outline" style="stroke:url(#bodyGrad2)" d="M21,8 C28,8 32,14 32,20 C32,26 28,30 26,34 L30,42 C34,48 38,56 38,70 L38,120 C38,128 36,134 34,140 L32,160 C32,168 28,176 21,176 C14,176 10,168 10,160 L8,140 C6,134 4,128 4,120 L4,70 C4,56 8,48 12,42 L16,34 C14,30 10,26 10,20 C10,14 14,8 21,8Z"/>
+                        </svg>
+                    </div>
+                    <div class="detector-pulse"></div>
                     <div class="detector-reticle">
-                        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="20" cy="20" r="15" stroke="#00d4ff" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.8"/>
-                            <circle cx="20" cy="20" r="10" stroke="#00d4ff" stroke-width="0.6" opacity="0.4"/>
-                            <line x1="20" y1="2" x2="20" y2="10" stroke="#00d4ff" stroke-width="0.8"/>
-                            <line x1="20" y1="30" x2="20" y2="38" stroke="#00d4ff" stroke-width="0.8"/>
-                            <line x1="2" y1="20" x2="10" y2="20" stroke="#00d4ff" stroke-width="0.8"/>
-                            <line x1="30" y1="20" x2="38" y2="20" stroke="#00d4ff" stroke-width="0.8"/>
-                            <circle cx="20" cy="20" r="2" fill="#00d4ff" opacity="0.6"/>
+                        <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="15" cy="15" r="11" stroke="#00dcff" stroke-width="1" stroke-dasharray="3 2.5" opacity="0.9"/>
+                            <line x1="15" y1="1" x2="15" y2="7" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
+                            <line x1="15" y1="23" x2="15" y2="29" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
+                            <line x1="1" y1="15" x2="7" y2="15" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
+                            <line x1="23" y1="15" x2="29" y2="15" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
+                            <circle cx="15" cy="15" r="1.5" fill="#00dcff" opacity="0.8"/>
                         </svg>
                     </div>
                     <div class="detector-line"></div>
