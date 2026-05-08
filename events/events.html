@@ -323,6 +323,24 @@
     .cursor-paper { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E📝%3C/text%3E%3C/svg%3E") 16 16, pointer; }
     .cursor-hotpot { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍲%3C/text%3E%3C/svg%3E") 16 16, pointer; }
     .cursor-music { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎸%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+    .cursor-cook { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍳%3C/text%3E%3C/svg%3E") 16 16, pointer; }
+
+    /* 状元 inline badge */
+    .zhuangyuan-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #c41e3a, #8b0000);
+        color: #ffd700;
+        font-size: 0.55em;
+        font-weight: 900;
+        padding: 1px 4px;
+        border-radius: 3px;
+        vertical-align: middle;
+        line-height: 1.3;
+        border: 1px solid rgba(255,215,0,0.5);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        letter-spacing: 1px;
+    }
 
     .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; }
     .swiper-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -372,7 +390,7 @@
     .det-bbox {
         position: absolute;
         /* 5th person body: adjust these to calibrate */
-        top: 20%; left: 29%; width: 38px; height: 74%;
+        top: 30%; left: 30%; width: 34px; height: 62%;
         z-index: 5; opacity: 0;
         animation: dbox 5s ease-in-out infinite;
     }
@@ -403,7 +421,7 @@
     .det-face {
         position: absolute;
         /* Face position: adjust these */
-        top: 24%; left: 31%; width: 22px; height: 28px;
+        top: 34%; left: 32%; width: 20px; height: 22px;
         border: 1.5px solid #00e5ff;
         border-radius: 2px;
         box-shadow: 0 0 6px rgba(0,220,255,0.4);
@@ -416,42 +434,11 @@
         78% { opacity: 1; }
         88%, 100% { opacity: 0; }
     }
-    /* Face landmark dots */
-    .det-face .dot {
-        position: absolute;
-        width: 3px; height: 3px;
-        background: #00ffcc;
-        border-radius: 50%;
-        box-shadow: 0 0 4px rgba(0,255,200,0.8);
-        opacity: 0;
-        animation: ddot 5s ease-in-out infinite;
-    }
-    .det-face .dot:nth-child(1) { top: 35%; left: 22%; animation-delay: 0.05s; }  /* left eye */
-    .det-face .dot:nth-child(2) { top: 35%; left: 62%; animation-delay: 0.1s; }   /* right eye */
-    .det-face .dot:nth-child(3) { top: 52%; left: 42%; animation-delay: 0.15s; }  /* nose */
-    .det-face .dot:nth-child(4) { top: 68%; left: 30%; animation-delay: 0.2s; }   /* mouth L */
-    .det-face .dot:nth-child(5) { top: 68%; left: 55%; animation-delay: 0.25s; }  /* mouth R */
-    @keyframes ddot {
-        0%, 35% { opacity: 0; }
-        42% { opacity: 1; }
-        78% { opacity: 1; }
-        88%, 100% { opacity: 0; }
-    }
+    /* Face landmark dots — hidden */
+    .det-face .dot { display: none; }
 
-    /* Confidence label — anchored to face box */
-    .det-tag {
-        position: absolute;
-        top: 19%; left: 31%;
-        background: rgba(0,229,255,0.9);
-        color: #000;
-        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-        font-size: 7px; font-weight: 700;
-        padding: 1px 5px;
-        border-radius: 1px;
-        white-space: nowrap;
-        z-index: 7; opacity: 0;
-        animation: dtag 5s ease-in-out infinite;
-    }
+    /* Tag used for animation timing reference */
+    .det-tag { display: none; }
     @keyframes dtag {
         0%, 33% { opacity: 0; }
         38% { opacity: 1; }
@@ -803,9 +790,9 @@
                     <div class="det-tag">Academician Pan 99.9%</div>
                     <!-- L-shaped connector: up from face then right to info panel -->
                     <svg class="det-connector" viewBox="0 0 300 250" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
-                        <polyline points="126,60 126,18 195,18" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
-                        <circle cx="126" cy="60" r="2" fill="#00e5ff"/>
-                        <circle cx="195" cy="18" r="2" fill="#00e5ff"/>
+                        <polyline points="126,85 126,28 200,28" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+                        <circle cx="126" cy="85" r="2" fill="#00e5ff"/>
+                        <circle cx="200" cy="28" r="2" fill="#00e5ff"/>
                     </svg>
                     <div class="det-info" style="top:8%;right:8%;">
                         <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
@@ -829,9 +816,9 @@
                     </div>
                     <div class="det-tag">Academician Pan 99.9%</div>
                     <svg class="det-connector" viewBox="0 0 300 250" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
-                        <polyline points="126,60 126,18 195,18" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
-                        <circle cx="126" cy="60" r="2" fill="#00e5ff"/>
-                        <circle cx="195" cy="18" r="2" fill="#00e5ff"/>
+                        <polyline points="126,85 126,28 200,28" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+                        <circle cx="126" cy="85" r="2" fill="#00e5ff"/>
+                        <circle cx="200" cy="28" r="2" fill="#00e5ff"/>
                     </svg>
                     <div class="det-info" style="top:8%;right:8%;">
                         <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
@@ -850,7 +837,7 @@
     </div>
     <div class="event-content">
         <div class="event-date">April 1, 2026</div>
-        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot!</h3>
+        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="zhuangyuan-badge">状元</span></h3>
         <p class="event-text">
             Our lab celebrated <strong>Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Fun fact: Chang insisted on pointing out <strong>"Academician Pan"</strong> in the photos — you know who you are! Welcome aboard, Chang!
         </p>
@@ -858,7 +845,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-bbq">
+<div class="event-card cursor-cook">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/zhuo_magic_kitchen/1.jpg" alt="Cheers at Dinner"></div>
@@ -870,7 +857,7 @@
     </div>
     <div class="event-content">
         <div class="event-date">March 15, 2026</div>
-        <h3 class="event-title">🍖 Dorm Team-Building Dinner at Zhuo's Magic Kitchen</h3>
+        <h3 class="event-title">🍳 Dorm Team-Building Dinner at Zhuo's Magic Kitchen</h3>
         <p class="event-text">
             <strong>Zhuo Chen & Yichen Lin</strong> and <strong>Zhongkai Yu & Zaifeng Pan</strong> got together for a cozy dorm team-building dinner at <strong>Zhuo Chen's Magic Kitchen</strong>. The chef served up amazing braised chicken drumsticks, pan-seared steak with tomatoes, and roasted carrots — a homemade feast to remember!
         </p>
