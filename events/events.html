@@ -336,7 +336,7 @@
     .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
     .read-more:hover { text-decoration: underline; }
 
-    /* ── Academician Detector v3 ── */
+    /* ── Academician Detector v4 — YOLO-style ── */
     .detector-slide {
         position: relative;
         width: 100%; height: 100%;
@@ -347,202 +347,160 @@
         object-fit: cover; display: block;
     }
 
-    /* Scan line */
-    .detector-scan {
-        position: absolute; top: 0; left: 0;
-        width: 2px; height: 100%;
-        background: linear-gradient(to bottom, transparent 5%, rgba(0,220,255,0.9) 50%, transparent 95%);
-        box-shadow: 0 0 10px rgba(0,220,255,0.8), 0 0 25px rgba(0,220,255,0.3);
-        z-index: 5;
-        animation: det-scan 5s ease-in-out infinite;
+    /* Scan bar — vertical sweep */
+    .det-scan {
+        position: absolute; top: 0; width: 2px; height: 100%;
+        background: rgba(0,220,255,0.85);
+        box-shadow: 0 0 6px 1px rgba(0,220,255,0.6);
+        z-index: 10;
+        animation: dscan 5s ease-in-out infinite;
     }
-    /* Scan glow trail */
-    .detector-scan::after {
-        content: '';
-        position: absolute; top: 0; right: 0;
-        width: 30px; height: 100%;
-        background: linear-gradient(to left, rgba(0,220,255,0.12), transparent);
+    .det-scan::after {
+        content: ''; position: absolute; top: 0; right: 0;
+        width: 40px; height: 100%;
+        background: linear-gradient(to left, rgba(0,220,255,0.08), transparent);
     }
-    @keyframes det-scan {
-        0% { left: -2%; opacity: 0; }
-        5% { opacity: 1; }
-        30% { left: 32%; opacity: 1; }
-        35% { left: 32%; opacity: 0; }
-        100% { left: 32%; opacity: 0; }
+    @keyframes dscan {
+        0%   { left: -1%; opacity: 0; }
+        3%   { opacity: 1; }
+        28%  { left: 34%; opacity: 1; }
+        32%  { opacity: 0; }
+        100% { left: 34%; opacity: 0; }
     }
 
-    /* Grid overlay */
-    .detector-grid {
+    /* Body bounding box — YOLO style rect with corner brackets */
+    .det-bbox {
+        position: absolute;
+        /* 5th person body: adjust these to calibrate */
+        top: 20%; left: 29%; width: 38px; height: 74%;
+        z-index: 5; opacity: 0;
+        animation: dbox 5s ease-in-out infinite;
+    }
+    .det-bbox::before, .det-bbox::after,
+    .det-bbox .c1::before, .det-bbox .c1::after {
+        content: ''; position: absolute;
+        width: 8px; height: 8px;
+        border-style: solid; border-color: #00e5ff;
+    }
+    .det-bbox::before  { top: 0; left: 0; border-width: 2px 0 0 2px; }
+    .det-bbox::after   { top: 0; right: 0; border-width: 2px 2px 0 0; }
+    .det-bbox .c1::before { bottom: 0; left: 0; border-width: 0 0 2px 2px; position: absolute; }
+    .det-bbox .c1::after  { bottom: 0; right: 0; border-width: 0 2px 2px 0; position: absolute; }
+    /* Subtle fill */
+    .det-bbox .c1 {
         position: absolute; inset: 0;
-        background: linear-gradient(90deg, rgba(0,220,255,0.03) 1px, transparent 1px),
-                    linear-gradient(rgba(0,220,255,0.03) 1px, transparent 1px);
-        background-size: 12px 12px;
-        z-index: 1; pointer-events: none;
-        animation: det-grid 5s ease-in-out infinite;
+        background: rgba(0,220,255,0.05);
+        border: 1px solid rgba(0,220,255,0.25);
     }
-    @keyframes det-grid {
-        0% { opacity: 0; }
-        5%, 30% { opacity: 0.7; }
-        40%, 100% { opacity: 0; }
+    @keyframes dbox {
+        0%, 29% { opacity: 0; }
+        34% { opacity: 1; }
+        78% { opacity: 1; }
+        88%, 100% { opacity: 0; }
     }
 
-    /* ── Body contour — animated traced outline ── */
-    .detector-body {
+    /* Face box — smaller rect on head */
+    .det-face {
         position: absolute;
-        /* Person 5 body region: shoulders to feet */
-        top: 22%; left: 27%;
-        width: 42px; height: 72%;
-        z-index: 3;
-        opacity: 0;
-        animation: det-body-appear 5s ease-in-out infinite;
-    }
-    .detector-body svg {
-        width: 100%; height: 100%;
-        overflow: visible;
-    }
-    .detector-body-outline {
-        fill: none;
-        stroke: url(#bodyGrad);
-        stroke-width: 1.5;
-        stroke-dasharray: 300;
-        stroke-dashoffset: 300;
-        animation: det-trace 5s ease-in-out infinite;
-        filter: drop-shadow(0 0 4px rgba(0,220,255,0.6));
-    }
-    .detector-body-glow {
-        fill: rgba(0,220,255,0.06);
-        stroke: none;
-        animation: det-body-appear 5s ease-in-out infinite;
-    }
-    @keyframes det-trace {
-        0%, 30% { stroke-dashoffset: 300; }
-        50% { stroke-dashoffset: 0; }
-        80% { stroke-dashoffset: 0; }
-        95%, 100% { stroke-dashoffset: -300; }
-    }
-    @keyframes det-body-appear {
-        0%, 30% { opacity: 0; }
-        38% { opacity: 1; }
-        82% { opacity: 1; }
-        92%, 100% { opacity: 0; }
-    }
-
-    /* ── Face reticle ── */
-    .detector-reticle {
-        position: absolute;
-        top: 26%; left: 29%;
-        width: 28px; height: 28px;
-        z-index: 4;
-        opacity: 0;
-        animation: det-lock 5s ease-in-out infinite;
-    }
-    @keyframes det-lock {
-        0%, 32% { opacity: 0; transform: scale(2.2) rotate(0deg); }
-        40% { opacity: 1; transform: scale(1) rotate(90deg); }
-        82% { opacity: 1; transform: scale(1) rotate(90deg); }
-        92%, 100% { opacity: 0; transform: scale(0.8) rotate(90deg); }
-    }
-    .detector-reticle svg { width: 100%; height: 100%; }
-
-    /* Pulsing ring around face */
-    .detector-pulse {
-        position: absolute;
-        top: 24%; left: 27.5%;
-        width: 32px; height: 32px;
-        border: 1px solid rgba(0,220,255,0.4);
-        border-radius: 50%;
-        z-index: 3;
-        opacity: 0;
-        animation: det-pulse 5s ease-in-out infinite;
-    }
-    @keyframes det-pulse {
-        0%, 38% { opacity: 0; transform: scale(0.8); }
-        42% { opacity: 0.8; transform: scale(1); }
-        50% { opacity: 0; transform: scale(1.8); }
-        55% { opacity: 0.6; transform: scale(1); }
-        63% { opacity: 0; transform: scale(1.6); }
-        68% { opacity: 0.4; transform: scale(1); }
-        82% { opacity: 0.4; transform: scale(1); }
-        92%, 100% { opacity: 0; }
-    }
-
-    /* Connecting line */
-    .detector-line {
-        position: absolute;
-        top: 30%; left: 43%;
-        width: 0; height: 1px;
-        background: rgba(0,220,255,0.5);
-        z-index: 4;
-        transform-origin: left;
-        animation: det-line 5s ease-in-out infinite;
-    }
-    @keyframes det-line {
-        0%, 42% { width: 0; opacity: 0; }
-        50% { width: 35px; opacity: 1; }
-        82% { width: 35px; opacity: 1; }
-        92%, 100% { opacity: 0; }
-    }
-
-    /* Label */
-    .detector-label {
-        position: absolute;
-        top: 24%; left: 56%;
-        background: rgba(0,12,25,0.88);
-        backdrop-filter: blur(6px);
-        color: #00dcff;
-        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-        font-size: 8px;
-        font-weight: 600;
-        padding: 5px 9px;
+        /* Face position: adjust these */
+        top: 24%; left: 31%; width: 22px; height: 28px;
+        border: 1.5px solid #00e5ff;
         border-radius: 2px;
-        border-left: 2px solid #00dcff;
-        white-space: nowrap;
-        z-index: 6;
-        opacity: 0;
-        animation: det-label 5s ease-in-out infinite;
-        letter-spacing: 1px;
-        text-shadow: 0 0 8px rgba(0,220,255,0.6);
-        line-height: 1.6;
-    }
-    @keyframes det-label {
-        0%, 46% { opacity: 0; transform: translateX(-5px); }
-        54% { opacity: 1; transform: translateX(0); }
-        82% { opacity: 1; }
-        92%, 100% { opacity: 0; }
-    }
-
-    /* HUD bottom bar */
-    .detector-hud {
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
-        height: 22px;
-        background: linear-gradient(to top, rgba(0,8,18,0.9), transparent);
-        display: flex; align-items: flex-end;
-        padding: 0 8px 3px; gap: 8px;
+        box-shadow: 0 0 6px rgba(0,220,255,0.4);
         z-index: 6; opacity: 0;
-        animation: det-label 5s ease-in-out infinite;
+        animation: dface 5s ease-in-out infinite;
     }
-    .detector-hud span {
+    @keyframes dface {
+        0%, 31% { opacity: 0; transform: scale(1.5); }
+        36% { opacity: 1; transform: scale(1); }
+        78% { opacity: 1; }
+        88%, 100% { opacity: 0; }
+    }
+    /* Face landmark dots */
+    .det-face .dot {
+        position: absolute;
+        width: 3px; height: 3px;
+        background: #00ffcc;
+        border-radius: 50%;
+        box-shadow: 0 0 4px rgba(0,255,200,0.8);
+        opacity: 0;
+        animation: ddot 5s ease-in-out infinite;
+    }
+    .det-face .dot:nth-child(1) { top: 35%; left: 22%; animation-delay: 0.05s; }  /* left eye */
+    .det-face .dot:nth-child(2) { top: 35%; left: 62%; animation-delay: 0.1s; }   /* right eye */
+    .det-face .dot:nth-child(3) { top: 52%; left: 42%; animation-delay: 0.15s; }  /* nose */
+    .det-face .dot:nth-child(4) { top: 68%; left: 30%; animation-delay: 0.2s; }   /* mouth L */
+    .det-face .dot:nth-child(5) { top: 68%; left: 55%; animation-delay: 0.25s; }  /* mouth R */
+    @keyframes ddot {
+        0%, 35% { opacity: 0; }
+        42% { opacity: 1; }
+        78% { opacity: 1; }
+        88%, 100% { opacity: 0; }
+    }
+
+    /* Confidence label — anchored to face box */
+    .det-tag {
+        position: absolute;
+        top: 19%; left: 31%;
+        background: rgba(0,229,255,0.9);
+        color: #000;
         font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-        font-size: 7px; color: rgba(0,220,255,0.5);
-        letter-spacing: 0.5px;
+        font-size: 7px; font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 1px;
+        white-space: nowrap;
+        z-index: 7; opacity: 0;
+        animation: dtag 5s ease-in-out infinite;
     }
-    .detector-hud .hud-bar {
-        flex: 1; max-width: 50px; height: 3px;
-        background: rgba(0,220,255,0.12);
-        border-radius: 2px; overflow: hidden;
-        margin-bottom: 2px;
+    @keyframes dtag {
+        0%, 33% { opacity: 0; }
+        38% { opacity: 1; }
+        78% { opacity: 1; }
+        88%, 100% { opacity: 0; }
     }
-    .detector-hud .hud-bar-fill {
-        height: 100%; width: 0;
-        background: linear-gradient(90deg, #00dcff, #00ff88);
-        border-radius: 2px;
-        animation: det-bar 5s ease-in-out infinite;
+
+    /* Side info panel */
+    .det-info {
+        position: absolute;
+        top: 26%; right: 6%;
+        z-index: 7; opacity: 0;
+        animation: dinfo 5s ease-in-out infinite;
     }
-    @keyframes det-bar {
-        0%, 32% { width: 0; }
-        50% { width: 99%; }
-        82%, 100% { width: 99%; }
+    .det-info-line {
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 7px; color: rgba(0,220,255,0.7);
+        line-height: 1.8;
+        text-shadow: 0 0 4px rgba(0,220,255,0.3);
+    }
+    .det-info-line .val { color: #00ffcc; font-weight: 700; }
+    @keyframes dinfo {
+        0%, 40% { opacity: 0; transform: translateX(5px); }
+        48% { opacity: 1; transform: translateX(0); }
+        78% { opacity: 1; }
+        88%, 100% { opacity: 0; }
+    }
+
+    /* Bottom HUD */
+    .det-hud {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        height: 18px;
+        background: linear-gradient(to top, rgba(0,5,15,0.85), transparent);
+        display: flex; align-items: flex-end;
+        padding: 0 6px 2px; gap: 6px;
+        z-index: 7; opacity: 0;
+        animation: dtag 5s ease-in-out infinite;
+    }
+    .det-hud span {
+        font-family: 'SF Mono', monospace;
+        font-size: 6.5px; color: rgba(0,220,255,0.45);
+        letter-spacing: 0.3px;
+    }
+    .det-hud .bar { flex: 0 0 40px; height: 2.5px; background: rgba(0,220,255,0.1); border-radius: 1px; overflow: hidden; margin-bottom: 1.5px; }
+    .det-hud .bar-f { height: 100%; width: 0; background: linear-gradient(90deg, #00dcff, #00ffaa); border-radius: 1px; animation: dbar 5s ease-in-out infinite; }
+    @keyframes dbar {
+        0%, 28% { width: 0; }
+        45% { width: 99%; }
+        78%, 100% { width: 99%; }
     }
 
     @media (max-width: 600px) {
@@ -837,78 +795,53 @@
             <div class="swiper-slide">
                 <div class="detector-slide">
                     <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/1.jpg" alt="Fire Spot Dinner">
-                    <div class="detector-grid"></div>
-                    <div class="detector-scan"></div>
-                    <!-- Body contour -->
-                    <div class="detector-body">
-                        <svg viewBox="0 0 42 180" xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#00ffcc"/>
-                                    <stop offset="50%" stop-color="#00dcff"/>
-                                    <stop offset="100%" stop-color="#0088ff"/>
-                                </linearGradient>
-                            </defs>
-                            <path class="detector-body-glow" d="M21,8 C28,8 32,14 32,20 C32,26 28,30 26,34 L30,42 C34,48 38,56 38,70 L38,120 C38,128 36,134 34,140 L32,160 C32,168 28,176 21,176 C14,176 10,168 10,160 L8,140 C6,134 4,128 4,120 L4,70 C4,56 8,48 12,42 L16,34 C14,30 10,26 10,20 C10,14 14,8 21,8Z"/>
-                            <path class="detector-body-outline" d="M21,8 C28,8 32,14 32,20 C32,26 28,30 26,34 L30,42 C34,48 38,56 38,70 L38,120 C38,128 36,134 34,140 L32,160 C32,168 28,176 21,176 C14,176 10,168 10,160 L8,140 C6,134 4,128 4,120 L4,70 C4,56 8,48 12,42 L16,34 C14,30 10,26 10,20 C10,14 14,8 21,8Z"/>
-                        </svg>
+                    <div class="det-scan"></div>
+                    <div class="det-bbox"><div class="c1"></div></div>
+                    <div class="det-face">
+                        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
                     </div>
-                    <!-- Face reticle -->
-                    <div class="detector-pulse"></div>
-                    <div class="detector-reticle">
-                        <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="15" cy="15" r="11" stroke="#00dcff" stroke-width="1" stroke-dasharray="3 2.5" opacity="0.9"/>
-                            <line x1="15" y1="1" x2="15" y2="7" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
-                            <line x1="15" y1="23" x2="15" y2="29" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
-                            <line x1="1" y1="15" x2="7" y2="15" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
-                            <line x1="23" y1="15" x2="29" y2="15" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
-                            <circle cx="15" cy="15" r="1.5" fill="#00dcff" opacity="0.8"/>
-                        </svg>
+                    <div class="det-tag">Academician Pan 99.9%</div>
+                    <!-- L-shaped connector: up from face then right to info panel -->
+                    <svg class="det-connector" viewBox="0 0 300 250" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
+                        <polyline points="126,60 126,18 195,18" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+                        <circle cx="126" cy="60" r="2" fill="#00e5ff"/>
+                        <circle cx="195" cy="18" r="2" fill="#00e5ff"/>
+                    </svg>
+                    <div class="det-info" style="top:8%;right:8%;">
+                        <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
+                        <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
+                        <div class="det-info-line">Model: <span class="val">Chang-Net v1.0</span></div>
                     </div>
-                    <div class="detector-line"></div>
-                    <div class="detector-label">ACADEMICIAN PAN<br><span style="color:rgba(0,255,136,0.8);font-size:7px;">MATCH 99.97%</span></div>
-                    <div class="detector-hud">
+                    <div class="det-hud">
+                        <span>FACES: 13</span>
+                        <div class="bar"><div class="bar-f"></div></div>
                         <span>CHANG-NET v1.0</span>
-                        <div class="hud-bar"><div class="hud-bar-fill"></div></div>
-                        <span>SCANNING</span>
                     </div>
                 </div>
             </div>
             <div class="swiper-slide">
                 <div class="detector-slide">
                     <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/2.jpg" alt="Fire Spot Group Photo">
-                    <div class="detector-grid"></div>
-                    <div class="detector-scan"></div>
-                    <div class="detector-body">
-                        <svg viewBox="0 0 42 180" xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <linearGradient id="bodyGrad2" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#00ffcc"/>
-                                    <stop offset="50%" stop-color="#00dcff"/>
-                                    <stop offset="100%" stop-color="#0088ff"/>
-                                </linearGradient>
-                            </defs>
-                            <path class="detector-body-glow" d="M21,8 C28,8 32,14 32,20 C32,26 28,30 26,34 L30,42 C34,48 38,56 38,70 L38,120 C38,128 36,134 34,140 L32,160 C32,168 28,176 21,176 C14,176 10,168 10,160 L8,140 C6,134 4,128 4,120 L4,70 C4,56 8,48 12,42 L16,34 C14,30 10,26 10,20 C10,14 14,8 21,8Z"/>
-                            <path class="detector-body-outline" style="stroke:url(#bodyGrad2)" d="M21,8 C28,8 32,14 32,20 C32,26 28,30 26,34 L30,42 C34,48 38,56 38,70 L38,120 C38,128 36,134 34,140 L32,160 C32,168 28,176 21,176 C14,176 10,168 10,160 L8,140 C6,134 4,128 4,120 L4,70 C4,56 8,48 12,42 L16,34 C14,30 10,26 10,20 C10,14 14,8 21,8Z"/>
-                        </svg>
+                    <div class="det-scan"></div>
+                    <div class="det-bbox"><div class="c1"></div></div>
+                    <div class="det-face">
+                        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
                     </div>
-                    <div class="detector-pulse"></div>
-                    <div class="detector-reticle">
-                        <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="15" cy="15" r="11" stroke="#00dcff" stroke-width="1" stroke-dasharray="3 2.5" opacity="0.9"/>
-                            <line x1="15" y1="1" x2="15" y2="7" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
-                            <line x1="15" y1="23" x2="15" y2="29" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
-                            <line x1="1" y1="15" x2="7" y2="15" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
-                            <line x1="23" y1="15" x2="29" y2="15" stroke="#00dcff" stroke-width="0.8" opacity="0.7"/>
-                            <circle cx="15" cy="15" r="1.5" fill="#00dcff" opacity="0.8"/>
-                        </svg>
+                    <div class="det-tag">Academician Pan 99.9%</div>
+                    <svg class="det-connector" viewBox="0 0 300 250" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
+                        <polyline points="126,60 126,18 195,18" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+                        <circle cx="126" cy="60" r="2" fill="#00e5ff"/>
+                        <circle cx="195" cy="18" r="2" fill="#00e5ff"/>
+                    </svg>
+                    <div class="det-info" style="top:8%;right:8%;">
+                        <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
+                        <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
+                        <div class="det-info-line">Model: <span class="val">Chang-Net v1.0</span></div>
                     </div>
-                    <div class="detector-line"></div>
-                    <div class="detector-label">ACADEMICIAN PAN<br><span style="color:rgba(0,255,136,0.8);font-size:7px;">MATCH 99.97%</span></div>
-                    <div class="detector-hud">
+                    <div class="det-hud">
+                        <span>FACES: 13</span>
+                        <div class="bar"><div class="bar-f"></div></div>
                         <span>CHANG-NET v1.0</span>
-                        <div class="hud-bar"><div class="hud-bar-fill"></div></div>
-                        <span>SCANNING</span>
                     </div>
                 </div>
             </div>
