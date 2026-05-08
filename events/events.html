@@ -325,54 +325,6 @@
     .cursor-music { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎸%3C/text%3E%3C/svg%3E") 16 16, pointer; }
     .cursor-cook { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍳%3C/text%3E%3C/svg%3E") 16 16, pointer; }
 
-    /* 状元 — mahjong tile style */
-    .zhuangyuan-badge {
-        display: inline-flex;
-        align-items: center;
-        vertical-align: -0.1em;
-        margin-left: 3px;
-    }
-    .mj-tile {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        width: 1.2em; height: 1.8em;
-        background: linear-gradient(170deg, #faf8f2 0%, #f0ece0 35%, #e6e0d0 70%, #d8d0bc 100%);
-        border-radius: 3px;
-        border: 1px solid #b8b098;
-        border-top: 1px solid #d0c8b0;
-        border-bottom: 2px solid #968e78;
-        box-shadow:
-            0 2px 0 #8a8270,
-            0 3px 1px rgba(0,0,0,0.2),
-            0 4px 6px rgba(0,0,0,0.12),
-            inset 0 1px 0 rgba(255,255,255,0.8),
-            inset 1px 0 0 rgba(255,255,255,0.3),
-            inset -1px 0 0 rgba(0,0,0,0.05),
-            inset 0 -1px 0 rgba(0,0,0,0.08);
-        text-align: center;
-        line-height: 1;
-        gap: 0px;
-        font-size: 0.5em;
-        font-weight: 900;
-        color: #c41e3a;
-        font-family: 'STKaiti', 'KaiTi', 'SimSun', serif;
-        position: relative;
-    }
-    .mj-tile::before {
-        content: '';
-        position: absolute;
-        inset: 2px;
-        border: 0.5px solid rgba(180,170,148,0.4);
-        border-radius: 1.5px;
-        pointer-events: none;
-    }
-    .mj-tile .mj-char {
-        display: block;
-        line-height: 1.1;
-        text-shadow: 0 0.5px 0 rgba(0,0,0,0.1);
-    }
 
     .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; }
     .swiper-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -891,7 +843,7 @@
     </div>
     <div class="event-content">
         <div class="event-date">April 1, 2026</div>
-        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="zhuangyuan-badge"><span class="mj-tile"><span class="mj-char">状</span><span class="mj-char">元</span></span></span></h3>
+        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;width:1.4em;height:auto;vertical-align:-0.25em;margin-left:3px;"></h3>
         <p class="event-text">
             Our lab celebrated <strong>Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Fun fact: Chang insisted on pointing out <strong>"Academician Pan"</strong> in the photos — you know who you are! Welcome aboard, Chang!
         </p>
