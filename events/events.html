@@ -325,6 +325,115 @@
     .cursor-music { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎸%3C/text%3E%3C/svg%3E") 16 16, pointer; }
     .cursor-cook { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍳%3C/text%3E%3C/svg%3E") 16 16, pointer; }
 
+    /* ── Wandering Cat ── */
+    #neko {
+        position: fixed;
+        z-index: 9998;
+        font-size: 32px;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.1s;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        pointer-events: auto;
+    }
+    #neko:hover { transform: scale(1.25); }
+    #neko.flip { display: inline-block; }
+
+    /* Cat speech bubble */
+    .neko-bubble {
+        position: fixed;
+        z-index: 10000;
+        background: #fff;
+        border: 2px solid #f0c040;
+        border-radius: 14px;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: #333;
+        max-width: 220px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        animation: nekoPop 0.25s ease-out;
+        line-height: 1.5;
+        pointer-events: auto;
+    }
+    .neko-bubble::after {
+        content: '';
+        position: absolute;
+        bottom: -8px; left: 20px;
+        width: 0; height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid #fff;
+    }
+    .neko-bubble::before {
+        content: '';
+        position: absolute;
+        bottom: -11px; left: 19px;
+        width: 0; height: 0;
+        border-left: 9px solid transparent;
+        border-right: 9px solid transparent;
+        border-top: 9px solid #f0c040;
+    }
+    @keyframes nekoPop { from { opacity: 0; transform: scale(0.7) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+    /* Mini-game popup */
+    .neko-game {
+        position: fixed;
+        z-index: 10001;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+        text-align: center;
+        animation: nekoPop 0.3s ease-out;
+        min-width: 260px;
+        font-family: inherit;
+    }
+    .neko-game h3 { margin: 0 0 12px; font-size: 1.1em; color: #333; }
+    .neko-game p { margin: 8px 0; font-size: 0.95em; color: #555; }
+    .neko-game-btn {
+        display: inline-block;
+        margin: 6px 4px 0;
+        padding: 8px 18px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #f0c040, #e8a020);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9em;
+        cursor: pointer;
+        font-family: inherit;
+        transition: transform 0.15s;
+    }
+    .neko-game-btn:hover { transform: scale(1.05); }
+    .neko-game-close {
+        position: absolute;
+        top: 8px; right: 12px;
+        background: none; border: none;
+        font-size: 18px; color: #aaa;
+        cursor: pointer;
+    }
+    .neko-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.25);
+        z-index: 10000;
+        animation: nekoPop 0.2s ease-out;
+    }
+
+    /* Confetti particle */
+    .neko-confetti {
+        position: fixed;
+        z-index: 10002;
+        width: 8px; height: 8px;
+        border-radius: 2px;
+        pointer-events: none;
+        animation: confettiFall 1.2s ease-in forwards;
+    }
+    @keyframes confettiFall {
+        0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+        100% { opacity: 0; transform: translateY(120px) rotate(720deg); }
+    }
 
     .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; }
     .swiper-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1600,6 +1709,384 @@
             setTimeout(() => overlay.remove(), 600);
         }
     }
+</script>
+
+<!-- ═══════════════════════════════════════════
+     Wandering Cat — random walk + interactions
+     ═══════════════════════════════════════════ -->
+<script>
+(function() {
+    const CATS = ['🐱','😺','😸','😻','🐈','🐈‍⬛'];
+    const IDLE = ['🐱','😺','😽','😿','🙀','😹'];
+    const SLEEP = '😴';
+
+    // Create cat element
+    const neko = document.createElement('div');
+    neko.id = 'neko';
+    neko.textContent = '🐱';
+    neko.style.left = Math.random() * (window.innerWidth - 60) + 'px';
+    neko.style.top = Math.random() * (window.innerHeight - 60) + 200 + 'px';
+    document.body.appendChild(neko);
+
+    let cx = parseFloat(neko.style.left);
+    let cy = parseFloat(neko.style.top);
+    let vx = (Math.random() - 0.5) * 1.5;
+    let vy = (Math.random() - 0.5) * 1.5;
+    let state = 'walk'; // walk, idle, sleep
+    let stateTimer = 0;
+    let idleCount = 0;
+    let bubble = null;
+    let clickCount = 0;
+
+    function walk() {
+        if (state === 'sleep') {
+            stateTimer--;
+            if (stateTimer <= 0) { state = 'walk'; neko.textContent = '🐱'; }
+            requestAnimationFrame(walk);
+            return;
+        }
+        if (state === 'idle') {
+            stateTimer--;
+            if (stateTimer <= 0) {
+                idleCount++;
+                if (idleCount > 2) {
+                    state = 'sleep'; stateTimer = 300;
+                    neko.textContent = SLEEP; idleCount = 0;
+                } else {
+                    state = 'walk';
+                    vx = (Math.random() - 0.5) * 2;
+                    vy = (Math.random() - 0.5) * 2;
+                    neko.textContent = CATS[Math.floor(Math.random() * CATS.length)];
+                }
+            }
+            requestAnimationFrame(walk);
+            return;
+        }
+
+        // Random direction changes
+        if (Math.random() < 0.02) {
+            vx += (Math.random() - 0.5) * 1.2;
+            vy += (Math.random() - 0.5) * 1.2;
+        }
+        // Random stop
+        if (Math.random() < 0.005) {
+            state = 'idle'; stateTimer = 60 + Math.random() * 120;
+            neko.textContent = IDLE[Math.floor(Math.random() * IDLE.length)];
+            requestAnimationFrame(walk);
+            return;
+        }
+
+        // Speed limit
+        const spd = Math.sqrt(vx*vx + vy*vy);
+        if (spd > 2) { vx *= 2/spd; vy *= 2/spd; }
+
+        cx += vx; cy += vy;
+
+        // Bounce off edges
+        const W = window.innerWidth - 40, H = window.innerHeight - 40;
+        if (cx < 10) { cx = 10; vx = Math.abs(vx); }
+        if (cx > W)  { cx = W;  vx = -Math.abs(vx); }
+        if (cy < 80) { cy = 80; vy = Math.abs(vy); }
+        if (cy > H)  { cy = H;  vy = -Math.abs(vy); }
+
+        neko.style.left = cx + 'px';
+        neko.style.top = cy + 'px';
+        neko.style.transform = vx < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+
+        requestAnimationFrame(walk);
+    }
+    requestAnimationFrame(walk);
+
+    // ── Interaction Events ──
+    const FORTUNES = [
+        '今日运势：你的 paper 会被 accept！🎉',
+        '小猫说：今天适合写 code，不适合写 paper 📝',
+        '运势：实验结果会非常好！📊',
+        '小猫预言：你今天会 debug 成功 🐛✨',
+        '今日幸运食物：火锅 🍲',
+        '小猫说：deadline 还早，先玩一会儿吧 😸',
+        '运势：今天有意外惊喜！🎁',
+        '小猫说：多喝水，多摸猫 🐱💧',
+        '预言：你的 GPU 今天不会 OOM 🎯',
+        '小猫说：今天的 loss 会下降得很快 📉✨',
+        '运势：reviewer 今天心情很好 😊',
+        '小猫提醒：记得 git commit 💾',
+    ];
+
+    const EVENTS = [
+        { type: 'fortune' },
+        { type: 'fortune' },
+        { type: 'rps' },
+        { type: 'guess' },
+        { type: 'quiz' },
+        { type: 'confetti' },
+        { type: 'fortune' },
+        { type: 'slot' },
+        { type: 'dice' },
+        { type: 'catfact' },
+    ];
+
+    const CAT_FACTS = [
+        '猫咪每天睡 12-16 小时 💤',
+        '猫的听力比人类灵敏 4 倍 👂',
+        '猫咪会用 100 多种声音交流 🗣️',
+        '猫的鼻纹和人的指纹一样独特 👃',
+        '猫咪能在空中旋转身体安全着陆 🌀',
+        '世界上最老的猫活了 38 岁！🎂',
+        '猫每天花 30% 的时间在整理毛发 ✨',
+        '猫咪的心跳是人类的两倍快 💓',
+    ];
+
+    const QUIZ = [
+        { q: 'Python 的作者是谁？', opts: ['Linus','Guido','Dennis'], a: 1 },
+        { q: '哪个不是排序算法？', opts: ['冒泡','快排','回溯'], a: 2 },
+        { q: 'HTTP 200 表示什么？', opts: ['出错','成功','重定向'], a: 1 },
+        { q: 'CPU 的中文全称是？', opts: ['中央处理器','图形处理器','内存'], a: 0 },
+        { q: 'Git 的创建者是？', opts: ['Guido','Linus','Bjarne'], a: 1 },
+        { q: '1 byte = ? bits', opts: ['4','8','16'], a: 1 },
+    ];
+
+    function showBubble(text, duration) {
+        removeBubble();
+        bubble = document.createElement('div');
+        bubble.className = 'neko-bubble';
+        bubble.innerHTML = text;
+        document.body.appendChild(bubble);
+        positionBubble();
+        if (duration) setTimeout(removeBubble, duration);
+    }
+    function positionBubble() {
+        if (!bubble) return;
+        const bx = Math.min(cx, window.innerWidth - 240);
+        bubble.style.left = bx + 'px';
+        bubble.style.top = (cy - bubble.offsetHeight - 12) + 'px';
+    }
+    function removeBubble() {
+        if (bubble) { bubble.remove(); bubble = null; }
+    }
+
+    function spawnConfetti(x, y, count) {
+        const colors = ['#f0c040','#e84060','#40c0f0','#60e060','#f080d0','#ff8030'];
+        for (let i = 0; i < (count||20); i++) {
+            const c = document.createElement('div');
+            c.className = 'neko-confetti';
+            c.style.left = (x + (Math.random()-0.5)*60) + 'px';
+            c.style.top = (y + (Math.random()-0.5)*30) + 'px';
+            c.style.background = colors[Math.floor(Math.random()*colors.length)];
+            c.style.animationDuration = (0.8 + Math.random()*0.8) + 's';
+            c.style.transform = 'rotate(' + Math.random()*360 + 'deg)';
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 1500);
+        }
+    }
+
+    function showGame(html) {
+        const overlay = document.createElement('div');
+        overlay.className = 'neko-overlay';
+        const game = document.createElement('div');
+        game.className = 'neko-game';
+        game.innerHTML = '<button class="neko-game-close">&times;</button>' + html;
+        document.body.appendChild(overlay);
+        document.body.appendChild(game);
+        const close = () => { overlay.remove(); game.remove(); };
+        overlay.onclick = close;
+        game.querySelector('.neko-game-close').onclick = close;
+        return { game, close };
+    }
+
+    // ── Game: Rock Paper Scissors ──
+    function playRPS() {
+        const emojis = ['✊','✋','✌️'];
+        const names = ['石头','布','剪刀'];
+        const { game, close } = showGame(
+            '<h3>🐱 猫咪猜拳！</h3><p>选一个和小猫比试吧：</p>' +
+            emojis.map((e,i) => `<button class="neko-game-btn rps" data-i="${i}">${e} ${names[i]}</button>`).join('')+
+            '<p id="rps-result" style="min-height:1.5em;font-weight:600;margin-top:12px;"></p>'
+        );
+        game.querySelectorAll('.rps').forEach(btn => {
+            btn.onclick = () => {
+                const pi = parseInt(btn.dataset.i);
+                const ci = Math.floor(Math.random()*3);
+                let result;
+                if (pi === ci) result = `平局！猫咪也出了 ${emojis[ci]} 😼`;
+                else if ((pi+1)%3 === ci) result = `猫咪出了 ${emojis[ci]}，你输了！😹`;
+                else result = `猫咪出了 ${emojis[ci]}，你赢了！🎉`;
+                game.querySelector('#rps-result').textContent = result;
+                if ((pi+2)%3 === ci) spawnConfetti(window.innerWidth/2, window.innerHeight/2, 30);
+            };
+        });
+    }
+
+    // ── Game: Guess Number ──
+    function playGuess() {
+        const target = Math.floor(Math.random()*10)+1;
+        let attempts = 3;
+        const { game, close } = showGame(
+            '<h3>🐱 猜数字！</h3><p>小猫想了一个 1-10 的数字，你有 3 次机会：</p>' +
+            '<div id="guess-btns">' +
+            Array.from({length:10},(_, i) => `<button class="neko-game-btn gbtn" data-n="${i+1}" style="min-width:36px;padding:8px 10px;">${i+1}</button>`).join('') +
+            '</div><p id="guess-result" style="min-height:1.5em;font-weight:600;margin-top:10px;"></p>'
+        );
+        game.querySelectorAll('.gbtn').forEach(btn => {
+            btn.onclick = () => {
+                const n = parseInt(btn.dataset.n);
+                btn.disabled = true; btn.style.opacity = 0.4;
+                if (n === target) {
+                    game.querySelector('#guess-result').textContent = '🎉 猜对了！小猫很佩服你！';
+                    spawnConfetti(window.innerWidth/2, window.innerHeight/2, 40);
+                    game.querySelectorAll('.gbtn').forEach(b => b.disabled = true);
+                } else {
+                    attempts--;
+                    const hint = n < target ? '大一点 ⬆️' : '小一点 ⬇️';
+                    game.querySelector('#guess-result').textContent = attempts > 0 ? `不对哦，再${hint}！还有 ${attempts} 次` : `没机会了！答案是 ${target} 😹`;
+                    if (attempts <= 0) game.querySelectorAll('.gbtn').forEach(b => b.disabled = true);
+                }
+            };
+        });
+    }
+
+    // ── Game: Quiz ──
+    function playQuiz() {
+        const q = QUIZ[Math.floor(Math.random()*QUIZ.length)];
+        const { game, close } = showGame(
+            `<h3>🐱 小猫考考你！</h3><p>${q.q}</p>` +
+            q.opts.map((o,i) => `<button class="neko-game-btn qbtn" data-i="${i}">${o}</button>`).join('') +
+            '<p id="quiz-result" style="min-height:1.5em;font-weight:600;margin-top:10px;"></p>'
+        );
+        game.querySelectorAll('.qbtn').forEach(btn => {
+            btn.onclick = () => {
+                game.querySelectorAll('.qbtn').forEach(b => b.disabled = true);
+                if (parseInt(btn.dataset.i) === q.a) {
+                    game.querySelector('#quiz-result').textContent = '✅ 正确！你真厉害！';
+                    btn.style.background = '#4caf50';
+                    spawnConfetti(window.innerWidth/2, window.innerHeight/2, 30);
+                } else {
+                    game.querySelector('#quiz-result').textContent = `❌ 错了！正确答案是「${q.opts[q.a]}」`;
+                    btn.style.background = '#e84060';
+                    game.querySelectorAll('.qbtn')[q.a].style.background = '#4caf50';
+                }
+            };
+        });
+    }
+
+    // ── Game: Slot Machine ──
+    function playSlot() {
+        const syms = ['🍒','🍋','🔔','⭐','7️⃣','🐱'];
+        const { game, close } = showGame(
+            '<h3>🎰 猫咪老虎机！</h3>' +
+            '<div id="slot-display" style="font-size:2.2em;letter-spacing:12px;margin:16px 0;">❓❓❓</div>' +
+            '<button class="neko-game-btn" id="slot-spin">🎰 拉！</button>' +
+            '<p id="slot-result" style="min-height:1.5em;font-weight:600;margin-top:10px;"></p>'
+        );
+        game.querySelector('#slot-spin').onclick = () => {
+            const r = [0,1,2].map(() => syms[Math.floor(Math.random()*syms.length)]);
+            game.querySelector('#slot-display').textContent = r.join('');
+            if (r[0]===r[1] && r[1]===r[2]) {
+                game.querySelector('#slot-result').textContent = r[0]==='🐱' ? '🎉🐱 超级大奖！三只猫咪！！！' : '🎉 三连！你太幸运了！';
+                spawnConfetti(window.innerWidth/2, window.innerHeight/2, 50);
+            } else if (r[0]===r[1] || r[1]===r[2] || r[0]===r[2]) {
+                game.querySelector('#slot-result').textContent = '😺 两个一样，还不错！';
+            } else {
+                game.querySelector('#slot-result').textContent = '😿 没中，再来一次？';
+            }
+        };
+    }
+
+    // ── Game: Dice ──
+    function playDice() {
+        const dice = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+        const { game, close } = showGame(
+            '<h3>🎲 和猫咪掷骰子！</h3><p>看谁点数大：</p>' +
+            '<button class="neko-game-btn" id="dice-roll">🎲 掷！</button>' +
+            '<div id="dice-display" style="font-size:2em;margin:12px 0;"></div>' +
+            '<p id="dice-result" style="min-height:1.5em;font-weight:600;"></p>'
+        );
+        game.querySelector('#dice-roll').onclick = () => {
+            const you = Math.floor(Math.random()*6);
+            const cat = Math.floor(Math.random()*6);
+            game.querySelector('#dice-display').textContent = `你: ${dice[you]}  🐱: ${dice[cat]}`;
+            if (you > cat) {
+                game.querySelector('#dice-result').textContent = '🎉 你赢了！小猫不服气！';
+                spawnConfetti(window.innerWidth/2, window.innerHeight/2, 25);
+            } else if (you < cat) {
+                game.querySelector('#dice-result').textContent = '😹 猫咪赢了！喵喵喵～';
+            } else {
+                game.querySelector('#dice-result').textContent = '🤝 平局！再来？';
+            }
+        };
+    }
+
+    // ── Trigger random event ──
+    function triggerEvent() {
+        const ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+        neko.textContent = '😻';
+        setTimeout(() => { if (state !== 'sleep') neko.textContent = '🐱'; }, 2000);
+
+        switch(ev.type) {
+            case 'fortune':
+                showBubble(FORTUNES[Math.floor(Math.random()*FORTUNES.length)], 4000);
+                break;
+            case 'rps':
+                removeBubble();
+                playRPS();
+                break;
+            case 'guess':
+                removeBubble();
+                playGuess();
+                break;
+            case 'quiz':
+                removeBubble();
+                playQuiz();
+                break;
+            case 'slot':
+                removeBubble();
+                playSlot();
+                break;
+            case 'dice':
+                removeBubble();
+                playDice();
+                break;
+            case 'confetti':
+                showBubble('🎉 喵～撒花！', 2000);
+                spawnConfetti(cx + 16, cy, 35);
+                break;
+            case 'catfact':
+                showBubble('🐱 猫知识：' + CAT_FACTS[Math.floor(Math.random()*CAT_FACTS.length)], 4500);
+                break;
+        }
+    }
+
+    neko.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clickCount++;
+        // Wake up if sleeping
+        if (state === 'sleep') {
+            state = 'walk'; stateTimer = 0;
+            neko.textContent = '🙀';
+            showBubble('喵！被吵醒了！😾', 2000);
+            setTimeout(() => { neko.textContent = '🐱'; }, 1500);
+            return;
+        }
+        // Rapid clicks = special
+        if (clickCount >= 5) {
+            clickCount = 0;
+            showBubble('别点了别点了！喵喵喵！🙀', 2500);
+            spawnConfetti(cx+16, cy, 50);
+            neko.textContent = '🙀';
+            setTimeout(() => { neko.textContent = '😸'; }, 2000);
+            return;
+        }
+        triggerEvent();
+        // Reset click count after delay
+        setTimeout(() => { clickCount = Math.max(0, clickCount - 1); }, 2000);
+    });
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+        cx = Math.min(cx, window.innerWidth - 50);
+        cy = Math.min(cy, window.innerHeight - 50);
+    });
+})();
 </script>
 </body>
 </html>
