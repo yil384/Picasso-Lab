@@ -338,6 +338,37 @@
     .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
     .read-more:hover { text-decoration: underline; }
 
+    /* Secret note tooltip */
+    .secret-note {
+        position: relative;
+        cursor: pointer;
+        font-size: 0.85em;
+    }
+    .secret-tip {
+        display: none;
+        position: absolute;
+        bottom: 130%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: #fff;
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        white-space: nowrap;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        z-index: 100;
+    }
+    .secret-tip::after {
+        content: '';
+        position: absolute;
+        top: 100%; left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: #333;
+    }
+    .secret-note:hover .secret-tip { display: block; }
+
     /* ── Academician Detector v4 — YOLO-style ── */
     .detector-slide {
         position: relative;
@@ -846,7 +877,7 @@
         <div class="event-date">April 1, 2026</div>
         <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"></h3>
         <p class="event-text">
-            Our lab celebrated <strong>Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Welcome aboard, Chang! <span style="font-size:0.8em;color:#999;cursor:help;" title="Fun fact: Chang was the top scorer (状元) of the Gaokao in Wenzhou, Zhejiang!">🤫</span>
+            Our lab celebrated <strong>Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Welcome aboard, Chang! <span class="secret-note">🤫<span class="secret-tip">Secret: Chang was the top scorer (状元) of the Gaokao in Wenzhou, Zhejiang!</span></span>
         </p>
         <a href="#" class="read-more">View Dinner Photos &rarr;</a>
     </div>
