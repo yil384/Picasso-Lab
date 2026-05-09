@@ -1662,15 +1662,19 @@
         });
     }
 
-    // Run on load and resize
-    window.addEventListener('load', () => setTimeout(updateAll, 100));
+    // Run on load, resize, orientation change
+    window.addEventListener('load', () => { updateAll(); setTimeout(updateAll, 300); setTimeout(updateAll, 1000); });
     window.addEventListener('resize', updateAll);
-    // Also update when swiper changes slide
+    window.addEventListener('orientationchange', () => setTimeout(updateAll, 200));
+    // Observe swiper slide class changes (active/inactive)
     const observer = new MutationObserver(updateAll);
-    document.querySelectorAll('.detector-slide').forEach(s => {
-        observer.observe(s.parentElement, { attributes: true, attributeFilter: ['class'] });
+    document.querySelectorAll('.swiper-slide').forEach(s => {
+        observer.observe(s, { attributes: true, attributeFilter: ['class'] });
     });
-    // Initial
+    // Images might load late from CDN — update when they load
+    document.querySelectorAll('.detector-slide img').forEach(img => {
+        img.addEventListener('load', updateAll);
+    });
     updateAll();
 })();
 </script>
