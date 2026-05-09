@@ -1730,7 +1730,7 @@
             if (sw) sw.autoplay.stop();
             setTimeout(() => {
                 slide.classList.remove('active');
-                if (sw) sw.autoplay.start();
+                if (sw) { sw.slideNext(); sw.autoplay.start(); }
             }, 4000);
         });
     });
