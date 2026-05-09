@@ -374,8 +374,6 @@
     /* Body bounding box — YOLO style rect with corner brackets */
     .det-bbox {
         position: absolute;
-        /* 5th person body — fixed px so mobile/desktop match */
-        top: 97px; left: 87px; width: 30px; height: 108px;
         z-index: 5; opacity: 0;
         animation: dbox 5s ease-in-out infinite;
     }
@@ -405,8 +403,6 @@
     /* Face box — smaller rect on head */
     .det-face {
         position: absolute;
-        /* Face — fixed px */
-        top: 100px; left: 93px; width: 20px; height: 21px;
         border: 1.5px solid #00e5ff;
         border-radius: 2px;
         box-shadow: 0 0 6px rgba(0,220,255,0.4);
@@ -796,12 +792,12 @@
                     </div>
                     <div class="det-tag">Academician Pan 99.9%</div>
                     <!-- L-shaped connector: up from face then right to info panel -->
-                    <svg class="det-connector" viewBox="0 0 300 250" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
-                        <polyline points="103,110 125,35 138,35" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
-                        <circle cx="103" cy="110" r="2" fill="#00e5ff"/>
-                        <circle cx="138" cy="35" r="2" fill="#00e5ff"/>
+                    <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
+                        <polyline class="det-line" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+                        <circle class="det-dot-start" r="2" fill="#00e5ff"/>
+                        <circle class="det-dot-end" r="2" fill="#00e5ff"/>
                     </svg>
-                    <div class="det-info" style="top:25px;left:138px;">
+                    <div class="det-info">
                         <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
                         <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
                         <div class="det-info-line">Model: <span class="val">Chang-Net v1.0</span></div>
@@ -822,12 +818,12 @@
                         <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
                     </div>
                     <div class="det-tag">Academician Pan 99.9%</div>
-                    <svg class="det-connector" viewBox="0 0 300 250" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
-                        <polyline points="103,110 125,35 138,35" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
-                        <circle cx="103" cy="110" r="2" fill="#00e5ff"/>
-                        <circle cx="138" cy="35" r="2" fill="#00e5ff"/>
+                    <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
+                        <polyline class="det-line" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+                        <circle class="det-dot-start" r="2" fill="#00e5ff"/>
+                        <circle class="det-dot-end" r="2" fill="#00e5ff"/>
                     </svg>
-                    <div class="det-info" style="top:25px;left:138px;">
+                    <div class="det-info">
                         <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
                         <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
                         <div class="det-info-line">Model: <span class="val">Chang-Net v1.0</span></div>
@@ -1601,6 +1597,82 @@
             setTimeout(() => overlay.remove(), 600);
         }
     }
+</script>
+
+<!-- Detector position: map image-space coords to container dynamically -->
+<script>
+(function(){
+    // Person coordinates in original image (5712 x 4284)
+    const IMG_W = 5712, IMG_H = 4284;
+    // Body bounding box in image space
+    const BODY = { x: 1776, y: 1664, w: 515, h: 1840 };
+    // Face box in image space
+    const FACE = { x: 1879, y: 1715, w: 343, h: 360 };
+    // Info panel anchor in image space (top-left of panel)
+    const INFO = { x: 2370, y: 430 };
+    // Connector: start at face top-center, end at info panel left edge
+    function mapToContainer(container, ix, iy) {
+        const cw = container.clientWidth, ch = container.clientHeight;
+        const scale = Math.max(cw / IMG_W, ch / IMG_H);
+        const rw = IMG_W * scale, rh = IMG_H * scale;
+        const ox = (cw - rw) / 2, oy = (ch - rh) / 2;
+        return { x: ox + ix * scale, y: oy + iy * scale };
+    }
+    function mapSize(container, iw, ih) {
+        const cw = container.clientWidth, ch = container.clientHeight;
+        const scale = Math.max(cw / IMG_W, ch / IMG_H);
+        return { w: iw * scale, h: ih * scale };
+    }
+
+    function updateAll() {
+        document.querySelectorAll('.detector-slide').forEach(slide => {
+            const bbox = slide.querySelector('.det-bbox');
+            const face = slide.querySelector('.det-face');
+            const info = slide.querySelector('.det-info');
+            const line = slide.querySelector('.det-line');
+            const dotS = slide.querySelector('.det-dot-start');
+            const dotE = slide.querySelector('.det-dot-end');
+            if (!bbox) return;
+
+            // Body box
+            const bp = mapToContainer(slide, BODY.x, BODY.y);
+            const bs = mapSize(slide, BODY.w, BODY.h);
+            bbox.style.left = bp.x + 'px'; bbox.style.top = bp.y + 'px';
+            bbox.style.width = bs.w + 'px'; bbox.style.height = bs.h + 'px';
+
+            // Face box
+            const fp = mapToContainer(slide, FACE.x, FACE.y);
+            const fs = mapSize(slide, FACE.w, FACE.h);
+            face.style.left = fp.x + 'px'; face.style.top = fp.y + 'px';
+            face.style.width = fs.w + 'px'; face.style.height = fs.h + 'px';
+
+            // Info panel
+            const ip = mapToContainer(slide, INFO.x, INFO.y);
+            info.style.left = ip.x + 'px'; info.style.top = ip.y + 'px';
+
+            // Connector line: face top-center → info panel left
+            const sx = fp.x + fs.w / 2, sy = fp.y;
+            const ex = ip.x, ey = ip.y + 10;
+            const mx = (sx + ex) / 2, my = ey;
+            if (line) {
+                line.setAttribute('points', `${sx},${sy} ${mx},${my} ${ex},${ey}`);
+                dotS.setAttribute('cx', sx); dotS.setAttribute('cy', sy);
+                dotE.setAttribute('cx', ex); dotE.setAttribute('cy', ey);
+            }
+        });
+    }
+
+    // Run on load and resize
+    window.addEventListener('load', () => setTimeout(updateAll, 100));
+    window.addEventListener('resize', updateAll);
+    // Also update when swiper changes slide
+    const observer = new MutationObserver(updateAll);
+    document.querySelectorAll('.detector-slide').forEach(s => {
+        observer.observe(s.parentElement, { attributes: true, attributeFilter: ['class'] });
+    });
+    // Initial
+    updateAll();
+})();
 </script>
 </body>
 </html>
