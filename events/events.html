@@ -818,7 +818,7 @@
         <div class="event-date">April 29, 2026</div>
         <h3 class="event-title">🎂 Happy Birthday to Zhongkai Yu — ISCA Best Paper Candidate! <video src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/birthday-zhongkai-2026/emoji.MP4" autoplay loop muted playsinline style="display:inline-block;width:1.2em;height:1.2em;object-fit:cover;vertical-align:-0.15em;"></video></h3>
         <p class="event-text">
-            We celebrated <strong>Zhongkai Yu</strong>'s birthday right here in the lab! On top of the cake and candles, we also toasted his <strong>ISCA 2026 Best Paper Candidate</strong> nomination — what a way to celebrate. Happy birthday, Zhongkai!
+            We celebrated <strong>Leader Yu</strong>'s birthday right here in the lab! On top of the cake and candles, we also toasted his <strong>ISCA 2026 Best Paper Candidate</strong> nomination — what a way to celebrate. Happy birthday, Leader Yu!
         </p>
     </div>
 </div>
@@ -886,7 +886,7 @@
         <div class="event-date">April 1, 2026</div>
         <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip">Psst~ Chang was the top scorer (状元) of the Gaokao in Wenzhou, Zhejiang! ✨</span></span></h3>
         <p class="event-text">
-            Our lab celebrated <strong>Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Chang is also the first author of <strong><em>Centauri</em></strong>, which won the <strong>ASPLOS 2024 Best Paper Award</strong>. Welcome aboard, Chang!
+            Our lab celebrated <strong>Dr. Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Chang is also the first author of <strong><em>Centauri</em></strong>, which won the <strong>ASPLOS 2024 Best Paper Award</strong>. Welcome aboard, Chang!
         </p>
     </div>
 </div>
@@ -1320,10 +1320,13 @@
     // -----------------------------------------------------------------
     // Swiper & Matrix
     // -----------------------------------------------------------------
-    new Swiper(".mySwiper", {
-        slidesPerView: 1, spaceBetween: 0, loop: true, effect: "slide",
-        autoplay: { delay: 3500, disableOnInteraction: false },
-        pagination: { el: ".swiper-pagination", clickable: true },
+    document.querySelectorAll(".mySwiper").forEach(el => {
+        const sw = new Swiper(el, {
+            slidesPerView: 1, spaceBetween: 0, loop: true, effect: "slide",
+            autoplay: { delay: 3500, disableOnInteraction: false },
+            pagination: { el: el.querySelector(".swiper-pagination"), clickable: true },
+        });
+        el._swiper = sw;
     });
 
     const cvs = document.getElementById('matrix');
@@ -1721,7 +1724,14 @@
         slide.addEventListener('click', () => {
             if (slide.classList.contains('active')) return;
             slide.classList.add('active');
-            setTimeout(() => slide.classList.remove('active'), 5200);
+            // Pause swiper autoplay during animation
+            const swiperEl = slide.closest('.mySwiper');
+            const sw = swiperEl && swiperEl._swiper;
+            if (sw) sw.autoplay.stop();
+            setTimeout(() => {
+                slide.classList.remove('active');
+                if (sw) sw.autoplay.start();
+            }, 5500);
         });
     });
 })();
