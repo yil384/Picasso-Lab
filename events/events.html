@@ -391,7 +391,7 @@
         background: rgba(0,220,255,0.85);
         box-shadow: 0 0 6px 1px rgba(0,220,255,0.6);
         z-index: 10;
-        animation: dscan 5s ease-in-out infinite;
+        opacity: 0;
     }
     .det-scan::after {
         content: ''; position: absolute; top: 0; right: 0;
@@ -410,7 +410,6 @@
     .det-bbox {
         position: absolute;
         z-index: 5; opacity: 0;
-        animation: dbox 5s ease-in-out infinite;
     }
     .det-bbox::before, .det-bbox::after,
     .det-bbox .c1::before, .det-bbox .c1::after {
@@ -442,7 +441,6 @@
         border-radius: 2px;
         box-shadow: 0 0 6px rgba(0,220,255,0.4);
         z-index: 6; opacity: 0;
-        animation: dface 5s ease-in-out infinite;
     }
     @keyframes dface {
         0%, 31% { opacity: 0; transform: scale(1.5); }
@@ -473,7 +471,6 @@
         border-radius: 2px;
         padding: 2px 5px;
         box-shadow: 0 0 12px rgba(0,220,255,0.15), inset 0 0 8px rgba(0,220,255,0.05);
-        animation: dinfo 5s ease-in-out infinite;
     }
     /* Corner accents */
     .det-info::before {
@@ -513,7 +510,6 @@
         display: flex; align-items: flex-end;
         padding: 0 6px 2px; gap: 6px;
         z-index: 7; opacity: 0;
-        animation: dtag 5s ease-in-out infinite;
     }
     .det-hud span {
         font-family: 'SF Mono', monospace;
@@ -527,6 +523,16 @@
         45% { width: 99%; }
         78%, 100% { width: 99%; }
     }
+
+    /* Detector active state — triggered by click */
+    .detector-slide.active .det-scan { animation: dscan 5s ease-in-out 1; }
+    .detector-slide.active .det-bbox { animation: dbox 5s ease-in-out 1; }
+    .detector-slide.active .det-face { animation: dface 5s ease-in-out 1; }
+    .detector-slide.active .det-info { animation: dinfo 5s ease-in-out 1; }
+    .detector-slide.active .det-hud { animation: dtag 5s ease-in-out 1; }
+    .detector-slide.active .det-connector { animation: dtag 5s ease-in-out 1 !important; }
+
+    .detector-slide { cursor: pointer; }
 
     @media (max-width: 600px) {
         .event-card { flex-direction: column; height: auto; }
@@ -830,7 +836,7 @@
                     </div>
                     <div class="det-tag">Academician Pan 99.9%</div>
                     <!-- L-shaped connector: up from face then right to info panel -->
-                    <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
+                    <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;">
                         <polyline class="det-line" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
                         <circle class="det-dot-start" r="2" fill="#00e5ff"/>
                         <circle class="det-dot-end" r="2" fill="#00e5ff"/>
@@ -856,7 +862,7 @@
                         <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
                     </div>
                     <div class="det-tag">Academician Pan 99.9%</div>
-                    <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
+                    <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;">
                         <polyline class="det-line" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
                         <circle class="det-dot-start" r="2" fill="#00e5ff"/>
                         <circle class="det-dot-end" r="2" fill="#00e5ff"/>
@@ -1709,6 +1715,15 @@
         img.addEventListener('load', updateAll);
     });
     updateAll();
+
+    // Click to trigger detector animation (plays once, re-clickable after)
+    document.querySelectorAll('.detector-slide').forEach(slide => {
+        slide.addEventListener('click', () => {
+            if (slide.classList.contains('active')) return;
+            slide.classList.add('active');
+            setTimeout(() => slide.classList.remove('active'), 5200);
+        });
+    });
 })();
 </script>
 
