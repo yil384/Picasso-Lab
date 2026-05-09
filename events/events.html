@@ -325,168 +325,6 @@
     .cursor-music { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🎸%3C/text%3E%3C/svg%3E") 16 16, pointer; }
     .cursor-cook { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍳%3C/text%3E%3C/svg%3E") 16 16, pointer; }
 
-    /* ── Wandering Cat Pet ── */
-    #neko-wrap {
-        position: fixed; z-index: 9998;
-        width: 60px; height: 50px;
-        cursor: pointer; user-select: none;
-        pointer-events: auto;
-        filter: drop-shadow(0 2px 5px rgba(0,0,0,0.18));
-    }
-    #neko-wrap:hover { filter: drop-shadow(0 3px 8px rgba(0,0,0,0.3)) brightness(1.05); }
-
-    /* Cat SVG body */
-    .neko-cat { width: 60px; height: 50px; }
-
-    /* Tail wag */
-    .neko-tail { transform-origin: 8px 20px; animation: tailWag 1.2s ease-in-out infinite; }
-    @keyframes tailWag {
-        0%, 100% { transform: rotate(-15deg); }
-        50% { transform: rotate(20deg); }
-    }
-
-    /* Ear twitch */
-    .neko-ear-l { transform-origin: 20px 12px; animation: earTwitchL 4s ease-in-out infinite; }
-    .neko-ear-r { transform-origin: 36px 12px; animation: earTwitchR 4s ease-in-out 0.3s infinite; }
-    @keyframes earTwitchL {
-        0%, 85%, 100% { transform: rotate(0); } 90% { transform: rotate(-8deg); }
-    }
-    @keyframes earTwitchR {
-        0%, 87%, 100% { transform: rotate(0); } 92% { transform: rotate(8deg); }
-    }
-
-    /* Blink */
-    .neko-eye { animation: nekoBlink 3.5s ease-in-out infinite; }
-    @keyframes nekoBlink {
-        0%, 42%, 48%, 100% { transform: scaleY(1); } 45% { transform: scaleY(0.1); }
-    }
-
-    /* Walk bounce */
-    #neko-wrap.walking .neko-cat { animation: walkBounce 0.35s ease-in-out infinite; }
-    @keyframes walkBounce {
-        0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); }
-    }
-
-    /* Walk paws */
-    .neko-paw-fl, .neko-paw-bl { animation: none; }
-    .neko-paw-fr, .neko-paw-br { animation: none; }
-    #neko-wrap.walking .neko-paw-fl { animation: pawStepF 0.35s ease-in-out infinite; }
-    #neko-wrap.walking .neko-paw-fr { animation: pawStepF 0.35s ease-in-out 0.175s infinite; }
-    #neko-wrap.walking .neko-paw-bl { animation: pawStepB 0.35s ease-in-out infinite; }
-    #neko-wrap.walking .neko-paw-br { animation: pawStepB 0.35s ease-in-out 0.175s infinite; }
-    @keyframes pawStepF {
-        0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px) translateX(2px); }
-    }
-    @keyframes pawStepB {
-        0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px) translateX(-1px); }
-    }
-
-    /* Idle tail slower */
-    #neko-wrap.idle .neko-tail { animation: tailSlow 2.5s ease-in-out infinite; }
-    @keyframes tailSlow {
-        0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(10deg); }
-    }
-
-    /* Sleep */
-    #neko-wrap.sleep .neko-tail { animation: tailSlow 4s ease-in-out infinite; }
-    #neko-wrap.sleep .neko-eye { animation: none; transform: scaleY(0.1); }
-    .neko-zzz {
-        position: absolute; top: -18px; right: -4px;
-        font-size: 14px; opacity: 0; pointer-events: none;
-    }
-    #neko-wrap.sleep .neko-zzz { animation: zzzFloat 2s ease-in-out infinite; }
-    @keyframes zzzFloat {
-        0% { opacity: 0; transform: translateY(0) scale(0.7); }
-        30% { opacity: 1; }
-        100% { opacity: 0; transform: translateY(-16px) scale(1.1); }
-    }
-
-    /* Surprised — big eyes */
-    #neko-wrap.surprised .neko-eye { animation: none; transform: scaleY(1.3) scaleX(1.2); }
-    #neko-wrap.surprised .neko-cat { animation: catJump 0.4s ease-out; }
-    @keyframes catJump {
-        0% { transform: translateY(0); }
-        40% { transform: translateY(-8px); }
-        100% { transform: translateY(0); }
-    }
-
-    /* Happy — purr vibrate */
-    #neko-wrap.happy .neko-cat { animation: purr 0.1s linear infinite; }
-    @keyframes purr {
-        0%, 100% { transform: translateX(0); } 50% { transform: translateX(0.5px); }
-    }
-
-    /* Cat speech bubble */
-    .neko-bubble {
-        position: fixed; z-index: 10000;
-        background: #fff; border: 2px solid #f0c040;
-        border-radius: 14px; padding: 10px 14px;
-        font-size: 13px; color: #333;
-        max-width: 220px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-        animation: nekoPop 0.25s ease-out;
-        line-height: 1.5; pointer-events: auto;
-    }
-    .neko-bubble::after {
-        content: ''; position: absolute;
-        bottom: -8px; left: 20px;
-        border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #fff;
-    }
-    .neko-bubble::before {
-        content: ''; position: absolute;
-        bottom: -11px; left: 19px;
-        border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 9px solid #f0c040;
-    }
-    @keyframes nekoPop { from { opacity: 0; transform: scale(0.7) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-
-    /* Mini-game popup */
-    .neko-game {
-        position: fixed; z-index: 10001;
-        top: 50%; left: 50%; transform: translate(-50%, -50%);
-        background: #fff; border-radius: 16px; padding: 24px;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.2);
-        text-align: center; animation: nekoPop 0.3s ease-out;
-        min-width: 260px; font-family: inherit;
-    }
-    .neko-game h3 { margin: 0 0 12px; font-size: 1.1em; color: #333; }
-    .neko-game p { margin: 8px 0; font-size: 0.95em; color: #555; }
-    .neko-game-btn {
-        display: inline-block; margin: 6px 4px 0; padding: 8px 18px;
-        border: none; border-radius: 8px;
-        background: linear-gradient(135deg, #f0c040, #e8a020);
-        color: #fff; font-weight: 600; font-size: 0.9em;
-        cursor: pointer; font-family: inherit; transition: transform 0.15s;
-    }
-    .neko-game-btn:hover { transform: scale(1.05); }
-    .neko-game-close {
-        position: absolute; top: 8px; right: 12px;
-        background: none; border: none; font-size: 18px; color: #aaa; cursor: pointer;
-    }
-    .neko-overlay {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.25);
-        z-index: 10000; animation: nekoPop 0.2s ease-out;
-    }
-
-    /* Confetti */
-    .neko-confetti {
-        position: fixed; z-index: 10002;
-        width: 8px; height: 8px; border-radius: 2px;
-        pointer-events: none; animation: confettiFall 1.2s ease-in forwards;
-    }
-    @keyframes confettiFall {
-        0% { opacity: 1; transform: translateY(0) rotate(0deg); }
-        100% { opacity: 0; transform: translateY(120px) rotate(720deg); }
-    }
-
-    /* Hearts on pet */
-    .neko-heart {
-        position: absolute; font-size: 14px; pointer-events: none;
-        animation: heartFloat 1s ease-out forwards;
-    }
-    @keyframes heartFloat {
-        0% { opacity: 1; transform: translateY(0) scale(0.5); }
-        100% { opacity: 0; transform: translateY(-30px) scale(1.2); }
-    }
 
     .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; }
     .swiper-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -509,6 +347,7 @@
     .detector-slide img {
         width: 100%; height: 100%;
         object-fit: cover; display: block;
+        object-position: center center;
     }
 
     /* Scan bar — vertical sweep */
@@ -535,8 +374,8 @@
     /* Body bounding box — YOLO style rect with corner brackets */
     .det-bbox {
         position: absolute;
-        /* 5th person body: adjust these to calibrate */
-        top: 39%; left: 29%; width: 30px; height: 43%;
+        /* 5th person body — fixed px so mobile/desktop match */
+        top: 97px; left: 87px; width: 30px; height: 108px;
         z-index: 5; opacity: 0;
         animation: dbox 5s ease-in-out infinite;
     }
@@ -566,8 +405,8 @@
     /* Face box — smaller rect on head */
     .det-face {
         position: absolute;
-        /* Face position: adjust these */
-        top: 40%; left: 31%; width: 20px; height: 21px;
+        /* Face — fixed px */
+        top: 100px; left: 93px; width: 20px; height: 21px;
         border: 1.5px solid #00e5ff;
         border-radius: 2px;
         box-shadow: 0 0 6px rgba(0,220,255,0.4);
@@ -958,11 +797,11 @@
                     <div class="det-tag">Academician Pan 99.9%</div>
                     <!-- L-shaped connector: up from face then right to info panel -->
                     <svg class="det-connector" viewBox="0 0 300 250" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
-                        <polyline points="103,100 120,30 138,30" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
-                        <circle cx="103" cy="100" r="2" fill="#00e5ff"/>
-                        <circle cx="138" cy="30" r="2" fill="#00e5ff"/>
+                        <polyline points="103,110 125,35 138,35" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+                        <circle cx="103" cy="110" r="2" fill="#00e5ff"/>
+                        <circle cx="138" cy="35" r="2" fill="#00e5ff"/>
                     </svg>
-                    <div class="det-info" style="top:10%;left:46%;">
+                    <div class="det-info" style="top:25px;left:138px;">
                         <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
                         <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
                         <div class="det-info-line">Model: <span class="val">Chang-Net v1.0</span></div>
@@ -984,11 +823,11 @@
                     </div>
                     <div class="det-tag">Academician Pan 99.9%</div>
                     <svg class="det-connector" viewBox="0 0 300 250" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;animation:dtag 5s ease-in-out infinite;">
-                        <polyline points="103,100 120,30 138,30" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
-                        <circle cx="103" cy="100" r="2" fill="#00e5ff"/>
-                        <circle cx="138" cy="30" r="2" fill="#00e5ff"/>
+                        <polyline points="103,110 125,35 138,35" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
+                        <circle cx="103" cy="110" r="2" fill="#00e5ff"/>
+                        <circle cx="138" cy="35" r="2" fill="#00e5ff"/>
                     </svg>
-                    <div class="det-info" style="top:10%;left:46%;">
+                    <div class="det-info" style="top:25px;left:138px;">
                         <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
                         <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
                         <div class="det-info-line">Model: <span class="val">Chang-Net v1.0</span></div>
@@ -1762,391 +1601,6 @@
             setTimeout(() => overlay.remove(), 600);
         }
     }
-</script>
-
-<!-- ═══════════════════════════════════════════
-     Wandering Cat Pet — SVG animated cat
-     ═══════════════════════════════════════════ -->
-<script>
-(function() {
-    // ── Build SVG cat ──
-    const wrap = document.createElement('div');
-    wrap.id = 'neko-wrap';
-    wrap.innerHTML = `
-        <svg class="neko-cat" viewBox="0 0 60 50" xmlns="http://www.w3.org/2000/svg">
-            <!-- Tail -->
-            <path class="neko-tail" d="M8,32 Q0,28 3,20 Q5,15 8,18" fill="none" stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
-            <!-- Body -->
-            <ellipse cx="28" cy="36" rx="16" ry="10" fill="#f5a623"/>
-            <ellipse cx="28" cy="35" rx="15" ry="9" fill="#f9bc4d"/>
-            <!-- Belly -->
-            <ellipse cx="28" cy="37" rx="9" ry="6" fill="#fde8b8"/>
-            <!-- Back legs -->
-            <rect class="neko-paw-bl" x="16" y="42" width="5" height="6" rx="2.5" fill="#f5a623"/>
-            <rect class="neko-paw-br" x="33" y="42" width="5" height="6" rx="2.5" fill="#f5a623"/>
-            <!-- Front legs -->
-            <rect class="neko-paw-fl" x="21" y="42" width="5" height="7" rx="2.5" fill="#f9bc4d"/>
-            <rect class="neko-paw-fr" x="28" y="42" width="5" height="7" rx="2.5" fill="#f9bc4d"/>
-            <!-- Paw tips -->
-            <ellipse class="neko-paw-fl" cx="23.5" cy="48.5" rx="2.8" ry="1.5" fill="#fde8b8"/>
-            <ellipse class="neko-paw-fr" cx="30.5" cy="48.5" rx="2.8" ry="1.5" fill="#fde8b8"/>
-            <!-- Head -->
-            <circle cx="38" cy="24" r="13" fill="#f5a623"/>
-            <circle cx="38" cy="25" r="12" fill="#f9bc4d"/>
-            <!-- Ear left -->
-            <polygon class="neko-ear-l" points="28,16 31,4 36,14" fill="#f5a623"/>
-            <polygon class="neko-ear-l" points="29.5,15 31.5,7 35,13.5" fill="#ffb8c6"/>
-            <!-- Ear right -->
-            <polygon class="neko-ear-r" points="40,14 45,4 48,16" fill="#f5a623"/>
-            <polygon class="neko-ear-r" points="41,13.5 44.5,7 46.5,15" fill="#ffb8c6"/>
-            <!-- Face -->
-            <circle cx="38" cy="26" r="8" fill="#fde8b8" opacity="0.3"/>
-            <!-- Eyes -->
-            <g class="neko-eye" style="transform-origin:33px 23px">
-                <ellipse cx="33" cy="23" rx="2.2" ry="2.8" fill="#3a3226"/>
-                <ellipse cx="33.6" cy="22.2" rx="0.8" ry="1" fill="#fff"/>
-            </g>
-            <g class="neko-eye" style="transform-origin:43px 23px">
-                <ellipse cx="43" cy="23" rx="2.2" ry="2.8" fill="#3a3226"/>
-                <ellipse cx="43.6" cy="22.2" rx="0.8" ry="1" fill="#fff"/>
-            </g>
-            <!-- Nose -->
-            <polygon points="38,27 36.5,29 39.5,29" fill="#ff8fa0"/>
-            <!-- Mouth -->
-            <path d="M36.5,29.5 Q38,32 39.5,29.5" fill="none" stroke="#c47a6a" stroke-width="0.7" stroke-linecap="round"/>
-            <path d="M38,29.5 L38,31" fill="none" stroke="#c47a6a" stroke-width="0.6"/>
-            <!-- Whiskers -->
-            <line x1="25" y1="25" x2="32" y2="26" stroke="#d4a050" stroke-width="0.5" opacity="0.6"/>
-            <line x1="25" y1="28" x2="32" y2="28" stroke="#d4a050" stroke-width="0.5" opacity="0.6"/>
-            <line x1="44" y1="26" x2="51" y2="25" stroke="#d4a050" stroke-width="0.5" opacity="0.6"/>
-            <line x1="44" y1="28" x2="51" y2="28" stroke="#d4a050" stroke-width="0.5" opacity="0.6"/>
-            <!-- Cheek blush -->
-            <circle cx="30" cy="27" r="2.5" fill="#ffb8c6" opacity="0.35"/>
-            <circle cx="46" cy="27" r="2.5" fill="#ffb8c6" opacity="0.35"/>
-            <!-- Stripes on forehead -->
-            <path d="M36,16 L38,19" stroke="#e09020" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
-            <path d="M38,15 L38,19" stroke="#e09020" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
-            <path d="M40,16 L38,19" stroke="#e09020" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
-        </svg>
-        <div class="neko-zzz">💤</div>
-    `;
-    wrap.style.left = Math.random() * (window.innerWidth - 80) + 'px';
-    wrap.style.top = Math.random() * (window.innerHeight - 100) + 200 + 'px';
-    document.body.appendChild(wrap);
-
-    let cx = parseFloat(wrap.style.left);
-    let cy = parseFloat(wrap.style.top);
-    let vx = (Math.random() - 0.5) * 1.5;
-    let vy = (Math.random() - 0.5) * 1.5;
-    let state = 'walk'; // walk, idle, sleep
-    let stateTimer = 0;
-    let idleCount = 0;
-    let bubble = null;
-    let clickCount = 0;
-
-    function setState(s) {
-        state = s;
-        wrap.className = '';
-        if (s === 'walk') wrap.classList.add('walking');
-        else if (s === 'idle') wrap.classList.add('idle');
-        else if (s === 'sleep') wrap.classList.add('sleep');
-    }
-    setState('walk');
-
-    function update() {
-        if (state === 'sleep') {
-            stateTimer--;
-            if (stateTimer <= 0) setState('walk');
-            requestAnimationFrame(update);
-            return;
-        }
-        if (state === 'idle') {
-            stateTimer--;
-            if (stateTimer <= 0) {
-                idleCount++;
-                if (idleCount > 2) {
-                    setState('sleep'); stateTimer = 300; idleCount = 0;
-                } else {
-                    setState('walk');
-                    vx = (Math.random() - 0.5) * 2;
-                    vy = (Math.random() - 0.5) * 2;
-                }
-            }
-            requestAnimationFrame(update);
-            return;
-        }
-
-        if (Math.random() < 0.02) {
-            vx += (Math.random() - 0.5) * 1.2;
-            vy += (Math.random() - 0.5) * 1.2;
-        }
-        if (Math.random() < 0.005) {
-            setState('idle'); stateTimer = 60 + Math.random() * 120;
-            requestAnimationFrame(update);
-            return;
-        }
-
-        const spd = Math.sqrt(vx*vx + vy*vy);
-        if (spd > 2) { vx *= 2/spd; vy *= 2/spd; }
-
-        cx += vx; cy += vy;
-
-        const W = window.innerWidth - 65, H = window.innerHeight - 55;
-        if (cx < 10) { cx = 10; vx = Math.abs(vx); }
-        if (cx > W)  { cx = W;  vx = -Math.abs(vx); }
-        if (cy < 80) { cy = 80; vy = Math.abs(vy); }
-        if (cy > H)  { cy = H;  vy = -Math.abs(vy); }
-
-        wrap.style.left = cx + 'px';
-        wrap.style.top = cy + 'px';
-        // Flip cat to face walking direction
-        wrap.style.transform = vx < 0 ? 'scaleX(-1)' : 'scaleX(1)';
-
-        requestAnimationFrame(update);
-    }
-    requestAnimationFrame(update);
-
-    // ── Spawn hearts when petted ──
-    function spawnHeart() {
-        const h = document.createElement('div');
-        h.className = 'neko-heart';
-        h.textContent = ['❤️','💕','💖','✨'][Math.floor(Math.random()*4)];
-        h.style.left = (Math.random()*40 - 5) + 'px';
-        h.style.top = (-5 - Math.random()*10) + 'px';
-        wrap.appendChild(h);
-        setTimeout(() => h.remove(), 1000);
-    }
-
-    // ── Interaction events ──
-    const FORTUNES = [
-        '今日运势：你的 paper 会被 accept！🎉',
-        '小猫说：今天适合写 code，不适合写 paper 📝',
-        '运势：实验结果会非常好！📊',
-        '小猫预言：你今天会 debug 成功 🐛✨',
-        '今日幸运食物：火锅 🍲',
-        '小猫说：deadline 还早，先玩一会儿吧 😸',
-        '运势：今天有意外惊喜！🎁',
-        '小猫说：多喝水，多摸猫 🐱💧',
-        '预言：你的 GPU 今天不会 OOM 🎯',
-        '小猫说：今天的 loss 会下降得很快 📉✨',
-        '运势：reviewer 今天心情很好 😊',
-        '小猫提醒：记得 git commit 💾',
-    ];
-    const CAT_FACTS = [
-        '猫咪每天睡 12-16 小时 💤',
-        '猫的听力比人类灵敏 4 倍 👂',
-        '猫咪会用 100 多种声音交流 🗣️',
-        '猫的鼻纹和人的指纹一样独特 👃',
-        '猫咪能在空中旋转身体安全着陆 🌀',
-        '世界上最老的猫活了 38 岁！🎂',
-        '猫每天花 30% 的时间在整理毛发 ✨',
-        '猫咪的心跳是人类的两倍快 💓',
-    ];
-    const QUIZ = [
-        { q: 'Python 的作者是谁？', opts: ['Linus','Guido','Dennis'], a: 1 },
-        { q: '哪个不是排序算法？', opts: ['冒泡','快排','回溯'], a: 2 },
-        { q: 'HTTP 200 表示什么？', opts: ['出错','成功','重定向'], a: 1 },
-        { q: 'CPU 的中文全称是？', opts: ['中央处理器','图形处理器','内存'], a: 0 },
-        { q: 'Git 的创建者是？', opts: ['Guido','Linus','Bjarne'], a: 1 },
-        { q: '1 byte = ? bits', opts: ['4','8','16'], a: 1 },
-    ];
-    const EVENTS = [
-        'fortune','fortune','rps','guess','quiz','confetti','fortune','slot','dice','catfact'
-    ];
-
-    function showBubble(text, duration) {
-        removeBubble();
-        bubble = document.createElement('div');
-        bubble.className = 'neko-bubble';
-        bubble.innerHTML = text;
-        document.body.appendChild(bubble);
-        const bx = Math.min(cx, window.innerWidth - 240);
-        bubble.style.left = bx + 'px';
-        bubble.style.top = (cy - bubble.offsetHeight - 12) + 'px';
-        if (duration) setTimeout(removeBubble, duration);
-    }
-    function removeBubble() { if (bubble) { bubble.remove(); bubble = null; } }
-
-    function spawnConfetti(x, y, count) {
-        const colors = ['#f0c040','#e84060','#40c0f0','#60e060','#f080d0','#ff8030'];
-        for (let i = 0; i < (count||20); i++) {
-            const c = document.createElement('div');
-            c.className = 'neko-confetti';
-            c.style.left = (x + (Math.random()-0.5)*60) + 'px';
-            c.style.top = (y + (Math.random()-0.5)*30) + 'px';
-            c.style.background = colors[Math.floor(Math.random()*colors.length)];
-            c.style.animationDuration = (0.8 + Math.random()*0.8) + 's';
-            document.body.appendChild(c);
-            setTimeout(() => c.remove(), 1500);
-        }
-    }
-
-    function showGame(html) {
-        const overlay = document.createElement('div');
-        overlay.className = 'neko-overlay';
-        const game = document.createElement('div');
-        game.className = 'neko-game';
-        game.innerHTML = '<button class="neko-game-close">&times;</button>' + html;
-        document.body.appendChild(overlay);
-        document.body.appendChild(game);
-        const close = () => { overlay.remove(); game.remove(); };
-        overlay.onclick = close;
-        game.querySelector('.neko-game-close').onclick = close;
-        return { game, close };
-    }
-
-    function playRPS() {
-        const emojis = ['✊','✋','✌️'], names = ['石头','布','剪刀'];
-        const { game } = showGame(
-            '<h3>🐱 猫咪猜拳！</h3><p>选一个和小猫比试吧：</p>' +
-            emojis.map((e,i) => `<button class="neko-game-btn rps" data-i="${i}">${e} ${names[i]}</button>`).join('')+
-            '<p id="rps-result" style="min-height:1.5em;font-weight:600;margin-top:12px;"></p>'
-        );
-        game.querySelectorAll('.rps').forEach(btn => {
-            btn.onclick = () => {
-                const pi = parseInt(btn.dataset.i), ci = Math.floor(Math.random()*3);
-                let r;
-                if (pi === ci) r = `平局！猫咪也出了 ${emojis[ci]} 😼`;
-                else if ((pi+1)%3 === ci) r = `猫咪出了 ${emojis[ci]}，你输了！😹`;
-                else { r = `猫咪出了 ${emojis[ci]}，你赢了！🎉`; spawnConfetti(window.innerWidth/2, window.innerHeight/2, 30); }
-                game.querySelector('#rps-result').textContent = r;
-            };
-        });
-    }
-
-    function playGuess() {
-        const target = Math.floor(Math.random()*10)+1;
-        let att = 3;
-        const { game } = showGame(
-            '<h3>🐱 猜数字！</h3><p>小猫想了一个 1-10 的数字，你有 3 次机会：</p>' +
-            '<div id="guess-btns">' + Array.from({length:10},(_,i) =>
-            `<button class="neko-game-btn gbtn" data-n="${i+1}" style="min-width:36px;padding:8px 10px;">${i+1}</button>`).join('') +
-            '</div><p id="guess-result" style="min-height:1.5em;font-weight:600;margin-top:10px;"></p>'
-        );
-        game.querySelectorAll('.gbtn').forEach(btn => {
-            btn.onclick = () => {
-                const n = parseInt(btn.dataset.n);
-                btn.disabled = true; btn.style.opacity = 0.4;
-                if (n === target) {
-                    game.querySelector('#guess-result').textContent = '🎉 猜对了！小猫很佩服你！';
-                    spawnConfetti(window.innerWidth/2, window.innerHeight/2, 40);
-                    game.querySelectorAll('.gbtn').forEach(b => b.disabled = true);
-                } else {
-                    att--;
-                    const hint = n < target ? '大一点 ⬆️' : '小一点 ⬇️';
-                    game.querySelector('#guess-result').textContent = att > 0 ? `不对哦，再${hint}！还有 ${att} 次` : `没机会了！答案是 ${target} 😹`;
-                    if (att <= 0) game.querySelectorAll('.gbtn').forEach(b => b.disabled = true);
-                }
-            };
-        });
-    }
-
-    function playQuiz() {
-        const q = QUIZ[Math.floor(Math.random()*QUIZ.length)];
-        const { game } = showGame(
-            `<h3>🐱 小猫考考你！</h3><p>${q.q}</p>` +
-            q.opts.map((o,i) => `<button class="neko-game-btn qbtn" data-i="${i}">${o}</button>`).join('') +
-            '<p id="quiz-result" style="min-height:1.5em;font-weight:600;margin-top:10px;"></p>'
-        );
-        game.querySelectorAll('.qbtn').forEach(btn => {
-            btn.onclick = () => {
-                game.querySelectorAll('.qbtn').forEach(b => b.disabled = true);
-                if (parseInt(btn.dataset.i) === q.a) {
-                    game.querySelector('#quiz-result').textContent = '✅ 正确！你真厉害！';
-                    btn.style.background = '#4caf50';
-                    spawnConfetti(window.innerWidth/2, window.innerHeight/2, 30);
-                } else {
-                    game.querySelector('#quiz-result').textContent = `❌ 错了！正确答案是「${q.opts[q.a]}」`;
-                    btn.style.background = '#e84060';
-                    game.querySelectorAll('.qbtn')[q.a].style.background = '#4caf50';
-                }
-            };
-        });
-    }
-
-    function playSlot() {
-        const syms = ['🍒','🍋','🔔','⭐','7️⃣','🐱'];
-        const { game } = showGame(
-            '<h3>🎰 猫咪老虎机！</h3>' +
-            '<div id="slot-display" style="font-size:2.2em;letter-spacing:12px;margin:16px 0;">❓❓❓</div>' +
-            '<button class="neko-game-btn" id="slot-spin">🎰 拉！</button>' +
-            '<p id="slot-result" style="min-height:1.5em;font-weight:600;margin-top:10px;"></p>'
-        );
-        game.querySelector('#slot-spin').onclick = () => {
-            const r = [0,1,2].map(() => syms[Math.floor(Math.random()*syms.length)]);
-            game.querySelector('#slot-display').textContent = r.join('');
-            if (r[0]===r[1]&&r[1]===r[2]) {
-                game.querySelector('#slot-result').textContent = r[0]==='🐱'?'🎉🐱 超级大奖！三只猫咪！！！':'🎉 三连！你太幸运了！';
-                spawnConfetti(window.innerWidth/2, window.innerHeight/2, 50);
-            } else if (r[0]===r[1]||r[1]===r[2]||r[0]===r[2]) {
-                game.querySelector('#slot-result').textContent = '😺 两个一样，还不错！';
-            } else { game.querySelector('#slot-result').textContent = '😿 没中，再来一次？'; }
-        };
-    }
-
-    function playDice() {
-        const dice = ['⚀','⚁','⚂','⚃','⚄','⚅'];
-        const { game } = showGame(
-            '<h3>🎲 和猫咪掷骰子！</h3><p>看谁点数大：</p>' +
-            '<button class="neko-game-btn" id="dice-roll">🎲 掷！</button>' +
-            '<div id="dice-display" style="font-size:2em;margin:12px 0;"></div>' +
-            '<p id="dice-result" style="min-height:1.5em;font-weight:600;"></p>'
-        );
-        game.querySelector('#dice-roll').onclick = () => {
-            const you = Math.floor(Math.random()*6), cat = Math.floor(Math.random()*6);
-            game.querySelector('#dice-display').textContent = `你: ${dice[you]}  🐱: ${dice[cat]}`;
-            if (you > cat) { game.querySelector('#dice-result').textContent = '🎉 你赢了！小猫不服气！'; spawnConfetti(window.innerWidth/2, window.innerHeight/2, 25); }
-            else if (you < cat) { game.querySelector('#dice-result').textContent = '😹 猫咪赢了！喵喵喵～'; }
-            else { game.querySelector('#dice-result').textContent = '🤝 平局！再来？'; }
-        };
-    }
-
-    function triggerEvent() {
-        const ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
-        wrap.classList.add('happy');
-        setTimeout(() => wrap.classList.remove('happy'), 1500);
-
-        switch(ev) {
-            case 'fortune': showBubble(FORTUNES[Math.floor(Math.random()*FORTUNES.length)], 4000); break;
-            case 'rps': removeBubble(); playRPS(); break;
-            case 'guess': removeBubble(); playGuess(); break;
-            case 'quiz': removeBubble(); playQuiz(); break;
-            case 'slot': removeBubble(); playSlot(); break;
-            case 'dice': removeBubble(); playDice(); break;
-            case 'confetti': showBubble('🎉 喵～撒花！', 2000); spawnConfetti(cx+30, cy, 35); break;
-            case 'catfact': showBubble('🐱 猫知识：' + CAT_FACTS[Math.floor(Math.random()*CAT_FACTS.length)], 4500); break;
-        }
-    }
-
-    wrap.addEventListener('click', (e) => {
-        e.stopPropagation();
-        clickCount++;
-        spawnHeart();
-
-        if (state === 'sleep') {
-            setState('walk'); stateTimer = 0;
-            wrap.classList.add('surprised');
-            setTimeout(() => wrap.classList.remove('surprised'), 600);
-            showBubble('喵！被吵醒了！😾', 2000);
-            return;
-        }
-        if (clickCount >= 5) {
-            clickCount = 0;
-            showBubble('别点了别点了！喵喵喵！🙀', 2500);
-            spawnConfetti(cx+30, cy, 50);
-            wrap.classList.add('surprised');
-            setTimeout(() => wrap.classList.remove('surprised'), 800);
-            return;
-        }
-        triggerEvent();
-        setTimeout(() => { clickCount = Math.max(0, clickCount - 1); }, 2000);
-    });
-
-    window.addEventListener('resize', () => {
-        cx = Math.min(cx, window.innerWidth - 70);
-        cy = Math.min(cy, window.innerHeight - 60);
-    });
-})();
 </script>
 </body>
 </html>
