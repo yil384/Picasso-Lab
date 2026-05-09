@@ -348,24 +348,25 @@
         display: none;
         position: absolute;
         bottom: 130%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #333;
-        color: #fff;
-        font-size: 12px;
-        padding: 6px 10px;
-        border-radius: 6px;
-        white-space: nowrap;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        right: 0;
+        background: linear-gradient(135deg, #fff5e6, #fff0f5);
+        color: #555;
+        font-size: 11.5px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        white-space: normal;
+        width: 200px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+        border: 1.5px solid #ffd6e0;
         z-index: 100;
+        line-height: 1.5;
     }
     .secret-tip::after {
         content: '';
         position: absolute;
-        top: 100%; left: 50%;
-        transform: translateX(-50%);
-        border: 5px solid transparent;
-        border-top-color: #333;
+        top: 100%; right: 12px;
+        border: 6px solid transparent;
+        border-top-color: #fff0f5;
     }
     .secret-note:hover .secret-tip { display: block; }
 
