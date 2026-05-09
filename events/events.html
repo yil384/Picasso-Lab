@@ -430,8 +430,8 @@
     @keyframes dbox {
         0%, 36% { opacity: 0; }
         42% { opacity: 1; }
-        90% { opacity: 1; }
-        97%, 100% { opacity: 0; }
+        92% { opacity: 1; }
+        100% { opacity: 0; }
     }
 
     /* Face box — smaller rect on head */
@@ -445,8 +445,8 @@
     @keyframes dface {
         0%, 38% { opacity: 0; transform: scale(1.5); }
         44% { opacity: 1; transform: scale(1); }
-        90% { opacity: 1; }
-        97%, 100% { opacity: 0; }
+        92% { opacity: 1; }
+        100% { opacity: 0; }
     }
     /* Face landmark dots — hidden */
     .det-face .dot { display: none; }
@@ -456,8 +456,8 @@
     @keyframes dtag {
         0%, 40% { opacity: 0; }
         46% { opacity: 1; }
-        90% { opacity: 1; }
-        97%, 100% { opacity: 0; }
+        92% { opacity: 1; }
+        100% { opacity: 0; }
     }
 
     /* Side info panel — holographic frame */
@@ -498,8 +498,8 @@
     @keyframes dinfo {
         0%, 46% { opacity: 0; transform: translateX(5px); }
         54% { opacity: 1; transform: translateX(0); }
-        90% { opacity: 1; }
-        97%, 100% { opacity: 0; }
+        92% { opacity: 1; }
+        100% { opacity: 0; }
     }
 
     /* Bottom HUD */
@@ -1731,7 +1731,7 @@
             setTimeout(() => {
                 slide.classList.remove('active');
                 if (sw) sw.autoplay.start();
-            }, 4100);
+            }, 4000);
         });
     });
 })();
