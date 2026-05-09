@@ -400,9 +400,9 @@
     }
     @keyframes dscan {
         0%   { left: -1%; opacity: 0; }
-        3%   { opacity: 1; }
-        28%  { left: 34%; opacity: 1; }
-        32%  { opacity: 0; }
+        4%   { opacity: 1; }
+        35%  { left: 34%; opacity: 1; }
+        40%  { opacity: 0; }
         100% { left: 34%; opacity: 0; }
     }
 
@@ -428,10 +428,10 @@
         border: 1px solid rgba(0,220,255,0.25);
     }
     @keyframes dbox {
-        0%, 29% { opacity: 0; }
-        34% { opacity: 1; }
-        78% { opacity: 1; }
-        88%, 100% { opacity: 0; }
+        0%, 36% { opacity: 0; }
+        42% { opacity: 1; }
+        90% { opacity: 1; }
+        97%, 100% { opacity: 0; }
     }
 
     /* Face box — smaller rect on head */
@@ -443,10 +443,10 @@
         z-index: 6; opacity: 0;
     }
     @keyframes dface {
-        0%, 31% { opacity: 0; transform: scale(1.5); }
-        36% { opacity: 1; transform: scale(1); }
-        78% { opacity: 1; }
-        88%, 100% { opacity: 0; }
+        0%, 38% { opacity: 0; transform: scale(1.5); }
+        44% { opacity: 1; transform: scale(1); }
+        90% { opacity: 1; }
+        97%, 100% { opacity: 0; }
     }
     /* Face landmark dots — hidden */
     .det-face .dot { display: none; }
@@ -454,10 +454,10 @@
     /* Tag used for animation timing reference */
     .det-tag { display: none; }
     @keyframes dtag {
-        0%, 33% { opacity: 0; }
-        38% { opacity: 1; }
-        78% { opacity: 1; }
-        88%, 100% { opacity: 0; }
+        0%, 40% { opacity: 0; }
+        46% { opacity: 1; }
+        90% { opacity: 1; }
+        97%, 100% { opacity: 0; }
     }
 
     /* Side info panel — holographic frame */
@@ -496,10 +496,10 @@
     }
     .det-info-line .val { color: #00ffcc; font-weight: 700; text-shadow: 0 0 8px rgba(0,255,200,0.4); }
     @keyframes dinfo {
-        0%, 40% { opacity: 0; transform: translateX(5px); }
-        48% { opacity: 1; transform: translateX(0); }
-        78% { opacity: 1; }
-        88%, 100% { opacity: 0; }
+        0%, 46% { opacity: 0; transform: translateX(5px); }
+        54% { opacity: 1; transform: translateX(0); }
+        90% { opacity: 1; }
+        97%, 100% { opacity: 0; }
     }
 
     /* Bottom HUD */
@@ -525,12 +525,12 @@
     }
 
     /* Detector active state — triggered by click */
-    .detector-slide.active .det-scan { animation: dscan 5s ease-in-out 1; }
-    .detector-slide.active .det-bbox { animation: dbox 5s ease-in-out 1; }
-    .detector-slide.active .det-face { animation: dface 5s ease-in-out 1; }
-    .detector-slide.active .det-info { animation: dinfo 5s ease-in-out 1; }
-    .detector-slide.active .det-hud { animation: dtag 5s ease-in-out 1; }
-    .detector-slide.active .det-connector { animation: dtag 5s ease-in-out 1 !important; }
+    .detector-slide.active .det-scan { animation: dscan 4s ease-in-out 1; }
+    .detector-slide.active .det-bbox { animation: dbox 4s ease-in-out 1; }
+    .detector-slide.active .det-face { animation: dface 4s ease-in-out 1; }
+    .detector-slide.active .det-info { animation: dinfo 4s ease-in-out 1; }
+    .detector-slide.active .det-hud { animation: dtag 4s ease-in-out 1; }
+    .detector-slide.active .det-connector { animation: dtag 4s ease-in-out 1 !important; }
 
     .detector-slide { cursor: pointer; }
 
@@ -1731,7 +1731,7 @@
             setTimeout(() => {
                 slide.classList.remove('active');
                 if (sw) sw.autoplay.start();
-            }, 5500);
+            }, 4100);
         });
     });
 })();
