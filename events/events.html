@@ -314,7 +314,7 @@
     .ticker-item { margin-right: 3rem; display: inline-flex; align-items: center; font-size: 0.9em; }
     .ticker-tag { font-weight: bold; color: #0056b3; margin-right: 6px; }
 
-    .event-card { display: flex; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; margin: 20px auto; max-width: 900px; height: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
+    .event-card { display: flex; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: visible; margin: 20px auto; max-width: 900px; height: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
     .event-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 
     .cursor-cny { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🧧%3C/text%3E%3C/svg%3E") 16 16, pointer; }
@@ -326,11 +326,11 @@
     .cursor-cook { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍳%3C/text%3E%3C/svg%3E") 16 16, pointer; }
 
 
-    .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; }
+    .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; overflow: hidden; border-radius: 7px 0 0 7px; }
     .swiper-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .swiper-pagination-bullet { background: rgba(255, 255, 255, 0.8); opacity: 1; width: 8px; height: 8px; transition: all 0.3s; }
     .swiper-pagination-bullet-active { background: #0056b3; width: 18px; border-radius: 4px; }
-    .event-content { padding: 20px; flex: 1; overflow-y: auto; }
+    .event-content { padding: 20px; flex: 1; overflow: visible; }
     .event-date { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
     .event-title { margin: 0 0 10px 0; font-size: 1.25em; color: #333; font-weight: 600; }
     .event-text { font-size: 0.95em; color: #444; line-height: 1.6; margin-bottom: 15px; }
@@ -396,34 +396,75 @@
     }
     .secret-note:hover::after { animation: goldSheen 0.8s ease-in-out infinite; }
     .secret-tip {
-        display: none;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(-6px) scale(0.95);
+        transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s 0.22s;
+
         position: absolute;
-        top: 130%;
+        top: calc(100% + 13px);
         right: 0;
-        background: #fff0f5;
-        color: #d4568a;
-        font-size: 11px;
-        font-weight: 500;
-        padding: 7px 11px;
+
+        background: linear-gradient(150deg, #fffef7 0%, #fffae8 100%);
         border-radius: 14px;
-        white-space: normal;
+        padding: 10px 14px 11px;
+
         width: max-content;
-        max-width: min(200px, 60vw);
-        box-shadow: 0 3px 12px rgba(255,150,186,0.3), 0 0 0 2px #ffc6d7;
-        border: 2px solid #ff9eba;
-        z-index: 100;
-        line-height: 1.5;
+        min-width: 178px;
+        max-width: min(218px, 72vw);
+        white-space: normal;
+        line-height: 1.6;
+
+        font-size: 11.5px;
+        color: #3d2800;
+        font-weight: 400;
+        font-style: normal;
+
+        border-top: 2.5px solid #c9950a;
+        box-shadow:
+            0 8px 28px rgba(150, 100, 0, 0.18),
+            0 2px 6px rgba(0,0,0,0.07),
+            0 0 0 1px rgba(200, 155, 15, 0.22);
+
+        z-index: 1000;
+        pointer-events: none;
     }
-    /* Tail pointing up-right */
-    .secret-tip strong { color: #c0306a; }
+    /* Arrow border (outer) */
+    .secret-tip::before {
+        content: '';
+        position: absolute;
+        right: 9px;
+        bottom: 100%;
+        border: 7px solid transparent;
+        border-bottom-color: #c9950a;
+    }
+    /* Arrow fill (inner) */
     .secret-tip::after {
         content: '';
         position: absolute;
-        bottom: 100%; right: 4px;
-        border: 7px solid transparent;
-        border-bottom-color: #ff9eba;
+        right: 10px;
+        bottom: calc(100% - 3px);
+        border: 6px solid transparent;
+        border-bottom-color: #fffef7;
     }
-    .secret-note:hover .secret-tip { display: block; }
+    .secret-note:hover .secret-tip {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s 0s;
+    }
+    .tip-header {
+        display: block;
+        font-size: 9.5px;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: #a07000;
+        margin-bottom: 6px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid rgba(190, 145, 10, 0.2);
+    }
+    .secret-tip strong { color: #7a4d00; font-weight: 700; }
 
     /* ── Academician Detector v4 — YOLO-style ── */
     .detector-slide {
@@ -588,7 +629,7 @@
 
     @media (max-width: 600px) {
         .event-card { flex-direction: column; height: auto; }
-        .event-image { width: 100%; height: 220px; flex: none; }
+        .event-image { width: 100%; height: 220px; flex: none; border-radius: 7px 7px 0 0; }
         #danmaku-container, #lightbox-overlay { height: 45%; } /* 移动端也同步高度 */
     }
 
@@ -937,7 +978,7 @@
     </div>
     <div class="event-content">
         <div class="event-date">April 1, 2026</div>
-        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip">Psst~ Chang was the <strong>#1 Gaokao scorer</strong> (状元) in <strong>Wenzhou, Zhejiang</strong>! ✨</span></span></h3>
+        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip"><span class="tip-header">👑 Did you know?</span>Chang was the <strong>#1 Gaokao scorer</strong> (状元) in <strong>Wenzhou, Zhejiang</strong>! ✨</span></span></h3>
         <p class="event-text">
             Our lab celebrated <strong>Dr. Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Chang is also the first author of <strong><em>Centauri</em></strong>, which won the <strong>ASPLOS 2024 Best Paper Award</strong>. Welcome aboard, Chang!
         </p>
