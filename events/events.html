@@ -617,7 +617,6 @@
         78%, 100% { width: 99%; }
     }
 
-    /* Detector active state — triggered by click */
     .detector-slide.active .det-scan { animation: dscan 4s ease-in-out 1; }
     .detector-slide.active .det-bbox { animation: dbox 4s ease-in-out 1; }
     .detector-slide.active .det-face { animation: dface 4s ease-in-out 1; }
@@ -625,7 +624,7 @@
     .detector-slide.active .det-hud { animation: dtag 4s ease-in-out 1; }
     .detector-slide.active .det-connector { animation: dtag 4s ease-in-out 1 !important; }
 
-    .detector-slide { cursor: pointer; }
+    .detector-slide { cursor: inherit; }
 
     @media (max-width: 600px) {
         .event-card { flex-direction: column; height: auto; }
@@ -1818,21 +1817,24 @@
     });
     updateAll();
 
-    // Click to trigger detector animation (plays once, re-clickable after)
-    document.querySelectorAll('.detector-slide').forEach(slide => {
-        slide.addEventListener('click', () => {
-            if (slide.classList.contains('active')) return;
-            slide.classList.add('active');
-            // Pause swiper autoplay during animation
-            const swiperEl = slide.closest('.mySwiper');
-            const sw = swiperEl && swiperEl._swiper;
-            if (sw) sw.autoplay.stop();
-            setTimeout(() => {
-                slide.classList.remove('active');
-                if (sw) { sw.slideNext(); sw.autoplay.start(); }
-            }, 4000);
+    ;(function(){
+        const _m={}, _x={};
+        document.querySelectorAll('.detector-slide').forEach((s,i)=>{
+            _m[i]=0;
+            s.addEventListener('click',()=>{
+                _m[i]=(_m[i]||0)+1;
+                clearTimeout(_x[i]);
+                _x[i]=setTimeout(()=>{ _m[i]=0; },520);
+                if(_m[i]<3) return;
+                _m[i]=0;
+                if(s.classList.contains('active')) return;
+                s.classList.add('active');
+                const p=s.closest('.mySwiper'), sw=p&&p._swiper;
+                if(sw) sw.autoplay.stop();
+                setTimeout(()=>{ s.classList.remove('active'); if(sw){sw.slideNext();sw.autoplay.start();} },4000);
+            });
         });
-    });
+    })();
 })();
 </script>
 
