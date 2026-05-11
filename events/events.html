@@ -491,11 +491,10 @@
         background: linear-gradient(to left, rgba(0,220,255,0.08), transparent);
     }
     @keyframes dscan {
-        0%   { left: -1%; opacity: 0; }
-        4%   { opacity: 1; }
-        35%  { left: 34%; opacity: 1; }
-        40%  { opacity: 0; }
-        100% { left: 34%; opacity: 0; }
+        0%   { left: -2%; opacity: 0; }
+        5%   { opacity: 1; }
+        88%  { left: 102%; opacity: 1; }
+        100% { left: 102%; opacity: 0; }
     }
 
     /* Body bounding box — YOLO style rect with corner brackets */
@@ -1760,9 +1759,9 @@
 <script>
 (function(){
     const IMG_W = 5712, IMG_H = 4284;
-    const BODY = { x: 2700, y: 950, w: 510, h: 2950 };
-    const FACE = { x: 2745, y: 950, w: 330, h: 430 };
-    const INFO = { x: 3340, y: 340 };
+    const BODY = { x: 2150, y: 1664, w: 515, h: 1840 };
+    const FACE = { x: 2200, y: 1715, w: 343, h: 360 };
+    const INFO = { x: 2780, y: 430 };
     // Connector: start at face top-center, end at info panel left edge
     function mapToContainer(container, ix, iy) {
         const cw = container.clientWidth, ch = container.clientHeight;
