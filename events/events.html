@@ -1830,15 +1830,8 @@
     updateAll();
 
     ;(function(){
-        const _m={}, _x={};
-        document.querySelectorAll('.detector-slide').forEach((s,i)=>{
-            _m[i]=0;
+        document.querySelectorAll('.detector-slide').forEach(s=>{
             s.addEventListener('click',()=>{
-                _m[i]=(_m[i]||0)+1;
-                clearTimeout(_x[i]);
-                _x[i]=setTimeout(()=>{ _m[i]=0; },520);
-                if(_m[i]<3) return;
-                _m[i]=0;
                 if(s.classList.contains('active')) return;
                 s.classList.add('active');
                 const p=s.closest('.mySwiper'), sw=p&&p._swiper;
