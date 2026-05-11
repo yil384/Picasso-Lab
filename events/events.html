@@ -466,7 +466,6 @@
     }
     .secret-tip strong { color: #7a4d00; font-weight: 700; }
 
-    /* ── Academician Detector v4 — YOLO-style ── */
     .detector-slide {
         position: relative;
         width: 100%; height: 100%;
@@ -945,7 +944,7 @@
                     <div class="det-face">
                         <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
                     </div>
-                    <div class="det-tag">Academician Pan 99.9%</div>
+                    <div class="det-tag">状元 Chang 99.9%</div>
                     <!-- L-shaped connector: up from face then right to info panel -->
                     <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;">
                         <polyline class="det-line" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
@@ -953,14 +952,14 @@
                         <circle class="det-dot-end" r="2" fill="#00e5ff"/>
                     </svg>
                     <div class="det-info">
-                        <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
+                        <div class="det-info-line">ID: <span class="val">CHANG_ZHUANGYUAN</span></div>
                         <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
-                        <div class="det-info-line">Model: <span class="val">Chang-Net v1.0</span></div>
+                        <div class="det-info-line">Model: <span class="val">Pan-Net v1.0</span></div>
                     </div>
                     <div class="det-hud">
                         <span>FACES: 13</span>
                         <div class="bar"><div class="bar-f"></div></div>
-                        <span>CHANG-NET v1.0</span>
+                        <span>PAN-NET v1.0</span>
                     </div>
                 </div>
             </div>
@@ -972,21 +971,21 @@
                     <div class="det-face">
                         <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
                     </div>
-                    <div class="det-tag">Academician Pan 99.9%</div>
+                    <div class="det-tag">状元 Chang 99.9%</div>
                     <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;">
                         <polyline class="det-line" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
                         <circle class="det-dot-start" r="2" fill="#00e5ff"/>
                         <circle class="det-dot-end" r="2" fill="#00e5ff"/>
                     </svg>
                     <div class="det-info">
-                        <div class="det-info-line">ID: <span class="val">PAN_ACADEMICIAN</span></div>
+                        <div class="det-info-line">ID: <span class="val">CHANG_ZHUANGYUAN</span></div>
                         <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
-                        <div class="det-info-line">Model: <span class="val">Chang-Net v1.0</span></div>
+                        <div class="det-info-line">Model: <span class="val">Pan-Net v1.0</span></div>
                     </div>
                     <div class="det-hud">
                         <span>FACES: 13</span>
                         <div class="bar"><div class="bar-f"></div></div>
-                        <span>CHANG-NET v1.0</span>
+                        <span>PAN-NET v1.0</span>
                     </div>
                 </div>
             </div>
@@ -1760,14 +1759,10 @@
 <!-- Detector position: map image-space coords to container dynamically -->
 <script>
 (function(){
-    // Person coordinates in original image (5712 x 4284)
     const IMG_W = 5712, IMG_H = 4284;
-    // Body bounding box in image space
-    const BODY = { x: 1776, y: 1664, w: 515, h: 1840 };
-    // Face box in image space
-    const FACE = { x: 1879, y: 1715, w: 343, h: 360 };
-    // Info panel anchor in image space (top-left of panel)
-    const INFO = { x: 2370, y: 430 };
+    const BODY = { x: 2700, y: 950, w: 510, h: 2950 };
+    const FACE = { x: 2745, y: 950, w: 330, h: 430 };
+    const INFO = { x: 3340, y: 340 };
     // Connector: start at face top-center, end at info panel left edge
     function mapToContainer(container, ix, iy) {
         const cw = container.clientWidth, ch = container.clientHeight;
