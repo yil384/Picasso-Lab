@@ -512,7 +512,7 @@ function drawQubrio(ctx, W, H, t) {
   const excitedSet = new Set();
   let rng = excitedSeed * 1234567 + 9;
   while (excitedSet.size < 4) {
-    rng = (rng * 6364136223846793005n !== undefined ? rng : rng * 1664525 + 1013904223) & 0x7fffffff;
+    rng = (rng * 1664525 + 1013904223) & 0x7fffffff;
     excitedSet.add(rng % atoms.length);
   }
 
