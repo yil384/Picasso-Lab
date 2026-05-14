@@ -67,7 +67,7 @@
       position: relative;
     }
     .project-card:hover {
-      transform: translateY(-6px);
+      transform: translateY(-5px);
       box-shadow: 0 16px 48px rgba(0,0,0,.12);
       border-color: rgba(0,0,0,.11);
     }
@@ -79,44 +79,45 @@
       flex-shrink: 0;
     }
 
-    /* Thumbnail — screenshot as background */
+    /* Thumbnail */
     .card-thumb {
       width: 100%;
-      height: 210px;
+      height: 195px;
       position: relative;
       overflow: hidden;
       flex-shrink: 0;
-      background-size: cover;
-      background-position: top center;
-      background-repeat: no-repeat;
     }
+    .card-thumb svg.art { width: 100%; height: 100%; display: block; }
 
-    /* Dark overlay so particles pop */
-    .card-thumb::before {
-      content: '';
-      position: absolute; inset: 0; z-index: 1;
-      background: linear-gradient(to bottom, rgba(4,6,20,.42) 0%, rgba(4,6,20,.60) 100%);
-      pointer-events: none;
-    }
-
-    /* Particle canvas */
-    .thumb-canvas {
+    /* Real image */
+    .card-thumb .thumb-img {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
+      object-fit: var(--thumb-fit, cover);
+      object-position: center;
       display: block;
-      z-index: 2;
-      pointer-events: none;
+      transform: scale(var(--thumb-scale, 1));
+      transform-origin: center center;
+      transition: transform .5s ease;
+    }
+    .project-card:hover .thumb-img { transform: scale(calc(var(--thumb-scale, 1) + 0.04)); }
+
+    /* Top mask — kills bad gradients at image top edge */
+    .thumb-top-mask {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 44px;
+      pointer-events: none; z-index: 2;
     }
 
     /* Bottom fade — blends thumbnail into white card body */
     .card-thumb::after {
       content: '';
-      position: absolute; bottom: 0; left: 0; right: 0; height: 36px;
-      background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,.6) 55%, rgba(255,255,255,.98) 100%);
-      pointer-events: none; z-index: 5;
+      position: absolute; bottom: 0; left: 0; right: 0; height: 18px;
+      background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,.6) 60%, rgba(255,255,255,.97) 100%);
+      pointer-events: none; z-index: 2;
     }
 
-    /* Decorative corner-bracket overlay */
+    /* Decorative corner-bracket overlay (viewfinder aesthetic) */
     .thumb-deco {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
@@ -147,7 +148,7 @@
 
     /* Live badge */
     .live-pill {
-      position: absolute; top: 12px; right: 12px; z-index: 4;
+      position: absolute; top: 12px; right: 12px; z-index: 3;
       display: inline-flex; align-items: center; gap: 5px;
       background: rgba(10,12,24,.55);
       backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -311,7 +312,7 @@
       .hero h1 { font-size: 1.6rem; }
       .wrapper { padding: 22px 14px 40px; }
       .project-grid { grid-template-columns: 1fr; gap: 16px; }
-      .card-thumb { height: 180px; }
+      .card-thumb { height: 165px; }
       .bar-url { display: none; }
       .iframe-bar { padding: 0 10px; gap: 8px; }
     }
@@ -375,127 +376,99 @@
 </div>
 
 <script>
-// ─── Project data ─────────────────────────────────────────────────────────────
+
 const PROJECTS = [
   {
-    id: 'qubrio', name: "Qubrio", url: "https://qubrio.picasso-lab.com/",
-    img: "qubrio.png",
-    category: "Quantum Computing", accent: "#7c3aed", accentBg: "rgba(124,58,237,.10)",
+    id: 'qubrio',
+    name: "Qubrio",
+    url: "https://qubrio.picasso-lab.com/",
+    category: "Quantum Computing",
+    accent: "#7c3aed",
+    accentBg: "rgba(124,58,237,.10)",
     desc: "A multi-agent LLM compiler for neutral atom quantum computers. Specialized agents handle qubit placement, atom routing, and schedule optimization — achieving 4.7× hardware runtime reduction over state-of-the-art baselines.",
-    tags: ["Quantum Compilation", "Multi-Agent", "LLM"], bracketColor: "rgba(167,139,250,.7)",
+    tags: ["Quantum Compilation", "Multi-Agent", "LLM"],
+    img: "https://raw.githubusercontent.com/yil384/Picasso-Lab/main/projects/qubrio.png",
+    // transparent PNG → show on dark purple radial bg; contain + slight zoom
+    thumbBg: "radial-gradient(ellipse at 42% 52%, #1e0b4a 0%, #08001a 100%)",
+    thumbFit: "contain",
+    thumbScale: "1.22",
+    thumbTopMask: null,
+    bracketColor: "rgba(167,139,250,.7)",
   },
   {
-    id: 'tritongym', name: "TritonGym", url: "https://tritongym.picasso-lab.com",
-    img: "tritongym.png",
-    category: "LLM Benchmark", accent: "#059669", accentBg: "rgba(5,150,105,.10)",
+    id: 'tritongym',
+    name: "TritonGym",
+    url: "https://tritongym.picasso-lab.com",
+    category: "LLM Benchmark",
+    accent: "#059669",
+    accentBg: "rgba(5,150,105,.10)",
     desc: "An ICML 2026 benchmark evaluating LLMs on generating optimized Triton GPU kernels via agentic workflows. 164 operators, four agent strategies, and a live leaderboard ranking models by correctness and kernel performance.",
-    tags: ["Triton", "LLM", "Benchmark", "ICML 2026"], bracketColor: "rgba(52,211,153,.7)",
+    tags: ["Triton", "LLM", "Benchmark", "ICML 2026"],
+    img: "https://raw.githubusercontent.com/yil384/Picasso-Lab/main/projects/tritongym.png",
+    // has own dark bg; cover; mask top gray gradient away
+    thumbBg: "#010c06",
+    thumbFit: "cover",
+    thumbScale: "1.0",
+    thumbTopMask: "linear-gradient(to bottom, #010c06 0%, transparent 100%)",
+    bracketColor: "rgba(52,211,153,.7)",
   },
   {
-    id: 'tritondft', name: "TritonDFT", url: "https://tritondft.com/",
-    img: "tritondft.png",
-    category: "AI for Science", accent: "#0284c7", accentBg: "rgba(2,132,199,.10)",
-    desc: "A multi-agent AI system automating Density Functional Theory (DFT) calculations in materials science. Four specialized agents — Planner, Executor, Analyzer, Refiner — reduce per-step time from hours to seconds.",
-    tags: ["DFT", "Materials Science", "Multi-Agent"], bracketColor: "rgba(56,189,248,.7)",
+    id: 'tritondft',
+    name: "TritonDFT",
+    url: "https://tritondft.com/",
+    category: "AI for Science",
+    accent: "#0284c7",
+    accentBg: "rgba(2,132,199,.10)",
+    desc: "A multi-agent AI system that automates Density Functional Theory (DFT) calculations in materials science. Four specialized agents — Planner, Executor, Analyzer, Refiner — reduce per-step time from hours to seconds.",
+    tags: ["DFT", "Materials Science", "Multi-Agent"],
+    img: "https://raw.githubusercontent.com/yil384/Picasso-Lab/main/projects/tritondft.png",
+    // transparent/white PNG → show on deep navy bg; contain
+    thumbBg: "linear-gradient(155deg, #021828 0%, #030d1c 100%)",
+    thumbFit: "contain",
+    thumbScale: "1.1",
+    thumbTopMask: null,
+    bracketColor: "rgba(56,189,248,.7)",
   },
   {
-    id: 'chipmate', name: "ChipMate", url: "https://chipmate.picasso-lab.com",
-    img: "chipmate.png",
-    category: "Chip Design", accent: "#d97706", accentBg: "rgba(217,119,6,.10)",
+    id: 'chipmate',
+    name: "ChipMate",
+    url: "https://chipmate.picasso-lab.com",
+    category: "Chip Design",
+    accent: "#d97706",
+    accentBg: "rgba(217,119,6,.10)",
     desc: "A self-trained multi-agent framework for RTL (Verilog) code generation. Two agents cross-verify outputs via waveform comparison — outperforming DeepSeek V3 despite being 20–180× smaller.",
-    tags: ["RTL", "Verilog", "Multi-Agent", "EDA"], bracketColor: "rgba(251,191,36,.7)",
+    tags: ["RTL", "Verilog", "Multi-Agent", "EDA"],
+    img: "https://raw.githubusercontent.com/yil384/Picasso-Lab/main/projects/chipmate.png",
+    thumbBg: "linear-gradient(135deg, #0d0800 0%, #08080f 60%, #001a1a 100%)",
+    thumbFit: "contain",
+    thumbScale: "1.15",
+    thumbTopMask: null,
+    bracketColor: "rgba(251,191,36,.7)",
   },
 ];
 
-// ─── Particle constellation animation ─────────────────────────────────────────
-function initParticles() {
-  document.querySelectorAll('.thumb-canvas').forEach(cv => {
-    if (cv._started) return;
-    cv._started = true;
-
-    const hex = cv.dataset.accent;
-    const r = parseInt(hex.slice(1,3), 16);
-    const g = parseInt(hex.slice(3,5), 16);
-    const b = parseInt(hex.slice(5,7), 16);
-
-    const W = cv.offsetWidth  || 480;
-    const H = cv.offsetHeight || 210;
-    cv.width  = W;
-    cv.height = H;
-
-    const pts = Array.from({length: 26}, () => ({
-      x:  Math.random() * W,
-      y:  Math.random() * H,
-      vx: (Math.random() - .5) * .45,
-      vy: (Math.random() - .5) * .45,
-      r:  Math.random() * 1.6 + .7,
-      ph: Math.random() * Math.PI * 2,
-    }));
-
-    const ctx = cv.getContext('2d');
-    const LINK = 88; // max distance for connecting lines
-
-    function frame() {
-      ctx.clearRect(0, 0, W, H);
-
-      // update
-      for (const p of pts) {
-        p.x  += p.vx;
-        p.y  += p.vy;
-        p.ph += .016;
-        if (p.x < 0) p.x = W;
-        if (p.x > W) p.x = 0;
-        if (p.y < 0) p.y = H;
-        if (p.y > H) p.y = 0;
-      }
-
-      // connecting lines
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const dx = pts[i].x - pts[j].x;
-          const dy = pts[i].y - pts[j].y;
-          const d  = Math.sqrt(dx*dx + dy*dy);
-          if (d < LINK) {
-            ctx.beginPath();
-            ctx.moveTo(pts[i].x, pts[i].y);
-            ctx.lineTo(pts[j].x, pts[j].y);
-            ctx.strokeStyle = `rgba(${r},${g},${b},${.22 * (1 - d / LINK)})`;
-            ctx.lineWidth   = .9;
-            ctx.stroke();
-          }
-        }
-      }
-
-      // dots
-      for (const p of pts) {
-        const a = .55 + .35 * Math.sin(p.ph);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
-        ctx.fill();
-      }
-
-      requestAnimationFrame(frame);
-    }
-    frame();
-  });
-}
-
-// ─── Card rendering ────────────────────────────────────────────────────────────
 function renderCards() {
   document.getElementById('project-grid').innerHTML = PROJECTS.map((p, i) => `
-    <div class="project-card" style="--accent:${p.accent}" onclick="openProject(${i})">
+    <div class="project-card" style="--accent:${p.accent};--thumb-fit:${p.thumbFit};--thumb-scale:${p.thumbScale}" onclick="openProject(${i})">
       <div class="card-accent-bar" style="background:${p.accent}"></div>
-      <div class="card-thumb" style="background-image:url('${p.img}')">
-        <canvas class="thumb-canvas" data-accent="${p.accent}"></canvas>
-        <svg class="thumb-deco" viewBox="0 0 480 210" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <div class="card-thumb" style="background:${p.thumbBg}">
+        <img class="thumb-img" src="${p.img}" alt="${p.name}"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        <svg class="art" style="display:none" viewBox="0 0 480 195" xmlns="http://www.w3.org/2000/svg">
+          <rect width="480" height="195" fill="rgba(255,255,255,.04)"/>
+          <text x="240" y="105" text-anchor="middle" font-family="Inter,sans-serif"
+                font-size="13" fill="rgba(255,255,255,.3)">${p.name}</text>
+        </svg>
+        ${p.thumbTopMask ? `<div class="thumb-top-mask" style="background:${p.thumbTopMask}"></div>` : ''}
+        <!-- Corner bracket decoration -->
+        <svg class="thumb-deco" viewBox="0 0 480 195" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
           <g stroke="${p.bracketColor}" stroke-width="1.5" fill="none" stroke-linecap="round">
             <path d="M14 30 L14 13 L30 13"/>
             <path d="M450 13 L466 13 L466 30"/>
-            <path d="M14 180 L14 197 L30 197"/>
-            <path d="M450 197 L466 197 L466 180"/>
+            <path d="M14 165 L14 182 L30 182"/>
+            <path d="M450 182 L466 182 L466 165"/>
           </g>
-          <rect x="13" y="12" width="454" height="186" rx="1"
+          <rect x="13" y="12" width="454" height="171" rx="1"
                 stroke="${p.bracketColor}" stroke-width=".4" fill="none" stroke-dasharray="3 6"/>
         </svg>
         <div class="thumb-scan"></div>
@@ -523,13 +496,12 @@ function renderCards() {
   `).join('');
 }
 
-// ─── iframe viewer ─────────────────────────────────────────────────────────────
 function openProject(idx) {
   const p = PROJECTS[idx];
-  const view    = document.getElementById('iframe-view');
-  const iframe  = document.getElementById('project-iframe');
-  const overlay = document.getElementById('iframe-overlay');
-  const blocked = document.getElementById('iframe-blocked');
+  const view     = document.getElementById('iframe-view');
+  const iframe   = document.getElementById('project-iframe');
+  const overlay  = document.getElementById('iframe-overlay');
+  const blocked  = document.getElementById('iframe-blocked');
   const loadInner = document.getElementById('loading-inner');
 
   document.getElementById('bar-url-text').textContent = p.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -548,7 +520,12 @@ function openProject(idx) {
 
   let done = false;
   const timer = setTimeout(() => { if (!done) showBlocked(); }, 11000);
-  iframe.onload = () => { done = true; clearTimeout(timer); overlay.classList.add('hide'); };
+
+  iframe.onload = () => {
+    done = true;
+    clearTimeout(timer);
+    overlay.classList.add('hide');
+  };
   iframe.src = p.url;
 }
 
@@ -566,7 +543,6 @@ function closeProject() {
 }
 
 renderCards();
-requestAnimationFrame(initParticles);
 </script>
 </body>
 </html>
