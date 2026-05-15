@@ -345,6 +345,8 @@
         cursor: pointer;
         font-size: 0.85em;
         display: inline-block;
+        --tip-shift: 0px;
+        --tip-arrow-x: 50%;
     }
     /* 鎏金闪烁效果 wrapper */
     .secret-note img {
@@ -398,12 +400,13 @@
     .secret-tip {
         visibility: hidden;
         opacity: 0;
-        transform: translateY(-6px) scale(0.95);
+        transform: translateX(calc(-50% + var(--tip-shift))) translateY(-6px) scale(0.95);
+        transform-origin: var(--tip-arrow-x) top;
         transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s 0.22s;
 
         position: absolute;
         top: calc(100% + 13px);
-        right: 0;
+        left: 50%;
 
         background: linear-gradient(150deg, #fffef7 0%, #fffae8 100%);
         border-radius: 14px;
@@ -411,7 +414,7 @@
 
         width: max-content;
         min-width: 178px;
-        max-width: min(218px, 72vw);
+        max-width: min(230px, calc(100vw - 24px));
         white-space: normal;
         line-height: 1.6;
 
@@ -433,8 +436,9 @@
     .secret-tip::before {
         content: '';
         position: absolute;
-        right: 9px;
+        left: var(--tip-arrow-x);
         bottom: 100%;
+        transform: translateX(-50%);
         border: 7px solid transparent;
         border-bottom-color: #c9950a;
     }
@@ -442,15 +446,18 @@
     .secret-tip::after {
         content: '';
         position: absolute;
-        right: 10px;
+        left: var(--tip-arrow-x);
         bottom: calc(100% - 3px);
+        transform: translateX(-50%);
         border: 6px solid transparent;
         border-bottom-color: #fffef7;
     }
-    .secret-note:hover .secret-tip {
+    .secret-note:hover .secret-tip,
+    .secret-note:focus-visible .secret-tip,
+    .secret-note.tip-open .secret-tip {
         visibility: visible;
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(calc(-50% + var(--tip-shift))) translateY(0) scale(1);
         transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s 0s;
     }
     .tip-header {
@@ -643,6 +650,15 @@
         .event-date { font-size: 0.78em; margin-bottom: 5px; }
         .event-title { font-size: 1.05em; margin-bottom: 8px; }
         .event-text { font-size: 0.88em; margin-bottom: 10px; }
+        .secret-note {
+            outline: none;
+        }
+        .secret-tip {
+            width: min(260px, calc(100vw - 24px));
+            min-width: 0;
+            max-width: calc(100vw - 24px);
+            font-size: 12px;
+        }
         #danmaku-container, #lightbox-overlay { height: 45%; }
         .danmaku-input-area { margin: 20px auto 20px; width: 92%; }
         .news-banner { font-size: 0.82em; }
@@ -944,7 +960,7 @@
                     <div class="det-face">
                         <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
                     </div>
-                    <div class="det-tag">状元 Chang 99.9%</div>
+                    <div class="det-tag">Chang Chen 99.9%</div>
                     <!-- L-shaped connector: up from face then right to info panel -->
                     <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;">
                         <polyline class="det-line" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
@@ -952,14 +968,14 @@
                         <circle class="det-dot-end" r="2" fill="#00e5ff"/>
                     </svg>
                     <div class="det-info">
-                        <div class="det-info-line">ID: <span class="val">CHANG_ZHUANGYUAN</span></div>
+                        <div class="det-info-line">ID: <span class="val">CHANG_CHEN</span></div>
                         <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
-                        <div class="det-info-line">Model: <span class="val">Pan-Net v1.0</span></div>
+                        <div class="det-info-line">Model: <span class="val">Zhengding-Net v1.0</span></div>
                     </div>
                     <div class="det-hud">
                         <span>FACES: 13</span>
                         <div class="bar"><div class="bar-f"></div></div>
-                        <span>PAN-NET v1.0</span>
+                        <span>ZHENGDING-NET v1.0</span>
                     </div>
                 </div>
             </div>
@@ -971,21 +987,21 @@
                     <div class="det-face">
                         <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
                     </div>
-                    <div class="det-tag">状元 Chang 99.9%</div>
+                    <div class="det-tag">Chang Chen 99.9%</div>
                     <svg class="det-connector" style="position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none;opacity:0;">
                         <polyline class="det-line" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1" stroke-dasharray="3 2"/>
                         <circle class="det-dot-start" r="2" fill="#00e5ff"/>
                         <circle class="det-dot-end" r="2" fill="#00e5ff"/>
                     </svg>
                     <div class="det-info">
-                        <div class="det-info-line">ID: <span class="val">CHANG_ZHUANGYUAN</span></div>
+                        <div class="det-info-line">ID: <span class="val">CHANG_CHEN</span></div>
                         <div class="det-info-line">Conf: <span class="val">99.97%</span></div>
-                        <div class="det-info-line">Model: <span class="val">Pan-Net v1.0</span></div>
+                        <div class="det-info-line">Model: <span class="val">Zhengding-Net v1.0</span></div>
                     </div>
                     <div class="det-hud">
                         <span>FACES: 13</span>
                         <div class="bar"><div class="bar-f"></div></div>
-                        <span>PAN-NET v1.0</span>
+                        <span>ZHENGDING-NET v1.0</span>
                     </div>
                 </div>
             </div>
@@ -994,7 +1010,7 @@
     </div>
     <div class="event-content">
         <div class="event-date">April 1, 2026</div>
-        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip"><span class="tip-header">👑 Did you know?</span>Chang was the <strong>#1 Gaokao scorer</strong> (状元) in <strong>Wenzhou, Zhejiang</strong>! ✨</span></span></h3>
+        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note" tabindex="0" role="button" aria-describedby="chang-zhuangyuan-tip" aria-label="Show Chang Chen Gaokao note"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip" id="chang-zhuangyuan-tip"><span class="tip-header">👑 Did you know?</span>Chang was the <strong>#1 Gaokao scorer</strong> (状元) in <strong>Wenzhou, Zhejiang</strong>! ✨</span></span></h3>
         <p class="event-text">
             Our lab celebrated <strong>Dr. Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Chang is also the first author of <strong><em>Centauri</em></strong>, which won the <strong>ASPLOS 2024 Best Paper Award</strong>. Welcome aboard, Chang!
         </p>
@@ -1434,6 +1450,73 @@
     sendBtn.addEventListener('click', sendDanmaku);
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDanmaku(); }
+    });
+
+    // -----------------------------------------------------------------
+    // 👑 Secret Tooltip: clamp to viewport and support tap on mobile
+    // -----------------------------------------------------------------
+    const secretNotes = Array.from(document.querySelectorAll('.secret-note'));
+    const touchTooltipQuery = window.matchMedia('(hover: none), (pointer: coarse)');
+
+    function closeSecretTips(except = null) {
+        secretNotes.forEach(note => {
+            if (note !== except) {
+                note.classList.remove('tip-open');
+                if (document.activeElement === note) note.blur();
+            }
+        });
+    }
+
+    function positionSecretTip(note) {
+        const tip = note.querySelector('.secret-tip');
+        if (!tip) return;
+
+        const noteRect = note.getBoundingClientRect();
+        const tipWidth = tip.offsetWidth || 230;
+        const viewportWidth = window.innerWidth;
+        const padding = 12;
+        const triggerCenter = noteRect.left + noteRect.width / 2;
+        const idealLeft = triggerCenter - tipWidth / 2;
+        let shift = 0;
+
+        if (idealLeft < padding) {
+            shift = padding - idealLeft;
+        } else if (idealLeft + tipWidth > viewportWidth - padding) {
+            shift = viewportWidth - padding - (idealLeft + tipWidth);
+        }
+
+        const arrowX = Math.max(14, Math.min(tipWidth - 14, tipWidth / 2 - shift));
+        note.style.setProperty('--tip-shift', `${Math.round(shift)}px`);
+        note.style.setProperty('--tip-arrow-x', `${Math.round(arrowX)}px`);
+    }
+
+    secretNotes.forEach(note => {
+        note.addEventListener('pointerenter', () => positionSecretTip(note));
+        note.addEventListener('focusin', () => positionSecretTip(note));
+
+        note.addEventListener('click', (e) => {
+            positionSecretTip(note);
+            if (!touchTooltipQuery.matches) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            const wasOpen = note.classList.contains('tip-open');
+            closeSecretTips(note);
+            note.classList.toggle('tip-open', !wasOpen);
+            if (wasOpen) note.blur();
+        });
+    });
+
+    document.addEventListener('pointerdown', (e) => {
+        if (!e.target.closest('.secret-note')) closeSecretTips();
+    });
+
+    window.addEventListener('resize', () => {
+        secretNotes.forEach(note => {
+            if (note.matches(':hover') || document.activeElement === note || note.classList.contains('tip-open')) {
+                positionSecretTip(note);
+            }
+        });
     });
 
     // -----------------------------------------------------------------
