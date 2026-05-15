@@ -38,11 +38,11 @@
        ========================================= */
     #danmaku-container {
         position: fixed;
-        top: 0;
+        top: 40px; /* clear the 40px news banner */
         left: 0;
         width: 100%;
-        height: 45%; /* 设定弹幕区域高度 */
-        pointer-events: none; 
+        height: calc(50vh - 40px); /* full half-screen minus the banner */
+        pointer-events: none;
         z-index: 9999;
         overflow: hidden;
         mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
@@ -1240,22 +1240,24 @@
     // 🎨 Render Logic (Updated)
     // -----------------------------------------------------------------
     const container = document.getElementById('danmaku-container');
-    const trackHeight = 50; 
-    let tracks = []; 
+    const TRACK_H   = 50;       // px per lane
+    const DM_SPEED  = 110;      // px/s — fixed speed so same-lane items never catch each other
+    const LANE_GAP  = 350;      // ms of extra clearance after tail enters screen
+    let tracks = [];
 
     function initTracks() {
-        const containerH = window.innerHeight * 0.45; 
-        const maxTracks = Math.floor(containerH / trackHeight);
-        tracks = [];
-        for(let i=0; i<maxTracks; i++) tracks[i] = { available: true };
+        const containerH = container.offsetHeight || (window.innerHeight * 0.5 - 40);
+        const n = Math.floor(containerH / TRACK_H);
+        tracks = Array.from({length: n}, () => ({ nextAt: 0 }));
     }
     initTracks();
     window.addEventListener('resize', initTracks);
 
     function getAvailableTrack() {
-        const avail = tracks.map((t, i) => t.available ? i : -1).filter(i => i !== -1);
-        if (avail.length > 0) return avail[Math.floor(Math.random() * avail.length)];
-        return Math.floor(Math.random() * tracks.length);
+        const now = Date.now();
+        const avail = tracks.reduce((a, t, i) => { if (t.nextAt <= now) a.push(i); return a; }, []);
+        if (avail.length === 0) return -1;
+        return avail[Math.floor(Math.random() * avail.length)];
     }
 
     function fireDanmaku(data, isPriority) {
@@ -1311,23 +1313,25 @@
             });
         }
 
-        const trackIdx = getAvailableTrack();
-        const safeTrackIdx = trackIdx !== undefined ? trackIdx : 0;
-        
-        el.style.top = (safeTrackIdx * trackHeight + 10) + 'px';
-        
-        if (tracks[safeTrackIdx]) {
-            tracks[safeTrackIdx].available = false;
-            setTimeout(() => { if(tracks[safeTrackIdx]) tracks[safeTrackIdx].available = true; }, 1000);
-        }
-
+        // Append first so we can measure actual rendered width
         container.appendChild(el);
 
-        const w = 200; 
+        const trackIdx = getAvailableTrack();
+        if (trackIdx === -1) {
+            el.remove(); // all lanes busy — drop this one
+            return;
+        }
+
+        const elWidth = el.offsetWidth || 220;
         const screenW = window.innerWidth;
-        const duration = (screenW + w) / 100 + Math.random() * 2; 
-        
+        const duration = (screenW + elWidth) / DM_SPEED; // fixed speed → no catch-up in same lane
+
+        el.style.top = (trackIdx * TRACK_H + 6) + 'px';
         el.style.animationDuration = duration + 's';
+
+        // Block this lane until the tail of this danmaku has fully entered the screen
+        // tail clears right edge after: elWidth / DM_SPEED seconds
+        tracks[trackIdx].nextAt = Date.now() + (elWidth / DM_SPEED) * 1000 + LANE_GAP;
 
         el.addEventListener('animationend', () => el.remove());
     }
