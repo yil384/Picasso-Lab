@@ -1,0 +1,324 @@
+<!--
+  ╔══════════════════════════════════════════════════════╗
+  ║  院士头饰模板                                         ║
+  ║  配置说明（每个人只需改这一个数字）：                    ║
+  ║  --head-y : 头顶在头像圆圈中的位置（从顶部算的 %）       ║
+  ║             通常在 8%~22% 之间，默认 13%               ║
+  ║  --head-x : 水平中心偏移（默认 50% = 正中）             ║
+  ╚══════════════════════════════════════════════════════╝
+-->
+
+<div class="ys-wrap" style="--head-y: 13%; --head-x: 50%">
+
+  <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/zaifeng.png"
+       class="avatar" alt="avatar" />
+
+  <!-- 院士帽 -->
+  <div class="ys-hat" aria-hidden="true">
+    <svg viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Cap body gradient -->
+        <linearGradient id="cap-g" x1="0.25" y1="0" x2="0.75" y2="1">
+          <stop offset="0%"   stop-color="#2e2c58"/>
+          <stop offset="100%" stop-color="#0c0b1e"/>
+        </linearGradient>
+        <!-- Shine radial on dome -->
+        <radialGradient id="shine-g" cx="36%" cy="22%" r="54%">
+          <stop offset="0%"   stop-color="rgba(255,255,255,0.20)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+        <!-- Wing gradient (darker at tips) -->
+        <linearGradient id="wing-g" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stop-color="#111028"/>
+          <stop offset="45%"  stop-color="#1d1c3a"/>
+          <stop offset="55%"  stop-color="#1d1c3a"/>
+          <stop offset="100%" stop-color="#111028"/>
+        </linearGradient>
+        <!-- Shadow filter for depth -->
+        <filter id="drop-s" x="-25%" y="-25%" width="150%" height="150%">
+          <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="rgba(0,0,0,0.50)"/>
+        </filter>
+        <!-- Soft glow on gold text -->
+        <filter id="glow-f" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- ── Wings (drawn first so cap sits on top) ── -->
+      <!-- Left wing -->
+      <path d="M 91 79 L 16 75 Q 5 75 5 83 Q 5 91 16 91 L 91 95 Z"
+            fill="url(#wing-g)" filter="url(#drop-s)"/>
+      <!-- Left wing highlight edge -->
+      <path d="M 18 77 Q 55 74 89 79" stroke="rgba(255,255,255,0.07)"
+            stroke-width="1.5" fill="none"/>
+      <!-- Left wing tip gem -->
+      <ellipse cx="51" cy="83" rx="4.5" ry="3" fill="#b8891c" opacity="0.75"/>
+      <ellipse cx="51" cy="83" rx="2.8" ry="1.8" fill="#ffd060" opacity="0.85"/>
+
+      <!-- Right wing -->
+      <path d="M 209 79 L 284 75 Q 295 75 295 83 Q 295 91 284 91 L 209 95 Z"
+            fill="url(#wing-g)" filter="url(#drop-s)"/>
+      <path d="M 282 77 Q 245 74 211 79" stroke="rgba(255,255,255,0.07)"
+            stroke-width="1.5" fill="none"/>
+      <ellipse cx="249" cy="83" rx="4.5" ry="3" fill="#b8891c" opacity="0.75"/>
+      <ellipse cx="249" cy="83" rx="2.8" ry="1.8" fill="#ffd060" opacity="0.85"/>
+
+      <!-- ── Cap dome body ── -->
+      <path d="M 93 120
+               C 90 99 87 76 91 52
+               C 95 27 113 7 150 7
+               C 187 7 205 27 209 52
+               C 213 76 210 99 207 120 Z"
+            fill="url(#cap-g)" filter="url(#drop-s)"/>
+      <!-- Shine overlay on dome -->
+      <path d="M 93 120 C 90 99 87 76 91 52 C 95 27 113 7 150 7
+               C 187 7 205 27 209 52 C 213 76 210 99 207 120 Z"
+            fill="url(#shine-g)" pointer-events="none"/>
+
+      <!-- Dome highlight stroke (left-side gloss) -->
+      <path d="M 110 28 C 119 17 135 10 153 9"
+            stroke="rgba(255,255,255,0.26)" stroke-width="2.8"
+            fill="none" stroke-linecap="round"/>
+
+      <!-- ── Brim (bottom of cap) ── -->
+      <rect x="89" y="116" width="122" height="14" rx="5" fill="#0b0a1c"/>
+      <!-- Gold trim strip on brim top -->
+      <rect x="89" y="116" width="122" height="4" rx="2" fill="#c9a227"/>
+      <!-- Tiny gold dots on brim trim -->
+      <circle cx="110" cy="118" r="1.5" fill="#ffd060" opacity="0.6"/>
+      <circle cx="150" cy="118" r="1.5" fill="#ffd060" opacity="0.6"/>
+      <circle cx="190" cy="118" r="1.5" fill="#ffd060" opacity="0.6"/>
+
+      <!-- Center front ornament on brim -->
+      <circle cx="150" cy="123" r="6"   fill="#9b6e10"/>
+      <circle cx="150" cy="123" r="4.2" fill="#e8ad18"/>
+      <circle cx="150" cy="123" r="2.2" fill="#fff5c0"/>
+
+      <!-- ── 院士 text (gold, glowing) ── -->
+      <text x="150" y="95"
+            text-anchor="middle"
+            dominant-baseline="auto"
+            font-family="'STKaiti','KaiTi','FangSong','SimSun',serif"
+            font-size="22"
+            font-weight="bold"
+            letter-spacing="3"
+            fill="#ffd060"
+            filter="url(#glow-f)"
+            opacity="0.95">院士</text>
+
+      <!-- Subtle vertical center seam on cap (feels 3D) -->
+      <line x1="150" y1="8" x2="150" y2="116"
+            stroke="rgba(0,0,0,0.12)" stroke-width="1.2"/>
+    </svg>
+  </div>
+
+  <!-- Sparkle container -->
+  <div class="ys-sparks" aria-hidden="true"></div>
+
+  <!-- Hint label -->
+  <div class="ys-hint">点击授封 👆</div>
+
+</div><!-- .ys-wrap -->
+
+
+<style>
+/* ── Wrapper ──────────────────────────────────── */
+.ys-wrap {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  /* Let hat overflow above the circle */
+  overflow: visible;
+}
+
+/* ── Avatar ───────────────────────────────────── */
+.avatar {
+  display: block;
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  transition: transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
+              filter 0.35s ease,
+              box-shadow 0.35s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.ys-wrap:hover .avatar {
+  transform: scale(1.07);
+  filter: brightness(1.08);
+}
+
+/* Golden glow when hat is on */
+.ys-wrap.hat-on .avatar {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18),
+              0 0 28px 6px rgba(255,210,50,0.30);
+}
+
+/* ── Hat ──────────────────────────────────────── */
+.ys-hat {
+  position: absolute;
+  /*
+   * Hat sizing: 108% wide so wings extend slightly past the circle edge.
+   * Hat SVG aspect is 300:130 ≈ 2.31:1, so rendered height ≈ 46.7% of 200px.
+   * We want the hat BRIM BOTTOM (SVG y=130/130 = 100%) to sit at --head-y.
+   * ∴ hat bottom edge  = --head-y from avatar top
+   * ∴ bottom           = (100% - --head-y)  [CSS bottom is from containing-block bottom]
+   */
+  width: 108%;
+  left: calc(var(--head-x, 50%) - 54%);  /* center on --head-x */
+  bottom: calc(100% - var(--head-y, 13%));
+  transform-origin: 50% 100%; /* scale/rotate from the hat's bottom center */
+
+  /* Initial (hidden) state */
+  transform: translateY(-110px) rotate(12deg) scale(0.45);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+
+  transition:
+    transform 0.72s cubic-bezier(0.22, 1.55, 0.36, 1),
+    opacity   0.28s ease;
+}
+
+.ys-hat svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  /* Overall drop shadow on the whole hat */
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.45));
+}
+
+/* Hat-on → dropped & settled */
+.ys-wrap.hat-on .ys-hat {
+  transform: translateY(0) rotate(0deg) scale(1);
+  opacity: 1;
+}
+
+/* Wobble settle (applied via JS after drop lands) */
+@keyframes hat-wobble {
+  0%   { transform: rotate(0deg); }
+  22%  { transform: rotate(-2.8deg); }
+  48%  { transform: rotate(1.9deg); }
+  70%  { transform: rotate(-1.1deg); }
+  86%  { transform: rotate(0.5deg); }
+  100% { transform: rotate(0deg); }
+}
+.ys-hat.wobble {
+  animation: hat-wobble 0.55s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+
+/* ── Sparkles ─────────────────────────────────── */
+.ys-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 25;
+  overflow: visible;
+}
+
+.ys-spark {
+  position: absolute;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+@keyframes spark-fly {
+  0%   { opacity: 1; transform: translate(-50%,-50%) scale(1.2); }
+  40%  { opacity: 0.9; }
+  100% { opacity: 0;
+         transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.1); }
+}
+.ys-spark.go {
+  animation: spark-fly 0.7s ease-out forwards;
+}
+
+/* ── Hint label ───────────────────────────────── */
+.ys-hint {
+  position: absolute;
+  bottom: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: rgba(0,0,0,0.35);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.ys-wrap.hat-on .ys-hint,
+.ys-wrap:hover .ys-hint {
+  opacity: 0;
+}
+</style>
+
+
+<script>
+(function () {
+  const wrap   = document.querySelector('.ys-wrap');
+  const hat    = wrap.querySelector('.ys-hat');
+  const sparks = wrap.querySelector('.ys-sparks');
+
+  wrap.addEventListener('click', () => {
+    const putting = !wrap.classList.contains('hat-on');
+    wrap.classList.toggle('hat-on', putting);
+
+    if (putting) {
+      // Wait for spring drop to land, then wobble + sparkle
+      setTimeout(() => {
+        // Wobble settle
+        hat.classList.remove('wobble');
+        void hat.offsetWidth; // force reflow to restart
+        hat.classList.add('wobble');
+        hat.addEventListener('animationend', () => hat.classList.remove('wobble'), { once: true });
+        // Sparkles
+        burstSparks();
+      }, 560);
+    }
+  });
+
+  function burstSparks() {
+    sparks.innerHTML = '';
+
+    const GLYPHS  = ['★', '✦', '✧', '◆', '•', '❋'];
+    const COLORS  = ['#ffd700','#ffc107','#ff6f9c','#a78bfa','#34d399','#38bdf8','#fb923c'];
+    const COUNT   = 11;
+
+    for (let i = 0; i < COUNT; i++) {
+      const sp = document.createElement('span');
+      sp.className = 'ys-spark';
+
+      // Spread evenly around a circle with slight jitter
+      const angle = (Math.PI * 2 / COUNT) * i + (Math.random() - 0.5) * 0.4;
+      const dist  = 38 + Math.random() * 38;
+      const dx    = Math.cos(angle) * dist;
+      const dy    = Math.sin(angle) * dist;
+
+      sp.style.cssText = [
+        `--dx:${dx.toFixed(1)}px`,
+        `--dy:${dy.toFixed(1)}px`,
+        `color:${COLORS[i % COLORS.length]}`,
+        `font-size:${9 + Math.random() * 9}px`,
+        // Cluster near the hat landing zone (upper-center of avatar)
+        `top:${15 + Math.random() * 30}%`,
+        `left:${35 + Math.random() * 30}%`,
+        `animation-delay:${(Math.random() * 0.12).toFixed(3)}s`,
+      ].join(';');
+      sp.textContent = GLYPHS[i % GLYPHS.length];
+
+      sparks.appendChild(sp);
+      // Double rAF to ensure style is applied before class add
+      requestAnimationFrame(() => requestAnimationFrame(() => sp.classList.add('go')));
+    }
+
+    // Clean up after animation
+    setTimeout(() => { sparks.innerHTML = ''; }, 950);
+  }
+})();
+</script>
