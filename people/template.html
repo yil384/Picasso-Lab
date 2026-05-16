@@ -1,15 +1,17 @@
 <!--
   院士头饰模板 — 配置说明
   ┌──────────────────────────────────────────────────────────┐
-  │  --head-y      头顶在圆形头像中的位置（从顶部 %）            │
-  │                通常 25%~45%，越大帽子覆盖区域越高           │
-  │  --head-x      水平中心，默认 50%                          │
-  │  --hat-rotate  帽子旋转角度（deg），匹配人头倾斜度            │
-  │                向右倾斜用正值，向左倾斜用负值                │
+  │  --hat-y       帽子 brim（下沿）在头像中的位置（从顶部 %）   │
+  │                = 头顶在圆里的高度，通常 20%~45%             │
+  │  --hat-size    帽子本身的高度（占头像高度的 %）              │
+  │                通常 15%~40%，越大帽子越高                   │
+  │  --hat-x       水平中心，默认 50%                           │
+  │  --hat-rotate  帽子旋转角度（deg）                          │
+  │                负数 → 向左倾，正数 → 向右倾                 │
   └──────────────────────────────────────────────────────────┘
 -->
 
-<div class="ys-wrap" style="--head-y:35%; --head-x:47%; --hat-rotate:-12deg">
+<div class="ys-wrap" style="--hat-y:35%; --hat-size:28%; --hat-x:47%; --hat-rotate:-12deg">
   <div class="ys-stage">
 
     <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/zaifeng.png"
@@ -204,11 +206,12 @@
 /* ── Hat outer: handles position + rotation + reveal ── */
 .ys-hat {
   position: absolute;
-  top: 0;
-  /* Center hat on --head-x; width 140% so wings extend past the circle */
-  left: calc(var(--head-x, 50%) - 70%);
+  /* Brim sits at --hat-y from top; hat extends upward by --hat-size */
+  top: calc(var(--hat-y, 35%) - var(--hat-size, 28%));
+  /* Center hat on --hat-x; width 140% so wings extend past the circle */
+  left: calc(var(--hat-x, 50%) - 70%);
   width: 140%;
-  height: var(--head-y, 35%);
+  height: var(--hat-size, 28%);
   /* Rotate from brim centre (bottom) to match head tilt */
   transform-origin: 50% 100%;
   z-index: 20;
@@ -253,9 +256,9 @@
 /* ── 院士 label: undistorted, rotates with hat ── */
 .ys-label {
   position: absolute;
-  /* Sit at ~60% down the hat height, at horizontal center */
-  top: calc(var(--head-y, 35%) * 0.60);
-  left: var(--head-x, 50%);
+  /* Sit at ~60% down from hat top = hat-y - 40% of hat-size */
+  top: calc(var(--hat-y, 35%) - var(--hat-size, 28%) * 0.40);
+  left: var(--hat-x, 50%);
   transform-origin: center center;
   transform: translateX(-50%) rotate(var(--hat-rotate, 0deg));
   font-family: 'STKaiti','KaiTi','FangSong','SimSun',serif;
