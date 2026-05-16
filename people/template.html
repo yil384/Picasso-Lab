@@ -11,7 +11,7 @@
   └──────────────────────────────────────────────────────────┘
 -->
 
-<div class="ys-wrap" style="--hat-y:35%; --hat-size:28%; --hat-x:47%; --hat-rotate:-12deg">
+<div class="ys-wrap" style="--hat-y:35%; --hat-size:18%; --hat-x:67%; --hat-rotate:-8deg">
   <div class="ys-stage">
 
     <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/zaifeng.png"
@@ -206,12 +206,16 @@
 /* ── Hat outer: handles position + rotation + reveal ── */
 .ys-hat {
   position: absolute;
-  /* Brim sits at --hat-y from top; hat extends upward by --hat-size */
-  top: calc(var(--hat-y, 35%) - var(--hat-size, 28%));
-  /* Center hat on --hat-x; width 140% so wings extend past the circle */
-  left: calc(var(--hat-x, 50%) - 70%);
-  width: 140%;
-  height: var(--hat-size, 28%);
+  /*
+   * --hat-size controls HEIGHT (% of 200px avatar).
+   * aspect-ratio:3.3/1 makes width auto-scale with height → uniform resize.
+   * Brim (bottom edge) sits at --hat-y from stage top.
+   * left = hat-x  minus  half the computed width (= hat-size * 3.3/2 = * 1.65)
+   */
+  height: var(--hat-size, 20%);
+  aspect-ratio: 3.3 / 1;
+  top:  calc(var(--hat-y, 35%) - var(--hat-size, 20%));
+  left: calc(var(--hat-x, 50%) - var(--hat-size, 20%) * 1.65);
   /* Rotate from brim centre (bottom) to match head tilt */
   transform-origin: 50% 100%;
   z-index: 20;
