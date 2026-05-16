@@ -151,8 +151,8 @@
         top: 0; 
         left: 0; 
         width: 100%; 
-        height: 45%; /* 🔥 关键修改：高度限制为 45%，与弹幕区一致 */
-        background: rgba(0,0,0,0.9); /* 背景更深一点，突出图片 */
+        height: 100%;
+        background: rgba(0,0,0,0.72);
         z-index: 20000;
         display: none;
         justify-content: center;
@@ -160,7 +160,6 @@
         opacity: 0;
         transition: opacity 0.3s;
         backdrop-filter: blur(8px);
-        border-bottom: 2px solid rgba(255,255,255,0.1); /* 底部加个分割线 */
     }
 
     #lightbox-overlay.active {
