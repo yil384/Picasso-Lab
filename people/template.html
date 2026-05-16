@@ -1,116 +1,167 @@
 <!--
   院士头饰模板 — 配置说明
-  ┌─────────────────────────────────────────────────────┐
-  │  --head-y  头顶在圆形头像中的位置（从顶部算 %）         │
-  │            通常 25%~45%，值越大帽子越高                │
-  │  --head-x  水平中心，默认 50%（正中）                  │
-  └─────────────────────────────────────────────────────┘
-  帽子从 top:0 向下铺展到 --head-y，完全在头像组件内，
-  不会撑开 Google Sites 的 iframe 布局。
+  ┌──────────────────────────────────────────────────────────┐
+  │  --head-y      头顶在圆形头像中的位置（从顶部 %）            │
+  │                通常 25%~45%，越大帽子覆盖区域越高           │
+  │  --head-x      水平中心，默认 50%                          │
+  │  --hat-rotate  帽子旋转角度（deg），匹配人头倾斜度            │
+  │                向右倾斜用正值，向左倾斜用负值                │
+  └──────────────────────────────────────────────────────────┘
 -->
 
-<div class="ys-wrap" style="--head-y: 35%; --head-x: 50%">
+<div class="ys-wrap" style="--head-y:35%; --head-x:47%; --hat-rotate:-12deg">
   <div class="ys-stage">
 
     <img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/zaifeng.png"
-         class="avatar" alt="avatar" />
+         class="avatar" alt="avatar"/>
 
-    <div class="ys-hat" aria-hidden="true">
-      <!--
-        viewBox="0 0 220 100" — 帽子 SVG 坐标系
-        用 preserveAspectRatio="none" 让帽子随 --head-y 自适应拉伸；
-        纵轴拉伸量 = head-y / 100，横轴 = hat-div-width / 220。
-        设计时目标比例约 3:1（head-y ≈ 33%）。
-      -->
-      <svg viewBox="0 0 220 100"
-           preserveAspectRatio="none"
-           xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="cap-g" x1="0.2" y1="0" x2="0.8" y2="1">
-            <stop offset="0%"   stop-color="#32305f"/>
-            <stop offset="50%"  stop-color="#191740"/>
-            <stop offset="100%" stop-color="#0b0a1d"/>
-          </linearGradient>
-          <radialGradient id="cap-shine" cx="33%" cy="16%" r="52%">
-            <stop offset="0%"   stop-color="rgba(255,255,255,0.26)"/>
-            <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
-          </radialGradient>
-          <linearGradient id="wing-g" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%"   stop-color="#0a0920"/>
-            <stop offset="28%"  stop-color="#18173c"/>
-            <stop offset="72%"  stop-color="#18173c"/>
-            <stop offset="100%" stop-color="#0a0920"/>
-          </linearGradient>
-          <filter id="dsf" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="3" stdDeviation="4"
-                          flood-color="rgba(0,0,0,0.60)"/>
-          </filter>
-          <filter id="gf" x="-60%" y="-60%" width="220%" height="220%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="1.8" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
+    <!-- 院士帽（乌纱帽）-->
+    <div class="ys-hat">
+      <div class="ys-hat-inner">
+        <svg viewBox="0 0 220 100" preserveAspectRatio="none"
+             xmlns="http://www.w3.org/2000/svg" overflow="visible">
+          <defs>
+            <!-- Cap dome: lit from upper-left -->
+            <linearGradient id="cg" x1="0.12" y1="0" x2="0.92" y2="1">
+              <stop offset="0%"   stop-color="#38366a"/>
+              <stop offset="38%"  stop-color="#1b1940"/>
+              <stop offset="100%" stop-color="#07061a"/>
+            </linearGradient>
+            <!-- Dome specular blob -->
+            <radialGradient id="spec" cx="30%" cy="14%" r="44%">
+              <stop offset="0%"   stop-color="rgba(210,205,255,0.32)"/>
+              <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+            </radialGradient>
+            <!-- Wing face: dark navy -->
+            <linearGradient id="wg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="#07061a"/>
+              <stop offset="20%"  stop-color="#131130"/>
+              <stop offset="50%"  stop-color="#131130"/>
+              <stop offset="80%"  stop-color="#131130"/>
+              <stop offset="100%" stop-color="#07061a"/>
+            </linearGradient>
+            <!-- Wing TOP surface: catches light -->
+            <linearGradient id="wtg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="#0f0e28"/>
+              <stop offset="40%"  stop-color="#22204c"/>
+              <stop offset="60%"  stop-color="#22204c"/>
+              <stop offset="100%" stop-color="#0f0e28"/>
+            </linearGradient>
+            <!-- Brim front -->
+            <linearGradient id="brg" x1="0.3" y1="0" x2="0.7" y2="1">
+              <stop offset="0%"   stop-color="#161434"/>
+              <stop offset="100%" stop-color="#06061a"/>
+            </linearGradient>
+            <!-- Shadow blur -->
+            <filter id="sb" x="-80%" y="-80%" width="260%" height="260%">
+              <feGaussianBlur stdDeviation="3.5"/>
+            </filter>
+            <!-- Overall drop shadow -->
+            <filter id="ds" x="-25%" y="-25%" width="150%" height="160%">
+              <feDropShadow dx="2" dy="5" stdDeviation="5"
+                            flood-color="rgba(0,0,0,0.65)"/>
+            </filter>
+          </defs>
 
-        <!-- ── Left wing ── -->
-        <path d="M 76 62 L 7 58 Q 1 58 1 66 Q 1 74 7 74 L 76 74 Z"
-              fill="url(#wing-g)" filter="url(#dsf)"/>
-        <path d="M 9 60 Q 43 57 74 62"
-              stroke="rgba(255,255,255,0.06)" stroke-width="1.5" fill="none"/>
-        <ellipse cx="40" cy="66" rx="5.5" ry="3" fill="#8c5f0a" opacity="0.75"/>
-        <ellipse cx="40" cy="66" rx="3.2" ry="1.8" fill="#ffe070" opacity="0.90"/>
+          <!-- ① Cast shadow on face below brim -->
+          <ellipse cx="110" cy="106" rx="46" ry="5.5"
+                   fill="rgba(0,0,0,0.30)" filter="url(#sb)"/>
 
-        <!-- ── Right wing ── -->
-        <path d="M 144 62 L 213 58 Q 219 58 219 66 Q 219 74 213 74 L 144 74 Z"
-              fill="url(#wing-g)" filter="url(#dsf)"/>
-        <path d="M 211 60 Q 177 57 146 62"
-              stroke="rgba(255,255,255,0.06)" stroke-width="1.5" fill="none"/>
-        <ellipse cx="180" cy="66" rx="5.5" ry="3" fill="#8c5f0a" opacity="0.75"/>
-        <ellipse cx="180" cy="66" rx="3.2" ry="1.8" fill="#ffe070" opacity="0.90"/>
+          <!-- ② LEFT WING assembly (back-to-front) -->
+          <!-- Wing bottom face -->
+          <path d="M 76 61 L 4 57 Q 1 57 1 66 Q 1 74 4 74 L 76 74 Z"
+                fill="url(#wg)"/>
+          <!-- Wing TOP surface (thin lit strip) -->
+          <path d="M 76 54 L 6 51 Q 1 51 1 57 L 4 57 L 76 61 Z"
+                fill="url(#wtg)" opacity="0.90"/>
+          <!-- Wing TIP end face (very dark side) -->
+          <path d="M 1 57 Q 0 57 0 66 Q 0 74 1 74 L 4 74 L 4 57 Z"
+                fill="#030310" opacity="0.80"/>
+          <!-- Wing subtle shine line on top surface -->
+          <path d="M 6 52 Q 40 50 74 55"
+                stroke="rgba(180,170,255,0.12)" stroke-width="1.3" fill="none"/>
+          <!-- Wing gem -->
+          <ellipse cx="38" cy="63" rx="5.5" ry="3.2" fill="#5a3a04"/>
+          <ellipse cx="38" cy="63" rx="3.8" ry="2.1" fill="#c08c0e"/>
+          <ellipse cx="38" cy="62.5" rx="2" ry="1.1" fill="#ffe898" opacity="0.9"/>
 
-        <!-- ── Cap body (cylinder + dome) ── -->
-        <path d="M 78 97
-                 L 78 52
-                 C 78 18 92 2 110 2
-                 C 128 2 142 18 142 52
-                 L 142 97 Z"
-              fill="url(#cap-g)" filter="url(#dsf)"/>
-        <!-- Shine -->
-        <path d="M 78 97 L 78 52 C 78 18 92 2 110 2
-                 C 128 2 142 18 142 52 L 142 97 Z"
-              fill="url(#cap-shine)" pointer-events="none"/>
-        <!-- Dome highlight arc -->
-        <path d="M 90 22 C 98 12 108 7 122 8"
-              stroke="rgba(255,255,255,0.30)" stroke-width="2.5"
-              fill="none" stroke-linecap="round"/>
-        <!-- Centre seam -->
-        <line x1="110" y1="3" x2="110" y2="92"
-              stroke="rgba(0,0,0,0.13)" stroke-width="1.2"/>
-        <!-- Right shadow strip -->
-        <path d="M 141 52 L 141 96"
-              stroke="rgba(0,0,0,0.20)" stroke-width="3.5"
-              fill="none" stroke-linecap="round"/>
+          <!-- ③ RIGHT WING assembly -->
+          <path d="M 144 61 L 216 57 Q 219 57 219 66 Q 219 74 216 74 L 144 74 Z"
+                fill="url(#wg)"/>
+          <path d="M 144 54 L 214 51 Q 219 51 219 57 L 216 57 L 144 61 Z"
+                fill="url(#wtg)" opacity="0.90"/>
+          <path d="M 219 57 Q 220 57 220 66 Q 220 74 219 74 L 216 74 L 216 57 Z"
+                fill="#030310" opacity="0.80"/>
+          <path d="M 214 52 Q 180 50 146 55"
+                stroke="rgba(180,170,255,0.12)" stroke-width="1.3" fill="none"/>
+          <ellipse cx="182" cy="63" rx="5.5" ry="3.2" fill="#5a3a04"/>
+          <ellipse cx="182" cy="63" rx="3.8" ry="2.1" fill="#c08c0e"/>
+          <ellipse cx="182" cy="62.5" rx="2" ry="1.1" fill="#ffe898" opacity="0.9"/>
 
-        <!-- ── Brim ── -->
-        <rect x="72" y="91" width="76" height="9" rx="3.5" fill="#09091a"/>
-        <rect x="72" y="91" width="76" height="3.2" rx="1.6" fill="#c9a227"/>
-        <!-- Brim rivets -->
-        <circle cx="91"  cy="92.8" r="1.4" fill="#ffe070" opacity="0.70"/>
-        <circle cx="110" cy="92.8" r="1.4" fill="#ffe070" opacity="0.70"/>
-        <circle cx="129" cy="92.8" r="1.4" fill="#ffe070" opacity="0.70"/>
+          <!-- ④ CAP BODY — shadow edge on right (darkest) -->
+          <path d="M 138 44 C 141 28 140 14 138 8
+                   L 142 10 C 145 16 146 30 142 44 L 142 92 L 138 92 Z"
+                fill="rgba(0,0,0,0.55)"/>
 
-        <!-- ── Centre gem ── -->
-        <circle cx="110" cy="97.5" r="5.5" fill="#6b4708"/>
-        <circle cx="110" cy="97.5" r="4"   fill="#d09a10"/>
-        <circle cx="110" cy="97.5" r="2.2" fill="#fff8d0"/>
+          <!-- ④ CAP BODY — main front face -->
+          <path d="M 78 92 L 78 44 C 78 16 91 2 110 2
+                   C 129 2 142 16 142 44 L 142 92 Z"
+                fill="url(#cg)" filter="url(#ds)"/>
 
-        <!-- ── 院士 text ── -->
-        <text x="110" y="74"
-              text-anchor="middle" dominant-baseline="middle"
-              font-family="'STKaiti','KaiTi','FangSong','SimSun',serif"
-              font-size="24" font-weight="bold" letter-spacing="5"
-              fill="#ffd060" filter="url(#gf)" opacity="0.95">院士</text>
-      </svg>
+          <!-- Specular radial overlay on dome -->
+          <path d="M 78 92 L 78 44 C 78 16 91 2 110 2
+                   C 129 2 142 16 142 44 L 142 92 Z"
+                fill="url(#spec)" pointer-events="none"/>
+
+          <!-- Left-edge light catch (subtle light strip) -->
+          <path d="M 78 92 L 78 44 C 78 16 87 5 94 3 L 93 92 Z"
+                fill="rgba(255,255,255,0.045)" pointer-events="none"/>
+
+          <!-- Dome highlight arc (left-top gloss line) -->
+          <path d="M 88 24 C 97 13 109 8 124 9"
+                stroke="rgba(225,220,255,0.38)" stroke-width="2.8"
+                fill="none" stroke-linecap="round"/>
+          <!-- Small specular dot on dome -->
+          <circle cx="93" cy="16" r="4"
+                  fill="rgba(255,255,255,0.18)"/>
+          <circle cx="93" cy="16" r="2"
+                  fill="rgba(255,255,255,0.32)"/>
+
+          <!-- ⑤ BRIM — 3D platform -->
+          <!-- Brim top surface (lit face) -->
+          <rect x="72" y="87" width="76" height="6" rx="2.5"
+                fill="#1e1c48"/>
+          <rect x="76" y="87" width="66" height="3" rx="1.5"
+                fill="rgba(255,255,255,0.06)"/>
+          <!-- Gold trim on brim top edge -->
+          <rect x="72" y="87" width="76" height="3" rx="1.5"
+                fill="#c9a227"/>
+          <!-- Brim front face (in shadow) -->
+          <rect x="72" y="93" width="76" height="7" rx="2.5"
+                fill="url(#brg)"/>
+          <!-- Rivets on gold trim -->
+          <circle cx="90"  cy="88.8" r="1.4" fill="#ffe070" opacity="0.80"/>
+          <circle cx="110" cy="88.8" r="1.4" fill="#ffe070" opacity="0.80"/>
+          <circle cx="130" cy="88.8" r="1.4" fill="#ffe070" opacity="0.80"/>
+
+          <!-- ⑥ CENTRE GEM — 3D jewel -->
+          <!-- gem shadow -->
+          <ellipse cx="111" cy="100" rx="7" ry="3.5"
+                   fill="rgba(0,0,0,0.35)" filter="url(#sb)"/>
+          <!-- gem layers -->
+          <circle cx="110" cy="97" r="7"   fill="#4a2e03"/>
+          <circle cx="110" cy="97" r="5.3" fill="#b07c0a"/>
+          <circle cx="110" cy="97" r="3.4" fill="#f0c840"/>
+          <circle cx="110" cy="97" r="1.8" fill="#fff8d8"/>
+          <!-- gem specular highlight (off-center = 3D) -->
+          <circle cx="108.5" cy="95.5" r="1.4"
+                  fill="rgba(255,255,255,0.85)"/>
+        </svg>
+      </div><!-- .ys-hat-inner -->
     </div><!-- .ys-hat -->
+
+    <!-- 院士 label: separate element so it's never stretched/distorted -->
+    <div class="ys-label" aria-hidden="true">院士</div>
 
     <div class="ys-sparks" aria-hidden="true"></div>
 
@@ -119,14 +170,14 @@
 
 
 <style>
-/* ── Wrapper: exact avatar size, no extra height ── */
+/* ── Wrapper ── */
 .ys-wrap {
   display: inline-block;
   cursor: pointer;
-  overflow: visible; /* wings can poke slightly past circle edge */
+  overflow: visible;
 }
 
-/* ── Stage: 200×200, anchors hat ── */
+/* ── Stage ── */
 .ys-stage {
   position: relative;
   width: 200px;
@@ -136,92 +187,107 @@
 /* ── Avatar ── */
 .avatar {
   display: block;
-  width: 200px;
-  height: 200px;
+  width: 200px; height: 200px;
   object-fit: cover;
   border-radius: 50%;
   box-shadow: 0 4px 12px rgba(0,0,0,0.18);
   position: relative;
   z-index: 1;
   transition: transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
-              filter 0.35s ease,
-              box-shadow 0.35s ease;
+              filter 0.35s ease, box-shadow 0.35s ease;
 }
-.ys-wrap:hover .avatar {
-  transform: scale(1.07);
-  filter: brightness(1.08);
-}
+.ys-wrap:hover .avatar { transform: scale(1.07); filter: brightness(1.08); }
 .ys-wrap.hat-on .avatar {
   box-shadow: 0 4px 12px rgba(0,0,0,0.18),
               0 0 28px 8px rgba(255,210,50,0.28);
 }
 
-/* ── Hat: lives WITHIN the avatar bounding box ──────────────
-   top:0  →  fits into the top of the avatar, no overflow above.
-   height: var(--head-y)  →  brim always lands at the hairline.
-   width: 120%  →  wings extend slightly past circle on each side.
-   clip-path controls the reveal animation (wipes downward).
-──────────────────────────────────────────────────────────── */
+/* ── Hat outer: handles position + rotation + reveal ── */
 .ys-hat {
   position: absolute;
   top: 0;
-  left: calc(var(--head-x, 50%) - 60%);
-  width: 120%;
+  /* Center hat on --head-x; width 140% so wings extend past the circle */
+  left: calc(var(--head-x, 50%) - 70%);
+  width: 140%;
   height: var(--head-y, 35%);
+  /* Rotate from brim centre (bottom) to match head tilt */
+  transform-origin: 50% 100%;
   z-index: 20;
   pointer-events: none;
   overflow: visible;
 
-  /* Hidden: clipped from the bottom up (hat is above, rolled up) */
-  clip-path: inset(0 0 100% 0 round 4px);
-  transform: translateY(-6px);
+  /* Hidden: clip wipes from bottom up within local (rotated) frame */
+  clip-path: inset(0 0 100% 0);
+  transform: rotate(var(--hat-rotate, 0deg)) translateY(-4px);
   opacity: 0;
 
   transition:
-    clip-path 0.70s cubic-bezier(0.22, 1.50, 0.36, 1),
-    transform  0.70s cubic-bezier(0.22, 1.50, 0.36, 1),
+    clip-path 0.68s cubic-bezier(0.22, 1.48, 0.36, 1),
+    transform  0.68s cubic-bezier(0.22, 1.48, 0.36, 1),
     opacity    0.22s ease;
 }
 .ys-hat svg {
-  width: 100%; height: 100%; display: block;
+  width: 100%; height: 100%; display: block; overflow: visible;
   filter: drop-shadow(0 6px 14px rgba(0,0,0,0.55));
-  overflow: visible;
 }
 
-/* Hat-on → wipe down into place */
+/* Hat on → wipe down, rotate to final angle */
 .ys-wrap.hat-on .ys-hat {
-  clip-path: inset(0 0 0% 0 round 0px);
-  transform: translateY(0);
+  clip-path: inset(0 0 0% 0);
+  transform: rotate(var(--hat-rotate, 0deg)) translateY(0);
   opacity: 1;
 }
 
-/* Wobble settle */
+/* ── Hat inner: wobble settle only (keeps rotation independent) ── */
+.ys-hat-inner { width: 100%; height: 100%; }
 @keyframes hat-wobble {
   0%,100%{ transform:rotate(0deg) }
-  20%    { transform:rotate(-2.5deg) }
-  45%    { transform:rotate(1.8deg)  }
-  68%    { transform:rotate(-1.0deg) }
-  84%    { transform:rotate(0.4deg)  }
+  20%    { transform:rotate(-2.4deg) }
+  44%    { transform:rotate(1.7deg)  }
+  66%    { transform:rotate(-0.9deg) }
+  82%    { transform:rotate(0.4deg)  }
 }
-.ys-hat.wobble { animation: hat-wobble 0.55s cubic-bezier(0.36,0.07,0.19,0.97) both; }
+.ys-hat-inner.wobble {
+  animation: hat-wobble 0.55s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+
+/* ── 院士 label: undistorted, rotates with hat ── */
+.ys-label {
+  position: absolute;
+  /* Sit at ~60% down the hat height, at horizontal center */
+  top: calc(var(--head-y, 35%) * 0.60);
+  left: var(--head-x, 50%);
+  transform-origin: center center;
+  transform: translateX(-50%) rotate(var(--hat-rotate, 0deg));
+  font-family: 'STKaiti','KaiTi','FangSong','SimSun',serif;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  color: #ffd060;
+  text-shadow:
+    0 0 5px rgba(255,195,0,0.90),
+    0 0 12px rgba(255,140,0,0.45),
+    0 1px 2px rgba(0,0,0,0.8);
+  z-index: 22;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.30s ease 0.50s;
+}
+.ys-wrap.hat-on .ys-label { opacity: 1; }
 
 /* ── Sparkles ── */
 .ys-sparks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 25;
-  overflow: visible;
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 25; overflow: visible;
 }
 .ys-spark {
-  position: absolute;
-  opacity: 0;
+  position: absolute; opacity: 0;
   transform: translate(-50%,-50%);
-  line-height: 1;
-  user-select: none;
+  line-height: 1; user-select: none;
 }
 @keyframes spark-fly {
-  0%   { opacity:1; transform:translate(-50%,-50%) scale(1.2); }
+  0%   { opacity:1; transform:translate(-50%,-50%) scale(1.3); }
   40%  { opacity:0.9; }
   100% { opacity:0; transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0.1); }
 }
@@ -232,20 +298,20 @@
 <script>
 (function () {
   const wrap   = document.querySelector('.ys-wrap');
-  const hat    = wrap.querySelector('.ys-hat');
+  const inner  = wrap.querySelector('.ys-hat-inner');
   const sparks = wrap.querySelector('.ys-sparks');
 
   wrap.addEventListener('click', () => {
     const on = wrap.classList.toggle('hat-on');
     if (on) {
       setTimeout(() => {
-        hat.classList.remove('wobble');
-        void hat.offsetWidth;
-        hat.classList.add('wobble');
-        hat.addEventListener('animationend',
-          () => hat.classList.remove('wobble'), { once: true });
+        inner.classList.remove('wobble');
+        void inner.offsetWidth;           // force reflow
+        inner.classList.add('wobble');
+        inner.addEventListener('animationend',
+          () => inner.classList.remove('wobble'), { once: true });
         burst();
-      }, 600);
+      }, 620);
     }
   });
 
@@ -258,15 +324,14 @@
       const sp = document.createElement('span');
       sp.className = 'ys-spark';
       const angle = (Math.PI * 2 / N) * i + (Math.random() - .5) * .4;
-      const dist  = 34 + Math.random() * 42;
+      const dist  = 32 + Math.random() * 44;
       sp.style.cssText = [
         `--dx:${(Math.cos(angle)*dist).toFixed(1)}px`,
         `--dy:${(Math.sin(angle)*dist).toFixed(1)}px`,
         `color:${COLORS[i % COLORS.length]}`,
         `font-size:${8 + Math.random()*10}px`,
-        // Cluster near the hat area (top 40% of avatar)
-        `top:${5 + Math.random()*35}%`,
-        `left:${25 + Math.random()*50}%`,
+        `top:${4 + Math.random()*36}%`,
+        `left:${22 + Math.random()*56}%`,
         `animation-delay:${(Math.random()*.13).toFixed(3)}s`,
       ].join(';');
       sp.textContent = GLYPHS[i % GLYPHS.length];
