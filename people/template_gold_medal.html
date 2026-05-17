@@ -21,98 +21,100 @@
         <svg viewBox="0 0 80 130" preserveAspectRatio="none"
              xmlns="http://www.w3.org/2000/svg" overflow="visible">
           <defs>
-            <!-- Left ribbon: darker on outer edge, lighter toward center -->
-            <linearGradient id="lrg" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stop-color="#6e0c0c"/>
-              <stop offset="35%"  stop-color="#c01c1c"/>
-              <stop offset="80%"  stop-color="#d42828"/>
-              <stop offset="100%" stop-color="#e03535"/>
+            <!-- Ribbon left half: darker outer edge → lighter toward center fold -->
+            <linearGradient id="lh" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="#6a0a0a"/>
+              <stop offset="45%"  stop-color="#be1c1c"/>
+              <stop offset="100%" stop-color="#d42828"/>
             </linearGradient>
-            <!-- Right ribbon: mirror of left -->
-            <linearGradient id="rrg" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stop-color="#e03535"/>
-              <stop offset="20%"  stop-color="#d42828"/>
-              <stop offset="65%"  stop-color="#c01c1c"/>
-              <stop offset="100%" stop-color="#6e0c0c"/>
+            <!-- Ribbon right half: mirror -->
+            <linearGradient id="rh" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="#d42828"/>
+              <stop offset="55%"  stop-color="#be1c1c"/>
+              <stop offset="100%" stop-color="#6a0a0a"/>
             </linearGradient>
-            <!-- Medal face: radial gold lit from upper-left -->
+            <!-- Medal face: radial gold -->
             <radialGradient id="mg" cx="34%" cy="28%" r="72%">
               <stop offset="0%"   stop-color="#ffe566"/>
               <stop offset="40%"  stop-color="#d4a800"/>
               <stop offset="80%"  stop-color="#a87800"/>
               <stop offset="100%" stop-color="#7a5500"/>
             </radialGradient>
-            <!-- Medal rim: darker gold ring -->
+            <!-- Medal rim -->
             <radialGradient id="rim" cx="50%" cy="50%" r="50%">
               <stop offset="55%"  stop-color="#b08800"/>
               <stop offset="100%" stop-color="#6a4800"/>
             </radialGradient>
-            <!-- Shadow blur -->
             <filter id="ms" x="-60%" y="-60%" width="220%" height="220%">
               <feGaussianBlur stdDeviation="3"/>
             </filter>
           </defs>
 
-          <!-- ① PIN BAR (gold clasp at very top) -->
-          <rect x="10" y="0" width="60" height="8" rx="4"   fill="#906800"/>
-          <rect x="12" y="1" width="56" height="5" rx="2.5" fill="#e8c400"/>
-          <!-- Pin highlight -->
-          <rect x="14" y="2" width="22" height="2.5" rx="1.2" fill="rgba(255,255,255,0.28)"/>
+          <!--
+            RIBBON SHAPE (matches 🏅):
+            Wide trapezoid at top, both side edges slant inward to a
+            narrow connector at the bottom centre.
+            Top spans x=6..74; bottom narrows to x=30..50.
+          -->
 
-          <!-- ② LEFT RIBBON STRIP (wide at pin, converges toward center-bottom) -->
-          <polygon points="12,8 38,8 34,68 18,68" fill="url(#lrg)"/>
-          <!-- Left ribbon gold accent stripe (follows strip angle) -->
-          <line x1="21" y1="8" x2="23" y2="68"
-                stroke="#d4aa00" stroke-width="1.6" opacity="0.55"/>
-          <!-- Left inner-edge fold highlight -->
-          <polygon points="34,8 38,8 34,68 31,68" fill="rgba(255,255,255,0.10)"/>
+          <!-- ① RIBBON LEFT HALF (x: 6→40 top, 30→40 bottom) -->
+          <polygon points="6,0 40,0 40,66 30,66" fill="url(#lh)"/>
           <!-- Left outer-edge shadow -->
-          <polygon points="12,8 16,8 20,68 18,68" fill="rgba(0,0,0,0.20)"/>
+          <polygon points="6,0 11,0 21,66 30,66" fill="rgba(0,0,0,0.22)"/>
+          <!-- Left inner fold highlight (thin strip at centre) -->
+          <polygon points="37,0 40,0 40,66 38,66" fill="rgba(255,255,255,0.10)"/>
 
-          <!-- ③ RIGHT RIBBON STRIP (mirror) -->
-          <polygon points="42,8 68,8 62,68 46,68" fill="url(#rrg)"/>
-          <!-- Right ribbon gold accent stripe -->
-          <line x1="59" y1="8" x2="57" y2="68"
-                stroke="#d4aa00" stroke-width="1.6" opacity="0.55"/>
-          <!-- Right inner-edge fold highlight -->
-          <polygon points="42,8 46,8 49,68 46,68" fill="rgba(255,255,255,0.10)"/>
+          <!-- ② RIBBON RIGHT HALF (x: 40→74 top, 40→50 bottom) -->
+          <polygon points="40,0 74,0 50,66 40,66" fill="url(#rh)"/>
           <!-- Right outer-edge shadow -->
-          <polygon points="64,8 68,8 62,68 60,68" fill="rgba(0,0,0,0.20)"/>
+          <polygon points="69,0 74,0 50,66 49,66" fill="rgba(0,0,0,0.22)"/>
+          <!-- Right inner fold highlight -->
+          <polygon points="40,0 43,0 42,66 40,66" fill="rgba(255,255,255,0.10)"/>
 
-          <!-- ④ CONNECTOR CLASP (bridges both ribbon bottoms to medal) -->
-          <rect x="16" y="65" width="48" height="10" rx="5"   fill="#906800"/>
-          <rect x="18" y="66" width="44" height="7"  rx="3.5" fill="#e0c000"/>
-          <rect x="20" y="67" width="18" height="3.5" rx="1.5" fill="rgba(255,255,255,0.24)"/>
+          <!-- Center fold crease -->
+          <line x1="40" y1="0" x2="40" y2="66"
+                stroke="rgba(0,0,0,0.18)" stroke-width="1"/>
 
-          <!-- ⑤ MEDAL DISC -->
-          <!-- Drop shadow -->
-          <ellipse cx="42" cy="112" rx="28" ry="5"
+          <!-- Gold horizontal stripe 1 (trapezoid-aware coords) -->
+          <polygon points="11,18 69,18 67,24 13,24"
+                   fill="rgba(218,168,0,0.70)"/>
+          <!-- Gold horizontal stripe 2 -->
+          <polygon points="18,42 62,42 60,48 20,48"
+                   fill="rgba(218,168,0,0.70)"/>
+
+          <!-- Top edge highlight -->
+          <polygon points="6,0 74,0 72,5 8,5"
+                   fill="rgba(255,255,255,0.13)"/>
+
+          <!-- ③ CONNECTOR CLASP -->
+          <rect x="26" y="64" width="28" height="10" rx="5"   fill="#906800"/>
+          <rect x="28" y="65" width="24" height="7"  rx="3.5" fill="#e0c000"/>
+          <rect x="30" y="66" width="10" height="3.5" rx="1.5"
+                fill="rgba(255,255,255,0.25)"/>
+
+          <!-- ④ MEDAL DISC -->
+          <ellipse cx="41" cy="111" rx="27" ry="5"
                    fill="rgba(0,0,0,0.28)" filter="url(#ms)"/>
-          <!-- Outer rim -->
-          <circle cx="40" cy="104" r="29" fill="url(#rim)"/>
-          <!-- Rim top-left highlight arc -->
-          <path d="M 14 95 A 27 27 0 0 1 64 100"
+          <circle cx="40" cy="103" r="28" fill="url(#rim)"/>
+          <path d="M 15 94 A 26 26 0 0 1 63 99"
                 stroke="rgba(255,220,80,0.45)" stroke-width="2" fill="none"
                 stroke-linecap="round"/>
-          <!-- Medal face -->
-          <circle cx="40" cy="104" r="26" fill="url(#mg)"/>
-          <!-- Inner decorative ring -->
-          <circle cx="40" cy="104" r="21.5" fill="none"
+          <circle cx="40" cy="103" r="25" fill="url(#mg)"/>
+          <circle cx="40" cy="103" r="20.5" fill="none"
                   stroke="rgba(255,205,40,0.45)" stroke-width="1.3"/>
 
-          <!-- ⑥ ATOM SYMBOL (3 orbits + nucleus) -->
+          <!-- ⑤ ATOM SYMBOL -->
           <g stroke="#a07800" stroke-width="1.3" fill="none" opacity="0.88">
-            <ellipse cx="40" cy="104" rx="13" ry="4.8"/>
-            <ellipse cx="40" cy="104" rx="13" ry="4.8" transform="rotate(60 40 104)"/>
-            <ellipse cx="40" cy="104" rx="13" ry="4.8" transform="rotate(120 40 104)"/>
+            <ellipse cx="40" cy="103" rx="12.5" ry="4.5"/>
+            <ellipse cx="40" cy="103" rx="12.5" ry="4.5" transform="rotate(60 40 103)"/>
+            <ellipse cx="40" cy="103" rx="12.5" ry="4.5" transform="rotate(120 40 103)"/>
           </g>
-          <!-- Nucleus -->
-          <circle cx="40" cy="104" r="3.2" fill="#c89800"/>
-          <circle cx="40" cy="104" r="1.8" fill="#ffe870"/>
+          <circle cx="40" cy="103" r="3.2" fill="#c89800"/>
+          <circle cx="40" cy="103" r="1.8" fill="#ffe870"/>
 
-          <!-- ⑦ SPECULAR HIGHLIGHTS on disc -->
-          <ellipse cx="33" cy="96" rx="8.5" ry="5"   fill="rgba(255,255,255,0.20)"/>
-          <ellipse cx="31" cy="94" rx="4"   ry="2.5" fill="rgba(255,255,255,0.14)"/>
+          <!-- ⑥ DISC SPECULAR HIGHLIGHTS -->
+          <ellipse cx="33" cy="95" rx="8"   ry="5"   fill="rgba(255,255,255,0.20)"/>
+          <ellipse cx="31" cy="93" rx="3.5" ry="2.5" fill="rgba(255,255,255,0.14)"/>
         </svg>
       </div><!-- .ys-medal-inner -->
     </div><!-- .ys-medal -->
@@ -210,7 +212,7 @@
 .ys-label {
   position: absolute;
   /* Sit near the medal disc centre: medal-y + ~74% of medal-size */
-  top:  calc(var(--medal-y, 50%) + var(--medal-size, 38%) * 0.74);
+  top:  calc(var(--medal-y, 50%) + var(--medal-size, 38%) * 0.79);
   left: var(--medal-x, 50%);
   transform: translateX(-50%);
   font-family: -apple-system, 'Helvetica Neue', sans-serif;
