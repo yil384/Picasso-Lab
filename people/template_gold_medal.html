@@ -1,0 +1,271 @@
+<!--
+  CPhO金牌模板 — 配置说明
+  ┌──────────────────────────────────────────────────────────┐
+  │  --medal-x     丝带挂点水平位置（从左 %）                   │
+  │  --medal-y     丝带顶端在头像中的位置（从顶部 %）            │
+  │                通常 45%~60%，约领口高度                     │
+  │  --medal-size  奖牌整体高度（占头像高度的 %）                │
+  │                通常 28%~45%                               │
+  └──────────────────────────────────────────────────────────┘
+-->
+
+<div class="ys-wrap" style="--medal-x:50%; --medal-y:50%; --medal-size:38%">
+  <div class="ys-stage">
+
+    <img src="https://yil384.github.io/Picasso-Lab/people/static/zhuo.png"
+         class="avatar" alt="avatar"/>
+
+    <!-- CPhO金牌 -->
+    <div class="ys-medal">
+      <div class="ys-medal-inner">
+        <svg viewBox="0 0 80 130" preserveAspectRatio="none"
+             xmlns="http://www.w3.org/2000/svg" overflow="visible">
+          <defs>
+            <!-- Medal face: radial gold lit from upper-left -->
+            <radialGradient id="mg" cx="34%" cy="28%" r="72%">
+              <stop offset="0%"   stop-color="#ffe566"/>
+              <stop offset="40%"  stop-color="#d4a800"/>
+              <stop offset="80%"  stop-color="#a87800"/>
+              <stop offset="100%" stop-color="#7a5500"/>
+            </radialGradient>
+            <!-- Medal rim: darker gold -->
+            <radialGradient id="rim" cx="50%" cy="50%" r="50%">
+              <stop offset="60%"  stop-color="#b08800"/>
+              <stop offset="100%" stop-color="#6a4800"/>
+            </radialGradient>
+            <!-- Soft blur for shadows -->
+            <filter id="ms" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="3"/>
+            </filter>
+          </defs>
+
+          <!-- ① RIBBON (red, with gold border & fold highlight) -->
+          <!-- Ribbon back shadow -->
+          <rect x="36" y="0" width="10" height="63" fill="#5a0808" rx="1"/>
+          <!-- Ribbon body -->
+          <rect x="33" y="0" width="14" height="63" fill="#c41e1e" rx="1"/>
+          <!-- Ribbon left highlight (fold) -->
+          <rect x="33" y="0" width="4"  height="63" fill="#e03535" opacity="0.65" rx="1"/>
+          <!-- Ribbon gold left border -->
+          <rect x="33"   y="0" width="1.5" height="63" fill="#d4aa00" opacity="0.80"/>
+          <!-- Ribbon gold right border -->
+          <rect x="45.5" y="0" width="1.5" height="63" fill="#d4aa00" opacity="0.80"/>
+
+          <!-- ② CONNECTOR (gold bar between ribbon and medal) -->
+          <rect x="25" y="60" width="30" height="9" rx="3.5" fill="#9a7000"/>
+          <rect x="27" y="61" width="26" height="6" rx="2.5" fill="#dfc000"/>
+          <!-- Connector top highlight -->
+          <rect x="28" y="62" width="12" height="2.5" rx="1" fill="rgba(255,255,255,0.22)"/>
+
+          <!-- ③ MEDAL DISC -->
+          <!-- Drop shadow -->
+          <ellipse cx="42" cy="106" rx="28" ry="5.5"
+                   fill="rgba(0,0,0,0.28)" filter="url(#ms)"/>
+          <!-- Outer rim -->
+          <circle cx="40" cy="98" r="30" fill="url(#rim)"/>
+          <!-- Rim top-left arc highlight -->
+          <path d="M 14 88 A 28 28 0 0 1 62 93"
+                stroke="rgba(255,220,80,0.45)" stroke-width="2" fill="none"
+                stroke-linecap="round"/>
+          <!-- Medal face -->
+          <circle cx="40" cy="98" r="27" fill="url(#mg)"/>
+          <!-- Inner decorative ring -->
+          <circle cx="40" cy="98" r="22.5" fill="none"
+                  stroke="rgba(255,205,40,0.45)" stroke-width="1.3"/>
+
+          <!-- ④ ATOM SYMBOL (physics olympiad) -->
+          <g stroke="#b08000" stroke-width="1.3" fill="none" opacity="0.9">
+            <ellipse cx="40" cy="98" rx="13" ry="4.8"/>
+            <ellipse cx="40" cy="98" rx="13" ry="4.8" transform="rotate(60 40 98)"/>
+            <ellipse cx="40" cy="98" rx="13" ry="4.8" transform="rotate(120 40 98)"/>
+          </g>
+          <!-- Nucleus -->
+          <circle cx="40" cy="98" r="3.2" fill="#c89800"/>
+          <circle cx="40" cy="98" r="1.8" fill="#ffe870"/>
+
+          <!-- ⑤ SPECULAR HIGHLIGHTS on disc -->
+          <ellipse cx="33" cy="90" rx="8.5" ry="5" fill="rgba(255,255,255,0.20)"/>
+          <ellipse cx="31" cy="88" rx="4"   ry="2.5" fill="rgba(255,255,255,0.14)"/>
+        </svg>
+      </div><!-- .ys-medal-inner -->
+    </div><!-- .ys-medal -->
+
+    <!-- 金牌 label -->
+    <div class="ys-label" aria-hidden="true">金牌</div>
+
+    <div class="ys-sparks" aria-hidden="true"></div>
+
+  </div><!-- .ys-stage -->
+</div><!-- .ys-wrap -->
+
+
+<style>
+/* ── Wrapper ── */
+.ys-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+}
+
+/* ── Stage ── */
+.ys-stage {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+/* ── Avatar ── */
+.avatar {
+  display: block;
+  width: 200px; height: 200px;
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  position: relative;
+  z-index: 1;
+  transition: transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
+              filter 0.35s ease;
+}
+.ys-wrap:hover .avatar { transform: scale(1.07); filter: brightness(1.08); }
+
+/* ── Medal outer: position + pendulum swing ── */
+.ys-medal {
+  position: absolute;
+  /*
+   * --medal-size controls HEIGHT (% of 200px avatar).
+   * viewBox is 80×130 → aspect-ratio 80/130 ≈ 0.615.
+   * left = medal-x minus half the width (= medal-size * 0.615/2 = * 0.308)
+   */
+  height: var(--medal-size, 38%);
+  aspect-ratio: 80 / 130;
+  top:  var(--medal-y, 50%);
+  left: calc(var(--medal-x, 50%) - var(--medal-size, 38%) * 0.308);
+  /* Pivot from ribbon top (top-center of element) */
+  transform-origin: 50% 0%;
+  z-index: 20;
+  pointer-events: none;
+  overflow: visible;
+
+  /* Hidden: swung hard to the left (off photo) */
+  transform: rotate(-80deg);
+  opacity: 0;
+
+  transition:
+    transform 0.80s cubic-bezier(0.22, 1.44, 0.36, 1),
+    opacity   0.18s ease;
+}
+
+/* Medal on → pendulum swings to centre */
+.ys-wrap.medal-on .ys-medal {
+  transform: rotate(0deg);
+  opacity: 1;
+}
+
+.ys-medal svg {
+  width: 100%; height: 100%; display: block; overflow: visible;
+}
+
+/* ── Medal inner: settle wobble only ── */
+.ys-medal-inner { width: 100%; height: 100%; }
+@keyframes medal-swing {
+  0%,100%{ transform: rotate(0deg) }
+  18%    { transform: rotate(6deg)  }
+  38%    { transform: rotate(-3.5deg) }
+  58%    { transform: rotate(2deg)  }
+  76%    { transform: rotate(-1deg) }
+  90%    { transform: rotate(0.4deg) }
+}
+.ys-medal-inner.swing {
+  animation: medal-swing 0.70s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+
+/* ── 金牌 label ── */
+.ys-label {
+  position: absolute;
+  /* Sit near the medal disc centre: medal-y + ~74% of medal-size */
+  top:  calc(var(--medal-y, 50%) + var(--medal-size, 38%) * 0.74);
+  left: var(--medal-x, 50%);
+  transform: translateX(-50%);
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffe566;
+  text-shadow:
+    0 0 6px rgba(255,180,0,0.95),
+    0 0 14px rgba(200,120,0,0.50),
+    0 1px 2px rgba(0,0,0,0.85);
+  z-index: 22;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.28s ease 0.55s;
+}
+.ys-wrap.medal-on .ys-label { opacity: 1; }
+
+/* ── Sparkles ── */
+.ys-sparks {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 25; overflow: visible;
+}
+.ys-spark {
+  position: absolute; opacity: 0;
+  transform: translate(-50%,-50%);
+  line-height: 1; user-select: none;
+}
+@keyframes spark-fly {
+  0%   { opacity:1; transform:translate(-50%,-50%) scale(1.3); }
+  40%  { opacity:0.9; }
+  100% { opacity:0; transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0.1); }
+}
+.ys-spark.go { animation: spark-fly 0.72s ease-out forwards; }
+</style>
+
+
+<script>
+(function () {
+  const wrap   = document.querySelector('.ys-wrap');
+  const inner  = wrap.querySelector('.ys-medal-inner');
+  const sparks = wrap.querySelector('.ys-sparks');
+
+  wrap.addEventListener('click', () => {
+    const on = wrap.classList.toggle('medal-on');
+    if (on) {
+      setTimeout(() => {
+        inner.classList.remove('swing');
+        void inner.offsetWidth;
+        inner.classList.add('swing');
+        inner.addEventListener('animationend',
+          () => inner.classList.remove('swing'), { once: true });
+        burst();
+      }, 650);
+    }
+  });
+
+  function burst() {
+    sparks.innerHTML = '';
+    const GLYPHS = ['★','🏅','✦','◆','✧','❋','•'];
+    const COLORS = ['#ffd700','#ffc107','#ffdd44','#e8c000','#ffe566','#fb923c','#fbbf24'];
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const sp = document.createElement('span');
+      sp.className = 'ys-spark';
+      const angle = (Math.PI * 2 / N) * i + (Math.random() - .5) * .4;
+      const dist  = 30 + Math.random() * 46;
+      sp.style.cssText = [
+        `--dx:${(Math.cos(angle)*dist).toFixed(1)}px`,
+        `--dy:${(Math.sin(angle)*dist).toFixed(1)}px`,
+        `color:${COLORS[i % COLORS.length]}`,
+        `font-size:${8 + Math.random()*10}px`,
+        `top:${30 + Math.random()*40}%`,
+        `left:${20 + Math.random()*60}%`,
+        `animation-delay:${(Math.random()*.13).toFixed(3)}s`,
+      ].join(';');
+      sp.textContent = GLYPHS[i % GLYPHS.length];
+      sparks.appendChild(sp);
+      requestAnimationFrame(() => requestAnimationFrame(() => sp.classList.add('go')));
+    }
+    setTimeout(() => { sparks.innerHTML = ''; }, 1050);
+  }
+})();
+</script>
