@@ -335,6 +335,43 @@
             color: rgba(255,255,255,0.6);
             font-size: 1rem;
         }
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+        .hero-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            min-height: 42px;
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.95);
+            color: #004d7a;
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .hero-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.2);
+            text-decoration: none;
+        }
+        .hero-action svg {
+            width: 17px;
+            height: 17px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
 
         /* ===== Animated Metrics Bar (B) ===== */
         .metrics-bar {
@@ -461,6 +498,53 @@
             border-radius: 20px;
             font-weight: 600;
         }
+        .announcement-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            margin: -0.25rem 0 1rem;
+        }
+        .announcement-actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            min-height: 34px;
+            padding: 0.42rem 0.7rem;
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            font-weight: 700;
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+        .announcement-actions a.primary {
+            background: var(--gradient-hero);
+            color: #fff;
+            border-color: transparent;
+        }
+        .announcement-actions a:hover {
+            color: var(--accent-primary);
+            background: var(--bg-secondary);
+            transform: translateY(-1px);
+            text-decoration: none;
+        }
+        .announcement-actions a.primary:hover {
+            color: #fff;
+            background: var(--gradient-hero);
+        }
+        .announcement-actions svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
         .announcement ul { padding-left: 1.5rem; }
         .announcement li { margin-bottom: 0.5rem; }
 
@@ -586,6 +670,46 @@
         .readings { margin-top: 0.5rem; padding-left: 1rem; font-size: 0.93rem; color: var(--text-secondary); }
         .readings ul { padding-left: 1rem; margin-top: 0.3rem; }
         .readings li { margin-bottom: 0.3rem; }
+        .presentation-list {
+            display: grid;
+            margin-top: 0.65rem;
+            border-top: 1px solid var(--border-color);
+        }
+        .presentation-item {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .presentation-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0.1rem;
+        }
+        .presentation-item .label {
+            white-space: nowrap;
+            align-self: start;
+            margin-top: 0.1rem;
+        }
+        .presentation-topic {
+            min-width: 0;
+            color: var(--text-primary);
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        .presentation-note {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.86rem;
+            font-weight: 400;
+            margin-top: 0.15rem;
+        }
+        .presentation-links {
+            margin-top: 0;
+            justify-content: flex-end;
+            flex-wrap: nowrap;
+        }
 
         /* ===== Staff Cards with Gradient Ring (I) ===== */
         .staff-grid {
@@ -919,6 +1043,15 @@
             .timeline { padding-left: 2.2rem; }
             .timeline::before { left: 10px; }
             .timeline-week-label::before { left: -2.2rem; width: 10px; height: 10px; }
+            .presentation-item {
+                grid-template-columns: auto minmax(0, 1fr);
+                align-items: start;
+            }
+            .presentation-links {
+                grid-column: 2;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
             .floating-links { bottom: 1rem; right: 1rem; }
         }
     </style>
@@ -974,6 +1107,10 @@
                         <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         Instructor
                     </a>
+                    <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                        Course Drive
+                    </a>
                     <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">
                         <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                         Piazza
@@ -1007,13 +1144,19 @@
                     <h1>CSE 291P: <span class="grad">LLM System Optimization</span></h1>
                     <p class="subtitle">Systems optimization for large language models: training parallelism, inference efficiency, and systems bottlenecks</p>
                     <p class="instructor">Instructor: Yufei Ding (UC San Diego) &bull; Winter 2026</p>
+                    <div class="hero-actions">
+                        <a class="hero-action" href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">
+                            <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                            Course Drive
+                        </a>
+                    </div>
                 </div>
             </div>
 
             <!-- Animated Metrics Bar (B) -->
             <div class="metrics-bar reveal">
                 <div class="metric-card">
-                    <div class="metric-number" data-target="13">0</div>
+                    <div class="metric-number" data-target="15">0</div>
                     <div class="metric-label">Lectures</div>
                 </div>
                 <div class="metric-card">
@@ -1021,7 +1164,7 @@
                     <div class="metric-label">Worksheets</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-number" data-target="3">0</div>
+                    <div class="metric-number" data-target="4">0</div>
                     <div class="metric-label">Guest Talks</div>
                 </div>
                 <div class="metric-card">
@@ -1040,8 +1183,30 @@
                     <h3>Welcome</h3>
                     <span class="announcement-date">Winter 2026</span>
                 </div>
+                <div class="announcement-actions">
+                    <a class="primary" href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                        Course Drive
+                    </a>
+                    <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">
+                        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        Project Spec
+                    </a>
+                    <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                        Presentation Schedule
+                    </a>
+                    <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">
+                        <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.74V17h8v-2.26A7 7 0 0 0 12 2z"/></svg>
+                        Candidate Topics
+                    </a>
+                    <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">
+                        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Podcast
+                    </a>
+                </div>
                 <ul>
-                    <li><strong>Grading</strong>: in-class participation + worksheets (30%) and a <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">team project</a> (70%, teams of 5-7 students). A 5% Piazza bonus will be awarded to the top five students with the most active and high-quality question responses.</li>
+                    <li><strong>Grading</strong>: in-class participation + worksheets (30%) and a <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">team project</a> (70%, teams of 5-7 students). Project presentation details and related links are in the project spec. A 5% Piazza bonus will be awarded to the top five students with the most active and high-quality question responses.</li>
                     <li><strong>Gradescope</strong>: upload a photo of your completed worksheet within 1 hour after class (Entry Code: <code>RV7PED</code>).</li>
                     <li><strong>Final project report deadline</strong>: <strong>March 18</strong> (see class/Gradescope announcements for any updates).</li>
                 </ul>
@@ -1064,9 +1229,9 @@
                     <span class="announcement-date">Subject to change</span>
                 </div>
                 <ul>
-                    <li><strong>Lecture window</strong>: roughly Jan 4 - Feb 17/19 (13-15 lectures), followed by project preparation and presentations.</li>
-                    <li><strong>Project presentations</strong>: roughly Feb 26 - Mar 13 (see in-class announcements for details).</li>
-                    <li><strong>Recordings</strong>: available via Canvas Podcast.</li>
+                    <li><strong>Lecture materials</strong>: the Drive folder currently includes Lecture 1 through Lecture 15.</li>
+                    <li><strong>Project presentations</strong>: Week 8 through Week 10. Use the <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">project spec</a>, <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">presentation slot sign-up</a>, and <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">candidate topics</a> for presentation instructions and related project links.</li>
+                    <li><strong>Recordings</strong>: available via Canvas Podcast and the course Drive folder.</li>
                 </ul>
             </div>
 
@@ -1247,8 +1412,8 @@
                     </div>
                 </div>
 
-                <!-- Week 7 (latest) -->
-                <div class="timeline-week latest reveal">
+                <!-- Week 7 -->
+                <div class="timeline-week reveal">
                     <div class="timeline-week-label">Week 7</div>
                     <div class="timeline-lecture">
                         <div class="lecture-date">Lecture 13 <span class="lecture-date-text">Feb 17, 2026 (Tue)</span></div>
@@ -1260,6 +1425,286 @@
                             <a href="https://drive.google.com/file/d/14mKviGdvY-6HvFGnHGsgNiy0aUMcuc6-/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
                             <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/13" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet10</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 14 <span class="lecture-date-text">Feb 19, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">14</span>
+                            <strong>MoE and MoE Serving System</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1c3lMN5HVjyaebkJAp4femJ_Vsa6ci_l4/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                            <a href="https://drive.google.com/file/d/1NogrgLByydnj6lH7vS82ECxqmEN_7Qlj/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 8 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 8</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 15 <span class="lecture-date-text">Feb 24, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">15</span>
+                            <strong>Invited Talk: Triton, Gluon, and the Future of Tile-Based Programming Models (Keren Zhou)</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://drive.google.com/file/d/1QMNvyP1APlDIxlaN4-vZ91RWYgpzyrLZ/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg> Course Drive</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Project Resources <span class="lecture-date-text">Presentation phase</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-reading">P</span>
+                            <strong>Presentation instructions, slots, and project references</strong>
+                        </div>
+                        <div class="lecture-links">
+                            <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Project Spec</a>
+                            <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg> Presentation Slots</a>
+                            <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.74V17h8v-2.26A7 7 0 0 0 12 2z"/></svg> Candidate Topics</a>
+                            <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg> Course Drive</a>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Feb 26, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-reading">P</span>
+                            <strong>7 team presentations</strong>
+                        </div>
+                        <div class="presentation-list">
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 1</span>
+                                <div class="presentation-topic">Analysis of Open-Source Coding Agent Frameworks</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1WGRMCECDWtMQh4U7GBAEMhACA0tHrbwKk16jniXJrhI/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 2</span>
+                                <div class="presentation-topic">CPU/GPU Vector Database Prototype</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1lEGd1HsOlBsk9xYsE4kMT_ENXUug-zu9n5Gjy-RoZ6I/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 3</span>
+                                <div class="presentation-topic">Analysis of Open-Source Coding Agent Frameworks</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/13ruMnYbccsPTxLV9KJXRMnGfjF36MYcv068X4SMT4tA/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 4</span>
+                                <div class="presentation-topic">Survey of Edge LLM Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/19j3OJHSZX-4LkTONx2fGgBg9q6_wcz-2osqeAhIBzkw/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 5</span>
+                                <div class="presentation-topic">Survey of VLM Serving Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1KKKMmYVohkPVFDJnPL61tlhaLoUy-D5lBE2ja5-OjPA/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 6</span>
+                                <div class="presentation-topic">Survey of Agentic Workflow and Formalization</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/19LKJOPGo_Tu2fnbM-EXtaXTRWYHXpggizXqyeeHYsBM/edit?slide=id.g250107b0fa7_0_18" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 7</span>
+                                <div class="presentation-topic">An Exploration of Disaggregated Speculative Decoding<span class="presentation-note">Slides link not listed in the downloaded schedule.</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 9 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 9</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Mar 3, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-reading">P</span>
+                            <strong>7 team presentations</strong>
+                        </div>
+                        <div class="presentation-list">
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 8</span>
+                                <div class="presentation-topic">Survey of Speculative Decoding for MoE Models</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://drive.google.com/file/d/1MSqj9LTCVb4OiQ9htUJgGo7wtxJ69Y80/view?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 9</span>
+                                <div class="presentation-topic">CPU/GPU Vector Database Prototype</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1Hx3w4LkzrKLFoPd-CsC-FK71GFD89RpXP5cqhOVpvXs/edit?slide=id.p" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 10</span>
+                                <div class="presentation-topic">Survey of Duffusion LLM and Serving Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1bJSRGKbe4A5PK5-d951iia3--MkSmW-2XtonhvrkTWg/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 11</span>
+                                <div class="presentation-topic">Tool for Collaborative Operation Overhead Analysis</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1nBbABU2LRhx520V8l1FTg0uTRvOCOfx0ehT14eRA_kU/edit?slide=id.g39588894851_0_179" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 12</span>
+                                <div class="presentation-topic">Survey of RL Training Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/16BLX5lfs0wsSPeEvr8a_VDWgF_CLiujokXw1-08RaFo/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 13</span>
+                                <div class="presentation-topic">Survey of Edge LLM Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://www.canva.com/design/DAHCo-Yc7xk/NKlvT6nt9jYGNaaiwq928Q/edit?utm_content=DAHCo-Yc7xk&amp;utm_campaign=designshare&amp;utm_medium=link2&amp;utm_source=sharebutton" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 14</span>
+                                <div class="presentation-topic">Tool for Theoretical Analysis of Large-Scale MoE Serving</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1W5h-QPR2M2jadK5bzL_hnaaHrCwcrdzX6ZpNcA_UGBA/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                    <a href="https://moe-analysis.vercel.app/" target="_blank"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Demo</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Mar 5, 2026 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-reading">P</span>
+                            <strong>7 team presentations</strong>
+                        </div>
+                        <div class="presentation-list">
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 15</span>
+                                <div class="presentation-topic">Credit Assignment Granularity in Multi-Turn Agentic RL: A Systems Design Space Exploration</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1ZL4IBX2whgBqH4TMQXaR0H-rUgjwmNw_Bk8MrodRvRQ/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 16</span>
+                                <div class="presentation-topic">Profiling and Workload Imbalance in RL Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/11OK606bnv7N7IMGUseOX-2gPBV6mDsJeQ0Qn3dlW-fo/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 17</span>
+                                <div class="presentation-topic">Analysis of Open-Source Coding Agent Frameworks</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1GXQNxWc6u-fvmEYNxhm6HTfs_pPOHlreK5qJPR-ynrE/edit?slide=id.g395ba1160af_3_3411" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 18</span>
+                                <div class="presentation-topic">Develop High-Performance Kernels with GPU DSLs</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1Z5CYCwU0PR6JIhf-ykJ_toTt1MNW0R82Wa1Jw2KAvXc/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 19</span>
+                                <div class="presentation-topic">Survey of Serverless LLM Serving Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1dlHNrYI7Bq1ZqweIZPeT2r4pIw4fWQdnPM2fpGh5z7E/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 20</span>
+                                <div class="presentation-topic">Survey of System Optimizations for Agentic Workloads</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1YuAj3wrPOqLQ0CTy5Bn29FFMvOI1tJzJoIFHB0YlTOE/edit?slide=id.g3c4ef91cdc3_8_7" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 21</span>
+                                <div class="presentation-topic">Collect High-Performance Kernels for GPU DSLs</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://h1yori233.github.io/TriBench/slides/" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 10 -->
+                <div class="timeline-week latest reveal">
+                    <div class="timeline-week-label">Week 10</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Mar 10, 2026 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-reading">P</span>
+                            <strong>7 team presentations</strong>
+                        </div>
+                        <div class="presentation-list">
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 22</span>
+                                <div class="presentation-topic">Survey of Edge LLM Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1_TVKzuiUAWvrLX-Rq5UUjSbcWHzcQu61KVPd5UoHJLM/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 23</span>
+                                <div class="presentation-topic">Survey of Duffusion LLM and Serving Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1EhkkMowSjCqp0Qc768bZyFdKK0LzM2HxYGyeEwkIDt4/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 24</span>
+                                <div class="presentation-topic">Survey of VLM Serving Systems</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/18VmpfrJqx62QGJbcp_dsXZ_RldPc6KoVh4dBlFM7qHY/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 25</span>
+                                <div class="presentation-topic">Develop High-Performance Kernels with GPU DSLs</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1iQlHpT4G_vvlf2fA_nGYXz65rXCUvSkY/edit?slide=id.p4" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 26</span>
+                                <div class="presentation-topic">Survey of System Optimizations for Agentic Workloads</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1eNXnLDaPm8APv8_SJzMOud_R0WSkIRmyIzOFu9zhANY/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 27</span>
+                                <div class="presentation-topic">Survey of Agentic Workflow and Formalization</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1mRoB6Af6-QvE3ghnGWPD_J7k_cQb-iUO/edit?usp=sharing&amp;ouid=106577947095373291607&amp;rtpof=true&amp;sd=true" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
+                            <div class="presentation-item">
+                                <span class="label label-reading">Team 28</span>
+                                <div class="presentation-topic">Analysis of Open-Source Coding Agent Frameworks</div>
+                                <div class="lecture-links presentation-links">
+                                    <a href="https://docs.google.com/presentation/d/1rx1iv8vXcC9sZwU7c0h0s0ee2OpEsv_rH4cvxSaMrso/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1331,8 +1776,8 @@
             <h3 class="reveal" style="margin:1rem 0 0.5rem;">Lectures</h3>
             <div class="card reveal">
                 <ul>
-                    <li>Approximately 13-15 instructor-led lectures from early January to mid/late February, followed by project preparation and presentations.</li>
-                    <li>Lecture recordings are provided via <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Canvas Podcast</a>.</li>
+                    <li>Approximately 15 instructor-led or invited lectures, followed by project preparation and student presentations.</li>
+                    <li>Lecture recordings are provided via <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Canvas Podcast</a> and the <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">course Drive folder</a>.</li>
                     <li>Course announcements and Q&amp;A are handled on <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a>.</li>
                 </ul>
             </div>
@@ -1350,7 +1795,7 @@
             <h3 class="reveal" style="margin:1rem 0 0.5rem;">Course Project</h3>
             <div class="card reveal">
                 <ul>
-                    <li><strong>Project spec (Google Doc)</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a> (also see <code>CSE291P Project.md</code> in this repo).</li>
+                    <li><strong>Project spec (Google Doc)</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>.</li>
                     <li><strong>Team size</strong>: 5-7 students (subject to the latest course announcement).</li>
                     <li><strong>Project categories</strong>: Survey / Tool Development / Exploration Project; self-proposed topics are allowed with TA approval.</li>
                     <li><strong>Proposal for self-proposed topics</strong>: up to 2 pages, due <strong>Feb 6</strong>.</li>
@@ -1410,7 +1855,7 @@
                 <h3>Course Project (70%, group of 5-7)</h3>
                 <ul>
                     <li><strong>Categories</strong>: Paper Survey / Paper Reproduction / Self-proposed topic.</li>
-                    <li><strong>Project Spec</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a> (also see <code>CSE291P Project.md</code>).</li>
+                    <li><strong>Project Spec</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>.</li>
                     <li><strong>Team size</strong>: 5-7 students.</li>
                     <li><strong>Proposal (for self-proposed topics)</strong>: up to 2 pages, due <strong>Feb 6</strong>.</li>
                     <li><strong>Team registration</strong>: <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">Presentation slot sign-up</a>.</li>
@@ -1443,8 +1888,8 @@
             <div class="card reveal">
                 <ul>
                     <li>This schedule is tentative and subject to change.</li>
-                    <li>Lecture PDFs are stored under Google Drive.</li>
-                    <li>We expect about 13-15 lectures (roughly early January-mid/late February), followed by project preparation and student presentations (roughly late February-mid March).</li>
+                    <li>Lecture PDFs and shared course files are available in the <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">CSE 291P Google Drive folder</a>.</li>
+                    <li>The Drive folder currently includes Lecture 1 through Lecture 15. Student presentation instructions and related project links are maintained in the <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>, <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">presentation slot sign-up</a>, and <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">candidate topics</a>.</li>
                 </ul>
             </div>
 
@@ -1464,13 +1909,17 @@
                         <tr><td>L5</td><td>Distributed Training: Data Parallelism (ZeRO-1/2/3)</td></tr>
                         <tr><td>L6</td><td>Distributed Training: Pipeline Parallelism + Tensor Parallelism</td></tr>
                         <tr><td>L7</td><td>Distributed Training: Context Parallelism (CP)</td></tr>
-                        <tr><td>L8</td><td>Distributed Training: Tensor Parallelism (TP)</td></tr>
+                        <tr><td>L8</td><td>LLM Serving: Speculative Decoding</td></tr>
                         <tr><td>L9</td><td>Invited Talk: Machine Learning Compiler (Yue Guan)</td></tr>
                         <tr><td>L10</td><td>Invited Talk: RL Intro for System Designers (Guyue Huang)</td></tr>
                         <tr><td>L11</td><td>Invited Talk: FlexAttention and CUDAGraph (Boyuan Feng)</td></tr>
                         <tr><td>L12</td><td>LLM Quantization</td></tr>
                         <tr><td>L13</td><td>LLM Serving: Scheduling, KV Management, and Kernel Optimization</td></tr>
-                        <tr><td>--</td><td>Project preparation &amp; student presentations (details in announcements)</td></tr>
+                        <tr><td>L14</td><td>MoE and MoE Serving System</td></tr>
+                        <tr><td>L15</td><td>Invited Talk: Triton, Gluon, and the Future of Tile-Based Programming Models (Keren Zhou)</td></tr>
+                        <tr><td>Week 8</td><td>Project resources and student presentations (Feb 26: Teams 1-7)</td></tr>
+                        <tr><td>Week 9</td><td>Student presentations (Mar 3: Teams 8-14; Mar 5: Teams 15-21)</td></tr>
+                        <tr><td>Week 10</td><td>Student presentations (Mar 10: Teams 22-28)</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1507,7 +1956,7 @@
             <h2 id="materials" class="reveal">Materials</h2>
             <div class="card reveal">
                 <h3>Slides &amp; Project Docs</h3>
-                <p>Slides are available in this repo under <code>cse291p-w26/</code>. Project spec: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>. Lecture recordings: <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Podcast</a>.</p>
+                <p>Slides and shared course files are available in the <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">CSE 291P Google Drive folder</a>. Project and presentation links: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>, <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">presentation slot sign-up</a>, and <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">candidate topics</a>. Lecture recordings: <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Podcast</a> and course Drive.</p>
             </div>
 
             <h2 id="wellness" class="reveal">Wellness Resources</h2>
@@ -1776,6 +2225,7 @@
         <p>CSE 291P: LLM System Optimization | Winter 2026 | UC San Diego</p>
         <p style="margin-top: 0.5rem; font-size: 0.85rem;">
             <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Instructor</a> &bull;
+            <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">Course Drive</a> &bull;
             <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a> &bull;
             <a href="https://canvas.ucsd.edu/courses/71228/external_tools/5826" target="_blank">Podcast</a> &bull;
             <a href="https://www.gradescope.com/courses/1211750" target="_blank">Gradescope (Entry Code: RV7PED)</a>
@@ -1785,6 +2235,10 @@
     <!-- Floating Quick Links (H) -->
     <div class="floating-links" id="floatingLinks">
         <div class="floating-links-items">
+            <a class="floating-link-item" href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                Course Drive
+            </a>
             <a class="floating-link-item" href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">
                 <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 Piazza

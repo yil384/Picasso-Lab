@@ -544,5 +544,156 @@ function closeProject() {
 
 renderCards();
 </script>
+
+<!-- ── Picasso Lab Easter Egg: type "picasso" or triple-tap hero ── -->
+<style>
+/* Page fold-out */
+@keyframes fold-out {
+  0%   { transform: perspective(1300px) rotateY(0deg);    opacity: 1; }
+  100% { transform: perspective(1300px) rotateY(-90deg);  opacity: 0.3; }
+}
+@keyframes fold-back-in {
+  0%   { transform: perspective(1300px) rotateY(-90deg);  opacity: 0.3; }
+  100% { transform: perspective(1300px) rotateY(0deg);    opacity: 1; }
+}
+body.lab-fold-out  { animation: fold-out     0.52s cubic-bezier(.55,0,.85,.3) forwards; }
+body.lab-fold-back { animation: fold-back-in 0.52s cubic-bezier(.15,.7,.35,1) forwards; }
+
+/* Lab panel (slides in from right) */
+#lab-panel {
+  position: fixed; inset: 0; z-index: 99999;
+  background: #fff;
+  transform: perspective(1300px) rotateY(90deg);
+  pointer-events: none;
+  transition: transform 0.56s cubic-bezier(.15,.7,.35,1);
+}
+#lab-panel.visible {
+  transform: perspective(1300px) rotateY(0deg);
+  pointer-events: all;
+}
+#lab-panel iframe { width: 100%; height: 100%; border: none; display: block; }
+
+/* Close button */
+#lab-close {
+  position: fixed; top: 16px; right: 20px; z-index: 100000;
+  display: none; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.52);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff; border: none; border-radius: 20px;
+  padding: 8px 18px 8px 14px;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; letter-spacing: .01em;
+  transition: background .2s;
+}
+#lab-close:hover { background: rgba(0,0,0,0.75); }
+
+/* Activation flash */
+#lab-flash {
+  position: fixed; inset: 0; z-index: 99998;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,41,84,0.0);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .18s;
+}
+#lab-flash span {
+  font-family: 'Inter', sans-serif;
+  font-size: 2rem; font-weight: 800;
+  color: #FFCD00;
+  letter-spacing: -.02em;
+  text-shadow: 0 0 40px rgba(255,205,0,.7), 0 2px 8px rgba(0,0,0,.4);
+  transform: scale(0.85);
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), opacity .18s;
+  opacity: 0;
+}
+#lab-flash.go { background: rgba(0,41,84,0.55); opacity: 1; }
+#lab-flash.go span { transform: scale(1); opacity: 1; }
+</style>
+
+<div id="lab-flash"><span>✨ Picasso Lab</span></div>
+<div id="lab-panel">
+  <iframe id="lab-iframe" allow="fullscreen *" src=""></iframe>
+</div>
+<button id="lab-close">← Back to Projects</button>
+
+<script>
+(function () {
+  const panel   = document.getElementById('lab-panel');
+  const closeBtn = document.getElementById('lab-close');
+  const flash   = document.getElementById('lab-flash');
+  const iframe  = document.getElementById('lab-iframe');
+  let active = false;
+
+  /* ── Trigger 1: type "picasso" anywhere (desktop) ── */
+  let buf = '';
+  document.addEventListener('keydown', e => {
+    if (active) return;
+    buf = (buf + e.key).slice(-7).toLowerCase();
+    if (buf === 'picasso') { buf = ''; launch(); }
+  });
+
+  /* ── Trigger 2: triple-tap hero within 700ms (mobile) ── */
+  const hero = document.querySelector('.hero');
+  if (hero) {
+    let taps = 0, tapTimer;
+    hero.addEventListener('pointerdown', () => {
+      if (active) return;
+      taps++;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => { taps = 0; }, 700);
+      if (taps >= 3) { taps = 0; launch(); }
+    });
+  }
+
+  function launch() {
+    if (active) return;
+    active = true;
+
+    /* 1. Flash "Picasso Lab" centre-screen */
+    flash.classList.add('go');
+
+    /* 2. Start loading iframe immediately (hidden behind panel) */
+    iframe.src = 'https://lab.picasso-lab.com';
+
+    /* 3. After flash: fold page out, then slide panel in */
+    setTimeout(() => {
+      flash.classList.remove('go');
+      document.body.classList.add('lab-fold-out');
+
+      setTimeout(() => {
+        panel.classList.add('visible');
+      }, 380);
+
+      setTimeout(() => {
+        document.body.classList.remove('lab-fold-out');
+        closeBtn.style.display = 'flex';
+      }, 940);
+    }, 520);
+  }
+
+  closeBtn.addEventListener('click', () => {
+    closeBtn.style.display = 'none';
+
+    /* Slide panel out to the right */
+    panel.style.transition = 'transform 0.50s cubic-bezier(.55,0,.85,.3)';
+    panel.style.transform  = 'perspective(1300px) rotateY(90deg)';
+
+    /* Fold page back in */
+    setTimeout(() => {
+      document.body.classList.add('lab-fold-back');
+    }, 280);
+
+    setTimeout(() => {
+      panel.classList.remove('visible');
+      panel.style.transition = '';
+      panel.style.transform  = '';
+      document.body.classList.remove('lab-fold-back');
+      iframe.src = '';
+      active = false;
+    }, 830);
+  });
+})();
+</script>
 </body>
 </html>

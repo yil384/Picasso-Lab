@@ -1,0 +1,923 @@
+<!--
+  演唱会氛围头像模板 — 配置说明
+  ┌──────────────────────────────────────────────────────────┐
+  │  --concert-hue   主舞台灯色相，默认 292deg                 │
+  │  --laser-hue     激光/荧光棒色相，默认 188deg               │
+  │  --glow-size     外圈光晕强度，默认 18px                    │
+  │  --mic-x/y       麦克风中心位置（头像内百分比）              │
+  │  --mic-size      麦克风高度（占头像高度百分比）              │
+  │  --mic-rotate    麦克风倾斜角度                              │
+  └──────────────────────────────────────────────────────────┘
+-->
+
+<div class="ys-wrap" style="--concert-hue:292deg; --laser-hue:188deg; --glow-size:18px; --mic-x:74%; --mic-y:68%; --mic-size:46%; --mic-rotate:-15deg">
+  <div class="ys-stage">
+
+    <img src="https://yil384.github.io/Picasso-Lab/people/static/xiang.png"
+         class="avatar" alt="avatar"/>
+
+    <div class="ys-mic" aria-hidden="true">
+      <svg viewBox="0 0 80 140" preserveAspectRatio="xMidYMid meet"
+           xmlns="http://www.w3.org/2000/svg" overflow="visible">
+        <defs>
+          <linearGradient id="concertMicHead" x1="22" y1="7" x2="59" y2="58" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#e8edf4"/>
+            <stop offset="0.22" stop-color="#9da7b5"/>
+            <stop offset="0.6" stop-color="#303948"/>
+            <stop offset="1" stop-color="#0b1018"/>
+          </linearGradient>
+          <linearGradient id="concertMicHandle" x1="33" y1="57" x2="55" y2="133" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#2c3442"/>
+            <stop offset="0.42" stop-color="#111824"/>
+            <stop offset="1" stop-color="#05070d"/>
+          </linearGradient>
+          <linearGradient id="concertMicBand" x1="28" y1="55" x2="58" y2="66" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#d9e2ef"/>
+            <stop offset="0.52" stop-color="#788392"/>
+            <stop offset="1" stop-color="#202733"/>
+          </linearGradient>
+          <filter id="concertMicShadow" x="-60%" y="-50%" width="220%" height="220%">
+            <feDropShadow dx="0" dy="3" stdDeviation="2.2" flood-color="#000000" flood-opacity="0.45"/>
+          </filter>
+        </defs>
+
+        <g filter="url(#concertMicShadow)">
+          <ellipse cx="42" cy="31" rx="20" ry="25"
+                fill="url(#concertMicHead)" stroke="#111827" stroke-width="2"/>
+          <ellipse cx="42" cy="31" rx="15.6" ry="19.2"
+                   fill="none" stroke="#f8fafc" stroke-width="1.2" opacity="0.32"/>
+          <path d="M27 23 H57 M24 32 H60 M27 41 H57"
+                fill="none" stroke="#0c111a" stroke-width="1.65" opacity="0.58" stroke-linecap="round"/>
+          <path d="M34 10 C30 22 30 41 35 53 M50 10 C54 22 54 41 49 53"
+                fill="none" stroke="#f8fafc" stroke-width="0.95" opacity="0.24" stroke-linecap="round"/>
+          <path d="M29 17 C36 10 49 10 56 18" fill="none"
+                stroke="#ffffff" stroke-width="2" opacity="0.42" stroke-linecap="round"/>
+
+          <rect x="28" y="53" width="28" height="10" rx="4"
+                fill="url(#concertMicBand)" stroke="#111827" stroke-width="1.2"/>
+          <path d="M34 62 L53 60 L62 124 C63 130 59 134 54 134
+                   C49 134 46 131 45 126 Z"
+                fill="url(#concertMicHandle)" stroke="#05070d" stroke-width="2"/>
+          <path d="M43 65 L53 126" fill="none"
+                stroke="#ffffff" stroke-width="1.5" opacity="0.13" stroke-linecap="round"/>
+          <g transform="rotate(82 51.4 96)"
+             font-family="Arial Black, Arial, Helvetica, sans-serif"
+             font-size="13.8" font-weight="900" letter-spacing="0.4"
+             text-anchor="middle" dominant-baseline="central"
+             text-rendering="geometricPrecision">
+            <text x="51.9" y="96.5" fill="#03070d" opacity="0.72">xiang</text>
+            <text x="51.2" y="95.8" fill="#f8fbff" stroke="#101722"
+                  stroke-width="0.34" paint-order="stroke fill"
+                  stroke-linejoin="round">xiang</text>
+          </g>
+          <rect x="47" y="124" width="15" height="7" rx="3"
+                transform="rotate(-8 54.5 127.5)" fill="#0b0f18"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="ys-concert-mask" aria-hidden="true">
+      <svg class="ys-concert-svg" viewBox="0 0 200 200" preserveAspectRatio="none"
+           xmlns="http://www.w3.org/2000/svg" overflow="visible">
+        <defs>
+          <linearGradient id="edgeWash" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#34e8ff" stop-opacity="0.20"/>
+            <stop offset="0.48" stop-color="#ffffff" stop-opacity="0"/>
+            <stop offset="1" stop-color="#ff4fd8" stop-opacity="0.22"/>
+          </linearGradient>
+          <linearGradient id="cyanBeam" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#b9fff8" stop-opacity="0.5"/>
+            <stop offset="0.38" stop-color="#34e8ff" stop-opacity="0.18"/>
+            <stop offset="1" stop-color="#34e8ff" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="magentaBeam" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fff0ff" stop-opacity="0.45"/>
+            <stop offset="0.42" stop-color="#ff4fd8" stop-opacity="0.18"/>
+            <stop offset="1" stop-color="#ff4fd8" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="stageFade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#171027" stop-opacity="0"/>
+            <stop offset="0.48" stop-color="#10081d" stop-opacity="0.22"/>
+            <stop offset="1" stop-color="#05030b" stop-opacity="0.48"/>
+          </linearGradient>
+          <linearGradient id="barGlow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="0.18" stop-color="#b9fff8"/>
+            <stop offset="0.65" stop-color="#34e8ff"/>
+            <stop offset="1" stop-color="#ff4fd8"/>
+          </linearGradient>
+          <linearGradient id="signPink" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffeffb"/>
+            <stop offset="0.32" stop-color="#ff5fcb"/>
+            <stop offset="1" stop-color="#7c3aed"/>
+          </linearGradient>
+          <linearGradient id="signCyan" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ecfeff"/>
+            <stop offset="0.38" stop-color="#22d3ee"/>
+            <stop offset="1" stop-color="#2563eb"/>
+          </linearGradient>
+          <filter id="concertGlow" x="-70%" y="-70%" width="240%" height="240%">
+            <feGaussianBlur stdDeviation="2.4"/>
+          </filter>
+        </defs>
+
+        <circle cx="100" cy="100" r="97" fill="none" stroke="url(#edgeWash)" stroke-width="9"/>
+        <path d="M0 116 C39 91 67 121 101 106 C134 91 164 98 200 70 V200 H0 Z"
+              fill="url(#stageFade)" opacity="0.54"/>
+
+        <g class="ys-svg-beams" filter="url(#concertGlow)">
+          <path class="ys-svg-beam-left"
+                d="M18 20 L34 21 C31 70 26 123 20 176 L0 176 C8 106 12 62 18 20 Z"
+                fill="url(#cyanBeam)"/>
+          <path class="ys-svg-beam-right"
+                d="M182 20 L166 21 C169 70 174 123 180 176 L200 176 C192 106 188 62 182 20 Z"
+                fill="url(#magentaBeam)"/>
+          <path class="ys-svg-beam-bottom"
+                d="M31 159 C72 143 129 143 169 159 L159 200 H41 Z"
+                fill="#b565ff" opacity="0.13"/>
+        </g>
+        <g class="ys-bottom-stage">
+          <path d="M7 162 C42 145 158 145 193 162 L200 200 H0 Z"
+                fill="#05030b" opacity="0.50"/>
+          <path d="M19 168 C58 151 142 151 181 168 L190 200 H10 Z"
+                fill="#12081f" opacity="0.52"/>
+          <g class="ys-led-bars" filter="url(#concertGlow)">
+            <rect x="62" y="157" width="4" height="22" rx="2" fill="url(#barGlow)"/>
+            <rect x="72" y="150" width="4" height="31" rx="2" fill="url(#barGlow)"/>
+            <rect x="82" y="162" width="4" height="19" rx="2" fill="url(#barGlow)"/>
+            <rect x="92" y="145" width="4" height="36" rx="2" fill="url(#barGlow)"/>
+            <rect x="102" y="153" width="4" height="28" rx="2" fill="url(#barGlow)"/>
+            <rect x="112" y="148" width="4" height="33" rx="2" fill="url(#barGlow)"/>
+            <rect x="122" y="160" width="4" height="21" rx="2" fill="url(#barGlow)"/>
+            <rect x="132" y="154" width="4" height="27" rx="2" fill="url(#barGlow)"/>
+          </g>
+          <g class="ys-fan-signs" filter="url(#concertGlow)">
+            <g class="ys-fan-sign ys-fan-sign-left" transform="rotate(-9 43 151)">
+              <rect x="25" y="144" width="36" height="14" rx="3" fill="url(#signPink)"/>
+              <rect x="27" y="146" width="32" height="10" rx="2" fill="rgba(255,255,255,0.16)"/>
+              <text x="43" y="153.8">&#20877;&#36951;&#24536;</text>
+            </g>
+            <g class="ys-fan-sign ys-fan-sign-mid" transform="rotate(5 101 158)">
+              <rect x="86" y="151" width="30" height="13" rx="3" fill="url(#signCyan)"/>
+              <rect x="88" y="153" width="26" height="9" rx="2" fill="rgba(255,255,255,0.14)"/>
+              <text x="101" y="160.1">&#22810;&#26790;&#30151;</text>
+            </g>
+            <g class="ys-fan-sign ys-fan-sign-right" transform="rotate(8 157 151)">
+              <rect x="140" y="144" width="34" height="14" rx="3" fill="url(#signPink)"/>
+              <rect x="142" y="146" width="30" height="10" rx="2" fill="rgba(255,255,255,0.16)"/>
+              <text x="157" y="153.8">&#20877;&#36951;&#24536;</text>
+            </g>
+          </g>
+          <g class="ys-crowd-sticks" filter="url(#concertGlow)">
+            <path d="M24 181 L18 160 M38 180 L40 158 M57 184 L54 164 M76 182 L79 159
+                     M95 184 L96 161 M116 182 L113 160 M137 184 L140 163
+                     M158 181 L162 158 M176 182 L184 162"
+                  fill="none" stroke="url(#barGlow)" stroke-width="2.2" stroke-linecap="round"/>
+            <path class="ys-stick-cyan"
+                  d="M13 187 L9 168 M29 186 L30 166 M47 188 L44 169 M67 187 L70 166
+                     M87 189 L86 168 M108 188 L110 166 M128 189 L126 169
+                     M149 187 L153 166 M170 188 L174 169 M191 187 L195 168"
+                  fill="none" stroke-width="1.8" stroke-linecap="round"/>
+            <path class="ys-stick-pink"
+                  d="M21 196 L17 178 M39 194 L42 175 M61 197 L59 177 M83 195 L86 176
+                     M105 197 L104 177 M127 195 L124 176 M149 197 L153 177
+                     M171 194 L174 175 M187 196 L193 179"
+                  fill="none" stroke-width="1.7" stroke-linecap="round"/>
+            <path class="ys-stick-yellow"
+                  d="M35 176 L31 158 M51 174 L54 157 M73 176 L76 158 M121 176 L118 158
+                     M143 174 L146 157 M165 176 L170 159"
+                  fill="none" stroke-width="1.6" stroke-linecap="round"/>
+          </g>
+          <g class="ys-crowd-row ys-crowd-back">
+            <circle class="ys-crowd-head" cx="24" cy="166" r="3.2"/>
+            <circle class="ys-crowd-head" cx="37" cy="162" r="3"/>
+            <circle class="ys-crowd-head" cx="50" cy="166" r="3.4"/>
+            <circle class="ys-crowd-head" cx="64" cy="163" r="3.1"/>
+            <circle class="ys-crowd-head" cx="78" cy="166" r="3.3"/>
+            <circle class="ys-crowd-head" cx="92" cy="162" r="3.2"/>
+            <circle class="ys-crowd-head" cx="106" cy="166" r="3.3"/>
+            <circle class="ys-crowd-head" cx="120" cy="163" r="3.1"/>
+            <circle class="ys-crowd-head" cx="134" cy="166" r="3.4"/>
+            <circle class="ys-crowd-head" cx="148" cy="162" r="3"/>
+            <circle class="ys-crowd-head" cx="162" cy="166" r="3.2"/>
+            <circle class="ys-crowd-head" cx="176" cy="164" r="3.1"/>
+          </g>
+          <g class="ys-crowd-row ys-crowd-mid">
+            <circle class="ys-crowd-head" cx="16" cy="179" r="4.1"/>
+            <circle class="ys-crowd-head" cx="30" cy="175" r="4.5"/>
+            <circle class="ys-crowd-head" cx="45" cy="181" r="4.2"/>
+            <circle class="ys-crowd-head" cx="60" cy="176" r="4.6"/>
+            <circle class="ys-crowd-head" cx="76" cy="181" r="4.3"/>
+            <circle class="ys-crowd-head" cx="92" cy="175" r="4.6"/>
+            <circle class="ys-crowd-head" cx="108" cy="181" r="4.3"/>
+            <circle class="ys-crowd-head" cx="124" cy="176" r="4.6"/>
+            <circle class="ys-crowd-head" cx="140" cy="181" r="4.2"/>
+            <circle class="ys-crowd-head" cx="155" cy="175" r="4.5"/>
+            <circle class="ys-crowd-head" cx="170" cy="180" r="4.2"/>
+            <circle class="ys-crowd-head" cx="184" cy="176" r="4.4"/>
+          </g>
+          <g class="ys-crowd-row ys-crowd-front">
+            <path d="M8 197 C17 187 27 187 36 197 C45 187 55 187 64 197
+                     C73 187 83 187 92 197 C101 187 111 187 120 197
+                     C129 187 139 187 148 197 C157 187 167 187 176 197
+                     C185 187 194 188 200 198 V200 H0 V198 C2 198 5 198 8 197 Z"
+                  fill="#030208" opacity="0.90"/>
+            <circle class="ys-crowd-head" cx="13" cy="190" r="5.2"/>
+            <circle class="ys-crowd-head" cx="28" cy="185" r="5.7"/>
+            <circle class="ys-crowd-head" cx="43" cy="191" r="5.3"/>
+            <circle class="ys-crowd-head" cx="58" cy="186" r="5.8"/>
+            <circle class="ys-crowd-head" cx="74" cy="191" r="5.4"/>
+            <circle class="ys-crowd-head" cx="90" cy="185" r="5.8"/>
+            <circle class="ys-crowd-head" cx="106" cy="191" r="5.4"/>
+            <circle class="ys-crowd-head" cx="122" cy="186" r="5.8"/>
+            <circle class="ys-crowd-head" cx="138" cy="191" r="5.4"/>
+            <circle class="ys-crowd-head" cx="154" cy="185" r="5.7"/>
+            <circle class="ys-crowd-head" cx="170" cy="191" r="5.3"/>
+            <circle class="ys-crowd-head" cx="186" cy="186" r="5.6"/>
+          </g>
+          <g class="ys-phone-lights">
+            <circle cx="20" cy="171" r="1.2"/><circle cx="32" cy="169" r="1.4"/>
+            <circle cx="48" cy="172" r="1.1"/><circle cx="69" cy="171" r="1.2"/>
+            <circle cx="84" cy="166" r="1.1"/><circle cx="101" cy="168" r="1.4"/>
+            <circle cx="119" cy="170" r="1.1"/><circle cx="136" cy="167" r="1.2"/>
+            <circle cx="147" cy="170" r="1.2"/><circle cx="178" cy="171" r="1.2"/>
+            <circle cx="23" cy="185" r="1.1"/><circle cx="52" cy="187" r="1.2"/>
+            <circle cx="82" cy="184" r="1.1"/><circle cx="126" cy="187" r="1.2"/>
+            <circle cx="165" cy="184" r="1.3"/><circle cx="190" cy="186" r="1.1"/>
+          </g>
+          <path d="M20 184 C64 174 136 174 180 184" fill="none"
+                stroke="#34e8ff" stroke-width="1.1" opacity="0.35"/>
+        </g>
+      </svg>
+
+      <div class="ys-live">LIVE</div>
+    </div>
+
+    <div class="ys-glow-ring" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-fan-1" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-left" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-fan-2" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-left-mid" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-fan-3" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-bottom-left" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-fan-4" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-fan-5" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-bottom-right" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-fan-6" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-right-mid" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-fan-7" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-right" aria-hidden="true"></div>
+    <div class="ys-glow-stick ys-glow-stick-fan-8" aria-hidden="true"></div>
+    <div class="ys-support-board ys-support-board-left" data-text="&#20877;&#36951;&#24536;" aria-hidden="true">&#20877;&#36951;&#24536;</div>
+    <div class="ys-support-board ys-support-board-right" data-text="&#22810;&#26790;&#30151;" aria-hidden="true">&#22810;&#26790;&#30151;</div>
+    <div class="ys-notes" aria-hidden="true"></div>
+
+  </div><!-- .ys-stage -->
+</div><!-- .ys-wrap -->
+
+
+<style>
+/* ── Wrapper ── */
+.ys-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+}
+
+/* ── Stage ── */
+.ys-stage {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  overflow: visible;
+}
+
+/* ── Avatar ── */
+.avatar {
+  display: block;
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 50%;
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.18),
+    0 0 0 1px rgba(255,255,255,0.20);
+  transition:
+    transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
+    filter 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.ys-wrap.concert-on:hover .avatar {
+  transform: scale(1.05);
+  filter: brightness(1.06) saturate(1.08);
+}
+.ys-wrap.concert-on .avatar {
+  filter: brightness(1.03) saturate(1.08) contrast(1.03);
+  box-shadow:
+    0 8px 22px rgba(0,0,0,0.22),
+    0 0 0 2px rgba(255,255,255,0.28);
+}
+
+/* ── Adjustable handheld microphone icon ── */
+.ys-mic {
+  position: absolute;
+  height: var(--mic-size, 31%);
+  aspect-ratio: 80 / 140;
+  top: calc(var(--mic-y, 61%) - var(--mic-size, 31%) * 0.50);
+  left: calc(var(--mic-x, 72%) - var(--mic-size, 31%) * 0.286);
+  z-index: 3;
+  pointer-events: none;
+  transform-origin: 50% 82%;
+  opacity: 0;
+  transform: translateY(12px) scale(0.92) rotate(var(--mic-rotate, -23deg));
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.38));
+  transition:
+    opacity 0.24s ease,
+    transform 0.38s cubic-bezier(0.22,1.2,0.36,1);
+}
+.ys-wrap.concert-on .ys-mic {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(var(--mic-rotate, -23deg));
+}
+.ys-mic svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* ── Circular concert overlay clipped to avatar ── */
+.ys-concert-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+.ys-wrap.concert-on .ys-concert-mask { opacity: 0.72; }
+
+.ys-concert-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.ys-wrap.concert-on .ys-svg-beam-left {
+  transform-origin: 18px 20px;
+  animation: svg-beam-left 2.8s ease-in-out infinite alternate;
+}
+.ys-wrap.concert-on .ys-svg-beam-right {
+  transform-origin: 182px 20px;
+  animation: svg-beam-right 2.6s ease-in-out infinite alternate;
+}
+.ys-wrap.concert-on .ys-led-bars rect {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: svg-eq 0.66s ease-in-out infinite alternate;
+}
+.ys-wrap.concert-on .ys-led-bars rect:nth-child(2n) { animation-delay: 0.12s; }
+.ys-wrap.concert-on .ys-led-bars rect:nth-child(3n) { animation-delay: 0.22s; }
+.ys-crowd-back {
+  fill: #090510;
+  opacity: 0.58;
+}
+.ys-crowd-row {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.ys-crowd-mid {
+  fill: #06030b;
+  opacity: 0.78;
+}
+.ys-crowd-front {
+  fill: #020106;
+}
+.ys-crowd-sticks {
+  opacity: 0.86;
+}
+.ys-stick-cyan {
+  stroke: #67e8f9;
+}
+.ys-stick-pink {
+  stroke: #ff72df;
+}
+.ys-stick-yellow {
+  stroke: #ffe45c;
+}
+.ys-fan-signs {
+  opacity: 0.92;
+}
+.ys-fan-sign {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.ys-fan-signs text {
+  fill: #fff3a8;
+  stroke: rgba(44,18,0,0.78);
+  stroke-width: 0.44;
+  paint-order: stroke fill;
+  font-family: "PingFang SC", "Microsoft YaHei", "Arial Black", sans-serif;
+  font-size: 5.2px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-anchor: middle;
+  filter: drop-shadow(0 0 2px #ffd84d);
+}
+.ys-phone-lights {
+  fill: #e8fbff;
+  opacity: 0.86;
+  filter: drop-shadow(0 0 4px #67e8f9);
+}
+.ys-wrap.concert-on .ys-crowd-back {
+  animation: crowd-bob 1.22s ease-in-out infinite alternate;
+}
+.ys-wrap.concert-on .ys-crowd-mid {
+  animation: crowd-bob 0.94s ease-in-out infinite alternate-reverse;
+}
+.ys-wrap.concert-on .ys-crowd-front {
+  animation: crowd-bob 0.78s ease-in-out infinite alternate;
+}
+.ys-wrap.concert-on .ys-phone-lights {
+  animation: phone-twinkle 0.72s ease-in-out infinite alternate;
+}
+.ys-wrap.concert-on .ys-fan-sign-left {
+  animation: fan-sign-left 0.9s ease-in-out infinite alternate;
+}
+.ys-wrap.concert-on .ys-fan-sign-mid {
+  animation: fan-sign-mid 0.78s ease-in-out infinite alternate-reverse;
+}
+.ys-wrap.concert-on .ys-fan-sign-right {
+  animation: fan-sign-right 0.86s ease-in-out infinite alternate;
+}
+@keyframes svg-beam-left {
+  from { transform: rotate(-5deg); opacity: 0.72; }
+  to   { transform: rotate(7deg); opacity: 0.95; }
+}
+@keyframes svg-beam-right {
+  from { transform: rotate(5deg); opacity: 0.7; }
+  to   { transform: rotate(-7deg); opacity: 0.95; }
+}
+@keyframes svg-eq {
+  from { transform: scaleY(0.55); opacity: 0.62; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+@keyframes crowd-bob {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-1.8px); }
+}
+@keyframes phone-twinkle {
+  from { opacity: 0.48; }
+  to   { opacity: 1; }
+}
+@keyframes fan-sign-left {
+  from { transform: rotate(-2deg) translateY(0); }
+  to   { transform: rotate(4deg) translateY(-2px); }
+}
+@keyframes fan-sign-mid {
+  from { transform: rotate(2deg) translateY(0); }
+  to   { transform: rotate(-3deg) translateY(-1.8px); }
+}
+@keyframes fan-sign-right {
+  from { transform: rotate(3deg) translateY(0); }
+  to   { transform: rotate(-4deg) translateY(-2px); }
+}
+
+.ys-live {
+  position: absolute;
+  top: 24px;
+  right: 26px;
+  padding: 2px 5px;
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.92);
+  background: rgba(255, 26, 87, 0.62);
+  box-shadow: 0 0 7px rgba(255,26,87,0.40);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.22s ease 0.2s, transform 0.22s ease 0.2s;
+}
+.ys-wrap.concert-on .ys-live {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Circular inner glow details ── */
+.ys-glow-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+  clip-path: circle(50% at 50% 50%);
+  background:
+    radial-gradient(circle,
+      transparent 0 68%,
+      hsla(var(--laser-hue),100%,60%,0.10) 76%,
+      hsla(var(--concert-hue),100%,62%,0.28) 90%,
+      hsla(var(--laser-hue),100%,58%,0.38) 100%);
+  box-shadow:
+    inset 0 0 0 2px hsla(var(--laser-hue),100%,70%,0.34),
+    inset 0 0 18px hsla(var(--laser-hue),100%,60%,0.26),
+    inset 0 0 34px hsla(var(--concert-hue),100%,62%,0.18);
+  transition: opacity 0.34s ease;
+}
+.ys-glow-ring::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    conic-gradient(from 20deg,
+      hsla(var(--concert-hue),100%,62%,0),
+      hsla(var(--concert-hue),100%,62%,0.44),
+      hsla(var(--laser-hue),100%,58%,0.5),
+      hsla(var(--concert-hue),100%,62%,0));
+  -webkit-mask: radial-gradient(circle, transparent 0 76%, #000 84% 100%);
+  mask: radial-gradient(circle, transparent 0 76%, #000 84% 100%);
+}
+.ys-wrap.concert-on .ys-glow-ring {
+  opacity: 0.54;
+  animation: ring-spin 3.4s linear infinite;
+}
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ys-glow-stick {
+  position: absolute;
+  z-index: 16;
+  width: var(--stick-width, 6px);
+  height: var(--stick-height, 54px);
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  transition: opacity 0.25s ease, transform 0.55s cubic-bezier(0.22,1.4,0.36,1);
+  transform: rotate(var(--stick-rest, 0deg)) translateY(12px);
+}
+.ys-glow-stick::before {
+  content: "";
+  position: absolute;
+  inset: 3px 1px 10px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor, 0 0 18px currentColor;
+}
+.ys-glow-stick::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 0;
+  height: 14px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f8fafc, #8a8a8a);
+}
+.ys-glow-stick-left {
+  left: 11px;
+  bottom: 5px;
+  color: hsl(var(--laser-hue),100%,62%);
+  --stick-rest: -38deg;
+  --stick-from: -34deg;
+  --stick-to: -14deg;
+  --stick-speed: 0.74s;
+}
+.ys-glow-stick-right {
+  right: 12px;
+  bottom: 5px;
+  color: hsl(var(--concert-hue),100%,66%);
+  --stick-rest: 38deg;
+  --stick-from: 34deg;
+  --stick-to: 14deg;
+  --stick-speed: 0.68s;
+}
+.ys-glow-stick-left-mid {
+  left: 38px;
+  bottom: -4px;
+  color: #7cff7a;
+  --stick-width: 5px;
+  --stick-height: 42px;
+  --stick-rest: -18deg;
+  --stick-from: -20deg;
+  --stick-to: -4deg;
+  --stick-speed: 0.62s;
+  --stick-delay: -0.18s;
+}
+.ys-glow-stick-bottom-left {
+  left: 72px;
+  bottom: -13px;
+  color: #36e7ff;
+  --stick-width: 5px;
+  --stick-height: 38px;
+  --stick-rest: -8deg;
+  --stick-from: -10deg;
+  --stick-to: 8deg;
+  --stick-speed: 0.7s;
+  --stick-delay: -0.34s;
+}
+.ys-glow-stick-bottom-right {
+  right: 72px;
+  bottom: -13px;
+  color: #ffdc5a;
+  --stick-width: 5px;
+  --stick-height: 38px;
+  --stick-rest: 8deg;
+  --stick-from: 10deg;
+  --stick-to: -8deg;
+  --stick-speed: 0.76s;
+  --stick-delay: -0.24s;
+}
+.ys-glow-stick-right-mid {
+  right: 38px;
+  bottom: -4px;
+  color: #ff72df;
+  --stick-width: 5px;
+  --stick-height: 42px;
+  --stick-rest: 18deg;
+  --stick-from: 20deg;
+  --stick-to: 4deg;
+  --stick-speed: 0.64s;
+  --stick-delay: -0.1s;
+}
+.ys-glow-stick-fan-1 {
+  left: -5px;
+  bottom: 17px;
+  color: #8dfcff;
+  --stick-width: 4px;
+  --stick-height: 46px;
+  --stick-rest: -56deg;
+  --stick-from: -54deg;
+  --stick-to: -34deg;
+  --stick-speed: 0.7s;
+  --stick-delay: -0.12s;
+}
+.ys-glow-stick-fan-2 {
+  left: 25px;
+  bottom: -10px;
+  color: #ff8ce8;
+  --stick-width: 4px;
+  --stick-height: 36px;
+  --stick-rest: -28deg;
+  --stick-from: -30deg;
+  --stick-to: -10deg;
+  --stick-speed: 0.66s;
+  --stick-delay: -0.22s;
+}
+.ys-glow-stick-fan-3 {
+  left: 55px;
+  bottom: -18px;
+  color: #b7ff6a;
+  --stick-width: 4px;
+  --stick-height: 34px;
+  --stick-rest: -14deg;
+  --stick-from: -16deg;
+  --stick-to: 4deg;
+  --stick-speed: 0.72s;
+  --stick-delay: -0.36s;
+}
+.ys-glow-stick-fan-4 {
+  left: 94px;
+  bottom: -22px;
+  color: #fff06b;
+  --stick-width: 4px;
+  --stick-height: 34px;
+  --stick-rest: -4deg;
+  --stick-from: -8deg;
+  --stick-to: 8deg;
+  --stick-speed: 0.62s;
+  --stick-delay: -0.18s;
+}
+.ys-glow-stick-fan-5 {
+  right: 94px;
+  bottom: -22px;
+  color: #74d8ff;
+  --stick-width: 4px;
+  --stick-height: 34px;
+  --stick-rest: 4deg;
+  --stick-from: 8deg;
+  --stick-to: -8deg;
+  --stick-speed: 0.68s;
+  --stick-delay: -0.28s;
+}
+.ys-glow-stick-fan-6 {
+  right: 55px;
+  bottom: -18px;
+  color: #ff83a6;
+  --stick-width: 4px;
+  --stick-height: 34px;
+  --stick-rest: 14deg;
+  --stick-from: 16deg;
+  --stick-to: -4deg;
+  --stick-speed: 0.74s;
+  --stick-delay: -0.08s;
+}
+.ys-glow-stick-fan-7 {
+  right: 25px;
+  bottom: -10px;
+  color: #9dff95;
+  --stick-width: 4px;
+  --stick-height: 36px;
+  --stick-rest: 28deg;
+  --stick-from: 30deg;
+  --stick-to: 10deg;
+  --stick-speed: 0.64s;
+  --stick-delay: -0.3s;
+}
+.ys-glow-stick-fan-8 {
+  right: -5px;
+  bottom: 17px;
+  color: #ff7cf2;
+  --stick-width: 4px;
+  --stick-height: 46px;
+  --stick-rest: 56deg;
+  --stick-from: 54deg;
+  --stick-to: 34deg;
+  --stick-speed: 0.7s;
+  --stick-delay: -0.16s;
+}
+.ys-wrap.concert-on .ys-glow-stick {
+  opacity: 0.95;
+  animation: glowstick-wave var(--stick-speed, 0.7s) ease-in-out infinite alternate;
+  animation-delay: var(--stick-delay, 0s);
+}
+@keyframes glowstick-wave {
+  from { transform: rotate(var(--stick-from, -24deg)) translateY(0); }
+  to   { transform: rotate(var(--stick-to, 0deg)) translateY(-3px); }
+}
+
+.ys-support-board {
+  position: absolute;
+  z-index: 17;
+  min-width: 86px;
+  height: 27px;
+  padding: 0 9px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #ffe77a;
+  -webkit-text-fill-color: #ffe77a;
+  -webkit-text-stroke: 0.55px rgba(30,13,0,0.88);
+  font-family: "PingFang SC", "Microsoft YaHei", "Arial Black", sans-serif;
+  font-size: 14.4px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  text-shadow:
+    0 0 1px rgba(255,255,210,0.8),
+    0 0 3px rgba(255,205,67,0.66);
+  border: 1px solid rgba(255,220,94,0.64);
+  transition: opacity 0.22s ease, transform 0.38s cubic-bezier(0.22,1.35,0.36,1);
+}
+.ys-support-board::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 4px;
+  opacity: 0.35;
+  background:
+    radial-gradient(circle, rgba(255,242,164,0.8) 0 1px, transparent 1.25px)
+    0 0 / 6px 6px;
+}
+.ys-support-board::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  letter-spacing: inherit;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background:
+    radial-gradient(circle, #fffbe8 0 0.95px, #ffd447 1.05px 1.55px, transparent 1.65px)
+    0 0 / 5px 5px;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-stroke: 0.35px rgba(255,183,42,0.68);
+  opacity: 0.22;
+  filter:
+    drop-shadow(0 0 2px rgba(255,244,160,0.98))
+    drop-shadow(0 0 6px rgba(255,168,38,0.82));
+}
+.ys-support-board-left {
+  left: -8px;
+  bottom: 16px;
+  background:
+    linear-gradient(135deg, rgba(42,10,38,0.96), rgba(12,5,20,0.94)),
+    radial-gradient(circle at 18% 26%, rgba(255,126,222,0.55), transparent 55%);
+  box-shadow:
+    inset 0 0 10px rgba(255,209,91,0.22),
+    0 0 8px rgba(255,92,205,0.62),
+    0 0 18px rgba(118,52,255,0.38);
+  transform: rotate(-10deg) translateY(12px) scale(0.82);
+}
+.ys-support-board-right {
+  right: -8px;
+  bottom: 19px;
+  background:
+    linear-gradient(135deg, rgba(6,27,44,0.96), rgba(7,7,27,0.94)),
+    radial-gradient(circle at 78% 28%, rgba(52,232,255,0.5), transparent 58%);
+  box-shadow:
+    inset 0 0 10px rgba(255,209,91,0.22),
+    0 0 8px rgba(52,232,255,0.66),
+    0 0 18px rgba(37,99,235,0.42);
+  transform: rotate(10deg) translateY(12px) scale(0.82);
+}
+.ys-wrap.concert-on .ys-support-board-left {
+  opacity: 0.96;
+  transform: rotate(-10deg) translateY(0) scale(1);
+  animation: board-wave-left 0.82s ease-in-out infinite alternate;
+}
+.ys-wrap.concert-on .ys-support-board-right {
+  opacity: 0.96;
+  transform: rotate(10deg) translateY(0) scale(1);
+  animation: board-wave-right 0.76s ease-in-out infinite alternate-reverse;
+}
+@keyframes board-wave-left {
+  from { transform: rotate(-12deg) translateY(0) scale(1); }
+  to   { transform: rotate(-5deg) translateY(-2px) scale(1); }
+}
+@keyframes board-wave-right {
+  from { transform: rotate(12deg) translateY(0) scale(1); }
+  to   { transform: rotate(5deg) translateY(-2px) scale(1); }
+}
+
+/* ── Music-note burst ── */
+.ys-notes {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  overflow: visible;
+}
+.ys-note {
+  position: absolute;
+  opacity: 0;
+  transform: translate(-50%,-50%) scale(0.7);
+  line-height: 1;
+  font-weight: 800;
+  text-shadow: 0 0 8px currentColor, 0 1px 3px rgba(0,0,0,0.35);
+  user-select: none;
+}
+@keyframes note-fly {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.55) rotate(-12deg); }
+  12%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.35) rotate(var(--rot)); }
+}
+.ys-note.go { animation: note-fly 0.9s ease-out forwards; }
+</style>
+
+
+<script>
+(function () {
+  const wrap  = document.querySelector('.ys-wrap');
+  const notes = wrap.querySelector('.ys-notes');
+
+  wrap.addEventListener('click', () => {
+    const on = wrap.classList.toggle('concert-on');
+    if (on) burst();
+  });
+
+  function burst() {
+    notes.innerHTML = '';
+    const GLYPHS = ['♪','♫','♬','✦','✧','LIVE'];
+    const COLORS = ['#67e8f9','#f0abfc','#a7f3d0','#fff176','#fb7185','#c084fc'];
+    const N = 16;
+    for (let i = 0; i < N; i++) {
+      const note = document.createElement('span');
+      note.className = 'ys-note';
+      const angle = -Math.PI * 0.95 + (Math.PI * 1.9 / (N - 1)) * i + (Math.random() - 0.5) * 0.28;
+      const dist = 44 + Math.random() * 46;
+      note.style.cssText = [
+        `--dx:${(Math.cos(angle) * dist).toFixed(1)}px`,
+        `--dy:${(Math.sin(angle) * dist - 30).toFixed(1)}px`,
+        `--rot:${(-28 + Math.random() * 56).toFixed(1)}deg`,
+        `color:${COLORS[i % COLORS.length]}`,
+        `font-size:${9 + Math.random() * 9}px`,
+        `left:${25 + Math.random() * 50}%`,
+        `top:${50 + Math.random() * 28}%`,
+        `animation-delay:${(Math.random() * 0.12).toFixed(3)}s`,
+      ].join(';');
+      note.textContent = GLYPHS[i % GLYPHS.length];
+      notes.appendChild(note);
+      requestAnimationFrame(() => requestAnimationFrame(() => note.classList.add('go')));
+    }
+    setTimeout(() => { notes.innerHTML = ''; }, 1150);
+  }
+})();
+</script>
