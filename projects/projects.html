@@ -629,22 +629,6 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 }
 #lab-flash.on span { transform: scale(1); opacity: 1; }
 
-/* Hint shown on the back face */
-#flip-hint {
-  position: fixed; bottom: 20px; left: 50%;
-  transform: translateX(-50%);
-  z-index: 100001;
-  background: rgba(0,0,0,0.38);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: rgba(255,255,255,0.5);
-  font-size: 11px; font-family: 'Inter', sans-serif;
-  padding: 5px 14px; border-radius: 14px;
-  letter-spacing: .07em; white-space: nowrap;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.5s;
-}
-#flip-hint.show { opacity: 1; }
 </style>
 
 <div id="flip-scene">
@@ -657,7 +641,6 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   <div id="flip-shade"></div>
 </div>
 <div id="lab-flash"><span>✨ Picasso Lab</span></div>
-<div id="flip-hint">type "picasso" to flip back</div>
 
 <script>
 (function () {
@@ -667,12 +650,10 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   const shade  = document.getElementById('flip-shade');
   const iframe = document.getElementById('lab-iframe');
   const flash  = document.getElementById('lab-flash');
-  const hint   = document.getElementById('flip-hint');
-
   let flipped   = false;
   let animating = false;
 
-  const SKIP = new Set(['flip-scene', 'lab-flash', 'flip-hint']);
+  const SKIP = new Set(['flip-scene', 'lab-flash']);
 
   /* ── Trigger: type "picasso" (desktop) ── */
   let buf = '';
@@ -737,7 +718,6 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
       setTimeout(() => {
         flipped   = true;
         animating = false;
-        hint.classList.add('show');
       }, 1150);
 
     }, 480);
@@ -746,7 +726,6 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   /* ── Backward: lab → projects ── */
   function flipBack() {
     animating = true;
-    hint.classList.remove('show');
 
     // Shade: same lighting arc
     shade.style.transition = 'opacity 0.55s ease-in';
