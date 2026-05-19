@@ -455,7 +455,7 @@ function renderCards() {
       <div class="card-thumb" style="background:${p.thumbBg}">
         ${p.video
           ? `<video class="thumb-img" src="${p.video}" autoplay muted loop playsinline
-               onerror="this.style.display='none'"></video>`
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block'"></video>`
           : `<img class="thumb-img" src="${p.img}" alt="${p.name}"
                onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
         }
@@ -548,11 +548,14 @@ function closeProject() {
 }
 
 renderCards();
-// Explicitly trigger play on any video thumbnails (innerHTML injection doesn't auto-trigger autoplay)
-document.querySelectorAll('.card-thumb video').forEach(v => {
-  v.muted = true;
-  v.play().catch(() => {});
-});
+// Use IntersectionObserver to play videos when visible (handles iframe autoplay restrictions)
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.muted = true; e.target.play().catch(() => {}); }
+    else { e.target.pause(); }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v));
 </script>
 
 <!-- ── Picasso Easter Egg: type "picasso" or triple-tap hero to flip ── -->
