@@ -17,6 +17,7 @@
     }
 
     .wrapper { max-width: 1100px; margin: 0 auto; padding: 36px 24px 56px; }
+    body.article-open { overflow: hidden; }
 
     /* ── Hero header ── */
     .blog-hero {
@@ -194,6 +195,143 @@
     }
     .blog-card:hover .card-cta svg { transform: translateX(4px); }
 
+    /* ── Fullscreen article viewer ── */
+    #article-view {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #fff;
+      flex-direction: column;
+    }
+    #article-view.active { display: flex; }
+
+    .article-bar {
+      height: 52px;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      background: #fff;
+      border-bottom: 1px solid #e6e8f0;
+      box-shadow: 0 1px 8px rgba(0,0,0,.06);
+    }
+    .article-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 10px;
+      background: none;
+      color: #4a5280;
+      cursor: pointer;
+      font: inherit;
+      font-size: .82rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+    .article-back:hover { background: #f0f2f9; color: #00629B; }
+    .article-back:focus-visible {
+      outline: 3px solid rgba(0,98,155,.22);
+      outline-offset: 2px;
+    }
+    .article-back svg,
+    .article-open-tab svg,
+    .article-url-lock svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .article-sep {
+      width: 1px;
+      height: 22px;
+      background: #e0e2ec;
+      flex-shrink: 0;
+    }
+    .article-url {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid #e0e2ec;
+      border-radius: 8px;
+      background: #f4f6fb;
+      color: #5c6280;
+      font-size: .8rem;
+      overflow: hidden;
+    }
+    .article-url-lock { color: #22c55e; flex-shrink: 0; }
+    .article-url-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .article-open-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      padding: 7px 14px;
+      background: #00629B;
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .article-open-tab:hover { background: #005082; text-decoration: none; }
+    .article-shell {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      background: #fff;
+    }
+    #article-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+    }
+    .article-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: #fff;
+      color: #8690a8;
+      font-size: .88rem;
+      font-weight: 500;
+      transition: opacity .2s;
+    }
+    .article-loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .spin-ring {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #e0e2ec;
+      border-top-color: #00629B;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     @media (max-width: 600px) {
       .blog-hero { padding: 32px 20px 28px; }
       .blog-hero h1 { font-size: 1.6rem; }
@@ -201,6 +339,9 @@
       .blog-card { padding: 20px; }
       .card-title { font-size: 1.05rem; }
       .card-bottom { flex-direction: column; align-items: flex-start; }
+      .article-bar { padding: 0 10px; gap: 8px; }
+      .article-url { display: none; }
+      .article-open-tab { padding: 7px 10px; }
     }
   </style>
 </head>
@@ -221,7 +362,7 @@
 <div class="wrapper">
   <!-- Blog list -->
   <div id="blog-list">
-    <a class="blog-card" href="https://yil384.github.io/Picasso-Lab/blogs/nvidia-ising/" target="_blank" rel="noopener" aria-label="Read Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes">
+    <a class="blog-card" href="https://yil384.github.io/Picasso-Lab/blogs/nvidia-ising/" onclick="openArticle(event, this.href)" aria-label="Read Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes">
       <div class="card-top">
         <span class="card-date">
           <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -247,5 +388,70 @@
     </a>
   </div>
 </div>
+
+<div id="article-view" aria-hidden="true">
+  <div class="article-bar">
+    <button class="article-back" type="button" onclick="closeArticle()">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Blogs
+    </button>
+    <div class="article-sep"></div>
+    <div class="article-url">
+      <span class="article-url-lock"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
+      <span class="article-url-text" id="article-url-text">—</span>
+    </div>
+    <a class="article-open-tab" id="article-open-tab" href="https://yil384.github.io/Picasso-Lab/blogs/nvidia-ising/" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Open in new tab
+    </a>
+  </div>
+  <div class="article-shell">
+    <iframe id="article-frame" title="Blog article preview" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <div class="article-loading" id="article-loading">
+      <div class="spin-ring"></div>
+      <div>Loading article...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openArticle(event, url) {
+  event.preventDefault();
+
+  const view = document.getElementById('article-view');
+  const frame = document.getElementById('article-frame');
+  const loading = document.getElementById('article-loading');
+  const displayUrl = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  document.getElementById('article-url-text').textContent = displayUrl;
+  document.getElementById('article-open-tab').href = url;
+  loading.classList.remove('hidden');
+
+  view.classList.add('active');
+  view.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('article-open');
+
+  frame.onload = () => loading.classList.add('hidden');
+  frame.src = url;
+}
+
+function closeArticle() {
+  const view = document.getElementById('article-view');
+  const frame = document.getElementById('article-frame');
+  const loading = document.getElementById('article-loading');
+
+  view.classList.remove('active');
+  view.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('article-open');
+  frame.src = 'about:blank';
+  loading.classList.remove('hidden');
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && document.getElementById('article-view').classList.contains('active')) {
+    closeArticle();
+  }
+});
+</script>
 </body>
 </html>
