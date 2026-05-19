@@ -16,7 +16,7 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    .wrapper { max-width: 1100px; margin: 0 auto; padding: 36px 24px 56px; }
+    .wrapper { max-width: 780px; margin: 0 auto; padding: 36px 24px 56px; }
     body.article-open { overflow: hidden; }
 
     /* ── Hero header ── */
@@ -362,7 +362,7 @@
 <div class="wrapper">
   <!-- Blog list -->
   <div id="blog-list">
-    <a class="blog-card" href="https://yil384.github.io/Picasso-Lab/blogs/nvidia-ising/" onclick="openArticle(event, this.href)" aria-label="Read Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes">
+    <a class="blog-card" href="https://yil384.github.io/Picasso-Lab/blogs/nvidia-ising/?v=20260519-article-center" onclick="openArticle(event, this.href)" aria-label="Read Testing NVIDIA Ising: Evaluating Neural Pre-Decoding from Surface Codes to Bivariate Bicycle Codes">
       <div class="card-top">
         <span class="card-date">
           <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -400,7 +400,7 @@
       <span class="article-url-lock"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
       <span class="article-url-text" id="article-url-text">—</span>
     </div>
-    <a class="article-open-tab" id="article-open-tab" href="https://yil384.github.io/Picasso-Lab/blogs/nvidia-ising/" target="_blank" rel="noopener">
+    <a class="article-open-tab" id="article-open-tab" href="https://yil384.github.io/Picasso-Lab/blogs/nvidia-ising/?v=20260519-article-center" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       Open in new tab
     </a>
@@ -421,7 +421,7 @@ function openArticle(event, url) {
   const view = document.getElementById('article-view');
   const frame = document.getElementById('article-frame');
   const loading = document.getElementById('article-loading');
-  const displayUrl = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const displayUrl = url.replace(/^https?:\/\//, '').replace(/[?#].*$/, '').replace(/\/$/, '');
 
   document.getElementById('article-url-text').textContent = displayUrl;
   document.getElementById('article-open-tab').href = url;
