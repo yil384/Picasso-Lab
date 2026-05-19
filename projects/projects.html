@@ -604,6 +604,35 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   z-index: 10;
 }
 
+/* Typing hint — shown on front after 2 keystrokes */
+#type-hint {
+  position: fixed; bottom: 22px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: rgba(0,0,0,0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: rgba(255,255,255,0.55);
+  font-size: 11.5px; font-family: 'Inter', sans-serif; font-weight: 500;
+  padding: 6px 16px; border-radius: 20px;
+  letter-spacing: .06em; white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.1);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+#type-hint.show { opacity: 1; }
+#type-hint kbd {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+  padding: 0px 5px;
+  font-family: inherit;
+  font-size: 11px;
+  color: #FFCD00;
+  margin: 0 1px;
+}
+
 /* Activation flash */
 #lab-flash {
   position: fixed; inset: 0; z-index: 100000;
@@ -641,6 +670,7 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   <div id="flip-shade"></div>
 </div>
 <div id="lab-flash"><span>✨ Picasso Lab</span></div>
+<div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
 
 <script>
 (function () {
@@ -653,14 +683,27 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   let flipped   = false;
   let animating = false;
 
-  const SKIP = new Set(['flip-scene', 'lab-flash']);
+  const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint']);
+
+  /* ── Typing hint ── */
+  const typeHint = document.getElementById('type-hint');
+  let hintTimer = null;
+  function showHint() {
+    if (flipped) return;
+    typeHint.classList.add('show');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => typeHint.classList.remove('show'), 3000);
+  }
+  function hideHint() { clearTimeout(hintTimer); typeHint.classList.remove('show'); }
 
   /* ── Trigger: type "picasso" (desktop) ── */
   let buf = '';
   document.addEventListener('keydown', e => {
     if (animating) return;
+    if (e.key.length !== 1 || e.metaKey || e.ctrlKey) return;
     buf = (buf + e.key).slice(-7).toLowerCase();
-    if (buf === 'picasso') { buf = ''; toggle(); }
+    if (buf === 'picasso') { buf = ''; hideHint(); toggle(); return; }
+    if (buf.length >= 2) showHint();
   });
 
   /* ── Trigger: triple-tap hero within 700ms (mobile) ── */
