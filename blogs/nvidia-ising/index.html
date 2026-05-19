@@ -15,7 +15,7 @@
 
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      line-height: 1.75;
+      line-height: 1.68;
       color: #1a1a1a;
       background: #fff;
       margin: 0;
@@ -26,27 +26,35 @@
     /* ── Banner ── */
     .title-banner {
       background: linear-gradient(135deg, #00629B 0%, #004a76 60%, #003355 100%);
-      padding: 2.8rem 2rem 2.2rem;
-      text-align: center;
+      padding: 48px 32px 44px;
       position: relative;
       overflow: hidden;
     }
     .title-banner::before {
       content: '';
       position: absolute;
-      top: -30%; right: -5%;
-      width: 350px; height: 350px;
+      top: -40%; right: -10%;
+      width: 420px; height: 420px;
       background: radial-gradient(circle, rgba(255,205,0,.12), transparent 70%);
       border-radius: 50%;
     }
+    .title-banner::after {
+      content: '';
+      position: absolute;
+      bottom: -30%; left: 8%;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(255,255,255,.06), transparent 70%);
+      border-radius: 50%;
+    }
     .title-banner-inner {
-      max-width: 800px;
+      max-width: 1100px;
       margin: 0 auto;
       position: relative;
       z-index: 1;
     }
     .title-banner h1 {
-      font-size: 1.9rem;
+      max-width: 880px;
+      font-size: 1.7rem;
       font-weight: 700;
       line-height: 1.3;
       margin: 0 0 0.8rem;
@@ -57,7 +65,6 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
-      justify-content: center;
     }
     .title-banner .tags span {
       display: inline-block;
@@ -82,18 +89,19 @@
 
     /* ── Two-column layout ── */
     .page-grid {
-      max-width: 1100px;
+      max-width: 1280px;
       margin: 0 auto;
-      padding: 2rem 2rem 3rem;
+      padding: 2rem 32px 3rem;
       display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 3rem;
+      grid-template-columns: 180px minmax(0, 760px);
+      gap: 2.25rem;
+      justify-content: start;
     }
 
     /* ── TOC sidebar ── */
     .toc-sidebar {
       position: sticky;
-      top: 2rem;
+      top: 1.75rem;
       align-self: start;
     }
     .toc-sidebar .toc-heading {
@@ -115,7 +123,7 @@
     }
     .toc-sidebar a {
       display: block;
-      font-size: 0.86rem;
+      font-size: 0.8rem;
       color: #555;
       text-decoration: none;
       padding: 0.35rem 0 0.35rem 0.75rem;
@@ -138,9 +146,9 @@
     }
 
     h2 {
-      font-size: 1.5rem;
+      font-size: 1.34rem;
       font-weight: 700;
-      margin: 3rem 0 1rem;
+      margin: 2.65rem 0 0.9rem;
       color: #00629B;
       border-bottom: 2px solid #e5e5e5;
       padding-bottom: 0.5rem;
@@ -150,15 +158,15 @@
     }
 
     h3 {
-      font-size: 1.35rem;
+      font-size: 1.16rem;
       font-weight: 600;
-      margin: 2.5rem 0 1rem;
+      margin: 2.1rem 0 0.85rem;
       color: #1a3a5c;
     }
 
     p {
       margin: 0 0 1.25rem;
-      font-size: 1.05rem;
+      font-size: 0.97rem;
     }
 
     blockquote {
@@ -177,7 +185,7 @@
     }
     li {
       margin-bottom: 0.5rem;
-      font-size: 1.05rem;
+      font-size: 0.97rem;
     }
     li strong {
       color: #00629B;
@@ -189,9 +197,9 @@
     strong { font-weight: 600; }
 
     .intro-lead {
-      font-size: 1.1rem;
+      font-size: 1rem;
       color: #333;
-      line-height: 1.8;
+      line-height: 1.72;
       border-left: 3px solid #00629B;
       padding-left: 1rem;
     }
@@ -237,7 +245,7 @@
       border-radius: 0 8px 8px 0;
       padding: 1.2rem 1.5rem;
       margin: 1.5rem 0;
-      font-size: 1.08rem;
+      font-size: 1rem;
       color: #1a3a5c;
       font-weight: 500;
     }
@@ -250,7 +258,7 @@
       border-radius: 0 8px 8px 0;
       padding: 1rem 1.5rem;
       margin: 1.5rem 0;
-      font-size: 1rem;
+      font-size: 0.95rem;
       color: #3a3000;
     }
 
@@ -261,7 +269,7 @@
       padding: 1.2rem 1.5rem;
       border-radius: 8px;
       margin: 2rem 0;
-      font-size: 1.02rem;
+      font-size: 0.96rem;
       font-weight: 500;
       line-height: 1.6;
     }
@@ -293,7 +301,7 @@
     }
     figcaption {
       margin-top: 0.75rem;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: #666;
       line-height: 1.55;
       text-align: left;
@@ -310,7 +318,7 @@
       border-radius: 8px;
       padding: 1.25rem 1.5rem;
       font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-      font-size: 0.88rem;
+      font-size: 0.82rem;
       line-height: 1.55;
       overflow-x: auto;
       margin: 0 0 1.5rem;
@@ -342,7 +350,7 @@
       width: 100%;
       border-collapse: collapse;
       margin: 0;
-      font-size: 0.9rem;
+      font-size: 0.84rem;
       overflow-x: auto;
       display: table;
       border-radius: 8px;
@@ -411,7 +419,7 @@
     .pipeline .step-box {
       padding: 0.4rem 0.8rem;
       border-radius: 6px;
-      font-size: 0.82rem;
+      font-size: 0.76rem;
       font-weight: 600;
       white-space: nowrap;
     }
@@ -457,7 +465,7 @@
       text-align: center;
     }
     .metric-card .metric-value {
-      font-size: 2rem;
+      font-size: 1.65rem;
       font-weight: 800;
       color: #00629B;
       line-height: 1.2;
@@ -490,7 +498,7 @@
       border-color: #e8dca0;
     }
     .compare-card h4 {
-      font-size: 1.1rem;
+      font-size: 1rem;
       margin: 0 0 0.75rem;
       display: flex;
       align-items: center;
@@ -503,7 +511,7 @@
       justify-content: space-between;
       padding: 0.4rem 0;
       border-bottom: 1px solid rgba(0,0,0,.06);
-      font-size: 0.9rem;
+      font-size: 0.84rem;
     }
     .compare-card .compare-item:last-child { border-bottom: none; }
     .compare-card .compare-key { color: #666; font-weight: 500; }
@@ -568,8 +576,8 @@
 
     /* ── Responsive ── */
     @media (max-width: 768px) {
-      .title-banner { padding: 2.5rem 1.25rem 2rem; }
-      .title-banner h1 { font-size: 1.6rem; }
+      .title-banner { padding: 32px 20px 28px; }
+      .title-banner h1 { font-size: 1.35rem; }
       .page-grid {
         grid-template-columns: 1fr;
         padding: 1.5rem 1.25rem 2rem;
@@ -582,8 +590,9 @@
         padding-bottom: 1.5rem;
         border-bottom: 1px solid #e5e5e5;
       }
-      h2 { font-size: 1.25rem; }
-      h3 { font-size: 1.15rem; }
+      h2 { font-size: 1.18rem; }
+      h3 { font-size: 1.05rem; }
+      p, li { font-size: 0.94rem; }
       figure { max-width: 100%; }
       .comparison-grid { grid-template-columns: 1fr; }
       .metrics-row { grid-template-columns: 1fr 1fr; }
@@ -657,7 +666,7 @@
       <h3 id="architecture">Architecture</h3>
 
       <figure>
-        <img src="figures/surface_code.png" alt="Surface Code Lattice">
+        <img src="figures/surface_code.png" alt="Surface Code Lattice" loading="lazy" decoding="async">
         <figcaption><strong>Figure 1:</strong> The rotated surface code: data qubits (black dots) sit on a regular 2D grid, with X stabilizers (red) and Z stabilizers (blue) forming a planar checkerboard pattern. Logical operators X<sub>L</sub> and Z<sub>L</sub> span the code as string-like paths. This regular structure is what makes 3D CNNs a natural fit &mdash; every local patch looks the same.</figcaption>
       </figure>
 
@@ -670,7 +679,7 @@
       <p>We sweep the physical error rate <em>p</em> from 0.001 to 0.008 and measure LER at distance 9:</p>
 
       <figure>
-        <img src="figures/fig2_ler_sweep.png" alt="Surface Code LER">
+        <img src="figures/fig2_ler_sweep.png" alt="Surface Code LER" loading="lazy" decoding="async">
         <figcaption><strong>Figure 2:</strong> LER vs. physical error rate for the surface code at <em>d</em> = 9. Both the R=9 (blue) and R=13 (orange) pre-decoder models reduce LER compared to the PyMatching baseline (gray dashed). The R=13 model achieves a <span class="hl-num">1.39x</span> LER reduction at <em>p</em> = 0.008.</figcaption>
       </figure>
 
@@ -679,7 +688,7 @@
       <p>By reducing syndrome density, the pre-decoder makes <span class="hl-model">PyMatching</span>'s job easier &mdash; sparser syndromes mean fewer matching edges and lower decode latency:</p>
 
       <figure>
-        <img src="figures/fig3_speedup.png" alt="Surface Code Speedup">
+        <img src="figures/fig3_speedup.png" alt="Surface Code Speedup" loading="lazy" decoding="async">
         <figcaption><strong>Figure 3:</strong> PyMatching speedup and LER reduction at <em>p</em> = 0.004 across code distances, using the R=13 model.</figcaption>
       </figure>
 
@@ -755,7 +764,7 @@
       <p>The BB [[72,12,6]] code stores <strong><span class="hl-num">12</span> logical qubits</strong> in 72 physical qubits &mdash; twice what a d=6 surface code uses for just <strong>1</strong>. The [[144,12,12]] code achieves distance 12 with the same qubit count as a d=12 surface code, but encodes <strong>12 logicals</strong> instead of 1.</p>
 
       <figure>
-        <img src="figures/bb_code.png" alt="BB Code Structure">
+        <img src="figures/bb_code.png" alt="BB Code Structure" loading="lazy" decoding="async">
         <figcaption><strong>Figure 4:</strong> Tanner graph of a bivariate bicycle code. Red diamonds (X) mark triggered syndrome checks; blue and yellow circles represent data qubits. The non-local connectivity (solid and dashed lines) is what gives BB codes their encoding advantage &mdash; and what makes decoding harder.</figcaption>
       </figure>
 
@@ -782,7 +791,7 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
       <p>We evaluate both BB codes under code-capacity noise with <span class="hl-model">BP-OSD</span> (<span class="hl-num">5,000</span> shots per point) to establish baseline performance:</p>
 
       <figure>
-        <img src="figures/fig4_bb_code_ler.png" alt="BB Code LER">
+        <img src="figures/fig4_bb_code_ler.png" alt="BB Code LER" loading="lazy" decoding="async">
         <figcaption><strong>Figure 5:</strong> LER vs. physical error rate for BB codes with BP-OSD. The [[144,12,12]] code achieves ~10x lower LER than [[72,12,6]] at <em>p</em> = 0.03. Both encode k = 12 logical qubits.</figcaption>
       </figure>
 
@@ -808,12 +817,12 @@ Hz = sp.hstack([B.T, A.T])  # 36 x 72</code></pre></div>
       <p>We compare <span class="hl-model">BP-OSD</span> alone vs. MLP pre-decoder + <span class="hl-model">BP-OSD</span> on [[144,12,12]] (<span class="hl-num">100,000</span> shots per point per basis, same error samples for both decoders):</p>
 
       <figure>
-        <img src="figures/fig5_predecoder_ler.png" alt="Pre-Decoder LER">
+        <img src="figures/fig5_predecoder_ler.png" alt="Pre-Decoder LER" loading="lazy" decoding="async">
         <figcaption><strong>Figure 6:</strong> The MLP pre-decoder (orange) reduces LER vs. BP-OSD alone (gray) in the sub-threshold regime, with gains fading at higher error rates.</figcaption>
       </figure>
 
       <figure>
-        <img src="figures/fig6_predecoder_tradeoff.png" alt="Pre-Decoder Tradeoff">
+        <img src="figures/fig6_predecoder_tradeoff.png" alt="Pre-Decoder Tradeoff" loading="lazy" decoding="async">
         <figcaption><strong>Figure 7:</strong> LER reduction factor and latency comparison across physical error rates.</figcaption>
       </figure>
 
