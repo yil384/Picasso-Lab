@@ -682,6 +682,7 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   const flash  = document.getElementById('lab-flash');
   let flipped   = false;
   let animating = false;
+  let keyboardPrimed = false;
 
   const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint']);
 
@@ -696,15 +697,38 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   }
   function hideHint() { clearTimeout(hintTimer); typeHint.classList.remove('show'); }
 
-  /* ── Trigger: type "picasso" (desktop) ── */
+  function primeKeyboardCapture() {
+    if (!document.body) return;
+    if (!document.body.hasAttribute('tabindex')) document.body.tabIndex = -1;
+    try {
+      document.body.focus({ preventScroll: true });
+      keyboardPrimed = true;
+    } catch (_) {}
+  }
+
+  window.addEventListener('load', () => setTimeout(primeKeyboardCapture, 0), { once: true });
+  window.addEventListener('pageshow', () => setTimeout(primeKeyboardCapture, 0));
+  window.addEventListener('focus', primeKeyboardCapture);
+  document.addEventListener('pointerenter', primeKeyboardCapture);
+  document.addEventListener('mousemove', () => {
+    if (!keyboardPrimed) primeKeyboardCapture();
+  }, { once: true });
+
+  /* ── Trigger: type "picasso" / "picaso" (desktop) ── */
   let buf = '';
   document.addEventListener('keydown', e => {
     if (animating) return;
     if (e.key.length !== 1 || e.metaKey || e.ctrlKey) return;
+    keyboardPrimed = true;
     buf = (buf + e.key).slice(-7).toLowerCase();
-    if (buf === 'picasso') { buf = ''; hideHint(); toggle(); return; }
+    if (buf.endsWith('picasso') || buf.endsWith('picaso')) {
+      buf = '';
+      hideHint();
+      toggle();
+      return;
+    }
     if (buf.length >= 2) showHint();
-  });
+  }, true);
 
   /* ── Trigger: triple-tap hero within 700ms (mobile) ── */
   const hero = document.querySelector('.hero');
