@@ -84,7 +84,7 @@
       gap: 6px;
       font-size: .72rem;
       font-weight: 600;
-      letter-spacing: .06em;
+      letter-spacing: 0;
       text-transform: uppercase;
       margin-bottom: 12px;
       color: var(--ucsd-gold);
@@ -130,53 +130,6 @@
       max-width: 1120px;
       margin: 0 auto;
       padding: 36px 24px 58px;
-    }
-
-    .section-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    .section-head h2 {
-      margin: 0;
-      color: var(--ink);
-      font-size: 1.18rem;
-      font-weight: 800;
-      letter-spacing: 0;
-    }
-
-    .section-head p {
-      margin: 4px 0 0;
-      max-width: 640px;
-      color: #7a849c;
-      font-size: 0.86rem;
-    }
-
-    .focus-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-      color: #59627a;
-      box-shadow: 0 4px 14px rgba(21, 35, 61, 0.05);
-      font-size: 0.76rem;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .focus-pill::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--ucsd-gold);
-      box-shadow: 0 0 0 4px rgba(255,205,0,0.18);
     }
 
     .course-grid {
@@ -283,7 +236,7 @@
       color: var(--accent);
       font-size: 0.68rem;
       font-weight: 800;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
       text-transform: uppercase;
     }
 
@@ -457,6 +410,239 @@
       transform: translate(-50%, 0);
     }
 
+    #type-hint {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      z-index: 9999;
+      transform: translateX(-50%);
+      padding: 6px 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      background: rgba(0,0,0,0.42);
+      color: rgba(255,255,255,0.55);
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      transition: opacity 0.4s ease;
+    }
+
+    #type-hint.show { opacity: 1; }
+
+    #type-hint kbd {
+      display: inline-block;
+      margin: 0 1px;
+      padding: 0 5px;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.15);
+      color: var(--ucsd-gold);
+      font: inherit;
+      font-size: 11px;
+    }
+
+    body.door-lock {
+      overflow: hidden;
+    }
+
+    #teaching-door-scene {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: none;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(255,205,0,0.18), transparent 34%),
+        linear-gradient(135deg, #061520 0%, #0b2434 48%, #050b12 100%);
+      color: #fff;
+      pointer-events: none;
+      perspective: 1600px;
+    }
+
+    #teaching-door-scene.active {
+      display: block;
+      pointer-events: auto;
+    }
+
+    .teaching-clip-stage {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: clamp(20px, 5vw, 56px);
+      opacity: 0;
+      transform: scale(0.965);
+      transition: opacity 0.55s ease 0.16s, transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.16s;
+    }
+
+    #teaching-door-scene.open .teaching-clip-stage {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .teaching-clip-shell {
+      width: min(92vw, 1080px);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      background: rgba(3, 14, 23, 0.78);
+      box-shadow: 0 28px 90px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,205,0,0.12);
+      overflow: hidden;
+    }
+
+    .teaching-clip-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 12px 9px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .teaching-clip-label {
+      min-width: 0;
+      color: rgba(255,255,255,0.78);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .teaching-door-close {
+      width: 32px;
+      height: 32px;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 32px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.84);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 0.22s ease 0.45s, transform 0.22s ease 0.45s, background 0.16s ease;
+    }
+
+    #teaching-door-scene.open .teaching-door-close {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .teaching-door-close:hover,
+    .teaching-door-close:focus-visible {
+      background: rgba(255,255,255,0.16);
+      outline: none;
+    }
+
+    .teaching-door-close svg {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    #teaching-highlight-video {
+      display: block;
+      width: 100%;
+      max-height: min(72vh, 640px);
+      aspect-ratio: 20 / 11;
+      background: #02070c;
+      object-fit: contain;
+    }
+
+    .teaching-page-half {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      z-index: 3;
+      width: 50.05vw;
+      overflow: hidden;
+      background: var(--page);
+      box-shadow: 0 0 40px rgba(0,0,0,0.18);
+      transition:
+        transform 1.05s cubic-bezier(0.76, 0, 0.24, 1),
+        filter 1.05s ease,
+        box-shadow 1.05s ease;
+      will-change: transform;
+    }
+
+    .teaching-page-left {
+      left: 0;
+      transform-origin: left center;
+    }
+
+    .teaching-page-right {
+      right: 0;
+      transform-origin: right center;
+    }
+
+    .teaching-page-copy {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      min-height: 100vh;
+      pointer-events: none;
+      transform: translateY(var(--split-scroll-y, 0px));
+    }
+
+    .teaching-page-right .teaching-page-copy {
+      left: -50vw;
+    }
+
+    .teaching-page-copy .hero::before,
+    .teaching-page-copy .hero::after {
+      transform: translateZ(0);
+    }
+
+    .teaching-page-crack {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      z-index: 4;
+      width: 2px;
+      background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.88) 12%, rgba(255,205,0,0.88) 50%, rgba(255,255,255,0.7) 88%, transparent 100%);
+      box-shadow: 0 0 22px rgba(255,205,0,0.34), 0 0 8px rgba(0,0,0,0.28);
+      opacity: 0;
+      transform: translateX(-50%) scaleY(0.2);
+      transition: opacity 0.24s ease, transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #teaching-door-scene.active .teaching-page-crack {
+      opacity: 1;
+      transform: translateX(-50%) scaleY(1);
+    }
+
+    #teaching-door-scene.open .teaching-page-left {
+      transform: translateX(-101%) rotateY(-5deg);
+      filter: brightness(0.92);
+      box-shadow: 24px 0 58px rgba(0,0,0,0.24);
+    }
+
+    #teaching-door-scene.open .teaching-page-right {
+      transform: translateX(101%) rotateY(5deg);
+      filter: brightness(0.92);
+      box-shadow: -24px 0 58px rgba(0,0,0,0.24);
+    }
+
+    #teaching-door-scene.open .teaching-page-crack {
+      opacity: 0;
+      transform: translateX(-50%) scaleY(1);
+    }
+
     .spark-layer {
       position: fixed;
       inset: 0;
@@ -504,12 +690,6 @@
 
       .wrap {
         padding: 26px 14px 44px;
-      }
-
-      .section-head {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
       }
 
       .course-grid {
@@ -575,14 +755,6 @@
   </header>
 
   <main class="wrap">
-    <div class="section-head">
-      <div>
-        <h2>Course Cards</h2>
-        <p>Schedule, contact, location, and course pages are grouped into compact cards with topic-specific accents.</p>
-      </div>
-      <div class="focus-pill">Current teaching focus</div>
-    </div>
-
     <section class="course-grid" aria-label="Courses taught">
       <article class="course-card" data-topic="ml" data-sparks="LLM,GPU,API,ML" data-message="ML systems: tokens, kernels, and schedulers are online.">
         <div class="card-inner">
@@ -788,13 +960,47 @@
 
   <div class="spark-layer" id="spark-layer" aria-hidden="true"></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
+
+  <div id="teaching-door-scene" aria-hidden="true">
+    <div class="teaching-clip-stage">
+      <div class="teaching-clip-shell">
+        <div class="teaching-clip-bar">
+          <span class="teaching-clip-label">CSE 291P Highlight · BPE Training</span>
+          <button class="teaching-door-close" type="button" aria-label="Close highlight">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <video id="teaching-highlight-video" controls playsinline preload="metadata"></video>
+      </div>
+    </div>
+    <div class="teaching-page-half teaching-page-left" aria-hidden="true">
+      <div class="teaching-page-copy"></div>
+    </div>
+    <div class="teaching-page-half teaching-page-right" aria-hidden="true">
+      <div class="teaching-page-copy"></div>
+    </div>
+    <div class="teaching-page-crack" aria-hidden="true"></div>
+  </div>
 
   <script>
     (function () {
       const layer = document.getElementById('spark-layer');
       const toast = document.getElementById('toast');
+      const typeHint = document.getElementById('type-hint');
+      const doorScene = document.getElementById('teaching-door-scene');
+      const highlightVideo = document.getElementById('teaching-highlight-video');
+      const doorClose = document.querySelector('.teaching-door-close');
+      const pageCopies = Array.from(document.querySelectorAll('.teaching-page-copy'));
+      const CLIP_START = 0;
+      const CLIP_END = 97.8;
+      const CLIP_SRC = 'https://yil384.github.io/Picasso-Lab/teaching/291P-W25/lecture1-tokenization-bpe-highlight.mp4';
       let toastTimer = null;
+      let hintTimer = null;
       let buffer = '';
+      let doorOpen = false;
+      let doorAnimating = false;
+      let keyboardPrimed = false;
 
       function showToast(text) {
         clearTimeout(toastTimer);
@@ -802,6 +1008,35 @@
         toast.classList.add('show');
         toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
       }
+
+      function showTypeHint() {
+        if (doorOpen) return;
+        typeHint.classList.add('show');
+        clearTimeout(hintTimer);
+        hintTimer = setTimeout(() => typeHint.classList.remove('show'), 3000);
+      }
+
+      function hideTypeHint() {
+        clearTimeout(hintTimer);
+        typeHint.classList.remove('show');
+      }
+
+      function primeKeyboardCapture() {
+        if (!document.body) return;
+        if (!document.body.hasAttribute('tabindex')) document.body.tabIndex = -1;
+        try {
+          document.body.focus({ preventScroll: true });
+          keyboardPrimed = true;
+        } catch (_) {}
+      }
+
+      window.addEventListener('load', () => setTimeout(primeKeyboardCapture, 0), { once: true });
+      window.addEventListener('pageshow', () => setTimeout(primeKeyboardCapture, 0));
+      window.addEventListener('focus', primeKeyboardCapture);
+      document.addEventListener('pointerenter', primeKeyboardCapture);
+      document.addEventListener('mousemove', () => {
+        if (!keyboardPrimed) primeKeyboardCapture();
+      }, { once: true });
 
       function releaseSparks(card, trigger) {
         const labels = (card.dataset.sparks || 'UCSD,PICASSO').split(',');
@@ -842,21 +1077,136 @@
       });
 
       const secrets = {
-        picasso: 'Picasso Lab teaching palette unlocked.',
         triton: 'Triton path found.',
         qubit: 'Quantum trace detected.',
         compile: 'Compiler pipeline warmed up.'
       };
 
+      function prepareHighlight() {
+        if (!highlightVideo.src) highlightVideo.src = CLIP_SRC;
+        const seekStart = () => {
+          try { highlightVideo.currentTime = CLIP_START; } catch (_) {}
+        };
+        if (highlightVideo.readyState >= 1) {
+          seekStart();
+        } else {
+          highlightVideo.addEventListener('loadedmetadata', seekStart, { once: true });
+        }
+      }
+
+      function playHighlight() {
+        const startPlayback = () => {
+          if (highlightVideo.currentTime < CLIP_START || highlightVideo.currentTime >= CLIP_END) {
+            try { highlightVideo.currentTime = CLIP_START; } catch (_) {}
+          }
+          highlightVideo.muted = false;
+          highlightVideo.volume = 0.88;
+          highlightVideo.play().catch(() => {
+            highlightVideo.muted = true;
+            highlightVideo.play().catch(() => {});
+          });
+        };
+
+        if (highlightVideo.readyState >= 1) {
+          startPlayback();
+        } else {
+          highlightVideo.addEventListener('loadedmetadata', startPlayback, { once: true });
+        }
+      }
+
+      function buildPageSplit() {
+        const sources = [
+          document.querySelector('.hero'),
+          document.querySelector('main.wrap')
+        ].filter(Boolean);
+        const scrollOffset = `${-window.scrollY}px`;
+
+        pageCopies.forEach((copy) => {
+          copy.innerHTML = '';
+          copy.style.setProperty('--split-scroll-y', scrollOffset);
+          sources.forEach((source) => {
+            const clone = source.cloneNode(true);
+            clone.querySelectorAll('button, a, input, textarea, select, video').forEach((el) => {
+              el.tabIndex = -1;
+              el.setAttribute('aria-hidden', 'true');
+            });
+            copy.appendChild(clone);
+          });
+        });
+      }
+
+      function clearPageSplit() {
+        pageCopies.forEach((copy) => {
+          copy.innerHTML = '';
+          copy.style.removeProperty('--split-scroll-y');
+        });
+      }
+
+      function openDoor() {
+        if (doorOpen || doorAnimating) return;
+        doorAnimating = true;
+        hideTypeHint();
+        buildPageSplit();
+        doorScene.setAttribute('aria-hidden', 'false');
+        doorScene.classList.add('active');
+        document.body.classList.add('door-lock');
+        prepareHighlight();
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          doorScene.classList.add('open');
+        }));
+
+        setTimeout(() => {
+          playHighlight();
+          doorOpen = true;
+          doorAnimating = false;
+        }, 1080);
+      }
+
+      function closeDoor() {
+        if (!doorOpen || doorAnimating) return;
+        doorAnimating = true;
+        doorScene.classList.remove('open');
+        highlightVideo.pause();
+
+        setTimeout(() => {
+          doorScene.classList.remove('active');
+          doorScene.setAttribute('aria-hidden', 'true');
+          document.body.classList.remove('door-lock');
+          clearPageSplit();
+          doorOpen = false;
+          doorAnimating = false;
+        }, 1080);
+      }
+
+      highlightVideo.addEventListener('timeupdate', () => {
+        if (highlightVideo.currentTime >= CLIP_END) {
+          highlightVideo.currentTime = CLIP_START;
+          highlightVideo.play().catch(() => {});
+        }
+      });
+
+      doorClose.addEventListener('click', closeDoor);
+
       document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeDoor();
+          return;
+        }
         if (event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1) return;
+        keyboardPrimed = true;
         buffer = (buffer + event.key.toLowerCase()).slice(-8);
+        if (buffer.endsWith('picasso') || buffer.endsWith('picaso')) {
+          buffer = '';
+          openDoor();
+          return;
+        }
         Object.keys(secrets).forEach((word) => {
           if (!buffer.endsWith(word)) return;
-          if (word === 'picasso') document.body.classList.toggle('lab-mode');
           showToast(secrets[word]);
         });
-      });
+        if (buffer.length >= 2) showTypeHint();
+      }, true);
     })();
   </script>
 </body>
