@@ -69,6 +69,45 @@
       text-decoration: underline;
     }
 
+    .gold-candidate {
+      display: inline-block;
+      color: #b87800;
+      background: linear-gradient(
+        90deg,
+        #7a4b00 0%,
+        #b87800 8%,
+        #ffd76a 18%,
+        #fff6c8 25%,
+        #d49a1e 33%,
+        #8d5700 42%,
+        #7a4b00 50%,
+        #b87800 58%,
+        #ffd76a 68%,
+        #fff6c8 75%,
+        #d49a1e 83%,
+        #8d5700 92%,
+        #7a4b00 100%
+      );
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 10px rgba(255, 205, 70, 0.22);
+      animation: goldFlow 9s linear infinite;
+    }
+
+    @keyframes goldFlow {
+      from { background-position: 0% 50%; }
+      to { background-position: 100% 50%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .gold-candidate {
+        animation: none;
+        background-position: 45% 50%;
+      }
+    }
+
     /* Preview Card */
     .preview-card {
       position: absolute;
@@ -233,10 +272,22 @@
 
   <!-- 论文列表 -->
   <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">ChipMATE: Multi-Agent Training via Reinforcement Learning for Enhanced RTL Generation. </i> Zhongkai Yu*, Yichen Lin*, Chenyang Zhou, Yuwei Zhang, Kun Zhou, Junxia Cui, Haotian Ye, Zhengding Hu, Zaifeng Pan, Ruiyi Wang, Yujie Zhao, Hejia Zhang, Jingbo Shang, Jishen Zhao, Yufei Ding. [<a href="https://arxiv.org/abs/2605.12857">paper</a>] [<a href="https://chipmate.picasso-lab.com/">website</a>]</p>
+    </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">FlashEvolve: Accelerating Agent Self-Evolution with Asynchronous Stage Orchestration. </i> Zhengding Hu, Mingge Lu, Zhen Wang, Jixuan Ruan, Chang Chen, Zaifeng Pan, Yue Guan, Ruiyi Wang, Zhongkai Yu, Chao Zhang, Yufei Ding. [<a href="https://arxiv.org/abs/2605.08520">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">JigsawRL: Assembling RL Pipelines for Efficient LLM Post-Training. </i> Zhengding Hu, Hehua Ouyang, Chang Chen, Zaifeng Pan, Yue Guan, Zhongkai Yu, Zhen Wang, Steven Swanson, Yufei Ding. [<a href="https://arxiv.org/abs/2604.23838">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[preprint]</b> <i style="font-weight:bold">Lookahead Context Engineering: Hiding Context Transformation Overhead for Efficient Long-Horizon Agent Serving. </i> Zaifeng Pan, Qianxu Wang, Zhengding Hu, Chang Chen, Yue Guan, Steven Swanson, Yufei Ding. [<a href="https://www.researchgate.net/publication/404781391_Lookahead_Context_Engineering_Hiding_Context_Transformation_Overhead_for_Efficient_Long-Horizon_Agent_Serving">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[OSDI'26] (To appear)</b> <i style="font-weight:bold">Syncopate: Efficient Multi-GPU AI Kernels via Automatic Chunk-Centric Compute-Communication Overlap. </i> Xinwei Qiang*, Yue Guan*, Zhengding Hu, Yufei Ding, Adnan Aziz. [<a href="https://arxiv.org/abs/2601.20595">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[ISCA'26] (To appear)</b> <i style="font-weight:bold">Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference. </i> Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai. [<a href="https://arxiv.org/abs/2510.05497">paper</a>]</p>
+    <p style="white-space:pre-wrap;"><b>[ISCA'26]<span class="gold-candidate">[Best Paper Candidate]</span> (To appear)</b> <i style="font-weight:bold">Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference. </i> Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai. [<a href="https://arxiv.org/abs/2510.05497">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[ISCA'26] (To appear)</b> <i style="font-weight:bold">Reducing Page Faults via Invalidation-based Mapping Propagation in Multi-GPU Systems. </i> Junsung Kim, Dongho Ha, Sungwoo Kim, Wonho Cho, Sungbin Kim, Yufei Ding, Won Woo Ro.</p>
@@ -244,25 +295,28 @@
   <div class="sqs-block-content quantum paper" >
     <p style="white-space:pre-wrap;"><b>[ISCA'26] (To appear)</b> <i style="font-weight:bold">Transpiler-Architecture Co-Design to Curb Clifford Costs in Fault-Tolerant Quantum Computing. </i> Meng Wang, Chenxu Liu, Samuel Stein, Yufei Ding, Poulami Das, Prashant Nair, Ang Li. [<a href="https://arxiv.org/abs/2412.15434">paper</a>]</p>
   </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICML'26] (To appear)</b> <i style="font-weight:bold">ScaleSim: Serving Large-Scale Multi-Agent Simulation with Invocation Distance-Based Memory Management. </i> Zaifeng Pan, Yipeng Shen, Zhengding Hu, Zhuang Wang, Aninda Manocha, Zheng Wang, Zhongkai Yu, Yue Guan, Yufei Ding. [<a href="https://arxiv.org/abs/2601.21473">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[ICML'26] (To appear)</b> <i style="font-weight:bold">TritonGym: A Benchmark for Agentic LLM Workflows in Triton GPU Code Generation. </i> Yue Guan, Yichen Lin, Xu Zhao, Jianzhu Yao, Xinwei Qiang, Zhongkai Yu, Pramod Viswanath, Yufei Ding, Adnan Aziz.</p>
+  </div>
   <div class="sqs-block-content quantum paper" >
-    <p style="white-space:pre-wrap;"><b>[ASPLOS'26] (To appear)</b> <i style="font-weight:bold">iSwitch: QEC on Demand via In-Situ Encoding of Bare Qubits for Ion Trap Architectures. </i> Keyi Yin, Xiang Fang, Zhuo Chen, David Hayes, Eneet Kaur, Reza Nejabati, Hartmut Haeffner, Wes Campbell, Eric Hudson, Jens Palsberg, Travis Humble, Yufei Ding.</p>
+    <p style="white-space:pre-wrap;"><b>[ASPLOS'26]</b> <i style="font-weight:bold">iSwitch: QEC on Demand via In-Situ Encoding of Bare Qubits for Ion Trap Architectures. </i> Keyi Yin, Xiang Fang, Zhuo Chen, David Hayes, Eneet Kaur, Reza Nejabati, Hartmut Haeffner, Wes Campbell, Eric Hudson, Jens Palsberg, Travis Humble, Yufei Ding. [<a href="https://dl.acm.org/doi/10.1145/3779212.3790177">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[HPCA'26] (To appear)</b> <i style="font-weight:bold">SFD: Towards Segment Fusion Dataflowfor Spatial Accelerators. </i> Fuyu Wang, Minghua Shen, Yufei Ding, Nong Xiao, Yutong Lu.</p>
+    <p style="white-space:pre-wrap;"><b>[HPCA'26]</b> <i style="font-weight:bold">SFD: Towards Segment Fusion Dataflowfor Spatial Accelerators. </i> Fuyu Wang, Minghua Shen, Yufei Ding, Nong Xiao, Yutong Lu. [<a href="https://ieeexplore.ieee.org/document/11408456">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[CGO'26] (To appear)</b> <i style="font-weight:bold">Proton: Towards Multi-level, Adaptive Profiling for Triton. </i> Keren Zhou, Tianle Zhong, Hao Wu, Jihyeong Lee, Yue Guan, Yufei Ding, Robeck Corbin, Yuanwei Fang, Jeff Niu, Philippe Tillet.</p>
+    <p style="white-space:pre-wrap;"><b>[CGO'26]</b> <i style="font-weight:bold">Proton: Towards Multi-level, Adaptive Profiling for Triton. </i> Keren Zhou, Tianle Zhong, Hao Wu, Jihyeong Lee, Yue Guan, Yufei Ding, Robeck Corbin, Yuanwei Fang, Jeff Niu, Philippe Tillet. [<a href="https://ieeexplore.ieee.org/abstract/document/11395207">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">ChipBench: A Next-Step Benchmark for Evaluating LLM Performance in AI-Aided Chip Design. </i> Zhongkai Yu, Chenyang Zhou, Yichen Lin, Hejia Zhang, Haotian Ye, Junxia Cui, Zaifeng Pan, Jishen Zhao, Yufei Ding. [<a href="https://arxiv.org/abs/2601.21448">paper</a>]</p>
   </div>
-<div class="sqs-block-content machinelearning paper">
-  <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">TritonDFT: Automating DFT with a Multi-Agent Framework.</i> Zhengding Hu, Kuntal Talit, Zhen Wang, Haseeb Ahmad, Yichen Lin, Prabhleen Kaur, Christopher Lane, Elizabeth A. Peterson, Zhiting Hu, Elizabeth A. Nowadnick, Yufei Ding. [<a href="https://arxiv.org/abs/2603.03372">paper</a>] [<a href="https://tritondft.com/">website</a>] </p>
-  </div>
-  <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">ScaleSim: Serving Large-Scale Multi-Agent Simulation with Invocation Distance-Based Memory Management. </i> Zaifeng Pan, Yipeng Shen, Zhengding Hu, Zhuang Wang, Aninda Manocha, Zheng Wang, Zhongkai Yu, Yue Guan, Yufei Ding. [<a href="https://arxiv.org/abs/2601.21473">paper</a>]</p>
-  </div>
-<div class="sqs-block-content machinelearning paper">
+  <div class="sqs-block-content machinelearning paper">
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">TritonDFT: Automating DFT with a Multi-Agent Framework.</i> Zhengding Hu, Kuntal Talit, Zhen Wang, Haseeb Ahmad, Yichen Lin, Prabhleen Kaur, Christopher Lane, Elizabeth A. Peterson, Zhiting Hu, Elizabeth A. Nowadnick, Yufei Ding. [<a href="https://arxiv.org/abs/2603.03372">paper</a>] [<a href="https://tritondft.com/">website</a>] </p>
+    </div>
+  <div class="sqs-block-content machinelearning paper">
   <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">Pancake: Hierarchical Memory System for Multi-Agent LLM Serving.</i> Zhengding Hu, Zaifeng Pan, Prabhleen Kaur, Vibha Murthy, Zhongkai Yu, Yue Guan, Zhen Wang, Steven Swanson, Yufei Ding. [<a href="https://arxiv.org/abs/2602.21477">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
