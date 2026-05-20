@@ -371,7 +371,8 @@
       </div>
     </div>
     <iframe id="project-iframe" title="Project preview"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+      allow="clipboard-read *; clipboard-write *; fullscreen *"></iframe>
   </div>
 </div>
 
@@ -664,7 +665,7 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   <div id="flip-card">
     <div id="flip-front"><!-- page content moved here on flip --></div>
     <div id="flip-back">
-      <iframe id="lab-iframe" src="" allow="fullscreen *"></iframe>
+      <iframe id="lab-iframe" src="" allow="clipboard-read *; clipboard-write *; fullscreen *"></iframe>
     </div>
   </div>
   <div id="flip-shade"></div>

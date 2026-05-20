@@ -316,7 +316,7 @@
     .ticker-item { margin-right: 3rem; display: inline-flex; align-items: center; font-size: 0.9em; }
     .ticker-tag { font-weight: bold; color: #0056b3; margin-right: 6px; }
 
-    .event-card { display: flex; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: visible; margin: 20px auto; max-width: 900px; height: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
+    .event-card { display: flex; align-items: stretch; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: visible; margin: 20px auto; max-width: 900px; min-height: 250px; box-sizing: border-box; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
     .event-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 
     .cursor-cny { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🧧%3C/text%3E%3C/svg%3E") 16 16, pointer; }
@@ -328,17 +328,515 @@
     .cursor-cook { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🍳%3C/text%3E%3C/svg%3E") 16 16, pointer; }
 
 
-    .event-image { flex: 0 0 300px; background-color: #f4f4f4; position: relative; height: 100%; overflow: hidden; border-radius: 7px 0 0 7px; }
+    .event-image { flex: 0 0 300px; align-self: stretch; background-color: #f4f4f4; position: relative; height: auto; min-height: 250px; overflow: hidden; border-radius: 7px 0 0 7px; }
+    .event-image .swiper-wrapper {
+        position: absolute;
+        inset: 0;
+        height: 100%;
+    }
+    .event-image .swiper-slide { height: 100%; }
     .swiper-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .swiper-pagination-bullet { background: rgba(255, 255, 255, 0.8); opacity: 1; width: 8px; height: 8px; transition: all 0.3s; }
     .swiper-pagination-bullet-active { background: #0056b3; width: 18px; border-radius: 4px; }
-    .event-content { padding: 20px; flex: 1; overflow: visible; }
+    .event-content { padding: 20px; flex: 1; min-width: 0; max-width: 100%; box-sizing: border-box; overflow: visible; }
     .event-date { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-    .event-title { margin: 0 0 10px 0; font-size: 1.25em; color: #333; font-weight: 600; }
-    .event-text { font-size: 0.95em; color: #444; line-height: 1.6; margin-bottom: 15px; }
+    .event-title { margin: 0 0 10px 0; font-size: 1.25em; color: #333; font-weight: 600; overflow-wrap: anywhere; word-break: break-word; }
+    .event-text { font-size: 0.95em; color: #444; line-height: 1.6; margin-bottom: 15px; overflow-wrap: anywhere; word-break: break-word; }
     .event-text strong { font-weight: 600; color: #333; }
     .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
     .read-more:hover { text-decoration: underline; }
+
+    /* Per-event comments */
+    .event-card.has-visible-comments,
+    .event-card.comments-open,
+    .event-card.comment-peek {
+        margin-bottom: 0;
+        border-bottom-color: #edf0f5;
+        border-radius: 8px 8px 0 0;
+    }
+    .event-card.has-comment-panel:hover {
+        transform: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.09);
+    }
+    .event-card.has-no-comments:not(.comments-open):not(.comment-peek) {
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .event-card.has-comment-panel + .event-comments {
+        width: auto;
+        max-width: 900px;
+        box-sizing: border-box;
+        margin: -1px auto 20px;
+        border: 1px solid #e0e0e0;
+        border-top-color: #edf0f5;
+        border-radius: 0 0 8px 8px;
+        background: #fff;
+        color: #333;
+        box-shadow: 0 3px 7px rgba(0,0,0,0.045);
+        overflow: hidden;
+        transition:
+            opacity 0.18s ease,
+            transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+            margin 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+            border-color 0.2s ease,
+            box-shadow 0.2s ease,
+            max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .event-comments.empty-comments:not(.is-open):not(.comment-peek) {
+        max-height: 0;
+        margin: -20px auto 20px;
+        opacity: 0;
+        transform: translateY(-5px);
+        pointer-events: none;
+        border-width: 0;
+        border-color: transparent;
+        box-shadow: none;
+    }
+    .event-comments.empty-comments.comment-peek:not(.is-open) {
+        max-height: 52px;
+        margin: -1px auto 20px;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+        border-width: 1px;
+    }
+    .event-comments.empty-comments.is-open {
+        max-height: 420px;
+        margin: -1px auto 20px;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+        border-width: 1px;
+    }
+    .event-comment-toggle {
+        width: 100%;
+        min-height: 44px;
+        border: 0;
+        border-radius: 0;
+        background: #fff;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: #3f4858;
+        font: inherit;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+    .event-comment-toggle:hover {
+        background: #f8fafc;
+        color: #0056b3;
+    }
+    .event-comment-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        font-size: 0.86em;
+        font-weight: 650;
+    }
+    .event-comment-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #eef4fb;
+        color: #1f5c8a;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 28px;
+    }
+    .event-comment-toggle svg,
+    .event-comment-mini-btn svg,
+    .event-comment-tool svg,
+    .event-comment-send svg,
+    .event-comment-replying button svg {
+        width: 15px;
+        height: 15px;
+        display: block;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .event-comment-toggle-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #6b7483;
+        font-size: 0.76em;
+        font-weight: 650;
+        white-space: nowrap;
+        opacity: 0;
+        transform: translateX(4px);
+        transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+    }
+    .event-comments:hover .event-comment-toggle-action,
+    .event-card:hover + .event-comments .event-comment-toggle-action,
+    .event-comments.comment-peek .event-comment-toggle-action,
+    .event-comments.is-open .event-comment-toggle-action {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    .event-comments.is-open .event-comment-toggle-action {
+        color: #0056b3;
+    }
+    .event-comment-chevron {
+        color: inherit;
+        transition: transform 0.18s ease;
+    }
+    .event-comment-chevron svg {
+        width: 12px;
+        height: 12px;
+    }
+    .event-comments.is-open .event-comment-chevron { transform: rotate(180deg); }
+    .event-comment-status {
+        display: block;
+        min-height: 0;
+        padding: 0 14px;
+        font-size: 0.74em;
+        color: #7b8496;
+    }
+    .event-comment-status:not(:empty) {
+        padding-bottom: 8px;
+    }
+    .event-comment-body {
+        display: grid;
+        grid-template-rows: 0fr;
+        padding: 0 14px;
+        background: #fbfcfd;
+        border-top: 1px solid transparent;
+        box-sizing: border-box;
+        opacity: 0;
+        overflow: hidden;
+        transition:
+            grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 0.2s ease,
+            padding 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+            border-color 0.2s ease;
+    }
+    .event-comments.is-open .event-comment-body,
+    .event-comments.has-comments .event-comment-body {
+        grid-template-rows: 1fr;
+        padding: 10px 14px 12px;
+        border-top-color: #edf0f5;
+        opacity: 1;
+    }
+    .event-comment-inner,
+    .event-comment-composer-inner {
+        min-height: 0;
+        overflow: hidden;
+    }
+    .event-comment-composer {
+        display: grid;
+        grid-template-rows: 0fr;
+        margin-top: 0;
+        opacity: 0;
+        transform: translateY(-4px);
+        transition:
+            grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+            margin-top 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 0.18s ease,
+            transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .event-comments.is-open .event-comment-composer {
+        grid-template-rows: 1fr;
+        margin-top: 8px;
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .event-comments.empty-comments .event-comment-composer {
+        margin-top: 0;
+    }
+    .event-comment-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+    .event-comment-empty {
+        margin: 0;
+        padding: 10px 2px 12px;
+        font-size: 0.8em;
+        color: #8b94a6;
+    }
+    .event-comment-item {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 9px;
+        border: 1px solid #e8edf3;
+        border-radius: 7px;
+        background: #fff;
+        box-sizing: border-box;
+    }
+    .event-comment-item:hover {
+        border-color: #dce5ef;
+        background: #ffffff;
+    }
+    .event-comment-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #eef4fb;
+        border: 1px solid #dbe7f2;
+        color: #24567d;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.68em;
+        font-weight: 800;
+        text-transform: uppercase;
+        box-sizing: border-box;
+    }
+    .event-comment-main {
+        min-width: 0;
+        font-size: 0.84em;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+    .event-comment-meta {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 2px;
+    }
+    .event-comment-author {
+        color: #38618c;
+        font-weight: 800;
+    }
+    .event-comment-reply {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        max-width: 100%;
+        margin: 0;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: #f0f5fa;
+        color: #5f6978;
+        font-size: 0.88em;
+        white-space: nowrap;
+    }
+    .event-comment-text {
+        display: block;
+        color: #303846;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+    .event-comment-time {
+        color: #9aa3b3;
+        font-size: 0.82em;
+        white-space: nowrap;
+    }
+    .event-comment-actions {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 2px;
+        align-self: start;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+    }
+    .event-comment-item:hover .event-comment-actions,
+    .event-comment-mini-btn:focus-visible {
+        opacity: 1;
+    }
+    .event-comment-mini-btn {
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: #7b8496;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 0.72em;
+        font-weight: 650;
+    }
+    .event-comment-mini-btn:hover {
+        background: #eef4fb;
+        color: #0056b3;
+    }
+    .event-comment-delete:hover {
+        background: rgba(185, 28, 28, 0.08);
+        color: #b91c1c;
+    }
+    .event-comment-delete {
+        width: 22px;
+        padding: 0;
+    }
+    @media (hover: none) {
+        .event-comment-actions { opacity: 0.78; }
+    }
+    .event-comment-attachments,
+    .event-comment-draft {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 7px 0 2px;
+    }
+    .event-comment-asset,
+    .event-comment-draft-asset {
+        min-height: 28px;
+        max-width: 180px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(216, 222, 232, 0.9);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.76);
+        color: #3f4858;
+        font-size: 0.76em;
+        padding: 3px 6px;
+    }
+    .event-comment-asset img,
+    .event-comment-draft-asset img,
+    .event-comment-asset video,
+    .event-comment-draft-asset video {
+        width: 30px;
+        height: 30px;
+        border-radius: 5px;
+        object-fit: cover;
+        background: #e8edf4;
+    }
+    .event-comment-asset img,
+    .event-comment-asset video {
+        cursor: zoom-in;
+    }
+    .event-comment-asset span,
+    .event-comment-draft-asset span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .event-comment-draft {
+        padding-top: 7px;
+        border-top: 1px solid #e4e7ec;
+    }
+    .event-comment-draft-asset {
+        cursor: pointer;
+        border-style: dashed;
+    }
+    .event-comment-draft-asset:hover {
+        background: #fff;
+        border-color: #d89a9a;
+        color: #b91c1c;
+    }
+    .event-comment-replying {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 9px 0 0;
+        padding: 6px 8px;
+        border: 1px solid #e5eaf0;
+        border-radius: 7px;
+        background: #fff;
+        color: #5f6978;
+        font-size: 0.76em;
+    }
+    .event-comment-replying.is-active { display: flex; }
+    .event-comment-replying b {
+        color: #38618c;
+        font-weight: 800;
+    }
+    .event-comment-replying button {
+        width: 22px;
+        height: 22px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: #7b8496;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .event-comment-replying button:hover {
+        background: #eef1f5;
+        color: #303846;
+    }
+    .event-comment-form {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr) 32px 34px;
+        gap: 8px;
+        align-items: end;
+        margin-top: 10px;
+        padding: 8px;
+        border: 1px solid #e5eaf0;
+        border-radius: 7px;
+        background: #fff;
+    }
+    .event-comment-name,
+    .event-comment-input {
+        width: 100%;
+        border: 1px solid #dde3ec;
+        border-radius: 6px;
+        background: #fff;
+        color: #253040;
+        font: inherit;
+        font-size: 0.78em;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .event-comment-name {
+        height: 32px;
+        padding: 0 8px;
+    }
+    .event-comment-input {
+        min-height: 32px;
+        max-height: 78px;
+        padding: 8px 9px;
+        resize: none;
+        line-height: 1.35;
+    }
+    .event-comment-name:focus,
+    .event-comment-input:focus {
+        border-color: #8bb8d7;
+        box-shadow: 0 0 0 2px rgba(0, 98, 155, 0.09);
+    }
+    .event-comment-tool,
+    .event-comment-send {
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 6px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .event-comment-tool {
+        background: rgba(255, 255, 255, 0.82);
+        color: #657184;
+        border: 1px solid #dde3ec;
+    }
+    .event-comment-tool:hover {
+        background: #fff;
+        color: #0056b3;
+    }
+    .event-comment-send {
+        background: #0056b3;
+        color: #fff;
+        width: 34px;
+    }
+    .event-comment-send:hover:not(:disabled) {
+        background: #004a97;
+    }
+    .event-comment-send:disabled {
+        cursor: not-allowed;
+        background: #c8d2df;
+    }
+    .event-comment-file { display: none; }
 
 
     /* Secret note tooltip */
@@ -897,12 +1395,14 @@
         .event-card {
             flex-direction: column;
             height: auto;
-            max-width: 96%;
+            width: calc(100% - 20px);
+            max-width: calc(100% - 20px);
             margin: 14px auto;
         }
         .event-image {
             width: 100%;
             height: 210px;
+            min-height: 0;
             flex: none;
             border-radius: 7px 7px 0 0;
         }
@@ -912,6 +1412,61 @@
         .event-date { font-size: 0.78em; margin-bottom: 5px; }
         .event-title { font-size: 1.05em; margin-bottom: 8px; }
         .event-text { font-size: 0.88em; margin-bottom: 10px; }
+        .event-card.has-visible-comments,
+        .event-card.comments-open,
+        .event-card.comment-peek {
+            margin-bottom: 0;
+        }
+        .event-card.has-no-comments:not(.comments-open):not(.comment-peek) {
+            margin-bottom: 14px;
+        }
+        .event-card.has-comment-panel + .event-comments {
+            width: calc(100% - 20px);
+            max-width: calc(100% - 20px);
+            margin: -1px auto 14px;
+        }
+        .event-comments.empty-comments:not(.is-open):not(.comment-peek) {
+            margin: -14px auto 14px;
+        }
+        .event-comments.empty-comments.comment-peek:not(.is-open),
+        .event-comments.empty-comments.is-open {
+            margin: -1px auto 14px;
+        }
+        .event-comment-toggle {
+            min-height: 42px;
+            padding: 0 10px;
+        }
+        .event-comment-body {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+        .event-comments.is-open .event-comment-body,
+        .event-comments.has-comments .event-comment-body {
+            padding-top: 9px;
+            padding-bottom: 11px;
+        }
+        .event-comment-action-text {
+            display: none;
+        }
+        .event-comment-form {
+            grid-template-columns: 1fr auto auto;
+        }
+        .event-comment-name {
+            grid-column: 1 / -1;
+        }
+        .event-comment-item {
+            grid-template-columns: 26px minmax(0, 1fr);
+            padding: 8px;
+        }
+        .event-comment-avatar {
+            width: 26px;
+            height: 26px;
+        }
+        .event-comment-actions {
+            grid-column: 2;
+            justify-content: flex-start;
+            opacity: 0.78;
+        }
         .secret-note {
             outline: none;
         }
@@ -1200,7 +1755,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-party">
+<div class="event-card cursor-party" data-event-id="birthday-zhongkai-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><video src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/IMG_2389.MOV" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:block;"></video></div>
@@ -1225,7 +1780,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-bbq">
+<div class="event-card cursor-bbq" data-event-id="chang-chen-firespot-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide">
@@ -1296,7 +1851,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-cook">
+<div class="event-card cursor-cook" data-event-id="zhuo-magic-kitchen-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/1.jpg" alt="Cheers at Dinner"></div>
@@ -1316,7 +1871,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-cny">
+<div class="event-card cursor-cny" data-event-id="cny-star-anise-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/cny-2026/1.jpg" alt="CNY Eve Dinner"></div>
@@ -1335,7 +1890,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-party">
+<div class="event-card cursor-party" data-event-id="zaifeng-birthday-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zaifeng-birth/1.jpg" alt="Happy Birthday Zaifeng"></div>
@@ -1354,7 +1909,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-bbq">
+<div class="event-card cursor-bbq" data-event-id="christmas-fire-spot-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/chrismas/1.jpg" alt="Christmas Party"></div>
@@ -1373,7 +1928,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-party">
+<div class="event-card cursor-party" data-event-id="zheng-wang-defense-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
         <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhengwang/1.jpg" alt="Zheng Wang Defense"></div>
@@ -1392,7 +1947,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-hotpot">
+<div class="event-card cursor-hotpot" data-event-id="thanksgiving-haidilao-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/thxgiving-lunch.jpg" alt="Thanksgiving Hot Pot"></div>
@@ -1409,7 +1964,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-music">
+<div class="event-card cursor-music" data-event-id="xiang-hunan-tv-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/xiang/1.jpg" alt="Infinity and Beyond Stage"></div>
@@ -1446,7 +2001,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-    import { getDatabase, ref, push, remove, child, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+    import { getDatabase, ref, push, remove, child, onChildAdded, onChildRemoved, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
@@ -1778,6 +2333,629 @@
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDanmaku(); }
     });
+
+    // -----------------------------------------------------------------
+    // Per-event comments backed by Firebase Realtime Database
+    // -----------------------------------------------------------------
+    const EVENT_COMMENT_ROOT = 'eventComments';
+    const EVENT_COMMENT_ALIAS_KEY = 'picasso-lab.event-comment-alias';
+    const EVENT_COMMENT_CLIENT_KEY = 'picasso-lab.event-comment-client-id';
+    const EVENT_COMMENT_MAX_BODY = 420;
+    const EVENT_COMMENT_MAX_AUTHOR = 28;
+    const EVENT_COMMENT_MAX_REPLY = 28;
+    const EVENT_COMMENT_MAX_ATTACHMENTS = 4;
+    const EVENT_COMMENT_MAX_FILE_BYTES = 3 * 1024 * 1024;
+    const EVENT_COMMENT_MAX_DATA_URL = 4200000;
+    const EVENT_COMMENT_MAX_IMAGE_EDGE = 720;
+    const eventCommentStates = new Map();
+    const EVENT_COMMENT_DEMO_DATA = {
+        'birthday-zhongkai-2026': [
+            { id: 'demo-birthday-1', author_name: 'Zaifeng Pan', body: 'Happy birthday Leader Yu! The ISCA nomination makes the cake taste even better.', demoOffsetMinutes: 14 },
+            { id: 'demo-birthday-2', author_name: 'Keyi Chen', body: 'This party photo set is excellent. Please keep the video slide first.', demoOffsetMinutes: 36 },
+            { id: 'demo-birthday-3', author_name: 'Yichen Lin', reply_to: 'Zaifeng Pan', body: 'Agreed. The lab needs this level of celebration energy every deadline week.', demoOffsetMinutes: 62 },
+        ],
+        'chang-chen-firespot-2026': [
+            { id: 'demo-chang-1', author_name: 'Zhongkai Yu', body: 'The Zhengding-Net overlay is hilarious and honestly very on brand.', demoOffsetMinutes: 22 },
+            { id: 'demo-chang-2', author_name: 'Yue Xing', body: 'Welcome Chang! Fire Spot was a strong choice for the first lab dinner.', demoOffsetMinutes: 48 },
+        ],
+        'zhuo-magic-kitchen-2026': [],
+        'cny-star-anise-2026': [
+            { id: 'demo-cny-1', author_name: 'Chang Chen', body: 'The Star Anise photos make this feel like a real lab tradition.', demoOffsetMinutes: 18 },
+            { id: 'demo-cny-2', author_name: 'Yichen Lin', body: 'Keeping this comment attached under the card makes the story much easier to scan.', demoOffsetMinutes: 44 },
+        ],
+        'zaifeng-birthday-2026': [
+            { id: 'demo-zaifeng-1', author_name: 'Xiang Fang', body: 'Happy birthday Zaifeng! The second photo is the perfect work-mode portrait.', demoOffsetMinutes: 31 },
+            { id: 'demo-zaifeng-2', author_name: 'Zhongkai Yu', body: 'Sending birthday wishes from the event page now feels natural.', demoOffsetMinutes: 73 },
+        ],
+        'christmas-fire-spot-2025': [
+            { id: 'demo-christmas-1', author_name: 'Hezi Zhang', body: 'This layout works well for older events too. The comments read like a compact guestbook.', demoOffsetMinutes: 24 },
+            { id: 'demo-christmas-2', author_name: 'Alon', body: 'The attached panel makes the card and discussion feel connected.', demoOffsetMinutes: 69 },
+        ],
+        'zheng-wang-defense-2025': [
+            { id: 'demo-defense-1', author_name: 'Prof. Yufei Ding', body: 'Congratulations Zheng. This deserves to stay visible below the defense card.', demoOffsetMinutes: 19 },
+            { id: 'demo-defense-2', author_name: 'Yue Xing', body: 'The thesis link plus comments now reads like a proper announcement thread.', demoOffsetMinutes: 53 },
+        ],
+        'thanksgiving-haidilao-2025': [
+            { id: 'demo-thanksgiving-1', author_name: 'Zaifeng Pan', body: 'Haidilao comments should probably include who ordered the most noodles.', demoOffsetMinutes: 37 },
+            { id: 'demo-thanksgiving-2', author_name: 'Keyi Chen', body: 'Compact, readable, and it does not fight with the photo anymore.', demoOffsetMinutes: 81 },
+        ],
+        'xiang-hunan-tv-2025': [
+            { id: 'demo-xiang-1', author_name: 'Yichen Lin', body: 'This is a good place for people to leave quick congratulations.', demoOffsetMinutes: 26 },
+            { id: 'demo-xiang-2', author_name: 'Zheng Wang', body: 'The music event definitely benefits from comments staying attached to the card.', demoOffsetMinutes: 64 },
+        ],
+    };
+
+    function eventCommentIcon(name) {
+        const icons = {
+            message: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 14.5a4.5 4.5 0 0 1-4.5 4.5H8l-5 3V7.5A4.5 4.5 0 0 1 7.5 3h9A4.5 4.5 0 0 1 21 7.5z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>',
+            chevron: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+            image: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-4.5-4.5L7 20"/></svg>',
+            send: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
+            reply: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
+            trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>',
+            close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+        };
+        return icons[name] || '';
+    }
+
+    function eventCommentClientId() {
+        try {
+            let id = localStorage.getItem(EVENT_COMMENT_CLIENT_KEY);
+            if (!id) {
+                id = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : `visitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                localStorage.setItem(EVENT_COMMENT_CLIENT_KEY, id);
+            }
+            return id;
+        } catch (_) {
+            return `visitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+    }
+
+    function savedEventCommentAlias() {
+        try {
+            return localStorage.getItem(EVENT_COMMENT_ALIAS_KEY) || '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function setSavedEventCommentAlias(alias) {
+        try {
+            localStorage.setItem(EVENT_COMMENT_ALIAS_KEY, alias);
+        } catch (_) {}
+    }
+
+    function cleanEventCommentText(value, max, fallback = '') {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        return (text || fallback).slice(0, max);
+    }
+
+    function eventCommentInitials(name) {
+        const words = cleanEventCommentText(name, EVENT_COMMENT_MAX_AUTHOR, 'Lab visitor').split(' ');
+        const first = words[0]?.charAt(0) || 'L';
+        const second = words.length > 1 ? words[words.length - 1].charAt(0) : '';
+        return `${first}${second}`.slice(0, 2);
+    }
+
+    function fallbackEventId(card) {
+        const date = card.querySelector('.event-date')?.textContent || '';
+        const title = card.querySelector('.event-title')?.textContent || '';
+        const raw = `${date}-${title}`.toLowerCase();
+        return raw
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 80) || `event-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function formatEventCommentTime(timestamp) {
+        const date = new Date(Number(timestamp) || Date.now());
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+
+    function cleanEventCommentAttachments(raw) {
+        if (!Array.isArray(raw)) return [];
+        return raw.slice(0, EVENT_COMMENT_MAX_ATTACHMENTS).map((item) => {
+            const kind = item && item.kind === 'video' ? 'video' : 'image';
+            const dataUrl = String(item && item.data_url || '');
+            if (kind === 'image' && !dataUrl.startsWith('data:image/')) return null;
+            if (kind === 'video' && !dataUrl.startsWith('data:video/')) return null;
+            if (dataUrl.length > EVENT_COMMENT_MAX_DATA_URL) return null;
+            return {
+                kind,
+                label: cleanEventCommentText(item && item.label, 32, kind === 'video' ? 'video' : 'image'),
+                tone: 'paper',
+                data_url: dataUrl,
+            };
+        }).filter(Boolean);
+    }
+
+    function normalizeEventComment(raw, key) {
+        const item = raw && typeof raw === 'object' ? raw : {};
+        return {
+            id: key,
+            author_name: cleanEventCommentText(item.author_name, EVENT_COMMENT_MAX_AUTHOR, 'Lab visitor'),
+            reply_to: cleanEventCommentText(item.reply_to, EVENT_COMMENT_MAX_REPLY, ''),
+            body: cleanEventCommentText(item.body, EVENT_COMMENT_MAX_BODY, ''),
+            attachments: cleanEventCommentAttachments(item.attachments),
+            timestamp: Number(item.timestamp || Date.now()),
+            owner_id: cleanEventCommentText(item.owner_id, 96, ''),
+        };
+    }
+
+    function demoEventComments(eventId) {
+        const rows = EVENT_COMMENT_DEMO_DATA[eventId] || [];
+        const now = Date.now();
+        return rows.map((row, index) => normalizeEventComment({
+            ...row,
+            timestamp: now - (Number(row.demoOffsetMinutes || index + 1) * 60 * 1000),
+            owner_id: '',
+        }, row.id || `demo-${eventId}-${index}`));
+    }
+
+    function setEventCommentOpen(state, open) {
+        state.panel.classList.toggle('is-open', open);
+        state.card.classList.toggle('comments-open', open);
+        state.toggle.setAttribute('aria-expanded', String(open));
+        state.actionLabel.textContent = open ? 'Close' : 'Write';
+    }
+
+    function setEventCommentPeek(state, active) {
+        if (state.panel.classList.contains('has-comments') || state.panel.classList.contains('is-open')) return;
+        state.panel.classList.toggle('comment-peek', active);
+        state.card.classList.toggle('comment-peek', active);
+    }
+
+    function setEventCommentStatus(state, message, isError = false) {
+        state.status.textContent = message || '';
+        state.status.style.color = isError ? '#b91c1c' : '#7b8496';
+        if (message) {
+            clearTimeout(state.statusTimer);
+            state.statusTimer = setTimeout(() => {
+                state.status.textContent = '';
+                state.status.style.color = '#7b8496';
+            }, isError ? 3600 : 2200);
+        }
+    }
+
+    function updateEventCommentSendState(state) {
+        const hasText = !!state.input.value.trim();
+        state.sendBtn.disabled = !hasText && state.attachments.length === 0;
+    }
+
+    function renderEventCommentDraft(state) {
+        state.draft.innerHTML = '';
+        if (!state.attachments.length) {
+            state.draft.hidden = true;
+            updateEventCommentSendState(state);
+            return;
+        }
+        state.draft.hidden = false;
+        state.attachments.forEach((att, index) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'event-comment-draft-asset';
+            btn.title = 'Remove attachment';
+
+            const media = att.kind === 'video' ? document.createElement('video') : document.createElement('img');
+            media.src = att.data_url;
+            if (att.kind === 'video') {
+                media.muted = true;
+                media.loop = true;
+                media.playsInline = true;
+            }
+            const label = document.createElement('span');
+            label.textContent = att.label;
+            btn.append(media, label);
+            btn.addEventListener('click', () => {
+                state.attachments.splice(index, 1);
+                renderEventCommentDraft(state);
+            });
+            state.draft.appendChild(btn);
+        });
+        updateEventCommentSendState(state);
+    }
+
+    function makeEventCommentAsset(att) {
+        const wrap = document.createElement('span');
+        wrap.className = `event-comment-asset ${att.kind || 'image'}`;
+        const media = att.kind === 'video' ? document.createElement('video') : document.createElement('img');
+        media.src = att.data_url;
+        media.alt = att.label || '';
+        if (att.kind === 'video') {
+            media.muted = true;
+            media.loop = true;
+            media.playsInline = true;
+            media.addEventListener('mouseenter', () => media.play().catch(() => {}));
+            media.addEventListener('mouseleave', () => media.pause());
+            media.addEventListener('click', () => window.open(att.data_url, '_blank', 'noopener'));
+        } else {
+            media.addEventListener('click', () => openLightbox(att.data_url));
+        }
+        const label = document.createElement('span');
+        label.textContent = att.label || (att.kind === 'video' ? 'video' : 'image');
+        wrap.append(media, label);
+        return wrap;
+    }
+
+    function renderEventComments(state) {
+        state.comments.sort((a, b) => a.timestamp - b.timestamp);
+        const count = state.comments.length;
+        state.panel.classList.toggle('has-comments', count > 0);
+        state.panel.classList.toggle('empty-comments', count === 0);
+        state.card.classList.toggle('has-visible-comments', count > 0);
+        state.card.classList.toggle('has-no-comments', count === 0);
+        state.countLabel.textContent = count === 0 ? 'Comments' : (count === 1 ? '1 comment' : `${count} comments`);
+        state.list.innerHTML = '';
+        state.empty.hidden = count > 0;
+
+        state.comments.forEach((comment) => {
+            const item = document.createElement('div');
+            item.className = 'event-comment-item';
+            item.dataset.commentId = comment.id;
+
+            const avatar = document.createElement('span');
+            avatar.className = 'event-comment-avatar';
+            avatar.textContent = eventCommentInitials(comment.author_name);
+            avatar.setAttribute('aria-hidden', 'true');
+
+            const main = document.createElement('div');
+            main.className = 'event-comment-main';
+
+            const meta = document.createElement('div');
+            meta.className = 'event-comment-meta';
+            const author = document.createElement('span');
+            author.className = 'event-comment-author';
+            author.textContent = comment.author_name;
+            meta.appendChild(author);
+
+            const time = document.createElement('span');
+            time.className = 'event-comment-time';
+            time.textContent = formatEventCommentTime(comment.timestamp);
+            meta.appendChild(time);
+            main.appendChild(meta);
+
+            if (comment.reply_to) {
+                const reply = document.createElement('span');
+                reply.className = 'event-comment-reply';
+                reply.textContent = `Replying to ${comment.reply_to}`;
+                meta.appendChild(reply);
+            }
+
+            if (comment.body) {
+                const text = document.createElement('span');
+                text.className = 'event-comment-text';
+                text.textContent = comment.body;
+                main.appendChild(text);
+            }
+
+            if (comment.attachments.length) {
+                const assets = document.createElement('div');
+                assets.className = 'event-comment-attachments';
+                comment.attachments.forEach((att) => assets.appendChild(makeEventCommentAsset(att)));
+                main.appendChild(assets);
+            }
+
+            const actions = document.createElement('div');
+            actions.className = 'event-comment-actions';
+
+            const replyBtn = document.createElement('button');
+            replyBtn.type = 'button';
+            replyBtn.className = 'event-comment-mini-btn';
+            replyBtn.innerHTML = `${eventCommentIcon('reply')}<span>Reply</span>`;
+            replyBtn.setAttribute('aria-label', 'Reply');
+            replyBtn.title = 'Reply';
+            replyBtn.addEventListener('click', () => {
+                state.replyTo = comment.author_name;
+                state.replyingName.textContent = comment.author_name;
+                state.replying.classList.add('is-active');
+                setEventCommentOpen(state, true);
+                state.input.focus();
+            });
+            actions.appendChild(replyBtn);
+
+            if (comment.owner_id && comment.owner_id === state.clientId) {
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'event-comment-mini-btn event-comment-delete';
+                delBtn.innerHTML = eventCommentIcon('trash');
+                delBtn.setAttribute('aria-label', 'Delete');
+                delBtn.title = 'Delete';
+                delBtn.addEventListener('click', () => deleteEventComment(state, comment));
+                actions.appendChild(delBtn);
+            }
+
+            item.append(avatar, main, actions);
+            state.list.appendChild(item);
+        });
+    }
+
+    function resizeEventCommentImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Could not read image'));
+            reader.onload = () => {
+                const img = new Image();
+                img.onerror = () => reject(new Error('Could not decode image'));
+                img.onload = () => {
+                    let { width, height } = img;
+                    const scale = Math.min(1, EVENT_COMMENT_MAX_IMAGE_EDGE / Math.max(width, height));
+                    width = Math.max(1, Math.round(width * scale));
+                    height = Math.max(1, Math.round(height * scale));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.74));
+                };
+                img.src = String(reader.result || '');
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function readEventCommentVideo(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Could not read video'));
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function addEventCommentFiles(state, files) {
+        const incoming = Array.from(files || []);
+        if (!incoming.length) return;
+
+        for (const file of incoming) {
+            if (state.attachments.length >= EVENT_COMMENT_MAX_ATTACHMENTS) {
+                setEventCommentStatus(state, 'Attachment limit reached.', true);
+                break;
+            }
+            if (file.size > EVENT_COMMENT_MAX_FILE_BYTES) {
+                setEventCommentStatus(state, 'Attachment is too large. Please keep files under 3 MB.', true);
+                continue;
+            }
+            const type = String(file.type || '');
+            const isImage = type.startsWith('image/');
+            const isVideo = type.startsWith('video/');
+            if (!isImage && !isVideo) {
+                setEventCommentStatus(state, 'Only image and video attachments are supported.', true);
+                continue;
+            }
+
+            try {
+                setEventCommentStatus(state, 'Preparing attachment...');
+                const dataUrl = isImage ? await resizeEventCommentImage(file) : await readEventCommentVideo(file);
+                if (dataUrl.length > EVENT_COMMENT_MAX_DATA_URL) {
+                    setEventCommentStatus(state, 'Attachment data is too large after encoding.', true);
+                    continue;
+                }
+                state.attachments.push({
+                    kind: isVideo ? 'video' : 'image',
+                    label: cleanEventCommentText(file.name.replace(/\.[^.]+$/, ''), 32, isVideo ? 'video' : 'image'),
+                    tone: 'paper',
+                    data_url: dataUrl,
+                });
+                renderEventCommentDraft(state);
+                setEventCommentStatus(state, '');
+            } catch (err) {
+                setEventCommentStatus(state, err.message || 'Attachment failed.', true);
+            }
+        }
+    }
+
+    async function submitEventComment(state) {
+        if (!state.ref) return;
+        const body = cleanEventCommentText(state.input.value, EVENT_COMMENT_MAX_BODY, '');
+        const author = cleanEventCommentText(state.name.value, EVENT_COMMENT_MAX_AUTHOR, 'Lab visitor');
+        const replyTo = cleanEventCommentText(state.replyTo, EVENT_COMMENT_MAX_REPLY, '');
+        const attachments = cleanEventCommentAttachments(state.attachments);
+        if (!body && !attachments.length) return;
+
+        setSavedEventCommentAlias(author);
+        state.name.value = author;
+        state.sendBtn.disabled = true;
+        try {
+            await push(state.ref, {
+                author_name: author,
+                reply_to: replyTo,
+                body,
+                attachments,
+                timestamp: Date.now(),
+                owner_id: state.clientId,
+            });
+            state.input.value = '';
+            state.input.style.height = 'auto';
+            state.replyTo = '';
+            state.replying.classList.remove('is-active');
+            state.attachments = [];
+            renderEventCommentDraft(state);
+            setEventCommentStatus(state, 'Comment saved.');
+        } catch (err) {
+            setEventCommentStatus(state, `Could not save comment: ${err.message || err}`, true);
+        } finally {
+            updateEventCommentSendState(state);
+        }
+    }
+
+    async function deleteEventComment(state, comment) {
+        if (!state.ref || !comment || comment.owner_id !== state.clientId) return;
+        if (!window.confirm('Delete this comment?')) return;
+        try {
+            await remove(child(state.ref, comment.id));
+            setEventCommentStatus(state, 'Comment deleted.');
+        } catch (err) {
+            setEventCommentStatus(state, `Could not delete comment: ${err.message || err}`, true);
+        }
+    }
+
+    function buildEventCommentPanel(card) {
+        if (!card || card.nextElementSibling?.classList.contains('event-comments')) return;
+
+        const eventId = card.dataset.eventId || fallbackEventId(card);
+        card.dataset.eventId = eventId;
+        const panelBodyId = `event-comments-body-${eventId}`;
+
+        const panel = document.createElement('section');
+        panel.className = 'event-comments';
+        panel.innerHTML = `
+            <button class="event-comment-toggle" type="button" aria-expanded="false" aria-controls="${panelBodyId}">
+                <span class="event-comment-count">
+                    <span class="event-comment-icon">${eventCommentIcon('message')}</span>
+                    <span class="event-comment-count-label">Comment</span>
+                </span>
+                <span class="event-comment-toggle-action">
+                    <span class="event-comment-action-text">Write</span>
+                    <span class="event-comment-chevron">${eventCommentIcon('chevron')}</span>
+                </span>
+            </button>
+            <span class="event-comment-status"></span>
+            <div class="event-comment-body" id="${panelBodyId}">
+                <div class="event-comment-inner">
+                    <div class="event-comment-list"></div>
+                    <div class="event-comment-composer">
+                        <div class="event-comment-composer-inner">
+                            <p class="event-comment-empty">No comments yet.</p>
+                            <div class="event-comment-replying">
+                                <span>Replying to <b></b></span>
+                                <button type="button" aria-label="Cancel reply">${eventCommentIcon('close')}</button>
+                            </div>
+                            <div class="event-comment-draft" hidden></div>
+                            <div class="event-comment-form">
+                                <input class="event-comment-name" maxlength="28" placeholder="Name">
+                                <textarea class="event-comment-input" maxlength="420" rows="1" placeholder="Leave a comment..."></textarea>
+                                <button class="event-comment-tool" type="button" title="Attach image or video" aria-label="Attach image or video">${eventCommentIcon('image')}</button>
+                                <input class="event-comment-file" type="file" accept="image/*,video/*" multiple>
+                                <button class="event-comment-send" type="button" disabled title="Post comment" aria-label="Post comment">${eventCommentIcon('send')}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        card.classList.add('has-comment-panel');
+        card.insertAdjacentElement('afterend', panel);
+
+        const state = {
+            eventId,
+            card,
+            panel,
+            toggle: panel.querySelector('.event-comment-toggle'),
+            count: panel.querySelector('.event-comment-count'),
+            countLabel: panel.querySelector('.event-comment-count-label'),
+            actionLabel: panel.querySelector('.event-comment-action-text'),
+            status: panel.querySelector('.event-comment-status'),
+            list: panel.querySelector('.event-comment-list'),
+            empty: panel.querySelector('.event-comment-empty'),
+            replying: panel.querySelector('.event-comment-replying'),
+            replyingName: panel.querySelector('.event-comment-replying b'),
+            draft: panel.querySelector('.event-comment-draft'),
+            name: panel.querySelector('.event-comment-name'),
+            input: panel.querySelector('.event-comment-input'),
+            attachBtn: panel.querySelector('.event-comment-tool'),
+            file: panel.querySelector('.event-comment-file'),
+            sendBtn: panel.querySelector('.event-comment-send'),
+            comments: demoEventComments(eventId),
+            attachments: [],
+            replyTo: '',
+            ref: db ? ref(db, `${EVENT_COMMENT_ROOT}/${eventId}`) : null,
+            clientId: eventCommentClientId(),
+            statusTimer: null,
+        };
+        eventCommentStates.set(eventId, state);
+
+        state.name.value = savedEventCommentAlias();
+        renderEventComments(state);
+
+        let peekTimer = null;
+        const clearPeekTimer = () => {
+            clearTimeout(peekTimer);
+            peekTimer = null;
+        };
+        const showPeek = () => {
+            clearPeekTimer();
+            setEventCommentPeek(state, true);
+        };
+        const hidePeek = () => {
+            clearPeekTimer();
+            peekTimer = setTimeout(() => setEventCommentPeek(state, false), 120);
+        };
+        card.addEventListener('mouseenter', showPeek);
+        card.addEventListener('mouseleave', hidePeek);
+        card.addEventListener('pointerdown', (e) => {
+            if (e.pointerType && e.pointerType !== 'mouse') showPeek();
+        });
+        panel.addEventListener('mouseenter', showPeek);
+        panel.addEventListener('mouseleave', hidePeek);
+        panel.addEventListener('focusin', showPeek);
+        panel.addEventListener('focusout', hidePeek);
+
+        state.toggle.addEventListener('click', () => {
+            const open = !panel.classList.contains('is-open');
+            setEventCommentOpen(state, open);
+            if (open) setTimeout(() => state.input.focus(), 0);
+        });
+
+        state.replying.querySelector('button').addEventListener('click', () => {
+            state.replyTo = '';
+            state.replying.classList.remove('is-active');
+            state.input.focus();
+        });
+
+        state.input.addEventListener('input', () => {
+            state.input.style.height = 'auto';
+            state.input.style.height = Math.min(state.input.scrollHeight, 84) + 'px';
+            updateEventCommentSendState(state);
+        });
+        state.input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitEventComment(state);
+            }
+        });
+        state.name.addEventListener('change', () => {
+            const alias = cleanEventCommentText(state.name.value, EVENT_COMMENT_MAX_AUTHOR, 'Lab visitor');
+            state.name.value = alias;
+            setSavedEventCommentAlias(alias);
+        });
+        state.attachBtn.addEventListener('click', () => state.file.click());
+        state.file.addEventListener('change', async (e) => {
+            await addEventCommentFiles(state, e.target.files);
+            e.target.value = '';
+            setEventCommentOpen(state, true);
+            state.input.focus();
+        });
+        state.sendBtn.addEventListener('click', () => submitEventComment(state));
+
+        if (!state.ref) {
+            state.name.disabled = true;
+            state.input.disabled = true;
+            state.attachBtn.disabled = true;
+            state.sendBtn.disabled = true;
+            setEventCommentStatus(state, 'Comments are unavailable because Firebase did not initialize.', true);
+            return;
+        }
+
+        const recentComments = query(state.ref, limitToLast(80));
+        onChildAdded(recentComments, (snapshot) => {
+            const comment = normalizeEventComment(snapshot.val(), snapshot.key);
+            if (!comment.body && !comment.attachments.length) return;
+            state.comments = state.comments.filter((row) => row.id !== comment.id).concat(comment);
+            renderEventComments(state);
+        });
+        onChildRemoved(recentComments, (snapshot) => {
+            state.comments = state.comments.filter((row) => row.id !== snapshot.key);
+            renderEventComments(state);
+        });
+    }
+
+    function initEventComments() {
+        document.querySelectorAll('.event-card').forEach(buildEventCommentPanel);
+    }
+
+    initEventComments();
 
     // -----------------------------------------------------------------
     // 👑 Secret Tooltip: clamp to viewport and support tap on mobile
