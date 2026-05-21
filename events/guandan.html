@@ -313,6 +313,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig, "guandan-app");
 const db = getDatabase(app);
+const EVENTS_URL = "https://yil384.github.io/Picasso-Lab/events/events.html";
+const GUANDAN_URL = "https://yil384.github.io/Picasso-Lab/events/guandan.html";
 const root = document.getElementById("root");
 const toastEl = document.getElementById("toast");
 const roomCaption = document.getElementById("room-caption");
@@ -1097,7 +1099,7 @@ function renderLobbyRoom() {
     });
     document.getElementById("delete-room").addEventListener("click", async () => {
         await remove(roomRef());
-        location.href = "guandan.html";
+        location.href = GUANDAN_URL;
     });
 }
 
@@ -1198,7 +1200,7 @@ document.getElementById("copy-link-btn").addEventListener("click", async () => {
 });
 
 document.getElementById("new-room-btn").addEventListener("click", () => {
-    location.href = "guandan.html";
+    location.href = GUANDAN_URL;
 });
 
 document.getElementById("back-events-btn").addEventListener("click", () => {
@@ -1219,7 +1221,7 @@ document.getElementById("back-events-btn").addEventListener("click", () => {
         card.style.animationDelay = `${i * 0.045}s`;
         overlay.appendChild(card);
     }
-    setTimeout(() => { location.href = "events.html?from=guandan"; }, 1550);
+    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 1550);
 });
 
 if (roomCode) attachRoom(roomCode);

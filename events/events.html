@@ -1363,6 +1363,66 @@
         pointer-events: auto; transition: background 0.2s;
     }
     .holo-close:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+    #guandan-type-hint {
+        position: fixed;
+        left: 50%;
+        bottom: calc(env(safe-area-inset-bottom) + 74px);
+        z-index: 200001;
+        transform: translateX(-50%) translateY(12px);
+        opacity: 0;
+        pointer-events: none;
+        padding: 9px 14px;
+        border-radius: 999px;
+        color: #fff8d8;
+        background: rgba(9, 22, 20, 0.86);
+        border: 1px solid rgba(255, 219, 116, 0.36);
+        box-shadow: 0 12px 34px rgba(0,0,0,0.28), 0 0 28px rgba(255, 205, 90, 0.14);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        transition: opacity 0.22s ease, transform 0.22s ease;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    #guandan-type-hint.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    #guandan-type-hint kbd {
+        display: inline-block;
+        margin: 0 1px;
+        padding: 1px 5px;
+        border-radius: 5px;
+        border: 1px solid rgba(255,255,255,0.24);
+        background: rgba(255,255,255,0.12);
+        color: #ffd66d;
+        font: inherit;
+        font-size: 11px;
+    }
+    #guandan-trigger-flash {
+        position: fixed;
+        inset: 0;
+        z-index: 200002;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(3, 12, 11, 0.56);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        transition: opacity 0.2s ease;
+    }
+    #guandan-trigger-flash.on { opacity: 1; }
+    #guandan-trigger-flash span {
+        color: #ffe79b;
+        font-size: clamp(1.6rem, 5vw, 3rem);
+        font-weight: 900;
+        text-shadow: 0 0 36px rgba(255, 207, 91, 0.75), 0 10px 32px rgba(0,0,0,0.5);
+        transform: scale(0.86);
+        transition: transform 0.24s cubic-bezier(.34,1.56,.64,1);
+    }
+    #guandan-trigger-flash.on span { transform: scale(1); }
 </style>
 </head>
 <body>
@@ -1371,6 +1431,8 @@
     <source src="https://yil384.github.io/Picasso-Lab/events/static/%E5%A4%9A%E6%A2%A6%E7%97%87.mp3" type="audio/mpeg">
 </audio>
 <div id="song-title-toast" class="song-title-toast"></div>
+<div id="guandan-type-hint">继续输入 <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> 开启牌桌</div>
+<div id="guandan-trigger-flash"><span>Picasso Table</span></div>
 <div id="music-btn" class="music-btn" title="Click: Play/Pause · Double-click: Flip record · Right-click 多梦症: Concert mode">
         <svg class="vinyl-icon" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -1954,8 +2016,41 @@
     const guandanClose = guandanOverlay?.querySelector('.guandan-egg-close');
     const guandanCode = '222aak';
     const guandanGameCode = 'picasso';
+    const guandanGameUrl = 'https://yil384.github.io/Picasso-Lab/events/guandan.html';
+    const guandanTypeHint = document.getElementById('guandan-type-hint');
+    const guandanTriggerFlash = document.getElementById('guandan-trigger-flash');
     let guandanBuffer = '';
     let guandanGameBuffer = '';
+    let guandanHintTimer = null;
+    let guandanKeyboardPrimed = false;
+
+    function showGuandanTypeHint() {
+        guandanTypeHint?.classList.add('show');
+        clearTimeout(guandanHintTimer);
+        guandanHintTimer = setTimeout(() => guandanTypeHint?.classList.remove('show'), 2600);
+    }
+
+    function hideGuandanTypeHint() {
+        clearTimeout(guandanHintTimer);
+        guandanTypeHint?.classList.remove('show');
+    }
+
+    function guandanGamePrefixLength() {
+        for (let len = Math.min(guandanGameBuffer.length, guandanGameCode.length - 1); len >= 2; len--) {
+            if (guandanGameCode.startsWith(guandanGameBuffer.slice(-len))) return len;
+        }
+        return 0;
+    }
+
+    function primeGuandanKeyboardCapture() {
+        if (!document.body) return;
+        if (document.activeElement?.closest?.('input, textarea, [contenteditable="true"]')) return;
+        if (!document.body.hasAttribute('tabindex')) document.body.tabIndex = -1;
+        try {
+            document.body.focus({ preventScroll: true });
+            guandanKeyboardPrimed = true;
+        } catch (_) {}
+    }
 
     function openGuandanEgg() {
         if (!guandanOverlay) return;
@@ -2010,18 +2105,29 @@
 
     function startGuandanGameTransition() {
         if (!guandanMonsterTransition) {
-            window.location.href = 'guandan.html';
+            window.location.href = guandanGameUrl;
             return;
         }
+        hideGuandanTypeHint();
         closeGuandanEgg();
         guandanMonsterTransition.querySelectorAll('.transition-card').forEach(el => el.remove());
+        guandanTriggerFlash?.classList.add('on');
         guandanMonsterTransition.classList.add('active');
         guandanMonsterTransition.setAttribute('aria-hidden', 'false');
         for (let i = 0; i < 18; i++) {
             guandanMonsterTransition.appendChild(makeTransitionCard('transition-card', i));
         }
-        setTimeout(() => { window.location.href = 'guandan.html'; }, 1900);
+        setTimeout(() => guandanTriggerFlash?.classList.remove('on'), 420);
+        setTimeout(() => { window.location.href = guandanGameUrl; }, 1900);
     }
+
+    window.addEventListener('load', () => setTimeout(primeGuandanKeyboardCapture, 0), { once: true });
+    window.addEventListener('pageshow', () => setTimeout(primeGuandanKeyboardCapture, 0));
+    window.addEventListener('focus', primeGuandanKeyboardCapture);
+    document.addEventListener('pointerenter', primeGuandanKeyboardCapture);
+    document.addEventListener('mousemove', () => {
+        if (!guandanKeyboardPrimed) primeGuandanKeyboardCapture();
+    }, { once: true });
 
     function playGuandanRestoreTransition() {
         const params = new URLSearchParams(window.location.search);
@@ -2048,7 +2154,8 @@
             return;
         }
         if (e.target?.closest?.('input, textarea, [contenteditable="true"]')) return;
-        if (e.key.length !== 1) return;
+        if (e.key.length !== 1 || e.metaKey || e.ctrlKey || e.altKey) return;
+        guandanKeyboardPrimed = true;
         const ch = e.key.toLowerCase();
         guandanBuffer = (guandanBuffer + ch).slice(-guandanCode.length);
         guandanGameBuffer = (guandanGameBuffer + ch).slice(-guandanGameCode.length);
@@ -2059,8 +2166,11 @@
         if (guandanGameBuffer === guandanGameCode) {
             guandanGameBuffer = '';
             startGuandanGameTransition();
+            return;
         }
-    });
+        if (guandanGamePrefixLength() >= 2) showGuandanTypeHint();
+        else hideGuandanTypeHint();
+    }, true);
 
     // -----------------------------------------------------------------
     // 📷 Image Handling
