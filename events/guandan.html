@@ -191,61 +191,30 @@
     .return-transition {
         position: fixed; inset: 0; z-index: 2000; overflow: hidden;
         background:
-            radial-gradient(circle at 50% 46%, rgba(255,205,0,0.22), transparent 24%),
-            radial-gradient(circle at 50% 58%, rgba(50,176,190,0.28), transparent 30%),
+            radial-gradient(circle at 50% 50%, rgba(255,205,0,0.18), transparent 26%),
+            radial-gradient(circle at 50% 60%, rgba(50,176,190,0.24), transparent 36%),
             linear-gradient(145deg, rgba(1,13,16,0.98), rgba(2,34,37,0.98));
         opacity: 0; visibility: hidden; pointer-events: none;
-        transition: opacity 0.28s ease, visibility 0s linear 0.28s;
+        transition: opacity 0.22s ease, visibility 0s linear 0.22s;
     }
     .return-transition.active { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
     .return-transition::before {
-        content: ""; position: absolute; inset: -14%;
-        background-image:
-            linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
-        background-size: 44px 44px;
-        transform: rotate(-7deg) scale(1.18);
-        opacity: 0.22;
+        content: ""; position: absolute; inset: -18%;
+        background: linear-gradient(105deg, transparent 0 38%, rgba(255,255,255,0.24) 46%, rgba(255,205,0,0.18) 52%, transparent 62% 100%);
+        transform: translateX(-46%) skewX(-12deg);
+        opacity: 0;
     }
-    .return-transition-title {
-        position: absolute; left: 50%; top: 12%; transform: translateX(-50%);
-        color: #fff8da; text-align: center; font-weight: 950;
-        font-size: clamp(24px, 4.8vw, 54px); text-shadow: 0 10px 30px rgba(0,0,0,0.45);
-        z-index: 4; pointer-events: none;
+    .return-transition.active::before {
+        animation: returnCleanSweep 0.56s cubic-bezier(0.18, 0.8, 0.2, 1) forwards;
     }
-    .return-portal {
-        position: absolute; left: 50%; top: 52%; width: min(340px, 50vw); aspect-ratio: 1;
-        transform: translate(-50%, -50%); border-radius: 50%; z-index: 2;
-        background:
-            radial-gradient(circle, rgba(255,255,255,0.95) 0 8%, rgba(255,205,0,0.72) 9% 18%, rgba(49,172,191,0.35) 19% 44%, transparent 45%),
-            conic-gradient(from 0deg, rgba(255,205,0,0), rgba(255,205,0,0.8), rgba(49,172,191,0.2), rgba(255,205,0,0));
-        box-shadow: 0 0 44px rgba(255,205,0,0.34), inset 0 0 36px rgba(255,255,255,0.22);
-        animation: returnPortalSpin 1.24s linear infinite;
-    }
-    .return-portal::after {
-        content: ""; position: absolute; left: 50%; bottom: 15%; width: 58%; height: 13%;
-        transform: translateX(-50%); border-radius: 50%;
-        background: rgba(255,255,255,0.18); filter: blur(5px);
-    }
-    .return-card {
-        position: absolute; left: 50%; top: 50%; width: clamp(48px, 6vw, 72px); height: clamp(68px, 8.3vw, 102px);
-        border-radius: 10px; background: #fffdf6; color: #111; border: 1px solid rgba(15,17,19,0.22);
-        display: grid; place-items: center; font-weight: 950; font-size: 22px; box-shadow: 0 16px 34px rgba(0,0,0,0.34);
-        animation: returnCardGather 1.18s cubic-bezier(0.16, 0.84, 0.2, 1) forwards;
-        animation-delay: var(--delay);
-        opacity: 0; z-index: 3;
-    }
-    .return-card.red { color: #c92535; }
-    @keyframes returnPortalSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-    @keyframes returnCardGather {
-        0% { transform: translate(var(--sx), var(--sy)) rotate(var(--sr)) scale(0.94); opacity: 0; filter: blur(7px); }
-        24% { opacity: 1; filter: blur(0); }
-        64% { transform: translate(var(--mx), var(--my)) rotate(var(--mr)) scale(1); opacity: 1; }
-        100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)) scale(0.22); opacity: 0; }
+    @keyframes returnCleanSweep {
+        0% { transform: translateX(-46%) skewX(-12deg); opacity: 0; }
+        24% { opacity: 1; }
+        100% { transform: translateX(46%) skewX(-12deg); opacity: 0; }
     }
 
     #return-type-hint {
-        position: fixed; left: 50%; bottom: 74px; z-index: 1500;
+        position: fixed; left: 50%; bottom: 74px; z-index: 3000;
         transform: translateX(-50%) translateY(12px); opacity: 0; pointer-events: none;
         padding: 9px 14px; border-radius: 999px; white-space: nowrap;
         background: rgba(6,18,18,0.9); color: #fff; border: 1px solid rgba(255,205,0,0.4);
@@ -1227,6 +1196,7 @@ let uiLang = localStorage.getItem("picasso.guandan.lang") || "en";
 let returnBuffer = "";
 let returnHintTimer = null;
 let returnNavigationStarted = false;
+let returnKeyboardPrimed = false;
 let clientId = localStorage.getItem("picasso.guandan.client");
 if (!clientId) {
     clientId = "c_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -1349,25 +1319,6 @@ function hideReturnTypeHint() {
     returnTypeHint?.classList.remove("show");
 }
 
-function makeReturnCard(index) {
-    const card = document.createElement("div");
-    const rank = ["2", "A", "K", "Q", "J", "10", "9", "8"][index % 8];
-    const suit = suits[index % suits.length];
-    card.className = `return-card ${suit === "H" || suit === "D" ? "red" : ""}`;
-    card.textContent = `${rank}${suitGlyph[suit]}`;
-    card.style.setProperty("--sx", `${(Math.random() - 0.5) * 94}vw`);
-    card.style.setProperty("--sy", `${(Math.random() - 0.5) * 78}vh`);
-    card.style.setProperty("--sr", `${-70 + Math.random() * 140}deg`);
-    card.style.setProperty("--mx", `${-250 + (index % 5) * 125 + (Math.random() - 0.5) * 22}px`);
-    card.style.setProperty("--my", `${-150 + Math.floor(index / 5) * 92 + (Math.random() - 0.5) * 20}px`);
-    card.style.setProperty("--mr", `${-18 + Math.random() * 36}deg`);
-    card.style.setProperty("--tx", `${(Math.random() - 0.5) * 28}px`);
-    card.style.setProperty("--ty", `${-10 + Math.random() * 20}px`);
-    card.style.setProperty("--tr", `${-110 + Math.random() * 220}deg`);
-    card.style.setProperty("--delay", `${index * 0.035}s`);
-    return card;
-}
-
 function startReturnToEvents() {
     if (returnNavigationStarted) return;
     returnNavigationStarted = true;
@@ -1376,11 +1327,20 @@ function startReturnToEvents() {
         location.href = `${EVENTS_URL}?from=guandan`;
         return;
     }
-    returnTransition.innerHTML = '<div class="return-transition-title">Cards returning to Events</div><div class="return-portal" aria-hidden="true"></div>';
+    returnTransition.innerHTML = "";
     returnTransition.setAttribute("aria-hidden", "false");
-    for (let i = 0; i < 20; i++) returnTransition.appendChild(makeReturnCard(i));
     requestAnimationFrame(() => returnTransition.classList.add("active"));
-    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 1420);
+    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 620);
+}
+
+function primeReturnKeyboardCapture() {
+    if (!document.body) return;
+    if (document.activeElement?.closest?.("input, textarea, [contenteditable='true']")) return;
+    if (!document.body.hasAttribute("tabindex")) document.body.tabIndex = -1;
+    try {
+        document.body.focus({ preventScroll: true });
+        returnKeyboardPrimed = true;
+    } catch (_) {}
 }
 
 function roomRef(code = roomCode) {
@@ -2513,9 +2473,18 @@ langToggleBtn.addEventListener("click", () => {
 
 backEventsBtn.addEventListener("click", startReturnToEvents);
 
+window.addEventListener("load", () => setTimeout(primeReturnKeyboardCapture, 0), { once: true });
+window.addEventListener("pageshow", () => setTimeout(primeReturnKeyboardCapture, 0));
+window.addEventListener("focus", primeReturnKeyboardCapture);
+document.addEventListener("pointerenter", primeReturnKeyboardCapture);
+document.addEventListener("mousemove", () => {
+    if (!returnKeyboardPrimed) primeReturnKeyboardCapture();
+}, { once: true });
+
 document.addEventListener("keydown", event => {
     if (event.target?.closest?.("input, textarea, [contenteditable='true']")) return;
     if (event.key.length !== 1 || event.metaKey || event.ctrlKey || event.altKey) return;
+    returnKeyboardPrimed = true;
     returnBuffer = (returnBuffer + event.key.toLowerCase()).slice(-7);
     if (returnBuffer.endsWith("picasso") || returnBuffer.endsWith("picaso")) {
         returnBuffer = "";

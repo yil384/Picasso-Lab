@@ -2161,18 +2161,7 @@
     function playGuandanRestoreTransition() {
         const params = new URLSearchParams(window.location.search);
         if (params.get('from') !== 'guandan') return;
-        const overlay = document.createElement('div');
-        overlay.className = 'guandan-restore-transition card-only active';
-        overlay.innerHTML = '<div class="guandan-transition-title">Cards returning to Events</div>';
-        document.body.appendChild(overlay);
-        for (let i = 0; i < 18; i++) {
-            overlay.appendChild(makeTransitionCard('restore-card', i, true));
-        }
-        setTimeout(() => {
-            overlay.classList.remove('active');
-            overlay.remove();
-            history.replaceState(null, '', window.location.pathname);
-        }, 1700);
+        history.replaceState(null, '', window.location.pathname);
     }
 
     playGuandanRestoreTransition();
