@@ -1457,7 +1457,6 @@
         <div class="guandan-float-card" style="--tx:-27vw;--ty:26vh;--rot:13deg;--delay:0.09s;">A</div>
         <div class="guandan-float-card red" style="--tx:35vw;--ty:-23vh;--rot:19deg;--delay:0.14s;">K</div>
         <div class="guandan-float-card" style="--tx:31vw;--ty:25vh;--rot:-11deg;--delay:0.2s;">Q</div>
-        <button class="guandan-open-btn" id="guandan-egg-play" type="button" style="position:absolute;left:50%;bottom:5%;z-index:4;transform:translateX(-50%);">开一局掼蛋</button>
     </div>
 </div>
 
@@ -1495,21 +1494,6 @@
         </div>
     </div>
 </div>
-
-<section class="guandan-open-card" aria-label="Picasso Lab Guandan game">
-    <div class="guandan-open-copy">
-        <div class="guandan-open-kicker">Lab Table Game</div>
-        <h2>在线组队掼蛋</h2>
-        <p>创建房间、邀请队友、人不够就补 AI。支持逢人配、进贡还贡、抗贡、接风、炸弹、同花顺、天王炸和升级。</p>
-        <div class="guandan-open-actions">
-            <button class="guandan-open-btn" id="open-guandan-game" type="button">开一局</button>
-            <button class="guandan-open-btn secondary" data-guandan-egg-open type="button" aria-label="Open hidden table replay">先看隐藏战报</button>
-        </div>
-    </div>
-    <div class="guandan-open-table" aria-hidden="true">
-        <div class="guandan-open-chip">2A</div>
-    </div>
-</section>
 
 <div class="event-card cursor-party">
     <div class="event-image swiper mySwiper">
@@ -1969,7 +1953,9 @@
     const guandanOverlay = document.getElementById('guandan-egg-overlay');
     const guandanClose = guandanOverlay?.querySelector('.guandan-egg-close');
     const guandanCode = '222aak';
+    const guandanGameCode = 'picasso';
     let guandanBuffer = '';
+    let guandanGameBuffer = '';
 
     function openGuandanEgg() {
         if (!guandanOverlay) return;
@@ -1987,13 +1973,6 @@
     }
 
     document.querySelectorAll('.guandan-egg-trigger').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openGuandanEgg();
-        });
-    });
-    document.querySelectorAll('[data-guandan-egg-open]').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -2061,12 +2040,6 @@
         }, 1700);
     }
 
-    document.getElementById('open-guandan-game')?.addEventListener('click', startGuandanGameTransition);
-    document.getElementById('guandan-egg-play')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        startGuandanGameTransition();
-    });
     playGuandanRestoreTransition();
 
     document.addEventListener('keydown', (e) => {
@@ -2074,12 +2047,18 @@
             closeGuandanEgg();
             return;
         }
-        if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
+        if (e.target?.closest?.('input, textarea, [contenteditable="true"]')) return;
         if (e.key.length !== 1) return;
-        guandanBuffer = (guandanBuffer + e.key.toLowerCase()).slice(-guandanCode.length);
+        const ch = e.key.toLowerCase();
+        guandanBuffer = (guandanBuffer + ch).slice(-guandanCode.length);
+        guandanGameBuffer = (guandanGameBuffer + ch).slice(-guandanGameCode.length);
         if (guandanBuffer === guandanCode) {
             guandanBuffer = '';
             openGuandanEgg();
+        }
+        if (guandanGameBuffer === guandanGameCode) {
+            guandanGameBuffer = '';
+            startGuandanGameTransition();
         }
     });
 
