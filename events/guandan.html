@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Picasso Lab Guandan</title>
+<title>Picasso Lab Guandan Arena</title>
 <style>
     :root {
         --felt: #0c5b47;
@@ -269,15 +269,805 @@
         .score-strip { top: 10px; left: 10px; right: 10px; transform: none; }
         .score-pill { font-size: 11px; padding: 6px 8px; }
     }
+
+    /* Professional table UI pass: casino table structure + Picasso Lab HUD. */
+    :root {
+        --lab-bg: #061013;
+        --lab-blue: #00629B;
+        --lab-cyan: #45d9ff;
+        --lab-gold: #FFCD00;
+        --lab-red: #C13743;
+        --felt: #0f6c58;
+        --felt-dark: #052c2a;
+        --felt-light: #1a9273;
+        --panel: rgba(5, 17, 20, 0.72);
+        --panel-strong: rgba(7, 22, 28, 0.9);
+        --rim: rgba(255,255,255,0.16);
+        --rim-bright: rgba(255,205,0,0.4);
+        --paper: #fffdf7;
+        --ink: #111820;
+        --shadow: 0 24px 70px rgba(0,0,0,0.38);
+    }
+
+    html, body {
+        min-height: 100%;
+        background: var(--lab-bg);
+        color: #f7fbff;
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    }
+    body {
+        background:
+            linear-gradient(90deg, rgba(255,255,255,0.026) 1px, transparent 1px),
+            linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+            radial-gradient(circle at 18% 12%, rgba(69,217,255,0.18), transparent 26%),
+            radial-gradient(circle at 88% 18%, rgba(255,205,0,0.14), transparent 24%),
+            radial-gradient(circle at 50% 100%, rgba(15,108,88,0.58), transparent 46%),
+            linear-gradient(145deg, #061013 0%, #09242b 48%, #061414 100%);
+        background-size: 38px 38px, 38px 38px, auto, auto, auto, auto;
+    }
+    button, input, select { font: inherit; }
+    .app-shell {
+        min-height: 100vh;
+        padding: 14px clamp(10px, 2.5vw, 28px) 22px;
+    }
+
+    .topbar {
+        max-width: 1480px;
+        min-height: 70px;
+        margin: 0 auto 12px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.13);
+        background:
+            linear-gradient(135deg, rgba(255,255,255,0.105), rgba(255,255,255,0.035)),
+            rgba(3, 14, 18, 0.78);
+        box-shadow: 0 18px 55px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+    .brand-mark {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background:
+            radial-gradient(circle at 34% 24%, rgba(255,255,255,0.96), transparent 0 13px),
+            conic-gradient(from 215deg, #45d9ff, #FFCD00, #ffffff, #00629B, #45d9ff);
+        color: #061013;
+        font-size: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .brand-mark::after {
+        content: "";
+        position: absolute;
+        inset: 6px;
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.18);
+        background: rgba(255,255,255,0.18);
+    }
+    .brand h1 {
+        margin: 0;
+        color: #ffffff;
+        font-size: clamp(18px, 2.5vw, 24px);
+        font-weight: 850;
+        line-height: 1.08;
+        letter-spacing: 0;
+    }
+    .brand p {
+        margin: 5px 0 0;
+        color: rgba(225,244,255,0.68);
+        font-size: 12px;
+        font-weight: 650;
+    }
+    .btn {
+        min-height: 40px;
+        border-radius: 10px;
+        padding: 9px 14px;
+        border: 1px solid rgba(255,255,255,0.14);
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,242,176,0.92));
+        color: #102027;
+        font-weight: 820;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.82);
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+    .btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.82);
+    }
+    .btn.secondary {
+        background: rgba(255,255,255,0.075);
+        color: #edf9ff;
+        border-color: rgba(255,255,255,0.18);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .btn.danger {
+        background: rgba(193,55,67,0.16);
+        color: #ffe0e2;
+        border-color: rgba(193,55,67,0.42);
+    }
+
+    .lobby, .table-wrap {
+        max-width: 1480px;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(7, 22, 28, 0.62);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+    }
+    .lobby {
+        grid-template-columns: minmax(340px, 1fr) minmax(420px, 0.9fr);
+        min-height: calc(100vh - 112px);
+    }
+    .lobby-hero {
+        position: relative;
+        display: grid;
+        align-content: center;
+        gap: 24px;
+        padding: clamp(28px, 5vw, 56px);
+        background:
+            radial-gradient(circle at 18% 20%, rgba(255,205,0,0.18), transparent 27%),
+            radial-gradient(circle at 78% 30%, rgba(69,217,255,0.18), transparent 30%),
+            linear-gradient(140deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025));
+        overflow: hidden;
+    }
+    .lobby-hero::before {
+        content: "";
+        position: absolute;
+        inset: 26px;
+        border-radius: 28px;
+        border: 1px solid rgba(255,255,255,0.09);
+        pointer-events: none;
+    }
+    .lobby-kicker {
+        display: inline-flex;
+        width: max-content;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(0,98,155,0.22);
+        color: #aeefff;
+        border: 1px solid rgba(69,217,255,0.24);
+        font-size: 12px;
+        font-weight: 830;
+    }
+    .lobby-hero h2 {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        font-size: clamp(40px, 7vw, 78px);
+        line-height: 0.95;
+        color: #fff;
+        text-shadow: 0 16px 42px rgba(0,0,0,0.42);
+    }
+    .lobby-hero p {
+        position: relative;
+        z-index: 1;
+        max-width: 680px;
+        color: rgba(233,248,255,0.78);
+        font-size: 15px;
+        line-height: 1.75;
+    }
+    .lobby-preview {
+        position: relative;
+        z-index: 1;
+        width: min(520px, 100%);
+        aspect-ratio: 1.62;
+        border-radius: 28px;
+        border: 12px solid rgba(54,33,20,0.84);
+        background:
+            radial-gradient(ellipse at center, rgba(28,151,116,0.96), rgba(6,62,54,0.98) 68%, #041b1c 100%);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), inset 0 0 70px rgba(0,0,0,0.3), 0 28px 70px rgba(0,0,0,0.35);
+    }
+    .lobby-preview::before {
+        content: "PICASSO LAB";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: rgba(255,255,255,0.18);
+        font-weight: 900;
+        font-size: clamp(18px, 4vw, 42px);
+    }
+    .preview-card {
+        position: absolute;
+        bottom: 22px;
+        left: 50%;
+        width: 52px;
+        height: 74px;
+        margin-left: calc(var(--i) * 26px - 90px);
+        transform: rotate(calc(var(--i) * 4deg - 8deg));
+        border-radius: 8px;
+        background: #fffdf7;
+        color: #111820;
+        display: grid;
+        place-items: center;
+        font-weight: 950;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.28);
+    }
+    .preview-seat {
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.3);
+        background: radial-gradient(circle at 30% 24%, #fff, #45d9ff 32%, #00629B);
+        box-shadow: 0 12px 25px rgba(0,0,0,0.28);
+    }
+    .preview-seat.s0 { left: 50%; bottom: -24px; transform: translateX(-50%); }
+    .preview-seat.s1 { left: -24px; top: 50%; transform: translateY(-50%); }
+    .preview-seat.s2 { left: 50%; top: -24px; transform: translateX(-50%); }
+    .preview-seat.s3 { right: -24px; top: 50%; transform: translateY(-50%); }
+    .rule-chips span {
+        background: rgba(255,255,255,0.075);
+        border: 1px solid rgba(255,255,255,0.14);
+        color: #fff0a8;
+        font-weight: 760;
+    }
+    .lobby-panel {
+        display: grid;
+        align-content: center;
+        gap: 18px;
+        background: rgba(3, 14, 18, 0.72);
+    }
+    .panel-title {
+        display: grid;
+        gap: 7px;
+        margin-bottom: 4px;
+    }
+    .panel-title span {
+        width: max-content;
+        padding: 5px 9px;
+        border-radius: 999px;
+        border: 1px solid rgba(69,217,255,0.24);
+        background: rgba(69,217,255,0.08);
+        color: #aeefff;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+    .panel-title h3 {
+        margin: 0;
+        color: #fff;
+        font-size: clamp(24px, 4vw, 34px);
+        line-height: 1.05;
+    }
+    .panel-title p {
+        margin: 0;
+        max-width: 520px;
+        color: rgba(232,249,255,0.64);
+        line-height: 1.55;
+        font-size: 13px;
+    }
+    .control-card {
+        padding: 18px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background:
+            linear-gradient(145deg, rgba(255,255,255,0.085), rgba(255,255,255,0.025)),
+            rgba(255,255,255,0.03);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .quick-rules {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .quick-rule {
+        min-height: 70px;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.045);
+    }
+    .quick-rule b {
+        display: block;
+        color: #fff0a8;
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+    .quick-rule span {
+        color: rgba(232,249,255,0.62);
+        font-size: 12px;
+        line-height: 1.45;
+    }
+    input {
+        min-height: 46px;
+        border-radius: 10px;
+        border-color: rgba(255,255,255,0.16);
+        background: rgba(255,255,255,0.075);
+        font-weight: 650;
+    }
+    .seat-card {
+        border-radius: 12px;
+        background:
+            linear-gradient(145deg, rgba(255,255,255,0.105), rgba(255,255,255,0.04));
+        border-color: rgba(255,255,255,0.14);
+    }
+    .seat-card.mine {
+        border-color: rgba(255,205,0,0.65);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 3px rgba(255,205,0,0.1);
+    }
+
+    .table-wrap {
+        min-height: calc(100vh - 102px);
+        overflow: hidden;
+        background: #031316;
+    }
+    .table {
+        min-height: calc(100vh - 102px);
+        padding: 18px;
+        background:
+            radial-gradient(ellipse at center, rgba(24,145,111,0.86) 0%, rgba(8,82,72,0.94) 48%, rgba(3,31,34,0.98) 75%),
+            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
+        background-size: auto, 34px 34px, 34px 34px;
+    }
+    .table::before {
+        inset: 76px 118px 154px;
+        border-radius: 50%;
+        border: 22px solid rgba(54,34,22,0.66);
+        box-shadow:
+            inset 0 0 0 1px rgba(255,255,255,0.12),
+            inset 0 0 90px rgba(0,0,0,0.34),
+            0 0 0 1px rgba(255,255,255,0.09),
+            0 28px 90px rgba(0,0,0,0.28);
+    }
+    .table::after {
+        content: "";
+        position: absolute;
+        inset: 102px 154px 190px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.16);
+        pointer-events: none;
+    }
+    .table-grid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.16;
+        background:
+            radial-gradient(circle at center, transparent 0 29%, rgba(255,255,255,0.1) 30% 30.2%, transparent 30.4%),
+            linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+            linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
+        background-size: auto, 46px 46px, 46px 46px;
+        pointer-events: none;
+    }
+    .table-emblem {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        z-index: 1;
+        transform: translate(-50%, -50%);
+        display: grid;
+        place-items: center;
+        color: rgba(255,255,255,0.13);
+        text-transform: uppercase;
+        pointer-events: none;
+        font-weight: 950;
+    }
+    .table-emblem span { font-size: clamp(15px, 2vw, 24px); }
+    .table-emblem b { font-size: clamp(34px, 6vw, 92px); line-height: 0.9; }
+    .score-strip {
+        top: 16px;
+        gap: 10px;
+        width: min(760px, calc(100% - 32px));
+    }
+    .score-pill {
+        min-width: 118px;
+        padding: 9px 12px;
+        border-radius: 12px;
+        background: rgba(5,17,20,0.74);
+        border: 1px solid rgba(255,255,255,0.14);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+        text-align: center;
+        color: rgba(232,249,255,0.8);
+    }
+    .score-pill strong {
+        display: inline-grid;
+        min-width: 25px;
+        height: 25px;
+        place-items: center;
+        margin-left: 5px;
+        border-radius: 8px;
+        color: #09191b;
+        background: var(--lab-gold);
+    }
+    .player {
+        min-width: 176px;
+        border-radius: 14px;
+        padding: 10px;
+        background:
+            linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)),
+            rgba(3, 14, 18, 0.74);
+        border: 1px solid rgba(255,255,255,0.16);
+        box-shadow: 0 18px 38px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.09);
+    }
+    .player.turn {
+        border-color: rgba(255,205,0,0.78);
+        box-shadow: 0 0 0 3px rgba(255,205,0,0.13), 0 22px 44px rgba(0,0,0,0.34);
+    }
+    .player.p0 { bottom: 232px; }
+    .player.p1 { left: 22px; }
+    .player.p2 { top: 78px; }
+    .player.p3 { right: 22px; }
+    .player-main {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+    }
+    .player-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at 32% 24%, #fff, #8ceeff 34%, #00629B 100%);
+        color: #061013;
+        font-weight: 950;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), 0 10px 22px rgba(0,0,0,0.26);
+    }
+    .player.turn .player-avatar { background: radial-gradient(circle at 32% 24%, #fff, #ffe980 34%, #ce8b13 100%); }
+    .player-name {
+        display: grid;
+        gap: 4px;
+        font-weight: 850;
+        overflow: hidden;
+    }
+    .player-name span:first-child {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+    .player-badge {
+        width: max-content;
+        padding: 3px 7px;
+        border-radius: 999px;
+        color: #061013;
+        background: rgba(255,205,0,0.94);
+        font-size: 11px;
+        font-weight: 900;
+    }
+    .player-small {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: rgba(232,249,255,0.68);
+        font-size: 12px;
+        font-weight: 680;
+    }
+    .count-chip {
+        color: #ffffff;
+        font-weight: 900;
+    }
+    .back-stack {
+        min-height: 34px;
+        padding-left: 5px;
+    }
+    .mini-back {
+        width: 22px;
+        height: 32px;
+        border-radius: 6px;
+        margin-left: -5px;
+        background:
+            linear-gradient(135deg, transparent 45%, rgba(255,255,255,0.26) 46% 54%, transparent 55%),
+            linear-gradient(145deg, #065e94, #091a43);
+        border: 1px solid rgba(255,255,255,0.34);
+    }
+    .center-zone {
+        inset: 230px 210px 226px;
+        z-index: 4;
+    }
+    .center-card {
+        width: min(580px, 100%);
+        min-height: 196px;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        align-items: center;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,0.13);
+        background: rgba(3, 15, 18, 0.34);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 60px rgba(0,0,0,0.18);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    }
+    .center-meta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        color: rgba(232,249,255,0.68);
+        font-size: 12px;
+        font-weight: 850;
+        text-transform: uppercase;
+    }
+    .center-meta strong {
+        max-width: min(380px, 70vw);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: #fff0a8;
+        text-transform: none;
+    }
+    .last-play {
+        min-height: 94px;
+        padding: 8px 0;
+    }
+    .last-play.empty {
+        color: rgba(232,249,255,0.42);
+        font-weight: 850;
+        letter-spacing: 0;
+    }
+    .round-message {
+        width: 100%;
+        align-self: auto;
+        border-radius: 12px;
+        background: rgba(0,0,0,0.25);
+        color: #fff4bf;
+        font-weight: 720;
+    }
+    .history {
+        right: 18px;
+        bottom: 194px;
+        width: 280px;
+        max-height: 240px;
+        border-radius: 14px;
+        background: rgba(3, 14, 18, 0.62);
+        border-color: rgba(255,255,255,0.14);
+        box-shadow: 0 18px 42px rgba(0,0,0,0.24);
+    }
+    .history-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        color: #aeefff;
+        font-weight: 900;
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+    .history-row {
+        display: grid;
+        gap: 2px;
+        padding: 7px 0;
+        border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .history-row:first-of-type { border-top: 0; }
+    .history-cards {
+        color: rgba(255,255,255,0.56);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .hand-zone {
+        padding: 14px 18px calc(18px + env(safe-area-inset-bottom));
+        background:
+            linear-gradient(to top, rgba(3,12,15,0.98), rgba(3,12,15,0.86) 70%, rgba(3,12,15,0));
+    }
+    .hand-header {
+        display: grid;
+        grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr);
+        gap: 12px;
+        align-items: center;
+        max-width: 1180px;
+        margin: 0 auto 10px;
+    }
+    .hand-summary {
+        color: rgba(232,249,255,0.72);
+        font-size: 12px;
+        font-weight: 760;
+    }
+    .hand-summary strong { color: #fff; }
+    .selection-meter {
+        justify-self: end;
+        color: rgba(232,249,255,0.72);
+        font-size: 12px;
+        font-weight: 760;
+    }
+    .hand-tools {
+        margin: 0;
+        gap: 9px;
+    }
+    .hand {
+        max-width: min(1240px, calc(100vw - 28px));
+        min-height: 128px;
+        margin: 0 auto;
+        padding: 4px 18px 0;
+    }
+    .card {
+        width: 64px;
+        height: 91px;
+        margin-left: -24px;
+        border-radius: 8px;
+        border: 1px solid rgba(22,24,28,0.18);
+        background:
+            radial-gradient(circle at 52% 48%, rgba(255,255,255,0.92), rgba(255,255,255,0) 32%),
+            linear-gradient(145deg, #ffffff 0%, #fff8ea 100%);
+        color: var(--ink);
+        padding: 7px;
+        box-shadow: 0 14px 30px rgba(0,0,0,0.34), inset 0 1px 0 #fff;
+    }
+    .card:first-child { margin-left: 0; }
+    .card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 18px 35px rgba(0,0,0,0.42), 0 0 0 2px rgba(69,217,255,0.2);
+    }
+    .card.selected {
+        transform: translateY(-28px);
+        border-color: rgba(255,205,0,0.95);
+        box-shadow: 0 0 0 3px rgba(255,205,0,0.22), 0 24px 42px rgba(0,0,0,0.48);
+    }
+    .card.red { color: #bf2636; }
+    .card.wild {
+        background:
+            linear-gradient(145deg, #ffffff 0%, #fff1c2 46%, #ffe0e6 100%);
+        box-shadow: 0 14px 30px rgba(0,0,0,0.34), 0 0 0 2px rgba(255,205,0,0.32);
+    }
+    .card .corner {
+        display: grid;
+        justify-items: start;
+        gap: 1px;
+        font-size: 15px;
+    }
+    .card .corner em {
+        font-style: normal;
+        font-size: 12px;
+        line-height: 1;
+    }
+    .card .pip {
+        font-size: 28px;
+        opacity: 0.96;
+    }
+    .card .bottom { justify-items: end; }
+    .wild-chip {
+        position: absolute;
+        left: 50%;
+        bottom: 5px;
+        transform: translateX(-50%);
+        padding: 1px 5px;
+        border-radius: 999px;
+        background: rgba(255,205,0,0.9);
+        color: #3d2500;
+        font-size: 9px;
+        font-weight: 950;
+    }
+    .card.small {
+        width: 48px;
+        height: 68px;
+        margin-left: -14px;
+        padding: 5px;
+    }
+    .card.small .corner { font-size: 12px; }
+    .card.small .corner em { font-size: 9px; }
+    .card.small .pip { font-size: 20px; }
+    .card.back {
+        background:
+            linear-gradient(135deg, transparent 44%, rgba(255,255,255,0.22) 45% 55%, transparent 56%),
+            radial-gradient(circle at 50% 50%, rgba(255,205,0,0.18), transparent 32%),
+            linear-gradient(145deg, #00629B, #071848);
+        border-color: rgba(255,255,255,0.42);
+    }
+    .card.back::before { content: "P"; }
+
+    .phase-panel {
+        border-radius: 16px;
+        background: rgba(5, 17, 20, 0.94);
+        border-color: rgba(255,255,255,0.16);
+    }
+    .toast {
+        background: rgba(5, 17, 20, 0.94);
+        border-color: rgba(69,217,255,0.3);
+        box-shadow: 0 18px 36px rgba(0,0,0,0.28);
+    }
+
+    @media (max-width: 980px) {
+        .lobby { grid-template-columns: 1fr; }
+        .lobby-preview { width: min(460px, 94%); }
+        .table::before { inset: 80px 30px 152px; border-width: 16px; }
+        .table::after { inset: 102px 54px 178px; }
+        .player { min-width: 142px; }
+        .player.p0 { bottom: 214px; }
+        .player.p1 { left: 10px; top: 43%; }
+        .player.p2 { top: 82px; }
+        .player.p3 { right: 10px; top: 43%; }
+        .center-zone { inset: 220px 22px 222px; }
+        .history { display: none; }
+        .hand-header { grid-template-columns: 1fr; text-align: center; }
+        .selection-meter { justify-self: center; }
+        .hand-summary { justify-self: center; }
+        .card { width: 52px; height: 75px; margin-left: -20px; padding: 6px; }
+        .card .corner { font-size: 12px; }
+        .card .pip { font-size: 22px; }
+    }
+
+    @media (max-width: 600px) {
+        .app-shell { padding: 8px; }
+        .topbar { min-height: 0; }
+        .brand-mark { width: 40px; height: 40px; }
+        .lobby { min-height: auto; border-radius: 14px; }
+        .lobby-hero, .lobby-panel { padding: 22px 18px; }
+        .lobby-hero h2 { font-size: 38px; }
+        .quick-rules { grid-template-columns: 1fr; }
+        .lobby-preview { border-width: 8px; border-radius: 22px; }
+        .preview-card { width: 40px; height: 58px; margin-left: calc(var(--i) * 20px - 70px); }
+        .preview-seat { width: 38px; height: 38px; }
+        .score-strip {
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            width: auto;
+            transform: none;
+            gap: 6px;
+        }
+        .score-pill {
+            min-width: 0;
+            flex: 1 1 calc(50% - 6px);
+            padding: 7px 8px;
+        }
+        .table, .table-wrap { min-height: calc(100vh - 188px); }
+        .table::before { inset: 122px 16px 154px; border-width: 10px; }
+        .table::after { display: none; }
+        .table-emblem b { font-size: 40px; }
+        .player {
+            min-width: 112px;
+            max-width: 132px;
+            padding: 6px;
+        }
+        .player-main { grid-template-columns: 30px minmax(0, 1fr); gap: 7px; }
+        .player-avatar { width: 30px; height: 30px; font-size: 12px; }
+        .player-name { font-size: 13px; }
+        .player-badge { font-size: 10px; padding: 2px 6px; }
+        .player-small { font-size: 10px; }
+        .back-stack { display: none; }
+        .player.p0 { bottom: 236px; }
+        .player.p1 { left: 8px; top: 45%; }
+        .player.p2 { top: 108px; }
+        .player.p3 { right: 8px; top: 45%; }
+        .center-zone { inset: 218px 12px 220px; }
+        .center-card { width: calc(100% - 54px); min-height: 130px; padding: 10px; border-radius: 14px; }
+        .last-play { min-height: 48px; }
+        .round-message { padding: 9px 10px; font-size: 12px; }
+        .hand-zone {
+            height: 158px;
+            padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+        }
+        .hand-header {
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            bottom: calc(86px + env(safe-area-inset-bottom));
+            margin: 0;
+        }
+        .hand-summary { display: none; }
+        .selection-meter { display: none; }
+        .hand-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+        .hand-tools .btn { min-width: 0; padding: 8px 6px; font-size: 12px; }
+        .hand {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: calc(4px + env(safe-area-inset-bottom));
+            justify-content: flex-start;
+            overflow-x: auto;
+            min-height: 76px;
+            padding: 8px 22px 0;
+        }
+        .card { width: 43px; height: 64px; margin-left: -17px; border-radius: 7px; }
+        .card .corner { font-size: 10px; }
+        .card .corner em { font-size: 8px; }
+        .card .pip { font-size: 17px; }
+        .wild-chip { display: none; }
+    }
 </style>
 </head>
 <body>
 <div class="app-shell">
     <header class="topbar">
         <div class="brand">
-            <div class="brand-mark">蛋</div>
+            <div class="brand-mark">P</div>
             <div>
-                <h1>Picasso Lab 掼蛋桌</h1>
+                <h1>Picasso Lab Guandan Arena</h1>
                 <p id="room-caption">朋友局 · 逢人配 · 进贡还贡 · AI 补位</p>
             </div>
         </div>
@@ -387,8 +1177,19 @@ function cardHTML(card, small = false, selectable = false) {
     const title = isWild(card, game?.currentLevelRank) ? "逢人配" : cardText(card);
     const data = selectable ? `data-card-id="${card.id}"` : "";
     return `<div class="card ${small ? "small" : ""} ${red} ${wild} ${sel}" ${data} title="${title}">
-        <div class="corner">${label}</div><div class="pip">${symbol}</div><div class="corner bottom">${label}</div>
+        <div class="corner"><span>${label}</span><em>${symbol}</em></div>
+        <div class="pip">${symbol}</div>
+        <div class="corner bottom"><span>${label}</span><em>${symbol}</em></div>
+        ${wild ? `<div class="wild-chip">WILD</div>` : ""}
     </div>`;
+}
+
+function initials(name, fallback = "P") {
+    const clean = String(name || "").trim();
+    if (!clean) return fallback;
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length > 1) return parts.slice(0, 2).map(p => p[0]).join("").toUpperCase();
+    return clean.slice(0, 2).toUpperCase();
 }
 
 function rankBase(rank) {
@@ -1041,22 +1842,40 @@ function renderLobby() {
     root.innerHTML = `
     <section class="lobby">
         <div class="lobby-hero">
+            <div class="lobby-kicker">Picasso Lab Friends Table</div>
             <h2>开一桌<br>实验室掼蛋</h2>
             <p>两副牌四人结对，支持房间码、人机补位、逢人配、同花顺、炸弹、天王炸、进贡还贡、抗贡、接风和升级。</p>
+            <div class="lobby-preview" aria-hidden="true">
+                <i class="preview-seat s0"></i><i class="preview-seat s1"></i><i class="preview-seat s2"></i><i class="preview-seat s3"></i>
+                ${["2", "A", "K", "Q", "J", "10"].map((v, i) => `<span class="preview-card" style="--i:${i}">${v}</span>`).join("")}
+            </div>
             <div class="rule-chips">
                 <span>四人两队</span><span>红桃级牌逢人配</span><span>贡还贡</span><span>双下升三级</span><span>AI 补位</span>
             </div>
         </div>
         <div class="lobby-panel">
-            <div class="field-grid">
-                <label>昵称<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="你的名字"></label>
-                <label>房间码<input id="room-input" value="${encodeHTML(roomCode)}" placeholder="例如 A7K2Q"></label>
+            <div class="panel-title">
+                <span>Room Console</span>
+                <h3>Start fast, fill seats with AI.</h3>
+                <p>Designed for a casual lab table: create a private room, share the link, or let AI occupy open seats when people are late.</p>
             </div>
-            <div class="split">
-                <button class="btn" id="create-room" type="button">创建房间</button>
-                <button class="btn secondary" id="join-room" type="button">加入房间</button>
+            <div class="control-card">
+                <div class="field-grid">
+                    <label>昵称<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="你的名字"></label>
+                    <label>房间码<input id="room-input" value="${encodeHTML(roomCode)}" placeholder="例如 A7K2Q"></label>
+                </div>
+                <div class="split">
+                    <button class="btn" id="create-room" type="button">创建房间</button>
+                    <button class="btn secondary" id="join-room" type="button">加入房间</button>
+                </div>
+                <div class="status-line">${encodeHTML(statusText)}</div>
             </div>
-            <div class="status-line">${encodeHTML(statusText)}</div>
+            <div class="quick-rules">
+                <div class="quick-rule"><b>Teams</b><span>1/3 versus 2/4, fixed partners around the table.</span></div>
+                <div class="quick-rule"><b>Wild Card</b><span>Heart level cards act as flexible cards.</span></div>
+                <div class="quick-rule"><b>Tribute</b><span>Tribute and return tribute are handled automatically.</span></div>
+                <div class="quick-rule"><b>AI Seats</b><span>Open seats can be filled by bots for a fast lab match.</span></div>
+            </div>
         </div>
     </section>`;
     document.getElementById("create-room").addEventListener("click", createRoom);
@@ -1068,23 +1887,35 @@ function renderLobbyRoom() {
     root.innerHTML = `
     <section class="lobby">
         <div class="lobby-hero">
+            <div class="lobby-kicker">Private Room Ready</div>
             <h2>房间 ${game.roomCode}</h2>
             <p>${encodeHTML(game.message || "等待玩家入座。")} 对家组队：1/3 号位一队，2/4 号位一队。人不够时房主可以补 AI。</p>
+            <div class="lobby-preview" aria-hidden="true">
+                <i class="preview-seat s0"></i><i class="preview-seat s1"></i><i class="preview-seat s2"></i><i class="preview-seat s3"></i>
+                ${["2", "A", "K", "Q", "J", "10"].map((v, i) => `<span class="preview-card" style="--i:${i}">${v}</span>`).join("")}
+            </div>
             <div class="rule-chips">
                 <span>${teamName[0]}：1 + 3 号位</span><span>${teamName[1]}：2 + 4 号位</span><span>当前双方都打 ${game.currentLevelRank}</span>
             </div>
         </div>
         <div class="lobby-panel">
-            <div class="field-grid">
-                <label>昵称<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="你的名字"></label>
+            <div class="panel-title">
+                <span>Seat Draft</span>
+                <h3>Choose seats, then deal.</h3>
+                <p>Host controls AI fill and game start. The table layout keeps partners opposite each other once the round begins.</p>
             </div>
-            <div class="seats">
-                ${[0,1,2,3].map(i => seatHTML(i, mine)).join("")}
-            </div>
-            <div class="top-actions" style="margin-top:18px;justify-content:flex-start">
-                <button class="btn" id="start-game" ${isHost() ? "" : "disabled"} type="button">开始游戏</button>
-                <button class="btn secondary" id="fill-ai" ${isHost() ? "" : "disabled"} type="button">空位补 AI</button>
-                <button class="btn danger" id="delete-room" ${isHost() ? "" : "disabled"} type="button">解散房间</button>
+            <div class="control-card">
+                <div class="field-grid">
+                    <label>昵称<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="你的名字"></label>
+                </div>
+                <div class="seats">
+                    ${[0,1,2,3].map(i => seatHTML(i, mine)).join("")}
+                </div>
+                <div class="top-actions" style="margin-top:18px;justify-content:flex-start">
+                    <button class="btn" id="start-game" ${isHost() ? "" : "disabled"} type="button">开始游戏</button>
+                    <button class="btn secondary" id="fill-ai" ${isHost() ? "" : "disabled"} type="button">空位补 AI</button>
+                    <button class="btn danger" id="delete-room" ${isHost() ? "" : "disabled"} type="button">解散房间</button>
+                </div>
             </div>
         </div>
     </section>`;
@@ -1107,12 +1938,12 @@ function seatHTML(i, mine) {
     const s = game.seats[i];
     if (!s) {
         return `<div class="seat-card">
-            <div><div class="seat-name">${i + 1} 号空位</div><div class="seat-team">${teamName[i % 2]}</div></div>
+            <div class="player-main"><div class="player-avatar">${i + 1}</div><div><div class="seat-name">${i + 1} 号空位</div><div class="seat-team">${teamName[i % 2]}</div></div></div>
             <div class="top-actions"><button class="btn secondary" id="seat-${i}" type="button">入座</button>${isHost() ? `<button class="btn secondary" id="ai-${i}" type="button">AI</button>` : ""}</div>
         </div>`;
     }
     return `<div class="seat-card ${mine === i ? "mine" : ""}">
-        <div><div class="seat-name">${encodeHTML(s.name)} ${s.host ? "· 房主" : ""}</div><div class="seat-meta">${s.type === "ai" ? "人机" : "真人"} · ${i + 1} 号位</div><div class="seat-team">${teamName[i % 2]}</div></div>
+        <div class="player-main"><div class="player-avatar">${encodeHTML(initials(s.name, String(i + 1)))}</div><div><div class="seat-name">${encodeHTML(s.name)} ${s.host ? "· 房主" : ""}</div><div class="seat-meta">${s.type === "ai" ? "人机" : "真人"} · ${i + 1} 号位</div><div class="seat-team">${teamName[i % 2]}</div></div></div>
         ${(mine === i || isHost()) ? `<button class="btn secondary" id="leave-${i}" type="button">离开</button>` : `<div></div>`}
     </div>`;
 }
@@ -1121,9 +1952,17 @@ function renderTable() {
     const mine = mySeat();
     const myHand = mine >= 0 ? sortCards(game.hands[mine] || [], game.currentLevelRank) : [];
     const canAct = mine === game.currentTurn && game.phase === "playing";
+    const lastLabel = game.lastPlay ? `${encodeHTML(game.seats[game.lastPlay.player].name)}：${game.lastPlay.combo.name}` : "新一轮，任意合法牌型";
+    const historyRows = (game.history || []).slice(-10).reverse().map(h => `
+        <div class="history-row">
+            <div><b>${encodeHTML(game.seats[h.player]?.name || "")}</b> ${encodeHTML(h.action)}</div>
+            ${h.cards?.length ? `<div class="history-cards">${h.cards.map(cardText).join(" ")}</div>` : ""}
+        </div>`).join("");
     root.innerHTML = `
     <section class="table-wrap">
         <div class="table">
+            <div class="table-grid" aria-hidden="true"></div>
+            <div class="table-emblem" aria-hidden="true"><span>Picasso Lab</span><b>Guandan</b></div>
             <div class="score-strip">
                 <div class="score-pill">${teamName[0]} <strong>${game.levels[0]}</strong></div>
                 <div class="score-pill">${teamName[1]} <strong>${game.levels[1]}</strong></div>
@@ -1132,18 +1971,24 @@ function renderTable() {
             </div>
             ${[0,1,2,3].map(i => playerHTML(i, mine)).join("")}
             <div class="center-zone">
-                <div class="combo-label">${game.lastPlay ? `${encodeHTML(game.seats[game.lastPlay.player].name)}：${game.lastPlay.combo.name}` : "新一轮，任意合法牌型"}</div>
-                <div class="last-play">${game.lastPlay ? game.lastPlay.cards.map(c => cardHTML(c, true)).join("") : ""}</div>
-                <div class="round-message">${encodeHTML(game.message || "")}</div>
+                <div class="center-card">
+                    <div class="center-meta"><span>Last Trick</span><strong>${lastLabel}</strong></div>
+                    <div class="last-play ${game.lastPlay ? "" : "empty"}">${game.lastPlay ? game.lastPlay.cards.map(c => cardHTML(c, true)).join("") : "Table is open"}</div>
+                    <div class="round-message">${encodeHTML(game.message || "")}</div>
+                </div>
             </div>
-            <div class="history">${(game.history || []).slice(-10).reverse().map(h => `<div><b>${encodeHTML(game.seats[h.player]?.name || "")}</b> ${encodeHTML(h.action)} ${h.cards?.length ? h.cards.map(cardText).join(" ") : ""}</div>`).join("")}</div>
+            <div class="history"><div class="history-title"><span>Trick Log</span><span>${(game.history || []).length}</span></div>${historyRows || `<div class="history-row">等待第一手牌。</div>`}</div>
             ${game.phase === "roundOver" ? roundOverHTML() : ""}
             <div class="hand-zone">
-                <div class="hand-tools">
-                    <button class="btn" id="play-btn" ${canAct ? "" : "disabled"} type="button">出牌</button>
-                    <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay ? "" : "disabled"} type="button">不要</button>
-                    <button class="btn secondary" id="hint-btn" ${canAct ? "" : "disabled"} type="button">提示</button>
-                    <button class="btn secondary" id="clear-btn" type="button">取消选择</button>
+                <div class="hand-header">
+                    <div class="hand-summary">${mine >= 0 ? `手牌 <strong>${myHand.length}</strong> 张 · ${canAct ? "轮到你出牌" : `等待 ${encodeHTML(game.seats[game.currentTurn]?.name || "玩家")}`}` : "观战视角"}</div>
+                    <div class="hand-tools">
+                        <button class="btn" id="play-btn" ${canAct ? "" : "disabled"} type="button">出牌</button>
+                        <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay ? "" : "disabled"} type="button">不要</button>
+                        <button class="btn secondary" id="hint-btn" ${canAct ? "" : "disabled"} type="button">提示</button>
+                        <button class="btn secondary" id="clear-btn" type="button">取消</button>
+                    </div>
+                    <div class="selection-meter">已选 <strong>${selected.size}</strong> 张</div>
                 </div>
                 <div class="hand">${myHand.length ? myHand.map(c => cardHTML(c, false, true)).join("") : `<div class="combo-label">你还没有入座，当前是观战视角。</div>`}</div>
             </div>
@@ -1170,8 +2015,11 @@ function playerHTML(i, mine) {
     const finishedPlace = finishedList(game).indexOf(i) + 1;
     const pos = mine >= 0 ? (i - mine + 4) % 4 : i;
     return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${finishedPlace ? "finished" : ""}">
-        <div class="player-name"><span>${encodeHTML(s.name)}</span><span class="player-badge">${i === mine ? "你" : teamName[i % 2]}</span></div>
-        <div class="player-small">${s.type === "ai" ? "AI" : "Human"} · ${finishedPlace ? `第 ${finishedPlace} 名` : `${count} 张`}</div>
+        <div class="player-main">
+            <div class="player-avatar">${encodeHTML(initials(s.name, String(i + 1)))}</div>
+            <div class="player-name"><span>${encodeHTML(s.name)}</span><span class="player-badge">${i === mine ? "你" : teamName[i % 2]}</span></div>
+        </div>
+        <div class="player-small"><span>${s.type === "ai" ? "AI" : "Human"} · ${finishedPlace ? `第 ${finishedPlace} 名` : "剩余"}</span><span class="count-chip">${finishedPlace ? "FIN" : `${count} 张`}</span></div>
         <div class="back-stack">${Array.from({ length: Math.min(6, Math.max(1, Math.ceil(count / 5))) }).map(() => `<i class="mini-back"></i>`).join("")}</div>
     </div>`;
 }
