@@ -1068,13 +1068,14 @@
             <div class="brand-mark">P</div>
             <div>
                 <h1>Picasso Lab Guandan Arena</h1>
-                <p id="room-caption">朋友局 · 逢人配 · 进贡还贡 · AI 补位</p>
+                <p id="room-caption">Friends table · Wild card · Tribute · AI fill</p>
             </div>
         </div>
         <div class="top-actions">
-            <button class="btn secondary" id="copy-link-btn" type="button">复制房间链接</button>
-            <button class="btn secondary" id="new-room-btn" type="button">新房间</button>
-            <button class="btn" id="back-events-btn" type="button">返回 Events</button>
+            <button class="btn secondary" id="copy-link-btn" type="button">Copy Room Link</button>
+            <button class="btn secondary" id="new-room-btn" type="button">New Room</button>
+            <button class="btn secondary" id="lang-toggle" type="button">中文</button>
+            <button class="btn" id="back-events-btn" type="button">Back to Events</button>
         </div>
     </header>
 
@@ -1108,13 +1109,23 @@ const GUANDAN_URL = "https://yil384.github.io/Picasso-Lab/events/guandan.html";
 const root = document.getElementById("root");
 const toastEl = document.getElementById("toast");
 const roomCaption = document.getElementById("room-caption");
+const copyLinkBtn = document.getElementById("copy-link-btn");
+const newRoomBtn = document.getElementById("new-room-btn");
+const backEventsBtn = document.getElementById("back-events-btn");
+const langToggleBtn = document.getElementById("lang-toggle");
 const roomRoot = "guandanRooms";
 const ranks = ["3","4","5","6","7","8","9","10","J","Q","K","A","2"];
 const suits = ["S","H","D","C"];
 const suitGlyph = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const suitName = { S: "spade", H: "heart", D: "diamond", C: "club" };
-const teamName = ["辰哥队", "于老板队"];
-const botNames = ["小怪兽", "光之队友", "牌桌博士", "厨房 AI"];
+const teamNames = {
+    en: ["Chen Team", "Yu Boss Team"],
+    zh: ["辰哥队", "于老板队"]
+};
+const botNames = {
+    en: ["Little Monster", "Light Teammate", "Card Table Professor", "Kitchen AI"],
+    zh: ["小怪兽", "光之队友", "牌桌博士", "厨房 AI"]
+};
 
 let game = null;
 let roomCode = new URLSearchParams(location.search).get("room") || "";
@@ -1122,12 +1133,48 @@ let selected = new Set();
 let unsubscribe = null;
 let statusText = "";
 let aiTimer = null;
+let uiLang = localStorage.getItem("picasso.guandan.lang") || "en";
 let clientId = localStorage.getItem("picasso.guandan.client");
 if (!clientId) {
     clientId = "c_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
     localStorage.setItem("picasso.guandan.client", clientId);
 }
 let nickname = localStorage.getItem("picasso.guandan.name") || "";
+
+function isZH() {
+    return uiLang === "zh";
+}
+
+function L(en, zh) {
+    return isZH() ? zh : en;
+}
+
+function teamName(index) {
+    return teamNames[uiLang]?.[index] || teamNames.en[index] || `Team ${index + 1}`;
+}
+
+function botName(index) {
+    return botNames[uiLang]?.[index] || botNames.en[index] || `AI ${index + 1}`;
+}
+
+function phaseLabel(phase) {
+    const labels = {
+        lobby: ["Lobby", "等待开局"],
+        playing: ["Playing", "进行中"],
+        roundOver: ["Round over", "本局结束"],
+        loading: ["Loading", "加载中"]
+    };
+    const label = labels[phase] || labels.loading;
+    return isZH() ? label[1] : label[0];
+}
+
+function setStaticLabels() {
+    document.documentElement.lang = isZH() ? "zh-CN" : "en";
+    copyLinkBtn.textContent = L("Copy Room Link", "复制房间链接");
+    newRoomBtn.textContent = L("New Room", "新房间");
+    backEventsBtn.textContent = L("Back to Events", "返回 Events");
+    langToggleBtn.textContent = isZH() ? "EN" : "中文";
+}
 
 function showToast(text) {
     toastEl.textContent = text;
@@ -1156,10 +1203,86 @@ function isWild(card, levelRank) {
     return !card.joker && card.suit === "H" && card.rank === levelRank;
 }
 
-function cardText(card) {
-    if (card.joker === "RJ") return "大王";
-    if (card.joker === "BJ") return "小王";
+function cardText(card, lang = uiLang) {
+    if (card.joker === "RJ") return lang === "zh" ? "大王" : "Red Joker";
+    if (card.joker === "BJ") return lang === "zh" ? "小王" : "Black Joker";
     return `${card.rank}${suitGlyph[card.suit]}`;
+}
+
+function comboName(combo, lang = uiLang) {
+    const zh = lang === "zh";
+    if (!combo) return "";
+    const labels = {
+        jokerBomb: ["Joker Bomb", "天王炸"],
+        single: ["Single", "单张"],
+        pair: ["Pair", "对子"],
+        triple: ["Triple", "三张"],
+        fullhouse: ["Full House", "三带二"],
+        straight: ["Straight", "顺子"],
+        straightFlush: ["Straight Flush", "同花顺"],
+        pairStraight: ["Three Consecutive Pairs", "三连对"],
+        tripleStraight: ["Triple Run", "钢板"]
+    };
+    if (combo.type === "bomb") return zh ? `${combo.len} 张炸弹` : `${combo.len}-card Bomb`;
+    const label = labels[combo.type] || [combo.name || combo.type, combo.name || combo.type];
+    return zh ? label[1] : label[0];
+}
+
+function translateAction(action, entry = {}) {
+    if (isZH()) return action || "";
+    if (entry.actionType === "pass" || action === "不要") return "Pass";
+    if (entry.actionType === "finish") return `Finished #${entry.place || ""}`.trim();
+    if (entry.combo) return comboName(entry.combo, "en");
+    const bomb = String(action || "").match(/^(\d+) 张炸弹$/);
+    if (bomb) return `${bomb[1]}-card Bomb`;
+    const map = {
+        "天王炸": "Joker Bomb",
+        "单张": "Single",
+        "对子": "Pair",
+        "三张": "Triple",
+        "三带二": "Full House",
+        "顺子": "Straight",
+        "同花顺": "Straight Flush",
+        "三连对": "Three Consecutive Pairs",
+        "钢板": "Triple Run"
+    };
+    return map[action] || action || "";
+}
+
+function displayNameText(name) {
+    if (isZH()) return name;
+    const teamIndex = teamNames.zh.indexOf(name);
+    if (teamIndex >= 0) return teamNames.en[teamIndex];
+    const botIndex = botNames.zh.indexOf(name);
+    if (botIndex >= 0) return botNames.en[botIndex];
+    return name;
+}
+
+function displayCardTextFromMessage(text) {
+    if (isZH()) return text;
+    return String(text || "").replaceAll("大王", "Red Joker").replaceAll("小王", "Black Joker");
+}
+
+function displayMessage(message) {
+    const text = String(message || "");
+    if (isZH() || !text) return text;
+    let m;
+    if (text === "等待队友入座。") return "Waiting for players to take seats.";
+    if (text === "座位已清空。") return "Seat cleared.";
+    if (text === "抗贡成功，头游先出牌。") return "Tribute blocked. The first-place player leads.";
+    if (text === "本轮收牌。") return "Trick collected.";
+    if ((m = text.match(/^(.+) 入座。$/))) return `${displayNameText(m[1])} took a seat.`;
+    if ((m = text.match(/^(.+) 加入对局。$/))) return `${displayNameText(m[1])} joined the table.`;
+    if ((m = text.match(/^第 (\d+) 局开始，打 (.+)。$/))) return `Round ${m[1]} started. Level rank: ${m[2]}.`;
+    if ((m = text.match(/^第 (\d+) 局 · (.+)$/))) return `Round ${m[1]} · ${m[2].split("；").map(displayMessage).join("; ")}`;
+    if ((m = text.match(/^(.+) 进贡 (.+) 给 (.+)，还贡 (.+)$/))) return `${displayNameText(m[1])} tributes ${displayCardTextFromMessage(m[2])} to ${displayNameText(m[3])}; ${displayNameText(m[3])} returns ${displayCardTextFromMessage(m[4])}.`;
+    if ((m = text.match(/^(.+) 进贡 (.+) 给 (.+)$/))) return `${displayNameText(m[1])} tributes ${displayCardTextFromMessage(m[2])} to ${displayNameText(m[3])}.`;
+    if ((m = text.match(/^(.+) 出了 (.+)。$/))) return `${displayNameText(m[1])} played ${translateAction(m[2])}.`;
+    if ((m = text.match(/^(.+) 收牌，继续出。$/))) return `${displayNameText(m[1])} takes the trick and leads again.`;
+    if ((m = text.match(/^(.+) 接风给队友 (.+)。$/))) return `${displayNameText(m[1])} passes catch-wind to partner ${displayNameText(m[2])}.`;
+    if ((m = text.match(/^(.+) 不要。$/))) return `${displayNameText(m[1])} passes.`;
+    if ((m = text.match(/^(.+) (.+) 完成排名，升 (\d+) 级。$/))) return `${displayNameText(m[1])} completed the round order and advanced ${m[3]} level${m[3] === "1" ? "" : "s"}.`;
+    return text;
 }
 
 function finishedList(g = game) {
@@ -1174,7 +1297,7 @@ function cardHTML(card, small = false, selectable = false) {
     const sel = selected.has(card.id) ? "selected" : "";
     const symbol = card.joker ? (card.joker === "RJ" ? "★" : "☆") : suitGlyph[card.suit];
     const label = card.joker ? (card.joker === "RJ" ? "RJ" : "BJ") : card.rank;
-    const title = isWild(card, game?.currentLevelRank) ? "逢人配" : cardText(card);
+    const title = isWild(card, game?.currentLevelRank) ? L("Wild Card (逢人配)", "逢人配") : cardText(card);
     const data = selectable ? `data-card-id="${card.id}"` : "";
     return `<div class="card ${small ? "small" : ""} ${red} ${wild} ${sel}" ${data} title="${title}">
         <div class="corner"><span>${label}</span><em>${symbol}</em></div>
@@ -1299,18 +1422,18 @@ async function createRoom() {
     await set(roomRef(code), g);
     history.replaceState(null, "", `?room=${code}`);
     attachRoom(code);
-    showToast("房间已创建");
+    showToast(L("Room created", "房间已创建"));
 }
 
 async function joinRoom() {
     const code = (document.getElementById("room-input")?.value || roomCode).trim().toUpperCase();
     const name = document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player";
-    if (!code) return showToast("请输入房间码");
+    if (!code) return showToast(L("Enter a room code", "请输入房间码"));
     nickname = name;
     localStorage.setItem("picasso.guandan.name", name);
     const snap = await get(roomRef(code));
     if (!snap.exists()) {
-        statusText = "没找到这个房间，可以新建一个。";
+        statusText = L("Room not found. You can create a new one.", "没找到这个房间，可以新建一个。");
         render();
         return;
     }
@@ -1379,7 +1502,7 @@ async function addAI(index) {
     await mutateGame(g => {
         g.seats[index] = {
             clientId: `ai_${index}_${Date.now()}`,
-            name: botNames[index] || `AI ${index + 1}`,
+            name: botName(index),
             type: "ai",
             team: index % 2,
             ready: true,
@@ -1390,11 +1513,11 @@ async function addAI(index) {
 }
 
 async function startGame() {
-    if (!isHost()) return showToast("只有房主能开始");
+    if (!isHost()) return showToast(L("Only the host can start", "只有房主能开始"));
     await mutateGame(g => {
         for (let i = 0; i < 4; i++) {
             if (!g.seats[i]) {
-                g.seats[i] = { clientId: `ai_${i}_${Date.now()}`, name: botNames[i] || `AI ${i + 1}`, type: "ai", team: i % 2, ready: true, host: false };
+                g.seats[i] = { clientId: `ai_${i}_${Date.now()}`, name: botName(i), type: "ai", team: i % 2, ready: true, host: false };
             }
         }
         startRound(g, null);
@@ -1473,7 +1596,7 @@ function applyTribute(g, result) {
         if (ret) moveCardBetween(g, receiver, payer, ret);
         const power = tribute.joker ? jokerPower(tribute) : rankPower(tribute.rank, levelRank);
         if (power > bestPower) { bestPower = power; bestPayer = payer; }
-        rows.push({ text: `${g.seats[payer].name} 进贡 ${cardText(tribute)} 给 ${g.seats[receiver].name}${ret ? `，还贡 ${cardText(ret)}` : ""}` });
+        rows.push({ text: `${g.seats[payer].name} 进贡 ${cardText(tribute, "zh")} 给 ${g.seats[receiver].name}${ret ? `，还贡 ${cardText(ret, "zh")}` : ""}` });
     }
     g.currentTurn = bestPayer;
     return rows;
@@ -1620,13 +1743,13 @@ function choosePlayable(cards, lastCombo) {
 
 async function playSelected() {
     const seat = mySeat();
-    if (seat !== game.currentTurn) return showToast("还没轮到你");
+    if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
     const hand = game.hands[seat] || [];
     const cards = hand.filter(c => selected.has(c.id));
-    if (!cards.length) return showToast("请选择要出的牌");
+    if (!cards.length) return showToast(L("Select cards to play", "请选择要出的牌"));
     const lastCombo = game.lastPlay?.combo || null;
     const combo = choosePlayable(cards, lastCombo);
-    if (!combo) return showToast("这手牌型不合法或压不过上家");
+    if (!combo) return showToast(L("Invalid combo or not strong enough", "这手牌型不合法或压不过上家"));
     await playCards(seat, cards, combo);
     selected.clear();
 }
@@ -1639,10 +1762,10 @@ async function playCards(seat, cards, combo) {
         g.hands[seat] = g.hands[seat].filter(c => !ids.has(c.id));
         g.lastPlay = { player: seat, cards, combo };
         g.passCount = 0;
-        g.history = [...(g.history || []), { player: seat, action: combo.name, cards, at: Date.now() }].slice(-16);
+        g.history = [...(g.history || []), { player: seat, action: comboName(combo, "zh"), actionType: "combo", combo, cards, at: Date.now() }].slice(-16);
         if (g.hands[seat].length === 0 && !g.finished.includes(seat)) {
             g.finished.push(seat);
-            g.history.push({ player: seat, action: `第 ${g.finished.length} 名出完`, cards: [], at: Date.now() });
+            g.history.push({ player: seat, action: `第 ${g.finished.length} 名出完`, actionType: "finish", place: g.finished.length, cards: [], at: Date.now() });
         }
         if (g.finished.length >= 3) {
             const last = [0,1,2,3].find(i => !g.finished.includes(i));
@@ -1651,14 +1774,14 @@ async function playCards(seat, cards, combo) {
             return;
         }
         g.currentTurn = nextSeat(seat, g);
-        g.message = `${g.seats[seat].name} 出了 ${combo.name}。`;
+        g.message = `${g.seats[seat].name} 出了 ${comboName(combo, "zh")}。`;
     });
 }
 
 async function passTurn() {
     const seat = mySeat();
-    if (seat !== game.currentTurn) return showToast("还没轮到你");
-    if (!game.lastPlay) return showToast("新一轮不能不要");
+    if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
+    if (!game.lastPlay) return showToast(L("You cannot pass when leading a new trick", "新一轮不能不要"));
     await doPass(seat);
 }
 
@@ -1667,7 +1790,7 @@ async function doPass(seat) {
         if (!Array.isArray(g.finished)) g.finished = [];
         if (!Array.isArray(g.history)) g.history = [];
         g.passCount = (g.passCount || 0) + 1;
-        g.history = [...(g.history || []), { player: seat, action: "不要", cards: [], at: Date.now() }].slice(-16);
+        g.history = [...(g.history || []), { player: seat, action: "不要", actionType: "pass", cards: [], at: Date.now() }].slice(-16);
         const activeCount = activeSeatIds(g).length;
         if (g.passCount >= activeCount - 1) {
             const winner = g.lastPlay.player;
@@ -1710,7 +1833,7 @@ function finishRound(g) {
         tributePayers,
         nextStarter: first
     };
-    g.message = `${teamName[firstTeam]} ${order.map(i => g.seats[i].name).join(" / ")} 完成排名，升 ${advance} 级。`;
+    g.message = `${teamNames.zh[firstTeam]} ${order.map(i => g.seats[i].name).join(" / ")} 完成排名，升 ${advance} 级。`;
 }
 
 function advanceLevel(level, steps) {
@@ -1726,10 +1849,10 @@ async function nextRound() {
 
 function hintMove() {
     const seat = mySeat();
-    if (seat !== game.currentTurn) return showToast("还没轮到你");
+    if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
     const hand = game.hands[seat] || [];
     const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank);
-    if (!move) return showToast("建议：不要");
+    if (!move) return showToast(L("Suggestion: pass", "建议：不要"));
     selected = new Set(move.cards.map(c => c.id));
     render();
 }
@@ -1829,7 +1952,10 @@ function maybeRunAI() {
 }
 
 function render() {
-    roomCaption.textContent = roomCode ? `房间 ${roomCode} · 打 ${game?.currentLevelRank || "2"} · ${game?.phase || "loading"}` : "朋友局 · 逢人配 · 进贡还贡 · AI 补位";
+    setStaticLabels();
+    roomCaption.textContent = roomCode
+        ? L(`Room ${roomCode} · Level ${game?.currentLevelRank || "2"} · ${phaseLabel(game?.phase)}`, `房间 ${roomCode} · 打 ${game?.currentLevelRank || "2"} · ${phaseLabel(game?.phase)}`)
+        : L("Friends table · Wild card · Tribute · AI fill", "朋友局 · 逢人配 · 进贡还贡 · AI 补位");
     if (!roomCode || !game) {
         renderLobby();
         return;
@@ -1842,39 +1968,39 @@ function renderLobby() {
     root.innerHTML = `
     <section class="lobby">
         <div class="lobby-hero">
-            <div class="lobby-kicker">Picasso Lab Friends Table</div>
-            <h2>开一桌<br>实验室掼蛋</h2>
-            <p>两副牌四人结对，支持房间码、人机补位、逢人配、同花顺、炸弹、天王炸、进贡还贡、抗贡、接风和升级。</p>
+            <div class="lobby-kicker">${L("Picasso Lab Friends Table", "Picasso Lab 朋友局")}</div>
+            <h2>${L("Open a Lab<br>Guandan Table", "开一桌<br>实验室掼蛋")}</h2>
+            <p>${L("A casual four-player, two-deck Guandan table with private room codes, AI fill, Wild Card, Straight Flush, Bombs, Joker Bomb, Tribute, blocked Tribute, Catch-wind, and level progression.", "两副牌四人结对，支持房间码、人机补位、逢人配、同花顺、炸弹、天王炸、进贡还贡、抗贡、接风和升级。")}</p>
             <div class="lobby-preview" aria-hidden="true">
                 <i class="preview-seat s0"></i><i class="preview-seat s1"></i><i class="preview-seat s2"></i><i class="preview-seat s3"></i>
                 ${["2", "A", "K", "Q", "J", "10"].map((v, i) => `<span class="preview-card" style="--i:${i}">${v}</span>`).join("")}
             </div>
             <div class="rule-chips">
-                <span>四人两队</span><span>红桃级牌逢人配</span><span>贡还贡</span><span>双下升三级</span><span>AI 补位</span>
+                <span>${L("4 players, 2 teams", "四人两队")}</span><span>${L("Heart level cards are Wild", "红桃级牌逢人配")}</span><span>${L("Tribute & Return", "贡还贡")}</span><span>${L("Double-last advances 3", "双下升三级")}</span><span>${L("AI fill", "AI 补位")}</span>
             </div>
         </div>
         <div class="lobby-panel">
             <div class="panel-title">
-                <span>Room Console</span>
-                <h3>Start fast, fill seats with AI.</h3>
-                <p>Designed for a casual lab table: create a private room, share the link, or let AI occupy open seats when people are late.</p>
+                <span>${L("Room Console", "房间控制台")}</span>
+                <h3>${L("Start fast, fill seats with AI.", "快速开局，AI 补位。")}</h3>
+                <p>${L("Designed for a casual lab table: create a private room, share the link, or let AI occupy open seats when people are late.", "面向实验室朋友局：创建私人房间、分享链接，或者让 AI 先补上迟到的空位。")}</p>
             </div>
             <div class="control-card">
                 <div class="field-grid">
-                    <label>昵称<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="你的名字"></label>
-                    <label>房间码<input id="room-input" value="${encodeHTML(roomCode)}" placeholder="例如 A7K2Q"></label>
+                    <label>${L("Nickname", "昵称")}<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="${L("Your name", "你的名字")}"></label>
+                    <label>${L("Room Code", "房间码")}<input id="room-input" value="${encodeHTML(roomCode)}" placeholder="${L("e.g. A7K2Q", "例如 A7K2Q")}"></label>
                 </div>
                 <div class="split">
-                    <button class="btn" id="create-room" type="button">创建房间</button>
-                    <button class="btn secondary" id="join-room" type="button">加入房间</button>
+                    <button class="btn" id="create-room" type="button">${L("Create Room", "创建房间")}</button>
+                    <button class="btn secondary" id="join-room" type="button">${L("Join Room", "加入房间")}</button>
                 </div>
                 <div class="status-line">${encodeHTML(statusText)}</div>
             </div>
             <div class="quick-rules">
-                <div class="quick-rule"><b>Teams</b><span>1/3 versus 2/4, fixed partners around the table.</span></div>
-                <div class="quick-rule"><b>Wild Card</b><span>Heart level cards act as flexible cards.</span></div>
-                <div class="quick-rule"><b>Tribute</b><span>Tribute and return tribute are handled automatically.</span></div>
-                <div class="quick-rule"><b>AI Seats</b><span>Open seats can be filled by bots for a fast lab match.</span></div>
+                <div class="quick-rule"><b>${L("Teams", "队伍")}</b><span>${L("1/3 versus 2/4, fixed partners around the table.", "1/3 号位对 2/4 号位，对家固定组队。")}</span></div>
+                <div class="quick-rule"><b>${L("Wild Card", "逢人配")}</b><span>${L("Heart level cards act as flexible cards.", "红桃级牌可以当作任意牌。")}</span></div>
+                <div class="quick-rule"><b>${L("Tribute", "进贡")}</b><span>${L("Tribute and return tribute are handled automatically.", "进贡和还贡会自动处理。")}</span></div>
+                <div class="quick-rule"><b>${L("AI Seats", "AI 补位")}</b><span>${L("Open seats can be filled by bots for a fast lab match.", "空位可以用人机补齐，快速开局。")}</span></div>
             </div>
         </div>
     </section>`;
@@ -1887,34 +2013,34 @@ function renderLobbyRoom() {
     root.innerHTML = `
     <section class="lobby">
         <div class="lobby-hero">
-            <div class="lobby-kicker">Private Room Ready</div>
-            <h2>房间 ${game.roomCode}</h2>
-            <p>${encodeHTML(game.message || "等待玩家入座。")} 对家组队：1/3 号位一队，2/4 号位一队。人不够时房主可以补 AI。</p>
+            <div class="lobby-kicker">${L("Private Room Ready", "私人房间就绪")}</div>
+            <h2>${L("Room", "房间")} ${game.roomCode}</h2>
+            <p>${encodeHTML(displayMessage(game.message || "等待玩家入座。"))} ${L("Partners sit opposite: seats 1/3 versus 2/4. The host can fill empty seats with AI.", "对家组队：1/3 号位一队，2/4 号位一队。人不够时房主可以补 AI。")}</p>
             <div class="lobby-preview" aria-hidden="true">
                 <i class="preview-seat s0"></i><i class="preview-seat s1"></i><i class="preview-seat s2"></i><i class="preview-seat s3"></i>
                 ${["2", "A", "K", "Q", "J", "10"].map((v, i) => `<span class="preview-card" style="--i:${i}">${v}</span>`).join("")}
             </div>
             <div class="rule-chips">
-                <span>${teamName[0]}：1 + 3 号位</span><span>${teamName[1]}：2 + 4 号位</span><span>当前双方都打 ${game.currentLevelRank}</span>
+                <span>${teamName(0)}: ${L("Seats 1 + 3", "1 + 3 号位")}</span><span>${teamName(1)}: ${L("Seats 2 + 4", "2 + 4 号位")}</span><span>${L("Both teams play level", "当前双方都打")} ${game.currentLevelRank}</span>
             </div>
         </div>
         <div class="lobby-panel">
             <div class="panel-title">
-                <span>Seat Draft</span>
-                <h3>Choose seats, then deal.</h3>
-                <p>Host controls AI fill and game start. The table layout keeps partners opposite each other once the round begins.</p>
+                <span>${L("Seat Draft", "选座")}</span>
+                <h3>${L("Choose seats, then deal.", "坐好就开牌。")}</h3>
+                <p>${L("Host controls AI fill and game start. The table layout keeps partners opposite each other once the round begins.", "房主控制 AI 补位和开始游戏；开局后牌桌会把对家放在相对位置。")}</p>
             </div>
             <div class="control-card">
                 <div class="field-grid">
-                    <label>昵称<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="你的名字"></label>
+                    <label>${L("Nickname", "昵称")}<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="${L("Your name", "你的名字")}"></label>
                 </div>
                 <div class="seats">
                     ${[0,1,2,3].map(i => seatHTML(i, mine)).join("")}
                 </div>
                 <div class="top-actions" style="margin-top:18px;justify-content:flex-start">
-                    <button class="btn" id="start-game" ${isHost() ? "" : "disabled"} type="button">开始游戏</button>
-                    <button class="btn secondary" id="fill-ai" ${isHost() ? "" : "disabled"} type="button">空位补 AI</button>
-                    <button class="btn danger" id="delete-room" ${isHost() ? "" : "disabled"} type="button">解散房间</button>
+                    <button class="btn" id="start-game" ${isHost() ? "" : "disabled"} type="button">${L("Start Game", "开始游戏")}</button>
+                    <button class="btn secondary" id="fill-ai" ${isHost() ? "" : "disabled"} type="button">${L("Fill AI", "空位补 AI")}</button>
+                    <button class="btn danger" id="delete-room" ${isHost() ? "" : "disabled"} type="button">${L("Dissolve Room", "解散房间")}</button>
                 </div>
             </div>
         </div>
@@ -1938,13 +2064,13 @@ function seatHTML(i, mine) {
     const s = game.seats[i];
     if (!s) {
         return `<div class="seat-card">
-            <div class="player-main"><div class="player-avatar">${i + 1}</div><div><div class="seat-name">${i + 1} 号空位</div><div class="seat-team">${teamName[i % 2]}</div></div></div>
-            <div class="top-actions"><button class="btn secondary" id="seat-${i}" type="button">入座</button>${isHost() ? `<button class="btn secondary" id="ai-${i}" type="button">AI</button>` : ""}</div>
+            <div class="player-main"><div class="player-avatar">${i + 1}</div><div><div class="seat-name">${L(`Seat ${i + 1} Empty`, `${i + 1} 号空位`)}</div><div class="seat-team">${teamName(i % 2)}</div></div></div>
+            <div class="top-actions"><button class="btn secondary" id="seat-${i}" type="button">${L("Sit", "入座")}</button>${isHost() ? `<button class="btn secondary" id="ai-${i}" type="button">AI</button>` : ""}</div>
         </div>`;
     }
     return `<div class="seat-card ${mine === i ? "mine" : ""}">
-        <div class="player-main"><div class="player-avatar">${encodeHTML(initials(s.name, String(i + 1)))}</div><div><div class="seat-name">${encodeHTML(s.name)} ${s.host ? "· 房主" : ""}</div><div class="seat-meta">${s.type === "ai" ? "人机" : "真人"} · ${i + 1} 号位</div><div class="seat-team">${teamName[i % 2]}</div></div></div>
-        ${(mine === i || isHost()) ? `<button class="btn secondary" id="leave-${i}" type="button">离开</button>` : `<div></div>`}
+        <div class="player-main"><div class="player-avatar">${encodeHTML(initials(s.name, String(i + 1)))}</div><div><div class="seat-name">${encodeHTML(s.name)} ${s.host ? L("· Host", "· 房主") : ""}</div><div class="seat-meta">${s.type === "ai" ? "AI" : L("Human", "真人")} · ${L(`Seat ${i + 1}`, `${i + 1} 号位`)}</div><div class="seat-team">${teamName(i % 2)}</div></div></div>
+        ${(mine === i || isHost()) ? `<button class="btn secondary" id="leave-${i}" type="button">${L("Leave", "离开")}</button>` : `<div></div>`}
     </div>`;
 }
 
@@ -1952,10 +2078,12 @@ function renderTable() {
     const mine = mySeat();
     const myHand = mine >= 0 ? sortCards(game.hands[mine] || [], game.currentLevelRank) : [];
     const canAct = mine === game.currentTurn && game.phase === "playing";
-    const lastLabel = game.lastPlay ? `${encodeHTML(game.seats[game.lastPlay.player].name)}：${game.lastPlay.combo.name}` : "新一轮，任意合法牌型";
+    const lastLabel = game.lastPlay
+        ? `${encodeHTML(game.seats[game.lastPlay.player].name)}: ${comboName(game.lastPlay.combo)}`
+        : L("New trick: any legal combo", "新一轮，任意合法牌型");
     const historyRows = (game.history || []).slice(-10).reverse().map(h => `
         <div class="history-row">
-            <div><b>${encodeHTML(game.seats[h.player]?.name || "")}</b> ${encodeHTML(h.action)}</div>
+            <div><b>${encodeHTML(game.seats[h.player]?.name || "")}</b> ${encodeHTML(translateAction(h.action, h))}</div>
             ${h.cards?.length ? `<div class="history-cards">${h.cards.map(cardText).join(" ")}</div>` : ""}
         </div>`).join("");
     root.innerHTML = `
@@ -1964,33 +2092,33 @@ function renderTable() {
             <div class="table-grid" aria-hidden="true"></div>
             <div class="table-emblem" aria-hidden="true"><span>Picasso Lab</span><b>Guandan</b></div>
             <div class="score-strip">
-                <div class="score-pill">${teamName[0]} <strong>${game.levels[0]}</strong></div>
-                <div class="score-pill">${teamName[1]} <strong>${game.levels[1]}</strong></div>
-                <div class="score-pill">本局打 <strong>${game.currentLevelRank}</strong></div>
-                <div class="score-pill">第 <strong>${game.roundNo}</strong> 局</div>
+                <div class="score-pill">${teamName(0)} <strong>${game.levels[0]}</strong></div>
+                <div class="score-pill">${teamName(1)} <strong>${game.levels[1]}</strong></div>
+                <div class="score-pill">${L("Level", "本局打")} <strong>${game.currentLevelRank}</strong></div>
+                <div class="score-pill">${L("Round", "第")} <strong>${game.roundNo}</strong>${isZH() ? " 局" : ""}</div>
             </div>
             ${[0,1,2,3].map(i => playerHTML(i, mine)).join("")}
             <div class="center-zone">
                 <div class="center-card">
-                    <div class="center-meta"><span>Last Trick</span><strong>${lastLabel}</strong></div>
-                    <div class="last-play ${game.lastPlay ? "" : "empty"}">${game.lastPlay ? game.lastPlay.cards.map(c => cardHTML(c, true)).join("") : "Table is open"}</div>
-                    <div class="round-message">${encodeHTML(game.message || "")}</div>
+                    <div class="center-meta"><span>${L("Last Trick", "上一手")}</span><strong>${lastLabel}</strong></div>
+                    <div class="last-play ${game.lastPlay ? "" : "empty"}">${game.lastPlay ? game.lastPlay.cards.map(c => cardHTML(c, true)).join("") : L("Table is open", "牌桌已开")}</div>
+                    <div class="round-message">${encodeHTML(displayMessage(game.message || ""))}</div>
                 </div>
             </div>
-            <div class="history"><div class="history-title"><span>Trick Log</span><span>${(game.history || []).length}</span></div>${historyRows || `<div class="history-row">等待第一手牌。</div>`}</div>
+            <div class="history"><div class="history-title"><span>${L("Trick Log", "出牌记录")}</span><span>${(game.history || []).length}</span></div>${historyRows || `<div class="history-row">${L("Waiting for the first play.", "等待第一手牌。")}</div>`}</div>
             ${game.phase === "roundOver" ? roundOverHTML() : ""}
             <div class="hand-zone">
                 <div class="hand-header">
-                    <div class="hand-summary">${mine >= 0 ? `手牌 <strong>${myHand.length}</strong> 张 · ${canAct ? "轮到你出牌" : `等待 ${encodeHTML(game.seats[game.currentTurn]?.name || "玩家")}`}` : "观战视角"}</div>
+                    <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : `${L("Waiting for", "等待")} ${encodeHTML(game.seats[game.currentTurn]?.name || L("player", "玩家"))}`}` : L("Spectator view", "观战视角")}</div>
                     <div class="hand-tools">
-                        <button class="btn" id="play-btn" ${canAct ? "" : "disabled"} type="button">出牌</button>
-                        <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay ? "" : "disabled"} type="button">不要</button>
-                        <button class="btn secondary" id="hint-btn" ${canAct ? "" : "disabled"} type="button">提示</button>
-                        <button class="btn secondary" id="clear-btn" type="button">取消</button>
+                        <button class="btn" id="play-btn" ${canAct ? "" : "disabled"} type="button">${L("Play", "出牌")}</button>
+                        <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay ? "" : "disabled"} type="button">${L("Pass", "不要")}</button>
+                        <button class="btn secondary" id="hint-btn" ${canAct ? "" : "disabled"} type="button">${L("Hint", "提示")}</button>
+                        <button class="btn secondary" id="clear-btn" type="button">${L("Clear", "取消")}</button>
                     </div>
-                    <div class="selection-meter">已选 <strong>${selected.size}</strong> 张</div>
+                    <div class="selection-meter">${L("Selected", "已选")} <strong>${selected.size}</strong> ${L("cards", "张")}</div>
                 </div>
-                <div class="hand">${myHand.length ? myHand.map(c => cardHTML(c, false, true)).join("") : `<div class="combo-label">你还没有入座，当前是观战视角。</div>`}</div>
+                <div class="hand">${myHand.length ? myHand.map(c => cardHTML(c, false, true)).join("") : `<div class="combo-label">${L("You are not seated yet. Spectator view.", "你还没有入座，当前是观战视角。")}</div>`}</div>
             </div>
         </div>
     </section>`;
@@ -2017,31 +2145,31 @@ function playerHTML(i, mine) {
     return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${finishedPlace ? "finished" : ""}">
         <div class="player-main">
             <div class="player-avatar">${encodeHTML(initials(s.name, String(i + 1)))}</div>
-            <div class="player-name"><span>${encodeHTML(s.name)}</span><span class="player-badge">${i === mine ? "你" : teamName[i % 2]}</span></div>
+            <div class="player-name"><span>${encodeHTML(s.name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
         </div>
-        <div class="player-small"><span>${s.type === "ai" ? "AI" : "Human"} · ${finishedPlace ? `第 ${finishedPlace} 名` : "剩余"}</span><span class="count-chip">${finishedPlace ? "FIN" : `${count} 张`}</span></div>
+        <div class="player-small"><span>${s.type === "ai" ? "AI" : L("Human", "真人")} · ${finishedPlace ? L(`#${finishedPlace}`, `第 ${finishedPlace} 名`) : L("left", "剩余")}</span><span class="count-chip">${finishedPlace ? L("DONE", "完赛") : `${count} ${L("cards", "张")}`}</span></div>
         <div class="back-stack">${Array.from({ length: Math.min(6, Math.max(1, Math.ceil(count / 5))) }).map(() => `<i class="mini-back"></i>`).join("")}</div>
     </div>`;
 }
 
 function roundOverHTML() {
     const r = game.roundResult;
-    const rows = r.order.map((i, idx) => `<div class="tribute-row">第 ${idx + 1} 名：${encodeHTML(game.seats[i].name)} · ${teamName[i % 2]}</div>`).join("");
+    const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(game.seats[i].name)} · ${teamName(i % 2)}</div>`).join("");
     return `<div class="phase-panel">
-        <h2>${teamName[r.firstTeam]} 本局升级 ${r.advance}</h2>
-        <p>下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。</p>
+        <h2>${teamName(r.firstTeam)} ${L(`advances ${r.advance}`, `本局升级 ${r.advance}`)}</h2>
+        <p>${L("The next round will automatically handle Tribute and Return. If the paying side holds two Red Jokers, Tribute is blocked.", "下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。")}</p>
         <div class="tribute-list">${rows}</div>
-        <button class="btn" id="next-round" ${isHost() ? "" : "disabled"} type="button">进入下一局</button>
+        <button class="btn" id="next-round" ${isHost() ? "" : "disabled"} type="button">${L("Next Round", "进入下一局")}</button>
     </div>`;
 }
 
 document.getElementById("copy-link-btn").addEventListener("click", async () => {
-    if (!roomCode) return showToast("还没有房间");
+    if (!roomCode) return showToast(L("No room yet", "还没有房间"));
     const url = new URL(location.href);
     url.searchParams.set("room", roomCode);
     try {
         await navigator.clipboard.writeText(url.toString());
-        showToast("房间链接已复制");
+        showToast(L("Room link copied", "房间链接已复制"));
     } catch (_) {
         showToast(roomCode);
     }
@@ -2049,6 +2177,13 @@ document.getElementById("copy-link-btn").addEventListener("click", async () => {
 
 document.getElementById("new-room-btn").addEventListener("click", () => {
     location.href = GUANDAN_URL;
+});
+
+langToggleBtn.addEventListener("click", () => {
+    uiLang = isZH() ? "en" : "zh";
+    localStorage.setItem("picasso.guandan.lang", uiLang);
+    setStaticLabels();
+    render();
 });
 
 document.getElementById("back-events-btn").addEventListener("click", () => {
