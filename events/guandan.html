@@ -191,26 +191,120 @@
     .return-transition {
         position: fixed; inset: 0; z-index: 2000; overflow: hidden;
         background:
-            radial-gradient(circle at 50% 50%, rgba(255,205,0,0.18), transparent 26%),
-            radial-gradient(circle at 50% 60%, rgba(50,176,190,0.24), transparent 36%),
-            linear-gradient(145deg, rgba(1,13,16,0.98), rgba(2,34,37,0.98));
+            radial-gradient(circle at 50% 56%, rgba(255,205,0,0.18), transparent 24%),
+            radial-gradient(circle at 50% 62%, rgba(50,176,190,0.2), transparent 36%),
+            linear-gradient(145deg, rgba(1,12,15,0.98), rgba(4,30,32,0.98));
         opacity: 0; visibility: hidden; pointer-events: none;
-        transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+        transition: opacity 0.18s ease, visibility 0s linear 0.18s;
     }
     .return-transition.active { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
-    .return-transition::before {
-        content: ""; position: absolute; inset: -18%;
-        background: linear-gradient(105deg, transparent 0 38%, rgba(255,255,255,0.24) 46%, rgba(255,205,0,0.18) 52%, transparent 62% 100%);
-        transform: translateX(-46%) skewX(-12deg);
-        opacity: 0;
+    .return-defeat-stage {
+        position: absolute; inset: 0; display: grid; place-items: center;
+        transform: translateZ(0); pointer-events: none;
     }
-    .return-transition.active::before {
-        animation: returnCleanSweep 0.56s cubic-bezier(0.18, 0.8, 0.2, 1) forwards;
+    .return-defeat-stage::before {
+        content: ""; position: absolute; left: 50%; top: 58%; width: min(520px, 72vw); height: 32px;
+        transform: translate(-50%, -50%) scaleX(0.4); border-radius: 50%;
+        background: rgba(255,255,255,0.16); filter: blur(8px); opacity: 0;
+        animation: defeatTableGlow 1.1s ease-out forwards;
     }
-    @keyframes returnCleanSweep {
-        0% { transform: translateX(-46%) skewX(-12deg); opacity: 0; }
-        24% { opacity: 1; }
-        100% { transform: translateX(46%) skewX(-12deg); opacity: 0; }
+    .return-defeat-ring {
+        position: absolute; left: 50%; top: 54%; width: min(330px, 46vw); aspect-ratio: 1;
+        transform: translate(-50%, -50%) scale(0.36); border-radius: 50%;
+        border: 2px solid rgba(255,205,0,0.78); opacity: 0;
+        box-shadow: 0 0 32px rgba(255,205,0,0.28);
+        animation: defeatRing 1.04s cubic-bezier(0.16, 0.86, 0.24, 1) forwards;
+    }
+    .return-defeat-beam {
+        position: absolute; left: 50%; top: -8%; width: min(70px, 9vw); height: 68%;
+        transform: translateX(-50%) scaleY(0); transform-origin: top;
+        border-radius: 0 0 999px 999px;
+        background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.92) 26%, rgba(255,205,0,0.72) 58%, rgba(50,176,190,0));
+        filter: blur(1px); opacity: 0;
+        animation: defeatBeam 0.82s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s forwards;
+    }
+    .return-kaiju {
+        position: relative; width: min(230px, 42vw); height: min(300px, 54vw);
+        transform: translateY(22px) scale(0.96); opacity: 0;
+        filter: drop-shadow(0 24px 28px rgba(0,0,0,0.45));
+        animation: kaijuDefeat 1.18s cubic-bezier(0.17, 0.84, 0.22, 1) forwards;
+        will-change: transform, opacity;
+    }
+    .return-kaiju-head {
+        position: absolute; left: 50%; top: 2%; width: 54%; height: 32%;
+        transform: translateX(-50%); border-radius: 45% 45% 40% 40%;
+        background: linear-gradient(145deg, #253933, #101b18);
+        border: 3px solid rgba(255,225,142,0.22);
+    }
+    .return-kaiju-head::before,
+    .return-kaiju-head::after {
+        content: ""; position: absolute; top: -16%; width: 24%; height: 34%;
+        border-radius: 70% 70% 20% 20%; background: #16231f;
+        border: 2px solid rgba(255,225,142,0.16);
+    }
+    .return-kaiju-head::before { left: 12%; transform: rotate(-18deg); }
+    .return-kaiju-head::after { right: 12%; transform: rotate(18deg); }
+    .return-kaiju-eye {
+        position: absolute; top: 43%; width: 15%; height: 10%; border-radius: 999px;
+        background: #ffcd00; box-shadow: 0 0 12px rgba(255,205,0,0.9);
+        animation: kaijuEyeOut 0.48s ease 0.58s forwards;
+    }
+    .return-kaiju-eye.left { left: 27%; }
+    .return-kaiju-eye.right { right: 27%; }
+    .return-kaiju-body {
+        position: absolute; left: 50%; top: 30%; width: 70%; height: 48%;
+        transform: translateX(-50%); border-radius: 32px 32px 22px 22px;
+        background: linear-gradient(155deg, #31443e, #14211d 72%);
+        border: 3px solid rgba(255,225,142,0.18);
+    }
+    .return-kaiju-body::before {
+        content: ""; position: absolute; left: 50%; top: 18%; width: 18%; height: 52%;
+        transform: translateX(-50%); border-radius: 999px;
+        background: linear-gradient(180deg, rgba(255,205,0,0.82), rgba(255,205,0,0));
+        opacity: 0.62;
+    }
+    .return-kaiju-arm {
+        position: absolute; top: 39%; width: 36%; height: 12%;
+        border-radius: 999px; background: #17251f; border: 2px solid rgba(255,225,142,0.14);
+        transform-origin: 12% 50%;
+    }
+    .return-kaiju-arm.left { left: 0; transform: rotate(22deg); }
+    .return-kaiju-arm.right { right: 0; transform: rotate(158deg); }
+    .return-kaiju-spark {
+        position: absolute; left: 50%; top: 48%; width: 8px; height: 8px; border-radius: 50%;
+        background: #fff5ba; opacity: 0; box-shadow: 0 0 18px rgba(255,205,0,0.72);
+        animation: defeatSpark 0.72s cubic-bezier(0.14, 0.84, 0.18, 1) var(--delay) forwards;
+    }
+    @keyframes defeatBeam {
+        0% { transform: translateX(-50%) scaleY(0); opacity: 0; }
+        22% { opacity: 1; }
+        72% { transform: translateX(-50%) scaleY(1); opacity: 0.96; }
+        100% { transform: translateX(-50%) scaleY(1); opacity: 0; }
+    }
+    @keyframes defeatRing {
+        0% { transform: translate(-50%, -50%) scale(0.36); opacity: 0; }
+        18% { opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1.45); opacity: 0; }
+    }
+    @keyframes defeatTableGlow {
+        0% { opacity: 0; transform: translate(-50%, -50%) scaleX(0.4); }
+        34% { opacity: 1; }
+        100% { opacity: 0; transform: translate(-50%, -50%) scaleX(1.08); }
+    }
+    @keyframes kaijuDefeat {
+        0% { transform: translateY(28px) scale(0.94); opacity: 0; }
+        18% { transform: translateY(0) scale(1); opacity: 1; }
+        48% { transform: translateY(0) scale(1) rotate(0); opacity: 1; }
+        70% { transform: translateY(18px) scale(0.86, 1.04) rotate(-7deg); opacity: 1; }
+        100% { transform: translateY(72px) scale(0.52, 0.2) rotate(-15deg); opacity: 0; }
+    }
+    @keyframes kaijuEyeOut {
+        to { opacity: 0; box-shadow: none; }
+    }
+    @keyframes defeatSpark {
+        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+        16% { opacity: 1; }
+        100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.15); opacity: 0; }
     }
 
     #return-type-hint {
@@ -1327,10 +1421,29 @@ function startReturnToEvents() {
         location.href = `${EVENTS_URL}?from=guandan`;
         return;
     }
-    returnTransition.innerHTML = "";
+    returnTransition.innerHTML = `
+        <div class="return-defeat-stage" aria-hidden="true">
+            <div class="return-defeat-ring"></div>
+            <div class="return-defeat-beam"></div>
+            <div class="return-kaiju">
+                <div class="return-kaiju-head">
+                    <span class="return-kaiju-eye left"></span>
+                    <span class="return-kaiju-eye right"></span>
+                </div>
+                <div class="return-kaiju-body"></div>
+                <div class="return-kaiju-arm left"></div>
+                <div class="return-kaiju-arm right"></div>
+                <span class="return-kaiju-spark" style="--dx:-118px;--dy:-84px;--delay:.42s"></span>
+                <span class="return-kaiju-spark" style="--dx:102px;--dy:-92px;--delay:.46s"></span>
+                <span class="return-kaiju-spark" style="--dx:-142px;--dy:18px;--delay:.5s"></span>
+                <span class="return-kaiju-spark" style="--dx:132px;--dy:24px;--delay:.54s"></span>
+                <span class="return-kaiju-spark" style="--dx:-78px;--dy:116px;--delay:.58s"></span>
+                <span class="return-kaiju-spark" style="--dx:74px;--dy:122px;--delay:.62s"></span>
+            </div>
+        </div>`;
     returnTransition.setAttribute("aria-hidden", "false");
     requestAnimationFrame(() => returnTransition.classList.add("active"));
-    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 620);
+    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 1240);
 }
 
 function primeReturnKeyboardCapture() {
