@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Picasso Lab Guandan</title>
+<style>
+    :root {
+        --felt: #0c5b47;
+        --felt-dark: #06372d;
+        --felt-light: #178263;
+        --ink: #16201d;
+        --paper: #fffdf6;
+        --line: rgba(255,255,255,0.22);
+        --gold: #f1c76a;
+        --red: #d53440;
+        --blue: #7fd3ff;
+        --shadow: 0 18px 60px rgba(0,0,0,0.28);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #061a18; color: #f9f6ea; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; overflow-x: hidden; }
+    body {
+        overflow-x: hidden;
+        background:
+            radial-gradient(circle at 18% 12%, rgba(242,196,97,0.24), transparent 28%),
+            radial-gradient(circle at 84% 18%, rgba(79,189,255,0.16), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(18,128,94,0.5), transparent 45%),
+            linear-gradient(145deg, #061a18, #0a3029 48%, #061815);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .app-shell { min-height: 100vh; padding: 18px clamp(12px, 3vw, 32px) 28px; }
+    .topbar {
+        display: flex; align-items: center; justify-content: space-between; gap: 14px;
+        max-width: 1380px; margin: 0 auto 16px; padding: 10px 12px;
+        border: 1px solid rgba(255,255,255,0.16); border-radius: 18px;
+        background: rgba(7,24,22,0.58); backdrop-filter: blur(18px);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+        width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+        background: radial-gradient(circle at 34% 28%, #fff6be, #f0b23f 44%, #8d3b25);
+        color: #241307; font-weight: 900; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .brand h1 { margin: 0; font-size: clamp(18px, 3vw, 25px); letter-spacing: 0; }
+    .brand p { margin: 3px 0 0; color: rgba(255,255,255,0.66); font-size: 12px; }
+    .top-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .btn {
+        border: 0; border-radius: 12px; padding: 10px 14px; color: #13211c; background: #fff6d6;
+        font-weight: 750; box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 22px rgba(0,0,0,0.18);
+    }
+    .btn.secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.22); box-shadow: none; }
+    .btn.danger { background: rgba(213,52,64,0.16); color: #ffd9dc; border: 1px solid rgba(213,52,64,0.36); box-shadow: none; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .lobby, .table-wrap {
+        max-width: 1380px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.16); border-radius: 24px;
+        background: rgba(255,255,255,0.08); box-shadow: var(--shadow); backdrop-filter: blur(20px);
+        overflow: hidden;
+    }
+    .lobby { display: grid; grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.2fr); }
+    .lobby-hero { padding: clamp(22px, 5vw, 46px); background: linear-gradient(145deg, rgba(255,246,214,0.16), rgba(255,255,255,0.05)); }
+    .lobby-hero h2 { margin: 0 0 12px; font-size: clamp(34px, 7vw, 72px); line-height: 0.95; letter-spacing: 0; }
+    .lobby-hero p { margin: 0; max-width: 560px; color: rgba(255,255,255,0.72); line-height: 1.65; }
+    .rule-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .rule-chips span { padding: 7px 10px; border-radius: 999px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.13); color: #ffe9a9; font-size: 12px; }
+    .lobby-panel { padding: clamp(18px, 4vw, 34px); background: rgba(5,21,20,0.62); }
+    .field-grid { display: grid; gap: 12px; margin-bottom: 18px; }
+    label { display: grid; gap: 7px; color: rgba(255,255,255,0.72); font-size: 12px; font-weight: 700; letter-spacing: 0; }
+    input {
+        min-height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); padding: 0 13px;
+        background: rgba(255,255,255,0.09); color: #fff; outline: none;
+    }
+    input:focus { border-color: rgba(241,199,106,0.72); box-shadow: 0 0 0 3px rgba(241,199,106,0.16); }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .status-line { min-height: 20px; color: #ffd9a1; font-size: 12px; margin-top: 10px; }
+    .seats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+    .seat-card {
+        min-height: 116px; padding: 14px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(255,255,255,0.08); display: grid; gap: 8px; align-content: space-between;
+    }
+    .seat-card.mine { border-color: rgba(241,199,106,0.8); box-shadow: 0 0 0 3px rgba(241,199,106,0.12); }
+    .seat-card .seat-name { font-weight: 850; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .seat-card .seat-meta { color: rgba(255,255,255,0.58); font-size: 12px; }
+    .seat-card .seat-team { color: #ffe39c; font-size: 12px; font-weight: 800; }
+
+    .table-wrap { min-height: calc(100vh - 112px); position: relative; }
+    .table {
+        min-height: calc(100vh - 112px); position: relative; padding: 18px; overflow: hidden;
+        background:
+            radial-gradient(ellipse at center, rgba(26,144,108,0.78), rgba(4,56,45,0.88) 62%, rgba(2,23,21,0.96)),
+            repeating-radial-gradient(circle at center, rgba(255,255,255,0.028) 0 2px, transparent 2px 11px);
+    }
+    .table::before {
+        content: ""; position: absolute; inset: 50px; border-radius: 42%; border: 1px solid rgba(255,255,255,0.13);
+        box-shadow: 0 0 0 14px rgba(255,255,255,0.025), inset 0 0 90px rgba(0,0,0,0.2);
+        pointer-events: none;
+    }
+    .score-strip {
+        position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 8px; z-index: 4; flex-wrap: wrap; justify-content: center;
+    }
+    .score-pill {
+        padding: 7px 10px; border-radius: 999px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.14);
+        color: rgba(255,255,255,0.82); font-size: 12px; font-weight: 800;
+    }
+    .score-pill strong { color: #ffe39c; }
+
+    .player {
+        position: absolute; z-index: 5; display: grid; gap: 8px; min-width: 150px;
+        border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.25); border-radius: 16px; padding: 10px;
+        box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+    }
+    .player.turn { border-color: rgba(241,199,106,0.92); box-shadow: 0 0 0 4px rgba(241,199,106,0.16), 0 10px 28px rgba(0,0,0,0.18); }
+    .player.finished { opacity: 0.75; }
+    .player.p0 { left: 50%; bottom: 178px; transform: translateX(-50%); }
+    .player.p1 { left: 18px; top: 50%; transform: translateY(-50%); }
+    .player.p2 { left: 50%; top: 58px; transform: translateX(-50%); }
+    .player.p3 { right: 18px; top: 50%; transform: translateY(-50%); }
+    .player-name { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 850; }
+    .player-badge { color: #ffe39c; font-size: 12px; }
+    .player-small { color: rgba(255,255,255,0.62); font-size: 12px; }
+    .back-stack { display: flex; align-items: center; gap: 4px; }
+    .mini-back { width: 21px; height: 29px; border-radius: 4px; background: linear-gradient(135deg, #2f58b8, #101f58); border: 1px solid rgba(255,255,255,0.38); box-shadow: -3px 2px 4px rgba(0,0,0,0.12); }
+
+    .center-zone {
+        position: absolute; inset: 148px 190px 218px; z-index: 4;
+        display: grid; grid-template-rows: auto 1fr auto; place-items: center; text-align: center; pointer-events: none;
+    }
+    .last-play { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; min-height: 88px; align-items: center; }
+    .combo-label { color: rgba(255,255,255,0.72); font-size: 13px; min-height: 18px; }
+    .round-message {
+        align-self: end; max-width: 740px; padding: 12px 14px; border-radius: 16px; background: rgba(0,0,0,0.25);
+        border: 1px solid rgba(255,255,255,0.14); color: #ffe6aa; line-height: 1.45;
+    }
+    .history {
+        position: absolute; right: 16px; bottom: 188px; width: 250px; max-height: 210px; overflow: auto; z-index: 6;
+        background: rgba(0,0,0,0.23); border: 1px solid rgba(255,255,255,0.13); border-radius: 14px; padding: 10px;
+        font-size: 12px; color: rgba(255,255,255,0.68);
+    }
+    .history b { color: #fff; }
+    .hand-zone {
+        position: absolute; left: 0; right: 0; bottom: 0; z-index: 10; padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+        background: linear-gradient(to top, rgba(2,16,15,0.96), rgba(2,16,15,0.72) 68%, transparent);
+    }
+    .hand-tools { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .hand { display: flex; justify-content: center; align-items: flex-end; gap: 0; min-height: 116px; padding: 0 8px; }
+    .card {
+        width: 58px; height: 82px; border-radius: 8px; border: 1px solid #d9d1bd; background: var(--paper); color: #111;
+        display: grid; grid-template-rows: auto 1fr auto; padding: 5px; margin-left: -20px; user-select: none;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.24); transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+        position: relative; flex: 0 0 auto;
+    }
+    .card:first-child { margin-left: 0; }
+    .card:hover { transform: translateY(-8px); z-index: 20; }
+    .card.selected { transform: translateY(-22px); border-color: #f4bc4d; box-shadow: 0 0 0 3px rgba(244,188,77,0.25), 0 16px 24px rgba(0,0,0,0.34); z-index: 30; }
+    .card.red { color: var(--red); }
+    .card.wild { background: linear-gradient(145deg, #fffdf6, #ffefd3 55%, #ffd3dc); }
+    .card .corner { font-weight: 900; font-size: 15px; line-height: 1; }
+    .card .pip { display: grid; place-items: center; font-size: 25px; font-weight: 900; }
+    .card .bottom { transform: rotate(180deg); }
+    .card.small { width: 44px; height: 62px; border-radius: 7px; margin-left: -12px; padding: 4px; }
+    .card.small .pip { font-size: 18px; }
+    .card.small .corner { font-size: 12px; }
+    .card.back {
+        background: linear-gradient(135deg, #233f9e, #12184e);
+        border-color: rgba(255,255,255,0.42); color: #fff;
+    }
+    .card.back::before { content: "P"; place-self: center; font-weight: 950; color: rgba(255,255,255,0.85); }
+
+    .phase-panel {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 30;
+        width: min(720px, calc(100vw - 28px)); padding: 24px; border-radius: 22px; background: rgba(7,24,22,0.9);
+        border: 1px solid rgba(255,255,255,0.18); box-shadow: var(--shadow); text-align: left;
+    }
+    .phase-panel h2 { margin: 0 0 12px; }
+    .phase-panel p { color: rgba(255,255,255,0.72); line-height: 1.6; }
+    .tribute-list { display: grid; gap: 8px; margin: 14px 0; }
+    .tribute-row { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.08); color: #ffe2a0; }
+
+    .toast {
+        position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(18px);
+        padding: 10px 14px; border-radius: 999px; background: rgba(10,18,16,0.92); border: 1px solid rgba(255,255,255,0.18);
+        color: #fff; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .return-transition {
+        position: fixed; inset: 0; z-index: 2000; display: none; overflow: hidden; background: radial-gradient(circle at 50% 48%, #124e62, #020707 72%);
+    }
+    .return-transition.active { display: block; }
+    .light-hero {
+        position: absolute; left: 50%; top: 50%; width: 170px; height: 360px; transform: translate(-50%, -50%);
+        filter: drop-shadow(0 0 30px rgba(117,226,255,0.9));
+    }
+    .light-hero::before {
+        content: ""; position: absolute; left: 50%; top: 0; width: 82px; height: 96px; transform: translateX(-50%);
+        border-radius: 50% 50% 44% 44%; background: linear-gradient(145deg, #f5fbff, #d0ecff 55%, #8cc4ff);
+        box-shadow: inset 0 -10px 18px rgba(31,82,121,0.25);
+    }
+    .light-hero::after {
+        content: ""; position: absolute; left: 50%; top: 86px; width: 118px; height: 180px; transform: translateX(-50%);
+        clip-path: polygon(50% 0, 82% 16%, 92% 74%, 66% 100%, 34% 100%, 8% 74%, 18% 16%);
+        background: linear-gradient(135deg, #f7fbff 0 34%, #c8323b 35% 48%, #f4f6ff 49% 62%, #237bd5 63%);
+    }
+    .return-card {
+        position: absolute; width: 68px; height: 96px; border-radius: 10px; background: #fffdf6; color: #111;
+        display: grid; place-items: center; font-weight: 950; font-size: 22px; box-shadow: 0 12px 26px rgba(0,0,0,0.34);
+        animation: restoreCard 1.35s cubic-bezier(0.18, 0.8, 0.22, 1) forwards;
+    }
+    @keyframes restoreCard {
+        0% { transform: translate(var(--sx), var(--sy)) rotate(var(--sr)); opacity: 0; }
+        24% { opacity: 1; }
+        100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)); opacity: 1; }
+    }
+
+    @media (max-width: 860px) {
+        .lobby { grid-template-columns: 1fr; }
+        .seats { grid-template-columns: 1fr 1fr; }
+        .table-wrap, .table { min-height: calc(100vh - 96px); }
+        .player { min-width: 118px; padding: 8px; }
+        .player.p0 { bottom: 168px; }
+        .player.p1 { left: 8px; top: 42%; }
+        .player.p3 { right: 8px; top: 42%; }
+        .center-zone { inset: 132px 10px 220px; }
+        .history { display: none; }
+        .card { width: 43px; height: 63px; margin-left: -17px; border-radius: 7px; }
+        .card .corner { font-size: 11px; }
+        .card .pip { font-size: 18px; }
+        .hand { min-height: 94px; justify-content: flex-start; overflow-x: auto; padding: 18px 20px 0; }
+        .topbar { align-items: flex-start; }
+    }
+
+    @media (max-width: 560px) {
+        .app-shell { padding: 10px 8px 18px; }
+        .topbar {
+            flex-direction: column;
+            align-items: stretch;
+            border-radius: 16px;
+        }
+        .brand { align-items: flex-start; }
+        .brand-mark { width: 38px; height: 38px; border-radius: 10px; }
+        .brand h1 { font-size: 20px; line-height: 1.15; }
+        .brand p { font-size: 11px; line-height: 1.35; }
+        .top-actions {
+            width: 100%;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            justify-content: stretch;
+            gap: 7px;
+        }
+        .top-actions .btn {
+            width: 100%;
+            flex: none;
+            min-width: 0;
+            padding: 9px 10px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        #back-events-btn { grid-column: 1 / -1; }
+        .lobby { border-radius: 20px; }
+        .lobby-hero, .lobby-panel { padding: 22px 20px; }
+        .lobby-hero h2 { font-size: 38px; }
+        .split { grid-template-columns: 1fr; }
+        .seats { grid-template-columns: 1fr; }
+        .score-strip { top: 10px; left: 10px; right: 10px; transform: none; }
+        .score-pill { font-size: 11px; padding: 6px 8px; }
+    }
+</style>
+</head>
+<body>
+<div class="app-shell">
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-mark">蛋</div>
+            <div>
+                <h1>Picasso Lab 掼蛋桌</h1>
+                <p id="room-caption">朋友局 · 逢人配 · 进贡还贡 · AI 补位</p>
+            </div>
+        </div>
+        <div class="top-actions">
+            <button class="btn secondary" id="copy-link-btn" type="button">复制房间链接</button>
+            <button class="btn secondary" id="new-room-btn" type="button">新房间</button>
+            <button class="btn" id="back-events-btn" type="button">返回 Events</button>
+        </div>
+    </header>
+
+    <main id="root"></main>
+</div>
+
+<div class="return-transition" id="return-transition" aria-hidden="true">
+    <div class="light-hero"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
+    authDomain: "yichen-5e23e.firebaseapp.com",
+    databaseURL: "https://yichen-5e23e-default-rtdb.firebaseio.com",
+    projectId: "yichen-5e23e",
+    storageBucket: "yichen-5e23e.firebasestorage.app",
+    messagingSenderId: "495540025061",
+    appId: "1:495540025061:web:733590e8781d90e866060c",
+    measurementId: "G-ZMREJCJL1G"
+};
+
+const app = initializeApp(firebaseConfig, "guandan-app");
+const db = getDatabase(app);
+const root = document.getElementById("root");
+const toastEl = document.getElementById("toast");
+const roomCaption = document.getElementById("room-caption");
+const roomRoot = "guandanRooms";
+const ranks = ["3","4","5","6","7","8","9","10","J","Q","K","A","2"];
+const suits = ["S","H","D","C"];
+const suitGlyph = { S: "♠", H: "♥", D: "♦", C: "♣" };
+const suitName = { S: "spade", H: "heart", D: "diamond", C: "club" };
+const teamName = ["辰哥队", "于老板队"];
+const botNames = ["小怪兽", "光之队友", "牌桌博士", "厨房 AI"];
+
+let game = null;
+let roomCode = new URLSearchParams(location.search).get("room") || "";
+let selected = new Set();
+let unsubscribe = null;
+let statusText = "";
+let aiTimer = null;
+let clientId = localStorage.getItem("picasso.guandan.client");
+if (!clientId) {
+    clientId = "c_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("picasso.guandan.client", clientId);
+}
+let nickname = localStorage.getItem("picasso.guandan.name") || "";
+
+function showToast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1700);
+}
+
+function roomRef(code = roomCode) {
+    return ref(db, `${roomRoot}/${code}`);
+}
+
+function encodeHTML(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+function rankLabel(rank) {
+    return rank;
+}
+
+function cardColor(card) {
+    return card.suit === "H" || card.suit === "D" || card.joker === "RJ" ? "red" : "";
+}
+
+function isWild(card, levelRank) {
+    return !card.joker && card.suit === "H" && card.rank === levelRank;
+}
+
+function cardText(card) {
+    if (card.joker === "RJ") return "大王";
+    if (card.joker === "BJ") return "小王";
+    return `${card.rank}${suitGlyph[card.suit]}`;
+}
+
+function finishedList(g = game) {
+    return Array.isArray(g?.finished) ? g.finished : [];
+}
+
+function cardHTML(card, small = false, selectable = false) {
+    if (!card) return "";
+    if (card.back) return `<div class="card back ${small ? "small" : ""}"></div>`;
+    const red = cardColor(card);
+    const wild = game && isWild(card, game.currentLevelRank) ? "wild" : "";
+    const sel = selected.has(card.id) ? "selected" : "";
+    const symbol = card.joker ? (card.joker === "RJ" ? "★" : "☆") : suitGlyph[card.suit];
+    const label = card.joker ? (card.joker === "RJ" ? "RJ" : "BJ") : card.rank;
+    const title = isWild(card, game?.currentLevelRank) ? "逢人配" : cardText(card);
+    const data = selectable ? `data-card-id="${card.id}"` : "";
+    return `<div class="card ${small ? "small" : ""} ${red} ${wild} ${sel}" ${data} title="${title}">
+        <div class="corner">${label}</div><div class="pip">${symbol}</div><div class="corner bottom">${label}</div>
+    </div>`;
+}
+
+function rankBase(rank) {
+    return ranks.indexOf(rank) + 3;
+}
+
+function rankPower(rank, levelRank) {
+    if (rank === levelRank) return 16;
+    if (rank === "2") return 15;
+    return rankBase(rank);
+}
+
+function jokerPower(card) {
+    if (card.joker === "RJ") return 18;
+    if (card.joker === "BJ") return 17;
+    return 0;
+}
+
+function sortCards(cards, levelRank) {
+    return [...cards].sort((a, b) => {
+        const pa = a.joker ? jokerPower(a) : rankPower(a.rank, levelRank);
+        const pb = b.joker ? jokerPower(b) : rankPower(b.rank, levelRank);
+        if (pa !== pb) return pa - pb;
+        const sa = suits.indexOf(a.suit || "S");
+        const sb = suits.indexOf(b.suit || "S");
+        return sa - sb || a.id.localeCompare(b.id);
+    });
+}
+
+function makeDeck() {
+    const deck = [];
+    for (let copy = 0; copy < 2; copy++) {
+        for (const suit of suits) {
+            for (const rank of ranks) deck.push({ id: `${copy}${suit}${rank}`, suit, rank });
+        }
+        deck.push({ id: `${copy}BJ`, joker: "BJ" });
+        deck.push({ id: `${copy}RJ`, joker: "RJ" });
+    }
+    return shuffle(deck);
+}
+
+function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function activeSeatIds(g = game) {
+    const done = finishedList(g);
+    return [0,1,2,3].filter(i => g.seats[i] && !done.includes(i));
+}
+
+function nextSeat(from, g = game) {
+    const active = activeSeatIds(g);
+    if (!active.length) return null;
+    for (let step = 1; step <= 4; step++) {
+        const n = (from + step) % 4;
+        if (active.includes(n)) return n;
+    }
+    return active[0];
+}
+
+function partnerOf(i) {
+    return (i + 2) % 4;
+}
+
+function createRoomCode() {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 5; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    return code;
+}
+
+function defaultGame(code, hostName) {
+    const seats = [null, null, null, null];
+    seats[0] = { clientId, name: hostName || "Host", type: "human", team: 0, ready: true, host: true };
+    return {
+        roomCode: code,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        phase: "lobby",
+        seats,
+        levels: ["2", "2"],
+        currentLevelRank: "2",
+        roundNo: 0,
+        leaderTeam: 0,
+        hands: { 0: [], 1: [], 2: [], 3: [] },
+        currentTurn: 0,
+        lastPlay: null,
+        passCount: 0,
+        finished: [],
+        history: [],
+        selectedTributes: [],
+        message: "等待队友入座。"
+    };
+}
+
+async function createRoom() {
+    const name = document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player";
+    nickname = name;
+    localStorage.setItem("picasso.guandan.name", name);
+    const code = createRoomCode();
+    const g = defaultGame(code, name);
+    await set(roomRef(code), g);
+    history.replaceState(null, "", `?room=${code}`);
+    attachRoom(code);
+    showToast("房间已创建");
+}
+
+async function joinRoom() {
+    const code = (document.getElementById("room-input")?.value || roomCode).trim().toUpperCase();
+    const name = document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player";
+    if (!code) return showToast("请输入房间码");
+    nickname = name;
+    localStorage.setItem("picasso.guandan.name", name);
+    const snap = await get(roomRef(code));
+    if (!snap.exists()) {
+        statusText = "没找到这个房间，可以新建一个。";
+        render();
+        return;
+    }
+    roomCode = code;
+    history.replaceState(null, "", `?room=${code}`);
+    attachRoom(code);
+}
+
+function attachRoom(code) {
+    roomCode = code;
+    if (unsubscribe) unsubscribe();
+    unsubscribe = onValue(roomRef(code), (snap) => {
+        game = snap.val();
+        selected.clear();
+        render();
+        maybeRunAI();
+    });
+}
+
+async function saveGame(next) {
+    if (!roomCode || !next) return;
+    next.updatedAt = Date.now();
+    await set(roomRef(), next);
+}
+
+async function mutateGame(fn) {
+    if (!game) return;
+    const next = JSON.parse(JSON.stringify(game));
+    fn(next);
+    await saveGame(next);
+}
+
+function mySeat() {
+    if (!game) return -1;
+    return game.seats.findIndex(s => s && s.clientId === clientId);
+}
+
+function isHost() {
+    const idx = mySeat();
+    return idx >= 0 && game?.seats[idx]?.host;
+}
+
+async function takeSeat(index) {
+    const name = document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player";
+    nickname = name;
+    localStorage.setItem("picasso.guandan.name", name);
+    await mutateGame(g => {
+        const existing = g.seats.findIndex(s => s && s.clientId === clientId);
+        if (existing >= 0) g.seats[existing] = null;
+        g.seats[index] = { clientId, name, type: "human", team: index % 2, ready: true, host: g.seats.every(s => !s || !s.host) };
+        g.message = `${name} 入座。`;
+    });
+}
+
+async function leaveSeat(index) {
+    await mutateGame(g => {
+        if (g.seats[index]?.clientId === clientId || isHost()) {
+            g.seats[index] = null;
+            g.message = "座位已清空。";
+        }
+    });
+}
+
+async function addAI(index) {
+    if (!isHost()) return;
+    await mutateGame(g => {
+        g.seats[index] = {
+            clientId: `ai_${index}_${Date.now()}`,
+            name: botNames[index] || `AI ${index + 1}`,
+            type: "ai",
+            team: index % 2,
+            ready: true,
+            host: false
+        };
+        g.message = `${g.seats[index].name} 加入对局。`;
+    });
+}
+
+async function startGame() {
+    if (!isHost()) return showToast("只有房主能开始");
+    await mutateGame(g => {
+        for (let i = 0; i < 4; i++) {
+            if (!g.seats[i]) {
+                g.seats[i] = { clientId: `ai_${i}_${Date.now()}`, name: botNames[i] || `AI ${i + 1}`, type: "ai", team: i % 2, ready: true, host: false };
+            }
+        }
+        startRound(g, null);
+    });
+}
+
+function startRound(g, previousResult) {
+    const deck = makeDeck();
+    g.roundNo = (g.roundNo || 0) + 1;
+    g.currentLevelRank = g.levels[g.leaderTeam || 0] || "2";
+    g.hands = { 0: [], 1: [], 2: [], 3: [] };
+    deck.forEach((card, idx) => g.hands[idx % 4].push(card));
+    for (let i = 0; i < 4; i++) g.hands[i] = sortCards(g.hands[i], g.currentLevelRank);
+    g.finished = [];
+    g.lastPlay = null;
+    g.passCount = 0;
+    g.history = [];
+    g.phase = "playing";
+    g.currentTurn = previousResult?.nextStarter ?? 0;
+    const tributeRows = previousResult ? applyTribute(g, previousResult) : [];
+    g.selectedTributes = tributeRows;
+    if (tributeRows.length) {
+        g.message = `第 ${g.roundNo} 局 · ${tributeRows.map(x => x.text).join("；")}`;
+    } else {
+        g.message = `第 ${g.roundNo} 局开始，打 ${g.currentLevelRank}。`;
+    }
+}
+
+function highestTributeCard(hand, levelRank) {
+    const candidates = hand.filter(c => !(isWild(c, levelRank)));
+    const sorted = sortCards(candidates, levelRank);
+    return sorted[sorted.length - 1] || sortCards(hand, levelRank)[hand.length - 1];
+}
+
+function lowestReturnCard(hand, levelRank) {
+    const counts = countRanks(hand.filter(c => !c.joker && !isWild(c, levelRank)));
+    const candidates = hand.filter(c => {
+        if (c.joker || isWild(c, levelRank)) return false;
+        if (rankBase(c.rank) > 10) return false;
+        if ((counts[c.rank] || 0) >= 4) return false;
+        return true;
+    });
+    return sortCards(candidates.length ? candidates : hand, levelRank)[0];
+}
+
+function moveCardBetween(g, from, to, card) {
+    g.hands[from] = g.hands[from].filter(c => c.id !== card.id);
+    g.hands[to].push(card);
+    g.hands[to] = sortCards(g.hands[to], g.currentLevelRank);
+}
+
+function applyTribute(g, result) {
+    const rows = [];
+    const levelRank = g.currentLevelRank;
+    const redJokerCount = result.tributePayers.reduce((n, p) => n + g.hands[p].filter(c => c.joker === "RJ").length, 0);
+    if (result.tributePayers.length && redJokerCount >= 2) {
+        g.currentTurn = result.first;
+        rows.push({ text: "抗贡成功，头游先出牌。" });
+        return rows;
+    }
+    const pairs = [];
+    if (result.tributePayers.length === 1) {
+        pairs.push([result.tributePayers[0], result.first]);
+    } else if (result.tributePayers.length === 2) {
+        const payers = [...result.tributePayers].sort((a, b) => b - a);
+        const receivers = [result.first, partnerOf(result.first)];
+        pairs.push([payers[0], receivers[0]], [payers[1], receivers[1]]);
+    }
+    let bestPayer = result.first;
+    let bestPower = -1;
+    for (const [payer, receiver] of pairs) {
+        const tribute = highestTributeCard(g.hands[payer], levelRank);
+        if (!tribute) continue;
+        moveCardBetween(g, payer, receiver, tribute);
+        const ret = lowestReturnCard(g.hands[receiver], levelRank);
+        if (ret) moveCardBetween(g, receiver, payer, ret);
+        const power = tribute.joker ? jokerPower(tribute) : rankPower(tribute.rank, levelRank);
+        if (power > bestPower) { bestPower = power; bestPayer = payer; }
+        rows.push({ text: `${g.seats[payer].name} 进贡 ${cardText(tribute)} 给 ${g.seats[receiver].name}${ret ? `，还贡 ${cardText(ret)}` : ""}` });
+    }
+    g.currentTurn = bestPayer;
+    return rows;
+}
+
+function countRanks(cards) {
+    return cards.reduce((m, c) => {
+        if (!c.joker) m[c.rank] = (m[c.rank] || 0) + 1;
+        return m;
+    }, {});
+}
+
+function sequenceSets(kind) {
+    const straight = [
+        ["A","2","3","4","5"], ["2","3","4","5","6"], ["3","4","5","6","7"],
+        ["4","5","6","7","8"], ["5","6","7","8","9"], ["6","7","8","9","10"],
+        ["7","8","9","10","J"], ["8","9","10","J","Q"], ["9","10","J","Q","K"], ["10","J","Q","K","A"]
+    ];
+    const triple = [
+        ["2","3","4"], ["3","4","5"], ["4","5","6"], ["5","6","7"], ["6","7","8"], ["7","8","9"],
+        ["8","9","10"], ["9","10","J"], ["10","J","Q"], ["J","Q","K"], ["Q","K","A"]
+    ];
+    const plate = [
+        ["2","3"], ["3","4"], ["4","5"], ["5","6"], ["6","7"], ["7","8"], ["8","9"], ["9","10"],
+        ["10","J"], ["J","Q"], ["Q","K"], ["K","A"]
+    ];
+    if (kind === "straight") return straight;
+    if (kind === "pair") return triple;
+    return plate;
+}
+
+function canFillRanks(nonWild, wildCount, required, sameSuit) {
+    const need = {};
+    required.forEach(([rank, count]) => need[rank] = count);
+    let usedWild = 0;
+    for (const c of nonWild) {
+        if (c.joker || !need[c.rank]) return false;
+        if (sameSuit && c.suit !== sameSuit) return false;
+        need[c.rank]--;
+        if (need[c.rank] < 0) return false;
+    }
+    for (const rank of Object.keys(need)) usedWild += need[rank];
+    return usedWild <= wildCount;
+}
+
+function evaluateCombos(cards, levelRank) {
+    if (!cards.length) return [];
+    const wild = cards.filter(c => isWild(c, levelRank));
+    const nonWild = cards.filter(c => !isWild(c, levelRank));
+    const wc = wild.length;
+    const combos = [];
+    const len = cards.length;
+    const add = (combo) => combos.push({ ...combo, len, cards });
+    const naturalRanks = [...new Set(nonWild.filter(c => !c.joker).map(c => c.rank))];
+    const allTargetRanks = ranks;
+    const allJokers = cards.every(c => c.joker);
+
+    if (len === 4 && allJokers) add({ type: "jokerBomb", name: "天王炸", isBomb: true, mainPower: 100 });
+
+    if (len === 1) {
+        const c = cards[0];
+        const p = c.joker ? jokerPower(c) : rankPower(c.rank, levelRank);
+        add({ type: "single", name: "单张", mainPower: p });
+    }
+
+    for (const rank of allTargetRanks) {
+        const rankCards = nonWild.filter(c => !c.joker && c.rank === rank);
+        if (rankCards.length + wc === len && nonWild.every(c => !c.joker && c.rank === rank)) {
+            if (len === 2) add({ type: "pair", name: "对子", mainPower: rankPower(rank, levelRank) });
+            if (len === 3) add({ type: "triple", name: "三张", mainPower: rankPower(rank, levelRank) });
+            if (len >= 4) add({ type: "bomb", name: `${len} 张炸弹`, isBomb: true, bombLen: len, mainPower: rankPower(rank, levelRank) });
+        }
+    }
+
+    if (len === 5) {
+        for (const tripleRank of ranks) {
+            for (const pairRank of ranks) {
+                if (tripleRank === pairRank) continue;
+                if (canFillRanks(nonWild, wc, [[tripleRank, 3], [pairRank, 2]], null)) {
+                    add({ type: "fullhouse", name: "三带二", mainPower: rankPower(tripleRank, levelRank) });
+                }
+            }
+        }
+        for (const seq of sequenceSets("straight")) {
+            const req = seq.map(r => [r, 1]);
+            if (canFillRanks(nonWild, wc, req, null)) add({ type: "straight", name: "顺子", mainPower: rankBase(seq[seq.length - 1]) });
+            const naturalSuits = [...new Set(nonWild.filter(c => !c.joker).map(c => c.suit))];
+            const suitOptions = naturalSuits.length ? naturalSuits : suits;
+            for (const suit of suitOptions) {
+                if (canFillRanks(nonWild, wc, req, suit)) {
+                    add({ type: "straightFlush", name: "同花顺", isBomb: true, mainPower: rankBase(seq[seq.length - 1]) });
+                }
+            }
+        }
+    }
+
+    if (len === 6) {
+        for (const seq of sequenceSets("pair")) {
+            if (canFillRanks(nonWild, wc, seq.map(r => [r, 2]), null)) {
+                add({ type: "pairStraight", name: "三连对", mainPower: rankBase(seq[seq.length - 1]) });
+            }
+        }
+        for (const seq of sequenceSets("plate")) {
+            if (canFillRanks(nonWild, wc, seq.map(r => [r, 3]), null)) {
+                add({ type: "tripleStraight", name: "钢板", mainPower: rankBase(seq[seq.length - 1]) });
+            }
+        }
+    }
+
+    const unique = new Map();
+    for (const c of combos) unique.set(`${c.type}:${c.mainPower}:${c.bombLen || 0}`, c);
+    return [...unique.values()];
+}
+
+function bombScore(c) {
+    if (c.type === "jokerBomb") return 10000;
+    if (c.type === "straightFlush") return 5500 + c.mainPower;
+    if (c.type === "bomb") {
+        if (c.bombLen >= 6) return 6000 + c.bombLen * 100 + c.mainPower;
+        return c.bombLen * 1000 + c.mainPower;
+    }
+    return 0;
+}
+
+function beats(a, b) {
+    if (!b) return true;
+    if (a.isBomb || b.isBomb) {
+        if (!a.isBomb) return false;
+        if (!b.isBomb) return true;
+        return bombScore(a) > bombScore(b);
+    }
+    return a.type === b.type && a.len === b.len && a.mainPower > b.mainPower;
+}
+
+function choosePlayable(cards, lastCombo) {
+    const combos = evaluateCombos(cards, game.currentLevelRank);
+    const playable = combos.filter(c => beats(c, lastCombo));
+    playable.sort((a, b) => {
+        if (!!a.isBomb !== !!b.isBomb) return a.isBomb ? 1 : -1;
+        return (a.mainPower + bombScore(a)) - (b.mainPower + bombScore(b));
+    });
+    return playable[0] || null;
+}
+
+async function playSelected() {
+    const seat = mySeat();
+    if (seat !== game.currentTurn) return showToast("还没轮到你");
+    const hand = game.hands[seat] || [];
+    const cards = hand.filter(c => selected.has(c.id));
+    if (!cards.length) return showToast("请选择要出的牌");
+    const lastCombo = game.lastPlay?.combo || null;
+    const combo = choosePlayable(cards, lastCombo);
+    if (!combo) return showToast("这手牌型不合法或压不过上家");
+    await playCards(seat, cards, combo);
+    selected.clear();
+}
+
+async function playCards(seat, cards, combo) {
+    await mutateGame(g => {
+        if (!Array.isArray(g.finished)) g.finished = [];
+        if (!Array.isArray(g.history)) g.history = [];
+        const ids = new Set(cards.map(c => c.id));
+        g.hands[seat] = g.hands[seat].filter(c => !ids.has(c.id));
+        g.lastPlay = { player: seat, cards, combo };
+        g.passCount = 0;
+        g.history = [...(g.history || []), { player: seat, action: combo.name, cards, at: Date.now() }].slice(-16);
+        if (g.hands[seat].length === 0 && !g.finished.includes(seat)) {
+            g.finished.push(seat);
+            g.history.push({ player: seat, action: `第 ${g.finished.length} 名出完`, cards: [], at: Date.now() });
+        }
+        if (g.finished.length >= 3) {
+            const last = [0,1,2,3].find(i => !g.finished.includes(i));
+            if (last != null) g.finished.push(last);
+            finishRound(g);
+            return;
+        }
+        g.currentTurn = nextSeat(seat, g);
+        g.message = `${g.seats[seat].name} 出了 ${combo.name}。`;
+    });
+}
+
+async function passTurn() {
+    const seat = mySeat();
+    if (seat !== game.currentTurn) return showToast("还没轮到你");
+    if (!game.lastPlay) return showToast("新一轮不能不要");
+    await doPass(seat);
+}
+
+async function doPass(seat) {
+    await mutateGame(g => {
+        if (!Array.isArray(g.finished)) g.finished = [];
+        if (!Array.isArray(g.history)) g.history = [];
+        g.passCount = (g.passCount || 0) + 1;
+        g.history = [...(g.history || []), { player: seat, action: "不要", cards: [], at: Date.now() }].slice(-16);
+        const activeCount = activeSeatIds(g).length;
+        if (g.passCount >= activeCount - 1) {
+            const winner = g.lastPlay.player;
+            const partner = partnerOf(winner);
+            g.lastPlay = null;
+            g.passCount = 0;
+            if (!g.finished.includes(winner)) {
+                g.currentTurn = winner;
+                g.message = `${g.seats[winner].name} 收牌，继续出。`;
+            } else if (!g.finished.includes(partner)) {
+                g.currentTurn = partner;
+                g.message = `${g.seats[winner].name} 接风给队友 ${g.seats[partner].name}。`;
+            } else {
+                g.currentTurn = nextSeat(winner, g);
+                g.message = "本轮收牌。";
+            }
+        } else {
+            g.currentTurn = nextSeat(seat, g);
+            g.message = `${g.seats[seat].name} 不要。`;
+        }
+    });
+}
+
+function finishRound(g) {
+    const order = finishedList(g);
+    const first = order[0];
+    const firstTeam = first % 2;
+    const partnerPlace = order.indexOf(partnerOf(first)) + 1;
+    const advance = partnerPlace === 2 ? 3 : partnerPlace === 3 ? 2 : 1;
+    g.levels[firstTeam] = advanceLevel(g.levels[firstTeam], advance);
+    g.leaderTeam = firstTeam;
+    const last = order[3];
+    const tributePayers = partnerPlace === 2 ? [order[2], order[3]] : [last];
+    g.phase = "roundOver";
+    g.roundResult = {
+        first,
+        firstTeam,
+        order,
+        advance,
+        tributePayers,
+        nextStarter: first
+    };
+    g.message = `${teamName[firstTeam]} ${order.map(i => g.seats[i].name).join(" / ")} 完成排名，升 ${advance} 级。`;
+}
+
+function advanceLevel(level, steps) {
+    const order = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+    const idx = order.indexOf(level);
+    return order[Math.min(order.length - 1, idx + steps)];
+}
+
+async function nextRound() {
+    if (!isHost()) return;
+    await mutateGame(g => startRound(g, g.roundResult));
+}
+
+function hintMove() {
+    const seat = mySeat();
+    if (seat !== game.currentTurn) return showToast("还没轮到你");
+    const hand = game.hands[seat] || [];
+    const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank);
+    if (!move) return showToast("建议：不要");
+    selected = new Set(move.cards.map(c => c.id));
+    render();
+}
+
+function findAIMove(hand, lastCombo, levelRank) {
+    const candidates = [];
+    for (const c of hand) candidates.push([c]);
+    const byRank = {};
+    for (const c of hand) {
+        if (!c.joker && !isWild(c, levelRank)) (byRank[c.rank] ||= []).push(c);
+    }
+    for (const cards of Object.values(byRank)) {
+        if (cards.length >= 2) candidates.push(cards.slice(0,2));
+        if (cards.length >= 3) candidates.push(cards.slice(0,3));
+        if (cards.length >= 4) candidates.push(cards.slice(0,4));
+        if (cards.length >= 5) candidates.push(cards.slice(0,5));
+        if (cards.length >= 6) candidates.push(cards.slice(0,6));
+    }
+    const jokers = hand.filter(c => c.joker);
+    if (jokers.length === 4) candidates.push(jokers);
+    for (const seq of sequenceSets("straight")) {
+        const cards = pickSequence(hand, seq, 1, levelRank);
+        if (cards) candidates.push(cards);
+        const flush = pickFlushSequence(hand, seq, levelRank);
+        if (flush) candidates.push(flush);
+    }
+    for (const seq of sequenceSets("pair")) {
+        const cards = pickSequence(hand, seq, 2, levelRank);
+        if (cards) candidates.push(cards);
+    }
+    for (const seq of sequenceSets("plate")) {
+        const cards = pickSequence(hand, seq, 3, levelRank);
+        if (cards) candidates.push(cards);
+    }
+    const seen = new Set();
+    const moves = [];
+    for (const cards of candidates) {
+        const key = cards.map(c => c.id).sort().join(",");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const combo = choosePlayable(cards, lastCombo);
+        if (combo) moves.push({ cards, combo });
+    }
+    moves.sort((a, b) => {
+        if (!!a.combo.isBomb !== !!b.combo.isBomb) return a.combo.isBomb ? 1 : -1;
+        if (a.cards.length !== b.cards.length && !lastCombo) return b.cards.length - a.cards.length;
+        return (a.combo.mainPower + bombScore(a.combo)) - (b.combo.mainPower + bombScore(b.combo));
+    });
+    return moves[0] || null;
+}
+
+function pickSequence(hand, seq, each, levelRank) {
+    const picked = [];
+    const used = new Set();
+    for (const rank of seq) {
+        const cards = hand.filter(c => !used.has(c.id) && !c.joker && !isWild(c, levelRank) && c.rank === rank).slice(0, each);
+        picked.push(...cards);
+        cards.forEach(c => used.add(c.id));
+        const miss = each - cards.length;
+        if (miss > 0) {
+            const wilds = hand.filter(c => !used.has(c.id) && isWild(c, levelRank)).slice(0, miss);
+            if (wilds.length < miss) return null;
+            picked.push(...wilds);
+            wilds.forEach(c => used.add(c.id));
+        }
+    }
+    return picked.length === seq.length * each ? picked : null;
+}
+
+function pickFlushSequence(hand, seq, levelRank) {
+    for (const suit of suits) {
+        const picked = [];
+        const used = new Set();
+        for (const rank of seq) {
+            let card = hand.find(c => !used.has(c.id) && !c.joker && !isWild(c, levelRank) && c.rank === rank && c.suit === suit);
+            if (!card) card = hand.find(c => !used.has(c.id) && isWild(c, levelRank));
+            if (!card) { picked.length = 0; break; }
+            picked.push(card); used.add(card.id);
+        }
+        if (picked.length === 5) return picked;
+    }
+    return null;
+}
+
+function maybeRunAI() {
+    clearTimeout(aiTimer);
+    if (!game || game.phase !== "playing") return;
+    const seat = game.currentTurn;
+    if (game.seats[seat]?.type !== "ai") return;
+    aiTimer = setTimeout(async () => {
+        if (!game || game.phase !== "playing" || game.currentTurn !== seat) return;
+        const hand = game.hands[seat] || [];
+        const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank);
+        if (move) await playCards(seat, move.cards, move.combo);
+        else await doPass(seat);
+    }, 850 + Math.random() * 650);
+}
+
+function render() {
+    roomCaption.textContent = roomCode ? `房间 ${roomCode} · 打 ${game?.currentLevelRank || "2"} · ${game?.phase || "loading"}` : "朋友局 · 逢人配 · 进贡还贡 · AI 补位";
+    if (!roomCode || !game) {
+        renderLobby();
+        return;
+    }
+    if (game.phase === "lobby") renderLobbyRoom();
+    else renderTable();
+}
+
+function renderLobby() {
+    root.innerHTML = `
+    <section class="lobby">
+        <div class="lobby-hero">
+            <h2>开一桌<br>实验室掼蛋</h2>
+            <p>两副牌四人结对，支持房间码、人机补位、逢人配、同花顺、炸弹、天王炸、进贡还贡、抗贡、接风和升级。</p>
+            <div class="rule-chips">
+                <span>四人两队</span><span>红桃级牌逢人配</span><span>贡还贡</span><span>双下升三级</span><span>AI 补位</span>
+            </div>
+        </div>
+        <div class="lobby-panel">
+            <div class="field-grid">
+                <label>昵称<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="你的名字"></label>
+                <label>房间码<input id="room-input" value="${encodeHTML(roomCode)}" placeholder="例如 A7K2Q"></label>
+            </div>
+            <div class="split">
+                <button class="btn" id="create-room" type="button">创建房间</button>
+                <button class="btn secondary" id="join-room" type="button">加入房间</button>
+            </div>
+            <div class="status-line">${encodeHTML(statusText)}</div>
+        </div>
+    </section>`;
+    document.getElementById("create-room").addEventListener("click", createRoom);
+    document.getElementById("join-room").addEventListener("click", joinRoom);
+}
+
+function renderLobbyRoom() {
+    const mine = mySeat();
+    root.innerHTML = `
+    <section class="lobby">
+        <div class="lobby-hero">
+            <h2>房间 ${game.roomCode}</h2>
+            <p>${encodeHTML(game.message || "等待玩家入座。")} 对家组队：1/3 号位一队，2/4 号位一队。人不够时房主可以补 AI。</p>
+            <div class="rule-chips">
+                <span>${teamName[0]}：1 + 3 号位</span><span>${teamName[1]}：2 + 4 号位</span><span>当前双方都打 ${game.currentLevelRank}</span>
+            </div>
+        </div>
+        <div class="lobby-panel">
+            <div class="field-grid">
+                <label>昵称<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="你的名字"></label>
+            </div>
+            <div class="seats">
+                ${[0,1,2,3].map(i => seatHTML(i, mine)).join("")}
+            </div>
+            <div class="top-actions" style="margin-top:18px;justify-content:flex-start">
+                <button class="btn" id="start-game" ${isHost() ? "" : "disabled"} type="button">开始游戏</button>
+                <button class="btn secondary" id="fill-ai" ${isHost() ? "" : "disabled"} type="button">空位补 AI</button>
+                <button class="btn danger" id="delete-room" ${isHost() ? "" : "disabled"} type="button">解散房间</button>
+            </div>
+        </div>
+    </section>`;
+    [0,1,2,3].forEach(i => {
+        document.getElementById(`seat-${i}`)?.addEventListener("click", () => takeSeat(i));
+        document.getElementById(`ai-${i}`)?.addEventListener("click", () => addAI(i));
+        document.getElementById(`leave-${i}`)?.addEventListener("click", () => leaveSeat(i));
+    });
+    document.getElementById("start-game").addEventListener("click", startGame);
+    document.getElementById("fill-ai").addEventListener("click", async () => {
+        for (let i = 0; i < 4; i++) if (!game.seats[i]) await addAI(i);
+    });
+    document.getElementById("delete-room").addEventListener("click", async () => {
+        await remove(roomRef());
+        location.href = "guandan.html";
+    });
+}
+
+function seatHTML(i, mine) {
+    const s = game.seats[i];
+    if (!s) {
+        return `<div class="seat-card">
+            <div><div class="seat-name">${i + 1} 号空位</div><div class="seat-team">${teamName[i % 2]}</div></div>
+            <div class="top-actions"><button class="btn secondary" id="seat-${i}" type="button">入座</button>${isHost() ? `<button class="btn secondary" id="ai-${i}" type="button">AI</button>` : ""}</div>
+        </div>`;
+    }
+    return `<div class="seat-card ${mine === i ? "mine" : ""}">
+        <div><div class="seat-name">${encodeHTML(s.name)} ${s.host ? "· 房主" : ""}</div><div class="seat-meta">${s.type === "ai" ? "人机" : "真人"} · ${i + 1} 号位</div><div class="seat-team">${teamName[i % 2]}</div></div>
+        ${(mine === i || isHost()) ? `<button class="btn secondary" id="leave-${i}" type="button">离开</button>` : `<div></div>`}
+    </div>`;
+}
+
+function renderTable() {
+    const mine = mySeat();
+    const myHand = mine >= 0 ? sortCards(game.hands[mine] || [], game.currentLevelRank) : [];
+    const canAct = mine === game.currentTurn && game.phase === "playing";
+    root.innerHTML = `
+    <section class="table-wrap">
+        <div class="table">
+            <div class="score-strip">
+                <div class="score-pill">${teamName[0]} <strong>${game.levels[0]}</strong></div>
+                <div class="score-pill">${teamName[1]} <strong>${game.levels[1]}</strong></div>
+                <div class="score-pill">本局打 <strong>${game.currentLevelRank}</strong></div>
+                <div class="score-pill">第 <strong>${game.roundNo}</strong> 局</div>
+            </div>
+            ${[0,1,2,3].map(i => playerHTML(i, mine)).join("")}
+            <div class="center-zone">
+                <div class="combo-label">${game.lastPlay ? `${encodeHTML(game.seats[game.lastPlay.player].name)}：${game.lastPlay.combo.name}` : "新一轮，任意合法牌型"}</div>
+                <div class="last-play">${game.lastPlay ? game.lastPlay.cards.map(c => cardHTML(c, true)).join("") : ""}</div>
+                <div class="round-message">${encodeHTML(game.message || "")}</div>
+            </div>
+            <div class="history">${(game.history || []).slice(-10).reverse().map(h => `<div><b>${encodeHTML(game.seats[h.player]?.name || "")}</b> ${encodeHTML(h.action)} ${h.cards?.length ? h.cards.map(cardText).join(" ") : ""}</div>`).join("")}</div>
+            ${game.phase === "roundOver" ? roundOverHTML() : ""}
+            <div class="hand-zone">
+                <div class="hand-tools">
+                    <button class="btn" id="play-btn" ${canAct ? "" : "disabled"} type="button">出牌</button>
+                    <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay ? "" : "disabled"} type="button">不要</button>
+                    <button class="btn secondary" id="hint-btn" ${canAct ? "" : "disabled"} type="button">提示</button>
+                    <button class="btn secondary" id="clear-btn" type="button">取消选择</button>
+                </div>
+                <div class="hand">${myHand.length ? myHand.map(c => cardHTML(c, false, true)).join("") : `<div class="combo-label">你还没有入座，当前是观战视角。</div>`}</div>
+            </div>
+        </div>
+    </section>`;
+    document.querySelectorAll("[data-card-id]").forEach(el => {
+        el.addEventListener("click", () => {
+            const id = el.dataset.cardId;
+            if (selected.has(id)) selected.delete(id);
+            else selected.add(id);
+            renderTable();
+        });
+    });
+    document.getElementById("play-btn")?.addEventListener("click", playSelected);
+    document.getElementById("pass-btn")?.addEventListener("click", passTurn);
+    document.getElementById("hint-btn")?.addEventListener("click", hintMove);
+    document.getElementById("clear-btn")?.addEventListener("click", () => { selected.clear(); renderTable(); });
+    document.getElementById("next-round")?.addEventListener("click", nextRound);
+}
+
+function playerHTML(i, mine) {
+    const s = game.seats[i] || { name: `Seat ${i + 1}`, type: "empty" };
+    const count = (game.hands[i] || []).length;
+    const finishedPlace = finishedList(game).indexOf(i) + 1;
+    const pos = mine >= 0 ? (i - mine + 4) % 4 : i;
+    return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${finishedPlace ? "finished" : ""}">
+        <div class="player-name"><span>${encodeHTML(s.name)}</span><span class="player-badge">${i === mine ? "你" : teamName[i % 2]}</span></div>
+        <div class="player-small">${s.type === "ai" ? "AI" : "Human"} · ${finishedPlace ? `第 ${finishedPlace} 名` : `${count} 张`}</div>
+        <div class="back-stack">${Array.from({ length: Math.min(6, Math.max(1, Math.ceil(count / 5))) }).map(() => `<i class="mini-back"></i>`).join("")}</div>
+    </div>`;
+}
+
+function roundOverHTML() {
+    const r = game.roundResult;
+    const rows = r.order.map((i, idx) => `<div class="tribute-row">第 ${idx + 1} 名：${encodeHTML(game.seats[i].name)} · ${teamName[i % 2]}</div>`).join("");
+    return `<div class="phase-panel">
+        <h2>${teamName[r.firstTeam]} 本局升级 ${r.advance}</h2>
+        <p>下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。</p>
+        <div class="tribute-list">${rows}</div>
+        <button class="btn" id="next-round" ${isHost() ? "" : "disabled"} type="button">进入下一局</button>
+    </div>`;
+}
+
+document.getElementById("copy-link-btn").addEventListener("click", async () => {
+    if (!roomCode) return showToast("还没有房间");
+    const url = new URL(location.href);
+    url.searchParams.set("room", roomCode);
+    try {
+        await navigator.clipboard.writeText(url.toString());
+        showToast("房间链接已复制");
+    } catch (_) {
+        showToast(roomCode);
+    }
+});
+
+document.getElementById("new-room-btn").addEventListener("click", () => {
+    location.href = "guandan.html";
+});
+
+document.getElementById("back-events-btn").addEventListener("click", () => {
+    const overlay = document.getElementById("return-transition");
+    overlay.classList.add("active");
+    for (let i = 0; i < 16; i++) {
+        const card = document.createElement("div");
+        card.className = "return-card";
+        card.textContent = ["2","A","K","Q","J","10"][i % 6];
+        card.style.left = "50%";
+        card.style.top = "50%";
+        card.style.setProperty("--sx", `${(Math.random() - 0.5) * 120}vw`);
+        card.style.setProperty("--sy", `${(Math.random() - 0.5) * 120}vh`);
+        card.style.setProperty("--sr", `${-80 + Math.random() * 160}deg`);
+        card.style.setProperty("--tx", `${-460 + (i % 4) * 150}px`);
+        card.style.setProperty("--ty", `${-170 + Math.floor(i / 4) * 96}px`);
+        card.style.setProperty("--tr", `${-10 + Math.random() * 20}deg`);
+        card.style.animationDelay = `${i * 0.045}s`;
+        overlay.appendChild(card);
+    }
+    setTimeout(() => { location.href = "events.html?from=guandan"; }, 1550);
+});
+
+if (roomCode) attachRoom(roomCode);
+else render();
+</script>
+</body>
+</html>
