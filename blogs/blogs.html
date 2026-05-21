@@ -380,6 +380,11 @@
         linear-gradient(145deg, rgba(0,35,58,.97), rgba(4,13,24,.98));
     }
     .blog-secret-transition.active { display: block; }
+    .blog-secret-transition.returning {
+      background:
+        radial-gradient(circle at 52% 42%, rgba(255,205,0,.24), transparent 28%),
+        linear-gradient(145deg, rgba(0,50,72,.97), rgba(4,20,30,.98));
+    }
     .secret-grid {
       position: absolute;
       inset: 0;
@@ -474,6 +479,10 @@
       text-transform: uppercase;
       opacity: 0;
       animation: stampHit .5s cubic-bezier(.34,1.56,.64,1) .28s forwards;
+    }
+    .blog-secret-transition.returning .secret-stamp {
+      border-color: #FFCD00;
+      color: #00629B;
     }
     .secret-caption {
       position: absolute;
@@ -622,6 +631,12 @@
 const BLOG_ARROW_ICON = '<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
 const BLOG_CAL_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
 const BLOG_EXT_ICON = '<svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+const officialBlogState = {
+  label: document.querySelector('.blog-hero .label')?.innerHTML || '',
+  title: document.querySelector('.blog-hero h1')?.textContent || 'Research Blog',
+  desc: document.querySelector('.blog-hero p')?.textContent || '',
+  list: document.getElementById('blog-list')?.innerHTML || ''
+};
 
 const fakeBlogs = [
   {
@@ -798,10 +813,27 @@ function renderTrueBlogs() {
   document.getElementById('blog-list').innerHTML = fakeBlogs.map(fakeBlogCard).join('');
 }
 
-function startBlogSecretTransition() {
-  const overlay = document.getElementById('blog-secret-transition');
-  if (!overlay || overlay.classList.contains('active')) return;
-  hideBlogTypeHint();
+function renderOfficialBlogs() {
+  closeArticle();
+  document.body.classList.remove('true-blogs');
+  const label = document.querySelector('.blog-hero .label');
+  if (label) label.innerHTML = officialBlogState.label;
+  const title = document.querySelector('.blog-hero h1');
+  if (title) title.textContent = officialBlogState.title;
+  const desc = document.querySelector('.blog-hero p');
+  if (desc) desc.textContent = officialBlogState.desc;
+  document.getElementById('blog-list').innerHTML = officialBlogState.list;
+}
+
+function setBlogTransitionCopy(overlay, returning) {
+  const stamp = overlay.querySelector('.secret-stamp');
+  const caption = overlay.querySelector('.secret-caption');
+  if (stamp) stamp.textContent = returning ? 'Official Blogs' : 'Fake Blogs?';
+  if (caption) caption.textContent = returning ? 'Putting the formal archive back' : 'The real blogs are being unsealed';
+  overlay.classList.toggle('returning', returning);
+}
+
+function stageBlogTransitionCards(overlay, returning = false) {
   overlay.querySelectorAll('.blog-kick-card').forEach(el => el.remove());
   document.querySelectorAll('.blog-card').forEach((card, idx) => {
     const rect = card.getBoundingClientRect();
@@ -812,12 +844,20 @@ function startBlogSecretTransition() {
     clone.style.top = '0px';
     clone.style.setProperty('--x', `${rect.left}px`);
     clone.style.setProperty('--y', `${rect.top}px`);
-    clone.style.setProperty('--r', `${-5 + idx * 7}deg`);
-    clone.style.setProperty('--tx', `${idx % 2 ? 120 : -140}vw`);
-    clone.style.setProperty('--ty', `${-45 + idx * 14}vh`);
-    clone.style.setProperty('--delay', `${0.2 + idx * 0.08}s`);
+    clone.style.setProperty('--r', `${returning ? 4 - idx * 5 : -5 + idx * 7}deg`);
+    clone.style.setProperty('--tx', returning ? `${idx % 2 ? 76 : -84}vw` : `${idx % 2 ? 120 : -140}vw`);
+    clone.style.setProperty('--ty', returning ? `${54 + idx * 12}vh` : `${-45 + idx * 14}vh`);
+    clone.style.setProperty('--delay', `${0.14 + idx * 0.07}s`);
     overlay.appendChild(clone);
   });
+}
+
+function startBlogSecretTransition() {
+  const overlay = document.getElementById('blog-secret-transition');
+  if (!overlay || overlay.classList.contains('active')) return;
+  hideBlogTypeHint();
+  setBlogTransitionCopy(overlay, false);
+  stageBlogTransitionCards(overlay);
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
   setTimeout(renderTrueBlogs, 1180);
@@ -825,6 +865,21 @@ function startBlogSecretTransition() {
     overlay.classList.remove('active');
     overlay.setAttribute('aria-hidden', 'true');
   }, 1750);
+}
+
+function startBlogReturnTransition() {
+  const overlay = document.getElementById('blog-secret-transition');
+  if (!overlay || overlay.classList.contains('active')) return;
+  hideBlogTypeHint();
+  setBlogTransitionCopy(overlay, true);
+  stageBlogTransitionCards(overlay, true);
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  setTimeout(renderOfficialBlogs, 960);
+  setTimeout(() => {
+    overlay.classList.remove('active', 'returning');
+    overlay.setAttribute('aria-hidden', 'true');
+  }, 1560);
 }
 
 const blogTypeHint = document.getElementById('blog-type-hint');
@@ -872,10 +927,11 @@ document.addEventListener('keydown', (event) => {
   blogBuffer = (blogBuffer + event.key.toLowerCase()).slice(-7);
   if (blogBuffer.endsWith('picasso') || blogBuffer.endsWith('picaso')) {
     blogBuffer = '';
-    startBlogSecretTransition();
+    if (document.body.classList.contains('true-blogs')) startBlogReturnTransition();
+    else startBlogSecretTransition();
     return;
   }
-  if (!document.body.classList.contains('true-blogs') && blogBuffer.length >= 2) showBlogTypeHint();
+  if (blogBuffer.length >= 2) showBlogTypeHint();
 }, true);
 </script>
 </body>

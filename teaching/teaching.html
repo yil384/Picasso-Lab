@@ -414,7 +414,7 @@
       position: fixed;
       bottom: 22px;
       left: 50%;
-      z-index: 9999;
+      z-index: 100001;
       transform: translateX(-50%);
       padding: 6px 16px;
       border: 1px solid rgba(255,255,255,0.1);
@@ -1010,7 +1010,6 @@
       }
 
       function showTypeHint() {
-        if (doorOpen) return;
         typeHint.classList.add('show');
         clearTimeout(hintTimer);
         hintTimer = setTimeout(() => typeHint.classList.remove('show'), 3000);
@@ -1198,7 +1197,8 @@
         buffer = (buffer + event.key.toLowerCase()).slice(-8);
         if (buffer.endsWith('picasso') || buffer.endsWith('picaso')) {
           buffer = '';
-          openDoor();
+          if (doorOpen) closeDoor();
+          else openDoor();
           return;
         }
         Object.keys(secrets).forEach((word) => {

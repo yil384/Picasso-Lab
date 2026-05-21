@@ -838,6 +838,37 @@
     }
     .guandan-monster-transition.active,
     .guandan-restore-transition.active { display: block; }
+    .guandan-restore-transition.card-only {
+        background:
+            radial-gradient(circle at 50% 52%, rgba(255,205,0,0.2), transparent 24%),
+            radial-gradient(circle at 50% 58%, rgba(0,98,155,0.28), transparent 34%),
+            linear-gradient(145deg, rgba(2,14,14,0.96), rgba(7,42,36,0.96));
+    }
+    .guandan-restore-transition.card-only::before {
+        content: "";
+        position: absolute;
+        inset: -12%;
+        opacity: 0.18;
+        background-image:
+            linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+        background-size: 46px 46px;
+        transform: rotate(-6deg) scale(1.15);
+    }
+    .guandan-restore-transition.card-only::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 54%;
+        width: min(520px, 70vw);
+        height: 24px;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background: rgba(255,255,255,0.22);
+        filter: blur(10px);
+        animation: restoreTableGlow 1.45s ease-out forwards;
+    }
+    .guandan-restore-transition.card-only .restore-card { animation-duration: 1.24s; }
     .guandan-transition-title {
         position: absolute;
         left: 50%;
@@ -1010,6 +1041,11 @@
         0% { transform: translate(-50%, 4vh) scale(0.2) rotate(var(--sr)); opacity: 0; }
         35% { opacity: 1; }
         100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)); opacity: 1; }
+    }
+    @keyframes restoreTableGlow {
+        0% { opacity: 0; transform: translate(-50%, -50%) scaleX(0.22); }
+        42% { opacity: 1; }
+        100% { opacity: 0.18; transform: translate(-50%, -50%) scaleX(1); }
     }
     @media (max-width: 760px) {
         .guandan-open-card { grid-template-columns: 1fr; padding: 20px; }
@@ -2126,10 +2162,10 @@
         const params = new URLSearchParams(window.location.search);
         if (params.get('from') !== 'guandan') return;
         const overlay = document.createElement('div');
-        overlay.className = 'guandan-restore-transition active';
-        overlay.innerHTML = '<div class="guandan-transition-title">光之巨人归还卡片</div><div class="light-guardian" aria-hidden="true"></div>';
+        overlay.className = 'guandan-restore-transition card-only active';
+        overlay.innerHTML = '<div class="guandan-transition-title">Cards returning to Events</div>';
         document.body.appendChild(overlay);
-        for (let i = 0; i < 16; i++) {
+        for (let i = 0; i < 18; i++) {
             overlay.appendChild(makeTransitionCard('restore-card', i, true));
         }
         setTimeout(() => {

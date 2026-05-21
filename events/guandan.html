@@ -189,32 +189,75 @@
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     .return-transition {
-        position: fixed; inset: 0; z-index: 2000; display: none; overflow: hidden; background: radial-gradient(circle at 50% 48%, #124e62, #020707 72%);
+        position: fixed; inset: 0; z-index: 2000; overflow: hidden;
+        background:
+            radial-gradient(circle at 50% 46%, rgba(255,205,0,0.22), transparent 24%),
+            radial-gradient(circle at 50% 58%, rgba(50,176,190,0.28), transparent 30%),
+            linear-gradient(145deg, rgba(1,13,16,0.98), rgba(2,34,37,0.98));
+        opacity: 0; visibility: hidden; pointer-events: none;
+        transition: opacity 0.28s ease, visibility 0s linear 0.28s;
     }
-    .return-transition.active { display: block; }
-    .light-hero {
-        position: absolute; left: 50%; top: 50%; width: 170px; height: 360px; transform: translate(-50%, -50%);
-        filter: drop-shadow(0 0 30px rgba(117,226,255,0.9));
+    .return-transition.active { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+    .return-transition::before {
+        content: ""; position: absolute; inset: -14%;
+        background-image:
+            linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+        background-size: 44px 44px;
+        transform: rotate(-7deg) scale(1.18);
+        opacity: 0.22;
     }
-    .light-hero::before {
-        content: ""; position: absolute; left: 50%; top: 0; width: 82px; height: 96px; transform: translateX(-50%);
-        border-radius: 50% 50% 44% 44%; background: linear-gradient(145deg, #f5fbff, #d0ecff 55%, #8cc4ff);
-        box-shadow: inset 0 -10px 18px rgba(31,82,121,0.25);
+    .return-transition-title {
+        position: absolute; left: 50%; top: 12%; transform: translateX(-50%);
+        color: #fff8da; text-align: center; font-weight: 950;
+        font-size: clamp(24px, 4.8vw, 54px); text-shadow: 0 10px 30px rgba(0,0,0,0.45);
+        z-index: 4; pointer-events: none;
     }
-    .light-hero::after {
-        content: ""; position: absolute; left: 50%; top: 86px; width: 118px; height: 180px; transform: translateX(-50%);
-        clip-path: polygon(50% 0, 82% 16%, 92% 74%, 66% 100%, 34% 100%, 8% 74%, 18% 16%);
-        background: linear-gradient(135deg, #f7fbff 0 34%, #c8323b 35% 48%, #f4f6ff 49% 62%, #237bd5 63%);
+    .return-portal {
+        position: absolute; left: 50%; top: 52%; width: min(340px, 50vw); aspect-ratio: 1;
+        transform: translate(-50%, -50%); border-radius: 50%; z-index: 2;
+        background:
+            radial-gradient(circle, rgba(255,255,255,0.95) 0 8%, rgba(255,205,0,0.72) 9% 18%, rgba(49,172,191,0.35) 19% 44%, transparent 45%),
+            conic-gradient(from 0deg, rgba(255,205,0,0), rgba(255,205,0,0.8), rgba(49,172,191,0.2), rgba(255,205,0,0));
+        box-shadow: 0 0 44px rgba(255,205,0,0.34), inset 0 0 36px rgba(255,255,255,0.22);
+        animation: returnPortalSpin 1.24s linear infinite;
+    }
+    .return-portal::after {
+        content: ""; position: absolute; left: 50%; bottom: 15%; width: 58%; height: 13%;
+        transform: translateX(-50%); border-radius: 50%;
+        background: rgba(255,255,255,0.18); filter: blur(5px);
     }
     .return-card {
-        position: absolute; width: 68px; height: 96px; border-radius: 10px; background: #fffdf6; color: #111;
-        display: grid; place-items: center; font-weight: 950; font-size: 22px; box-shadow: 0 12px 26px rgba(0,0,0,0.34);
-        animation: restoreCard 1.35s cubic-bezier(0.18, 0.8, 0.22, 1) forwards;
+        position: absolute; left: 50%; top: 50%; width: clamp(48px, 6vw, 72px); height: clamp(68px, 8.3vw, 102px);
+        border-radius: 10px; background: #fffdf6; color: #111; border: 1px solid rgba(15,17,19,0.22);
+        display: grid; place-items: center; font-weight: 950; font-size: 22px; box-shadow: 0 16px 34px rgba(0,0,0,0.34);
+        animation: returnCardGather 1.18s cubic-bezier(0.16, 0.84, 0.2, 1) forwards;
+        animation-delay: var(--delay);
+        opacity: 0; z-index: 3;
     }
-    @keyframes restoreCard {
-        0% { transform: translate(var(--sx), var(--sy)) rotate(var(--sr)); opacity: 0; }
-        24% { opacity: 1; }
-        100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)); opacity: 1; }
+    .return-card.red { color: #c92535; }
+    @keyframes returnPortalSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    @keyframes returnCardGather {
+        0% { transform: translate(var(--sx), var(--sy)) rotate(var(--sr)) scale(0.94); opacity: 0; filter: blur(7px); }
+        24% { opacity: 1; filter: blur(0); }
+        64% { transform: translate(var(--mx), var(--my)) rotate(var(--mr)) scale(1); opacity: 1; }
+        100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)) scale(0.22); opacity: 0; }
+    }
+
+    #return-type-hint {
+        position: fixed; left: 50%; bottom: 74px; z-index: 1500;
+        transform: translateX(-50%) translateY(12px); opacity: 0; pointer-events: none;
+        padding: 9px 14px; border-radius: 999px; white-space: nowrap;
+        background: rgba(6,18,18,0.9); color: #fff; border: 1px solid rgba(255,205,0,0.4);
+        box-shadow: 0 12px 34px rgba(0,0,0,0.28); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        font-size: 0.76rem; font-weight: 750;
+        transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    #return-type-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #return-type-hint kbd {
+        display: inline-block; margin: 0 1px; padding: 1px 5px; border-radius: 5px;
+        border: 1px solid rgba(255,255,255,0.24); background: rgba(255,255,255,0.12);
+        color: #ffcd00; font: inherit; font-size: 0.7rem;
     }
 
     @media (max-width: 860px) {
@@ -1127,9 +1170,8 @@
     <main id="root"></main>
 </div>
 
-<div class="return-transition" id="return-transition" aria-hidden="true">
-    <div class="light-hero"></div>
-</div>
+<div class="return-transition" id="return-transition" aria-hidden="true"></div>
+<div id="return-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -1158,6 +1200,8 @@ const copyLinkBtn = document.getElementById("copy-link-btn");
 const newRoomBtn = document.getElementById("new-room-btn");
 const backEventsBtn = document.getElementById("back-events-btn");
 const langToggleBtn = document.getElementById("lang-toggle");
+const returnTransition = document.getElementById("return-transition");
+const returnTypeHint = document.getElementById("return-type-hint");
 const roomRoot = "guandanRooms";
 const ranks = ["3","4","5","6","7","8","9","10","J","Q","K","A","2"];
 const suits = ["S","H","D","C"];
@@ -1180,6 +1224,9 @@ let statusText = "";
 let aiTimer = null;
 let actionBusy = false;
 let uiLang = localStorage.getItem("picasso.guandan.lang") || "en";
+let returnBuffer = "";
+let returnHintTimer = null;
+let returnNavigationStarted = false;
 let clientId = localStorage.getItem("picasso.guandan.client");
 if (!clientId) {
     clientId = "c_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -1289,6 +1336,51 @@ function showToast(text) {
     toastEl.classList.add("show");
     clearTimeout(showToast._t);
     showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1700);
+}
+
+function showReturnTypeHint() {
+    returnTypeHint?.classList.add("show");
+    clearTimeout(returnHintTimer);
+    returnHintTimer = setTimeout(() => returnTypeHint?.classList.remove("show"), 2600);
+}
+
+function hideReturnTypeHint() {
+    clearTimeout(returnHintTimer);
+    returnTypeHint?.classList.remove("show");
+}
+
+function makeReturnCard(index) {
+    const card = document.createElement("div");
+    const rank = ["2", "A", "K", "Q", "J", "10", "9", "8"][index % 8];
+    const suit = suits[index % suits.length];
+    card.className = `return-card ${suit === "H" || suit === "D" ? "red" : ""}`;
+    card.textContent = `${rank}${suitGlyph[suit]}`;
+    card.style.setProperty("--sx", `${(Math.random() - 0.5) * 94}vw`);
+    card.style.setProperty("--sy", `${(Math.random() - 0.5) * 78}vh`);
+    card.style.setProperty("--sr", `${-70 + Math.random() * 140}deg`);
+    card.style.setProperty("--mx", `${-250 + (index % 5) * 125 + (Math.random() - 0.5) * 22}px`);
+    card.style.setProperty("--my", `${-150 + Math.floor(index / 5) * 92 + (Math.random() - 0.5) * 20}px`);
+    card.style.setProperty("--mr", `${-18 + Math.random() * 36}deg`);
+    card.style.setProperty("--tx", `${(Math.random() - 0.5) * 28}px`);
+    card.style.setProperty("--ty", `${-10 + Math.random() * 20}px`);
+    card.style.setProperty("--tr", `${-110 + Math.random() * 220}deg`);
+    card.style.setProperty("--delay", `${index * 0.035}s`);
+    return card;
+}
+
+function startReturnToEvents() {
+    if (returnNavigationStarted) return;
+    returnNavigationStarted = true;
+    hideReturnTypeHint();
+    if (!returnTransition) {
+        location.href = `${EVENTS_URL}?from=guandan`;
+        return;
+    }
+    returnTransition.innerHTML = '<div class="return-transition-title">Cards returning to Events</div><div class="return-portal" aria-hidden="true"></div>';
+    returnTransition.setAttribute("aria-hidden", "false");
+    for (let i = 0; i < 20; i++) returnTransition.appendChild(makeReturnCard(i));
+    requestAnimationFrame(() => returnTransition.classList.add("active"));
+    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 1420);
 }
 
 function roomRef(code = roomCode) {
@@ -2419,26 +2511,19 @@ langToggleBtn.addEventListener("click", () => {
     render();
 });
 
-document.getElementById("back-events-btn").addEventListener("click", () => {
-    const overlay = document.getElementById("return-transition");
-    overlay.classList.add("active");
-    for (let i = 0; i < 16; i++) {
-        const card = document.createElement("div");
-        card.className = "return-card";
-        card.textContent = ["2","A","K","Q","J","10"][i % 6];
-        card.style.left = "50%";
-        card.style.top = "50%";
-        card.style.setProperty("--sx", `${(Math.random() - 0.5) * 120}vw`);
-        card.style.setProperty("--sy", `${(Math.random() - 0.5) * 120}vh`);
-        card.style.setProperty("--sr", `${-80 + Math.random() * 160}deg`);
-        card.style.setProperty("--tx", `${-460 + (i % 4) * 150}px`);
-        card.style.setProperty("--ty", `${-170 + Math.floor(i / 4) * 96}px`);
-        card.style.setProperty("--tr", `${-10 + Math.random() * 20}deg`);
-        card.style.animationDelay = `${i * 0.045}s`;
-        overlay.appendChild(card);
+backEventsBtn.addEventListener("click", startReturnToEvents);
+
+document.addEventListener("keydown", event => {
+    if (event.target?.closest?.("input, textarea, [contenteditable='true']")) return;
+    if (event.key.length !== 1 || event.metaKey || event.ctrlKey || event.altKey) return;
+    returnBuffer = (returnBuffer + event.key.toLowerCase()).slice(-7);
+    if (returnBuffer.endsWith("picasso") || returnBuffer.endsWith("picaso")) {
+        returnBuffer = "";
+        startReturnToEvents();
+        return;
     }
-    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 1550);
-});
+    if (returnBuffer.length >= 2) showReturnTypeHint();
+}, true);
 
 if (roomCode) attachRoom(roomCode);
 else render();

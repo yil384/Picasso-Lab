@@ -609,7 +609,7 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 #type-hint {
   position: fixed; bottom: 22px; left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: 100001;
   background: rgba(0,0,0,0.42);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -691,7 +691,6 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   const typeHint = document.getElementById('type-hint');
   let hintTimer = null;
   function showHint() {
-    if (flipped) return;
     typeHint.classList.add('show');
     clearTimeout(hintTimer);
     hintTimer = setTimeout(() => typeHint.classList.remove('show'), 3000);
