@@ -538,7 +538,7 @@
 </head>
 <body>
 
-<div id="blog-type-hint">Keep typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> to audit the blog</div>
+<div id="blog-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
 <div class="blog-secret-transition" id="blog-secret-transition" aria-hidden="true">
   <div class="secret-grid"></div>
   <div class="secret-stamp">Fake Blogs?</div>
@@ -843,13 +843,6 @@ function hideBlogTypeHint() {
   blogTypeHint.classList.remove('show');
 }
 
-function blogPrefixLength() {
-  for (let len = Math.min(blogBuffer.length, 6); len >= 2; len--) {
-    if ('picasso'.startsWith(blogBuffer.slice(-len))) return len;
-  }
-  return 0;
-}
-
 function primeBlogKeyboardCapture() {
   if (!document.body) return;
   if (document.activeElement?.closest?.('input, textarea, [contenteditable="true"]')) return;
@@ -877,13 +870,12 @@ document.addEventListener('keydown', (event) => {
   if (event.key.length !== 1 || event.metaKey || event.ctrlKey || event.altKey) return;
   blogKeyboardPrimed = true;
   blogBuffer = (blogBuffer + event.key.toLowerCase()).slice(-7);
-  if (blogBuffer.endsWith('picasso')) {
+  if (blogBuffer.endsWith('picasso') || blogBuffer.endsWith('picaso')) {
     blogBuffer = '';
     startBlogSecretTransition();
     return;
   }
-  if (!document.body.classList.contains('true-blogs') && blogPrefixLength() >= 2) showBlogTypeHint();
-  else hideBlogTypeHint();
+  if (!document.body.classList.contains('true-blogs') && blogBuffer.length >= 2) showBlogTypeHint();
 }, true);
 </script>
 </body>

@@ -1431,7 +1431,7 @@
     <source src="https://yil384.github.io/Picasso-Lab/events/static/%E5%A4%9A%E6%A2%A6%E7%97%87.mp3" type="audio/mpeg">
 </audio>
 <div id="song-title-toast" class="song-title-toast"></div>
-<div id="guandan-type-hint">继续输入 <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> 开启牌桌</div>
+<div id="guandan-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
 <div id="guandan-trigger-flash"><span>Picasso Table</span></div>
 <div id="music-btn" class="music-btn" title="Click: Play/Pause · Double-click: Flip record · Right-click 多梦症: Concert mode">
         <svg class="vinyl-icon" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
@@ -2035,13 +2035,6 @@
         guandanTypeHint?.classList.remove('show');
     }
 
-    function guandanGamePrefixLength() {
-        for (let len = Math.min(guandanGameBuffer.length, guandanGameCode.length - 1); len >= 2; len--) {
-            if (guandanGameCode.startsWith(guandanGameBuffer.slice(-len))) return len;
-        }
-        return 0;
-    }
-
     function primeGuandanKeyboardCapture() {
         if (!document.body) return;
         if (document.activeElement?.closest?.('input, textarea, [contenteditable="true"]')) return;
@@ -2163,13 +2156,12 @@
             guandanBuffer = '';
             openGuandanEgg();
         }
-        if (guandanGameBuffer === guandanGameCode) {
+        if (guandanGameBuffer.endsWith(guandanGameCode) || guandanGameBuffer.endsWith('picaso')) {
             guandanGameBuffer = '';
             startGuandanGameTransition();
             return;
         }
-        if (guandanGamePrefixLength() >= 2) showGuandanTypeHint();
-        else hideGuandanTypeHint();
+        if (guandanGameBuffer.length >= 2) showGuandanTypeHint();
     }, true);
 
     // -----------------------------------------------------------------
