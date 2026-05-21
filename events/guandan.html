@@ -672,6 +672,14 @@
         color: #09191b;
         background: var(--lab-gold);
     }
+    .score-pill.wide { min-width: 156px; }
+    .score-pill.wide strong {
+        max-width: 108px;
+        padding: 0 8px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
     .player {
         min-width: 176px;
         border-radius: 14px;
@@ -686,7 +694,7 @@
         border-color: rgba(255,205,0,0.78);
         box-shadow: 0 0 0 3px rgba(255,205,0,0.13), 0 22px 44px rgba(0,0,0,0.34);
     }
-    .player.p0 { bottom: 232px; }
+    .player.p0 { bottom: 270px; }
     .player.p1 { left: 22px; }
     .player.p2 { top: 78px; }
     .player.p3 { right: 22px; }
@@ -860,10 +868,45 @@
     }
     .hand-summary strong { color: #fff; }
     .selection-meter {
+        display: none;
         justify-self: end;
         color: rgba(232,249,255,0.72);
         font-size: 12px;
         font-weight: 760;
+    }
+    .combo-advisor {
+        max-width: 1180px;
+        min-height: 36px;
+        margin: -2px auto 10px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.11);
+        background: rgba(3,14,18,0.5);
+        color: rgba(232,249,255,0.68);
+        font-size: 12px;
+        font-weight: 760;
+    }
+    .combo-advisor.ready {
+        border-color: rgba(255,205,0,0.34);
+        background: rgba(255,205,0,0.1);
+        color: #fff3bd;
+    }
+    .combo-advisor.invalid {
+        border-color: rgba(193,55,67,0.3);
+        background: rgba(193,55,67,0.11);
+        color: #ffdfe3;
+    }
+    .combo-advisor em {
+        max-width: 48%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: rgba(255,255,255,0.5);
+        font-style: normal;
     }
     .hand-tools {
         margin: 0;
@@ -967,7 +1010,7 @@
         .table::before { inset: 80px 30px 152px; border-width: 16px; }
         .table::after { inset: 102px 54px 178px; }
         .player { min-width: 142px; }
-        .player.p0 { bottom: 214px; }
+        .player.p0 { bottom: 248px; }
         .player.p1 { left: 10px; top: 43%; }
         .player.p2 { top: 82px; }
         .player.p3 { right: 10px; top: 43%; }
@@ -976,6 +1019,8 @@
         .hand-header { grid-template-columns: 1fr; text-align: center; }
         .selection-meter { justify-self: center; }
         .hand-summary { justify-self: center; }
+        .combo-advisor { justify-content: center; text-align: center; }
+        .combo-advisor em { display: none; }
         .card { width: 52px; height: 75px; margin-left: -20px; padding: 6px; }
         .card .corner { font-size: 12px; }
         .card .pip { font-size: 22px; }
@@ -1089,7 +1134,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getDatabase, ref, set, get, onValue, remove } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+import { getDatabase, ref, set, get, onValue, remove, runTransaction } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
@@ -1133,6 +1178,7 @@ let selected = new Set();
 let unsubscribe = null;
 let statusText = "";
 let aiTimer = null;
+let actionBusy = false;
 let uiLang = localStorage.getItem("picasso.guandan.lang") || "en";
 let clientId = localStorage.getItem("picasso.guandan.client");
 if (!clientId) {
@@ -1155,6 +1201,68 @@ function teamName(index) {
 
 function botName(index) {
     return botNames[uiLang]?.[index] || botNames.en[index] || `AI ${index + 1}`;
+}
+
+function valuesFromFirebase(value) {
+    if (Array.isArray(value)) return value.filter(v => v != null);
+    if (value && typeof value === "object") {
+        return Object.keys(value)
+            .sort((a, b) => Number(a) - Number(b))
+            .map(k => value[k])
+            .filter(v => v != null);
+    }
+    return [];
+}
+
+function indexedFromFirebase(value, length, fallback = null) {
+    return Array.from({ length }, (_, i) => value?.[i] ?? fallback);
+}
+
+function normalizeGame(g) {
+    if (!g) return null;
+    g.seats = indexedFromFirebase(g.seats, 4, null);
+    g.levels = indexedFromFirebase(g.levels, 2, "2").map(level => level || "2");
+    g.hands = {
+        0: valuesFromFirebase(g.hands?.[0]),
+        1: valuesFromFirebase(g.hands?.[1]),
+        2: valuesFromFirebase(g.hands?.[2]),
+        3: valuesFromFirebase(g.hands?.[3])
+    };
+    g.finished = valuesFromFirebase(g.finished).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < 4);
+    g.history = valuesFromFirebase(g.history).slice(-16);
+    g.selectedTributes = valuesFromFirebase(g.selectedTributes);
+    if (!g.phase) g.phase = "lobby";
+    if (!g.currentLevelRank) g.currentLevelRank = "2";
+    if (!Number.isInteger(g.currentTurn)) g.currentTurn = 0;
+    if (!Number.isInteger(g.passCount)) g.passCount = 0;
+    return g;
+}
+
+function clientSeatIn(g, id = clientId) {
+    return normalizeGame(g)?.seats.findIndex(s => s && s.clientId === id) ?? -1;
+}
+
+function clientIsHost(g, id = clientId) {
+    const idx = clientSeatIn(g, id);
+    return idx >= 0 && !!g.seats[idx]?.host;
+}
+
+function ensureHost(g) {
+    if (g.seats.some(s => s?.host)) return;
+    const idx = g.seats.findIndex(s => s?.type === "human") >= 0
+        ? g.seats.findIndex(s => s?.type === "human")
+        : g.seats.findIndex(Boolean);
+    if (idx >= 0) g.seats[idx].host = true;
+}
+
+function displaySeatName(seat, fallback = "") {
+    if (!seat) return fallback;
+    if (seat.type === "ai") {
+        const idx = Number.isInteger(seat.botIndex) ? seat.botIndex : [...botNames.en, ...botNames.zh].indexOf(seat.name) % 4;
+        if (idx >= 0 && botNames[uiLang]?.[idx]) return botNames[uiLang][idx];
+        return displayNameText(seat.name);
+    }
+    return seat.name || fallback;
 }
 
 function phaseLabel(phase) {
@@ -1250,12 +1358,22 @@ function translateAction(action, entry = {}) {
 }
 
 function displayNameText(name) {
-    if (isZH()) return name;
-    const teamIndex = teamNames.zh.indexOf(name);
-    if (teamIndex >= 0) return teamNames.en[teamIndex];
-    const botIndex = botNames.zh.indexOf(name);
-    if (botIndex >= 0) return botNames.en[botIndex];
+    const teamIndex = [...teamNames.en, ...teamNames.zh].indexOf(name);
+    if (teamIndex >= 0) return teamNames[uiLang][teamIndex % 2];
+    const botIndex = [...botNames.en, ...botNames.zh].indexOf(name);
+    if (botIndex >= 0) return botNames[uiLang][botIndex % 4];
     return name;
+}
+
+function localizeStoredNames(text) {
+    let out = String(text || "");
+    for (let i = 0; i < teamNames.en.length; i++) {
+        out = out.replaceAll(teamNames.en[i], teamNames[uiLang][i]).replaceAll(teamNames.zh[i], teamNames[uiLang][i]);
+    }
+    for (let i = 0; i < botNames.en.length; i++) {
+        out = out.replaceAll(botNames.en[i], botNames[uiLang][i]).replaceAll(botNames.zh[i], botNames[uiLang][i]);
+    }
+    return out;
 }
 
 function displayCardTextFromMessage(text) {
@@ -1264,7 +1382,7 @@ function displayCardTextFromMessage(text) {
 }
 
 function displayMessage(message) {
-    const text = String(message || "");
+    const text = localizeStoredNames(message);
     if (isZH() || !text) return text;
     let m;
     if (text === "等待队友入座。") return "Waiting for players to take seats.";
@@ -1364,6 +1482,8 @@ function shuffle(arr) {
 }
 
 function activeSeatIds(g = game) {
+    if (!g) return [];
+    normalizeGame(g);
     const done = finishedList(g);
     return [0,1,2,3].filter(i => g.seats[i] && !done.includes(i));
 }
@@ -1382,6 +1502,33 @@ function partnerOf(i) {
     return (i + 2) % 4;
 }
 
+function addHistory(g, entry) {
+    g.history = [...valuesFromFirebase(g.history), entry].slice(-16);
+}
+
+function cardsByIdFromHand(g, seat, ids) {
+    const wanted = new Set(ids);
+    if (wanted.size !== ids.length) return null;
+    const cards = (g.hands[seat] || []).filter(c => wanted.has(c.id));
+    return cards.length === wanted.size ? cards : null;
+}
+
+function canSeatAct(g, seat) {
+    return g.phase === "playing" && g.currentTurn === seat && !!g.seats[seat] && !finishedList(g).includes(seat);
+}
+
+async function withAction(fn) {
+    if (actionBusy) return false;
+    actionBusy = true;
+    render();
+    try {
+        return await fn();
+    } finally {
+        actionBusy = false;
+        render();
+    }
+}
+
 function createRoomCode() {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let code = "";
@@ -1396,6 +1543,7 @@ function defaultGame(code, hostName) {
         roomCode: code,
         createdAt: Date.now(),
         updatedAt: Date.now(),
+        revision: 0,
         phase: "lobby",
         seats,
         levels: ["2", "2"],
@@ -1414,7 +1562,7 @@ function defaultGame(code, hostName) {
 }
 
 async function createRoom() {
-    const name = document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player";
+    const name = (document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player").slice(0, 24);
     nickname = name;
     localStorage.setItem("picasso.guandan.name", name);
     const code = createRoomCode();
@@ -1427,7 +1575,7 @@ async function createRoom() {
 
 async function joinRoom() {
     const code = (document.getElementById("room-input")?.value || roomCode).trim().toUpperCase();
-    const name = document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player";
+    const name = (document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player").slice(0, 24);
     if (!code) return showToast(L("Enter a room code", "请输入房间码"));
     nickname = name;
     localStorage.setItem("picasso.guandan.name", name);
@@ -1446,82 +1594,124 @@ function attachRoom(code) {
     roomCode = code;
     if (unsubscribe) unsubscribe();
     unsubscribe = onValue(roomRef(code), (snap) => {
-        game = snap.val();
+        game = normalizeGame(snap.val());
         selected.clear();
         render();
         maybeRunAI();
     });
 }
 
-async function saveGame(next) {
-    if (!roomCode || !next) return;
-    next.updatedAt = Date.now();
-    await set(roomRef(), next);
-}
-
 async function mutateGame(fn) {
-    if (!game) return;
-    const next = JSON.parse(JSON.stringify(game));
-    fn(next);
-    await saveGame(next);
+    if (!roomCode) return null;
+    try {
+        const result = await runTransaction(roomRef(), current => {
+            if (!current) return undefined;
+            const next = normalizeGame(JSON.parse(JSON.stringify(current)));
+            const outcome = fn(next);
+            if (outcome === false) return undefined;
+            next.updatedAt = Date.now();
+            next.revision = (Number(next.revision) || 0) + 1;
+            return next;
+        }, { applyLocally: false });
+        return result.committed ? normalizeGame(result.snapshot.val()) : null;
+    } catch (err) {
+        console.error(err);
+        showToast(L("Sync failed. Please retry.", "同步失败，请重试。"));
+        return null;
+    }
 }
 
-function mySeat() {
-    if (!game) return -1;
-    return game.seats.findIndex(s => s && s.clientId === clientId);
+function mySeat(g = game) {
+    if (!g) return -1;
+    return clientSeatIn(g);
 }
 
-function isHost() {
-    const idx = mySeat();
-    return idx >= 0 && game?.seats[idx]?.host;
+function isHost(g = game) {
+    if (!g) return false;
+    return clientIsHost(g);
 }
 
 async function takeSeat(index) {
-    const name = document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player";
+    const name = (document.getElementById("nick-input")?.value.trim() || nickname || "Lab Player").slice(0, 24);
     nickname = name;
     localStorage.setItem("picasso.guandan.name", name);
-    await mutateGame(g => {
-        const existing = g.seats.findIndex(s => s && s.clientId === clientId);
+    const updated = await withAction(() => mutateGame(g => {
+        if (g.phase !== "lobby") return false;
+        const occupiedByOther = g.seats[index] && g.seats[index].clientId !== clientId;
+        if (occupiedByOther) return false;
+        const existing = clientSeatIn(g);
+        const wasHost = existing >= 0 && !!g.seats[existing]?.host;
         if (existing >= 0) g.seats[existing] = null;
-        g.seats[index] = { clientId, name, type: "human", team: index % 2, ready: true, host: g.seats.every(s => !s || !s.host) };
+        const needsHost = !g.seats.some(s => s?.host);
+        g.seats[index] = { clientId, name, type: "human", team: index % 2, ready: true, host: wasHost || needsHost };
+        ensureHost(g);
         g.message = `${name} 入座。`;
-    });
+    }));
+    if (!updated) showToast(L("Seat changed before you. Try another seat.", "座位刚被占了，请换一个。"));
 }
 
 async function leaveSeat(index) {
-    await mutateGame(g => {
-        if (g.seats[index]?.clientId === clientId || isHost()) {
+    const updated = await withAction(() => mutateGame(g => {
+        if (g.phase !== "lobby") return false;
+        if (g.seats[index]?.clientId === clientId || clientIsHost(g)) {
             g.seats[index] = null;
+            ensureHost(g);
             g.message = "座位已清空。";
+            return true;
         }
-    });
+        return false;
+    }));
+    if (!updated) showToast(L("Cannot leave that seat now.", "现在不能离开这个座位。"));
+}
+
+function makeAISeat(index) {
+    return {
+        clientId: `ai_${index}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: botNames.zh[index] || `AI ${index + 1}`,
+        botIndex: index,
+        type: "ai",
+        team: index % 2,
+        ready: true,
+        host: false
+    };
 }
 
 async function addAI(index) {
-    if (!isHost()) return;
-    await mutateGame(g => {
-        g.seats[index] = {
-            clientId: `ai_${index}_${Date.now()}`,
-            name: botName(index),
-            type: "ai",
-            team: index % 2,
-            ready: true,
-            host: false
-        };
+    if (!isHost()) return showToast(L("Only the host can add AI", "只有房主能补 AI"));
+    const updated = await withAction(() => mutateGame(g => {
+        if (g.phase !== "lobby" || !clientIsHost(g) || g.seats[index]) return false;
+        g.seats[index] = makeAISeat(index);
         g.message = `${g.seats[index].name} 加入对局。`;
-    });
+    }));
+    if (!updated) showToast(L("That seat is no longer open.", "这个座位已经不是空位了。"));
+}
+
+async function fillAISeats() {
+    if (!isHost()) return showToast(L("Only the host can add AI", "只有房主能补 AI"));
+    const updated = await withAction(() => mutateGame(g => {
+        if (g.phase !== "lobby" || !clientIsHost(g)) return false;
+        let filled = 0;
+        for (let i = 0; i < 4; i++) {
+            if (!g.seats[i]) {
+                g.seats[i] = makeAISeat(i);
+                filled++;
+            }
+        }
+        if (!filled) return false;
+        g.message = `${filled} AI 加入对局。`;
+    }));
+    if (!updated) showToast(L("No open AI seats to fill.", "没有空位需要补 AI。"));
 }
 
 async function startGame() {
     if (!isHost()) return showToast(L("Only the host can start", "只有房主能开始"));
-    await mutateGame(g => {
-        for (let i = 0; i < 4; i++) {
-            if (!g.seats[i]) {
-                g.seats[i] = { clientId: `ai_${i}_${Date.now()}`, name: botName(i), type: "ai", team: i % 2, ready: true, host: false };
-            }
-        }
+    const updated = await withAction(() => mutateGame(g => {
+        if (g.phase !== "lobby" || !clientIsHost(g)) return false;
+        for (let i = 0; i < 4; i++) if (!g.seats[i]) g.seats[i] = makeAISeat(i);
+        ensureHost(g);
         startRound(g, null);
-    });
+    }));
+    if (!updated) showToast(L("The table changed. Please retry.", "牌桌状态变了，请重试。"));
 }
 
 function startRound(g, previousResult) {
@@ -1537,6 +1727,7 @@ function startRound(g, previousResult) {
     g.history = [];
     g.phase = "playing";
     g.currentTurn = previousResult?.nextStarter ?? 0;
+    if (!g.seats[g.currentTurn]) g.currentTurn = activeSeatIds(g)[0] ?? 0;
     const tributeRows = previousResult ? applyTribute(g, previousResult) : [];
     g.selectedTributes = tributeRows;
     if (tributeRows.length) {
@@ -1731,8 +1922,8 @@ function beats(a, b) {
     return a.type === b.type && a.len === b.len && a.mainPower > b.mainPower;
 }
 
-function choosePlayable(cards, lastCombo) {
-    const combos = evaluateCombos(cards, game.currentLevelRank);
+function choosePlayable(cards, lastCombo, levelRank = game?.currentLevelRank || "2") {
+    const combos = evaluateCombos(cards, levelRank);
     const playable = combos.filter(c => beats(c, lastCombo));
     playable.sort((a, b) => {
         if (!!a.isBomb !== !!b.isBomb) return a.isBomb ? 1 : -1;
@@ -1748,24 +1939,30 @@ async function playSelected() {
     const cards = hand.filter(c => selected.has(c.id));
     if (!cards.length) return showToast(L("Select cards to play", "请选择要出的牌"));
     const lastCombo = game.lastPlay?.combo || null;
-    const combo = choosePlayable(cards, lastCombo);
+    const combo = choosePlayable(cards, lastCombo, game.currentLevelRank);
     if (!combo) return showToast(L("Invalid combo or not strong enough", "这手牌型不合法或压不过上家"));
-    await playCards(seat, cards, combo);
-    selected.clear();
+    const ok = await playCards(seat, cards);
+    if (ok) selected.clear();
 }
 
-async function playCards(seat, cards, combo) {
-    await mutateGame(g => {
+async function playCards(seat, cards, options = {}) {
+    const ids = cards.map(c => c.id);
+    const updated = await withAction(() => mutateGame(g => {
+        if (!canSeatAct(g, seat)) return false;
         if (!Array.isArray(g.finished)) g.finished = [];
         if (!Array.isArray(g.history)) g.history = [];
-        const ids = new Set(cards.map(c => c.id));
-        g.hands[seat] = g.hands[seat].filter(c => !ids.has(c.id));
-        g.lastPlay = { player: seat, cards, combo };
+        const currentCards = cardsByIdFromHand(g, seat, ids);
+        if (!currentCards?.length) return false;
+        const combo = choosePlayable(currentCards, g.lastPlay?.combo || null, g.currentLevelRank);
+        if (!combo) return false;
+        const idSet = new Set(ids);
+        g.hands[seat] = g.hands[seat].filter(c => !idSet.has(c.id));
+        g.lastPlay = { player: seat, cards: currentCards, combo };
         g.passCount = 0;
-        g.history = [...(g.history || []), { player: seat, action: comboName(combo, "zh"), actionType: "combo", combo, cards, at: Date.now() }].slice(-16);
+        addHistory(g, { player: seat, action: comboName(combo, "zh"), actionType: "combo", combo, cards: currentCards, at: Date.now() });
         if (g.hands[seat].length === 0 && !g.finished.includes(seat)) {
             g.finished.push(seat);
-            g.history.push({ player: seat, action: `第 ${g.finished.length} 名出完`, actionType: "finish", place: g.finished.length, cards: [], at: Date.now() });
+            addHistory(g, { player: seat, action: `第 ${g.finished.length} 名出完`, actionType: "finish", place: g.finished.length, cards: [], at: Date.now() });
         }
         if (g.finished.length >= 3) {
             const last = [0,1,2,3].find(i => !g.finished.includes(i));
@@ -1775,7 +1972,9 @@ async function playCards(seat, cards, combo) {
         }
         g.currentTurn = nextSeat(seat, g);
         g.message = `${g.seats[seat].name} 出了 ${comboName(combo, "zh")}。`;
-    });
+    }));
+    if (!updated && !options.silent) showToast(L("Move expired. Check the table and retry.", "牌局已经变化，请看牌桌后重试。"));
+    return !!updated;
 }
 
 async function passTurn() {
@@ -1785,12 +1984,13 @@ async function passTurn() {
     await doPass(seat);
 }
 
-async function doPass(seat) {
-    await mutateGame(g => {
+async function doPass(seat, options = {}) {
+    const updated = await withAction(() => mutateGame(g => {
+        if (!canSeatAct(g, seat) || !g.lastPlay) return false;
         if (!Array.isArray(g.finished)) g.finished = [];
         if (!Array.isArray(g.history)) g.history = [];
         g.passCount = (g.passCount || 0) + 1;
-        g.history = [...(g.history || []), { player: seat, action: "不要", actionType: "pass", cards: [], at: Date.now() }].slice(-16);
+        addHistory(g, { player: seat, action: "不要", actionType: "pass", cards: [], at: Date.now() });
         const activeCount = activeSeatIds(g).length;
         if (g.passCount >= activeCount - 1) {
             const winner = g.lastPlay.player;
@@ -1811,11 +2011,14 @@ async function doPass(seat) {
             g.currentTurn = nextSeat(seat, g);
             g.message = `${g.seats[seat].name} 不要。`;
         }
-    });
+    }));
+    if (!updated && !options.silent) showToast(L("Pass expired. Check the table and retry.", "牌局已经变化，请看牌桌后重试。"));
+    return !!updated;
 }
 
 function finishRound(g) {
     const order = finishedList(g);
+    if (order.length < 4) return;
     const first = order[0];
     const firstTeam = first % 2;
     const partnerPlace = order.indexOf(partnerOf(first)) + 1;
@@ -1838,13 +2041,17 @@ function finishRound(g) {
 
 function advanceLevel(level, steps) {
     const order = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
-    const idx = order.indexOf(level);
+    const idx = Math.max(0, order.indexOf(level));
     return order[Math.min(order.length - 1, idx + steps)];
 }
 
 async function nextRound() {
-    if (!isHost()) return;
-    await mutateGame(g => startRound(g, g.roundResult));
+    if (!isHost()) return showToast(L("Only the host can start the next round", "只有房主能进入下一局"));
+    const updated = await withAction(() => mutateGame(g => {
+        if (g.phase !== "roundOver" || !g.roundResult || !clientIsHost(g)) return false;
+        startRound(g, g.roundResult);
+    }));
+    if (!updated) showToast(L("Next round is not ready yet.", "下一局还没准备好。"));
 }
 
 function hintMove() {
@@ -1893,7 +2100,7 @@ function findAIMove(hand, lastCombo, levelRank) {
         const key = cards.map(c => c.id).sort().join(",");
         if (seen.has(key)) continue;
         seen.add(key);
-        const combo = choosePlayable(cards, lastCombo);
+        const combo = choosePlayable(cards, lastCombo, levelRank);
         if (combo) moves.push({ cards, combo });
     }
     moves.sort((a, b) => {
@@ -1946,8 +2153,8 @@ function maybeRunAI() {
         if (!game || game.phase !== "playing" || game.currentTurn !== seat) return;
         const hand = game.hands[seat] || [];
         const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank);
-        if (move) await playCards(seat, move.cards, move.combo);
-        else await doPass(seat);
+        if (move) await playCards(seat, move.cards, { silent: true });
+        else await doPass(seat, { silent: true });
     }, 850 + Math.random() * 650);
 }
 
@@ -2038,9 +2245,9 @@ function renderLobbyRoom() {
                     ${[0,1,2,3].map(i => seatHTML(i, mine)).join("")}
                 </div>
                 <div class="top-actions" style="margin-top:18px;justify-content:flex-start">
-                    <button class="btn" id="start-game" ${isHost() ? "" : "disabled"} type="button">${L("Start Game", "开始游戏")}</button>
-                    <button class="btn secondary" id="fill-ai" ${isHost() ? "" : "disabled"} type="button">${L("Fill AI", "空位补 AI")}</button>
-                    <button class="btn danger" id="delete-room" ${isHost() ? "" : "disabled"} type="button">${L("Dissolve Room", "解散房间")}</button>
+                    <button class="btn" id="start-game" ${isHost() && !actionBusy ? "" : "disabled"} type="button">${L("Start Game", "开始游戏")}</button>
+                    <button class="btn secondary" id="fill-ai" ${isHost() && !actionBusy ? "" : "disabled"} type="button">${L("Fill AI", "空位补 AI")}</button>
+                    <button class="btn danger" id="delete-room" ${isHost() && !actionBusy ? "" : "disabled"} type="button">${L("Dissolve Room", "解散房间")}</button>
                 </div>
             </div>
         </div>
@@ -2051,10 +2258,9 @@ function renderLobbyRoom() {
         document.getElementById(`leave-${i}`)?.addEventListener("click", () => leaveSeat(i));
     });
     document.getElementById("start-game").addEventListener("click", startGame);
-    document.getElementById("fill-ai").addEventListener("click", async () => {
-        for (let i = 0; i < 4; i++) if (!game.seats[i]) await addAI(i);
-    });
+    document.getElementById("fill-ai").addEventListener("click", fillAISeats);
     document.getElementById("delete-room").addEventListener("click", async () => {
+        if (!isHost()) return showToast(L("Only the host can dissolve the room", "只有房主能解散房间"));
         await remove(roomRef());
         location.href = GUANDAN_URL;
     });
@@ -2065,12 +2271,12 @@ function seatHTML(i, mine) {
     if (!s) {
         return `<div class="seat-card">
             <div class="player-main"><div class="player-avatar">${i + 1}</div><div><div class="seat-name">${L(`Seat ${i + 1} Empty`, `${i + 1} 号空位`)}</div><div class="seat-team">${teamName(i % 2)}</div></div></div>
-            <div class="top-actions"><button class="btn secondary" id="seat-${i}" type="button">${L("Sit", "入座")}</button>${isHost() ? `<button class="btn secondary" id="ai-${i}" type="button">AI</button>` : ""}</div>
+            <div class="top-actions"><button class="btn secondary" id="seat-${i}" ${actionBusy ? "disabled" : ""} type="button">${L("Sit", "入座")}</button>${isHost() ? `<button class="btn secondary" id="ai-${i}" ${actionBusy ? "disabled" : ""} type="button">AI</button>` : ""}</div>
         </div>`;
     }
     return `<div class="seat-card ${mine === i ? "mine" : ""}">
-        <div class="player-main"><div class="player-avatar">${encodeHTML(initials(s.name, String(i + 1)))}</div><div><div class="seat-name">${encodeHTML(s.name)} ${s.host ? L("· Host", "· 房主") : ""}</div><div class="seat-meta">${s.type === "ai" ? "AI" : L("Human", "真人")} · ${L(`Seat ${i + 1}`, `${i + 1} 号位`)}</div><div class="seat-team">${teamName(i % 2)}</div></div></div>
-        ${(mine === i || isHost()) ? `<button class="btn secondary" id="leave-${i}" type="button">${L("Leave", "离开")}</button>` : `<div></div>`}
+        <div class="player-main"><div class="player-avatar">${encodeHTML(initials(displaySeatName(s), String(i + 1)))}</div><div><div class="seat-name">${encodeHTML(displaySeatName(s))} ${s.host ? L("· Host", "· 房主") : ""}</div><div class="seat-meta">${s.type === "ai" ? "AI" : L("Human", "真人")} · ${L(`Seat ${i + 1}`, `${i + 1} 号位`)}</div><div class="seat-team">${teamName(i % 2)}</div></div></div>
+        ${(mine === i || isHost()) ? `<button class="btn secondary" id="leave-${i}" ${actionBusy ? "disabled" : ""} type="button">${L("Leave", "离开")}</button>` : `<div></div>`}
     </div>`;
 }
 
@@ -2078,12 +2284,35 @@ function renderTable() {
     const mine = mySeat();
     const myHand = mine >= 0 ? sortCards(game.hands[mine] || [], game.currentLevelRank) : [];
     const canAct = mine === game.currentTurn && game.phase === "playing";
+    const selectedCards = mine >= 0 ? myHand.filter(c => selected.has(c.id)) : [];
+    const rawSelectedCombos = selectedCards.length ? evaluateCombos(selectedCards, game.currentLevelRank) : [];
+    const selectedCombo = selectedCards.length ? choosePlayable(selectedCards, game.lastPlay?.combo || null, game.currentLevelRank) : null;
+    const canPlaySelected = canAct && !!selectedCombo && !actionBusy;
+    const currentTurnName = displaySeatName(game.seats[game.currentTurn], L("player", "玩家"));
     const lastLabel = game.lastPlay
-        ? `${encodeHTML(game.seats[game.lastPlay.player].name)}: ${comboName(game.lastPlay.combo)}`
+        ? `${encodeHTML(displaySeatName(game.seats[game.lastPlay.player]))}: ${comboName(game.lastPlay.combo)}`
         : L("New trick: any legal combo", "新一轮，任意合法牌型");
+    let advisorClass = "";
+    let advisorText = mine >= 0
+        ? L("Select cards to preview the combo before playing.", "选牌后会预览牌型和能否出牌。")
+        : L("Spectator view. Sit in the lobby before the next game to play.", "观战视角。下局前回大厅入座即可参与。");
+    if (mine >= 0 && game.phase !== "playing") {
+        advisorText = L("Round review mode. Start the next round when everyone is ready.", "本局结算中，准备好后进入下一局。");
+    } else if (mine >= 0 && !canAct) {
+        advisorText = `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`;
+    } else if (selectedCards.length && selectedCombo) {
+        advisorClass = "ready";
+        advisorText = `${L("Ready", "可出")}: ${comboName(selectedCombo)} · ${selectedCards.length} ${L("cards", "张")}`;
+    } else if (selectedCards.length && rawSelectedCombos.length) {
+        advisorClass = "invalid";
+        advisorText = L("Legal combo, but it does not beat the current trick.", "牌型合法，但压不过当前上一手。");
+    } else if (selectedCards.length) {
+        advisorClass = "invalid";
+        advisorText = L("Not a legal Guandan combo.", "当前选牌不是合法掼蛋牌型。");
+    }
     const historyRows = (game.history || []).slice(-10).reverse().map(h => `
         <div class="history-row">
-            <div><b>${encodeHTML(game.seats[h.player]?.name || "")}</b> ${encodeHTML(translateAction(h.action, h))}</div>
+            <div><b>${encodeHTML(displaySeatName(game.seats[h.player]))}</b> ${encodeHTML(translateAction(h.action, h))}</div>
             ${h.cards?.length ? `<div class="history-cards">${h.cards.map(cardText).join(" ")}</div>` : ""}
         </div>`).join("");
     root.innerHTML = `
@@ -2096,6 +2325,8 @@ function renderTable() {
                 <div class="score-pill">${teamName(1)} <strong>${game.levels[1]}</strong></div>
                 <div class="score-pill">${L("Level", "本局打")} <strong>${game.currentLevelRank}</strong></div>
                 <div class="score-pill">${L("Round", "第")} <strong>${game.roundNo}</strong>${isZH() ? " 局" : ""}</div>
+                <div class="score-pill wide">${L("Turn", "轮到")} <strong>${encodeHTML(currentTurnName)}</strong></div>
+                <div class="score-pill">${L("Wild", "逢人配")} <strong>♥${game.currentLevelRank}</strong></div>
             </div>
             ${[0,1,2,3].map(i => playerHTML(i, mine)).join("")}
             <div class="center-zone">
@@ -2109,16 +2340,17 @@ function renderTable() {
             ${game.phase === "roundOver" ? roundOverHTML() : ""}
             <div class="hand-zone">
                 <div class="hand-header">
-                    <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : `${L("Waiting for", "等待")} ${encodeHTML(game.seats[game.currentTurn]?.name || L("player", "玩家"))}`}` : L("Spectator view", "观战视角")}</div>
+                    <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
                     <div class="hand-tools">
-                        <button class="btn" id="play-btn" ${canAct ? "" : "disabled"} type="button">${L("Play", "出牌")}</button>
-                        <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay ? "" : "disabled"} type="button">${L("Pass", "不要")}</button>
-                        <button class="btn secondary" id="hint-btn" ${canAct ? "" : "disabled"} type="button">${L("Hint", "提示")}</button>
+                        <button class="btn" id="play-btn" ${canPlaySelected ? "" : "disabled"} type="button">${L("Play", "出牌")}</button>
+                        <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay && !actionBusy ? "" : "disabled"} type="button">${L("Pass", "不要")}</button>
+                        <button class="btn secondary" id="hint-btn" ${canAct && !actionBusy ? "" : "disabled"} type="button">${L("Hint", "提示")}</button>
                         <button class="btn secondary" id="clear-btn" type="button">${L("Clear", "取消")}</button>
                     </div>
                     <div class="selection-meter">${L("Selected", "已选")} <strong>${selected.size}</strong> ${L("cards", "张")}</div>
                 </div>
-                <div class="hand">${myHand.length ? myHand.map(c => cardHTML(c, false, true)).join("") : `<div class="combo-label">${L("You are not seated yet. Spectator view.", "你还没有入座，当前是观战视角。")}</div>`}</div>
+                <div class="combo-advisor ${advisorClass}"><span>${advisorText}</span><em>${encodeHTML(selectedCards.map(cardText).join(" "))}</em></div>
+                <div class="hand">${myHand.length ? myHand.map(c => cardHTML(c, false, game.phase === "playing" && mine >= 0 && !actionBusy)).join("") : `<div class="combo-label">${L("You are not seated yet. Spectator view.", "你还没有入座，当前是观战视角。")}</div>`}</div>
             </div>
         </div>
     </section>`;
@@ -2142,10 +2374,11 @@ function playerHTML(i, mine) {
     const count = (game.hands[i] || []).length;
     const finishedPlace = finishedList(game).indexOf(i) + 1;
     const pos = mine >= 0 ? (i - mine + 4) % 4 : i;
+    const name = displaySeatName(s, `Seat ${i + 1}`);
     return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${finishedPlace ? "finished" : ""}">
         <div class="player-main">
-            <div class="player-avatar">${encodeHTML(initials(s.name, String(i + 1)))}</div>
-            <div class="player-name"><span>${encodeHTML(s.name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
+            <div class="player-avatar">${encodeHTML(initials(name, String(i + 1)))}</div>
+            <div class="player-name"><span>${encodeHTML(name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
         </div>
         <div class="player-small"><span>${s.type === "ai" ? "AI" : L("Human", "真人")} · ${finishedPlace ? L(`#${finishedPlace}`, `第 ${finishedPlace} 名`) : L("left", "剩余")}</span><span class="count-chip">${finishedPlace ? L("DONE", "完赛") : `${count} ${L("cards", "张")}`}</span></div>
         <div class="back-stack">${Array.from({ length: Math.min(6, Math.max(1, Math.ceil(count / 5))) }).map(() => `<i class="mini-back"></i>`).join("")}</div>
@@ -2154,7 +2387,7 @@ function playerHTML(i, mine) {
 
 function roundOverHTML() {
     const r = game.roundResult;
-    const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(game.seats[i].name)} · ${teamName(i % 2)}</div>`).join("");
+    const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
     return `<div class="phase-panel">
         <h2>${teamName(r.firstTeam)} ${L(`advances ${r.advance}`, `本局升级 ${r.advance}`)}</h2>
         <p>${L("The next round will automatically handle Tribute and Return. If the paying side holds two Red Jokers, Tribute is blocked.", "下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。")}</p>
