@@ -538,7 +538,7 @@
 </head>
 <body>
 
-<div id="blog-type-hint">继续输入 <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> 审核博客</div>
+<div id="blog-type-hint">Keep typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> to audit the blog</div>
 <div class="blog-secret-transition" id="blog-secret-transition" aria-hidden="true">
   <div class="secret-grid"></div>
   <div class="secret-stamp">Fake Blogs?</div>
@@ -548,7 +548,7 @@
     <div class="auditor-leg left"></div>
     <div class="auditor-leg right"></div>
   </div>
-  <div class="secret-caption">真正的 blogs 正在解除封印</div>
+  <div class="secret-caption">The real blogs are being unsealed</div>
 </div>
 
 <!-- Hero header -->
@@ -627,8 +627,8 @@ const fakeBlogs = [
   {
     slug: 'may-20-teacher-rendezvous',
     date: 'May 20, 2026',
-    title: '研究发现：520 管老师找方老师约会的概率显著高于随机游走基线',
-    desc: '我们建立了一个节日驱动的路径规划模型，发现当日期特征等于 520 时，实验室 gossip channel 的 posterior 会发生剧烈偏移。',
+    title: 'A May 20 Scheduling Anomaly: Evidence That Professor Guan Asked Professor Fang Out',
+    desc: 'We build a calendar-conditioned rumor model and find that the lab gossip posterior shifts sharply when the date feature equals 520.',
     authors: 'Anonymous Lab Statistician, P. Value, Y. Lin',
     tags: ['520', 'Gossip Systems', 'Causal Romance'],
     body: [
@@ -641,12 +641,12 @@ const fakeBlogs = [
   {
     slug: 'zhuo-poker-heart-level-cards',
     date: 'May 18, 2026',
-    title: '卓哥在德扑中连续摸到 2 个红心级牌：期望级牌数量被校准为 1.37',
-    desc: '本文提出 Kitchen-Table Monte Carlo，对红心级牌连击进行离线复现，并给出一个看似严肃但其实很可疑的 1.37 期望值。',
+    title: 'Two Consecutive Heart Level Cards in Poker: Calibrating Zhuo\'s Expected Level-Card Count to 1.37',
+    desc: 'This note introduces Kitchen-Table Monte Carlo, an offline reconstruction of the heart-level-card streak that produces a suspiciously precise expected value of 1.37.',
     authors: 'Z. Chen, DealerNet, Table-4 Consortium',
     tags: ['Poker', 'Wild Cards', 'Monte Carlo'],
     body: [
-      'We define a heart-level event as any moment where the table collectively says "这也能来?" within 1.5 seconds of card reveal.',
+      'We define a heart-level event as any moment where the table collectively says "how did that happen?" within 1.5 seconds of card reveal.',
       'The estimator uses 100,000 simulated dorm-table universes and one emotionally unreliable witness report.',
       'A surprising result is that 1.37 appears regardless of random seed, which strongly suggests the seed was not changed.',
       'Threats to validity include snacks, table tilt, and the possibility that Zhuo is simply built different.'
@@ -655,26 +655,26 @@ const fakeBlogs = [
   {
     slug: 'neural-hotpot-temperature-scaling',
     date: 'Apr 1, 2026',
-    title: '火锅温度缩放定律：为什么越说不辣，最后越辣',
-    desc: '我们把锅底建模为一个非凸优化问题，证明“微辣”在多人聚餐中会被 social gradient 放大成红油灾难。',
+    title: 'Neural Hotpot Temperature Scaling: Why "Mild" Converges to Fire',
+    desc: 'We model hotpot broth as a non-convex optimization problem and show how social gradients amplify "just a little spicy" into a red-oil incident.',
     authors: 'Haidilao Systems Group',
     tags: ['Optimization', 'Hotpot', 'Scaling Law'],
     body: [
       'The core theorem states that spice level is not a scalar, but a distributed consensus protocol with poor failure handling.',
       'Every participant votes for mildness, yet the final soup approaches a high-temperature fixed point.',
-      'We identify the culprit as repeated local updates: "再加一点点应该没事."',
+      'We identify the culprit as repeated local updates: "one more scoop should be fine."',
       'Future work will investigate whether sesame sauce is a regularizer or merely a coping mechanism.'
     ]
   },
   {
     slug: 'birthday-cake-load-balancing',
     date: 'Feb 29, 2026',
-    title: '生日蛋糕负载均衡：Leader Yu 的切蛋糕算法是否 Pareto 最优',
-    desc: '通过观察蛋糕切分、叉子调度和边角料抢占，我们提出 CakeSched，一种面向实验室聚会的公平共享协议。',
+    title: 'Birthday Cake Load Balancing: Is Leader Yu\'s Slicing Algorithm Pareto Optimal?',
+    desc: 'By observing cake partitioning, fork scheduling, and corner-piece preemption, we propose CakeSched, a fair-sharing protocol for lab gatherings.',
     authors: 'CakeSched Authors',
     tags: ['Scheduling', 'Fairness', 'Cake'],
     body: [
-      'CakeSched minimizes envy under the constraint that someone always says "我只要一点点" and then takes a structurally important corner.',
+      'CakeSched minimizes envy under the constraint that someone always says "I only want a tiny piece" and then takes a structurally important corner.',
       'The protocol assigns frosting-heavy regions using weighted round-robin, except when the birthday person overrides the scheduler.',
       'Empirically, the algorithm achieves high happiness throughput and low plate starvation.',
       'The only unresolved bug is that the last strawberry disappears before the camera is ready.'
@@ -744,7 +744,7 @@ function openFakeArticle(event, index) {
 
 function fakeArticleHTML(article) {
   return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -792,7 +792,7 @@ function renderTrueBlogs() {
   const label = document.querySelector('.blog-hero .label');
   if (label) label.innerHTML = `${BLOG_EXT_ICON} Picasso Lab Classified`;
   const title = document.querySelector('.blog-hero h1');
-  if (title) title.textContent = '真正的 Blogs';
+  if (title) title.textContent = 'The Real Blogs';
   const desc = document.querySelector('.blog-hero p');
   if (desc) desc.textContent = 'Peer-reviewed lab folklore, suspicious statistics, and reproducible nonsense from the hallway.';
   document.getElementById('blog-list').innerHTML = fakeBlogs.map(fakeBlogCard).join('');
