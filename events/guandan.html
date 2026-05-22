@@ -2068,8 +2068,8 @@
     }
 
     .relation-band {
-        --sleeve-w: 28px;
-        --sleeve-h: 13px;
+        --sleeve-w: 34px;
+        --sleeve-h: 15px;
         --band-fill-top: #ffe57b;
         --band-fill-mid: #ffcf37;
         --band-fill-bottom: #d89c14;
@@ -2083,9 +2083,10 @@
         place-items: center;
         transform: none;
         transform-origin: top right;
-        border-radius: 0 6px 0 4px;
-        clip-path: none;
+        border-radius: 0 6px 3px 0;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 26% 100%);
         background:
+            linear-gradient(115deg, rgba(0,0,0,0.2) 0 18%, transparent 19% 72%, rgba(255,255,255,0.3) 82% 100%),
             linear-gradient(90deg, rgba(255,255,255,0.24), transparent 44%, rgba(0,0,0,0.16)),
             linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.12) 42%, rgba(0,0,0,0.2) 100%),
             linear-gradient(180deg, var(--band-fill-top), var(--band-fill-mid) 54%, var(--band-fill-bottom));
@@ -2115,21 +2116,21 @@
     }
 
     .relation-band::before {
-        left: 0;
+        left: 25%;
         right: 0;
         bottom: -3px;
         height: 3px;
-        border-radius: 0 0 0 4px;
+        border-radius: 0 0 3px 0;
         background: linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0));
     }
 
     .relation-band::after {
-        top: 0;
+        left: -1px;
         bottom: 0;
-        left: -4px;
-        width: 4px;
-        border-radius: 4px 0 0 0;
-        background: linear-gradient(90deg, rgba(0,0,0,0.2), rgba(255,255,255,0.08));
+        width: 9px;
+        height: 100%;
+        clip-path: polygon(0 0, 100% 0, 42% 100%, 0 100%);
+        background: linear-gradient(115deg, rgba(0,0,0,0.28), rgba(255,255,255,0.1) 72%);
     }
 
     .relation-band.relation-opponent {
@@ -3254,8 +3255,8 @@
         }
 
         .relation-band {
-            --sleeve-w: 23px;
-            --sleeve-h: 11px;
+            --sleeve-w: 28px;
+            --sleeve-h: 12px;
             font-size: 6px;
         }
 
