@@ -48,6 +48,7 @@
     .brand h1 { margin: 0; font-size: clamp(18px, 3vw, 25px); letter-spacing: 0; }
     .brand p { margin: 3px 0 0; color: rgba(255,255,255,0.66); font-size: 12px; }
     .top-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .top-actions .btn { min-width: 0; }
     .btn {
         border: 0; border-radius: 12px; padding: 10px 14px; color: #13211c; background: #fff6d6;
         font-weight: 750; box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 22px rgba(0,0,0,0.18);
@@ -66,7 +67,7 @@
     .lobby-hero h2 { margin: 0 0 12px; font-size: clamp(34px, 7vw, 72px); line-height: 0.95; letter-spacing: 0; }
     .lobby-hero p { margin: 0; max-width: 560px; color: rgba(255,255,255,0.72); line-height: 1.65; }
     .rule-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
-    .rule-chips span { padding: 7px 10px; border-radius: 999px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.13); color: #ffe9a9; font-size: 12px; }
+    .rule-chips span { flex: 0 0 auto; max-width: 100%; padding: 7px 10px; border-radius: 999px; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.13); color: #ffe9a9; font-size: 12px; }
     .lobby-panel { padding: clamp(18px, 4vw, 34px); background: rgba(5,21,20,0.62); }
     .field-grid { display: grid; gap: 12px; margin-bottom: 18px; }
     label { display: grid; gap: 7px; color: rgba(255,255,255,0.72); font-size: 12px; font-weight: 700; letter-spacing: 0; }
@@ -457,8 +458,13 @@
         line-height: 1.08;
         letter-spacing: 0;
     }
+    .brand > div { min-width: 0; }
     .brand p {
         margin: 5px 0 0;
+        max-width: min(720px, 58vw);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         color: rgba(225,244,255,0.68);
         font-size: 12px;
         font-weight: 650;
@@ -584,12 +590,40 @@
         margin-left: calc(var(--i) * 26px - 90px);
         transform: rotate(calc(var(--i) * 4deg - 8deg));
         border-radius: 8px;
-        background: #fffdf7;
+        border: 1px solid rgba(17,24,32,0.18);
+        background:
+            radial-gradient(circle at 50% 52%, rgba(255,255,255,0.86), transparent 34%),
+            linear-gradient(145deg, #ffffff, #fff6e7);
         color: #111820;
         display: grid;
-        place-items: center;
+        grid-template-rows: auto 1fr auto;
+        padding: 6px;
         font-weight: 950;
         box-shadow: 0 12px 24px rgba(0,0,0,0.28);
+    }
+    .preview-card.red { color: #bd1f32; }
+    .preview-card span {
+        display: grid;
+        width: 17px;
+        justify-items: center;
+        line-height: 0.9;
+        font-size: 13px;
+    }
+    .preview-card small {
+        font-size: 10px;
+        line-height: 0.9;
+    }
+    .preview-card span:last-child {
+        justify-self: end;
+        align-self: end;
+        transform: rotate(180deg);
+    }
+    .preview-card em {
+        align-self: center;
+        justify-self: center;
+        font-style: normal;
+        font-size: 24px;
+        line-height: 1;
     }
     .preview-seat {
         position: absolute;
@@ -957,61 +991,73 @@
     .hand-zone {
         padding: 14px 18px calc(18px + env(safe-area-inset-bottom));
         background:
-            linear-gradient(to top, rgba(3,12,15,0.98), rgba(3,12,15,0.86) 70%, rgba(3,12,15,0));
+            linear-gradient(to top, rgba(3,12,15,0.99), rgba(3,12,15,0.9) 68%, rgba(3,12,15,0));
     }
     .hand-header {
         display: grid;
-        grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr);
+        grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr);
         gap: 12px;
         align-items: center;
-        max-width: 1180px;
+        max-width: 1230px;
         margin: 0 auto 10px;
     }
     .hand-summary {
-        color: rgba(232,249,255,0.72);
+        min-width: 0;
+        color: rgba(232,249,255,0.74);
         font-size: 12px;
         font-weight: 760;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .hand-summary strong { color: #fff; }
     .selection-meter {
         display: none;
         justify-self: end;
-        color: rgba(232,249,255,0.72);
+        min-width: 0;
+        color: rgba(232,249,255,0.74);
         font-size: 12px;
         font-weight: 760;
+        white-space: nowrap;
     }
     .combo-advisor {
-        max-width: 1180px;
-        min-height: 36px;
+        max-width: 1230px;
+        min-height: 38px;
         margin: -2px auto 10px;
         padding: 8px 12px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        border-radius: 12px;
+        border-radius: 10px;
         border: 1px solid rgba(255,255,255,0.11);
-        background: rgba(3,14,18,0.5);
-        color: rgba(232,249,255,0.68);
+        background: rgba(3,14,18,0.58);
+        color: rgba(232,249,255,0.72);
         font-size: 12px;
+        line-height: 1.35;
         font-weight: 760;
     }
     .combo-advisor.ready {
-        border-color: rgba(255,205,0,0.34);
+        border-color: rgba(255,205,0,0.36);
         background: rgba(255,205,0,0.1);
         color: #fff3bd;
     }
     .combo-advisor.invalid {
-        border-color: rgba(193,55,67,0.3);
-        background: rgba(193,55,67,0.11);
+        border-color: rgba(193,55,67,0.32);
+        background: rgba(193,55,67,0.12);
         color: #ffdfe3;
     }
+    .combo-advisor span,
     .combo-advisor em {
-        max-width: 48%;
+        min-width: 0;
         overflow: hidden;
-        white-space: nowrap;
         text-overflow: ellipsis;
-        color: rgba(255,255,255,0.5);
+    }
+    .combo-advisor span { white-space: nowrap; }
+    .combo-advisor em {
+        max-width: 45%;
+        white-space: nowrap;
+        color: rgba(255,255,255,0.54);
         font-style: normal;
     }
     .hand-tools {
@@ -1019,85 +1065,274 @@
         gap: 9px;
     }
     .hand {
-        max-width: min(1240px, calc(100vw - 28px));
-        min-height: 128px;
+        max-width: min(1260px, calc(100vw - 28px));
+        min-height: 138px;
         margin: 0 auto;
-        padding: 4px 18px 0;
+        padding: 6px 20px 0;
+        scrollbar-color: rgba(255,255,255,0.28) transparent;
     }
     .card {
-        width: 64px;
-        height: 91px;
-        margin-left: -24px;
-        border-radius: 8px;
-        border: 1px solid rgba(22,24,28,0.18);
+        --card-w: 68px;
+        --card-h: 98px;
+        --card-overlap: -25px;
+        width: var(--card-w);
+        height: var(--card-h);
+        margin-left: var(--card-overlap);
+        border-radius: 7px;
+        border: 1px solid rgba(22,24,28,0.2);
         background:
-            radial-gradient(circle at 52% 48%, rgba(255,255,255,0.92), rgba(255,255,255,0) 32%),
-            linear-gradient(145deg, #ffffff 0%, #fff8ea 100%);
-        color: var(--ink);
-        padding: 7px;
+            linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,249,236,0.98)),
+            #fffdf7;
+        color: #101820;
+        padding: 6px;
+        display: grid;
+        grid-template-rows: 20px 1fr 20px;
         box-shadow: 0 14px 30px rgba(0,0,0,0.34), inset 0 1px 0 #fff;
+        overflow: hidden;
+        isolation: isolate;
+        touch-action: manipulation;
     }
     .card:first-child { margin-left: 0; }
+    .card::after {
+        content: "";
+        position: absolute;
+        inset: 4px;
+        border-radius: 5px;
+        border: 1px solid rgba(12,18,24,0.08);
+        pointer-events: none;
+        z-index: 4;
+    }
     .card:hover {
         transform: translateY(-10px);
         box-shadow: 0 18px 35px rgba(0,0,0,0.42), 0 0 0 2px rgba(69,217,255,0.2);
     }
     .card.selected {
-        transform: translateY(-28px);
-        border-color: rgba(255,205,0,0.95);
-        box-shadow: 0 0 0 3px rgba(255,205,0,0.22), 0 24px 42px rgba(0,0,0,0.48);
+        transform: translateY(-30px);
+        border-color: rgba(255,205,0,0.96);
+        box-shadow: 0 0 0 3px rgba(255,205,0,0.24), 0 24px 42px rgba(0,0,0,0.48);
     }
-    .card.red { color: #bf2636; }
+    .card.red { color: #bd1f32; }
+    .card.black { color: #101820; }
     .card.wild {
         background:
-            linear-gradient(145deg, #ffffff 0%, #fff1c2 46%, #ffe0e6 100%);
-        box-shadow: 0 14px 30px rgba(0,0,0,0.34), 0 0 0 2px rgba(255,205,0,0.32);
+            radial-gradient(circle at 50% 55%, rgba(255,205,0,0.2), transparent 38%),
+            linear-gradient(145deg, #ffffff 0%, #fff2c5 47%, #ffe2e8 100%);
+        box-shadow: 0 14px 30px rgba(0,0,0,0.34), 0 0 0 2px rgba(255,205,0,0.3);
     }
     .card .corner {
+        position: relative;
+        z-index: 3;
         display: grid;
         justify-items: start;
-        gap: 1px;
-        font-size: 15px;
+        align-content: start;
+        width: 20px;
+        min-width: 0;
+        line-height: 0.9;
+        font-weight: 950;
+        text-align: center;
+    }
+    .card .corner span {
+        width: 20px;
+        font-size: 14px;
+        line-height: 0.9;
+        letter-spacing: 0;
+        white-space: nowrap;
     }
     .card .corner em {
+        width: 20px;
         font-style: normal;
-        font-size: 12px;
+        font-size: 13px;
+        line-height: 0.9;
+    }
+    .card .bottom {
+        justify-items: end;
+        align-content: end;
+        justify-self: end;
+        transform: rotate(180deg);
+    }
+    .pip-grid,
+    .face-center,
+    .joker-center {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+    }
+    .pip-mark {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        transform: translate(-50%, -50%);
+        font-size: 17px;
+        line-height: 1;
+        font-weight: 900;
+    }
+    .pip-mark.invert { transform: translate(-50%, -50%) rotate(180deg); }
+    .pip-tl { left: 29%; top: 19%; }
+    .pip-tc { left: 50%; top: 18%; }
+    .pip-tr { left: 71%; top: 19%; }
+    .pip-uml { left: 29%; top: 34%; }
+    .pip-umr { left: 71%; top: 34%; }
+    .pip-c { left: 50%; top: 50%; }
+    .pip-lml { left: 29%; top: 50%; }
+    .pip-lmr { left: 71%; top: 50%; }
+    .pip-lowerml { left: 29%; top: 66%; }
+    .pip-lowermr { left: 71%; top: 66%; }
+    .pip-bl { left: 29%; top: 81%; }
+    .pip-bc { left: 50%; top: 82%; }
+    .pip-br { left: 71%; top: 81%; }
+    .face-center {
+        display: grid;
+        place-items: center;
+        padding: 3px 7px 5px;
+    }
+    .face-badge {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        place-items: center;
+        border-radius: 7px;
+        border: 1px solid currentColor;
+        background:
+            linear-gradient(135deg, currentColor 0 1px, transparent 1px),
+            linear-gradient(225deg, currentColor 0 1px, transparent 1px),
+            rgba(255,255,255,0.46);
+        box-shadow: inset 0 0 0 3px rgba(255,255,255,0.56);
+        overflow: hidden;
+    }
+    .face-badge strong {
+        font-size: 24px;
+        line-height: 0.95;
+        font-family: Georgia, "Times New Roman", serif;
+    }
+    .face-badge span {
+        font-size: 19px;
         line-height: 1;
     }
-    .card .pip {
-        font-size: 28px;
-        opacity: 0.96;
+    .face-badge i {
+        width: 24px;
+        height: 12px;
+        border-radius: 50%;
+        border-top: 2px solid currentColor;
+        opacity: 0.55;
     }
-    .card .bottom { justify-items: end; }
+    .joker-card {
+        background:
+            linear-gradient(135deg, rgba(255,205,0,0.18), transparent 34%),
+            linear-gradient(145deg, #ffffff, #fff8e8 72%, #f7eee2);
+    }
+    .joker-card .corner span { font-size: 12px; }
+    .joker-card .corner em { font-size: 9px; font-weight: 900; }
+    .joker-center {
+        display: grid;
+        place-items: center;
+        padding: 4px 6px;
+        text-align: center;
+    }
+    .joker-figure {
+        width: 100%;
+        min-height: 0;
+        display: grid;
+        place-items: center;
+        gap: 2px;
+        border-radius: 8px;
+        border: 1px solid currentColor;
+        background:
+            radial-gradient(circle at 50% 22%, currentColor 0 2px, transparent 3px),
+            linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.42));
+        padding: 5px 2px;
+    }
+    .joker-figure strong {
+        font-size: 18px;
+        line-height: 1;
+    }
+    .joker-figure span {
+        max-width: 100%;
+        font-size: 10px;
+        line-height: 1;
+        font-weight: 950;
+        letter-spacing: 0;
+        white-space: nowrap;
+    }
     .wild-chip {
         position: absolute;
         left: 50%;
         bottom: 5px;
+        z-index: 5;
         transform: translateX(-50%);
-        padding: 1px 5px;
+        max-width: calc(100% - 18px);
+        padding: 1px 6px;
         border-radius: 999px;
-        background: rgba(255,205,0,0.9);
+        background: rgba(255,205,0,0.94);
         color: #3d2500;
-        font-size: 9px;
+        font-size: 8px;
+        line-height: 1.25;
         font-weight: 950;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
     .card.small {
-        width: 48px;
-        height: 68px;
-        margin-left: -14px;
+        --card-w: 50px;
+        --card-h: 72px;
+        --card-overlap: -15px;
         padding: 5px;
+        grid-template-rows: 15px 1fr 15px;
+        border-radius: 6px;
     }
-    .card.small .corner { font-size: 12px; }
-    .card.small .corner em { font-size: 9px; }
-    .card.small .pip { font-size: 20px; }
+    .card.small .corner { width: 16px; }
+    .card.small .corner span { width: 16px; font-size: 11px; }
+    .card.small .corner em { width: 16px; font-size: 9px; }
+    .card.small .pip-mark {
+        width: 13px;
+        height: 13px;
+        font-size: 12px;
+    }
+    .card.small .face-center { padding: 2px 4px 4px; }
+    .card.small .face-badge strong { font-size: 16px; }
+    .card.small .face-badge span { font-size: 13px; }
+    .card.small .face-badge i { width: 18px; height: 8px; }
+    .card.small .joker-figure { padding: 3px 1px; }
+    .card.small .joker-figure strong { font-size: 13px; }
+    .card.small .joker-figure span { font-size: 7px; }
+    .card.small .wild-chip { display: none; }
     .card.back {
+        display: grid;
+        place-items: center;
         background:
             linear-gradient(135deg, transparent 44%, rgba(255,255,255,0.22) 45% 55%, transparent 56%),
             radial-gradient(circle at 50% 50%, rgba(255,205,0,0.18), transparent 32%),
             linear-gradient(145deg, #00629B, #071848);
         border-color: rgba(255,255,255,0.42);
+        color: #fff;
     }
-    .card.back::before { content: "P"; }
+    .card.back::before {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 5px;
+        border: 1px solid rgba(255,255,255,0.34);
+        background:
+            radial-gradient(circle at 50% 50%, rgba(255,205,0,0.84) 0 3px, transparent 4px),
+            repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 2px, transparent 2px 6px);
+    }
+    .card.back::after {
+        content: "P";
+        position: relative;
+        z-index: 2;
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.9);
+        color: #061013;
+        font-weight: 950;
+    }
 
     .phase-panel {
         border-radius: 16px;
@@ -1126,22 +1361,61 @@
         .selection-meter { justify-self: center; }
         .hand-summary { justify-self: center; }
         .combo-advisor { justify-content: center; text-align: center; }
+        .combo-advisor span { white-space: normal; }
         .combo-advisor em { display: none; }
-        .card { width: 52px; height: 75px; margin-left: -20px; padding: 6px; }
-        .card .corner { font-size: 12px; }
-        .card .pip { font-size: 22px; }
+        .card {
+            --card-w: 54px;
+            --card-h: 78px;
+            --card-overlap: -20px;
+            padding: 5px;
+            grid-template-rows: 16px 1fr 16px;
+        }
+        .card .corner { width: 17px; }
+        .card .corner span { width: 17px; font-size: 11px; }
+        .card .corner em { width: 17px; font-size: 10px; }
+        .card .pip-mark { width: 14px; height: 14px; font-size: 13px; }
+        .face-badge strong { font-size: 17px; }
+        .face-badge span { font-size: 14px; }
+        .joker-figure strong { font-size: 14px; }
+        .joker-figure span { font-size: 8px; }
     }
 
     @media (max-width: 600px) {
         .app-shell { padding: 8px; }
         .topbar { min-height: 0; }
+        .topbar .top-actions {
+            width: 100%;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            justify-content: stretch;
+            gap: 8px;
+        }
+        .topbar .top-actions .btn {
+            width: 100%;
+            padding: 9px 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .topbar #back-events-btn { grid-column: 1 / -1; }
         .brand-mark { width: 40px; height: 40px; }
+        .brand p { max-width: 100%; white-space: normal; }
         .lobby { min-height: auto; border-radius: 14px; }
         .lobby-hero, .lobby-panel { padding: 22px 18px; }
         .lobby-hero h2 { font-size: 38px; }
+        .rule-chips { overflow: visible; }
+        .rule-chips span { font-size: 11px; padding: 6px 9px; }
         .quick-rules { grid-template-columns: 1fr; }
         .lobby-preview { border-width: 8px; border-radius: 22px; }
-        .preview-card { width: 40px; height: 58px; margin-left: calc(var(--i) * 20px - 70px); }
+        .preview-card {
+            width: 40px;
+            height: 58px;
+            margin-left: calc(var(--i) * 20px - 70px);
+            padding: 5px;
+        }
+        .preview-card span { width: 13px; font-size: 10px; }
+        .preview-card small { font-size: 8px; }
+        .preview-card em { font-size: 18px; }
         .preview-seat { width: 38px; height: 38px; }
         .score-strip {
             top: 8px;
@@ -1180,14 +1454,14 @@
         .last-play { min-height: 48px; }
         .round-message { padding: 9px 10px; font-size: 12px; }
         .hand-zone {
-            height: 158px;
+            height: 174px;
             padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
         }
         .hand-header {
             position: absolute;
             left: 8px;
             right: 8px;
-            bottom: calc(86px + env(safe-area-inset-bottom));
+            bottom: calc(98px + env(safe-area-inset-bottom));
             margin: 0;
         }
         .hand-summary { display: none; }
@@ -1201,13 +1475,29 @@
             bottom: calc(4px + env(safe-area-inset-bottom));
             justify-content: flex-start;
             overflow-x: auto;
-            min-height: 76px;
-            padding: 8px 22px 0;
+            min-height: 88px;
+            padding: 10px 22px 0;
         }
-        .card { width: 43px; height: 64px; margin-left: -17px; border-radius: 7px; }
-        .card .corner { font-size: 10px; }
-        .card .corner em { font-size: 8px; }
-        .card .pip { font-size: 17px; }
+        .card {
+            --card-w: 46px;
+            --card-h: 68px;
+            --card-overlap: -17px;
+            border-radius: 6px;
+            padding: 4px;
+            grid-template-rows: 14px 1fr 14px;
+        }
+        .card .corner { width: 15px; }
+        .card .corner span { width: 15px; font-size: 10px; }
+        .card .corner em { width: 15px; font-size: 8px; }
+        .card .pip-mark { width: 11px; height: 11px; font-size: 10px; }
+        .face-center { padding: 2px 3px 3px; }
+        .face-badge { border-radius: 5px; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.56); }
+        .face-badge strong { font-size: 14px; }
+        .face-badge span { font-size: 11px; }
+        .face-badge i { width: 16px; height: 7px; }
+        .joker-center { padding: 2px 3px; }
+        .joker-figure strong { font-size: 12px; }
+        .joker-figure span { font-size: 7px; }
         .wild-chip { display: none; }
     }
 </style>
@@ -1572,21 +1862,56 @@ function finishedList(g = game) {
     return Array.isArray(g?.finished) ? g.finished : [];
 }
 
+const pipLayouts = {
+    1: ["pip-c"],
+    2: ["pip-tc", "pip-bc invert"],
+    3: ["pip-tc", "pip-c", "pip-bc invert"],
+    4: ["pip-tl", "pip-tr", "pip-bl invert", "pip-br invert"],
+    5: ["pip-tl", "pip-tr", "pip-c", "pip-bl invert", "pip-br invert"],
+    6: ["pip-tl", "pip-tr", "pip-lml", "pip-lmr", "pip-bl invert", "pip-br invert"],
+    7: ["pip-tl", "pip-tr", "pip-uml", "pip-umr", "pip-c", "pip-bl invert", "pip-br invert"],
+    8: ["pip-tl", "pip-tr", "pip-uml", "pip-umr", "pip-lowerml invert", "pip-lowermr invert", "pip-bl invert", "pip-br invert"],
+    9: ["pip-tl", "pip-tr", "pip-uml", "pip-umr", "pip-c", "pip-lowerml invert", "pip-lowermr invert", "pip-bl invert", "pip-br invert"],
+    10: ["pip-tl", "pip-tr", "pip-uml", "pip-umr", "pip-lml", "pip-lmr", "pip-lowerml invert", "pip-lowermr invert", "pip-bl invert", "pip-br invert"]
+};
+
+function pipCountForRank(rank) {
+    if (rank === "A") return 1;
+    const n = Number(rank);
+    return Number.isInteger(n) && n >= 2 && n <= 10 ? n : 0;
+}
+
+function cardCenterHTML(card, symbol, label) {
+    if (card.joker) {
+        const jokerTone = card.joker === "RJ" ? L("RED", "大王") : L("BLACK", "小王");
+        return `<div class="joker-center"><div class="joker-figure"><strong>${symbol}</strong><span>JOKER</span><span>${jokerTone}</span></div></div>`;
+    }
+    if (["J", "Q", "K"].includes(card.rank)) {
+        return `<div class="face-center"><div class="face-badge"><i></i><strong>${label}</strong><span>${symbol}</span><i></i></div></div>`;
+    }
+    const count = pipCountForRank(card.rank);
+    const marks = (pipLayouts[count] || ["pip-c"]).map(cls => `<span class="pip-mark ${cls}">${symbol}</span>`).join("");
+    return `<div class="pip-grid pip-count-${count}">${marks}</div>`;
+}
+
 function cardHTML(card, small = false, selectable = false) {
     if (!card) return "";
-    if (card.back) return `<div class="card back ${small ? "small" : ""}"></div>`;
+    if (card.back) return `<div class="card back ${small ? "small" : ""}" aria-hidden="true"></div>`;
     const red = cardColor(card);
     const wild = game && isWild(card, game.currentLevelRank) ? "wild" : "";
-    const sel = selected.has(card.id) ? "selected" : "";
+    const sel = selectable && selected.has(card.id) ? "selected" : "";
+    const color = red ? "red" : "black";
+    const jokerClass = card.joker ? `joker-card ${card.joker === "RJ" ? "red-joker" : "black-joker"}` : "";
     const symbol = card.joker ? (card.joker === "RJ" ? "★" : "☆") : suitGlyph[card.suit];
-    const label = card.joker ? (card.joker === "RJ" ? "RJ" : "BJ") : card.rank;
+    const label = card.joker ? "JK" : rankLabel(card.rank);
+    const subLabel = card.joker ? (card.joker === "RJ" ? "RED" : "BLK") : symbol;
     const title = isWild(card, game?.currentLevelRank) ? L("Wild Card (逢人配)", "逢人配") : cardText(card);
-    const data = selectable ? `data-card-id="${card.id}"` : "";
-    return `<div class="card ${small ? "small" : ""} ${red} ${wild} ${sel}" ${data} title="${title}">
-        <div class="corner"><span>${label}</span><em>${symbol}</em></div>
-        <div class="pip">${symbol}</div>
-        <div class="corner bottom"><span>${label}</span><em>${symbol}</em></div>
-        ${wild ? `<div class="wild-chip">WILD</div>` : ""}
+    const data = selectable ? `data-card-id="${encodeHTML(card.id)}"` : "";
+    return `<div class="card ${small ? "small" : ""} ${color} ${jokerClass} ${wild} ${sel}" ${data} title="${encodeHTML(title)}" aria-label="${encodeHTML(title)}">
+        <div class="corner"><span>${label}</span><em>${subLabel}</em></div>
+        ${cardCenterHTML(card, symbol, label)}
+        <div class="corner bottom"><span>${label}</span><em>${subLabel}</em></div>
+        ${wild ? `<div class="wild-chip">${L("WILD", "逢人配")}</div>` : ""}
     </div>`;
 }
 
@@ -2336,6 +2661,18 @@ function render() {
     else renderTable();
 }
 
+function previewCardsHTML() {
+    const preview = [
+        { r: "A", s: "♠" },
+        { r: "K", s: "♥", red: true },
+        { r: "Q", s: "♦", red: true },
+        { r: "J", s: "♣" },
+        { r: "10", s: "♠" },
+        { r: "2", s: "♥", red: true }
+    ];
+    return preview.map((c, i) => `<span class="preview-card ${c.red ? "red" : ""}" style="--i:${i}"><span>${c.r}<small>${c.s}</small></span><em>${c.s}</em><span>${c.r}<small>${c.s}</small></span></span>`).join("");
+}
+
 function renderLobby() {
     root.innerHTML = `
     <section class="lobby">
@@ -2345,7 +2682,7 @@ function renderLobby() {
             <p>${L("A casual four-player, two-deck Guandan table with private room codes, AI fill, Wild Card, Straight Flush, Bombs, Joker Bomb, Tribute, blocked Tribute, Catch-wind, and level progression.", "两副牌四人结对，支持房间码、人机补位、逢人配、同花顺、炸弹、天王炸、进贡还贡、抗贡、接风和升级。")}</p>
             <div class="lobby-preview" aria-hidden="true">
                 <i class="preview-seat s0"></i><i class="preview-seat s1"></i><i class="preview-seat s2"></i><i class="preview-seat s3"></i>
-                ${["2", "A", "K", "Q", "J", "10"].map((v, i) => `<span class="preview-card" style="--i:${i}">${v}</span>`).join("")}
+                ${previewCardsHTML()}
             </div>
             <div class="rule-chips">
                 <span>${L("4 players, 2 teams", "四人两队")}</span><span>${L("Heart level cards are Wild", "红桃级牌逢人配")}</span><span>${L("Tribute & Return", "贡还贡")}</span><span>${L("Double-last advances 3", "双下升三级")}</span><span>${L("AI fill", "AI 补位")}</span>
@@ -2390,7 +2727,7 @@ function renderLobbyRoom() {
             <p>${encodeHTML(displayMessage(game.message || "等待玩家入座。"))} ${L("Partners sit opposite: seats 1/3 versus 2/4. The host can fill empty seats with AI.", "对家组队：1/3 号位一队，2/4 号位一队。人不够时房主可以补 AI。")}</p>
             <div class="lobby-preview" aria-hidden="true">
                 <i class="preview-seat s0"></i><i class="preview-seat s1"></i><i class="preview-seat s2"></i><i class="preview-seat s3"></i>
-                ${["2", "A", "K", "Q", "J", "10"].map((v, i) => `<span class="preview-card" style="--i:${i}">${v}</span>`).join("")}
+                ${previewCardsHTML()}
             </div>
             <div class="rule-chips">
                 <span>${teamName(0)}: ${L("Seats 1 + 3", "1 + 3 号位")}</span><span>${teamName(1)}: ${L("Seats 2 + 4", "2 + 4 号位")}</span><span>${L("Both teams play level", "当前双方都打")} ${game.currentLevelRank}</span>
