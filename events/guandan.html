@@ -2035,6 +2035,11 @@
         animation-delay: calc(var(--i, 0) * 34ms);
     }
 
+    .seat-play.fresh .relation-band {
+        animation: relationSleeveIn 360ms cubic-bezier(0.16, 0.86, 0.24, 1) both;
+        animation-delay: 160ms;
+    }
+
     .pass-mark {
         min-width: 74px;
         padding: 9px 16px;
@@ -2063,46 +2068,76 @@
     }
 
     .relation-band {
-        --band-cut: 20px;
-        --band-fill: #ffca28;
+        --sleeve-run: 21px;
+        --sleeve-height: 10px;
+        --band-fill-top: #ffe57b;
+        --band-fill-mid: #ffcf37;
+        --band-fill-bottom: #d89c14;
         position: absolute;
-        left: calc(100% - var(--band-cut) / 2);
-        top: calc(var(--band-cut) / 2);
+        left: calc(100% - var(--sleeve-run) / 2);
+        top: calc(var(--sleeve-run) / 2);
         z-index: 20;
-        width: calc(var(--band-cut) * 1.4142);
-        height: 9px;
+        width: calc(var(--sleeve-run) * 1.48);
+        height: var(--sleeve-height);
         display: grid;
         place-items: center;
         transform: translate(-50%, -50%) rotate(45deg);
         transform-origin: center;
-        clip-path: polygon(11% 0, 100% 0, 89% 100%, 0 100%);
+        clip-path: polygon(7% 0, 100% 0, 93% 100%, 0 100%);
         background:
-            linear-gradient(90deg, rgba(0,0,0,0.25) 0 13%, transparent 15% 78%, rgba(255,255,255,0.35) 84% 100%),
-            linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.08) 46%, rgba(0,0,0,0.18)),
-            var(--band-fill);
+            linear-gradient(90deg, rgba(0,0,0,0.18) 0 10%, transparent 17% 76%, rgba(255,255,255,0.34) 86% 100%),
+            linear-gradient(180deg, rgba(255,255,255,0.62), rgba(255,255,255,0.12) 39%, rgba(0,0,0,0.2) 100%),
+            linear-gradient(180deg, var(--band-fill-top), var(--band-fill-mid) 54%, var(--band-fill-bottom));
         color: #061115;
-        font-size: 5px;
+        font-size: 7px;
         line-height: 1;
         font-weight: 950;
+        letter-spacing: 0;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.18);
         text-align: center;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         pointer-events: none;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.34));
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.46),
-            inset 0 -1px 0 rgba(0,0,0,0.18),
-            0 2px 0 rgba(0,0,0,0.18),
-            0 5px 12px rgba(0,0,0,0.3);
+            inset 0 1px 0 rgba(255,255,255,0.68),
+            inset 0 -1px 0 rgba(0,0,0,0.22);
+    }
+
+    .relation-band::before,
+    .relation-band::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        pointer-events: none;
+    }
+
+    .relation-band::before {
+        left: -1px;
+        clip-path: polygon(0 0, 100% 0, 72% 100%, 0 100%);
+        background: linear-gradient(90deg, rgba(0,0,0,0.26), rgba(255,255,255,0.06));
+    }
+
+    .relation-band::after {
+        right: -1px;
+        clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%);
+        background: linear-gradient(90deg, rgba(255,255,255,0.16), rgba(0,0,0,0.24));
     }
 
     .relation-band.relation-opponent {
-        --band-fill: #f05a5f;
+        --band-fill-top: #ff8a87;
+        --band-fill-mid: #f45d62;
+        --band-fill-bottom: #b93b40;
         color: #fff;
     }
 
     .relation-band.relation-self {
-        --band-fill: #77e8ff;
+        --band-fill-top: #c4f8ff;
+        --band-fill-mid: #77e8ff;
+        --band-fill-bottom: #3aa7bf;
     }
 
     @keyframes playPanelIn {
@@ -2113,6 +2148,24 @@
     @keyframes playedCardIn {
         from { opacity: 0; transform: translate3d(0, -22px, 0) scale(0.92) rotate(-2deg); }
         to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    @keyframes relationSleeveIn {
+        0% {
+            opacity: 0;
+            transform: translate(calc(-50% + 5px), calc(-50% - 5px)) rotate(45deg) scale(0.82);
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.22)) blur(0.6px);
+        }
+        72% {
+            opacity: 1;
+            transform: translate(-50%, -50%) rotate(45deg) scale(1.04);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.36));
+        }
+        100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) rotate(45deg) scale(1);
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.34));
+        }
     }
 
     @keyframes passMarkIn {
@@ -3196,9 +3249,9 @@
         }
 
         .relation-band {
-            --band-cut: 15px;
-            height: 8px;
-            font-size: 5px;
+            --sleeve-run: 17px;
+            --sleeve-height: 7px;
+            font-size: 4.8px;
         }
 
         .play-caption {
