@@ -1500,6 +1500,1324 @@
         .joker-figure span { font-size: 7px; }
         .wild-chip { display: none; }
     }
+
+    /* Definitive game-table overhaul: full-width board, fixed play lanes, SVG card faces. */
+    :root {
+        --arena-bg: #061115;
+        --felt-core: #11735f;
+        --felt-edge: #042b2e;
+        --hud-bg: rgba(3, 15, 18, 0.86);
+        --hud-line: rgba(205, 235, 239, 0.18);
+        --hud-text: #edf8fb;
+        --accent-gold: #ffca28;
+        --accent-cyan: #77e8ff;
+        --card-red: #c92035;
+        --card-black: #111820;
+        --wood-rim: #3b281d;
+    }
+
+    body {
+        background:
+            linear-gradient(90deg, rgba(255,255,255,0.023) 1px, transparent 1px),
+            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+            radial-gradient(circle at 15% 12%, rgba(119,232,255,0.18), transparent 28%),
+            radial-gradient(circle at 88% 8%, rgba(255,202,40,0.13), transparent 24%),
+            linear-gradient(135deg, #061115 0%, #0a2b32 42%, #071812 100%);
+        background-size: 40px 40px, 40px 40px, auto, auto, auto;
+    }
+
+    .app-shell {
+        padding: 12px clamp(12px, 2vw, 32px) 18px;
+    }
+
+    .topbar,
+    .lobby,
+    .table-wrap {
+        width: min(1968px, 100%);
+        max-width: none;
+    }
+
+    .topbar {
+        min-height: 74px;
+        margin-bottom: 12px;
+        border-radius: 14px;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.035)),
+            rgba(5, 18, 23, 0.88);
+    }
+
+    .brand h1 {
+        font-size: 24px;
+        line-height: 1.08;
+    }
+
+    .brand p {
+        max-width: 760px;
+        font-size: 12px;
+    }
+
+    .ui-icon-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-width: 0;
+        line-height: 1;
+    }
+
+    .ui-icon-label span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ui-icon {
+        width: 17px;
+        height: 17px;
+        flex: 0 0 auto;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .btn .ui-icon {
+        width: 18px;
+        height: 18px;
+        stroke-width: 2.25;
+    }
+
+    .table-wrap {
+        height: calc(100svh - 104px);
+        min-height: 760px;
+        margin-inline: auto;
+        border-radius: 16px;
+        background: #031114;
+        overflow: hidden;
+    }
+
+    .table {
+        height: 100%;
+        min-height: inherit;
+        padding: 0;
+        overflow: hidden;
+        background:
+            radial-gradient(ellipse at center, rgba(25, 154, 119, 0.94) 0%, rgba(14, 108, 93, 0.96) 44%, rgba(4, 44, 47, 0.98) 73%),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(rgba(255,255,255,0.026) 1px, transparent 1px);
+        background-size: auto, 46px 46px, 46px 46px;
+    }
+
+    .table::before {
+        inset: 92px 132px 190px;
+        border-radius: 50%;
+        border: 24px solid rgba(59, 40, 29, 0.72);
+        background: transparent;
+        box-shadow:
+            inset 0 0 0 1px rgba(255,255,255,0.14),
+            inset 0 0 120px rgba(0,0,0,0.28),
+            0 22px 80px rgba(0,0,0,0.36),
+            0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    .table::after {
+        inset: 124px 174px 224px;
+        border-color: rgba(214, 246, 241, 0.18);
+    }
+
+    .table-grid {
+        opacity: 0.11;
+        background:
+            radial-gradient(circle at center, transparent 0 31%, rgba(255,255,255,0.14) 31.2% 31.5%, transparent 31.7%),
+            linear-gradient(90deg, rgba(255,255,255,0.09) 1px, transparent 1px),
+            linear-gradient(rgba(255,255,255,0.09) 1px, transparent 1px);
+        background-size: auto, 58px 58px, 58px 58px;
+    }
+
+    .table-grid::before,
+    .table-grid::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+    }
+
+    .table-grid::before {
+        left: 50%;
+        top: 52%;
+        width: min(900px, 58vw);
+        aspect-ratio: 1.72;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background:
+            radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2), transparent 0 24px),
+            radial-gradient(ellipse at center, rgba(255,255,255,0.12), transparent 55%),
+            radial-gradient(ellipse at center, transparent 58%, rgba(255,202,40,0.18) 58.5% 59.5%, transparent 60.5%);
+        opacity: 0.72;
+    }
+
+    .table-grid::after {
+        left: 50%;
+        top: 86px;
+        width: 220px;
+        height: 34px;
+        transform: translateX(-50%);
+        border-radius: 999px;
+        background:
+            radial-gradient(circle at 18% 50%, rgba(255,202,40,0.95) 0 7px, rgba(111,68,18,0.95) 8px 12px, transparent 13px),
+            radial-gradient(circle at 31% 50%, rgba(255,202,40,0.95) 0 7px, rgba(111,68,18,0.95) 8px 12px, transparent 13px),
+            radial-gradient(circle at 44% 50%, rgba(119,232,255,0.95) 0 7px, rgba(17,78,100,0.95) 8px 12px, transparent 13px),
+            radial-gradient(circle at 57% 50%, rgba(255,202,40,0.95) 0 7px, rgba(111,68,18,0.95) 8px 12px, transparent 13px),
+            radial-gradient(circle at 70% 50%, rgba(119,232,255,0.95) 0 7px, rgba(17,78,100,0.95) 8px 12px, transparent 13px),
+            radial-gradient(circle at 83% 50%, rgba(255,202,40,0.95) 0 7px, rgba(111,68,18,0.95) 8px 12px, transparent 13px);
+        opacity: 0.46;
+    }
+
+    .table-emblem {
+        top: 54%;
+        color: rgba(255,255,255,0.105);
+    }
+
+    .table-emblem span {
+        font-size: 22px;
+        letter-spacing: 0;
+    }
+
+    .table-emblem b {
+        font-size: 82px;
+        letter-spacing: 0;
+    }
+
+    .score-strip {
+        top: 18px;
+        width: auto;
+        max-width: calc(100% - 56px);
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .score-strip::-webkit-scrollbar {
+        display: none;
+    }
+
+    .score-pill {
+        flex: 0 0 auto;
+        min-width: 156px;
+        height: 44px;
+        padding: 8px 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 8px;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)),
+            var(--hud-bg);
+        border: 1px solid var(--hud-line);
+        color: rgba(237,248,251,0.82);
+        font-size: 12px;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .score-pill .ui-icon {
+        width: 16px;
+        height: 16px;
+        color: var(--accent-cyan);
+        filter: drop-shadow(0 0 8px rgba(119,232,255,0.28));
+    }
+
+    .score-pill span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .score-pill strong {
+        margin: 0;
+        min-width: 28px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: 8px;
+        background: var(--accent-gold);
+        color: #061115;
+        line-height: 26px;
+    }
+
+    .score-pill.wide {
+        min-width: 172px;
+    }
+
+    .score-pill.wide strong {
+        max-width: 112px;
+    }
+
+    .player {
+        width: 260px;
+        min-width: 0;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 8px;
+        background:
+            linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.035)),
+            rgba(3, 15, 18, 0.84);
+        border: 1px solid rgba(223, 246, 249, 0.18);
+        box-shadow: 0 18px 42px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .player::before {
+        content: "";
+        position: absolute;
+        inset: -10px;
+        z-index: -1;
+        border-radius: 14px;
+        background:
+            radial-gradient(circle at 50% 10%, rgba(119,232,255,0.24), transparent 48%),
+            radial-gradient(circle at 50% 100%, rgba(255,202,40,0.16), transparent 55%);
+        opacity: 0.66;
+        filter: blur(10px);
+    }
+
+    .player.turn {
+        border-color: rgba(255,202,40,0.84);
+        box-shadow: 0 0 0 3px rgba(255,202,40,0.16), 0 20px 46px rgba(0,0,0,0.38);
+    }
+
+    .player.p0 {
+        bottom: 246px;
+    }
+
+    .player.p1 {
+        left: 24px;
+        top: 50%;
+    }
+
+    .player.p2 {
+        top: 94px;
+    }
+
+    .player.p3 {
+        right: 24px;
+        top: 50%;
+    }
+
+    .player-main {
+        grid-template-columns: 44px minmax(0, 1fr);
+    }
+
+    .player-avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 14px;
+    }
+
+    .player-name {
+        min-width: 0;
+        font-size: 16px;
+        line-height: 1.08;
+    }
+
+    .player-badge {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        border-radius: 8px;
+    }
+
+    .player-small {
+        align-items: center;
+        min-width: 0;
+        line-height: 1.15;
+    }
+
+    .player-small .ui-icon,
+    .count-chip .ui-icon {
+        width: 13px;
+        height: 13px;
+        color: rgba(119,232,255,0.9);
+        stroke-width: 2.2;
+        vertical-align: -2px;
+    }
+
+    .player-small > span:first-child {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .count-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .back-stack {
+        min-height: 33px;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .mini-back {
+        width: 23px;
+        height: 32px;
+        border-radius: 6px;
+        background:
+            linear-gradient(135deg, transparent 42%, rgba(255,255,255,0.24) 43% 54%, transparent 55%),
+            radial-gradient(circle at 50% 50%, rgba(255,202,40,0.16), transparent 34%),
+            linear-gradient(145deg, #096a9f, #081944);
+    }
+
+    .center-zone {
+        inset: 250px 330px 300px;
+        z-index: 3;
+    }
+
+    .center-card {
+        width: min(690px, 100%);
+        min-height: 190px;
+        padding: 16px;
+        border-radius: 8px;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+            rgba(2, 30, 27, 0.58);
+        border: 1px solid rgba(226, 251, 247, 0.17);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 26px 70px rgba(0,0,0,0.24);
+    }
+
+    .center-meta {
+        min-width: 0;
+        font-size: 12px;
+    }
+
+    .center-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .center-meta .ui-icon,
+    .history-title .ui-icon {
+        width: 15px;
+        height: 15px;
+        color: var(--accent-cyan);
+        stroke-width: 2.25;
+    }
+
+    .center-meta strong {
+        max-width: 420px;
+    }
+
+    .last-play {
+        min-height: 84px;
+    }
+
+    .round-message {
+        padding: 11px 14px;
+        border-radius: 8px;
+        color: #fff3bd;
+        font-size: 14px;
+    }
+
+    .history {
+        right: 28px;
+        bottom: 304px;
+        width: 280px;
+        max-height: 210px;
+        border-radius: 8px;
+        z-index: 7;
+    }
+
+    .history-title span:first-child {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .hand-zone {
+        height: 280px;
+        padding: 14px 28px calc(16px + env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-rows: 44px 38px minmax(0, 1fr);
+        row-gap: 30px;
+        align-content: end;
+        background:
+            linear-gradient(to top, rgba(2,10,12,1) 0%, rgba(2,10,12,0.96) 64%, rgba(2,10,12,0.18) 100%);
+    }
+
+    .hand-header {
+        width: min(1500px, 100%);
+        max-width: none;
+        grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+        margin: 0 auto;
+        gap: 14px;
+    }
+
+    .hand-summary,
+    .selection-meter {
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .hand-tools {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .hand-tools .btn {
+        min-width: 72px;
+        min-height: 40px;
+        padding: 8px 13px;
+        border-radius: 8px;
+    }
+
+    .combo-advisor {
+        width: min(1500px, 100%);
+        max-width: none;
+        min-height: 34px;
+        margin: 0 auto;
+        border-radius: 8px;
+    }
+
+    .combo-advisor span {
+        min-width: 0;
+    }
+
+    .hand {
+        width: min(1500px, 100%);
+        max-width: none;
+        min-height: 108px;
+        padding: 4px 22px 8px;
+        margin: 0 auto;
+        align-items: center;
+        justify-content: center;
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
+    .card {
+        --card-w: 68px;
+        --card-h: 96px;
+        --card-overlap: -26px;
+        width: var(--card-w);
+        height: var(--card-h);
+        min-width: var(--card-w);
+        grid-template-rows: 23px minmax(0, 1fr) 23px;
+        padding: 6px;
+        border-radius: 8px;
+        border: 1px solid rgba(20,24,30,0.24);
+        box-shadow: 0 12px 26px rgba(0,0,0,0.34), inset 0 1px 0 #fff;
+        background:
+            radial-gradient(circle at 78% 18%, rgba(255,255,255,0.85), transparent 16%),
+            linear-gradient(145deg, #ffffff, #fff8ec);
+        transition:
+            transform 230ms cubic-bezier(0.2, 0.82, 0.22, 1),
+            box-shadow 230ms cubic-bezier(0.2, 0.82, 0.22, 1),
+            filter 230ms cubic-bezier(0.2, 0.82, 0.22, 1);
+        will-change: transform;
+        backface-visibility: hidden;
+        transform: translate3d(0, 0, 0);
+    }
+
+    .card.has-art {
+        padding: 0;
+        border-color: rgba(255,255,255,0.72);
+        background: transparent;
+        box-shadow: 0 13px 26px rgba(0,0,0,0.38);
+    }
+
+    .card.has-art::after {
+        inset: 0;
+        border-radius: inherit;
+        border: 1px solid rgba(20,24,30,0.22);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
+    }
+
+    .card-art {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        object-fit: fill;
+        background: #fff;
+        pointer-events: none;
+    }
+
+    .card.has-art .corner,
+    .card.has-art .pip-grid,
+    .card.has-art .face-center,
+    .card.has-art .joker-center {
+        visibility: hidden;
+    }
+
+    .card.has-art.art-failed {
+        padding: 6px;
+        background:
+            radial-gradient(circle at 78% 18%, rgba(255,255,255,0.85), transparent 16%),
+            linear-gradient(145deg, #ffffff, #fff8ec);
+    }
+
+    .card.has-art.art-failed .corner,
+    .card.has-art.art-failed .pip-grid,
+    .card.has-art.art-failed .face-center,
+    .card.has-art.art-failed .joker-center {
+        visibility: visible;
+    }
+
+    .card.has-art.wild {
+        box-shadow: 0 15px 32px rgba(0,0,0,0.38), 0 0 0 2px rgba(255,202,40,0.72), 0 0 18px rgba(255,202,40,0.28);
+    }
+
+    .card.selected {
+        transform: translate3d(0, -24px, 0) scale(1.015);
+        filter: saturate(1.06);
+    }
+
+    .card:not(.selected):active {
+        transform: translate3d(0, -6px, 0);
+    }
+
+    .card.red,
+    .red-joker {
+        color: var(--card-red);
+    }
+
+    .card.black,
+    .black-joker {
+        color: var(--card-black);
+    }
+
+    .card .corner {
+        width: 25px;
+        min-width: 25px;
+        gap: 1px;
+        align-content: start;
+        justify-items: center;
+        line-height: 1;
+    }
+
+    .card .corner .rank-label {
+        width: auto;
+        max-width: 25px;
+        font-size: 15px;
+        line-height: 1;
+        font-weight: 950;
+        text-align: center;
+    }
+
+    .card .corner em {
+        width: 16px;
+        height: 16px;
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        line-height: 1;
+    }
+
+    .card .joker-corner {
+        width: 31px;
+        min-width: 31px;
+    }
+
+    .card .joker-corner .rank-label {
+        max-width: 31px;
+        font-size: 7px;
+        letter-spacing: 0;
+    }
+
+    .card .joker-corner em {
+        width: 30px;
+        height: auto;
+        font-size: 10px;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .suit-icon {
+        width: 100%;
+        height: 100%;
+        display: inline-grid;
+        place-items: center;
+        color: currentColor;
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 950;
+        line-height: 1;
+        text-align: center;
+    }
+
+    .corner-suit {
+        width: 15px;
+        height: 15px;
+        font-size: 16px;
+    }
+
+    .pip-mark {
+        width: 17px;
+        height: 17px;
+        font-size: 18px;
+    }
+
+    .pip-mark .suit-icon {
+        width: 17px;
+        height: 17px;
+    }
+
+    .face-center {
+        padding: 3px 6px 5px;
+    }
+
+    .face-badge {
+        border-radius: 6px;
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.62);
+    }
+
+    .face-badge strong {
+        font-size: 24px;
+        line-height: 0.95;
+    }
+
+    .face-badge span {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+    }
+
+    .face-suit {
+        width: 21px;
+        height: 21px;
+        font-size: 23px;
+    }
+
+    .joker-card {
+        background:
+            radial-gradient(circle at 50% 48%, rgba(255,202,40,0.16), transparent 42%),
+            linear-gradient(145deg, #ffffff, #fff6e6 70%, #f3ecdd);
+    }
+
+    .joker-center {
+        padding: 0 4px 2px;
+    }
+
+    .joker-figure {
+        height: 100%;
+        gap: 1px;
+        padding: 2px 1px 4px;
+        border-radius: 7px;
+        background:
+            radial-gradient(circle at 50% 10%, rgba(255,202,40,0.22), transparent 30%),
+            linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.38));
+    }
+
+    .joker-word {
+        color: currentColor;
+        font-size: 7px;
+        font-weight: 950;
+        letter-spacing: 0;
+        line-height: 1;
+    }
+
+    .joker-svg {
+        width: 36px;
+        height: 42px;
+        overflow: visible;
+    }
+
+    .joker-svg * {
+        vector-effect: non-scaling-stroke;
+    }
+
+    .joker-cape,
+    .joker-hat,
+    .joker-dot,
+    .joker-star {
+        fill: currentColor;
+    }
+
+    .joker-face {
+        fill: #fff8e8;
+        stroke: currentColor;
+        stroke-width: 3;
+    }
+
+    .joker-smile,
+    .joker-eye {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 4;
+        stroke-linecap: round;
+    }
+
+    .joker-figure strong {
+        font-size: 13px;
+        line-height: 1;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .joker-figure span:last-child {
+        max-width: 54px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 6px;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .wild-chip {
+        bottom: 4px;
+        max-width: calc(100% - 14px);
+        border-radius: 8px;
+    }
+
+    .card.small {
+        --card-w: 48px;
+        --card-h: 68px;
+        --card-overlap: -15px;
+        grid-template-rows: 16px minmax(0, 1fr) 16px;
+        padding: 4px;
+        border-radius: 6px;
+    }
+
+    .card.small .corner {
+        width: 18px;
+        min-width: 18px;
+    }
+
+    .card.small .corner .rank-label {
+        max-width: 18px;
+        font-size: 11px;
+    }
+
+    .card.small .corner em {
+        width: 12px;
+        height: 12px;
+        font-size: 7px;
+    }
+
+    .card.small .joker-corner {
+        width: 24px;
+        min-width: 24px;
+    }
+
+    .card.small .joker-corner .rank-label {
+        max-width: 24px;
+        font-size: 6px;
+    }
+
+    .card.small .joker-corner em {
+        width: 24px;
+        font-size: 8px;
+    }
+
+    .card.small .pip-mark,
+    .card.small .pip-mark .suit-icon {
+        width: 12px;
+        height: 12px;
+    }
+
+    .card.small .face-badge strong {
+        font-size: 15px;
+    }
+
+    .card.small .face-suit {
+        width: 13px;
+        height: 13px;
+    }
+
+    .card.small .joker-svg {
+        width: 24px;
+        height: 28px;
+    }
+
+    .card.small .joker-figure strong {
+        font-size: 9px;
+    }
+
+    .card.small .joker-word,
+    .card.small .joker-figure span:last-child {
+        font-size: 5px;
+    }
+
+    @media (max-width: 1240px) {
+        .score-strip {
+            width: auto;
+            max-width: calc(100% - 48px);
+            gap: 7px;
+        }
+
+        .score-pill {
+            font-size: 11px;
+            padding-inline: 7px;
+        }
+
+        .player {
+            width: 198px;
+        }
+
+        .center-zone {
+            inset: 246px 230px 296px;
+        }
+
+        .hand {
+            justify-content: flex-start;
+        }
+    }
+
+    @media (max-height: 820px) and (min-width: 861px) {
+        .table-wrap,
+        .table {
+            height: calc(100svh - 104px);
+            min-height: 640px;
+        }
+
+        .table::before {
+            inset: 74px 94px 142px;
+            border-width: 18px;
+        }
+
+        .table::after {
+            inset: 98px 128px 174px;
+        }
+
+        .score-strip {
+            top: 14px;
+        }
+
+        .score-pill {
+            height: 38px;
+            padding-block: 6px;
+        }
+
+        .player {
+            width: 220px;
+            gap: 6px;
+            padding: 8px;
+        }
+
+        .player-main {
+            grid-template-columns: 38px minmax(0, 1fr);
+            gap: 8px;
+        }
+
+        .player-avatar {
+            width: 38px;
+            height: 38px;
+            font-size: 12px;
+        }
+
+        .player-name {
+            font-size: 14px;
+        }
+
+        .player-small {
+            font-size: 11px;
+        }
+
+        .back-stack {
+            min-height: 29px;
+        }
+
+        .mini-back {
+            width: 20px;
+            height: 28px;
+        }
+
+        .player.p2 {
+            top: 64px;
+        }
+
+        .player.p0 {
+            bottom: 190px;
+        }
+
+        .center-zone {
+            inset: 218px 278px 296px;
+        }
+
+        .center-card {
+            min-height: 142px;
+            padding: 12px;
+        }
+
+        .last-play {
+            min-height: 42px;
+        }
+
+        .round-message {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .history {
+            bottom: 266px;
+            max-height: 150px;
+        }
+
+        .hand-zone {
+            height: 246px;
+            grid-template-rows: 38px 32px minmax(0, 1fr);
+            row-gap: 20px;
+            padding: 10px 24px calc(10px + env(safe-area-inset-bottom));
+        }
+
+        .hand-tools .btn {
+            min-height: 36px;
+        }
+
+        .combo-advisor {
+            min-height: 30px;
+            padding-block: 6px;
+        }
+
+        .hand {
+            min-height: 96px;
+            padding-block: 3px 7px;
+        }
+    }
+
+    @media (max-width: 860px) {
+        .app-shell {
+            padding: 8px;
+        }
+
+        .topbar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+            padding: 8px;
+            min-height: 0;
+            border-radius: 12px;
+        }
+
+        .brand {
+            gap: 8px;
+            align-items: center;
+        }
+
+        .brand-mark {
+            width: 44px;
+            height: 44px;
+            border-radius: 11px;
+        }
+
+        .brand h1 {
+            font-size: 18px;
+        }
+
+        .brand p {
+            font-size: 11px;
+            line-height: 1.2;
+        }
+
+        .topbar .top-actions {
+            width: 100%;
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .topbar .top-actions::-webkit-scrollbar {
+            display: none;
+        }
+
+        .topbar .top-actions .btn {
+            flex: 0 0 auto;
+            width: auto;
+            min-width: max-content;
+            min-height: 34px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .topbar #back-events-btn {
+            grid-column: auto;
+        }
+
+        .table-wrap,
+        .table {
+            height: calc(100svh - 134px);
+            min-height: 0;
+            border-radius: 12px;
+        }
+
+        .table::before {
+            inset: 124px 18px 170px;
+            border-width: 10px;
+        }
+
+        .table::after {
+            display: none;
+        }
+
+        .table-emblem span {
+            font-size: 14px;
+        }
+
+        .table-emblem b {
+            font-size: 38px;
+        }
+
+        .score-strip {
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            width: auto;
+            max-width: none;
+            transform: none;
+            gap: 6px;
+            justify-content: flex-start;
+            padding-bottom: 2px;
+        }
+
+        .score-pill {
+            min-width: max-content;
+            height: 34px;
+            font-size: 10px;
+            border-radius: 7px;
+        }
+
+        .score-pill span {
+            display: inline;
+        }
+
+        .score-pill strong {
+            min-width: 22px;
+            height: 22px;
+            line-height: 22px;
+            border-radius: 7px;
+        }
+
+        .player {
+            width: 128px;
+            padding: 6px;
+        }
+
+        .player-main {
+            grid-template-columns: 30px minmax(0, 1fr);
+            gap: 7px;
+        }
+
+        .player-avatar {
+            width: 30px;
+            height: 30px;
+            font-size: 11px;
+        }
+
+        .player-name {
+            font-size: 12px;
+        }
+
+        .player-badge {
+            max-width: 74px;
+            padding: 2px 5px;
+            font-size: 9px;
+        }
+
+        .player-small {
+            font-size: 9px;
+        }
+
+        .back-stack {
+            display: none;
+        }
+
+        .player.p2 {
+            top: 112px;
+        }
+
+        .player.p0 {
+            bottom: 196px;
+        }
+
+        .player.p1 {
+            left: 16px;
+            top: 210px;
+            transform: none;
+        }
+
+        .player.p3 {
+            right: 16px;
+            top: 210px;
+            transform: none;
+        }
+
+        .center-zone {
+            inset: 286px 8px 245px;
+        }
+
+        .center-card {
+            width: calc(100% - 40px);
+            min-height: 112px;
+            padding: 10px;
+        }
+
+        .center-meta {
+            display: grid;
+            gap: 4px;
+        }
+
+        .center-meta strong {
+            max-width: 100%;
+        }
+
+        .last-play {
+            min-height: 24px;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+
+        .round-message {
+            padding: 8px 10px;
+            font-size: 11px;
+        }
+
+        .history {
+            display: none;
+        }
+
+        .hand-zone {
+            height: 238px;
+            grid-template-rows: 38px 34px minmax(0, 1fr);
+            row-gap: 18px;
+            padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+        }
+
+        .hand-header {
+            position: static;
+            grid-template-columns: 1fr;
+        }
+
+        .hand-summary {
+            display: none;
+        }
+
+        .hand-tools {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            width: 100%;
+            gap: 6px;
+        }
+
+        .hand-tools .btn {
+            min-width: 0;
+            min-height: 34px;
+            padding: 6px 4px;
+            font-size: 11px;
+        }
+
+        .combo-advisor {
+            min-height: 32px;
+            padding: 7px 9px;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .combo-advisor span {
+            white-space: normal;
+        }
+
+        .combo-advisor em {
+            display: none;
+        }
+
+        .hand {
+            min-height: 98px;
+            padding: 8px 18px 0;
+            justify-content: flex-start;
+        }
+
+        .card {
+            --card-w: 48px;
+            --card-h: 70px;
+            --card-overlap: -18px;
+            grid-template-rows: 15px minmax(0, 1fr) 15px;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .card .corner {
+            width: 17px;
+            min-width: 17px;
+        }
+
+        .card .corner .rank-label {
+            max-width: 17px;
+            font-size: 10px;
+        }
+
+        .card .corner em {
+            width: 12px;
+            height: 12px;
+            font-size: 7px;
+        }
+
+        .card .joker-corner {
+            width: 24px;
+            min-width: 24px;
+        }
+
+        .card .joker-corner .rank-label {
+            max-width: 24px;
+            font-size: 6px;
+        }
+
+        .card .joker-corner em {
+            width: 24px;
+            font-size: 8px;
+        }
+
+        .pip-mark,
+        .pip-mark .suit-icon {
+            width: 11px;
+            height: 11px;
+        }
+
+        .face-center {
+            padding: 2px 3px 3px;
+        }
+
+        .face-badge strong {
+            font-size: 13px;
+        }
+
+        .face-suit {
+            width: 12px;
+            height: 12px;
+        }
+
+        .joker-svg {
+            width: 24px;
+            height: 28px;
+        }
+
+        .joker-figure strong {
+            font-size: 9px;
+        }
+
+        .joker-word,
+        .joker-figure span:last-child {
+            font-size: 5px;
+        }
+    }
 </style>
 </head>
 <body>
@@ -1560,6 +2878,9 @@ const ranks = ["3","4","5","6","7","8","9","10","J","Q","K","A","2"];
 const suits = ["S","H","D","C"];
 const suitGlyph = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const suitName = { S: "spade", H: "heart", D: "diamond", C: "club" };
+const cardAssetBase = "static/playing-cards/";
+const cardAssetRanks = { A: "ace", J: "jack", Q: "queen", K: "king" };
+const cardAssetSuits = { S: "spades", H: "hearts", D: "diamonds", C: "clubs" };
 const teamNames = {
     en: ["Chen Team", "Yu Boss Team"],
     zh: ["辰哥队", "于老板队"]
@@ -1679,10 +3000,10 @@ function phaseLabel(phase) {
 
 function setStaticLabels() {
     document.documentElement.lang = isZH() ? "zh-CN" : "en";
-    copyLinkBtn.textContent = L("Copy Room Link", "复制房间链接");
-    newRoomBtn.textContent = L("New Room", "新房间");
-    backEventsBtn.textContent = L("Back to Events", "返回 Events");
-    langToggleBtn.textContent = isZH() ? "EN" : "中文";
+    copyLinkBtn.innerHTML = iconLabel("copy", L("Copy Room Link", "复制房间链接"));
+    newRoomBtn.innerHTML = iconLabel("plus", L("New Room", "新房间"));
+    backEventsBtn.innerHTML = iconLabel("back", L("Back to Events", "返回 Events"));
+    langToggleBtn.innerHTML = iconLabel("language", isZH() ? "EN" : "中文");
 }
 
 function showToast(text) {
@@ -1752,6 +3073,35 @@ function roomRef(code = roomCode) {
 
 function encodeHTML(s) {
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+function iconHTML(name, extraClass = "") {
+    const icons = {
+        copy: `<path d="M8 8.5A2.5 2.5 0 0 1 10.5 6H18a2 2 0 0 1 2 2v7.5A2.5 2.5 0 0 1 17.5 18H10a2 2 0 0 1-2-2V8.5Z"/><path d="M5 14H4a2 2 0 0 1-2-2V4.5A2.5 2.5 0 0 1 4.5 2H12a2 2 0 0 1 2 2v1"/>`,
+        plus: `<path d="M12 5v14M5 12h14"/>`,
+        back: `<path d="M10 6 4 12l6 6"/><path d="M5 12h15"/>`,
+        language: `<path d="M4 5h9M8.5 3v2M6 5c.6 3.2 2.9 6 7 8M12 5c-.7 3-2.8 5.7-7 8"/><path d="m14 19 4-9 4 9M15.3 16h5.4"/>`,
+        shield: `<path d="M12 3 20 6v6c0 5-3.4 8.1-8 9-4.6-.9-8-4-8-9V6l8-3Z"/><path d="M9 12.5 11.2 15 15.5 9.5"/>`,
+        level: `<path d="M5 19V5h14v14H5Z"/><path d="M8 16h8M8 12h8M8 8h8"/>`,
+        round: `<path d="M7 7h10v10H7z"/><path d="M4 4h16v16H4z"/>`,
+        turn: `<path d="M12 5v5l4 2"/><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M18 2v4h4"/>`,
+        wild: `<path d="M12 21C7.5 16.9 4 13.8 4 9.7A4.2 4.2 0 0 1 8.2 5.5c1.8 0 3 .9 3.8 2.2.8-1.3 2-2.2 3.8-2.2A4.2 4.2 0 0 1 20 9.7c0 4.1-3.5 7.2-8 11.3Z"/><path d="m12 9 1 2 2.2.2-1.7 1.5.5 2.3-2-1.2-2 1.2.5-2.3-1.7-1.5L11 11l1-2Z"/>`,
+        cards: `<path d="m7 7 8-3 5 13-8 3L7 7Z"/><path d="M4 7h10v14H4z"/>`,
+        ai: `<path d="M8 7h8a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z"/><path d="M9 3v4M15 3v4M9 13h.01M15 13h.01M10 17v3M14 17v3"/>`,
+        human: `<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>`,
+        log: `<path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h4"/>`,
+        last: `<path d="M4 7h16M7 4v6M17 4v6"/><path d="M6 12h12v8H6z"/>`,
+        play: `<path d="M8 5v14l11-7L8 5Z"/>`,
+        pass: `<path d="M5 12h14"/><path d="M8 8l-4 4 4 4M16 8l4 4-4 4"/>`,
+        hint: `<path d="M9 18h6M10 22h4"/><path d="M8 14c-1.2-1.1-2-2.7-2-4.5a6 6 0 1 1 12 0c0 1.8-.8 3.4-2 4.5-.8.8-1 1.5-1 2H9c0-.5-.2-1.2-1-2Z"/>`,
+        clear: `<path d="M6 6l12 12M18 6 6 18"/>`,
+        table: `<ellipse cx="12" cy="12" rx="9" ry="5"/><path d="M3 12v3c0 2.8 4 5 9 5s9-2.2 9-5v-3"/>`
+    };
+    return `<svg class="ui-icon ${extraClass}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${icons[name] || ""}</svg>`;
+}
+
+function iconLabel(icon, text) {
+    return `<span class="ui-icon-label">${iconHTML(icon)}<span>${encodeHTML(text)}</span></span>`;
 }
 
 function rankLabel(rank) {
@@ -1881,16 +3231,44 @@ function pipCountForRank(rank) {
     return Number.isInteger(n) && n >= 2 && n <= 10 ? n : 0;
 }
 
-function cardCenterHTML(card, symbol, label) {
+function suitIconHTML(suit, extraClass = "") {
+    const cls = `suit-icon suit-${suitName[suit] || "unknown"} ${extraClass}`.trim();
+    return `<span class="${cls}" aria-hidden="true">${suitGlyph[suit] || ""}</span>`;
+}
+
+function cardAssetPath(card) {
+    if (card.joker) return `${cardAssetBase}${card.joker === "RJ" ? "red" : "black"}_joker.svg`;
+    const rank = cardAssetRanks[card.rank] || card.rank;
+    const suit = cardAssetSuits[card.suit];
+    return rank && suit ? `${cardAssetBase}${rank}_of_${suit}.svg` : "";
+}
+
+function jokerIconHTML(card) {
+    const red = card.joker === "RJ";
+    return `<svg class="joker-svg ${red ? "joker-svg-red" : "joker-svg-black"}" viewBox="0 0 120 140" aria-hidden="true" focusable="false">
+        <path class="joker-cape" d="M27 116C35 88 44 68 60 68C76 68 85 88 93 116C76 127 44 127 27 116Z"/>
+        <path class="joker-hat" d="M20 42C32 17 47 16 58 39C72 12 91 17 102 43C88 38 77 44 69 58C61 47 50 47 42 58C35 45 26 38 20 42Z"/>
+        <circle class="joker-dot" cx="30" cy="37" r="8"/>
+        <circle class="joker-dot" cx="60" cy="31" r="8"/>
+        <circle class="joker-dot" cx="92" cy="38" r="8"/>
+        <path class="joker-face" d="M38 58C44 49 76 49 82 58V82C82 96 72 106 60 106C48 106 38 96 38 82V58Z"/>
+        <path class="joker-smile" d="M48 78C55 85 65 85 72 78"/>
+        <path class="joker-eye" d="M48 67H52M68 67H72"/>
+        <path class="joker-star" d="M60 8L65 20L78 20L68 28L72 41L60 33L48 41L52 28L42 20L55 20Z"/>
+    </svg>`;
+}
+
+function cardCenterHTML(card, label) {
     if (card.joker) {
-        const jokerTone = card.joker === "RJ" ? L("RED", "大王") : L("BLACK", "小王");
-        return `<div class="joker-center"><div class="joker-figure"><strong>${symbol}</strong><span>JOKER</span><span>${jokerTone}</span></div></div>`;
+        const jokerName = card.joker === "RJ" ? "大王" : "小王";
+        const jokerTone = card.joker === "RJ" ? L("BIG JOKER", "大王") : L("SMALL JOKER", "小王");
+        return `<div class="joker-center"><div class="joker-figure"><span class="joker-word">JOKER</span>${jokerIconHTML(card)}<strong>${jokerName}</strong><span>${jokerTone}</span></div></div>`;
     }
     if (["J", "Q", "K"].includes(card.rank)) {
-        return `<div class="face-center"><div class="face-badge"><i></i><strong>${label}</strong><span>${symbol}</span><i></i></div></div>`;
+        return `<div class="face-center"><div class="face-badge"><i></i><strong>${label}</strong><span>${suitIconHTML(card.suit, "face-suit")}</span><i></i></div></div>`;
     }
     const count = pipCountForRank(card.rank);
-    const marks = (pipLayouts[count] || ["pip-c"]).map(cls => `<span class="pip-mark ${cls}">${symbol}</span>`).join("");
+    const marks = (pipLayouts[count] || ["pip-c"]).map(cls => `<span class="pip-mark ${cls}">${suitIconHTML(card.suit)}</span>`).join("");
     return `<div class="pip-grid pip-count-${count}">${marks}</div>`;
 }
 
@@ -1902,15 +3280,17 @@ function cardHTML(card, small = false, selectable = false) {
     const sel = selectable && selected.has(card.id) ? "selected" : "";
     const color = red ? "red" : "black";
     const jokerClass = card.joker ? `joker-card ${card.joker === "RJ" ? "red-joker" : "black-joker"}` : "";
-    const symbol = card.joker ? (card.joker === "RJ" ? "★" : "☆") : suitGlyph[card.suit];
-    const label = card.joker ? "JK" : rankLabel(card.rank);
-    const subLabel = card.joker ? (card.joker === "RJ" ? "RED" : "BLK") : symbol;
+    const label = card.joker ? "JOKER" : rankLabel(card.rank);
+    const subLabel = card.joker ? (card.joker === "RJ" ? "大王" : "小王") : suitIconHTML(card.suit, "corner-suit");
+    const cornerClass = card.joker ? "corner joker-corner" : "corner";
     const title = isWild(card, game?.currentLevelRank) ? L("Wild Card (逢人配)", "逢人配") : cardText(card);
     const data = selectable ? `data-card-id="${encodeHTML(card.id)}"` : "";
-    return `<div class="card ${small ? "small" : ""} ${color} ${jokerClass} ${wild} ${sel}" ${data} title="${encodeHTML(title)}" aria-label="${encodeHTML(title)}">
-        <div class="corner"><span>${label}</span><em>${subLabel}</em></div>
-        ${cardCenterHTML(card, symbol, label)}
-        <div class="corner bottom"><span>${label}</span><em>${subLabel}</em></div>
+    const artPath = cardAssetPath(card);
+    return `<div class="card has-art ${small ? "small" : ""} ${color} ${jokerClass} ${wild} ${sel}" ${data} title="${encodeHTML(title)}" aria-label="${encodeHTML(title)}">
+        <img class="card-art" src="${encodeHTML(artPath)}" alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.closest('.card')?.classList.add('art-failed');this.remove()">
+        <div class="${cornerClass}"><span class="rank-label">${label}</span><em>${subLabel}</em></div>
+        ${cardCenterHTML(card, label)}
+        <div class="${cornerClass} bottom"><span class="rank-label">${label}</span><em>${subLabel}</em></div>
         ${wild ? `<div class="wild-chip">${L("WILD", "逢人配")}</div>` : ""}
     </div>`;
 }
@@ -2823,31 +4203,31 @@ function renderTable() {
             <div class="table-grid" aria-hidden="true"></div>
             <div class="table-emblem" aria-hidden="true"><span>Picasso Lab</span><b>Guandan</b></div>
             <div class="score-strip">
-                <div class="score-pill">${teamName(0)} <strong>${game.levels[0]}</strong></div>
-                <div class="score-pill">${teamName(1)} <strong>${game.levels[1]}</strong></div>
-                <div class="score-pill">${L("Level", "本局打")} <strong>${game.currentLevelRank}</strong></div>
-                <div class="score-pill">${L("Round", "第")} <strong>${game.roundNo}</strong>${isZH() ? " 局" : ""}</div>
-                <div class="score-pill wide">${L("Turn", "轮到")} <strong>${encodeHTML(currentTurnName)}</strong></div>
-                <div class="score-pill">${L("Wild", "逢人配")} <strong>♥${game.currentLevelRank}</strong></div>
+                <div class="score-pill">${iconHTML("shield")}<span>${teamName(0)}</span><strong>${game.levels[0]}</strong></div>
+                <div class="score-pill">${iconHTML("shield")}<span>${teamName(1)}</span><strong>${game.levels[1]}</strong></div>
+                <div class="score-pill">${iconHTML("level")}<span>${L("Level", "本局打")}</span><strong>${game.currentLevelRank}</strong></div>
+                <div class="score-pill">${iconHTML("round")}<span>${L("Round", "第")}</span><strong>${game.roundNo}</strong>${isZH() ? " 局" : ""}</div>
+                <div class="score-pill wide">${iconHTML("turn")}<span>${L("Turn", "轮到")}</span><strong>${encodeHTML(currentTurnName)}</strong></div>
+                <div class="score-pill">${iconHTML("wild")}<span>${L("Wild", "逢人配")}</span><strong>♥${game.currentLevelRank}</strong></div>
             </div>
             ${[0,1,2,3].map(i => playerHTML(i, mine)).join("")}
             <div class="center-zone">
                 <div class="center-card">
-                    <div class="center-meta"><span>${L("Last Trick", "上一手")}</span><strong>${lastLabel}</strong></div>
+                    <div class="center-meta"><span>${iconHTML("last")}${L("Last Trick", "上一手")}</span><strong>${lastLabel}</strong></div>
                     <div class="last-play ${game.lastPlay ? "" : "empty"}">${game.lastPlay ? game.lastPlay.cards.map(c => cardHTML(c, true)).join("") : L("Table is open", "牌桌已开")}</div>
                     <div class="round-message">${encodeHTML(displayMessage(game.message || ""))}</div>
                 </div>
             </div>
-            <div class="history"><div class="history-title"><span>${L("Trick Log", "出牌记录")}</span><span>${(game.history || []).length}</span></div>${historyRows || `<div class="history-row">${L("Waiting for the first play.", "等待第一手牌。")}</div>`}</div>
+            <div class="history"><div class="history-title"><span>${iconHTML("log")}${L("Trick Log", "出牌记录")}</span><span>${(game.history || []).length}</span></div>${historyRows || `<div class="history-row">${L("Waiting for the first play.", "等待第一手牌。")}</div>`}</div>
             ${game.phase === "roundOver" ? roundOverHTML() : ""}
             <div class="hand-zone">
                 <div class="hand-header">
                     <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
                     <div class="hand-tools">
-                        <button class="btn" id="play-btn" ${canPlaySelected ? "" : "disabled"} type="button">${L("Play", "出牌")}</button>
-                        <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay && !actionBusy ? "" : "disabled"} type="button">${L("Pass", "不要")}</button>
-                        <button class="btn secondary" id="hint-btn" ${canAct && !actionBusy ? "" : "disabled"} type="button">${L("Hint", "提示")}</button>
-                        <button class="btn secondary" id="clear-btn" type="button">${L("Clear", "取消")}</button>
+                        <button class="btn" id="play-btn" ${canPlaySelected ? "" : "disabled"} type="button">${iconLabel("play", L("Play", "出牌"))}</button>
+                        <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay && !actionBusy ? "" : "disabled"} type="button">${iconLabel("pass", L("Pass", "不要"))}</button>
+                        <button class="btn secondary" id="hint-btn" ${canAct && !actionBusy ? "" : "disabled"} type="button">${iconLabel("hint", L("Hint", "提示"))}</button>
+                        <button class="btn secondary" id="clear-btn" type="button">${iconLabel("clear", L("Clear", "取消"))}</button>
                     </div>
                     <div class="selection-meter">${L("Selected", "已选")} <strong>${selected.size}</strong> ${L("cards", "张")}</div>
                 </div>
@@ -2856,12 +4236,48 @@ function renderTable() {
             </div>
         </div>
     </section>`;
+    function refreshSelectionState() {
+        const selectedCardsNow = mine >= 0 ? myHand.filter(c => selected.has(c.id)) : [];
+        const rawCombosNow = selectedCardsNow.length ? evaluateCombos(selectedCardsNow, game.currentLevelRank) : [];
+        const selectedComboNow = selectedCardsNow.length ? choosePlayable(selectedCardsNow, game.lastPlay?.combo || null, game.currentLevelRank) : null;
+        const canPlayNow = canAct && !!selectedComboNow && !actionBusy;
+        let nextClass = "";
+        let nextText = mine >= 0
+            ? L("Select cards to preview the combo before playing.", "选牌后会预览牌型和能否出牌。")
+            : L("Spectator view. Sit in the lobby before the next game to play.", "观战视角。下局前回大厅入座即可参与。");
+        if (mine >= 0 && game.phase !== "playing") {
+            nextText = L("Round review mode. Start the next round when everyone is ready.", "本局结算中，准备好后进入下一局。");
+        } else if (mine >= 0 && !canAct) {
+            nextText = `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`;
+        } else if (selectedCardsNow.length && selectedComboNow) {
+            nextClass = "ready";
+            nextText = `${L("Ready", "可出")}: ${comboName(selectedComboNow)} · ${selectedCardsNow.length} ${L("cards", "张")}`;
+        } else if (selectedCardsNow.length && rawCombosNow.length) {
+            nextClass = "invalid";
+            nextText = L("Legal combo, but it does not beat the current trick.", "牌型合法，但压不过当前上一手。");
+        } else if (selectedCardsNow.length) {
+            nextClass = "invalid";
+            nextText = L("Not a legal Guandan combo.", "当前选牌不是合法掼蛋牌型。");
+        }
+        const advisor = document.querySelector(".combo-advisor");
+        advisor?.classList.toggle("ready", nextClass === "ready");
+        advisor?.classList.toggle("invalid", nextClass === "invalid");
+        const span = advisor?.querySelector("span");
+        const em = advisor?.querySelector("em");
+        if (span) span.textContent = nextText;
+        if (em) em.textContent = selectedCardsNow.map(cardText).join(" ");
+        const playBtn = document.getElementById("play-btn");
+        if (playBtn) playBtn.disabled = !canPlayNow;
+        const meter = document.querySelector(".selection-meter strong");
+        if (meter) meter.textContent = String(selected.size);
+    }
     document.querySelectorAll("[data-card-id]").forEach(el => {
         el.addEventListener("click", () => {
             const id = el.dataset.cardId;
             if (selected.has(id)) selected.delete(id);
             else selected.add(id);
-            renderTable();
+            el.classList.toggle("selected", selected.has(id));
+            refreshSelectionState();
         });
     });
     document.getElementById("play-btn")?.addEventListener("click", playSelected);
@@ -2873,17 +4289,31 @@ function renderTable() {
 
 function playerHTML(i, mine) {
     const s = game.seats[i] || { name: `Seat ${i + 1}`, type: "empty" };
+    if (i === mine) return "";
     const count = (game.hands[i] || []).length;
     const finishedPlace = finishedList(game).indexOf(i) + 1;
     const pos = mine >= 0 ? (i - mine + 4) % 4 : i;
     const name = displaySeatName(s, `Seat ${i + 1}`);
+    const canRevealCount = i === mine || finishedPlace || count <= 7;
+    const countText = finishedPlace
+        ? L("DONE", "完赛")
+        : canRevealCount
+            ? `${count} ${L("cards", "张")}`
+            : "";
+    const backCount = finishedPlace
+        ? 0
+        : i === mine
+            ? Math.min(6, Math.max(1, Math.ceil(count / 5)))
+            : count <= 7
+                ? Math.min(6, Math.max(1, count))
+                : 5;
     return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${finishedPlace ? "finished" : ""}">
         <div class="player-main">
             <div class="player-avatar">${encodeHTML(initials(name, String(i + 1)))}</div>
             <div class="player-name"><span>${encodeHTML(name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
         </div>
-        <div class="player-small"><span>${s.type === "ai" ? "AI" : L("Human", "真人")} · ${finishedPlace ? L(`#${finishedPlace}`, `第 ${finishedPlace} 名`) : L("left", "剩余")}</span><span class="count-chip">${finishedPlace ? L("DONE", "完赛") : `${count} ${L("cards", "张")}`}</span></div>
-        <div class="back-stack">${Array.from({ length: Math.min(6, Math.max(1, Math.ceil(count / 5))) }).map(() => `<i class="mini-back"></i>`).join("")}</div>
+        <div class="player-small"><span>${iconHTML(s.type === "ai" ? "ai" : "human")} ${s.type === "ai" ? "AI" : L("Human", "真人")} · ${finishedPlace ? L(`#${finishedPlace}`, `第 ${finishedPlace} 名`) : L("left", "剩余")}</span>${countText ? `<span class="count-chip">${iconHTML("cards")} ${countText}</span>` : ""}</div>
+        <div class="back-stack">${Array.from({ length: backCount }).map(() => `<i class="mini-back"></i>`).join("")}</div>
     </div>`;
 }
 
