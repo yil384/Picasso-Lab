@@ -87,6 +87,15 @@
     .seat-card .seat-name { font-weight: 850; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .seat-card .seat-meta { color: rgba(255,255,255,0.58); font-size: 12px; }
     .seat-card .seat-team { color: #ffe39c; font-size: 12px; font-weight: 800; }
+    .level-setup { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .level-setup label {
+        padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+    .level-setup select {
+        width: 100%; min-height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18);
+        padding: 0 10px; background: rgba(5,18,18,0.9); color: #fff; outline: none; font-weight: 850;
+    }
 
     .table-wrap { min-height: calc(100vh - 112px); position: relative; }
     .table {
@@ -181,6 +190,15 @@
     .phase-panel p { color: rgba(255,255,255,0.72); line-height: 1.6; }
     .tribute-list { display: grid; gap: 8px; margin: 14px 0; }
     .tribute-row { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.08); color: #ffe2a0; }
+    .table-tribute {
+        width: min(520px, 100%); margin: 10px auto 0; display: grid; gap: 6px;
+        text-align: left; pointer-events: none;
+    }
+    .table-tribute .tribute-row {
+        margin: 0; padding: 7px 10px; border-radius: 10px;
+        background: rgba(255,233,156,0.12); border: 1px solid rgba(255,233,156,0.18);
+        color: #fff1b8; font-size: 11px;
+    }
 
     .toast {
         position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(18px);
@@ -3375,6 +3393,7 @@ const returnTypeHint = document.getElementById("return-type-hint");
 const roomRoot = "guandanRooms";
 const ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
 const suits = ["S","H","D","C"];
+const ACE_FAIL_LIMIT = 3;
 const suitGlyph = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const suitName = { S: "spade", H: "heart", D: "diamond", C: "club" };
 const cardAssetBase = "static/playing-cards/";
@@ -3442,6 +3461,12 @@ function teamName(index) {
     return teamNames[uiLang]?.[index] || teamNames.en[index] || `Team ${index + 1}`;
 }
 
+function teamLevelDisplay(team, g = game) {
+    const level = g?.levels?.[team] || "2";
+    const failures = level === "A" ? Number(g?.aceFailures?.[team] || 0) : 0;
+    return failures ? `${level} ${failures}/${ACE_FAIL_LIMIT}` : level;
+}
+
 function botName(index) {
     return botNames[uiLang]?.[index] || botNames.en[index] || `AI ${index + 1}`;
 }
@@ -3490,6 +3515,7 @@ function normalizeGame(g) {
     if (!g) return null;
     g.seats = indexedFromFirebase(g.seats, 4, null);
     g.levels = indexedFromFirebase(g.levels, 2, "2").map(level => level || "2");
+    g.aceFailures = indexedFromFirebase(g.aceFailures, 2, 0).map(n => Math.max(0, Number(n) || 0));
     if (!g.currentLevelRank) g.currentLevelRank = "2";
     g.hands = {
         0: valuesFromFirebase(g.hands?.[0]),
@@ -3545,6 +3571,7 @@ function phaseLabel(phase) {
         lobby: ["Lobby", "等待开局"],
         playing: ["Playing", "进行中"],
         roundOver: ["Round over", "本局结束"],
+        gameOver: ["Game over", "比赛结束"],
         loading: ["Loading", "加载中"]
     };
     const label = labels[phase] || labels.loading;
@@ -3755,8 +3782,12 @@ function displayMessage(message) {
     if (text === "本轮收牌。") return "Trick collected.";
     if ((m = text.match(/^(.+) 入座。$/))) return `${displayNameText(m[1])} took a seat.`;
     if ((m = text.match(/^(.+) 加入对局。$/))) return `${displayNameText(m[1])} joined the table.`;
+    if ((m = text.match(/^(.+) 从 (.+) 开始打。$/))) return `${displayNameText(m[1])} starts from ${m[2]}.`;
     if ((m = text.match(/^第 (\d+) 局开始，打 (.+)。$/))) return `Round ${m[1]} started. Level rank: ${m[2]}.`;
     if ((m = text.match(/^第 (\d+) 局 · (.+)$/))) return `Round ${m[1]} · ${m[2].split("；").map(displayMessage).join("; ")}`;
+    if ((m = text.match(/^双贡：(.+) 进贡 (.+) 给 (.+)，(.+) 还贡 (.+)$/))) return `Double tribute: ${displayNameText(m[1])} tributes ${displayCardTextFromMessage(m[2])} to ${displayNameText(m[3])}; ${displayNameText(m[4])} returns ${displayCardTextFromMessage(m[5])}.`;
+    if ((m = text.match(/^双贡：(.+) 进贡 (.+) 给 (.+)$/))) return `Double tribute: ${displayNameText(m[1])} tributes ${displayCardTextFromMessage(m[2])} to ${displayNameText(m[3])}.`;
+    if ((m = text.match(/^(.+) 进贡 (.+) 给 (.+)，(.+) 还贡 (.+)$/))) return `${displayNameText(m[1])} tributes ${displayCardTextFromMessage(m[2])} to ${displayNameText(m[3])}; ${displayNameText(m[4])} returns ${displayCardTextFromMessage(m[5])}.`;
     if ((m = text.match(/^(.+) 进贡 (.+) 给 (.+)，还贡 (.+)$/))) return `${displayNameText(m[1])} tributes ${displayCardTextFromMessage(m[2])} to ${displayNameText(m[3])}; ${displayNameText(m[3])} returns ${displayCardTextFromMessage(m[4])}.`;
     if ((m = text.match(/^(.+) 进贡 (.+) 给 (.+)$/))) return `${displayNameText(m[1])} tributes ${displayCardTextFromMessage(m[2])} to ${displayNameText(m[3])}.`;
     if ((m = text.match(/^(.+) 出了 (.+)。$/))) return `${displayNameText(m[1])} played ${translateAction(m[2])}.`;
@@ -3765,6 +3796,9 @@ function displayMessage(message) {
     if ((m = text.match(/^(.+) 超时不要。$/))) return `${displayNameText(m[1])} timed out and passed.`;
     if ((m = text.match(/^(.+) 超时自动出 (.+)。$/))) return `${displayNameText(m[1])} timed out and auto-played ${displayCardTextFromMessage(m[2])}.`;
     if ((m = text.match(/^(.+) 不要。$/))) return `${displayNameText(m[1])} passes.`;
+    if ((m = text.match(/^(.+) 冲 A 成功，赢得比赛。$/))) return `${displayNameText(m[1])} cleared A and won the match.`;
+    if ((m = text.match(/^(.+) 冲 A 第 (\d+) 次失败，退回打 2。$/))) return `${displayNameText(m[1])} failed the A challenge ${m[2]} times and resets to level 2.`;
+    if ((m = text.match(/^(.+) 冲 A 失败，第 (\d+)\/(\d+) 次；下局继续打 A。$/))) return `${displayNameText(m[1])} failed the A challenge (${m[2]}/${m[3]}). They keep playing A next round.`;
     if ((m = text.match(/^(.+) (.+) 完成排名，升 (\d+) 级。$/))) return `${displayNameText(m[1])} completed the round order and advanced ${m[3]} level${m[3] === "1" ? "" : "s"}.`;
     return text;
 }
@@ -4077,6 +4111,7 @@ function defaultGame(code, hostName) {
         phase: "lobby",
         seats,
         levels: ["2", "2"],
+        aceFailures: [0, 0],
         currentLevelRank: "2",
         roundNo: 0,
         leaderTeam: 0,
@@ -4423,15 +4458,16 @@ function highestTributeCard(hand, levelRank) {
     return sorted[0] || sortCards(hand, levelRank)[0];
 }
 
-function lowestReturnCard(hand, levelRank) {
-    const counts = countRanks(hand.filter(c => !c.joker && !isWild(c, levelRank)));
-    const candidates = hand.filter(c => {
+function lowestReturnCard(hand, levelRank, excluded = new Set()) {
+    const available = hand.filter(c => !excluded.has(c.id));
+    const counts = countRanks(available.filter(c => !c.joker && !isWild(c, levelRank)));
+    const candidates = available.filter(c => {
         if (c.joker || isWild(c, levelRank)) return false;
         if (rankPower(c.rank, levelRank) > 10) return false;
         if ((counts[c.rank] || 0) >= 4) return false;
         return true;
     });
-    const sorted = sortCards(candidates.length ? candidates : hand, levelRank);
+    const sorted = sortCards(candidates.length ? candidates : available, levelRank);
     return sorted[sorted.length - 1];
 }
 
@@ -4441,36 +4477,55 @@ function moveCardBetween(g, from, to, card) {
     g.hands[to] = sortCards(g.hands[to], g.currentLevelRank);
 }
 
+function tributePower(card, levelRank) {
+    return card?.joker ? jokerPower(card) : rankPower(card?.rank, levelRank);
+}
+
+function clockwiseDistanceFrom(from, to, g = game) {
+    const active = activeSeatIds(g);
+    let cursor = from;
+    for (let step = 1; step <= 4; step++) {
+        cursor = (cursor + 1) % 4;
+        if (!active.includes(cursor)) continue;
+        if (cursor === to) return step;
+    }
+    return 99;
+}
+
 function applyTribute(g, result) {
     const rows = [];
     const levelRank = g.currentLevelRank;
-    const redJokerCount = result.tributePayers.reduce((n, p) => n + g.hands[p].filter(c => c.joker === "RJ").length, 0);
-    if (result.tributePayers.length && redJokerCount >= 2) {
+    const payers = (result.tributePayers || []).filter(p => Number.isInteger(p) && g.hands[p]?.length);
+    const redJokerCount = payers.reduce((n, p) => n + g.hands[p].filter(c => c.joker === "RJ").length, 0);
+    if (payers.length && redJokerCount >= 2) {
         setCurrentTurn(g, result.first);
         rows.push({ text: "抗贡成功，头游先出牌。" });
         return rows;
     }
-    const pairs = [];
-    if (result.tributePayers.length === 1) {
-        pairs.push([result.tributePayers[0], result.first]);
-    } else if (result.tributePayers.length === 2) {
-        const payers = [...result.tributePayers].sort((a, b) => b - a);
-        const receivers = [result.first, partnerOf(result.first)];
-        pairs.push([payers[0], receivers[0]], [payers[1], receivers[1]]);
+    const entries = payers.map(payer => ({
+        payer,
+        tribute: highestTributeCard(g.hands[payer], levelRank)
+    })).filter(entry => entry.tribute);
+    if (entries.length === 2) {
+        entries.sort((a, b) => {
+            const diff = tributePower(b.tribute, levelRank) - tributePower(a.tribute, levelRank);
+            if (diff) return diff;
+            return clockwiseDistanceFrom(result.first, a.payer, g) - clockwiseDistanceFrom(result.first, b.payer, g);
+        });
     }
-    let bestPayer = result.first;
-    let bestPower = -1;
-    for (const [payer, receiver] of pairs) {
-        const tribute = highestTributeCard(g.hands[payer], levelRank);
+    const receivers = entries.length === 2 ? [result.first, partnerOf(result.first)] : [result.first];
+    let starter = entries[0]?.payer ?? result.first;
+    for (const [idx, entry] of entries.entries()) {
+        const payer = entry.payer;
+        const receiver = receivers[idx] ?? result.first;
+        const tribute = entry.tribute;
         if (!tribute) continue;
         moveCardBetween(g, payer, receiver, tribute);
-        const ret = lowestReturnCard(g.hands[receiver], levelRank);
+        const ret = lowestReturnCard(g.hands[receiver], levelRank, new Set([tribute.id]));
         if (ret) moveCardBetween(g, receiver, payer, ret);
-        const power = tribute.joker ? jokerPower(tribute) : rankPower(tribute.rank, levelRank);
-        if (power > bestPower) { bestPower = power; bestPayer = payer; }
-        rows.push({ text: `${g.seats[payer].name} 进贡 ${cardText(tribute, "zh")} 给 ${g.seats[receiver].name}${ret ? `，还贡 ${cardText(ret, "zh")}` : ""}` });
+        rows.push({ text: `${entries.length === 2 ? "双贡：" : ""}${g.seats[payer].name} 进贡 ${cardText(tribute, "zh")} 给 ${g.seats[receiver].name}${ret ? `，${g.seats[receiver].name} 还贡 ${cardText(ret, "zh")}` : ""}` });
     }
-    setCurrentTurn(g, bestPayer);
+    setCurrentTurn(g, starter);
     return rows;
 }
 
@@ -4799,7 +4854,41 @@ function finishRound(g) {
     const firstTeam = first % 2;
     const partnerPlace = order.indexOf(partnerOf(first)) + 1;
     const advance = partnerPlace === 2 ? 3 : partnerPlace === 3 ? 2 : 1;
-    g.levels[firstTeam] = advanceLevel(g.levels[firstTeam], advance);
+    g.selectedTributes = [];
+    const wasAceChallenge = g.levels[firstTeam] === "A";
+    let aceFailureCount = g.aceFailures[firstTeam] || 0;
+    let aceReset = false;
+    if (wasAceChallenge) {
+        if (partnerPlace === 2 || partnerPlace === 3) {
+            g.leaderTeam = firstTeam;
+            g.aceFailures[firstTeam] = 0;
+            g.phase = "gameOver";
+            g.roundResult = {
+                first,
+                firstTeam,
+                order,
+                advance: 0,
+                aceChallenge: true,
+                acePassed: true,
+                tributePayers: [],
+                nextStarter: first
+            };
+            g.message = `${teamNames.zh[firstTeam]} 冲 A 成功，赢得比赛。`;
+            return;
+        }
+        aceFailureCount += 1;
+        if (aceFailureCount >= ACE_FAIL_LIMIT) {
+            g.levels[firstTeam] = "2";
+            g.aceFailures[firstTeam] = 0;
+            aceReset = true;
+        } else {
+            g.levels[firstTeam] = "A";
+            g.aceFailures[firstTeam] = aceFailureCount;
+        }
+    } else {
+        g.levels[firstTeam] = advanceLevel(g.levels[firstTeam], advance);
+        g.aceFailures[firstTeam] = 0;
+    }
     g.leaderTeam = firstTeam;
     const last = order[3];
     const tributePayers = partnerPlace === 2 ? [order[2], order[3]] : [last];
@@ -4809,10 +4898,20 @@ function finishRound(g) {
         firstTeam,
         order,
         advance,
+        aceChallenge: wasAceChallenge,
+        acePassed: false,
+        aceFailureCount,
+        aceReset,
         tributePayers,
         nextStarter: first
     };
-    g.message = `${teamNames.zh[firstTeam]} ${order.map(i => g.seats[i].name).join(" / ")} 完成排名，升 ${advance} 级。`;
+    if (wasAceChallenge) {
+        g.message = aceReset
+            ? `${teamNames.zh[firstTeam]} 冲 A 第 ${ACE_FAIL_LIMIT} 次失败，退回打 2。`
+            : `${teamNames.zh[firstTeam]} 冲 A 失败，第 ${aceFailureCount}/${ACE_FAIL_LIMIT} 次；下局继续打 A。`;
+    } else {
+        g.message = `${teamNames.zh[firstTeam]} ${order.map(i => g.seats[i].name).join(" / ")} 完成排名，升 ${advance} 级。`;
+    }
 }
 
 function advanceLevel(level, steps) {
@@ -5091,6 +5190,34 @@ function renderLobby() {
     document.getElementById("join-room").addEventListener("click", joinRoom);
 }
 
+function levelOptionsHTML(selectedLevel) {
+    return ranks.map(rank => `<option value="${rank}" ${rank === selectedLevel ? "selected" : ""}>${rank}</option>`).join("");
+}
+
+function levelSetupHTML() {
+    const disabled = isHost() && !actionBusy ? "" : "disabled";
+    return `<div class="level-setup">
+        <label>${teamName(0)} ${L("start level", "起始牌")}
+            <select id="level-team-0" ${disabled}>${levelOptionsHTML(game.levels[0] || "2")}</select>
+        </label>
+        <label>${teamName(1)} ${L("start level", "起始牌")}
+            <select id="level-team-1" ${disabled}>${levelOptionsHTML(game.levels[1] || "2")}</select>
+        </label>
+    </div>`;
+}
+
+async function updateStartLevel(team, level) {
+    if (!isHost() || !ranks.includes(level)) return;
+    const updated = await withAction(() => mutateGame(g => {
+        if (g.phase !== "lobby" || !clientIsHost(g)) return false;
+        g.levels[team] = level;
+        g.aceFailures[team] = 0;
+        g.currentLevelRank = g.levels[g.leaderTeam || 0] || "2";
+        g.message = `${teamNames.zh[team]} 从 ${level} 开始打。`;
+    }));
+    if (!updated) showToast(L("Level setup changed. Please retry.", "级牌设置变化了，请重试。"));
+}
+
 function renderLobbyRoom() {
     const mine = mySeat();
     root.innerHTML = `
@@ -5104,7 +5231,7 @@ function renderLobbyRoom() {
                 ${previewCardsHTML()}
             </div>
             <div class="rule-chips">
-                <span>${teamName(0)}: ${L("Seats 1 + 3", "1 + 3 号位")}</span><span>${teamName(1)}: ${L("Seats 2 + 4", "2 + 4 号位")}</span><span>${L("Both teams play level", "当前双方都打")} ${game.currentLevelRank}</span>
+                <span>${teamName(0)}: ${L("Seats 1 + 3", "1 + 3 号位")} · ${teamLevelDisplay(0)}</span><span>${teamName(1)}: ${L("Seats 2 + 4", "2 + 4 号位")} · ${teamLevelDisplay(1)}</span><span>${L("Current hand level", "当前本手打")} ${game.currentLevelRank}</span>
             </div>
         </div>
         <div class="lobby-panel">
@@ -5117,6 +5244,7 @@ function renderLobbyRoom() {
                 <div class="field-grid">
                     <label>${L("Nickname", "昵称")}<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="${L("Your name", "你的名字")}"></label>
                 </div>
+                ${levelSetupHTML()}
                 <div class="seats">
                     ${[0,1,2,3].map(i => seatHTML(i, mine)).join("")}
                 </div>
@@ -5133,6 +5261,8 @@ function renderLobbyRoom() {
         document.getElementById(`ai-${i}`)?.addEventListener("click", () => addAI(i));
         document.getElementById(`leave-${i}`)?.addEventListener("click", () => leaveSeat(i));
     });
+    document.getElementById("level-team-0")?.addEventListener("change", event => updateStartLevel(0, event.target.value));
+    document.getElementById("level-team-1")?.addEventListener("change", event => updateStartLevel(1, event.target.value));
     document.getElementById("start-game").addEventListener("click", startGame);
     document.getElementById("fill-ai").addEventListener("click", fillAISeats);
     document.getElementById("delete-room").addEventListener("click", async () => {
@@ -5232,6 +5362,12 @@ function lastPlaySummaryHTML(lastLabel) {
     return `${L("Current to beat", "当前要管")}: ${lastLabel} · ${relation.label}`;
 }
 
+function tributeSummaryHTML() {
+    const rows = valuesFromFirebase(game.selectedTributes);
+    if (!rows.length) return "";
+    return `<div class="table-tribute">${rows.map(row => `<div class="tribute-row">${encodeHTML(displayMessage(row.text || row))}</div>`).join("")}</div>`;
+}
+
 function dealOverlayHTML(mine, phase) {
     if (phase !== "dealing" && phase !== "sorting") return "";
     const label = phase === "dealing" ? L("Dealing cards", "正在发牌") : L("Sorting hand", "正在理牌");
@@ -5317,8 +5453,8 @@ function renderTable() {
             <div class="table-grid" aria-hidden="true"></div>
             <div class="table-emblem" aria-hidden="true"><span>Picasso Lab</span><b>Guandan</b></div>
             <div class="score-strip">
-                <div class="score-pill">${iconHTML("shield")}<span>${teamName(0)}</span><strong>${game.levels[0]}</strong></div>
-                <div class="score-pill">${iconHTML("shield")}<span>${teamName(1)}</span><strong>${game.levels[1]}</strong></div>
+                <div class="score-pill">${iconHTML("shield")}<span>${teamName(0)}</span><strong>${teamLevelDisplay(0)}</strong></div>
+                <div class="score-pill">${iconHTML("shield")}<span>${teamName(1)}</span><strong>${teamLevelDisplay(1)}</strong></div>
                 <div class="score-pill">${iconHTML("level")}<span>${L("Level", "本局打")}</span><strong>${game.currentLevelRank}</strong></div>
                 <div class="score-pill">${iconHTML("round")}<span>${L("Round", "第")}</span><strong>${game.roundNo}</strong>${isZH() ? " 局" : ""}</div>
                 <div class="score-pill wide turn-timer ${turnClockClass}">${iconHTML("turn")}<span>${L("Turn", "轮到")}</span><strong>${encodeHTML(currentTurnName)}</strong><em id="turn-clock">${turnClockText}</em></div>
@@ -5330,12 +5466,14 @@ function renderTable() {
             <div class="center-zone">
                 <div class="center-card">
                     <div class="center-meta"><span>${iconHTML("last")}${L("Last Trick", "上一手")}</span><strong>${lastLabel}</strong></div>
+                    ${tributeSummaryHTML()}
                     <div class="last-play ${game.lastPlay ? "" : "empty"}">${encodeHTML(lastPlaySummaryHTML(lastLabel))}</div>
                     <div class="round-message">${encodeHTML(displayMessage(game.message || ""))}</div>
                 </div>
             </div>
             <div class="history"><div class="history-title"><span>${iconHTML("log")}${L("Trick Log", "出牌记录")}</span><span>${(game.history || []).length}</span></div>${historyRows || `<div class="history-row">${L("Waiting for the first play.", "等待第一手牌。")}</div>`}</div>
             ${game.phase === "roundOver" ? roundOverHTML() : ""}
+            ${game.phase === "gameOver" ? gameOverHTML() : ""}
             <div class="hand-zone ${canAct ? "your-turn" : ""}">
                 <div class="hand-header">
                     <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : tableBusy ? (dealPhase === "dealing" ? L("Dealing", "发牌中") : L("Sorting", "理牌中")) : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
@@ -5476,11 +5614,32 @@ function playerHTML(i, mine) {
 function roundOverHTML() {
     const r = game.roundResult;
     const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
+    const title = r.aceChallenge
+        ? r.aceReset
+            ? `${teamName(r.firstTeam)} ${L("A challenge reset", "冲 A 失败退回 2")}`
+            : `${teamName(r.firstTeam)} ${L("A challenge failed", "冲 A 失败")}`
+        : `${teamName(r.firstTeam)} ${L(`advances ${r.advance}`, `本局升级 ${r.advance}`)}`;
+    const detail = r.aceChallenge
+        ? r.aceReset
+            ? L("This was the third failed A challenge. The team resets to level 2 next round.", "这是第 3 次冲 A 失败，下局该队退回打 2。")
+            : L(`A challenge failed. Failure ${r.aceFailureCount}/${ACE_FAIL_LIMIT}; the team keeps playing A next round.`, `冲 A 失败，第 ${r.aceFailureCount}/${ACE_FAIL_LIMIT} 次；下局继续打 A。`)
+        : L("The next round will automatically handle Tribute and Return. If the paying side holds two Red Jokers, Tribute is blocked.", "下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。");
     return `<div class="phase-panel">
-        <h2>${teamName(r.firstTeam)} ${L(`advances ${r.advance}`, `本局升级 ${r.advance}`)}</h2>
-        <p>${L("The next round will automatically handle Tribute and Return. If the paying side holds two Red Jokers, Tribute is blocked.", "下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。")}</p>
+        <h2>${title}</h2>
+        <p>${detail}</p>
         <div class="tribute-list">${rows}</div>
         <button class="btn" id="next-round" ${isHost() ? "" : "disabled"} type="button">${L("Next Round", "进入下一局")}</button>
+    </div>`;
+}
+
+function gameOverHTML() {
+    const r = game.roundResult;
+    const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
+    return `<div class="phase-panel">
+        <h2>${teamName(r.firstTeam)} ${L("wins the match", "冲 A 成功")}</h2>
+        <p>${L("A-level victory requires first place with the partner in second or third. The match is complete.", "打 A 时必须头游且对家第二或第三才算升级成功；本场比赛结束。")}</p>
+        <div class="tribute-list">${rows}</div>
+        <button class="btn" id="next-round" disabled type="button">${L("Match Complete", "比赛结束")}</button>
     </div>`;
 }
 
