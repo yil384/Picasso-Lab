@@ -2256,10 +2256,10 @@
         animation-delay: calc(var(--i) * 18ms);
     }
 
-    .deal-card.target-0 { --tx: calc(var(--fan) * 8px); --ty: 286px; }
-    .deal-card.target-1 { --tx: -43vw; --ty: 20px; }
-    .deal-card.target-2 { --tx: calc(var(--fan) * 5px); --ty: -238px; }
-    .deal-card.target-3 { --tx: 43vw; --ty: 20px; }
+    .deal-card.target-0 { --tx: calc(var(--fan) * 8px); --ty: clamp(310px, 39vh, 430px); }
+    .deal-card.target-1 { --tx: clamp(-850px, -42vw, -430px); --ty: clamp(40px, 7vh, 74px); }
+    .deal-card.target-2 { --tx: calc(var(--fan) * 5px); --ty: clamp(-330px, -32vh, -245px); }
+    .deal-card.target-3 { --tx: clamp(430px, 42vw, 850px); --ty: clamp(40px, 7vh, 74px); }
 
     .deal-sorting .deal-card {
         opacity: 0;
@@ -2268,7 +2268,7 @@
 
     .deal-hand-back {
         animation: receiveHandBack 460ms cubic-bezier(0.18, 0.82, 0.24, 1) both;
-        animation-delay: calc(var(--i) * 24ms);
+        animation-delay: calc(var(--i) * 72ms + 260ms);
     }
 
     .card.sort-in {
@@ -2309,13 +2309,17 @@
     }
 
     .hand-zone {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10;
         height: 306px;
         padding: 12px 28px calc(16px + env(safe-area-inset-bottom));
         display: grid;
         grid-template-rows: 58px minmax(0, 1fr);
         row-gap: 4px;
         align-content: end;
-        position: relative;
         background:
             linear-gradient(to top, rgba(2,10,12,1) 0%, rgba(2,10,12,0.96) 64%, rgba(2,10,12,0.18) 100%);
     }
@@ -4251,14 +4255,6 @@ function syncDealAnimation(g = game) {
     }
     dealAnimation.phase = elapsed < DEALING_MS ? "dealing" : "sorting";
     if (elapsed < DEALING_MS) {
-        const tickDeal = () => {
-            if (dealAnimation.key !== key || dealAnimation.phase !== "dealing") return;
-            render();
-            if (Date.now() < Number(g.dealStartedAt || 0) + DEALING_MS) {
-                dealAnimation.timers.push(setTimeout(tickDeal, 90));
-            }
-        };
-        dealAnimation.timers.push(setTimeout(tickDeal, 90));
         dealAnimation.timers.push(setTimeout(() => setDealPhase("sorting"), DEALING_MS - elapsed));
     }
     dealAnimation.timers.push(setTimeout(() => finishDealAnimation(key), total - elapsed));
@@ -4268,15 +4264,6 @@ function currentDealPhase(g = game) {
     const key = dealKey(g);
     if (!key || dealAnimation.completed.has(key) || dealAnimation.key !== key) return "done";
     return dealAnimation.phase;
-}
-
-function dealVisibleCount(seat, g = game, phase = currentDealPhase(g)) {
-    const total = (g?.hands?.[seat] || []).length;
-    if (!total || phase === "done" || phase === "sorting") return total;
-    const elapsed = Math.max(0, Date.now() - Number(g.dealStartedAt || 0));
-    const dealt = Math.min(DEAL_CARD_COUNT, Math.floor((elapsed / DEALING_MS) * DEAL_CARD_COUNT));
-    const seatCount = Math.floor((dealt + 3 - seat) / 4);
-    return Math.max(0, Math.min(total, seatCount));
 }
 
 function dealBusy(g = game) {
@@ -5402,9 +5389,7 @@ function renderTable() {
     const mine = mySeat();
     const dealPhase = currentDealPhase();
     const tableBusy = dealPhase !== "done";
-    const fullMyHand = mine >= 0 ? orderedHandForDisplay(game.hands[mine] || [], game.currentLevelRank, mine) : [];
-    const visibleHandCount = mine >= 0 ? dealVisibleCount(mine, game, dealPhase) : 0;
-    const myHand = dealPhase === "dealing" ? fullMyHand.slice(0, visibleHandCount) : fullMyHand;
+    const myHand = mine >= 0 ? orderedHandForDisplay(game.hands[mine] || [], game.currentLevelRank, mine) : [];
     const canAct = mine === game.currentTurn && game.phase === "playing" && !tableBusy;
     const selectedCards = mine >= 0 ? myHand.filter(c => selected.has(c.id)) : [];
     const rawSelectedCombos = selectedCards.length ? evaluateCombos(selectedCards, game.currentLevelRank) : [];
@@ -5476,7 +5461,7 @@ function renderTable() {
             ${game.phase === "gameOver" ? gameOverHTML() : ""}
             <div class="hand-zone ${canAct ? "your-turn" : ""}">
                 <div class="hand-header">
-                    <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : tableBusy ? (dealPhase === "dealing" ? L("Dealing", "发牌中") : L("Sorting", "理牌中")) : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
+                    <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} ${tableBusy ? "" : `<strong>${myHand.length}</strong> ${L("cards", "张")} · `}${canAct ? L("Your turn", "轮到你出牌") : tableBusy ? (dealPhase === "dealing" ? L("Dealing", "发牌中") : L("Sorting", "理牌中")) : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
                     <div class="hand-tools">
                         <button class="btn" id="play-btn" ${canPlaySelected ? "" : "disabled"} type="button">${iconLabel("play", L("Play", "出牌"))}</button>
                         <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay && !actionBusy ? "" : "disabled"} type="button">${iconLabel("pass", L("Pass", "不要"))}</button>
