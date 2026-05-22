@@ -2046,6 +2046,7 @@
 
     .relation-band {
         --band-cut: 20px;
+        --band-fill: #ffca28;
         position: absolute;
         left: calc(100% - var(--band-cut) / 2);
         top: calc(var(--band-cut) / 2);
@@ -2056,8 +2057,11 @@
         place-items: center;
         transform: translate(-50%, -50%) rotate(45deg);
         transform-origin: center;
-        border-radius: 1px;
-        background: #ffca28;
+        clip-path: polygon(11% 0, 100% 0, 89% 100%, 0 100%);
+        background:
+            linear-gradient(90deg, rgba(0,0,0,0.25) 0 13%, transparent 15% 78%, rgba(255,255,255,0.35) 84% 100%),
+            linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.08) 46%, rgba(0,0,0,0.18)),
+            var(--band-fill);
         color: #061115;
         font-size: 5px;
         line-height: 1;
@@ -2067,16 +2071,20 @@
         overflow: hidden;
         text-overflow: ellipsis;
         pointer-events: none;
-        box-shadow: 0 5px 12px rgba(0,0,0,0.32);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.46),
+            inset 0 -1px 0 rgba(0,0,0,0.18),
+            0 2px 0 rgba(0,0,0,0.18),
+            0 5px 12px rgba(0,0,0,0.3);
     }
 
     .relation-band.relation-opponent {
-        background: #f05a5f;
+        --band-fill: #f05a5f;
         color: #fff;
     }
 
     .relation-band.relation-self {
-        background: #77e8ff;
+        --band-fill: #77e8ff;
     }
 
     @keyframes playPanelIn {
@@ -2227,7 +2235,7 @@
         opacity: 0;
         transform: translate(-50%, -50%);
         animation: dealToSeat 760ms cubic-bezier(0.18, 0.82, 0.24, 1) both;
-        animation-delay: calc(var(--i) * 34ms);
+        animation-delay: calc(var(--i) * 18ms);
     }
 
     .deal-card.target-0 { --tx: calc(var(--fan) * 8px); --ty: 286px; }
@@ -2289,8 +2297,28 @@
         grid-template-rows: 58px minmax(0, 1fr);
         row-gap: 4px;
         align-content: end;
+        position: relative;
         background:
             linear-gradient(to top, rgba(2,10,12,1) 0%, rgba(2,10,12,0.96) 64%, rgba(2,10,12,0.18) 100%);
+    }
+
+    .hand-zone.your-turn {
+        background:
+            radial-gradient(ellipse at 50% 64%, rgba(255,202,40,0.22), rgba(255,202,40,0.08) 34%, transparent 68%),
+            linear-gradient(to top, rgba(16,14,7,1) 0%, rgba(14,16,12,0.96) 56%, rgba(255,202,40,0.08) 76%, rgba(2,10,12,0.16) 100%);
+    }
+
+    .hand-zone.your-turn::before {
+        content: "";
+        position: absolute;
+        left: 16%;
+        right: 16%;
+        bottom: 58px;
+        height: 34px;
+        border-radius: 50%;
+        background: rgba(255,202,40,0.2);
+        filter: blur(18px);
+        pointer-events: none;
     }
 
     .hand-header {
@@ -2356,6 +2384,42 @@
         overscroll-behavior-x: contain;
     }
 
+    .hand.reorderable .card {
+        cursor: grab;
+    }
+
+    .hand.reorderable .card:active,
+    .hand.reorder-dragging .card {
+        cursor: grabbing;
+    }
+
+    .hand .card.drag-source {
+        opacity: 0.5;
+        filter: saturate(0.8);
+    }
+
+    .hand .card.drop-before::before,
+    .hand .card.drop-after::before {
+        content: "";
+        position: absolute;
+        top: 8px;
+        bottom: 8px;
+        width: 3px;
+        border-radius: 999px;
+        background: rgba(255,202,40,0.95);
+        box-shadow: 0 0 10px rgba(255,202,40,0.55);
+        z-index: 50;
+        pointer-events: none;
+    }
+
+    .hand .card.drop-before::before {
+        left: -6px;
+    }
+
+    .hand .card.drop-after::before {
+        right: -6px;
+    }
+
     .card {
         --card-w: 68px;
         --card-h: 96px;
@@ -2382,16 +2446,13 @@
 
     .card.has-art {
         padding: 0;
-        border-color: rgba(255,255,255,0.72);
+        border: 0;
         background: transparent;
-        box-shadow: 0 13px 26px rgba(0,0,0,0.38);
+        box-shadow: 0 10px 18px rgba(0,0,0,0.32);
     }
 
     .card.has-art::after {
-        inset: 0;
-        border-radius: inherit;
-        border: 1px solid rgba(20,24,30,0.22);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
+        display: none;
     }
 
     .card-art {
@@ -2416,9 +2477,18 @@
 
     .card.has-art.art-failed {
         padding: 6px;
+        border: 1px solid rgba(20,24,30,0.24);
         background:
             radial-gradient(circle at 78% 18%, rgba(255,255,255,0.85), transparent 16%),
             linear-gradient(145deg, #ffffff, #fff8ec);
+    }
+
+    .card.has-art.art-failed::after {
+        display: block;
+        inset: 4px;
+        border-radius: 5px;
+        border: 1px solid rgba(12,18,24,0.08);
+        box-shadow: none;
     }
 
     .card.has-art.art-failed .corner,
@@ -2429,7 +2499,7 @@
     }
 
     .card.has-art.wild {
-        box-shadow: 0 15px 32px rgba(0,0,0,0.38), 0 0 0 2px rgba(255,202,40,0.72), 0 0 18px rgba(255,202,40,0.28);
+        box-shadow: 0 10px 18px rgba(0,0,0,0.32), 0 0 0 1.5px rgba(255,202,40,0.78), 0 0 12px rgba(255,202,40,0.22);
     }
 
     .card.selected {
@@ -3325,8 +3395,8 @@ const legacyBotNames = [
 ];
 const AI_MIN_TURN_MS = 1800;
 const AI_RANDOM_TURN_MS = 2200;
-const DEAL_CARD_COUNT = 48;
-const DEALING_MS = 2450;
+const DEAL_CARD_COUNT = 108;
+const DEALING_MS = 2800;
 const SORTING_MS = 980;
 const TURN_LIMIT_MS = 180000;
 
@@ -3339,6 +3409,9 @@ let aiTimer = null;
 let turnDeadlineTimer = null;
 let turnRenderTimer = null;
 let actionBusy = false;
+let suppressNextCardClick = false;
+let cardDragState = { id: "", moved: false };
+let handOrderState = { key: "", ids: [] };
 let uiLang = localStorage.getItem("picasso.guandan.lang") || "en";
 let returnBuffer = "";
 let returnHintTimer = null;
@@ -3829,6 +3902,44 @@ function sortHandForDisplay(cards, levelRank) {
     });
 }
 
+function handOrderKey(seat, g = game) {
+    return `${roomCode || g?.roomCode || ""}:${g?.roundNo || 0}:${g?.dealStartedAt || 0}:${seat}`;
+}
+
+function orderedHandForDisplay(cards, levelRank, seat) {
+    const sorted = sortHandForDisplay(cards, levelRank);
+    const key = handOrderKey(seat);
+    const sortedIds = sorted.map(c => c.id);
+    if (handOrderState.key !== key) {
+        handOrderState = { key, ids: sortedIds };
+        return sorted;
+    }
+    const liveIds = new Set(sortedIds);
+    const nextIds = handOrderState.ids.filter(id => liveIds.has(id));
+    const seen = new Set(nextIds);
+    for (const card of sorted) {
+        if (!seen.has(card.id)) nextIds.push(card.id);
+    }
+    handOrderState.ids = nextIds;
+    const byId = new Map(cards.map(c => [c.id, c]));
+    return nextIds.map(id => byId.get(id)).filter(Boolean);
+}
+
+function moveHandCard(dragId, targetId, before) {
+    if (!dragId || !targetId || dragId === targetId) return false;
+    const seat = mySeat();
+    if (seat < 0) return false;
+    orderedHandForDisplay(game.hands[seat] || [], game.currentLevelRank, seat);
+    const ids = handOrderState.ids.filter(id => id !== dragId);
+    const targetIndex = ids.indexOf(targetId);
+    if (targetIndex < 0) return false;
+    ids.splice(targetIndex + (before ? 0 : 1), 0, dragId);
+    handOrderState.ids = ids;
+    suppressNextCardClick = true;
+    renderTable();
+    return true;
+}
+
 function makeDeck() {
     const deck = [];
     for (let copy = 0; copy < 2; copy++) {
@@ -3865,6 +3976,12 @@ function activeSeatIds(g = game) {
     normalizeGame(g);
     const done = finishedList(g);
     return [0,1,2,3].filter(i => g.seats[i] && !done.includes(i));
+}
+
+function requiredPassesForTrick(g = game) {
+    if (!g?.lastPlay) return 0;
+    const done = finishedList(g);
+    return [0,1,2,3].filter(i => i !== g.lastPlay.player && g.seats[i] && !done.includes(i)).length;
 }
 
 function setCurrentTurn(g, seat) {
@@ -4099,6 +4216,14 @@ function syncDealAnimation(g = game) {
     }
     dealAnimation.phase = elapsed < DEALING_MS ? "dealing" : "sorting";
     if (elapsed < DEALING_MS) {
+        const tickDeal = () => {
+            if (dealAnimation.key !== key || dealAnimation.phase !== "dealing") return;
+            render();
+            if (Date.now() < Number(g.dealStartedAt || 0) + DEALING_MS) {
+                dealAnimation.timers.push(setTimeout(tickDeal, 90));
+            }
+        };
+        dealAnimation.timers.push(setTimeout(tickDeal, 90));
         dealAnimation.timers.push(setTimeout(() => setDealPhase("sorting"), DEALING_MS - elapsed));
     }
     dealAnimation.timers.push(setTimeout(() => finishDealAnimation(key), total - elapsed));
@@ -4108,6 +4233,15 @@ function currentDealPhase(g = game) {
     const key = dealKey(g);
     if (!key || dealAnimation.completed.has(key) || dealAnimation.key !== key) return "done";
     return dealAnimation.phase;
+}
+
+function dealVisibleCount(seat, g = game, phase = currentDealPhase(g)) {
+    const total = (g?.hands?.[seat] || []).length;
+    if (!total || phase === "done" || phase === "sorting") return total;
+    const elapsed = Math.max(0, Date.now() - Number(g.dealStartedAt || 0));
+    const dealt = Math.min(DEAL_CARD_COUNT, Math.floor((elapsed / DEALING_MS) * DEAL_CARD_COUNT));
+    const seatCount = Math.floor((dealt + 3 - seat) / 4);
+    return Math.max(0, Math.min(total, seatCount));
 }
 
 function dealBusy(g = game) {
@@ -4418,6 +4552,10 @@ function evaluateCombos(cards, levelRank) {
         add({ type: "single", name: "单张", mainPower: p });
     }
 
+    if (len === 2 && cards.every(c => c.joker) && cards[0].joker === cards[1].joker) {
+        add({ type: "pair", name: "对子", mainPower: jokerPower(cards[0]) });
+    }
+
     for (const rank of allTargetRanks) {
         const rankCards = nonWild.filter(c => !c.joker && c.rank === rank);
         if (rankCards.length + wc === len && nonWild.every(c => !c.joker && c.rank === rank)) {
@@ -4567,8 +4705,7 @@ async function doPass(seat, options = {}) {
         g.passCount = (g.passCount || 0) + 1;
         g.trickPlays[seat] = { player: seat, action: "不要", actionType: "pass", cards: [], at: Date.now() };
         addHistory(g, { player: seat, action: "不要", actionType: "pass", cards: [], at: Date.now() });
-        const activeCount = activeSeatIds(g).length;
-        if (g.passCount >= activeCount - 1) {
+        if (g.passCount >= requiredPassesForTrick(g)) {
             const winner = g.lastPlay.player;
             const partner = partnerOf(winner);
             g.lastPlay = null;
@@ -4606,8 +4743,7 @@ async function handleTurnTimeout() {
             g.passCount = (g.passCount || 0) + 1;
             g.trickPlays[seat] = { player: seat, action: "不要", actionType: "pass", cards: [], timedOut: true, at: Date.now() };
             addHistory(g, { player: seat, action: "不要", actionType: "pass", cards: [], timedOut: true, at: Date.now() });
-            const activeCount = activeSeatIds(g).length;
-            if (g.passCount >= activeCount - 1) {
+            if (g.passCount >= requiredPassesForTrick(g)) {
                 const winner = g.lastPlay.player;
                 const partner = partnerOf(winner);
                 g.lastPlay = null;
@@ -4738,6 +4874,8 @@ function shouldProtectPartnerLead(move, hand, lastCombo, seat, g = game) {
 }
 
 function findAIMove(hand, lastCombo, levelRank, seat = null, g = game) {
+    const finishingCombo = hand.length ? choosePlayable(hand, lastCombo, levelRank) : null;
+    if (finishingCombo) return { cards: hand, combo: finishingCombo };
     const candidates = [];
     for (const c of hand) candidates.push([c]);
     const byRank = {};
@@ -4751,8 +4889,27 @@ function findAIMove(hand, lastCombo, levelRank, seat = null, g = game) {
         if (cards.length >= 5) candidates.push(cards.slice(0,5));
         if (cards.length >= 6) candidates.push(cards.slice(0,6));
     }
+    for (const rank of ranks) {
+        for (let count = 2; count <= 6; count++) {
+            const cards = pickRankGroup(hand, rank, count, levelRank);
+            if (cards) candidates.push(cards);
+        }
+    }
     const jokers = hand.filter(c => c.joker);
+    for (const joker of ["BJ", "RJ"]) {
+        const pair = jokers.filter(c => c.joker === joker).slice(0, 2);
+        if (pair.length === 2) candidates.push(pair);
+    }
     if (jokers.length === 4) candidates.push(jokers);
+    for (const tripleRank of ranks) {
+        for (const pairRank of ranks) {
+            if (tripleRank === pairRank) continue;
+            const triple = pickRankGroup(hand, tripleRank, 3, levelRank);
+            if (!triple) continue;
+            const pair = pickRankGroup(hand, pairRank, 2, levelRank, new Set(triple.map(c => c.id)));
+            if (pair) candidates.push([...triple, ...pair]);
+        }
+    }
     for (const seq of sequenceSets("straight")) {
         const cards = pickSequence(hand, seq, 1, levelRank);
         if (cards) candidates.push(cards);
@@ -4790,6 +4947,19 @@ function findAIMove(hand, lastCombo, levelRank, seat = null, g = game) {
         return nonDisruptive || null;
     }
     return moves[0] || null;
+}
+
+function pickRankGroup(hand, rank, count, levelRank, used = new Set()) {
+    const picked = hand
+        .filter(c => !used.has(c.id) && !c.joker && !isWild(c, levelRank) && c.rank === rank)
+        .slice(0, count);
+    if (picked.length < count) {
+        const wilds = hand
+            .filter(c => !used.has(c.id) && !picked.some(p => p.id === c.id) && isWild(c, levelRank))
+            .slice(0, count - picked.length);
+        picked.push(...wilds);
+    }
+    return picked.length === count ? picked : null;
 }
 
 function pickSequence(hand, seq, each, levelRank) {
@@ -4837,9 +5007,12 @@ function maybeRunAI() {
     if (game.seats[seat]?.type !== "ai") return;
     const hand = game.hands[seat] || [];
     const obviousNoBeat = !!game.lastPlay && obviouslyCannotBeat(hand, game.lastPlay.combo, game.currentLevelRank);
+    const previewMove = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank, seat, game);
+    const canFinishNow = !!previewMove && remainingAfterMove(hand, previewMove) === 0;
+    const fastDecision = obviousNoBeat || canFinishNow;
     const elapsed = Date.now() - (Number(game.turnStartedAt) || Date.now());
-    const minWait = obviousNoBeat ? 0 : Math.max(0, AI_MIN_TURN_MS - elapsed);
-    const delay = obviousNoBeat ? 520 + Math.random() * 220 : minWait + 900 + Math.random() * AI_RANDOM_TURN_MS;
+    const minWait = fastDecision ? 0 : Math.max(0, AI_MIN_TURN_MS - elapsed);
+    const delay = fastDecision ? 520 + Math.random() * 220 : minWait + 900 + Math.random() * AI_RANDOM_TURN_MS;
     aiTimer = setTimeout(async () => {
         if (!game || game.phase !== "playing" || game.currentTurn !== seat) return;
         const hand = game.hands[seat] || [];
@@ -5065,7 +5238,7 @@ function dealOverlayHTML(mine, phase) {
     const cards = Array.from({ length: DEAL_CARD_COUNT }).map((_, idx) => {
         const seat = idx % 4;
         const pos = visualSeatPos(seat, mine);
-        const fan = Math.floor(idx / 4) - 5.5;
+        const fan = Math.floor(idx / 4) - 13;
         const rot = (fan * 1.6).toFixed(1);
         return `<i class="deal-card target-${pos}" style="--i:${idx};--fan:${fan};--rot:${rot}deg"></i>`;
     }).join("");
@@ -5081,7 +5254,10 @@ function handCardsHTML(myHand, selectable, phase) {
     if (phase === "dealing") return handBacksHTML(myHand.length, "deal-hand-back");
     return myHand.map((c, idx) => {
         const fan = idx - myHand.length / 2;
-        const attrs = phase === "sorting" ? `style="--i:${idx};--fan:${fan}"` : "";
+        const attrs = [
+            phase === "sorting" ? `style="--i:${idx};--fan:${fan}"` : "",
+            selectable && phase === "done" ? `draggable="true" data-hand-pos="${idx}"` : ""
+        ].filter(Boolean).join(" ");
         return cardHTML(c, false, selectable, attrs, phase === "sorting" ? "sort-in" : "");
     }).join("");
 }
@@ -5090,7 +5266,9 @@ function renderTable() {
     const mine = mySeat();
     const dealPhase = currentDealPhase();
     const tableBusy = dealPhase !== "done";
-    const myHand = mine >= 0 ? sortHandForDisplay(game.hands[mine] || [], game.currentLevelRank) : [];
+    const fullMyHand = mine >= 0 ? orderedHandForDisplay(game.hands[mine] || [], game.currentLevelRank, mine) : [];
+    const visibleHandCount = mine >= 0 ? dealVisibleCount(mine, game, dealPhase) : 0;
+    const myHand = dealPhase === "dealing" ? fullMyHand.slice(0, visibleHandCount) : fullMyHand;
     const canAct = mine === game.currentTurn && game.phase === "playing" && !tableBusy;
     const selectedCards = mine >= 0 ? myHand.filter(c => selected.has(c.id)) : [];
     const rawSelectedCombos = selectedCards.length ? evaluateCombos(selectedCards, game.currentLevelRank) : [];
@@ -5158,7 +5336,7 @@ function renderTable() {
             </div>
             <div class="history"><div class="history-title"><span>${iconHTML("log")}${L("Trick Log", "出牌记录")}</span><span>${(game.history || []).length}</span></div>${historyRows || `<div class="history-row">${L("Waiting for the first play.", "等待第一手牌。")}</div>`}</div>
             ${game.phase === "roundOver" ? roundOverHTML() : ""}
-            <div class="hand-zone">
+            <div class="hand-zone ${canAct ? "your-turn" : ""}">
                 <div class="hand-header">
                     <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : tableBusy ? (dealPhase === "dealing" ? L("Dealing", "发牌中") : L("Sorting", "理牌中")) : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
                     <div class="hand-tools">
@@ -5172,7 +5350,7 @@ function renderTable() {
                         <div class="combo-advisor ${advisorClass}"><span>${advisorText}</span><em>${encodeHTML(selectedCards.map(cardText).join(" "))}</em></div>
                     </div>
                 </div>
-                <div class="hand ${dealPhase === "dealing" ? "receiving-hand" : dealPhase === "sorting" ? "sorting-hand" : ""}">${handCardsHTML(myHand, handSelectable, dealPhase)}</div>
+                <div class="hand ${dealPhase === "dealing" ? "receiving-hand" : dealPhase === "sorting" ? "sorting-hand" : ""} ${handSelectable && dealPhase === "done" ? "reorderable" : ""}">${handCardsHTML(myHand, handSelectable, dealPhase)}</div>
             </div>
         </div>
     </section>`;
@@ -5217,11 +5395,44 @@ function renderTable() {
     }
     document.querySelectorAll("[data-card-id]").forEach(el => {
         el.addEventListener("click", () => {
+            if (suppressNextCardClick) {
+                suppressNextCardClick = false;
+                return;
+            }
             const id = el.dataset.cardId;
             if (selected.has(id)) selected.delete(id);
             else selected.add(id);
             el.classList.toggle("selected", selected.has(id));
             refreshSelectionState();
+        });
+        el.addEventListener("dragstart", event => {
+            cardDragState = { id: el.dataset.cardId || "", moved: false };
+            el.classList.add("drag-source");
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", cardDragState.id);
+        });
+        el.addEventListener("dragover", event => {
+            if (!cardDragState.id || cardDragState.id === el.dataset.cardId) return;
+            event.preventDefault();
+            const rect = el.getBoundingClientRect();
+            const before = event.clientX < rect.left + rect.width / 2;
+            el.classList.toggle("drop-before", before);
+            el.classList.toggle("drop-after", !before);
+        });
+        el.addEventListener("dragleave", () => {
+            el.classList.remove("drop-before", "drop-after");
+        });
+        el.addEventListener("drop", event => {
+            if (!cardDragState.id) return;
+            event.preventDefault();
+            const rect = el.getBoundingClientRect();
+            const before = event.clientX < rect.left + rect.width / 2;
+            cardDragState.moved = moveHandCard(cardDragState.id, el.dataset.cardId, before);
+        });
+        el.addEventListener("dragend", () => {
+            if (cardDragState.moved) suppressNextCardClick = true;
+            cardDragState = { id: "", moved: false };
+            document.querySelectorAll(".drag-source,.drop-before,.drop-after").forEach(node => node.classList.remove("drag-source", "drop-before", "drop-after"));
         });
     });
     document.getElementById("play-btn")?.addEventListener("click", playSelected);
