@@ -3914,6 +3914,7 @@ async function withAction(fn) {
     } finally {
         actionBusy = false;
         root.classList.remove("action-busy");
+        render();
     }
 }
 
