@@ -1998,6 +1998,7 @@
     }
 
     .trick-card-row {
+        position: relative;
         display: flex;
         align-items: center;
         min-width: 0;
@@ -2043,36 +2044,38 @@
         text-overflow: ellipsis;
     }
 
-    .trick-card-stack .card.small.relation-corner {
-        overflow: hidden;
-    }
-
-    .trick-card-stack .card.small.relation-corner::after {
-        content: attr(data-relation);
+    .relation-band {
+        --band-cut: 20px;
         position: absolute;
-        top: 4px;
-        right: -14px;
+        left: calc(100% - var(--band-cut) / 2);
+        top: calc(var(--band-cut) / 2);
         z-index: 20;
-        width: 50px;
-        padding: 2px 0;
-        transform: rotate(36deg);
+        width: calc(var(--band-cut) * 1.4142);
+        height: 9px;
+        display: grid;
+        place-items: center;
+        transform: translate(-50%, -50%) rotate(45deg);
         transform-origin: center;
-        border-radius: 2px;
+        border-radius: 1px;
         background: #ffca28;
         color: #061115;
-        font-size: 7px;
-        line-height: 1.2;
+        font-size: 5px;
+        line-height: 1;
         font-weight: 950;
         text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        pointer-events: none;
         box-shadow: 0 5px 12px rgba(0,0,0,0.32);
     }
 
-    .trick-card-stack .card.small.relation-corner.relation-opponent::after {
+    .relation-band.relation-opponent {
         background: #f05a5f;
         color: #fff;
     }
 
-    .trick-card-stack .card.small.relation-corner.relation-self::after {
+    .relation-band.relation-self {
         background: #77e8ff;
     }
 
@@ -3100,11 +3103,10 @@
             --card-overlap: -15px;
         }
 
-        .trick-card-stack .card.small.relation-corner::after {
-            top: 5px;
-            right: -12px;
-            width: 44px;
-            font-size: 8px;
+        .relation-band {
+            --band-cut: 15px;
+            height: 8px;
+            font-size: 5px;
         }
 
         .play-caption {
@@ -5022,14 +5024,8 @@ function displayCardsForCombo(cards = [], combo = null) {
 
 function playedCardsHTML(cards = [], relation = null, combo = null) {
     const displayCards = displayCardsForCombo(cards, combo);
-    const lastIdx = displayCards.length - 1;
-    return `<div class="trick-card-stack"><div class="trick-card-row">${displayCards.map((card, idx) => {
-        const attrs = relation && idx === lastIdx
-            ? `style="--i:${idx}" data-relation="${encodeHTML(relation.label)}"`
-            : `style="--i:${idx}"`;
-        const extraClass = relation && idx === lastIdx ? `relation-corner relation-${relation.key}` : "";
-        return cardHTML(card, true, false, attrs, extraClass);
-    }).join("")}</div></div>`;
+    const band = relation ? `<span class="relation-band relation-${relation.key}">${encodeHTML(relation.label)}</span>` : "";
+    return `<div class="trick-card-stack"><div class="trick-card-row">${displayCards.map((card, idx) => cardHTML(card, true, false, `style="--i:${idx}"`)).join("")}${band}</div></div>`;
 }
 
 function seatPlayStamp(entry) {
