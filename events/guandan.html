@@ -1879,14 +1879,14 @@
     }
 
     .center-zone {
-        inset: 250px 330px 394px;
+        inset: 326px 430px 390px;
         z-index: 3;
     }
 
     .center-card {
-        width: min(690px, 100%);
-        min-height: 154px;
-        padding: 16px;
+        width: min(560px, 100%);
+        min-height: 118px;
+        padding: 12px 14px;
         border-radius: 8px;
         background:
             linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
@@ -1919,14 +1919,15 @@
     }
 
     .last-play {
-        min-height: 36px;
+        min-height: 28px;
+        padding: 4px 0;
     }
 
     .round-message {
-        padding: 11px 14px;
+        padding: 8px 12px;
         border-radius: 8px;
         color: #fff3bd;
-        font-size: 14px;
+        font-size: 12px;
     }
 
     .history {
@@ -1949,12 +1950,12 @@
         align-items: center;
         gap: 4px;
         pointer-events: none;
-        animation: playPanelIn 340ms cubic-bezier(0.2, 0.82, 0.22, 1) both;
+        animation: none;
     }
 
     .seat-play.p0 {
         left: 50%;
-        bottom: 292px;
+        bottom: 314px;
         transform: translateX(-50%);
         justify-items: center;
     }
@@ -1968,7 +1969,7 @@
 
     .seat-play.p2 {
         left: 50%;
-        top: 328px;
+        top: 238px;
         transform: translateX(-50%);
         justify-items: center;
     }
@@ -1985,13 +1986,29 @@
         display: flex;
         align-items: center;
         min-height: 70px;
-        padding: 2px 8px;
+        padding: 8px 10px 4px;
         border-radius: 8px;
         background: rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+    }
+
+    .trick-card-row {
+        display: flex;
+        align-items: center;
+        min-width: 0;
     }
 
     .trick-card-stack .card.small {
-        animation: playedCardIn 360ms cubic-bezier(0.2, 0.82, 0.22, 1) both;
+        animation: none;
+    }
+
+    .seat-play.fresh {
+        animation: playPanelIn 320ms cubic-bezier(0.16, 0.86, 0.24, 1) both;
+    }
+
+    .seat-play.fresh .trick-card-stack .card.small {
+        animation: playedCardIn 420ms cubic-bezier(0.16, 0.86, 0.24, 1) both;
         animation-delay: calc(var(--i, 0) * 34ms);
     }
 
@@ -2024,14 +2041,14 @@
 
     .relation-ribbon {
         position: absolute;
-        top: -3px;
-        right: -18px;
+        top: 7px;
+        right: -12px;
         z-index: 20;
-        width: 76px;
-        padding: 2px 0;
+        width: 88px;
+        padding: 3px 0;
         transform: rotate(32deg);
         transform-origin: center;
-        border-radius: 3px;
+        border-radius: 2px;
         background: #ffca28;
         color: #061115;
         font-size: 9px;
@@ -2051,12 +2068,12 @@
     }
 
     @keyframes playPanelIn {
-        from { opacity: 0; filter: blur(4px); }
+        from { opacity: 0; filter: blur(3px); }
         to { opacity: 1; filter: blur(0); }
     }
 
     @keyframes playedCardIn {
-        from { opacity: 0; transform: translate3d(0, -14px, 0) scale(0.94); }
+        from { opacity: 0; transform: translate3d(0, -22px, 0) scale(0.92) rotate(-2deg); }
         to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
     }
 
@@ -2088,6 +2105,155 @@
     .thinking-badge i:nth-child(2) { animation-delay: 120ms; }
     .thinking-badge i:nth-child(3) { animation-delay: 240ms; }
 
+    .turn-timer em {
+        min-width: 42px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(119,232,255,0.14);
+        color: #bff6ff;
+        font-style: normal;
+        font-weight: 950;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .turn-timer.warn em {
+        background: rgba(255,202,40,0.2);
+        color: #ffe794;
+    }
+
+    #turn-clock.warn {
+        background: rgba(255,202,40,0.2);
+        color: #ffe794;
+    }
+
+    .turn-timer.danger em,
+    #turn-clock.danger {
+        background: rgba(239,83,80,0.24);
+        color: #ffd7d5;
+    }
+
+    #root.action-busy .table .btn {
+        pointer-events: none;
+        opacity: 0.58;
+    }
+
+    .deal-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 8;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .deal-deck {
+        position: absolute;
+        left: 50%;
+        top: 49%;
+        width: 66px;
+        height: 92px;
+        transform: translate(-50%, -50%);
+        filter: drop-shadow(0 22px 32px rgba(0,0,0,0.36));
+    }
+
+    .deal-deck i,
+    .deal-card {
+        position: absolute;
+        width: 48px;
+        height: 68px;
+        border-radius: 7px;
+        border: 1px solid rgba(255,255,255,0.42);
+        background:
+            linear-gradient(135deg, transparent 42%, rgba(255,255,255,0.26) 43% 54%, transparent 55%),
+            radial-gradient(circle at 50% 50%, rgba(255,202,40,0.2), transparent 34%),
+            linear-gradient(145deg, #0a72a8, #091a48);
+        box-shadow: inset 0 0 0 5px rgba(255,255,255,0.08), 0 12px 26px rgba(0,0,0,0.28);
+    }
+
+    .deal-deck i {
+        inset: 0;
+    }
+
+    .deal-deck i:nth-child(2) { transform: translate(5px, -4px) rotate(4deg); }
+    .deal-deck i:nth-child(3) { transform: translate(10px, -8px) rotate(8deg); }
+
+    .deal-status {
+        position: absolute;
+        left: 50%;
+        top: calc(49% + 72px);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transform: translateX(-50%);
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(4,16,19,0.74);
+        border: 1px solid rgba(255,255,255,0.16);
+        color: #fff3b0;
+        font-size: 12px;
+        font-weight: 900;
+        box-shadow: 0 16px 34px rgba(0,0,0,0.28);
+    }
+
+    .deal-status span,
+    .deal-status::before,
+    .deal-status::after {
+        content: "";
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: thinkingDot 860ms ease-in-out infinite;
+    }
+
+    .deal-status span { animation-delay: 120ms; }
+    .deal-status::after { animation-delay: 240ms; }
+
+    .deal-card {
+        left: 50%;
+        top: 49%;
+        opacity: 0;
+        transform: translate(-50%, -50%);
+        animation: dealToSeat 760ms cubic-bezier(0.18, 0.82, 0.24, 1) both;
+        animation-delay: calc(var(--i) * 34ms);
+    }
+
+    .deal-card.target-0 { --tx: calc(var(--fan) * 8px); --ty: 286px; }
+    .deal-card.target-1 { --tx: -43vw; --ty: 20px; }
+    .deal-card.target-2 { --tx: calc(var(--fan) * 5px); --ty: -238px; }
+    .deal-card.target-3 { --tx: 43vw; --ty: 20px; }
+
+    .deal-sorting .deal-card {
+        opacity: 0;
+        animation: none;
+    }
+
+    .deal-hand-back {
+        animation: receiveHandBack 460ms cubic-bezier(0.18, 0.82, 0.24, 1) both;
+        animation-delay: calc(var(--i) * 24ms);
+    }
+
+    .card.sort-in {
+        animation: sortHandCard 520ms cubic-bezier(0.18, 0.82, 0.24, 1) both;
+        animation-delay: calc(var(--i) * 18ms);
+    }
+
+    @keyframes dealToSeat {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.78) rotate(0deg); }
+        18% { opacity: 1; }
+        100% { opacity: 1; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.82) rotate(var(--rot)); }
+    }
+
+    @keyframes receiveHandBack {
+        from { opacity: 0; transform: translate3d(0, -28px, 0) scale(0.94) rotate(-4deg); }
+        to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    @keyframes sortHandCard {
+        0% { opacity: 0; transform: translate3d(calc(var(--fan) * -3px), -18px, 0) scale(0.96); filter: brightness(0.9); }
+        100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); }
+    }
+
     @keyframes thinkingCards {
         from { filter: brightness(1); transform: translateY(0); }
         to { filter: brightness(1.25); transform: translateY(-3px); }
@@ -2105,11 +2271,11 @@
     }
 
     .hand-zone {
-        height: 280px;
-        padding: 14px 28px calc(16px + env(safe-area-inset-bottom));
+        height: 306px;
+        padding: 12px 28px calc(16px + env(safe-area-inset-bottom));
         display: grid;
-        grid-template-rows: 44px 38px minmax(0, 1fr);
-        row-gap: 30px;
+        grid-template-rows: 58px minmax(0, 1fr);
+        row-gap: 4px;
         align-content: end;
         background:
             linear-gradient(to top, rgba(2,10,12,1) 0%, rgba(2,10,12,0.96) 64%, rgba(2,10,12,0.18) 100%);
@@ -2118,9 +2284,10 @@
     .hand-header {
         width: min(1500px, 100%);
         max-width: none;
-        grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+        grid-template-columns: minmax(190px, 0.75fr) auto minmax(310px, 1fr);
         margin: 0 auto;
         gap: 14px;
+        align-items: center;
     }
 
     .hand-summary,
@@ -2143,11 +2310,20 @@
         border-radius: 8px;
     }
 
+    .hand-feedback {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+    }
+
     .combo-advisor {
-        width: min(1500px, 100%);
+        width: 100%;
         max-width: none;
         min-height: 34px;
-        margin: 0 auto;
+        margin: 0;
+        padding: 7px 10px;
         border-radius: 8px;
     }
 
@@ -2158,13 +2334,14 @@
     .hand {
         width: min(1500px, 100%);
         max-width: none;
-        min-height: 108px;
-        padding: 4px 22px 8px;
+        min-height: 178px;
+        padding: 42px 22px 8px;
         margin: 0 auto;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         overflow-x: auto;
-        overflow-y: visible;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
     }
 
     .card {
@@ -2244,7 +2421,7 @@
     }
 
     .card.selected {
-        transform: translate3d(0, -24px, 0) scale(1.015);
+        transform: translate3d(0, -28px, 0) scale(1.018);
         filter: saturate(1.06);
     }
 
@@ -2531,7 +2708,7 @@
         }
 
         .center-zone {
-            inset: 246px 230px 360px;
+            inset: 300px 270px 344px;
         }
 
         .seat-play.p1 {
@@ -2539,7 +2716,7 @@
         }
 
         .seat-play.p2 {
-            top: 308px;
+            top: 226px;
         }
 
         .seat-play.p3 {
@@ -2547,7 +2724,7 @@
         }
 
         .seat-play.p0 {
-            bottom: 272px;
+            bottom: 304px;
         }
 
         .hand {
@@ -2623,7 +2800,7 @@
         }
 
         .center-zone {
-            inset: 210px 278px 326px;
+            inset: 278px 300px 286px;
         }
 
         .center-card {
@@ -2647,17 +2824,17 @@
         }
 
         .seat-play.p0 {
-            bottom: 250px;
+            bottom: 278px;
         }
 
         .seat-play.p2 {
-            top: 258px;
+            top: 210px;
         }
 
         .hand-zone {
-            height: 246px;
-            grid-template-rows: 38px 32px minmax(0, 1fr);
-            row-gap: 20px;
+            height: 270px;
+            grid-template-rows: 52px minmax(0, 1fr);
+            row-gap: 4px;
             padding: 10px 24px calc(10px + env(safe-area-inset-bottom));
         }
 
@@ -2671,8 +2848,8 @@
         }
 
         .hand {
-            min-height: 96px;
-            padding-block: 3px 7px;
+            min-height: 156px;
+            padding-block: 36px 7px;
         }
     }
 
@@ -2846,7 +3023,7 @@
         }
 
         .center-zone {
-            inset: 286px 8px 245px;
+            inset: 330px 8px 246px;
         }
 
         .center-card {
@@ -2886,7 +3063,7 @@
 
         .seat-play.p0 {
             left: 50%;
-            bottom: 230px;
+            bottom: 272px;
         }
 
         .seat-play.p1 {
@@ -2896,7 +3073,7 @@
         }
 
         .seat-play.p2 {
-            top: 260px;
+            top: 244px;
         }
 
         .seat-play.p3 {
@@ -2907,7 +3084,7 @@
 
         .trick-card-stack {
             min-height: 54px;
-            padding-inline: 4px;
+            padding: 7px 5px 3px;
         }
 
         .seat-play .card.small {
@@ -2917,8 +3094,9 @@
         }
 
         .relation-ribbon {
-            right: -16px;
-            width: 62px;
+            top: 5px;
+            right: -13px;
+            width: 68px;
             font-size: 8px;
         }
 
@@ -2928,9 +3106,9 @@
         }
 
         .hand-zone {
-            height: 238px;
-            grid-template-rows: 38px 34px minmax(0, 1fr);
-            row-gap: 18px;
+            height: 264px;
+            grid-template-rows: 74px minmax(0, 1fr);
+            row-gap: 4px;
             padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
         }
 
@@ -2950,6 +3128,15 @@
             gap: 6px;
         }
 
+        .hand-feedback {
+            grid-template-columns: 1fr;
+            gap: 5px;
+        }
+
+        .selection-meter {
+            display: none;
+        }
+
         .hand-tools .btn {
             min-width: 0;
             min-height: 34px;
@@ -2958,8 +3145,8 @@
         }
 
         .combo-advisor {
-            min-height: 32px;
-            padding: 7px 9px;
+            min-height: 30px;
+            padding: 6px 8px;
             text-align: center;
             justify-content: center;
         }
@@ -2973,8 +3160,8 @@
         }
 
         .hand {
-            min-height: 98px;
-            padding: 8px 18px 0;
+            min-height: 152px;
+            padding: 38px 18px 0;
             justify-content: flex-start;
         }
 
@@ -3107,7 +3294,7 @@ const langToggleBtn = document.getElementById("lang-toggle");
 const returnTransition = document.getElementById("return-transition");
 const returnTypeHint = document.getElementById("return-type-hint");
 const roomRoot = "guandanRooms";
-const ranks = ["3","4","5","6","7","8","9","10","J","Q","K","A","2"];
+const ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
 const suits = ["S","H","D","C"];
 const suitGlyph = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const suitName = { S: "spade", H: "heart", D: "diamond", C: "club" };
@@ -3129,6 +3316,10 @@ const legacyBotNames = [
 ];
 const AI_MIN_TURN_MS = 1800;
 const AI_RANDOM_TURN_MS = 2200;
+const DEAL_CARD_COUNT = 48;
+const DEALING_MS = 2450;
+const SORTING_MS = 980;
+const TURN_LIMIT_MS = 180000;
 
 let game = null;
 let roomCode = new URLSearchParams(location.search).get("room") || "";
@@ -3136,12 +3327,20 @@ let selected = new Set();
 let unsubscribe = null;
 let statusText = "";
 let aiTimer = null;
+let turnDeadlineTimer = null;
+let turnRenderTimer = null;
 let actionBusy = false;
 let uiLang = localStorage.getItem("picasso.guandan.lang") || "en";
 let returnBuffer = "";
 let returnHintTimer = null;
 let returnNavigationStarted = false;
 let returnKeyboardPrimed = false;
+const dealAnimation = {
+    key: "",
+    phase: "done",
+    completed: new Set(),
+    timers: []
+};
 let clientId = localStorage.getItem("picasso.guandan.client");
 if (!clientId) {
     clientId = "c_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -3180,15 +3379,36 @@ function indexedFromFirebase(value, length, fallback = null) {
     return Array.from({ length }, (_, i) => value?.[i] ?? fallback);
 }
 
-function normalizeActionEntry(entry) {
+function recomputeComboForEntry(entry, levelRank) {
+    const cards = valuesFromFirebase(entry?.cards);
+    if (!cards.length) return entry?.combo || null;
+    const combos = evaluateCombos(cards, levelRank);
+    if (!combos.length) return entry?.combo || null;
+    if (entry?.combo?.type) {
+        const sameType = combos.find(combo => {
+            if (combo.type !== entry.combo.type) return false;
+            if (combo.type === "bomb" && entry.combo.bombLen && combo.bombLen !== entry.combo.bombLen) return false;
+            return true;
+        });
+        if (sameType) return sameType;
+    }
+    return choosePlayable(cards, null, levelRank) || combos[0];
+}
+
+function normalizeActionEntry(entry, levelRank = "2") {
     if (!entry || typeof entry !== "object") return entry || null;
-    return { ...entry, cards: valuesFromFirebase(entry.cards) };
+    const cards = valuesFromFirebase(entry.cards);
+    const combo = cards.length && (entry.combo || entry.actionType === "combo")
+        ? recomputeComboForEntry({ ...entry, cards }, levelRank)
+        : entry.combo || null;
+    return { ...entry, cards, combo };
 }
 
 function normalizeGame(g) {
     if (!g) return null;
     g.seats = indexedFromFirebase(g.seats, 4, null);
     g.levels = indexedFromFirebase(g.levels, 2, "2").map(level => level || "2");
+    if (!g.currentLevelRank) g.currentLevelRank = "2";
     g.hands = {
         0: valuesFromFirebase(g.hands?.[0]),
         1: valuesFromFirebase(g.hands?.[1]),
@@ -3196,14 +3416,16 @@ function normalizeGame(g) {
         3: valuesFromFirebase(g.hands?.[3])
     };
     g.finished = valuesFromFirebase(g.finished).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < 4);
-    g.history = valuesFromFirebase(g.history).map(normalizeActionEntry).slice(-16);
-    g.trickPlays = indexedFromFirebase(g.trickPlays, 4, null).map(normalizeActionEntry);
+    g.lastPlay = normalizeActionEntry(g.lastPlay, g.currentLevelRank);
+    g.history = valuesFromFirebase(g.history).map(entry => normalizeActionEntry(entry, g.currentLevelRank)).slice(-16);
+    g.trickPlays = indexedFromFirebase(g.trickPlays, 4, null).map(entry => normalizeActionEntry(entry, g.currentLevelRank));
     g.selectedTributes = valuesFromFirebase(g.selectedTributes);
     if (!g.phase) g.phase = "lobby";
-    if (!g.currentLevelRank) g.currentLevelRank = "2";
     if (!Number.isInteger(g.currentTurn)) g.currentTurn = 0;
     if (!Number.isInteger(g.passCount)) g.passCount = 0;
     if (!Number.isFinite(g.turnStartedAt)) g.turnStartedAt = Date.now();
+    if (!Number.isFinite(g.roundStartedAt)) g.roundStartedAt = 0;
+    if (!Number.isFinite(g.dealStartedAt)) g.dealStartedAt = 0;
     return g;
 }
 
@@ -3458,6 +3680,8 @@ function displayMessage(message) {
     if ((m = text.match(/^(.+) 出了 (.+)。$/))) return `${displayNameText(m[1])} played ${translateAction(m[2])}.`;
     if ((m = text.match(/^(.+) 收牌，继续出。$/))) return `${displayNameText(m[1])} takes the trick and leads again.`;
     if ((m = text.match(/^(.+) 接风给队友 (.+)。$/))) return `${displayNameText(m[1])} passes catch-wind to partner ${displayNameText(m[2])}.`;
+    if ((m = text.match(/^(.+) 超时不要。$/))) return `${displayNameText(m[1])} timed out and passed.`;
+    if ((m = text.match(/^(.+) 超时自动出 (.+)。$/))) return `${displayNameText(m[1])} timed out and auto-played ${displayCardTextFromMessage(m[2])}.`;
     if ((m = text.match(/^(.+) 不要。$/))) return `${displayNameText(m[1])} passes.`;
     if ((m = text.match(/^(.+) (.+) 完成排名，升 (\d+) 级。$/))) return `${displayNameText(m[1])} completed the round order and advanced ${m[3]} level${m[3] === "1" ? "" : "s"}.`;
     return text;
@@ -3527,9 +3751,9 @@ function cardCenterHTML(card, label) {
     return `<div class="pip-grid pip-count-${count}">${marks}</div>`;
 }
 
-function cardHTML(card, small = false, selectable = false, extraAttrs = "") {
+function cardHTML(card, small = false, selectable = false, extraAttrs = "", extraClass = "") {
     if (!card) return "";
-    if (card.back) return `<div class="card back ${small ? "small" : ""}" aria-hidden="true"></div>`;
+    if (card.back) return `<div class="card back ${small ? "small" : ""} ${extraClass}" ${extraAttrs} aria-hidden="true"></div>`;
     const red = cardColor(card);
     const wild = game && isWild(card, game.currentLevelRank) ? "wild" : "";
     const sel = selectable && selected.has(card.id) ? "selected" : "";
@@ -3542,7 +3766,7 @@ function cardHTML(card, small = false, selectable = false, extraAttrs = "") {
     const data = selectable ? `data-card-id="${encodeHTML(card.id)}"` : "";
     const attrs = [data, extraAttrs].filter(Boolean).join(" ");
     const artPath = cardAssetPath(card);
-    return `<div class="card has-art ${small ? "small" : ""} ${color} ${jokerClass} ${wild} ${sel}" ${attrs} title="${encodeHTML(title)}" aria-label="${encodeHTML(title)}">
+    return `<div class="card has-art ${small ? "small" : ""} ${color} ${jokerClass} ${wild} ${sel} ${extraClass}" ${attrs} title="${encodeHTML(title)}" aria-label="${encodeHTML(title)}">
         <img class="card-art" src="${encodeHTML(artPath)}" alt="" aria-hidden="true" loading="eager" decoding="async" onerror="this.closest('.card')?.classList.add('art-failed');this.remove()">
         <div class="${cornerClass}"><span class="rank-label">${label}</span><em>${subLabel}</em></div>
         ${cardCenterHTML(card, label)}
@@ -3560,12 +3784,11 @@ function initials(name, fallback = "P") {
 }
 
 function rankBase(rank) {
-    return ranks.indexOf(rank) + 3;
+    return ranks.indexOf(rank) + 2;
 }
 
 function rankPower(rank, levelRank) {
     if (rank === levelRank) return 16;
-    if (rank === "2") return 15;
     return rankBase(rank);
 }
 
@@ -3579,7 +3802,7 @@ function sortCards(cards, levelRank) {
     return [...cards].sort((a, b) => {
         const pa = a.joker ? jokerPower(a) : rankPower(a.rank, levelRank);
         const pb = b.joker ? jokerPower(b) : rankPower(b.rank, levelRank);
-        if (pa !== pb) return pa - pb;
+        if (pa !== pb) return pb - pa;
         const sa = suits.indexOf(a.suit || "S");
         const sb = suits.indexOf(b.suit || "S");
         return sa - sb || a.id.localeCompare(b.id);
@@ -3600,8 +3823,18 @@ function makeDeck() {
 
 function shuffle(arr) {
     const a = [...arr];
+    const randomIndex = (maxExclusive) => {
+        if (globalThis.crypto?.getRandomValues && maxExclusive > 0) {
+            const limit = Math.floor(0x100000000 / maxExclusive) * maxExclusive;
+            const buf = new Uint32Array(1);
+            do globalThis.crypto.getRandomValues(buf);
+            while (buf[0] >= limit);
+            return buf[0] % maxExclusive;
+        }
+        return Math.floor(Math.random() * maxExclusive);
+    };
     for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = randomIndex(i + 1);
         [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
@@ -3637,6 +3870,30 @@ function addHistory(g, entry) {
     g.history = [...valuesFromFirebase(g.history), entry].slice(-16);
 }
 
+function finishIfPartnershipDone(g, lastSeat = null) {
+    const order = finishedList(g);
+    if (order.length < 2) return false;
+    const first = order[0];
+    const partner = partnerOf(first);
+    if (!order.includes(partner)) return false;
+    const remaining = [0,1,2,3].filter(i => !order.includes(i));
+    if (lastSeat != null) {
+        const orderedRemaining = [];
+        let cursor = lastSeat;
+        while (orderedRemaining.length < remaining.length) {
+            cursor = nextSeat(cursor, { ...g, finished: [...order, ...orderedRemaining] });
+            if (cursor == null || orderedRemaining.includes(cursor)) break;
+            if (remaining.includes(cursor)) orderedRemaining.push(cursor);
+        }
+        for (const i of remaining) if (!orderedRemaining.includes(i)) orderedRemaining.push(i);
+        g.finished.push(...orderedRemaining);
+    } else {
+        g.finished.push(...remaining);
+    }
+    finishRound(g);
+    return true;
+}
+
 function cardsByIdFromHand(g, seat, ids) {
     const wanted = new Set(ids);
     if (wanted.size !== ids.length) return null;
@@ -3645,19 +3902,23 @@ function cardsByIdFromHand(g, seat, ids) {
 }
 
 function canSeatAct(g, seat) {
-    return g.phase === "playing" && g.currentTurn === seat && !!g.seats[seat] && !finishedList(g).includes(seat);
+    return g.phase === "playing" && !dealWindowOpen(g) && g.currentTurn === seat && !!g.seats[seat] && !finishedList(g).includes(seat);
 }
 
 async function withAction(fn) {
     if (actionBusy) return false;
     actionBusy = true;
-    render();
+    root.classList.add("action-busy");
     try {
         return await fn();
     } finally {
         actionBusy = false;
-        render();
+        root.classList.remove("action-busy");
     }
+}
+
+function commitAction(fn, options = {}) {
+    return options.silent ? mutateGame(fn) : withAction(() => mutateGame(fn));
 }
 
 function createRoomCode() {
@@ -3684,6 +3945,8 @@ function defaultGame(code, hostName) {
         hands: { 0: [], 1: [], 2: [], 3: [] },
         currentTurn: 0,
         turnStartedAt: Date.now(),
+        roundStartedAt: 0,
+        dealStartedAt: 0,
         lastPlay: null,
         passCount: 0,
         finished: [],
@@ -3729,8 +3992,10 @@ function attachRoom(code) {
     unsubscribe = onValue(roomRef(code), (snap) => {
         game = normalizeGame(snap.val());
         selected.clear();
+        syncDealAnimation();
         render();
         maybeRunAI();
+        scheduleTurnClock();
     });
 }
 
@@ -3762,6 +4027,129 @@ function mySeat(g = game) {
 function isHost(g = game) {
     if (!g) return false;
     return clientIsHost(g);
+}
+
+function clearDealTimers() {
+    dealAnimation.timers.forEach(t => clearTimeout(t));
+    dealAnimation.timers = [];
+}
+
+function dealKey(g = game) {
+    if (!g || g.phase !== "playing" || !Number.isFinite(g.dealStartedAt) || !g.dealStartedAt) return "";
+    return `${g.roomCode || roomCode}:${g.roundNo || 0}:${g.dealStartedAt}`;
+}
+
+function setDealPhase(phase) {
+    if (dealAnimation.phase === phase) return;
+    dealAnimation.phase = phase;
+    render();
+}
+
+function finishDealAnimation(key = dealAnimation.key) {
+    clearDealTimers();
+    if (key) dealAnimation.completed.add(key);
+    if (dealAnimation.key === key) dealAnimation.phase = "done";
+    render();
+    maybeRunAI();
+    scheduleTurnClock();
+}
+
+function syncDealAnimation(g = game) {
+    const key = dealKey(g);
+    if (!key || dealAnimation.completed.has(key)) {
+        if (!key) {
+            clearDealTimers();
+            dealAnimation.key = "";
+            dealAnimation.phase = "done";
+        }
+        return;
+    }
+    const elapsed = Math.max(0, Date.now() - Number(g.dealStartedAt || 0));
+    const total = DEALING_MS + SORTING_MS;
+    if (elapsed >= total) {
+        finishDealAnimation(key);
+        return;
+    }
+    if (dealAnimation.key !== key) {
+        clearDealTimers();
+        dealAnimation.key = key;
+    } else {
+        clearDealTimers();
+    }
+    dealAnimation.phase = elapsed < DEALING_MS ? "dealing" : "sorting";
+    if (elapsed < DEALING_MS) {
+        dealAnimation.timers.push(setTimeout(() => setDealPhase("sorting"), DEALING_MS - elapsed));
+    }
+    dealAnimation.timers.push(setTimeout(() => finishDealAnimation(key), total - elapsed));
+}
+
+function currentDealPhase(g = game) {
+    const key = dealKey(g);
+    if (!key || dealAnimation.completed.has(key) || dealAnimation.key !== key) return "done";
+    return dealAnimation.phase;
+}
+
+function dealBusy(g = game) {
+    const phase = currentDealPhase(g);
+    return phase === "dealing" || phase === "sorting";
+}
+
+function dealWindowOpen(g = game) {
+    return !!g && g.phase === "playing" && Number(g.dealStartedAt) > 0 && Date.now() < Number(g.dealStartedAt) + DEALING_MS + SORTING_MS;
+}
+
+function clearTurnTimers() {
+    clearTimeout(turnDeadlineTimer);
+    clearTimeout(turnRenderTimer);
+    turnDeadlineTimer = null;
+    turnRenderTimer = null;
+}
+
+function isOpeningLead(g = game) {
+    return !!g && g.phase === "playing" && !g.lastPlay && valuesFromFirebase(g.history).length === 0;
+}
+
+function turnLimitApplies(g = game) {
+    if (!g || g.phase !== "playing" || dealWindowOpen(g)) return false;
+    if (isOpeningLead(g)) return false;
+    if (!g.seats?.[g.currentTurn] || finishedList(g).includes(g.currentTurn)) return false;
+    return true;
+}
+
+function turnRemainingMs(g = game) {
+    if (!turnLimitApplies(g)) return null;
+    const started = Number(g.turnStartedAt) || Date.now();
+    return Math.max(0, TURN_LIMIT_MS - (Date.now() - started));
+}
+
+function formatClock(ms) {
+    const safe = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(safe / 60);
+    const s = String(safe % 60).padStart(2, "0");
+    return `${m}:${s}`;
+}
+
+function scheduleTurnClock() {
+    clearTurnTimers();
+    if (!game || !turnLimitApplies(game)) return;
+    const remaining = turnRemainingMs(game);
+    if (remaining == null) return;
+    if (remaining <= 0) {
+        handleTurnTimeout();
+        return;
+    }
+    turnDeadlineTimer = setTimeout(handleTurnTimeout, remaining + 80);
+    updateTurnClockDOM();
+    turnRenderTimer = setTimeout(scheduleTurnClock, Math.min(1000, remaining + 80));
+}
+
+function updateTurnClockDOM() {
+    const el = document.getElementById("turn-clock");
+    if (!el || !game) return;
+    const remaining = turnRemainingMs(game);
+    el.textContent = remaining == null ? (isOpeningLead(game) ? L("No limit", "不限时") : "--") : formatClock(remaining);
+    el.classList.toggle("warn", remaining != null && remaining <= 60000 && remaining > 30000);
+    el.classList.toggle("danger", remaining != null && remaining <= 30000);
 }
 
 async function takeSeat(index) {
@@ -3849,7 +4237,10 @@ async function startGame() {
 
 function startRound(g, previousResult) {
     const deck = makeDeck();
+    const now = Date.now();
     g.roundNo = (g.roundNo || 0) + 1;
+    g.roundStartedAt = now;
+    g.dealStartedAt = now;
     g.currentLevelRank = g.levels[g.leaderTeam || 0] || "2";
     g.hands = { 0: [], 1: [], 2: [], 3: [] };
     deck.forEach((card, idx) => g.hands[idx % 4].push(card));
@@ -3874,18 +4265,19 @@ function startRound(g, previousResult) {
 function highestTributeCard(hand, levelRank) {
     const candidates = hand.filter(c => !(isWild(c, levelRank)));
     const sorted = sortCards(candidates, levelRank);
-    return sorted[sorted.length - 1] || sortCards(hand, levelRank)[hand.length - 1];
+    return sorted[0] || sortCards(hand, levelRank)[0];
 }
 
 function lowestReturnCard(hand, levelRank) {
     const counts = countRanks(hand.filter(c => !c.joker && !isWild(c, levelRank)));
     const candidates = hand.filter(c => {
         if (c.joker || isWild(c, levelRank)) return false;
-        if (rankBase(c.rank) > 10) return false;
+        if (rankPower(c.rank, levelRank) > 10) return false;
         if ((counts[c.rank] || 0) >= 4) return false;
         return true;
     });
-    return sortCards(candidates.length ? candidates : hand, levelRank)[0];
+    const sorted = sortCards(candidates.length ? candidates : hand, levelRank);
+    return sorted[sorted.length - 1];
 }
 
 function moveCardBetween(g, from, to, card) {
@@ -3936,7 +4328,7 @@ function countRanks(cards) {
 
 function sequenceSets(kind) {
     const straight = [
-        ["A","2","3","4","5"], ["2","3","4","5","6"], ["3","4","5","6","7"],
+        ["2","3","4","5","6"], ["3","4","5","6","7"],
         ["4","5","6","7","8"], ["5","6","7","8","9"], ["6","7","8","9","10"],
         ["7","8","9","10","J"], ["8","9","10","J","Q"], ["9","10","J","Q","K"], ["10","J","Q","K","A"]
     ];
@@ -3965,6 +4357,24 @@ function canFillRanks(nonWild, wildCount, required, sameSuit) {
     }
     for (const rank of Object.keys(need)) usedWild += need[rank];
     return usedWild <= wildCount;
+}
+
+function comboDisplayOrder(cards, required, levelRank, sameSuit = null) {
+    const remaining = [...cards];
+    const order = [];
+    for (const [rank, count] of required) {
+        for (let n = 0; n < count; n++) {
+            let idx = remaining.findIndex(c => !c.joker && !isWild(c, levelRank) && c.rank === rank && (!sameSuit || c.suit === sameSuit));
+            if (idx < 0) idx = remaining.findIndex(c => !c.joker && isWild(c, levelRank));
+            if (idx < 0) idx = remaining.findIndex(c => !c.joker && c.rank === rank);
+            if (idx >= 0) {
+                const [card] = remaining.splice(idx, 1);
+                order.push({ id: card.id, targetRank: rank });
+            }
+        }
+    }
+    remaining.forEach(card => order.push({ id: card.id, targetRank: card.rank || "" }));
+    return order;
 }
 
 function evaluateCombos(cards, levelRank) {
@@ -4007,12 +4417,12 @@ function evaluateCombos(cards, levelRank) {
         }
         for (const seq of sequenceSets("straight")) {
             const req = seq.map(r => [r, 1]);
-            if (canFillRanks(nonWild, wc, req, null)) add({ type: "straight", name: "顺子", mainPower: rankBase(seq[seq.length - 1]) });
+            if (canFillRanks(nonWild, wc, req, null)) add({ type: "straight", name: "顺子", mainPower: rankBase(seq[seq.length - 1]), displayOrder: comboDisplayOrder(cards, req, levelRank) });
             const naturalSuits = [...new Set(nonWild.filter(c => !c.joker).map(c => c.suit))];
             const suitOptions = naturalSuits.length ? naturalSuits : suits;
             for (const suit of suitOptions) {
                 if (canFillRanks(nonWild, wc, req, suit)) {
-                    add({ type: "straightFlush", name: "同花顺", isBomb: true, mainPower: rankBase(seq[seq.length - 1]) });
+                    add({ type: "straightFlush", name: "同花顺", isBomb: true, mainPower: rankBase(seq[seq.length - 1]), displayOrder: comboDisplayOrder(cards, req, levelRank, suit) });
                 }
             }
         }
@@ -4020,19 +4430,24 @@ function evaluateCombos(cards, levelRank) {
 
     if (len === 6) {
         for (const seq of sequenceSets("pair")) {
-            if (canFillRanks(nonWild, wc, seq.map(r => [r, 2]), null)) {
-                add({ type: "pairStraight", name: "三连对", mainPower: rankBase(seq[seq.length - 1]) });
+            const req = seq.map(r => [r, 2]);
+            if (canFillRanks(nonWild, wc, req, null)) {
+                add({ type: "pairStraight", name: "三连对", mainPower: rankBase(seq[seq.length - 1]), displayOrder: comboDisplayOrder(cards, req, levelRank) });
             }
         }
         for (const seq of sequenceSets("plate")) {
-            if (canFillRanks(nonWild, wc, seq.map(r => [r, 3]), null)) {
-                add({ type: "tripleStraight", name: "钢板", mainPower: rankBase(seq[seq.length - 1]) });
+            const req = seq.map(r => [r, 3]);
+            if (canFillRanks(nonWild, wc, req, null)) {
+                add({ type: "tripleStraight", name: "钢板", mainPower: rankBase(seq[seq.length - 1]), displayOrder: comboDisplayOrder(cards, req, levelRank) });
             }
         }
     }
 
     const unique = new Map();
-    for (const c of combos) unique.set(`${c.type}:${c.mainPower}:${c.bombLen || 0}`, c);
+    for (const c of combos) {
+        const key = `${c.type}:${c.mainPower}:${c.bombLen || 0}`;
+        if (!unique.has(key)) unique.set(key, c);
+    }
     return [...unique.values()];
 }
 
@@ -4081,7 +4496,7 @@ async function playSelected() {
 
 async function playCards(seat, cards, options = {}) {
     const ids = cards.map(c => c.id);
-    const updated = await withAction(() => mutateGame(g => {
+    const updated = await commitAction(g => {
         if (!canSeatAct(g, seat)) return false;
         if (!Array.isArray(g.finished)) g.finished = [];
         if (!Array.isArray(g.history)) g.history = [];
@@ -4101,6 +4516,7 @@ async function playCards(seat, cards, options = {}) {
             g.finished.push(seat);
             addHistory(g, { player: seat, action: `第 ${g.finished.length} 名出完`, actionType: "finish", place: g.finished.length, cards: [], at: Date.now() });
         }
+        if (finishIfPartnershipDone(g, seat)) return;
         if (g.finished.length >= 3) {
             const last = [0,1,2,3].find(i => !g.finished.includes(i));
             if (last != null) g.finished.push(last);
@@ -4109,7 +4525,7 @@ async function playCards(seat, cards, options = {}) {
         }
         setCurrentTurn(g, nextSeat(seat, g));
         g.message = `${g.seats[seat].name} 出了 ${comboName(combo, "zh")}。`;
-    }));
+    }, options);
     if (!updated && !options.silent) showToast(L("Move expired. Check the table and retry.", "牌局已经变化，请看牌桌后重试。"));
     return !!updated;
 }
@@ -4122,7 +4538,7 @@ async function passTurn() {
 }
 
 async function doPass(seat, options = {}) {
-    const updated = await withAction(() => mutateGame(g => {
+    const updated = await commitAction(g => {
         if (!canSeatAct(g, seat) || !g.lastPlay) return false;
         if (!Array.isArray(g.finished)) g.finished = [];
         if (!Array.isArray(g.history)) g.history = [];
@@ -4150,9 +4566,73 @@ async function doPass(seat, options = {}) {
             setCurrentTurn(g, nextSeat(seat, g));
             g.message = `${g.seats[seat].name} 不要。`;
         }
-    }));
+    }, options);
     if (!updated && !options.silent) showToast(L("Pass expired. Check the table and retry.", "牌局已经变化，请看牌桌后重试。"));
     return !!updated;
+}
+
+async function handleTurnTimeout() {
+    if (!game || !turnLimitApplies(game)) return;
+    const seat = game.currentTurn;
+    const started = Number(game.turnStartedAt) || 0;
+    await mutateGame(g => {
+        if (!turnLimitApplies(g) || g.currentTurn !== seat || Number(g.turnStartedAt || 0) !== started) return false;
+        if (!Array.isArray(g.finished)) g.finished = [];
+        if (!Array.isArray(g.history)) g.history = [];
+        if (!Array.isArray(g.trickPlays)) g.trickPlays = [null, null, null, null];
+        const seatName = g.seats[seat]?.name || `Seat ${seat + 1}`;
+        if (g.lastPlay) {
+            g.passCount = (g.passCount || 0) + 1;
+            g.trickPlays[seat] = { player: seat, action: "不要", actionType: "pass", cards: [], timedOut: true, at: Date.now() };
+            addHistory(g, { player: seat, action: "不要", actionType: "pass", cards: [], timedOut: true, at: Date.now() });
+            const activeCount = activeSeatIds(g).length;
+            if (g.passCount >= activeCount - 1) {
+                const winner = g.lastPlay.player;
+                const partner = partnerOf(winner);
+                g.lastPlay = null;
+                g.passCount = 0;
+                if (!g.finished.includes(winner)) {
+                    setCurrentTurn(g, winner);
+                    g.message = `${g.seats[winner].name} 收牌，继续出。`;
+                } else if (!g.finished.includes(partner)) {
+                    setCurrentTurn(g, partner);
+                    g.message = `${g.seats[winner].name} 接风给队友 ${g.seats[partner].name}。`;
+                } else {
+                    setCurrentTurn(g, nextSeat(winner, g));
+                    g.message = "本轮收牌。";
+                }
+            } else {
+                setCurrentTurn(g, nextSeat(seat, g));
+                g.message = `${seatName} 超时不要。`;
+            }
+            return true;
+        }
+        const sortedHand = sortCards(g.hands[seat] || [], g.currentLevelRank);
+        const card = sortedHand[sortedHand.length - 1];
+        if (!card) return false;
+        const combo = choosePlayable([card], null, g.currentLevelRank);
+        if (!combo) return false;
+        g.hands[seat] = g.hands[seat].filter(c => c.id !== card.id);
+        g.lastPlay = { player: seat, cards: [card], combo };
+        g.trickPlays = [null, null, null, null];
+        g.trickPlays[seat] = { player: seat, action: comboName(combo, "zh"), actionType: "combo", combo, cards: [card], timedOut: true, at: Date.now() };
+        g.passCount = 0;
+        addHistory(g, { player: seat, action: comboName(combo, "zh"), actionType: "combo", combo, cards: [card], timedOut: true, at: Date.now() });
+        if (g.hands[seat].length === 0 && !g.finished.includes(seat)) {
+            g.finished.push(seat);
+            addHistory(g, { player: seat, action: `第 ${g.finished.length} 名出完`, actionType: "finish", place: g.finished.length, cards: [], at: Date.now() });
+        }
+        if (finishIfPartnershipDone(g, seat)) return true;
+        if (g.finished.length >= 3) {
+            const last = [0,1,2,3].find(i => !g.finished.includes(i));
+            if (last != null) g.finished.push(last);
+            finishRound(g);
+            return true;
+        }
+        setCurrentTurn(g, nextSeat(seat, g));
+        g.message = `${seatName} 超时自动出 ${cardText(card, "zh")}。`;
+        return true;
+    });
 }
 
 function finishRound(g) {
@@ -4197,13 +4677,46 @@ function hintMove() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
     const hand = game.hands[seat] || [];
-    const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank);
+    const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank, seat, game);
     if (!move) return showToast(L("Suggestion: pass", "建议：不要"));
     selected = new Set(move.cards.map(c => c.id));
     render();
 }
 
-function findAIMove(hand, lastCombo, levelRank) {
+function comboStrength(combo) {
+    return combo ? combo.mainPower + bombScore(combo) : 0;
+}
+
+function moveStrength(move) {
+    return move ? comboStrength(move.combo) : 0;
+}
+
+function remainingAfterMove(hand, move) {
+    if (!move) return hand.length;
+    return Math.max(0, hand.length - move.cards.length);
+}
+
+function lastPlayByPartner(seat, g = game) {
+    return !!g?.lastPlay && partnerOf(seat) === g.lastPlay.player;
+}
+
+function obviouslyCannotBeat(hand, lastCombo, levelRank) {
+    if (!lastCombo) return false;
+    if ((hand || []).length < lastCombo.len && (hand || []).length < 4 && !lastCombo.isBomb) return true;
+    return !findAIMoveIgnoringTeam(hand, lastCombo, levelRank);
+}
+
+function findAIMoveIgnoringTeam(hand, lastCombo, levelRank) {
+    return findAIMove(hand, lastCombo, levelRank, null, null);
+}
+
+function shouldProtectPartnerLead(move, hand, lastCombo, seat, g = game) {
+    if (!move || !lastCombo || !lastPlayByPartner(seat, g)) return false;
+    if (remainingAfterMove(hand, move) === 0) return false;
+    return true;
+}
+
+function findAIMove(hand, lastCombo, levelRank, seat = null, g = game) {
     const candidates = [];
     for (const c of hand) candidates.push([c]);
     const byRank = {};
@@ -4245,8 +4758,16 @@ function findAIMove(hand, lastCombo, levelRank) {
     moves.sort((a, b) => {
         if (!!a.combo.isBomb !== !!b.combo.isBomb) return a.combo.isBomb ? 1 : -1;
         if (a.cards.length !== b.cards.length && !lastCombo) return b.cards.length - a.cards.length;
-        return (a.combo.mainPower + bombScore(a.combo)) - (b.combo.mainPower + bombScore(b.combo));
+        return moveStrength(a) - moveStrength(b);
     });
+    if (seat != null && shouldProtectPartnerLead(moves[0], hand, lastCombo, seat, g)) {
+        const nonDisruptive = moves.find(move => {
+            if (shouldProtectPartnerLead(move, hand, lastCombo, seat, g)) return false;
+            if (move.combo?.isBomb && remainingAfterMove(hand, move) > 0) return false;
+            return remainingAfterMove(hand, move) <= 1 || moveStrength(move) >= comboStrength(lastCombo) + 6;
+        });
+        return nonDisruptive || null;
+    }
     return moves[0] || null;
 }
 
@@ -4286,15 +4807,22 @@ function pickFlushSequence(hand, seq, levelRank) {
 function maybeRunAI() {
     clearTimeout(aiTimer);
     if (!game || game.phase !== "playing") return;
+    if (dealWindowOpen(game)) {
+        const wait = Math.max(0, Number(game.dealStartedAt) + DEALING_MS + SORTING_MS - Date.now()) + 140;
+        aiTimer = setTimeout(maybeRunAI, wait);
+        return;
+    }
     const seat = game.currentTurn;
     if (game.seats[seat]?.type !== "ai") return;
+    const hand = game.hands[seat] || [];
+    const obviousNoBeat = !!game.lastPlay && obviouslyCannotBeat(hand, game.lastPlay.combo, game.currentLevelRank);
     const elapsed = Date.now() - (Number(game.turnStartedAt) || Date.now());
-    const minWait = Math.max(0, AI_MIN_TURN_MS - elapsed);
-    const delay = minWait + 900 + Math.random() * AI_RANDOM_TURN_MS;
+    const minWait = obviousNoBeat ? 0 : Math.max(0, AI_MIN_TURN_MS - elapsed);
+    const delay = obviousNoBeat ? 520 + Math.random() * 220 : minWait + 900 + Math.random() * AI_RANDOM_TURN_MS;
     aiTimer = setTimeout(async () => {
         if (!game || game.phase !== "playing" || game.currentTurn !== seat) return;
         const hand = game.hands[seat] || [];
-        const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank);
+        const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank, seat, game);
         if (move) await playCards(seat, move.cards, { silent: true });
         else await doPass(seat, { silent: true });
     }, delay);
@@ -4445,8 +4973,47 @@ function relationForSeat(i, mine) {
     return { key: "opponent", label: L("Opponent", "对手") };
 }
 
-function playedCardsHTML(cards = []) {
-    return `<div class="trick-card-stack">${cards.map((card, idx) => cardHTML(card, true, false, `style="--i:${idx}"`)).join("")}</div>`;
+function handBacksHTML(count, className = "") {
+    return Array.from({ length: Math.min(27, Math.max(0, count)) })
+        .map((_, idx) => cardHTML({ back: true }, false, false, `style="--i:${idx};--fan:${idx - Math.min(27, count) / 2}"`, className))
+        .join("");
+}
+
+function displayCardsForCombo(cards = [], combo = null) {
+    const sorted = sortCards(cards, game?.currentLevelRank || "2");
+    if (combo?.displayOrder?.length) {
+        const byId = new Map(cards.map(c => [c.id, c]));
+        return combo.displayOrder
+            .map(item => byId.get(item.id))
+            .filter(Boolean);
+    }
+    if (!combo || !["straight", "straightFlush", "pairStraight", "tripleStraight"].includes(combo.type)) return sorted;
+    const counts = countRanks(cards.filter(c => !c.joker));
+    const seq = Object.keys(counts).sort((a, b) => rankBase(a) - rankBase(b));
+    if (seq.length) {
+        return [...cards].sort((a, b) => {
+            const ra = a.rank ? seq.indexOf(a.rank) : 999;
+            const rb = b.rank ? seq.indexOf(b.rank) : 999;
+            if (ra !== rb) return ra - rb;
+            return suits.indexOf(a.suit || "S") - suits.indexOf(b.suit || "S") || a.id.localeCompare(b.id);
+        });
+    }
+    return sorted;
+}
+
+function playedCardsHTML(cards = [], relation = null, combo = null) {
+    const ribbon = relation ? `<span class="relation-ribbon">${encodeHTML(relation.label)}</span>` : "";
+    const displayCards = displayCardsForCombo(cards, combo);
+    return `<div class="trick-card-stack"><div class="trick-card-row">${displayCards.map((card, idx) => cardHTML(card, true, false, `style="--i:${idx}"`)).join("")}</div>${ribbon}</div>`;
+}
+
+function seatPlayStamp(entry) {
+    if (!entry) return "";
+    return `${entry.player ?? ""}:${entry.actionType || ""}:${entry.at || ""}:${valuesFromFirebase(entry.cards).map(c => c.id).join("-")}`;
+}
+
+function latestTrickPlayAt() {
+    return Math.max(0, ...(game.trickPlays || []).map(entry => Number(entry?.at) || 0));
 }
 
 function seatPlayHTML(i, mine) {
@@ -4456,12 +5023,12 @@ function seatPlayHTML(i, mine) {
     const relation = relationForSeat(i, mine);
     const name = displaySeatName(game.seats[i], `Seat ${i + 1}`);
     const pass = entry.actionType === "pass";
-    const body = pass ? `<div class="pass-mark">${L("Pass", "不要")}</div>` : playedCardsHTML(entry.cards || []);
+    const body = pass ? `<div class="pass-mark">${L("Pass", "不要")}</div>` : playedCardsHTML(entry.cards || [], relation, entry.combo);
     const action = pass ? L("Pass", "不要") : comboName(entry.combo || { name: entry.action || "" });
-    return `<div class="seat-play p${pos} ${pass ? "pass" : "played"} relation-${relation.key}">
+    const fresh = Number(entry.at) && Number(entry.at) === latestTrickPlayAt();
+    return `<div class="seat-play p${pos} ${pass ? "pass" : "played"} ${fresh ? "fresh" : ""} relation-${relation.key}" data-play-stamp="${encodeHTML(seatPlayStamp(entry))}">
         ${body}
         <div class="play-caption">${encodeHTML(name)} · ${encodeHTML(action)}</div>
-        <span class="relation-ribbon">${encodeHTML(relation.label)}</span>
     </div>`;
 }
 
@@ -4471,14 +5038,49 @@ function lastPlaySummaryHTML(lastLabel) {
     return `${L("Current to beat", "当前要管")}: ${lastLabel} · ${relation.label}`;
 }
 
+function dealOverlayHTML(mine, phase) {
+    if (phase !== "dealing" && phase !== "sorting") return "";
+    const label = phase === "dealing" ? L("Dealing cards", "正在发牌") : L("Sorting hand", "正在理牌");
+    const cards = Array.from({ length: DEAL_CARD_COUNT }).map((_, idx) => {
+        const seat = idx % 4;
+        const pos = visualSeatPos(seat, mine);
+        const fan = Math.floor(idx / 4) - 5.5;
+        const rot = (fan * 1.6).toFixed(1);
+        return `<i class="deal-card target-${pos}" style="--i:${idx};--fan:${fan};--rot:${rot}deg"></i>`;
+    }).join("");
+    return `<div class="deal-overlay ${phase}" aria-hidden="true">
+        <div class="deal-deck"><i></i><i></i><i></i></div>
+        <div class="deal-status">${label}<span></span></div>
+        <div class="deal-flight">${cards}</div>
+    </div>`;
+}
+
+function handCardsHTML(myHand, selectable, phase) {
+    if (!myHand.length) return `<div class="combo-label">${L("You are not seated yet. Spectator view.", "你还没有入座，当前是观战视角。")}</div>`;
+    if (phase === "dealing") return handBacksHTML(myHand.length, "deal-hand-back");
+    return myHand.map((c, idx) => {
+        const fan = idx - myHand.length / 2;
+        const attrs = phase === "sorting" ? `style="--i:${idx};--fan:${fan}"` : "";
+        return cardHTML(c, false, selectable, attrs, phase === "sorting" ? "sort-in" : "");
+    }).join("");
+}
+
 function renderTable() {
     const mine = mySeat();
+    const dealPhase = currentDealPhase();
+    const tableBusy = dealPhase !== "done";
     const myHand = mine >= 0 ? sortCards(game.hands[mine] || [], game.currentLevelRank) : [];
-    const canAct = mine === game.currentTurn && game.phase === "playing";
+    const canAct = mine === game.currentTurn && game.phase === "playing" && !tableBusy;
     const selectedCards = mine >= 0 ? myHand.filter(c => selected.has(c.id)) : [];
     const rawSelectedCombos = selectedCards.length ? evaluateCombos(selectedCards, game.currentLevelRank) : [];
     const selectedCombo = selectedCards.length ? choosePlayable(selectedCards, game.lastPlay?.combo || null, game.currentLevelRank) : null;
     const canPlaySelected = canAct && !!selectedCombo && !actionBusy;
+    const handSelectable = game.phase === "playing" && mine >= 0 && !actionBusy && !tableBusy;
+    const remaining = turnRemainingMs(game);
+    const turnClockText = remaining == null
+        ? isOpeningLead(game) ? L("No limit", "不限时") : "--"
+        : formatClock(remaining);
+    const turnClockClass = remaining != null && remaining <= 30000 ? "danger" : remaining != null && remaining <= 60000 ? "warn" : "";
     const currentTurnName = displaySeatName(game.seats[game.currentTurn], L("player", "玩家"));
     const lastLabel = game.lastPlay
         ? `${encodeHTML(displaySeatName(game.seats[game.lastPlay.player]))}: ${comboName(game.lastPlay.combo)}`
@@ -4487,7 +5089,11 @@ function renderTable() {
     let advisorText = mine >= 0
         ? L("Select cards to preview the combo before playing.", "选牌后会预览牌型和能否出牌。")
         : L("Spectator view. Sit in the lobby before the next game to play.", "观战视角。下局前回大厅入座即可参与。");
-    if (mine >= 0 && game.phase !== "playing") {
+    if (tableBusy) {
+        advisorText = dealPhase === "dealing"
+            ? L("Cards are being dealt. Your hand will reveal after the deal.", "正在发牌，发完后会翻开并理牌。")
+            : L("Sorting your hand.", "正在理牌。");
+    } else if (mine >= 0 && game.phase !== "playing") {
         advisorText = L("Round review mode. Start the next round when everyone is ready.", "本局结算中，准备好后进入下一局。");
     } else if (mine >= 0 && !canAct) {
         advisorText = `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`;
@@ -4504,11 +5110,11 @@ function renderTable() {
     const historyRows = (game.history || []).slice(-10).reverse().map(h => `
         <div class="history-row">
             <div><b>${encodeHTML(displaySeatName(game.seats[h.player]))}</b> ${encodeHTML(translateAction(h.action, h))}</div>
-            ${h.cards?.length ? `<div class="history-cards">${h.cards.map(cardText).join(" ")}</div>` : ""}
+            ${h.cards?.length ? `<div class="history-cards">${displayCardsForCombo(h.cards, h.combo).map(cardText).join(" ")}</div>` : ""}
         </div>`).join("");
     root.innerHTML = `
     <section class="table-wrap">
-        <div class="table">
+        <div class="table deal-${dealPhase}">
             <div class="table-grid" aria-hidden="true"></div>
             <div class="table-emblem" aria-hidden="true"><span>Picasso Lab</span><b>Guandan</b></div>
             <div class="score-strip">
@@ -4516,11 +5122,12 @@ function renderTable() {
                 <div class="score-pill">${iconHTML("shield")}<span>${teamName(1)}</span><strong>${game.levels[1]}</strong></div>
                 <div class="score-pill">${iconHTML("level")}<span>${L("Level", "本局打")}</span><strong>${game.currentLevelRank}</strong></div>
                 <div class="score-pill">${iconHTML("round")}<span>${L("Round", "第")}</span><strong>${game.roundNo}</strong>${isZH() ? " 局" : ""}</div>
-                <div class="score-pill wide">${iconHTML("turn")}<span>${L("Turn", "轮到")}</span><strong>${encodeHTML(currentTurnName)}</strong></div>
+                <div class="score-pill wide turn-timer ${turnClockClass}">${iconHTML("turn")}<span>${L("Turn", "轮到")}</span><strong>${encodeHTML(currentTurnName)}</strong><em id="turn-clock">${turnClockText}</em></div>
                 <div class="score-pill">${iconHTML("wild")}<span>${L("Wild", "逢人配")}</span><strong>♥${game.currentLevelRank}</strong></div>
             </div>
             ${[0,1,2,3].map(i => playerHTML(i, mine)).join("")}
             ${[0,1,2,3].map(i => seatPlayHTML(i, mine)).join("")}
+            ${dealOverlayHTML(mine, dealPhase)}
             <div class="center-zone">
                 <div class="center-card">
                     <div class="center-meta"><span>${iconHTML("last")}${L("Last Trick", "上一手")}</span><strong>${lastLabel}</strong></div>
@@ -4532,17 +5139,19 @@ function renderTable() {
             ${game.phase === "roundOver" ? roundOverHTML() : ""}
             <div class="hand-zone">
                 <div class="hand-header">
-                    <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
+                    <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} <strong>${myHand.length}</strong> ${L("cards", "张")} · ${canAct ? L("Your turn", "轮到你出牌") : tableBusy ? (dealPhase === "dealing" ? L("Dealing", "发牌中") : L("Sorting", "理牌中")) : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
                     <div class="hand-tools">
                         <button class="btn" id="play-btn" ${canPlaySelected ? "" : "disabled"} type="button">${iconLabel("play", L("Play", "出牌"))}</button>
                         <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay && !actionBusy ? "" : "disabled"} type="button">${iconLabel("pass", L("Pass", "不要"))}</button>
                         <button class="btn secondary" id="hint-btn" ${canAct && !actionBusy ? "" : "disabled"} type="button">${iconLabel("hint", L("Hint", "提示"))}</button>
                         <button class="btn secondary" id="clear-btn" type="button">${iconLabel("clear", L("Clear", "取消"))}</button>
                     </div>
-                    <div class="selection-meter">${L("Selected", "已选")} <strong>${selected.size}</strong> ${L("cards", "张")}</div>
+                    <div class="hand-feedback">
+                        <div class="selection-meter">${L("Selected", "已选")} <strong>${selected.size}</strong> ${L("cards", "张")}</div>
+                        <div class="combo-advisor ${advisorClass}"><span>${advisorText}</span><em>${encodeHTML(selectedCards.map(cardText).join(" "))}</em></div>
+                    </div>
                 </div>
-                <div class="combo-advisor ${advisorClass}"><span>${advisorText}</span><em>${encodeHTML(selectedCards.map(cardText).join(" "))}</em></div>
-                <div class="hand">${myHand.length ? myHand.map(c => cardHTML(c, false, game.phase === "playing" && mine >= 0 && !actionBusy)).join("") : `<div class="combo-label">${L("You are not seated yet. Spectator view.", "你还没有入座，当前是观战视角。")}</div>`}</div>
+                <div class="hand ${dealPhase === "dealing" ? "receiving-hand" : dealPhase === "sorting" ? "sorting-hand" : ""}">${handCardsHTML(myHand, handSelectable, dealPhase)}</div>
             </div>
         </div>
     </section>`;
@@ -4555,7 +5164,11 @@ function renderTable() {
         let nextText = mine >= 0
             ? L("Select cards to preview the combo before playing.", "选牌后会预览牌型和能否出牌。")
             : L("Spectator view. Sit in the lobby before the next game to play.", "观战视角。下局前回大厅入座即可参与。");
-        if (mine >= 0 && game.phase !== "playing") {
+        if (tableBusy) {
+            nextText = dealPhase === "dealing"
+                ? L("Cards are being dealt. Your hand will reveal after the deal.", "正在发牌，发完后会翻开并理牌。")
+                : L("Sorting your hand.", "正在理牌。");
+        } else if (mine >= 0 && game.phase !== "playing") {
             nextText = L("Round review mode. Start the next round when everyone is ready.", "本局结算中，准备好后进入下一局。");
         } else if (mine >= 0 && !canAct) {
             nextText = `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`;
