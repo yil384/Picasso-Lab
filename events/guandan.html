@@ -2068,34 +2068,29 @@
     }
 
     .relation-band {
-        --sleeve-w: 38px;
-        --sleeve-h: 38px;
+        --sleeve-w: 36px;
+        --sleeve-h: 36px;
         --band-fill-top: #ffe57b;
         --band-fill-mid: #ffcf37;
         --band-fill-bottom: #d89c14;
         position: absolute;
-        right: 0;
-        top: 0;
+        right: -1px;
+        top: -1px;
         z-index: 20;
         width: var(--sleeve-w);
         height: var(--sleeve-h);
         transform: none;
         transform-origin: top right;
-        clip-path: polygon(20% 0, 56% 0, 100% 44%, 100% 80%);
-        background:
-            linear-gradient(132deg, rgba(255,255,255,0.42) 0 18%, transparent 28% 68%, rgba(0,0,0,0.18) 82% 100%),
-            linear-gradient(45deg, var(--band-fill-top), var(--band-fill-mid) 52%, var(--band-fill-bottom));
+        background: none;
         color: #061115;
         pointer-events: none;
-        box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.68),
-            inset -1px -1px 0 rgba(0,0,0,0.2);
+        filter: drop-shadow(-1px 1px 2px rgba(0,0,0,0.22));
     }
 
     .relation-band span {
         position: absolute;
-        left: 18px;
-        top: 7px;
+        left: 15px;
+        top: 10px;
         width: 24px;
         display: block;
         transform: rotate(47deg);
@@ -2118,19 +2113,19 @@
     }
 
     .relation-band::before {
-        left: 26%;
-        top: 0;
-        width: 3px;
-        height: 122%;
-        transform: rotate(-43deg);
-        transform-origin: top center;
-        background: linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.04));
-        filter: blur(0.25px);
+        inset: 0;
+        clip-path: polygon(18% 0, 56% 0, 100% 44%, 100% 82%);
+        background:
+            linear-gradient(132deg, rgba(255,255,255,0.48) 0 18%, transparent 29% 67%, rgba(0,0,0,0.19) 82% 100%),
+            linear-gradient(45deg, var(--band-fill-top), var(--band-fill-mid) 52%, var(--band-fill-bottom));
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.68),
+            inset -1px -1px 0 rgba(0,0,0,0.2);
     }
 
     .relation-band::after {
         right: 0;
-        top: 42%;
+        top: 45%;
         width: 100%;
         height: 3px;
         transform: rotate(47deg);
@@ -3261,13 +3256,13 @@
         }
 
         .relation-band {
-            --sleeve-w: 32px;
-            --sleeve-h: 34px;
+            --sleeve-w: 30px;
+            --sleeve-h: 32px;
         }
 
         .relation-band span {
             left: 12px;
-            top: 6px;
+            top: 9px;
             width: 21px;
             font-size: 5.5px;
         }
