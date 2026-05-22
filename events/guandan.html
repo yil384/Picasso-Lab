@@ -2068,25 +2068,26 @@
     }
 
     .relation-band {
-        --sleeve-run: 21px;
-        --sleeve-height: 10px;
+        --sleeve-w: 28px;
+        --sleeve-h: 13px;
         --band-fill-top: #ffe57b;
         --band-fill-mid: #ffcf37;
         --band-fill-bottom: #d89c14;
         position: absolute;
-        left: calc(100% - var(--sleeve-run) / 2);
-        top: calc(var(--sleeve-run) / 2);
+        right: 0;
+        top: 0;
         z-index: 20;
-        width: calc(var(--sleeve-run) * 1.48);
-        height: var(--sleeve-height);
+        width: var(--sleeve-w);
+        height: var(--sleeve-h);
         display: grid;
         place-items: center;
-        transform: translate(-50%, -50%) rotate(45deg);
-        transform-origin: center;
-        clip-path: polygon(7% 0, 100% 0, 93% 100%, 0 100%);
+        transform: none;
+        transform-origin: top right;
+        border-radius: 0 6px 0 4px;
+        clip-path: none;
         background:
-            linear-gradient(90deg, rgba(0,0,0,0.18) 0 10%, transparent 17% 76%, rgba(255,255,255,0.34) 86% 100%),
-            linear-gradient(180deg, rgba(255,255,255,0.62), rgba(255,255,255,0.12) 39%, rgba(0,0,0,0.2) 100%),
+            linear-gradient(90deg, rgba(255,255,255,0.24), transparent 44%, rgba(0,0,0,0.16)),
+            linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.12) 42%, rgba(0,0,0,0.2) 100%),
             linear-gradient(180deg, var(--band-fill-top), var(--band-fill-mid) 54%, var(--band-fill-bottom));
         color: #061115;
         font-size: 7px;
@@ -2099,8 +2100,9 @@
         overflow: hidden;
         text-overflow: ellipsis;
         pointer-events: none;
-        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.34));
         box-shadow:
+            -1px 1px 0 rgba(0,0,0,0.18),
+            0 3px 7px rgba(0,0,0,0.22),
             inset 0 1px 0 rgba(255,255,255,0.68),
             inset 0 -1px 0 rgba(0,0,0,0.22);
     }
@@ -2109,22 +2111,25 @@
     .relation-band::after {
         content: "";
         position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 8px;
         pointer-events: none;
     }
 
     .relation-band::before {
-        left: -1px;
-        clip-path: polygon(0 0, 100% 0, 72% 100%, 0 100%);
-        background: linear-gradient(90deg, rgba(0,0,0,0.26), rgba(255,255,255,0.06));
+        left: 0;
+        right: 0;
+        bottom: -3px;
+        height: 3px;
+        border-radius: 0 0 0 4px;
+        background: linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0));
     }
 
     .relation-band::after {
-        right: -1px;
-        clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%);
-        background: linear-gradient(90deg, rgba(255,255,255,0.16), rgba(0,0,0,0.24));
+        top: 0;
+        bottom: 0;
+        left: -4px;
+        width: 4px;
+        border-radius: 4px 0 0 0;
+        background: linear-gradient(90deg, rgba(0,0,0,0.2), rgba(255,255,255,0.08));
     }
 
     .relation-band.relation-opponent {
@@ -2153,18 +2158,18 @@
     @keyframes relationSleeveIn {
         0% {
             opacity: 0;
-            transform: translate(calc(-50% + 5px), calc(-50% - 5px)) rotate(45deg) scale(0.82);
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.22)) blur(0.6px);
+            transform: translate3d(4px, -4px, 0) scale(0.9);
+            filter: blur(0.4px);
         }
         72% {
             opacity: 1;
-            transform: translate(-50%, -50%) rotate(45deg) scale(1.04);
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.36));
+            transform: translate3d(0, 0, 0) scale(1.04);
+            filter: none;
         }
         100% {
             opacity: 1;
-            transform: translate(-50%, -50%) rotate(45deg) scale(1);
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.34));
+            transform: translate3d(0, 0, 0) scale(1);
+            filter: none;
         }
     }
 
@@ -3249,9 +3254,9 @@
         }
 
         .relation-band {
-            --sleeve-run: 17px;
-            --sleeve-height: 7px;
-            font-size: 4.8px;
+            --sleeve-w: 23px;
+            --sleeve-h: 11px;
+            font-size: 6px;
         }
 
         .play-caption {
