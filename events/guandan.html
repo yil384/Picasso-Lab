@@ -2068,8 +2068,8 @@
     }
 
     .relation-band {
-        --sleeve-w: 34px;
-        --sleeve-h: 15px;
+        --sleeve-w: 38px;
+        --sleeve-h: 38px;
         --band-fill-top: #ffe57b;
         --band-fill-mid: #ffcf37;
         --band-fill-bottom: #d89c14;
@@ -2079,33 +2079,35 @@
         z-index: 20;
         width: var(--sleeve-w);
         height: var(--sleeve-h);
-        display: grid;
-        place-items: center;
         transform: none;
         transform-origin: top right;
-        border-radius: 0 6px 3px 0;
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 26% 100%);
+        clip-path: polygon(20% 0, 56% 0, 100% 44%, 100% 80%);
         background:
-            linear-gradient(115deg, rgba(0,0,0,0.2) 0 18%, transparent 19% 72%, rgba(255,255,255,0.3) 82% 100%),
-            linear-gradient(90deg, rgba(255,255,255,0.24), transparent 44%, rgba(0,0,0,0.16)),
-            linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.12) 42%, rgba(0,0,0,0.2) 100%),
-            linear-gradient(180deg, var(--band-fill-top), var(--band-fill-mid) 54%, var(--band-fill-bottom));
+            linear-gradient(132deg, rgba(255,255,255,0.42) 0 18%, transparent 28% 68%, rgba(0,0,0,0.18) 82% 100%),
+            linear-gradient(45deg, var(--band-fill-top), var(--band-fill-mid) 52%, var(--band-fill-bottom));
         color: #061115;
+        pointer-events: none;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.68),
+            inset -1px -1px 0 rgba(0,0,0,0.2);
+    }
+
+    .relation-band span {
+        position: absolute;
+        left: 18px;
+        top: 7px;
+        width: 24px;
+        display: block;
+        transform: rotate(47deg);
+        transform-origin: center;
+        color: inherit;
         font-size: 7px;
         line-height: 1;
         font-weight: 950;
         letter-spacing: 0;
-        text-shadow: 0 1px 0 rgba(255,255,255,0.18);
         text-align: center;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        pointer-events: none;
-        box-shadow:
-            -1px 1px 0 rgba(0,0,0,0.18),
-            0 3px 7px rgba(0,0,0,0.22),
-            inset 0 1px 0 rgba(255,255,255,0.68),
-            inset 0 -1px 0 rgba(0,0,0,0.22);
+        text-shadow: 0 1px 0 rgba(255,255,255,0.18);
     }
 
     .relation-band::before,
@@ -2116,21 +2118,25 @@
     }
 
     .relation-band::before {
-        left: 25%;
-        right: 0;
-        bottom: -3px;
-        height: 3px;
-        border-radius: 0 0 3px 0;
-        background: linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0));
+        left: 26%;
+        top: 0;
+        width: 3px;
+        height: 122%;
+        transform: rotate(-43deg);
+        transform-origin: top center;
+        background: linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.04));
+        filter: blur(0.25px);
     }
 
     .relation-band::after {
-        left: -1px;
-        bottom: 0;
-        width: 9px;
-        height: 100%;
-        clip-path: polygon(0 0, 100% 0, 42% 100%, 0 100%);
-        background: linear-gradient(115deg, rgba(0,0,0,0.28), rgba(255,255,255,0.1) 72%);
+        right: 0;
+        top: 42%;
+        width: 100%;
+        height: 3px;
+        transform: rotate(47deg);
+        transform-origin: right center;
+        background: linear-gradient(90deg, rgba(255,255,255,0.12), rgba(0,0,0,0.24));
+        filter: blur(0.18px);
     }
 
     .relation-band.relation-opponent {
@@ -2159,7 +2165,7 @@
     @keyframes relationSleeveIn {
         0% {
             opacity: 0;
-            transform: translate3d(4px, -4px, 0) scale(0.9);
+            transform: translate3d(6px, -6px, 0) scale(0.92);
             filter: blur(0.4px);
         }
         72% {
@@ -3255,9 +3261,15 @@
         }
 
         .relation-band {
-            --sleeve-w: 28px;
-            --sleeve-h: 12px;
-            font-size: 6px;
+            --sleeve-w: 32px;
+            --sleeve-h: 34px;
+        }
+
+        .relation-band span {
+            left: 12px;
+            top: 6px;
+            width: 21px;
+            font-size: 5.5px;
         }
 
         .play-caption {
@@ -3930,7 +3942,7 @@ function cardCenterHTML(card, label) {
     return `<div class="pip-grid pip-count-${count}">${marks}</div>`;
 }
 
-function cardHTML(card, small = false, selectable = false, extraAttrs = "", extraClass = "") {
+function cardHTML(card, small = false, selectable = false, extraAttrs = "", extraClass = "", overlayHTML = "") {
     if (!card) return "";
     if (card.back) return `<div class="card back ${small ? "small" : ""} ${extraClass}" ${extraAttrs} aria-hidden="true"></div>`;
     const red = cardColor(card);
@@ -3951,6 +3963,7 @@ function cardHTML(card, small = false, selectable = false, extraAttrs = "", extr
         ${cardCenterHTML(card, label)}
         <div class="${cornerClass} bottom"><span class="rank-label">${label}</span><em>${subLabel}</em></div>
         ${wild ? `<div class="wild-chip">${L("WILD", "逢人配")}</div>` : ""}
+        ${overlayHTML}
     </div>`;
 }
 
@@ -5373,8 +5386,15 @@ function displayCardsForCombo(cards = [], combo = null) {
 
 function playedCardsHTML(cards = [], relation = null, combo = null) {
     const displayCards = displayCardsForCombo(cards, combo);
-    const band = relation ? `<span class="relation-band relation-${relation.key}">${encodeHTML(relation.label)}</span>` : "";
-    return `<div class="trick-card-stack"><div class="trick-card-row">${displayCards.map((card, idx) => cardHTML(card, true, false, `style="--i:${idx}"`)).join("")}${band}</div></div>`;
+    const band = relation ? `<span class="relation-band relation-${relation.key}"><span>${encodeHTML(relation.label)}</span></span>` : "";
+    return `<div class="trick-card-stack"><div class="trick-card-row">${displayCards.map((card, idx) => cardHTML(
+        card,
+        true,
+        false,
+        `style="--i:${idx}"`,
+        idx === displayCards.length - 1 && band ? "relation-anchor" : "",
+        idx === displayCards.length - 1 ? band : ""
+    )).join("")}</div></div>`;
 }
 
 function seatPlayStamp(entry) {
