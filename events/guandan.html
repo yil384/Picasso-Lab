@@ -1690,14 +1690,14 @@
     }
 
     .score-strip {
-        top: 18px;
+        top: 8px;
         width: auto;
         max-width: calc(100% - 56px);
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
         overflow-x: auto;
         scrollbar-width: none;
     }
@@ -1708,13 +1708,13 @@
 
     .score-pill {
         flex: 0 0 auto;
-        min-width: 156px;
-        height: 44px;
-        padding: 8px 10px;
+        min-width: 146px;
+        height: 36px;
+        padding: 5px 9px;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 7px;
         border-radius: 8px;
         background:
             linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)),
@@ -1727,8 +1727,8 @@
     }
 
     .score-pill .ui-icon {
-        width: 16px;
-        height: 16px;
+        width: 15px;
+        height: 15px;
         color: var(--accent-cyan);
         filter: drop-shadow(0 0 8px rgba(119,232,255,0.28));
     }
@@ -1741,17 +1741,21 @@
 
     .score-pill strong {
         margin: 0;
-        min-width: 28px;
-        height: 26px;
+        min-width: 26px;
+        height: 24px;
         padding: 0 8px;
         border-radius: 8px;
         background: var(--accent-gold);
         color: #061115;
-        line-height: 26px;
+        line-height: 24px;
+    }
+
+    .score-pill strong.wild-rank {
+        color: var(--card-red);
     }
 
     .score-pill.wide {
-        min-width: 172px;
+        min-width: 164px;
     }
 
     .score-pill.wide strong {
@@ -1799,7 +1803,7 @@
     }
 
     .player.p2 {
-        top: 94px;
+        top: 68px;
     }
 
     .player.p3 {
@@ -1961,7 +1965,7 @@
     }
 
     .seat-play.p1 {
-        left: 338px;
+        left: 288px;
         top: 50%;
         transform: translateY(-50%);
         justify-items: start;
@@ -1969,13 +1973,13 @@
 
     .seat-play.p2 {
         left: 50%;
-        top: 238px;
+        top: 202px;
         transform: translateX(-50%);
         justify-items: center;
     }
 
     .seat-play.p3 {
-        right: 338px;
+        right: 288px;
         top: 50%;
         transform: translateY(-50%);
         justify-items: end;
@@ -1989,7 +1993,7 @@
         padding: 8px 10px 4px;
         border-radius: 8px;
         background: rgba(0, 0, 0, 0.1);
-        overflow: hidden;
+        overflow: visible;
         box-shadow: 0 12px 28px rgba(0,0,0,0.12);
     }
 
@@ -2039,31 +2043,36 @@
         text-overflow: ellipsis;
     }
 
-    .relation-ribbon {
+    .trick-card-stack .card.small.relation-corner {
+        overflow: hidden;
+    }
+
+    .trick-card-stack .card.small.relation-corner::after {
+        content: attr(data-relation);
         position: absolute;
-        top: 7px;
-        right: -12px;
+        top: 4px;
+        right: -14px;
         z-index: 20;
-        width: 88px;
-        padding: 3px 0;
-        transform: rotate(32deg);
+        width: 50px;
+        padding: 2px 0;
+        transform: rotate(36deg);
         transform-origin: center;
         border-radius: 2px;
         background: #ffca28;
         color: #061115;
-        font-size: 9px;
+        font-size: 7px;
         line-height: 1.2;
         font-weight: 950;
         text-align: center;
         box-shadow: 0 5px 12px rgba(0,0,0,0.32);
     }
 
-    .seat-play.relation-opponent .relation-ribbon {
+    .trick-card-stack .card.small.relation-corner.relation-opponent::after {
         background: #f05a5f;
         color: #fff;
     }
 
-    .seat-play.relation-self .relation-ribbon {
+    .trick-card-stack .card.small.relation-corner.relation-self::after {
         background: #77e8ff;
     }
 
@@ -2695,11 +2704,13 @@
         .score-strip {
             width: auto;
             max-width: calc(100% - 48px);
-            gap: 7px;
+            gap: 6px;
         }
 
         .score-pill {
             font-size: 11px;
+            min-width: 128px;
+            height: 34px;
             padding-inline: 7px;
         }
 
@@ -2712,15 +2723,15 @@
         }
 
         .seat-play.p1 {
-            left: 238px;
+            left: 210px;
         }
 
         .seat-play.p2 {
-            top: 226px;
+            top: 188px;
         }
 
         .seat-play.p3 {
-            right: 238px;
+            right: 210px;
         }
 
         .seat-play.p0 {
@@ -2748,12 +2759,8 @@
             inset: 98px 128px 174px;
         }
 
-        .score-strip {
-            top: 14px;
-        }
-
         .score-pill {
-            height: 38px;
+            height: 32px;
             padding-block: 6px;
         }
 
@@ -2792,7 +2799,7 @@
         }
 
         .player.p2 {
-            top: 64px;
+            top: 52px;
         }
 
         .player.p0 {
@@ -2828,7 +2835,7 @@
         }
 
         .seat-play.p2 {
-            top: 210px;
+            top: 178px;
         }
 
         .hand-zone {
@@ -3093,10 +3100,10 @@
             --card-overlap: -15px;
         }
 
-        .relation-ribbon {
+        .trick-card-stack .card.small.relation-corner::after {
             top: 5px;
-            right: -13px;
-            width: 68px;
+            right: -12px;
+            width: 44px;
             font-size: 8px;
         }
 
@@ -3803,6 +3810,17 @@ function sortCards(cards, levelRank) {
         const pa = a.joker ? jokerPower(a) : rankPower(a.rank, levelRank);
         const pb = b.joker ? jokerPower(b) : rankPower(b.rank, levelRank);
         if (pa !== pb) return pb - pa;
+        const sa = suits.indexOf(a.suit || "S");
+        const sb = suits.indexOf(b.suit || "S");
+        return sa - sb || a.id.localeCompare(b.id);
+    });
+}
+
+function sortHandForDisplay(cards, levelRank) {
+    return [...cards].sort((a, b) => {
+        const pa = a.joker ? jokerPower(a) : rankPower(a.rank, levelRank);
+        const pb = b.joker ? jokerPower(b) : rankPower(b.rank, levelRank);
+        if (pa !== pb) return pa - pb;
         const sa = suits.indexOf(a.suit || "S");
         const sb = suits.indexOf(b.suit || "S");
         return sa - sb || a.id.localeCompare(b.id);
@@ -5003,9 +5021,15 @@ function displayCardsForCombo(cards = [], combo = null) {
 }
 
 function playedCardsHTML(cards = [], relation = null, combo = null) {
-    const ribbon = relation ? `<span class="relation-ribbon">${encodeHTML(relation.label)}</span>` : "";
     const displayCards = displayCardsForCombo(cards, combo);
-    return `<div class="trick-card-stack"><div class="trick-card-row">${displayCards.map((card, idx) => cardHTML(card, true, false, `style="--i:${idx}"`)).join("")}</div>${ribbon}</div>`;
+    const lastIdx = displayCards.length - 1;
+    return `<div class="trick-card-stack"><div class="trick-card-row">${displayCards.map((card, idx) => {
+        const attrs = relation && idx === lastIdx
+            ? `style="--i:${idx}" data-relation="${encodeHTML(relation.label)}"`
+            : `style="--i:${idx}"`;
+        const extraClass = relation && idx === lastIdx ? `relation-corner relation-${relation.key}` : "";
+        return cardHTML(card, true, false, attrs, extraClass);
+    }).join("")}</div></div>`;
 }
 
 function seatPlayStamp(entry) {
@@ -5070,7 +5094,7 @@ function renderTable() {
     const mine = mySeat();
     const dealPhase = currentDealPhase();
     const tableBusy = dealPhase !== "done";
-    const myHand = mine >= 0 ? sortCards(game.hands[mine] || [], game.currentLevelRank) : [];
+    const myHand = mine >= 0 ? sortHandForDisplay(game.hands[mine] || [], game.currentLevelRank) : [];
     const canAct = mine === game.currentTurn && game.phase === "playing" && !tableBusy;
     const selectedCards = mine >= 0 ? myHand.filter(c => selected.has(c.id)) : [];
     const rawSelectedCombos = selectedCards.length ? evaluateCombos(selectedCards, game.currentLevelRank) : [];
@@ -5124,7 +5148,7 @@ function renderTable() {
                 <div class="score-pill">${iconHTML("level")}<span>${L("Level", "本局打")}</span><strong>${game.currentLevelRank}</strong></div>
                 <div class="score-pill">${iconHTML("round")}<span>${L("Round", "第")}</span><strong>${game.roundNo}</strong>${isZH() ? " 局" : ""}</div>
                 <div class="score-pill wide turn-timer ${turnClockClass}">${iconHTML("turn")}<span>${L("Turn", "轮到")}</span><strong>${encodeHTML(currentTurnName)}</strong><em id="turn-clock">${turnClockText}</em></div>
-                <div class="score-pill">${iconHTML("wild")}<span>${L("Wild", "逢人配")}</span><strong>♥${game.currentLevelRank}</strong></div>
+                <div class="score-pill">${iconHTML("wild")}<span>${L("Wild", "逢人配")}</span><strong class="wild-rank">♥${game.currentLevelRank}</strong></div>
             </div>
             ${[0,1,2,3].map(i => playerHTML(i, mine)).join("")}
             ${[0,1,2,3].map(i => seatPlayHTML(i, mine)).join("")}
