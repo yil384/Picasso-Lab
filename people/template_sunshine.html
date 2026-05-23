@@ -1,0 +1,744 @@
+<!--
+  Cinematic god-rays avatar template
+  Tunables:
+  --avatar-size: circular avatar size
+  --light-x/y: flare center, placed on the avatar's upper-left rim
+-->
+
+<div class="sunshine-wrap"
+     style="--avatar-size:200px; --light-x:29px; --light-y:29px">
+  <div class="sunshine-stage">
+    <div class="sunshine-avatar-frame">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/zhengding.png"
+           class="avatar sunshine-avatar" alt="avatar"/>
+
+      <svg class="sunshine-godrays" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+        <defs>
+          <radialGradient id="sunCore" cx="29" cy="29" r="76" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fffef0" stop-opacity="1"/>
+            <stop offset="0.18" stop-color="#fff5aa" stop-opacity="0.92"/>
+            <stop offset="0.42" stop-color="#ffd95b" stop-opacity="0.58"/>
+            <stop offset="0.78" stop-color="#ffc34a" stop-opacity="0.16"/>
+            <stop offset="1" stop-color="#ffc34a" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="sunWash" cx="29" cy="29" r="194" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fff4a8" stop-opacity="0.45"/>
+            <stop offset="0.34" stop-color="#ffd060" stop-opacity="0.20"/>
+            <stop offset="0.72" stop-color="#ffc34a" stop-opacity="0.06"/>
+            <stop offset="1" stop-color="#ffc34a" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="rayGold" x1="26" y1="26" x2="208" y2="124" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fffef4" stop-opacity="0.95"/>
+            <stop offset="0.18" stop-color="#ffe486" stop-opacity="0.72"/>
+            <stop offset="0.52" stop-color="#ffb13e" stop-opacity="0.26"/>
+            <stop offset="1" stop-color="#ff8b22" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="rayAmber" x1="29" y1="29" x2="207" y2="111" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fff0a0" stop-opacity="0.78"/>
+            <stop offset="0.22" stop-color="#ffc44a" stop-opacity="0.54"/>
+            <stop offset="0.58" stop-color="#ff9b22" stop-opacity="0.28"/>
+            <stop offset="1" stop-color="#e66a10" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="rayAmberHeavy" x1="29" y1="29" x2="210" y2="126" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#ffe073" stop-opacity="0.88"/>
+            <stop offset="0.20" stop-color="#ffb22c" stop-opacity="0.68"/>
+            <stop offset="0.52" stop-color="#f47a16" stop-opacity="0.36"/>
+            <stop offset="0.82" stop-color="#c85106" stop-opacity="0.13"/>
+            <stop offset="1" stop-color="#9c3500" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="rayLine" x1="29" y1="29" x2="207" y2="92" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fffef8" stop-opacity="0.94"/>
+            <stop offset="0.16" stop-color="#ffe68b" stop-opacity="0.80"/>
+            <stop offset="0.54" stop-color="#ffc04a" stop-opacity="0.46"/>
+            <stop offset="0.82" stop-color="#ff9826" stop-opacity="0.16"/>
+            <stop offset="1" stop-color="#ff7e19" stop-opacity="0"/>
+          </linearGradient>
+          <filter id="raySoft" x="-20%" y="-40%" width="160%" height="190%">
+            <feGaussianBlur stdDeviation="1.25"/>
+          </filter>
+          <filter id="lineSoft" x="-20%" y="-40%" width="160%" height="190%">
+            <feGaussianBlur stdDeviation="0.22"/>
+          </filter>
+          <filter id="sunBloom" x="-90%" y="-90%" width="280%" height="280%">
+            <feGaussianBlur stdDeviation="9"/>
+          </filter>
+        </defs>
+
+        <rect class="sun-wash" x="-30" y="-30" width="260" height="260" fill="url(#sunWash)"/>
+        <g class="sunburst-layer" filter="url(#raySoft)">
+          <path class="sunburst b1" d="M28 27 L200 -8 L202 0 L30 32 Z"/>
+          <path class="sunburst b2" d="M29 28 L204 14 L205 23 L30 33 Z"/>
+          <path class="sunburst b3" d="M29 29 L204 36 L203 46 L31 34 Z"/>
+          <path class="sunburst b4" d="M30 30 L202 58 L199 68 L31 36 Z"/>
+          <path class="sunburst b5" d="M30 31 L198 82 L194 93 L32 38 Z"/>
+          <path class="sunburst b6" d="M31 33 L190 108 L184 119 L32 40 Z"/>
+          <path class="sunburst b7" d="M31 34 L176 136 L167 147 L33 42 Z"/>
+          <path class="sunburst b8" d="M30 36 L154 166 L142 176 L32 44 Z"/>
+          <path class="sunburst b9" d="M28 25 L154 -30 L164 -24 L31 32 Z"/>
+          <path class="sunburst b10" d="M26 29 L96 -36 L106 -31 L31 34 Z"/>
+        </g>
+
+        <g class="arc-ray-layer" filter="url(#raySoft)">
+          <path class="arc-ray a1" d="M27 30 C70 -6 127 -22 200 -17 L202 -7 C131 -6 78 8 31 36 Z"/>
+          <path class="arc-ray a2" d="M29 31 C80 5 137 -2 203 7 L204 18 C136 15 84 20 32 38 Z"/>
+          <path class="arc-ray a3" d="M31 33 C83 20 139 22 202 43 L199 55 C138 38 86 35 34 41 Z"/>
+          <path class="arc-ray a4" d="M33 36 C85 41 138 60 194 94 L187 106 C134 74 84 54 35 45 Z"/>
+          <path class="arc-ray a5" d="M34 39 C78 65 119 101 158 151 L145 160 C110 112 73 78 35 48 Z"/>
+          <path class="arc-ray a6" d="M24 25 C52 -10 86 -28 133 -43 L145 -38 C95 -17 61 3 30 32 Z"/>
+          <path class="arc-ray a7" d="M34 30 C91 -14 137 -45 201 -73 L209 -65 C151 -33 106 -5 38 37 Z"/>
+        </g>
+
+        <g class="godray-layer back" filter="url(#raySoft)">
+          <path class="godray r1" d="M21 18 L198 -38 L206 -22 L33 35 Z"/>
+          <path class="godray r2" d="M25 22 L214 0 L217 24 L33 36 Z"/>
+          <path class="godray r3" d="M29 27 L220 45 L218 70 L34 38 Z"/>
+          <path class="godray r4" d="M31 32 L216 92 L208 118 L35 41 Z"/>
+          <path class="godray r5" d="M31 37 L194 145 L178 166 L33 45 Z"/>
+          <path class="godray r6" d="M27 41 L143 220 L119 226 L30 47 Z"/>
+          <path class="godray r7" d="M23 29 L128 -35 L149 -29 L32 36 Z"/>
+          <path class="godray r12" d="M26 38 L219 171 L207 200 L32 48 Z"/>
+        </g>
+
+        <g class="godray-layer front" filter="url(#raySoft)">
+          <path class="godray r8" d="M26 21 L176 4 L180 18 L33 34 Z"/>
+          <path class="godray r9" d="M30 28 L200 63 L196 82 L35 39 Z"/>
+          <path class="godray r10" d="M32 35 L190 109 L181 127 L35 44 Z"/>
+          <path class="godray r11" d="M30 42 L144 176 L127 188 L33 49 Z"/>
+        </g>
+
+        <g class="warm-ray-layer" filter="url(#raySoft)">
+          <path class="warm-ray w1" d="M29 26 L204 -16 L207 -9 L31 32 Z"/>
+          <path class="warm-ray w2" d="M30 29 L205 22 L205 32 L32 35 Z"/>
+          <path class="warm-ray w3" d="M31 31 L203 53 L200 66 L34 39 Z"/>
+          <path class="warm-ray w4" d="M33 34 L198 87 L192 101 L35 43 Z"/>
+          <path class="warm-ray w5" d="M34 37 L180 127 L170 139 L36 47 Z"/>
+          <path class="warm-ray w6" d="M26 27 L138 -35 L151 -30 L32 34 Z"/>
+          <path class="warm-ray w7" d="M31 39 L142 175 L129 185 L34 49 Z"/>
+        </g>
+
+        <g class="heavy-ray-layer" filter="url(#raySoft)">
+          <path class="heavy-ray h1" d="M30 27 L205 -1 L207 7 L32 33 Z"/>
+          <path class="heavy-ray h2" d="M30 29 L207 35 L205 44 L33 36 Z"/>
+          <path class="heavy-ray h3" d="M31 32 L203 70 L199 81 L34 40 Z"/>
+          <path class="heavy-ray h4" d="M33 35 L194 107 L187 121 L36 45 Z"/>
+          <path class="heavy-ray h5" d="M34 39 L167 151 L154 162 L36 49 Z"/>
+          <path class="heavy-ray h6" d="M27 26 L166 -27 L176 -21 L32 33 Z"/>
+          <path class="heavy-ray h7" d="M25 31 L111 -38 L122 -34 L32 36 Z"/>
+          <path class="heavy-ray h8" d="M32 37 L204 143 L195 160 L35 47 Z"/>
+          <path class="heavy-ray h9" d="M29 28 L207 15 L208 22 L32 34 Z"/>
+        </g>
+
+        <g class="highlight-ray-layer" filter="url(#lineSoft)">
+          <path class="ray-line l1" d="M30 25 C68 -6 116 -22 196 -32"/>
+          <path class="ray-line l2" d="M29 27 C76 1 128 -5 205 3"/>
+          <path class="ray-line l3" d="M31 29 C86 12 139 13 205 28"/>
+          <path class="ray-line l4" d="M31 31 C83 27 142 39 203 62"/>
+          <path class="ray-line l5" d="M32 34 C80 42 132 66 192 105"/>
+          <path class="ray-line l6" d="M33 37 C74 61 113 96 158 151"/>
+          <path class="ray-line l7" d="M26 24 C47 -5 72 -24 110 -45"/>
+          <path class="ray-line l8" d="M28 32 C65 11 111 6 183 16"/>
+          <path class="ray-line l9" d="M31 36 C68 52 105 83 149 132"/>
+          <path class="ray-line l10" d="M24 30 C61 -2 113 -38 197 -69"/>
+          <path class="ray-line l11" d="M30 30 C92 2 147 -13 209 -14"/>
+          <path class="ray-line l12" d="M32 33 C89 29 145 46 208 78"/>
+        </g>
+
+        <circle class="sun-bloom" cx="29" cy="29" r="58" fill="url(#sunCore)" filter="url(#sunBloom)"/>
+        <circle class="sun-core" cx="29" cy="29" r="28" fill="url(#sunCore)"/>
+        <circle class="sun-hot" cx="29" cy="29" r="9" fill="rgba(255,255,244,0.92)"/>
+      </svg>
+
+      <svg class="sunshine-sunglasses" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="sunglassFill" x1="2" y1="5" x2="14" y2="11" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#2e3239"/>
+            <stop offset="0.45" stop-color="#050607"/>
+            <stop offset="1" stop-color="#171c24"/>
+          </linearGradient>
+          <linearGradient id="sunglassSheen" x1="2.2" y1="5.2" x2="12.5" y2="9.7" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.42"/>
+            <stop offset="0.24" stop-color="#ffffff" stop-opacity="0.12"/>
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="sunglasses-temples" d="M1.55 6.75 C1.05 6.55 0.62 6.34 0.24 6.06 M14.45 6.75 C14.95 6.55 15.38 6.34 15.76 6.06"/>
+        <path class="sunglasses-icon left" d="M1.75 6.38 C2.75 5.72 5.25 5.58 7.20 6.18 C7.45 7.42 6.88 8.85 5.80 9.45 C4.52 10.16 2.35 9.74 1.65 8.55 C1.23 7.84 1.28 6.8 1.75 6.38 Z"/>
+        <path class="sunglasses-icon right" d="M8.80 6.18 C10.75 5.58 13.25 5.72 14.25 6.38 C14.72 6.8 14.77 7.84 14.35 8.55 C13.65 9.74 11.48 10.16 10.20 9.45 C9.12 8.85 8.55 7.42 8.80 6.18 Z"/>
+        <path class="sunglasses-bridge" d="M7.20 6.42 C7.55 6.20 8.45 6.20 8.80 6.42"/>
+        <path class="sunglasses-sheen" d="M2.55 6.65 C3.65 6.18 5.32 6.15 6.58 6.46 M9.42 6.46 C10.68 6.15 12.35 6.18 13.45 6.65"/>
+      </svg>
+
+      <div class="sunshine-face-light" aria-hidden="true"></div>
+      <div class="sunshine-rim-light" aria-hidden="true"></div>
+      <div class="sunshine-face-shadow" aria-hidden="true"></div>
+      <div class="sunshine-visible-sun" aria-hidden="true"></div>
+      <div class="sunshine-particles" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+.sunshine-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sunshine-stage {
+  position: relative;
+  width: var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  overflow: visible;
+  isolation: isolate;
+}
+
+.sunshine-godrays,
+.sunshine-avatar-frame,
+.sunshine-sunglasses,
+.sunshine-face-light,
+.sunshine-rim-light,
+.sunshine-face-shadow,
+.sunshine-visible-sun,
+.sunshine-particles {
+  position: absolute;
+  pointer-events: none;
+}
+
+.sunshine-godrays {
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+
+.sunshine-wrap.sun-on .sunshine-godrays {
+  opacity: 1;
+}
+
+.sun-wash {
+  opacity: 0;
+}
+
+.godray {
+  fill: url(#rayGold);
+  opacity: 0;
+  transform-origin: var(--light-x, 77px) var(--light-y, 67px);
+}
+
+.sunburst {
+  fill: url(#rayGold);
+  opacity: 0;
+  transform-origin: var(--light-x, 29px) var(--light-y, 29px);
+}
+
+.arc-ray {
+  fill: url(#rayGold);
+  opacity: 0;
+  transform-origin: var(--light-x, 29px) var(--light-y, 29px);
+}
+
+.warm-ray {
+  fill: url(#rayAmber);
+  opacity: 0;
+  transform-origin: var(--light-x, 29px) var(--light-y, 29px);
+}
+
+.heavy-ray {
+  fill: url(#rayAmberHeavy);
+  opacity: 0;
+  transform-origin: var(--light-x, 29px) var(--light-y, 29px);
+}
+
+.ray-line {
+  fill: none;
+  stroke: url(#rayLine);
+  stroke-width: var(--line-width, 1px);
+  stroke-linecap: round;
+  opacity: 0;
+  transform-origin: var(--light-x, 29px) var(--light-y, 29px);
+}
+
+.sunshine-wrap.sun-on .sun-wash {
+  animation: wash-breathe 5.6s ease-in-out infinite alternate;
+}
+
+.sunshine-wrap.sun-on .godray {
+  animation: ray-drift var(--ray-speed, 5.2s) ease-in-out infinite alternate;
+}
+
+.sunshine-wrap.sun-on .sunburst {
+  animation: burst-shimmer var(--burst-speed, 4.5s) ease-in-out infinite alternate;
+}
+
+.sunshine-wrap.sun-on .arc-ray {
+  animation: arc-sweep var(--arc-speed, 6s) ease-in-out infinite alternate;
+}
+
+.sunshine-wrap.sun-on .warm-ray {
+  animation: warm-ray-pulse var(--warm-speed, 5.8s) ease-in-out infinite alternate;
+}
+
+.sunshine-wrap.sun-on .heavy-ray {
+  animation: heavy-ray-pulse var(--heavy-speed, 5.9s) ease-in-out infinite alternate;
+}
+
+.sunshine-wrap.sun-on .ray-line {
+  animation: line-shimmer var(--line-speed, 5.6s) ease-in-out infinite alternate;
+}
+
+.a1 { --arc-opacity:0.42; --arc-speed:6.2s; animation-delay:-1.2s; }
+.a2 { --arc-opacity:0.50; --arc-speed:5.4s; animation-delay:-2.8s; }
+.a3 { --arc-opacity:0.58; --arc-speed:5.9s; animation-delay:-0.6s; }
+.a4 { --arc-opacity:0.42; --arc-speed:6.7s; animation-delay:-3.3s; }
+.a5 { --arc-opacity:0.30; --arc-speed:7.2s; animation-delay:-4.2s; }
+.a6 { --arc-opacity:0.28; --arc-speed:6.4s; animation-delay:-2s; }
+.a7 { --arc-opacity:0.24; --arc-speed:7.1s; animation-delay:-3.9s; }
+
+.w1 { --warm-opacity:0.22; --warm-speed:5.7s; animation-delay:-1s; }
+.w2 { --warm-opacity:0.30; --warm-speed:5.2s; animation-delay:-2.4s; }
+.w3 { --warm-opacity:0.34; --warm-speed:5.8s; animation-delay:-0.6s; }
+.w4 { --warm-opacity:0.32; --warm-speed:6.1s; animation-delay:-3.2s; }
+.w5 { --warm-opacity:0.24; --warm-speed:6.6s; animation-delay:-4.1s; }
+.w6 { --warm-opacity:0.18; --warm-speed:6.3s; animation-delay:-1.8s; }
+.w7 { --warm-opacity:0.16; --warm-speed:6.9s; animation-delay:-3.7s; }
+
+.h1 { --heavy-opacity:0.32; --heavy-speed:5.5s; animation-delay:-1.2s; }
+.h2 { --heavy-opacity:0.40; --heavy-speed:5.1s; animation-delay:-2.8s; }
+.h3 { --heavy-opacity:0.44; --heavy-speed:5.7s; animation-delay:-0.5s; }
+.h4 { --heavy-opacity:0.38; --heavy-speed:6.2s; animation-delay:-3.3s; }
+.h5 { --heavy-opacity:0.30; --heavy-speed:6.6s; animation-delay:-4.5s; }
+.h6 { --heavy-opacity:0.26; --heavy-speed:5.9s; animation-delay:-2.1s; }
+.h7 { --heavy-opacity:0.22; --heavy-speed:6.4s; animation-delay:-3.8s; }
+.h8 { --heavy-opacity:0.26; --heavy-speed:6.8s; animation-delay:-1.7s; }
+.h9 { --heavy-opacity:0.34; --heavy-speed:5.3s; animation-delay:-4s; }
+
+.l1 { --line-opacity:0.38; --line-width:1.2px; --line-speed:5.7s; animation-delay:-1.4s; }
+.l2 { --line-opacity:0.58; --line-width:1.45px; --line-speed:5.1s; animation-delay:-2.1s; }
+.l3 { --line-opacity:0.52; --line-width:0.9px; --line-speed:5.9s; animation-delay:-0.7s; }
+.l4 { --line-opacity:0.62; --line-width:1.55px; --line-speed:5.4s; animation-delay:-3.3s; }
+.l5 { --line-opacity:0.48; --line-width:1.05px; --line-speed:6.2s; animation-delay:-1.1s; }
+.l6 { --line-opacity:0.34; --line-width:0.8px; --line-speed:6.8s; animation-delay:-4.2s; }
+.l7 { --line-opacity:0.30; --line-width:0.9px; --line-speed:6.4s; animation-delay:-2.9s; }
+.l8 { --line-opacity:0.50; --line-width:0.72px; --line-speed:5.5s; animation-delay:-4.8s; }
+.l9 { --line-opacity:0.42; --line-width:0.78px; --line-speed:6.1s; animation-delay:-0.4s; }
+.l10 { --line-opacity:0.28; --line-width:0.86px; --line-speed:6.9s; animation-delay:-3.7s; }
+.l11 { --line-opacity:0.32; --line-width:1.15px; --line-speed:5.8s; animation-delay:-2.5s; }
+.l12 { --line-opacity:0.46; --line-width:0.95px; --line-speed:6s; animation-delay:-5.1s; }
+
+.b1 { --burst-opacity:0.50; --burst-speed:4.2s; animation-delay:-0.8s; }
+.b2 { --burst-opacity:0.62; --burst-speed:4.9s; animation-delay:-2.2s; }
+.b3 { --burst-opacity:0.72; --burst-speed:4.4s; animation-delay:-1.4s; }
+.b4 { --burst-opacity:0.68; --burst-speed:5.1s; animation-delay:-3s; }
+.b5 { --burst-opacity:0.58; --burst-speed:4.7s; animation-delay:-0.3s; }
+.b6 { --burst-opacity:0.46; --burst-speed:5.4s; animation-delay:-1.8s; }
+.b7 { --burst-opacity:0.36; --burst-speed:5.8s; animation-delay:-2.6s; }
+.b8 { --burst-opacity:0.30; --burst-speed:6s; animation-delay:-4.1s; }
+.b9 { --burst-opacity:0.26; --burst-speed:5.5s; animation-delay:-1.1s; }
+.b10 { --burst-opacity:0.22; --burst-speed:5.9s; animation-delay:-3.5s; }
+
+.godray-layer.back .godray { filter: blur(0.4px); }
+.godray-layer.front .godray { filter: blur(0.1px); }
+
+.r1 { --ray-opacity:0.26; --ray-speed:6.4s; animation-delay:-1.2s; }
+.r2 { --ray-opacity:0.42; --ray-speed:5.8s; animation-delay:-3.1s; }
+.r3 { --ray-opacity:0.60; --ray-speed:5.2s; animation-delay:-0.7s; }
+.r4 { --ray-opacity:0.50; --ray-speed:6.1s; animation-delay:-2.4s; }
+.r5 { --ray-opacity:0.36; --ray-speed:6.8s; animation-delay:-4.2s; }
+.r6 { --ray-opacity:0.28; --ray-speed:7.1s; animation-delay:-1.9s; }
+.r7 { --ray-opacity:0.24; --ray-speed:6.5s; animation-delay:-3.6s; }
+.r8 { --ray-opacity:0.72; --ray-speed:4.9s; animation-delay:-1.4s; }
+.r9 { --ray-opacity:0.78; --ray-speed:5.4s; animation-delay:-2.8s; }
+.r10 { --ray-opacity:0.66; --ray-speed:5s; animation-delay:-0.3s; }
+.r11 { --ray-opacity:0.46; --ray-speed:5.7s; animation-delay:-2s; }
+.r12 { --ray-opacity:0.28; --ray-speed:6.2s; animation-delay:-4.8s; }
+
+.sun-bloom,
+.sun-core,
+.sun-hot {
+  opacity: 0;
+  transform-origin: var(--light-x, 77px) var(--light-y, 67px);
+}
+
+.sunshine-wrap.sun-on .sun-bloom,
+.sunshine-wrap.sun-on .sun-core,
+.sunshine-wrap.sun-on .sun-hot {
+  animation: sun-breathe 3.4s ease-in-out infinite alternate;
+}
+
+.sunshine-avatar-frame {
+  left: 0;
+  top: 0;
+  z-index: 3;
+  width: var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  transition:
+    transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
+    box-shadow 0.35s ease;
+}
+
+.sunshine-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  filter: none;
+  transition: filter 0.35s ease, transform 0.35s cubic-bezier(0.34,1.3,0.64,1);
+}
+
+.sunshine-sunglasses {
+  left: 42px;
+  top: 75px;
+  z-index: 8;
+  width: 98px;
+  height: 44px;
+  overflow: visible;
+  opacity: 0;
+  transform: rotate(0.3deg) translateY(4px) scale(0.94);
+  transform-origin: 50% 54%;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.32));
+  transition:
+    opacity 0.24s ease,
+    transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
+    filter 0.35s ease;
+}
+
+.sunshine-wrap.sun-on .sunshine-sunglasses {
+  opacity: 1;
+  transform: rotate(0.3deg) translateY(0) scale(1);
+}
+
+.sunglasses-icon {
+  fill: url(#sunglassFill);
+  stroke: rgba(0,0,0,0.78);
+  stroke-width: 0.18;
+  stroke-linejoin: round;
+}
+
+.sunglasses-bridge,
+.sunglasses-temples {
+  fill: none;
+  stroke: rgba(2,2,3,0.96);
+  stroke-width: 0.42;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sunglasses-temples {
+  stroke-width: 0.34;
+  opacity: 0.8;
+}
+
+.sunglasses-sheen {
+  fill: none;
+  stroke: url(#sunglassSheen);
+  stroke-width: 0.48;
+  stroke-linecap: round;
+  opacity: 0.62;
+}
+
+.sunshine-face-light {
+  inset: 0;
+  z-index: 4;
+  border-radius: 50%;
+  background:
+    linear-gradient(132deg,
+      rgba(255,255,238,0.72) 0%,
+      rgba(255,220,109,0.38) 25%,
+      rgba(255,179,54,0.15) 45%,
+      transparent 64%),
+    radial-gradient(ellipse at 29% 18%,
+      rgba(255,255,246,0.68) 0%,
+      rgba(255,226,128,0.25) 27%,
+      transparent 54%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+
+.sunshine-rim-light {
+  inset: 0;
+  z-index: 5;
+  border-radius: 50%;
+  box-shadow:
+    inset 11px 10px 18px rgba(255,246,203,0.38),
+    inset 27px 20px 32px rgba(255,188,58,0.15);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+
+.sunshine-face-shadow {
+  inset: 0;
+  z-index: 3;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 79% 86%, rgba(42,24,10,0.17), transparent 46%);
+  mix-blend-mode: multiply;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+
+.sunshine-visible-sun {
+  left: -7px;
+  top: -7px;
+  z-index: 11;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 47% 47%,
+      #fffef4 0 17%,
+      #fff3a4 34%,
+      rgba(255,217,86,0.88) 53%,
+      rgba(255,197,63,0.36) 76%,
+      transparent 100%);
+  box-shadow:
+    0 0 14px rgba(255,238,137,0.88),
+    0 0 32px rgba(255,213,82,0.56),
+    0 0 54px rgba(255,200,72,0.24);
+  mix-blend-mode: normal;
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.32s ease;
+}
+
+.sunshine-visible-sun::after {
+  content: none;
+}
+
+.sunshine-particles {
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.sunshine-particle {
+  position: absolute;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ffe38c;
+  box-shadow: 0 0 9px rgba(255,212,92,0.85);
+}
+
+.sunshine-wrap:hover .sunshine-avatar-frame {
+  transform: scale(1.08);
+}
+
+.sunshine-wrap.sun-on .sunshine-avatar-frame {
+  transform: scale(1.055);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.sunshine-wrap:hover .sunshine-avatar {
+  filter: brightness(1.1);
+}
+
+.sunshine-wrap.sun-on .sunshine-avatar {
+  transform: scale(1.006);
+  filter: brightness(1.10) contrast(1.055) saturate(1.08);
+}
+
+.sunshine-wrap.sun-on .sunshine-sunglasses {
+  transform: rotate(0.3deg) translateY(-0.5px) scale(1.015);
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,0.32)) brightness(1.08);
+}
+
+.sunshine-wrap.sun-on .sunshine-face-light {
+  animation: face-light-pulse 4.4s ease-in-out infinite alternate;
+}
+
+.sunshine-wrap.sun-on .sunshine-rim-light {
+  animation: rim-light-pulse 4.4s ease-in-out infinite alternate;
+}
+
+.sunshine-wrap.sun-on .sunshine-face-shadow {
+  opacity: 0.38;
+}
+
+.sunshine-wrap.sun-on .sunshine-visible-sun {
+  animation: visible-sun-pulse 3.4s ease-in-out infinite alternate;
+}
+
+@keyframes ray-drift {
+  0% {
+    opacity: calc(var(--ray-opacity, 0.42) * 0.58);
+    transform: rotate(-0.7deg) scaleX(0.985);
+  }
+  48% {
+    opacity: calc(var(--ray-opacity, 0.42) + 0.10);
+  }
+  100% {
+    opacity: calc(var(--ray-opacity, 0.42) * 0.86);
+    transform: rotate(0.6deg) scaleX(1.025);
+  }
+}
+
+@keyframes burst-shimmer {
+  0% {
+    opacity: calc(var(--burst-opacity, 0.5) * 0.62);
+    transform: scaleX(0.98) rotate(-0.35deg);
+  }
+  100% {
+    opacity: calc(var(--burst-opacity, 0.5) + 0.14);
+    transform: scaleX(1.03) rotate(0.35deg);
+  }
+}
+
+@keyframes arc-sweep {
+  0% {
+    opacity: calc(var(--arc-opacity, 0.42) * 0.58);
+    transform: rotate(-0.8deg) scaleX(0.96);
+  }
+  100% {
+    opacity: calc(var(--arc-opacity, 0.42) + 0.10);
+    transform: rotate(0.9deg) scaleX(1.04);
+  }
+}
+
+@keyframes warm-ray-pulse {
+  0% {
+    opacity: calc(var(--warm-opacity, 0.24) * 0.52);
+    transform: rotate(-0.55deg) scaleX(0.98);
+  }
+  44% {
+    opacity: calc(var(--warm-opacity, 0.24) + 0.08);
+  }
+  100% {
+    opacity: calc(var(--warm-opacity, 0.24) * 0.86);
+    transform: rotate(0.65deg) scaleX(1.025);
+  }
+}
+
+@keyframes heavy-ray-pulse {
+  0% {
+    opacity: calc(var(--heavy-opacity, 0.34) * 0.46);
+    transform: rotate(-0.35deg) scaleX(0.985);
+  }
+  42% {
+    opacity: calc(var(--heavy-opacity, 0.34) + 0.06);
+  }
+  100% {
+    opacity: calc(var(--heavy-opacity, 0.34) * 0.82);
+    transform: rotate(0.5deg) scaleX(1.02);
+  }
+}
+
+@keyframes line-shimmer {
+  0% {
+    opacity: calc(var(--line-opacity, 0.42) * 0.68);
+    transform: rotate(-0.45deg) translateX(-1px);
+  }
+  46% {
+    opacity: calc(var(--line-opacity, 0.42) + 0.08);
+  }
+  100% {
+    opacity: calc(var(--line-opacity, 0.42) * 0.92);
+    transform: rotate(0.55deg) translateX(1.2px);
+  }
+}
+
+@keyframes wash-breathe {
+  0% { opacity: 0.54; }
+  100% { opacity: 0.9; }
+}
+
+@keyframes sun-breathe {
+  0% {
+    opacity: 0.76;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 0.98;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes visible-sun-pulse {
+  0% {
+    opacity: 0.84;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 0.98;
+    transform: scale(1.035);
+  }
+}
+
+@keyframes face-light-pulse {
+  0% { opacity: 0.62; }
+  100% { opacity: 0.84; }
+}
+
+@keyframes rim-light-pulse {
+  0% { opacity: 0.48; }
+  100% { opacity: 0.76; }
+}
+
+@keyframes particle-fly {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2);
+  }
+}
+
+.sunshine-particle.go {
+  animation: particle-fly 0.76s ease-out forwards;
+}
+</style>
+
+<script>
+(function () {
+  document.querySelectorAll('.sunshine-wrap').forEach((wrap) => {
+    if (wrap.dataset.sunshineReady === '1') return;
+    wrap.dataset.sunshineReady = '1';
+    const particles = wrap.querySelector('.sunshine-particles');
+
+    wrap.addEventListener('click', () => {
+      clearTimeout(wrap._sunTimer);
+      const on = wrap.classList.toggle('sun-on');
+      if (on) {
+        burst(particles);
+      } else if (particles) {
+        particles.innerHTML = '';
+      }
+    });
+  });
+
+  function burst(particles) {
+    if (!particles) return;
+    particles.innerHTML = '';
+    const count = 12;
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('span');
+      const angle = 0.05 + Math.random() * 0.86;
+      const dist = 34 + Math.random() * 56;
+      dot.className = 'sunshine-particle';
+      dot.style.cssText = [
+        `--dx:${(Math.cos(angle) * dist).toFixed(1)}px`,
+        `--dy:${(Math.sin(angle) * dist).toFixed(1)}px`,
+        `left:${23 + Math.random() * 18}%`,
+        `top:${19 + Math.random() * 22}%`,
+        `animation-delay:${(Math.random() * 0.10).toFixed(3)}s`
+      ].join(';');
+      particles.appendChild(dot);
+      requestAnimationFrame(() => requestAnimationFrame(() => dot.classList.add('go')));
+    }
+    setTimeout(() => { particles.innerHTML = ''; }, 900);
+  }
+})();
+</script>

@@ -1,0 +1,712 @@
+<div class="baseball-wrap"
+     style="--bat-x:70px; --bat-y:45px; --bat-width:82px; --bat-height:124px; --bat-pivot-x:64px; --bat-pivot-y:113px">
+  <div class="baseball-stage">
+    <div class="baseball-avatar-frame">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/yue.png"
+           class="avatar baseball-avatar" alt="avatar"/>
+
+      <div class="baseball-panel-flash" aria-hidden="true"></div>
+
+      <svg class="baseball-bat" viewBox="0 0 90 130" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="batWood" x1="20" y1="8" x2="70" y2="125" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#f2c879"/>
+            <stop offset="0.25" stop-color="#c98536"/>
+            <stop offset="0.58" stop-color="#8f4c1f"/>
+            <stop offset="1" stop-color="#5c2d13"/>
+          </linearGradient>
+          <linearGradient id="batShine" x1="25" y1="0" x2="62" y2="130" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fff0b8" stop-opacity="0.72"/>
+            <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.08"/>
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+          </linearGradient>
+          <filter id="batShadow" x="-70%" y="-40%" width="230%" height="190%">
+            <feDropShadow dx="0" dy="3" stdDeviation="2.2" flood-color="#000000" flood-opacity="0.38"/>
+          </filter>
+        </defs>
+        <g filter="url(#batShadow)">
+          <path d="M34 7 C27 11 25 20 29 28 L58 104 C61 112 70 109 68 101 L43 20 C41 12 38 7 34 7 Z"
+                fill="url(#batWood)"/>
+          <path d="M61 99 L72 118 C75 123 70 129 64 126 L54 105 Z"
+                fill="#6f3414"/>
+          <ellipse cx="68" cy="123" rx="9" ry="5" transform="rotate(45 68 123)"
+                   fill="#3f1f0e"/>
+          <path d="M36 14 C33 35 46 71 60 101" fill="none"
+                stroke="url(#batShine)" stroke-width="4.2" stroke-linecap="round" opacity="0.72"/>
+          <path d="M39 18 C35 24 35 37 42 58" fill="none"
+                stroke="#4b250f" stroke-width="1.6" opacity="0.28" stroke-linecap="round"/>
+          <path d="M57 105 L66 101 M59 110 L69 106 M61 115 L72 111"
+                fill="none" stroke="#f7e1b2" stroke-width="2.3" stroke-linecap="round" opacity="0.82"/>
+        </g>
+      </svg>
+
+      <div class="baseball-trail trail-in" aria-hidden="true"></div>
+      <div class="baseball-trail trail-out" aria-hidden="true"></div>
+      <div class="baseball-swing-arc" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="baseball-focus-lines" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="baseball-comic-speed" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="baseball-whoosh" aria-hidden="true">WHOOSH</div>
+      <div class="baseball-ball" aria-hidden="true"></div>
+
+      <svg class="baseball-impact" viewBox="0 0 60 60" aria-hidden="true" focusable="false">
+        <g>
+          <path d="M30 3 L35 22 L54 10 L40 28 L58 34 L38 36 L48 55 L31 42 L19 58 L22 38 L2 44 L19 31 L4 17 L25 23 Z"
+                fill="#2b1500"/>
+          <path d="M30 3 L35 22 L54 10 L40 28 L58 34 L38 36 L48 55 L31 42 L19 58 L22 38 L2 44 L19 31 L4 17 L25 23 Z"
+                fill="#fff7b0" transform="scale(0.9) translate(3.4 3.4)"/>
+          <path d="M30 10 L33 24 L47 16 L37 29 L51 33 L37 34 L43 48 L31 39 L22 50 L25 36 L11 40 L22 31 L11 22 L26 25 Z"
+                fill="#ffbf2e"/>
+          <circle cx="30" cy="31" r="6" fill="#fffef0"/>
+        </g>
+      </svg>
+      <div class="baseball-comic-word" aria-hidden="true">CRACK!</div>
+      <div class="baseball-home-callout" aria-hidden="true">
+        <div class="baseball-home-bubble">
+          <span>ホームラン!!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.baseball-wrap {
+  --baseball-cycle: 5.8s;
+  --bat-rest-rotate: -46deg;
+  --bat-load-rotate: -61deg;
+  --bat-contact-rotate: -12deg;
+  --bat-follow-rotate: 21deg;
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.baseball-stage {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.baseball-avatar-frame {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.avatar,
+.baseball-avatar {
+  display: block;
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.baseball-wrap:hover .baseball-avatar-frame {
+  transform: scale(1.08);
+}
+
+.baseball-wrap:hover .baseball-avatar {
+  filter: brightness(1.1);
+}
+
+.baseball-panel-flash,
+.baseball-bat,
+.baseball-ball,
+.baseball-trail,
+.baseball-swing-arc,
+.baseball-focus-lines,
+.baseball-comic-speed,
+.baseball-whoosh,
+.baseball-comic-word,
+.baseball-home-callout,
+.baseball-impact {
+  position: absolute;
+  pointer-events: none;
+}
+
+.baseball-panel-flash {
+  inset: 0;
+  z-index: 4;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 60% 43%, rgba(255,246,173,0.62), transparent 24%),
+    radial-gradient(circle at 28% 34%, rgba(255,120,31,0.24), transparent 32%);
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+
+.baseball-wrap.baseball-on .baseball-panel-flash {
+  animation: panel-flash var(--baseball-cycle) ease-out infinite;
+}
+
+.baseball-bat {
+  left: var(--bat-x, 85px);
+  top: var(--bat-y, 68px);
+  z-index: 8;
+  width: var(--bat-width, 82px);
+  height: var(--bat-height, 124px);
+  opacity: 0;
+  transform-origin: var(--bat-pivot-x, 64px) var(--bat-pivot-y, 113px);
+  transform: translate(0,0) rotate(var(--bat-rest-rotate, -46deg));
+  will-change: transform;
+}
+
+.baseball-wrap.baseball-on .baseball-bat {
+  opacity: 1;
+  animation: bat-swing var(--baseball-cycle) linear infinite;
+}
+
+.baseball-ball {
+  z-index: 9;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 27%, #ffffff 0 25%, #fff8e9 44%, #d8c7a6 100%);
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.32),
+    inset -2px -2px 0 rgba(95,50,20,0.18);
+  opacity: 0;
+}
+
+.baseball-ball::before,
+.baseball-ball::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: 1.2px solid #c5362d;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+}
+
+.baseball-ball::before {
+  left: 2px;
+  transform: rotate(-18deg);
+}
+
+.baseball-ball::after {
+  right: 2px;
+  transform: rotate(18deg);
+}
+
+.baseball-wrap.baseball-on .baseball-ball {
+  animation: ball-flight var(--baseball-cycle) cubic-bezier(0.25,0.74,0.26,1) infinite;
+}
+
+.baseball-trail {
+  z-index: 6;
+  height: 5px;
+  border-radius: 999px;
+  opacity: 0;
+  transform-origin: 100% 50%;
+  background: linear-gradient(90deg, transparent, rgba(255,245,206,0.36), rgba(255,194,40,0.95));
+  filter: blur(0.2px);
+}
+
+.trail-in {
+  left: 20px;
+  top: 96px;
+  width: 82px;
+  transform: rotate(8deg);
+}
+
+.trail-out {
+  left: 119px;
+  top: 75px;
+  width: 74px;
+  transform: rotate(-30deg);
+  background: linear-gradient(90deg, rgba(255,214,87,0.9), rgba(255,255,255,0.34), transparent);
+}
+
+.baseball-wrap.baseball-on .trail-in {
+  animation: trail-in var(--baseball-cycle) ease-in-out infinite;
+}
+
+.baseball-wrap.baseball-on .trail-out {
+  animation: trail-out var(--baseball-cycle) ease-in-out infinite;
+}
+
+.baseball-swing-arc {
+  left: 80px;
+  top: 41px;
+  z-index: 7;
+  width: 105px;
+  height: 104px;
+  opacity: 0;
+}
+
+.baseball-swing-arc span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-right-color: rgba(255,239,119,0.95);
+  border-bottom-color: rgba(255,132,28,0.80);
+  transform: rotate(-24deg) scale(var(--arc-scale, 1));
+  filter: drop-shadow(0 0 4px rgba(255,177,50,0.55));
+}
+
+.baseball-swing-arc span:nth-child(2) {
+  --arc-scale: 0.82;
+  border-width: 3px;
+  opacity: 0.72;
+}
+
+.baseball-swing-arc span:nth-child(3) {
+  --arc-scale: 0.65;
+  border-width: 2px;
+  opacity: 0.55;
+}
+
+.baseball-wrap.baseball-on .baseball-swing-arc {
+  animation: swing-arc-pop var(--baseball-cycle) ease-out infinite;
+}
+
+.baseball-focus-lines {
+  left: 64px;
+  top: 36px;
+  z-index: 9;
+  width: 132px;
+  height: 122px;
+  opacity: 0;
+}
+
+.baseball-focus-lines span {
+  position: absolute;
+  left: 62px;
+  top: 58px;
+  width: var(--focus-width, 58px);
+  height: var(--focus-height, 3px);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(35,12,0,0.95), rgba(255,238,146,0.92), transparent);
+  transform-origin: 0 50%;
+  box-shadow: 1px 1px 0 rgba(255,255,255,0.24);
+}
+
+.baseball-focus-lines span:nth-child(1) { --focus-width:64px; transform: rotate(-50deg); }
+.baseball-focus-lines span:nth-child(2) { --focus-width:78px; transform: rotate(-35deg); }
+.baseball-focus-lines span:nth-child(3) { --focus-width:54px; transform: rotate(-18deg); }
+.baseball-focus-lines span:nth-child(4) { --focus-width:82px; transform: rotate(2deg); }
+.baseball-focus-lines span:nth-child(5) { --focus-width:62px; transform: rotate(18deg); }
+.baseball-focus-lines span:nth-child(6) { --focus-width:76px; transform: rotate(36deg); }
+.baseball-focus-lines span:nth-child(7) { --focus-width:52px; transform: rotate(54deg); }
+.baseball-focus-lines span:nth-child(8) { --focus-width:46px; --focus-height:2px; transform: rotate(-72deg); }
+.baseball-focus-lines span:nth-child(9) { --focus-width:42px; --focus-height:2px; transform: rotate(72deg); }
+.baseball-focus-lines span:nth-child(10) { --focus-width:68px; --focus-height:2px; transform: rotate(-4deg); }
+
+.baseball-wrap.baseball-on .baseball-focus-lines {
+  animation: focus-line-burst var(--baseball-cycle) ease-out infinite;
+}
+
+.baseball-comic-speed {
+  left: 8px;
+  top: 76px;
+  z-index: 7;
+  width: 116px;
+  height: 44px;
+  opacity: 0;
+}
+
+.baseball-comic-speed span {
+  position: absolute;
+  right: 0;
+  width: 86px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(20,41,60,0.72), rgba(255,255,255,0.96));
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.18),
+    0 0 5px rgba(255,255,255,0.58);
+  transform-origin: 100% 50%;
+}
+
+.baseball-comic-speed span:nth-child(1) { top: 4px; width: 72px; transform: rotate(5deg); }
+.baseball-comic-speed span:nth-child(2) { top: 13px; width: 100px; transform: rotate(8deg); }
+.baseball-comic-speed span:nth-child(3) { top: 23px; width: 88px; transform: rotate(6deg); }
+.baseball-comic-speed span:nth-child(4) { top: 33px; width: 64px; transform: rotate(10deg); }
+.baseball-comic-speed span:nth-child(5) { top: 39px; width: 92px; transform: rotate(3deg); }
+
+.baseball-wrap.baseball-on .baseball-comic-speed {
+  animation: comic-speed var(--baseball-cycle) ease-in-out infinite;
+}
+
+.baseball-whoosh {
+  left: 17px;
+  top: 55px;
+  z-index: 8;
+  font-family: Arial Black, Impact, Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #e7f7ff;
+  -webkit-text-stroke: 0.7px #14344b;
+  text-shadow:
+    2px 2px 0 rgba(13,55,84,0.72),
+    0 0 7px rgba(255,255,255,0.7);
+  opacity: 0;
+  transform: rotate(9deg) skewX(-8deg);
+}
+
+.baseball-wrap.baseball-on .baseball-whoosh {
+  animation: whoosh-float var(--baseball-cycle) ease-out infinite;
+}
+
+.baseball-impact {
+  left: 96px;
+  top: 59px;
+  z-index: 10;
+  width: 62px;
+  height: 62px;
+  opacity: 0;
+  transform: scale(0.45) rotate(-12deg);
+  filter:
+    drop-shadow(2px 3px 0 rgba(63,25,0,0.64))
+    drop-shadow(0 0 10px rgba(255,196,45,0.76));
+}
+
+.baseball-wrap.baseball-on .baseball-impact {
+  animation: impact-pop var(--baseball-cycle) ease-out infinite;
+}
+
+.baseball-comic-word {
+  left: 86px;
+  top: 52px;
+  z-index: 11;
+  font-family: Arial Black, Impact, Arial, Helvetica, sans-serif;
+  font-size: 25px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  color: #fff2a8;
+  -webkit-text-stroke: 1.3px #3b1600;
+  text-shadow:
+    3px 3px 0 #f97316,
+    -1px -1px 0 #ffffff,
+    0 0 8px rgba(255,209,72,0.72);
+  opacity: 0;
+  transform: rotate(-9deg) scale(0.55);
+}
+
+.baseball-wrap.baseball-on .baseball-comic-word {
+  animation: comic-word-pop var(--baseball-cycle) ease-out infinite;
+}
+
+.baseball-home-callout {
+  left: 19px;
+  top: 116px;
+  z-index: 12;
+  width: 164px;
+  height: 73px;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.62) rotate(-7deg);
+}
+
+.baseball-home-bubble {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(7% 35%, 18% 27%, 14% 4%, 31% 20%, 43% 0, 50% 21%, 67% 4%, 64% 28%, 94% 18%, 76% 42%, 99% 57%, 70% 58%, 79% 91%, 55% 69%, 42% 100%, 34% 70%, 8% 82%, 21% 58%, 0 51%);
+  background:
+    radial-gradient(circle at 44% 42%, #fffef4 0 34%, #ffe66d 35% 58%, #ff8a1d 59% 100%);
+  filter:
+    drop-shadow(3px 4px 0 rgba(46,15,0,0.82))
+    drop-shadow(0 0 8px rgba(255,214,55,0.55));
+}
+
+.baseball-home-bubble::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  clip-path: inherit;
+  background: #fff8bc;
+  opacity: 0.88;
+}
+
+.baseball-home-bubble span {
+  position: relative;
+  z-index: 1;
+  font-family: "Arial Black", "PingFang SC", "Microsoft YaHei", Arial, Helvetica, sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: #f22b10;
+  -webkit-text-stroke: 1px #2b1200;
+  text-shadow:
+    2px 2px 0 #fff1a6,
+    4px 4px 0 #ff9f1c;
+  transform: rotate(3deg);
+  white-space: nowrap;
+}
+
+.baseball-wrap.baseball-on .baseball-home-callout {
+  animation: home-callout-pop var(--baseball-cycle) cubic-bezier(0.18,1.35,0.28,1) infinite;
+}
+
+@keyframes bat-swing {
+  0% {
+    transform: translate(0,0) rotate(var(--bat-rest-rotate, -46deg));
+  }
+  14% {
+    transform: translate(-0.5px,0.2px) rotate(-52deg);
+  }
+  27% {
+    transform: translate(-1.8px,1px) rotate(var(--bat-load-rotate, -61deg));
+  }
+  36% {
+    transform: translate(-1.2px,0.8px) rotate(-58deg);
+  }
+  42% {
+    transform: translate(0.6px,-0.2px) rotate(-38deg);
+  }
+  46% {
+    transform: translate(1.2px,-0.7px) rotate(var(--bat-contact-rotate, -12deg));
+  }
+  51% {
+    transform: translate(1.6px,-1px) rotate(var(--bat-follow-rotate, 21deg));
+  }
+  63% {
+    transform: translate(1.4px,-0.8px) rotate(18deg);
+  }
+  76% {
+    transform: translate(1.1px,-0.5px) rotate(15deg);
+  }
+  84% {
+    transform: translate(0.6px,-0.2px) rotate(4deg);
+  }
+  92% {
+    transform: translate(0.2px,0) rotate(-26deg);
+  }
+  100% {
+    transform: translate(0,0) rotate(var(--bat-rest-rotate, -46deg));
+  }
+}
+
+@keyframes ball-flight {
+  0% {
+    opacity: 0;
+    transform: translate(-24px, 88px) scale(0.58) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+    transform: translate(-12px, 89px) scale(0.66) rotate(80deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(28px, 93px) scale(0.78) rotate(190deg);
+  }
+  33% {
+    opacity: 1;
+    transform: translate(70px, 95px) scale(0.9) rotate(305deg);
+  }
+  43% {
+    opacity: 1;
+    transform: translate(113px, 82px) scale(1) rotate(420deg);
+  }
+  46% {
+    opacity: 0;
+    transform: translate(120px, 78px) scale(0.82) rotate(470deg);
+  }
+  51% {
+    opacity: 1;
+    transform: translate(140px, 66px) scale(0.76) rotate(560deg);
+  }
+  67% {
+    opacity: 0.7;
+    transform: translate(205px, 28px) scale(0.32) rotate(980deg);
+  }
+  68%, 100% {
+    opacity: 0;
+    transform: translate(226px, 10px) scale(0.22) rotate(1020deg);
+  }
+}
+
+@keyframes trail-in {
+  0%, 9% {
+    opacity: 0;
+    transform: rotate(8deg) scaleX(0.2);
+  }
+  18%, 42% {
+    opacity: 0.62;
+    transform: rotate(8deg) scaleX(1.06);
+  }
+  50%, 100% {
+    opacity: 0;
+    transform: rotate(8deg) scaleX(0.2);
+  }
+}
+
+@keyframes trail-out {
+  0%, 45% {
+    opacity: 0;
+    transform: rotate(-30deg) scaleX(0.12);
+  }
+  54% {
+    opacity: 0.9;
+    transform: rotate(-30deg) scaleX(1);
+  }
+  68%, 100% {
+    opacity: 0;
+    transform: rotate(-30deg) scaleX(0.4);
+  }
+}
+
+@keyframes comic-speed {
+  0%, 9% {
+    opacity: 0;
+    transform: translateX(-10px) scaleX(0.7);
+  }
+  18%, 41% {
+    opacity: 0.72;
+    transform: translateX(3px) scaleX(1);
+  }
+  48%, 100% {
+    opacity: 0;
+    transform: translateX(18px) scaleX(0.76);
+  }
+}
+
+@keyframes whoosh-float {
+  0%, 11% {
+    opacity: 0;
+    transform: translate(-8px, 6px) rotate(9deg) skewX(-8deg) scale(0.82);
+  }
+  20%, 38% {
+    opacity: 0.92;
+    transform: translate(7px, 0) rotate(5deg) skewX(-8deg) scale(1);
+  }
+  47%, 100% {
+    opacity: 0;
+    transform: translate(24px, -8px) rotate(2deg) skewX(-8deg) scale(0.9);
+  }
+}
+
+@keyframes swing-arc-pop {
+  0%, 41% {
+    opacity: 0;
+    transform: rotate(-10deg) scale(0.78);
+  }
+  46%, 54% {
+    opacity: 1;
+    transform: rotate(5deg) scale(1);
+  }
+  64%, 100% {
+    opacity: 0;
+    transform: rotate(14deg) scale(1.12);
+  }
+}
+
+@keyframes impact-pop {
+  0%, 43% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-18deg);
+  }
+  46% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  54% {
+    opacity: 0;
+    transform: scale(1.45) rotate(18deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.35) rotate(18deg);
+  }
+}
+
+@keyframes comic-word-pop {
+  0%, 43% {
+    opacity: 0;
+    transform: rotate(-9deg) scale(0.55) translateY(4px);
+  }
+  47%, 56% {
+    opacity: 1;
+    transform: rotate(-9deg) scale(1) translateY(0);
+  }
+  66%, 100% {
+    opacity: 0;
+    transform: rotate(-9deg) scale(1.16) translateY(-7px);
+  }
+}
+
+@keyframes home-callout-pop {
+  0%, 61% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.62) rotate(-7deg);
+  }
+  66% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08) rotate(-7deg);
+  }
+  72%, 86% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(-7deg);
+  }
+  94%, 100% {
+    opacity: 0;
+    transform: translateY(-2px) scale(0.82) rotate(-7deg);
+  }
+}
+
+@keyframes focus-line-burst {
+  0%, 42% {
+    opacity: 0;
+    transform: scale(0.72) rotate(-4deg);
+  }
+  46%, 52% {
+    opacity: 0.92;
+    transform: scale(1) rotate(0deg);
+  }
+  61%, 100% {
+    opacity: 0;
+    transform: scale(1.22) rotate(3deg);
+  }
+}
+
+@keyframes panel-flash {
+  0%, 43% {
+    opacity: 0;
+  }
+  46%, 54% {
+    opacity: 0.86;
+    transform: scale(1.02);
+  }
+  64%, 100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+</style>
+
+<script>
+(function () {
+  document.querySelectorAll('.baseball-wrap').forEach((wrap) => {
+    if (wrap.dataset.baseballReady === '1') return;
+    wrap.dataset.baseballReady = '1';
+
+    wrap.addEventListener('click', () => {
+      wrap.classList.toggle('baseball-on');
+    });
+  });
+})();
+</script>
