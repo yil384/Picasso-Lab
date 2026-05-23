@@ -1060,6 +1060,11 @@
         background: rgba(255,205,0,0.1);
         color: #fff3bd;
     }
+    .combo-advisor.hint {
+        border-color: rgba(69,217,255,0.42);
+        background: rgba(69,217,255,0.11);
+        color: #e7fbff;
+    }
     .combo-advisor.invalid {
         border-color: rgba(193,55,67,0.32);
         background: rgba(193,55,67,0.12);
@@ -3482,8 +3487,19 @@ const legacyBotNames = [
     "Little Monster", "Light Teammate", "Card Table Professor", "Kitchen AI",
     "小怪兽", "光之队友", "牌桌博士", "厨房 AI"
 ];
-const AI_MIN_TURN_MS = 1800;
-const AI_RANDOM_TURN_MS = 2200;
+const AI_FAST_VISIBLE_MS = 360;
+const AI_THINK_VISIBLE_MS = 680;
+const AI_COMMIT_BUFFER_MS = 90;
+const AI_PLAN_SEARCH_LIMIT = 13;
+const AI_PLAN_BRANCH_LIMIT = 18;
+const AI_GREEDY_PLAN_LIMIT = 24;
+const AI_SCORE_MOVE_LIMIT = 36;
+const AI_MC_TOP_MOVES = 5;
+const AI_MC_MAX_CHOICES = 6;
+const AI_MC_MIN_VISITS = 3;
+const AI_MC_TARGET_VISITS = 5;
+const AI_MC_TIME_MS = 60;
+const AI_MC_PLAYOUT_DEPTH = 24;
 const DEAL_CARD_COUNT = 108;
 const DEALING_MS = 2800;
 const SORTING_MS = 980;
@@ -3492,6 +3508,7 @@ const TURN_LIMIT_MS = 180000;
 let game = null;
 let roomCode = new URLSearchParams(location.search).get("room") || "";
 let selected = new Set();
+let hintAdvisor = null;
 let unsubscribe = null;
 let statusText = "";
 let aiTimer = null;
@@ -3656,11 +3673,11 @@ function setStaticLabels() {
     langToggleBtn.innerHTML = iconLabel("language", isZH() ? "EN" : "中文");
 }
 
-function showToast(text) {
+function showToast(text, duration = 1700) {
     toastEl.textContent = text;
     toastEl.classList.add("show");
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1700);
+    showToast._t = setTimeout(() => toastEl.classList.remove("show"), duration);
 }
 
 function showReturnTypeHint() {
@@ -4236,6 +4253,7 @@ function attachRoom(code) {
     unsubscribe = onValue(roomRef(code), (snap) => {
         game = normalizeGame(snap.val());
         selected.clear();
+        hintAdvisor = null;
         syncDealAnimation();
         render();
         maybeRunAI();
@@ -4759,7 +4777,10 @@ async function playSelected() {
     const combo = choosePlayable(cards, lastCombo, game.currentLevelRank);
     if (!combo) return showToast(L("Invalid combo or not strong enough", "这手牌型不合法或压不过上家"));
     const ok = await playCards(seat, cards);
-    if (ok) selected.clear();
+    if (ok) {
+        selected.clear();
+        hintAdvisor = null;
+    }
 }
 
 async function playCards(seat, cards, options = {}) {
@@ -4802,6 +4823,7 @@ async function passTurn() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
     if (!game.lastPlay) return showToast(L("You cannot pass when leading a new trick", "新一轮不能不要"));
+    hintAdvisor = null;
     await doPass(seat);
 }
 
@@ -4987,10 +5009,264 @@ function hintMove() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
     const hand = game.hands[seat] || [];
-    const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank, seat, game);
-    if (!move) return showToast(L("Suggestion: pass", "建议：不要"));
-    selected = new Set(move.cards.map(c => c.id));
+    const packet = buildPlayerHintPackage(seat, game);
+    const previousHintActive = !!activeHintForSelection(hand.filter(c => selected.has(c.id)), true);
+    if (!packet?.options?.length) return showToast(L("No useful suggestion found.", "暂时没有可用提示。"));
+    const nextIndex = previousHintActive && hintAdvisor?.signature === packet.signature && packet.options.length > 1
+        ? (hintAdvisor.index + 1) % packet.options.length
+        : 0;
+    const advice = packet.options[nextIndex];
+    const ids = advice.move?.cards?.map(c => c.id) || [];
+    selected = new Set(ids);
+    hintAdvisor = {
+        ids,
+        text: hintTextWithOrdinal(advice.text, nextIndex, packet.options.length),
+        detail: advice.detail || "",
+        className: "hint",
+        signature: packet.signature,
+        index: nextIndex,
+        total: packet.options.length
+    };
     render();
+    showToast(hintAdvisor.text, 2800);
+}
+
+function buildPlayerHintPackage(seat, g = game) {
+    const hand = g?.hands?.[seat] || [];
+    const lastCombo = g?.lastPlay?.combo || null;
+    const levelRank = g?.currentLevelRank || "2";
+    const signature = makeHintSignature(seat, g, hand);
+    const moves = generateAIMoves(hand, lastCombo, levelRank);
+    if (!moves.length) {
+        return {
+            signature,
+            options: [makeHintPassAdvice(
+                "no legal combo can beat the current trick",
+                "没有能压过当前牌型的组合",
+                "Keep the hand intact and wait for a better entry.",
+                "保留手牌结构，等下一轮更好的入口。"
+            )]
+        };
+    }
+
+    const context = aiTableContext(seat, g);
+    const memo = new Map();
+    const baseShape = evaluateHandShape(hand, levelRank, memo);
+    const makeEntry = (move) => {
+        const remaining = cardsAfterMove(hand, move);
+        return {
+            move,
+            remaining,
+            afterShape: evaluateHandShape(remaining, levelRank, memo),
+            score: scoreAIMove(move, hand, lastCombo, levelRank, seat, g, context, baseShape, memo)
+        };
+    };
+
+    const finishing = moves
+        .filter(move => remainingAfterMove(hand, move) === 0)
+        .map(makeEntry)
+        .sort((a, b) => moveStrength(a.move) - moveStrength(b.move));
+    if (finishing.length) {
+        return {
+            signature,
+            options: [makeHintMoveAdvice(finishing[0], hand, lastCombo, levelRank, context, baseShape, L("Go out", "直接走完"))]
+        };
+    }
+
+    if (lastCombo && context.lastPlayRelation === "partner") {
+        const partnerMove = choosePartnerLeadOverride(moves, hand, lastCombo, levelRank, context);
+        if (!partnerMove) {
+            return {
+                signature,
+                options: [makeHintPassAdvice(
+                    "partner owns this trick; do not spend cards to beat them",
+                    "队友掌握牌权，没必要拆牌去压队友",
+                    "Only take over partner's trick when you can finish or almost finish.",
+                    "只有能直接走完或接近走完时，才接队友这手。"
+                )]
+            };
+        }
+        return {
+            signature,
+            options: [makeHintMoveAdvice(makeEntry(partnerMove), hand, lastCombo, levelRank, context, baseShape, L("Close out", "收尾接手"))]
+        };
+    }
+
+    const scored = preselectAIMoves(moves, hand, lastCombo, levelRank, context)
+        .map(makeEntry)
+        .sort((a, b) => a.score - b.score || moveStrength(a.move) - moveStrength(b.move));
+    const best = scored[0];
+    if (!best) return { signature, options: [] };
+
+    if (lastCombo && shouldDeclineAIMove(best.move, hand, lastCombo, levelRank, context, baseShape, best.score, memo)) {
+        return {
+            signature,
+            options: [
+                makeDeclineHintAdvice(best, hand, lastCombo, levelRank, context, baseShape),
+                makeHintMoveAdvice(best, hand, lastCombo, levelRank, context, baseShape, L("Emergency press", "强压备选"))
+            ]
+        };
+    }
+
+    const options = [];
+    const seen = new Set();
+    for (const entry of scored) {
+        const key = hintMoveKey(entry.move);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        options.push(makeHintMoveAdvice(entry, hand, lastCombo, levelRank, context, baseShape));
+        if (options.length >= 3) break;
+    }
+    return { signature, options };
+}
+
+function makeHintSignature(seat, g, hand) {
+    const handKey = hand.map(c => c.id).sort().join("-");
+    const lastCards = (g?.lastPlay?.cards || []).map(c => c.id).sort().join("-");
+    return `${seat}:${g?.roundNo || 0}:${g?.currentTurn ?? ""}:${g?.passCount || 0}:${g?.lastPlay?.player ?? "lead"}:${lastCards}:${handKey}`;
+}
+
+function hintMoveKey(move) {
+    if (!move) return "pass";
+    return `${move.combo.type}:${move.combo.mainPower}:${move.combo.len}:${move.cards.map(c => c.id).sort().join("-")}`;
+}
+
+function makeHintPassAdvice(enReason, zhReason, enDetail = "", zhDetail = "") {
+    return {
+        move: null,
+        text: L(`Suggested pass: ${enReason}`, `建议不要：${zhReason}`),
+        detail: L(enDetail, zhDetail)
+    };
+}
+
+function makeDeclineHintAdvice(entry, hand, lastCombo, levelRank, context, baseShape) {
+    const move = entry.move;
+    if (context.lastPlayRelation === "partner") {
+        return makeHintPassAdvice(
+            "partner owns this trick",
+            "队友已经在牌权上",
+            "Avoid stealing partner tempo unless it ends the hand.",
+            "不抢队友节奏，除非这手能收尾。"
+        );
+    }
+    if (move.combo.isBomb && !lastCombo.isBomb && context.pressure < 36) {
+        return makeHintPassAdvice(
+            "bombing now is too expensive",
+            "现在炸牌成本太高",
+            "Save the bomb for an opponent's close-out or a must-win trick.",
+            "炸弹留给对手临门或必须抢回牌权的轮次。"
+        );
+    }
+    if (hintUsesControl(move, levelRank) && context.pressure < 30) {
+        return makeHintPassAdvice(
+            "this press spends control cards before the table is dangerous",
+            "这手会过早消耗控制牌",
+            "Keep jokers, wild cards, and high cards for real pressure.",
+            "大小王、逢人配和高张先留住，等真正高压再接。"
+        );
+    }
+    const afterTurns = entry.afterShape?.plan?.turns ?? 99;
+    const baseTurns = baseShape?.plan?.turns ?? 99;
+    if (afterTurns > baseTurns) {
+        return makeHintPassAdvice(
+            "forcing a press makes the remaining hand worse",
+            "强行压牌会把后续手牌打散",
+            "The backup hint shows the best legal press if you must take over.",
+            "如果必须接管，可以再点一次提示看强压备选。"
+        );
+    }
+    return makeHintPassAdvice(
+        "the legal press is not worth the card cost",
+        "能压但代价不划算",
+        "Pass keeps your structure and waits for a cleaner entry.",
+        "不要可以保住结构，等更干净的接牌机会。"
+    );
+}
+
+function makeHintMoveAdvice(entry, hand, lastCombo, levelRank, context, baseShape, forcedIntent = "") {
+    const move = entry.move;
+    const combo = move.combo;
+    const remaining = entry.remaining || cardsAfterMove(hand, move);
+    const afterShape = entry.afterShape || evaluateHandShape(remaining, levelRank);
+    const intent = forcedIntent || hintIntentForMove(entry, lastCombo, levelRank, context, baseShape);
+    const reasons = hintReasonFragments(entry, lastCombo, levelRank, context, baseShape).slice(0, 2);
+    const comboText = comboName(combo);
+    const reasonText = reasons.length ? (isZH() ? `，${reasons.join("，")}` : ` - ${reasons.join("; ")}`) : "";
+    const text = isZH() ? `${intent}：${comboText}${reasonText}` : `${intent}: ${comboText}${reasonText}`;
+    const cardsText = displayCardsForCombo(move.cards, combo).map(cardText).join(" ");
+    const turns = afterShape?.plan?.turns ?? null;
+    const detailParts = [cardsText, L(`${remaining.length} left`, `出后剩 ${remaining.length} 张`)];
+    if (turns != null) detailParts.push(L(`est. ${turns} turns`, `预计 ${turns} 手`));
+    return { move, text, detail: detailParts.join(" · ") };
+}
+
+function hintIntentForMove(entry, lastCombo, levelRank, context, baseShape) {
+    const move = entry.move;
+    const combo = move.combo;
+    const remaining = entry.remaining || [];
+    if (!remaining.length) return L("Go out", "直接走完");
+    if (lastCombo) {
+        if (context.lastPlayRelation === "partner") return L("Close out", "收尾接手");
+        if (combo.isBomb && !lastCombo.isBomb) return L("Bomb stop", "炸牌截停");
+        if (context.partnerPassed) return L("Take control", "接管牌权");
+        if (context.lastPlayerLeft <= 3 || context.minOpponentLeft <= 3 || context.opponentFirstPartnerLeft <= 3) return L("Pressure press", "高压压牌");
+        if (context.passesUntilCollect <= 1) return L("Win trick", "压住收轮");
+        if (combo.mainPower >= 15) return L("Control press", "控制压牌");
+        return L("Low-cost press", "低损耗压牌");
+    }
+    if (context.partnerLeft === combo.len) return L("Feed partner", "送队友");
+    if (context.minOpponentLeft === combo.len || (context.nextIsOpponent && context.nextLeft === combo.len)) return L("Block outlet", "封对手出口");
+    if (context.passMemory?.[combo.type]) return L("Attack weakness", "打对手弱项");
+    if ((entry.afterShape?.plan?.turns ?? 99) < (baseShape?.plan?.turns ?? 99)) return L("Clean shape", "清手牌结构");
+    if (["straight", "pairStraight", "tripleStraight", "fullhouse"].includes(combo.type)) return L("Lead with shape", "先甩整牌");
+    return L("Conservative lead", "保控制起手");
+}
+
+function hintReasonFragments(entry, lastCombo, levelRank, context, baseShape) {
+    const move = entry.move;
+    const combo = move.combo;
+    const remaining = entry.remaining || [];
+    const afterTurns = entry.afterShape?.plan?.turns ?? 99;
+    const baseTurns = baseShape?.plan?.turns ?? 99;
+    const reasons = [];
+    if (!remaining.length) return [L("no follow-up needed", "无需后续")];
+    if (lastCombo) {
+        if (context.partnerPassed) reasons.push(L("partner already passed", "队友已不要"));
+        if (context.lastPlayerLeft <= 3) reasons.push(L(`last player has ${context.lastPlayerLeft} left`, `上家只剩 ${context.lastPlayerLeft} 张`));
+        if (context.minOpponentLeft <= 3) reasons.push(L(`opponent is down to ${context.minOpponentLeft}`, `对手最少只剩 ${context.minOpponentLeft} 张`));
+        if (context.opponentHasFirst && context.opponentFirstPartnerLeft <= 4) reasons.push(L("opponent partner is close", "对家搭档临门"));
+        if (context.passesUntilCollect <= 1) reasons.push(L("one pass can collect the trick", "再过一家就收轮"));
+        if (combo.isBomb) reasons.push(context.pressure >= 34 ? L("pressure is high enough", "当前压力足够高") : L("spends a bomb", "会消耗炸弹"));
+        if (afterTurns < baseTurns) reasons.push(L("improves the remaining plan", "后续手数更顺"));
+        if (!reasons.length) reasons.push(L("beats with the lowest structural cost", "以较低拆牌成本压过"));
+        return reasons;
+    }
+    if (context.partnerLeft === combo.len) reasons.push(L(`partner has ${context.partnerLeft} left`, `队友正好剩 ${context.partnerLeft} 张`));
+    if (context.nextIsPartner && context.partnerLeft <= 2) reasons.push(L("partner acts next", "下家就是队友"));
+    if (context.minOpponentLeft === combo.len || (context.nextIsOpponent && context.nextLeft === combo.len)) reasons.push(L("does not open an easy outlet", "不给对手顺口出口"));
+    if (context.passMemory?.[combo.type]) reasons.push(L("opponents recently passed this type", "对手近期怕这个牌型"));
+    if (afterTurns < baseTurns) reasons.push(L(`plan drops to ${afterTurns} turns`, `预计压到 ${afterTurns} 手`));
+    if (["straight", "pairStraight", "tripleStraight"].includes(combo.type)) reasons.push(L("removes a long shape", "先清长牌型"));
+    if (!hintUsesControl(move, levelRank)) reasons.push(L("keeps control cards", "保留控制牌"));
+    return reasons;
+}
+
+function hintUsesControl(move, levelRank) {
+    if (!move) return false;
+    if (move.combo.isBomb) return true;
+    return move.cards.some(card => card.joker || isWild(card, levelRank) || (!card.joker && rankPower(card.rank, levelRank) >= 15));
+}
+
+function hintTextWithOrdinal(text, index, total) {
+    if (total <= 1) return text;
+    return isZH() ? `提示 ${index + 1}/${total} · ${text}` : `Hint ${index + 1}/${total} · ${text}`;
+}
+
+function activeHintForSelection(selectedCards, canAct) {
+    if (!hintAdvisor || !canAct) return null;
+    const currentIds = selectedCards.map(c => c.id).sort().join(",");
+    const hintIds = (hintAdvisor.ids || []).slice().sort().join(",");
+    return currentIds === hintIds ? hintAdvisor : null;
 }
 
 function comboStrength(combo) {
@@ -5006,100 +5282,794 @@ function remainingAfterMove(hand, move) {
     return Math.max(0, hand.length - move.cards.length);
 }
 
-function lastPlayByPartner(seat, g = game) {
-    return !!g?.lastPlay && partnerOf(seat) === g.lastPlay.player;
-}
-
 function obviouslyCannotBeat(hand, lastCombo, levelRank) {
     if (!lastCombo) return false;
     if ((hand || []).length < lastCombo.len && (hand || []).length < 4 && !lastCombo.isBomb) return true;
-    return !findAIMoveIgnoringTeam(hand, lastCombo, levelRank);
-}
-
-function findAIMoveIgnoringTeam(hand, lastCombo, levelRank) {
-    return findAIMove(hand, lastCombo, levelRank, null, null);
-}
-
-function shouldProtectPartnerLead(move, hand, lastCombo, seat, g = game) {
-    if (!move || !lastCombo || !lastPlayByPartner(seat, g)) return false;
-    if (remainingAfterMove(hand, move) === 0) return false;
-    return true;
+    return !generateAIMoves(hand, lastCombo, levelRank).length;
 }
 
 function findAIMove(hand, lastCombo, levelRank, seat = null, g = game) {
-    const finishingCombo = hand.length ? choosePlayable(hand, lastCombo, levelRank) : null;
-    if (finishingCombo) return { cards: hand, combo: finishingCombo };
-    const candidates = [];
-    for (const c of hand) candidates.push([c]);
-    const byRank = {};
-    for (const c of hand) {
-        if (!c.joker && !isWild(c, levelRank)) (byRank[c.rank] ||= []).push(c);
+    const moves = generateAIMoves(hand, lastCombo, levelRank);
+    if (!moves.length) return null;
+
+    const finishingMoves = moves
+        .filter(move => remainingAfterMove(hand, move) === 0)
+        .sort((a, b) => moveStrength(a) - moveStrength(b));
+    if (finishingMoves.length) return finishingMoves[0];
+
+    const context = aiTableContext(seat, g);
+    if (seat != null && lastCombo && context.lastPlayRelation === "partner") {
+        return choosePartnerLeadOverride(moves, hand, lastCombo, levelRank, context);
     }
-    for (const cards of Object.values(byRank)) {
-        if (cards.length >= 2) candidates.push(cards.slice(0,2));
-        if (cards.length >= 3) candidates.push(cards.slice(0,3));
-        if (cards.length >= 4) candidates.push(cards.slice(0,4));
-        if (cards.length >= 5) candidates.push(cards.slice(0,5));
-        if (cards.length >= 6) candidates.push(cards.slice(0,6));
+
+    const memo = new Map();
+    const baseShape = evaluateHandShape(hand, levelRank, memo);
+    const searchMoves = preselectAIMoves(moves, hand, lastCombo, levelRank, context);
+    const scored = searchMoves
+        .map(move => ({ move, score: scoreAIMove(move, hand, lastCombo, levelRank, seat, g, context, baseShape, memo) }))
+        .sort((a, b) => a.score - b.score || moveStrength(a.move) - moveStrength(b.move));
+    const best = scored[0]?.move || null;
+    if (shouldDeclineAIMove(best, hand, lastCombo, levelRank, context, baseShape, scored[0]?.score ?? 0, memo)) return null;
+    const monteCarloChoice = chooseMonteCarloMove(scored, hand, lastCombo, levelRank, seat, g, context);
+    return monteCarloChoice ? monteCarloChoice.move : best;
+}
+
+function generateAIMoves(hand, lastCombo, levelRank) {
+    const candidates = [];
+    const addCandidate = (cards) => {
+        if (cards?.length) candidates.push(cards);
+    };
+    for (const c of hand) addCandidate([c]);
+
+    const naturalByRank = {};
+    let wildCount = 0;
+    for (const c of hand) {
+        if (isWild(c, levelRank)) wildCount++;
+        else if (!c.joker) (naturalByRank[c.rank] ||= []).push(c);
     }
     for (const rank of ranks) {
-        for (let count = 2; count <= 6; count++) {
-            const cards = pickRankGroup(hand, rank, count, levelRank);
-            if (cards) candidates.push(cards);
-        }
+        const maxCount = Math.min(hand.length, (naturalByRank[rank]?.length || 0) + wildCount);
+        for (let count = 2; count <= maxCount; count++) addCandidate(pickRankGroup(hand, rank, count, levelRank));
     }
+
     const jokers = hand.filter(c => c.joker);
     for (const joker of ["BJ", "RJ"]) {
         const pair = jokers.filter(c => c.joker === joker).slice(0, 2);
-        if (pair.length === 2) candidates.push(pair);
+        if (pair.length === 2) addCandidate(pair);
     }
-    if (jokers.length === 4) candidates.push(jokers);
+    if (jokers.length === 4) addCandidate(jokers);
+
     for (const tripleRank of ranks) {
         for (const pairRank of ranks) {
             if (tripleRank === pairRank) continue;
             const triple = pickRankGroup(hand, tripleRank, 3, levelRank);
             if (!triple) continue;
             const pair = pickRankGroup(hand, pairRank, 2, levelRank, new Set(triple.map(c => c.id)));
-            if (pair) candidates.push([...triple, ...pair]);
+            if (pair) addCandidate([...triple, ...pair]);
         }
     }
     for (const seq of sequenceSets("straight")) {
-        const cards = pickSequence(hand, seq, 1, levelRank);
-        if (cards) candidates.push(cards);
-        const flush = pickFlushSequence(hand, seq, levelRank);
-        if (flush) candidates.push(flush);
+        addCandidate(pickSequence(hand, seq, 1, levelRank));
+        for (const flush of pickFlushSequences(hand, seq, levelRank)) addCandidate(flush);
     }
-    for (const seq of sequenceSets("pair")) {
-        const cards = pickSequence(hand, seq, 2, levelRank);
-        if (cards) candidates.push(cards);
-    }
-    for (const seq of sequenceSets("plate")) {
-        const cards = pickSequence(hand, seq, 3, levelRank);
-        if (cards) candidates.push(cards);
-    }
+    for (const seq of sequenceSets("pair")) addCandidate(pickSequence(hand, seq, 2, levelRank));
+    for (const seq of sequenceSets("plate")) addCandidate(pickSequence(hand, seq, 3, levelRank));
+
     const seen = new Set();
     const moves = [];
     for (const cards of candidates) {
-        const key = cards.map(c => c.id).sort().join(",");
+        const combo = choosePlayable(cards, lastCombo, levelRank);
+        if (!combo) continue;
+        const key = `${cards.map(c => c.id).sort().join(",")}:${combo.type}:${combo.mainPower}:${combo.bombLen || 0}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        const combo = choosePlayable(cards, lastCombo, levelRank);
-        if (combo) moves.push({ cards, combo });
+        moves.push({ cards, combo });
     }
-    moves.sort((a, b) => {
-        if (!!a.combo.isBomb !== !!b.combo.isBomb) return a.combo.isBomb ? 1 : -1;
-        if (a.cards.length !== b.cards.length && !lastCombo) return b.cards.length - a.cards.length;
-        return moveStrength(a) - moveStrength(b);
+    return moves;
+}
+
+function preselectAIMoves(moves, hand, lastCombo, levelRank, context) {
+    if (moves.length <= AI_SCORE_MOVE_LIMIT) return moves;
+    return moves
+        .map(move => ({ move, score: quickAIMoveScore(move, hand, lastCombo, levelRank, context) }))
+        .sort((a, b) => a.score - b.score)
+        .slice(0, AI_SCORE_MOVE_LIMIT)
+        .map(entry => entry.move);
+}
+
+function quickAIMoveScore(move, hand, lastCombo, levelRank, context) {
+    let score = planMoveCost(move, hand, levelRank) + moveResourcePenalty(move, hand, levelRank) * 0.45;
+    if (!lastCombo) {
+        score += leadMovePenalty(move, hand, levelRank, context) * 0.75;
+        return score;
+    }
+    score += Math.max(0, comboStrength(move.combo) - comboStrength(lastCombo)) * 0.35;
+    if (context.lastPlayRelation === "opponent") score -= context.pressure * 1.6;
+    if (move.combo.isBomb && !lastCombo.isBomb) score += Math.max(20, 130 - context.pressure * 3.5);
+    score += outletRiskForCombo(move.combo, context) * 0.7;
+    score -= partnerFeedValue(move.combo, context) * 0.35;
+    score -= pressControlValue(move, lastCombo, context) * 0.45;
+    if (context.partnerPassed && context.lastPlayRelation === "opponent") score -= 12;
+    return score;
+}
+
+function aiTableContext(seat, g = game) {
+    if (seat == null || !g) return { seat, partner: null, lastPlayRelation: "none", pressure: 0, partnerLeft: 99, minOpponentLeft: 99, lastPlayerLeft: 99 };
+    const partner = partnerOf(seat);
+    const team = seat % 2;
+    const finished = finishedList(g);
+    const opponents = [0,1,2,3].filter(i => i % 2 !== seat % 2 && !finishedList(g).includes(i));
+    const handCount = (i) => finishedList(g).includes(i) ? 0 : (g.hands?.[i] || []).length;
+    const lastPlayer = g.lastPlay?.player;
+    const lastPlayRelation = lastPlayer == null ? "none" : lastPlayer === partner ? "partner" : lastPlayer % 2 !== seat % 2 ? "opponent" : "self";
+    const lastPlayerLeft = lastPlayer == null ? 99 : handCount(lastPlayer);
+    const minOpponentLeft = opponents.length ? Math.min(...opponents.map(handCount)) : 99;
+    const partnerLeft = handCount(partner);
+    const firstFinished = finished[0] ?? null;
+    const teamHasFirst = firstFinished != null && firstFinished % 2 === team;
+    const opponentHasFirst = firstFinished != null && firstFinished % 2 !== team;
+    const partnerFinished = finished.includes(partner);
+    const opponentFirstPartner = opponentHasFirst ? partnerOf(firstFinished) : null;
+    const opponentFirstPartnerLeft = opponentFirstPartner == null ? 99 : handCount(opponentFirstPartner);
+    const trickPasses = [0,1,2,3].filter(i => g.trickPlays?.[i]?.actionType === "pass");
+    const partnerPassed = trickPasses.includes(partner);
+    const opponentPassCount = trickPasses.filter(i => i % 2 !== team).length;
+    const requiredPasses = g.lastPlay
+        ? (typeof g.over === "boolean" ? simRequiredPasses(g) : requiredPassesForTrick(g))
+        : 0;
+    const passCount = Math.max(0, Number(g.passCount) || 0);
+    const passesUntilCollect = g.lastPlay ? Math.max(1, requiredPasses - passCount) : 0;
+    const passMemory = recentOpponentPassMemory(g, seat);
+    let pressure = 0;
+    if (lastPlayRelation === "opponent") {
+        if (lastPlayerLeft === 0) pressure += 48;
+        else if (lastPlayerLeft === 1) pressure += 40;
+        else if (lastPlayerLeft === 2) pressure += 30;
+        else if (lastPlayerLeft <= 4) pressure += 16;
+        else pressure += 5;
+    }
+    if (minOpponentLeft === 0) pressure += 22;
+    else if (minOpponentLeft === 1) pressure += 18;
+    else if (minOpponentLeft === 2) pressure += 12;
+    if (opponentHasFirst && opponentFirstPartnerLeft <= 2) pressure += 22;
+    if (partnerPassed && lastPlayRelation === "opponent") pressure += 10;
+    const next = typeof g.over === "boolean" ? simNextSeat(seat, g) : nextSeat(seat, g);
+    return {
+        seat,
+        partner,
+        lastPlayRelation,
+        pressure,
+        partnerLeft,
+        minOpponentLeft,
+        lastPlayerLeft,
+        nextSeat: next,
+        teamHasFirst,
+        opponentHasFirst,
+        partnerFinished,
+        partnerPassed,
+        opponentPassCount,
+        opponentFirstPartnerLeft,
+        nextIsPartner: next === partner,
+        nextIsOpponent: next != null && next % 2 !== team,
+        nextLeft: next == null ? 99 : handCount(next),
+        passCount,
+        passesUntilCollect,
+        passMemory
+    };
+}
+
+function recentOpponentPassMemory(g, seat) {
+    const memory = {};
+    let currentCombo = null;
+    for (const entry of valuesFromFirebase(g?.history)) {
+        if (entry?.actionType === "combo" && entry.combo) {
+            currentCombo = entry.combo;
+            continue;
+        }
+        if (entry?.actionType === "pass" && currentCombo && Number(entry.player) % 2 !== seat % 2) {
+            const type = currentCombo.type || "";
+            if (type && !currentCombo.isBomb) memory[type] = (memory[type] || 0) + 1;
+        }
+    }
+    return memory;
+}
+
+function choosePartnerLeadOverride(moves, hand, lastCombo, levelRank, context) {
+    const memo = new Map();
+    const candidates = moves
+        .filter(move => {
+            const remaining = remainingAfterMove(hand, move);
+            if (remaining === 0) return true;
+            if (remaining <= 1 && !move.combo.isBomb) return true;
+            if (context.minOpponentLeft <= 1 && remaining <= 2 && !move.combo.isBomb) return true;
+            return false;
+        })
+        .map(move => ({ move, score: evaluateHandShape(cardsAfterMove(hand, move), levelRank, memo).score + moveResourcePenalty(move, hand, levelRank) }))
+        .sort((a, b) => a.score - b.score);
+    return candidates[0]?.move || null;
+}
+
+function scoreAIMove(move, hand, lastCombo, levelRank, seat, g, context, baseShape, memo) {
+    const remaining = cardsAfterMove(hand, move);
+    const afterShape = evaluateHandShape(remaining, levelRank, memo);
+    let score = afterShape.score;
+    score += moveResourcePenalty(move, hand, levelRank);
+    score += moveShapePenalty(move, lastCombo);
+    score += partnershipTempoPenalty(move, remaining, context);
+
+    if (!lastCombo) {
+        score += leadMovePenalty(move, hand, levelRank, context);
+    } else {
+        const overtakeCost = Math.max(0, comboStrength(move.combo) - comboStrength(lastCombo));
+        score += overtakeCost * 0.55;
+        if (context.lastPlayRelation === "opponent") score -= context.pressure * 2.2;
+        if (context.lastPlayRelation === "opponent") score -= pressControlValue(move, lastCombo, context);
+        if (context.partnerPassed && context.lastPlayRelation === "opponent") score -= 24;
+        if (context.nextIsPartner && context.lastPlayRelation === "opponent" && context.pressure < 28) score += 18;
+        if (context.opponentHasFirst && context.lastPlayerLeft <= 3) score -= 20;
+        if (context.teamHasFirst && afterShape.plan.turns <= 2) score -= 24;
+        if (move.combo.isBomb && !lastCombo.isBomb) score += Math.max(18, 150 - context.pressure * 4);
+        if (move.combo.isBomb && lastCombo.isBomb) score += 28;
+        if (remaining.length <= 2) score -= 50;
+        if (afterShape.plan.turns <= 2) score -= 28;
+        if (afterShape.score < baseShape.score - 80) score -= 16;
+    }
+
+    return score;
+}
+
+function shouldDeclineAIMove(move, hand, lastCombo, levelRank, context, baseShape, bestScore, memo) {
+    if (!move || !lastCombo) return false;
+    const remaining = cardsAfterMove(hand, move);
+    if (!remaining.length || remaining.length <= 2) return false;
+    if (context.lastPlayRelation !== "opponent") return false;
+    if (shouldForcePress(move, remaining, context)) return false;
+    if (context.pressure >= 30) return false;
+    if (move.combo.isBomb && !lastCombo.isBomb) return true;
+    const burnsControl = move.cards.some(c => c.joker || isWild(c, levelRank));
+    const afterShape = evaluateHandShape(remaining, levelRank, memo);
+    if (burnsControl && afterShape.plan.turns > 2) return true;
+    return bestScore > baseShape.score + 42;
+}
+
+function shouldForcePress(move, remaining, context) {
+    if (!move || context.lastPlayRelation !== "opponent") return false;
+    if (move.combo.isBomb && context.pressure < 36) return false;
+    if (context.partnerPassed && !move.combo.isBomb) return true;
+    if (context.minOpponentLeft <= 3 && !move.combo.isBomb) return true;
+    if (context.opponentHasFirst && context.opponentFirstPartnerLeft <= 4) return true;
+    if (context.teamHasFirst && remaining.length <= 5) return true;
+    return context.passesUntilCollect <= 1 && context.nextIsOpponent && context.nextLeft <= 5 && !move.combo.isBomb;
+}
+
+function pressControlValue(move, lastCombo, context) {
+    if (!move || !lastCombo || context.lastPlayRelation !== "opponent") return 0;
+    const combo = move.combo;
+    let value = 0;
+    if (!combo.isBomb && !lastCombo.isBomb) {
+        const margin = Math.max(0, comboStrength(combo) - comboStrength(lastCombo));
+        value += Math.min(26, margin * 1.6);
+        if (combo.mainPower >= 15) value += 14;
+        if (combo.mainPower >= 17) value += 10;
+        if (margin <= 2 && context.nextIsOpponent) value -= 16;
+        if (context.partnerPassed) value += 18;
+        if (context.opponentPassCount > 0) value += 10;
+        if (context.passesUntilCollect <= 1) value += 12;
+        if (context.nextIsOpponent && context.nextLeft <= 4) value += 16;
+        if (context.passMemory?.[combo.type]) value += Math.min(18, context.passMemory[combo.type] * 8);
+    }
+    if (combo.isBomb && !lastCombo.isBomb) {
+        value += context.pressure >= 36 ? 42 : -34;
+        if (context.opponentHasFirst && context.opponentFirstPartnerLeft <= 3) value += 26;
+        if (context.partnerPassed && context.pressure >= 28) value += 16;
+    }
+    if (combo.isBomb && lastCombo.isBomb) value += context.pressure >= 34 ? 24 : -20;
+    return value;
+}
+
+function partnershipTempoPenalty(move, remaining, context) {
+    let score = 0;
+    if (context.partnerFinished || context.teamHasFirst) {
+        score -= move.cards.length * 4;
+        if (remaining.length <= 4) score -= 18;
+        if (move.combo.isBomb && remaining.length > 2) score += 18;
+    }
+    if (context.opponentHasFirst && context.opponentFirstPartnerLeft <= 2) {
+        score -= move.combo.isBomb ? 18 : 8;
+        if (remaining.length <= 3) score -= 12;
+    }
+    return score;
+}
+
+function outletRiskForCombo(combo, context) {
+    if (!combo) return 0;
+    let risk = 0;
+    const common = ["single", "pair", "triple", "fullhouse"].includes(combo.type);
+    if (context.minOpponentLeft === combo.len) risk += common ? 34 : 18;
+    if (context.nextIsOpponent && context.nextLeft === combo.len) risk += common ? 34 : 16;
+    if (context.minOpponentLeft === 1 && combo.type === "single") risk += 30;
+    if (context.minOpponentLeft === 2 && combo.type === "pair") risk += 26;
+    if (context.nextIsOpponent && context.nextLeft === 1 && combo.type === "single") risk += 34;
+    if (context.nextIsOpponent && context.nextLeft === 2 && combo.type === "pair") risk += 30;
+    return risk;
+}
+
+function partnerFeedValue(combo, context) {
+    if (!combo) return 0;
+    let value = 0;
+    if (context.partnerLeft === combo.len) value += ["single", "pair", "triple", "fullhouse"].includes(combo.type) ? 60 : 24;
+    if (context.nextIsPartner && context.partnerLeft === combo.len) value += 24;
+    if (context.partnerLeft === 1 && combo.type === "single") value += 34;
+    if (context.partnerLeft === 2 && combo.type === "pair") value += 30;
+    return value;
+}
+
+function chooseMonteCarloMove(scored, hand, lastCombo, levelRank, seat, g, context) {
+    if (seat == null || !g || !scored.length) return null;
+    if (hand.length <= 2) return null;
+    if (!lastCombo && hand.length > 20) return null;
+    if (context.partnerLeft <= 2 || context.minOpponentLeft <= 2 || context.opponentFirstPartnerLeft <= 2 || context.partnerPassed) return null;
+    const start = aiNow();
+    const choices = scored.slice(0, AI_MC_TOP_MOVES).map(entry => ({
+        move: entry.move,
+        heuristicScore: entry.score,
+        total: 0,
+        visits: 0
+    }));
+    if (lastCombo && context.lastPlayRelation === "opponent" && context.pressure < 30) {
+        choices.push({ move: null, heuristicScore: scored[0].score + 36, total: 0, visits: 0 });
+    }
+    const limitedChoices = choices.slice(0, AI_MC_MAX_CHOICES);
+    if (limitedChoices.length <= 1) return null;
+    const hiddenHandSampler = makeHiddenHandSamplerForAI(seat, hand, g);
+    if (!hiddenHandSampler) return null;
+
+    let rounds = 0;
+    while (rounds < AI_MC_TARGET_VISITS && aiNow() - start < AI_MC_TIME_MS) {
+        for (const choice of limitedChoices) {
+            if (aiNow() - start >= AI_MC_TIME_MS) break;
+            const sampledHands = hiddenHandSampler();
+            if (!sampledHands) continue;
+            const sim = makeAISimulationState(seat, sampledHands, g);
+            if (!applyInitialSimulationChoice(sim, seat, choice.move, levelRank)) continue;
+            const value = rolloutSimulation(sim, seat, levelRank, AI_MC_PLAYOUT_DEPTH);
+            choice.total += value;
+            choice.visits++;
+        }
+        rounds++;
+    }
+
+    const visited = limitedChoices.filter(choice => choice.visits >= AI_MC_MIN_VISITS);
+    if (visited.length < 2) return null;
+    visited.sort((a, b) => monteCarloChoiceValue(b) - monteCarloChoiceValue(a));
+    const best = visited[0];
+    const heuristicBest = limitedChoices[0];
+    if (best === heuristicBest) return null;
+    if (monteCarloChoiceValue(best) < monteCarloChoiceValue(heuristicBest) + 18) return null;
+    return { move: best.move };
+}
+
+function monteCarloChoiceValue(choice) {
+    return (choice.total / Math.max(1, choice.visits)) - choice.heuristicScore * 0.08;
+}
+
+function aiNow() {
+    return globalThis.performance?.now ? performance.now() : Date.now();
+}
+
+function makeOrderedDeck() {
+    const deck = [];
+    for (let copy = 0; copy < 2; copy++) {
+        for (const suit of suits) {
+            for (const rank of ranks) deck.push({ id: `${copy}${suit}${rank}`, suit, rank });
+        }
+        deck.push({ id: `${copy}BJ`, joker: "BJ" });
+        deck.push({ id: `${copy}RJ`, joker: "RJ" });
+    }
+    return deck;
+}
+
+function sampleHiddenHandsForAI(seat, hand, g) {
+    const sampler = makeHiddenHandSamplerForAI(seat, hand, g);
+    return sampler ? sampler() : null;
+}
+
+function makeHiddenHandSamplerForAI(seat, hand, g) {
+    const knownIds = new Set(hand.map(c => c.id));
+    for (const entry of valuesFromFirebase(g.history)) {
+        for (const card of valuesFromFirebase(entry?.cards)) knownIds.add(card.id);
+    }
+    for (const entry of valuesFromFirebase(g.trickPlays)) {
+        for (const card of valuesFromFirebase(entry?.cards)) knownIds.add(card.id);
+    }
+    for (const card of valuesFromFirebase(g.lastPlay?.cards)) knownIds.add(card.id);
+    const unknownBase = makeOrderedDeck().filter(card => !knownIds.has(card.id));
+    const done = finishedList(g);
+    const targetCounts = [0,1,2,3].map(i => {
+        if (i === seat) return hand.length;
+        return done.includes(i) ? 0 : Math.max(0, (g.hands?.[i] || []).length);
     });
-    if (seat != null && shouldProtectPartnerLead(moves[0], hand, lastCombo, seat, g)) {
-        const nonDisruptive = moves.find(move => {
-            if (shouldProtectPartnerLead(move, hand, lastCombo, seat, g)) return false;
-            if (move.combo?.isBomb && remainingAfterMove(hand, move) > 0) return false;
-            return remainingAfterMove(hand, move) <= 1 || moveStrength(move) >= comboStrength(lastCombo) + 6;
-        });
-        return nonDisruptive || null;
+    const needed = targetCounts.reduce((sum, count, i) => i === seat ? sum : sum + count, 0);
+    if (needed > unknownBase.length) return null;
+    return () => {
+        const unknown = shuffleForAI([...unknownBase]);
+        const sampled = { 0: [], 1: [], 2: [], 3: [] };
+        sampled[seat] = [...hand];
+        let cursor = 0;
+        for (let i = 0; i < 4; i++) {
+            if (i === seat) continue;
+            const count = targetCounts[i];
+            sampled[i] = unknown.slice(cursor, cursor + count);
+            cursor += count;
+            if (sampled[i].length !== count) return null;
+        }
+        return sampled;
+    };
+}
+
+function shuffleForAI(cards) {
+    for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cards[i], cards[j]] = [cards[j], cards[i]];
     }
-    return moves[0] || null;
+    return cards;
+}
+
+function makeAISimulationState(seat, hands, g) {
+    return {
+        hands: {
+            0: [...(hands[0] || [])],
+            1: [...(hands[1] || [])],
+            2: [...(hands[2] || [])],
+            3: [...(hands[3] || [])]
+        },
+        currentTurn: seat,
+        lastPlay: g.lastPlay ? {
+            player: g.lastPlay.player,
+            combo: g.lastPlay.combo,
+            cards: valuesFromFirebase(g.lastPlay.cards)
+        } : null,
+        passCount: Math.max(0, Number(g.passCount) || 0),
+        finished: [...finishedList(g)],
+        seats: [0,1,2,3].map(i => g.seats?.[i] || { type: "ai", team: i % 2 }),
+        over: false
+    };
+}
+
+function applyInitialSimulationChoice(sim, seat, move, levelRank) {
+    if (!move) return !!sim.lastPlay && simApplyPass(sim, seat);
+    const combo = choosePlayable(move.cards, sim.lastPlay?.combo || null, levelRank);
+    if (!combo) return false;
+    return simApplyMove(sim, seat, { cards: move.cards, combo }, levelRank);
+}
+
+function rolloutSimulation(sim, perspectiveSeat, levelRank, maxDepth) {
+    let depth = 0;
+    while (!sim.over && depth < maxDepth) {
+        const seat = sim.currentTurn;
+        if (seat == null || sim.finished.includes(seat)) break;
+        const move = chooseRolloutMove(sim, seat, levelRank);
+        if (move) simApplyMove(sim, seat, move, levelRank);
+        else if (sim.lastPlay) simApplyPass(sim, seat);
+        else {
+            const fallback = lowestSimulationSingle(sim.hands[seat] || [], levelRank);
+            if (!fallback) break;
+            simApplyMove(sim, seat, fallback, levelRank);
+        }
+        depth++;
+    }
+    return evaluateSimulationState(sim, perspectiveSeat, levelRank);
+}
+
+function chooseRolloutMove(sim, seat, levelRank) {
+    const hand = sim.hands[seat] || [];
+    const lastCombo = sim.lastPlay?.combo || null;
+    const moves = generateAIMoves(hand, lastCombo, levelRank);
+    if (!moves.length) return null;
+    const finishing = moves.find(move => remainingAfterMove(hand, move) === 0);
+    if (finishing) return finishing;
+    const context = aiTableContext(seat, sim);
+    if (lastCombo && context.lastPlayRelation === "partner" && context.minOpponentLeft > 1) return null;
+    const scored = moves
+        .map(move => ({
+            move,
+            score: rolloutMoveScore(move, hand, lastCombo, levelRank, context) + Math.random() * 18
+        }))
+        .sort((a, b) => a.score - b.score);
+    const pool = scored.slice(0, Math.min(4, scored.length));
+    const pick = Math.random() < 0.72 ? pool[0] : pool[Math.floor(Math.random() * pool.length)];
+    if (lastCombo && context.lastPlayRelation === "opponent" && context.pressure < 20 && pick.score > scored[0].score + 30) return null;
+    return pick?.move || null;
+}
+
+function rolloutMoveScore(move, hand, lastCombo, levelRank, context) {
+    let score = quickAIMoveScore(move, hand, lastCombo, levelRank, context);
+    const remaining = cardsAfterMove(hand, move);
+    score += remaining.length * 4;
+    if (remaining.length <= 2) score -= 32;
+    if (move.combo.isBomb && hand.length > move.cards.length + 1) score += 48;
+    score += outletRiskForCombo(move.combo, context) * 0.5;
+    score -= partnerFeedValue(move.combo, context) * 0.45;
+    return score;
+}
+
+function lowestSimulationSingle(hand, levelRank) {
+    const card = sortCards(hand, levelRank)[hand.length - 1];
+    const combo = card ? choosePlayable([card], null, levelRank) : null;
+    return combo ? { cards: [card], combo } : null;
+}
+
+function simApplyMove(sim, seat, move, levelRank) {
+    const ids = new Set(move.cards.map(c => c.id));
+    const hand = sim.hands[seat] || [];
+    if (move.cards.some(card => !hand.some(h => h.id === card.id))) return false;
+    sim.hands[seat] = hand.filter(c => !ids.has(c.id));
+    sim.lastPlay = { player: seat, cards: move.cards, combo: move.combo };
+    sim.passCount = 0;
+    if (!sim.hands[seat].length && !sim.finished.includes(seat)) sim.finished.push(seat);
+    if (simCheckRoundOver(sim, seat)) return true;
+    sim.currentTurn = simNextSeat(seat, sim);
+    return true;
+}
+
+function simApplyPass(sim, seat) {
+    if (!sim.lastPlay) return false;
+    sim.passCount = (sim.passCount || 0) + 1;
+    if (sim.passCount >= simRequiredPasses(sim)) {
+        const winner = sim.lastPlay.player;
+        const partner = partnerOf(winner);
+        sim.lastPlay = null;
+        sim.passCount = 0;
+        if (!sim.finished.includes(winner)) sim.currentTurn = winner;
+        else if (!sim.finished.includes(partner)) sim.currentTurn = partner;
+        else sim.currentTurn = simNextSeat(winner, sim);
+    } else {
+        sim.currentTurn = simNextSeat(seat, sim);
+    }
+    return true;
+}
+
+function simCheckRoundOver(sim, lastSeat) {
+    const first = sim.finished[0];
+    if (first != null && sim.finished.includes(partnerOf(first))) {
+        for (const i of [0,1,2,3]) if (!sim.finished.includes(i)) sim.finished.push(i);
+        sim.over = true;
+        return true;
+    }
+    if (sim.finished.length >= 3) {
+        for (const i of [0,1,2,3]) if (!sim.finished.includes(i)) sim.finished.push(i);
+        sim.over = true;
+        return true;
+    }
+    return false;
+}
+
+function simActiveSeats(sim) {
+    return [0,1,2,3].filter(i => sim.seats[i] && !sim.finished.includes(i));
+}
+
+function simNextSeat(from, sim) {
+    const active = simActiveSeats(sim);
+    if (!active.length) return null;
+    for (let step = 1; step <= 4; step++) {
+        const n = (from - step + 4) % 4;
+        if (active.includes(n)) return n;
+    }
+    return active[0];
+}
+
+function simRequiredPasses(sim) {
+    if (!sim.lastPlay) return 0;
+    return [0,1,2,3].filter(i => i !== sim.lastPlay.player && sim.seats[i] && !sim.finished.includes(i)).length;
+}
+
+function evaluateSimulationState(sim, perspectiveSeat, levelRank) {
+    const team = perspectiveSeat % 2;
+    const partner = partnerOf(perspectiveSeat);
+    const order = sim.finished;
+    let value = 0;
+    for (let place = 0; place < order.length; place++) {
+        const player = order[place];
+        const placeValue = [520, 260, -80, -220][place] ?? -260;
+        value += player % 2 === team ? placeValue : -placeValue;
+        if (player === perspectiveSeat) value += [120, 55, -20, -70][place] ?? -80;
+        if (player === partner) value += [80, 60, 10, -70][place] ?? -80;
+    }
+    const ownLeft = (sim.hands[perspectiveSeat] || []).length;
+    const partnerLeft = (sim.hands[partner] || []).length;
+    const opponentLeft = [0,1,2,3]
+        .filter(i => i % 2 !== team)
+        .reduce((sum, i) => sum + (sim.hands[i] || []).length, 0);
+    value += opponentLeft * 9 - ownLeft * 13 - partnerLeft * 9;
+    value += remainingControlValue(sim.hands[perspectiveSeat] || [], levelRank) * 4;
+    value += remainingControlValue(sim.hands[partner] || [], levelRank) * 2;
+    return value;
+}
+
+function remainingControlValue(hand, levelRank) {
+    const stats = handShapeStats(hand, levelRank);
+    return stats.controlCount * 12 + stats.bombCount * 18 - stats.looseSingles * 4;
+}
+
+function leadMovePenalty(move, hand, levelRank, context) {
+    const combo = move.combo;
+    let score = 0;
+    const typePenalty = {
+        tripleStraight: -56,
+        pairStraight: -48,
+        straight: -34,
+        fullhouse: -28,
+        triple: -10,
+        pair: 8,
+        single: 28,
+        straightFlush: 22,
+        bomb: 44,
+        jokerBomb: 92
+    };
+    score += typePenalty[combo.type] ?? 0;
+    score -= move.cards.length * 8;
+    score += combo.mainPower * 0.6;
+    score += outletRiskForCombo(combo, context);
+    score -= partnerFeedValue(combo, context);
+    score -= Math.min(28, (context.passMemory?.[combo.type] || 0) * 10);
+    if (combo.isBomb && hand.length > move.cards.length + 2) score += 90;
+    if (context.partnerLeft === 1) {
+        score += combo.type === "single" ? -62 : 42;
+        if (combo.type === "single") score += context.nextIsPartner ? combo.mainPower * 0.35 : -combo.mainPower * 1.45;
+    }
+    if (context.partnerLeft === 2) {
+        score += combo.type === "pair" ? -58 : 42;
+        if (combo.type === "pair") score += context.nextIsPartner ? combo.mainPower * 0.25 : -combo.mainPower * 1.1;
+    }
+    if (context.minOpponentLeft === 1) score += combo.type === "single" ? 48 : -12;
+    if (context.minOpponentLeft === 2) score += combo.type === "pair" ? 38 : -8;
+    if (context.partnerFinished || context.teamHasFirst) score -= move.cards.length * 3;
+    if (context.opponentHasFirst && context.opponentFirstPartnerLeft <= 2) score -= combo.isBomb ? 16 : 8;
+    if (context.nextSeat === context.partner && context.partnerLeft <= 2) score -= 10;
+    return score;
+}
+
+function moveShapePenalty(move, lastCombo) {
+    if (!lastCombo) return 0;
+    const combo = move.combo;
+    if (combo.type === "single") return 18;
+    if (combo.type === "pair") return 8;
+    if (["straight", "pairStraight", "tripleStraight", "fullhouse"].includes(combo.type)) return -10;
+    return 0;
+}
+
+function moveResourcePenalty(move, hand, levelRank) {
+    const combo = move.combo;
+    const naturalCounts = countRanks(hand.filter(c => !c.joker && !isWild(c, levelRank)));
+    let penalty = 0;
+    for (const card of move.cards) {
+        if (isWild(card, levelRank)) penalty += combo.isBomb ? 10 : 22;
+        if (card.joker) penalty += combo.type === "jokerBomb" ? 14 : 30;
+        if (!card.joker && !isWild(card, levelRank)) {
+            const count = naturalCounts[card.rank] || 0;
+            if (count >= 4 && combo.type !== "bomb") penalty += 22;
+            else if (count === 3 && !["triple", "fullhouse", "tripleStraight", "bomb"].includes(combo.type)) penalty += 10;
+            else if (count === 2 && combo.type === "single") penalty += 8;
+        }
+    }
+    if (combo.isBomb) {
+        if (combo.type === "jokerBomb") penalty += 120;
+        else if (combo.type === "straightFlush") penalty += 82;
+        else penalty += 34 + Math.max(0, (combo.bombLen || 4) - 4) * 7;
+    }
+    return penalty;
+}
+
+function evaluateHandShape(cards, levelRank, memo = new Map()) {
+    const key = `shape:${levelRank}:${cards.map(c => c.id).sort().join(",")}`;
+    if (memo.has(key)) return memo.get(key);
+    const plan = estimateHandPlan(cards, levelRank, memo);
+    const stats = handShapeStats(cards, levelRank);
+    const score = plan.turns * 120
+        + plan.quality
+        + stats.looseSingles * 18
+        + stats.highLooseSingles * 9
+        + stats.wildCount * 4
+        - stats.bombCount * 22
+        - stats.controlCount * 10;
+    const result = { score, plan, stats };
+    memo.set(key, result);
+    return result;
+}
+
+function estimateHandPlan(cards, levelRank, memo = new Map()) {
+    const key = `plan:${levelRank}:${cards.map(c => c.id).sort().join(",")}`;
+    if (memo.has(key)) return memo.get(key);
+    if (!cards.length) {
+        const empty = { turns: 0, quality: 0, singles: 0 };
+        memo.set(key, empty);
+        return empty;
+    }
+    if (cards.length > AI_PLAN_SEARCH_LIMIT) {
+        const greedy = greedyHandPlan(cards, levelRank);
+        memo.set(key, greedy);
+        return greedy;
+    }
+    const moves = generateAIMoves(cards, null, levelRank)
+        .sort((a, b) => planMoveCost(a, cards, levelRank) - planMoveCost(b, cards, levelRank))
+        .slice(0, AI_PLAN_BRANCH_LIMIT);
+    let best = { turns: cards.length, quality: cards.length * 45, singles: cards.length };
+    for (const move of moves) {
+        const rest = estimateHandPlan(cardsAfterMove(cards, move), levelRank, memo);
+        const candidate = {
+            turns: rest.turns + 1,
+            quality: rest.quality + planMoveCost(move, cards, levelRank),
+            singles: rest.singles + (move.combo.type === "single" ? 1 : 0)
+        };
+        if (candidate.turns < best.turns || (candidate.turns === best.turns && candidate.quality < best.quality)) best = candidate;
+    }
+    memo.set(key, best);
+    return best;
+}
+
+function greedyHandPlan(cards, levelRank) {
+    let remaining = [...cards];
+    let turns = 0;
+    let quality = 0;
+    let singles = 0;
+    const seen = new Set();
+    while (remaining.length && turns < AI_GREEDY_PLAN_LIMIT) {
+        const stateKey = remaining.map(c => c.id).sort().join(",");
+        if (seen.has(stateKey)) break;
+        seen.add(stateKey);
+        const move = generateAIMoves(remaining, null, levelRank)
+            .sort((a, b) => planMoveCost(a, remaining, levelRank) - planMoveCost(b, remaining, levelRank))[0];
+        if (!move) break;
+        quality += planMoveCost(move, remaining, levelRank);
+        singles += move.combo.type === "single" ? 1 : 0;
+        turns++;
+        remaining = cardsAfterMove(remaining, move);
+    }
+    if (remaining.length) {
+        turns += remaining.length;
+        quality += remaining.length * 45;
+        singles += remaining.length;
+    }
+    return { turns, quality, singles };
+}
+
+function planMoveCost(move, hand, levelRank) {
+    const combo = move.combo;
+    const typeCost = {
+        tripleStraight: -34,
+        pairStraight: -30,
+        straight: -22,
+        fullhouse: -18,
+        triple: -6,
+        pair: 10,
+        single: 38,
+        straightFlush: 18,
+        bomb: 28,
+        jokerBomb: 80
+    };
+    let cost = typeCost[combo.type] ?? 0;
+    cost -= move.cards.length * 6;
+    cost += combo.mainPower * 0.75;
+    cost += move.cards.filter(c => isWild(c, levelRank)).length * 9;
+    cost += move.cards.filter(c => c.joker).length * 10;
+    if (combo.isBomb && hand.length > move.cards.length) cost += 34;
+    return cost;
+}
+
+function handShapeStats(cards, levelRank) {
+    const natural = cards.filter(c => !c.joker && !isWild(c, levelRank));
+    const counts = countRanks(natural);
+    const looseSingles = Object.keys(counts).filter(rank => counts[rank] === 1).length;
+    const highLooseSingles = Object.keys(counts).filter(rank => counts[rank] === 1 && rankPower(rank, levelRank) >= 13).length;
+    const bombCount = Object.keys(counts).filter(rank => counts[rank] >= 4).length + (cards.filter(c => c.joker).length === 4 ? 1 : 0);
+    const controlCount = cards.filter(c => c.joker || (!isWild(c, levelRank) && !c.joker && rankPower(c.rank, levelRank) >= 15)).length + bombCount;
+    const wildCount = cards.filter(c => isWild(c, levelRank)).length;
+    return { looseSingles, highLooseSingles, bombCount, controlCount, wildCount };
+}
+
+function cardsAfterMove(hand, move) {
+    const used = new Set(move?.cards?.map(c => c.id) || []);
+    return hand.filter(c => !used.has(c.id));
 }
 
 function pickRankGroup(hand, rank, count, levelRank, used = new Set()) {
@@ -5134,6 +6104,11 @@ function pickSequence(hand, seq, each, levelRank) {
 }
 
 function pickFlushSequence(hand, seq, levelRank) {
+    return pickFlushSequences(hand, seq, levelRank)[0] || null;
+}
+
+function pickFlushSequences(hand, seq, levelRank) {
+    const matches = [];
     for (const suit of suits) {
         const picked = [];
         const used = new Set();
@@ -5143,9 +6118,9 @@ function pickFlushSequence(hand, seq, levelRank) {
             if (!card) { picked.length = 0; break; }
             picked.push(card); used.add(card.id);
         }
-        if (picked.length === 5) return picked;
+        if (picked.length === 5) matches.push(picked);
     }
-    return null;
+    return matches;
 }
 
 function maybeRunAI() {
@@ -5160,18 +6135,26 @@ function maybeRunAI() {
     if (game.seats[seat]?.type !== "ai") return;
     const hand = game.hands[seat] || [];
     const obviousNoBeat = !!game.lastPlay && obviouslyCannotBeat(hand, game.lastPlay.combo, game.currentLevelRank);
-    const previewMove = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank, seat, game);
-    const canFinishNow = !!previewMove && remainingAfterMove(hand, previewMove) === 0;
+    const finishingCombo = hand.length ? choosePlayable(hand, game.lastPlay?.combo || null, game.currentLevelRank) : null;
+    const canFinishNow = !!finishingCombo;
     const fastDecision = obviousNoBeat || canFinishNow;
     const elapsed = Date.now() - (Number(game.turnStartedAt) || Date.now());
-    const minWait = fastDecision ? 0 : Math.max(0, AI_MIN_TURN_MS - elapsed);
-    const delay = fastDecision ? 520 + Math.random() * 220 : minWait + 900 + Math.random() * AI_RANDOM_TURN_MS;
+    const visibleMs = fastDecision ? AI_FAST_VISIBLE_MS : AI_THINK_VISIBLE_MS;
+    const delay = Math.max(0, visibleMs - elapsed);
     aiTimer = setTimeout(async () => {
         if (!game || game.phase !== "playing" || game.currentTurn !== seat) return;
         const hand = game.hands[seat] || [];
+        const thinkStart = Date.now();
         const move = findAIMove(hand, game.lastPlay?.combo || null, game.currentLevelRank, seat, game);
-        if (move) await playCards(seat, move.cards, { silent: true });
-        else await doPass(seat, { silent: true });
+        const computedMs = Date.now() - thinkStart;
+        const submit = async () => {
+            if (!game || game.phase !== "playing" || game.currentTurn !== seat) return;
+            if (move) await playCards(seat, move.cards, { silent: true });
+            else await doPass(seat, { silent: true });
+        };
+        const commitDelay = Math.max(0, AI_COMMIT_BUFFER_MS - computedMs);
+        if (commitDelay) setTimeout(submit, commitDelay);
+        else await submit();
     }, delay);
 }
 
@@ -5483,7 +6466,13 @@ function renderTable() {
     let advisorText = mine >= 0
         ? L("Select cards to preview the combo before playing.", "选牌后会预览牌型和能否出牌。")
         : L("Spectator view. Sit in the lobby before the next game to play.", "观战视角。下局前回大厅入座即可参与。");
-    if (tableBusy) {
+    let advisorDetail = selectedCards.map(cardText).join(" ");
+    const activeHint = activeHintForSelection(selectedCards, canAct);
+    if (activeHint) {
+        advisorClass = activeHint.className || "hint";
+        advisorText = activeHint.text;
+        advisorDetail = activeHint.detail || advisorDetail;
+    } else if (tableBusy) {
         advisorText = dealPhase === "dealing"
             ? L("Cards are being dealt. Your hand will reveal after the deal.", "正在发牌，发完后会翻开并理牌。")
             : L("Sorting your hand.", "正在理牌。");
@@ -5544,7 +6533,7 @@ function renderTable() {
                     </div>
                     <div class="hand-feedback">
                         <div class="selection-meter">${L("Selected", "已选")} <strong>${selected.size}</strong> ${L("cards", "张")}</div>
-                        <div class="combo-advisor ${advisorClass}"><span>${advisorText}</span><em>${encodeHTML(selectedCards.map(cardText).join(" "))}</em></div>
+                        <div class="combo-advisor ${advisorClass}"><span>${advisorText}</span><em>${encodeHTML(advisorDetail)}</em></div>
                     </div>
                 </div>
                 <div class="hand ${dealPhase === "dealing" ? "receiving-hand" : dealPhase === "sorting" ? "sorting-hand" : ""} ${handSelectable && dealPhase === "done" ? "reorderable" : ""}">${handCardsHTML(myHand, handSelectable, dealPhase)}</div>
@@ -5560,7 +6549,13 @@ function renderTable() {
         let nextText = mine >= 0
             ? L("Select cards to preview the combo before playing.", "选牌后会预览牌型和能否出牌。")
             : L("Spectator view. Sit in the lobby before the next game to play.", "观战视角。下局前回大厅入座即可参与。");
-        if (tableBusy) {
+        let nextDetail = selectedCardsNow.map(cardText).join(" ");
+        const activeHintNow = activeHintForSelection(selectedCardsNow, canAct);
+        if (activeHintNow) {
+            nextClass = activeHintNow.className || "hint";
+            nextText = activeHintNow.text;
+            nextDetail = activeHintNow.detail || nextDetail;
+        } else if (tableBusy) {
             nextText = dealPhase === "dealing"
                 ? L("Cards are being dealt. Your hand will reveal after the deal.", "正在发牌，发完后会翻开并理牌。")
                 : L("Sorting your hand.", "正在理牌。");
@@ -5580,11 +6575,12 @@ function renderTable() {
         }
         const advisor = document.querySelector(".combo-advisor");
         advisor?.classList.toggle("ready", nextClass === "ready");
+        advisor?.classList.toggle("hint", nextClass === "hint");
         advisor?.classList.toggle("invalid", nextClass === "invalid");
         const span = advisor?.querySelector("span");
         const em = advisor?.querySelector("em");
         if (span) span.textContent = nextText;
-        if (em) em.textContent = selectedCardsNow.map(cardText).join(" ");
+        if (em) em.textContent = nextDetail;
         const playBtn = document.getElementById("play-btn");
         if (playBtn) playBtn.disabled = !canPlayNow;
         const meter = document.querySelector(".selection-meter strong");
@@ -5597,6 +6593,7 @@ function renderTable() {
                 return;
             }
             const id = el.dataset.cardId;
+            hintAdvisor = null;
             if (selected.has(id)) selected.delete(id);
             else selected.add(id);
             el.classList.toggle("selected", selected.has(id));
@@ -5635,7 +6632,7 @@ function renderTable() {
     document.getElementById("play-btn")?.addEventListener("click", playSelected);
     document.getElementById("pass-btn")?.addEventListener("click", passTurn);
     document.getElementById("hint-btn")?.addEventListener("click", hintMove);
-    document.getElementById("clear-btn")?.addEventListener("click", () => { selected.clear(); renderTable(); });
+    document.getElementById("clear-btn")?.addEventListener("click", () => { selected.clear(); hintAdvisor = null; renderTable(); });
     document.getElementById("next-round")?.addEventListener("click", nextRound);
 }
 
