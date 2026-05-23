@@ -1,0 +1,291 @@
+<!--
+  院士头饰模板 — 配置说明
+  ┌──────────────────────────────────────────────────────────┐
+  │  --hat-y       帽子 brim（下沿）在头像中的位置（从顶部 %）   │
+  │                = 头顶在圆里的高度，通常 20%~45%             │
+  │  --hat-size    帽子本身的高度（占头像高度的 %）              │
+  │                通常 15%~40%，越大帽子越高                   │
+  │  --hat-x       水平中心，默认 50%                           │
+  │  --hat-rotate  帽子旋转角度（deg）                          │
+  │                负数 → 向左倾，正数 → 向右倾                 │
+  └──────────────────────────────────────────────────────────┘
+-->
+
+<div class="ys-wrap" style="--hat-y:35%; --hat-size:21%; --hat-x:50%; --hat-rotate:0deg">
+  <div class="ys-stage">
+
+    <img src="https://yil384.github.io/Picasso-Lab/people/static/zhongkai.png"
+         class="avatar" alt="avatar"/>
+
+    <!-- 院士帽（学术四方帽 mortarboard）-->
+    <div class="ys-hat">
+      <div class="ys-hat-inner">
+        <svg viewBox="0 0 220 100" preserveAspectRatio="none"
+             xmlns="http://www.w3.org/2000/svg" overflow="visible">
+          <defs>
+            <!-- Board top face: lit from upper-left -->
+            <linearGradient id="bt" x1="0.1" y1="0" x2="0.9" y2="1">
+              <stop offset="0%"   stop-color="#3c3c3c"/>
+              <stop offset="40%"  stop-color="#222"/>
+              <stop offset="100%" stop-color="#111"/>
+            </linearGradient>
+            <!-- Cap cylindrical shading (horizontal) -->
+            <linearGradient id="cp" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="#0e0e0e"/>
+              <stop offset="25%"  stop-color="#222"/>
+              <stop offset="50%"  stop-color="#2e2e2e"/>
+              <stop offset="75%"  stop-color="#1a1a1a"/>
+              <stop offset="100%" stop-color="#0a0a0a"/>
+            </linearGradient>
+            <!-- Shadow blur -->
+            <filter id="sb" x="-80%" y="-80%" width="260%" height="400%">
+              <feGaussianBlur stdDeviation="3.5"/>
+            </filter>
+          </defs>
+
+          <!-- Cast shadow on face below brim -->
+          <ellipse cx="110" cy="97" rx="52" ry="5.5"
+                   fill="rgba(0,0,0,0.28)" filter="url(#sb)"/>
+
+          <!-- ① CAP (fabric dome under board) -->
+          <path d="M 74 51 C 72 66 72 80 78 88 Q 94 96 110 96
+                   Q 126 96 142 88 C 148 80 148 66 146 51 Z"
+                fill="url(#cp)"/>
+          <!-- Cap top ellipse (gap between cap and board underside) -->
+          <ellipse cx="110" cy="51" rx="36" ry="5.5" fill="#1a1a1a"/>
+          <!-- Cap left highlight -->
+          <path d="M 74 51 C 72 63 73 77 77 86 L 80 55 Z"
+                fill="rgba(255,255,255,0.06)"/>
+          <!-- Cap right shadow -->
+          <path d="M 146 51 C 148 63 147 77 143 86 L 140 55 Z"
+                fill="rgba(0,0,0,0.22)"/>
+
+          <!-- ② BOARD (mortarboard square top, perspective view) -->
+          <!-- Board left end face -->
+          <polygon points="20,44 20,52 32,14" fill="#090909"/>
+          <!-- Board right end face -->
+          <polygon points="200,44 200,52 188,14" fill="#090909"/>
+          <!-- Board front face (3D thickness facing viewer) -->
+          <rect x="20" y="44" width="180" height="8" fill="#111"/>
+          <!-- Board front face top catch-light -->
+          <rect x="20" y="44" width="180" height="2" fill="rgba(255,255,255,0.05)"/>
+          <!-- Board top face (main surface) -->
+          <polygon points="20,44 200,44 188,14 32,14" fill="url(#bt)"/>
+          <!-- Board top highlight strip -->
+          <polygon points="34,15 186,15 184,21 36,21"
+                   fill="rgba(255,255,255,0.09)"/>
+          <!-- Board upper-left specular sheen -->
+          <polygon points="34,15 90,15 86,22 36,22"
+                   fill="rgba(255,255,255,0.05)"/>
+
+          <!-- ③ BUTTON at board centre -->
+          <circle cx="110" cy="25" r="5"   fill="#3a3a3a"/>
+          <circle cx="110" cy="25" r="3.2" fill="#666"/>
+          <circle cx="110" cy="24.5" r="1.6" fill="#aaa"/>
+
+          <!-- ④ TASSEL (hangs to the right) -->
+          <!-- Cord from button, drapes right -->
+          <path d="M 113 25 C 158 24 178 38 182 60"
+                stroke="#c8a400" stroke-width="2.2" fill="none"
+                stroke-linecap="round"/>
+          <!-- Tassel wrap band -->
+          <rect x="177" y="60" width="13" height="8" rx="2" fill="#b89400"/>
+          <rect x="178" y="61" width="11" height="5" rx="1.5" fill="#f0d000"/>
+          <!-- Tassel strands -->
+          <line x1="177" y1="68" x2="171" y2="90" stroke="#9a7800" stroke-width="1.8"/>
+          <line x1="179" y1="68" x2="174" y2="92" stroke="#c8a400" stroke-width="1.8"/>
+          <line x1="181" y1="68" x2="178" y2="93" stroke="#9a7800" stroke-width="1.8"/>
+          <line x1="183" y1="68" x2="182" y2="92" stroke="#c8a400" stroke-width="1.8"/>
+          <line x1="185" y1="68" x2="186" y2="91" stroke="#9a7800" stroke-width="1.8"/>
+          <line x1="187" y1="68" x2="190" y2="90" stroke="#c8a400" stroke-width="1.8"/>
+          <!-- Tassel end bar -->
+          <rect x="169" y="90" width="23" height="2.5" rx="1.2" fill="#b89400"/>
+        </svg>
+      </div><!-- .ys-hat-inner -->
+    </div><!-- .ys-hat -->
+
+    <!-- 院士 label: separate element so it's never stretched/distorted -->
+    <div class="ys-label" aria-hidden="true">院士</div>
+
+    <div class="ys-sparks" aria-hidden="true"></div>
+
+  </div><!-- .ys-stage -->
+</div><!-- .ys-wrap -->
+
+
+<style>
+/* ── Wrapper ── */
+.ys-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+}
+
+/* ── Stage ── */
+.ys-stage {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+/* ── Avatar ── */
+.avatar {
+  display: block;
+  width: 200px; height: 200px;
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  position: relative;
+  z-index: 1;
+  transition: transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
+              filter 0.35s ease, box-shadow 0.35s ease;
+}
+.ys-wrap:hover .avatar { transform: scale(1.07); filter: brightness(1.08); }
+.ys-wrap.hat-on .avatar {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+/* ── Hat outer: handles position + rotation + reveal ── */
+.ys-hat {
+  position: absolute;
+  /*
+   * --hat-size controls HEIGHT (% of 200px avatar).
+   * aspect-ratio:2.2/1 makes width auto-scale with height → uniform resize.
+   * Brim (bottom edge) sits at --hat-y from stage top.
+   * left = hat-x  minus  half the computed width (= hat-size * 2.2/2 = * 1.1)
+   */
+  height: var(--hat-size, 20%);
+  aspect-ratio: 2.2 / 1;
+  top:  calc(var(--hat-y, 35%) - var(--hat-size, 20%));
+  left: calc(var(--hat-x, 50%) - var(--hat-size, 20%) * 1.1);
+  /* Rotate from brim centre (bottom) to match head tilt */
+  transform-origin: 50% 100%;
+  z-index: 20;
+  pointer-events: none;
+  overflow: visible;
+
+  /* Hidden: clip wipes from bottom up within local (rotated) frame */
+  clip-path: inset(0 0 100% 0);
+  transform: rotate(var(--hat-rotate, 0deg)) translateY(-4px);
+  opacity: 0;
+
+  transition:
+    clip-path 0.68s cubic-bezier(0.22, 1.48, 0.36, 1),
+    transform  0.68s cubic-bezier(0.22, 1.48, 0.36, 1),
+    opacity    0.22s ease;
+}
+.ys-hat svg {
+  width: 100%; height: 100%; display: block; overflow: visible;
+}
+
+/* Hat on → wipe down, rotate to final angle */
+.ys-wrap.hat-on .ys-hat {
+  clip-path: inset(0 0 0% 0);
+  transform: rotate(var(--hat-rotate, 0deg)) translateY(0);
+  opacity: 1;
+}
+
+/* ── Hat inner: wobble settle only (keeps rotation independent) ── */
+.ys-hat-inner { width: 100%; height: 100%; }
+@keyframes hat-wobble {
+  0%,100%{ transform:rotate(0deg) }
+  20%    { transform:rotate(-2.4deg) }
+  44%    { transform:rotate(1.7deg)  }
+  66%    { transform:rotate(-0.9deg) }
+  82%    { transform:rotate(0.4deg)  }
+}
+.ys-hat-inner.wobble {
+  animation: hat-wobble 0.55s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+
+/* ── 院士 label: undistorted, rotates with hat ── */
+.ys-label {
+  position: absolute;
+  /* Sit at ~60% down from hat top = hat-y - 40% of hat-size */
+  top: calc(var(--hat-y, 35%) - var(--hat-size, 28%) * 0.40);
+  left: var(--hat-x, 50%);
+  transform-origin: center center;
+  transform: translateX(-50%) rotate(var(--hat-rotate, 0deg));
+  font-family: 'STKaiti','KaiTi','FangSong','SimSun',serif;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  color: #ffd060;
+  text-shadow:
+    0 0 5px rgba(255,195,0,0.90),
+    0 0 12px rgba(255,140,0,0.45),
+    0 1px 2px rgba(0,0,0,0.8);
+  z-index: 22;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.30s ease 0.50s;
+}
+.ys-wrap.hat-on .ys-label { opacity: 1; }
+
+/* ── Sparkles ── */
+.ys-sparks {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 25; overflow: visible;
+}
+.ys-spark {
+  position: absolute; opacity: 0;
+  transform: translate(-50%,-50%);
+  line-height: 1; user-select: none;
+}
+@keyframes spark-fly {
+  0%   { opacity:1; transform:translate(-50%,-50%) scale(1.3); }
+  40%  { opacity:0.9; }
+  100% { opacity:0; transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0.1); }
+}
+.ys-spark.go { animation: spark-fly 0.72s ease-out forwards; }
+</style>
+
+
+<script>
+(function () {
+  const wrap   = document.querySelector('.ys-wrap');
+  const inner  = wrap.querySelector('.ys-hat-inner');
+  const sparks = wrap.querySelector('.ys-sparks');
+
+  wrap.addEventListener('click', () => {
+    const on = wrap.classList.toggle('hat-on');
+    if (on) {
+      setTimeout(() => {
+        inner.classList.remove('wobble');
+        void inner.offsetWidth;           // force reflow
+        inner.classList.add('wobble');
+        inner.addEventListener('animationend',
+          () => inner.classList.remove('wobble'), { once: true });
+        burst();
+      }, 620);
+    }
+  });
+
+  function burst() {
+    sparks.innerHTML = '';
+    const GLYPHS = ['★','✦','✧','◆','❋','•','✿'];
+    const COLORS = ['#ffd700','#ffc107','#ff6f9c','#a78bfa','#34d399','#38bdf8','#fb923c'];
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const sp = document.createElement('span');
+      sp.className = 'ys-spark';
+      const angle = (Math.PI * 2 / N) * i + (Math.random() - .5) * .4;
+      const dist  = 32 + Math.random() * 44;
+      sp.style.cssText = [
+        `--dx:${(Math.cos(angle)*dist).toFixed(1)}px`,
+        `--dy:${(Math.sin(angle)*dist).toFixed(1)}px`,
+        `color:${COLORS[i % COLORS.length]}`,
+        `font-size:${8 + Math.random()*10}px`,
+        `top:${4 + Math.random()*36}%`,
+        `left:${22 + Math.random()*56}%`,
+        `animation-delay:${(Math.random()*.13).toFixed(3)}s`,
+      ].join(';');
+      sp.textContent = GLYPHS[i % GLYPHS.length];
+      sparks.appendChild(sp);
+      requestAnimationFrame(() => requestAnimationFrame(() => sp.classList.add('go')));
+    }
+    setTimeout(() => { sparks.innerHTML = ''; }, 1050);
+  }
+})();
+</script>

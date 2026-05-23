@@ -536,8 +536,12 @@
 }
 
 .sunshine-wrap.sun-on .sunshine-avatar-frame {
-  transform: scale(1.055);
+  transform: scale(1);
   box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.sunshine-wrap.sun-on:hover .sunshine-avatar-frame {
+  transform: scale(1.08);
 }
 
 .sunshine-wrap:hover .sunshine-avatar {
@@ -545,8 +549,13 @@
 }
 
 .sunshine-wrap.sun-on .sunshine-avatar {
-  transform: scale(1.006);
+  transform: scale(1);
   filter: brightness(1.10) contrast(1.055) saturate(1.08);
+}
+
+.sunshine-wrap.sun-on:hover .sunshine-avatar {
+  transform: scale(1);
+  filter: brightness(1.16) contrast(1.055) saturate(1.08);
 }
 
 .sunshine-wrap.sun-on .sunshine-sunglasses {
