@@ -5,16 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Publications</title>
   <style>
+    /*
+     * Scrolling note (mirrors pub.html fix): 这个页面被嵌入 Google Sites iframe.
+     * 千万不要在 html/body 上同时加 overflow:auto + min-height:100dvh —
+     * 那样 iPad 会完全锁住手势, iPhone 会卡在底部. 让 document 自然长高,
+     * Google Sites 会自己 resize iframe.
+     *
+     * 布局参考: Google Sites "整页/全屏" 模式 — iframe 占满父容器宽度,
+     * 内容左右两侧留出和 Sites 默认主题接近的大段空白:
+     *
+     *           top              sides            bottom
+     *   iPhone  28px             20–32px          56px
+     *   iPad竖  ~40px            ~62px            ~64px        (768px viewport)
+     *   iPad横  ~52px            ~82px            ~80px        (1024px)
+     *   桌面    56–64px          120–140px        96px         (≥1500px)
+     *
+     * 用 clamp() 让 padding 跟视口宽度连续缩放, 不靠硬断点.
+     * 然后在内层套一个 max-width 1500px 的居中容器, 防止 27" 大屏上
+     * 行宽过长.
+     */
+    html, body {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont,
                    "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans",
                    "PingFang SC", "Microsoft YaHei", sans-serif;
-      margin: 20px auto;
       line-height: 1.6;
-      color: #333;
-      padding: 0 15px;
-      width: 100%;
-      box-sizing: border-box;
+      color: #2a2a2a;
+      padding-top:    clamp(28px, 4vw,  64px);
+      padding-right:  calc(clamp(20px, 8vw, 140px) + env(safe-area-inset-right));
+      padding-bottom: calc(clamp(56px, 7vw,  96px) + env(safe-area-inset-bottom));
+      padding-left:   calc(clamp(20px, 8vw, 140px) + env(safe-area-inset-left));
+      max-width: 100%;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* 内层居中容器: 大屏上把行宽限制在 1500px, 看起来更接近 Sites 主题 */
+    .page-wrap {
+      max-width: 1500px;
+      margin: 0 auto;
     }
 
     /* 顶部选择区域 */
@@ -22,8 +61,9 @@
       display: flex;
       align-items: center;
       justify-content: flex-start;
+      flex-wrap: wrap;
       gap: 15px;
-      margin-bottom: 30px;
+      margin: 0 0 32px;
     }
 
     .topic-label {
@@ -35,13 +75,17 @@
     .button-group {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
     }
 
-    /* Section Title */
+    /* Section Title — 全屏页面里更醒目, 段落分隔感更强 */
     .section-title {
-      font-size: 2.5em;
-      font-weight: bold;
-      margin: 20px 0;
+      font-size: clamp(1.8em, 3.4vw, 2.6em);
+      font-weight: 800;
+      margin: 12px 0 18px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #ececec;
+      letter-spacing: -0.01em;
     }
 
     /* Paper 列表 */
@@ -108,18 +152,20 @@
       }
     }
 
-    /* Preview Card */
+    /* Preview Card — 整页布局下贴着 .paper 容器走, 不再用 94vw */
     .preview-card {
       position: absolute;
       left: 0;
+      right: 0;
       top: 94%;
-      width: 94vw;
+      width: 100%;
+      max-width: 100%;
       background: #fff;
       border: 1px solid #ddd;
       border-radius: 12px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.15);
       padding: 16px;
-      display: flex;        /* 横向布局 */
+      display: flex;
       gap: 16px;
       opacity: 0;
       transform: translateY(10px);
@@ -223,47 +269,148 @@
       background-color: #EE9A4D;
     }
 
-    /* 响应式设计 */
+    /* 按钮文字双标签: 默认显示全名, 手机断点切到缩写 */
+    .label-short { display: none; }
+    .label-full  { display: inline; }
+
+    /* ─────────────────────────────────────────────────────────────
+       响应式 — body padding 已由 clamp() 自动随视口缩放,
+       这里只针对手机/iPad 调整字号、触控目标、堆叠方向.
+
+         手机    ≤ 600px      竖向堆叠, 全宽按钮, 触控目标 ≥ 44px
+         平板    601 – 1024px  按钮稍大 (44px), 字号略宽松, 横向布局
+         桌面    ≥ 1025px     默认值
+       ───────────────────────────────────────────────────────────── */
+
+    /* ── 手机 (含 iPhone, 小尺寸 Android) ── */
     @media (max-width: 600px) {
       body {
-        font-size: 16px;
-        line-height: 1.5;
-        width: 100%;
-        padding: 0 10px;
-      }
-
-      .button-18, .button-16 {
-        width: auto;
-        flex: 1;
+        font-size: 15.5px;
+        line-height: 1.55;
       }
 
       .topic-bar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
+        /* 标签 + ML + QC 三个全部挤在同一行;
+           按钮换成缩写后总宽 ≈ 140 + 10 + 72 + 10 + 72 = 304px,
+           适用 360px 以上的所有现代手机. 320px 旧 iPhone SE
+           会自动 flex-wrap 落到下一行, 也不会溢出. */
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+
+      .topic-label {
+        margin-right: 4px;
+        font-size: 1em;
+      }
+
+      .button-group {
+        /* 横向并排, 按钮按内容收缩 (不再吃掉整行) */
+        width: auto;
+        flex-direction: row;
+        gap: 10px;
+      }
+
+      /* iOS 友好的触控目标 (Apple HIG: ≥44pt)
+         min-width 64px 保证 "ML"/"QC" 两字也是个像样的胶囊按钮,
+         但又留出空间让两枚按钮 + 标签能共占一行. */
+      .button-18, .button-16 {
+        flex: 0 0 auto;     /* 按内容自然宽, 不抢满整行 */
+        width: auto;
+        min-width: 64px;
+        font-size: 15px;
+        font-weight: 700;
+        min-height: 40px;
+        padding: 0 18px;
+      }
+
+      /* 手机上换成缩写, 让两枚按钮能挤在一行 */
+      .label-full  { display: none; }
+      .label-short { display: inline; }
+
+      .section-title {
+        font-size: 1.55em;
+        margin: 6px 0 14px;
+      }
+
+      .paper p {
+        font-size: 15px;
       }
     }
 
-    /* 响应式设计 */
+    /* ── 平板 (iPad 竖屏 768px ↔ 横屏 1024px) ── */
+    @media (min-width: 601px) and (max-width: 1024px) {
+      body {
+        font-size: 16.5px;
+        line-height: 1.6;
+      }
+
+      .topic-bar {
+        gap: 14px;
+        margin-bottom: 30px;
+      }
+
+      .button-18, .button-16 {
+        font-size: 15.5px;
+        min-height: 44px;
+        width: auto;
+        padding: 0 22px;
+      }
+
+      .section-title {
+        font-size: 2em;
+      }
+
+      /* iPad 上整页节标题之间的大间距收紧一点 */
+      .section-title[style*="margin-top: 100px"] {
+        margin-top: 64px !important;
+      }
+    }
+
+    /* ── 预览卡片 (悬停时弹出) 在窄屏改成纵向, 防止溢出 ── */
     @media (max-width: 1100px) {
       .preview-card {
         flex-direction: column;
-        width: 100vw;
       }
-      .preview-images img {
+      .preview-images,
+      .preview-images img,
+      .preview-images iframe {
+        max-width: 100%;
         height: auto;
+      }
+    }
+
+    /* ── 触屏设备一律去掉 hover-only 的 preview-card 弹出
+         (避免 iPad 上一点就卡住一个浮窗) ── */
+    @media (hover: none) {
+      .paper:hover .preview-card {
+        opacity: 0;
+        pointer-events: none;
       }
     }
   </style>
 </head>
 <body>
+<div class="page-wrap">
 
   <!-- 顶部选择区域 -->
+  <!--
+    按钮里同时放两份文字: 桌面/平板显示全名, 手机显示缩写 (ML / QC).
+    这样手机上两枚按钮可以并排, 不用一人一行.
+  -->
   <div class="topic-bar">
     <span class="topic-label">Select by topic:</span>
     <div class="button-group">
-      <button class="button-18" onclick="changeml();" role="button">Machine Learning</button>
-      <button class="button-16" onclick="change();" role="button">Quantum Computing</button>
+      <button class="button-18" onclick="changeml();" role="button" aria-label="Machine Learning">
+        <span class="label-full">Machine Learning</span>
+        <span class="label-short" aria-hidden="true">ML</span>
+      </button>
+      <button class="button-16" onclick="change();" role="button" aria-label="Quantum Computing">
+        <span class="label-full">Quantum Computing</span>
+        <span class="label-short" aria-hidden="true">QC</span>
+      </button>
     </div>
   </div>
 
@@ -271,6 +418,9 @@
   <h1 class="section-title">Conference Papers</h1>
 
   <!-- 论文列表 -->
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">TLX: Hardware-Native, Evolvable MIMW GPU Compiler for Large-scale Production Environments. </i> Yue Guan, Hongtao Yu, Peng Chen, Daohang Shi, Karthik Manivannan, Nicholas J Riasanovsky, Manman Ren, Lei Wang, Shane Nay, Partha Kanuparthy, Zaifeng Pan, Zhengding Hu, Yufei Ding. [<a href="https://arxiv.org/abs/2605.10905">paper</a>]</p>
+    </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">ChipMATE: Multi-Agent Training via Reinforcement Learning for Enhanced RTL Generation. </i> Zhongkai Yu*, Yichen Lin*, Chenyang Zhou, Yuwei Zhang, Kun Zhou, Junxia Cui, Haotian Ye, Zhengding Hu, Zaifeng Pan, Ruiyi Wang, Yujie Zhao, Hejia Zhang, Jingbo Shang, Jishen Zhao, Yufei Ding. [<a href="https://arxiv.org/abs/2605.12857">paper</a>] [<a href="https://chipmate.picasso-lab.com/">website</a>]</p>
     </div>
@@ -600,6 +750,9 @@
   
   <h1 class="section-title" style="margin-top: 100px;">Journals</h1>
 
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[TACO'26] </b><I style="font-weight:bold"> RecDM: Efficient Training System for Large-Scale Recommendation Models on Disaggregated Memory. </I> Zheng Wang, Zhongkai Yu, Kaijian Wang, Yichen Lin, Yikai Li, Liu Liu, Xulong Tang, Yuke Wang, Yangwook Kang, Yufei Ding.</p>
+  </div>
   <div class="sqs-block-content quantum paper" >
     <p style="white-space:pre-wrap;"><b>[TQC'26] </b><I style="font-weight:bold"> STQS: A Unified System Architecture for Spatial Temporal Quantum Sensing. </I> Anastashia Jebraeilli, Chenxu Liu, Keyi Yin, Erik W Lentz, Yufei Ding, Ang Li. [<a href="https://arxiv.org/abs/2502.17778">paper</a>]</p>
   </div>
@@ -699,5 +852,6 @@
     }
   </script>
 
+</div><!-- /.page-wrap -->
 </body>
 </html>
