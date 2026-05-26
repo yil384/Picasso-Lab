@@ -3,33 +3,73 @@
     <div class="xa-avatar-frame">
       <img src="https://yil384.github.io/Picasso-Lab/people/static/xinwei.png"
            class="avatar xa-avatar" alt="avatar"/>
+
+      <div class="xa-sky-layer" aria-hidden="true">
+        <svg class="xa-skycraft xa-orbiter" viewBox="0 0 92 38" focusable="false">
+          <defs>
+            <linearGradient id="xaOrbiterHull" x1="10" y1="5" x2="86" y2="33" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#e8fbff"/>
+              <stop offset="0.52" stop-color="#00aeea"/>
+              <stop offset="1" stop-color="#0d3f79"/>
+            </linearGradient>
+            <linearGradient id="xaOrbiterGlow" x1="22" y1="27" x2="70" y2="37" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#e8fbff" stop-opacity="0"/>
+              <stop offset="0.5" stop-color="#8df7ff" stop-opacity="0.85"/>
+              <stop offset="1" stop-color="#e8fbff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M12 21 C27 9 63 7 80 20 C68 31 28 32 12 21Z"
+                fill="url(#xaOrbiterHull)" stroke="rgba(6,36,70,0.62)" stroke-width="1.5"/>
+          <path d="M30 18 C35 8 56 8 62 18" fill="rgba(232,251,255,0.62)"
+                stroke="rgba(255,255,255,0.74)" stroke-width="1"/>
+          <path d="M26 26 C39 31 57 31 72 25" fill="none" stroke="url(#xaOrbiterGlow)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="32" cy="22" r="1.8"/><circle cx="45" cy="24" r="1.8"/><circle cx="58" cy="23" r="1.8"/>
+        </svg>
+
+        <svg class="xa-skycraft xa-automan" viewBox="0 0 78 58" focusable="false">
+          <defs>
+            <linearGradient id="xaAutomanSuit" x1="18" y1="8" x2="58" y2="52" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#ffffff"/>
+              <stop offset="0.42" stop-color="#90dcff"/>
+              <stop offset="1" stop-color="#2e6ab3"/>
+            </linearGradient>
+            <linearGradient id="xaAutomanTrail" x1="0" y1="31" x2="37" y2="31" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#bdf7ff" stop-opacity="0"/>
+              <stop offset="0.68" stop-color="#8deaff" stop-opacity="0.78"/>
+              <stop offset="1" stop-color="#ffffff"/>
+            </linearGradient>
+          </defs>
+          <path d="M4 34 C15 24 25 20 38 22" fill="none" stroke="url(#xaAutomanTrail)" stroke-width="8" stroke-linecap="round"/>
+          <circle cx="49" cy="14" r="8" fill="url(#xaAutomanSuit)" stroke="rgba(5,31,62,0.62)" stroke-width="1.6"/>
+          <path d="M39 25 H57 L64 47 H32Z" fill="url(#xaAutomanSuit)" stroke="rgba(5,31,62,0.62)" stroke-width="1.6"/>
+          <path d="M44 17 L54 11 M38 31 L22 42 M58 31 L72 41 M42 47 L37 56 M54 47 L60 56"
+                fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M42 29 H57" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+
+        <svg class="xa-skycraft xa-probe" viewBox="0 0 68 44" focusable="false">
+          <defs>
+            <linearGradient id="xaProbeBody" x1="20" y1="7" x2="47" y2="36" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#f8fbff"/>
+              <stop offset="0.6" stop-color="#87a6cf"/>
+              <stop offset="1" stop-color="#2d4263"/>
+            </linearGradient>
+          </defs>
+          <path d="M30 9 H46 L52 22 L45 36 H28 L21 22Z"
+                fill="url(#xaProbeBody)" stroke="rgba(10,28,51,0.62)" stroke-width="1.5"/>
+          <path d="M22 21 H5 M51 21 H64 M35 9 L35 0 M36 36 L36 44"
+                stroke="rgba(232,251,255,0.9)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="36" cy="22" r="5" fill="#67e8f9" opacity="0.78"/>
+          <path d="M12 16 L5 21 L12 26 M56 16 L64 21 L56 26" fill="none"
+                stroke="#facc15" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+
+        <div class="xa-photo-mist"></div>
+        <div class="xa-sky-spark s1"></div>
+        <div class="xa-sky-spark s2"></div>
+        <div class="xa-sky-spark s3"></div>
+      </div>
     </div>
-    <div class="xa-flight-lane" aria-hidden="true">
-      <svg class="xa-flyer xa-ufo" viewBox="0 0 82 46" focusable="false">
-        <ellipse cx="41" cy="27" rx="32" ry="12" fill="#67e8f9" stroke="#0f172a" stroke-width="4"/>
-        <path d="M25 26 C29 9 53 9 57 26Z" fill="#dbeafe" stroke="#0f172a" stroke-width="4"/>
-        <circle cx="25" cy="29" r="3" fill="#facc15"/><circle cx="41" cy="32" r="3" fill="#22c55e"/><circle cx="57" cy="29" r="3" fill="#ef4444"/>
-        <path d="M31 36 L51 36 L62 46 H20Z" fill="rgba(125,211,252,0.38)"/>
-      </svg>
-      <svg class="xa-flyer xa-hero" viewBox="0 0 64 58" focusable="false">
-        <path d="M6 33 C16 27 23 25 35 27" stroke="#ef4444" stroke-width="10" stroke-linecap="round" opacity="0.75"/>
-        <circle cx="40" cy="15" r="11" fill="#f8fafc" stroke="#111827" stroke-width="4"/>
-        <path d="M40 4 L40 26" stroke="#ef4444" stroke-width="5"/>
-        <path d="M30 29 H50 L56 50 H24Z" fill="#f8fafc" stroke="#111827" stroke-width="4"/>
-        <path d="M31 32 L49 32" stroke="#ef4444" stroke-width="6"/>
-        <path d="M27 34 L9 45 M53 34 L61 47" stroke="#f8fafc" stroke-width="8" stroke-linecap="round"/>
-        <path d="M27 34 L9 45 M53 34 L61 47" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
-      </svg>
-      <svg class="xa-flyer xa-mecha" viewBox="0 0 68 62" focusable="false">
-        <rect x="22" y="5" width="24" height="16" rx="4" fill="#cbd5e1" stroke="#111827" stroke-width="4"/>
-        <circle cx="29" cy="13" r="3" fill="#22d3ee"/><circle cx="39" cy="13" r="3" fill="#22d3ee"/>
-        <path d="M16 21 H52 V44 H16Z" fill="#e2e8f0" stroke="#111827" stroke-width="4"/>
-        <path d="M18 24 H31 V44 H18Z" fill="#ef4444"/><path d="M37 24 H50 V44 H37Z" fill="#2563eb"/>
-        <path d="M16 28 L5 42 M52 28 L63 42" stroke="#94a3b8" stroke-width="9" stroke-linecap="round"/>
-        <path d="M26 44 L20 59 M42 44 L48 59" stroke="#64748b" stroke-width="9" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <div class="xa-stars" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   </div>
 </div>
 
@@ -62,12 +102,18 @@
   border: 0;
   border-radius: 50%;
   overflow: hidden;
+  background: transparent;
   box-shadow: none;
+  transform: scale(var(--xa-avatar-scale, 1));
+  transform-origin: 50% 50%;
   transition: transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
+  will-change: transform;
 }
 
 .xa-avatar {
   display: block;
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -75,112 +121,236 @@
   transition: filter 0.32s ease;
 }
 
-.xa-wrap:hover .xa-avatar-frame {
-  transform: scale(1.08);
+.xa-wrap:hover {
+  --xa-avatar-scale: 1.08;
 }
 
-.xa-wrap:hover .xa-avatar {
-  filter: brightness(1.08) saturate(1.06);
+.xa-wrap.xa-on {
+  --xa-avatar-scale: 1.07;
 }
 
-.xa-flight-lane,
-.xa-stars {
+.xa-wrap.xa-on:hover {
+  --xa-avatar-scale: 1.12;
+}
+
+.xa-wrap:hover .xa-avatar,
+.xa-wrap.xa-on .xa-avatar {
+  filter: brightness(1.07) saturate(1.05);
+}
+
+.xa-sky-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 63%,
+    80% 61%,
+    72% 54%,
+    63% 36%,
+    58% 31%,
+    53% 22%,
+    48% 20%,
+    43% 23%,
+    38% 34%,
+    31% 50%,
+    24% 61%,
+    0 62%
+  );
+  transition: opacity 0.26s ease;
+}
+
+.xa-sky-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 48% 70%, rgba(0,0,0,0) 0 25%, rgba(0,0,0,0.06) 33%, rgba(0,0,0,0) 43%),
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 42%);
+  mix-blend-mode: screen;
+}
+
+.xa-wrap.xa-on .xa-sky-layer {
+  opacity: 1;
+}
+
+.xa-skycraft,
+.xa-photo-mist,
+.xa-sky-spark {
   position: absolute;
   pointer-events: none;
 }
 
-.xa-flight-lane {
-  inset: 0;
-  z-index: 5;
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-.xa-flyer {
-  position: absolute;
-  left: -78px;
-  opacity: 0;
-  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.32));
-}
-
-.xa-ufo {
-  top: 20px;
-  width: 64px;
-  height: 36px;
-  --rise: -3px;
-}
-
-.xa-hero {
-  top: 30px;
-  width: 53px;
-  height: 48px;
-  --rise: -5px;
-}
-
-.xa-mecha {
-  top: 127px;
-  width: 57px;
-  height: 52px;
-  --rise: 5px;
-}
-
-.xa-stars {
-  inset: 0;
+.xa-skycraft {
+  left: -44px;
   z-index: 4;
-  border-radius: 50%;
-  overflow: hidden;
   opacity: 0;
+  overflow: visible;
+  filter:
+    drop-shadow(0 1px 2px rgba(0,0,0,0.44))
+    drop-shadow(0 0 9px rgba(91,202,255,0.58));
+  transform-origin: 50% 50%;
 }
 
-.xa-stars i {
-  position: absolute;
+.xa-skycraft circle {
+  fill: rgba(248,252,255,0.9);
+}
+
+.xa-orbiter > path:first-of-type {
+  stroke: rgba(7,35,70,0.92);
+  stroke-width: 2.2;
+}
+
+.xa-orbiter > path:nth-of-type(2) {
+  fill: rgba(92,210,255,0.72);
+}
+
+.xa-automan circle,
+.xa-automan > path:nth-of-type(2),
+.xa-probe > path:first-of-type {
+  stroke: rgba(7,28,54,0.82);
+  stroke-width: 2;
+}
+
+.xa-orbiter {
+  top: 26px;
+  width: 88px;
+  height: 36px;
+  --xa-y: -5px;
+  --xa-scale: 0.9;
+  --xa-end: 252px;
+}
+
+.xa-automan {
+  left: 128px;
+  top: 27px;
+  width: 66px;
+  height: 49px;
+  --xa-y: -2px;
+  --xa-scale: 0.78;
+  --xa-end: 240px;
+}
+
+.xa-probe {
+  left: 18px;
+  top: 82px;
+  width: 58px;
+  height: 38px;
+  --xa-y: 4px;
+  --xa-scale: 0.76;
+  --xa-end: 228px;
+}
+
+.xa-photo-mist {
+  left: -10px;
+  top: 22px;
+  z-index: 2;
+  width: 218px;
+  height: 80px;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 18% 45%, rgba(152,232,255,0.18), transparent 44%),
+    radial-gradient(ellipse at 81% 32%, rgba(255,255,255,0.16), transparent 42%);
+  mix-blend-mode: screen;
+}
+
+.xa-sky-spark {
+  z-index: 5;
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 0 8px rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 0 7px rgba(183,244,255,0.9);
+  opacity: 0;
 }
 
-.xa-stars i:nth-child(1) { left: 25px; top: 33px; }
-.xa-stars i:nth-child(2) { left: 173px; top: 30px; width: 4px; height: 4px; }
-.xa-stars i:nth-child(3) { left: 184px; top: 135px; }
-.xa-stars i:nth-child(4) { left: 30px; top: 159px; width: 4px; height: 4px; }
+.xa-sky-spark.s1 { left: 33px; top: 42px; }
+.xa-sky-spark.s2 { left: 172px; top: 35px; width: 4px; height: 4px; }
+.xa-sky-spark.s3 { left: 160px; top: 91px; }
 
-.xa-wrap.xa-on .xa-stars {
-  animation: xa-stars-in 0.4s ease-out forwards;
+.xa-wrap.xa-on .xa-photo-mist {
+  animation: xa-mist 5.8s ease-in-out infinite alternate;
 }
 
-.xa-wrap.xa-on .xa-stars i {
-  animation: xa-star-twinkle 1.4s ease-in-out infinite alternate;
+.xa-wrap.xa-on .xa-orbiter {
+  animation: xa-sky-pass 7.2s 0s linear infinite both;
 }
 
-.xa-wrap.xa-on .xa-ufo {
-  animation: xa-fly-across 6.6s 0s linear infinite;
+.xa-wrap.xa-on .xa-automan {
+  animation: xa-automan-patrol 2.7s 1.05s ease-in-out infinite alternate;
 }
 
-.xa-wrap.xa-on .xa-hero {
-  animation: xa-fly-across 6.6s 2.2s linear infinite;
+.xa-wrap.xa-on .xa-probe {
+  animation: xa-probe-patrol 3.1s 2s ease-in-out infinite alternate;
 }
 
-.xa-wrap.xa-on .xa-mecha {
-  animation: xa-fly-across 6.6s 4.4s linear infinite;
+.xa-wrap.xa-on .xa-sky-spark {
+  animation: xa-sparkle 1.6s ease-in-out infinite alternate;
 }
 
-@keyframes xa-stars-in {
-  to { opacity: 1; }
+.xa-wrap.xa-on .xa-sky-spark.s2 { animation-delay: 0.28s; }
+.xa-wrap.xa-on .xa-sky-spark.s3 { animation-delay: 0.56s; }
+
+@keyframes xa-mist {
+  from { opacity: 0.16; transform: translateX(-5px); }
+  to { opacity: 0.42; transform: translateX(6px); }
 }
 
-@keyframes xa-star-twinkle {
-  from { opacity: 0.35; transform: scale(0.75); }
-  to { opacity: 1; transform: scale(1.25); }
+@keyframes xa-sky-pass {
+  0% {
+    opacity: 0.94;
+    transform: translate(45px, 0) scale(calc(var(--xa-scale) * 0.9)) rotate(-4deg);
+  }
+  11% {
+    opacity: 1;
+    transform: translate(70px, calc(var(--xa-y) * 0.4)) scale(var(--xa-scale)) rotate(-2deg);
+  }
+  44% {
+    opacity: 0.96;
+    transform: translate(148px, var(--xa-y)) scale(calc(var(--xa-scale) * 1.03)) rotate(2deg);
+  }
+  61% {
+    opacity: 0.18;
+    transform: translate(var(--xa-end), calc(var(--xa-y) * 0.35)) scale(calc(var(--xa-scale) * 0.92)) rotate(5deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--xa-end), calc(var(--xa-y) * 0.35)) scale(calc(var(--xa-scale) * 0.92)) rotate(5deg);
+  }
 }
 
-@keyframes xa-fly-across {
-  0% { opacity: 0; transform: translate(-20px, 0) scale(0.76) rotate(-7deg); }
-  8% { opacity: 0.92; transform: translate(72px, calc(var(--rise) * 0.25)) scale(0.88) rotate(-4deg); }
-  42% { opacity: 0.92; transform: translate(180px, var(--rise)) scale(1) rotate(3deg); }
-  56% { opacity: 0; transform: translate(282px, calc(var(--rise) * 0.4)) scale(0.9) rotate(8deg); }
-  100% { opacity: 0; transform: translate(282px, calc(var(--rise) * 0.4)) scale(0.9) rotate(8deg); }
+@keyframes xa-automan-patrol {
+  from {
+    opacity: 0.92;
+    transform: translate(0, 0) scale(var(--xa-scale)) rotate(-4deg);
+  }
+  to {
+    opacity: 0.98;
+    transform: translate(-11px, -5px) scale(calc(var(--xa-scale) * 1.04)) rotate(5deg);
+  }
+}
+
+@keyframes xa-probe-patrol {
+  from {
+    opacity: 0.9;
+    transform: translate(0, 0) scale(var(--xa-scale)) rotate(7deg);
+  }
+  to {
+    opacity: 0.98;
+    transform: translate(9px, -4px) scale(calc(var(--xa-scale) * 1.05)) rotate(-5deg);
+  }
+}
+
+@keyframes xa-sparkle {
+  from { opacity: 0.22; transform: scale(0.72); }
+  to { opacity: 0.95; transform: scale(1.22); }
 }
 </style>
 

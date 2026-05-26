@@ -3,43 +3,74 @@
     <div class="jp-avatar-frame">
       <img src="https://yil384.github.io/Picasso-Lab/people/static/jixuan.png"
            class="avatar jp-avatar" alt="avatar"/>
+
+      <svg class="jp-face-sketch" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+        <path class="jp-sketch-line" d="M62 36 C45 55 39 84 46 112"/>
+        <path class="jp-sketch-line" d="M136 38 C151 61 157 92 147 119"/>
+        <path class="jp-sketch-line light" d="M54 134 C78 151 121 151 145 132"/>
+      </svg>
     </div>
 
-    <svg class="jp-easel" viewBox="0 0 94 112" aria-hidden="true" focusable="false">
+    <svg class="jp-rice-paper" viewBox="0 0 92 146" aria-hidden="true" focusable="false">
       <defs>
-        <linearGradient id="jpCanvas" x1="12" y1="5" x2="80" y2="80" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stop-color="#fff7ed"/>
-          <stop offset="1" stop-color="#fed7aa"/>
+        <linearGradient id="jpPaper" x1="8" y1="3" x2="84" y2="143" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#fffdf1"/>
+          <stop offset="0.55" stop-color="#f4ead0"/>
+          <stop offset="1" stop-color="#e2d0aa"/>
         </linearGradient>
+        <filter id="jpPaperShadow" x="-35%" y="-25%" width="170%" height="160%">
+          <feDropShadow dx="3" dy="5" stdDeviation="2.2" flood-color="#2b2112" flood-opacity="0.22"/>
+        </filter>
       </defs>
-      <path d="M43 68 L23 110 M51 68 L74 110 M47 68 L47 111" stroke="#7c2d12" stroke-width="5" stroke-linecap="round"/>
-      <rect x="15" y="7" width="64" height="62" rx="5" fill="url(#jpCanvas)" stroke="#3b1b0b" stroke-width="4"/>
-      <path d="M24 53 C31 34 42 27 56 19 C63 31 59 48 42 56 C35 59 29 58 24 53Z" fill="#d97706"/>
-      <path d="M24 53 C35 42 45 36 58 31" fill="none" stroke="#fef3c7" stroke-width="6" stroke-linecap="round"/>
-      <path d="M21 18 C38 24 49 20 70 28" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
-      <path d="M22 62 C42 55 52 62 73 55" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
-      <path d="M18 75 L78 75" stroke="#3b1b0b" stroke-width="5" stroke-linecap="round"/>
+      <path d="M12 9 C31 3 61 3 80 10 L78 135 C57 143 31 143 11 134 Z"
+            fill="url(#jpPaper)" stroke="#5b4630" stroke-width="2.6" filter="url(#jpPaperShadow)"/>
+      <path d="M20 18 C36 14 56 14 72 18 M18 125 C36 132 55 132 73 126"
+            fill="none" stroke="rgba(110,88,55,0.28)" stroke-width="1.5"/>
+      <g class="jp-paper-fibers">
+        <path d="M28 22 C31 50 28 78 33 120"/>
+        <path d="M49 17 C45 54 52 88 47 130"/>
+        <path d="M69 24 C63 57 69 91 64 121"/>
+      </g>
     </svg>
 
-    <svg class="jp-palette" viewBox="0 0 76 60" aria-hidden="true" focusable="false">
-      <path d="M7 35 C1 17 18 4 41 6 C64 8 77 23 69 40 C63 52 50 57 31 53 C26 52 26 43 19 43 C13 43 9 41 7 35Z" fill="#c47a2c" stroke="#31170a" stroke-width="4"/>
-      <circle cx="52" cy="41" r="8" fill="#fff0c7" stroke="#7c2d12" stroke-width="2"/>
-      <circle cx="22" cy="22" r="6" fill="#ef4444"/>
-      <circle cx="39" cy="18" r="6" fill="#2563eb"/>
-      <circle cx="30" cy="38" r="6" fill="#facc15"/>
-      <circle cx="51" cy="28" r="6" fill="#22c55e"/>
+    <svg class="jp-ink-orchid" viewBox="0 0 112 150" aria-hidden="true" focusable="false">
+      <path class="jp-ink-stem s1" d="M30 138 C43 101 48 70 44 22"/>
+      <path class="jp-ink-stem s2" d="M45 138 C55 100 67 74 83 34"/>
+      <path class="jp-ink-leaf" d="M38 111 C11 80 9 45 24 12 C33 50 45 82 38 111Z"/>
+      <path class="jp-ink-leaf" d="M49 117 C73 91 90 56 91 22 C70 55 55 84 49 117Z"/>
+      <path class="jp-ink-leaf soft" d="M31 132 C18 111 12 95 8 69 C26 88 35 108 31 132Z"/>
+      <g class="jp-orchid-blooms">
+        <path d="M39 38 C24 30 24 17 39 18 C43 6 56 8 55 22 C70 19 75 33 61 40 C59 54 43 53 43 42 Z"/>
+        <path d="M74 54 C61 48 61 36 74 36 C78 25 90 28 88 40 C100 38 105 49 94 56 C91 68 77 66 78 58 Z"/>
+        <path d="M46 71 C34 66 35 55 47 55 C51 45 61 48 60 59 C71 58 75 68 65 73 C62 83 50 81 50 73 Z"/>
+      </g>
     </svg>
 
-    <div class="jp-strokes" aria-hidden="true">
-      <span class="jp-stroke s1"></span>
-      <span class="jp-stroke s2"></span>
-      <span class="jp-stroke s3"></span>
-      <span class="jp-stroke s4"></span>
+    <svg class="jp-ducks" viewBox="0 0 116 80" aria-hidden="true" focusable="false">
+      <path class="jp-water-line" d="M8 62 C29 55 50 68 73 59 C86 54 101 56 111 62"/>
+      <path class="jp-water-line w2" d="M20 70 C38 65 54 73 72 68 C86 64 99 66 108 70"/>
+      <g class="jp-duck duck-a">
+        <path d="M20 49 C30 35 47 35 57 49 C47 58 31 59 20 49Z"/>
+        <path d="M42 38 C49 27 62 28 67 39 C60 43 49 43 42 38Z"/>
+        <path d="M60 38 L73 35 L64 44 Z"/>
+        <circle cx="57" cy="36" r="1.7"/>
+      </g>
+      <g class="jp-duck duck-b">
+        <path d="M59 53 C68 42 82 42 92 53 C83 61 68 62 59 53Z"/>
+        <path d="M78 45 C84 36 95 37 99 47 C93 50 84 50 78 45Z"/>
+        <path d="M95 46 L106 44 L98 52 Z"/>
+        <circle cx="91" cy="44" r="1.5"/>
+      </g>
+    </svg>
+
+    <div class="jp-calligraphy" aria-hidden="true">
+      <span>&#20070;&#27861;</span>
+      <span>&#32032;&#25551;</span>
+      <span>&#20025;&#38738;</span>
     </div>
     <div class="jp-brush" aria-hidden="true"></div>
-    <div class="jp-wet-stroke" aria-hidden="true"></div>
-    <div class="jp-signature" aria-hidden="true">OIL</div>
-    <div class="jp-splatter" aria-hidden="true"></div>
+    <div class="jp-red-seal" aria-hidden="true">&#29831;</div>
+    <div class="jp-ink-drops" aria-hidden="true"></div>
   </div>
 </div>
 
@@ -72,12 +103,18 @@
   border: 0;
   border-radius: 50%;
   overflow: hidden;
+  background: transparent;
   box-shadow: none;
+  transform: scale(var(--jp-avatar-scale, 1));
+  transform-origin: 50% 50%;
   transition: transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
+  will-change: transform;
 }
 
 .jp-avatar {
   display: block;
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -85,133 +122,255 @@
   transition: filter 0.32s ease;
 }
 
-.jp-wrap:hover .jp-avatar-frame {
-  transform: scale(1.08);
+.jp-wrap:hover {
+  --jp-avatar-scale: 1.08;
 }
 
-.jp-wrap:hover .jp-avatar {
-  filter: brightness(1.08);
+.jp-wrap.jp-on {
+  --jp-avatar-scale: 1.07;
 }
 
-.jp-easel,
-.jp-palette,
-.jp-strokes,
-.jp-stroke,
+.jp-wrap.jp-on:hover {
+  --jp-avatar-scale: 1.12;
+}
+
+.jp-wrap:hover .jp-avatar,
+.jp-wrap.jp-on .jp-avatar {
+  filter: brightness(1.06) saturate(1.02);
+}
+
+.jp-face-sketch,
+.jp-rice-paper,
+.jp-ink-orchid,
+.jp-ducks,
+.jp-calligraphy,
 .jp-brush,
-.jp-wet-stroke,
-.jp-signature,
-.jp-splatter {
+.jp-red-seal,
+.jp-ink-drops {
   position: absolute;
   pointer-events: none;
 }
 
-.jp-easel {
-  right: -20px;
-  top: 61px;
-  z-index: 5;
-  width: 89px;
-  height: 106px;
-  opacity: 0;
-  transform: rotate(5deg) translate(18px, 6px) scale(0.74);
-  filter: drop-shadow(4px 5px 0 rgba(40,18,6,0.22));
-}
-
-.jp-palette {
-  left: -14px;
-  bottom: 22px;
-  z-index: 5;
-  width: 70px;
-  height: 55px;
-  opacity: 0;
-  transform: rotate(-13deg) translate(-15px, 12px) scale(0.76);
-  filter: drop-shadow(4px 5px 0 rgba(35,16,6,0.23));
-}
-
-.jp-strokes {
+.jp-face-sketch {
   inset: 0;
-  z-index: 4;
-  overflow: visible;
-}
-
-.jp-stroke {
-  width: var(--w);
-  height: var(--h);
-  left: var(--x);
-  top: var(--y);
-  border-radius: 999px 70% 999px 64%;
-  background: var(--paint);
-  box-shadow:
-    inset 0 2px 3px rgba(255,255,255,0.42),
-    inset 0 -3px 5px rgba(20,10,4,0.2),
-    0 3px 5px rgba(24,12,6,0.22);
+  z-index: 2;
+  width: 100%;
+  height: 100%;
   opacity: 0;
-  transform: rotate(var(--r)) scaleX(0.08);
-  transform-origin: 0 50%;
+  mix-blend-mode: multiply;
 }
 
-.jp-stroke.s1 { --x: 13px; --y: 3px; --w: 95px; --h: 13px; --r: -8deg; --paint: linear-gradient(90deg, #fff7c2, #f97316 54%, #7c2d12); }
-.jp-stroke.s2 { --x: 133px; --y: 36px; --w: 80px; --h: 12px; --r: 22deg; --paint: linear-gradient(90deg, #dbeafe, #2563eb 58%, #0f172a); }
-.jp-stroke.s3 { --x: -18px; --y: 132px; --w: 74px; --h: 13px; --r: -24deg; --paint: linear-gradient(90deg, #dcfce7, #22c55e 50%, #166534); }
-.jp-stroke.s4 { --x: 83px; --y: 205px; --w: 92px; --h: 13px; --r: 4deg; --paint: linear-gradient(90deg, #fee2e2, #ef4444 50%, #7f1d1d); }
+.jp-sketch-line {
+  fill: none;
+  stroke: rgba(36,32,27,0.42);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-dasharray: 74;
+  stroke-dashoffset: 74;
+}
+
+.jp-sketch-line.light {
+  stroke: rgba(36,32,27,0.24);
+  stroke-width: 0.9;
+  stroke-dasharray: 62;
+  stroke-dashoffset: 62;
+}
+
+.jp-rice-paper {
+  right: -38px;
+  top: 0;
+  z-index: 4;
+  width: 84px;
+  height: 133px;
+  opacity: 0;
+  transform: rotate(5deg) translate(14px, -12px) scale(0.78);
+  transform-origin: 50% 18%;
+  transition: opacity 0.14s ease, transform 0.28s cubic-bezier(0.18,1.35,0.28,1);
+}
+
+.jp-paper-fibers path {
+  fill: none;
+  stroke: rgba(72,58,36,0.16);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+}
+
+.jp-ink-orchid {
+  left: -22px;
+  top: 13px;
+  z-index: 5;
+  width: 106px;
+  height: 142px;
+  opacity: 0;
+  overflow: visible;
+  filter: drop-shadow(2px 4px 0 rgba(32,26,17,0.1));
+  transform: rotate(-5deg) translate(-14px, 4px) scale(0.82);
+  transform-origin: 34% 90%;
+}
+
+.jp-ink-stem,
+.jp-water-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.jp-ink-stem {
+  stroke: rgba(17,24,18,0.86);
+  stroke-width: 4.5;
+  stroke-dasharray: 150;
+  stroke-dashoffset: 150;
+}
+
+.jp-ink-stem.s2 {
+  stroke: rgba(36,58,43,0.78);
+  stroke-width: 3.7;
+}
+
+.jp-ink-leaf {
+  fill: rgba(30,58,42,0.78);
+  stroke: rgba(10,26,18,0.88);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.jp-ink-leaf.soft {
+  fill: rgba(51,87,61,0.48);
+}
+
+.jp-orchid-blooms path {
+  fill: rgba(255,252,237,0.92);
+  stroke: rgba(17,24,18,0.92);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.jp-ducks {
+  right: -24px;
+  bottom: 12px;
+  z-index: 5;
+  width: 105px;
+  height: 72px;
+  opacity: 0;
+  overflow: visible;
+  transform: translate(16px, 14px) scale(0.78);
+  filter: drop-shadow(2px 4px 0 rgba(30,24,18,0.14));
+  transition: opacity 0.14s ease, transform 0.28s cubic-bezier(0.18,1.35,0.28,1);
+}
+
+.jp-water-line {
+  stroke: rgba(27,43,48,0.78);
+  stroke-width: 2.2;
+  stroke-dasharray: 118;
+  stroke-dashoffset: 118;
+}
+
+.jp-water-line.w2 {
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+
+.jp-duck path {
+  stroke: rgba(14,18,16,0.9);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.jp-duck circle {
+  fill: #fefce8;
+}
+
+.duck-a path:nth-child(1) { fill: rgba(35,39,34,0.94); }
+.duck-a path:nth-child(2) { fill: rgba(245,148,47,0.86); }
+.duck-a path:nth-child(3) { fill: #ef4444; }
+.duck-b path:nth-child(1) { fill: rgba(235,232,216,0.92); }
+.duck-b path:nth-child(2) { fill: rgba(30,31,29,0.9); }
+.duck-b path:nth-child(3) { fill: #d97706; }
+
+.jp-calligraphy {
+  right: -18px;
+  top: 20px;
+  z-index: 6;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transform: rotate(5deg) translate(11px, -8px);
+  transition: opacity 0.12s ease, transform 0.24s cubic-bezier(0.18,1.35,0.28,1);
+}
+
+.jp-calligraphy span {
+  writing-mode: vertical-rl;
+  color: #1f1b17;
+  font: 900 15px/1.05 "STKaiti", "KaiTi", "Songti SC", serif;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.24);
+}
 
 .jp-brush {
-  right: -19px;
-  bottom: 16px;
-  z-index: 6;
-  width: 104px;
-  height: 12px;
+  left: 31px;
+  bottom: -10px;
+  z-index: 7;
+  width: 121px;
+  height: 15px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #2f1608 0 21%, #f4d092 22% 63%, #7c2d12 64% 100%);
-  box-shadow: 0 4px 5px rgba(33,15,6,0.25);
+  background: linear-gradient(90deg, #120b07 0 15%, #4b2b14 16% 25%, #d9a35b 26% 70%, #6a3518 71% 100%);
+  box-shadow: 0 4px 5px rgba(31,19,8,0.22);
   opacity: 0;
-  transform-origin: 16px 50%;
-  transform: rotate(-34deg) translate(18px, 12px);
+  transform-origin: 18px 50%;
+  transform: rotate(-22deg) translate(12px, 17px);
+  transition: opacity 0.12s ease, transform 0.24s cubic-bezier(0.18,1.35,0.28,1);
 }
 
 .jp-brush::before {
   content: "";
   position: absolute;
-  left: -11px;
-  top: -5px;
-  width: 24px;
-  height: 22px;
-  border-radius: 70% 30% 60% 45%;
-  background: linear-gradient(135deg, #111827, #334155 52%, #ef4444 54%, #f97316);
-}
-
-.jp-wet-stroke {
-  right: 16px;
-  top: 112px;
-  z-index: 6;
-  width: 58px;
-  height: 16px;
-  border-radius: 999px 60% 999px 65%;
+  left: -18px;
+  top: -7px;
+  width: 32px;
+  height: 28px;
+  border-radius: 72% 28% 61% 39%;
   background:
-    linear-gradient(90deg, #fff7c2 0 18%, #f97316 19% 47%, #2563eb 48% 70%, #ef4444 71% 100%);
-  box-shadow:
-    inset 0 2px 2px rgba(255,255,255,0.45),
-    inset 0 -3px 4px rgba(30,16,6,0.22),
-    0 3px 5px rgba(31,18,6,0.24);
-  opacity: 0;
-  transform: rotate(-18deg) scaleX(0.06);
-  transform-origin: 100% 50%;
+    radial-gradient(circle at 68% 32%, rgba(255,255,255,0.22), transparent 20%),
+    linear-gradient(135deg, #101010, #232323 54%, #0b0b0b);
 }
 
-.jp-signature {
-  right: 4px;
-  top: 2px;
-  z-index: 6;
-  color: #fff7ed;
-  -webkit-text-stroke: 1px #3b1608;
-  font: italic 900 28px/1 Georgia, "Times New Roman", serif;
-  text-shadow: 3px 3px 0 #c2410c, 0 0 10px rgba(255,232,166,0.62);
-  opacity: 0;
-  transform: rotate(-11deg) translate(10px, -11px) scale(0.72);
+.jp-brush::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  top: 3px;
+  width: 65px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255,243,205,0.52);
 }
 
-.jp-splatter {
-  inset: 0;
+.jp-red-seal {
+  right: -21px;
+  bottom: 50px;
   z-index: 7;
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #7f1d1d;
+  color: #fff7ed;
+  background: rgba(185,28,28,0.9);
+  font: 900 18px/1 "STKaiti", "KaiTi", serif;
+  opacity: 0;
+  transform: rotate(8deg) scale(0.6);
+  box-shadow: 2px 3px 0 rgba(73,19,19,0.22);
+  transition: opacity 0.12s ease, transform 0.22s cubic-bezier(0.18,1.35,0.28,1);
+}
+
+.jp-ink-drops {
+  inset: 0;
+  z-index: 8;
   overflow: visible;
 }
 
@@ -222,72 +381,123 @@
   border-radius: 50%;
   background: var(--c);
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.4);
-  animation: jp-drop-fly 0.86s ease-out forwards;
+  transform: translate(-50%, -50%) scale(0.35);
+  animation: jp-drop-fly 0.92s ease-out forwards;
 }
 
-.jp-wrap.jp-on .jp-easel {
-  animation: jp-easel-in 0.55s 0.18s cubic-bezier(0.18,1.35,0.28,1) forwards;
+.jp-wrap.jp-on .jp-face-sketch {
+  animation: jp-sketch-in 0.28s ease-out forwards;
 }
 
-.jp-wrap.jp-on .jp-palette {
-  animation: jp-palette-in 0.52s 0.12s cubic-bezier(0.18,1.35,0.28,1) forwards;
+.jp-wrap.jp-on .jp-sketch-line {
+  animation: jp-sketch-draw 1.1s 0.18s ease-out forwards;
 }
 
-.jp-wrap.jp-on .jp-stroke {
-  animation: jp-stroke-paint 0.7s cubic-bezier(0.16,1,0.3,1) forwards;
-  animation-delay: var(--d, 0s);
+.jp-wrap.jp-on .jp-rice-paper {
+  opacity: 1;
+  transform: rotate(5deg) translate(0, 0) scale(1);
 }
 
-.jp-wrap.jp-on .jp-stroke.s1 { --d: 0.05s; }
-.jp-wrap.jp-on .jp-stroke.s2 { --d: 0.15s; }
-.jp-wrap.jp-on .jp-stroke.s3 { --d: 0.25s; }
-.jp-wrap.jp-on .jp-stroke.s4 { --d: 0.35s; }
+.jp-wrap.jp-on .jp-calligraphy {
+  opacity: 1;
+  transform: rotate(5deg) translate(0, 0);
+}
+
+.jp-wrap.jp-on .jp-ink-orchid {
+  animation: jp-orchid-in 0.36s 0.04s cubic-bezier(0.18,1.35,0.28,1) forwards;
+}
+
+.jp-wrap.jp-on .jp-ink-stem {
+  animation: jp-stem-draw 0.56s 0.1s ease-out forwards;
+}
+
+.jp-wrap.jp-on .jp-ink-leaf {
+  animation: jp-leaf-open 0.42s 0.2s cubic-bezier(0.18,1.35,0.28,1) forwards;
+}
+
+.jp-wrap.jp-on .jp-orchid-blooms path {
+  animation: jp-bloom-in 0.34s 0.32s cubic-bezier(0.18,1.35,0.28,1) forwards;
+}
+
+.jp-wrap.jp-on .jp-ducks {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+  animation: jp-ducks-float 1.9s 0.7s ease-in-out infinite alternate;
+}
+
+.jp-wrap.jp-on .jp-water-line {
+  animation: jp-water-draw 0.78s 0.52s ease-out forwards;
+}
 
 .jp-wrap.jp-on .jp-brush {
-  animation: jp-brush-in 0.55s 0.28s cubic-bezier(0.18,1.35,0.28,1) forwards,
-             jp-brush-float 1.7s 0.9s ease-in-out infinite alternate;
+  opacity: 1;
+  transform: rotate(-22deg) translate(0, 0);
+  animation: jp-brush-float 1.8s 0.7s ease-in-out infinite alternate;
 }
 
-.jp-wrap.jp-on .jp-wet-stroke {
-  animation: jp-wet-paint 0.58s 0.42s cubic-bezier(0.16,1,0.3,1) forwards;
+.jp-wrap.jp-on .jp-red-seal {
+  opacity: 1;
+  transform: rotate(8deg) scale(1);
 }
 
-.jp-wrap.jp-on .jp-signature {
-  animation: jp-sign-in 0.48s 0.44s cubic-bezier(0.18,1.35,0.28,1) forwards;
+@keyframes jp-sketch-in {
+  to { opacity: 1; }
 }
 
-@keyframes jp-easel-in {
-  to { opacity: 1; transform: rotate(5deg) translate(0, 0) scale(1); }
+@keyframes jp-sketch-draw {
+  to { stroke-dashoffset: 0; }
 }
 
-@keyframes jp-palette-in {
-  to { opacity: 1; transform: rotate(-13deg) translate(0, 0) scale(1); }
+@keyframes jp-paper-in {
+  to { opacity: 0.96; transform: rotate(5deg) translate(0, 0) scale(1); }
 }
 
-@keyframes jp-stroke-paint {
-  0% { opacity: 0; transform: rotate(var(--r)) scaleX(0.08); }
-  28% { opacity: 0.95; }
-  100% { opacity: 0.95; transform: rotate(var(--r)) scaleX(1); }
+@keyframes jp-calligraphy-in {
+  to { opacity: 0.92; transform: rotate(5deg) translate(0, 0); }
+}
+
+@keyframes jp-orchid-in {
+  to { opacity: 1; transform: rotate(-5deg) translate(0, 0) scale(1); }
+}
+
+@keyframes jp-stem-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes jp-leaf-open {
+  from { opacity: 0; transform: scaleY(0.24) rotate(-3deg); }
+  to { opacity: 1; transform: scaleY(1) rotate(0deg); }
+}
+
+@keyframes jp-bloom-in {
+  from { opacity: 0; transform: scale(0.5) rotate(-8deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes jp-ducks-in {
+  to { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+@keyframes jp-ducks-float {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-2px) scale(1.01); }
+}
+
+@keyframes jp-water-draw {
+  to { stroke-dashoffset: 0; }
 }
 
 @keyframes jp-brush-in {
-  to { opacity: 1; transform: rotate(-32deg) translate(0, 0); }
+  to { opacity: 1; transform: rotate(-22deg) translate(0, 0); }
 }
 
 @keyframes jp-brush-float {
-  from { transform: rotate(-32deg) translate(0, 0); }
-  to { transform: rotate(-23deg) translate(-7px, -3px); }
+  from { transform: rotate(-22deg) translate(0, 0); }
+  to { transform: rotate(-16deg) translate(-6px, -4px); }
 }
 
-@keyframes jp-wet-paint {
-  0% { opacity: 0; transform: rotate(-18deg) scaleX(0.06); }
-  35% { opacity: 1; }
-  100% { opacity: 1; transform: rotate(-18deg) scaleX(1); }
-}
-
-@keyframes jp-sign-in {
-  to { opacity: 1; transform: rotate(-11deg) translate(0, 0) scale(1); }
+@keyframes jp-seal-in {
+  to { opacity: 1; transform: rotate(8deg) scale(1); }
 }
 
 @keyframes jp-drop-fly {
@@ -301,35 +511,35 @@
   document.querySelectorAll('.jp-wrap').forEach((wrap) => {
     if (wrap.dataset.jpReady === '1') return;
     wrap.dataset.jpReady = '1';
-    const splatter = wrap.querySelector('.jp-splatter');
+    const drops = wrap.querySelector('.jp-ink-drops');
     wrap.addEventListener('click', () => {
       const on = wrap.classList.toggle('jp-on');
-      if (on) splatterPaint(splatter);
-      else if (splatter) splatter.innerHTML = '';
+      if (on) splashInk(drops);
+      else if (drops) drops.innerHTML = '';
     });
   });
 
-  function splatterPaint(layer) {
+  function splashInk(layer) {
     if (!layer) return;
     layer.innerHTML = '';
-    const colors = ['#ef4444', '#2563eb', '#facc15', '#22c55e', '#a855f7', '#f97316'];
-    const anchors = [[18, 31], [176, 24], [17, 158], [176, 174], [91, 212]];
-    for (let i = 0; i < 24; i++) {
+    const colors = ['#111111', '#254734', '#3f2f1c', '#b91c1c', '#f5f0de'];
+    const anchors = [[25, 38], [46, 112], [168, 40], [92, 198], [175, 146]];
+    for (let i = 0; i < 26; i++) {
       const drop = document.createElement('span');
       const anchor = anchors[i % anchors.length];
       const angle = Math.random() * Math.PI * 2;
-      const dist = 18 + Math.random() * 44;
+      const dist = 18 + Math.random() * 48;
       drop.className = 'jp-drop';
       drop.style.left = `${anchor[0]}px`;
       drop.style.top = `${anchor[1]}px`;
       drop.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
       drop.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
-      drop.style.setProperty('--s', `${3 + Math.random() * 5}px`);
+      drop.style.setProperty('--s', `${3 + Math.random() * 6}px`);
       drop.style.setProperty('--c', colors[i % colors.length]);
       drop.style.animationDelay = `${Math.random() * 0.16}s`;
       layer.appendChild(drop);
     }
-    setTimeout(() => { layer.innerHTML = ''; }, 1100);
+    setTimeout(() => { layer.innerHTML = ''; }, 1150);
   }
 })();
 </script>
