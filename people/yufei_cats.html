@@ -1,0 +1,424 @@
+<div class="yf-wrap" style="--avatar-size:200px">
+  <div class="yf-stage">
+    <div class="yf-avatar-frame">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/yufei.png"
+           class="avatar yf-avatar" alt="avatar"/>
+    </div>
+    <div class="yf-tree" aria-hidden="true">
+      <img class="yf-tree-img" src="https://yil384.github.io/Picasso-Lab/people/static/sd_palm_tree.svg" alt=""/>
+    </div>
+    <div class="yf-cat-layer" aria-hidden="true">
+      <div class="yf-cat-actor">
+        <div class="yf-cat-sprite yf-cat-walk-cycle"></div>
+        <div class="yf-cat-sprite yf-cat-sleep"></div>
+        <div class="yf-cat-sprite yf-cat-climb-cycle"></div>
+        <div class="yf-cat-sprite yf-cat-perch"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.yf-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+  --yf-cat-cycle: 34s;
+}
+
+.yf-wrap *,
+.yf-wrap *::before,
+.yf-wrap *::after {
+  box-sizing: border-box;
+}
+
+.yf-stage {
+  position: relative;
+  width: var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  overflow: visible;
+}
+
+.yf-avatar-frame {
+  position: relative;
+  z-index: 3;
+  width: var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: none;
+  transition: transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
+}
+
+.yf-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: filter 0.32s ease;
+}
+
+.yf-wrap:hover .yf-avatar-frame {
+  transform: scale(1.08);
+}
+
+.yf-wrap:hover .yf-avatar {
+  filter: brightness(1.08) saturate(1.04);
+}
+
+.yf-cat-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.yf-tree {
+  position: absolute;
+  left: 96px;
+  top: -4px;
+  z-index: 2;
+  width: 224px;
+  height: 268px;
+  opacity: 0;
+  pointer-events: none;
+  transform: rotate(-3deg);
+  transform-origin: 42% 92%;
+  transition: opacity 0.18s ease;
+  will-change: transform, opacity;
+}
+
+.yf-tree-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 4px rgba(15,23,42,0.14));
+}
+
+.yf-cat-actor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 101px;
+  height: 97px;
+  opacity: 0;
+  transform: translate(218px, 116px);
+  transform-origin: 50% 82%;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 5px 5px rgba(15,23,42,0.16));
+}
+
+.yf-cat-actor::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: -1px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.16);
+  filter: blur(3px);
+  transform: translateY(4px) scale(0.95, 1);
+  z-index: -1;
+}
+
+.yf-wrap.yf-on .yf-cat-actor::after {
+  animation: yf-cat-shadow var(--yf-cat-cycle) steps(1, end) infinite;
+}
+
+.yf-cat-sprite {
+  position: absolute;
+  display: block;
+  opacity: 0;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  pointer-events: none;
+  transform-origin: 50% 72%;
+  will-change: opacity, transform, background-position;
+}
+
+.yf-cat-walk-cycle {
+  left: 0;
+  bottom: 4px;
+  width: 97px;
+  height: 68px;
+  background-image: url("https://yil384.github.io/Picasso-Lab/people/static/yufei_cartoon_walk_sheet.png");
+  background-size: 388px 68px;
+  opacity: 1;
+}
+
+.yf-cat-sleep {
+  left: 6px;
+  bottom: 5px;
+  width: 90px;
+  height: 58px;
+  background-image: url("https://yil384.github.io/Picasso-Lab/people/static/yufei_cartoon_sleep.png");
+  background-size: 90px 58px;
+}
+
+.yf-cat-climb-cycle {
+  left: 15px;
+  bottom: -4px;
+  width: 70px;
+  height: 97px;
+  background-image: url("https://yil384.github.io/Picasso-Lab/people/static/yufei_cartoon_climb_sheet.png");
+  background-size: 280px 97px;
+}
+
+.yf-cat-perch {
+  left: 19px;
+  bottom: 4px;
+  width: 68px;
+  height: 85px;
+  background-image: url("https://yil384.github.io/Picasso-Lab/people/static/yufei_cartoon_perch.png");
+  background-size: 68px 85px;
+}
+
+.yf-wrap.yf-on .yf-tree {
+  opacity: 0.98;
+  animation: yf-tree-sway 5.6s ease-in-out infinite;
+}
+
+.yf-wrap.yf-on .yf-cat-layer {
+  animation: yf-cat-depth var(--yf-cat-cycle) steps(1, end) infinite;
+}
+
+.yf-wrap.yf-on .yf-cat-actor {
+  animation: yf-cat-route var(--yf-cat-cycle) linear infinite;
+}
+
+.yf-wrap.yf-on .yf-cat-walk-cycle {
+  animation:
+    yf-cat-walk-pose var(--yf-cat-cycle) steps(1, end) infinite,
+    yf-walk-cycle 0.72s steps(4, end) infinite,
+    yf-walk-facing var(--yf-cat-cycle) steps(1, end) infinite;
+}
+
+.yf-wrap.yf-on .yf-cat-sleep {
+  animation:
+    yf-cat-sleep-pose var(--yf-cat-cycle) steps(1, end) infinite,
+    yf-cat-breathe 1.65s ease-in-out infinite;
+}
+
+.yf-wrap.yf-on .yf-cat-climb-cycle {
+  animation:
+    yf-cat-climb-pose var(--yf-cat-cycle) steps(1, end) infinite,
+    yf-climb-cycle 0.64s steps(4, end) infinite;
+}
+
+.yf-wrap.yf-on .yf-cat-perch {
+  animation:
+    yf-cat-perch-pose var(--yf-cat-cycle) steps(1, end) infinite,
+    yf-cat-look 1.45s ease-in-out infinite;
+}
+
+@keyframes yf-tree-sway {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(-0.8deg);
+  }
+}
+
+@keyframes yf-cat-depth {
+  0%, 100% {
+    z-index: 6;
+  }
+}
+
+@keyframes yf-cat-route {
+  0%, 11.8% {
+    opacity: 0;
+    transform: translate(-136px, 128px) rotate(0deg);
+  }
+  11.81% {
+    opacity: 1;
+    transform: translate(-136px, 128px) rotate(0deg) scale(0.98);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-98px, 128px) rotate(0deg) scale(1);
+  }
+  21% {
+    opacity: 1;
+    transform: translate(-18px, 128px) rotate(0deg);
+  }
+  27% {
+    opacity: 1;
+    transform: translate(86px, 128px) rotate(0deg);
+  }
+  43% {
+    opacity: 1;
+    transform: translate(86px, 128px) rotate(0deg);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(102px, 127px) rotate(0deg);
+  }
+  47% {
+    opacity: 1;
+    transform: translate(116px, 120px) rotate(-3deg);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(122px, 101px) rotate(-6deg);
+  }
+  54% {
+    opacity: 1;
+    transform: translate(131px, 76px) rotate(-6deg);
+  }
+  59% {
+    opacity: 1;
+    transform: translate(140px, 42px) rotate(-2deg);
+  }
+  77% {
+    opacity: 1;
+    transform: translate(140px, 42px) rotate(0deg);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(135px, 62px) rotate(-5deg);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(126px, 90px) rotate(-6deg);
+  }
+  88% {
+    opacity: 1;
+    transform: translate(116px, 120px) rotate(-2deg);
+  }
+  88.01% {
+    opacity: 1;
+    transform: translate(86px, 128px) rotate(0deg);
+  }
+  92% {
+    opacity: 1;
+    transform: translate(18px, 128px) rotate(0deg);
+  }
+  99.55% {
+    opacity: 1;
+    transform: translate(-136px, 128px) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-136px, 128px) rotate(0deg);
+  }
+}
+
+@keyframes yf-walk-facing {
+  0%, 11.79%, 47.01%, 88%, 100% {
+    transform: scaleX(-1);
+  }
+  11.8%, 47% {
+    transform: scaleX(1);
+  }
+  88.01%, 99.55% {
+    transform: scaleX(-1);
+  }
+}
+
+@keyframes yf-walk-cycle {
+  to {
+    background-position-x: -388px;
+  }
+}
+
+@keyframes yf-climb-cycle {
+  to {
+    background-position-x: -280px;
+  }
+}
+
+@keyframes yf-cat-breathe {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(1px) scale(1.025, 0.985);
+  }
+}
+
+@keyframes yf-cat-look {
+  0%, 100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(3deg) translateY(-1px);
+  }
+}
+
+@keyframes yf-cat-walk-pose {
+  0%, 11.79%, 27.01%, 43%, 47.01%, 88%, 100% {
+    opacity: 0;
+  }
+  11.8%, 27%, 43.01%, 47%, 88.01%, 99.55% {
+    opacity: 1;
+  }
+}
+
+@keyframes yf-cat-sleep-pose {
+  0%, 27%, 43.01%, 100% {
+    opacity: 0;
+  }
+  27.01%, 43% {
+    opacity: 1;
+  }
+}
+
+@keyframes yf-cat-climb-pose {
+  0%, 46.99%, 59.01%, 76.99%, 88.01%, 100% {
+    opacity: 0;
+  }
+  47%, 59%, 77%, 88% {
+    opacity: 1;
+  }
+}
+
+@keyframes yf-cat-perch-pose {
+  0%, 58.99%, 77.01%, 100% {
+    opacity: 0;
+  }
+  59%, 77% {
+    opacity: 1;
+  }
+}
+
+@keyframes yf-cat-shadow {
+  0%, 11.79%, 47%, 88%, 100% {
+    opacity: 0;
+  }
+  11.8%, 46.99%, 88.01%, 99.55% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yf-wrap.yf-on .yf-tree,
+  .yf-wrap.yf-on .yf-cat-layer,
+  .yf-wrap.yf-on .yf-cat-actor,
+  .yf-wrap.yf-on .yf-cat-actor::after,
+  .yf-wrap.yf-on .yf-cat-sprite {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+ }
+</style>
+
+<script>
+(function () {
+  document.querySelectorAll('.yf-wrap').forEach((wrap) => {
+    if (wrap.dataset.yfReady === '1') return;
+    wrap.dataset.yfReady = '1';
+
+    wrap.addEventListener('click', () => {
+      wrap.classList.toggle('yf-on');
+    });
+  });
+})();
+</script>

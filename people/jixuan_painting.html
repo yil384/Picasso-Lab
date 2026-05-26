@@ -1,0 +1,335 @@
+<div class="jp-wrap" style="--avatar-size:200px">
+  <div class="jp-stage">
+    <div class="jp-avatar-frame">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/jixuan.png"
+           class="avatar jp-avatar" alt="avatar"/>
+    </div>
+
+    <svg class="jp-easel" viewBox="0 0 94 112" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="jpCanvas" x1="12" y1="5" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#fff7ed"/>
+          <stop offset="1" stop-color="#fed7aa"/>
+        </linearGradient>
+      </defs>
+      <path d="M43 68 L23 110 M51 68 L74 110 M47 68 L47 111" stroke="#7c2d12" stroke-width="5" stroke-linecap="round"/>
+      <rect x="15" y="7" width="64" height="62" rx="5" fill="url(#jpCanvas)" stroke="#3b1b0b" stroke-width="4"/>
+      <path d="M24 53 C31 34 42 27 56 19 C63 31 59 48 42 56 C35 59 29 58 24 53Z" fill="#d97706"/>
+      <path d="M24 53 C35 42 45 36 58 31" fill="none" stroke="#fef3c7" stroke-width="6" stroke-linecap="round"/>
+      <path d="M21 18 C38 24 49 20 70 28" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
+      <path d="M22 62 C42 55 52 62 73 55" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+      <path d="M18 75 L78 75" stroke="#3b1b0b" stroke-width="5" stroke-linecap="round"/>
+    </svg>
+
+    <svg class="jp-palette" viewBox="0 0 76 60" aria-hidden="true" focusable="false">
+      <path d="M7 35 C1 17 18 4 41 6 C64 8 77 23 69 40 C63 52 50 57 31 53 C26 52 26 43 19 43 C13 43 9 41 7 35Z" fill="#c47a2c" stroke="#31170a" stroke-width="4"/>
+      <circle cx="52" cy="41" r="8" fill="#fff0c7" stroke="#7c2d12" stroke-width="2"/>
+      <circle cx="22" cy="22" r="6" fill="#ef4444"/>
+      <circle cx="39" cy="18" r="6" fill="#2563eb"/>
+      <circle cx="30" cy="38" r="6" fill="#facc15"/>
+      <circle cx="51" cy="28" r="6" fill="#22c55e"/>
+    </svg>
+
+    <div class="jp-strokes" aria-hidden="true">
+      <span class="jp-stroke s1"></span>
+      <span class="jp-stroke s2"></span>
+      <span class="jp-stroke s3"></span>
+      <span class="jp-stroke s4"></span>
+    </div>
+    <div class="jp-brush" aria-hidden="true"></div>
+    <div class="jp-wet-stroke" aria-hidden="true"></div>
+    <div class="jp-signature" aria-hidden="true">OIL</div>
+    <div class="jp-splatter" aria-hidden="true"></div>
+  </div>
+</div>
+
+<style>
+.jp-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.jp-wrap *,
+.jp-wrap *::before,
+.jp-wrap *::after {
+  box-sizing: border-box;
+}
+
+.jp-stage {
+  position: relative;
+  width: var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  overflow: visible;
+}
+
+.jp-avatar-frame {
+  position: relative;
+  z-index: 3;
+  width: var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: none;
+  transition: transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
+}
+
+.jp-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: filter 0.32s ease;
+}
+
+.jp-wrap:hover .jp-avatar-frame {
+  transform: scale(1.08);
+}
+
+.jp-wrap:hover .jp-avatar {
+  filter: brightness(1.08);
+}
+
+.jp-easel,
+.jp-palette,
+.jp-strokes,
+.jp-stroke,
+.jp-brush,
+.jp-wet-stroke,
+.jp-signature,
+.jp-splatter {
+  position: absolute;
+  pointer-events: none;
+}
+
+.jp-easel {
+  right: -20px;
+  top: 61px;
+  z-index: 5;
+  width: 89px;
+  height: 106px;
+  opacity: 0;
+  transform: rotate(5deg) translate(18px, 6px) scale(0.74);
+  filter: drop-shadow(4px 5px 0 rgba(40,18,6,0.22));
+}
+
+.jp-palette {
+  left: -14px;
+  bottom: 22px;
+  z-index: 5;
+  width: 70px;
+  height: 55px;
+  opacity: 0;
+  transform: rotate(-13deg) translate(-15px, 12px) scale(0.76);
+  filter: drop-shadow(4px 5px 0 rgba(35,16,6,0.23));
+}
+
+.jp-strokes {
+  inset: 0;
+  z-index: 4;
+  overflow: visible;
+}
+
+.jp-stroke {
+  width: var(--w);
+  height: var(--h);
+  left: var(--x);
+  top: var(--y);
+  border-radius: 999px 70% 999px 64%;
+  background: var(--paint);
+  box-shadow:
+    inset 0 2px 3px rgba(255,255,255,0.42),
+    inset 0 -3px 5px rgba(20,10,4,0.2),
+    0 3px 5px rgba(24,12,6,0.22);
+  opacity: 0;
+  transform: rotate(var(--r)) scaleX(0.08);
+  transform-origin: 0 50%;
+}
+
+.jp-stroke.s1 { --x: 13px; --y: 3px; --w: 95px; --h: 13px; --r: -8deg; --paint: linear-gradient(90deg, #fff7c2, #f97316 54%, #7c2d12); }
+.jp-stroke.s2 { --x: 133px; --y: 36px; --w: 80px; --h: 12px; --r: 22deg; --paint: linear-gradient(90deg, #dbeafe, #2563eb 58%, #0f172a); }
+.jp-stroke.s3 { --x: -18px; --y: 132px; --w: 74px; --h: 13px; --r: -24deg; --paint: linear-gradient(90deg, #dcfce7, #22c55e 50%, #166534); }
+.jp-stroke.s4 { --x: 83px; --y: 205px; --w: 92px; --h: 13px; --r: 4deg; --paint: linear-gradient(90deg, #fee2e2, #ef4444 50%, #7f1d1d); }
+
+.jp-brush {
+  right: -19px;
+  bottom: 16px;
+  z-index: 6;
+  width: 104px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f1608 0 21%, #f4d092 22% 63%, #7c2d12 64% 100%);
+  box-shadow: 0 4px 5px rgba(33,15,6,0.25);
+  opacity: 0;
+  transform-origin: 16px 50%;
+  transform: rotate(-34deg) translate(18px, 12px);
+}
+
+.jp-brush::before {
+  content: "";
+  position: absolute;
+  left: -11px;
+  top: -5px;
+  width: 24px;
+  height: 22px;
+  border-radius: 70% 30% 60% 45%;
+  background: linear-gradient(135deg, #111827, #334155 52%, #ef4444 54%, #f97316);
+}
+
+.jp-wet-stroke {
+  right: 16px;
+  top: 112px;
+  z-index: 6;
+  width: 58px;
+  height: 16px;
+  border-radius: 999px 60% 999px 65%;
+  background:
+    linear-gradient(90deg, #fff7c2 0 18%, #f97316 19% 47%, #2563eb 48% 70%, #ef4444 71% 100%);
+  box-shadow:
+    inset 0 2px 2px rgba(255,255,255,0.45),
+    inset 0 -3px 4px rgba(30,16,6,0.22),
+    0 3px 5px rgba(31,18,6,0.24);
+  opacity: 0;
+  transform: rotate(-18deg) scaleX(0.06);
+  transform-origin: 100% 50%;
+}
+
+.jp-signature {
+  right: 4px;
+  top: 2px;
+  z-index: 6;
+  color: #fff7ed;
+  -webkit-text-stroke: 1px #3b1608;
+  font: italic 900 28px/1 Georgia, "Times New Roman", serif;
+  text-shadow: 3px 3px 0 #c2410c, 0 0 10px rgba(255,232,166,0.62);
+  opacity: 0;
+  transform: rotate(-11deg) translate(10px, -11px) scale(0.72);
+}
+
+.jp-splatter {
+  inset: 0;
+  z-index: 7;
+  overflow: visible;
+}
+
+.jp-drop {
+  position: absolute;
+  width: var(--s, 5px);
+  height: var(--s, 5px);
+  border-radius: 50%;
+  background: var(--c);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+  animation: jp-drop-fly 0.86s ease-out forwards;
+}
+
+.jp-wrap.jp-on .jp-easel {
+  animation: jp-easel-in 0.55s 0.18s cubic-bezier(0.18,1.35,0.28,1) forwards;
+}
+
+.jp-wrap.jp-on .jp-palette {
+  animation: jp-palette-in 0.52s 0.12s cubic-bezier(0.18,1.35,0.28,1) forwards;
+}
+
+.jp-wrap.jp-on .jp-stroke {
+  animation: jp-stroke-paint 0.7s cubic-bezier(0.16,1,0.3,1) forwards;
+  animation-delay: var(--d, 0s);
+}
+
+.jp-wrap.jp-on .jp-stroke.s1 { --d: 0.05s; }
+.jp-wrap.jp-on .jp-stroke.s2 { --d: 0.15s; }
+.jp-wrap.jp-on .jp-stroke.s3 { --d: 0.25s; }
+.jp-wrap.jp-on .jp-stroke.s4 { --d: 0.35s; }
+
+.jp-wrap.jp-on .jp-brush {
+  animation: jp-brush-in 0.55s 0.28s cubic-bezier(0.18,1.35,0.28,1) forwards,
+             jp-brush-float 1.7s 0.9s ease-in-out infinite alternate;
+}
+
+.jp-wrap.jp-on .jp-wet-stroke {
+  animation: jp-wet-paint 0.58s 0.42s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+
+.jp-wrap.jp-on .jp-signature {
+  animation: jp-sign-in 0.48s 0.44s cubic-bezier(0.18,1.35,0.28,1) forwards;
+}
+
+@keyframes jp-easel-in {
+  to { opacity: 1; transform: rotate(5deg) translate(0, 0) scale(1); }
+}
+
+@keyframes jp-palette-in {
+  to { opacity: 1; transform: rotate(-13deg) translate(0, 0) scale(1); }
+}
+
+@keyframes jp-stroke-paint {
+  0% { opacity: 0; transform: rotate(var(--r)) scaleX(0.08); }
+  28% { opacity: 0.95; }
+  100% { opacity: 0.95; transform: rotate(var(--r)) scaleX(1); }
+}
+
+@keyframes jp-brush-in {
+  to { opacity: 1; transform: rotate(-32deg) translate(0, 0); }
+}
+
+@keyframes jp-brush-float {
+  from { transform: rotate(-32deg) translate(0, 0); }
+  to { transform: rotate(-23deg) translate(-7px, -3px); }
+}
+
+@keyframes jp-wet-paint {
+  0% { opacity: 0; transform: rotate(-18deg) scaleX(0.06); }
+  35% { opacity: 1; }
+  100% { opacity: 1; transform: rotate(-18deg) scaleX(1); }
+}
+
+@keyframes jp-sign-in {
+  to { opacity: 1; transform: rotate(-11deg) translate(0, 0) scale(1); }
+}
+
+@keyframes jp-drop-fly {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.35); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1); }
+}
+</style>
+
+<script>
+(function () {
+  document.querySelectorAll('.jp-wrap').forEach((wrap) => {
+    if (wrap.dataset.jpReady === '1') return;
+    wrap.dataset.jpReady = '1';
+    const splatter = wrap.querySelector('.jp-splatter');
+    wrap.addEventListener('click', () => {
+      const on = wrap.classList.toggle('jp-on');
+      if (on) splatterPaint(splatter);
+      else if (splatter) splatter.innerHTML = '';
+    });
+  });
+
+  function splatterPaint(layer) {
+    if (!layer) return;
+    layer.innerHTML = '';
+    const colors = ['#ef4444', '#2563eb', '#facc15', '#22c55e', '#a855f7', '#f97316'];
+    const anchors = [[18, 31], [176, 24], [17, 158], [176, 174], [91, 212]];
+    for (let i = 0; i < 24; i++) {
+      const drop = document.createElement('span');
+      const anchor = anchors[i % anchors.length];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 18 + Math.random() * 44;
+      drop.className = 'jp-drop';
+      drop.style.left = `${anchor[0]}px`;
+      drop.style.top = `${anchor[1]}px`;
+      drop.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+      drop.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+      drop.style.setProperty('--s', `${3 + Math.random() * 5}px`);
+      drop.style.setProperty('--c', colors[i % colors.length]);
+      drop.style.animationDelay = `${Math.random() * 0.16}s`;
+      layer.appendChild(drop);
+    }
+    setTimeout(() => { layer.innerHTML = ''; }, 1100);
+  }
+})();
+</script>

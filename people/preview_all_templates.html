@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>People Animation Preview</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f6f7fb;
+      color: #111827;
+      font-family: Arial, "PingFang SC", sans-serif;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 22px 36px;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: 22px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 18px;
+    }
+
+    .item {
+      border: 1px solid #d8dee9;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 8px 22px rgba(15,23,42,0.08);
+      overflow: hidden;
+    }
+
+    .label {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 13px;
+      font-weight: 700;
+      color: #374151;
+    }
+
+    iframe {
+      display: block;
+      width: 100%;
+      height: 300px;
+      border: 0;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>People Animation Preview</h1>
+    <section class="grid">
+      <article class="item">
+        <div class="label">chang_top_scorer.html</div>
+        <iframe src="./chang_top_scorer.html"></iframe>
+      </article>
+      <article class="item">
+        <div class="label">jixuan_painting.html</div>
+        <iframe src="./jixuan_painting.html"></iframe>
+      </article>
+      <article class="item">
+        <div class="label">keyi_esports_genius.html</div>
+        <iframe src="./keyi_esports_genius.html"></iframe>
+      </article>
+      <article class="item">
+        <div class="label">xinwei_alien_automan.html</div>
+        <iframe src="./xinwei_alien_automan.html"></iframe>
+      </article>
+      <article class="item">
+        <div class="label">yichen_card_master.html</div>
+        <iframe src="./yichen_card_master.html"></iframe>
+      </article>
+      <article class="item">
+        <div class="label">yufei_cats.html</div>
+        <iframe src="./yufei_cats.html"></iframe>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
