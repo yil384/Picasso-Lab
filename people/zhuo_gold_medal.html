@@ -121,6 +121,71 @@
       </div><!-- .ys-medal-inner -->
     </div><!-- .ys-medal -->
 
+    <svg class="ys-chess-play" viewBox="0 0 178 112" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="zgBoardEdge" x1="31" y1="51" x2="145" y2="104" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#7a4a22"/>
+          <stop offset="1" stop-color="#2f1b0e"/>
+        </linearGradient>
+        <linearGradient id="zgHand" x1="103" y1="50" x2="173" y2="87" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#ffd9b5"/>
+          <stop offset="0.55" stop-color="#eeb483"/>
+          <stop offset="1" stop-color="#c7774d"/>
+        </linearGradient>
+        <filter id="zgChessShadow" x="-35%" y="-35%" width="180%" height="190%">
+          <feDropShadow dx="0" dy="4" stdDeviation="2.2" flood-color="#101827" flood-opacity="0.34"/>
+        </filter>
+      </defs>
+      <g class="ys-chess-board" filter="url(#zgChessShadow)">
+        <path d="M24 47 L119 34 L153 84 L50 100 Z" fill="url(#zgBoardEdge)"/>
+        <path d="M31 43 L118 31 L146 76 L52 90 Z" fill="#f3d9a5" stroke="#2e1a0b" stroke-width="2"/>
+        <g class="ys-board-squares">
+          <path d="M31 43 L53 40 L60 51 L38 54 Z" fill="#f8ecd0"/>
+          <path d="M53 40 L75 37 L82 48 L60 51 Z" fill="#5a3218"/>
+          <path d="M75 37 L97 34 L104 45 L82 48 Z" fill="#f8ecd0"/>
+          <path d="M97 34 L118 31 L126 42 L104 45 Z" fill="#5a3218"/>
+          <path d="M38 54 L60 51 L68 63 L45 67 Z" fill="#5a3218"/>
+          <path d="M60 51 L82 48 L90 60 L68 63 Z" fill="#f8ecd0"/>
+          <path d="M82 48 L104 45 L112 57 L90 60 Z" fill="#5a3218"/>
+          <path d="M104 45 L126 42 L134 54 L112 57 Z" fill="#f8ecd0"/>
+          <path d="M45 67 L68 63 L76 76 L53 80 Z" fill="#f8ecd0"/>
+          <path d="M68 63 L90 60 L99 73 L76 76 Z" fill="#5a3218"/>
+          <path d="M90 60 L112 57 L121 70 L99 73 Z" fill="#f8ecd0"/>
+          <path d="M112 57 L134 54 L143 67 L121 70 Z" fill="#5a3218"/>
+          <path d="M53 80 L76 76 L85 88 L61 92 Z" fill="#5a3218"/>
+          <path d="M76 76 L99 73 L108 85 L85 88 Z" fill="#f8ecd0"/>
+          <path d="M99 73 L121 70 L131 82 L108 85 Z" fill="#5a3218"/>
+          <path d="M121 70 L143 67 L152 79 L131 82 Z" fill="#f8ecd0"/>
+        </g>
+      </g>
+      <g class="ys-chess-pieces">
+        <g class="piece dark">
+          <ellipse cx="63" cy="71" rx="10" ry="4" fill="#18181b"/>
+          <path d="M57 69 L61 51 L68 51 L72 69 Z" fill="#24242a"/>
+          <circle cx="64.5" cy="47" r="7" fill="#24242a"/>
+          <path d="M61 40 L67 40 M64 36 L64 44" stroke="#f6e7c4" stroke-width="2" stroke-linecap="round"/>
+        </g>
+        <g class="piece light">
+          <ellipse cx="113" cy="60" rx="9" ry="3.7" fill="#c8b68b"/>
+          <path d="M108 58 L111 43 L118 43 L121 58 Z" fill="#fff5d8" stroke="#6b5a38" stroke-width="1"/>
+          <path d="M111 41 C114 34 122 35 123 42 C118 45 114 45 111 41Z" fill="#fff5d8" stroke="#6b5a38" stroke-width="1"/>
+        </g>
+      </g>
+      <g class="ys-chess-hand">
+        <path d="M172 74 C153 64 138 58 124 59 C115 60 112 69 119 74 C132 83 151 85 173 88 Z"
+              fill="url(#zgHand)" stroke="#8b4e2d" stroke-width="2.4"/>
+        <path d="M121 62 C110 55 101 51 95 51 C91 52 90 57 94 60 C101 65 112 68 122 71 Z"
+              fill="url(#zgHand)" stroke="#8b4e2d" stroke-width="2.1"/>
+        <path d="M139 61 C129 53 119 49 113 49 C109 50 108 55 112 58 C120 63 130 67 140 71"
+              fill="none" stroke="#9b5d38" stroke-width="2" stroke-linecap="round"/>
+        <g class="ys-moving-piece">
+          <ellipse cx="102" cy="62" rx="8" ry="3.2" fill="#c8b68b"/>
+          <path d="M98 60 L100 45 L107 45 L110 60 Z" fill="#fff8df" stroke="#5b4a2e" stroke-width="1.2"/>
+          <path d="M100 44 C104 36 114 37 114 45 C110 47 106 47 100 44Z" fill="#fff8df" stroke="#5b4a2e" stroke-width="1.2"/>
+        </g>
+      </g>
+    </svg>
+
     <div class="ys-sparks" aria-hidden="true"></div>
 
   </div><!-- .ys-stage -->
@@ -205,6 +270,49 @@
 }
 .ys-medal-inner.swing {
   animation: medal-swing 0.70s cubic-bezier(0.36,0.07,0.19,0.97) both;
+}
+
+.ys-chess-play {
+  position: absolute;
+  left: -24px;
+  top: 60px;
+  z-index: 30;
+  width: 142px;
+  height: 89px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-12px, 20px) scale(0.72) rotate(-9deg);
+  transform-origin: 75% 68%;
+  transition:
+    opacity 0.18s ease,
+    transform 0.58s cubic-bezier(0.18,1.35,0.28,1);
+}
+
+.ys-wrap.medal-on .ys-chess-play {
+  opacity: 1 !important;
+  transform: none;
+}
+
+.ys-moving-piece {
+  transform-origin: 102px 62px;
+}
+
+.ys-wrap.medal-on .ys-moving-piece {
+  animation: chess-piece-place 1.18s 0.62s ease-in-out infinite alternate;
+}
+
+.ys-wrap.medal-on .ys-chess-hand {
+  animation: chess-hand-move 1.18s 0.62s ease-in-out infinite alternate;
+}
+
+@keyframes chess-piece-place {
+  from { transform: translate(8px, -7px) scale(1.03); }
+  to { transform: translate(-2px, 1px) scale(1); }
+}
+
+@keyframes chess-hand-move {
+  from { transform: translate(9px, -4px) rotate(2deg); }
+  to { transform: translate(0, 1px) rotate(-1deg); }
 }
 
 /* ── Sparkles ── */

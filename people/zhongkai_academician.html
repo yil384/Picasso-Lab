@@ -17,6 +17,12 @@
     <img src="https://yil384.github.io/Picasso-Lab/people/static/zhongkai.png"
          class="avatar" alt="avatar"/>
 
+    <div class="ys-authority-layer" aria-hidden="true">
+      <div class="ys-authority-sign">
+        <span>&#26435;</span><span>&#23041;</span>
+      </div>
+    </div>
+
     <!-- 院士帽（学术四方帽 mortarboard）-->
     <div class="ys-hat">
       <div class="ys-hat-inner">
@@ -105,7 +111,7 @@
     </div><!-- .ys-hat -->
 
     <!-- 院士 label: separate element so it's never stretched/distorted -->
-    <div class="ys-label" aria-hidden="true">院士</div>
+    <div class="ys-label" aria-hidden="true">&#38498;&#22763;</div>
 
     <div class="ys-sparks" aria-hidden="true"></div>
 
@@ -143,6 +149,90 @@
 .ys-wrap:hover .avatar { transform: scale(1.07); filter: brightness(1.08); }
 .ys-wrap.hat-on .avatar {
   box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+.ys-authority-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.ys-authority-layer::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 83px;
+  width: 76px;
+  height: 20px;
+  border-radius: 48% 52% 42% 58%;
+  background:
+    radial-gradient(ellipse at 35% 15%, rgba(255,231,172,0.26), transparent 54%),
+    linear-gradient(180deg, rgba(88,48,25,0.78), rgba(46,31,25,0.62));
+  transform: rotate(-4deg) scaleX(0.72);
+  opacity: 0;
+  filter: blur(0.2px);
+}
+
+.ys-authority-sign {
+  position: absolute;
+  left: 13px;
+  top: 48px;
+  display: flex;
+  gap: 2px;
+  color: #f9d466;
+  font-family: 'STKaiti','KaiTi','FangSong','SimSun',serif;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  -webkit-text-stroke: 1.3px #5b2b0d;
+  text-shadow:
+    0 2px 0 #7c3d0f,
+    0 5px 7px rgba(0,0,0,0.55),
+    0 0 9px rgba(255,210,86,0.46);
+  transform: translateY(22px) scale(0.58) rotate(-6deg);
+  transform-origin: 50% 100%;
+  opacity: 0;
+}
+
+.ys-authority-sign span {
+  display: inline-block;
+  transform: skewY(-3deg);
+}
+
+.ys-authority-sign span:last-child {
+  transform: translateY(3px) skewY(-3deg);
+}
+
+.ys-wrap.hat-on .ys-authority-layer {
+  opacity: 1;
+}
+
+.ys-wrap.hat-on .ys-authority-layer::after {
+  animation: authority-base-in 0.54s 0.08s ease-out forwards;
+}
+
+.ys-wrap.hat-on .ys-authority-sign {
+  animation: authority-rise 0.66s 0.14s cubic-bezier(0.18,1.35,0.28,1) forwards,
+             authority-stand 1.9s 0.88s ease-in-out infinite alternate;
+}
+
+@keyframes authority-rise {
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(-6deg); }
+}
+
+@keyframes authority-base-in {
+  to { opacity: 1; transform: rotate(-4deg) scaleX(1); }
+}
+
+@keyframes authority-stand {
+  from { transform: translateY(0) scale(1) rotate(-6deg); }
+  to { transform: translateY(-2px) scale(1.02) rotate(-4deg); }
 }
 
 /* ── Hat outer: handles position + rotation + reveal ── */

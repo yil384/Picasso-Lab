@@ -105,7 +105,59 @@
     </div><!-- .ys-hat -->
 
     <!-- 院士 label: separate element so it's never stretched/distorted -->
-    <div class="ys-label" aria-hidden="true">院士</div>
+    <div class="ys-label" aria-hidden="true">&#38498;&#22763;</div>
+
+    <svg class="ys-paper-bundle" viewBox="0 0 210 116" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="zfPaper" x1="38" y1="4" x2="166" y2="96" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#ffffff"/>
+          <stop offset="0.62" stop-color="#eef5ff"/>
+          <stop offset="1" stop-color="#cdd9ef"/>
+        </linearGradient>
+        <linearGradient id="zfHand" x1="13" y1="72" x2="196" y2="98" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#ffd9b2"/>
+          <stop offset="0.55" stop-color="#f3b783"/>
+          <stop offset="1" stop-color="#d48a5e"/>
+        </linearGradient>
+        <filter id="zfPaperShadow" x="-30%" y="-35%" width="160%" height="190%">
+          <feDropShadow dx="0" dy="5" stdDeviation="3" flood-color="#13203a" flood-opacity="0.28"/>
+        </filter>
+      </defs>
+      <g class="ys-paper-fan" filter="url(#zfPaperShadow)">
+        <rect x="46" y="15" width="74" height="82" rx="5" fill="url(#zfPaper)" stroke="#7b8aa6" stroke-width="1.5"
+              transform="rotate(-20 83 56)"/>
+        <rect x="63" y="7" width="78" height="87" rx="5" fill="url(#zfPaper)" stroke="#7b8aa6" stroke-width="1.5"
+              transform="rotate(-10 102 50)"/>
+        <rect x="78" y="4" width="82" height="91" rx="5" fill="url(#zfPaper)" stroke="#7b8aa6" stroke-width="1.5"
+              transform="rotate(2 119 50)"/>
+        <rect x="96" y="12" width="77" height="84" rx="5" fill="url(#zfPaper)" stroke="#7b8aa6" stroke-width="1.5"
+              transform="rotate(13 135 54)"/>
+        <rect x="28" y="35" width="68" height="70" rx="5" fill="#f8fbff" stroke="#8ba0bd" stroke-width="1.4"
+              transform="rotate(-29 62 70)"/>
+        <rect x="121" y="33" width="67" height="72" rx="5" fill="#f8fbff" stroke="#8ba0bd" stroke-width="1.4"
+              transform="rotate(25 154 69)"/>
+        <g stroke="#8fa2bd" stroke-linecap="round" stroke-width="2" opacity="0.72">
+          <path d="M71 42 L117 32"/>
+          <path d="M73 54 L122 44"/>
+          <path d="M83 68 L130 66"/>
+          <path d="M103 31 L146 36"/>
+          <path d="M104 45 L154 51"/>
+          <path d="M101 61 L151 69"/>
+          <path d="M47 68 L79 54"/>
+          <path d="M132 66 L166 79"/>
+        </g>
+      </g>
+      <g class="ys-paper-hands">
+        <path d="M4 87 C25 72 44 68 63 74 C71 77 72 90 64 96 C47 107 28 105 6 98 Z"
+              fill="url(#zfHand)" stroke="#8f5130" stroke-width="2.4"/>
+        <path d="M25 75 C35 68 49 69 58 76 M24 87 C35 80 48 80 60 87"
+              fill="none" stroke="#aa6740" stroke-width="2" stroke-linecap="round"/>
+        <path d="M206 86 C185 71 166 68 147 74 C139 77 138 90 146 96 C163 107 182 105 204 98 Z"
+              fill="url(#zfHand)" stroke="#8f5130" stroke-width="2.4"/>
+        <path d="M185 75 C175 68 161 69 152 76 M186 87 C175 80 162 80 150 87"
+              fill="none" stroke="#aa6740" stroke-width="2" stroke-linecap="round"/>
+      </g>
+    </svg>
 
     <div class="ys-sparks" aria-hidden="true"></div>
 
@@ -222,6 +274,47 @@
   transition: opacity 0.30s ease 0.50s;
 }
 .ys-wrap.hat-on .ys-label { opacity: 1; }
+
+.ys-paper-bundle {
+  position: absolute;
+  left: -6px;
+  top: 96px;
+  z-index: 30;
+  width: 212px;
+  height: 118px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(24px) scale(0.72) rotate(-3deg);
+  transform-origin: 50% 82%;
+  filter: drop-shadow(0 5px 7px rgba(0,0,0,0.22));
+  transition:
+    opacity 0.18s ease,
+    transform 0.58s cubic-bezier(0.18,1.35,0.28,1);
+}
+
+.ys-wrap.hat-on .ys-paper-bundle {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) rotate(-3deg);
+  animation: paper-bundle-float 1.7s 0.78s ease-in-out infinite alternate;
+}
+
+.ys-paper-fan {
+  transform-origin: 50% 76%;
+}
+
+.ys-wrap.hat-on .ys-paper-fan {
+  animation: paper-fan-flutter 1.25s 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes paper-bundle-float {
+  from { transform: translateY(0) scale(1) rotate(-3deg); }
+  to { transform: translateY(-4px) scale(1.015) rotate(1deg); }
+}
+
+@keyframes paper-fan-flutter {
+  from { transform: rotate(-1.2deg); }
+  to { transform: rotate(1.4deg); }
+}
 
 /* ── Sparkles ── */
 .ys-sparks {
