@@ -1,0 +1,457 @@
+<!--
+  xinwei_sf_postcard.html
+  ────────────────────────
+  Theme:  "A postcard from San Francisco."
+  心炜的照片背景是金门大桥, 我们围绕这张"照片"加上一整套
+  邮政元素 — 像把头像贴在一张明信片上寄出:
+
+    · 右上角  : 邮票 (金门大桥剪影, USA POSTAGE $1.50)
+    · 邮票旁边: 圆形邮戳 (SAN FRANCISCO · CA, 日期, 波浪销章)
+    · 左上角  : 手写体 "Greetings from SF" 小标签 + 心心
+    · 上半圆  : 三只海鸥 V 形剪影飞掠
+    · 横向    : 一架小纸飞机划过一次
+    · 头像本身: 浅浅一层暖色复古滤镜 + 内描白边 (像照片自带相纸)
+    · 左下角  : 手写体签名 "— Xinwei ♥"
+
+  风格: 简洁 / 复古明信片 / 暖色调红蓝.
+  实现要点:
+    · 所有元素绝对定位于 .xp-wrap (avatar-size 200px), 默认 opacity:0
+    · click 切换 .xp-on 类, 元素依次淡入并各自循环动画
+    · 海鸥在头顶上方天空那块用 clip-path 限制范围
+    · 邮票/邮戳故意伸到头像圆外, 像贴纸贴出边
+-->
+
+<div class="xp-wrap" style="--avatar-size:200px">
+  <div class="xp-stage">
+
+    <!-- ─── 头像 ─── -->
+    <div class="xp-photo">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/xinwei.png"
+           class="avatar xp-avatar" alt="avatar"/>
+
+      <!-- 复古色暖滤镜, 模拟明信片相纸 -->
+      <div class="xp-vintage" aria-hidden="true"></div>
+
+      <!-- 上半圆海鸥层 (用 clip-path 把它限制在天空区域, 不挡脸) -->
+      <div class="xp-sky" aria-hidden="true">
+        <svg class="xp-birds" viewBox="0 0 200 80" focusable="false">
+          <g class="xp-bird b1">
+            <path d="M0 22 Q5 14 10 22 M10 22 Q15 14 20 22"
+                  stroke="#1d2538" stroke-width="1.8" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <g class="xp-bird b2">
+            <path d="M0 22 Q4 16 8 22 M8 22 Q12 16 16 22"
+                  stroke="#1d2538" stroke-width="1.5" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <g class="xp-bird b3">
+            <path d="M0 22 Q3.5 17 7 22 M7 22 Q10.5 17 14 22"
+                  stroke="#1d2538" stroke-width="1.3" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ─── 邮戳 (圆形, 半透明叠在邮票左下) ─── -->
+    <svg class="xp-postmark" viewBox="0 0 80 80" aria-hidden="true" focusable="false">
+      <defs>
+        <path id="xpPmTop" d="M 40 40 m -28 0 a 28 28 0 0 1 56 0" fill="none"/>
+        <path id="xpPmBot" d="M 12 40 a 28 28 0 0 0 56 0" fill="none"/>
+      </defs>
+      <circle cx="40" cy="40" r="30" fill="none"
+              stroke="#1f2a44" stroke-width="1.6" opacity="0.78"/>
+      <circle cx="40" cy="40" r="25" fill="none"
+              stroke="#1f2a44" stroke-width="0.7" opacity="0.62"/>
+      <!-- 销章波浪线 -->
+      <g stroke="#1f2a44" stroke-width="1.3" fill="none"
+         stroke-linecap="round" opacity="0.72">
+        <path d="M14 38 Q22 33 30 38 T46 38 T62 38"/>
+        <path d="M14 44 Q22 39 30 44 T46 44 T62 44"/>
+      </g>
+      <text font-family="Georgia, 'Times New Roman', serif"
+            font-size="6.6" font-weight="700"
+            fill="#1f2a44" letter-spacing="0.8" opacity="0.85">
+        <textPath href="#xpPmTop" startOffset="50%" text-anchor="middle">
+          SAN  FRANCISCO  ·  CA
+        </textPath>
+      </text>
+      <text font-family="Georgia, 'Times New Roman', serif"
+            font-size="5.4" font-weight="600"
+            fill="#1f2a44" letter-spacing="0.6" opacity="0.78">
+        <textPath href="#xpPmBot" startOffset="50%" text-anchor="middle">
+          ★  MAR · 2026  ★
+        </textPath>
+      </text>
+    </svg>
+
+    <!-- ─── 邮票 (右上角伸出) ─── -->
+    <svg class="xp-stamp" viewBox="0 0 60 72" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="xpStampSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"   stop-color="#fff2d8"/>
+          <stop offset="0.55" stop-color="#ffd49a"/>
+          <stop offset="1"   stop-color="#f49f6a"/>
+        </linearGradient>
+        <linearGradient id="xpStampWater" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7faecd"/>
+          <stop offset="1" stop-color="#345d80"/>
+        </linearGradient>
+      </defs>
+
+      <!-- 锯齿边: 用 stroke-dasharray 做出邮票穿孔感 -->
+      <rect x="1.2" y="1.2" width="57.6" height="69.6" rx="1.2"
+            fill="#fffaf0"
+            stroke="#9a9a9a" stroke-width="2.4"
+            stroke-dasharray="0.01 2.2" stroke-linecap="round"/>
+      <!-- 内框 -->
+      <rect x="5" y="5" width="50" height="62" rx="0.5"
+            fill="#fffaf0" stroke="#b91c1c" stroke-width="0.9"/>
+
+      <!-- 邮票画面: 夕阳天 + 海 + 金门大桥 -->
+      <g clip-path="inset(5px 5px 18px 5px)"></g>
+      <rect x="6" y="6" width="48" height="42" fill="url(#xpStampSky)"/>
+      <rect x="6" y="42" width="48" height="6"  fill="url(#xpStampWater)"/>
+      <path d="M6 46 Q12 44 18 46 T30 46 T42 46 T54 46 L54 48 L6 48 Z"
+            fill="#5b8fb9" opacity="0.6"/>
+
+      <!-- 远山剪影 -->
+      <path d="M6 38 L14 32 L18 36 L24 30 L30 35 L36 28 L42 34 L48 30 L54 36 L54 42 L6 42 Z"
+            fill="#7a3a18" opacity="0.42"/>
+
+      <!-- 桥塔 (国际橙) -->
+      <g fill="#c5371b">
+        <!-- 左塔 -->
+        <rect x="14.5" y="13" width="2.6" height="29"/>
+        <rect x="13.6" y="13" width="4.4" height="1.4"/>   <!-- 顶帽 -->
+        <rect x="13.4" y="17" width="4.8" height="1"/>     <!-- 横梁 1 -->
+        <rect x="13.4" y="25" width="4.8" height="1"/>     <!-- 横梁 2 -->
+        <!-- 右塔 -->
+        <rect x="42.9" y="13" width="2.6" height="29"/>
+        <rect x="42"   y="13" width="4.4" height="1.4"/>
+        <rect x="41.8" y="17" width="4.8" height="1"/>
+        <rect x="41.8" y="25" width="4.8" height="1"/>
+      </g>
+      <!-- 主缆 (双弧) -->
+      <path d="M15.8 14.5 Q30 30 44.2 14.5"
+            fill="none" stroke="#c5371b" stroke-width="0.9" stroke-linecap="round"/>
+      <path d="M15.8 14.5 Q30 32.5 44.2 14.5"
+            fill="none" stroke="#c5371b" stroke-width="0.55" opacity="0.6"/>
+      <!-- 桥面 -->
+      <rect x="9" y="40" width="42" height="1.1" fill="#c5371b"/>
+      <!-- 吊索 -->
+      <g stroke="#c5371b" stroke-width="0.32" opacity="0.85">
+        <line x1="20" y1="22" x2="20" y2="40"/>
+        <line x1="24" y1="26" x2="24" y2="40"/>
+        <line x1="28" y1="28.5" x2="28" y2="40"/>
+        <line x1="32" y1="28.5" x2="32" y2="40"/>
+        <line x1="36" y1="26"   x2="36" y2="40"/>
+        <line x1="40" y1="22"   x2="40" y2="40"/>
+      </g>
+
+      <!-- 邮票底部文字 -->
+      <text x="30" y="55" text-anchor="middle"
+            font-family="Georgia, 'Times New Roman', serif"
+            font-size="4.8" font-weight="700"
+            fill="#b91c1c" letter-spacing="0.6">USA · POSTAGE</text>
+      <text x="30" y="62" text-anchor="middle"
+            font-family="Georgia, 'Times New Roman', serif"
+            font-size="6.4" font-weight="900"
+            fill="#1f2a44" letter-spacing="1">$1.50</text>
+    </svg>
+
+    <!-- ─── 左上角 手写问候 ─── -->
+    <div class="xp-greeting" aria-hidden="true">
+      <span>Greetings&nbsp;from</span>
+      <strong>San Francisco</strong>
+      <em>&#9829;</em>
+    </div>
+
+    <!-- ─── 左下角 签名 ─── -->
+    <div class="xp-signature" aria-hidden="true">— Xinwei</div>
+
+    <!-- ─── 一次性掠过的纸飞机 ─── -->
+    <svg class="xp-plane" viewBox="0 0 30 18" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="xpPlaneBody" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0"   stop-color="#ffffff"/>
+          <stop offset="1"   stop-color="#cbd5e1"/>
+        </linearGradient>
+      </defs>
+      <path d="M0 6 L28 0 L18 9 L28 0 L22 17 L18 9 Z"
+            fill="url(#xpPlaneBody)" stroke="#1f2a44" stroke-width="0.7"
+            stroke-linejoin="round"/>
+    </svg>
+
+  </div><!-- /.xp-stage -->
+</div><!-- /.xp-wrap -->
+
+
+<style>
+.xp-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+.xp-wrap *,
+.xp-wrap *::before,
+.xp-wrap *::after { box-sizing: border-box; }
+
+.xp-stage {
+  position: relative;
+  width:  var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  overflow: visible;        /* 邮票要伸出圆外 */
+}
+
+/* ── 头像本体 (照片) ── */
+.xp-photo {
+  position: relative;
+  z-index: 3;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  transform: scale(var(--xp-scale, 1));
+  transform-origin: 50% 50%;
+  transition: transform 0.4s cubic-bezier(0.32,1.3,0.4,1),
+              box-shadow 0.4s ease;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.18),
+    inset 0 0 0 3px #ffffff,      /* 白色内描边 — 像照片相纸 */
+    inset 0 0 0 4px rgba(0,0,0,0.12);
+}
+.xp-avatar {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: filter 0.4s ease;
+}
+
+.xp-wrap:hover               { --xp-scale: 1.06; }
+.xp-wrap.xp-on               { --xp-scale: 1.04; }
+.xp-wrap.xp-on:hover         { --xp-scale: 1.09; }
+
+.xp-wrap:hover .xp-avatar,
+.xp-wrap.xp-on .xp-avatar    { filter: contrast(1.04) saturate(1.05); }
+
+/* ── 复古暖色滤镜 (淡淡覆盖在照片上) ── */
+.xp-vintage {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 50% 55%, rgba(0,0,0,0) 55%, rgba(80,40,20,0.32) 100%),
+    linear-gradient(180deg, rgba(255,210,150,0.18), rgba(255,160,90,0.10) 60%, rgba(60,30,12,0.16));
+  mix-blend-mode: multiply;
+  transition: opacity 0.45s ease;
+}
+.xp-wrap.xp-on .xp-vintage { opacity: 1; }
+
+/* ── 天空海鸥层 (只在头顶以上) ── */
+.xp-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  /* 顶部带状区域, 留出头部空白 */
+  clip-path: polygon(
+    0   0,
+    100% 0,
+    100% 38%,
+    82%  36%,
+    66%  28%,
+    52%  20%,
+    36%  28%,
+    20%  36%,
+    0    38%
+  );
+}
+.xp-birds {
+  position: absolute;
+  left:   -30%;
+  top:    8%;
+  width:  120%;
+  height: 32%;
+  opacity: 0;
+  pointer-events: none;
+}
+.xp-wrap.xp-on .xp-birds {
+  animation: xp-flock-cross 12s 0.6s linear infinite;
+}
+.xp-bird {
+  transform-origin: center;
+  animation: xp-flap 0.46s ease-in-out infinite alternate;
+}
+.xp-bird.b1 { transform: translate(0,    0) scale(1);   }
+.xp-bird.b2 { transform: translate(28px, 10px) scale(0.82);
+              animation-delay: 0.12s; }
+.xp-bird.b3 { transform: translate(54px, 4px)  scale(0.7);
+              animation-delay: 0.24s; }
+
+@keyframes xp-flap {
+  from { transform-box: fill-box; }   /* fallback */
+}
+/* 用单独的 path scaleY 实现 flap 太脏 → 改成整组上下颠 */
+@keyframes xp-flock-cross {
+  0%   { opacity: 0; transform: translateX(0); }
+  6%   { opacity: 0.95; }
+  88%  { opacity: 0.95; transform: translateX(60%); }
+  100% { opacity: 0; transform: translateX(72%); }
+}
+
+/* ── 邮票 (右上, 伸出圆外, 像贴纸贴出边) ── */
+.xp-stamp {
+  position: absolute;
+  right: -14px;
+  top:   -12px;
+  width:  58px;
+  height: 70px;
+  z-index: 12;
+  opacity: 0;
+  transform: rotate(8deg) translate(10px, -10px) scale(0.6);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(2px 4px 6px rgba(20,28,48,0.28));
+  transition:
+    opacity 0.36s ease 0.05s,
+    transform 0.6s cubic-bezier(0.2,1.4,0.32,1) 0.05s;
+}
+.xp-wrap.xp-on .xp-stamp {
+  opacity: 1;
+  transform: rotate(8deg) translate(0, 0) scale(1);
+}
+
+/* ── 邮戳 (圆形, 左下伸出邮票边缘叠在头像上) ── */
+.xp-postmark {
+  position: absolute;
+  right: 22px;
+  top:   24px;
+  width:  72px;
+  height: 72px;
+  z-index: 11;       /* 在邮票下面, 但在头像上面 */
+  opacity: 0;
+  transform: scale(0.4) rotate(-18deg);
+  transform-origin: 50% 50%;
+  transition:
+    opacity 0.3s ease 0.42s,
+    transform 0.4s cubic-bezier(0.18,1.5,0.34,1) 0.42s;
+}
+.xp-wrap.xp-on .xp-postmark {
+  opacity: 0.85;
+  transform: scale(1) rotate(-14deg);
+}
+
+/* ── 左上 手写问候 ── */
+.xp-greeting {
+  position: absolute;
+  left: -10px;
+  top:  14px;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+  font-family: 'Snell Roundhand','Apple Chancery','Brush Script MT',
+               'Segoe Script', cursive;
+  color: #1f2a44;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+  opacity: 0;
+  transform: translate(-12px, -4px) rotate(-6deg);
+  transform-origin: 0% 100%;
+  transition:
+    opacity 0.32s ease 0.18s,
+    transform 0.5s cubic-bezier(0.2,1.4,0.32,1) 0.18s;
+}
+.xp-greeting span    { font-size: 12px; font-weight: 600; }
+.xp-greeting strong  { font-size: 16px; font-weight: 800; letter-spacing: 0.5px; }
+.xp-greeting em      { color: #d11d3b; font-size: 13px; font-style: normal; padding-left: 4px; }
+.xp-wrap.xp-on .xp-greeting {
+  opacity: 1;
+  transform: translate(0, 0) rotate(-6deg);
+}
+
+/* ── 左下 签名 ── */
+.xp-signature {
+  position: absolute;
+  left: 18px;
+  bottom: 4px;
+  z-index: 12;
+  font-family: 'Snell Roundhand','Apple Chancery','Brush Script MT',
+               'Segoe Script', cursive;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2a44;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.55);
+  opacity: 0;
+  transform: translate(-6px, 6px) rotate(-4deg);
+  transition:
+    opacity 0.32s ease 0.32s,
+    transform 0.5s cubic-bezier(0.2,1.4,0.32,1) 0.32s;
+}
+.xp-wrap.xp-on .xp-signature {
+  opacity: 1;
+  transform: translate(0, 0) rotate(-4deg);
+}
+
+/* ── 一次性纸飞机 (只在激活那一刻飞过去) ── */
+.xp-plane {
+  position: absolute;
+  left:  -24px;
+  top:   54%;
+  width: 30px;
+  height: 18px;
+  z-index: 13;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(1px 2px 2px rgba(20,28,48,0.32));
+}
+.xp-wrap.xp-on .xp-plane {
+  animation: xp-plane-fly 2.2s 0.45s cubic-bezier(0.42,0,0.6,1) 1;
+}
+@keyframes xp-plane-fly {
+  0%   { opacity: 0;    transform: translate(0,    0)  rotate(-12deg) scale(0.7); }
+  10%  { opacity: 1;    transform: translate(30px,-12px) rotate(-6deg)  scale(0.9); }
+  55%  { opacity: 1;    transform: translate(140px,-22px) rotate(-2deg) scale(1);    }
+  90%  { opacity: 0.55; transform: translate(220px,-8px)  rotate(6deg)  scale(0.95); }
+  100% { opacity: 0;    transform: translate(260px, 8px)  rotate(12deg) scale(0.85); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-wrap.xp-on .xp-birds,
+  .xp-wrap.xp-on .xp-bird,
+  .xp-wrap.xp-on .xp-plane {
+    animation: none;
+  }
+  .xp-wrap.xp-on .xp-plane { opacity: 0; }
+}
+</style>
+
+
+<script>
+(function () {
+  document.querySelectorAll('.xp-wrap').forEach((wrap) => {
+    if (wrap.dataset.xpReady === '1') return;
+    wrap.dataset.xpReady = '1';
+    wrap.addEventListener('click', () => {
+      // 切换激活态. 关闭时强制重置纸飞机, 这样下一次开启又能再次飞过去.
+      const on = wrap.classList.toggle('xp-on');
+      if (!on) {
+        const plane = wrap.querySelector('.xp-plane');
+        if (plane) {
+          plane.style.animation = 'none';
+          // 强制 reflow, 让下次再加 .xp-on 时 animation 能重新触发
+          void plane.offsetWidth;
+          plane.style.animation = '';
+        }
+      }
+    });
+  });
+})();
+</script>

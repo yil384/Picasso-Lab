@@ -11,7 +11,20 @@
   └──────────────────────────────────────────────────────────┘
 -->
 
-<div class="ys-wrap" style="--hat-y:26%; --hat-size:28%; --hat-x:67%; --hat-rotate:-6deg">
+<!--
+  ⚠ 如果两张 A4 论文位置还是没对上手, 直接调下面四个 CSS 变量
+  (单位是 200×200 头像里的像素). 不需要碰其它代码.
+
+    --paper-l-x : 左手 V 指根 x 坐标   (默认 74,  往中间 +, 往外 -)
+    --paper-l-y : 左手 V 指根 y 坐标   (默认 124, 往下 +, 往上 -)
+    --paper-r-x : 右手 V 指根 x 坐标   (默认 150)
+    --paper-r-y : 右手 V 指根 y 坐标   (默认 118)
+-->
+<div class="ys-wrap" style="
+  --hat-y: 26%; --hat-size: 28%; --hat-x: 67%; --hat-rotate: -6deg;
+  --paper-l-x: 86px; --paper-l-y: 119px;
+  --paper-r-x: 159px; --paper-r-y: 138px;
+">
   <div class="ys-stage">
 
     <img src="https://yil384.github.io/Picasso-Lab/people/static/zaifeng.png"
@@ -107,57 +120,119 @@
     <!-- 院士 label: separate element so it's never stretched/distorted -->
     <div class="ys-label" aria-hidden="true">&#38498;&#22763;</div>
 
-    <svg class="ys-paper-bundle" viewBox="0 0 210 116" aria-hidden="true" focusable="false">
+    <!--
+      再丰双手 ✌️. 用网格量出来的真实位置 (200×200 stage):
+        · 左手 V (viewer's left)  ≈ (74, 122)   [比之前往中间 32px]
+        · 右手 V (viewer's right) ≈ (152, 116)
+      每只手"夹"一张明显独立的 A4 论文 (1:1.41 比例),
+      会议名 (ICML / NeurIPS) 用大字号确保看得清.
+      左纸略偏暖色 (preprint 感), 右纸略偏冷色 (会议感) — 视觉上不会糊在一起.
+    -->
+
+    <!-- ▣ 左手 A4 论文 (锚点 = 左 V 指根 (74, 122), 大字号 ICML 标) -->
+    <svg class="ys-stack ys-stack-l" viewBox="0 0 36 50" aria-hidden="true" focusable="false">
       <defs>
-        <linearGradient id="zfPaper" x1="38" y1="4" x2="166" y2="96" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stop-color="#ffffff"/>
-          <stop offset="0.62" stop-color="#eef5ff"/>
-          <stop offset="1" stop-color="#cdd9ef"/>
+        <linearGradient id="zfA4L" x1="0" y1="0" x2="0.8" y2="1">
+          <stop offset="0"    stop-color="#ffffff"/>
+          <stop offset="0.55" stop-color="#fdf9ed"/>
+          <stop offset="1"    stop-color="#e8dfba"/>
         </linearGradient>
-        <linearGradient id="zfHand" x1="13" y1="72" x2="196" y2="98" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stop-color="#ffd9b2"/>
-          <stop offset="0.55" stop-color="#f3b783"/>
-          <stop offset="1" stop-color="#d48a5e"/>
-        </linearGradient>
-        <filter id="zfPaperShadow" x="-30%" y="-35%" width="160%" height="190%">
-          <feDropShadow dx="0" dy="5" stdDeviation="3" flood-color="#13203a" flood-opacity="0.28"/>
+        <filter id="zfShadowL" x="-25%" y="-25%" width="150%" height="160%">
+          <feDropShadow dx="-1" dy="2.5" stdDeviation="1.6" flood-color="#13203a" flood-opacity="0.46"/>
         </filter>
       </defs>
-      <g class="ys-paper-fan" filter="url(#zfPaperShadow)">
-        <rect x="46" y="15" width="74" height="82" rx="5" fill="url(#zfPaper)" stroke="#7b8aa6" stroke-width="1.5"
-              transform="rotate(-20 83 56)"/>
-        <rect x="63" y="7" width="78" height="87" rx="5" fill="url(#zfPaper)" stroke="#7b8aa6" stroke-width="1.5"
-              transform="rotate(-10 102 50)"/>
-        <rect x="78" y="4" width="82" height="91" rx="5" fill="url(#zfPaper)" stroke="#7b8aa6" stroke-width="1.5"
-              transform="rotate(2 119 50)"/>
-        <rect x="96" y="12" width="77" height="84" rx="5" fill="url(#zfPaper)" stroke="#7b8aa6" stroke-width="1.5"
-              transform="rotate(13 135 54)"/>
-        <rect x="28" y="35" width="68" height="70" rx="5" fill="#f8fbff" stroke="#8ba0bd" stroke-width="1.4"
-              transform="rotate(-29 62 70)"/>
-        <rect x="121" y="33" width="67" height="72" rx="5" fill="#f8fbff" stroke="#8ba0bd" stroke-width="1.4"
-              transform="rotate(25 154 69)"/>
-        <g stroke="#8fa2bd" stroke-linecap="round" stroke-width="2" opacity="0.72">
-          <path d="M71 42 L117 32"/>
-          <path d="M73 54 L122 44"/>
-          <path d="M83 68 L130 66"/>
-          <path d="M103 31 L146 36"/>
-          <path d="M104 45 L154 51"/>
-          <path d="M101 61 L151 69"/>
-          <path d="M47 68 L79 54"/>
-          <path d="M132 66 L166 79"/>
+      <g filter="url(#zfShadowL)">
+        <!-- A4 主纸 (竖版): 32×46 ≈ 1:1.44, 近 A4 -->
+        <rect x="2" y="2" width="32" height="46" rx="0.8" fill="url(#zfA4L)"
+              stroke="#5a6a8a" stroke-width="1.2"/>
+
+        <!-- 顶部红色 ICML 大角标 (现在能看清了) -->
+        <g>
+          <rect x="11" y="3" width="20" height="6" rx="1" fill="#b91c1c"/>
+          <text x="21" y="7.6" text-anchor="middle"
+                font-family="'Helvetica Neue', Arial, sans-serif"
+                font-size="4.2" font-weight="900"
+                fill="#ffffff" letter-spacing="0.3">ICML</text>
+        </g>
+
+        <!-- 论文标题 (粗 3 行) -->
+        <g stroke="#1f2a44" stroke-linecap="round">
+          <line x1="4.5" y1="14" x2="28" y2="14" stroke-width="1.8"/>
+          <line x1="4.5" y1="17.5" x2="24" y2="17.5" stroke-width="1.8"/>
+          <line x1="4.5" y1="21" x2="20" y2="21" stroke-width="1.8"/>
+        </g>
+        <!-- 作者行 -->
+        <line x1="4.5" y1="25" x2="26" y2="25" stroke="#7a8aaa" stroke-width="0.65"/>
+        <line x1="4.5" y1="27" x2="22" y2="27" stroke="#7a8aaa" stroke-width="0.65"/>
+        <!-- 摘要 -->
+        <g stroke="#8a9ab6" stroke-linecap="round" stroke-width="0.55">
+          <line x1="4.5" y1="31" x2="31" y2="31"/>
+          <line x1="4.5" y1="33.5" x2="30" y2="33.5"/>
+          <line x1="4.5" y1="36" x2="31" y2="36"/>
+          <line x1="4.5" y1="38.5" x2="28" y2="38.5"/>
+          <line x1="4.5" y1="41" x2="30" y2="41"/>
+          <line x1="4.5" y1="43.5" x2="26" y2="43.5"/>
+          <line x1="4.5" y1="46" x2="29" y2="46"/>
         </g>
       </g>
-      <g class="ys-paper-hands">
-        <path d="M4 87 C25 72 44 68 63 74 C71 77 72 90 64 96 C47 107 28 105 6 98 Z"
-              fill="url(#zfHand)" stroke="#8f5130" stroke-width="2.4"/>
-        <path d="M25 75 C35 68 49 69 58 76 M24 87 C35 80 48 80 60 87"
-              fill="none" stroke="#aa6740" stroke-width="2" stroke-linecap="round"/>
-        <path d="M206 86 C185 71 166 68 147 74 C139 77 138 90 146 96 C163 107 182 105 204 98 Z"
-              fill="url(#zfHand)" stroke="#8f5130" stroke-width="2.4"/>
-        <path d="M185 75 C175 68 161 69 152 76 M186 87 C175 80 162 80 150 87"
-              fill="none" stroke="#aa6740" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+
+    <!-- ▣ 右手 A4 论文 (锚点 = 右 V 指根 (152, 116), 大字号 NeurIPS 标) -->
+    <svg class="ys-stack ys-stack-r" viewBox="0 0 36 50" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="zfA4R" x1="0" y1="0" x2="0.8" y2="1">
+          <stop offset="0"    stop-color="#ffffff"/>
+          <stop offset="0.55" stop-color="#eef4fc"/>
+          <stop offset="1"    stop-color="#cdd9ec"/>
+        </linearGradient>
+        <filter id="zfShadowR" x="-25%" y="-25%" width="150%" height="160%">
+          <feDropShadow dx="1" dy="2.5" stdDeviation="1.6" flood-color="#13203a" flood-opacity="0.46"/>
+        </filter>
+      </defs>
+      <g filter="url(#zfShadowR)">
+        <rect x="2" y="2" width="32" height="46" rx="0.8" fill="url(#zfA4R)"
+              stroke="#5a6a8a" stroke-width="1.2"/>
+
+        <!-- 顶部蓝色 NeurIPS 大角标 -->
+        <g>
+          <rect x="8" y="3" width="26" height="6" rx="1" fill="#0a66c2"/>
+          <text x="21" y="7.6" text-anchor="middle"
+                font-family="'Helvetica Neue', Arial, sans-serif"
+                font-size="4.2" font-weight="900"
+                fill="#ffffff" letter-spacing="0.2">NeurIPS</text>
+        </g>
+
+        <g stroke="#1f2a44" stroke-linecap="round">
+          <line x1="4.5" y1="14" x2="28" y2="14" stroke-width="1.8"/>
+          <line x1="4.5" y1="17.5" x2="26" y2="17.5" stroke-width="1.8"/>
+          <line x1="4.5" y1="21" x2="22" y2="21" stroke-width="1.8"/>
+        </g>
+        <line x1="4.5" y1="25" x2="26" y2="25" stroke="#7a8aaa" stroke-width="0.65"/>
+        <line x1="4.5" y1="27" x2="24" y2="27" stroke="#7a8aaa" stroke-width="0.65"/>
+        <g stroke="#8a9ab6" stroke-linecap="round" stroke-width="0.55">
+          <line x1="4.5" y1="31" x2="31" y2="31"/>
+          <line x1="4.5" y1="33.5" x2="30" y2="33.5"/>
+          <line x1="4.5" y1="36" x2="29" y2="36"/>
+          <line x1="4.5" y1="38.5" x2="30" y2="38.5"/>
+          <line x1="4.5" y1="41" x2="28" y2="41"/>
+          <line x1="4.5" y1="43.5" x2="30" y2="43.5"/>
+          <line x1="4.5" y1="46" x2="26" y2="46"/>
+        </g>
       </g>
     </svg>
+
+    <!-- ▣ 左手那把上方的 +1 浮起 -->
+    <div class="ys-pub-floaters ys-pub-l" aria-hidden="true">
+      <span class="ys-pub-plus pL1">+1</span>
+      <span class="ys-pub-plus pL2">+1</span>
+      <span class="ys-pub-plus pL3">+1</span>
+    </div>
+    <!-- ▣ 右手那把上方的 +1 浮起 -->
+    <div class="ys-pub-floaters ys-pub-r" aria-hidden="true">
+      <span class="ys-pub-plus pR1">+1</span>
+      <span class="ys-pub-plus pR2">+1</span>
+      <span class="ys-pub-plus pR3">+1</span>
+    </div>
 
     <div class="ys-sparks" aria-hidden="true"></div>
 
@@ -275,45 +350,148 @@
 }
 .ys-wrap.hat-on .ys-label { opacity: 1; }
 
-.ys-paper-bundle {
+/*
+ * 两张 A4 论文 — 位置完全由 --paper-l-x / --paper-l-y / --paper-r-x / --paper-r-y 决定.
+ * SVG 36×50, 论文底中点 = SVG (18, 50). 用 calc() 把它平移到指定坐标:
+ *   left = (--paper-l-x) - 18,  top = (--paper-l-y) - 50
+ * 这样手位置不对的时候直接调那 4 个变量就行, 不用碰这里的代码.
+ */
+.ys-stack {
   position: absolute;
-  left: -6px;
-  top: 96px;
+  width:  36px;
+  height: 50px;
   z-index: 30;
-  width: 212px;
-  height: 118px;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(24px) scale(0.72) rotate(-3deg);
-  transform-origin: 50% 82%;
-  filter: drop-shadow(0 5px 7px rgba(0,0,0,0.22));
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.22));
   transition:
-    opacity 0.18s ease,
-    transform 0.58s cubic-bezier(0.18,1.35,0.28,1);
+    opacity 0.22s ease,
+    transform 0.55s cubic-bezier(0.18,1.4,0.32,1);
 }
 
-.ys-wrap.hat-on .ys-paper-bundle {
-  opacity: 1 !important;
-  transform: translateY(0) scale(1) rotate(-3deg);
-  animation: paper-bundle-float 1.7s 0.78s ease-in-out infinite alternate;
+.ys-stack-l {
+  left: calc(var(--paper-l-x, 74px)  - 18px);
+  top:  calc(var(--paper-l-y, 124px) - 50px);
+  transform: translateY(14px) scale(0.55) rotate(-22deg);
+  transform-origin: 18px 50px;
+}
+.ys-stack-r {
+  left: calc(var(--paper-r-x, 150px) - 18px);
+  top:  calc(var(--paper-r-y, 118px) - 50px);
+  transform: translateY(14px) scale(0.55) rotate(22deg);
+  transform-origin: 18px 50px;
 }
 
-.ys-paper-fan {
-  transform-origin: 50% 76%;
+.ys-wrap.hat-on .ys-stack-l {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(-12deg);
+  animation: paper-sway-l 3.2s 0.7s ease-in-out infinite alternate;
+}
+.ys-wrap.hat-on .ys-stack-r {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(12deg);
+  animation: paper-sway-r 3.2s 0.95s ease-in-out infinite alternate;
 }
 
-.ys-wrap.hat-on .ys-paper-fan {
-  animation: paper-fan-flutter 1.25s 0.7s ease-in-out infinite alternate;
+/* 纸张以底端 (被夹住处) 为支点轻轻摇摆 */
+@keyframes paper-sway-l {
+  from { transform: translateY(0)    scale(1)     rotate(-12deg); }
+  to   { transform: translateY(-1px) scale(1.012) rotate(-8deg);  }
+}
+@keyframes paper-sway-r {
+  from { transform: translateY(0)    scale(1)     rotate(12deg); }
+  to   { transform: translateY(-1px) scale(1.012) rotate(8deg);  }
 }
 
-@keyframes paper-bundle-float {
-  from { transform: translateY(0) scale(1) rotate(-3deg); }
-  to { transform: translateY(-4px) scale(1.015) rotate(1deg); }
+/* ── "+1" 浮动: 每只手各一组, 从对应那张 paper 顶部冒上来 ── */
+.ys-pub-floaters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 35;
+  overflow: visible;
+}
+.ys-pub-plus {
+  position: absolute;
+  font-family: 'Inter', -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+  font-weight: 900;
+  font-size: 14px;
+  color: #16a34a;
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 1px 0 #ffffff,
+    0 0 6px rgba(22,163,74,0.55),
+    0 0 12px rgba(132,255,180,0.35);
+  opacity: 0;
+  transform: translateY(0) scale(0.6);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
-@keyframes paper-fan-flutter {
-  from { transform: rotate(-1.2deg); }
-  to { transform: rotate(1.4deg); }
+/*
+ * +1 直接跟着 --paper-l-* / --paper-r-* 变量走, 浮在每张纸的"纸面 + 上方一点"
+ * (从纸张中部冒出来, 飘到纸顶上方 20–58 px).
+ *
+ * 纸张顶端 y = --paper-l-y - 50  (因为论文高 50)
+ * 我们让 +1 起始 y 在 纸张中部 (--paper-l-y - 25 左右), animation 把它往上推 40+ px.
+ */
+
+/* 左纸 +1 — 沿纸面中部散开 */
+.ys-pub-plus.pL1 {
+  left: calc(var(--paper-l-x, 74px) - 8px);
+  top:  calc(var(--paper-l-y, 124px) - 30px);
+}
+.ys-pub-plus.pL2 {
+  left: calc(var(--paper-l-x, 74px) + 6px);
+  top:  calc(var(--paper-l-y, 124px) - 26px);
+  font-size: 16px; color: #d97706;
+}
+.ys-pub-plus.pL3 {
+  left: calc(var(--paper-l-x, 74px) - 18px);
+  top:  calc(var(--paper-l-y, 124px) - 22px);
+  font-size: 12px; color: #ea580c;
+}
+
+/* 右纸 +1 */
+.ys-pub-plus.pR1 {
+  left: calc(var(--paper-r-x, 150px) - 8px);
+  top:  calc(var(--paper-r-y, 118px) - 30px);
+}
+.ys-pub-plus.pR2 {
+  left: calc(var(--paper-r-x, 150px) + 8px);
+  top:  calc(var(--paper-r-y, 118px) - 26px);
+  font-size: 16px; color: #d97706;
+}
+.ys-pub-plus.pR3 {
+  left: calc(var(--paper-r-x, 150px) - 18px);
+  top:  calc(var(--paper-r-y, 118px) - 22px);
+  font-size: 12px; color: #ea580c;
+}
+
+.ys-wrap.hat-on .ys-pub-plus {
+  animation: pub-plus-rise 2.4s 0.9s ease-out infinite;
+}
+/* 左右两组 +1 错开节奏, 让两只手轮流"+1", 不会齐刷刷 */
+.ys-wrap.hat-on .ys-pub-plus.pL2 { animation-delay: 1.6s; }
+.ys-wrap.hat-on .ys-pub-plus.pL3 { animation-delay: 2.4s; }
+.ys-wrap.hat-on .ys-pub-plus.pR1 { animation-delay: 1.2s; }
+.ys-wrap.hat-on .ys-pub-plus.pR2 { animation-delay: 2.0s; }
+.ys-wrap.hat-on .ys-pub-plus.pR3 { animation-delay: 2.8s; }
+
+@keyframes pub-plus-rise {
+  0%   { opacity: 0; transform: translateY(4px)   scale(0.55); }
+  18%  { opacity: 1; transform: translateY(-8px)  scale(1.05); }
+  60%  { opacity: 0.85; transform: translateY(-32px) scale(1); }
+  100% { opacity: 0;  transform: translateY(-58px) scale(0.85); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-wrap.hat-on .ys-stack-l,
+  .ys-wrap.hat-on .ys-stack-r,
+  .ys-wrap.hat-on .ys-pub-plus {
+    animation: none;
+  }
+  .ys-wrap.hat-on .ys-pub-plus { opacity: 0; }
 }
 
 /* ── Sparkles ── */

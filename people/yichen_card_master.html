@@ -4,6 +4,62 @@
       <img src="https://yil384.github.io/Picasso-Lab/people/static/yichen.png"
            class="avatar yc-avatar" alt="avatar"/>
     </div>
+
+    <!--
+      魔术师顶帽 — 精确戴在 yichen 真实的头顶上.
+      网格量出: 头顶大约 (140, 40) on 200×200 stage (人物在画面右侧).
+      帽子 SVG 80×80, 帽檐底中点 = (40, 64), 让它落到 (140, 40):
+        left = 140 - 40 = 100,  top = 40 - 64 = -24
+      帽身向上跨出头像顶部, 像真戴上一样.
+    -->
+    <svg class="yc-hat" viewBox="0 0 80 80" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="ycHatBody" x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0"    stop-color="#262630"/>
+          <stop offset="0.45" stop-color="#0a0a10"/>
+          <stop offset="1"    stop-color="#1a1a22"/>
+        </linearGradient>
+        <radialGradient id="ycHatTop" cx="0.5" cy="0.4" r="0.6">
+          <stop offset="0"   stop-color="#3a3a48"/>
+          <stop offset="1"   stop-color="#000000"/>
+        </radialGradient>
+        <linearGradient id="ycHatBand" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"   stop-color="#f8344a"/>
+          <stop offset="0.6" stop-color="#b91c1c"/>
+          <stop offset="1"   stop-color="#6a0a0a"/>
+        </linearGradient>
+      </defs>
+
+      <!-- 帽檐 (扁宽椭圆 + 厚度) -->
+      <ellipse cx="40" cy="66" rx="38" ry="6" fill="#000000"/>
+      <ellipse cx="40" cy="64" rx="38" ry="5.4" fill="url(#ycHatBody)"
+               stroke="#000" stroke-width="0.6"/>
+      <!-- 帽身 (轻微外凸的圆柱) -->
+      <path d="M22 26 C22 24 58 24 58 26 L58 60 C58 64 22 64 22 60 Z"
+            fill="url(#ycHatBody)" stroke="#000" stroke-width="0.6"/>
+      <!-- 帽顶 -->
+      <ellipse cx="40" cy="26" rx="18" ry="4" fill="url(#ycHatTop)"
+               stroke="#000" stroke-width="0.6"/>
+      <!-- 帽顶高光 -->
+      <ellipse cx="35" cy="25" rx="6" ry="1.2" fill="rgba(255,255,255,0.18)"/>
+      <!-- 红丝带 (帽檐之上的装饰带) -->
+      <path d="M22 53 C22 51 58 51 58 53 L58 60 C58 64 22 64 22 60 Z"
+            fill="url(#ycHatBand)" stroke="#3a0408" stroke-width="0.5"/>
+      <!-- 帽檐反光线 -->
+      <ellipse cx="40" cy="62.5" rx="35" ry="2.2"
+               fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="0.7"/>
+      <!-- 帽身左侧高光 -->
+      <path d="M24 28 C23 38 23 50 25 60"
+            fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+
+      <!-- 魔术金星 (帽身上点缀) -->
+      <g class="yc-hat-stars" fill="#facc15">
+        <path class="yc-hat-star s1" d="M32 36 L33 39 L36 39 L33.5 41 L34.5 44 L32 42 L29.5 44 L30.5 41 L28 39 L31 39 Z"/>
+        <path class="yc-hat-star s2" d="M48 30 L48.5 32 L50.5 32 L49 33.5 L49.5 35.5 L48 34.5 L46.5 35.5 L47 33.5 L45.5 32 L47.5 32 Z"/>
+        <path class="yc-hat-star s3" d="M52 46 L52.5 48 L54.5 48 L53 49.5 L53.5 51 L52 50 L50.5 51 L51 49.5 L49.5 48 L51.5 48 Z"/>
+      </g>
+    </svg>
+
     <div class="yc-card-layer" aria-hidden="true"></div>
     <div class="yc-hand-source" aria-hidden="true">
       <span></span><span></span><span></span>
@@ -65,6 +121,79 @@
 .yc-hand-source {
   position: absolute;
   pointer-events: none;
+}
+
+/*
+ * ── 魔术帽 (戴在他真实的头顶) ──
+ * yichen 头顶约 (130, 36) on 200×200 stage; 头宽 ~40px, 所以帽子显示宽 ~50px 比较合身.
+ * SVG viewBox 是 80×80 (画质用大画布), 但显示尺寸只用 52×52.
+ * 比例: 1 SVG px = 0.65 显示 px. brim 中心 SVG(40, 64) → 显示 (26, 41.6).
+ *   left = 130 - 26 = 104,  top = 36 - 41.6 ≈ -6
+ * 帽子比之前小很多, 不会盖住整个头.
+ *
+ * 如果还想微调, 改下面 4 个 CSS 变量:
+ *   --hat-x : 帽子锚定的 x (默认 130)
+ *   --hat-y : 帽子锚定的 y (默认 36)
+ *   --hat-w : 帽子显示宽度 (默认 52)
+ *   --hat-tilt : 帽子倾角 (默认 -6deg)
+ */
+.yc-hat {
+  position: absolute;
+  --hat-x: 134px;
+  --hat-y: 31px;
+  --hat-w: 46px;
+  --hat-tilt: -4deg;
+
+  width:  var(--hat-w);
+  height: var(--hat-w);                /* 帽子 SVG 是方形 80×80 */
+  /* brim 中心 在 SVG (40, 64) → 显示坐标 (40/80, 64/80) * width = (0.5w, 0.8w) */
+  left: calc(var(--hat-x) - var(--hat-w) * 0.5);
+  top:  calc(var(--hat-y) - var(--hat-w) * 0.8);
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-14px) scale(0.55) rotate(-14deg);
+  transform-origin: 50% 80%;           /* brim 中心 (相对 hat 自身) */
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55));
+  transition:
+    opacity 0.3s ease,
+    transform 0.55s cubic-bezier(0.2,1.4,0.32,1);
+}
+
+
+.yc-wrap.yc-on .yc-hat {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(var(--hat-tilt, -6deg));
+  animation: yc-hat-tip 2.6s 0.5s ease-in-out infinite alternate;
+}
+
+/* 帽子微微随魔术节拍倾 — 像变戏法时摆动 */
+@keyframes yc-hat-tip {
+  from { transform: translateY(0)    scale(1)     rotate(var(--hat-tilt, -6deg)); }
+  to   { transform: translateY(-1px) scale(1.012) rotate(calc(var(--hat-tilt, -6deg) + 4deg)); }
+}
+
+/* 帽身金星错落闪 */
+.yc-hat-star {
+  transform-origin: center;
+  opacity: 0;
+}
+
+.yc-wrap.yc-on .yc-hat-star {
+  animation: yc-hat-star-twinkle 1.6s ease-in-out infinite alternate;
+}
+
+.yc-wrap.yc-on .yc-hat-star.s2 { animation-delay: 0.35s; }
+
+.yc-wrap.yc-on .yc-hat-star.s3 { animation-delay: 0.7s; }
+@keyframes yc-hat-star-twinkle {
+  from { opacity: 0.35; transform: scale(0.7); }
+  to   { opacity: 1;    transform: scale(1.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yc-wrap.yc-on .yc-hat,
+  .yc-wrap.yc-on .yc-hat-star { animation: none; }
 }
 
 .yc-card-layer {

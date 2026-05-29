@@ -1,0 +1,952 @@
+<!--
+  haotian_shen.html — 叶神 = 雷神 Thor  (v25 — 全面重设计)
+  ──────────────────────────────────────────────────────────
+  Palette: midnight-blue #0a1628 | electric-cyan #67e8f9 | gold #f6c64a
+
+  Props (全部在 .ye-on 激活后出现, 点击切换):
+    ① 风暴漩涡    — 背景辉光 + 旋涡弧线
+    ② 红披风      — 改进版, 含线性渐变 + 金锁扣
+    ③ 头像        — 圆形照片
+    ④ 电流眼睛    — 青色闪电眼
+    ⑤ Mjolnir     — 梯形锤头 + 符文辉光 + 电晕 corona
+    ⑥ 分叉闪电    — 4 主道各含子分支, 三层渲染
+    ⑦ 符文印章    — 圆形北欧徽章 (取代旗帜), 外环符文旋转
+    ⑧ 点击雷霆    — 点击瞬间的白光爆闪
+
+  CSS 变量 (微调直接改下方 style="..." 中的数字):
+    --avatar-size        头像直径
+    --eye-l-x/y          左眼位置 (%)
+    --eye-r-x/y          右眼位置 (%)
+    --eye-w/h            眼睛大小 (px)
+    --cape-left/top      斗篷位置 (px)
+    --cape-rotate        斗篷旋转 (deg)
+    --hammer-left/top    锤子位置 (px)
+    --seal-right/top     符文印章位置 (px)
+    --seal-rotate        印章旋转 (deg)
+-->
+
+<div class="ye-wrap" style="
+    --avatar-size: 200px;
+
+    /* 眼睛 */
+    --eye-l-x: 46.3%;
+    --eye-l-y: 27.5%;
+    --eye-r-x: 53.3%;
+    --eye-r-y: 28%;
+    --eye-w: 5px;
+    --eye-h: 3px;
+
+    /* 斗篷 */
+    --cape-left:   -55px;
+    --cape-top:     67px;
+    --cape-rotate:  30deg;
+
+    /* 锤子 */
+    --hammer-left:  81px;
+    --hammer-top:    108px;
+    --hammer-rotate: 15deg;  /* 倾斜角: 负=逆时针, 正=顺时针 */
+
+    /* 符文印章 */
+    --seal-right:   -10px;
+    --seal-top:     -9px;
+    --seal-rotate:    5deg;
+
+    /* Thor 假发 (位置/大小/旋转) */
+    --wig-scale:   0.34;     /* 大小: 1=默认, 0.8=缩小, 1.2=放大 */
+    --wig-x:       -4px;   /* 左右偏移: 正=右移, 负=左移 */
+    --wig-y:       -26px;   /* 上下偏移: 正=下移, 负=上移 */
+    --wig-rotate:  2deg;  /* 旋转: 正=顺时针, 负=逆时针 */
+  ">
+  <div class="ye-stage">
+
+    <!-- ── ⑦ 北欧符文印章 (取代简陋旗帜) ── -->
+    <svg class="ye-seal" viewBox="0 0 80 100" overflow="visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="yeSealBg" cx="50%" cy="55%" r="50%">
+          <stop offset="0%"   stop-color="#0e2240"/>
+          <stop offset="100%" stop-color="#04090f"/>
+        </radialGradient>
+        <filter id="yeSealGlow">
+          <feGaussianBlur stdDeviation="1.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="yeSealGlowStrong">
+          <feGaussianBlur stdDeviation="3.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <!-- 短柄 -->
+      <rect x="37.5" y="4" width="5" height="33" rx="2.5"
+            fill="#4a2c08" stroke="#1a0c04" stroke-width="0.8"/>
+      <rect x="38.5" y="4" width="2" height="33"
+            fill="#f6c64a" opacity="0.35" stroke="none"/>
+      <!-- 柄顶装饰球 -->
+      <circle cx="40" cy="4"  r="4" fill="#f6c64a" stroke="#7a4205" stroke-width="1.2"/>
+      <circle cx="40" cy="3.5" r="2" fill="#c89840" stroke="none"/>
+
+      <!-- 印章外环 (双圆) -->
+      <circle cx="40" cy="62" r="33" fill="url(#yeSealBg)"
+              stroke="#c89840" stroke-width="2.8"/>
+      <circle cx="40" cy="62" r="29" fill="none"
+              stroke="#f6c64a" stroke-width="0.7" opacity="0.5"/>
+
+      <!-- 8 个北欧符文 (沿内环旋转) — transform-origin 在印章圆心 (40, 62) -->
+      <g class="ye-seal-runes"
+         font-family="serif" font-size="7.5" fill="#f6c64a"
+         text-anchor="middle" dominant-baseline="central"
+         filter="url(#yeSealGlow)">
+        <!-- 0°   → (40, 40) -->
+        <text transform="translate(40,40)">ᚦ</text>
+        <!-- 45°  → (56.3, 45.7) -->
+        <text transform="translate(56.3,45.7)">ᚨ</text>
+        <!-- 90°  → (62, 62) -->
+        <text transform="translate(62,62)">ᚱ</text>
+        <!-- 135° → (56.3, 78.3) -->
+        <text transform="translate(56.3,78.3)">ᚲ</text>
+        <!-- 180° → (40, 84) -->
+        <text transform="translate(40,84)">ᚷ</text>
+        <!-- 225° → (23.7, 78.3) -->
+        <text transform="translate(23.7,78.3)">ᚹ</text>
+        <!-- 270° → (18, 62) -->
+        <text transform="translate(18,62)">ᚺ</text>
+        <!-- 315° → (23.7, 45.7) -->
+        <text transform="translate(23.7,45.7)">ᛁ</text>
+      </g>
+
+      <!-- 对角辐射细线 (装饰) -->
+      <g stroke="#f6c64a" stroke-width="0.5" opacity="0.3" stroke-linecap="round">
+        <line x1="40" y1="33" x2="40" y2="91"/>
+        <line x1="9"  y1="62" x2="71" y2="62"/>
+        <line x1="16.6" y1="39.6" x2="63.4" y2="84.4"/>
+        <line x1="63.4" y1="39.6" x2="16.6" y2="84.4"/>
+      </g>
+
+      <!-- 中心: 叶神 (不参与旋转) -->
+      <text class="ye-seal-char" x="40" y="54"
+            font-family="STKaiti, KaiTi, FangSong, STSong, SimSun, serif"
+            font-size="15" font-weight="900" text-anchor="middle" dominant-baseline="central"
+            fill="#ffffff" filter="url(#yeSealGlowStrong)">叶</text>
+      <text class="ye-seal-char" x="40" y="72"
+            font-family="STKaiti, KaiTi, FangSong, STSong, SimSun, serif"
+            font-size="15" font-weight="900" text-anchor="middle" dominant-baseline="central"
+            fill="#ffffff" filter="url(#yeSealGlowStrong)">神</text>
+    </svg>
+
+    <!--
+      ── ② 红披风 (细丝带 — 像混天绫, 从脖子右侧向左飘出画外) ──
+      起点 (130, 30) ≈ 脖子右侧; 一路向左+上卷飘到画外.
+      viewBox 220×180, 容器 left/top 由 CSS 变量控制.
+    -->
+    <svg class="ye-cape" viewBox="0 0 220 180" overflow="visible" aria-hidden="true">
+      <g stroke="#3a000a" stroke-width="1.6" stroke-linejoin="round">
+        <path class="ye-cape-body" d="
+          M 130 30
+          C 100 50, 50 70, 8 132
+          Q -4 142, 2 150
+          C 30 142, 80 100, 110 50
+          C 115 38, 118 30, 110 25
+          C 105 25, 110 24, 130 30
+          Z" fill="#c5132c"/>
+        <!-- 金边 (风吹起那侧) -->
+        <path d="M 130 30 C 100 50, 50 70, 8 132"
+              fill="none" stroke="#f6c64a" stroke-width="1.4" stroke-linecap="round"/>
+        <!-- 内侧高光 -->
+        <path d="M 125 32 C 100 52, 56 76, 18 135"
+              fill="none" stroke="#ff6a6a" stroke-width="1.1" stroke-linecap="round" opacity="0.65"/>
+        <!-- 暗侧折痕 -->
+        <path d="M 108 28 C 88 48, 44 74, 6 138"
+              fill="none" stroke="#7a0a18" stroke-width="0.8" stroke-linecap="round" opacity="0.45"/>
+      </g>
+    </svg>
+
+    <!--
+      Thor 金发假发 (z-index 5 — 在照片上方)
+      mask-image 镂空中心 (44%~52%) → 脸部透明可见, 圆外侧发丝显现.
+      大小/位置/旋转用顶部 --wig-* 变量调节.
+    -->
+    <svg class="ye-wig" viewBox="-20 -80 240 290" overflow="visible" aria-hidden="true">
+      <defs>
+        <linearGradient id="yeWigL" x1="0%" y1="0%" x2="20%" y2="100%">
+          <stop offset="0%"   stop-color="#f5d040"/>
+          <stop offset="40%"  stop-color="#d49808"/>
+          <stop offset="100%" stop-color="#7a5400"/>
+        </linearGradient>
+        <linearGradient id="yeWigR" x1="100%" y1="0%" x2="80%" y2="100%">
+          <stop offset="0%"   stop-color="#f5d040"/>
+          <stop offset="40%"  stop-color="#d49808"/>
+          <stop offset="100%" stop-color="#7a5400"/>
+        </linearGradient>
+        <linearGradient id="yeWigTop" x1="40%" y1="100%" x2="55%" y2="0%">
+          <stop offset="0%"   stop-color="#c08800"/>
+          <stop offset="55%"  stop-color="#e8b218"/>
+          <stop offset="100%" stop-color="#f5d040"/>
+        </linearGradient>
+        <filter id="yeWigShadow">
+          <feDropShadow dx="1" dy="3" stdDeviation="2.5" flood-color="#3a2200" flood-opacity="0.5"/>
+        </filter>
+      </defs>
+      <!-- 顶部大弧 (超粗笔刷, 覆盖帽冠中央可见区域) -->
+      <path d="M 14 44 C 4 8, 16 -36, 60 -56 C 80 -66, 120 -66, 140 -56
+               C 184 -36, 196 8, 186 44"
+            fill="none" stroke="#c08800" stroke-width="44"
+            stroke-linecap="round" filter="url(#yeWigShadow)"/>
+      <!-- 顶部发团 (扩展更高, 中央可见面积大幅增加) -->
+      <path d="M 22 44 C 10 14, 16 -24, 46 -44 C 68 -58, 100 -64, 132 -56
+               C 162 -46, 178 -20, 182 14 C 184 32, 182 46, 178 50
+               L 162 42 C 164 30, 166 12, 160 -2
+               C 150 -16, 122 -24, 100 -24
+               C 78 -24, 52 -16, 42 -2
+               C 36 12, 36 30, 36 44 Z"
+            fill="url(#yeWigTop)" filter="url(#yeWigShadow)"/>
+      <!-- 顶部高光缕 -->
+      <path d="M 84 -60 C 104 -68, 124 -64, 140 -54"
+            fill="none" stroke="#fce870" stroke-width="5" stroke-linecap="round" opacity="0.55"/>
+      <!-- 左侧顶角细缕 -->
+      <path d="M 24 38 C 8 10, 16 -20, 38 -36"
+            fill="none" stroke="#d8a020" stroke-width="18"
+            stroke-linecap="round" filter="url(#yeWigShadow)"/>
+      <!-- 右侧顶角细缕 -->
+      <path d="M 176 38 C 192 10, 184 -20, 162 -36"
+            fill="none" stroke="#d8a020" stroke-width="18"
+            stroke-linecap="round" filter="url(#yeWigShadow)"/>
+
+      <!-- 左侧主发束 (中短发, 到颈部即止) -->
+      <path d="M 26 50 C 6 72, -5 108, -6 142 C -7 156, -2 164, 4 168"
+            fill="none" stroke="url(#yeWigL)" stroke-width="30"
+            stroke-linecap="round" filter="url(#yeWigShadow)"/>
+      <!-- 左侧高光 -->
+      <path d="M 26 52 C 8 74, -2 108, -3 140"
+            fill="none" stroke="#f0c830" stroke-width="9"
+            stroke-linecap="round" opacity="0.45"/>
+      <!-- 左侧副束 -->
+      <path d="M 14 58 C -3 90, -12 128, -12 158"
+            fill="none" stroke="#c08a08" stroke-width="18"
+            stroke-linecap="round" opacity="0.75"/>
+
+      <!-- 右侧主发束 (镜像, 中短发) -->
+      <path d="M 174 50 C 194 72, 205 108, 206 142 C 207 156, 202 164, 196 168"
+            fill="none" stroke="url(#yeWigR)" stroke-width="30"
+            stroke-linecap="round" filter="url(#yeWigShadow)"/>
+      <!-- 右侧高光 -->
+      <path d="M 174 52 C 192 74, 202 108, 203 140"
+            fill="none" stroke="#f0c830" stroke-width="9"
+            stroke-linecap="round" opacity="0.45"/>
+      <!-- 右侧副束 -->
+      <path d="M 186 58 C 203 90, 212 128, 212 158"
+            fill="none" stroke="#c08a08" stroke-width="18"
+            stroke-linecap="round" opacity="0.75"/>
+    </svg>
+
+    <!-- ── ③ 头像 ── -->
+    <div class="ye-photo">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/haotian.png"
+           class="avatar ye-avatar" alt="avatar"/>
+
+      <!-- ④ 电流眼睛 -->
+      <div class="ye-eye ye-eye-l" aria-hidden="true">
+        <svg class="ye-eye-svg" viewBox="0 0 20 10" overflow="visible">
+          <path class="ye-eye-bolt"
+                d="M 2 5 L 6 2.5 L 5 5 L 9.5 3 L 8 6 L 12.5 4 L 11 7 L 16 5"
+                fill="none" stroke="#ffffff" stroke-width="1.4"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="ye-eye-spark s1"
+                d="M 0 5 L -4 3 L -2 6 L -7 4 L -5 7 L -11 5"
+                fill="none" stroke="#67e8f9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="ye-eye-spark s2"
+                d="M 20 5 L 24 3 L 22 6 L 27 4 L 25 7 L 31 5"
+                fill="none" stroke="#67e8f9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="ye-eye ye-eye-r" aria-hidden="true">
+        <svg class="ye-eye-svg" viewBox="0 0 20 10" overflow="visible">
+          <path class="ye-eye-bolt"
+                d="M 2 5 L 6 2.5 L 5 5 L 9.5 3 L 8 6 L 12.5 4 L 11 7 L 16 5"
+                fill="none" stroke="#ffffff" stroke-width="1.4"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="ye-eye-spark s1"
+                d="M 0 5 L -4 3 L -2 6 L -7 4 L -5 7 L -11 5"
+                fill="none" stroke="#67e8f9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="ye-eye-spark s2"
+                d="M 20 5 L 24 3 L 22 6 L 27 4 L 25 7 L 31 5"
+                fill="none" stroke="#67e8f9" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!--
+      漩涡叠层 (照片上方, clip-path 裁成圆 — 明显可见)
+      z-index 4 > photo z-index 3. clip-path circle(50%) 限制在圆形内.
+      opacity 直接叠加, 无 mix-blend-mode.
+    -->
+    <svg class="ye-vortex" viewBox="0 0 200 200" overflow="visible" aria-hidden="true">
+      <defs>
+        <radialGradient id="yeVortexGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="#1a3a7a" stop-opacity="0.55"/>
+          <stop offset="60%"  stop-color="#0a1628" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#030810" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="yeVortexBlur">
+          <feGaussianBlur stdDeviation="7"/>
+        </filter>
+      </defs>
+      <ellipse cx="100" cy="100" rx="100" ry="100"
+               fill="url(#yeVortexGrad)" filter="url(#yeVortexBlur)"/>
+      <g fill="none" stroke="#4a90d8" stroke-linecap="round"
+         stroke-width="10" filter="url(#yeVortexBlur)" opacity="0.7">
+        <path class="ye-vortex-arc va1"
+              d="M 100 5 C 162 15, 192 65, 182 120 C 172 175, 132 192, 100 194"/>
+        <path class="ye-vortex-arc va2"
+              d="M 162 22 C 192 72, 185 145, 140 173 C 95 200, 28 186, 8 138"/>
+        <path class="ye-vortex-arc va3"
+              d="M 22 42 C -2 90, 10 155, 52 182 C 90 205, 165 192, 192 148"/>
+      </g>
+    </svg>
+
+    <!--
+      ── ⑥ 分叉闪电 (4 主道各含子分支, 三层渲染: 暗影/主色/青色核心) ──
+      b1: 左上角 (向内下延伸 + 右侧子分支)
+      b2: 右上角 (镜像 + 左侧子分支)
+      b3: 锤辐射左下 (更长 + 侧分支)
+      b4: 锤辐射右下 (镜像 + 侧分支)
+    -->
+    <svg class="ye-bolts" viewBox="-40 -40 280 290" overflow="visible" aria-hidden="true">
+      <defs>
+        <filter id="yeBoltGlow">
+          <feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g stroke-linecap="round" stroke-linejoin="round">
+
+        <!-- b1 左上主道 -->
+        <path class="ye-bolt b1"
+              d="M -20 -20 L -2 8 L -14 18 L 8 42 L -4 58 L 14 76"
+              fill="none" stroke="#071020" stroke-width="9"/>
+        <path class="ye-bolt b1"
+              d="M -20 -20 L -2 8 L -14 18 L 8 42 L -4 58 L 14 76"
+              fill="none" stroke="#e8f4ff" stroke-width="2.8"/>
+        <path class="ye-bolt b1g"
+              d="M -20 -20 L -2 8 L -14 18 L 8 42 L -4 58 L 14 76"
+              fill="none" stroke="#67e8f9" stroke-width="1.2" filter="url(#yeBoltGlow)"/>
+        <!-- b1 子分支 (从折点向右) -->
+        <path class="ye-bolt b1a"
+              d="M 8 42 L 26 36 L 18 50"
+              fill="none" stroke="#071020" stroke-width="6"/>
+        <path class="ye-bolt b1a"
+              d="M 8 42 L 26 36 L 18 50"
+              fill="none" stroke="#e8f4ff" stroke-width="2"/>
+        <path class="ye-bolt b1ag"
+              d="M 8 42 L 26 36 L 18 50"
+              fill="none" stroke="#67e8f9" stroke-width="0.9" filter="url(#yeBoltGlow)"/>
+
+        <!-- b2 右上主道 -->
+        <path class="ye-bolt b2"
+              d="M 220 -20 L 202 8 L 214 18 L 192 42 L 204 58 L 186 76"
+              fill="none" stroke="#071020" stroke-width="9"/>
+        <path class="ye-bolt b2"
+              d="M 220 -20 L 202 8 L 214 18 L 192 42 L 204 58 L 186 76"
+              fill="none" stroke="#e8f4ff" stroke-width="2.8"/>
+        <path class="ye-bolt b2g"
+              d="M 220 -20 L 202 8 L 214 18 L 192 42 L 204 58 L 186 76"
+              fill="none" stroke="#67e8f9" stroke-width="1.2" filter="url(#yeBoltGlow)"/>
+        <!-- b2 子分支 -->
+        <path class="ye-bolt b2a"
+              d="M 192 42 L 174 36 L 182 50"
+              fill="none" stroke="#071020" stroke-width="6"/>
+        <path class="ye-bolt b2a"
+              d="M 192 42 L 174 36 L 182 50"
+              fill="none" stroke="#e8f4ff" stroke-width="2"/>
+        <path class="ye-bolt b2ag"
+              d="M 192 42 L 174 36 L 182 50"
+              fill="none" stroke="#67e8f9" stroke-width="0.9" filter="url(#yeBoltGlow)"/>
+
+        <!-- b3 锤辐射左下 -->
+        <path class="ye-bolt b3"
+              d="M 108 116 L 80 136 L 98 152 L 64 172 L 84 192 L 58 212"
+              fill="none" stroke="#071020" stroke-width="10"/>
+        <path class="ye-bolt b3"
+              d="M 108 116 L 80 136 L 98 152 L 64 172 L 84 192 L 58 212"
+              fill="none" stroke="#e8f4ff" stroke-width="3.4"/>
+        <path class="ye-bolt b3g"
+              d="M 108 116 L 80 136 L 98 152 L 64 172 L 84 192 L 58 212"
+              fill="none" stroke="#67e8f9" stroke-width="1.5" filter="url(#yeBoltGlow)"/>
+        <!-- b3 子分支 -->
+        <path class="ye-bolt b3a"
+              d="M 64 172 L 44 166 L 54 180"
+              fill="none" stroke="#071020" stroke-width="6"/>
+        <path class="ye-bolt b3a"
+              d="M 64 172 L 44 166 L 54 180"
+              fill="none" stroke="#e8f4ff" stroke-width="2"/>
+        <path class="ye-bolt b3ag"
+              d="M 64 172 L 44 166 L 54 180"
+              fill="none" stroke="#67e8f9" stroke-width="0.9" filter="url(#yeBoltGlow)"/>
+
+        <!-- b4 锤辐射右下 -->
+        <path class="ye-bolt b4"
+              d="M 132 116 L 160 136 L 142 152 L 176 172 L 156 192 L 182 212"
+              fill="none" stroke="#071020" stroke-width="10"/>
+        <path class="ye-bolt b4"
+              d="M 132 116 L 160 136 L 142 152 L 176 172 L 156 192 L 182 212"
+              fill="none" stroke="#e8f4ff" stroke-width="3.4"/>
+        <path class="ye-bolt b4g"
+              d="M 132 116 L 160 136 L 142 152 L 176 172 L 156 192 L 182 212"
+              fill="none" stroke="#67e8f9" stroke-width="1.5" filter="url(#yeBoltGlow)"/>
+        <!-- b4 子分支 -->
+        <path class="ye-bolt b4a"
+              d="M 176 172 L 196 166 L 186 180"
+              fill="none" stroke="#071020" stroke-width="6"/>
+        <path class="ye-bolt b4a"
+              d="M 176 172 L 196 166 L 186 180"
+              fill="none" stroke="#e8f4ff" stroke-width="2"/>
+        <path class="ye-bolt b4ag"
+              d="M 176 172 L 196 166 L 186 180"
+              fill="none" stroke="#67e8f9" stroke-width="0.9" filter="url(#yeBoltGlow)"/>
+
+      </g>
+    </svg>
+
+    <!-- ── ⑤ Mjolnir (v25 — 梯形头 + 符文辉光 + 电晕 corona) ── -->
+    <div class="ye-hammer" aria-hidden="true">
+      <svg viewBox="0 0 90 120" overflow="visible">
+        <defs>
+          <linearGradient id="yeHammerFace" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"   stop-color="#9aacbc"/>
+            <stop offset="28%"  stop-color="#6a7a88"/>
+            <stop offset="70%"  stop-color="#4a5a68"/>
+            <stop offset="100%" stop-color="#2a3848"/>
+          </linearGradient>
+          <linearGradient id="yeHammerSide" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#1e2c3a"/>
+            <stop offset="100%" stop-color="#3a4e5e"/>
+          </linearGradient>
+          <filter id="yeRuneGlow">
+            <feGaussianBlur stdDeviation="1.8" result="b"/>
+            <feMerge>
+              <feMergeNode in="b"/>
+              <feMergeNode in="b"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="yeArcGlow">
+            <feGaussianBlur stdDeviation="2.5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="yeCoronaGlow">
+            <feGaussianBlur stdDeviation="7"/>
+          </filter>
+        </defs>
+
+        <!-- 电晕 corona (锤头背后蓝色辉光) -->
+        <ellipse class="ye-hammer-corona"
+                 cx="45" cy="38" rx="52" ry="28"
+                 fill="#1a4a8a" filter="url(#yeCoronaGlow)" opacity="0"/>
+
+        <!-- ── 锤头 (梯形: 上宽下窄, 真 Mjolnir 形) ── -->
+        <!-- 顶面 (3D感) -->
+        <path d="M 0 15 L 90 15 L 84 20 L 6 20 Z"
+              fill="#aabece" stroke="#182838" stroke-width="1.5"/>
+        <!-- 主面 -->
+        <path d="M 6 20 L 84 20 L 78 62 L 12 62 Z"
+              fill="url(#yeHammerFace)" stroke="#182838" stroke-width="2"/>
+        <!-- 左侧面 -->
+        <path d="M 0 15 L 6 20 L 12 62 L 4 62 Z"
+              fill="url(#yeHammerSide)" stroke="#182838" stroke-width="1.2"/>
+        <!-- 右侧面 -->
+        <path d="M 90 15 L 84 20 L 78 62 L 86 62 Z"
+              fill="#304050" stroke="#182838" stroke-width="1.2"/>
+        <!-- 中央高光条 -->
+        <path d="M 41 22 L 49 22 L 46 60 L 38 60 Z"
+              fill="#b8ccd8" opacity="0.35" stroke="none"/>
+
+        <!-- 金边上沿 -->
+        <rect x="0" y="11" width="90" height="4" fill="#f6c64a" rx="1.2"
+              stroke="#7a4205" stroke-width="0.8"/>
+        <!-- 金边下沿 -->
+        <path d="M 12 62 L 78 62 L 82 67 L 8 67 Z"
+              fill="#f6c64a" stroke="#7a4205" stroke-width="0.8"/>
+
+        <!-- ── 北欧符文 × 4 (暗刻 + 激活时青色辉光) ── -->
+        <g stroke-linecap="round" fill="none">
+          <!-- ᚦ thurisaz (左) -->
+          <path d="M 18 29 L 18 52 M 18 32 L 27 39 L 18 46"
+                stroke="#2a3840" stroke-width="1.7"/>
+          <path class="ye-rune-glow" d="M 18 29 L 18 52 M 18 32 L 27 39 L 18 46"
+                stroke="#67e8f9" stroke-width="1.5" opacity="0" filter="url(#yeRuneGlow)"/>
+          <!-- ᚲ kenaz -->
+          <path d="M 33 29 L 42 41 L 33 52"
+                stroke="#2a3840" stroke-width="1.7"/>
+          <path class="ye-rune-glow" d="M 33 29 L 42 41 L 33 52"
+                stroke="#67e8f9" stroke-width="1.5" opacity="0" filter="url(#yeRuneGlow)"/>
+          <!-- ᛏ tiwaz -->
+          <path d="M 53 29 L 53 52 M 46 35 L 53 29 L 60 35"
+                stroke="#2a3840" stroke-width="1.7"/>
+          <path class="ye-rune-glow" d="M 53 29 L 53 52 M 46 35 L 53 29 L 60 35"
+                stroke="#67e8f9" stroke-width="1.5" opacity="0" filter="url(#yeRuneGlow)"/>
+          <!-- ᚱ raidho -->
+          <path d="M 67 29 L 67 52 M 67 29 L 76 34 L 67 41 L 76 52"
+                stroke="#2a3840" stroke-width="1.7"/>
+          <path class="ye-rune-glow" d="M 67 29 L 67 52 M 67 29 L 76 34 L 67 41 L 76 52"
+                stroke="#67e8f9" stroke-width="1.5" opacity="0" filter="url(#yeRuneGlow)"/>
+        </g>
+
+        <!-- ── 手柄 ── -->
+        <!-- 皮革主体 -->
+        <rect x="38" y="67" width="14" height="49" rx="2"
+              fill="#231208" stroke="#120902" stroke-width="1.4"/>
+        <!-- 皮裹缠线 (金色弧形) -->
+        <g stroke="#f6c64a" stroke-width="1.4" stroke-linecap="round" fill="none">
+          <path d="M 38 75 Q 45 76.5, 52 75"/>
+          <path d="M 38 84 Q 45 85.5, 52 84"/>
+          <path d="M 38 93 Q 45 94.5, 52 93"/>
+          <path d="M 38 102 Q 45 103.5, 52 102"/>
+          <path d="M 38 111 Q 45 112.5, 52 111"/>
+        </g>
+        <!-- 皮纹细节 -->
+        <g stroke="#0e0604" stroke-width="0.6" stroke-linecap="round" opacity="0.55" fill="none">
+          <line x1="39" y1="70" x2="51" y2="72"/>
+          <line x1="39" y1="79" x2="51" y2="81"/>
+          <line x1="39" y1="88" x2="51" y2="90"/>
+          <line x1="39" y1="97" x2="51" y2="99"/>
+          <line x1="39" y1="106" x2="51" y2="108"/>
+        </g>
+        <!-- 柄底圆 pommel -->
+        <ellipse cx="45" cy="117" rx="7.5" ry="4.5" fill="#f6c64a" stroke="#7a4205" stroke-width="1.5"/>
+        <ellipse cx="45" cy="116.5" rx="4" ry="2.2" fill="#c89840"/>
+        <!-- 皮带垂坠 -->
+        <path d="M 45 121 Q 39 128 42 134 Q 47 131 45 126"
+              stroke="#231208" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+        <!-- ── 周身电弧 (原地错峰闪, 6 条) ── -->
+        <g class="ye-hammer-arcs" filter="url(#yeArcGlow)">
+          <path class="ye-arc a1"
+                d="M 0 28 L -14 20 L -6 34 L -18 44"
+                stroke="#67e8f9" stroke-width="2.4" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="ye-arc a2"
+                d="M 0 46 L -16 40 L -8 54"
+                stroke="#67e8f9" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path class="ye-arc a3"
+                d="M 90 28 L 104 20 L 96 34 L 108 44"
+                stroke="#67e8f9" stroke-width="2.4" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="ye-arc a4"
+                d="M 90 46 L 106 40 L 98 54"
+                stroke="#67e8f9" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path class="ye-arc a5"
+                d="M 22 11 L 14 -6 L 28 0 L 18 -16"
+                stroke="#ffffff" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="ye-arc a6"
+                d="M 68 11 L 76 -6 L 62 0 L 72 -16"
+                stroke="#ffffff" stroke-width="2" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- ── ⑧ 点击雷霆一闪 ── -->
+    <div class="ye-thunder" aria-hidden="true"></div>
+
+  </div><!-- /.ye-stage -->
+</div><!-- /.ye-wrap -->
+
+
+<style>
+.ye-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+}
+.ye-wrap *,
+.ye-wrap *::before,
+.ye-wrap *::after { box-sizing: border-box; }
+
+.ye-stage {
+  position: relative;
+  width:  var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  overflow: visible;
+  background: transparent;
+}
+
+/* ── 头像 ── */
+.ye-photo {
+  position: relative;
+  z-index: 3;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  transform: scale(var(--ye-scale, 1));
+  transform-origin: 50% 50%;
+  transition:
+    transform 0.4s cubic-bezier(0.32,1.3,0.4,1),
+    box-shadow 0.4s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+}
+/* 激活时圆边青色辉光环 */
+.ye-wrap.ye-on .ye-photo {
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.25),
+    0 0 0 1.5px rgba(103,232,249,0.7),
+    0 0 18px 4px rgba(103,232,249,0.25);
+}
+
+/* ── Thor 金发假发 ── */
+.ye-wig {
+  position: absolute;
+  left: 0; top: 0;
+  width: 200px; height: 200px;
+  z-index: 5;            /* 高于 photo (z=3) → 发丝在照片上方 */
+  pointer-events: none;
+  opacity: 0;
+  /* mask 镂空中心: 脸部区域透明, 外围发丝可见 */
+  mask-image: radial-gradient(circle at 50% 58%, transparent 32%, black 42%);
+  -webkit-mask-image: radial-gradient(circle at 50% 58%, transparent 32%, black 42%);
+  /* 调节变量支持 (改 style="" 里的 --wig-* 数字) */
+  transform-origin: 50% 40%;
+  transform:
+    translateX(var(--wig-x, 0px))
+    translateY(calc(var(--wig-y, 0px) - 10px))
+    rotate(var(--wig-rotate, 0deg))
+    scale(calc(var(--wig-scale, 1) * 0.92));
+  transition:
+    opacity 0.5s ease 0.12s,
+    transform 0.6s cubic-bezier(0.2,1.2,0.4,1) 0.12s;
+}
+.ye-wrap.ye-on .ye-wig {
+  opacity: 1;
+  transform:
+    translateX(var(--wig-x, 0px))
+    translateY(var(--wig-y, 0px))
+    rotate(var(--wig-rotate, 0deg))
+    scale(var(--wig-scale, 1));
+}
+
+/* 漩涡叠层 (环形: 中心透明, 边缘可见) */
+.ye-vortex {
+  position: absolute;
+  inset: 0;
+  width: 200px; height: 200px;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  /* 环形 mask: 圆心区域透明 (不遮脸), 圆边处可见 */
+  clip-path: circle(50% at 50% 50%);
+  mask-image: radial-gradient(circle at 50% 50%,
+    transparent 50%, rgba(0,0,0,0.6) 60%, black 72%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%,
+    transparent 50%, rgba(0,0,0,0.6) 60%, black 72%, transparent 100%);
+  transition: opacity 0.9s ease;
+}
+.ye-wrap.ye-on .ye-vortex { opacity: 1; }
+.ye-vortex-arc {
+  stroke-dasharray: 420;
+  stroke-dashoffset: 420;
+}
+.ye-wrap.ye-on .ye-vortex-arc.va1 { animation: ye-vortex-draw 6s 0.2s ease-in-out infinite; }
+.ye-wrap.ye-on .ye-vortex-arc.va2 { animation: ye-vortex-draw 8s 2.0s ease-in-out infinite; }
+.ye-wrap.ye-on .ye-vortex-arc.va3 { animation: ye-vortex-draw 7s 3.8s ease-in-out infinite; }
+@keyframes ye-vortex-draw {
+  0%   { stroke-dashoffset:  420; opacity: 0;    }
+  18%  {                          opacity: 0.75; }
+  55%  { stroke-dashoffset:    0; opacity: 0.5;  }
+  82%  {                          opacity: 0.18; }
+  100% { stroke-dashoffset: -420; opacity: 0;    }
+}
+.ye-avatar {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.ye-wrap:hover       { --ye-scale: 1.07; }
+.ye-wrap.ye-on       { --ye-scale: 1.04; }
+.ye-wrap.ye-on:hover { --ye-scale: 1.08; }
+
+/* ── 电流眼睛 ── */
+.ye-eye {
+  position: absolute;
+  width:  var(--eye-w, 14px);
+  height: var(--eye-h, 7px);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center,
+    #06b6d4 0%, #0e7490 60%, transparent 100%);
+  box-shadow: 0 0 5px #67e8f9, 0 0 10px rgba(103,232,249,0.6);
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+  transition: opacity 0.32s ease 0.22s, transform 0.4s ease 0.22s;
+  overflow: visible;
+}
+.ye-eye-l { left: var(--eye-l-x, 46%); top: var(--eye-l-y, 35%); }
+.ye-eye-r { left: var(--eye-r-x, 54%); top: var(--eye-r-y, 35%); }
+.ye-wrap.ye-on .ye-eye {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.ye-eye-svg {
+  position: absolute;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  overflow: visible;
+  filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 4px #67e8f9);
+}
+.ye-eye-bolt {
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  opacity: 0;
+}
+.ye-wrap.ye-on .ye-eye-bolt {
+  animation: ye-eye-strike 3s steps(1, end) infinite;
+}
+@keyframes ye-eye-strike {
+  0%   { stroke-dashoffset: 36; opacity: 0; }
+  4%   { stroke-dashoffset:  0; opacity: 1; }
+  8%   {                        opacity: 0.3; }
+  11%  {                        opacity: 1; }
+  17%  {                        opacity: 0.4; }
+  22%  {                        opacity: 1; }
+  30%  {                        opacity: 0; }
+  100% {                        opacity: 0; }
+}
+.ye-eye-spark { opacity: 0; }
+.ye-wrap.ye-on .ye-eye-spark.s1 {
+  animation: ye-eye-spark-flash 3s steps(2, end) 0.6s infinite;
+}
+.ye-wrap.ye-on .ye-eye-spark.s2 {
+  animation: ye-eye-spark-flash 3s steps(2, end) 1.2s infinite;
+}
+@keyframes ye-eye-spark-flash {
+  0%, 100% { opacity: 0; transform: scale(0.7); }
+  20%      { opacity: 0.95; transform: scale(1.1); }
+  40%      { opacity: 0; }
+}
+
+/* ── 符文印章 ── */
+.ye-seal {
+  position: absolute;
+  right: var(--seal-right, -10px);
+  top:   var(--seal-top,   -10px);
+  width:  80px;
+  height: 100px;
+  z-index: 12;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px) rotate(var(--seal-rotate, 5deg)) scale(0.85);
+  transform-origin: 50% 8%;
+  transition:
+    opacity 0.5s ease 0.12s,
+    transform 0.65s cubic-bezier(0.2,1.4,0.32,1) 0.12s;
+  filter: drop-shadow(0 2px 8px rgba(6,30,70,0.7));
+}
+.ye-wrap.ye-on .ye-seal {
+  opacity: 1;
+  transform: translateY(0) rotate(var(--seal-rotate, 5deg)) scale(1);
+}
+/* 外圈符文缓慢旋转 */
+.ye-seal-runes { transform-origin: 40px 62px; }
+.ye-wrap.ye-on .ye-seal-runes {
+  animation: ye-seal-spin 22s linear infinite;
+}
+@keyframes ye-seal-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+/* 中心字发光脉冲 */
+.ye-wrap.ye-on .ye-seal-char {
+  animation: ye-seal-pulse 2.8s ease-in-out infinite;
+}
+@keyframes ye-seal-pulse {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
+}
+
+/* ── 红披风 (细丝带) ── */
+.ye-cape {
+  position: absolute;
+  left: var(--cape-left, -55px);
+  top:  var(--cape-top,   67px);
+  width:  220px;
+  height: 180px;
+  z-index: 14;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.92) rotate(var(--cape-rotate, 0deg));
+  transform-origin: 70% 20%;
+  transition:
+    opacity 0.5s ease 0.10s,
+    transform 0.65s cubic-bezier(0.2,1.4,0.32,1) 0.10s;
+  filter: drop-shadow(-1px 2px 3px rgba(0,0,0,0.32));
+}
+.ye-wrap.ye-on .ye-cape {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(var(--cape-rotate, 0deg));
+}
+.ye-cape-body { transform-origin: 70% 20%; }
+.ye-wrap.ye-on .ye-cape-body {
+  animation: ye-cape-billow 3.4s ease-in-out infinite alternate;
+}
+@keyframes ye-cape-billow {
+  0%   { transform: skewX(-3deg) scaleX(0.99); }
+  100% { transform: skewX( 3deg) scaleX(1.02); }
+}
+
+/* ── 分叉闪电 ── */
+.ye-bolts {
+  position: absolute;
+  left:  -40px; top: -40px;
+  width:  280px; height: 290px;
+  z-index: 8;
+  pointer-events: none;
+  overflow: visible;
+}
+.ye-bolt {
+  stroke-dasharray: 280;
+  stroke-dashoffset: 280;
+  opacity: 0;
+}
+/* 主道 */
+.ye-wrap.ye-on .ye-bolt.b1,
+.ye-wrap.ye-on .ye-bolt.b1g  { animation: ye-bolt-flash 3.4s 0.4s  ease-out infinite; }
+.ye-wrap.ye-on .ye-bolt.b2,
+.ye-wrap.ye-on .ye-bolt.b2g  { animation: ye-bolt-flash 3.8s 1.2s  ease-out infinite; }
+.ye-wrap.ye-on .ye-bolt.b3,
+.ye-wrap.ye-on .ye-bolt.b3g  { animation: ye-bolt-flash 3.0s 1.9s  ease-out infinite; }
+.ye-wrap.ye-on .ye-bolt.b4,
+.ye-wrap.ye-on .ye-bolt.b4g  { animation: ye-bolt-flash 2.8s 2.7s  ease-out infinite; }
+/* 子分支 (稍晚 0.12s) */
+.ye-wrap.ye-on .ye-bolt.b1a,
+.ye-wrap.ye-on .ye-bolt.b1ag { animation: ye-bolt-flash 3.4s 0.52s ease-out infinite; }
+.ye-wrap.ye-on .ye-bolt.b2a,
+.ye-wrap.ye-on .ye-bolt.b2ag { animation: ye-bolt-flash 3.8s 1.32s ease-out infinite; }
+.ye-wrap.ye-on .ye-bolt.b3a,
+.ye-wrap.ye-on .ye-bolt.b3ag { animation: ye-bolt-flash 3.0s 2.02s ease-out infinite; }
+.ye-wrap.ye-on .ye-bolt.b4a,
+.ye-wrap.ye-on .ye-bolt.b4ag { animation: ye-bolt-flash 2.8s 2.82s ease-out infinite; }
+@keyframes ye-bolt-flash {
+  0%   { stroke-dashoffset: 280; opacity: 0; }
+  12%  { stroke-dashoffset:   0; opacity: 1; }
+  20%  {                         opacity: 0.5; }
+  28%  {                         opacity: 1; }
+  46%  {                         opacity: 0; }
+  100% { stroke-dashoffset: 280; opacity: 0; }
+}
+
+/* ── Mjolnir ── */
+.ye-hammer {
+  position: absolute;
+  left: var(--hammer-left, 94px);
+  top:  var(--hammer-top,  38px);
+  width:  68px;
+  height: 90px;
+  z-index: 13;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  transform-origin: 50% 78%;
+  transform: scale(0.52) translateY(10px);
+  transition:
+    opacity 0.4s ease 0.22s,
+    transform 0.55s cubic-bezier(0.2,1.4,0.32,1) 0.22s;
+  filter: drop-shadow(2px 4px 5px rgba(0,0,0,0.65));
+}
+.ye-hammer svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.ye-wrap.ye-on .ye-hammer {
+  opacity: 1;
+  transform: rotate(var(--hammer-rotate, 0deg)) scale(1) translateY(0);
+}
+/* 符文辉光 */
+.ye-rune-glow { opacity: 0; }
+.ye-wrap.ye-on .ye-rune-glow {
+  animation: ye-rune-pulse 2.2s 0.6s ease-in-out infinite;
+}
+@keyframes ye-rune-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+/* 电晕 corona */
+.ye-hammer-corona { opacity: 0; }
+.ye-wrap.ye-on .ye-hammer-corona {
+  animation: ye-corona-pulse 1.8s 0.35s ease-in-out infinite;
+}
+@keyframes ye-corona-pulse {
+  0%, 100% { opacity: 0;    }
+  50%      { opacity: 0.6;  }
+}
+/* 周身电弧 */
+.ye-arc {
+  opacity: 0;
+  filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 4px #67e8f9);
+}
+.ye-wrap.ye-on .ye-arc.a1 { animation: ye-arc-flash 1.8s 0.00s ease-out infinite; }
+.ye-wrap.ye-on .ye-arc.a2 { animation: ye-arc-flash 2.2s 0.70s ease-out infinite; }
+.ye-wrap.ye-on .ye-arc.a3 { animation: ye-arc-flash 1.8s 0.30s ease-out infinite; }
+.ye-wrap.ye-on .ye-arc.a4 { animation: ye-arc-flash 2.2s 1.00s ease-out infinite; }
+.ye-wrap.ye-on .ye-arc.a5 { animation: ye-arc-flash 1.6s 0.55s ease-out infinite; }
+.ye-wrap.ye-on .ye-arc.a6 { animation: ye-arc-flash 1.6s 0.85s ease-out infinite; }
+@keyframes ye-arc-flash {
+  0%, 100% { opacity: 0; transform: scale(0.85); }
+  35%      { opacity: 1; transform: scale(1.15); }
+  60%      { opacity: 0; transform: scale(0.90); }
+}
+
+/* ── 点击雷霆一闪 ── */
+.ye-thunder {
+  position: absolute;
+  inset: -30%;
+  z-index: 30;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%,
+    rgba(255,255,255,0.96) 0%,
+    rgba(254,240,138,0.6)  18%,
+    rgba(103,232,249,0.32) 40%,
+    transparent            70%);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+.ye-wrap.ye-strike .ye-thunder {
+  animation: ye-thunder-flash 0.5s ease-out;
+}
+@keyframes ye-thunder-flash {
+  0%   { opacity: 0; transform: scale(0.7); }
+  18%  { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ye-wrap.ye-on  .ye-wig,
+  .ye-wrap.ye-on  .ye-vortex-arc,
+  .ye-wrap.ye-on  .ye-cape-body,
+  .ye-wrap.ye-on  .ye-eye-bolt,
+  .ye-wrap.ye-on  .ye-eye-spark,
+  .ye-wrap.ye-on  .ye-bolt,
+  .ye-wrap.ye-on  .ye-arc,
+  .ye-wrap.ye-on  .ye-seal-runes,
+  .ye-wrap.ye-on  .ye-seal-char,
+.ye-wrap.ye-on  .ye-rune-glow,
+  .ye-wrap.ye-on  .ye-hammer-corona,
+  .ye-wrap.ye-strike .ye-thunder { animation: none; }
+}
+</style>
+
+
+<script>
+(function () {
+  document.querySelectorAll('.ye-wrap').forEach(function(wrap) {
+    if (wrap.dataset.yeReady === '1') return;
+    wrap.dataset.yeReady = '1';
+    wrap.addEventListener('click', function() {
+      wrap.classList.toggle('ye-on');
+      wrap.classList.remove('ye-strike');
+      void wrap.offsetWidth;
+      wrap.classList.add('ye-strike');
+      setTimeout(function() { wrap.classList.remove('ye-strike'); }, 600);
+    });
+  });
+})();
+</script>

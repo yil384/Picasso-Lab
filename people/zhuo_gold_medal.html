@@ -1,15 +1,24 @@
 <!--
-  CPhO奖牌模板 — 配置说明
+  CPhO 奖牌模板 — 配置说明
   ┌──────────────────────────────────────────────────────────┐
-  │  --medal-x     丝带挂点水平位置（从左 %）                   │
-  │  --medal-y     丝带顶端在头像中的位置（从顶部 %）            │
-  │                通常 45%~60%，约领口高度                     │
-  │  --medal-size  奖牌整体高度（占头像高度的 %）                │
-  │                通常 28%~45%                               │
+  │  奖牌:                                                    │
+  │  --medal-x      丝带挂点水平位置（从左 %, 通常 ~50%）        │
+  │  --medal-y      丝带顶端 (% from top, 45~60% ≈ 领口)        │
+  │  --medal-size   奖牌整体高度（% of avatar, 28~45%）         │
+  │                                                          │
+  │  下面那只手的 🏆 CPhO 奖杯:                                │
+  │  --trophy-x     奖杯 left (px, 默认 80px ≈ 手心 ~100,172)  │
+  │  --trophy-y     奖杯 top  (px, 默认 116px)                 │
+  │                                                          │
+  │  头顶 ⚛ 量子风暴: 位置写死在 CSS, 一般不用调.              │
   └──────────────────────────────────────────────────────────┘
 -->
 
-<div class="ys-wrap" style="--medal-x:51%; --medal-y:46%; --medal-size:22%">
+<div class="ys-wrap" style="
+    --medal-x:51%; --medal-y:46%; --medal-size:22%;
+    --trophy-x:96px; --trophy-y:144px; --trophy-size:27px; --trophy-rotate:-50deg;
+    --quantum-left:0px; --quantum-top:0px; --quantum-w:100px; --quantum-h:40px;
+">
   <div class="ys-stage">
 
     <img src="https://yil384.github.io/Picasso-Lab/people/static/zhuo.png"
@@ -121,69 +130,246 @@
       </div><!-- .ys-medal-inner -->
     </div><!-- .ys-medal -->
 
-    <svg class="ys-chess-play" viewBox="0 0 178 112" aria-hidden="true" focusable="false">
+    <!--
+      之前那一大块棋盘横在中间, 挡住了卓和金牌. 重做:
+        ① 小棋盘单独放在头像左上角 (天空/柳树那一片), 完全不挡他身体和金牌
+        ② 被"举起的白后"放成一个独立 SVG, 锚定到他的食指尖 (30, 80)
+        ③ 棋盘 → 棋子之间不画连线 — 用"刚走完一步, 抬起棋子"的视觉故事
+           让观者自己脑补关联.
+    -->
+
+    <!-- ▣ 小棋盘 (左上角, 50×42, 完全不挡他身体/金牌) -->
+    <svg class="ys-chess-mini" viewBox="0 0 90 72" aria-hidden="true" focusable="false">
       <defs>
-        <linearGradient id="zgBoardEdge" x1="31" y1="51" x2="145" y2="104" gradientUnits="userSpaceOnUse">
+        <linearGradient id="zgBoardEdge" x1="6" y1="6" x2="84" y2="68" gradientUnits="userSpaceOnUse">
           <stop offset="0" stop-color="#7a4a22"/>
-          <stop offset="1" stop-color="#2f1b0e"/>
+          <stop offset="1" stop-color="#2a160a"/>
         </linearGradient>
-        <linearGradient id="zgHand" x1="103" y1="50" x2="173" y2="87" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stop-color="#ffd9b5"/>
-          <stop offset="0.55" stop-color="#eeb483"/>
-          <stop offset="1" stop-color="#c7774d"/>
-        </linearGradient>
-        <filter id="zgChessShadow" x="-35%" y="-35%" width="180%" height="190%">
-          <feDropShadow dx="0" dy="4" stdDeviation="2.2" flood-color="#101827" flood-opacity="0.34"/>
+        <filter id="zgChessShadow" x="-25%" y="-25%" width="150%" height="160%">
+          <feDropShadow dx="0" dy="2.5" stdDeviation="1.8"
+                        flood-color="#0a0f1a" flood-opacity="0.45"/>
         </filter>
       </defs>
       <g class="ys-chess-board" filter="url(#zgChessShadow)">
-        <path d="M24 47 L119 34 L153 84 L50 100 Z" fill="url(#zgBoardEdge)"/>
-        <path d="M31 43 L118 31 L146 76 L52 90 Z" fill="#f3d9a5" stroke="#2e1a0b" stroke-width="2"/>
+        <!-- 桌面厚度 -->
+        <path d="M6 14 L82 8 L88 60 L10 66 Z" fill="url(#zgBoardEdge)"/>
+        <!-- 棋盘面 -->
+        <path d="M10 12 L80 6 L86 56 L14 62 Z"
+              fill="#f3d9a5" stroke="#1c0e05" stroke-width="1.2"/>
         <g class="ys-board-squares">
-          <path d="M31 43 L53 40 L60 51 L38 54 Z" fill="#f8ecd0"/>
-          <path d="M53 40 L75 37 L82 48 L60 51 Z" fill="#5a3218"/>
-          <path d="M75 37 L97 34 L104 45 L82 48 Z" fill="#f8ecd0"/>
-          <path d="M97 34 L118 31 L126 42 L104 45 Z" fill="#5a3218"/>
-          <path d="M38 54 L60 51 L68 63 L45 67 Z" fill="#5a3218"/>
-          <path d="M60 51 L82 48 L90 60 L68 63 Z" fill="#f8ecd0"/>
-          <path d="M82 48 L104 45 L112 57 L90 60 Z" fill="#5a3218"/>
-          <path d="M104 45 L126 42 L134 54 L112 57 Z" fill="#f8ecd0"/>
-          <path d="M45 67 L68 63 L76 76 L53 80 Z" fill="#f8ecd0"/>
-          <path d="M68 63 L90 60 L99 73 L76 76 Z" fill="#5a3218"/>
-          <path d="M90 60 L112 57 L121 70 L99 73 Z" fill="#f8ecd0"/>
-          <path d="M112 57 L134 54 L143 67 L121 70 Z" fill="#5a3218"/>
-          <path d="M53 80 L76 76 L85 88 L61 92 Z" fill="#5a3218"/>
-          <path d="M76 76 L99 73 L108 85 L85 88 Z" fill="#f8ecd0"/>
-          <path d="M99 73 L121 70 L131 82 L108 85 Z" fill="#5a3218"/>
-          <path d="M121 70 L143 67 L152 79 L131 82 Z" fill="#f8ecd0"/>
+          <!-- 4×4 棋格 (透视小斜) -->
+          <path d="M10 12 L28 11 L31 23 L13 24 Z" fill="#f8ecd0"/>
+          <path d="M28 11 L46 10 L49 22 L31 23 Z" fill="#5a3218"/>
+          <path d="M46 10 L64 9  L67 21 L49 22 Z" fill="#f8ecd0"/>
+          <path d="M64 9  L80 6  L83 19 L67 21 Z" fill="#5a3218"/>
+          <path d="M13 24 L31 23 L34 36 L16 38 Z" fill="#5a3218"/>
+          <path d="M31 23 L49 22 L52 35 L34 36 Z" fill="#f8ecd0"/>
+          <path d="M49 22 L67 21 L70 34 L52 35 Z" fill="#5a3218"/>
+          <path d="M67 21 L83 19 L86 32 L70 34 Z" fill="#f8ecd0"/>
+          <path d="M16 38 L34 36 L37 49 L18 51 Z" fill="#f8ecd0"/>
+          <path d="M34 36 L52 35 L55 48 L37 49 Z" fill="#5a3218"/>
+          <path d="M52 35 L70 34 L73 47 L55 48 Z" fill="#f8ecd0"/>
+          <path d="M70 34 L86 32 L89 45 L73 47 Z" fill="#5a3218"/>
+          <path d="M18 51 L37 49 L40 62 L21 64 Z" fill="#5a3218"/>
+          <path d="M37 49 L55 48 L58 61 L40 62 Z" fill="#f8ecd0"/>
+          <path d="M55 48 L73 47 L76 60 L58 61 Z" fill="#5a3218"/>
+          <path d="M73 47 L89 45 L92 58 L76 60 Z" fill="#f8ecd0"/>
+        </g>
+        <!-- 棋盘上已落下的两枚黑子 (黑王 + 黑兵) -->
+        <g class="ys-chess-pieces">
+          <g class="piece dark king">
+            <ellipse cx="52" cy="38" rx="4.6" ry="1.7" fill="#0d0d12"/>
+            <path d="M49 37 L50.5 30 L53.5 30 L55 37 Z" fill="#24242a"/>
+            <circle cx="52" cy="27.5" r="3" fill="#24242a"/>
+            <path d="M50.5 25.5 L53.5 25.5 M52 24 L52 27" stroke="#f6e7c4"
+                  stroke-width="0.9" stroke-linecap="round"/>
+          </g>
+          <g class="piece dark pawn">
+            <ellipse cx="36" cy="43" rx="4" ry="1.5" fill="#0d0d12"/>
+            <path d="M33.5 42 L35 36 L37 36 L38.5 42 Z" fill="#24242a"/>
+            <circle cx="36" cy="34" r="2.2" fill="#24242a"/>
+          </g>
         </g>
       </g>
-      <g class="ys-chess-pieces">
-        <g class="piece dark">
-          <ellipse cx="63" cy="71" rx="10" ry="4" fill="#18181b"/>
-          <path d="M57 69 L61 51 L68 51 L72 69 Z" fill="#24242a"/>
-          <circle cx="64.5" cy="47" r="7" fill="#24242a"/>
-          <path d="M61 40 L67 40 M64 36 L64 44" stroke="#f6e7c4" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+
+    <!-- ♕ 被"举起"的白后 — 单独锚定到食指尖 (30, 80) -->
+    <svg class="ys-queen" viewBox="0 0 24 30" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="zgQueenShine" cx="0.4" cy="0.3" r="0.7">
+          <stop offset="0"   stop-color="#fffaf0"/>
+          <stop offset="0.55" stop-color="#f0e3c0"/>
+          <stop offset="1"   stop-color="#9c8554"/>
+        </radialGradient>
+        <filter id="zgQueenShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="1.2"
+                        flood-color="#0a0f1a" flood-opacity="0.55"/>
+        </filter>
+        <radialGradient id="zgQueenAura" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0"    stop-color="rgba(255,238,160,0.65)"/>
+          <stop offset="1"    stop-color="rgba(255,238,160,0)"/>
+        </radialGradient>
+      </defs>
+      <!-- 软光晕 (强调"被举起来"的瞬间) -->
+      <circle class="ys-queen-aura" cx="12" cy="15" r="11" fill="url(#zgQueenAura)"/>
+
+      <g filter="url(#zgQueenShadow)">
+        <ellipse cx="12" cy="28" rx="7" ry="2.2" fill="#a8956a"/>
+        <path d="M7.5 27 L9 16 L15 16 L16.5 27 Z"
+              fill="url(#zgQueenShine)" stroke="#5b4a2e" stroke-width="0.9"/>
+        <ellipse cx="12" cy="16" rx="3.6" ry="0.9" fill="#9c8554"/>
+        <!-- 五齿王冠 -->
+        <path d="M8.4 15.4 L8.8 11.5 L10.2 13.2 L11 10.5 L12 13 L13 10.5 L13.8 13.2 L15.2 11.5 L15.6 15.4 Z"
+              fill="url(#zgQueenShine)" stroke="#5b4a2e" stroke-width="0.8"
+              stroke-linejoin="round"/>
+        <circle cx="12" cy="9.3" r="0.95" fill="#fffaf0" stroke="#5b4a2e" stroke-width="0.5"/>
+        <ellipse cx="10.4" cy="19" rx="0.9" ry="2.6" fill="rgba(255,255,255,0.6)"/>
+      </g>
+    </svg>
+
+    <!--
+      🏆 CPhO 奖杯 — 锚到下面那只手 (~100, 172).
+      SVG 40×60, 底盘中心 (20, 56) 对齐手心 → left:80, top:116.
+      想微调: 改 --trophy-x / --trophy-y (默认 80px / 116px).
+    -->
+    <svg class="ys-trophy" viewBox="0 0 40 60" overflow="visible" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="zgTrophyGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"    stop-color="#fff5b0"/>
+          <stop offset="0.32" stop-color="#ffd65a"/>
+          <stop offset="0.7"  stop-color="#c47a00"/>
+          <stop offset="1"    stop-color="#6f3a00"/>
+        </linearGradient>
+        <radialGradient id="zgTrophyShine" cx="0.32" cy="0.28" r="0.55">
+          <stop offset="0" stop-color="rgba(255,255,255,0.85)"/>
+          <stop offset="1" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+        <filter id="zgTrophyShadow" x="-30%" y="-15%" width="160%" height="130%">
+          <feDropShadow dx="0" dy="1.6" stdDeviation="1.3" flood-color="#0a0f1a" flood-opacity="0.55"/>
+        </filter>
+      </defs>
+
+      <g filter="url(#zgTrophyShadow)">
+        <!-- 左把手 -->
+        <path d="M9 15 C 1 15, -2 24, 4 30 C 8 32, 10 31, 10 28"
+              fill="none" stroke="#a07000" stroke-width="2.6" stroke-linecap="round"/>
+        <!-- 右把手 -->
+        <path d="M31 15 C 39 15, 42 24, 36 30 C 32 32, 30 31, 30 28"
+              fill="none" stroke="#a07000" stroke-width="2.6" stroke-linecap="round"/>
+        <!-- 杯身 -->
+        <path d="M8 10 L 8 22 C 8 31, 13 35, 20 35 C 27 35, 32 31, 32 22 L 32 10 Z"
+              fill="url(#zgTrophyGold)" stroke="#5b3a00" stroke-width="1"/>
+        <!-- 杯口外环 -->
+        <ellipse cx="20" cy="10" rx="12.5" ry="2.6"
+                 fill="#ffe16a" stroke="#5b3a00" stroke-width="1"/>
+        <!-- 杯口内圈 (深色) -->
+        <ellipse cx="20" cy="10" rx="10.6" ry="1.5" fill="#6f3a00" opacity="0.7"/>
+        <!-- 杯身高光 -->
+        <ellipse cx="14" cy="20" rx="2.2" ry="6" fill="url(#zgTrophyShine)"/>
+        <!-- 杯身印章 ★ -->
+        <circle cx="20" cy="22.5" r="5.2" fill="#ffd65a" stroke="#5b3a00" stroke-width="0.7"/>
+        <text x="20" y="25.2" text-anchor="middle"
+              font-family="Georgia, serif" font-size="6.5" font-weight="900"
+              fill="#5b3a00">★</text>
+
+        <!-- 杯颈 -->
+        <path d="M17 35 L 17 40 L 23 40 L 23 35 Z"
+              fill="url(#zgTrophyGold)" stroke="#5b3a00" stroke-width="0.9"/>
+        <!-- 中段球 -->
+        <ellipse cx="20" cy="42" rx="6" ry="2" fill="url(#zgTrophyGold)" stroke="#5b3a00" stroke-width="0.9"/>
+        <!-- 梯形底座 -->
+        <path d="M12 44 L 28 44 L 30 52 L 10 52 Z"
+              fill="url(#zgTrophyGold)" stroke="#5b3a00" stroke-width="0.9"/>
+        <!-- 底座刻字 -->
+        <text x="20" y="50" text-anchor="middle"
+              font-family="Georgia, serif" font-size="3.6" font-weight="900"
+              fill="#3a2400" letter-spacing="-0.3">CPhO</text>
+        <!-- 底盘 -->
+        <rect x="7" y="52" width="26" height="4" fill="#7a4205" stroke="#3a2400" stroke-width="0.9"/>
+      </g>
+    </svg>
+
+    <!--
+      ⚛ 量子风暴 — 头顶 (avatar 上半部天空区).
+      容器: top:-35 left:-20 width:240 height:90 (lower 半段 over 天空, upper 段冒出头像)
+      内容: 风暴云 + 3 原子轨道 + 3 沿轨电子 (SMIL animateMotion 精确沿椭圆)
+            + ψ 波函数 + 4 个飘动量子符号 (ψ ℏ |ψ⟩ ΔxΔp)
+      触发: .medal-on 一起淡入, 电子始终在转 (SMIL)
+    -->
+    <svg class="ys-quantum" viewBox="0 0 240 90" overflow="visible" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="zgQuantumCloud" cx="0.5" cy="0.7" r="0.62">
+          <stop offset="0"    stop-color="rgba(168,85,247,0.55)"/>
+          <stop offset="0.55" stop-color="rgba(103,232,249,0.22)"/>
+          <stop offset="1"    stop-color="rgba(168,85,247,0)"/>
+        </radialGradient>
+        <filter id="zgQuantumGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1.1"/>
+        </filter>
+        <!-- 椭圆轨道路径 (rx=72 ry=18, 给 SMIL 用) -->
+        <path id="zgOrbitPath" d="M 72 0 A 72 18 0 0 1 -72 0 A 72 18 0 0 1 72 0" fill="none"/>
+      </defs>
+
+      <!-- ① 风暴云层 (背景紫青光晕) -->
+      <ellipse class="ys-q-cloud" cx="120" cy="60" rx="118" ry="32" fill="url(#zgQuantumCloud)"/>
+
+      <!-- ② 原子结构: 3 倾角轨道 + 中心核 -->
+      <g transform="translate(120 60)">
+        <ellipse rx="72" ry="18" fill="none" stroke="#a78bfa" stroke-width="1.2" opacity="0.75"
+                 transform="rotate(0)"/>
+        <ellipse rx="72" ry="18" fill="none" stroke="#67e8f9" stroke-width="1.2" opacity="0.75"
+                 transform="rotate(60)"/>
+        <ellipse rx="72" ry="18" fill="none" stroke="#f0abfc" stroke-width="1.2" opacity="0.75"
+                 transform="rotate(-60)"/>
+        <!-- 原子核 (中心金亮点) -->
+        <circle class="ys-q-nucleus" cx="0" cy="0" r="3.2" fill="#fef08a"
+                stroke="#7a4205" stroke-width="0.6" filter="url(#zgQuantumGlow)"/>
+      </g>
+
+      <!-- ③ 3 个电子 — SMIL 精确沿椭圆轨道飞行, 不同速度 + 不同倾角 -->
+      <g transform="translate(120 60)">
+        <g transform="rotate(0)">
+          <circle r="3" fill="#67e8f9" filter="url(#zgQuantumGlow)">
+            <animateMotion dur="2.2s" repeatCount="indefinite">
+              <mpath href="#zgOrbitPath"/>
+            </animateMotion>
+          </circle>
         </g>
-        <g class="piece light">
-          <ellipse cx="113" cy="60" rx="9" ry="3.7" fill="#c8b68b"/>
-          <path d="M108 58 L111 43 L118 43 L121 58 Z" fill="#fff5d8" stroke="#6b5a38" stroke-width="1"/>
-          <path d="M111 41 C114 34 122 35 123 42 C118 45 114 45 111 41Z" fill="#fff5d8" stroke="#6b5a38" stroke-width="1"/>
+        <g transform="rotate(60)">
+          <circle r="2.6" fill="#fef08a" filter="url(#zgQuantumGlow)">
+            <animateMotion dur="3.4s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+              <mpath href="#zgOrbitPath"/>
+            </animateMotion>
+          </circle>
+        </g>
+        <g transform="rotate(-60)">
+          <circle r="2.6" fill="#f0abfc" filter="url(#zgQuantumGlow)">
+            <animateMotion dur="2.8s" repeatCount="indefinite">
+              <mpath href="#zgOrbitPath"/>
+            </animateMotion>
+          </circle>
         </g>
       </g>
-      <g class="ys-chess-hand">
-        <path d="M172 74 C153 64 138 58 124 59 C115 60 112 69 119 74 C132 83 151 85 173 88 Z"
-              fill="url(#zgHand)" stroke="#8b4e2d" stroke-width="2.4"/>
-        <path d="M121 62 C110 55 101 51 95 51 C91 52 90 57 94 60 C101 65 112 68 122 71 Z"
-              fill="url(#zgHand)" stroke="#8b4e2d" stroke-width="2.1"/>
-        <path d="M139 61 C129 53 119 49 113 49 C109 50 108 55 112 58 C120 63 130 67 140 71"
-              fill="none" stroke="#9b5d38" stroke-width="2" stroke-linecap="round"/>
-        <g class="ys-moving-piece">
-          <ellipse cx="102" cy="62" rx="8" ry="3.2" fill="#c8b68b"/>
-          <path d="M98 60 L100 45 L107 45 L110 60 Z" fill="#fff8df" stroke="#5b4a2e" stroke-width="1.2"/>
-          <path d="M100 44 C104 36 114 37 114 45 C110 47 106 47 100 44Z" fill="#fff8df" stroke="#5b4a2e" stroke-width="1.2"/>
-        </g>
-      </g>
+
+      <!-- ④ 波函数 ψ(x) — sine wave 在风暴底部流动 (dasharray 流向) -->
+      <path class="ys-q-wave"
+            d="M 0 80 Q 15 70 30 80 T 60 80 T 90 80 T 120 80 T 150 80 T 180 80 T 210 80 T 240 80"
+            fill="none" stroke="#a78bfa" stroke-width="1.6" opacity="0.7"
+            stroke-linecap="round" filter="url(#zgQuantumGlow)"/>
+
+      <!-- ⑤ 飘动量子符号 (4 个) -->
+      <text class="ys-q-sym s1" x="30" y="20"
+            font-family="Georgia, serif" font-size="14" font-style="italic"
+            fill="#67e8f9" opacity="0.9">ψ</text>
+      <text class="ys-q-sym s2" x="115" y="14"
+            font-family="Georgia, serif" font-size="12" font-style="italic"
+            fill="#fef08a" opacity="0.9">ℏ</text>
+      <text class="ys-q-sym s3" x="190" y="22"
+            font-family="Georgia, serif" font-size="13"
+            fill="#f0abfc" opacity="0.9">|ψ⟩</text>
+      <text class="ys-q-sym s4" x="70" y="38"
+            font-family="Georgia, serif" font-size="9" font-style="italic"
+            fill="#a78bfa" opacity="0.85">ΔxΔp≥ℏ/2</text>
     </svg>
 
     <div class="ys-sparks" aria-hidden="true"></div>
@@ -272,47 +458,194 @@
   animation: medal-swing 0.70s cubic-bezier(0.36,0.07,0.19,0.97) both;
 }
 
-.ys-chess-play {
+/*
+ * 棋盘和棋子拆成两个独立元素:
+ *   · 白后锚到食指尖 (30, 80) — 真正"在手里"
+ *   · 棋盘就放在白后下方 — 看起来他刚把这枚后从棋盘上举起来
+ *
+ * 棋盘宽度收窄到 65px, 完全在头像左半边, 不挡中心的金牌 (medal x ≈ 88..117).
+ */
+
+/* ── 棋盘 (放在白后正下方) ── */
+.ys-chess-mini {
   position: absolute;
-  left: -24px;
-  top: 60px;
-  z-index: 30;
-  width: 142px;
-  height: 89px;
+  /* 白后中心约在 (30, 80); 棋盘顶端紧贴白后底部 (~y=92), 整盘向下 + 向右延伸.
+     棋盘 SVG 90×72 用显示宽 65, 显示高 52 缩放 → 1 SVG px = 0.72 显示 px.
+     棋盘 左上角对齐: left=4, top=92 → 棋盘覆盖 stage (4..69, 92..144),
+     完全避开了中心的金牌 (88..117, 92..136 的右半) */
+  left:  4px;
+  top:   92px;
+  width:  68px;
+  height: 56px;
+  z-index: 28;
   pointer-events: none;
   opacity: 0;
-  transform: translate(-12px, 20px) scale(0.72) rotate(-9deg);
-  transform-origin: 75% 68%;
+  transform: translateY(-14px) scale(0.55) rotate(-6deg);
+  transform-origin: 50% 0%;     /* 从白后底部展开 */
   transition:
-    opacity 0.18s ease,
-    transform 0.58s cubic-bezier(0.18,1.35,0.28,1);
+    opacity 0.28s ease 0.18s,
+    transform 0.62s cubic-bezier(0.18,1.4,0.32,1) 0.18s;
 }
-
-.ys-wrap.medal-on .ys-chess-play {
+.ys-wrap.medal-on .ys-chess-mini {
   opacity: 1 !important;
-  transform: none;
+  transform: translateY(0) scale(1) rotate(0deg);
+  animation: chess-mini-float 3.2s 1s ease-in-out infinite alternate;
+}
+@keyframes chess-mini-float {
+  from { transform: translateY(0)    scale(1)     rotate(0deg);   }
+  to   { transform: translateY(1px)  scale(1.008) rotate(-1deg);  }
 }
 
-.ys-moving-piece {
-  transform-origin: 102px 62px;
+/* ── 食指尖那枚白后 ── */
+.ys-queen {
+  position: absolute;
+  /* SVG 24×30, 白后中心 ≈ (12, 16). 锚到指尖 (30, 80):
+     left = 30 - 12 = 18,  top = 80 - 16 = 64 */
+  left: 18px;
+  top:  64px;
+  width:  24px;
+  height: 30px;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(8px, 10px) scale(0.5) rotate(-14deg);
+  transform-origin: 12px 16px;
+  filter: drop-shadow(0 0 6px rgba(255,230,150,0.55));
+  transition:
+    opacity 0.22s ease 0.18s,
+    transform 0.6s cubic-bezier(0.18,1.4,0.3,1) 0.18s;
+}
+.ys-wrap.medal-on .ys-queen {
+  opacity: 1;
+  transform: translate(0, 0) scale(1) rotate(0deg);
+  animation: queen-hover 1.6s 0.85s ease-in-out infinite alternate;
+}
+/* 白后在指尖上轻微悬浮 + 旋转, 看起来"刚被举起准备落子" */
+@keyframes queen-hover {
+  from { transform: translate(0, 0)      rotate(-3deg) scale(1);     }
+  to   { transform: translate(0.5px, -2px) rotate(3deg)  scale(1.05); }
 }
 
-.ys-wrap.medal-on .ys-moving-piece {
-  animation: chess-piece-place 1.18s 0.62s ease-in-out infinite alternate;
+.ys-queen-aura { transform-origin: 12px 15px; }
+.ys-wrap.medal-on .ys-queen-aura {
+  animation: queen-aura-pulse 1.4s ease-in-out infinite alternate;
+}
+@keyframes queen-aura-pulse {
+  from { opacity: 0.5; transform: scale(0.85); }
+  to   { opacity: 1;   transform: scale(1.15); }
 }
 
-.ys-wrap.medal-on .ys-chess-hand {
-  animation: chess-hand-move 1.18s 0.62s ease-in-out infinite alternate;
+/* ── 🏆 CPhO 奖杯 (锚到下面那只手) ── */
+.ys-trophy {
+  position: absolute;
+  /* 默认锚到 (~100, 172) 那只手. 微调改 --trophy-x / --trophy-y */
+  left: var(--trophy-x, 80px);
+  top:  var(--trophy-y, 116px);
+  width:  var(--trophy-size, 40px);
+  height: calc(var(--trophy-size, 40px) * 1.5);
+  z-index: 29;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px) scale(0.55) rotate(calc(var(--trophy-rotate, 0deg) - 14deg));
+  transform-origin: 50% 95%;     /* 从手心展开 */
+  filter: drop-shadow(0 0 5px rgba(255,215,0,0.5));
+  transition:
+    opacity 0.28s ease 0.42s,
+    transform 0.6s cubic-bezier(0.18, 1.4, 0.32, 1) 0.42s;
+}
+.ys-wrap.medal-on .ys-trophy {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(var(--trophy-rotate, 0deg));
+  animation: trophy-bobble 2.6s 1.0s ease-in-out infinite alternate;
+}
+/* 入场后轻微"举杯"晃动 */
+@keyframes trophy-bobble {
+  from { transform: translateY(0)    rotate(calc(var(--trophy-rotate,0deg) - 2deg))   scale(1);    }
+  to   { transform: translateY(-2px) rotate(calc(var(--trophy-rotate,0deg) + 2.5deg)) scale(1.02); }
 }
 
-@keyframes chess-piece-place {
-  from { transform: translate(8px, -7px) scale(1.03); }
-  to { transform: translate(-2px, 1px) scale(1); }
+/* ── ⚛ 量子风暴 (头顶) ── */
+.ys-quantum {
+  position: absolute;
+  /* 头顶上方: 下半段覆盖头像天空区, 上半段冒出头像 */
+  left:   var(--quantum-left, -20px);
+  top:    var(--quantum-top, -35px);
+  width:  var(--quantum-w, 240px);
+  height: var(--quantum-h, 90px);
+  z-index: 12;          /* 头像 (1) 之上, medal/queen/chess 之下 */
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  transform: translateY(8px) scale(0.85);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.55s ease 0.42s,
+    transform 0.7s cubic-bezier(0.18, 1.4, 0.32, 1) 0.42s;
+}
+.ys-wrap.medal-on .ys-quantum {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
-@keyframes chess-hand-move {
-  from { transform: translate(9px, -4px) rotate(2deg); }
-  to { transform: translate(0, 1px) rotate(-1deg); }
+/* 风暴云缓慢呼吸 — fill-box 让 SVG 元素以自身中心为锚 */
+.ys-q-cloud { transform-box: fill-box; transform-origin: center; }
+.ys-wrap.medal-on .ys-q-cloud {
+  animation: q-cloud-breathe 3.6s ease-in-out infinite alternate;
+}
+@keyframes q-cloud-breathe {
+  from { opacity: 0.7; transform: scale(0.96); }
+  to   { opacity: 1;   transform: scale(1.05); }
+}
+
+/* 原子核闪烁 */
+.ys-q-nucleus { transform-box: fill-box; transform-origin: center; }
+.ys-wrap.medal-on .ys-q-nucleus {
+  animation: q-nucleus-flash 1.3s ease-in-out infinite alternate;
+}
+@keyframes q-nucleus-flash {
+  from { opacity: 0.7; transform: scale(0.9); }
+  to   { opacity: 1;   transform: scale(1.25); }
+}
+
+/* ψ(x) 波函数 dasharray 流动 */
+.ys-q-wave {
+  stroke-dasharray: 14 6;
+  stroke-dashoffset: 0;
+}
+.ys-wrap.medal-on .ys-q-wave {
+  animation: q-wave-flow 2.6s linear infinite;
+}
+@keyframes q-wave-flow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -40; }
+}
+
+/* 量子符号飘动 (上下浮 + 透明度脉冲) */
+.ys-q-sym {
+  transform-origin: center;
+}
+.ys-wrap.medal-on .ys-q-sym {
+  animation: q-sym-float 3.2s ease-in-out infinite;
+}
+.ys-wrap.medal-on .ys-q-sym.s1 { animation-delay: 0.0s; }
+.ys-wrap.medal-on .ys-q-sym.s2 { animation-delay: 0.8s; }
+.ys-wrap.medal-on .ys-q-sym.s3 { animation-delay: 1.6s; }
+.ys-wrap.medal-on .ys-q-sym.s4 { animation-delay: 0.4s; }
+@keyframes q-sym-float {
+  0%, 100% { transform: translateY(0);   opacity: 0.55; }
+  50%      { transform: translateY(-5px); opacity: 1;    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-wrap.medal-on .ys-chess-mini,
+  .ys-wrap.medal-on .ys-queen,
+  .ys-wrap.medal-on .ys-queen-aura,
+  .ys-wrap.medal-on .ys-trophy,
+  .ys-wrap.medal-on .ys-q-cloud,
+  .ys-wrap.medal-on .ys-q-nucleus,
+  .ys-wrap.medal-on .ys-q-wave,
+  .ys-wrap.medal-on .ys-q-sym { animation: none; }
+  /* SMIL animateMotion 也需要禁掉 — 加 css 不够, 用 :root 没法, 接受默认 */
 }
 
 /* ── Sparkles ── */

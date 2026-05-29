@@ -11,16 +11,20 @@
   └──────────────────────────────────────────────────────────┘
 -->
 
-<div class="ys-wrap" style="--hat-y:35%; --hat-size:21%; --hat-x:50%; --hat-rotate:0deg">
+<div class="ys-wrap" style="--hat-y:35%; --hat-size:21%; --hat-x:50%; --hat-rotate:0deg; --ribbon-x:97px; --ribbon-y:118px;">
   <div class="ys-stage">
 
     <img src="https://yil384.github.io/Picasso-Lab/people/static/zhongkai.png"
          class="avatar" alt="avatar"/>
 
+    <!--
+      "权威" 两字一左一右刻在头像中可见的两座山头上 (人物后方).
+      照片左侧那座锥形山在 (~10%, ~30%), 右侧的山/景观在 (~88%, ~30%),
+      字号偏大, 用金黄+棕红描边模拟石刻+夕阳照在山顶的感觉.
+    -->
     <div class="ys-authority-layer" aria-hidden="true">
-      <div class="ys-authority-sign">
-        <span>&#26435;</span><span>&#23041;</span>
-      </div>
+      <span class="ys-authority-char left">&#26435;</span>
+      <span class="ys-authority-char right">&#23041;</span>
     </div>
 
     <!-- 院士帽（学术四方帽 mortarboard）-->
@@ -115,6 +119,34 @@
 
     <div class="ys-sparks" aria-hidden="true"></div>
 
+    <!-- ── Best Paper: award ribbon badge (chest) ── -->
+    <svg class="ys-ribbon" viewBox="0 0 46 72" overflow="visible"
+         xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <!-- ribbon left tail with V-notch bottom -->
+      <polygon points="5,27 21,25 21,56 15,49 11,62 5,56"
+               fill="#1d4ed8" stroke="#1e3a8a" stroke-width="2"
+               stroke-linejoin="round"/>
+      <!-- ribbon right tail with V-notch bottom -->
+      <polygon points="41,27 25,25 25,56 31,49 35,62 41,56"
+               fill="#1d4ed8" stroke="#1e3a8a" stroke-width="2"
+               stroke-linejoin="round"/>
+      <!-- center seam line -->
+      <line x1="23" y1="25" x2="23" y2="56" stroke="#1e3a8a" stroke-width="1.5"/>
+      <!-- outer gold ring -->
+      <circle cx="23" cy="19" r="19" fill="#f59e0b" stroke="#111" stroke-width="2.5"/>
+      <!-- middle pale-gold ring -->
+      <circle cx="23" cy="19" r="14" fill="#fde68a" stroke="#111" stroke-width="2"/>
+      <!-- inner white circle -->
+      <circle cx="23" cy="19" r="11" fill="#fff" stroke="#111" stroke-width="1.5"/>
+      <!-- BEST PAPER two-line text -->
+      <text x="23" y="16.5" text-anchor="middle"
+            font-family="Arial Black,Impact,sans-serif"
+            font-size="7" font-weight="900" fill="#92400e">BEST</text>
+      <text x="23" y="25" text-anchor="middle"
+            font-family="Arial Black,Impact,sans-serif"
+            font-size="7" font-weight="900" fill="#92400e">PAPER</text>
+    </svg>
+
   </div><!-- .ys-stage -->
 </div><!-- .ys-wrap -->
 
@@ -151,88 +183,93 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.18);
 }
 
+/* ── 权威: 一左一右刻在山头上 ── */
 .ys-authority-layer {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 2;       /* 在头像之上, 但视觉位置在 "山" 那一片 */
   border-radius: 50%;
   overflow: hidden;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.22s ease;
+  transition: opacity 0.28s ease;
 }
 
-.ys-authority-layer::after {
-  content: "";
+.ys-authority-char {
   position: absolute;
-  left: 7px;
-  top: 83px;
-  width: 76px;
-  height: 20px;
-  border-radius: 48% 52% 42% 58%;
-  background:
-    radial-gradient(ellipse at 35% 15%, rgba(255,231,172,0.26), transparent 54%),
-    linear-gradient(180deg, rgba(88,48,25,0.78), rgba(46,31,25,0.62));
-  transform: rotate(-4deg) scaleX(0.72);
-  opacity: 0;
-  filter: blur(0.2px);
-}
-
-.ys-authority-sign {
-  position: absolute;
-  left: 13px;
-  top: 48px;
-  display: flex;
-  gap: 2px;
-  color: #f9d466;
-  font-family: 'STKaiti','KaiTi','FangSong','SimSun',serif;
-  font-size: 30px;
+  font-family: 'STKaiti','KaiTi','FangSong','STSong','SimSun',serif;
+  font-size: 54px;                     /* 大很多: 38 → 54 */
   font-weight: 900;
   line-height: 1;
-  letter-spacing: -0.05em;
-  -webkit-text-stroke: 1.3px #5b2b0d;
+  color: #d61a2e;                      /* 朱红主色 */
+  -webkit-text-stroke: 2px #f4c84a;    /* 描金边 */
   text-shadow:
-    0 2px 0 #7c3d0f,
-    0 5px 7px rgba(0,0,0,0.55),
-    0 0 9px rgba(255,210,86,0.46);
-  transform: translateY(22px) scale(0.58) rotate(-6deg);
+    0 2px 0 #6b0010,                   /* 朱面厚度 (赤金浮雕) */
+    0 4px 0 rgba(40,4,8,0.55),
+    0 6px 12px rgba(0,0,0,0.62),       /* 落在山体上的影子 */
+    0 0 14px rgba(255,90,90,0.62),     /* 红色霞光 */
+    0 0 22px rgba(255,200,80,0.42);    /* 外圈金光 */
+  letter-spacing: -0.05em;
   transform-origin: 50% 100%;
   opacity: 0;
 }
 
-.ys-authority-sign span {
-  display: inline-block;
-  transform: skewY(-3deg);
+/*
+ * 把左右两字往中心靠拢: 不再贴在 6px / 6px 的边缘, 改成离中线大约 18%
+ * (每字距中线 ~36px, 两字外缘约在 28..82 与 118..172, 中间留 ~36px 空隙
+ *  让脸部和"院士"标签居中喘息).
+ */
+.ys-authority-char.left {
+  left: 18px;
+  top:  56px;
+  transform: translateY(18px) scale(0.55) rotate(-6deg);
 }
-
-.ys-authority-sign span:last-child {
-  transform: translateY(3px) skewY(-3deg);
+.ys-authority-char.right {
+  right: 18px;
+  top:  56px;
+  transform: translateY(18px) scale(0.55) rotate(5deg);
 }
 
 .ys-wrap.hat-on .ys-authority-layer {
   opacity: 1;
 }
 
-.ys-wrap.hat-on .ys-authority-layer::after {
-  animation: authority-base-in 0.54s 0.08s ease-out forwards;
+.ys-wrap.hat-on .ys-authority-char.left {
+  animation:
+    authority-rise-left  0.62s 0.10s cubic-bezier(0.18,1.35,0.28,1) forwards,
+    authority-stand-left 2.4s  0.85s ease-in-out infinite alternate;
 }
 
-.ys-wrap.hat-on .ys-authority-sign {
-  animation: authority-rise 0.66s 0.14s cubic-bezier(0.18,1.35,0.28,1) forwards,
-             authority-stand 1.9s 0.88s ease-in-out infinite alternate;
+.ys-wrap.hat-on .ys-authority-char.right {
+  animation:
+    authority-rise-right  0.62s 0.22s cubic-bezier(0.18,1.35,0.28,1) forwards,
+    authority-stand-right 2.4s  0.95s ease-in-out infinite alternate;
 }
 
-@keyframes authority-rise {
-  to { opacity: 1; transform: translateY(0) scale(1) rotate(-6deg); }
+@keyframes authority-rise-left {
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(-5deg); }
+}
+@keyframes authority-rise-right {
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(4deg); }
 }
 
-@keyframes authority-base-in {
-  to { opacity: 1; transform: rotate(-4deg) scaleX(1); }
+@keyframes authority-stand-left {
+  from { transform: translateY(0)    scale(1)    rotate(-5deg); }
+  to   { transform: translateY(-2px) scale(1.02) rotate(-3deg); }
+}
+@keyframes authority-stand-right {
+  from { transform: translateY(0)    scale(1)    rotate(4deg); }
+  to   { transform: translateY(-2px) scale(1.02) rotate(2deg); }
 }
 
-@keyframes authority-stand {
-  from { transform: translateY(0) scale(1) rotate(-6deg); }
-  to { transform: translateY(-2px) scale(1.02) rotate(-4deg); }
+@media (prefers-reduced-motion: reduce) {
+  .ys-wrap.hat-on .ys-authority-char.left,
+  .ys-wrap.hat-on .ys-authority-char.right {
+    animation: none;
+    opacity: 1;
+  }
+  .ys-wrap.hat-on .ys-authority-char.left  { transform: rotate(-5deg); }
+  .ys-wrap.hat-on .ys-authority-char.right { transform: rotate(4deg);  }
 }
 
 /* ── Hat outer: handles position + rotation + reveal ── */
@@ -312,6 +349,31 @@
   transition: opacity 0.30s ease 0.50s;
 }
 .ys-wrap.hat-on .ys-label { opacity: 1; }
+
+/* ── Best Paper: award ribbon badge (chest) ── */
+.ys-ribbon {
+  position: absolute;
+  left: var(--ribbon-x, 42px);
+  top:  var(--ribbon-y, 118px);
+  width: 40px; height: 50px;
+  z-index: 15;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.45) rotate(-8deg);
+  transform-origin: 50% 0%;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.40));
+  transition: opacity 0.40s 0.28s ease,
+              transform 0.48s 0.28s cubic-bezier(0.22,1.48,0.36,1);
+}
+.ys-wrap.hat-on .ys-ribbon {
+  opacity: 1;
+  transform: rotate(-8deg);
+  animation: ribbon-sway 4.2s 0.85s ease-in-out infinite;
+}
+@keyframes ribbon-sway {
+  0%,100% { transform: rotate(-8deg); }
+  50%     { transform: rotate(-5deg); }
+}
 
 /* ── Sparkles ── */
 .ys-sparks {

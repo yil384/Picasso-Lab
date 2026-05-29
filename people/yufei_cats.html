@@ -232,76 +232,81 @@
   }
 }
 
+/*
+ * 已经把所有 keyframe 整体提前 ~8.8%, 让猫第一次出现从 ~4s 提前到 ~1s.
+ * 走路 / 睡觉 / 爬树 / 在树顶 / 下树 / 走出去 — 这些动作各自的持续时间都保持原值,
+ * 只是整段顺时针前移. 末尾 90.55%–100% 是收尾的小停顿 (loop 衔接).
+ */
 @keyframes yf-cat-route {
-  0%, 11.8% {
+  0%, 3% {
     opacity: 0;
     transform: translate(-136px, 128px) rotate(0deg);
   }
-  11.81% {
+  3.01% {
     opacity: 1;
     transform: translate(-136px, 128px) rotate(0deg) scale(0.98);
   }
-  15% {
+  6% {
     opacity: 1;
     transform: translate(-98px, 128px) rotate(0deg) scale(1);
   }
-  21% {
+  12% {
     opacity: 1;
     transform: translate(-18px, 128px) rotate(0deg);
   }
-  27% {
+  18% {                                    /* 到树脚 (原 27%) */
     opacity: 1;
     transform: translate(86px, 128px) rotate(0deg);
   }
-  43% {
+  34% {                                    /* 睡完 (原 43%) */
     opacity: 1;
     transform: translate(86px, 128px) rotate(0deg);
   }
-  45% {
+  36% {
     opacity: 1;
     transform: translate(102px, 127px) rotate(0deg);
   }
-  47% {
+  38% {                                    /* 开始爬 (原 47%) */
     opacity: 1;
     transform: translate(116px, 120px) rotate(-3deg);
   }
-  50% {
+  41% {
     opacity: 1;
     transform: translate(122px, 101px) rotate(-6deg);
   }
-  54% {
+  45% {
     opacity: 1;
     transform: translate(131px, 76px) rotate(-6deg);
   }
-  59% {
+  50% {                                    /* 到树顶 (原 59%) */
     opacity: 1;
     transform: translate(140px, 42px) rotate(-2deg);
   }
-  77% {
+  68% {                                    /* 树顶坐够了 (原 77%) */
     opacity: 1;
     transform: translate(140px, 42px) rotate(0deg);
   }
-  80% {
+  71% {
     opacity: 1;
     transform: translate(135px, 62px) rotate(-5deg);
   }
-  84% {
+  75% {
     opacity: 1;
     transform: translate(126px, 90px) rotate(-6deg);
   }
-  88% {
+  79% {                                    /* 回到树脚 (原 88%) */
     opacity: 1;
     transform: translate(116px, 120px) rotate(-2deg);
   }
-  88.01% {
+  79.01% {
     opacity: 1;
     transform: translate(86px, 128px) rotate(0deg);
   }
-  92% {
+  83% {
     opacity: 1;
     transform: translate(18px, 128px) rotate(0deg);
   }
-  99.55% {
+  90.55% {                                 /* 走到画外 (原 99.55%) */
     opacity: 1;
     transform: translate(-136px, 128px) rotate(0deg);
   }
@@ -312,13 +317,13 @@
 }
 
 @keyframes yf-walk-facing {
-  0%, 11.79%, 47.01%, 88%, 100% {
+  0%, 2.99%, 38.01%, 79%, 100% {
     transform: scaleX(-1);
   }
-  11.8%, 47% {
+  3%, 38% {
     transform: scaleX(1);
   }
-  88.01%, 99.55% {
+  79.01%, 90.55% {
     transform: scaleX(-1);
   }
 }
@@ -354,46 +359,46 @@
 }
 
 @keyframes yf-cat-walk-pose {
-  0%, 11.79%, 27.01%, 43%, 47.01%, 88%, 100% {
+  0%, 2.99%, 18.01%, 34%, 38.01%, 79%, 100% {
     opacity: 0;
   }
-  11.8%, 27%, 43.01%, 47%, 88.01%, 99.55% {
+  3%, 18%, 34.01%, 38%, 79.01%, 90.55% {
     opacity: 1;
   }
 }
 
 @keyframes yf-cat-sleep-pose {
-  0%, 27%, 43.01%, 100% {
+  0%, 18%, 34.01%, 100% {
     opacity: 0;
   }
-  27.01%, 43% {
+  18.01%, 34% {
     opacity: 1;
   }
 }
 
 @keyframes yf-cat-climb-pose {
-  0%, 46.99%, 59.01%, 76.99%, 88.01%, 100% {
+  0%, 37.99%, 50.01%, 67.99%, 79.01%, 100% {
     opacity: 0;
   }
-  47%, 59%, 77%, 88% {
+  38%, 50%, 68%, 79% {
     opacity: 1;
   }
 }
 
 @keyframes yf-cat-perch-pose {
-  0%, 58.99%, 77.01%, 100% {
+  0%, 49.99%, 68.01%, 100% {
     opacity: 0;
   }
-  59%, 77% {
+  50%, 68% {
     opacity: 1;
   }
 }
 
 @keyframes yf-cat-shadow {
-  0%, 11.79%, 47%, 88%, 100% {
+  0%, 2.99%, 38%, 79%, 100% {
     opacity: 0;
   }
-  11.8%, 46.99%, 88.01%, 99.55% {
+  3%, 37.99%, 79.01%, 90.55% {
     opacity: 0.9;
   }
 }

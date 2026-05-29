@@ -1,5 +1,5 @@
 <!--
-  演唱会氛围头像模板 — 配置说明
+  演唱会氛围头像模板 — 配置说明 (V1 回退 + V2 polish)
   ┌──────────────────────────────────────────────────────────┐
   │  --concert-hue   主舞台灯色相，默认 292deg                 │
   │  --laser-hue     激光/荧光棒色相，默认 188deg               │
@@ -8,9 +8,38 @@
   │  --mic-size      麦克风高度（占头像高度百分比）              │
   │  --mic-rotate    麦克风倾斜角度                              │
   └──────────────────────────────────────────────────────────┘
+  V2 改动: 不动 HTML/结构, 只精修各元素的 CSS — 更鲜的灯头, 更干净
+         的 LIVE 标, 更清晰的应援牌, 更平滑的进入过渡.
 -->
 
-<div class="ys-wrap" style="--concert-hue:292deg; --laser-hue:188deg; --glow-size:18px; --mic-x:74%; --mic-y:68%; --mic-size:46%; --mic-rotate:-15deg">
+<!--
+  调节面板:
+    --concert-hue / --laser-hue   舞台灯色相
+    --mic-x / --mic-y             麦克风位置 (avatar 内 %)
+    --mic-size / --mic-rotate     麦克风大小 / 倾角
+    --iem-x / --iem-y             ★ 耳返位置 (% of avatar, 在 visible ear 上)
+    --iem-rotate                  耳返整体旋转 (deg, 跟着头侧角度走)
+    --iem-scale                   耳返大小 (1=默认, 0.8=小)
+    --iem-cable-trim              ★ 耳返线尾部裁掉多少 px (0=全长 180px, 60=裁短 60px)
+                                  调大 = 线变短, 调到 ~140 = 只剩耳塞
+-->
+
+<div class="ys-wrap" style="
+      --concert-hue: 292deg;
+      --laser-hue:   188deg;
+      --glow-size:    18px;
+      --mic-x:        75%;
+      --mic-y:        60%;
+      --mic-size:     46%;
+      --mic-rotate:  -9deg;
+
+      /* 耳返 (in-ear monitor) — 戴在他侧脸 visible 那只耳 */
+      --iem-x:        40%;
+      --iem-y:        30.7%;
+      --iem-rotate:  -8deg;
+      --iem-scale:     0.55;
+      --iem-cable-trim: 36px;   /* 从下往上裁掉多少 px (0=全长, 调大=变短) */
+    ">
   <div class="ys-stage">
 
     <img src="https://yil384.github.io/Picasso-Lab/people/static/xiang.png"
@@ -75,6 +104,94 @@
         </g>
       </svg>
     </div>
+
+    <!--
+      ── 耳返 IEM V2 — RGB 机械键盘酷炫风 ──
+      · 耳塞放大到 26×22, 黑紫底 + RGB 边光 (2 层 stroke 增强 rim glow)
+      · 4 颗 RGB LED 跑马灯 (cyan/紫/粉/黄 循环), 全部带 bloom 滤镜
+      · driver 中心 cyan LED 持续脉冲
+      · cable 加长到 ~120px + 3 层 (外 glow / 主线 / 暗芯) + 白色"流光"
+        沿着线滚动 (像 RGB 键盘 wave)
+      · 外圈大 RGB halo (慢呼吸)
+    -->
+    <svg class="ys-iem" viewBox="0 0 50 180" overflow="visible" aria-hidden="true">
+      <defs>
+        <linearGradient id="iemBody" x1="0" y1="0" x2="0.6" y2="1">
+          <stop offset="0"   stop-color="#2a1438"/>
+          <stop offset="0.5" stop-color="#0a0518"/>
+          <stop offset="1"   stop-color="#000004"/>
+        </linearGradient>
+        <!-- RGB 渐变 (耳塞 rim) -->
+        <linearGradient id="iemRGB" gradientTransform="rotate(45)">
+          <stop offset="0"    stop-color="#ff5fcb"/>
+          <stop offset="0.33" stop-color="#c084fc"/>
+          <stop offset="0.66" stop-color="#34e8ff"/>
+          <stop offset="1"    stop-color="#22c55e"/>
+        </linearGradient>
+        <!-- Cable 渐变 -->
+        <linearGradient id="iemCable" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"   stop-color="#22d3ee"/>
+          <stop offset="0.5" stop-color="#a855f7"/>
+          <stop offset="1"   stop-color="#ec4899"/>
+        </linearGradient>
+        <filter id="iemGlow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="1.8"/>
+        </filter>
+      </defs>
+
+      <!-- 外圈大 RGB halo (慢呼吸) -->
+      <ellipse class="ys-iem-halo" cx="22" cy="26" rx="18" ry="15"
+               fill="none" stroke="url(#iemRGB)" stroke-width="0.6"
+               opacity="0.4" filter="url(#iemGlow)"/>
+
+      <!-- ── Cable: 长 + 3 层 + 流光 ── -->
+      <!-- 外层 glow 粗模糊 -->
+      <path d="M 30 14 Q 44 6, 38 26 Q 30 46, 36 72 Q 42 96, 34 118 Q 28 140, 32 158 Q 36 172, 30 178"
+            fill="none" stroke="url(#iemCable)" stroke-width="5"
+            stroke-linecap="round" opacity="0.4" filter="url(#iemGlow)"/>
+      <!-- 中层主线 (RGB 渐变) -->
+      <path class="ys-iem-cable-path"
+            d="M 30 14 Q 44 6, 38 26 Q 30 46, 36 72 Q 42 96, 34 118 Q 28 140, 32 158 Q 36 172, 30 178"
+            fill="none" stroke="url(#iemCable)" stroke-width="2.4"
+            stroke-linecap="round"/>
+      <!-- 内层暗芯 (像编织线 inside) -->
+      <path d="M 30 14 Q 44 6, 38 26 Q 30 46, 36 72 Q 42 96, 34 118 Q 28 140, 32 158 Q 36 172, 30 178"
+            fill="none" stroke="#0a0218" stroke-width="0.8"
+            stroke-linecap="round" opacity="0.7"/>
+      <!-- 白色"流光" 沿 cable 滚动 (RGB 键盘 wave 效果) -->
+      <path class="ys-iem-cable-flow"
+            d="M 30 14 Q 44 6, 38 26 Q 30 46, 36 72 Q 42 96, 34 118 Q 28 140, 32 158 Q 36 172, 30 178"
+            fill="none" stroke="#ffffff" stroke-width="1.4"
+            stroke-linecap="round" stroke-dasharray="8 260"
+            filter="url(#iemGlow)"/>
+
+      <!-- 耳塞主体 (大椭圆, 黑紫底 + RGB rim) -->
+      <ellipse cx="22" cy="26" rx="13" ry="11"
+               fill="url(#iemBody)"
+               stroke="url(#iemRGB)" stroke-width="1.8"/>
+      <!-- Rim glow 增强 (二层模糊 stroke) -->
+      <ellipse cx="22" cy="26" rx="13" ry="11"
+               fill="none" stroke="url(#iemRGB)" stroke-width="0.8"
+               opacity="0.7" filter="url(#iemGlow)"/>
+
+      <!-- 内部 driver 圆 (透明 acrylic, 显示内部 LED) -->
+      <circle cx="16" cy="26" r="4"
+              fill="#000508"
+              stroke="url(#iemRGB)" stroke-width="0.8"/>
+      <!-- driver 中心 cyan LED 持续脉冲 -->
+      <circle class="ys-iem-driver-led" cx="16" cy="26" r="1.6"
+              fill="#34e8ff" filter="url(#iemGlow)"/>
+
+      <!-- 4 颗 RGB LED 跑马灯 (排在右侧弧) -->
+      <circle class="ys-iem-led l1" cx="27" cy="20" r="1.4" fill="#34e8ff" filter="url(#iemGlow)"/>
+      <circle class="ys-iem-led l2" cx="30" cy="25" r="1.4" fill="#c084fc" filter="url(#iemGlow)"/>
+      <circle class="ys-iem-led l3" cx="29" cy="31" r="1.4" fill="#ff5fcb" filter="url(#iemGlow)"/>
+      <circle class="ys-iem-led l4" cx="25" cy="33" r="1.4" fill="#fde047" filter="url(#iemGlow)"/>
+
+      <!-- 顶部小高光斑 (acrylic 反光) -->
+      <ellipse cx="17" cy="20" rx="3" ry="1.4"
+               fill="#ffffff" opacity="0.4"/>
+    </svg>
 
     <div class="ys-concert-mask" aria-hidden="true">
       <svg class="ys-concert-svg" viewBox="0 0 200 200" preserveAspectRatio="none"
@@ -152,20 +269,24 @@
             <rect x="132" y="154" width="4" height="27" rx="2" fill="url(#barGlow)"/>
           </g>
           <g class="ys-fan-signs" filter="url(#concertGlow)">
+            <!-- V3 upgrade: 真 LED 屏感 — 彩色外框 + 深色屏底 + 顶部高光带 + 亮字 -->
             <g class="ys-fan-sign ys-fan-sign-left" transform="rotate(-9 43 151)">
-              <rect x="25" y="144" width="36" height="14" rx="3" fill="url(#signPink)"/>
-              <rect x="27" y="146" width="32" height="10" rx="2" fill="rgba(255,255,255,0.16)"/>
-              <text x="43" y="153.8">&#20877;&#36951;&#24536;</text>
+              <rect x="23" y="143" width="40" height="16" rx="3" fill="url(#signPink)" stroke="#3a0838" stroke-width="0.8"/>
+              <rect x="25.5" y="145.5" width="35" height="11" rx="1.6" fill="#1a0220"/>
+              <rect x="25.5" y="145.5" width="35" height="2.5" rx="1.6" fill="rgba(255,255,255,0.22)"/>
+              <text x="43" y="154">&#20877;&#36951;&#24536;</text>
             </g>
             <g class="ys-fan-sign ys-fan-sign-mid" transform="rotate(5 101 158)">
-              <rect x="86" y="151" width="30" height="13" rx="3" fill="url(#signCyan)"/>
-              <rect x="88" y="153" width="26" height="9" rx="2" fill="rgba(255,255,255,0.14)"/>
-              <text x="101" y="160.1">&#22810;&#26790;&#30151;</text>
+              <rect x="84" y="150" width="34" height="15" rx="3" fill="url(#signCyan)" stroke="#072844" stroke-width="0.8"/>
+              <rect x="86.5" y="152.5" width="29" height="10" rx="1.5" fill="#06142a"/>
+              <rect x="86.5" y="152.5" width="29" height="2.2" rx="1.5" fill="rgba(255,255,255,0.22)"/>
+              <text x="101" y="160.2">&#22810;&#26790;&#30151;</text>
             </g>
             <g class="ys-fan-sign ys-fan-sign-right" transform="rotate(8 157 151)">
-              <rect x="140" y="144" width="34" height="14" rx="3" fill="url(#signPink)"/>
-              <rect x="142" y="146" width="30" height="10" rx="2" fill="rgba(255,255,255,0.16)"/>
-              <text x="157" y="153.8">&#20877;&#36951;&#24536;</text>
+              <rect x="138" y="143" width="38" height="16" rx="3" fill="url(#signPink)" stroke="#3a0838" stroke-width="0.8"/>
+              <rect x="140.5" y="145.5" width="33" height="11" rx="1.6" fill="#1a0220"/>
+              <rect x="140.5" y="145.5" width="33" height="2.5" rx="1.6" fill="rgba(255,255,255,0.22)"/>
+              <text x="157" y="154">&#20877;&#36951;&#24536;</text>
             </g>
           </g>
           <g class="ys-crowd-sticks" filter="url(#concertGlow)">
@@ -270,7 +391,87 @@
     <div class="ys-glow-stick ys-glow-stick-fan-8" aria-hidden="true"></div>
     <div class="ys-support-board ys-support-board-left" data-text="&#20877;&#36951;&#24536;" aria-hidden="true">&#20877;&#36951;&#24536;</div>
     <div class="ys-support-board ys-support-board-right" data-text="&#22810;&#26790;&#30151;" aria-hidden="true">&#22810;&#26790;&#30151;</div>
+
+    <!-- V4: 麦克风口持续冒音符 (不只是点击 burst) -->
+    <div class="ys-emit-notes" aria-hidden="true">
+      <span class="ys-en e1">&#9834;</span>
+      <span class="ys-en e2">&#9835;</span>
+      <span class="ys-en e3">&#9836;</span>
+      <span class="ys-en e4">&#9834;</span>
+      <span class="ys-en e5">&#9835;</span>
+      <span class="ys-en e6">&#9836;</span>
+    </div>
+
+    <!-- V4 顶部 lyric ticker 已删 (用户嫌头顶多一条奇怪) -->
+
+    <!--
+      V9 演唱会 confetti (重做 — 真的是 confetti 不是带子)
+      · 12 片, 6 种形状: 五角星/菱形/心/方/圆/叶
+      · 飘落像真叶子: 宽 S-曲线 (X 振幅 ±25px) + 持续 360° 翻滚
+      · 每片独立 (--cycle / delay / depth 各自不同)
+    -->
+    <div class="ys-ribbons" aria-hidden="true">
+      <span class="ys-ribbon r1  shape-star"   ></span>
+      <span class="ys-ribbon r2  shape-diamond"></span>
+      <span class="ys-ribbon r3  shape-leaf"   ></span>
+      <span class="ys-ribbon r4  shape-heart"  ></span>
+      <span class="ys-ribbon r5  shape-square" ></span>
+      <span class="ys-ribbon r6  shape-circle" ></span>
+      <span class="ys-ribbon r7  shape-star"   ></span>
+      <span class="ys-ribbon r8  shape-diamond"></span>
+      <span class="ys-ribbon r9  shape-leaf"   ></span>
+      <span class="ys-ribbon r10 shape-heart"  ></span>
+      <span class="ys-ribbon r11 shape-square" ></span>
+      <span class="ys-ribbon r12 shape-star"   ></span>
+    </div>
+
     <div class="ys-notes" aria-hidden="true"></div>
+
+    <!--
+      ── 台下观众欢呼 V3 — 分层 sticker 设计 ──
+      每个 cheer = [8-point 大 burst 在后] + [白色 pill 在前 + 大字] + [2 颗小 sparkle]
+      WOW (左) + XIANG (右), 成对弹出, 隔 ~8s 再次.
+      为何分层: 单层 starburst 文字挤在不规则形里 → 拥挤. pill 给文字留呼吸空间,
+                burst 在后只负责 "comic 能量", 二者各司其职.
+    -->
+    <div class="ys-cheers" aria-hidden="true">
+
+      <div class="ys-cheer ys-cheer-wow">
+        <!-- 8-point burst 在后 (大胆颜色, 提供能量) -->
+        <svg class="ys-cheer-burst" viewBox="0 0 100 70" overflow="visible">
+          <polygon
+            points="50,2 58.4,22.1 83.9,11.7 70.3,29.6 98,35 70.3,40.4 83.9,58.3 58.4,47.9 50,68 41.6,47.9 16.1,58.3 29.7,40.4 2,35 29.7,29.6 16.1,11.7 41.6,22.1"/>
+        </svg>
+        <!-- 白色 pill 在前 (干净, 让文字主角化) -->
+        <div class="ys-cheer-pill">
+          <span class="ys-cheer-text">WOW!</span>
+        </div>
+        <!-- 2 颗小 sparkle 装饰角落 -->
+        <svg class="ys-cheer-sparkle sp1" viewBox="0 0 14 14" overflow="visible">
+          <polygon points="7,0 8.2,5.8 14,7 8.2,8.2 7,14 5.8,8.2 0,7 5.8,5.8"/>
+        </svg>
+        <svg class="ys-cheer-sparkle sp2" viewBox="0 0 14 14" overflow="visible">
+          <polygon points="7,0 8.2,5.8 14,7 8.2,8.2 7,14 5.8,8.2 0,7 5.8,5.8"/>
+        </svg>
+      </div>
+
+      <div class="ys-cheer ys-cheer-xiang">
+        <svg class="ys-cheer-burst" viewBox="0 0 100 70" overflow="visible">
+          <polygon
+            points="50,2 58.4,22.1 83.9,11.7 70.3,29.6 98,35 70.3,40.4 83.9,58.3 58.4,47.9 50,68 41.6,47.9 16.1,58.3 29.7,40.4 2,35 29.7,29.6 16.1,11.7 41.6,22.1"/>
+        </svg>
+        <div class="ys-cheer-pill">
+          <span class="ys-cheer-text">XIANG!</span>
+        </div>
+        <svg class="ys-cheer-sparkle sp1" viewBox="0 0 14 14" overflow="visible">
+          <polygon points="7,0 8.2,5.8 14,7 8.2,8.2 7,14 5.8,8.2 0,7 5.8,5.8"/>
+        </svg>
+        <svg class="ys-cheer-sparkle sp2" viewBox="0 0 14 14" overflow="visible">
+          <polygon points="7,0 8.2,5.8 14,7 8.2,8.2 7,14 5.8,8.2 0,7 5.8,5.8"/>
+        </svg>
+      </div>
+
+    </div>
 
   </div><!-- .ys-stage -->
 </div><!-- .ys-wrap -->
@@ -282,6 +483,7 @@
   display: inline-block;
   cursor: pointer;
   overflow: visible;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ── Stage ── */
@@ -304,7 +506,7 @@
   box-shadow: none;
   transition:
     transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
-    filter 0.35s ease;
+    filter 0.4s ease;
 }
 .ys-wrap:hover .avatar {
   transform: scale(1.07);
@@ -312,10 +514,10 @@
 }
 .ys-wrap.concert-on:hover .avatar {
   transform: scale(1.07);
-  filter: brightness(1.08) saturate(1.08) contrast(1.03);
+  filter: brightness(1.10) saturate(1.12) contrast(1.04);
 }
 .ys-wrap.concert-on .avatar {
-  filter: brightness(1.03) saturate(1.08) contrast(1.03);
+  filter: brightness(1.04) saturate(1.12) contrast(1.04);
   box-shadow: none;
 }
 
@@ -331,10 +533,10 @@
   transform-origin: 50% 82%;
   opacity: 0;
   transform: translateY(12px) scale(0.92) rotate(var(--mic-rotate, -23deg));
-  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.38));
+  filter: drop-shadow(0 4px 5px rgba(0,0,0,0.42));
   transition:
-    opacity 0.24s ease,
-    transform 0.38s cubic-bezier(0.22,1.2,0.36,1);
+    opacity 0.26s ease,
+    transform 0.42s cubic-bezier(0.22,1.2,0.36,1);
 }
 .ys-wrap.concert-on .ys-mic {
   opacity: 1;
@@ -356,9 +558,9 @@
   overflow: hidden;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.32s ease;
+  transition: opacity 0.36s ease;
 }
-.ys-wrap.concert-on .ys-concert-mask { opacity: 0.72; }
+.ys-wrap.concert-on .ys-concert-mask { opacity: 0.78; }
 
 .ys-concert-svg {
   position: absolute;
@@ -398,7 +600,7 @@
   fill: #020106;
 }
 .ys-crowd-sticks {
-  opacity: 0.86;
+  opacity: 0.92;
 }
 .ys-stick-cyan {
   stroke: #67e8f9;
@@ -410,7 +612,7 @@
   stroke: #ffe45c;
 }
 .ys-fan-signs {
-  opacity: 0.92;
+  opacity: 0.94;
 }
 .ys-fan-sign {
   transform-box: fill-box;
@@ -430,7 +632,7 @@
 }
 .ys-phone-lights {
   fill: #e8fbff;
-  opacity: 0.86;
+  opacity: 0.88;
   filter: drop-shadow(0 0 4px #67e8f9);
 }
 .ys-wrap.concert-on .ys-crowd-back {
@@ -487,27 +689,33 @@
   to   { transform: rotate(-4deg) translateY(-2px); }
 }
 
+/* V2 polish: 更干净的 LIVE 标 — 加粗、圆角、内边距更舒服, 高对比 */
 .ys-live {
   position: absolute;
-  top: 24px;
-  right: 26px;
-  padding: 2px 5px;
-  border-radius: 6px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.92);
-  background: rgba(255, 26, 87, 0.62);
-  box-shadow: 0 0 7px rgba(255,26,87,0.40);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+  top: 22px;
+  right: 22px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #ffffff;
+  background: linear-gradient(180deg, #ff3a64 0%, #c5132c 100%);
+  border: 1px solid rgba(255,255,255,0.32);
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.45),
+    0 0 8px rgba(255,58,100,0.55);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.5);
   opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.22s ease 0.2s, transform 0.22s ease 0.2s;
+  transform: translateY(-4px) scale(0.9);
+  transition:
+    opacity 0.24s ease 0.2s,
+    transform 0.32s cubic-bezier(0.22,1.4,0.36,1) 0.2s;
 }
 .ys-wrap.concert-on .ys-live {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 /* ── Circular inner glow details ── */
@@ -547,13 +755,14 @@
   mask: radial-gradient(circle, transparent 0 76%, #000 84% 100%);
 }
 .ys-wrap.concert-on .ys-glow-ring {
-  opacity: 0.54;
+  opacity: 0.58;
   animation: ring-spin 3.4s linear infinite;
 }
 @keyframes ring-spin {
   to { transform: rotate(360deg); }
 }
 
+/* V2 polish: 荧光棒 — 更鲜的灯头, 双 halo + 白核, 比 V1 亮一档 */
 .ys-glow-stick {
   position: absolute;
   z-index: 16;
@@ -563,18 +772,27 @@
   pointer-events: none;
   opacity: 0;
   transform-origin: 50% 100%;
-  transition: opacity 0.25s ease, transform 0.55s cubic-bezier(0.22,1.4,0.36,1);
+  transition: opacity 0.28s ease, transform 0.6s cubic-bezier(0.22,1.4,0.36,1);
   transform: rotate(var(--stick-rest, 0deg)) translateY(12px);
 }
 .ys-glow-stick::before {
+  /* 灯头 (上半段发光部分) */
   content: "";
   position: absolute;
   inset: 3px 1px 10px;
   border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 8px currentColor, 0 0 18px currentColor;
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,0.85) 0%,
+      currentColor 22%,
+      currentColor 100%);
+  box-shadow:
+    0 0 6px currentColor,
+    0 0 14px currentColor,
+    0 0 24px color-mix(in srgb, currentColor 60%, transparent);
 }
 .ys-glow-stick::after {
+  /* 手柄 (底部银色) */
   content: "";
   position: absolute;
   left: 1px;
@@ -582,7 +800,8 @@
   bottom: 0;
   height: 14px;
   border-radius: 3px;
-  background: linear-gradient(180deg, #f8fafc, #8a8a8a);
+  background: linear-gradient(180deg, #f8fafc, #6a6a6a);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 .ys-glow-stick-left {
   left: 11px;
@@ -747,7 +966,7 @@
   --stick-delay: -0.16s;
 }
 .ys-wrap.concert-on .ys-glow-stick {
-  opacity: 0.95;
+  opacity: 0.96;
   animation: glowstick-wave var(--stick-speed, 0.7s) ease-in-out infinite alternate;
   animation-delay: var(--stick-delay, 0s);
 }
@@ -756,40 +975,43 @@
   to   { transform: rotate(var(--stick-to, 0deg)) translateY(-3px); }
 }
 
+/* V2 polish: 应援牌 — 更锐的边缘 + 内圈细描金边 + 字体更立体 */
 .ys-support-board {
   position: absolute;
   z-index: 17;
   min-width: 86px;
-  height: 27px;
+  height: 28px;
   padding: 0 9px;
-  border-radius: 5px;
+  border-radius: 6px;
   pointer-events: none;
   opacity: 0;
   display: grid;
   place-items: center;
   overflow: hidden;
-  color: #ffe77a;
-  -webkit-text-fill-color: #ffe77a;
-  -webkit-text-stroke: 0.55px rgba(30,13,0,0.88);
+  color: #fff1a0;
+  -webkit-text-fill-color: #fff1a0;
+  -webkit-text-stroke: 0.6px rgba(28,12,0,0.92);
   font-family: "PingFang SC", "Microsoft YaHei", "Arial Black", sans-serif;
   font-size: 14.4px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.2px;
   text-shadow:
-    0 0 1px rgba(255,255,210,0.8),
-    0 0 3px rgba(255,205,67,0.66);
-  border: 1px solid rgba(255,220,94,0.64);
-  transition: opacity 0.22s ease, transform 0.38s cubic-bezier(0.22,1.35,0.36,1);
+    0 0 1px rgba(255,255,210,0.85),
+    0 0 4px rgba(255,205,67,0.75);
+  border: 1px solid rgba(255,225,108,0.7);
+  transition:
+    opacity 0.24s ease,
+    transform 0.42s cubic-bezier(0.22,1.4,0.36,1);
 }
 .ys-support-board::before {
   content: "";
   position: absolute;
   inset: 3px;
   border-radius: 4px;
-  opacity: 0.35;
+  opacity: 0.42;
   background:
-    radial-gradient(circle, rgba(255,242,164,0.8) 0 1px, transparent 1.25px)
+    radial-gradient(circle, rgba(255,242,164,0.92) 0 1px, transparent 1.25px)
     0 0 / 6px 6px;
 }
 .ys-support-board::after {
@@ -807,43 +1029,43 @@
     0 0 / 5px 5px;
   background-clip: text;
   -webkit-background-clip: text;
-  -webkit-text-stroke: 0.35px rgba(255,183,42,0.68);
-  opacity: 0.22;
+  -webkit-text-stroke: 0.4px rgba(255,183,42,0.74);
+  opacity: 0.26;
   filter:
     drop-shadow(0 0 2px rgba(255,244,160,0.98))
-    drop-shadow(0 0 6px rgba(255,168,38,0.82));
+    drop-shadow(0 0 6px rgba(255,168,38,0.85));
 }
 .ys-support-board-left {
   left: -8px;
   bottom: 16px;
   background:
-    linear-gradient(135deg, rgba(42,10,38,0.96), rgba(12,5,20,0.94)),
-    radial-gradient(circle at 18% 26%, rgba(255,126,222,0.55), transparent 55%);
+    linear-gradient(135deg, rgba(46,12,42,0.96), rgba(14,6,22,0.94)),
+    radial-gradient(circle at 18% 26%, rgba(255,126,222,0.62), transparent 55%);
   box-shadow:
-    inset 0 0 10px rgba(255,209,91,0.22),
-    0 0 8px rgba(255,92,205,0.62),
-    0 0 18px rgba(118,52,255,0.38);
+    inset 0 0 12px rgba(255,209,91,0.28),
+    0 0 10px rgba(255,92,205,0.68),
+    0 0 22px rgba(118,52,255,0.42);
   transform: rotate(-10deg) translateY(12px) scale(0.82);
 }
 .ys-support-board-right {
   right: -8px;
   bottom: 19px;
   background:
-    linear-gradient(135deg, rgba(6,27,44,0.96), rgba(7,7,27,0.94)),
-    radial-gradient(circle at 78% 28%, rgba(52,232,255,0.5), transparent 58%);
+    linear-gradient(135deg, rgba(6,29,46,0.96), rgba(7,7,29,0.94)),
+    radial-gradient(circle at 78% 28%, rgba(52,232,255,0.56), transparent 58%);
   box-shadow:
-    inset 0 0 10px rgba(255,209,91,0.22),
-    0 0 8px rgba(52,232,255,0.66),
-    0 0 18px rgba(37,99,235,0.42);
+    inset 0 0 12px rgba(255,209,91,0.28),
+    0 0 10px rgba(52,232,255,0.72),
+    0 0 22px rgba(37,99,235,0.46);
   transform: rotate(10deg) translateY(12px) scale(0.82);
 }
 .ys-wrap.concert-on .ys-support-board-left {
-  opacity: 0.96;
+  opacity: 0.98;
   transform: rotate(-10deg) translateY(0) scale(1);
   animation: board-wave-left 0.82s ease-in-out infinite alternate;
 }
 .ys-wrap.concert-on .ys-support-board-right {
-  opacity: 0.96;
+  opacity: 0.98;
   transform: rotate(10deg) translateY(0) scale(1);
   animation: board-wave-right 0.76s ease-in-out infinite alternate-reverse;
 }
@@ -854,6 +1076,309 @@
 @keyframes board-wave-right {
   from { transform: rotate(12deg) translateY(0) scale(1); }
   to   { transform: rotate(5deg) translateY(-2px) scale(1); }
+}
+
+/*
+ * ── V4: 麦克风口持续冒音符 ──
+ * 6 个音符循环上升, 错开 delay → 看起来一直有音符在冒出来.
+ */
+.ys-emit-notes {
+  position: absolute;
+  /* 锚到麦克风的"嘴边" 上方 */
+  left: calc(var(--mic-x, 74%) - 28px);
+  top:  calc(var(--mic-y, 68%) - 56px);
+  width: 64px;
+  height: 80px;
+  z-index: 20;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.3s;
+}
+.ys-wrap.concert-on .ys-emit-notes { opacity: 1; }
+.ys-en {
+  position: absolute;
+  bottom: 0;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    0 0 6px currentColor,
+    0 1px 2px rgba(0,0,0,0.5);
+  -webkit-text-stroke: 0.5px rgba(20,4,40,0.6);
+  opacity: 0;
+  user-select: none;
+}
+.ys-en.e1 { left:  6%; color: #67e8f9; font-size: 13px; --drift:  14px; }
+.ys-en.e2 { left: 28%; color: #ff5fcb; font-size: 11px; --drift:   6px; }
+.ys-en.e3 { left: 50%; color: #fde047; font-size: 16px; --drift: -10px; }
+.ys-en.e4 { left: 72%; color: #c084fc; font-size: 13px; --drift:  18px; }
+.ys-en.e5 { left: 18%; color: #f0abfc; font-size: 12px; --drift:  -6px; }
+.ys-en.e6 { left: 62%; color: #a7f3d0; font-size: 14px; --drift:  10px; }
+.ys-wrap.concert-on .ys-en {
+  animation: ys-en-rise 2.8s ease-out infinite;
+}
+.ys-wrap.concert-on .ys-en.e2 { animation-delay: 0.45s; }
+.ys-wrap.concert-on .ys-en.e3 { animation-delay: 0.90s; }
+.ys-wrap.concert-on .ys-en.e4 { animation-delay: 1.35s; }
+.ys-wrap.concert-on .ys-en.e5 { animation-delay: 1.80s; }
+.ys-wrap.concert-on .ys-en.e6 { animation-delay: 2.25s; }
+@keyframes ys-en-rise {
+  0%   { opacity: 0; transform: translate(0, 0) rotate(-10deg) scale(0.55); }
+  18%  { opacity: 1; }
+  85%  { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(var(--drift, 0), -78px) rotate(22deg) scale(1.18); }
+}
+
+/* V4 顶部 lyric ticker CSS 已删 (用户嫌头顶多一条奇怪) */
+
+/*
+ * ── V9 演唱会 confetti (五角星 / 菱形 / 心 / 方 / 圆 / 叶) ──
+ * 不再是带子, 是真演唱会洒下来的 confetti 小片片.
+ * 每片小 (10-14px), clip-path 切出形状, 飘落像叶子: 宽 S-曲线 + 360° 翻滚.
+ */
+.ys-ribbons {
+  position: absolute;
+  inset: -30% -10% -10% -10%;
+  z-index: 19;
+  pointer-events: none;
+  overflow: visible;
+}
+.ys-ribbon {
+  position: absolute;
+  top: -30px;
+  opacity: 0;
+  /* 通用尺寸 (per-shape override) */
+  width: 12px;
+  height: 12px;
+  filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.4));
+}
+
+/*
+ * 6 种形状 — 全部用 clip-path 切出, 不再是 rectangle
+ */
+/* ⭐ 五角星 */
+.ys-ribbon.shape-star {
+  width: 14px; height: 14px;
+  clip-path: polygon(
+    50% 0%, 61% 35%, 98% 35%, 68% 57%,
+    79% 91%, 50% 70%, 21% 91%, 32% 57%,
+    2% 35%, 39% 35%
+  );
+}
+/* 🔷 菱形 (rotated square) */
+.ys-ribbon.shape-diamond {
+  width: 12px; height: 12px;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+/* ❤ 心形 (用 polygon 近似) */
+.ys-ribbon.shape-heart {
+  width: 13px; height: 12px;
+  clip-path: polygon(
+    50% 100%, 90% 65%, 100% 35%, 85% 8%, 65% 12%,
+    50% 28%, 35% 12%, 15% 8%, 0% 35%, 10% 65%
+  );
+}
+/* ⬛ 方形 (小方块, 略 round 边) */
+.ys-ribbon.shape-square {
+  width: 10px; height: 10px;
+  border-radius: 1px;
+}
+/* ⚪ 圆形 */
+.ys-ribbon.shape-circle {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+}
+/* 🍃 叶形 (不对称 border-radius 做出叶子) */
+.ys-ribbon.shape-leaf {
+  width: 14px; height: 10px;
+  border-radius: 0 100% 0 100%;
+}
+
+/* 颜色 (12 条, K-pop 应援色循环) */
+.ys-ribbon.r1  { left:   4%; background: linear-gradient(180deg, #ff8ce8 0%, #ff4fd8 55%, #c026d3 100%); }
+.ys-ribbon.r2  { left:  12%; background: linear-gradient(180deg, #b9fff8 0%, #34e8ff 55%, #2563eb 100%); }
+.ys-ribbon.r3  { left:  21%; background: linear-gradient(180deg, #fff176 0%, #fde047 55%, #d97706 100%); }
+.ys-ribbon.r4  { left:  30%; background: linear-gradient(180deg, #f0abfc 0%, #c084fc 55%, #7c3aed 100%); }
+.ys-ribbon.r5  { left:  40%; background: linear-gradient(180deg, #a7f3d0 0%, #34d399 55%, #16a34a 100%); }
+.ys-ribbon.r6  { left:  50%; background: linear-gradient(180deg, #fff0ff 0%, #ff5fcb 55%, #c5132c 100%); }
+.ys-ribbon.r7  { left:  60%; background: linear-gradient(180deg, #fef9c3 0%, #fbbf24 55%, #c2410c 100%); }
+.ys-ribbon.r8  { left:  70%; background: linear-gradient(180deg, #ecfeff 0%, #67e8f9 55%, #0e7490 100%); }
+.ys-ribbon.r9  { left:  78%; background: linear-gradient(180deg, #ddd6fe 0%, #a78bfa 55%, #5b21b6 100%); }
+.ys-ribbon.r10 { left:  86%; background: linear-gradient(180deg, #fed7aa 0%, #fb923c 55%, #9a3412 100%); }
+.ys-ribbon.r11 { left:  93%; background: linear-gradient(180deg, #fbcfe8 0%, #f472b6 55%, #9d174b 100%); }
+.ys-ribbon.r12 { left:  98%; background: linear-gradient(180deg, #d9f99d 0%, #84cc16 55%, #3f6212 100%); }
+
+/*
+ * V9 per-piece 性格 (每片独立):
+ *   --color    片本身颜色 (背景色)
+ *   --swing-a  X 左侧极限 (像叶子飘到一侧)
+ *   --swing-b  X 右侧极限
+ *   --depth    前后景 (1=近大亮, 0.8=远小暗)
+ *   --cycle    单片完整循环 (8-13s)
+ */
+.ys-ribbon.r1  { background: #ff5fcb; --swing-a: -22px; --swing-b:  20px; --depth: 1.0;  }
+.ys-ribbon.r2  { background: #34e8ff; --swing-a:  24px; --swing-b: -18px; --depth: 0.85; }
+.ys-ribbon.r3  { background: #22c55e; --swing-a: -18px; --swing-b:  22px; --depth: 1.0;  }
+.ys-ribbon.r4  { background: #f43f5e; --swing-a:  20px; --swing-b: -24px; --depth: 0.9;  }
+.ys-ribbon.r5  { background: #fde047; --swing-a: -25px; --swing-b:  18px; --depth: 1.0;  }
+.ys-ribbon.r6  { background: #c084fc; --swing-a:  22px; --swing-b: -20px; --depth: 0.8;  }
+.ys-ribbon.r7  { background: #fb923c; --swing-a: -20px; --swing-b:  24px; --depth: 1.0;  }
+.ys-ribbon.r8  { background: #f0abfc; --swing-a:  18px; --swing-b: -22px; --depth: 0.85; }
+.ys-ribbon.r9  { background: #7af2c8; --swing-a: -24px; --swing-b:  20px; --depth: 0.9;  }
+.ys-ribbon.r10 { background: #f472b6; --swing-a:  20px; --swing-b: -25px; --depth: 1.0;  }
+.ys-ribbon.r11 { background: #67e8f9; --swing-a: -22px; --swing-b:  22px; --depth: 0.95; }
+.ys-ribbon.r12 { background: #fbbf24; --swing-a:  25px; --swing-b: -18px; --depth: 0.8;  }
+
+/*
+ * V8 独立异步落: 每条用 var(--cycle) 自己的周期 (8-13s 不等)
+ * + 自己的 delay (0-7s 随机散开). 没有 rigid 波浪, 没有同步, 各落各的.
+ *
+ * 深度 (--depth) 模拟前后景: 1.0 = 近 (大+亮), 0.8 = 远 (小+暗).
+ * 远的 ribbon 自然就被近的"挡住" 一部分, 看起来像不同层级.
+ */
+.ys-ribbon {
+  /*
+   * --depth 模拟前后景层 (0.8 远, 1.0 近):
+   * 只用 filter (brightness 暗 + 加少量 blur 模拟景深), 不动 scale
+   * (因为 keyframe 也用 standalone scale, 会被覆盖)
+   */
+  filter:
+    brightness(var(--depth, 1))
+    blur(calc((1 - var(--depth, 1)) * 1.5px));
+}
+
+.ys-wrap.concert-on .ys-ribbon {
+  animation: ys-ribbon-fall var(--cycle, 10s) ease-out infinite;
+}
+/* 12 条独立 delays + 各自 cycle (重映射 --fall-dur 到 --cycle) */
+.ys-wrap.concert-on .ys-ribbon.r1  { animation-delay: 0.4s;  --cycle: 9.2s;  }
+.ys-wrap.concert-on .ys-ribbon.r2  { animation-delay: 3.7s;  --cycle: 11.4s; }
+.ys-wrap.concert-on .ys-ribbon.r3  { animation-delay: 1.8s;  --cycle: 8.6s;  }
+.ys-wrap.concert-on .ys-ribbon.r4  { animation-delay: 5.5s;  --cycle: 10.8s; }
+.ys-wrap.concert-on .ys-ribbon.r5  { animation-delay: 2.6s;  --cycle: 9.8s;  }
+.ys-wrap.concert-on .ys-ribbon.r6  { animation-delay: 6.3s;  --cycle: 12.6s; }
+.ys-wrap.concert-on .ys-ribbon.r7  { animation-delay: 0.9s;  --cycle: 8.8s;  }
+.ys-wrap.concert-on .ys-ribbon.r8  { animation-delay: 4.2s;  --cycle: 10.2s; }
+.ys-wrap.concert-on .ys-ribbon.r9  { animation-delay: 7.1s;  --cycle: 11.0s; }
+.ys-wrap.concert-on .ys-ribbon.r10 { animation-delay: 3.0s;  --cycle: 9.4s;  }
+.ys-wrap.concert-on .ys-ribbon.r11 { animation-delay: 5.8s;  --cycle: 10.4s; }
+.ys-wrap.concert-on .ys-ribbon.r12 { animation-delay: 2.2s;  --cycle: 12.0s; }
+
+/*
+ * V9 物理 keyframe — 像真叶子/confetti 飘落:
+ *   · X 宽 S-曲线 sway (--swing-a ↔ --swing-b, ±20-25px 大幅来回)
+ *   · 持续 720° rotation (一路翻滚, 不再正负来回)
+ *   · scaleY 0.4-1 oscillation 模拟纸面正反翻转
+ *   · Y 近匀速 (terminal velocity, 像真 confetti 轻飘)
+ *   · 0-58% 可见 (慢慢飘 5-7s), 58-100% invisible 等下个 loop
+ * 使用 standalone translate / rotate / scale 属性 — 各自独立动画, 互不覆盖.
+ */
+@keyframes ys-ribbon-fall {
+  0% {
+    opacity: 0;
+    translate: 0 -30px;
+    rotate: 0deg;
+    scale: 1;
+  }
+  4%  { opacity: 1; }
+
+  /* 6 段 S-曲线 sway, Y 接近匀速, rotation 一路向前 720° */
+  10% { translate: var(--swing-a, -20px)  45px; rotate:  90deg; scale: 0.85; }
+  20% { translate: var(--swing-b,  20px) 100px; rotate: 180deg; scale: 1;    }
+  30% { translate: var(--swing-a, -20px) 155px; rotate: 270deg; scale: 0.6;  }
+  40% { translate: var(--swing-b,  20px) 210px; rotate: 360deg; scale: 0.95; }
+  48% { translate: var(--swing-a, -20px) 265px; rotate: 480deg; scale: 0.75; }
+  56% { opacity: 1; translate: var(--swing-b, 12px) 320px; rotate: 600deg; scale: 1; }
+  60% { opacity: 0; translate: var(--swing-b, 12px) 350px; rotate: 660deg; }
+  100%{ opacity: 0; translate: var(--swing-b, 12px) 350px; rotate: 660deg; }
+}
+
+/* V5: LIVE 改成 极轻微的呼吸 — 慢、单拍、幅度极小
+   (V4 双拍 1.2s scale 1.14 太跳了, user 觉得乱动) */
+.ys-wrap.concert-on .ys-live {
+  animation: ys-live-breathe 4s ease-in-out infinite;
+}
+@keyframes ys-live-breathe {
+  0%, 100% { transform: scale(1);    opacity: 0.94; }
+  50%      { transform: scale(1.04); opacity: 1; }
+}
+
+/*
+ * ── 耳返 IEM V2 — RGB 机械键盘酷炫风 ──
+ * 容器放大到 50×120, 锚点在 SVG (22, 26) (耳塞中心)
+ * 4 颗 RGB LED 跑马 + driver 中心脉冲 + cable 流光 + halo 呼吸
+ */
+.ys-iem {
+  position: absolute;
+  left:  var(--iem-x, 32%);
+  top:   var(--iem-y, 42%);
+  width:  50px;
+  height: 180px;
+  z-index: 5;                  /* 在头像上, mic 上, 在 concert mask 下 */
+  pointer-events: none;
+  /* SVG (22, 26) = 耳塞中心 = 44%, 14.4% of viewBox (26/180).
+     translate(-44%, -14.4%) 把耳塞中心对到 --iem-x/y 那个点. */
+  transform:
+    translate(-44%, -14.4%)
+    rotate(var(--iem-rotate, -8deg))
+    scale(var(--iem-scale, 1));
+  transform-origin: 44% 14.4%;
+  /* 用户可裁线长 — 从下往上 inset, 不影响耳塞 (在顶部) */
+  clip-path: inset(0 0 var(--iem-cable-trim, 0px) 0);
+  opacity: 0;
+  transition:
+    opacity 0.32s ease 0.16s,
+    transform 0.42s cubic-bezier(0.22, 1.3, 0.36, 1) 0.16s;
+  filter:
+    drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 6px rgba(180, 90, 255, 0.4));
+}
+.ys-wrap.concert-on .ys-iem { opacity: 1; }
+
+/*
+ * RGB LED 跑马灯 — 4 颗 LED 循环 cyan → 紫 → 粉 → 黄 → cyan
+ * 用不同 delay 制造 wave 跑马效果
+ */
+@keyframes ys-iem-led-cycle {
+  0%   { fill: #34e8ff; }
+  25%  { fill: #c084fc; }
+  50%  { fill: #ff5fcb; }
+  75%  { fill: #fde047; }
+  100% { fill: #34e8ff; }
+}
+.ys-wrap.concert-on .ys-iem-led {
+  animation: ys-iem-led-cycle 2.4s linear infinite;
+}
+.ys-wrap.concert-on .ys-iem-led.l2 { animation-delay: -0.6s; }
+.ys-wrap.concert-on .ys-iem-led.l3 { animation-delay: -1.2s; }
+.ys-wrap.concert-on .ys-iem-led.l4 { animation-delay: -1.8s; }
+
+/* Driver 中心 LED 脉冲 (cyan 呼吸) */
+.ys-wrap.concert-on .ys-iem-driver-led {
+  animation: ys-iem-driver-pulse 1.4s ease-in-out infinite alternate;
+}
+@keyframes ys-iem-driver-pulse {
+  from { opacity: 0.5; transform-origin: 16px 26px; scale: 0.9; }
+  to   { opacity: 1;                                scale: 1.2; }
+}
+
+/* Cable 白色流光 沿 cable 滚动 (像 RGB 键盘 wave) */
+.ys-wrap.concert-on .ys-iem-cable-flow {
+  animation: ys-iem-cable-flow 2s linear infinite;
+}
+@keyframes ys-iem-cable-flow {
+  from { stroke-dashoffset: 268; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* 外圈 RGB halo 慢呼吸 */
+.ys-wrap.concert-on .ys-iem-halo {
+  animation: ys-iem-halo-pulse 2.8s ease-in-out infinite alternate;
+}
+@keyframes ys-iem-halo-pulse {
+  from { opacity: 0.25; stroke-width: 0.5; }
+  to   { opacity: 0.7;  stroke-width: 1.2; }
 }
 
 /* ── Music-note burst ── */
@@ -870,7 +1395,7 @@
   transform: translate(-50%,-50%) scale(0.7);
   line-height: 1;
   font-weight: 800;
-  text-shadow: 0 0 8px currentColor, 0 1px 3px rgba(0,0,0,0.35);
+  text-shadow: 0 0 8px currentColor, 0 1px 3px rgba(0,0,0,0.4);
   user-select: none;
 }
 @keyframes note-fly {
@@ -879,6 +1404,164 @@
   100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.35) rotate(var(--rot)); }
 }
 .ys-note.go { animation: note-fly 0.9s ease-out forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ys-wrap.concert-on .ys-svg-beam-left,
+  .ys-wrap.concert-on .ys-svg-beam-right,
+  .ys-wrap.concert-on .ys-led-bars rect,
+  .ys-wrap.concert-on .ys-crowd-back,
+  .ys-wrap.concert-on .ys-crowd-mid,
+  .ys-wrap.concert-on .ys-crowd-front,
+  .ys-wrap.concert-on .ys-phone-lights,
+  .ys-wrap.concert-on .ys-fan-sign-left,
+  .ys-wrap.concert-on .ys-fan-sign-mid,
+  .ys-wrap.concert-on .ys-fan-sign-right,
+  .ys-wrap.concert-on .ys-glow-ring,
+  .ys-wrap.concert-on .ys-glow-stick,
+  .ys-wrap.concert-on .ys-support-board-left,
+  .ys-wrap.concert-on .ys-support-board-right,
+  .ys-wrap.concert-on .ys-en,
+  .ys-wrap.concert-on .ys-ribbon,
+  .ys-wrap.concert-on .ys-iem-led,
+  .ys-wrap.concert-on .ys-iem-driver-led,
+  .ys-wrap.concert-on .ys-iem-cable-flow,
+  .ys-wrap.concert-on .ys-iem-halo,
+  .ys-wrap.concert-on .ys-cheer,
+  .ys-wrap.concert-on .ys-live { animation: none; }
+}
+
+/*
+ * ── 台下观众欢呼 V3 — 分层 sticker (重设计) ──
+ * 每个 cheer = burst(后) + pill(中) + text(前) + 2 sparkle(角)
+ * - burst: 8-point comic 星, 大色块在后提供能量, 旋转角度和 pill 错开
+ * - pill: 白色圆角矩形 + 厚黑边 + 双下落 hard shadow (漫画 offset 黑影)
+ * - text: Impact 斜体, 文字在 pill 里有充足留白, 不再挤
+ * - sparkle: 4-point 小星, 装饰角落, 黑边
+ * 节奏: 10s 循环, 每次 WOW + XIANG 成对弹出 (140ms 接力), 之后 8s 静默
+ */
+.ys-cheers {
+  position: absolute;
+  inset: 0;
+  z-index: 28;
+  pointer-events: none;
+}
+
+/* ── 整体容器 (整组弹跳的 anchor) ── */
+.ys-cheer {
+  position: absolute;
+  width:  108px;
+  height: 78px;
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: 50% 85%;          /* 从下方弹起 */
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.22));
+}
+
+/* ── 后层: 8-point comic 大 burst ── */
+.ys-cheer-burst {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.ys-cheer-burst polygon {
+  stroke: #0a0a18;
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+}
+
+/* ── 中前层: 白色 pill (文字主舞台) ── */
+.ys-cheer-pill {
+  position: absolute;
+  left:   12%;
+  right:  12%;
+  top:    28%;
+  bottom: 28%;
+  background: #ffffff;
+  border: 3px solid #0a0a18;
+  border-radius: 999px;
+  box-shadow:
+    2px 3px 0 0 #0a0a18,              /* 厚黑硬影 = 漫画 sticker */
+    0 0 0 1px #ffffff inset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ys-cheer-text {
+  font: italic 900 22px/1 Impact, "Haettenschweiler", "Arial Narrow Bold", "Oswald", sans-serif;
+  letter-spacing: 1.2px;
+  user-select: none;
+  pointer-events: none;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.12);  /* 文字自身一点点立体 */
+}
+
+/* ── 装饰: 4-point 小 sparkle ── */
+.ys-cheer-sparkle {
+  position: absolute;
+  width:  14px;
+  height: 14px;
+  display: block;
+  overflow: visible;
+}
+.ys-cheer-sparkle polygon {
+  stroke: #0a0a18;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+/* ── WOW: 暖橙 burst + 白 pill + 深红字 + 金 sparkle ── */
+.ys-cheer-wow {
+  left: -22px;
+  top:  152px;
+}
+.ys-cheer-wow .ys-cheer-burst polygon { fill: #ffb300; }   /* 暖橙 */
+.ys-cheer-wow .ys-cheer-text          { color: #d61f4a; }  /* 深红粉 */
+.ys-cheer-wow .ys-cheer-sparkle polygon { fill: #ffe247; } /* 金 */
+.ys-cheer-wow .ys-cheer-sparkle.sp1 { top: -6px;  left: 4px;   transform: rotate(-12deg); }
+.ys-cheer-wow .ys-cheer-sparkle.sp2 { bottom: -6px; right: 8px; transform: rotate(18deg) scale(0.75); }
+
+/* ── XIANG: 热粉 burst + 白 pill + 紫字 + 青 sparkle ── */
+.ys-cheer-xiang {
+  left: 116px;
+  top:  152px;
+}
+.ys-cheer-xiang .ys-cheer-burst polygon { fill: #ff4fb0; }  /* 热粉 */
+.ys-cheer-xiang .ys-cheer-text          { color: #7c3aed; } /* 紫 */
+.ys-cheer-xiang .ys-cheer-sparkle polygon { fill: #34e8ff; }/* 青 */
+.ys-cheer-xiang .ys-cheer-sparkle.sp1 { top: -6px;  right: 4px; transform: rotate(14deg); }
+.ys-cheer-xiang .ys-cheer-sparkle.sp2 { bottom: -6px; left: 8px; transform: rotate(-20deg) scale(0.75); }
+
+/*
+ * 节奏: 10s 总周期, --tilt 让 WOW/XIANG 各自带固定倾角
+ *   0–2.5%   pop in (scale 0→1.22, translateY 18→-4px)
+ *   2.5–17%  显示 + 微 wobble
+ *   17–21%   pop out (向上飘 + 缩小)
+ *   21–100%  空白 ~7.9s  ← 这就是 "隔一会才一次"
+ */
+@keyframes ys-cheer-pop {
+  0%    { opacity: 0; transform: translateY(18px) scale(0)    rotate(var(--tilt, 0deg)); }
+  2.5%  { opacity: 1; transform: translateY(-4px) scale(1.22) rotate(calc(var(--tilt, 0deg) - 4deg)); }
+  5%    { opacity: 1; transform: translateY(2px)  scale(0.94) rotate(calc(var(--tilt, 0deg) + 2deg)); }
+  8%    { opacity: 1; transform: translateY(-1px) scale(1.06) rotate(var(--tilt, 0deg)); }
+  12%   { opacity: 1; transform: translateY(0)    scale(1)    rotate(var(--tilt, 0deg)); }
+  15%   { opacity: 1; transform: translateY(-2px) scale(1.03) rotate(calc(var(--tilt, 0deg) - 1.5deg)); }
+  17%   { opacity: 1; transform: translateY(0)    scale(1)    rotate(var(--tilt, 0deg)); }
+  21%   { opacity: 0; transform: translateY(-14px) scale(0.5) rotate(var(--tilt, 0deg)); }
+  100%  { opacity: 0; transform: translateY(-14px) scale(0)   rotate(var(--tilt, 0deg)); }
+}
+
+.ys-cheer-wow   { --tilt: -10deg; }
+.ys-cheer-xiang { --tilt:   8deg; }
+
+.ys-wrap.concert-on .ys-cheer-wow,
+.ys-wrap.concert-on .ys-cheer-xiang {
+  animation: ys-cheer-pop 10s cubic-bezier(0.3, 1.4, 0.5, 1) infinite;
+}
+/* WOW 先, XIANG 晚 ~140ms → "WOW… XIANG!" 接力呼喊, 不是机械同步 */
+.ys-wrap.concert-on .ys-cheer-wow   { animation-delay: 2.0s; }
+.ys-wrap.concert-on .ys-cheer-xiang { animation-delay: 2.14s; }
 </style>
 
 

@@ -1,0 +1,325 @@
+<!--
+  hezi_scholar.html  —  量子计算学者 (V3, 透明背景, 修复乱码)
+  ─────────────────────────────────────────────────────────
+  · 头像圆框外完全透明 / 白色, 没有任何环 / 雾 / 渐变
+  · 全部用 HTML 实体写非 ASCII 字符 (避免 编码不一致导致的乱码)
+  · 装饰用她研究的"工具语言" (Bloch sphere / 原子阵列 / 光波导 / 量子态记号)
+  · 整体感觉沉静 / 极简, 不喧宾夺主
+-->
+
+<div class="hz-wrap" style="--avatar-size:200px">
+  <div class="hz-stage">
+
+    <!-- ── ① 头像 (干净圆框, 外面什么都不包) ── -->
+    <div class="hz-photo">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/hezi.png"
+           class="avatar hz-avatar" alt="avatar"/>
+    </div>
+
+    <!-- ── ② Bloch 球 (右上, 单量子比特) ── -->
+    <svg class="hz-bloch" viewBox="0 0 60 60" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="hzBlochShade" cx="0.4" cy="0.35" r="0.6">
+          <stop offset="0"    stop-color="rgba(255,255,255,0.9)"/>
+          <stop offset="0.55" stop-color="rgba(180,210,240,0.42)"/>
+          <stop offset="1"    stop-color="rgba(80,120,180,0.18)"/>
+        </radialGradient>
+      </defs>
+      <circle cx="30" cy="30" r="22" fill="url(#hzBlochShade)"
+              stroke="#1f3a6b" stroke-width="0.9"/>
+      <ellipse cx="30" cy="30" rx="22" ry="6" fill="none"
+               stroke="#1f3a6b" stroke-width="0.6" stroke-dasharray="2 2"/>
+      <ellipse cx="30" cy="30" rx="6" ry="22" fill="none"
+               stroke="#1f3a6b" stroke-width="0.6" stroke-dasharray="2 2"/>
+      <line x1="6"  y1="30" x2="54" y2="30" stroke="#1f3a6b" stroke-width="0.55"/>
+      <line x1="30" y1="6"  x2="30" y2="54" stroke="#1f3a6b" stroke-width="0.55"/>
+      <!-- |0&rang; 顶 / |1&rang; 底, 全部用 HTML 实体写, 不会乱码 -->
+      <text x="30" y="4.2" text-anchor="middle"
+            font-family="Georgia, 'Times New Roman', serif"
+            font-size="4.4" font-style="italic" fill="#0a1428">|0&#10217;</text>
+      <text x="30" y="59" text-anchor="middle"
+            font-family="Georgia, 'Times New Roman', serif"
+            font-size="4.4" font-style="italic" fill="#0a1428">|1&#10217;</text>
+      <!-- 状态向量 (红, 旋转) -->
+      <g class="hz-bloch-vec">
+        <line x1="30" y1="30" x2="44" y2="14"
+              stroke="#e21a2e" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="44" cy="14" r="2.2" fill="#e21a2e"
+                stroke="#7a0c14" stroke-width="0.5"/>
+      </g>
+      <circle cx="30" cy="30" r="1.2" fill="#0a1428"/>
+    </svg>
+
+    <!-- ── ③ 中性原子阵列 (左上 4×3 dot lattice) ── -->
+    <svg class="hz-atoms" viewBox="0 0 60 46" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="hzAtom" cx="0.4" cy="0.35" r="0.65">
+          <stop offset="0"    stop-color="#dfeefa"/>
+          <stop offset="0.55" stop-color="#3a7fc8"/>
+          <stop offset="1"    stop-color="#0a2848"/>
+        </radialGradient>
+      </defs>
+      <!-- optical tweezer 网格暗示 -->
+      <g stroke="#3a7fc8" stroke-width="0.3" opacity="0.32">
+        <line x1="6"  y1="0" x2="6"  y2="46"/>
+        <line x1="22" y1="0" x2="22" y2="46"/>
+        <line x1="38" y1="0" x2="38" y2="46"/>
+        <line x1="54" y1="0" x2="54" y2="46"/>
+        <line x1="0" y1="6"  x2="60" y2="6"/>
+        <line x1="0" y1="22" x2="60" y2="22"/>
+        <line x1="0" y1="38" x2="60" y2="38"/>
+      </g>
+      <g class="hz-lattice">
+        <circle class="hz-atom a1"  cx="6"  cy="6"  r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a2"  cx="22" cy="6"  r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a3"  cx="38" cy="6"  r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a4"  cx="54" cy="6"  r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a5"  cx="6"  cy="22" r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a6"  cx="22" cy="22" r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a7"  cx="38" cy="22" r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a8"  cx="54" cy="22" r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a9"  cx="6"  cy="38" r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a10" cx="22" cy="38" r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a11" cx="38" cy="38" r="2.2" fill="url(#hzAtom)"/>
+        <circle class="hz-atom a12" cx="54" cy="38" r="2.2" fill="url(#hzAtom)"/>
+      </g>
+    </svg>
+
+    <!-- ── ④ 光波导 + 光子 (底部, photon 沿 path 跑) ── -->
+    <svg class="hz-photonic" viewBox="0 0 220 50" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="hzWGgrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0"   stop-color="#7aa3cf"/>
+          <stop offset="0.5" stop-color="#3a7fc8"/>
+          <stop offset="1"   stop-color="#7aa3cf"/>
+        </linearGradient>
+        <filter id="hzPhotonGlow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="1.6"/>
+        </filter>
+      </defs>
+      <path id="hz-wg-path"
+            d="M4 36 C40 36 56 14 96 14 C136 14 154 36 196 36 L216 36"
+            fill="none" stroke="url(#hzWGgrad)" stroke-width="2.6"
+            stroke-linecap="round"/>
+      <path d="M4 36 C40 36 56 14 96 14 C136 14 154 36 196 36 L216 36"
+            fill="none" stroke="rgba(220,240,255,0.85)" stroke-width="0.7"/>
+      <rect x="0"   y="33" width="6" height="6" rx="0.6"
+            fill="#1f3a6b" stroke="#0a1428" stroke-width="0.4"/>
+      <rect x="214" y="33" width="6" height="6" rx="0.6"
+            fill="#1f3a6b" stroke="#0a1428" stroke-width="0.4"/>
+      <circle class="hz-photon" cx="0" cy="0" r="2.6"
+              fill="#5eddc8" filter="url(#hzPhotonGlow)">
+        <animateMotion dur="3.2s" repeatCount="indefinite" rotate="auto">
+          <mpath href="#hz-wg-path"/>
+        </animateMotion>
+      </circle>
+    </svg>
+
+    <!--
+      ⑤ 量子态记号 (右下浮动公式).
+      所有非 ASCII 字符都用 HTML 实体写, 避免任何编码不一致都不会乱码:
+        |  = | (ASCII)
+        ψ  = &#968;     (希腊小写 psi)
+        ⟩  = &#10217;   (math right angle bracket)
+        α  = &#945;
+        β  = &#946;
+        = + 0   都是 ASCII
+    -->
+    <div class="hz-ket" aria-hidden="true">
+      |&#968;&#10217; = &#945;|0&#10217; + &#946;|1&#10217;
+    </div>
+
+  </div><!-- /.hz-stage -->
+</div><!-- /.hz-wrap -->
+
+
+<style>
+.hz-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;        /* 头像圆框外完全透明 */
+}
+.hz-wrap *,
+.hz-wrap *::before,
+.hz-wrap *::after { box-sizing: border-box; }
+
+.hz-stage {
+  position: relative;
+  width:  var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  overflow: visible;
+  background: transparent;
+}
+
+/* ── ① 头像本体 ── */
+.hz-photo {
+  position: relative;
+  z-index: 3;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  transform: scale(var(--hz-scale, 1));
+  transform-origin: 50% 50%;
+  transition: transform 0.4s cubic-bezier(0.32,1.3,0.4,1);
+  box-shadow: 0 4px 12px rgba(20,40,80,0.18);
+}
+.hz-avatar {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: filter 0.4s ease;
+}
+
+.hz-wrap:hover         { --hz-scale: 1.05; }
+.hz-wrap.hz-on         { --hz-scale: 1.04; }
+.hz-wrap.hz-on:hover   { --hz-scale: 1.08; }
+
+
+.hz-wrap.hz-on .hz-avatar {
+  filter: contrast(1.04) saturate(0.98) brightness(1.02);
+}
+
+/* ── ② Bloch 球 ── */
+.hz-bloch {
+  position: absolute;
+  right: -16px;
+  top:   -8px;
+  width:  56px;
+  height: 56px;
+  z-index: 9;
+  opacity: 0;
+  transform: translate(8px, -6px) scale(0.6);
+  filter: drop-shadow(0 2px 3px rgba(20,40,80,0.42));
+  transition:
+    opacity 0.4s ease 0.1s,
+    transform 0.55s cubic-bezier(0.2,1.4,0.32,1) 0.1s;
+}
+
+.hz-wrap.hz-on .hz-bloch {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+}
+.hz-bloch-vec { transform-origin: 30px 30px; }
+
+.hz-wrap.hz-on .hz-bloch-vec {
+  animation: hz-bloch-precess 7s linear infinite;
+}
+@keyframes hz-bloch-precess {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── ③ 原子阵列 ── */
+.hz-atoms {
+  position: absolute;
+  left: -8px;
+  top:  -2px;
+  width:  56px;
+  height: 44px;
+  z-index: 8;
+  opacity: 0;
+  transform: translate(-6px, -4px) scale(0.7);
+  filter: drop-shadow(0 1px 2px rgba(20,40,80,0.32));
+  transition:
+    opacity 0.4s ease 0.18s,
+    transform 0.55s cubic-bezier(0.2,1.4,0.32,1) 0.18s;
+}
+
+.hz-wrap.hz-on .hz-atoms {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+}
+.hz-atom { transform-origin: center; transform-box: fill-box; }
+
+.hz-wrap.hz-on .hz-atom {
+  animation: hz-atom-pulse 2.4s ease-in-out infinite alternate;
+}
+.hz-wrap.hz-on .hz-atom.a2  { animation-delay: 0.15s; }
+.hz-wrap.hz-on .hz-atom.a3  { animation-delay: 0.30s; }
+.hz-wrap.hz-on .hz-atom.a4  { animation-delay: 0.45s; }
+.hz-wrap.hz-on .hz-atom.a5  { animation-delay: 0.20s; }
+.hz-wrap.hz-on .hz-atom.a6  { animation-delay: 0.35s; }
+.hz-wrap.hz-on .hz-atom.a7  { animation-delay: 0.50s; }
+.hz-wrap.hz-on .hz-atom.a8  { animation-delay: 0.65s; }
+.hz-wrap.hz-on .hz-atom.a9  { animation-delay: 0.40s; }
+.hz-wrap.hz-on .hz-atom.a10 { animation-delay: 0.55s; }
+.hz-wrap.hz-on .hz-atom.a11 { animation-delay: 0.70s; }
+.hz-wrap.hz-on .hz-atom.a12 { animation-delay: 0.85s; }
+@keyframes hz-atom-pulse {
+  from { opacity: 0.55; transform: scale(0.85); }
+  to   { opacity: 1;    transform: scale(1.18); }
+}
+
+/* ── ④ 光波导 ── */
+.hz-photonic {
+  position: absolute;
+  left:  -10px;
+  bottom: -28px;
+  width:  220px;
+  height: 50px;
+  z-index: 8;
+  opacity: 0;
+  transform: translateY(12px) scaleX(0.9);
+  transform-origin: 50% 0%;
+  filter: drop-shadow(0 2px 3px rgba(20,40,80,0.32));
+  transition:
+    opacity 0.4s ease 0.24s,
+    transform 0.6s cubic-bezier(0.2,1.4,0.32,1) 0.24s;
+}
+
+.hz-wrap.hz-on .hz-photonic {
+  opacity: 1;
+  transform: translateY(0) scaleX(1);
+}
+
+/* ── ⑤ 量子态记号 ── */
+.hz-ket {
+  position: absolute;
+  right: -30px;
+  bottom: 6px;
+  z-index: 10;
+  font-family: 'Cambria Math', 'STIX Two Math', 'Latin Modern Math',
+               'Times New Roman', Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0a1428;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.85);
+  opacity: 0;
+  transform: translate(8px, 4px);
+  transition:
+    opacity 0.4s ease 0.32s,
+    transform 0.5s cubic-bezier(0.2,1.4,0.3,1) 0.32s;
+}
+
+.hz-wrap.hz-on .hz-ket {
+  opacity: 0.9;
+  transform: translate(0, 0);
+}
+
+/* 减弱动画 */
+@media (prefers-reduced-motion: reduce) {
+  .hz-wrap.hz-on .hz-bloch-vec,
+  .hz-wrap.hz-on .hz-atom,
+  .hz-wrap.hz-on .hz-photon {
+    animation: none;
+  }
+}
+</style>
+
+
+<script>
+(function () {
+  document.querySelectorAll('.hz-wrap').forEach((wrap) => {
+    if (wrap.dataset.hzReady === '1') return;
+    wrap.dataset.hzReady = '1';
+    wrap.addEventListener('click', () => {
+      wrap.classList.toggle('hz-on');
+    });
+  });
+})();
+</script>

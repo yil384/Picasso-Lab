@@ -1,4 +1,29 @@
-<div class="ct-wrap" style="--avatar-size:200px">
+<!--
+  chang_top_scorer.html — 高考状元 + 灭霸手套
+  ─────────────────────────────────────────────────────────────────
+  ★ 调节面板 (在下方 <div class="ct-wrap" style="...">, 直接改数字) ★
+
+    avatar:
+      --avatar-size     头像圆框大小 (px)
+
+    灭霸手套 (gauntlet):
+      --gauntlet-left   手套 left   (px, 水平位置)
+      --gauntlet-top    手套 top    (px, 垂直位置)
+      --gauntlet-w      手套宽      (px, 等比缩放)
+      --gauntlet-h      手套高      (px, 等比缩放)
+      --gauntlet-rotate 手套倾角    (deg, 0=不动, 负=逆时针)
+-->
+
+<div class="ct-wrap" style="
+    --avatar-size: 200px;
+
+    /* 灭霸手套 (位置 + 大小 + 倾角) */
+    --gauntlet-left:   70px;
+    --gauntlet-top:    40px;
+    --gauntlet-w:     150px;
+    --gauntlet-h:     130px;
+    --gauntlet-rotate: 30deg;
+  ">
   <div class="ct-stage">
     <div class="ct-avatar-frame">
       <img src="https://yil384.github.io/Picasso-Lab/people/static/chang.png"
@@ -6,47 +31,213 @@
 
       <div class="ct-photo-warmth" aria-hidden="true"></div>
 
-      <svg class="ct-cup-energy" viewBox="0 0 112 150" aria-hidden="true" focusable="false">
+      <!--
+        ── 灭霸无限手套 (V5 — 重画解剖连接) ──
+        姿态: 拇指 UP / 4 指 LEFT / 腕 RIGHT
+        重做了 V4 的问题:
+          · 拇指 base 真接到 palm top-right (不再悬空)
+          · palm 不再是直角方块, 改成 rounded fist shape (左侧 4 个 finger 接口微凹)
+          · 每根 finger 从 palm 根部向 LEFT 延伸时 略微 taper (根部宽 14, 指尖 10)
+          · 关节凹槽落在 finger segment 中段, 不再 stick-like
+          · 5 颗宝石在 finger base + palm center 显眼位置
+      -->
+      <svg class="ct-cup-energy ct-gauntlet" viewBox="0 0 140 120"
+           aria-hidden="true" focusable="false">
         <defs>
-          <linearGradient id="ctCupGlow" x1="16" y1="28" x2="94" y2="139" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#fff9d8"/>
-            <stop offset="0.36" stop-color="#fbbf24"/>
-            <stop offset="0.74" stop-color="#f97316"/>
-            <stop offset="1" stop-color="#7c2d12"/>
+          <linearGradient id="ctGtMain" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0"    stop-color="#fff2b8"/>
+            <stop offset="0.25" stop-color="#f6c64a"/>
+            <stop offset="0.55" stop-color="#a06a0c"/>
+            <stop offset="0.85" stop-color="#6b3608"/>
+            <stop offset="1"    stop-color="#3a1c02"/>
           </linearGradient>
-          <linearGradient id="ctSteamGlow" x1="18" y1="0" x2="82" y2="72" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#ffffff"/>
-            <stop offset="0.42" stop-color="#fde68a"/>
-            <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+          <linearGradient id="ctGtFinger" x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0"    stop-color="#a06a0c"/>
+            <stop offset="0.4"  stop-color="#f6c64a"/>
+            <stop offset="0.85" stop-color="#a06a0c"/>
+            <stop offset="1"    stop-color="#3a1c02"/>
           </linearGradient>
-          <filter id="ctCupBloom" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="1.4"/>
+          <linearGradient id="ctGtPlate" x1="0" y1="0" x2="1" y2="0.5">
+            <stop offset="0" stop-color="#5a3a08"/>
+            <stop offset="0.5" stop-color="#f6c64a"/>
+            <stop offset="1" stop-color="#5a3a08"/>
+          </linearGradient>
+          <linearGradient id="ctGtWrist" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#8a5e1c"/>
+            <stop offset="0.5" stop-color="#5a3a08"/>
+            <stop offset="1" stop-color="#2a1a02"/>
+          </linearGradient>
+          <radialGradient id="ctGemSoul" cx="0.35" cy="0.35" r="0.7">
+            <stop offset="0"   stop-color="#fde047"/>
+            <stop offset="0.25" stop-color="#fed7aa"/>
+            <stop offset="0.65" stop-color="#f97316"/>
+            <stop offset="1"   stop-color="#7c2d12"/>
+          </radialGradient>
+          <filter id="ctGemBloom" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="2.4"/>
           </filter>
         </defs>
 
-        <g class="ct-cup-rings" filter="url(#ctCupBloom)">
-          <ellipse cx="56" cy="43" rx="39" ry="12"/>
-          <ellipse cx="57" cy="101" rx="31" ry="43"/>
+        <g stroke="#2a1a02" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+
+          <!-- ── 腕板 (画在最底层, 在 palm 后面) ── -->
+          <path d="M 100 36 L 138 38 L 138 60 L 100 60 Z" fill="url(#ctGtWrist)"/>
+          <path d="M 100 62 L 138 64 L 138 88 L 100 88 Z" fill="url(#ctGtWrist)"/>
+          <line x1="118" y1="40" x2="118" y2="58" stroke="#1a1002" stroke-width="1.2"/>
+          <line x1="128" y1="40" x2="128" y2="58" stroke="#1a1002" stroke-width="1.2"/>
+          <line x1="118" y1="66" x2="118" y2="86" stroke="#1a1002" stroke-width="1.2"/>
+          <line x1="128" y1="66" x2="128" y2="86" stroke="#1a1002" stroke-width="1.2"/>
+          <circle cx="109" cy="48" r="1.5" fill="#1a1002"/>
+          <circle cx="109" cy="76" r="1.5" fill="#1a1002"/>
+          <circle cx="135" cy="48" r="1.5" fill="#1a1002"/>
+          <circle cx="135" cy="76" r="1.5" fill="#1a1002"/>
+
+          <!-- ── 拇指 (UP, base 紧贴 palm top-right) ── -->
+          <path d="M 80 32
+                   C 80 18, 84 8, 92 8
+                   C 100 8, 102 18, 100 30
+                   C 100 34, 96 36, 92 36
+                   C 88 36, 82 36, 80 32 Z"
+                fill="url(#ctGtMain)"/>
+          <!-- 拇指关节凹槽 -->
+          <path d="M 82 22 Q 92 20, 100 22"
+                stroke="#3a1a02" stroke-width="1.1" fill="none" opacity="0.7"/>
+          <!-- 拇指高光 -->
+          <path d="M 86 12 Q 92 9, 98 14"
+                stroke="#fef3c7" stroke-width="1.1" fill="none" opacity="0.6"/>
+
+          <!--
+            ── 手背 palm (fist shape, 左侧 4 个 finger 接口微凹) ──
+            视觉上像握拳, 左边轮廓有 4 个 indentation = 4 根 finger 的根部
+          -->
+          <path d="M 56 30
+                   C 50 30, 48 34, 50 40
+                   L 50 42
+                   C 48 44, 48 46, 50 48
+                   L 50 50
+                   C 48 52, 48 54, 50 56
+                   L 50 58
+                   C 48 60, 48 62, 50 64
+                   L 50 66
+                   C 48 68, 48 70, 50 72
+                   L 50 74
+                   C 48 76, 48 78, 50 80
+                   L 50 82
+                   C 50 90, 56 94, 64 94
+                   L 96 94
+                   C 104 94, 108 90, 108 82
+                   L 108 38
+                   C 108 32, 104 28, 96 28
+                   L 60 28
+                   C 58 28, 56 28, 56 30 Z"
+                fill="url(#ctGtMain)"/>
+          <!-- 手背顶部高光 -->
+          <path d="M 60 32 Q 84 30, 104 32"
+                stroke="#fde68a" stroke-width="1.3" fill="none" opacity="0.55"/>
+          <!-- 手背底部阴影 -->
+          <path d="M 60 90 Q 84 93, 104 90"
+                stroke="#3a1c02" stroke-width="1.1" fill="none" opacity="0.45"/>
+
+          <!--
+            ── 4 根手指 (LEFT, 从 palm 4 个凹口接出, taper from 14 → 10) ──
+            每根 finger 用单一连续 path 画 root → middle → tip + 关节凹槽
+          -->
+          <!-- 食指 (top) -->
+          <path d="M 50 36
+                   C 40 35, 28 34, 20 36
+                   C 14 37, 10 39, 10 44
+                   C 10 48, 14 50, 20 50
+                   C 30 51, 42 50, 50 49 Z"
+                fill="url(#ctGtFinger)"/>
+          <!-- 关节凹槽 (在指中段) -->
+          <path d="M 28 36 Q 28 43, 28 50" stroke="#3a1a02" stroke-width="1" fill="none" opacity="0.7"/>
+          <!-- 指尖高光 -->
+          <path d="M 12 40 Q 22 39, 30 39" stroke="#fef3c7" stroke-width="0.8" fill="none" opacity="0.6"/>
+
+          <!-- 中指 -->
+          <path d="M 50 52
+                   C 40 51, 26 50, 16 52
+                   C 8 53, 4 56, 4 60
+                   C 4 64, 10 66, 18 66
+                   C 30 67, 42 66, 50 65 Z"
+                fill="url(#ctGtFinger)"/>
+          <path d="M 24 52 Q 24 59, 24 66" stroke="#3a1a02" stroke-width="1" fill="none" opacity="0.7"/>
+          <path d="M 8 56 Q 18 55, 26 55" stroke="#fef3c7" stroke-width="0.8" fill="none" opacity="0.6"/>
+
+          <!-- 无名指 -->
+          <path d="M 50 68
+                   C 40 67, 28 67, 18 69
+                   C 12 70, 8 72, 8 76
+                   C 8 80, 12 82, 20 82
+                   C 30 82, 42 81, 50 81 Z"
+                fill="url(#ctGtFinger)"/>
+          <path d="M 26 68 Q 26 75, 26 82" stroke="#3a1a02" stroke-width="1" fill="none" opacity="0.7"/>
+          <path d="M 12 72 Q 22 71, 30 71" stroke="#fef3c7" stroke-width="0.8" fill="none" opacity="0.6"/>
+
+          <!-- 小指 (bottom, shorter, slightly higher up at tip) -->
+          <path d="M 50 84
+                   C 40 83, 30 84, 22 86
+                   C 16 87, 14 90, 14 93
+                   C 14 96, 18 97, 24 97
+                   C 32 97, 42 96, 50 95 Z"
+                fill="url(#ctGtFinger)"/>
+          <path d="M 28 84 Q 28 90, 28 97" stroke="#3a1a02" stroke-width="1" fill="none" opacity="0.7"/>
+          <path d="M 18 88 Q 26 87, 32 87" stroke="#fef3c7" stroke-width="0.8" fill="none" opacity="0.6"/>
         </g>
-        <g class="ct-cup-steam-lines">
-          <path d="M27 29 C12 10 26 0 19 -14"/>
-          <path d="M51 28 C36 10 55 -1 47 -18"/>
-          <path d="M75 29 C61 9 79 0 70 -16"/>
+
+        <!-- ── 5 颗无限宝石 ── -->
+        <g class="ct-gems" stroke="#2a1a02" stroke-linejoin="round">
+          <!-- 食指根 Power 紫 -->
+          <g class="ct-gem g1">
+            <circle cx="50" cy="43" r="4" fill="url(#ctGtPlate)" stroke-width="1.2"/>
+            <circle cx="50" cy="43" r="2.8" fill="#a855f7" stroke-width="0.7"/>
+            <circle cx="49" cy="42" r="1.1" fill="#f0abfc" stroke="none"/>
+          </g>
+          <!-- 中指根 Reality 红 -->
+          <g class="ct-gem g2">
+            <circle cx="50" cy="59" r="4" fill="url(#ctGtPlate)" stroke-width="1.2"/>
+            <circle cx="50" cy="59" r="2.8" fill="#dc2626" stroke-width="0.7"/>
+            <circle cx="49" cy="58" r="1.1" fill="#fca5a5" stroke="none"/>
+          </g>
+          <!-- 无名指根 Space 蓝 -->
+          <g class="ct-gem g3">
+            <circle cx="50" cy="75" r="4" fill="url(#ctGtPlate)" stroke-width="1.2"/>
+            <circle cx="50" cy="75" r="2.8" fill="#3b82f6" stroke-width="0.7"/>
+            <circle cx="49" cy="74" r="1.1" fill="#93c5fd" stroke="none"/>
+          </g>
+          <!-- 小指根 Time 绿 -->
+          <g class="ct-gem g4">
+            <circle cx="50" cy="90" r="4" fill="url(#ctGtPlate)" stroke-width="1.2"/>
+            <circle cx="50" cy="90" r="2.8" fill="#22c55e" stroke-width="0.7"/>
+            <circle cx="49" cy="89" r="1.1" fill="#bbf7d0" stroke="none"/>
+          </g>
+
+          <!-- 手背中央 Soul 橙 (大) -->
+          <g class="ct-gem g5">
+            <circle cx="78" cy="62" r="12" fill="url(#ctGtPlate)" stroke-width="1.6"/>
+            <circle cx="78" cy="62" r="9" fill="#3a1c02" stroke="#5a3a08" stroke-width="0.9"/>
+            <!-- 6 prong claws -->
+            <path d="M 78 50 L 76 54 L 80 54 Z
+                     M 90 62 L 86 60 L 86 64 Z
+                     M 78 74 L 80 70 L 76 70 Z
+                     M 66 62 L 70 64 L 70 60 Z
+                     M 87 53 L 84 56 L 88 56 Z
+                     M 69 71 L 72 68 L 68 69 Z"
+                  fill="url(#ctGtPlate)" stroke-width="0.7"/>
+            <circle cx="78" cy="62" r="7" fill="url(#ctGemSoul)" stroke-width="0.9"/>
+            <ellipse cx="75" cy="59" rx="2.2" ry="1.6" fill="#fef3c7" stroke="none" opacity="0.9"/>
+          </g>
         </g>
-        <path class="ct-cup-liquid" d="M19 46 C34 39 76 39 93 47"/>
-        <path class="ct-cup-shine" d="M28 53 C30 76 31 102 37 132"/>
-        <path class="ct-cup-bolt" d="M77 68 L60 99 H76 L54 139 L60 108 H45 Z"/>
-        <g class="ct-cup-bubbles">
-          <circle cx="88" cy="28" r="2.7"/>
-          <circle cx="72" cy="18" r="1.9"/>
-          <circle cx="97" cy="58" r="2.2"/>
-          <circle cx="84" cy="116" r="1.8"/>
+
+        <!-- 宝石外圈 glow halo -->
+        <g class="ct-gem-halo" filter="url(#ctGemBloom)">
+          <circle cx="50" cy="43" r="3" fill="#a855f7" opacity="0.7"/>
+          <circle cx="50" cy="59" r="3" fill="#dc2626" opacity="0.7"/>
+          <circle cx="50" cy="75" r="3" fill="#3b82f6" opacity="0.7"/>
+          <circle cx="50" cy="90" r="3" fill="#22c55e" opacity="0.7"/>
+          <circle cx="78" cy="62" r="6" fill="#f97316" opacity="0.78"/>
         </g>
       </svg>
-
-      <div class="ct-steam" aria-hidden="true">
-        <i></i><i></i><i></i>
-      </div>
     </div>
 
     <svg class="ct-laurel" viewBox="0 0 230 230" aria-hidden="true" focusable="false">
@@ -78,7 +269,10 @@
       <path d="M58 5 V21 H73" fill="#fde68a" stroke="#3f2a0b" stroke-width="4"/>
       <path d="M25 31 H59 M25 46 H59 M25 61 H50" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
       <path class="ct-check" d="M23 80 L34 91 L60 70" fill="none" stroke="#16a34a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="23" y="21" fill="#111827" font-family="Arial Black, Arial, sans-serif" font-size="12" font-weight="900">EXAM</text>
+      <text x="42" y="21" text-anchor="middle"
+            fill="#111827"
+            font-family="STKaiti, KaiTi, 'PingFang SC', 'Microsoft YaHei', 'Arial Black', sans-serif"
+            font-size="14" font-weight="900">理综</text>
     </svg>
 
     <svg class="ct-pencil" viewBox="0 0 116 32" aria-hidden="true" focusable="false">
@@ -90,8 +284,8 @@
     </svg>
 
     <div class="ct-honor" aria-hidden="true">
-      <span>RANK 1</span>
-      <b>TOP SCORER</b>
+      <span>温&nbsp;州&nbsp;市</span>
+      <b>高考状元</b>
     </div>
 
     <div class="ct-spark-layer" aria-hidden="true"></div>
@@ -182,96 +376,57 @@
   opacity: 0;
 }
 
+/*
+ * V5: 灭霸手套 — 位置/大小/角度 全部由顶部 CSS 变量控制
+ *   --gauntlet-left / --gauntlet-top / --gauntlet-w / --gauntlet-h / --gauntlet-rotate
+ */
 .ct-cup-energy {
-  left: 83px;
-  top: 19px;
+  left:   var(--gauntlet-left, 60px);
+  top:    var(--gauntlet-top, 30px);
+  width:  var(--gauntlet-w, 140px);
+  height: var(--gauntlet-h, 120px);
   z-index: 7;
-  width: 112px;
-  height: 150px;
   opacity: 0;
-  mix-blend-mode: screen;
   overflow: visible;
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+  transform: rotate(var(--gauntlet-rotate, 0deg));
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.42));
 }
 
-.ct-cup-energy path,
-.ct-cup-energy ellipse {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+/*
+ * V2 灭霸手套 — 5 颗无限宝石 错时呼吸 + halo 脉冲
+ */
+.ct-gem {
+  transform-box: fill-box;
+  transform-origin: center;
 }
-
-.ct-cup-rings ellipse {
-  stroke: url(#ctCupGlow);
-  stroke-width: 2.1;
-  stroke-dasharray: 24 82;
-  opacity: 0.74;
-}
-
-.ct-cup-steam-lines path {
-  stroke: url(#ctSteamGlow);
-  stroke-width: 2.6;
-  stroke-dasharray: 16 46;
-  opacity: 0;
-}
-
-.ct-cup-liquid {
-  stroke: #fff7cc;
-  stroke-width: 2.4;
-  stroke-dasharray: 35 55;
-  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.78));
-}
-
-.ct-cup-shine {
-  stroke: rgba(255, 255, 255, 0.88);
-  stroke-width: 3.2;
-  stroke-dasharray: 18 92;
-  opacity: 0.72;
-  filter: drop-shadow(0 0 6px rgba(254, 240, 138, 0.65));
-}
-
-.ct-cup-bolt {
-  fill: rgba(250, 204, 21, 0.24);
-  stroke: rgba(255, 247, 150, 0.95);
-  stroke-width: 2;
-  opacity: 0;
-  filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.8));
-}
-
-.ct-cup-bubbles {
-  fill: rgba(255, 247, 205, 0.92);
-  filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.8));
-}
-
-.ct-cup-bubbles circle {
-  opacity: 0;
+.ct-gem-halo circle {
   transform-box: fill-box;
   transform-origin: center;
 }
 
-.ct-steam {
-  left: 104px;
-  top: 16px;
-  z-index: 7;
-  width: 64px;
-  height: 58px;
-  opacity: 0;
-}
+.ct-wrap.ct-on .ct-gem.g1 circle { animation: ct-gem-pulse 1.8s ease-in-out infinite alternate; }
+.ct-wrap.ct-on .ct-gem.g2 circle { animation: ct-gem-pulse 1.6s ease-in-out infinite alternate; animation-delay: 0.25s; }
+.ct-wrap.ct-on .ct-gem.g3 circle { animation: ct-gem-pulse 1.9s ease-in-out infinite alternate; animation-delay: 0.50s; }
+.ct-wrap.ct-on .ct-gem.g4 circle { animation: ct-gem-pulse 1.7s ease-in-out infinite alternate; animation-delay: 0.75s; }
+.ct-wrap.ct-on .ct-gem.g5 circle { animation: ct-gem-pulse 1.5s ease-in-out infinite alternate; animation-delay: 1.00s; }
 
-.ct-steam i {
-  position: absolute;
-  bottom: 4px;
-  width: 14px;
-  height: 42px;
-  border-left: 2px solid rgba(255, 255, 255, 0.82);
-  border-radius: 999px;
-  opacity: 0;
-  transform-origin: 50% 100%;
+.ct-wrap.ct-on .ct-gem-halo circle {
+  animation: ct-gem-halo-pulse 1.8s ease-in-out infinite alternate;
 }
+.ct-wrap.ct-on .ct-gem-halo circle:nth-child(2) { animation-delay: 0.25s; }
+.ct-wrap.ct-on .ct-gem-halo circle:nth-child(3) { animation-delay: 0.50s; }
+.ct-wrap.ct-on .ct-gem-halo circle:nth-child(4) { animation-delay: 0.75s; }
+.ct-wrap.ct-on .ct-gem-halo circle:nth-child(5) { animation-delay: 1.00s; }
 
-.ct-steam i:nth-child(1) { left: 6px; --tilt: -16deg; }
-.ct-steam i:nth-child(2) { left: 25px; --tilt: 2deg; animation-delay: 0.24s; }
-.ct-steam i:nth-child(3) { left: 44px; --tilt: 14deg; animation-delay: 0.48s; }
+@keyframes ct-gem-pulse {
+  from { filter: brightness(0.92); }
+  to   { filter: brightness(1.3); }
+}
+@keyframes ct-gem-halo-pulse {
+  from { opacity: 0.4; transform: scale(0.85); }
+  to   { opacity: 0.9; transform: scale(1.4); }
+}
 
 .ct-laurel {
   left: -15px;
@@ -369,13 +524,18 @@
 }
 
 .ct-honor span {
-  margin-bottom: 2px;
+  margin-bottom: 3px;
   color: #78350f;
-  font: 900 8px/1 Arial, sans-serif;
+  font: 900 9px/1 'STKaiti','KaiTi','PingFang SC','Microsoft YaHei',
+                  Arial, sans-serif;
+  letter-spacing: 0.04em;
 }
 
 .ct-honor b {
-  font: 900 16px/0.95 "Arial Black", Impact, Arial, sans-serif;
+  /* 高考状元 — 用中文字体, 字号略放大让 4 个汉字 撑得起场面 */
+  font: 900 18px/0.95 'STKaiti','KaiTi','SimHei','PingFang SC',
+                       'Microsoft YaHei','Arial Black', sans-serif;
+  letter-spacing: 0.06em;
 }
 
 .ct-spark-layer {

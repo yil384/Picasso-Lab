@@ -1,0 +1,355 @@
+<!--
+  chenyang_captain_america.html — 美国队长 Captain America
+  ──────────────────────────────────────────────────────────
+  Palette: shield-blue #3c3b6e | shield-red #b22234 | shield-white #f0ece8
+
+  Props (all activated under .ca-on, click to toggle):
+    ① 爱国光环      — 蓝红渐变背景辉光
+    ② 盾牌          — 同心圆盾 + 白星, 右下弹入
+    ③ 头盔翼        — 两侧耳翼 (经典白色羽翼)
+    ④ 胸前星星      — 蓝底白星 制服标志
+    ⑤ 头像          — 圆形照片 + 蓝色边光
+    ⑥ 蓝色眼光      — 双眼淡蓝辉光
+    ⑦ 点击涟漪      — 红白蓝三环扩散
+
+  CSS 变量 (微调直接改下方 style="" 中的数字):
+    --eye-l-x/y          左眼位置 (%)
+    --eye-r-x/y          右眼位置 (%)
+    --eye-w/h            眼睛大小 (px)
+    --shield-right/bottom 盾牌位置 (px)
+    --shield-rotate       盾牌旋转 (deg)
+-->
+
+<div class="ca-wrap" style="
+    --avatar-size: 200px;
+
+    /* 眼睛 */
+    --eye-l-x: 44%;
+    --eye-l-y: 33%;
+    --eye-r-x: 56%;
+    --eye-r-y: 33%;
+    --eye-w: 7px;
+    --eye-h: 4px;
+
+    /* 盾牌 */
+    --shield-right:  -24px;
+    --shield-bottom: -18px;
+    --shield-rotate:  12deg;
+">
+  <div class="ca-stage">
+
+    <!-- ① 爱国光环 -->
+    <div class="ca-aura" aria-hidden="true"></div>
+
+    <!-- ② 盾牌 (同心圆 + 白星) -->
+    <svg class="ca-shield" viewBox="0 0 100 100" overflow="visible" aria-hidden="true">
+      <defs>
+        <filter id="caShieldShadow">
+          <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#080820" flood-opacity="0.65"/>
+        </filter>
+        <filter id="caStarGlowF">
+          <feGaussianBlur stdDeviation="1.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="caShieldShine" cx="38%" cy="32%" r="52%">
+          <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.22"/>
+          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <!-- 外环 — 深蓝 -->
+      <circle cx="50" cy="50" r="48" fill="#3c3b6e" stroke="#1a1a50" stroke-width="1.5"
+              filter="url(#caShieldShadow)"/>
+      <!-- 第一红环 -->
+      <circle cx="50" cy="50" r="38" fill="#b22234"/>
+      <!-- 白环 -->
+      <circle cx="50" cy="50" r="27" fill="#f0ece8"/>
+      <!-- 中心红圆 -->
+      <circle cx="50" cy="50" r="16" fill="#b22234"/>
+      <!-- 白色五角星 (outer r=12, inner r=5) -->
+      <polygon
+        points="50,37 53.2,45.5 62.4,46.0 55.2,51.7 57.6,60.5 50,55.5 42.4,60.5 44.8,51.7 37.6,46.0 46.8,45.5"
+        fill="#f0ece8" filter="url(#caStarGlowF)"/>
+      <!-- 光泽高光 -->
+      <ellipse cx="32" cy="26" rx="11" ry="6" fill="url(#caShieldShine)" transform="rotate(-25 32 26)"/>
+      <!-- 金属边缘细线 -->
+      <circle cx="50" cy="50" r="47.5" fill="none" stroke="#7a7aaa" stroke-width="0.6" opacity="0.45"/>
+    </svg>
+
+    <!-- ③ 头盔翼 (两侧) -->
+    <svg class="ca-wings" viewBox="-40 0 280 68" overflow="visible" aria-hidden="true">
+      <defs>
+        <filter id="caWingGlow">
+          <feGaussianBlur stdDeviation="1.2" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <!-- 左翼 (三层羽片叠加) -->
+      <g filter="url(#caWingGlow)" opacity="0.96">
+        <!-- 主羽 -->
+        <path d="M 4 52 C -6 44,-20 32,-34 26 C -22 27,-10 35,-2 42
+                 C -14 26,-28 14,-36 6 C -22 12,-10 26, 0 36
+                 C -8 18,-20 8,-28 2 C -14 8,-4 22, 4 36 Z"
+              fill="#f0ece8" stroke="#c8c4c0" stroke-width="0.7" stroke-linejoin="round"/>
+        <!-- 羽脉 (细线) -->
+        <line x1="4" y1="52" x2="-34" y2="26" stroke="#b8b4b0" stroke-width="0.6" opacity="0.5"/>
+        <line x1="0" y1="36" x2="-28" y2="2"  stroke="#b8b4b0" stroke-width="0.6" opacity="0.5"/>
+      </g>
+      <!-- 右翼 (镜像) -->
+      <g transform="translate(200,0) scale(-1,1)" filter="url(#caWingGlow)" opacity="0.96">
+        <path d="M 4 52 C -6 44,-20 32,-34 26 C -22 27,-10 35,-2 42
+                 C -14 26,-28 14,-36 6 C -22 12,-10 26, 0 36
+                 C -8 18,-20 8,-28 2 C -14 8,-4 22, 4 36 Z"
+              fill="#f0ece8" stroke="#c8c4c0" stroke-width="0.7" stroke-linejoin="round"/>
+        <line x1="4" y1="52" x2="-34" y2="26" stroke="#b8b4b0" stroke-width="0.6" opacity="0.5"/>
+        <line x1="0" y1="36" x2="-28" y2="2"  stroke="#b8b4b0" stroke-width="0.6" opacity="0.5"/>
+      </g>
+    </svg>
+
+    <!-- ⑤ 头像 -->
+    <div class="ca-photo">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/chenyang.png"
+           class="avatar ca-avatar" alt="avatar"/>
+
+      <!-- ⑥ 蓝色眼光 -->
+      <div class="ca-eye ca-eye-l" aria-hidden="true"></div>
+      <div class="ca-eye ca-eye-r" aria-hidden="true"></div>
+    </div>
+
+    <!-- ④ 胸前星星 (制服标志) -->
+    <svg class="ca-star" viewBox="0 0 40 40" overflow="visible" aria-hidden="true">
+      <defs>
+        <filter id="caStarBadgeGlow">
+          <feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <circle cx="20" cy="20" r="15.5" fill="#3c3b6e" stroke="#2a2a5a" stroke-width="1.2"/>
+      <circle cx="20" cy="20" r="15.5" fill="none"   stroke="#6666aa" stroke-width="0.6" opacity="0.5"/>
+      <!-- 白色五角星 (outer r=10, inner r=4) -->
+      <polygon
+        points="20,10 22.35,16.8 29.5,16.9 23.8,21.2 25.9,28.1 20,24 14.1,28.1 16.2,21.2 10.5,16.9 17.65,16.8"
+        fill="#f0ece8" filter="url(#caStarBadgeGlow)"/>
+    </svg>
+
+    <!-- ⑦ 点击涟漪 -->
+    <div class="ca-ripple" aria-hidden="true"></div>
+
+  </div><!-- /.ca-stage -->
+</div><!-- /.ca-wrap -->
+
+
+<style>
+.ca-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+}
+.ca-wrap *, .ca-wrap *::before, .ca-wrap *::after { box-sizing: border-box; }
+
+.ca-stage {
+  position: relative;
+  width:  var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  overflow: visible;
+  background: transparent;
+}
+
+/* ── 头像 ── */
+.ca-photo {
+  position: relative;
+  z-index: 3;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  transform: scale(var(--ca-scale, 1));
+  transform-origin: 50% 50%;
+  transition:
+    transform 0.4s cubic-bezier(0.32,1.3,0.4,1),
+    box-shadow 0.4s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+}
+.ca-wrap.ca-on .ca-photo {
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.28),
+    0 0 0 1.5px rgba(100,149,237,0.75),
+    0 0 20px 5px rgba(60,59,110,0.3);
+}
+.ca-avatar {
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; border-radius: 50%;
+}
+.ca-wrap:hover       { --ca-scale: 1.07; }
+.ca-wrap.ca-on       { --ca-scale: 1.04; }
+.ca-wrap.ca-on:hover { --ca-scale: 1.08; }
+
+/* ── 爱国光环 ── */
+.ca-aura {
+  position: absolute;
+  inset: -22%;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 48% 52%,
+    rgba(60,59,110,0.55) 0%,
+    rgba(178,34,52,0.22) 55%,
+    transparent 80%);
+  opacity: 0;
+  filter: blur(10px);
+  transition: opacity 0.7s ease;
+}
+.ca-wrap.ca-on .ca-aura { opacity: 1; }
+
+/* ── 盾牌 ── */
+.ca-shield {
+  position: absolute;
+  right:  var(--shield-right,  -24px);
+  bottom: var(--shield-bottom, -18px);
+  width:  90px;
+  height: 90px;
+  z-index: 13;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(14px) rotate(var(--shield-rotate, 12deg)) scale(0.72);
+  transform-origin: 50% 50%;
+  transition:
+    opacity   0.45s ease 0.10s,
+    transform 0.60s cubic-bezier(0.2,1.4,0.32,1) 0.10s;
+  filter: drop-shadow(2px 5px 7px rgba(0,0,0,0.6));
+}
+.ca-wrap.ca-on .ca-shield {
+  opacity: 1;
+  transform: translateY(0) rotate(var(--shield-rotate, 12deg)) scale(1);
+}
+
+/* ── 头盔翼 ── */
+.ca-wings {
+  position: absolute;
+  left: 0; top: 20%;
+  width: 200px; height: 68px;
+  z-index: 12;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleX(0.55);
+  transform-origin: 50% 50%;
+  transition:
+    opacity   0.40s ease 0.15s,
+    transform 0.55s cubic-bezier(0.2,1.4,0.32,1) 0.15s;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.28));
+}
+.ca-wrap.ca-on .ca-wings {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* ── 胸前星星 ── */
+.ca-star {
+  position: absolute;
+  left: 50%; bottom: 30px;
+  width: 38px; height: 38px;
+  margin-left: -19px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px) scale(0.55);
+  transform-origin: 50% 50%;
+  transition:
+    opacity   0.38s ease 0.22s,
+    transform 0.50s cubic-bezier(0.2,1.4,0.32,1) 0.22s,
+    filter    0.5s ease;
+  filter: drop-shadow(0 0 4px rgba(100,149,237,0.7));
+}
+.ca-wrap.ca-on .ca-star {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.ca-wrap.ca-on .ca-star {
+  animation: ca-star-pulse 2.8s ease-in-out infinite;
+}
+@keyframes ca-star-pulse {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(100,149,237,0.65)); }
+  50%       { filter: drop-shadow(0 0 9px rgba(100,149,237,1)) drop-shadow(0 0 18px rgba(60,59,110,0.55)); }
+}
+
+/* ── 蓝色眼光 ── */
+.ca-eye {
+  position: absolute;
+  width:  var(--eye-w, 7px);
+  height: var(--eye-h, 4px);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center,
+    #90c0ff 0%, #5588dd 55%, transparent 100%);
+  box-shadow: 0 0 6px #6495ed, 0 0 14px rgba(100,149,237,0.65);
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+  transition:
+    opacity   0.30s ease 0.28s,
+    transform 0.40s ease 0.28s;
+}
+.ca-eye-l { left: var(--eye-l-x, 44%); top: var(--eye-l-y, 33%); }
+.ca-eye-r { left: var(--eye-r-x, 56%); top: var(--eye-r-y, 33%); }
+.ca-wrap.ca-on .ca-eye {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  animation: ca-eye-glow 2.4s ease-in-out infinite;
+}
+@keyframes ca-eye-glow {
+  0%, 100% { box-shadow: 0 0 5px #6495ed, 0 0 10px rgba(100,149,237,0.6); opacity: 0.8; }
+  50%       { box-shadow: 0 0 8px #88aaff, 0 0 18px rgba(100,149,237,0.9); opacity: 1;   }
+}
+
+/* ── 点击涟漪 (红白蓝三环) ── */
+.ca-ripple {
+  position: absolute;
+  inset: -4%;
+  z-index: 30;
+  pointer-events: none;
+  border-radius: 50%;
+  opacity: 0;
+}
+.ca-wrap.ca-strike .ca-ripple {
+  animation: ca-ripple-burst 0.65s ease-out;
+}
+@keyframes ca-ripple-burst {
+  0% {
+    box-shadow:
+      0 0 0  0px rgba(178,34,52,0.85),
+      0 0 0  0px rgba(240,236,232,0.85),
+      0 0 0  0px rgba(60,59,110,0.85);
+    opacity: 1;
+  }
+  100% {
+    box-shadow:
+      0 0 0 28px rgba(178,34,52,0),
+      0 0 0 52px rgba(240,236,232,0),
+      0 0 0 76px rgba(60,59,110,0);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ca-wrap.ca-on  .ca-star,
+  .ca-wrap.ca-on  .ca-eye,
+  .ca-wrap.ca-strike .ca-ripple { animation: none; }
+}
+</style>
+
+
+<script>
+(function () {
+  document.querySelectorAll('.ca-wrap').forEach(function(wrap) {
+    if (wrap.dataset.caReady === '1') return;
+    wrap.dataset.caReady = '1';
+    wrap.addEventListener('click', function() {
+      wrap.classList.toggle('ca-on');
+      wrap.classList.remove('ca-strike');
+      void wrap.offsetWidth;
+      wrap.classList.add('ca-strike');
+      setTimeout(function() { wrap.classList.remove('ca-strike'); }, 700);
+    });
+  });
+})();
+</script>

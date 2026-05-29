@@ -1,12 +1,42 @@
 <!--
   Cinematic god-rays avatar template
-  Tunables:
-  --avatar-size: circular avatar size
-  --light-x/y: flare center, placed on the avatar's upper-left rim
+  Tunables (all in inline style="...", edit numbers directly):
+    --avatar-size       avatar 圆框大小 (px)
+    --light-x/y         太阳光源中心 (px)
+
+  ★ MacArthur 帽 (sun-hat) 可调:
+    --hat-left          帽子 left   (px, 整体水平位置)
+    --hat-top           帽子 top    (px, 整体垂直位置, 负值=往上顶出)
+    --hat-w             帽子宽      (px, 整体缩放)
+    --hat-h             帽子高      (px, 整体缩放)
+    --hat-rotate        帽子倾角    (deg, 负=逆时针 jaunty)
 -->
 
 <div class="sunshine-wrap"
-     style="--avatar-size:200px; --light-x:29px; --light-y:29px">
+     style="
+       --avatar-size: 200px;
+       --light-x: 29px;
+       --light-y: 29px;
+
+       /* MacArthur 帽 (位置 + 大小 + 倾角) */
+       --hat-left:    61px;
+       --hat-top:     51px;
+       --hat-w:      60px;
+       --hat-h:       37px;
+       --hat-rotate: -1deg;
+
+       /* 原子弹爆炸 (可调) */
+       --bomb-cx:     150px;   /* 爆炸中心 X (stage 坐标) */
+       --bomb-cy:      150px;   /* 爆炸中心 Y (stage 坐标, 上50%≈70-100) */
+       --bomb-scale:    0.6;   /* 整体缩放 */
+       --bomb-tilt:    -150deg;  /* 炸弹倾斜角 */
+
+       /* 烟斗 (位置 + 大小 + 倾角) */
+       --pipe-left:   63px;   /* 烟斗 left (px) */
+       --pipe-top:    93px;   /* 烟斗 top  (px) */
+       --pipe-w:       25px;   /* 烟斗宽   (px, 整体缩放) */
+       --pipe-rotate:  -16deg;  /* 烟斗倾角 (deg, 负=逆时针) */
+     ">
   <div class="sunshine-stage">
     <div class="sunshine-avatar-frame">
       <img src="https://yil384.github.io/Picasso-Lab/people/static/zhengding.png"
@@ -173,6 +203,530 @@
       <div class="sunshine-face-shadow" aria-hidden="true"></div>
       <div class="sunshine-visible-sun" aria-hidden="true"></div>
       <div class="sunshine-particles" aria-hidden="true"></div>
+    </div>
+
+    <!--
+      ── 伟大领袖 layer (V2 — 金正恩 元帅风, 不再 农民艺术) ──
+      上一版搞了一堆向日葵 + "正鼎同志万岁" 大字直幅, 用户反馈太奇怪 (像文革).
+      重做思路: 金正恩 元帅风 — 现代军装领导, 收敛但有威严:
+
+        · 右上角小红旗 + 金五角星 (保留)
+        · 底部一排 8 枚金色勋章 (= 8 个 project 的"功勋"),
+          每枚星章下面带项目缩写, 入场时从左到右依次点亮
+        · 勋章上方一行小字 caption: "八 项 工 程"
+        · 完全不再有 向日葵 / 大字直幅 / 万岁飘字 (= 文革太重)
+    -->
+    <!--
+      ── 胸前勋章 rack (V6 — 五角星 + 竖窄列) ──
+      之前的圆 disc 不是五角星, 而且 4 列横排 overflow 出了左胸.
+      V6: 还原成 五角星金章, 缩到 12px, 改 2 列 × 4 行 (竖窄列), 总 26×51px.
+      每枚星章中央嵌入 2 字母项目缩写 (黑色, 极小字).
+    -->
+    <!--
+      V9: 3-3-2 layout, 每枚 = 红绶带 (顶) + 金五角星 (下) + 中央 abbreviation.
+      像真军勋章: 红色 ribbon strip 在上, 金星垂下来.
+    -->
+    <div class="sun-chest-rack" aria-hidden="true">
+      <div class="sun-chest-row">
+        <div class="sun-chest-medal m1" title="KVFlow"><span class="cm-rib"></span><div class="cm-pendant"><svg class="cm-star" viewBox="0 0 22 22"><use href="#sunChestStar"/></svg><span class="cm-abbr">KV</span></div></div>
+        <div class="sun-chest-medal m2" title="FastTree"><span class="cm-rib"></span><div class="cm-pendant"><svg class="cm-star" viewBox="0 0 22 22"><use href="#sunChestStar"/></svg><span class="cm-abbr">FT</span></div></div>
+        <div class="sun-chest-medal m3" title="ScaleSim"><span class="cm-rib"></span><div class="cm-pendant"><svg class="cm-star" viewBox="0 0 22 22"><use href="#sunChestStar"/></svg><span class="cm-abbr">SS</span></div></div>
+      </div>
+      <div class="sun-chest-row">
+        <div class="sun-chest-medal m4" title="RecFlex"><span class="cm-rib"></span><div class="cm-pendant"><svg class="cm-star" viewBox="0 0 22 22"><use href="#sunChestStar"/></svg><span class="cm-abbr">RF</span></div></div>
+        <div class="sun-chest-medal m5" title="Triton-IR"><span class="cm-rib"></span><div class="cm-pendant"><svg class="cm-star" viewBox="0 0 22 22"><use href="#sunChestStar"/></svg><span class="cm-abbr">TI</span></div></div>
+        <div class="sun-chest-medal m6" title="MoE-Cache"><span class="cm-rib"></span><div class="cm-pendant"><svg class="cm-star" viewBox="0 0 22 22"><use href="#sunChestStar"/></svg><span class="cm-abbr">MC</span></div></div>
+      </div>
+      <div class="sun-chest-row sr-two">
+        <div class="sun-chest-medal m7" title="AgentLab"><span class="cm-rib"></span><div class="cm-pendant"><svg class="cm-star" viewBox="0 0 22 22"><use href="#sunChestStar"/></svg><span class="cm-abbr">AL</span></div></div>
+        <div class="sun-chest-medal m8" title="RAG-Pro"><span class="cm-rib"></span><div class="cm-pendant"><svg class="cm-star" viewBox="0 0 22 22"><use href="#sunChestStar"/></svg><span class="cm-abbr">RP</span></div></div>
+      </div>
+      <!-- 共用的金 gradient + 5-point star symbol -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="sunChestGold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0"   stop-color="#fff2b8"/>
+            <stop offset="0.45" stop-color="#f6c64a"/>
+            <stop offset="1"   stop-color="#7a4205"/>
+          </linearGradient>
+          <symbol id="sunChestStar" viewBox="0 0 22 22">
+            <polygon points="11,1 13.7,8 21,8 15,12.5 17.5,20 11,15.5 4.5,20 7,12.5 1,8 8.3,8"
+                     fill="url(#sunChestGold)" stroke="#5a2a02" stroke-width="0.6"/>
+          </symbol>
+        </defs>
+      </svg>
+    </div>
+
+    <!-- 肩章 (V7) 用户反馈太烂, 已删. 只留胸前 8 星. -->
+
+    <!--
+      ── MacArthur 五星上将 peaked cap ──
+      参考 Douglas MacArthur 标志性军帽:
+        · 暗橄榄绿/卡其 crown (略微 slumped 不死板)
+        · 深色 hatband + 双道金边
+        · 黑色 visor + 金色 "scrambled eggs" (橡叶刺绣 — MacArthur 标志)
+        · 帽徽: 金圈 + 中央 5 星
+      位置: 戴在头顶, 帽舌微微遮额, 整顶略向左下倾 (jaunty angle)
+    -->
+    <svg class="sun-hat" viewBox="0 0 140 64" overflow="visible" aria-hidden="true">
+      <defs>
+        <linearGradient id="sunHatOlive" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"    stop-color="#a89456"/>
+          <stop offset="0.45" stop-color="#7a6534"/>
+          <stop offset="1"    stop-color="#4a3c18"/>
+        </linearGradient>
+        <linearGradient id="sunHatGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"   stop-color="#fde68a"/>
+          <stop offset="0.5" stop-color="#c9a23a"/>
+          <stop offset="1"   stop-color="#6a4a0c"/>
+        </linearGradient>
+        <linearGradient id="sunHatBand" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3a2810"/>
+          <stop offset="1" stop-color="#1a1002"/>
+        </linearGradient>
+        <linearGradient id="sunHatVisor" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"   stop-color="#2a1a08"/>
+          <stop offset="0.4" stop-color="#0e0700"/>
+          <stop offset="1"   stop-color="#000000"/>
+        </linearGradient>
+      </defs>
+
+      <g stroke="#1a1002" stroke-width="1.6" stroke-linejoin="round">
+        <!--
+          Crown 顶 (V2 — 扁了 30%, 32 高, MacArthur casual look):
+            crown y range 14-32, slumped 前后 + 两侧微塌.
+        -->
+        <path d="M 22 32
+                 C 22 20, 34 14, 56 13
+                 C 76 12, 96 13, 108 16
+                 C 118 18, 120 24, 120 32
+                 L 118 36 L 24 36 Z"
+              fill="url(#sunHatOlive)"/>
+        <!-- 顶部高光 -->
+        <path d="M 36 18 Q 70 14, 106 18"
+              fill="none" stroke="#c9a35a" stroke-width="1.2" opacity="0.75"/>
+        <!-- 前面"凹陷" 折痕 (crushed 帽冠) -->
+        <path d="M 56 16 Q 70 19, 84 16"
+              fill="none" stroke="#3a2810" stroke-width="1" opacity="0.55"/>
+
+        <!--
+          Hatband: y=34 to y=46 (12 厚), 与 crown 底 (36) + visor 顶 (44) 各重叠 2px
+        -->
+        <path d="M 20 34 L 120 34 L 118 46 L 22 46 Z"
+              fill="url(#sunHatBand)"/>
+        <line x1="22" y1="37" x2="118" y2="37"
+              stroke="url(#sunHatGold)" stroke-width="1" opacity="0.9"/>
+        <line x1="22" y1="43.5" x2="118" y2="43.5"
+              stroke="url(#sunHatGold)" stroke-width="1" opacity="0.9"/>
+
+        <!--
+          Visor: y=44-58, 顶边直线 (与 band 底 46 重叠 2px), 底边大幅下弯 (bill)
+        -->
+        <path d="M 10 44
+                 L 130 44
+                 L 130 50
+                 Q 126 57, 112 59
+                 Q 70 64, 28 59
+                 Q 14 57, 10 50 Z"
+              fill="url(#sunHatVisor)"/>
+        <!-- Visor 顶面反光 -->
+        <path d="M 16 46 Q 70 50, 124 46"
+              fill="none" stroke="#5a4a18" stroke-width="0.8" opacity="0.6"/>
+
+        <!--
+          Scrambled eggs (帽舌上的金色橡叶刺绣 — MacArthur 标志)
+        -->
+        <g fill="url(#sunHatGold)" stroke="#6a4a0c" stroke-width="0.3">
+          <ellipse cx="32" cy="51" rx="3" ry="1.7"/>
+          <ellipse cx="44" cy="53" rx="3" ry="1.8"/>
+          <ellipse cx="56" cy="54.5" rx="3.2" ry="1.8"/>
+          <ellipse cx="70" cy="55" rx="3.4" ry="1.9"/>
+          <ellipse cx="84" cy="54.5" rx="3.2" ry="1.8"/>
+          <ellipse cx="96" cy="53" rx="3" ry="1.8"/>
+          <ellipse cx="108" cy="51" rx="3" ry="1.7"/>
+        </g>
+        <path d="M 28 56 Q 70 60, 112 56"
+              fill="none" stroke="url(#sunHatGold)" stroke-width="1.3" opacity="0.85"
+              stroke-linecap="round"/>
+        <circle cx="38" cy="52.5" r="0.6" fill="#fff2b8"/>
+        <circle cx="50" cy="54" r="0.6" fill="#fff2b8"/>
+        <circle cx="63" cy="55" r="0.6" fill="#fff2b8"/>
+        <circle cx="77" cy="55" r="0.6" fill="#fff2b8"/>
+        <circle cx="90" cy="54" r="0.6" fill="#fff2b8"/>
+        <circle cx="102" cy="52.5" r="0.6" fill="#fff2b8"/>
+
+        <!--
+          帽徽: 纯金两层 disc + 一颗大金星 (US Army officer 风, 居中在 crown 内 y=23)
+        -->
+        <circle cx="70" cy="23" r="8"
+                fill="url(#sunHatGold)" stroke="#3a2010" stroke-width="1.2"/>
+        <circle cx="70" cy="23" r="5.8"
+                fill="#8a5e0c" stroke="#3a2010" stroke-width="0.5" opacity="0.85"/>
+        <polygon points="70,17.8 71.4,21.8 75.8,21.8 72.2,24.4 73.6,28.4 70,25.8 66.4,28.4 67.8,24.4 64.2,21.8 68.6,21.8"
+                 fill="url(#sunHatGold)" stroke="#3a2010" stroke-width="0.6"/>
+      </g>
+    </svg>
+
+    <!-- LEGACY (V3 sun-flag + sun-honors) 已删除, stub 防 selector 残留报错 -->
+    <div class="sun-legacy-removed" aria-hidden="true" hidden style="display:none">
+      <!-- 复用以前 sun-medal star symbol; 现在彻底不用了 -->
+      <svg width="0" height="0">
+        <defs>
+          <linearGradient id="sunMedalGold-legacy" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fff2b8"/>
+            <stop offset="0.45" stop-color="#f6c64a"/>
+            <stop offset="1" stop-color="#a06a0c"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+
+    <!-- LEGACY 向日葵 + 万岁 全部去掉, 留个空 stub 防 selector 报错 -->
+    <div class="sun-flowers-legacy-removed" aria-hidden="true" hidden style="display:none">
+      <svg class="sun-flower-legacy sf1" viewBox="0 0 40 60">
+        <path class="sf-stem" d="M20 60 Q19 50 20 36" stroke="#1f7a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path class="sf-leaf" d="M20 48 Q12 44 9 50 Q14 53 20 50 Z" fill="#2aa543"/>
+        <g class="sf-head">
+          <g class="sf-petals">
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(45 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(90 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(135 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(180 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(225 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(270 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(315 20 22)"/>
+          </g>
+          <circle cx="20" cy="22" r="5.5" fill="#5a3015"/>
+          <circle cx="20" cy="22" r="3.6" fill="#7a4218"/>
+        </g>
+      </svg>
+      <svg class="sun-flower sf2" viewBox="0 0 40 60">
+        <path class="sf-stem" d="M20 60 Q21 50 20 36" stroke="#1f7a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path class="sf-leaf" d="M20 50 Q28 46 31 52 Q26 55 20 52 Z" fill="#2aa543"/>
+        <g class="sf-head">
+          <g class="sf-petals">
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(45 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(90 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(135 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(180 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(225 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(270 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(315 20 22)"/>
+          </g>
+          <circle cx="20" cy="22" r="5.5" fill="#5a3015"/>
+          <circle cx="20" cy="22" r="3.6" fill="#7a4218"/>
+        </g>
+      </svg>
+      <svg class="sun-flower sf3" viewBox="0 0 40 60">
+        <path class="sf-stem" d="M20 60 Q19 50 20 36" stroke="#1f7a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path class="sf-leaf" d="M20 48 Q12 44 9 50 Q14 53 20 50 Z" fill="#2aa543"/>
+        <g class="sf-head">
+          <g class="sf-petals">
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(45 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(90 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(135 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(180 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(225 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(270 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(315 20 22)"/>
+          </g>
+          <circle cx="20" cy="22" r="5.5" fill="#5a3015"/>
+          <circle cx="20" cy="22" r="3.6" fill="#7a4218"/>
+        </g>
+      </svg>
+      <svg class="sun-flower sf4" viewBox="0 0 40 60">
+        <path class="sf-stem" d="M20 60 Q21 50 20 36" stroke="#1f7a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path class="sf-leaf" d="M20 50 Q28 46 31 52 Q26 55 20 52 Z" fill="#2aa543"/>
+        <g class="sf-head">
+          <g class="sf-petals">
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(45 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(90 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(135 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(180 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(225 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(270 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(315 20 22)"/>
+          </g>
+          <circle cx="20" cy="22" r="5.5" fill="#5a3015"/>
+          <circle cx="20" cy="22" r="3.6" fill="#7a4218"/>
+        </g>
+      </svg>
+      <svg class="sun-flower sf5" viewBox="0 0 40 60">
+        <path class="sf-stem" d="M20 60 Q19 50 20 36" stroke="#1f7a2e" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path class="sf-leaf" d="M20 48 Q12 44 9 50 Q14 53 20 50 Z" fill="#2aa543"/>
+        <g class="sf-head">
+          <g class="sf-petals">
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(45 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(90 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(135 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(180 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(225 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffd23a" transform="rotate(270 20 22)"/>
+            <ellipse cx="20" cy="11" rx="3.4" ry="7.5" fill="#ffc227" transform="rotate(315 20 22)"/>
+          </g>
+          <circle cx="20" cy="22" r="5.5" fill="#5a3015"/>
+          <circle cx="20" cy="22" r="3.6" fill="#7a4218"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- LEGACY 万岁 cheers, 已废弃 -->
+    <div class="sun-cheers-legacy-removed" aria-hidden="true" hidden style="display:none"></div>
+
+    <!--
+      ── 麦克阿瑟同款烟斗 (corncob pipe) ──
+      布局: 嘴咬端(mouthpiece) 在右 → 进嘴; 烟碗(bowl) 在左上方朝外.
+      ViewBox "0 0 44 36":
+        右端 x=40 = 嘴咬端 (进嘴位置)
+        左端 x=2-15 = 烟碗
+        短把: M40→x=16, 仅 24 单位, 不再过长
+    -->
+    <svg class="sun-pipe" viewBox="0 0 44 36" overflow="visible" aria-hidden="true">
+      <defs>
+        <linearGradient id="pipeStem" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0"   stop-color="#c87840"/>
+          <stop offset="0.5" stop-color="#8B4513"/>
+          <stop offset="1"   stop-color="#5a2808"/>
+        </linearGradient>
+        <linearGradient id="pipeBowlGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0"   stop-color="#e8a060"/>
+          <stop offset="0.45" stop-color="#c07030"/>
+          <stop offset="1"   stop-color="#6a3510"/>
+        </linearGradient>
+      </defs>
+      <!-- 短把: 从嘴咬端(右,x=40) 弯向烟碗接头(左,x=16) -->
+      <path d="M40 14 C34 16, 26 20, 18 23 C15 24, 13 24, 12 22"
+            stroke="url(#pipeStem)" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+      <!-- 把的高光 -->
+      <path d="M38 11 C32 13, 24 17, 17 20"
+            stroke="#d9904e" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.45"/>
+      <!-- 烟碗本体 (corncob 圆柱) -->
+      <rect x="2" y="12" width="13" height="18" rx="3.5" fill="url(#pipeBowlGrad)"/>
+      <!-- 碗口沿 -->
+      <ellipse cx="8.5" cy="12" rx="6.5" ry="3" fill="#d08848"/>
+      <!-- 碗内(深色) -->
+      <ellipse cx="8.5" cy="12" rx="4.5" ry="1.9" fill="#180a02"/>
+      <!-- 玉米芯纹理 (3×2) -->
+      <circle cx="5"   cy="16" r="1.5" fill="#d89050" opacity="0.7"/>
+      <circle cx="9"   cy="17" r="1.5" fill="#a06028" opacity="0.7"/>
+      <circle cx="13"  cy="16" r="1.5" fill="#d89050" opacity="0.7"/>
+      <circle cx="5"   cy="22" r="1.5" fill="#a06028" opacity="0.7"/>
+      <circle cx="9"   cy="23" r="1.5" fill="#d89050" opacity="0.7"/>
+      <circle cx="13"  cy="22" r="1.5" fill="#a06028" opacity="0.7"/>
+      <!-- 碗底沿 -->
+      <ellipse cx="8.5" cy="30" rx="6.5" ry="2.2" fill="#804820" opacity="0.75"/>
+      <!-- 嘴咬端(进嘴, 右端) -->
+      <ellipse cx="40" cy="14" rx="3" ry="2" fill="#1e0c04" opacity="0.88"/>
+      <!-- 烟雾 (从碗口升起) -->
+      <g class="pipe-smoke">
+        <path class="pipe-smoke-wisp s1"
+              d="M 8 11 C 4 5, 10 -1, 6 -8"
+              fill="none" stroke="rgba(210,210,210,0.55)" stroke-width="1.8" stroke-linecap="round"/>
+        <path class="pipe-smoke-wisp s2"
+              d="M 8 11 C 12 4, 5 -2, 9 -9"
+              fill="none" stroke="rgba(200,200,200,0.38)" stroke-width="1.2" stroke-linecap="round"/>
+        <path class="pipe-smoke-wisp s3"
+              d="M 8 11 C 2 6, 6 0, 3 -7"
+              fill="none" stroke="rgba(190,190,190,0.25)" stroke-width="0.9" stroke-linecap="round"/>
+      </g>
+    </svg>
+
+    <!--
+      ── 原子弹投递 + 蘑菇云爆炸 (v2 全面重设计) ──
+      坐标系: SVG (100,200) = 爆炸中心; CSS 映射到 stage (--bomb-cx,--bomb-cy).
+      可调 CSS 变量 (sunshine-wrap style="" 中):
+        --bomb-cx / --bomb-cy   爆炸中心在 stage 的坐标 (px)
+        --bomb-scale            整体缩放
+        --bomb-tilt             炸弹入射倾角 (deg)
+    -->
+    <div class="sun-atombomb" aria-hidden="true">
+      <svg class="sun-bomb-svg" viewBox="0 0 200 400" overflow="visible">
+        <defs>
+          <radialGradient id="abBombGrad" cx="35%" cy="28%" r="65%" gradientUnits="objectBoundingBox">
+            <stop offset="0"    stop-color="#e0e0b4"/>
+            <stop offset="0.3"  stop-color="#b4b488"/>
+            <stop offset="0.65" stop-color="#787850"/>
+            <stop offset="1"    stop-color="#3c3c24"/>
+          </radialGradient>
+          <radialGradient id="abFlashGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0"    stop-color="#ffffff"/>
+            <stop offset="0.12" stop-color="#fffff0" stop-opacity="0.99"/>
+            <stop offset="0.35" stop-color="#ffee80" stop-opacity="0.85"/>
+            <stop offset="0.65" stop-color="#ff8800" stop-opacity="0.35"/>
+            <stop offset="1"    stop-color="#ff3300" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="abFireGrad" cx="48%" cy="42%" r="55%">
+            <stop offset="0"    stop-color="#ffffff"/>
+            <stop offset="0.18" stop-color="#ffee60"/>
+            <stop offset="0.42" stop-color="#ff8800"/>
+            <stop offset="0.72" stop-color="#cc2800"/>
+            <stop offset="1"    stop-color="#550a00" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="abStemGrad" x1="0" y1="1" x2="0" y2="0" gradientUnits="objectBoundingBox">
+            <stop offset="0"    stop-color="#ff8800"/>
+            <stop offset="0.3"  stop-color="#cc3800"/>
+            <stop offset="0.65" stop-color="#7c2208"/>
+            <stop offset="1"    stop-color="#3a1204"/>
+          </linearGradient>
+          <linearGradient id="abStemCoreGrad" x1="0" y1="1" x2="0" y2="0" gradientUnits="objectBoundingBox">
+            <stop offset="0"    stop-color="#ffffa0"/>
+            <stop offset="0.4"  stop-color="#ffcc22"/>
+            <stop offset="1"    stop-color="#ff8800"/>
+          </linearGradient>
+          <radialGradient id="abRingGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0"    stop-color="#ffcc44"/>
+            <stop offset="0.4"  stop-color="#ff7700"/>
+            <stop offset="0.78" stop-color="#882200"/>
+            <stop offset="1"    stop-color="#340600"/>
+          </radialGradient>
+          <filter id="abFlashGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="18" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="abBlur2" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="2"/>
+          </filter>
+          <filter id="abBlur4" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="4"/>
+          </filter>
+          <filter id="abBlur6" x="-70%" y="-70%" width="240%" height="240%">
+            <feGaussianBlur stdDeviation="6"/>
+          </filter>
+          <filter id="abBlur10" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="10"/>
+          </filter>
+          <filter id="abBlur14" x="-90%" y="-90%" width="280%" height="280%">
+            <feGaussianBlur stdDeviation="14"/>
+          </filter>
+          <filter id="abStemGlow" x="-80%" y="-20%" width="260%" height="140%">
+            <feGaussianBlur stdDeviation="5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- ── Fat Man 炸弹本体 ─────────────────────────── -->
+        <g class="ab-bomb-body">
+          <!-- 凝结尾迹 -->
+          <line x1="100" y1="90" x2="100" y2="10"
+                stroke="rgba(200,220,240,0.38)" stroke-width="3"
+                stroke-linecap="round" filter="url(#abBlur2)"/>
+          <line x1="99"  y1="92" x2="96"  y2="18"
+                stroke="rgba(200,220,240,0.18)" stroke-width="1.4" stroke-linecap="round"/>
+          <line x1="101" y1="92" x2="104" y2="22"
+                stroke="rgba(200,220,240,0.15)" stroke-width="1.2" stroke-linecap="round"/>
+          <!-- 主弹体 (Fat Man 胖椭球) -->
+          <ellipse cx="100" cy="110" rx="28" ry="34"
+                   fill="url(#abBombGrad)" stroke="#3c3c24" stroke-width="0.7"/>
+          <!-- 金属高光 -->
+          <ellipse cx="90" cy="100" rx="9" ry="13"
+                   fill="rgba(255,255,240,0.22)" filter="url(#abBlur2)"/>
+          <!-- 引爆鼻锥 -->
+          <ellipse cx="100" cy="80" rx="14" ry="11" fill="#888878" stroke="#404034" stroke-width="0.6"/>
+          <ellipse cx="100" cy="75" rx="8"  ry="6"  fill="#aaaa94"/>
+          <ellipse cx="100" cy="71" rx="5"  ry="4"  fill="#ccccb0"/>
+          <circle  cx="100" cy="68" r="2.2" fill="#e8e8d0"/>
+          <circle  cx="100" cy="67" r="1"   fill="#ffffff" opacity="0.7"/>
+          <!-- 赤道识别带 -->
+          <path d="M 74 106 Q 100 101, 126 106 Q 126 113, 100 113 Q 74 113, 74 106 Z"
+                fill="rgba(235,235,195,0.38)"/>
+          <!-- 引爆插头端口 (4个) -->
+          <circle cx="74"  cy="109" r="2.8" fill="#707060" stroke="#404" stroke-width="0.4"/>
+          <circle cx="82"  cy="103" r="2.2" fill="#606055" stroke="#404" stroke-width="0.4"/>
+          <circle cx="118" cy="103" r="2.2" fill="#606055" stroke="#404" stroke-width="0.4"/>
+          <circle cx="126" cy="109" r="2.8" fill="#707060" stroke="#404" stroke-width="0.4"/>
+          <!-- FAT MAN 标识 -->
+          <text x="100" y="122" text-anchor="middle" font-size="4.5"
+                fill="#1c1c0c" font-family="monospace" letter-spacing="0.6" opacity="0.6">FAT MAN</text>
+          <!-- 尾部圆柱段 -->
+          <rect x="90" y="142" width="20" height="12" rx="2.5"
+                fill="#606050" stroke="#404030" stroke-width="0.5"/>
+          <!-- 箱形尾翼 (4片) -->
+          <path d="M 90 150 L 70 178 L 80 178 L 90 158 Z"   fill="#6c6c58" stroke="#404030" stroke-width="0.4"/>
+          <path d="M 110 150 L 130 178 L 120 178 L 110 158 Z" fill="#6c6c58" stroke="#404030" stroke-width="0.4"/>
+          <path d="M 93 150 L 88 179 L 93 179 L 97 162 Z"   fill="#7a7a66" stroke="#404030" stroke-width="0.4"/>
+          <path d="M 107 150 L 112 179 L 107 179 L 103 162 Z" fill="#7a7a66" stroke="#404030" stroke-width="0.4"/>
+        </g>
+
+        <!-- ── 爆炸闪光 (爆炸中心 100,200) ───────────────── -->
+        <circle class="ab-flash" cx="100" cy="200" r="0"
+                fill="url(#abFlashGrad)" filter="url(#abFlashGlow)" opacity="0"/>
+
+        <!-- ── 冲击波环 ──────────────────────────────────── -->
+        <ellipse class="ab-shockwave" cx="100" cy="200" rx="1" ry="1"
+                 fill="none" stroke="rgba(255,220,130,0.72)" stroke-width="2.5"
+                 style="vector-effect:non-scaling-stroke" opacity="0"/>
+
+        <!-- ── 火球 ──────────────────────────────────────── -->
+        <circle class="ab-fireball" cx="100" cy="200" r="0"
+                fill="url(#abFireGrad)" filter="url(#abBlur6)" opacity="0"/>
+
+        <!-- ── 蘑菇云烟柱 (从爆炸中心向上生长, 腰部收束) ─── -->
+        <g class="ab-stem-group" style="transform-origin:100px 200px">
+          <!-- 外层暗色烟团 -->
+          <path class="ab-stem-outer"
+                d="M 80 200 C 80 185, 86 170, 88 155 C 90 140, 83 123, 78 88
+                   L 122 88 C 117 123, 110 140, 112 155 C 114 170, 120 185, 120 200 Z"
+                fill="#2a0c02" filter="url(#abBlur10)" opacity="0"/>
+          <!-- 主烟柱体 (渐变色) -->
+          <path class="ab-stem-main"
+                d="M 84 200 C 84 186, 89 171, 91 157 C 93 143, 87 127, 83 92
+                   L 117 92 C 113 127, 107 143, 109 157 C 111 171, 116 186, 116 200 Z"
+                fill="url(#abStemGrad)" filter="url(#abBlur4)" opacity="0"/>
+          <!-- 炽热内核 -->
+          <path class="ab-stem-core"
+                d="M 91 200 C 91 188, 94 174, 96 161 C 97 149, 93 134, 91 101
+                   L 109 101 C 107 134, 103 149, 104 161 C 106 174, 109 188, 109 200 Z"
+                fill="url(#abStemCoreGrad)" filter="url(#abStemGlow)" opacity="0"/>
+        </g>
+
+        <!-- ── 圆环 (烟柱与帽盖衔接处) ──────────────────── -->
+        <g class="ab-ring-group" style="transform-origin:100px 200px">
+          <ellipse class="ab-ring-shadow" cx="100" cy="84" rx="56" ry="18"
+                   fill="#220600" filter="url(#abBlur6)" opacity="0"/>
+          <ellipse class="ab-ring-main"   cx="100" cy="84" rx="46" ry="13"
+                   fill="url(#abRingGrad)" filter="url(#abBlur4)" opacity="0"/>
+          <ellipse class="ab-ring-core"   cx="100" cy="84" rx="30" ry="7"
+                   fill="#ffcc44" filter="url(#abBlur2)" opacity="0"/>
+        </g>
+
+        <!-- ── 蘑菇云顶帽 (14层叠椭圆, 多模糊量营造立体感) ── -->
+        <!-- transform-origin 在爆炸中心, scale(0)→scale(1) 即从地面升起 -->
+        <g class="ab-cap-group" style="transform-origin:100px 200px">
+          <!-- 1. 底部投影 (最宽最暗最模糊) -->
+          <ellipse cx="100" cy="62" rx="80" ry="28" fill="#140400" filter="url(#abBlur14)" opacity="0.88"/>
+          <!-- 2. 主暗团 -->
+          <ellipse cx="100" cy="52" rx="72" ry="34" fill="#2c0e03" filter="url(#abBlur10)" opacity="0.88"/>
+          <!-- 3. 左下侧鼓包 -->
+          <ellipse cx="50"  cy="58" rx="42" ry="20" fill="#481806" filter="url(#abBlur10)" opacity="0.82"/>
+          <!-- 4. 右下侧鼓包 -->
+          <ellipse cx="150" cy="58" rx="42" ry="20" fill="#481806" filter="url(#abBlur10)" opacity="0.82"/>
+          <!-- 5. 左上侧鼓包 -->
+          <ellipse cx="42"  cy="43" rx="36" ry="19" fill="#7a2a0c" filter="url(#abBlur6)"  opacity="0.78"/>
+          <!-- 6. 右上侧鼓包 -->
+          <ellipse cx="158" cy="43" rx="36" ry="19" fill="#7a2a0c" filter="url(#abBlur6)"  opacity="0.78"/>
+          <!-- 7. 中央主体 -->
+          <ellipse cx="100" cy="44" rx="60" ry="31" fill="#9c3410" filter="url(#abBlur6)"  opacity="0.85"/>
+          <!-- 8. 左顶子鼓包 -->
+          <ellipse cx="63"  cy="32" rx="32" ry="17" fill="#c24c18" filter="url(#abBlur4)"  opacity="0.80"/>
+          <!-- 9. 右顶子鼓包 -->
+          <ellipse cx="137" cy="32" rx="32" ry="17" fill="#c24c18" filter="url(#abBlur4)"  opacity="0.80"/>
+          <!-- 10. 内部橙色体 -->
+          <ellipse cx="100" cy="34" rx="48" ry="23" fill="#e86820" filter="url(#abBlur4)"  opacity="0.78"/>
+          <!-- 11. 上部热团 -->
+          <ellipse cx="100" cy="26" rx="34" ry="17" fill="#ff9030" filter="url(#abBlur4)"  opacity="0.75"/>
+          <!-- 12. 炽热核心 -->
+          <ellipse cx="100" cy="21" rx="22" ry="13" fill="#ffcc50" filter="url(#abBlur2)"  opacity="0.82"/>
+          <!-- 13. 超高温中心 -->
+          <ellipse cx="100" cy="17" rx="13" ry="9"  fill="#fff5a0" filter="url(#abBlur2)"  opacity="0.88"/>
+          <!-- 14. 核闪亮点 -->
+          <ellipse cx="100" cy="13" rx="7"  ry="5"  fill="#ffffff"                          opacity="0.75"/>
+        </g>
+      </svg>
     </div>
   </div>
 </div>
@@ -707,6 +1261,756 @@
 
 .sunshine-particle.go {
   animation: particle-fly 0.76s ease-out forwards;
+}
+
+
+/* ============================================================
+   GREAT-LEADER PROPAGANDA LAYER
+   ============================================================
+   头像左上角已经有"红太阳"了 → 整套布置成 "心中的红太阳" 风格:
+     · 右侧大字直幅: 正 鼎 同 志 万 岁
+     · 头像底部一排向日葵, 全部朝太阳 (= 正鼎) 仰头
+     · 右上角小红旗 + 金色五角星, 迎风飘扬
+     · 底部金色"万岁"小字, 像礼花一样飘起再淡出
+*/
+
+/* ── 1. 大字直幅 "正鼎同志万岁" ─────────────────────────────── */
+.sun-banner {
+  position: absolute;
+  right: -64px;
+  top: -10px;
+  width: 52px;
+  height: 220px;
+  z-index: 12;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(10px) scaleY(0.92);
+  transform-origin: 50% 0%;
+  transition:
+    opacity 0.42s ease 0.10s,
+    transform 0.55s cubic-bezier(0.2,1.4,0.32,1) 0.10s;
+}
+
+.sunshine-wrap.sun-on .sun-banner {
+  opacity: 1;
+  transform: translateX(0) scaleY(1);
+}
+.sun-banner-cloth {
+  position: relative;
+  width: 100%;
+  height: 192px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  padding: 8px 0 6px;
+  background:
+    linear-gradient(180deg, #c00808 0%, #a80606 50%, #870202 100%);
+  border: 2px solid #f5c33a;
+  border-radius: 3px;
+  box-shadow:
+    0 4px 10px rgba(80,0,0,0.42),
+    inset 0 0 0 1px rgba(255,232,140,0.32),
+    0 0 14px rgba(255,200,80,0.22);
+  font-family: 'STKaiti', 'KaiTi', 'STHeiti', 'PingFang SC', 'Microsoft YaHei', 'SimHei', serif;
+  transform-origin: 50% 0%;
+}
+.sun-banner-cloth::before,
+.sun-banner-cloth::after {
+  content: "";
+  position: absolute;
+  left: -2px; right: -2px;
+  height: 4px;
+  background: #f5c33a;
+  box-shadow: 0 0 4px rgba(255,200,80,0.6);
+}
+.sun-banner-cloth::before { top: -7px; border-radius: 2px; }
+.sun-banner-cloth::after  { bottom: -7px; border-radius: 2px; }
+.sun-banner-cloth span {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffec84;
+  text-shadow:
+    0 0 4px rgba(255,200,80,0.65),
+    0 1px 0 #5a0202,
+    0 2px 3px rgba(0,0,0,0.45);
+  letter-spacing: 0;
+}
+.sun-banner-tassel {
+  position: absolute;
+  left: 50%; bottom: -14px;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 14px;
+  background:
+    repeating-linear-gradient(180deg,
+      #f5c33a 0 2px,
+      #d99a14 2px 4px);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 2px 4px rgba(80,0,0,0.4);
+  clip-path: polygon(
+    0% 0%, 100% 0%, 100% 60%,
+    90% 100%, 80% 60%, 70% 100%, 60% 60%,
+    50% 100%, 40% 60%, 30% 100%, 20% 60%,
+    10% 100%, 0% 60%);
+}
+.sunshine-wrap.sun-on .sun-banner-cloth {
+  animation: sun-banner-sway 4.2s ease-in-out infinite alternate;
+}
+@keyframes sun-banner-sway {
+  0%   { transform: rotate(-1.2deg) skewY(-0.4deg); }
+  100% { transform: rotate( 1.2deg) skewY( 0.4deg); }
+}
+
+/* ── 2. 小红旗 + 金五角星 (右上角) ─────────────────────────── */
+.sun-flag {
+  position: absolute;
+  right: -18px;
+  top: -34px;
+  width: 78px;
+  height: 56px;
+  z-index: 13;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-6px, 6px) scale(0.88);
+  transition:
+    opacity 0.36s ease 0.18s,
+    transform 0.5s cubic-bezier(0.2,1.4,0.32,1) 0.18s;
+}
+
+.sunshine-wrap.sun-on .sun-flag {
+  opacity: 1;
+  transform: translate(0,0) scale(1);
+}
+.sun-flag-pole {
+  position: absolute;
+  left: 4px; top: 0;
+  width: 2px;
+  height: 56px;
+  background: linear-gradient(180deg, #d6a02a, #855e0c);
+  border-radius: 1px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.sun-flag-pole::before {
+  content: "";
+  position: absolute;
+  left: -2px; top: -3px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff2b0, #d6a02a 60%, #855e0c);
+  box-shadow: 0 0 4px rgba(255,200,80,0.6);
+}
+.sun-flag-cloth {
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  width: 60px;
+  height: 40px;
+  overflow: visible;
+  transform-origin: 0% 50%;
+  filter: drop-shadow(0 2px 3px rgba(80,0,0,0.4));
+}
+.sun-flag-star { transform-origin: 14px 22px; }
+.sunshine-wrap.sun-on .sun-flag-cloth {
+  animation: sun-flag-wave 2.4s ease-in-out infinite;
+}
+.sunshine-wrap.sun-on .sun-flag-star {
+  animation: sun-flag-star-glow 1.8s ease-in-out infinite alternate;
+}
+@keyframes sun-flag-wave {
+  0%, 100% { transform: skewY(-2deg) scaleX(1); }
+  35%      { transform: skewY( 1.5deg) scaleX(0.97); }
+  65%      { transform: skewY(-1.2deg) scaleX(1.02); }
+}
+@keyframes sun-flag-star-glow {
+  from { filter: drop-shadow(0 0 0 rgba(255,210,80,0)); }
+  to   { filter: drop-shadow(0 0 3px rgba(255,210,80,0.95)); }
+}
+
+/* ── 3. 向日葵一排 (头像下方, 朵朵朝太阳) ───────────────────── */
+.sun-flowers {
+  position: absolute;
+  left: -22px;
+  right: -22px;
+  bottom: -56px;
+  height: 64px;
+  z-index: 11;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+.sun-flower {
+  width: 36px;
+  height: 56px;
+  overflow: visible;
+  opacity: 0;
+  transform: translateY(14px) scale(0.6);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.32s ease,
+    transform 0.55s cubic-bezier(0.22,1.6,0.36,1);
+  filter: drop-shadow(0 2px 2px rgba(40,20,5,0.32));
+}
+.sunshine-wrap.sun-on .sun-flower {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.sunshine-wrap.sun-on .sun-flower.sf1 { transition-delay: 0.28s; }
+.sunshine-wrap.sun-on .sun-flower.sf2 { transition-delay: 0.36s; }
+.sunshine-wrap.sun-on .sun-flower.sf3 { transition-delay: 0.44s; }
+.sunshine-wrap.sun-on .sun-flower.sf4 { transition-delay: 0.52s; }
+.sunshine-wrap.sun-on .sun-flower.sf5 { transition-delay: 0.60s; }
+
+/* 向日葵的"头" 永远朝着太阳 (左上角) — 用 transform 旋转一个角度 */
+.sf-head {
+  transform-origin: 20px 30px;
+}
+.sun-flower.sf1 .sf-head { transform: rotate(-35deg); }
+.sun-flower.sf2 .sf-head { transform: rotate(-22deg); }
+.sun-flower.sf3 .sf-head { transform: rotate(-10deg); }
+.sun-flower.sf4 .sf-head { transform: rotate(  6deg); }
+.sun-flower.sf5 .sf-head { transform: rotate( 20deg); }
+
+/* 花头轻微仰望/呼吸 + 茎随风左右晃 */
+.sunshine-wrap.sun-on .sun-flower.sf1 .sf-head { animation: sf-head-look-1 3.6s ease-in-out infinite alternate; }
+.sunshine-wrap.sun-on .sun-flower.sf2 .sf-head { animation: sf-head-look-2 3.8s ease-in-out infinite alternate; }
+.sunshine-wrap.sun-on .sun-flower.sf3 .sf-head { animation: sf-head-look-3 3.4s ease-in-out infinite alternate; }
+.sunshine-wrap.sun-on .sun-flower.sf4 .sf-head { animation: sf-head-look-4 4.0s ease-in-out infinite alternate; }
+.sunshine-wrap.sun-on .sun-flower.sf5 .sf-head { animation: sf-head-look-5 3.5s ease-in-out infinite alternate; }
+@keyframes sf-head-look-1 { from { transform: rotate(-39deg); } to { transform: rotate(-31deg); } }
+@keyframes sf-head-look-2 { from { transform: rotate(-26deg); } to { transform: rotate(-18deg); } }
+@keyframes sf-head-look-3 { from { transform: rotate(-14deg); } to { transform: rotate( -6deg); } }
+@keyframes sf-head-look-4 { from { transform: rotate(  2deg); } to { transform: rotate( 10deg); } }
+@keyframes sf-head-look-5 { from { transform: rotate( 16deg); } to { transform: rotate( 24deg); } }
+
+.sunshine-wrap.sun-on .sun-flower {
+  animation: sf-sway 3.6s ease-in-out infinite alternate;
+}
+.sunshine-wrap.sun-on .sun-flower.sf2 { animation-delay: -0.6s; animation-duration: 4.1s; }
+.sunshine-wrap.sun-on .sun-flower.sf3 { animation-delay: -1.2s; animation-duration: 3.7s; }
+.sunshine-wrap.sun-on .sun-flower.sf4 { animation-delay: -1.8s; animation-duration: 4.3s; }
+.sunshine-wrap.sun-on .sun-flower.sf5 { animation-delay: -0.4s; animation-duration: 3.9s; }
+@keyframes sf-sway {
+  from { transform: translateY(0) rotate(-1.6deg); }
+  to   { transform: translateY(0) rotate( 1.6deg); }
+}
+
+/* ── 4. 金色"万岁"漂浮小字 ─────────────────────────────────── */
+.sun-cheers {
+  position: absolute;
+  left: 6%; right: 6%;
+  bottom: -8px;
+  height: 90px;
+  z-index: 14;
+  pointer-events: none;
+  overflow: visible;
+}
+.sun-cheer {
+  position: absolute;
+  bottom: 0;
+  font-family: 'STKaiti', 'KaiTi', 'STHeiti', 'PingFang SC', 'Microsoft YaHei', serif;
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffe06a;
+  text-shadow:
+    0 0 6px rgba(255,200,80,0.85),
+    0 1px 0 #7a2a02,
+    0 2px 4px rgba(0,0,0,0.4);
+  opacity: 0;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.sun-cheer.c1 { left:  8%; }
+.sun-cheer.c2 { left: 42%; font-size: 14px; }
+.sun-cheer.c3 { left: 70%; font-size: 12.5px; }
+.sunshine-wrap.sun-on .sun-cheer {
+  animation: sun-cheer-float 3.6s ease-out infinite;
+}
+.sunshine-wrap.sun-on .sun-cheer.c1 { animation-delay: 0.2s; }
+.sunshine-wrap.sun-on .sun-cheer.c2 { animation-delay: 1.4s; }
+.sunshine-wrap.sun-on .sun-cheer.c3 { animation-delay: 2.5s; }
+@keyframes sun-cheer-float {
+  0%   { opacity: 0;    transform: translateY(0)    scale(0.7); }
+  18%  { opacity: 1;    transform: translateY(-14px) scale(1); }
+  60%  { opacity: 0.85; transform: translateY(-46px) scale(1.04); }
+  100% { opacity: 0;    transform: translateY(-78px) scale(1.06); }
+}
+
+/* ── 5. 八枚金色勋章 (替换原 sunflowers/banner/cheers) ───────────── */
+.sun-honors {
+  position: absolute;
+  left: -16px;
+  right: -16px;
+  bottom: -62px;
+  height: 56px;
+  z-index: 12;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.sun-honors-caption {
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.32s ease 0.10s,
+    transform 0.42s cubic-bezier(0.2,1.4,0.32,1) 0.10s;
+  font-family: 'STHeiti','PingFang SC','Microsoft YaHei','SimHei',sans-serif;
+}
+.sun-honors-caption span {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  color: #d61a1a;
+  text-shadow: 0 0 4px rgba(214,26,26,0.55), 0 1px 0 rgba(0,0,0,0.4);
+}
+
+.sunshine-wrap.sun-on .sun-honors-caption {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sun-honors-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.sun-medal {
+  position: relative;
+  width: 22px;
+  height: 38px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  transform: translateY(8px) scale(0.6);
+  transform-origin: 50% 30%;
+  transition:
+    opacity 0.32s ease,
+    transform 0.5s cubic-bezier(0.22,1.6,0.36,1);
+  filter: drop-shadow(0 1.5px 2px rgba(60,30,5,0.45));
+}
+
+.sunshine-wrap.sun-on .sun-medal {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.sunshine-wrap.sun-on .sun-medal.m1 { transition-delay: 0.20s; }
+.sunshine-wrap.sun-on .sun-medal.m2 { transition-delay: 0.28s; }
+.sunshine-wrap.sun-on .sun-medal.m3 { transition-delay: 0.36s; }
+.sunshine-wrap.sun-on .sun-medal.m4 { transition-delay: 0.44s; }
+.sunshine-wrap.sun-on .sun-medal.m5 { transition-delay: 0.52s; }
+.sunshine-wrap.sun-on .sun-medal.m6 { transition-delay: 0.60s; }
+.sunshine-wrap.sun-on .sun-medal.m7 { transition-delay: 0.68s; }
+.sunshine-wrap.sun-on .sun-medal.m8 { transition-delay: 0.76s; }
+
+/* 勋章顶部的红色绶带 (扁条) */
+.sun-medal-ribbon {
+  display: block;
+  width: 14px;
+  height: 4px;
+  background:
+    linear-gradient(180deg, #d20a0a 0%, #870202 100%);
+  border-radius: 1px;
+  box-shadow: 0 0 2px rgba(150,0,0,0.6);
+  position: relative;
+}
+.sun-medal-ribbon::before,
+.sun-medal-ribbon::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: #f6c64a;
+}
+.sun-medal-ribbon::before { left: 3px; }
+.sun-medal-ribbon::after  { right: 3px; }
+
+/* 金色五角星本体 */
+.sun-medal-star {
+  width: 22px;
+  height: 22px;
+  margin-top: -1px;
+  display: block;
+  overflow: visible;
+}
+/* 金色光晕 — 入场后慢慢呼吸 */
+.sunshine-wrap.sun-on .sun-medal-star {
+  animation: sun-medal-glow 2.4s ease-in-out infinite alternate;
+}
+.sunshine-wrap.sun-on .sun-medal.m2 .sun-medal-star { animation-delay: 0.30s; }
+.sunshine-wrap.sun-on .sun-medal.m3 .sun-medal-star { animation-delay: 0.60s; }
+.sunshine-wrap.sun-on .sun-medal.m4 .sun-medal-star { animation-delay: 0.90s; }
+.sunshine-wrap.sun-on .sun-medal.m5 .sun-medal-star { animation-delay: 1.20s; }
+.sunshine-wrap.sun-on .sun-medal.m6 .sun-medal-star { animation-delay: 1.50s; }
+.sunshine-wrap.sun-on .sun-medal.m7 .sun-medal-star { animation-delay: 1.80s; }
+.sunshine-wrap.sun-on .sun-medal.m8 .sun-medal-star { animation-delay: 2.10s; }
+@keyframes sun-medal-glow {
+  from { filter: brightness(0.92) drop-shadow(0 0 0 rgba(255,200,80,0)); }
+  to   { filter: brightness(1.15) drop-shadow(0 0 4px rgba(255,210,90,0.92)); }
+}
+
+/* 勋章下面的项目名 (默认隐藏, hover 整组时浮出) */
+.sun-medal-label {
+  margin-top: 2px;
+  font-family: 'Inter','SF Pro Display',-apple-system,sans-serif;
+  font-size: 6.4px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #f6c64a;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 0.32s ease, transform 0.32s ease;
+  white-space: nowrap;
+}
+.sunshine-wrap.sun-on .sun-medal-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/*
+ * ── 6. 胸前勋章 rack (V11 — 中间折中) ──────────
+ * V9 完全分开 (太散), V10 重叠 -8px (太密). V11 折中: 重叠 -3px + 错开 3/6.
+ */
+.sun-chest-rack {
+  position: absolute;
+  left: 104px;          /* 左胸 = subject's left = viewer's right */
+  bottom: 8px;
+  transform: rotate(-5deg);
+  transform-origin: 0% 100%;
+  z-index: 12;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: transparent;
+  filter: none;
+}
+.sun-chest-row {
+  display: flex;
+  gap: 1.5px;
+  justify-content: flex-start;
+  position: relative;
+  margin-bottom: -3px;          /* 上下行 轻微 重叠 3px (V10 是 -8 太密, V9 是 0 太散) */
+}
+.sun-chest-row:nth-child(1) { z-index: 1; }
+.sun-chest-row:nth-child(2) {
+  z-index: 2;
+  margin-left: 3px;             /* row 2 水平错开 3px */
+}
+.sun-chest-row:nth-child(3) {
+  z-index: 3;
+  margin-left: 6px;             /* row 3 错开 6px */
+}
+.sun-chest-row:last-child {
+  margin-bottom: 0;
+}
+
+.sun-chest-medal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 13px;
+  opacity: 0;
+  transform: translateY(4px) scale(0.4);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.30s ease,
+    transform 0.46s cubic-bezier(0.2,1.6,0.32,1);
+}
+.sunshine-wrap.sun-on .sun-chest-medal { opacity: 1; transform: translateY(0) scale(1); }
+.sunshine-wrap.sun-on .sun-chest-medal.m1 { transition-delay: 0.20s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m2 { transition-delay: 0.26s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m3 { transition-delay: 0.32s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m4 { transition-delay: 0.38s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m5 { transition-delay: 0.44s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m6 { transition-delay: 0.50s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m7 { transition-delay: 0.56s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m8 { transition-delay: 0.62s; }
+
+/* V9 真勋章感: 红绶带 (顶) + 金五角星 pendant (下) + abbr overlay */
+.sun-chest-medal .cm-rib {
+  display: block;
+  width: 9px;
+  height: 4px;
+  background: linear-gradient(180deg, #e60a0a 0%, #b50808 50%, #7d0303 100%);
+  border: 0.7px solid #4a0202;
+  border-radius: 1px;
+  margin-bottom: -1px;
+  z-index: 2;
+  position: relative;
+  box-shadow: 0 0.5px 0 rgba(0,0,0,0.4);
+}
+.sun-chest-medal .cm-rib::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 1.6px;
+  margin-left: -0.8px;
+  background: #f6c64a;
+}
+
+.sun-chest-medal .cm-pendant {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+.sun-chest-medal .cm-star {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 0.5px 1px rgba(0,0,0,0.55));
+}
+.sun-chest-medal .cm-abbr {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  font-family: 'Inter', 'SF Pro Display', -apple-system, sans-serif;
+  font-size: 5.4px;
+  font-weight: 900;
+  color: #3a1a02;
+  text-shadow: 0 0.5px 0 rgba(255,232,140,0.6);
+  letter-spacing: -0.05em;
+  line-height: 1;
+  /* 微下移 — 字落在 star 的"内五边形" 而不是顶角 */
+  padding-top: 1.2px;
+  pointer-events: none;
+}
+
+/* 五角星 glow 错时呼吸 */
+.sunshine-wrap.sun-on .sun-chest-medal .cm-star {
+  animation: sun-chest-glow 2.4s ease-in-out infinite alternate;
+}
+.sunshine-wrap.sun-on .sun-chest-medal.m2 .cm-star { animation-delay: 0.30s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m3 .cm-star { animation-delay: 0.60s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m4 .cm-star { animation-delay: 0.90s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m5 .cm-star { animation-delay: 1.20s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m6 .cm-star { animation-delay: 1.50s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m7 .cm-star { animation-delay: 1.80s; }
+.sunshine-wrap.sun-on .sun-chest-medal.m8 .cm-star { animation-delay: 2.10s; }
+@keyframes sun-chest-glow {
+  from { filter: drop-shadow(0 0.5px 1px rgba(0,0,0,0.55)) brightness(0.92); }
+  to   { filter: drop-shadow(0 0.5px 1px rgba(0,0,0,0.55)) drop-shadow(0 0 3px rgba(255,210,90,0.92)) brightness(1.15); }
+}
+
+/* V7 肩章 CSS 已删 — 用户反馈太烂 */
+
+/*
+ * ── MacArthur peaked cap (V2 — 扁了 30% + 全参数可调) ──
+ * ★ 位置/大小/角度 全部由顶部 CSS 变量控制
+ *   --hat-left / --hat-top / --hat-w / --hat-h / --hat-rotate
+ * z-index 14 = 最上面, 盖住头顶/头发.
+ */
+.sun-hat {
+  position: absolute;
+  left:   var(--hat-left, 32px);
+  top:    var(--hat-top, -8px);
+  width:  var(--hat-w, 140px);
+  height: var(--hat-h, 64px);
+  z-index: 14;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-12px) rotate(var(--hat-rotate, -3deg)) scale(0.92);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.4s ease 0.18s,
+    transform 0.55s cubic-bezier(0.2,1.4,0.32,1) 0.18s;
+  filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
+}
+.sunshine-wrap.sun-on .sun-hat {
+  opacity: 1;
+  transform: translateY(0) rotate(var(--hat-rotate, -3deg)) scale(1);
+  animation: sun-hat-tilt 5.4s 0.8s ease-in-out infinite alternate;
+}
+/* 入场后帽子轻轻晃动 (在 --hat-rotate 基础上 ±1deg 微摆) */
+@keyframes sun-hat-tilt {
+  from { transform: translateY(0) rotate(calc(var(--hat-rotate, -3deg) - 1deg)) scale(1); }
+  to   { transform: translateY(-1px) rotate(calc(var(--hat-rotate, -3deg) + 1deg)) scale(1.01); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sunshine-wrap.sun-on .sun-chest-medal,
+  .sunshine-wrap.sun-on .sun-chest-medal .cm-star,
+  .sunshine-wrap.sun-on .sun-hat { animation: none; }
+  .sunshine-wrap.sun-on .sun-chest-medal { transition: none; opacity: 1; transform: none; }
+}
+
+/* ════════════════════════════════════════════════
+   麦克阿瑟烟斗 (corncob pipe)
+   ════════════════════════════════════════════════ */
+.sun-pipe {
+  position: absolute;
+  left:   var(--pipe-left,    78px);
+  top:    var(--pipe-top,    135px);
+  width:  var(--pipe-w,       56px);
+  height: auto;
+  z-index: 9;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
+  transform: rotate(var(--pipe-rotate, -6deg));
+  transform-origin: 62px 15px;
+  opacity: 0;
+  transition: opacity 0.28s ease 0.1s;
+}
+
+.sunshine-wrap.sun-on .sun-pipe {
+  opacity: 1;
+}
+
+/* Smoke wisps */
+.pipe-smoke-wisp {
+  opacity: 0;
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+}
+
+.sunshine-wrap.sun-on .pipe-smoke-wisp.s1 {
+  animation: pipe-smoke-rise 2.6s ease-out 0.2s infinite;
+}
+.sunshine-wrap.sun-on .pipe-smoke-wisp.s2 {
+  animation: pipe-smoke-rise 3.1s ease-out 0.9s infinite;
+}
+.sunshine-wrap.sun-on .pipe-smoke-wisp.s3 {
+  animation: pipe-smoke-rise 3.8s ease-out 1.7s infinite;
+}
+
+@keyframes pipe-smoke-rise {
+  0%   { opacity: 0; stroke-dashoffset: 28; transform: translateY(0) scaleX(1); }
+  12%  { opacity: 0.65; }
+  70%  { opacity: 0.22; stroke-dashoffset: 0; transform: translateY(-4px) scaleX(1.1); }
+  100% { opacity: 0; stroke-dashoffset: -6; transform: translateY(-8px) scaleX(0.9); }
+}
+
+/* ════════════════════════════════════════════════
+   原子弹投递 + 蘑菇云爆炸  (v2 – 全面重新设计)
+   爆炸中心 = SVG (100,200); CSS 将其映射到 stage (--bomb-cx, --bomb-cy)
+   ════════════════════════════════════════════════ */
+.sun-atombomb {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  overflow: visible;
+}
+.sun-bomb-svg {
+  position: absolute;
+  left: calc(var(--bomb-cx, 100px) - 100px);
+  top:  calc(var(--bomb-cy,  70px) - 200px);
+  width: 200px;
+  height: 400px;
+  overflow: visible;
+  transform: scale(var(--bomb-scale, 1.3));
+  transform-origin: var(--bomb-cx, 100px) calc(var(--bomb-cy, 70px) - 0px);
+}
+
+/* ── 默认隐藏: 点击前炸弹全部不可见 */
+.ab-bomb-body  { opacity: 0; transform-origin: 100px 120px; }
+.ab-stem-group { transform-origin: 100px 200px; }
+.ab-ring-group { transform-origin: 100px 200px; }
+.ab-cap-group  { opacity: 0; transform-origin: 100px 200px; }
+.ab-shockwave  { transform-origin: 100px 200px; }
+
+/* ── 点击激活 (.sun-on) 后才播放动画 */
+.sunshine-wrap.sun-on .ab-bomb-body  { animation: ab-bomb-fall       9s cubic-bezier(0.35,0.02,0.68,0.98) infinite; }
+.sunshine-wrap.sun-on .ab-flash      { animation: ab-flash-burst      9s ease-out infinite; }
+.sunshine-wrap.sun-on .ab-shockwave  { animation: ab-shockwave-expand 9s ease-out infinite; }
+.sunshine-wrap.sun-on .ab-fireball   { animation: ab-fireball-bloom   9s ease-out infinite; }
+.sunshine-wrap.sun-on .ab-stem-group { animation: ab-stem-rise        9s ease-out infinite; }
+.sunshine-wrap.sun-on .ab-stem-outer,
+.sunshine-wrap.sun-on .ab-stem-main  { animation: ab-stem-opacity     9s ease-out infinite; }
+.sunshine-wrap.sun-on .ab-stem-core  { animation: ab-stemcore-opacity 9s ease-out infinite; }
+.sunshine-wrap.sun-on .ab-ring-group { animation: ab-ring-bloom       9s ease-out infinite; }
+.sunshine-wrap.sun-on .ab-ring-shadow,
+.sunshine-wrap.sun-on .ab-ring-main,
+.sunshine-wrap.sun-on .ab-ring-core  { animation: ab-ring-opacity     9s ease-out infinite; }
+.sunshine-wrap.sun-on .ab-cap-group  { animation: ab-cap-bloom        9s ease-out infinite; }
+
+/* ── Keyframes */
+@keyframes ab-bomb-fall {
+  0%   { transform: translateY(-290px) rotate(var(--bomb-tilt,-8deg)); opacity: 1; }
+  29%  { transform: translateY(  58px) rotate(calc(var(--bomb-tilt,-8deg)*-0.3)); opacity: 1; }
+  32%  { transform: translateY(  60px) rotate(0deg); opacity: 0; }
+  100% { transform: translateY(  60px) rotate(0deg); opacity: 0; }
+}
+@keyframes ab-flash-burst {
+  0%,  32.5% { r: 0px;   opacity: 0; }
+  34%         { r: 90px;  opacity: 1; }
+  39%         { r: 110px; opacity: 0; }
+  100%        { r: 110px; opacity: 0; }
+}
+@keyframes ab-shockwave-expand {
+  0%,  33%  { transform: scale(1,1);    opacity: 0; }
+  34%        { transform: scale(4,2);    opacity: 0.82; }
+  52%        { transform: scale(125,18); opacity: 0.28; }
+  64%        { transform: scale(155,22); opacity: 0; }
+  100%       { transform: scale(155,22); opacity: 0; }
+}
+@keyframes ab-fireball-bloom {
+  0%,  33%  { r: 0px;   opacity: 0; }
+  36.5%      { r: 65px;  opacity: 1; }
+  50%        { r: 45px;  opacity: 0.55; }
+  64%        { r: 20px;  opacity: 0; }
+  100%       { r: 0px;   opacity: 0; }
+}
+@keyframes ab-stem-rise {
+  0%,  35% { transform: scaleY(0); }
+  42%       { transform: scaleY(0.28); }
+  60%       { transform: scaleY(1); }
+  90%       { transform: scaleY(1.05); }
+  100%      { transform: scaleY(1.05); }
+}
+@keyframes ab-stem-opacity {
+  0%,  35% { opacity: 0; }
+  42%       { opacity: 0.95; }
+  65%       { opacity: 0.88; }
+  88%       { opacity: 0.3; }
+  98%       { opacity: 0; }
+  100%      { opacity: 0; }
+}
+@keyframes ab-stemcore-opacity {
+  0%,  38% { opacity: 0; }
+  46%       { opacity: 0.88; }
+  60%       { opacity: 0.35; }
+  72%       { opacity: 0; }
+  100%      { opacity: 0; }
+}
+@keyframes ab-ring-bloom {
+  0%,  39% { transform: scale(0); }
+  46%       { transform: scale(0.65); }
+  64%       { transform: scale(1); }
+  68%       { transform: scale(1.08); }
+  100%      { transform: scale(1.08); }
+}
+@keyframes ab-ring-opacity {
+  0%,  39% { opacity: 0; }
+  47%       { opacity: 0.9; }
+  68%       { opacity: 0.65; }
+  90%       { opacity: 0; }
+  100%      { opacity: 0; }
+}
+/* transform-origin=爆炸中心: scale(0)=帽聚于爆炸点; scale(1)=完全展开 */
+@keyframes ab-cap-bloom {
+  0%,  38% { transform: scale(0);    opacity: 0; }
+  48%       { transform: scale(0.5);  opacity: 0.88; }
+  65%       { transform: scale(1);    opacity: 1; }
+  72%       { transform: scale(1.06); opacity: 1; }
+  88%       { transform: scale(1.06); opacity: 0.38; }
+  98%       { opacity: 0; }
+  100%      { opacity: 0; }
 }
 </style>
 
