@@ -73,7 +73,7 @@
             <div class="card cwide"><div class="card-h">Activity by hour</div><div id="p-hours" class="hist"></div></div>
             <div class="card"><div class="card-h">By day of week</div><div id="p-dow" class="hist"></div></div>
             <div class="card"><div class="card-h">New vs returning</div><div id="p-nr" class="nr"></div></div>
-            <div class="card cwide"><div class="card-h">Recent visitors</div><div id="dash-recent" class="recent"></div></div>
+            <div class="card cwide3"><div class="card-h">Recent visitors</div><div id="dash-recent" class="recent"></div></div>
         </div>
     </div>
 </div>
@@ -360,7 +360,7 @@
     .dash-main { display: grid; grid-template-columns: 1.9fr 1fr; gap: 16px; margin-bottom: 18px; }
     .sech { font: 600 11px/1 ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; opacity: .7; margin: 4px 2px 12px; } .secsub { opacity: .45; }
     .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-    .cwide { grid-column: span 2; }
+    .cwide { grid-column: span 2; } .cwide3 { grid-column: span 3; }
     .card { background: linear-gradient(180deg, #0a2236, #07182a); border: 1px solid rgba(120,200,255,.13); border-radius: 16px; padding: 15px 17px; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
     .card-h { font: 600 11px/1 ui-monospace, monospace; letter-spacing: .09em; text-transform: uppercase; opacity: .6; margin-bottom: 12px; display: flex; align-items: center; gap: 9px; }
     .dash-badge { display: none; font: 600 11px/1 ui-monospace, monospace; color: #06202e; background: #36e0ff; padding: 4px 9px; border-radius: 20px; } .dash-badge.show { display: inline-block; }
