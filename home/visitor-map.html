@@ -45,7 +45,7 @@
             <div class="kpi"><span>Last 7 days</span><b id="k-7">0</b><i id="k-7-d" class="kdelta"></i></div>
             <div class="kpi"><span>Last 30 days</span><b id="k-30">0</b><i id="k-30-d" class="kdelta"></i></div>
             <div class="kpi"><span>Live now</span><b id="k-live">0</b></div>
-            <div class="kpi"><span>Countries</span><b id="k-co">0</b></div>
+            <div class="kpi"><span>Regions</span><b id="k-co">0</b></div>
             <div class="kpi"><span>Cities</span><b id="k-ci">0</b></div>
         </div>
 
@@ -61,7 +61,7 @@
         <div class="sech">Breakdown <span class="secsub" id="rng-lbl">last 7 days</span></div>
         <div class="grid">
             <div class="card cwide"><div class="card-h">Locations <i id="loc-clear" class="dash-clear">show all</i></div>
-                <div class="loc-head"><span>Country</span><span>Cities</span><span>Visits</span><span>Share</span><span>Last</span></div>
+                <div class="loc-head"><span>Region</span><span>Cities</span><span>Visits</span><span>Share</span><span>Last</span></div>
                 <div id="dash-loc" class="loc"></div></div>
             <div class="card"><div class="card-h">Top cities</div><div id="p-cities" class="plist"></div></div>
             <div class="card"><div class="card-h">Browsers</div><div id="p-browser" class="plist"></div></div>
@@ -253,13 +253,13 @@
         ROWS.forEach(function (r) { var t = Date.parse(r.created_at); if (isNaN(t)) return; for (var k = 0; k < arr.length; k++) { if (t >= arr[k].a && t < arr[k].b) { arr[k].v++; break; } } }); return arr; }
     var chartEl;
     function renderChart() { var data = buckets(CUR_RANGE), n = data.length, mx = data.reduce(function (m, o) { return Math.max(m, o.v); }, 1);
-        var Wd = 600, Hd = 150, padB = 22, padT = 12, padX = 6, X = function (i) { return padX + i / (n - 1) * (Wd - 2 * padX); }, Y = function (v) { return Hd - padB - (v / mx) * (Hd - padB - padT); };
+        var Wd = 600, Hd = 300, padB = 28, padT = 16, padX = 6, X = function (i) { return padX + i / (n - 1) * (Wd - 2 * padX); }, Y = function (v) { return Hd - padB - (v / mx) * (Hd - padB - padT); };
         var pts = data.map(function (o, i) { return [X(i), Y(o.v)]; });
         var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
         var area = 'M' + padX + ' ' + (Hd - padB) + ' ' + pts.map(function (p) { return 'L' + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ') + ' L' + (Wd - padX) + ' ' + (Hd - padB) + ' Z';
         var lbl = '', dots = '', every = Math.ceil(n / 8);
         for (var i = 0; i < n; i++) { if (i % every === 0 || i === n - 1) lbl += '<text x="' + X(i).toFixed(1) + '" y="' + (Hd - 6) + '" class="cx">' + esc(data[i].label) + '</text>'; dots += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(data[i].v).toFixed(1) + '" r="2.3" class="cdot"/>'; }
-        var grid = ''; for (var g = 0; g <= 2; g++) { var gv = mx * g / 2, gy = Y(gv); grid += '<line x1="' + padX + '" y1="' + gy.toFixed(1) + '" x2="' + (Wd - padX) + '" y2="' + gy.toFixed(1) + '" class="cgrid"/><text x="' + padX + '" y="' + (gy - 2).toFixed(1) + '" class="cy">' + Math.round(gv) + '</text>'; }
+        var grid = ''; for (var g = 0; g <= 4; g++) { var gv = mx * g / 4, gy = Y(gv); grid += '<line x1="' + padX + '" y1="' + gy.toFixed(1) + '" x2="' + (Wd - padX) + '" y2="' + gy.toFixed(1) + '" class="cgrid"/>' + (g % 2 === 0 ? '<text x="' + padX + '" y="' + (gy - 3).toFixed(1) + '" class="cy">' + fmtNum(Math.round(gv)) + '</text>' : ''); }
         chartEl.innerHTML = '<svg viewBox="0 0 ' + Wd + ' ' + Hd + '" preserveAspectRatio="none" class="csvg"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#36e0ff" stop-opacity="0.4"/><stop offset="1" stop-color="#36e0ff" stop-opacity="0"/></linearGradient></defs>' +
             grid + '<path d="' + area + '" fill="url(#cg)"/><path d="' + line + '" fill="none" stroke="#36e0ff" stroke-width="2" vector-effect="non-scaling-stroke"/>' + dots + lbl + '<line id="cvline" x1="0" y1="' + padT + '" x2="0" y2="' + (Hd - padB) + '" class="cvline" style="display:none"/></svg><div class="ctip" id="ctip"></div>';
         var cvline = chartEl.querySelector('#cvline'), ctip = chartEl.querySelector('#ctip');
@@ -365,12 +365,12 @@
     .card-h { font: 600 11px/1 ui-monospace, monospace; letter-spacing: .09em; text-transform: uppercase; opacity: .6; margin-bottom: 12px; display: flex; align-items: center; gap: 9px; }
     .dash-badge { display: none; font: 600 11px/1 ui-monospace, monospace; color: #06202e; background: #36e0ff; padding: 4px 9px; border-radius: 20px; } .dash-badge.show { display: inline-block; }
     .dash-clear { display: none; margin-left: auto; font-style: normal; cursor: pointer; color: #5fd6ff; } .dash-clear.show { display: inline; }
-    .mapwrap { position: relative; height: clamp(340px, 48vh, 540px); border-radius: 11px; overflow: hidden; background: radial-gradient(120% 130% at 50% 0%, #082a44 0%, #04121f 75%); }
+    .mapwrap { position: relative; height: clamp(200px, 30vh, 300px); border-radius: 11px; overflow: hidden; background: radial-gradient(120% 130% at 50% 0%, #082a44 0%, #04121f 75%); }
     .mapwrap canvas { display: block; width: 100%; height: 100%; cursor: grab; } .mapwrap canvas:active { cursor: grabbing; }
     .zoomctl { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
     .zoomctl button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(120,200,255,.2); background: rgba(8,26,44,.7); color: #cfeaff; font-size: 16px; line-height: 1; cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: .12s; }
     .zoomctl button:hover { background: rgba(54,224,255,.18); border-color: rgba(120,210,255,.5); }
-    .chart { position: relative; } .csvg { width: 100%; height: clamp(340px, 48vh, 540px); display: block; }
+    .chart { position: relative; } .csvg { width: 100%; height: clamp(200px, 30vh, 300px); display: block; }
     .cgrid { stroke: rgba(120,200,255,.1); stroke-width: 1; vector-effect: non-scaling-stroke; } .cy, .cx { fill: #7fa8c4; font: 9px ui-monospace, monospace; opacity: .65; } .cx { text-anchor: middle; } .cdot { fill: #36e0ff; } .cvline { stroke: rgba(54,224,255,.5); stroke-width: 1; vector-effect: non-scaling-stroke; }
     .ctip { position: absolute; top: 6px; display: none; background: rgba(8,26,44,.92); border: 1px solid rgba(120,200,255,.25); border-radius: 8px; padding: 5px 9px; font-size: 11px; pointer-events: none; white-space: nowrap; } .ctip b { color: #36e0ff; font-size: 14px; } .ctip span { opacity: .6; margin-left: 5px; }
     .plist { display: flex; flex-direction: column; gap: 7px; min-height: 40px; }
