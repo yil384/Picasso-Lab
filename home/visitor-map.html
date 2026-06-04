@@ -187,6 +187,8 @@
         try { if (!sessionStorage.getItem('vm_seen')) { geoIP().then(function (v) { return sbInsert(v).then(function () { sessionStorage.setItem('vm_seen', '1'); sbSelectAll().then(function (rows) { if (Array.isArray(rows)) aggregate(rows); }); }); }).catch(function () {}); } } catch (e) {} }
 
     /* ---------- helpers ---------- */
+    var COUNTRY_DISPLAY = { 'China': 'China Mainland', 'Hong Kong': 'Hong Kong SAR', 'Macao': 'Macau SAR' };
+    function dispCountry(c) { return COUNTRY_DISPLAY[c] || c; }
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
     function fmtAgo(ms) { if (!ms) return ''; var s = Math.max(0, (Date.now() - ms) / 1000);
         if (s < 60) return 'now'; if (s < 3600) return Math.floor(s / 60) + 'm'; if (s < 86400) return Math.floor(s / 3600) + 'h'; if (s < 2592000) return Math.floor(s / 86400) + 'd'; return Math.floor(s / 2592000) + 'mo'; }
@@ -269,24 +271,24 @@
         chartEl.onmouseleave = function () { cvline.style.display = 'none'; ctip.style.display = 'none'; }; }
 
     function renderLocations(rows) { var byC = {};
-        rows.forEach(function (r) { var cn = r.country || 'Unknown'; if (!byC[cn]) byC[cn] = { v: 0, cities: {}, t: 0 }; byC[cn].v++; var t = Date.parse(r.created_at); if (!isNaN(t) && t > byC[cn].t) byC[cn].t = t;
+        rows.forEach(function (r) { var cn = r.country || 'Unknown'; var dc = dispCountry(cn); if (!byC[cn]) byC[cn] = { v: 0, cities: {}, t: 0 }; byC[cn].v++; var t = Date.parse(r.created_at); if (!isNaN(t) && t > byC[cn].t) byC[cn].t = t;
             var cy = r.city || 'Unknown'; if (!byC[cn].cities[cy]) byC[cn].cities[cy] = { v: 0, t: 0 }; byC[cn].cities[cy].v++; if (!isNaN(t) && t > byC[cn].cities[cy].t) byC[cn].cities[cy].t = t; });
         var list = Object.keys(byC).map(function (k) { return { c: k, d: byC[k] }; }).sort(function (a, b) { return b.d.v - a.d.v; }), total = rows.length || 1;
         document.getElementById('dash-loc').innerHTML = list.map(function (o) { var nc = Object.keys(o.d.cities).length, share = o.d.v / total * 100;
             var cities = Object.keys(o.d.cities).map(function (k) { return { c: k, v: o.d.cities[k].v, t: o.d.cities[k].t }; }).sort(function (a, b) { return b.v - a.v; });
             var sub = cities.map(function (ct) { return '<div class="loc-city"><span>' + esc(ct.c) + '</span><span>' + ct.v + '</span><span class="lc-t">' + fmtAgo(ct.t) + '</span></div>'; }).join('');
-            return '<div class="loc-grp"><button class="loc-row" data-c="' + esc(o.c) + '"><span class="lc-n"><i class="lc-car">▸</i>' + flag(o.c) + ' ' + esc(o.c) + '</span><span class="lc-ct">' + nc + '</span><span class="lc-v">' + o.d.v + '</span><span class="lc-bar"><i style="width:' + share.toFixed(0) + '%"></i></span><span class="lc-last">' + fmtAgo(o.d.t) + '</span></button><div class="loc-sub">' + sub + '</div></div>'; }).join('') || '<div class="empty">no data</div>';
+            return '<div class="loc-grp"><button class="loc-row" data-c="' + esc(o.c) + '"><span class="lc-n"><i class="lc-car">▸</i>' + flag(o.c) + ' ' + esc(dispCountry(o.c)) + '</span><span class="lc-ct">' + nc + '</span><span class="lc-v">' + o.d.v + '</span><span class="lc-bar"><i style="width:' + share.toFixed(0) + '%"></i></span><span class="lc-last">' + fmtAgo(o.d.t) + '</span></button><div class="loc-sub">' + sub + '</div></div>'; }).join('') || '<div class="empty">no data</div>';
         Array.prototype.forEach.call(document.querySelectorAll('.loc-row'), function (b) { b.onclick = function () { b.parentNode.classList.toggle('open'); var cn = b.getAttribute('data-c'); setHI(HI && HI.val === cn ? null : { type: 'country', val: cn }); }; }); }
 
     function renderRecent(rows) { var recent = rows.filter(function (r) { return r.created_at; }).sort(function (a, b) { return a.created_at < b.created_at ? 1 : -1; }).slice(0, 20);
-        document.getElementById('dash-recent').innerHTML = recent.length ? recent.map(function (r) { var where = (r.city ? r.city + ', ' : '') + (r.country || 'Unknown');
+        document.getElementById('dash-recent').innerHTML = recent.length ? recent.map(function (r) { var where = (r.city ? r.city + ', ' : '') + dispCountry(r.country || 'Unknown');
             var meta = [r.browser, r.os, r.device].filter(function (x) { return x && x !== 'Other'; }).join(' · ');
             return '<div class="rec-row"><span class="rec-f">' + flag(r.country) + '</span><span class="rec-w">' + esc(where) + '</span><span class="rec-m">' + esc(meta) + '</span><span class="rec-t">' + fmtAgo(Date.parse(r.created_at)) + ' ago</span></div>'; }).join('') : '<div class="empty">no visits yet</div>'; }
 
     function renderDash() { if (!document.getElementById('k-total')) return; var F = getFiltered(); pings = pingsFrom(F);
         renderKPIs(); renderChart();
         renderLocations(F);
-        rankList('p-cities', countBy(F, function (r) { return r.city ? (r.city + ', ' + (r.country || '')) : ''; }), { n: 8 });
+        rankList('p-cities', countBy(F, function (r) { return r.city ? (r.city + ', ' + dispCountry(r.country || '')) : ''; }), { n: 8 });
         rankList('p-browser', countBy(F, function (r) { return r.browser; }), { n: 6, drop: true });
         rankList('p-os', countBy(F, function (r) { return r.os; }), { n: 6, drop: true });
         rankList('p-device', countBy(F, function (r) { return r.device; }), { n: 4, drop: true });
