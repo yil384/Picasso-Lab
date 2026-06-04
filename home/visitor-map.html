@@ -18,7 +18,6 @@
 <div id="vmroot" class="vmroot">
     <div id="vmap" class="vmap">
         <canvas id="vmap-c" class="vmap-c"></canvas>
-        <button id="vmap-open" class="vmap-btn" type="button">&#9638;&nbsp;Analytics</button>
         <div class="vmap-stats"><span class="vmap-live"></span><b id="vmap-total">0</b>&nbsp;visits <span class="vmap-sep">/</span>
             <b id="vmap-countries">0</b>&nbsp;countries <span class="vmap-sep">/</span><span class="vmap-dim">latest</span>&nbsp;<span id="vmap-latest">—</span></div>
     </div>
@@ -321,7 +320,7 @@
     } else { setTarget(document.getElementById('vmap-c')); var ftC = document.getElementById('vmap-c');
         ftC.addEventListener('mousemove', hoverMove); ftC.addEventListener('mouseleave', function () { tip.classList.remove('show'); });
         ftC.addEventListener('click', function (e) { var p = nearestPing(ftC, e.clientX, e.clientY); if (p) openAnalytics(); });
-        document.getElementById('vmap-open').addEventListener('click', function (e) { e.stopPropagation(); openAnalytics(); }); }
+        document.getElementById('vmap').addEventListener('click', function (e) { openAnalytics(); }); }
     window.addEventListener('resize', resize); setTimeout(resize, 250);
     requestAnimationFrame(frame); loadData();
 })();
@@ -330,10 +329,8 @@
 <style>
     .vmroot { width: 100%; } .vmroot.embed .dash { display: none !important; } .vmroot.full .vmap, .vmroot.full .vmtip { display: none !important; }
     .vmroot.full { position: fixed; inset: 0; overflow: auto; background: #050f1c; }
-    .vmap { position: relative; width: 100%; aspect-ratio: 2.6 / 1; min-height: 140px; max-height: 460px; margin: 0 auto; border-radius: 14px; overflow: hidden; background: radial-gradient(130% 150% at 50% 0%, #082a44 0%, #04121f 72%); box-shadow: 0 12px 44px rgba(0,0,0,.45), inset 0 0 0 1px rgba(120,200,255,.08); }
+    .vmap { position: relative; width: 100%; aspect-ratio: 2.6 / 1; min-height: 140px; max-height: 460px; margin: 0 auto; border-radius: 14px; overflow: hidden; background: radial-gradient(130% 150% at 50% 0%, #082a44 0%, #04121f 72%); box-shadow: 0 12px 44px rgba(0,0,0,.45), inset 0 0 0 1px rgba(120,200,255,.08); cursor: pointer; }
     .vmap-c { display: block; width: 100%; height: 100%; }
-    .vmap-btn { position: absolute; right: 10px; top: 9px; cursor: pointer; font: 600 10px/1 ui-monospace, Menlo, monospace; letter-spacing: .07em; text-transform: uppercase; color: #d4f1ff; background: rgba(10,30,50,.2); border: 1px solid rgba(120,200,255,.22); padding: 6px 10px; border-radius: 8px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: .15s; }
-    .vmap-btn:hover { background: rgba(54,224,255,.16); border-color: rgba(120,210,255,.5); transform: translateY(-1px); }
     .vmap-stats { position: absolute; left: 12px; bottom: 11px; display: flex; align-items: center; gap: 7px; pointer-events: none; max-width: calc(100% - 24px); padding: 6px 11px; border-radius: 9px; font: 600 10.5px/1 ui-monospace, Menlo, monospace; letter-spacing: .05em; text-transform: uppercase; color: #a9def7; background: rgba(6,22,38,.12); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(120,200,255,.1); }
     .vmap-stats b { color: #fff; font-variant-numeric: tabular-nums; } .vmap-dim { opacity: .55; } .vmap-sep { opacity: .3; }
     #vmap-latest { font-size: 9px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; opacity: .9; }
