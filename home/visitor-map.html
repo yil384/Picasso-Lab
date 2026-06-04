@@ -132,10 +132,10 @@
     function frame(t) { if (baseDirty) { baseDirty = false; buildBase(); } if (R.off) { R.ctx.clearRect(0, 0, R.W, R.H); R.ctx.drawImage(R.off, 0, 0); }
         var period = 2400, big = IS_TOP;
         for (var i = 0; i < pings.length; i++) { var p = pings[i], xy = project(p.lon, p.lat), x = xy[0] * dpr, y = xy[1] * dpr, on = matchHI(p);
-            var core = (big ? (1.8 + Math.min(13, Math.sqrt(p.n) * 1.1)) : (0.7 + Math.min(1.2, Math.sqrt(p.n) * 0.3))) * dpr;
+            var core = (big ? (1.2 + Math.min(6, Math.sqrt(p.n) * 0.65)) : (0.7 + Math.min(1.2, Math.sqrt(p.n) * 0.3))) * dpr;
             if (HI && on) core *= 1.25;
             if (!on) { R.ctx.beginPath(); R.ctx.arc(x, y, Math.min(core, 4 * dpr), 0, 6.2832); R.ctx.fillStyle = 'rgba(' + PING_RGB + ',0.1)'; R.ctx.fill(); continue; }
-            if (p.live || (HI && on)) { for (var rr = 0; rr < 2; rr++) { var ph = ((t + i * 400 + rr * period / 2) % period) / period, ring = core + ph * (big ? 26 : 7) * dpr;
+            if (p.live || (HI && on)) { for (var rr = 0; rr < 2; rr++) { var ph = ((t + i * 400 + rr * period / 2) % period) / period, ring = core + ph * (big ? 14 : 7) * dpr;
                     R.ctx.beginPath(); R.ctx.arc(x, y, ring, 0, 6.2832); R.ctx.strokeStyle = 'rgba(' + PING_RGB + ',' + (0.5 * (1 - ph)) + ')'; R.ctx.lineWidth = 1 * dpr; R.ctx.stroke(); } }
             R.ctx.save(); R.ctx.shadowColor = PING; R.ctx.shadowBlur = (big ? 12 : 3) * dpr; R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + PING_RGB + ',0.85)'; R.ctx.fill(); R.ctx.restore();
             R.ctx.beginPath(); R.ctx.arc(x, y, core * 0.42, 0, 6.2832); R.ctx.fillStyle = '#eafdff'; R.ctx.fill(); }
@@ -160,8 +160,9 @@
         function () { return fetch('https://get.geojs.io/v1/ip/geo.json').then(function (r) { return r.json(); }).then(function (d) { if (!d || !d.latitude) throw 0; return { lat: +d.latitude, lon: +d.longitude, city: d.city, country: d.country }; }); } ];
         return P.reduce(function (p, fn) { return p.catch(fn); }, Promise.reject()); }
     function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
-    function countUp(id, to) { var el = document.getElementById(id); if (!el) return; var t0 = null, dur = 800;
-        function step(ts) { if (!t0) t0 = ts; var p = Math.min(1, (ts - t0) / dur); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); } requestAnimationFrame(step); }
+    function fmtNum(n) { if (n >= 1e9) return (n/1e9).toFixed(1).replace(/\.0$/,'') + 'B'; if (n >= 1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'') + 'M'; if (n >= 1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'') + 'k'; return n; }
+    function countUp(id, to, fmt) { var el = document.getElementById(id); if (!el) return; var t0 = null, dur = 800;
+        function step(ts) { if (!t0) t0 = ts; var p = Math.min(1, (ts - t0) / dur), v = Math.round(to * (1 - Math.pow(1 - p, 3))); el.textContent = fmt ? fmt(v) : v; if (p < 1) requestAnimationFrame(step); } requestAnimationFrame(step); }
     function pingsFrom(rows) { var agg = {};
         rows.forEach(function (r) { if (r.lat == null || r.lon == null) return; var la = round(r.lat), lo = round(r.lon), k = la + ',' + lo, t = Date.parse(r.created_at) || 0;
             if (!agg[k]) agg[k] = { key: k, lon: lo, lat: la, n: 0, t: 0, city: r.city || '', country: r.country || '', where: (r.city ? r.city + ', ' : '') + (r.country || 'Unknown') }; agg[k].n++; if (t > agg[k].t) agg[k].t = t; });
@@ -172,7 +173,7 @@
         ROWS.forEach(function (r) { if (r.country) countries[r.country] = 1; var t = Date.parse(r.created_at); if (isNaN(t)) t = 0;
             if (t > latestT) { latestT = t; latest = r; } if (r.vid) { if (!(r.vid in vidFirst) || t < vidFirst[r.vid]) vidFirst[r.vid] = t; } });
         pings = pingsFrom(ROWS); var cc = Object.keys(countries).length;
-        if (!barAnimated) { barAnimated = true; countUp('vmap-total', ROWS.length); countUp('vmap-countries', cc); } else { setText('vmap-total', ROWS.length); setText('vmap-countries', cc); }
+        if (!barAnimated) { barAnimated = true; countUp('vmap-total', ROWS.length, fmtNum); countUp('vmap-countries', cc); } else { setText('vmap-total', fmtNum(ROWS.length)); setText('vmap-countries', cc); }
         setText('vmap-latest', latest ? ((latest.city ? latest.city + ', ' : '') + (latest.country || '')) : '—');
         if (IS_TOP) renderDash(); }
     function sbSelectAll() { return fetch(SUPABASE_URL + '/rest/v1/visits?select=lat,lon,city,country,created_at,browser,os,device,lang,source,tz,vid&limit=50000', { headers: sbHeaders() }).then(function (r) { return r.json(); }); }
