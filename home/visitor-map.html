@@ -121,7 +121,7 @@
         for (var i = 0; i < polys.length; i++) { var poly = polys[i]; if (poly.length < 2) continue; o.beginPath();
             for (var j = 0; j < poly.length; j++) { var xy = project(poly[j][0], poly[j][1]); if (j === 0) o.moveTo(xy[0] * dpr, xy[1] * dpr); else o.lineTo(xy[0] * dpr, xy[1] * dpr); } o.stroke(); } }
     function buildBase() { R.off = document.createElement('canvas'); R.off.width = R.W; R.off.height = R.H;
-        var o = R.off.getContext('2d'), cw = R.lay.mw / GW, ch = R.lay.mh / GH, rad = Math.max(0.5, Math.min(cw, ch) * 0.10) * dpr * view.s;
+        var o = R.off.getContext('2d'), cw = R.lay.mw / GW, ch = R.lay.mh / GH, rad = Math.max(0.5, Math.min(cw, ch) * 0.28) * dpr * view.s;
         o.fillStyle = LAND_COLOR;
         for (var r = 0; r < GH; r++) for (var c = 0; c < GW; c++) { if (!isLand(c, r)) continue; var lon = (c + 0.5) / GW * (LON_MAX - LON_MIN) + LON_MIN, lat = LAT_MAX - (r + 0.5) / GH * (LAT_MAX - LAT_MIN); var xy = project(lon, lat); o.beginPath(); o.arc(xy[0] * dpr, xy[1] * dpr, rad, 0, 6.2832); o.fill(); }
         o.lineJoin = 'round'; o.lineCap = 'round'; drawLines(o, BORDERS.us_states, S_BORDER, 0.5 * dpr); drawLines(o, BORDERS.countries, C_BORDER, 0.6 * dpr); }
