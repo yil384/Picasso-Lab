@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSE 291P: Quantum Computing System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* ===== @property for animated gradient angle ===== */
+        @property --gradient-angle {
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+        }
+        @property --ring-angle {
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+        }
+
+        :root {
+            --bg-primary: #faf9f7;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f5f3f0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --text-muted: #6b6b6b;
+            --accent-primary: #00629B;
+            --accent-secondary: #FFCD00;
+            --accent-tertiary: #059669;
+            --border-color: #e5e3df;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+            --gradient-hero: linear-gradient(135deg, #00629B 0%, #0080b3 100%);
+            --label-bg: #00629B;
+            --label-guest: #8b5cf6;
+            --label-exam: #ef4444;
+            --label-pres: #10b981;
+            --sidebar-bg: #ffffff;
+            --glass-bg: rgba(255,255,255,0.65);
+            --glass-border: rgba(255,255,255,0.3);
+
+            --timeline-line: #e0dfe4;
+            --timeline-node: linear-gradient(135deg, #00629B, #FFCD00);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f0f14;
+            --bg-secondary: #1a1a24;
+            --bg-tertiary: #252532;
+            --text-primary: #e8e6e3;
+            --text-secondary: #b8b5b0;
+            --text-muted: #8a8780;
+            --accent-primary: #4db8e8;
+            --accent-secondary: #FFD633;
+            --accent-tertiary: #34d399;
+            --border-color: #2d2d3a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.3);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.4);
+            --gradient-hero: linear-gradient(135deg, #004d7a 0%, #0080b3 100%);
+            --sidebar-bg: #13131c;
+            --glass-bg: rgba(26,26,36,0.75);
+            --glass-border: rgba(255,255,255,0.08);
+            --hero-bg: #08070f;
+            --timeline-line: #2d2d3a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: background 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* ===== Scroll Progress Bar ===== */
+        #scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: linear-gradient(90deg, #00629B, #FFCD00, #FFE066);
+            z-index: 9999;
+            transition: width 0.05s linear;
+        }
+
+        /* ===== LEFT SIDEBAR ===== */
+        header {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 200px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .header-content {
+            height: 100%;
+            padding: 1.5rem 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+        }
+        .logo span {
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            width: 100%;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.55rem 0.8rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.92rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+        nav a svg {
+            width: 16px; height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+        nav a:hover, nav a.active {
+            color: var(--accent-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .nav-right {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .external-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            width: 100%;
+        }
+        .external-links a {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.7rem;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .external-links a:hover { color: var(--accent-primary); }
+        .external-links a svg {
+            width: 14px; height: 14px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 0.8rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.25s ease;
+            width: 100%;
+            text-align: center;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .theme-toggle svg {
+            width: 16px; height: 16px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .theme-toggle:hover { background: var(--accent-primary); color: #fff; }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-primary);
+            padding: 0.5rem;
+        }
+        .mobile-menu-btn svg {
+            width: 24px; height: 24px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        main {
+            margin-left: 250px;
+            max-width: 1100px;
+            padding: 0 2rem 4rem;
+            min-height: 100vh;
+        }
+
+        .page { display: none; animation: fadeIn 0.4s ease; }
+        .page.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== HERO with Animated Mesh ===== */
+        .hero-wrapper {
+            position: relative;
+            margin: 0 -2rem;
+            padding: 0;
+            overflow: hidden;
+            border-radius: 24px;
+            margin-bottom: 2.5rem;
+            background: var(--gradient-hero);
+        }
+        .hero-mesh {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden; z-index: 0;
+            background: linear-gradient(135deg, #003d5c 0%, #00629B 40%, #0080b3 70%, #0090c8 100%);
+        }
+        .hero-mesh .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            animation: blobFloat 12s ease-in-out infinite alternate;
+        }
+        .hero-mesh .blob:nth-child(1) {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, #0090c8, transparent 70%);
+            top: -10%; left: -5%;
+            animation-duration: 14s;
+        }
+        .hero-mesh .blob:nth-child(2) {
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, #FFCD00, transparent 70%);
+            top: 20%; right: -8%;
+            animation-duration: 10s;
+            animation-delay: -3s;
+        }
+        .hero-mesh .blob:nth-child(3) {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, #FFE066, transparent 70%);
+            bottom: -15%; left: 30%;
+            animation-duration: 16s;
+            animation-delay: -7s;
+        }
+        .hero-mesh .blob:nth-child(4) {
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, #0080b8, transparent 70%);
+            top: 50%; left: 60%;
+            animation-duration: 11s;
+            animation-delay: -5s;
+        }
+        @keyframes blobFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -25px) scale(1.1); }
+            66% { transform: translate(-20px, 15px) scale(0.95); }
+            100% { transform: translate(15px, -10px) scale(1.05); }
+        }
+        .hero-overlay {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 5rem 2rem 4rem;
+        }
+        .hero-overlay h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            line-height: 1.25;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+        }
+        .hero-overlay h1 .grad {
+            background: linear-gradient(135deg, #FFCD00, #FFE066, #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-overlay .subtitle {
+            font-size: 1.15rem;
+            color: rgba(255,255,255,0.85);
+            margin-bottom: 0.5rem;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            text-shadow: 0 1px 8px rgba(0,0,0,0.2);
+        }
+        .hero-overlay .instructor {
+            color: rgba(255,255,255,0.6);
+            font-size: 1rem;
+        }
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+        .hero-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            min-height: 42px;
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.95);
+            color: #004d7a;
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .hero-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.2);
+            text-decoration: none;
+        }
+        .hero-action svg {
+            width: 17px; height: 17px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        /* ===== Animated Metrics Bar ===== */
+        .metrics-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: -2rem 0 2.5rem;
+            position: relative;
+            z-index: 2;
+        }
+        .metric-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+        }
+        .metric-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+        }
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ===== Section Headers ===== */
+        .section-header {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .section-header svg {
+            width: 28px; height: 28px;
+            stroke: var(--accent-primary);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        /* ===== Cards ===== */
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.06) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .card:hover::before { opacity: 1; }
+        .card > * { position: relative; z-index: 1; }
+
+        .card h2, .card h3 {
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        .card h2 { font-size: 1.6rem; }
+        .card h3 { font-size: 1.3rem; }
+
+        /* ===== Announcements ===== */
+        .announcement {
+            position: relative;
+            background: var(--bg-secondary);
+            border: none;
+            overflow: visible;
+        }
+        .announcement::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px;
+            height: 100%;
+            border-radius: 16px 0 0 16px;
+            background: linear-gradient(180deg, #00629B, #FFCD00);
+            z-index: 2;
+        }
+        .announcement-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .announcement-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: var(--bg-tertiary);
+            padding: 0.25rem 0.7rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .announcement-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            margin: -0.25rem 0 1rem;
+        }
+        .announcement-actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            min-height: 34px;
+            padding: 0.42rem 0.7rem;
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            font-weight: 700;
+            border: 1px solid var(--border-color);
+            text-decoration: none;
+            transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+        .announcement-actions a.primary {
+            background: var(--gradient-hero);
+            color: #fff;
+            border-color: transparent;
+        }
+        .announcement-actions a:hover {
+            color: var(--accent-primary);
+            background: var(--bg-secondary);
+            transform: translateY(-1px);
+            text-decoration: none;
+        }
+        .announcement-actions a.primary:hover {
+            color: #fff;
+            background: var(--gradient-hero);
+        }
+        .announcement-actions svg {
+            width: 14px; height: 14px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+        .announcement ul { padding-left: 1.5rem; }
+        .announcement li { margin-bottom: 0.5rem; }
+
+        /* ===== Schedule Timeline ===== */
+        .timeline {
+            position: relative;
+            padding-left: 3rem;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 14px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--timeline-line);
+            border-radius: 2px;
+        }
+        .timeline-week {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        .timeline-week-label {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-secondary);
+            margin-bottom: 0.8rem;
+            position: relative;
+        }
+        .timeline-week-label::before {
+            content: '';
+            position: absolute;
+            left: -3rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--timeline-node);
+            border: 3px solid var(--bg-primary);
+            box-shadow: 0 0 0 3px var(--accent-secondary);
+            z-index: 1;
+        }
+        .timeline-week.latest .timeline-week-label::before {
+            animation: pulseNode 2s ease infinite;
+            box-shadow: 0 0 0 3px var(--accent-secondary), 0 0 15px rgba(124,58,237,0.5);
+        }
+        @keyframes pulseNode {
+            0%, 100% { box-shadow: 0 0 0 3px var(--accent-secondary), 0 0 8px rgba(124,58,237,0.3); }
+            50% { box-shadow: 0 0 0 5px var(--accent-secondary), 0 0 20px rgba(124,58,237,0.6); }
+        }
+
+        .timeline-lecture {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.6rem;
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .timeline-lecture:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-hover);
+        }
+        .lecture-date {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1.05rem;
+            margin-bottom: 0.3rem;
+        }
+        .lecture-date-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-left: 0.5rem;
+        }
+        .lecture-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+        .label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.15rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            background: var(--label-bg);
+            min-width: 22px;
+        }
+        .label-guest { background: var(--label-guest); }
+        .label-exam { background: var(--label-exam); }
+        .label-pres { background: var(--label-pres); }
+
+        /* ===== Staff Cards ===== */
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .staff-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .staff-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+        .staff-avatar {
+            width: 110px; height: 110px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .staff-avatar::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: conic-gradient(from var(--ring-angle), #00629B, #FFCD00, #FFE066, #0090c8, #00629B);
+            animation: ringRotate 4s linear infinite;
+            z-index: 0;
+        }
+        @keyframes ringRotate {
+            to { --ring-angle: 360deg; }
+        }
+        .staff-avatar img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            position: relative;
+            z-index: 1;
+            border: 3px solid var(--bg-secondary);
+        }
+        .staff-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        .staff-name a { color: var(--text-primary); text-decoration: none; }
+        .staff-name a:hover { color: var(--accent-primary); }
+        .staff-role {
+            color: var(--accent-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+        .staff-pronouns {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+        .staff-bio {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+        .staff-contact {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            align-items: center;
+        }
+        .staff-contact a { color: var(--accent-primary); }
+        .staff-contact span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .staff-contact svg {
+            width: 13px; height: 13px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        /* ===== Tables ===== */
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background: var(--bg-tertiary); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        tr:hover { background: var(--bg-tertiary); }
+        .grading-table { border: 1px solid var(--border-color); }
+        .grading-table td, .grading-table th { border: 1px solid var(--border-color); }
+
+        /* ===== TOC ===== */
+        .toc {
+            background: var(--bg-tertiary);
+            padding: 1.25rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        .toc h3 { margin-bottom: 0.75rem; font-size: 1rem; font-weight: 700; }
+        .toc ul { list-style: none; padding-left: 0; }
+        .toc li { margin-bottom: 0.4rem; }
+        .toc a { color: var(--text-secondary); font-size: 0.95rem; }
+        .toc a:hover { color: var(--accent-primary); }
+
+        /* ===== Alert boxes ===== */
+        .alert { padding: 1rem 1.5rem; border-radius: 12px; margin: 1rem 0; }
+        .alert-info { background: rgba(37,99,235,0.08); border: 1px solid var(--accent-primary); }
+        .alert-warning { background: rgba(245,158,11,0.08); border: 1px solid var(--label-exam); }
+
+        /* ===== General ===== */
+        a { color: var(--accent-primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-size: 0.88em;
+        }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin-bottom: 0.5rem; }
+        .highlight { background: linear-gradient(120deg, #ffeaa7 0%, #fdcb6e 100%); padding: 0 0.2rem; border-radius: 3px; }
+        [data-theme="dark"] .highlight { background: linear-gradient(120deg, #6c5ce7 0%, #a29bfe 100%); }
+
+        /* ===== Floating Quick Links ===== */
+        .floating-links {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.4rem;
+        }
+        .floating-links-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            align-items: flex-end;
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .floating-links.open .floating-links-items {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .floating-link-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 0.9rem;
+            border-radius: 24px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-decoration: none;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .floating-link-item:hover {
+            color: var(--accent-primary);
+            box-shadow: var(--shadow-hover);
+            text-decoration: none;
+        }
+        .floating-link-item svg {
+            width: 14px; height: 14px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .floating-trigger {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: var(--gradient-hero);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(102,126,234,0.4);
+            transition: transform 0.3s ease;
+        }
+        .floating-trigger:hover { transform: scale(1.1); }
+        .floating-links.open .floating-trigger { transform: rotate(45deg); }
+        .floating-trigger svg {
+            width: 22px; height: 22px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        /* ===== Scroll Reveal ===== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ===== Presentation Topics Grid ===== */
+        .topic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .topic-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .topic-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        .topic-card h4 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        .topic-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ===== Footer ===== */
+        footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 4rem;
+            font-size: 0.9rem;
+        }
+        footer a { color: var(--accent-primary); }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 900px) {
+            header {
+                position: fixed;
+                width: 100%; height: 60px;
+                bottom: auto; top: 0;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                flex-direction: row;
+            }
+            .header-content {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 1rem;
+                height: 60px;
+            }
+            nav {
+                display: none;
+                position: absolute;
+                top: 60px; left: 0; right: 0;
+                background: var(--sidebar-bg);
+                padding: 1rem;
+                border-bottom: 1px solid var(--border-color);
+                z-index: 999;
+            }
+            nav.open { display: flex; }
+            .mobile-menu-btn { display: block; }
+            .nav-right { display: none; }
+            main { margin-left: 0; padding: 76px 1rem 2rem; }
+            .hero-wrapper { margin: 0 -1rem; border-radius: 16px; }
+            .hero-overlay { padding: 3rem 1rem 2.5rem; }
+            .hero-overlay h1 { font-size: 1.8rem; }
+            .metrics-bar { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+            .metric-number { font-size: 1.6rem; }
+            .timeline { padding-left: 2.2rem; }
+            .timeline::before { left: 10px; }
+            .timeline-week-label::before { left: -2.2rem; width: 10px; height: 10px; }
+            .floating-links { bottom: 1rem; right: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll Progress Bar -->
+    <div id="scroll-progress"></div>
+
+    <!-- LEFT SIDEBAR -->
+    <header>
+        <div class="header-content">
+            <a class="logo" onclick="showPage('home', this)"><span>CSE 291P</span></a>
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <nav id="mainNav">
+                <a onclick="showPage('home', this)" class="active">
+                    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    Home
+                </a>
+                <a onclick="showPage('schedule', this)">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Schedule
+                </a>
+                <a onclick="showPage('grading', this)">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    Grading
+                </a>
+                <a onclick="showPage('presentations', this)">
+                    <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Presentations
+                </a>
+                <a onclick="showPage('resources', this)">
+                    <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Resources
+                </a>
+            </nav>
+            <div class="nav-right">
+                <div class="external-links">
+                    <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Instructor
+                    </a>
+                    <a href="https://drive.google.com/drive/folders/1N5FltInEbIolDOEjZKmCs-aL3rhl9wVm?usp=drive_link" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                        Course Drive
+                    </a>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+                    <svg viewBox="0 0 24 24" class="icon-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <span>Dark Mode</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        <!-- ======== HOME PAGE ======== -->
+        <div id="page-home" class="page active">
+            <!-- Animated Mesh Gradient Hero -->
+            <div class="hero-wrapper">
+                <div class="hero-mesh">
+                    <div class="blob"></div>
+                    <div class="blob"></div>
+                    <div class="blob"></div>
+                    <div class="blob"></div>
+                </div>
+                <div class="hero-overlay">
+                    <h1>CSE 291P: <span class="grad">Quantum Computing System</span></h1>
+                    <p class="subtitle">Topics in PL, Compilers &amp; SE: quantum algorithms, compilers, error correction, and fault-tolerant computation</p>
+                    <p class="instructor">Instructor: Yufei Ding (UC San Diego) &bull; Fall 2025 &bull; Online</p>
+                    <div class="hero-actions">
+                        <a class="hero-action" href="https://drive.google.com/drive/folders/1N5FltInEbIolDOEjZKmCs-aL3rhl9wVm?usp=drive_link" target="_blank" rel="noopener">
+                            <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                            Course Drive
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Animated Metrics Bar -->
+            <div class="metrics-bar reveal">
+                <div class="metric-card">
+                    <div class="metric-number" data-target="10">0</div>
+                    <div class="metric-label">Lectures</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" data-target="3">0</div>
+                    <div class="metric-label">Guest Talks</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" data-target="8">0</div>
+                    <div class="metric-label">Presentation Sessions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" data-target="75" data-suffix="%">0</div>
+                    <div class="metric-label">Presentation Weight</div>
+                </div>
+            </div>
+
+            <h2 class="section-header reveal">
+                <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                Announcements
+            </h2>
+
+            <div class="card announcement reveal">
+                <div class="announcement-title">
+                    <h3>Welcome to CSE 291P -- Fall 2025</h3>
+                    <span class="announcement-date">Fall 2025</span>
+                </div>
+                <div class="announcement-actions">
+                    <a class="primary" href="https://drive.google.com/drive/folders/1N5FltInEbIolDOEjZKmCs-aL3rhl9wVm?usp=drive_link" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                        Course Drive
+                    </a>
+                </div>
+                <ul>
+                    <li><strong>Format</strong>: This is an <strong>online class</strong>. All lectures, guest talks, and student presentations are conducted remotely.</li>
+                    <li><strong>Grading</strong>: Paper presentations &amp; discussions (75%), midterm exam (5%), and LLM-enhanced midterm report (20%).</li>
+                    <li><strong>Lectures</strong>: 10 instructor-led lectures on quantum computing system fundamentals (09/25 -- 10/17), followed by guest lectures and student presentations.</li>
+                    <li><strong>Midterm Exam</strong>: Oct 31, 2025 (online, closed book, 1h20m).</li>
+                    <li><strong>LLM-Enhanced Midterm Report</strong>: Due Dec 8, 2025 by 11:59pm.</li>
+                </ul>
+            </div>
+
+            <div class="card announcement reveal">
+                <div class="announcement-title">
+                    <h3>Important Dates</h3>
+                    <span class="announcement-date">Mark your calendar</span>
+                </div>
+                <ul>
+                    <li><strong>Nov 6, 2025</strong>: Midterm Examination (due by 3:30pm)</li>
+                    <li><strong>Dec 8, 2025</strong>: LLM-Enhanced Midterm Report (due by 11:59pm)</li>
+                    <li><strong>Dec 4, 2025</strong>: No class</li>
+                </ul>
+            </div>
+
+            <h2 class="section-header reveal" style="margin-top: 2.5rem;">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Course Schedule
+            </h2>
+
+            <!-- Timeline Schedule -->
+            <div class="timeline">
+                <!-- Instructor Lectures: Week 1 (09/25) -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 1 (Sep 25)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 1 <span class="lecture-date-text">Sep 25, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">1</span>
+                            <strong>Principles of Quantum Computation: Qubit States, Hilbert Space, Unitary Gates, Measurements</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 2 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 2 (Sep 30 -- Oct 2)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 2 <span class="lecture-date-text">Sep 30, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">2</span>
+                            <strong>Principles of Quantum Computation (cont.)</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 3 <span class="lecture-date-text">Oct 2, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">3</span>
+                            <strong>Classical vs. Quantum Computing: Reversible Logic, Quantum Oracles, Speedup</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 3 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 3 (Oct 7 -- Oct 9)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 4 <span class="lecture-date-text">Oct 7, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">4</span>
+                            <strong>Quantum Algorithms: Deutsch-Jozsa, Simon's Algorithm</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 5 <span class="lecture-date-text">Oct 9, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">5</span>
+                            <strong>Quantum Algorithms: Shor's Factoring, Grover's Search</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 4 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 4 (Oct 14 -- Oct 16)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 6 <span class="lecture-date-text">Oct 14, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">6</span>
+                            <strong>Quantum Compiler for Gate Synthesis: Native Gates, Synthesis, Optimizations</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 7 <span class="lecture-date-text">Oct 16, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">7</span>
+                            <strong>Quantum Compiler for Qubit Mapping: Hardware Constraints, Heuristics</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 5 (Oct 17 is a Fri, so lectures on Tue/Thu of this week) -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 5 (Oct 21 -- Oct 23) &mdash; Guest Lectures</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Guest Lecture <span class="lecture-date-text">Oct 21, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-guest">Guest</span>
+                            <strong>Xiang Fang: Surface Code and Stim Tools (Part I)</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Guest Lecture <span class="lecture-date-text">Oct 23, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-guest">Guest</span>
+                            <strong>Xiang Fang: Surface Code and Stim Tools (Part II)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 6 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 6 (Oct 28 -- Oct 31)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Guest Lecture <span class="lecture-date-text">Oct 28, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-guest">Guest</span>
+                            <strong>Keyi Yin: Basics of QEC Decoders and NVIDIA Toolsets</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 8 <span class="lecture-date-text">Oct 28, 2025 (Tue, after guest)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">8</span>
+                            <strong>Quantum Error Correction Codes: Stabilizer Codes, Logical Gate Constructions</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 9 <span class="lecture-date-text">Oct 30, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">9</span>
+                            <strong>Quantum Error Correction (cont.): Transversal Gates, Magic State Distillation, Code Conversion</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Midterm Exam <span class="lecture-date-text">Oct 31, 2025 (Fri)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-exam">Exam</span>
+                            <strong>Online Midterm (closed book, 1h20m, due on Canvas)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 7 -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 7 (Nov 4 -- Nov 6)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Lecture 10 <span class="lecture-date-text">Nov 4, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label">10</span>
+                            <strong>Fault-Tolerant Quantum Computation: Threshold Theorem, Shor's FT Scheme</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Nov 6, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-pres">Pres</span>
+                            <strong>Student Presentations Session 1</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weeks 8-11: Student Presentations -->
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 8 (Nov 11 -- Nov 13)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Nov 11, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-pres">Pres</span>
+                            <strong>Student Presentations Session 2</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Nov 13, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-pres">Pres</span>
+                            <strong>Student Presentations Session 3</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 9 (Nov 18 -- Nov 20)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Nov 18, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-pres">Pres</span>
+                            <strong>Student Presentations Session 4</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Nov 20, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-pres">Pres</span>
+                            <strong>Student Presentations Session 5</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-week reveal">
+                    <div class="timeline-week-label">Week 10 (Nov 25)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Nov 25, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-pres">Pres</span>
+                            <strong>Student Presentations Session 6</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date"><span class="lecture-date-text">Nov 27 -- Thanksgiving Break</span></div>
+                        <div class="lecture-content">
+                            <strong>No class</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-week latest reveal">
+                    <div class="timeline-week-label">Week 11 (Dec 2)</div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date">Student Presentations <span class="lecture-date-text">Dec 2, 2025 (Tue)</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-pres">Pres</span>
+                            <strong>Student Presentations Session 7-8</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date"><span class="lecture-date-text">Dec 4, 2025 (Thu)</span></div>
+                        <div class="lecture-content">
+                            <strong>No class</strong>
+                        </div>
+                    </div>
+                    <div class="timeline-lecture">
+                        <div class="lecture-date"><span class="lecture-date-text">Dec 8, 2025</span></div>
+                        <div class="lecture-content">
+                            <span class="label label-exam">Due</span>
+                            <strong>LLM-Enhanced Midterm Report due by 11:59pm</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== SCHEDULE PAGE ======== -->
+        <div id="page-schedule" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Course Schedule
+            </h1>
+
+            <div class="card reveal">
+                <ul>
+                    <li>This schedule is tentative and subject to change.</li>
+                    <li>All lectures and materials are available in the <a href="https://drive.google.com/drive/folders/1N5FltInEbIolDOEjZKmCs-aL3rhl9wVm?usp=drive_link" target="_blank" rel="noopener">course Drive folder</a>.</li>
+                    <li>This is an <strong>online class</strong>.</li>
+                </ul>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Instructor Lectures (09/25 -- 10/17)</h2>
+            <div class="card reveal">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Topic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>L1</td><td>Sep 25 (Thu)</td><td>Principles of Quantum Computation: Qubit States, Hilbert Space, Unitary Gates, Measurements</td></tr>
+                        <tr><td>L2</td><td>Sep 30 (Tue)</td><td>Principles of Quantum Computation (cont.)</td></tr>
+                        <tr><td>L3</td><td>Oct 2 (Thu)</td><td>Classical vs. Quantum Computing: Reversible Logic, Quantum Oracles, Speedup</td></tr>
+                        <tr><td>L4</td><td>Oct 7 (Tue)</td><td>Quantum Algorithms: Deutsch-Jozsa, Simon's Algorithm</td></tr>
+                        <tr><td>L5</td><td>Oct 9 (Thu)</td><td>Quantum Algorithms: Shor's Factoring, Grover's Search</td></tr>
+                        <tr><td>L6</td><td>Oct 14 (Tue)</td><td>Quantum Compiler for Gate Synthesis</td></tr>
+                        <tr><td>L7</td><td>Oct 16 (Thu)</td><td>Quantum Compiler for Qubit Mapping</td></tr>
+                        <tr><td>L8</td><td>Oct 28 (Tue)</td><td>Quantum Error Correction Codes: Stabilizer Codes, Logical Gate Constructions</td></tr>
+                        <tr><td>L9</td><td>Oct 30 (Thu)</td><td>QEC (cont.): Transversal Gates, Magic State Distillation, Code Conversion</td></tr>
+                        <tr><td>L10</td><td>Nov 4 (Tue)</td><td>Fault-Tolerant Quantum Computation: Threshold Theorem, Shor's FT Scheme</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Guest Lectures</h2>
+            <div class="card reveal">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Speaker</th>
+                            <th>Topic</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Oct 21 (Tue)</td><td>Xiang Fang</td><td>Surface Code and Stim Tools (Part I)</td></tr>
+                        <tr><td>Oct 23 (Thu)</td><td>Xiang Fang</td><td>Surface Code and Stim Tools (Part II)</td></tr>
+                        <tr><td>Oct 28 (Tue)</td><td>Keyi Yin</td><td>Basics of QEC Decoders and NVIDIA Toolsets</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Exam &amp; Deadlines</h2>
+            <div class="card reveal">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Event</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Oct 31 (Fri)</td><td>Midterm Exam</td><td>Online, closed book, 1h20m, due on Canvas</td></tr>
+                        <tr><td>Nov 6</td><td>Midterm Examination</td><td>Due by 3:30pm</td></tr>
+                        <tr><td>Dec 8</td><td>LLM-Enhanced Midterm Report</td><td>Due by 11:59pm</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Student Presentations (11/04 -- 12/02)</h2>
+            <div class="card reveal">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Session</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Session 1</td><td>Nov 6 (Thu)</td></tr>
+                        <tr><td>Session 2</td><td>Nov 11 (Tue)</td></tr>
+                        <tr><td>Session 3</td><td>Nov 13 (Thu)</td></tr>
+                        <tr><td>Session 4</td><td>Nov 18 (Tue)</td></tr>
+                        <tr><td>Session 5</td><td>Nov 20 (Thu)</td></tr>
+                        <tr><td>Session 6</td><td>Nov 25 (Tue)</td></tr>
+                        <tr><td>Sessions 7-8</td><td>Dec 2 (Tue)</td></tr>
+                    </tbody>
+                </table>
+                <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">No class on Dec 4. Thanksgiving break on Nov 27.</p>
+            </div>
+        </div>
+
+        <!-- ======== GRADING PAGE ======== -->
+        <div id="page-grading" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Grading Policy
+            </h1>
+
+            <div class="alert alert-info reveal">
+                <strong>This course is graded based on paper presentations, a midterm exam, and an LLM-enhanced midterm report.</strong>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Components</h2>
+            <div class="card reveal">
+                <table class="grading-table">
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Paper Presentations &amp; Discussions</td><td><strong>75%</strong></td></tr>
+                        <tr><td>Midterm Exam</td><td><strong>5%</strong></td></tr>
+                        <tr><td>LLM-Enhanced Midterm Report</td><td><strong>20%</strong></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Paper Presentations &amp; Discussions (75%)</h2>
+            <div class="card reveal">
+                <ul>
+                    <li>Each student presents <strong>2-3 times</strong> during the quarter.</li>
+                    <li>Presentations are based on curated research papers organized by topic.</li>
+                    <li>Presenters must lead class discussion covering:
+                        <ul>
+                            <li>Paper strengths and contributions</li>
+                            <li>Weaknesses and limitations</li>
+                            <li>Future research directions</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Midterm Exam (5%)</h2>
+            <div class="card reveal">
+                <ul>
+                    <li><strong>Date</strong>: November 6, 2025 (during class time)</li>
+                    <li><strong>Format</strong>: Closed book, online</li>
+                    <li><strong>Duration</strong>: Distributed at the beginning of class; submit on Canvas within 1 hour 20 minutes</li>
+                    <li><strong>Scope</strong>: Fundamental quantum computing system concepts covered in lectures</li>
+                    <li><strong>Grading</strong>: Graded mostly for participation; graded together with the LLM-enhanced report</li>
+                    <li><strong>Honesty policy</strong>: Work independently -- no collaboration allowed during the exam</li>
+                </ul>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">LLM-Enhanced Midterm Report (20%)</h2>
+            <div class="card reveal">
+                <ul>
+                    <li><strong>Due</strong>: December 8, 2025 by 11:59pm</li>
+                    <li><strong>Task</strong>: Re-do the midterm exam using LLM tools (ChatGPT, Claude, Gemini, etc.)</li>
+                    <li><strong>Report must include</strong>:
+                        <ul>
+                            <li>How AI tools were used to answer each question</li>
+                            <li>How AI-generated answers were verified and/or corrected</li>
+                            <li>Reflections on AI strengths and weaknesses in quantum computing</li>
+                        </ul>
+                    </li>
+                    <li><strong>Bonus</strong>: Novel results discovered through this process may become co-authored research papers.</li>
+                </ul>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Academic Integrity</h2>
+            <div class="card reveal">
+                <ul>
+                    <li>Please review UCSD's honor code and policies on <a href="https://academicintegrity.ucsd.edu/" target="_blank">academic integrity</a>.</li>
+                    <li>Please review UCSD's <a href="https://ucsd.edu/about/principles.html" target="_blank">principles of community</a>.</li>
+                    <li>Harassment, discrimination, or intimidation of any form will not be tolerated.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ======== PRESENTATIONS PAGE ======== -->
+        <div id="page-presentations" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Presentation Topics
+            </h1>
+
+            <div class="card reveal">
+                <p>Student presentations are based on curated research papers organized by the following topics. Each student presents 2-3 times and must lead a class discussion analyzing strengths, weaknesses, and future directions of the presented work.</p>
+            </div>
+
+            <div class="topic-grid reveal">
+                <div class="topic-card">
+                    <h4>Gate Synthesis &amp; General Compiler Optimizations</h4>
+                    <p>Research on quantum gate decomposition, synthesis algorithms, and general-purpose compiler optimization passes for quantum circuits.</p>
+                </div>
+                <div class="topic-card">
+                    <h4>Superconducting Architectures</h4>
+                    <p>Systems and compiler challenges specific to superconducting qubit platforms, including connectivity constraints and crosstalk mitigation.</p>
+                </div>
+                <div class="topic-card">
+                    <h4>Ion Trap Systems</h4>
+                    <p>Compilation and optimization for trapped-ion quantum computers, including all-to-all connectivity and shuttling operations.</p>
+                </div>
+                <div class="topic-card">
+                    <h4>Neutral Atom Systems</h4>
+                    <p>Emerging neutral atom quantum computing platforms, including reconfigurable atom arrays and native multi-qubit gates.</p>
+                </div>
+                <div class="topic-card">
+                    <h4>Photonics Quantum Computing</h4>
+                    <p>Linear optical quantum computing, boson sampling, and photonic integrated circuits for quantum information processing.</p>
+                </div>
+                <div class="topic-card">
+                    <h4>QEC: Syndrome Circuit Compiling</h4>
+                    <p>Compilation techniques for quantum error correction syndrome extraction circuits, including ancilla management and scheduling.</p>
+                </div>
+                <div class="topic-card">
+                    <h4>QEC: Logic-Level Compiling</h4>
+                    <p>Compilation at the logical qubit level, including lattice surgery, code deformation, and logical gate scheduling.</p>
+                </div>
+                <div class="topic-card">
+                    <h4>QEC: Decoding Optimizations</h4>
+                    <p>Efficient decoding algorithms for quantum error correction, including MWPM, union-find, and neural network decoders.</p>
+                </div>
+                <div class="topic-card">
+                    <h4>Advanced QEC Topics</h4>
+                    <p>Cutting-edge research in quantum error correction including new code families, fault-tolerant protocols, and hardware-aware QEC.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== RESOURCES PAGE ======== -->
+        <div id="page-resources" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                Resources
+            </h1>
+
+            <h2 class="reveal">Course Materials</h2>
+            <div class="card reveal">
+                <h3>Lecture Notes &amp; Recordings</h3>
+                <p>All lecture notes and recordings are available in the <a href="https://drive.google.com/drive/folders/1N5FltInEbIolDOEjZKmCs-aL3rhl9wVm?usp=drive_link" target="_blank" rel="noopener">course Google Drive folder</a>.</p>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Instructor</h2>
+            <div class="staff-grid reveal">
+                <div class="staff-card">
+                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/yufei.png" alt="Yufei Ding"></div>
+                    <div class="staff-name"><a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Yufei Ding</a></div>
+                    <div class="staff-role">Instructor</div>
+                    <div class="staff-pronouns">Associate Professor (CSE)</div>
+                    <div class="staff-bio">Research interests include system optimization (especially compilers) for machine learning and quantum computing.</div>
+                    <div class="staff-contact">
+                        <span><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> <a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a></span>
+                        <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> By appointment</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="reveal" style="margin-top:1.5rem;">Wellness Resources</h2>
+            <div class="card reveal">
+                <p>Your wellbeing matters. If you need support, please reach out to the instructor or use the campus resources below.</p>
+                <ul>
+                    <li><a href="https://studenthealth.ucsd.edu/" target="_blank">University Health Services</a></li>
+                    <li><a href="https://caps.ucsd.edu/" target="_blank">UHS Counseling and Psychological Services (CAPS)</a></li>
+                    <li><a href="https://osd.ucsd.edu/" target="_blank">Office For Students with Disabilities</a></li>
+                    <li><a href="https://asadvocacy.ucsd.edu/" target="_blank">Office of Student Advocacy</a></li>
+                    <li><a href="https://basicneeds.ucsd.edu/" target="_blank">Basic Needs Center</a></li>
+                    <li><a href="https://studenthealth.ucsd.edu/services/mental-health/index.html" target="_blank">Mental Health Resources Guide</a></li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>CSE 291P: Quantum Computing System | Fall 2025 | UC San Diego</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85rem;">
+            <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Instructor</a> &bull;
+            <a href="https://drive.google.com/drive/folders/1N5FltInEbIolDOEjZKmCs-aL3rhl9wVm?usp=drive_link" target="_blank" rel="noopener">Course Drive</a>
+        </p>
+    </footer>
+
+    <!-- Floating Quick Links -->
+    <div class="floating-links" id="floatingLinks">
+        <div class="floating-links-items">
+            <a class="floating-link-item" href="https://drive.google.com/drive/folders/1N5FltInEbIolDOEjZKmCs-aL3rhl9wVm?usp=drive_link" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                Course Drive
+            </a>
+            <a class="floating-link-item" href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Instructor
+            </a>
+        </div>
+        <button class="floating-trigger" onclick="document.getElementById('floatingLinks').classList.toggle('open')">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+    </div>
+
+    <script>
+    // ===== Scroll Progress Bar =====
+    window.addEventListener('scroll', function() {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        document.getElementById('scroll-progress').style.width = progress + '%';
+    });
+
+    // ===== Animated Counter =====
+    function animateCounters() {
+        document.querySelectorAll('.metric-number').forEach(function(el) {
+            const target = parseInt(el.dataset.target);
+            const suffix = el.dataset.suffix || '';
+            const duration = 1200;
+            const start = performance.now();
+            function step(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(target * ease) + suffix;
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        });
+    }
+
+    // ===== Scroll Reveal =====
+    const revealObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+    function initReveal() {
+        document.querySelectorAll('.reveal').forEach(function(el) {
+            revealObserver.observe(el);
+        });
+    }
+
+    // ===== Page Navigation (SPA) =====
+    function showPage(pageId, el) {
+        document.querySelectorAll('.page').forEach(function(page) { page.classList.remove('active'); });
+        document.getElementById('page-' + pageId).classList.add('active');
+        document.querySelectorAll('nav a').forEach(function(link) { link.classList.remove('active'); });
+        if (el) el.classList.add('active');
+        window.scrollTo(0, 0);
+        document.getElementById('mainNav').classList.remove('open');
+
+        // Re-trigger reveal for newly visible page
+        document.querySelectorAll('.reveal').forEach(function(r) {
+            r.classList.remove('visible');
+            revealObserver.unobserve(r);
+            revealObserver.observe(r);
+        });
+
+        // Re-animate counters on home page
+        if (pageId === 'home') {
+            setTimeout(animateCounters, 200);
+        }
+    }
+
+    // ===== Theme Toggle =====
+    function toggleTheme() {
+        const body = document.body;
+        const btn = document.getElementById('themeBtn');
+        if (body.getAttribute('data-theme') === 'dark') {
+            body.removeAttribute('data-theme');
+            btn.querySelector('span').textContent = 'Dark Mode';
+            btn.querySelector('svg').innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+            localStorage.setItem('theme', 'light');
+        } else {
+            body.setAttribute('data-theme', 'dark');
+            btn.querySelector('span').textContent = 'Light Mode';
+            btn.querySelector('svg').innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+            localStorage.setItem('theme', 'dark');
+        }
+    }
+
+    // ===== Mobile Menu =====
+    function toggleMobileMenu() {
+        document.getElementById('mainNav').classList.toggle('open');
+    }
+
+    // ===== Init =====
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+            const btn = document.getElementById('themeBtn');
+            btn.querySelector('span').textContent = 'Light Mode';
+            btn.querySelector('svg').innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        }
+
+        // Init scroll reveal
+        initReveal();
+
+        // Animate counters on first load
+        setTimeout(animateCounters, 400);
+
+        // Hash navigation
+        if (window.location.hash) {
+            const hash = window.location.hash.substring(1);
+            if (document.getElementById('page-' + hash)) {
+                document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+                document.getElementById('page-' + hash).classList.add('active');
+                document.querySelectorAll('nav a').forEach(function(a) {
+                    a.classList.remove('active');
+                    if (a.textContent.trim().toLowerCase().replace(/\s+/g,'') === hash) a.classList.add('active');
+                });
+            }
+        }
+    });
+
+    window.addEventListener('hashchange', function() {
+        const hash = window.location.hash.substring(1);
+        if (hash && document.getElementById('page-' + hash)) {
+            showPage(hash);
+        }
+    });
+    </script>
+</body>
+</html>
