@@ -876,21 +876,22 @@
         .alert-warning { background: rgba(245,158,11,0.08); border: 1px solid var(--label-survey); }
 
         /* ===== Calendar ===== */
-        .calendar-container {
-            position: relative;
-            padding-bottom: 75%;
-            height: 0;
-            overflow: hidden;
-            max-width: 100%;
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-        }
-        .calendar-container iframe {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            border: none;
-        }
+        .oh-cal { width: 100%; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); background: var(--bg-card); border: 1px solid var(--border); }
+        .oh-cal-head { display: grid; grid-template-columns: 56px repeat(5, 1fr); background: var(--bg-secondary); border-bottom: 1px solid var(--border); }
+        .oh-cal-head span { padding: 10px 6px; text-align: center; font: 600 11px/1 var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
+        .oh-cal-body { display: grid; grid-template-columns: 56px repeat(5, 1fr); }
+        .oh-times { display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+        .oh-time { height: 48px; display: flex; align-items: flex-start; padding: 4px 8px 0; font: 500 10px/1 var(--font-sans); color: var(--text-secondary); opacity: .6; }
+        .oh-day-col { position: relative; border-right: 1px solid var(--border); min-height: 192px; }
+        .oh-day-col:last-child { border-right: none; }
+        .oh-row-lines { position: absolute; inset: 0; pointer-events: none; }
+        .oh-row-lines div { height: 48px; border-bottom: 1px solid var(--border); opacity: .4; }
+        .oh-event { position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 6px 8px; font: 600 11px/1.35 var(--font-sans); cursor: default; transition: opacity .15s; }
+        .oh-event:hover { opacity: .85; }
+        .oh-event .oh-name { font-size: 11px; font-weight: 700; }
+        .oh-event .oh-loc  { font-size: 10px; opacity: .75; margin-top: 3px; }
+        .oh-event.color-a { background: rgba(99,179,237,.18); border: 1px solid rgba(99,179,237,.45); color: #90cdf4; }
+        .oh-event.color-b { background: rgba(154,117,234,.18); border: 1px solid rgba(154,117,234,.45); color: #c4b5fd; }
 
         /* ===== General ===== */
         a { color: var(--accent-primary); text-decoration: none; }
@@ -1253,7 +1254,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/1XGxzGOK6LSmJ9ZpWzGVnlG6O9WksN4Cf/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/1" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1gzYhZsAf4IDNTfkfuj4VJKz7e5Og4ZFu/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet1</a>
                         </div>
                     </div>
@@ -1265,7 +1266,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/1vq6X-zhqY1w-PtKh1Gt8k0nCmbNXapVL/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/2" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1XTY6tvcEH5BI3Laa2fPC6o4C_nw-OjnJ/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet2</a>
                         </div>
                     </div>
@@ -1282,7 +1283,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/1Ug-_rPRCcTmCzNdPHQQaMJCt8vz-FdnE/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/3" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1IuTN9xrW6eR-vVISCW6XMHYACZ4p1D3U/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet3</a>
                         </div>
                     </div>
@@ -1294,7 +1295,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/1MEW5-pAsxJH3TCeRKtsHOOW38zVPs8kC/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/4" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1CuXKsynwNRnn7bs1zQ77OiuWMBK5Vgz1/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://docs.google.com/forms/d/e/1FAIpQLSeUzIj2ADAqO_qdVc6qVDL9nhCBveiwWGjRnZbI-ENqRLsjNA/viewform" target="_blank"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Survey</a>
                         </div>
                     </div>
@@ -1311,7 +1312,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/1S-TZUZlATf68euuiuMS6GVv7izSk3w0l/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/5" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/121v8Gb2OMGhwBXEMIi3x0CEvKCGk8_UY/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet5</a>
                         </div>
                     </div>
@@ -1323,7 +1324,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/12GjbjYBGK-TaPRIH1jNoDcmhlJVLm1rM/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/6" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1SyNSymfwewvLDYiBzd08sU1akmeS8foL/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet6</a>
                         </div>
                     </div>
@@ -1340,7 +1341,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/1H6WzDcwTr8HQgAoU8-NckFLhXOG7-zA4/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/7" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1k4PwhFVOk-DXG-GQHHciMcO5SFLN0d9m/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet7</a>
                         </div>
                     </div>
@@ -1352,7 +1353,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/1Q-u3rZ7eGYswraWN_IzM8eae4hcj2kZh/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/8" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1uo6JtnkQlvoNXFam6PI7MGhfplT-iv6z/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet8</a>
                         </div>
                     </div>
@@ -1406,7 +1407,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/1u8d8e3w3j--0SYCnhZ8TrGqzKu6VTbZj/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/12" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1uLAAR-BllMtzJ-MhbmouCwJopi3rlRm5/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet9</a>
                         </div>
                     </div>
@@ -1423,7 +1424,7 @@
                         </div>
                         <div class="lecture-links">
                             <a href="https://drive.google.com/file/d/14mKviGdvY-6HvFGnHGsgNiy0aUMcuc6-/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
-                            <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/13" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
+                            <a href="https://drive.google.com/file/d/1YxWfKfvfIeir0GRXPoS6BOpYodIpEUea/view?usp=drive_link" target="_blank"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Recording</a>
                             <a href="https://www.gradescope.com/courses/1211750" target="_blank"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Worksheet10</a>
                         </div>
                     </div>
@@ -2112,7 +2113,7 @@
             <h2 class="reveal">Instructor</h2>
             <div class="staff-grid reveal">
                 <div class="staff-card">
-                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/SelfPic-YufeiDing.png" alt="Yufei Ding"></div>
+                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/yufei.png" alt="Yufei Ding"></div>
                     <div class="staff-name"><a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Yufei Ding</a></div>
                     <div class="staff-role">Instructor</div>
                     <div class="staff-pronouns">Associate Professor (CSE)</div>
@@ -2127,7 +2128,7 @@
             <h2 class="reveal" style="margin-top:2rem;">Teaching Assistants</h2>
             <div class="staff-grid reveal">
                 <div class="staff-card">
-                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/zaifeng.webp" alt="Zaifeng Pan"></div>
+                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/zaifeng.png" alt="Zaifeng Pan"></div>
                     <div class="staff-name">Zaifeng Pan</div>
                     <div class="staff-role">Teaching Assistant</div>
                     <div class="staff-pronouns">Full TA (office hour + project guidance)</div>
@@ -2138,7 +2139,7 @@
                 </div>
 
                 <div class="staff-card">
-                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/zhongkai.webp" alt="Zhongkai Yu"></div>
+                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/zhongkai.png" alt="Zhongkai Yu"></div>
                     <div class="staff-name">Zhongkai Yu</div>
                     <div class="staff-role">Teaching Assistant</div>
                     <div class="staff-pronouns">Full TA (office hour + project guidance)</div>
@@ -2149,7 +2150,7 @@
                 </div>
 
                 <div class="staff-card">
-                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/jixuan.webp" alt="Jixuan Ruan"></div>
+                    <div class="staff-avatar"><img src="https://raw.githubusercontent.com/yil384/Picasso-Lab/main/people/static/jixuan.png" alt="Jixuan Ruan"></div>
                     <div class="staff-name">Jixuan Ruan</div>
                     <div class="staff-role">Teaching Assistant</div>
                     <div class="staff-pronouns">Half TA (grading + system development)</div>
@@ -2172,15 +2173,36 @@
             </div>
 
             <h2 class="reveal">Office Hours Calendar</h2>
-            <div class="calendar-container reveal">
-                <iframe
-                    src="https://calendar.google.com/calendar/embed?src=linyichen.thu.cs%40gmail.com&ctz=America%2FLos_Angeles"
-                    style="border: 0"
-                    width="800"
-                    height="600"
-                    frameborder="0"
-                    scrolling="no">
-                </iframe>
+            <div class="reveal">
+            <div class="oh-cal">
+                <div class="oh-cal-head">
+                    <span></span>
+                    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span>
+                </div>
+                <div class="oh-cal-body">
+                    <div class="oh-times">
+                        <div class="oh-time">3 PM</div>
+                        <div class="oh-time">4 PM</div>
+                        <div class="oh-time">5 PM</div>
+                        <div class="oh-time">6 PM</div>
+                    </div>
+                    <div class="oh-day-col">
+                        <div class="oh-row-lines"><div></div><div></div><div></div><div></div></div>
+                        <div class="oh-event color-a" style="top:48px;height:46px;">
+                            <div class="oh-name">Zaifeng Pan</div>
+                            <div class="oh-loc">4:00–5:00 PM &middot; B270A</div>
+                        </div>
+                        <div class="oh-event color-b" style="top:96px;height:46px;">
+                            <div class="oh-name">Zhongkai Yu</div>
+                            <div class="oh-loc">5:00–6:00 PM &middot; B270A</div>
+                        </div>
+                    </div>
+                    <div class="oh-day-col"><div class="oh-row-lines"><div></div><div></div><div></div><div></div></div></div>
+                    <div class="oh-day-col"><div class="oh-row-lines"><div></div><div></div><div></div><div></div></div></div>
+                    <div class="oh-day-col"><div class="oh-row-lines"><div></div><div></div><div></div><div></div></div></div>
+                    <div class="oh-day-col"><div class="oh-row-lines"><div></div><div></div><div></div><div></div></div></div>
+                </div>
+            </div>
             </div>
 
             <h2 class="reveal" style="margin-top: 2rem;">Quick Reference</h2>
