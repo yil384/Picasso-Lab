@@ -340,115 +340,38 @@
     .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
     .read-more:hover { text-decoration: underline; }
 
-    /* Per-event comments */
-    .event-card.has-visible-comments,
-    .event-card.comments-open,
-    .event-card.comment-peek {
-        margin-bottom: 0;
-        border-bottom-color: #edf0f5;
-        border-radius: 8px 8px 0 0;
-    }
-    .event-card.has-comment-panel:hover {
-        transform: none;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.09);
-    }
-    .event-card.has-no-comments:not(.comments-open):not(.comment-peek) {
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-    .event-card.has-comment-panel + .event-comments {
-        width: auto;
-        max-width: 900px;
-        box-sizing: border-box;
-        margin: -1px auto 20px;
-        border: 1px solid #e0e0e0;
-        border-top-color: #edf0f5;
-        border-radius: 0 0 8px 8px;
-        background: #fff;
-        color: #333;
-        box-shadow: 0 3px 7px rgba(0,0,0,0.045);
+    /* WeChat-style per-event interactions */
+    .event-content { position: relative; }
+    .wc-bar {
+        position: absolute;
+        bottom: 10px;
+        right: 16px;
+        display: inline-flex;
+        align-items: center;
+        background: #4b4b4b;
+        border-radius: 4px;
         overflow: hidden;
-        transition:
-            opacity 0.18s ease,
-            transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-            margin 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-            border-color 0.2s ease,
-            box-shadow 0.2s ease,
-            max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+        z-index: 5;
     }
-    .event-comments.empty-comments:not(.is-open):not(.comment-peek) {
-        max-height: 0;
-        margin: -20px auto 20px;
-        opacity: 0;
-        transform: translateY(-5px);
-        pointer-events: none;
-        border-width: 0;
-        border-color: transparent;
-        box-shadow: none;
-    }
-    .event-comments.empty-comments.comment-peek:not(.is-open) {
-        max-height: 52px;
-        margin: -1px auto 20px;
-        opacity: 1;
-        transform: translateY(0);
-        pointer-events: auto;
-        border-width: 1px;
-    }
-    .event-comments.empty-comments.is-open {
-        max-height: 420px;
-        margin: -1px auto 20px;
-        opacity: 1;
-        transform: translateY(0);
-        pointer-events: auto;
-        border-width: 1px;
-    }
-    .event-comment-toggle {
-        width: 100%;
-        min-height: 44px;
-        border: 0;
-        border-radius: 0;
-        background: #fff;
-        padding: 0 14px;
-        display: flex;
+    .wc-btn {
+        display: inline-flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        color: #3f4858;
-        font: inherit;
+        gap: 5px;
+        height: 30px;
+        padding: 0 12px;
+        border: none;
+        background: transparent;
+        color: rgba(255,255,255,0.9);
+        font-size: 12px;
+        font-weight: 500;
         cursor: pointer;
-        text-align: left;
-        transition: background 0.15s ease, color 0.15s ease;
+        white-space: nowrap;
+        transition: background 0.15s;
+        font-family: inherit;
     }
-    .event-comment-toggle:hover {
-        background: #f8fafc;
-        color: #0056b3;
-    }
-    .event-comment-count {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        min-width: 0;
-        font-size: 0.86em;
-        font-weight: 650;
-    }
-    .event-comment-icon {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: #eef4fb;
-        color: #1f5c8a;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 28px;
-    }
-    .event-comment-toggle svg,
-    .event-comment-mini-btn svg,
-    .event-comment-tool svg,
-    .event-comment-send svg,
-    .event-comment-replying button svg {
-        width: 15px;
-        height: 15px;
+    .wc-btn:hover { background: rgba(255,255,255,0.1); }
+    .wc-btn svg {
+        width: 14px; height: 14px;
         display: block;
         stroke: currentColor;
         fill: none;
@@ -456,384 +379,182 @@
         stroke-linecap: round;
         stroke-linejoin: round;
     }
-    .event-comment-toggle-action {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        color: #6b7483;
-        font-size: 0.76em;
-        font-weight: 650;
-        white-space: nowrap;
-        opacity: 0;
-        transform: translateX(4px);
-        transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+    .wc-like-btn.is-liked { color: #ff6b81; }
+    .wc-like-btn.is-liked svg { fill: #ff6b81; stroke: #ff6b81; }
+    .wc-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.25); flex-shrink: 0; }
+    .wc-num { font-variant-numeric: tabular-nums; }
+    .wc-num:empty { display: none; }
+
+    /* Panel below card */
+    .event-card.wc-active {
+        margin-bottom: 0;
+        border-radius: 8px 8px 0 0;
     }
-    .event-comments:hover .event-comment-toggle-action,
-    .event-card:hover + .event-comments .event-comment-toggle-action,
-    .event-comments.comment-peek .event-comment-toggle-action,
-    .event-comments.is-open .event-comment-toggle-action {
-        opacity: 1;
-        transform: translateX(0);
+    .event-card.wc-active:hover {
+        transform: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.09);
     }
-    .event-comments.is-open .event-comment-toggle-action {
-        color: #0056b3;
-    }
-    .event-comment-chevron {
-        color: inherit;
-        transition: transform 0.18s ease;
-    }
-    .event-comment-chevron svg {
-        width: 12px;
-        height: 12px;
-    }
-    .event-comments.is-open .event-comment-chevron { transform: rotate(180deg); }
-    .event-comment-status {
-        display: block;
-        min-height: 0;
-        padding: 0 14px;
-        font-size: 0.74em;
-        color: #7b8496;
-    }
-    .event-comment-status:not(:empty) {
-        padding-bottom: 8px;
-    }
-    .event-comment-body {
-        display: grid;
-        grid-template-rows: 0fr;
-        padding: 0 14px;
-        background: #fbfcfd;
-        border-top: 1px solid transparent;
-        box-sizing: border-box;
-        opacity: 0;
-        overflow: hidden;
-        transition:
-            grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-            opacity 0.2s ease,
-            padding 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-            border-color 0.2s ease;
-    }
-    .event-comments.is-open .event-comment-body,
-    .event-comments.has-comments .event-comment-body {
-        grid-template-rows: 1fr;
-        padding: 10px 14px 12px;
-        border-top-color: #edf0f5;
-        opacity: 1;
-    }
-    .event-comment-inner,
-    .event-comment-composer-inner {
-        min-height: 0;
+    .wc-panel {
+        max-width: 900px;
+        margin: 0 auto 20px;
+        background: #f7f7f7;
+        border: 1px solid #e0e0e0;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
         overflow: hidden;
     }
-    .event-comment-composer {
-        display: grid;
-        grid-template-rows: 0fr;
-        margin-top: 0;
-        opacity: 0;
-        transform: translateY(-4px);
-        transition:
-            grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-            margin-top 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-            opacity 0.18s ease,
-            transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    .event-comments.is-open .event-comment-composer {
-        grid-template-rows: 1fr;
-        margin-top: 8px;
-        opacity: 1;
-        transform: translateY(0);
-    }
-    .event-comments.empty-comments .event-comment-composer {
-        margin-top: 0;
-    }
-    .event-comment-list {
+    .wc-panel:not(.wc-visible) { display: none; }
+
+    /* Likes row */
+    .wc-likes {
         display: flex;
-        flex-direction: column;
-        gap: 7px;
-    }
-    .event-comment-empty {
-        margin: 0;
-        padding: 10px 2px 12px;
-        font-size: 0.8em;
-        color: #8b94a6;
-    }
-    .event-comment-item {
-        width: 100%;
-        display: grid;
-        grid-template-columns: 28px minmax(0, 1fr) auto;
         align-items: flex-start;
-        gap: 8px;
-        padding: 9px;
-        border: 1px solid #e8edf3;
-        border-radius: 7px;
-        background: #fff;
-        box-sizing: border-box;
-    }
-    .event-comment-item:hover {
-        border-color: #dce5ef;
-        background: #ffffff;
-    }
-    .event-comment-item.is-pending {
-        opacity: 0.7;
-    }
-    .event-comment-avatar {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: #eef4fb;
-        border: 1px solid #dbe7f2;
-        color: #24567d;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.68em;
-        font-weight: 800;
-        text-transform: uppercase;
-        box-sizing: border-box;
-    }
-    .event-comment-main {
-        min-width: 0;
-        font-size: 0.84em;
-        line-height: 1.45;
-        overflow-wrap: anywhere;
-    }
-    .event-comment-meta {
-        display: flex;
-        align-items: baseline;
-        flex-wrap: wrap;
         gap: 6px;
-        margin-bottom: 2px;
+        padding: 8px 12px;
+        font-size: 13px;
+        color: #576b95;
+        line-height: 1.5;
     }
-    .event-comment-author {
-        color: #38618c;
-        font-weight: 800;
+    .wc-likes:empty { display: none; padding: 0; }
+    .wc-likes svg {
+        width: 14px; height: 14px;
+        fill: #e74c3c; stroke: none;
+        flex-shrink: 0;
+        margin-top: 3px;
     }
-    .event-comment-reply {
-        display: inline-flex;
-        align-items: center;
-        width: fit-content;
-        max-width: 100%;
-        margin: 0;
-        padding: 1px 6px;
-        border-radius: 999px;
-        background: #f0f5fa;
-        color: #5f6978;
-        font-size: 0.88em;
-        white-space: nowrap;
+    .wc-likes-names { flex: 1; word-break: break-word; }
+    .wc-likes-names span { font-weight: 600; }
+    .wc-likes-names span + span::before { content: ', '; font-weight: 400; }
+
+    /* Divider */
+    .wc-div { height: 1px; margin: 0 12px; background: #e0e0e0; }
+    .wc-likes:empty + .wc-div { display: none; }
+    .wc-msgs:empty + .wc-div,
+    .wc-div:last-child { display: none; }
+
+    /* Comments list */
+    .wc-msgs { padding: 4px 12px; }
+    .wc-msgs:empty { display: none; padding: 0; }
+    .wc-msg {
+        padding: 4px 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #333;
     }
-    .event-comment-text {
-        display: block;
-        color: #303846;
-        overflow-wrap: anywhere;
-        word-break: break-word;
+    .wc-msg-author { color: #576b95; font-weight: 600; }
+    .wc-msg-time { font-size: 11px; color: #b2b2b2; margin-left: 6px; }
+    .wc-msg-del {
+        font-size: 11px; color: #b2b2b2; cursor: pointer;
+        border: none; background: none; padding: 0; margin-left: 4px; font-family: inherit;
     }
-    .event-comment-time {
-        color: #9aa3b3;
-        font-size: 0.82em;
-        white-space: nowrap;
+    .wc-msg-del:hover { color: #ff4d6a; }
+    .wc-msg.is-pending { opacity: 0.5; }
+
+    /* Attachments in comments */
+    .wc-msg-assets {
+        display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;
     }
-    .event-comment-actions {
-        display: inline-flex;
-        align-items: flex-start;
-        gap: 2px;
-        align-self: start;
-        opacity: 0;
-        transition: opacity 0.15s ease;
+    .wc-msg-asset {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 3px 6px; border: 1px solid #e0e0e0; border-radius: 4px;
+        font-size: 12px; color: #666; background: #fff;
     }
-    .event-comment-item:hover .event-comment-actions,
-    .event-comment-mini-btn:focus-visible {
-        opacity: 1;
-    }
-    .event-comment-mini-btn {
-        min-width: 22px;
-        height: 22px;
-        padding: 0 6px;
-        border: 0;
-        border-radius: 5px;
-        background: transparent;
-        color: #7b8496;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        font-size: 0.72em;
-        font-weight: 650;
-    }
-    .event-comment-mini-btn:hover {
-        background: #eef4fb;
-        color: #0056b3;
-    }
-    .event-comment-delete:hover {
-        background: rgba(185, 28, 28, 0.08);
-        color: #b91c1c;
-    }
-    .event-comment-delete {
-        width: 22px;
-        padding: 0;
-    }
-    @media (hover: none) {
-        .event-comment-actions { opacity: 0.78; }
-    }
-    .event-comment-attachments,
-    .event-comment-draft {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin: 7px 0 2px;
-    }
-    .event-comment-asset,
-    .event-comment-draft-asset {
-        min-height: 28px;
-        max-width: 180px;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border: 1px solid rgba(216, 222, 232, 0.9);
-        border-radius: 7px;
-        background: rgba(255, 255, 255, 0.76);
-        color: #3f4858;
-        font-size: 0.76em;
-        padding: 3px 6px;
-    }
-    .event-comment-asset img,
-    .event-comment-draft-asset img,
-    .event-comment-asset video,
-    .event-comment-draft-asset video {
-        width: 30px;
-        height: 30px;
-        border-radius: 5px;
-        object-fit: cover;
-        background: #e8edf4;
-    }
-    .event-comment-asset img,
-    .event-comment-asset video {
+    .wc-msg-asset img, .wc-msg-asset video {
+        width: 30px; height: 30px; border-radius: 3px; object-fit: cover;
         cursor: zoom-in;
     }
-    .event-comment-asset span,
-    .event-comment-draft-asset span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .event-comment-draft {
-        padding-top: 7px;
-        border-top: 1px solid #e4e7ec;
-    }
-    .event-comment-draft-asset {
-        cursor: pointer;
-        border-style: dashed;
-    }
-    .event-comment-draft-asset:hover {
-        background: #fff;
-        border-color: #d89a9a;
-        color: #b91c1c;
-    }
-    .event-comment-replying {
+    .wc-msg-asset span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px; }
+
+    /* Compose area */
+    .wc-compose {
+        padding: 8px 12px 10px;
+        border-top: 1px solid #e0e0e0;
         display: none;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        margin: 9px 0 0;
-        padding: 6px 8px;
-        border: 1px solid #e5eaf0;
-        border-radius: 7px;
-        background: #fff;
-        color: #5f6978;
-        font-size: 0.76em;
     }
-    .event-comment-replying.is-active { display: flex; }
-    .event-comment-replying b {
-        color: #38618c;
-        font-weight: 800;
+    .wc-panel.wc-composing .wc-compose { display: block; }
+    .wc-name-input {
+        width: 100%; height: 30px; padding: 0 10px;
+        border: 1px solid #ddd; border-radius: 4px;
+        font-size: 13px; box-sizing: border-box;
+        margin-bottom: 8px; outline: none;
+        background: #fff; font-family: inherit; color: #333;
     }
-    .event-comment-replying button {
-        width: 22px;
-        height: 22px;
-        border: 0;
-        border-radius: 5px;
-        background: transparent;
-        color: #7b8496;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+    .wc-name-input:focus { border-color: #57be6a; box-shadow: 0 0 0 2px rgba(87,190,106,0.12); }
+    .wc-reply-bar {
+        display: none;
+        align-items: center; justify-content: space-between;
+        gap: 8px; margin-bottom: 6px; padding: 4px 8px;
+        background: #fff; border: 1px solid #e8e8e8; border-radius: 4px;
+        font-size: 12px; color: #999;
     }
-    .event-comment-replying button:hover {
-        background: #eef1f5;
-        color: #303846;
+    .wc-reply-bar.is-active { display: flex; }
+    .wc-reply-bar b { color: #576b95; font-weight: 600; }
+    .wc-reply-cancel {
+        border: none; background: none; color: #999; cursor: pointer;
+        font-size: 14px; padding: 0 2px; font-family: inherit; line-height: 1;
     }
-    .event-comment-form {
-        display: grid;
-        grid-template-columns: 96px minmax(0, 1fr) 32px 34px;
-        gap: 8px;
-        align-items: end;
-        margin-top: 10px;
-        padding: 8px;
-        border: 1px solid #e5eaf0;
-        border-radius: 7px;
-        background: #fff;
-    }
-    .event-comment-name,
-    .event-comment-input {
-        width: 100%;
-        border: 1px solid #dde3ec;
+    .wc-reply-cancel:hover { color: #333; }
+    .wc-input-wrap {
+        border: 2px solid #57be6a;
         border-radius: 6px;
         background: #fff;
-        color: #253040;
-        font: inherit;
-        font-size: 0.78em;
-        outline: none;
-        box-sizing: border-box;
+        padding: 8px 10px;
     }
-    .event-comment-name {
-        height: 32px;
-        padding: 0 8px;
+    .wc-textarea {
+        width: 100%; min-height: 40px; max-height: 80px;
+        border: none; outline: none; font-size: 14px;
+        resize: none; line-height: 1.4; font-family: inherit;
+        color: #333; box-sizing: border-box; display: block;
     }
-    .event-comment-input {
-        min-height: 32px;
-        max-height: 78px;
-        padding: 8px 9px;
-        resize: none;
-        line-height: 1.35;
+    .wc-textarea::placeholder { color: #b2b2b2; }
+    .wc-input-footer {
+        display: flex; align-items: center;
+        justify-content: flex-end; gap: 8px; margin-top: 6px;
     }
-    .event-comment-name:focus,
-    .event-comment-input:focus {
-        border-color: #8bb8d7;
-        box-shadow: 0 0 0 2px rgba(0, 98, 155, 0.09);
+    .wc-attach-btn {
+        width: 28px; height: 28px;
+        border: none; background: none;
+        cursor: pointer; color: #b2b2b2; padding: 0;
+        display: flex; align-items: center; justify-content: center;
     }
-    .event-comment-tool,
-    .event-comment-send {
-        width: 32px;
-        height: 32px;
-        border: 0;
-        border-radius: 6px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+    .wc-attach-btn:hover { color: #666; }
+    .wc-attach-btn svg {
+        width: 16px; height: 16px;
+        stroke: currentColor; fill: none;
+        stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
-    .event-comment-tool {
-        background: rgba(255, 255, 255, 0.82);
-        color: #657184;
-        border: 1px solid #dde3ec;
+    .wc-file { display: none; }
+    .wc-send-btn {
+        padding: 5px 18px; border: none; border-radius: 4px;
+        background: #f0f0f0; color: #333;
+        font-size: 13px; font-weight: 500;
+        cursor: pointer; white-space: nowrap;
+        font-family: inherit; transition: background 0.15s, color 0.15s;
     }
-    .event-comment-tool:hover {
-        background: #fff;
-        color: #0056b3;
+    .wc-send-btn:hover:not(:disabled) { background: #57be6a; color: #fff; }
+    .wc-send-btn:disabled { color: #b2b2b2; cursor: not-allowed; }
+
+    /* Draft attachments */
+    .wc-draft {
+        display: flex; flex-wrap: wrap; gap: 6px;
+        padding-top: 6px; border-top: 1px solid #eee; margin-top: 6px;
     }
-    .event-comment-send {
-        background: #0056b3;
-        color: #fff;
-        width: 34px;
+    .wc-draft:empty, .wc-draft[hidden] { display: none; }
+    .wc-draft-item {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 3px 6px; border: 1px dashed #ddd; border-radius: 4px;
+        font-size: 12px; color: #666; cursor: pointer; background: #fff;
     }
-    .event-comment-send:hover:not(:disabled) {
-        background: #004a97;
+    .wc-draft-item:hover { border-color: #ff6b81; color: #ff4d6a; }
+    .wc-draft-item img, .wc-draft-item video {
+        width: 28px; height: 28px; border-radius: 3px; object-fit: cover;
     }
-    .event-comment-send:disabled {
-        cursor: not-allowed;
-        background: #c8d2df;
-    }
-    .event-comment-file { display: none; }
+
+    /* Status */
+    .wc-status { padding: 0 12px; font-size: 12px; color: #999; min-height: 0; }
+    .wc-status:not(:empty) { padding-bottom: 6px; }
+    .wc-status.is-error { color: #e74c3c; }
 
 
     /* Secret note tooltip */
@@ -1724,61 +1445,24 @@
         .event-date { font-size: 0.78em; margin-bottom: 5px; }
         .event-title { font-size: 1.05em; margin-bottom: 8px; }
         .event-text { font-size: 0.88em; margin-bottom: 10px; }
-        .event-card.has-visible-comments,
-        .event-card.comments-open,
-        .event-card.comment-peek {
+        .event-card.wc-active {
             margin-bottom: 0;
         }
-        .event-card.has-no-comments:not(.comments-open):not(.comment-peek) {
-            margin-bottom: 14px;
+        .wc-bar {
+            position: static;
+            float: right;
+            margin-top: 8px;
+            clear: both;
         }
-        .event-card.has-comment-panel + .event-comments {
+        .wc-panel {
             width: calc(100% - 20px);
             max-width: calc(100% - 20px);
-            margin: -1px auto 14px;
+            margin: 0 auto 14px;
         }
-        .event-comments.empty-comments:not(.is-open):not(.comment-peek) {
-            margin: -14px auto 14px;
+        .wc-compose {
+            padding: 8px 10px 10px;
         }
-        .event-comments.empty-comments.comment-peek:not(.is-open),
-        .event-comments.empty-comments.is-open {
-            margin: -1px auto 14px;
-        }
-        .event-comment-toggle {
-            min-height: 42px;
-            padding: 0 10px;
-        }
-        .event-comment-body {
-            padding-left: 10px;
-            padding-right: 10px;
-        }
-        .event-comments.is-open .event-comment-body,
-        .event-comments.has-comments .event-comment-body {
-            padding-top: 9px;
-            padding-bottom: 11px;
-        }
-        .event-comment-action-text {
-            display: none;
-        }
-        .event-comment-form {
-            grid-template-columns: 1fr auto auto;
-        }
-        .event-comment-name {
-            grid-column: 1 / -1;
-        }
-        .event-comment-item {
-            grid-template-columns: 26px minmax(0, 1fr);
-            padding: 8px;
-        }
-        .event-comment-avatar {
-            width: 26px;
-            height: 26px;
-        }
-        .event-comment-actions {
-            grid-column: 2;
-            justify-content: flex-start;
-            opacity: 0.78;
-        }
+        .wc-msg-del { opacity: 0.7; }
         .secret-note {
             outline: none;
         }
@@ -2436,7 +2120,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-    import { getDatabase, ref, push, remove, child, onChildAdded, onChildRemoved, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+    import { getDatabase, ref, push, remove, child, set, get, onChildAdded, onChildRemoved, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
@@ -2865,312 +2549,267 @@
     });
 
     // -----------------------------------------------------------------
-    // Per-event comments backed by Firebase Realtime Database
+    // WeChat-style per-event likes & comments (Firebase Realtime Database)
     // -----------------------------------------------------------------
     const EVENT_COMMENT_ROOT = 'eventComments';
-    const EVENT_COMMENT_ALIAS_KEY = 'picasso-lab.event-comment-alias';
-    const EVENT_COMMENT_CLIENT_KEY = 'picasso-lab.event-comment-client-id';
-    const EVENT_COMMENT_MAX_BODY = 420;
-    const EVENT_COMMENT_MAX_AUTHOR = 28;
-    const EVENT_COMMENT_MAX_REPLY = 28;
-    const EVENT_COMMENT_MAX_ATTACHMENTS = 4;
-    const EVENT_COMMENT_MAX_FILE_BYTES = 3 * 1024 * 1024;
-    const EVENT_COMMENT_MAX_DATA_URL = 4200000;
-    const EVENT_COMMENT_MAX_IMAGE_EDGE = 720;
-    const eventCommentStates = new Map();
+    const EVENT_LIKES_ROOT = 'eventLikes';
+    const EC_ALIAS_KEY = 'picasso-lab.event-comment-alias';
+    const EC_CLIENT_KEY = 'picasso-lab.event-comment-client-id';
+    const EC_MAX_BODY = 420;
+    const EC_MAX_AUTHOR = 28;
+    const EC_MAX_REPLY = 28;
+    const EC_MAX_ATTACHMENTS = 4;
+    const EC_MAX_FILE_BYTES = 3 * 1024 * 1024;
+    const EC_MAX_DATA_URL = 4200000;
+    const EC_MAX_IMAGE_EDGE = 720;
+    const wcStates = new Map();
 
-    function eventCommentIcon(name) {
+    function wcIcon(name) {
         const icons = {
-            message: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 14.5a4.5 4.5 0 0 1-4.5 4.5H8l-5 3V7.5A4.5 4.5 0 0 1 7.5 3h9A4.5 4.5 0 0 1 21 7.5z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>',
-            chevron: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
-            image: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-4.5-4.5L7 20"/></svg>',
-            send: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
-            reply: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
-            trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>',
-            close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+            heart: '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
+            heartFill: '<svg viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
+            comment: '<svg viewBox="0 0 24 24"><path d="M21 14.5a4.5 4.5 0 0 1-4.5 4.5H8l-5 3V7.5A4.5 4.5 0 0 1 7.5 3h9A4.5 4.5 0 0 1 21 7.5z"/></svg>',
+            image: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-4.5-4.5L7 20"/></svg>',
+            send: '<svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
         };
         return icons[name] || '';
     }
 
-    function eventCommentClientId() {
+    function ecClientId() {
         try {
-            let id = localStorage.getItem(EVENT_COMMENT_CLIENT_KEY);
+            let id = localStorage.getItem(EC_CLIENT_KEY);
             if (!id) {
-                id = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : `visitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-                localStorage.setItem(EVENT_COMMENT_CLIENT_KEY, id);
+                id = window.crypto?.randomUUID?.() || `v-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                localStorage.setItem(EC_CLIENT_KEY, id);
             }
             return id;
         } catch (_) {
-            return `visitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+            return `v-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         }
     }
 
-    function savedEventCommentAlias() {
-        try {
-            return localStorage.getItem(EVENT_COMMENT_ALIAS_KEY) || '';
-        } catch (_) {
-            return '';
-        }
+    function ecAlias() { try { return localStorage.getItem(EC_ALIAS_KEY) || ''; } catch (_) { return ''; } }
+    function ecSetAlias(a) { try { localStorage.setItem(EC_ALIAS_KEY, a); } catch (_) {} }
+
+    function ecClean(value, max, fallback = '') {
+        const t = String(value || '').replace(/\s+/g, ' ').trim();
+        return (t || fallback).slice(0, max);
     }
 
-    function setSavedEventCommentAlias(alias) {
-        try {
-            localStorage.setItem(EVENT_COMMENT_ALIAS_KEY, alias);
-        } catch (_) {}
+    function ecFallbackId(card) {
+        const d = card.querySelector('.event-date')?.textContent || '';
+        const t = card.querySelector('.event-title')?.textContent || '';
+        return `${d}-${t}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80)
+            || `event-${Math.random().toString(16).slice(2)}`;
     }
 
-    function cleanEventCommentText(value, max, fallback = '') {
-        const text = String(value || '').replace(/\s+/g, ' ').trim();
-        return (text || fallback).slice(0, max);
+    function ecFmtTime(ts) {
+        const d = new Date(Number(ts) || Date.now());
+        return Number.isNaN(d.getTime()) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     }
 
-    function eventCommentInitials(name) {
-        const words = cleanEventCommentText(name, EVENT_COMMENT_MAX_AUTHOR, 'Lab visitor').split(' ');
-        const first = words[0]?.charAt(0) || 'L';
-        const second = words.length > 1 ? words[words.length - 1].charAt(0) : '';
-        return `${first}${second}`.slice(0, 2);
-    }
-
-    function fallbackEventId(card) {
-        const date = card.querySelector('.event-date')?.textContent || '';
-        const title = card.querySelector('.event-title')?.textContent || '';
-        const raw = `${date}-${title}`.toLowerCase();
-        return raw
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .slice(0, 80) || `event-${Math.random().toString(16).slice(2)}`;
-    }
-
-    function formatEventCommentTime(timestamp) {
-        const date = new Date(Number(timestamp) || Date.now());
-        if (Number.isNaN(date.getTime())) return '';
-        return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-    }
-
-    function cleanEventCommentAttachments(raw) {
+    function ecCleanAttachments(raw) {
         if (!Array.isArray(raw)) return [];
-        return raw.slice(0, EVENT_COMMENT_MAX_ATTACHMENTS).map((item) => {
-            const rawKind = String(item && item.kind || '').toLowerCase();
-            const kind = ['sticker', 'image', 'video'].includes(rawKind) ? rawKind : '';
-            if (!kind) return null;
-
-            const dataUrl = String(item && item.data_url || '');
-            if (kind === 'video') {
-                if (!dataUrl.startsWith('data:video/')) return null;
-            } else if (!dataUrl.startsWith('data:image/')) {
-                return null;
-            }
-            if (dataUrl.length > EVENT_COMMENT_MAX_DATA_URL) return null;
-
-            return {
-                kind,
-                label: cleanEventCommentText(item && item.label, 32, kind === 'video' ? 'video' : 'image'),
-                tone: 'paper',
-                data_url: dataUrl,
-            };
+        return raw.slice(0, EC_MAX_ATTACHMENTS).map(item => {
+            const kind = String(item?.kind || '').toLowerCase();
+            if (!['sticker','image','video'].includes(kind)) return null;
+            const dataUrl = String(item?.data_url || '');
+            if (kind === 'video' ? !dataUrl.startsWith('data:video/') : !dataUrl.startsWith('data:image/')) return null;
+            if (dataUrl.length > EC_MAX_DATA_URL) return null;
+            return { kind, label: ecClean(item?.label, 32, kind === 'video' ? 'video' : 'image'), data_url: dataUrl };
         }).filter(Boolean);
     }
 
-    function normalizeEventComment(raw, key) {
-        const item = raw && typeof raw === 'object' ? raw : {};
+    function ecNormalize(raw, key) {
+        const o = raw && typeof raw === 'object' ? raw : {};
         return {
             id: key,
-            author_name: cleanEventCommentText(item.author_name, EVENT_COMMENT_MAX_AUTHOR, 'Lab visitor'),
-            reply_to: cleanEventCommentText(item.reply_to, EVENT_COMMENT_MAX_REPLY, ''),
-            body: cleanEventCommentText(item.body, EVENT_COMMENT_MAX_BODY, ''),
-            attachments: cleanEventCommentAttachments(item.attachments),
-            timestamp: Number(item.timestamp || Date.now()),
-            owner_id: cleanEventCommentText(item.owner_id, 96, ''),
-            pending: !!item.pending,
+            author_name: ecClean(o.author_name, EC_MAX_AUTHOR, 'Lab visitor'),
+            reply_to: ecClean(o.reply_to, EC_MAX_REPLY, ''),
+            body: ecClean(o.body, EC_MAX_BODY, ''),
+            attachments: ecCleanAttachments(o.attachments),
+            timestamp: Number(o.timestamp || Date.now()),
+            owner_id: ecClean(o.owner_id, 96, ''),
+            pending: !!o.pending,
         };
     }
 
-    function isMatchingPendingComment(pending, saved) {
-        return pending.pending &&
-            pending.owner_id === saved.owner_id &&
-            pending.timestamp === saved.timestamp &&
-            pending.body === saved.body &&
-            pending.reply_to === saved.reply_to;
+    function ecIsMatchingPending(pending, saved) {
+        return pending.pending && pending.owner_id === saved.owner_id
+            && pending.timestamp === saved.timestamp && pending.body === saved.body
+            && pending.reply_to === saved.reply_to;
     }
 
-    function setEventCommentOpen(state, open) {
-        state.panel.classList.toggle('is-open', open);
-        state.card.classList.toggle('comments-open', open);
-        state.toggle.setAttribute('aria-expanded', String(open));
-        state.actionLabel.textContent = open ? 'Close' : 'Write';
+    // --- Likes ---
+    function wcToggleLike(state) {
+        if (!state.likesRef) return;
+        const myRef = child(state.likesRef, state.clientId);
+        if (state.myLike) {
+            remove(myRef).catch(() => {});
+        } else {
+            const alias = ecClean(state.nameEl?.value || ecAlias(), EC_MAX_AUTHOR, 'Lab visitor');
+            set(myRef, { name: alias, timestamp: Date.now() }).catch(() => {});
+        }
     }
 
-    function setEventCommentPeek(state, active) {
-        if (state.panel.classList.contains('has-comments') || state.panel.classList.contains('is-open')) return;
-        state.panel.classList.toggle('comment-peek', active);
-        state.card.classList.toggle('comment-peek', active);
+    function wcRenderLikes(state) {
+        const names = Object.values(state.likes);
+        state.myLike = !!state.likes[state.clientId];
+        state.likeBtn.classList.toggle('is-liked', state.myLike);
+        state.likeBtn.innerHTML = `${state.myLike ? wcIcon('heartFill') : wcIcon('heart')}<span class="wc-num">${names.length || ''}</span>`;
+        state.commentNum.textContent = state.comments.length || '';
+
+        const likesEl = state.likesEl;
+        likesEl.innerHTML = '';
+        if (names.length) {
+            likesEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+            const namesEl = document.createElement('span');
+            namesEl.className = 'wc-likes-names';
+            names.forEach(l => {
+                const s = document.createElement('span');
+                s.textContent = l.name || 'Lab visitor';
+                namesEl.appendChild(s);
+            });
+            likesEl.appendChild(namesEl);
+        }
+
+        wcUpdatePanel(state);
     }
 
-    function setEventCommentStatus(state, message, isError = false) {
-        state.status.textContent = message || '';
-        state.status.style.color = isError ? '#b91c1c' : '#7b8496';
-        if (message) {
+    // --- Comments ---
+    function wcRenderComments(state) {
+        state.comments.sort((a, b) => a.timestamp - b.timestamp);
+        state.commentNum.textContent = state.comments.length || '';
+        const list = state.msgsEl;
+        list.innerHTML = '';
+
+        state.comments.forEach(c => {
+            const msg = document.createElement('div');
+            msg.className = `wc-msg${c.pending ? ' is-pending' : ''}`;
+            msg.dataset.commentId = c.id;
+
+            const author = document.createElement('span');
+            author.className = 'wc-msg-author';
+            author.textContent = c.author_name;
+            msg.appendChild(author);
+
+            if (c.reply_to) {
+                const replyText = document.createTextNode(' replied to ');
+                msg.appendChild(replyText);
+                const replyAuthor = document.createElement('span');
+                replyAuthor.className = 'wc-msg-author';
+                replyAuthor.textContent = c.reply_to;
+                msg.appendChild(replyAuthor);
+            }
+
+            if (c.body) {
+                const colon = document.createTextNode(': ');
+                msg.appendChild(colon);
+                const bodyText = document.createTextNode(c.body);
+                msg.appendChild(bodyText);
+            }
+
+            if (c.attachments.length) {
+                const assets = document.createElement('div');
+                assets.className = 'wc-msg-assets';
+                c.attachments.forEach(att => {
+                    const wrap = document.createElement('span');
+                    wrap.className = 'wc-msg-asset';
+                    const media = att.kind === 'video' ? document.createElement('video') : document.createElement('img');
+                    media.src = att.data_url;
+                    if (att.kind === 'video') { media.muted = true; media.loop = true; media.playsInline = true; }
+                    else { media.addEventListener('click', () => openLightbox(att.data_url)); }
+                    const label = document.createElement('span');
+                    label.textContent = att.label;
+                    wrap.append(media, label);
+                    assets.appendChild(wrap);
+                });
+                msg.appendChild(assets);
+            }
+
+            const time = document.createElement('span');
+            time.className = 'wc-msg-time';
+            time.textContent = c.pending ? 'Sending...' : ecFmtTime(c.timestamp);
+            msg.appendChild(time);
+
+            // Reply button (click author name to reply)
+            author.style.cursor = 'pointer';
+            author.addEventListener('click', () => {
+                state.replyTo = c.author_name;
+                state.replyName.textContent = c.author_name;
+                state.replyBar.classList.add('is-active');
+                wcSetComposing(state, true);
+                state.textareaEl.focus();
+            });
+
+            if (!c.pending && c.owner_id && c.owner_id === state.clientId) {
+                const del = document.createElement('button');
+                del.className = 'wc-msg-del';
+                del.textContent = 'Delete';
+                del.addEventListener('click', () => {
+                    if (!confirm('Delete this comment?')) return;
+                    remove(child(state.commentsRef, c.id)).catch(() => {});
+                });
+                msg.appendChild(del);
+            }
+
+            list.appendChild(msg);
+        });
+
+        wcUpdatePanel(state);
+    }
+
+    function wcUpdatePanel(state) {
+        const hasContent = Object.keys(state.likes).length > 0 || state.comments.length > 0;
+        const isComposing = state.panel.classList.contains('wc-composing');
+        state.panel.classList.toggle('wc-visible', hasContent || isComposing);
+        state.card.classList.toggle('wc-active', hasContent || isComposing);
+
+        const hasLikes = Object.keys(state.likes).length > 0;
+        const hasComments = state.comments.length > 0;
+        state.divEl.style.display = (hasLikes && hasComments) ? '' : 'none';
+    }
+
+    function wcSetComposing(state, open) {
+        state.panel.classList.toggle('wc-composing', open);
+        wcUpdatePanel(state);
+    }
+
+    function wcSetStatus(state, msg, isError = false) {
+        state.statusEl.textContent = msg || '';
+        state.statusEl.className = 'wc-status' + (isError ? ' is-error' : '');
+        if (msg) {
             clearTimeout(state.statusTimer);
-            state.statusTimer = setTimeout(() => {
-                state.status.textContent = '';
-                state.status.style.color = '#7b8496';
-            }, isError ? 3600 : 2200);
+            state.statusTimer = setTimeout(() => { state.statusEl.textContent = ''; }, isError ? 3600 : 2200);
         }
     }
 
-    function updateEventCommentSendState(state) {
-        const hasText = !!state.input.value.trim();
-        state.sendBtn.disabled = !hasText && state.attachments.length === 0;
+    function wcUpdateSendState(state) {
+        state.sendBtn.disabled = !state.textareaEl.value.trim() && !state.attachments.length;
     }
 
-    function renderEventCommentDraft(state) {
-        state.draft.innerHTML = '';
-        if (!state.attachments.length) {
-            state.draft.hidden = true;
-            updateEventCommentSendState(state);
-            return;
-        }
-        state.draft.hidden = false;
-        state.attachments.forEach((att, index) => {
+    function wcRenderDraft(state) {
+        state.draftEl.innerHTML = '';
+        if (!state.attachments.length) { state.draftEl.hidden = true; wcUpdateSendState(state); return; }
+        state.draftEl.hidden = false;
+        state.attachments.forEach((att, i) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'event-comment-draft-asset';
-            btn.title = 'Remove attachment';
-
+            btn.className = 'wc-draft-item';
+            btn.title = 'Remove';
             const media = att.kind === 'video' ? document.createElement('video') : document.createElement('img');
             media.src = att.data_url;
-            if (att.kind === 'video') {
-                media.muted = true;
-                media.loop = true;
-                media.playsInline = true;
-            }
+            if (att.kind === 'video') { media.muted = true; media.loop = true; media.playsInline = true; }
             const label = document.createElement('span');
             label.textContent = att.label;
             btn.append(media, label);
-            btn.addEventListener('click', () => {
-                state.attachments.splice(index, 1);
-                renderEventCommentDraft(state);
-            });
-            state.draft.appendChild(btn);
+            btn.addEventListener('click', () => { state.attachments.splice(i, 1); wcRenderDraft(state); });
+            state.draftEl.appendChild(btn);
         });
-        updateEventCommentSendState(state);
+        wcUpdateSendState(state);
     }
 
-    function makeEventCommentAsset(att) {
-        const wrap = document.createElement('span');
-        wrap.className = `event-comment-asset ${att.kind || 'image'}`;
-        const media = att.kind === 'video' ? document.createElement('video') : document.createElement('img');
-        media.src = att.data_url;
-        media.alt = att.label || '';
-        if (att.kind === 'video') {
-            media.muted = true;
-            media.loop = true;
-            media.playsInline = true;
-            media.addEventListener('mouseenter', () => media.play().catch(() => {}));
-            media.addEventListener('mouseleave', () => media.pause());
-            media.addEventListener('click', () => window.open(att.data_url, '_blank', 'noopener'));
-        } else {
-            media.addEventListener('click', () => openLightbox(att.data_url));
-        }
-        const label = document.createElement('span');
-        label.textContent = att.label || (att.kind === 'video' ? 'video' : 'image');
-        wrap.append(media, label);
-        return wrap;
-    }
-
-    function renderEventComments(state) {
-        state.comments.sort((a, b) => a.timestamp - b.timestamp);
-        const count = state.comments.length;
-        state.panel.classList.toggle('has-comments', count > 0);
-        state.panel.classList.toggle('empty-comments', count === 0);
-        state.card.classList.toggle('has-visible-comments', count > 0);
-        state.card.classList.toggle('has-no-comments', count === 0);
-        state.countLabel.textContent = count === 0 ? 'Comments' : (count === 1 ? '1 comment' : `${count} comments`);
-        state.list.innerHTML = '';
-        state.empty.hidden = count > 0;
-
-        state.comments.forEach((comment) => {
-            const item = document.createElement('div');
-            item.className = `event-comment-item${comment.pending ? ' is-pending' : ''}`;
-            item.dataset.commentId = comment.id;
-
-            const avatar = document.createElement('span');
-            avatar.className = 'event-comment-avatar';
-            avatar.textContent = eventCommentInitials(comment.author_name);
-            avatar.setAttribute('aria-hidden', 'true');
-
-            const main = document.createElement('div');
-            main.className = 'event-comment-main';
-
-            const meta = document.createElement('div');
-            meta.className = 'event-comment-meta';
-            const author = document.createElement('span');
-            author.className = 'event-comment-author';
-            author.textContent = comment.author_name;
-            meta.appendChild(author);
-
-            const time = document.createElement('span');
-            time.className = 'event-comment-time';
-            time.textContent = comment.pending ? 'Sending...' : formatEventCommentTime(comment.timestamp);
-            meta.appendChild(time);
-            main.appendChild(meta);
-
-            if (comment.reply_to) {
-                const reply = document.createElement('span');
-                reply.className = 'event-comment-reply';
-                reply.textContent = `Replying to ${comment.reply_to}`;
-                meta.appendChild(reply);
-            }
-
-            if (comment.body) {
-                const text = document.createElement('span');
-                text.className = 'event-comment-text';
-                text.textContent = comment.body;
-                main.appendChild(text);
-            }
-
-            if (comment.attachments.length) {
-                const assets = document.createElement('div');
-                assets.className = 'event-comment-attachments';
-                comment.attachments.forEach((att) => assets.appendChild(makeEventCommentAsset(att)));
-                main.appendChild(assets);
-            }
-
-            const actions = document.createElement('div');
-            actions.className = 'event-comment-actions';
-
-            const replyBtn = document.createElement('button');
-            replyBtn.type = 'button';
-            replyBtn.className = 'event-comment-mini-btn';
-            replyBtn.innerHTML = `${eventCommentIcon('reply')}<span>Reply</span>`;
-            replyBtn.setAttribute('aria-label', 'Reply');
-            replyBtn.title = 'Reply';
-            replyBtn.addEventListener('click', () => {
-                state.replyTo = comment.author_name;
-                state.replyingName.textContent = comment.author_name;
-                state.replying.classList.add('is-active');
-                setEventCommentOpen(state, true);
-                state.input.focus();
-            });
-            actions.appendChild(replyBtn);
-
-            if (!comment.pending && comment.owner_id && comment.owner_id === state.clientId) {
-                const delBtn = document.createElement('button');
-                delBtn.type = 'button';
-                delBtn.className = 'event-comment-mini-btn event-comment-delete';
-                delBtn.innerHTML = eventCommentIcon('trash');
-                delBtn.setAttribute('aria-label', 'Delete');
-                delBtn.title = 'Delete';
-                delBtn.addEventListener('click', () => deleteEventComment(state, comment));
-                actions.appendChild(delBtn);
-            }
-
-            item.append(avatar, main, actions);
-            state.list.appendChild(item);
-        });
-    }
-
-    function resizeEventCommentImage(file) {
+    function resizeWcImage(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onerror = () => reject(new Error('Could not read image'));
@@ -3178,16 +2817,12 @@
                 const img = new Image();
                 img.onerror = () => reject(new Error('Could not decode image'));
                 img.onload = () => {
-                    let { width, height } = img;
-                    const scale = Math.min(1, EVENT_COMMENT_MAX_IMAGE_EDGE / Math.max(width, height));
-                    width = Math.max(1, Math.round(width * scale));
-                    height = Math.max(1, Math.round(height * scale));
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.74));
+                    let { width: w, height: h } = img;
+                    const s = Math.min(1, EC_MAX_IMAGE_EDGE / Math.max(w, h));
+                    w = Math.max(1, Math.round(w * s)); h = Math.max(1, Math.round(h * s));
+                    const c = document.createElement('canvas'); c.width = w; c.height = h;
+                    c.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(c.toDataURL('image/jpeg', 0.74));
                 };
                 img.src = String(reader.result || '');
             };
@@ -3195,278 +2830,206 @@
         });
     }
 
-    function readEventCommentVideo(file) {
+    function readWcVideo(file) {
         return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onerror = () => reject(new Error('Could not read video'));
-            reader.onload = () => resolve(String(reader.result || ''));
-            reader.readAsDataURL(file);
+            const r = new FileReader();
+            r.onerror = () => reject(new Error('Could not read video'));
+            r.onload = () => resolve(String(r.result || ''));
+            r.readAsDataURL(file);
         });
     }
 
-    async function addEventCommentFiles(state, files) {
-        const incoming = Array.from(files || []);
-        if (!incoming.length) return;
-
-        for (const file of incoming) {
-            if (state.attachments.length >= EVENT_COMMENT_MAX_ATTACHMENTS) {
-                setEventCommentStatus(state, 'Attachment limit reached.', true);
-                break;
-            }
-            if (file.size > EVENT_COMMENT_MAX_FILE_BYTES) {
-                setEventCommentStatus(state, 'Attachment is too large. Please keep files under 3 MB.', true);
-                continue;
-            }
+    async function wcAddFiles(state, files) {
+        for (const file of Array.from(files || [])) {
+            if (state.attachments.length >= EC_MAX_ATTACHMENTS) { wcSetStatus(state, 'Attachment limit reached.', true); break; }
+            if (file.size > EC_MAX_FILE_BYTES) { wcSetStatus(state, 'File too large (max 3 MB).', true); continue; }
             const type = String(file.type || '');
-            const isImage = type.startsWith('image/');
-            const isVideo = type.startsWith('video/');
-            if (!isImage && !isVideo) {
-                setEventCommentStatus(state, 'Only image and video attachments are supported.', true);
-                continue;
-            }
-
+            const isImg = type.startsWith('image/'), isVid = type.startsWith('video/');
+            if (!isImg && !isVid) { wcSetStatus(state, 'Only image/video supported.', true); continue; }
             try {
-                setEventCommentStatus(state, 'Preparing attachment...');
-                const dataUrl = isImage ? await resizeEventCommentImage(file) : await readEventCommentVideo(file);
-                if (dataUrl.length > EVENT_COMMENT_MAX_DATA_URL) {
-                    setEventCommentStatus(state, 'Attachment data is too large after encoding.', true);
-                    continue;
-                }
-                state.attachments.push({
-                    kind: isVideo ? 'video' : 'image',
-                    label: cleanEventCommentText(file.name.replace(/\.[^.]+$/, ''), 32, isVideo ? 'video' : 'image'),
-                    tone: 'paper',
-                    data_url: dataUrl,
-                });
-                renderEventCommentDraft(state);
-                setEventCommentStatus(state, '');
-            } catch (err) {
-                setEventCommentStatus(state, err.message || 'Attachment failed.', true);
-            }
+                wcSetStatus(state, 'Preparing...');
+                const dataUrl = isImg ? await resizeWcImage(file) : await readWcVideo(file);
+                if (dataUrl.length > EC_MAX_DATA_URL) { wcSetStatus(state, 'File too large after encoding.', true); continue; }
+                state.attachments.push({ kind: isVid ? 'video' : 'image', label: ecClean(file.name.replace(/\.[^.]+$/, ''), 32, isVid ? 'video' : 'image'), data_url: dataUrl });
+                wcRenderDraft(state);
+                wcSetStatus(state, '');
+            } catch (err) { wcSetStatus(state, err.message || 'Failed.', true); }
         }
     }
 
-    async function submitEventComment(state) {
-        if (!state.ref) return;
-        const body = cleanEventCommentText(state.input.value, EVENT_COMMENT_MAX_BODY, '');
-        const author = cleanEventCommentText(state.name.value, EVENT_COMMENT_MAX_AUTHOR, 'Lab visitor');
-        const replyTo = cleanEventCommentText(state.replyTo, EVENT_COMMENT_MAX_REPLY, '');
-        const attachments = cleanEventCommentAttachments(state.attachments);
+    async function wcSubmit(state) {
+        if (!state.commentsRef) return;
+        const body = ecClean(state.textareaEl.value, EC_MAX_BODY, '');
+        const author = ecClean(state.nameEl.value, EC_MAX_AUTHOR, 'Lab visitor');
+        const replyTo = ecClean(state.replyTo, EC_MAX_REPLY, '');
+        const attachments = ecCleanAttachments(state.attachments);
         if (!body && !attachments.length) return;
 
-        const payload = {
-            author_name: author,
-            reply_to: replyTo,
-            body,
-            attachments,
-            timestamp: Date.now(),
-            owner_id: state.clientId,
-        };
-        const optimisticId = `pending-${payload.timestamp}-${Math.random().toString(16).slice(2)}`;
-        const optimistic = normalizeEventComment({ ...payload, pending: true }, optimisticId);
+        const payload = { author_name: author, reply_to: replyTo, body, attachments, timestamp: Date.now(), owner_id: state.clientId };
+        const optId = `pending-${payload.timestamp}-${Math.random().toString(16).slice(2)}`;
+        const optimistic = ecNormalize({ ...payload, pending: true }, optId);
 
-        setSavedEventCommentAlias(author);
-        state.name.value = author;
-        state.input.value = '';
-        state.input.style.height = 'auto';
+        ecSetAlias(author);
+        state.nameEl.value = author;
+        state.textareaEl.value = '';
+        state.textareaEl.style.height = 'auto';
         state.replyTo = '';
-        state.replying.classList.remove('is-active');
+        state.replyBar.classList.remove('is-active');
         state.attachments = [];
-        renderEventCommentDraft(state);
+        wcRenderDraft(state);
         state.comments = state.comments.concat(optimistic);
-        renderEventComments(state);
+        wcRenderComments(state);
         state.sendBtn.disabled = true;
 
         try {
-            await push(state.ref, payload);
-            setEventCommentStatus(state, 'Comment saved.');
+            await push(state.commentsRef, payload);
+            wcSetStatus(state, 'Comment saved.');
         } catch (err) {
-            state.comments = state.comments.filter((row) => row.id !== optimisticId);
-            renderEventComments(state);
-            setEventCommentStatus(state, `Could not save comment: ${err.message || err}`, true);
-        } finally {
-            updateEventCommentSendState(state);
-        }
+            state.comments = state.comments.filter(r => r.id !== optId);
+            wcRenderComments(state);
+            wcSetStatus(state, `Failed: ${err.message || err}`, true);
+        } finally { wcUpdateSendState(state); }
     }
 
-    async function deleteEventComment(state, comment) {
-        if (!state.ref || !comment || comment.owner_id !== state.clientId) return;
-        if (!window.confirm('Delete this comment?')) return;
-        try {
-            await remove(child(state.ref, comment.id));
-            setEventCommentStatus(state, 'Comment deleted.');
-        } catch (err) {
-            setEventCommentStatus(state, `Could not delete comment: ${err.message || err}`, true);
-        }
-    }
-
-    function buildEventCommentPanel(card) {
-        if (!card || card.nextElementSibling?.classList.contains('event-comments')) return;
-
-        const eventId = card.dataset.eventId || fallbackEventId(card);
+    // --- Build panel for each card ---
+    function wcBuildPanel(card) {
+        if (!card || card.querySelector('.wc-bar')) return;
+        const eventId = card.dataset.eventId || ecFallbackId(card);
         card.dataset.eventId = eventId;
-        const panelBodyId = `event-comments-body-${eventId}`;
 
-        const panel = document.createElement('section');
-        panel.className = 'event-comments';
+        // Action bar inside card
+        const content = card.querySelector('.event-content');
+        const bar = document.createElement('div');
+        bar.className = 'wc-bar';
+        bar.innerHTML = `
+            <button class="wc-btn wc-like-btn" type="button" title="Like">${wcIcon('heart')}<span class="wc-num"></span></button>
+            <span class="wc-sep"></span>
+            <button class="wc-btn wc-comment-btn" type="button" title="Comment">${wcIcon('comment')}<span class="wc-num"></span></button>
+        `;
+        content.appendChild(bar);
+
+        // Panel below card
+        const panel = document.createElement('div');
+        panel.className = 'wc-panel';
         panel.innerHTML = `
-            <button class="event-comment-toggle" type="button" aria-expanded="false" aria-controls="${panelBodyId}">
-                <span class="event-comment-count">
-                    <span class="event-comment-icon">${eventCommentIcon('message')}</span>
-                    <span class="event-comment-count-label">Comment</span>
-                </span>
-                <span class="event-comment-toggle-action">
-                    <span class="event-comment-action-text">Write</span>
-                    <span class="event-comment-chevron">${eventCommentIcon('chevron')}</span>
-                </span>
-            </button>
-            <span class="event-comment-status"></span>
-            <div class="event-comment-body" id="${panelBodyId}">
-                <div class="event-comment-inner">
-                    <div class="event-comment-list"></div>
-                    <div class="event-comment-composer">
-                        <div class="event-comment-composer-inner">
-                            <p class="event-comment-empty">No comments yet.</p>
-                            <div class="event-comment-replying">
-                                <span>Replying to <b></b></span>
-                                <button type="button" aria-label="Cancel reply">${eventCommentIcon('close')}</button>
-                            </div>
-                            <div class="event-comment-draft" hidden></div>
-                            <div class="event-comment-form">
-                                <input class="event-comment-name" maxlength="28" placeholder="Name">
-                                <textarea class="event-comment-input" maxlength="420" rows="1" placeholder="Leave a comment..."></textarea>
-                                <button class="event-comment-tool" type="button" title="Attach image or video" aria-label="Attach image or video">${eventCommentIcon('image')}</button>
-                                <input class="event-comment-file" type="file" accept="image/*,video/*" multiple>
-                                <button class="event-comment-send" type="button" disabled title="Post comment" aria-label="Post comment">${eventCommentIcon('send')}</button>
-                            </div>
-                        </div>
+            <div class="wc-likes"></div>
+            <div class="wc-div"></div>
+            <div class="wc-msgs"></div>
+            <span class="wc-status"></span>
+            <div class="wc-compose">
+                <input class="wc-name-input" maxlength="28" placeholder="Your name">
+                <div class="wc-reply-bar"><span>Replying to <b></b></span><button class="wc-reply-cancel" type="button">&times;</button></div>
+                <div class="wc-input-wrap">
+                    <textarea class="wc-textarea" maxlength="420" rows="1" placeholder="Comment"></textarea>
+                    <div class="wc-input-footer">
+                        <button class="wc-attach-btn" type="button" title="Attach image/video">${wcIcon('image')}</button>
+                        <input class="wc-file" type="file" accept="image/*,video/*" multiple>
+                        <button class="wc-send-btn" type="button" disabled>Send</button>
                     </div>
                 </div>
+                <div class="wc-draft" hidden></div>
             </div>
         `;
-        card.classList.add('has-comment-panel');
         card.insertAdjacentElement('afterend', panel);
 
         const state = {
-            eventId,
-            card,
-            panel,
-            toggle: panel.querySelector('.event-comment-toggle'),
-            count: panel.querySelector('.event-comment-count'),
-            countLabel: panel.querySelector('.event-comment-count-label'),
-            actionLabel: panel.querySelector('.event-comment-action-text'),
-            status: panel.querySelector('.event-comment-status'),
-            list: panel.querySelector('.event-comment-list'),
-            empty: panel.querySelector('.event-comment-empty'),
-            replying: panel.querySelector('.event-comment-replying'),
-            replyingName: panel.querySelector('.event-comment-replying b'),
-            draft: panel.querySelector('.event-comment-draft'),
-            name: panel.querySelector('.event-comment-name'),
-            input: panel.querySelector('.event-comment-input'),
-            attachBtn: panel.querySelector('.event-comment-tool'),
-            file: panel.querySelector('.event-comment-file'),
-            sendBtn: panel.querySelector('.event-comment-send'),
+            eventId, card, panel,
+            likeBtn: bar.querySelector('.wc-like-btn'),
+            commentBtn: bar.querySelector('.wc-comment-btn'),
+            commentNum: bar.querySelectorAll('.wc-num')[1],
+            likesEl: panel.querySelector('.wc-likes'),
+            divEl: panel.querySelector('.wc-div'),
+            msgsEl: panel.querySelector('.wc-msgs'),
+            statusEl: panel.querySelector('.wc-status'),
+            nameEl: panel.querySelector('.wc-name-input'),
+            replyBar: panel.querySelector('.wc-reply-bar'),
+            replyName: panel.querySelector('.wc-reply-bar b'),
+            textareaEl: panel.querySelector('.wc-textarea'),
+            attachBtn: panel.querySelector('.wc-attach-btn'),
+            fileEl: panel.querySelector('.wc-file'),
+            sendBtn: panel.querySelector('.wc-send-btn'),
+            draftEl: panel.querySelector('.wc-draft'),
+            likes: {},
+            myLike: false,
             comments: [],
             attachments: [],
             replyTo: '',
-            ref: db ? ref(db, `${EVENT_COMMENT_ROOT}/${eventId}`) : null,
-            clientId: eventCommentClientId(),
+            commentsRef: db ? ref(db, `${EVENT_COMMENT_ROOT}/${eventId}`) : null,
+            likesRef: db ? ref(db, `${EVENT_LIKES_ROOT}/${eventId}`) : null,
+            clientId: ecClientId(),
             statusTimer: null,
         };
-        eventCommentStates.set(eventId, state);
+        wcStates.set(eventId, state);
 
-        state.name.value = savedEventCommentAlias();
-        renderEventComments(state);
+        state.nameEl.value = ecAlias();
+        wcRenderLikes(state);
+        wcRenderComments(state);
 
-        let peekTimer = null;
-        const clearPeekTimer = () => {
-            clearTimeout(peekTimer);
-            peekTimer = null;
-        };
-        const showPeek = () => {
-            clearPeekTimer();
-            setEventCommentPeek(state, true);
-        };
-        const hidePeek = () => {
-            clearPeekTimer();
-            peekTimer = setTimeout(() => setEventCommentPeek(state, false), 120);
-        };
-        card.addEventListener('mouseenter', showPeek);
-        card.addEventListener('mouseleave', hidePeek);
-        card.addEventListener('pointerdown', (e) => {
-            if (e.pointerType && e.pointerType !== 'mouse') showPeek();
+        // Events
+        state.likeBtn.addEventListener('click', (e) => { e.stopPropagation(); wcToggleLike(state); });
+        state.commentBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = !panel.classList.contains('wc-composing');
+            wcSetComposing(state, open);
+            if (open) setTimeout(() => state.textareaEl.focus(), 0);
         });
-        panel.addEventListener('mouseenter', showPeek);
-        panel.addEventListener('mouseleave', hidePeek);
-        panel.addEventListener('focusin', showPeek);
-        panel.addEventListener('focusout', hidePeek);
-
-        state.toggle.addEventListener('click', () => {
-            const open = !panel.classList.contains('is-open');
-            setEventCommentOpen(state, open);
-            if (open) setTimeout(() => state.input.focus(), 0);
-        });
-
-        state.replying.querySelector('button').addEventListener('click', () => {
+        state.replyBar.querySelector('.wc-reply-cancel').addEventListener('click', () => {
             state.replyTo = '';
-            state.replying.classList.remove('is-active');
-            state.input.focus();
+            state.replyBar.classList.remove('is-active');
+            state.textareaEl.focus();
         });
-
-        state.input.addEventListener('input', () => {
-            state.input.style.height = 'auto';
-            state.input.style.height = Math.min(state.input.scrollHeight, 84) + 'px';
-            updateEventCommentSendState(state);
+        state.textareaEl.addEventListener('input', () => {
+            state.textareaEl.style.height = 'auto';
+            state.textareaEl.style.height = Math.min(state.textareaEl.scrollHeight, 84) + 'px';
+            wcUpdateSendState(state);
         });
-        state.input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                submitEventComment(state);
-            }
+        state.textareaEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); wcSubmit(state); }
         });
-        state.name.addEventListener('change', () => {
-            const alias = cleanEventCommentText(state.name.value, EVENT_COMMENT_MAX_AUTHOR, 'Lab visitor');
-            state.name.value = alias;
-            setSavedEventCommentAlias(alias);
+        state.nameEl.addEventListener('change', () => {
+            const a = ecClean(state.nameEl.value, EC_MAX_AUTHOR, 'Lab visitor');
+            state.nameEl.value = a;
+            ecSetAlias(a);
         });
-        state.attachBtn.addEventListener('click', () => state.file.click());
-        state.file.addEventListener('change', async (e) => {
-            await addEventCommentFiles(state, e.target.files);
+        state.attachBtn.addEventListener('click', () => state.fileEl.click());
+        state.fileEl.addEventListener('change', async e => {
+            await wcAddFiles(state, e.target.files);
             e.target.value = '';
-            setEventCommentOpen(state, true);
-            state.input.focus();
+            wcSetComposing(state, true);
+            state.textareaEl.focus();
         });
-        state.sendBtn.addEventListener('click', () => submitEventComment(state));
+        state.sendBtn.addEventListener('click', () => wcSubmit(state));
 
-        if (!state.ref) {
-            state.name.disabled = true;
-            state.input.disabled = true;
+        if (!state.commentsRef) {
+            state.nameEl.disabled = true;
+            state.textareaEl.disabled = true;
             state.attachBtn.disabled = true;
             state.sendBtn.disabled = true;
-            setEventCommentStatus(state, 'Comments are unavailable because Firebase did not initialize.', true);
+            wcSetStatus(state, 'Comments unavailable (Firebase error).', true);
             return;
         }
 
-        const recentComments = query(state.ref, limitToLast(80));
-        onChildAdded(recentComments, (snapshot) => {
-            const comment = normalizeEventComment(snapshot.val(), snapshot.key);
-            if (!comment.body && !comment.attachments.length) return;
-            state.comments = state.comments
-                .filter((row) => row.id !== comment.id && !isMatchingPendingComment(row, comment))
-                .concat(comment);
-            renderEventComments(state);
+        // Listen for comments
+        const recentComments = query(state.commentsRef, limitToLast(80));
+        onChildAdded(recentComments, snap => {
+            const c = ecNormalize(snap.val(), snap.key);
+            if (!c.body && !c.attachments.length) return;
+            state.comments = state.comments.filter(r => r.id !== c.id && !ecIsMatchingPending(r, c)).concat(c);
+            wcRenderComments(state);
         });
-        onChildRemoved(recentComments, (snapshot) => {
-            state.comments = state.comments.filter((row) => row.id !== snapshot.key);
-            renderEventComments(state);
+        onChildRemoved(recentComments, snap => {
+            state.comments = state.comments.filter(r => r.id !== snap.key);
+            wcRenderComments(state);
+        });
+
+        // Listen for likes
+        onValue(state.likesRef, snap => {
+            state.likes = snap.val() || {};
+            wcRenderLikes(state);
         });
     }
 
-    function initEventComments() {
-        document.querySelectorAll('.event-card').forEach(buildEventCommentPanel);
-    }
-
-    initEventComments();
+    document.querySelectorAll('.event-card').forEach(wcBuildPanel);
 
     // -----------------------------------------------------------------
     // 👑 Secret Tooltip: clamp to viewport and support tap on mobile
