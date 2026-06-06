@@ -306,11 +306,12 @@
     #dm-send-btn:hover { background: #004494; }
 
     .dm-toggle {
+        position: relative;
         width: 36px; height: 36px;
         border-radius: 50%;
         border: none;
         background: transparent;
-        color: #666;
+        color: #444;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -319,18 +320,17 @@
         transition: color 0.2s, background 0.2s;
         flex-shrink: 0;
     }
-    .dm-toggle:hover { background: #f0f0f0; }
-    .dm-toggle svg { width: 20px; height: 20px; }
-    .dm-toggle.is-off { color: #ccc; }
+    .dm-toggle:hover { background: rgba(0,0,0,0.06); }
+    .dm-toggle svg { width: 20px; height: 20px; stroke-width: 2; }
+    .dm-toggle.is-off { color: #aaa; }
     .dm-toggle.is-off::after {
         content: '';
         position: absolute;
-        width: 22px; height: 2px;
-        background: #ccc;
+        width: 24px; height: 2.5px;
+        background: #e74c3c;
         transform: rotate(-45deg);
-        border-radius: 1px;
+        border-radius: 2px;
     }
-    .dm-toggle { position: relative; }
 
     /* =========================================
        5. 原有页面样式
@@ -434,19 +434,27 @@
     .wc-panel:not(.wc-visible) { display: none; }
 
     /* Comments list */
-    .wc-msgs { padding: 4px 12px; }
+    .wc-msgs { padding: 6px 12px 2px; }
     .wc-msgs:empty { display: none; padding: 0; }
     .wc-msg {
+        display: flex;
+        align-items: baseline;
+        gap: 0;
         padding: 4px 0;
         font-size: 13px;
         line-height: 1.5;
         color: #333;
     }
+    .wc-msg-content { flex: 1; min-width: 0; }
     .wc-msg-author { color: #576b95; font-weight: 600; }
-    .wc-msg-time { font-size: 11px; color: #b2b2b2; margin-left: 6px; }
+    .wc-msg-meta {
+        display: flex; align-items: baseline; gap: 4px;
+        flex-shrink: 0; margin-left: 8px; white-space: nowrap;
+    }
+    .wc-msg-time { font-size: 11px; color: #b2b2b2; }
     .wc-msg-del {
         font-size: 11px; color: #b2b2b2; cursor: pointer;
-        border: none; background: none; padding: 0; margin-left: 4px; font-family: inherit;
+        border: none; background: none; padding: 0; font-family: inherit;
     }
     .wc-msg-del:hover { color: #ff4d6a; }
     .wc-msg.is-pending { opacity: 0.5; }
@@ -468,7 +476,7 @@
 
     /* Compose area */
     .wc-compose {
-        padding: 8px 12px 10px;
+        padding: 4px 12px 8px;
         border-top: 1px solid #e0e0e0;
         display: none;
     }
@@ -2703,25 +2711,25 @@
             msg.className = `wc-msg${c.pending ? ' is-pending' : ''}`;
             msg.dataset.commentId = c.id;
 
+            const content = document.createElement('span');
+            content.className = 'wc-msg-content';
+
             const author = document.createElement('span');
             author.className = 'wc-msg-author';
             author.textContent = c.author_name;
-            msg.appendChild(author);
+            content.appendChild(author);
 
             if (c.reply_to) {
-                const replyText = document.createTextNode(' replied to ');
-                msg.appendChild(replyText);
+                content.appendChild(document.createTextNode(' replied to '));
                 const replyAuthor = document.createElement('span');
                 replyAuthor.className = 'wc-msg-author';
                 replyAuthor.textContent = c.reply_to;
-                msg.appendChild(replyAuthor);
+                content.appendChild(replyAuthor);
             }
 
             if (c.body) {
-                const colon = document.createTextNode(': ');
-                msg.appendChild(colon);
-                const bodyText = document.createTextNode(c.body);
-                msg.appendChild(bodyText);
+                content.appendChild(document.createTextNode(': '));
+                content.appendChild(document.createTextNode(c.body));
             }
 
             if (c.attachments.length) {
@@ -2739,15 +2747,17 @@
                     wrap.append(media, label);
                     assets.appendChild(wrap);
                 });
-                msg.appendChild(assets);
+                content.appendChild(assets);
             }
+            msg.appendChild(content);
 
+            const meta = document.createElement('span');
+            meta.className = 'wc-msg-meta';
             const time = document.createElement('span');
             time.className = 'wc-msg-time';
             time.textContent = c.pending ? 'Sending...' : ecFmtTime(c.timestamp);
-            msg.appendChild(time);
+            meta.appendChild(time);
 
-            // Reply button (click author name to reply)
             author.style.cursor = 'pointer';
             author.addEventListener('click', () => {
                 state.replyTo = c.author_name;
@@ -2765,8 +2775,9 @@
                     if (!confirm('Delete this comment?')) return;
                     remove(child(state.commentsRef, c.id)).catch(() => {});
                 });
-                msg.appendChild(del);
+                meta.appendChild(del);
             }
+            msg.appendChild(meta);
 
             list.appendChild(msg);
         });
