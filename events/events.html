@@ -305,6 +305,33 @@
     }
     #dm-send-btn:hover { background: #004494; }
 
+    .dm-toggle {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: #666;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 2px;
+        transition: color 0.2s, background 0.2s;
+        flex-shrink: 0;
+    }
+    .dm-toggle:hover { background: #f0f0f0; }
+    .dm-toggle svg { width: 20px; height: 20px; }
+    .dm-toggle.is-off { color: #ccc; }
+    .dm-toggle.is-off::after {
+        content: '';
+        position: absolute;
+        width: 22px; height: 2px;
+        background: #ccc;
+        transform: rotate(-45deg);
+        border-radius: 1px;
+    }
+    .dm-toggle { position: relative; }
+
     /* =========================================
        5. 原有页面样式
        ========================================= */
@@ -447,10 +474,10 @@
     }
     .wc-panel.wc-composing .wc-compose { display: block; }
     .wc-name-input {
-        width: 100%; height: 30px; padding: 0 10px;
+        width: 90px; height: 28px; padding: 0 8px;
         border: 1px solid #ddd; border-radius: 4px;
-        font-size: 13px; box-sizing: border-box;
-        margin-bottom: 8px; outline: none;
+        font-size: 12px; box-sizing: border-box;
+        outline: none;
         background: #fff; font-family: inherit; color: #333;
     }
     .wc-name-input:focus { border-color: #57be6a; box-shadow: 0 0 0 2px rgba(87,190,106,0.12); }
@@ -486,14 +513,14 @@
         justify-content: flex-end; gap: 8px; margin-top: 6px;
     }
     .wc-attach-btn {
-        width: 28px; height: 28px;
+        width: 32px; height: 32px;
         border: none; background: none;
         cursor: pointer; color: #b2b2b2; padding: 0;
         display: flex; align-items: center; justify-content: center;
     }
     .wc-attach-btn:hover { color: #666; }
     .wc-attach-btn svg {
-        width: 16px; height: 16px;
+        width: 20px; height: 20px;
         stroke: currentColor; fill: none;
         stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
@@ -2080,6 +2107,13 @@
         <img id="img-preview-target" src="" alt="preview">
     </div>
 
+    <button class="dm-toggle" id="dm-toggle" type="button" title="Toggle danmaku">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M8 9h8"/><path d="M8 13h5"/>
+        </svg>
+    </button>
+
     <label for="dm-file-input" class="img-upload-btn" id="upload-icon-label" title="Add Image">
         <i class="far fa-image fa-lg"></i>
     </label>
@@ -2202,6 +2236,7 @@
     }
 
     function fireDanmaku(data, isPriority) {
+        if (danmakuOff) return;
         const el = document.createElement('div');
         el.className = 'danmaku-item';
         
@@ -2276,6 +2311,30 @@
 
         el.addEventListener('animationend', () => el.remove());
     }
+
+    // -----------------------------------------------------------------
+    // 🔇 Danmaku Toggle
+    // -----------------------------------------------------------------
+    const DM_PREF_KEY = 'picasso-lab.danmaku-off';
+    const dmToggleBtn = document.getElementById('dm-toggle');
+    let danmakuOff = false;
+    try { danmakuOff = localStorage.getItem(DM_PREF_KEY) === '1'; } catch (_) {}
+
+    function applyDanmakuState() {
+        container.style.display = danmakuOff ? 'none' : '';
+        dmToggleBtn.classList.toggle('is-off', danmakuOff);
+        dmToggleBtn.title = danmakuOff ? 'Turn on danmaku' : 'Turn off danmaku';
+    }
+    applyDanmakuState();
+
+    dmToggleBtn.addEventListener('click', () => {
+        danmakuOff = !danmakuOff;
+        try { localStorage.setItem(DM_PREF_KEY, danmakuOff ? '1' : '0'); } catch (_) {}
+        applyDanmakuState();
+        if (danmakuOff) {
+            container.innerHTML = '';
+        }
+    });
 
     // -----------------------------------------------------------------
     // 💡 Lightbox Logic (Restricted to Top)
@@ -2867,13 +2926,13 @@
             <div class="wc-msgs"></div>
             <span class="wc-status"></span>
             <div class="wc-compose">
-                <input class="wc-name-input" maxlength="28" placeholder="Name (optional)">
                 <div class="wc-reply-bar"><span>Replying to <b></b></span><button class="wc-reply-cancel" type="button">&times;</button></div>
                 <div class="wc-input-wrap">
                     <textarea class="wc-textarea" maxlength="420" rows="1" placeholder="Comment"></textarea>
                     <div class="wc-input-footer">
                         <button class="wc-attach-btn" type="button" title="Attach image/video">${wcIcon('image')}</button>
                         <input class="wc-file" type="file" accept="image/*,video/*" multiple>
+                        <input class="wc-name-input" maxlength="28" placeholder="Name (optional)">
                         <button class="wc-send-btn" type="button" disabled>Send</button>
                     </div>
                 </div>
