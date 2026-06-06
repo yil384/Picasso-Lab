@@ -434,16 +434,17 @@
     .wc-panel:not(.wc-visible) { display: none; }
 
     /* Comments list */
-    .wc-msgs { padding: 4px 12px 5px; }
+    .wc-msgs { padding: 3px 12px; }
     .wc-msgs:empty { display: none; padding: 0; }
     .wc-msg {
         display: flex;
         align-items: baseline;
         gap: 0;
-        padding: 4px 0;
+        padding: 3px 0;
         font-size: 13px;
-        line-height: 1.5;
+        line-height: 1.4;
         color: #333;
+        position: relative;
     }
     .wc-msg-content { flex: 1; min-width: 0; }
     .wc-msg-author { color: #576b95; font-weight: 600; }
@@ -452,12 +453,33 @@
         flex-shrink: 0; margin-left: 8px; white-space: nowrap;
     }
     .wc-msg-time { font-size: 11px; color: #b2b2b2; }
-    .wc-msg-del {
-        font-size: 11px; color: #b2b2b2; cursor: pointer;
-        border: none; background: none; padding: 0; font-family: inherit;
-    }
-    .wc-msg-del:hover { color: #ff4d6a; }
     .wc-msg.is-pending { opacity: 0.5; }
+
+    /* Context menu for comment actions */
+    .wc-ctx-menu {
+        position: absolute;
+        top: 50%; right: 0;
+        transform: translateY(-50%);
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        z-index: 20;
+        overflow: hidden;
+        min-width: 80px;
+    }
+    .wc-ctx-item {
+        display: block; width: 100%;
+        padding: 8px 16px;
+        border: none; background: #fff;
+        font-size: 13px; color: #333;
+        cursor: pointer; text-align: left;
+        font-family: inherit;
+    }
+    .wc-ctx-item:hover { background: #f5f5f5; }
+    .wc-ctx-item.wc-ctx-danger { color: #e74c3c; }
+    .wc-ctx-item.wc-ctx-danger:hover { background: #fef2f2; }
+    .wc-ctx-item + .wc-ctx-item { border-top: 1px solid #f0f0f0; }
 
     /* Attachments in comments */
     .wc-msg-assets {
@@ -2699,6 +2721,10 @@
         state.commentNum.textContent = state.comments.length || '';
     }
 
+    function wcCloseAllCtx() {
+        document.querySelectorAll('.wc-ctx-menu').forEach(m => m.remove());
+    }
+
     // --- Comments ---
     function wcRenderComments(state) {
         state.comments.sort((a, b) => a.timestamp - b.timestamp);
@@ -2767,17 +2793,40 @@
                 state.textareaEl.focus();
             });
 
-            if (!c.pending && c.owner_id && c.owner_id === state.clientId) {
-                const del = document.createElement('button');
-                del.className = 'wc-msg-del';
-                del.textContent = 'Delete';
-                del.addEventListener('click', () => {
-                    if (!confirm('Delete this comment?')) return;
-                    remove(child(state.commentsRef, c.id)).catch(() => {});
-                });
-                meta.appendChild(del);
-            }
             msg.appendChild(meta);
+
+            const canDelete = !c.pending && c.owner_id && c.owner_id === state.clientId;
+            if (canDelete) {
+                const showCtx = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    wcCloseAllCtx();
+                    const menu = document.createElement('div');
+                    menu.className = 'wc-ctx-menu';
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'wc-ctx-item';
+                    copyBtn.textContent = 'Copy';
+                    copyBtn.addEventListener('click', () => {
+                        navigator.clipboard?.writeText(c.body || '').catch(() => {});
+                        menu.remove();
+                    });
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'wc-ctx-item wc-ctx-danger';
+                    delBtn.textContent = 'Delete';
+                    delBtn.addEventListener('click', () => {
+                        menu.remove();
+                        remove(child(state.commentsRef, c.id)).catch(() => {});
+                    });
+                    menu.append(copyBtn, delBtn);
+                    msg.appendChild(menu);
+                    setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
+                };
+                msg.addEventListener('contextmenu', showCtx);
+                let tapTimer = null;
+                msg.addEventListener('touchstart', () => { tapTimer = setTimeout(() => showCtx(new Event('contextmenu')), 500); }, { passive: true });
+                msg.addEventListener('touchend', () => clearTimeout(tapTimer), { passive: true });
+                msg.addEventListener('touchmove', () => clearTimeout(tapTimer), { passive: true });
+            }
 
             list.appendChild(msg);
         });
