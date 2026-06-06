@@ -406,33 +406,6 @@
     }
     .wc-panel:not(.wc-visible) { display: none; }
 
-    /* Likes row */
-    .wc-likes {
-        display: flex;
-        align-items: flex-start;
-        gap: 6px;
-        padding: 8px 12px;
-        font-size: 13px;
-        color: #576b95;
-        line-height: 1.5;
-    }
-    .wc-likes:empty { display: none; padding: 0; }
-    .wc-likes svg {
-        width: 14px; height: 14px;
-        fill: #e74c3c; stroke: none;
-        flex-shrink: 0;
-        margin-top: 3px;
-    }
-    .wc-likes-names { flex: 1; word-break: break-word; }
-    .wc-likes-names span { font-weight: 600; }
-    .wc-likes-names span + span::before { content: ', '; font-weight: 400; }
-
-    /* Divider */
-    .wc-div { height: 1px; margin: 0 12px; background: #e0e0e0; }
-    .wc-likes:empty + .wc-div { display: none; }
-    .wc-msgs:empty + .wc-div,
-    .wc-div:last-child { display: none; }
-
     /* Comments list */
     .wc-msgs { padding: 4px 12px; }
     .wc-msgs:empty { display: none; padding: 0; }
@@ -2624,7 +2597,7 @@
         const o = raw && typeof raw === 'object' ? raw : {};
         return {
             id: key,
-            author_name: ecClean(o.author_name, EC_MAX_AUTHOR, 'Lab visitor'),
+            author_name: ecClean(o.author_name, EC_MAX_AUTHOR, 'Anonymous'),
             reply_to: ecClean(o.reply_to, EC_MAX_REPLY, ''),
             body: ecClean(o.body, EC_MAX_BODY, ''),
             attachments: ecCleanAttachments(o.attachments),
@@ -2647,33 +2620,16 @@
         if (state.myLike) {
             remove(myRef).catch(() => {});
         } else {
-            const alias = ecClean(state.nameEl?.value || ecAlias(), EC_MAX_AUTHOR, 'Lab visitor');
-            set(myRef, { name: alias, timestamp: Date.now() }).catch(() => {});
+            set(myRef, true).catch(() => {});
         }
     }
 
     function wcRenderLikes(state) {
-        const names = Object.values(state.likes);
+        const count = Object.keys(state.likes).length;
         state.myLike = !!state.likes[state.clientId];
         state.likeBtn.classList.toggle('is-liked', state.myLike);
-        state.likeBtn.innerHTML = `${state.myLike ? wcIcon('heartFill') : wcIcon('heart')}<span class="wc-num">${names.length || ''}</span>`;
+        state.likeBtn.innerHTML = `${state.myLike ? wcIcon('heartFill') : wcIcon('heart')}<span class="wc-num">${count || ''}</span>`;
         state.commentNum.textContent = state.comments.length || '';
-
-        const likesEl = state.likesEl;
-        likesEl.innerHTML = '';
-        if (names.length) {
-            likesEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
-            const namesEl = document.createElement('span');
-            namesEl.className = 'wc-likes-names';
-            names.forEach(l => {
-                const s = document.createElement('span');
-                s.textContent = l.name || 'Lab visitor';
-                namesEl.appendChild(s);
-            });
-            likesEl.appendChild(namesEl);
-        }
-
-        wcUpdatePanel(state);
     }
 
     // --- Comments ---
@@ -2760,14 +2716,10 @@
     }
 
     function wcUpdatePanel(state) {
-        const hasContent = Object.keys(state.likes).length > 0 || state.comments.length > 0;
-        const isComposing = state.panel.classList.contains('wc-composing');
-        state.panel.classList.toggle('wc-visible', hasContent || isComposing);
-        state.card.classList.toggle('wc-active', hasContent || isComposing);
-
-        const hasLikes = Object.keys(state.likes).length > 0;
         const hasComments = state.comments.length > 0;
-        state.divEl.style.display = (hasLikes && hasComments) ? '' : 'none';
+        const isComposing = state.panel.classList.contains('wc-composing');
+        state.panel.classList.toggle('wc-visible', hasComments || isComposing);
+        state.card.classList.toggle('wc-active', hasComments || isComposing);
     }
 
     function wcSetComposing(state, open) {
@@ -2860,7 +2812,7 @@
     async function wcSubmit(state) {
         if (!state.commentsRef) return;
         const body = ecClean(state.textareaEl.value, EC_MAX_BODY, '');
-        const author = ecClean(state.nameEl.value, EC_MAX_AUTHOR, 'Lab visitor');
+        const author = ecClean(state.nameEl.value, EC_MAX_AUTHOR, 'Anonymous');
         const replyTo = ecClean(state.replyTo, EC_MAX_REPLY, '');
         const attachments = ecCleanAttachments(state.attachments);
         if (!body && !attachments.length) return;
@@ -2912,12 +2864,10 @@
         const panel = document.createElement('div');
         panel.className = 'wc-panel';
         panel.innerHTML = `
-            <div class="wc-likes"></div>
-            <div class="wc-div"></div>
             <div class="wc-msgs"></div>
             <span class="wc-status"></span>
             <div class="wc-compose">
-                <input class="wc-name-input" maxlength="28" placeholder="Your name">
+                <input class="wc-name-input" maxlength="28" placeholder="Name (optional)">
                 <div class="wc-reply-bar"><span>Replying to <b></b></span><button class="wc-reply-cancel" type="button">&times;</button></div>
                 <div class="wc-input-wrap">
                     <textarea class="wc-textarea" maxlength="420" rows="1" placeholder="Comment"></textarea>
@@ -2937,8 +2887,6 @@
             likeBtn: bar.querySelector('.wc-like-btn'),
             commentBtn: bar.querySelector('.wc-comment-btn'),
             commentNum: bar.querySelectorAll('.wc-num')[1],
-            likesEl: panel.querySelector('.wc-likes'),
-            divEl: panel.querySelector('.wc-div'),
             msgsEl: panel.querySelector('.wc-msgs'),
             statusEl: panel.querySelector('.wc-status'),
             nameEl: panel.querySelector('.wc-name-input'),
@@ -2987,7 +2935,7 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); wcSubmit(state); }
         });
         state.nameEl.addEventListener('change', () => {
-            const a = ecClean(state.nameEl.value, EC_MAX_AUTHOR, 'Lab visitor');
+            const a = ecClean(state.nameEl.value, EC_MAX_AUTHOR, '');
             state.nameEl.value = a;
             ecSetAlias(a);
         });
