@@ -226,18 +226,20 @@
     }
 
     .img-upload-btn {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        color: #666;
+        color: #555;
         transition: all 0.2s;
-        margin-left: 5px;
+        flex-shrink: 0;
+        margin-left: 0;
     }
-    .img-upload-btn:hover { background: #f0f0f0; color: #0056b3; }
+    .img-upload-btn svg { width: 20px; height: 20px; }
+    .img-upload-btn:hover { background: rgba(0,0,0,0.06); color: #0056b3; }
     .img-upload-btn.has-file { color: #28a745; background: #e6ffed; }
 
     #dm-file-input { display: none; }
@@ -278,17 +280,20 @@
 
     #dm-input {
         flex: 1;
+        min-width: 0;
         border: none;
         background: transparent;
         font-size: 15px;
         font-family: inherit;
         outline: none;
-        padding: 8px 10px;
+        padding: 6px 10px;
         resize: none;
         overflow: hidden;
         min-height: 36px;
         max-height: 120px;
         line-height: 1.4;
+        box-sizing: border-box;
+        margin: 0;
     }
 
     #dm-send-btn {
@@ -302,6 +307,8 @@
         font-size: 14px;
         margin-right: 5px;
         transition: background 0.3s;
+        flex-shrink: 0;
+        white-space: nowrap;
     }
     #dm-send-btn:hover { background: #004494; }
 
@@ -321,16 +328,10 @@
         flex-shrink: 0;
     }
     .dm-toggle:hover { background: rgba(0,0,0,0.06); }
-    .dm-toggle svg { width: 20px; height: 20px; stroke-width: 2; }
-    .dm-toggle.is-off { color: #aaa; }
-    .dm-toggle.is-off::after {
-        content: '';
-        position: absolute;
-        width: 24px; height: 2.5px;
-        background: #e74c3c;
-        transform: rotate(-45deg);
-        border-radius: 2px;
-    }
+    .dm-toggle svg { width: 26px; height: 22px; overflow: visible; }
+    .dm-toggle.is-off { color: #bbb; }
+    .dm-toggle.is-off .dm-badge,
+    .dm-toggle.is-off .dm-badge-ck { display: none; }
 
     /* =========================================
        5. 原有页面样式
@@ -343,7 +344,7 @@
     .ticker-item { margin-right: 3rem; display: inline-flex; align-items: center; font-size: 0.9em; }
     .ticker-tag { font-weight: bold; color: #0056b3; margin-right: 6px; }
 
-    .event-card { display: flex; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: visible; margin: 20px auto; max-width: 900px; height: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
+    .event-card { display: flex; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; margin: 20px auto; max-width: 900px; height: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
     .event-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 
     .cursor-cny { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' height='150%25'%3E%3CfeDropShadow dx='0' dy='1' stdDeviation='1' flood-opacity='0.3'/%3E%3C/filter%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='26' filter='url(%23s)' style='text-shadow: 0 0 2px white, 0 0 2px white;'%3E🧧%3C/text%3E%3C/svg%3E") 16 16, pointer; }
@@ -429,12 +430,12 @@
         border-top: none;
         border-radius: 0 0 4px 4px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-        overflow: hidden;
+        overflow: visible;
     }
     .wc-panel:not(.wc-visible) { display: none; }
 
     /* Comments list */
-    .wc-msgs { padding: 3px 12px 1px; }
+    .wc-msgs { padding: 3px 12px 2px; }
     .wc-msgs:empty { display: none; padding: 0; }
     .wc-msg {
         display: flex;
@@ -583,6 +584,7 @@
 
     /* Status */
     .wc-status { padding: 0 12px; font-size: 12px; color: #999; min-height: 0; }
+    .wc-status:empty { display: none; }
     .wc-status:not(:empty) { padding-bottom: 6px; }
     .wc-status.is-error { color: #e74c3c; }
 
@@ -1493,6 +1495,28 @@
             padding: 8px 10px 10px;
         }
         .wc-msg-del { opacity: 0.7; }
+
+        /* ---- Comment system mobile ---- */
+        .wc-btn { height: 36px; padding: 0 10px; font-size: 13px; }
+        .wc-btn svg { width: 15px; height: 15px; }
+        .wc-msgs { padding: 4px 10px 2px; }
+        .wc-msg { font-size: 13px; padding: 4px 0; }
+        .wc-textarea { font-size: 16px; }
+        .wc-name-input { width: 76px; height: 32px; font-size: 16px; }
+        .wc-send-btn { padding: 7px 16px; font-size: 14px; }
+        .wc-attach-btn { width: 36px; height: 36px; }
+        .wc-attach-btn svg { width: 22px; height: 22px; }
+        .wc-ctx-menu { right: auto; left: 0; }
+        .wc-ctx-item { padding: 12px 18px; font-size: 14px; }
+        .wc-input-footer { gap: 6px; }
+
+        /* ---- Danmaku input mobile ---- */
+        .danmaku-input-area { width: 92%; padding: 3px 4px; min-height: 44px; }
+        .dm-toggle { width: 38px; height: 38px; margin-left: 1px; }
+        .img-upload-btn { width: 36px; height: 36px; }
+        #dm-input { font-size: 16px; padding: 5px 8px; min-height: 34px; }
+        #dm-send-btn { padding: 6px 14px; font-size: 13px; margin-right: 3px; }
+
         .secret-note {
             outline: none;
         }
@@ -1503,7 +1527,6 @@
             font-size: 12px;
         }
         #danmaku-container, #lightbox-overlay { height: 45%; }
-        .danmaku-input-area { width: 92%; }
         .news-banner { font-size: 0.82em; }
     }
 
@@ -2138,14 +2161,22 @@
     </div>
 
     <button class="dm-toggle" id="dm-toggle" type="button" title="Toggle danmaku">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <path d="M8 9h8"/><path d="M8 13h5"/>
+        <svg viewBox="0 0 30 26" fill="none">
+            <line x1="9" y1="5.5" x2="6.5" y2="1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="16" y1="5.5" x2="18.5" y2="1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <rect x="2" y="5.5" width="21" height="16" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/>
+            <text x="12.5" y="16.5" text-anchor="middle" fill="currentColor" font-size="11" font-weight="700" style="font-family:system-ui,-apple-system,sans-serif">弹</text>
+            <circle class="dm-badge" cx="24.5" cy="20.5" r="5" fill="#4a9bf5"/>
+            <polyline class="dm-badge-ck" points="22,20.5 23.8,22.5 27,18.5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     </button>
 
     <label for="dm-file-input" class="img-upload-btn" id="upload-icon-label" title="Add Image">
-        <i class="far fa-image fa-lg"></i>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="18" rx="3"/>
+            <circle cx="8.5" cy="10" r="2.5"/>
+            <path d="M22 17l-5.5-5.5L5 21"/>
+        </svg>
     </label>
     <input type="file" id="dm-file-input" accept="image/*">
 
