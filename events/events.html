@@ -2379,7 +2379,7 @@
     const DM_PREF_KEY = 'picasso-lab.danmaku-off';
     const dmToggleBtn = document.getElementById('dm-toggle');
     let danmakuOff = false;
-    try { danmakuOff = localStorage.getItem(DM_PREF_KEY) === '1'; } catch (_) {}
+    try { danmakuOff = _storeRead(DM_PREF_KEY) === '1'; } catch (_) {}
 
     function applyDanmakuState() {
         container.style.display = danmakuOff ? 'none' : '';
@@ -2390,7 +2390,7 @@
 
     dmToggleBtn.addEventListener('click', () => {
         danmakuOff = !danmakuOff;
-        try { localStorage.setItem(DM_PREF_KEY, danmakuOff ? '1' : '0'); } catch (_) {}
+        try { _storeWrite(DM_PREF_KEY, danmakuOff ? '1' : '0'); } catch (_) {}
         applyDanmakuState();
         if (danmakuOff) {
             container.innerHTML = '';
@@ -2668,21 +2668,40 @@
         return icons[name] || '';
     }
 
-    function ecClientId() {
-        try {
-            let id = localStorage.getItem(EC_CLIENT_KEY);
-            if (!id) {
-                id = window.crypto?.randomUUID?.() || `v-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-                localStorage.setItem(EC_CLIENT_KEY, id);
-            }
-            return id;
-        } catch (_) {
-            return `v-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        }
+    function _cookieGet(k) {
+        const m = document.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]+)'));
+        return m ? decodeURIComponent(m[1]) : null;
+    }
+    function _cookieSet(k, v) {
+        document.cookie = k + '=' + encodeURIComponent(v) + '; max-age=31536000; path=/; SameSite=None; Secure';
+    }
+    function _fingerprint() {
+        const raw = [navigator.userAgent || '', (screen.width||0) + 'x' + (screen.height||0),
+            new Date().getTimezoneOffset(), navigator.language || '', navigator.hardwareConcurrency || ''].join('|');
+        let h = 0;
+        for (let i = 0; i < raw.length; i++) { h = ((h << 5) - h) + raw.charCodeAt(i); h |= 0; }
+        return 'fp-' + Math.abs(h).toString(36);
+    }
+    function _storeRead(k) {
+        try { const v = localStorage.getItem(k); if (v) return v; } catch (_) {}
+        return _cookieGet(k);
+    }
+    function _storeWrite(k, v) {
+        try { localStorage.setItem(k, v); } catch (_) {}
+        try { _cookieSet(k, v); } catch (_) {}
     }
 
-    function ecAlias() { try { return localStorage.getItem(EC_ALIAS_KEY) || ''; } catch (_) { return ''; } }
-    function ecSetAlias(a) { try { localStorage.setItem(EC_ALIAS_KEY, a); } catch (_) {} }
+    function ecClientId() {
+        let id = _storeRead(EC_CLIENT_KEY);
+        if (!id) {
+            id = window.crypto?.randomUUID?.() || _fingerprint();
+            _storeWrite(EC_CLIENT_KEY, id);
+        }
+        return id;
+    }
+
+    function ecAlias() { return _storeRead(EC_ALIAS_KEY) || ''; }
+    function ecSetAlias(a) { _storeWrite(EC_ALIAS_KEY, a); }
 
     function ecClean(value, max, fallback = '') {
         const t = String(value || '').replace(/\s+/g, ' ').trim();
@@ -2826,8 +2845,8 @@
 
             msg.appendChild(meta);
 
-            const canDelete = !c.pending && c.owner_id && c.owner_id === state.clientId;
-            if (canDelete) {
+            if (!c.pending) {
+                const canDelete = c.owner_id && c.owner_id === state.clientId;
                 const showCtx = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -2841,14 +2860,17 @@
                         navigator.clipboard?.writeText(c.body || '').catch(() => {});
                         menu.remove();
                     });
-                    const delBtn = document.createElement('button');
-                    delBtn.className = 'wc-ctx-item wc-ctx-danger';
-                    delBtn.textContent = 'Delete';
-                    delBtn.addEventListener('click', () => {
-                        menu.remove();
-                        remove(child(state.commentsRef, c.id)).catch(() => {});
-                    });
-                    menu.append(copyBtn, delBtn);
+                    menu.appendChild(copyBtn);
+                    if (canDelete) {
+                        const delBtn = document.createElement('button');
+                        delBtn.className = 'wc-ctx-item wc-ctx-danger';
+                        delBtn.textContent = 'Delete';
+                        delBtn.addEventListener('click', () => {
+                            menu.remove();
+                            remove(child(state.commentsRef, c.id)).catch(() => {});
+                        });
+                        menu.appendChild(delBtn);
+                    }
                     msg.appendChild(menu);
                     setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
                 };
