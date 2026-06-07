@@ -556,6 +556,57 @@
         stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
     .wc-file { display: none; }
+
+    /* Sticker picker */
+    .wc-sticker-btn {
+        width: 32px; height: 32px;
+        border: none; background: none;
+        cursor: pointer; color: #b2b2b2; padding: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-family: inherit;
+    }
+    .wc-sticker-btn:hover { color: #666; }
+    .wc-sticker-btn svg {
+        width: 20px; height: 20px;
+        stroke: currentColor; fill: none;
+        stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .wc-sticker-wrap { position: relative; }
+    .wc-sticker-panel {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 8px);
+        right: 0;
+        width: 290px;
+        max-height: 240px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        padding: 10px 10px 6px;
+        z-index: 30;
+    }
+    .wc-sticker-panel.is-open { display: block; }
+    .wc-sticker-label {
+        font-size: 11px; color: #999; font-weight: 600;
+        margin: 2px 0 4px; padding: 0;
+    }
+    .wc-sticker-recent:empty + .wc-sticker-label:last-of-type { margin-top: 0; }
+    .wc-sticker-grid {
+        display: flex; flex-wrap: wrap; gap: 2px;
+    }
+    .wc-sticker-grid:empty { display: none; }
+    .wc-sticker-grid:empty + .wc-sticker-label { display: none; }
+    .wc-sticker-item {
+        width: 36px; height: 36px;
+        border: none; background: none; border-radius: 6px;
+        cursor: pointer; font-size: 22px;
+        display: flex; align-items: center; justify-content: center;
+        padding: 0; transition: background 0.1s;
+    }
+    .wc-sticker-item:hover { background: #f5f5f5; }
+
     .wc-send-btn {
         padding: 5px 18px; border: none; border-radius: 4px;
         background: #f0f0f0; color: #333;
@@ -1509,6 +1560,10 @@
         .wc-ctx-menu { right: auto; left: 0; }
         .wc-ctx-item { padding: 12px 18px; font-size: 14px; }
         .wc-input-footer { gap: 6px; }
+        .wc-sticker-btn { width: 36px; height: 36px; }
+        .wc-sticker-btn svg { width: 22px; height: 22px; }
+        .wc-sticker-panel { width: calc(100vw - 60px); max-width: 320px; right: -10px; }
+        .wc-sticker-item { width: 38px; height: 38px; font-size: 24px; }
 
         /* ---- Danmaku input mobile ---- */
         .danmaku-input-area { width: 92%; padding: 3px 4px; min-height: 44px; }
@@ -2684,6 +2739,7 @@
             comment: '<svg viewBox="0 0 24 24"><path d="M21 14.5a4.5 4.5 0 0 1-4.5 4.5H8l-5 3V7.5A4.5 4.5 0 0 1 7.5 3h9A4.5 4.5 0 0 1 21 7.5z"/></svg>',
             image: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-4.5-4.5L7 20"/></svg>',
             send: '<svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
+            smile: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
         };
         return icons[name] || '';
     }
@@ -3035,6 +3091,51 @@
         } finally { wcUpdateSendState(state); }
     }
 
+    // --- Sticker picker ---
+    const WC_STICKERS = [
+        '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😉',
+        '😊','😇','🥰','😍','🤩','😘','😋','😛','😜','😝',
+        '🤗','🤔','🤭','🤫','😶','😏','😒','🙄','😬','😮',
+        '😲','😳','🥺','😢','😭','😤','😡','🤯','😱','😴',
+        '🤤','🤢','🤮','😷','🤓','😎','🥳','🤠','👻','💀',
+        '👍','👎','👏','🙌','🤝','✌️','🤞','💪','🫶','👋',
+        '🙏','❤️','🔥','💯','🎉','✨','⭐','🏆','💫','💖',
+        '😺','😸','🙈','🙉','🙊','🐶','🐱','🐼','🍕','🍺',
+    ];
+    const WC_RECENT_KEY = 'picasso-lab.sticker-recent';
+    const WC_RECENT_MAX = 16;
+
+    function wcGetRecent() {
+        try { return JSON.parse(_storeRead(WC_RECENT_KEY) || '[]').slice(0, WC_RECENT_MAX); } catch (_) { return []; }
+    }
+    function wcSaveRecent(emoji) {
+        const arr = wcGetRecent().filter(e => e !== emoji);
+        arr.unshift(emoji);
+        _storeWrite(WC_RECENT_KEY, JSON.stringify(arr.slice(0, WC_RECENT_MAX)));
+    }
+    function wcBuildStickerGrid(panelEl) {
+        let html = '<div class="wc-sticker-grid wc-sticker-recent"></div>';
+        html += '<div class="wc-sticker-label">All Stickers</div>';
+        html += '<div class="wc-sticker-grid">';
+        for (const e of WC_STICKERS) html += `<button class="wc-sticker-item" type="button" data-emoji="${e}">${e}</button>`;
+        html += '</div>';
+        panelEl.innerHTML = html;
+    }
+    function wcRefreshRecent(panelEl) {
+        const grid = panelEl.querySelector('.wc-sticker-recent');
+        const recent = wcGetRecent();
+        if (!recent.length) {
+            grid.innerHTML = '';
+            grid.previousElementSibling?.remove();
+            return;
+        }
+        const label = grid.previousElementSibling;
+        if (!label || !label.classList.contains('wc-sticker-label')) {
+            grid.insertAdjacentHTML('beforebegin', '<div class="wc-sticker-label">Recent</div>');
+        }
+        grid.innerHTML = recent.map(e => `<button class="wc-sticker-item" type="button" data-emoji="${e}">${e}</button>`).join('');
+    }
+
     // --- Build panel for each card ---
     function wcBuildPanel(card) {
         if (!card || card.querySelector('.wc-bar')) return;
@@ -3066,6 +3167,10 @@
                         <button class="wc-attach-btn" type="button" title="Attach image/video">${wcIcon('image')}</button>
                         <input class="wc-file" type="file" accept="image/*,video/*" multiple>
                         <input class="wc-name-input" maxlength="28" placeholder="Name (optional)">
+                        <div class="wc-sticker-wrap">
+                            <button class="wc-sticker-btn" type="button" title="Stickers">${wcIcon('smile')}</button>
+                            <div class="wc-sticker-panel"></div>
+                        </div>
                         <button class="wc-send-btn" type="button" disabled>Send</button>
                     </div>
                 </div>
@@ -3139,6 +3244,35 @@
             state.textareaEl.focus();
         });
         state.sendBtn.addEventListener('click', () => wcSubmit(state));
+
+        // Sticker picker
+        const stickerBtn = panel.querySelector('.wc-sticker-btn');
+        const stickerPanel = panel.querySelector('.wc-sticker-panel');
+        wcBuildStickerGrid(stickerPanel);
+        stickerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const wasOpen = stickerPanel.classList.contains('is-open');
+            document.querySelectorAll('.wc-sticker-panel.is-open').forEach(p => p.classList.remove('is-open'));
+            if (!wasOpen) {
+                wcRefreshRecent(stickerPanel);
+                stickerPanel.classList.add('is-open');
+                setTimeout(() => document.addEventListener('click', () => stickerPanel.classList.remove('is-open'), { once: true }), 0);
+            }
+        });
+        stickerPanel.addEventListener('click', (e) => {
+            const item = e.target.closest('.wc-sticker-item');
+            if (!item) { e.stopPropagation(); return; }
+            const emoji = item.dataset.emoji;
+            if (!emoji) return;
+            const ta = state.textareaEl;
+            const start = ta.selectionStart, end = ta.selectionEnd;
+            ta.value = ta.value.slice(0, start) + emoji + ta.value.slice(end);
+            ta.selectionStart = ta.selectionEnd = start + emoji.length;
+            ta.focus();
+            ta.dispatchEvent(new Event('input'));
+            wcSaveRecent(emoji);
+            stickerPanel.classList.remove('is-open');
+        });
 
         if (!state.commentsRef) {
             state.nameEl.disabled = true;
