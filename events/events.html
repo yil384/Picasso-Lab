@@ -496,6 +496,13 @@
         cursor: zoom-in;
     }
     .wc-msg-asset span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px; }
+    .wc-msg-asset.is-sticker {
+        border: none; padding: 0; background: none;
+    }
+    .wc-msg-asset.is-sticker img {
+        width: 80px; height: 80px; object-fit: contain;
+        border-radius: 4px; cursor: default;
+    }
 
     /* Compose area */
     .wc-compose {
@@ -606,6 +613,26 @@
         padding: 0; transition: background 0.1s;
     }
     .wc-sticker-item:hover { background: #f5f5f5; }
+    .wc-sticker-img {
+        width: 36px; height: 36px;
+        border: none; background: none; border-radius: 6px;
+        cursor: pointer; padding: 2px;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.1s;
+    }
+    .wc-sticker-img:hover { background: #f5f5f5; }
+    .wc-sticker-img img {
+        width: 100%; height: 100%; object-fit: contain;
+        border-radius: 4px; pointer-events: none;
+    }
+    .wc-sticker-add {
+        width: 36px; height: 36px;
+        border: 2px dashed #d0d0d0; background: none; border-radius: 6px;
+        cursor: pointer; color: #b2b2b2; font-size: 20px;
+        display: flex; align-items: center; justify-content: center;
+        transition: border-color 0.15s, color 0.15s;
+    }
+    .wc-sticker-add:hover { border-color: #57be6a; color: #57be6a; }
 
     .wc-send-btn {
         padding: 5px 18px; border: none; border-radius: 4px;
@@ -1564,6 +1591,8 @@
         .wc-sticker-btn svg { width: 22px; height: 22px; }
         .wc-sticker-panel { width: calc(100vw - 60px); max-width: 320px; right: -10px; }
         .wc-sticker-item { width: 38px; height: 38px; font-size: 24px; }
+        .wc-sticker-img { width: 38px; height: 38px; }
+        .wc-sticker-add { width: 38px; height: 38px; }
 
         /* ---- Danmaku input mobile ---- */
         .danmaku-input-area { width: 92%; padding: 3px 4px; min-height: 44px; }
@@ -2889,14 +2918,17 @@
                 assets.className = 'wc-msg-assets';
                 c.attachments.forEach(att => {
                     const wrap = document.createElement('span');
-                    wrap.className = 'wc-msg-asset';
+                    wrap.className = 'wc-msg-asset' + (att.kind === 'sticker' ? ' is-sticker' : '');
                     const media = att.kind === 'video' ? document.createElement('video') : document.createElement('img');
                     media.src = att.data_url;
                     if (att.kind === 'video') { media.muted = true; media.loop = true; media.playsInline = true; }
-                    else { media.addEventListener('click', () => openLightbox(att.data_url)); }
-                    const label = document.createElement('span');
-                    label.textContent = att.label;
-                    wrap.append(media, label);
+                    else if (att.kind !== 'sticker') { media.addEventListener('click', () => openLightbox(att.data_url)); }
+                    wrap.appendChild(media);
+                    if (att.kind !== 'sticker') {
+                        const label = document.createElement('span');
+                        label.textContent = att.label;
+                        wrap.appendChild(label);
+                    }
                     assets.appendChild(wrap);
                 });
                 content.appendChild(assets);
@@ -3104,36 +3136,103 @@
     ];
     const WC_RECENT_KEY = 'picasso-lab.sticker-recent';
     const WC_RECENT_MAX = 16;
+    const SHARED_STICKER_ROOT = 'sharedStickers';
+    const SHARED_STICKER_MAX_EDGE = 120;
+    let sharedStickers = [];
+    const stickerPanelEls = new Set();
+
+    if (db) {
+        const stickerRef = ref(db, SHARED_STICKER_ROOT);
+        onChildAdded(query(stickerRef, limitToLast(200)), snap => {
+            const s = snap.val();
+            if (!s || !s.data_url) return;
+            sharedStickers.push({ id: snap.key, url: s.data_url });
+            stickerPanelEls.forEach(p => wcRenderShared(p));
+        });
+        onChildRemoved(ref(db, SHARED_STICKER_ROOT), snap => {
+            sharedStickers = sharedStickers.filter(s => s.id !== snap.key);
+            stickerPanelEls.forEach(p => wcRenderShared(p));
+        });
+    }
+
+    function wcResizeSticker(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Read failed'));
+            reader.onload = () => {
+                const img = new Image();
+                img.onerror = () => reject(new Error('Decode failed'));
+                img.onload = () => {
+                    let { width: w, height: h } = img;
+                    const s = Math.min(1, SHARED_STICKER_MAX_EDGE / Math.max(w, h));
+                    w = Math.max(1, Math.round(w * s)); h = Math.max(1, Math.round(h * s));
+                    const c = document.createElement('canvas'); c.width = w; c.height = h;
+                    c.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(c.toDataURL('image/png'));
+                };
+                img.src = String(reader.result || '');
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function wcUploadSticker(file) {
+        if (!db || !file) return;
+        const dataUrl = await wcResizeSticker(file);
+        await push(ref(db, SHARED_STICKER_ROOT), { data_url: dataUrl, timestamp: Date.now() });
+    }
 
     function wcGetRecent() {
         try { return JSON.parse(_storeRead(WC_RECENT_KEY) || '[]').slice(0, WC_RECENT_MAX); } catch (_) { return []; }
     }
-    function wcSaveRecent(emoji) {
-        const arr = wcGetRecent().filter(e => e !== emoji);
-        arr.unshift(emoji);
+    function wcSaveRecent(key) {
+        const arr = wcGetRecent().filter(e => e !== key);
+        arr.unshift(key);
         _storeWrite(WC_RECENT_KEY, JSON.stringify(arr.slice(0, WC_RECENT_MAX)));
     }
+
     function wcBuildStickerGrid(panelEl) {
         let html = '<div class="wc-sticker-grid wc-sticker-recent"></div>';
-        html += '<div class="wc-sticker-label">All Stickers</div>';
+        html += '<div class="wc-sticker-label">Emoji</div>';
         html += '<div class="wc-sticker-grid">';
         for (const e of WC_STICKERS) html += `<button class="wc-sticker-item" type="button" data-emoji="${e}">${e}</button>`;
         html += '</div>';
+        html += '<div class="wc-sticker-label">Shared Stickers</div>';
+        html += '<div class="wc-sticker-grid wc-sticker-shared"></div>';
+        html += '<input class="wc-sticker-file" type="file" accept="image/*" style="display:none">';
         panelEl.innerHTML = html;
+        stickerPanelEls.add(panelEl);
+        wcRenderShared(panelEl);
     }
+
+    function wcRenderShared(panelEl) {
+        const grid = panelEl.querySelector('.wc-sticker-shared');
+        if (!grid) return;
+        let html = '';
+        for (const s of sharedStickers) {
+            html += `<button class="wc-sticker-img" type="button" data-sticker-id="${s.id}" data-sticker-url="${s.url}"><img src="${s.url}" alt="sticker"></button>`;
+        }
+        html += '<button class="wc-sticker-add" type="button" title="Add sticker">+</button>';
+        grid.innerHTML = html;
+    }
+
     function wcRefreshRecent(panelEl) {
         const grid = panelEl.querySelector('.wc-sticker-recent');
         const recent = wcGetRecent();
         if (!recent.length) {
             grid.innerHTML = '';
-            grid.previousElementSibling?.remove();
+            const prev = grid.previousElementSibling;
+            if (prev?.classList.contains('wc-sticker-label')) prev.remove();
             return;
         }
-        const label = grid.previousElementSibling;
-        if (!label || !label.classList.contains('wc-sticker-label')) {
+        if (!grid.previousElementSibling?.classList.contains('wc-sticker-label')) {
             grid.insertAdjacentHTML('beforebegin', '<div class="wc-sticker-label">Recent</div>');
         }
-        grid.innerHTML = recent.map(e => `<button class="wc-sticker-item" type="button" data-emoji="${e}">${e}</button>`).join('');
+        grid.innerHTML = recent.map(key => {
+            const shared = sharedStickers.find(s => s.id === key);
+            if (shared) return `<button class="wc-sticker-img" type="button" data-sticker-id="${shared.id}" data-sticker-url="${shared.url}"><img src="${shared.url}" alt="sticker"></button>`;
+            return `<button class="wc-sticker-item" type="button" data-emoji="${key}">${key}</button>`;
+        }).join('');
     }
 
     // --- Build panel for each card ---
@@ -3259,19 +3358,48 @@
                 setTimeout(() => document.addEventListener('click', () => stickerPanel.classList.remove('is-open'), { once: true }), 0);
             }
         });
+        const stickerFileInput = stickerPanel.querySelector('.wc-sticker-file');
         stickerPanel.addEventListener('click', (e) => {
-            const item = e.target.closest('.wc-sticker-item');
-            if (!item) { e.stopPropagation(); return; }
-            const emoji = item.dataset.emoji;
-            if (!emoji) return;
-            const ta = state.textareaEl;
-            const start = ta.selectionStart, end = ta.selectionEnd;
-            ta.value = ta.value.slice(0, start) + emoji + ta.value.slice(end);
-            ta.selectionStart = ta.selectionEnd = start + emoji.length;
-            ta.focus();
-            ta.dispatchEvent(new Event('input'));
-            wcSaveRecent(emoji);
-            stickerPanel.classList.remove('is-open');
+            e.stopPropagation();
+            // "+" add button
+            if (e.target.closest('.wc-sticker-add')) {
+                stickerFileInput.click();
+                return;
+            }
+            // Shared image sticker
+            const imgItem = e.target.closest('.wc-sticker-img');
+            if (imgItem) {
+                const url = imgItem.dataset.stickerUrl;
+                const id = imgItem.dataset.stickerId;
+                if (!url || !state.commentsRef) return;
+                const author = ecClean(state.nameEl.value, EC_MAX_AUTHOR, 'Anonymous');
+                ecSetAlias(author); state.nameEl.value = author;
+                const payload = { author_name: author, reply_to: '', body: '', attachments: [{ kind: 'sticker', label: 'sticker', data_url: url }], timestamp: Date.now(), owner_id: state.clientId };
+                push(state.commentsRef, payload).catch(() => {});
+                wcSaveRecent(id);
+                stickerPanel.classList.remove('is-open');
+                return;
+            }
+            // Unicode emoji
+            const emojiItem = e.target.closest('.wc-sticker-item');
+            if (emojiItem) {
+                const emoji = emojiItem.dataset.emoji;
+                if (!emoji) return;
+                const ta = state.textareaEl;
+                const start = ta.selectionStart, end = ta.selectionEnd;
+                ta.value = ta.value.slice(0, start) + emoji + ta.value.slice(end);
+                ta.selectionStart = ta.selectionEnd = start + emoji.length;
+                ta.focus();
+                ta.dispatchEvent(new Event('input'));
+                wcSaveRecent(emoji);
+                stickerPanel.classList.remove('is-open');
+            }
+        });
+        stickerFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            try { await wcUploadSticker(file); } catch (_) {}
         });
 
         if (!state.commentsRef) {
