@@ -17,12 +17,12 @@
 
     // -------- PLAYER ROSTER (card = signature playing card) --------
     var PLAYERS = {
-        zhuo:     { name: "Zhuo Chen",    avatar: AV + "zhuo.png",     card: "A♠" },
-        zhongkai: { name: "Zhongkai Yu",  avatar: AV + "zhongkai.png", card: "A♥" },
-        yichen:   { name: "Yichen Lin",   avatar: AV + "yichen.png",   card: "K♦" },
-        zaifeng:  { name: "Zaifeng Pan",  avatar: AV + "zaifeng.png",  card: "A♣" },
-        haotian:  { name: "Haotian Shen", avatar: AV + "haotian.png",  card: "K♥" },
-        chang:    { name: "Chang Chen",   avatar: AV + "chang.png",    card: "Q♥" }
+        zhuo:     { name: "Zhuo Chen",    avatar: AV + "zhuo.webp",     card: "A♠" },
+        zhongkai: { name: "Zhongkai Yu",  avatar: AV + "zhongkai.webp", card: "A♥" },
+        yichen:   { name: "Yichen Lin",   avatar: AV + "yichen.webp",   card: "K♦" },
+        zaifeng:  { name: "Zaifeng Pan",  avatar: AV + "zaifeng.webp",  card: "A♣" },
+        haotian:  { name: "Haotian Shen", avatar: AV + "haotian.webp",  card: "K♥" },
+        chang:    { name: "Chang Chen",   avatar: AV + "chang.webp",    card: "Q♥" }
     };
 
     // -------- MATCH HISTORY (⚠️ placeholder — replace with real) --------
