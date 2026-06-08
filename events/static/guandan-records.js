@@ -20,15 +20,15 @@
 
     var AV = "https://yil384.github.io/Picasso-Lab/people/static/"; // absolute → works embedded anywhere
 
-    // -------- PLAYER ROSTER (✏️ style / quote are placeholders) --------
+    // -------- PLAYER ROSTER (✏️ style placeholders; quote = 座右铭/motto) --------
     var PLAYERS = {
-        zhongkai: { name: "Zhongkai Yu",  avatar: AV + "zhongkai.webp", card: "A♥", style: "稳健控场 · 逢人配大师", quote: "稳住，我们能赢。" },
-        zhuo:     { name: "Zhuo Chen",    avatar: AV + "zhuo.webp",     card: "A♠", style: "炸弹强攻 · 火力全开", quote: "该炸就炸！" },
-        zaifeng:  { name: "Zaifeng Pan",  avatar: AV + "zaifeng.webp",  card: "A♣", style: "灵活接风 · 见缝插针", quote: "再来亿把。" },
-        yichen:   { name: "Yichen Lin",   avatar: AV + "yichen.webp",   card: "K♦", style: "记牌反击 · 后发制人", quote: "我算过了。" },
-        zhengding:{ name: "Zhengding Hu", avatar: AV + "zhengding.webp",card: "K♠", style: "冲 A 猛将 · 大牌敢出", quote: "冲就完了！" },
-        zihan:    { name: "Zihan Hao",    avatar: AV + "zihan.webp",                   card: "Q♦", style: "新锐黑马 · 后劲十足", quote: "萌新求带。" },
-        yilin:    { name: "Yilin Wang",   avatar: AV + "yilin.webp",                   card: "J♥", style: "团队核心 · 配合默契", quote: "队友辛苦了。" }
+        zhongkai: { name: "Zhongkai Yu",  avatar: AV + "zhongkai.webp", card: "A♥", style: "稳健控场 · 逢人配大师", quote: "Let's see. / 思考是好事。" },
+        zhuo:     { name: "Zhuo Chen",    avatar: AV + "zhuo.webp",     card: "A♠", style: "炸弹强攻 · 火力全开", quote: "我将全职在家研究这副牌。" },
+        zaifeng:  { name: "Zaifeng Pan",  avatar: AV + "zaifeng.webp",  card: "A♣", style: "灵活接风 · 见缝插针", quote: "17 张牌你能秒我？" },
+        yichen:   { name: "Yichen Lin",   avatar: AV + "yichen.webp",   card: "K♦", style: "记牌反击 · 后发制人", quote: "别急，还有反转。" },
+        zhengding:{ name: "Zhengding Hu", avatar: AV + "zhengding.webp",card: "K♠", style: "冲 A 猛将 · 大牌敢出", quote: "神了。" },
+        zihan:    { name: "Zihan Hao",    avatar: AV + "zihan.webp",                   card: "Q♦", style: "新锐黑马 · 后劲十足", quote: "" },
+        yilin:    { name: "Yilin Wang",   avatar: AV + "yilin.webp",                   card: "J♥", style: "团队核心 · 配合默契", quote: "" }
     };
 
     // -------- MATCH HISTORY (real records; teamA = left, score levelA:levelB) --------
@@ -178,6 +178,7 @@
                         '<div class="gdr-statline"><span class="ic">' + ICONS.target + '</span><b>' + mvp.wr + '<i>%</i></b><span class="lbl">胜率 Win Rate</span></div>' +
                         '<div class="gdr-statline"><span class="ic">' + ICONS.bolt + '</span><b>' + mvp.aw + '</b><span class="lbl">过 A Cleared A</span></div>' +
                     '</div>' +
+                    (pm.quote ? '<div class="gdr-mvpcard-motto">' + ICONS.quote + ' 座右铭 · “' + esc(pm.quote) + '”</div>' : "") +
                 '</div>' +
                 '<div class="gdr-mvpcard-hero">' +
                     bigCard(pm.card) +
@@ -239,6 +240,7 @@
                 '<div class="gdr-splash-hero">' + bigCard(pm.card) + '<img src="' + avatarSrc(mvp.key) + '" alt=""></div>' +
                 '<div class="gdr-splash-name">' + esc(pm.name) + '</div>' +
                 '<div class="gdr-splash-line"><span>' + ICONS.trophy + ' ' + mvp.pts + ' 积分</span><span>' + mvp.w + '-' + mvp.l + '</span><span>胜率 ' + mvp.wr + '%</span></div>' +
+                (pm.quote ? '<div class="gdr-splash-motto">' + ICONS.quote + ' “' + esc(pm.quote) + '”</div>' : "") +
             '</div>' +
         '</div>';
     }

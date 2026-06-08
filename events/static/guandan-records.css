@@ -202,6 +202,8 @@ body.gdr-open { overflow: hidden; }
 .gdr-mvpcard-name { position: absolute; right: 4px; bottom: 2px; z-index: 3; text-align: right; }
 .gdr-mvpcard-name b { display: block; font-size: 18px; font-weight: 900; color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7); }
 .gdr-mvpcard-name span { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gdr-gold); }
+.gdr-mvpcard-motto { margin-top: 16px; max-width: 380px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-style: italic; color: var(--gdr-gold-2); }
+.gdr-mvpcard-motto .gi { color: var(--gdr-gold); font-size: 14px; flex: none; }
 /* big playing card behind the hero */
 .gdr-bigcard {
     position: absolute; z-index: 1; right: 8%; top: 50%;
@@ -403,6 +405,8 @@ body.gdr-open { overflow: hidden; }
 .gdr-splash-line { margin-top: 12px; display: flex; gap: 18px; justify-content: center; color: rgba(255, 255, 255, 0.72); font-weight: 700; font-size: 14px; }
 .gdr-splash-line span { display: inline-flex; align-items: center; gap: 5px; }
 .gdr-splash-line .gi { color: var(--gdr-gold); }
+.gdr-splash-motto { margin-top: 16px; display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-style: italic; color: var(--gdr-gold-2); }
+.gdr-splash-motto .gi { color: var(--gdr-gold); font-size: 15px; }
 @keyframes gdr-splash-pop { from { opacity: 0; transform: scale(0.82); } to { opacity: 1; transform: scale(1); } }
 
 /* ----- responsive ----- */
@@ -424,5 +428,6 @@ body.gdr-open { overflow: hidden; }
     .gdr-statgrid { max-width: none; }
     .gdr-bigcard { right: auto; left: 50%; top: 44%; transform: translate(-50%, -50%) rotate(8deg); opacity: 0.4; }
     .gdr-mvpcard-name { position: static; text-align: center; margin-top: 12px; }
+    .gdr-mvpcard-motto { max-width: none; justify-content: center; margin-top: 14px; }
     .gdr-mvp-word { margin-bottom: 12px; }
 }
