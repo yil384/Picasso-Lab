@@ -3509,12 +3509,13 @@
         </div>
     </header>
 
-    <div class="gdr-collapse gdr-scope" id="gdr-collapse">
-        <button class="gdr-collapse-toggle" id="gdr-collapse-toggle" type="button" aria-expanded="true" aria-controls="gdr-collapse-body">
-            <span>🏆 巅峰对决 · 历史战绩<span class="gdr-collapse-sub">Peak Showdown</span></span>
-            <span class="gdr-collapse-caret">▾</span>
-        </button>
-        <div class="gdr-collapse-body" id="gdr-collapse-body"></div>
+    <div class="gdr-banner gdr-scope" id="gdr-banner" role="button" tabindex="0" aria-label="打开巅峰对决战绩">
+        <div class="gdr-banner-inner" id="gdr-banner-inner"></div>
+        <button class="gdr-banner-btn" id="gdr-card-open" type="button">巅峰对决 · 完整战绩 ›</button>
+    </div>
+    <div class="gdr-cardmodal gdr-scope" id="gdr-cardmodal" style="display:none" aria-hidden="true">
+        <button class="gdr-cardmodal-close" id="gdr-card-close" type="button" aria-label="Close">&times;</button>
+        <div class="gdr-cardmodal-card"><div id="gdr-cardmodal-body"></div></div>
     </div>
 
     <main id="root"></main>
@@ -6838,16 +6839,31 @@ else render();
 <script src="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.js"></script>
 <script>
 (function () {
-    var body = document.getElementById("gdr-collapse-body");
-    if (body && window.GuandanRecords) body.innerHTML = window.GuandanRecords.buildHTML();
-    var wrap = document.getElementById("gdr-collapse");
-    var toggle = document.getElementById("gdr-collapse-toggle");
-    if (toggle && wrap) {
-        toggle.addEventListener("click", function () {
-            var collapsed = wrap.classList.toggle("collapsed");
-            toggle.setAttribute("aria-expanded", String(!collapsed));
-        });
+    var R = window.GuandanRecords;
+    if (!R) return;
+    var bn = document.getElementById("gdr-banner-inner");
+    if (bn && R.buildBanner) bn.innerHTML = R.buildBanner();
+    var modal = document.getElementById("gdr-cardmodal");
+    var mbody = document.getElementById("gdr-cardmodal-body");
+    var openBtn = document.getElementById("gdr-card-open");
+    var banner = document.getElementById("gdr-banner");
+    var closeBtn = document.getElementById("gdr-card-close");
+    var rendered = false;
+    function openCard() {
+        if (!rendered && mbody) { mbody.innerHTML = R.buildHTML(); rendered = true; }
+        if (modal) { modal.style.display = "flex"; modal.setAttribute("aria-hidden", "false"); }
+        document.body.style.overflow = "hidden";
     }
+    function closeCard() {
+        if (modal) { modal.style.display = "none"; modal.setAttribute("aria-hidden", "true"); }
+        document.body.style.overflow = "";
+    }
+    openBtn && openBtn.addEventListener("click", function (e) { e.stopPropagation(); openCard(); });
+    banner && banner.addEventListener("click", openCard);
+    banner && banner.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCard(); } });
+    closeBtn && closeBtn.addEventListener("click", closeCard);
+    modal && modal.addEventListener("click", function (e) { if (e.target === modal) closeCard(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && modal && modal.style.display === "flex") closeCard(); });
 })();
 </script>
 </body>

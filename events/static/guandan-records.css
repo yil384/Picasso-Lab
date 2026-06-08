@@ -333,6 +333,40 @@ body.gdr-open { overflow: hidden; }
     .gdr-scope *, .gdr-board * { animation: none !important; }
 }
 
+/* ===================== guandan.html banner + floating card ===================== */
+.gdr-banner {
+    max-width: 1380px; margin: 16px auto 0; display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px 10px 18px; border-radius: 14px; cursor: pointer;
+    border: 1px solid rgba(255, 211, 94, 0.28);
+    background: linear-gradient(135deg, rgba(255, 59, 92, 0.1), rgba(46, 139, 255, 0.1)), rgba(8, 10, 22, 0.72);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    transition: border-color 0.2s;
+}
+.gdr-banner:hover { border-color: rgba(255, 211, 94, 0.5); }
+.gdr-banner-inner { flex: 1; min-width: 0; display: flex; align-items: center; gap: 18px; overflow-x: auto; white-space: nowrap; font-size: 13px; color: #e9eefc; scrollbar-width: none; }
+.gdr-banner-inner::-webkit-scrollbar { display: none; }
+.gdr-bn-seg { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.gdr-bn-seg .gi { color: var(--gdr-gold); font-size: 14px; }
+.gdr-bn-rankseg { color: rgba(233, 238, 252, 0.82); }
+.gdr-bn-rank { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: rgba(255, 211, 94, 0.18); color: var(--gdr-gold); font-size: 10px; font-weight: 800; margin-right: 4px; }
+.gdr-bn-seg i { color: var(--gdr-gold); font-style: normal; font-weight: 800; margin-left: 4px; }
+.gdr-bn-dot { color: rgba(255, 255, 255, 0.3); margin: 0 8px; flex: none; }
+.gdr-banner-btn { flex: none; padding: 9px 15px; border-radius: 999px; border: 1px solid rgba(255, 211, 94, 0.5); background: var(--gdr-metal); color: #1a1205; font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer; white-space: nowrap; box-shadow: 0 0 14px rgba(255, 211, 94, 0.25); }
+.gdr-banner-btn:hover { filter: brightness(1.06); }
+
+.gdr-cardmodal { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(4, 5, 12, 0.72); backdrop-filter: blur(8px); animation: gdr-fade-in 0.25s; }
+@keyframes gdr-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.gdr-cardmodal-close { position: absolute; top: 18px; right: 20px; z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 211, 94, 0.4); background: rgba(10, 12, 24, 0.8); color: var(--gdr-gold-2); font-size: 24px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); transition: background 0.2s, transform 0.3s; }
+.gdr-cardmodal-close:hover { background: rgba(255, 59, 92, 0.4); transform: rotate(90deg); }
+.gdr-cardmodal-card {
+    position: relative; width: 100%; max-width: 660px; max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    border-radius: 18px; border: 1px solid rgba(255, 211, 94, 0.25);
+    background: radial-gradient(70% 40% at 50% 0%, rgba(255, 211, 94, 0.06), transparent 60%), linear-gradient(180deg, #0b0e1d, #06070e);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); padding: 22px 18px 26px;
+    animation: gdr-card-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes gdr-card-in { from { opacity: 0; transform: translateY(22px) scale(0.97); } to { opacity: 1; transform: none; } }
+
 /* ===================== paged overlay (events "mvp") ===================== */
 .gdr-pager { position: relative; max-width: 920px; margin: 0 auto; }
 .gdr-page { display: none; }
