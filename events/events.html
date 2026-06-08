@@ -500,8 +500,14 @@
         border: none; padding: 0; background: none;
     }
     .wc-msg-asset.is-sticker img {
-        width: 80px; height: 80px; object-fit: contain;
-        border-radius: 4px; cursor: default;
+        width: 100px; height: 100px; object-fit: contain;
+        border-radius: 6px; cursor: default;
+    }
+    .wc-draft-item.is-sticker {
+        border-style: solid; border-color: #c8e6c9;
+    }
+    .wc-draft-item.is-sticker img {
+        width: 40px; height: 40px; object-fit: contain;
     }
 
     /* Compose area */
@@ -558,7 +564,7 @@
     }
     .wc-attach-btn:hover { color: #666; }
     .wc-attach-btn svg {
-        width: 20px; height: 20px;
+        width: 28px; height: 28px;
         stroke: currentColor; fill: none;
         stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
@@ -574,7 +580,7 @@
     }
     .wc-sticker-btn:hover { color: #666; }
     .wc-sticker-btn svg {
-        width: 20px; height: 20px;
+        width: 22px; height: 22px;
         stroke: currentColor; fill: none;
         stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
@@ -1966,6 +1972,25 @@
     </div>
 </div>
 
+<div class="event-card cursor-hotpot" data-event-id="mongolia-hotpot-2026">
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/1.jpg" alt="Mongolian Hot Pot"></div>
+            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/2.jpg" alt="Mongolian Hot Pot"></div>
+            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/3.jpg" alt="Mongolian Hot Pot"></div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+    <div class="event-content">
+        <div class="event-date">June 7, 2026</div>
+        <h3 class="event-title">🍲 Hot Pot Buffet at Mongolian Hot Pot!</h3>
+        <p class="event-text">
+            We joined friends from the neighboring lab for an all-you-can-eat hot pot feast at <strong>Mongolian Hot Pot</strong>! Big thanks to <strong>Yanbo</strong> for sharing tons of valuable experience and insights. Wishing everyone a smooth and successful summer internship in the Bay Area!
+        </p>
+        <a href="https://maps.app.goo.gl/mB3rGjykJAkctdP4A" class="read-more" target="_blank" rel="noopener">📍 Mongolian Hot Pot on Google Maps &rarr;</a>
+    </div>
+</div>
+
 <div class="event-card cursor-bbq" data-event-id="alon-farewell-pita22-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
@@ -2833,7 +2858,8 @@
             const dataUrl = String(item?.data_url || '');
             if (kind === 'video' ? !dataUrl.startsWith('data:video/') : !dataUrl.startsWith('data:image/')) return null;
             if (dataUrl.length > EC_MAX_DATA_URL) return null;
-            return { kind, label: ecClean(item?.label, 32, kind === 'video' ? 'video' : 'image'), data_url: dataUrl };
+            const fallback = kind === 'sticker' ? '' : kind === 'video' ? 'video' : 'image';
+            return { kind, label: ecClean(item?.label, 32, fallback), data_url: dataUrl };
         }).filter(Boolean);
     }
 
@@ -2908,8 +2934,8 @@
                 content.appendChild(replyAuthor);
             }
 
+            content.appendChild(document.createTextNode(': '));
             if (c.body) {
-                content.appendChild(document.createTextNode(': '));
                 content.appendChild(document.createTextNode(c.body));
             }
 
@@ -2922,7 +2948,7 @@
                     const media = att.kind === 'video' ? document.createElement('video') : document.createElement('img');
                     media.src = att.data_url;
                     if (att.kind === 'video') { media.muted = true; media.loop = true; media.playsInline = true; }
-                    else if (att.kind !== 'sticker') { media.addEventListener('click', () => openLightbox(att.data_url)); }
+                    else { media.addEventListener('click', () => openLightbox(att.data_url)); media.style.cursor = 'zoom-in'; }
                     wrap.appendChild(media);
                     if (att.kind !== 'sticker') {
                         const label = document.createElement('span');
@@ -3027,14 +3053,18 @@
         state.attachments.forEach((att, i) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'wc-draft-item';
+            btn.className = 'wc-draft-item' + (att.kind === 'sticker' ? ' is-sticker' : '');
             btn.title = 'Remove';
             const media = att.kind === 'video' ? document.createElement('video') : document.createElement('img');
             media.src = att.data_url;
             if (att.kind === 'video') { media.muted = true; media.loop = true; media.playsInline = true; }
-            const label = document.createElement('span');
-            label.textContent = att.label;
-            btn.append(media, label);
+            if (att.kind !== 'sticker' && att.label) {
+                const label = document.createElement('span');
+                label.textContent = att.label;
+                btn.append(media, label);
+            } else {
+                btn.appendChild(media);
+            }
             btn.addEventListener('click', () => { state.attachments.splice(i, 1); wcRenderDraft(state); });
             state.draftEl.appendChild(btn);
         });
@@ -3263,13 +3293,13 @@
                 <div class="wc-input-wrap">
                     <textarea class="wc-textarea" maxlength="420" rows="1" placeholder="Comment"></textarea>
                     <div class="wc-input-footer">
-                        <button class="wc-attach-btn" type="button" title="Attach image/video">${wcIcon('image')}</button>
-                        <input class="wc-file" type="file" accept="image/*,video/*" multiple>
-                        <input class="wc-name-input" maxlength="28" placeholder="Name (optional)">
                         <div class="wc-sticker-wrap">
                             <button class="wc-sticker-btn" type="button" title="Stickers">${wcIcon('smile')}</button>
                             <div class="wc-sticker-panel"></div>
                         </div>
+                        <button class="wc-attach-btn" type="button" title="Attach image/video">${wcIcon('image')}</button>
+                        <input class="wc-file" type="file" accept="image/*,video/*" multiple>
+                        <input class="wc-name-input" maxlength="28" placeholder="Name (optional)">
                         <button class="wc-send-btn" type="button" disabled>Send</button>
                     </div>
                 </div>
@@ -3371,13 +3401,13 @@
             if (imgItem) {
                 const url = imgItem.dataset.stickerUrl;
                 const id = imgItem.dataset.stickerId;
-                if (!url || !state.commentsRef) return;
-                const author = ecClean(state.nameEl.value, EC_MAX_AUTHOR, 'Anonymous');
-                ecSetAlias(author); state.nameEl.value = author;
-                const payload = { author_name: author, reply_to: '', body: '', attachments: [{ kind: 'sticker', label: 'sticker', data_url: url }], timestamp: Date.now(), owner_id: state.clientId };
-                push(state.commentsRef, payload).catch(() => {});
+                if (!url) return;
+                if (state.attachments.length >= EC_MAX_ATTACHMENTS) { wcSetStatus(state, 'Attachment limit reached.', true); return; }
+                state.attachments.push({ kind: 'sticker', label: '', data_url: url });
+                wcRenderDraft(state);
                 wcSaveRecent(id);
                 stickerPanel.classList.remove('is-open');
+                state.textareaEl.focus();
                 return;
             }
             // Unicode emoji
