@@ -104,6 +104,11 @@ body.gdr-open { overflow: hidden; }
 }
 .gdr-hero-sub::before, .gdr-hero-sub::after { content: ''; width: 38px; height: 1px; background: linear-gradient(90deg, transparent, var(--gdr-gold)); }
 .gdr-hero-sub::after { transform: scaleX(-1); }
+.gdr-hero-tag { position: relative; margin-top: 9px; font-size: 11.5px; color: rgba(255, 211, 94, 0.72); letter-spacing: 0.01em; }
+
+/* drop-to-2 note on the poster (not a clean shutout) */
+.gdr-pnote { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: rgba(255, 211, 94, 0.92); border: 1px solid rgba(255, 211, 94, 0.42); border-radius: 999px; padding: 3px 12px; }
+.gdr-pnote .gi { font-size: 11px; }
 
 /* ----- VS poster ----- */
 .gdr-poster {
@@ -242,6 +247,31 @@ body.gdr-open { overflow: hidden; }
 .gdr-mvpc { display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 800; font-size: 13px; color: var(--gdr-gold); white-space: nowrap; }
 .gdr-mvpc .gi { font-size: 14px; }
 
+/* ----- rich leaderboard (积分 + 打法 + 口头禅) ----- */
+.gdr-ptable { display: flex; flex-direction: column; gap: 10px; margin-bottom: 34px; }
+.gdr-prow {
+    display: grid; grid-template-columns: 38px 46px 1fr auto; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 12px; border: 1px solid var(--gdr-line);
+    background: linear-gradient(100deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+}
+.gdr-prow.top1 { border-color: rgba(255, 211, 94, 0.42); background: linear-gradient(100deg, rgba(255, 211, 94, 0.18), rgba(255, 211, 94, 0.02)); box-shadow: inset 0 0 0 1px rgba(255, 211, 94, 0.22); }
+.gdr-prank { display: flex; align-items: center; justify-content: center; }
+.gdr-pava { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.25); background: #0a0c16; }
+.gdr-prow.top1 .gdr-pava { border-color: var(--gdr-gold); box-shadow: 0 0 12px rgba(255, 211, 94, 0.5); }
+.gdr-pinfo { min-width: 0; }
+.gdr-pname { font-size: 15px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gdr-pstyle { font-size: 11px; font-weight: 600; color: var(--gdr-gold-2); display: inline-flex; align-items: center; gap: 3px; opacity: 0.92; }
+.gdr-pstyle .gi { font-size: 12px; opacity: 0.8; }
+.gdr-pquote { font-size: 11.5px; color: rgba(233, 238, 252, 0.6); margin-top: 4px; display: inline-flex; align-items: center; gap: 5px; font-style: italic; }
+.gdr-pquote .gi { font-size: 12px; color: rgba(255, 211, 94, 0.55); flex: none; }
+.gdr-pstats { display: flex; align-items: center; gap: 16px; }
+.gdr-ppts { text-align: center; }
+.gdr-ppts b { font-size: 23px; font-weight: 900; color: var(--gdr-gold); display: block; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 0 12px rgba(255, 211, 94, 0.3); }
+.gdr-ppts span { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
+.gdr-pstat { text-align: center; }
+.gdr-pstat b { font-size: 14px; font-weight: 800; color: #fff; display: block; line-height: 1; font-variant-numeric: tabular-nums; }
+.gdr-pstat span { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
+
 /* ----- match cards ----- */
 .gdr-matches { display: flex; flex-direction: column; gap: 14px; }
 .gdr-match { position: relative; border-radius: 12px; padding: 15px 16px; border: 1px solid var(--gdr-line);
@@ -309,6 +339,10 @@ body.gdr-open { overflow: hidden; }
     .gdr-match-top { grid-template-columns: 1fr; gap: 12px; }
     .gdr-mteam.b { flex-direction: row; text-align: left; }
     .gdr-row { grid-template-columns: 42px 1fr 68px 48px; gap: 6px; padding: 9px 10px; }
+    .gdr-prow { grid-template-columns: 30px 42px 1fr; gap: 9px; }
+    .gdr-pava { width: 42px; height: 42px; }
+    .gdr-pstats { grid-column: 1 / -1; justify-content: space-between; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--gdr-line); gap: 8px; }
+    .gdr-ppts b { font-size: 20px; }
     .gdr-collapse-body { padding: 6px 14px 18px; }
     .gdr-collapse-toggle { font-size: 15px; padding: 13px 16px; }
     .gdr-collapse-toggle .gdr-collapse-sub { display: none; }
