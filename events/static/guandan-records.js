@@ -13,7 +13,7 @@
 (function (global) {
     "use strict";
 
-    var AV = "../people/static/"; // avatars relative to /events/*.html
+    var AV = "https://yil384.github.io/Picasso-Lab/people/static/"; // absolute so the board works embedded anywhere
 
     // -------- PLAYER ROSTER (card = signature playing card) --------
     var PLAYERS = {
