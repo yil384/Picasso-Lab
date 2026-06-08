@@ -2711,12 +2711,59 @@
     const gdrCloseBtn = gdrOverlay?.querySelector('.gdr-close');
     const gdrCode = 'mvp';
     let gdrBuffer = '';
-    let gdrRendered = false;
+    let gdrPager = null;
+    function setupGdrPager() {
+        const pages = [].slice.call(gdrScroll.querySelectorAll('.gdr-page'));
+        const dots = [].slice.call(gdrScroll.querySelectorAll('.gdr-dot'));
+        const prevBtn = gdrScroll.querySelector('.gdr-pg-prev');
+        const nextBtn = gdrScroll.querySelector('.gdr-pg-next');
+        let idx = 0;
+        function show(n, dir) {
+            if (!pages.length) return;
+            n = Math.max(0, Math.min(pages.length - 1, n));
+            pages[idx] && pages[idx].classList.remove('active');
+            dots[idx] && dots[idx].classList.remove('active');
+            idx = n;
+            pages[idx].style.setProperty('--gdr-dir', dir < 0 ? '-34px' : '34px');
+            pages[idx].classList.add('active');
+            dots[idx] && dots[idx].classList.add('active');
+            if (prevBtn) prevBtn.disabled = idx === 0;
+            if (nextBtn) nextBtn.disabled = idx === pages.length - 1;
+            gdrOverlay.scrollTop = 0;
+        }
+        pages.forEach(p => p.classList.remove('active'));
+        show(0, 1);
+        prevBtn && prevBtn.addEventListener('click', () => show(idx - 1, -1));
+        nextBtn && nextBtn.addEventListener('click', () => show(idx + 1, 1));
+        dots.forEach((d, i) => d.addEventListener('click', () => show(i, i > idx ? 1 : -1)));
+        let x0 = null;
+        gdrScroll.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+        gdrScroll.addEventListener('touchend', e => {
+            if (x0 == null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 50) show(idx + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+            x0 = null;
+        }, { passive: true });
+        gdrPager = { prev: () => show(idx - 1, -1), next: () => show(idx + 1, 1) };
+    }
     function openGdr() {
         if (!gdrOverlay) return;
-        if (!gdrRendered && window.GuandanRecords) {
+        gdrPager = null;
+        if (window.GuandanRecords && window.GuandanRecords.buildPages) {
+            const d = window.GuandanRecords.buildPages();
+            const dots = d.pages.map((_, i) => '<span class="gdr-dot" data-i="' + i + '"></span>').join('');
+            gdrScroll.innerHTML =
+                '<div class="gdr-pager">' + d.pages.join('') + '</div>' +
+                '<div class="gdr-pager-nav"><button class="gdr-pg-btn gdr-pg-prev" type="button" aria-label="Prev">‹</button><div class="gdr-pager-dots">' + dots + '</div><button class="gdr-pg-btn gdr-pg-next" type="button" aria-label="Next">›</button></div>' +
+                d.splash;
+            setupGdrPager();
+            const sp = gdrScroll.querySelector('.gdr-splash');
+            if (sp) {
+                setTimeout(() => sp.classList.add('gone'), 1900);
+                setTimeout(() => { if (sp.parentNode) sp.remove(); }, 2600);
+            }
+        } else if (window.GuandanRecords) {
             gdrScroll.innerHTML = window.GuandanRecords.buildHTML();
-            gdrRendered = true;
         }
         gdrOverlay.style.display = 'block';
         gdrOverlay.setAttribute('aria-hidden', 'false');
@@ -2734,9 +2781,10 @@
     gdrOverlay?.addEventListener('click', (e) => { if (e.target === gdrOverlay) closeGdr(); });
 
     document.addEventListener('keydown', (e) => {
-        if (gdrOverlay?.classList.contains('active') && e.key === 'Escape') {
-            closeGdr();
-            return;
+        if (gdrOverlay?.classList.contains('active')) {
+            if (e.key === 'Escape') { closeGdr(); return; }
+            if (gdrPager && e.key === 'ArrowRight') { gdrPager.next(); return; }
+            if (gdrPager && e.key === 'ArrowLeft') { gdrPager.prev(); return; }
         }
         if (guandanOverlay?.classList.contains('active') && e.key === 'Escape') {
             closeGuandanEgg();
