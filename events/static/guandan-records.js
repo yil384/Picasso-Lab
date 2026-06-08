@@ -83,6 +83,7 @@
         var bRk = !aWin ? "win" : "b";
         var poster =
             '<div class="gdr-poster">' +
+                '<i class="gdr-corner tl"></i><i class="gdr-corner tr"></i><i class="gdr-corner bl"></i><i class="gdr-corner br"></i>' +
                 '<div class="gdr-poster-meta"><span class="gdr-latest">最新一战 Latest</span><span>' + esc(L.date) + ' · ' + esc(L.round || "") + '</span></div>' +
                 '<div class="gdr-vs">' +
                     '<div class="gdr-team side-a' + (aWin ? " is-win" : "") + '">' +
@@ -92,7 +93,7 @@
                         '<span class="gdr-win-tag">WIN</span>' +
                     '</div>' +
                     '<div class="gdr-center">' +
-                        '<div class="gdr-vs-badge">VS</div>' +
+                        '<div class="gdr-emblem"><span class="ray"></span><span class="wing l"></span><span class="disc"><span class="vs">VS</span></span><span class="wing r"></span></div>' +
                         '<div class="gdr-score"><span class="gdr-rk ' + aRk + '">' + esc(L.levelA) + '</span><span class="sep">:</span><span class="gdr-rk ' + bRk + '">' + esc(L.levelB) + '</span></div>' +
                         (L.shutout ? '<div class="gdr-shutout">零封 Shutout</div>' : "") +
                     '</div>' +
@@ -145,10 +146,11 @@
         var history = '<div class="gdr-section-title">历史对阵 <span>Match History</span></div><div class="gdr-matches">' + cards + '</div>';
 
         return '<div class="gdr-board">' +
-            '<div class="gdr-head">' +
-                '<div class="gdr-kicker">Picasso Lab · 掼蛋</div>' +
-                '<h2 class="gdr-title">巅峰对决 PEAK SHOWDOWN</h2>' +
-                '<p class="gdr-sub">Hall of Records</p>' +
+            '<div class="gdr-hero">' +
+                '<div class="gdr-hero-rays"></div>' +
+                '<div class="gdr-hero-trophy">🏆</div>' +
+                '<h2 class="gdr-hero-title">巅峰对决</h2>' +
+                '<div class="gdr-hero-sub">Peak Showdown · Picasso Lab 掼蛋</div>' +
             '</div>' +
             poster + leaderboard + history +
             '<div class="gdr-foot-note">⚠️ 占位示例数据 placeholder records — 待替换为真实战绩</div>' +
