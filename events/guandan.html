@@ -3411,6 +3411,7 @@
         }
     }
 </style>
+<link rel="stylesheet" href="static/guandan-records.css">
 </head>
 <body>
 <div class="app-shell">
@@ -3429,6 +3430,14 @@
             <button class="btn" id="back-events-btn" type="button">Back to Events</button>
         </div>
     </header>
+
+    <div class="gdr-collapse gdr-scope" id="gdr-collapse">
+        <button class="gdr-collapse-toggle" id="gdr-collapse-toggle" type="button" aria-expanded="true" aria-controls="gdr-collapse-body">
+            <span>🏆 巅峰对决 · 历史战绩<span class="gdr-collapse-sub">Peak Showdown</span></span>
+            <span class="gdr-collapse-caret">▾</span>
+        </button>
+        <div class="gdr-collapse-body" id="gdr-collapse-body"></div>
+    </div>
 
     <main id="root"></main>
 </div>
@@ -6747,6 +6756,21 @@ document.addEventListener("keydown", event => {
 
 if (roomCode) attachRoom(roomCode);
 else render();
+</script>
+<script src="static/guandan-records.js"></script>
+<script>
+(function () {
+    var body = document.getElementById("gdr-collapse-body");
+    if (body && window.GuandanRecords) body.innerHTML = window.GuandanRecords.buildHTML();
+    var wrap = document.getElementById("gdr-collapse");
+    var toggle = document.getElementById("gdr-collapse-toggle");
+    if (toggle && wrap) {
+        toggle.addEventListener("click", function () {
+            var collapsed = wrap.classList.toggle("collapsed");
+            toggle.setAttribute("aria-expanded", String(!collapsed));
+        });
+    }
+})();
 </script>
 </body>
 </html>

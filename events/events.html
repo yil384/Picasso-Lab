@@ -6,6 +6,7 @@
 <title>Lab Events - Live Danmaku</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="static/guandan-records.css">
 
 <style>
     /* =========================================
@@ -1975,6 +1976,11 @@
     </div>
 </div>
 
+<div id="gdr-overlay" class="gdr-overlay gdr-scope" aria-hidden="true">
+    <button class="gdr-close" type="button" aria-label="Close records">&times;</button>
+    <div class="gdr-scroll"></div>
+</div>
+
 <div class="news-banner">
     <div class="ticker-track">
         <div class="ticker-content">
@@ -2340,6 +2346,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script src="static/guandan-records.js"></script>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
@@ -2695,7 +2702,37 @@
 
     playGuandanRestoreTransition();
 
+    // 🏆 Guandan Peak-Showdown records overlay (type "mvp" to open)
+    const gdrOverlay = document.getElementById('gdr-overlay');
+    const gdrScroll = gdrOverlay?.querySelector('.gdr-scroll');
+    const gdrCloseBtn = gdrOverlay?.querySelector('.gdr-close');
+    const gdrCode = 'mvp';
+    let gdrBuffer = '';
+    let gdrRendered = false;
+    function openGdr() {
+        if (!gdrOverlay) return;
+        if (!gdrRendered && window.GuandanRecords) {
+            gdrScroll.innerHTML = window.GuandanRecords.buildHTML();
+            gdrRendered = true;
+        }
+        gdrOverlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('gdr-open');
+        requestAnimationFrame(() => gdrOverlay.classList.add('active'));
+    }
+    function closeGdr() {
+        if (!gdrOverlay) return;
+        gdrOverlay.classList.remove('active');
+        gdrOverlay.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('gdr-open');
+    }
+    gdrCloseBtn?.addEventListener('click', closeGdr);
+    gdrOverlay?.addEventListener('click', (e) => { if (e.target === gdrOverlay) closeGdr(); });
+
     document.addEventListener('keydown', (e) => {
+        if (gdrOverlay?.classList.contains('active') && e.key === 'Escape') {
+            closeGdr();
+            return;
+        }
         if (guandanOverlay?.classList.contains('active') && e.key === 'Escape') {
             closeGuandanEgg();
             return;
@@ -2706,6 +2743,12 @@
         const ch = e.key.toLowerCase();
         guandanBuffer = (guandanBuffer + ch).slice(-guandanCode.length);
         guandanGameBuffer = (guandanGameBuffer + ch).slice(-guandanGameCode.length);
+        gdrBuffer = (gdrBuffer + ch).slice(-gdrCode.length);
+        if (gdrBuffer === gdrCode) {
+            gdrBuffer = '';
+            openGdr();
+            return;
+        }
         if (guandanBuffer === guandanCode) {
             guandanBuffer = '';
             openGuandanEgg();
