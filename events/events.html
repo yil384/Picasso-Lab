@@ -1976,7 +1976,7 @@
     </div>
 </div>
 
-<div id="gdr-overlay" class="gdr-overlay gdr-scope" aria-hidden="true">
+<div id="gdr-overlay" class="gdr-overlay gdr-scope" aria-hidden="true" style="display:none">
     <button class="gdr-close" type="button" aria-label="Close records">&times;</button>
     <div class="gdr-scroll"></div>
 </div>
@@ -2718,6 +2718,7 @@
             gdrScroll.innerHTML = window.GuandanRecords.buildHTML();
             gdrRendered = true;
         }
+        gdrOverlay.style.display = 'block';
         gdrOverlay.setAttribute('aria-hidden', 'false');
         document.body.classList.add('gdr-open');
         requestAnimationFrame(() => gdrOverlay.classList.add('active'));
@@ -2725,6 +2726,7 @@
     function closeGdr() {
         if (!gdrOverlay) return;
         gdrOverlay.classList.remove('active');
+        gdrOverlay.style.display = 'none';
         gdrOverlay.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('gdr-open');
     }
