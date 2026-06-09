@@ -739,17 +739,19 @@
     }
     .preview-seat {
         position: absolute;
-        width: 48px;
-        height: 48px;
+        width: 46px;
+        height: 46px;
         border-radius: 50%;
-        border: 1px solid rgba(255,255,255,0.3);
-        background: radial-gradient(circle at 30% 24%, #fff, #45d9ff 32%, #00629B);
-        box-shadow: 0 12px 25px rgba(0,0,0,0.28);
+        border: 2px solid rgba(255,211,94,0.55);
+        box-shadow: 0 10px 22px rgba(0,0,0,0.42), inset 0 2px 6px rgba(255,255,255,0.22);
     }
-    .preview-seat.s0 { left: 50%; bottom: -24px; transform: translateX(-50%); }
-    .preview-seat.s1 { left: -24px; top: 50%; transform: translateY(-50%); }
-    .preview-seat.s2 { left: 50%; top: -24px; transform: translateX(-50%); }
-    .preview-seat.s3 { right: -24px; top: 50%; transform: translateY(-50%); }
+    /* partners sit across the table → vertical pair = red team, horizontal pair = blue team */
+    .preview-seat.s0, .preview-seat.s2 { background: radial-gradient(circle at 32% 26%, #ff9a8c, #e23b3b 46%, #851414); }
+    .preview-seat.s1, .preview-seat.s3 { background: radial-gradient(circle at 32% 26%, #8fd6ff, #2f8bd6 46%, #114a84); }
+    .preview-seat.s0 { left: 50%; bottom: -23px; transform: translateX(-50%); }
+    .preview-seat.s1 { left: -23px; top: 50%; transform: translateY(-50%); }
+    .preview-seat.s2 { left: 50%; top: -23px; transform: translateX(-50%); }
+    .preview-seat.s3 { right: -23px; top: 50%; transform: translateY(-50%); }
     .rule-chips span {
         background: rgba(255,255,255,0.075);
         border: 1px solid rgba(255,255,255,0.14);
