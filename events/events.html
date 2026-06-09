@@ -1171,6 +1171,124 @@
     }
     .guandan-monster-transition.active,
     .guandan-restore-transition.active { display: block; }
+
+    /* ===== Card-Kaiju entry transition (redesigned, esports theme) ===== */
+    .guandan-monster-transition {
+        background:
+            radial-gradient(58% 48% at 50% 42%, rgba(255, 86, 58, 0.22), transparent 60%),
+            radial-gradient(72% 60% at 50% 118%, rgba(46, 120, 255, 0.16), transparent 70%),
+            radial-gradient(42% 32% at 50% 46%, rgba(255, 200, 80, 0.14), transparent 72%),
+            linear-gradient(180deg, #0d0a18, #050409 72%);
+    }
+    .guandan-monster-transition::before {
+        content: "";
+        position: absolute;
+        inset: -14%;
+        opacity: 0.16;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+        background-size: 48px 48px;
+        transform: rotate(-5deg) scale(1.18);
+        pointer-events: none;
+        z-index: 0;
+    }
+    .guandan-monster-transition::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 5;
+        box-shadow: inset 0 0 200px 40px rgba(120, 8, 0, 0.55);
+        animation: gmtVignette 0.85s steps(1) 0.4s infinite;
+    }
+    .gmt-rays {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: min(900px, 130vw);
+        aspect-ratio: 1;
+        transform: translate(-50%, -50%) scale(0.3);
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 86, 58, 0.3), rgba(255, 86, 58, 0) 62%);
+        opacity: 0;
+        animation: gmtRays 0.95s ease-out 0.12s forwards;
+        pointer-events: none;
+        z-index: 1;
+    }
+    .gmt-title {
+        position: absolute;
+        left: 50%;
+        top: 10%;
+        transform: translateX(-50%);
+        text-align: center;
+        z-index: 3;
+        pointer-events: none;
+        font-weight: 900;
+        font-style: italic;
+        font-size: clamp(32px, 6.4vw, 70px);
+        letter-spacing: 0.02em;
+        line-height: 1;
+        background: linear-gradient(180deg, #fff7d4 0%, #ffd96a 40%, #b9831f 62%, #ffe9a8 82%, #8a6612 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 22px rgba(255, 170, 40, 0.25));
+        animation: gmtTitleIn 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+    }
+    .gmt-title em {
+        display: block;
+        margin-top: 10px;
+        font-style: normal;
+        font-weight: 800;
+        font-size: 0.32em;
+        letter-spacing: 0.42em;
+        text-indent: 0.42em;
+        color: #ff5a4a;
+        -webkit-text-fill-color: #ff5a4a;
+        filter: drop-shadow(0 0 12px rgba(255, 70, 50, 0.6));
+        animation: gmtAlert 0.85s steps(1) 0.4s infinite;
+    }
+    .gmt-boss {
+        position: absolute;
+        left: 50%;
+        top: 52%;
+        width: clamp(180px, 23vw, 280px);
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        filter: drop-shadow(0 0 46px rgba(255, 86, 58, 0.5)) drop-shadow(0 26px 40px rgba(0, 0, 0, 0.6));
+        animation: gmtBossIn 0.66s cubic-bezier(0.2, 0.86, 0.22, 1) forwards, gmtBossShake 0.14s linear 0.72s 7;
+    }
+    .gmt-boss-svg { width: 100%; height: auto; display: block; }
+    .gmt-eyes { animation: gmtEyePulse 0.62s ease-in-out 0.7s infinite alternate; transform-origin: center; }
+    .guandan-monster-transition .transition-card {
+        background: linear-gradient(157deg, #fffdf6, #e9ecf3);
+        border: 1px solid rgba(255, 211, 94, 0.45);
+        box-shadow: 0 0 16px rgba(255, 200, 90, 0.28), 0 14px 26px rgba(0, 0, 0, 0.45);
+        border-radius: 10px;
+    }
+    @keyframes gmtRays {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+        42% { opacity: 1; }
+        100% { opacity: 0.34; transform: translate(-50%, -50%) scale(1.12); }
+    }
+    @keyframes gmtTitleIn {
+        0% { opacity: 0; transform: translateX(-50%) translateY(-16px) scale(0.92); }
+        100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    }
+    @keyframes gmtAlert { 0%, 62% { opacity: 1; } 63%, 100% { opacity: 0.25; } }
+    @keyframes gmtVignette { 0%, 62% { opacity: 1; } 63%, 100% { opacity: 0.45; } }
+    @keyframes gmtBossIn {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(2.3) rotate(-12deg); }
+        55% { opacity: 1; }
+        100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
+    }
+    @keyframes gmtBossShake { 0%, 100% { margin-left: 0; } 25% { margin-left: -7px; } 75% { margin-left: 7px; } }
+    @keyframes gmtEyePulse {
+        from { opacity: 0.82; filter: none; }
+        to { opacity: 1; filter: drop-shadow(0 0 9px rgba(255, 150, 45, 0.9)); }
+    }
     .guandan-restore-transition.card-only {
         background:
             radial-gradient(circle at 50% 52%, rgba(255,205,0,0.2), transparent 24%),
@@ -1963,16 +2081,29 @@
 </div>
 
 <div class="guandan-monster-transition" id="guandan-monster-transition" aria-hidden="true">
-    <div class="guandan-transition-title">卡牌怪兽来袭</div>
-    <div class="card-kaiju" aria-hidden="true">
-        <div class="kaiju-head">
-            <span class="kaiju-eye left"></span>
-            <span class="kaiju-eye right"></span>
-            <span class="kaiju-mouth"></span>
-        </div>
-        <div class="kaiju-arm left"><span class="kaiju-claw"></span></div>
-        <div class="kaiju-arm right"><span class="kaiju-claw"></span></div>
-        <div class="kaiju-body"></div>
+    <div class="gmt-rays" aria-hidden="true"></div>
+    <div class="gmt-title">CARD KAIJU<em>· INCOMING ·</em></div>
+    <div class="gmt-boss" aria-hidden="true">
+        <svg class="gmt-boss-svg" viewBox="0 0 260 372" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="gmtCard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#241b3a"/><stop offset="1" stop-color="#0a0712"/></linearGradient>
+                <linearGradient id="gmtGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7d4"/><stop offset=".4" stop-color="#ffd96a"/><stop offset=".62" stop-color="#b9831f"/><stop offset=".82" stop-color="#ffe9a8"/><stop offset="1" stop-color="#8a6612"/></linearGradient>
+                <radialGradient id="gmtEye" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#fff4c2"/><stop offset=".45" stop-color="#ff9b2e"/><stop offset="1" stop-color="#c41f2c"/></radialGradient>
+            </defs>
+            <rect x="5" y="5" width="250" height="362" rx="20" fill="url(#gmtCard)" stroke="url(#gmtGold)" stroke-width="4"/>
+            <rect x="16" y="16" width="228" height="340" rx="13" fill="none" stroke="rgba(255,211,94,0.22)" stroke-width="1.5"/>
+            <path d="M88 100 L62 50 L106 88 Z" fill="url(#gmtGold)"/>
+            <path d="M172 100 L198 50 L154 88 Z" fill="url(#gmtGold)"/>
+            <path d="M70 124 Q130 106 190 124" stroke="url(#gmtGold)" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <g class="gmt-eyes">
+                <path d="M80 140 L120 153 L107 172 L78 161 Z" fill="url(#gmtEye)"/>
+                <path d="M180 140 L140 153 L153 172 L182 161 Z" fill="url(#gmtEye)"/>
+            </g>
+            <path d="M78 222 Q130 206 182 222 Q160 268 130 268 Q100 268 78 222 Z" fill="#2a060c"/>
+            <path d="M82 226 L100 212 L116 230 L130 210 L144 230 L160 212 L178 226 L160 246 L144 232 L130 250 L116 232 L100 246 Z" fill="url(#gmtGold)" stroke="url(#gmtGold)" stroke-width="1.5" stroke-linejoin="round"/>
+            <text x="30" y="46" fill="url(#gmtGold)" font-size="26" font-weight="900" font-family="-apple-system,Segoe UI,sans-serif">A</text>
+            <text x="230" y="332" fill="url(#gmtGold)" font-size="26" font-weight="900" font-family="-apple-system,Segoe UI,sans-serif" transform="rotate(180 230 326)">A</text>
+        </svg>
     </div>
 </div>
 
