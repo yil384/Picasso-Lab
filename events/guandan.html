@@ -7114,8 +7114,8 @@ function playerHTML(i, mine) {
         : i === mine
             ? Math.min(6, Math.max(1, Math.ceil(count / 5)))
             : count <= 7
-                ? Math.min(6, Math.max(1, count))
-                : 5;
+                ? Math.max(1, count)
+                : 8;
     return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${thinking ? "thinking" : ""} ${finishedPlace ? "finished" : ""}">
         <div class="player-main">
             <div class="player-avatar">${encodeHTML(initials(name, String(i + 1)))}</div>
