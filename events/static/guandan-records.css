@@ -144,11 +144,11 @@ body.gdr-open { overflow: hidden; }
 .gdr-avatars img { width: 78px; height: 78px; border-radius: 50%; object-fit: cover; background: #0a0c16; margin: 0 -8px; }
 .gdr-team.side-a .gdr-avatars img { border: 3px solid var(--gdr-red); box-shadow: 0 0 20px rgba(255, 59, 92, 0.6); }
 .gdr-team.side-b .gdr-avatars img { border: 3px solid var(--gdr-blue); box-shadow: 0 0 20px rgba(46, 139, 255, 0.6); }
-.gdr-team.is-win .gdr-avatars img { border-color: var(--gdr-gold); box-shadow: 0 0 24px rgba(255, 211, 94, 0.7); }
+.gdr-team.side-a.is-win .gdr-avatars img { border-color: #ff7090; box-shadow: 0 0 28px rgba(255, 59, 92, 0.9); }
+.gdr-team.side-b.is-win .gdr-avatars img { border-color: #70bfff; box-shadow: 0 0 28px rgba(46, 139, 255, 0.9); }
 .gdr-team-names { margin-top: 12px; font-weight: 800; font-size: 14px; line-height: 1.3; }
 .gdr-team.side-a .gdr-team-names { color: #ffd9e0; }
 .gdr-team.side-b .gdr-team-names { color: #d6e8ff; }
-.gdr-team.is-win .gdr-team-names { color: var(--gdr-gold-2); }
 .gdr-win-tag { display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 900; letter-spacing: 0.2em; padding: 3px 13px; border-radius: 2px; }
 .gdr-win-tag.win { color: #1a1205; background: var(--gdr-metal); box-shadow: 0 0 14px rgba(255, 211, 94, 0.5); }
 .gdr-win-tag.lose { color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.16); }
@@ -287,10 +287,10 @@ body.gdr-open { overflow: hidden; }
 .gdr-mav img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; margin: 0 -6px; background: #0a0c16; }
 .gdr-mteam.a .gdr-mav img { border: 2px solid rgba(255, 59, 92, 0.7); }
 .gdr-mteam.b .gdr-mav img { border: 2px solid rgba(46, 139, 255, 0.7); }
-.gdr-mteam.win .gdr-mav img { border-color: var(--gdr-gold); box-shadow: 0 0 10px rgba(255, 211, 94, 0.5); }
+.gdr-mteam.a.win .gdr-mav img { border-color: #ff7090; box-shadow: 0 0 12px rgba(255, 59, 92, 0.8); }
+.gdr-mteam.b.win .gdr-mav img { border-color: #70bfff; box-shadow: 0 0 12px rgba(46, 139, 255, 0.8); }
 .gdr-mnames { font-size: 12.5px; font-weight: 700; line-height: 1.25; min-width: 0; }
 .gdr-mteam.a .gdr-mnames { color: #ffd9e0; } .gdr-mteam.b .gdr-mnames { color: #d6e8ff; }
-.gdr-mteam.win .gdr-mnames { color: var(--gdr-gold-2); }
 .gdr-mscore { text-align: center; }
 .gdr-mscore b { font-size: 22px; font-weight: 900; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
 .gdr-mscore .ra { color: var(--gdr-red); } .gdr-mscore .rb { color: var(--gdr-blue); }
