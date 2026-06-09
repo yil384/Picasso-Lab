@@ -271,8 +271,10 @@
         opacity: 0; animation: rktShard 0.86s cubic-bezier(0.16,0.8,0.2,1) var(--delay) forwards;
     }
     .rkt-shard-photo {
-        position: absolute; inset: 4px; border-radius: 5px;
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 74%; aspect-ratio: 1; border-radius: 50%;
         background-size: cover; background-position: center top; background-color: #2a3350;
+        border: 1.5px solid rgba(190,150,50,0.85);
     }
     .rkt-shard-cn {
         position: absolute; top: 2px; left: 4px; z-index: 2;
@@ -2802,23 +2804,24 @@
     .card.has-portrait .face-center { display: none; }
     .card-portrait {
         position: absolute;
-        inset: 23% 11% 22%;
+        inset: 0;
         z-index: 2;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
-        gap: 3px;
+        justify-content: center;
+        gap: 4px;
+        padding: 17% 6% 13%;
         pointer-events: none;
     }
     .card-portrait img {
-        width: 100%;
-        flex: 1 1 auto;
-        min-height: 0;
+        width: 70%;
+        aspect-ratio: 1;
+        flex: none;
         object-fit: cover;
         object-position: center top;
-        border-radius: 7px;
-        border: 1.5px solid rgba(190,150,50,0.88);
+        border-radius: 50%;
+        border: 1.5px solid rgba(190,150,50,0.9);
         box-shadow: 0 2px 6px rgba(0,0,0,0.28);
         background: #2a3350;
     }
@@ -2834,7 +2837,7 @@
         white-space: nowrap;
     }
     .card.red .card-portrait-name { color: rgba(150,28,40,0.82); }
-    .card.small .card-portrait { inset: 22% 9% 12%; }
+    .card.small .card-portrait { padding: 15% 5% 9%; }
     .card.small .card-portrait-name { display: none; }
 
     .card.has-art.wild {
