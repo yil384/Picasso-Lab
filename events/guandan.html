@@ -3785,6 +3785,8 @@
         </div>
     </header>
 
+    <audio id="guandan-bgm" src="https://yil384.github.io/Picasso-Lab/events/static/guandan_music.mp3" loop preload="auto" style="display:none"></audio>
+
     <div class="gdr-cardmodal gdr-scope" id="gdr-cardmodal" style="display:none" aria-hidden="true">
         <button class="gdr-cardmodal-close" id="gdr-card-close" type="button" aria-label="Close">&times;</button>
         <div class="gdr-cardmodal-card"><div id="gdr-cardmodal-body"></div></div>
@@ -7250,6 +7252,22 @@ else render();
     injectBanner();
     // open records board by default on page load
     openCard();
+})();
+
+// BGM: autoplay on load; fall back to first user gesture if browser blocks autoplay
+(function () {
+    var bgm = document.getElementById("guandan-bgm");
+    if (!bgm) return;
+    bgm.volume = 0.45;
+    function tryPlay() { bgm.play().catch(function () {}); }
+    tryPlay();
+    function onGesture() {
+        tryPlay();
+        document.removeEventListener("click", onGesture, true);
+        document.removeEventListener("keydown", onGesture, true);
+    }
+    document.addEventListener("click", onGesture, true);
+    document.addEventListener("keydown", onGesture, true);
 })();
 </script>
 </body>
