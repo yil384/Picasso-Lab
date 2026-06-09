@@ -2799,9 +2799,31 @@
         box-shadow: 0 12px 26px rgba(0,0,0,0.34), inset 0 1px 0 #fff;
     }
     .card.has-portrait .card-art { display: none; }
-    .card.has-portrait .corner { visibility: visible; }
     .card.has-portrait .pip-grid,
     .card.has-portrait .face-center { display: none; }
+    /* pin rank+suit to the real corners (decoupled from the art grid) so the bottom
+       corner can't collapse into the middle row and the suit can't overlap the avatar */
+    .card.has-portrait .corner {
+        position: absolute;
+        z-index: 3;
+        visibility: visible;
+        width: auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        line-height: 0.92;
+    }
+    .card.has-portrait .corner:not(.bottom) { top: 5px; left: 6px; }
+    .card.has-portrait .corner.bottom { bottom: 5px; right: 6px; }
+    .card.has-portrait .corner .rank-label { width: auto; max-width: none; font-size: 14px; }
+    .card.has-portrait .corner em { width: auto; height: auto; }
+    .card.has-portrait .corner .corner-suit { width: auto; height: auto; font-size: 11px; }
+    .card.small.has-portrait .corner:not(.bottom) { top: 3px; left: 4px; }
+    .card.small.has-portrait .corner.bottom { bottom: 3px; right: 4px; }
+    .card.small.has-portrait .corner .rank-label { font-size: 11px; }
+    .card.small.has-portrait .corner .corner-suit { font-size: 8px; }
     .card-portrait {
         position: absolute;
         inset: 0;
@@ -2811,7 +2833,7 @@
         align-items: center;
         justify-content: center;
         gap: 4px;
-        padding: 17% 6% 13%;
+        padding: 13% 6%;
         pointer-events: none;
     }
     .card-portrait img {
@@ -2837,7 +2859,8 @@
         white-space: nowrap;
     }
     .card.red .card-portrait-name { color: rgba(150,28,40,0.82); }
-    .card.small .card-portrait { padding: 15% 5% 9%; }
+    .card.small .card-portrait { padding: 12% 5%; }
+    .card.small .card-portrait img { width: 60%; }
     .card.small .card-portrait-name { display: none; }
 
     .card.has-art.wild {
