@@ -6624,7 +6624,7 @@ function previewCardsHTML() {
     // display cards are literally identical to the in-game cards: each labmate appears on
     // their signature card (the portrait map maps e.g. A♥→Zhongkai), plus a PICASSO back.
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    const roster = ["yufei","yue","zhengding","chang","hezi","keyi","xiang","jixuan","zaifeng","zhongkai","zhuo","yichen","xinwei","alon","chenyang","haotian"];
+    const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen"];
     const present = roster.filter(k => PL[k]);
     const items = [{ back: true }].concat((present.length ? present : ["zhongkai", "zhuo", "zaifeng"]).map(k => ({ key: k })));
     const n = items.length;
