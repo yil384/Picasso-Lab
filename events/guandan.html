@@ -4059,16 +4059,20 @@ function hideReturnTypeHint() {
 
 function returnShardsHTML() {
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen"].filter(k => PL[k] && PL[k].avatar);
+    const roster = ["yufei","yue","zhengding","chang","hezi","keyi","xiang","jixuan","zaifeng","zhongkai","zhuo","yichen","xinwei","alon","chenyang","haotian"].filter(k => PL[k] && PL[k].avatar);
     const spread = [
         { dx: -156, dy: -94, rot: -40 }, { dx: 148, dy: -104, rot: 38 },
         { dx: -188, dy: 20, rot: -24 }, { dx: 178, dy: 30, rot: 26 },
         { dx: -150, dy: 116, rot: -16 }, { dx: 150, dy: 122, rot: 18 },
-        { dx: -70, dy: 158, rot: -8 }, { dx: 78, dy: 162, rot: 10 }
+        { dx: -70, dy: 158, rot: -8 }, { dx: 78, dy: 162, rot: 10 },
+        { dx: -210, dy: -40, rot: -52 }, { dx: 200, dy: -48, rot: 50 },
+        { dx: -100, dy: -140, rot: -30 }, { dx: 96, dy: -134, rot: 32 },
+        { dx: -240, dy: 80, rot: -62 }, { dx: 230, dy: 88, rot: 58 },
+        { dx: -30, dy: 190, rot: -5 }, { dx: 36, dy: 194, rot: 6 }
     ];
     const isRed = (s) => s === "♥" || s === "♦";
     if (!roster.length) return "";
-    return roster.slice(0, 8).map((k, i) => {
+    return roster.slice(0, 16).map((k, i) => {
         const p = PL[k];
         const sp = spread[i % spread.length];
         const card = p.card || "A♥";
@@ -4335,8 +4339,8 @@ let _facePortraitMap = null;
 function facePortraitMap() {
     if (_facePortraitMap) return _facePortraitMap;
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    // only PICASSO Lab members get a face card (Yilin Wang & Zihan Hao are external).
-    const keys = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen"].filter(k => PL[k] && PL[k].avatar);
+    // All 16 PICASSO Lab members get a face card (A♠→J♣); external opponents (zihan, yilin) are excluded.
+    const keys = ["yufei","yue","zhengding","chang","hezi","keyi","xiang","jixuan","zaifeng","zhongkai","zhuo","yichen","xinwei","alon","chenyang","haotian"].filter(k => PL[k] && PL[k].avatar);
     if (!keys.length) return {};            // board data not loaded yet → no portraits this pass
     const sig = {};
     keys.forEach(k => { if (PL[k].card) sig[PL[k].card] = k; });
@@ -6620,7 +6624,7 @@ function previewCardsHTML() {
     // display cards are literally identical to the in-game cards: each labmate appears on
     // their signature card (the portrait map maps e.g. A♥→Zhongkai), plus a PICASSO back.
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen"];
+    const roster = ["yufei","yue","zhengding","chang","hezi","keyi","xiang","jixuan","zaifeng","zhongkai","zhuo","yichen","xinwei","alon","chenyang","haotian"];
     const present = roster.filter(k => PL[k]);
     const items = [{ back: true }].concat((present.length ? present : ["zhongkai", "zhuo", "zaifeng"]).map(k => ({ key: k })));
     const n = items.length;

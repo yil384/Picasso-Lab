@@ -22,14 +22,26 @@
 
     // -------- PLAYER ROSTER (✏️ style placeholders; quote = 座右铭/motto) --------
     var PLAYERS = {
-        zhongkai: { name: "Zhongkai Yu",  avatar: AV + "zhongkai.webp", card: "A♥", style: "稳健控场 · 逢人配大师", quote: "Let's see. / 思考是好事。" },
-        zhuo:     { name: "Zhuo Chen",    avatar: AV + "zhuo.webp",     card: "A♠", style: "炸弹强攻 · 火力全开", quote: "我将全职在家研究这副牌。" },
-        zaifeng:  { name: "Zaifeng Pan",  avatar: AV + "zaifeng.webp",  card: "A♣", style: "灵活接风 · 见缝插针", quote: "17 张牌你能秒我？" },
-        yichen:   { name: "Yichen Lin",   avatar: AV + "yichen.webp",   card: "K♦", style: "记牌反击 · 后发制人", quote: "别急，还有反转。" },
-        zhengding:{ name: "Zhengding Hu", avatar: AV + "zhengding.webp",card: "K♠", style: "冲 A 猛将 · 大牌敢出", quote: "神了。" },
-        haotian:  { name: "Haotian Ye",   avatar: AV + "haotian.webp",  card: "K♥", style: "雷霆万钧 · 大牌压制", quote: "" },
-        zihan:    { name: "Zihan Hao",    avatar: AV + "zihan.webp",                   card: "Q♦", style: "新锐黑马 · 后劲十足", quote: "" },
-        yilin:    { name: "Yilin Wang",   avatar: AV + "yilin.webp",                   card: "J♥", style: "团队核心 · 配合默契", quote: "" }
+        // --- full lab roster (16 members, A♠→J♣ order) ---
+        yufei:    { name: "Yufei Ding",   avatar: AV + "yufei.webp",    card: "A♠", style: "", quote: "" },
+        yue:      { name: "Yue Guan",     avatar: AV + "yue.webp",      card: "A♥", style: "", quote: "" },
+        zhengding:{ name: "Zhengding Hu", avatar: AV + "zhengding.webp",card: "A♦", style: "冲 A 猛将 · 大牌敢出", quote: "神了。" },
+        chang:    { name: "Chang Chen",   avatar: AV + "chang.webp",    card: "A♣", style: "", quote: "" },
+        hezi:     { name: "Hezi Zhang",   avatar: AV + "hezi.webp",     card: "K♠", style: "", quote: "" },
+        keyi:     { name: "Keyi Yin",     avatar: AV + "keyi.webp",     card: "K♥", style: "", quote: "" },
+        xiang:    { name: "Xiang Fang",   avatar: AV + "xiang.webp",    card: "K♦", style: "", quote: "" },
+        jixuan:   { name: "Jixuan Ruan",  avatar: AV + "jixuan.webp",   card: "K♣", style: "", quote: "" },
+        zaifeng:  { name: "Zaifeng Pan",  avatar: AV + "zaifeng.webp",  card: "Q♠", style: "灵活接风 · 见缝插针", quote: "17 张牌你能秒我？" },
+        zhongkai: { name: "Zhongkai Yu",  avatar: AV + "zhongkai.webp", card: "Q♥", style: "稳健控场 · 逢人配大师", quote: "Let's see. / 思考是好事。" },
+        zhuo:     { name: "Zhuo Chen",    avatar: AV + "zhuo.webp",     card: "Q♦", style: "炸弹强攻 · 火力全开", quote: "我将全职在家研究这副牌。" },
+        yichen:   { name: "Yichen Lin",   avatar: AV + "yichen.webp",   card: "Q♣", style: "记牌反击 · 后发制人", quote: "别急，还有反转。" },
+        xinwei:   { name: "Xinwei Qiang", avatar: AV + "xinwei.webp",   card: "J♠", style: "", quote: "" },
+        alon:     { name: "Alon Lahav",   avatar: AV + "alon.webp",     card: "J♥", style: "", quote: "" },
+        chenyang: { name: "Chenyang Zhou",avatar: AV + "chenyang.webp", card: "J♦", style: "", quote: "" },
+        haotian:  { name: "Haotian Ye",   avatar: AV + "haotian.webp",  card: "J♣", style: "雷霆万钧 · 大牌压制", quote: "" },
+        // --- external opponents (match records only, no face cards) ---
+        zihan:    { name: "Zihan Hao",    avatar: AV + "zihan.webp",    card: "", style: "新锐黑马 · 后劲十足", quote: "" },
+        yilin:    { name: "Yilin Wang",   avatar: AV + "yilin.webp",    card: "", style: "团队核心 · 配合默契", quote: "" }
     };
 
     // -------- MATCH HISTORY (real records; teamA = left, score levelA:levelB) --------
