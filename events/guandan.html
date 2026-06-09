@@ -7248,6 +7248,8 @@ else render();
     var root = document.getElementById("root") || document.body;
     new MutationObserver(injectBanner).observe(root, { childList: true, subtree: true });
     injectBanner();
+    // open records board by default on page load
+    openCard();
 })();
 </script>
 </body>
