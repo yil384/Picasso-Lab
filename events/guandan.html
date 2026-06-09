@@ -7106,9 +7106,11 @@ function playerHTML(i, mine) {
     const canRevealCount = i === mine || finishedPlace || count <= 7;
     const countText = finishedPlace
         ? L("DONE", "完赛")
-        : canRevealCount
-            ? `${count} ${L("cards", "张")}`
-            : "";
+        : i !== mine && !finishedPlace && count > 7
+            ? `≥8 ${L("cards", "张")}`
+            : canRevealCount
+                ? `${count} ${L("cards", "张")}`
+                : "";
     const backCount = finishedPlace
         ? 0
         : i === mine
