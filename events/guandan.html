@@ -7106,11 +7106,14 @@ function playerHTML(i, mine) {
     const canRevealCount = i === mine || finishedPlace || count <= 7;
     const countText = finishedPlace
         ? L("DONE", "完赛")
-        : i !== mine && !finishedPlace && count > 7
+        : canRevealCount
+            ? `${count} ${L("cards", "张")}`
+            : "";
+    const leftLabel = finishedPlace
+        ? L(`#${finishedPlace}`, `第 ${finishedPlace} 名`)
+        : i !== mine && count > 7
             ? `≥8 ${L("cards", "张")}`
-            : canRevealCount
-                ? `${count} ${L("cards", "张")}`
-                : "";
+            : L("left", "剩余");
     const backCount = finishedPlace
         ? 0
         : i === mine
@@ -7123,7 +7126,7 @@ function playerHTML(i, mine) {
             <div class="player-avatar">${encodeHTML(initials(name, String(i + 1)))}</div>
             <div class="player-name"><span>${encodeHTML(name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
         </div>
-        <div class="player-small"><span>${iconHTML(s.type === "ai" ? "ai" : "human")} ${s.type === "ai" ? "AI" : L("Human", "真人")} · ${thinking ? `<span class="thinking-badge">${L("Thinking", "思考中")}<i></i><i></i><i></i></span>` : finishedPlace ? L(`#${finishedPlace}`, `第 ${finishedPlace} 名`) : L("left", "剩余")}</span>${countText ? `<span class="count-chip">${iconHTML("cards")} ${countText}</span>` : ""}</div>
+        <div class="player-small"><span>${iconHTML(s.type === "ai" ? "ai" : "human")} ${s.type === "ai" ? "AI" : L("Human", "真人")} · ${thinking ? `<span class="thinking-badge">${L("Thinking", "思考中")}<i></i><i></i><i></i></span>` : leftLabel}</span>${countText ? `<span class="count-chip">${iconHTML("cards")} ${countText}</span>` : ""}</div>
         <div class="back-stack">${Array.from({ length: backCount }).map(() => `<i class="mini-back"></i>`).join("")}</div>
     </div>`;
 }
