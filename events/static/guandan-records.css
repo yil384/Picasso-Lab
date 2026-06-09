@@ -267,11 +267,11 @@ body.gdr-open { overflow: hidden; }
 .gdr-pstyle .gi { font-size: 12px; opacity: 0.8; }
 .gdr-pquote { font-size: 11.5px; color: rgba(233, 238, 252, 0.6); margin-top: 4px; display: inline-flex; align-items: center; gap: 5px; font-style: italic; }
 .gdr-pquote .gi { font-size: 12px; color: rgba(255, 211, 94, 0.55); flex: none; }
-.gdr-pstats { display: flex; align-items: center; gap: 16px; }
-.gdr-ppts { text-align: center; }
+.gdr-pstats { display: flex; align-items: center; gap: 10px; }
+.gdr-ppts { text-align: center; width: 50px; flex: none; }
 .gdr-ppts b { font-size: 23px; font-weight: 900; color: var(--gdr-gold); display: block; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 0 12px rgba(255, 211, 94, 0.3); }
 .gdr-ppts span { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
-.gdr-pstat { text-align: center; }
+.gdr-pstat { text-align: center; width: 52px; flex: none; }
 .gdr-pstat b { font-size: 14px; font-weight: 800; color: #fff; display: block; line-height: 1; font-variant-numeric: tabular-nums; }
 .gdr-pstat span { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255, 255, 255, 0.45); }
 

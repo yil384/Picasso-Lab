@@ -2599,10 +2599,25 @@
     let guandanHintTimer = null;
     let guandanKeyboardPrimed = false;
 
-    function showGuandanTypeHint() {
-        guandanTypeHint?.classList.add('show');
+    // Type hints: default suggests "picasso", but if the user starts typing
+    // another egg's 2-char prefix (e.g. "mv" -> mvp), hint that code instead.
+    const HINT_SPECIALS = ['mvp'];
+    function pickHintCode(buf) {
+        for (let i = 0; i < HINT_SPECIALS.length; i++) {
+            const code = HINT_SPECIALS[i];
+            for (let k = Math.min(buf.length, code.length - 1); k >= 2; k--) {
+                if (buf.slice(-k) === code.slice(0, k)) return code;
+            }
+        }
+        return 'picasso';
+    }
+    function showGuandanTypeHint(code) {
+        if (!guandanTypeHint) return;
+        const letters = (code || 'picasso').split('').map(c => '<kbd>' + c + '</kbd>').join('');
+        guandanTypeHint.innerHTML = 'try typing ' + letters + ' ✨';
+        guandanTypeHint.classList.add('show');
         clearTimeout(guandanHintTimer);
-        guandanHintTimer = setTimeout(() => guandanTypeHint?.classList.remove('show'), 2600);
+        guandanHintTimer = setTimeout(() => guandanTypeHint.classList.remove('show'), 2600);
     }
 
     function hideGuandanTypeHint() {
@@ -2811,7 +2826,7 @@
             startGuandanGameTransition();
             return;
         }
-        if (guandanGameBuffer.length >= 2) showGuandanTypeHint();
+        if (guandanGameBuffer.length >= 2) showGuandanTypeHint(pickHintCode(guandanGameBuffer));
     }, true);
 
     // -----------------------------------------------------------------
