@@ -6994,8 +6994,8 @@ function renderTable() {
                     <div class="hand-tools">
                         <button class="btn secondary" id="clear-btn" type="button">${iconLabel("clear", L("Clear", "取消"))}</button>
                         <button class="btn secondary" id="hint-btn" ${canAct && !actionBusy ? "" : "disabled"} type="button">${iconLabel("hint", L("Hint", "提示"))}</button>
-                        <button class="btn" id="play-btn" ${canPlaySelected ? "" : "disabled"} type="button">${iconLabel("play", L("Play", "出牌"))}</button>
                         <button class="btn secondary" id="pass-btn" ${canAct && game.lastPlay && !actionBusy ? "" : "disabled"} type="button">${iconLabel("pass", L("Pass", "不要"))}</button>
+                        <button class="btn" id="play-btn" ${canPlaySelected ? "" : "disabled"} type="button">${iconLabel("play", L("Play", "出牌"))}</button>
                     </div>
                     <div class="hand-feedback">
                         <div class="selection-meter">${L("Selected", "已选")} <strong>${selected.size}</strong> ${L("cards", "张")}</div>
