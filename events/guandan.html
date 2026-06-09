@@ -789,6 +789,51 @@
         letter-spacing: 1.5px;
         color: rgba(255,224,150,0.82);
     }
+    /* hero fan: positions real game cards (cardHTML) + a PICASSO back as a fanned hand */
+    .preview-slot {
+        --step: 27px;
+        position: absolute;
+        bottom: 22px;
+        left: 50%;
+        margin-left: calc((var(--i) - (var(--n) - 1) / 2) * var(--step) - 24px);
+        transform: rotate(calc((var(--i) - (var(--n) - 1) / 2) * 4.2deg));
+        transform-origin: bottom center;
+    }
+    .preview-slot .card { margin: 0 !important; transition: none !important; box-shadow: 0 14px 26px rgba(0,0,0,0.4); }
+    .preview-slot .card:hover { transform: none; }
+    .pl-back {
+        display: grid;
+        width: 48px;
+        height: 68px;
+        grid-auto-rows: max-content;
+        place-content: center;
+        justify-items: center;
+        gap: 2px;
+        padding: 5px;
+        border-radius: 6px;
+        background: linear-gradient(150deg, #241b3a, #0c0a18);
+        border: 1px solid rgba(255,211,94,0.5);
+        box-shadow: 0 14px 26px rgba(0,0,0,0.4), inset 0 0 0 2px rgba(255,211,94,0.16);
+    }
+    .pl-back b {
+        font-size: 15px;
+        font-weight: 900;
+        color: #ffd96a;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        border: 1.5px solid rgba(255,211,94,0.6);
+        background: rgba(255,211,94,0.08);
+    }
+    .pl-back i {
+        font-style: normal;
+        font-size: 6px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        color: rgba(255,224,150,0.82);
+    }
     .preview-seat {
         position: absolute;
         width: 46px;
@@ -1578,6 +1623,9 @@
         .rule-chips span { font-size: 11px; padding: 6px 9px; }
         .quick-rules { grid-template-columns: 1fr; }
         .lobby-preview { border-width: 8px; border-radius: 22px; }
+        .preview-slot { --step: 22px; }
+        .preview-slot .card { --card-w: 42px; --card-h: 60px; }
+        .pl-back { width: 42px; height: 60px; }
         .preview-card {
             --step: 19px;
             --rot: 4deg;
@@ -6541,26 +6589,24 @@ function render() {
 }
 
 function previewCardsHTML() {
-    // Lab signature deck: each labmate shown on their own signature card (pulled
-    // from the records board), plus a PICASSO LAB card back. Decorative only.
+    // The hero fan renders the SAME card component as the live game (cardHTML), so the
+    // display cards are literally identical to the in-game cards: each labmate appears on
+    // their signature card (the portrait map maps e.g. A♥→Zhongkai), plus a PICASSO back.
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    // a PICASSO back + the whole roster, each on their own signature card
     const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen", "zihan", "yilin"];
-    const fan = [{ back: true }].concat(roster.filter(k => PL[k]).map(k => ({ key: k })));
-    if (fan.length < 2) fan.push({ key: "zhongkai" }, { key: "zhuo" }, { key: "zaifeng" }); // data not loaded fallback
-    const n = fan.length;
-    const isRed = (s) => s === "♥" || s === "♦";
-    return fan.map((c, i) => {
+    const present = roster.filter(k => PL[k]);
+    const items = [{ back: true }].concat((present.length ? present : ["zhongkai", "zhuo", "zaifeng"]).map(k => ({ key: k })));
+    const n = items.length;
+    const suitCode = { "♠": "S", "♥": "H", "♦": "D", "♣": "C" };
+    return items.map((it, i) => {
         const st = `--i:${i};--n:${n}`;
-        if (c.back) {
-            return `<span class="preview-card back" style="${st}"><b>P</b><i>PICASSO</i><i>LAB</i></span>`;
+        if (it.back) {
+            return `<span class="preview-slot" style="${st}"><span class="pl-back"><b>P</b><i>PICASSO</i><i>LAB</i></span></span>`;
         }
-        const p = PL[c.key] || { name: c.key, avatar: "", card: "A♥" };
-        const card = p.card || "A♥";
-        const r = card.slice(0, -1);
-        const s = card.slice(-1);
-        const name = (p.name || "").split(" ")[0];
-        return `<span class="preview-card face ${isRed(s) ? "red" : ""}" style="${st}"><span class="pc-cn">${r}<small>${s}</small></span><span class="pc-mid"><span class="pc-photo" style="background-image:url('${p.avatar || ""}')"></span><span class="pc-name">${name}</span></span><span class="pc-cn br">${r}<small>${s}</small></span></span>`;
+        const p = PL[it.key] || { card: "A♥" };
+        const sig = p.card || "A♥";
+        const co = { rank: sig.slice(0, -1), suit: suitCode[sig.slice(-1)] || "H", id: "pv" + i };
+        return `<span class="preview-slot" style="${st}">${cardHTML(co, true, false, "", "preview-game-card")}</span>`;
     }).join("");
 }
 
