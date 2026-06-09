@@ -41,8 +41,10 @@
         { date: "2026-05-25", teamA: ["zhongkai", "zhuo"], teamB: ["zhengding", "zaifeng"], levelA: "J", levelB: "2", winner: "A", note: "对手三冲 A 未过 · 掉回 2（非零封）" },
         { date: "2026-05-22", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "A", levelB: "Q", winner: "A" },
         { date: "2026-05-01", teamA: ["zhongkai", "zhuo"],    teamB: ["zaifeng", "yichen"],   levelA: "2", levelB: "A", winner: "B" },
+        { date: "2026-04-29", teamA: ["zhongkai", "zhuo"],    teamB: ["zaifeng", "yichen"],   levelA: "3", levelB: "A", winner: "A", note: "以下克上 · 阻击对手冲 A" },
         { date: "2026-04-25", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "10", levelB: "A", winner: "B" },
-        { date: "2026-03-20", teamA: ["haotian", "yichen"],   teamB: ["zhongkai", "zaifeng"],  levelA: "3", levelB: "A", winner: "B" }
+        { date: "2026-03-20", teamA: ["haotian", "yichen"],   teamB: ["zhongkai", "zaifeng"],  levelA: "3", levelB: "A", winner: "B" },
+        { date: "2026-02-06", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "A", levelB: "A", winner: "A", note: "双 A 决战 · 我方先终结" }
     ];
 
     // ------------------------- SVG icon set (no emoji) --------------------------
@@ -122,9 +124,17 @@
             m.teamA.forEach(function (k) { var s = ensure(k); s.p++; aWin ? s.w++ : s.l++; if (aWin && winLvl === "A") s.aw++; });
             m.teamB.forEach(function (k) { var s = ensure(k); s.p++; aWin ? s.l++ : s.w++; if (!aWin && winLvl === "A") s.aw++; });
         });
-        Object.keys(stats).forEach(function (k) { var s = stats[k]; s.pts = s.w * 3 - s.l; s.wr = s.p ? Math.round(100 * s.w / s.p) : 0; });
+        // 评分 = 赛量修正胜率 (Bayesian shrinkage): regress each win rate toward 50% with C
+        // phantom .500 games. High win-rate is rewarded, but a 1-game 100% can't top a proven
+        // record, and a high-volume .500 player sits at 50 instead of farming raw win counts.
+        var C = 4, PRIOR = 0.5;
+        Object.keys(stats).forEach(function (k) {
+            var s = stats[k];
+            s.wr = s.p ? Math.round(100 * s.w / s.p) : 0;
+            s.pts = Math.round(100 * (s.w + C * PRIOR) / (s.p + C));
+        });
         var board = Object.keys(stats).map(function (k) { return stats[k]; }).sort(function (a, b) {
-            return (b.pts - a.pts) || (b.w - a.w) || (b.wr - a.wr) || P(a.key).name.localeCompare(P(b.key).name);
+            return (b.pts - a.pts) || (b.w - a.w) || (b.wr - a.wr) || (b.p - a.p) || P(a.key).name.localeCompare(P(b.key).name);
         });
         return { matches: matches, board: board, mvp: board[0] };
     }
@@ -177,7 +187,7 @@
                 '<div class="gdr-mvpcard-stats">' +
                     '<div class="gdr-mvp-word">MVP</div>' +
                     '<div class="gdr-statgrid">' +
-                        '<div class="gdr-statline"><span class="ic">' + ICONS.trophy + '</span><b>' + mvp.pts + '</b><span class="lbl">综合积分</span></div>' +
+                        '<div class="gdr-statline"><span class="ic">' + ICONS.trophy + '</span><b>' + mvp.pts + '</b><span class="lbl">综合评分</span></div>' +
                         '<div class="gdr-statline"><span class="ic">' + ICONS.crown + '</span><b>' + mvp.w + '<i>-</i>' + mvp.l + '</b><span class="lbl">战绩 W-L</span></div>' +
                         '<div class="gdr-statline"><span class="ic">' + ICONS.target + '</span><b>' + mvp.wr + '<i>%</i></b><span class="lbl">胜率 Win Rate</span></div>' +
                         '<div class="gdr-statline"><span class="ic">' + ICONS.bolt + '</span><b>' + mvp.aw + '</b><span class="lbl">过 A Cleared A</span></div>' +
@@ -194,7 +204,7 @@
 
     function leaderboardHTML(board) {
         function medal(i) {
-            if (i < 3) return '<span class="gdr-medal m' + (i + 1) + '">' + ICONS.medal + '<i>' + (i + 1) + '</i></span>';
+            if (i < 3) return '<span class="gdr-medal e m' + (i + 1) + '">' + ["🥇", "🥈", "🥉"][i] + '</span>';
             return '<span class="gdr-rnum">' + (i + 1) + '</span>';
         }
         var rows = board.map(function (s, i) {
@@ -207,14 +217,14 @@
                     (p.quote ? '<div class="gdr-pquote">' + ICONS.quote + ' “' + esc(p.quote) + '”</div>' : "") +
                 '</div>' +
                 '<div class="gdr-pstats">' +
-                    '<div class="gdr-ppts"><b>' + s.pts + '</b><span>积分</span></div>' +
+                    '<div class="gdr-ppts"><b>' + s.pts + '</b><span>评分</span></div>' +
                     '<div class="gdr-pstat"><b>' + s.w + '-' + s.l + '</b><span>胜负</span></div>' +
                     '<div class="gdr-pstat"><b>' + s.wr + '%</b><span>胜率</span></div>' +
                     '<div class="gdr-pstat"><b>' + s.aw + '</b><span>过A</span></div>' +
                 '</div>' +
             '</div>';
         }).join("");
-        return '<div class="gdr-section-title">' + ICONS.crown + ' 选手排行榜 <span>Leaderboard · 积分 = 胜×3 − 负×1</span></div>' +
+        return '<div class="gdr-section-title">' + ICONS.crown + ' 选手排行榜 <span>Leaderboard · 评分 = 赛量修正胜率 (Bayesian)</span></div>' +
             '<div class="gdr-ptable">' + rows + '</div>';
     }
 
@@ -243,7 +253,7 @@
                 '<div class="gdr-splash-kicker">' + ICONS.star + ' Season MVP · 赛季最佳</div>' +
                 '<div class="gdr-splash-hero">' + bigCard(pm.card) + '<img src="' + avatarSrc(mvp.key) + '" alt=""></div>' +
                 '<div class="gdr-splash-name">' + esc(pm.name) + '</div>' +
-                '<div class="gdr-splash-line"><span>' + ICONS.trophy + ' ' + mvp.pts + ' 积分</span><span>' + mvp.w + '-' + mvp.l + '</span><span>胜率 ' + mvp.wr + '%</span></div>' +
+                '<div class="gdr-splash-line"><span>' + ICONS.trophy + ' ' + mvp.pts + ' 评分</span><span>' + mvp.w + '-' + mvp.l + '</span><span>胜率 ' + mvp.wr + '%</span></div>' +
                 (pm.quote ? '<div class="gdr-splash-motto">' + ICONS.quote + ' “' + esc(pm.quote) + '”</div>' : "") +
             '</div>' +
         '</div>';
@@ -287,13 +297,19 @@
                 '<span class="gdr-bn-score"><span class="w">' + esc(winLvl) + '</span><i>:</i><span class="l">' + esc(loseLvl) + '</span></span>' +
                 '<span class="gdr-bn-mut">def. ' + names(loseT) + '</span>' +
             '</span>';
+        var medals = ["🥇", "🥈", "🥉"];
         var chips = d.board.slice(0, 3).map(function (s, i) {
-            return '<span class="gdr-bn-chip rank' + (i + 1) + '"><span class="gdr-bn-rk">' + (i + 1) + '</span>' +
+            return '<span class="gdr-bn-chip rank' + (i + 1) + '"><span class="gdr-bn-medal">' + medals[i] + '</span>' +
                 '<img class="gdr-bn-av sm" src="' + avatarSrc(s.key) + '" alt="">' +
                 '<span class="gdr-bn-nm">' + esc(P(s.key).name.split(" ")[0]) + '</span><b>' + s.pts + '</b></span>';
         }).join("");
         var ranks = '<span class="gdr-bn-seg"><span class="gdr-bn-tag">' + ICONS.crown + ' Rank</span>' + chips + '</span>';
-        return latest + '<span class="gdr-bn-div"></span>' + ranks;
+        var set = latest + '<span class="gdr-bn-div"></span>' + ranks;
+        // 4 identical sets → seamless looping marquee (CSS translateX(-50%) scrolls 2 sets,
+        // and one half of the track always stays wider than the lobby, so no gap at the loop).
+        var one = '<div class="gdr-bn-set">' + set + '</div>';
+        var copy = '<div class="gdr-bn-set" aria-hidden="true">' + set + '</div>';
+        return '<div class="gdr-bn-track">' + one + copy + copy + copy + '</div>';
     }
 
     global.GuandanRecords = { buildHTML: buildHTML, buildPages: buildPages, buildBanner: buildBanner, PLAYERS: PLAYERS, MATCHES: MATCHES };
