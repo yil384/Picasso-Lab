@@ -274,12 +274,26 @@
     function buildBanner() {
         var d = buildStats();
         var L = d.matches[0];
-        var top = d.board.slice(0, 3).map(function (s, i) {
-            return '<span class="gdr-bn-rank">' + (i + 1) + '</span>' + esc(P(s.key).name.split(" ")[0]) + '<i>' + s.pts + '</i>';
-        }).join('<span class="gdr-bn-dot">·</span>');
-        var latest = names(L.winner === "A" ? L.teamA : L.teamB) + ' ' + (L.winner === "A" ? L.levelA + ":" + L.levelB : L.levelB + ":" + L.levelA) + ' 胜';
-        return '<span class="gdr-bn-seg">' + ICONS.swords + ' 最新 · ' + esc(latest) + '</span>' +
-               '<span class="gdr-bn-seg gdr-bn-rankseg">' + ICONS.crown + ' 榜首 · ' + top + '</span>';
+        var winT = L.winner === "A" ? L.teamA : L.teamB;
+        var loseT = L.winner === "A" ? L.teamB : L.teamA;
+        var winLvl = L.winner === "A" ? L.levelA : L.levelB;
+        var loseLvl = L.winner === "A" ? L.levelB : L.levelA;
+        var avs = winT.map(function (k) { return '<img class="gdr-bn-av" src="' + avatarSrc(k) + '" alt="">'; }).join("");
+        var latest =
+            '<span class="gdr-bn-seg">' +
+                '<span class="gdr-bn-tag">' + ICONS.swords + ' Latest</span>' +
+                '<span class="gdr-bn-avs">' + avs + '</span>' +
+                '<b>' + names(winT) + '</b>' +
+                '<span class="gdr-bn-score"><span class="w">' + esc(winLvl) + '</span><i>:</i><span class="l">' + esc(loseLvl) + '</span></span>' +
+                '<span class="gdr-bn-mut">def. ' + names(loseT) + '</span>' +
+            '</span>';
+        var chips = d.board.slice(0, 3).map(function (s, i) {
+            return '<span class="gdr-bn-chip rank' + (i + 1) + '"><span class="gdr-bn-rk">' + (i + 1) + '</span>' +
+                '<img class="gdr-bn-av sm" src="' + avatarSrc(s.key) + '" alt="">' +
+                '<span class="gdr-bn-nm">' + esc(P(s.key).name.split(" ")[0]) + '</span><b>' + s.pts + '</b></span>';
+        }).join("");
+        var ranks = '<span class="gdr-bn-seg"><span class="gdr-bn-tag">' + ICONS.crown + ' Rank</span>' + chips + '</span>';
+        return latest + '<span class="gdr-bn-div"></span>' + ranks;
     }
 
     global.GuandanRecords = { buildHTML: buildHTML, buildPages: buildPages, buildBanner: buildBanner, PLAYERS: PLAYERS, MATCHES: MATCHES };
