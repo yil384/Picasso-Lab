@@ -2066,6 +2066,13 @@
         stroke-width: 2.2;
         vertical-align: -2px;
     }
+    @keyframes countAlertPulse {
+        0%, 100% { color: #ff3b5c; filter: drop-shadow(0 0 4px rgba(255,59,92,0.8)); }
+        50%       { color: #ff8fa3; filter: drop-shadow(0 0 8px rgba(255,59,92,0.4)); }
+    }
+    .count-chip.alert .ui-icon {
+        animation: countAlertPulse 0.9s ease-in-out infinite;
+    }
 
     .player-small > span:first-child {
         display: inline-flex;
@@ -7126,7 +7133,7 @@ function playerHTML(i, mine) {
             <div class="player-avatar">${encodeHTML(initials(name, String(i + 1)))}</div>
             <div class="player-name"><span>${encodeHTML(name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
         </div>
-        <div class="player-small"><span>${iconHTML(s.type === "ai" ? "ai" : "human")} ${s.type === "ai" ? "AI" : L("Human", "真人")} · ${thinking ? `<span class="thinking-badge">${L("Thinking", "思考中")}<i></i><i></i><i></i></span>` : leftLabel}</span>${countText ? `<span class="count-chip">${iconHTML("cards")} ${countText}</span>` : ""}</div>
+        <div class="player-small"><span>${iconHTML(s.type === "ai" ? "ai" : "human")} ${s.type === "ai" ? "AI" : L("Human", "真人")} · ${thinking ? `<span class="thinking-badge">${L("Thinking", "思考中")}<i></i><i></i><i></i></span>` : leftLabel}</span>${countText ? `<span class="count-chip${i !== mine && !finishedPlace && count <= 7 ? " alert" : ""}">${iconHTML("cards")} ${countText}</span>` : ""}</div>
         <div class="back-stack">${Array.from({ length: backCount }).map(() => `<i class="mini-back"></i>`).join("")}</div>
     </div>`;
 }
