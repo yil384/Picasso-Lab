@@ -149,8 +149,9 @@ body.gdr-open { overflow: hidden; }
 .gdr-team.side-a .gdr-team-names { color: #ffd9e0; }
 .gdr-team.side-b .gdr-team-names { color: #d6e8ff; }
 .gdr-team.is-win .gdr-team-names { color: var(--gdr-gold-2); }
-.gdr-win-tag { display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 900; letter-spacing: 0.2em; color: #1a1205; background: var(--gdr-metal); padding: 3px 13px; border-radius: 2px; visibility: hidden; box-shadow: 0 0 14px rgba(255, 211, 94, 0.5); }
-.gdr-team.is-win .gdr-win-tag { visibility: visible; }
+.gdr-win-tag { display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 900; letter-spacing: 0.2em; padding: 3px 13px; border-radius: 2px; }
+.gdr-win-tag.win { color: #1a1205; background: var(--gdr-metal); box-shadow: 0 0 14px rgba(255, 211, 94, 0.5); }
+.gdr-win-tag.lose { color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.16); }
 
 /* center: winged crest + score */
 .gdr-center { text-align: center; padding: 0 2px; }

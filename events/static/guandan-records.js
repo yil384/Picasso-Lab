@@ -27,6 +27,7 @@
         zaifeng:  { name: "Zaifeng Pan",  avatar: AV + "zaifeng.webp",  card: "A♣", style: "灵活接风 · 见缝插针", quote: "17 张牌你能秒我？" },
         yichen:   { name: "Yichen Lin",   avatar: AV + "yichen.webp",   card: "K♦", style: "记牌反击 · 后发制人", quote: "别急，还有反转。" },
         zhengding:{ name: "Zhengding Hu", avatar: AV + "zhengding.webp",card: "K♠", style: "冲 A 猛将 · 大牌敢出", quote: "神了。" },
+        haotian:  { name: "Haotian Ye",   avatar: AV + "haotian.webp",  card: "K♥", style: "雷霆万钧 · 大牌压制", quote: "" },
         zihan:    { name: "Zihan Hao",    avatar: AV + "zihan.webp",                   card: "Q♦", style: "新锐黑马 · 后劲十足", quote: "" },
         yilin:    { name: "Yilin Wang",   avatar: AV + "yilin.webp",                   card: "J♥", style: "团队核心 · 配合默契", quote: "" }
     };
@@ -38,7 +39,10 @@
         { date: "2026-06-01", teamA: ["zhongkai", "zhuo"], teamB: ["zhengding", "yichen"],  levelA: "8", levelB: "2", winner: "A", note: "对手三冲 A 未过 · 掉回 2（非零封）" },
         { date: "2026-05-29", teamA: ["zhongkai", "zhuo"], teamB: ["zaifeng", "yichen"],    levelA: "A", levelB: "3", winner: "A" },
         { date: "2026-05-25", teamA: ["zhongkai", "zhuo"], teamB: ["zhengding", "zaifeng"], levelA: "J", levelB: "2", winner: "A", note: "对手三冲 A 未过 · 掉回 2（非零封）" },
-        { date: "2026-05-22", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "A", levelB: "Q", winner: "A" }
+        { date: "2026-05-22", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "A", levelB: "Q", winner: "A" },
+        { date: "2026-05-01", teamA: ["zhongkai", "zhuo"],    teamB: ["zaifeng", "yichen"],   levelA: "2", levelB: "A", winner: "B" },
+        { date: "2026-04-25", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "10", levelB: "A", winner: "B" },
+        { date: "2026-03-20", teamA: ["haotian", "yichen"],   teamB: ["zhongkai", "zaifeng"],  levelA: "3", levelB: "A", winner: "B" }
     ];
 
     // ------------------------- SVG icon set (no emoji) --------------------------
@@ -67,8 +71,8 @@
             '<path d="M116 50 L174 39 L126 55 Z"/><path d="M116 60 L186 60 L126 63 Z"/><path d="M116 70 L174 81 L126 66 Z"/>' +
         '</g>' +
         '<path d="M100 24 L130 37 V63 C130 84 116 98 100 105 C84 98 70 84 70 63 V37 Z" fill="url(#gdrShield)" stroke="url(#gdrGold)" stroke-width="3"/>' +
-        '<path d="M100 44 l3 6.2 6.8.9 -4.9 4.6 1.2 6.7 -6.1-3.2 -6.1 3.2 1.2-6.7 -4.9-4.6 6.8-.9 Z" fill="url(#gdrGold)" opacity=".95"/>' +
-        '<text x="100" y="99" text-anchor="middle" font-size="14" font-weight="900" font-style="italic" fill="url(#gdrGold)" font-family="-apple-system,Segoe UI,sans-serif" letter-spacing="1">VS</text>' +
+        '<path d="M100 34 l2.6 5.4 5.9.8 -4.3 4 1 5.8 -5.2-2.8 -5.2 2.8 1-5.8 -4.3-4 5.9-.8 Z" fill="url(#gdrGold)" opacity=".95"/>' +
+        '<text x="100" y="74" text-anchor="middle" font-size="17" font-weight="900" font-style="italic" fill="url(#gdrGold)" font-family="-apple-system,Segoe UI,sans-serif" letter-spacing="1">VS</text>' +
         '</svg>';
 
     // ------------------------- helpers -------------------------
@@ -147,7 +151,7 @@
                     '<div class="gdr-crown">' + ICONS.crown + '</div>' +
                     '<div class="gdr-avatars">' + avatars(L.teamA) + '</div>' +
                     '<div class="gdr-team-names">' + names(L.teamA) + '</div>' +
-                    '<span class="gdr-win-tag">WIN</span>' +
+                    '<span class="gdr-win-tag ' + (aWin ? "win" : "lose") + '">' + (aWin ? "WIN" : "LOSE") + '</span>' +
                 '</div>' +
                 '<div class="gdr-center">' +
                     '<div class="gdr-crest">' + CREST + '</div>' +
@@ -158,7 +162,7 @@
                     '<div class="gdr-crown">' + ICONS.crown + '</div>' +
                     '<div class="gdr-avatars">' + avatars(L.teamB) + '</div>' +
                     '<div class="gdr-team-names">' + names(L.teamB) + '</div>' +
-                    '<span class="gdr-win-tag">WIN</span>' +
+                    '<span class="gdr-win-tag ' + (!aWin ? "win" : "lose") + '">' + (!aWin ? "WIN" : "LOSE") + '</span>' +
                 '</div>' +
             '</div>' +
         '</div>';
