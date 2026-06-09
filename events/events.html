@@ -1446,6 +1446,16 @@
     .transition-card { animation: cardSnatch 1.25s cubic-bezier(0.16, 0.78, 0.2, 1) forwards; animation-delay: var(--delay); }
     .restore-card { animation: cardRestore 1.1s cubic-bezier(0.16, 0.78, 0.2, 1) forwards; animation-delay: var(--delay); }
     .transition-card.red, .restore-card.red { color: #c92535; }
+    /* labmate signature cards in the swirl */
+    .transition-card.face { display: block; padding: 5px; overflow: hidden; }
+    .transition-card .tc-cn { position: absolute; top: 5px; left: 6px; z-index: 2; font-size: 13px; font-weight: 900; line-height: 0.82; }
+    .transition-card .tc-cn small { font-size: 9px; }
+    .transition-card .tc-cn.br { top: auto; bottom: 5px; left: auto; right: 6px; transform: rotate(180deg); }
+    .transition-card .tc-photo {
+        position: absolute; inset: 19px 6px 19px; border-radius: 6px;
+        background-size: cover; background-position: center top; background-color: #2a3350;
+        border: 1px solid rgba(190,150,50,0.78); box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
     .light-guardian {
         position: absolute;
         left: 50%;
@@ -2796,12 +2806,25 @@
 
     const guandanMonsterTransition = document.getElementById('guandan-monster-transition');
     const guandanGameCards = ['2', 'A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4'];
+    const guandanCardRoster = ['zhongkai', 'zhuo', 'zaifeng', 'zhengding', 'haotian', 'yichen', 'zihan', 'yilin'];
 
     function makeTransitionCard(className, index, restore = false) {
         const card = document.createElement('div');
-        const value = guandanGameCards[index % guandanGameCards.length];
-        card.className = `${className} ${index % 3 === 0 ? 'red' : ''}`;
-        card.textContent = value;
+        const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
+        const key = guandanCardRoster[index % guandanCardRoster.length];
+        const p = PL[key];
+        if (p && p.avatar) {
+            // labmate signature card (photo + their rank)
+            const sig = p.card || 'A♥';
+            const r = sig.slice(0, -1), s = sig.slice(-1);
+            const red = (s === '♥' || s === '♦');
+            card.className = `${className} face ${red ? 'red' : ''}`;
+            card.innerHTML = `<span class="tc-cn">${r}<small>${s}</small></span><span class="tc-photo" style="background-image:url('${p.avatar}')"></span><span class="tc-cn br">${r}<small>${s}</small></span>`;
+        } else {
+            const value = guandanGameCards[index % guandanGameCards.length];
+            card.className = `${className} ${index % 3 === 0 ? 'red' : ''}`;
+            card.textContent = value;
+        }
         card.style.setProperty('--delay', `${index * 0.045}s`);
         card.style.setProperty('--sr', `${-70 + Math.random() * 140}deg`);
         card.style.setProperty('--tr', `${-12 + Math.random() * 24}deg`);
