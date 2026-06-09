@@ -210,13 +210,107 @@
     .return-transition {
         position: fixed; inset: 0; z-index: 2000; overflow: hidden;
         background:
-            radial-gradient(circle at 50% 56%, rgba(255,205,0,0.18), transparent 24%),
-            radial-gradient(circle at 50% 62%, rgba(50,176,190,0.2), transparent 36%),
-            linear-gradient(145deg, rgba(1,12,15,0.98), rgba(4,30,32,0.98));
+            radial-gradient(54% 46% at 50% 46%, rgba(255, 205, 80, 0.2), transparent 60%),
+            radial-gradient(72% 58% at 50% 116%, rgba(46, 120, 255, 0.16), transparent 70%),
+            linear-gradient(180deg, #0d0a18, #050409 72%);
         opacity: 0; visibility: hidden; pointer-events: none;
         transition: opacity 0.18s ease, visibility 0s linear 0.18s;
     }
     .return-transition.active { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+    .return-transition::before {
+        content: ""; position: absolute; inset: -14%; opacity: 0.16; pointer-events: none;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+        background-size: 48px 48px; transform: rotate(-5deg) scale(1.18);
+    }
+    /* ===== Kaiju-defeated exit transition (redesigned, esports victory) ===== */
+    .rkt-stage { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+    .rkt-title {
+        position: absolute; left: 50%; top: 11%; transform: translateX(-50%);
+        text-align: center; font-weight: 900; font-style: italic; line-height: 1;
+        white-space: nowrap;
+        font-size: clamp(30px, 6.6vw, 66px); letter-spacing: 0.03em;
+        background: linear-gradient(180deg, #fff7d4 0%, #ffd96a 40%, #b9831f 62%, #ffe9a8 82%, #8a6612 100%);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent; color: transparent;
+        filter: drop-shadow(0 4px 14px rgba(0,0,0,0.5)) drop-shadow(0 0 24px rgba(255,190,60,0.3));
+        opacity: 0; animation: rktTitleIn 0.6s cubic-bezier(0.2,0.86,0.22,1) 0.46s forwards;
+    }
+    .rkt-title small {
+        display: block; margin-top: 10px; font-style: normal; font-weight: 800;
+        font-size: 0.3em; letter-spacing: 0.46em; text-indent: 0.46em;
+        color: #7fe3ff; -webkit-text-fill-color: #7fe3ff;
+        filter: drop-shadow(0 0 12px rgba(70,200,255,0.5));
+    }
+    .rkt-ring {
+        position: absolute; left: 50%; top: 50%; width: min(360px, 52vw); aspect-ratio: 1;
+        transform: translate(-50%,-50%) scale(0.3); border-radius: 50%;
+        border: 2px solid rgba(255,205,80,0.8); box-shadow: 0 0 40px rgba(255,205,80,0.34);
+        opacity: 0; animation: rktRing 0.9s cubic-bezier(0.16,0.86,0.24,1) 0.16s forwards;
+    }
+    .rkt-beam {
+        position: absolute; left: 50%; top: -6%; width: min(64px, 8vw); height: 64%;
+        transform: translateX(-50%) scaleY(0); transform-origin: top; border-radius: 0 0 999px 999px;
+        background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.95) 24%, rgba(255,205,80,0.8) 56%, rgba(70,200,255,0));
+        filter: blur(1px); opacity: 0; animation: rktBeam 0.6s cubic-bezier(0.2,0.8,0.2,1) forwards;
+    }
+    .rkt-boss {
+        position: relative; width: clamp(150px, 30vw, 236px); z-index: 2;
+        filter: drop-shadow(0 0 40px rgba(255,160,40,0.35)) drop-shadow(0 24px 38px rgba(0,0,0,0.6));
+        animation: rktBossDefeat 1.18s cubic-bezier(0.2,0.7,0.3,1) forwards;
+    }
+    .rkt-boss-svg { width: 100%; height: auto; display: block; }
+    .rkt-eyes { animation: rktEyesOut 0.4s ease 0.48s forwards; }
+    .rkt-crack { opacity: 0; animation: rktCrackIn 0.18s ease 0.5s forwards; }
+    .rkt-shard {
+        position: absolute; left: 50%; top: 50%; width: clamp(30px,4vw,44px); height: clamp(42px,5.6vw,62px);
+        margin: -28px 0 0 -20px; border-radius: 7px;
+        background: linear-gradient(157deg, #fffdf6, #e9ecf3); border: 1px solid rgba(255,211,94,0.5);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.4); color: #14110a; font-weight: 900;
+        display: flex; align-items: flex-start; padding: 5px 7px; font-size: 13px;
+        opacity: 0; animation: rktShard 0.86s cubic-bezier(0.16,0.8,0.2,1) var(--delay) forwards;
+    }
+    .rkt-shard.red { color: #c92535; }
+    .rkt-spark {
+        position: absolute; left: 50%; top: 46%; width: 8px; height: 8px; border-radius: 50%;
+        background: #fff3bf; box-shadow: 0 0 18px rgba(255,205,80,0.8); opacity: 0;
+        animation: rktSpark 0.72s cubic-bezier(0.14,0.84,0.18,1) var(--delay) forwards;
+    }
+    @keyframes rktBeam {
+        0% { transform: translateX(-50%) scaleY(0); opacity: 0; }
+        24% { opacity: 1; }
+        70% { transform: translateX(-50%) scaleY(1); opacity: 0.96; }
+        100% { transform: translateX(-50%) scaleY(1); opacity: 0; }
+    }
+    @keyframes rktRing {
+        0% { transform: translate(-50%,-50%) scale(0.3); opacity: 0; }
+        20% { opacity: 1; }
+        100% { transform: translate(-50%,-50%) scale(1.5); opacity: 0; }
+    }
+    @keyframes rktTitleIn {
+        0% { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.92); }
+        100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    }
+    @keyframes rktBossDefeat {
+        0% { transform: translateY(10px) scale(0.96); opacity: 0; }
+        16% { transform: translateY(0) scale(1); opacity: 1; }
+        44% { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
+        60% { transform: translateY(6px) rotate(-5deg) scale(1.02); opacity: 1; }
+        100% { transform: translateY(96px) rotate(-16deg) scale(0.58); opacity: 0; }
+    }
+    @keyframes rktEyesOut { to { opacity: 0; } }
+    @keyframes rktCrackIn { to { opacity: 1; } }
+    @keyframes rktShard {
+        0% { transform: translate(0,0) rotate(0) scale(0.6); opacity: 0; }
+        24% { opacity: 1; }
+        100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); opacity: 0; }
+    }
+    @keyframes rktSpark {
+        0% { transform: translate(-50%,-50%) scale(0.5); opacity: 0; }
+        16% { opacity: 1; }
+        100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.15); opacity: 0; }
+    }
     .return-defeat-stage {
         position: absolute; inset: 0; display: grid; place-items: center;
         transform: translateZ(0); pointer-events: none;
@@ -3784,28 +3878,49 @@ function startReturnToEvents() {
         return;
     }
     returnTransition.innerHTML = `
-        <div class="return-defeat-stage" aria-hidden="true">
-            <div class="return-defeat-ring"></div>
-            <div class="return-defeat-beam"></div>
-            <div class="return-kaiju">
-                <div class="return-kaiju-head">
-                    <span class="return-kaiju-eye left"></span>
-                    <span class="return-kaiju-eye right"></span>
-                </div>
-                <div class="return-kaiju-body"></div>
-                <div class="return-kaiju-arm left"></div>
-                <div class="return-kaiju-arm right"></div>
-                <span class="return-kaiju-spark" style="--dx:-118px;--dy:-84px;--delay:.42s"></span>
-                <span class="return-kaiju-spark" style="--dx:102px;--dy:-92px;--delay:.46s"></span>
-                <span class="return-kaiju-spark" style="--dx:-142px;--dy:18px;--delay:.5s"></span>
-                <span class="return-kaiju-spark" style="--dx:132px;--dy:24px;--delay:.54s"></span>
-                <span class="return-kaiju-spark" style="--dx:-78px;--dy:116px;--delay:.58s"></span>
-                <span class="return-kaiju-spark" style="--dx:74px;--dy:122px;--delay:.62s"></span>
+        <div class="rkt-stage" aria-hidden="true">
+            <div class="rkt-title">KAIJU DEFEATED<small>&middot; VICTORY &middot;</small></div>
+            <div class="rkt-ring"></div>
+            <div class="rkt-beam"></div>
+            <div class="rkt-boss">
+                <svg class="rkt-boss-svg" viewBox="0 0 260 372" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="rktCard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#241b3a"/><stop offset="1" stop-color="#0a0712"/></linearGradient>
+                        <linearGradient id="rktGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7d4"/><stop offset=".4" stop-color="#ffd96a"/><stop offset=".62" stop-color="#b9831f"/><stop offset=".82" stop-color="#ffe9a8"/><stop offset="1" stop-color="#8a6612"/></linearGradient>
+                        <radialGradient id="rktEye" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#fff4c2"/><stop offset=".45" stop-color="#ff9b2e"/><stop offset="1" stop-color="#c41f2c"/></radialGradient>
+                    </defs>
+                    <rect x="5" y="5" width="250" height="362" rx="20" fill="url(#rktCard)" stroke="url(#rktGold)" stroke-width="4"/>
+                    <rect x="16" y="16" width="228" height="340" rx="13" fill="none" stroke="rgba(255,211,94,0.22)" stroke-width="1.5"/>
+                    <path d="M88 100 L62 50 L106 88 Z" fill="url(#rktGold)"/>
+                    <path d="M172 100 L198 50 L154 88 Z" fill="url(#rktGold)"/>
+                    <path d="M70 124 Q130 106 190 124" stroke="url(#rktGold)" stroke-width="4" fill="none" stroke-linecap="round"/>
+                    <g class="rkt-eyes">
+                        <path d="M80 140 L120 153 L107 172 L78 161 Z" fill="url(#rktEye)"/>
+                        <path d="M180 140 L140 153 L153 172 L182 161 Z" fill="url(#rktEye)"/>
+                    </g>
+                    <path d="M78 222 Q130 206 182 222 Q160 268 130 268 Q100 268 78 222 Z" fill="#2a060c"/>
+                    <path d="M82 226 L100 212 L116 230 L130 210 L144 230 L160 212 L178 226 L160 246 L144 232 L130 250 L116 232 L100 246 Z" fill="url(#rktGold)" stroke="url(#rktGold)" stroke-width="1.5" stroke-linejoin="round"/>
+                    <path class="rkt-crack" d="M132 22 L114 118 L150 168 L116 252 L142 350 M150 168 L196 150 M116 252 L70 232" stroke="#fff3c8" stroke-width="3" fill="none" stroke-linejoin="round" opacity="0.92"/>
+                    <text x="30" y="46" fill="url(#rktGold)" font-size="26" font-weight="900" font-family="-apple-system,Segoe UI,sans-serif">A</text>
+                    <text x="230" y="332" fill="url(#rktGold)" font-size="26" font-weight="900" font-family="-apple-system,Segoe UI,sans-serif" transform="rotate(180 230 326)">A</text>
+                </svg>
+                <span class="rkt-shard red" style="--dx:-150px;--dy:-94px;--rot:-40deg;--delay:.5s">A</span>
+                <span class="rkt-shard" style="--dx:142px;--dy:-104px;--rot:38deg;--delay:.53s">K</span>
+                <span class="rkt-shard" style="--dx:-176px;--dy:28px;--rot:-22deg;--delay:.56s">Q</span>
+                <span class="rkt-shard red" style="--dx:164px;--dy:40px;--rot:26deg;--delay:.59s">J</span>
+                <span class="rkt-shard" style="--dx:-96px;--dy:146px;--rot:-14deg;--delay:.62s">10</span>
+                <span class="rkt-shard" style="--dx:100px;--dy:152px;--rot:18deg;--delay:.65s">9</span>
+                <span class="rkt-spark" style="--dx:-118px;--dy:-84px;--delay:.5s"></span>
+                <span class="rkt-spark" style="--dx:102px;--dy:-92px;--delay:.53s"></span>
+                <span class="rkt-spark" style="--dx:-142px;--dy:18px;--delay:.56s"></span>
+                <span class="rkt-spark" style="--dx:132px;--dy:24px;--delay:.59s"></span>
+                <span class="rkt-spark" style="--dx:-78px;--dy:116px;--delay:.62s"></span>
+                <span class="rkt-spark" style="--dx:74px;--dy:122px;--delay:.65s"></span>
             </div>
         </div>`;
     returnTransition.setAttribute("aria-hidden", "false");
     requestAnimationFrame(() => returnTransition.classList.add("active"));
-    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 1240);
+    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 1640);
 }
 
 function primeReturnKeyboardCapture() {
