@@ -4059,7 +4059,7 @@ function hideReturnTypeHint() {
 
 function returnShardsHTML() {
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen", "zihan", "yilin"].filter(k => PL[k] && PL[k].avatar);
+    const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen"].filter(k => PL[k] && PL[k].avatar);
     const spread = [
         { dx: -156, dy: -94, rot: -40 }, { dx: 148, dy: -104, rot: 38 },
         { dx: -188, dy: 20, rot: -24 }, { dx: 178, dy: 30, rot: 26 },
@@ -4335,7 +4335,8 @@ let _facePortraitMap = null;
 function facePortraitMap() {
     if (_facePortraitMap) return _facePortraitMap;
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    const keys = Object.keys(PL).filter(k => PL[k] && PL[k].avatar);
+    // only PICASSO Lab members get a face card (Yilin Wang & Zihan Hao are external).
+    const keys = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen"].filter(k => PL[k] && PL[k].avatar);
     if (!keys.length) return {};            // board data not loaded yet → no portraits this pass
     const sig = {};
     keys.forEach(k => { if (PL[k].card) sig[PL[k].card] = k; });
@@ -6619,7 +6620,7 @@ function previewCardsHTML() {
     // display cards are literally identical to the in-game cards: each labmate appears on
     // their signature card (the portrait map maps e.g. A♥→Zhongkai), plus a PICASSO back.
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen", "zihan", "yilin"];
+    const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen"];
     const present = roster.filter(k => PL[k]);
     const items = [{ back: true }].concat((present.length ? present : ["zhongkai", "zhuo", "zaifeng"]).map(k => ({ key: k })));
     const n = items.length;
