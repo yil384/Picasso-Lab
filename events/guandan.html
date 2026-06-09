@@ -176,10 +176,24 @@
     .card.small .pip { font-size: 18px; }
     .card.small .corner { font-size: 12px; }
     .card.back {
-        background: linear-gradient(135deg, #233f9e, #12184e);
-        border-color: rgba(255,255,255,0.42); color: #fff;
+        display: grid; grid-auto-rows: max-content; place-content: center; justify-items: center; gap: 2px;
+        background: linear-gradient(150deg, #241b3a, #0c0a18);
+        border-color: rgba(255,211,94,0.5);
+        box-shadow: inset 0 0 0 2px rgba(255,211,94,0.16);
     }
-    .card.back::before { content: "P"; place-self: center; font-weight: 950; color: rgba(255,255,255,0.85); }
+    .card.back b {
+        font-size: 15px; font-weight: 900; color: #ffd96a;
+        width: 22px; height: 22px; border-radius: 6px;
+        display: grid; place-items: center;
+        border: 1.5px solid rgba(255,211,94,0.6);
+        background: rgba(255,211,94,0.08);
+    }
+    .card.back i {
+        font-style: normal; font-size: 6px; font-weight: 900;
+        letter-spacing: 1px; color: rgba(255,224,150,0.82);
+    }
+    .card.small.back b { font-size: 11px; width: 16px; height: 16px; }
+    .card.small.back i { font-size: 4.5px; }
 
     .phase-panel {
         position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 30;
@@ -1519,38 +1533,11 @@
     .card.small .joker-figure span { font-size: 7px; }
     .card.small .wild-chip { display: none; }
     .card.back {
-        display: grid;
-        place-items: center;
-        background:
-            linear-gradient(135deg, transparent 44%, rgba(255,255,255,0.22) 45% 55%, transparent 56%),
-            radial-gradient(circle at 50% 50%, rgba(255,205,0,0.18), transparent 32%),
-            linear-gradient(145deg, #00629B, #071848);
-        border-color: rgba(255,255,255,0.42);
-        color: #fff;
+        background: linear-gradient(150deg, #241b3a, #0c0a18);
+        border-color: rgba(255,211,94,0.5);
+        box-shadow: inset 0 0 0 2px rgba(255,211,94,0.16);
     }
-    .card.back::before {
-        content: "";
-        position: absolute;
-        inset: 8px;
-        border-radius: 5px;
-        border: 1px solid rgba(255,255,255,0.34);
-        background:
-            radial-gradient(circle at 50% 50%, rgba(255,205,0,0.84) 0 3px, transparent 4px),
-            repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 2px, transparent 2px 6px);
-    }
-    .card.back::after {
-        content: "P";
-        position: relative;
-        z-index: 2;
-        width: 28px;
-        height: 28px;
-        display: grid;
-        place-items: center;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.9);
-        color: #061013;
-        font-weight: 950;
-    }
+    .card.back::before, .card.back::after { content: none; }
 
     .phase-panel {
         border-radius: 16px;
@@ -4399,7 +4386,7 @@ function cardCenterHTML(card, label) {
 
 function cardHTML(card, small = false, selectable = false, extraAttrs = "", extraClass = "", overlayHTML = "") {
     if (!card) return "";
-    if (card.back) return `<div class="card back ${small ? "small" : ""} ${extraClass}" ${extraAttrs} aria-hidden="true"></div>`;
+    if (card.back) return `<div class="card back ${small ? "small" : ""} ${extraClass}" ${extraAttrs} aria-hidden="true"><b>P</b><i>PICASSO</i><i>LAB</i></div>`;
     const red = cardColor(card);
     const wild = game && isWild(card, game.currentLevelRank) ? "wild" : "";
     const sel = selectable && selected.has(card.id) ? "selected" : "";
