@@ -48,15 +48,15 @@
     var MATCHES = [
         { date: "2026-06-06", teamA: ["zhongkai", "zhuo"], teamB: ["zaifeng", "yilin"],     levelA: "A", levelB: "K", winner: "A" },
         { date: "2026-06-05", teamA: ["zhongkai", "zhuo"], teamB: ["zaifeng", "zihan"],     levelA: "Q", levelB: "A", winner: "B" },
-        { date: "2026-06-01", teamA: ["zhongkai", "zhuo"], teamB: ["zhengding", "yichen"],  levelA: "8", levelB: "2", winner: "A", note: "对手三冲 A 未过 · 掉回 2（非零封）" },
+        { date: "2026-06-01", teamA: ["zhongkai", "zhuo"], teamB: ["zhengding", "yichen"],  levelA: "2", levelB: "8", winner: "B", note: "红方三冲 A 未过 · 掉回 2（非零封）" },
         { date: "2026-05-29", teamA: ["zhongkai", "zhuo"], teamB: ["zaifeng", "yichen"],    levelA: "A", levelB: "3", winner: "A" },
-        { date: "2026-05-25", teamA: ["zhongkai", "zhuo"], teamB: ["zhengding", "zaifeng"], levelA: "J", levelB: "2", winner: "A", note: "对手三冲 A 未过 · 掉回 2（非零封）" },
+        { date: "2026-05-25", teamA: ["zhongkai", "zhuo"], teamB: ["zhengding", "zaifeng"], levelA: "J", levelB: "2", winner: "A", note: "蓝方三冲 A 未过 · 掉回 2（非零封）" },
         { date: "2026-05-22", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "A", levelB: "Q", winner: "A" },
         { date: "2026-05-01", teamA: ["zhongkai", "zhuo"],    teamB: ["zaifeng", "yichen"],   levelA: "2", levelB: "A", winner: "B" },
-        { date: "2026-04-29", teamA: ["zhongkai", "zhuo"],    teamB: ["zaifeng", "yichen"],   levelA: "3", levelB: "A", winner: "A", note: "以下克上 · 阻击对手冲 A" },
+        { date: "2026-04-29", teamA: ["zhongkai", "zhuo"],    teamB: ["zaifeng", "yichen"],   levelA: "3", levelB: "A", winner: "A", note: "以下克上 · 阻击蓝方冲 A" },
         { date: "2026-04-25", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "10", levelB: "A", winner: "B" },
         { date: "2026-03-20", teamA: ["haotian", "yichen"],   teamB: ["zhongkai", "zaifeng"],  levelA: "3", levelB: "A", winner: "B" },
-        { date: "2026-02-06", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "A", levelB: "A", winner: "A", note: "双 A 决战 · 我方先终结" }
+        { date: "2026-02-06", teamA: ["zhongkai", "zaifeng"], teamB: ["zhengding", "yichen"], levelA: "A", levelB: "A", winner: "B", note: "双 A 决战 · 蓝方先终结" }
     ];
 
     // ------------------------- SVG icon set (no emoji) --------------------------
