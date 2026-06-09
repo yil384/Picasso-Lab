@@ -7211,8 +7211,12 @@ else render();
             el.className = "gdr-banner gdr-scope";
             el.setAttribute("role", "button");
             el.tabIndex = 0;
+            // main UI is a module (L/uiLang aren't global) — read the saved lang directly.
+            // The toggle writes localStorage before re-render, so re-injection picks up the switch.
+            var bnLang = localStorage.getItem("picasso.guandan.lang") || "en";
+            var btnLabel = bnLang === "zh" ? "巅峰对决 · 完整战绩 ›" : "Peak Showdown · Full Record ›";
             el.innerHTML = '<div class="gdr-banner-inner">' + (R.buildBanner ? R.buildBanner() : "") + '</div>' +
-                '<button class="gdr-banner-btn" type="button">巅峰对决 · 完整战绩 ›</button>';
+                '<button class="gdr-banner-btn" type="button">' + btnLabel + '</button>';
             lobby.insertBefore(el, lobby.firstChild);
         }
     }
