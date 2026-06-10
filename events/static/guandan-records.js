@@ -158,7 +158,7 @@
             '<div class="gdr-hero-trophy">' + ICONS.trophy + '</div>' +
             '<h2 class="gdr-hero-title">巅峰对决</h2>' +
             '<div class="gdr-hero-sub">Peak Showdown · Picasso Lab 掼蛋</div>' +
-            '<div class="gdr-hero-tag">一个「AI for Guandan」研究计划 🤖 · 我们真的有在努力学习</div>' +
+            '<div class="gdr-hero-tag">AI for Guandan 🤖 · 输了叫收集数据，赢了叫重大突破 · <em>Lost = data collection &nbsp;·&nbsp; Won = major breakthrough</em></div>' +
         '</div>';
     }
 
