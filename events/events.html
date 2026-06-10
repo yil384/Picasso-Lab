@@ -1287,6 +1287,8 @@
     }
     @keyframes gmtAlert { 0%, 62% { opacity: 1; } 63%, 100% { opacity: 0.25; } }
     @keyframes gmtVignette { 0%, 62% { opacity: 1; } 63%, 100% { opacity: 0.45; } }
+    @keyframes fromGuandanFade { from { opacity: 0; } to { opacity: 1; } }
+    body.from-guandan { animation: fromGuandanFade 0.45s ease both; }
     @keyframes gmtBossIn {
         0% { opacity: 0; transform: translate(-50%, -50%) scale(2.3) rotate(-12deg); }
         55% { opacity: 1; }
@@ -2902,6 +2904,8 @@
         const params = new URLSearchParams(window.location.search);
         if (params.get('from') !== 'guandan') return;
         history.replaceState(null, '', window.location.pathname);
+        document.body.classList.add('from-guandan');
+        setTimeout(() => document.body.classList.remove('from-guandan'), 500);
     }
 
     playGuandanRestoreTransition();

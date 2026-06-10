@@ -411,6 +411,8 @@ body.gdr-open { overflow: hidden; }
 
 .gdr-cardmodal { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(4, 5, 12, 0.72); backdrop-filter: blur(8px); animation: gdr-fade-in 0.25s; }
 @keyframes gdr-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gdr-fade-out { from { opacity: 1; } to { opacity: 0; } }
+.gdr-cardmodal.gdr-closing { animation: gdr-fade-out 0.22s forwards; }
 .gdr-cardmodal-close { position: absolute; top: 18px; right: 20px; z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 211, 94, 0.4); background: rgba(10, 12, 24, 0.8); color: var(--gdr-gold-2); font-size: 24px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); transition: background 0.2s, transform 0.3s; }
 .gdr-cardmodal-close:hover { background: rgba(255, 59, 92, 0.4); transform: rotate(90deg); }
 .gdr-cardmodal-card {
@@ -418,9 +420,10 @@ body.gdr-open { overflow: hidden; }
     border-radius: 18px; border: 1px solid rgba(255, 211, 94, 0.25);
     background: radial-gradient(70% 40% at 50% 0%, rgba(255, 211, 94, 0.06), transparent 60%), linear-gradient(180deg, #0b0e1d, #06070e);
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); padding: 22px 18px 26px;
-    animation: gdr-card-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: gdr-card-entry 0.32s cubic-bezier(0.22,0.86,0.36,1) both;
 }
 @keyframes gdr-card-in { from { opacity: 0; transform: translateY(22px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes gdr-card-entry { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: none; } }
 
 /* ===================== paged overlay (events "mvp") ===================== */
 .gdr-pager { position: relative; max-width: 920px; margin: 0 auto; }
