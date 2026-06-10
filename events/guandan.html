@@ -296,6 +296,22 @@
     .rkt-boss-svg { width: 100%; height: auto; display: block; }
     .rkt-eyes { animation: rktEyesOut 0.4s ease 0.48s forwards; }
     .rkt-crack { opacity: 0; animation: rktCrackIn 0.18s ease 0.5s forwards; }
+    /* monster limbs: flail in shock, then collapse limp */
+    .rkt-arm, .rkt-hand, .rkt-leg, .rkt-tail { transform-box: fill-box; }
+    .rkt-arm-l { transform-origin: 92% 12%; animation: rktArmFlailL 1.05s cubic-bezier(0.3, 0.6, 0.3, 1) forwards; }
+    .rkt-arm-r { transform-origin: 8% 12%; animation: rktArmFlailR 1.05s cubic-bezier(0.3, 0.6, 0.3, 1) forwards; }
+    .rkt-hand-l { transform-origin: 88% 24%; animation: rktClawL 1s ease-in-out forwards; }
+    .rkt-hand-r { transform-origin: 12% 24%; animation: rktClawR 1s ease-in-out forwards; }
+    .rkt-leg-l { transform-origin: 60% 4%; animation: rktLegBuckleL 0.8s ease-in 0.34s forwards; }
+    .rkt-leg-r { transform-origin: 40% 4%; animation: rktLegBuckleR 0.8s ease-in 0.34s forwards; }
+    .rkt-tail { transform-origin: 2% 28%; animation: rktTailDroop 0.85s ease-in 0.3s forwards; }
+    @keyframes rktArmFlailL { 0% { transform: rotate(0); } 22% { transform: rotate(40deg); } 46% { transform: rotate(30deg); } 78% { transform: rotate(-26deg); } 100% { transform: rotate(-30deg); } }
+    @keyframes rktArmFlailR { 0% { transform: rotate(0); } 22% { transform: rotate(-40deg); } 46% { transform: rotate(-30deg); } 78% { transform: rotate(26deg); } 100% { transform: rotate(30deg); } }
+    @keyframes rktClawL { 0% { transform: rotate(0); } 30% { transform: rotate(-22deg); } 60% { transform: rotate(-22deg); } 100% { transform: rotate(14deg); } }
+    @keyframes rktClawR { 0% { transform: rotate(0); } 30% { transform: rotate(22deg); } 60% { transform: rotate(22deg); } 100% { transform: rotate(-14deg); } }
+    @keyframes rktLegBuckleL { to { transform: rotate(-14deg) translateY(4px); } }
+    @keyframes rktLegBuckleR { to { transform: rotate(14deg) translateY(4px); } }
+    @keyframes rktTailDroop { to { transform: rotate(18deg); } }
     .rkt-shard {
         position: absolute; left: 50%; top: 50%; width: clamp(34px,4.6vw,50px); height: clamp(48px,6.4vw,70px);
         margin: -32px 0 0 -24px; border-radius: 8px; overflow: hidden;
@@ -4129,25 +4145,50 @@ function startReturnToEvents() {
                         <linearGradient id="rktCard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#241b3a"/><stop offset="1" stop-color="#0a0712"/></linearGradient>
                         <linearGradient id="rktGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7d4"/><stop offset=".4" stop-color="#ffd96a"/><stop offset=".62" stop-color="#b9831f"/><stop offset=".82" stop-color="#ffe9a8"/><stop offset="1" stop-color="#8a6612"/></linearGradient>
                         <radialGradient id="rktEye" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#fff4c2"/><stop offset=".45" stop-color="#ff9b2e"/><stop offset="1" stop-color="#c41f2c"/></radialGradient>
+                        <linearGradient id="rktSkin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#43306b"/><stop offset="1" stop-color="#1a1130"/></linearGradient>
                     </defs>
-                    <!-- Left arm -->
-                    <path d="M 14 192 Q -38 222 -72 266" stroke="#1e3028" stroke-width="28" stroke-linecap="round" fill="none"/>
-                    <path d="M 14 192 Q -38 222 -72 266" stroke="rgba(255,211,94,0.12)" stroke-width="6" stroke-linecap="round" fill="none"/>
-                    <path d="M -72 266 L -90 250" stroke="#152420" stroke-width="13" stroke-linecap="round" fill="none"/>
-                    <path d="M -72 266 L -91 269" stroke="#152420" stroke-width="13" stroke-linecap="round" fill="none"/>
-                    <path d="M -72 266 L -79 288" stroke="#152420" stroke-width="13" stroke-linecap="round" fill="none"/>
-                    <path d="M -90 250 L -96 244" stroke="rgba(255,211,94,0.45)" stroke-width="3" stroke-linecap="round" fill="none"/>
-                    <path d="M -91 269 L -99 267" stroke="rgba(255,211,94,0.45)" stroke-width="3" stroke-linecap="round" fill="none"/>
-                    <path d="M -79 288 L -83 296" stroke="rgba(255,211,94,0.45)" stroke-width="3" stroke-linecap="round" fill="none"/>
-                    <!-- Right arm (mirror) -->
-                    <path d="M 246 192 Q 298 222 332 266" stroke="#1e3028" stroke-width="28" stroke-linecap="round" fill="none"/>
-                    <path d="M 246 192 Q 298 222 332 266" stroke="rgba(255,211,94,0.12)" stroke-width="6" stroke-linecap="round" fill="none"/>
-                    <path d="M 332 266 L 350 250" stroke="#152420" stroke-width="13" stroke-linecap="round" fill="none"/>
-                    <path d="M 332 266 L 351 269" stroke="#152420" stroke-width="13" stroke-linecap="round" fill="none"/>
-                    <path d="M 332 266 L 339 288" stroke="#152420" stroke-width="13" stroke-linecap="round" fill="none"/>
-                    <path d="M 350 250 L 356 244" stroke="rgba(255,211,94,0.45)" stroke-width="3" stroke-linecap="round" fill="none"/>
-                    <path d="M 351 269 L 359 267" stroke="rgba(255,211,94,0.45)" stroke-width="3" stroke-linecap="round" fill="none"/>
-                    <path d="M 339 288 L 343 296" stroke="rgba(255,211,94,0.45)" stroke-width="3" stroke-linecap="round" fill="none"/>
+                    <!-- tail (droops in defeat) -->
+                    <g class="rkt-tail">
+                        <path d="M 130 352 Q 198 398 254 390" stroke="url(#rktSkin)" stroke-width="22" stroke-linecap="round" fill="none"/>
+                        <path d="M 254 390 L 286 400 L 250 370 Z" fill="url(#rktGold)"/>
+                    </g>
+                    <!-- legs (buckle) -->
+                    <g class="rkt-leg rkt-leg-l">
+                        <path d="M 82 348 Q 74 380 70 400" stroke="url(#rktSkin)" stroke-width="30" stroke-linecap="round" fill="none"/>
+                        <path d="M 60 402 L 36 414 L 62 418 Z" fill="url(#rktGold)"/>
+                        <path d="M 72 408 L 64 428 L 84 418 Z" fill="url(#rktGold)"/>
+                    </g>
+                    <g class="rkt-leg rkt-leg-r">
+                        <path d="M 178 348 Q 186 380 190 400" stroke="url(#rktSkin)" stroke-width="30" stroke-linecap="round" fill="none"/>
+                        <path d="M 200 402 L 224 414 L 198 418 Z" fill="url(#rktGold)"/>
+                        <path d="M 188 408 L 196 428 L 176 418 Z" fill="url(#rktGold)"/>
+                    </g>
+                    <!-- left arm (flails, then hangs limp) -->
+                    <g class="rkt-arm rkt-arm-l">
+                        <path d="M 20 168 Q -30 184 -52 226" stroke="url(#rktSkin)" stroke-width="36" stroke-linecap="round" fill="none"/>
+                        <path d="M -52 226 Q -66 252 -72 274" stroke="url(#rktSkin)" stroke-width="27" stroke-linecap="round" fill="none"/>
+                        <path d="M 6 146 L -2 118 L 24 138 Z" fill="url(#rktGold)"/>
+                        <path d="M -20 160 L -38 140 L -6 154 Z" fill="url(#rktGold)"/>
+                        <g class="rkt-hand rkt-hand-l">
+                            <circle cx="-74" cy="280" r="19" fill="url(#rktSkin)"/>
+                            <path d="M -86 268 Q -112 252 -120 230 Q -100 250 -82 254 Z" fill="url(#rktGold)"/>
+                            <path d="M -92 282 Q -122 276 -134 260 Q -112 278 -88 276 Z" fill="url(#rktGold)"/>
+                            <path d="M -86 294 Q -108 308 -116 326 Q -98 306 -80 302 Z" fill="url(#rktGold)"/>
+                        </g>
+                    </g>
+                    <!-- right arm (mirror) -->
+                    <g class="rkt-arm rkt-arm-r">
+                        <path d="M 240 168 Q 290 184 312 226" stroke="url(#rktSkin)" stroke-width="36" stroke-linecap="round" fill="none"/>
+                        <path d="M 312 226 Q 326 252 332 274" stroke="url(#rktSkin)" stroke-width="27" stroke-linecap="round" fill="none"/>
+                        <path d="M 254 146 L 262 118 L 236 138 Z" fill="url(#rktGold)"/>
+                        <path d="M 280 160 L 298 140 L 266 154 Z" fill="url(#rktGold)"/>
+                        <g class="rkt-hand rkt-hand-r">
+                            <circle cx="334" cy="280" r="19" fill="url(#rktSkin)"/>
+                            <path d="M 346 268 Q 372 252 380 230 Q 360 250 342 254 Z" fill="url(#rktGold)"/>
+                            <path d="M 352 282 Q 382 276 394 260 Q 372 278 348 276 Z" fill="url(#rktGold)"/>
+                            <path d="M 346 294 Q 368 308 376 326 Q 358 306 340 302 Z" fill="url(#rktGold)"/>
+                        </g>
+                    </g>
                     <rect x="5" y="5" width="250" height="362" rx="20" fill="url(#rktCard)" stroke="url(#rktGold)" stroke-width="4"/>
                     <rect x="16" y="16" width="228" height="340" rx="13" fill="none" stroke="rgba(255,211,94,0.22)" stroke-width="1.5"/>
                     <path d="M88 100 L62 50 L106 88 Z" fill="url(#rktGold)"/>
