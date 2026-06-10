@@ -214,6 +214,22 @@
         background: rgba(255,233,156,0.12); border: 1px solid rgba(255,233,156,0.18);
         color: #fff1b8; font-size: 11px;
     }
+    .tribute-visual { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 6px 10px; }
+    .tv-name { font-size: 11px; color: #fff1b8; font-weight: 600; }
+    .tv-arrow { font-size: 10px; color: rgba(255,233,156,0.6); }
+    .tv-sep { color: rgba(255,255,255,0.3); }
+    .tv-card { pointer-events: none; }
+    .tv-return { opacity: 0.8; }
+    .back-stack .card.small.public-joker { margin-left: 0; flex-shrink: 0; }
+    .public-joker { outline: 2px solid rgba(255,59,92,0.7); outline-offset: 1px; border-radius: 5px; }
+    .starting-card-banner {
+        display: flex; align-items: center; gap: 7px; justify-content: center;
+        padding: 5px 10px; margin: 4px auto 0;
+        background: rgba(255,233,156,0.1); border: 1px solid rgba(255,233,156,0.2);
+        border-radius: 10px; font-size: 11px; color: rgba(255,233,156,0.75);
+        width: min(320px, 100%);
+    }
+    .starting-card-banner .sc-card { pointer-events: none; }
 
     .toast {
         position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(18px);
@@ -3989,6 +4005,8 @@ function normalizeGame(g) {
     g.history = valuesFromFirebase(g.history).map(entry => normalizeActionEntry(entry, g.currentLevelRank)).slice(-16);
     g.trickPlays = indexedFromFirebase(g.trickPlays, 4, null).map(entry => normalizeActionEntry(entry, g.currentLevelRank));
     g.selectedTributes = valuesFromFirebase(g.selectedTributes);
+    g.publicJokerSeats = valuesFromFirebase(g.publicJokerSeats).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < 4);
+    if (!g.startingCard) g.startingCard = null;
     if (!g.phase) g.phase = "lobby";
     if (!Number.isInteger(g.currentTurn)) g.currentTurn = 0;
     if (!Number.isInteger(g.passCount)) g.passCount = 0;
@@ -4969,12 +4987,32 @@ function startRound(g, previousResult) {
     g.history = [];
     g.trickPlays = [null, null, null, null];
     g.phase = "playing";
-    setCurrentTurn(g, previousResult?.nextStarter ?? 0);
+    g.startingCard = null;
+    g.publicJokerSeats = [];
+    if (!previousResult) {
+        // First game: randomly pick a non-joker card as public starting marker
+        const allNonJokers = [0, 1, 2, 3].flatMap(s =>
+            (g.hands[s] || []).filter(c => !c.joker).map(c => ({ card: c, seat: s }))
+        );
+        const pick = allNonJokers.length
+            ? allNonJokers[Math.floor(Math.random() * allNonJokers.length)]
+            : null;
+        if (pick) {
+            g.startingCard = { rank: pick.card.rank, suit: pick.card.suit };
+            setCurrentTurn(g, pick.seat);
+        } else {
+            setCurrentTurn(g, activeSeatIds(g)[0] ?? 0);
+        }
+    } else {
+        setCurrentTurn(g, previousResult.nextStarter ?? 0);
+    }
     if (!g.seats[g.currentTurn]) setCurrentTurn(g, activeSeatIds(g)[0] ?? 0);
     const tributeRows = previousResult ? applyTribute(g, previousResult) : [];
     g.selectedTributes = tributeRows;
     if (tributeRows.length) {
         g.message = `第 ${g.roundNo} 局 · ${tributeRows.map(x => x.text).join("；")}`;
+    } else if (g.startingCard) {
+        g.message = `第 ${g.roundNo} 局开始，打 ${g.currentLevelRank}。起始牌：${g.startingCard.suit}${g.startingCard.rank}`;
     } else {
         g.message = `第 ${g.roundNo} 局开始，打 ${g.currentLevelRank}。`;
     }
@@ -5026,10 +5064,13 @@ function applyTribute(g, result) {
     const payers = (result.tributePayers || []).filter(p => Number.isInteger(p) && g.hands[p]?.length);
     const redJokerCount = payers.reduce((n, p) => n + g.hands[p].filter(c => c.joker === "RJ").length, 0);
     if (payers.length && redJokerCount >= 2) {
+        // 抗贡：big jokers become public information
+        g.publicJokerSeats = payers.filter(p => g.hands[p].some(c => c.joker === "RJ"));
         setCurrentTurn(g, result.first);
         rows.push({ text: "抗贡成功，头游先出牌。" });
         return rows;
     }
+    g.publicJokerSeats = [];
     const entries = payers.map(payer => ({
         payer,
         tribute: highestTributeCard(g.hands[payer], levelRank)
@@ -5042,7 +5083,9 @@ function applyTribute(g, result) {
         });
     }
     const receivers = entries.length === 2 ? [result.first, partnerOf(result.first)] : [result.first];
-    let starter = entries[0]?.payer ?? result.first;
+    // Starter = the tribute payer who received the highest returned card
+    let starter = result.first;
+    let maxRetPower = -1;
     for (const [idx, entry] of entries.entries()) {
         const payer = entry.payer;
         const receiver = receivers[idx] ?? result.first;
@@ -5050,8 +5093,20 @@ function applyTribute(g, result) {
         if (!tribute) continue;
         moveCardBetween(g, payer, receiver, tribute);
         const ret = lowestReturnCard(g.hands[receiver], levelRank, new Set([tribute.id]));
-        if (ret) moveCardBetween(g, receiver, payer, ret);
-        rows.push({ text: `${entries.length === 2 ? "双贡：" : ""}${g.seats[payer].name} 进贡 ${cardText(tribute, "zh")} 给 ${g.seats[receiver].name}${ret ? `，${g.seats[receiver].name} 还贡 ${cardText(ret, "zh")}` : ""}` });
+        if (ret) {
+            moveCardBetween(g, receiver, payer, ret);
+            const retPower = tributePower(ret, levelRank);
+            if (retPower > maxRetPower) { maxRetPower = retPower; starter = payer; }
+        } else if (maxRetPower < 0) {
+            starter = payer;
+        }
+        rows.push({
+            text: `${entries.length === 2 ? "双贡：" : ""}${g.seats[payer].name} 进贡 ${cardText(tribute, "zh")} 给 ${g.seats[receiver].name}${ret ? `，${g.seats[receiver].name} 还贡 ${cardText(ret, "zh")}` : ""}`,
+            payerSeat: payer,
+            receiverSeat: receiver,
+            tributeCard: tribute,
+            returnCard: ret || null
+        });
     }
     setCurrentTurn(g, starter);
     return rows;
@@ -5253,6 +5308,12 @@ async function playCards(seat, cards, options = {}) {
         if (!g.lastPlay) g.trickPlays = [null, null, null, null];
         const idSet = new Set(ids);
         g.hands[seat] = g.hands[seat].filter(c => !idSet.has(c.id));
+        // Remove played public jokers from the public reveal list
+        if ((g.publicJokerSeats || []).includes(seat) && currentCards.some(c => c.joker === "RJ")) {
+            if (!g.hands[seat].some(c => c.joker === "RJ")) {
+                g.publicJokerSeats = (g.publicJokerSeats || []).filter(s => s !== seat);
+            }
+        }
         g.lastPlay = { player: seat, cards: currentCards, combo };
         g.trickPlays[seat] = { player: seat, action: comboName(combo, "zh"), actionType: "combo", combo, cards: currentCards, at: Date.now() };
         g.passCount = 0;
@@ -6875,7 +6936,23 @@ function lastPlaySummaryHTML(lastLabel) {
 function tributeSummaryHTML() {
     const rows = valuesFromFirebase(game.selectedTributes);
     if (!rows.length) return "";
-    return `<div class="table-tribute">${rows.map(row => `<div class="tribute-row">${encodeHTML(displayMessage(row.text || row))}</div>`).join("")}</div>`;
+    return `<div class="table-tribute">${rows.map(row => {
+        const tc = row.tributeCard;
+        const rc = row.returnCard;
+        const payerName = row.payerSeat != null ? encodeHTML(displaySeatName(game.seats[row.payerSeat])) : "";
+        const recvName  = row.receiverSeat != null ? encodeHTML(displaySeatName(game.seats[row.receiverSeat])) : "";
+        if (tc && payerName) {
+            return `<div class="tribute-row tribute-visual">
+                <span class="tv-name">${payerName}</span>
+                <span class="tv-arrow">进贡</span>
+                ${cardHTML(tc, true, false, "", "tv-card")}
+                <span class="tv-arrow">→</span>
+                <span class="tv-name">${recvName}</span>
+                ${rc ? `<span class="tv-sep">·</span><span class="tv-name">${recvName}</span><span class="tv-arrow">还贡</span>${cardHTML(rc, true, false, "", "tv-card tv-return")}<span class="tv-arrow">→</span><span class="tv-name">${payerName}</span>` : ""}
+            </div>`;
+        }
+        return `<div class="tribute-row">${encodeHTML(displayMessage(row.text || row))}</div>`;
+    }).join("")}</div>`;
 }
 
 function dealOverlayHTML(mine, phase) {
@@ -6981,6 +7058,7 @@ function renderTable() {
                 <div class="center-card">
                     <div class="center-meta"><span>${iconHTML("last")}${L("Last Trick", "上一手")}</span><strong>${lastLabel}</strong></div>
                     ${tributeSummaryHTML()}
+                    ${game.startingCard && game.roundNo === 1 ? `<div class="starting-card-banner"><span>${L("Starting card", "起始牌")}</span>${cardHTML({ suit: game.startingCard.suit, rank: game.startingCard.rank, id: "__sc" }, true, false, "", "sc-card")}<span>${L("determines first player", "决定首出")}</span></div>` : ""}
                     <div class="last-play ${game.lastPlay ? "" : "empty"}">${encodeHTML(lastPlaySummaryHTML(lastLabel))}</div>
                     <div class="round-message">${encodeHTML(displayMessage(game.message || ""))}</div>
                 </div>
@@ -7121,20 +7199,24 @@ function playerHTML(i, mine) {
         : i !== mine && count > 7
             ? `≥8 ${L("cards", "张")}`
             : L("left", "剩余");
+    // Public jokers revealed after 抗贡
+    const publicJokerSeats = valuesFromFirebase(game.publicJokerSeats);
+    const publicJokers = publicJokerSeats.includes(i)
+        ? (game.hands[i] || []).filter(c => c.joker === "RJ")
+        : [];
     const backCount = finishedPlace
         ? 0
-        : i === mine
-            ? Math.min(6, Math.max(1, Math.ceil(count / 5)))
-            : count <= 7
-                ? Math.max(1, count)
-                : 8;
+        : count <= 7
+            ? Math.max(1, count - publicJokers.length)
+            : 8 - publicJokers.length;
+    const publicJokerCards = publicJokers.map(c => cardHTML(c, true, false, "", "public-joker")).join("");
     return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${thinking ? "thinking" : ""} ${finishedPlace ? "finished" : ""}">
         <div class="player-main">
             <div class="player-avatar">${encodeHTML(initials(name, String(i + 1)))}</div>
             <div class="player-name"><span>${encodeHTML(name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
         </div>
         <div class="player-small"><span>${iconHTML(s.type === "ai" ? "ai" : "human")} ${s.type === "ai" ? "AI" : L("Human", "真人")} · ${thinking ? `<span class="thinking-badge">${L("Thinking", "思考中")}<i></i><i></i><i></i></span>` : leftLabel}</span>${countText ? `<span class="count-chip${i !== mine && !finishedPlace && count <= 7 ? " alert" : ""}">${iconHTML("cards")} ${countText}</span>` : ""}</div>
-        <div class="back-stack">${Array.from({ length: backCount }).map(() => `<i class="mini-back"></i>`).join("")}</div>
+        <div class="back-stack">${publicJokerCards}${Array.from({ length: Math.max(0, backCount) }).map(() => `<i class="mini-back"></i>`).join("")}</div>
     </div>`;
 }
 
