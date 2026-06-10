@@ -1269,23 +1269,21 @@
         filter: drop-shadow(0 0 46px rgba(255, 86, 58, 0.5)) drop-shadow(0 26px 40px rgba(0, 0, 0, 0.6));
         animation: gmtBossIn 0.66s cubic-bezier(0.2, 0.86, 0.22, 1) forwards, gmtBossShake 0.14s linear 0.72s 7;
     }
-    .gmt-boss-svg { width: 100%; height: auto; display: block; overflow: visible; }
+    .gmt-boss-svg { width: 100%; height: auto; display: block; overflow: visible; animation: gmtBreathe 1.3s ease-in-out 0.72s infinite alternate; }
     .gmt-eyes { animation: gmtEyePulse 0.62s ease-in-out 0.7s infinite alternate; transform-origin: center; }
-    /* monster limbs: skeletal SVG-group animation */
-    .gmt-arm, .gmt-hand, .gmt-leg, .gmt-tail { transform-box: fill-box; }
-    .gmt-arm-l { transform-origin: 92% 12%; animation: gmtArmRageL 1.5s ease-in-out 0.7s infinite; }
-    .gmt-arm-r { transform-origin: 8% 12%; animation: gmtArmRageR 1.5s ease-in-out 0.7s infinite; }
-    .gmt-hand-l { transform-origin: 88% 24%; animation: gmtClawL 0.72s ease-in-out 0.7s infinite alternate; }
-    .gmt-hand-r { transform-origin: 12% 24%; animation: gmtClawR 0.72s ease-in-out 0.7s infinite alternate; }
-    .gmt-leg-l { transform-origin: 60% 4%; animation: gmtStomp 0.58s ease-in-out 0.75s infinite alternate; }
-    .gmt-leg-r { transform-origin: 40% 4%; animation: gmtStomp 0.58s ease-in-out 0.75s infinite alternate-reverse; }
-    .gmt-tail { transform-origin: 2% 28%; animation: gmtTailWag 1.15s ease-in-out 0.7s infinite alternate; }
-    @keyframes gmtArmRageL { 0%, 100% { transform: rotate(-5deg); } 38% { transform: rotate(30deg); } 62% { transform: rotate(16deg); } }
-    @keyframes gmtArmRageR { 0%, 100% { transform: rotate(5deg); } 38% { transform: rotate(-30deg); } 62% { transform: rotate(-16deg); } }
-    @keyframes gmtClawL { from { transform: rotate(10deg); } to { transform: rotate(-16deg); } }
-    @keyframes gmtClawR { from { transform: rotate(-10deg); } to { transform: rotate(16deg); } }
-    @keyframes gmtStomp { from { transform: rotate(-5deg); } to { transform: rotate(4deg) translateY(-5px); } }
-    @keyframes gmtTailWag { from { transform: rotate(-6deg); } to { transform: rotate(10deg); } }
+    /* monster limbs: breathing body + slow asymmetric arm sway with claw follow-through */
+    .gmt-arm, .gmt-hand, .gmt-tail { transform-box: fill-box; }
+    .gmt-arm-l { transform-origin: 93% 27%; animation: gmtArmSwayL 1.35s ease-in-out 0.7s infinite alternate; }
+    .gmt-arm-r { transform-origin: 7% 27%; animation: gmtArmSwayR 1.35s ease-in-out 1.05s infinite alternate; }
+    .gmt-hand-l { transform-origin: 88% 49%; animation: gmtClawFlexL 1.35s ease-in-out 0.9s infinite alternate; }
+    .gmt-hand-r { transform-origin: 12% 49%; animation: gmtClawFlexR 1.35s ease-in-out 1.25s infinite alternate; }
+    .gmt-tail { transform-origin: 5% 15%; animation: gmtTailWag 1.5s ease-in-out 0.7s infinite alternate; }
+    @keyframes gmtBreathe { from { transform: translateY(0); } to { transform: translateY(5px); } }
+    @keyframes gmtArmSwayL { from { transform: rotate(-4deg); } to { transform: rotate(11deg); } }
+    @keyframes gmtArmSwayR { from { transform: rotate(4deg); } to { transform: rotate(-11deg); } }
+    @keyframes gmtClawFlexL { from { transform: rotate(5deg); } to { transform: rotate(-9deg); } }
+    @keyframes gmtClawFlexR { from { transform: rotate(-5deg); } to { transform: rotate(9deg); } }
+    @keyframes gmtTailWag { from { transform: rotate(-5deg); } to { transform: rotate(8deg); } }
     .guandan-monster-transition .transition-card {
         background: linear-gradient(157deg, #fffdf6, #e9ecf3);
         border: 1px solid rgba(255, 211, 94, 0.45);
@@ -2130,44 +2128,44 @@
             </defs>
             <!-- tail (wags) -->
             <g class="gmt-tail">
-                <path d="M 130 352 Q 198 398 254 390" stroke="url(#gmtSkin)" stroke-width="22" stroke-linecap="round" fill="none"/>
-                <path d="M 254 390 L 286 400 L 250 370 Z" fill="url(#gmtGold)"/>
+                <path d="M 130 350 Q 205 396 258 386" stroke="url(#gmtSkin)" stroke-width="18" stroke-linecap="round" fill="none"/>
+                <path d="M 258 386 L 288 394 L 252 366 Z" fill="url(#gmtGold)"/>
             </g>
-            <!-- legs (stomp) -->
+            <!-- legs: planted haunches + flat feet with front talons -->
             <g class="gmt-leg gmt-leg-l">
-                <path d="M 82 348 Q 74 380 70 400" stroke="url(#gmtSkin)" stroke-width="30" stroke-linecap="round" fill="none"/>
-                <path d="M 60 402 L 36 414 L 62 418 Z" fill="url(#gmtGold)"/>
-                <path d="M 72 408 L 64 428 L 84 418 Z" fill="url(#gmtGold)"/>
+                <path d="M 58 338 C 52 362 50 382 54 398 L 90 398 C 96 380 98 360 100 338 Z" fill="url(#gmtSkin)"/>
+                <rect x="36" y="390" width="62" height="18" rx="9" fill="url(#gmtSkin)"/>
+                <path d="M 40 392 C 28 390 18 390 10 393 C 20 398 32 400 42 401 Z" fill="url(#gmtGold)"/>
+                <path d="M 38 401 C 28 403 20 406 15 410 C 25 410 36 408 44 406 Z" fill="url(#gmtGold)"/>
             </g>
             <g class="gmt-leg gmt-leg-r">
-                <path d="M 178 348 Q 186 380 190 400" stroke="url(#gmtSkin)" stroke-width="30" stroke-linecap="round" fill="none"/>
-                <path d="M 200 402 L 224 414 L 198 418 Z" fill="url(#gmtGold)"/>
-                <path d="M 188 408 L 196 428 L 176 418 Z" fill="url(#gmtGold)"/>
+                <path d="M 202 338 C 208 362 210 382 206 398 L 170 398 C 164 380 162 360 160 338 Z" fill="url(#gmtSkin)"/>
+                <rect x="162" y="390" width="62" height="18" rx="9" fill="url(#gmtSkin)"/>
+                <path d="M 220 392 C 232 390 242 390 250 393 C 240 398 228 400 218 401 Z" fill="url(#gmtGold)"/>
+                <path d="M 222 401 C 232 403 240 406 245 410 C 235 410 224 408 216 406 Z" fill="url(#gmtGold)"/>
             </g>
-            <!-- left arm: shoulder->elbow->forearm + taloned hand (rages + grasps) -->
+            <!-- left arm: tapered filled limb + blade-talon hand -->
             <g class="gmt-arm gmt-arm-l">
-                <path d="M 20 168 Q -30 184 -52 226" stroke="url(#gmtSkin)" stroke-width="36" stroke-linecap="round" fill="none"/>
-                <path d="M -52 226 Q -66 252 -72 274" stroke="url(#gmtSkin)" stroke-width="27" stroke-linecap="round" fill="none"/>
-                <path d="M 6 146 L -2 118 L 24 138 Z" fill="url(#gmtGold)"/>
-                <path d="M -20 160 L -38 140 L -6 154 Z" fill="url(#gmtGold)"/>
+                <path d="M 26 146 C -14 152 -42 176 -54 208 C -62 230 -70 248 -76 266 L -50 278 C -42 252 -32 230 -20 210 C -10 192 2 186 26 192 Z" fill="url(#gmtSkin)"/>
+                <path d="M 8 144 L 0 116 L 26 136 Z" fill="url(#gmtGold)"/>
+                <path d="M -18 158 L -36 138 L -4 152 Z" fill="url(#gmtGold)"/>
                 <g class="gmt-hand gmt-hand-l">
-                    <circle cx="-74" cy="280" r="19" fill="url(#gmtSkin)"/>
-                    <path d="M -86 268 Q -112 252 -120 230 Q -100 250 -82 254 Z" fill="url(#gmtGold)"/>
-                    <path d="M -92 282 Q -122 276 -134 260 Q -112 278 -88 276 Z" fill="url(#gmtGold)"/>
-                    <path d="M -86 294 Q -108 308 -116 326 Q -98 306 -80 302 Z" fill="url(#gmtGold)"/>
+                    <circle cx="-66" cy="280" r="16" fill="url(#gmtSkin)"/>
+                    <path d="M -62 262 C -78 252 -92 244 -102 234 C -94 250 -84 262 -74 270 Z" fill="url(#gmtGold)"/>
+                    <path d="M -78 268 C -94 262 -108 260 -118 260 C -106 270 -94 276 -82 280 Z" fill="url(#gmtGold)"/>
+                    <path d="M -76 290 C -90 298 -100 306 -104 312 C -92 308 -78 300 -66 294 Z" fill="url(#gmtGold)"/>
                 </g>
             </g>
             <!-- right arm (mirror) -->
             <g class="gmt-arm gmt-arm-r">
-                <path d="M 240 168 Q 290 184 312 226" stroke="url(#gmtSkin)" stroke-width="36" stroke-linecap="round" fill="none"/>
-                <path d="M 312 226 Q 326 252 332 274" stroke="url(#gmtSkin)" stroke-width="27" stroke-linecap="round" fill="none"/>
-                <path d="M 254 146 L 262 118 L 236 138 Z" fill="url(#gmtGold)"/>
-                <path d="M 280 160 L 298 140 L 266 154 Z" fill="url(#gmtGold)"/>
+                <path d="M 234 146 C 274 152 302 176 314 208 C 322 230 330 248 336 266 L 310 278 C 302 252 292 230 280 210 C 270 192 258 186 234 192 Z" fill="url(#gmtSkin)"/>
+                <path d="M 252 144 L 260 116 L 234 136 Z" fill="url(#gmtGold)"/>
+                <path d="M 278 158 L 296 138 L 264 152 Z" fill="url(#gmtGold)"/>
                 <g class="gmt-hand gmt-hand-r">
-                    <circle cx="334" cy="280" r="19" fill="url(#gmtSkin)"/>
-                    <path d="M 346 268 Q 372 252 380 230 Q 360 250 342 254 Z" fill="url(#gmtGold)"/>
-                    <path d="M 352 282 Q 382 276 394 260 Q 372 278 348 276 Z" fill="url(#gmtGold)"/>
-                    <path d="M 346 294 Q 368 308 376 326 Q 358 306 340 302 Z" fill="url(#gmtGold)"/>
+                    <circle cx="326" cy="280" r="16" fill="url(#gmtSkin)"/>
+                    <path d="M 322 262 C 338 252 352 244 362 234 C 354 250 344 262 334 270 Z" fill="url(#gmtGold)"/>
+                    <path d="M 338 268 C 354 262 368 260 378 260 C 366 270 354 276 342 280 Z" fill="url(#gmtGold)"/>
+                    <path d="M 336 290 C 350 298 360 306 364 312 C 352 308 338 300 326 294 Z" fill="url(#gmtGold)"/>
                 </g>
             </g>
             <rect x="5" y="5" width="250" height="362" rx="20" fill="url(#gmtCard)" stroke="url(#gmtGold)" stroke-width="4"/>
