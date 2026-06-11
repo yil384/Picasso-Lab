@@ -90,6 +90,29 @@
     function mercY(lat) { return Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)); }
     var MAP_ASPECT = (LON_MAX - LON_MIN) * Math.PI / 180 / (mercY(LAT_MAX) - mercY(LAT_MIN));
     var LIVE_COUNT = 3, PING_RGB = "54,224,255", PING = "#36e0ff", LIVE_RGB = "255,201,77", LAND_COLOR = "#173f61";
+
+    /* ════════ 访客点样式配置(手动调节就改这里)════════
+       每项都是 [dashboard大图, 页脚小图] 两个值。单位:CSS像素。
+       base    点的基础半径(最小的城市就是这个大小)
+       scale   按访问量增长的系数(半径 += sqrt(访问量) * scale)
+       max     按访问量增长的上限(防止大城市变成巨型圆)
+       blur    光晕强度(0=完全无光晕,数字越大越「发光」)
+       ring    live脉冲扩散环的最大半径(扩散距离)
+       alpha   点的不透明度(0~1)
+       liveBoost  live金色点的放大倍数
+       liveMin    live金色点的最小半径(保证小城市的live也看得见)
+       liveBlur   live金色点的光晕强度(仅页脚小图;大图用 blur) */
+    var DOTS = {
+        base:  [1.0, 0.6],
+        scale: [0.45, 0.25],
+        max:   [3.4, 1.0],
+        blur:  [6, 1.5],
+        ring:  [8, 5],
+        alpha: 0.88,
+        liveBoost: 1.3,
+        liveMin: 2.2,
+        liveBlur: 4
+    };
     var C_BORDER = "rgba(125,200,250,0.24)", S_BORDER = "rgba(125,200,250,0.11)";
     var RNGL = { day: "last 24 hours", week: "last 7 days", month: "last 30 days", all: "all time" };
 
@@ -130,20 +153,20 @@
     function setTarget(canvas) { R.canvas = canvas; R.ctx = canvas.getContext('2d'); resize(); }
     function matchHI(p) { return HI ? (HI.type === 'country' ? p.country === HI.val : p.key === HI.val) : true; }
     function frame(t) { if (baseDirty) { baseDirty = false; buildBase(); } if (R.off) { R.ctx.clearRect(0, 0, R.W, R.H); R.ctx.drawImage(R.off, 0, 0); }
-        var period = 2400, big = IS_TOP;
+        var period = 2400, big = IS_TOP, M = big ? 0 : 1;
         /* draw live (amber) points after the cyan ones so they sit on top */
         var order = [];
         for (var i = 0; i < pings.length; i++) order.push(i);
         order.sort(function (a, b) { return (pings[a].live ? 1 : 0) - (pings[b].live ? 1 : 0); });
         for (var oi = 0; oi < order.length; oi++) { var i = order[oi], p = pings[i], xy = project(p.lon, p.lat), x = xy[0] * dpr, y = xy[1] * dpr, on = matchHI(p);
-            var core = (big ? (1.0 + Math.min(3.4, Math.sqrt(p.n) * 0.45)) : (0.6 + Math.min(1.0, Math.sqrt(p.n) * 0.25))) * dpr;
+            var core = (DOTS.base[M] + Math.min(DOTS.max[M], Math.sqrt(p.n) * DOTS.scale[M])) * dpr;
             if (HI && on) core *= 1.25;
-            if (p.live) core = Math.max(core * 1.3, 2.2 * dpr);
+            if (p.live) core = Math.max(core * DOTS.liveBoost, DOTS.liveMin * dpr);
             var rgb = p.live ? LIVE_RGB : PING_RGB, glow = p.live ? '#ffc94d' : PING;
             if (!on) { R.ctx.beginPath(); R.ctx.arc(x, y, Math.min(core, 3.5 * dpr), 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.1)'; R.ctx.fill(); continue; }
-            if (p.live || (HI && on)) { for (var rr = 0; rr < 1; rr++) { var ph = ((t + i * 400) % period) / period, ring = core + ph * (big ? 8 : 5) * dpr;
+            if (p.live || (HI && on)) { for (var rr = 0; rr < 1; rr++) { var ph = ((t + i * 400) % period) / period, ring = core + ph * DOTS.ring[M] * dpr;
                     R.ctx.beginPath(); R.ctx.arc(x, y, ring, 0, 6.2832); R.ctx.strokeStyle = 'rgba(' + rgb + ',' + (0.55 * (1 - ph)) + ')'; R.ctx.lineWidth = 1.2 * dpr; R.ctx.stroke(); } }
-            R.ctx.save(); R.ctx.shadowColor = glow; R.ctx.shadowBlur = (big ? 6 : (p.live ? 4 : 1.5)) * dpr; R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.88)'; R.ctx.fill(); R.ctx.restore();
+            R.ctx.save(); R.ctx.shadowColor = glow; R.ctx.shadowBlur = (big ? DOTS.blur[0] : (p.live ? DOTS.liveBlur : DOTS.blur[1])) * dpr; R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',' + DOTS.alpha + ')'; R.ctx.fill(); R.ctx.restore();
             R.ctx.beginPath(); R.ctx.arc(x, y, core * 0.4, 0, 6.2832); R.ctx.fillStyle = p.live ? '#fff6dd' : '#eafdff'; R.ctx.fill(); }
         requestAnimationFrame(frame); }
 
