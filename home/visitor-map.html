@@ -131,23 +131,15 @@
     function matchHI(p) { return HI ? (HI.type === 'country' ? p.country === HI.val : p.key === HI.val) : true; }
     function frame(t) { if (baseDirty) { baseDirty = false; buildBase(); } if (R.off) { R.ctx.clearRect(0, 0, R.W, R.H); R.ctx.drawImage(R.off, 0, 0); }
         var period = 2400, big = IS_TOP;
-        /* screen-space clustering: merge points within one grid cell so dense
-           metro areas (SoCal, east coast) render as one clean dot, not a smear.
-           Zooming in shrinks each cell's geographic span, so clusters split. */
-        var G = (big ? 6 : 7) * dpr, cells = {}, clusters = [];
-        for (var i = 0; i < pings.length; i++) { var p = pings[i], xy = project(p.lon, p.lat), px = xy[0] * dpr, py = xy[1] * dpr;
-            var ck = Math.round(px / G) + '_' + Math.round(py / G);
-            var c = cells[ck]; if (!c) { c = cells[ck] = { sx: 0, sy: 0, n: 0, live: false, on: false, i: i }; clusters.push(c); }
-            c.sx += px * p.n; c.sy += py * p.n; c.n += p.n; if (p.live) c.live = true; if (matchHI(p)) c.on = true; }
-        for (var j = 0; j < clusters.length; j++) { var p = clusters[j], x = p.sx / p.n, y = p.sy / p.n, on = p.on, i = p.i;
-            var core = (big ? (0.8 + Math.min(1.8, Math.sqrt(p.n) * 0.3)) : (0.5 + Math.min(0.7, Math.sqrt(p.n) * 0.18))) * dpr;
+        for (var i = 0; i < pings.length; i++) { var p = pings[i], xy = project(p.lon, p.lat), x = xy[0] * dpr, y = xy[1] * dpr, on = matchHI(p);
+            var core = (big ? (1.2 + Math.min(6, Math.sqrt(p.n) * 0.65)) : (0.7 + Math.min(1.2, Math.sqrt(p.n) * 0.3))) * dpr;
             if (HI && on) core *= 1.25;
-            var rgb = p.live ? LIVE_RGB : PING_RGB;
-            if (!on) { R.ctx.beginPath(); R.ctx.arc(x, y, Math.min(core, 3 * dpr), 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.1)'; R.ctx.fill(); continue; }
-            if (p.live || (HI && on)) { for (var rr = 0; rr < 1; rr++) { var ph = ((t + i * 400) % period) / period, ring = core + ph * (big ? 7 : 4) * dpr;
+            var rgb = p.live ? LIVE_RGB : PING_RGB, glow = p.live ? '#ffc94d' : PING;
+            if (!on) { R.ctx.beginPath(); R.ctx.arc(x, y, Math.min(core, 4 * dpr), 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.1)'; R.ctx.fill(); continue; }
+            if (p.live || (HI && on)) { for (var rr = 0; rr < 1; rr++) { var ph = ((t + i * 400) % period) / period, ring = core + ph * (big ? 10 : 6) * dpr;
                     R.ctx.beginPath(); R.ctx.arc(x, y, ring, 0, 6.2832); R.ctx.strokeStyle = 'rgba(' + rgb + ',' + (0.5 * (1 - ph)) + ')'; R.ctx.lineWidth = 1 * dpr; R.ctx.stroke(); } }
-            R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.92)'; R.ctx.fill();
-            if (big || p.live) { R.ctx.beginPath(); R.ctx.arc(x, y, core * 0.38, 0, 6.2832); R.ctx.fillStyle = p.live ? '#fff6dd' : '#eafdff'; R.ctx.fill(); } }
+            R.ctx.save(); R.ctx.shadowColor = glow; R.ctx.shadowBlur = (big ? 12 : 3) * dpr; R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.85)'; R.ctx.fill(); R.ctx.restore();
+            R.ctx.beginPath(); R.ctx.arc(x, y, core * 0.42, 0, 6.2832); R.ctx.fillStyle = p.live ? '#fff6dd' : '#eafdff'; R.ctx.fill(); }
         requestAnimationFrame(frame); }
 
     /* ---------- data + capture ---------- */
@@ -347,7 +339,7 @@
     .vmap-stats { position: absolute; left: 12px; bottom: 11px; display: flex; align-items: center; gap: 7px; pointer-events: none; max-width: calc(100% - 24px); padding: 6px 11px; border-radius: 9px; font: 600 10.5px/1 ui-monospace, Menlo, monospace; letter-spacing: .05em; text-transform: uppercase; color: #a9def7; background: rgba(6,22,38,.12); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(120,200,255,.1); }
     .vmap-stats b { color: #fff; font-variant-numeric: tabular-nums; } .vmap-dim { opacity: .55; } .vmap-sep { opacity: .3; }
     #vmap-latest { font-size: 9px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; opacity: .9; }
-    .vmap-live { width: 7px; height: 7px; margin-top: -1px; border-radius: 50%; background: #ffc94d; box-shadow: 0 0 9px #ffc94d; animation: vmpulse 2.4s ease-in-out infinite; flex: none; }
+    .vmap-live { width: 7px; height: 7px; margin-top: -2px; border-radius: 50%; background: #ffc94d; box-shadow: 0 0 9px #ffc94d; animation: vmpulse 2.4s ease-in-out infinite; flex: none; }
     @keyframes vmpulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.65); } }
     .vmtip { position: fixed; z-index: 100000; display: none; flex-direction: column; gap: 2px; pointer-events: none; max-width: 240px; padding: 8px 11px; border-radius: 10px; background: rgba(8,26,44,.9); border: 1px solid rgba(120,200,255,.22); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,.5); color: #dff3ff; font-family: ui-sans-serif, system-ui, sans-serif; }
     .vmtip.show { display: flex; } .vmtip b { font-size: 12.5px; } .vmtip span { font-size: 11px; opacity: .65; }
