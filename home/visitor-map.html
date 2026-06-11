@@ -132,13 +132,13 @@
     function frame(t) { if (baseDirty) { baseDirty = false; buildBase(); } if (R.off) { R.ctx.clearRect(0, 0, R.W, R.H); R.ctx.drawImage(R.off, 0, 0); }
         var period = 2400, big = IS_TOP;
         for (var i = 0; i < pings.length; i++) { var p = pings[i], xy = project(p.lon, p.lat), x = xy[0] * dpr, y = xy[1] * dpr, on = matchHI(p);
-            var core = (big ? (1.2 + Math.min(6, Math.sqrt(p.n) * 0.65)) : (0.7 + Math.min(1.2, Math.sqrt(p.n) * 0.3))) * dpr;
+            var core = (big ? (0.8 + Math.min(1.8, Math.sqrt(p.n) * 0.3)) : (0.5 + Math.min(0.7, Math.sqrt(p.n) * 0.18))) * dpr;
             if (HI && on) core *= 1.25;
-            if (!on) { R.ctx.beginPath(); R.ctx.arc(x, y, Math.min(core, 4 * dpr), 0, 6.2832); R.ctx.fillStyle = 'rgba(' + PING_RGB + ',0.1)'; R.ctx.fill(); continue; }
-            if (p.live || (HI && on)) { for (var rr = 0; rr < 1; rr++) { var ph = ((t + i * 400) % period) / period, ring = core + ph * (big ? 10 : 6) * dpr;
+            if (!on) { R.ctx.beginPath(); R.ctx.arc(x, y, Math.min(core, 3 * dpr), 0, 6.2832); R.ctx.fillStyle = 'rgba(' + PING_RGB + ',0.1)'; R.ctx.fill(); continue; }
+            if (p.live || (HI && on)) { for (var rr = 0; rr < 1; rr++) { var ph = ((t + i * 400) % period) / period, ring = core + ph * (big ? 7 : 4) * dpr;
                     R.ctx.beginPath(); R.ctx.arc(x, y, ring, 0, 6.2832); R.ctx.strokeStyle = 'rgba(' + PING_RGB + ',' + (0.5 * (1 - ph)) + ')'; R.ctx.lineWidth = 1 * dpr; R.ctx.stroke(); } }
-            R.ctx.save(); R.ctx.shadowColor = PING; R.ctx.shadowBlur = (big ? 12 : 3) * dpr; R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + PING_RGB + ',0.85)'; R.ctx.fill(); R.ctx.restore();
-            R.ctx.beginPath(); R.ctx.arc(x, y, core * 0.42, 0, 6.2832); R.ctx.fillStyle = '#eafdff'; R.ctx.fill(); }
+            R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + PING_RGB + ',0.92)'; R.ctx.fill();
+            if (big) { R.ctx.beginPath(); R.ctx.arc(x, y, core * 0.38, 0, 6.2832); R.ctx.fillStyle = '#eafdff'; R.ctx.fill(); } }
         requestAnimationFrame(frame); }
 
     /* ---------- data + capture ---------- */
