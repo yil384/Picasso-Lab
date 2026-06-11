@@ -374,6 +374,17 @@
     .swiper-pagination-bullet { background: rgba(255, 255, 255, 0.8); opacity: 1; width: 8px; height: 8px; transition: all 0.3s; }
     .swiper-pagination-bullet-active { background: #0056b3; width: 18px; border-radius: 4px; }
     .event-content { padding: 20px; flex: 1; overflow: visible; }
+    #events-sentinel {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        margin: 26px auto 10px; color: #9aa3ad; font-size: 0.85em; letter-spacing: 0.04em;
+    }
+    #events-sentinel .es-spin {
+        width: 14px; height: 14px; border-radius: 50%; flex: none;
+        border: 2px solid rgba(0, 86, 179, 0.18); border-top-color: #0056b3;
+        animation: esSpin 0.9s linear infinite;
+    }
+    @keyframes esSpin { to { transform: rotate(360deg); } }
+
     .event-date { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
     .event-title { margin: 0 0 10px 0; font-size: 1.25em; color: #333; font-weight: 600; }
     .event-text { font-size: 0.95em; color: #444; line-height: 1.6; margin-bottom: 15px; }
@@ -2108,7 +2119,7 @@
 
 <div id="lightbox-overlay">
     <div id="lightbox-close">&times;</div>
-    <img id="lightbox-img" src="" alt="Full view">
+    <img loading="lazy" id="lightbox-img" src="" alt="Full view">
 </div>
 
 <div id="guandan-egg-overlay" class="guandan-egg-overlay" aria-hidden="true">
@@ -2116,7 +2127,7 @@
     <div class="guandan-egg-stage" role="dialog" aria-label="Hidden Guandan table replay">
         <div class="guandan-photo-frame">
             <div class="guandan-photo-header"><span>Private Table Replay</span><strong>辰哥完胜</strong></div>
-            <img src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/hidden.jpg" alt="Hidden Guandan replay photo">
+            <img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/hidden.jpg" alt="Hidden Guandan replay photo">
         </div>
         <div class="guandan-score-chip plus">辰哥 +2</div>
         <div class="guandan-score-chip minus">于老板 -2</div>
@@ -2231,10 +2242,10 @@
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/1.jpg" alt="King Crab Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/2.jpg" alt="King Crab Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/3.jpg" alt="King Crab Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/4.jpg" alt="King Crab Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/5.jpg" alt="King Crab Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/2.jpg" alt="King Crab Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/3.jpg" alt="King Crab Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/4.jpg" alt="King Crab Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/crab_day/5.jpg" alt="King Crab Day"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2251,13 +2262,13 @@
 <div class="event-card cursor-truck" data-event-id="move-place-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/move_place/1.jpg" alt="Moving Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/move_place/2.jpg" alt="Moving Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/move_place/3.jpg" alt="Moving Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/move_place/4.jpg" alt="Moving Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/move_place/5.jpg" alt="Moving Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/move_place/6.jpg" alt="Moving Day"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/move_place/7.jpg" alt="Moving Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/move_place/1.jpg" alt="Moving Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/move_place/2.jpg" alt="Moving Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/move_place/3.jpg" alt="Moving Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/move_place/4.jpg" alt="Moving Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/move_place/5.jpg" alt="Moving Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/move_place/6.jpg" alt="Moving Day"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/move_place/7.jpg" alt="Moving Day"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2274,9 +2285,9 @@
 <div class="event-card cursor-chopsticks" data-event-id="mongolia-hotpot-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/1.jpg" alt="Mongolian Hot Pot"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/2.jpg" alt="Mongolian Hot Pot"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/3.jpg" alt="Mongolian Hot Pot"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/1.jpg" alt="Mongolian Hot Pot"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/2.jpg" alt="Mongolian Hot Pot"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/mongolia_hotpot/3.jpg" alt="Mongolian Hot Pot"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2293,11 +2304,11 @@
 <div class="event-card cursor-wave" data-event-id="alon-farewell-pita22-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/pita22/1.jpg" alt="PITA 22 Dinner"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/pita22/2.jpg" alt="PITA 22 Group"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/pita22/3.jpg" alt="PITA 22 Dinner"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/pita22/4.jpg" alt="PITA 22 Dinner"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/pita22/5.jpg" alt="PITA 22 Dinner"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/pita22/1.jpg" alt="PITA 22 Dinner"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/pita22/2.jpg" alt="PITA 22 Group"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/pita22/3.jpg" alt="PITA 22 Dinner"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/pita22/4.jpg" alt="PITA 22 Dinner"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/pita22/5.jpg" alt="PITA 22 Dinner"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2314,12 +2325,12 @@
 <div class="event-card cursor-scroll" data-event-id="hezi-defense-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/1.jpg" alt="Hezi Defense"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/2.jpg" alt="Hezi Defense"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/3.jpg" alt="Hezi Defense"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/4.jpg" alt="Hezi Defense"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/5.jpg" alt="Hezi Defense"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/6.jpg" alt="Hezi Defense"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/1.jpg" alt="Hezi Defense"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/2.jpg" alt="Hezi Defense"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/3.jpg" alt="Hezi Defense"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/4.jpg" alt="Hezi Defense"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/5.jpg" alt="Hezi Defense"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/hezi_defense/6.jpg" alt="Hezi Defense"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2337,7 +2348,7 @@
 <div class="event-card cursor-robot" data-event-id="ding-openai-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/openai/1.jpg" alt="Prof. Ding joins OpenAI"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/openai/1.jpg" alt="Prof. Ding joins OpenAI"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2356,14 +2367,14 @@
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><video src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/IMG_2389.MOV" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:block;"></video></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/0.jpg" alt="Zhongkai Birthday"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/0_5.jpg" alt="Zhongkai Birthday"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/0.jpg" alt="Zhongkai Birthday"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/0_5.jpg" alt="Zhongkai Birthday"></div>
             <div class="swiper-slide"><video src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/1.mp4" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:block;"></video></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/2.jpg" alt="Zhongkai Birthday"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/3.jpg" alt="Birthday Celebration"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/4.jpg" alt="Lab Celebration"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/5.jpg" alt="Birthday Celebration"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/6.jpg" alt="Birthday Celebration"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/2.jpg" alt="Zhongkai Birthday"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/3.jpg" alt="Birthday Celebration"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/4.jpg" alt="Lab Celebration"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/5.jpg" alt="Birthday Celebration"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/6.jpg" alt="Birthday Celebration"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2382,7 +2393,7 @@
         <div class="swiper-wrapper">
             <div class="swiper-slide">
                 <div class="detector-slide">
-                    <img src="https://yil384.github.io/Picasso-Lab/events/static/firespot4.1/1.jpg" alt="Fire Spot Dinner">
+                    <img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/firespot4.1/1.jpg" alt="Fire Spot Dinner">
                     <div class="det-scan"></div>
                     <div class="det-bbox"><div class="c1"></div></div>
                     <div class="det-face">
@@ -2410,7 +2421,7 @@
             </div>
             <div class="swiper-slide">
                 <div class="detector-slide">
-                    <img src="https://yil384.github.io/Picasso-Lab/events/static/firespot4.1/2.jpg" alt="Fire Spot Group Photo">
+                    <img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/firespot4.1/2.jpg" alt="Fire Spot Group Photo">
                     <div class="det-scan"></div>
                     <div class="det-bbox"><div class="c1"></div></div>
                     <div class="det-face">
@@ -2440,7 +2451,7 @@
     </div>
     <div class="event-content">
         <div class="event-date">April 1, 2026</div>
-        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note" tabindex="0" role="button" aria-describedby="chang-zhuangyuan-tip" aria-label="Show Chang Chen Gaokao note"><img src="https://yil384.github.io/Picasso-Lab/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip" id="chang-zhuangyuan-tip"><span class="tip-header">👑 Did you know?</span>Chang was the <strong>#1 Gaokao scorer</strong> (状元) in <strong>Wenzhou, Zhejiang</strong>! ✨</span></span></h3>
+        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note" tabindex="0" role="button" aria-describedby="chang-zhuangyuan-tip" aria-label="Show Chang Chen Gaokao note"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/firespot4.1/zhuangyuan.png" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip" id="chang-zhuangyuan-tip"><span class="tip-header">👑 Did you know?</span>Chang was the <strong>#1 Gaokao scorer</strong> (状元) in <strong>Wenzhou, Zhejiang</strong>! ✨</span></span></h3>
         <p class="event-text">
             Our lab celebrated <strong>Dr. Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Chang is also the first author of <strong><em>Centauri</em></strong>, which won the <strong>ASPLOS 2024 Best Paper Award</strong>. Welcome aboard, Chang!
         </p>
@@ -2451,10 +2462,10 @@
 <div class="event-card cursor-drumstick" data-event-id="zhuo-magic-kitchen-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/1.jpg" alt="Cheers at Dinner"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/2.jpg" alt="Homemade Feast"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/3.jpg" alt="Cheers Together"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/4.jpg" alt="Group Dinner"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/1.jpg" alt="Cheers at Dinner"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/2.jpg" alt="Homemade Feast"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/3.jpg" alt="Cheers Together"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zhuo_magic_kitchen/4.jpg" alt="Group Dinner"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2471,9 +2482,9 @@
 <div class="event-card cursor-lantern" data-event-id="cny-star-anise-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/cny-2026/1.jpg" alt="CNY Eve Dinner"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/cny-2026/2.jpg" alt="Star Anise Thai Food"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/cny-2026/3.jpg" alt="Star Anise Thai Food"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/cny-2026/1.jpg" alt="CNY Eve Dinner"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/cny-2026/2.jpg" alt="Star Anise Thai Food"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/cny-2026/3.jpg" alt="Star Anise Thai Food"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2490,8 +2501,8 @@
 <div class="event-card cursor-gift" data-event-id="zaifeng-birthday-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zaifeng-birth/1.jpg" alt="Happy Birthday Zaifeng"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zaifeng-birth/2.jpg" alt="Zaifeng at Work"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zaifeng-birth/1.jpg" alt="Happy Birthday Zaifeng"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zaifeng-birth/2.jpg" alt="Zaifeng at Work"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2509,9 +2520,9 @@
 <div class="event-card cursor-santa" data-event-id="christmas-fire-spot-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/chrismas/1.jpg" alt="Christmas Party"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/chrismas/2.jpg" alt="Fire Spot BBQ"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/chrismas/3.jpg" alt="Fire Spot BBQ"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/chrismas/1.jpg" alt="Christmas Party"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/chrismas/2.jpg" alt="Fire Spot BBQ"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/chrismas/3.jpg" alt="Fire Spot BBQ"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2528,14 +2539,14 @@
 <div class="event-card cursor-giraffe" data-event-id="safari-zoo-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/1.jpg" alt="Safari Zoo"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/2.jpg" alt="Safari Zoo"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/3.jpg" alt="Safari Zoo"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/4.jpg" alt="Safari Zoo"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/5.jpg" alt="Safari Zoo"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/6.jpg" alt="Safari Zoo"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/7.jpg" alt="Safari Zoo"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/8.jpg" alt="Safari Zoo"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/1.jpg" alt="Safari Zoo"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/2.jpg" alt="Safari Zoo"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/3.jpg" alt="Safari Zoo"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/4.jpg" alt="Safari Zoo"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/5.jpg" alt="Safari Zoo"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/6.jpg" alt="Safari Zoo"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/7.jpg" alt="Safari Zoo"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/safari_zoo/8.jpg" alt="Safari Zoo"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2552,9 +2563,9 @@
 <div class="event-card cursor-gradcap" data-event-id="zheng-wang-defense-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-        <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhengwang/1.jpg" alt="Zheng Wang Defense"></div>
-        <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhengwang/2.jpg" alt="Thesis Presentation"></div>
-        <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/zhengwang/3.jpg" alt="Group Photo"></div>
+        <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zhengwang/1.jpg" alt="Zheng Wang Defense"></div>
+        <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zhengwang/2.jpg" alt="Thesis Presentation"></div>
+        <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/zhengwang/3.jpg" alt="Group Photo"></div>
     </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2571,7 +2582,7 @@
 <div class="event-card cursor-beefcut" data-event-id="thanksgiving-haidilao-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/thxgiving-lunch.jpg" alt="Thanksgiving Hot Pot"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/thxgiving-lunch.jpg" alt="Thanksgiving Hot Pot"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2588,9 +2599,9 @@
 <div class="event-card cursor-violin" data-event-id="xiang-hunan-tv-2025">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/xiang/1.jpg" alt="Infinity and Beyond Stage"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/xiang/2.jpg" alt="Xiang Fang composing"></div>
-            <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/xiang/3.jpg" alt="Xiang Fang"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/xiang/1.jpg" alt="Infinity and Beyond Stage"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/xiang/2.jpg" alt="Xiang Fang composing"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/xiang/3.jpg" alt="Xiang Fang"></div>
         </div>
         <div class="swiper-pagination"></div>
     </div>
@@ -2607,7 +2618,7 @@
 <div class="danmaku-input-area">
     <div id="img-preview-container">
         <div id="clear-img-btn">×</div>
-        <img id="img-preview-target" src="" alt="preview">
+        <img loading="lazy" id="img-preview-target" src="" alt="preview">
     </div>
 
     <button class="dm-toggle" id="dm-toggle" type="button" title="Toggle danmaku">
@@ -2762,11 +2773,11 @@
 
         if (hasImage && !hasText) {
             el.classList.add('image-only'); 
-            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" alt="danmaku image" />`;
+            el.innerHTML = `<img loading="lazy" src="${data.image}" class="danmaku-img-content" alt="danmaku image" />`;
         }
         else if (hasImage && hasText) {
             el.classList.add('mixed-content');
-            el.innerHTML = `<img src="${data.image}" class="danmaku-img-content" alt="danmaku image" /><span>${data.text}</span>`;
+            el.innerHTML = `<img loading="lazy" src="${data.image}" class="danmaku-img-content" alt="danmaku image" /><span>${data.text}</span>`;
         }
         else if (hasText) {
             const avatar = data.text.charAt(0).toUpperCase();
@@ -3678,7 +3689,7 @@
         if (!grid) return;
         let html = '';
         for (const s of sharedStickers) {
-            html += `<button class="wc-sticker-img" type="button" data-sticker-id="${s.id}" data-sticker-url="${s.url}"><img src="${s.url}" alt="sticker"></button>`;
+            html += `<button class="wc-sticker-img" type="button" data-sticker-id="${s.id}" data-sticker-url="${s.url}"><img loading="lazy" src="${s.url}" alt="sticker"></button>`;
         }
         html += '<button class="wc-sticker-add" type="button" title="Add sticker">+</button>';
         grid.innerHTML = html;
@@ -3698,7 +3709,7 @@
         }
         grid.innerHTML = recent.map(key => {
             const shared = sharedStickers.find(s => s.id === key);
-            if (shared) return `<button class="wc-sticker-img" type="button" data-sticker-id="${shared.id}" data-sticker-url="${shared.url}"><img src="${shared.url}" alt="sticker"></button>`;
+            if (shared) return `<button class="wc-sticker-img" type="button" data-sticker-id="${shared.id}" data-sticker-url="${shared.url}"><img loading="lazy" src="${shared.url}" alt="sticker"></button>`;
             return `<button class="wc-sticker-item" type="button" data-emoji="${key}">${key}</button>`;
         }).join('');
     }
@@ -4426,5 +4437,33 @@
 })();
 </script>
 
+
+<script>
+/* ===== auto infinite scroll: show events in batches of 8 as you near the bottom ===== */
+(function () {
+    var BATCH = 8;
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.event-card'));
+    if (cards.length <= BATCH) return;
+    var shown = BATCH;
+    cards.slice(BATCH).forEach(function (c) { c.style.display = 'none'; });
+    var sentinel = document.createElement('div');
+    sentinel.id = 'events-sentinel';
+    sentinel.innerHTML = '<span class="es-spin"></span><span>More events below — keep scrolling</span>';
+    var lastCard = cards[cards.length - 1];
+    lastCard.parentNode.insertBefore(sentinel, lastCard.nextSibling);
+    function reveal() {
+        cards.slice(shown, shown + BATCH).forEach(function (c) {
+            c.style.display = '';
+            c.querySelectorAll('.mySwiper').forEach(function (el) { if (el._swiper) el._swiper.update(); });
+        });
+        shown += BATCH;
+        if (shown >= cards.length) { sentinel.remove(); if (io) io.disconnect(); }
+    }
+    var io = new IntersectionObserver(function (es) {
+        if (es.some(function (e) { return e.isIntersecting; })) reveal();
+    }, { rootMargin: '600px 0px' });
+    io.observe(sentinel);
+})();
+</script>
 </body>
 </html>
