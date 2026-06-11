@@ -131,15 +131,20 @@
     function matchHI(p) { return HI ? (HI.type === 'country' ? p.country === HI.val : p.key === HI.val) : true; }
     function frame(t) { if (baseDirty) { baseDirty = false; buildBase(); } if (R.off) { R.ctx.clearRect(0, 0, R.W, R.H); R.ctx.drawImage(R.off, 0, 0); }
         var period = 2400, big = IS_TOP;
-        for (var i = 0; i < pings.length; i++) { var p = pings[i], xy = project(p.lon, p.lat), x = xy[0] * dpr, y = xy[1] * dpr, on = matchHI(p);
-            var core = (big ? (1.2 + Math.min(6, Math.sqrt(p.n) * 0.65)) : (0.7 + Math.min(1.2, Math.sqrt(p.n) * 0.3))) * dpr;
+        /* draw live (amber) points after the cyan ones so they sit on top */
+        var order = [];
+        for (var i = 0; i < pings.length; i++) order.push(i);
+        order.sort(function (a, b) { return (pings[a].live ? 1 : 0) - (pings[b].live ? 1 : 0); });
+        for (var oi = 0; oi < order.length; oi++) { var i = order[oi], p = pings[i], xy = project(p.lon, p.lat), x = xy[0] * dpr, y = xy[1] * dpr, on = matchHI(p);
+            var core = (big ? (1.0 + Math.min(3.4, Math.sqrt(p.n) * 0.45)) : (0.6 + Math.min(1.0, Math.sqrt(p.n) * 0.25))) * dpr;
             if (HI && on) core *= 1.25;
+            if (p.live) core = Math.max(core * 1.3, 2.2 * dpr);
             var rgb = p.live ? LIVE_RGB : PING_RGB, glow = p.live ? '#ffc94d' : PING;
-            if (!on) { R.ctx.beginPath(); R.ctx.arc(x, y, Math.min(core, 4 * dpr), 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.1)'; R.ctx.fill(); continue; }
-            if (p.live || (HI && on)) { for (var rr = 0; rr < 1; rr++) { var ph = ((t + i * 400) % period) / period, ring = core + ph * (big ? 10 : 6) * dpr;
-                    R.ctx.beginPath(); R.ctx.arc(x, y, ring, 0, 6.2832); R.ctx.strokeStyle = 'rgba(' + rgb + ',' + (0.5 * (1 - ph)) + ')'; R.ctx.lineWidth = 1 * dpr; R.ctx.stroke(); } }
-            R.ctx.save(); R.ctx.shadowColor = glow; R.ctx.shadowBlur = (big ? 12 : 3) * dpr; R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.85)'; R.ctx.fill(); R.ctx.restore();
-            R.ctx.beginPath(); R.ctx.arc(x, y, core * 0.42, 0, 6.2832); R.ctx.fillStyle = p.live ? '#fff6dd' : '#eafdff'; R.ctx.fill(); }
+            if (!on) { R.ctx.beginPath(); R.ctx.arc(x, y, Math.min(core, 3.5 * dpr), 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.1)'; R.ctx.fill(); continue; }
+            if (p.live || (HI && on)) { for (var rr = 0; rr < 1; rr++) { var ph = ((t + i * 400) % period) / period, ring = core + ph * (big ? 8 : 5) * dpr;
+                    R.ctx.beginPath(); R.ctx.arc(x, y, ring, 0, 6.2832); R.ctx.strokeStyle = 'rgba(' + rgb + ',' + (0.55 * (1 - ph)) + ')'; R.ctx.lineWidth = 1.2 * dpr; R.ctx.stroke(); } }
+            R.ctx.save(); R.ctx.shadowColor = glow; R.ctx.shadowBlur = (big ? 6 : (p.live ? 4 : 1.5)) * dpr; R.ctx.beginPath(); R.ctx.arc(x, y, core, 0, 6.2832); R.ctx.fillStyle = 'rgba(' + rgb + ',0.88)'; R.ctx.fill(); R.ctx.restore();
+            R.ctx.beginPath(); R.ctx.arc(x, y, core * 0.4, 0, 6.2832); R.ctx.fillStyle = p.live ? '#fff6dd' : '#eafdff'; R.ctx.fill(); }
         requestAnimationFrame(frame); }
 
     /* ---------- data + capture ---------- */
