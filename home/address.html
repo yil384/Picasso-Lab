@@ -34,11 +34,11 @@
        ║  标题默认一行；想拆成两行就在 HTML 里 PICASSO 和 LAB 之间加 <br>        ║
        ╚═══════════════════════════════════════════════════════════════════╝ */
     .enter {
-        --t: 35px;
-        --a: 17px;
-        --px: 22px;
-        --py: 25px;
-        --gap: 0px;
+        --t: 36px;
+        --a: 19px;
+        --px: 9px;
+        --py: 35px;
+        --gap: 10px;
     }
 
     /* ↓↓↓ 下面这些一般不用动 ↓↓↓ */
@@ -68,6 +68,8 @@
     .ctl:hover { background: rgba(54, 224, 255, 0.16); border-color: rgba(54, 224, 255, 0.5); color: #fff; transform: translateY(-2px); }
     .ctl:active { transform: scale(0.94); }
     .ctl svg { width: 21px; height: 21px; }
+    .ctl.on { background: rgba(255, 201, 77, 0.2); border-color: rgba(255, 201, 77, 0.6); color: var(--gold); box-shadow: 0 0 16px rgba(255, 201, 77, 0.25); }
+    canvas.locked { cursor: none; }
 
     .pad, .lookpad { position: absolute; bottom: 18px; z-index: 6; display: grid; gap: 7px; grid-template-columns: repeat(3, 42px); }
     .pad { left: 18px; grid-template-rows: repeat(2, 42px); }
@@ -134,6 +136,9 @@
     </div>
 
     <div class="util">
+        <button class="ctl" id="btn-gyro" title="Gyroscope look" aria-label="Toggle gyroscope look" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M2 9a8 8 0 0 1 3-1M22 9a8 8 0 0 0-3-1M2 15a8 8 0 0 0 3 1M22 15a8 8 0 0 1-3 1"/></svg>
+        </button>
         <button class="ctl" id="btn-reset" title="Back to start" aria-label="Back to start">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/><circle cx="12" cy="12" r="2.3"/></svg>
         </button>
@@ -161,7 +166,7 @@
 
     <div class="hint" id="hint">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="3.2"/></svg>
-        Drag to look <span class="dot"></span> pinch / scroll to zoom <span class="dot"></span> pads to walk &amp; turn
+        Click to mouse-look <span class="dot"></span> WASD move <span class="dot"></span> arrows / Q E turn <span class="dot"></span> drag &middot; pinch / scroll zoom
     </div>
 
     <div class="loader" id="loader">
@@ -271,6 +276,8 @@ if (!document.documentElement.classList.contains('m-embed')) {
     const canvas = renderer.domElement;
     const pointers = new Map();
     let pinchDist0 = 0, pinchFov0 = DEF_FOV;
+    let locked = false;  // pointer-lock (mouse-look) state
+    const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
     canvas.addEventListener('pointerdown', (e) => {
         try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -289,7 +296,7 @@ if (!document.documentElement.classList.contains('m-embed')) {
             const p = [...pointers.values()];
             const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
             if (d > 0 && pinchDist0 > 0) { camera.fov = clamp(pinchFov0 * (pinchDist0 / d), MIN_FOV, MAX_FOV); camera.updateProjectionMatrix(); }
-        } else {
+        } else if (!locked) {
             yaw -= (e.clientX - pv.x) * SENS;
             pitch = clamp(pitch - (e.clientY - pv.y) * SENS, -1.45, 1.45);
             pv.x = e.clientX; pv.y = e.clientY;
@@ -310,9 +317,69 @@ if (!document.documentElement.classList.contains('m-embed')) {
         camera.updateProjectionMatrix(); retireHint();
     }, { passive: false });
 
-    const KEYMAP = { KeyW: 'fwd', KeyS: 'back', KeyA: 'left', KeyD: 'right', ArrowUp: 'fwd', ArrowDown: 'back', ArrowLeft: 'left', ArrowRight: 'right' };
-    window.addEventListener('keydown', (e) => { if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); retireHint(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.add('sprint'); });
-    window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys.delete(KEYMAP[e.code]); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.delete('sprint'); });
+    /* ── keyboard: WASD = move, arrows / Q-E = turn (hold both to move + turn at once) ── */
+    const MOVE_KEYS = { KeyW: 'fwd', KeyS: 'back', KeyA: 'left', KeyD: 'right' };
+    const TURN_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', KeyQ: 'left', KeyE: 'right' };
+    window.addEventListener('keydown', (e) => {
+        if (MOVE_KEYS[e.code]) { keys.add(MOVE_KEYS[e.code]); e.preventDefault(); retireHint(); }
+        if (TURN_KEYS[e.code]) { turn.add(TURN_KEYS[e.code]); e.preventDefault(); retireHint(); }
+        if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.add('sprint');
+    });
+    window.addEventListener('keyup', (e) => {
+        if (MOVE_KEYS[e.code]) keys.delete(MOVE_KEYS[e.code]);
+        if (TURN_KEYS[e.code]) turn.delete(TURN_KEYS[e.code]);
+        if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.delete('sprint');
+    });
+
+    /* ── desktop pointer-lock: click once → mouse drives the view (FPS); Esc releases ── */
+    if (!isTouch) {
+        canvas.addEventListener('click', () => { if (!locked) { try { canvas.requestPointerLock(); } catch (_) {} } });
+        document.addEventListener('pointerlockchange', () => {
+            locked = (document.pointerLockElement === canvas);
+            canvas.classList.toggle('locked', locked);
+            if (locked) retireHint();
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!locked) return;
+            yaw -= e.movementX * SENS;
+            pitch = clamp(pitch - e.movementY * SENS, -1.45, 1.45);
+        });
+    }
+
+    /* ── mobile gyroscope: tilt / turn the phone to look around ── */
+    const ZEE = new THREE.Vector3(0, 0, 1), Y_AXIS = new THREE.Vector3(0, 1, 0);
+    const Q_SCREEN = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -90° about X
+    const gyroEuler = new THREE.Euler(), gyroQ = new THREE.Quaternion(), gyroTmp = new THREE.Quaternion(), gyroYawQ = new THREE.Quaternion();
+    let gyroOn = false, gyroData = null, gyroYawOffset = 0, gyroAlign = false;
+    function onGyro(e) { if (e.alpha != null) gyroData = e; }
+    function screenAngle() { const a = (screen.orientation && screen.orientation.angle) || window.orientation || 0; return a * Math.PI / 180; }
+    function applyGyro() {
+        if (!gyroData) return false;
+        gyroEuler.set((gyroData.beta || 0) * Math.PI / 180, (gyroData.alpha || 0) * Math.PI / 180, -(gyroData.gamma || 0) * Math.PI / 180, 'YXZ');
+        gyroQ.setFromEuler(gyroEuler);
+        gyroQ.multiply(Q_SCREEN);
+        gyroQ.multiply(gyroTmp.setFromAxisAngle(ZEE, -screenAngle()));
+        if (gyroAlign) { gyroYawOffset = yaw - new THREE.Euler().setFromQuaternion(gyroQ, 'YXZ').y; gyroAlign = false; }
+        gyroYawQ.setFromAxisAngle(Y_AXIS, gyroYawOffset);
+        camera.quaternion.copy(gyroQ).premultiply(gyroYawQ);
+        return true;
+    }
+    const btnGyro = document.getElementById('btn-gyro');
+    if (btnGyro && isTouch && window.DeviceOrientationEvent) {
+        btnGyro.style.display = 'flex';
+        btnGyro.addEventListener('click', async () => {
+            if (gyroOn) {  // turn off → hand control back to drag/buttons from the current view
+                window.removeEventListener('deviceorientation', onGyro, true);
+                gyroOn = false; btnGyro.classList.remove('on');
+                const e2 = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+                yaw = e2.y; pitch = clamp(e2.x, -1.45, 1.45);
+                return;
+            }
+            try { if (DeviceOrientationEvent.requestPermission) { const r = await DeviceOrientationEvent.requestPermission(); if (r !== 'granted') return; } } catch (_) { return; }
+            window.addEventListener('deviceorientation', onGyro, true);
+            gyroOn = true; gyroAlign = true; btnGyro.classList.add('on'); retireHint();
+        });
+    }
 
     function holdable(selector, set, attr) {
         document.querySelectorAll(selector).forEach((btn) => {
@@ -341,14 +408,18 @@ if (!document.documentElement.classList.contains('m-embed')) {
         requestAnimationFrame(animate);
         const dt = Math.min(clock.getDelta(), 0.05);
 
-        if (turn.size) {
-            if (turn.has('left')) yaw += TURN * dt;
-            if (turn.has('right')) yaw -= TURN * dt;
-            if (turn.has('up')) pitch += TURN * dt;
-            if (turn.has('down')) pitch -= TURN * dt;
-            pitch = clamp(pitch, -1.45, 1.45);
+        if (gyroOn && applyGyro()) {
+            // look is driven by the phone's orientation
+        } else {
+            if (turn.size) {
+                if (turn.has('left')) yaw += TURN * dt;
+                if (turn.has('right')) yaw -= TURN * dt;
+                if (turn.has('up')) pitch += TURN * dt;
+                if (turn.has('down')) pitch -= TURN * dt;
+                pitch = clamp(pitch, -1.45, 1.45);
+            }
+            camera.rotation.set(pitch, yaw, 0);
         }
-        camera.rotation.set(pitch, yaw, 0);
 
         if (ready && keys.size) {
             camera.getWorldDirection(fwd); fwd.y = 0; if (fwd.lengthSq() > 0) fwd.normalize();
