@@ -2,43 +2,358 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Picasso Lab · Location</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>Picasso Lab</title>
+<!-- detect embed (footer iframe) vs full (own tab) synchronously, before paint -->
+<script>document.documentElement.classList.add((function(){try{return window.self===window.top}catch(e){return false}})()?'m-full':'m-embed');</script>
 <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; background: #000; }
-    .wrap {
-        min-height: 100%;
-        display: flex; align-items: center; justify-content: flex-start;
-        padding: clamp(18px, 7vw, 50px) clamp(20px, 11vw, 66px);
-    }
-    .card {
-        width: 100%; max-width: 660px;
-        color: #fff; text-decoration: none; display: block;
-        font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-        -webkit-font-smoothing: antialiased;
-    }
-    .title {
-        font-weight: 800;
-        font-size: clamp(42px, 16vw, 88px);
-        line-height: 1.0; letter-spacing: -0.02em;
-    }
-    .addr {
-        margin-top: clamp(13px, 3.4vw, 26px);
-        font-weight: 400;
-        font-size: clamp(18px, 7.6vw, 42px);
-        line-height: 1.45;
-        text-align: justify; text-justify: inter-word;
-    }
+    :root { --cyan: #36e0ff; --gold: #ffc94d; --ink: #04121f; --line: rgba(120, 200, 255, 0.18); --glass: rgba(8, 26, 44, 0.55); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; width: 100%; overflow: hidden; background: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; touch-action: none; }
+    .stage { position: fixed; inset: 0;
+        background: radial-gradient(130% 120% at 50% 14%, #0c3556 0%, #061d2f 52%, #03101b 100%); }
+    canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+    canvas.grabbing { cursor: grabbing; }
+
+    /* ===== mode gating ===== */
+    .enter { display: none; }
+    html.m-embed, html.m-embed body, html.m-embed .stage { background: #000; }
+    html.m-embed .badge, html.m-embed .util, html.m-embed .pad, html.m-embed .lookpad, html.m-embed .hint, html.m-embed .loader, html.m-embed canvas { display: none !important; }
+    html.m-embed .enter { display: flex; }
+    html.m-full .enter { display: none; }
+
+    /* ===== embed: PICASSO LAB address card (click → opens the 3D lab) ===== */
+    .enter { position: absolute; inset: 0; align-items: center; justify-content: flex-start; cursor: pointer; text-decoration: none;
+        padding: clamp(18px, 7vw, 50px) clamp(20px, 11vw, 66px); color: #fff; }
+    .enter .card { width: 100%; max-width: 660px; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
+    .enter .title { font-weight: 800; font-size: clamp(42px, 16vw, 88px); line-height: 1.0; letter-spacing: -0.02em; }
+    .enter .addr { margin-top: clamp(13px, 3.4vw, 26px); font-weight: 400; font-size: clamp(18px, 7.6vw, 42px); line-height: 1.45;
+        text-align: justify; text-justify: inter-word; }
+
+    /* brand chip (full only) */
+    .badge { position: absolute; top: 14px; left: 14px; z-index: 6; display: flex; align-items: center; gap: 9px;
+        padding: 8px 13px; border-radius: 11px; background: var(--glass); border: 1px solid var(--line);
+        backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); color: #cdeeff;
+        font: 700 11px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase;
+        pointer-events: none; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.4); }
+    .badge svg { width: 16px; height: 16px; color: var(--cyan); flex: none; }
+    .badge .sub { color: rgba(205, 238, 255, 0.5); font-weight: 600; }
+
+    .util { position: absolute; right: 14px; top: 14px; z-index: 6; display: flex; gap: 9px; }
+    .ctl { width: 44px; height: 44px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        background: var(--glass); border: 1px solid var(--line); color: #d7f1ff;
+        backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+        transition: transform 0.14s, background 0.2s, border-color 0.2s, color 0.2s; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+    .ctl:hover { background: rgba(54, 224, 255, 0.16); border-color: rgba(54, 224, 255, 0.5); color: #fff; transform: translateY(-2px); }
+    .ctl:active { transform: scale(0.94); }
+    .ctl svg { width: 21px; height: 21px; }
+
+    .pad, .lookpad { position: absolute; bottom: 18px; z-index: 6; display: grid; gap: 7px; grid-template-columns: repeat(3, 42px); }
+    .pad { left: 18px; grid-template-rows: repeat(2, 42px); }
+    .lookpad { right: 18px; grid-template-rows: repeat(3, 42px); }
+    .padbtn { border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        background: var(--glass); border: 1px solid var(--line); color: #d7f1ff;
+        backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        transition: background 0.12s, border-color 0.12s, transform 0.1s; }
+    .padbtn svg { width: 21px; height: 21px; }
+    .padbtn.active, .padbtn:active { background: rgba(54, 224, 255, 0.22); border-color: rgba(54, 224, 255, 0.6); color: #fff; transform: scale(0.95); }
+    .lookpad .padbtn.active, .lookpad .padbtn:active { background: rgba(255, 201, 77, 0.2); border-color: rgba(255, 201, 77, 0.6); color: var(--gold); }
+    .pad .fwd { grid-column: 2; grid-row: 1; } .pad .left { grid-column: 1; grid-row: 2; }
+    .pad .back { grid-column: 2; grid-row: 2; } .pad .right { grid-column: 3; grid-row: 2; }
+    .lookpad .up { grid-column: 2; grid-row: 1; } .lookpad .lleft { grid-column: 1; grid-row: 2; }
+    .lookpad .lright { grid-column: 3; grid-row: 2; } .lookpad .down { grid-column: 2; grid-row: 3; }
+    .lookpad .eye { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; color: rgba(255, 201, 77, 0.5); pointer-events: none; }
+    .lookpad .eye svg { width: 19px; height: 19px; }
+    .pad .lbl, .lookpad .lbl { position: absolute; top: -19px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+        font: 700 8.5px/1 ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(205, 238, 255, 0.4); }
+
+    .hint { position: absolute; left: 50%; bottom: 176px; transform: translateX(-50%); z-index: 5;
+        display: flex; align-items: center; gap: 9px; pointer-events: none; padding: 8px 15px; border-radius: 999px; max-width: calc(100% - 28px);
+        background: rgba(6, 18, 30, 0.5); border: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        color: #bfe6f7; font: 600 11px/1.4 ui-monospace, Menlo, monospace; letter-spacing: 0.02em;
+        opacity: 0; transition: opacity 0.5s ease; text-align: center; }
+    .hint.show { opacity: 1; } .hint.gone { opacity: 0 !important; }
+    .hint svg { width: 15px; height: 15px; opacity: 0.85; flex: none; }
+    .hint .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.5; flex: none; }
+
+    .loader { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px; pointer-events: none; color: #cdeeff;
+        background: radial-gradient(120% 120% at 50% 30%, #0a2d49, #03101b 75%); transition: opacity 0.7s ease; }
+    .loader.hidden { opacity: 0; }
+    .loader .cube { width: 46px; height: 46px; animation: spin 2.4s linear infinite; color: var(--cyan); filter: drop-shadow(0 0 12px rgba(54, 224, 255, 0.5)); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader .track { width: 200px; height: 4px; border-radius: 999px; background: rgba(120, 200, 255, 0.14); overflow: hidden; }
+    .loader .fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--cyan), var(--gold)); transition: width 0.2s ease; }
+    .loader .pct { font: 700 12px/1 ui-monospace, monospace; letter-spacing: 0.18em; color: rgba(205, 238, 255, 0.7); }
+    .loader .cap { font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.12em; color: rgba(205, 238, 255, 0.4); text-transform: uppercase; }
+
+    .err { position: absolute; inset: 0; z-index: 9; display: none; flex-direction: column; align-items: center; justify-content: center;
+        gap: 12px; text-align: center; padding: 24px; background: radial-gradient(120% 120% at 50% 30%, #0a2d49, #03101b 75%);
+        color: #cdeeff; font-family: ui-monospace, monospace; }
+    .err.show { display: flex; }
+    .err svg { width: 40px; height: 40px; color: var(--gold); opacity: 0.85; }
+    .err b { font-size: 15px; } .err span { font-size: 12px; color: rgba(205, 238, 255, 0.55); max-width: 320px; line-height: 1.6; }
+
+    @media (max-width: 520px) { .badge .sub { display: none; } .ctl { width: 40px; height: 40px; } .hint { font-size: 10px; bottom: 168px; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-    <a class="card" href="https://www.google.com/maps/search/?api=1&query=UC+San+Diego+Computer+Science+and+Engineering+Building"
-       target="_blank" rel="noopener" aria-label="Picasso Lab — Computer Science and Engineering Building, 3235 Voigt Dr, La Jolla, CA 92093">
-        <div class="title">PICASSO LAB</div>
-        <div class="addr">Computer Science and Engineering Building, 3235 Voigt Dr, La Jolla, CA 92093</div>
+<div class="stage" id="stage">
+    <!-- EMBED (footer): PICASSO LAB address card; click opens the 3D walk-through in a new tab -->
+    <a class="enter" id="enter" href="https://yil384.github.io/Picasso-Lab/home/address.html" target="_blank" rel="noopener" aria-label="Picasso Lab — step inside the lab in 3D">
+        <div class="card">
+            <div class="title">PICASSO LAB</div>
+            <div class="addr">Computer Science and Engineering Building, 3235 Voigt Dr, La Jolla, CA 92093</div>
+        </div>
     </a>
+
+    <div class="badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"/><path d="m3 7 9 5 9-5M12 22V12"/></svg>
+        <span>Picasso Lab <span class="sub">· Step Inside</span></span>
+    </div>
+
+    <div class="util">
+        <button class="ctl" id="btn-reset" title="Back to start" aria-label="Back to start">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/><circle cx="12" cy="12" r="2.3"/></svg>
+        </button>
+        <button class="ctl" id="btn-full" title="Fullscreen" aria-label="Fullscreen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M16 21h3a2 2 0 0 0 2-2v-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
+        </button>
+    </div>
+
+    <div class="pad" id="pad">
+        <span class="lbl">Move</span>
+        <button class="padbtn fwd" data-dir="fwd" aria-label="Forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+        <button class="padbtn left" data-dir="left" aria-label="Step left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+        <button class="padbtn back" data-dir="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <button class="padbtn right" data-dir="right" aria-label="Step right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+    </div>
+
+    <div class="lookpad" id="lookpad">
+        <span class="lbl">Look</span>
+        <button class="padbtn up" data-look="up" aria-label="Look up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+        <button class="padbtn lleft" data-look="left" aria-label="Turn left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+        <span class="eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="2.6"/></svg></span>
+        <button class="padbtn lright" data-look="right" aria-label="Turn right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="padbtn down" data-look="down" aria-label="Look down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>
+
+    <div class="hint" id="hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="3.2"/></svg>
+        Drag to look <span class="dot"></span> pinch / scroll to zoom <span class="dot"></span> pads to walk &amp; turn
+    </div>
+
+    <div class="loader" id="loader">
+        <svg class="cube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"/><path d="m3 7 9 5 9-5M12 22V12"/></svg>
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <div class="pct" id="pct">LOADING 0%</div>
+        <div class="cap">Entering the lab…</div>
+    </div>
+
+    <div class="err" id="err">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <b>Couldn't load the lab</b>
+        <span>Check your connection and refresh. The model may still be deploying — give it a minute and try again.</span>
+    </div>
 </div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+// Footer (embed) mode shows only the address card — no Three.js, no 7 MB model.
+// The full first-person walk-through loads lazily only when opened in its own tab.
+if (!document.documentElement.classList.contains('m-embed')) {
+    const THREE = await import('three');
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+
+    const MODEL_URL = 'https://yil384.github.io/Picasso-Lab/home/static/lab-model.glb';
+    const EYE = 1.6, SPEED = 2.6, SPRINT = 1.9, SENS = 0.0026, TURN = 1.7;
+    const DEF_FOV = 72, MIN_FOV = 32, MAX_FOV = 88;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    const stage = document.getElementById('stage');
+    const loaderEl = document.getElementById('loader'), fillEl = document.getElementById('fill'), pctEl = document.getElementById('pct');
+    const hintEl = document.getElementById('hint'), errEl = document.getElementById('err');
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    stage.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(DEF_FOV, window.innerWidth / window.innerHeight, 0.05, 500);
+    camera.rotation.order = 'YXZ';
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    scene.add(new THREE.HemisphereLight(0xdff1ff, 0x141a22, 0.5));
+
+    let yaw = Math.PI, pitch = 0;
+    const keys = new Set();
+    const turn = new Set();
+    const bounds = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 };
+    let floorY = 0, ready = false;
+    const start = { x: 0, z: 0, yaw: Math.PI };
+
+    new GLTFLoader().load(MODEL_URL, (gltf) => {
+        const root = gltf.scene;
+        root.traverse((o) => {
+            if (o.isMesh && o.material) {
+                (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
+                    if ('metalness' in m) m.metalness = 0;
+                    if ('roughness' in m) m.roughness = Math.max(m.roughness ?? 1, 0.85);
+                    m.side = THREE.FrontSide;
+                });
+                o.frustumCulled = false;
+            }
+        });
+        scene.add(root);
+
+        const box = new THREE.Box3().setFromObject(root);
+        const size = box.getSize(new THREE.Vector3());
+        const ctr = box.getCenter(new THREE.Vector3());
+        floorY = box.min.y;
+        const pad = 0.6;
+        bounds.minX = box.min.x + pad; bounds.maxX = box.max.x - pad;
+        bounds.minZ = box.min.z + pad; bounds.maxZ = box.max.z - pad;
+        if (size.z >= size.x) { start.x = ctr.x; start.z = box.min.z + size.z * 0.18; start.yaw = Math.PI; }
+        else { start.z = ctr.z; start.x = box.min.x + size.x * 0.18; start.yaw = Math.PI / 2; }
+
+        resetView(); ready = true;
+        loaderEl.classList.add('hidden');
+        setTimeout(() => { loaderEl.style.display = 'none'; }, 700);
+        setTimeout(() => hintEl.classList.add('show'), 500);
+        setTimeout(retireHint, 8000);
+        try { window.focus(); } catch (_) {}
+    }, (ev) => {
+        const p = ev.total ? Math.round(ev.loaded / ev.total * 100) : Math.min(96, Math.round(ev.loaded / 7600156 * 100));
+        fillEl.style.width = p + '%'; pctEl.textContent = 'LOADING ' + p + '%';
+    }, () => { loaderEl.style.display = 'none'; errEl.classList.add('show'); });
+
+    function resetView() {
+        camera.position.set(start.x, floorY + EYE, start.z);
+        yaw = start.yaw; pitch = 0;
+        camera.fov = DEF_FOV; camera.updateProjectionMatrix();
+    }
+
+    let hintGone = false;
+    function retireHint() { if (!hintGone) { hintGone = true; hintEl.classList.add('gone'); } }
+    const canvas = renderer.domElement;
+    const pointers = new Map();
+    let pinchDist0 = 0, pinchFov0 = DEF_FOV;
+
+    canvas.addEventListener('pointerdown', (e) => {
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 2) {
+            const p = [...pointers.values()];
+            pinchDist0 = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+            pinchFov0 = camera.fov;
+        }
+        canvas.classList.add('grabbing'); try { window.focus(); } catch (_) {} retireHint();
+    });
+    canvas.addEventListener('pointermove', (e) => {
+        const pv = pointers.get(e.pointerId); if (!pv) return;
+        if (pointers.size >= 2) {
+            pv.x = e.clientX; pv.y = e.clientY;
+            const p = [...pointers.values()];
+            const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+            if (d > 0 && pinchDist0 > 0) { camera.fov = clamp(pinchFov0 * (pinchDist0 / d), MIN_FOV, MAX_FOV); camera.updateProjectionMatrix(); }
+        } else {
+            yaw -= (e.clientX - pv.x) * SENS;
+            pitch = clamp(pitch - (e.clientY - pv.y) * SENS, -1.45, 1.45);
+            pv.x = e.clientX; pv.y = e.clientY;
+        }
+    });
+    function dropPointer(e) {
+        pointers.delete(e.pointerId);
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+        if (pointers.size < 2) pinchDist0 = 0;
+        if (pointers.size === 0) canvas.classList.remove('grabbing');
+    }
+    canvas.addEventListener('pointerup', dropPointer);
+    canvas.addEventListener('pointercancel', dropPointer);
+
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        camera.fov = clamp(camera.fov + (e.deltaY > 0 ? 3.5 : -3.5), MIN_FOV, MAX_FOV);
+        camera.updateProjectionMatrix(); retireHint();
+    }, { passive: false });
+
+    const KEYMAP = { KeyW: 'fwd', KeyS: 'back', KeyA: 'left', KeyD: 'right', ArrowUp: 'fwd', ArrowDown: 'back', ArrowLeft: 'left', ArrowRight: 'right' };
+    window.addEventListener('keydown', (e) => { if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); retireHint(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.add('sprint'); });
+    window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys.delete(KEYMAP[e.code]); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.delete('sprint'); });
+
+    function holdable(selector, set, attr) {
+        document.querySelectorAll(selector).forEach((btn) => {
+            const v = btn.dataset[attr];
+            const press = (e) => { e.preventDefault(); e.stopPropagation(); set.add(v); btn.classList.add('active'); retireHint(); };
+            const release = (e) => { e.preventDefault(); e.stopPropagation(); set.delete(v); btn.classList.remove('active'); };
+            btn.addEventListener('pointerdown', press);
+            btn.addEventListener('pointerup', release);
+            btn.addEventListener('pointerleave', release);
+            btn.addEventListener('pointercancel', release);
+        });
+    }
+    holdable('.pad .padbtn', keys, 'dir');
+    holdable('.lookpad .padbtn', turn, 'look');
+
+    document.getElementById('btn-reset').addEventListener('click', () => { if (ready) resetView(); });
+    document.getElementById('btn-full').addEventListener('click', () => {
+        const el = document.documentElement;
+        if (!document.fullscreenElement) (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+        else (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    });
+
+    const fwd = new THREE.Vector3(), right = new THREE.Vector3(), move = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+    const clock = new THREE.Clock();
+    (function animate() {
+        requestAnimationFrame(animate);
+        const dt = Math.min(clock.getDelta(), 0.05);
+
+        if (turn.size) {
+            if (turn.has('left')) yaw += TURN * dt;
+            if (turn.has('right')) yaw -= TURN * dt;
+            if (turn.has('up')) pitch += TURN * dt;
+            if (turn.has('down')) pitch -= TURN * dt;
+            pitch = clamp(pitch, -1.45, 1.45);
+        }
+        camera.rotation.set(pitch, yaw, 0);
+
+        if (ready && keys.size) {
+            camera.getWorldDirection(fwd); fwd.y = 0; if (fwd.lengthSq() > 0) fwd.normalize();
+            right.crossVectors(fwd, up).normalize();
+            move.set(0, 0, 0);
+            if (keys.has('fwd')) move.add(fwd);
+            if (keys.has('back')) move.sub(fwd);
+            if (keys.has('right')) move.add(right);
+            if (keys.has('left')) move.sub(right);
+            if (move.lengthSq() > 0) {
+                move.normalize().multiplyScalar(SPEED * (keys.has('sprint') ? SPRINT : 1) * dt);
+                camera.position.x = clamp(camera.position.x + move.x, bounds.minX, bounds.maxX);
+                camera.position.z = clamp(camera.position.z + move.z, bounds.minZ, bounds.maxZ);
+            }
+        }
+        camera.position.y = floorY + EYE;
+        renderer.render(scene, camera);
+    })();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+}
+</script>
 </body>
 </html>
