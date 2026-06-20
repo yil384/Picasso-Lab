@@ -36,18 +36,20 @@
        ║  （改成一行后记得把 --t 调小，否则在窄的 footer 里会超出换行）          ║
        ╚═══════════════════════════════════════════════════════════════════╝ */
     .enter {
-        --t: 40px;
-        --a: 20px;
-        --px: 32px;
-        --py: 26px;
-        --gap: 14px;
+        --t: 35px;
+        --a: 17px;
+        --px: 12px;
+        --py: 0px;
+        --gap: 10px;
     }
 
     /* ↓↓↓ 下面这些一般不用动 ↓↓↓ */
-    .enter { position: absolute; inset: 0; align-items: center; justify-content: flex-start; cursor: pointer; text-decoration: none;
+    /* align-items: flex-start = 从顶部往下排（--py 就是纯上留白）。想改回垂直居中就换成 center */
+    .enter { position: absolute; inset: 0; align-items: flex-start; justify-content: flex-start; cursor: pointer; text-decoration: none;
         padding: var(--py) var(--px); color: #fff; }
     .enter .card { width: 100%; max-width: 720px; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
-    .enter .title { font-weight: 800; font-size: var(--t); line-height: 0.98; letter-spacing: -0.025em; }
+    /* margin-top 负值把标题大写字母上方的行距裁掉，让 --py=0 时字母正好贴顶 */
+    .enter .title { font-weight: 800; font-size: var(--t); line-height: 0.98; letter-spacing: -0.025em; margin-top: calc(var(--t) * -0.11); }
     .enter .addr { margin-top: var(--gap); font-weight: 400; font-size: var(--a); line-height: 1.5;
         text-align: justify; text-justify: inter-word; }
 
