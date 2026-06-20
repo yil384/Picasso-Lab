@@ -24,12 +24,31 @@
     html.m-embed .enter { display: flex; }
     html.m-full .enter { display: none; }
 
-    /* ===== embed: PICASSO LAB address card (click → opens the 3D lab) ===== */
+    /* ╔═══════════════════════════════════════════════════════════════════╗
+       ║  地址卡片调节区 —— 只改下面这 5 个数字就行（单位 px，越大越大）      ║
+       ║    --t   标题 PICASSO/LAB 的字号      （太大就调小，比如 36；太小就调大）║
+       ║    --a   地址文字的字号               （一般是标题的一半左右）          ║
+       ║    --px  左右留白                     （调大 → 文字更往中间缩）         ║
+       ║    --py  上下留白                                                      ║
+       ║    --gap 标题和地址之间的间距                                          ║
+       ║  标题想要「两行 PICASSO / LAB」= HTML 里保留 <br>（默认）；             ║
+       ║  想要「一行 PICASSO LAB」= 把 HTML 里 PICASSO<br>LAB 的 <br> 删掉       ║
+       ║  （改成一行后记得把 --t 调小，否则在窄的 footer 里会超出换行）          ║
+       ╚═══════════════════════════════════════════════════════════════════╝ */
+    .enter {
+        --t: 40px;
+        --a: 20px;
+        --px: 32px;
+        --py: 26px;
+        --gap: 14px;
+    }
+
+    /* ↓↓↓ 下面这些一般不用动 ↓↓↓ */
     .enter { position: absolute; inset: 0; align-items: center; justify-content: flex-start; cursor: pointer; text-decoration: none;
-        padding: clamp(16px, 5vw, 44px) clamp(18px, 6vw, 52px); color: #fff; }
+        padding: var(--py) var(--px); color: #fff; }
     .enter .card { width: 100%; max-width: 720px; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
-    .enter .title { font-weight: 800; font-size: clamp(38px, min(18vw, 22vh), 84px); line-height: 0.96; letter-spacing: -0.025em; }
-    .enter .addr { margin-top: clamp(12px, min(3.4vw, 4vh), 24px); font-weight: 400; font-size: clamp(15px, min(6.6vw, 8vh), 34px); line-height: 1.48;
+    .enter .title { font-weight: 800; font-size: var(--t); line-height: 0.98; letter-spacing: -0.025em; }
+    .enter .addr { margin-top: var(--gap); font-weight: 400; font-size: var(--a); line-height: 1.5;
         text-align: justify; text-justify: inter-word; }
 
     /* brand chip (full only) */
