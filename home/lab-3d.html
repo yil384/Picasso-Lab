@@ -14,12 +14,12 @@
         -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; touch-action: none; }
     .stage { position: fixed; inset: 0;
         background: radial-gradient(130% 120% at 50% 14%, #0c3556 0%, #061d2f 52%, #03101b 100%); }
-    canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
     canvas.grabbing { cursor: grabbing; }
 
     /* ===== mode gating ===== */
     .enter { display: none; }
-    html.m-embed .util, html.m-embed .pad, html.m-embed .hint, html.m-embed .loader, html.m-embed canvas { display: none !important; }
+    html.m-embed .util, html.m-embed .pad, html.m-embed .lookpad, html.m-embed .hint, html.m-embed .loader, html.m-embed canvas { display: none !important; }
     html.m-embed .enter { display: block; }
     html.m-full .enter { display: none; }
 
@@ -51,7 +51,7 @@
     .badge svg { width: 16px; height: 16px; color: var(--cyan); flex: none; }
     .badge .sub { color: rgba(205, 238, 255, 0.5); font-weight: 600; }
 
-    /* full: utility buttons */
+    /* full: utility buttons (top-right) */
     .util { position: absolute; right: 14px; top: 14px; z-index: 6; display: flex; gap: 9px; }
     .ctl { width: 44px; height: 44px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
         background: var(--glass); border: 1px solid var(--line); color: #d7f1ff;
@@ -61,26 +61,35 @@
     .ctl:active { transform: scale(0.94); }
     .ctl svg { width: 21px; height: 21px; }
 
-    /* full: movement pad */
-    .pad { position: absolute; left: 18px; bottom: 18px; z-index: 6;
-        display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 46px); gap: 7px; }
-    .pad .mv { border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    /* full: dual control pads (left = walk, right = look) */
+    .pad, .lookpad { position: absolute; bottom: 18px; z-index: 6; display: grid; gap: 7px;
+        grid-template-columns: repeat(3, 42px); }
+    .pad { left: 18px; grid-template-rows: repeat(2, 42px); }
+    .lookpad { right: 18px; grid-template-rows: repeat(3, 42px); }
+    .padbtn { border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;
         background: var(--glass); border: 1px solid var(--line); color: #d7f1ff;
         backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
         transition: background 0.12s, border-color 0.12s, transform 0.1s; }
-    .pad .mv svg { width: 22px; height: 22px; }
-    .pad .mv.active, .pad .mv:active { background: rgba(54, 224, 255, 0.22); border-color: rgba(54, 224, 255, 0.6); color: #fff; transform: scale(0.95); }
+    .padbtn svg { width: 21px; height: 21px; }
+    .padbtn.active, .padbtn:active { background: rgba(54, 224, 255, 0.22); border-color: rgba(54, 224, 255, 0.6); color: #fff; transform: scale(0.95); }
+    .lookpad .padbtn.active, .lookpad .padbtn:active { background: rgba(255, 201, 77, 0.2); border-color: rgba(255, 201, 77, 0.6); color: var(--gold); }
     .pad .fwd { grid-column: 2; grid-row: 1; } .pad .left { grid-column: 1; grid-row: 2; }
     .pad .back { grid-column: 2; grid-row: 2; } .pad .right { grid-column: 3; grid-row: 2; }
+    .lookpad .up { grid-column: 2; grid-row: 1; } .lookpad .lleft { grid-column: 1; grid-row: 2; }
+    .lookpad .lright { grid-column: 3; grid-row: 2; } .lookpad .down { grid-column: 2; grid-row: 3; }
+    .lookpad .eye { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; color: rgba(255, 201, 77, 0.5); pointer-events: none; }
+    .lookpad .eye svg { width: 19px; height: 19px; }
+    .pad .lbl, .lookpad .lbl { position: absolute; top: -19px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+        font: 700 8.5px/1 ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(205, 238, 255, 0.4); }
 
-    .hint { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 5;
-        display: flex; align-items: center; gap: 9px; pointer-events: none; padding: 8px 15px; border-radius: 999px;
+    .hint { position: absolute; left: 50%; bottom: 176px; transform: translateX(-50%); z-index: 5;
+        display: flex; align-items: center; gap: 9px; pointer-events: none; padding: 8px 15px; border-radius: 999px; max-width: calc(100% - 28px);
         background: rgba(6, 18, 30, 0.5); border: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-        color: #bfe6f7; font: 600 11.5px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.03em;
-        opacity: 0; transition: opacity 0.5s ease; text-align: center; white-space: nowrap; }
+        color: #bfe6f7; font: 600 11px/1.4 ui-monospace, Menlo, monospace; letter-spacing: 0.02em;
+        opacity: 0; transition: opacity 0.5s ease; text-align: center; }
     .hint.show { opacity: 1; } .hint.gone { opacity: 0 !important; }
-    .hint svg { width: 15px; height: 15px; opacity: 0.85; }
-    .hint .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.5; }
+    .hint svg { width: 15px; height: 15px; opacity: 0.85; flex: none; }
+    .hint .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.5; flex: none; }
 
     .loader { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center;
         gap: 18px; pointer-events: none; color: #cdeeff;
@@ -100,7 +109,7 @@
     .err svg { width: 40px; height: 40px; color: var(--gold); opacity: 0.85; }
     .err b { font-size: 15px; } .err span { font-size: 12px; color: rgba(205, 238, 255, 0.55); max-width: 320px; line-height: 1.6; }
 
-    @media (max-width: 520px) { .badge .sub { display: none; } .ctl { width: 40px; height: 40px; } }
+    @media (max-width: 520px) { .badge .sub { display: none; } .ctl { width: 40px; height: 40px; } .hint { font-size: 10px; bottom: 168px; } }
 </style>
 </head>
 <body>
@@ -128,16 +137,28 @@
         </button>
     </div>
 
+    <!-- left pad: walk -->
     <div class="pad" id="pad">
-        <button class="mv fwd" data-dir="fwd" aria-label="Forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
-        <button class="mv left" data-dir="left" aria-label="Step left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
-        <button class="mv back" data-dir="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
-        <button class="mv right" data-dir="right" aria-label="Step right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <span class="lbl">Move</span>
+        <button class="padbtn fwd" data-dir="fwd" aria-label="Forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+        <button class="padbtn left" data-dir="left" aria-label="Step left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+        <button class="padbtn back" data-dir="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <button class="padbtn right" data-dir="right" aria-label="Step right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+    </div>
+
+    <!-- right pad: look / turn -->
+    <div class="lookpad" id="lookpad">
+        <span class="lbl">Look</span>
+        <button class="padbtn up" data-look="up" aria-label="Look up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+        <button class="padbtn lleft" data-look="left" aria-label="Turn left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+        <span class="eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="2.6"/></svg></span>
+        <button class="padbtn lright" data-look="right" aria-label="Turn right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="padbtn down" data-look="down" aria-label="Look down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
 
     <div class="hint" id="hint">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="3.2"/></svg>
-        Drag to look around <span class="dot"></span> Buttons or W A S D to walk
+        Drag to look <span class="dot"></span> pinch / scroll to zoom <span class="dot"></span> pads to walk &amp; turn
     </div>
 
     <div class="loader" id="loader">
@@ -169,7 +190,9 @@ if (!document.documentElement.classList.contains('m-embed')) {
     const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
 
     const MODEL_URL = 'https://yil384.github.io/Picasso-Lab/home/static/lab-model.glb';
-    const EYE = 1.6, SPEED = 2.6, SPRINT = 1.9, SENS = 0.0026;
+    const EYE = 1.6, SPEED = 2.6, SPRINT = 1.9, SENS = 0.0026, TURN = 1.7;
+    const DEF_FOV = 72, MIN_FOV = 32, MAX_FOV = 88;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
     const stage = document.getElementById('stage');
     const loaderEl = document.getElementById('loader'), fillEl = document.getElementById('fill'), pctEl = document.getElementById('pct');
@@ -184,7 +207,7 @@ if (!document.documentElement.classList.contains('m-embed')) {
     stage.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 500);
+    const camera = new THREE.PerspectiveCamera(DEF_FOV, window.innerWidth / window.innerHeight, 0.05, 500);
     camera.rotation.order = 'YXZ';
 
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -193,7 +216,8 @@ if (!document.documentElement.classList.contains('m-embed')) {
     scene.add(new THREE.HemisphereLight(0xdff1ff, 0x141a22, 0.5));
 
     let yaw = Math.PI, pitch = 0;
-    const keys = new Set();
+    const keys = new Set();   // movement
+    const turn = new Set();   // look/turn buttons
     const bounds = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 };
     let floorY = 0, ready = false;
     const start = { x: 0, z: 0, yaw: Math.PI };
@@ -226,34 +250,84 @@ if (!document.documentElement.classList.contains('m-embed')) {
         loaderEl.classList.add('hidden');
         setTimeout(() => { loaderEl.style.display = 'none'; }, 700);
         setTimeout(() => hintEl.classList.add('show'), 500);
-        setTimeout(retireHint, 7000);
+        setTimeout(retireHint, 8000);
         try { window.focus(); } catch (_) {}
     }, (ev) => {
         const p = ev.total ? Math.round(ev.loaded / ev.total * 100) : Math.min(96, Math.round(ev.loaded / 7600156 * 100));
         fillEl.style.width = p + '%'; pctEl.textContent = 'LOADING ' + p + '%';
     }, () => { loaderEl.style.display = 'none'; errEl.classList.add('show'); });
 
-    function resetView() { camera.position.set(start.x, floorY + EYE, start.z); yaw = start.yaw; pitch = 0; }
+    function resetView() {
+        camera.position.set(start.x, floorY + EYE, start.z);
+        yaw = start.yaw; pitch = 0;
+        camera.fov = DEF_FOV; camera.updateProjectionMatrix();
+    }
 
-    let dragging = false, lastX = 0, lastY = 0, hintGone = false;
+    // ---- look (1-finger drag) + zoom (2-finger pinch) via pointer map ----
+    let hintGone = false;
     function retireHint() { if (!hintGone) { hintGone = true; hintEl.classList.add('gone'); } }
     const canvas = renderer.domElement;
-    canvas.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.classList.add('grabbing'); canvas.setPointerCapture(e.pointerId); try { window.focus(); } catch (_) {} retireHint(); });
-    canvas.addEventListener('pointermove', (e) => { if (!dragging) return; yaw -= (e.clientX - lastX) * SENS; pitch -= (e.clientY - lastY) * SENS; pitch = Math.max(-1.45, Math.min(1.45, pitch)); lastX = e.clientX; lastY = e.clientY; });
-    function endDrag(e) { dragging = false; canvas.classList.remove('grabbing'); try { canvas.releasePointerCapture(e.pointerId); } catch (_) {} }
-    canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+    const pointers = new Map();
+    let pinchDist0 = 0, pinchFov0 = DEF_FOV;
 
-    const KEYMAP = { KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right' };
+    canvas.addEventListener('pointerdown', (e) => {
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 2) {
+            const p = [...pointers.values()];
+            pinchDist0 = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+            pinchFov0 = camera.fov;
+        }
+        canvas.classList.add('grabbing'); try { window.focus(); } catch (_) {} retireHint();
+    });
+    canvas.addEventListener('pointermove', (e) => {
+        const pv = pointers.get(e.pointerId); if (!pv) return;
+        if (pointers.size >= 2) {
+            pv.x = e.clientX; pv.y = e.clientY;
+            const p = [...pointers.values()];
+            const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+            if (d > 0 && pinchDist0 > 0) { camera.fov = clamp(pinchFov0 * (pinchDist0 / d), MIN_FOV, MAX_FOV); camera.updateProjectionMatrix(); }
+        } else {
+            yaw -= (e.clientX - pv.x) * SENS;
+            pitch = clamp(pitch - (e.clientY - pv.y) * SENS, -1.45, 1.45);
+            pv.x = e.clientX; pv.y = e.clientY;
+        }
+    });
+    function dropPointer(e) {
+        pointers.delete(e.pointerId);
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+        if (pointers.size < 2) pinchDist0 = 0;
+        if (pointers.size === 0) canvas.classList.remove('grabbing');
+    }
+    canvas.addEventListener('pointerup', dropPointer);
+    canvas.addEventListener('pointercancel', dropPointer);
+
+    // ---- scroll to zoom (desktop) ----
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        camera.fov = clamp(camera.fov + (e.deltaY > 0 ? 3.5 : -3.5), MIN_FOV, MAX_FOV);
+        camera.updateProjectionMatrix(); retireHint();
+    }, { passive: false });
+
+    // ---- keyboard: move (WASD/arrows) ----
+    const KEYMAP = { KeyW: 'fwd', KeyS: 'back', KeyA: 'left', KeyD: 'right', ArrowUp: 'fwd', ArrowDown: 'back', ArrowLeft: 'left', ArrowRight: 'right' };
     window.addEventListener('keydown', (e) => { if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); retireHint(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.add('sprint'); });
     window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys.delete(KEYMAP[e.code]); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.delete('sprint'); });
 
-    document.querySelectorAll('.pad .mv').forEach((btn) => {
-        const dir = btn.dataset.dir;
-        const press = (e) => { e.preventDefault(); e.stopPropagation(); keys.add(dir); btn.classList.add('active'); retireHint(); };
-        const release = (e) => { e.preventDefault(); e.stopPropagation(); keys.delete(dir); btn.classList.remove('active'); };
-        btn.addEventListener('pointerdown', press); btn.addEventListener('pointerup', release);
-        btn.addEventListener('pointerleave', release); btn.addEventListener('pointercancel', release);
-    });
+    // ---- press-and-hold for both pads ----
+    function holdable(selector, set, attr) {
+        document.querySelectorAll(selector).forEach((btn) => {
+            const v = btn.dataset[attr];
+            const press = (e) => { e.preventDefault(); e.stopPropagation(); set.add(v); btn.classList.add('active'); retireHint(); };
+            const release = (e) => { e.preventDefault(); e.stopPropagation(); set.delete(v); btn.classList.remove('active'); };
+            btn.addEventListener('pointerdown', press);
+            btn.addEventListener('pointerup', release);
+            btn.addEventListener('pointerleave', release);
+            btn.addEventListener('pointercancel', release);
+        });
+    }
+    holdable('.pad .padbtn', keys, 'dir');
+    holdable('.lookpad .padbtn', turn, 'look');
 
     document.getElementById('btn-reset').addEventListener('click', () => { if (ready) resetView(); });
     document.getElementById('btn-full').addEventListener('click', () => {
@@ -262,12 +336,23 @@ if (!document.documentElement.classList.contains('m-embed')) {
         else (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
     });
 
+    // ---- main loop ----
     const fwd = new THREE.Vector3(), right = new THREE.Vector3(), move = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
     const clock = new THREE.Clock();
     (function animate() {
         requestAnimationFrame(animate);
         const dt = Math.min(clock.getDelta(), 0.05);
+
+        // on-screen turn buttons
+        if (turn.size) {
+            if (turn.has('left')) yaw += TURN * dt;
+            if (turn.has('right')) yaw -= TURN * dt;
+            if (turn.has('up')) pitch += TURN * dt;
+            if (turn.has('down')) pitch -= TURN * dt;
+            pitch = clamp(pitch, -1.45, 1.45);
+        }
         camera.rotation.set(pitch, yaw, 0);
+
         if (ready && keys.size) {
             camera.getWorldDirection(fwd); fwd.y = 0; if (fwd.lengthSq() > 0) fwd.normalize();
             right.crossVectors(fwd, up).normalize();
@@ -278,8 +363,8 @@ if (!document.documentElement.classList.contains('m-embed')) {
             if (keys.has('left')) move.sub(right);
             if (move.lengthSq() > 0) {
                 move.normalize().multiplyScalar(SPEED * (keys.has('sprint') ? SPRINT : 1) * dt);
-                camera.position.x = Math.max(bounds.minX, Math.min(bounds.maxX, camera.position.x + move.x));
-                camera.position.z = Math.max(bounds.minZ, Math.min(bounds.maxZ, camera.position.z + move.z));
+                camera.position.x = clamp(camera.position.x + move.x, bounds.minX, bounds.maxX);
+                camera.position.z = clamp(camera.position.z + move.z, bounds.minZ, bounds.maxZ);
             }
         }
         camera.position.y = floorY + EYE;
