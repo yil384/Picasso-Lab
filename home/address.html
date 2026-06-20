@@ -25,22 +25,20 @@
     html.m-full .enter { display: none; }
 
     /* ╔═══════════════════════════════════════════════════════════════════╗
-       ║  地址卡片调节区 —— 只改下面这 5 个数字就行（单位 px，越大越大）      ║
-       ║    --t   标题 PICASSO/LAB 的字号      （太大就调小，比如 36；太小就调大）║
+       ║  地址卡片调节区 —— 改下面这 5 个数字就行（单位 px，越大越大）        ║
+       ║    --t   标题 PICASSO LAB 的字号      （太大就调小，比如 30；太小就调大）║
        ║    --a   地址文字的字号               （一般是标题的一半左右）          ║
        ║    --px  左右留白                     （调大 → 文字更往中间缩）         ║
-       ║    --py  上下留白                                                      ║
-       ║    --gap 标题和地址之间的间距                                          ║
-       ║  标题想要「两行 PICASSO / LAB」= HTML 里保留 <br>（默认）；             ║
-       ║  想要「一行 PICASSO LAB」= 把 HTML 里 PICASSO<br>LAB 的 <br> 删掉       ║
-       ║  （改成一行后记得把 --t 调小，否则在窄的 footer 里会超出换行）          ║
+       ║    --py  上留白（顶部到文字的距离，0 = 贴顶）                          ║
+       ║    --gap 标题和地址之间的间距（0 = 贴着，调大就拉开）                  ║
+       ║  标题默认一行；想拆成两行就在 HTML 里 PICASSO 和 LAB 之间加 <br>        ║
        ╚═══════════════════════════════════════════════════════════════════╝ */
     .enter {
         --t: 35px;
         --a: 17px;
-        --px: 12px;
-        --py: 0px;
-        --gap: 10px;
+        --px: 22px;
+        --py: 25px;
+        --gap: 0px;
     }
 
     /* ↓↓↓ 下面这些一般不用动 ↓↓↓ */
@@ -125,7 +123,7 @@
     <!-- EMBED (footer): PICASSO LAB address card; click opens the 3D walk-through in a new tab -->
     <a class="enter" id="enter" href="https://yil384.github.io/Picasso-Lab/home/address.html" target="_blank" rel="noopener" aria-label="Picasso Lab — step inside the lab in 3D">
         <div class="card">
-            <div class="title">PICASSO<br>LAB</div>
+            <div class="title">PICASSO LAB</div>
             <div class="addr">Computer Science and Engineering Building, 3235 Voigt Dr, La Jolla, CA 92093</div>
         </div>
     </a>
