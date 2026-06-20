@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>Picasso Lab · Step Inside</title>
+<!-- detect embed (footer iframe) vs full (own tab) synchronously, before paint -->
+<script>document.documentElement.classList.add((function(){try{return window.self===window.top}catch(e){return false}})()?'m-full':'m-embed');</script>
+<style>
+    :root { --cyan: #36e0ff; --gold: #ffc94d; --ink: #04121f; --line: rgba(120, 200, 255, 0.18); --glass: rgba(8, 26, 44, 0.55); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; width: 100%; overflow: hidden; background: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; touch-action: none; }
+    .stage { position: fixed; inset: 0;
+        background: radial-gradient(130% 120% at 50% 14%, #0c3556 0%, #061d2f 52%, #03101b 100%); }
+    canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    canvas.grabbing { cursor: grabbing; }
+
+    /* ===== mode gating ===== */
+    .enter { display: none; }
+    html.m-embed .util, html.m-embed .pad, html.m-embed .hint, html.m-embed .loader, html.m-embed canvas { display: none !important; }
+    html.m-embed .enter { display: block; }
+    html.m-full .enter { display: none; }
+
+    /* ===== embed: clickable poster teaser ===== */
+    .enter { position: absolute; inset: 0; overflow: hidden; cursor: pointer; text-decoration: none; }
+    .enter .poster { width: 100%; height: 100%; object-fit: cover; transform: scale(1.07);
+        animation: kenburns 26s ease-in-out infinite alternate; will-change: transform; }
+    @keyframes kenburns { from { transform: scale(1.07) translate(-1.2%, 0.6%); } to { transform: scale(1.16) translate(1.2%, -0.6%); } }
+    .enter::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(180deg, rgba(4, 18, 31, 0.05) 35%, rgba(4, 18, 31, 0.62) 100%); }
+    .enter-cta { position: absolute; left: 50%; bottom: 13px; transform: translateX(-50%); z-index: 3;
+        display: flex; align-items: center; gap: 9px; padding: 9px 16px; border-radius: 999px; white-space: nowrap;
+        background: rgba(6, 20, 34, 0.6); border: 1px solid rgba(54, 224, 255, 0.4);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        color: #eafdff; font: 700 11.5px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.1em; text-transform: uppercase;
+        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45); transition: background 0.2s, border-color 0.2s, transform 0.2s; }
+    .enter-cta svg { width: 15px; height: 15px; }
+    .enter-cta .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 9px var(--cyan); animation: pulse 1.8s ease-in-out infinite; flex: none; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+    .enter:hover .enter-cta { background: rgba(54, 224, 255, 0.2); border-color: rgba(54, 224, 255, 0.7); transform: translateX(-50%) translateY(-2px); }
+    .enter:hover .poster { animation-play-state: paused; }
+
+    /* brand chip (both modes) */
+    .badge { position: absolute; top: 14px; left: 14px; z-index: 6; display: flex; align-items: center; gap: 9px;
+        padding: 8px 13px; border-radius: 11px; background: var(--glass); border: 1px solid var(--line);
+        backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); color: #cdeeff;
+        font: 700 11px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase;
+        pointer-events: none; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.4); }
+    .badge svg { width: 16px; height: 16px; color: var(--cyan); flex: none; }
+    .badge .sub { color: rgba(205, 238, 255, 0.5); font-weight: 600; }
+
+    /* full: utility buttons */
+    .util { position: absolute; right: 14px; top: 14px; z-index: 6; display: flex; gap: 9px; }
+    .ctl { width: 44px; height: 44px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        background: var(--glass); border: 1px solid var(--line); color: #d7f1ff;
+        backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+        transition: transform 0.14s, background 0.2s, border-color 0.2s, color 0.2s; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+    .ctl:hover { background: rgba(54, 224, 255, 0.16); border-color: rgba(54, 224, 255, 0.5); color: #fff; transform: translateY(-2px); }
+    .ctl:active { transform: scale(0.94); }
+    .ctl svg { width: 21px; height: 21px; }
+
+    /* full: movement pad */
+    .pad { position: absolute; left: 18px; bottom: 18px; z-index: 6;
+        display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 46px); gap: 7px; }
+    .pad .mv { border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        background: var(--glass); border: 1px solid var(--line); color: #d7f1ff;
+        backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        transition: background 0.12s, border-color 0.12s, transform 0.1s; }
+    .pad .mv svg { width: 22px; height: 22px; }
+    .pad .mv.active, .pad .mv:active { background: rgba(54, 224, 255, 0.22); border-color: rgba(54, 224, 255, 0.6); color: #fff; transform: scale(0.95); }
+    .pad .fwd { grid-column: 2; grid-row: 1; } .pad .left { grid-column: 1; grid-row: 2; }
+    .pad .back { grid-column: 2; grid-row: 2; } .pad .right { grid-column: 3; grid-row: 2; }
+
+    .hint { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 5;
+        display: flex; align-items: center; gap: 9px; pointer-events: none; padding: 8px 15px; border-radius: 999px;
+        background: rgba(6, 18, 30, 0.5); border: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        color: #bfe6f7; font: 600 11.5px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.03em;
+        opacity: 0; transition: opacity 0.5s ease; text-align: center; white-space: nowrap; }
+    .hint.show { opacity: 1; } .hint.gone { opacity: 0 !important; }
+    .hint svg { width: 15px; height: 15px; opacity: 0.85; }
+    .hint .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.5; }
+
+    .loader { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px; pointer-events: none; color: #cdeeff;
+        background: radial-gradient(120% 120% at 50% 30%, #0a2d49, #03101b 75%); transition: opacity 0.7s ease; }
+    .loader.hidden { opacity: 0; }
+    .loader .cube { width: 46px; height: 46px; animation: spin 2.4s linear infinite; color: var(--cyan); filter: drop-shadow(0 0 12px rgba(54, 224, 255, 0.5)); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader .track { width: 200px; height: 4px; border-radius: 999px; background: rgba(120, 200, 255, 0.14); overflow: hidden; }
+    .loader .fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--cyan), var(--gold)); transition: width 0.2s ease; }
+    .loader .pct { font: 700 12px/1 ui-monospace, monospace; letter-spacing: 0.18em; color: rgba(205, 238, 255, 0.7); }
+    .loader .cap { font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.12em; color: rgba(205, 238, 255, 0.4); text-transform: uppercase; }
+
+    .err { position: absolute; inset: 0; z-index: 9; display: none; flex-direction: column; align-items: center; justify-content: center;
+        gap: 12px; text-align: center; padding: 24px; background: radial-gradient(120% 120% at 50% 30%, #0a2d49, #03101b 75%);
+        color: #cdeeff; font-family: ui-monospace, monospace; }
+    .err.show { display: flex; }
+    .err svg { width: 40px; height: 40px; color: var(--gold); opacity: 0.85; }
+    .err b { font-size: 15px; } .err span { font-size: 12px; color: rgba(205, 238, 255, 0.55); max-width: 320px; line-height: 1.6; }
+
+    @media (max-width: 520px) { .badge .sub { display: none; } .ctl { width: 40px; height: 40px; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+    <!-- EMBED: clickable poster that opens the full walk-through in a new tab -->
+    <a class="enter" id="enter" href="https://yil384.github.io/Picasso-Lab/home/lab-3d.html" target="_blank" rel="noopener" aria-label="Step inside the lab in 3D">
+        <img class="poster" src="https://yil384.github.io/Picasso-Lab/home/static/lab-3d-poster.webp" alt="Inside the Picasso Lab">
+        <div class="enter-cta">
+            <span class="dot"></span> Step inside the lab
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+    </a>
+
+    <div class="badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"/><path d="m3 7 9 5 9-5M12 22V12"/></svg>
+        <span>Picasso Lab <span class="sub">· Step Inside</span></span>
+    </div>
+
+    <div class="util">
+        <button class="ctl" id="btn-reset" title="Back to start" aria-label="Back to start">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/><circle cx="12" cy="12" r="2.3"/></svg>
+        </button>
+        <button class="ctl" id="btn-full" title="Fullscreen" aria-label="Fullscreen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M16 21h3a2 2 0 0 0 2-2v-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
+        </button>
+    </div>
+
+    <div class="pad" id="pad">
+        <button class="mv fwd" data-dir="fwd" aria-label="Forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+        <button class="mv left" data-dir="left" aria-label="Step left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+        <button class="mv back" data-dir="back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <button class="mv right" data-dir="right" aria-label="Step right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+    </div>
+
+    <div class="hint" id="hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="3.2"/></svg>
+        Drag to look around <span class="dot"></span> Buttons or W A S D to walk
+    </div>
+
+    <div class="loader" id="loader">
+        <svg class="cube" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z"/><path d="m3 7 9 5 9-5M12 22V12"/></svg>
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <div class="pct" id="pct">LOADING 0%</div>
+        <div class="cap">Entering the lab…</div>
+    </div>
+
+    <div class="err" id="err">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <b>Couldn't load the lab</b>
+        <span>Check your connection and refresh. The model may still be deploying — give it a minute and try again.</span>
+    </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+// Footer (embed) mode shows only the poster <a> — no Three.js, no 7 MB model.
+// The full first-person walk-through loads lazily only when opened in its own tab.
+if (!document.documentElement.classList.contains('m-embed')) {
+    const THREE = await import('three');
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+
+    const MODEL_URL = 'https://yil384.github.io/Picasso-Lab/home/static/lab-model.glb';
+    const EYE = 1.6, SPEED = 2.6, SPRINT = 1.9, SENS = 0.0026;
+
+    const stage = document.getElementById('stage');
+    const loaderEl = document.getElementById('loader'), fillEl = document.getElementById('fill'), pctEl = document.getElementById('pct');
+    const hintEl = document.getElementById('hint'), errEl = document.getElementById('err');
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    stage.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 500);
+    camera.rotation.order = 'YXZ';
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    scene.add(new THREE.HemisphereLight(0xdff1ff, 0x141a22, 0.5));
+
+    let yaw = Math.PI, pitch = 0;
+    const keys = new Set();
+    const bounds = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 };
+    let floorY = 0, ready = false;
+    const start = { x: 0, z: 0, yaw: Math.PI };
+
+    new GLTFLoader().load(MODEL_URL, (gltf) => {
+        const root = gltf.scene;
+        root.traverse((o) => {
+            if (o.isMesh && o.material) {
+                (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
+                    if ('metalness' in m) m.metalness = 0;
+                    if ('roughness' in m) m.roughness = Math.max(m.roughness ?? 1, 0.85);
+                    m.side = THREE.FrontSide;
+                });
+                o.frustumCulled = false;
+            }
+        });
+        scene.add(root);
+
+        const box = new THREE.Box3().setFromObject(root);
+        const size = box.getSize(new THREE.Vector3());
+        const ctr = box.getCenter(new THREE.Vector3());
+        floorY = box.min.y;
+        const pad = 0.6;
+        bounds.minX = box.min.x + pad; bounds.maxX = box.max.x - pad;
+        bounds.minZ = box.min.z + pad; bounds.maxZ = box.max.z - pad;
+        if (size.z >= size.x) { start.x = ctr.x; start.z = box.min.z + size.z * 0.18; start.yaw = Math.PI; }
+        else { start.z = ctr.z; start.x = box.min.x + size.x * 0.18; start.yaw = Math.PI / 2; }
+
+        resetView(); ready = true;
+        loaderEl.classList.add('hidden');
+        setTimeout(() => { loaderEl.style.display = 'none'; }, 700);
+        setTimeout(() => hintEl.classList.add('show'), 500);
+        setTimeout(retireHint, 7000);
+        try { window.focus(); } catch (_) {}
+    }, (ev) => {
+        const p = ev.total ? Math.round(ev.loaded / ev.total * 100) : Math.min(96, Math.round(ev.loaded / 7600156 * 100));
+        fillEl.style.width = p + '%'; pctEl.textContent = 'LOADING ' + p + '%';
+    }, () => { loaderEl.style.display = 'none'; errEl.classList.add('show'); });
+
+    function resetView() { camera.position.set(start.x, floorY + EYE, start.z); yaw = start.yaw; pitch = 0; }
+
+    let dragging = false, lastX = 0, lastY = 0, hintGone = false;
+    function retireHint() { if (!hintGone) { hintGone = true; hintEl.classList.add('gone'); } }
+    const canvas = renderer.domElement;
+    canvas.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.classList.add('grabbing'); canvas.setPointerCapture(e.pointerId); try { window.focus(); } catch (_) {} retireHint(); });
+    canvas.addEventListener('pointermove', (e) => { if (!dragging) return; yaw -= (e.clientX - lastX) * SENS; pitch -= (e.clientY - lastY) * SENS; pitch = Math.max(-1.45, Math.min(1.45, pitch)); lastX = e.clientX; lastY = e.clientY; });
+    function endDrag(e) { dragging = false; canvas.classList.remove('grabbing'); try { canvas.releasePointerCapture(e.pointerId); } catch (_) {} }
+    canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+
+    const KEYMAP = { KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right' };
+    window.addEventListener('keydown', (e) => { if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); retireHint(); } if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.add('sprint'); });
+    window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys.delete(KEYMAP[e.code]); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.delete('sprint'); });
+
+    document.querySelectorAll('.pad .mv').forEach((btn) => {
+        const dir = btn.dataset.dir;
+        const press = (e) => { e.preventDefault(); e.stopPropagation(); keys.add(dir); btn.classList.add('active'); retireHint(); };
+        const release = (e) => { e.preventDefault(); e.stopPropagation(); keys.delete(dir); btn.classList.remove('active'); };
+        btn.addEventListener('pointerdown', press); btn.addEventListener('pointerup', release);
+        btn.addEventListener('pointerleave', release); btn.addEventListener('pointercancel', release);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => { if (ready) resetView(); });
+    document.getElementById('btn-full').addEventListener('click', () => {
+        const el = document.documentElement;
+        if (!document.fullscreenElement) (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+        else (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    });
+
+    const fwd = new THREE.Vector3(), right = new THREE.Vector3(), move = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+    const clock = new THREE.Clock();
+    (function animate() {
+        requestAnimationFrame(animate);
+        const dt = Math.min(clock.getDelta(), 0.05);
+        camera.rotation.set(pitch, yaw, 0);
+        if (ready && keys.size) {
+            camera.getWorldDirection(fwd); fwd.y = 0; if (fwd.lengthSq() > 0) fwd.normalize();
+            right.crossVectors(fwd, up).normalize();
+            move.set(0, 0, 0);
+            if (keys.has('fwd')) move.add(fwd);
+            if (keys.has('back')) move.sub(fwd);
+            if (keys.has('right')) move.add(right);
+            if (keys.has('left')) move.sub(right);
+            if (move.lengthSq() > 0) {
+                move.normalize().multiplyScalar(SPEED * (keys.has('sprint') ? SPRINT : 1) * dt);
+                camera.position.x = Math.max(bounds.minX, Math.min(bounds.maxX, camera.position.x + move.x));
+                camera.position.z = Math.max(bounds.minZ, Math.min(bounds.maxZ, camera.position.z + move.z));
+            }
+        }
+        camera.position.y = floorY + EYE;
+        renderer.render(scene, camera);
+    })();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+}
+</script>
+</body>
+</html>
