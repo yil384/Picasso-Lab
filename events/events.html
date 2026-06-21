@@ -2642,17 +2642,6 @@
         <img loading="lazy" id="img-preview-target" src="" alt="preview">
     </div>
 
-    <button class="dm-toggle" id="dm-toggle" type="button" title="Toggle danmaku">
-        <svg viewBox="0 0 30 26" fill="none">
-            <line x1="9" y1="5.5" x2="6.5" y2="1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="16" y1="5.5" x2="18.5" y2="1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <rect x="2" y="5.5" width="21" height="16" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/>
-            <text x="12.5" y="16.5" text-anchor="middle" fill="currentColor" font-size="11" font-weight="700" style="font-family:system-ui,-apple-system,sans-serif">弹</text>
-            <circle class="dm-badge" cx="24.5" cy="20.5" r="5" fill="#4a9bf5"/>
-            <polyline class="dm-badge-ck" points="22,20.5 23.8,22.5 27,18.5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </button>
-
     <label for="dm-file-input" class="img-upload-btn" id="upload-icon-label" title="Add Image">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="3" width="20" height="18" rx="3"/>
@@ -2663,6 +2652,16 @@
     <input type="file" id="dm-file-input" accept="image/*">
 
     <textarea id="dm-input" placeholder="Say something..." rows="1"></textarea>
+    <button class="dm-toggle" id="dm-toggle" type="button" title="Toggle danmaku">
+        <svg viewBox="0 0 30 26" fill="none">
+            <line x1="9" y1="5.5" x2="6.5" y2="1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="16" y1="5.5" x2="18.5" y2="1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <rect x="2" y="5.5" width="21" height="16" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/>
+            <text x="12.5" y="16.5" text-anchor="middle" fill="currentColor" font-size="11" font-weight="700" style="font-family:system-ui,-apple-system,sans-serif">弹</text>
+            <circle class="dm-badge" cx="24.5" cy="20.5" r="5" fill="#4a9bf5"/>
+            <polyline class="dm-badge-ck" points="22,20.5 23.8,22.5 27,18.5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
     <button id="dm-send-btn">Send</button>
 </div>
 
