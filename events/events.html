@@ -2044,6 +2044,76 @@
 </head>
 <body>
 
+<!-- ===== Best Paper celebration splash (plays on page open; remove this block + its <script> when the news gets old) ===== -->
+<div id="bp-splash" aria-hidden="true">
+    <canvas id="bp-confetti"></canvas>
+    <div class="bp-card">
+        <div class="bp-trophy">🏆</div>
+        <div class="bp-kicker">ISCA 2026 · BEST PAPER AWARD</div>
+        <div class="bp-name">Zhongkai&nbsp;Yu</div>
+        <div class="bp-sub">“Patterns behind Chaos” &middot; Picasso Lab</div>
+        <div class="bp-tap">tap to continue</div>
+    </div>
+</div>
+<style>
+    #bp-splash { position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(120% 100% at 50% 34%, rgba(12,24,46,0.72), rgba(4,8,16,0.93)); cursor: pointer;
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: bpIn 0.4s ease both; }
+    #bp-splash.bp-out { animation: bpOut 0.6s ease forwards; }
+    @keyframes bpIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes bpOut { to { opacity: 0; visibility: hidden; } }
+    #bp-confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    #bp-splash .bp-card { position: relative; text-align: center; padding: 0 24px; color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        transform: translateY(10px) scale(0.9); animation: bpPop 0.7s cubic-bezier(0.2,0.9,0.25,1.2) 0.1s both; }
+    @keyframes bpPop { to { transform: translateY(0) scale(1); } }
+    #bp-splash .bp-trophy { font-size: clamp(64px, 16vw, 124px); line-height: 1;
+        filter: drop-shadow(0 10px 32px rgba(255,201,77,0.6)); animation: bpFloat 2.2s ease-in-out infinite; }
+    @keyframes bpFloat { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
+    #bp-splash .bp-kicker { margin-top: 10px; font: 800 clamp(12px,3.4vw,16px)/1.2 ui-monospace, Menlo, monospace; letter-spacing: 0.22em;
+        background: linear-gradient(90deg,#ffe9a8,#ffc94d,#b9831f,#ffe9a8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    #bp-splash .bp-name { margin-top: 6px; font-weight: 900; font-size: clamp(34px, 10vw, 74px); letter-spacing: -0.01em; text-shadow: 0 4px 26px rgba(54,224,255,0.4); }
+    #bp-splash .bp-sub { margin-top: 10px; font-size: clamp(13px,3.6vw,18px); color: rgba(220,235,255,0.72); font-style: italic; }
+    #bp-splash .bp-tap { margin-top: 24px; font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.18em; text-transform: uppercase;
+        color: rgba(220,235,255,0.45); animation: bpBlink 1.4s ease-in-out infinite; }
+    @keyframes bpBlink { 0%,100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+</style>
+<script>
+(function () {
+    var splash = document.getElementById('bp-splash');
+    if (!splash) return;
+    var cv = document.getElementById('bp-confetti'), ctx = cv.getContext('2d');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2), W, H, parts = [], raf, running = true, t0 = Date.now();
+    var COLORS = ['#ffc94d', '#36e0ff', '#ffffff', '#5a8bff', '#ff6b9d', '#9be15d'];
+    function size() { W = cv.width = innerWidth * dpr; H = cv.height = innerHeight * dpr; }
+    size(); addEventListener('resize', size);
+    function burst(n, ox, oy, spread) { for (var i = 0; i < n; i++) parts.push({
+        x: ox, y: oy, vx: (Math.random() - 0.5) * spread * dpr, vy: (Math.random() * -9 - 4) * dpr,
+        g: (0.26 + Math.random() * 0.12) * dpr, w: (5 + Math.random() * 7) * dpr, h: (8 + Math.random() * 8) * dpr,
+        rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.4, c: COLORS[(Math.random() * COLORS.length) | 0], life: 1 }); }
+    burst(170, W * 0.5, H * 0.3, 16);
+    setTimeout(function () { if (running) { burst(60, 0, H * 0.55, 22); burst(60, W, H * 0.55, 22); } }, 300);
+    function frame() {
+        if (!running) return;
+        ctx.clearRect(0, 0, W, H);
+        var elapsed = Date.now() - t0;
+        for (var i = 0; i < parts.length; i++) { var p = parts[i];
+            p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.992; p.rot += p.vr;
+            if (elapsed > 2700) p.life -= 0.013;
+            if (p.life <= 0) continue;
+            ctx.save(); ctx.globalAlpha = Math.max(0, p.life); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+            ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
+        }
+        raf = requestAnimationFrame(frame);
+    }
+    frame();
+    function dismiss() { if (!running) return; running = false; splash.classList.add('bp-out');
+        setTimeout(function () { cancelAnimationFrame(raf); splash.remove(); }, 650); }
+    splash.addEventListener('click', dismiss);
+    setTimeout(dismiss, 4600);
+})();
+</script>
+
 <audio loop id="bg-music">
     <source src="https://yil384.github.io/Picasso-Lab/events/static/%E5%A4%9A%E6%A2%A6%E7%97%87.mp3" type="audio/mpeg">
 </audio>
