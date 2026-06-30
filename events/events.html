@@ -2044,73 +2044,137 @@
 </head>
 <body>
 
-<!-- ===== Best Paper celebration splash (plays on page open; remove this block + its <script> when the news gets old) ===== -->
+<!-- ===== Best Paper celebration splash (plays on page open; remove this whole block + its <script> when the news gets old) ===== -->
 <div id="bp-splash" aria-hidden="true">
-    <canvas id="bp-confetti"></canvas>
+    <div class="bp-aurora"></div>
+    <div class="bp-vignette"></div>
+    <canvas id="bp-cv"></canvas>
     <div class="bp-card">
-        <div class="bp-trophy">🏆</div>
-        <div class="bp-kicker">ISCA 2026 · BEST PAPER AWARD</div>
-        <div class="bp-name">Zhongkai&nbsp;Yu</div>
-        <div class="bp-sub">“Patterns behind Chaos” &middot; Picasso Lab</div>
+        <figure class="bp-photo">
+            <img src="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1.jpg" alt="Zhongkai Yu — ISCA 2026 Best Paper Award">
+            <span class="bp-seal">★</span>
+            <div class="bp-scrim"></div>
+            <figcaption class="bp-cap">
+                <div class="bp-kicker">ISCA 2026 · BEST PAPER AWARD</div>
+                <div class="bp-name">Zhongkai Yu</div>
+                <div class="bp-sub">“Patterns behind Chaos” &middot; Picasso Lab</div>
+            </figcaption>
+        </figure>
         <div class="bp-tap">tap to continue</div>
     </div>
+    <i class="bp-spark" style="top:17%;left:23%;animation-delay:0s"></i>
+    <i class="bp-spark" style="top:25%;left:75%;animation-delay:.4s"></i>
+    <i class="bp-spark" style="top:63%;left:15%;animation-delay:.8s"></i>
+    <i class="bp-spark" style="top:71%;left:83%;animation-delay:.2s"></i>
+    <i class="bp-spark" style="top:13%;left:55%;animation-delay:.6s"></i>
+    <i class="bp-spark" style="top:82%;left:45%;animation-delay:1s"></i>
 </div>
 <style>
     #bp-splash { position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center;
-        background: radial-gradient(120% 100% at 50% 34%, rgba(12,24,46,0.72), rgba(4,8,16,0.93)); cursor: pointer;
-        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: bpIn 0.4s ease both; }
-    #bp-splash.bp-out { animation: bpOut 0.6s ease forwards; }
+        overflow: hidden; cursor: pointer; background: #05080f; animation: bpIn 0.5s ease both; }
+    #bp-splash.bp-out { animation: bpOut 0.7s ease forwards; }
     @keyframes bpIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes bpOut { to { opacity: 0; visibility: hidden; } }
-    #bp-confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-    #bp-splash .bp-card { position: relative; text-align: center; padding: 0 24px; color: #fff;
+    /* flowing aurora backdrop */
+    #bp-splash .bp-aurora { position: absolute; inset: -35%; z-index: 0; filter: blur(90px) saturate(150%); opacity: 0.6;
+        background:
+            radial-gradient(38% 48% at 28% 30%, #ffce5e, transparent 62%),
+            radial-gradient(42% 52% at 72% 32%, #36e0ff, transparent 62%),
+            radial-gradient(50% 50% at 48% 76%, #5a8bff, transparent 62%),
+            radial-gradient(38% 40% at 82% 70%, #ff6b9d, transparent 62%);
+        animation: bpAurora 13s ease-in-out infinite alternate; }
+    @keyframes bpAurora { 0% { transform: translate(-4%, -3%) rotate(0deg) scale(1.05); } 100% { transform: translate(4%, 3%) rotate(10deg) scale(1.18); } }
+    #bp-splash .bp-vignette { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+        background: radial-gradient(120% 95% at 50% 42%, transparent 28%, rgba(3,6,12,0.55) 78%, rgba(3,6,12,0.82) 100%); }
+    #bp-cv { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
+    #bp-splash .bp-card { position: relative; z-index: 2; text-align: center; padding: 0 22px;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        transform: translateY(10px) scale(0.9); animation: bpPop 0.7s cubic-bezier(0.2,0.9,0.25,1.2) 0.1s both; }
-    @keyframes bpPop { to { transform: translateY(0) scale(1); } }
-    #bp-splash .bp-trophy { font-size: clamp(64px, 16vw, 124px); line-height: 1;
-        filter: drop-shadow(0 10px 32px rgba(255,201,77,0.6)); animation: bpFloat 2.2s ease-in-out infinite; }
-    @keyframes bpFloat { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
-    #bp-splash .bp-kicker { margin-top: 10px; font: 800 clamp(12px,3.4vw,16px)/1.2 ui-monospace, Menlo, monospace; letter-spacing: 0.22em;
-        background: linear-gradient(90deg,#ffe9a8,#ffc94d,#b9831f,#ffe9a8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    #bp-splash .bp-name { margin-top: 6px; font-weight: 900; font-size: clamp(34px, 10vw, 74px); letter-spacing: -0.01em; text-shadow: 0 4px 26px rgba(54,224,255,0.4); }
-    #bp-splash .bp-sub { margin-top: 10px; font-size: clamp(13px,3.6vw,18px); color: rgba(220,235,255,0.72); font-style: italic; }
-    #bp-splash .bp-tap { margin-top: 24px; font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.18em; text-transform: uppercase;
-        color: rgba(220,235,255,0.45); animation: bpBlink 1.4s ease-in-out infinite; }
-    @keyframes bpBlink { 0%,100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+        transform: translateY(16px) scale(0.92); opacity: 0; animation: bpPop 0.9s cubic-bezier(0.16,1,0.3,1) 0.16s forwards; }
+    @keyframes bpPop { to { transform: translateY(0) scale(1); opacity: 1; } }
+    #bp-splash .bp-photo { position: relative; margin: 0; width: min(560px, 86vw); border-radius: 18px; overflow: hidden;
+        border: 2px solid rgba(255,216,120,0.75); animation: bpFloat 5s ease-in-out infinite, bpGlow 3.2s ease-in-out infinite;
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.6), 0 0 50px rgba(255,206,94,0.28); }
+    #bp-splash .bp-photo img { display: block; width: 100%; height: auto; }
+    @keyframes bpFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes bpGlow { 0%,100% { box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(255,206,94,0.22); }
+        50% { box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 30px 80px rgba(0,0,0,0.6), 0 0 72px rgba(255,206,94,0.5); } }
+    #bp-splash .bp-photo::after { content: ''; position: absolute; top: 0; left: -70%; width: 55%; height: 100%; z-index: 3;
+        transform: skewX(-20deg); pointer-events: none;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent); animation: bpSweep 3.6s ease-in-out 0.8s infinite; }
+    @keyframes bpSweep { 0% { left: -70%; } 55%,100% { left: 140%; } }
+    #bp-splash .bp-scrim { position: absolute; inset: 0; z-index: 1;
+        background: linear-gradient(180deg, rgba(4,8,16,0.05) 30%, rgba(4,8,16,0.55) 66%, rgba(4,8,16,0.92) 100%); }
+    #bp-splash .bp-cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 16px 18px 18px; text-align: center; color: #fff; }
+    #bp-splash .bp-seal { position: absolute; top: 12px; right: 12px; z-index: 2; width: 38px; height: 38px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; font-size: 18px; color: #5a3a00;
+        background: radial-gradient(circle at 35% 30%, #fff6cf, #ffd76a 45%, #c8901f); border: 1.5px solid rgba(255,255,255,0.7);
+        box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 18px rgba(255,206,94,0.6); animation: bpSpin 6s linear infinite; }
+    @keyframes bpSpin { to { transform: rotate(360deg); } }
+    #bp-splash .bp-kicker { font: 800 clamp(11px,3vw,15px)/1.2 ui-monospace, Menlo, monospace; letter-spacing: 0.22em;
+        background: linear-gradient(100deg, #b9831f 0%, #ffe9a8 22%, #ffffff 38%, #ffd76a 52%, #ffe9a8 70%, #b9831f 100%);
+        background-size: 220% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+        animation: bpShine 3.4s linear infinite; }
+    @keyframes bpShine { from { background-position: 0% center; } to { background-position: -220% center; } }
+    #bp-splash .bp-name { margin-top: 4px; font-weight: 900; font-size: clamp(28px, 7.5vw, 50px); letter-spacing: -0.01em;
+        text-shadow: 0 2px 20px rgba(0,0,0,0.6), 0 0 26px rgba(54,224,255,0.35); }
+    #bp-splash .bp-sub { margin-top: 6px; font-size: clamp(12px,3.2vw,16px); color: rgba(230,240,255,0.85); font-style: italic; text-shadow: 0 1px 8px rgba(0,0,0,0.7); }
+    #bp-splash .bp-tap { margin-top: 22px; font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.2em; text-transform: uppercase;
+        color: rgba(222,236,255,0.5); animation: bpBlink 1.6s ease-in-out infinite; }
+    @keyframes bpBlink { 0%,100% { opacity: 0.3; } 50% { opacity: 0.78; } }
+    #bp-splash .bp-spark { position: absolute; z-index: 3; width: 14px; height: 14px; pointer-events: none; opacity: 0;
+        background: radial-gradient(circle, #fff 0%, #ffe9a8 40%, transparent 70%); border-radius: 50%;
+        box-shadow: 0 0 10px rgba(255,231,168,0.9); animation: bpTwinkle 2.2s ease-in-out infinite; }
+    @keyframes bpTwinkle { 0%,100% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) { #bp-splash * { animation: none !important; } }
 </style>
 <script>
 (function () {
     var splash = document.getElementById('bp-splash');
     if (!splash) return;
-    var cv = document.getElementById('bp-confetti'), ctx = cv.getContext('2d');
-    var dpr = Math.min(window.devicePixelRatio || 1, 2), W, H, parts = [], raf, running = true, t0 = Date.now();
-    var COLORS = ['#ffc94d', '#36e0ff', '#ffffff', '#5a8bff', '#ff6b9d', '#9be15d'];
-    function size() { W = cv.width = innerWidth * dpr; H = cv.height = innerHeight * dpr; }
-    size(); addEventListener('resize', size);
-    function burst(n, ox, oy, spread) { for (var i = 0; i < n; i++) parts.push({
-        x: ox, y: oy, vx: (Math.random() - 0.5) * spread * dpr, vy: (Math.random() * -9 - 4) * dpr,
-        g: (0.26 + Math.random() * 0.12) * dpr, w: (5 + Math.random() * 7) * dpr, h: (8 + Math.random() * 8) * dpr,
-        rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.4, c: COLORS[(Math.random() * COLORS.length) | 0], life: 1 }); }
-    burst(170, W * 0.5, H * 0.3, 16);
-    setTimeout(function () { if (running) { burst(60, 0, H * 0.55, 22); burst(60, W, H * 0.55, 22); } }, 300);
-    function frame() {
-        if (!running) return;
-        ctx.clearRect(0, 0, W, H);
-        var elapsed = Date.now() - t0;
-        for (var i = 0; i < parts.length; i++) { var p = parts[i];
-            p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.992; p.rot += p.vr;
-            if (elapsed > 2700) p.life -= 0.013;
-            if (p.life <= 0) continue;
-            ctx.save(); ctx.globalAlpha = Math.max(0, p.life); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-            ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
-        }
-        raf = requestAnimationFrame(frame);
-    }
-    frame();
+    var myCanvas = document.getElementById('bp-cv');
+    var running = true;
+
     function dismiss() { if (!running) return; running = false; splash.classList.add('bp-out');
-        setTimeout(function () { cancelAnimationFrame(raf); splash.remove(); }, 650); }
+        setTimeout(function () { splash.remove(); }, 720); }
     splash.addEventListener('click', dismiss);
-    setTimeout(dismiss, 4600);
+    setTimeout(dismiss, 5400);
+
+    function start() {
+        if (!window.confetti || !running) return;
+        var myConfetti = confetti.create(myCanvas, { resize: true, useWorker: false });
+        var GOLD = ['#ffd76a', '#ffe9a8', '#f0a93b', '#fff3c8'];
+        var MIX = ['#ffd76a', '#ffe9a8', '#36e0ff', '#5a8bff', '#ffffff', '#ff6b9d'];
+        // realistic multi-burst from lower-centre (canvas-confetti's recommended recipe)
+        function fire(ratio, opts) { myConfetti(Object.assign({ origin: { y: 0.6 }, colors: MIX }, opts, { particleCount: Math.floor(240 * ratio) })); }
+        fire(0.25, { spread: 26, startVelocity: 55 });
+        fire(0.2,  { spread: 60 });
+        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.95 });
+        fire(0.1,  { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.25 });
+        fire(0.1,  { spread: 120, startVelocity: 45 });
+        // a burst of gold stars
+        myConfetti({ particleCount: 50, spread: 90, startVelocity: 42, scalar: 1.3, ticks: 220, shapes: ['star'], colors: GOLD, origin: { y: 0.55 } });
+        // gold side cannons for ~2.4s
+        var endC = Date.now() + 2400;
+        (function cannons() {
+            if (!running) return;
+            myConfetti({ particleCount: 4, angle: 60,  spread: 65, startVelocity: 50, origin: { x: 0, y: 0.78 }, colors: GOLD });
+            myConfetti({ particleCount: 4, angle: 120, spread: 65, startVelocity: 50, origin: { x: 1, y: 0.78 }, colors: GOLD });
+            if (Date.now() < endC) requestAnimationFrame(cannons);
+        })();
+        // slow gold rain drifting down for ~3.6s (the "flowing" layer)
+        var endR = Date.now() + 3600;
+        (function rain() {
+            if (!running) return;
+            myConfetti({ particleCount: 2, startVelocity: 0, ticks: 260, gravity: 0.55, scalar: 1.15,
+                drift: (Math.random() - 0.5) * 1.4, origin: { x: Math.random(), y: -0.1 }, colors: GOLD });
+            if (Date.now() < endR) setTimeout(rain, 140);
+        })();
+    }
+
+    if (window.confetti) start();
+    else { var sc = document.createElement('script');
+        sc.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js';
+        sc.onload = start; document.head.appendChild(sc); }
 })();
 </script>
 
@@ -2321,7 +2385,7 @@
         <div class="event-date">June 30, 2026</div>
         <h3 class="event-title">🏆 Zhongkai Yu Wins the ISCA 2026 Best Paper Award!</h3>
         <p class="event-text">
-            🎉 WE DID IT! <strong>Zhongkai Yu</strong> just won the <strong>Best Paper Award at ISCA 2026</strong> — the crown jewel of computer architecture! His paper <strong><em>"Patterns behind Chaos"</em></strong> tames large-scale MoE LLM inference into blazing-fast data movement. Congratulations Zhongkai! 🚀🔥
+            🎉 WE DID IT! <strong>Leader Yu</strong> just won the <strong>Best Paper Award at ISCA 2026</strong> — the crown jewel of computer architecture! His paper <strong><em>"Patterns behind Chaos"</em></strong> tames large-scale MoE LLM inference into blazing-fast data movement. Congratulations Zhongkai! 🚀🔥
         </p>
         <a href="https://arxiv.org/abs/2510.05497" class="read-more" target="_blank" rel="noopener">📄 Read the paper on arXiv &rarr;</a>
     </div>
