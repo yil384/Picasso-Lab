@@ -119,19 +119,20 @@
       background: linear-gradient(
         96deg,
         #5e3700 0%,
-        #9b6507 10%,
-        #d49d29 19%,
-        #efd27a 28%,
-        #b77b12 36%,
-        #623900 46%,
-        #ad7412 55%,
-        #e5b340 64%,
-        #f4dc8c 70%,
-        #8a5606 80%,
-        #c38a20 90%,
+        #7a4b03 9%,
+        #b77a14 18%,
+        #d8a73f 26%,
+        #f0d57e 34%,
+        #c58a1d 42%,
+        #623900 50%,
+        #8b5808 59%,
+        #c98e24 68%,
+        #e5ba50 76%,
+        #a96c0c 85%,
+        #754606 93%,
         #5e3700 100%
       );
-      background-size: 260% 100%;
+      background-size: 340% 100%;
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -140,13 +141,12 @@
       text-shadow:
         0 0 4px rgba(185, 126, 19, 0.22),
         0 1px 0 rgba(102, 61, 0, 0.08);
-      animation: goldFlow 5.6s cubic-bezier(0.45, 0, 0.16, 1) infinite;
+      animation: goldFlow 12s linear infinite alternate;
     }
 
     @keyframes goldFlow {
-      0% { background-position: 0% 50%; }
-      48% { background-position: 100% 50%; }
-      100% { background-position: 100% 50%; }
+      from { background-position: 0% 50%; }
+      to { background-position: 100% 50%; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -426,7 +426,7 @@
     <p style="white-space:pre-wrap;"><b>[MICRO'26] (To appear)</b> <i style="font-weight:bold">AMMA: A Multi-Chiplet Memory-Centric Architecture for Low-Latency 1M Context Attention Serving. </i> Zhongkai Yu, Haotian Ye, Chenyang Zhou, Ohm Rishabh Venkatachalam, Zaifeng Pan, Zhengding Hu, Junsung Kim, Won Woo Ro, Po-An Tsai, Shuyi Pei, Yangwook Kang, and Yufei Ding. arXiv preprint arXiv:2604.26103, 2026. [<a href="https://arxiv.org/abs/2604.26103">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[ISCA'26] <span class="gold-candidate">[Best Paper]</span> (To appear)</b> <i style="font-weight:bold">Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference. </i> Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai. [<a href="https://arxiv.org/abs/2510.05497">paper</a>]</p>
+    <p style="white-space:pre-wrap;"><b>[ISCA'26] <span class="gold-candidate">[🏆 Best Paper]</span> (To appear)</b> <i style="font-weight:bold">Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference. </i> Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai. [<a href="https://arxiv.org/abs/2510.05497">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[ISCA'26] (To appear)</b> <i style="font-weight:bold">Reducing Page Faults via Invalidation-based Mapping Propagation in Multi-GPU Systems. </i> Junsung Kim, Dongho Ha, Sungwoo Kim, Wonho Cho, Sungbin Kim, Yufei Ding, Won Woo Ro.</p>
