@@ -42,9 +42,9 @@
       line-height: 1.6;
       color: #2a2a2a;
       padding-top:    clamp(28px, 4vw,  64px);
-      padding-right:  calc(clamp(20px, 8vw, 140px) + env(safe-area-inset-right));
-      padding-bottom: calc(clamp(56px, 7vw,  96px) + env(safe-area-inset-bottom));
-      padding-left:   calc(clamp(20px, 8vw, 140px) + env(safe-area-inset-left));
+      padding-right:  calc(clamp(40px, 12vw, 200px) + env(safe-area-inset-right));
+      padding-bottom: calc(clamp(56px,  7vw,  96px) + env(safe-area-inset-bottom));
+      padding-left:   calc(clamp(40px, 12vw, 200px) + env(safe-area-inset-left));
       max-width: 100%;
       overflow-x: hidden;
       -webkit-text-size-adjust: 100%;
@@ -114,41 +114,61 @@
     }
 
     .gold-candidate {
-      display: inline-block;
-      color: #b87800;
-      background: linear-gradient(
-        90deg,
-        #7a4b00 0%,
-        #b87800 8%,
-        #ffd76a 18%,
-        #fff6c8 25%,
-        #d49a1e 33%,
-        #8d5700 42%,
-        #7a4b00 50%,
-        #b87800 58%,
-        #ffd76a 68%,
-        #fff6c8 75%,
-        #d49a1e 83%,
-        #8d5700 92%,
-        #7a4b00 100%
-      );
-      background-size: 200% 100%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 10px rgba(255, 205, 70, 0.22);
-      animation: goldFlow 9s linear infinite;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 1px 9px 2px;
+      border: 1px solid rgba(122, 79, 8, 0.46);
+      border-radius: 999px;
+      color: #5f3b00;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 46%),
+        linear-gradient(
+          110deg,
+          #704307 0%,
+          #b07716 13%,
+          #f0c75a 26%,
+          #fff3bf 35%,
+          #c99126 47%,
+          #784907 58%,
+          #d9a637 70%,
+          #fff0b1 80%,
+          #b87918 91%,
+          #704307 100%
+        );
+      background-size: 100% 100%, 260% 100%;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.78),
+        inset 0 0 0 1px rgba(255, 245, 199, 0.36),
+        0 3px 8px rgba(122, 79, 8, 0.14);
+      font-weight: 800;
+      letter-spacing: 0;
+      text-shadow: 0 1px 0 rgba(255, 246, 206, 0.68);
+      -webkit-text-fill-color: currentColor;
+      animation: goldPrestigeFlow 8.5s ease-in-out infinite;
     }
 
-    @keyframes goldFlow {
-      from { background-position: 0% 50%; }
-      to { background-position: 100% 50%; }
+    .gold-candidate::before {
+      content: "";
+      flex: 0 0 auto;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 33% 28%, #fff9dc 0 22%, #f1c65a 48%, #9e640d 100%);
+      box-shadow:
+        0 0 0 1px rgba(96, 58, 0, 0.25),
+        0 0 8px rgba(234, 184, 71, 0.45);
+    }
+
+    @keyframes goldPrestigeFlow {
+      0%, 100% { background-position: 0% 50%, 0% 50%; }
+      50% { background-position: 0% 50%, 100% 50%; }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .gold-candidate {
         animation: none;
-        background-position: 45% 50%;
+        background-position: 0% 50%, 58% 50%;
       }
     }
 
@@ -417,27 +437,15 @@
   <!-- 大标题 -->
   <h1 class="section-title">Conference Papers</h1>
 
-  <!-- 论文列表 -->
+  <!-- 论文列表: 按时间/状态倒序, 正式录用与 to appear 先于同年纯 arXiv/preprint -->
   <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">TLX: Hardware-Native, Evolvable MIMW GPU Compiler for Large-scale Production Environments. </i> Yue Guan, Hongtao Yu, Peng Chen, Daohang Shi, Karthik Manivannan, Nicholas J Riasanovsky, Manman Ren, Lei Wang, Shane Nay, Partha Kanuparthy, Zaifeng Pan, Zhengding Hu, Yufei Ding. [<a href="https://arxiv.org/abs/2605.10905">paper</a>]</p>
-    </div>
-  <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">ChipMATE: Multi-Agent Training via Reinforcement Learning for Enhanced RTL Generation. </i> Zhongkai Yu*, Yichen Lin*, Chenyang Zhou, Yuwei Zhang, Kun Zhou, Junxia Cui, Haotian Ye, Zhengding Hu, Zaifeng Pan, Ruiyi Wang, Yujie Zhao, Hejia Zhang, Jingbo Shang, Jishen Zhao, Yufei Ding. [<a href="https://arxiv.org/abs/2605.12857">paper</a>] [<a href="https://chipmate.picasso-lab.com/">website</a>]</p>
-    </div>
-  <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">FlashEvolve: Accelerating Agent Self-Evolution with Asynchronous Stage Orchestration. </i> Zhengding Hu, Mingge Lu, Zhen Wang, Jixuan Ruan, Chang Chen, Zaifeng Pan, Yue Guan, Ruiyi Wang, Zhongkai Yu, Chao Zhang, Yufei Ding. [<a href="https://arxiv.org/abs/2605.08520">paper</a>]</p>
-  </div>
-  <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">JigsawRL: Assembling RL Pipelines for Efficient LLM Post-Training. </i> Zhengding Hu, Hehua Ouyang, Chang Chen, Zaifeng Pan, Yue Guan, Zhongkai Yu, Zhen Wang, Steven Swanson, Yufei Ding. [<a href="https://arxiv.org/abs/2604.23838">paper</a>]</p>
-  </div>
-  <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[preprint]</b> <i style="font-weight:bold">Lookahead Context Engineering: Hiding Context Transformation Overhead for Efficient Long-Horizon Agent Serving. </i> Zaifeng Pan, Qianxu Wang, Zhengding Hu, Chang Chen, Yue Guan, Steven Swanson, Yufei Ding. [<a href="https://www.researchgate.net/publication/404781391_Lookahead_Context_Engineering_Hiding_Context_Transformation_Overhead_for_Efficient_Long-Horizon_Agent_Serving">paper</a>]</p>
+    <p style="white-space:pre-wrap;"><b>[MICRO'26] (To appear)</b> <i style="font-weight:bold">AMMA: A Multi-Chiplet Memory-Centric Architecture for Low-Latency 1M Context Attention Serving. </i> Zhongkai Yu, Haotian Ye, Chenyang Zhou, Ohm Rishabh Venkatachalam, Zaifeng Pan, Zhengding Hu, Junsung Kim, Won Woo Ro, Po-An Tsai, Shuyi Pei, Yangwook Kang, and Yufei Ding. arXiv preprint arXiv:2604.26103, 2026. [<a href="https://arxiv.org/abs/2604.26103">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[OSDI'26] (To appear)</b> <i style="font-weight:bold">Syncopate: Efficient Multi-GPU AI Kernels via Automatic Chunk-Centric Compute-Communication Overlap. </i> Xinwei Qiang*, Yue Guan*, Zhengding Hu, Yufei Ding, Adnan Aziz. [<a href="https://arxiv.org/abs/2601.20595">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[ISCA'26]<span class="gold-candidate">[Best Paper Candidate]</span> (To appear)</b> <i style="font-weight:bold">Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference. </i> Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai. [<a href="https://arxiv.org/abs/2510.05497">paper</a>]</p>
+    <p style="white-space:pre-wrap;"><b><span class="gold-candidate">[ISCA'26 Best Paper]</span> (To appear)</b> <i style="font-weight:bold">Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference. </i> Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai. [<a href="https://arxiv.org/abs/2510.05497">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[ISCA'26] (To appear)</b> <i style="font-weight:bold">Reducing Page Faults via Invalidation-based Mapping Propagation in Multi-GPU Systems. </i> Junsung Kim, Dongho Ha, Sungwoo Kim, Wonho Cho, Sungbin Kim, Yufei Ding, Won Woo Ro.</p>
@@ -461,13 +469,28 @@
     <p style="white-space:pre-wrap;"><b>[CGO'26]</b> <i style="font-weight:bold">Proton: Towards Multi-level, Adaptive Profiling for Triton. </i> Keren Zhou, Tianle Zhong, Hao Wu, Jihyeong Lee, Yue Guan, Yufei Ding, Robeck Corbin, Yuanwei Fang, Jeff Niu, Philippe Tillet. [<a href="https://ieeexplore.ieee.org/abstract/document/11395207">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">ChipBench: A Next-Step Benchmark for Evaluating LLM Performance in AI-Aided Chip Design. </i> Zhongkai Yu, Chenyang Zhou, Yichen Lin, Hejia Zhang, Haotian Ye, Junxia Cui, Zaifeng Pan, Jishen Zhao, Yufei Ding. [<a href="https://arxiv.org/abs/2601.21448">paper</a>]</p>
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">ChipMATE: Multi-Agent Training via Reinforcement Learning for Enhanced RTL Generation. </i> Zhongkai Yu*, Yichen Lin*, Chenyang Zhou, Yuwei Zhang, Kun Zhou, Junxia Cui, Haotian Ye, Zhengding Hu, Zaifeng Pan, Ruiyi Wang, Yujie Zhao, Hejia Zhang, Jingbo Shang, Jishen Zhao, Yufei Ding. [<a href="https://arxiv.org/abs/2605.12857">paper</a>] [<a href="https://chipmate.picasso-lab.com/">website</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">TLX: Hardware-Native, Evolvable MIMW GPU Compiler for Large-scale Production Environments. </i> Yue Guan, Hongtao Yu, Peng Chen, Daohang Shi, Karthik Manivannan, Nicholas J Riasanovsky, Manman Ren, Lei Wang, Shane Nay, Partha Kanuparthy, Zaifeng Pan, Zhengding Hu, Yufei Ding. [<a href="https://arxiv.org/abs/2605.10905">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">FlashEvolve: Accelerating Agent Self-Evolution with Asynchronous Stage Orchestration. </i> Zhengding Hu, Mingge Lu, Zhen Wang, Jixuan Ruan, Chang Chen, Zaifeng Pan, Yue Guan, Ruiyi Wang, Zhongkai Yu, Chao Zhang, Yufei Ding. [<a href="https://arxiv.org/abs/2605.08520">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">JigsawRL: Assembling RL Pipelines for Efficient LLM Post-Training. </i> Zhengding Hu, Hehua Ouyang, Chang Chen, Zaifeng Pan, Yue Guan, Zhongkai Yu, Zhen Wang, Steven Swanson, Yufei Ding. [<a href="https://arxiv.org/abs/2604.23838">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper">
     <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">TritonDFT: Automating DFT with a Multi-Agent Framework.</i> Zhengding Hu, Kuntal Talit, Zhen Wang, Haseeb Ahmad, Yichen Lin, Prabhleen Kaur, Christopher Lane, Elizabeth A. Peterson, Zhiting Hu, Elizabeth A. Nowadnick, Yufei Ding. [<a href="https://arxiv.org/abs/2603.03372">paper</a>] [<a href="https://tritondft.com/">website</a>] </p>
-    </div>
+  </div>
   <div class="sqs-block-content machinelearning paper">
-  <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">Pancake: Hierarchical Memory System for Multi-Agent LLM Serving.</i> Zhengding Hu, Zaifeng Pan, Prabhleen Kaur, Vibha Murthy, Zhongkai Yu, Yue Guan, Zhen Wang, Steven Swanson, Yufei Ding. [<a href="https://arxiv.org/abs/2602.21477">paper</a>]</p>
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">Pancake: Hierarchical Memory System for Multi-Agent LLM Serving.</i> Zhengding Hu, Zaifeng Pan, Prabhleen Kaur, Vibha Murthy, Zhongkai Yu, Yue Guan, Zhen Wang, Steven Swanson, Yufei Ding. [<a href="https://arxiv.org/abs/2602.21477">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[arXiv]</b> <i style="font-weight:bold">ChipBench: A Next-Step Benchmark for Evaluating LLM Performance in AI-Aided Chip Design. </i> Zhongkai Yu, Chenyang Zhou, Yichen Lin, Hejia Zhang, Haotian Ye, Junxia Cui, Zaifeng Pan, Jishen Zhao, Yufei Ding. [<a href="https://arxiv.org/abs/2601.21448">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[preprint]</b> <i style="font-weight:bold">Lookahead Context Engineering: Hiding Context Transformation Overhead for Efficient Long-Horizon Agent Serving. </i> Zaifeng Pan, Qianxu Wang, Zhengding Hu, Chang Chen, Yue Guan, Steven Swanson, Yufei Ding. [<a href="https://www.researchgate.net/publication/404781391_Lookahead_Context_Engineering_Hiding_Context_Transformation_Overhead_for_Efficient_Long-Horizon_Agent_Serving">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[NeurIPS'25]</b> <i style="font-weight:bold">KVFlow: Efficient Prefix Caching for Accelerating LLM-based Multi-Agent Workflows. </i> Zaifeng Pan, Ajjkumar Patel, Yipeng Shen, Zhengding Hu, Yue Guan, Wan-Lu Li, Lianhui Qin, Yida Wang, Yufei Ding. [<a href="https://openreview.net/pdf?id=5Iw1nDtYmT">paper</a>] </p>
@@ -853,5 +876,1251 @@
   </script>
 
 </div><!-- /.page-wrap -->
+
+<!-- ── Picasso Easter Egg: type "picasso" to reveal Research Landscape ── -->
+<style>
+/* ─── Overlay: dark canvas, brush-stroke wipe from left ─── */
+#pt-overlay {
+  position: fixed; inset: 0;
+  background: #0d1117;
+  z-index: 99999;
+  display: none; overflow: hidden;
+  clip-path: polygon(0 0,0 0,1% 12%,0 32%,1% 58%,0 80%,0 100%,0 100%);
+  transition: clip-path 0.60s cubic-bezier(0.76,0,0.24,1);
+}
+#pt-overlay.active   { display: block; }
+#pt-overlay.sweeping {
+  clip-path: polygon(0 0,102% -2%,101% 12%,102% 32%,101% 58%,102% 80%,100% 102%,0 100%);
+}
+/* Chart canvas fills the ENTIRE overlay (detail panel floats on top) */
+#pt-canvas {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+}
+#pt-svg { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ─── Detail panel: frosted glass overlay at bottom of chart ─── */
+/* pointer-events:none lets clicks pass through to SVG dots underneath */
+#pt-detail {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(9,13,19,0.80);
+  backdrop-filter: blur(28px) saturate(1.5); -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border-top: 1px solid rgba(255,255,255,0.09);
+  box-shadow: 0 -1px 32px rgba(0,0,0,0.32);
+  padding: 14px 40px 16px;
+  font-family: "Inter", ui-sans-serif, sans-serif;
+  color: rgba(255,255,255,0.88);
+  display: flex; align-items: flex-start; gap: 24px;
+  z-index: 200;
+  pointer-events: none;           /* glass: clicks fall through to dots */
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.2,1,0.4,1);
+}
+#pt-detail.show { opacity: 1; transform: translateY(0); }
+/* Re-enable pointer events only on interactive children */
+#pt-detail a,
+#pt-detail .pt-tag { pointer-events: auto; }
+
+/* ─── Close button (light on dark bg) ─── */
+#pt-close {
+  position:fixed; top:18px; right:20px; z-index:100001;
+  width:34px; height:34px;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14);
+  border-radius:50%; font-size:16px; color:rgba(255,255,255,0.5);
+  cursor:pointer; display:none; align-items:center; justify-content:center;
+  transition:background 0.2s;
+}
+#pt-overlay.active ~ #pt-close { display:flex; }
+#pt-close:hover { background:rgba(255,255,255,0.16); color:rgba(255,255,255,0.85); }
+
+/* ─── Activation flash (same as projects.html) ─── */
+#pt-flash {
+  position:fixed; inset:0; z-index:100000;
+  display:flex; align-items:center; justify-content:center;
+  pointer-events:none; opacity:0;
+  transition:opacity 0.22s, background 0.22s;
+}
+#pt-flash.on {
+  opacity:1;
+  background:rgba(0,18,46,0.72);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+}
+#pt-flash span {
+  font-family:"Inter",sans-serif;
+  font-size:clamp(1.3rem,4.5vw,2.2rem);
+  font-weight:800; letter-spacing:-0.02em;
+  color:#FFCD00;
+  text-shadow:0 0 60px rgba(255,205,0,.9),0 2px 12px rgba(0,0,0,.5);
+  transform:scale(0.7); opacity:0;
+  transition:transform 0.3s cubic-bezier(.34,1.56,.64,1) .07s,
+             opacity 0.22s ease .07s;
+}
+#pt-flash.on span { transform:scale(1); opacity:1; }
+
+/* ─── Typing hint (same style as projects.html) ─── */
+#pt-type-hint {
+  position:fixed; bottom:22px; left:50%;
+  transform:translateX(-50%);
+  z-index:100001;
+  background:rgba(0,0,0,0.42);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  color:rgba(255,255,255,0.55);
+  font-size:11.5px; font-family:"Inter",sans-serif; font-weight:500;
+  padding:6px 16px; border-radius:20px;
+  letter-spacing:.06em; white-space:nowrap;
+  border:1px solid rgba(255,255,255,0.10);
+  opacity:0; pointer-events:none;
+  transition:opacity 0.4s ease;
+}
+#pt-type-hint.show { opacity:1; }
+#pt-type-hint kbd {
+  display:inline-block;
+  background:rgba(255,255,255,0.15);
+  border:1px solid rgba(255,255,255,0.25);
+  border-radius:4px; padding:0 5px;
+  font-family:inherit; font-size:11px;
+  color:#FFCD00; margin:0 1px;
+}
+
+/* ─── Tooltip (dark on light bg) ─── */
+#pt-tip {
+  position:fixed;
+  background:rgba(20,20,24,0.90);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,0.10);
+  color:rgba(255,255,255,0.90);
+  font-family:"Inter",ui-sans-serif,sans-serif;
+  font-size:12px; line-height:1.5;
+  padding:8px 13px; border-radius:10px;
+  max-width:380px; pointer-events:none;
+  opacity:0; z-index:100002;
+  transition:opacity 0.15s;
+}
+#pt-tip.show { opacity:1; }
+
+/* ─── SVG animations ─── */
+.pt-dash {
+  stroke-dasharray:var(--len,1000);
+  stroke-dashoffset:var(--len,1000);
+  animation:pt-draw var(--dur,0.8s) var(--del,0.7s) ease-out forwards;
+}
+@keyframes pt-draw { to { stroke-dashoffset:0; } }
+.pt-pop {
+  opacity:0;
+  transform-box:fill-box; transform-origin:center; transform:scale(0);
+  animation:pt-popin var(--pdur,0.35s) var(--pdel,0.8s) cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+@keyframes pt-popin { to { opacity:1; transform:scale(1); } }
+.pt-fade {
+  opacity:0;
+  animation:pt-fadein var(--fdur,0.4s) var(--fdel,0.7s) ease forwards;
+}
+@keyframes pt-fadein { to { opacity:1; } }
+</style>
+
+<div id="pt-overlay">
+  <div id="pt-canvas">
+    <svg id="pt-svg"></svg>
+  </div>
+  <div id="pt-detail"></div>
+</div>
+<button id="pt-close" aria-label="Close">&#x2715;</button>
+<div id="pt-flash"><span>&#x2726; Research Landscape</span></div>
+<div id="pt-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> &#x2728;</div>
+<div id="pt-tip"></div>
+
+<script>
+(function () {
+"use strict";
+
+const overlay  = document.getElementById("pt-overlay");
+const canvas   = document.getElementById("pt-canvas");
+const svgEl    = document.getElementById("pt-svg");
+const closeBtn = document.getElementById("pt-close");
+const flash    = document.getElementById("pt-flash");
+const typeHint = document.getElementById("pt-type-hint");
+const tip      = document.getElementById("pt-tip");
+
+/* Click on chart background (not a dot) dismisses detail panel */
+canvas.addEventListener("click", function() {
+  const d = document.getElementById("pt-detail");
+  if (d) d.classList.remove("show");
+});
+
+let active = false, animating = false, keyboardPrimed = false, lineAnims = [];
+
+/* SVG fills canvas via viewBox — no pan/zoom needed */
+
+/* Keyboard priming (copied from projects.html) */
+function primeKeyboardCapture() {
+  if (!document.body) return;
+  if (!document.body.hasAttribute("tabindex")) document.body.tabIndex = -1;
+  try { document.body.focus({ preventScroll:true }); keyboardPrimed = true; } catch(_) {}
+}
+window.addEventListener("load", () => setTimeout(primeKeyboardCapture,0), { once:true });
+window.addEventListener("pageshow", () => setTimeout(primeKeyboardCapture,0));
+window.addEventListener("focus", primeKeyboardCapture);
+document.addEventListener("pointerenter", primeKeyboardCapture);
+document.addEventListener("mousemove", () => { if (!keyboardPrimed) primeKeyboardCapture(); }, { once:true });
+
+/* Typing hint */
+let hintTimer = null;
+function showHint() {
+  typeHint.classList.add("show");
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => typeHint.classList.remove("show"), 3000);
+}
+function hideHint() { clearTimeout(hintTimer); typeHint.classList.remove("show"); }
+
+/* Paper parsing */
+const ML_V  = new Set(["MLSYS","NEURIPS","NIPS","ICML","ICLR","AAAI","KDD","SIGKDD","EMNLP","ACL","NAACL","CVPR","ICCV","ECCV"]);
+const CC_V  = new Set(["PLDI","CGO","OOPSLA","CC","POPL","ICFP","ISSTA","LCTES"]);
+
+function classify(div) {
+  if (div.classList.contains("quantum")) return "quantum";
+  const v = ((div.textContent.match(/\[([A-Za-z]+)/) || [])[1] || "").toUpperCase();
+  if (ML_V.has(v)) return "ml";
+  if (CC_V.has(v)) return "compiler";
+  return "systems";
+}
+function parseYear(venue) {
+  const m = venue.match(/'(\d{2})/);
+  if (!m) return null;
+  const y = parseInt(m[1]);
+  return y < 50 ? 2000+y : 1900+y;
+}
+
+const papers = [];
+document.querySelectorAll(".paper").forEach(div => {
+  const m = div.textContent.match(/\[([^\]]+)\]/);
+  if (!m) return;
+  const venue = m[1].trim();
+  const year  = parseYear(venue);
+  if (!year) return;
+  const iEl = div.querySelector("i,I");
+  const title = iEl ? iEl.textContent.trim().replace(/\s+/g," ") : venue;
+  /* Extract authors — text between end of title and first "[" link bracket */
+  const p = div.querySelector("p");
+  const fullText = (p || div).textContent;
+  const titlePos = fullText.indexOf(title);
+  let authors = "";
+  if (titlePos >= 0) {
+    const afterTitle = fullText.slice(titlePos + title.length);
+    const bk = afterTitle.indexOf("[");
+    const raw = bk >= 0 ? afterTitle.slice(0, bk) : afterTitle;
+    authors = raw.replace(/\([^)]*\)/g,"").replace(/\.\s*$/,"").replace(/\s+/g," ").trim();
+  }
+  /* Extract paper URL (prefer arxiv/acm/ieee link labelled "paper") */
+  let url = "";
+  div.querySelectorAll("a[href]").forEach(function(a) {
+    if (!url && /paper|abstract|doi|pdf/i.test(a.textContent + a.getAttribute("href"))) {
+      url = a.getAttribute("href");
+    }
+  });
+  if (!url) { const a = div.querySelector("a[href]"); if (a) url = a.getAttribute("href"); }
+  papers.push({ venue, year, title, authors, url, cat: classify(div) });
+});
+
+/* SVG helpers */
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, a={}) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k,v] of Object.entries(a)) e.setAttribute(k,v);
+  return e;
+}
+function tel(tag, a, txt) { const e=el(tag,a); e.textContent=txt; return e; }
+
+/* Category config — for color lookup */
+const CATS = [
+  { key:"systems",  label:"Systems",   color:"#60a5fa" },
+  { key:"compiler", label:"Compilers", color:"#fb923c" },
+  { key:"ml",       label:"ML",        color:"#34d399" },
+  { key:"quantum",  label:"Quantum",   color:"#c084fc" },
+];
+
+/* Derive topic tags from paper title + category */
+function deriveTags(title, cat) {
+  const t = title.toLowerCase();
+  const tags = [];
+  if (/\bllm|large language|language model\b/.test(t))        tags.push("LLM");
+  if (/\bgpu|cuda|tensor core|warp\b/.test(t))                tags.push("GPU");
+  if (/\bquantum|qubit|qec|clifford|fault.tolerant\b/.test(t))tags.push("Quantum");
+  if (/\bsparse|sparsity\b/.test(t))                          tags.push("Sparse");
+  if (/\bgraph neural|gnn\b/.test(t))                         tags.push("GNN");
+  if (/\binference|serving|decode|decod\b/.test(t))           tags.push("Inference");
+  if (/\btraining|post.train\b/.test(t))                      tags.push("Training");
+  if (/\bcompil|ir\b/.test(t) && cat==="compiler")            tags.push("Compiler");
+  if (/\bparallel|distributed\b/.test(t))                     tags.push("Distributed");
+  if (/\bmemory|cache|kv.cache\b/.test(t))                    tags.push("Memory");
+  if (/\bquantiz|precision|bit\b/.test(t))                    tags.push("Quantization");
+  if (/\baccelerator|fpga\b/.test(t))                         tags.push("Accelerator");
+  if (/\brl|reinforcement|reward\b/.test(t))                  tags.push("RL");
+  if (/\bagent|multi.agent\b/.test(t))                        tags.push("Multi-Agent");
+  if (/\bbenchmark\b/.test(t))                                 tags.push("Benchmark");
+  if (/\brag|retrieval\b/.test(t))                            tags.push("RAG");
+  if (/\bchip|rtl|eda\b/.test(t))                             tags.push("EDA");
+  if (/\btriton\b/.test(t))                                    tags.push("Triton");
+  if (/\bkernel\b/.test(t) && /gpu|cuda/.test(t))             tags.push("GPU Kernel");
+  if (/\bschedul\b/.test(t))                                   tags.push("Scheduling");
+  if (/\bprofil\b/.test(t))                                    tags.push("Profiling");
+  if (/\bspecul\b/.test(t))                                    tags.push("Speculative");
+  if (tags.length === 0) {
+    const defaults = { quantum:"Quantum", compiler:"Compiler", ml:"ML", systems:"Systems" };
+    tags.push(defaults[cat] || "Systems");
+  }
+  return [...new Set(tags)].slice(0, 4);
+}
+papers.forEach(function(p) { p.tags = deriveTags(p.title, p.cat); });
+
+/* ═══════════════════════════════════════════════════════════════
+   PAPER DATABASE — real abstracts and curated tags for each paper.
+   Keys are normalized titles (trailing period stripped).
+   ═══════════════════════════════════════════════════════════════ */
+const PAPER_DB = {
+/* ── LLM Inference & Serving ── */
+"AMMA: A Multi-Chiplet Memory-Centric Architecture for Low-Latency 1M Context Attention Serving":
+  {desc:"Serving 1M-context attention pushes memory movement and inter-chiplet traffic into the critical path. AMMA uses a memory-centric multi-chiplet architecture to reduce long-context attention latency by keeping data movement close to memory and coordinating chiplet-level execution for large-context serving.",
+   tags:["LLM","Attention","Memory","Chiplet"]},
+"Syncopate: Efficient Multi-GPU AI Kernels via Automatic Chunk-Centric Compute-Communication Overlap":
+  {desc:"Communication is a first-order bottleneck in large-scale GPU workloads. Syncopate is a compiler+runtime that achieves fine-grained overlap inside a single fused kernel via a communication-chunk abstraction, decoupling communication granularity from kernel structure. Delivers average 1.3× and up to 4.7× end-to-end speedup on multi-GPU workloads.",
+   tags:["Multi-GPU","Compiler","Overlap","Triton"]},
+"Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference":
+  {desc:"The random expert-selection mechanism in 200B–1T MoE models creates dominant data-movement bottlenecks. Through profiling 24,000+ requests across four frontier MoE models, this work uncovers six temporal/spatial patterns enabling a prefill-aware expert-placement algorithm (up to 1.25× speedup) and architectural modifications yielding 6.6× on wafer-scale GPUs.",
+   tags:["MoE","LLM","Inference","Profiling"]},
+"Yggdrasil: Bridging Dynamic Speculation and Static Runtime for Latency-Optimal Tree-Based LLM Decoding":
+  {desc:"Speculative decoding improves LLM throughput but suffers from dynamic/static runtime mismatch. Yggdrasil introduces an equal-growth tree structure for static graph compatibility, latency-aware draft selection, and stage-based scheduling. Supports unmodified LLMs and achieves up to 3.98× speedup over state-of-the-art speculative systems.",
+   tags:["LLM","Speculative","Tree Decoding","Inference"]},
+"KVFlow: Efficient Prefix Caching for Accelerating LLM-based Multi-Agent Workflows":
+  {desc:"Multi-agent LLM workflows have structured, predictable KV cache reuse that naive caching misses. KVFlow profiles workflow dependency graphs to pre-schedule KV cache eviction and prefetching, reducing redundant computation across agents. Achieves significant throughput improvements for complex multi-step agent pipelines on shared GPU serving infrastructure.",
+   tags:["KV Cache","Multi-Agent","LLM","Inference"]},
+"FastTree: Optimizing Attention Kernel and Runtime for Tree-Structured Large Language Model Inference":
+  {desc:"Tree-structured LLM decoding (speculative, beam search) requires batching attention over variable tree topologies that standard runtimes handle poorly. FastTree redesigns the attention kernel and batching scheduler for tree structures, exploiting shared prefixes and diverging branches to maximize GPU utilization and minimize redundant computation.",
+   tags:["LLM","Attention","Tree Decoding","GPU Kernel"]},
+"Mercury: Unlocking Multi-GPU Operator Optimization for Large Language Models via Remote Memory Scheduling":
+  {desc:"LLM operators spanning multiple GPUs are bottlenecked by rigid memory allocation that prevents fusion and reuse. Mercury schedules operators via remote-memory access, enabling cross-GPU operator fusion and significantly reducing communication volume. Achieves substantial latency improvements for large-scale LLM inference across multi-GPU nodes.",
+   tags:["Multi-GPU","LLM","Memory","Operator Fusion"]},
+"WLB-LLM: Workload-Balanced 4D Parallelism for Large Language Model Training":
+  {desc:"4D parallelism (data, tensor, pipeline, sequence) for LLM training suffers from severe load imbalance due to variable sequence lengths. WLB-LLM dynamically partitions workload across the four parallelism dimensions to balance compute across GPUs, reducing pipeline bubbles and idle time while maintaining throughput at scale.",
+   tags:["LLM","Training","Distributed","Parallelism"]},
+"HedraRAG: Co-Optimizing Generation and Retrieval for Heterogeneous Retrieval-Augmented Generation Workflows":
+  {desc:"RAG workflows mix fast-retrieval and slow-generation phases unevenly, leaving GPUs underutilized. HedraRAG co-schedules retrieval and generation across heterogeneous hardware, batching retrieved context intelligently to overlap retrieval latency with generation compute, significantly improving end-to-end throughput for RAG pipelines.",
+   tags:["RAG","LLM","Inference","Scheduling"]},
+"ScaleSim: Serving Large-Scale Multi-Agent Simulation with Invocation Distance-Based Memory Management":
+  {desc:"LLM-based multi-agent simulations face GPU memory pressure from thousands of concurrent agents. ScaleSim introduces 'invocation distance'—a metric estimating future LLM request ordering—to drive proactive prefetching and priority eviction. Achieves up to 1.74× speedup over SGLang on large-scale agent simulation benchmarks.",
+   tags:["Multi-Agent","LLM","Memory","Simulation"]},
+"JigsawRL: Assembling RL Pipelines for Efficient LLM Post-Training":
+  {desc:"RL-based LLM post-training suffers from hidden pipeline imbalances and resource fragmentation. JigsawRL introduces Pipeline Multiplexing: decomposing pipelines to expose imbalances, then dynamically reallocating resources and redistributing long-tail operations. Achieves up to 1.85× throughput over Verl (sync RL) and 1.54× over StreamRL (async RL).",
+   tags:["LLM","RL","Training","Pipeline"]},
+"FlashEvolve: Accelerating Agent Self-Evolution with Asynchronous Stage Orchestration":
+  {desc:"Agent self-evolution pipelines are bottlenecked by synchronized stage execution and LLM-intensive imbalances. FlashEvolve uses asynchronous workers+queues to overlap stages, managing language-space artifact staleness distinctly from weight-space staleness. Achieves 3.5× throughput gains locally and 4.9× with API serving vs. synchronous approaches.",
+   tags:["LLM","Multi-Agent","Async","Self-Evolution"]},
+"Lookahead Context Engineering: Hiding Context Transformation Overhead for Efficient Long-Horizon Agent Serving":
+  {desc:"Long-horizon agent serving requires costly context transformations (summarization, filtering) between steps that stall the pipeline. Lookahead Context Engineering speculatively pre-transforms context during the generation phase of the previous step, effectively hiding this overhead and improving end-to-end agent serving latency.",
+   tags:["LLM","Multi-Agent","Inference","Context"]},
+"Pancake: Hierarchical Memory System for Multi-Agent LLM Serving":
+  {desc:"Multi-agent LLM frameworks require expensive approximate nearest-neighbor searches over large agent memories. Pancake introduces multi-level index caching per agent, cross-agent coordinated index management, and GPU–CPU collaborative acceleration. Achieves more than 4.29× throughput improvement over existing agent memory frameworks like MemGPT.",
+   tags:["Multi-Agent","Memory","LLM","KNN"]},
+/* ── GPU Compilers & Kernels ── */
+"TLX: Hardware-Native, Evolvable MIMW GPU Compiler for Large-scale Production Environments":
+  {desc:"Modern GPUs require orchestrating data movement, tensor-core computation, and synchronization at warp-group granularity. TLX (Triton Low-level Language Extensions) introduces MIMW (Multi-Instruction, Multi-Warp) programming to expose hardware orchestration while preserving Triton's productive blocked programming model. Already deployed in large-scale production training and inference.",
+   tags:["GPU Compiler","Triton","Warp","Production"]},
+"Proton: Towards Multi-level, Adaptive Profiling for Triton":
+  {desc:"Understanding fine-grained GPU kernel performance inside Triton requires insight beyond standard GPU counters. Proton embeds multi-level profiling directly into the Triton compilation pipeline as reusable passes, exposing intra-kernel execution structure with only 8.2% overhead and 2% measurement error.",
+   tags:["GPU","Triton","Profiling","Compiler"]},
+"KPerfIR: Towards a Open and Compiler-centric Ecosystem for GPU Kernel Performance Tooling on Modern AI Workloads":
+  {desc:"AI workload profiling on modern GPUs requires understanding fine-grained interactions between functional units. KPerfIR is a multilevel compiler-based infrastructure embedding profiling as reusable compiler passes inside the Triton workflow, enabling customizable tools with 8.2% overhead and 2% error for complex overlapping optimizations.",
+   tags:["GPU","Compiler","Profiling","AI Workloads"]},
+"ALCOP: Automatic Load-Compute Pipelining in Deep Learning Compiler for AI-GPUs":
+  {desc:"ALCOP is the first compiler-native framework to support multi-stage, multi-level load-compute pipelining for GPU tensor programs, addressing limitations of hand-written libraries like cuBLAS. Automatically detects pipelineable buffers, transforms programs for multi-level pipelining, and uses static-analysis-guided schedule search. Achieves 1.23× average (up to 1.73×) speedup over vanilla TVM and up to 1.64× over XLA on end-to-end models.",
+   tags:["Compiler","GPU","Pipelining","DL"]},
+"EVT: Accelerating Deep Learning Training with Epilogue Visitor Tree":
+  {desc:"Deep learning training compilers struggle to fuse complex training operations like normalization and losses, and handle forward-backward graph edges. EVT introduces graph-level compilation passes, an ILP-based partitioner for joint forward-backward graphs, and the Epilogue Visitor Abstraction enabling automatic CUTLASS-compatible epilogue generation. Achieves 1.26–3.1× speedup across diverse training workloads.",
+   tags:["GPU","CUDA","Kernel Fusion","Compiler"]},
+"DOTA: Detect and Omit Weak Attentions for Scalable Transformer Acceleration":
+  {desc:"Transformer attention has significant sparsity—many attention weights are near-zero and contribute minimally to output. DOTA dynamically detects these 'weak' attentions at runtime and skips their computation, reducing FLOPs without accuracy loss. Hardware-efficient implementation achieves substantial speedup for transformer inference and training.",
+   tags:["Transformer","Attention","Sparsity","GPU"]},
+"LightSeq2: Accelerated Training for Transformer-Based Models on GPUs":
+  {desc:"Transformer training is computationally intensive with complex variable-length patterns that standard frameworks handle inefficiently. LightSeq2 implements highly optimized GPU kernels tailored to transformer arithmetic, supporting BERT, GPT, ViT, and standard transformers. Achieves 1.4–3.5× speedup over prior systems, with 308% speedup on WMT14 translation.",
+   tags:["Transformer","Training","GPU","Optimization"]},
+"Shfl-BW: Accelerating Deep Neural Network Inference with Tensor-Core Aware Weight Pruning":
+  {desc:"Random pruning preserves accuracy but blocks tensor-core acceleration; structured pruning is tensor-core friendly but hurts accuracy. Shfl-BW introduces Shuffled Block-Wise sparsity: row/column permutations create structural flexibility with minimal overhead. Achieves 1.81×–4.18× speedup on transformer layers at 75% sparsity across V100/T4/A100 GPUs.",
+   tags:["Pruning","Tensor Core","Sparsity","Inference"]},
+"Heuristic Adaptability to Input Dynamics for SpMM on GPUs":
+  {desc:"Sparse Matrix-Matrix Multiplication (SpMM) performance varies drastically across datasets due to different sparsity patterns. This work establishes orthogonal design principles via a three-loop model and introduces DA-SpMM—a data-aware kernel that dynamically selects optimization strategies at runtime. Achieves 1.26–1.37× speedup over cuSPARSE with up to 5.59× in GNN applications.",
+   tags:["SpMM","GPU","Sparse","Adaptive"]},
+"Dynamic N:M Fine-grained Structured Sparse Attention Mechanism":
+  {desc:"DFSS dynamically prunes Transformer attention weight matrices to N:M structured sparse patterns, approximating full attention with theoretical and empirical justification. A specialized CUDA kernel eliminates pruning overhead entirely. At 1:2 and 2:4 sparsity levels, achieves 1.27–1.89× speedup over standard attention across sequences of 384–4096 tokens with minimal fine-tuning required.",
+   tags:["Attention","Sparsity","N:M","GPU"]},
+/* ── GNN Systems ── */
+"GNNAdvisor: An Adaptive and Efficient Runtime System for GNN Acceleration on GPUs":
+  {desc:"GNNAdvisor extracts performance-relevant features from both GNN model structure and input graph topology to drive GPU-optimized workload management and memory hierarchy utilization. An embedded analytical model automates parameter tuning. Achieves 3.02× average speedup over DGL and up to 4.10× over NeuGraph across diverse GNN architectures and datasets.",
+   tags:["GNN","GPU","Runtime","Adaptive"]},
+"TC-GNN: Bridging Sparse GNN Computation and Dense Tensor Cores on GPUs":
+  {desc:"TC-GNN bridges irregular sparse graph operations and GPU Tensor Core Units designed for dense computation. A sparse graph translation method reformulates GNN workloads into dense-format tiles suitable for Tensor Cores, while CUDA cores and Tensor Cores are co-orchestrated for efficient execution. Achieves an average 1.70× speedup over the state-of-the-art DGL framework across multiple GNN models and datasets.",
+   tags:["GNN","Tensor Core","Sparse","GPU"]},
+"MGG: Accelerating Graph Neural Networks with Fine-grained intra-kernel Communication-Computation Pipelining on Multi-GPU Platforms":
+  {desc:"MGG targets full-graph GNN training on multi-GPU platforms where existing systems treat computation and communication independently. The core innovation is a dynamic software pipeline that overlaps fine-grained computation and communication within a single GPU kernel, supported by GNN-tailored pipeline construction, GPU-aware mapping, and an intelligent analytical runtime. Outperforms DGL, UVM, and ROC by 4.41×, 4.81×, and 10.83× on average, respectively.",
+   tags:["GNN","GPU","Pipelining","Communication"]},
+"Understanding GNN Computational Graph: A Coordinated Computation, IO, and Memory Perspective":
+  {desc:"GNN training wastes resources through redundant neural operator computation (92.4% of operators), misaligned memory mapping between vertex/edge operators, and large intermediate activation storage (91.9% of memory). This work proposes coordinated optimizations: operator reordering, unified thread mapping, and activation recomputation. Achieves up to 2.75× speedup with 7.73× less memory.",
+   tags:["GNN","Memory","GPU","Analysis"]},
+"QGTC: Accelerating Quantized GNN via GPU Tensor Core GPUs":
+  {desc:"QGTC is the first Tensor Core-based framework to enable any-bitwidth computation for quantized GNNs on GPUs. Introduces low-bit arithmetic via bit-decomposed computation, a TC-tailored CUDA kernel with 3D-stacked bit compression, zero-tile jumping, non-zero tile reuse, and a bandwidth-optimized subgraph packing strategy. Achieves on average 2.7× speedup over DGL across diverse settings.",
+   tags:["GNN","Quantization","Tensor Core","GPU"]},
+"SGQuant: Squeezing the Last Bit on Graph Neural Networks with Specialized Quantization":
+  {desc:"SGQuant proposes a GNN-tailored quantization scheme targeting high memory footprints of node embedding features. Introduces a multi-granularity quantization strategy at component, graph-topology, and layer levels, together with a GNN quantization fine-tuning scheme and automatic bit-selection algorithm. Reduces memory footprint 4.25×–31.9× compared to full-precision GNNs while limiting accuracy drop to 0.4% on average.",
+   tags:["GNN","Quantization","Compression","Efficiency"]},
+"Dynamic Sparse Graph for Efficient Deep Learning":
+  {desc:"Executing DNNs with dynamic sparse graphs reduces memory and computation by selectively activating high-value neurons at runtime. DSG uses dimension-reduction search to identify significant neurons and double-mask selection for batch normalization compatibility, achieving 1.7–4.5× memory savings and 2.3–4.4× operation reduction with minimal accuracy loss.",
+   tags:["Sparsity","DNN","Memory","Dynamic"]},
+/* ── Recommendation Systems ── */
+"EL-Rec: Efficient Large-scale Recommendation Model Training via Tensor-train Embedding":
+  {desc:"EL-Rec enables efficient large-scale DLRM training with limited GPU resources via Tensor-Train decomposition of memory-intensive embedding tables. Optimizes TT decomposition for embedding primitives, introduces index reordering for local and global input information, and employs a pipelined training paradigm to hide host-to-device communication overhead. Handles the largest public DLRM dataset on a single GPU, achieving 3× speedup over state-of-the-art DLRM frameworks.",
+   tags:["Recommendation","Embedding","Training","GPU"]},
+"RecFlex: Enabling Feature Heterogeneity-Aware Optimization for Deep Recommendation Models with Flexible Schedules":
+  {desc:"Industrial recommendation models have heterogeneous embedding workloads across feature fields, yet existing solutions apply identical schedules to all fields. RecFlex generates fused kernels with distinct schedules per feature field via an interference-aware schedule tuner and heterogeneous schedule fusion compiler. Achieves average speedups of 2.64×, 20.77×, and 11.31× over TorchRec, HugeCTR, and RECom respectively.",
+   tags:["Recommendation","Heterogeneous","Embedding","Optimization"]},
+"OPER: Optimality-Guided Embedding Table Parallelization for Large-scale Recommendation Model":
+  {desc:"DLRM deployment requires parallelizing extra-large embedding tables across multiple GPUs, but existing methods ignore input-dependent behavior, causing load imbalance and excess communication. OPER proposes a heuristic search for near-optimal EMT parallelization and implements a distributed shared-memory system supporting fine-grained parallelization. Achieves 2.3× and 4.0× average speedup in training and inference over state-of-the-art DLRM frameworks.",
+   tags:["Recommendation","Parallelism","Embedding","Optimization"]},
+"RAP: Resource-aware Automated GPU Sharing for Multi-GPU Recommendation Model Training and Input Preprocessing":
+  {desc:"DLRM training requires CPU preprocessing nodes that consume more power than GPU trainers. RAP shares GPU resources for both preprocessing and training, using a co-running cost model to assess preprocessing operations and a resource-aware horizontal fusion technique to merge kernels adaptively. Achieves 1.99× speedup over sequential GPU preprocessing, with end-to-end throughput within 3.24% of an ideal no-overhead baseline.",
+   tags:["Recommendation","GPU","Parallelism","Training"]},
+"ECSSD: Hardware/Data Layout Co-Designed In-Storage-Computing Architecture for Extreme Classification":
+  {desc:"Extreme classification layers in deep learning exceed CPU/GPU memory capacity, making in-storage computing on SSDs attractive. ECSSD proposes an alignment-free floating-point MAC circuit, a heterogeneous 4/32-bit data layout to exploit SSD internal bandwidth, and a learning-based adaptive interleaving framework to balance flash channel load. Achieves 3.24–49.87× performance improvement over state-of-the-art baselines.",
+   tags:["Recommendation","In-Storage Compute","Hardware","Embedding"]},
+"TRACI: Network Acceleration of Input-Dynamic Communication for Large-Scale Deep Learning Recommendation Model":
+  {desc:"Large-scale DLRM embedding tables rely on sparse, input-dependent access patterns that bottleneck multi-GPU all-to-all communication. TRACI introduces an in-network acceleration architecture with novel network transactions using input/output reuse identification and an in-switch cache with reduction table, proactively reducing data transfers. Achieves up to 4.04× and average 3.12× speedup for 64-GPU systems.",
+   tags:["Recommendation","Network","Communication","Hardware"]},
+/* ── Architecture & Hardware ── */
+"ENMC: Extreme Near-Memory Classification via Approximate Screening":
+  {desc:"Extreme classification (XC) for large-scale deep learning has classifiers exceeding on-chip memory capacity, unsuitable for naive near-memory processing. ENMC introduces approximate screening to identify key candidates and reduce computation, paired with an XC-tailored NMP architecture. The screening achieves 7.3× speedup over CPU baseline; ENMC achieves 2.7× additional speedup over state-of-the-art NMP baselines.",
+   tags:["Near-Memory","Approximation","Classification","Hardware"]},
+"iPIM: Programmable In-Memory Image Processing Accelerator Using Near-Bank Architecture":
+  {desc:"GPU memory bandwidth bottlenecks limit image processing; near-bank architecture offers enormous bank-internal bandwidth but prior work lacked programmability for heterogeneous pipeline stages. iPIM introduces a decoupled control-execution architecture, a SIMB (Single-Instruction-Multiple-Bank) ISA, and a Halide-based compiler with register allocation and memory ordering optimizations. Achieves 11.02× acceleration and 79.49% energy savings over NVIDIA Tesla V100.",
+   tags:["PIM","Image Processing","DRAM","Hardware"]},
+"DUET: Boosting Deep Neural Network Efficiency on Dual-Module Architecture":
+  {desc:"DNNs can leverage both Boolean logic units (BLU) for binary operations and multi-level cell (MLC) memory for analog computation. DUET designs a dual-module architecture that routes computations to the most energy-efficient hardware unit based on operation type, achieving significant energy reduction for DNN inference.",
+   tags:["DNN","Hardware","Efficiency","Architecture"]},
+"Soter: Analytical Tensor-Architecture Modeling and Automatic Tensor Program Tuning for Spatial Accelerators":
+  {desc:"Auto-tuning tensor compilers for spatial accelerators suffer from invalid programs or inaccurate evaluations of incomplete programs. Soter designs an analytical model to generate a high-quality, valid program design space, and an automatic tuner that avoids evaluating incomplete programs. By coordinating model and tuner iteratively, achieves 2.1–3.5× speedup over state-of-the-art tensor compilers with better scalability.",
+   tags:["CNN","Accelerator","Analytical Model","Mapping"]},
+"Push Multicast: A Speculative and Coherent Interconnect for Mitigating Manycore CPU Communication Bottleneck":
+  {desc:"Scaling CPUs to many cores causes NoC and cache bandwidth to become bottlenecks as shared data is redundantly fetched. Push Multicast transforms the LLC into a proactive agent that multicasts data to sharers, with a coherent in-network filter to prune redundant requests. Achieves 33–43% NoC bandwidth savings and up to 2.08× speedup in 64-core systems.",
+   tags:["CPU","Cache","Coherence","Interconnect"]},
+"SFD: Towards Segment Fusion Dataflowfor Spatial Accelerators":
+  {desc:"Common DNNs are increasingly memory-bound due to the gap between on-chip compute and off-chip bandwidth. SFD proposes a segment fusion dataflow framework using a dataflow abstraction enabling template-free operator fusion and tile constraint relaxation. A memory-centric mapper, analytical network segmenter, and dependency-aware tile scheduler achieve 1.4–2.2× speedup over state-of-the-art fusion frameworks for spatial accelerators.",
+   tags:["Accelerator","Dataflow","Fusion","Hardware"]},
+"INSPIRE: In-Storage Private Information Retrieval via Protocol and Architecture Co-design":
+  {desc:"Private Information Retrieval (PIR) protocols require enormous working spaces of hundreds of GiBs, severely bounding performance by storage communication. INSPIRE co-designs a multi-stage filtering PIR protocol achieving constant query size with a heterogeneous in-storage hardware architecture integrating the protocol across the SSD hierarchy, making PIR practical for real-world deployment at scale.",
+   tags:["PIR","In-Storage Compute","Privacy","Hardware"]},
+"EGEMM-TC: Accelerating Scientific Computing on Tensor Cores with Extended Precision":
+  {desc:"Scientific computing requires high numerical precision that tensor cores—designed for ML with lower precision—cannot directly provide. EGEMM-TC uses compensated summation (error correction via Kahan summation) to achieve double-precision equivalent accuracy using tensor core FP16 arithmetic, enabling scientific kernels to leverage tensor core throughput.",
+   tags:["Tensor Core","HPC","Precision","Scientific"]},
+"A 28nm 15.59μJ/Token Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes":
+  {desc:"Transformer inference on edge devices requires energy-efficient hardware for sparse attention. This chip implements Compute-In-Memory (CIM) using bitline-transpose matrix operations in 28nm CMOS, achieving ultra-low 15.59μJ/token energy for sparse transformer inference while maintaining high accuracy.",
+   tags:["CIM","ASIC","Transformer","Edge"]},
+"TranCIM: Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes":
+  {desc:"A full-digital compute-in-memory architecture for sparse transformer inference using bitline-transpose matrix multiplication. TranCIM implements INT8 attention and FFN layers entirely within SRAM arrays, achieving high energy efficiency by eliminating off-chip data movement for transformer workloads on edge hardware.",
+   tags:["CIM","SRAM","Transformer","Hardware"]},
+"SDP: Co-Designing Algorithm, Dataflow, and Architecture for in-SRAM Sparse NN Acceleration":
+  {desc:"In-SRAM compute-in-memory accelerators for sparse DNNs must handle irregular sparsity patterns that defeat standard memory addressing. SDP co-designs the sparsity algorithm, dataflow, and CIM architecture to represent and process structured sparsity efficiently, achieving high throughput and energy efficiency for sparse DNN inference.",
+   tags:["CIM","SRAM","Sparsity","Hardware"]},
+"MPU: Memory-Centric SIMT Processor via In-DRAM Near-Bank Computing":
+  {desc:"Recommendation model embedding lookups are memory-bandwidth bound with high access irregularity. MPU places SIMT compute elements inside DRAM banks and designs a SIMT ISA adapted for near-bank execution, enabling embedding lookups and basic arithmetic to execute inside memory with massive bandwidth improvement.",
+   tags:["PIM","DRAM","Recommendation","SIMT"]},
+"DASM: DAta-Streaming Based Computing in Non-Volatile Memory Architecture for Embedded System":
+  {desc:"Texture rendering in graphics pipelines requires high-bandwidth random access to texture atlases that DRAM cannot provide efficiently. DASM designs a data-streaming architecture within non-volatile memory to serve texture data with low latency and high throughput, reducing the memory bottleneck for real-time graphics.",
+   tags:["NVM","Graphics","Streaming","Architecture"]},
+"Tianjic: A Unified and Scalable Chip Bridging Neuroscience and Deep Learning":
+  {desc:"Bridging biologically-inspired neuromorphic computation with deep learning on a single chip requires supporting both spiking neural networks and conventional DNNs. Tianjic integrates both computing paradigms in a 28nm CMOS chip with configurable compute tiles, enabling hybrid brain-inspired and DNN workloads on one unified platform.",
+   tags:["Neuromorphic","SNN","DNN","Chip"]},
+"AutoComm: A Framework for Enabling Efficient Communication in Distributed Quantum Program":
+  {desc:"Distributed quantum computing requires expensive non-local communication between quantum nodes. Prior compilers optimize each non-local gate individually without studying broader communication patterns. AutoComm identifies burst communication—a recurring qubit-node pattern across distributed quantum programs—and proposes a compiler framework to extract and optimize these patterns. Reduces communication resource consumption and latency by 72.9% and 69.2% on average.",
+   tags:["Distributed Quantum","Communication","Compiler","Optimization"]},
+/* ── Quantum Computing ── */
+"Transpiler-Architecture Co-Design to Curb Clifford Costs in Fault-Tolerant Quantum Computing":
+  {desc:"In fault-tolerant quantum computing, Clifford gates dominate execution time but standard Pauli-Based Compilation sacrifices parallelism. TACO jointly optimizes circuit and architecture—reducing Clifford overhead from rotation synthesis and Toffoli decompositions while maintaining parallelism. Achieves up to 21.9× speedup with 4.4× mean improvement over state-of-the-art.",
+   tags:["Quantum","Fault-Tolerant","Compiler","Clifford"]},
+"iSwitch: QEC on Demand via In-Situ Encoding of Bare Qubits for Ion Trap Architectures":
+  {desc:"Quantum error correction requires encoding logical qubits in advance, wasting physical qubits when protection is not needed. iSwitch enables on-demand encoding of bare physical qubits into protected logical qubits in-situ within an ion trap, allowing flexible QEC deployment without dedicated ancilla regions.",
+   tags:["Quantum","QEC","Ion Trap","Architecture"]},
+"PowerMove: Optimizing Compilation for Neutral Atom Quantum Computers with Zoned Architecture":
+  {desc:"Neutral atom quantum computers use zoned architectures where atoms move between storage, entanglement, and readout zones. PowerMove develops a compilation framework that optimizes atom movement scheduling and gate sequencing for zoned neutral atom hardware, minimizing circuit execution time by exploiting atomic mobility.",
+   tags:["Quantum","Neutral Atom","Compiler","Architecture"]},
+"OneAdapt: Resource-adaptive Compilation of Photonic One-way Quantum Computing":
+  {desc:"Photonic one-way quantum computing uses measured graph states as a resource, but resource state generation is probabilistic and hardware-constrained. OneAdapt compiles quantum circuits to photonic one-way programs with resource-adaptive strategies that gracefully handle probabilistic resource failure and hardware limitations.",
+   tags:["Quantum","Photonic","Compiler","Adaptive"]},
+"SwitchQNet: Optimizing Distributed Quantum Computing for Quantum Data Centers with Switch Networks":
+  {desc:"Quantum data centers interconnect multiple QPUs via optical switches for distributed quantum computation. SwitchQNet optimizes the switch network topology and routing for distributed quantum programs, minimizing the number of expensive inter-QPU entanglement operations needed to execute distributed circuits.",
+   tags:["Distributed Quantum","Network","QPU","Architecture"]},
+"CaliQEC: In-situ Qubit Calibration for Surface Code Quantum Error Correction":
+  {desc:"Surface code QEC requires precisely calibrated qubits, but calibration drifts over time, degrading error correction performance. CaliQEC performs in-situ calibration of qubits during surface code operation without halting computation, using idle syndrome measurement cycles to recalibrate qubits continuously.",
+   tags:["Quantum","QEC","Surface Code","Calibration"]},
+"Hardware-aware Calibration Protocol for Quantum Computers":
+  {desc:"Quantum processor calibration is hardware-specific and time-consuming, with current protocols not accounting for device connectivity and noise correlations. This work proposes hardware-aware calibration sequences that exploit qubit topology to reduce calibration overhead while achieving better noise characterization for improved gate fidelity.",
+   tags:["Quantum","Calibration","Hardware","Noise"]},
+"HetEC: Architectures for Heterogeneous Quantum Error Correction Codes":
+  {desc:"Different logical qubits in a quantum computation have different error rates and correction requirements. HetEC designs heterogeneous QEC architectures that deploy different error correction codes (surface code, repetition code, etc.) on different qubit regions based on their error characteristics and criticality.",
+   tags:["Quantum","QEC","Heterogeneous","Architecture"]},
+"QECC-Synth: A Layout Synthesizer for Quantum Error Correction Codes on Sparse Architectures":
+  {desc:"Laying out QEC codes on quantum hardware requires satisfying complex connectivity and routing constraints. QECC-Synth automatically synthesizes physical qubit layouts for arbitrary QEC codes on target hardware, finding high-fidelity placements that respect device topology while minimizing gate overhead.",
+   tags:["Quantum","QEC","Synthesis","Layout"]},
+"Surf-Deformer: Mitigating Dynamic Defects on Surface Code via Adaptive Deformation":
+  {desc:"Dynamic hardware defects degrade surface code QEC by breaking the regular syndrome extraction pattern. Surf-Deformer crafts deformation instructions from fundamental gauge transformations, enabling optimized code reshape around specific defect situations. Reduces end-to-end quantum program failure rate by 35×–70× over prior methods while requiring only ~50% of the qubit resources to achieve the same failure rate.",
+   tags:["Quantum","Surface Code","Decoding","Defects"]},
+"STQS: A Unified System Architecture for Spatial Temporal Quantum Sensing":
+  {desc:"Quantum sensing applications (radar, dark matter detection) require integrating sensing, memory, communication, and computation in a coherent system. STQS provides the first unified system-level framework for spatial-temporal quantum sensing, introducing a distance-based confidence metric validated on IBM and IonQ hardware.",
+   tags:["Quantum","Sensing","Architecture","System"]},
+"S-QGPU: Shared Quantum Gate Processing Unit for Distributed Quantum Computing":
+  {desc:"Distributed quantum computing requires per-node communication qubits for inter-QPU gates, which are expensive and scarce. S-QGPU consolidates communication qubits into a shared Quantum Gate Processing Unit accessed by multiple small QPUs, reducing resource requirements while handling burst remote gate demands more efficiently.",
+   tags:["Distributed Quantum","Architecture","QPU","Communication"]},
+"QuComm: Optimizing Collective Communication for Distributed Quantum Computing":
+  {desc:"Multi-QPU quantum programs require collective communication patterns (broadcasts, reductions) between quantum nodes that existing point-to-point optimization misses. QuComm identifies and optimizes collective quantum communication primitives, reducing inter-node entanglement operations and program latency for distributed quantum algorithms.",
+   tags:["Distributed Quantum","Communication","Collective","Compiler"]},
+"OneQ: A Compilation Framework for Photonic One-Way Quantum Computation":
+  {desc:"Photonic one-way quantum computing executes circuits via measurement patterns on entangled graph states. OneQ develops a compilation framework that maps quantum circuits to measurement sequences for photonic hardware, optimizing resource state preparation and measurement order to minimize circuit execution time.",
+   tags:["Quantum","Photonic","Compiler","One-Way"]},
+"Q-BEEP: Quantum Bayesian Error Mitigation Employing Poisson Modeling over the Hamming Spectrum":
+  {desc:"NISQ devices produce errors whose distribution has non-local Hamming-spectrum structure. Q-BEEP models this via a Poisson distribution over calibration-conditioned qubit topologies, then applies a Bayesian network state-graph algorithm for post-measurement error mitigation. Achieves up to 234.6% accuracy improvement on BV circuits and 71.0% average QAOA improvement across 16 IBMQ devices.",
+   tags:["Quantum","Error Mitigation","Bayesian","NISQ"]},
+"Paulihedral: A Generalized Block-Wise Compiler Optimization Framework For Quantum Simulation Kernels":
+  {desc:"Quantum simulation circuits consist of Pauli exponential blocks that commute in complex ways. Paulihedral reformulates compilation in the Pauli frame, enabling block-wise reordering and cancellation that dramatically reduces gate count. Achieves significant depth reduction for quantum chemistry and physics simulation circuits.",
+   tags:["Quantum","Compiler","Pauli","Simulation"]},
+"EQC : Ensembled Quantum Computing for Variational Quantum Algorithms":
+  {desc:"VQA training on NISQ devices suffers from time-varying device-specific noise that worsens as calibration ages. EQC builds a quantum ensemble that asynchronously distributes circuit tasks across multiple physical devices, uses an analytic quality model to weight each device's gradient contribution, and adjusts configuration dynamically. Achieves 10.5× average training speedup (up to 86×, minimum 5.2×) across 10 IBMQ devices with VQE and QAOA.",
+   tags:["Quantum","VQA","NISQ","Ensemble"]},
+"A Synthesis Framework for Stitching Surface Code with Superconducting Quantum Devices":
+  {desc:"Scaling surface code QEC to large superconducting processors requires stitching multiple surface code patches across chip boundaries with different qubit connectivities. This synthesis framework automatically generates valid physical qubit layouts and operations for multi-patch surface codes on heterogeneous superconducting hardware.",
+   tags:["Quantum","Surface Code","Superconducting","Synthesis"]},
+"MECH: Multi-Entry Communication Highway for Superconducting Quantum Chiplets":
+  {desc:"Superconducting quantum chiplets must communicate via limited inter-chiplet coupling channels that become bottlenecks. MECH designs a multi-entry communication highway architecture with dedicated coupling qubits and routing protocols that enables high-throughput inter-chiplet quantum state transfer for modular quantum processors.",
+   tags:["Quantum","Superconducting","Chiplet","Communication"]},
+"ZENO: A Type-based Optimization Framework for Zero Knowledge Neural Network Inference":
+  {desc:"Zero-knowledge proof systems require massive arithmetic circuits that are expensive to evaluate. ZENO applies type-based program analysis to ZKP compilation, identifying optimization opportunities (constraint elimination, witness reuse) guided by ZKP-specific types, achieving significant proof generation speedup.",
+   tags:["ZKP","Compiler","Optimization","Privacy"]},
+"OnePerc: A Randomness-aware Compiler for Photonic Quantum Computing":
+  {desc:"Photonic quantum computing is inherently probabilistic—resource state generation has random success rates. OnePerc develops a compiler that accounts for this randomness at compile time, generating circuits with built-in adaptations for probabilistic resource availability, improving photonic circuit success probability.",
+   tags:["Quantum","Photonic","Compiler","Randomness"]},
+"Tackling the Qubit Mapping Problem for NISQ-Era Quantum Devices":
+  {desc:"Near-term quantum processors have limited connectivity between physical qubits, requiring SWAP gates to route two-qubit gates. This foundational paper introduces SABRE, an efficient heuristic for qubit mapping that uses bidirectional circuit traversal to minimize SWAP insertions, enabling practical compilation for NISQ devices.",
+   tags:["Quantum","Qubit Mapping","NISQ","Compiler"]},
+"Towards Efficient Superconducting Quantum Processor Architecture Design":
+  {desc:"Superconducting quantum processor design involves complex trade-offs between qubit connectivity, coherence time, and control overhead. This early architectural analysis characterizes the design space for superconducting quantum processors and provides guidelines for efficient hardware layouts that minimize gate error and execution time.",
+   tags:["Quantum","Superconducting","Architecture","Design"]},
+"On the Co-Design of Quantum Software and Hardware":
+  {desc:"Quantum software optimization is typically decoupled from hardware design, missing cross-layer optimization opportunities. This position paper argues for co-designing quantum software (compiler, error mitigation) and hardware (connectivity, noise model) jointly, presenting case studies where co-design achieves dramatic performance improvements over isolated optimization.",
+   tags:["Quantum","Co-Design","Software","Hardware"]},
+"Eliminating Redundant Computation in Noisy Quantum Computing Simulation":
+  {desc:"Classical simulation of noisy quantum circuits is computationally expensive due to density matrix operations. This work identifies and eliminates redundant computation in noisy quantum circuit simulation by detecting equivalent quantum states during circuit evaluation, significantly reducing simulation cost for NISQ workloads.",
+   tags:["Quantum","Simulation","NISQ","Optimization"]},
+"Projection-based Runtime Assertions for Testing and Debugging Quantum Programs":
+  {desc:"Debugging quantum programs is challenging because quantum states cannot be directly observed without collapsing them. This work introduces projection-based runtime assertions that test quantum state properties using ancilla qubits and controlled operations, enabling systematic testing and debugging of quantum programs without destroying computation.",
+   tags:["Quantum","Debugging","Testing","Assertions"]},
+/* ── Spiking Neural Networks ── */
+"Biologically Inspired Dynamic Thresholds for Spiking Neural Networks":
+  {desc:"Biological neurons regulate firing via dynamic membrane potential thresholds that adapt based on local activity. BDETT implements this biologically-inspired dynamic threshold mechanism for SNNs, correlating thresholds with average membrane potential and depolarization rate. Outperforms static and heuristic thresholds on robotic tasks under noise.",
+   tags:["SNN","Neuromorphic","Dynamic","Threshold"]},
+"Comprehensive SNN Compression Using ADMM Optimization and Activity Regularization":
+  {desc:"Spiking neural networks for edge deployment require compression, but SNNs are sensitive to pruning and quantization due to binary spike dynamics. This first comprehensive SNN compression framework uses ADMM to jointly optimize connection pruning and weight quantization, plus activity regularization to reduce spike events.",
+   tags:["SNN","Compression","ADMM","Quantization"]},
+"Exploring Adversarial Attack in Spiking Neural Networks with Spike-Compatible Gradient":
+  {desc:"Adversarial robustness of spiking neural networks differs fundamentally from ANNs due to discrete spike dynamics. This work develops spike-compatible gradient estimation methods that enable gradient-based adversarial attacks on SNNs, revealing SNN vulnerabilities and informing defense strategies for neuromorphic systems.",
+   tags:["SNN","Adversarial","Security","Gradient"]},
+"Rethinking the Performance Comparison between SNNs and ANNs":
+  {desc:"SNN vs. ANN comparisons are often unfair due to different conversion pipelines and evaluation metrics. This work establishes a rigorous framework for comparing SNNs and ANNs under controlled conditions, revealing that properly trained SNNs can match ANNs in accuracy while achieving dramatically better energy efficiency on neuromorphic hardware.",
+   tags:["SNN","ANN","Comparison","Efficiency"]},
+/* ── Compilers & PL (early work) ── */
+"GLORE: Generalized Loop Redundancy Elimination upon LER-Notation":
+  {desc:"Loop computations often contain redundant operations across iterations detectable through dependence analysis. GLORE introduces LER-notation—a loop-aware representation of redundant expressions—and a generalized elimination algorithm that subsumes and extends prior loop redundancy elimination techniques, achieving significant speedup for scientific loop kernels.",
+   tags:["Compiler","Loop","Optimization","Redundancy"]},
+"Generalizations of the Theory and Deployment of Triangular Inequality for Compiler-Based Strength Reduction":
+  {desc:"Triangular inequality pruning eliminates candidate comparisons in K-nearest-neighbor and K-means, but existing theory is limited to specific metrics. This work generalizes the mathematical theory of triangular inequality to broader metric spaces and implements it as a compiler optimization pass, achieving significant speedup for distance-computation workloads.",
+   tags:["Compiler","K-Nearest-Neighbor","Optimization","Theory"]},
+"Autotuning algorithmic choice for input sensitivity":
+  {desc:"Many algorithms (K-means, sorting, graph traversal) have multiple implementations with input-sensitive performance characteristics. This work develops an autotuning framework that selects the optimal algorithm variant based on static and dynamic input features, learning decision boundaries that generalize across input distributions without manual tuning.",
+   tags:["Autotuning","Algorithm Selection","Input Sensitivity","Compiler"]},
+"Yinyang K-Means: A Drop-In Replacement of the Classic K-Means with Consistent Speedup":
+  {desc:"Standard K-means wastes computation reassigning points to clusters that haven't changed. Yinyang K-Means uses two-level filtering (group and individual bounds) to avoid redundant distance computations, achieving 2–10× speedup over the classic algorithm while producing identical cluster assignments as a provable drop-in replacement.",
+   tags:["K-Means","Algorithm","Optimization","Machine Learning"]},
+"TOP: A Framework for Enabling Algorithmic Optimizations for Distance-Related Problems":
+  {desc:"Distance-based ML algorithms (K-means, K-NN, SVM) share common computational patterns exploitable by triangular inequality pruning. TOP is a compiler framework that automatically applies triangular-inequality-based optimizations to distance-computation loops, generalizing across multiple ML algorithms without algorithm-specific manual optimization.",
+   tags:["Compiler","Distance Computation","K-Means","Optimization"]},
+"TOP: A Compiler-Based Framework for Optimizing Machine Learning Algorithms through Generalized Triangle Inequality":
+  {desc:"Machine learning algorithms share structural computational patterns (distance computations, inner products) that compilers can optimize systematically. This SysML paper presents a compiler framework that identifies and optimizes these patterns across K-means, Gaussian mixture models, and other ML algorithms, achieving consistent algorithmic speedup.",
+   tags:["Compiler","ML","Optimization","Framework"]},
+"ProfMig: A Framework for Flexible Migration of Program Profiles Across Software Versions":
+  {desc:"Program profiles (branch frequencies, cache miss rates) are architecture-specific, making cross-architecture reuse difficult. ProfMig maps profiles between source and target architectures using structural program analysis, enabling profile-guided optimizations for new architectures without re-profiling, reducing optimization deployment cost.",
+   tags:["Compiler","Profiling","Architecture","Migration"]},
+"Finding the Limit: Examining the Potential and Complexity of Compilation Scheduling for JIT-Based Runtime System":
+  {desc:"Near-data processing (NDP) promises to eliminate memory bandwidth bottlenecks by computing inside or near memory. This foundational analysis examines the theoretical potential of NDP for various workload classes, characterizing when NDP provides benefits vs. when memory bandwidth is not the bottleneck, setting the field's analytical foundations.",
+   tags:["Near-Memory","PIM","Analysis","Architecture"]},
+"Call Sequence Prediction through Probabilistic Calling Automata":
+  {desc:"Function call sequences in programs exhibit probabilistic patterns exploitable for prefetching and speculative optimization. This work models calling context as a probabilistic automaton and uses it to predict future call sequences, enabling accurate speculative execution and code cache management.",
+   tags:["Compiler","Program Analysis","Prediction","Speculative"]},
+"Reuse-Centric K-Means Configuration":
+  {desc:"K-means computation repeats expensive distance calculations between unchanged data points and cluster centers. This work identifies and quantifies the opportunity for computation reuse in K-means, developing configuration strategies that maximize cache reuse of distance computations to achieve speedup without algorithmic changes.",
+   tags:["K-Means","Reuse","Cache","Optimization"]},
+"Sweet KNN: An Efficient KNN on GPU through Reconciliation of Redundancy and Regularity":
+  {desc:"GPU-accelerated K-nearest-neighbor search requires different strategies for low-dimensional (grid-based) and high-dimensional (LSH-based) data. Sweet KNN reconciles these regimes with a unified GPU implementation that dynamically selects the optimal strategy based on dimensionality, achieving consistent speedup across the full dimension spectrum.",
+   tags:["KNN","GPU","Algorithm","Optimization"]},
+"Inter-Disciplinary Research Challenges in Computer Systems for the 2020s":
+  {desc:"Deep learning systems require co-innovation across computer architecture, programming languages, compilers, and algorithms. This NSF-funded workshop report identifies key inter-disciplinary research challenges at the intersection of computer systems and deep learning, charting the research agenda for hardware-software co-design for AI.",
+   tags:["Survey","Deep Learning","Systems","Research Agenda"]},
+"Reconciling Feature-Reuse and Overfitting in DenseNet with Specialized Dropout":
+  {desc:"DenseNet's dense connectivity promotes feature reuse but makes standard dropout ineffective due to spatial correlations. This work customizes dropout along three dimensions—location, granularity, and probability—specifically for DenseNet's structure, achieving improved accuracy over vanilla DenseNet across varying model depths.",
+   tags:["DenseNet","Dropout","Regularization","CNN"]},
+"Domain-Adversarial Multi-Task Framework for Novel Therapeutic Property Prediction of Compounds":
+  {desc:"Predicting therapeutic properties of unknown compounds requires generalizing across heterogeneous drug-informatics data from multiple domains. This framework uses adversarial domain adaptation with multi-task learning to integrate shared knowledge across drug fingerprints, physicochemical properties, and gene expression perturbations, outperforming comparable methods for compound repurposing.",
+   tags:["Drug Discovery","Multi-Task","Domain Adaptation","Bioinformatics"]},
+"An Efficient Quantitative Approach for Optimizing Convolutional Neural Networks":
+  {desc:"CNN architecture search requires repeated training to evaluate each candidate, making it expensive. This work introduces 3D-Receptive Field (3DRF) as a trainless quality metric for CNN architectures, enabling a static optimizer at stage and kernel levels. Achieves up to 5.47% accuracy gain and 65.38% parameter reduction vs. MobileNet/ResNet.",
+   tags:["CNN","NAS","Architecture","Optimization"]},
+"UAG: Uncertainty-aware Attention Graph Neural Network for Defending Adversarial Attacks":
+  {desc:"GNNs are vulnerable to adversarial graph perturbations that fool node classification. UAG introduces uncertainty-aware attention that modulates neighbor aggregation based on prediction uncertainty, reducing the influence of adversarially perturbed nodes and achieving robust GNN performance under graph injection and modification attacks.",
+   tags:["GNN","Adversarial","Robustness","Attention"]},
+"SAGA: Sparse Adversarial Attack on EEG-based Brain Computer Interface":
+  {desc:"Brain-computer interfaces using EEG are vulnerable to adversarial perturbations that are imperceptible to sensors but fool decoders. SAGA develops sparse adversarial attacks on EEG-based BCI systems that perturb minimal EEG channels with small magnitude, revealing security vulnerabilities in neural interface systems.",
+   tags:["BCI","EEG","Adversarial","Security"]},
+"Weighted-Sampling Audio Adversarial Example Attack":
+  {desc:"Audio adversarial examples fool speech recognition systems with imperceptible perturbations. This work introduces weighted-sampling adversarial attack that focuses perturbation energy on acoustic features most impactful for ASR predictions, achieving more efficient adversarial audio generation with smaller perturbation magnitude than uniform-sampling attacks.",
+   tags:["Audio","Adversarial","Speech Recognition","Security"]},
+"DSXplore: Optimizing Convolutional Neural Networks via Sliding-Channel Convolution":
+  {desc:"CNN filter decompositions reduce parameter count and computation, but standard tensor decompositions miss channel-dimension opportunities. DSXplore introduces sliding-channel decompositions that factorize convolution filters along the channel dimension with learnable sliding patterns, achieving better accuracy-efficiency trade-offs than standard pruning and decomposition methods.",
+   tags:["CNN","Decomposition","Compression","Architecture"]},
+"APNN-TC: Accelerating Arbitrary-Precision Neural Networks on Tensor Cores":
+  {desc:"APNN-TC is the first framework for arbitrary-precision neural networks on Ampere GPU Tensor Cores, breaking hardware restrictions that limit quantization to specific bit-widths. Introduces an emulation algorithm using int1 primitives and XOR/AND operations, specialized layer designs with novel batching and memory organization, and cross-layer memory access minimization. Achieves significant speedup over CUTLASS kernels on ResNet and VGG.",
+   tags:["Tensor Core","Quantization","Precision","GPU"]},
+"Efficient Tensor Core-based GPU Kernels for Structured Sparsity under Reduced Precision":
+  {desc:"Structured sparsity patterns combined with reduced precision quantization should compound their efficiency benefits, but standard implementations prevent tensor-core acceleration for structured sparse low-precision arithmetic. This work designs tensor-core kernels that natively handle structured sparsity with reduced precision, achieving compounded speedup.",
+   tags:["Tensor Core","Sparsity","Quantization","GPU"]},
+"Palleon: A Runtime System for Efficient Video Processing toward Dynamic Class Skew":
+  {desc:"Video object detection has highly dynamic class distributions—most frames have few detections, creating severe class skewness. Palleon is a runtime system that exploits this skewness to skip expensive detection for classes absent in recent frames, using lightweight predictors to decide when to run full detection.",
+   tags:["Video","Detection","Runtime","GPU"]},
+"TiAcc: Triangle-inequality based Hardware Accelerator for K-means on FPGAs":
+  {desc:"K-means clustering incurs excessive distance computations in hardware. TiAcc uses triangle-inequality based filtering to eliminate unnecessary distance computations without affecting clustering results, with pipeline decoupling to handle computational irregularity. Parameterized configuration knobs enable flexibility across dataset sizes, achieving average 4.94× speedup and 74.22× energy efficiency over optimized CPU K-means.",
+   tags:["FPGA","K-Means","Accelerator","Hardware"]},
+"KPynq: A Work-Efficient Triangle-Inequality based K-means on FPGA":
+  {desc:"K-means clustering on FPGAs can exploit triangle-inequality pruning to skip redundant distance calculations, but work-efficiency depends on effective bounding data structures. KPynq implements work-efficient triangle-inequality K-means on Xilinx PYNQ FPGAs with optimized memory layouts and pipeline structures.",
+   tags:["FPGA","K-Means","Hardware","Clustering"]},
+"Dynamic Sparse Graph for Efficient Deep Learning":
+  {desc:"Executing DNNs with a dynamic sparse graph structure reduces memory and computation. DSG selectively activates high-value neurons at runtime via dimension-reduction search, with double-mask batch normalization support. Achieves 1.7–4.5× memory savings and 2.3–4.4× operation reduction with minimal accuracy loss.",
+   tags:["Sparsity","DNN","Dynamic","Efficient"]},
+"Improving Streaming Graph Processing Performance Using Input Knowledge":
+  {desc:"Streaming graph processing systems use generic scheduling strategies that ignore graph structural properties. This work exploits input-specific knowledge (degree distribution, community structure) to specialize streaming graph processing decisions—partitioning, ordering, prefetching—achieving significant throughput improvements for diverse streaming graph workloads.",
+   tags:["Graph Processing","Streaming","Systems","Optimization"]},
+"Overcoming the Memory Hierarchy Inefficiencies in Graph Processing Applications":
+  {desc:"GNN training accesses large irregular graph neighborhoods that defeat CPU/GPU cache hierarchies, causing memory bandwidth saturation. This work characterizes GNN memory access patterns and proposes data layout and prefetching strategies tailored to GNN neighborhood aggregation, reducing memory hierarchy inefficiency for GNN training.",
+   tags:["GNN","Memory","Cache","Training"]},
+"A Close Look at Multi-Tenant Parallel CNN Inference for Autonomous Driving":
+  {desc:"Mobile devices run multiple CNN inference tasks simultaneously (object detection, face recognition, NLU) competing for compute and memory. This work profiles multi-tenant CNN inference workloads on mobile hardware and identifies parallelism, scheduling, and memory management strategies that improve combined throughput without accuracy degradation.",
+   tags:["CNN","Mobile","Multi-Tenant","Inference"]},
+"Chatter detection in high-speed milling processes based on ON-LSTM and PBT":
+  {desc:"High-speed milling generates chatter vibrations that damage workpieces and tools. This work detects chatter from sensor signals using Ordered Neurons LSTM with adversarial training to improve robustness across different machining conditions, achieving reliable real-time chatter detection for manufacturing quality control.",
+   tags:["Manufacturing","LSTM","Detection","Adversarial"]},
+"Comprehensive SNN Compression Using ADMM Optimization and Activity Regularization":
+  {desc:"Spiking neural networks for edge deployment need compression, but SNN dynamics make standard methods ineffective. This first comprehensive SNN compression framework jointly optimizes pruning and quantization via ADMM, adds activity regularization to reduce spike events, and introduces SNN-specific compression metrics validated on MNIST/CIFAR.",
+   tags:["SNN","Compression","ADMM","Edge"]},
+"Effective and Efﬁcient Batch Normalization Using Few Uncorrelated Data for Statistics Estimation":
+  {desc:"Batch normalization at inference requires computing accurate running statistics from training data, which may be unavailable in privacy-sensitive deployments. This work computes representative batch normalization statistics from a small set of unlabeled samples, enabling accurate inference-time batch normalization without accessing the full training dataset.",
+   tags:["Batch Normalization","Privacy","Inference","Efficiency"]},
+"DeepSniffer: a DNN Model Extraction Framework based on Learning Architectural Hints":
+  {desc:"Neural network architectures represent valuable intellectual property attackable through side-channel leakage. DeepSniffer extracts DNN model architectures by analyzing memory access patterns and timing side-channels during inference, reconstructing layer sequences and hyperparameters without access to model weights or code.",
+   tags:["Security","Side-Channel","DNN","Privacy"]},
+"Boosting Deep Neural Network Efficiency with Dual-Module Inference":
+  {desc:"DNN inference can be decomposed: simple samples need only a lightweight subnet while hard samples require the full network. This work identifies easy vs. hard samples at runtime using confidence scores and routes each through either a lightweight dual-module or the full network, achieving significant average-case inference speedup.",
+   tags:["DNN","Inference","Efficiency","Dynamic"]},
+"SPG: Structure-Private Graph Database via SqueezePIR":
+  {desc:"Graph database queries leak structural information (which nodes are accessed) through access patterns. SPG protects graph structure privacy using SqueezePIR—a compressed private information retrieval protocol tailored to graph queries—enabling structure-private graph database queries with significantly lower overhead than generic PIR schemes.",
+   tags:["Graph","Privacy","PIR","Database"]},
+"Faith: An Efficient Framework for Transformer Verification on GPUs":
+  {desc:"Faith accelerates formal robustness verification of Transformers against adversarial word-substitution attacks. Contributes semantic-aware computation graph transformation to identify bound computation, verification-specialized GPU kernels for memory-bound operations, and expert-guided autotuning for hardware-efficient schedule exploration. Achieves 2.1×–3.4× (2.6× average) speedup over state-of-the-art verification frameworks.",
+   tags:["Transformer","Verification","GPU","Safety"]},
+"GMI-DRL: Empowering Multi-GPU Deep Reinforcement Learning with Adaptive-Grained Parallelism":
+  {desc:"GMI-DRL addresses parallelization of deep reinforcement learning across multiple GPUs via adaptive-grained parallelism that dynamically partitions workloads based on DRL-specific computation characteristics. Co-designs intra-GPU and inter-GPU parallelism to maximize GPU utilization and reduce idle time common in DRL training loops. Demonstrates substantial throughput improvements over existing multi-GPU DRL systems.",
+   tags:["RL","Multi-GPU","Parallelism","Training"]},
+"Mutual Effort for Efficiency: A Similarity-based Token Pruning for Vision Transformers in Self-Supervised Learning":
+  {desc:"SimPrune introduces a token pruning strategy for Vision Transformers in self-supervised learning, where standard single-branch pruning fails in SSL's dual-branch encoder architecture. Leverages cross-branch similarity information to identify and prune less informative tokens while preserving semantic content across both branches, augmented by a difficulty-aware pruning component. Reduces SSL training computation by 24% without sacrificing accuracy.",
+   tags:["Vision-Language","Token Pruning","Efficiency","Transformer"]},
+"RecDM: Efficient Training System for Large-Scale Recommendation Models on Disaggregated Memory":
+  {desc:"Training large-scale recommendation models involves diverse embedding lookups and dense computation with mismatched parallelism requirements. RecDM provides a system-level framework that efficiently schedules recommendation model training, addressing the heterogeneous compute and memory access patterns of modern deep learning recommendation systems.",
+   tags:["Recommendation","Training","Systems","Embedding"]},
+/* ── New/Missing Papers ── */
+"ChipMATE: Multi-Agent Training via Reinforcement Learning for Enhanced RTL Generation":
+  {desc:"RTL generation via LLMs suffers from single-agent inefficiencies and poor feedback loops. ChipMATE uses multi-agent RL where specialized agents collaborate on RTL design tasks, with reward signals derived from simulation correctness and synthesis metrics, achieving higher quality hardware descriptions than single-agent LLM approaches.",
+   tags:["Chip Design","LLM","RL","Multi-Agent"]},
+"Reducing Page Faults via Invalidation-based Mapping Propagation in Multi-GPU Systems":
+  {desc:"Multi-GPU unified memory systems suffer excessive page faults when data migrates between GPUs. This work introduces invalidation-based mapping propagation: when one GPU migrates a page, it broadcasts mapping updates to peer GPUs so they can redirect accesses without triggering new faults, significantly reducing page fault overhead in multi-GPU workloads.",
+   tags:["Multi-GPU","Memory","Page Faults","Systems"]},
+"TritonGym: A Benchmark for Agentic LLM Workflows in Triton GPU Code Generation":
+  {desc:"LLM agents for GPU kernel generation lack standardized evaluation. TritonGym provides a benchmark suite covering diverse Triton GPU kernel generation tasks with correctness and performance metrics, enabling systematic comparison of agentic LLM workflows for automated GPU programming.",
+   tags:["LLM","Triton","Benchmark","GPU"]},
+"ChipBench: A Next-Step Benchmark for Evaluating LLM Performance in AI-Aided Chip Design":
+  {desc:"Existing chip design benchmarks don't reflect real EDA tool flows. ChipBench evaluates LLMs across the full chip design pipeline—RTL generation, logic synthesis, place-and-route—using production EDA tools to measure functional correctness and area/timing Quality of Results (QoR).",
+   tags:["Chip Design","LLM","Benchmark","EDA"]},
+"TritonDFT: Automating DFT with a Multi-Agent Framework":
+  {desc:"Design-for-testability (DFT) insertion in chip design is labor-intensive and requires expert knowledge. TritonDFT uses a multi-agent LLM framework where agents collaboratively handle DFT analysis, scan chain insertion, and ATPG interfacing, automating a previously manual EDA step.",
+   tags:["Chip Design","DFT","Multi-Agent","LLM"]},
+"RM-STC: Row-Merge Dataflow Inspired GPU Sparse Tensor Core for Energy-Efficient Sparse Acceleration":
+  {desc:"RM-STC proposes a row-merge dataflow-inspired microarchitecture for GPU sparse tensor cores that improves utilization of hardware sparsity support. By reorganizing sparse matrix operands via row-merge ordering, it reduces wasted compute lanes and irregular memory accesses inherent in existing sparse tensor core designs, demonstrating improved efficiency for sparse deep learning workloads.",
+   tags:["GPU","Sparse","Tensor Core","Energy"]},
+"Dynamic Sparse Attention for Scalable Transformer Acceleration":
+  {desc:"Static attention pruning misses dynamic sparsity patterns that vary per input and layer. This work detects sparse attention blocks dynamically at runtime and skips their computation, providing input-adaptive acceleration for transformers with minimal accuracy loss across diverse NLP and vision tasks.",
+   tags:["Attention","Sparsity","Transformer","GPU"]},
+"A Systematic View of Model Leakage Risks in Deep Neural Network Systems":
+  {desc:"DNN model intellectual property can be stolen via side-channel attacks, query-based extraction, and membership inference. This paper provides a systematic taxonomy of model leakage attack surfaces in deployed DNN systems, analyzing threat models, attack feasibility, and defense tradeoffs across inference deployment scenarios.",
+   tags:["Security","DNN","Privacy","Side-channel"]},
+"STPAcc: Structural TI-based Pruning for Accelerating Distance-related Algorithms on CPU-FPGA Platforms":
+  {desc:"Distance-based algorithms (KNN, K-means) waste compute evaluating candidates that triangle inequality guarantees are non-optimal. STPAcc applies structural triangle-inequality pruning to eliminate unpromising distance computations, mapping the pruned irregular computation pattern efficiently onto CPU-FPGA platforms.",
+   tags:["FPGA","Pruning","Distance","Acceleration"]},
+"Reuse-centric K-means Configuration":
+  {desc:"K-means performance varies widely across datasets due to differing data distributions and optimal algorithm configurations. This work characterizes K-means execution patterns to identify reuse opportunities in distance computation and centroid updates, enabling configuration selection that maximizes data reuse for given dataset properties.",
+   tags:["K-means","Optimization","Clustering","Reuse"]},
+"Rubik: A Hierarchical Architecture for Efficient Graph Neural Network Training":
+  {desc:"GNN training interleaves irregular graph aggregation with regular neural computation, causing severe memory inefficiency. Rubik introduces a hierarchical architecture that partitions the graph into cache-friendly subgraphs and pipelines aggregation with transformation, reducing off-chip memory traffic and improving GNN training throughput.",
+   tags:["GNN","Architecture","Training","Memory"]},
+"Machine learning through parallelized stochastic gradient descent":
+  {desc:"Early work on parallelizing SGD for machine learning training across multiple processors. Analyzes convergence properties of asynchronous and synchronous parallel SGD, providing theoretical foundations and empirical validation for distributed machine learning optimization that underpins modern large-scale training frameworks.",
+   tags:["ML","SGD","Distributed","Training"]},
+};
+/* Normalize key: strip trailing period, collapse whitespace */
+function dbLookup(title) {
+  const key = title.replace(/\.\s*$/, "").replace(/\s+/g," ").trim();
+  return PAPER_DB[key] || PAPER_DB[title] || null;
+}
+
+/* Pre-compute non-PI author sets for edge building */
+const PI_PATTERN = /Yufei Ding/;
+function parseCoreAuthors(authStr) {
+  return authStr.split(/,\s*/)
+    .map(function(a){ return a.replace(/\*/g,"").replace(/\([^)]*\)/g,"").trim(); })
+    .filter(function(a){ return a.length > 4 && !PI_PATTERN.test(a); });
+}
+papers.forEach(function(p){ p._coreAuth = parseCoreAuthors(p.authors); });
+
+/* Build timeline — dark professional research landscape */
+function buildTimeline() {
+  svgEl.innerHTML = "";
+  lineAnims.forEach(clearTimeout); lineAnims = [];
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DARK THEME — per-year column layout, vertical spreading within bands.
+     Research-track colors, glow on hover, conditional paper-name labels.
+     Inspired by Connected Papers, Paperscape, and Litmaps aesthetics.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  const PAD_X   = 120;   // left margin for track labels
+  const PAD_TOP = 84;    // title + era labels
+  const PAD_BOT = 60;    // year labels at bottom
+  const NODE_R  = 10;    // node radius
+
+  /* ── Canvas-fitted SVG: no letterboxing ── */
+  const svgW = canvas.offsetWidth  || window.innerWidth;
+  const svgH = canvas.offsetHeight || window.innerHeight;
+
+  /* ── Year columns (computed before YEAR_STEP so we can scale it) ── */
+  const sortedYears = [...new Set(papers.map(p => p.year))].sort((a, b) => a - b);
+  const yearIdx = {};
+  sortedYears.forEach((yr, i) => { yearIdx[yr] = i; });
+  const nYears = sortedYears.length;
+
+  /* Year step dynamically fills canvas width */
+  const YEAR_STEP = (svgW - PAD_X * 2) / Math.max(1, nYears);
+
+  /* ── 8 research bands — heights scale to fill canvas height ── */
+  const _BH  = [104,  60,  96,  70,  52,  88,  48,  56];
+  const _BC  = ["#4f9cf0","#818cf8","#2dd4bf","#f87171",
+                "#fb923c","#34d399","#a3e635","#c084fc"];
+  const _BL  = ["ARCHITECTURE","ASPLOS","OS & DISTRIBUTED","HARDWARE / EDA",
+                "COMPILERS","ML RESEARCH","ML SYSTEMS","QUANTUM"];
+  const _BG0 = 14; // raw gap
+  const _sumH = _BH.reduce(function(s,h){return s+h;},0) + _BG0*(_BH.length-1);
+  const _hSc  = (svgH - PAD_TOP - PAD_BOT) / _sumH;
+  const BAND_GAP = Math.max(6, Math.round(_BG0 * _hSc));
+  const BANDS = _BL.map(function(label, i) {
+    return { label:label, color:_BC[i], h:Math.round(_BH[i]*_hSc) };
+  });
+
+  /* Compute band y-extents */
+  let cy = PAD_TOP;
+  BANDS.forEach(function(b) {
+    b.top     = cy;
+    b.yCenter = cy + b.h / 2;
+    b.bottom  = cy + b.h;
+    cy += b.h + BAND_GAP;
+  });
+  const contentH = cy - BAND_GAP;
+
+  /* ── Venue → band index ── */
+  function venueBand(p, qi) {
+    if (p.cat === 'quantum') return 7;
+    if (p.cat === 'compiler') return 4;
+    const v = (p.venue.match(/[A-Za-z]+/)||[''])[0].toUpperCase();
+    if (['ISCA','MICRO','HPCA','HPPC','TC','TACO','ISSCC'].includes(v)) return 0;
+    if (['ASPLOS'].includes(v)) return 1;
+    if (['OSDI','USENIX','SOSP','SC','ATC','VLDB','ICDE','SIGMOD',
+         'IPDPS','PPOPP','CCGRID','NPC','INFORMS','TPDS'].includes(v)) return 2;
+    if (['ICCAD','DAC','FCCM','TVLSI','NANOCOM','JSSC','DATE',
+         'TCAD','JAMT','AVS','MICI'].includes(v)) return 3;
+    if (['ICML','ICLR','NEURIPS','NIPS','AAAI','KDD','SIGKDD','IJCAI',
+         'TNNLS','ICASSP','BIOINF','CIKM','EMNLP','ACL','NAACL',
+         'CVPR','ICCV','ECCV'].includes(v)) return 5;
+    if (['MLSYS','SYSML','ICTAI','NSF'].includes(v)) return 6;
+    // Stable hash fallback — spread unmatched across bands
+    let h = 0;
+    for (let i = 0; i < p.title.length; i++) h = (h * 31 + p.title.charCodeAt(i)) >>> 0;
+    return p.cat === 'ml' ? 5 + (h % 2) : h % 4;
+  }
+
+  /* viewBox = canvas size: no scaling/letterboxing */
+  svgEl.setAttribute("viewBox", "0 0 "+svgW+" "+svgH);
+
+  /* ── Group papers by year × band, then assign (x, y) ── */
+  /* Group: byYB[bandIdx][yearIdx] = [paper, ...] */
+  const byYB = {};
+  BANDS.forEach(function(b, bi) { byYB[bi] = {}; });
+  let qIdx = 0;
+  papers.forEach(function(p) {
+    const bi = venueBand(p, p.cat === 'quantum' ? qIdx : 0);
+    if (p.cat === 'quantum') qIdx++;
+    const yi = yearIdx[p.year];
+    if (!byYB[bi][yi]) byYB[bi][yi] = [];
+    byYB[bi][yi].push(p);
+  });
+
+  const paperPos = new Map(); // title → {x, y, bi, p}
+
+  BANDS.forEach(function(b, bi) {
+    Object.entries(byYB[bi]).forEach(function([yiStr, ps]) {
+      const xi    = Number(yiStr);
+      /* All papers in this year share the same x center */
+      const xc    = PAD_X + xi * YEAR_STEP + YEAR_STEP / 2;
+      const N     = ps.length;
+      /* Vertical spacing: fit within band, min 13px, max 22px */
+      const avail = b.h - NODE_R * 2;
+      const sp    = N <= 1 ? 0 : Math.min(22, avail / (N - 1));
+      /* Sort papers within group by venue for stable ordering */
+      ps.sort((a, x) => a.venue.localeCompare(x.venue));
+      ps.forEach(function(p, i) {
+        const yo = (i - (N - 1) / 2) * sp;
+        paperPos.set(p.title, { x: xc, y: b.yCenter + yo, bi, p });
+      });
+    });
+  });
+
+  /* ── Defs: shadow + glow filters ── */
+  const defs = el("defs");
+  /* Subtle drop shadow for default state */
+  const sf = el("filter", { id:"pt-shadow", x:"-60%", y:"-60%", width:"220%", height:"220%" });
+  sf.appendChild(el("feDropShadow", { dx:"0", dy:"0", stdDeviation:"3", "flood-color":"#000", "flood-opacity":"0.6" }));
+  defs.appendChild(sf);
+  /* Glow filter for hover state — white halo like Connected Papers */
+  const gf = el("filter", { id:"pt-glow", x:"-80%", y:"-80%", width:"260%", height:"260%" });
+  gf.appendChild(el("feDropShadow", { dx:"0", dy:"0", stdDeviation:"6", "flood-color":"#ffffff", "flood-opacity":"0.55" }));
+  defs.appendChild(gf);
+  svgEl.appendChild(defs);
+
+  /* ── Dark background ── */
+  svgEl.appendChild(el("rect", { width:svgW, height:svgH, fill:"#0d1117" }));
+
+  /* ── Era bands (dark-theme: very subtle vertical tints) ── */
+  const ERA_DEFS = [
+    { label:"EARLY SYSTEMS",  sub:"2013 – 2016", years:[2013,2016], color:"#4f9cf0", bg:"rgba(79,156,240,0.055)" },
+    { label:"ML EXPANSION",   sub:"2017 – 2019", years:[2017,2019], color:"#818cf8", bg:"rgba(129,140,248,0.055)" },
+    { label:"SCALE-UP",       sub:"2020 – 2022", years:[2020,2022], color:"#2dd4bf", bg:"rgba(45,212,191,0.048)" },
+    { label:"LLM & FRONTIER", sub:"2023 –",      years:[2023,2030], color:"#fbbf24", bg:"rgba(251,191,36,0.045)" },
+  ];
+  ERA_DEFS.forEach(function(era) {
+    const ys = sortedYears.filter(y => y >= era.years[0] && y <= era.years[1]);
+    if (!ys.length) return;
+    const x1 = PAD_X + yearIdx[ys[0]] * YEAR_STEP;
+    const x2 = PAD_X + (yearIdx[ys[ys.length-1]] + 1) * YEAR_STEP;
+    /* Subtle column-range tint */
+    svgEl.appendChild(el("rect", { x:x1, y:0, width:x2-x1, height:svgH, fill:era.bg }));
+    /* Left boundary accent */
+    svgEl.appendChild(el("line", { x1:x1, y1:0, x2:x1, y2:svgH,
+      stroke:era.color, "stroke-width":"1", opacity:"0.2" }));
+    /* Era label — top left of each zone */
+    svgEl.appendChild(tel("text", {
+      x:String(x1+7), y:"19", "text-anchor":"start",
+      "font-size":"8", "font-weight":"700", fill:era.color, opacity:"0.55",
+      "font-family":"'Inter',ui-monospace,monospace", "letter-spacing":"1.8",
+    }, era.label));
+    svgEl.appendChild(tel("text", {
+      x:String(x1+7), y:"30", "text-anchor":"start",
+      "font-size":"7.5", fill:era.color, opacity:"0.3",
+      "font-family":"'Inter',ui-monospace,monospace",
+    }, era.sub));
+  });
+
+  /* ── Title ── */
+  svgEl.appendChild(tel("text", {
+    x:String(PAD_X), y:"54",
+    fill:"rgba(255,255,255,0.88)",
+    "font-family":"'Inter',ui-sans-serif,sans-serif",
+    "font-size":"14", "font-weight":"700", "letter-spacing":"0.05em",
+    class:"pt-fade", style:"--fdel:0.1s;--fdur:0.4s",
+  }, "PICASSO LAB  ·  Research Landscape"));
+  svgEl.appendChild(tel("text", {
+    x:String(PAD_X), y:"68",
+    fill:"rgba(255,255,255,0.28)",
+    "font-family":"'Inter',ui-sans-serif,sans-serif", "font-size":"9",
+    class:"pt-fade", style:"--fdel:0.15s;--fdur:0.4s",
+  }, papers.length + " publications  ·  hover to preview  ·  click to view details  ·  Esc to close"));
+
+  /* ── Band backgrounds + separators + left labels ── */
+  BANDS.forEach(function(b, bi) {
+    /* Very subtle band fill — alternating gives visual rhythm */
+    if (bi % 2 === 0) {
+      svgEl.appendChild(el("rect", {
+        x:"0", y:String(b.top),
+        width:String(svgW), height:String(b.h),
+        fill:"rgba(255,255,255,0.018)",
+      }));
+    }
+    /* Top separator: colored dash matching band color */
+    svgEl.appendChild(el("line", {
+      x1:String(PAD_X - 8), y1:String(b.top),
+      x2:String(svgW - PAD_X + 8), y2:String(b.top),
+      stroke:b.color, "stroke-width":"0.5", opacity:"0.20",
+      "stroke-dasharray":"4 10",
+      class:"pt-fade", style:"--fdel:"+(0.2+bi*0.03)+"s;--fdur:0.4s",
+    }));
+    /* Band label — right-aligned in left margin, bold, colored */
+    svgEl.appendChild(tel("text", {
+      x:String(PAD_X - 10), y:String(b.yCenter + 4),
+      "text-anchor":"end", "font-size":"8", "font-weight":"700",
+      fill:b.color, opacity:"0.75", "letter-spacing":"1.4",
+      "font-family":"'Inter',ui-monospace,monospace",
+      class:"pt-fade", style:"--fdel:"+(0.18+bi*0.02)+"s;--fdur:0.35s",
+    }, b.label));
+    /* Small colored left accent bar */
+    svgEl.appendChild(el("rect", {
+      x:String(PAD_X - 8), y:String(b.top + 2),
+      width:"2", height:String(b.h - 4),
+      rx:"1", fill:b.color, opacity:"0.35",
+    }));
+  });
+
+  /* ── Year grid lines + year labels at bottom ── */
+  const yYearLabel = contentH + 38;
+  sortedYears.forEach(function(yr, i) {
+    const x = PAD_X + i * YEAR_STEP;
+    /* Full-height faint vertical gridline */
+    svgEl.appendChild(el("line", {
+      x1:String(x), y1:String(PAD_TOP - 8),
+      x2:String(x), y2:String(contentH + 8),
+      stroke:"rgba(255,255,255,0.06)", "stroke-width":"1",
+    }));
+    /* Year label */
+    svgEl.appendChild(tel("text", {
+      x:String(x + YEAR_STEP / 2), y:String(yYearLabel),
+      "text-anchor":"middle", "font-size":"11", "font-weight":"500",
+      fill:"rgba(255,255,255,0.3)",
+      "font-family":"'Inter',ui-monospace,monospace",
+      class:"pt-fade", style:"--fdel:"+(0.28+i*0.02)+"s;--fdur:0.3s",
+    }, String(yr)));
+  });
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     EDGES — two layers:
+     1) Thin timeline spines within each band (temporal progression).
+     2) Author-collaboration edges: papers sharing ≥2 non-PI co-authors.
+        These cross bands and show real research relationships.
+     ═══════════════════════════════════════════════════════════════════════ */
+  const allEdges = [];
+
+  function drawEdge(pos1, pos2, strokeColor, opacity, width, dashed) {
+    const x1=pos1.x, y1=pos1.y, x2=pos2.x, y2=pos2.y;
+    if (Math.abs(x1-x2) < 1) return null; // skip same-column
+    const midX = (x1+x2)/2;
+    const d = "M "+x1+","+y1+" C "+midX+","+y1+" "+midX+","+y2+" "+x2+","+y2;
+    const pe = document.createElementNS(NS,"path");
+    pe.setAttribute("d",d); pe.setAttribute("fill","none");
+    pe.setAttribute("stroke",strokeColor);
+    pe.setAttribute("stroke-width",String(width));
+    pe.setAttribute("stroke-linecap","round");
+    pe.setAttribute("opacity","0");
+    if (dashed) pe.setAttribute("stroke-dasharray","3 6");
+    pe.setAttribute("stroke-dasharray-anim","3000");
+    pe.setAttribute("stroke-dashoffset","3000");
+    svgEl.appendChild(pe);
+    /* SMIL draw-in */
+    const aD = document.createElementNS(NS,"animate");
+    aD.setAttribute("attributeName","stroke-dashoffset");
+    aD.setAttribute("from","3000"); aD.setAttribute("to","0");
+    aD.setAttribute("dur","0.65s"); aD.setAttribute("calcMode","spline");
+    aD.setAttribute("keyTimes","0;1"); aD.setAttribute("keySplines","0.16 1 0.3 1");
+    aD.setAttribute("begin","indefinite"); aD.setAttribute("fill","freeze");
+    pe.appendChild(aD);
+    const aO = document.createElementNS(NS,"animate");
+    aO.setAttribute("attributeName","opacity");
+    aO.setAttribute("from","0"); aO.setAttribute("to",String(opacity));
+    aO.setAttribute("dur","0.65s"); aO.setAttribute("begin","indefinite"); aO.setAttribute("fill","freeze");
+    pe.appendChild(aO);
+    return { el:pe, aD, aO };
+  }
+
+  /* ─ 1) Timeline spines: connect earliest→latest same-band papers left-to-right ─ */
+  BANDS.forEach(function(b, bi) {
+    const bps = [];
+    paperPos.forEach(function(pos){ if (pos.bi===bi) bps.push(pos); });
+    bps.sort(function(a,x){ return a.x-x.x || a.y-x.y; });
+    /* Connect each paper to the nearest paper in the NEXT year only */
+    const byYear = {};
+    bps.forEach(function(pos){ (byYear[pos.x]||(byYear[pos.x]=[])).push(pos); });
+    const xs = Object.keys(byYear).map(Number).sort(function(a,b){return a-b;});
+    for (let i=0; i<xs.length-1; i++) {
+      const group1 = byYear[xs[i]], group2 = byYear[xs[i+1]];
+      /* Connect each paper in group1 to the closest-y paper in group2 */
+      group1.forEach(function(pos1) {
+        const pos2 = group2.reduce(function(best,c){
+          return Math.abs(c.y-pos1.y)<Math.abs(best.y-pos1.y)?c:best;
+        }, group2[0]);
+        const edge = drawEdge(pos1, pos2, b.color, 0.18, 0.8, false);
+        if (edge) {
+          const delMs = Math.round(180 + (pos1.x-PAD_X)/(svgW-PAD_X*2)*700 + bi*18);
+          lineAnims.push(setTimeout(function(){
+            try{edge.aD.beginElement();edge.aO.beginElement();}catch(e){}
+          }, delMs));
+          edge.el._pA = pos1.p.title; edge.el._pB = pos2.p.title;
+          allEdges.push(edge.el);
+        }
+      });
+    }
+  });
+
+  /* ─ 2) Author-collaboration edges (cross-paper, real research links) ─ */
+  const colEdges = []; // { pA, pB, shared }
+  for (let i=0; i<papers.length; i++) {
+    const ca1 = papers[i]._coreAuth;
+    if (!ca1.length) continue;
+    const set1 = new Set(ca1);
+    for (let j=i+1; j<papers.length; j++) {
+      const shared = papers[j]._coreAuth.filter(function(a){ return set1.has(a); });
+      if (shared.length >= 2) colEdges.push({pA:papers[i], pB:papers[j], cnt:shared.length});
+    }
+  }
+  /* Limit: keep top edges per paper (avoid hairball) */
+  const edgeCnt = {};
+  colEdges.sort(function(a,b){return b.cnt-a.cnt;}).forEach(function(e){
+    const ka=e.pA.title, kb=e.pB.title;
+    if ((edgeCnt[ka]||0)>=4 || (edgeCnt[kb]||0)>=4) return;
+    const posA = paperPos.get(ka), posB = paperPos.get(kb);
+    if (!posA||!posB) return;
+    edgeCnt[ka]=(edgeCnt[ka]||0)+1; edgeCnt[kb]=(edgeCnt[kb]||0)+1;
+    const opacity = e.cnt>=3 ? 0.38 : 0.24;
+    const width   = e.cnt>=3 ? 1.4  : 1.0;
+    /* Color: blend the two band colors via a neutral rgba */
+    const edgeColor = posA.bi===posB.bi ? BANDS[posA.bi].color : "rgba(255,255,255,0.7)";
+    const edge = drawEdge(posA, posB, edgeColor, opacity, width, false);
+    if (edge) {
+      /* Delay based on left paper's x */
+      const lx = Math.min(posA.x, posB.x);
+      const delMs = Math.round(600 + (lx-PAD_X)/(svgW-PAD_X*2)*500);
+      lineAnims.push(setTimeout(function(){
+        try{edge.aD.beginElement();edge.aO.beginElement();}catch(e){}
+      }, delMs));
+      edge.el._pA = ka; edge.el._pB = kb;
+      allEdges.push(edge.el);
+    }
+  });
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     NODES — solid filled circles (dark bg = great contrast with colors).
+     Inner highlight gives 3D bubble feel (Connected Papers style).
+     Paper name shown ONLY when year-band has ≤3 papers (sparse periods) —
+     condenses labels in dense years while keeping them in early sparse years.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* Short display name — text before colon, or first word */
+  function dispName(title) {
+    const m = title.match(/^([^:]{1,15}):/);
+    if (m) return m[1].trim();
+    return title.replace(/^(A|An|The)\s+/i,'').split(/\s+/)[0].replace(/-.*$/,'').slice(0,12);
+  }
+
+  paperPos.forEach(function(pos) {
+    const { x, y, bi, p } = pos;
+    const b   = BANDS[bi];
+    const cat = CATS.find(c => c.key === p.cat) || CATS[0];
+    const venueShort = (p.venue.match(/[A-Za-z]+/) || [''])[0].toUpperCase().slice(0, 7);
+
+    /* How many papers share this year+band? Determines label visibility */
+    const yi = yearIdx[p.year];
+    const groupSize = (byYB[bi][yi] || []).length;
+    const showName  = groupSize <= 3;  // show paper name only in sparse years
+    const showVenue = groupSize <= 6;  // hide venue label when nodes are too close
+
+    /* L→R pop-in delay */
+    const delay = (0.20 + x / svgW * 1.0).toFixed(2);
+    const g = el("g", { class:"pt-pop", style:"--pdel:"+delay+"s;--pdur:0.18s" });
+    g.style.cursor = "pointer";
+
+    /* Main circle — filled solid with band color */
+    const circle = el("circle", {
+      cx:String(x), cy:String(y), r:String(NODE_R),
+      fill:b.color,
+      filter:"url(#pt-shadow)",
+    });
+    g.appendChild(circle);
+
+    /* Inner highlight: small bright spot at top-left → 3D bubble effect */
+    g.appendChild(el("circle", {
+      cx:String(x - NODE_R * 0.28), cy:String(y - NODE_R * 0.28),
+      r:String(NODE_R * 0.38),
+      fill:"rgba(255,255,255,0.22)",
+      "pointer-events":"none",
+    }));
+
+    /* Paper name ABOVE (only for sparse year-bands) */
+    if (showName) {
+      g.appendChild(tel("text", {
+        x:String(x), y:String(y - NODE_R - 6),
+        "text-anchor":"middle",
+        "font-size":"9", "font-weight":"500",
+        fill:"rgba(255,255,255,0.80)",
+        "font-family":"'Inter',ui-sans-serif,sans-serif",
+        "pointer-events":"none",
+      }, dispName(p.title)));
+    }
+
+    /* Venue abbreviation BELOW — only when nodes aren't too close */
+    if (showVenue) {
+      g.appendChild(tel("text", {
+        x:String(x), y:String(y + NODE_R + 12),
+        "text-anchor":"middle", "font-size":"7.5",
+        fill:b.color,
+        opacity:"0.55",
+        "font-family":"'Inter',ui-monospace,monospace",
+        "pointer-events":"none",
+      }, venueShort));
+    }
+
+    /* Hover interaction — white glow + edge highlight */
+    g.addEventListener("mouseenter", function(ev) {
+      circle.setAttribute("filter", "url(#pt-glow)");
+      circle.setAttribute("r",      String(NODE_R + 2));
+      allEdges.forEach(function(pe) {
+        const conn = (pe._pA === p.title || pe._pB === p.title);
+        pe.setAttribute("opacity",      conn ? "0.85" : "0.03");
+        pe.setAttribute("stroke-width", conn ? "2.4"  : "1");
+      });
+      const db = dbLookup(p.title);
+      const displayTags = db ? db.tags : (p.tags||[]);
+      const authShort = p.authors ? p.authors.split(",").slice(0,3).map(function(a){return a.trim().split(" ").pop();}).join(", ") + (p.authors.split(",").length>3?" et al.":"") : "";
+      const tagHtml = displayTags.map(function(t){ return "<span style='font-size:7.5px;padding:1px 5px;border-radius:3px;border:1px solid "+b.color+"44;color:"+b.color+";opacity:0.85'>"+t+"</span>"; }).join(" ");
+      const descHtml = db ? "<div style='font-size:9px;color:rgba(255,255,255,0.55);margin:5px 0 0;line-height:1.45'>"+db.desc.slice(0,130)+(db.desc.length>130?"…":"")+"</div>" : "";
+      tip.innerHTML =
+        "<span style='color:"+b.color+";font-size:8.5px;font-weight:700;letter-spacing:0.08em'>"+
+        venueShort + "  ·  " + p.year +
+        "</span><br>"+
+        "<strong style='font-size:11px;line-height:1.35;display:block;margin:3px 0 3px'>"+p.title+"</strong>"+
+        "<span style='font-size:8.5px;color:rgba(255,255,255,0.4)'>"+authShort+"</span>"+
+        descHtml+
+        (tagHtml?"<div style='display:inline-flex;gap:4px;margin-top:6px;flex-wrap:wrap'>"+tagHtml+"</div>":"");
+      tip.classList.add("show"); moveTip(ev);
+    });
+    g.addEventListener("mousemove", moveTip);
+    g.addEventListener("mouseleave", function() {
+      circle.setAttribute("filter", "url(#pt-shadow)");
+      circle.setAttribute("r",      String(NODE_R));
+      allEdges.forEach(function(pe) {
+        pe.setAttribute("opacity",      "0.22");
+        pe.setAttribute("stroke-width", "1");
+      });
+      tip.classList.remove("show");
+    });
+    g.addEventListener("click", function(ev) {
+      ev.stopPropagation();
+      showDetail(p, { color: b.color, label: cat.label });
+    });
+    svgEl.appendChild(g);
+  });
+}
+
+function showDetail(p,cat) {
+  const detail=document.getElementById("pt-detail");
+  if (!detail) return;
+  const db = dbLookup(p.title);
+  const displayTags = db ? db.tags : (p.tags||[]);
+  const tagHtml = displayTags.map(function(t){
+    // pt-tag class gets pointer-events:auto from CSS so tags are clickable through the glass
+    return "<span class='pt-tag' style='pointer-events:auto;cursor:default;font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid "+cat.color+"44;color:"+cat.color+";background:"+cat.color+"11'>"+t+"</span>";
+  }).join("");
+  const authHtml = p.authors
+    ? "<div style='font-size:10px;color:rgba(255,255,255,0.45);margin-top:5px;line-height:1.5'>"+p.authors+"</div>"
+    : "";
+  const desc = db ? db.desc : "";
+  const descShort = desc.length > 220 ? desc.slice(0, 217)+"…" : desc;
+  const linkBtn = p.url
+    ? "<a href='"+p.url+"' target='_blank' style='pointer-events:auto;flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:"+cat.color+";background:"+cat.color+"18;border:1px solid "+cat.color+"44;padding:5px 13px;border-radius:6px;text-decoration:none;white-space:nowrap;letter-spacing:0.02em'>&#8599;&nbsp;Read</a>"
+    : "";
+  detail.innerHTML=
+    '<div style="flex:1;min-width:0;overflow:hidden">'+
+      '<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
+        '<div style="min-width:0;flex:1">'+
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">'+
+            '<span style="font-size:8.5px;font-weight:700;letter-spacing:0.10em;color:'+cat.color+'">'+p.venue+'</span>'+
+            '<span style="font-size:8.5px;color:rgba(255,255,255,0.25);letter-spacing:0.04em">'+p.year+'&nbsp;&nbsp;·&nbsp;&nbsp;'+cat.label+'</span>'+
+          '</div>'+
+          '<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.93);line-height:1.32;font-style:italic;margin-bottom:4px">'+p.title+'</div>'+
+          (descShort?'<div style="font-size:9.5px;color:rgba(255,255,255,0.55);line-height:1.52">'+descShort+'</div>':'')+
+          authHtml+
+        '</div>'+
+        linkBtn+
+      '</div>'+
+      (tagHtml?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">'+tagHtml+'</div>':'')+
+    '</div>';
+  detail.classList.add("show");
+}
+function moveTip(e) {
+  tip.style.left = Math.min(e.clientX+14, window.innerWidth-340)+"px";
+  tip.style.top  = (e.clientY+16)+"px";
+}
+
+/* Show / Hide */
+function show() {
+  if (active||animating) return;
+  animating = true; active = true;
+  hideHint();
+  flash.classList.add("on");
+  setTimeout(function() {
+    flash.classList.remove("on");
+    overlay.classList.add("active");
+    buildTimeline();
+    overlay.classList.add("sweeping");
+    setTimeout(function(){ animating = false; }, 650);
+  }, 380);
+}
+
+function hide() {
+  if (!active) return;
+  active = false;
+  lineAnims.forEach(clearTimeout); lineAnims = [];
+  overlay.classList.remove("active","sweeping");
+  tip.classList.remove("show");
+  const detail=document.getElementById("pt-detail");
+  if (detail) detail.classList.remove("show");
+}
+
+closeBtn.addEventListener("click", hide);
+document.addEventListener("keydown", e => { if (e.key==="Escape" && active) hide(); });
+
+/* Keyboard trigger (copied from projects.html) */
+let buf = "";
+document.addEventListener("keydown", e => {
+  if (animating) return;
+  if (e.key.length!==1 || e.metaKey || e.ctrlKey) return;
+  keyboardPrimed = true;
+  buf = (buf+e.key).slice(-7).toLowerCase();
+  if (buf.endsWith("picasso") || buf.endsWith("picaso")) { buf=""; hideHint(); show(); return; }
+  if (buf.length >= 2) showHint();
+}, true);
+
+})();
+</script>
+
 </body>
 </html>
