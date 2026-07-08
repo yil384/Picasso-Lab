@@ -114,61 +114,45 @@
     }
 
     .gold-candidate {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 1px 9px 2px;
-      border: 1px solid rgba(122, 79, 8, 0.46);
-      border-radius: 999px;
-      color: #5f3b00;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 46%),
-        linear-gradient(
-          110deg,
-          #704307 0%,
-          #b07716 13%,
-          #f0c75a 26%,
-          #fff3bf 35%,
-          #c99126 47%,
-          #784907 58%,
-          #d9a637 70%,
-          #fff0b1 80%,
-          #b87918 91%,
-          #704307 100%
-        );
-      background-size: 100% 100%, 260% 100%;
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.78),
-        inset 0 0 0 1px rgba(255, 245, 199, 0.36),
-        0 3px 8px rgba(122, 79, 8, 0.14);
+      display: inline-block;
+      color: #9f6909;
+      background: linear-gradient(
+        96deg,
+        #5e3700 0%,
+        #9b6507 10%,
+        #d49d29 19%,
+        #efd27a 28%,
+        #b77b12 36%,
+        #623900 46%,
+        #ad7412 55%,
+        #e5b340 64%,
+        #f4dc8c 70%,
+        #8a5606 80%,
+        #c38a20 90%,
+        #5e3700 100%
+      );
+      background-size: 260% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
       font-weight: 800;
       letter-spacing: 0;
-      text-shadow: 0 1px 0 rgba(255, 246, 206, 0.68);
-      -webkit-text-fill-color: currentColor;
-      animation: goldPrestigeFlow 8.5s ease-in-out infinite;
+      text-shadow:
+        0 0 4px rgba(185, 126, 19, 0.22),
+        0 1px 0 rgba(102, 61, 0, 0.08);
+      animation: goldFlow 5.6s cubic-bezier(0.45, 0, 0.16, 1) infinite;
     }
 
-    .gold-candidate::before {
-      content: "";
-      flex: 0 0 auto;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 33% 28%, #fff9dc 0 22%, #f1c65a 48%, #9e640d 100%);
-      box-shadow:
-        0 0 0 1px rgba(96, 58, 0, 0.25),
-        0 0 8px rgba(234, 184, 71, 0.45);
-    }
-
-    @keyframes goldPrestigeFlow {
-      0%, 100% { background-position: 0% 50%, 0% 50%; }
-      50% { background-position: 0% 50%, 100% 50%; }
+    @keyframes goldFlow {
+      0% { background-position: 0% 50%; }
+      48% { background-position: 100% 50%; }
+      100% { background-position: 100% 50%; }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .gold-candidate {
         animation: none;
-        background-position: 0% 50%, 58% 50%;
+        background-position: 58% 50%;
       }
     }
 
@@ -442,16 +426,16 @@
     <p style="white-space:pre-wrap;"><b>[MICRO'26] (To appear)</b> <i style="font-weight:bold">AMMA: A Multi-Chiplet Memory-Centric Architecture for Low-Latency 1M Context Attention Serving. </i> Zhongkai Yu, Haotian Ye, Chenyang Zhou, Ohm Rishabh Venkatachalam, Zaifeng Pan, Zhengding Hu, Junsung Kim, Won Woo Ro, Po-An Tsai, Shuyi Pei, Yangwook Kang, and Yufei Ding. arXiv preprint arXiv:2604.26103, 2026. [<a href="https://arxiv.org/abs/2604.26103">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b>[OSDI'26] (To appear)</b> <i style="font-weight:bold">Syncopate: Efficient Multi-GPU AI Kernels via Automatic Chunk-Centric Compute-Communication Overlap. </i> Xinwei Qiang*, Yue Guan*, Zhengding Hu, Yufei Ding, Adnan Aziz. [<a href="https://arxiv.org/abs/2601.20595">paper</a>]</p>
-  </div>
-  <div class="sqs-block-content machinelearning paper" >
-    <p style="white-space:pre-wrap;"><b><span class="gold-candidate">[ISCA'26 Best Paper]</span> (To appear)</b> <i style="font-weight:bold">Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference. </i> Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai. [<a href="https://arxiv.org/abs/2510.05497">paper</a>]</p>
+    <p style="white-space:pre-wrap;"><b>[ISCA'26] <span class="gold-candidate">[Best Paper]</span> (To appear)</b> <i style="font-weight:bold">Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference. </i> Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai. [<a href="https://arxiv.org/abs/2510.05497">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[ISCA'26] (To appear)</b> <i style="font-weight:bold">Reducing Page Faults via Invalidation-based Mapping Propagation in Multi-GPU Systems. </i> Junsung Kim, Dongho Ha, Sungwoo Kim, Wonho Cho, Sungbin Kim, Yufei Ding, Won Woo Ro.</p>
   </div>
   <div class="sqs-block-content quantum paper" >
     <p style="white-space:pre-wrap;"><b>[ISCA'26] (To appear)</b> <i style="font-weight:bold">Transpiler-Architecture Co-Design to Curb Clifford Costs in Fault-Tolerant Quantum Computing. </i> Meng Wang, Chenxu Liu, Samuel Stein, Yufei Ding, Poulami Das, Prashant Nair, Ang Li. [<a href="https://arxiv.org/abs/2412.15434">paper</a>]</p>
+  </div>
+  <div class="sqs-block-content machinelearning paper" >
+    <p style="white-space:pre-wrap;"><b>[OSDI'26] (To appear)</b> <i style="font-weight:bold">Syncopate: Efficient Multi-GPU AI Kernels via Automatic Chunk-Centric Compute-Communication Overlap. </i> Xinwei Qiang*, Yue Guan*, Zhengding Hu, Yufei Ding, Adnan Aziz. [<a href="https://arxiv.org/abs/2601.20595">paper</a>]</p>
   </div>
   <div class="sqs-block-content machinelearning paper" >
     <p style="white-space:pre-wrap;"><b>[ICML'26] (To appear)</b> <i style="font-weight:bold">ScaleSim: Serving Large-Scale Multi-Agent Simulation with Invocation Distance-Based Memory Management. </i> Zaifeng Pan, Yipeng Shen, Zhengding Hu, Zhuang Wang, Aninda Manocha, Zheng Wang, Zhongkai Yu, Yue Guan, Yufei Ding. [<a href="https://arxiv.org/abs/2601.21473">paper</a>]</p>
