@@ -169,12 +169,17 @@ body {
               filter 420ms ease;
 }
 
-.ohm-widget.ohm-on:hover .ohm-avatar {
-  transform: scale(1.018);
+.ohm-widget:hover .ohm-avatar {
+  transform: scale(1.07);
+  filter: brightness(1.08);
 }
 
 .ohm-widget.ohm-on .ohm-avatar {
   filter: saturate(1.04) contrast(1.03) brightness(1.03);
+}
+
+.ohm-widget.ohm-on:hover .ohm-avatar {
+  filter: saturate(1.04) contrast(1.03) brightness(1.08);
 }
 
 .ohm-board {
