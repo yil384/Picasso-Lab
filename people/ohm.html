@@ -1,0 +1,467 @@
+<!--
+  Ohm / AMMA multi-chiplet portrait
+  The full interaction stays inside a 200 x 200 stage so the Google Sites
+  embed cannot acquire scrollbars from the animated layers.
+-->
+<div class="ohm-widget"
+     role="button"
+     tabindex="0"
+     aria-pressed="false"
+     aria-label="启动 Ohm 的 AMMA 电路动画">
+  <div class="ohm-stage">
+    <div class="ohm-photo">
+      <img class="ohm-avatar"
+           src="https://yil384.github.io/Picasso-Lab/people/static/ohm.webp"
+           alt="Ohm" />
+    </div>
+
+    <!-- Ring PCB, four memory chiplets, and circulating data pulses. -->
+    <svg class="ohm-board"
+         viewBox="0 0 200 200"
+         aria-hidden="true"
+         focusable="false">
+      <defs>
+        <linearGradient id="ohmCopper" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#fbbf24" />
+          <stop offset="0.48" stop-color="#fde68a" />
+          <stop offset="1" stop-color="#d97706" />
+        </linearGradient>
+        <linearGradient id="ohmSignal" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#67e8f9" />
+          <stop offset="0.55" stop-color="#ffffff" />
+          <stop offset="1" stop-color="#2dd4bf" />
+        </linearGradient>
+        <filter id="ohmGlow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="1.8" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <circle class="ohm-pcb-base" cx="100" cy="100" r="96" />
+      <circle class="ohm-pcb-trace" cx="100" cy="100" r="91" />
+      <circle class="ohm-pcb-trace ohm-pcb-trace-inner" cx="100" cy="100" r="85" />
+
+      <g class="ohm-static-traces">
+        <path d="M24 62 H40 L48 70" />
+        <path d="M176 62 H160 L152 70" />
+        <path d="M24 138 H40 L48 130" />
+        <path d="M176 138 H160 L152 130" />
+      </g>
+
+      <!-- Four small AMMA memory chiplets sit at the portrait's periphery. -->
+      <g class="ohm-chiplet ohm-chiplet-a" transform="translate(27 48)">
+        <path class="ohm-pins" d="M2 0v-3m5 3v-3m5 3v-3m5 3v-3M2 14v3m5-3v3m5-3v3m5-3v3" />
+        <rect width="19" height="14" rx="3" />
+        <path class="ohm-chip-core" d="M5 4h9v6H5z" />
+      </g>
+      <g class="ohm-chiplet ohm-chiplet-b" transform="translate(154 48)">
+        <path class="ohm-pins" d="M2 0v-3m5 3v-3m5 3v-3m5 3v-3M2 14v3m5-3v3m5-3v3m5-3v3" />
+        <rect width="19" height="14" rx="3" />
+        <path class="ohm-chip-core" d="M5 4h9v6H5z" />
+      </g>
+      <g class="ohm-chiplet ohm-chiplet-c" transform="translate(154 138)">
+        <path class="ohm-pins" d="M2 0v-3m5 3v-3m5 3v-3m5 3v-3M2 14v3m5-3v3m5-3v3m5-3v3" />
+        <rect width="19" height="14" rx="3" />
+        <path class="ohm-chip-core" d="M5 4h9v6H5z" />
+      </g>
+      <g class="ohm-chiplet ohm-chiplet-d" transform="translate(27 138)">
+        <path class="ohm-pins" d="M2 0v-3m5 3v-3m5 3v-3m5 3v-3M2 14v3m5-3v3m5-3v3m5-3v3" />
+        <rect width="19" height="14" rx="3" />
+        <path class="ohm-chip-core" d="M5 4h9v6H5z" />
+      </g>
+
+      <g class="ohm-nodes">
+        <circle cx="100" cy="5" r="2.4" />
+        <circle cx="167" cy="33" r="2.4" />
+        <circle cx="195" cy="100" r="2.4" />
+        <circle cx="167" cy="167" r="2.4" />
+        <circle cx="100" cy="195" r="2.4" />
+        <circle cx="33" cy="167" r="2.4" />
+        <circle cx="5" cy="100" r="2.4" />
+        <circle cx="33" cy="33" r="2.4" />
+      </g>
+
+      <circle class="ohm-data ohm-data-a" cx="100" cy="100" r="91" />
+      <circle class="ohm-data ohm-data-b" cx="100" cy="100" r="85" />
+    </svg>
+
+    <div class="ohm-amma" aria-hidden="true">
+      <span>AMMA</span>
+      <i></i><i></i><i></i>
+    </div>
+
+    <div class="ohm-badge" aria-hidden="true">
+      <span>&Omega;</span>
+    </div>
+
+    <div class="ohm-switch-flash" aria-hidden="true"></div>
+  </div>
+</div>
+
+<style>
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  box-sizing: border-box;
+  padding: 8px;
+}
+
+.ohm-widget,
+.ohm-widget *,
+.ohm-widget *::before,
+.ohm-widget *::after {
+  box-sizing: border-box;
+}
+
+.ohm-widget {
+  display: inline-block;
+  width: 200px;
+  height: 200px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ohm-stage {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 50%;
+  isolation: isolate;
+  background: #071316;
+}
+
+.ohm-widget:focus {
+  outline: none;
+}
+
+.ohm-widget:focus-visible .ohm-stage {
+  box-shadow: inset 0 0 0 3px rgba(103, 232, 249, 0.9);
+}
+
+.ohm-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #0f2424;
+}
+
+.ohm-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: transform 420ms cubic-bezier(.2, .8, .2, 1),
+              filter 420ms ease;
+}
+
+.ohm-widget:hover .ohm-avatar {
+  transform: scale(1.018);
+}
+
+.ohm-widget.ohm-on .ohm-avatar {
+  filter: saturate(1.04) contrast(1.03) brightness(1.03);
+}
+
+.ohm-board {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: block;
+  width: 200px;
+  height: 200px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ohm-pcb-base {
+  fill: none;
+  stroke: rgba(6, 28, 31, 0.78);
+  stroke-width: 8;
+  transition: stroke 360ms ease;
+}
+
+.ohm-pcb-trace {
+  fill: none;
+  stroke: rgba(245, 190, 55, 0.58);
+  stroke-width: 1.35;
+  stroke-dasharray: 2 5;
+}
+
+.ohm-pcb-trace-inner {
+  stroke: rgba(45, 212, 191, 0.4);
+  stroke-dasharray: 16 5 2 5;
+}
+
+.ohm-static-traces {
+  fill: none;
+  stroke: rgba(253, 230, 138, 0.58);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 360ms ease;
+}
+
+.ohm-chiplet > rect {
+  fill: rgba(4, 20, 24, 0.84);
+  stroke: rgba(94, 234, 212, 0.72);
+  stroke-width: 1;
+  transition: fill 360ms ease, stroke 360ms ease;
+}
+
+.ohm-chip-core {
+  fill: rgba(251, 191, 36, 0.48);
+  transition: fill 360ms ease;
+}
+
+.ohm-pins {
+  fill: none;
+  stroke: rgba(253, 230, 138, 0.68);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.ohm-nodes {
+  fill: #fcd34d;
+  stroke: rgba(7, 19, 22, 0.9);
+  stroke-width: 1.2;
+}
+
+.ohm-data {
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0;
+  filter: url(#ohmGlow);
+}
+
+.ohm-data-a {
+  stroke: url(#ohmSignal);
+  stroke-width: 2.5;
+  stroke-dasharray: 25 547;
+  transform: rotate(-90deg);
+  transform-origin: 100px 100px;
+}
+
+.ohm-data-b {
+  stroke: url(#ohmCopper);
+  stroke-width: 1.8;
+  stroke-dasharray: 15 519;
+  transform: rotate(72deg);
+  transform-origin: 100px 100px;
+}
+
+.ohm-amma {
+  position: absolute;
+  z-index: 4;
+  left: 65px;
+  bottom: 9px;
+  width: 70px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid rgba(94, 234, 212, 0.58);
+  border-radius: 5px;
+  background: rgba(4, 20, 24, 0.82);
+  color: #ccfbf1;
+  font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 1.2px;
+  opacity: 0.68;
+  pointer-events: none;
+  transition: opacity 300ms ease, border-color 300ms ease;
+}
+
+.ohm-amma i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #2dd4bf;
+  box-shadow: 0 0 4px rgba(45, 212, 191, 0.7);
+}
+
+.ohm-badge {
+  position: absolute;
+  z-index: 5;
+  right: 17px;
+  bottom: 24px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgba(251, 191, 36, 0.82);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%,
+    rgba(30, 65, 66, 0.95), rgba(3, 17, 20, 0.94));
+  color: #fde68a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.42);
+  opacity: 0.82;
+  pointer-events: none;
+  transition: opacity 300ms ease, transform 400ms cubic-bezier(.2, .9, .2, 1.2);
+}
+
+.ohm-badge span {
+  font: 600 21px/1 Georgia, serif;
+  transform: translateY(-1px);
+}
+
+.ohm-switch-flash {
+  position: absolute;
+  inset: 3px;
+  z-index: 6;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ohm-widget.ohm-on .ohm-pcb-base {
+  stroke: rgba(5, 28, 31, 0.9);
+}
+
+.ohm-widget.ohm-on .ohm-static-traces {
+  stroke: rgba(253, 230, 138, 0.9);
+}
+
+.ohm-widget.ohm-on .ohm-chiplet > rect {
+  fill: rgba(4, 24, 29, 0.94);
+  stroke: #5eead4;
+}
+
+.ohm-widget.ohm-on .ohm-chip-core {
+  fill: #fbbf24;
+}
+
+.ohm-widget.ohm-on .ohm-data-a {
+  opacity: 1;
+  animation: ohm-data-clockwise 2.8s linear infinite;
+}
+
+.ohm-widget.ohm-on .ohm-data-b {
+  opacity: 0.92;
+  animation: ohm-data-counter 3.5s linear infinite;
+}
+
+.ohm-widget.ohm-on .ohm-chiplet {
+  animation: ohm-chip-breathe 2.4s ease-in-out infinite;
+}
+
+.ohm-widget.ohm-on .ohm-chiplet-b { animation-delay: 300ms; }
+.ohm-widget.ohm-on .ohm-chiplet-c { animation-delay: 600ms; }
+.ohm-widget.ohm-on .ohm-chiplet-d { animation-delay: 900ms; }
+
+.ohm-widget.ohm-on .ohm-amma {
+  opacity: 1;
+  border-color: rgba(94, 234, 212, 0.9);
+}
+
+.ohm-widget.ohm-on .ohm-amma i {
+  animation: ohm-bit 1.2s ease-in-out infinite;
+}
+
+.ohm-widget.ohm-on .ohm-amma i:nth-of-type(2) { animation-delay: 180ms; }
+.ohm-widget.ohm-on .ohm-amma i:nth-of-type(3) { animation-delay: 360ms; }
+
+.ohm-widget.ohm-on .ohm-badge {
+  opacity: 1;
+  transform: rotate(4deg) scale(1.04);
+  animation: ohm-badge-pulse 2.4s ease-in-out infinite;
+}
+
+.ohm-widget.ohm-kick .ohm-switch-flash {
+  animation: ohm-switch 520ms ease-out;
+}
+
+@keyframes ohm-data-clockwise {
+  to { stroke-dashoffset: -572; }
+}
+
+@keyframes ohm-data-counter {
+  to { stroke-dashoffset: 534; }
+}
+
+@keyframes ohm-chip-breathe {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; filter: url(#ohmGlow); }
+}
+
+@keyframes ohm-bit {
+  0%, 100% { opacity: 0.35; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+
+@keyframes ohm-badge-pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.42), 0 0 0 rgba(251, 191, 36, 0); }
+  50% { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.42), 0 0 12px rgba(251, 191, 36, 0.55); }
+}
+
+@keyframes ohm-switch {
+  0% { opacity: 0; border-color: rgba(255, 255, 255, 0); transform: scale(0.94); }
+  30% { opacity: 1; border-color: rgba(153, 246, 228, 0.95); }
+  100% { opacity: 0; border-color: rgba(45, 212, 191, 0); transform: scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ohm-widget *,
+  .ohm-widget *::before,
+  .ohm-widget *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .ohm-widget.ohm-on .ohm-data-a,
+  .ohm-widget.ohm-on .ohm-data-b {
+    opacity: 0.9;
+  }
+}
+</style>
+
+<script>
+(function () {
+  document.querySelectorAll('.ohm-widget').forEach(function (widget) {
+    if (widget.dataset.ohmReady === '1') return;
+    widget.dataset.ohmReady = '1';
+
+    function toggleOhm() {
+      var active = widget.getAttribute('aria-pressed') !== 'true';
+      widget.classList.toggle('ohm-on', active);
+      widget.setAttribute('aria-pressed', String(active));
+      widget.setAttribute(
+        'aria-label',
+        active ? '关闭 Ohm 的 AMMA 电路动画' : '启动 Ohm 的 AMMA 电路动画'
+      );
+
+      widget.classList.remove('ohm-kick');
+      void widget.offsetWidth;
+      widget.classList.add('ohm-kick');
+      window.setTimeout(function () {
+        widget.classList.remove('ohm-kick');
+      }, 560);
+    }
+
+    widget.addEventListener('click', toggleOhm);
+    widget.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleOhm();
+      }
+    });
+  });
+})();
+</script>
