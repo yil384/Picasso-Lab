@@ -126,6 +126,7 @@ body {
   display: inline-block;
   width: 200px;
   height: 200px;
+  overflow: visible;
   cursor: pointer;
   user-select: none;
   touch-action: manipulation;
@@ -136,7 +137,7 @@ body {
   position: relative;
   width: 200px;
   height: 200px;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 50%;
   isolation: isolate;
   background: #071316;
@@ -157,6 +158,11 @@ body {
   overflow: hidden;
   border-radius: 50%;
   background: #0f2424;
+  transform: scale(var(--ohm-scale, 1));
+  transform-origin: 50% 50%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+  transition: transform 400ms cubic-bezier(.32, 1.3, .4, 1),
+              box-shadow 400ms ease;
 }
 
 .ohm-avatar {
@@ -165,17 +171,24 @@ body {
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  transition: transform 420ms cubic-bezier(.2, .8, .2, 1),
-              filter 420ms ease;
+  transition: filter 420ms ease;
 }
 
-.ohm-widget:hover .ohm-avatar {
-  transform: scale(1.07);
-  filter: brightness(1.08);
-}
+.ohm-widget:hover { --ohm-scale: 1.07; }
+.ohm-widget.ohm-on { --ohm-scale: 1.04; }
+.ohm-widget.ohm-on:hover { --ohm-scale: 1.08; }
+
+.ohm-widget:hover .ohm-avatar { filter: brightness(1.08); }
 
 .ohm-widget.ohm-on .ohm-avatar {
   filter: saturate(1.04) contrast(1.03) brightness(1.03);
+}
+
+.ohm-widget.ohm-on .ohm-photo {
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.25),
+    0 0 0 1.5px rgba(94, 234, 212, 0.75),
+    0 0 18px 4px rgba(45, 212, 191, 0.25);
 }
 
 .ohm-widget.ohm-on:hover .ohm-avatar {
