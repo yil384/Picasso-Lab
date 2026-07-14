@@ -169,7 +169,7 @@ body {
               filter 420ms ease;
 }
 
-.ohm-widget:hover .ohm-avatar {
+.ohm-widget.ohm-on:hover .ohm-avatar {
   transform: scale(1.018);
 }
 
@@ -185,7 +185,11 @@ body {
   width: 200px;
   height: 200px;
   overflow: hidden;
+  opacity: 0;
+  transform: scale(0.97);
+  transform-origin: 50% 50%;
   pointer-events: none;
+  transition: opacity 300ms ease, transform 420ms cubic-bezier(.2, .8, .2, 1);
 }
 
 .ohm-pcb-base {
@@ -281,9 +285,11 @@ body {
   color: #ccfbf1;
   font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 1.2px;
-  opacity: 0.68;
+  opacity: 0;
+  transform: translateY(6px);
   pointer-events: none;
-  transition: opacity 300ms ease, border-color 300ms ease;
+  transition: opacity 300ms ease, transform 360ms cubic-bezier(.2, .8, .2, 1),
+              border-color 300ms ease;
 }
 
 .ohm-amma i {
@@ -309,7 +315,8 @@ body {
     rgba(30, 65, 66, 0.95), rgba(3, 17, 20, 0.94));
   color: #fde68a;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.42);
-  opacity: 0.82;
+  opacity: 0;
+  transform: rotate(-10deg) scale(0.75);
   pointer-events: none;
   transition: opacity 300ms ease, transform 400ms cubic-bezier(.2, .9, .2, 1.2);
 }
@@ -327,6 +334,11 @@ body {
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
+}
+
+.ohm-widget.ohm-on .ohm-board {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .ohm-widget.ohm-on .ohm-pcb-base {
@@ -366,6 +378,7 @@ body {
 
 .ohm-widget.ohm-on .ohm-amma {
   opacity: 1;
+  transform: translateY(0);
   border-color: rgba(94, 234, 212, 0.9);
 }
 
