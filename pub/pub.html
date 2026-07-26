@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Publications</title>
   <style>
     /*
@@ -86,6 +86,7 @@
       padding-bottom: 8px;
       border-bottom: 1px solid #ececec;
       letter-spacing: -0.01em;
+      touch-action: manipulation;
     }
 
     /* Paper 列表 */
@@ -866,6 +867,7 @@
 /* ─── Overlay: dark canvas, brush-stroke wipe from left ─── */
 #pt-overlay {
   position: fixed; inset: 0;
+  width: 100vw; height: 100vh; height: 100dvh;
   background: #0d1117;
   z-index: 99999;
   display: none; overflow: hidden;
@@ -880,6 +882,7 @@
 #pt-canvas {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   overflow: hidden;
+  overscroll-behavior: contain;
 }
 #pt-svg { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
 
@@ -905,6 +908,8 @@
 /* Re-enable pointer events only on interactive children */
 #pt-detail a,
 #pt-detail .pt-tag { pointer-events: auto; }
+#pt-detail:not(.show) a,
+#pt-detail:not(.show) .pt-tag { pointer-events: none; }
 
 /* ─── Close button (light on dark bg) ─── */
 #pt-close {
@@ -915,7 +920,7 @@
   cursor:pointer; display:none; align-items:center; justify-content:center;
   transition:background 0.2s;
 }
-#pt-overlay.active ~ #pt-close { display:flex; }
+#pt-overlay.active #pt-close { display:flex; }
 #pt-close:hover { background:rgba(255,255,255,0.16); color:rgba(255,255,255,0.85); }
 
 /* ─── Activation flash (same as projects.html) ─── */
@@ -983,6 +988,51 @@
 }
 #pt-tip.show { opacity:1; }
 
+body.pt-open { overflow:hidden; }
+
+@media (max-width:860px), (max-height:600px) and (pointer:coarse) {
+  #pt-canvas {
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-x pan-y;
+  }
+  #pt-svg {
+    position:relative;
+    inset:auto;
+    max-width:none;
+    max-height:none;
+  }
+  #pt-close {
+    top:max(10px, calc(env(safe-area-inset-top) + 6px));
+    right:max(10px, calc(env(safe-area-inset-right) + 6px));
+    width:46px;
+    height:46px;
+    background:rgba(13,17,23,.82);
+    color:rgba(255,255,255,.88);
+  }
+  #pt-detail {
+    max-height:360px;
+    max-height:min(44dvh, 360px);
+    display:block;
+    overflow-y:auto;
+    padding:
+      12px
+      max(14px, calc(env(safe-area-inset-right) + 8px))
+      calc(12px + env(safe-area-inset-bottom))
+      max(14px, calc(env(safe-area-inset-left) + 8px));
+    pointer-events:none;
+  }
+  #pt-detail.show { pointer-events:auto; }
+  #pt-detail > div { overflow:visible !important; }
+  #pt-type-hint,
+  #pt-tip { display:none !important; }
+  .section-title {
+    -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+}
+
 /* ─── SVG animations ─── */
 .pt-dash {
   stroke-dasharray:var(--len,1000);
@@ -1003,13 +1053,13 @@
 @keyframes pt-fadein { to { opacity:1; } }
 </style>
 
-<div id="pt-overlay">
+<div id="pt-overlay" role="dialog" aria-modal="true" aria-label="Picasso Lab Research Landscape" aria-hidden="true">
   <div id="pt-canvas">
     <svg id="pt-svg"></svg>
   </div>
   <div id="pt-detail"></div>
+  <button id="pt-close" type="button" aria-label="Close research landscape">&#x2715;</button>
 </div>
-<button id="pt-close" aria-label="Close">&#x2715;</button>
 <div id="pt-flash"><span>&#x2726; Research Landscape</span></div>
 <div id="pt-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> &#x2728;</div>
 <div id="pt-tip"></div>
@@ -1033,6 +1083,7 @@ canvas.addEventListener("click", function() {
 });
 
 let active = false, animating = false, keyboardPrimed = false, lineAnims = [];
+let previousFocus = null, resizeTimer = null, transitionToken = 0;
 
 /* SVG fills canvas via viewBox — no pan/zoom needed */
 
@@ -1594,23 +1645,32 @@ function buildTimeline() {
      Inspired by Connected Papers, Paperscape, and Litmaps aesthetics.
      ═══════════════════════════════════════════════════════════════════════ */
 
-  const PAD_X   = 120;   // left margin for track labels
-  const PAD_TOP = 84;    // title + era labels
-  const PAD_BOT = 60;    // year labels at bottom
-  const NODE_R  = 10;    // node radius
-
-  /* ── Canvas-fitted SVG: no letterboxing ── */
-  const svgW = canvas.offsetWidth  || window.innerWidth;
-  const svgH = canvas.offsetHeight || window.innerHeight;
-
   /* ── Year columns (computed before YEAR_STEP so we can scale it) ── */
   const sortedYears = [...new Set(papers.map(p => p.year))].sort((a, b) => a - b);
   const yearIdx = {};
   sortedYears.forEach((yr, i) => { yearIdx[yr] = i; });
   const nYears = sortedYears.length;
 
-  /* Year step dynamically fills canvas width */
-  const YEAR_STEP = (svgW - PAD_X * 2) / Math.max(1, nYears);
+  const compact = window.matchMedia("(max-width: 860px), (max-height: 600px) and (pointer: coarse)").matches;
+  const PAD_X   = compact ? 96 : 120; // room for track labels
+  const PAD_TOP = compact ? 72 : 84;  // title + era labels
+  const PAD_BOT = compact ? 48 : 60;  // year labels at bottom
+  const NODE_R  = 10;                 // visible node radius
+
+  /* Mobile keeps readable year columns inside a pannable canvas. */
+  const viewportW = canvas.clientWidth  || window.innerWidth;
+  const viewportH = canvas.clientHeight || window.innerHeight;
+  const svgW = compact ? Math.max(viewportW, PAD_X * 2 + nYears * 70) : viewportW;
+  const svgH = compact ? Math.max(viewportH, 760) : viewportH;
+  const YEAR_STEP = compact ? 70 : (svgW - PAD_X * 2) / Math.max(1, nYears);
+
+  if (compact) {
+    svgEl.style.width = svgW + "px";
+    svgEl.style.height = svgH + "px";
+  } else {
+    svgEl.style.removeProperty("width");
+    svgEl.style.removeProperty("height");
+  }
 
   /* ── 8 research bands — heights scale to fill canvas height ── */
   const _BH  = [104,  60,  96,  70,  52,  88,  48,  56];
@@ -1751,7 +1811,9 @@ function buildTimeline() {
     fill:"rgba(255,255,255,0.28)",
     "font-family":"'Inter',ui-sans-serif,sans-serif", "font-size":"9",
     class:"pt-fade", style:"--fdel:0.15s;--fdur:0.4s",
-  }, papers.length + " publications  ·  hover to preview  ·  click to view details  ·  Esc to close"));
+  }, compact
+      ? papers.length + " publications  ·  swipe to explore  ·  tap a node for details"
+      : papers.length + " publications  ·  hover to preview  ·  click to view details  ·  Esc to close"));
 
   /* ── Band backgrounds + separators + left labels ── */
   BANDS.forEach(function(b, bi) {
@@ -1939,8 +2001,21 @@ function buildTimeline() {
 
     /* L→R pop-in delay */
     const delay = (0.20 + x / svgW * 1.0).toFixed(2);
-    const g = el("g", { class:"pt-pop", style:"--pdel:"+delay+"s;--pdur:0.18s" });
+    const g = el("g", {
+      class:"pt-pop",
+      style:"--pdel:"+delay+"s;--pdur:0.18s",
+      role:"button",
+      tabindex:"0",
+      "aria-label":p.title + ", " + p.venue + ", " + p.year,
+    });
     g.style.cursor = "pointer";
+
+    /* Invisible 44px hit target keeps the visible nodes precise but easy to tap. */
+    g.appendChild(el("circle", {
+      cx:String(x), cy:String(y), r:"22",
+      fill:"transparent",
+      "pointer-events":"all",
+    }));
 
     /* Main circle — filled solid with band color */
     const circle = el("circle", {
@@ -1982,46 +2057,60 @@ function buildTimeline() {
       }, venueShort));
     }
 
-    /* Hover interaction — white glow + edge highlight */
-    g.addEventListener("mouseenter", function(ev) {
-      circle.setAttribute("filter", "url(#pt-glow)");
-      circle.setAttribute("r",      String(NODE_R + 2));
-      allEdges.forEach(function(pe) {
-        const conn = (pe._pA === p.title || pe._pB === p.title);
-        pe.setAttribute("opacity",      conn ? "0.85" : "0.03");
-        pe.setAttribute("stroke-width", conn ? "2.4"  : "1");
+    /* Desktop-only hover interaction; touch taps go straight to details. */
+    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      g.addEventListener("mouseenter", function(ev) {
+        circle.setAttribute("filter", "url(#pt-glow)");
+        circle.setAttribute("r",      String(NODE_R + 2));
+        allEdges.forEach(function(pe) {
+          const conn = (pe._pA === p.title || pe._pB === p.title);
+          pe.setAttribute("opacity",      conn ? "0.85" : "0.03");
+          pe.setAttribute("stroke-width", conn ? "2.4"  : "1");
+        });
+        const db = dbLookup(p.title);
+        const displayTags = db ? db.tags : (p.tags||[]);
+        const authShort = p.authors ? p.authors.split(",").slice(0,3).map(function(a){return a.trim().split(" ").pop();}).join(", ") + (p.authors.split(",").length>3?" et al.":"") : "";
+        const tagHtml = displayTags.map(function(t){ return "<span style='font-size:7.5px;padding:1px 5px;border-radius:3px;border:1px solid "+b.color+"44;color:"+b.color+";opacity:0.85'>"+t+"</span>"; }).join(" ");
+        const descHtml = db ? "<div style='font-size:9px;color:rgba(255,255,255,0.55);margin:5px 0 0;line-height:1.45'>"+db.desc.slice(0,130)+(db.desc.length>130?"…":"")+"</div>" : "";
+        tip.innerHTML =
+          "<span style='color:"+b.color+";font-size:8.5px;font-weight:700;letter-spacing:0.08em'>"+
+          venueShort + "  ·  " + p.year +
+          "</span><br>"+
+          "<strong style='font-size:11px;line-height:1.35;display:block;margin:3px 0 3px'>"+p.title+"</strong>"+
+          "<span style='font-size:8.5px;color:rgba(255,255,255,0.4)'>"+authShort+"</span>"+
+          descHtml+
+          (tagHtml?"<div style='display:inline-flex;gap:4px;margin-top:6px;flex-wrap:wrap'>"+tagHtml+"</div>":"");
+        tip.classList.add("show"); moveTip(ev);
       });
-      const db = dbLookup(p.title);
-      const displayTags = db ? db.tags : (p.tags||[]);
-      const authShort = p.authors ? p.authors.split(",").slice(0,3).map(function(a){return a.trim().split(" ").pop();}).join(", ") + (p.authors.split(",").length>3?" et al.":"") : "";
-      const tagHtml = displayTags.map(function(t){ return "<span style='font-size:7.5px;padding:1px 5px;border-radius:3px;border:1px solid "+b.color+"44;color:"+b.color+";opacity:0.85'>"+t+"</span>"; }).join(" ");
-      const descHtml = db ? "<div style='font-size:9px;color:rgba(255,255,255,0.55);margin:5px 0 0;line-height:1.45'>"+db.desc.slice(0,130)+(db.desc.length>130?"…":"")+"</div>" : "";
-      tip.innerHTML =
-        "<span style='color:"+b.color+";font-size:8.5px;font-weight:700;letter-spacing:0.08em'>"+
-        venueShort + "  ·  " + p.year +
-        "</span><br>"+
-        "<strong style='font-size:11px;line-height:1.35;display:block;margin:3px 0 3px'>"+p.title+"</strong>"+
-        "<span style='font-size:8.5px;color:rgba(255,255,255,0.4)'>"+authShort+"</span>"+
-        descHtml+
-        (tagHtml?"<div style='display:inline-flex;gap:4px;margin-top:6px;flex-wrap:wrap'>"+tagHtml+"</div>":"");
-      tip.classList.add("show"); moveTip(ev);
-    });
-    g.addEventListener("mousemove", moveTip);
-    g.addEventListener("mouseleave", function() {
-      circle.setAttribute("filter", "url(#pt-shadow)");
-      circle.setAttribute("r",      String(NODE_R));
-      allEdges.forEach(function(pe) {
-        pe.setAttribute("opacity",      "0.22");
-        pe.setAttribute("stroke-width", "1");
+      g.addEventListener("mousemove", moveTip);
+      g.addEventListener("mouseleave", function() {
+        circle.setAttribute("filter", "url(#pt-shadow)");
+        circle.setAttribute("r",      String(NODE_R));
+        allEdges.forEach(function(pe) {
+          pe.setAttribute("opacity",      "0.22");
+          pe.setAttribute("stroke-width", "1");
+        });
+        tip.classList.remove("show");
       });
-      tip.classList.remove("show");
-    });
+    }
     g.addEventListener("click", function(ev) {
+      ev.stopPropagation();
+      showDetail(p, { color: b.color, label: cat.label });
+    });
+    g.addEventListener("keydown", function(ev) {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      ev.preventDefault();
       ev.stopPropagation();
       showDetail(p, { color: b.color, label: cat.label });
     });
     svgEl.appendChild(g);
   });
+
+  if (compact) {
+    requestAnimationFrame(function() {
+      canvas.scrollLeft = Math.max(0, canvas.scrollWidth - canvas.clientWidth);
+    });
+  }
 }
 
 function showDetail(p,cat) {
@@ -2060,37 +2149,60 @@ function showDetail(p,cat) {
   detail.classList.add("show");
 }
 function moveTip(e) {
-  tip.style.left = Math.min(e.clientX+14, window.innerWidth-340)+"px";
+  tip.style.left = Math.max(12, Math.min(e.clientX+14, window.innerWidth-340))+"px";
   tip.style.top  = (e.clientY+16)+"px";
 }
 
 /* Show / Hide */
 function show() {
   if (active||animating) return;
+  const token = ++transitionToken;
   animating = true; active = true;
+  previousFocus = document.activeElement;
   hideHint();
+  document.body.classList.add("pt-open");
+  overlay.setAttribute("aria-hidden", "false");
   flash.classList.add("on");
   setTimeout(function() {
+    if (token !== transitionToken || !active) return;
     flash.classList.remove("on");
     overlay.classList.add("active");
     buildTimeline();
     overlay.classList.add("sweeping");
-    setTimeout(function(){ animating = false; }, 650);
+    setTimeout(function(){
+      if (token !== transitionToken || !active) return;
+      animating = false;
+      closeBtn.focus({ preventScroll:true });
+    }, 650);
   }, 380);
 }
 
 function hide() {
-  if (!active) return;
+  if (!active && !animating) return;
+  ++transitionToken;
   active = false;
+  animating = false;
+  clearTimeout(resizeTimer);
   lineAnims.forEach(clearTimeout); lineAnims = [];
+  flash.classList.remove("on");
   overlay.classList.remove("active","sweeping");
+  overlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("pt-open");
   tip.classList.remove("show");
   const detail=document.getElementById("pt-detail");
   if (detail) detail.classList.remove("show");
+  if (previousFocus && typeof previousFocus.focus === "function") {
+    previousFocus.focus({ preventScroll:true });
+  }
 }
 
 closeBtn.addEventListener("click", hide);
 document.addEventListener("keydown", e => { if (e.key==="Escape" && active) hide(); });
+window.addEventListener("resize", function() {
+  if (!active || animating) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(buildTimeline, 180);
+});
 
 /* Keyboard trigger (copied from projects.html) */
 let buf = "";
@@ -2102,6 +2214,57 @@ document.addEventListener("keydown", e => {
   if (buf.endsWith("picasso") || buf.endsWith("picaso")) { buf=""; hideHint(); show(); return; }
   if (buf.length >= 2) showHint();
 }, true);
+
+/* Mobile counterpart to typing "picasso": three quick taps on the page title. */
+function installPicassoTripleTap(target, activate) {
+  if (!target) return;
+  let press = null;
+  let taps = 0;
+  let firstTapAt = 0;
+  let lastX = 0;
+  let lastY = 0;
+  let resetTimer = null;
+  const reset = function() {
+    press = null;
+    taps = 0;
+    firstTapAt = 0;
+    clearTimeout(resetTimer);
+  };
+
+  target.addEventListener("pointerdown", function(event) {
+    if (event.pointerType === "mouse" || event.isPrimary === false) return;
+    if (event.target.closest && event.target.closest("a, button, input, textarea, select, video, [contenteditable='true']")) return;
+    press = { id:event.pointerId, x:event.clientX, y:event.clientY, at:performance.now() };
+  });
+  target.addEventListener("pointerup", function(event) {
+    if (!press || press.id !== event.pointerId) return;
+    const start = press;
+    press = null;
+    if (Math.hypot(event.clientX-start.x, event.clientY-start.y) > 18 || performance.now()-start.at > 420) {
+      reset();
+      return;
+    }
+
+    const now = performance.now();
+    if (!taps || now-firstTapAt > 950 || Math.hypot(event.clientX-lastX, event.clientY-lastY) > 56) {
+      taps = 1;
+      firstTapAt = now;
+    } else {
+      taps += 1;
+    }
+    lastX = event.clientX;
+    lastY = event.clientY;
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(reset, Math.max(120, 980-(now-firstTapAt)));
+    if (taps === 3) {
+      reset();
+      activate();
+    }
+  });
+  target.addEventListener("pointercancel", reset);
+}
+
+installPicassoTripleTap(document.querySelector(".section-title"), show);
 
 })();
 </script>

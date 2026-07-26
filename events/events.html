@@ -337,13 +337,22 @@
     /* =========================================
        5. 原有页面样式
        ========================================= */
-    .news-banner { background-color: #f8f9fa; color: #555; height: 40px; display: flex; align-items: center; overflow: hidden; border-bottom: 1px solid #eaeaea; }
+    .news-banner { background-color: #f8f9fa; color: #555; height: 40px; display: flex; align-items: center; overflow: hidden; border-bottom: 1px solid #eaeaea; touch-action: manipulation; }
     .ticker-track { display: flex; animation: scroll 40s linear infinite; }
     @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     .news-banner:hover .ticker-track { animation-play-state: paused; }
     .ticker-content { display: flex; align-items: center; white-space: nowrap; padding-right: 50px; }
     .ticker-item { margin-right: 3rem; display: inline-flex; align-items: center; font-size: 0.9em; }
     .ticker-tag { font-weight: bold; color: #0056b3; margin-right: 6px; }
+
+    @media (hover: none), (pointer: coarse) {
+        .news-banner {
+            height: 44px;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+    }
 
     .event-card { display: flex; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; margin: 20px auto; max-width: 900px; height: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; }
     .event-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -3393,6 +3402,58 @@
     }
     gdrCloseBtn?.addEventListener('click', closeGdr);
     gdrOverlay?.addEventListener('click', (e) => { if (e.target === gdrOverlay) closeGdr(); });
+
+    // Mobile counterpart to typing "picasso": three quick taps on the top news strip.
+    function installPicassoTripleTap(target, activate) {
+        if (!target) return;
+        let press = null;
+        let taps = 0;
+        let firstTapAt = 0;
+        let lastX = 0;
+        let lastY = 0;
+        let resetTimer = null;
+        const reset = () => {
+            press = null;
+            taps = 0;
+            firstTapAt = 0;
+            clearTimeout(resetTimer);
+        };
+
+        target.addEventListener('pointerdown', (event) => {
+            if (event.pointerType === 'mouse' || event.isPrimary === false) return;
+            if (event.target.closest?.('a, button, input, textarea, select, video, [contenteditable="true"]')) return;
+            press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: performance.now() };
+        });
+        target.addEventListener('pointerup', (event) => {
+            if (!press || press.id !== event.pointerId) return;
+            const start = press;
+            press = null;
+            const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+            if (moved > 18 || performance.now() - start.at > 420) {
+                reset();
+                return;
+            }
+
+            const now = performance.now();
+            if (!taps || now - firstTapAt > 950 || Math.hypot(event.clientX - lastX, event.clientY - lastY) > 56) {
+                taps = 1;
+                firstTapAt = now;
+            } else {
+                taps += 1;
+            }
+            lastX = event.clientX;
+            lastY = event.clientY;
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(reset, Math.max(120, 980 - (now - firstTapAt)));
+            if (taps === 3) {
+                reset();
+                activate();
+            }
+        });
+        target.addEventListener('pointercancel', reset);
+    }
+
+    installPicassoTripleTap(document.querySelector('.news-banner'), startGuandanGameTransition);
 
     document.addEventListener('keydown', (e) => {
         if (gdrOverlay?.classList.contains('active')) {

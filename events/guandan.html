@@ -493,7 +493,7 @@
         color: #ffcd00; font: inherit; font-size: 0.7rem;
     }
 
-    @media (max-width: 860px) {
+    @media (max-width: 860px), (max-height: 600px) and (pointer: coarse) {
         .lobby { grid-template-columns: 1fr; }
         .seats { grid-template-columns: 1fr 1fr; }
         .table-wrap, .table { min-height: calc(100vh - 96px); }
@@ -3335,7 +3335,7 @@
         }
     }
 
-    @media (max-width: 860px) {
+    @media (max-width: 860px), (max-height: 600px) and (pointer: coarse) {
         .app-shell {
             padding: 8px;
         }
@@ -3807,6 +3807,74 @@
     .lobby { overflow: hidden; }
     .lobby > * { min-width: 0; max-width: 100%; }
     .lobby > .gdr-banner { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Phone layout: preserve a usable table instead of squeezing fixed seats
+       into a short viewport. The document may scroll vertically on short or
+       landscape phones, while the hand remains horizontally pannable. */
+    @media (max-width: 860px), (max-height: 600px) and (pointer: coarse) {
+        .app-shell {
+            padding:
+                max(8px, env(safe-area-inset-top))
+                max(8px, env(safe-area-inset-right))
+                max(12px, env(safe-area-inset-bottom))
+                max(8px, env(safe-area-inset-left));
+        }
+
+        .topbar .top-actions .btn,
+        .hand-tools .btn {
+            min-height: 44px;
+        }
+
+        .table-wrap,
+        .table {
+            height: max(720px, calc(100dvh - 126px));
+            min-height: 720px;
+        }
+
+        .table::before {
+            inset: 116px 12px 174px;
+        }
+
+        .center-zone {
+            inset: 270px 8px 276px;
+        }
+
+        .seat-play.p0 {
+            bottom: 270px;
+        }
+
+        .seat-play.p1 {
+            top: 354px;
+        }
+
+        .seat-play.p2 {
+            top: 218px;
+        }
+
+        .seat-play.p3 {
+            top: 354px;
+        }
+
+        .hand-zone {
+            height: 272px;
+            grid-template-rows: 82px minmax(0, 1fr);
+        }
+
+        .hand {
+            padding-inline: 14px;
+            scroll-padding-inline: 14px;
+            scrollbar-width: none;
+            touch-action: pan-x;
+        }
+
+        .hand::-webkit-scrollbar {
+            display: none;
+        }
+
+        .card {
+            --card-overlap: -4px;
+        }
+    }
 </style>
 <link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.css">
 </head>

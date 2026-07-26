@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Blog – Picasso Lab</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -18,6 +18,7 @@
 
     .wrapper { max-width: 780px; margin: 0 auto; padding: 36px 24px 56px; }
     body.article-open { overflow: hidden; }
+    body.blog-transitioning { overflow: hidden; }
 
     /* ── Hero header ── */
     .blog-hero {
@@ -25,6 +26,7 @@
       padding: 48px 32px 44px;
       position: relative;
       overflow: hidden;
+      touch-action: manipulation;
     }
     .blog-hero::before {
       content: '';
@@ -200,6 +202,8 @@
       display: none;
       position: fixed;
       inset: 0;
+      width: 100vw;
+      height: 100dvh;
       z-index: 9999;
       background: #fff;
       flex-direction: column;
@@ -372,6 +376,7 @@
     .blog-secret-transition {
       position: fixed;
       inset: 0;
+      min-height: 100dvh;
       z-index: 11000;
       display: none;
       overflow: hidden;
@@ -531,17 +536,52 @@
       background: rgba(138,63,252,.08);
     }
 
-    @media (max-width: 600px) {
-      .blog-hero { padding: 32px 20px 28px; }
+    @media (max-width: 600px), (max-height: 600px) and (pointer: coarse) {
+      .blog-hero {
+        padding: 32px 20px 28px;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-user-select: none;
+        user-select: none;
+      }
       .blog-hero h1 { font-size: 1.6rem; }
       .wrapper { padding: 22px 14px 40px; }
       .blog-card { padding: 20px; }
       .card-title { font-size: 1.05rem; }
       .card-bottom { flex-direction: column; align-items: flex-start; }
       .article-bar { padding: 0 10px; gap: 8px; }
+      .article-bar {
+        height: auto;
+        min-height: calc(52px + env(safe-area-inset-top));
+        padding:
+          env(safe-area-inset-top)
+          max(10px, env(safe-area-inset-right))
+          0
+          max(10px, env(safe-area-inset-left));
+      }
+      .article-back,
+      .article-open-tab { min-height: 44px; }
       .article-url { display: none; }
       .article-open-tab { padding: 7px 10px; }
       #blog-type-hint { bottom: 16px; }
+      .secret-auditor {
+        top: 47%;
+        width: min(270px, 66vw, 48dvh);
+        height: min(330px, 80vw, 58dvh);
+      }
+      .secret-stamp {
+        top: max(12%, calc(env(safe-area-inset-top) + 12px));
+        width: max-content;
+        max-width: calc(100vw - 32px);
+        padding: 8px 14px;
+        border-width: 4px;
+        font-size: clamp(1.45rem, 9vw, 2.8rem);
+        text-align: center;
+      }
+      .secret-caption {
+        bottom: max(7%, calc(env(safe-area-inset-bottom) + 16px));
+        width: calc(100vw - 32px);
+        font-size: clamp(1rem, 5.5vw, 1.5rem);
+      }
     }
   </style>
 </head>
@@ -602,7 +642,7 @@
   </div>
 </div>
 
-<div id="article-view" aria-hidden="true">
+<div id="article-view" role="dialog" aria-modal="true" aria-label="Blog article" aria-hidden="true">
   <div class="article-bar">
     <button class="article-back" type="button" onclick="closeArticle()">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
@@ -718,6 +758,8 @@ function fakeBlogCard(article, index) {
     </a>`;
 }
 
+let previousArticleFocus = null;
+
 function openArticle(event, url) {
   event.preventDefault();
 
@@ -730,12 +772,14 @@ function openArticle(event, url) {
   document.getElementById('article-open-tab').href = url;
   loading.classList.remove('hidden');
 
+  previousArticleFocus = document.activeElement;
   view.classList.add('active');
   view.setAttribute('aria-hidden', 'false');
   document.body.classList.add('article-open');
 
   frame.onload = () => loading.classList.add('hidden');
   frame.src = url;
+  requestAnimationFrame(() => view.querySelector('.article-back')?.focus({ preventScroll: true }));
 }
 
 function openFakeArticle(event, index) {
@@ -749,12 +793,14 @@ function openFakeArticle(event, index) {
   document.getElementById('article-url-text').textContent = displayUrl;
   document.getElementById('article-open-tab').href = `#${article.slug}`;
   loading.classList.remove('hidden');
+  previousArticleFocus = document.activeElement;
   view.classList.add('active');
   view.setAttribute('aria-hidden', 'false');
   document.body.classList.add('article-open');
 
   frame.onload = () => loading.classList.add('hidden');
   frame.srcdoc = fakeArticleHTML(article);
+  requestAnimationFrame(() => view.querySelector('.article-back')?.focus({ preventScroll: true }));
 }
 
 function fakeArticleHTML(article) {
@@ -762,10 +808,10 @@ function fakeArticleHTML(article) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <style>
   body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #161a2a; background: #fff; line-height: 1.72; }
-  article { max-width: 820px; margin: 0 auto; padding: 46px 24px 70px; }
+  article { max-width: 820px; margin: 0 auto; padding: 46px 24px calc(70px + env(safe-area-inset-bottom)); }
   .eyebrow { display: inline-flex; padding: 4px 10px; border-radius: 999px; background: rgba(0,98,155,.08); color: #00629B; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
   h1 { margin: 18px 0 14px; font-size: clamp(2rem, 5vw, 3.6rem); line-height: 1.02; letter-spacing: -.04em; }
   .meta { color: #7d859b; font-size: 14px; margin-bottom: 30px; }
@@ -800,6 +846,9 @@ function closeArticle() {
   frame.src = 'about:blank';
   frame.removeAttribute('srcdoc');
   loading.classList.remove('hidden');
+  if (previousArticleFocus && typeof previousArticleFocus.focus === 'function') {
+    previousArticleFocus.focus({ preventScroll: true });
+  }
 }
 
 function renderTrueBlogs() {
@@ -860,10 +909,12 @@ function startBlogSecretTransition() {
   stageBlogTransitionCards(overlay);
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('blog-transitioning');
   setTimeout(renderTrueBlogs, 1180);
   setTimeout(() => {
     overlay.classList.remove('active');
     overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('blog-transitioning');
   }, 1750);
 }
 
@@ -875,10 +926,12 @@ function startBlogReturnTransition() {
   stageBlogTransitionCards(overlay, true);
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('blog-transitioning');
   setTimeout(renderOfficialBlogs, 960);
   setTimeout(() => {
     overlay.classList.remove('active', 'returning');
     overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('blog-transitioning');
   }, 1560);
 }
 
@@ -897,6 +950,60 @@ function hideBlogTypeHint() {
   clearTimeout(blogHintTimer);
   blogTypeHint.classList.remove('show');
 }
+
+// Mobile counterpart to typing "picasso": three quick taps on the hero.
+function installPicassoTripleTap(target, activate) {
+  if (!target) return;
+  let press = null;
+  let taps = 0;
+  let firstTapAt = 0;
+  let lastX = 0;
+  let lastY = 0;
+  let resetTimer = null;
+  const reset = () => {
+    press = null;
+    taps = 0;
+    firstTapAt = 0;
+    clearTimeout(resetTimer);
+  };
+
+  target.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' || event.isPrimary === false) return;
+    if (event.target.closest?.('a, button, input, textarea, select, video, [contenteditable="true"]')) return;
+    press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: performance.now() };
+  });
+  target.addEventListener('pointerup', (event) => {
+    if (!press || press.id !== event.pointerId) return;
+    const start = press;
+    press = null;
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 18 || performance.now() - start.at > 420) {
+      reset();
+      return;
+    }
+
+    const now = performance.now();
+    if (!taps || now - firstTapAt > 950 || Math.hypot(event.clientX - lastX, event.clientY - lastY) > 56) {
+      taps = 1;
+      firstTapAt = now;
+    } else {
+      taps += 1;
+    }
+    lastX = event.clientX;
+    lastY = event.clientY;
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(reset, Math.max(120, 980 - (now - firstTapAt)));
+    if (taps === 3) {
+      reset();
+      activate();
+    }
+  });
+  target.addEventListener('pointercancel', reset);
+}
+
+installPicassoTripleTap(document.querySelector('.blog-hero'), () => {
+  if (document.body.classList.contains('true-blogs')) startBlogReturnTransition();
+  else startBlogSecretTransition();
+});
 
 function primeBlogKeyboardCapture() {
   if (!document.body) return;

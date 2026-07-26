@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Projects – Picasso Lab</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -21,6 +21,7 @@
       padding: 48px 32px 44px;
       position: relative;
       overflow: hidden;
+      touch-action: manipulation;
     }
     .hero::before {
       content: ''; position: absolute; top: -40%; right: -10%;
@@ -564,6 +565,7 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 /* Scene: perspective container, fullscreen fixed */
 #flip-scene {
   position: fixed; inset: 0;
+  width: 100vw; height: 100vh; height: 100dvh;
   perspective: 1600px;
   perspective-origin: 50% 40%;
   z-index: 99999;
@@ -574,7 +576,7 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 
 /* Card: the actual 3D object */
 #flip-card {
-  width: 100%; height: 100%;
+  width: 100%; height: 100%; height: 100dvh;
   transform-style: preserve-3d;
   transform: rotateY(0deg);
   transition: transform 1.15s cubic-bezier(0.65, 0, 0.35, 1);
@@ -591,7 +593,7 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 }
 #flip-front { overflow-y: scroll; background: #fff; }
 #flip-back  { transform: rotateY(180deg); background: #fff; }
-#flip-back iframe { width: 100%; height: 100%; border: none; display: block; }
+#flip-back iframe { width: 100%; height: 100%; height: 100dvh; border: none; display: block; }
 
 /*
  * Shade: sits inside #flip-scene but OUTSIDE the card,
@@ -603,6 +605,41 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   opacity: 0;
   pointer-events: none;
   z-index: 10;
+}
+
+#flip-close {
+  position: fixed;
+  top: max(12px, calc(env(safe-area-inset-top) + 8px));
+  right: max(12px, calc(env(safe-area-inset-right) + 8px));
+  z-index: 30;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+  background: rgba(4,18,30,.72);
+  color: #fff;
+  box-shadow: 0 8px 28px rgba(0,0,0,.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font: 400 25px/1 sans-serif;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(.88);
+  transition: opacity .2s ease, transform .25s ease, background .2s ease;
+}
+#flip-scene.ready #flip-close {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+#flip-close:hover,
+#flip-close:focus-visible {
+  background: rgba(0,98,155,.92);
+  outline: 3px solid rgba(255,205,0,.55);
+  outline-offset: 2px;
 }
 
 /* Typing hint — shown on front after 2 keystrokes */
@@ -659,16 +696,25 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 }
 #lab-flash.on span { transform: scale(1); opacity: 1; }
 
+@media (hover: none), (pointer: coarse) {
+  .hero {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
 </style>
 
-<div id="flip-scene">
+<div id="flip-scene" aria-hidden="true">
   <div id="flip-card">
-    <div id="flip-front"><!-- page content moved here on flip --></div>
-    <div id="flip-back">
-      <iframe id="lab-iframe" src="" allow="clipboard-read *; clipboard-write *; fullscreen *"></iframe>
+    <div id="flip-front" aria-hidden="false"><!-- page content moved here on flip --></div>
+    <div id="flip-back" aria-hidden="true">
+      <iframe id="lab-iframe" src="" title="Picasso Lab" allow="clipboard-read *; clipboard-write *; fullscreen *"></iframe>
     </div>
   </div>
   <div id="flip-shade"></div>
+  <button id="flip-close" type="button" aria-label="Return to projects">&times;</button>
 </div>
 <div id="lab-flash"><span>✨ Picasso Lab</span></div>
 <div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
@@ -678,12 +724,17 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   const scene  = document.getElementById('flip-scene');
   const card   = document.getElementById('flip-card');
   const front  = document.getElementById('flip-front');
+  const back   = document.getElementById('flip-back');
   const shade  = document.getElementById('flip-shade');
   const iframe = document.getElementById('lab-iframe');
   const flash  = document.getElementById('lab-flash');
+  const close  = document.getElementById('flip-close');
   let flipped   = false;
   let animating = false;
   let keyboardPrimed = false;
+  let desiredFlipped = history.state?.picassoLab === true;
+  let previousOverflow = '';
+  let previousFocus = null;
 
   const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint']);
 
@@ -717,6 +768,11 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   /* ── Trigger: type "picasso" / "picaso" (desktop) ── */
   let buf = '';
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && (flipped || scene.classList.contains('active'))) {
+      e.preventDefault();
+      requestFlipBack();
+      return;
+    }
     if (animating) return;
     if (e.key.length !== 1 || e.metaKey || e.ctrlKey) return;
     keyboardPrimed = true;
@@ -730,24 +786,95 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
     if (buf.length >= 2) showHint();
   }, true);
 
-  /* ── Trigger: triple-tap hero within 700ms (mobile) ── */
+  /* ── Trigger: three quick taps on the hero (mobile) ── */
   const hero = document.querySelector('.hero');
-  if (hero) {
-    let taps = 0, tapTimer;
-    hero.addEventListener('pointerdown', () => {
-      if (animating) return;
-      clearTimeout(tapTimer);
-      taps++;
-      tapTimer = setTimeout(() => { taps = 0; }, 700);
-      if (taps >= 3) { taps = 0; toggle(); }
+  function installPicassoTripleTap(target, activate) {
+    if (!target) return;
+    let press = null;
+    let taps = 0;
+    let firstTapAt = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let resetTimer = null;
+    const reset = () => {
+      press = null;
+      taps = 0;
+      firstTapAt = 0;
+      clearTimeout(resetTimer);
+    };
+
+    target.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' || event.isPrimary === false || animating) return;
+      if (event.target.closest?.('a, button, input, textarea, select, video, [contenteditable="true"]')) return;
+      press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: performance.now() };
     });
+    target.addEventListener('pointerup', (event) => {
+      if (!press || press.id !== event.pointerId) return;
+      const start = press;
+      press = null;
+      if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 18 || performance.now() - start.at > 420) {
+        reset();
+        return;
+      }
+
+      const now = performance.now();
+      if (!taps || now - firstTapAt > 950 || Math.hypot(event.clientX - lastX, event.clientY - lastY) > 56) {
+        taps = 1;
+        firstTapAt = now;
+      } else {
+        taps += 1;
+      }
+      lastX = event.clientX;
+      lastY = event.clientY;
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(reset, Math.max(120, 980 - (now - firstTapAt)));
+      if (taps === 3) {
+        reset();
+        activate();
+      }
+    });
+    target.addEventListener('pointercancel', reset);
+  }
+  installPicassoTripleTap(hero, toggle);
+
+  function toggle() {
+    if (desiredFlipped || flipped) requestFlipBack();
+    else requestFlipForward();
   }
 
-  function toggle() { flipped ? flipBack() : flipForward(); }
+  function reconcileFlipState() {
+    if (animating) return;
+    if (desiredFlipped && !flipped) flipForward();
+    else if (!desiredFlipped && flipped) flipBack();
+  }
+
+  function requestFlipForward() {
+    desiredFlipped = true;
+    if (history.state?.picassoLab !== true) {
+      history.pushState({ ...(history.state || {}), picassoLab: true }, '', window.location.href);
+    }
+    reconcileFlipState();
+  }
+
+  function requestFlipBack() {
+    desiredFlipped = false;
+    if (history.state?.picassoLab === true) {
+      history.back();
+    }
+    reconcileFlipState();
+  }
+
+  close.addEventListener('click', requestFlipBack);
+  window.addEventListener('popstate', (event) => {
+    desiredFlipped = event.state?.picassoLab === true;
+    reconcileFlipState();
+  });
 
   /* ── Forward: projects → lab ── */
   function flipForward() {
     animating = true;
+    previousFocus = document.activeElement;
+    previousOverflow = document.body.style.overflow;
 
     // Pre-load iframe quietly
     iframe.src = 'https://lab.picasso-lab.com';
@@ -767,6 +894,8 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 
       // Activate scene
       scene.classList.add('active');
+      scene.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
 
       // Animate shade: ramp up to mid-point, then fade out
       shade.style.transition = 'opacity 0.55s ease-in';
@@ -785,6 +914,12 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
       setTimeout(() => {
         flipped   = true;
         animating = false;
+        scene.classList.add('ready');
+        front.setAttribute('inert', '');
+        front.setAttribute('aria-hidden', 'true');
+        back.setAttribute('aria-hidden', 'false');
+        close.focus({ preventScroll: true });
+        reconcileFlipState();
       }, 1150);
 
     }, 480);
@@ -793,6 +928,10 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   /* ── Backward: lab → projects ── */
   function flipBack() {
     animating = true;
+    scene.classList.remove('ready');
+    front.removeAttribute('inert');
+    front.setAttribute('aria-hidden', 'false');
+    back.setAttribute('aria-hidden', 'true');
 
     // Shade: same lighting arc
     shade.style.transition = 'opacity 0.55s ease-in';
@@ -813,11 +952,22 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
       window.scrollTo(0, scrollY);
 
       scene.classList.remove('active');
-      iframe.src = '';
+      scene.setAttribute('aria-hidden', 'true');
+      iframe.src = 'about:blank';
+      document.body.style.overflow = previousOverflow;
       flipped   = false;
       animating = false;
+      if (!desiredFlipped && history.state?.picassoLab === true) {
+        history.replaceState({ ...(history.state || {}), picassoLab: false }, '', window.location.href);
+      }
+      if (previousFocus && typeof previousFocus.focus === 'function') {
+        previousFocus.focus({ preventScroll: true });
+      }
+      reconcileFlipState();
     }, 1150);
   }
+
+  if (desiredFlipped) requestAnimationFrame(reconcileFlipState);
 })();
 </script>
 </body>
