@@ -491,6 +491,8 @@
 
     .teaching-clip-shell {
       width: min(92vw, 1080px);
+      display: flex;
+      flex-direction: column;
       border: 1px solid rgba(255,255,255,0.18);
       border-radius: 12px;
       background: rgba(3, 14, 23, 0.78);
@@ -546,7 +548,8 @@
     .teaching-door-close:hover,
     .teaching-door-close:focus-visible {
       background: rgba(255,255,255,0.16);
-      outline: none;
+      outline: 3px solid rgba(255,205,0,0.72);
+      outline-offset: 2px;
     }
 
     .teaching-door-close svg {
@@ -687,7 +690,11 @@
 
     @media (max-width: 820px), (max-height: 600px) and (pointer: coarse) {
       .hero {
-        padding: 32px 20px 28px;
+        padding:
+          calc(32px + env(safe-area-inset-top))
+          max(20px, calc(env(safe-area-inset-right) + 12px))
+          28px
+          max(20px, calc(env(safe-area-inset-left) + 12px));
         -webkit-tap-highlight-color: transparent;
         -webkit-user-select: none;
         user-select: none;
@@ -697,8 +704,20 @@
         padding: 0;
       }
 
+      .toast,
+      #type-hint {
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        max-width: calc(100vw - 24px);
+        white-space: normal;
+        text-align: center;
+      }
+
       .wrap {
-        padding: 26px 14px 44px;
+        padding:
+          26px
+          max(14px, calc(env(safe-area-inset-right) + 8px))
+          calc(44px + env(safe-area-inset-bottom))
+          max(14px, calc(env(safe-area-inset-left) + 8px));
       }
 
       .course-grid {
@@ -739,8 +758,9 @@
       }
 
       #teaching-highlight-video {
-        max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 76px);
-        aspect-ratio: auto;
+        min-height: 0;
+        max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 78px);
+        aspect-ratio: 20 / 11;
       }
 
       .teaching-page-copy {
@@ -780,6 +800,7 @@
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
+        transition-delay: 0s !important;
       }
     }
   </style>
@@ -1045,6 +1066,8 @@
       let keyboardPrimed = false;
       let doorAnimationToken = 0;
       let previousFocus = null;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const doorTransitionMs = () => reducedMotion.matches ? 0 : 1080;
 
       function showToast(text) {
         clearTimeout(toastTimer);
@@ -1193,6 +1216,7 @@
         if (doorOpen || doorAnimating) return;
         doorAnimating = true;
         const animationToken = ++doorAnimationToken;
+        const transitionMs = doorTransitionMs();
         previousFocus = document.activeElement;
         hideTypeHint();
         buildPageSplit();
@@ -1201,17 +1225,26 @@
         document.body.classList.add('door-lock');
         prepareHighlight();
 
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          doorScene.classList.add('open');
-        }));
-
-        setTimeout(() => {
+        const finishOpen = () => {
           if (animationToken !== doorAnimationToken) return;
           playHighlight();
           doorOpen = true;
           doorAnimating = false;
           doorClose.focus({ preventScroll: true });
-        }, 1080);
+        };
+
+        const revealDoor = () => {
+          if (animationToken !== doorAnimationToken) return;
+          doorScene.classList.add('open');
+        };
+
+        if (transitionMs === 0) {
+          revealDoor();
+          finishOpen();
+        } else {
+          requestAnimationFrame(() => requestAnimationFrame(revealDoor));
+          setTimeout(finishOpen, transitionMs);
+        }
       }
 
       function closeDoor() {
@@ -1232,7 +1265,7 @@
           if (previousFocus && typeof previousFocus.focus === 'function') {
             previousFocus.focus({ preventScroll: true });
           }
-        }, 1080);
+        }, doorTransitionMs());
       }
 
       highlightVideo.addEventListener('timeupdate', () => {
@@ -1285,6 +1318,11 @@
           lastY = event.clientY;
           clearTimeout(resetTimer);
           resetTimer = setTimeout(reset, Math.max(120, 980 - (now - firstTapAt)));
+          if (taps < 3) {
+            showToast(taps === 2
+              ? 'One more tap to open the hidden lecture.'
+              : 'Tap the header twice more.');
+          }
           if (taps === 3) {
             reset();
             activate();

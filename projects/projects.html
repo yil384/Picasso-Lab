@@ -223,7 +223,9 @@
     #iframe-view {
       display: none;
       position: fixed; inset: 0; z-index: 9999;
+      width: 100vw; height: 100vh; height: 100dvh;
       flex-direction: column;
+      background: #fff;
     }
     #iframe-view.active { display: flex; }
 
@@ -309,13 +311,70 @@
     .blocked-cta svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
     @media (max-width: 640px) {
-      .hero { padding: 32px 20px 28px; }
+      .hero {
+        padding:
+          calc(32px + env(safe-area-inset-top))
+          max(20px, calc(env(safe-area-inset-right) + 12px))
+          28px
+          max(20px, calc(env(safe-area-inset-left) + 12px));
+      }
       .hero h1 { font-size: 1.6rem; }
-      .wrapper { padding: 22px 14px 40px; }
+      .wrapper {
+        padding:
+          22px
+          max(14px, calc(env(safe-area-inset-right) + 8px))
+          calc(40px + env(safe-area-inset-bottom))
+          max(14px, calc(env(safe-area-inset-left) + 8px));
+      }
       .project-grid { grid-template-columns: 1fr; gap: 16px; }
       .card-thumb { height: 165px; }
+      .card-head { align-items: flex-start; gap: 8px; }
+      .card-domain {
+        min-width: 0;
+        max-width: 48%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .card-footer { align-items: flex-end; }
       .bar-url { display: none; }
-      .iframe-bar { padding: 0 10px; gap: 8px; }
+      .iframe-bar {
+        height: auto;
+        min-height: calc(52px + env(safe-area-inset-top));
+        padding:
+          env(safe-area-inset-top)
+          max(10px, env(safe-area-inset-right))
+          0
+          max(10px, env(safe-area-inset-left));
+        gap: 8px;
+      }
+      .bar-back,
+      .bar-ext { min-height: 44px; }
+      .bar-ext { padding-inline: 10px; }
+    }
+
+    @media (max-height: 600px) and (pointer: coarse) {
+      .hero {
+        padding:
+          calc(22px + env(safe-area-inset-top))
+          max(20px, calc(env(safe-area-inset-right) + 12px))
+          20px
+          max(20px, calc(env(safe-area-inset-left) + 12px));
+      }
+      .hero h1 { font-size: 1.55rem; }
+      .iframe-bar {
+        height: auto;
+        min-height: calc(52px + env(safe-area-inset-top));
+        padding:
+          env(safe-area-inset-top)
+          max(10px, env(safe-area-inset-right))
+          0
+          max(10px, env(safe-area-inset-left));
+        gap: 8px;
+      }
+      .bar-back,
+      .bar-ext { min-height: 44px; }
+      .bar-url { display: none; }
     }
   </style>
 </head>
@@ -503,8 +562,11 @@ function renderCards() {
   `).join('');
 }
 
-function openProject(idx) {
+let projectLoadTimer = null;
+
+function openProject(idx, fromHistory = false) {
   const p = PROJECTS[idx];
+  if (!p) return;
   const view     = document.getElementById('iframe-view');
   const iframe   = document.getElementById('project-iframe');
   const overlay  = document.getElementById('iframe-overlay');
@@ -524,13 +586,21 @@ function openProject(idx) {
   document.getElementById('hero-section').style.display = 'none';
   document.getElementById('project-list').style.display = 'none';
   document.body.style.overflow = 'hidden';
+  if (!fromHistory && history.state?.picassoProjectPreview !== idx) {
+    history.pushState(
+      { ...(history.state || {}), picassoProjectPreview: idx },
+      '',
+      window.location.href
+    );
+  }
 
   let done = false;
-  const timer = setTimeout(() => { if (!done) showBlocked(); }, 11000);
+  clearTimeout(projectLoadTimer);
+  projectLoadTimer = setTimeout(() => { if (!done) showBlocked(); }, 11000);
 
   iframe.onload = () => {
     done = true;
-    clearTimeout(timer);
+    clearTimeout(projectLoadTimer);
     overlay.classList.add('hide');
   };
   iframe.src = p.url;
@@ -541,7 +611,12 @@ function showBlocked() {
   document.getElementById('iframe-blocked').classList.add('show');
 }
 
-function closeProject() {
+function closeProject(fromHistory = false) {
+  if (!fromHistory && Number.isInteger(history.state?.picassoProjectPreview)) {
+    history.back();
+    return;
+  }
+  clearTimeout(projectLoadTimer);
   document.getElementById('iframe-view').classList.remove('active');
   document.getElementById('project-iframe').src = '';
   document.getElementById('hero-section').style.display = '';
@@ -549,7 +624,22 @@ function closeProject() {
   document.body.style.overflow = '';
 }
 
+function syncProjectPreviewState(state) {
+  const view = document.getElementById('iframe-view');
+  const idx = state?.picassoLab === true ? null : state?.picassoProjectPreview;
+  if (Number.isInteger(idx) && PROJECTS[idx] && !view.classList.contains('active')) {
+    openProject(idx, true);
+  } else if ((!Number.isInteger(idx) || !PROJECTS[idx]) && view.classList.contains('active')) {
+    closeProject(true);
+  }
+}
+
+window.addEventListener('popstate', (event) => {
+  syncProjectPreviewState(event.state);
+});
+
 renderCards();
+syncProjectPreviewState(history.state);
 // Use IntersectionObserver to play videos when visible (handles iframe autoplay restrictions)
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => {
@@ -595,6 +685,60 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 #flip-back  { transform: rotateY(180deg); background: #fff; }
 #flip-back iframe { width: 100%; height: 100%; height: 100dvh; border: none; display: block; }
 
+#flip-status {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 28px;
+  background: #fff;
+  color: #5c6280;
+  text-align: center;
+  font: 600 .86rem/1.5 'Inter', sans-serif;
+  transition: opacity .25s ease;
+}
+#flip-back.loaded #flip-status {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .25s ease, visibility 0s linear .25s;
+}
+.flip-launch-mark {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #00629B, #003355);
+  color: #FFCD00;
+  box-shadow: 0 16px 40px rgba(0,98,155,.22);
+  font-size: 1.55rem;
+  font-weight: 900;
+}
+.flip-status-title {
+  color: #172033;
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+#flip-status-text {
+  max-width: 330px;
+  font-weight: 500;
+}
+#flip-status a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #00629B;
+  color: #fff;
+  text-decoration: none;
+  font-size: .8rem;
+}
+
 /*
  * Shade: sits inside #flip-scene but OUTSIDE the card,
  * darkens at mid-flip to simulate light hitting the card edge.
@@ -637,6 +781,44 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 }
 #flip-close:hover,
 #flip-close:focus-visible {
+  background: rgba(0,98,155,.92);
+  outline: 3px solid rgba(255,205,0,.55);
+  outline-offset: 2px;
+}
+
+#flip-open {
+  position: fixed;
+  top: max(12px, calc(env(safe-area-inset-top) + 8px));
+  right: max(70px, calc(env(safe-area-inset-right) + 66px));
+  z-index: 30;
+  min-width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 13px;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 999px;
+  background: rgba(4,18,30,.72);
+  color: #fff;
+  box-shadow: 0 8px 28px rgba(0,0,0,.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font: 700 12px/1 'Inter', sans-serif;
+  text-decoration: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(.88);
+  transition: opacity .2s ease, transform .25s ease, background .2s ease;
+}
+#flip-scene.ready #flip-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+#flip-open:hover,
+#flip-open:focus-visible {
   background: rgba(0,98,155,.92);
   outline: 3px solid rgba(255,205,0,.55);
   outline-offset: 2px;
@@ -704,17 +886,100 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   }
 }
 
+@media (max-width: 700px), (max-height: 600px) and (pointer: coarse) {
+  #type-hint {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px);
+    white-space: normal;
+    text-align: center;
+  }
+  #flip-card {
+    transition-duration: .78s;
+  }
+  #flip-back {
+    --flip-toolbar-h: 58px;
+    display: flex;
+    flex-direction: column;
+    padding-top: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
+    background: #07131f;
+  }
+  #flip-back::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    background: rgba(4,18,30,.96);
+  }
+  #flip-back iframe {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+  }
+  #flip-status {
+    top: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
+  }
+  #flip-close {
+    top: calc(env(safe-area-inset-top) + 7px);
+    left: max(8px, env(safe-area-inset-left));
+    right: auto;
+    width: auto;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 13px;
+    border-radius: 999px;
+    font-size: 0;
+  }
+  #flip-close::before {
+    content: "‹";
+    margin-right: 5px;
+    font: 400 24px/1 sans-serif;
+  }
+  #flip-close::after {
+    content: "Projects";
+    font: 700 12px/1 'Inter', sans-serif;
+  }
+  #flip-open {
+    top: calc(env(safe-area-inset-top) + 7px);
+    right: max(8px, env(safe-area-inset-right));
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #flip-card,
+  #flip-shade,
+  #flip-close,
+  #flip-open,
+  #lab-flash,
+  #lab-flash span,
+  #flip-status {
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+    animation-duration: .01ms !important;
+  }
+}
+
 </style>
 
 <div id="flip-scene" aria-hidden="true">
   <div id="flip-card">
     <div id="flip-front" aria-hidden="false"><!-- page content moved here on flip --></div>
     <div id="flip-back" aria-hidden="true">
+      <div id="flip-status" role="status">
+        <span class="flip-launch-mark" aria-hidden="true">P</span>
+        <strong class="flip-status-title">Picasso Lab</strong>
+        <span id="flip-status-text">Continue to the full Lab experience in a new tab.</span>
+        <a href="https://lab.picasso-lab.com" target="_blank" rel="noopener">Open Picasso Lab</a>
+      </div>
       <iframe id="lab-iframe" src="" title="Picasso Lab" allow="clipboard-read *; clipboard-write *; fullscreen *"></iframe>
     </div>
   </div>
   <div id="flip-shade"></div>
   <button id="flip-close" type="button" aria-label="Return to projects">&times;</button>
+  <a id="flip-open" href="https://lab.picasso-lab.com" target="_blank" rel="noopener" aria-label="Open Picasso Lab in a new tab">↗ Open</a>
 </div>
 <div id="lab-flash"><span>✨ Picasso Lab</span></div>
 <div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
@@ -729,24 +994,71 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   const iframe = document.getElementById('lab-iframe');
   const flash  = document.getElementById('lab-flash');
   const close  = document.getElementById('flip-close');
+  const statusText = document.getElementById('flip-status-text');
   let flipped   = false;
   let animating = false;
   let keyboardPrimed = false;
   let desiredFlipped = history.state?.picassoLab === true;
   let previousOverflow = '';
   let previousFocus = null;
+  let iframeWaitTimer = null;
+  let flipTransitionToken = 0;
+  let flipDirection = null;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const compactFlip = window.matchMedia('(max-width: 700px), (max-height: 600px) and (pointer: coarse)');
+  const flipDurationMs = () => reducedMotion.matches ? 0 : (compactFlip.matches ? 780 : 1150);
+  const flashDurationMs = () => reducedMotion.matches ? 0 : (compactFlip.matches ? 280 : 480);
+  const LAB_URL = 'https://lab.picasso-lab.com';
+  const labEmbedParents = new Set([
+    'https://yufeiding.ucsd.edu',
+    'https://www.yufeiding.ucsd.edu',
+    'https://yufei.ucsd.edu',
+    'https://www.yufei.ucsd.edu',
+    'https://picasso.ucsd.edu',
+    'https://www.picasso.ucsd.edu'
+  ]);
+  const canEmbedLab = labEmbedParents.has(window.location.origin);
 
   const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint']);
 
+  iframe.addEventListener('load', () => {
+    if (
+      !desiredFlipped ||
+      !canEmbedLab ||
+      !iframe.getAttribute('src')?.startsWith(LAB_URL)
+    ) return;
+    clearTimeout(iframeWaitTimer);
+    back.classList.add('loaded');
+  });
+
+  function resetLabFrame() {
+    clearTimeout(iframeWaitTimer);
+    iframe.src = 'about:blank';
+    back.classList.remove('loaded');
+    statusText.textContent = canEmbedLab
+      ? 'Opening the full Lab experience…'
+      : 'Continue to the full Lab experience in a new tab.';
+  }
+
   /* ── Typing hint ── */
   const typeHint = document.getElementById('type-hint');
+  const typeHintMarkup = typeHint.innerHTML;
   let hintTimer = null;
   function showHint() {
+    typeHint.innerHTML = typeHintMarkup;
     typeHint.classList.add('show');
     clearTimeout(hintTimer);
     hintTimer = setTimeout(() => typeHint.classList.remove('show'), 3000);
   }
   function hideHint() { clearTimeout(hintTimer); typeHint.classList.remove('show'); }
+  function showTapHint(remaining) {
+    typeHint.textContent = remaining === 1
+      ? 'One more tap to open Picasso Lab ✨'
+      : 'Tap the header twice more ✨';
+    typeHint.classList.add('show');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => typeHint.classList.remove('show'), 1100);
+  }
 
   function primeKeyboardCapture() {
     if (!document.body) return;
@@ -828,6 +1140,7 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
       lastY = event.clientY;
       clearTimeout(resetTimer);
       resetTimer = setTimeout(reset, Math.max(120, 980 - (now - firstTapAt)));
+      if (taps < 3) showTapHint(3 - taps);
       if (taps === 3) {
         reset();
         activate();
@@ -843,7 +1156,25 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
   }
 
   function reconcileFlipState() {
-    if (animating) return;
+    if (animating) {
+      if (!desiredFlipped && flipDirection === 'forward') {
+        ++flipTransitionToken;
+        flash.classList.remove('on');
+        shade.style.opacity = '0';
+        if (scene.classList.contains('active')) {
+          const reverseImmediately = !card.classList.contains('flipped');
+          animating = false;
+          flipDirection = null;
+          flipBack(reverseImmediately);
+        } else {
+          resetLabFrame();
+          animating = false;
+          flipDirection = null;
+          flipped = false;
+        }
+      }
+      return;
+    }
     if (desiredFlipped && !flipped) flipForward();
     else if (!desiredFlipped && flipped) flipBack();
   }
@@ -872,17 +1203,47 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 
   /* ── Forward: projects → lab ── */
   function flipForward() {
+    const token = ++flipTransitionToken;
     animating = true;
+    flipDirection = 'forward';
+    const flipMs = flipDurationMs();
+    const shadeHalfMs = Math.round(flipMs / 2);
     previousFocus = document.activeElement;
     previousOverflow = document.body.style.overflow;
 
-    // Pre-load iframe quietly
-    iframe.src = 'https://lab.picasso-lab.com';
+    // The GitHub Pages wrapper is not in the Lab server's frame-ancestors
+    // allowlist, so Google Sites must use the explicit new-tab handoff.
+    back.classList.remove('loaded');
+    clearTimeout(iframeWaitTimer);
+    if (canEmbedLab) {
+      statusText.textContent = 'Opening the full Lab experience…';
+      iframe.src = LAB_URL;
+      iframeWaitTimer = setTimeout(() => {
+        if (
+          token !== flipTransitionToken ||
+          !scene.classList.contains('active') ||
+          back.classList.contains('loaded')
+        ) return;
+        statusText.textContent = 'Still loading — you can open it directly.';
+      }, 7000);
+    } else {
+      iframe.src = 'about:blank';
+      statusText.textContent = 'Continue to the full Lab experience in a new tab.';
+    }
 
     // Show activation flash
     flash.classList.add('on');
 
     setTimeout(() => {
+      if (token !== flipTransitionToken) return;
+      if (!desiredFlipped) {
+        flash.classList.remove('on');
+        resetLabFrame();
+        animating = false;
+        flipDirection = null;
+        reconcileFlipState();
+        return;
+      }
       flash.classList.remove('on');
 
       // Capture scroll, move page content into front face
@@ -898,54 +1259,74 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
       document.body.style.overflow = 'hidden';
 
       // Animate shade: ramp up to mid-point, then fade out
-      shade.style.transition = 'opacity 0.55s ease-in';
+      shade.style.transition = `opacity ${shadeHalfMs / 1000}s ease-in`;
       shade.style.opacity    = '0.88';
       setTimeout(() => {
-        shade.style.transition = 'opacity 0.55s ease-out';
+        if (token !== flipTransitionToken) return;
+        shade.style.transition = `opacity ${shadeHalfMs / 1000}s ease-out`;
         shade.style.opacity    = '0';
-      }, 575);
+      }, shadeHalfMs);
 
       // Flip the card
-      requestAnimationFrame(() => requestAnimationFrame(() => {
+      const applyForwardFlip = () => {
+        if (token !== flipTransitionToken || !desiredFlipped) return;
         card.classList.add('flipped');
-      }));
+      };
+      if (flipMs === 0) {
+        applyForwardFlip();
+      } else {
+        requestAnimationFrame(() => requestAnimationFrame(applyForwardFlip));
+      }
 
       // Done
       setTimeout(() => {
+        if (token !== flipTransitionToken || !desiredFlipped) return;
+        card.classList.add('flipped');
         flipped   = true;
         animating = false;
+        flipDirection = null;
         scene.classList.add('ready');
         front.setAttribute('inert', '');
         front.setAttribute('aria-hidden', 'true');
         back.setAttribute('aria-hidden', 'false');
         close.focus({ preventScroll: true });
         reconcileFlipState();
-      }, 1150);
+      }, flipMs);
 
-    }, 480);
+    }, flashDurationMs());
   }
 
   /* ── Backward: lab → projects ── */
-  function flipBack() {
+  function flipBack(immediate = false) {
+    const token = ++flipTransitionToken;
     animating = true;
+    flipDirection = 'backward';
+    const flipMs = immediate ? 0 : flipDurationMs();
+    const shadeHalfMs = Math.round(flipMs / 2);
     scene.classList.remove('ready');
     front.removeAttribute('inert');
     front.setAttribute('aria-hidden', 'false');
     back.setAttribute('aria-hidden', 'true');
 
     // Shade: same lighting arc
-    shade.style.transition = 'opacity 0.55s ease-in';
-    shade.style.opacity    = '0.88';
-    setTimeout(() => {
-      shade.style.transition = 'opacity 0.55s ease-out';
-      shade.style.opacity    = '0';
-    }, 575);
+    if (flipMs > 0) {
+      shade.style.transition = `opacity ${shadeHalfMs / 1000}s ease-in`;
+      shade.style.opacity    = '0.88';
+      setTimeout(() => {
+        if (token !== flipTransitionToken) return;
+        shade.style.transition = `opacity ${shadeHalfMs / 1000}s ease-out`;
+        shade.style.opacity    = '0';
+      }, shadeHalfMs);
+    } else {
+      shade.style.opacity = '0';
+    }
 
     // Flip back
     card.classList.remove('flipped');
 
     // After animation: restore DOM
     setTimeout(() => {
+      if (token !== flipTransitionToken) return;
       const scrollY = front.scrollTop;
       Array.from(front.children)
         .forEach(el => document.body.insertBefore(el, scene));
@@ -953,18 +1334,16 @@ document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v))
 
       scene.classList.remove('active');
       scene.setAttribute('aria-hidden', 'true');
-      iframe.src = 'about:blank';
+      resetLabFrame();
       document.body.style.overflow = previousOverflow;
       flipped   = false;
       animating = false;
-      if (!desiredFlipped && history.state?.picassoLab === true) {
-        history.replaceState({ ...(history.state || {}), picassoLab: false }, '', window.location.href);
-      }
-      if (previousFocus && typeof previousFocus.focus === 'function') {
+      flipDirection = null;
+      if (!desiredFlipped && previousFocus && typeof previousFocus.focus === 'function') {
         previousFocus.focus({ preventScroll: true });
       }
       reconcileFlipState();
-    }, 1150);
+    }, flipMs);
   }
 
   if (desiredFlipped) requestAnimationFrame(reconcileFlipState);

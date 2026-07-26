@@ -3808,6 +3808,11 @@
     .lobby > * { min-width: 0; max-width: 100%; }
     .lobby > .gdr-banner { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
+    @keyframes playedCardInMobile {
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
     /* Phone layout: preserve a usable table instead of squeezing fixed seats
        into a short viewport. The document may scroll vertically on short or
        landscape phones, while the hand remains horizontally pannable. */
@@ -3821,38 +3826,158 @@
         }
 
         .topbar .top-actions .btn,
-        .hand-tools .btn {
+        .hand-tools .btn,
+        .lobby .btn,
+        .lobby select {
             min-height: 44px;
+        }
+
+        .topbar .top-actions {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scrollbar-width: none;
+            scroll-snap-type: x proximity;
+        }
+
+        .topbar .top-actions .btn {
+            scroll-snap-align: start;
+        }
+
+        .phase-panel {
+            width: calc(100% - 16px);
+            max-height: calc(100% - 32px);
+            padding: 16px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .phase-panel .btn {
+            min-height: 44px;
+        }
+
+        .toast {
+            bottom: calc(16px + env(safe-area-inset-bottom));
+            max-width: calc(100vw - 24px);
+            white-space: normal;
+            text-align: center;
+        }
+
+        #return-type-hint {
+            bottom: calc(68px + env(safe-area-inset-bottom));
+            max-width: calc(100vw - 24px);
+            white-space: normal;
+            text-align: center;
         }
 
         .table-wrap,
         .table {
-            height: max(720px, calc(100dvh - 126px));
-            min-height: 720px;
+            height: 820px;
+            min-height: 820px;
         }
 
         .table::before {
-            inset: 116px 12px 174px;
+            inset: 104px 12px 278px;
         }
 
         .center-zone {
-            inset: 270px 8px 276px;
+            inset: 262px 8px auto;
+            height: 138px;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+        }
+
+        .center-card {
+            width: min(520px, calc(100% - 32px));
+            height: 100%;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            pointer-events: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .starting-card-banner {
+            padding-block: 3px;
+        }
+
+        .starting-card-banner span:last-child {
+            display: none;
+        }
+
+        .table-tribute {
+            max-height: none;
+            overflow: visible;
         }
 
         .seat-play.p0 {
-            bottom: 270px;
+            top: 410px;
+            bottom: auto;
         }
 
         .seat-play.p1 {
-            top: 354px;
+            top: 410px;
         }
 
         .seat-play.p2 {
-            top: 218px;
+            top: 120px;
         }
 
         .seat-play.p3 {
-            top: 354px;
+            top: 410px;
+        }
+
+        .seat-play {
+            width: clamp(92px, 30vw, 126px);
+            min-width: 0;
+            max-width: clamp(92px, 30vw, 126px);
+        }
+
+        .seat-play.p1 {
+            left: 6px;
+        }
+
+        .seat-play.p3 {
+            right: 6px;
+        }
+
+        .trick-card-stack {
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .seat-play .card.small {
+            --card-overlap: -20px;
+        }
+
+        .seat-play.fresh .trick-card-stack .card.small {
+            animation-name: playedCardInMobile;
+        }
+
+        .relation-band,
+        .play-caption {
+            display: none;
+        }
+
+        .player.p2 {
+            top: 52px;
+        }
+
+        .player.p1 {
+            left: 8px;
+            top: 194px;
+        }
+
+        .player.p3 {
+            right: 8px;
+            top: 194px;
+        }
+
+        .player.p0 {
+            bottom: 278px;
         }
 
         .hand-zone {
@@ -3864,7 +3989,7 @@
             padding-inline: 14px;
             scroll-padding-inline: 14px;
             scrollbar-width: none;
-            touch-action: pan-x;
+            touch-action: pan-x pan-y;
         }
 
         .hand::-webkit-scrollbar {
@@ -3873,6 +3998,149 @@
 
         .card {
             --card-overlap: -4px;
+        }
+
+        .turn-timer {
+            order: -1;
+        }
+    }
+
+    @media (max-width: 390px) {
+        .brand p {
+            display: none;
+        }
+
+        .player {
+            width: 112px;
+        }
+
+        .player-small {
+            display: none;
+        }
+
+        .center-card {
+            width: calc(100% - 20px);
+        }
+    }
+
+    @media (max-height: 500px) and (orientation: landscape) and (pointer: coarse) {
+        .brand p {
+            display: none;
+        }
+
+        .app-shell {
+            padding:
+                max(6px, env(safe-area-inset-top))
+                max(6px, env(safe-area-inset-right))
+                max(8px, env(safe-area-inset-bottom))
+                max(6px, env(safe-area-inset-left));
+        }
+
+        .topbar {
+            grid-template-columns: minmax(170px, 1fr) minmax(0, 46vw);
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .topbar .top-actions {
+            width: 100%;
+        }
+
+        .table-wrap,
+        .table {
+            height: 600px;
+            min-height: 600px;
+        }
+
+        .table::before {
+            inset: 92px 12px 218px;
+        }
+
+        .player-small {
+            display: none;
+        }
+
+        .player.p2 {
+            top: 48px;
+        }
+
+        .player.p1 {
+            left: 8px;
+            top: 70px;
+        }
+
+        .player.p3 {
+            right: 8px;
+            top: 70px;
+        }
+
+        .player.p0 {
+            bottom: 218px;
+        }
+
+        .center-zone {
+            inset: 180px 150px auto;
+            height: 126px;
+        }
+
+        .center-card {
+            width: min(520px, 100%);
+        }
+
+        .seat-play {
+            width: 126px;
+            max-width: 126px;
+        }
+
+        .seat-play.p2 {
+            top: 112px;
+        }
+
+        .seat-play.p1 {
+            left: 8px;
+            top: 160px;
+        }
+
+        .seat-play.p3 {
+            right: 8px;
+            top: 160px;
+        }
+
+        .seat-play.p0 {
+            left: calc(50% + 160px);
+            top: 312px;
+        }
+
+        .hand-zone {
+            height: 210px;
+            grid-template-rows: 50px minmax(0, 1fr);
+        }
+
+        .hand-feedback {
+            display: none;
+        }
+
+        .hand {
+            height: 100%;
+            min-height: 0;
+            padding-block: 32px 4px;
+        }
+    }
+
+    @media (max-width: 520px) and (max-height: 500px) and (orientation: landscape) and (pointer: coarse) {
+        .center-zone {
+            right: 126px;
+            left: 126px;
+        }
+
+        .seat-play {
+            width: 108px;
+            max-width: 108px;
+        }
+
+        .seat-play.p0 {
+            left: calc(50% + 125px);
         }
     }
 </style>

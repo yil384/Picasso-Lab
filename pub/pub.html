@@ -41,7 +41,7 @@
                    "PingFang SC", "Microsoft YaHei", sans-serif;
       line-height: 1.6;
       color: #2a2a2a;
-      padding-top:    clamp(28px, 4vw,  64px);
+      padding-top:    calc(clamp(28px, 4vw, 64px) + env(safe-area-inset-top));
       padding-right:  calc(clamp(40px, 12vw, 200px) + env(safe-area-inset-right));
       padding-bottom: calc(clamp(56px,  7vw,  96px) + env(safe-area-inset-bottom));
       padding-left:   calc(clamp(40px, 12vw, 200px) + env(safe-area-inset-left));
@@ -292,6 +292,8 @@
       body {
         font-size: 15.5px;
         line-height: 1.55;
+        padding-right: calc(20px + env(safe-area-inset-right));
+        padding-left: calc(20px + env(safe-area-inset-left));
       }
 
       .topic-bar {
@@ -327,7 +329,7 @@
         min-width: 64px;
         font-size: 15px;
         font-weight: 700;
-        min-height: 40px;
+        min-height: 44px;
         padding: 0 18px;
       }
 
@@ -878,6 +880,9 @@
 #pt-overlay.sweeping {
   clip-path: polygon(0 0,102% -2%,101% 12%,102% 32%,101% 58%,102% 80%,100% 102%,0 100%);
 }
+#pt-mobile-toolbar {
+  display: none;
+}
 /* Chart canvas fills the ENTIRE overlay (detail panel floats on top) */
 #pt-canvas {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -907,9 +912,14 @@
 #pt-detail.show { opacity: 1; transform: translateY(0); }
 /* Re-enable pointer events only on interactive children */
 #pt-detail a,
-#pt-detail .pt-tag { pointer-events: auto; }
-#pt-detail:not(.show) a,
-#pt-detail:not(.show) .pt-tag { pointer-events: none; }
+#pt-detail .pt-tag,
+.pt-detail-close { pointer-events: none; }
+#pt-detail.show a,
+#pt-detail.show .pt-tag,
+#pt-detail.show .pt-detail-close { pointer-events: auto; }
+.pt-detail-close {
+  display: none;
+}
 
 /* ─── Close button (light on dark bg) ─── */
 #pt-close {
@@ -991,10 +1001,45 @@
 body.pt-open { overflow:hidden; }
 
 @media (max-width:860px), (max-height:600px) and (pointer:coarse) {
+  #pt-mobile-toolbar {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 300;
+    min-height: calc(62px + env(safe-area-inset-top));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding:
+      calc(env(safe-area-inset-top) + 8px)
+      calc(66px + env(safe-area-inset-right))
+      8px
+      max(14px, calc(env(safe-area-inset-left) + 8px));
+    border-bottom: 1px solid rgba(255,255,255,.1);
+    background: rgba(9,13,19,.94);
+    box-shadow: 0 8px 28px rgba(0,0,0,.24);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    color: #fff;
+    font-family: "Inter", ui-sans-serif, sans-serif;
+  }
+  #pt-mobile-toolbar strong {
+    font-size: 13px;
+    letter-spacing: .02em;
+  }
+  #pt-mobile-toolbar span {
+    color: rgba(255,255,255,.5);
+    font-size: 10px;
+    line-height: 1.3;
+  }
   #pt-canvas {
+    top: calc(62px + env(safe-area-inset-top));
+    right: env(safe-area-inset-right);
+    bottom: env(safe-area-inset-bottom);
+    left: env(safe-area-inset-left);
     overflow:auto;
     -webkit-overflow-scrolling:touch;
-    touch-action:pan-x pan-y;
+    touch-action:pan-x pan-y pinch-zoom;
   }
   #pt-svg {
     position:relative;
@@ -1003,33 +1048,98 @@ body.pt-open { overflow:hidden; }
     max-height:none;
   }
   #pt-close {
-    top:max(10px, calc(env(safe-area-inset-top) + 6px));
+    top:calc(env(safe-area-inset-top) + 9px);
     right:max(10px, calc(env(safe-area-inset-right) + 6px));
-    width:46px;
-    height:46px;
+    width:44px;
+    height:44px;
     background:rgba(13,17,23,.82);
     color:rgba(255,255,255,.88);
   }
   #pt-detail {
-    max-height:360px;
-    max-height:min(44dvh, 360px);
+    left:max(8px, env(safe-area-inset-left));
+    right:max(8px, env(safe-area-inset-right));
+    bottom:max(8px, env(safe-area-inset-bottom));
+    max-height:380px;
+    max-height:min(48dvh, 380px);
     display:block;
     overflow-y:auto;
+    border:1px solid rgba(255,255,255,.11);
+    border-radius:18px;
     padding:
-      12px
-      max(14px, calc(env(safe-area-inset-right) + 8px))
-      calc(12px + env(safe-area-inset-bottom))
-      max(14px, calc(env(safe-area-inset-left) + 8px));
+      44px 14px 14px;
     pointer-events:none;
   }
   #pt-detail.show { pointer-events:auto; }
   #pt-detail > div { overflow:visible !important; }
+  .pt-detail-close {
+    position: sticky;
+    top: 5px;
+    float: right;
+    margin: -39px -9px -5px 8px;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: rgba(255,255,255,.72);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  #pt-detail .pt-detail-title {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+  #pt-detail .pt-detail-desc,
+  #pt-detail .pt-detail-auth {
+    font-size: 11.5px !important;
+    line-height: 1.5 !important;
+  }
+  #pt-detail .pt-detail-meta span {
+    font-size: 10.5px !important;
+  }
+  #pt-detail .pt-detail-read {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+  }
   #pt-type-hint,
   #pt-tip { display:none !important; }
+  #pt-type-hint.mobile-tap {
+    bottom:calc(16px + env(safe-area-inset-bottom));
+    display:block !important;
+    width:max-content;
+    max-width:calc(100vw - 24px);
+    white-space:normal;
+    text-align:center;
+  }
   .section-title {
     -webkit-tap-highlight-color:transparent;
     -webkit-user-select:none;
     user-select:none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #pt-overlay,
+  #pt-flash,
+  #pt-flash span,
+  #pt-overlay * {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-delay: 0s !important;
+  }
+  #pt-overlay .pt-pop,
+  #pt-overlay .pt-fade {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  #pt-overlay .pt-dash {
+    stroke-dashoffset: 0 !important;
   }
 }
 
@@ -1054,6 +1164,10 @@ body.pt-open { overflow:hidden; }
 </style>
 
 <div id="pt-overlay" role="dialog" aria-modal="true" aria-label="Picasso Lab Research Landscape" aria-hidden="true">
+  <div id="pt-mobile-toolbar" aria-hidden="true">
+    <strong>Research Landscape</strong>
+    <span>Swipe the timeline · tap a node for details</span>
+  </div>
   <div id="pt-canvas">
     <svg id="pt-svg"></svg>
   </div>
@@ -1075,15 +1189,19 @@ const closeBtn = document.getElementById("pt-close");
 const flash    = document.getElementById("pt-flash");
 const typeHint = document.getElementById("pt-type-hint");
 const tip      = document.getElementById("pt-tip");
+const detailPanel = document.getElementById("pt-detail");
 
 /* Click on chart background (not a dot) dismisses detail panel */
 canvas.addEventListener("click", function() {
-  const d = document.getElementById("pt-detail");
-  if (d) d.classList.remove("show");
+  detailPanel.classList.remove("show");
+});
+detailPanel.addEventListener("click", function(event) {
+  if (event.target.closest(".pt-detail-close")) detailPanel.classList.remove("show");
 });
 
 let active = false, animating = false, keyboardPrimed = false, lineAnims = [];
 let previousFocus = null, resizeTimer = null, transitionToken = 0;
+const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 /* SVG fills canvas via viewBox — no pan/zoom needed */
 
@@ -1100,13 +1218,29 @@ document.addEventListener("pointerenter", primeKeyboardCapture);
 document.addEventListener("mousemove", () => { if (!keyboardPrimed) primeKeyboardCapture(); }, { once:true });
 
 /* Typing hint */
+const typeHintMarkup = typeHint.innerHTML;
 let hintTimer = null;
 function showHint() {
+  typeHint.innerHTML = typeHintMarkup;
+  typeHint.classList.remove("mobile-tap");
   typeHint.classList.add("show");
   clearTimeout(hintTimer);
   hintTimer = setTimeout(() => typeHint.classList.remove("show"), 3000);
 }
-function hideHint() { clearTimeout(hintTimer); typeHint.classList.remove("show"); }
+function hideHint() {
+  clearTimeout(hintTimer);
+  typeHint.classList.remove("show", "mobile-tap");
+}
+function showTapHint(remaining) {
+  typeHint.textContent = remaining === 1
+    ? "One more tap to open the research map ✨"
+    : "Tap the title twice more ✨";
+  typeHint.classList.add("show", "mobile-tap");
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(function() {
+    typeHint.classList.remove("show", "mobile-tap");
+  }, 1100);
+}
 
 /* Paper parsing */
 const ML_V  = new Set(["MLSYS","NEURIPS","NIPS","ICML","ICLR","AAAI","KDD","SIGKDD","EMNLP","ACL","NAACL","CVPR","ICCV","ECCV"]);
@@ -1656,12 +1790,13 @@ function buildTimeline() {
   const PAD_TOP = compact ? 72 : 84;  // title + era labels
   const PAD_BOT = compact ? 48 : 60;  // year labels at bottom
   const NODE_R  = 10;                 // visible node radius
+  const COMPACT_NODE_STEP = 44;       // non-overlapping 44px touch targets
 
   /* Mobile keeps readable year columns inside a pannable canvas. */
   const viewportW = canvas.clientWidth  || window.innerWidth;
   const viewportH = canvas.clientHeight || window.innerHeight;
   const svgW = compact ? Math.max(viewportW, PAD_X * 2 + nYears * 70) : viewportW;
-  const svgH = compact ? Math.max(viewportH, 760) : viewportH;
+  let svgH = compact ? Math.max(viewportH, 760) : viewportH;
   const YEAR_STEP = compact ? 70 : (svgW - PAD_X * 2) / Math.max(1, nYears);
 
   if (compact) {
@@ -1694,7 +1829,7 @@ function buildTimeline() {
     b.bottom  = cy + b.h;
     cy += b.h + BAND_GAP;
   });
-  const contentH = cy - BAND_GAP;
+  let contentH = cy - BAND_GAP;
 
   /* ── Venue → band index ── */
   function venueBand(p, qi) {
@@ -1717,9 +1852,6 @@ function buildTimeline() {
     return p.cat === 'ml' ? 5 + (h % 2) : h % 4;
   }
 
-  /* viewBox = canvas size: no scaling/letterboxing */
-  svgEl.setAttribute("viewBox", "0 0 "+svgW+" "+svgH);
-
   /* ── Group papers by year × band, then assign (x, y) ── */
   /* Group: byYB[bandIdx][yearIdx] = [paper, ...] */
   const byYB = {};
@@ -1733,6 +1865,37 @@ function buildTimeline() {
     byYB[bi][yi].push(p);
   });
 
+  /*
+   * Dense mobile year/band groups need real vertical room. Previously eight
+   * Quantum papers could be squeezed into about 53px, so both the visible
+   * nodes and their 44px hit circles sat on top of one another.
+   */
+  if (compact) {
+    BANDS.forEach(function(b, bi) {
+      const maxGroup = Math.max(1, ...Object.values(byYB[bi]).map(function(group) {
+        return group.length;
+      }));
+      b.h = Math.max(b.h, NODE_R * 2 + (maxGroup - 1) * COMPACT_NODE_STEP);
+    });
+    const requiredH = PAD_TOP + PAD_BOT +
+      BANDS.reduce(function(sum, b) { return sum + b.h; }, 0) +
+      BAND_GAP * (BANDS.length - 1);
+    svgH = Math.max(svgH, requiredH);
+    svgEl.style.height = svgH + "px";
+
+    cy = PAD_TOP;
+    BANDS.forEach(function(b) {
+      b.top = cy;
+      b.yCenter = cy + b.h / 2;
+      b.bottom = cy + b.h;
+      cy += b.h + BAND_GAP;
+    });
+    contentH = cy - BAND_GAP;
+  }
+
+  /* viewBox = final canvas size after density expansion */
+  svgEl.setAttribute("viewBox", "0 0 "+svgW+" "+svgH);
+
   const paperPos = new Map(); // title → {x, y, bi, p}
 
   BANDS.forEach(function(b, bi) {
@@ -1743,12 +1906,13 @@ function buildTimeline() {
       const N     = ps.length;
       /* Vertical spacing: fit within band, min 13px, max 22px */
       const avail = b.h - NODE_R * 2;
-      const sp    = N <= 1 ? 0 : Math.min(22, avail / (N - 1));
+      const sp    = N <= 1 ? 0 : Math.min(compact ? COMPACT_NODE_STEP : 22, avail / (N - 1));
       /* Sort papers within group by venue for stable ordering */
       ps.sort((a, x) => a.venue.localeCompare(x.venue));
       ps.forEach(function(p, i) {
         const yo = (i - (N - 1) / 2) * sp;
-        paperPos.set(p.title, { x: xc, y: b.yCenter + yo, bi, p });
+        const hitR = 22;
+        paperPos.set(p.title, { x: xc, y: b.yCenter + yo, bi, p, hitR });
       });
     });
   });
@@ -1988,7 +2152,7 @@ function buildTimeline() {
   }
 
   paperPos.forEach(function(pos) {
-    const { x, y, bi, p } = pos;
+    const { x, y, bi, p, hitR } = pos;
     const b   = BANDS[bi];
     const cat = CATS.find(c => c.key === p.cat) || CATS[0];
     const venueShort = (p.venue.match(/[A-Za-z]+/) || [''])[0].toUpperCase().slice(0, 7);
@@ -2012,7 +2176,7 @@ function buildTimeline() {
 
     /* Invisible 44px hit target keeps the visible nodes precise but easy to tap. */
     g.appendChild(el("circle", {
-      cx:String(x), cy:String(y), r:"22",
+      cx:String(x), cy:String(y), r:String(hitR),
       fill:"transparent",
       "pointer-events":"all",
     }));
@@ -2114,39 +2278,41 @@ function buildTimeline() {
 }
 
 function showDetail(p,cat) {
-  const detail=document.getElementById("pt-detail");
-  if (!detail) return;
+  const detail=detailPanel;
   const db = dbLookup(p.title);
   const displayTags = db ? db.tags : (p.tags||[]);
   const tagHtml = displayTags.map(function(t){
     // pt-tag class gets pointer-events:auto from CSS so tags are clickable through the glass
-    return "<span class='pt-tag' style='pointer-events:auto;cursor:default;font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid "+cat.color+"44;color:"+cat.color+";background:"+cat.color+"11'>"+t+"</span>";
+    return "<span class='pt-tag' style='cursor:default;font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid "+cat.color+"44;color:"+cat.color+";background:"+cat.color+"11'>"+t+"</span>";
   }).join("");
   const authHtml = p.authors
-    ? "<div style='font-size:10px;color:rgba(255,255,255,0.45);margin-top:5px;line-height:1.5'>"+p.authors+"</div>"
+    ? "<div class='pt-detail-auth' style='font-size:10px;color:rgba(255,255,255,0.45);margin-top:5px;line-height:1.5'>"+p.authors+"</div>"
     : "";
   const desc = db ? db.desc : "";
   const descShort = desc.length > 220 ? desc.slice(0, 217)+"…" : desc;
   const linkBtn = p.url
-    ? "<a href='"+p.url+"' target='_blank' style='pointer-events:auto;flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:"+cat.color+";background:"+cat.color+"18;border:1px solid "+cat.color+"44;padding:5px 13px;border-radius:6px;text-decoration:none;white-space:nowrap;letter-spacing:0.02em'>&#8599;&nbsp;Read</a>"
+    ? "<a class='pt-detail-read' href='"+p.url+"' target='_blank' rel='noopener' style='flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:"+cat.color+";background:"+cat.color+"18;border:1px solid "+cat.color+"44;padding:5px 13px;border-radius:6px;text-decoration:none;white-space:nowrap;letter-spacing:0.02em'>&#8599;&nbsp;Read</a>"
     : "";
   detail.innerHTML=
-    '<div style="flex:1;min-width:0;overflow:hidden">'+
+    '<button class="pt-detail-close" type="button" aria-label="Close paper details">&#x2715;</button>'+
+    '<div class="pt-detail-content" style="flex:1;min-width:0;overflow:hidden">'+
       '<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
         '<div style="min-width:0;flex:1">'+
-          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">'+
+          '<div class="pt-detail-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">'+
             '<span style="font-size:8.5px;font-weight:700;letter-spacing:0.10em;color:'+cat.color+'">'+p.venue+'</span>'+
             '<span style="font-size:8.5px;color:rgba(255,255,255,0.25);letter-spacing:0.04em">'+p.year+'&nbsp;&nbsp;·&nbsp;&nbsp;'+cat.label+'</span>'+
           '</div>'+
-          '<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.93);line-height:1.32;font-style:italic;margin-bottom:4px">'+p.title+'</div>'+
-          (descShort?'<div style="font-size:9.5px;color:rgba(255,255,255,0.55);line-height:1.52">'+descShort+'</div>':'')+
+          '<div class="pt-detail-title" style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.93);line-height:1.32;font-style:italic;margin-bottom:4px">'+p.title+'</div>'+
+          (descShort?'<div class="pt-detail-desc" style="font-size:9.5px;color:rgba(255,255,255,0.55);line-height:1.52">'+descShort+'</div>':'')+
           authHtml+
         '</div>'+
         linkBtn+
       '</div>'+
       (tagHtml?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">'+tagHtml+'</div>':'')+
     '</div>';
+  detail.scrollTop = 0;
   detail.classList.add("show");
+  requestAnimationFrame(function() { detail.scrollTop = 0; });
 }
 function moveTip(e) {
   tip.style.left = Math.max(12, Math.min(e.clientX+14, window.innerWidth-340))+"px";
@@ -2163,6 +2329,8 @@ function show() {
   document.body.classList.add("pt-open");
   overlay.setAttribute("aria-hidden", "false");
   flash.classList.add("on");
+  const flashDelay = reduceMotionQuery.matches ? 0 : 380;
+  const sweepDelay = reduceMotionQuery.matches ? 0 : 650;
   setTimeout(function() {
     if (token !== transitionToken || !active) return;
     flash.classList.remove("on");
@@ -2173,8 +2341,8 @@ function show() {
       if (token !== transitionToken || !active) return;
       animating = false;
       closeBtn.focus({ preventScroll:true });
-    }, 650);
-  }, 380);
+    }, sweepDelay);
+  }, flashDelay);
 }
 
 function hide() {
@@ -2256,6 +2424,7 @@ function installPicassoTripleTap(target, activate) {
     lastY = event.clientY;
     clearTimeout(resetTimer);
     resetTimer = setTimeout(reset, Math.max(120, 980-(now-firstTapAt)));
+    if (taps < 3) showTapHint(3-taps);
     if (taps === 3) {
       reset();
       activate();
