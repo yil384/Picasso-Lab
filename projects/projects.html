@@ -448,7 +448,7 @@ const PROJECTS = [
     accentBg: "rgba(124,58,237,.10)",
     desc: "A multi-agent LLM compiler for neutral atom quantum computers. Specialized agents handle qubit placement, atom routing, and schedule optimization — achieving 4.7× hardware runtime reduction over state-of-the-art baselines.",
     tags: ["Quantum Compilation", "Multi-Agent", "LLM"],
-    img: "qubrio/qubrio.png",
+    img: "qubrio/qubrio.webp",
     video: "https://yil384.github.io/Picasso-Lab/projects/qubrio/qubrio_loop.mp4",
     thumbBg: "radial-gradient(ellipse at 42% 52%, #1e0b4a 0%, #08001a 100%)",
     thumbFit: "cover",
@@ -465,7 +465,7 @@ const PROJECTS = [
     accentBg: "rgba(5,150,105,.10)",
     desc: "An ICML 2026 benchmark evaluating LLMs on generating optimized Triton GPU kernels via agentic workflows. 164 operators, four agent strategies, and a live leaderboard ranking models by correctness and kernel performance.",
     tags: ["Triton", "LLM", "Benchmark", "ICML 2026"],
-    img: "tritongym/tritongym.png",
+    img: "tritongym/tritongym.webp",
     video: "https://yil384.github.io/Picasso-Lab/projects/tritongym/tritongym_loop.mp4",
     thumbBg: "#010c06",
     thumbFit: "cover",
@@ -482,7 +482,7 @@ const PROJECTS = [
     accentBg: "rgba(2,132,199,.10)",
     desc: "A multi-agent AI system that automates Density Functional Theory (DFT) calculations in materials science. Four specialized agents — Planner, Executor, Analyzer, Refiner — reduce per-step time from hours to seconds.",
     tags: ["DFT", "Materials Science", "Multi-Agent"],
-    img: "tritondft/tritondft.png",
+    img: "tritondft/tritondft.webp",
     video: "https://yil384.github.io/Picasso-Lab/projects/tritondft/tritondft_loop.mp4",
     thumbBg: "linear-gradient(155deg, #021828 0%, #030d1c 100%)",
     thumbFit: "cover",
@@ -499,7 +499,7 @@ const PROJECTS = [
     accentBg: "rgba(217,119,6,.10)",
     desc: "A self-trained multi-agent framework for RTL (Verilog) code generation. Two agents cross-verify outputs via waveform comparison — outperforming DeepSeek V3 despite being 20–180× smaller.",
     tags: ["RTL", "Verilog", "Multi-Agent", "EDA"],
-    img: "chipmate/chipmate.png",
+    img: "chipmate/chipmate.webp",
     video: "https://yil384.github.io/Picasso-Lab/projects/chipmate/chipmate_loop.mp4",
     thumbBg: "linear-gradient(135deg, #0d0800 0%, #08080f 60%, #001a1a 100%)",
     thumbFit: "cover",
@@ -515,9 +515,12 @@ function renderCards() {
       <div class="card-accent-bar" style="background:${p.accent}"></div>
       <div class="card-thumb" style="background:${p.thumbBg}">
         ${p.video
-          ? `<video class="thumb-img" src="${p.video}" autoplay muted loop playsinline
-               onerror="this.style.display='none';this.nextElementSibling.style.display='block'"></video>`
-          : `<img class="thumb-img" src="${p.img}" alt="${p.name}"
+          ? `<video class="thumb-img" data-src="${p.video}" poster="${p.img}"
+               preload="none" muted loop playsinline aria-label="${p.name} preview"></video>
+             <img class="thumb-img" src="${p.img}" alt="${p.name}" decoding="async"
+               style="display:none"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
+          : `<img class="thumb-img" src="${p.img}" alt="${p.name}" loading="lazy" decoding="async"
                onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
         }
         <svg class="art" style="display:none" viewBox="0 0 480 195" xmlns="http://www.w3.org/2000/svg">
@@ -640,14 +643,63 @@ window.addEventListener('popstate', (event) => {
 
 renderCards();
 syncProjectPreviewState(history.state);
-// Use IntersectionObserver to play videos when visible (handles iframe autoplay restrictions)
-const observer = new IntersectionObserver(entries => {
+
+function loadCardVideo(video) {
+  if (video.dataset.loaded === 'true' || !video.dataset.src) return;
+  video.dataset.loaded = 'true';
+  video.preload = 'metadata';
+  video.src = video.dataset.src;
+  video.load();
+}
+
+function playCardVideo(video) {
+  loadCardVideo(video);
+  video.muted = true;
+  video.play().catch(() => {});
+}
+
+function showCardVideoFallback(video) {
+  video.pause();
+  video.style.display = 'none';
+  const fallback = video.nextElementSibling;
+  if (!fallback) return;
+  if (fallback.complete && fallback.naturalWidth === 0) {
+    fallback.style.display = 'none';
+    fallback.nextElementSibling?.style.setProperty('display', 'block');
+  } else {
+    fallback.style.display = 'block';
+  }
+}
+
+const cardVideos = document.querySelectorAll('.card-thumb video[data-src]');
+
+// Assign the source only when a card is close to the viewport. This prevents the
+// four loop videos from downloading while the Projects section is still offscreen.
+const videoLoadObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    loadCardVideo(entry.target);
+    videoLoadObserver.unobserve(entry.target);
+  });
+}, { rootMargin: '320px 0px', threshold: 0 });
+
+// Play only while visible (and retry once enough data arrives for stricter browsers).
+const videoPlaybackObserver = new IntersectionObserver(entries => {
   entries.forEach(e => {
-    if (e.isIntersecting) { e.target.muted = true; e.target.play().catch(() => {}); }
-    else { e.target.pause(); }
+    e.target.dataset.visible = e.isIntersecting ? 'true' : 'false';
+    if (e.isIntersecting) playCardVideo(e.target);
+    else e.target.pause();
   });
 }, { threshold: 0.1 });
-document.querySelectorAll('.card-thumb video').forEach(v => observer.observe(v));
+
+cardVideos.forEach(video => {
+  video.addEventListener('canplay', () => {
+    if (video.dataset.visible === 'true') playCardVideo(video);
+  });
+  video.addEventListener('error', () => showCardVideoFallback(video), { once: true });
+  videoLoadObserver.observe(video);
+  videoPlaybackObserver.observe(video);
+});
 </script>
 
 <!-- ── Picasso Easter Egg: type "picasso" or triple-tap hero to flip ── -->
