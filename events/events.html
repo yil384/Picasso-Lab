@@ -393,6 +393,28 @@
     .event-title { margin: 0 0 10px 0; font-size: 1.25em; color: #333; font-weight: 600; }
     .event-text { font-size: 0.95em; color: #444; line-height: 1.6; margin-bottom: 15px; }
     .event-text strong { font-weight: 600; color: #333; }
+    .event-quote {
+        display: block;
+        margin-top: 7px;
+        padding-left: 10px;
+        border-left: 3px solid #d5a447;
+        color: #70551f;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 0.92em;
+        font-style: italic;
+        line-height: 1.45;
+    }
+    .event-quote cite {
+        color: #80662f;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.88em;
+        font-style: normal;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    @media (min-width: 761px) and (max-width: 900px) {
+        .event-card-with-quote { height: 280px; }
+    }
     .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
     .read-more:hover { text-decoration: underline; }
     .event-links { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
@@ -2435,7 +2457,7 @@
     </div>
 </div>
 
-<div class="event-card cursor-chopsticks" data-event-id="picasso-party-0725-2026">
+<div class="event-card event-card-with-quote cursor-chopsticks" data-event-id="picasso-party-0725-2026">
     <div class="event-image swiper mySwiper">
         <div class="swiper-wrapper">
             <div class="swiper-slide"><img src="https://yil384.github.io/Picasso-Lab/events/static/picasso_party_0725/1.jpg" alt="Seven friends gather around the dinner table at Easterly Cupertino"></div>
@@ -2448,7 +2470,8 @@
         <div class="event-date">July 25, 2026</div>
         <h3 class="event-title">🎉 Picasso Party at Easterly Cupertino</h3>
         <p class="event-text">
-            <strong>Guyue</strong>, <strong>Boyuan</strong>, <strong><a href="https://www.linkedin.com/in/zhengyang-wang-040575295/" target="_blank" rel="noopener">Zhengyang</a></strong>, <strong>Zheng</strong>, <strong>Zhongkai</strong>, <strong>Zaifeng</strong>, and <strong>Yichen</strong> gathered at <strong>眷湘 Easterly Cupertino</strong> for a lively Picasso Lab dinner — an evening of Hunan food, laughter, and great company!
+            <strong>Guyue</strong>, <strong>Boyuan</strong>, <strong><a href="https://www.linkedin.com/in/zhengyang-wang-040575295/" target="_blank" rel="noopener">Zhengyang</a></strong>, <strong>Zheng</strong>, <strong>Zhongkai</strong>, <strong>Zaifeng</strong>, and <strong>Yichen</strong> shared a lively Picasso Lab dinner at <strong>眷湘 Easterly Cupertino</strong>.
+            <span class="event-quote">“Work when work feels right; live when life feels right. When either doesn’t, turn to the other—that is the true meaning of work–life balance.” <cite>— Guyue</cite></span>
         </p>
         <a href="https://maps.app.goo.gl/eZzcQZpz7ynpW4eq9" class="read-more" target="_blank" rel="noopener">📍 眷湘 Easterly Cupertino on Google Maps &rarr;</a>
     </div>
