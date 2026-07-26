@@ -4267,34 +4267,8 @@
     });
 
     // -----------------------------------------------------------------
-    // Swiper & Matrix
+    // Matrix
     // -----------------------------------------------------------------
-    document.querySelectorAll(".mySwiper").forEach(el => {
-        const sw = new Swiper(el, {
-            slidesPerView: 1, spaceBetween: 0, loop: true, effect: "slide",
-            autoplay: { delay: 3500, disableOnInteraction: false },
-            pagination: { el: el.querySelector(".swiper-pagination"), clickable: true },
-        });
-        el._swiper = sw;
-
-        function handleVideoSlide() {
-            const slide = sw.slides[sw.activeIndex];
-            if (!slide) return;
-            const vid = slide.querySelector('video');
-            if (!vid) return;
-            sw.autoplay.stop();
-            vid.currentTime = 0;
-            vid.play().catch(() => {});
-            vid.addEventListener('ended', () => {
-                sw.slideNext();
-                sw.autoplay.start();
-            }, { once: true });
-        }
-
-        sw.on('slideChange', handleVideoSlide);
-        handleVideoSlide();
-    });
-
     const cvs = document.getElementById('matrix');
     const ctx = cvs.getContext('2d');
     function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
@@ -4726,13 +4700,111 @@
 
 
 <script>
-/* ===== auto infinite scroll: show events in batches of 8 as you near the bottom ===== */
+/* ===== lazy Swiper initialization + batched infinite scroll ===== */
 (function () {
     var BATCH = 8;
     var cards = Array.prototype.slice.call(document.querySelectorAll('.event-card'));
-    if (cards.length <= BATCH) return;
-    var shown = BATCH;
+
+    function initEventSwiper(el) {
+        if (!el || el._swiper) return el && el._swiper;
+
+        var slideCount = el.querySelectorAll('.swiper-slide').length;
+        var canAdvance = slideCount > 1;
+        var sw = new Swiper(el, {
+            slidesPerView: 1,
+            spaceBetween: 0,
+            loop: canAdvance,
+            effect: 'slide',
+            autoplay: canAdvance ? { delay: 3500, disableOnInteraction: false } : false,
+            pagination: { el: el.querySelector('.swiper-pagination'), clickable: canAdvance }
+        });
+        el._swiper = sw;
+
+        var cancelActiveVideo = null;
+
+        function handleVideoSlide() {
+            var leavingVideo = Boolean(cancelActiveVideo);
+            if (cancelActiveVideo) {
+                cancelActiveVideo();
+                cancelActiveVideo = null;
+            }
+
+            var slide = sw.slides[sw.activeIndex];
+            var video = slide && slide.querySelector('video');
+            if (!video) {
+                if (leavingVideo && canAdvance && !sw.autoplay.running) sw.autoplay.start();
+                return;
+            }
+
+            sw.autoplay.stop();
+            try {
+                video.currentTime = 0;
+            } catch (_) {}
+
+            var settled = false;
+            var fallbackTimer;
+
+            function armFallback() {
+                clearTimeout(fallbackTimer);
+                fallbackTimer = setTimeout(advance, 12000);
+            }
+
+            function cleanup() {
+                clearTimeout(fallbackTimer);
+                video.removeEventListener('ended', advance);
+                video.removeEventListener('error', advance);
+                video.removeEventListener('playing', armFallback);
+                video.removeEventListener('timeupdate', armFallback);
+            }
+
+            function advance() {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                if (sw.destroyed) return;
+                sw.slideNext();
+            }
+
+            cancelActiveVideo = function () {
+                if (settled) return;
+                settled = true;
+                cleanup();
+            };
+
+            video.addEventListener('ended', advance, { once: true });
+            video.addEventListener('error', advance, { once: true });
+            video.addEventListener('playing', armFallback);
+            video.addEventListener('timeupdate', armFallback);
+            armFallback();
+
+            try {
+                var playPromise = video.play();
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise.catch(advance);
+                }
+            } catch (_) {
+                advance();
+            }
+        }
+
+        sw.on('slideChange', handleVideoSlide);
+        sw.on('beforeDestroy', function () {
+            if (cancelActiveVideo) cancelActiveVideo();
+        });
+        handleVideoSlide();
+        return sw;
+    }
+
+    function initCardSwipers(card) {
+        card.querySelectorAll('.mySwiper').forEach(initEventSwiper);
+    }
+
+    var shown = Math.min(BATCH, cards.length);
     cards.slice(BATCH).forEach(function (c) { c.style.display = 'none'; });
+    cards.slice(0, shown).forEach(initCardSwipers);
+
+    if (cards.length <= BATCH) return;
+
     var sentinel = document.createElement('div');
     sentinel.id = 'events-sentinel';
     sentinel.innerHTML = '<span class="es-spin"></span><span>More events below — keep scrolling</span>';
@@ -4741,7 +4813,7 @@
     function reveal() {
         cards.slice(shown, shown + BATCH).forEach(function (c) {
             c.style.display = '';
-            c.querySelectorAll('.mySwiper').forEach(function (el) { if (el._swiper) el._swiper.update(); });
+            initCardSwipers(c);
         });
         shown += BATCH;
         if (shown >= cards.length) { sentinel.remove(); if (io) io.disconnect(); }
