@@ -418,70 +418,7 @@
     .read-more { text-decoration: none; color: #0056b3; font-weight: 500; font-size: 0.9em; cursor: pointer; }
     .read-more:hover { text-decoration: underline; }
     .event-links { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
-    .summer-welcome-art {
-        display: grid;
-        place-items: center;
-        isolation: isolate;
-        text-align: center;
-        color: #fff6df;
-        background:
-            radial-gradient(circle at 18% 20%, rgba(255, 226, 139, 0.42) 0 2px, transparent 3px),
-            radial-gradient(circle at 82% 76%, rgba(255, 226, 139, 0.32) 0 2px, transparent 3px),
-            linear-gradient(145deg, #4e101b 0%, #982521 52%, #d96f3c 100%);
-    }
-    .summer-welcome-art::before {
-        content: "";
-        position: absolute;
-        inset: 13px;
-        border: 1px solid rgba(255, 227, 154, 0.58);
-        border-radius: 16px;
-        box-shadow: inset 0 0 30px rgba(255, 214, 113, 0.12);
-    }
-    .summer-welcome-art::after {
-        content: "";
-        position: absolute;
-        width: 170px;
-        height: 170px;
-        border: 1px solid rgba(255, 227, 154, 0.22);
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(255, 220, 128, 0.16), transparent 68%);
-    }
-    .summer-welcome-copy {
-        position: relative;
-        z-index: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-shadow: 0 2px 12px rgba(54, 4, 8, 0.5);
-    }
-    .summer-welcome-kicker {
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: 0.18em;
-    }
-    .summer-welcome-year {
-        margin-top: 7px;
-        color: #ffe39a;
-        font-family: Georgia, "Times New Roman", serif;
-        font-size: 36px;
-        line-height: 1;
-    }
-    .summer-welcome-label {
-        margin-top: 9px;
-        padding: 5px 11px;
-        border: 1px solid rgba(255, 235, 184, 0.62);
-        border-radius: 999px;
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: 0.12em;
-    }
-    .summer-welcome-venue {
-        margin-top: 9px;
-        color: #fff0c8;
-        font-family: Georgia, "Times New Roman", serif;
-        font-size: 15px;
-        letter-spacing: 0.08em;
-    }
+    .summer-intern-cover { object-position: center 70%; }
     .event-notice {
         display: inline-block; margin-top: 0; padding: 7px 11px;
         background: #fff8e6; border: 1px solid #f0d080; border-radius: 8px;
@@ -2946,13 +2883,12 @@
 </div>
 
 <div class="event-card cursor-gift" data-event-id="summer-intern-welcome-0723-2024">
-    <div class="event-image summer-welcome-art" role="img" aria-label="Illustrated welcome dinner card for the 2024 summer interns">
-        <div class="summer-welcome-copy" aria-hidden="true">
-            <span class="summer-welcome-kicker">PICASSO LAB · JUL 23</span>
-            <strong class="summer-welcome-year">SUMMER 2024</strong>
-            <span class="summer-welcome-label">WELCOME DINNER</span>
-            <span class="summer-welcome-venue">湘村人家</span>
+    <div class="event-image swiper mySwiper">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide"><img class="summer-intern-cover" src="https://yil384.github.io/Picasso-Lab/events/static/summer_interns_2024/1.JPG" alt="Summer interns pose together after a group meal at Taste of Hunan"></div>
+            <div class="swiper-slide"><img loading="lazy" src="https://yil384.github.io/Picasso-Lab/events/static/summer_interns_2024/2.JPG" alt="Summer interns share dishes around the restaurant table"></div>
         </div>
+        <div class="swiper-pagination"></div>
     </div>
     <div class="event-content">
         <div class="event-date">July 23, 2024</div>
