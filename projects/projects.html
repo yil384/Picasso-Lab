@@ -1069,7 +1069,14 @@ cardVideos.forEach(video => {
     'https://picasso.ucsd.edu',
     'https://www.picasso.ucsd.edu'
   ]);
-  const canEmbedLab = labEmbedParents.has(window.location.origin);
+  // Google Sites runs "embed code" inside an Atari sandbox whose origin is
+  // `*-atari-embeds.googleusercontent.com`, not the visible custom domain.
+  // The Lab CSP already permits Google/Googleusercontent ancestors, so keep
+  // the Easter egg in-page there while retaining the new-tab fallback for
+  // origins (such as direct GitHub Pages) that the Lab server cannot frame.
+  const isGoogleSitesEmbed = /^[a-z0-9-]+-(?:atari|sites)-embeds\.googleusercontent\.com$/i
+    .test(window.location.hostname);
+  const canEmbedLab = labEmbedParents.has(window.location.origin) || isGoogleSitesEmbed;
 
   const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint']);
 
@@ -1263,8 +1270,8 @@ cardVideos.forEach(video => {
     previousFocus = document.activeElement;
     previousOverflow = document.body.style.overflow;
 
-    // The GitHub Pages wrapper is not in the Lab server's frame-ancestors
-    // allowlist, so Google Sites must use the explicit new-tab handoff.
+    // Embed inside the Google Sites sandbox/custom domain when its ancestor
+    // chain is accepted by the Lab CSP; otherwise use the new-tab handoff.
     back.classList.remove('loaded');
     clearTimeout(iframeWaitTimer);
     if (canEmbedLab) {
