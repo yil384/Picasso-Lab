@@ -757,8 +757,21 @@ const officialBlogState = {
   list: document.getElementById('blog-list')?.innerHTML || ''
 };
 
+/* Every history call is wrapped: this page is embedded (Google Sites), where a
+   sandboxed frame can reject them. A rejected call must never break the UI. */
 function pushBlogHistoryState(patch) {
-  history.pushState({ ...(history.state || {}), ...patch }, '', window.location.href);
+  try {
+    history.pushState({ ...(history.state || {}), ...patch }, '', window.location.href);
+  } catch (_) {}
+}
+
+/* Closing never traverses history. Inside a host frame, back() walks the
+   top-level joint history and can land on the host's pre-embed entry, which
+   blanks the whole frame. Clearing the current entry is always safe. */
+function clearBlogHistoryState(patch) {
+  try {
+    history.replaceState({ ...(history.state || {}), ...patch }, '', window.location.href);
+  } catch (_) {}
 }
 
 const fakeBlogs = [
@@ -842,8 +855,6 @@ function fakeBlogCard(article, index) {
 }
 
 let previousArticleFocus = null;
-let articleCloseHops = 0;
-let articleCloseHopTimer = null;
 
 /* Reusing one iframe made every article after the first add a nested history
    entry, so the Blogs button's history.back() only blanked the frame instead of
@@ -988,13 +999,7 @@ function closeArticle(fromHistory = false) {
   }
 
   if (!fromHistory && history.state?.picassoBlogArticle) {
-    /* Anchor jumps inside the article leave entries that inherit our state;
-       unwind them so a later back gesture cannot re-open what we just closed.
-       The window is short so a much later popstate is never swallowed. */
-    articleCloseHops = 6;
-    clearTimeout(articleCloseHopTimer);
-    articleCloseHopTimer = setTimeout(() => { articleCloseHops = 0; }, 500);
-    history.back();
+    clearBlogHistoryState({ picassoBlogArticle: null });
   }
 }
 
@@ -1121,11 +1126,11 @@ function startBlogReturnTransition() {
 }
 
 function requestBlogReturn() {
-  if (history.state?.picassoTrueBlogs === true) history.back();
-  else {
-    desiredTrueBlogs = false;
-    reconcileBlogMode(true);
+  if (history.state?.picassoTrueBlogs === true) {
+    clearBlogHistoryState({ picassoTrueBlogs: false, picassoBlogArticle: null });
   }
+  desiredTrueBlogs = false;
+  reconcileBlogMode(true);
 }
 
 const blogTypeHint = document.getElementById('blog-type-hint');
@@ -1247,14 +1252,6 @@ function syncBlogFromHistory(state, animate = true) {
 }
 
 window.addEventListener('popstate', (event) => {
-  if (articleCloseHops > 0) {
-    articleCloseHops -= 1;
-    if (event.state?.picassoBlogArticle) {
-      history.back();
-      return;
-    }
-    articleCloseHops = 0;
-  }
   syncBlogFromHistory(event.state, true);
 });
 
