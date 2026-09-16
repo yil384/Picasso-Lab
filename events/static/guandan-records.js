@@ -78,7 +78,7 @@
         '<svg class="gdr-crest-svg" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
         '<defs>' +
             '<linearGradient id="gdrGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7d4"/><stop offset=".42" stop-color="#ffd96a"/><stop offset=".62" stop-color="#b9831f"/><stop offset=".82" stop-color="#ffe9a8"/><stop offset="1" stop-color="#8a6612"/></linearGradient>' +
-            '<linearGradient id="gdrShield" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#222a4a"/><stop offset="1" stop-color="#0a0b16"/></linearGradient>' +
+            '<linearGradient id="gdrShield" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2016"/><stop offset="1" stop-color="#0a0e1a"/></linearGradient>' +
         '</defs>' +
         '<g fill="url(#gdrGold)">' +
             '<path d="M84 50 L26 39 L74 55 Z"/><path d="M84 60 L14 60 L74 63 Z"/><path d="M84 70 L26 81 L74 66 Z"/>' +
@@ -106,7 +106,7 @@
         if (p.avatar) return p.avatar;
         var t = initials(p.name);
         var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">' +
-            '<rect width="120" height="120" fill="#222a48"/>' +
+            '<rect width="120" height="120" fill="#0a0e1a"/>' +
             '<text x="60" y="64" font-family="-apple-system,Segoe UI,sans-serif" font-size="46" font-weight="700" fill="#ffd35e" text-anchor="middle" dominant-baseline="central">' + t + '</text></svg>';
         return "data:image/svg+xml," + encodeURIComponent(svg);
     }
