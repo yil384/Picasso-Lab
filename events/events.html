@@ -1182,6 +1182,11 @@
         }
     }
 
+    :root {
+        --ease-out-soft: cubic-bezier(0.16, 0.84, 0.20, 1);
+        --ease-in-soft: cubic-bezier(0.40, 0.00, 0.20, 1);
+    }
+
     .guandan-launch-transition {
         position: fixed;
         inset: 0;
@@ -1195,6 +1200,7 @@
     .guandan-launch-transition.active {
         display: grid;
         place-items: center;
+        animation: gltOverlayCycle 1620ms var(--ease-out-soft) both;
     }
 
     /* ===== Guandan entry: Scientific Signal Lock =====
@@ -1215,7 +1221,6 @@
             radial-gradient(58% 50% at 50% 14%, rgba(0, 98, 155, 0.23), transparent 72%),
             radial-gradient(42% 46% at 84% 92%, rgba(255, 205, 0, 0.1), transparent 74%),
             linear-gradient(155deg, #07111d 0%, #03070d 64%, #07110f 100%);
-        animation: gltOverlayIn 0.32s ease-out both;
     }
     .guandan-launch-transition::before {
         content: "";
@@ -1232,7 +1237,8 @@
         -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 68%);
         mask-image: radial-gradient(ellipse at center, #000 0%, transparent 68%);
         pointer-events: none;
-        animation: gltGridIn 0.7s ease-out both;
+        will-change: opacity, transform;
+        animation: gltGridIn 640ms var(--ease-out-soft) both;
     }
     .guandan-launch-transition::after {
         content: "";
@@ -1254,7 +1260,10 @@
         color: #edf8fb;
         text-align: center;
         z-index: 2;
-        animation: gltStageIn 0.48s cubic-bezier(0.2, 0.82, 0.2, 1) both;
+        will-change: opacity, transform;
+    }
+    .guandan-launch-transition.active .glt-stage {
+        animation: gltStageCycle 1620ms var(--ease-out-soft) both;
     }
     .glt-kicker {
         display: inline-flex;
@@ -1309,6 +1318,7 @@
         transform-box: fill-box;
         transform-origin: center;
         opacity: 0;
+        will-change: opacity, transform;
         animation: gltNodeIn 0.36s cubic-bezier(0.2, 0.84, 0.2, 1) var(--delay) both;
     }
     .glt-node-ring {
@@ -1328,7 +1338,8 @@
         transform-box: fill-box;
         transform-origin: center;
         opacity: 0;
-        animation: gltCoreIn 0.52s cubic-bezier(0.16, 0.86, 0.2, 1) 0.28s both;
+        will-change: opacity, transform;
+        animation: gltCoreIn 480ms var(--ease-out-soft) 260ms both;
     }
     .glt-core-halo {
         fill: rgba(0, 98, 155, 0.1);
@@ -1389,7 +1400,8 @@
         transform: translateX(-100%);
         background: linear-gradient(90deg, #0876a8, #73d0df 58%, #ffcd00);
         box-shadow: 0 0 14px rgba(115, 208, 223, 0.38);
-        animation: gltProgress 1.18s cubic-bezier(0.18, 0.74, 0.2, 1) 0.12s both;
+        will-change: opacity, transform;
+        animation: gltProgress 1000ms var(--ease-out-soft) 100ms both;
     }
     .glt-skip {
         min-height: 36px;
@@ -1422,31 +1434,35 @@
         white-space: nowrap !important;
         border: 0 !important;
     }
-    .guandan-launch-transition.departing {
-        animation: gltOverlayOut 0.26s ease both;
+    .guandan-launch-transition.active.skipping {
+        animation: gltSkipOut 180ms var(--ease-in-soft) both;
     }
-    .guandan-launch-transition.departing .glt-stage {
-        animation: gltStageOut 0.26s ease both;
+    .guandan-launch-transition.active.skipping .glt-stage {
+        animation: gltStageSkipOut 180ms var(--ease-in-soft) both;
     }
-    @keyframes gltOverlayIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    @keyframes gltOverlayCycle {
+        0%   { opacity: 0; }
+        16%  { opacity: 1; }
+        84%  { opacity: 1; }
+        100% { opacity: 0; }
     }
     @keyframes gltGridIn {
         from { opacity: 0; transform: perspective(720px) rotateX(57deg) translateY(14%); }
         to { opacity: 0.28; transform: perspective(720px) rotateX(57deg) translateY(8%); }
     }
-    @keyframes gltStageIn {
-        from { opacity: 0; transform: translateY(10px) scale(0.985); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
+    @keyframes gltStageCycle {
+        0%   { opacity: 0; transform: translateY(10px) scale(0.985); }
+        26%  { opacity: 1; transform: translateY(0) scale(1); }
+        84%  { opacity: 1; transform: scale(1); }
+        100% { opacity: 0.92; transform: scale(1.02); }
     }
-    @keyframes gltOverlayOut {
+    @keyframes gltSkipOut {
         from { opacity: 1; }
         to { opacity: 0; }
     }
-    @keyframes gltStageOut {
+    @keyframes gltStageSkipOut {
         from { opacity: 1; transform: scale(1); }
-        to { opacity: 1; transform: scale(1.018); }
+        to { opacity: 0; transform: scale(0.99); }
     }
     @keyframes gltDotPulse {
         0% { opacity: 0.45; box-shadow: 0 0 0 0 rgba(255, 205, 0, 0.2); }
@@ -1490,22 +1506,6 @@
         .glt-title { font-size: clamp(24px, 10vh, 30px); }
         .glt-title { font-size: clamp(24px, 10dvh, 30px); }
         .glt-skip { min-height: 28px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-        .guandan-launch-transition,
-        .guandan-launch-transition::before,
-        .glt-stage,
-        .glt-kicker-dot,
-        .glt-route-signal,
-        .glt-node,
-        .glt-core,
-        .glt-progress::before {
-            animation: none !important;
-        }
-        .glt-route-signal,
-        .glt-node,
-        .glt-core { opacity: 1; }
-        .glt-progress::before { transform: translateX(0); }
     }
     @keyframes fromGuandanFade { from { opacity: 0; } to { opacity: 1; } }
     body.from-guandan { animation: fromGuandanFade 0.45s ease both; }
@@ -3171,65 +3171,68 @@
     const guandanReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let guandanTransitionRunning = false;
     let guandanDepartTimer = 0;
-    let guandanNavigateTimer = 0;
 
     function resetGuandanLaunchTransition() {
         clearTimeout(guandanDepartTimer);
-        clearTimeout(guandanNavigateTimer);
         guandanTransitionRunning = false;
-        guandanLaunchTransition?.classList.remove('active', 'departing');
+        guandanLaunchTransition?.classList.remove('active', 'skipping');
         guandanLaunchTransition?.setAttribute('aria-hidden', 'true');
         if (document.activeElement === guandanLaunchTransition) guandanLaunchTransition.blur();
         if (guandanLaunchStatus) guandanLaunchStatus.textContent = '';
     }
 
-    function navigateToGuandan(delay = 0) {
+    function navigateToGuandan() {
         if (!guandanTransitionRunning) return;
         guandanTransitionRunning = false;
         clearTimeout(guandanDepartTimer);
-        clearTimeout(guandanNavigateTimer);
-        guandanLaunchTransition?.classList.add('departing');
-        guandanNavigateTimer = window.setTimeout(function () {
-            window.location.assign(guandanGameUrl);
-        }, delay);
+        guandanLaunchTransition.classList.add('skipping');
+        const go = () => window.location.assign(guandanGameUrl);
+        guandanLaunchTransition.addEventListener('animationend', go, { once: true });
+        setTimeout(go, 220); // fallback, 40ms past the 180ms CSS duration
     }
 
     function startGuandanGameTransition() {
         if (guandanTransitionRunning) return;
-        if (!guandanLaunchTransition) {
+        if (!guandanLaunchTransition || guandanReduceMotion.matches) {
             window.location.assign(guandanGameUrl);
             return;
         }
         guandanTransitionRunning = true;
         hideGuandanTypeHint();
-        closeGuandanEgg();
-        guandanLaunchTransition.classList.remove('departing');
+        guandanLaunchTransition.classList.remove('skipping');
         guandanLaunchTransition.classList.add('active');
         guandanLaunchTransition.setAttribute('aria-hidden', 'false');
         if (guandanLaunchStatus) guandanLaunchStatus.textContent = '';
-        requestAnimationFrame(function () {
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
             if (!guandanTransitionRunning) return;
+            closeGuandanEgg();
             if (guandanLaunchStatus) guandanLaunchStatus.textContent = 'Opening the Picasso Lab Guandan table.';
             guandanLaunchTransition.focus({ preventScroll: true });
-        });
+        }));
 
-        const reduced = guandanReduceMotion.matches;
-        guandanDepartTimer = window.setTimeout(function () {
-            guandanLaunchTransition.classList.add('departing');
-        }, reduced ? 40 : 1320);
-        guandanNavigateTimer = window.setTimeout(function () {
+        const go = () => {
+            if (!guandanTransitionRunning) return;
+            guandanTransitionRunning = false;
             window.location.assign(guandanGameUrl);
-        }, reduced ? 180 : 1600);
+        };
+        function onEnd(e) {
+            if (e.target !== guandanLaunchTransition || e.animationName !== 'gltOverlayCycle') return;
+            guandanLaunchTransition.removeEventListener('animationend', onEnd);
+            go();
+        }
+        guandanLaunchTransition.addEventListener('animationend', onEnd);
+        guandanDepartTimer = window.setTimeout(go, 1660); // fallback = 1620ms cycle + 40ms slack
     }
 
     guandanLaunchTransition?.addEventListener('click', function () {
-        if (guandanTransitionRunning) navigateToGuandan(90);
+        if (guandanTransitionRunning) navigateToGuandan();
     });
     guandanLaunchTransition?.addEventListener('keydown', function (event) {
         if (!guandanTransitionRunning || (event.key !== 'Enter' && event.key !== ' ')) return;
         event.preventDefault();
         event.stopPropagation();
-        navigateToGuandan(60);
+        navigateToGuandan();
     });
 
     window.addEventListener('load', () => setTimeout(primeGuandanKeyboardCapture, 0), { once: true });

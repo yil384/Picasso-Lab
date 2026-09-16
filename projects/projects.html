@@ -803,79 +803,6 @@ cardVideos.forEach(video => {
   z-index: 10;
 }
 
-#flip-close {
-  position: fixed;
-  top: max(12px, calc(env(safe-area-inset-top) + 8px));
-  right: max(12px, calc(env(safe-area-inset-right) + 8px));
-  z-index: 30;
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255,255,255,.3);
-  border-radius: 50%;
-  background: rgba(4,18,30,.72);
-  color: #fff;
-  box-shadow: 0 8px 28px rgba(0,0,0,.28);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  font: 400 25px/1 sans-serif;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(.88);
-  transition: opacity .2s ease, transform .25s ease, background .2s ease;
-}
-#flip-scene.ready #flip-close {
-  opacity: 1;
-  pointer-events: auto;
-  transform: scale(1);
-}
-#flip-close:hover,
-#flip-close:focus-visible {
-  background: rgba(0,98,155,.92);
-  outline: 3px solid rgba(255,205,0,.55);
-  outline-offset: 2px;
-}
-
-#flip-open {
-  position: fixed;
-  top: max(12px, calc(env(safe-area-inset-top) + 8px));
-  right: max(70px, calc(env(safe-area-inset-right) + 66px));
-  z-index: 30;
-  min-width: 46px;
-  height: 46px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 13px;
-  border: 1px solid rgba(255,255,255,.3);
-  border-radius: 999px;
-  background: rgba(4,18,30,.72);
-  color: #fff;
-  box-shadow: 0 8px 28px rgba(0,0,0,.28);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  font: 700 12px/1 'Inter', sans-serif;
-  text-decoration: none;
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(.88);
-  transition: opacity .2s ease, transform .25s ease, background .2s ease;
-}
-#flip-scene.ready #flip-open {
-  opacity: 1;
-  pointer-events: auto;
-  transform: scale(1);
-}
-#flip-open:hover,
-#flip-open:focus-visible {
-  background: rgba(0,98,155,.92);
-  outline: 3px solid rgba(255,205,0,.55);
-  outline-offset: 2px;
-}
-
 /* Typing hint — shown on front after 2 keystrokes */
 #type-hint {
   position: fixed; bottom: 22px; left: 50%;
@@ -973,38 +900,11 @@ cardVideos.forEach(video => {
   #flip-status {
     top: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
   }
-  #flip-close {
-    top: calc(env(safe-area-inset-top) + 7px);
-    left: max(8px, env(safe-area-inset-left));
-    right: auto;
-    width: auto;
-    min-width: 44px;
-    height: 44px;
-    padding: 0 13px;
-    border-radius: 999px;
-    font-size: 0;
-  }
-  #flip-close::before {
-    content: "‹";
-    margin-right: 5px;
-    font: 400 24px/1 sans-serif;
-  }
-  #flip-close::after {
-    content: "Projects";
-    font: 700 12px/1 'Inter', sans-serif;
-  }
-  #flip-open {
-    top: calc(env(safe-area-inset-top) + 7px);
-    right: max(8px, env(safe-area-inset-right));
-    height: 44px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   #flip-card,
   #flip-shade,
-  #flip-close,
-  #flip-open,
   #lab-flash,
   #lab-flash span,
   #flip-status {
@@ -1019,19 +919,17 @@ cardVideos.forEach(video => {
 <div id="flip-scene" aria-hidden="true">
   <div id="flip-card">
     <div id="flip-front" aria-hidden="false"><!-- page content moved here on flip --></div>
-    <div id="flip-back" aria-hidden="true">
+    <div id="flip-back" aria-hidden="true" tabindex="-1">
       <div id="flip-status" role="status">
         <span class="flip-launch-mark" aria-hidden="true">P</span>
         <strong class="flip-status-title">Picasso Lab</strong>
         <span id="flip-status-text">Continue to the full Lab experience in a new tab.</span>
-        <a href="https://lab.picasso-lab.com" target="_blank" rel="noopener">Open Picasso Lab</a>
+        <a href="https://picasso-lab.com" target="_blank" rel="noopener">Open Picasso Lab</a>
       </div>
       <iframe id="lab-iframe" src="" title="Picasso Lab" allow="clipboard-read *; clipboard-write *; fullscreen *"></iframe>
     </div>
   </div>
   <div id="flip-shade"></div>
-  <button id="flip-close" type="button" aria-label="Return to projects">&times;</button>
-  <a id="flip-open" href="https://lab.picasso-lab.com" target="_blank" rel="noopener" aria-label="Open Picasso Lab in a new tab">↗ Open</a>
 </div>
 <div id="lab-flash"><span>✨ Picasso Lab</span></div>
 <div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
@@ -1045,7 +943,6 @@ cardVideos.forEach(video => {
   const shade  = document.getElementById('flip-shade');
   const iframe = document.getElementById('lab-iframe');
   const flash  = document.getElementById('lab-flash');
-  const close  = document.getElementById('flip-close');
   const statusText = document.getElementById('flip-status-text');
   let flipped   = false;
   let animating = false;
@@ -1060,7 +957,7 @@ cardVideos.forEach(video => {
   const compactFlip = window.matchMedia('(max-width: 700px), (max-height: 600px) and (pointer: coarse)');
   const flipDurationMs = () => reducedMotion.matches ? 0 : (compactFlip.matches ? 780 : 1150);
   const flashDurationMs = () => reducedMotion.matches ? 0 : (compactFlip.matches ? 280 : 480);
-  const LAB_URL = 'https://lab.picasso-lab.com';
+  const LAB_URL = 'https://picasso-lab.com';
   const labEmbedParents = new Set([
     'https://yufeiding.ucsd.edu',
     'https://www.yufeiding.ucsd.edu',
@@ -1254,7 +1151,6 @@ cardVideos.forEach(video => {
     reconcileFlipState();
   }
 
-  close.addEventListener('click', requestFlipBack);
   window.addEventListener('popstate', (event) => {
     desiredFlipped = event.state?.picassoLab === true;
     reconcileFlipState();
@@ -1344,11 +1240,10 @@ cardVideos.forEach(video => {
         flipped   = true;
         animating = false;
         flipDirection = null;
-        scene.classList.add('ready');
         front.setAttribute('inert', '');
         front.setAttribute('aria-hidden', 'true');
         back.setAttribute('aria-hidden', 'false');
-        close.focus({ preventScroll: true });
+        back.focus({ preventScroll: true });
         reconcileFlipState();
       }, flipMs);
 
@@ -1362,7 +1257,6 @@ cardVideos.forEach(video => {
     flipDirection = 'backward';
     const flipMs = immediate ? 0 : flipDurationMs();
     const shadeHalfMs = Math.round(flipMs / 2);
-    scene.classList.remove('ready');
     front.removeAttribute('inert');
     front.setAttribute('aria-hidden', 'false');
     back.setAttribute('aria-hidden', 'true');

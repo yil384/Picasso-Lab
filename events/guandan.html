@@ -4,18 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Picasso Lab Guandan Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Noto+Sans+SC:wght@600;700;900&display=swap" rel="stylesheet">
 <style>
     :root {
-        --felt: #0c5b47;
-        --felt-dark: #06372d;
-        --felt-light: #178263;
-        --ink: #16201d;
-        --paper: #fffdf6;
-        --line: rgba(255,255,255,0.22);
-        --gold: #f1c76a;
-        --red: #d53440;
-        --blue: #7fd3ff;
-        --shadow: 0 18px 60px rgba(0,0,0,0.28);
+        /* Felt */
+        --felt-center: #1a8a5c; --felt-mid: #106b46; --felt-edge: #063a27; --felt-vignette: rgba(2,10,7,0.6);
+        /* Wood + gold rail */
+        --wood-hi: #d8b06b; --wood-mid: #8a5a24; --wood-lo: #4a2a12; --rail-gold: #ffd35e; --rail-gold-dark: #8a5f18;
+        /* Gold accent (buttons/badges) */
+        --gold-1: #fff3c4; --gold-2: #ffd35e; --gold-3: #d99b1f; --gold-4: #8a5a10; --gold-ink: #2b1a02;
+        /* Cards */
+        --card-face: #fbf8ef; --card-face-2: #f2ecd8; --card-red: #c8202f; --card-black: #16181d;
+        --card-back-1: #17233f; --card-back-2: #0a0f1e;
+        /* HUD chrome */
+        --hud-bg-0: #0a0e1a; --hud-bg-1: #11172b; --hud-panel: rgba(9,16,20,0.86);
+        --hud-line: rgba(255,230,180,0.14); --hud-text: #f5f7ff; --hud-text-dim: rgba(245,247,255,0.62);
+        /* Rank/level ring tiers */
+        --ring-bronze: #b3743c; --ring-bronze-glow: rgba(179,116,60,.55);
+        --ring-silver: #cfd8e2; --ring-silver-glow: rgba(207,216,226,.55);
+        --ring-gold: #ffd35e; --ring-gold-glow: rgba(255,211,94,.6);
+        --ring-diamond: #7fe3ff; --ring-diamond-glow: rgba(127,227,255,.6);
+        /* Status */
+        --danger: #ff3b5c; --danger-deep: #a4192b; --success: #35d488; --info: #4fd8ff;
+        /* Legacy shadow token, still consumed by .phase-panel / .lobby / .table-wrap */
+        --shadow: 0 24px 70px rgba(0,0,0,0.38);
+        /* Easing */
+        --ease-out-soft: cubic-bezier(0.16,0.84,0.20,1);
+        --ease-overshoot: cubic-bezier(0.20,0.90,0.15,1.40);
+        --ease-shake: cubic-bezier(0.36,0.07,0.19,0.97);
     }
 
     * { box-sizing: border-box; }
@@ -162,7 +180,7 @@
     .hand-tools { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
     .hand { display: flex; justify-content: center; align-items: flex-end; gap: 0; min-height: 116px; padding: 0 8px; }
     .card {
-        width: 58px; height: 82px; border-radius: 8px; border: 1px solid #d9d1bd; background: var(--paper); color: #111;
+        width: 58px; height: 82px; border-radius: 8px; border: 1px solid #d9d1bd; background: var(--card-face); color: #111;
         display: grid; grid-template-rows: auto 1fr auto; padding: 5px; margin-left: -20px; user-select: none;
         box-shadow: 0 8px 18px rgba(0,0,0,0.24); transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
         position: relative; flex: 0 0 auto;
@@ -170,7 +188,7 @@
     .card:first-child { margin-left: 0; }
     .card:hover { transform: translateY(-8px); z-index: 20; }
     .card.selected { transform: translateY(-22px); border-color: #f4bc4d; box-shadow: 0 0 0 3px rgba(244,188,77,0.25), 0 16px 24px rgba(0,0,0,0.34); z-index: 30; }
-    .card.red { color: var(--red); }
+    .card.red { color: var(--card-red); }
     .card.wild { background: linear-gradient(145deg, #fffdf6, #ffefd3 55%, #ffd3dc); }
     .card .corner { font-weight: 900; font-size: 15px; line-height: 1; }
     .card .pip { display: grid; place-items: center; font-size: 25px; font-weight: 900; }
@@ -547,29 +565,11 @@
     }
 
     /* Professional table UI pass: casino table structure + Picasso Lab HUD. */
-    :root {
-        --lab-bg: #061013;
-        --lab-blue: #00629B;
-        --lab-cyan: #45d9ff;
-        --lab-gold: #FFCD00;
-        --lab-red: #C13743;
-        --felt: #0f6c58;
-        --felt-dark: #052c2a;
-        --felt-light: #1a9273;
-        --panel: rgba(5, 17, 20, 0.72);
-        --panel-strong: rgba(7, 22, 28, 0.9);
-        --rim: rgba(255,255,255,0.16);
-        --rim-bright: rgba(255,205,0,0.4);
-        --paper: #fffdf7;
-        --ink: #111820;
-        --shadow: 0 24px 70px rgba(0,0,0,0.38);
-    }
-
     html, body {
         min-height: 100%;
-        background: var(--lab-bg);
+        background: var(--hud-bg-0);
         color: #f7fbff;
-        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+        font-family: 'Nunito', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
     }
     body {
         background:
@@ -638,34 +638,6 @@
         font-size: 12px;
         font-weight: 650;
     }
-    .btn {
-        min-height: 40px;
-        border-radius: 10px;
-        padding: 9px 14px;
-        border: 1px solid rgba(255,255,255,0.14);
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,242,176,0.92));
-        color: #102027;
-        font-weight: 820;
-        box-shadow: 0 10px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.82);
-        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-    }
-    .btn:hover:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 14px 30px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.82);
-    }
-    .btn.secondary {
-        background: rgba(255,255,255,0.075);
-        color: #edf9ff;
-        border-color: rgba(255,255,255,0.18);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
-    }
-    .btn.danger {
-        background: rgba(193,55,67,0.16);
-        color: #ffe0e2;
-        border-color: rgba(193,55,67,0.42);
-    }
-
     .lobby, .table-wrap {
         max-width: 1480px;
         border-radius: 18px;
@@ -993,25 +965,6 @@
         overflow: hidden;
         background: #031316;
     }
-    .table {
-        min-height: calc(100vh - 102px);
-        padding: 18px;
-        background:
-            radial-gradient(ellipse at center, rgba(24,145,111,0.86) 0%, rgba(8,82,72,0.94) 48%, rgba(3,31,34,0.98) 75%),
-            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
-            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
-        background-size: auto, 34px 34px, 34px 34px;
-    }
-    .table::before {
-        inset: 76px 118px 154px;
-        border-radius: 50%;
-        border: 22px solid rgba(54,34,22,0.66);
-        box-shadow:
-            inset 0 0 0 1px rgba(255,255,255,0.12),
-            inset 0 0 90px rgba(0,0,0,0.34),
-            0 0 0 1px rgba(255,255,255,0.09),
-            0 28px 90px rgba(0,0,0,0.28);
-    }
     .table::after {
         content: "";
         position: absolute;
@@ -1069,7 +1022,7 @@
         margin-left: 5px;
         border-radius: 8px;
         color: #09191b;
-        background: var(--lab-gold);
+        background: var(--gold-2);
     }
     .score-pill.wide { min-width: 156px; }
     .score-pill.wide strong {
@@ -1097,24 +1050,6 @@
     .player.p1 { left: 22px; }
     .player.p2 { top: 78px; }
     .player.p3 { right: 22px; }
-    .player-main {
-        display: grid;
-        grid-template-columns: 42px minmax(0, 1fr);
-        gap: 10px;
-        align-items: center;
-    }
-    .player-avatar {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        background: radial-gradient(circle at 32% 24%, #fff, #8ceeff 34%, #00629B 100%);
-        color: #061013;
-        font-weight: 950;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), 0 10px 22px rgba(0,0,0,0.26);
-    }
-    .player.turn .player-avatar { background: radial-gradient(circle at 32% 24%, #fff, #ffe980 34%, #ce8b13 100%); }
     .player-name {
         display: grid;
         gap: 4px;
@@ -1368,12 +1303,7 @@
     }
     .card:hover {
         transform: translateY(-10px);
-        box-shadow: 0 18px 35px rgba(0,0,0,0.42), 0 0 0 2px rgba(69,217,255,0.2);
-    }
-    .card.selected {
-        transform: translateY(-30px);
-        border-color: rgba(255,205,0,0.96);
-        box-shadow: 0 0 0 3px rgba(255,205,0,0.24), 0 24px 42px rgba(0,0,0,0.48);
+        box-shadow: 0 18px 34px rgba(0,0,0,.4);
     }
     .card.red { color: #bd1f32; }
     .card.black { color: #101820; }
@@ -1565,11 +1495,30 @@
     .card.small .joker-figure span { font-size: 7px; }
     .card.small .wild-chip { display: none; }
     .card.back {
-        background: linear-gradient(150deg, #241b3a, #0c0a18);
-        border-color: rgba(255,211,94,0.5);
-        box-shadow: inset 0 0 0 2px rgba(255,211,94,0.16);
+        background:
+            repeating-linear-gradient(45deg, rgba(255,211,94,.06) 0 6px, transparent 6px 12px),
+            linear-gradient(150deg, var(--card-back-1), var(--card-back-2));
+        border: 1px solid rgba(255,211,94,.45);
+        box-shadow: inset 0 0 0 2px rgba(255,211,94,.16), 0 10px 20px rgba(0,0,0,.32);
+        display: grid;
+        place-items: center;
+        gap: 2px;
     }
     .card.back::before, .card.back::after { content: none; }
+    .card.back .back-emblem {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 1.5px solid var(--rail-gold);
+        background: radial-gradient(circle at 35% 30%, var(--gold-1), var(--gold-2) 55%, var(--gold-3) 100%);
+        display: grid;
+        place-items: center;
+        color: var(--gold-ink);
+        font-weight: 900;
+        font-size: 15px;
+        box-shadow: 0 2px 6px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.6);
+    }
+    .card.small.back .back-emblem { width: 22px; height: 22px; font-size: 11px; }
 
     .phase-panel {
         border-radius: 16px;
@@ -1748,20 +1697,6 @@
     }
 
     /* Definitive game-table overhaul: full-width board, fixed play lanes, SVG card faces. */
-    :root {
-        --arena-bg: #061115;
-        --felt-core: #11735f;
-        --felt-edge: #042b2e;
-        --hud-bg: rgba(3, 15, 18, 0.86);
-        --hud-line: rgba(205, 235, 239, 0.18);
-        --hud-text: #edf8fb;
-        --accent-gold: #ffca28;
-        --accent-cyan: #77e8ff;
-        --card-red: #c92035;
-        --card-black: #111820;
-        --wood-rim: #3b281d;
-    }
-
     body {
         background:
             linear-gradient(90deg, rgba(255,255,255,0.023) 1px, transparent 1px),
@@ -1845,32 +1780,43 @@
     }
 
     .table {
+        position: relative;
         height: 100%;
         min-height: inherit;
         padding: 0;
         overflow: hidden;
-        background:
-            radial-gradient(ellipse at center, rgba(25, 154, 119, 0.94) 0%, rgba(14, 108, 93, 0.96) 44%, rgba(4, 44, 47, 0.98) 73%),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(rgba(255,255,255,0.026) 1px, transparent 1px);
-        background-size: auto, 46px 46px, 46px 46px;
+        border-radius: 26px;
+        background-image:
+            repeating-linear-gradient(45deg,  rgba(255,255,255,0.03) 0 1px, transparent 1px 14px),
+            repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 14px),
+            radial-gradient(120% 90% at 50% 34%, var(--felt-center) 0%, var(--felt-mid) 48%, var(--felt-edge) 84%, #052016 100%);
+        box-shadow: inset 0 0 140px var(--felt-vignette), 0 30px 90px rgba(0,0,0,0.55);
     }
 
+    /* Wood + gold rail ring. Uses mask+padding (not border-image) so the ring
+       stays radius-safe on this rounded-rectangle table — border-image ignores
+       border-radius in every browser. */
     .table::before {
+        content: "";
+        position: absolute;
         inset: 92px 132px 190px;
         border-radius: 50%;
-        border: 24px solid rgba(59, 40, 29, 0.72);
-        background: transparent;
+        padding: 20px;
+        background: linear-gradient(155deg, var(--wood-hi) 0%, var(--wood-mid) 45%, var(--wood-lo) 100%);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        mask-composite: exclude;
         box-shadow:
-            inset 0 0 0 1px rgba(255,255,255,0.14),
+            0 0 0 2px var(--rail-gold),
+            inset 0 0 0 2px var(--rail-gold),
             inset 0 0 120px rgba(0,0,0,0.28),
-            0 22px 80px rgba(0,0,0,0.36),
-            0 0 0 1px rgba(255,255,255,0.08);
+            0 22px 80px rgba(0,0,0,0.36);
     }
 
     .table::after {
         inset: 124px 174px 224px;
-        border-color: rgba(214, 246, 241, 0.18);
+        border-color: rgba(255, 230, 180, 0.18);
     }
 
     .table-grid {
@@ -1901,23 +1847,6 @@
             radial-gradient(ellipse at center, rgba(255,255,255,0.12), transparent 55%),
             radial-gradient(ellipse at center, transparent 58%, rgba(255,202,40,0.18) 58.5% 59.5%, transparent 60.5%);
         opacity: 0.72;
-    }
-
-    .table-grid::after {
-        left: 50%;
-        top: 86px;
-        width: 220px;
-        height: 34px;
-        transform: translateX(-50%);
-        border-radius: 999px;
-        background:
-            radial-gradient(circle at 18% 50%, rgba(255,202,40,0.95) 0 7px, rgba(111,68,18,0.95) 8px 12px, transparent 13px),
-            radial-gradient(circle at 31% 50%, rgba(255,202,40,0.95) 0 7px, rgba(111,68,18,0.95) 8px 12px, transparent 13px),
-            radial-gradient(circle at 44% 50%, rgba(119,232,255,0.95) 0 7px, rgba(17,78,100,0.95) 8px 12px, transparent 13px),
-            radial-gradient(circle at 57% 50%, rgba(255,202,40,0.95) 0 7px, rgba(111,68,18,0.95) 8px 12px, transparent 13px),
-            radial-gradient(circle at 70% 50%, rgba(119,232,255,0.95) 0 7px, rgba(17,78,100,0.95) 8px 12px, transparent 13px),
-            radial-gradient(circle at 83% 50%, rgba(255,202,40,0.95) 0 7px, rgba(111,68,18,0.95) 8px 12px, transparent 13px);
-        opacity: 0.46;
     }
 
     .table-emblem {
@@ -1964,7 +1893,7 @@
         border-radius: 8px;
         background:
             linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)),
-            var(--hud-bg);
+            var(--hud-panel);
         border: 1px solid var(--hud-line);
         color: #edf8fb;
         font-size: 12px;
@@ -1975,8 +1904,8 @@
     .score-pill .ui-icon {
         width: 15px;
         height: 15px;
-        color: var(--accent-cyan);
-        filter: drop-shadow(0 0 8px rgba(119,232,255,0.28));
+        color: var(--info);
+        filter: drop-shadow(0 0 8px rgba(79,216,255,0.28));
     }
 
     .score-pill span {
@@ -1991,7 +1920,7 @@
         height: 24px;
         padding: 0 8px;
         border-radius: 8px;
-        background: var(--accent-gold);
+        background: var(--gold-2);
         color: #061115;
         line-height: 24px;
         font-size: 14px;
@@ -2008,6 +1937,29 @@
 
     .score-pill.wide strong {
         max-width: 112px;
+    }
+
+    /* HUD density pass: tighten the score strip and retint it onto the warm
+       gold/dark HUD system (was leftover KPL red/blue tinting). */
+    .score-strip {
+        display: flex;
+        gap: 6px;
+        padding: 6px 10px;
+    }
+
+    .score-pill {
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 13px;
+        font-size: 12px;
+        gap: 6px;
+        background: var(--hud-panel);
+        border: 1px solid var(--hud-line);
+    }
+
+    .score-pill strong {
+        font-size: 13px;
+        color: var(--gold-ink);
     }
 
     .player {
@@ -2060,13 +2012,124 @@
     }
 
     .player-main {
-        grid-template-columns: 44px minmax(0, 1fr);
+        grid-template-columns: 56px minmax(0, 1fr);
+    }
+
+    .avatar-frame {
+        position: relative;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        margin: 6px;
+    }
+
+    .avatar-frame::before {
+        /* tier ring, radius-safe mask technique */
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        background: conic-gradient(var(--ring-bronze), #8a5628, var(--ring-bronze));
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+        mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+        box-shadow: 0 0 10px var(--ring-bronze-glow);
+    }
+
+    .avatar-frame[data-tier="silver"]::before {
+        background: conic-gradient(var(--ring-silver), #8f9aa6, var(--ring-silver));
+        box-shadow: 0 0 10px var(--ring-silver-glow);
+    }
+
+    .avatar-frame[data-tier="gold"]::before {
+        background: conic-gradient(var(--ring-gold), var(--gold-3), var(--ring-gold));
+        box-shadow: 0 0 12px var(--ring-gold-glow);
+    }
+
+    .avatar-frame[data-tier="diamond"]::before {
+        background: conic-gradient(var(--ring-diamond), #2a8fb0, var(--ring-diamond));
+        box-shadow: 0 0 14px var(--ring-diamond-glow);
+    }
+
+    .turn-ring {
+        position: absolute;
+        inset: -6px;
+        width: 68px;
+        height: 68px;
+        transform: rotate(-90deg);
+        pointer-events: none;
+    }
+
+    .turn-ring-track {
+        fill: none;
+        stroke: var(--hud-line);
+        stroke-width: 3;
+    }
+
+    .turn-ring-fill {
+        fill: none;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke: var(--info);
+        stroke-dasharray: 163.4;
+        stroke-dashoffset: 0;
+        transition: stroke-dashoffset 1s linear, stroke .2s ease;
+    }
+
+    .turn-ring.warn .turn-ring-fill { stroke: var(--gold-2); }
+
+    .turn-ring.danger .turn-ring-fill {
+        stroke: var(--danger);
+        animation: gdRingDanger 0.9s ease-in-out infinite alternate;
+    }
+
+    @keyframes gdRingDanger {
+        from { filter: drop-shadow(0 0 0 rgba(255,59,92,0)); }
+        to { filter: drop-shadow(0 0 6px rgba(255,59,92,.85)); }
     }
 
     .player-avatar {
+        position: relative;
         width: 44px;
         height: 44px;
+        margin: 6px;
+        border-radius: 50%;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at 32% 24%, #fff, #8ceeff 34%, #00629B 100%);
+        color: #061013;
+        font-weight: 950;
         font-size: 14px;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), 0 10px 22px rgba(0,0,0,0.26);
+    }
+
+    .player-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .player.turn .player-avatar {
+        background: radial-gradient(circle at 32% 24%, #fff, #ffe980 34%, #ce8b13 100%);
+    }
+
+    .player-level-badge {
+        position: absolute;
+        bottom: -4px;
+        left: 50%;
+        transform: translateX(-50%);
+        min-width: 22px;
+        height: 16px;
+        padding: 0 5px;
+        border-radius: 8px;
+        background: linear-gradient(180deg, var(--gold-1), var(--gold-3));
+        color: var(--gold-ink);
+        font-size: 10px;
+        font-weight: 900;
+        line-height: 16px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.6);
+        border: 1px solid rgba(255,255,255,.5);
     }
 
     .player-name {
@@ -2093,7 +2156,7 @@
     .count-chip .ui-icon {
         width: 13px;
         height: 13px;
-        color: rgba(119,232,255,0.9);
+        color: inherit;
         stroke-width: 2.2;
         vertical-align: -2px;
     }
@@ -2168,7 +2231,7 @@
     .history-title .ui-icon {
         width: 15px;
         height: 15px;
-        color: var(--accent-cyan);
+        color: var(--info);
         stroke-width: 2.25;
     }
 
@@ -2267,8 +2330,8 @@
     }
 
     .seat-play.fresh .trick-card-stack .card.small {
-        animation: playedCardIn 420ms cubic-bezier(0.16, 0.86, 0.24, 1) both;
-        animation-delay: calc(var(--i, 0) * 34ms);
+        animation: gdPlayCard 360ms var(--ease-out-soft) both;
+        animation-delay: calc(var(--i, 0) * 28ms);
     }
 
     .seat-play.fresh .relation-band {
@@ -2388,9 +2451,10 @@
         to { opacity: 1; filter: blur(0); }
     }
 
-    @keyframes playedCardIn {
-        from { opacity: 0; transform: translate3d(0, -22px, 0) scale(0.92) rotate(-2deg); }
-        to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    @keyframes gdPlayCard {
+        0% { opacity: 0; transform: translate3d(0, -22px, 0) scale(0.92) rotate(-2deg); }
+        60% { opacity: 1; transform: translate3d(0, 4px, 0) scale(1.02) rotate(0deg); }
+        100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
     }
 
     @keyframes relationSleeveIn {
@@ -2558,8 +2622,8 @@
         top: 49%;
         opacity: 0;
         transform: translate(-50%, -50%);
-        animation: dealToSeat 760ms cubic-bezier(0.18, 0.82, 0.24, 1) both;
-        animation-delay: calc(var(--i) * 18ms);
+        animation: gdDealCard 640ms var(--ease-out-soft) both;
+        animation-delay: calc(var(--i) * 16ms);
     }
 
     .deal-card.target-0 { --tx: calc(var(--fan) * 8px); --ty: clamp(310px, 39vh, 430px); }
@@ -2578,13 +2642,14 @@
     }
 
     .card.sort-in {
-        animation: sortHandCard 520ms cubic-bezier(0.18, 0.82, 0.24, 1) both;
+        animation: gdSortCard 480ms var(--ease-out-soft) both;
         animation-delay: calc(var(--i) * 18ms);
     }
 
-    @keyframes dealToSeat {
+    @keyframes gdDealCard {
         0% { opacity: 0; transform: translate(-50%, -50%) scale(0.78) rotate(0deg); }
         18% { opacity: 1; }
+        55% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.86) rotate(var(--rot)); }
         100% { opacity: 1; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.82) rotate(var(--rot)); }
     }
 
@@ -2593,7 +2658,7 @@
         to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
     }
 
-    @keyframes sortHandCard {
+    @keyframes gdSortCard {
         0% { opacity: 0; transform: translate3d(calc(var(--fan) * -3px), -18px, 0) scale(0.96); filter: brightness(0.9); }
         100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); }
     }
@@ -2749,27 +2814,33 @@
     }
 
     .card {
-        --card-w: 68px;
-        --card-h: 96px;
-        --card-overlap: -26px;
-        width: var(--card-w);
-        height: var(--card-h);
-        min-width: var(--card-w);
+        width: 78px;
+        height: 108px;
+        min-width: 78px;
         grid-template-rows: 23px minmax(0, 1fr) 23px;
         padding: 6px;
-        border-radius: 8px;
-        border: 1px solid rgba(20,24,30,0.24);
-        box-shadow: 0 12px 26px rgba(0,0,0,0.34), inset 0 1px 0 #fff;
-        background:
-            radial-gradient(circle at 78% 18%, rgba(255,255,255,0.85), transparent 16%),
-            linear-gradient(145deg, #ffffff, #fff8ec);
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,.06);
+        box-shadow: 0 10px 20px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.85);
+        background: linear-gradient(160deg, var(--card-face) 0%, var(--card-face-2) 100%);
+        overflow: hidden;
         transition:
-            transform 230ms cubic-bezier(0.2, 0.82, 0.22, 1),
-            box-shadow 230ms cubic-bezier(0.2, 0.82, 0.22, 1),
-            filter 230ms cubic-bezier(0.2, 0.82, 0.22, 1);
+            transform 230ms var(--ease-out-soft),
+            box-shadow 230ms var(--ease-out-soft),
+            filter 230ms var(--ease-out-soft);
         will-change: transform;
         backface-visibility: hidden;
         transform: translate3d(0, 0, 0);
+    }
+
+    .card::after {
+        /* gloss sheen */
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(115deg, rgba(255,255,255,.55) 0%, transparent 30%);
+        mix-blend-mode: overlay;
+        pointer-events: none;
     }
 
     .card.has-art {
@@ -2905,8 +2976,11 @@
     }
 
     .card.selected {
-        transform: translate3d(0, -28px, 0) scale(1.018);
-        filter: saturate(1.06);
+        transform: translate3d(0, -28px, 0) scale(1.02);
+        filter: saturate(1.08);
+        border-color: transparent;
+        z-index: 30;
+        box-shadow: 0 18px 34px rgba(0,0,0,.4), 0 0 0 2px var(--gold-2), 0 0 16px var(--ring-gold-glow);
     }
 
     .card:not(.selected):active {
@@ -3107,12 +3181,12 @@
     }
 
     .card.small {
-        --card-w: 48px;
-        --card-h: 68px;
-        --card-overlap: -15px;
+        width: 54px;
+        height: 76px;
+        min-width: 54px;
         grid-template-rows: 16px minmax(0, 1fr) 16px;
         padding: 4px;
-        border-radius: 6px;
+        border-radius: 7px;
     }
 
     .card.small .corner {
@@ -3728,26 +3802,21 @@
        ⚡ Esports / KPL theme override (Peak Showdown look)
        Dark arena, red-vs-blue energy, metallic gold accents.
        ===================================================== */
-    :root {
-        --felt: #16213f; --felt-dark: #0a1022; --felt-light: #21305a;
-        --gold: #ffd35e; --red: #ff3b5c; --blue: #2e8bff;
-    }
-    html, body { background: #07080f; }
+    html, body { background: #0a0806; }
     body {
         background:
-            radial-gradient(circle at 14% 8%, rgba(255,59,92,0.20), transparent 30%),
-            radial-gradient(circle at 88% 12%, rgba(46,139,255,0.20), transparent 30%),
-            radial-gradient(circle at 50% 110%, rgba(255,211,94,0.08), transparent 52%),
-            linear-gradient(160deg, #0a0c1c 0%, #07080f 60%, #050609 100%);
+            radial-gradient(120% 70% at 50% -10%, rgba(255, 205, 80, 0.06), transparent 60%),
+            linear-gradient(160deg, #100c08 0%, #0a0806 60%, #060504 100%);
     }
     .topbar {
-        border-color: rgba(255,211,94,0.26);
-        background: linear-gradient(135deg, rgba(255,59,92,0.08), rgba(46,139,255,0.08)), rgba(8,10,22,0.74);
+        border-color: var(--hud-line);
+        background: linear-gradient(180deg, var(--hud-bg-1), var(--hud-bg-0));
+        border-bottom: 1px solid var(--hud-line);
         box-shadow: 0 12px 34px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04) inset;
     }
     .brand-mark {
-        background: linear-gradient(135deg, #ff3b5c, #2e8bff); color: #fff;
-        box-shadow: 0 0 20px rgba(46,139,255,0.45);
+        background: linear-gradient(135deg, var(--gold-2), var(--gold-4)); color: #fff;
+        box-shadow: 0 0 20px rgba(255,211,94,0.35);
     }
     .brand h1 {
         font-style: italic; font-weight: 900; letter-spacing: 0.01em;
@@ -3755,12 +3824,33 @@
         -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
     }
     .btn {
-        color: #1a1205; border: 1px solid rgba(255,211,94,0.5);
-        background: linear-gradient(135deg, #ffe9a8, #ffd35e 55%, #b9831f);
-        box-shadow: 0 8px 22px rgba(0,0,0,0.32), 0 0 16px rgba(255,211,94,0.22); font-weight: 800;
+        min-height: 44px; padding: 0 20px; border-radius: 12px; font-weight: 800;
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        border: 1px solid rgba(255,255,255,.18);
+        transition: transform .12s var(--ease-overshoot), box-shadow .12s ease, filter .12s ease;
     }
-    .btn.secondary { color: #e2e9ff; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); box-shadow: none; }
-    .btn.danger { color: #ffd9df; background: rgba(255,59,92,0.16); border: 1px solid rgba(255,59,92,0.42); box-shadow: none; }
+    .btn, .btn.primary, #play-btn {
+        color: var(--gold-ink);
+        background: linear-gradient(180deg, var(--gold-1) 0%, var(--gold-2) 45%, var(--gold-3) 100%);
+        border-color: rgba(255,236,180,.7);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 6px 0 var(--gold-4), 0 10px 18px rgba(0,0,0,.4);
+    }
+    .btn:hover:not(:disabled)  { filter: brightness(1.06); transform: translateY(-1px); }
+    .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 2px 0 var(--gold-4), 0 4px 8px rgba(0,0,0,.35); }
+    .btn.secondary {
+        color: var(--hud-text);
+        background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+        border-color: rgba(255,255,255,.18);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 4px 0 rgba(0,0,0,.35), 0 8px 14px rgba(0,0,0,.3);
+    }
+    .btn.secondary:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 1px 0 rgba(0,0,0,.35); }
+    .btn.danger {
+        color: #fff;
+        background: linear-gradient(180deg, #ff5c78, var(--danger) 60%, #b8203a);
+        border-color: rgba(255,140,160,.5);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 5px 0 #7a1526, 0 10px 16px rgba(0,0,0,.4);
+    }
+    .btn:disabled { filter: grayscale(.4) brightness(.7); box-shadow: none; transform: none; cursor: not-allowed; }
     .lobby, .table-wrap {
         border-color: rgba(255,211,94,0.16);
         background: rgba(10,12,26,0.62);
@@ -3778,26 +3868,17 @@
         -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
         filter: drop-shadow(0 3px 16px rgba(255,211,94,0.18));
     }
-    .lobby-kicker { color: var(--gold); }
+    .lobby-kicker { color: var(--gold-2); }
     .rule-chips span { background: rgba(255,211,94,0.09); border-color: rgba(255,211,94,0.3); color: #ffe6a3; }
     .lobby-panel { background: rgba(7,9,18,0.7); }
-    .panel-title span { color: var(--gold); }
+    .panel-title span { color: var(--gold-2); }
     .seat-card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.12); }
     .seat-card.mine { border-color: rgba(255,211,94,0.8); box-shadow: 0 0 0 3px rgba(255,211,94,0.14), 0 0 18px rgba(255,211,94,0.22); }
-    .seat-card .seat-team { color: var(--gold); }
+    .seat-card .seat-team { color: var(--gold-2); }
     input:focus { border-color: rgba(255,211,94,0.7); box-shadow: 0 0 0 3px rgba(255,211,94,0.16); }
     .status-line { color: #ffe0a8; }
-    .table {
-        background:
-            radial-gradient(ellipse at center, rgba(46,139,255,0.12), rgba(10,14,30,0.92) 60%, rgba(5,6,13,0.97)),
-            radial-gradient(ellipse at 50% 0%, rgba(255,59,92,0.08), transparent 55%);
-    }
-    .table::before {
-        border-color: rgba(255,211,94,0.18);
-        box-shadow: 0 0 0 14px rgba(255,211,94,0.03), inset 0 0 90px rgba(0,0,0,0.45);
-    }
-    .score-pill strong { color: #1a1205; }
-    .lobby-kicker { background: rgba(255,211,94,0.1); border-color: rgba(255,211,94,0.3); color: var(--gold); }
+    .score-pill strong { color: var(--gold-ink); }
+    .lobby-kicker { background: rgba(255,211,94,0.1); border-color: rgba(255,211,94,0.3); color: var(--gold-2); }
     .lobby-preview {
         border-color: rgba(28,34,60,0.92);
         background: radial-gradient(ellipse at center, rgba(46,139,255,0.18), rgba(12,16,34,0.96) 64%, #07080f 100%);
@@ -4143,6 +4224,79 @@
             left: calc(50% + 125px);
         }
     }
+
+    /* Bomb / combo celebration */
+    .table.bomb-shake { animation: gdBombShake 480ms var(--ease-shake) 1 both; }
+    @keyframes gdBombShake {
+        0%,100% { transform: translate3d(0,0,0); }
+        10% { transform: translate3d(-6px,2px,0) rotate(-.4deg); }
+        20% { transform: translate3d(5px,-3px,0) rotate(.5deg); }
+        30% { transform: translate3d(-5px,3px,0) rotate(-.5deg); }
+        40% { transform: translate3d(4px,-2px,0) rotate(.4deg); }
+        55% { transform: translate3d(-3px,2px,0) rotate(-.3deg); }
+        70% { transform: translate3d(2px,-1px,0) rotate(.2deg); }
+        85% { transform: translate3d(-1px,1px,0) rotate(-.1deg); }
+    }
+    .bomb-fx { position: absolute; inset: 0; pointer-events: none; z-index: 50; }
+    .bomb-particle {
+        position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; background: var(--gold-2);
+        animation: gdParticleBurst 900ms cubic-bezier(.16,.84,.28,1) both;
+    }
+    .bomb-particle:nth-child(odd)  { border-radius: 50%; }
+    .bomb-particle:nth-child(even) { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: var(--gold-1); }
+    @keyframes gdParticleBurst {
+        0%   { opacity: 1; transform: translate3d(0,0,0) scale(.4) rotate(0deg); }
+        70%  { opacity: 1; transform: translate3d(var(--px), var(--py), 0) scale(1) rotate(var(--rot)); }
+        100% { opacity: 0; transform: translate3d(calc(var(--px)*1.15), calc(var(--py)*1.15 + 30px), 0) scale(.7) rotate(var(--rot)); }
+    }
+    .bomb-banner-slot { position: absolute; inset: 0; pointer-events: none; z-index: 60; }
+    .bomb-banner {
+        position: absolute; left: 50%; top: 36%; transform: translate(-50%,-50%);
+        padding: 10px 28px; border-radius: 999px;
+        background: linear-gradient(180deg, var(--gold-1), var(--gold-2) 55%, var(--gold-3));
+        color: var(--gold-ink); font-weight: 900; font-size: 22px; letter-spacing: .02em;
+        box-shadow: 0 12px 30px rgba(0,0,0,.45), 0 0 24px var(--ring-gold-glow);
+        white-space: nowrap;
+    }
+    .bomb-banner.show { animation: gdBannerIn 420ms var(--ease-overshoot) both; }
+    .bomb-banner.hide { animation: gdBannerOut 220ms ease-in both; }
+    @keyframes gdBannerIn  { 0% { opacity:0; transform: translate(-50%,-50%) scale(.6) rotate(-4deg); } 60% { opacity:1; transform: translate(-50%,-50%) scale(1.1) rotate(1deg); } 100% { opacity:1; transform: translate(-50%,-50%) scale(1) rotate(0); } }
+    @keyframes gdBannerOut { from { opacity:1; transform: translate(-50%,-50%) scale(1); } to { opacity:0; transform: translate(-50%,-50%) scale(.85); } }
+
+    /* Win / lose overlay */
+    @keyframes gdBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+    .phase-backdrop {
+        position: absolute; inset: 0; z-index: 29;
+        display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(circle at 50% 40%, rgba(0,0,0,.35), rgba(0,0,0,.72));
+        animation: gdBackdropIn 260ms ease-out both;
+    }
+    @keyframes gdResultIn { 0% { opacity:0; transform: translate3d(0,18px,0) scale(.94); } 100% { opacity:1; transform: translate3d(0,0,0) scale(1); } }
+    .phase-panel.result {
+        position: relative; left: auto; top: auto; transform: none;
+        animation: gdResultIn 480ms var(--ease-out-soft) both;
+    }
+    .phase-panel.result.lose { filter: saturate(.7); }
+    .result-score {
+        display: flex; align-items: baseline; gap: 8px; margin: 10px 0 4px;
+        font-weight: 900; color: var(--gold-1);
+    }
+    .result-score-label { font-size: 13px; font-weight: 700; color: rgba(245,247,255,.68); }
+    .result-score-value { font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+    .result-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+    .confetti-piece {
+        position: absolute; top: -20px; left: var(--cx, 50%); width: 8px; height: 14px; background: var(--gold-2);
+        animation: gdConfettiFall var(--cdur, 2200ms) linear var(--cdelay, 0ms) 1 both;
+    }
+    .confetti-piece:nth-child(3n)   { background: var(--gold-1); }
+    .confetti-piece:nth-child(5n)   { background: var(--info); width: 6px; height: 10px; }
+    @keyframes gdConfettiFall {
+        0% { opacity:0; transform: translate3d(0,-40px,0) rotate(0deg); }
+        8% { opacity:1; }
+        100% { opacity:0; transform: translate3d(var(--cdx,40px), 340px, 0) rotate(var(--crot,360deg)); }
+    }
+    .tribute-row.tallying strong { animation: gdTallyPulse 240ms ease-out both; }
+    @keyframes gdTallyPulse { 0% { transform: scale(1); } 50% { transform: scale(1.06); text-shadow: 0 0 8px var(--ring-gold-glow); } 100% { transform: scale(1); } }
 </style>
 <link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.css">
 </head>
@@ -4819,7 +4973,7 @@ function cardCenterHTML(card, label) {
 
 function cardHTML(card, small = false, selectable = false, extraAttrs = "", extraClass = "", overlayHTML = "") {
     if (!card) return "";
-    if (card.back) return `<div class="card back ${small ? "small" : ""} ${extraClass}" ${extraAttrs} aria-hidden="true"><b>P</b><i>PICASSO</i><i>LAB</i></div>`;
+    if (card.back) return `<div class="card back ${small ? "small" : ""} ${extraClass}" ${extraAttrs} aria-hidden="true"><div class="back-emblem">P</div><i>PICASSO</i><i>LAB</i></div>`;
     const red = cardColor(card);
     const wild = game && isWild(card, game.currentLevelRank) ? "wild" : "";
     const sel = selectable && selected.has(card.id) ? "selected" : "";
@@ -4853,6 +5007,30 @@ function initials(name, fallback = "P") {
     const parts = clean.split(/\s+/).filter(Boolean);
     if (parts.length > 1) return parts.slice(0, 2).map(p => p[0]).join("").toUpperCase();
     return clean.slice(0, 2).toUpperCase();
+}
+
+// Avatar rank-tier ring: bronze (2-4) / silver (5-8) / gold (9-J) / diamond (Q-A).
+function levelTier(lv) {
+    const n = rankBase(lv || "2");
+    return n <= 4 ? "bronze" : n <= 8 ? "silver" : n <= 11 ? "gold" : "diamond";
+}
+
+// Reuse the same labmate photo pool already wired for card-face portraits
+// (facePortraitMap/faceCardPortrait) so a seat's live avatar shows a real
+// photo when the seat's display name matches a Picasso Lab member; no new
+// photo asset map needed. Falls back to null (→ initials) otherwise.
+function seatMemberPhoto(name) {
+    const clean = String(name || "").trim().toLowerCase();
+    if (!clean) return null;
+    const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
+    for (const key in PL) {
+        const p = PL[key];
+        if (!p || !p.avatar) continue;
+        const pname = String(p.name || "").trim().toLowerCase();
+        if (!pname) continue;
+        if (clean === pname || clean.includes(pname) || pname.includes(clean)) return p.avatar;
+    }
+    return null;
 }
 
 function rankBase(rank) {
@@ -5280,6 +5458,17 @@ function updateTurnClockDOM() {
     el.textContent = remaining == null ? (isOpeningLead(game) ? L("No limit", "不限时") : "--") : formatClock(remaining);
     el.classList.toggle("warn", remaining != null && remaining <= 60000 && remaining > 30000);
     el.classList.toggle("danger", remaining != null && remaining <= 30000);
+    // Keep the current-turn seat's avatar turn-ring in sync with the same
+    // numeric clock tick (reuses turnRemainingMs + the identical warn/danger
+    // thresholds above) so the ring animates in real time between full renders.
+    const ring = document.querySelector(".player.turn .turn-ring");
+    if (ring) {
+        const frac = remaining == null ? 0 : Math.max(0, Math.min(1, remaining / TURN_LIMIT_MS));
+        const fill = ring.querySelector(".turn-ring-fill");
+        if (fill) fill.style.strokeDashoffset = String((1 - frac) * 163.4);
+        ring.classList.toggle("warn", remaining != null && remaining <= 60000 && remaining > 30000);
+        ring.classList.toggle("danger", remaining != null && remaining <= 30000);
+    }
 }
 
 async function takeSeat(index) {
@@ -7305,6 +7494,63 @@ function latestTrickPlayAt() {
     return Math.max(0, ...(game.trickPlays || []).map(entry => Number(entry?.at) || 0));
 }
 
+// Bomb / combo celebration: purely presentational — reads entry.combo.isBomb
+// (already computed by the scoring logic in evaluateCombos/normalizeActionEntry)
+// and never changes game state. Guarded by lastCelebratedBombAt so each real
+// bomb play triggers the shake/particles/banner exactly once per client.
+let lastCelebratedBombAt = 0;
+function maybeCelebrateBomb() {
+    if (!game || !Array.isArray(game.trickPlays)) return;
+    const latestAt = latestTrickPlayAt();
+    if (!latestAt || latestAt === lastCelebratedBombAt) return;
+    const entry = game.trickPlays.find(e => e && Number(e.at) === latestAt);
+    lastCelebratedBombAt = latestAt;
+    const combo = entry?.combo;
+    if (!entry || entry.actionType === "pass" || !combo?.isBomb) return;
+    triggerBombCelebration(combo);
+}
+
+function triggerBombCelebration(combo) {
+    const tableEl = document.querySelector(".table");
+    if (!tableEl) return;
+    tableEl.classList.remove("bomb-shake");
+    void tableEl.offsetWidth; // restart the animation if it's already mid-shake
+    requestAnimationFrame(() => tableEl.classList.add("bomb-shake"));
+
+    const fx = tableEl.querySelector(".bomb-fx");
+    if (fx) {
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < 28; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const mag = 60 + Math.random() * 100;
+            const px = Math.round(Math.cos(angle) * mag);
+            const py = Math.round(Math.sin(angle) * mag);
+            const rot = Math.round(Math.random() * 360);
+            const span = document.createElement("span");
+            span.className = "bomb-particle";
+            span.style.cssText = `--px:${px}px;--py:${py}px;--rot:${rot}deg;animation-delay:${Math.round(Math.random() * 80)}ms`;
+            frag.appendChild(span);
+        }
+        fx.innerHTML = "";
+        fx.appendChild(frag);
+        setTimeout(() => { fx.innerHTML = ""; }, 1000);
+    }
+
+    const slot = tableEl.querySelector(".bomb-banner-slot");
+    if (slot) {
+        const bombLen = combo.bombLen || 0;
+        const text = combo.type === "jokerBomb" ? "天王炸!" : bombLen >= 8 ? "八张炸弹!" : bombLen >= 6 ? "六张炸弹!" : "炸弹!";
+        slot.innerHTML = `<div class="bomb-banner show">${text}</div>`;
+        setTimeout(() => {
+            const banner = slot.querySelector(".bomb-banner");
+            if (!banner) return;
+            banner.classList.remove("show");
+            banner.classList.add("hide");
+            setTimeout(() => banner.remove(), 220);
+        }, 900);
+    }
+}
+
 function seatPlayHTML(i, mine) {
     const entry = game.trickPlays?.[i];
     if (!entry) return "";
@@ -7437,6 +7683,8 @@ function renderTable() {
         <div class="table deal-${dealPhase}">
             <div class="table-grid" aria-hidden="true"></div>
             <div class="table-emblem" aria-hidden="true"><span>Picasso Lab</span><b>Guandan</b></div>
+            <div class="bomb-fx" aria-hidden="true"></div>
+            <div class="bomb-banner-slot" aria-hidden="true"></div>
             <div class="score-strip">
                 <div class="score-pill">${iconHTML("shield")}<span>${teamName(0)}</span><strong>${teamLevelDisplay(0)}</strong></div>
                 <div class="score-pill">${iconHTML("shield")}<span>${teamName(1)}</span><strong>${teamLevelDisplay(1)}</strong></div>
@@ -7572,6 +7820,8 @@ function renderTable() {
     document.getElementById("hint-btn")?.addEventListener("click", hintMove);
     document.getElementById("clear-btn")?.addEventListener("click", () => { selected.clear(); hintAdvisor = null; renderTable(); });
     document.getElementById("next-round")?.addEventListener("click", nextRound);
+    maybeCelebrateBomb();
+    initResultOverlay();
 }
 
 function playerHTML(i, mine) {
@@ -7604,9 +7854,23 @@ function playerHTML(i, mine) {
             ? Math.max(1, count - publicJokers.length)
             : 8 - publicJokers.length;
     const publicJokerCards = publicJokers.map(c => cardHTML(c, true, false, "", "public-joker")).join("");
+    const isTurn = game.currentTurn === i;
+    const turnRemainMs = isTurn ? turnRemainingMs(game) : null;
+    const turnFrac = turnRemainMs == null ? 0 : Math.max(0, Math.min(1, turnRemainMs / TURN_LIMIT_MS));
+    const turnDashOffset = (1 - turnFrac) * 163.4;
+    const ringClass = turnRemainMs != null && turnRemainMs <= 30000 ? "danger" : turnRemainMs != null && turnRemainMs <= 60000 ? "warn" : "";
+    const tier = levelTier(game.levels?.[i % 2]);
+    const memberPhoto = seatMemberPhoto(name);
     return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${thinking ? "thinking" : ""} ${finishedPlace ? "finished" : ""}">
         <div class="player-main">
-            <div class="player-avatar">${encodeHTML(initials(name, String(i + 1)))}</div>
+            <div class="avatar-frame" data-tier="${tier}">
+                <svg class="turn-ring ${ringClass}" viewBox="0 0 68 68" aria-hidden="true">
+                    <circle class="turn-ring-track" cx="34" cy="34" r="26"/>
+                    <circle class="turn-ring-fill" cx="34" cy="34" r="26" style="stroke-dashoffset:${turnDashOffset}"/>
+                </svg>
+                <div class="player-avatar">${memberPhoto ? `<img src="${encodeHTML(memberPhoto)}" alt="">` : encodeHTML(initials(name, String(i + 1)))}</div>
+                <span class="player-level-badge">${encodeHTML(teamLevelDisplay(i % 2))}</span>
+            </div>
             <div class="player-name"><span>${encodeHTML(name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
         </div>
         <div class="player-small"><span>${iconHTML(s.type === "ai" ? "ai" : "human")} ${s.type === "ai" ? "AI" : L("Human", "真人")} · ${thinking ? `<span class="thinking-badge">${L("Thinking", "思考中")}<i></i><i></i><i></i></span>` : leftLabel}</span>${countText ? `<span class="count-chip${i !== mine && !finishedPlace && count <= 7 ? " alert" : ""}">${iconHTML("cards")} ${countText}</span>` : ""}</div>
@@ -7616,6 +7880,9 @@ function playerHTML(i, mine) {
 
 function roundOverHTML() {
     const r = game.roundResult;
+    const mine = mySeat();
+    const isWin = mine >= 0 && mine % 2 === r.firstTeam;
+    const isLose = mine >= 0 && mine % 2 !== r.firstTeam;
     const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
     const title = r.aceChallenge
         ? r.aceReset
@@ -7627,23 +7894,77 @@ function roundOverHTML() {
             ? L("This was the third failed A challenge. The team resets to level 2 next round.", "这是第 3 次冲 A 失败，下局该队退回打 2。")
             : L(`A challenge failed. Failure ${r.aceFailureCount}/${ACE_FAIL_LIMIT}; the team keeps playing A next round.`, `冲 A 失败，第 ${r.aceFailureCount}/${ACE_FAIL_LIMIT} 次；下局继续打 A。`)
         : L("The next round will automatically handle Tribute and Return. If the paying side holds two Red Jokers, Tribute is blocked.", "下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。");
-    return `<div class="phase-panel">
-        <h2>${title}</h2>
-        <p>${detail}</p>
-        <div class="tribute-list">${rows}</div>
-        <button class="btn" id="next-round" ${isHost() ? "" : "disabled"} type="button">${L("Next Round", "进入下一局")}</button>
+    // Confetti only for a clean round win (not a failed/aborted A challenge, even
+    // though the challenging team still technically held first place).
+    const showConfetti = isWin && !r.aceChallenge;
+    const resultKey = `round:${game.roundNo}:${r.firstTeam}:${r.advance}:${r.aceChallenge ? 1 : 0}:${r.aceReset ? 1 : 0}`;
+    return `<div class="phase-backdrop">
+        <div class="phase-panel result ${isWin ? "win" : ""} ${isLose ? "lose" : ""}" data-result-key="${encodeHTML(resultKey)}" data-result-score="${Number(r.advance) || 0}">
+            <h2>${title}</h2>
+            <p>${detail}</p>
+            <div class="result-score"><span class="result-score-label">${L("Levels advanced", "本局升级")}</span><span class="result-score-value">0</span></div>
+            <div class="tribute-list">${rows}</div>
+            <button class="btn" id="next-round" ${isHost() ? "" : "disabled"} type="button">${L("Next Round", "进入下一局")}</button>
+            ${showConfetti ? `<div class="result-confetti">${confettiPiecesHTML(28)}</div>` : ""}
+        </div>
     </div>`;
 }
 
 function gameOverHTML() {
     const r = game.roundResult;
+    const mine = mySeat();
+    const isWin = mine >= 0 && mine % 2 === r.firstTeam;
+    const isLose = mine >= 0 && mine % 2 !== r.firstTeam;
     const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
-    return `<div class="phase-panel">
-        <h2>${teamName(r.firstTeam)} ${L("wins the match", "冲 A 成功")}</h2>
-        <p>${L("A-level victory requires first place with the partner in second or third. The match is complete.", "打 A 时必须头游且对家第二或第三才算升级成功；本场比赛结束。")}</p>
-        <div class="tribute-list">${rows}</div>
-        <button class="btn" id="next-round" disabled type="button">${L("Match Complete", "比赛结束")}</button>
+    const resultKey = `game:${game.roundNo}:${r.firstTeam}`;
+    return `<div class="phase-backdrop">
+        <div class="phase-panel result ${isWin ? "win" : ""} ${isLose ? "lose" : ""}" data-result-key="${encodeHTML(resultKey)}" data-result-score="${Number(game.roundNo) || 0}">
+            <h2>${teamName(r.firstTeam)} ${L("wins the match", "冲 A 成功")}</h2>
+            <p>${L("A-level victory requires first place with the partner in second or third. The match is complete.", "打 A 时必须头游且对家第二或第三才算升级成功；本场比赛结束。")}</p>
+            <div class="result-score"><span class="result-score-label">${L("Rounds played", "共进行回合")}</span><span class="result-score-value">0</span></div>
+            <div class="tribute-list">${rows}</div>
+            <button class="btn" id="next-round" disabled type="button">${L("Match Complete", "比赛结束")}</button>
+            ${isWin ? `<div class="result-confetti">${confettiPiecesHTML(28)}</div>` : ""}
+        </div>
     </div>`;
+}
+
+function confettiPiecesHTML(n) {
+    let out = "";
+    for (let i = 0; i < n; i++) {
+        const cx = Math.round(Math.random() * 100);
+        const dx = Math.round((Math.random() * 2 - 1) * 120);
+        const rot = Math.round(Math.random() * 720 - 360);
+        const dur = Math.round(1800 + Math.random() * 800);
+        const delay = Math.round(Math.random() * 600);
+        out += `<span class="confetti-piece" style="--cx:${cx}%;--cdx:${dx}px;--crot:${rot}deg;--cdur:${dur}ms;--cdelay:${delay}ms"></span>`;
+    }
+    return out;
+}
+
+// Win/lose overlay entrance is handled by CSS (gdBackdropIn/gdResultIn); the
+// score count-up needs real per-frame JS for an eased 0 -> final-tally
+// animation. Guarded by lastResultOverlayKey so it only plays once per result
+// (renderTable() re-runs on every game-state tick while the panel is open).
+let lastResultOverlayKey = "";
+function initResultOverlay() {
+    const panel = document.querySelector(".phase-panel.result");
+    if (!panel) { lastResultOverlayKey = ""; return; }
+    const key = panel.dataset.resultKey || "";
+    if (!key || key === lastResultOverlayKey) return;
+    lastResultOverlayKey = key;
+    const valueEl = panel.querySelector(".result-score-value");
+    const target = Number(panel.dataset.resultScore) || 0;
+    if (!valueEl) return;
+    const duration = 700;
+    const start = performance.now();
+    function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        valueEl.textContent = String(Math.round(target * eased));
+        if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
 }
 
 document.getElementById("copy-link-btn").addEventListener("click", async () => {
