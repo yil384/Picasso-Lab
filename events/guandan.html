@@ -3869,6 +3869,45 @@
     }
 
 @keyframes gdTallyPulse { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } }
+
+/* ── Guandan 3D table (events/static/guandan-3d.js) ──────────────────────────────────────
+   Toggled by that module's own setEnabled(), never set statically in markup. `.gd-3d-on`
+   hides the 2D felt/wood/opponent-plaque/played-card visuals that the 3D canvas now draws,
+   via visibility (not display) so `.table`'s layout math -- and everything absolutely
+   positioned against it -- is completely unaffected. Every child that has no 3D equivalent
+   (HUD strip, center message/last-trick text, trick history, the round/game result screen)
+   or that must stay real interactive 2D DOM per the plan (the hand-tools action bar + the
+   player's own drag-and-drop hand tray) is explicitly re-shown, since visibility is
+   inheritable but overridable per descendant. The 3D canvas itself is a position:fixed
+   sibling of #root (mounted by guandan.html, see #gd3d-mount) with pointer-events:none, so
+   it never intercepts clicks meant for any of these. */
+html.gd-3d-on .table {
+    background: none;
+    visibility: hidden;
+}
+html.gd-3d-on .table::before,
+html.gd-3d-on .table::after {
+    display: none;
+}
+html.gd-3d-on .table-wrap {
+    background: transparent;
+}
+html.gd-3d-on .table > .score-strip,
+html.gd-3d-on .table > .center-zone,
+html.gd-3d-on .table > .history,
+html.gd-3d-on .table > .phase-backdrop,
+html.gd-3d-on .table > .hand-zone {
+    visibility: visible;
+}
+/* The 3D layer plays its own deal-in/sort/play-flight/bomb animation off the same shared
+   game timestamps -- these 2D-only equivalents must not run in parallel (double animation). */
+html.gd-3d-on .deal-overlay {
+    display: none;
+}
+html.gd-3d-on .deal-hand-back,
+html.gd-3d-on .card.sort-in {
+    animation: none;
+}
 </style>
 <link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.css">
 </head>
@@ -3895,10 +3934,32 @@
     <main id="root"></main>
 </div>
 
+<!-- Guandan 3D table mount point (events/static/guandan-3d.js). Deliberately a direct body
+     child, OUTSIDE #root/.app-shell: #root is fully replaced (root.innerHTML = ...) on every
+     Firebase state tick, which would destroy/recreate a canvas mounted inside it. The module
+     itself gives its canvas position:fixed + pointer-events:none, so this wrapper needs no
+     special styling of its own. -->
+<div id="gd3d-mount"></div>
+
 <div class="return-transition" id="return-transition" aria-hidden="true"></div>
 <div id="return-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
 <div class="toast" id="toast"></div>
 
+<!-- Guandan 3D: import map must precede any module script that consumes "three" -- copied
+     verbatim from home/address.html's existing Three.js setup, same CDN/version, so this
+     follows the site's one established 3D convention rather than introducing a second one. -->
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<!-- Loaded as a module BEFORE the main game-logic module script below (module scripts run in
+     document order), so window.Guandan3D is guaranteed to exist by the time that script's
+     bootstrap tail (attachRoom()/render()) runs. Defines window.Guandan3D and nothing else at
+     top level -- init()/setEnabled() are only ever called lazily, gated by ?gd3d=, from the
+     bootstrap code added near the end of the script below. -->
+<script type="module" src="https://yil384.github.io/Picasso-Lab/events/static/guandan-3d.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
 import { getDatabase, ref, set, get, onValue, remove, runTransaction } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
@@ -3997,6 +4058,16 @@ if (!clientId) {
     localStorage.setItem("picasso.guandan.client", clientId);
 }
 let nickname = localStorage.getItem("picasso.guandan.name") || "";
+
+// Guandan 3D opt-in gate. Default OFF for everyone. ?gd3d=1 turns it on and remembers that
+// choice (sticky localStorage) so it survives navigating away and back; ?gd3d=0 always wins
+// over the stored preference and turns it back off -- a permanent, one-URL-param rollback
+// lever that doesn't require clearing localStorage. This module is the ONLY thing gated here;
+// it never affects the core 2D game logic below, which runs identically either way.
+const gd3dParam = new URLSearchParams(location.search).get("gd3d");
+if (gd3dParam === "1") localStorage.setItem("picasso.guandan.gd3d", "1");
+else if (gd3dParam === "0") localStorage.setItem("picasso.guandan.gd3d", "0");
+const wantGuandan3D = gd3dParam === "0" ? false : (gd3dParam === "1" || localStorage.getItem("picasso.guandan.gd3d") === "1");
 
 function isZH() {
     return uiLang === "zh";
@@ -6805,6 +6876,7 @@ function render() {
     }
     if (game.phase === "lobby") renderLobbyRoom();
     else renderTable();
+    if (window.Guandan3D) window.Guandan3D.sync(game, dealAnimation);
 }
 
 function previewCardsHTML() {
@@ -7565,6 +7637,23 @@ document.addEventListener("keydown", event => {
     }
     if (returnBuffer.length >= 2) showReturnTypeHint();
 }, true);
+
+// Guandan 3D: lazy, opt-in init. Runs once, here at the bootstrap tail -- never at
+// guandan-3d.js's own module top level, and never inside render() (which stays exactly the
+// one added sync() line above, per the "one choke point" design: every render() already
+// funnels through that single line regardless of which of its 8 call sites fired). A failure
+// anywhere in here (missing script, WebGL unavailable, a thrown error) is swallowed and just
+// leaves window.Guandan3D absent/disabled, so the untouched 2D table below is completely
+// unaffected either way.
+if (wantGuandan3D) {
+    try {
+        if (window.Guandan3D && window.Guandan3D.init(document.getElementById("gd3d-mount"))) {
+            window.Guandan3D.setEnabled(true);
+        }
+    } catch (err) {
+        console.warn("[gd3d] 3D init failed -- staying on the 2D table.", err);
+    }
+}
 
 if (roomCode) attachRoom(roomCode);
 else render();
