@@ -567,6 +567,24 @@ function renderCards() {
 
 let projectLoadTimer = null;
 
+/* This page gets embedded in a host site (Google Sites). Every history call
+   is wrapped because a sandboxed frame can reject them, and a rejected call
+   must never break the UI. */
+function pushPicassoHistoryState(patch) {
+  try {
+    history.pushState({ ...(history.state || {}), ...patch }, '', window.location.href);
+  } catch (_) {}
+}
+
+/* Closing never traverses history via back(). Inside a host frame, back()
+   walks the top-level joint history and can land on the host's pre-embed
+   entry, which blanks the whole frame. Clearing the current entry is safe. */
+function clearPicassoHistoryState(patch) {
+  try {
+    history.replaceState({ ...(history.state || {}), ...patch }, '', window.location.href);
+  } catch (_) {}
+}
+
 function openProject(idx, fromHistory = false) {
   const p = PROJECTS[idx];
   if (!p) return;
@@ -590,11 +608,7 @@ function openProject(idx, fromHistory = false) {
   document.getElementById('project-list').style.display = 'none';
   document.body.style.overflow = 'hidden';
   if (!fromHistory && history.state?.picassoProjectPreview !== idx) {
-    history.pushState(
-      { ...(history.state || {}), picassoProjectPreview: idx },
-      '',
-      window.location.href
-    );
+    pushPicassoHistoryState({ picassoProjectPreview: idx });
   }
 
   let done = false;
@@ -616,8 +630,7 @@ function showBlocked() {
 
 function closeProject(fromHistory = false) {
   if (!fromHistory && Number.isInteger(history.state?.picassoProjectPreview)) {
-    history.back();
-    return;
+    clearPicassoHistoryState({ picassoProjectPreview: null });
   }
   clearTimeout(projectLoadTimer);
   document.getElementById('iframe-view').classList.remove('active');
@@ -1138,7 +1151,7 @@ cardVideos.forEach(video => {
   function requestFlipForward() {
     desiredFlipped = true;
     if (history.state?.picassoLab !== true) {
-      history.pushState({ ...(history.state || {}), picassoLab: true }, '', window.location.href);
+      pushPicassoHistoryState({ picassoLab: true });
     }
     reconcileFlipState();
   }
@@ -1146,7 +1159,7 @@ cardVideos.forEach(video => {
   function requestFlipBack() {
     desiredFlipped = false;
     if (history.state?.picassoLab === true) {
-      history.back();
+      clearPicassoHistoryState({ picassoLab: false });
     }
     reconcileFlipState();
   }
