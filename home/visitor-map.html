@@ -49,7 +49,7 @@
             <p class="va-status" id="va-status" aria-live="polite"><span>Loading visits&hellip;</span></p>
 
             <section class="va-kpis" aria-label="Summary">
-                <div class="va-kpi va-kpi-main"><div class="va-kpi-l" id="kl-1">Visits</div><div class="va-kpi-v" id="kv-1">&ndash;</div><div class="va-kpi-s" id="ks-1">&nbsp;</div></div>
+                <div class="va-kpi va-kpi-main"><div class="va-kpi-l va-kpi-l1"><span id="kl-1">Visits</span><button type="button" class="va-link va-alltime" id="va-alltime" hidden></button></div><div class="va-kpi-v" id="kv-1">&ndash;</div><div class="va-kpi-s" id="ks-1">&nbsp;</div></div>
                 <div class="va-kpi"><div class="va-kpi-l" id="kl-2">Countries &amp; regions</div><div class="va-kpi-v" id="kv-2">&ndash;</div><div class="va-kpi-s" id="ks-2">&nbsp;</div></div>
                 <div class="va-kpi"><div class="va-kpi-l" id="kl-3">Cities</div><div class="va-kpi-v" id="kv-3">&ndash;</div><div class="va-kpi-s" id="ks-3">&nbsp;</div></div>
                 <div class="va-kpi"><div class="va-kpi-l" id="kl-4">Busiest day</div><div class="va-kpi-v" id="kv-4">&ndash;</div><div class="va-kpi-s" id="ks-4">&nbsp;</div></div>
@@ -308,7 +308,7 @@
         var FKEYS = ['country', 'city', 'browser', 'os', 'device', 'lang'];
         var FDIM = { country: 'Country or region', city: 'City', browser: 'Browser', os: 'OS', device: 'Device', lang: 'Language' };
         var S = { range: '7d', country: null, city: null, browser: null, os: null, device: null, lang: null,
-            locTab: 'countries', q: '', locAll: false, devTab: 'browser', langAll: false, recentN: 10, table: false };
+            locTab: 'countries', q: '', locAll: false, devTab: 'browser', langAll: false, recentN: 10, table: false, hmAll: false };
 
         /* ---------- page chrome (head tags only exist for the dashboard) ---------- */
         function addHead(tag, attrs) { var e = doc.createElement(tag); Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); (doc.head || doc.documentElement).appendChild(e); return e; }
@@ -373,13 +373,18 @@
             var extra = { 'Hong Kong': 'HK', 'Macao': 'MO', 'Türkiye': 'TR', 'South Korea': 'KR', 'Netherlands': 'NL', 'Russia': 'RU', 'Vietnam': 'VN', 'Taiwan': 'TW', 'Czechia': 'CZ', 'Iran': 'IR', 'Laos': 'LA', 'Syria': 'SY', 'Bolivia': 'BO', 'Venezuela': 'VE', 'Tanzania': 'TZ', 'Moldova': 'MD', 'Palestine': 'PS', 'Ivory Coast': 'CI', 'Myanmar': 'MM', 'North Macedonia': 'MK', 'Brunei': 'BN', 'Cape Verde': 'CV', 'Eswatini': 'SZ' };
             Object.keys(extra).forEach(function (k) { m[k] = extra[k]; }); return m; })();
         function flag(c) { var code = ISO2[c];
-            return code ? '<img class="va-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/flags/4x3/' + code.toLowerCase() + '.svg" alt="" decoding="async">' : '<span class="va-flag va-flag-x" aria-hidden="true"></span>'; }
+            return code ? '<img class="va-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/flags/4x3/' + code.toLowerCase() + '.svg" alt="">' : '<span class="va-flag va-flag-x" aria-hidden="true"></span>'; }
         var LANG_DN = (function () { try { return new Intl.DisplayNames(['en'], { type: 'language', languageDisplay: 'standard' }); } catch (e) { try { return new Intl.DisplayNames(['en'], { type: 'language' }); } catch (e2) { return null; } } })();
         var langMemo = {};
         function langKey(l) { l = l || ''; if (l in langMemo) return langMemo[l]; var k = l.split('@')[0].replace(/_/g, '-').trim(); try { if (k) k = Intl.getCanonicalLocales(k)[0]; } catch (e) {} return (langMemo[l] = k); }
         function langLabel(k) { try { var s = LANG_DN ? LANG_DN.of(k) : k; return s || k; } catch (e) { return k; } }
         function srcKind(s) { if (!s) return 'unset'; if (s === 'Direct') return 'none'; var h = String(s).toLowerCase();
             return /(^|\.)googleusercontent\.com$/.test(h) || h === 'sites.google.com' || /(^|\.)yufeiding\.ucsd\.edu$/.test(h) || /(^|\.)github\.io$/.test(h) ? 'frame' : 'other'; }
+        /* opened from the footer map (the lab website's frame, or the fallback copy of this page): start on All time,
+           which is what the footer shows (its dots and its total) */
+        var FROM_FOOTER = (function () { if (location.protocol === 'blob:') return true; try { var r = doc.referrer; if (!r) return false; var u = new URL(r);
+            return u.href.split('#')[0] === location.href.split('#')[0] || srcKind(u.hostname.replace(/^www\./, '')) === 'frame'; } catch (e) { return false; } })();
+        var DEF_RANGE = FROM_FOOTER ? 'all' : '7d';
         function fold(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
         function fLabel(k, v) { return k === 'country' ? cLabel(v) : k === 'lang' ? langLabel(v) : v; }
 
@@ -392,18 +397,21 @@
             var asUTC = Date.UTC(+o.year, +o.month - 1, +o.day, (+o.hour) % 24, +o.minute);
             return (OFFC[key] = Math.round((asUTC - (t - t % MIN)) / MIN)); }
         function localHD(r) { if (r.lh == null) { var off = tzOffset(r.tz, r.t); if (off == null) off = Math.round(r.lon / 15) * 60;
-            var d = new Date(r.t + off * MIN); r.lh = d.getUTCHours(); r.ld = (d.getUTCDay() + 6) % 7; } }
+            var lt = r.t + off * MIN; r.lh = new Date(lt).getUTCHours(); r.lk = Math.floor(lt / DAY); r.ld = (r.lk + 3) % 7; } }   /* lk: the visitor's calendar date as a day number (day 0 was a Thursday) */
+        function dkey(ts) { return Math.floor((ts - new Date(ts).getTimezoneOffset() * MIN) / DAY); }   /* the same for a date in your time zone */
+        function fmtKey(k) { return new Date(k * DAY).toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }); }
 
         /* ---------- data preparation (once per fetch) ---------- */
         var D = null, FAILED = false, UPDATED = 0;
         function prep() {
             if (D && D.src === ROWS && D.len === ROWS.length) return D;
+            var raw = {}; ROWS.forEach(function (r) { if (r.country) raw[r.country] = 1; });   /* the footer map counts these spellings as they are */
             var rows = [], first = Infinity, last = -Infinity, firstRich = Infinity, posCount = {}, pn = {}, bare = 0, ctry = {}, cities = {}, vals = { browser: {}, os: {}, device: {}, lang: {} }, src = { none: 0, frame: 0, unset: 0, other: 0 };
             ROWS.forEach(function (r) { var t = Date.parse(r.created_at); if (isNaN(t) || r.lat == null || r.lon == null) return;
                 var country = normCountry(r.country), city = (r.city || '').trim(), lat = +r.lat, lon = +r.lon;
                 if (city) city = CITY_ALIAS[country + '|' + city] || city; else if (CITY_STATE[country]) city = CITY_STATE[country];
                 var ck = city ? country + '|' + city : country + '|@' + lat.toFixed(1) + ',' + lon.toFixed(1);
-                var o = { t: t, country: country, city: city, ck: ck, lat: lat, lon: lon, browser: r.browser || '', os: r.os || '', device: r.device || '', lang: langKey(r.lang), tz: r.tz || '', lh: null, ld: null };
+                var o = { t: t, country: country, city: city, ck: ck, lat: lat, lon: lon, browser: r.browser || '', os: r.os || '', device: r.device || '', lang: langKey(r.lang), tz: r.tz || '', lh: null, ld: null, lk: null };
                 src[srcKind(r.source)]++; pn[ck] = (pn[ck] || 0) + 1; if (!r.browser) bare++; if (country) ctry[country.toLowerCase()] = country; if (country && city) cities[country + '|' + city.toLowerCase()] = city;
                 ['browser', 'os', 'device', 'lang'].forEach(function (k) { if (o[k]) vals[k][o[k].toLowerCase()] = o[k]; });
                 if (r.browser && t < firstRich) firstRich = t;
@@ -412,7 +420,7 @@
             rows.sort(function (a, b) { return a.t - b.t; });
             var pos = {}; Object.keys(posCount).forEach(function (ck) { var best = null, bn = -1, pc = posCount[ck]; Object.keys(pc).forEach(function (k) { if (pc[k] > bn) { bn = pc[k]; best = k; } }); var q = best.split(','); pos[ck] = [+q[1], +q[0]]; });
             var legacy = 0; if (isFinite(firstRich)) for (var i = 0; i < rows.length && rows[i].t < firstRich; i++) if (!rows[i].browser) legacy++;
-            D = { src: ROWS, len: ROWS.length, rows: rows, first: first, last: last, legacy: legacy, bare: bare, firstRich: firstRich, pos: pos, pn: pn, vals: vals, ctry: ctry, cities: cities, bbox: {}, polys: {}, sources: src };
+            D = { src: ROWS, len: ROWS.length, rows: rows, first: first, last: last, legacy: legacy, bare: bare, firstRich: firstRich, pos: pos, pn: pn, vals: vals, ctry: ctry, cities: cities, rawC: Object.keys(raw).length, bbox: {}, polys: {}, sources: src };
             return D;
         }
         function win(range, now) { var B = [], i;
@@ -468,7 +476,7 @@
             v.tx = W <= cw ? (cw - W) / 2 - X0 : Math.min(-X0, Math.max(cw - W - X0, v.tx));
             v.ty = H <= ch ? (ch - H) / 2 - Y0 : Math.min(-Y0, Math.max(ch - H - Y0, v.ty)); return v; }
         function readTokens() { var cs = getComputedStyle(doc.documentElement), g = function (n) { return cs.getPropertyValue(n).trim(); };
-            TOK = { fill: g('--map-fill'), land: g('--map-land'), bc: g('--map-border'), bs: g('--map-border-2'), dot: g('--map-dot'), dim: g('--map-dim'), latest: g('--map-latest'), ring: g('--card'), ink: g('--ink'), sel: g('--map-sel'), selb: g('--map-sel-border') }; }
+            TOK = { fill: g('--map-fill'), land: g('--map-land'), bc: g('--map-border'), bs: g('--map-border-2'), dot: g('--map-dot'), dim: g('--map-dim'), latest: g('--map-latest'), ring: g('--card'), ink: g('--ink'), hov: g('--ink-2'), pick: g('--accent-ink'), sel: g('--map-sel'), selb: g('--map-sel-border') }; }
         function mapResize() { var cw = M.box.clientWidth, ch = M.box.clientHeight; if (!cw || !ch || ch > cw * 2) return;
             var keep = M.L ? { mx: (M.cw / 2 - M.v.tx) / M.v.s / M.L.mw, my: (M.ch / 2 - M.v.ty) / M.v.s / M.L.mh, s: M.v.s } : null;
             M.d = Math.max(1, Math.min(3, window.devicePixelRatio || 1)); M.cw = cw; M.ch = ch; M.cv.width = Math.round(cw * M.d); M.cv.height = Math.round(ch * M.d); M.L = mapLayout();
@@ -483,16 +491,18 @@
             if (!TOK.land) readTokens();
             var o = M.base.getContext('2d'), s = M.v.s, L = M.L, cell = Math.min(L.mw / GW, L.mh / GRID_ROWS) * s;
             var r = Math.max(0.55, Math.min(cell * 0.3, 2.1)) * d, pad = r + 1;
-            /* dotted land at world scale, filled shapes once zoomed in (the mask is too coarse at country scale); the crossfade is over by the second zoom step */
-            var dotA = Math.max(0, Math.min(1, (2.1 - s) / 0.4));
+            /* dotted land at world scale, filled shapes once zoomed in (the mask is too coarse at country scale); the crossfade
+               is over by the first zoom step, so the dots never spread into a coarse grid. With a country selected the rest of
+               the land steps back. */
+            var dotA = Math.max(0, Math.min(1, (1.5 - s) / 0.4)), fade = M.sel ? 0.6 : 1;
             o.clearRect(0, 0, W, H);
-            if (dotA < 1) { o.globalAlpha = 1 - dotA; o.fillStyle = TOK.fill; o.beginPath(); pathPolys(o, BUV.c, true); o.fill(); }
-            if (dotA > 0) { o.globalAlpha = dotA; o.fillStyle = TOK.land; o.beginPath();
+            if (dotA < 1) { o.globalAlpha = (1 - dotA) * fade; o.fillStyle = TOK.fill; o.beginPath(); pathPolys(o, BUV.c, true); o.fill(); }
+            if (dotA > 0) { o.globalAlpha = dotA * fade; o.fillStyle = TOK.land; o.beginPath();
                 for (var i = 0; i < LANDUV.length; i += 2) { var x = sx(LANDUV[i]) * d, y = sy(LANDUV[i + 1]) * d; if (x < -pad || y < -pad || x > W + pad || y > H + pad) continue; o.moveTo(x + r, y); o.arc(x, y, r, 0, 6.2832); }
                 o.fill(); }
             o.globalAlpha = 1; o.lineJoin = 'round'; o.lineCap = 'round';
             var sel = M.sel ? M.sel.map(function (k) { return BUV.c[k]; }) : null;
-            if (sel) { o.fillStyle = TOK.sel; o.beginPath(); pathPolys(o, sel, true); o.fill(); }   /* the selected country, a step darker */
+            if (sel) { o.fillStyle = TOK.fill; o.beginPath(); pathPolys(o, sel, true); o.fill(); o.fillStyle = TOK.sel; o.fill(); }   /* the selected country: full land colour plus an accent wash */
             var lw = Math.min(1.1, 0.55 + 0.12 * Math.log2(s));
             o.strokeStyle = TOK.bs; o.lineWidth = lw * 0.85 * d; o.beginPath(); pathPolys(o, BUV.s, false); o.stroke();
             o.strokeStyle = TOK.bc; o.lineWidth = lw * d; o.beginPath(); pathPolys(o, BUV.c, false); o.stroke();
@@ -537,12 +547,13 @@
             /* a card-coloured halo under every bubble first, then all the fills: touching bubbles read as one shape with one outline, never as rings */
             c.fillStyle = TOK.ring; for (i = 0; i < L.length; i++) { p = L[i]; c.beginPath(); c.arc(p.x * d, p.y * d, (p.r + 1.25) * d, 0, 6.2832); c.fill(); }
             c.fillStyle = TOK.dot; for (i = 0; i < L.length; i++) { p = L[i]; c.beginPath(); c.arc(p.x * d, p.y * d, p.r * d, 0, 6.2832); c.fill(); }
-            var lp = M.latest; if (lp && lit(lp)) { x = sx(lp.u) * d; y = sy(lp.v) * d; r = Math.max(2.2, Math.min(3.5, rOf(lp.n) * 0.4)) * d;   /* the latest visit: one static core, no animation */
-                c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fillStyle = TOK.latest; c.fill(); c.strokeStyle = TOK.ring; c.lineWidth = 1 * d; c.stroke(); }
-            var mark = function (pp, w) { if (!pp) return; if (pp.abs) pp = pp.abs; var rr = (lit(pp) ? rOf(pp.n) : rDim(pp)) + w / 2;   /* outline right on the bubble's edge */
-                c.beginPath(); c.arc(sx(pp.u) * d, sy(pp.v) * d, rr * d, 0, 6.2832); c.strokeStyle = TOK.ink; c.lineWidth = w * d; c.stroke(); };
-            if (S.city) for (i = 0; i < pts.length; i++) if (pts[i].country === S.country && pts[i].city === S.city) mark(pts[i], 2);
-            if (M.hover) mark(M.hover, 1.5); }
+            var mark = function (pp, w, col) { if (!pp) return; if (pp.abs) pp = pp.abs; var rr = (lit(pp) ? rOf(pp.n) : rDim(pp)) + w / 2;   /* outline right on the bubble's edge */
+                c.beginPath(); c.arc(sx(pp.u) * d, sy(pp.v) * d, rr * d, 0, 6.2832); c.strokeStyle = col; c.lineWidth = w * d; c.stroke(); };
+            if (S.city) for (i = 0; i < pts.length; i++) if (pts[i].country === S.country && pts[i].city === S.city) mark(pts[i], 2, TOK.pick);
+            if (M.hover) mark(M.hover, 1.5, TOK.hov);
+            /* the latest visit: a small solid dot on the top-right edge of its bubble (a badge, not a target); static */
+            var lp = M.latest; if (lp && lit(lp)) { if (lp.abs) lp = lp.abs; r = rOf(lp.n); x = (lp.x + r * 0.7071) * d; y = (lp.y - r * 0.7071) * d;
+                c.beginPath(); c.arc(x, y, (M.cw < 520 ? 2.6 : 3.2) * d, 0, 6.2832); c.fillStyle = TOK.latest; c.fill(); c.strokeStyle = TOK.ring; c.lineWidth = 1.25 * d; c.stroke(); } }
         function kick() { if (!M.raf) M.raf = requestAnimationFrame(loop); }
         function loop(ts) { M.raf = 0;
             if (M.anim) { var a = M.anim, k = Math.min(1, (ts - (a.t0 || (a.t0 = ts))) / a.ms), e = 1 - Math.pow(1 - k, 3);
@@ -583,10 +594,9 @@
                 (p.kids && p.kids.length ? '<div class="va-tip-s va-tip-near">' + esc(nearText(p)) + '</div>' : '') +
                 (hint ? '<div class="va-tip-hint">' + esc(hint) + '</div>' : '');
             showTip(h, x, y); }
-        function nearText(p) { var k = p.kids.slice().sort(function (a, b) { return b.n - a.n; }), n = 0;
-            k.forEach(function (q) { n += q.n; });
-            var names = k.slice(0, k.length > 3 ? 2 : 3).map(function (q) { return (q.city || 'Unknown city') + (q.country !== p.country ? ', ' + cLabel(q.country) : ''); });
-            return 'Also here: ' + names.join(', ') + (k.length > names.length ? ' and ' + (k.length - names.length) + ' more' : '') + ' (' + plural(n, 'visit') + '). Zoom in to separate them.'; }
+        /* the places folded into this bubble at this zoom */
+        function nearText(p) { var n = 0; p.kids.forEach(function (q) { n += q.n; });
+            return '+' + plural(p.kids.length, 'nearby place') + ', ' + plural(n, 'visit'); }
         /* after a tap the map may fly to the country: show the tooltip on the place once it has landed */
         var TIP_HOLD = 0;
         function tipAfterFly(k) { var show = function () { for (var i = 0; i < M.pts.length; i++) { var p = M.pts[i]; if (p.k !== k) continue; if (p.abs) p = p.abs;
@@ -635,9 +645,10 @@
             $('va-map-sub').textContent = sub;
             M.cv.setAttribute('aria-label', 'Map of visitor locations: ' + sub + '. The Locations list has the same data.');
             var note = $('va-map-note'); note.textContent = F.length ? '' : (D.rows.length ? 'No visits in this period.' : 'No visits recorded yet.'); note.classList.toggle('on', !F.length);
-            if (pl.length) renderLegend(M.nmax, !!M.latest); else $('va-legend').innerHTML = ''; kick(); }
+            if (F.length) renderLegend(M.nmax, !!M.latest); else $('va-legend').innerHTML = ''; kick(); }
+        /* sizes on the current scale: powers of ten up to the largest place, and always the largest itself when that's all there is */
         function renderLegend(nmax, hasLatest) { var vals = [], cand = [1, 10, 100, 1000, 10000]; cand.forEach(function (v) { if (v <= nmax) vals.push(v); }); if (vals.length > 3) vals = [vals[0], vals[vals.length - 2], vals[vals.length - 1]];
-            if (!vals.length) vals = [1]; var rs = vals.map(function (v) { return rOf(v); }), R = Math.max.apply(null, rs), svg = '', gap = 10, x = 0;
+            if (vals.length < 2 && nmax > 1) vals = [1, nmax]; if (!vals.length) vals = [1]; var rs = vals.map(function (v) { return rOf(v); }), R = Math.max.apply(null, rs), svg = '', gap = 10, x = 0;
             vals.forEach(function (v, i) { var r = rs[i], cw = Math.max(r * 2, fmt(v).length * 7 + 2), cx = x + cw / 2; svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + (R * 2 - r + 1).toFixed(1) + '" r="' + r.toFixed(1) + '" class="va-lg-c"/><text x="' + cx.toFixed(1) + '" y="' + (R * 2 + 15) + '" class="va-lg-t">' + fmt(v) + '</text>'; x += cw + gap; });
             var w = x - gap, h = '<div class="va-lg-title">Visits per city</div><svg width="' + Math.ceil(w + 8) + '" height="' + Math.ceil(R * 2 + 19) + '" viewBox="-4 0 ' + Math.ceil(w + 8) + ' ' + Math.ceil(R * 2 + 19) + '">' + svg + '</svg>';
             if (hasLatest) h += '<div class="va-lg-latest"><i></i>Latest visit</div>';
@@ -645,7 +656,7 @@
 
         /* ═════════ tooltip ═════════ */
         var tipEl = $('va-tip');
-        function showTip(html, x, y, above) { tipEl.innerHTML = html; tipEl.classList.add('on'); var w = tipEl.offsetWidth, h = tipEl.offsetHeight, vw = doc.documentElement.clientWidth, vh = window.innerHeight;
+        function showTip(html, x, y, above, owner) { tipEl.innerHTML = html; tipEl.classList.add('on'); tipEl.setAttribute('data-owner', owner || ''); var w = tipEl.offsetWidth, h = tipEl.offsetHeight, vw = doc.documentElement.clientWidth, vh = window.innerHeight;
             var left = x + 14, top = above ? y - h - 12 : y + 16; if (left + w > vw - 8) left = x - 14 - w; if (top + h > vh - 8) top = y - h - 12; if (top < 8) top = Math.min(vh - h - 8, y + 16);
             tipEl.style.transform = 'translate(' + Math.round(Math.max(8, left)) + 'px,' + Math.round(Math.max(8, top)) + 'px)'; }
         function hideTip() { tipEl.classList.remove('on'); }
@@ -680,47 +691,63 @@
 
         /* ═════════ KPIs ═════════ */
         var SER = null;
-        function busiest(C) { var i, best = -1, bn = 0, B, cur, part;
-            if (S.range !== 'all') { B = SER.B; cur = SER.cur; for (i = 0; i < B.length; i++) if (cur[i] > bn) { bn = cur[i]; best = i; }
-                if (best < 0) return null;
-                part = SER.partial && best === B.length - 1 ? ' (so far)' : SER.pf && best === 0 ? ' (from ' + fmtClock(SER.firstT) + ')' : '';
-                return { label: S.range === '24h' ? 'Busiest hour' : 'Busiest day', n: bn, when: (S.range === '24h' ? hourSpan(new Date(B[best].a).getHours()) + ', ' + fmtDay(B[best].a) : fmtWday(B[best].a)) + part }; }
-            var m = {}, k; C.F.forEach(function (r) { var d = sod(r.t); m[d] = (m[d] || 0) + 1; });
-            for (k in m) if (m[k] > bn) { bn = m[k]; best = +k; } if (best < 0) return null;
-            return { label: 'Busiest day', n: bn, when: fmtWday(best) + ', ' + new Date(best).getFullYear() + (best === sod(C.now) ? ' (so far)' : '') }; }
-        function renderKPIs(C) { var F = C.F, RN = C.RN, set = function (id, v, html) { var el = $(id); if (html) el.innerHTML = v; else el.textContent = v; }, NONE = 'No visits in this period';
+        /* the busiest bucket; ties are named as ties, never as a lead */
+        function busiest(C) { var i, bn = 0, top = [], B, cur, hr = S.range === '24h', label = hr ? 'Busiest hour' : 'Busiest day', one;
+            if (S.range !== 'all') { B = SER.B; cur = SER.cur; for (i = 0; i < B.length; i++) { if (cur[i] > bn) { bn = cur[i]; top = [i]; } else if (cur[i] === bn && bn > 0) top.push(i); }
+                one = function (j) { return (hr ? hourSpan(new Date(B[j].a).getHours()) + ', ' + fmtDay(B[j].a) : fmtWday(B[j].a)) + (SER.partial && j === B.length - 1 ? ' (so far)' : SER.pf && j === 0 ? ' (from ' + fmtClock(SER.firstT) + ')' : ''); }; }
+            else { var m = {}, k; C.F.forEach(function (r) { var d = sod(r.t); m[d] = (m[d] || 0) + 1; });
+                for (k in m) { if (m[k] > bn) { bn = m[k]; top = [+k]; } else if (m[k] === bn) top.push(+k); } top.sort(function (a, b) { return a - b; });
+                one = function (d) { return fmtWday(d) + ', ' + new Date(d).getFullYear() + (d === sod(C.now) ? ' (so far)' : ''); }; }
+            if (!top.length) return null;
+            return { label: label, n: bn, when: top.length === 1 ? one(top[0]) : top.length === 2 ? one(top[0]) + ' and ' + one(top[1]) : 'Tied on ' + top.length + (hr ? ' hours' : ' days'), tie: top.length > 1 }; }
+        /* "Safari ", "mobile " with one non-location filter, "matching " with more, "" with none: "8 of 147 Safari visits" */
+        function nlPre() { var ks = ['browser', 'os', 'device', 'lang'].filter(function (k) { return S[k]; });
+            if (ks.length !== 1) return ks.length ? 'matching ' : ''; var k = ks[0], v = fLabel(k, S[k]); return (k === 'device' ? v.toLowerCase() : v) + ' '; }
+        function renderKPIs(C) { var F = C.F, RN = C.RN, set = function (id, v, html) { var el = $(id); if (html) el.innerHTML = v; else el.textContent = v; }, NONE = 'No visits in this period', DASH = '–', BLANK = ' ';
             set('kv-1', fmt(F.length)); $('ks-1').title = '';
+            /* the all-time total (what the footer map shows) is one click away from every range */
+            var at = $('va-alltime'); if (S.range !== 'all' && D.rows.length) { var na = 0, all = !anyF(); for (var i = 0; i < D.rows.length; i++) { var r = D.rows[i]; if (r.t <= C.now && (all || (matchNL(r) && matchLoc(r)))) na++; }
+                at.textContent = fmt(na) + ' all time'; at.title = 'Show all time: ' + plural(na, all ? 'visit' : 'matching visit') + ' since ' + fmtDayY(D.first); at.hidden = !na; } else at.hidden = true;
             if (C.P) { var p = C.P.length, c = F.length, dl;
-                if (!p && !c) dl = 'None in the ' + RANGES[S.range].cmp + ' either';
+                if (!c) dl = NONE + (p ? ' · ' + fmt(p) + ' in the ' + RANGES[S.range].cmp : '');
                 else if (!p) dl = 'None in the ' + RANGES[S.range].cmp;
-                else { var r = Math.round((c - p) / p * 100); dl = (r === 0 ? '<span class="va-delta">No change</span>' : '<span class="va-delta ' + (r > 0 ? 'up' : 'down') + '">' + (r > 0 ? '↑ ' : '↓ ') + Math.abs(r) + '%</span>') + ' vs ' + RANGES[S.range].cmp; }
+                else { var rr = Math.round((c - p) / p * 100); dl = (rr === 0 ? '<span class="va-delta">No change</span>' : '<span class="va-delta ' + (rr > 0 ? 'up' : 'down') + '">' + (rr > 0 ? '↑ ' : '↓ ') + Math.abs(rr) + '%</span>') + ' vs ' + RANGES[S.range].cmp; }
                 set('ks-1', dl, true); $('ks-1').title = fmt(p) + ' visits in the ' + RANGES[S.range].cmp + ', ' + fmtWhen(C.W.prev.a, C.now) + ' to ' + fmtWhen(C.W.prev.b, C.now) + (S.range === '24h' ? '' : ', counted up to the same point'); }
-            else set('ks-1', D.rows.length ? 'Since ' + fmtDayY(D.first) : 'No visits recorded yet');
+            else set('ks-1', !D.rows.length ? 'No visits recorded yet' : F.length ? 'Since ' + fmtDayY(D.first) : NONE);
+            var pre = nlPre(), b = busiest(C);
+            set('kl-2', !S.country ? 'Countries & regions' : 'Share of ' + (pre ? pre + 'visits' : 'all visits'));
+            set('kl-3', S.city ? 'Share of ' + cLabel(S.country) : S.country ? 'Cities in ' + cLabel(S.country) : 'Cities');
+            set('kl-4', b ? b.label : (S.range === '24h' ? 'Busiest hour' : 'Busiest day'));
+            $('ks-4').title = $('ks-5').title = '';
+            /* nothing matches: one message (in the first tile) and the same placeholder everywhere else */
+            if (!F.length) { ['2', '3', '4', '5'].forEach(function (n) { set('kv-' + n, DASH); set('ks-' + n, BLANK); }); return; }
             /* tile 2: how many countries, or, under a place filter, that place's share (the city's own when a city is picked) */
-            if (!S.country) { var tc = tally(F, function (r) { return r.country; }); set('kl-2', 'Countries & regions'); set('kv-2', fmt(tc.length));
-                set('ks-2', tc.length ? 'Top: ' + cLabel(tc[0].k) + ' · ' + fmtPct(share(tc[0].n, F.length)) : NONE); }
-            else { set('kl-2', anyNL() ? 'Share of matching visits' : 'Share of all visits'); set('kv-2', RN.length ? fmtPct(share(F.length, RN.length)) : '–'); set('ks-2', RN.length ? fmt(F.length) + ' of ' + plural(RN.length, 'visit') : NONE); }
-            if (!S.city) { var ct = tally(F, function (r) { return r.city ? r.ck : ''; }); set('kl-3', S.country ? 'Cities in ' + cLabel(S.country) : 'Cities'); set('kv-3', F.length ? fmt(ct.length) : '–');
-                set('ks-3', ct.length ? 'Top: ' + ct[0].k.split('|')[1] + ' · ' + fmtPct(share(ct[0].n, F.length)) : F.length ? 'No city recorded' : NONE); }
-            else { var cc = RN.filter(function (r) { return r.country === S.country; }).length; set('kl-3', 'Share of ' + cLabel(S.country)); set('kv-3', cc ? fmtPct(share(F.length, cc)) : '–'); set('ks-3', cc ? fmt(F.length) + ' of ' + plural(cc, 'visit') : NONE); }
-            var b = busiest(C); set('kl-4', b ? b.label : (S.range === '24h' ? 'Busiest hour' : 'Busiest day'));
-            set('kv-4', b ? fmt(b.n) : '–'); set('ks-4', b ? b.when + ' · ' + TZ_SHORT : NONE);
-            $('ks-4').title = b ? (S.range === '24h' ? 'The clock hour' : 'The calendar day') + ' with the most visits, in your time zone (' + TZ_NAME + ')' : '';
+            if (!S.country) { var tc = tally(F, function (r) { return r.country; }); set('kv-2', fmt(tc.length)); set('ks-2', 'Top: ' + cLabel(tc[0].k) + ' · ' + fmtPct(share(tc[0].n, F.length))); }
+            else { set('kv-2', fmtPct(share(F.length, RN.length))); set('ks-2', fmt(F.length) + ' of ' + plural(RN.length, pre + 'visit')); }
+            if (!S.city) { var ct = tally(F, function (r) { return r.city ? r.ck : ''; }); set('kv-3', fmt(ct.length));
+                set('ks-3', ct.length ? 'Top: ' + ct[0].k.split('|')[1] + ' · ' + fmtPct(share(ct[0].n, F.length)) : 'No city recorded'); }
+            else { var cc = RN.filter(function (r) { return r.country === S.country; }).length; set('kv-3', fmtPct(share(F.length, cc))); set('ks-3', fmt(F.length) + ' of ' + plural(cc, pre + 'visit')); }
+            set('kv-4', b ? fmt(b.n) : DASH); set('ks-4', b ? b.when + ' · ' + TZ_SHORT : BLANK);
+            if (b) $('ks-4').title = (S.range === '24h' ? 'The clock hour' : 'The calendar day') + (b.tie ? 's' : '') + ' with the most visits, in your time zone (' + TZ_NAME + ')';
             var dev = 0, mob = 0; F.forEach(function (r) { if (r.device) { dev++; if (r.device === 'Mobile' || r.device === 'Tablet') mob++; } });
-            set('kv-5', dev ? fmtPct(share(mob, dev)) : '–'); set('ks-5', dev ? fmt(mob) + ' of ' + plural(dev, 'visit') : F.length ? 'Device not recorded' : NONE);
+            set('kv-5', dev ? fmtPct(share(mob, dev)) : DASH); set('ks-5', !dev ? 'Device not recorded' : fmt(mob) + ' of ' + (dev === F.length ? plural(dev, 'visit') : fmt(dev) + ' with device info'));
             $('ks-5').title = dev ? 'Share of visits with a recorded device type that came from a phone or tablet' : ''; }
 
         /* ═════════ locations panel ═════════ */
         var STACKED = window.matchMedia('(max-width: 900px)');
+        function locTabs() { return '<div class="va-tabs" role="tablist" aria-label="Location breakdown"><button type="button" role="tab" data-lt="countries" aria-selected="' + (S.locTab === 'countries') + '">Countries &amp; regions</button><button type="button" role="tab" data-lt="cities" aria-selected="' + (S.locTab === 'cities') + '">Cities</button></div>'; }
+        /* a soft fade at the bottom while the list has more rows below */
+        function locFade() { var l = $('va-loc-list'); l.classList.toggle('va-fade', l.scrollHeight - l.scrollTop - l.clientHeight > 2); }
+        $('va-loc-list').addEventListener('scroll', locFade, { passive: true });
         function renderLoc(C) { var R = C.RN, head = $('va-loc-h'), list = $('va-loc-list'), q = fold(S.q), items = [], total, col;
             if (S.country) { var inC = R.filter(function (r) { return r.country === S.country; }); total = inC.length; col = 'City';
                 var nCity = tally(inC, function (r) { return r.city; }).length;
                 head.innerHTML = '<button type="button" class="va-back" id="va-back"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>All countries &amp; regions</button>' +
-                    '<div class="va-drill">' + flag(S.country) + '<div><div class="va-drill-n">' + esc(cLabel(S.country)) + '</div><div class="va-drill-s">' + plural(total, 'visit') + ' · ' + fmtPct(share(total, R.length)) + ' of ' + esc(scopeText()) + ' · ' + plural(nCity, 'city', 'cities') + '</div></div></div>';
+                    '<div class="va-drill">' + flag(S.country) + '<div><div class="va-drill-n">' + esc(cLabel(S.country)) + '</div><div class="va-drill-s">' + (total ? plural(total, 'visit') + ' · ' + fmtPct(share(total, R.length)) + ' of ' + esc(scopeText()) + ' · ' + plural(nCity, 'city', 'cities') : 'No ' + esc(scopeText())) + '</div></div></div>';
                 var byCity = {}; inC.forEach(function (r) { var k = r.city || ''; var o = byCity[k] || (byCity[k] = { k: k, n: 0 }); o.n++; });
                 items = Object.keys(byCity).map(function (k) { var o = byCity[k]; return { key: 'city:' + k, label: k || 'Unknown city', find: k, muted: !k, n: o.n, on: S.city === k && !!k }; });
                 $('va-q').placeholder = 'Search cities in ' + cLabel(S.country); }
-            else { head.innerHTML = '<div class="va-tabs" role="tablist" aria-label="Location breakdown"><button type="button" role="tab" data-lt="countries" aria-selected="' + (S.locTab === 'countries') + '">Countries &amp; regions</button><button type="button" role="tab" data-lt="cities" aria-selected="' + (S.locTab === 'cities') + '">Cities</button></div>';
+            else { head.innerHTML = locTabs();
                 total = R.length;
                 if (S.locTab === 'countries') { col = 'Country or region'; var byC = {}; R.forEach(function (r) { var o = byC[r.country] || (byC[r.country] = { n: 0, cities: {} }); o.n++; if (r.city) o.cities[r.city] = 1; });
                     items = Object.keys(byC).map(function (k) { var nc = Object.keys(byC[k].cities).length; return { key: 'country:' + k, label: cLabel(k), find: cLabel(k) + ' ' + k, flag: flag(k), n: byC[k].n, sub: nc ? plural(nc, 'city', 'cities') : '' }; });
@@ -730,25 +757,29 @@
                     $('va-q').placeholder = items.length ? 'Search ' + plural(items.length, 'city', 'cities') : 'Search cities'; } }
             items.sort(function (a, b) { return (a.muted ? 1 : 0) - (b.muted ? 1 : 0) || b.n - a.n || (a.label < b.label ? -1 : 1); });
             /* counts name real places only: the muted "Unknown city" row is reported separately */
+            /* bars are on the scale of the whole list, so a search never stretches a small share to full width */
+            var max = 1; items.forEach(function (o) { if (o.n > max) max = o.n; });
             var unk = items.filter(function (o) { return o.muted; }), all = items.length - unk.length; if (q) items = items.filter(function (o) { return fold(o.find).indexOf(q) >= 0; });
             var nReal = items.filter(function (o) { return !o.muted; }).length, noun = function (n) { return col === 'City' ? plural(n, 'city', 'cities') : plural(n, 'country or region', 'countries and regions'); };
-            var max = 1; items.forEach(function (o) { if (o.n > max) max = o.n; });
             var lim = STACKED.matches && !S.locAll && !q ? 8 : Infinity, shown = items.slice(0, lim);
             $('va-lhead-n').textContent = col;
             list.innerHTML = shown.length ? shown.map(function (o) {
-                return '<button type="button" class="va-lrow' + (o.on ? ' on' : '') + '" data-k="' + esc(o.key) + '"' + (o.on ? ' aria-pressed="true"' : '') + ' title="' + esc(o.label + (o.two && o.sub ? ', ' + o.sub : '') + ' · ' + plural(o.n, 'visit')) + '">' +
-                    '<span class="va-lrow-bar" style="--w:' + (o.n / max).toFixed(4) + '"></span>' +
+                return '<button type="button" class="va-lrow' + (o.on ? ' on' : '') + (o.flag ? ' va-fl' : '') + '" data-k="' + esc(o.key) + '"' + (o.on ? ' aria-pressed="true"' : '') + ' title="' + esc(o.label + (o.two && o.sub ? ', ' + o.sub : '') + ' · ' + plural(o.n, 'visit')) + '">' + bar(o.n / max, barRoom(list, o.flag ? 174 : 148)) +
                     '<span class="va-lrow-n">' + (o.flag || '') + (o.two ? '<span class="va-two"><span class="va-wrap">' + esc(o.label) + '</span><span class="va-lrow-sub2">' + esc(o.sub) + '</span></span>'
                         : '<span class="va-wrap' + (o.muted ? ' va-muted' : '') + '">' + esc(o.label) + '</span>' + (o.sub ? '<span class="va-lrow-sub">' + esc(o.sub) + '</span>' : '')) + '</span>' +
                     '<span class="va-num">' + fmt(o.n) + '</span><span class="va-pct">' + fmtPct(share(o.n, total)) + '</span></button>'; }).join('')
                 : '<div class="va-empty">' + (q ? 'No matches for “' + esc(S.q) + '”' : 'No visits in this period') + '</div>';
+            /* a country with a single city: say so, instead of leaving a tall empty card */
+            if (S.country && !q && nReal === 1 && items.length === 1) list.innerHTML += '<div class="va-only">No other city in ' + esc(cLabel(S.country)) + (anyNL() ? ' has matching visits' : ' has visits') + (S.range === 'all' ? ' so far.' : ' in the ' + RANGES[S.range].title.toLowerCase() + '.') + '</div>';
+            list.classList.toggle('va-list-one', !!(S.country && !q && nReal === 1 && items.length === 1));
             var f = $('va-loc-f'); if (lim < Infinity && items.length > lim) f.innerHTML = '<button type="button" class="va-link" id="va-loc-all">Show all ' + noun(nReal) + '</button>';
             else if (STACKED.matches && S.locAll && items.length > 8 && !q) f.innerHTML = '<button type="button" class="va-link" id="va-loc-less">Show fewer</button>';
-            else f.innerHTML = '<span>' + (q ? fmt(nReal) + ' of ' + noun(all) : noun(all)) + (unk.length && !q ? ' · ' + plural(unk[0].n, 'visit') + ' with no city recorded' : '') + '</span>'; }
+            else f.innerHTML = '<span>' + (q ? fmt(nReal) + ' of ' + noun(all) : noun(all)) + (unk.length && !q ? ' · ' + plural(unk[0].n, 'visit') + ' with no city recorded' : '') + '</span>';
+            list.scrollTop = 0; locFade(); }
         $('va-loc').addEventListener('click', function (e) { var t = e.target.closest('button'); if (!t) return;
             if (t.id === 'va-back') { S.country = null; S.city = null; S.q = ''; $('va-q').value = ''; flyTo(worldView(), 600); commit(); return; }
             if (t.id === 'va-loc-all') { S.locAll = true; renderLoc(LAST); return; } if (t.id === 'va-loc-less') { S.locAll = false; renderLoc(LAST); return; }
-            if (t.hasAttribute('data-lt')) { S.locTab = t.getAttribute('data-lt'); S.q = ''; $('va-q').value = ''; renderLoc(LAST); return; }
+            if (t.hasAttribute('data-lt')) { S.locTab = t.getAttribute('data-lt'); S.q = ''; $('va-q').value = ''; if (LAST) renderLoc(LAST); else $('va-loc-h').innerHTML = locTabs(); return; }
             var k = t.getAttribute('data-k'); if (!k) return; M.hl = null;
             if (k.indexOf('country:') === 0) { S.country = k.slice(8); S.city = null; S.q = ''; $('va-q').value = ''; fitCountry(S.country); }
             else if (k.indexOf('cityin:') === 0) { var ck = k.slice(7), i = ck.indexOf('|'); var co = ck.slice(0, i); S.city = ck.slice(i + 1); S.q = ''; $('va-q').value = ''; if (S.country !== co) { S.country = co; fitCountry(co); } }
@@ -760,7 +791,7 @@
             if (JSON.stringify(h) !== JSON.stringify(M.hl)) { M.hl = h; kick(); } }
         ['pointerover', 'focusin'].forEach(function (ev) { $('va-loc-list').addEventListener(ev, locHL); });
         ['pointerleave', 'focusout'].forEach(function (ev) { $('va-loc-list').addEventListener(ev, function () { if (M.hl) { M.hl = null; kick(); } }); });
-        $('va-q').addEventListener('input', function (e) { S.q = e.target.value; renderLoc(LAST); });
+        $('va-q').addEventListener('input', function (e) { S.q = e.target.value; if (LAST) renderLoc(LAST); });
         if (STACKED.addEventListener) STACKED.addEventListener('change', function () { if (LAST) renderLoc(LAST); });
 
         /* ═════════ visits over time ═════════ */
@@ -784,18 +815,20 @@
             if (prevShown()) keys += '<span class="va-key"><i class="va-key-prev"></i>' + RANGES[S.range].cmp.replace(/^previous/, 'Previous') + '</span>';
             if (TR.pf && C.F.length) keys += '<span class="va-key"><i class="va-key-open va-key-first"></i>First ' + TR.unit + ', ' + (TR.unit === 'week' ? 'from ' + fmtDay(TR.firstT) : 'from ' + fmtClock(TR.firstT)) + '</span>';
             if (TR.partial && C.F.length) keys += '<span class="va-key"><i class="va-key-open"></i>' + RANGES[S.range].now + ', in progress</span>';
-            $('va-trend-keys').innerHTML = keys; drawTrend(); }
+            $('va-trend-keys').innerHTML = keys; $('va-trend-keys').hidden = S.table; drawTrend(); }
         function drawTrend() { if (!TR) return; var el = trendEl, Wd = el.clientWidth - (parseFloat(getComputedStyle(el).paddingLeft) || 0) - (parseFloat(getComputedStyle(el).paddingRight) || 0); if (Wd <= 0) return;
             var n = TR.B.length, done = TR.partial ? n - 1 : n, f0 = TR.pf ? 1 : 0, sp = prevShown();
             if (S.table) { var rows = TR.B.map(function (b, i) { var so = i === n - 1 && TR.partial, fw = i === 0 && TR.pf;
                     return '<tr><th scope="row">' + esc(bucketLabel(b, TR.unit, true)) + (so ? ' <span class="va-muted">(so far)</span>' : fw ? ' <span class="va-muted">(' + esc(firstNote()) + ')</span>' : '') + '</th><td>' + fmt(TR.cur[i]) + '</td>' + (sp ? '<td>' + fmt(TR.prev[i]) + (so ? ' <span class="va-muted">(same time)</span>' : '') + '</td>' : '') + '</tr>'; }).reverse().join('');
                 el.innerHTML = '<div class="va-tablewrap va-tscroll"><table class="va-table va-table-num"><thead><tr><th>' + { hour: 'Hour', day: 'Day', week: 'Week' }[TR.unit] + '</th><th>Visits</th>' + (sp ? '<th>' + esc(RANGES[S.range].cmp.replace(/^previous/, 'Previous')) + '</th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table></div>'; return; }
             if (!LAST || !LAST.F.length) { el.innerHTML = '<div class="va-empty va-chart-empty">' + (D && D.rows.length ? 'No visits in this period' : 'No visits recorded yet') + '</div>'; TR.geom = null; return; }
-            var H = Wd < 560 ? 200 : 250, vals = TR.cur.slice(); if (sp) vals = vals.concat(TR.prev.slice(0, done));
-            var mx = Math.max.apply(null, vals.concat([1]));
+            /* the scale follows the complete buckets and the current one; a partial first bucket (the first week of tracking,
+               say) that is taller is pinned to the top edge with its value, so it can't squeeze the rest of the line */
+            var H = Wd < 560 ? 200 : 250, vals = TR.cur.slice(f0); if (sp) vals = vals.concat(TR.prev.slice(0, done));
+            var mx = Math.max.apply(null, vals.concat([1])); if (f0 && n - f0 < 2) mx = Math.max(mx, TR.cur[0]);
             var step = niceStep(mx, H < 220 ? 3 : 4), top = Math.max(step, Math.ceil(mx / step) * step), ticks = []; for (var v = 0; v <= top + 1e-9; v += step) ticks.push(v);
             var padL = 14 + String(fmt(top)).length * 7.4, padR = 30, padT = 14, padB = 30, pw = Wd - padL - padR, ph = H - padT - padB;
-            var X = function (i) { return padL + (n === 1 ? pw / 2 : i / (n - 1) * pw); }, Y = function (v) { return padT + ph - v / top * ph; };
+            var X = function (i) { return padL + (n === 1 ? pw / 2 : i / (n - 1) * pw); }, Y = function (v) { return padT + ph - Math.min(v, top) / top * ph; };
             var s = '<svg width="' + Wd + '" height="' + H + '" viewBox="0 0 ' + Wd + ' ' + H + '" role="img" aria-label="' + esc($('va-trend-h').textContent) + ' chart">';
             ticks.forEach(function (t) { var y = Math.round(Y(t)) + 0.5; s += '<line x1="' + padL + '" x2="' + (Wd - padR + 12) + '" y1="' + y + '" y2="' + y + '" class="' + (t === 0 ? 'va-ax' : 'va-gl') + '"/><text x="' + (padL - 10) + '" y="' + (y + 4) + '" class="va-yt">' + fmt(t) + '</text>'; });
             var lw = TR.unit === 'hour' ? 50 : TR.unit === 'week' ? 58 : 60, every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(pw / lw))));
@@ -806,7 +839,8 @@
                 if (sp && done - f0 > 1) s += '<path d="' + line(TR.prev, f0, done - 1) + '" class="va-l-prev"/>';
                 if (done - f0 > 1) s += '<path d="' + line(TR.cur, f0, done - 1) + ' L' + X(done - 1).toFixed(1) + ' ' + Y(0).toFixed(1) + ' L' + X(f0).toFixed(1) + ' ' + Y(0).toFixed(1) + 'Z" class="va-area"/><path d="' + line(TR.cur, f0, done - 1) + '" class="va-l-cur"/>';
                 if (done - f0 <= 45) for (var j = f0; j < done; j++) s += '<circle cx="' + X(j).toFixed(1) + '" cy="' + Y(TR.cur[j]).toFixed(1) + '" r="' + (done > 20 ? 2.25 : 2.75) + '" class="va-pt"/>'; }
-            if (TR.pf) s += '<circle cx="' + X(0).toFixed(1) + '" cy="' + Y(TR.cur[0]).toFixed(1) + '" r="3.5" class="va-pt-open va-pt-first"/>';
+            if (TR.pf) { s += '<circle cx="' + X(0).toFixed(1) + '" cy="' + Y(TR.cur[0]).toFixed(1) + '" r="3.5" class="va-pt-open va-pt-first"/>';
+                if (TR.cur[0] > top) s += '<text x="' + (X(0) + 8).toFixed(1) + '" y="' + (Y(top) + 4).toFixed(1) + '" class="va-so-far va-off">↑ ' + esc(fmt(TR.cur[0])) + '</text>'; }
             if (TR.partial) { var px = X(n - 1), py = Y(TR.cur[n - 1]), lab = fmt(TR.cur[n - 1]) + ' so far', tw = lab.length * 6.6 + 4;
                 /* the in-progress bucket is its own hollow point, never joined to the line */
                 var ya = py - 11, yb = py + 19, near = done > 0 && X(done - 1) > px - tw - 6 ? Y(TR.cur[done - 1]) : null, ly = ya;
@@ -822,29 +856,40 @@
             h += '<div class="va-tip-kv"><i class="va-key-cur"></i><span>Visits</span><b>' + fmt(TR.cur[i]) + '</b></div>';
             if (g.sp) h += '<div class="va-tip-kv"><i class="va-key-prev"></i><span>' + esc(RANGES[S.range].cmp.replace(/^previous/, 'Previous')) + (so ? ', same time' : '') + '</span><b>' + fmt(TR.prev[i]) + '</b></div>';
             var r = trendEl.getBoundingClientRect(), pl = parseFloat(getComputedStyle(trendEl).paddingLeft) || 0;
-            showTip(h, clientX != null ? clientX : r.left + pl + x, clientY != null ? clientY : r.top + g.Y(TR.cur[i])); }
+            showTip(h, clientX != null ? clientX : r.left + pl + x, clientY != null ? clientY : r.top + g.Y(TR.cur[i]), false, 'trend'); }
         function trendIdx(clientX) { var g = TR.geom, r = trendEl.getBoundingClientRect(), pl = parseFloat(getComputedStyle(trendEl).paddingLeft) || 0; return Math.round((clientX - r.left - pl - g.padL) / (g.n > 1 ? g.pw / (g.n - 1) : 1)); }
-        trendEl.addEventListener('pointermove', function (e) { if (S.table || !TR || !TR.geom) return; var g = TR.geom, i = Math.max(0, Math.min(g.n - 1, trendIdx(e.clientX))), r = trendEl.getBoundingClientRect(), pl = parseFloat(getComputedStyle(trendEl).paddingLeft) || 0;
-            trendAt(i, r.left + pl + g.X(i), r.top + g.padT + 4); });
-        trendEl.addEventListener('pointerleave', function () { var c = $('va-cross'); if (c) c.style.display = 'none'; hideTip(); });
+        function trendMove(e) { if (S.table || !TR || !TR.geom) return; var g = TR.geom, i = Math.max(0, Math.min(g.n - 1, trendIdx(e.clientX))), r = trendEl.getBoundingClientRect(), pl = parseFloat(getComputedStyle(trendEl).paddingLeft) || 0;
+            trendAt(i, r.left + pl + g.X(i), r.top + g.padT + 4); }
+        function trendOff() { var c = $('va-cross'); if (c) c.style.display = 'none'; hideTip(); }
+        /* a tap reads a value too (touch has no hover); the readout stays until the next tap elsewhere or a scroll */
+        trendEl.addEventListener('pointermove', trendMove);
+        trendEl.addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse') trendMove(e); });
+        trendEl.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') trendOff(); });
+        doc.addEventListener('pointerdown', function (e) { if (e.pointerType === 'mouse' || !tipEl.classList.contains('on')) return; var t = e.target;
+            if (!(t.closest && t.closest('#va-trend, #va-hm, #va-map-c'))) { trendOff(); if (M.hover) { M.hover = null; kick(); } } });
         trendEl.addEventListener('keydown', function (e) { if (S.table || !TR || !TR.geom) return; var i = TR.hi == null ? TR.geom.n - 1 : TR.hi;
             if (e.key === 'ArrowLeft') i--; else if (e.key === 'ArrowRight') i++; else if (e.key === 'Home') i = 0; else if (e.key === 'End') i = TR.geom.n - 1; else return; e.preventDefault();
             var r = trendEl.getBoundingClientRect(), pl = parseFloat(getComputedStyle(trendEl).paddingLeft) || 0; i = Math.max(0, Math.min(TR.geom.n - 1, i)); trendAt(i, r.left + pl + TR.geom.X(i), r.top + TR.geom.padT + 4); });
-        trendEl.addEventListener('blur', function () { var c = $('va-cross'); if (c) c.style.display = 'none'; hideTip(); });
-        $('va-trend-tbl').addEventListener('click', function () { S.table = !S.table; this.setAttribute('aria-pressed', S.table); this.textContent = S.table ? 'Show chart' : 'Show table'; drawTrend(); });
+        /* leaving the chart by keyboard clears its readout (a tap on another chart has already replaced the tooltip) */
+        trendEl.addEventListener('blur', function () { var c = $('va-cross'); if (c) c.style.display = 'none'; if (tipEl.getAttribute('data-owner') === 'trend') hideTip(); });
+        $('va-trend-tbl').addEventListener('click', function () { S.table = !S.table; this.setAttribute('aria-pressed', S.table); this.textContent = S.table ? 'Show chart' : 'Show table'; $('va-trend-keys').hidden = S.table; hideTip(); drawTrend(); });
 
         /* ═════════ breakdown lists (every row is a filter) ═════════ */
+        /* share bars under 24 px are left out: a sliver reads as a glitch, and the share column has the number */
+        function bar(w, room) { return w * room < 24 ? '' : '<span class="va-lrow-bar" style="--w:' + w.toFixed(4) + '"></span>'; }
+        function barRoom(el, used) { return Math.max(100, (el.clientWidth || 340) - used); }
         function barList(el, arr, dim, opts) { opts = opts || {}; var total = arr.total || 1, max = arr.length ? arr[0].n : 1, lim = opts.limit || 8, shown = arr.slice(0, lim);
             el.innerHTML = shown.length ? shown.map(function (o) { var lab = opts.label ? opts.label(o.k) : o.k, on = S[dim] === o.k;
-                return '<button type="button" class="va-brow' + (on ? ' on' : '') + '" data-dim="' + dim + '" data-v="' + esc(o.k) + '" aria-pressed="' + on + '" title="' + esc(lab + ' · ' + plural(o.n, 'visit') + (on ? ' · click to remove the filter' : ' · click to filter')) + '"><span class="va-lrow-bar" style="--w:' + (o.n / max).toFixed(4) + '"></span><span class="va-brow-l"><span class="va-wrap">' + esc(lab) + '</span></span><span class="va-num">' + fmt(o.n) + '</span><span class="va-pct">' + fmtPct(share(o.n, total)) + '</span></button>'; }).join('')
+                return '<button type="button" class="va-brow' + (on ? ' on' : '') + '" data-dim="' + dim + '" data-v="' + esc(o.k) + '" aria-pressed="' + on + '" title="' + esc(lab + ' · ' + plural(o.n, 'visit') + (on ? ' · click to remove the filter' : ' · click to filter')) + '">' + bar(o.n / max, barRoom(el, 148)) + '<span class="va-brow-l"><span class="va-wrap">' + esc(lab) + '</span></span><span class="va-num">' + fmt(o.n) + '</span><span class="va-pct">' + fmtPct(share(o.n, total)) + '</span></button>'; }).join('')
                 : '<div class="va-empty">' + (opts.empty || 'No data for this period') + '</div>';
             return arr.length - shown.length; }
         function missingNote(F, key) { var miss = 0; F.forEach(function (r) { if (!key(r)) miss++; }); return miss ? 'Not recorded for ' + plural(miss, 'visit') + ' in this period.' : ''; }
         var DEVK = { browser: function (r) { return r.browser; }, os: function (r) { return r.os; }, device: function (r) { return r.device; } };
-        function renderDevices(C) { Array.prototype.forEach.call($('va-dev-tabs').children, function (b) { b.setAttribute('aria-selected', b.getAttribute('data-t') === S.devTab ? 'true' : 'false'); });
+        function renderDevices(C) { devTabs();
             $('va-dev-col').textContent = { browser: 'Browser', os: 'Operating system', device: 'Device type' }[S.devTab];
             barList($('va-dev-list'), tally(C.F, DEVK[S.devTab]), S.devTab, { limit: 7 }); $('va-dev-note').textContent = missingNote(C.F, DEVK[S.devTab]); }
-        $('va-dev-tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.devTab = b.getAttribute('data-t'); renderDevices(LAST); });
+        function devTabs() { Array.prototype.forEach.call($('va-dev-tabs').children, function (b) { b.setAttribute('aria-selected', b.getAttribute('data-t') === S.devTab ? 'true' : 'false'); }); }
+        $('va-dev-tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.devTab = b.getAttribute('data-t'); if (LAST) renderDevices(LAST); else devTabs(); });
         function renderLang(C) { var arr = tally(C.F, function (r) { return r.lang; }), more = barList($('va-lang-list'), arr, 'lang', { limit: S.langAll ? 80 : 7, label: langLabel });
             $('va-lang-more').innerHTML = more > 0 ? '<button type="button" class="va-link" id="va-lang-btn">Show ' + fmt(more) + ' more</button>' : S.langAll && arr.length > 7 ? '<button type="button" class="va-link" id="va-lang-btn">Show fewer</button>' : '';
             $('va-lang-note').textContent = missingNote(C.F, function (r) { return r.lang; }); }
@@ -854,53 +899,73 @@
 
         /* ═════════ busiest times: weekday × hour in each visitor's local time ═════════ */
         var DOW = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], HM = null;
-        function fmtAvg(v) { var t = v < 9.95 ? String(Math.round(v * 10) / 10) : fmt(Math.round(v)); return t + (t === '1' ? '\u00a0visit' : '\u00a0visits'); }
-        function renderHeat(C) { var d, h, g = [], dayT = [0, 0, 0, 0, 0, 0, 0], dayFull = [0, 0, 0, 0, 0, 0, 0], occ = [0, 0, 0, 0, 0, 0, 0], hrT = [], mx = 0, fallback = S.range === '24h';
-            for (d = 0; d < 7; d++) { g.push([]); for (h = 0; h < 24; h++) g[d].push(0); } for (h = 0; h < 24; h++) hrT.push(0);
-            /* the same window as the rest of the page (24 hours borrows the 7-day one: too short for a weekly pattern) */
-            var W = fallback ? win('7d', C.now) : C.W, today = sod(C.now), todayD = (new Date(C.now).getDay() + 6) % 7, weekly = fallback || S.range === '7d';
-            var rows = fallback ? D.rows.filter(function (r) { return r.t >= W.start && r.t <= C.now && matchNL(r) && matchLoc(r); }) : C.F;
-            rows.forEach(function (r) { localHD(r); g[r.ld][r.lh]++; dayT[r.ld]++; hrT[r.lh]++; if (r.t < today) dayFull[r.ld]++; });
-            for (d = 0; d < 7; d++) for (h = 0; h < 24; h++) if (g[d][h] > mx) mx = g[d][h];
-            /* rank weekdays by visits per complete day: today is still in progress, and a 30-day range holds some weekdays 5 times, others 4 */
-            for (var t = sod(Math.max(W.start, D.first)); t < today; t = addDays(t, 1)) occ[(new Date(t).getDay() + 6) % 7]++;
-            var avg = dayFull.map(function (v, i) { return occ[i] ? v / occ[i] : -1; }), bd = 0, bv = -1;
-            for (d = 0; d < 7; d++) if (avg[d] > bv) { bv = avg[d]; bd = d; }
-            if (bv <= 0) { bd = dayT.indexOf(Math.max.apply(null, dayT)); bv = -1; }
-            var dMax = Math.max.apply(null, dayT.concat([1])), hMax = Math.max.apply(null, hrT.concat([1])), bh = hrT.indexOf(Math.max.apply(null, hrT));
-            HM = { g: g, dayT: dayT, hrT: hrT, occ: occ, avg: avg, todayD: dayT[todayD] ? todayD : -1, weekly: weekly };
-            var lvl = function (v) { return v ? Math.max(1, Math.ceil(v / mx * 6)) : 0; }, narrow = $('va-hm').clientWidth < 600;
+        function fmtAvg(v) { var t = v < 9.95 ? String(Math.round(v * 10) / 10) : fmt(Math.round(v)); return t + (t === '1' ? ' visit' : ' visits'); }
+        function andList(a) { return a.length < 3 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+        function renderHeat(C) { var d, h, k, i, fallback = S.range === '24h', weekly = fallback || S.range === '7d', W = fallback ? win('7d', C.now) : C.W;
+            /* each visit sits on the visitor's own calendar day and hour. The grid covers the visitor dates from the range's first
+               day (or the first day of tracking) to today; the first of those starts part-way for visitors ahead of you, and
+               today isn't over, so only the dates in between count as full days */
+            var k0 = dkey(S.range === 'all' ? D.first : W.start), kT = dkey(C.now), rows = [], perDay = {}, rowTot = [0, 0, 0, 0, 0, 0, 0];
+            var src = fallback ? D.rows.filter(function (r) { return r.t >= W.start && r.t <= C.now && matchNL(r) && matchLoc(r); }) : C.F;
+            for (i = 0; i < src.length; i++) { var r = src[i]; localHD(r); if (r.lk >= k0 && r.lk <= kT) { rows.push(r); perDay[r.lk] = (perDay[r.lk] || 0) + 1; rowTot[r.ld]++; } }
+            var full = []; for (k = k0 + 1; k < kT; k++) full.push(k);
+            /* over several weeks, one date far above the rest (3x the median day, and a quarter of its weekday's visits) would
+               paint its row by itself: it is left out of the averages, and out of the grid unless asked for */
+            var out = {}, outL = [];
+            if (!weekly && full.length >= 14) { var cs = full.map(function (x) { return perDay[x] || 0; }).sort(function (x, y) { return x - y; }), med = cs[cs.length >> 1];
+                Object.keys(perDay).forEach(function (x) { var n = perDay[x]; x = +x; if (n >= Math.max(20, 3 * med) && n >= 0.25 * rowTot[(x + 3) % 7]) { out[x] = n; outL.push(x); } });
+                outL.sort(function (x, y) { return out[y] - out[x]; }); }
+            var hide = outL.length > 0 && !S.hmAll, g = [], dayT = [0, 0, 0, 0, 0, 0, 0], hrT = [], hrC = [], occ = [0, 0, 0, 0, 0, 0, 0], sumC = [0, 0, 0, 0, 0, 0, 0], hid = [0, 0, 0, 0, 0, 0, 0];
+            for (d = 0; d < 7; d++) { g.push([]); for (h = 0; h < 24; h++) g[d].push(0); } for (h = 0; h < 24; h++) { hrT.push(0); hrC.push(0); }
+            rows.forEach(function (r) { if (out[r.lk]) { if (hide) { hid[r.ld]++; return; } } else if (r.lk > k0 && r.lk < kT) hrC[r.lh]++; g[r.ld][r.lh]++; dayT[r.ld]++; hrT[r.lh]++; });
+            full.forEach(function (x) { if (out[x]) return; occ[(x + 3) % 7]++; sumC[(x + 3) % 7] += perDay[x] || 0; });
+            /* the busiest weekday and hour, from full days only; ties are named as ties */
+            var val = occ.map(function (o, j) { return o ? (weekly ? sumC[j] : sumC[j] / o) : -1; }), bv = Math.max.apply(null, val), bestD = [], hv = Math.max.apply(null, hrC), bestH = [];
+            if (bv > 0) for (d = 0; d < 7; d++) if (Math.abs(val[d] - bv) < 1e-9) bestD.push(d);
+            if (hv > 0) for (h = 0; h < 24; h++) if (hrC[h] === hv) bestH.push(h);
+            var fd = (k0 + 3) % 7, td = (kT + 3) % 7;
+            HM = { g: g, dayT: dayT, hrT: hrT, occ: occ, val: val, hid: hid, out: out, outL: outL, hide: hide, weekly: weekly, fd: fd, td: td };
             if (!rows.length) { $('va-hm').innerHTML = '<div class="va-empty">No visits in this period</div>'; $('va-hm-legend').innerHTML = ''; return; }
-            var html = '<div class="va-hm-grid" role="img" aria-label="Visits by weekday and hour in each visitor’s local time. Busiest weekday ' + DOW[bd] + ', busiest hour ' + hourSpan(bh) + '.">';
+            /* colour: six steps up to the 95th percentile of the cells, so a few extreme cells can't wash out the rest */
+            var nz = []; for (d = 0; d < 7; d++) for (h = 0; h < 24; h++) if (g[d][h]) nz.push(g[d][h]); nz.sort(function (x, y) { return x - y; });
+            var cap = nz.length ? nz[Math.floor(0.95 * (nz.length - 1))] : 1, lvl = function (v) { return v ? Math.max(1, Math.ceil(Math.min(v, cap) / cap * 6)) : 0; };
+            var dMax = Math.max.apply(null, dayT.concat([1])), hMax = Math.max.apply(null, hrT.concat([1])), narrow = $('va-hm').clientWidth < 600;
+            var tense = weekly ? 'was' : 'is', parts = [];
+            if (bestD.length) parts.push('<b>' + andList(bestD.map(function (x) { return weekly ? DOW[x] : DOW[x] + 's'; })) + '</b> ' +
+                (weekly ? (bestD.length > 1 ? 'tied as the busiest full days' : 'was the busiest full day')   /* no count here: it would sit next to the Busiest day tile's, counted in your time zone */
+                    : (bestD.length > 1 ? 'are equally busy (' + fmtAvg(bv) + ' on an average day)' : 'are busiest (' + fmtAvg(bv) + ' on an average ' + DOW[bestD[0]] + ')')));
+            if (bestH.length) parts.push(bestH.length > 2 ? bestH.length + ' hours tie as the busiest' : '<b>' + andList(bestH.map(hourSpan)) + '</b> ' + (bestH.length > 1 ? (weekly ? 'were' : 'are') + ' the busiest hours' : tense + ' the busiest hour'));
+            var fullN = sumC.reduce(function (x, y) { return x + y; }, 0);
+            var sum = fullN < 100 ? (fullN ? 'Only ' + plural(fullN, 'visit') + ' on full days in this range: too few to name the busiest times.' : 'No full days in this range yet to name the busiest times.')
+                : 'In visitors’ own time, ' + parts.join(' and ') + '.';
+            if (outL.length) { var names = andList(outL.map(function (x) { return fmtKey(x) + ' (' + plural(out[x], 'visit') + ')'; })), many = outL.length > 1;
+                sum += hide ? ' Leaves out ' + names + ', ' + (many ? 'unusually busy days' : 'an unusually busy day') + '. <button type="button" class="va-link" id="va-hm-all">Include ' + (many ? 'them' : 'it') + '</button>'
+                    : ' Includes ' + names + ', which the averages leave out. <button type="button" class="va-link" id="va-hm-all">Leave ' + (many ? 'them' : 'it') + ' out</button>'; }
+            if (fallback) sum += ' 24 hours is too short for a weekly pattern, so this shows the last 7 days.';
+            var html = '<div class="va-hm-grid" role="img" aria-label="Visits by weekday and hour in each visitor’s local time. ' + esc(sum.replace(/<[^>]+>[^<]*<\/button>/g, '').replace(/<[^>]+>/g, '')) + '">';
             html += '<div class="va-hm-corner">Total</div>'; for (h = 0; h < 24; h++) html += '<div class="va-hm-hb" data-h="' + h + '"><i style="height:' + (hrT[h] / hMax * 100).toFixed(1) + '%"></i></div>'; html += '<div></div>';
-            for (d = 0; d < 7; d++) { var pt = weekly && d === HM.todayD ? ' va-hm-part' : '';   /* on 7 days that row is only today, so far */
+            for (d = 0; d < 7; d++) { var pt = weekly && (d === td || d === fd) ? ' va-hm-part' : '';   /* on 7 days the first and last rows are partial days */
                 html += '<div class="va-hm-d' + pt + '">' + DOW[d].slice(0, 3) + '</div>'; for (h = 0; h < 24; h++) html += '<div class="va-hm-c l' + lvl(g[d][h]) + '" data-d="' + d + '" data-h="' + h + '"></div>';
                 html += '<div class="va-hm-t' + pt + '" data-d="' + d + '"><span class="va-hm-tb" style="--w:' + (dayT[d] / dMax).toFixed(3) + '"></span><span class="va-num">' + fmt(dayT[d]) + '</span></div>'; }
             html += '<div></div>'; for (h = 0; h < 24; h++) html += '<div class="va-hm-x">' + (h % (narrow ? 6 : 3) === 0 ? (narrow ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : hourName(h)) : '') + '</div>'; html += '<div></div></div>';
-            var sum = 'By each visitor\u2019s own clock, ';
-            if (bv < 0) sum += 'the most visits came on <b>' + DOW[bd] + '</b> (' + fmt(dayT[bd]) + ')';
-            else if (weekly) sum += '<b>' + DOW[bd] + '</b> had the most visits (' + fmt(dayT[bd]) + ')';
-            else sum += '<b>' + DOW[bd] + 's</b> were busiest, with ' + fmtAvg(bv) + ' on an average ' + DOW[bd];
-            sum += ', and <b>' + hourSpan(bh) + '</b> was the busiest hour (' + fmt(hrT[bh]) + (weekly ? '' : ' in total') + ').';
-            if (HM.todayD >= 0) sum += weekly ? ' The ' + DOW[todayD] + ' row is today, still in progress.' : ' Averages leave out today, which isn\u2019t over yet.';
-            if (S.range === '7d' && SER) { var kb = -1, kn = 0; for (var i = 0; i < SER.cur.length; i++) if (SER.cur[i] > kn) { kn = SER.cur[i]; kb = i; }
-                var kd = kb >= 0 ? (new Date(SER.B[kb].a).getDay() + 6) % 7 : -1;
-                if (kd >= 0 && kd !== bd) sum += ' The Busiest day figure above counts calendar days in your time zone (' + esc(TZ_SHORT) + '), where ' + DOW[kd] + ' led.'; }
-            if (fallback) sum += ' 24 hours is too short for a weekly pattern, so this shows the last 7 days (' + esc(dayRange(W.start, C.now)) + ').';
-            else if (rows.length < 150 && S.range !== 'all') sum += ' With only ' + plural(rows.length, 'visit') + ', a longer range gives a clearer pattern.';
             html += '<p class="va-hm-sum">' + sum + '</p>';
             $('va-hm').innerHTML = html;
             var lg = '<span class="va-hm-lab">Fewer</span>'; for (var l = 0; l <= 6; l++) lg += '<i class="va-hm-sw l' + l + '"></i>'; lg += '<span class="va-hm-lab">More</span>';
             $('va-hm-legend').innerHTML = lg; }
-        $('va-hm').addEventListener('pointermove', function (e) { if (!HM) return; var c = e.target.closest('.va-hm-c, .va-hm-hb, .va-hm-t'); if (!c) { hideTip(); return; }
-            var d = c.getAttribute('data-d'), h = c.getAttribute('data-h'), v, head, extra = '', dn = function (d) { return HM.weekly ? DOW[d] : DOW[d] + 's'; };
+        function hmTip(e) { if (!HM) return; var c = e.target.closest('.va-hm-c, .va-hm-hb, .va-hm-t'); if (!c) { hideTip(); return; }
+            var d = c.getAttribute('data-d'), h = c.getAttribute('data-h'), v, head, extra = '', dn = function (x) { return HM.weekly ? DOW[x] : DOW[x] + 's'; };
             if (c.classList.contains('va-hm-c')) { d = +d; h = +h; v = HM.g[d][h]; head = dn(d) + ', ' + hourSpan(h); }
             else if (h != null) { h = +h; v = HM.hrT[h]; head = 'All days, ' + hourSpan(h); }
             else { d = +d; v = HM.dayT[d]; head = dn(d) + ', all day';
-                if (HM.weekly) extra = d === HM.todayD ? 'Today, still in progress' : '';
-                else extra = (HM.occ[d] ? plural(HM.occ[d], 'full ' + DOW[d]) + ' in this range, ' + fmtAvg(HM.avg[d]) + ' on average' : 'No full ' + DOW[d] + ' in this range') + (d === HM.todayD ? '; the total includes today so far' : ''); }
-            showTip('<div class="va-tip-s">' + esc(head) + ' · visitor’s local time</div><div class="va-tip-row"><b>' + fmt(v) + '</b> ' + (v === 1 ? 'visit' : 'visits') + '</div>' + (extra ? '<div class="va-tip-s">' + esc(extra) + '</div>' : ''), e.clientX, e.clientY, true); });
-        $('va-hm').addEventListener('pointerleave', hideTip);
+                if (HM.weekly) extra = d === HM.td ? 'Today, still in progress' : d === HM.fd ? 'Starts at midnight ' + TZ_SHORT + ', so it misses the first hours for visitors ahead of ' + TZ_SHORT : '';
+                else { extra = HM.occ[d] ? plural(HM.occ[d], 'full ' + DOW[d]) + ', ' + fmtAvg(HM.val[d]) + ' on average' : 'No full ' + DOW[d] + ' in this range';
+                    HM.outL.forEach(function (x) { if ((x + 3) % 7 === d) extra += '; ' + fmtKey(x) + ' (' + plural(HM.out[x], 'visit') + ') ' + (HM.hide ? 'left out' : 'left out of the average'); });
+                    if (d === HM.td) extra += '; includes today so far'; } }
+            showTip('<div class="va-tip-s">' + esc(head) + ' · visitor’s local time</div><div class="va-tip-row"><b>' + fmt(v) + '</b> ' + (v === 1 ? 'visit' : 'visits') + '</div>' + (extra ? '<div class="va-tip-s">' + esc(extra) + '</div>' : ''), e.clientX, e.clientY, true); }
+        $('va-hm').addEventListener('pointermove', hmTip);
+        $('va-hm').addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse') hmTip(e); });
+        $('va-hm').addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') hideTip(); });
+        $('va-hm').addEventListener('click', function (e) { if (e.target.id === 'va-hm-all') { S.hmAll = !S.hmAll; hideTip(); renderHeat(LAST); var b = $('va-hm-all'); if (b) b.focus(); } });
 
         /* ═════════ recent visits ═════════ */
         function renderRecent(C) { var F = C.F, n = Math.min(S.recentN, F.length), rows = '';
@@ -914,61 +979,59 @@
         $('va-recent-more').addEventListener('click', function (e) { if (e.target.id === 'va-recent-btn') { S.recentN += 25; renderRecent(LAST); } });
 
         /* ═════════ about this data ═════════ */
-        function renderAbout(C) { var s = D.sources, li = [];
-            li.push('A visit is one browser session in which the visitor map on the Picasso Lab website loaded. Opening this page counts as a visit too.');
-            li.push('Locations are approximate and come from each visitor’s IP address. Spellings from the location service are merged: “Republic of Korea” counts as South Korea and “New York City” as New York, for example. Visits from Hong Kong, Singapore and Macau with no city are counted under that city.');
-            li.push('Dates, the chart and the busiest day use your time zone (' + esc(TZ_NAME) + '). The busiest-times grid uses each visitor’s own local time, taken from their browser or, for visits that didn’t record one, estimated from longitude.');
-            li.push('Changes compare against the same stretch of the previous period. On the 7-day view at 9 AM today, for example, the previous 7 days are counted only up to 9 AM on their last day.');
-            li.push('Unique visitors aren’t reported. Browsers keep storage separate inside embedded frames, so a returning visitor can’t be recognised reliably.');
-            if (D.rows.length) li.push('Traffic sources aren’t reported. The map runs inside the lab website’s Google Sites frame, which hides the page a visitor came from: ' + plural(s.none, 'visit') + ' arrived with no referrer, ' + fmt(s.frame) + ' named the lab website’s own frame' +
-                (s.other ? ', ' + fmt(s.other) + ' named another site' : '') + (s.unset ? ' and ' + fmt(s.unset) + ' have no source recorded.' : '.'));
-            if (D.bare) { var later = D.bare - D.legacy;
-                li.push(plural(D.bare, 'visit') + ' have a location only, with no browser, device, language, time zone or source: ' +
-                    (D.legacy ? (later ? 'the first ' + fmt(D.legacy) + ', from before ' : 'all from before ') + fmtDayY(D.firstRich) + ', when those details weren’t recorded yet' : '') +
-                    (later ? (D.legacy ? ', and ' : '') + fmt(later) + ' later ones, probably from an old cached copy of the map or a save that fell back to location only' : '') +
-                    '. They count everywhere except in Devices, Browser language and the mobile share.'); }
+        function renderAbout(C) { var s = D.sources, li = [], nC = Object.keys(D.ctry).length;
+            li.push('A visit is one page load of the lab website with this map on it; opening this page counts too. Unique visitors and traffic sources aren’t shown: the website’s Google Sites frame hides both' +
+                (D.rows.length ? ' (' + fmtPct(share(s.none + s.frame, D.rows.length)) + ' of visits name no source, or only that frame).' : '.'));
+            li.push('Locations are approximate, from each visitor’s IP address. Spelling variants are merged' + (D.rawC > nC ? ', so the footer map’s ' + fmt(D.rawC) + ' regions are ' + fmt(nC) + ' here' : '') + '; Hong Kong, Singapore and Macau visits without a city count under that city.');
+            li.push('Dates, the chart and the Busiest day use your time zone (' + esc(TZ_NAME) + '). The busiest-times grid uses each visitor’s own clock, so the two can name different days. Changes compare with the same stretch of the previous period.');
+            if (D.bare) li.push(plural(D.bare, 'visit') + ' have a location only' + (!D.legacy ? '' : (D.legacy === D.bare ? ', all' : D.legacy * 2 > D.bare ? ', most' : ', some') + ' from before ' + fmtDayY(D.firstRich) + ', when nothing else was recorded') +
+                '. They don’t count in Devices, Browser language or the mobile share.');
             $('va-about').innerHTML = li.map(function (x) { return '<li>' + x + '</li>'; }).join('');
             $('va-updated').textContent = 'Data loaded ' + fmtWhen(UPDATED, C.now) + ' · ' + (D.rows.length ? plural(D.rows.length, 'visit') + ' since ' + fmtDayY(D.first) + '.' : 'no visits recorded yet.'); }
 
         /* ═════════ render orchestration ═════════ */
         var LAST = null;
-        function writeHash() { var p = []; if (S.range !== '7d') p.push('range=' + S.range); FKEYS.forEach(function (k) { if (S[k]) p.push(k + '=' + encodeURIComponent(S[k])); }); if (DEBUG) p.push('debug');
+        function writeHash() { var p = []; if (S.range !== '7d' || FROM_FOOTER) p.push('range=' + S.range); FKEYS.forEach(function (k) { if (S[k]) p.push(k + '=' + encodeURIComponent(S[k])); }); if (DEBUG) p.push('debug');
             try { history.replaceState(null, '', p.length ? '#' + p.join('&') : location.pathname + location.search); } catch (e) {} }
-        function readHash() { FKEYS.forEach(function (k) { S[k] = null; }); S.range = '7d';
+        function readHash() { FKEYS.forEach(function (k) { S[k] = null; }); S.range = DEF_RANGE;
             location.hash.replace(/^#/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='), k = i < 0 ? kv : kv.slice(0, i), v = ''; try { v = i < 0 ? '' : decodeURIComponent(kv.slice(i + 1)); } catch (e) {}
                 if (k === 'range') { if (RANGES[v]) S.range = v; }
                 else if (FKEYS.indexOf(k) >= 0 && v.trim()) S[k] = k === 'lang' ? langKey(v) : k === 'country' ? (LABEL_REV[v.trim().toLowerCase()] || normCountry(v)) : v.trim(); });
             if (!S.country) S.city = null; }
         var LABEL_REV = {}; Object.keys(COUNTRY_LABEL).forEach(function (k) { LABEL_REV[COUNTRY_LABEL[k].toLowerCase()] = k; });
+        var CITY_ALIAS_LC = {}; Object.keys(CITY_ALIAS).forEach(function (k) { CITY_ALIAS_LC[k.toLowerCase()] = CITY_ALIAS[k]; });
         /* filters from a link are matched to the data (any letter case, the lab's display names, merged spellings); unknown ones are dropped */
         function validate() { if (S.country) S.country = D.ctry[S.country.toLowerCase()] || null;
-            if (S.city) { var c = S.country ? CITY_ALIAS[S.country + '|' + S.city] || S.city : null; S.city = c ? D.cities[S.country + '|' + c.toLowerCase()] || null : null; }
+            if (S.city) { var c = S.country ? CITY_ALIAS_LC[(S.country + '|' + S.city).toLowerCase()] || S.city : null; S.city = c ? D.cities[S.country + '|' + c.toLowerCase()] || null : null; }
             ['browser', 'os', 'device', 'lang'].forEach(function (k) { if (S[k]) S[k] = D.vals[k][S[k].toLowerCase()] || null; }); }
         function commit() { writeHash(); render(); }
         function render() {
             if (!D || D.src !== ROWS || D.len !== ROWS.length) UPDATED = Date.now();
-            prep(); validate(); writeHash();   /* the address bar always shows the view actually applied */
+            hideTip(); prep(); validate(); writeHash();   /* the address bar always shows the view actually applied */
             var C = compute(); LAST = C; SER = series(C);
             renderHeader(); renderStatus(C); renderKPIs(C); renderMap(C); renderLoc(C); renderTrend(C); renderDevices(C); renderLang(C); renderHeat(C); renderRecent(C); renderAbout(C);
             doc.documentElement.classList.remove('va-loading'); }
         function fail() { if (D) return; FAILED = true; doc.documentElement.classList.remove('va-loading');
             $('va-status').innerHTML = '<span><span class="va-st-err">Couldn’t load visit data.</span><button type="button" class="va-link" id="va-retry">Try again</button></span>';
             $('va-map-sub').textContent = 'No data'; var note = $('va-map-note'); note.innerHTML = 'Couldn’t load visit data. <button type="button" class="va-link" id="va-retry-map">Try again</button>'; note.classList.add('on');
-            ['va-loc-list', 'va-dev-list', 'va-lang-list', 'va-hm'].forEach(function (id) { $(id).innerHTML = '<div class="va-empty">No data</div>'; });
+            $('va-loc-h').innerHTML = locTabs(); ['va-loc-list', 'va-dev-list', 'va-lang-list', 'va-hm'].forEach(function (id) { $(id).innerHTML = '<div class="va-empty">No data</div>'; });
             $('va-trend').innerHTML = '<div class="va-empty va-chart-empty">No data</div>'; }
 
         /* ---------- boot ---------- */
-        readHash(); renderHeader();
+        readHash(); renderHeader(); $('va-loc-h').innerHTML = locTabs(); devTabs();
         doc.documentElement.classList.add('va-loading');
-        var lastW = 0; function onWidth() { var w = trendEl.clientWidth; if (w && w !== lastW) { lastW = w; drawTrend(); if (LAST) renderHeat(LAST); } }
-        if (window.ResizeObserver) { new ResizeObserver(mapResize).observe(M.box); new ResizeObserver(onWidth).observe(trendEl); }
+        var lastW = 0; function onWidth() { var w = trendEl.clientWidth; if (w && w !== lastW) { lastW = w; drawTrend(); if (LAST) renderHeat(LAST); } locFade(); }
+        /* redraws run in the next frame, not inside the observer callback: they change heights, which WebKit reports as an observer loop */
+        var roQ = 0; function roLater() { if (!roQ) roQ = requestAnimationFrame(function () { roQ = 0; mapResize(); onWidth(); }); }
+        if (window.ResizeObserver) { var ro = new ResizeObserver(roLater); ro.observe(M.box); ro.observe(trendEl); }
         else window.addEventListener('resize', function () { mapResize(); onWidth(); });
         mapResize();
         var scheme = window.matchMedia('(prefers-color-scheme: dark)'); if (scheme.addEventListener) scheme.addEventListener('change', function () { readTokens(); M.dirty = true; kick(); });
         window.addEventListener('load', function () { readTokens(); M.dirty = true; kick(); });
         window.addEventListener('hashchange', function () { var c0 = S.country; readHash(); if (!D) { renderHeader(); return; } render(); if (S.country && S.country !== c0) fitCountry(S.country); else if (!S.country && c0) flyTo(worldView(), 500); });
         /* scrolling hides a tooltip, except the scroll anchoring that follows a tap (the filter row appearing in the sticky bar) */
-        var bar = $('va-bar'); window.addEventListener('scroll', function () { bar.classList.toggle('va-scrolled', window.scrollY > 4); if (performance.now() > TIP_HOLD) hideTip(); }, { passive: true });
+        var topBar = $('va-bar'); window.addEventListener('scroll', function () { topBar.classList.toggle('va-scrolled', window.scrollY > 4); if (performance.now() > TIP_HOLD) { hideTip(); var c = $('va-cross'); if (c) c.style.display = 'none'; } }, { passive: true });
+        $('va-alltime').addEventListener('click', function () { S.range = 'all'; S.recentN = 10; commit(); });
         setInterval(function () { if (LAST && !doc.hidden) renderStatus(LAST, Date.now()); }, 60000);
         setTimeout(function () { if (!D && !FAILED && (!ROWS || !ROWS.length)) fail(); }, 20000);
         VA = { render: function () { var first = !D; render(); if (first && S.country) fitCountry(S.country, 0); }, fail: fail };
@@ -1015,7 +1078,7 @@
         --ink: #161615; --ink-2: #56554f; --ink-3: #75746e;
         --accent: #2a78d6; --accent-ink: #1d5ba8; --wash: rgba(42,120,214,.10); --wash-2: rgba(42,120,214,.18); --focus: #2a78d6;
         --up: #177a17; --down: #c23a3a; --prev: #b9b8af;
-        --map-fill: #ebeae4; --map-land: #d6d5ce; --map-border: rgba(22,22,21,.13); --map-border-2: rgba(22,22,21,.06); --map-dot: #4b8fe0; --map-dim: rgba(117,116,110,.26); --map-latest: #e2612b; --map-sel: rgba(22,22,21,.07); --map-sel-border: rgba(22,22,21,.34);
+        --map-fill: #ebeae4; --map-land: #d6d5ce; --map-border: rgba(22,22,21,.13); --map-border-2: rgba(22,22,21,.06); --map-dot: #4b8fe0; --map-dim: rgba(117,116,110,.26); --map-latest: #e2612b; --map-sel: rgba(42,120,214,.16); --map-sel-border: rgba(29,91,168,.55);
         --seq-0: #f0efea; --seq-1: #d6e7fb; --seq-2: #aacdf5; --seq-3: #78aeee; --seq-4: #3f8ae3; --seq-5: #2465b8; --seq-6: #16457f;
         --flag-ring: rgba(22,22,21,.10); --shadow-pop: 0 10px 28px rgba(22,22,21,.12), 0 2px 6px rgba(22,22,21,.06); }
     @media (prefers-color-scheme: dark) {
@@ -1024,7 +1087,7 @@
             --ink: #f1f0eb; --ink-2: #bab9b1; --ink-3: #8f8e88;
             --accent: #3987e5; --accent-ink: #8dbbf2; --wash: rgba(57,135,229,.16); --wash-2: rgba(57,135,229,.28); --focus: #6da7ec;
             --up: #3fb93f; --down: #ec6b6b; --prev: #5b5a55;
-            --map-fill: #1f2831; --map-land: #2f3e4c; --map-border: rgba(150,196,236,.17); --map-border-2: rgba(150,196,236,.07); --map-dot: #4690e6; --map-dim: rgba(143,142,136,.26); --map-latest: #e8733f; --map-sel: rgba(150,196,236,.10); --map-sel-border: rgba(150,196,236,.5);
+            --map-fill: #1f2831; --map-land: #2f3e4c; --map-border: rgba(150,196,236,.17); --map-border-2: rgba(150,196,236,.07); --map-dot: #4690e6; --map-dim: rgba(143,142,136,.26); --map-latest: #e8733f; --map-sel: rgba(57,135,229,.22); --map-sel-border: rgba(141,187,242,.6);
             --seq-0: #222221; --seq-1: #16345b; --seq-2: #1b4f93; --seq-3: #256abf; --seq-4: #3987e5; --seq-5: #6da7ec; --seq-6: #b7d3f6;
             --flag-ring: rgba(255,255,255,.12); --shadow-pop: 0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04); } }
     html.va-page body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
@@ -1033,6 +1096,7 @@
     .dash h1, .dash h2, .dash p { margin: 0; }
     :where(.dash) button { font: inherit; color: inherit; }
     .dash svg { flex: none; }
+    .dash [hidden] { display: none !important; }
     .dash :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
     .va-chip svg, .va-zoom svg, .va-back svg, .va-search svg { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -1096,6 +1160,8 @@
     .va-kpi { padding: 16px 20px; min-width: 0; }
     .va-kpi + .va-kpi { border-left: 1px solid var(--line); }
     .va-kpi-l { font-size: 13px; font-weight: 500; color: var(--ink-2); overflow-wrap: anywhere; }
+    .va-kpi-l1 { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
+    .va-alltime { font-size: 12.5px; white-space: nowrap; }
     .va-kpi-v { font-size: 28px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.15; margin-top: 6px; font-variant-numeric: tabular-nums; }
     .va-kpi-s { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; line-height: 1.4; overflow-wrap: anywhere; }
     .va-delta { font-weight: 600; color: var(--ink-2); white-space: nowrap; }
@@ -1153,11 +1219,16 @@
     .va-lhead, .va-bhead { display: grid; grid-template-columns: minmax(0, 1fr) 64px 46px; gap: 8px; padding: 8px 24px 4px; font-size: 12px; font-weight: 500; color: var(--ink-3); }
     .va-lhead span + span, .va-bhead span + span { text-align: right; }
     .va-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 8px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+    .va-list.va-fade { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
+    .va-list.va-list-one { display: flex; flex-direction: column; }
+    .va-only { margin: auto 0; padding: 24px 16px; text-align: center; font-size: 13px; color: var(--ink-3); }
     .va-lrow, .va-brow { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) 64px 46px; gap: 8px; align-items: center; width: 100%; min-height: 34px; padding: 0 8px; border: 0; background: none; border-radius: 6px; text-align: left; font-size: 13.5px; color: var(--ink); cursor: pointer; }
     .va-lrow:hover, .va-brow:hover { background: var(--sunk); }
-    .va-lrow.on, .va-brow.on { background: var(--wash); }
-    .va-lrow-bar { position: absolute; left: 4px; top: 4px; bottom: 4px; z-index: -1; width: calc((100% - 132px) * var(--w, 0)); min-width: 3px; background: var(--wash); border-radius: 4px; }
-    .va-lrow.on .va-lrow-bar, .va-brow.on .va-lrow-bar { background: var(--wash-2); }
+    /* selected: an accent rule and a bolder label, so it never looks like a long share bar */
+    .va-lrow.on::before, .va-brow.on::before { content: ''; position: absolute; left: 0; top: 7px; bottom: 7px; width: 2px; border-radius: 2px; background: var(--accent); }
+    .va-lrow.on .va-wrap, .va-brow.on .va-wrap { font-weight: 600; }
+    .va-lrow-bar { position: absolute; left: 4px; top: 4px; bottom: 4px; z-index: -1; width: calc((100% - 132px) * var(--w, 0)); background: var(--wash); border-radius: 4px; }
+    .va-lrow.va-fl .va-lrow-bar { left: 30px; width: calc((100% - 158px) * var(--w, 0)); }   /* starts after the flag */
     .va-lrow-n, .va-brow-l { display: flex; align-items: center; gap: 8px; min-width: 0; }
     .va-wrap { min-width: 0; overflow-wrap: anywhere; line-height: 1.3; padding: 7px 0; }
     .va-two { display: flex; flex-direction: column; min-width: 0; padding: 6px 0; line-height: 1.3; }
@@ -1186,12 +1257,13 @@
     .va-pt { fill: var(--accent); stroke: var(--card); stroke-width: 1.5; }
     .va-pt-open { fill: var(--card); stroke: var(--accent); stroke-width: 2; }
     .va-so-far { fill: var(--accent-ink); font-size: 12px; font-weight: 500; text-anchor: end; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
+    .va-so-far.va-off { fill: var(--ink-2); text-anchor: start; }
     .va-crossl { stroke: var(--ink-3); stroke-width: 1; opacity: .55; }
     .va-pt-hot { fill: var(--accent); stroke: var(--card); stroke-width: 2; }
     .va-pt-hot.va-pt-hot-open { fill: var(--card); stroke: var(--accent); }
     .va-pt-prev { fill: var(--prev); stroke: var(--card); stroke-width: 1.5; }
     .va-tscroll { max-height: 340px; overflow: auto; padding: 0; margin: 0 0 0 8px; }
-    .va-tscroll .va-table { max-width: 760px; }
+    .va-tscroll .va-table th, .va-tscroll .va-table td { width: 30%; } .va-tscroll .va-table th:first-child { width: auto; }
 
     /* breakdown cards */
     .va-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -1219,6 +1291,7 @@
     .va-hm-lab { margin: 0 4px; }
     .va-hm-sum { margin-top: 14px !important; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
     .va-hm-sum b { font-weight: 600; color: var(--ink); }
+    .va-hm-sum .va-link { margin-left: 2px; }
 
     /* recent visits table */
     .va-tablewrap { overflow-x: auto; padding: 0 8px; }
@@ -1263,12 +1336,12 @@
         .va-hero { grid-template-columns: minmax(0, 1fr) 340px; }
         .va-loc .va-lhead, .va-loc .va-lrow { grid-template-columns: minmax(0, 1fr) 50px 40px; }
         .va-loc .va-lhead { padding: 8px 20px 4px; }
-        .va-loc .va-lrow-bar { width: calc((100% - 114px) * var(--w, 0)); }
+        .va-loc .va-lrow-bar { width: calc((100% - 114px) * var(--w, 0)); } .va-loc .va-lrow.va-fl .va-lrow-bar { width: calc((100% - 140px) * var(--w, 0)); }
         .va-kpi { padding: 14px 16px; } }
     @media (max-width: 900px) {
         .va-hero { grid-template-columns: minmax(0, 1fr); }
         .va-loc .va-lhead, .va-loc .va-lrow { grid-template-columns: minmax(0, 1fr) 64px 46px; }
-        .va-loc .va-lrow-bar { width: calc((100% - 132px) * var(--w, 0)); }
+        .va-loc .va-lrow-bar { width: calc((100% - 132px) * var(--w, 0)); } .va-loc .va-lrow.va-fl .va-lrow-bar { width: calc((100% - 158px) * var(--w, 0)); }
         .va-loc { min-height: 0; }
         .va-loc-in { position: static; }
         .va-list { overflow: visible; }
@@ -1282,8 +1355,7 @@
         .va-bar-in { flex-wrap: wrap; padding: 10px 16px; gap: 8px 12px; min-height: 0; }
         .va-lab, .va-h1 { font-size: 14px; }
         .va-ctl { width: 100%; }
-        .va-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
-        .va-chips::-webkit-scrollbar { display: none; }
+        .va-chips { row-gap: 6px; }
         .va-seg { width: 100%; } .va-seg button { flex: 1; padding: 0 4px; }
         .va-main { padding: 0 16px 40px; gap: 12px; }
         .va-status { margin: 0; font-size: 12.5px; }
