@@ -37,11 +37,11 @@
                     <h1 class="va-h1">Visitor analytics</h1>
                 </div>
                 <div class="va-ctl">
-                    <div class="va-chips" id="va-chips" aria-label="Active filters"></div>
                     <div class="va-seg" id="va-range" role="group" aria-label="Time range">
                         <button type="button" data-r="24h">24 hours</button><button type="button" data-r="7d">7 days</button><button type="button" data-r="30d">30 days</button><button type="button" data-r="all">All time</button>
                     </div>
                 </div>
+                <div class="va-chips" id="va-chips" role="group" aria-label="Active filters"></div>
             </div>
         </header>
 
@@ -59,7 +59,7 @@
             <section class="va-hero">
                 <div class="va-card va-mapcard">
                     <div class="va-card-h">
-                        <div><h2>Where visitors are</h2><p id="va-map-sub">&nbsp;</p></div>
+                        <div><h2>Where visitors are</h2><p id="va-map-sub">Loading visits&hellip;</p></div>
                         <div class="va-zoom" role="group" aria-label="Map zoom">
                             <button type="button" id="va-zin" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
                             <button type="button" id="va-zout" aria-label="Zoom out" title="Zoom out"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9"/></svg></button>
@@ -497,8 +497,8 @@
             for (i = 0; i < pts.length; i++) { p = pts[i]; if (!lit(p)) continue;
                 x = sx(p.u) * d; y = sy(p.v) * d; r = rOf(p.n) * d; if (x < -40 * d || y < -40 * d || x > M.cv.width + 40 * d || y > M.cv.height + 40 * d) continue;
                 c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fillStyle = TOK.dot; c.fill(); c.stroke(); }
-            var lp = M.latest; if (lp && lit(lp)) { x = sx(lp.u) * d; y = sy(lp.v) * d; r = 3.5 * d;   /* the latest visit: one static marker, no animation */
-                c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fillStyle = TOK.latest; c.fill(); c.strokeStyle = TOK.ring; c.lineWidth = 1.5 * d; c.stroke(); }
+            var lp = M.latest; if (lp && lit(lp)) { x = sx(lp.u) * d; y = sy(lp.v) * d; r = Math.max(2.2, Math.min(3.5, rOf(lp.n) * 0.5)) * d;   /* the latest visit: one static core inside its bubble, no animation */
+                c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fillStyle = TOK.latest; c.fill(); c.strokeStyle = TOK.ring; c.lineWidth = 1 * d; c.stroke(); }
             var mark = function (pp, w) { if (!pp) return; var xx = sx(pp.u) * d, yy = sy(pp.v) * d, rr = (lit(pp) ? rOf(pp.n) : Math.min(rOf(pp.n), 7)) * d;
                 c.beginPath(); c.arc(xx, yy, rr + 2.5 * d, 0, 6.2832); c.strokeStyle = TOK.ink; c.lineWidth = w * d; c.stroke(); };
             if (S.city) for (i = 0; i < pts.length; i++) if (pts[i].country === S.country && pts[i].city === S.city) mark(pts[i], 2);
@@ -585,7 +585,7 @@
             if (pl.length) renderLegend(nmax, !!M.latest); else $('va-legend').innerHTML = ''; kick(); }
         function renderLegend(nmax, hasLatest) { var vals = [], cand = [1, 10, 100, 1000, 10000]; cand.forEach(function (v) { if (v <= nmax) vals.push(v); }); if (vals.length > 3) vals = [vals[0], vals[vals.length - 2], vals[vals.length - 1]];
             if (!vals.length) vals = [1]; var rs = vals.map(rOf), R = Math.max.apply(null, rs), svg = '', gap = 10, x = 0;
-            vals.forEach(function (v, i) { var r = rs[i]; svg += '<circle cx="' + (x + r).toFixed(1) + '" cy="' + (R * 2 - r + 1).toFixed(1) + '" r="' + r.toFixed(1) + '" class="va-lg-c"/><text x="' + (x + r).toFixed(1) + '" y="' + (R * 2 + 15) + '" class="va-lg-t">' + fmt(v) + '</text>'; x += r * 2 + gap + 6; });
+            vals.forEach(function (v, i) { var r = rs[i], cw = Math.max(r * 2, fmt(v).length * 7 + 2), cx = x + cw / 2; svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + (R * 2 - r + 1).toFixed(1) + '" r="' + r.toFixed(1) + '" class="va-lg-c"/><text x="' + cx.toFixed(1) + '" y="' + (R * 2 + 15) + '" class="va-lg-t">' + fmt(v) + '</text>'; x += cw + gap; });
             var w = x - gap, h = '<div class="va-lg-title">Visits per city</div><svg width="' + Math.ceil(w + 8) + '" height="' + Math.ceil(R * 2 + 19) + '" viewBox="-4 0 ' + Math.ceil(w + 8) + ' ' + Math.ceil(R * 2 + 19) + '">' + svg + '</svg>';
             if (hasLatest) h += '<div class="va-lg-latest"><i></i>Latest visit</div>';
             $('va-legend').innerHTML = h; }
@@ -608,7 +608,7 @@
             var x = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>', h = '', n = 0;
             FKEYS.forEach(function (k) { var v = S[k]; if (!v) return; n++; var lab = fLabel(k, v);
                 h += '<span class="va-chip">' + (k === 'country' ? flag(v) : '<span class="va-chip-k">' + FDIM[k] + '</span>') + '<span>' + esc(lab) + '</span><button type="button" data-clear="' + k + '" aria-label="Remove filter: ' + esc(FDIM[k] + ' ' + lab) + '" title="Remove filter">' + x + '</button></span>'; });
-            if (n > 1) h += '<button type="button" class="va-link va-clearall" data-clear="all">Clear all</button>';
+            if (n) h = '<span class="va-chips-l">Filtered by</span>' + h; if (n > 1) h += '<button type="button" class="va-link va-clearall" data-clear="all">Clear all</button>';
             $('va-chips').innerHTML = h; }
         function rangeText(C) { var W = C.W;
             if (W.unit === 'hour') return dfmt(W.start, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' – ' + dfmt(C.now, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -620,6 +620,7 @@
             else if (D.rows.length) parts.push('<span>No matching visits yet</span>');
             parts.push('<span>Updated ' + esc(fmtWhen(UPDATED, now).replace(/^Today, /, '')) + ' <button type="button" class="va-link" id="va-refresh">Refresh</button></span>');
             $('va-status').innerHTML = parts.join('<span class="va-sep" aria-hidden="true">·</span>'); }
+        $('va-map-note').addEventListener('click', function (e) { if (e.target.id === 'va-retry-map') { var b = $('va-retry'); if (b && !b.disabled) b.click(); e.target.disabled = true; e.target.textContent = 'Loading…'; } });
         $('va-status').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return;
             if (b.id === 'va-refresh' || b.id === 'va-retry') { b.disabled = true; b.textContent = b.id === 'va-retry' ? 'Loading…' : 'Refreshing…';
                 sbSelectAll().then(function (rows) { if (!Array.isArray(rows)) throw 0; aggregate(rows); if (D && D.src !== rows) render(); }).catch(function () { if (!D) fail(); else { b.disabled = false; b.textContent = 'Couldn’t refresh · Try again'; } }); } });
@@ -649,6 +650,7 @@
             else { var cc = RN.filter(function (r) { return r.country === S.country; }).length; set('kl-3', 'Share of ' + cLabel(S.country)); set('kv-3', fmtPct(share(F.length, cc))); set('ks-3', fmt(F.length) + ' of ' + plural(cc, 'visit')); }
             var b = busiest(C); set('kl-4', b ? b.label : (S.range === '24h' ? 'Busiest hour' : 'Busiest day'));
             set('kv-4', b ? fmt(b.n) : '–'); set('ks-4', b ? b.when + (b.part ? ' (so far)' : '') : 'No visits in this period');
+            $('ks-4').title = b ? (S.range === '24h' ? 'The clock hour' : 'The calendar day') + ' with the most visits, in your time zone (' + TZ_SHORT + ')' : '';
             var dev = 0, mob = 0; F.forEach(function (r) { if (r.device) { dev++; if (r.device === 'Mobile' || r.device === 'Tablet') mob++; } });
             set('kv-5', dev ? fmtPct(share(mob, dev)) : '–'); set('ks-5', dev ? fmt(mob) + ' of ' + plural(dev, 'visit') : 'No device data');
             $('ks-5').title = dev ? 'Share of visits with a recorded device type that came from a phone or tablet' : ''; }
@@ -667,10 +669,10 @@
                 total = R.length;
                 if (S.locTab === 'countries') { col = 'Country or region'; var byC = {}; R.forEach(function (r) { var o = byC[r.country] || (byC[r.country] = { n: 0, cities: {} }); o.n++; if (r.city) o.cities[r.city] = 1; });
                     items = Object.keys(byC).map(function (k) { var nc = Object.keys(byC[k].cities).length; return { key: 'country:' + k, label: cLabel(k), find: cLabel(k) + ' ' + k, flag: flag(k), n: byC[k].n, sub: nc ? plural(nc, 'city', 'cities') : '' }; });
-                    $('va-q').placeholder = 'Search ' + plural(items.length, 'country or region', 'countries and regions'); }
+                    $('va-q').placeholder = items.length ? 'Search ' + plural(items.length, 'country or region', 'countries and regions') : 'Search countries and regions'; }
                 else { col = 'City'; var byCi = {}; R.forEach(function (r) { if (!r.city) return; var o = byCi[r.ck] || (byCi[r.ck] = { n: 0, city: r.city, country: r.country }); o.n++; });
                     items = Object.keys(byCi).map(function (k) { var o = byCi[k]; return { key: 'cityin:' + k, label: o.city, find: o.city + ' ' + cLabel(o.country), flag: flag(o.country), n: o.n, sub: cityIsCountry(o.city, o.country) ? '' : cLabel(o.country), two: true }; });
-                    $('va-q').placeholder = 'Search ' + plural(items.length, 'city', 'cities'); } }
+                    $('va-q').placeholder = items.length ? 'Search ' + plural(items.length, 'city', 'cities') : 'Search cities'; } }
             items.sort(function (a, b) { return (a.muted ? 1 : 0) - (b.muted ? 1 : 0) || b.n - a.n || (a.label < b.label ? -1 : 1); });
             var all = items.length; if (q) items = items.filter(function (o) { return fold(o.find).indexOf(q) >= 0; });
             var max = 1; items.forEach(function (o) { if (o.n > max) max = o.n; });
@@ -857,8 +859,8 @@
             renderHeader(); renderStatus(C); renderKPIs(C); renderMap(C); renderLoc(C); renderTrend(C); renderDevices(C); renderLang(C); renderHeat(C); renderRecent(C); renderAbout(C);
             doc.documentElement.classList.remove('va-loading'); }
         function fail() { if (D) return; FAILED = true; doc.documentElement.classList.remove('va-loading');
-            $('va-status').innerHTML = '<span class="va-st-err">Couldn’t load visit data.</span> <button type="button" class="va-link" id="va-retry">Try again</button>';
-            $('va-map-sub').textContent = 'No data'; var note = $('va-map-note'); note.textContent = 'Couldn’t load visit data.'; note.classList.add('on');
+            $('va-status').innerHTML = '<span><span class="va-st-err">Couldn’t load visit data.</span><button type="button" class="va-link" id="va-retry">Try again</button></span>';
+            $('va-map-sub').textContent = 'No data'; var note = $('va-map-note'); note.innerHTML = 'Couldn’t load visit data. <button type="button" class="va-link" id="va-retry-map">Try again</button>'; note.classList.add('on');
             ['va-loc-list', 'va-dev-list', 'va-lang-list', 'va-hm'].forEach(function (id) { $(id).innerHTML = '<div class="va-empty">No data</div>'; });
             $('va-trend').innerHTML = '<div class="va-empty va-chart-empty">No data</div>'; }
 
@@ -927,7 +929,7 @@
             --ink: #f1f0eb; --ink-2: #bab9b1; --ink-3: #8f8e88;
             --accent: #3987e5; --accent-ink: #8dbbf2; --wash: rgba(57,135,229,.16); --wash-2: rgba(57,135,229,.28); --focus: #6da7ec;
             --up: #3fb93f; --down: #ec6b6b; --prev: #5b5a55;
-            --map-fill: #2a2a28; --map-land: #3a3a37; --map-border: rgba(241,240,235,.15); --map-border-2: rgba(241,240,235,.06); --map-dot: rgba(57,135,229,.82); --map-dim: rgba(143,142,136,.26); --map-latest: #e8733f;
+            --map-fill: #1f2831; --map-land: #2f3e4c; --map-border: rgba(150,196,236,.17); --map-border-2: rgba(150,196,236,.07); --map-dot: rgba(74,148,236,.9); --map-dim: rgba(143,142,136,.26); --map-latest: #e8733f;
             --seq-0: #222221; --seq-1: #16345b; --seq-2: #1b4f93; --seq-3: #256abf; --seq-4: #3987e5; --seq-5: #6da7ec; --seq-6: #b7d3f6;
             --flag-ring: rgba(255,255,255,.12); --shadow-pop: 0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04); } }
     html.va-page body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
@@ -940,9 +942,9 @@
     .va-chip svg, .va-zoom svg, .va-back svg, .va-search svg { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
     /* top bar */
-    .va-bar { position: sticky; top: 0; z-index: 30; background: rgba(246,246,243,.88); background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4); border-bottom: 1px solid transparent; transition: border-color .15s; }
+    .va-bar { position: sticky; top: 0; z-index: 30; background: rgba(246,246,243,.94); background: color-mix(in srgb, var(--bg) 94%, transparent); -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4); border-bottom: 1px solid transparent; transition: border-color .15s; }
     .va-bar.va-scrolled { border-bottom-color: var(--line); }
-    .va-bar-in { max-width: 1320px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; gap: 16px; min-height: 60px; }
+    .va-bar-in { max-width: 1320px; margin: 0 auto; padding: 12px 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; min-height: 60px; }
     .va-crumb { display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-right: auto; white-space: nowrap; }
     .va-lab { color: var(--ink-2); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 4px; }
     .va-lab:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
@@ -953,7 +955,9 @@
     .va-seg button { border: 0; background: none; height: 28px; padding: 0 12px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
     .va-seg button:hover { color: var(--ink); }
     .va-seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.07), 0 0 0 1px var(--line); }
-    .va-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; justify-content: flex-end; min-width: 0; }
+    .va-chips { display: flex; flex: 1 0 100%; order: 3; gap: 6px; flex-wrap: wrap; align-items: center; min-width: 0; margin-top: -2px; }
+    .va-chips:empty { display: none; }
+    .va-chips-l { font-size: 13px; color: var(--ink-3); margin-right: 4px; white-space: nowrap; }
     .va-chip { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; height: 30px; padding: 0 3px 0 10px; border-radius: 8px; background: var(--wash); color: var(--accent-ink); font-size: 13px; font-weight: 500; white-space: nowrap; }
     .va-chip-k { color: var(--ink-2); font-weight: 400; }
     .va-chip button { width: 24px; height: 24px; border: 0; padding: 0; background: none; border-radius: 6px; display: grid; place-items: center; cursor: pointer; color: inherit; flex: none; }
@@ -969,6 +973,7 @@
     .va-st-range { color: var(--ink); font-weight: 500; }
     .va-st-place { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
     .va-st-err { color: var(--down); font-weight: 500; }
+    .va-map-note .va-link { margin-left: 6px; }
     .va-status .va-link { font-size: 13px; }
     .va-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
     .va-card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; padding: 14px 20px 10px; min-height: 52px; }
@@ -1122,7 +1127,7 @@
     .va-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .va-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--ink-3); padding: 6px 12px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
     .va-table td { padding: 9px 12px; border-bottom: 1px solid var(--line-2); white-space: nowrap; vertical-align: middle; }
-    .va-table tbody tr:last-child td { border-bottom: 0; }
+    .va-table tbody tr:last-child td, .va-table tbody tr:last-child th { border-bottom: 0; }
     .va-table tbody tr:hover td, .va-table tbody tr:hover th { background: var(--sunk); }
     .va-t-when span { display: block; font-variant-numeric: tabular-nums; } .va-t-when span + span { font-size: 12px; }
     .va-t-place { display: inline-flex; align-items: center; gap: 9px; }
@@ -1177,12 +1182,13 @@
     @media (max-width: 760px) {
         .va-bar-in { flex-wrap: wrap; padding: 10px 16px; gap: 8px 12px; min-height: 0; }
         .va-lab, .va-h1 { font-size: 14px; }
-        .va-ctl { width: 100%; flex-direction: column-reverse; align-items: stretch; gap: 8px; }
-        .va-chips { justify-content: flex-start; } .va-chips:empty { display: none; }
+        .va-ctl { width: 100%; }
+        .va-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+        .va-chips::-webkit-scrollbar { display: none; }
         .va-seg { width: 100%; } .va-seg button { flex: 1; padding: 0 4px; }
         .va-main { padding: 0 16px 40px; gap: 12px; }
         .va-status { margin: 0; font-size: 12.5px; }
-        .va-status .va-sep { margin: 0 7px; }
+        .va-status { column-gap: 14px; } .va-status .va-sep { display: none; }
         .va-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .va-kpi, .va-kpi-main + .va-kpi { grid-column: auto; padding: 12px 14px; } .va-kpi-main { grid-column: 1 / -1; }
         .va-kpi + .va-kpi, .va-kpi:nth-child(2), .va-kpi:nth-child(4), .va-kpi:nth-child(5) { border-left: 0; }
