@@ -115,7 +115,7 @@
 
             <section class="va-card va-when">
                 <div class="va-card-h">
-                    <h2>Busiest times <span class="va-h2-note">in each visitor&rsquo;s local time</span></h2>
+                    <h2>Busiest times <span class="va-h2-note" id="va-hm-note">visitors&rsquo; local time</span></h2>
                     <div class="va-card-tools va-hm-legend" id="va-hm-legend"></div>
                 </div>
                 <div class="va-hm" id="va-hm"></div>
@@ -335,9 +335,13 @@
         function fmtHour(ts) { return dfmt(ts, { hour: 'numeric' }); }
         function fmtClock(ts) { return dfmt(ts, { hour: 'numeric', minute: '2-digit' }); }
         function fmtWhen(ts, now) { return sod(ts) === sod(now) ? 'Today, ' + fmtClock(ts) : dfmt(ts, { month: 'short', day: 'numeric' }) + ', ' + fmtClock(ts); }
+        /* minutes, then hours within the same day (or the last 6 hours); older than that by calendar day in your time zone,
+           so a visit on the evening of Sep 26 reads "2 days ago" on the morning of Sep 28, never "yesterday" */
         function fmtAgoLong(ts, now) { var s = Math.max(0, (now - ts) / 1000);
-            if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + ' min ago'; if (s < 86400) { var h = Math.floor(s / 3600); return h + (h === 1 ? ' hour ago' : ' hours ago'); }
-            var d = Math.floor(s / 86400); return d === 1 ? 'yesterday' : d + ' days ago'; }
+            if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + ' min ago';
+            var d = Math.round((sod(now) - sod(ts)) / DAY);
+            if (d < 1 || s < 6 * 3600) { var h = Math.floor(s / 3600); return h + (h === 1 ? ' hour ago' : ' hours ago'); }
+            return d === 1 ? 'yesterday' : d + ' days ago'; }
         function plural(n, one, many) { return fmt(n) + ' ' + (n === 1 ? one : (many || one + 's')); }
         function hourName(h) { return (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); }
         function hourSpan(h) { var a = h % 12 || 12, b = (h + 1) % 12 || 12, am = h < 12, bm = (h + 1) % 24 < 12; return a + (am === bm ? '' : (am ? ' AM' : ' PM')) + '–' + b + (bm ? ' AM' : ' PM'); }
@@ -361,7 +365,8 @@
         /* the lab's own display names (same as the old dashboard) */
         var COUNTRY_LABEL = { 'China': 'China Mainland', 'Hong Kong': 'Hong Kong SAR', 'Macao': 'Macau SAR' };
         /* the same city spelled two ways by the location provider */
-        var CITY_ALIAS = { 'United States|New York City': 'New York', 'United States|Bala-Cynwyd': 'Bala Cynwyd', 'Taiwan|Taipei City': 'Taipei', 'Japan|Chiyoda City': 'Chiyoda', 'South Korea|Yuseong-gu': 'Yuseong' };
+        var CITY_ALIAS = { 'United States|New York City': 'New York', 'United States|Bala-Cynwyd': 'Bala Cynwyd', 'Taiwan|Taipei City': 'Taipei', 'Japan|Chiyoda City': 'Chiyoda', 'South Korea|Yuseong-gu': 'Yuseong',
+            'South Korea|Osan-si': 'Osan', 'Hong Kong|Tuenmen': 'Tuen Mun' };
         /* city-states: a visit without a city is still in that city */
         var CITY_STATE = { 'Hong Kong': 'Hong Kong', 'Singapore': 'Singapore', 'Macao': 'Macau' };
         function normCountry(c) { c = (c || '').trim(); return c ? (COUNTRY_ALIAS[c] || c) : ''; }
@@ -372,8 +377,24 @@
             Object.keys(ISO).forEach(function (k) { m[k] = ISO[k]; });
             var extra = { 'Hong Kong': 'HK', 'Macao': 'MO', 'Türkiye': 'TR', 'South Korea': 'KR', 'Netherlands': 'NL', 'Russia': 'RU', 'Vietnam': 'VN', 'Taiwan': 'TW', 'Czechia': 'CZ', 'Iran': 'IR', 'Laos': 'LA', 'Syria': 'SY', 'Bolivia': 'BO', 'Venezuela': 'VE', 'Tanzania': 'TZ', 'Moldova': 'MD', 'Palestine': 'PS', 'Ivory Coast': 'CI', 'Myanmar': 'MM', 'North Macedonia': 'MK', 'Brunei': 'BN', 'Cape Verde': 'CV', 'Eswatini': 'SZ' };
             Object.keys(extra).forEach(function (k) { m[k] = extra[k]; }); return m; })();
-        function flag(c) { var code = ISO2[c];
-            return code ? '<img class="va-flag" src="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/flags/4x3/' + code.toLowerCase() + '.svg" alt="">' : '<span class="va-flag va-flag-x" aria-hidden="true"></span>'; }
+        /* flags are the background of a fixed-size box, not <img>s. The list rows are rebuilt on every filter, tab, range
+           and search change, and each new SVG <img> went back to the CDN and painted blank until it came back (half a second
+           or more; for good when the cache was off or the CDN slow). Each flag is now fetched once and kept in memory as a
+           blob: URL, so a rebuilt row paints it at once; its box shows a neutral placeholder only while that first request
+           is in flight (or for a place with no flag). If fetch() can't be used, the flag's own URL is used instead */
+        var FLAG_URL = 'https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/flags/4x3/', FLAG_ST = {}, FLAG_SRC = {};
+        function flagBg(code) { return 'background-image:url(' + FLAG_SRC[code] + ')'; }
+        function flagLoad(code) { if (FLAG_ST[code]) return FLAG_ST[code]; FLAG_ST[code] = 'wait';
+            var url = FLAG_URL + code + '.svg', done = function (src) { FLAG_ST[code] = src ? 'ok' : 'no'; FLAG_SRC[code] = src;
+                Array.prototype.forEach.call(doc.querySelectorAll('.va-flag[data-cc="' + code + '"]'), function (el) { el.classList.remove('va-flag-wait'); if (src) el.setAttribute('style', flagBg(code)); else el.classList.add('va-flag-x'); }); };
+            var viaImg = function (src, fallback) { var im = new Image(); im.onload = function () { done(src); }; im.onerror = function () { if (fallback) fallback(); else done(null); }; im.src = src; };
+            var plain = function () { viaImg(url); };
+            if (!window.fetch || !window.Blob || !window.URL || !URL.createObjectURL) plain();
+            else fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+                .then(function (t) { viaImg(URL.createObjectURL(new Blob([t], { type: 'image/svg+xml' })), plain); }, plain);
+            return FLAG_ST[code]; }
+        function flag(c) { var code = ISO2[c]; if (!code) return '<span class="va-flag va-flag-x" aria-hidden="true"></span>'; code = code.toLowerCase(); var st = flagLoad(code);
+            return '<span class="va-flag' + (st === 'wait' ? ' va-flag-wait' : st === 'no' ? ' va-flag-x' : '') + '" data-cc="' + code + '"' + (st === 'ok' ? ' style="' + flagBg(code) + '"' : '') + ' aria-hidden="true"></span>'; }
         var LANG_DN = (function () { try { return new Intl.DisplayNames(['en'], { type: 'language', languageDisplay: 'standard' }); } catch (e) { try { return new Intl.DisplayNames(['en'], { type: 'language' }); } catch (e2) { return null; } } })();
         var langMemo = {};
         function langKey(l) { l = l || ''; if (l in langMemo) return langMemo[l]; var k = l.split('@')[0].replace(/_/g, '-').trim(); try { if (k) k = Intl.getCanonicalLocales(k)[0]; } catch (e) {} return (langMemo[l] = k); }
@@ -470,11 +491,22 @@
            50m countries and 10m US state lines from jsDelivr (pinned, about 280 KB), and the coarse set stays if that fails */
         function topoArcs(t) { var tf = t.transform; return t.arcs.map(function (a) { var x = 0, y = 0;
             return a.map(function (q) { if (!tf) return q; x += q[0]; y += q[1]; return [x * tf.scale[0] + tf.translate[0], y * tf.scale[1] + tf.translate[1]]; }); }); }
+        /* Natural Earth keeps a few shapes (Russia, Fiji) as single rings that cross the 180° meridian: drawn as they are, each
+           jump from +180 to -180 is a line across the whole map. Such a ring is unwrapped into continuous longitudes and drawn
+           twice, once per map edge (the canvas clips the rest). Rings around a pole, or wholly south of the map, are dropped. */
+        function unwrapRing(pts) { var out = [], off = 0, lo = Infinity, hi = -Infinity, jump = false, top = -90;
+            for (var i = 0; i < pts.length; i++) { var x = pts[i][0] + off;
+                if (i) { var dx = x - out[i - 1][0]; if (dx > 180) { off -= 360; x -= 360; jump = true; } else if (dx < -180) { off += 360; x += 360; jump = true; } }
+                out.push([x, pts[i][1]]); if (x < lo) lo = x; if (x > hi) hi = x; if (pts[i][1] > top) top = pts[i][1]; }
+            if (top < LAT_MIN || off !== 0) return [];
+            if (!jump) return [pts];
+            var res = [out]; if (hi > 180) res.push(out.map(function (q) { return [q[0] - 360, q[1]]; })); if (lo < -180) res.push(out.map(function (q) { return [q[0] + 360, q[1]]; }));
+            return res; }
         function topoPolys(t, arcs, name) { var feat = [], rings = [];
             t.objects[name].geometries.forEach(function (g, gi) { var ps = g.type === 'Polygon' ? [g.arcs] : g.type === 'MultiPolygon' ? g.arcs : [];
                 ps.forEach(function (poly) { poly.forEach(function (ids) { var pts = [];
                     ids.forEach(function (id, j) { var a = id < 0 ? arcs[~id].slice().reverse() : arcs[id]; for (var k = j ? 1 : 0; k < a.length; k++) pts.push(a[k]); });
-                    rings.push(pts); feat.push(gi); }); }); });
+                    unwrapRing(pts).forEach(function (r) { rings.push(r); feat.push(gi); }); }); }); });
             return { rings: rings, feat: feat }; }
         function topoInner(t, arcs, name) { var own = {};   /* arcs shared by two shapes: the borders between them, not the coast */
             t.objects[name].geometries.forEach(function (g, gi) { var ps = g.type === 'Polygon' ? [g.arcs] : g.type === 'MultiPolygon' ? g.arcs : [];
@@ -591,7 +623,7 @@
             if (M.hover) mark(M.hover, 1.5, TOK.hov);
             /* the latest visit: a small solid dot on the top-right edge of its bubble (a badge, not a target); static */
             var lp = M.latest; if (lp && lit(lp)) { if (lp.abs) lp = lp.abs; r = rOf(lp.n); x = (lp.x + r * 0.7071) * d; y = (lp.y - r * 0.7071) * d;
-                c.beginPath(); c.arc(x, y, (M.cw < 520 ? 2.6 : 3.2) * d, 0, 6.2832); c.fillStyle = TOK.latest; c.fill(); c.strokeStyle = TOK.ring; c.lineWidth = 1.25 * d; c.stroke(); } }
+                c.beginPath(); c.arc(x, y, (M.cw < 520 ? 3.6 : 4.2) * d, 0, 6.2832); c.fillStyle = TOK.latest; c.fill(); c.strokeStyle = TOK.ring; c.lineWidth = 1.25 * d; c.stroke(); } }
         function kick() { if (!M.raf) M.raf = requestAnimationFrame(loop); }
         function loop(ts) { M.raf = 0;
             if (M.anim) { var a = M.anim, k = Math.min(1, (ts - (a.t0 || (a.t0 = ts))) / a.ms), e = 1 - Math.pow(1 - k, 3);
@@ -696,7 +728,13 @@
         var tipEl = $('va-tip');
         function showTip(html, x, y, above, owner, box) { tipEl.innerHTML = html; tipEl.classList.add('on'); tipEl.setAttribute('data-owner', owner || ''); var w = tipEl.offsetWidth, h = tipEl.offsetHeight, vw = doc.documentElement.clientWidth, vh = window.innerHeight;
             var left = x + 14, top = above ? y - h - 12 : y + 16; if (left + w > vw - 8) left = x - 14 - w; if (top + h > vh - 8) top = y - h - 12; if (top < 8) top = Math.min(vh - h - 8, y + 16);
-            if (box) { var lo = Math.max(8, box.top + 8), hi = Math.min(vh - 8, box.bottom - 8) - h; top = hi >= lo ? Math.max(lo, Math.min(hi, top)) : lo; }
+            /* inside a box (a tapped map place): the first of the four corners around the point that, kept in the box, leaves the
+               point visible; if none can, the one farthest from it */
+            if (box) { var lo = Math.max(8, box.top + 8), hi = Math.min(vh - 8, box.bottom - 8) - h, l0 = Math.max(8, box.left + 8), l1 = Math.min(vw - 8, box.right - 8) - w, best = -1;
+                [[x + 14, y + 16], [x - 14 - w, y + 16], [x + 14, y - h - 12], [x - 14 - w, y - h - 12]].forEach(function (q) {
+                    var L = l1 >= l0 ? Math.max(l0, Math.min(l1, q[0])) : l0, T = hi >= lo ? Math.max(lo, Math.min(hi, q[1])) : lo;
+                    var dx = Math.max(L - x, 0, x - (L + w)), dy = Math.max(T - y, 0, y - (T + h)), dist = Math.min(Math.hypot(dx, dy), 12);
+                    if (dist > best + 0.5) { best = dist; left = L; top = T; } }); }
             tipEl.style.transform = 'translate(' + Math.round(Math.max(8, left)) + 'px,' + Math.round(Math.max(8, top)) + 'px)'; }
         function hideTip() { tipEl.classList.remove('on'); }
 
@@ -750,18 +788,19 @@
             if (C.P) { var p = C.P.length, c = F.length, dl;
                 if (!c) dl = NONE + (p ? ' · ' + fmt(p) + ' in the ' + RANGES[S.range].cmp : '');
                 else if (!p) dl = 'None in the ' + RANGES[S.range].cmp;
-                else { var rr = Math.round((c - p) / p * 100); dl = (rr === 0 ? '<span class="va-delta">No change</span>' : '<span class="va-delta ' + (rr > 0 ? 'up' : 'down') + '">' + (rr > 0 ? '↑ ' : '↓ ') + Math.abs(rr) + '%</span>') + ' vs ' + RANGES[S.range].cmp; }
+                else { var rr = Math.round((c - p) / p * 100); dl = (rr === 0 ? '<span class="va-delta">No change</span>' : '<span class="va-delta ' + (rr > 0 ? 'up' : 'down') + '">' + (rr > 0 ? '↑ ' : '↓ ') + Math.abs(rr) + '%</span>') + ' vs ' + RANGES[S.range].cmp.replace(/ (\S+)$/, '\u00a0$1'); }
                 set('ks-1', dl, true); $('ks-1').title = fmt(p) + ' visits in the ' + RANGES[S.range].cmp + ', ' + fmtWhen(C.W.prev.a, C.now) + ' to ' + fmtWhen(C.W.prev.b, C.now) + (S.range === '24h' ? '' : ', counted up to the same point'); }
             else set('ks-1', !D.rows.length ? 'No visits recorded yet' : F.length ? 'Since ' + fmtDayY(D.first) : NONE);
             var pre = nlPre(), b = busiest(C); LASTB = b;
             set('kl-2', !S.country ? 'Countries & regions' : 'Share of ' + (pre ? pre + 'visits' : 'all visits'));
             set('kl-3', S.city ? 'Share of ' + cLabel(S.country) : S.country ? 'Cities in ' + cLabel(S.country) : 'Cities');
             set('kl-4', b ? b.label : (S.range === '24h' ? 'Busiest hour' : 'Busiest day'));
-            $('ks-4').title = $('ks-5').title = '';
+            $('ks-4').title = $('ks-5').title = $('kv-2').title = '';
             /* nothing matches: one message (in the first tile) and the same placeholder everywhere else */
             if (!F.length) { ['2', '3', '4', '5'].forEach(function (n) { set('kv-' + n, DASH); set('ks-' + n, BLANK); }); return; }
             /* tile 2: how many countries, or, under a place filter, that place's share (the city's own when a city is picked) */
-            if (!S.country) { var tc = tally(F, function (r) { return r.country; }); set('kv-2', fmt(tc.length)); set('ks-2', 'Top: ' + cLabel(tc[0].k) + ' · ' + fmtPct(share(tc[0].n, F.length))); }
+            if (!S.country) { var tc = tally(F, function (r) { return r.country; }); set('kv-2', fmt(tc.length)); set('ks-2', 'Top: ' + cLabel(tc[0].k) + ' · ' + fmtPct(share(tc[0].n, F.length)));
+                if (S.range === 'all' && !anyNL() && D.rawC > tc.length) $('kv-2').title = 'The footer map shows ' + fmt(D.rawC) + ': it counts spelling variants separately'; }
             else { set('kv-2', fmtPct(share(F.length, RN.length))); set('ks-2', fmt(F.length) + ' of ' + plural(RN.length, pre + 'visit')); }
             if (!S.city) { var ct = tally(F, function (r) { return r.city ? r.ck : ''; }); set('kv-3', fmt(ct.length));
                 set('ks-3', ct.length ? 'Top: ' + ct[0].k.split('|')[1] + ' · ' + fmtPct(share(ct[0].n, F.length)) : 'No city recorded'); }
@@ -842,6 +881,9 @@
         function bucketLabel(b, unit, long) { if (unit === 'hour') return long ? fmtWday(b.a) + ', ' + hourSpan(new Date(b.a).getHours()) : fmtHour(b.a);
             if (unit === 'day') return long ? dfmt(b.a, { weekday: 'long', month: 'short', day: 'numeric' }) : fmtDay(b.a);
             return long ? 'Week of ' + fmtDay(b.a) + '–' + fmtDay(b.b - 1) : fmtDay(b.a); }
+        function tableLabel(b, unit) { if (unit === 'hour') return fmtDay(b.a) + ', ' + hourSpan(new Date(b.a).getHours());
+            if (unit === 'day') return fmtWday(b.a);
+            var e = b.b - 1; return new Date(b.a).getMonth() === new Date(e).getMonth() ? fmtDay(b.a) + '–' + new Date(e).getDate() : fmtDay(b.a) + ' – ' + fmtDay(e); }
         function series(C) { var W = C.W, B = W.B, n = B.length, cur = B.map(function () { return 0; }), prev = C.P ? B.map(function () { return 0; }) : null;
             var idx = function (t) { var lo = 0, hi = n - 1; while (lo <= hi) { var m = (lo + hi) >> 1; if (t < B[m].a) hi = m - 1; else if (t >= B[m].b) lo = m + 1; else return m; } return -1; };
             C.F.forEach(function (r) { var k = idx(r.t); if (k >= 0) cur[k]++; });
@@ -860,9 +902,11 @@
             $('va-trend-keys').innerHTML = keys; $('va-trend-keys').hidden = S.table; drawTrend(); }
         function drawTrend() { if (!TR) return; var el = trendEl, Wd = el.clientWidth - (parseFloat(getComputedStyle(el).paddingLeft) || 0) - (parseFloat(getComputedStyle(el).paddingRight) || 0); if (Wd <= 0) return;
             var n = TR.B.length, done = TR.partial ? n - 1 : n, f0 = TR.pf ? 1 : 0, sp = prevShown();
-            if (S.table) { var rows = TR.B.map(function (b, i) { var so = i === n - 1 && TR.partial, fw = i === 0 && TR.pf;
-                    return '<tr><th scope="row">' + esc(bucketLabel(b, TR.unit, true)) + (so ? ' <span class="va-muted">(so far)</span>' : fw ? ' <span class="va-muted">(' + esc(firstNote()) + ')</span>' : '') + '</th><td>' + fmt(TR.cur[i]) + '</td>' + (sp ? '<td>' + fmt(TR.prev[i]) + (so ? ' <span class="va-muted">(same time)</span>' : '') + '</td>' : '') + '</tr>'; }).reverse().join('');
-                el.innerHTML = '<div class="va-tablewrap va-tscroll"><table class="va-table va-table-num"><thead><tr><th>' + { hour: 'Hour', day: 'Day', week: 'Week' }[TR.unit] + '</th><th>Visits</th>' + (sp ? '<th>' + esc(RANGES[S.range].cmp.replace(/^previous/, 'Previous')) + '</th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table></div>'; return; }
+            /* the table: compact labels, and the "so far" notes on a line of their own, so it fits a phone without scrolling sideways */
+            if (S.table) { var note = function (t) { return '<span class="va-t-note">' + esc(t) + '</span>'; };
+                var rows = TR.B.map(function (b, i) { var so = i === n - 1 && TR.partial, fw = i === 0 && TR.pf;
+                    return '<tr><th scope="row"><span class="va-nw">' + esc(tableLabel(b, TR.unit)) + '</span>' + (so ? note('so far') : fw ? note(firstNote()) : '') + '</th><td>' + fmt(TR.cur[i]) + '</td>' + (sp ? '<td>' + fmt(TR.prev[i]) + (so ? note('same time') : '') + '</td>' : '') + '</tr>'; }).reverse().join('');
+                el.innerHTML = '<div class="va-tablewrap va-tscroll"><table class="va-table va-table-num"><thead><tr><th>' + { hour: 'Hour', day: 'Day', week: 'Week' }[TR.unit] + '</th><th>Visits</th>' + (sp ? '<th>' + esc(RANGES[S.range].cmp.replace(/^previous/, 'Previous').replace(/ (\S+)$/, '\u00a0$1')) + '</th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table></div>'; return; }
             if (!LAST || !LAST.F.length) { el.innerHTML = '<div class="va-empty va-chart-empty">' + (D && D.rows.length ? 'No visits in this period' : 'No visits recorded yet') + '</div>'; TR.geom = null; return; }
             /* the scale follows the complete buckets and the current one; a partial first bucket (the first week of tracking,
                say) that is taller is pinned to the top edge with its value, so it can't squeeze the rest of the line */
@@ -873,23 +917,36 @@
             var X = function (i) { return padL + inL + (n === 1 ? (pw - inL) / 2 : i / (n - 1) * (pw - inL)); }, Y = function (v) { return padT + ph - Math.min(v, top) / top * ph; };
             var s = '<svg width="' + Wd + '" height="' + H + '" viewBox="0 0 ' + Wd + ' ' + H + '" role="img" aria-label="' + esc($('va-trend-h').textContent) + ' chart">';
             ticks.forEach(function (t) { var y = Math.round(Y(t)) + 0.5; s += '<line x1="' + padL + '" x2="' + (Wd - padR + 12) + '" y1="' + y + '" y2="' + y + '" class="' + (t === 0 ? 'va-ax' : 'va-gl') + '"/><text x="' + (padL - 10) + '" y="' + (y + 4) + '" class="va-yt">' + fmt(t) + '</text>'; });
-            var lw = TR.unit === 'hour' ? 50 : TR.unit === 'week' ? 58 : 60, every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(pw / lw))));
-            /* hours: the first label carries its date, midnight shows the new date, and the bucket in progress is "Now" */
-            var i0 = (n - 1) % every, xl = function (i) { var b = TR.B[i]; if (TR.unit !== 'hour') return bucketLabel(b, TR.unit); if (i === n - 1 && TR.partial) return 'Now';
-                return new Date(b.a).getHours() === 0 ? fmtDay(b.a) : (i === i0 ? fmtDay(b.a) + ', ' : '') + fmtHour(b.a); };
-            for (var i = i0; i < n; i += every) s += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" class="va-xt">' + esc(xl(i)) + '</text>';
+            var lw = TR.unit === 'hour' ? 50 : TR.unit === 'week' ? 58 : 60, every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(pw / lw)))), idx = [], i;
+            /* hours: labels on round clock hours (so midnight, with the new date, is always one), the first label carries its
+               date, and the bucket in progress is "Now". Days and weeks: counted back from the latest */
+            if (TR.unit === 'hour') { every = [1, 2, 3, 4, 6, 12].filter(function (e) { return e >= every; })[0] || 12;
+                for (i = 0; i < n; i++) if (new Date(TR.B[i].a).getHours() % every === 0 || (i === n - 1 && TR.partial)) idx.push(i); }
+            else for (i = (n - 1) % every; i < n; i += every) idx.push(i);
+            var xl = function (i) { var b = TR.B[i]; if (TR.unit !== 'hour') return bucketLabel(b, TR.unit); if (i === n - 1 && TR.partial) return 'Now';
+                return new Date(b.a).getHours() === 0 ? fmtDay(b.a) : (i === idx[0] ? fmtDay(b.a) + ', ' : '') + fmtHour(b.a); };
+            /* inside the chart, and never closer than 8 px to the next label (the latest one wins) */
+            var labs = []; idx.forEach(function (i) { var t = xl(i), w = t.length * 6.5, x = Math.max(w / 2 + 2, Math.min(Wd - w / 2 - 2, X(i))), L = { i: i, t: t, x: x, a: x - w / 2, b: x + w / 2 }, p = labs[labs.length - 1];
+                var hits = function () { var q = labs[labs.length - 1]; return q && L.a < q.b + 8; };
+                if (p && hits()) { if (i !== n - 1) return; while (labs.length > 1 && hits()) labs.pop(); if (hits()) return; } labs.push(L); });
+            labs.forEach(function (L) { s += '<text x="' + L.x.toFixed(1) + '" y="' + (H - 9) + '" class="va-xt">' + esc(L.t) + '</text>'; });
             var line = function (arr, from, to) { var d = ''; for (var k = from; k <= to; k++) d += (k === from ? 'M' : 'L') + X(k).toFixed(1) + ' ' + Y(arr[k]).toFixed(1); return d; };
             /* the line and area join complete buckets only; partial ones (first, current) are hollow points of their own */
             if (done > f0) {
                 if (sp && done - f0 > 1) s += '<path d="' + line(TR.prev, f0, done - 1) + '" class="va-l-prev"/>';
                 if (done - f0 > 1) s += '<path d="' + line(TR.cur, f0, done - 1) + ' L' + X(done - 1).toFixed(1) + ' ' + Y(0).toFixed(1) + ' L' + X(f0).toFixed(1) + ' ' + Y(0).toFixed(1) + 'Z" class="va-area"/><path d="' + line(TR.cur, f0, done - 1) + '" class="va-l-cur"/>';
-                if (done - f0 <= 45) for (var j = f0; j < done; j++) s += '<circle cx="' + X(j).toFixed(1) + '" cy="' + Y(TR.cur[j]).toFixed(1) + '" r="' + (done > 20 ? 2.25 : 2.75) + '" class="va-pt"/>'; }
+                /* point markers only where they have room, and not along a flat run of zeros (it would read as a dashed line) */
+                var cz = function (k) { return k >= f0 && k < done && TR.cur[k] === 0; };
+                if (done - f0 <= 45 && (n < 2 || (pw - inL) / (n - 1) >= 14)) for (var j = f0; j < done; j++) { if (cz(j) && (cz(j - 1) || cz(j + 1))) continue; s += '<circle cx="' + X(j).toFixed(1) + '" cy="' + Y(TR.cur[j]).toFixed(1) + '" r="' + (done > 20 ? 2.25 : 2.75) + '" class="va-pt"/>'; } }
             if (TR.pf) { s += '<circle cx="' + X(0).toFixed(1) + '" cy="' + Y(TR.cur[0]).toFixed(1) + '" r="3.5" class="va-pt-open va-pt-first"/>';
                 if (TR.cur[0] > top) s += '<text x="' + (X(0) + 7).toFixed(1) + '" y="' + (Y(top) + 17).toFixed(1) + '" class="va-so-far va-off">↑ ' + esc(fmt(TR.cur[0])) + '</text>'; }   /* off the scale: its value, inside the plot below the top line */
             if (TR.partial) { var px = X(n - 1), py = Y(TR.cur[n - 1]), lab = fmt(TR.cur[n - 1]) + ' so far', tw = lab.length * 6.6 + 4;
                 /* the in-progress bucket is its own hollow point, never joined to the line */
-                var ya = py - 11, yb = py + 19, near = done > 0 && X(done - 1) > px - tw - 6 ? Y(TR.cur[done - 1]) : null, ly = ya;
-                if (ya < padT + 8 || (near != null && Math.abs(near - (ya - 4)) < 14 && yb < padT + ph - 4)) ly = yb;
+                /* above the point, unless the line runs through the label there (then below, if that is clear and inside the plot) */
+                var lineY = function (x) { for (var k = f0; k < done - 1; k++) { var x0 = X(k), x1 = X(k + 1); if (x >= x0 && x <= x1) return Y(TR.cur[k]) + (x - x0) / (x1 - x0 || 1) * (Y(TR.cur[k + 1]) - Y(TR.cur[k])); } return null; };
+                var hits = function (y) { for (var x = px + 6 - tw; x <= px + 6; x += 3) { var v = lineY(x); if (v != null && v > y - 14 && v < y + 5) return true; } return false; };
+                var ya = py - 11, yb = py + 19, okB = yb < padT + ph - 4, ly = ya;
+                if (ya < padT + 8 || (hits(ya) && okB && !hits(yb))) ly = yb;
                 s += '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="4" class="va-pt-open"/><text x="' + (px + 6).toFixed(1) + '" y="' + ly.toFixed(1) + '" class="va-so-far">' + esc(lab) + '</text>'; }
             s += '<g class="va-cross" id="va-cross" style="display:none"><line y1="' + padT + '" y2="' + (padT + ph) + '" class="va-crossl"/>' + (sp ? '<circle r="3.5" class="va-pt-prev" id="va-cross-p"/>' : '') + '<circle r="4.5" class="va-pt-hot" id="va-cross-c"/></g></svg>';
             el.innerHTML = s; TR.geom = { X: X, Y: Y, n: n, x0: padL + inL, pw: pw - inL, padT: padT, sp: sp, done: done }; }
@@ -941,103 +998,105 @@
         [$('va-dev-list'), $('va-lang-list')].forEach(function (el) { el.addEventListener('click', function (e) { var b = e.target.closest('.va-brow'); if (!b) return; var k = b.getAttribute('data-dim'), v = b.getAttribute('data-v');
             S[k] = S[k] === v ? null : v; S.recentN = 10; commit(); }); });
 
-        /* ═════════ busiest times: weekday × hour in each visitor's local time ═════════ */
+        /* ═════════ busiest times: date (7 days) or weekday (longer ranges) × hour, in each visitor's local time ═════════ */
         var DOW = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], HM = null;
-        function fmtAvg(v) { var t = v < 9.95 ? String(Math.round(v * 10) / 10) : fmt(Math.round(v)); return t + (t === '1' ? ' visit' : ' visits'); }
         function fmtAvgN(v) { return v < 9.95 ? String(Math.round(v * 10) / 10) : fmt(Math.round(v)); }
         function andList(a) { return a.length < 3 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
-        function spanOf(h0, h1) { var a = h0 % 12 || 12, b = h1 % 12 || 12, am0 = h0 < 12, am1 = h1 % 24 < 12; return a + (am0 === am1 ? '' : (am0 ? ' AM' : ' PM')) + '–' + b + (am1 ? ' AM' : ' PM'); }
+        /* "9–11 PM", "9 PM – 12 AM" */
+        function spanOf(h0, h1) { var a = h0 % 12 || 12, b = h1 % 12 || 12, am0 = h0 % 24 < 12, am1 = h1 % 24 < 12, s1 = am1 ? ' AM' : ' PM';
+            return am0 === am1 ? a + '–' + b + s1 : a + (am0 ? ' AM' : ' PM') + ' – ' + b + s1; }
+        function keyDate(k) { return new Date(k * DAY); }   /* a day number as a UTC date */
+        function keyRange(a, b) { if (a === b) return fmtKey(a); var A = keyDate(a), B = keyDate(b); return A.getUTCMonth() === B.getUTCMonth() ? fmtKey(a) + '–' + B.getUTCDate() : fmtKey(a) + ' – ' + fmtKey(b); }
         function renderHeat(C) { var d, c, i, x, fallback = S.range === '24h', weekly = fallback || S.range === '7d', W = fallback ? win('7d', C.now) : C.W;
             var src = fallback ? D.rows.filter(function (r) { return r.t >= W.start && r.t <= C.now && matchNL(r) && matchLoc(r); }) : C.F;
-            /* every visit in the range sits on its visitor's own date and hour. A date is a full day only when it lies wholly
-               inside the range in every time zone (UTC−12 to UTC+14); the range's first and last dates never do. Full days
-               alone name the busiest times; partial days are still drawn, and said to be partial */
+            $('va-hm-note').textContent = fallback ? 'last 7 days, visitors’ local time' : 'visitors’ local time';
+            /* each visit sits on its visitor's own date and hour. A date is a full day only when it lies wholly inside the range in
+               every time zone (UTC−12 to UTC+14); only full days name the busiest times */
             var S0 = S.range === 'all' ? D.first : W.start, Xa = Math.ceil((S0 + 14 * HOUR) / DAY), Xb = Math.floor((C.now - 12 * HOUR) / DAY) - 1, kT = dkey(C.now);
-            var perDay = {}, wdAll = [0, 0, 0, 0, 0, 0, 0];
+            var isFull = function (k) { return k >= Xa && k <= Xb; }, perDay = {}, wdAll = [0, 0, 0, 0, 0, 0, 0];
             for (i = 0; i < src.length; i++) { var r = src[i]; localHD(r); perDay[r.lk] = (perDay[r.lk] || 0) + 1; wdAll[r.ld]++; }
-            var full = []; for (x = Xa; x <= Xb; x++) full.push(x);
-            /* over several weeks, one date far above the rest (3x the median full day, and a quarter of its weekday's visits)
-               would paint its row by itself: it is left out of the averages, and out of the grid unless asked for */
+            /* over several weeks, one full date far above the rest (3x the median full day, and a quarter of its weekday's visits)
+               would paint its row by itself: it is left out unless asked for */
             var out = {}, outL = [];
-            if (!weekly && full.length >= 14) { var cs = full.map(function (k) { return perDay[k] || 0; }).sort(function (p, q) { return p - q; }), med = cs[cs.length >> 1];
-                Object.keys(perDay).forEach(function (k) { var n = perDay[k]; k = +k; if (n >= Math.max(20, 3 * med) && n >= 0.25 * wdAll[(k + 3) % 7]) { out[k] = n; outL.push(k); } });
+            if (!weekly && Xb - Xa >= 13) { var cs = []; for (x = Xa; x <= Xb; x++) cs.push(perDay[x] || 0); cs.sort(function (p, q) { return p - q; }); var med = cs[cs.length >> 1];
+                Object.keys(perDay).forEach(function (k) { var n = perDay[k]; k = +k; if (isFull(k) && n >= Math.max(20, 3 * med) && n >= 0.25 * wdAll[(k + 3) % 7]) { out[k] = n; outL.push(k); } });
                 outL.sort(function (p, q) { return out[q] - out[p]; }); }
-            var hide = outL.length > 0 && !S.hmAll, rowFull = [0, 0, 0, 0, 0, 0, 0], occ = [0, 0, 0, 0, 0, 0, 0], sumF = [0, 0, 0, 0, 0, 0, 0], rowDates = [[], [], [], [], [], [], []];
-            full.forEach(function (k) { var wd = (k + 3) % 7; rowFull[wd] = 1; if (out[k]) return; occ[wd]++; sumF[wd] += perDay[k] || 0; });
-            Object.keys(perDay).map(Number).sort(function (p, q) { return p - q; }).forEach(function (k) { rowDates[(k + 3) % 7].push(k); });
-            /* on 7 days each full weekday is one date, and a row with no full date is a partial day: drawn lighter and left out
-               of the top row. Over several weeks the top row counts everything the grid shows. */
-            var strong = function (r) { return !weekly || rowFull[r.ld]; }, nStrong = 0;
-            src.forEach(function (r) { if (!(hide && out[r.lk]) && strong(r)) nStrong++; });
-            /* hours in threes when there are too few visits for single hours to mean anything */
-            var bin = nStrong < 2000 ? 3 : 1, NB = 24 / bin, g = [], top = [], dayT = [0, 0, 0, 0, 0, 0, 0], hid = [0, 0, 0, 0, 0, 0, 0];
-            for (d = 0; d < 7; d++) { g.push([]); for (c = 0; c < NB; c++) g[d].push(0); } for (c = 0; c < NB; c++) top.push(0);
-            src.forEach(function (r) { if (hide && out[r.lk]) { hid[r.ld]++; return; } var b = Math.floor(r.lh / bin); g[r.ld][b]++; dayT[r.ld]++; if (strong(r)) top[b]++; });
-            /* the right-hand column is what the caption ranks: each full day's visits on 7 days, the average full day over several weeks */
-            var val = weekly ? dayT.map(function (v, j) { return rowFull[j] ? v : -1; }) : occ.map(function (o, j) { return o ? sumF[j] / o : -1; });
-            var bv = Math.max.apply(null, val), bestD = [], tv = Math.max.apply(null, top), bestH = [];
-            if (bv > 0) for (d = 0; d < 7; d++) if (Math.abs(val[d] - bv) < 1e-9) bestD.push(d);
-            if (tv > 0) for (c = 0; c < NB; c++) if (top[c] === tv) bestH.push(c);
-            var fullDays = full.filter(function (k) { return !out[k]; }), fullLab = !fullDays.length ? '' : fullDays.length === 1 ? DOW[(fullDays[0] + 3) % 7].slice(0, 3) : DOW[(fullDays[0] + 3) % 7].slice(0, 3) + '–' + DOW[(fullDays[fullDays.length - 1] + 3) % 7].slice(0, 3);
-            var span = function (b) { return spanOf(b * bin, (b + 1) * bin); };
-            HM = { g: g, top: top, dayT: dayT, val: val, occ: occ, hid: hid, out: out, outL: outL, hide: hide, weekly: weekly, bin: bin, rowFull: rowFull, rowDates: rowDates, Xa: Xa, Xb: Xb, kT: kT, fullLab: fullLab, span: span };
+            var hide = outL.length > 0 && !S.hmAll, used = function (k) { return isFull(k) && !(hide && out[k]); };
+            /* 7 days: one row per date, in date order (partial ones included, and marked). Longer ranges: one row per weekday,
+               each cell the visits in that hour on an average full day, like the right-hand column */
+            var rows = [], rowOf = {};
+            if (weekly) { var ks = {}; for (x = dkey(W.start); x <= kT; x++) ks[x] = 1; Object.keys(perDay).forEach(function (k) { ks[k] = 1; });
+                Object.keys(ks).map(Number).sort(function (p, q) { return p - q; }).forEach(function (k) { var wd = DOW[(k + 3) % 7]; rowOf[k] = rows.length;
+                    rows.push({ k: k, full: isFull(k), lab: k === kT ? 'Today' : wd.slice(0, 3) + ' ' + keyDate(k).getUTCDate(), name: wd + ', ' + fmtKey(k),
+                        why: isFull(k) ? '' : k === kT ? 'Today, still in progress' : k > Xb ? 'Partial day: still in progress in some time zones' : 'Partial day: only partly in this range' }); }); }
+            else { DOW.forEach(function (nm) { rows.push({ full: true, lab: nm.slice(0, 3), one: nm, name: nm + 's', occ: 0, sum: 0, part: [] }); });
+                Object.keys(perDay).map(Number).sort(function (p, q) { return p - q; }).forEach(function (k) { if (!isFull(k)) rows[(k + 3) % 7].part.push(k === kT ? 'today so far' : fmtKey(k)); }); }
+            var NR = rows.length, g = [], top = [], tot = [], nStrong = 0, nFull = 0, hid = 0;
+            for (d = 0; d < NR; d++) { g.push([]); tot.push(0); for (c = 0; c < 24; c++) g[d].push(0); } for (c = 0; c < 24; c++) top.push(0);
+            if (weekly) { src.forEach(function (r) { var j = rowOf[r.lk]; g[j][r.lh]++; tot[j]++; if (rows[j].full) { top[r.lh]++; nStrong++; } });
+                rows.forEach(function (R) { if (R.full) nFull++; }); }
+            else { for (x = Xa; x <= Xb; x++) if (used(x)) { rows[(x + 3) % 7].occ++; nFull++; }
+                src.forEach(function (r) { if (!used(r.lk)) { if (hide && out[r.lk]) hid++; return; } g[r.ld][r.lh]++; rows[r.ld].sum++; top[r.lh]++; nStrong++; });
+                rows.forEach(function (R, j) { for (c = 0; c < 24; c++) g[j][c] = R.occ ? g[j][c] / R.occ : 0; tot[j] = R.occ ? R.sum / R.occ : -1; });
+                for (c = 0; c < 24; c++) top[c] = nFull ? top[c] / nFull : 0; }
+            /* the busiest day is the longest bar in the right-hand column (full days only); the busiest time is the tallest bar in
+               the top row, or, with fewer than 2,000 visits (single hours are noisy), the 3-hour stretch around it */
+            var val = rows.map(function (R, j) { return R.full ? tot[j] : -1; }), bv = Math.max.apply(null, val.concat([0])), bestD = [];
+            if (bv > 0) val.forEach(function (v, j) { if (Math.abs(v - bv) < 1e-9) bestD.push(j); });
+            var tv = Math.max.apply(null, top), peaks = [], w3 = null, bestH = [], onH = {};
+            if (tv > 0) top.forEach(function (v, j) { if (v === tv) peaks.push(j); });
+            if (peaks.length && nStrong >= 2000) { bestH = peaks; if (peaks.length <= 2) peaks.forEach(function (j) { onH[j] = 1; }); }
+            else if (peaks.length) { var bs = -1; peaks.forEach(function (p) { [-1, -2, 0].forEach(function (o) { var h0 = (p + o + 24) % 24, sm = top[h0] + top[(h0 + 1) % 24] + top[(h0 + 2) % 24]; if (sm > bs + 1e-9) { bs = sm; w3 = h0; } }); });
+                for (c = 0; c < 3; c++) onH[(w3 + c) % 24] = 1; }
+            /* one line: the day and the time the grid's two bar rows point at; ties of three or more name nothing */
+            var enough = nStrong >= 100, parts = [], kv = function (k, v, tip) { return '<span class="va-hm-kv"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' + k + ' <b>' + esc(v) + '</b></span>'; };
+            if (enough && bestD.length && bestD.length <= 2) parts.push(kv(bestD.length > 1 ? 'Busiest days' : 'Busiest day', andList(bestD.map(function (j) { var R = rows[j]; return weekly ? DOW[(R.k + 3) % 7].slice(0, 3) + ', ' + fmtKey(R.k) : R.one; }))));
+            if (enough && w3 != null) parts.push(kv('Busiest hours', spanOf(w3, w3 + 3), 'The busiest 3 hours in a row: single hours are too noisy at this number of visits'));
+            else if (enough && bestH.length && bestH.length <= 2) parts.push(kv(bestH.length > 1 ? 'Busiest hours' : 'Busiest hour', andList(bestH.map(function (j) { return spanOf(j, j + 1); }))));
+            var sum = !enough ? (nFull ? 'Too few visits yet to name the busiest times.' : 'No full days in this range yet.') : parts.length ? parts.join('<span class="va-sep" aria-hidden="true">·</span>') : 'No single busiest day or time.';
+            var outNote = '';
+            if (outL.length) { var many = outL.length > 1, names = andList(outL.map(function (k) { return fmtKey(k) + ' (' + plural(out[k], 'visit') + ')'; }));
+                outNote = (hide ? names + (many ? ', one-day spikes, are left out. ' : ', a one-day spike, is left out. ') : 'Includes ' + names + (many ? ', one-day spikes. ' : ', a one-day spike. ')) +
+                    '<button type="button" class="va-link" id="va-hm-all">' + (hide ? 'Include ' : 'Leave ') + (many ? 'them' : 'it') + (hide ? '' : ' out') + '</button>'; }
+            var fk = rows.filter(function (R) { return weekly && R.full; }), fullLab = fk.length ? keyRange(fk[0].k, fk[fk.length - 1].k) : '';
+            HM = { weekly: weekly, rows: rows, g: g, top: top, tot: tot, nFull: nFull, out: out, outL: outL, hide: hide, hid: hid, fullLab: fullLab };
             if (!src.length) { $('va-hm').innerHTML = '<div class="va-empty">No visits in this period</div>'; $('va-hm-legend').innerHTML = ''; return; }
-            var ghost = function (j) { return weekly && !rowFull[j]; };
-            /* colour: six steps up to the 95th percentile of the full-strength cells, so a few extreme cells can't wash out the rest */
-            var nz = []; for (d = 0; d < 7; d++) if (!ghost(d)) for (c = 0; c < NB; c++) if (g[d][c]) nz.push(g[d][c]); nz.sort(function (p, q) { return p - q; });
-            var cap = nz.length ? nz[Math.floor(0.95 * (nz.length - 1))] : 1, lvl = function (v) { return v ? Math.max(1, Math.ceil(Math.min(v, cap) / cap * 6)) : 0; };
-            var cMax = 1; for (d = 0; d < 7; d++) { var cv = weekly ? (rowFull[d] ? dayT[d] : 0) : val[d]; if (cv > cMax) cMax = cv; }
-            var tMax = Math.max.apply(null, top.concat([1])), narrow = $('va-hm').clientWidth < 600;
-            /* the caption names the largest values drawn: the longest bar in the right-hand column and the tallest in the top row */
-            var fullN = sumF.reduce(function (p, q) { return p + q; }, 0), parts = [], slot = bin === 1 ? 'hour' : 'time of day', slots = bin === 1 ? 'hours' : 'times of day';
-            if (bestD.length) { var other = '';
-                if (weekly && !fallback && bestD.length === 1 && LASTB && LASTB.wd != null && !LASTB.tie && LASTB.wd !== bestD[0]) other = ' (' + DOW[LASTB.wd] + ' in ' + TZ_SHORT + ')';
-                parts.push('<b>' + andList(bestD.map(function (j) { return weekly ? DOW[j] : DOW[j] + 's'; })) + '</b> ' +
-                    (weekly ? (bestD.length > 1 ? 'tied as the busiest full days' : 'was the busiest full day' + other)
-                        : (bestD.length > 1 ? 'are equally busy (' + fmtAvg(bv) + ' on an average day)' : 'are busiest (' + fmtAvg(bv) + ' on an average ' + DOW[bestD[0]] + ')'))); }
-            if (bestH.length) parts.push(bestH.length > 2 ? bestH.length + ' ' + slots + ' tie as the busiest' : '<b>' + andList(bestH.map(span)) + '</b> ' + (bestH.length > 1 ? (weekly ? 'were' : 'are') + ' the busiest ' + slots : (weekly ? 'was' : 'is') + ' the busiest ' + slot));
-            var sum = fullN < 100 ? (fullN ? 'Only ' + plural(fullN, 'visit') + ' on full days in this range: too few to name the busiest times.' : 'No full days in this range yet to name the busiest times.')
-                : 'In visitors’ own time, ' + parts.join(' and ') + '.';
-            var gh = []; for (d = 0; d < 7; d++) if (ghost(d) && dayT[d]) gh.push(DOW[d].slice(0, 3));
-            if (gh.length) sum += ' ' + andList(gh) + ' (faded) ' + (gh.length > 1 ? 'are partial days' : 'is a partial day') + ', left out of the top row.';
-            if (outL.length) { var many = outL.length > 1, names = andList(outL.map(function (k) { var tz = 0; src.forEach(function (r) { if (dkey(r.t) === k) tz++; });
-                    return fmtKey(k) + ' (' + plural(out[k], 'visit') + ' by visitors’ own dates' + (tz && tz !== out[k] ? ', ' + fmt(tz) + ' in ' + TZ_SHORT : '') + ')'; }));
-                sum += hide ? ' Leaves out ' + names + ', ' + (many ? 'unusually busy days' : 'an unusually busy day') + '. <button type="button" class="va-link" id="va-hm-all">Include ' + (many ? 'them' : 'it') + '</button>'
-                    : ' Includes ' + names + ', which the averages leave out. <button type="button" class="va-link" id="va-hm-all">Leave ' + (many ? 'them' : 'it') + ' out</button>'; }
-            if (bin > 1 && fullN >= 100) sum += ' Hours are grouped in threes: there are too few visits to read single hours.';
-            if (fallback) sum += ' 24 hours is too short for a weekly pattern, so this shows the last 7 days.';
-            var html = '<div class="va-hm-grid" style="--cols:' + NB + '" role="img" aria-label="Visits by weekday and ' + (bin > 1 ? '3-hour block' : 'hour') + ' in each visitor’s local time. ' + esc(sum.replace(/<[^>]+>[^<]*<\/button>/g, '').replace(/<[^>]+>/g, '')) + '">';
-            html += '<div class="va-hm-corner">' + (weekly ? 'Full days' : 'Total') + '</div>';
-            for (c = 0; c < NB; c++) html += '<div class="va-hm-hb" data-c="' + c + '"><i style="height:' + (top[c] / tMax * 100).toFixed(1) + '%"></i></div>';
+            /* colour: five steps up to the 95th percentile of the full-day cells (a few extreme cells can't wash out the rest), and
+               only the lower three for a small sample, so a handful of visits never looks like a strong pattern */
+            var ref = []; for (d = 0; d < NR; d++) if (rows[d].full) for (c = 0; c < 24; c++) if (g[d][c]) ref.push(g[d][c]); ref.sort(function (p, q) { return p - q; });
+            var cap = ref.length ? ref[Math.floor(0.95 * (ref.length - 1))] : 1, steps = enough ? 5 : 3, lvl = function (v) { return v ? Math.max(1, Math.ceil(Math.min(v, cap) / cap * steps)) : 0; };
+            var cMax = Math.max.apply(null, tot.concat([1e-9])), narrow = $('va-hm').clientWidth < 600;
+            var html = '<div class="va-hm-grid" style="--lab:' + (weekly ? 46 : 40) + 'px;--lab-n:' + (weekly ? 47 : 32) + 'px" role="img" aria-label="' + esc((weekly ? 'Visits by date and hour' : 'Visits on an average day, by weekday and hour') + ', in each visitor’s local time. ' + sum.replace(/<span class="va-sep"[^>]*>·<\/span>/g, '; ').replace(/<[^>]+>/g, '')) + '">';
+            html += '<div class="va-hm-corner"></div>';
+            for (c = 0; c < 24; c++) html += '<div class="va-hm-hb' + (enough && onH[c] ? ' on' : '') + '" data-c="' + c + '"><i style="height:' + (tv > 0 ? top[c] / tv * 100 : 0).toFixed(1) + '%"></i></div>';
             html += '<div class="va-hm-ch">' + (weekly ? 'Visits' : '<span class="va-long">Avg day</span><span class="va-short">Avg</span>') + '</div>';
-            for (d = 0; d < 7; d++) { var gc = ghost(d) ? ' va-hm-ghost' : '', cv2 = weekly ? dayT[d] : val[d];
-                html += '<div class="va-hm-d' + gc + '">' + DOW[d].slice(0, 3) + '</div>'; for (c = 0; c < NB; c++) html += '<div class="va-hm-c l' + lvl(g[d][c]) + gc + '" data-d="' + d + '" data-c="' + c + '"></div>';
-                html += '<div class="va-hm-t' + gc + '" data-d="' + d + '"><span class="va-hm-tb" style="--w:' + (cv2 > 0 ? Math.min(1, cv2 / cMax) : 0).toFixed(3) + '"></span><span class="va-num">' + (cv2 < 0 ? '–' : weekly ? fmt(cv2) : fmtAvgN(cv2)) + '</span></div>'; }
-            var every = bin === 1 ? (narrow ? 6 : 3) : (narrow ? 2 : 1);
-            html += '<div></div>'; for (c = 0; c < NB; c++) { var h0 = c * bin; html += '<div class="va-hm-x">' + (c % every === 0 ? (narrow ? (h0 % 12 || 12) + (h0 < 12 ? 'a' : 'p') : hourName(h0)) : '') + '</div>'; } html += '<div></div></div>';
-            html += '<p class="va-hm-sum">' + sum + '</p>';
+            for (d = 0; d < NR; d++) { var R = rows[d], pc = R.full ? '' : ' va-hm-part', on = enough && bestD.length <= 2 && bestD.indexOf(d) >= 0 ? ' on' : '', t = tot[d];
+                html += '<div class="va-hm-d' + pc + '" data-r="' + d + '">' + esc(R.lab) + '</div>';
+                for (c = 0; c < 24; c++) html += '<div class="va-hm-c l' + lvl(g[d][c]) + '" data-r="' + d + '" data-c="' + c + '"></div>';
+                html += '<div class="va-hm-t' + pc + on + '" data-r="' + d + '">' + (t > 0 ? '<span class="va-hm-tb" style="--w:' + (t / cMax).toFixed(3) + '"></span>' : '') + '<span class="va-num">' + (t < 0 ? '–' : weekly ? fmt(t) : fmtAvgN(t)) + '</span></div>'; }
+            var every = narrow ? 6 : 3;
+            html += '<div></div>'; for (c = 0; c < 24; c++) html += '<div class="va-hm-x">' + (c % every === 0 ? (narrow ? (c % 12 || 12) + (c < 12 ? 'a' : 'p') : hourName(c)) : '') + '</div>'; html += '<div></div></div>';
+            html += '<p class="va-hm-sum">' + sum + (outNote ? '<span class="va-hm-out">' + outNote + '</span>' : '') + '</p>';
             $('va-hm').innerHTML = html;
-            var lg = '<span class="va-hm-lab">Fewer</span>'; for (var l = 0; l <= 6; l++) lg += '<i class="va-hm-sw l' + l + '"></i>'; lg += '<span class="va-hm-lab">More</span>';
+            var lg = '<span class="va-hm-lab">Fewer</span>'; for (var l = 0; l <= 5; l++) lg += '<i class="va-hm-sw l' + l + '"></i>'; lg += '<span class="va-hm-lab">More</span>';
             $('va-hm-legend').innerHTML = lg; }
-        /* why a row is partial, date by date */
-        function partialWhy(d) { var H = HM, a = [];
-            H.rowDates[d].forEach(function (k) { if (k >= H.Xa && k <= H.Xb) return;
-                a.push(k > H.Xb ? (k === H.kT ? 'today, still in progress' : fmtKey(k) + ', still in progress in some time zones') : fmtKey(k) + ', only partly in this range'); });
-            return a.length ? 'Partial day: ' + a.join('; ') : ''; }
-        function hmTip(e) { if (!HM) return; var el = e.target.closest('.va-hm-c, .va-hm-hb, .va-hm-t'); if (!el) { hideTip(); return; }
-            var H = HM, d = el.getAttribute('data-d'), c = el.getAttribute('data-c'), v, head, main = null, extra = [], dn = function (x) { return H.weekly ? DOW[x] : DOW[x] + 's'; };
-            var leftOut = function (fd) { H.outL.forEach(function (k) { if (fd == null || (k + 3) % 7 === fd) extra.push(fmtKey(k) + ' (' + plural(H.out[k], 'visit') + ') ' + (H.hide ? 'left out' : 'shown, but left out of the average')); }); };
-            if (el.classList.contains('va-hm-c')) { d = +d; c = +c; v = H.g[d][c]; head = dn(d) + ', ' + H.span(c); if (H.weekly && !H.rowFull[d]) extra.push(partialWhy(d)); }
-            else if (c != null) { c = +c; v = H.top[c]; head = (H.weekly ? 'Full days (' + H.fullLab + ')' : 'All days') + ', ' + H.span(c); if (H.hide) leftOut(null); }
-            else { d = +d;
-                if (H.weekly) { var ds = H.rowDates[d]; head = DOW[d] + (ds.length === 1 ? ', ' + fmtKey(ds[0]) : ''); v = H.dayT[d]; if (!H.rowFull[d]) extra.push(partialWhy(d)); }
-                else { head = DOW[d] + 's'; v = H.dayT[d];
-                    if (H.occ[d]) main = '<b>' + fmtAvgN(H.val[d]) + '</b> ' + (fmtAvgN(H.val[d]) === '1' ? 'visit' : 'visits') + ' on an average ' + DOW[d];
-                    extra.push((H.occ[d] ? plural(H.occ[d], 'full ' + DOW[d]) : 'No full ' + DOW[d] + ' in this range') + '; ' + plural(v, 'visit') + ' on ' + DOW[d] + 's in all');
-                    var pd = H.rowDates[d].filter(function (k) { return (k < H.Xa || k > H.Xb) && !H.out[k]; }).map(function (k) { return k === H.kT ? 'today so far' : fmtKey(k) + ' (partial)'; });
-                    if (pd.length) extra.push('The average leaves out ' + andList(pd)); leftOut(d); } }
-            showTip('<div class="va-tip-s">' + esc(head) + ' · visitor’s local time</div><div class="va-tip-row">' + (main || '<b>' + fmt(v) + '</b> ' + (v === 1 ? 'visit' : 'visits')) + '</div>' +
-                extra.filter(Boolean).map(function (x) { return '<div class="va-tip-s">' + esc(x) + '</div>'; }).join(''), e.clientX, e.clientY, true); }
+        /* the details live in the tooltips: dates, partial days, what an average covers, what is left out */
+        function hmTip(e) { if (!HM) return; var el = e.target.closest('.va-hm-c, .va-hm-hb, .va-hm-t, .va-hm-d'); if (!el) { hideTip(); return; }
+            var H = HM, r = el.getAttribute('data-r'), c = el.getAttribute('data-c'), R = r != null ? H.rows[+r] : null, head, main, extra = [];
+            var cnt = function (v, avg) { var t = avg ? fmtAvgN(v) : fmt(v); return '<b>' + t + '</b> ' + (t === '1' ? 'visit' : 'visits'); };
+            var avgOf = function () { var a = [R.occ ? 'Average of ' + plural(R.occ, 'full ' + R.one) : 'No full ' + R.one + ' in this range'];
+                if (R.part.length) a.push('leaves out ' + andList(R.part) + ' (partial)'); return a.join('; '); };
+            var leftOut = function (wd) { if (H.hide) H.outL.forEach(function (k) { if (wd == null || (k + 3) % 7 === wd) extra.push(fmtKey(k) + ' (' + plural(H.out[k], 'visit') + ') left out'); }); };
+            if (el.classList.contains('va-hm-c')) { c = +c; head = R.name + ', ' + spanOf(c, c + 1);
+                if (H.weekly) { main = cnt(H.g[+r][c]); if (R.why) extra.push(R.why); } else { main = cnt(H.g[+r][c], true) + ' on an average ' + R.one; extra.push(avgOf()); leftOut(+r); } }
+            else if (c != null) { c = +c; head = spanOf(c, c + 1);
+                if (H.weekly) { main = cnt(H.top[c]) + ' on full days'; extra.push(H.fullLab ? 'Full days: ' + H.fullLab + ' (partial days aren’t counted here)' : 'No full days in this range yet'); }
+                else { main = cnt(H.top[c], true) + ' on an average day'; extra.push('Average of ' + plural(H.nFull, 'full day')); leftOut(null); } }
+            else { head = R.name;
+                if (H.weekly) { main = cnt(H.tot[+r]); if (R.why) extra.push(R.why); }
+                else { main = H.tot[+r] < 0 ? 'No full ' + R.one + ' in this range' : cnt(H.tot[+r], true) + ' on an average ' + R.one; if (H.tot[+r] >= 0) extra.push(avgOf()); leftOut(+r); } }
+            showTip('<div class="va-tip-s">' + esc(head) + '</div><div class="va-tip-row">' + main + '</div>' +
+                extra.map(function (x) { return '<div class="va-tip-s">' + esc(x) + '</div>'; }).join(''), e.clientX, e.clientY, true); }
         $('va-hm').addEventListener('pointermove', hmTip);
         $('va-hm').addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse') hmTip(e); });
         $('va-hm').addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') hideTip(); });
@@ -1051,17 +1110,17 @@
                     '<td class="va-t-tech">' + (tech ? esc(tech) : '<span class="va-muted">Not recorded</span>') + '<span class="va-t-extra">' + [r.device, r.lang ? langLabel(r.lang) : ''].filter(Boolean).map(function (x) { return ' · <span class="va-nw">' + esc(x) + '</span>'; }).join('') + '</span></td><td class="va-t-dev">' + (r.device ? esc(r.device) : '<span class="va-muted">–</span>') + '</td>' +
                     '<td class="va-t-lang">' + (r.lang ? esc(langLabel(r.lang)) : '<span class="va-muted">–</span>') + '</td></tr>'; }
             $('va-recent').innerHTML = n ? '<thead><tr><th>Time</th><th>Location</th><th>Browser</th><th>Device</th><th>Language</th></tr></thead><tbody>' + rows + '</tbody>' : '<tbody><tr><td class="va-empty">No visits in this period</td></tr></tbody>';
-            $('va-recent-more').innerHTML = n ? '<span class="va-muted">Newest first · showing ' + fmt(n) + ' of ' + fmt(F.length) + '</span>' + (F.length > n ? '<button type="button" class="va-btn" id="va-recent-btn">Show ' + fmt(Math.min(25, F.length - n)) + ' more</button>' : '') : ''; }
+            /* the caption wraps between its two phrases, never inside one; the button never wraps */
+            $('va-recent-more').innerHTML = n ? '<span class="va-muted va-more-t"><span class="va-nw">Showing ' + fmt(n) + ' of ' + fmt(F.length) + '</span> <span class="va-nw">· newest first</span></span>' + (F.length > n ? '<button type="button" class="va-btn" id="va-recent-btn">Show ' + fmt(Math.min(25, F.length - n)) + ' more</button>' : '') : ''; }
         $('va-recent-more').addEventListener('click', function (e) { if (e.target.id === 'va-recent-btn') { S.recentN += 25; renderRecent(LAST); } });
 
         /* ═════════ about this data ═════════ */
-        function renderAbout(C) { var s = D.sources, li = [], nC = Object.keys(D.ctry).length;
-            li.push('A visit is one browser tab in which the lab website loaded this map: reloads and other pages in the same tab don’t count again, and opening this page in a new tab can count as one. Unique visitors and traffic sources aren’t shown: the website’s Google Sites frame hides both' +
-                (D.rows.length ? ' (' + fmtPct(share(s.none + s.frame, D.rows.length)) + ' of visits name no source, or only that frame).' : '.'));
-            li.push('Locations are approximate, from each visitor’s IP address. Spelling variants are merged' + (D.rawC > nC ? ', so the footer map’s ' + fmt(D.rawC) + ' regions are ' + fmt(nC) + ' here' : '') + '; Hong Kong, Singapore and Macau visits without a city count under that city.');
-            li.push('Dates, the chart and the Busiest day use your time zone (' + esc(TZ_NAME) + '). The busiest-times grid uses each visitor’s own clock, so the two can name different days. Changes compare with the same stretch of the previous period.');
-            if (D.bare) li.push(plural(D.bare, 'visit') + ' have a location only' + (!D.legacy ? '' : (D.legacy === D.bare ? ', all' : D.legacy * 2 > D.bare ? ', most' : ', some') + ' from before ' + fmtDayY(D.firstRich) + ', when nothing else was recorded') +
-                '. They don’t count in Devices, Browser language or the mobile share.');
+        function renderAbout(C) { var li = [], nC = Object.keys(D.ctry).length;
+            li.push('A visit is one browser tab that opened the lab website. Unique visitors and referrers aren’t available inside Google Sites.');
+            li.push('Locations are approximate, from IP addresses. Spelling variants are merged' + (D.rawC > nC ? ', so the footer map’s ' + fmt(D.rawC) + ' regions are ' + fmt(nC) + ' here.' : '.'));
+            li.push('Dates and the chart use your time zone (' + esc(TZ_NAME) + '). Busiest times use each visitor’s local time, ranked on full days only.');
+            if (D.bare) li.push(D.legacy === D.bare && isFinite(D.firstRich) ? 'Browser, device and language are recorded from ' + fmtDayY(D.firstRich) + '; the ' + plural(D.bare, 'earlier visit') + ' have a location only.'
+                : plural(D.bare, 'visit') + ' have no browser or device details and are left out of Devices and Browser language.');
             $('va-about').innerHTML = li.map(function (x) { return '<li>' + x + '</li>'; }).join('');
             $('va-updated').textContent = 'Data loaded ' + fmtWhen(UPDATED, C.now) + ' · ' + (D.rows.length ? plural(D.rows.length, 'visit') + ' since ' + fmtDayY(D.first) + '.' : 'no visits recorded yet.'); }
 
@@ -1091,6 +1150,7 @@
             $('va-status').innerHTML = '<span><span class="va-st-err">Couldn’t load visit data.</span><button type="button" class="va-link" id="va-retry">Try again</button></span>';
             $('va-map-sub').textContent = 'No data'; var note = $('va-map-note'); note.textContent = ''; note.classList.remove('on');   /* the error and its button live in the status line only */
             $('va-loc-h').innerHTML = locTabs(); ['va-loc-list', 'va-dev-list', 'va-lang-list', 'va-hm'].forEach(function (id) { $(id).innerHTML = '<div class="va-empty">No data</div>'; });
+            $('va-recent').innerHTML = '<tbody><tr><td class="va-empty">No data</td></tr></tbody>'; $('va-recent-more').innerHTML = '';
             $('va-trend').innerHTML = '<div class="va-empty va-chart-empty">No data</div>'; }
 
         /* ---------- boot ---------- */
@@ -1111,7 +1171,7 @@
         setInterval(function () { if (LAST && !doc.hidden) renderStatus(LAST, Date.now()); }, 60000);
         setTimeout(function () { if (!D && !FAILED && (!ROWS || !ROWS.length)) fail(); }, 20000);
         VA = { render: function () { var first = !D; render(); if (first && S.country) fitCountry(S.country, 0); }, fail: fail };
-        if (DEBUG) window.__vaDebug = { S: S, hm: function () { var t = 0; HM.g.forEach(function (row) { row.forEach(function (v) { t += v; }); }); return { cells: t, hid: HM.hid.reduce(function (p, q) { return p + q; }, 0), bin: HM.bin }; }, locate: function (city) { for (var i = 0; i < M.pts.length; i++) { var p = M.pts[i]; if (p.city === city) { var r = M.cv.getBoundingClientRect(); return { x: r.left + sx(p.u), y: r.top + sy(p.v), n: p.n }; } } return null; }, view: function () { return M.v; }, bench: function (k, sc) { if (sc) { M.anim = null; M.v = clampV({ s: sc, tx: M.v.tx, ty: M.v.ty }); } var t0 = performance.now(); for (var i = 0; i < k; i++) { M.dirty = true; draw(); } return { ms: (performance.now() - t0) / k, hi: !!HI, s: M.v.s }; }, map: function () { return { nmax: M.nmax, nmaxAll: M.nmaxAll, s: M.v.s, cw: M.cw, sel: M.selC, hi: !!HI, pts: M.pts.filter(lit).slice(0, 6).map(function (p) { return [p.city, p.n, p.r && +p.r.toFixed(1), !!p.abs, p.kids ? p.kids.length : 0]; }) }; } };
+        if (DEBUG) window.__vaDebug = { S: S, hm: function () { var t = 0; HM.g.forEach(function (row) { row.forEach(function (v) { t += v; }); }); return { cells: t, hid: HM.hid, weekly: HM.weekly, rows: HM.rows.map(function (R) { return R.lab; }) }; }, locate: function (city) { for (var i = 0; i < M.pts.length; i++) { var p = M.pts[i]; if (p.city === city) { var r = M.cv.getBoundingClientRect(); return { x: r.left + sx(p.u), y: r.top + sy(p.v), n: p.n }; } } return null; }, view: function () { return M.v; }, bench: function (k, sc) { if (sc) { M.anim = null; M.v = clampV({ s: sc, tx: M.v.tx, ty: M.v.ty }); } var t0 = performance.now(); for (var i = 0; i < k; i++) { M.dirty = true; draw(); } return { ms: (performance.now() - t0) / k, hi: !!HI, s: M.v.s }; }, map: function () { return { nmax: M.nmax, nmaxAll: M.nmaxAll, s: M.v.s, cw: M.cw, sel: M.selC, hi: !!HI, pts: M.pts.filter(lit).slice(0, 6).map(function (p) { return [p.city, p.n, p.r && +p.r.toFixed(1), !!p.abs, p.kids ? p.kids.length : 0]; }) }; } };
     }
 
     /* one click = one tab: open without the "noopener" feature (with it, window.open returns null by spec and the
@@ -1151,11 +1211,12 @@
     html.va-page { color-scheme: light; background: var(--bg);
         --font: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         --bg: #f6f6f3; --card: #ffffff; --sunk: #f1f0ec; --line: #e5e4de; --line-2: #efeee9;
-        --ink: #161615; --ink-2: #56554f; --ink-3: #75746e;
+        --ink: #161615; --ink-2: #56554f; --ink-3: #6c6b65;
         --accent: #2a78d6; --accent-ink: #1d5ba8; --wash: rgba(42,120,214,.10); --wash-2: rgba(42,120,214,.18); --focus: #2a78d6;
         --up: #177a17; --down: #c23a3a; --prev: #b9b8af;
         --map-fill: #ebeae4; --map-land: #d6d5ce; --map-border: rgba(22,22,21,.13); --map-border-2: rgba(22,22,21,.06); --map-dot: #4b8fe0; --map-dim: rgba(117,116,110,.26); --map-latest: #e2612b; --map-sel: rgba(42,120,214,.16); --map-sel-border: rgba(29,91,168,.55);
-        --seq-0: #f0efea; --seq-1: #d6e7fb; --seq-2: #aacdf5; --seq-3: #78aeee; --seq-4: #3f8ae3; --seq-5: #2465b8; --seq-6: #16457f;
+        --bar: #aacdf5;
+        --hm-0: #f1f0ec; --hm-1: #e5eef9; --hm-2: #cfe0f6; --hm-3: #b8d2f3; --hm-4: #a0c2ee; --hm-5: #86b1e8; --hm-bar: #e3e2dc;
         --flag-ring: rgba(22,22,21,.10); --shadow-pop: 0 10px 28px rgba(22,22,21,.12), 0 2px 6px rgba(22,22,21,.06); }
     @media (prefers-color-scheme: dark) {
         html.va-page { color-scheme: dark;
@@ -1164,7 +1225,8 @@
             --accent: #3987e5; --accent-ink: #8dbbf2; --wash: rgba(57,135,229,.16); --wash-2: rgba(57,135,229,.28); --focus: #6da7ec;
             --up: #3fb93f; --down: #ec6b6b; --prev: #5b5a55;
             --map-fill: #1f2831; --map-land: #2f3e4c; --map-border: rgba(150,196,236,.17); --map-border-2: rgba(150,196,236,.07); --map-dot: #4690e6; --map-dim: rgba(143,142,136,.26); --map-latest: #e8733f; --map-sel: rgba(57,135,229,.22); --map-sel-border: rgba(141,187,242,.6);
-            --seq-0: #222221; --seq-1: #16345b; --seq-2: #1b4f93; --seq-3: #256abf; --seq-4: #3987e5; --seq-5: #5d9de9; --seq-6: #93bdf0;
+            --bar: #1b4f93;
+            --hm-0: #222221; --hm-1: #202f42; --hm-2: #253c58; --hm-3: #2b496f; --hm-4: #315685; --hm-5: #39659b; --hm-bar: #383835;
             --flag-ring: rgba(255,255,255,.12); --shadow-pop: 0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04); } }
     html.va-page body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
     .vmroot.full { position: static; }
@@ -1181,7 +1243,7 @@
     .va-bar.va-scrolled { border-bottom-color: var(--line); }
     .va-bar-in { max-width: 1320px; margin: 0 auto; padding: 12px 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; min-height: 60px; }
     .va-crumb { display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-right: auto; white-space: nowrap; }
-    .va-lab { color: var(--ink-2); text-decoration: none; font-size: 16px; font-weight: 500; border-radius: 4px; }
+    .va-lab { color: var(--ink-2); text-decoration: none; font-size: 16px; font-weight: 500; border-radius: 4px; padding: 3px 0; margin: -3px 0; }
     .va-lab:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
     .va-crumb-sep { color: var(--ink-3); }
     .va-h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.006em; }
@@ -1224,12 +1286,11 @@
     .va-link { display: inline-block; border: 0; background: none; padding: 3px 0; margin: -3px 0; color: var(--accent-ink); font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 4px; }   /* 24 px tall to tap, same line box */
     .va-link:hover { text-decoration: underline; text-underline-offset: 2px; }
     .va-link:disabled { color: var(--ink-3); cursor: default; text-decoration: none; }
-    .va-btn { height: 32px; padding: 0 12px; border: 1px solid var(--line); background: var(--card); border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .va-btn { flex: none; white-space: nowrap; height: 32px; padding: 0 12px; border: 1px solid var(--line); background: var(--card); border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
     .va-btn:hover { background: var(--sunk); }
     .va-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
     .va-pct { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--ink-3); }
-    .va-flag { width: 18px; height: 13.5px; border-radius: 2px; object-fit: cover; flex: none; display: inline-block; box-shadow: 0 0 0 1px var(--flag-ring); background: var(--sunk); }
-    .va-flag-x { background: var(--sunk); }
+    .va-flag { width: 18px; height: 13.5px; border-radius: 2px; flex: none; display: inline-block; box-shadow: 0 0 0 1px var(--flag-ring); background: var(--sunk) center / cover no-repeat; }
 
     /* KPI strip */
     .va-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
@@ -1239,7 +1300,7 @@
     .va-kpi-l1 { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
     .va-alltime { font-size: 13px; white-space: nowrap; }
     .va-kpi-v { font-size: 28px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.15; margin-top: 6px; font-variant-numeric: tabular-nums; }
-    .va-kpi-s { font-size: 13px; color: var(--ink-3); margin-top: 4px; line-height: 1.4; overflow-wrap: anywhere; }
+    .va-kpi-s { font-size: 13px; color: var(--ink-3); margin-top: 4px; line-height: 1.4; overflow-wrap: anywhere; text-wrap: balance; }
     .va-delta { font-weight: 600; color: var(--ink-2); white-space: nowrap; }
     .va-delta.up { color: var(--up); } .va-delta.down { color: var(--down); }
 
@@ -1298,12 +1359,12 @@
     .va-list.va-fade { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
     .va-list.va-list-one { display: flex; flex-direction: column; }
     .va-only { margin: auto 0; padding: 24px 16px; text-align: center; font-size: 13px; color: var(--ink-3); }
-    .va-lrow, .va-brow { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) 64px 46px; gap: 8px; align-items: center; width: 100%; min-height: 34px; padding: 0 8px; border: 0; background: none; border-radius: 6px; text-align: left; font-size: 14px; color: var(--ink); cursor: pointer; }
+    .va-lrow, .va-brow { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 64px 46px; gap: 8px; align-items: center; width: 100%; min-height: 34px; padding: 0 8px; border: 0; background: none; border-radius: 6px; text-align: left; font-size: 14px; color: var(--ink); cursor: pointer; }
     .va-lrow:hover, .va-brow:hover { background: var(--sunk); }
     /* selected: an accent rule and a bolder label, so it never looks like a long share bar */
     .va-lrow.on::before, .va-brow.on::before { content: ''; position: absolute; left: 0; top: 7px; bottom: 7px; width: 2px; border-radius: 2px; background: var(--accent); }
     .va-lrow.on .va-wrap, .va-brow.on .va-wrap { font-weight: 600; }
-    .va-lrow-bar { position: absolute; left: 8px; bottom: 3px; height: 3px; min-width: 2px; z-index: -1; width: calc((100% - 132px) * var(--w, 0)); background: var(--seq-2); border-radius: 2px; }
+    .va-lrow-bar { position: absolute; left: 8px; bottom: 3px; height: 3px; min-width: 6px; width: calc((100% - 132px) * var(--w, 0)); background: var(--bar); border-radius: 2px; }
     .va-lrow.va-fl .va-lrow-bar { left: 34px; width: calc((100% - 158px) * var(--w, 0)); }   /* starts under the label, after the flag */
     .va-lrow-n, .va-brow-l { display: flex; align-items: center; gap: 8px; min-width: 0; }
     .va-wrap { min-width: 0; overflow-wrap: anywhere; line-height: 1.3; padding: 7px 0; }
@@ -1340,6 +1401,8 @@
     .va-pt-prev { fill: var(--prev); stroke: var(--card); stroke-width: 1.5; }
     .va-tscroll { max-height: 340px; max-width: 640px; overflow: auto; padding: 0; margin: 0 0 0 8px; }
     .va-tscroll .va-table th, .va-tscroll .va-table td { width: 30%; } .va-tscroll .va-table th:first-child { width: auto; }
+    .va-t-note { display: block; font-size: 12px; font-weight: 400; color: var(--ink-3); white-space: nowrap; }
+    .va-tscroll .va-table thead th { white-space: normal; vertical-align: bottom; }
 
     /* breakdown cards */
     .va-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -1349,28 +1412,35 @@
 
     /* busiest times */
     .va-hm { padding: 4px 20px 18px; }
-    .va-hm-grid { display: grid; grid-template-columns: 40px repeat(var(--cols, 24), minmax(0, 1fr)) 72px; gap: 3px; align-items: center; }
+    .va-hm-grid { display: grid; grid-template-columns: var(--lab, 40px) repeat(24, minmax(0, 1fr)) 64px; gap: 2px; align-items: center; }
     .va-hm-corner, .va-hm-ch { font-size: 12px; color: var(--ink-3); align-self: end; line-height: 1.15; }
     .va-hm-ch { text-align: right; padding-right: 2px; white-space: nowrap; } .va-hm-ch .va-short { display: none; }
-    .va-hm-hb { height: 30px; display: flex; align-items: flex-end; align-self: end; }
-    .va-hm-hb i { display: block; width: 100%; min-height: 1px; background: var(--seq-2); border-radius: 2px 2px 0 0; }
-    .va-hm-hb:hover i { background: var(--seq-4); }
-    .va-hm-d { font-size: 12px; color: var(--ink-3); }
-    .va-hm-c { height: 26px; border-radius: 3px; background: var(--seq-0); }
-    .va-hm-c:hover { box-shadow: inset 0 0 0 2px var(--ink); }
-    /* partial days (7 days): the whole row steps back */
-    .va-hm-c.va-hm-ghost { opacity: .38; } .va-hm-t.va-hm-ghost .va-hm-tb { opacity: .5; }
-    .va-hm-d.va-hm-ghost, .va-hm-t.va-hm-ghost .va-num { color: var(--ink-3); font-weight: 400; }
-    .va-hm-t { position: relative; isolation: isolate; height: 26px; display: flex; align-items: center; justify-content: flex-end; padding-right: 2px; font-size: 13px; }
-    .va-hm-tb { position: absolute; left: 8px; bottom: 2px; height: 3px; z-index: -1; width: calc((100% - 10px) * var(--w, 0)); background: var(--seq-2); border-radius: 2px; }
-    .va-hm-x { font-size: 12px; color: var(--ink-3); white-space: nowrap; padding-top: 3px; overflow: visible; }
-    .l0 { background: var(--seq-0); } .l1 { background: var(--seq-1); } .l2 { background: var(--seq-2); } .l3 { background: var(--seq-3); } .l4 { background: var(--seq-4); } .l5 { background: var(--seq-5); } .l6 { background: var(--seq-6); }
+    .va-hm-hb { height: 26px; display: flex; align-items: flex-end; justify-content: center; align-self: end; margin-bottom: 3px; }
+    .va-hm-hb i { display: block; width: 72%; min-height: 1px; background: var(--hm-bar); border-radius: 2px 2px 0 0; }
+    .va-hm-hb:hover i { background: var(--hm-4); }
+    .va-hm-hb.on i { background: var(--hm-5); }
+    .va-hm-d { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+    .va-hm-c { height: 20px; border-radius: 2px; background: var(--hm-0); }
+    .va-hm-c:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
+    /* a partial day (7 days: the first date and today): a muted, dotted label; its cells keep the true colours */
+    .va-hm-d.va-hm-part { color: var(--ink-3); text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: var(--ink-3); cursor: default; }
+    .va-hm-t.va-hm-part .va-num { color: var(--ink-3); font-weight: 400; } .va-hm-t.va-hm-part .va-hm-tb { background: var(--hm-1); }
+    .va-hm-t { position: relative; height: 20px; display: flex; align-items: flex-start; justify-content: flex-end; padding: 1px 2px 0 0; font-size: 12px; line-height: 14px; color: var(--ink-2); }
+    .va-hm-t .va-num { font-weight: 400; }
+    .va-hm-t.on .va-num { color: var(--ink); font-weight: 600; }
+    .va-hm-tb { position: absolute; left: 10px; bottom: 0; height: 3px; min-width: 4px; width: calc((100% - 12px) * var(--w, 0)); background: var(--hm-2); border-radius: 2px; }
+    .va-hm-t.on .va-hm-tb { background: var(--hm-5); }
+    .va-hm-x { font-size: 12px; color: var(--ink-3); white-space: nowrap; padding-top: 4px; overflow: visible; }
+    .l0 { background: var(--hm-0); } .l1 { background: var(--hm-1); } .l2 { background: var(--hm-2); } .l3 { background: var(--hm-3); } .l4 { background: var(--hm-4); } .l5 { background: var(--hm-5); }
     .va-hm-legend { gap: 3px; font-size: 12px; color: var(--ink-3); flex-wrap: nowrap; }
     .va-hm-sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; }
     .va-hm-lab { margin: 0 4px; }
-    .va-hm-sum { margin-top: 14px !important; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+    .va-hm-sum { display: flex; flex-wrap: wrap; align-items: baseline; margin-top: 14px !important; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
     .va-hm-sum b { font-weight: 600; color: var(--ink); }
-    .va-hm-sum .va-link { margin-left: 2px; }
+    .va-hm-sum .va-sep { color: var(--ink-3); margin: 0 10px; }
+    .va-hm-kv { white-space: nowrap; }
+    .va-hm-out { flex: 1 0 100%; margin-top: 2px; color: var(--ink-3); }
+    .va-hm-out .va-link { margin-left: 4px; }
 
     /* recent visits table */
     .va-tablewrap { overflow-x: auto; padding: 0 8px; }
@@ -1386,6 +1456,7 @@
     .va-table-num tbody th { font-weight: 400; font-size: 13px; color: var(--ink); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line-2); }
     .va-table-num thead th { position: sticky; top: 0; background: var(--card); }
     .va-more { display: flex; align-items: center; gap: 16px; padding: 8px 20px 16px; font-size: 13px; border-top: 1px solid var(--line-2); }
+    .va-more-t { min-width: 0; }
     .va-more:empty { display: none; }
 
     /* footer */
@@ -1465,12 +1536,12 @@
         .va-blist { padding: 0 8px 4px; } .va-note { padding: 6px 16px 14px; }
         .va-chart { padding: 0 12px 10px 4px; min-height: 214px; }
         .va-hm { padding: 2px 12px 14px 12px; }
-        .va-hm-grid { grid-template-columns: 32px repeat(var(--cols, 24), minmax(0, 1fr)) 44px; gap: 2px; }
+        .va-hm-grid { grid-template-columns: var(--lab-n, 32px) repeat(24, minmax(0, 1fr)) 40px; gap: 1px; }
         .va-hm-ch .va-long { display: none; } .va-hm-ch .va-short { display: inline; }
-        .va-hm-corner { font-size: 12px; letter-spacing: -0.02em; }
         .va-hm-hb { height: 22px; }
-        .va-hm-c, .va-hm-t { height: 20px; } .va-hm-c { border-radius: 2px; }
-        .va-hm-t { font-size: 12px; } .va-hm-tb { left: 4px; width: calc((100% - 6px) * var(--w, 0)); }
+        .va-hm-c, .va-hm-t { height: 18px; } .va-hm-c { border-radius: 1.5px; }
+        .va-hm-sum { column-gap: 16px; } .va-hm-sum .va-sep { display: none; }
+        .va-hm-t { padding-top: 0; line-height: 13px; } .va-hm-tb { left: 6px; bottom: 0; width: calc((100% - 8px) * var(--w, 0)); }
         #va-recent thead { display: none; }
         #va-recent tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 3px; padding: 10px 8px; border-bottom: 1px solid var(--line-2); }
         #va-recent tbody tr:last-child { border-bottom: 0; }
@@ -1485,4 +1556,9 @@
         #va-recent .va-t-dev, #va-recent .va-t-lang { display: none; }
         .va-more { padding: 8px 16px 14px; justify-content: space-between; }
         .va-foot { padding: 4px 2px 0; } }
+    /* a phone: the Recent visits caption on one line, the button full width below it */
+    @media (max-width: 480px) {
+        .va-more { flex-direction: column; align-items: stretch; gap: 10px; padding-top: 12px; }
+        .va-more-t { text-align: center; }
+        .va-tscroll { margin-left: 0; } }
 </style>
