@@ -1474,7 +1474,7 @@ async function hintMove() {
     const lang = uiLang;
     const token = ++hintClickToken;
     const hand = game.hands[seat] || [];
-    const previousHint = activeHintForSelection(hand.filter(c => selected.has(c.id)), true);
+    const previousHint = hintAdvisor?.pass ? hintAdvisor : activeHintForSelection(hand.filter(c => selected.has(c.id)), true);
     let thinkingShown = false;
     const thinkingTimer = setTimeout(() => {
         thinkingShown = true;
@@ -1499,11 +1499,21 @@ async function hintMove() {
         : 0;
     const advice = packet.options[nextIndex];
     const ids = advice.move?.cards?.map(c => c.id) || [];
-    selected = new Set(ids);
-    // Like Tencent's 提示: the suggestion is simply selected in the hand, no advisor text.
-    hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: packet.options.length };
-    if (thinkingShown) hideToast();
+    const pass = !ids.length;
+    hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: packet.options.length, pass, turn: turnStateKey() };
+    // Like Tencent's 提示: a suggestion is simply selected in the hand, no advisor text. Pass advice
+    // (partner owns the trick, or pressing costs too much) keeps the selection, lights up 不出 and
+    // says so in two words; the next press moves on to the backup press if there is one.
+    if (pass) showToast(L("Pass suggested", "建议不出"), 1300);
+    else {
+        selected = new Set(ids);
+        if (thinkingShown) hideToast();
+    }
     render();
+}
+
+function turnStateKey(g = game) {
+    return `${g?.roomCode || roomCode}:${Number(g?.revision) || 0}:${g?.currentTurn}`;
 }
 
 function activeHintForSelection(selectedCards, canAct) {
@@ -2550,14 +2560,13 @@ function obviousPassNow(mine) {
 }
 
 // [不出] [timer] [提示] [出牌]: only on my turn. No 不出 on a lead; when the engine sees no way to
-// beat the table, 不出 becomes the primary button and 提示 steps aside.
+// beat the table, 不出 becomes the primary button and 提示 steps aside. 提示's pass advice also
+// makes 不出 primary for this turn.
 function actionsHTML(v) {
     if (!v.canAct) return "";
-    const lead = !game.lastPlay;
-    const noBeat = !lead && obviousPassNow(v.mine);
     const spaced = isZH() ? " spaced" : "";
-    const pass = lead ? "" : `<button class="btn ${noBeat ? "play" : "pass"}${spaced}" id="pass-btn" type="button">${L("Pass", "不出")}</button>`;
-    const hint = noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${L("Hint", "提示")}</button>`;
+    const pass = v.lead ? "" : `<button class="btn ${v.noBeat || v.passHint ? "play" : "pass"}${spaced}" id="pass-btn" type="button">${L("Pass", "不出")}</button>`;
+    const hint = v.noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${L("Hint", "提示")}</button>`;
     return `${pass}${clockHTML("hex")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${L("Play", "出牌")}</button>`;
 }
 
@@ -2617,9 +2626,12 @@ function renderTable() {
     const view = Math.max(0, mine);
     const dealPhase = currentDealPhase();
     const liveTurn = game.phase === "playing" && dealPhase === "done" && !finishedList(game).includes(game.currentTurn) ? game.currentTurn : -1;
+    const canAct = mine >= 0 && liveTurn === mine;
     const v = {
-        mine, view, dealPhase, liveTurn,
-        canAct: mine >= 0 && liveTurn === mine,
+        mine, view, dealPhase, liveTurn, canAct,
+        lead: !game.lastPlay,
+        noBeat: canAct && !!game.lastPlay && obviousPassNow(mine),
+        passHint: canAct && !!hintAdvisor?.pass && hintAdvisor.turn === turnStateKey(),
         leader: game.phase === "playing" ? roundLeaderSeat() : -1
     };
     const handCards = mine >= 0 ? (game.hands[mine] || []) : [];
@@ -2643,7 +2655,7 @@ function renderTable() {
     renderHand(columns, handMode === "row" && mine >= 0 ? orderedHandForDisplay(handCards, game.currentLevelRank, mine) : [], geo, dealPhase);
     setRegion("tools", toolsHTML(v));
     setRegion("spectate", mine < 0 ? `<span>${L("Spectating", "观战中")}</span>` : "");
-    setRegion("actions", `${v.canAct}:${!game.lastPlay}:${v.canAct && obviousPassNow(mine)}:${uiLang}`, () => actionsHTML(v));
+    setRegion("actions", `${v.canAct}:${v.lead}:${v.noBeat}:${v.passHint}:${uiLang}`, () => actionsHTML(v));
     setRegion("deal", dealPhase === "dealing" ? `deal:${dealKey()}:${Math.round(t.layout.w)}` : "", () => dealHTML(v));
     const result = game.phase === "roundOver" ? "round" : game.phase === "gameOver" ? "game" : "";
     setRegion("result", result ? `${result}:${game.roundNo}:${uiLang}:${isHost()}` : "", result === "round" ? roundOverHTML : result ? gameOverHTML : "");
