@@ -73,7 +73,7 @@ body.gdr-modal-open { overflow: hidden; }
     padding: env(safe-area-inset-top, 0px) calc(14px + env(safe-area-inset-right, 0px)) 0 calc(6px + env(safe-area-inset-left, 0px));
 }
 .gdr-back {
-    flex: none; width: 48px; height: 44px; margin-right: 2px; padding: 0;
+    flex: none; width: 52px; height: 52px; margin: -2px 0; padding: 0; /* >= 40px even at s = .79 (667x375) */
     display: grid; place-items: center;
     border: 0; border-radius: 8px; background: none; color: #fff; cursor: pointer;
 }
