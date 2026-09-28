@@ -3,7 +3,7 @@
    EDIT THE DATA BELOW (PLAYERS / MATCHES). Players also carry a
    `style` (擅长打法), a `quote` (座右铭) and a signature `card`.
    Exposes window.GuandanRecords:
-     mount(host, { lang, splash }) -> { go(page, instant), next(), prev(), index(), destroy() }
+     mount(host, { lang, splash }) -> { go(page, instant), next(), prev(), lang, destroy() }
          renders the paged board (最新战报 / 赛季 MVP / 排行榜 / 历史对阵) into `host`;
          used by guandan.html's #gdr-cardmodal and events.html's "mvp" overlay (splash: true).
          `page` is an index or one of PAGE_KEYS.
@@ -470,7 +470,6 @@
             go: go,
             next: function () { go(idx + 1); },
             prev: function () { go(idx - 1); },
-            index: function () { return idx; },
             lang: lang,
             destroy: function () {
                 timers.forEach(clearTimeout);
