@@ -305,7 +305,8 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     grid-template-columns: calc(288 * var(--lu)) repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: calc(7 * var(--lu));
-    height: calc(446 * var(--lu));
+    /* 446 design px on a 720-high screen; taller screens give the grid part of the extra height */
+    height: min(calc(446 * var(--lu) + (100vh - 720 * var(--lu)) * .55), calc(530 * var(--lu)));
     margin: auto 0;
 }
 .lobby-tile {
