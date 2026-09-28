@@ -2560,7 +2560,7 @@ function dealHTML(v) {
     if (v.dealPhase !== "dealing") return "";
     const { w, h } = tableView.layout;
     const ox = w / 2;
-    const oy = h * .42;
+    const oy = h * .36;
     const targets = {
         0: [0, h - HAND_BOTTOM - HAND_CARD_H / 2 - oy],
         1: [90 - ox, 250 - oy],
@@ -2573,7 +2573,7 @@ function dealHTML(v) {
         const pos = visualSeatPos(idx % 4, v.mine);
         const [tx, ty] = targets[pos];
         const spread = pos === 0 ? ((idx >> 2) - 13) * 16 : 0;
-        return `<i class="gd-deal-card gd-back" style="--tx:${(tx + spread).toFixed(0)}px;--ty:${ty.toFixed(0)}px;--rot:${pos % 2 ? 90 : 0}deg;animation-delay:${Math.round(idx * gap - elapsed)}ms"></i>`;
+        return `<i class="gd-deal-card gd-back" style="--tx:${(tx + spread).toFixed(0)}px;--ty:${ty.toFixed(0)}px;animation-delay:${Math.round(idx * gap - elapsed)}ms"></i>`;
     }).join("");
     return `<div class="gd-deal" style="--deal-left:${Math.round(DEALING_MS - elapsed)}ms"><div class="gd-deck"><i class="gd-back"></i><i class="gd-back"></i><i class="gd-back"><span class="gd-back-emblem">P</span></i></div>${flights}</div>`;
 }
