@@ -3,9 +3,11 @@
    #return-transition: the "picasso" card-fan victory exit back to events.html
    (startReturnToEvents + returnCardsHTML/returnShardsHTML/returnCoinsHTML).
    #return-type-hint: the "try typing picasso" pill.
-   Both are body-level, fixed, full-viewport and never rotated with the table
-   stage. The look is the pre-redesign one (ec32e31), so it keeps its own warm
-   palette instead of the Tencent tokens in guandan-ui.css.
+   Both are body-level and fixed. On a portrait phone the table stage is turned
+   90deg (the phone is held sideways), and both layers turn with it; sizes inside
+   the transition use container units so the turned layer lays out as the
+   landscape screen the player sees. The look is the pre-redesign one (ec32e31),
+   so it keeps its own warm palette instead of the Tencent tokens in guandan-ui.css.
    ========================================================================== */
 
 .return-transition {
@@ -22,6 +24,7 @@
     position: fixed;
     inset: 0;
     z-index: var(--z-transition, 80);
+    container-type: size; /* cqw / cqh below = this layer, i.e. the viewport unless it is turned */
     overflow: hidden;
     background: radial-gradient(54% 46% at 50% 46%, rgba(232, 189, 99, .16), transparent 60%), var(--rvx-bg);
     font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
@@ -40,7 +43,7 @@
     position: absolute; left: 50%; top: 11%;
     transform: translateX(-50%);
     text-align: center; white-space: nowrap;
-    font-size: clamp(30px, 6.6vw, 66px); font-weight: 900; font-style: italic; line-height: 1; letter-spacing: .03em;
+    font-size: clamp(30px, 6.6cqw, 66px); font-weight: 900; font-style: italic; line-height: 1; letter-spacing: .03em;
     /* the old page's primary font (Nunito) put the baseline .107em higher than Noto Sans SC does */
     margin-top: -.107em;
     color: var(--rvx-gold-2);
@@ -56,7 +59,7 @@
 
 .rvx-ring {
     position: absolute; left: 50%; top: 50%;
-    width: min(360px, 52vw); aspect-ratio: 1;
+    width: min(360px, 52cqw); aspect-ratio: 1;
     transform: translate(-50%, -50%) scale(.3);
     border: 2px solid rgba(232, 189, 99, .85); border-radius: 50%;
     box-shadow: 0 0 24px rgba(232, 189, 99, .4);
@@ -66,7 +69,7 @@
 
 .rvx-beam {
     position: absolute; left: 50%; top: -6%;
-    width: min(64px, 8vw); height: 64%;
+    width: min(64px, 8cqw); height: 64%;
     transform: translateX(-50%) scaleY(0); transform-origin: top;
     border-radius: 0 0 999px 999px;
     background: rgba(232, 189, 99, .55);
@@ -77,14 +80,14 @@
 
 .rvx-burst {
     position: relative; z-index: 2; overflow: visible;
-    width: clamp(200px, 40vw, 320px); height: clamp(220px, 44vw, 340px);
-    margin-top: -3vh;
+    width: clamp(200px, 40cqw, 320px); height: clamp(220px, 44cqw, 340px);
+    margin-top: -3cqh;
 }
 
 /* card fan: face-down cards stack at the centre, fan open on their own tilt, flip to a suit, then scatter */
 .rvx-card {
     position: absolute; left: 50%; top: 50%;
-    width: clamp(56px, 8vw, 84px); height: clamp(80px, 11.5vw, 120px);
+    width: clamp(56px, 8cqw, 84px); height: clamp(80px, 11.5cqw, 120px);
     perspective: 700px;
     opacity: 0;
     animation: rvxCardFan 1.2s cubic-bezier(.22, .75, .26, 1) var(--delay, 0s) forwards;
@@ -110,7 +113,7 @@
     transform: rotateY(180deg);
     border: 2px solid rgba(255, 255, 255, .6);
     background: var(--rvx-card-face);
-    font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 5vw, 44px); font-weight: 900;
+    font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 5cqw, 44px); font-weight: 900;
 }
 .rvx-face.front.red { color: var(--rvx-card-red); }
 .rvx-face.front.black { color: var(--rvx-card-black); }
@@ -120,13 +123,13 @@
     border: 1.5px solid var(--rvx-rail-gold); border-radius: 50%;
     background: var(--rvx-gold-2);
     box-shadow: 0 2px 6px rgba(0, 0, 0, .4);
-    color: var(--rvx-gold-ink); font-size: clamp(15px, 2.4vw, 21px); font-weight: 900;
+    color: var(--rvx-gold-ink); font-size: clamp(15px, 2.4cqw, 21px); font-weight: 900;
 }
 
 /* labmate avatar shards */
 .rvx-shard {
     position: absolute; left: 50%; top: 50%;
-    width: clamp(34px, 4.6vw, 50px); height: clamp(48px, 6.4vw, 70px);
+    width: clamp(34px, 4.6cqw, 50px); height: clamp(48px, 6.4cqw, 70px);
     margin: -32px 0 0 -24px;
     overflow: hidden;
     border: 1px solid rgba(190, 150, 50, .72); border-radius: 8px;
@@ -199,10 +202,19 @@
 
 /* Short landscape screens (a phone on its side, where the table always is): the title moves up and the
    burst shrinks and drops below it, so the fan, shards and coins never cover 牌局结束 / 完胜. */
-@media (max-height: 520px) {
-    .rvx-title { top: 5%; font-size: min(11vh, 48px); }
-    .rvx-ring { width: 64vh; }
-    .rvx-burst { scale: .6; margin-top: 16vh; }
+@container (max-height: 520px) {
+    .rvx-title { top: 5%; font-size: min(11cqh, 48px); }
+    .rvx-ring { width: 64cqh; }
+    .rvx-burst { scale: .6; margin-top: 16cqh; }
+}
+
+/* Over the turned portrait table: the layer is the landscape screen, rotated like the table's stage
+   (translate(100vw, 0) rotate(90deg), top-left origin). */
+body[data-screen="table"]:has(.gd-viewport.is-rotated) .return-transition {
+    inset: auto; left: 0; top: 0;
+    width: 100dvh; height: 100vw;
+    transform-origin: 0 0;
+    transform: translate(100vw, 0) rotate(90deg);
 }
 
 /* ---------- "try typing picasso" hint ---------- */
@@ -239,4 +251,14 @@
         white-space: normal;
         text-align: center;
     }
+}
+/* Over the turned portrait table the pill stands on the physical left edge (the landscape bottom),
+   centred along it and reading top to bottom like the table. */
+body[data-screen="table"]:has(.gd-viewport.is-rotated) #return-type-hint {
+    left: calc(68px + env(safe-area-inset-left)); top: 50%; bottom: auto;
+    max-width: calc(100dvh - 24px);
+    transform: translate(-50%, -50%) rotate(90deg) translateY(calc(-50% + 12px));
+}
+body[data-screen="table"]:has(.gd-viewport.is-rotated) #return-type-hint.show {
+    transform: translate(-50%, -50%) rotate(90deg) translateY(-50%);
 }
