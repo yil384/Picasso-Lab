@@ -395,11 +395,17 @@
             var done = function (src) { FLAG_ST[code] = src ? 'ok' : 'no'; FLAG_SRC[code] = src;
                 Array.prototype.forEach.call(doc.querySelectorAll('.va-flag[data-cc="' + code + '"]'), function (el) { el.classList.remove('va-flag-wait'); if (src) el.setAttribute('style', flagBg(code)); else el.classList.add('va-flag-x'); });
                 if (!src && !FLAG_T && FLAG_AUTO < 2) { FLAG_AUTO++; FLAG_T = setTimeout(function () { FLAG_T = 0; flagRetry(); }, 6000 * FLAG_AUTO); } };
-            var viaImg = function (src, fallback) { var im = new Image(); im.onload = function () { done(src); }; im.onerror = fallback; im.src = src; };
-            var from = function (i) { if (i >= FLAG_HOSTS.length) { done(null); return; } var url = FLAG_HOSTS[i] + code + '.svg', plain = function () { viaImg(url, function () { from(i + 1); }); };
+            var viaImg = function (src, onok, onfail) { var im = new Image(); im.onload = function () { onok(src); }; im.onerror = onfail; im.src = src; };
+            var from = function (i) { if (i >= FLAG_HOSTS.length) { done(null); return; }
+                /* a mirror that accepts the request but never answers counts as failed after 3 s, so the next one is tried */
+                var url = FLAG_HOSTS[i] + code + '.svg', fin = 0, ctl = window.AbortController ? new AbortController() : null,
+                    tm = setTimeout(function () { if (ctl) ctl.abort(); next(); }, 3000),
+                    ok = function (src) { if (fin) return; fin = 1; clearTimeout(tm); done(src); },
+                    next = function () { if (fin) return; fin = 1; clearTimeout(tm); from(i + 1); },
+                    plain = function () { if (!fin) viaImg(url, ok, next); };
                 if (!window.fetch || !window.Blob || !window.URL || !URL.createObjectURL) plain();
-                else fetch(url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
-                    .then(function (t) { viaImg(URL.createObjectURL(new Blob([t], { type: 'image/svg+xml' })), plain); }, plain); };
+                else fetch(url, ctl ? { signal: ctl.signal } : undefined).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+                    .then(function (t) { if (!fin) viaImg(URL.createObjectURL(new Blob([t], { type: 'image/svg+xml' })), ok, plain); }, plain); };
             from(0); return FLAG_ST[code]; }
         function flagRetry() { var again = {};
             Object.keys(FLAG_ST).forEach(function (k) { if (FLAG_ST[k] === 'no') { delete FLAG_ST[k]; again[k] = 1; } });
@@ -834,9 +840,8 @@
             if (!F.length) { ['2', '3', '4', '5'].forEach(function (n) { set('kv-' + n, DASH); set('ks-' + n, BLANK); }); return; }
             /* tile 2: how many countries, or, under a place filter, that place's share (the city's own when a city is picked) */
             if (!S.country) { var tc = tally(F, function (r) { return r.country; }), s2 = esc('Top: ' + cLabel(tc[0].k) + ' · ' + fmtPct(share(tc[0].n, F.length))); set('kv-2', fmt(tc.length));
-                /* All time is what the footer map shows, and it lists a few countries twice (two spellings): say so, visibly */
-                if (S.range === 'all' && !anyNL() && D.rawC > tc.length && D.dupSp.length) { var dup = D.dupSp.length;
-                    s2 += '<span class="va-kpi-s2">' + fmt(D.rawC) + ' on the footer map <span class="va-nw">(' + (dup === 1 ? '1 is' : fmt(dup) + ' are') + ' spelled two ways)</span></span>';
+                /* All time is what the footer map shows, and it lists a few countries twice (two spellings): the tooltip says so */
+                if (S.range === 'all' && !anyNL() && D.rawC > tc.length && D.dupSp.length) {
                     $('kv-2').title = $('ks-2').title = 'The footer map shows ' + fmt(D.rawC) + ' because it counts these spellings separately: ' + D.dupSp.join(', ') + '. They are merged here.'; }
                 set('ks-2', s2, true); }
             else { set('kv-2', fmtPct(share(F.length, RN.length))); set('ks-2', fmt(F.length) + ' of ' + plural(RN.length, pre + 'visit')); }
@@ -1088,7 +1093,8 @@
                ranges: the longest bar in the right-hand column) and the busiest time: the tallest bar in the top row, or, with
                fewer than 2,000 visits, where single hours are noisy, the busiest 3 hours in a row */
             var bestD = [];
-            if (!weekly) { var bv = Math.max.apply(null, tot.concat([0])); if (bv > 0) tot.forEach(function (v, j) { if (Math.abs(v - bv) < 1e-9) bestD.push(j); }); }
+            if (!weekly && Math.min.apply(null, rows.map(function (R) { return R.occ; })) >= 8) {
+                var bv = Math.max.apply(null, tot.concat([0])); if (bv > 0) tot.forEach(function (v, j) { if (v >= 0.95 * bv - 1e-9) bestD.push(j); }); }
             var tv = Math.max.apply(null, top), peaks = [], w3 = [], bestH = [], onH = {};
             if (tv > 0) top.forEach(function (v, j) { if (v === tv) peaks.push(j); });
             if (peaks.length && nStrong >= 2000) {
@@ -1365,7 +1371,6 @@
     .va-alltime { font-size: 13px; white-space: nowrap; }
     .va-kpi-v { font-size: 28px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.15; margin-top: 6px; font-variant-numeric: tabular-nums; }
     .va-kpi-s { font-size: 13px; color: var(--ink-3); margin-top: 4px; line-height: 1.4; overflow-wrap: anywhere; text-wrap: balance; }
-    .va-kpi-s2 { display: block; margin-top: 2px; font-size: 12px; }
     .va-delta { font-weight: 600; color: var(--ink-2); white-space: nowrap; }
     .va-delta.up { color: var(--up); } .va-delta.down { color: var(--down); }
 
