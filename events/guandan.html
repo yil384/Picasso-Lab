@@ -1777,7 +1777,7 @@ const tableView = {
     regions: {}, keys: {}, seats: [], avatars: [],
     cardEls: new Map(),
     handCardW: HAND_CARD_W,
-    layout: { s: 1, w: STAGE_MIN_W, h: STAGE_H, rotated: false, left: 0, vw: 0 },
+    layout: { s: 1, w: STAGE_MIN_W, h: STAGE_H, rotated: false, left: 0, top: 0, vw: 0 },
     menuOpen: false,
     jipaiTab: "count",
     seenPlays: new Set(),
@@ -1899,14 +1899,19 @@ function ensureTableSkeleton() {
     return true;
 }
 
-// Scale (and on portrait phones rotate) the stage into the viewport, keeping the in-game UI out
-// of the notch/home-indicator insets while the felt still bleeds edge to edge.
+// Scale the stage into the viewport, keeping the in-game UI out of the notch/home-indicator insets
+// while the felt still bleeds edge to edge. Portrait phones, and portrait touch tablets, get it
+// rotated 90deg (turning the device to landscape removes the rotation). A portrait window that
+// stays upright (desktop) would get a very tall stage: it is capped at 4:3 and letterboxed on the
+// floor colour instead of stretching the felt.
+const STAGE_MAX_ASPECT = .75;
+const coarsePointer = window.matchMedia?.("(pointer: coarse)");
 function layoutStage() {
     const t = tableView;
     if (!t.rot?.isConnected) return false;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const rotated = vw < vh && Math.max(vw, vh) <= 1024;
+    const rotated = vw < vh && (Math.max(vw, vh) <= 1024 || !!coarsePointer?.matches);
     const lw = rotated ? vh : vw;
     const lh = rotated ? vw : vh;
     const cs = getComputedStyle(t.probe);
@@ -1915,17 +1920,19 @@ function layoutStage() {
     const aw = Math.max(1, lw - left - right);
     const s = Math.min(lh / STAGE_H, aw / STAGE_MIN_W);
     const w = aw / s;
-    const h = lh / s;
+    const h = Math.min(lh / s, w * STAGE_MAX_ASPECT);
+    const rh = h * s;
+    const top = rotated ? 0 : Math.round((lh - rh) / 2);
     t.rot.style.width = `${lw}px`;
-    t.rot.style.height = `${lh}px`;
-    t.rot.style.transform = rotated ? `translate(${vw}px, 0) rotate(90deg)` : "";
+    t.rot.style.height = `${rh}px`;
+    t.rot.style.transform = rotated ? `translate(${vw}px, 0) rotate(90deg)` : top ? `translate(0, ${top}px)` : "";
     t.rot.style.setProperty("--gd-s", s.toFixed(4));
     t.stage.style.width = `${w}px`;
     t.stage.style.height = `${h}px`;
     t.stage.style.transform = `translate(${left}px, 0) scale(${s})`;
     t.viewport.classList.toggle("is-rotated", rotated);
     const changed = Math.abs(w - t.layout.w) > .5 || Math.abs(h - t.layout.h) > .5;
-    t.layout = { s, w, h, rotated, left, vw };
+    t.layout = { s, w, h, rotated, left, top, vw };
     return changed;
 }
 
@@ -1939,8 +1946,8 @@ function scheduleStageLayout() {
 
 // Viewport point -> stage design px (inverse of the transforms set in layoutStage).
 function stagePoint(x, y) {
-    const { s, rotated, left, vw } = tableView.layout;
-    return rotated ? { x: (y - left) / s, y: (vw - x) / s } : { x: (x - left) / s, y: y / s };
+    const { s, rotated, left, top, vw } = tableView.layout;
+    return rotated ? { x: (y - left) / s, y: (vw - x) / s } : { x: (x - left) / s, y: (y - top) / s };
 }
 
 // Rewrites one region only when its key changed; `html` may be a builder so unchanged regions
