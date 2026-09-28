@@ -1,0 +1,709 @@
+/* ==========================================================================
+   Picasso Lab Guandan: design-system foundation.
+   Tokens, fonts, base, app shell + topbar, buttons, card component, CSS felt
+   fallback, toast, pill/badge/avatar primitives, z-index scale, reduced motion.
+   Screen layouts live in guandan-lobby.css / guandan-table.css (loaded after
+   this file); they override the defaults here through the documented vars.
+   Screen contract: body[data-screen="lobby"|"room"|"table"] is set by render().
+   ========================================================================== */
+
+:root {
+    /* felt (腾讯掼蛋 / 大掼蛋 2026 in-game, sampled) */
+    --felt-c: #069a8a; --felt-1: #049484; --felt-2: #048c7c; --felt-3: #047c74; --felt-4: #046c64; --felt-5: #045454;
+    --felt-rim: #14948c; --floor: #5a4034; --floor-2: #3e2b22;
+    /* chrome (lobby / room) */
+    --navy-0: #1b2750; --navy-1: #243464; --navy-2: #34447c; --navy-3: #4c5c9c;
+    --panel: #f7f9fd; --panel-2: #ecf2fc; --panel-line: #d6e0f0;
+    --ink: #1c2f66; --ink-2: #44507a; --ink-3: #8290b4;
+    --tab-sel: #c4dcfc; --radio-on: #fcd45c; --radio-off: #b4c4dc;
+    /* actions */
+    --pri: linear-gradient(180deg, #fce541 0%, #fec93b 38%, #fcaf2f 72%, #fa9f29 100%);
+    --pri-edge: #c9700f; --pri-stroke: #b85f07; --pri-inset: rgba(170, 80, 0, .35);
+    --sec: linear-gradient(180deg, #8aebfe 0%, #72bfff 30%, #739cfb 70%, #7385f9 100%);
+    --sec-edge: #4a5bc9; --sec-stroke: #3b53b8; --sec-inset: rgba(40, 50, 160, .3);
+    --util: #6484f4; --util-bg: linear-gradient(180deg, #8aa2ff 0%, #6f8cf6 55%, #6484f4 100%);
+    --util-edge: #4a5bc9; --util-stroke: #3b53b8;
+    --chat: #18c474; --ok: linear-gradient(180deg, #7ff0a8 0%, #5fe08e 40%, #2fb865 100%);
+    --ok-edge: #1f8c49; --ok-stroke: #17703a;
+    --danger: linear-gradient(180deg, #ffa39a 0%, #f06a5e 42%, #d8433c 100%);
+    --danger-edge: #9e2a24; --danger-stroke: #8a221d;
+    --off: linear-gradient(180deg, #d5d9e2 0%, #c0c6d2 45%, #9aa3b3 100%);
+    --off-edge: #6b7384; --off-stroke: #6b7384;
+    /* identity */
+    --opp: #e05454; --opp-d: #b43c3c; --mate: #1cb4e4; --mate-d: #1587b8;
+    --warm-plate: linear-gradient(180deg, #ffcf5a, #f49a1c); --cool-plate: linear-gradient(180deg, #8fd0ff, #4c86f0);
+    --gold-1: #fff6c8; --gold-2: #ffd66b; --gold-3: #f4a92a; --gold-4: #b8660c;
+    --lvl-us: #e47424; --lvl-them: #8d949c;
+    --report-bg: linear-gradient(180deg, #fff3a0, #fcd444); --report-ink: #7a2a00; --report-num: #e0201a;
+    --pass-fill: #fff4c8; --pass-stroke: #5a3310;
+    /* cards */
+    --card-face: linear-gradient(180deg, #fff 0%, #f6f6f6 55%, #e7e7e7 100%);
+    --card-edge: #b8b8b8; --card-red: #c01c1c; --card-black: #141414;
+    --card-back: #3f63b5; --card-back-2: #34529a;
+    --ji: #4fbf63; --wild: #e8772a; --wild-heart: #ffc21a; --wild-heart-edge: #e07b00;
+    --card-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 1px 1px rgba(0, 0, 0, .18), 0 2px 5px rgba(0, 0, 0, .18);
+
+    /* fonts: Nunito and Georgia are intentionally gone */
+    --font-ui: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --font-display: "Smiley Sans Oblique", "ZCOOL QingKe HuangYou", "Noto Sans SC", "PingFang SC", sans-serif;
+    --font-rank: "Noto Serif Display", "Noto Serif", serif;
+    --font-num: "Barlow Condensed", "DIN Alternate", "Arial Narrow", sans-serif;
+
+    /* type scale: px at 844x390, growing ~30% by 1440x900 */
+    --fs-10: clamp(10px, 2.564vmin, 13px);
+    --fs-11: clamp(11px, 2.821vmin, 14px);
+    --fs-13: clamp(13px, 3.333vmin, 16px);
+    --fs-15: clamp(15px, 3.846vmin, 19px);
+    --fs-17: clamp(17px, 4.359vmin, 22px);
+    --fs-22: clamp(22px, 5.641vmin, 28px);
+    --fs-28: clamp(28px, 7.179vmin, 36px);
+    --fs-40: clamp(40px, 10.26vmin, 52px);
+    --fs-52: clamp(52px, 13.33vmin, 68px);
+
+    /* radii (card radius = 7.5% of its width, see .card) */
+    --r-tile: 4px; --r-panel: 8px; --r-pill: 999px;
+
+    /* page z-layers. #stage-mount sits at --z-stage, everything in .app-shell at --z-table;
+       the in-shell layers below only compete inside .app-shell's stacking context. */
+    --z-stage: 0; --z-table: 10; --z-hand: 20; --z-actions: 30; --z-topbar: 35; --z-fx: 40;
+    --z-result: 50; --z-modal: 60; --z-toast: 70; --z-transition: 80;
+
+    /* motion */
+    --ease-out: cubic-bezier(.2, .8, .2, 1);
+    --ease-back: cubic-bezier(.34, 1.4, .64, 1);
+    --dur-fast: 120ms; --dur-ui: 220ms; --dur-slow: 350ms;
+
+    --topbar-h: 44px;
+}
+
+/* ---------- base / reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    background: var(--felt-1);
+}
+body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--felt-1);
+    color: #fff;
+    font: 500 var(--fs-13)/1.45 var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+    /* Opacity only: a transform here would make <body> the containing block of every
+       position:fixed overlay (toast, modal, transition) and mis-center them. */
+    animation: gd-body-in 280ms var(--ease-out) both;
+}
+@keyframes gd-body-in { from { opacity: 0; } }
+body:focus { outline: none; }
+button, input, select, textarea { font: inherit; }
+button { color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: not-allowed; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 2px; }
+.sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* Legacy stroke icons (iconHTML) still appear in some markup; keep them text-sized. */
+.ui-icon {
+    width: 1em; height: 1em; flex: none; display: inline-block; vertical-align: -.125em;
+    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.ui-icon-label { display: inline-flex; align-items: center; gap: .35em; }
+
+/* ---------- app shell ---------- */
+#stage-mount {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-stage);
+    pointer-events: none;
+}
+#stage-mount:empty { display: none; }
+.gd-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.app-shell {
+    position: relative;
+    z-index: var(--z-table);
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+#root { position: relative; min-height: 100vh; min-height: 100dvh; }
+/* Lobby/room content starts under the topbar by default; screens may take the space back. */
+body:not([data-screen="table"]) #root { padding-top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)); }
+
+/* Topbar: a transparent overlay strip. Brand + room status on the left (lobby/room only),
+   round translucent buttons on the right. Screens reserve --topbar-h where they need it. */
+.topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: var(--z-topbar);
+    height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: env(safe-area-inset-top, 0px) calc(10px + env(safe-area-inset-right, 0px)) 0 calc(12px + env(safe-area-inset-left, 0px));
+    pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+.hud-brand { display: flex; align-items: center; }
+.hud-brand-mark {
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    border-radius: 7px;
+    background: #fff;
+    color: var(--card-back);
+    font: 800 19px/1 var(--font-num);
+    box-shadow: inset 0 0 0 2px var(--card-back), inset 0 0 0 3px #fff, 0 1px 2px rgba(0, 0, 0, .3);
+}
+.hud-status {
+    display: flex; align-items: center; gap: 8px;
+    height: 24px; padding: 0 10px;
+    border-radius: var(--r-pill);
+    background: rgba(0, 0, 0, .28);
+    font: 700 var(--fs-11)/1 var(--font-ui);
+    white-space: nowrap;
+}
+.hud-status:empty { display: none; }
+.hud-status-room { letter-spacing: .02em; }
+.hud-status-seats { display: inline-flex; gap: 4px; }
+.hud-seat-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, .28); }
+.hud-seat-dot.human { background: var(--mate); }
+.hud-seat-dot.ai { background: var(--gold-2); }
+.hud-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.icon-btn {
+    min-width: 34px; height: 34px;
+    padding: 0 9px;
+    display: inline-grid; place-items: center;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: rgba(0, 0, 0, .28);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+    color: #fff;
+    font: 700 var(--fs-11)/1 var(--font-ui);
+    letter-spacing: .04em;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background-color var(--dur-fast) ease;
+}
+.icon-btn:active { background: rgba(0, 0, 0, .4); }
+body[data-screen="table"] .hud-brand,
+body[data-screen="table"] .hud-status { display: none; }
+
+/* ---------- buttons ----------
+   .btn = primary orange (出牌). Variants: .secondary/.pass (blue), .util (periwinkle),
+   .ok (green), .danger, .ghost. Size through --btn-h / --btn-fs / --btn-px / --btn-ls
+   or the .sm / .lg presets; 2-char action labels want .spaced (letter-spacing .35em). */
+.btn {
+    --btn-h: 40px; --btn-fs: 17px; --btn-px: 18px; --btn-minw: 96px; --btn-ls: .12em;
+    --btn-bg: var(--pri); --btn-edge: var(--pri-edge); --btn-stroke: var(--pri-stroke); --btn-inset: var(--pri-inset);
+    position: relative;
+    display: inline-flex; align-items: center; justify-content: center; gap: .3em;
+    height: var(--btn-h);
+    min-width: var(--btn-minw);
+    padding: 0 var(--btn-px) 0 calc(var(--btn-px) + var(--btn-ls));
+    border: 0;
+    border-radius: calc(var(--btn-h) / 2);
+    background: var(--btn-bg);
+    color: #fff;
+    font: 900 var(--btn-fs)/1 var(--font-ui);
+    letter-spacing: var(--btn-ls);
+    white-space: nowrap;
+    -webkit-text-stroke: calc(var(--btn-fs) * .18) var(--btn-stroke);
+    paint-order: stroke fill;
+    box-shadow:
+        0 2px 0 rgba(255, 255, 255, .6) inset,
+        0 -3px 0 var(--btn-inset) inset,
+        0 3px 0 var(--btn-edge),
+        0 5px 8px rgba(0, 0, 0, .3);
+    user-select: none;
+    -webkit-user-select: none;
+    translate: 0 0;
+    transition: translate var(--dur-fast) var(--ease-out);
+}
+.btn::after { /* gloss band across the top 38% */
+    content: "";
+    position: absolute;
+    left: 14%; right: 14%; top: 3px;
+    height: 38%;
+    border-radius: var(--r-pill);
+    background: linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, 0));
+    pointer-events: none;
+}
+.btn::before { /* hover/press sheen, opacity-only */
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: rgba(255, 255, 255, .14);
+    opacity: 0;
+    transition: opacity var(--dur-fast) ease;
+    pointer-events: none;
+}
+.btn > * { position: relative; z-index: 1; }
+.btn:active:not(:disabled) {
+    translate: 0 2px;
+    box-shadow:
+        0 2px 0 rgba(255, 255, 255, .6) inset,
+        0 -3px 0 var(--btn-inset) inset,
+        0 1px 0 var(--btn-edge),
+        0 2px 4px rgba(0, 0, 0, .3);
+}
+.btn:active:not(:disabled)::before { opacity: 1; background: rgba(0, 0, 0, .06); }
+.btn.primary, .btn.play { --btn-bg: var(--pri); --btn-edge: var(--pri-edge); --btn-stroke: var(--pri-stroke); --btn-inset: var(--pri-inset); }
+.btn.secondary, .btn.pass { --btn-bg: var(--sec); --btn-edge: var(--sec-edge); --btn-stroke: var(--sec-stroke); --btn-inset: var(--sec-inset); }
+.btn.util { --btn-bg: var(--util-bg); --btn-edge: var(--util-edge); --btn-stroke: var(--util-stroke); --btn-inset: rgba(30, 40, 150, .28); }
+.btn.ok { --btn-bg: var(--ok); --btn-edge: var(--ok-edge); --btn-stroke: var(--ok-stroke); --btn-inset: rgba(0, 90, 40, .28); }
+.btn.danger { --btn-bg: var(--danger); --btn-edge: var(--danger-edge); --btn-stroke: var(--danger-stroke); --btn-inset: rgba(120, 10, 10, .28); }
+.btn.ghost {
+    --btn-bg: rgba(0, 0, 0, .28);
+    -webkit-text-stroke: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22);
+}
+.btn.ghost::after { display: none; }
+.btn:disabled, .btn.is-disabled {
+    --btn-bg: var(--off); --btn-edge: var(--off-edge); --btn-stroke: var(--off-stroke); --btn-inset: rgba(60, 66, 80, .25);
+    color: #f4f6fa;
+}
+.btn.ghost:disabled { --btn-bg: rgba(0, 0, 0, .18); color: rgba(255, 255, 255, .45); }
+.btn.sm { --btn-h: 28px; --btn-fs: 13px; --btn-px: 12px; --btn-minw: 0px; }
+.btn.lg { --btn-h: 48px; --btn-fs: 20px; --btn-px: 28px; --btn-minw: 140px; }
+.btn.spaced { --btn-ls: .35em; }
+.btn .ui-icon { -webkit-text-stroke: 0; }
+@media (hover: hover) {
+    .btn:hover:not(:disabled)::before { opacity: 1; }
+    .icon-btn:hover { background: rgba(0, 0, 0, .38); }
+}
+
+/* ---------- pills, badges, plates, avatars ---------- */
+.gd-pill {
+    --pill-h: 22px;
+    display: inline-flex; align-items: center; gap: 4px;
+    height: var(--pill-h);
+    padding: 0 10px;
+    border-radius: var(--r-pill);
+    background: var(--util-bg);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .45) inset, 0 -2px 0 rgba(0, 0, 0, .18) inset, 0 1px 2px rgba(0, 0, 0, .3);
+    color: #fff;
+    font: 800 var(--fs-11)/1 var(--font-ui);
+    letter-spacing: .06em;
+    white-space: nowrap;
+}
+.gd-pill.is-ok { background: linear-gradient(#43dc8e, var(--chat)); }
+.gd-pill.is-dark { background: rgba(10, 18, 60, .45); box-shadow: none; font-weight: 700; }
+.gd-pill.is-gold { background: linear-gradient(#fff6c4, #ffd766 55%, #f2b43c); color: #a3240c; box-shadow: 0 0 0 1px #fff8d8 inset, 0 1px 2px rgba(0, 0, 0, .3); }
+
+.gd-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    white-space: nowrap;
+    min-width: 18px; height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: rgba(0, 0, 0, .5);
+    color: #fff;
+    font: 700 13px/1 var(--font-num);
+}
+.gd-badge.is-report { /* 剩N张 at <=10 cards */
+    background: var(--report-bg);
+    color: var(--report-ink);
+    font: 800 10px/1 var(--font-ui);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    border-radius: 3px;
+}
+.gd-badge.is-report b { color: var(--report-num); font: 800 13px/1 var(--font-num); margin: 0 1px; }
+.is-pulse { animation: gd-pulse 1s ease-in-out infinite; }
+@keyframes gd-pulse { 50% { scale: 1.12; } }
+
+.gd-plate {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: var(--r-tile);
+    background: rgba(0, 0, 0, .28);
+    color: #fff;
+    font: 700 11px/1.3 var(--font-ui);
+    white-space: nowrap;
+    text-align: center;
+}
+.gd-plate .num { font: 600 11px/1.3 var(--font-num); color: #ffe9a6; letter-spacing: .02em; }
+
+/* Circular photo, 2px identity ring, pill label overlapping the bottom edge.
+   Nothing is ever drawn outside the circle except that label (standing rule). */
+.gd-avatar {
+    --av-size: 46px; --ring: var(--mate); --ring-d: var(--mate-d);
+    position: relative;
+    flex: none;
+    width: var(--av-size); height: var(--av-size);
+    border: 2px solid var(--ring);
+    border-radius: 50%;
+    background: #e9eef5;
+}
+.gd-avatar.is-opp { --ring: var(--opp); --ring-d: var(--opp-d); }
+.gd-avatar.is-plain { --ring: #fff; --ring-d: var(--ink-2); }
+.gd-avatar > img {
+    display: block;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.gd-avatar-initials {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    color: var(--ink);
+    font: 900 calc(var(--av-size) * .34)/1 var(--font-ui);
+}
+.gd-avatar-tag {
+    position: absolute;
+    left: 50%; bottom: -7px;
+    translate: -50% 0;
+    height: 14px;
+    padding: 0 6px;
+    border-radius: 7px;
+    background: var(--ring-d);
+    color: #fff;
+    font: 700 10px/14px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-avatar-tag.gd-badge { height: 15px; bottom: -8px; }
+/* Countdown ring hook kept by name for updateTurnClockDOM(): .turn-ring .turn-ring-fill
+   (r=26 in a 68 viewBox, dasharray 163.4). Screens size and place it. */
+.turn-ring { display: block; overflow: visible; rotate: -90deg; }
+.turn-ring circle { fill: none; stroke-width: 4; }
+.turn-ring-track { stroke: rgba(0, 0, 0, .28); }
+.turn-ring-fill {
+    stroke: var(--gold-2);
+    stroke-linecap: round;
+    stroke-dasharray: 163.4;
+    transition: stroke-dashoffset 1s linear;
+}
+.turn-ring.warn .turn-ring-fill { stroke: #ff9a1c; }
+.turn-ring.danger .turn-ring-fill { stroke: #ff4a3c; }
+
+/* Display-font words (combo labels, 胜利, VS). Static filter only; animate transform/opacity. */
+.gd-display { font-family: var(--font-display); font-weight: 400; }
+.gd-gold-text {
+    background: linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #ff9a1c 70%, #e4480e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 2px 0 #7a1e00) drop-shadow(0 0 1px #7a1e00);
+}
+.gd-stroke-text { color: #fff; -webkit-text-stroke: 3px rgba(40, 30, 10, .8); paint-order: stroke fill; }
+
+/* ---------- card component ----------
+   Markup (cardHTML): div.card[.red|.black][.small][.back][.wild][.level-card][.has-portrait]
+   [.joker-card.red-joker|.black-joker][.selected] containing .gd-ix (b.gd-rank + svg.gd-suit),
+   svg.gd-pip, optional .gd-portrait / .gd-ji / .gd-wild-tag / .gd-joker-*.
+   Contexts size cards from their container, never by restyling .card:
+     --card-w            normal cards (default 64px); height = width / .74
+     --card-w-small      .small cards (played/tribute/preview; default 79% of --card-w)
+   Index layout: suit beside the rank by default (hand columns); suit under the rank on
+   .small cards and on every card inside a .card-ix-v container (e.g. a 横排 overlapped row).
+     --card-sel-lift     translate-y of .selected (default 0; row-mode hands set ~ -18% h)
+     --card-sel-tint / --card-sel-ring   selected overlay (column mode blue tint + 2px ring)
+     --card-hover-lift   pointer-hover lift, only under (hover:hover) */
+.card {
+    --cw: var(--card-w, 64px);
+    --cc: var(--card-black);
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    flex: none;
+    width: var(--cw);
+    height: calc(var(--cw) / .74);
+    border: 1px solid var(--card-edge);
+    border-radius: calc(var(--cw) * .075);
+    background: var(--card-face);
+    box-shadow: var(--card-shadow);
+    color: var(--cc);
+    font-family: var(--font-ui);
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    translate: 0 0;
+    transition: translate var(--dur-fast) var(--ease-out);
+}
+.card.small { --cw: var(--card-w-small, calc(var(--card-w, 64px) * .79)); }
+.card.red { --cc: var(--card-red); }
+.card[data-card-id] { cursor: pointer; }
+.card svg { display: block; fill: currentColor; overflow: visible; }
+
+.gd-ix {
+    position: absolute;
+    left: 6.5%; top: 3.5%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: calc(var(--cw) * .015);
+    pointer-events: none;
+}
+.gd-rank {
+    display: block;
+    font: 900 calc(var(--cw) * .44)/1 var(--font-rank);
+    font-stretch: 62.5%;
+    letter-spacing: -.04em;
+}
+.gd-rank.is-10 { letter-spacing: -.1em; margin-left: -.03em; }
+.gd-suit { width: calc(var(--cw) * .25); height: calc(var(--cw) * .25); margin-top: calc(var(--cw) * .02); }
+.card.small .gd-ix, .card-ix-v .card .gd-ix {
+    left: 4%; top: 4%;
+    width: calc(var(--cw) * .32);
+    flex-direction: column;
+    gap: calc(var(--cw) * .025);
+}
+.card.small .gd-suit, .card-ix-v .card .gd-suit { width: calc(var(--cw) * .26); height: calc(var(--cw) * .26); margin-top: 0; }
+.gd-pip {
+    position: absolute;
+    right: 7%; bottom: 5%;
+    width: calc(var(--cw) * .42);
+    height: calc(var(--cw) * .42);
+    pointer-events: none;
+}
+
+/* 级牌: green corner triangle, white 级 */
+.gd-ji {
+    position: absolute;
+    top: -1px; right: -1px;
+    width: calc(var(--cw) * .4); height: calc(var(--cw) * .4);
+    border-top-right-radius: calc(var(--cw) * .075);
+    background: linear-gradient(225deg, var(--ji) 50%, transparent 50.5%);
+    color: #fff;
+    font: 900 calc(var(--cw) * .17)/1 var(--font-ui);
+    text-align: right;
+    padding: calc(var(--cw) * .035) calc(var(--cw) * .04) 0 0;
+    pointer-events: none;
+}
+/* 逢人配: gold heart in the index + orange vertical tag */
+.card.wild .gd-ix .gd-suit { fill: var(--wild-heart); stroke: var(--wild-heart-edge); stroke-width: 6px; paint-order: stroke fill; }
+.gd-wild-tag {
+    position: absolute;
+    left: 6.5%; bottom: 5%;
+    width: calc(var(--cw) * .2);
+    padding: calc(var(--cw) * .025) 0;
+    border-radius: calc(var(--cw) * .03);
+    background: var(--wild);
+    color: #fff;
+    font: 800 calc(var(--cw) * .135)/1.08 var(--font-ui);
+    text-align: center;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: .02em;
+    pointer-events: none;
+}
+.card.small .gd-wild-tag, .card-ix-v .card .gd-wild-tag { bottom: auto; top: calc(var(--cw) * .8); left: calc(var(--cw) * .1); }
+
+/* J/Q/K/A labmate portrait: lower-left body, under the index row, thin suit-colored frame */
+.gd-portrait {
+    position: absolute;
+    left: 7%; bottom: 5.5%;
+    width: 55%;
+    height: calc(var(--cw) * .7);
+    overflow: hidden;
+    border: max(1px, calc(var(--cw) * .018)) solid currentColor;
+    border-radius: calc(var(--cw) * .05);
+    background: #eef1f6;
+    pointer-events: none;
+}
+.gd-portrait img { /* sources are circle crops: zoom until the frame sits inside the circle */
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 178%; max-width: none; height: auto;
+    translate: -50% -47%;
+}
+.gd-portrait-initials {
+    position: absolute; inset: 0;
+    display: none; place-items: center;
+    font: 900 calc(var(--cw) * .2)/1 var(--font-ui);
+    font-style: normal;
+}
+.gd-portrait.art-failed img { display: none; }
+.gd-portrait.art-failed .gd-portrait-initials { display: grid; }
+.card.has-portrait .gd-pip { width: calc(var(--cw) * .3); height: calc(var(--cw) * .3); right: 6.5%; }
+.card.has-portrait.wild .gd-portrait { left: 30%; width: 38%; }
+.card.small.has-portrait .gd-portrait, .card-ix-v .card.has-portrait .gd-portrait { left: auto; right: 6%; bottom: 5.5%; width: 46%; height: calc(var(--cw) * .66); }
+.card.small.has-portrait .gd-pip, .card-ix-v .card.has-portrait .gd-pip { display: none; }
+
+/* Jokers: vertical JOKER + the joker figure; red = 大王, black = 小王 */
+.card.joker-card { --cc: var(--card-black); }
+.card.joker-card.red-joker { --cc: var(--card-red); }
+.gd-joker-word {
+    position: absolute;
+    left: 6%; top: 4%;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font: 800 calc(var(--cw) * .24)/1 var(--font-num);
+    letter-spacing: -.14em;
+    pointer-events: none;
+}
+.gd-joker-art {
+    position: absolute;
+    right: 4%; bottom: 5%;
+    width: 74%; height: 78%;
+    pointer-events: none;
+}
+.gd-joker-art .joker-svg { width: 100%; height: 100%; }
+.joker-svg .joker-cape, .joker-svg .joker-hat { fill: currentColor; }
+.joker-svg .joker-dot, .joker-svg .joker-star { fill: var(--gold-3); }
+.joker-svg-black .joker-dot, .joker-svg-black .joker-star { fill: #9aa0a8; }
+.joker-svg .joker-face { fill: #fff8e8; stroke: currentColor; stroke-width: 5; }
+.joker-svg .joker-smile, .joker-svg .joker-eye { fill: none; stroke: currentColor; stroke-width: 6; stroke-linecap: round; }
+.card.small .gd-joker-word { font-size: calc(var(--cw) * .22); }
+.card.small .gd-joker-art, .card-ix-v .card .gd-joker-art { width: 50%; height: 62%; }
+
+/* Back: blue field inside a white border, lattice, original "P" emblem.
+   .gd-back gives any element (deal flights, previews) the same look; set --cw on it. */
+.card.back, .gd-back {
+    --cw: var(--card-w, 64px);
+    background: #fff;
+    overflow: hidden;
+}
+.gd-back { position: relative; border-radius: calc(var(--cw) * .075); box-shadow: var(--card-shadow); }
+.card.back.small { --cw: var(--card-w-small, calc(var(--card-w, 64px) * .79)); }
+.card.back::before, .gd-back::before {
+    content: "";
+    position: absolute;
+    inset: calc(var(--cw) * .06);
+    border-radius: calc(var(--cw) * .045);
+    background:
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, .13) 0 1px, transparent 1px calc(var(--cw) * .09)),
+        repeating-linear-gradient(-45deg, rgba(255, 255, 255, .13) 0 1px, transparent 1px calc(var(--cw) * .09)),
+        radial-gradient(120% 90% at 50% 40%, #5a7fd2 0%, var(--card-back) 55%, var(--card-back-2) 100%);
+    box-shadow: inset 0 0 0 max(1px, calc(var(--cw) * .018)) rgba(255, 255, 255, .5);
+}
+.gd-back-emblem {
+    position: absolute;
+    left: 50%; top: 50%;
+    translate: -50% -50%;
+    width: calc(var(--cw) * .44); height: calc(var(--cw) * .44);
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--card-back);
+    font: 800 calc(var(--cw) * .31)/1 var(--font-num);
+    box-shadow: inset 0 0 0 calc(var(--cw) * .03) var(--card-back), inset 0 0 0 calc(var(--cw) * .05) #fff;
+}
+
+/* selection / interaction */
+.card.selected { translate: 0 var(--card-sel-lift, 0px); }
+.card.selected::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: var(--card-sel-tint, rgba(70, 110, 230, .32));
+    box-shadow: inset 0 0 0 2px var(--card-sel-ring, #5b8cff);
+    pointer-events: none;
+}
+.card.drag-source { opacity: .45; }
+.card.drop-before::before, .card.drop-after::before {
+    content: "";
+    position: absolute;
+    top: 6%; bottom: 6%;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--gold-2);
+    pointer-events: none;
+}
+.card.drop-before::before { left: -3px; }
+.card.drop-after::before { right: -3px; }
+@media (hover: hover) {
+    .card[data-card-id]:not(.selected):hover { translate: 0 var(--card-hover-lift, calc(var(--cw) * -.06)); }
+}
+
+/* ---------- CSS felt (fallback when the three.js stage is not live) ----------
+   Put .felt on a positioned full-bleed element; the stage package sets
+   html.gd-stage-live to make it transparent over the WebGL canvas. */
+.felt {
+    position: relative;
+    isolation: isolate;
+    background: radial-gradient(130% 100% at 50% 38%, var(--felt-c) 0%, var(--felt-1) 28%, var(--felt-2) 52%, var(--felt-3) 72%, var(--felt-4) 88%, var(--felt-5) 100%);
+}
+.felt::before, .felt::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+}
+.felt::before { /* twill */
+    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 4px);
+}
+.felt::after { /* thin rim arc + floor in the bottom corners + soft bottom falloff */
+    background:
+        radial-gradient(86.5% 98% at 50% 0%, transparent 0 99.3%, rgba(255, 255, 255, .22) 99.5% 100.1%, rgba(0, 0, 0, .32) 100.3% 101.6%, var(--floor) 101.8% 112%, var(--floor-2) 130%),
+        linear-gradient(transparent 70%, rgba(0, 0, 0, .22));
+}
+html.gd-stage-live .felt { background: transparent; }
+html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: none; }
+
+/* ---------- toast ---------- */
+.toast {
+    position: fixed;
+    left: 50%; top: 44%;
+    z-index: var(--z-toast);
+    max-width: min(80vw, 420px);
+    padding: 9px 20px;
+    border-radius: var(--r-pill);
+    background: rgba(6, 24, 28, .8);
+    color: #fff;
+    font: 700 var(--fs-15)/1.35 var(--font-ui);
+    text-align: center;
+    translate: -50% -50%;
+    scale: .92;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease, scale var(--dur-ui) var(--ease-back);
+}
+.toast.show { opacity: 1; scale: 1; }
+
+/* ---------- shell overlays (the transition package styles their content) ---------- */
+.return-transition {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-transition);
+    pointer-events: none;
+}
+.return-transition:empty { display: none; }
+.return-transition.active { pointer-events: auto; }
+#return-type-hint {
+    position: fixed;
+    left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    z-index: var(--z-toast);
+    padding: 6px 14px;
+    border-radius: var(--r-pill);
+    background: rgba(6, 24, 28, .8);
+    color: rgba(255, 255, 255, .88);
+    font: 600 var(--fs-11)/1.4 var(--font-ui);
+    white-space: nowrap;
+    translate: -50% 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease, translate 180ms var(--ease-out);
+}
+#return-type-hint.show { opacity: 1; translate: -50% 0; }
+#return-type-hint kbd {
+    display: inline-block;
+    min-width: 1.4em;
+    margin: 0 1px;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .16);
+    font: 700 var(--fs-11)/1.2 var(--font-num);
+    text-align: center;
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+}
