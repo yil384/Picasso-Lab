@@ -45,7 +45,6 @@
     <div class="gdr-cardmodal gdr-scope" id="gdr-cardmodal" role="dialog" aria-modal="true" aria-label="巅峰对决" hidden>
         <div class="gdr-cardmodal-card">
             <div class="gdr-cardmodal-body" id="gdr-cardmodal-body"></div>
-            <button class="gdr-cardmodal-close" id="gdr-card-close" type="button" aria-label="关闭">&times;</button>
         </div>
     </div>
 
@@ -2403,7 +2402,6 @@ else render();
     var R = window.GuandanRecords;
     var modal = document.getElementById("gdr-cardmodal");
     var host = document.getElementById("gdr-cardmodal-body");
-    var closeBtn = document.getElementById("gdr-card-close");
     if (!R || !R.mount || !modal || !host) return;
     var board = null, opener = null, closeTimer = 0;
     function setBackgroundInert(on) {
@@ -2418,9 +2416,8 @@ else render();
         clearTimeout(closeTimer);
         if (!board || board.lang !== lang) {
             if (board) board.destroy();
-            board = R.mount(host, { lang: lang });
+            board = R.mount(host, { lang: lang, onClose: close });
             modal.setAttribute("aria-label", lang === "en" ? "Peak Showdown" : "巅峰对决");
-            closeBtn.setAttribute("aria-label", lang === "en" ? "Close" : "关闭");
         }
         board.go(page == null || page === "" ? 0 : page, true);
         if (!isOpen()) opener = document.activeElement;
@@ -2429,7 +2426,8 @@ else render();
         document.body.classList.add("gdr-modal-open");
         void modal.offsetWidth; // start the fade from the hidden state
         modal.classList.add("is-open");
-        closeBtn.focus({ preventScroll: true });
+        var back = host.querySelector(".gdr-back");
+        if (back) back.focus({ preventScroll: true });
     }
     function close() {
         if (modal.hidden) return;
@@ -2442,7 +2440,6 @@ else render();
         opener = null;
         try { back.focus({ preventScroll: true }); } catch (_) {}
     }
-    closeBtn.addEventListener("click", close);
     document.addEventListener("click", function (e) {
         var t = e.target.closest && e.target.closest("[data-open-records]");
         if (!t) return;

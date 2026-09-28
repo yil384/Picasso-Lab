@@ -3,10 +3,12 @@
    EDIT THE DATA BELOW (PLAYERS / MATCHES). Players also carry a
    `style` (擅长打法), a `quote` (座右铭) and a signature `card`.
    Exposes window.GuandanRecords:
-     mount(host, { lang, splash }) -> { go(page, instant), next(), prev(), lang, destroy() }
-         renders the paged board (最新战报 / 赛季 MVP / 排行榜 / 历史对阵) into `host`;
-         used by guandan.html's #gdr-cardmodal and events.html's "mvp" overlay (splash: true).
-         `page` is an index or one of PAGE_KEYS.
+     mount(host, { lang, splash, onClose }) -> { go(page, instant), next(), prev(), lang, destroy() }
+         renders the paged board (最新战报 / 赛季 MVP / 排行榜 / 历史对阵) into `host` (a full-viewport
+         layer); used by guandan.html's #gdr-cardmodal and events.html's "mvp" overlay (splash: true).
+         The header's back arrow (.gdr-back) calls onClose. `page` is an index or one of PAGE_KEYS.
+         Like the game table, the board is laid out in design px on a stage scaled to the viewport
+         (landscape: s = min(W/844, H/390)); portrait phones get their own layout at s = 1.
      buildBanner({ lang }) -> slim 战报 strip; clicking it opens the board ([data-open-records]).
      stats() -> { matches, board, mvp }, PLAYERS, MATCHES, PAGE_KEYS
 
@@ -64,6 +66,23 @@
 
     var LAB = ["yufei", "yue", "zhengding", "chang", "hezi", "keyi", "xiang", "jixuan", "zaifeng", "zhongkai", "zhuo", "yichen", "xinwei", "alon", "chenyang", "haotian"];
     var PAGE_KEYS = ["latest", "mvp", "board", "history"];
+    var DESIGN_W = 844, DESIGN_H = 390; // landscape design stage (a phone on its side = 1:1)
+
+    // English for the style tags and match notes above (quotes stay in the player's own words).
+    var EN = {
+        "记牌反击 · 后发制人": "Card counter · strikes late",
+        "灵活接风 · 见缝插针": "Quick to take the lead · finds every gap",
+        "稳健控场 · 逢人配大师": "Steady control · wild-card master",
+        "炸弹强攻 · 火力全开": "Bomb assault · all guns blazing",
+        "冲 A 猛将 · 大牌敢出": "Ace charger · plays big cards",
+        "雷霆万钧 · 大牌压制": "Thunder strike · big-card pressure",
+        "新锐黑马 · 后劲十足": "Dark horse · strong finisher",
+        "团队核心 · 配合默契": "Team anchor · great teamwork",
+        "红方三冲 A 未过 · 掉回 2（非零封）": "Red failed at A three times · dropped to 2 (not a shutout)",
+        "蓝方三冲 A 未过 · 掉回 2（非零封）": "Blue failed at A three times · dropped to 2 (not a shutout)",
+        "以下克上 · 阻击蓝方冲 A": "Upset · stopped Blue at A",
+        "双 A 决战 · 蓝方先终结": "A vs A decider · Blue finished first"
+    };
 
     // Fonts the board is drawn in; guandan.html already links them, events.html gets them on first open.
     var FONT_CSS = {
@@ -80,15 +99,29 @@
         "♣": '<circle cx="50" cy="28" r="20"/><circle cx="27" cy="58" r="20"/><circle cx="73" cy="58" r="20"/><circle cx="50" cy="52" r="13"/><path d="M46 58c-.5 15-4 26-12 37h32c-8-11-11.5-22-12-37Z"/>'
     };
     var ICONS = {
-        trophy: '<svg class="gdr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2H6v1H2v3.2C2 8.8 3.9 11 6.3 11.3A6 6 0 0 0 11 15.8V18H8.6c-.9 0-1.6.7-1.6 1.6V20h10v-.4c0-.9-.7-1.6-1.6-1.6H13v-2.2a6 6 0 0 0 4.7-4.5C20.1 11 22 8.8 22 6.2V3h-4V2zM6 9.2C4.9 8.9 4 7.6 4 6.2V5h2v4.2zM20 6.2c0 1.4-.9 2.7-2 3V5h2v1.2zM6 21h12v1H6z"/></svg>',
+        // full-screen sub-page back arrow: head to the left, tail sweeping up to the right
+        back: '<svg class="gdr-back-ic" viewBox="0 0 38 30" aria-hidden="true"><path d="M2.5 16.5 15 5.5v6c8.3.2 15.4-1.9 20.5-8.3.9 11.8-6.9 19.4-20.5 19.3v6Z"/></svg>',
+        crown: '<svg class="gdr-crown" viewBox="0 0 40 28" aria-hidden="true"><path d="M5 25 2.5 7l10 7.5L20 2.5l7.5 12 10-7.5L35 25Z"/></svg>',
         quote: '<svg class="gdr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6C6.5 6 4 8.5 4 11.5c0 2.7 2 4.9 4.6 5.4-.2 1-.9 2-2.1 2.6-.3.2-.2.6.1.7 2.8-.3 5.3-2.6 5.3-6.2V11.5C11.9 8.5 11 6 9.5 6zm9 0C15.5 6 13 8.5 13 11.5c0 2.7 2 4.9 4.6 5.4-.2 1-.9 2-2.1 2.6-.3.2-.2.6.1.7 2.8-.3 5.3-2.6 5.3-6.2V11.5C20.9 8.5 20 6 18.5 6z"/></svg>',
         warn: '<svg class="gdr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 23 21.5H1L12 2.5Z"/><path d="M11 9h2l-.3 6.5h-1.4L11 9Zm1 8.2a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z" fill="#fff"/></svg>',
         help: '<svg class="gdr-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.2 9.3a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.3-2.8 4.1M12 17.4v.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>'
     };
 
+    // Static sunburst for the MVP reveal panel (16 wedges; clipped by the panel, never animated).
+    var RAYS = (function () {
+        var d = "", n = 16, r = 150;
+        for (var i = 0; i < n; i++) {
+            var a0 = 2 * Math.PI * i / n, a1 = a0 + Math.PI / n;
+            d += "M0 0L" + (r * Math.cos(a0)).toFixed(1) + " " + (r * Math.sin(a0)).toFixed(1) +
+                "L" + (r * Math.cos(a1)).toFixed(1) + " " + (r * Math.sin(a1)).toFixed(1) + "Z";
+        }
+        return '<svg class="gdr-rays" viewBox="-100 -100 200 200" aria-hidden="true"><path d="' + d + '"/></svg>';
+    })();
+
     // ------------------------- helpers -------------------------
     var lang = "zh";
     function T(zh, en) { return lang === "en" ? en : zh; }
+    function tx(s) { return (lang === "en" && EN[s]) || s; }
     function esc(s) {
         return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
             return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
@@ -136,12 +169,17 @@
         if (!c) return "";
         return '<span class="gdr-chip-card' + (c.red ? " red" : "") + '" title="' + esc(T("招牌牌", "Signature card")) + '"><b>' + esc(c.rank) + '</b>' + suitSVG(c.suit, "gdr-chip-suit") + '</span>';
     }
-    // Ladder badge: gold / silver / bronze shield for the top three, plain numeral below.
+    // Ladder badge: winged gold / silver / bronze shield for the top three, plain numeral below.
     function rankBadge(i) {
         if (i > 2) return '<span class="gdr-rank n">' + (i + 1) + '</span>';
-        return '<span class="gdr-rank m' + (i + 1) + '" aria-label="' + (i + 1) + '"><svg viewBox="0 0 36 40" aria-hidden="true">' +
-            '<path class="gdr-rank-b" d="M18 1.5 33 9v13.5c0 8.3-6.4 13.6-15 16-8.6-2.4-15-7.7-15-16V9z"/>' +
-            '<path class="gdr-rank-h" d="M18 4.8 30 10.8v5.9c-7.6 2.4-16.4 2.4-24 0v-5.9z"/></svg><b>' + (i + 1) + '</b></span>';
+        return '<span class="gdr-rank m' + (i + 1) + '" aria-label="' + (i + 1) + '"><svg viewBox="0 0 48 40" aria-hidden="true">' +
+            '<path class="gdr-rank-w" d="M11 9.5 1 7.5l3.2 5.2L.5 14l4.4 4.3-3 1.7 5.4 4 3.7-.6ZM37 9.5l10-2-3.2 5.2L47.5 14l-4.4 4.3 3 1.7-5.4 4-3.7-.6Z"/>' +
+            '<path class="gdr-rank-b" d="M24 1.5 39 9v13.5c0 8.3-6.4 13.6-15 16-8.6-2.4-15-7.7-15-16V9z"/>' +
+            '<path class="gdr-rank-h" d="M24 4.8 36 10.8v5.9c-7.6 2.4-16.4 2.4-24 0v-5.9z"/></svg><b>' + (i + 1) + '</b></span>';
+    }
+    // Heavy gold title: dark extrusion, brown outline, light-to-amber gradient face.
+    function goldText(text, cls) {
+        return '<span class="gdr-gold ' + (cls || "") + '"><i aria-hidden="true">' + text + '</i><i aria-hidden="true">' + text + '</i><i>' + text + '</i></span>';
     }
     function winLossText(s) { return s ? T(s.w + " 胜 " + s.l + " 负", s.w + "W " + s.l + "L") : ""; }
 
@@ -187,20 +225,35 @@
     function memberHTML(key, st) {
         var p = P(key);
         return '<div class="gdr-mem">' + avatarImg(key, "gdr-av") +
-            '<span class="gdr-mem-t"><b>' + esc(p.name) + '</b>' + (p.style ? '<span>' + esc(p.style) + '</span>' : "") +
+            '<span class="gdr-mem-t"><b>' + esc(p.name) + '</b>' + (p.style ? '<span>' + esc(tx(p.style)) + '</span>' : "") +
             '<span class="gdr-mem-rec">' + esc(winLossText(st[key])) + '</span></span></div>';
     }
 
     function noteHTML(m, cls) {
-        return m.note ? '<div class="' + cls + '">' + ICONS.warn + '<span>' + esc(m.note) + '</span></div>' : "";
+        return m.note ? '<div class="' + cls + '">' + ICONS.warn + '<span>' + esc(tx(m.note)) + '</span></div>' : "";
     }
 
-    // 最新一战: red-vs-blue diagonal split, gold VS, the levels as the largest type.
-    function posterHTML(m, no, st) {
+    // Season record of one fixed pair (same two players on the same side).
+    function pairRecord(d, keys) {
+        var r = { w: 0, l: 0 };
+        function same(t) { return t.length === keys.length && keys.every(function (k) { return t.indexOf(k) >= 0; }); }
+        d.matches.forEach(function (m) {
+            var onA = same(m.teamA);
+            if (!onA && !same(m.teamB)) return;
+            if ((m.winner === "A") === onA) r.w++; else r.l++;
+        });
+        return r;
+    }
+    function pairHTML(r, cls) {
+        return '<span class="gdr-pair ' + cls + '"><b>' + r.w + '</b>' + T("胜", "W") + '<b>' + r.l + '</b>' + T("负", "L") + '</span>';
+    }
+
+    // 最新一战: red-vs-blue split with a crisp diagonal seam, saturated team plates, a gold VS as tall as the levels.
+    function posterHTML(d, m, no) {
         var aWin = m.winner === "A";
         function side(cls, keys, win) {
             return '<div class="gdr-side ' + cls + (win ? " is-win" : "") + '">' +
-                keys.map(function (k) { return memberHTML(k, st); }).join("") +
+                keys.map(function (k) { return memberHTML(k, d.byKey); }).join("") +
                 '<span class="gdr-plate ' + (win ? "win" : "lose") + '">' + (win ? T("胜", "WIN") : T("负", "LOSS")) + '</span>' +
             '</div>';
         }
@@ -208,14 +261,20 @@
             '<span class="gdr-poster-word red" aria-hidden="true">' + teamWord("A") + '</span>' +
             '<span class="gdr-poster-word blue" aria-hidden="true">' + teamWord("B") + '</span>' +
             '<div class="gdr-poster-head"><b>' + T("最新一战", "Latest match") + '</b><span>' + dotDate(m.date) + ' · ' + T("第 " + no + " 场", "Match " + no) + '</span></div>' +
-            side("red", m.teamA, aWin) +
-            '<div class="gdr-bigscore" aria-label="' + esc(m.levelA + ":" + m.levelB) + '">' +
-                '<span class="gdr-lv' + (aWin ? "" : " lose") + '">' + esc(m.levelA) + '</span>' +
-                '<span class="gdr-vs" aria-hidden="true">VS</span>' +
-                '<span class="gdr-lv' + (aWin ? " lose" : "") + '">' + esc(m.levelB) + '</span>' +
+            '<div class="gdr-poster-main">' +
+                side("red", m.teamA, aWin) +
+                '<div class="gdr-bigscore" aria-label="' + esc(m.levelA + ":" + m.levelB) + '">' +
+                    '<span class="gdr-lv' + (aWin ? "" : " lose") + '">' + esc(m.levelA) + '</span>' +
+                    '<span class="gdr-vs" aria-hidden="true">' + ICONS.crown + goldText("VS") + '</span>' +
+                    '<span class="gdr-lv' + (aWin ? " lose" : "") + '">' + esc(m.levelB) + '</span>' +
+                '</div>' +
+                side("blue", m.teamB, !aWin) +
             '</div>' +
-            side("blue", m.teamB, !aWin) +
-            noteHTML(m, "gdr-poster-note") +
+            '<div class="gdr-poster-foot">' +
+                pairHTML(pairRecord(d, m.teamA), "red") +
+                (m.note ? noteHTML(m, "gdr-poster-note") : '<i>' + T("组合战绩", "Pair record") + '</i>') +
+                pairHTML(pairRecord(d, m.teamB), "blue") +
+            '</div>' +
         '</div>';
     }
 
@@ -244,54 +303,61 @@
     function latestPage(d) {
         var n = d.matches.length;
         var recent = d.matches.slice(1, 4).map(matchRowHTML).join("");
-        return posterHTML(d.matches[0], n, d.byKey) +
+        return posterHTML(d, d.matches[0], n) +
             (recent ? sectionHead(T("近期对阵", "Recent matches"), '<button class="gdr-link" type="button" data-gdr-go="history">' + T("全部对阵", "All matches") + ' ›</button>') +
                 '<div class="gdr-mlist">' + recent + '</div>' : "");
     }
 
-    // The MVP's most recent match, told from their side.
+    // Portrait in a gold frame; the signature card peeks from behind it when the player has one.
+    function mvpArt(key) {
+        var card = !!P(key).card;
+        return '<div class="gdr-mvp-art' + (card ? "" : " no-card") + '">' + (card ? sigCard(key, "gdr-mvp-card") : "") + avatarImg(key, "gdr-mvp-av") + '</div>';
+    }
+
+    // The MVP's most recent match, told from their side, as the last cell of the stat ribbon.
     function mvpLastHTML(d, key) {
         var m = d.matches.filter(function (x) { return x.teamA.indexOf(key) >= 0 || x.teamB.indexOf(key) >= 0; })[0];
         if (!m) return "";
         var onA = m.teamA.indexOf(key) >= 0;
         var mine = onA ? m.teamA : m.teamB, theirs = onA ? m.teamB : m.teamA;
         var won = (m.winner === "A") === onA;
-        var partner = mine.filter(function (k) { return k !== key; }).map(function (k) { return P(k).name; }).join(" · ");
-        return '<div class="gdr-mvp-last"><i>' + T("最近一战", "Last match") + '</i>' +
-            '<b>' + esc(onA ? m.levelA : m.levelB) + ' : ' + esc(onA ? m.levelB : m.levelA) + '</b>' +
-            '<span>' + shortDate(m.date) + (partner ? T(" · 搭档 ", " · with ") + esc(partner) : "") + T(" · 对阵 ", " · vs ") + esc(theirs.map(function (k) { return P(k).name; }).join(" · ")) + '</span>' +
-            '<em class="' + (won ? "win" : "lose") + '">' + (won ? T("胜", "WIN") : T("负", "LOSS")) + '</em></div>';
+        var partner = mine.filter(function (k) { return k !== key; }).map(firstName).join(" · ");
+        return '<span class="gdr-mvp-last"><i>' + T("最近一战", "Last match") + '</i>' +
+            '<b>' + esc(onA ? m.levelA : m.levelB) + ':' + esc(onA ? m.levelB : m.levelA) + '</b>' +
+            '<em class="' + (won ? "win" : "lose") + '">' + (won ? T("胜", "WIN") : T("负", "LOSS")) + '</em>' +
+            '<small>' + shortDate(m.date) + (partner ? T(" · 搭档 ", " · with ") + esc(partner) : "") + T(" · 对阵 ", " · vs ") + esc(theirs.map(firstName).join(" · ")) + '</small></span>';
     }
 
+    function chaseCard(r, i) {
+        var q = P(r.key);
+        return '<div class="gdr-row" style="--i:' + (i + 1) + '">' + rankBadge(i + 1) + avatarImg(r.key, "gdr-av") +
+            '<div class="gdr-row-main"><div class="gdr-row-name"><b>' + esc(q.name) + '</b>' + cardChip(r.key) + '</div>' +
+            (q.style ? '<div class="gdr-row-sub">' + esc(tx(q.style)) + '</div>' : "") + '</div>' +
+            '<div class="gdr-row-pts"><b>' + r.pts + '</b><i>' + T("评分", "Score") + '</i></div></div>';
+    }
+
+    // Season MVP, composed like a result screen: framed portrait, name, gold score plate, one stat ribbon.
     function mvpPage(d) {
         var s = d.mvp, p = P(s.key);
-        var chase = d.board.slice(1, 3).map(function (r, i) {
-            var q = P(r.key);
-            return '<div class="gdr-row compact" style="--i:' + (i + 1) + '">' + rankBadge(i + 1) + avatarImg(r.key, "gdr-av") +
-                '<div class="gdr-row-main"><div class="gdr-row-name"><b>' + esc(q.name) + '</b>' + cardChip(r.key) + '</div>' +
-                (q.style ? '<div class="gdr-row-sub">' + esc(q.style) + '</div>' : "") + '</div>' +
-                '<div class="gdr-row-pts"><b>' + r.pts + '</b><i>' + T("评分", "Score") + '</i></div></div>';
-        }).join("");
+        var chase = d.board.slice(1, 3).map(chaseCard).join("");
         return '<div class="gdr-mvp">' +
-            '<div class="gdr-mvp-hero">' +
-                '<span class="gdr-ribbon">' + T("赛季 MVP", "Season MVP") + '</span>' +
-                '<div class="gdr-mvp-art">' + sigCard(s.key, "gdr-mvp-card") + avatarImg(s.key, "gdr-mvp-av") + '</div>' +
-                '<b class="gdr-mvp-name">' + esc(p.name) + '</b>' +
-                (p.style ? '<span class="gdr-tag light">' + esc(p.style) + '</span>' : "") +
-            '</div>' +
-            '<div class="gdr-mvp-body">' +
-                '<div class="gdr-mvp-score"><i>' + T("综合评分", "Score") + '</i><b>' + s.pts + '</b></div>' +
-                '<div class="gdr-cells">' +
+                mvpArt(s.key) +
+                '<div class="gdr-mvp-id">' +
+                    '<span class="gdr-ribbon">' + T("赛季 MVP", "Season MVP") + '</span>' +
+                    '<b class="gdr-mvp-name">' + esc(p.name) + '</b>' +
+                    (p.style ? '<span class="gdr-tag light">' + esc(tx(p.style)) + '</span>' : "") +
+                    (p.quote ? '<div class="gdr-quote light">' + ICONS.quote + '<span>' + esc(p.quote) + '</span></div>' : "") +
+                '</div>' +
+                '<div class="gdr-mvp-plate"><b>' + s.pts + '</b><i>' + T("综合评分", "Score") + '</i></div>' +
+                '<div class="gdr-mvp-rib">' +
                     '<span><b>' + s.w + '-' + s.l + '</b><i>' + T("胜负", "W-L") + '</i></span>' +
                     '<span><b>' + s.wr + '%</b><i>' + T("胜率", "Win rate") + '</i></span>' +
                     '<span><b>' + s.aw + '</b><i>' + T("过 A", "Cleared A") + '</i></span>' +
                     '<span><b>' + s.p + '</b><i>' + T("场次", "Played") + '</i></span>' +
+                    mvpLastHTML(d, s.key) +
                 '</div>' +
-                (p.quote ? '<div class="gdr-quote">' + ICONS.quote + '<span>' + esc(p.quote) + '</span></div>' : "") +
-                mvpLastHTML(d, s.key) +
             '</div>' +
-        '</div>' +
-        (chase ? sectionHead(T("紧随其后", "Chasing")) + '<div class="gdr-rows">' + chase + '</div>' : "");
+            (chase ? sectionHead(T("紧随其后", "Chasing")) + '<div class="gdr-chase">' + chase + '</div>' : "");
     }
 
     function boardPage(d) {
@@ -300,7 +366,7 @@
             return '<div class="gdr-row' + (i < 3 ? " top" : "") + '" style="--i:' + Math.min(i, 10) + '">' +
                 rankBadge(i) + avatarImg(s.key, "gdr-av") +
                 '<div class="gdr-row-main">' +
-                    '<div class="gdr-row-name"><b>' + esc(p.name) + '</b>' + cardChip(s.key) + (p.style ? '<span class="gdr-tag">' + esc(p.style) + '</span>' : "") + '</div>' +
+                    '<div class="gdr-row-name"><b>' + esc(p.name) + '</b>' + cardChip(s.key) + (p.style ? '<span class="gdr-tag">' + esc(tx(p.style)) + '</span>' : "") + '</div>' +
                     (p.quote ? '<div class="gdr-row-sub">' + ICONS.quote + '<span>' + esc(p.quote) + '</span></div>' : "") +
                 '</div>' +
                 '<div class="gdr-cells">' +
@@ -325,13 +391,13 @@
             '<div class="gdr-mlist">' + d.matches.map(matchRowHTML).join("") + '</div>';
     }
 
-    // events.html intro: the season MVP, then the board slides in from under it.
+    // events.html intro: the season MVP reveal, then the board slides in from under it.
     function splashHTML(d) {
         var s = d.mvp, p = P(s.key);
         return '<div class="gdr-splash" role="button" tabindex="-1" aria-label="' + esc(T("跳过", "Skip")) + '">' +
-            '<div class="gdr-splash-in">' +
-                '<span class="gdr-ribbon">' + T("赛季 MVP", "Season MVP") + '</span>' +
-                '<div class="gdr-mvp-art">' + sigCard(s.key, "gdr-mvp-card") + avatarImg(s.key, "gdr-mvp-av") + '</div>' +
+            '<div class="gdr-splash-in">' + RAYS +
+                goldText(T("赛季MVP", "SEASON MVP"), "gdr-splash-title") +
+                mvpArt(s.key) +
                 '<b class="gdr-splash-name">' + esc(p.name) + '</b>' +
                 '<div class="gdr-splash-line">' +
                     '<span><b>' + s.pts + '</b>' + T("评分", "score") + '</span>' +
@@ -344,11 +410,11 @@
     }
 
     function appHTML(d, splash) {
-        var titles = [T("最新战报", "Latest"), T("赛季 MVP", "Season MVP"), T("排行榜", "Leaderboard"), T("历史对阵", "History")];
+        var titles = [T("最新战报", "Latest"), T("赛季 MVP", "MVP"), T("排行榜", "Ranking"), T("历史对阵", "History")];
         var bodies = [latestPage(d), mvpPage(d), boardPage(d), historyPage(d)];
         return '<div class="gdr-app" lang="' + (lang === "en" ? "en" : "zh-CN") + '" data-page="latest">' +
             '<header class="gdr-head">' +
-                '<span class="gdr-head-mark">' + ICONS.trophy + '</span>' +
+                '<button class="gdr-back gdr-close" type="button" aria-label="' + esc(T("返回", "Back")) + '">' + ICONS.back + '</button>' +
                 '<h2 class="gdr-head-title">' + T("巅峰对决", "Peak Showdown") + '</h2>' +
                 '<span class="gdr-head-sub">' + T("Picasso Lab 掼蛋 · 输了叫收集数据，赢了叫重大突破", "Picasso Lab Guandan · a loss is data, a win is a breakthrough") + '</span>' +
                 '<span class="gdr-head-chip">' + T(d.matches.length + " 场实战", d.matches.length + " matches") + '</span>' +
@@ -383,7 +449,24 @@
         var tabs = [].slice.call(app.querySelectorAll(".gdr-tab"));
         var splash = app.querySelector(".gdr-splash");
         var reduce = !!(global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches);
-        var idx = 0, drag = null, swallowClick = false, timers = [];
+        var idx = 0, drag = null, swallowClick = false, timers = [], scale = 1, ro = null;
+
+        // Design stage: landscape screens show the 844x390 layout scaled by s (so a 1440x900 desktop
+        // keeps a phone's proportions); portrait phones use their own layout at s = 1.
+        function fit() {
+            var W = host.clientWidth, H = host.clientHeight;
+            if (!W || !H) return;
+            var port = W < 700 && W < H;
+            scale = port ? 1 : Math.min(W / DESIGN_W, H / DESIGN_H);
+            var w = W / scale, h = H / scale;
+            app.classList.toggle("is-port", port);
+            app.classList.toggle("is-tall", !port && h >= 460); // 16:10-ish screens: spare height, same width
+            app.style.width = w + "px";
+            app.style.height = h + "px";
+            app.style.setProperty("--gdr-sw", w + "px");
+            app.style.setProperty("--gdr-sh", h + "px");
+            app.style.transform = scale === 1 ? "" : "scale(" + scale + ")";
+        }
 
         function pageIndex(p) {
             if (typeof p === "number") return p;
@@ -393,8 +476,9 @@
         function place(dx) {
             track.style.transform = "translate3d(calc(" + (-100 * idx) + "% + " + (dx || 0) + "px),0,0)";
         }
-        // Entry animations run once per page, the first time it is shown (never on revisits).
-        function reveal(page) { if (!splash) page.classList.add("is-shown"); }
+        // A page's entry animation starts the first time it is shown or dragged into view. The
+        // guandan modal hides with display:none, so each re-open plays the shown page's entry again.
+        function reveal(page) { if (page && !splash) page.classList.add("is-shown"); }
         function go(p, instant) {
             idx = Math.max(0, Math.min(pages.length - 1, pageIndex(p)));
             track.classList.toggle("no-anim", !!instant || reduce);
@@ -407,13 +491,16 @@
 
         function onClick(e) {
             if (swallowClick) { swallowClick = false; e.stopPropagation(); e.preventDefault(); return; }
-            var t = e.target.closest && e.target.closest("[data-gdr-go]");
-            if (t && app.contains(t)) go(t.getAttribute("data-gdr-go"));
+            var t = e.target.closest && e.target.closest("[data-gdr-go], .gdr-back");
+            if (!t || !app.contains(t)) return;
+            if (t.classList.contains("gdr-back")) { if (opts.onClose) opts.onClose(); }
+            else go(t.getAttribute("data-gdr-go"));
         }
         // Touch/pen drag follows the finger; vertical pans stay native (touch-action: pan-y).
+        // Pointer deltas are screen px; the track moves in stage px, hence the division by scale.
         function onDown(e) {
             if (e.pointerType === "mouse" || !e.isPrimary) return;
-            drag = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, lx: e.clientX, lt: e.timeStamp, v: 0, dx: 0, on: false };
+            drag = { id: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, lt: e.timeStamp, v: 0, dx: 0, on: false };
         }
         function onMove(e) {
             if (!drag || e.pointerId !== drag.id) return;
@@ -429,7 +516,8 @@
             if (dt > 0) drag.v = (e.clientX - drag.lx) / dt;
             drag.lx = e.clientX; drag.lt = e.timeStamp;
             var atEdge = (idx === 0 && dx > 0) || (idx === pages.length - 1 && dx < 0);
-            drag.dx = atEdge ? dx / 3 : dx;
+            if (!atEdge) reveal(pages[idx + (dx < 0 ? 1 : -1)]); // the neighbour animates in as it is pulled into view
+            drag.dx = (atEdge ? dx / 3 : dx) / scale;
             place(drag.dx);
         }
         function onUp(e) {
@@ -448,16 +536,22 @@
         view.addEventListener("pointermove", onMove);
         view.addEventListener("pointerup", onUp);
         view.addEventListener("pointercancel", onUp);
+        // The observer runs after layout and before paint, so a newly shown host never paints unscaled.
+        if (global.ResizeObserver) { ro = new ResizeObserver(fit); ro.observe(host); }
+        else global.addEventListener("resize", fit);
+        fit();
 
         go(0, true);
         if (splash) {
+            // The splash slides up on an ease-out curve; page 1's entry starts once it has mostly cleared.
             var leave = function () {
                 if (!splash) return;
                 var s = splash;
                 splash = null;
+                pages[idx].style.setProperty("--gdr-d0", "140ms");
                 reveal(pages[idx]);
                 s.classList.add("is-leaving");
-                timers.push(setTimeout(function () { s.remove(); }, 380));
+                timers.push(setTimeout(function () { s.remove(); }, 420));
             };
             if (reduce) leave();
             else {
@@ -473,6 +567,7 @@
             lang: lang,
             destroy: function () {
                 timers.forEach(clearTimeout);
+                if (ro) ro.disconnect(); else global.removeEventListener("resize", fit);
                 app.removeEventListener("click", onClick, true);
                 host.innerHTML = "";
             }

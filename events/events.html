@@ -2291,7 +2291,6 @@
 </div>
 
 <div id="gdr-overlay" class="gdr-overlay gdr-scope" aria-hidden="true" style="display:none">
-    <button class="gdr-close" type="button" aria-label="Close records">&times;</button>
     <div class="gdr-scroll"></div>
 </div>
 
@@ -3282,16 +3281,15 @@
     // 🏆 Guandan Peak-Showdown records overlay (type "mvp" to open)
     const gdrOverlay = document.getElementById('gdr-overlay');
     const gdrScroll = gdrOverlay?.querySelector('.gdr-scroll');
-    const gdrCloseBtn = gdrOverlay?.querySelector('.gdr-close');
     const gdrCode = 'mvp';
     let gdrBuffer = '';
     let gdrPager = null;
-    // The board (tabs, sliding pages, swipe, MVP splash) is the shared component in guandan-records.js.
+    // The board (tabs, sliding pages, swipe, MVP splash, back arrow) is the shared component in guandan-records.js.
     function openGdr() {
         if (!gdrOverlay || !window.GuandanRecords?.mount) return;
         hideGuandanTypeHint();
         gdrPager?.destroy();
-        gdrPager = window.GuandanRecords.mount(gdrScroll, { splash: true });
+        gdrPager = window.GuandanRecords.mount(gdrScroll, { splash: true, onClose: closeGdr });
         gdrOverlay.style.display = 'block';
         gdrOverlay.setAttribute('aria-hidden', 'false');
         document.body.classList.add('gdr-open');
@@ -3306,7 +3304,6 @@
         gdrOverlay.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('gdr-open');
     }
-    gdrCloseBtn?.addEventListener('click', closeGdr);
     gdrOverlay?.addEventListener('click', (e) => { if (e.target === gdrOverlay) closeGdr(); });
 
     // Mobile counterpart to typing "picasso": three quick taps on the top news strip.
