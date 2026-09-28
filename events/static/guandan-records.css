@@ -503,7 +503,7 @@ body.gdr-modal-open { overflow: hidden; }
     .gdr-track, .gdr-splash, .gdr-cardmodal, .gdr-cardmodal-card { transition: none; }
 }
 
-/* ---------- 16:10-ish landscape (.is-tall, stage 844 x 460+): the poster uses its spare height ---------- */
+/* ---------- 16:10-ish landscape (.is-tall, stage 844 x 460+): use the spare height ---------- */
 .is-tall .gdr-poster { padding-top: 14px; padding-bottom: 16px; }
 .is-tall .gdr-poster-head b { font-size: 32px; }
 .gdr-app.is-tall[lang="en"] .gdr-poster-head b { font-size: 26px; }
@@ -515,6 +515,11 @@ body.gdr-modal-open { overflow: hidden; }
 .is-tall .gdr-plate, .is-tall .gdr-side.blue .gdr-plate { left: 50%; right: auto; translate: -50% 0; }
 .is-tall .gdr-bigscore { --lv: 116px; }
 .is-tall .gdr-pair b { font-size: 28px; }
+/* list rows get closer to Tencent's row height (~16% of H) */
+.is-tall .gdr-mrow { min-height: 82px; }
+.is-tall .gdr-mnames b { font-size: 15px; }
+.is-tall .gdr-rows .gdr-row { min-height: 74px; }
+.is-tall .gdr-row-name > b { font-size: 16px; }
 
 /* ---------- portrait phones (.is-port, stage = viewport): tabs across the top, stacked rows ---------- */
 .gdr-app.is-port {
