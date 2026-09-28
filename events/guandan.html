@@ -53,7 +53,7 @@
 </div>
 
 <div class="return-transition" id="return-transition" aria-hidden="true"></div>
-<div id="return-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd></div>
+<div id="return-type-hint">试试输入 <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd></div>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -266,7 +266,9 @@ function showToast(text, duration = 1700) {
 }
 
 function showReturnTypeHint() {
-    returnTypeHint?.classList.add("show");
+    if (!returnTypeHint) return;
+    returnTypeHint.firstChild.nodeValue = L("try typing ", "试试输入 ");
+    returnTypeHint.classList.add("show");
     clearTimeout(returnHintTimer);
     returnHintTimer = setTimeout(() => returnTypeHint?.classList.remove("show"), 2600);
 }

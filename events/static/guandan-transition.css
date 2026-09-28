@@ -41,13 +41,15 @@
     transform: translateX(-50%);
     text-align: center; white-space: nowrap;
     font-size: clamp(30px, 6.6vw, 66px); font-weight: 900; font-style: italic; line-height: 1; letter-spacing: .03em;
+    /* the old page's primary font (Nunito) put the baseline .107em higher than Noto Sans SC does */
+    margin-top: -.107em;
     color: var(--rvx-gold-2);
     filter: drop-shadow(0 0 14px rgba(232, 189, 99, .4));
     opacity: 0;
     animation: rvxTitleIn .6s cubic-bezier(.2, .86, .22, 1) .46s forwards;
 }
 .rvx-title small {
-    display: block; margin-top: 10px;
+    display: block; margin-top: calc(10px + .25em);
     font-size: .3em; font-weight: 800; font-style: normal; letter-spacing: .46em; text-indent: .46em;
     color: var(--rvx-gold-1);
 }
@@ -195,6 +197,14 @@
     100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot, 200deg)) scale(.2); opacity: 0; }
 }
 
+/* Short landscape screens (a phone on its side, where the table always is): the title moves up and the
+   burst shrinks and drops below it, so the fan, shards and coins never cover 牌局结束 / 完胜. */
+@media (max-height: 520px) {
+    .rvx-title { top: 5%; font-size: min(11vh, 48px); }
+    .rvx-ring { width: 64vh; }
+    .rvx-burst { scale: .6; margin-top: 16vh; }
+}
+
 /* ---------- "try typing picasso" hint ---------- */
 #return-type-hint {
     position: fixed; left: 50%; bottom: 74px;
@@ -224,6 +234,7 @@
 @media (max-width: 860px), (max-height: 600px) and (pointer: coarse) {
     #return-type-hint {
         bottom: calc(68px + env(safe-area-inset-bottom));
+        width: max-content; /* left: 50% would otherwise cap the shrink-to-fit width at half the viewport */
         max-width: calc(100vw - 24px);
         white-space: normal;
         text-align: center;
