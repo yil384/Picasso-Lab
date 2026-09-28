@@ -1,1 +1,867 @@
-/* Picasso Lab Guandan: in-game table, hand, action row, results, VS intro, fx DOM. Owned by the table package; builds on guandan-ui.css tokens. */
+/* ==========================================================================
+   Picasso Lab Guandan: in-game table (renderTable), a replica of 腾讯掼蛋's in-game screen.
+   Everything inside .gd-stage is in design px: the stage is 720 high and >= 1280 wide and
+   layoutStage() scales it (and rotates it on portrait phones) with one transform, so every
+   proportion below holds on every screen. Anchors: top/bottom of the stage, its centre line,
+   --hand-h (height of the tallest hand column) and --actions-bottom, both set by renderTable.
+   ========================================================================== */
+
+body[data-screen="table"] { overflow: hidden; overscroll-behavior: none; }
+body[data-screen="table"] .topbar { display: none; }
+
+.gd-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--floor-2);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+.gd-safe-probe {
+    position: fixed;
+    left: 0; top: 0;
+    width: 0; height: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Felt: bright teal, darker toward the top corners, fine twill, a double groove parallel to the
+   rim, the rim edge, and the wooden floor showing only in the bottom corners (tg_table5/6). */
+.gd-rot {
+    position: absolute;
+    left: 0; top: 0;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: radial-gradient(120% 105% at 50% 62%, var(--felt-c) 0%, var(--felt-1) 30%, var(--felt-2) 52%, var(--felt-3) 72%, var(--felt-4) 90%, var(--felt-5) 100%);
+}
+.gd-rot::before, .gd-rot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.gd-rot::before {
+    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 3px);
+}
+.gd-rot::after {
+    background:
+        radial-gradient(68% 110% at 50% -4%,
+            transparent 0 94.2%,
+            rgba(0, 70, 64, .3) 94.4% 94.8%, transparent 95% 95.6%, rgba(0, 70, 64, .3) 95.8% 96.2%,
+            transparent 96.4% 99.5%,
+            rgba(0, 0, 0, .3) 99.7% 100%,
+            #7c5b40 100.1%, #5a4034 104%, #3e2b22 112%, #2a2226 125%);
+}
+
+.gd-stage {
+    position: absolute;
+    left: 0; top: 0;
+    z-index: 1;
+    transform-origin: 0 0;
+    color: #fff;
+    font: 500 20px/1.3 var(--font-ui);
+    --card-w: 102px;
+    --card-w-small: 80.6px;
+}
+.gd-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.gd-ico { display: block; flex: none; width: 28px; height: 28px; }
+/* Invisible hit slop: on small scales (--gd-s ~ .54 on phones) the small controls still take a
+   >= 44 CSS px tap without growing visually. The bottom pills stop short of the hand. */
+.gd-menu-btn, .gd-round-btn, .gd-tool, .gd-jp-tabs button { position: relative; }
+.gd-jp-tabs button { z-index: 1; }
+.gd-menu-btn::after, .gd-round-btn::after, .gd-tool::after, .gd-jp-tabs button::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: max(100%, calc(44px / var(--gd-s, 1)));
+    height: max(100%, calc(44px / var(--gd-s, 1)));
+    translate: -50% -50%;
+}
+.gd-tool::after { height: max(100%, min(calc(44px / var(--gd-s, 1)), 58px)); }
+
+.gd-ui-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.gd-ui-layer > :not(.toast) { pointer-events: auto; }
+/* Toasts: a faded dark band between the partner's played cards and the action row (never on
+   the controls). The layer is in CSS px, so the design-px anchor goes through --gd-s. */
+.gd-stage-toast {
+    top: calc(var(--gd-s, 1) * 266px);
+    max-width: 72%;
+    padding: .45em 3.4em;
+    border-radius: 0;
+    background: linear-gradient(90deg, transparent, rgba(0, 22, 20, .74) 20%, rgba(0, 22, 20, .74) 80%, transparent);
+}
+
+.gd-bottombar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 50px;
+    background: linear-gradient(rgba(10, 14, 22, .42), rgba(10, 14, 22, .58));
+    pointer-events: none;
+}
+
+/* centre watermark: the only text on the felt */
+.gd-watermark {
+    position: absolute;
+    left: 50%; top: 37%;
+    translate: -50% -50%;
+    z-index: 1;
+    color: rgba(0, 40, 36, .28);
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.gd-watermark b { display: block; font: 400 54px/1 var(--font-display); letter-spacing: .03em; }
+.gd-watermark span { display: block; margin-top: 10px; font: 700 22px/1 var(--font-ui); letter-spacing: .24em; }
+.gd-watermark span:lang(en) { letter-spacing: .02em; }
+.gd-stage.is-acting .gd-watermark span { opacity: 0; }
+
+/* ---------- HUD: ☰ + level tiles (top-left), 记牌 / 规则 (top-right) ---------- */
+.gd-hud {
+    position: absolute;
+    left: 26px; top: 14px;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+}
+.gd-menu-btn {
+    width: 56px; height: 46px;
+    padding: 8px 6px;
+    border: 0;
+    background: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.gd-menu-btn i {
+    position: relative;
+    height: 7px;
+    margin-left: 14px;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+}
+.gd-menu-btn i::before {
+    content: "";
+    position: absolute;
+    left: -14px; top: 0;
+    width: 8px; height: 7px;
+    border-radius: 4px;
+    background: #fff;
+}
+.gd-lvls {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 7px;
+    background: rgba(0, 30, 28, .32);
+}
+.gd-lvl { display: flex; height: 38px; border-radius: 5px; overflow: hidden; }
+.gd-lvl b {
+    flex: 1;
+    min-width: 64px;
+    padding: 0 9px;
+    text-align: center;
+    background: var(--lvl-us);
+    color: #fff;
+    font: 700 22px/38px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-lvl.is-them b { background: #7d8187; }
+.gd-lvl em {
+    min-width: 46px;
+    padding: 0 6px;
+    background: #fff6e8;
+    color: #b8401c;
+    font: 900 32px/38px var(--font-rank);
+    font-stretch: 62.5%;
+    font-style: normal;
+    text-align: center;
+}
+.gd-lvl.is-them em { background: #ededed; color: #3c3c3c; }
+.gd-lvl em small { margin-left: 3px; font: 700 16px/1 var(--font-num); color: #b8401c; }
+
+.gd-hud-right {
+    position: absolute;
+    right: 26px; top: 14px;
+    z-index: 25;
+    display: flex;
+    gap: 16px;
+}
+.gd-round-btn {
+    width: 66px; height: 66px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 34, 32, .34);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #fff;
+    font: 700 15px/1 var(--font-ui);
+    white-space: nowrap;
+}
+.gd-round-btn .gd-ico { width: 30px; height: 30px; }
+.gd-round-btn.is-on { background: rgba(0, 34, 32, .55); box-shadow: inset 0 0 0 3px var(--gold-2); }
+
+/* ☰ menu sheet over a light scrim (tapping the scrim closes it) */
+.gd-menu-host { position: absolute; inset: 0; z-index: 60; }
+.gd-menu-host:empty { display: none; }
+.gd-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .18); animation: gd-fade-in 160ms ease both; }
+.gd-menu {
+    position: absolute;
+    left: 20px; top: 68px;
+    width: max(250px, calc(180px / var(--gd-s, 1)));
+    padding: 8px 0;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 12px;
+    background: #0b3b3f;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .38);
+    animation: gd-menu-in 160ms var(--ease-out) both;
+    transform-origin: 20px 0;
+}
+@keyframes gd-menu-in { from { opacity: 0; scale: .94; } }
+.gd-menu button {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    height: max(54px, calc(44px / var(--gd-s, 1)));
+    padding: 0 20px;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: 700 max(21px, calc(15px / var(--gd-s, 1)))/1 var(--font-ui);
+    text-align: left;
+    white-space: nowrap;
+}
+.gd-menu button + button { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .09); }
+.gd-menu .gd-ico { width: max(28px, calc(20px / var(--gd-s, 1))); height: max(28px, calc(20px / var(--gd-s, 1))); }
+.gd-menu button:active { background: rgba(255, 255, 255, .08); }
+
+/* ---------- 记牌器 (大掼蛋 strip: 2 x 8 cells) and 出牌记录 ---------- */
+.gd-jipai-host { position: absolute; left: 164px; top: 12px; z-index: 24; }
+.gd-jipai {
+    width: 392px;
+    padding: 4px;
+    border-radius: 8px;
+    background: #f4f4f2;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .3);
+    color: #222;
+    animation: gd-menu-in 160ms var(--ease-out) both;
+}
+.gd-jp-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
+.gd-jp-tabs button {
+    flex: 1;
+    height: 30px;
+    border: 0;
+    border-radius: 5px;
+    background: #e2e4e6;
+    color: #6a6f76;
+    font: 700 17px/1 var(--font-ui);
+}
+.gd-jp-tabs button.is-on { background: #fff; color: var(--felt-4); box-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
+.gd-jp-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 1px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: #d9d9d6;
+}
+.gd-jp-cell { display: flex; flex-direction: column; background: #fff; }
+.gd-jp-cell:nth-child(n + 9) { margin-top: 3px; }
+.gd-jp-head {
+    position: relative;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    background: #f7f7f5;
+    color: #1d1d1d;
+    overflow: hidden;
+}
+.gd-jp-head.is-red { color: var(--card-red); }
+.gd-jp-rank { font: 900 27px/1 var(--font-rank); font-stretch: 62.5%; letter-spacing: -.04em; }
+.gd-jp-joker { display: block; width: 26px; height: 30px; }
+.gd-jp-joker .joker-svg { width: 100%; height: 100%; display: block; fill: currentColor; }
+.gd-jp-head:not(.is-red) .joker-svg { color: #2a2a2a; }
+.gd-jp-wild { width: 24px; height: 24px; fill: var(--wild-heart); stroke: var(--wild-heart-edge); stroke-width: 6px; paint-order: stroke fill; }
+.gd-jp-ji {
+    position: absolute;
+    top: 0; right: 0;
+    width: 22px; height: 22px;
+    background: linear-gradient(225deg, var(--ji) 50%, transparent 51%);
+    color: #fff;
+    font: 900 10px/1 var(--font-ui);
+    text-align: right;
+    padding: 2px 2px 0 0;
+}
+.gd-jp-num { height: 34px; font: 700 28px/34px var(--font-num); text-align: center; }
+.gd-jp-num.is-hot { color: #d9241c; }
+.gd-jp-num.is-some { color: #de8a1a; }
+.gd-jp-num.is-none { color: #bdbdbd; }
+.gd-jp-log {
+    list-style: none;
+    margin: 0;
+    padding: 0 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    touch-action: pan-y;
+    font: 500 17px/1.3 var(--font-ui);
+}
+.gd-jp-log li {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 2px 0;
+    border-bottom: 1px solid #e3e3e0;
+}
+.gd-jp-log li:last-child { border-bottom: 0; }
+.gd-jp-log li.is-empty { display: block; padding: 10px 0; color: #8a8f96; text-align: center; }
+.gd-jp-log li > b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* played cards as rank + suit glyphs (the card index in miniature), 不出 as the stroked word */
+.gd-jp-play { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; }
+.gd-jp-play i {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    color: var(--card-black);
+    font: 900 24px/1 var(--font-rank);
+    font-stretch: 62.5%;
+    font-style: normal;
+    letter-spacing: -.04em;
+}
+.gd-jp-play i.is-red { color: var(--card-red); }
+.gd-jp-play i svg { width: 15px; height: 15px; fill: currentColor; }
+.gd-jp-play i .joker-svg { width: 22px; height: 24px; }
+.gd-jp-play .is-pass {
+    color: var(--pass-fill);
+    font: 900 19px/1 var(--font-ui);
+    letter-spacing: .06em;
+    -webkit-text-stroke: 4px var(--pass-stroke);
+    paint-order: stroke fill;
+}
+.gd-jp-play small { color: #7a808a; font: 700 14px/1 var(--font-ui); }
+
+/* ---------- seats ---------- */
+.gd-seat { position: absolute; z-index: 6; }
+.gd-seat.is-p1, .gd-seat.is-p3 {
+    top: 190px;
+    width: 140px;
+    padding: 10px 6px 8px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .14);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.gd-seat.is-p1 { left: 20px; }
+.gd-seat.is-p3 { right: 20px; }
+.gd-seat.is-p2 {
+    left: calc(50% - 52px); top: 6px;
+    padding: 8px 12px 8px 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .14);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.gd-seat.is-p0 {
+    left: 26px; bottom: 6px;
+    z-index: 12;
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    pointer-events: none;
+}
+
+.gd-av {
+    --ring: var(--mate); --ring-d: var(--mate-d);
+    position: relative;
+    flex: none;
+    width: 84px; height: 84px;
+    border: 4px solid var(--ring);
+    border-radius: 50%;
+    background: #dfe6ee;
+}
+.gd-av.is-opp { --ring: var(--opp); --ring-d: var(--opp-d); }
+.gd-seat.is-p0 .gd-av { width: 80px; height: 80px; }
+.gd-av-face, .gd-av-face > * { position: absolute; inset: 0; border-radius: 50%; }
+.gd-av-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gd-av-glyph {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(#fbfcfe, #d6dfeb);
+    color: var(--ink);
+    font: 900 30px/1 var(--font-ui);
+}
+.gd-av-glyph.is-ai { background: linear-gradient(#6d82c9, #3a4c8c); color: #fff; font-size: 38px; }
+.gd-av-glyph.is-empty { background: rgba(255, 255, 255, .25); color: rgba(255, 255, 255, .8); font-size: 24px; }
+.gd-seat.is-done .gd-av-face { opacity: .78; }
+
+.gd-av-tag {
+    position: absolute;
+    left: 50%; bottom: -13px;
+    translate: -50% 0;
+    height: 26px;
+    padding: 0 11px;
+    border-radius: 13px;
+    background: var(--ring-d);
+    color: #fff;
+    font: 700 18px/26px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-av-tag.is-report {
+    padding: 0 7px;
+    border-radius: 5px;
+    background: var(--report-bg);
+    color: var(--report-ink);
+    font-weight: 800;
+    animation: gd-report-pulse 1s ease-in-out infinite;
+}
+.gd-av-tag.is-report b { margin: 0 2px; color: var(--report-num); font: 800 25px/26px var(--font-num); }
+@keyframes gd-report-pulse { 50% { scale: 1.1; } }
+.gd-seat.is-p0 .gd-av-tag { bottom: auto; top: -13px; }
+.gd-av-tag.is-place {
+    padding: 0 12px;
+    border-radius: 5px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    -webkit-text-stroke: 4px rgba(120, 50, 0, .8);
+    paint-order: stroke fill;
+}
+.gd-av-tag.is-warm { background: var(--warm-plate); }
+.gd-av-tag.is-cool { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
+.gd-av-count {
+    position: absolute;
+    top: -6px;
+    min-width: 32px; height: 26px;
+    padding: 0 7px;
+    border-radius: 13px;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    font: 700 21px/26px var(--font-num);
+    text-align: center;
+}
+.gd-seat.is-p1 .gd-av-count, .gd-seat.is-p2 .gd-av-count { left: -14px; }
+.gd-seat.is-p3 .gd-av-count { right: -14px; }
+.gd-first {
+    position: absolute;
+    top: -6px;
+    width: 30px; height: 30px;
+    border-radius: 5px;
+    background: linear-gradient(#ffe9a6, #ffbd45);
+    color: #7a3500;
+    font: 900 20px/30px var(--font-ui);
+    text-align: center;
+}
+.gd-first:lang(en) { width: auto; padding: 0 5px; font-size: 15px; }
+.gd-seat.is-p1 .gd-first, .gd-seat.is-p2 .gd-first { right: -16px; }
+.gd-seat.is-p0 .gd-first { left: -12px; }
+.gd-seat.is-p3 .gd-first { left: -16px; }
+
+.gd-name { min-width: 0; max-width: 128px; text-align: center; }
+.gd-seat.is-p1 .gd-name, .gd-seat.is-p3 .gd-name { margin-top: 16px; }
+.gd-seat.is-p2 .gd-name { text-align: left; max-width: 170px; }
+.gd-seat.is-p0 .gd-name { display: flex; align-items: baseline; gap: 12px; max-width: 320px; margin-bottom: 8px; text-align: left; }
+.gd-name .nm {
+    display: block;
+    overflow: hidden;
+    color: #fff;
+    font: 700 21px/1.25 var(--font-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gd-name .st { display: block; color: #ffe9a6; font: 600 19px/1.25 var(--font-num); white-space: nowrap; }
+
+.gd-seat-extra { display: contents; }
+.gd-public-jokers { display: flex; gap: 4px; margin-top: 6px; --card-w-small: 34px; }
+.gd-seat.is-p2 .gd-public-jokers { margin-top: 0; }
+
+/* other seats' turn: gold alarm clock on the inboard side (tg_table6) */
+.gd-clock {
+    position: absolute;
+    top: 18px;
+    width: 84px; height: 89px;
+    pointer-events: none;
+}
+.gd-seat.is-p1 .gd-clock { left: calc(100% + 12px); }
+.gd-seat.is-p3 .gd-clock { right: calc(100% + 12px); }
+.gd-seat.is-p2 .gd-clock { right: calc(100% + 12px); top: 4px; }
+.gd-seat.is-p0 .gd-clock { position: relative; top: auto; margin-bottom: 4px; }
+.gd-clock svg, .gd-hex svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.gd-clock b, .gd-hex b {
+    position: absolute;
+    left: 0; right: 0;
+    color: #fff;
+    font: 800 36px/1 var(--font-num);
+    text-align: center;
+    paint-order: stroke fill;
+}
+.gd-clock b { top: 36px; -webkit-text-stroke: 3px #9a4a00; }
+.gd-clock.is-free, .gd-hex.is-free { --hands: 1; }
+
+/* ---------- played cards / 不出 at each seat's slot ---------- */
+.gd-slot {
+    position: absolute;
+    z-index: 5;
+    min-height: 109px;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+}
+.gd-slot.is-p2 { left: 0; right: 0; top: 112px; justify-content: center; }
+.gd-slot.is-p1 { left: 176px; top: 196px; }
+.gd-slot.is-p3 { right: 176px; top: 196px; justify-content: flex-end; }
+/* own plays sit at 32% like Tencent, rising only if an unusually tall hand would reach them */
+.gd-slot.is-p0 { left: 0; right: 0; top: min(32%, calc(100% - 55px - var(--hand-h) - 14px - 109px)); justify-content: center; }
+.gd-played { display: flex; }
+.gd-played .card + .card { margin-left: calc(var(--card-w-small) * -.52); }
+.gd-played.is-enter { animation: gd-play-in 200ms var(--ease-out) both; }
+@keyframes gd-play-in { from { opacity: 0; scale: 1.12; } }
+/* combo label over a fresh play: display font, gold gradient, 1.4 -> 1 in 120 ms, hold, fade */
+.gd-combo-label {
+    position: absolute;
+    left: 50%; top: 72%;
+    z-index: 1;
+    translate: -50% -50%;
+    font: 400 64px/1 var(--font-display);
+    white-space: nowrap;
+    background: linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #ff9a1c 70%, #e4480e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 3px 0 #7a1e00) drop-shadow(0 0 1px #7a1e00);
+    opacity: 0;
+    animation: gd-combo-label 820ms linear 150ms both;
+}
+@keyframes gd-combo-label {
+    0% { opacity: 0; scale: 1.4; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    15% { opacity: 1; scale: 1; }
+    76% { opacity: 1; }
+    100% { opacity: 0; scale: 1; }
+}
+.gd-pass-word {
+    color: var(--pass-fill);
+    font: 900 46px/1 var(--font-ui);
+    letter-spacing: .06em;
+    -webkit-text-stroke: 9px var(--pass-stroke);
+    paint-order: stroke fill;
+    text-shadow: 0 4px 0 rgba(0, 0, 0, .22);
+    white-space: nowrap;
+}
+.gd-pass-word.is-enter { animation: gd-pass-in 220ms var(--ease-back) both; }
+@keyframes gd-pass-in { from { opacity: 0; scale: 1.5; } }
+
+/* ---------- hand: 竖排 rank columns (default) or 横排 row ---------- */
+.gd-hand {
+    position: absolute;
+    left: 0; right: 0; bottom: 55px;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+.gd-hand > * { pointer-events: auto; touch-action: none; }
+.gd-cols { display: flex; align-items: flex-end; --card-hover-lift: 0px; }
+.gd-col { display: flex; flex-direction: column; flex: none; }
+.gd-col + .gd-col { margin-left: calc(var(--pitch) - var(--card-w)); }
+.gd-col .card + .card { margin-top: calc(var(--step) - var(--card-w) / .74); }
+.gd-row { display: flex; align-items: flex-end; --card-sel-lift: calc(var(--card-w) / .74 * -.18); }
+.gd-row .card + .card { margin-left: calc(var(--pitch) - var(--card-w)); }
+.gd-row .card.selected::after { background: rgba(70, 110, 230, .16); }
+.gd-cols.is-sorting .gd-col { animation: gd-col-in 300ms var(--ease-back) both; animation-delay: calc(var(--ci) * 42ms); }
+.gd-row.is-sorting .card { animation: gd-col-in 260ms var(--ease-back) both; animation-delay: calc(var(--ci) * 22ms); }
+@keyframes gd-col-in { from { opacity: 0; translate: 0 70px; } }
+
+/* bottom-right pills: 重选 · 理牌 · 横排 */
+.gd-tools {
+    position: absolute;
+    right: 22px; bottom: 6px;
+    z-index: 12;
+    display: flex;
+    gap: 12px;
+}
+.gd-tool {
+    height: 38px;
+    padding: 0 16px 0 12px;
+    border: 0;
+    border-radius: 19px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(#8ea5ff, #6484f4);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .38), inset 0 -3px 0 rgba(30, 40, 150, .22), 0 2px 3px rgba(0, 0, 0, .3);
+    color: #fff;
+    font: 700 20px/1 var(--font-ui);
+    white-space: nowrap;
+}
+.gd-tool .gd-ico { width: 24px; height: 24px; }
+.gd-tool#clear-btn { padding: 0 16px; }
+.gd-tool.is-idle { opacity: .55; }
+
+.gd-spectate { position: absolute; left: 50%; bottom: 90px; translate: -50% 0; z-index: 12; }
+.gd-spectate span {
+    display: block;
+    padding: 8px 24px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .34);
+    font: 700 24px/1.2 var(--font-ui);
+    letter-spacing: .2em;
+}
+
+/* ---------- action row: [不出] [hexagon timer] [提示] [出牌] (dagd_new_ingame) ---------- */
+.gd-actions {
+    position: absolute;
+    left: 0; right: 0; bottom: var(--actions-bottom);
+    z-index: 20;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 22px;
+    pointer-events: none;
+}
+.gd-actions > * { pointer-events: auto; }
+.gd-actions .btn {
+    --btn-h: 78px; --btn-fs: 36px; --btn-px: 26px; --btn-minw: 200px;
+    -webkit-text-stroke: 3px var(--btn-stroke);
+    text-shadow: 0 2px 0 var(--btn-stroke);
+    box-shadow:
+        0 3px 0 rgba(255, 255, 255, .6) inset,
+        0 -5px 0 var(--btn-inset) inset,
+        0 6px 0 var(--btn-edge),
+        0 10px 14px rgba(0, 0, 0, .28);
+}
+.gd-actions .btn::after { top: 5px; opacity: .75; }
+.gd-actions .btn:active:not(.is-disabled) {
+    translate: 0 4px;
+    box-shadow:
+        0 3px 0 rgba(255, 255, 255, .6) inset,
+        0 -5px 0 var(--btn-inset) inset,
+        0 2px 0 var(--btn-edge),
+        0 4px 8px rgba(0, 0, 0, .28);
+}
+.gd-actions .btn:not(.spaced) { --btn-ls: .02em; }
+.gd-actions .btn.is-disabled { cursor: default; }
+#root.action-busy .gd-actions, #root.action-busy .gd-tools { pointer-events: none; }
+.gd-hex { position: relative; flex: none; width: 90px; height: 101px; margin: -14px 0 0; }
+.gd-hex b { top: 44px; -webkit-text-stroke: 6px #4a0a86; }
+.gd-clock.is-3 b, .gd-hex.is-3 b { font-size: 28px; letter-spacing: -.02em; }
+.gd-clock.is-3 b { top: 40px; }
+.gd-hex.is-3 b { top: 48px; }
+.gd-clock.is-danger b, .gd-hex.is-danger b { color: #ffd9d4; -webkit-text-stroke-color: #b3140a; }
+.gd-clock.is-danger, .gd-hex.is-danger { animation: gd-timer-pulse .8s ease-in-out infinite; }
+@keyframes gd-timer-pulse { 50% { scale: 1.1; } }
+
+/* ---------- deal ---------- */
+.gd-deal-host { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+.gd-deal { position: absolute; inset: 0; }
+.gd-deck, .gd-deal-card { position: absolute; left: calc(50% - 32px); top: calc(36% - 43px); width: 64px; height: 86px; }
+.gd-deck { animation: gd-deck-out 260ms ease-in both; animation-delay: calc(var(--deal-left) - 280ms); }
+.gd-deck .gd-back, .gd-deal-card .gd-back { position: absolute; inset: 0; --cw: 64px; }
+.gd-deck .gd-back:nth-child(1) { translate: -3px 3px; }
+.gd-deck .gd-back:nth-child(2) { translate: -1.5px 1.5px; }
+@keyframes gd-deck-out { to { opacity: 0; scale: .8; } }
+/* each flight: the outer box travels (ease-out), the back arcs up, tilts, then shrinks and fades
+   into the seat's inboard edge over the last 30% */
+.gd-deal-card { animation: gd-deal-go 380ms cubic-bezier(.25, .7, .35, 1) both; }
+.gd-deal-card .gd-back { animation: gd-deal-arc 380ms linear both; animation-delay: inherit; }
+@keyframes gd-deal-go { to { translate: var(--tx) var(--ty); } }
+@keyframes gd-deal-arc {
+    0% { opacity: 0; transform: none; }
+    10% { opacity: 1; }
+    40% { transform: translateY(-24px) rotate(calc(var(--r) * .6)); }
+    70% { opacity: 1; transform: translateY(-8px) rotate(var(--r)) scale(.9); }
+    100% { opacity: 0; transform: rotate(var(--r)) scale(.55); }
+}
+
+/* ---------- 首出: the starting card pops up, then shrinks into the leading seat ---------- */
+.gd-first-host { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
+.gd-first-lead {
+    position: absolute;
+    left: 50%; top: 40%;
+    --card-w: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    translate: -50% -50%;
+    animation: gd-first-lead 1500ms linear both;
+}
+.gd-first-lead .card { box-shadow: 0 10px 24px rgba(0, 30, 26, .45); }
+@keyframes gd-first-lead {
+    0% { opacity: 0; transform: scale(.8); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
+    15% { opacity: 1; transform: none; }
+    78% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.35); }
+}
+.gd-first-ribbon {
+    position: relative;
+    margin-top: -24px;
+    padding: 4px 30px 5px;
+    border-radius: 6px;
+    background: var(--warm-plate);
+    box-shadow: 0 3px 0 rgba(120, 50, 0, .35);
+    color: #fff;
+    font: 900 34px/1.1 var(--font-ui);
+    letter-spacing: .3em;
+    text-indent: .3em;
+    -webkit-text-stroke: 6px rgba(140, 56, 0, .85);
+    paint-order: stroke fill;
+    white-space: nowrap;
+}
+.gd-first-ribbon:lang(en) { letter-spacing: .02em; text-indent: 0; font-size: 26px; }
+
+/* ---------- 进贡 / 还贡: the card flies seat to seat under its plate; 抗贡: centre word ---------- */
+.gd-tribute-host { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
+.gd-tribute {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    translate: -50% -50%;
+    animation: gd-tribute 1200ms linear both;
+}
+.gd-tribute .card { box-shadow: 0 6px 14px rgba(0, 30, 26, .4); }
+.gd-tribute span {
+    padding: 3px 12px;
+    border-radius: 5px;
+    background: var(--warm-plate);
+    color: #fff;
+    font: 900 24px/1.2 var(--font-ui);
+    letter-spacing: .12em;
+    -webkit-text-stroke: 4px rgba(120, 50, 0, .8);
+    paint-order: stroke fill;
+    white-space: nowrap;
+}
+.gd-tribute span:lang(en) { letter-spacing: .02em; }
+.gd-tribute.is-back span { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
+@keyframes gd-tribute {
+    0% { opacity: 0; transform: scale(.7); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
+    14% { opacity: 1; transform: none; }
+    32% { transform: none; animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+    80% { opacity: 1; transform: translate(var(--tx), var(--ty)); }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.8); }
+}
+.gd-kanggong {
+    position: absolute;
+    left: 50%; top: 40%;
+    translate: -50% -50%;
+    font: 400 110px/1 var(--font-display);
+    white-space: nowrap;
+    background: linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #ff9a1c 70%, #e4480e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 4px 0 #7a1e00) drop-shadow(0 0 1px #7a1e00);
+    animation: gd-kanggong 1800ms linear both;
+}
+@keyframes gd-kanggong {
+    0% { opacity: 0; scale: 1.4; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    10% { opacity: 1; scale: 1; }
+    82% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* reduced motion: the transient labels still show, as a still frame that fades */
+@media (prefers-reduced-motion: reduce) {
+    .gd-stage .gd-combo-label { animation: gd-still 820ms linear 150ms both !important; }
+    .gd-stage .gd-first-lead, .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation: gd-still 1600ms linear both !important; }
+}
+@keyframes gd-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------- bomb celebration (minimal; the effects package replaces it) ---------- */
+.gd-stage.bomb-shake { animation: gd-shake 250ms linear; }
+@keyframes gd-shake { 20% { translate: 6px 0; } 40% { translate: -6px 0; } 60% { translate: 4px 0; } 80% { translate: -2px 0; } }
+.bomb-fx { position: absolute; left: 50%; top: 40%; z-index: 40; pointer-events: none; }
+.bomb-particle {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    background: linear-gradient(#ffe066, #ff8a1c);
+    animation: gd-bomb-bit 800ms ease-out both;
+}
+@keyframes gd-bomb-bit { to { opacity: 0; translate: calc(var(--px) * 2.2) calc(var(--py) * 2.2); rotate: var(--rot); } }
+.bomb-banner-slot { position: absolute; left: 50%; top: 36%; z-index: 41; translate: -50% -50%; pointer-events: none; }
+.bomb-banner {
+    font: 400 100px/1 var(--font-display);
+    white-space: nowrap;
+    background: linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #ff9a1c 70%, #e4480e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 4px 0 #7a1e00);
+    animation: gd-pop-in 220ms var(--ease-back) both;
+}
+.bomb-banner.hide { opacity: 0; transition: opacity 200ms ease; }
+
+/* ---------- round / match result (interim layout; the results package restyles it) ---------- */
+.gd-result-host { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
+.gd-result-host > * { pointer-events: auto; }
+.phase-backdrop {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 22, 30, .5);
+    animation: gd-fade-in 180ms ease both;
+}
+@keyframes gd-fade-in { from { opacity: 0; } }
+@keyframes gd-pop-in { from { opacity: 0; scale: .88; } }
+.result-ticket {
+    position: relative;
+    width: 780px;
+    padding: 34px 40px 30px;
+    border-radius: 16px;
+    background: linear-gradient(#fdfeff, #e8eff9);
+    box-shadow: 0 16px 40px rgba(0, 10, 40, .45);
+    color: var(--ink);
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 14px 32px;
+    overflow: hidden;
+    animation: gd-pop-in 240ms var(--ease-back) both;
+}
+.result-verdict { grid-row: span 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.result-verdict-label {
+    font: 400 124px/1 var(--font-display);
+    background: linear-gradient(180deg, #fffbe0, #ffe066 40%, #ffae2a 75%, #f07a10);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 3px 0 #8a3a00);
+}
+.result-ticket.lose .result-verdict-label {
+    background-image: linear-gradient(180deg, #f2f6ff, #b9c8e6 45%, #7c8fb8);
+    filter: drop-shadow(0 3px 0 #3a4a70);
+}
+.result-verdict-team { font: 700 22px/1 var(--font-ui); color: var(--ink-2); }
+.result-standings h2 { margin: 0 0 8px; font: 900 32px/1.2 var(--font-ui); }
+.result-standings p { margin: 0 0 12px; color: var(--ink-2); font: 500 19px/1.5 var(--font-ui); }
+.result-standings .tribute-row { font: 700 20px/1.6 var(--font-ui); }
+.result-action { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.result-score { display: flex; align-items: baseline; gap: 12px; }
+.result-score-label { color: var(--ink-3); font: 700 18px/1 var(--font-ui); }
+.result-score-value { color: #d0301c; font: 800 48px/1 var(--font-num); }
+.result-action .btn { --btn-h: 70px; --btn-fs: 28px; --btn-px: 30px; --btn-minw: 230px; }
+.result-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti-piece {
+    position: absolute;
+    top: -24px; left: var(--cx);
+    width: 12px; height: 18px;
+    border-radius: 2px;
+    background: var(--gold-2);
+    animation: gd-confetti var(--cdur) var(--cdelay) ease-in both;
+}
+.confetti-piece:nth-child(3n) { background: #ff6b5a; }
+.confetti-piece:nth-child(3n + 1) { background: #6f8cf6; }
+@keyframes gd-confetti { to { translate: var(--cdx) 560px; rotate: var(--crot); opacity: 0; } }

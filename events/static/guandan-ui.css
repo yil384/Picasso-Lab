@@ -306,20 +306,6 @@ img { max-width: 100%; }
     white-space: nowrap;
 }
 .gd-avatar-tag.gd-badge { height: 15px; bottom: -8px; }
-/* Countdown ring hook kept by name for updateTurnClockDOM(): .turn-ring .turn-ring-fill
-   (r=26 in a 68 viewBox, dasharray 163.4). Screens size and place it. */
-.turn-ring { display: block; overflow: visible; rotate: -90deg; }
-.turn-ring circle { fill: none; stroke-width: 4; }
-.turn-ring-track { stroke: rgba(0, 0, 0, .28); }
-.turn-ring-fill {
-    stroke: var(--gold-2);
-    stroke-linecap: round;
-    stroke-dasharray: 163.4;
-    transition: stroke-dashoffset 1s linear;
-}
-.turn-ring.warn .turn-ring-fill { stroke: #ff9a1c; }
-.turn-ring.danger .turn-ring-fill { stroke: #ff4a3c; }
-
 /* Display-font words (combo labels, 胜利, VS). Static filter only; animate transform/opacity. */
 .gd-display { font-family: var(--font-display); font-weight: 400; }
 .gd-gold-text {
@@ -386,6 +372,10 @@ img { max-width: 100%; }
     letter-spacing: -.04em;
 }
 .gd-rank.is-10 { letter-spacing: -.1em; margin-left: -.03em; }
+/* The condensed serif "J" hooks ~.24em below the baseline, where the next card of a stacked
+   column covers it; squash it from the cap line so the hook sits on the baseline (as Tencent's). */
+.gd-rank.is-j, .rank-j { scale: 1 .77; transform-origin: 50% 15%; }
+.rank-j { display: inline-block; line-height: 1; font-style: normal; }
 .gd-suit { width: calc(var(--cw) * .25); height: calc(var(--cw) * .25); margin-top: calc(var(--cw) * .02); }
 .card.small .gd-ix, .card-ix-v .card .gd-ix {
     left: 4%; top: 4%;
@@ -434,12 +424,13 @@ img { max-width: 100%; }
 }
 .card.small .gd-wild-tag, .card-ix-v .card .gd-wild-tag { bottom: auto; top: calc(var(--cw) * .8); left: calc(var(--cw) * .1); }
 
-/* J/Q/K/A labmate portrait: lower-left body, under the index row, thin suit-colored frame */
+/* J/Q/K/A labmate portrait: lower-left body, thin suit-colored frame. Its top edge stays below
+   the index row including the long descender of the condensed serif "J". */
 .gd-portrait {
     position: absolute;
     left: 7%; bottom: 5.5%;
     width: 55%;
-    height: calc(var(--cw) * .7);
+    height: calc(var(--cw) * .62);
     overflow: hidden;
     border: max(1px, calc(var(--cw) * .018)) solid currentColor;
     border-radius: calc(var(--cw) * .05);
@@ -462,7 +453,10 @@ img { max-width: 100%; }
 .gd-portrait.art-failed .gd-portrait-initials { display: grid; }
 .card.has-portrait .gd-pip { width: calc(var(--cw) * .3); height: calc(var(--cw) * .3); right: 6.5%; }
 .card.has-portrait.wild .gd-portrait { left: 30%; width: 38%; }
-.card.small.has-portrait .gd-portrait, .card-ix-v .card.has-portrait .gd-portrait { left: auto; right: 6%; bottom: 5.5%; width: 46%; height: calc(var(--cw) * .66); }
+.card.small.has-portrait .gd-portrait { left: auto; right: 6%; bottom: 5.5%; width: 46%; height: calc(var(--cw) * .66); }
+/* overlapped rows only show each card's left strip: keep the portrait under the index there */
+.card-ix-v .card.has-portrait .gd-portrait { left: 6%; bottom: 5%; width: 38%; height: calc(var(--cw) * .5); }
+.card-ix-v .card.has-portrait.wild .gd-portrait { display: none; }
 .card.small.has-portrait .gd-pip, .card-ix-v .card.has-portrait .gd-pip { display: none; }
 
 /* Jokers: vertical JOKER + the joker figure; red = 大王, black = 小王 */

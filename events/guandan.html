@@ -143,8 +143,6 @@ let aiTimer = null;
 let turnDeadlineTimer = null;
 let turnRenderTimer = null;
 let actionBusy = false;
-let suppressNextCardClick = false;
-let cardDragState = { id: "", moved: false };
 let handOrderState = { key: "", ids: [] };
 
 // Storage can throw (blocked third-party storage in the Google Sites iframe, private modes);
@@ -281,11 +279,20 @@ function updateTopbarStatus() {
     hudStatusEl.innerHTML = html;
 }
 
+// On the table the toast lives inside the (possibly rotated) stage; elsewhere it is #toast.
 function showToast(text, duration = 1700) {
-    toastEl.textContent = text;
-    toastEl.classList.add("show");
+    const el = tableView.toast?.isConnected ? tableView.toast : toastEl;
+    if (el !== toastEl) toastEl.classList.remove("show");
+    el.textContent = text;
+    el.classList.add("show");
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => toastEl.classList.remove("show"), duration);
+    showToast._t = setTimeout(() => el.classList.remove("show"), duration);
+}
+
+function hideToast() {
+    clearTimeout(showToast._t);
+    toastEl.classList.remove("show");
+    tableView.toast?.classList.remove("show");
 }
 
 function showReturnTypeHint() {
@@ -419,10 +426,6 @@ function iconHTML(name, extraClass = "") {
     return `<svg class="ui-icon ${extraClass}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${icons[name] || ""}</svg>`;
 }
 
-function iconLabel(icon, text) {
-    return `<span class="ui-icon-label">${iconHTML(icon)}<span>${encodeHTML(text)}</span></span>`;
-}
-
 function rankLabel(rank) {
     return rank;
 }
@@ -491,7 +494,8 @@ function displayCardTextFromMessage(text) {
 }
 
 function displayMessage(message) {
-    const text = localizeStoredNames(message);
+    // Stored round-start messages carry the raw starting card ("起始牌：C3"); show it as ♣3.
+    const text = localizeStoredNames(message).replace(/起始牌：([SHDC])(10|[2-9JQKA])/, (_, suit, rank) => `起始牌：${suitGlyph[suit]}${rank}`);
     if (isZH() || !text) return text;
     let m;
     if (text === "等待队友入座。") return "Waiting for players to take seats.";
@@ -501,6 +505,7 @@ function displayMessage(message) {
     if ((m = text.match(/^(.+) 入座。$/))) return `${displayNameText(m[1])} took a seat.`;
     if ((m = text.match(/^(.+) 加入对局。$/))) return `${displayNameText(m[1])} joined the table.`;
     if ((m = text.match(/^(.+) 从 (.+) 开始打。$/))) return `${displayNameText(m[1])} starts from ${m[2]}.`;
+    if ((m = text.match(/^第 (\d+) 局开始，打 (.+?)。起始牌：(.+)$/))) return `Round ${m[1]} started. Level rank: ${m[2]}. Starting card: ${m[3]}.`;
     if ((m = text.match(/^第 (\d+) 局开始，打 (.+)。$/))) return `Round ${m[1]} started. Level rank: ${m[2]}.`;
     if ((m = text.match(/^第 (\d+) 局 · (.+)$/))) return `Round ${m[1]} · ${m[2].split("；").map(displayMessage).join("; ")}`;
     if ((m = text.match(/^双贡：(.+) 进贡 (.+) 给 (.+)，(.+) 还贡 (.+)$/))) return `Double tribute: ${displayNameText(m[1])} tributes ${displayCardTextFromMessage(m[2])} to ${displayNameText(m[3])}; ${displayNameText(m[4])} returns ${displayCardTextFromMessage(m[5])}.`;
@@ -619,7 +624,7 @@ function cardHTML(card, small = false, selectable = false, extraAttrs = "", extr
     const attrs = [selectable ? `data-card-id="${encodeHTML(card.id)}"` : "", extraAttrs].filter(Boolean).join(" ");
     const index = card.joker
         ? ""
-        : `<span class="gd-ix" aria-hidden="true"><b class="gd-rank${card.rank === "10" ? " is-10" : ""}">${rankLabel(card.rank)}</b>${suitSvgHTML(card.suit, "gd-suit")}</span>`;
+        : `<span class="gd-ix" aria-hidden="true"><b class="gd-rank${card.rank === "10" ? " is-10" : card.rank === "J" ? " is-j" : ""}">${rankLabel(card.rank)}</b>${suitSvgHTML(card.suit, "gd-suit")}</span>`;
     return `<div class="${classes}" ${attrs} title="${encodeHTML(title)}" aria-label="${encodeHTML(title)}">${index}${cardBodyHTML(card, portrait)}${isLevel ? `<span class="gd-ji" aria-hidden="true">${L("LV", "级")}</span>` : ""}${wild ? `<span class="gd-wild-tag" aria-hidden="true">${L("WILD", "逢人配")}</span>` : ""}${overlayHTML}</div>`;
 }
 
@@ -629,12 +634,6 @@ function initials(name, fallback = "P") {
     const parts = clean.split(/\s+/).filter(Boolean);
     if (parts.length > 1) return parts.slice(0, 2).map(p => p[0]).join("").toUpperCase();
     return clean.slice(0, 2).toUpperCase();
-}
-
-// Avatar rank-tier ring: bronze (2-4) / silver (5-8) / gold (9-J) / diamond (Q-A).
-function levelTier(lv) {
-    const n = rankBase(lv || "2");
-    return n <= 4 ? "bronze" : n <= 8 ? "silver" : n <= 11 ? "gold" : "diamond";
 }
 
 // Reuse the same labmate photo pool already wired for card-face portraits
@@ -653,55 +652,6 @@ function seatMemberPhoto(name) {
         if (clean === pname || clean.includes(pname) || pname.includes(clean)) return p.avatar;
     }
     return null;
-}
-
-function sortHandForDisplay(cards, levelRank) {
-    return [...cards].sort((a, b) => {
-        const pa = a.joker ? jokerPower(a) : rankPower(a.rank, levelRank);
-        const pb = b.joker ? jokerPower(b) : rankPower(b.rank, levelRank);
-        if (pa !== pb) return pa - pb;
-        const sa = suits.indexOf(a.suit || "S");
-        const sb = suits.indexOf(b.suit || "S");
-        return sa - sb || a.id.localeCompare(b.id);
-    });
-}
-
-function handOrderKey(seat, g = game) {
-    return `${roomCode || g?.roomCode || ""}:${g?.roundNo || 0}:${g?.dealStartedAt || 0}:${seat}`;
-}
-
-function orderedHandForDisplay(cards, levelRank, seat) {
-    const sorted = sortHandForDisplay(cards, levelRank);
-    const key = handOrderKey(seat);
-    const sortedIds = sorted.map(c => c.id);
-    if (handOrderState.key !== key) {
-        handOrderState = { key, ids: sortedIds };
-        return sorted;
-    }
-    const liveIds = new Set(sortedIds);
-    const nextIds = handOrderState.ids.filter(id => liveIds.has(id));
-    const seen = new Set(nextIds);
-    for (const card of sorted) {
-        if (!seen.has(card.id)) nextIds.push(card.id);
-    }
-    handOrderState.ids = nextIds;
-    const byId = new Map(cards.map(c => [c.id, c]));
-    return nextIds.map(id => byId.get(id)).filter(Boolean);
-}
-
-function moveHandCard(dragId, targetId, before) {
-    if (!dragId || !targetId || dragId === targetId) return false;
-    const seat = mySeat();
-    if (seat < 0) return false;
-    orderedHandForDisplay(game.hands[seat] || [], game.currentLevelRank, seat);
-    const ids = handOrderState.ids.filter(id => id !== dragId);
-    const targetIndex = ids.indexOf(targetId);
-    if (targetIndex < 0) return false;
-    ids.splice(targetIndex + (before ? 0 : 1), 0, dragId);
-    handOrderState.ids = ids;
-    suppressNextCardClick = true;
-    renderTable();
-    return true;
 }
 
 function makeDeck() {
@@ -867,7 +817,6 @@ function attachRoom(code) {
     if (unsubscribe) unsubscribe();
     unsubscribe = onValue(roomRef(code), (snap) => {
         game = normalizeGame(snap.val());
-        selected.clear();
         hintAdvisor = null;
         syncDealAnimation();
         render();
@@ -1001,13 +950,6 @@ function turnRemainingMs(g = game) {
     return Math.max(0, TURN_LIMIT_MS - (Date.now() - started));
 }
 
-function formatClock(ms) {
-    const safe = Math.max(0, Math.ceil(ms / 1000));
-    const m = Math.floor(safe / 60);
-    const s = String(safe % 60).padStart(2, "0");
-    return `${m}:${s}`;
-}
-
 function scheduleTurnClock() {
     clearTurnTimers();
     if (!game || !turnLimitApplies(game)) return;
@@ -1022,24 +964,19 @@ function scheduleTurnClock() {
     turnRenderTimer = setTimeout(scheduleTurnClock, Math.min(1000, remaining + 80));
 }
 
+// Every visible turn timer ([data-turn-clock]: my purple hexagon or another seat's alarm clock)
+// shows whole seconds; the untimed opening lead shows clock hands instead. <=10 s pulses red.
 function updateTurnClockDOM() {
-    const el = document.getElementById("turn-clock");
-    if (!el || !game) return;
+    if (!game) return;
     const remaining = turnRemainingMs(game);
-    el.textContent = remaining == null ? (isOpeningLead(game) ? L("No limit", "不限时") : "--") : formatClock(remaining);
-    el.classList.toggle("warn", remaining != null && remaining <= 60000 && remaining > 30000);
-    el.classList.toggle("danger", remaining != null && remaining <= 30000);
-    // Keep the current-turn seat's avatar turn-ring in sync with the same
-    // numeric clock tick (reuses turnRemainingMs + the identical warn/danger
-    // thresholds above) so the ring animates in real time between full renders.
-    const ring = document.querySelector(".player.turn .turn-ring");
-    if (ring) {
-        const frac = remaining == null ? 0 : Math.max(0, Math.min(1, remaining / TURN_LIMIT_MS));
-        const fill = ring.querySelector(".turn-ring-fill");
-        if (fill) fill.style.strokeDashoffset = String((1 - frac) * 163.4);
-        ring.classList.toggle("warn", remaining != null && remaining <= 60000 && remaining > 30000);
-        ring.classList.toggle("danger", remaining != null && remaining <= 30000);
-    }
+    const secs = remaining == null ? "" : String(Math.ceil(remaining / 1000));
+    document.querySelectorAll("[data-turn-clock]").forEach(el => {
+        const num = el.querySelector("b");
+        if (num && num.textContent !== secs) num.textContent = secs;
+        el.classList.toggle("is-free", remaining == null);
+        el.classList.toggle("is-3", secs.length > 2);
+        el.classList.toggle("is-danger", remaining != null && remaining <= 10000);
+    });
 }
 
 async function takeSeat(index) {
@@ -1565,7 +1502,7 @@ async function hintMove() {
     const lang = uiLang;
     const token = ++hintClickToken;
     const hand = game.hands[seat] || [];
-    const previousHint = activeHintForSelection(hand.filter(c => selected.has(c.id)), true);
+    const previousHint = hintAdvisor?.pass ? hintAdvisor : activeHintForSelection(hand.filter(c => selected.has(c.id)), true);
     let thinkingShown = false;
     const thinkingTimer = setTimeout(() => {
         thinkingShown = true;
@@ -1581,7 +1518,7 @@ async function hintMove() {
         clearTimeout(thinkingTimer);
     }
     if (token !== hintClickToken || !sameTurnState(game, snapshot) || mySeat() !== seat) {
-        if (thinkingShown && token === hintClickToken) toastEl.classList.remove("show");
+        if (thinkingShown && token === hintClickToken) hideToast();
         return;
     }
     if (!packet?.options?.length) return showToast(L("No useful suggestion found.", "暂时没有可用提示。"));
@@ -1590,23 +1527,21 @@ async function hintMove() {
         : 0;
     const advice = packet.options[nextIndex];
     const ids = advice.move?.cards?.map(c => c.id) || [];
-    selected = new Set(ids);
-    hintAdvisor = {
-        ids,
-        text: hintTextWithOrdinal(advice.text, nextIndex, packet.options.length),
-        detail: advice.detail || "",
-        className: "hint",
-        signature: packet.signature,
-        index: nextIndex,
-        total: packet.options.length
-    };
+    const pass = !ids.length;
+    hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: packet.options.length, pass, turn: turnStateKey() };
+    // Like Tencent's 提示: a suggestion is simply selected in the hand, no advisor text. Pass advice
+    // (partner owns the trick, or pressing costs too much) keeps the selection, lights up 不出 and
+    // says so in two words; the next press moves on to the backup press if there is one.
+    if (pass) showToast(L("Pass suggested", "建议不出"), 1300);
+    else {
+        selected = new Set(ids);
+        if (thinkingShown) hideToast();
+    }
     render();
-    showToast(hintAdvisor.text, 2800);
 }
 
-function hintTextWithOrdinal(text, index, total) {
-    if (total <= 1) return text;
-    return isZH() ? `提示 ${index + 1}/${total} · ${text}` : `Hint ${index + 1}/${total} · ${text}`;
+function turnStateKey(g = game) {
+    return `${g?.roomCode || roomCode}:${Number(g?.revision) || 0}:${g?.currentTurn}`;
 }
 
 function activeHintForSelection(selectedCards, canAct) {
@@ -2474,34 +2409,856 @@ function visualSeatPos(i, mine) {
     return mine >= 0 ? (i - mine + 4) % 4 : i;
 }
 
+// Spectators watch from seat 0, so relations are taken from that seat.
 function relationForSeat(i, mine) {
-    if (mine < 0) return { key: "neutral", label: teamName(i % 2) };
-    if (i === mine) return { key: "self", label: L("You", "自己") };
-    if (i % 2 === mine % 2) return { key: "ally", label: L("Teammate", "队友") };
-    return { key: "opponent", label: L("Opponent", "对手") };
+    const view = mine >= 0 ? mine : 0;
+    if (i === view) return { key: "self", label: L("You", "自己") };
+    if (i % 2 === view % 2) return { key: "ally", label: L("Partner", "队友") };
+    return { key: "opponent", label: L("Rival", "对手") };
 }
 
-function handBacksHTML(count, className = "") {
-    return Array.from({ length: Math.min(27, Math.max(0, count)) })
-        .map((_, idx) => cardHTML({ back: true }, false, false, `style="--i:${idx};--fan:${idx - Math.min(27, count) / 2}"`, className))
-        .join("");
+// ============================ in-game table ============================
+// Fixed-height design stage (Cocos FIXED_HEIGHT, as Tencent's H5 builds scale): the table is laid
+// out in design px on a stage 720 high and >= 1280 wide, scaled by one transform; portrait phones
+// get the stage rotated 90deg. The skeleton is built once per mount and renderTable() rewrites a
+// region only when its key changes, so selections, slide gestures and entry animations survive
+// Firebase ticks.
+const STAGE_H = 720;
+const STAGE_MIN_W = 1280;
+const HAND_CARD_W = 102;                    // 102 x 138: 19.1% of the stage height
+const HAND_CARD_H = HAND_CARD_W / .74;
+const HAND_BOTTOM = 55;                     // hand bottom edge, 7.6% of 720
+const HAND_STEP = .35;                      // same-rank stack step, share of the card height
+const HAND_MIN_STEP = .25;                  // tall columns compress down to this
+const HAND_MIN_PITCH = .93;                 // columns never cover more than 7% of a card (Tencent: ~1px gap)
+const HAND_MIN_SCALE = .75;                 // before that, hand cards shrink down to this
+const ACTION_ROW_TOP = 312;                 // action row never rises into the side seats' played cards (196 + 109)
+const ACTION_ROW_H = 87;                    // pills 78 + the hexagon's crown
+const ACTION_ROW_GAP = 20;                  // between the row and the tallest hand column
+const COLUMN_SUIT_DEPTH = { D: 0, C: 1, H: 2, S: 3 };  // 方块 on top of a column, 黑桃 in front
+const PLACE_LABELS = { zh: ["头游", "二游", "三游", "末游"], en: ["1st", "2nd", "3rd", "4th"] };
+const JIPAI_ORDER = ["wild", "RJ", "BJ", "A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
+
+const tableView = {
+    viewport: null, rot: null, stage: null, probe: null, ui: null, toast: null,
+    regions: {}, keys: {}, seats: [], avatars: [],
+    cardEls: new Map(),
+    handCardW: HAND_CARD_W,
+    layout: { s: 1, w: STAGE_MIN_W, h: STAGE_H, rotated: false, left: 0, top: 0, vw: 0 },
+    menuOpen: false,
+    jipaiTab: "count",
+    seenPlays: new Set(),
+    lastMessage: null,
+    leader: { key: "", seat: -1 }
+};
+let handMode = storageGet("picasso.guandan.handMode") === "row" ? "row" : "col";
+let jipaiOpen = storageGet("picasso.guandan.jipai") === "on";
+let handGroups = { key: "", groups: [] };
+let selectionKey = "";
+let handSlide = null;
+let noBeatMemo = { key: "", value: false };
+let stageLayoutFrame = 0;
+
+// Filled two-tone glyphs for the round HUD buttons and the ☰ menu (no stroke icon set).
+const TABLE_ICONS = {
+    rules: `<path fill="#fff" d="M8 3h11l7 7v17a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path fill="#bfe3de" d="M19 3v5a2 2 0 0 0 2 2h5Z"/><path fill="#0b6b62" d="M10 14h12v2.4H10zm0 4.8h12v2.4H10zm0 4.8h8V26h-8z"/>`,
+    tracker: `<rect x="3.5" y="7" width="15" height="21" rx="2.5" fill="#cfe7e3" transform="rotate(-12 11 17.5)"/><rect x="12" y="4" width="16" height="23" rx="2.5" fill="#fff"/><path fill="#d8262a" d="M20 22c-.5-.6-5-3.9-5-6.9 0-1.6 1.2-2.8 2.7-2.8 1 0 1.8.5 2.3 1.3.5-.8 1.3-1.3 2.3-1.3 1.5 0 2.7 1.2 2.7 2.8 0 3-4.5 6.3-5 6.9Z"/>`,
+    invite: `<circle cx="12.5" cy="10" r="5.5" fill="#fff"/><path fill="#fff" d="M2.5 27c0-5.6 4.5-9.6 10-9.6s10 4 10 9.6Z"/><path fill="#ffd66b" d="M24 10h3v4h4v3h-4v4h-3v-4h-4v-3h4Z"/>`,
+    lang: `<rect x="3" y="4" width="26" height="24" rx="6" fill="#fff"/><path fill="#0b6b62" d="M14.6 7.5h2.8v2.8h6.1v2.5h-1.6c-.7 2.6-2 4.8-3.8 6.5 1.6 1.1 3.5 1.9 5.7 2.4l-1 2.6c-2.6-.7-4.8-1.7-6.7-3.2-1.9 1.4-4.2 2.5-6.9 3.2l-1-2.5c2.2-.6 4.1-1.4 5.7-2.5-1.5-1.5-2.7-3.3-3.4-5.4l2.6-.7c.5 1.6 1.4 2.9 2.6 4.1 1.3-1.3 2.2-2.9 2.8-4.9H8.5v-2.5h6.1Z"/>`,
+    music: `<path fill="#fff" d="M12 7.5 27 4v17.5a4.5 4.5 0 1 1-3-4.2V9.8l-9 2.1v11.7a4.5 4.5 0 1 1-3-4.2Z"/>`,
+    table: `<circle cx="16" cy="16" r="13" fill="#fff"/><path fill="#0b6b62" d="M14.5 9h3v5.5H23v3h-5.5V23h-3v-5.5H9v-3h5.5Z"/>`,
+    exit: `<path fill="#fff" d="M5 4h13a2 2 0 0 1 2 2v5h-3V7H8v18h9v-4h3v5a2 2 0 0 1-2 2H5Z"/><path fill="#ffd66b" d="m21 9.5 7.5 6.5-7.5 6.5v-4.3h-8v-4.4h8Z"/>`
+};
+// Rank text outside the card index (tracker, level tiles, play log): same J squash as the cards.
+function rankGlyphHTML(rank) {
+    return rank === "J" ? `<i class="rank-j">J</i>` : encodeHTML(rank);
 }
 
-function displayCardsForCombo(cards = [], combo = null) {
-    return engineDisplayCardsForCombo(cards, combo, game?.currentLevelRank || "2");
+function tableIcon(name) {
+    return `<svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${TABLE_ICONS[name] || ""}</svg>`;
 }
 
-function playedCardsHTML(cards = [], relation = null, combo = null) {
-    const displayCards = displayCardsForCombo(cards, combo);
-    const band = relation ? `<span class="relation-band relation-${relation.key}"><span>${encodeHTML(relation.label)}</span></span>` : "";
-    return `<div class="trick-card-stack"><div class="trick-card-row">${displayCards.map((card, idx) => cardHTML(
-        card,
-        true,
-        false,
-        `style="--i:${idx}"`,
-        idx === displayCards.length - 1 && band ? "relation-anchor" : "",
-        idx === displayCards.length - 1 ? band : ""
-    )).join("")}</div></div>`;
+// Timer art: the purple crowned hexagon (own turn, 大掼蛋 2026) and the gold alarm clock
+// (other seats, 腾讯掼蛋). Gradients live once in the stage; --hands shows the clock hands
+// instead of seconds on the untimed opening lead.
+const TABLE_DEFS_HTML = `<svg class="gd-defs" aria-hidden="true" focusable="false">
+    <defs>
+        <linearGradient id="gd-g-hex" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d98bff"/><stop offset=".5" stop-color="#a23cf0"/><stop offset="1" stop-color="#6a06c4"/></linearGradient>
+        <linearGradient id="gd-g-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff5bd"/><stop offset=".45" stop-color="#ffd66b"/><stop offset="1" stop-color="#d8911c"/></linearGradient>
+        <radialGradient id="gd-g-face" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#ffd35a"/><stop offset=".65" stop-color="#f7a21c"/><stop offset="1" stop-color="#e27d0b"/></radialGradient>
+        <linearGradient id="gd-g-bell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfcfd"/><stop offset="1" stop-color="#a3acb6"/></linearGradient>
+    </defs>
+    <symbol id="gd-sym-hex" viewBox="0 0 100 112">
+        <path d="M24 33 17 9l17 12L50 3l16 18 17-12-7 24Z" fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M50 21 87 42.5v43L50 107 13 85.5v-43Z" fill="url(#gd-g-hex)" stroke="url(#gd-g-gold)" stroke-width="6" stroke-linejoin="round"/>
+        <path d="M50 30 79 47v13c-17-7-41-7-58 0V47Z" fill="#fff" opacity=".24"/>
+        <path d="M50 64V47M50 64l12 7" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" style="opacity:var(--hands,0)"/>
+    </symbol>
+    <symbol id="gd-sym-clock" viewBox="0 0 100 106">
+        <path d="M7 31C4 18 13 7 27 8Z" fill="url(#gd-g-bell)" stroke="#78818c" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M93 31C96 18 87 7 73 8Z" fill="url(#gd-g-bell)" stroke="#78818c" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="m27 93-8 9M73 93l8 9" stroke="#8d96a1" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="50" cy="57" r="42" fill="url(#gd-g-gold)" stroke="#b8660c" stroke-width="3"/>
+        <circle cx="50" cy="57" r="33" fill="url(#gd-g-face)"/>
+        <path d="M31 40c9-10 29-10 38 0" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+        <path d="M50 58V40M50 58l12 8" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" style="opacity:var(--hands,0)"/>
+    </symbol>
+</svg>`;
+
+function ensureTableSkeleton() {
+    const t = tableView;
+    if (t.viewport?.isConnected) return false;
+    const seatHTML = pos => `<div class="gd-seat is-p${pos}">
+            <div class="gd-av"><span class="gd-av-face" data-region="face${pos}"></span><span class="gd-av-deco" data-region="deco${pos}"></span></div>
+            <div class="gd-name" data-region="name${pos}"></div>
+            <div class="gd-seat-extra" data-region="extra${pos}"></div>
+        </div>`;
+    root.innerHTML = `<div class="gd-viewport">
+        <i class="gd-safe-probe" aria-hidden="true"></i>
+        <div class="gd-rot">
+            <div class="gd-stage">
+                ${TABLE_DEFS_HTML}
+                <div class="gd-bottombar" aria-hidden="true"></div>
+                <div class="gd-watermark" data-region="watermark" aria-hidden="true"></div>
+                ${[2, 1, 3, 0].map(p => `<div class="gd-slot is-p${p}" data-region="slot${p}"></div>`).join("")}
+                ${[2, 1, 3].map(seatHTML).join("")}
+                <div class="gd-hand" data-region="hand"></div>
+                ${seatHTML(0)}
+                <div class="gd-tools" data-region="tools"></div>
+                <div class="gd-spectate" data-region="spectate"></div>
+                <div class="gd-actions" data-region="actions"></div>
+                <div class="gd-hud" data-region="hud"></div>
+                <div class="gd-hud-right" data-region="hudRight"></div>
+                <div class="gd-jipai-host" data-region="jipai"></div>
+                <div class="gd-deal-host" data-region="deal" aria-hidden="true"></div>
+                <div class="gd-first-host" data-region="firstLead" aria-hidden="true"></div>
+                <div class="gd-tribute-host" data-region="tribute" aria-hidden="true"></div>
+                <div class="bomb-fx" aria-hidden="true"></div>
+                <div class="bomb-banner-slot" aria-hidden="true"></div>
+                <div class="gd-result-host" data-region="result"></div>
+                <div class="gd-menu-host" data-region="menu"></div>
+            </div>
+            <div class="gd-ui-layer"><div class="toast gd-stage-toast" role="status" aria-live="polite"></div></div>
+        </div>
+    </div>`;
+    t.viewport = root.querySelector(".gd-viewport");
+    t.rot = t.viewport.querySelector(".gd-rot");
+    t.stage = t.viewport.querySelector(".gd-stage");
+    t.probe = t.viewport.querySelector(".gd-safe-probe");
+    t.ui = t.viewport.querySelector(".gd-ui-layer");
+    t.toast = t.ui.querySelector(".gd-stage-toast");
+    t.regions = {};
+    t.stage.querySelectorAll("[data-region]").forEach(el => { t.regions[el.dataset.region] = el; });
+    t.seats = [0, 1, 2, 3].map(pos => t.stage.querySelector(`.gd-seat.is-p${pos}`));
+    t.avatars = t.seats.map(el => el.querySelector(".gd-av"));
+    t.keys = {};
+    t.cardEls = new Map();
+    t.menuOpen = false;
+    handSlide = null;
+    t.stage.addEventListener("click", onTableClick);
+    t.stage.addEventListener("pointerdown", onTablePointerDown);
+    t.stage.addEventListener("contextmenu", event => event.preventDefault());
+    const hand = t.regions.hand;
+    hand.addEventListener("pointerdown", onHandPointerDown);
+    hand.addEventListener("pointermove", onHandPointerMove);
+    hand.addEventListener("pointerup", onHandPointerUp);
+    hand.addEventListener("pointercancel", onHandPointerUp);
+    layoutStage();
+    return true;
+}
+
+// Scale the stage into the viewport, keeping the in-game UI out of the notch/home-indicator insets
+// while the felt still bleeds edge to edge. Portrait phones, and portrait touch tablets, get it
+// rotated 90deg (turning the device to landscape removes the rotation). A portrait window that
+// stays upright (desktop) would get a very tall stage: it is capped at 4:3 and letterboxed on the
+// floor colour instead of stretching the felt.
+const STAGE_MAX_ASPECT = .75;
+const coarsePointer = window.matchMedia?.("(pointer: coarse)");
+function layoutStage() {
+    const t = tableView;
+    if (!t.rot?.isConnected) return false;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const rotated = vw < vh && (Math.max(vw, vh) <= 1024 || !!coarsePointer?.matches);
+    const lw = rotated ? vh : vw;
+    const lh = rotated ? vw : vh;
+    const cs = getComputedStyle(t.probe);
+    const left = parseFloat(rotated ? cs.paddingTop : cs.paddingLeft) || 0;
+    const right = parseFloat(rotated ? cs.paddingBottom : cs.paddingRight) || 0;
+    const aw = Math.max(1, lw - left - right);
+    const s = Math.min(lh / STAGE_H, aw / STAGE_MIN_W);
+    const w = aw / s;
+    const h = Math.min(lh / s, w * STAGE_MAX_ASPECT);
+    const rh = h * s;
+    const top = rotated ? 0 : Math.round((lh - rh) / 2);
+    t.rot.style.width = `${lw}px`;
+    t.rot.style.height = `${rh}px`;
+    t.rot.style.transform = rotated ? `translate(${vw}px, 0) rotate(90deg)` : top ? `translate(0, ${top}px)` : "";
+    t.rot.style.setProperty("--gd-s", s.toFixed(4));
+    t.stage.style.width = `${w}px`;
+    t.stage.style.height = `${h}px`;
+    t.stage.style.transform = `translate(${left}px, 0) scale(${s})`;
+    t.viewport.classList.toggle("is-rotated", rotated);
+    const changed = Math.abs(w - t.layout.w) > .5 || Math.abs(h - t.layout.h) > .5;
+    t.layout = { s, w, h, rotated, left, top, vw };
+    return changed;
+}
+
+function scheduleStageLayout() {
+    if (stageLayoutFrame) return;
+    stageLayoutFrame = requestAnimationFrame(() => {
+        stageLayoutFrame = 0;
+        if (layoutStage() && game && document.body.dataset.screen === "table") renderTable();
+    });
+}
+
+// Viewport point -> stage design px (inverse of the transforms set in layoutStage).
+function stagePoint(x, y) {
+    const { s, rotated, left, top, vw } = tableView.layout;
+    return rotated ? { x: (y - left) / s, y: (vw - x) / s } : { x: (x - left) / s, y: (y - top) / s };
+}
+
+// Rewrites one region only when its key changed; `html` may be a builder so unchanged regions
+// cost nothing. Returns true when the region was rewritten.
+function setRegion(name, key, html = key) {
+    const el = tableView.regions[name];
+    if (!el || tableView.keys[name] === key) return false;
+    tableView.keys[name] = key;
+    el.innerHTML = typeof html === "function" ? html() : html;
+    return true;
+}
+
+function cardPower(card, levelRank) {
+    return card.joker ? jokerPower(card) : rankPower(card.rank, levelRank);
+}
+
+// 理牌 groups, keyed to the current deal so they never leak into the next hand.
+function liveHandGroups(cards, seat) {
+    const key = handOrderKey(seat);
+    if (handGroups.key !== key) handGroups = { key, groups: [] };
+    const live = new Set(cards.map(c => c.id));
+    handGroups.groups = handGroups.groups.map(ids => ids.filter(id => live.has(id))).filter(ids => ids.length);
+    return handGroups.groups;
+}
+
+// Tencent 竖排: one column per rank, jokers far left, high -> low; same-rank cards stack with
+// 方块 on top and 黑桃 in front. Each 理牌 group is its own column at the right end.
+function handColumns(cards, levelRank, seat) {
+    const groups = liveHandGroups(cards, seat);
+    const grouped = new Set(groups.flat());
+    const buckets = new Map();
+    for (const card of cards) {
+        if (grouped.has(card.id)) continue;
+        const key = card.joker || card.rank;
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(card);
+    }
+    const depth = (a, b) => (COLUMN_SUIT_DEPTH[a.suit] ?? 0) - (COLUMN_SUIT_DEPTH[b.suit] ?? 0) || a.id.localeCompare(b.id);
+    const columns = [...buckets.values()]
+        .sort((a, b) => cardPower(b[0], levelRank) - cardPower(a[0], levelRank))
+        .map(list => ({ key: list[0].joker || list[0].rank, cards: list.sort(depth) }));
+    const byId = new Map(cards.map(c => [c.id, c]));
+    groups.forEach((ids, gi) => {
+        const list = ids.map(id => byId.get(id)).filter(Boolean);
+        const combo = choosePlayable(list, null, levelRank);
+        const stacked = combo
+            ? displayCardsForCombo(list, combo).reverse()
+            : list.sort((a, b) => cardPower(b, levelRank) - cardPower(a, levelRank));
+        columns.push({ key: `g${gi}`, group: true, cards: stacked });
+    });
+    return columns;
+}
+
+function handOrderKey(seat, g = game) {
+    return `${roomCode || g?.roomCode || ""}:${g?.roundNo || 0}:${g?.dealStartedAt || 0}:${seat}`;
+}
+
+// 横排 row order: the columns read left to right (front card first), then any drag reorders.
+function orderedHandForDisplay(cards, levelRank, seat) {
+    const sorted = handColumns(cards, levelRank, seat).flatMap(col => [...col.cards].reverse());
+    const key = handOrderKey(seat);
+    const sortedIds = sorted.map(c => c.id);
+    if (handOrderState.key !== key) {
+        handOrderState = { key, ids: sortedIds };
+        return sorted;
+    }
+    const liveIds = new Set(sortedIds);
+    const nextIds = handOrderState.ids.filter(id => liveIds.has(id));
+    const seen = new Set(nextIds);
+    for (const card of sorted) {
+        if (!seen.has(card.id)) nextIds.push(card.id);
+    }
+    handOrderState.ids = nextIds;
+    const byId = new Map(cards.map(c => [c.id, c]));
+    return nextIds.map(id => byId.get(id)).filter(Boolean);
+}
+
+function moveHandCard(dragId, targetId, before) {
+    if (!dragId || !targetId || dragId === targetId) return false;
+    const seat = mySeat();
+    if (seat < 0) return false;
+    orderedHandForDisplay(game.hands[seat] || [], game.currentLevelRank, seat);
+    const ids = handOrderState.ids.filter(id => id !== dragId);
+    const targetIndex = ids.indexOf(targetId);
+    if (targetIndex < 0) return false;
+    ids.splice(targetIndex + (before ? 0 : 1), 0, dragId);
+    handOrderState.ids = ids;
+    renderTable();
+    return true;
+}
+
+// Column mode: the pitch shrinks to fit the stage width down to HAND_MIN_PITCH, tall columns
+// compress their step so the hand stays under the action row, and only past both limits do the
+// hand cards themselves shrink (never below HAND_MIN_SCALE). Played cards keep their size.
+function handGeometry(columns) {
+    const { w, h } = tableView.layout;
+    const avail = w - 64;
+    if (handMode === "row") {
+        const n = columns.reduce((sum, col) => sum + col.cards.length, 0);
+        const pitch = n > 1 ? Math.min(HAND_CARD_W * .52, (avail - HAND_CARD_W) / (n - 1)) : HAND_CARD_W;
+        return { cardW: HAND_CARD_W, pitch, step: 0, height: HAND_CARD_H * 1.18 };
+    }
+    const n = columns.length;
+    const tallest = Math.max(1, ...columns.map(col => col.cards.length));
+    const room = h - HAND_BOTTOM - ACTION_ROW_GAP - ACTION_ROW_H - ACTION_ROW_TOP;
+    const fitW = n > 1 ? avail / (HAND_CARD_W * (HAND_MIN_PITCH * (n - 1) + 1)) : 1;
+    const fitH = room / (HAND_CARD_H * (1 + HAND_MIN_STEP * (tallest - 1)));
+    const k = Math.max(HAND_MIN_SCALE, Math.min(1, fitW, fitH));
+    const cardW = HAND_CARD_W * k;
+    const cardH = HAND_CARD_H * k;
+    const pitch = n > 1 ? Math.min(cardW + 1, (avail - cardW) / (n - 1)) : cardW;
+    const step = tallest > 1
+        ? Math.max(cardH * HAND_MIN_STEP, Math.min(cardH * HAND_STEP, (room - cardH) / (tallest - 1)))
+        : cardH * HAND_STEP;
+    return { cardW, pitch, step, height: cardH + (tallest - 1) * step };
+}
+
+// Selection survives ticks: it is only pruned to the cards still in hand, and dropped when a
+// new deal starts (card ids repeat across rounds).
+function syncSelection(seat, cards) {
+    const key = seat >= 0 ? handOrderKey(seat) : "";
+    if (key !== selectionKey) {
+        selectionKey = key;
+        selected.clear();
+        hintAdvisor = null;
+        return;
+    }
+    const live = new Set(cards.map(c => c.id));
+    for (const id of [...selected]) if (!live.has(id)) selected.delete(id);
+}
+
+// Hand cards are keyed DOM nodes: a re-layout moves the existing elements into new columns
+// instead of re-creating them, so portraits never re-decode and nothing flickers. Cards always
+// carry [data-card-id]; whether they react is decided by handInteractive().
+function renderHand(columns, rowCards, geo, dealPhase) {
+    const host = tableView.regions.hand;
+    const layoutIds = handMode === "row"
+        ? rowCards.map(c => c.id).join(",")
+        : columns.map(col => col.cards.map(c => c.id).join(",")).join("|");
+    const key = `${handMode}:${geo.cardW.toFixed(2)}:${geo.pitch.toFixed(2)}:${geo.step.toFixed(2)}:${dealPhase}:${uiLang}:${game.currentLevelRank}:${layoutIds}`;
+    if (tableView.keys.hand === key) return;
+    tableView.keys.hand = key;
+    host.style.setProperty("--card-w", `${geo.cardW.toFixed(2)}px`);
+    tableView.handCardW = geo.cardW;
+    if (dealPhase === "dealing" || !columns.length) {
+        host.textContent = "";
+        tableView.cardEls = new Map();
+        return;
+    }
+    const sig = `${uiLang}:${game.currentLevelRank}`;
+    const cache = tableView.cardEls;
+    const next = new Map();
+    const tpl = document.createElement("template");
+    const cardEl = card => {
+        let hit = cache.get(card.id);
+        if (!hit || hit.sig !== sig) {
+            tpl.innerHTML = cardHTML(card, false, true);
+            hit = { el: tpl.content.firstElementChild, sig };
+        }
+        next.set(card.id, hit);
+        return hit.el;
+    };
+    const sorting = dealPhase === "sorting" ? " is-sorting" : "";
+    const wrap = document.createElement("div");
+    wrap.style.setProperty("--pitch", `${geo.pitch}px`);
+    if (handMode === "row") {
+        wrap.className = `gd-row card-ix-v${sorting}`;
+        rowCards.forEach((card, i) => {
+            const el = cardEl(card);
+            el.style.setProperty("--ci", i);
+            wrap.append(el);
+        });
+    } else {
+        wrap.className = `gd-cols${sorting}`;
+        wrap.style.setProperty("--step", `${geo.step}px`);
+        columns.forEach((col, ci) => {
+            const colEl = document.createElement("div");
+            colEl.className = col.group ? "gd-col is-group" : "gd-col";
+            colEl.style.setProperty("--ci", ci);
+            col.cards.forEach(card => {
+                const el = cardEl(card);
+                el.style.removeProperty("--ci");
+                colEl.append(el);
+            });
+            wrap.append(colEl);
+        });
+    }
+    host.replaceChildren(wrap);
+    tableView.cardEls = next;
+}
+
+function selectionVerdict(mine) {
+    const cards = (game.hands[mine] || []).filter(c => selected.has(c.id));
+    if (!cards.length) return { ok: false, reason: L("Select cards first", "请先选牌") };
+    if (choosePlayable(cards, game.lastPlay?.combo || null, game.currentLevelRank)) return { ok: true, reason: "" };
+    const legal = evaluateCombos(cards, game.currentLevelRank).length > 0;
+    return { ok: false, reason: legal && game.lastPlay ? L("Can't beat that", "管不上") : L("Not a valid combo", "牌型不符") };
+}
+
+// Selection changes never rebuild the hand: classes and the 出牌 state are patched in place.
+function refreshSelectionUI() {
+    const hand = tableView.regions.hand;
+    if (!hand?.isConnected) return;
+    hand.querySelectorAll("[data-card-id]").forEach(el => el.classList.toggle("selected", selected.has(el.dataset.cardId)));
+    const mine = mySeat();
+    const playBtn = document.getElementById("play-btn");
+    if (playBtn && mine >= 0) {
+        const off = !selectionVerdict(mine).ok;
+        playBtn.classList.toggle("is-disabled", off);
+        playBtn.setAttribute("aria-disabled", String(off));
+    }
+    const clearBtn = document.getElementById("clear-btn");
+    if (clearBtn) clearBtn.classList.toggle("is-idle", !selected.size);
+}
+
+function handInteractive() {
+    const mine = mySeat();
+    return !!game && game.phase === "playing" && mine >= 0 && !actionBusy && currentDealPhase() === "done";
+}
+
+// Press-and-slide selection. Column mode applies the press mode (select/deselect) to every card
+// the pointer crosses; row mode selects the contiguous run between the pressed card and the
+// pointer. In row mode a still long-press picks the card up to reorder it instead.
+function onHandPointerDown(event) {
+    const card = event.target.closest?.("[data-card-id]");
+    if (!card || handSlide || !handInteractive()) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    event.preventDefault();
+    const host = tableView.regions.hand;
+    const id = card.dataset.cardId;
+    handSlide = {
+        pointerId: event.pointerId,
+        startId: id,
+        lastId: "",
+        add: !selected.has(id),
+        before: new Set(selected),
+        order: [...host.querySelectorAll("[data-card-id]")].map(el => el.dataset.cardId),
+        x0: event.clientX, y0: event.clientY,
+        x: event.clientX, y: event.clientY,
+        moved: false,
+        reorder: null,
+        hold: handMode === "row" ? setTimeout(startHandReorder, 380) : 0
+    };
+    try { host.setPointerCapture(event.pointerId); } catch (_) {}
+    hintAdvisor = null;
+    slideOver(id);
+    refreshSelectionUI();
+}
+
+function slideOver(id) {
+    const s = handSlide;
+    if (!s || id === s.lastId) return;
+    s.lastId = id;
+    if (handMode === "row") {
+        const a = s.order.indexOf(s.startId);
+        const b = s.order.indexOf(id);
+        const lo = Math.min(a, b);
+        const hi = Math.max(a, b);
+        s.order.forEach((cid, idx) => {
+            const want = idx >= lo && idx <= hi ? s.add : s.before.has(cid);
+            if (want) selected.add(cid);
+            else selected.delete(cid);
+        });
+    } else if (s.add) {
+        selected.add(id);
+    } else {
+        selected.delete(id);
+    }
+}
+
+function handCardAt(x, y) {
+    const el = document.elementFromPoint(x, y)?.closest?.("[data-card-id]");
+    return el && tableView.regions.hand.contains(el) ? el : null;
+}
+
+function onHandPointerMove(event) {
+    const s = handSlide;
+    if (!s || event.pointerId !== s.pointerId) return;
+    if (s.reorder) {
+        updateHandReorder(event.clientX, event.clientY);
+        return;
+    }
+    if (!s.moved && Math.hypot(event.clientX - s.x0, event.clientY - s.y0) > 8) {
+        s.moved = true;
+        clearTimeout(s.hold);
+    }
+    // Walk the segment so a fast swipe cannot skip a column.
+    const dx = event.clientX - s.x;
+    const dy = event.clientY - s.y;
+    const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 8));
+    const before = s.lastId;
+    for (let k = 1; k <= steps; k++) {
+        const el = handCardAt(s.x + dx * k / steps, s.y + dy * k / steps);
+        if (el) slideOver(el.dataset.cardId);
+    }
+    s.x = event.clientX;
+    s.y = event.clientY;
+    if (s.lastId !== before) refreshSelectionUI();
+}
+
+function startHandReorder() {
+    const s = handSlide;
+    if (!s || s.moved) return;
+    selected = new Set(s.before);
+    s.reorder = { id: s.startId, targetId: "", before: true };
+    tableView.regions.hand.querySelector(`[data-card-id="${CSS.escape(s.startId)}"]`)?.classList.add("drag-source");
+    refreshSelectionUI();
+}
+
+function clearHandDropMarks() {
+    tableView.regions.hand?.querySelectorAll(".drag-source,.drop-before,.drop-after")
+        .forEach(el => el.classList.remove("drag-source", "drop-before", "drop-after"));
+}
+
+function updateHandReorder(x, y) {
+    const r = handSlide.reorder;
+    tableView.regions.hand.querySelectorAll(".drop-before,.drop-after").forEach(el => el.classList.remove("drop-before", "drop-after"));
+    const el = handCardAt(x, y);
+    if (!el || el.dataset.cardId === r.id) {
+        r.targetId = "";
+        return;
+    }
+    const box = el.getBoundingClientRect();
+    const centre = stagePoint(box.left + box.width / 2, box.top + box.height / 2);
+    r.before = stagePoint(x, y).x < centre.x;
+    r.targetId = el.dataset.cardId;
+    el.classList.add(r.before ? "drop-before" : "drop-after");
+}
+
+function onHandPointerUp(event) {
+    const s = handSlide;
+    if (!s || event.pointerId !== s.pointerId) return;
+    clearTimeout(s.hold);
+    handSlide = null;
+    clearHandDropMarks();
+    if (s.reorder?.targetId) moveHandCard(s.reorder.id, s.reorder.targetId, s.reorder.before);
+}
+
+function clearSelection() {
+    if (!selected.size) return;
+    selected.clear();
+    hintAdvisor = null;
+    refreshSelectionUI();
+}
+
+// Tapping empty felt clears the selection; while the ☰ menu is open its scrim catches the tap
+// (closed on click, so the release cannot land on whatever was under the scrim).
+function onTablePointerDown(event) {
+    if (event.target.closest("[data-card-id], button, .gd-menu-host, .gd-jipai, .gd-result-host > *, .gd-seat")) return;
+    clearSelection();
+}
+
+function onTableClick(event) {
+    if (event.target.closest(".gd-scrim")) {
+        tableView.menuOpen = false;
+        return renderTableChrome();
+    }
+    const btn = event.target.closest("button");
+    if (!btn || !tableView.stage.contains(btn) || btn.disabled) return;
+    const mine = mySeat();
+    switch (btn.id) {
+        case "play-btn":
+            if (btn.classList.contains("is-disabled")) return showToast(selectionVerdict(mine).reason, 1300);
+            return playSelected();
+        case "pass-btn": return passTurn();
+        case "hint-btn": return hintMove();
+        case "clear-btn": return clearSelection();
+        case "next-round": return nextRound();
+    }
+    const act = btn.dataset.act || "";
+    const closeMenu = act.startsWith("m-");
+    if (closeMenu) tableView.menuOpen = false;
+    switch (act.replace(/^m-/, "")) {
+        case "menu": tableView.menuOpen = !tableView.menuOpen; break;
+        case "tracker":
+            jipaiOpen = !jipaiOpen;
+            storageSet("picasso.guandan.jipai", jipaiOpen ? "on" : "off");
+            return renderTable();
+        case "tracker-tab": tableView.jipaiTab = btn.dataset.tab === "log" ? "log" : "count"; break;
+        case "rules":
+            if (window.GuandanUI?.openRules) window.GuandanUI.openRules(tableView.ui);
+            else showToast(L("Rules are loading", "规则加载中"));
+            break;
+        case "invite": copyLinkBtn.click(); break;
+        case "lang": langToggleBtn.click(); return;
+        case "music": {
+            const music = window.GuandanMusic;
+            if (!music) break;
+            music.setOn(!music.isOn());
+            showToast(music.isOn() ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
+            break;
+        }
+        case "newroom": newRoomBtn.click(); return;
+        case "exit": startReturnToEvents(); return;
+        case "lipai": return groupSelection();
+        case "hengpai":
+            handMode = handMode === "row" ? "col" : "row";
+            storageSet("picasso.guandan.handMode", handMode);
+            clearSelection();
+            return renderTable();
+        default: return;
+    }
+    renderTableChrome();
+}
+
+// 理牌: selected cards become their own column; with nothing selected it restores the default.
+function groupSelection() {
+    const mine = mySeat();
+    if (mine < 0) return;
+    const cards = game.hands[mine] || [];
+    liveHandGroups(cards, mine);
+    if (selected.size) {
+        const ids = cards.filter(c => selected.has(c.id)).map(c => c.id);
+        const picked = new Set(ids);
+        handGroups.groups = [...handGroups.groups.map(g => g.filter(id => !picked.has(id))).filter(g => g.length), ids];
+        selected.clear();
+        hintAdvisor = null;
+    } else if (handGroups.groups.length) {
+        handGroups.groups = [];
+    } else {
+        return;
+    }
+    handOrderState = { key: "", ids: [] };
+    renderTable();
+}
+
+// Remaining cards per rank that are neither in my hand nor played (the other hands). Red when a
+// bomb is still possible (4+, or every joker / 逢人配 still out), orange for a few, gray for none.
+function jipaiHTML(mine) {
+    if (!jipaiOpen) return "";
+    const level = game.currentLevelRank;
+    const counts = {};
+    [0, 1, 2, 3].forEach(seat => {
+        if (seat === mine) return;
+        for (const c of game.hands[seat] || []) {
+            const key = c.joker || (isWild(c, level) ? "wild" : c.rank);
+            counts[key] = (counts[key] || 0) + 1;
+        }
+    });
+    const tab = tableView.jipaiTab;
+    const tabs = `<div class="gd-jp-tabs"><button type="button" data-act="tracker-tab" data-tab="count" class="${tab === "count" ? "is-on" : ""}">${L("Tracker", "记牌器")}</button><button type="button" data-act="tracker-tab" data-tab="log" class="${tab === "log" ? "is-on" : ""}">${L("Plays", "出牌记录")}</button></div>`;
+    if (tab === "log") {
+        const glyph = c => `<i class="${cardColor(c) ? "is-red" : ""}">${c.joker ? jokerIconHTML(c) : `${rankGlyphHTML(c.rank)}${suitSvgHTML(c.suit, "")}`}</i>`;
+        const rows = valuesFromFirebase(game.history).slice(-12).reverse().map(h => {
+            let play;
+            if (h.actionType === "pass") play = `<span class="is-pass">${L("Pass", "不出")}</span>`;
+            else if (h.actionType === "finish") play = `<small>${encodeHTML(translateAction(h.action, h))}</small>`;
+            else {
+                const special = h.combo && !["single", "pair", "triple"].includes(h.combo.type);
+                play = displayCardsForCombo(valuesFromFirebase(h.cards), h.combo).map(glyph).join("")
+                    + (special ? `<small>${encodeHTML(translateAction(h.action, h))}</small>` : "");
+            }
+            return `<li><b>${encodeHTML(displaySeatName(game.seats[h.player]))}</b><span class="gd-jp-play">${play}</span></li>`;
+        }).join("");
+        return `<div class="gd-jipai is-log">${tabs}<ul class="gd-jp-log">${rows || `<li class="is-empty">${L("No plays yet", "还没有人出牌")}</li>`}</ul></div>`;
+    }
+    const cell = key => {
+        const n = counts[key] || 0;
+        const max = key === "RJ" || key === "BJ" || key === "wild" ? 2 : 4;
+        const tone = !n ? "is-none" : n >= max ? "is-hot" : "is-some";
+        const head = key === "wild"
+            ? suitSvgHTML("H", "gd-jp-wild")
+            : key === "RJ" || key === "BJ"
+                ? `<span class="gd-jp-joker">${jokerIconHTML({ joker: key })}</span>`
+                : `<b class="gd-jp-rank">${rankGlyphHTML(key)}</b>${key === level ? `<span class="gd-jp-ji">${L("LV", "级")}</span>` : ""}`;
+        return `<div class="gd-jp-cell"><div class="gd-jp-head${key === "RJ" || key === "wild" ? " is-red" : ""}">${head}</div><div class="gd-jp-num ${tone}">${n}</div></div>`;
+    };
+    return `<div class="gd-jipai">${tabs}<div class="gd-jp-grid">${JIPAI_ORDER.map(cell).join("")}</div></div>`;
+}
+
+function menuHTML() {
+    if (!tableView.menuOpen) return "";
+    const music = window.GuandanMusic;
+    const items = [
+        ["invite", tableIcon("invite"), L("Invite friends", "邀请好友")],
+        ["rules", tableIcon("rules"), L("Rules", "规则")],
+        ["tracker", tableIcon("tracker"), jipaiOpen ? L("Hide tracker", "收起记牌") : L("Card tracker", "记牌")],
+        ["lang", tableIcon("lang"), isZH() ? "English" : "中文"],
+        music ? ["music", tableIcon("music"), music.isOn?.() ? L("Music: on", "音乐：开") : L("Music: off", "音乐：关")] : null,
+        ["newroom", tableIcon("table"), L("New table", "新桌")],
+        ["exit", tableIcon("exit"), L("Back to events", "返回活动")]
+    ].filter(Boolean);
+    return `<div class="gd-scrim"></div><div class="gd-menu" role="menu">${items.map(([act, icon, label]) => `<button type="button" role="menuitem" data-act="m-${act}">${icon}<span>${label}</span></button>`).join("")}</div>`;
+}
+
+function hudHTML(view) {
+    const tile = (team, cls, label) => {
+        const level = game.levels?.[team] || "2";
+        const fails = level === "A" ? Number(game.aceFailures?.[team] || 0) : 0;
+        return `<div class="gd-lvl ${cls}"><b>${label}</b><em>${rankGlyphHTML(level)}${fails ? `<small>${fails}/${ACE_FAIL_LIMIT}</small>` : ""}</em></div>`;
+    };
+    return `<button class="gd-menu-btn" type="button" data-act="menu" aria-label="${L("Menu", "菜单")}" aria-expanded="${tableView.menuOpen}"><i></i><i></i><i></i></button>
+        <div class="gd-lvls">${tile(view % 2, "is-us", L("Us", "我方"))}${tile(1 - view % 2, "is-them", L("Them", "对方"))}</div>`;
+}
+
+function hudRightHTML() {
+    return `<button class="gd-round-btn${jipaiOpen ? " is-on" : ""}" type="button" data-act="tracker" aria-pressed="${jipaiOpen}">${tableIcon("tracker")}<span>${L("Tracker", "记牌")}</span></button>
+        <button class="gd-round-btn" type="button" data-act="rules">${tableIcon("rules")}<span>${L("Rules", "规则")}</span></button>`;
+}
+
+// Menu, HUD buttons and the tracker only depend on local UI state: refresh them on their own.
+function renderTableChrome() {
+    const view = Math.max(0, mySeat());
+    setRegion("hud", hudHTML(view));
+    setRegion("hudRight", hudRightHTML());
+    setRegion("menu", menuHTML());
+    setRegion("jipai", jipaiHTML(mySeat()));
+}
+
+// Lab stat on a seat plate: the labmate's win rate on the 巅峰对决 board (read-only).
+function seatMemberStat(name) {
+    const clean = String(name || "").trim().toLowerCase();
+    const R = window.GuandanRecords;
+    if (!clean || !R?.PLAYERS || !Array.isArray(R.MATCHES)) return "";
+    const key = Object.keys(R.PLAYERS).find(k => {
+        const pname = String(R.PLAYERS[k]?.name || "").trim().toLowerCase();
+        return pname && (clean === pname || clean.includes(pname) || pname.includes(clean));
+    });
+    if (!key) return "";
+    let played = 0;
+    let won = 0;
+    for (const m of R.MATCHES) {
+        const side = m.teamA?.includes(key) ? "A" : m.teamB?.includes(key) ? "B" : "";
+        if (!side) continue;
+        played++;
+        if (m.winner === side) won++;
+    }
+    const pct = played ? Math.round(won * 100 / played) : 0;
+    return played ? L(`Win ${pct}%`, `胜率 ${pct}%`) : "";
+}
+
+function seatFaceHTML(i, name) {
+    const seat = game.seats[i];
+    if (!seat) return `<span class="gd-av-glyph is-empty">${L("Open", "空")}</span>`;
+    const photo = seat.type === "human" ? seatMemberPhoto(name) : null;
+    if (photo) return `<img src="${encodeHTML(photo)}" alt="" draggable="false">`;
+    if (seat.type === "ai") return `<span class="gd-av-glyph is-ai">${encodeHTML(Array.from(name)[0] || "AI")}</span>`;
+    return `<span class="gd-av-glyph">${encodeHTML(initials(name, String(i + 1)))}</span>`;
+}
+
+function clockHTML(kind) {
+    return kind === "hex"
+        ? `<div class="gd-hex" data-turn-clock><svg viewBox="0 0 100 112" aria-hidden="true"><use href="#gd-sym-hex"/></svg><b id="turn-clock"></b></div>`
+        : `<div class="gd-clock" data-turn-clock><svg viewBox="0 0 100 106" aria-hidden="true"><use href="#gd-sym-clock"/></svg><b id="turn-clock"></b></div>`;
+}
+
+// Seat: avatar (ring + relation pill, 剩N张 report at <=10, finish place), name plate with a
+// lab stat, 首 tag, the active-seat clock and any jokers made public by 抗贡.
+function renderSeat(i, v) {
+    const pos = visualSeatPos(i, v.mine);
+    const seat = game.seats[i];
+    const name = displaySeatName(seat, L(`Seat ${i + 1}`, `${i + 1} 号位`));
+    const relation = relationForSeat(i, v.mine);
+    const count = (game.hands[i] || []).length;
+    const place = finishedList(game).indexOf(i) + 1;
+    const bottom = pos === 0;
+    const turn = v.liveTurn === i && !(bottom && v.mine >= 0);
+    const el = tableView.seats[pos];
+    el.className = `gd-seat is-p${pos} is-${relation.key}${turn ? " is-turn" : ""}${place ? " is-done" : ""}`;
+    tableView.avatars[pos].className = `gd-av${relation.key === "opponent" ? " is-opp" : ""}`;
+    setRegion(`face${pos}`, seatFaceHTML(i, name));
+    let tag = "";
+    if (place) tag = `<span class="gd-av-tag is-place ${place <= 2 ? "is-warm" : "is-cool"}">${PLACE_LABELS[uiLang][place - 1]}</span>`;
+    else if (!bottom && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
+    else if (!bottom) tag = `<span class="gd-av-tag">${relation.label}</span>`;
+    // Tencent shows nothing above 10 cards; the exact count is a 记牌器 extra.
+    const chip = jipaiOpen && !bottom && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
+    const first = v.leader === i ? `<span class="gd-first">${L("Lead", "首")}</span>` : "";
+    setRegion(`deco${pos}`, tag + chip + first);
+    const stat = seat?.type === "human" ? seatMemberStat(name) : "";
+    setRegion(`name${pos}`, `<span class="nm">${encodeHTML(name)}</span>${stat ? `<span class="st">${stat}</span>` : ""}`);
+    const jokers = valuesFromFirebase(game.publicJokerSeats).includes(i) ? (game.hands[i] || []).filter(c => c.joker === "RJ") : [];
+    const jokerHTML = jokers.length ? `<div class="gd-public-jokers" title="${L("Revealed by blocked tribute", "抗贡亮出的大王")}">${jokers.map(c => cardHTML(c, true)).join("")}</div>` : "";
+    setRegion(`extra${pos}`, (turn ? clockHTML("clock") : "") + jokerHTML);
+}
+
+// Played cards (or the 不出 word) at a seat's slot. The seat whose turn it is has its slot
+// cleared, as in Tencent. A fresh play flies in (see playFlightSources) or, without a source, pops
+// in; special combos get their label. All of it is keyed by the play stamp, so it never replays.
+const COMBO_LABELS = {
+    straight: ["Straight", "顺子"],
+    pairStraight: ["Pairs", "连对"],
+    tripleStraight: ["Plates", "钢板"],
+    fullhouse: ["Full House", "三带二"]
+};
+function renderSlot(i, v, animate, flights) {
+    const pos = visualSeatPos(i, v.mine);
+    const entry = game.trickPlays?.[i];
+    if (!entry || v.dealPhase !== "done" || v.liveTurn === i) {
+        setRegion(`slot${pos}`, "");
+        return;
+    }
+    const stamp = seatPlayStamp(entry);
+    setRegion(`slot${pos}`, `${stamp}:${uiLang}:${game.currentLevelRank}`, () => {
+        const fresh = animate && !tableView.seenPlays.has(stamp);
+        tableView.seenPlays.add(stamp);
+        const enter = fresh && !flights.has(i) ? " is-enter" : "";
+        if (entry.actionType === "pass") return `<div class="gd-pass-word${enter}">${L("Pass", "不出")}</div>`;
+        const cards = displayCardsForCombo(valuesFromFirebase(entry.cards), entry.combo);
+        const label = fresh && COMBO_LABELS[entry.combo?.type];
+        return `<div class="gd-played${enter}">${cards.map(c => cardHTML(c, true, false, `data-pid="${encodeHTML(c.id)}"`)).join("")}</div>`
+            + (label ? `<span class="gd-combo-label">${L(...label)}</span>` : "");
+    });
+}
+
+// Fresh plays about to appear: mine fly from where the cards sat in my hand (read before the hand
+// re-lays out), everyone else's from their avatar. Returns seat -> source.
+function playFlightSources(v, animate) {
+    const out = new Map();
+    if (!animate || v.dealPhase !== "done" || prefersReducedMotion()) return out;
+    (game.trickPlays || []).forEach((entry, i) => {
+        if (!entry || entry.actionType === "pass" || v.liveTurn === i || tableView.seenPlays.has(seatPlayStamp(entry))) return;
+        if (i === v.mine) {
+            const rects = new Map();
+            valuesFromFirebase(entry.cards).forEach(c => {
+                const el = tableView.cardEls.get(c.id)?.el;
+                if (el?.isConnected) rects.set(c.id, el.getBoundingClientRect());
+            });
+            if (rects.size) out.set(i, { rects, scale: tableView.handCardW / (HAND_CARD_W * .79) });
+        } else {
+            out.set(i, { avatar: tableView.avatars[visualSeatPos(i, v.mine)].getBoundingClientRect(), scale: .45 });
+        }
+    });
+    return out;
+}
+
+// FLIP: each played card starts at its source (in stage design px, so the rotated stage works too)
+// and settles into the slot in ~200 ms. Transform and opacity only.
+function runPlayFlights(flights, v) {
+    const centre = r => stagePoint(r.left + r.width / 2, r.top + r.height / 2);
+    flights.forEach((src, i) => {
+        const slot = tableView.regions[`slot${visualSeatPos(i, v.mine)}`];
+        slot.querySelectorAll(".gd-played .card").forEach((el, k) => {
+            const from = src.rects ? src.rects.get(el.dataset.pid) : src.avatar;
+            if (!from) return;
+            const a = centre(from);
+            const b = centre(el.getBoundingClientRect());
+            el.animate([
+                { transform: `translate(${(a.x - b.x).toFixed(1)}px, ${(a.y - b.y).toFixed(1)}px) scale(${src.scale.toFixed(3)})`, opacity: src.rects ? 1 : 0 },
+                { transform: "none", opacity: 1 }
+            ], { duration: 210, delay: src.rects ? 0 : k * 16, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
+        });
+    });
 }
 
 function seatPlayStamp(entry) {
@@ -2511,6 +3268,191 @@ function seatPlayStamp(entry) {
 
 function latestTrickPlayAt() {
     return Math.max(0, ...(game.trickPlays || []).map(entry => Number(entry?.at) || 0));
+}
+
+function displayCardsForCombo(cards = [], combo = null) {
+    return engineDisplayCardsForCombo(cards, combo, game?.currentLevelRank || "2");
+}
+
+// The seat that led the round's first trick (the 首 tag). Remembered from the opening lead; a
+// mid-round rejoin falls back to the first history entry while the history is not yet capped.
+function roundLeaderSeat() {
+    const key = dealKey();
+    if (isOpeningLead(game)) {
+        tableView.leader = { key, seat: game.currentTurn };
+        return game.currentTurn;
+    }
+    if (tableView.leader.key === key) return tableView.leader.seat;
+    const hist = valuesFromFirebase(game.history);
+    return hist.length && hist.length < 16 ? hist[0].player : -1;
+}
+
+function obviousPassNow(mine) {
+    if (!game.lastPlay) return false;
+    const key = `${game.roomCode}:${game.revision}:${mine}`;
+    if (noBeatMemo.key !== key) {
+        noBeatMemo = { key, value: obviouslyCannotBeat(game.hands[mine] || [], game.lastPlay.combo, game.currentLevelRank) };
+    }
+    return noBeatMemo.value;
+}
+
+// [不出] [timer] [提示] [出牌]: only on my turn. No 不出 on a lead; when the engine sees no way to
+// beat the table, 不出 becomes the primary button and 提示 steps aside. 提示's pass advice also
+// makes 不出 primary for this turn.
+function actionsHTML(v) {
+    if (!v.canAct) return "";
+    const spaced = isZH() ? " spaced" : "";
+    const pass = v.lead ? "" : `<button class="btn ${v.noBeat || v.passHint ? "play" : "pass"}${spaced}" id="pass-btn" type="button">${L("Pass", "不出")}</button>`;
+    const hint = v.noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${L("Hint", "提示")}</button>`;
+    return `${pass}${clockHTML("hex")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${L("Play", "出牌")}</button>`;
+}
+
+function toolsHTML(v) {
+    if (v.mine < 0 || game.phase !== "playing") return "";
+    return `<button class="gd-tool is-idle" id="clear-btn" type="button">${L("Reset", "重选")}</button>
+        <button class="gd-tool" type="button" data-act="lipai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="m16 4 13 6.5-13 6.5L3 10.5Zm-9.2 11 9.2 4.6 9.2-4.6 3.8 1.9-13 6.5-13-6.5Zm0 6 9.2 4.6 9.2-4.6 3.8 1.9L16 29.4 3 22.9Z"/></svg>${L("Group", "理牌")}</button>
+        <button class="gd-tool" type="button" data-act="hengpai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="${handMode === "row" ? "M4 5h24v6H4Zm0 8h24v6H4Zm0 8h24v6H4Z" : "M5 4h6v24H5Zm8 0h6v24h-6Zm8 0h6v24h-6Z"}"/></svg>${handMode === "row" ? L("Columns", "竖排") : L("Row", "横排")}</button>`;
+}
+
+// Deal: backs arc from a centre deck toward the four seats over DEALING_MS, synced to dealStartedAt
+// (a rejoin mid-deal resumes mid-flight through negative delays), each flight shrinking and fading
+// at the seat's inboard edge so no face is covered; the hand then rises column by column during
+// SORTING_MS. One flight stands for two cards. Your hand is never face-up before the deal ends.
+const DEAL_FLIGHTS = DEAL_CARD_COUNT / 2;
+function dealHTML(v) {
+    if (v.dealPhase !== "dealing") return "";
+    const { w, h } = tableView.layout;
+    const ox = w / 2;
+    const oy = h * .36;
+    const targets = {
+        0: [0, h - HAND_BOTTOM - HAND_CARD_H * .6 - oy],
+        1: [196 - ox, 250 - oy],
+        2: [0, 172 - oy],
+        3: [w - 196 - ox, 250 - oy]
+    };
+    const elapsed = Math.max(0, Date.now() - Number(game.dealStartedAt || 0));
+    const gap = (DEALING_MS - 560) / DEAL_FLIGHTS;
+    const back = `<i class="gd-back"><span class="gd-back-emblem">P</span></i>`;
+    const flights = prefersReducedMotion() ? "" : Array.from({ length: DEAL_FLIGHTS }, (_, idx) => {
+        const pos = visualSeatPos(idx % 4, v.mine);
+        const [tx, ty] = targets[pos];
+        const spread = pos === 0 ? ((idx >> 2) - 6.5) * 40 : 0;
+        const tilt = ((idx * 37) % 13) - 6;
+        return `<i class="gd-deal-card" style="--tx:${(tx + spread).toFixed(0)}px;--ty:${ty.toFixed(0)}px;--r:${tilt}deg;animation-delay:${Math.round(idx * gap - elapsed)}ms">${back}</i>`;
+    }).join("");
+    return `<div class="gd-deal" style="--deal-left:${Math.round(DEALING_MS - elapsed)}ms"><div class="gd-deck"><i class="gd-back"></i><i class="gd-back"></i>${back}</div>${flights}</div>`;
+}
+
+// 首出 (qqg_result_zoom): when the deal ends, the round-1 starting card pops up at the centre
+// with a warm ribbon, then shrinks into the seat that holds it and leads (which keeps its 首 tag).
+// Keyed by the deal, so a re-render never replays it and a rejoin resumes it in step.
+const FIRST_LEAD_MS = 1500;
+function firstLeadKey(v) {
+    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    if (!game.startingCard || v.dealPhase === "dealing" || v.leader < 0 || since < 0 || since > FIRST_LEAD_MS) return "";
+    return `${dealKey()}:${v.leader}:${uiLang}`;
+}
+function firstLeadHTML(v) {
+    const { w, h } = tableView.layout;
+    const pos = visualSeatPos(v.leader, v.mine);
+    const seat = { 0: [92, h - 50], 1: [90, 240], 2: [w / 2, 58], 3: [w - 90, 240] }[pos];
+    const card = { ...game.startingCard, id: "first-lead" };
+    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
+}
+
+// 进贡/还贡/抗贡 (round 2+): when the deal ends each tribute card flies payer -> receiver under an
+// orange 进贡 plate, then the returned card flies back under a blue 还贡 plate; a blocked tribute
+// shows 抗贡 at the centre (the revealed jokers sit at the seats). Replaces the sentence toast.
+const TRIBUTE_MS = 2200;
+function tributeKey(v) {
+    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    if (!game.selectedTributes?.length || game.startingCard || v.dealPhase === "dealing" || since < 0 || since > TRIBUTE_MS) return "";
+    return `${dealKey()}:${v.mine}:${uiLang}`;
+}
+function tributeHTML(v) {
+    const { w, h } = tableView.layout;
+    const at = { 0: [w / 2, h - 250], 1: [215, 250], 2: [w / 2, 172], 3: [w - 215, 250] };
+    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    const rows = game.selectedTributes.filter(r => r?.tributeCard);
+    if (!rows.length) return `<div class="gd-kanggong" style="animation-delay:${-since}ms">${L("Tribute blocked", "抗贡")}</div>`;
+    const fly = (card, from, to, cls, label, delay) => `<div class="gd-tribute ${cls}" style="left:${from[0].toFixed(0)}px;top:${from[1].toFixed(0)}px;--tx:${(to[0] - from[0]).toFixed(0)}px;--ty:${(to[1] - from[1]).toFixed(0)}px;animation-delay:${delay - since}ms"><span>${label}</span>${cardHTML(card, true)}</div>`;
+    return rows.map((r, n) => {
+        const payer = at[visualSeatPos(r.payerSeat, v.mine)];
+        const receiver = at[visualSeatPos(r.receiverSeat, v.mine)];
+        return fly(r.tributeCard, payer, receiver, "is-in", L("Tribute", "进贡"), n * 160)
+            + (r.returnCard ? fly(r.returnCard, receiver, payer, "is-back", L("Return", "还贡"), 820 + n * 160) : "");
+    }).join("");
+}
+
+// Round/system messages become short toasts (plays and passes are already visible at the seats).
+function maybeToastTableMessage() {
+    const msg = game.message || "";
+    const key = `${game.roomCode}:${game.roundNo}:${msg}`;
+    const first = tableView.lastMessage === null;
+    if (key === tableView.lastMessage) return;
+    tableView.lastMessage = key;
+    if (first && !dealWindowOpen(game)) return;
+    if (game.phase !== "playing" || !msg || /出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局(开始| · )/.test(msg)) return;
+    showToast(displayMessage(msg), 2600);
+}
+
+function renderTable() {
+    document.body.dataset.screen = "table";
+    const freshMount = ensureTableSkeleton();
+    if (freshMount) {
+        tableView.seenPlays = new Set();
+        tableView.lastMessage = null;
+    }
+    const t = tableView;
+    const mine = mySeat();
+    const view = Math.max(0, mine);
+    const dealPhase = currentDealPhase();
+    const liveTurn = game.phase === "playing" && dealPhase === "done" && !finishedList(game).includes(game.currentTurn) ? game.currentTurn : -1;
+    const canAct = mine >= 0 && liveTurn === mine;
+    const v = {
+        mine, view, dealPhase, liveTurn, canAct,
+        lead: !game.lastPlay,
+        noBeat: canAct && !!game.lastPlay && obviousPassNow(mine),
+        passHint: canAct && !!hintAdvisor?.pass && hintAdvisor.turn === turnStateKey(),
+        leader: game.phase === "playing" ? roundLeaderSeat() : -1
+    };
+    const handCards = mine >= 0 ? (game.hands[mine] || []) : [];
+    syncSelection(mine, handCards);
+    const columns = mine >= 0 ? handColumns(handCards, game.currentLevelRank, mine) : [];
+    const geo = handGeometry(columns);
+    const handH = mine >= 0 ? geo.height : 0;
+    t.stage.style.setProperty("--hand-h", `${handH.toFixed(1)}px`);
+    // Just above the tallest column, but never up into the side seats' played cards: a hand
+    // taller than that runs behind the row.
+    const actionsBottom = Math.min(HAND_BOTTOM + handH + ACTION_ROW_GAP, t.layout.h - ACTION_ROW_TOP - ACTION_ROW_H);
+    t.stage.style.setProperty("--actions-bottom", `${actionsBottom.toFixed(1)}px`);
+    t.stage.classList.toggle("is-acting", v.canAct);
+
+    renderTableChrome();
+    setRegion("watermark", `<b>${L("PICASSO Guandan", "PICASSO 掼蛋")}</b><span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span>`);
+    const flights = playFlightSources(v, !freshMount);
+    [0, 1, 2, 3].forEach(i => {
+        renderSeat(i, v);
+        renderSlot(i, v, !freshMount, flights);
+    });
+    renderHand(columns, handMode === "row" && mine >= 0 ? orderedHandForDisplay(handCards, game.currentLevelRank, mine) : [], geo, dealPhase);
+    setRegion("tools", toolsHTML(v));
+    setRegion("spectate", mine < 0 ? `<span>${L("Spectating", "观战中")}</span>` : "");
+    setRegion("actions", `${v.canAct}:${v.lead}:${v.noBeat}:${v.passHint}:${uiLang}`, () => actionsHTML(v));
+    setRegion("deal", dealPhase === "dealing" ? `deal:${dealKey()}:${Math.round(t.layout.w)}` : "", () => dealHTML(v));
+    const firstKey = firstLeadKey(v);
+    setRegion("firstLead", firstKey, firstKey ? () => firstLeadHTML(v) : "");
+    const tributeMoment = tributeKey(v);
+    setRegion("tribute", tributeMoment, tributeMoment ? () => tributeHTML(v) : "");
+    const result = game.phase === "roundOver" ? "round" : game.phase === "gameOver" ? "game" : "";
+    setRegion("result", result ? `${result}:${game.roundNo}:${uiLang}:${isHost()}` : "", result === "round" ? roundOverHTML : result ? gameOverHTML : "");
+    refreshSelectionUI();
+    updateTurnClockDOM();
+    runPlayFlights(flights, v);
+    maybeCelebrateBomb();
+    initResultOverlay();
+    maybeToastTableMessage();
 }
 
 // Bomb / combo celebration: purely presentational — reads entry.combo.isBomb
@@ -2530,13 +3472,13 @@ function maybeCelebrateBomb() {
 }
 
 function triggerBombCelebration(combo) {
-    const tableEl = document.querySelector(".table");
-    if (!tableEl) return;
-    tableEl.classList.remove("bomb-shake");
-    void tableEl.offsetWidth; // restart the animation if it's already mid-shake
-    requestAnimationFrame(() => tableEl.classList.add("bomb-shake"));
+    const stageEl = tableView.stage;
+    if (!stageEl?.isConnected) return;
+    stageEl.classList.remove("bomb-shake");
+    void stageEl.offsetWidth; // restart the animation if it's already mid-shake
+    requestAnimationFrame(() => stageEl.classList.add("bomb-shake"));
 
-    const fx = tableEl.querySelector(".bomb-fx");
+    const fx = stageEl.querySelector(".bomb-fx");
     if (fx) {
         const frag = document.createDocumentFragment();
         for (let i = 0; i < 28; i++) {
@@ -2555,10 +3497,10 @@ function triggerBombCelebration(combo) {
         setTimeout(() => { fx.innerHTML = ""; }, 1000);
     }
 
-    const slot = tableEl.querySelector(".bomb-banner-slot");
+    const slot = stageEl.querySelector(".bomb-banner-slot");
     if (slot) {
         const bombLen = combo.bombLen || 0;
-        const text = combo.type === "jokerBomb" ? "天王炸!" : bombLen >= 8 ? "八张炸弹!" : bombLen >= 6 ? "六张炸弹!" : "炸弹!";
+        const text = combo.type === "jokerBomb" ? "天王炸!" : combo.type === "straightFlush" ? "同花顺!" : bombLen >= 8 ? "八张炸弹!" : bombLen >= 6 ? "六张炸弹!" : "炸弹!";
         slot.innerHTML = `<div class="bomb-banner show">${text}</div>`;
         setTimeout(() => {
             const banner = slot.querySelector(".bomb-banner");
@@ -2568,334 +3510,6 @@ function triggerBombCelebration(combo) {
             setTimeout(() => banner.remove(), 220);
         }, 900);
     }
-}
-
-function seatPlayHTML(i, mine) {
-    const entry = game.trickPlays?.[i];
-    if (!entry) return "";
-    const pos = visualSeatPos(i, mine);
-    const relation = relationForSeat(i, mine);
-    const name = displaySeatName(game.seats[i], `Seat ${i + 1}`);
-    const pass = entry.actionType === "pass";
-    const body = pass ? `<div class="pass-mark">${L("Pass", "不要")}</div>` : playedCardsHTML(entry.cards || [], relation, entry.combo);
-    const action = pass ? L("Pass", "不要") : comboName(entry.combo || { name: entry.action || "" });
-    const fresh = Number(entry.at) && Number(entry.at) === latestTrickPlayAt();
-    return `<div class="seat-play p${pos} ${pass ? "pass" : "played"} ${fresh ? "fresh" : ""} relation-${relation.key}" data-play-stamp="${encodeHTML(seatPlayStamp(entry))}">
-        ${body}
-        <div class="play-caption">${encodeHTML(name)} · ${encodeHTML(action)}</div>
-    </div>`;
-}
-
-function lastPlaySummaryHTML(lastLabel) {
-    if (!game.lastPlay) return L("Table is open", "牌桌已开");
-    const relation = relationForSeat(game.lastPlay.player, mySeat());
-    return `${L("Current to beat", "当前要管")}: ${lastLabel} · ${relation.label}`;
-}
-
-function tributeSummaryHTML() {
-    const rows = valuesFromFirebase(game.selectedTributes);
-    if (!rows.length) return "";
-    return `<div class="table-tribute">${rows.map(row => {
-        const tc = row.tributeCard;
-        const rc = row.returnCard;
-        const payerName = row.payerSeat != null ? encodeHTML(displaySeatName(game.seats[row.payerSeat])) : "";
-        const recvName  = row.receiverSeat != null ? encodeHTML(displaySeatName(game.seats[row.receiverSeat])) : "";
-        if (tc && payerName) {
-            return `<div class="tribute-row tribute-visual">
-                <span class="tv-name">${payerName}</span>
-                <span class="tv-arrow">进贡</span>
-                ${cardHTML(tc, true, false, "", "tv-card")}
-                <span class="tv-arrow">→</span>
-                <span class="tv-name">${recvName}</span>
-                ${rc ? `<span class="tv-sep">·</span><span class="tv-name">${recvName}</span><span class="tv-arrow">还贡</span>${cardHTML(rc, true, false, "", "tv-card tv-return")}<span class="tv-arrow">→</span><span class="tv-name">${payerName}</span>` : ""}
-            </div>`;
-        }
-        return `<div class="tribute-row">${encodeHTML(displayMessage(row.text || row))}</div>`;
-    }).join("")}</div>`;
-}
-
-function dealOverlayHTML(mine, phase) {
-    if (phase !== "dealing" && phase !== "sorting") return "";
-    const label = phase === "dealing" ? L("Dealing cards", "正在发牌") : L("Sorting hand", "正在理牌");
-    const cards = Array.from({ length: DEAL_CARD_COUNT }).map((_, idx) => {
-        const seat = idx % 4;
-        const pos = visualSeatPos(seat, mine);
-        const fan = Math.floor(idx / 4) - 13;
-        const rot = (fan * 1.6).toFixed(1);
-        return `<span class="deal-card target-${pos}" style="--i:${idx};--fan:${fan};--rot:${rot}deg"><b>P</b><i>PICASSO</i><i>LAB</i></span>`;
-    }).join("");
-    return `<div class="deal-overlay ${phase}" aria-hidden="true">
-        <div class="deal-deck"><i></i><i></i><i></i></div>
-        <div class="deal-status">${label}<span></span></div>
-        <div class="deal-flight">${cards}</div>
-    </div>`;
-}
-
-function handCardsHTML(myHand, selectable, phase) {
-    if (!myHand.length) return `<div class="combo-label">${L("You are not seated yet. Spectator view.", "你还没有入座，当前是观战视角。")}</div>`;
-    if (phase === "dealing") return handBacksHTML(myHand.length, "deal-hand-back");
-    return myHand.map((c, idx) => {
-        const fan = idx - myHand.length / 2;
-        const attrs = [
-            phase === "sorting" ? `style="--i:${idx};--fan:${fan}"` : "",
-            selectable && phase === "done" ? `draggable="true" data-hand-pos="${idx}"` : ""
-        ].filter(Boolean).join(" ");
-        return cardHTML(c, false, selectable, attrs, phase === "sorting" ? "sort-in" : "");
-    }).join("");
-}
-
-function renderTable() {
-    document.body.dataset.screen = "table";
-    const mine = mySeat();
-    const dealPhase = currentDealPhase();
-    const tableBusy = dealPhase !== "done";
-    const myHand = mine >= 0 ? orderedHandForDisplay(game.hands[mine] || [], game.currentLevelRank, mine) : [];
-    const canAct = mine === game.currentTurn && game.phase === "playing" && !tableBusy;
-    const selectedCards = mine >= 0 ? myHand.filter(c => selected.has(c.id)) : [];
-    const rawSelectedCombos = selectedCards.length ? evaluateCombos(selectedCards, game.currentLevelRank) : [];
-    const selectedCombo = selectedCards.length ? choosePlayable(selectedCards, game.lastPlay?.combo || null, game.currentLevelRank) : null;
-    const canPlaySelected = canAct && !!selectedCombo && !actionBusy;
-    const handSelectable = game.phase === "playing" && mine >= 0 && !actionBusy && !tableBusy;
-    const remaining = turnRemainingMs(game);
-    const turnClockText = remaining == null
-        ? isOpeningLead(game) ? L("No limit", "不限时") : "--"
-        : formatClock(remaining);
-    const turnClockClass = remaining != null && remaining <= 30000 ? "danger" : remaining != null && remaining <= 60000 ? "warn" : "";
-    const currentTurnName = displaySeatName(game.seats[game.currentTurn], L("player", "玩家"));
-    const lastLabel = game.lastPlay
-        ? `${encodeHTML(displaySeatName(game.seats[game.lastPlay.player]))}: ${comboName(game.lastPlay.combo)}`
-        : L("New trick: any legal combo", "新一轮，任意合法牌型");
-    let advisorClass = "";
-    let advisorText = mine >= 0
-        ? L("Select cards to preview the combo before playing.", "选牌后会预览牌型和能否出牌。")
-        : L("Spectator view. Sit in the lobby before the next game to play.", "观战视角。下局前回大厅入座即可参与。");
-    let advisorDetail = selectedCards.map(cardText).join(" ");
-    const activeHint = activeHintForSelection(selectedCards, canAct);
-    if (activeHint) {
-        advisorClass = activeHint.className || "hint";
-        advisorText = activeHint.text;
-        advisorDetail = activeHint.detail || advisorDetail;
-    } else if (tableBusy) {
-        advisorText = dealPhase === "dealing"
-            ? L("Cards are being dealt. Your hand will reveal after the deal.", "正在发牌，发完后会翻开并理牌。")
-            : L("Sorting your hand.", "正在理牌。");
-    } else if (mine >= 0 && game.phase !== "playing") {
-        advisorText = L("Round review mode. Start the next round when everyone is ready.", "本局结算中，准备好后进入下一局。");
-    } else if (mine >= 0 && !canAct) {
-        advisorText = `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`;
-    } else if (selectedCards.length && selectedCombo) {
-        advisorClass = "ready";
-        advisorText = `${L("Ready", "可出")}: ${comboName(selectedCombo)} · ${selectedCards.length} ${L("cards", "张")}`;
-    } else if (selectedCards.length && rawSelectedCombos.length) {
-        advisorClass = "invalid";
-        advisorText = L("Legal combo, but it does not beat the current trick.", "牌型合法，但压不过当前上一手。");
-    } else if (selectedCards.length) {
-        advisorClass = "invalid";
-        advisorText = L("Not a legal Guandan combo.", "当前选牌不是合法掼蛋牌型。");
-    }
-    const historyRows = (game.history || []).slice(-10).reverse().map(h => `
-        <div class="history-row">
-            <div><b>${encodeHTML(displaySeatName(game.seats[h.player]))}</b> ${encodeHTML(translateAction(h.action, h))}</div>
-            ${h.cards?.length ? `<div class="history-cards">${displayCardsForCombo(h.cards, h.combo).map(cardText).join(" ")}</div>` : ""}
-        </div>`).join("");
-    root.innerHTML = `
-    <section class="table-wrap">
-        <div class="table deal-${dealPhase}">
-            <div class="table-emblem" aria-hidden="true"><span>Picasso Lab</span><b>Guandan</b></div>
-            <div class="bomb-fx" aria-hidden="true"></div>
-            <div class="bomb-banner-slot" aria-hidden="true"></div>
-            <div class="score-strip">
-                <div class="score-pill">${iconHTML("shield")}<span>${teamName(0)}</span><strong>${teamLevelDisplay(0)}</strong></div>
-                <div class="score-pill">${iconHTML("shield")}<span>${teamName(1)}</span><strong>${teamLevelDisplay(1)}</strong></div>
-                <div class="score-pill">${iconHTML("level")}<span>${L("Level", "本局打")}</span><strong>${game.currentLevelRank}</strong></div>
-                <div class="score-pill">${iconHTML("round")}<span>${L("Round", "第")}</span><strong>${game.roundNo}</strong>${isZH() ? " 局" : ""}</div>
-                <div class="score-pill wide turn-timer ${turnClockClass}">${iconHTML("turn")}<span>${L("Turn", "轮到")}</span><strong>${encodeHTML(currentTurnName)}</strong><em id="turn-clock">${turnClockText}</em></div>
-                <div class="score-pill">${iconHTML("wild")}<span>${L("Wild", "逢人配")}</span><strong class="wild-rank">♥${game.currentLevelRank}</strong></div>
-            </div>
-            ${[0,1,2,3].map(i => playerHTML(i, mine)).join("")}
-            ${[0,1,2,3].map(i => seatPlayHTML(i, mine)).join("")}
-            ${dealOverlayHTML(mine, dealPhase)}
-            <div class="center-zone">
-                <div class="center-card">
-                    <div class="center-meta"><span>${iconHTML("last")}${L("Last Trick", "上一手")}</span><strong>${lastLabel}</strong></div>
-                    ${tributeSummaryHTML()}
-                    ${game.startingCard && game.roundNo === 1 ? `<div class="starting-card-banner"><span>${L("Starting card", "起始牌")}</span>${cardHTML({ suit: game.startingCard.suit, rank: game.startingCard.rank, id: "__sc" }, true, false, "", "sc-card")}<span>${L("determines first player", "决定首出")}</span></div>` : ""}
-                    <div class="last-play ${game.lastPlay ? "" : "empty"}">${encodeHTML(lastPlaySummaryHTML(lastLabel))}</div>
-                    <div class="round-message">${encodeHTML(displayMessage(game.message || ""))}</div>
-                </div>
-            </div>
-            <div class="history"><div class="history-title"><span>${iconHTML("log")}${L("Trick Log", "出牌记录")}</span><span>${(game.history || []).length}</span></div>${historyRows || `<div class="history-row">${L("Waiting for the first play.", "等待第一手牌。")}</div>`}</div>
-            ${game.phase === "roundOver" ? roundOverHTML() : ""}
-            ${game.phase === "gameOver" ? gameOverHTML() : ""}
-            <div class="hand-zone ${canAct ? "your-turn" : ""}">
-                <div class="hand-header">
-                    <div class="hand-summary">${mine >= 0 ? `${L("Hand", "手牌")} ${tableBusy ? "" : `<strong>${myHand.length}</strong> ${L("cards", "张")} · `}${canAct ? L("Your turn", "轮到你出牌") : tableBusy ? (dealPhase === "dealing" ? L("Dealing", "发牌中") : L("Sorting", "理牌中")) : `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`}` : L("Spectator view", "观战视角")}</div>
-                    <div class="hand-tools">
-                        <button class="btn ghost" id="clear-btn" title="${L('Clear', '取消')}" type="button">${iconHTML("clear")}</button>
-                        <button class="btn ghost" id="hint-btn" title="${L('Hint', '提示')}" ${canAct && !actionBusy ? "" : "disabled"} type="button">${iconHTML("hint")}</button>
-                        <button class="btn pass" id="pass-btn" ${canAct && game.lastPlay && !actionBusy ? "" : "disabled"} type="button">${iconLabel("pass", L("Pass", "不要"))}</button>
-                        <button class="btn play" id="play-btn" ${canPlaySelected ? "" : "disabled"} type="button">${iconLabel("play", L("Play", "出牌"))}</button>
-                    </div>
-                    <div class="hand-feedback">
-                        <div class="selection-meter">${L("Selected", "已选")} <strong>${selected.size}</strong> ${L("cards", "张")}</div>
-                        <div class="combo-advisor ${advisorClass}"><span>${advisorText}</span><em>${encodeHTML(advisorDetail)}</em></div>
-                    </div>
-                </div>
-                <div class="hand ${dealPhase === "dealing" ? "receiving-hand" : dealPhase === "sorting" ? "sorting-hand" : ""} ${handSelectable && dealPhase === "done" ? "reorderable" : ""}">${handCardsHTML(myHand, handSelectable, dealPhase)}</div>
-            </div>
-        </div>
-    </section>`;
-    function refreshSelectionState() {
-        const selectedCardsNow = mine >= 0 ? myHand.filter(c => selected.has(c.id)) : [];
-        const rawCombosNow = selectedCardsNow.length ? evaluateCombos(selectedCardsNow, game.currentLevelRank) : [];
-        const selectedComboNow = selectedCardsNow.length ? choosePlayable(selectedCardsNow, game.lastPlay?.combo || null, game.currentLevelRank) : null;
-        const canPlayNow = canAct && !!selectedComboNow && !actionBusy;
-        let nextClass = "";
-        let nextText = mine >= 0
-            ? L("Select cards to preview the combo before playing.", "选牌后会预览牌型和能否出牌。")
-            : L("Spectator view. Sit in the lobby before the next game to play.", "观战视角。下局前回大厅入座即可参与。");
-        let nextDetail = selectedCardsNow.map(cardText).join(" ");
-        const activeHintNow = activeHintForSelection(selectedCardsNow, canAct);
-        if (activeHintNow) {
-            nextClass = activeHintNow.className || "hint";
-            nextText = activeHintNow.text;
-            nextDetail = activeHintNow.detail || nextDetail;
-        } else if (tableBusy) {
-            nextText = dealPhase === "dealing"
-                ? L("Cards are being dealt. Your hand will reveal after the deal.", "正在发牌，发完后会翻开并理牌。")
-                : L("Sorting your hand.", "正在理牌。");
-        } else if (mine >= 0 && game.phase !== "playing") {
-            nextText = L("Round review mode. Start the next round when everyone is ready.", "本局结算中，准备好后进入下一局。");
-        } else if (mine >= 0 && !canAct) {
-            nextText = `${L("Waiting for", "等待")} ${encodeHTML(currentTurnName)}`;
-        } else if (selectedCardsNow.length && selectedComboNow) {
-            nextClass = "ready";
-            nextText = `${L("Ready", "可出")}: ${comboName(selectedComboNow)} · ${selectedCardsNow.length} ${L("cards", "张")}`;
-        } else if (selectedCardsNow.length && rawCombosNow.length) {
-            nextClass = "invalid";
-            nextText = L("Legal combo, but it does not beat the current trick.", "牌型合法，但压不过当前上一手。");
-        } else if (selectedCardsNow.length) {
-            nextClass = "invalid";
-            nextText = L("Not a legal Guandan combo.", "当前选牌不是合法掼蛋牌型。");
-        }
-        const advisor = document.querySelector(".combo-advisor");
-        advisor?.classList.toggle("ready", nextClass === "ready");
-        advisor?.classList.toggle("hint", nextClass === "hint");
-        advisor?.classList.toggle("invalid", nextClass === "invalid");
-        const span = advisor?.querySelector("span");
-        const em = advisor?.querySelector("em");
-        if (span) span.textContent = nextText;
-        if (em) em.textContent = nextDetail;
-        const playBtn = document.getElementById("play-btn");
-        if (playBtn) playBtn.disabled = !canPlayNow;
-        const meter = document.querySelector(".selection-meter strong");
-        if (meter) meter.textContent = String(selected.size);
-    }
-    document.querySelectorAll("[data-card-id]").forEach(el => {
-        el.addEventListener("click", () => {
-            if (suppressNextCardClick) {
-                suppressNextCardClick = false;
-                return;
-            }
-            const id = el.dataset.cardId;
-            hintAdvisor = null;
-            if (selected.has(id)) selected.delete(id);
-            else selected.add(id);
-            el.classList.toggle("selected", selected.has(id));
-            refreshSelectionState();
-        });
-        el.addEventListener("dragstart", event => {
-            cardDragState = { id: el.dataset.cardId || "", moved: false };
-            el.classList.add("drag-source");
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", cardDragState.id);
-        });
-        el.addEventListener("dragover", event => {
-            if (!cardDragState.id || cardDragState.id === el.dataset.cardId) return;
-            event.preventDefault();
-            const rect = el.getBoundingClientRect();
-            const before = event.clientX < rect.left + rect.width / 2;
-            el.classList.toggle("drop-before", before);
-            el.classList.toggle("drop-after", !before);
-        });
-        el.addEventListener("dragleave", () => {
-            el.classList.remove("drop-before", "drop-after");
-        });
-        el.addEventListener("drop", event => {
-            if (!cardDragState.id) return;
-            event.preventDefault();
-            const rect = el.getBoundingClientRect();
-            const before = event.clientX < rect.left + rect.width / 2;
-            cardDragState.moved = moveHandCard(cardDragState.id, el.dataset.cardId, before);
-        });
-        el.addEventListener("dragend", () => {
-            if (cardDragState.moved) suppressNextCardClick = true;
-            cardDragState = { id: "", moved: false };
-            document.querySelectorAll(".drag-source,.drop-before,.drop-after").forEach(node => node.classList.remove("drag-source", "drop-before", "drop-after"));
-        });
-    });
-    document.getElementById("play-btn")?.addEventListener("click", playSelected);
-    document.getElementById("pass-btn")?.addEventListener("click", passTurn);
-    document.getElementById("hint-btn")?.addEventListener("click", hintMove);
-    document.getElementById("clear-btn")?.addEventListener("click", () => { selected.clear(); hintAdvisor = null; renderTable(); });
-    document.getElementById("next-round")?.addEventListener("click", nextRound);
-    maybeCelebrateBomb();
-    initResultOverlay();
-    updateTopbarStatus();
-}
-
-function playerHTML(i, mine) {
-    const s = game.seats[i] || { name: `Seat ${i + 1}`, type: "empty" };
-    if (i === mine) return "";
-    const count = (game.hands[i] || []).length;
-    const finishedPlace = finishedList(game).indexOf(i) + 1;
-    const pos = visualSeatPos(i, mine);
-    const name = displaySeatName(s, `Seat ${i + 1}`);
-    const thinking = game.phase === "playing" && game.currentTurn === i && s.type === "ai";
-    const canRevealCount = i === mine || finishedPlace || count <= 7;
-    const countText = finishedPlace
-        ? L("DONE", "完赛")
-        : canRevealCount
-            ? `${count} ${L("cards", "张")}`
-            : "";
-    const leftLabel = finishedPlace
-        ? L(`#${finishedPlace}`, `第 ${finishedPlace} 名`)
-        : i !== mine && count > 7
-            ? `≥8 ${L("cards", "张")}`
-            : L("left", "剩余");
-    // Public jokers revealed after 抗贡
-    const publicJokerSeats = valuesFromFirebase(game.publicJokerSeats);
-    const publicJokers = publicJokerSeats.includes(i)
-        ? (game.hands[i] || []).filter(c => c.joker === "RJ")
-        : [];
-    const backCount = finishedPlace
-        ? 0
-        : count <= 7
-            ? Math.max(1, count - publicJokers.length)
-            : 8 - publicJokers.length;
-    const publicJokerCards = publicJokers.map(c => cardHTML(c, true, false, "", "public-joker")).join("");
-    const isTurn = game.currentTurn === i;
-    const turnRemainMs = isTurn ? turnRemainingMs(game) : null;
-    const turnFrac = turnRemainMs == null ? 0 : Math.max(0, Math.min(1, turnRemainMs / TURN_LIMIT_MS));
-    const turnDashOffset = (1 - turnFrac) * 163.4;
-    const ringClass = turnRemainMs != null && turnRemainMs <= 30000 ? "danger" : turnRemainMs != null && turnRemainMs <= 60000 ? "warn" : "";
-    const tier = levelTier(game.levels?.[i % 2]);
-    const memberPhoto = seatMemberPhoto(name);
-    return `<div class="player p${pos} ${game.currentTurn === i ? "turn" : ""} ${thinking ? "thinking" : ""} ${finishedPlace ? "finished" : ""}">
-        <div class="player-main">
-            <div class="avatar-frame" data-tier="${tier}">
-                <svg class="turn-ring ${ringClass}" viewBox="0 0 68 68" aria-hidden="true">
-                    <circle class="turn-ring-track" cx="34" cy="34" r="26"/>
-                    <circle class="turn-ring-fill" cx="34" cy="34" r="26" style="stroke-dashoffset:${turnDashOffset}"/>
-                </svg>
-                <div class="player-avatar">${memberPhoto ? `<img src="${encodeHTML(memberPhoto)}" alt="">` : encodeHTML(initials(name, String(i + 1)))}</div>
-                <span class="player-level-badge">${encodeHTML(teamLevelDisplay(i % 2))}</span>
-            </div>
-            <div class="player-name"><span>${encodeHTML(name)}</span><span class="player-badge">${i === mine ? L("You", "你") : teamName(i % 2)}</span></div>
-        </div>
-        <div class="player-small"><span>${iconHTML(s.type === "ai" ? "ai" : "human")} ${s.type === "ai" ? "AI" : L("Human", "真人")} · ${thinking ? `<span class="thinking-badge">${L("Thinking", "思考中")}<i></i><i></i><i></i></span>` : leftLabel}</span>${countText ? `<span class="count-chip${i !== mine && !finishedPlace && count <= 7 ? " alert" : ""}">${iconHTML("cards")} ${countText}</span>` : ""}</div>
-        <div class="back-stack">${publicJokerCards}${Array.from({ length: Math.max(0, backCount) }).map(() => `<i class="mini-back"></i>`).join("")}</div>
-    </div>`;
 }
 
 function roundOverHTML() {
@@ -3064,6 +3678,9 @@ document.addEventListener("keydown", event => {
 // Mount window.GuandanStage into #stage-mount here (lazy import, optional-chained, never
 // blocking the 2D game). Nothing runs in this region yet.
 // ==== END STAGE HOOKS ====
+
+window.addEventListener("resize", scheduleStageLayout);
+window.addEventListener("orientationchange", scheduleStageLayout);
 
 if (roomCode) attachRoom(roomCode);
 else render();
