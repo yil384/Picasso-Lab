@@ -597,7 +597,7 @@ function cardHTML(card, small = false, selectable = false, extraAttrs = "", extr
     const attrs = [selectable ? `data-card-id="${encodeHTML(card.id)}"` : "", extraAttrs].filter(Boolean).join(" ");
     const index = card.joker
         ? ""
-        : `<span class="gd-ix" aria-hidden="true"><b class="gd-rank${card.rank === "10" ? " is-10" : ""}">${rankLabel(card.rank)}</b>${suitSvgHTML(card.suit, "gd-suit")}</span>`;
+        : `<span class="gd-ix" aria-hidden="true"><b class="gd-rank${card.rank === "10" ? " is-10" : card.rank === "J" ? " is-j" : ""}">${rankLabel(card.rank)}</b>${suitSvgHTML(card.suit, "gd-suit")}</span>`;
     return `<div class="${classes}" ${attrs} title="${encodeHTML(title)}" aria-label="${encodeHTML(title)}">${index}${cardBodyHTML(card, portrait)}${isLevel ? `<span class="gd-ji" aria-hidden="true">${L("LV", "级")}</span>` : ""}${wild ? `<span class="gd-wild-tag" aria-hidden="true">${L("WILD", "逢人配")}</span>` : ""}${overlayHTML}</div>`;
 }
 
@@ -1787,6 +1787,11 @@ const TABLE_ICONS = {
     table: `<circle cx="16" cy="16" r="13" fill="#fff"/><path fill="#0b6b62" d="M14.5 9h3v5.5H23v3h-5.5V23h-3v-5.5H9v-3h5.5Z"/>`,
     exit: `<path fill="#fff" d="M5 4h13a2 2 0 0 1 2 2v5h-3V7H8v18h9v-4h3v5a2 2 0 0 1-2 2H5Z"/><path fill="#ffd66b" d="m21 9.5 7.5 6.5-7.5 6.5v-4.3h-8v-4.4h8Z"/>`
 };
+// Rank text outside the card index (tracker, level tiles, play log): same J squash as the cards.
+function rankGlyphHTML(rank) {
+    return rank === "J" ? `<i class="rank-j">J</i>` : encodeHTML(rank);
+}
+
 function tableIcon(name) {
     return `<svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${TABLE_ICONS[name] || ""}</svg>`;
 }
@@ -2369,7 +2374,7 @@ function jipaiHTML(mine) {
             ? suitSvgHTML("H", "gd-jp-wild")
             : key === "RJ" || key === "BJ"
                 ? `<span class="gd-jp-joker">${jokerIconHTML({ joker: key })}</span>`
-                : `<b class="gd-jp-rank">${key}</b>${key === level ? `<span class="gd-jp-ji">${L("LV", "级")}</span>` : ""}`;
+                : `<b class="gd-jp-rank">${rankGlyphHTML(key)}</b>${key === level ? `<span class="gd-jp-ji">${L("LV", "级")}</span>` : ""}`;
         return `<div class="gd-jp-cell"><div class="gd-jp-head${key === "RJ" || key === "wild" ? " is-red" : ""}">${head}</div><div class="gd-jp-num ${tone}">${n}</div></div>`;
     };
     return `<div class="gd-jipai">${tabs}<div class="gd-jp-grid">${JIPAI_ORDER.map(cell).join("")}</div></div>`;
@@ -2394,7 +2399,7 @@ function hudHTML(view) {
     const tile = (team, cls, label) => {
         const level = game.levels?.[team] || "2";
         const fails = level === "A" ? Number(game.aceFailures?.[team] || 0) : 0;
-        return `<div class="gd-lvl ${cls}"><b>${label}</b><em>${level}${fails ? `<small>${fails}/${ACE_FAIL_LIMIT}</small>` : ""}</em></div>`;
+        return `<div class="gd-lvl ${cls}"><b>${label}</b><em>${rankGlyphHTML(level)}${fails ? `<small>${fails}/${ACE_FAIL_LIMIT}</small>` : ""}</em></div>`;
     };
     return `<button class="gd-menu-btn" type="button" data-act="menu" aria-label="${L("Menu", "菜单")}" aria-expanded="${tableView.menuOpen}"><i></i><i></i><i></i></button>
         <div class="gd-lvls">${tile(view % 2, "is-us", L("Us", "我方"))}${tile(1 - view % 2, "is-them", L("Them", "对方"))}</div>`;
