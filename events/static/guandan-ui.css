@@ -370,20 +370,6 @@ body[data-screen="table"] .hud-status { display: none; }
     white-space: nowrap;
 }
 .gd-avatar-tag.gd-badge { height: 15px; bottom: -8px; }
-/* Countdown ring hook kept by name for updateTurnClockDOM(): .turn-ring .turn-ring-fill
-   (r=26 in a 68 viewBox, dasharray 163.4). Screens size and place it. */
-.turn-ring { display: block; overflow: visible; rotate: -90deg; }
-.turn-ring circle { fill: none; stroke-width: 4; }
-.turn-ring-track { stroke: rgba(0, 0, 0, .28); }
-.turn-ring-fill {
-    stroke: var(--gold-2);
-    stroke-linecap: round;
-    stroke-dasharray: 163.4;
-    transition: stroke-dashoffset 1s linear;
-}
-.turn-ring.warn .turn-ring-fill { stroke: #ff9a1c; }
-.turn-ring.danger .turn-ring-fill { stroke: #ff4a3c; }
-
 /* Display-font words (combo labels, 胜利, VS). Static filter only; animate transform/opacity. */
 .gd-display { font-family: var(--font-display); font-weight: 400; }
 .gd-gold-text {
