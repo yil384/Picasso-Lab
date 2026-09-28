@@ -1784,7 +1784,8 @@ function previewCardsHTML() {
     return (aces.length ? aces : ["A♠", "A♥", "A♦", "A♣"]).slice(0, 4).map((card, i) => cardHTML(signatureCard(card, `pv${i}`))).join("");
 }
 
-// Left rail: 赛季MVP · 巅峰对决 · 实验室 · 分享 · 音乐 (dark discs, label over the bottom edge).
+// Left rail: 赛季MVP · 巅峰对决 · 实验室 · 分享 · 音乐, free-standing objects with the label over
+// their bottom edge.
 function lobbyRailHTML() {
     const standings = labStandings();
     const PL = labPlayers();
@@ -1794,11 +1795,11 @@ function lobbyRailHTML() {
     const item = (cls, attrs, disc, label, extra = "") => `<button class="rail-item ${cls}" type="button" ${attrs}>
             <span class="rail-disc">${disc}</span>${extra}<span class="rail-lb">${label}</span></button>`;
     return [
-        mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, L("MVP", "赛季MVP"), `<span class="rail-badge">MVP</span>`) : "",
+        mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, L("Season MVP", "赛季MVP"), `<span class="rail-badge">MVP</span>`) : "",
         item("is-peak", `data-open-records="latest"`, `<span class="rail-vs"><b>VS</b></span>`, L("Showdown", "巅峰对决")),
         labKey ? item("is-lab", `data-lobby="lab"`, cardHTML(signatureCard(PL[labKey].card, "rl0")), L("Lab", "实验室")) : "",
         item("is-share", `data-lobby="share"`, `${cardHTML({ back: true })}<span class="rail-share">${glyphHTML("share")}</span>`, L("Share", "分享")),
-        item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-pressed="${musicOn}"`, `<span class="rail-vinyl"></span>`, L("Music", "音乐"),
+        item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-pressed="${musicOn}"`, `<span class="rail-vinyl"></span>${glyphHTML("note", "rail-note")}`, L("Music", "音乐"),
             musicOn ? "" : `<span class="rail-badge is-off">${L("OFF", "关")}</span>`)
     ].join("");
 }
@@ -1844,7 +1845,7 @@ function lobbyTilesHTML() {
         </button>
         <button class="lobby-tile is-practice" type="button" data-lobby="practice" aria-label="${L("Practice against AI", "人机练习")}">
             <span class="tile-art joker-art">${cardHTML({ id: "pvBJ", joker: "BJ" })}${cardHTML({ id: "pvRJ", joker: "RJ" })}</span>
-            <b class="tile-title">${L("vs AI", "人机练习")}<span class="tile-tag">${L("SOLO", "单人")}</span></b>
+            <b class="tile-title">${L("vs AI", "人机练习")}</b>
         </button>
         <button class="lobby-tile is-peak" type="button" data-open-records="latest" aria-label="${L("Peak Showdown records", "巅峰对决战绩")}">
             ${peakTileArtHTML()}
@@ -1857,13 +1858,13 @@ function lobbyTilesHTML() {
         <div class="lobby-tile is-join" data-lobby="join">
             <span class="tile-art join-art">
                 <label class="join-code">${joinCellsHTML(code)}<input id="room-input" value="${encodeHTML(code)}" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="${L("Room code (5 characters)", "房间码（5 位）")}"></label>
-                <button class="btn sm" id="join-room" type="button">${L("Join", "加入")}</button>
+                <button class="join-go" id="join-room" type="button"><span class="btn sm">${L("Join", "加入")}</span></button>
             </span>
             <b class="tile-title">${L("Join Room", "加入房间")}</b>
         </div>
         <button class="lobby-tile is-friends" type="button" data-lobby="friends" aria-label="${L("Create a room and copy the invite link", "创建房间并复制邀请链接")}">
             ${friendsTileArtHTML()}
-            <b class="tile-title">${L("Friends", "好友房")}<span class="tile-tag">${L("INVITE", "邀请")}</span></b>
+            <b class="tile-title">${L("Friends", "好友房")}</b>
         </button>
         <button class="lobby-tile is-rules" type="button" data-lobby="rules" aria-label="${L("Rules", "玩法规则")}">
             <span class="tile-art rules-art">${straight}</span>
@@ -1917,11 +1918,12 @@ function bindLobby(el) {
     el.addEventListener("click", event => {
         const target = event.target.closest("button, .lobby-tile");
         if (!target || target.disabled) return;
-        if (target.id === "create-room") return runLobbyAction(createRoom);
+        const creating = L("Creating room…", "正在创建房间…");
+        if (target.id === "create-room") return runLobbyAction(createRoom, target, creating);
         if (target.id === "join-room") return joinRoom();
         const action = target.dataset.lobby;
-        if (action === "practice") return runLobbyAction(quickPractice);
-        if (action === "friends") return runLobbyAction(createAndInvite);
+        if (action === "practice") return runLobbyAction(quickPractice, target, L("Dealing…", "正在开局…"));
+        if (action === "friends") return runLobbyAction(createAndInvite, target, creating);
         if (action === "lab") return openLabDeck();
         if (action === "rules") return openRules();
         if (action === "settings") return openSettings();
@@ -1944,16 +1946,22 @@ function bindLobby(el) {
     });
 }
 
-// One lobby action at a time: a double tap must not create two rooms.
-async function runLobbyAction(fn) {
+// One lobby action at a time: a double tap must not create two rooms. The tapped tile stays
+// pressed under a "正在开局…" veil until the next screen arrives (Firebase can take a second or two).
+async function runLobbyAction(fn, source, label) {
     if (lobbyActionBusy) return;
     lobbyActionBusy = true;
     root.querySelector(".lobby")?.classList.add("is-busy");
+    if (source) {
+        source.dataset.loading = label;
+        source.classList.add("is-loading");
+    }
     try {
         await fn();
     } finally {
         lobbyActionBusy = false;
         root.querySelector(".lobby")?.classList.remove("is-busy");
+        source?.classList.remove("is-loading");
     }
 }
 
@@ -1977,6 +1985,8 @@ async function quickPractice() {
     quickStart = hold;
     try {
         await createRoom();
+        // This room is never shown, so neither is its 房间已创建 toast.
+        toastEl.classList.remove("show");
         if (await Promise.race([hold.loaded, waitFor(() => false, 8000)])) {
             await startGame();
             const snap = await get(roomRef());

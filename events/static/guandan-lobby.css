@@ -17,28 +17,32 @@ body[data-screen="lobby"],
 body[data-screen="room"],
 html[data-gd-boot="lobby"] body:not([data-screen]) {
     --lu: min(calc(100vw / 1280), calc(100vh / 720));
+    --vh: 100vh;
+    --fx: max(0px, (100vw - 1280 * var(--lu)) / 2);      /* left edge of the centred 1280-wide design */
     --hud-h: calc(80 * var(--lu));
     --sl: env(safe-area-inset-left, 0px);
     --sr: env(safe-area-inset-right, 0px);
     --tap: 0px;
     --fs-min: 10px;
     /* navy-periwinkle room: window light and a mullioned window top-left, tall glass panes on
-       the right, a lilac wash under the ceiling, the floor line and a darker floor */
+       the right, a lilac wash under the ceiling, a large soft room light, the lit horizon band
+       and a darker floor */
     background:
         radial-gradient(48% 42% at 8% 14%, rgba(150, 200, 255, .34), rgba(150, 200, 255, 0) 70%),
+        radial-gradient(42% 46% at 56% 40%, rgba(176, 196, 255, .2), rgba(176, 196, 255, 0) 72%),
         radial-gradient(60% 55% at 88% 0%, rgba(132, 146, 236, .5), rgba(132, 146, 236, 0) 70%),
         linear-gradient(90deg, transparent 2%, rgba(190, 215, 255, .08) 2% 7.5%, transparent 7.5% 8.2%, rgba(190, 215, 255, .08) 8.2% 13.7%, transparent 13.7%) 0 12% / 100% 38% no-repeat,
         linear-gradient(180deg, transparent 49%, rgba(190, 215, 255, .12) 49% 51%, transparent 51%) 0 12% / 14% 38% no-repeat,
         linear-gradient(90deg, transparent 74%, rgba(180, 205, 255, .07) 74% 81%, transparent 81% 82.5%, rgba(180, 205, 255, .07) 82.5% 89.5%, transparent 89.5% 91%, rgba(180, 205, 255, .05) 91% 98%, transparent 98%) 0 0 / 100% 58% no-repeat,
         linear-gradient(180deg, rgba(210, 222, 255, .1), rgba(210, 222, 255, 0)) 0 0 / 100% 4% no-repeat,
         linear-gradient(104deg, rgba(255, 255, 255, 0) 30%, rgba(190, 210, 255, .07) 42%, rgba(255, 255, 255, 0) 54%),
-        linear-gradient(180deg, transparent 57%, rgba(160, 190, 255, .14) 58.2%, rgba(160, 190, 255, .04) 58.6%, rgba(20, 30, 80, .1) 62%, rgba(10, 16, 50, .34) 100%),
+        linear-gradient(180deg, transparent 50%, rgba(170, 196, 255, .1) 56%, rgba(190, 212, 255, .22) 58.2%, rgba(160, 190, 255, .06) 59%, rgba(20, 30, 80, .1) 63%, rgba(10, 16, 50, .34) 100%),
         linear-gradient(180deg, #4659aa 0%, #34478f 40%, #2b3c7c 72%, #223066 100%);
 }
 @supports (height: 100dvh) {
     body[data-screen="lobby"],
     body[data-screen="room"],
-    html[data-gd-boot="lobby"] body:not([data-screen]) { --lu: min(calc(100vw / 1280), calc(100dvh / 720)); }
+    html[data-gd-boot="lobby"] body:not([data-screen]) { --lu: min(calc(100vw / 1280), calc(100dvh / 720)); --vh: 100dvh; }
 }
 /* landscape phones: a 600-high design so text and controls stay readable */
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
@@ -251,28 +255,54 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 }
 
 /* ---------- lobby ---------- */
+/* Laid out on a centred 1280-wide design (大掼蛋 2026 lobby proportions): the rail at 6-12% of
+   the width, the tile grid from 20% to 90%, the bottom row with the nav under the grid and the
+   快速开始 bar reaching past the grid's right edge. */
 .lobby {
+    --tiles-h: clamp(calc(365 * var(--lu)), calc(365 * var(--lu) + (var(--vh) - 600 * var(--lu)) * .4), calc(420 * var(--lu)));
     position: relative;
+    display: grid;
+    grid-template-columns: calc(var(--fx) + 79 * var(--lu) + var(--sl)) calc(72 * var(--lu)) calc(104 * var(--lu)) calc(900 * var(--lu)) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) calc(100 * var(--lu));
     min-height: 100vh;
     min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: var(--hud-h) calc(34 * var(--lu) + var(--sr)) 0 calc(150 * var(--lu) + var(--sl));
+    padding-top: var(--hud-h);
     overflow-x: clip;
     color: #fff;
 }
+body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu) + var(--sl)); }
 .lobby.is-busy { cursor: progress; }
 .lobby.is-busy .lobby-tile, .lobby.is-busy .lobby-quick { pointer-events: none; }
-
-/* left rail: dark discs with an object, label overlapping the bottom */
-.lobby-rail {
+/* the tapped tile stays pressed under a caption until the next screen arrives */
+.lobby-tile.is-loading, .lobby-quick.is-loading { scale: .97; }
+.lobby-tile.is-loading::after, .lobby-quick.is-loading::after {
+    content: attr(data-loading);
     position: absolute;
-    left: calc(34 * var(--lu) + var(--sl));
-    top: calc(var(--hud-h) + 12 * var(--lu));
-    height: min(calc(100% - var(--hud-h) - 34 * var(--lu)), calc(560 * var(--lu)));
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    border-radius: inherit;
+    background: rgba(24, 34, 86, .62);
+    color: #fff;
+    font: 900 max(var(--fs-min) * 1.2, calc(22 * var(--lu)))/1.2 var(--font-ui);
+    text-shadow: 0 calc(2 * var(--lu)) 0 rgba(10, 16, 50, .6);
+}
+/* on the gold bar the caption replaces the label */
+.lobby-quick.is-loading > * { visibility: hidden; }
+.lobby-quick.is-loading::after { background: none; color: #a3240c; font-size: calc(28 * var(--lu)); text-shadow: none; }
+
+/* left rail: free-standing objects (MVP portrait, VS disc, a labmate's card, the shared card
+   back, a record), each with its label over the bottom edge */
+.lobby-rail {
+    grid-area: 1 / 2;
+    align-self: center;
+    /* from just under the top bar to the grid's bottom edge */
+    height: calc(var(--tiles-h) + 20 * var(--lu));
+    translate: 0 calc(-10 * var(--lu));
     display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: space-between;
 }
 .rail-item {
@@ -280,7 +310,7 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: calc(86 * var(--lu));
+    width: calc(80 * var(--lu));
     padding: 0;
     border: 0;
     background: none;
@@ -292,24 +322,20 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     position: relative;
     display: grid;
     place-items: center;
-    width: calc(74 * var(--lu));
-    height: calc(74 * var(--lu));
-    overflow: hidden;
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 35%, #5a6aa8 0%, #3a4a86 70%, #2e3c72 100%);
-    box-shadow: inset 0 0 0 calc(2 * var(--lu)) rgba(255, 255, 255, .22);
+    width: calc(60 * var(--lu));
+    height: calc(60 * var(--lu));
 }
 .rail-lb {
     position: relative;
-    margin-top: calc(-12 * var(--lu));
-    font: 900 max(var(--fs-min) * 1.1, calc(18 * var(--lu)))/1.1 var(--font-ui);
+    margin-top: calc(-10 * var(--lu));
+    font: 900 max(var(--fs-min), calc(17 * var(--lu)))/1.1 var(--font-ui);
     white-space: nowrap;
     -webkit-text-stroke: calc(4 * var(--lu)) #243268;
     paint-order: stroke fill;
 }
 .rail-badge {
     position: absolute;
-    top: calc(50 * var(--lu));
+    top: calc(41 * var(--lu));
     left: 50%;
     translate: -50% 0;
     padding: 0 calc(7 * var(--lu));
@@ -320,75 +346,83 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     letter-spacing: .04em;
 }
 .rail-badge.is-off { background: linear-gradient(180deg, #ff9a8a, #d8433c); color: #fff; font-family: var(--font-ui); }
-.is-mvp .rail-disc { background: linear-gradient(180deg, #ffe9a0, #d99a2a); }
+/* 赛季MVP: the MVP's photo in a gold ring */
+.is-mvp .rail-disc { border-radius: 50%; background: linear-gradient(180deg, #ffe9a0, #d99a2a); box-shadow: 0 calc(3 * var(--lu)) 0 rgba(20, 30, 90, .45); }
 .is-mvp .rail-disc img {
-    width: calc(66 * var(--lu));
-    height: calc(66 * var(--lu));
+    width: calc(53 * var(--lu));
+    height: calc(53 * var(--lu));
     border-radius: 50%;
     object-fit: cover;
 }
-.is-mvp .rail-lb { margin-top: calc(-4 * var(--lu)); }
+.is-mvp .rail-lb { margin-top: calc(-2 * var(--lu)); }
 /* 巅峰对决: a red / blue split disc with a gold VS */
-.is-peak .rail-disc { background: linear-gradient(115deg, #e0546e 0%, #c8304e 49.5%, #2c5ce4 50.5%, #5a86ff 100%); }
+.is-peak .rail-disc {
+    border-radius: 50%;
+    background: linear-gradient(115deg, #e0546e 0%, #c8304e 49.5%, #2c5ce4 50.5%, #5a86ff 100%);
+    box-shadow: inset 0 0 0 calc(3 * var(--lu)) rgba(255, 255, 255, .85), 0 calc(3 * var(--lu)) 0 rgba(20, 30, 90, .45);
+}
 .rail-vs b {
     display: block;
-    font: 400 calc(34 * var(--lu))/1 var(--font-display);
+    font: 400 calc(30 * var(--lu))/1 var(--font-display);
     background: linear-gradient(180deg, #fffbe8 0%, #ffe39a 40%, #f6b33a 70%, #b8660c 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     filter: drop-shadow(0 calc(2 * var(--lu)) 0 #5a1c00);
 }
-/* 实验室: a labmate's signature card */
-.is-lab .rail-disc { --card-w: calc(40 * var(--lu)); }
-.is-lab .rail-disc .card { rotate: 10deg; translate: 0 calc(4 * var(--lu)); }
-.is-share .rail-disc { --card-w: calc(40 * var(--lu)); }
-.is-share .rail-disc .card { rotate: -14deg; translate: calc(-6 * var(--lu)) calc(-2 * var(--lu)); }
+/* 实验室: a labmate's signature card; 分享: the card back with a green share badge */
+.is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(42 * var(--lu)); }
+.is-lab .rail-disc .card { rotate: 10deg; }
+.is-share .rail-disc .card { rotate: -12deg; translate: calc(-4 * var(--lu)) 0; }
 .rail-share {
     position: absolute;
-    right: calc(8 * var(--lu));
-    bottom: calc(12 * var(--lu));
+    right: calc(2 * var(--lu));
+    bottom: calc(10 * var(--lu));
     display: grid;
     place-items: center;
-    width: calc(32 * var(--lu));
-    height: calc(32 * var(--lu));
+    width: calc(30 * var(--lu));
+    height: calc(30 * var(--lu));
+    border: calc(2 * var(--lu)) solid #fff;
     border-radius: 50%;
     background: linear-gradient(180deg, #7ff0a8, #2fb865);
-    box-shadow: inset 0 calc(-2 * var(--lu)) 0 rgba(0, 90, 40, .3);
     color: #fff;
 }
-.rail-share .gd-glyph { width: calc(20 * var(--lu)); height: calc(20 * var(--lu)); }
-/* vinyl record: black grooves, gold label */
+.rail-share .gd-glyph { width: calc(17 * var(--lu)); height: calc(17 * var(--lu)); }
+/* 音乐: a record (grooves, sheen, red label) with a gold note */
 .rail-vinyl {
-    width: calc(58 * var(--lu));
-    height: calc(58 * var(--lu));
+    width: calc(52 * var(--lu));
+    height: calc(52 * var(--lu));
     border-radius: 50%;
     background:
-        radial-gradient(circle closest-side, #f6c343 0 26%, #b8660c 27% 30%, transparent 31%),
-        repeating-radial-gradient(circle closest-side, #1a1d2c 0 3%, #2c3148 3.5% 5%),
-        #1a1d2c;
-    box-shadow: inset calc(4 * var(--lu)) calc(-4 * var(--lu)) 0 rgba(255, 255, 255, .06);
-    rotate: -20deg;
+        radial-gradient(circle closest-side, #fff 0 5%, #e0546e 6% 30%, #fff3 31% 32%, transparent 33%),
+        linear-gradient(135deg, transparent 28%, rgba(255, 255, 255, .16) 42%, transparent 54%),
+        repeating-radial-gradient(circle closest-side, #1c2030 0 4%, #2d3350 4.5% 6%),
+        #1c2030;
+    box-shadow: 0 calc(3 * var(--lu)) 0 rgba(20, 30, 90, .45);
 }
-.is-music.is-off .rail-vinyl { opacity: .45; }
+.rail-note {
+    position: absolute;
+    top: calc(-2 * var(--lu));
+    right: calc(-4 * var(--lu));
+    width: calc(28 * var(--lu));
+    height: calc(28 * var(--lu));
+    fill: #ffd766;
+    filter: drop-shadow(0 calc(2 * var(--lu)) 0 #7a3a00);
+}
+.is-music.is-off .rail-vinyl, .is-music.is-off .rail-note { opacity: .45; }
 
-.lobby-main { flex: 1; display: flex; flex-direction: column; width: calc(1080 * var(--lu)); }
+.lobby-main { display: contents; }
 
-/* tile grid: tall 经典 + six pastel tiles, heavy ink titles at the bottom */
+/* tile grid: tall 经典 + six pastel tiles (about 1.2 : 1), heavy ink titles at the bottom */
 .lobby-tiles {
-    --t: var(--lu);
-    flex: none;
+    --t: calc(var(--lu) * .82);
+    grid-area: 1 / 4;
+    align-self: center;
     display: grid;
-    grid-template-columns: calc(288 * var(--lu)) repeat(3, minmax(0, 1fr));
+    grid-template-columns: calc(235 * var(--lu)) repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: calc(7 * var(--lu));
-    /* 446 design px on a 720-high screen; taller screens give the grid part of the extra height */
-    height: min(calc(446 * var(--lu) + (100vh - 720 * var(--lu)) * .55), calc(530 * var(--lu)));
-    margin: auto 0;
-}
-/* landscape phones: the tiles are shorter, their contents follow */
-@media (min-aspect-ratio: 1/1) and (max-height: 500px) {
-    .lobby-tiles { --t: calc(var(--lu) * .85); }
+    height: var(--tiles-h);
 }
 .lobby-tile {
     --t-hot: rgba(255, 160, 110, .9); --t-top: #fdd0af; --t-mid: #fceae0;
@@ -423,18 +457,6 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     text-shadow: 0 calc(2 * var(--t)) 0 rgba(255, 255, 255, .9);
 }
 html[lang="en"] .tile-title { font-size: calc(36 * var(--t)); letter-spacing: 0; }
-/* red vertical corner tag beside the title (加倍-style), real features only */
-.tile-tag {
-    position: absolute;
-    left: calc(100% + 8 * var(--t));
-    bottom: 0;
-    color: #e8601c;
-    font: 900 max(var(--fs-min), calc(19 * var(--t)))/1.05 var(--font-ui);
-    letter-spacing: 0;
-    writing-mode: vertical-rl;
-    text-shadow: none;
-}
-html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc(-18 * var(--t)); left: auto; right: calc(-6 * var(--t)); font-size: max(var(--fs-min), calc(13 * var(--t))); }
 /* white speech bubble above a tile */
 .tile-bubble {
     position: absolute;
@@ -475,6 +497,7 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
 /* 经典: tall orange tile, a fan of the lab's signature aces (the real card component) */
 .lobby-tile.is-classic { --t-hot: rgba(250, 128, 70, .95); --t-top: #fba766; --t-mid: #fdd7ae; grid-row: span 2; padding-bottom: calc(34 * var(--t)); }
 .is-classic .tile-title { font-size: calc(70 * var(--t)); }
+html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
 .is-classic .tile-art { top: calc(50 * var(--t)); bottom: calc(118 * var(--t)); }
 /* each card turns about its own bottom-left corner, so every rank + suit index and every
    portrait stays readable */
@@ -571,23 +594,25 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
 .lab-photo:nth-child(4) { rotate: 12deg; }
 .lab-photo:nth-child(5) { rotate: 24deg; }
 
-/* 加入房间: aqua, five code cells over the transparent room-code field */
+/* 加入房间: aqua, five inset code cells (a dim dot while empty) over the transparent room-code
+   field; the field and the 加入 button keep --tap targets around their drawn size */
 .lobby-tile.is-join { --t-hot: rgba(70, 226, 250, .8); --t-top: #93f3fd; --t-mid: #d2fbff; cursor: text; }
 .join-art { gap: calc(8 * var(--t)); pointer-events: auto; }
-.join-code { position: relative; display: block; cursor: text; }
+.join-code { position: relative; display: grid; align-items: center; min-height: var(--tap); cursor: text; }
 .join-cells { display: flex; gap: calc(4 * var(--t)); }
 .join-cells i {
     display: grid;
     place-items: center;
     width: calc(28 * var(--t));
-    height: max(var(--tap), calc(54 * var(--t)));
+    height: calc(54 * var(--t));
     border-radius: calc(6 * var(--t));
-    background: #fff;
-    box-shadow: inset 0 0 0 calc(2 * var(--t)) #b8d8ee, inset 0 calc(3 * var(--t)) calc(4 * var(--t)) rgba(20, 60, 120, .1);
+    background: linear-gradient(180deg, #e8f5fc, #fff 60%);
+    box-shadow: inset 0 0 0 calc(2 * var(--t)) #b8d8ee, inset 0 calc(3 * var(--t)) calc(4 * var(--t)) rgba(20, 60, 120, .16);
     color: var(--ink);
     font: 800 calc(30 * var(--t))/1 var(--font-num);
     font-style: normal;
 }
+.join-cells i:empty::after { content: ""; width: calc(7 * var(--t)); height: calc(7 * var(--t)); border-radius: 50%; background: rgba(40, 70, 120, .22); }
 .join-code:focus-within .join-cells i.is-next { box-shadow: inset 0 0 0 calc(3 * var(--t)) var(--util); }
 .join-code input {
     position: absolute;
@@ -611,7 +636,8 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
     60% { translate: calc(-4 * var(--t)) 0; }
     80% { translate: calc(2 * var(--t)) 0; }
 }
-.join-art .btn { --btn-h: max(var(--tap), calc(54 * var(--t))); --btn-fs: calc(21 * var(--t)); --btn-px: calc(12 * var(--t)); --btn-minw: calc(58 * var(--t)); }
+.join-go { display: grid; place-items: center; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; background: none; }
+.join-go .btn { --btn-h: calc(54 * var(--t)); --btn-fs: calc(21 * var(--t)); --btn-px: calc(12 * var(--t)); --btn-minw: calc(58 * var(--t)); }
 
 /* 好友房: peach, a mini room table */
 .lobby-tile.is-friends { --t-hot: rgba(255, 150, 105, .85); --t-top: #fec5a6; --t-mid: #fde7da; }
@@ -662,18 +688,17 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
 .rules-art .card:nth-child(4) { rotate: 7deg; }
 .rules-art .card:nth-child(5) { rotate: 14deg; }
 
-/* bottom dock: white glyph nav + gold 快速开始 bar */
+/* bottom row: the white glyph nav from under the rail's edge, the gold 快速开始 bar reaching
+   69 design px past the grid */
 .lobby-dock {
-    flex: none;
+    grid-area: 2 / 2 / 3 / 5;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: calc(24 * var(--lu));
-    height: calc(118 * var(--lu));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    margin: 0 calc(-69 * var(--lu)) 0 calc(101 * var(--lu));
+    padding-bottom: calc(14 * var(--lu) + env(safe-area-inset-bottom, 0px));
 }
-/* the nav spreads across the row left of 快速开始, as in Tencent's bottom bar */
-.lobby-nav { flex: 1; display: flex; justify-content: space-around; max-width: calc(720 * var(--lu)); }
+.lobby-nav { flex: none; display: flex; justify-content: space-between; width: calc(660 * var(--lu)); }
 .lobby-nav-item {
     display: flex;
     flex-direction: column;
@@ -695,11 +720,15 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
 .lobby-nav-item .gd-glyph { width: calc(40 * var(--lu)); height: calc(40 * var(--lu)); filter: drop-shadow(0 calc(2 * var(--lu)) 0 rgba(28, 40, 110, .55)); }
 /* gold plate: dark gold outer frame, a light inner line, bevelled bottom */
 .lobby-quick {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: calc(16 * var(--lu));
-    height: calc(72 * var(--lu));
-    padding: 0 calc(28 * var(--lu));
+    justify-content: center;
+    gap: calc(14 * var(--lu));
+    min-width: calc(265 * var(--lu));
+    height: max(var(--tap), calc(60 * var(--lu)));
+    margin-left: auto;
+    padding: 0 calc(22 * var(--lu));
     border: calc(3 * var(--lu)) solid #b87818;
     border-radius: calc(5 * var(--lu));
     background: linear-gradient(180deg, #fff6c4 0%, #ffd766 55%, #f2b43c 100%);
@@ -712,8 +741,8 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
     transition: translate var(--dur-fast) var(--ease-out);
 }
 .lobby-quick:active { translate: 0 calc(2 * var(--lu)); }
-.lobby-quick small { color: #6a4a10; font: 700 max(var(--fs-min), calc(19 * var(--lu)))/1 var(--font-ui); }
-.lobby-quick b { color: #a3240c; font: 900 calc(34 * var(--lu))/1 var(--font-ui); letter-spacing: .04em; }
+.lobby-quick small { color: #6a4a10; font: 700 max(var(--fs-min), calc(18 * var(--lu)))/1 var(--font-ui); }
+.lobby-quick b { color: #a3240c; font: 900 calc(32 * var(--lu))/1 var(--font-ui); letter-spacing: .04em; }
 
 /* ---------- room (好友同玩) ---------- */
 .room {
@@ -1190,26 +1219,28 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .hud-title span { font-size: max(var(--fs-min), calc(13 * var(--lu))); }
     .hud-title em { font-size: max(var(--fs-min) * 1.2, calc(16 * var(--lu))); }
 
+    body[data-screen="lobby"] .topbar { padding-left: calc(12 * var(--lu) + var(--sl)); }
     .lobby { display: block; min-height: 0; padding: 0 calc(12 * var(--lu) + var(--sr)) 0 calc(12 * var(--lu) + var(--sl)); }
-    .lobby-rail { position: static; height: auto; flex-direction: row; justify-content: space-between; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
+    .lobby-rail { height: auto; translate: none; flex-direction: row; justify-content: space-between; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
     .rail-item { width: calc(66 * var(--lu)); }
-    .rail-disc { width: calc(56 * var(--lu)); height: calc(56 * var(--lu)); }
-    .is-mvp .rail-disc img { width: calc(50 * var(--lu)); height: calc(50 * var(--lu)); }
-    .is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(32 * var(--lu)); }
-    .rail-share { width: calc(26 * var(--lu)); height: calc(26 * var(--lu)); right: calc(5 * var(--lu)); bottom: calc(8 * var(--lu)); }
-    .rail-share .gd-glyph { width: calc(16 * var(--lu)); height: calc(16 * var(--lu)); }
-    .rail-vinyl { width: calc(44 * var(--lu)); height: calc(44 * var(--lu)); }
+    .rail-disc { width: calc(54 * var(--lu)); height: calc(54 * var(--lu)); }
+    .is-mvp .rail-disc img { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
+    .is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(38 * var(--lu)); }
+    .rail-share { width: calc(26 * var(--lu)); height: calc(26 * var(--lu)); right: calc(2 * var(--lu)); bottom: calc(8 * var(--lu)); }
+    .rail-share .gd-glyph { width: calc(15 * var(--lu)); height: calc(15 * var(--lu)); }
+    .rail-vinyl { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
+    .rail-note { width: calc(24 * var(--lu)); height: calc(24 * var(--lu)); }
     .rail-vs b { font-size: calc(26 * var(--lu)); }
-    .rail-badge { top: calc(38 * var(--lu)); }
-    .rail-lb { font-size: max(var(--fs-min) * 1.1, calc(14 * var(--lu))); margin-top: calc(-10 * var(--lu)); }
-    .lobby-main { width: auto; }
+    .rail-badge { top: calc(36 * var(--lu)); }
+    .rail-lb { font-size: max(var(--fs-min) * 1.1, calc(14 * var(--lu))); margin-top: calc(-8 * var(--lu)); }
     .lobby-tiles {
         --t: calc(var(--lu) * .7);
         height: auto;
         margin: 0;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-rows: calc(236 * var(--lu));
-        grid-auto-rows: calc(154 * var(--lu));
+        /* on a 19.5:9 phone the first screen ends just past the third row, clear of the dock */
+        grid-template-rows: calc(226 * var(--lu));
+        grid-auto-rows: calc(142 * var(--lu));
         gap: calc(8 * var(--lu));
     }
     .lobby-tile.is-classic { grid-row: auto; grid-column: 1 / -1; --t: calc(var(--lu) * .82); padding-bottom: calc(26 * var(--t)); }
@@ -1217,10 +1248,12 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .is-classic .tile-fan { --card-w: calc(104 * var(--t)); }
     .is-classic .tile-fan .card { translate: calc(var(--k) * 60 * var(--t)) calc(var(--k) * var(--k) * 5 * var(--t)); rotate: calc(var(--k) * 7deg); }
     .is-classic .tile-title { font-size: calc(58 * var(--t)); }
+    .joker-art { --card-w: calc(74 * var(--t)); }
+    .peak-poster { scale: .9; }
     .join-art { flex-direction: column; gap: calc(6 * var(--lu)); bottom: calc(64 * var(--t)); }
-    .join-cells i { width: calc(40 * var(--t)); height: max(var(--tap), calc(50 * var(--t))); }
-    .join-art .btn { --btn-h: max(var(--tap), calc(44 * var(--t))); --btn-minw: calc(120 * var(--t)); }
-    /* the dock stays on screen: 快速开始 full width over the nav row */
+    .join-cells i { width: calc(40 * var(--t)); height: calc(50 * var(--t)); }
+    .join-go .btn { --btn-h: calc(44 * var(--t)); --btn-minw: calc(120 * var(--t)); }
+    /* the dock stays on screen: 快速开始 full width over an opaque nav row, a 12px fade above */
     .lobby-dock {
         position: sticky;
         bottom: 0;
@@ -1230,12 +1263,12 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
         gap: calc(8 * var(--lu));
         height: auto;
         margin: 0 calc(-12 * var(--lu) - var(--sr)) 0 calc(-12 * var(--lu) - var(--sl));
-        padding: calc(22 * var(--lu)) calc(12 * var(--lu) + var(--sr)) calc(6 * var(--lu) + env(safe-area-inset-bottom, 0px)) calc(12 * var(--lu) + var(--sl));
-        background: linear-gradient(180deg, rgba(34, 48, 102, 0) 0, rgba(34, 48, 102, .94) calc(22 * var(--lu)), #223066 100%);
+        padding: 12px calc(12 * var(--lu) + var(--sr)) calc(6 * var(--lu) + env(safe-area-inset-bottom, 0px)) calc(12 * var(--lu) + var(--sl));
+        background: linear-gradient(180deg, rgba(34, 48, 102, 0), #223066 12px);
     }
-    .lobby-quick { justify-content: center; height: calc(58 * var(--lu)); }
+    .lobby-quick { min-width: 0; height: calc(58 * var(--lu)); margin-left: 0; }
     .lobby-quick b { font-size: calc(28 * var(--lu)); }
-    .lobby-nav { justify-content: space-between; gap: 0; }
+    .lobby-nav { width: auto; }
     .lobby-nav-item { min-width: calc(56 * var(--lu)); font-size: max(var(--fs-min) * 1.1, calc(13 * var(--lu))); gap: calc(4 * var(--lu)); }
     .lobby-nav-item .gd-glyph { width: calc(26 * var(--lu)); height: calc(26 * var(--lu)); }
     .lobby-tiles { margin-bottom: calc(10 * var(--lu)); }
