@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Picasso Lab Guandan Arena</title>
-<!-- Critical first paint: the events launch transition hands off into this exact teal. -->
-<style>html,body{margin:0;background:#049484}</style>
+<!-- Critical first paint: navy for the lobby, the table teal when a ?room= link opens a game. -->
+<script>document.documentElement.dataset.gdBoot = /[?&]room=/.test(location.search) ? "room" : "lobby";</script>
+<style>html,body{margin:0;background:#2b3c7c}html[data-gd-boot="room"],html[data-gd-boot="room"] body:not([data-screen]){background:#049484}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -29,15 +30,31 @@
     <symbol id="gd-suit-c" viewBox="0 0 100 100"><circle cx="50" cy="28" r="20"/><circle cx="27" cy="58" r="20"/><circle cx="73" cy="58" r="20"/><circle cx="50" cy="52" r="13"/><path d="M46 58c-.5 15-4 26-12 37h32c-8-11-11.5-22-12-37Z"/></symbol>
 </svg>
 <div class="app-shell">
+    <!-- Lobby/room glyphs: solid white shapes (Tencent chrome), referenced as <use href="#gd-g-*">. -->
+    <svg class="gd-sprite" aria-hidden="true" focusable="false">
+        <symbol id="gd-g-back" viewBox="0 0 24 24"><path d="M10.2 3.5 2 10.6l8.2 7.1v-4.3c4.9-.2 8.4 1.2 11.3 4.9-.8-6.1-4.4-10.2-11.3-10.9V3.5Z"/></symbol>
+        <symbol id="gd-g-share" viewBox="0 0 24 24"><path d="M13.8 3.5 22 10.6l-8.2 7.1v-4.3c-4.9-.2-8.4 1.2-11.3 4.9.8-6.1 4.4-10.2 11.3-10.9V3.5Z"/></symbol>
+        <symbol id="gd-g-invite" viewBox="0 0 24 24"><circle cx="9" cy="7.5" r="4"/><path d="M1.5 20.5c.4-4.3 3.6-6.8 7.5-6.8s7.1 2.5 7.5 6.8H1.5ZM18 8.5h2.2v2.8H23v2.2h-2.8v2.8H18v-2.8h-2.8v-2.2H18V8.5Z"/></symbol>
+        <symbol id="gd-g-book" viewBox="0 0 24 24"><path d="M2.5 5.2c2.9-1.3 5.8-1.3 8.7.4V21c-2.9-1.5-5.8-1.6-8.7-.4V5.2Zm19 0c-2.9-1.3-5.8-1.3-8.7.4V21c2.9-1.5 5.8-1.6 8.7-.4V5.2Z"/></symbol>
+        <symbol id="gd-g-trophy" viewBox="0 0 24 24"><path d="M6.5 3h11v6a5.5 5.5 0 0 1-11 0V3ZM3 5h2.6v4.6A3.6 3.6 0 0 1 3 6.2V5Zm18 0h-2.6v4.6A3.6 3.6 0 0 0 21 6.2V5Zm-10.2 9.3h2.4v3.4h-2.4v-3.4ZM7 17.5h10V21H7v-3.5Z"/></symbol>
+        <symbol id="gd-g-lang" viewBox="0 0 24 24"><rect x="2" y="2.5" width="20" height="19" rx="5"/><text x="12" y="17.3" text-anchor="middle" font-size="13.5" font-weight="900" fill="#34447c" font-family="Noto Sans SC, PingFang SC, sans-serif">文</text></symbol>
+        <symbol id="gd-g-exit" viewBox="0 0 24 24"><path d="M13.5 3H5.2C4.5 3 4 3.5 4 4.2v15.6c0 .7.5 1.2 1.2 1.2h8.3v-2.6H6.6V5.6h6.9V3Zm2.1 4.2L21 12l-5.4 4.8v-3.3H9.5v-3h6.1V7.2Z"/></symbol>
+        <symbol id="gd-g-podium" viewBox="0 0 24 24"><path d="M9 9h6v12H9V9Zm-7 4.5h6V21H2v-7.5Zm14 2.5h6v5h-6v-5ZM9.6 2.6 12 5.2l2.4-2.6.6 4.6H9l.6-4.6Z"/></symbol>
+        <symbol id="gd-g-gear" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M19.8 9.47 22.35 9.73v4.54l-2.55.26-.49 1.19 1.62 1.99-3.22 3.22-1.99-1.62-1.19.49-.26 2.55H9.73l-.26-2.55-1.19-.49-1.99 1.62-3.22-3.22 1.62-1.99-.49-1.19-2.55-.26V9.73l2.55-.26.49-1.19-1.62-1.99 3.22-3.22 1.99 1.62 1.19-.49.26-2.55h4.54l.26 2.55 1.19.49 1.99-1.62 3.22 3.22-1.62 1.99.49 1.19ZM8.4 12a3.6 3.6 0 1 0 7.2 0 3.6 3.6 0 1 0-7.2 0Z"/></symbol>
+        <symbol id="gd-g-history" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 3h13l3 3v15H4V3Zm3 5v2h10V8H7Zm0 4v2h10v-2H7Zm0 4v2h6v-2H7Z"/></symbol>
+        <symbol id="gd-g-close" viewBox="0 0 24 24"><path d="M5.6 3.4 12 9.8l6.4-6.4 2.2 2.2-6.4 6.4 6.4 6.4-2.2 2.2-6.4-6.4-6.4 6.4-2.2-2.2 6.4-6.4-6.4-6.4 2.2-2.2Z"/></symbol>
+        <symbol id="gd-g-note" viewBox="0 0 24 24"><path d="M9 4.6 20.5 2v13.6a3.4 3.4 0 1 1-2.2-3.2V7.1L11.2 8.7v9.4A3.4 3.4 0 1 1 9 14.9V4.6Z"/></symbol>
+        <symbol id="gd-g-cards" viewBox="0 0 24 24"><path d="M3.2 6.3 10.6 4.3c.7-.2 1.4.2 1.6.9l3.5 13c.2.7-.2 1.4-.9 1.6l-7.4 2c-.7.2-1.4-.2-1.6-.9l-3.5-13c-.2-.7.2-1.4.9-1.6Z"/><path d="M13.3 3.4 20 5.2c.7.2 1.1.9.9 1.6l-3.2 12.1-4.3-15.5Z" opacity=".75"/></symbol>
+    </svg>
+    <!-- Tencent-style top bar for the lobby and room (the table screen hides it and reuses these handlers). -->
     <header class="topbar">
-        <div class="hud-brand"><span class="hud-brand-mark">P</span></div>
+        <button class="hud-btn" id="new-room-btn" type="button"><svg class="hud-ic"><use href="#gd-g-back"/></svg><span class="hud-lb"></span></button>
         <div class="hud-status" id="hud-status"></div>
-        <div class="hud-actions">
-            <button class="icon-btn" id="copy-link-btn" type="button"></button>
-            <button class="icon-btn" id="new-room-btn" type="button"></button>
-            <button class="icon-btn" id="lang-toggle" type="button"></button>
-            <button class="icon-btn" id="back-events-btn" type="button"></button>
-        </div>
+        <button class="hud-btn hud-chip" id="copy-link-btn" type="button"><svg class="hud-ic"><use href="#gd-g-invite"/></svg><span class="hud-lb"></span></button>
+        <button class="hud-btn hud-chip" id="hud-rules-btn" type="button"><svg class="hud-ic"><use href="#gd-g-book"/></svg><span class="hud-lb"></span></button>
+        <button class="hud-btn hud-chip" id="hud-records-btn" type="button" data-open-records><svg class="hud-ic"><use href="#gd-g-trophy"/></svg><span class="hud-lb"></span></button>
+        <button class="hud-btn" id="lang-toggle" type="button"><svg class="hud-ic"><use href="#gd-g-lang"/></svg><span class="hud-lb"></span></button>
+        <button class="hud-btn" id="back-events-btn" type="button"><svg class="hud-ic"><use href="#gd-g-exit"/></svg><span class="hud-lb"></span></button>
     </header>
 
     <audio id="guandan-bgm" src="https://yil384.github.io/Picasso-Lab/events/static/guandan_music.mp3" loop preload="auto" style="display:none"></audio>
@@ -87,6 +104,8 @@ const copyLinkBtn = document.getElementById("copy-link-btn");
 const newRoomBtn = document.getElementById("new-room-btn");
 const backEventsBtn = document.getElementById("back-events-btn");
 const langToggleBtn = document.getElementById("lang-toggle");
+const hudRulesBtn = document.getElementById("hud-rules-btn");
+const hudRecordsBtn = document.getElementById("hud-records-btn");
 const returnTransition = document.getElementById("return-transition");
 const returnTypeHint = document.getElementById("return-type-hint");
 const roomRoot = "guandanRooms";
@@ -228,10 +247,12 @@ function phaseLabel(phase) {
     return isZH() ? label[1] : label[0];
 }
 
-// Topbar buttons are short text labels (no stroke icons); only rewritten when the language flips.
+// Top bar buttons: a solid glyph plus a short label; labels are only rewritten when the language flips.
 let staticLabelsLang = "";
 function setHudButton(btn, label, title) {
-    btn.textContent = label;
+    if (!btn) return;
+    const labelEl = btn.querySelector(".hud-lb") || btn;
+    labelEl.textContent = label;
     btn.title = title;
     btn.setAttribute("aria-label", title);
 }
@@ -240,21 +261,24 @@ function setStaticLabels() {
     if (staticLabelsLang === uiLang) return;
     staticLabelsLang = uiLang;
     document.documentElement.lang = isZH() ? "zh-CN" : "en";
-    setHudButton(copyLinkBtn, L("Invite", "邀请"), L("Copy Room Link", "复制房间链接"));
-    setHudButton(newRoomBtn, L("New", "新桌"), L("New Room", "新建房间"));
-    setHudButton(langToggleBtn, isZH() ? "EN" : "中", isZH() ? "Switch to English" : "切换到中文");
+    setHudButton(newRoomBtn, L("Lobby", "大厅"), L("Back to the lobby", "返回大厅"));
+    setHudButton(copyLinkBtn, L("Invite", "邀请"), L("Copy room link", "复制房间链接"));
+    setHudButton(hudRulesBtn, L("Rules", "规则"), L("Game rules", "玩法规则"));
+    setHudButton(hudRecordsBtn, L("Records", "战绩"), L("Peak Showdown records", "巅峰对决战绩"));
+    setHudButton(langToggleBtn, isZH() ? "EN" : "中文", isZH() ? "Switch to English" : "切换到中文");
     setHudButton(backEventsBtn, L("Exit", "返回"), L("Back to Events", "返回活动"));
 }
 
+// Left side of the top bar: the player card on the lobby, the 好友同玩 title on the room screen.
+// Only rewritten when its markup changes, so an in-progress nickname edit is never clobbered.
+let hudStatusHTML = "";
 function updateTopbarStatus() {
     if (!hudStatusEl) return;
-    if (!game || !game.roomCode) { hudStatusEl.innerHTML = ""; return; }
-    hudStatusEl.innerHTML = `<span class="hud-status-room">${L("Room", "房间")} ${encodeHTML(game.roomCode)}</span>
-        <span class="hud-status-seats">${[0,1,2,3].map(i => {
-            const s = game.seats && game.seats[i];
-            const cls = !s ? "empty" : s.type === "ai" ? "ai" : "human";
-            return `<i class="hud-seat-dot ${cls}"></i>`;
-        }).join("")}</span>`;
+    const screen = document.body.dataset.screen;
+    const html = screen === "lobby" ? lobbyProfileHTML() : screen === "room" && game ? roomTitleHTML() : "";
+    if (html === hudStatusHTML) return;
+    hudStatusHTML = html;
+    hudStatusEl.innerHTML = html;
 }
 
 function showToast(text, duration = 1700) {
@@ -1641,88 +1665,599 @@ function render() {
     // ==== END STAGE HOOKS ====
 }
 
-function previewCardsHTML() {
-    // The hero fan renders the SAME card component as the live game (cardHTML), so the
-    // display cards are literally identical to the in-game cards: each labmate appears on
-    // their signature card (the portrait map maps e.g. A♥→Zhongkai), plus a PICASSO back.
-    const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    const roster = ["zhongkai", "zhuo", "zaifeng", "zhengding", "haotian", "yichen"];
-    const present = roster.filter(k => PL[k]);
-    const items = [{ back: true }].concat((present.length ? present : ["zhongkai", "zhuo", "zaifeng"]).map(k => ({ key: k })));
-    const n = items.length;
+// ---------- lab personalization data for the lobby / room ----------
+function labPlayers() {
+    return (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
+}
+
+// Lab members are the roster entries with a signature card (external opponents have none).
+function labMemberKeys() {
+    const PL = labPlayers();
+    return Object.keys(PL).filter(k => PL[k]?.card && PL[k]?.avatar);
+}
+
+// Same matching as seatMemberPhoto: exact name, or either name containing the other.
+function labPlayerKey(name) {
+    const clean = String(name || "").trim().toLowerCase();
+    if (!clean) return "";
+    const PL = labPlayers();
+    return Object.keys(PL).find(k => {
+        const pname = String(PL[k]?.name || "").trim().toLowerCase();
+        return !!pname && (clean === pname || clean.includes(pname) || pname.includes(clean));
+    }) || "";
+}
+
+// 评分 / 胜率 / 场次 come from the records module's own standings; without them no stats are shown.
+function labStandings() {
+    try { return window.GuandanRecords?.stats?.() || null; } catch (_) { return null; }
+}
+
+function labStatsFor(key) {
+    const board = labStandings()?.board || [];
+    const idx = board.findIndex(s => s.key === key);
+    return idx >= 0 ? { ...board[idx], rank: idx + 1 } : null;
+}
+
+function latestLabMatch() {
+    const matches = labStandings()?.matches || (window.GuandanRecords?.MATCHES || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+    return matches[0] || null;
+}
+
+function firstNameOf(name) {
+    return String(name || "").trim().split(/\s+/)[0] || "";
+}
+
+function signatureCard(str, id) {
     const suitCode = { "♠": "S", "♥": "H", "♦": "D", "♣": "C" };
-    return items.map((it, i) => {
-        const st = `--i:${i};--n:${n}`;
-        if (it.back) {
-            return `<span class="preview-slot" style="${st}"><span class="pl-back"><b>P</b><i>PICASSO</i><i>LAB</i></span></span>`;
-        }
-        const p = PL[it.key] || { card: "A♥" };
-        const sig = p.card || "A♥";
-        const co = { rank: sig.slice(0, -1), suit: suitCode[sig.slice(-1)] || "H", id: "pv" + i };
-        return `<span class="preview-slot" style="${st}">${cardHTML(co, true, false, "", "preview-game-card")}</span>`;
-    }).join("");
+    const s = String(str || "A♥");
+    return { id, rank: s.slice(0, -1) || "A", suit: suitCode[s.slice(-1)] || "H" };
+}
+
+function glyphHTML(name, className = "") {
+    return `<svg class="gd-glyph ${className}" aria-hidden="true" focusable="false"><use href="#gd-g-${name}"/></svg>`;
+}
+
+// ---------- top bar content ----------
+function lobbyProfileHTML() {
+    const key = labPlayerKey(nickname);
+    const p = key ? labPlayers()[key] : null;
+    const st = key ? labStatsFor(key) : null;
+    const face = p?.avatar
+        ? `<img src="${encodeHTML(p.avatar)}" alt="">`
+        : `<span class="gd-avatar-initials">${encodeHTML(initials(nickname, "P"))}</span>`;
+    const tier = st ? L(`Rank ${st.rank}`, `第 ${st.rank} 名`) : p ? L("Lab member", "实验室") : L("Rookie", "新手");
+    const stats = st ? [
+        [L("R", "分"), st.pts, L("Rating", "评分")],
+        [L("W", "胜"), `${st.wr}%`, L("Win rate", "胜率")],
+        [L("G", "场"), st.p, L("Matches", "场次")]
+    ].map(([mark, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${mark}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("") : "";
+    return `<div class="hud-profile">
+        <span class="hud-avatar">${face}</span>
+        <div class="hud-id">
+            <label class="hud-name"><input id="nick-input" value="${encodeHTML(nickname)}" maxlength="24" autocomplete="nickname" spellcheck="false" placeholder="${L("Set a name", "设置昵称")}" aria-label="${L("Nickname", "昵称")}"><svg class="hud-pen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17.2V21h3.8L17.9 9.9l-3.8-3.8L3 17.2Zm17.7-10.1c.4-.4.4-1 0-1.4l-2.4-2.4c-.4-.4-1-.4-1.4 0l-1.8 1.8 3.8 3.8 1.8-1.8Z"/></svg></label>
+            <span class="hud-tier"><span>${tier}</span></span>
+        </div>
+    </div>${stats ? `<div class="hud-stats">${stats}</div>` : ""}`;
+}
+
+function roomTitleHTML() {
+    return `<div class="hud-title"><b>${L("Friends Room", "好友同玩")}</b><span>${L("Room", "房间号")} <em>${encodeHTML(game.roomCode)}</em></span></div>`;
+}
+
+function saveNickname(input) {
+    const name = String(input?.value || "").trim().slice(0, 24);
+    if (!name) {
+        if (input) input.value = nickname;
+        return;
+    }
+    if (name !== nickname) {
+        nickname = name;
+        storageSet("picasso.guandan.name", name);
+        updateTopbarStatus();
+    }
+    // A seated player re-takes the same seat so the table shows the new name. It goes through
+    // the room queue, so a seat / start tap that blurred the field waits for it instead of failing.
+    if (document.body.dataset.screen === "room") {
+        queueRoomAction(() => {
+            const seat = mySeat();
+            if (game?.phase === "lobby" && seat >= 0 && game.seats[seat]?.name !== nickname) return takeSeat(seat);
+        });
+    }
+}
+
+function blurNicknameOnEnter(event) {
+    if (event.key === "Enter" && event.target.id === "nick-input") {
+        event.preventDefault();
+        event.target.blur();
+    }
+}
+
+// ---------- lobby (大厅) ----------
+let lobbyCodeDraft = "";
+let lobbyActionBusy = false;
+// 人机练习 / 快速开始 in progress: { until, loaded, resolve }. While it is set the room screen is
+// never drawn, so the lobby goes straight to the dealt table.
+let quickStart = null;
+
+// The 经典 tile fan renders the live card component: the lab's four signature aces, each
+// labmate's portrait on their own card (a four-ace bomb).
+function previewCardsHTML() {
+    const PL = labPlayers();
+    const aces = labMemberKeys().map(k => PL[k].card).filter(card => card.startsWith("A"));
+    return (aces.length ? aces : ["A♠", "A♥", "A♦", "A♣"]).slice(0, 4).map((card, i) => cardHTML(signatureCard(card, `pv${i}`))).join("");
+}
+
+// Left rail: 赛季MVP · 巅峰对决 · 实验室 · 分享 · 音乐, free-standing objects with the label over
+// their bottom edge.
+function lobbyRailHTML() {
+    const standings = labStandings();
+    const PL = labPlayers();
+    const mvp = standings?.mvp ? PL[standings.mvp.key] : null;
+    const labKey = labMemberKeys().find(k => !PL[k].card.startsWith("A")) || labMemberKeys()[0];
+    const musicOn = window.GuandanMusic?.isOn?.() !== false;
+    const item = (cls, attrs, disc, label, extra = "") => `<button class="rail-item ${cls}" type="button" ${attrs}>
+            <span class="rail-disc">${disc}</span>${extra}<span class="rail-lb">${label}</span></button>`;
+    return [
+        mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, L("Season MVP", "赛季MVP"), `<span class="rail-badge">MVP</span>`) : "",
+        item("is-peak", `data-open-records="latest"`, `<span class="rail-vs"><b>VS</b></span>`, L("Showdown", "巅峰对决")),
+        labKey ? item("is-lab", `data-lobby="lab"`, cardHTML(signatureCard(PL[labKey].card, "rl0")), L("Lab", "实验室")) : "",
+        item("is-share", `data-lobby="share"`, `${cardHTML({ back: true })}<span class="rail-share">${glyphHTML("share")}</span>`, L("Share", "分享")),
+        item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-pressed="${musicOn}"`, `<span class="rail-vinyl"></span>${glyphHTML("note", "rail-note")}`, L("Music", "音乐"),
+            musicOn ? "" : `<span class="rail-badge is-off">${L("OFF", "关")}</span>`)
+    ].join("");
+}
+
+// 巅峰对决: a mini red-vs-blue poster of the latest match, the four players in team frames.
+function peakTileArtHTML() {
+    const m = latestLabMatch();
+    const PL = labPlayers();
+    if (!m) return "";
+    const team = (keys, cls) => `<span class="peak-side ${cls}">${keys.map(k => `<span class="peak-frame">${PL[k]?.avatar
+        ? `<img src="${encodeHTML(PL[k].avatar)}" alt="" loading="lazy">` : `<i>${encodeHTML(initials(PL[k]?.name || k))}</i>`}</span>`).join("")}</span>`;
+    return `<span class="tile-art peak-art"><span class="peak-poster">${team(m.teamA, "is-red")}${team(m.teamB, "is-blue")}<b class="peak-vs">VS</b></span></span>
+        <span class="tile-bubble">${L("Latest", "最新战报")} <b>${encodeHTML(m.levelA)} : ${encodeHTML(m.levelB)}</b></span>`;
+}
+
+// 实验室: a fanned stack of labmate photos.
+function labTileArtHTML() {
+    const PL = labPlayers();
+    const keys = labMemberKeys();
+    const photos = keys.slice(0, 5).map(k => `<span class="lab-photo"><img src="${encodeHTML(PL[k].avatar)}" alt="" loading="lazy"></span>`).join("");
+    return `<span class="tile-art lab-art">${photos}</span>${keys.length ? `<span class="tile-bubble">${L(`${keys.length} members`, `${keys.length} 位成员`)}</span>` : ""}`;
+}
+
+// 好友房: a mini room table, three labmates seated and one open "+" seat.
+function friendsTileArtHTML() {
+    const PL = labPlayers();
+    const seated = labMemberKeys().slice(8, 11).map((k, i) => `<span class="gd-avatar is-plain mini-seat s${i}"><img src="${encodeHTML(PL[k].avatar)}" alt="" loading="lazy"></span>`).join("");
+    return `<span class="tile-art mini-table" aria-hidden="true"><span class="mini-felt">PICASSO</span>${seated}<i class="mini-seat s3">+</i></span>`;
+}
+
+// 加入房间: five code cells mirror the (transparent) #room-input laid over them.
+function joinCellsHTML(code) {
+    return `<span class="join-cells" aria-hidden="true">${[0, 1, 2, 3, 4].map(i => `<i class="${i === code.length ? "is-next" : ""}">${encodeHTML(code[i] || "")}</i>`).join("")}</span>`;
+}
+
+function lobbyTilesHTML() {
+    const code = lobbyCodeDraft || roomCode;
+    const straight = ["5♥", "6♥", "7♥", "8♥", "9♥"].map((c, i) => cardHTML(signatureCard(c, `pr${i}`), true)).join("");
+    return `
+        <button class="lobby-tile is-classic" id="create-room" type="button" aria-label="${L("Classic: create a room", "经典：创建房间")}">
+            <span class="tile-art tile-fan">${previewCardsHTML()}</span>
+            <b class="tile-title">${L("Classic", "经典")}</b>
+        </button>
+        <button class="lobby-tile is-practice" type="button" data-lobby="practice" aria-label="${L("Practice against AI", "人机练习")}">
+            <span class="tile-art joker-art">${cardHTML({ id: "pvBJ", joker: "BJ" })}${cardHTML({ id: "pvRJ", joker: "RJ" })}</span>
+            <b class="tile-title">${L("vs AI", "人机练习")}</b>
+        </button>
+        <button class="lobby-tile is-peak" type="button" data-open-records="latest" aria-label="${L("Peak Showdown records", "巅峰对决战绩")}">
+            ${peakTileArtHTML()}
+            <b class="tile-title">${L("Showdown", "巅峰对决")}</b>
+        </button>
+        <button class="lobby-tile is-lab" type="button" data-lobby="lab" aria-label="${L("Lab deck", "实验室牌组")}">
+            ${labTileArtHTML()}
+            <b class="tile-title">${L("Lab Deck", "实验室")}</b>
+        </button>
+        <div class="lobby-tile is-join" data-lobby="join">
+            <span class="tile-art join-art">
+                <label class="join-code">${joinCellsHTML(code)}<input id="room-input" value="${encodeHTML(code)}" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="${L("Room code (5 characters)", "房间码（5 位）")}"></label>
+                <button class="join-go" id="join-room" type="button"><span class="btn sm">${L("Join", "加入")}</span></button>
+            </span>
+            <b class="tile-title">${L("Join Room", "加入房间")}</b>
+        </div>
+        <button class="lobby-tile is-friends" type="button" data-lobby="friends" aria-label="${L("Create a room and copy the invite link", "创建房间并复制邀请链接")}">
+            ${friendsTileArtHTML()}
+            <b class="tile-title">${L("Friends", "好友房")}</b>
+        </button>
+        <button class="lobby-tile is-rules" type="button" data-lobby="rules" aria-label="${L("Rules", "玩法规则")}">
+            <span class="tile-art rules-art">${straight}</span>
+            <b class="tile-title">${L("Rules", "玩法规则")}</b>
+        </button>`;
+}
+
+// Each screen starts at the top: a scrolled portrait lobby must not open the room half-scrolled.
+function enterScreen(name) {
+    if (document.body.dataset.screen === name) return;
+    document.body.dataset.screen = name;
+    window.scrollTo(0, 0);
 }
 
 function renderLobby() {
-    document.body.dataset.screen = "lobby";
+    enterScreen("lobby");
+    updateTopbarStatus();
+    // joinRoom() reports a missing room through statusText: a short toast and a shake of the code field.
+    const joinFailed = !!statusText;
+    statusText = "";
+    const nav = [
+        ["invite", `data-lobby="friends"`, L("Invite", "邀请")],
+        ["cards", `data-lobby="lab"`, L("Lab", "实验室")],
+        ["book", `data-lobby="rules"`, L("Rules", "规则")],
+        ["history", `data-open-records="history"`, L("History", "历史对阵")],
+        ["podium", `data-open-records="board"`, L("Ranking", "排行榜")],
+        ["gear", `data-lobby="settings"`, L("Settings", "设置")]
+    ].map(([glyph, attrs, label]) => `<button class="lobby-nav-item" type="button" ${attrs}>${glyphHTML(glyph)}<span>${label}</span></button>`).join("");
     root.innerHTML = `
     <section class="lobby">
-        <aside class="lobby-rail">
-            <div class="lobby-rail-mark">P</div>
-            <ul class="lobby-rail-rules">
-                <li>${iconHTML("team")}<span>${L("4 players, 2 teams", "四人两队")}</span></li>
-                <li>${iconHTML("wild")}<span>${L("Heart level cards are Wild", "红桃级牌逢人配")}</span></li>
-                <li>${iconHTML("gift")}<span>${L("Tribute & Return", "进贡还贡")}</span></li>
-                <li>${iconHTML("ai")}<span>${L("AI fill", "AI 补位")}</span></li>
-            </ul>
-        </aside>
-        <div class="lobby-console">
-            <h2 class="lobby-console-title">${L("Open a Lab Table", "开一桌实验室掼蛋")}</h2>
-            <p class="lobby-console-sub">${L("A casual four-player, two-deck Guandan table with private room codes, AI fill, Wild Card, Straight Flush, Bombs, Joker Bomb, Tribute, blocked Tribute, Catch-wind, and level progression.", "两副牌四人结对，支持房间码、人机补位、逢人配、同花顺、炸弹、天王炸、进贡还贡、抗贡、接风和升级。")}</p>
-            <div class="control-card">
-                <div class="field-grid">
-                    <label>${L("Nickname", "昵称")}<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="${L("Your name", "你的名字")}"></label>
-                    <label>${L("Room Code", "房间码")}<input id="room-input" value="${encodeHTML(roomCode)}" placeholder="${L("e.g. A7K2Q", "例如 A7K2Q")}"></label>
-                </div>
-                <div class="split">
-                    <button class="btn" id="create-room" type="button">${L("Create Room", "创建房间")}</button>
-                    <button class="btn secondary" id="join-room" type="button">${L("Join Room", "加入房间")}</button>
-                </div>
-                <div class="status-line">${encodeHTML(statusText)}</div>
-            </div>
-            <div class="quick-rules">
-                <div class="quick-rule"><b>${L("Teams", "队伍")}</b><span>${L("1/3 versus 2/4, fixed partners around the table.", "1/3 号位对 2/4 号位，对家固定组队。")}</span></div>
-                <div class="quick-rule"><b>${L("Wild Card", "逢人配")}</b><span>${L("Heart level cards act as flexible cards.", "红桃级牌可以当作任意牌。")}</span></div>
-                <div class="quick-rule"><b>${L("Tribute", "进贡")}</b><span>${L("Tribute and return tribute are handled automatically.", "进贡和还贡会自动处理。")}</span></div>
-                <div class="quick-rule"><b>${L("AI Seats", "AI 补位")}</b><span>${L("Open seats can be filled by bots for a fast lab match.", "空位可以用人机补齐，快速开局。")}</span></div>
-            </div>
-        </div>
-        <div class="lobby-side">
-            <div class="lobby-preview" aria-hidden="true">
-                <i class="preview-seat s0"></i><i class="preview-seat s1"></i><i class="preview-seat s2"></i><i class="preview-seat s3"></i>
-                ${previewCardsHTML()}
+        <nav class="lobby-rail" aria-label="${L("Shortcuts", "快捷入口")}">${lobbyRailHTML()}</nav>
+        <div class="lobby-main">
+            <div class="lobby-tiles">${lobbyTilesHTML()}</div>
+            <div class="lobby-dock">
+                <nav class="lobby-nav">${nav}</nav>
+                <button class="lobby-quick" type="button" data-lobby="practice"><small>${L("Classic · vs AI", "经典 · 人机")}</small><b>${L("Quick Start", "快速开始")}</b></button>
             </div>
         </div>
     </section>`;
-    document.getElementById("create-room").addEventListener("click", createRoom);
-    document.getElementById("join-room").addEventListener("click", joinRoom);
-    updateTopbarStatus();
+    const lobby = root.querySelector(".lobby");
+    bindLobby(lobby);
+    if (joinFailed) {
+        showToast(L("Room not found", "房间不存在"));
+        const field = lobby.querySelector(".join-code");
+        field.classList.add("is-error");
+        field.addEventListener("animationend", () => field.classList.remove("is-error"), { once: true });
+    }
 }
 
-function levelOptionsHTML(selectedLevel) {
-    return ranks.map(rank => `<option value="${rank}" ${rank === selectedLevel ? "selected" : ""}>${rank}</option>`).join("");
+function bindLobby(el) {
+    el.addEventListener("click", event => {
+        const target = event.target.closest("button, .lobby-tile");
+        if (!target || target.disabled) return;
+        const creating = L("Creating room…", "正在创建房间…");
+        if (target.id === "create-room") return runLobbyAction(createRoom, target, creating);
+        if (target.id === "join-room") return joinRoom();
+        const action = target.dataset.lobby;
+        if (action === "practice") return runLobbyAction(quickPractice, target, L("Dealing…", "正在开局…"));
+        if (action === "friends") return runLobbyAction(createAndInvite, target, creating);
+        if (action === "lab") return openLabDeck();
+        if (action === "rules") return openRules();
+        if (action === "settings") return openSettings();
+        if (action === "share") return shareArena();
+        if (action === "music") return toggleMusic();
+        if (action === "join" && !event.target.closest("input")) el.querySelector("#room-input")?.focus();
+    });
+    const codeInput = el.querySelector("#room-input");
+    codeInput.addEventListener("input", () => {
+        const clean = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
+        if (clean !== codeInput.value) codeInput.value = clean;
+        lobbyCodeDraft = clean;
+        el.querySelector(".join-cells").outerHTML = joinCellsHTML(clean);
+    });
+    codeInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            joinRoom();
+        }
+    });
 }
 
-function levelSetupHTML() {
-    const disabled = isHost() && !actionBusy ? "" : "disabled";
-    return `<div class="level-setup">
-        <label>${teamName(0)} ${L("start level", "起始牌")}
-            <select id="level-team-0" ${disabled}>${levelOptionsHTML(game.levels[0] || "2")}</select>
-        </label>
-        <label>${teamName(1)} ${L("start level", "起始牌")}
-            <select id="level-team-1" ${disabled}>${levelOptionsHTML(game.levels[1] || "2")}</select>
-        </label>
+// One lobby action at a time: a double tap must not create two rooms. The tapped tile stays
+// pressed under a "正在开局…" veil until the next screen arrives (Firebase can take a second or two).
+async function runLobbyAction(fn, source, label) {
+    if (lobbyActionBusy) return;
+    lobbyActionBusy = true;
+    root.querySelector(".lobby")?.classList.add("is-busy");
+    if (source) {
+        source.dataset.loading = label;
+        source.classList.add("is-loading");
+    }
+    try {
+        await fn();
+    } finally {
+        lobbyActionBusy = false;
+        root.querySelector(".lobby")?.classList.remove("is-busy");
+        source?.classList.remove("is-loading");
+    }
+}
+
+function waitFor(test, ms) {
+    return new Promise(resolve => {
+        const end = Date.now() + ms;
+        (function poll() {
+            if (test()) resolve(true);
+            else if (Date.now() > end) resolve(false);
+            else setTimeout(poll, 40);
+        })();
+    });
+}
+
+// 人机练习 / 快速开始 = create a room, then start it (startGame seats AI in every empty seat).
+// The lobby stays up until the dealt table arrives; renderLobbyRoom() holds the room back
+// while `quickStart` is set, and only a start that did not happen releases it early.
+async function quickPractice() {
+    const hold = { until: Date.now() + 8000 };
+    hold.loaded = new Promise(resolve => { hold.resolve = resolve; });
+    quickStart = hold;
+    try {
+        await createRoom();
+        // This room is never shown, so neither is its 房间已创建 toast.
+        toastEl.classList.remove("show");
+        if (await Promise.race([hold.loaded, waitFor(() => false, 8000)])) {
+            await startGame();
+            const snap = await get(roomRef());
+            if (snap.exists() && snap.val().phase !== "lobby") {
+                await waitFor(() => game && game.phase !== "lobby", 8000);
+                return;
+            }
+        }
+    } catch (err) {
+        console.error(err);
+    }
+    // The game did not start (or the room never loaded): show the room instead.
+    if (quickStart === hold) quickStart = null;
+    if (game?.phase === "lobby") render();
+}
+
+async function createAndInvite() {
+    await createRoom();
+    copyLinkBtn.click();
+}
+
+async function shareArena() {
+    try {
+        await navigator.clipboard.writeText(GUANDAN_URL);
+        showToast(L("Link copied. Send it to your labmates.", "链接已复制，发给实验室的朋友吧"));
+    } catch (_) {
+        showToast(GUANDAN_URL, 3200);
+    }
+}
+
+function toggleMusic() {
+    const next = window.GuandanMusic?.isOn?.() === false;
+    window.GuandanMusic?.setOn(next);
+    showToast(next ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
+}
+
+function refreshLobbyRail() {
+    const rail = root.querySelector(".lobby-rail");
+    if (rail) rail.innerHTML = lobbyRailHTML();
+}
+
+// ---------- shared popup service (window.GuandanUI) ----------
+// Tencent popup: near-white panel, periwinkle title bar, round close button. Mounts into
+// `container` (default body; the table mounts it inside its scaled stage). Returns close().
+function openPopup({ title = "", html = "", container = document.body, wide = false } = {}) {
+    const host = container || document.body;
+    const layer = document.createElement("div");
+    layer.className = `gd-popup-layer${host === document.body ? "" : " in-stage"}`;
+    layer.innerHTML = `<div class="gd-popup${wide ? " is-wide" : ""}" role="dialog" aria-modal="true" tabindex="-1">
+        <div class="gd-popup-head"><h2 class="gd-popup-title"></h2></div>
+        <button class="gd-popup-close" type="button" aria-label="${L("Close", "关闭")}"></button>
+        <div class="gd-popup-body">${html}</div>
     </div>`;
+    const panel = layer.firstElementChild;
+    panel.querySelector(".gd-popup-title").textContent = title;
+    panel.setAttribute("aria-label", title);
+    const opener = document.activeElement;
+    let closed = false;
+    function onKey(event) {
+        if (event.key !== "Escape") return;
+        event.stopPropagation();
+        close();
+    }
+    function close() {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener("keydown", onKey, true);
+        layer.classList.remove("is-open");
+        setTimeout(() => layer.remove(), 180);
+        if (opener && opener !== document.body) opener.focus?.({ preventScroll: true });
+    }
+    layer.addEventListener("click", event => {
+        if (event.target === layer || event.target.closest(".gd-popup-close")) close();
+    });
+    document.addEventListener("keydown", onKey, true);
+    host.appendChild(layer);
+    requestAnimationFrame(() => {
+        layer.classList.add("is-open");
+        panel.focus({ preventScroll: true });
+    });
+    close.panel = panel;
+    return close;
+}
+
+function rulesCardsHTML(list) {
+    return `<span class="gd-rules-cards">${list.map((c, i) => cardHTML(c === "RJ" || c === "BJ" ? { id: `rr${c}${i}`, joker: c } : signatureCard(c, `rr${i}`), true)).join("")}</span>`;
+}
+
+// The examples are drawn "playing 7", whatever table is open, so 7♠ carries the level mark and
+// 7♥ the 逢人配 mark. cardHTML reads the level from `game`; it is swapped only for this
+// synchronous build and always restored.
+function atExampleLevel(rank, build) {
+    const live = game;
+    game = { currentLevelRank: rank };
+    try { return build(); } finally { game = live; }
+}
+
+// 玩法规则 as this game implements them (engine combos/bomb order, tribute, 接风, 升级, 过A):
+// Tencent left tabs, each pane a few short labelled rows, card examples on the right.
+function rulesHTML() {
+    return atExampleLevel("7", rulesBodyHTML);
+}
+
+function rulesBodyHTML() {
+    const row = (key, text, cards) => `<div class="gd-rules-row${cards ? " has-cards" : ""}"><b>${key}</b><span>${text}</span>${cards ? rulesCardsHTML(cards) : ""}</div>`;
+    const tabs = [
+        [L("Basics", "基本玩法"), [
+            row(L("Teams", "队伍"), L("Four players in two teams; partners sit opposite: seats 1 + 3 (Blue) against seats 2 + 4 (Red).", "四人两队，对家为队友：1、3 号位（蓝队）对 2、4 号位（红队）。")),
+            row(L("Cards", "牌数"), L("Two decks, 108 cards including four jokers; everyone gets 27.", "两副牌共 108 张（含四张王），每人 27 张。")),
+            row(L("Lead", "先出"), L("Round 1: a random card is turned up and its holder leads. Later rounds: the tribute payer or last round's first place leads.", "首局随机翻一张起始牌，拿到它的人先出；之后由进贡方或上局头游先出。")),
+            row(L("Turns", "出牌"), L("Lead any legal combo; the others follow with a bigger same combo or a bomb, or pass.", "领出任意合法牌型；其他人只能出更大的同牌型或炸弹，也可以不出。")),
+            row(L("Trick", "收牌"), L("When everyone else passes, the last player to play takes the trick and leads again. If that player has gone out, their partner leads (catch-wind).", "其他人都不出时，最后出牌的人收牌再出；他已出完时由对家「接风」。")),
+            row(L("Time", "限时"), L("3 minutes a turn (a round's opening lead has no limit); on timeout you pass, or play your smallest single when leading.", "每手 3 分钟（每局第一手不限时）；超时自动不出，领出时自动出最小的单张。"))
+        ]],
+        [L("Level card", "级牌"), [
+            row(L("Level", "级牌"), L("The level played is the level of last round's first-place team; both teams start at 2 (the host can change it in the room).", "本局打的级牌 = 上局头游所在队伍的级数；两队都从 2 打起（房主可在房间里调整）。")),
+            row(L("Order", "大小"), L("Red Joker > Black Joker > level card > A > K > … > 3 > 2. Playing 7:", "大王 > 小王 > 级牌 > A > K > … > 3 > 2。打 7 时："), ["RJ", "BJ", "7♠", "A♣", "K♦", "3♠", "2♣"]),
+            row(L("Wild", "逢人配"), L("The heart level card stands in for any card except a joker. Playing 7 it is 7♥:", "红桃级牌可以替代除大小王以外的任意一张牌。打 7 时就是红桃 7："), ["7♥"])
+        ]],
+        [L("Combos", "牌型"), [
+            `<p class="gd-rules-note">${L("Beat a play with the same combo, same number of cards, higher rank. In runs the level card counts at its natural rank.", "只能用同牌型、同张数且更大的牌去压；顺子、连对、钢板里的级牌按原点数算。")}</p>`,
+            row(L("Single", "单张"), L("Any one card", "任意一张"), ["K♠"]),
+            row(L("Pair", "对子"), L("Two of a rank (jokers pair only with the same joker)", "两张同点数（王只能和同色王成对）"), ["9♥", "9♣"]),
+            row(L("Triple", "三张"), L("Three of a rank", "三张同点数"), ["5♠", "5♥", "5♦"]),
+            row(L("Full House", "三带二"), L("A triple plus a pair; the triple decides", "三张加一对，比三张的大小"), ["8♠", "8♥", "8♣", "4♦", "4♣"]),
+            row(L("Straight", "顺子"), L("Five in a row, 2-6 up to 10-A", "五张连续，23456 到 10JQKA"), ["10♦", "J♣", "Q♠", "K♥", "A♠"]),
+            row(L("Pairs run", "三连对"), L("Three consecutive pairs, 223344 to QQKKAA", "三个连续的对子，223344 到 QQKKAA"), ["3♠", "3♦", "4♥", "4♣", "5♠", "5♥"]),
+            row(L("Triple run", "钢板"), L("Two consecutive triples, 222333 to KKKAAA", "两个连续的三张，222333 到 KKKAAA"), ["J♠", "J♥", "J♣", "Q♦", "Q♠", "Q♥"])
+        ]],
+        [L("Bombs", "炸弹"), [
+            `<p class="gd-rules-note">${L("A bomb beats any non-bomb. 4 of a kind < 5 of a kind < Straight Flush < 6 < 7 < 8 … < Joker Bomb; the same size compares by rank.", "炸弹能压任何非炸弹牌型。四炸 < 五炸 < 同花顺 < 六炸 < 七炸 < 八炸 … < 天王炸；张数相同比点数。")}</p>`,
+            row(L("Bomb", "炸弹"), L("Four or more of a rank", "四张及以上同点数"), ["6♠", "6♥", "6♦", "6♣"]),
+            row(L("Flush run", "同花顺"), L("A five-card straight in one suit", "同一花色的五张顺子"), ["8♠", "9♠", "10♠", "J♠", "Q♠"]),
+            row(L("Jokers", "天王炸"), L("All four jokers, the biggest play", "四张王，最大的牌"), ["RJ", "RJ", "BJ", "BJ"])
+        ]],
+        [L("Level up", "升级"), [
+            row(L("Places", "名次"), L("Finishing order: 1st, 2nd, 3rd, last.", "出完的顺序为头游、二游、三游、末游。")),
+            row(L("Up 3", "升 3 级"), L("Partner of first place finishes 2nd (a 1-2 finish).", "头游的队友二游（双上）。")),
+            row(L("Up 2", "升 2 级"), L("Partner of first place finishes 3rd.", "头游的队友三游。")),
+            row(L("Up 1", "升 1 级"), L("Partner of first place finishes last.", "头游的队友末游。")),
+            row(L("Pass A", "过 A"), L("At level A, first place with the partner not last wins the match. First place with the partner last is a failed attempt; after 3 the team drops back to 2.", "打 A 时拿到头游且队友不是末游即过 A，赢下整场；头游但队友末游算一次冲 A 失败，累计 3 次退回打 2。"))
+        ]],
+        [L("Tribute", "进贡"), [
+            row(L("Tribute", "进贡"), L("When the next round starts, the last place gives first place their highest card (never the Wild).", "下一局开始时，末游把手里最大的一张牌进贡给头游（红桃级牌不用进贡）。")),
+            row(L("Double", "双贡"), L("After a 1-2 finish both losers pay: the higher card goes to first place, the lower to first place's partner.", "双上时三游和末游都进贡：较大的给头游，较小的给头游的队友。")),
+            row(L("Return", "还贡"), L("Each receiver returns a card of 10 or lower.", "收到贡牌的人还一张不大于 10 的牌。")),
+            row(L("Block", "抗贡"), L("If the paying side holds both Red Jokers there is no tribute: the jokers are shown and first place leads.", "进贡方合计有两张大王即抗贡：不用进贡，大王亮明，头游先出。")),
+            row(L("Lead", "先出"), L("Otherwise a tribute payer leads (with two payers, the one who got the higher return).", "否则由进贡方先出（双贡时由拿到较大还贡牌的一方先出）。"))
+        ]]
+    ];
+    return `<div class="gd-rules">
+        <div class="gd-rules-tabs" role="tablist" aria-orientation="vertical">${tabs.map(([title], i) =>
+            `<button class="gd-rules-tab" type="button" role="tab" id="gd-rules-tab-${i}" aria-controls="gd-rules-pane-${i}" aria-selected="${i === 0}"${i ? ` tabindex="-1"` : ""}>${title}</button>`).join("")}</div>
+        <div class="gd-rules-panes">${tabs.map(([, rows], i) =>
+            `<section class="gd-rules-pane" role="tabpanel" id="gd-rules-pane-${i}" aria-labelledby="gd-rules-tab-${i}"${i ? " hidden" : ""}>${rows.join("")}</section>`).join("")}</div>
+    </div>`;
+}
+
+function openRules(container) {
+    const close = openPopup({ title: L("Rules", "玩法规则"), html: rulesHTML(), container, wide: true });
+    const panel = close.panel;
+    panel.querySelector(".gd-popup-body").classList.add("has-tabs");
+    const tabs = [...panel.querySelectorAll(".gd-rules-tab")];
+    const panes = [...panel.querySelectorAll(".gd-rules-pane")];
+    const show = (i, focus) => {
+        tabs.forEach((tab, j) => {
+            tab.setAttribute("aria-selected", String(i === j));
+            tab.tabIndex = i === j ? 0 : -1;
+            panes[j].hidden = i !== j;
+        });
+        panes[i].scrollTop = 0;
+        if (focus) tabs[i].focus();
+    };
+    panel.querySelector(".gd-rules-tabs").addEventListener("click", event => {
+        const tab = event.target.closest(".gd-rules-tab");
+        if (tab) show(tabs.indexOf(tab), false);
+    });
+    panel.querySelector(".gd-rules-tabs").addEventListener("keydown", event => {
+        const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+        if (!step) return;
+        event.preventDefault();
+        show((tabs.indexOf(document.activeElement) + step + tabs.length) % tabs.length, true);
+    });
+    return close;
+}
+
+window.GuandanUI = { openPopup, openRules };
+
+function openLabDeck() {
+    const PL = labPlayers();
+    const html = `<div class="gd-labdeck">${labMemberKeys().map((k, i) => {
+        const p = PL[k];
+        return `<div class="labdeck-item">${cardHTML(signatureCard(p.card, `ld${i}`))}<b>${encodeHTML(firstNameOf(p.name))}</b>${isZH() && p.style ? `<small>${encodeHTML(p.style)}</small>` : ""}</div>`;
+    }).join("")}</div>`;
+    openPopup({ title: L("Lab Deck", "实验室牌组"), html, wide: true });
+}
+
+function settingsHTML() {
+    const musicOn = window.GuandanMusic?.isOn?.() !== false;
+    const row = (label, name, options) => `<div class="gd-setrow"><span class="gd-setrow-k">${label}</span>${options.map(([value, text, on]) =>
+        `<label class="gd-radio"><input type="radio" name="${name}" value="${value}"${on ? " checked" : ""}><i></i>${text}</label>`).join("")}</div>`;
+    return `<div class="gd-settings" data-settings>
+        ${row(L("Language", "语言"), "gd-set-lang", [["zh", "中文", isZH()], ["en", "English", !isZH()]])}
+        ${row(L("Music", "音乐"), "gd-set-music", [["on", L("On", "开"), musicOn], ["off", L("Off", "关"), !musicOn]])}
+    </div>`;
+}
+
+function openSettings() {
+    const close = openPopup({ title: L("Settings", "设置"), html: settingsHTML() });
+    const panel = close.panel;
+    panel.addEventListener("change", event => {
+        const t = event.target;
+        if (t.name === "gd-set-lang" && (t.value === "zh") !== isZH()) {
+            langToggleBtn.click();
+            panel.querySelector(".gd-popup-title").textContent = L("Settings", "设置");
+            panel.querySelector("[data-settings]").outerHTML = settingsHTML();
+        } else if (t.name === "gd-set-music") {
+            window.GuandanMusic?.setOn(t.value === "on");
+        }
+    });
+}
+
+// ---------- room (好友同玩): the room is a small table with four seat plates ----------
+const roomRegionHTML = new WeakMap();
+
+// Re-render one region only when its markup changed. Keyboard focus stays on the same control,
+// and a name being typed survives the re-render.
+function patchRegion(scope, name, html) {
+    const node = scope.querySelector(`[data-region="${name}"]`);
+    if (!node || roomRegionHTML.get(node) === html) return;
+    const active = node.contains(document.activeElement) ? document.activeElement : null;
+    roomRegionHTML.set(node, html);
+    node.innerHTML = html;
+    const again = active?.id ? node.querySelector(`#${active.id}`) : null;
+    if (!again) return;
+    if (active.tagName === "INPUT") {
+        again.value = active.value;
+        again.setSelectionRange(active.selectionStart, active.selectionEnd);
+    }
+    again.focus({ preventScroll: true });
+}
+
+// Room writes run one after another. A tap that lands while another write is in flight (e.g. the
+// rename that blurring the name field just started) waits for it instead of bouncing off
+// withAction's busy lock. `valid` is checked when the action's turn comes.
+let roomQueue = Promise.resolve();
+function queueRoomAction(run, valid = () => true) {
+    roomQueue = roomQueue.then(() => (valid() ? run() : undefined)).catch(err => console.error(err));
+    return roomQueue;
+}
+
+// 起始级: a gold ‹ N › stepper per team (host only); the group keeps the #level-team-N id.
+// Taps queue up (queueRoomAction), so the arrows stay enabled and keep keyboard focus.
+function levelSetupHTML() {
+    const host = isHost();
+    return [0, 1].map(team => {
+        const level = game.levels[team] || "2";
+        const idx = ranks.indexOf(level);
+        const step = (dir, glyph, label, off) => host
+            ? `<button class="room-step-btn" id="level-${team}-${dir > 0 ? "up" : "down"}" type="button" data-team="${team}" data-step="${dir}" aria-label="${label}"${off ? " disabled" : ""}>${glyph}</button>`
+            : "";
+        return `<div class="room-row is-level">
+            <span class="room-k">${L(`${teamShortName(team)} start`, `${teamShortName(team)}起始`)}</span>
+            <div class="room-step" id="level-team-${team}" role="group" aria-label="${teamName(team)} ${L("start level", "起始级牌")}">
+                ${step(-1, "‹", L("Lower", "降一级"), idx <= 0)}<b class="room-step-v t${team}" aria-live="polite">${encodeHTML(level)}</b>${step(1, "›", L("Higher", "升一级"), idx >= ranks.length - 1)}
+            </div>
+        </div>`;
+    }).join("");
 }
 
 async function updateStartLevel(team, level) {
@@ -1737,72 +2272,201 @@ async function updateStartLevel(team, level) {
     if (!updated) showToast(L("Level setup changed. Please retry.", "级牌设置变化了，请重试。"));
 }
 
-function renderLobbyRoom() {
-    document.body.dataset.screen = "room";
-    const mine = mySeat();
-    root.innerHTML = `
-    <section class="lobby">
-        <aside class="lobby-rail">
-            <div class="lobby-rail-mark">P</div>
-            <ul class="lobby-rail-rules">
-                <li>${iconHTML("team")}<span>${teamName(0)}: ${L("Seats 1 + 3", "1 + 3 号位")} · ${teamLevelDisplay(0)}</span></li>
-                <li>${iconHTML("team")}<span>${teamName(1)}: ${L("Seats 2 + 4", "2 + 4 号位")} · ${teamLevelDisplay(1)}</span></li>
-                <li>${iconHTML("level")}<span>${L("Current hand level", "当前本手打")} ${game.currentLevelRank}</span></li>
-            </ul>
-        </aside>
-        <div class="lobby-console">
-            <h2 class="lobby-console-title">${L("Room", "房间")} ${game.roomCode}</h2>
-            <p class="lobby-console-sub">${encodeHTML(displayMessage(game.message || "等待玩家入座。"))} ${L("Partners sit opposite: seats 1/3 versus 2/4. The host can fill empty seats with AI.", "对家组队：1/3 号位一队，2/4 号位一队。人不够时房主可以补 AI。")}</p>
-            <div class="control-card">
-                <div class="field-grid">
-                    <label>${L("Nickname", "昵称")}<input id="nick-input" value="${encodeHTML(nickname)}" placeholder="${L("Your name", "你的名字")}"></label>
-                </div>
-                ${levelSetupHTML()}
-                <div class="seats" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    ${[0,1,2,3].map(i => seatHTML(i, mine)).join("")}
-                </div>
-                <div class="split" style="margin-top:16px;">
-                    <button class="btn" id="start-game" ${isHost() && !actionBusy ? "" : "disabled"} type="button">${L("Start Game", "开始游戏")}</button>
-                    <button class="btn secondary" id="fill-ai" ${isHost() && !actionBusy ? "" : "disabled"} type="button">${L("Fill AI", "空位补 AI")}</button>
-                    <button class="btn danger" id="delete-room" ${isHost() && !actionBusy ? "" : "disabled"} type="button">${L("Dissolve Room", "解散房间")}</button>
-                </div>
-            </div>
-        </div>
-        <div class="lobby-side">
-            <div class="lobby-preview" aria-hidden="true">
-                <i class="preview-seat s0"></i><i class="preview-seat s1"></i><i class="preview-seat s2"></i><i class="preview-seat s3"></i>
-                ${previewCardsHTML()}
-            </div>
-        </div>
-    </section>`;
-    [0,1,2,3].forEach(i => {
-        document.getElementById(`seat-${i}`)?.addEventListener("click", () => takeSeat(i));
-        document.getElementById(`ai-${i}`)?.addEventListener("click", () => addAI(i));
-        document.getElementById(`leave-${i}`)?.addEventListener("click", () => leaveSeat(i));
-    });
-    document.getElementById("level-team-0")?.addEventListener("change", event => updateStartLevel(0, event.target.value));
-    document.getElementById("level-team-1")?.addEventListener("change", event => updateStartLevel(1, event.target.value));
-    document.getElementById("start-game").addEventListener("click", startGame);
-    document.getElementById("fill-ai").addEventListener("click", fillAISeats);
-    document.getElementById("delete-room").addEventListener("click", async () => {
-        if (!isHost()) return showToast(L("Only the host can dissolve the room", "只有房主能解散房间"));
-        await remove(roomRef());
-        location.href = GUANDAN_URL;
-    });
-    updateTopbarStatus();
+// Steps from the level current when the queued step runs, so quick taps add up.
+function stepStartLevel(team, dir) {
+    const idx = ranks.indexOf(game?.levels?.[team] || "2");
+    const next = ranks[idx + dir];
+    return next ? updateStartLevel(team, next) : undefined;
 }
 
+// The settings rows state what this game plays (read-only); 发牌 and 旁观 drop on short phones.
+function roomShellHTML() {
+    const checks = [L("Wild", "逢人配"), L("Catch-wind", "接风")];
+    return `
+    <section class="room">
+        <aside class="room-panel room-settings">
+            <h3 class="room-panel-head">${L("Table", "对局设置")}</h3>
+            <div class="room-panel-body">
+                <div class="room-levels-setup" data-region="levels"></div>
+                <div class="room-row"><span class="room-k">${L("Goal", "目标")}</span><span class="room-v">${L("Pass A", "过 A")}<small>${L("3 misses → 2", "（3 把不过回 2）")}</small></span></div>
+                <div class="room-row"><span class="room-k">${L("Tribute", "进贡")}</span><span class="room-v">${L("Tribute", "进贡")}<small>${L("two Red Jokers block it", "（双大王抗贡）")}</small></span></div>
+                <div class="room-row"><span class="room-k">${L("Level", "升级")}</span><span class="room-v">${L("1-2 finish +3", "双上升 3 级")}</span></div>
+                <div class="room-row"><span class="room-k">${L("Turn", "出牌时间")}</span><span class="room-v">${L("3 min", "3 分钟")}</span></div>
+                <div class="room-row is-extra"><span class="room-k">${L("Deal", "发牌")}</span><span class="room-v">${L("Shuffled", "随机发牌")}</span></div>
+                <div class="room-row"><span class="room-k">${L("Rules", "规则")}</span><span class="room-checks">${checks.map(c => `<span class="room-chk">${c}</span>`).join("")}</span></div>
+                <div class="room-row is-extra"><span class="room-k">${L("Watch", "旁观")}</span><span class="room-v">${L("Allowed", "允许旁观")}</span></div>
+                <div class="room-admin" data-region="admin"></div>
+            </div>
+        </aside>
+        <div class="room-center">
+            <div class="room-table">
+                <div class="room-board" data-region="table"></div>
+                <div class="room-actions" data-region="actions"></div>
+            </div>
+        </div>
+        <aside class="room-panel room-roster">
+            <h3 class="room-panel-head">${L("Lab members", "实验室成员")}</h3>
+            <div class="room-roster-list" data-region="roster"></div>
+            <div class="room-roster-foot"><button class="btn ok" type="button" data-room="invite">${L("Invite friends", "邀请好友")}</button></div>
+        </aside>
+    </section>`;
+}
+
+function renderLobbyRoom() {
+    if (quickStart) {
+        // 人机练习: the room exists now; the lobby stays up while quickPractice() starts the game.
+        if (Date.now() < quickStart.until) {
+            quickStart.resolve(true);
+            return;
+        }
+        quickStart = null;
+    }
+    enterScreen("room");
+    updateTopbarStatus();
+    const mine = mySeat();
+    const key = `${game.roomCode}:${uiLang}`;
+    let el = root.querySelector(".room");
+    if (!el || el.dataset.roomKey !== key) {
+        root.innerHTML = roomShellHTML();
+        el = root.querySelector(".room");
+        el.dataset.roomKey = key;
+        bindRoom(el);
+    }
+    patchRegion(el, "levels", levelSetupHTML());
+    patchRegion(el, "admin", isHost() ? `<button class="room-dissolve" id="delete-room" type="button"${actionBusy ? " disabled" : ""}>${L("Dissolve room", "解散房间")}</button>` : "");
+    patchRegion(el, "table", roomTableHTML(mine));
+    patchRegion(el, "actions", roomActionsHTML());
+    patchRegion(el, "roster", rosterHTML());
+}
+
+function bindRoom(el) {
+    el.addEventListener("click", event => {
+        const btn = event.target.closest("button");
+        if (!btn || btn.disabled) return;
+        if (btn.dataset.room === "invite") return copyLinkBtn.click();
+        if (btn.dataset.step) {
+            const team = Number(btn.dataset.team);
+            const dir = Number(btn.dataset.step);
+            return queueRoomAction(() => stepStartLevel(team, dir), () => isHost());
+        }
+        const run = {
+            "start-game": startGame,
+            "fill-ai": fillAISeats,
+            "delete-room": dissolveRoom
+        }[btn.id];
+        const seatAction = /^(seat|ai|leave)-(\d)$/.exec(btn.id);
+        const action = run || (seatAction && (() => {
+            const i = Number(seatAction[2]);
+            return seatAction[1] === "seat" ? takeSeat(i) : seatAction[1] === "ai" ? addAI(i) : leaveSeat(i);
+        }));
+        if (!action) return;
+        // When its turn comes the control must still be there and enabled (a double tap on
+        // 入座 or 开始游戏 finds it gone and does nothing).
+        const id = btn.id;
+        queueRoomAction(action, () => {
+            const now = document.getElementById(id);
+            return !!now && !now.disabled;
+        });
+    });
+    el.addEventListener("change", event => {
+        if (event.target.id === "nick-input") saveNickname(event.target);
+    });
+    el.addEventListener("keydown", blurNicknameOnEnter);
+}
+
+async function dissolveRoom() {
+    if (!isHost()) return showToast(L("Only the host can dissolve the room", "只有房主能解散房间"));
+    await remove(roomRef());
+    location.href = GUANDAN_URL;
+}
+
+// Leaving through ↩: a host with no other player here closes the room (as 好友同玩 does when the
+// host exits); anyone else gives the seat back, and a leaving host hands the room to a player.
+function leaveRoom() {
+    const seat = mySeat();
+    if (seat < 0) return;
+    const others = game.seats.some((s, i) => i !== seat && s?.type === "human");
+    return isHost() && !others ? remove(roomRef()) : leaveSeat(seat);
+}
+
+function teamShortName(team) {
+    return team ? L("Red", "红队") : L("Blue", "蓝队");
+}
+
+function roomTableHTML(mine) {
+    return `<div class="room-felt">
+            <div class="room-felt-mark">PICASSO ${L("Guandan", "掼蛋")} · ${L(`level ${game.currentLevelRank}`, `打${game.currentLevelRank}`)}</div>
+            <div class="room-lvs">${[0, 1].map(t => `<span class="room-lv t${t}"><i>${teamShortName(t)}</i><b>${encodeHTML(teamLevelDisplay(t))}</b></span>`).join("")}</div>
+        </div>
+        ${[0, 1, 2, 3].map(i => seatHTML(i, mine)).join("")}`;
+}
+
+// Guests see a waiting caption, not a dead button (it keeps the disabled #start-game hook).
+function roomActionsHTML() {
+    if (!isHost()) return `<button class="room-wait" id="start-game" type="button" disabled>${L("Waiting for the host…", "等待房主开始…")}</button>`;
+    const open = game.seats.some(s => !s);
+    return `<button class="btn secondary" id="fill-ai" type="button"${actionBusy || !open ? " disabled" : ""}>${L("Fill AI", "AI 补位")}</button>
+        <button class="btn lg" id="start-game" type="button"${actionBusy ? " disabled" : ""}>${L("Start", "开始游戏")}</button>`;
+}
+
+function rosterHTML() {
+    const PL = labPlayers();
+    const seated = new Set(game.seats.filter(s => s && s.type !== "ai").map(s => labPlayerKey(s.name)).filter(Boolean));
+    return labMemberKeys().map(k => {
+        const p = PL[k];
+        const red = /[♥♦]/.test(p.card);
+        const sub = [`<i class="${red ? "is-red" : ""}">${encodeHTML(p.card)}</i>`, isZH() && p.style ? encodeHTML(p.style) : ""].filter(Boolean).join(" · ");
+        return `<div class="roster-row">
+            <span class="gd-avatar is-plain roster-av"><img src="${encodeHTML(p.avatar)}" alt="" loading="lazy"></span>
+            <span class="roster-name"><b>${encodeHTML(firstNameOf(p.name))}</b><small>${sub}</small></span>
+            ${seated.has(k) ? `<span class="roster-in">${L("Seated", "已入座")}</span>` : `<button class="roster-invite" type="button" data-room="invite">${L("Invite", "邀请")}</button>`}
+        </div>`;
+    }).join("");
+}
+
+// A seat around the room table: the avatar, and under it the dark name plate (name + team chip on
+// one line), the same for all four seats. Ring and pill follow the relation to the viewer (me and
+// my partner cyan, opponents red; an unseated viewer sees the table from seat 1, so 蓝队 cyan).
+// My own name is edited in place (#nick-input). The host removes a seat with the small × badge
+// (#leave-i); a guest leaves their own seat the same way. The host has no leave badge: they move
+// by taking another seat and leave through ↩, so the room is never handed to an AI.
+// An empty seat is one dashed "+ 入座" disc, with the host's small "AI" badge beside it.
 function seatHTML(i, mine) {
     const s = game.seats[i];
+    const pos = visualSeatPos(i, mine);
+    const team = i % 2;
+    const opp = mine >= 0 ? team !== mine % 2 : team === 1;
+    const busy = actionBusy ? " disabled" : "";
+    const host = isHost();
     if (!s) {
-        return `<div class="seat-card">
-            <div class="player-main"><div class="player-avatar">${i + 1}</div><div><div class="seat-name">${L(`Seat ${i + 1} Empty`, `${i + 1} 号空位`)}</div><div class="seat-team">${teamName(i % 2)}</div></div></div>
-            <div class="top-actions"><button class="btn secondary" id="seat-${i}" ${actionBusy ? "disabled" : ""} type="button">${L("Sit", "入座")}</button>${isHost() ? `<button class="btn secondary" id="ai-${i}" ${actionBusy ? "disabled" : ""} type="button">AI</button>` : ""}</div>
+        return `<div class="room-seat p${pos} is-empty${opp ? " is-opp" : ""}">
+            <span class="room-seat-disc">
+                <button class="room-seat-sit" id="seat-${i}" type="button"${busy} aria-label="${L(`Take seat ${i + 1} (${teamShortName(team)})`, `坐 ${i + 1} 号位（${teamShortName(team)}）`)}"><b>+</b><span>${L("Sit", "入座")}</span></button>
+                ${host ? `<button class="room-badge is-ai" id="ai-${i}" type="button"${busy} aria-label="${L(`AI takes seat ${i + 1}`, `AI 入座 ${i + 1} 号位`)}"><span>AI</span></button>` : ""}
+            </span>
         </div>`;
     }
-    return `<div class="seat-card ${mine === i ? "mine" : ""}">
-        <div class="player-main"><div class="player-avatar">${encodeHTML(initials(displaySeatName(s), String(i + 1)))}</div><div><div class="seat-name">${encodeHTML(displaySeatName(s))} ${s.host ? L("· Host", "· 房主") : ""}</div><div class="seat-meta">${s.type === "ai" ? "AI" : L("Human", "真人")} · ${L(`Seat ${i + 1}`, `${i + 1} 号位`)}</div><div class="seat-team">${teamName(i % 2)}</div></div></div>
-        ${(mine === i || isHost()) ? `<button class="btn secondary" id="leave-${i}" ${actionBusy ? "disabled" : ""} type="button">${L("Leave", "离开")}</button>` : `<div></div>`}
+    const me = mine === i;
+    const name = displaySeatName(s, L(`Seat ${i + 1}`, `${i + 1} 号位`));
+    const isAI = s.type === "ai";
+    const photo = isAI ? null : seatMemberPhoto(name);
+    const relation = isAI ? "AI" : mine < 0 ? "" : me ? L("Me", "我") : opp ? L("Rival", "对手") : L("Partner", "队友");
+    const face = photo
+        ? `<img src="${encodeHTML(photo)}" alt="">`
+        : `<span class="gd-avatar-initials">${encodeHTML(isAI ? name.charAt(0) : initials(name, String(i + 1)))}</span>`;
+    const nameHTML = me
+        ? `<label class="room-seat-name"><input id="nick-input" value="${encodeHTML(name)}" maxlength="24" autocomplete="nickname" spellcheck="false" aria-label="${L("Your name", "我的昵称")}"><svg class="room-pen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17.2V21h3.8L17.9 9.9l-3.8-3.8L3 17.2Zm17.7-10.1c.4-.4.4-1 0-1.4l-2.4-2.4c-.4-.4-1-.4-1.4 0l-1.8 1.8 3.8 3.8 1.8-1.8Z"/></svg></label>`
+        : `<b>${encodeHTML(name)}</b>`;
+    const clearLabel = me ? L("Leave the seat", "离开座位") : L(`Remove ${name}`, `移除 ${name}`);
+    const clear = (me ? !host : host)
+        ? `<button class="room-badge ${me ? "is-leave" : "is-remove"}" id="leave-${i}" type="button"${busy} aria-label="${encodeHTML(clearLabel)}" title="${encodeHTML(clearLabel)}">${glyphHTML("close")}</button>`
+        : "";
+    return `<div class="room-seat p${pos}${opp ? " is-opp" : ""}${me ? " is-me" : ""}${isAI ? " is-ai" : ""}">
+        <span class="room-seat-disc">
+            <span class="gd-avatar room-seat-av${opp ? " is-opp" : ""}">${face}${relation ? `<span class="gd-avatar-tag">${relation}</span>` : ""}</span>
+            ${s.host ? `<span class="room-seat-host">${L("Host", "房主")}</span>` : ""}${clear}
+        </span>
+        <span class="room-seat-plate">${nameHTML}<em class="team-pill t${team}">${teamShortName(team)}</em></span>
     </div>`;
 }
 
@@ -2351,7 +3015,10 @@ document.getElementById("copy-link-btn").addEventListener("click", async () => {
     }
 });
 
-document.getElementById("new-room-btn").addEventListener("click", () => {
+// ↩ on the room screen gives the seat back before going to the lobby, so nobody waits on a ghost
+// seat; mid-game it is the table's 新桌 and just opens a fresh lobby.
+document.getElementById("new-room-btn").addEventListener("click", async () => {
+    if (game?.phase === "lobby") await queueRoomAction(leaveRoom);
     location.href = GUANDAN_URL;
 });
 
@@ -2363,6 +3030,14 @@ langToggleBtn.addEventListener("click", () => {
 });
 
 backEventsBtn.addEventListener("click", startReturnToEvents);
+hudRulesBtn.addEventListener("click", () => openRules());
+
+// The lobby top bar hosts the nickname field (#nick-input); it is saved on change / Enter.
+hudStatusEl.addEventListener("change", event => {
+    if (event.target.id === "nick-input") saveNickname(event.target);
+});
+hudStatusEl.addEventListener("keydown", blurNicknameOnEnter);
+document.addEventListener("guandan:music", refreshLobbyRail);
 
 window.addEventListener("load", () => setTimeout(primeReturnKeyboardCapture, 0), { once: true });
 window.addEventListener("pageshow", () => setTimeout(primeReturnKeyboardCapture, 0));
@@ -2470,12 +3145,25 @@ else render();
     window.GuandanRecordsUI = { open: open, close: close };
 })();
 
-// BGM: autoplay on load; fall back to first user gesture if browser blocks autoplay
+// BGM + window.GuandanMusic { isOn(), setOn(bool) }: the on/off preference is stored in
+// localStorage "picasso.guandan.music" ('on'|'off'). While on, it autoplays on load and falls back
+// to the first user gesture if the browser blocks autoplay. setOn() fires a "guandan:music" event.
 (function () {
+    var KEY = "picasso.guandan.music";
     var bgm = document.getElementById("guandan-bgm");
+    var on = true;
+    try { on = localStorage.getItem(KEY) !== "off"; } catch (_) {}
+    function tryPlay() { if (on && bgm) bgm.play().catch(function () {}); }
+    function setOn(value) {
+        on = !!value;
+        try { localStorage.setItem(KEY, on ? "on" : "off"); } catch (_) {}
+        if (on) tryPlay();
+        else if (bgm) bgm.pause();
+        document.dispatchEvent(new CustomEvent("guandan:music", { detail: { on: on } }));
+    }
+    window.GuandanMusic = { isOn: function () { return on; }, setOn: setOn };
     if (!bgm) return;
     bgm.volume = 0.45;
-    function tryPlay() { bgm.play().catch(function () {}); }
     tryPlay();
     function onGesture() {
         tryPlay();

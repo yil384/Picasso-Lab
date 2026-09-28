@@ -1,7 +1,8 @@
 /* ==========================================================================
    Picasso Lab Guandan: design-system foundation.
-   Tokens, fonts, base, app shell + topbar, buttons, card component, CSS felt
-   fallback, toast, pill/badge/avatar primitives, z-index scale, reduced motion.
+   Tokens, fonts, base, app shell, buttons, card component, CSS felt fallback,
+   toast, pill/badge/avatar primitives, popup, z-index scale, reduced motion.
+   The lobby/room top bar (.topbar) is styled in guandan-lobby.css.
    Screen layouts live in guandan-lobby.css / guandan-table.css (loaded after
    this file); they override the defaults here through the documented vars.
    Screen contract: body[data-screen="lobby"|"room"|"table"] is set by render().
@@ -72,8 +73,6 @@
     --ease-out: cubic-bezier(.2, .8, .2, 1);
     --ease-back: cubic-bezier(.34, 1.4, .64, 1);
     --dur-fast: 120ms; --dur-ui: 220ms; --dur-slow: 350ms;
-
-    --topbar-h: 44px;
 }
 
 /* ---------- base / reset ---------- */
@@ -134,68 +133,6 @@ img { max-width: 100%; }
     min-height: 100dvh;
 }
 #root { position: relative; min-height: 100vh; min-height: 100dvh; }
-/* Lobby/room content starts under the topbar by default; screens may take the space back. */
-body:not([data-screen="table"]) #root { padding-top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)); }
-
-/* Topbar: a transparent overlay strip. Brand + room status on the left (lobby/room only),
-   round translucent buttons on the right. Screens reserve --topbar-h where they need it. */
-.topbar {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: var(--z-topbar);
-    height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: env(safe-area-inset-top, 0px) calc(10px + env(safe-area-inset-right, 0px)) 0 calc(12px + env(safe-area-inset-left, 0px));
-    pointer-events: none;
-}
-.topbar > * { pointer-events: auto; }
-.hud-brand { display: flex; align-items: center; }
-.hud-brand-mark {
-    width: 28px; height: 28px;
-    display: grid; place-items: center;
-    border-radius: 7px;
-    background: #fff;
-    color: var(--card-back);
-    font: 800 19px/1 var(--font-num);
-    box-shadow: inset 0 0 0 2px var(--card-back), inset 0 0 0 3px #fff, 0 1px 2px rgba(0, 0, 0, .3);
-}
-.hud-status {
-    display: flex; align-items: center; gap: 8px;
-    height: 24px; padding: 0 10px;
-    border-radius: var(--r-pill);
-    background: rgba(0, 0, 0, .28);
-    font: 700 var(--fs-11)/1 var(--font-ui);
-    white-space: nowrap;
-}
-.hud-status:empty { display: none; }
-.hud-status-room { letter-spacing: .02em; }
-.hud-status-seats { display: inline-flex; gap: 4px; }
-.hud-seat-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, .28); }
-.hud-seat-dot.human { background: var(--mate); }
-.hud-seat-dot.ai { background: var(--gold-2); }
-.hud-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.icon-btn {
-    min-width: 34px; height: 34px;
-    padding: 0 9px;
-    display: inline-grid; place-items: center;
-    border: 0;
-    border-radius: var(--r-pill);
-    background: rgba(0, 0, 0, .28);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
-    color: #fff;
-    font: 700 var(--fs-11)/1 var(--font-ui);
-    letter-spacing: .04em;
-    white-space: nowrap;
-    user-select: none;
-    -webkit-user-select: none;
-    transition: background-color var(--dur-fast) ease;
-}
-.icon-btn:active { background: rgba(0, 0, 0, .4); }
-body[data-screen="table"] .hud-brand,
-body[data-screen="table"] .hud-status { display: none; }
-
 /* ---------- buttons ----------
    .btn = primary orange (出牌). Variants: .secondary/.pass (blue), .util (periwinkle),
    .ok (green), .danger, .ghost. Size through --btn-h / --btn-fs / --btn-px / --btn-ls
@@ -277,7 +214,6 @@ body[data-screen="table"] .hud-status { display: none; }
 .btn .ui-icon { -webkit-text-stroke: 0; }
 @media (hover: hover) {
     .btn:hover:not(:disabled)::before { opacity: 1; }
-    .icon-btn:hover { background: rgba(0, 0, 0, .38); }
 }
 
 /* ---------- pills, badges, plates, avatars ---------- */
@@ -663,6 +599,211 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
 .toast.show { opacity: 1; scale: 1; }
 
 /* #return-transition and #return-type-hint are styled in guandan-transition.css. */
+
+/* ---------- popup (window.GuandanUI.openPopup / openRules) ----------
+   .gd-popup-layer > .gd-popup > .gd-popup-head/.gd-popup-close/.gd-popup-body. Sized in --pu:
+   one design px of a 1280x720 screen. On <body> that is the viewport; mounted in another
+   container (.in-stage, e.g. the table's rotated UI layer) it is that container's box. */
+.gd-popup-layer {
+    --pu: clamp(.7px, min(calc(100vw / 1280), calc(100vh / 720)), 1.25px);
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    place-items: center;
+    padding: 12px;
+}
+@media (max-aspect-ratio: 1/1) {
+    .gd-popup-layer { --pu: min(calc(100vw / 520), 1.25px); }
+    .gd-popup-layer:not(.in-stage) .gd-popup { max-height: 88%; }
+}
+.gd-popup-layer.in-stage { position: absolute; container-type: size; }
+.gd-popup-layer.in-stage .gd-popup { --pu: clamp(.7px, min(calc(100cqw / 1280), calc(100cqh / 720)), 1.25px); }
+@media (pointer: coarse) { .gd-popup-layer { --tap: 40px; } }
+.gd-popup-layer::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 16, 48, .58);
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+.gd-popup-layer.is-open::before { opacity: 1; }
+.gd-popup {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(calc(640 * var(--pu)), 94%);
+    max-height: min(calc(660 * var(--pu)), 92%);
+    border-radius: calc(12 * var(--pu));
+    background: linear-gradient(180deg, #fdfeff 0%, var(--panel-2) 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), 0 calc(10 * var(--pu)) calc(28 * var(--pu)) rgba(0, 0, 30, .45);
+    color: var(--ink);
+    opacity: 0;
+    scale: .9;
+    transition: opacity 150ms ease, scale 150ms ease;
+}
+.gd-popup.is-wide { width: min(calc(920 * var(--pu)), 94%); }
+.gd-popup:focus { outline: none; }
+.gd-popup-layer.is-open .gd-popup {
+    opacity: 1;
+    scale: 1;
+    transition: opacity 150ms ease, scale 220ms var(--ease-back);
+}
+.gd-popup-head {
+    flex: none;
+    display: grid;
+    place-items: center;
+    height: calc(60 * var(--pu));
+    border-radius: calc(12 * var(--pu)) calc(12 * var(--pu)) 0 0;
+    background: linear-gradient(180deg, #8ea4ff 0%, #6c84ec 100%);
+    box-shadow: inset 0 calc(-2 * var(--pu)) 0 rgba(40, 50, 160, .25);
+}
+.gd-popup-title {
+    margin: 0;
+    color: #fff;
+    font: 900 calc(28 * var(--pu))/1 var(--font-ui);
+    letter-spacing: .12em;
+    text-indent: .12em;
+    -webkit-text-stroke: calc(5 * var(--pu)) var(--sec-stroke);
+    paint-order: stroke fill;
+}
+.gd-popup-close {
+    position: absolute;
+    top: calc(-14 * var(--pu));
+    right: calc(-14 * var(--pu));
+    width: max(var(--tap, 0px), calc(48 * var(--pu)));
+    height: max(var(--tap, 0px), calc(48 * var(--pu)));
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: inset 0 0 0 calc(3 * var(--pu)) #6c84ec, 0 calc(2 * var(--pu)) calc(4 * var(--pu)) rgba(0, 0, 30, .35);
+}
+.gd-popup-close::before, .gd-popup-close::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: calc(22 * var(--pu));
+    height: calc(4 * var(--pu));
+    border-radius: calc(2 * var(--pu));
+    background: var(--ink);
+    translate: -50% -50%;
+    rotate: 45deg;
+}
+.gd-popup-close::after { rotate: -45deg; }
+.gd-popup-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: calc(20 * var(--pu)) calc(30 * var(--pu)) calc(28 * var(--pu));
+    font: 500 calc(19 * var(--pu))/1.6 var(--font-ui);
+}
+
+/* 玩法规则: left tabs (like the 好友同玩 tab column) and a short pane of labelled rows */
+.gd-popup-body.has-tabs { flex: 0 1 auto; display: flex; height: calc(560 * var(--pu)); padding: 0; overflow: hidden; }
+.gd-rules { flex: 1; min-width: 0; display: flex; }
+.gd-rules-tabs {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: calc(4 * var(--pu));
+    width: calc(172 * var(--pu));
+    padding: calc(14 * var(--pu)) 0;
+    border-bottom-left-radius: calc(12 * var(--pu));
+    background: linear-gradient(180deg, #e3e9fa 0%, #d8e1f7 100%);
+}
+.gd-rules-tab {
+    position: relative;
+    flex: none;
+    height: max(var(--tap, 0px), calc(58 * var(--pu)));
+    padding: 0 calc(18 * var(--pu)) 0 calc(28 * var(--pu));
+    border: 0;
+    background: none;
+    color: #5d6a94;
+    font: 900 calc(21 * var(--pu))/1 var(--font-ui);
+    text-align: left;
+    white-space: nowrap;
+}
+.gd-rules-tab[aria-selected="true"] {
+    background: linear-gradient(90deg, #fff 55%, #f4f7fe);
+    color: var(--ink);
+    clip-path: polygon(0 0, calc(100% - 14 * var(--pu)) 0, 100% 50%, calc(100% - 14 * var(--pu)) 100%, 0 100%);
+}
+.gd-rules-tab[aria-selected="true"]::before {
+    content: "";
+    position: absolute;
+    left: 0; top: calc(15 * var(--pu)); bottom: calc(15 * var(--pu));
+    width: calc(6 * var(--pu));
+    border-radius: 0 calc(3 * var(--pu)) calc(3 * var(--pu)) 0;
+    background: linear-gradient(180deg, #ffe27a, #f6b92a);
+}
+.gd-rules-tab:focus-visible { outline: 2px solid var(--util); outline-offset: -3px; }
+.gd-rules-panes { flex: 1; min-width: 0; display: flex; }
+.gd-rules-pane { flex: 1; min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: calc(8 * var(--pu)) calc(28 * var(--pu)) calc(20 * var(--pu)); }
+.gd-rules-pane[hidden] { display: none; }
+.gd-rules-row {
+    display: grid;
+    grid-template-columns: calc(90 * var(--pu)) minmax(0, 1fr);
+    align-items: center;
+    gap: calc(4 * var(--pu)) calc(18 * var(--pu));
+    min-height: calc(66 * var(--pu));
+    padding: calc(10 * var(--pu)) 0;
+    border-bottom: 1px solid var(--panel-line);
+}
+.gd-rules-row.has-cards { grid-template-columns: calc(90 * var(--pu)) minmax(0, 1fr) auto; }
+.gd-rules-row:last-child { border-bottom: 0; }
+.gd-rules-row > b { color: var(--ink); font: 900 calc(21 * var(--pu))/1.3 var(--font-ui); text-align-last: justify; }
+html[lang="en"] .gd-rules-row > b { text-align-last: auto; }
+.gd-rules-row > span { color: var(--ink-2); font-size: calc(18 * var(--pu)); line-height: 1.5; }
+.gd-rules-note { margin: calc(10 * var(--pu)) 0 calc(4 * var(--pu)); padding: calc(10 * var(--pu)) calc(14 * var(--pu)); border-radius: calc(6 * var(--pu)); background: #eaf0fc; color: var(--ink-2); font-size: calc(17 * var(--pu)); line-height: 1.5; }
+.gd-rules-cards { --card-w-small: calc(46 * var(--pu)); display: flex; padding-right: calc(4 * var(--pu)); }
+.gd-rules-cards .card + .card { margin-left: calc(-20 * var(--pu)); }
+@media (max-aspect-ratio: 1/1) { /* portrait page: tabs across the top (a rotated in-game stage stays landscape) */
+    .gd-popup-layer:not(.in-stage) .gd-rules { flex-direction: column; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-tabs { flex-direction: row; width: auto; gap: 0; overflow-x: auto; padding: calc(8 * var(--pu)) calc(8 * var(--pu)) 0; border-radius: 0; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-tab { height: max(var(--tap, 0px), calc(54 * var(--pu))); padding: 0 calc(15 * var(--pu)); font-size: calc(20 * var(--pu)); }
+    .gd-popup-layer:not(.in-stage) .gd-rules-tab[aria-selected="true"] { clip-path: none; border-radius: calc(8 * var(--pu)) calc(8 * var(--pu)) 0 0; background: #fff; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-tab[aria-selected="true"]::before { left: calc(14 * var(--pu)); right: calc(14 * var(--pu)); top: auto; bottom: 0; width: auto; height: calc(5 * var(--pu)); border-radius: calc(3 * var(--pu)) calc(3 * var(--pu)) 0 0; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-pane { padding: calc(4 * var(--pu)) calc(20 * var(--pu)) calc(16 * var(--pu)); }
+    .gd-popup-layer:not(.in-stage) .gd-rules-row { grid-template-columns: calc(80 * var(--pu)) minmax(0, 1fr); }
+    .gd-popup-layer:not(.in-stage) .gd-rules-row .gd-rules-cards { grid-column: 2; }
+}
+
+/* 实验室牌组 */
+.gd-labdeck {
+    --card-w: calc(84 * var(--pu));
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(150 * var(--pu)), 1fr));
+    gap: calc(18 * var(--pu)) calc(12 * var(--pu));
+}
+.labdeck-item { display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--pu)); text-align: center; }
+.labdeck-item > b { font: 900 calc(18 * var(--pu))/1.2 var(--font-ui); color: var(--ink); }
+.labdeck-item > small { font: 500 calc(13 * var(--pu))/1.35 var(--font-ui); color: var(--ink-3); }
+
+/* 设置: Tencent rows (justified label, gold radios) */
+.gd-setrow {
+    display: flex;
+    align-items: center;
+    gap: calc(34 * var(--pu));
+    min-height: calc(62 * var(--pu));
+    border-bottom: 1px solid var(--panel-line);
+}
+.gd-setrow:last-child { border-bottom: 0; }
+.gd-setrow-k { flex: none; width: calc(80 * var(--pu)); font: 900 calc(20 * var(--pu))/1 var(--font-ui); text-align-last: justify; }
+.gd-radio { display: inline-flex; align-items: center; gap: calc(10 * var(--pu)); font: 700 calc(20 * var(--pu))/1 var(--font-ui); cursor: pointer; }
+.gd-radio input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.gd-radio i {
+    width: calc(24 * var(--pu));
+    height: calc(24 * var(--pu));
+    border-radius: 50%;
+    background: var(--radio-off);
+    box-shadow: inset 0 calc(1 * var(--pu)) calc(2 * var(--pu)) rgba(0, 0, 40, .25);
+}
+.gd-radio input:checked + i { background: radial-gradient(circle closest-side, #ffe27a 0 56%, #f6b92a 60% 86%, #d99a0c 90%); box-shadow: none; }
+.gd-radio input:focus-visible + i { outline: 2px solid var(--util); outline-offset: 2px; }
 
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
