@@ -209,70 +209,82 @@ body.gdr-modal-open { overflow: hidden; }
 }
 
 /* ---------- page 1: VS poster (fills the view; recent matches follow below) ---------- */
+/* Tencent 红蓝对抗: red → violet → blue field, lit behind the title and the VS, no hard seam */
 .gdr-poster {
+    --gdr-gut: 40px; /* side margins that hold 红方 / 蓝方 */
     position: relative; overflow: hidden; isolation: isolate;
     display: flex; flex-direction: column;
     min-height: calc(var(--gdr-sh) - var(--gdr-head) - 18px);
-    padding: 10px 46px 12px;
     border-radius: 10px;
-    background: linear-gradient(104deg,
-        #9a1f3d 0%, #c8304e 30%, #d83c5c calc(50% - 1px),
-        rgba(255, 236, 244, .92) calc(50% - 1px) calc(50% + 1px),
-        #3c66f2 calc(50% + 1px), #2c5ce4 70%, #1c3aa8 100%);
+    background:
+        radial-gradient(32% 30% at 50% 0%, rgba(196, 206, 255, .5), transparent),
+        radial-gradient(24% 34% at 50% 50%, rgba(120, 132, 255, .42), transparent),
+        linear-gradient(100deg, #b11f42 0%, #d23a5c 17%, #b23c7c 33%, #5a3db0 50%, #3552d4 66%, #2c5ce4 82%, #1d3caa 100%);
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22), 0 4px 0 rgba(8, 14, 48, .35);
 }
 .gdr-poster::before { /* fine diagonal stripes */
     content: ""; position: absolute; inset: 0; z-index: -1;
-    background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 14px);
+    background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .045) 0 2px, transparent 2px 14px);
 }
-.gdr-poster-word { /* big translucent 红方 / 蓝方 in the side gutters */
-    position: absolute; top: 50%; translate: 0 -50%; z-index: -1;
-    writing-mode: vertical-rl; text-orientation: upright;
-    font: 400 36px/1 var(--gdr-font-display); letter-spacing: .06em; color: rgba(255, 255, 255, .2);
+/* slanted match tab in the top-left corner (Tencent's 复式 tab) */
+.gdr-poster-tab {
+    position: absolute; left: 0; top: 0;
+    padding: 4px 30px 5px 14px;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    background: linear-gradient(90deg, #3b62e6 0%, #6f98ff 62%, #b8d0ff 100%);
+    font: 900 13px/1.25 var(--gdr-font-ui); color: #fff; text-shadow: 0 1px 0 rgba(12, 30, 120, .55);
 }
-.gdr-poster-word.red { left: 7px; }
-.gdr-poster-word.blue { right: 7px; }
-.gdr-app[lang="en"] .gdr-poster-word { display: none; }
-.gdr-poster-head { flex: none; text-align: center; white-space: nowrap; }
-.gdr-poster-head b { display: block; font: 400 26px/1.1 var(--gdr-font-display); letter-spacing: .06em; text-shadow: 0 3px 0 rgba(0, 0, 0, .22); }
-.gdr-app[lang="en"] .gdr-poster-head b { font: 900 22px/1.15 var(--gdr-font-ui); letter-spacing: 0; }
-.gdr-poster-head span { font: 600 12px/1.7 var(--gdr-font-num); color: rgba(255, 255, 255, .8); }
+.gdr-poster-head { flex: none; padding: 8px 120px 0; text-align: center; white-space: nowrap; }
+.gdr-poster-head b { display: block; font: 400 28px/1.1 var(--gdr-font-display); letter-spacing: .06em; text-shadow: 0 3px 0 rgba(40, 14, 90, .4); }
+.gdr-app[lang="en"] .gdr-poster-head b { font: 900 22px/1.2 var(--gdr-font-ui); letter-spacing: 0; }
+.gdr-poster-head span { font: 600 13px/1.6 var(--gdr-font-num); color: rgba(255, 255, 255, .82); }
+/* margin | red plate | score | blue plate | margin; both plates share the middle row's height */
 .gdr-poster-main {
     flex: 1; min-height: 0;
-    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 8px;
-    padding: 14px 0 6px;
+    display: grid; column-gap: 5px;
+    grid-template-columns: var(--gdr-gut) minmax(0, 1fr) auto minmax(0, 1fr) var(--gdr-gut);
+    grid-template-rows: 1fr auto 1fr;
+    padding: 6px 0 10px;
 }
-/* each team on a saturated plate with a white inner border and its result tag on the top edge */
+.gdr-poster-word { /* 红方 / 蓝方, fully inside their margins */
+    grid-row: 1 / -1; align-self: center; justify-self: center;
+    writing-mode: vertical-rl; text-orientation: upright;
+    font: 400 30px/1 var(--gdr-font-display); letter-spacing: .06em;
+}
+.gdr-poster-word.red { grid-column: 1; color: rgba(255, 150, 172, .6); }
+.gdr-poster-word.blue { grid-column: 5; color: rgba(150, 196, 255, .6); }
+.gdr-app[lang="en"] .gdr-poster-word { display: none; }
+/* each team on a saturated plate with a light inner border and its result tag on the top edge */
 .gdr-side {
-    position: relative; justify-self: start; min-width: 0; max-width: 100%;
-    display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
-    padding: 18px 12px 12px 10px; border-radius: 8px;
+    grid-row: 2; grid-column: 2; align-self: stretch;
+    position: relative; min-width: 0;
+    display: flex; flex-direction: column; justify-content: center; gap: 10px;
+    padding: 18px 10px 12px; border-radius: 8px;
     background: linear-gradient(180deg, #f25c76 0%, #e8435f 48%, #d4304f 100%);
-    box-shadow: inset 0 0 0 2px #fff, 0 3px 0 rgba(80, 8, 30, .45);
+    box-shadow: inset 0 0 0 2px #ffc4cf, 0 3px 0 rgba(80, 8, 30, .45);
 }
 .gdr-side.blue {
-    justify-self: end; align-items: flex-end; padding: 18px 10px 12px 12px;
+    grid-column: 4;
     background: linear-gradient(180deg, #5f86f7 0%, #3f6cf0 48%, #2f58d8 100%);
-    box-shadow: inset 0 0 0 2px #fff, 0 3px 0 rgba(10, 20, 96, .45);
+    box-shadow: inset 0 0 0 2px #b4d4ff, 0 3px 0 rgba(10, 20, 96, .45);
 }
-.gdr-mem { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.gdr-mem { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .gdr-side.blue .gdr-mem { flex-direction: row-reverse; text-align: right; }
 .gdr-av { flex: none; width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #c9d2e4; }
-.gdr-mem .gdr-av { width: 46px; height: 46px; border: 2px solid #fff; }
-.gdr-mem-t { min-width: 0; max-width: 100%; }
-.gdr-mem-t > b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 900 16px/1.25 var(--gdr-font-ui); text-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
-.gdr-mem-t > span {
-    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
-    word-break: keep-all; font: 700 11px/1.3 var(--gdr-font-ui); color: rgba(255, 255, 255, .88);
-}
-.gdr-mem-t > .gdr-mem-rec { display: block; margin-top: 1px; font: 600 12px/1.3 var(--gdr-font-num); color: #fff; }
+.gdr-mem .gdr-av { width: 44px; height: 44px; border: 2px solid #fff; }
+.gdr-mem-t { flex: 1; min-width: 0; }
+/* one line each; a name too long for the plate is shrunk by fitNames() in the JS */
+.gdr-mem-t > b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 900 15px/1.3 var(--gdr-font-ui); text-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
+.gdr-mem-t > span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 700 11px/1.35 var(--gdr-font-ui); color: rgba(255, 255, 255, .88); }
+.gdr-mem-t > .gdr-mem-rec { margin-top: 1px; font: 600 12px/1.3 var(--gdr-font-num); color: #fff; }
 .gdr-plate { position: absolute; top: -12px; left: 12px; padding: 2px 14px; border-radius: 4px; font: 900 14px/1.3 var(--gdr-font-ui); letter-spacing: .2em; text-indent: .2em; box-shadow: 0 1px 0 rgba(0, 0, 0, .3); }
 .gdr-side.blue .gdr-plate { left: auto; right: 12px; }
 .gdr-app[lang="en"] .gdr-plate { letter-spacing: .02em; text-indent: 0; }
 .gdr-plate.win { background: var(--gdr-gold-plate); color: #a3240c; }
 .gdr-plate.lose { background: #dfe6f3; color: #5a6688; }
 .gdr-bigscore {
-    --lv: 92px; /* the stage is 844 wide on every landscape screen: size by width, not height */
+    --lv: 80px; /* the stage is 844 wide on every landscape screen: size by width, not height */
+    grid-row: 1 / -1; grid-column: 3; align-self: center;
     display: flex; align-items: center; gap: calc(var(--lv) * .06);
 }
 .gdr-lv { min-width: .5em; text-align: center; font: 800 var(--lv)/.8 var(--gdr-font-num); color: #fff; text-shadow: 0 4px 0 rgba(20, 10, 60, .32); }
@@ -283,11 +295,20 @@ body.gdr-modal-open { overflow: hidden; }
     position: absolute; left: -.02em; top: -.3em; width: .36em; height: .26em; rotate: -16deg;
     fill: #ffd766; stroke: #6a2c02; stroke-width: 3px; stroke-linejoin: round; paint-order: stroke fill;
 }
-.gdr-poster-foot { flex: none; display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 30px; }
-.gdr-poster-foot > i { padding: 3px 12px; border-radius: 999px; background: rgba(10, 18, 60, .35); font: 700 12px/1.3 var(--gdr-font-ui); font-style: normal; color: rgba(255, 255, 255, .85); }
-.gdr-pair { display: inline-flex; align-items: baseline; gap: 2px; font: 700 12px/1 var(--gdr-font-ui); color: rgba(255, 255, 255, .85); }
-.gdr-pair b { margin-left: 2px; font: 800 24px/1 var(--gdr-font-num); color: #fff; }
+/* light bottom band (Tencent's 详细规则 / 继续 strip): each pair's record under its own plate */
+.gdr-poster-foot {
+    flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 38px; padding: 4px calc(var(--gdr-gut) + 8px);
+    background: linear-gradient(180deg, #edf2ff 0%, #d9e3f8 100%);
+    box-shadow: inset 0 1px 0 #fff;
+    color: var(--gdr-ink-2);
+}
+.gdr-poster-foot > i { font: 700 12px/1.3 var(--gdr-font-ui); font-style: normal; color: var(--gdr-ink-3); }
+.gdr-pair { flex: none; display: inline-flex; align-items: baseline; gap: 2px; font: 700 12px/1 var(--gdr-font-ui); }
+.gdr-pair b { margin-left: 3px; font: 800 24px/1 var(--gdr-font-num); }
 .gdr-pair b:first-child { margin-left: 0; }
+.gdr-pair.red b { color: var(--gdr-red); }
+.gdr-pair.blue b { color: var(--gdr-blue); }
 .gdr-poster-note, .gdr-mnote {
     display: flex; align-items: center; gap: 6px; width: max-content; max-width: 100%;
     padding: 3px 12px 3px 8px; border-radius: 999px;
@@ -504,16 +525,18 @@ body.gdr-modal-open { overflow: hidden; }
 }
 
 /* ---------- 16:10-ish landscape (.is-tall, stage 844 x 460+): use the spare height ---------- */
-.is-tall .gdr-poster { padding-top: 14px; padding-bottom: 16px; }
-.is-tall .gdr-poster-head b { font-size: 32px; }
+.is-tall .gdr-poster-head { padding-top: 12px; }
+.is-tall .gdr-poster-head b { font-size: 34px; }
 .gdr-app.is-tall[lang="en"] .gdr-poster-head b { font-size: 26px; }
-.is-tall .gdr-poster-word { font-size: 46px; }
-.is-tall .gdr-side, .is-tall .gdr-side.blue { align-items: center; gap: 12px; padding: 22px 14px 14px; }
+.is-tall .gdr-poster-main { padding: 10px 0 14px; }
+.is-tall .gdr-side { gap: 12px; padding: 22px 12px 14px; }
 .is-tall .gdr-side .gdr-mem, .is-tall .gdr-side.blue .gdr-mem { flex-direction: column; text-align: center; gap: 3px; }
 .is-tall .gdr-mem .gdr-av { width: 60px; height: 60px; }
+.is-tall .gdr-mem-t { width: 100%; }
 .is-tall .gdr-mem-t > b { font-size: 17px; }
 .is-tall .gdr-plate, .is-tall .gdr-side.blue .gdr-plate { left: 50%; right: auto; translate: -50% 0; }
-.is-tall .gdr-bigscore { --lv: 116px; }
+.is-tall .gdr-bigscore { --lv: 104px; }
+.is-tall .gdr-poster-foot { min-height: 44px; }
 .is-tall .gdr-pair b { font-size: 28px; }
 /* list rows get closer to Tencent's row height (~16% of H) */
 .is-tall .gdr-mrow { min-height: 82px; }
@@ -536,17 +559,19 @@ body.gdr-modal-open { overflow: hidden; }
 .is-port .gdr-tab[aria-selected="true"] { background: var(--gdr-gold-plate); box-shadow: 0 1px 0 rgba(0, 0, 0, .25); color: #7a2a00; }
 .is-port .gdr-page { padding: 2px 12px calc(20px + env(safe-area-inset-bottom, 0px)); }
 
-.is-port .gdr-poster { min-height: 0; padding: 10px 12px 12px; }
+.is-port .gdr-poster { min-height: 0; }
+.is-port .gdr-poster-head { padding: 10px 96px 0; }
 .is-port .gdr-poster-word { display: none; }
-.is-port .gdr-poster-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 34px 8px; padding: 22px 0 10px; }
-.is-port .gdr-bigscore { --lv: 96px; grid-column: 1 / -1; grid-row: 2; justify-content: center; }
-.is-port .gdr-side.blue { grid-column: 2; grid-row: 1; }
-.is-port .gdr-side .gdr-mem, .is-port .gdr-side.blue .gdr-mem { flex-direction: column; align-items: center; text-align: center; gap: 4px; }
-.is-port .gdr-side, .is-port .gdr-side.blue { justify-self: stretch; align-self: stretch; align-items: center; padding: 20px 8px 12px; }
+.is-port .gdr-poster-main { grid-template: auto auto / minmax(0, 1fr) minmax(0, 1fr); gap: 30px 8px; padding: 22px 12px 14px; }
+.is-port .gdr-side { grid-row: 1; grid-column: 1; padding: 20px 8px 12px; }
+.is-port .gdr-side.blue { grid-column: 2; }
+.is-port .gdr-bigscore { --lv: 96px; grid-row: 2; grid-column: 1 / -1; justify-content: center; }
+.is-port .gdr-side .gdr-mem, .is-port .gdr-side.blue .gdr-mem { flex-direction: column; text-align: center; gap: 4px; }
+.is-port .gdr-mem-t { width: 100%; }
 .is-port .gdr-plate, .is-port .gdr-side.blue .gdr-plate { left: 50%; right: auto; translate: -50% 0; }
 .is-port .gdr-mem .gdr-av { width: 56px; height: 56px; }
-.is-port .gdr-mem-t > b { font-size: 15px; }
-.is-port .gdr-poster-foot { flex-wrap: wrap; row-gap: 6px; }
+.is-port .gdr-poster-foot { flex-wrap: wrap; row-gap: 4px; padding: 6px 14px; }
+.is-port .gdr-poster-note { order: -1; flex: 1 0 100%; justify-content: center; width: auto; }
 
 .is-port .gdr-mrow {
     grid-template: "date date date" auto "red score blue" auto "note note note" auto / minmax(0, 1fr) auto minmax(0, 1fr);

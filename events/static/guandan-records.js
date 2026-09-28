@@ -248,7 +248,9 @@
         return '<span class="gdr-pair ' + cls + '"><b>' + r.w + '</b>' + T("胜", "W") + '<b>' + r.l + '</b>' + T("负", "L") + '</span>';
     }
 
-    // 最新一战: red-vs-blue split with a crisp diagonal seam, saturated team plates, a gold VS as tall as the levels.
+    // 最新一战, laid out like Tencent's 红蓝对抗 popup: a red → violet → blue field lit behind the title
+    // and the VS, a slanted match tab, 红方/蓝方 in their own margins, two mirrored team plates, and a
+    // light bottom band with each pair's season record.
     function posterHTML(d, m, no) {
         var aWin = m.winner === "A";
         function side(cls, keys, win) {
@@ -258,10 +260,10 @@
             '</div>';
         }
         return '<div class="gdr-poster" aria-label="' + esc(T("最新一战", "Latest match")) + '">' +
-            '<span class="gdr-poster-word red" aria-hidden="true">' + teamWord("A") + '</span>' +
-            '<span class="gdr-poster-word blue" aria-hidden="true">' + teamWord("B") + '</span>' +
-            '<div class="gdr-poster-head"><b>' + T("最新一战", "Latest match") + '</b><span>' + dotDate(m.date) + ' · ' + T("第 " + no + " 场", "Match " + no) + '</span></div>' +
+            '<span class="gdr-poster-tab">' + T("第 " + no + " 场", "Match " + no) + '</span>' +
+            '<div class="gdr-poster-head"><b>' + T("最新一战", "Latest match") + '</b><span>' + dotDate(m.date) + '</span></div>' +
             '<div class="gdr-poster-main">' +
+                '<span class="gdr-poster-word red" aria-hidden="true">' + teamWord("A") + '</span>' +
                 side("red", m.teamA, aWin) +
                 '<div class="gdr-bigscore" aria-label="' + esc(m.levelA + ":" + m.levelB) + '">' +
                     '<span class="gdr-lv' + (aWin ? "" : " lose") + '">' + esc(m.levelA) + '</span>' +
@@ -269,6 +271,7 @@
                     '<span class="gdr-lv' + (aWin ? " lose" : "") + '">' + esc(m.levelB) + '</span>' +
                 '</div>' +
                 side("blue", m.teamB, !aWin) +
+                '<span class="gdr-poster-word blue" aria-hidden="true">' + teamWord("B") + '</span>' +
             '</div>' +
             '<div class="gdr-poster-foot">' +
                 pairHTML(pairRecord(d, m.teamA), "red") +
@@ -465,7 +468,18 @@
             app.style.height = h + "px";
             app.style.setProperty("--gdr-sw", w + "px");
             app.style.setProperty("--gdr-sh", h + "px");
+            app.style.setProperty("--gdr-hit", Math.max(40, 40 / scale) + "px"); // a 40 px touch target after scaling
             app.style.transform = scale === 1 ? "" : "scale(" + scale + ")";
+            fitNames();
+        }
+        // A long roster name shrinks to fit its team plate instead of being cut off.
+        function fitNames() {
+            [].forEach.call(app.querySelectorAll(".gdr-mem-t > b"), function (b) {
+                b.style.fontSize = "";
+                if (b.clientWidth && b.scrollWidth > b.clientWidth) {
+                    b.style.fontSize = Math.max(11, parseFloat(getComputedStyle(b).fontSize) * b.clientWidth / b.scrollWidth).toFixed(2) + "px";
+                }
+            });
         }
 
         function pageIndex(p) {
@@ -539,6 +553,8 @@
         // The observer runs after layout and before paint, so a newly shown host never paints unscaled.
         if (global.ResizeObserver) { ro = new ResizeObserver(fit); ro.observe(host); }
         else global.addEventListener("resize", fit);
+        var fonts = global.document && document.fonts;
+        if (fonts && fonts.addEventListener) fonts.addEventListener("loadingdone", fitNames); // names were measured in a fallback face
         fit();
 
         go(0, true);
@@ -568,6 +584,7 @@
             destroy: function () {
                 timers.forEach(clearTimeout);
                 if (ro) ro.disconnect(); else global.removeEventListener("resize", fit);
+                if (fonts && fonts.removeEventListener) fonts.removeEventListener("loadingdone", fitNames);
                 app.removeEventListener("click", onClick, true);
                 host.innerHTML = "";
             }
