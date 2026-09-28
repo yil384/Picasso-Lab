@@ -2,8 +2,11 @@
    Picasso Lab Guandan: lobby (renderLobby), room / seat draft (renderLobbyRoom) and the
    Tencent-style top bar (.topbar) they share. After 大掼蛋 2026's lobby and 好友同玩 screens.
    Units: --lu is one design px of a 1280x720 landscape screen (the smaller of width/1280 and
-   height/720), so every landscape screen keeps the same proportions. Portrait phones get a
-   vertical layout with --lu = width/400. Tile interiors use --t (--lu times the tile scale).
+   height/720), so every landscape screen keeps the same proportions. Short landscape phones
+   use a 600-high design (bigger type and controls); portrait phones get a vertical layout with
+   --lu = width/400. Tile interiors use --t (--lu times the tile scale).
+   Touch: controls never shrink below --tap (40px on coarse pointers) and small text never
+   below --fs-min.
    ========================================================================== */
 
 html[data-gd-boot="lobby"] { background: #2b3c7c; }
@@ -15,20 +18,35 @@ html[data-gd-boot="lobby"] body:not([data-screen]) {
     --hud-h: calc(80 * var(--lu));
     --sl: env(safe-area-inset-left, 0px);
     --sr: env(safe-area-inset-right, 0px);
-    /* navy-periwinkle room: a cool window light top-left, tall glass panes on the right,
-       a lilac wash under the ceiling, a lighter wall/floor line and a darker floor */
+    --tap: 0px;
+    --fs-min: 10px;
+    /* navy-periwinkle room: window light and a mullioned window top-left, tall glass panes on
+       the right, a lilac wash under the ceiling, the floor line and a darker floor */
     background:
         radial-gradient(48% 42% at 8% 14%, rgba(150, 200, 255, .34), rgba(150, 200, 255, 0) 70%),
         radial-gradient(60% 55% at 88% 0%, rgba(132, 146, 236, .5), rgba(132, 146, 236, 0) 70%),
+        linear-gradient(90deg, transparent 2%, rgba(190, 215, 255, .08) 2% 7.5%, transparent 7.5% 8.2%, rgba(190, 215, 255, .08) 8.2% 13.7%, transparent 13.7%) 0 12% / 100% 38% no-repeat,
+        linear-gradient(180deg, transparent 49%, rgba(190, 215, 255, .12) 49% 51%, transparent 51%) 0 12% / 14% 38% no-repeat,
         linear-gradient(90deg, transparent 74%, rgba(180, 205, 255, .07) 74% 81%, transparent 81% 82.5%, rgba(180, 205, 255, .07) 82.5% 89.5%, transparent 89.5% 91%, rgba(180, 205, 255, .05) 91% 98%, transparent 98%) 0 0 / 100% 58% no-repeat,
+        linear-gradient(180deg, rgba(210, 222, 255, .1), rgba(210, 222, 255, 0)) 0 0 / 100% 4% no-repeat,
         linear-gradient(104deg, rgba(255, 255, 255, 0) 30%, rgba(190, 210, 255, .07) 42%, rgba(255, 255, 255, 0) 54%),
-        linear-gradient(180deg, transparent 57%, rgba(160, 190, 255, .12) 58.5%, rgba(20, 30, 80, .1) 62%, rgba(10, 16, 50, .34) 100%),
+        linear-gradient(180deg, transparent 57%, rgba(160, 190, 255, .14) 58.2%, rgba(160, 190, 255, .04) 58.6%, rgba(20, 30, 80, .1) 62%, rgba(10, 16, 50, .34) 100%),
         linear-gradient(180deg, #4659aa 0%, #34478f 40%, #2b3c7c 72%, #223066 100%);
 }
 @supports (height: 100dvh) {
     body[data-screen="lobby"],
     body[data-screen="room"],
     html[data-gd-boot="lobby"] body:not([data-screen]) { --lu: min(calc(100vw / 1280), calc(100dvh / 720)); }
+}
+/* landscape phones: a 600-high design so text and controls stay readable */
+@media (min-aspect-ratio: 1/1) and (max-height: 500px) {
+    body[data-screen="lobby"],
+    body[data-screen="room"],
+    html[data-gd-boot="lobby"] body:not([data-screen]) { --lu: min(calc(100vw / 1280), calc(100dvh / 600)); }
+}
+@media (pointer: coarse) {
+    body[data-screen="lobby"],
+    body[data-screen="room"] { --tap: 40px; --fs-min: 11px; }
 }
 
 /* ---------- top bar ---------- */
@@ -52,13 +70,13 @@ body:not([data-screen]) .topbar { visibility: hidden; }
     align-items: center;
     justify-content: center;
     gap: calc(5 * var(--lu));
-    min-width: calc(62 * var(--lu));
-    height: calc(66 * var(--lu));
+    min-width: max(var(--tap), calc(62 * var(--lu)));
+    height: max(var(--tap), calc(66 * var(--lu)));
     padding: 0 calc(4 * var(--lu));
     border: 0;
     background: none;
     color: #fff;
-    font: 700 calc(19 * var(--lu))/1 var(--font-ui);
+    font: 700 max(var(--fs-min), calc(19 * var(--lu)))/1 var(--font-ui);
     white-space: nowrap;
     text-shadow: 0 calc(1 * var(--lu)) calc(1 * var(--lu)) rgba(20, 30, 90, .9);
     transition: translate var(--dur-fast) var(--ease-out);
@@ -82,12 +100,40 @@ body[data-screen="lobby"] #lang-toggle { order: 4; }
 body[data-screen="lobby"] #back-events-btn { order: 5; }
 
 .hud-profile { display: flex; align-items: center; gap: calc(12 * var(--lu)); min-width: 0; }
-.hud-avatar { --av-size: calc(60 * var(--lu)); border-width: calc(3 * var(--lu)); }
+/* profile photo: a rounded square in a gold frame (Tencent's framed head portrait) */
+.hud-avatar {
+    position: relative;
+    flex: none;
+    width: calc(62 * var(--lu));
+    height: calc(62 * var(--lu));
+    padding: calc(3 * var(--lu));
+    border-radius: calc(14 * var(--lu));
+    background: linear-gradient(180deg, #fff8d8 0%, #f3cc62 55%, #c9871c 100%);
+    box-shadow: 0 calc(2 * var(--lu)) 0 rgba(20, 30, 90, .55);
+}
+.hud-avatar > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: calc(11 * var(--lu));
+    background: #e9eef5;
+    object-fit: cover;
+}
+.hud-avatar > .gd-avatar-initials {
+    inset: calc(3 * var(--lu));
+    border-radius: calc(11 * var(--lu));
+    background: linear-gradient(180deg, #8ea4ff, #5b72d8);
+    color: #fff;
+    font-size: calc(24 * var(--lu));
+}
 .hud-id { display: flex; flex-direction: column; align-items: flex-start; gap: calc(5 * var(--lu)); min-width: 0; }
 .hud-name { position: relative; display: flex; align-items: center; cursor: text; }
 .hud-name input {
     width: calc(190 * var(--lu));
-    padding: 0 calc(22 * var(--lu)) calc(2 * var(--lu)) 0;
+    /* a --tap high touch target; the negative margin keeps the row height */
+    height: max(var(--tap), calc(34 * var(--lu)));
+    margin: min(0px, calc((34 * var(--lu) - var(--tap)) / 2)) 0;
+    padding: 0 calc(22 * var(--lu)) 0 0;
     border: 0;
     border-bottom: calc(2 * var(--lu)) solid transparent;
     background: none;
@@ -124,7 +170,7 @@ body[data-screen="lobby"] #back-events-btn { order: 5; }
     background: linear-gradient(180deg, #33a3ec 0%, #1569b8 100%);
     clip-path: inherit;
     color: #fff;
-    font: 800 calc(15 * var(--lu))/calc(24 * var(--lu)) var(--font-ui);
+    font: 800 max(var(--fs-min), calc(15 * var(--lu)))/max(calc(var(--fs-min) * 1.5), calc(24 * var(--lu))) var(--font-ui);
     white-space: nowrap;
 }
 .hud-stats { display: flex; gap: calc(16 * var(--lu)); margin-left: calc(34 * var(--lu)); }
@@ -152,7 +198,7 @@ body[data-screen="lobby"] #back-events-btn { order: 5; }
     background: radial-gradient(circle at 36% 30%, #fff5bf 0%, #ffcf45 48%, #e39516 100%);
     box-shadow: inset 0 calc(-3 * var(--lu)) 0 rgba(150, 70, 0, .35);
     color: #7a3a00;
-    font: 900 calc(19 * var(--lu))/1 var(--font-ui);
+    font: 900 max(var(--fs-min), calc(19 * var(--lu)))/1 var(--font-ui);
     font-style: normal;
 }
 .hud-stat.s1 i { background: radial-gradient(circle at 36% 30%, #d8ffe6 0%, #5fe08e 48%, #22a458 100%); box-shadow: inset 0 calc(-3 * var(--lu)) 0 rgba(0, 90, 40, .35); color: #0d5a2a; }
@@ -209,10 +255,11 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 .lobby-rail {
     position: absolute;
     left: calc(34 * var(--lu) + var(--sl));
-    top: calc(var(--hud-h) + 30 * var(--lu));
+    top: calc(var(--hud-h) + 12 * var(--lu));
+    height: min(calc(100% - var(--hud-h) - 34 * var(--lu)), calc(560 * var(--lu)));
     display: flex;
     flex-direction: column;
-    gap: calc(26 * var(--lu));
+    justify-content: space-between;
 }
 .rail-item {
     position: relative;
@@ -231,8 +278,9 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     position: relative;
     display: grid;
     place-items: center;
-    width: calc(76 * var(--lu));
-    height: calc(76 * var(--lu));
+    width: calc(74 * var(--lu));
+    height: calc(74 * var(--lu));
+    overflow: hidden;
     border-radius: 50%;
     background: radial-gradient(circle at 50% 35%, #5a6aa8 0%, #3a4a86 70%, #2e3c72 100%);
     box-shadow: inset 0 0 0 calc(2 * var(--lu)) rgba(255, 255, 255, .22);
@@ -240,38 +288,52 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 .rail-lb {
     position: relative;
     margin-top: calc(-12 * var(--lu));
-    font: 900 calc(18 * var(--lu))/1.1 var(--font-ui);
+    font: 900 max(var(--fs-min) * 1.1, calc(18 * var(--lu)))/1.1 var(--font-ui);
     white-space: nowrap;
     -webkit-text-stroke: calc(4 * var(--lu)) #243268;
     paint-order: stroke fill;
 }
 .rail-badge {
     position: absolute;
-    top: calc(52 * var(--lu));
+    top: calc(50 * var(--lu));
     left: 50%;
     translate: -50% 0;
     padding: 0 calc(7 * var(--lu));
     border-radius: calc(4 * var(--lu));
     background: linear-gradient(180deg, #fff1a8, #f4b03a);
     color: #7a2a00;
-    font: 800 calc(13 * var(--lu))/calc(18 * var(--lu)) var(--font-num);
+    font: 800 max(var(--fs-min), calc(13 * var(--lu)))/1.4 var(--font-num);
     letter-spacing: .04em;
 }
 .rail-badge.is-off { background: linear-gradient(180deg, #ff9a8a, #d8433c); color: #fff; font-family: var(--font-ui); }
 .is-mvp .rail-disc { background: linear-gradient(180deg, #ffe9a0, #d99a2a); }
 .is-mvp .rail-disc img {
-    width: calc(68 * var(--lu));
-    height: calc(68 * var(--lu));
+    width: calc(66 * var(--lu));
+    height: calc(66 * var(--lu));
     border-radius: 50%;
     object-fit: cover;
 }
 .is-mvp .rail-lb { margin-top: calc(-4 * var(--lu)); }
+/* 巅峰对决: a red / blue split disc with a gold VS */
+.is-peak .rail-disc { background: linear-gradient(115deg, #e0546e 0%, #c8304e 49.5%, #2c5ce4 50.5%, #5a86ff 100%); }
+.rail-vs b {
+    display: block;
+    font: 400 calc(34 * var(--lu))/1 var(--font-display);
+    background: linear-gradient(180deg, #fffbe8 0%, #ffe39a 40%, #f6b33a 70%, #b8660c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 calc(2 * var(--lu)) 0 #5a1c00);
+}
+/* 实验室: a labmate's signature card */
+.is-lab .rail-disc { --card-w: calc(40 * var(--lu)); }
+.is-lab .rail-disc .card { rotate: 10deg; translate: 0 calc(4 * var(--lu)); }
 .is-share .rail-disc { --card-w: calc(40 * var(--lu)); }
 .is-share .rail-disc .card { rotate: -14deg; translate: calc(-6 * var(--lu)) calc(-2 * var(--lu)); }
 .rail-share {
     position: absolute;
     right: calc(8 * var(--lu));
-    bottom: calc(14 * var(--lu));
+    bottom: calc(12 * var(--lu));
     display: grid;
     place-items: center;
     width: calc(32 * var(--lu));
@@ -310,6 +372,10 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     height: min(calc(446 * var(--lu) + (100vh - 720 * var(--lu)) * .55), calc(530 * var(--lu)));
     margin: auto 0;
 }
+/* landscape phones: the tiles are shorter, their contents follow */
+@media (min-aspect-ratio: 1/1) and (max-height: 500px) {
+    .lobby-tiles { --t: calc(var(--lu) * .85); }
+}
 .lobby-tile {
     --t-hot: rgba(255, 160, 110, .9); --t-top: #fdd0af; --t-mid: #fceae0;
     position: relative;
@@ -318,7 +384,7 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     align-items: center;
     justify-content: flex-end;
     min-width: 0;
-    padding: 0 calc(10 * var(--t)) calc(26 * var(--t));
+    padding: 0 calc(10 * var(--t)) calc(22 * var(--t));
     border: calc(2 * var(--lu)) solid rgba(255, 255, 255, .78);
     border-radius: calc(5 * var(--lu));
     background:
@@ -349,13 +415,12 @@ html[lang="en"] .tile-title { font-size: calc(36 * var(--t)); letter-spacing: 0;
     left: calc(100% + 8 * var(--t));
     bottom: 0;
     color: #e8601c;
-    font: 900 calc(19 * var(--t))/1.05 var(--font-ui);
+    font: 900 max(var(--fs-min), calc(19 * var(--t)))/1.05 var(--font-ui);
     letter-spacing: 0;
     writing-mode: vertical-rl;
     text-shadow: none;
 }
-html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc(-18 * var(--t)); left: auto; right: calc(-6 * var(--t)); font-size: calc(13 * var(--t)); }
-.tile-sub { margin-bottom: calc(12 * var(--t)); color: #8a4a14; font: 700 calc(18 * var(--t))/1 var(--font-ui); }
+html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc(-18 * var(--t)); left: auto; right: calc(-6 * var(--t)); font-size: max(var(--fs-min), calc(13 * var(--t))); }
 /* white speech bubble above a tile */
 .tile-bubble {
     position: absolute;
@@ -367,10 +432,10 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
     background: #fff;
     box-shadow: 0 calc(2 * var(--t)) calc(4 * var(--t)) rgba(10, 20, 70, .25);
     color: #c8401c;
-    font: 700 calc(16 * var(--t))/1.1 var(--font-ui);
+    font: 700 max(var(--fs-min), calc(16 * var(--t)))/1.1 var(--font-ui);
     white-space: nowrap;
 }
-.tile-bubble b { font: 700 calc(18 * var(--t))/1 var(--font-num); letter-spacing: .04em; }
+.tile-bubble b { font: 700 max(var(--fs-min), calc(18 * var(--t)))/1 var(--font-num); letter-spacing: .04em; }
 .tile-bubble::after {
     content: "";
     position: absolute;
@@ -381,11 +446,12 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
     border-top-color: #fff;
     border-bottom-width: 0;
 }
+/* the object fills the top ~60% of the tile, as in Tencent's tiles */
 .tile-art {
     position: absolute;
     left: 0; right: 0;
-    top: calc(14 * var(--t));
-    bottom: calc(82 * var(--t));
+    top: calc(6 * var(--t));
+    bottom: calc(70 * var(--t));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -393,127 +459,190 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
 }
 
 /* 经典: tall orange tile, a fan of the lab's signature aces (the real card component) */
-.lobby-tile.is-classic { --t-hot: rgba(250, 128, 70, .95); --t-top: #fba766; --t-mid: #fdd7ae; grid-row: span 2; }
-.is-classic .tile-title { font-size: calc(66 * var(--t)); }
-.is-classic .tile-art { top: calc(30 * var(--t)); bottom: calc(140 * var(--t)); }
-.tile-fan { --card-w: calc(108 * var(--t)); --fan-dx: calc(44 * var(--t)); }
+.lobby-tile.is-classic { --t-hot: rgba(250, 128, 70, .95); --t-top: #fba766; --t-mid: #fdd7ae; grid-row: span 2; padding-bottom: calc(34 * var(--t)); }
+.is-classic .tile-title { font-size: calc(70 * var(--t)); }
+.is-classic .tile-art { top: calc(50 * var(--t)); bottom: calc(118 * var(--t)); }
+/* each card turns about its own bottom-left corner, so every rank + suit index and every
+   portrait stays readable */
+.tile-fan { --card-w: calc(104 * var(--t)); }
 .tile-fan .card {
     position: absolute;
     left: 50%;
     top: 50%;
-    margin: calc(-73 * var(--t)) 0 0 calc(-54 * var(--t));
-    transform-origin: 50% 100%;
-    translate: calc(var(--k) * var(--fan-dx)) calc(var(--ky) * var(--t));
-    rotate: calc(var(--k) * 4.5deg);
+    margin: calc(-70 * var(--t)) 0 0 calc(-58 * var(--t));
+    transform-origin: 0 100%;
+    translate: calc(var(--k) * 38 * var(--t)) calc(var(--k) * var(--k) * 5 * var(--t));
+    rotate: calc(var(--k) * 9deg);
     box-shadow: var(--card-shadow), calc(-2 * var(--t)) 0 calc(6 * var(--t)) rgba(90, 40, 0, .18);
 }
-.tile-fan .card:nth-child(1) { --k: -1.5; --ky: 8; }
-.tile-fan .card:nth-child(2) { --k: -.5; --ky: 1; }
-.tile-fan .card:nth-child(3) { --k: .5; --ky: 1; }
-.tile-fan .card:nth-child(4) { --k: 1.5; --ky: 8; }
+.tile-fan .card:nth-child(1) { --k: -1.5; }
+.tile-fan .card:nth-child(2) { --k: -.5; }
+.tile-fan .card:nth-child(3) { --k: .5; }
+.tile-fan .card:nth-child(4) { --k: 1.5; }
 
 /* 人机练习: mint, the two jokers */
 .lobby-tile.is-practice { --t-hot: rgba(90, 232, 214, .85); --t-top: #b1fff7; --t-mid: #d8fdf6; }
-.joker-art { --card-w: calc(74 * var(--t)); }
+.joker-art { --card-w: calc(84 * var(--t)); top: calc(16 * var(--t)); }
 .joker-art .card { box-shadow: var(--card-shadow), 0 calc(4 * var(--t)) calc(8 * var(--t)) rgba(0, 80, 70, .2); }
-.joker-art .card:first-child { rotate: -12deg; translate: calc(16 * var(--t)) calc(6 * var(--t)); }
-.joker-art .card:last-child { rotate: 9deg; translate: calc(-16 * var(--t)) 0; }
+.joker-art .card:first-child { rotate: -12deg; translate: calc(20 * var(--t)) calc(8 * var(--t)); }
+.joker-art .card:last-child { rotate: 9deg; translate: calc(-20 * var(--t)) 0; }
 
-/* 巅峰对决: periwinkle, the latest match's two pairs (red vs blue) */
+/* 巅峰对决: a mini red-vs-blue poster of the latest match (the records board's VS language) */
 .lobby-tile.is-peak { --t-hot: rgba(150, 168, 255, .85); --t-top: #cbd7ff; --t-mid: #e6ecff; }
-.peak-art { gap: calc(8 * var(--t)); }
-.peak-team { display: flex; }
-.peak-av { --av-size: calc(54 * var(--t)); border-width: calc(3 * var(--t)); }
-.peak-team.is-red .peak-av { --ring: #c8304e; }
-.peak-team.is-blue .peak-av { --ring: #2c5ce4; }
-.peak-av + .peak-av { margin-left: calc(-16 * var(--t)); }
+.peak-poster {
+    position: relative;
+    display: flex;
+    width: calc(222 * var(--t));
+    height: calc(128 * var(--t));
+    overflow: hidden;
+    border-radius: calc(8 * var(--t));
+    background: linear-gradient(112deg, #e0546e 0%, #c8304e 49.6%, #2c5ce4 50.4%, #5a86ff 100%);
+    box-shadow: inset 0 0 0 calc(3 * var(--t)) rgba(255, 255, 255, .85), 0 calc(5 * var(--t)) calc(10 * var(--t)) rgba(20, 30, 100, .3);
+    rotate: -3deg;
+}
+.peak-side { flex: 1; position: relative; }
+.peak-frame {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: calc(54 * var(--t));
+    height: calc(54 * var(--t));
+    overflow: hidden;
+    border: calc(3 * var(--t)) solid #fff;
+    border-radius: calc(8 * var(--t));
+    background: #e9eef5;
+    color: var(--ink);
+    font: 900 calc(18 * var(--t))/1 var(--font-ui);
+    font-style: normal;
+}
+.peak-frame img { width: 100%; height: 100%; object-fit: cover; }
+.peak-side.is-red .peak-frame { box-shadow: 0 0 0 calc(2 * var(--t)) #8e1a33; }
+.peak-side.is-blue .peak-frame { box-shadow: 0 0 0 calc(2 * var(--t)) #173a9c; }
+.peak-side.is-red .peak-frame:nth-child(1) { left: calc(10 * var(--t)); top: calc(9 * var(--t)); }
+.peak-side.is-red .peak-frame:nth-child(2) { left: calc(30 * var(--t)); top: calc(65 * var(--t)); }
+.peak-side.is-blue .peak-frame:nth-child(1) { right: calc(30 * var(--t)); top: calc(9 * var(--t)); }
+.peak-side.is-blue .peak-frame:nth-child(2) { right: calc(10 * var(--t)); top: calc(65 * var(--t)); }
 .peak-vs {
-    font: 400 calc(36 * var(--t))/1 var(--font-display);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    font: 400 calc(46 * var(--t))/1 var(--font-display);
     background: linear-gradient(180deg, #fffbe8 0%, #ffe39a 40%, #f6b33a 70%, #b8660c 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    filter: drop-shadow(0 calc(2 * var(--t)) 0 #6a2c00);
+    filter: drop-shadow(0 calc(2 * var(--t)) 0 #4a1600);
 }
 
-/* 实验室: lemon to lilac, the roster's photos */
+/* 实验室: lemon to lilac, a fanned stack of labmate photos */
 .lobby-tile.is-lab { --t-hot: rgba(255, 222, 100, .75); --t-top: #fff4a8; --t-mid: #f4ecfb; }
-.lab-art { flex-wrap: wrap; align-content: center; padding: 0 calc(34 * var(--t)); }
-.lab-av { --av-size: calc(52 * var(--t)); --ring: #fff; margin: calc(-4 * var(--t)) calc(-3 * var(--t)); border-width: calc(3 * var(--t)); }
-
-/* 加入房间: aqua, the inline room-code field */
-.lobby-tile.is-join { --t-hot: rgba(70, 226, 250, .8); --t-top: #93f3fd; --t-mid: #d2fbff; cursor: text; }
-.join-art { gap: calc(8 * var(--t)); pointer-events: auto; bottom: calc(92 * var(--t)); }
-.join-art input {
-    width: calc(150 * var(--t));
-    height: calc(52 * var(--t));
-    padding: 0 0 0 .3em;
-    border: calc(2 * var(--t)) solid #b8d8ee;
-    border-radius: calc(8 * var(--t));
+.lab-photo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(70 * var(--t));
+    height: calc(88 * var(--t));
+    margin: calc(-40 * var(--t)) 0 0 calc(-35 * var(--t));
+    padding: calc(4 * var(--t)) calc(4 * var(--t)) calc(12 * var(--t));
+    border-radius: calc(5 * var(--t));
     background: #fff;
-    box-shadow: inset 0 calc(2 * var(--t)) calc(3 * var(--t)) rgba(20, 60, 120, .12);
+    box-shadow: 0 calc(3 * var(--t)) calc(6 * var(--t)) rgba(60, 40, 100, .28);
+    transform-origin: 50% 150%;
+}
+.lab-photo img { display: block; width: 100%; height: 100%; border-radius: calc(3 * var(--t)); object-fit: cover; }
+.lab-photo:nth-child(1) { rotate: -24deg; }
+.lab-photo:nth-child(2) { rotate: -12deg; }
+.lab-photo:nth-child(3) { rotate: 0deg; }
+.lab-photo:nth-child(4) { rotate: 12deg; }
+.lab-photo:nth-child(5) { rotate: 24deg; }
+
+/* 加入房间: aqua, five code cells over the transparent room-code field */
+.lobby-tile.is-join { --t-hot: rgba(70, 226, 250, .8); --t-top: #93f3fd; --t-mid: #d2fbff; cursor: text; }
+.join-art { gap: calc(8 * var(--t)); pointer-events: auto; }
+.join-code { position: relative; display: block; cursor: text; }
+.join-cells { display: flex; gap: calc(4 * var(--t)); }
+.join-cells i {
+    display: grid;
+    place-items: center;
+    width: calc(28 * var(--t));
+    height: max(var(--tap), calc(54 * var(--t)));
+    border-radius: calc(6 * var(--t));
+    background: #fff;
+    box-shadow: inset 0 0 0 calc(2 * var(--t)) #b8d8ee, inset 0 calc(3 * var(--t)) calc(4 * var(--t)) rgba(20, 60, 120, .1);
     color: var(--ink);
-    font: 700 calc(30 * var(--t))/1 var(--font-num);
-    letter-spacing: .3em;
-    text-align: center;
-    text-transform: uppercase;
+    font: 800 calc(30 * var(--t))/1 var(--font-num);
+    font-style: normal;
+}
+.join-code:focus-within .join-cells i.is-next { box-shadow: inset 0 0 0 calc(3 * var(--t)) var(--util); }
+.join-code input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: transparent;
+    caret-color: transparent;
+    font-size: 16px; /* no iOS focus zoom */
     outline: none;
 }
-.join-art input::placeholder { color: var(--ink-3); font: 700 calc(19 * var(--t))/1 var(--font-ui); letter-spacing: .1em; text-transform: none; }
-.join-art input:focus { border-color: var(--util); }
-.join-art .btn { --btn-h: calc(52 * var(--t)); --btn-fs: calc(21 * var(--t)); --btn-px: calc(16 * var(--t)); --btn-minw: calc(76 * var(--t)); }
-.join-status {
-    position: absolute;
-    left: 0; right: 0;
-    bottom: calc(72 * var(--t));
-    color: #d8433c;
-    font: 700 calc(14 * var(--t))/1.2 var(--font-ui);
+.join-code input::selection { background: transparent; }
+.join-code.is-error { animation: gd-join-shake 320ms var(--ease-out); }
+.join-code.is-error .join-cells i { box-shadow: inset 0 0 0 calc(2 * var(--t)) #e05454; }
+@keyframes gd-join-shake {
+    20% { translate: calc(-7 * var(--t)) 0; }
+    40% { translate: calc(6 * var(--t)) 0; }
+    60% { translate: calc(-4 * var(--t)) 0; }
+    80% { translate: calc(2 * var(--t)) 0; }
 }
+.join-art .btn { --btn-h: max(var(--tap), calc(54 * var(--t))); --btn-fs: calc(21 * var(--t)); --btn-px: calc(12 * var(--t)); --btn-minw: calc(58 * var(--t)); }
 
 /* 好友房: peach, a mini room table */
 .lobby-tile.is-friends { --t-hot: rgba(255, 150, 105, .85); --t-top: #fec5a6; --t-mid: #fde7da; }
 .mini-felt {
     display: grid;
     place-items: center;
-    width: calc(156 * var(--t));
-    height: calc(88 * var(--t));
-    border-radius: calc(44 * var(--t));
+    width: calc(196 * var(--t));
+    height: calc(106 * var(--t));
+    border-radius: calc(53 * var(--t));
     background:
         repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 4px),
         radial-gradient(120% 110% at 50% 40%, var(--felt-c) 0%, var(--felt-1) 40%, var(--felt-4) 100%);
-    box-shadow: inset 0 0 0 calc(4 * var(--t)) #0b6f66, 0 calc(4 * var(--t)) calc(8 * var(--t)) rgba(80, 40, 20, .25);
+    box-shadow: inset 0 0 0 calc(5 * var(--t)) #0b6f66, 0 calc(5 * var(--t)) calc(10 * var(--t)) rgba(80, 40, 20, .25);
     color: rgba(0, 40, 36, .32);
-    font: 900 calc(15 * var(--t))/1 var(--font-ui);
+    font: 900 calc(19 * var(--t))/1 var(--font-ui);
     letter-spacing: .06em;
 }
 .mini-seat {
-    --av-size: calc(34 * var(--t));
+    --av-size: calc(44 * var(--t));
     position: absolute;
     left: 50%; top: 50%;
-    margin: calc(-17 * var(--t)) 0 0 calc(-17 * var(--t));
+    margin: calc(-22 * var(--t)) 0 0 calc(-22 * var(--t));
     border-width: calc(3 * var(--t));
 }
-.mini-seat.s0 { translate: 0 calc(-44 * var(--t)); }
-.mini-seat.s1 { translate: calc(-78 * var(--t)) 0; }
-.mini-seat.s2 { translate: calc(78 * var(--t)) 0; }
+.mini-seat.s0 { translate: 0 calc(-53 * var(--t)); }
+.mini-seat.s1 { translate: calc(-98 * var(--t)) 0; }
+.mini-seat.s2 { translate: calc(98 * var(--t)) 0; }
 .mini-seat.s3 {
     display: grid;
     place-items: center;
-    width: calc(34 * var(--t));
-    height: calc(34 * var(--t));
+    width: calc(44 * var(--t));
+    height: calc(44 * var(--t));
     border: calc(3 * var(--t)) dashed rgba(255, 255, 255, .95);
     border-radius: 50%;
     background: #f08a5c;
     color: #fff;
-    font: 700 calc(22 * var(--t))/1 var(--font-ui);
+    font: 700 calc(28 * var(--t))/1 var(--font-ui);
     font-style: normal;
-    translate: 0 calc(44 * var(--t));
+    translate: 0 calc(53 * var(--t));
 }
 
 /* 玩法规则: pale periwinkle, a heart run */
 .lobby-tile.is-rules { --t-hot: rgba(160, 190, 255, .7); --t-top: #d9e6ff; --t-mid: #edf2ff; }
-.rules-art { --card-w-small: calc(52 * var(--t)); }
-.rules-art .card { margin-left: calc(-26 * var(--t)); transform-origin: 50% 160%; box-shadow: var(--card-shadow), calc(-2 * var(--t)) 0 calc(4 * var(--t)) rgba(20, 40, 100, .15); }
+.rules-art { --card-w-small: calc(62 * var(--t)); }
+.rules-art .card { margin-left: calc(-30 * var(--t)); transform-origin: 50% 160%; box-shadow: var(--card-shadow), calc(-2 * var(--t)) 0 calc(4 * var(--t)) rgba(20, 40, 100, .15); }
 .rules-art .card:first-child { margin-left: 0; rotate: -14deg; }
 .rules-art .card:nth-child(2) { rotate: -7deg; }
 .rules-art .card:nth-child(4) { rotate: 7deg; }
@@ -525,41 +654,50 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: calc(24 * var(--lu));
     height: calc(118 * var(--lu));
     padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.lobby-nav { display: flex; gap: calc(30 * var(--lu)); }
+.lobby-nav { display: flex; gap: calc(20 * var(--lu)); }
 .lobby-nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: calc(5 * var(--lu));
+    justify-content: center;
+    gap: calc(6 * var(--lu));
     min-width: calc(80 * var(--lu));
+    min-height: var(--tap);
     padding: 0;
     border: 0;
     background: none;
     color: #fff;
-    font: 700 calc(22 * var(--lu))/1 var(--font-ui);
+    font: 700 max(var(--fs-min) * 1.1, calc(21 * var(--lu)))/1 var(--font-ui);
+    white-space: nowrap;
     text-shadow: 0 calc(1 * var(--lu)) calc(1 * var(--lu)) rgba(20, 30, 90, .9);
     transition: translate var(--dur-fast) var(--ease-out);
 }
 .lobby-nav-item:active { translate: 0 calc(2 * var(--lu)); }
-.lobby-nav-item .gd-glyph { width: calc(38 * var(--lu)); height: calc(38 * var(--lu)); filter: drop-shadow(0 calc(2 * var(--lu)) 0 rgba(28, 40, 110, .55)); }
+.lobby-nav-item .gd-glyph { width: calc(40 * var(--lu)); height: calc(40 * var(--lu)); filter: drop-shadow(0 calc(2 * var(--lu)) 0 rgba(28, 40, 110, .55)); }
+/* gold plate: dark gold outer frame, a light inner line, bevelled bottom */
 .lobby-quick {
     display: flex;
     align-items: center;
     gap: calc(16 * var(--lu));
-    height: calc(70 * var(--lu));
+    height: calc(72 * var(--lu));
     padding: 0 calc(28 * var(--lu));
-    border: 0;
-    border-radius: calc(4 * var(--lu));
+    border: calc(3 * var(--lu)) solid #b87818;
+    border-radius: calc(5 * var(--lu));
     background: linear-gradient(180deg, #fff6c4 0%, #ffd766 55%, #f2b43c 100%);
-    box-shadow: inset 0 0 0 calc(2 * var(--lu)) rgba(255, 248, 216, .9), inset 0 calc(-4 * var(--lu)) 0 rgba(190, 120, 20, .35), 0 calc(5 * var(--lu)) calc(12 * var(--lu)) rgba(0, 0, 30, .4);
+    box-shadow:
+        inset 0 0 0 calc(2 * var(--lu)) #f7c44e,
+        inset 0 0 0 calc(4 * var(--lu)) #fffae0,
+        inset 0 calc(-6 * var(--lu)) 0 rgba(190, 120, 20, .3),
+        0 calc(5 * var(--lu)) calc(12 * var(--lu)) rgba(0, 0, 30, .4);
     white-space: nowrap;
     transition: translate var(--dur-fast) var(--ease-out);
 }
 .lobby-quick:active { translate: 0 calc(2 * var(--lu)); }
-.lobby-quick small { color: #6a4a10; font: 700 calc(19 * var(--lu))/1 var(--font-ui); }
+.lobby-quick small { color: #6a4a10; font: 700 max(var(--fs-min), calc(19 * var(--lu)))/1 var(--font-ui); }
 .lobby-quick b { color: #a3240c; font: 900 calc(34 * var(--lu))/1 var(--font-ui); letter-spacing: .04em; }
 
 /* ---------- room (好友同玩) ---------- */
@@ -878,18 +1016,19 @@ html[lang="en"] .roster-invite { letter-spacing: .02em; }
         padding: calc(10 * var(--lu) + env(safe-area-inset-top, 0px)) calc(10 * var(--lu) + var(--sr)) calc(6 * var(--lu)) calc(12 * var(--lu) + var(--sl));
     }
     .topbar::after { content: ""; order: 9; flex-basis: 100%; height: 0; }
-    .hud-btn { min-width: calc(44 * var(--lu)); height: calc(52 * var(--lu)); font-size: calc(12 * var(--lu)); gap: calc(3 * var(--lu)); }
+    .hud-btn { min-width: max(var(--tap), calc(44 * var(--lu))); height: max(var(--tap), calc(52 * var(--lu))); font-size: max(var(--fs-min) * 1.1, calc(12 * var(--lu))); gap: calc(3 * var(--lu)); }
     .hud-btn .hud-ic { width: calc(26 * var(--lu)); height: calc(26 * var(--lu)); }
     .hud-status { flex: 1; }
     .hud-profile { gap: calc(8 * var(--lu)); }
-    .hud-avatar { --av-size: calc(46 * var(--lu)); }
-    .hud-name input { width: calc(128 * var(--lu)); font-size: calc(19 * var(--lu)); }
-    .hud-tier > span { font-size: calc(12 * var(--lu)); line-height: calc(20 * var(--lu)); padding: 0 calc(14 * var(--lu)); }
+    .hud-avatar { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); border-radius: calc(11 * var(--lu)); }
+    .hud-avatar > img, .hud-avatar > .gd-avatar-initials { border-radius: calc(8 * var(--lu)); }
+    .hud-name input { width: calc(128 * var(--lu)); height: max(var(--tap), calc(26 * var(--lu))); margin: min(0px, calc((26 * var(--lu) - var(--tap)) / 2)) 0; font-size: calc(19 * var(--lu)); }
+    .hud-tier > span { font-size: max(var(--fs-min), calc(12 * var(--lu))); line-height: max(calc(var(--fs-min) * 1.6), calc(20 * var(--lu))); padding: 0 calc(14 * var(--lu)); }
     .hud-stats { order: 10; gap: calc(10 * var(--lu)); margin: 0 0 0 calc(4 * var(--lu)); }
     body[data-screen="lobby"] .hud-status { display: contents; }
     body[data-screen="lobby"] .hud-profile { order: 1; flex: 1; }
     .hud-stat { height: calc(30 * var(--lu)); min-width: calc(96 * var(--lu)); padding: 0 calc(12 * var(--lu)) 0 calc(38 * var(--lu)); font-size: calc(20 * var(--lu)); }
-    .hud-stat i { width: calc(34 * var(--lu)); height: calc(34 * var(--lu)); font-size: calc(15 * var(--lu)); }
+    .hud-stat i { width: calc(34 * var(--lu)); height: calc(34 * var(--lu)); font-size: max(var(--fs-min), calc(15 * var(--lu))); }
     body[data-screen="room"] #new-room-btn .hud-ic { width: calc(34 * var(--lu)); height: calc(34 * var(--lu)); }
     body[data-screen="room"] .hud-chip { order: 10; height: calc(32 * var(--lu)); font-size: calc(15 * var(--lu)); }
     body[data-screen="room"] #copy-link-btn { order: 10; }
@@ -900,33 +1039,55 @@ html[lang="en"] .roster-invite { letter-spacing: .02em; }
     .hud-title span { font-size: calc(13 * var(--lu)); }
     .hud-title em { font-size: calc(16 * var(--lu)); }
 
-    .lobby { display: block; min-height: 0; padding: 0 calc(12 * var(--lu) + var(--sr)) calc(20 * var(--lu) + env(safe-area-inset-bottom, 0px)) calc(12 * var(--lu) + var(--sl)); }
-    .lobby-rail { position: static; flex-direction: row; gap: calc(16 * var(--lu)); padding: calc(6 * var(--lu)) 0 calc(18 * var(--lu)); }
-    .rail-item { width: calc(74 * var(--lu)); }
-    .rail-disc { width: calc(62 * var(--lu)); height: calc(62 * var(--lu)); }
-    .is-mvp .rail-disc img { width: calc(55 * var(--lu)); height: calc(55 * var(--lu)); }
-    .rail-vinyl { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
-    .rail-badge { top: calc(42 * var(--lu)); }
-    .rail-lb { font-size: calc(15 * var(--lu)); }
+    .lobby { display: block; min-height: 0; padding: 0 calc(12 * var(--lu) + var(--sr)) 0 calc(12 * var(--lu) + var(--sl)); }
+    .lobby-rail { position: static; height: auto; flex-direction: row; justify-content: space-between; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
+    .rail-item { width: calc(66 * var(--lu)); }
+    .rail-disc { width: calc(56 * var(--lu)); height: calc(56 * var(--lu)); }
+    .is-mvp .rail-disc img { width: calc(50 * var(--lu)); height: calc(50 * var(--lu)); }
+    .is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(32 * var(--lu)); }
+    .rail-share { width: calc(26 * var(--lu)); height: calc(26 * var(--lu)); right: calc(5 * var(--lu)); bottom: calc(8 * var(--lu)); }
+    .rail-share .gd-glyph { width: calc(16 * var(--lu)); height: calc(16 * var(--lu)); }
+    .rail-vinyl { width: calc(44 * var(--lu)); height: calc(44 * var(--lu)); }
+    .rail-vs b { font-size: calc(26 * var(--lu)); }
+    .rail-badge { top: calc(38 * var(--lu)); }
+    .rail-lb { font-size: max(var(--fs-min) * 1.1, calc(14 * var(--lu))); margin-top: calc(-10 * var(--lu)); }
     .lobby-main { width: auto; }
     .lobby-tiles {
         --t: calc(var(--lu) * .7);
         height: auto;
         margin: 0;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-rows: calc(232 * var(--lu));
-        grid-auto-rows: calc(150 * var(--lu));
+        grid-template-rows: calc(236 * var(--lu));
+        grid-auto-rows: calc(154 * var(--lu));
         gap: calc(8 * var(--lu));
     }
-    .lobby-tile.is-classic { grid-row: auto; grid-column: 1 / -1; --t: calc(var(--lu) * .82); }
-    .is-classic .tile-art { top: calc(8 * var(--t)); bottom: calc(116 * var(--t)); }
-    .is-classic .tile-fan { --card-w: calc(96 * var(--t)); --fan-dx: calc(70 * var(--t)); }
-    .is-classic .tile-title { font-size: calc(56 * var(--t)); }
-    .lobby-dock { flex-direction: column-reverse; align-items: stretch; gap: calc(16 * var(--lu)); height: auto; padding-top: calc(14 * var(--lu)); }
-    .lobby-quick { justify-content: center; }
-    .lobby-nav { justify-content: center; gap: calc(48 * var(--lu)); }
-    .lobby-nav-item { font-size: calc(15 * var(--lu)); }
-    .lobby-nav-item .gd-glyph { width: calc(30 * var(--lu)); height: calc(30 * var(--lu)); }
+    .lobby-tile.is-classic { grid-row: auto; grid-column: 1 / -1; --t: calc(var(--lu) * .82); padding-bottom: calc(26 * var(--t)); }
+    .is-classic .tile-art { top: calc(8 * var(--t)); bottom: calc(100 * var(--t)); }
+    .is-classic .tile-fan { --card-w: calc(104 * var(--t)); }
+    .is-classic .tile-fan .card { translate: calc(var(--k) * 60 * var(--t)) calc(var(--k) * var(--k) * 5 * var(--t)); rotate: calc(var(--k) * 7deg); }
+    .is-classic .tile-title { font-size: calc(58 * var(--t)); }
+    .join-art { flex-direction: column; gap: calc(6 * var(--lu)); bottom: calc(64 * var(--t)); }
+    .join-cells i { width: calc(40 * var(--t)); height: max(var(--tap), calc(50 * var(--t))); }
+    .join-art .btn { --btn-h: max(var(--tap), calc(44 * var(--t))); --btn-minw: calc(120 * var(--t)); }
+    /* the dock stays on screen: 快速开始 full width over the nav row */
+    .lobby-dock {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: calc(8 * var(--lu));
+        height: auto;
+        margin: 0 calc(-12 * var(--lu) - var(--sr)) 0 calc(-12 * var(--lu) - var(--sl));
+        padding: calc(22 * var(--lu)) calc(12 * var(--lu) + var(--sr)) calc(6 * var(--lu) + env(safe-area-inset-bottom, 0px)) calc(12 * var(--lu) + var(--sl));
+        background: linear-gradient(180deg, rgba(34, 48, 102, 0) 0, rgba(34, 48, 102, .94) calc(22 * var(--lu)), #223066 100%);
+    }
+    .lobby-quick { justify-content: center; height: calc(58 * var(--lu)); }
+    .lobby-quick b { font-size: calc(28 * var(--lu)); }
+    .lobby-nav { justify-content: space-between; gap: 0; }
+    .lobby-nav-item { min-width: calc(56 * var(--lu)); font-size: max(var(--fs-min) * 1.1, calc(13 * var(--lu))); gap: calc(4 * var(--lu)); }
+    .lobby-nav-item .gd-glyph { width: calc(26 * var(--lu)); height: calc(26 * var(--lu)); }
+    .lobby-tiles { margin-bottom: calc(10 * var(--lu)); }
 
     .room {
         display: flex;

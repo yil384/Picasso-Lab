@@ -42,6 +42,7 @@
         <symbol id="gd-g-podium" viewBox="0 0 24 24"><path d="M9 9h6v12H9V9Zm-7 4.5h6V21H2v-7.5Zm14 2.5h6v5h-6v-5ZM9.6 2.6 12 5.2l2.4-2.6.6 4.6H9l.6-4.6Z"/></symbol>
         <symbol id="gd-g-gear" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M19.8 9.47 22.35 9.73v4.54l-2.55.26-.49 1.19 1.62 1.99-3.22 3.22-1.99-1.62-1.19.49-.26 2.55H9.73l-.26-2.55-1.19-.49-1.99 1.62-3.22-3.22 1.62-1.99-.49-1.19-2.55-.26V9.73l2.55-.26.49-1.19-1.62-1.99 3.22-3.22 1.99 1.62 1.19-.49.26-2.55h4.54l.26 2.55 1.19.49 1.99-1.62 3.22 3.22-1.62 1.99.49 1.19ZM8.4 12a3.6 3.6 0 1 0 7.2 0 3.6 3.6 0 1 0-7.2 0Z"/></symbol>
         <symbol id="gd-g-history" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 3h13l3 3v15H4V3Zm3 5v2h10V8H7Zm0 4v2h10v-2H7Zm0 4v2h6v-2H7Z"/></symbol>
+        <symbol id="gd-g-cards" viewBox="0 0 24 24"><path d="M3.2 6.3 10.6 4.3c.7-.2 1.4.2 1.6.9l3.5 13c.2.7-.2 1.4-.9 1.6l-7.4 2c-.7.2-1.4-.2-1.6-.9l-3.5-13c-.2-.7.2-1.4.9-1.6Z"/><path d="M13.3 3.4 20 5.2c.7.2 1.1.9.9 1.6l-3.2 12.1-4.3-15.5Z" opacity=".75"/></symbol>
     </svg>
     <!-- Tencent-style top bar for the lobby and room (the table screen hides it and reuses these handlers). -->
     <header class="topbar">
@@ -1726,7 +1727,7 @@ function lobbyProfileHTML() {
         [L("G", "场"), st.p, L("Matches", "场次")]
     ].map(([mark, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${mark}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("") : "";
     return `<div class="hud-profile">
-        <span class="gd-avatar is-plain hud-avatar">${face}</span>
+        <span class="hud-avatar">${face}</span>
         <div class="hud-id">
             <label class="hud-name"><input id="nick-input" value="${encodeHTML(nickname)}" maxlength="24" autocomplete="nickname" spellcheck="false" placeholder="${L("Set a name", "设置昵称")}" aria-label="${L("Nickname", "昵称")}"><svg class="hud-pen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17.2V21h3.8L17.9 9.9l-3.8-3.8L3 17.2Zm17.7-10.1c.4-.4.4-1 0-1.4l-2.4-2.4c-.4-.4-1-.4-1.4 0l-1.8 1.8 3.8 3.8 1.8-1.8Z"/></svg></label>
             <span class="hud-tier"><span>${tier}</span></span>
@@ -1763,8 +1764,9 @@ function blurNicknameOnEnter(event) {
 // ---------- lobby (大厅) ----------
 let lobbyCodeDraft = "";
 let lobbyActionBusy = false;
-let quickStartHold = false;
-let quickStartReady = null;
+// 人机练习 / 快速开始 in progress: { until, loaded, resolve }. While it is set the room screen is
+// never drawn, so the lobby goes straight to the dealt table.
+let quickStart = null;
 
 // The 经典 tile fan renders the live card component: the lab's four signature aces, each
 // labmate's portrait on their own card (a four-ace bomb).
@@ -1774,36 +1776,42 @@ function previewCardsHTML() {
     return (aces.length ? aces : ["A♠", "A♥", "A♦", "A♣"]).slice(0, 4).map((card, i) => cardHTML(signatureCard(card, `pv${i}`))).join("");
 }
 
+// Left rail: 赛季MVP · 巅峰对决 · 实验室 · 分享 · 音乐 (dark discs, label over the bottom edge).
 function lobbyRailHTML() {
     const standings = labStandings();
-    const mvp = standings?.mvp ? labPlayers()[standings.mvp.key] : null;
+    const PL = labPlayers();
+    const mvp = standings?.mvp ? PL[standings.mvp.key] : null;
+    const labKey = labMemberKeys().find(k => !PL[k].card.startsWith("A")) || labMemberKeys()[0];
     const musicOn = window.GuandanMusic?.isOn?.() !== false;
-    return `${mvp?.avatar ? `<button class="rail-item is-mvp" type="button" data-open-records="mvp" aria-label="${L("Season MVP", "赛季MVP")}">
-            <span class="rail-disc"><img src="${encodeHTML(mvp.avatar)}" alt=""></span><span class="rail-badge">MVP</span>
-            <span class="rail-lb">${L("MVP", "赛季MVP")}</span></button>` : ""}
-        <button class="rail-item is-share" type="button" data-lobby="share">
-            <span class="rail-disc">${cardHTML({ back: true })}<span class="rail-share">${glyphHTML("share")}</span></span>
-            <span class="rail-lb">${L("Share", "分享")}</span></button>
-        <button class="rail-item is-music${musicOn ? "" : " is-off"}" type="button" data-lobby="music" aria-pressed="${musicOn}">
-            <span class="rail-disc"><span class="rail-vinyl"></span></span>${musicOn ? "" : `<span class="rail-badge is-off">${L("OFF", "关")}</span>`}
-            <span class="rail-lb">${L("Music", "音乐")}</span></button>`;
+    const item = (cls, attrs, disc, label, extra = "") => `<button class="rail-item ${cls}" type="button" ${attrs}>
+            <span class="rail-disc">${disc}</span>${extra}<span class="rail-lb">${label}</span></button>`;
+    return [
+        mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, L("MVP", "赛季MVP"), `<span class="rail-badge">MVP</span>`) : "",
+        item("is-peak", `data-open-records="latest"`, `<span class="rail-vs"><b>VS</b></span>`, L("Showdown", "巅峰对决")),
+        labKey ? item("is-lab", `data-lobby="lab"`, cardHTML(signatureCard(PL[labKey].card, "rl0")), L("Lab", "实验室")) : "",
+        item("is-share", `data-lobby="share"`, `${cardHTML({ back: true })}<span class="rail-share">${glyphHTML("share")}</span>`, L("Share", "分享")),
+        item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-pressed="${musicOn}"`, `<span class="rail-vinyl"></span>`, L("Music", "音乐"),
+            musicOn ? "" : `<span class="rail-badge is-off">${L("OFF", "关")}</span>`)
+    ].join("");
 }
 
+// 巅峰对决: a mini red-vs-blue poster of the latest match, the four players in team frames.
 function peakTileArtHTML() {
     const m = latestLabMatch();
     const PL = labPlayers();
     if (!m) return "";
-    const team = (keys, cls) => `<span class="peak-team ${cls}">${keys.map(k => PL[k]?.avatar
-        ? `<span class="gd-avatar peak-av"><img src="${encodeHTML(PL[k].avatar)}" alt="" loading="lazy"></span>` : "").join("")}</span>`;
-    return `<span class="tile-art peak-art">${team(m.teamA, "is-red")}<b class="peak-vs">VS</b>${team(m.teamB, "is-blue")}</span>
+    const team = (keys, cls) => `<span class="peak-side ${cls}">${keys.map(k => `<span class="peak-frame">${PL[k]?.avatar
+        ? `<img src="${encodeHTML(PL[k].avatar)}" alt="" loading="lazy">` : `<i>${encodeHTML(initials(PL[k]?.name || k))}</i>`}</span>`).join("")}</span>`;
+    return `<span class="tile-art peak-art"><span class="peak-poster">${team(m.teamA, "is-red")}${team(m.teamB, "is-blue")}<b class="peak-vs">VS</b></span></span>
         <span class="tile-bubble">${L("Latest", "最新战报")} <b>${encodeHTML(m.levelA)} : ${encodeHTML(m.levelB)}</b></span>`;
 }
 
+// 实验室: a fanned stack of labmate photos.
 function labTileArtHTML() {
     const PL = labPlayers();
     const keys = labMemberKeys();
-    const faces = keys.slice(0, 7).map(k => `<span class="gd-avatar is-plain lab-av"><img src="${encodeHTML(PL[k].avatar)}" alt="" loading="lazy"></span>`).join("");
-    return `<span class="tile-art lab-art">${faces}</span>${keys.length ? `<span class="tile-bubble">${L(`${keys.length} members`, `${keys.length} 位成员`)}</span>` : ""}`;
+    const photos = keys.slice(0, 5).map(k => `<span class="lab-photo"><img src="${encodeHTML(PL[k].avatar)}" alt="" loading="lazy"></span>`).join("");
+    return `<span class="tile-art lab-art">${photos}</span>${keys.length ? `<span class="tile-bubble">${L(`${keys.length} members`, `${keys.length} 位成员`)}</span>` : ""}`;
 }
 
 // 好友房: a mini room table, three labmates seated and one open "+" seat.
@@ -1813,12 +1821,17 @@ function friendsTileArtHTML() {
     return `<span class="tile-art mini-table" aria-hidden="true"><span class="mini-felt">PICASSO</span>${seated}<i class="mini-seat s3">+</i></span>`;
 }
 
+// 加入房间: five code cells mirror the (transparent) #room-input laid over them.
+function joinCellsHTML(code) {
+    return `<span class="join-cells" aria-hidden="true">${[0, 1, 2, 3, 4].map(i => `<i class="${i === code.length ? "is-next" : ""}">${encodeHTML(code[i] || "")}</i>`).join("")}</span>`;
+}
+
 function lobbyTilesHTML() {
+    const code = lobbyCodeDraft || roomCode;
     const straight = ["5♥", "6♥", "7♥", "8♥", "9♥"].map((c, i) => cardHTML(signatureCard(c, `pr${i}`), true)).join("");
     return `
         <button class="lobby-tile is-classic" id="create-room" type="button" aria-label="${L("Classic: create a room", "经典：创建房间")}">
             <span class="tile-art tile-fan">${previewCardsHTML()}</span>
-            <span class="tile-sub">${L("Create a room", "创建房间")}</span>
             <b class="tile-title">${L("Classic", "经典")}</b>
         </button>
         <button class="lobby-tile is-practice" type="button" data-lobby="practice" aria-label="${L("Practice against AI", "人机练习")}">
@@ -1835,10 +1848,9 @@ function lobbyTilesHTML() {
         </button>
         <div class="lobby-tile is-join" data-lobby="join">
             <span class="tile-art join-art">
-                <input id="room-input" value="${encodeHTML(lobbyCodeDraft || roomCode)}" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${L("CODE", "房间码")}" aria-label="${L("Room code", "房间码")}">
+                <label class="join-code">${joinCellsHTML(code)}<input id="room-input" value="${encodeHTML(code)}" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="${L("Room code (5 characters)", "房间码（5 位）")}"></label>
                 <button class="btn sm" id="join-room" type="button">${L("Join", "加入")}</button>
             </span>
-            <span class="join-status" role="status">${encodeHTML(statusText)}</span>
             <b class="tile-title">${L("Join Room", "加入房间")}</b>
         </div>
         <button class="lobby-tile is-friends" type="button" data-lobby="friends" aria-label="${L("Create a room and copy the invite link", "创建房间并复制邀请链接")}">
@@ -1851,25 +1863,46 @@ function lobbyTilesHTML() {
         </button>`;
 }
 
+// Each screen starts at the top: a scrolled portrait lobby must not open the room half-scrolled.
+function enterScreen(name) {
+    if (document.body.dataset.screen === name) return;
+    document.body.dataset.screen = name;
+    window.scrollTo(0, 0);
+}
+
 function renderLobby() {
-    document.body.dataset.screen = "lobby";
+    enterScreen("lobby");
     updateTopbarStatus();
+    // joinRoom() reports a missing room through statusText: a short toast and a shake of the code field.
+    const joinFailed = !!statusText;
+    statusText = "";
+    const nav = [
+        ["invite", `data-lobby="friends"`, L("Invite", "邀请")],
+        ["cards", `data-lobby="lab"`, L("Lab", "实验室")],
+        ["book", `data-lobby="rules"`, L("Rules", "规则")],
+        ["history", `data-open-records="history"`, L("History", "历史对阵")],
+        ["podium", `data-open-records="board"`, L("Ranking", "排行榜")],
+        ["gear", `data-lobby="settings"`, L("Settings", "设置")]
+    ].map(([glyph, attrs, label]) => `<button class="lobby-nav-item" type="button" ${attrs}>${glyphHTML(glyph)}<span>${label}</span></button>`).join("");
     root.innerHTML = `
     <section class="lobby">
         <nav class="lobby-rail" aria-label="${L("Shortcuts", "快捷入口")}">${lobbyRailHTML()}</nav>
         <div class="lobby-main">
             <div class="lobby-tiles">${lobbyTilesHTML()}</div>
             <div class="lobby-dock">
-                <nav class="lobby-nav">
-                    <button class="lobby-nav-item" type="button" data-open-records="board">${glyphHTML("podium")}<span>${L("Ranking", "排行榜")}</span></button>
-                    <button class="lobby-nav-item" type="button" data-open-records="history">${glyphHTML("history")}<span>${L("History", "历史对阵")}</span></button>
-                    <button class="lobby-nav-item" type="button" data-lobby="settings">${glyphHTML("gear")}<span>${L("Settings", "设置")}</span></button>
-                </nav>
+                <nav class="lobby-nav">${nav}</nav>
                 <button class="lobby-quick" type="button" data-lobby="practice"><small>${L("Classic · vs AI", "经典 · 人机")}</small><b>${L("Quick Start", "快速开始")}</b></button>
             </div>
         </div>
     </section>`;
-    bindLobby(root.querySelector(".lobby"));
+    const lobby = root.querySelector(".lobby");
+    bindLobby(lobby);
+    if (joinFailed) {
+        showToast(L("Room not found", "房间不存在"));
+        const field = lobby.querySelector(".join-code");
+        field.classList.add("is-error");
+        field.addEventListener("animationend", () => field.classList.remove("is-error"), { once: true });
+    }
 }
 
 function bindLobby(el) {
@@ -1893,10 +1926,7 @@ function bindLobby(el) {
         const clean = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
         if (clean !== codeInput.value) codeInput.value = clean;
         lobbyCodeDraft = clean;
-        if (statusText) {
-            statusText = "";
-            el.querySelector(".join-status").textContent = "";
-        }
+        el.querySelector(".join-cells").outerHTML = joinCellsHTML(clean);
     });
     codeInput.addEventListener("keydown", event => {
         if (event.key === "Enter") {
@@ -1919,20 +1949,40 @@ async function runLobbyAction(fn) {
     }
 }
 
+function waitFor(test, ms) {
+    return new Promise(resolve => {
+        const end = Date.now() + ms;
+        (function poll() {
+            if (test()) resolve(true);
+            else if (Date.now() > end) resolve(false);
+            else setTimeout(poll, 40);
+        })();
+    });
+}
+
 // 人机练习 / 快速开始 = create a room, then start it (startGame seats AI in every empty seat).
-// The lobby stays on screen until the table appears, so the room never flashes in between.
+// The lobby stays up until the dealt table arrives; renderLobbyRoom() holds the room back
+// while `quickStart` is set, and only a start that did not happen releases it early.
 async function quickPractice() {
-    quickStartHold = true;
-    const ready = new Promise(resolve => { quickStartReady = resolve; });
+    const hold = { until: Date.now() + 8000 };
+    hold.loaded = new Promise(resolve => { hold.resolve = resolve; });
+    quickStart = hold;
     try {
         await createRoom();
-        const loaded = await Promise.race([ready, new Promise(resolve => setTimeout(() => resolve(false), 8000))]);
-        if (loaded !== false) await startGame();
-    } finally {
-        quickStartHold = false;
-        quickStartReady = null;
-        requestAnimationFrame(() => { if (game?.phase === "lobby") render(); });
+        if (await Promise.race([hold.loaded, waitFor(() => false, 8000)])) {
+            await startGame();
+            const snap = await get(roomRef());
+            if (snap.exists() && snap.val().phase !== "lobby") {
+                await waitFor(() => game && game.phase !== "lobby", 8000);
+                return;
+            }
+        }
+    } catch (err) {
+        console.error(err);
     }
+    // The game did not start (or the room never loaded): show the room instead.
+    if (quickStart === hold) quickStart = null;
+    if (game?.phase === "lobby") render();
 }
 
 async function createAndInvite() {
@@ -2210,13 +2260,15 @@ function roomShellHTML() {
 }
 
 function renderLobbyRoom() {
-    if (quickStartHold) {
-        // 人机练习: the room exists now; keep the lobby up while quickPractice() starts the game.
-        quickStartReady?.(true);
-        quickStartReady = null;
-        return;
+    if (quickStart) {
+        // 人机练习: the room exists now; the lobby stays up while quickPractice() starts the game.
+        if (Date.now() < quickStart.until) {
+            quickStart.resolve(true);
+            return;
+        }
+        quickStart = null;
     }
-    document.body.dataset.screen = "room";
+    enterScreen("room");
     updateTopbarStatus();
     const mine = mySeat();
     const key = `${game.roomCode}:${uiLang}`;
