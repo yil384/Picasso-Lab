@@ -720,6 +720,65 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-first-ribbon:lang(en) { letter-spacing: .02em; text-indent: 0; font-size: 26px; }
 
+/* ---------- 进贡 / 还贡: the card flies seat to seat under its plate; 抗贡: centre word ---------- */
+.gd-tribute-host { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
+.gd-tribute {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    translate: -50% -50%;
+    animation: gd-tribute 1200ms linear both;
+}
+.gd-tribute .card { box-shadow: 0 6px 14px rgba(0, 30, 26, .4); }
+.gd-tribute span {
+    padding: 3px 12px;
+    border-radius: 5px;
+    background: var(--warm-plate);
+    color: #fff;
+    font: 900 24px/1.2 var(--font-ui);
+    letter-spacing: .12em;
+    -webkit-text-stroke: 4px rgba(120, 50, 0, .8);
+    paint-order: stroke fill;
+    white-space: nowrap;
+}
+.gd-tribute span:lang(en) { letter-spacing: .02em; }
+.gd-tribute.is-back span { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
+@keyframes gd-tribute {
+    0% { opacity: 0; transform: scale(.7); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
+    14% { opacity: 1; transform: none; }
+    32% { transform: none; animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+    80% { opacity: 1; transform: translate(var(--tx), var(--ty)); }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.8); }
+}
+.gd-kanggong {
+    position: absolute;
+    left: 50%; top: 40%;
+    translate: -50% -50%;
+    font: 400 110px/1 var(--font-display);
+    white-space: nowrap;
+    background: linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #ff9a1c 70%, #e4480e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 4px 0 #7a1e00) drop-shadow(0 0 1px #7a1e00);
+    animation: gd-kanggong 1800ms linear both;
+}
+@keyframes gd-kanggong {
+    0% { opacity: 0; scale: 1.4; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    10% { opacity: 1; scale: 1; }
+    82% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* reduced motion: the transient labels still show, as a still frame that fades */
+@media (prefers-reduced-motion: reduce) {
+    .gd-stage .gd-combo-label { animation: gd-still 820ms linear 150ms both !important; }
+    .gd-stage .gd-first-lead, .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation: gd-still 1600ms linear both !important; }
+}
+@keyframes gd-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
 /* ---------- bomb celebration (minimal; the effects package replaces it) ---------- */
 .gd-stage.bomb-shake { animation: gd-shake 250ms linear; }
 @keyframes gd-shake { 20% { translate: 6px 0; } 40% { translate: -6px 0; } 60% { translate: 4px 0; } 80% { translate: -2px 0; } }

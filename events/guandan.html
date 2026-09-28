@@ -1865,6 +1865,7 @@ function ensureTableSkeleton() {
                 <div class="gd-jipai-host" data-region="jipai"></div>
                 <div class="gd-deal-host" data-region="deal" aria-hidden="true"></div>
                 <div class="gd-first-host" data-region="firstLead" aria-hidden="true"></div>
+                <div class="gd-tribute-host" data-region="tribute" aria-hidden="true"></div>
                 <div class="bomb-fx" aria-hidden="true"></div>
                 <div class="bomb-banner-slot" aria-hidden="true"></div>
                 <div class="gd-result-host" data-region="result"></div>
@@ -2693,6 +2694,30 @@ function firstLeadHTML(v) {
     return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
 }
 
+// 进贡/还贡/抗贡 (round 2+): when the deal ends each tribute card flies payer -> receiver under an
+// orange 进贡 plate, then the returned card flies back under a blue 还贡 plate; a blocked tribute
+// shows 抗贡 at the centre (the revealed jokers sit at the seats). Replaces the sentence toast.
+const TRIBUTE_MS = 2200;
+function tributeKey(v) {
+    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    if (!game.selectedTributes?.length || game.startingCard || v.dealPhase === "dealing" || since < 0 || since > TRIBUTE_MS) return "";
+    return `${dealKey()}:${v.mine}:${uiLang}`;
+}
+function tributeHTML(v) {
+    const { w, h } = tableView.layout;
+    const at = { 0: [w / 2, h - 250], 1: [215, 250], 2: [w / 2, 172], 3: [w - 215, 250] };
+    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    const rows = game.selectedTributes.filter(r => r?.tributeCard);
+    if (!rows.length) return `<div class="gd-kanggong" style="animation-delay:${-since}ms">${L("Tribute blocked", "抗贡")}</div>`;
+    const fly = (card, from, to, cls, label, delay) => `<div class="gd-tribute ${cls}" style="left:${from[0].toFixed(0)}px;top:${from[1].toFixed(0)}px;--tx:${(to[0] - from[0]).toFixed(0)}px;--ty:${(to[1] - from[1]).toFixed(0)}px;animation-delay:${delay - since}ms"><span>${label}</span>${cardHTML(card, true)}</div>`;
+    return rows.map((r, n) => {
+        const payer = at[visualSeatPos(r.payerSeat, v.mine)];
+        const receiver = at[visualSeatPos(r.receiverSeat, v.mine)];
+        return fly(r.tributeCard, payer, receiver, "is-in", L("Tribute", "进贡"), n * 160)
+            + (r.returnCard ? fly(r.returnCard, receiver, payer, "is-back", L("Return", "还贡"), 820 + n * 160) : "");
+    }).join("");
+}
+
 // Round/system messages become short toasts (plays and passes are already visible at the seats).
 function maybeToastTableMessage() {
     const msg = game.message || "";
@@ -2701,7 +2726,7 @@ function maybeToastTableMessage() {
     if (key === tableView.lastMessage) return;
     tableView.lastMessage = key;
     if (first && !dealWindowOpen(game)) return;
-    if (game.phase !== "playing" || !msg || /出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局开始/.test(msg)) return;
+    if (game.phase !== "playing" || !msg || /出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局(开始| · )/.test(msg)) return;
     showToast(displayMessage(msg), 2600);
 }
 
@@ -2749,7 +2774,10 @@ function renderTable() {
     setRegion("spectate", mine < 0 ? `<span>${L("Spectating", "观战中")}</span>` : "");
     setRegion("actions", `${v.canAct}:${v.lead}:${v.noBeat}:${v.passHint}:${uiLang}`, () => actionsHTML(v));
     setRegion("deal", dealPhase === "dealing" ? `deal:${dealKey()}:${Math.round(t.layout.w)}` : "", () => dealHTML(v));
-    setRegion("firstLead", firstLeadKey(v), () => firstLeadHTML(v));
+    const firstKey = firstLeadKey(v);
+    setRegion("firstLead", firstKey, firstKey ? () => firstLeadHTML(v) : "");
+    const tributeMoment = tributeKey(v);
+    setRegion("tribute", tributeMoment, tributeMoment ? () => tributeHTML(v) : "");
     const result = game.phase === "roundOver" ? "round" : game.phase === "gameOver" ? "game" : "";
     setRegion("result", result ? `${result}:${game.roundNo}:${uiLang}:${isHost()}` : "", result === "round" ? roundOverHTML : result ? gameOverHTML : "");
     refreshSelectionUI();
