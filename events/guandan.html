@@ -1752,8 +1752,11 @@ const HAND_CARD_H = HAND_CARD_W / .74;
 const HAND_BOTTOM = 55;                     // hand bottom edge, 7.6% of 720
 const HAND_STEP = .35;                      // same-rank stack step, share of the card height
 const HAND_MIN_STEP = .25;                  // tall columns compress down to this
-const PLAYED_CARD_H = HAND_CARD_H * .79;
-const SELF_SLOT_TOP = .32;                  // own played cards never rise above 32% of the stage
+const HAND_MIN_PITCH = .93;                 // columns never cover more than 7% of a card (Tencent: ~1px gap)
+const HAND_MIN_SCALE = .75;                 // before that, hand cards shrink down to this
+const ACTION_ROW_TOP = 312;                 // action row never rises into the side seats' played cards (196 + 109)
+const ACTION_ROW_H = 87;                    // pills 78 + the hexagon's crown
+const ACTION_ROW_GAP = 20;                  // between the row and the tallest hand column
 const COLUMN_SUIT_DEPTH = { D: 0, C: 1, H: 2, S: 3 };  // 方块 on top of a column, 黑桃 in front
 const PLACE_LABELS = { zh: ["头游", "二游", "三游", "末游"], en: ["1st", "2nd", "3rd", "4th"] };
 const JIPAI_ORDER = ["wild", "RJ", "BJ", "A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
@@ -2015,24 +2018,30 @@ function moveHandCard(dragId, targetId, before) {
     return true;
 }
 
-// Column pitch shrinks to fit the stage; tall columns compress their step so the hand never
-// climbs into the played-cards lane.
+// Column mode: the pitch shrinks to fit the stage width down to HAND_MIN_PITCH, tall columns
+// compress their step so the hand stays under the action row, and only past both limits do the
+// hand cards themselves shrink (never below HAND_MIN_SCALE). Played cards keep their size.
 function handGeometry(columns) {
     const { w, h } = tableView.layout;
     const avail = w - 64;
     if (handMode === "row") {
         const n = columns.reduce((sum, col) => sum + col.cards.length, 0);
         const pitch = n > 1 ? Math.min(HAND_CARD_W * .52, (avail - HAND_CARD_W) / (n - 1)) : HAND_CARD_W;
-        return { pitch, step: 0, height: HAND_CARD_H * 1.18 };
+        return { cardW: HAND_CARD_W, pitch, step: 0, height: HAND_CARD_H * 1.18 };
     }
     const n = columns.length;
-    const pitch = n > 1 ? Math.min(HAND_CARD_W + 1, (avail - HAND_CARD_W) / (n - 1)) : HAND_CARD_W;
     const tallest = Math.max(1, ...columns.map(col => col.cards.length));
-    const room = h - HAND_BOTTOM - (h * SELF_SLOT_TOP + PLAYED_CARD_H + 10);
+    const room = h - HAND_BOTTOM - ACTION_ROW_GAP - ACTION_ROW_H - ACTION_ROW_TOP;
+    const fitW = n > 1 ? avail / (HAND_CARD_W * (HAND_MIN_PITCH * (n - 1) + 1)) : 1;
+    const fitH = room / (HAND_CARD_H * (1 + HAND_MIN_STEP * (tallest - 1)));
+    const k = Math.max(HAND_MIN_SCALE, Math.min(1, fitW, fitH));
+    const cardW = HAND_CARD_W * k;
+    const cardH = HAND_CARD_H * k;
+    const pitch = n > 1 ? Math.min(cardW + 1, (avail - cardW) / (n - 1)) : cardW;
     const step = tallest > 1
-        ? Math.max(HAND_CARD_H * HAND_MIN_STEP, Math.min(HAND_CARD_H * HAND_STEP, (room - HAND_CARD_H) / (tallest - 1)))
-        : HAND_CARD_H * HAND_STEP;
-    return { pitch, step, height: HAND_CARD_H + (tallest - 1) * step };
+        ? Math.max(cardH * HAND_MIN_STEP, Math.min(cardH * HAND_STEP, (room - cardH) / (tallest - 1)))
+        : cardH * HAND_STEP;
+    return { cardW, pitch, step, height: cardH + (tallest - 1) * step };
 }
 
 // Selection survives ticks: it is only pruned to the cards still in hand, and dropped when a
@@ -2057,9 +2066,10 @@ function renderHand(columns, rowCards, geo, dealPhase) {
     const layoutIds = handMode === "row"
         ? rowCards.map(c => c.id).join(",")
         : columns.map(col => col.cards.map(c => c.id).join(",")).join("|");
-    const key = `${handMode}:${geo.pitch.toFixed(2)}:${geo.step.toFixed(2)}:${dealPhase}:${uiLang}:${game.currentLevelRank}:${layoutIds}`;
+    const key = `${handMode}:${geo.cardW.toFixed(2)}:${geo.pitch.toFixed(2)}:${geo.step.toFixed(2)}:${dealPhase}:${uiLang}:${game.currentLevelRank}:${layoutIds}`;
     if (tableView.keys.hand === key) return;
     tableView.keys.hand = key;
+    host.style.setProperty("--card-w", `${geo.cardW.toFixed(2)}px`);
     if (dealPhase === "dealing" || !columns.length) {
         host.textContent = "";
         tableView.cardEls = new Map();
@@ -2616,7 +2626,13 @@ function renderTable() {
     syncSelection(mine, handCards);
     const columns = mine >= 0 ? handColumns(handCards, game.currentLevelRank, mine) : [];
     const geo = handGeometry(columns);
-    t.stage.style.setProperty("--hand-h", `${(mine >= 0 ? geo.height : 0).toFixed(1)}px`);
+    const handH = mine >= 0 ? geo.height : 0;
+    t.stage.style.setProperty("--hand-h", `${handH.toFixed(1)}px`);
+    // Just above the tallest column, but never up into the side seats' played cards: a hand
+    // taller than that runs behind the row.
+    const actionsBottom = Math.min(HAND_BOTTOM + handH + ACTION_ROW_GAP, t.layout.h - ACTION_ROW_TOP - ACTION_ROW_H);
+    t.stage.style.setProperty("--actions-bottom", `${actionsBottom.toFixed(1)}px`);
+    t.stage.classList.toggle("is-acting", v.canAct);
 
     renderTableChrome();
     setRegion("watermark", `<b>${L("PICASSO Guandan", "PICASSO 掼蛋")}</b><span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span>`);

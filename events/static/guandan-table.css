@@ -3,7 +3,7 @@
    Everything inside .gd-stage is in design px: the stage is 720 high and >= 1280 wide and
    layoutStage() scales it (and rotates it on portrait phones) with one transform, so every
    proportion below holds on every screen. Anchors: top/bottom of the stage, its centre line,
-   and --hand-h (height of the tallest hand column, set by renderTable).
+   --hand-h (height of the tallest hand column) and --actions-bottom, both set by renderTable.
    ========================================================================== */
 
 body[data-screen="table"] { overflow: hidden; overscroll-behavior: none; }
@@ -95,6 +95,7 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-watermark b { display: block; font: 400 54px/1 var(--font-display); letter-spacing: .03em; }
 .gd-watermark span { display: block; margin-top: 10px; font: 700 22px/1 var(--font-ui); letter-spacing: .24em; }
 .gd-watermark span:lang(en) { letter-spacing: .02em; }
+.gd-stage.is-acting .gd-watermark span { opacity: 0; }
 
 /* ---------- HUD: ☰ + level tiles (top-left), 记牌 / 规则 (top-right) ---------- */
 .gd-hud {
@@ -551,7 +552,7 @@ body[data-screen="table"] .topbar { display: none; }
 /* ---------- action row: [不出] [hexagon timer] [提示] [出牌] (dagd_new_ingame) ---------- */
 .gd-actions {
     position: absolute;
-    left: 0; right: 0; bottom: calc(55px + var(--hand-h) + 20px);
+    left: 0; right: 0; bottom: var(--actions-bottom);
     z-index: 20;
     display: flex;
     justify-content: center;
