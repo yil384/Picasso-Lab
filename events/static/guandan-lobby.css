@@ -66,7 +66,9 @@ html[data-gd-boot="lobby"] body:not([data-screen]) {
     gap: calc(12 * var(--lu));
     padding: env(safe-area-inset-top, 0px) calc(34 * var(--lu) + var(--sr)) 0 calc(36 * var(--lu) + var(--sl));
     color: #fff;
+    pointer-events: none;   /* the empty bar never swallows taps meant for the screen under it */
 }
+.topbar > * { pointer-events: auto; }
 body:not([data-screen]) .topbar { visibility: hidden; }
 .hud-status { order: 1; display: flex; align-items: center; min-width: 0; }
 .hud-btn {
@@ -1092,9 +1094,10 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 .room-badge.is-ai::before, .room-badge.is-ai > * { left: 0; top: 0; }
 .room-seat.p1 .room-badge.is-ai { left: auto; right: calc(var(--seat-av) * .78); }
 .room-seat.p1 .room-badge.is-ai::before, .room-seat.p1 .room-badge.is-ai > * { left: auto; right: 0; }
-/* × remove / leave: upper right of the avatar */
-.room-badge.is-remove, .room-badge.is-leave { left: calc(var(--seat-av) * .65); bottom: calc(var(--seat-av) * .65); }
-.room-badge.is-remove::before, .room-badge.is-remove > *, .room-badge.is-leave::before, .room-badge.is-leave > * { left: 0; bottom: 0; }
+/* × remove / leave: upper right of the avatar; the box grows over the portrait, never up into
+   the header */
+.room-badge.is-remove, .room-badge.is-leave { left: calc(var(--seat-av) * .65); top: calc(var(--seat-av) * -.05); }
+.room-badge.is-remove::before, .room-badge.is-remove > *, .room-badge.is-leave::before, .room-badge.is-leave > * { left: 0; top: 0; }
 .room-badge.is-remove::before { background: linear-gradient(180deg, #ff9a8a, #d8433c); box-shadow: 0 calc(2 * var(--lu)) 0 var(--danger-edge); }
 .room-badge.is-leave::before { background: var(--util-bg); box-shadow: 0 calc(2 * var(--lu)) 0 var(--util-edge); }
 .room-badge:active:not(:disabled) { translate: 0 calc(2 * var(--lu)); }
