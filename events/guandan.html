@@ -947,6 +947,7 @@ function updateTurnClockDOM() {
         const num = el.querySelector("b");
         if (num && num.textContent !== secs) num.textContent = secs;
         el.classList.toggle("is-free", remaining == null);
+        el.classList.toggle("is-3", secs.length > 2);
         el.classList.toggle("is-danger", remaining != null && remaining <= 10000);
     });
 }
@@ -1916,6 +1917,7 @@ function layoutStage() {
     t.rot.style.width = `${lw}px`;
     t.rot.style.height = `${lh}px`;
     t.rot.style.transform = rotated ? `translate(${vw}px, 0) rotate(90deg)` : "";
+    t.rot.style.setProperty("--gd-s", s.toFixed(4));
     t.stage.style.width = `${w}px`;
     t.stage.style.height = `${h}px`;
     t.stage.style.transform = `translate(${left}px, 0) scale(${s})`;
@@ -2281,18 +2283,18 @@ function clearSelection() {
     refreshSelectionUI();
 }
 
-// Tapping empty felt clears the selection and closes the menu / popovers.
+// Tapping empty felt clears the selection; while the ☰ menu is open its scrim catches the tap
+// (closed on click, so the release cannot land on whatever was under the scrim).
 function onTablePointerDown(event) {
-    if (event.target.closest(".gd-menu, [data-act='menu']")) return;
-    if (tableView.menuOpen) {
-        tableView.menuOpen = false;
-        renderTableChrome();
-    }
-    if (event.target.closest("[data-card-id], button, .gd-jipai, .gd-result-host > *, .gd-seat")) return;
+    if (event.target.closest("[data-card-id], button, .gd-menu-host, .gd-jipai, .gd-result-host > *, .gd-seat")) return;
     clearSelection();
 }
 
 function onTableClick(event) {
+    if (event.target.closest(".gd-scrim")) {
+        tableView.menuOpen = false;
+        return renderTableChrome();
+    }
     const btn = event.target.closest("button");
     if (!btn || !tableView.stage.contains(btn) || btn.disabled) return;
     const mine = mySeat();
@@ -2313,7 +2315,7 @@ function onTableClick(event) {
         case "tracker":
             jipaiOpen = !jipaiOpen;
             storageSet("picasso.guandan.jipai", jipaiOpen ? "on" : "off");
-            break;
+            return renderTable();
         case "tracker-tab": tableView.jipaiTab = btn.dataset.tab === "log" ? "log" : "count"; break;
         case "rules":
             if (window.GuandanUI?.openRules) window.GuandanUI.openRules(tableView.ui);
@@ -2378,11 +2380,17 @@ function jipaiHTML(mine) {
     const tab = tableView.jipaiTab;
     const tabs = `<div class="gd-jp-tabs"><button type="button" data-act="tracker-tab" data-tab="count" class="${tab === "count" ? "is-on" : ""}">${L("Tracker", "记牌器")}</button><button type="button" data-act="tracker-tab" data-tab="log" class="${tab === "log" ? "is-on" : ""}">${L("Plays", "出牌记录")}</button></div>`;
     if (tab === "log") {
+        const glyph = c => `<i class="${cardColor(c) ? "is-red" : ""}">${c.joker ? jokerIconHTML(c) : `${rankGlyphHTML(c.rank)}${suitSvgHTML(c.suit, "")}`}</i>`;
         const rows = valuesFromFirebase(game.history).slice(-12).reverse().map(h => {
-            const pass = h.actionType === "pass";
-            const cards = pass ? "" : displayCardsForCombo(valuesFromFirebase(h.cards), h.combo)
-                .map(c => `<i class="${cardColor(c) ? "is-red" : ""}">${encodeHTML(cardText(c))}</i>`).join("");
-            return `<li><b>${encodeHTML(displaySeatName(game.seats[h.player]))}</b><span>${encodeHTML(pass ? L("Pass", "不出") : translateAction(h.action, h))}</span><em>${cards}</em></li>`;
+            let play;
+            if (h.actionType === "pass") play = `<span class="is-pass">${L("Pass", "不出")}</span>`;
+            else if (h.actionType === "finish") play = `<small>${encodeHTML(translateAction(h.action, h))}</small>`;
+            else {
+                const special = h.combo && !["single", "pair", "triple"].includes(h.combo.type);
+                play = displayCardsForCombo(valuesFromFirebase(h.cards), h.combo).map(glyph).join("")
+                    + (special ? `<small>${encodeHTML(translateAction(h.action, h))}</small>` : "");
+            }
+            return `<li><b>${encodeHTML(displaySeatName(game.seats[h.player]))}</b><span class="gd-jp-play">${play}</span></li>`;
         }).join("");
         return `<div class="gd-jipai is-log">${tabs}<ul class="gd-jp-log">${rows || `<li class="is-empty">${L("No plays yet", "还没有人出牌")}</li>`}</ul></div>`;
     }
@@ -2412,7 +2420,7 @@ function menuHTML() {
         ["newroom", tableIcon("table"), L("New table", "新桌")],
         ["exit", tableIcon("exit"), L("Back to events", "返回活动")]
     ].filter(Boolean);
-    return `<div class="gd-menu" role="menu">${items.map(([act, icon, label]) => `<button type="button" role="menuitem" data-act="m-${act}">${icon}<span>${label}</span></button>`).join("")}</div>`;
+    return `<div class="gd-scrim"></div><div class="gd-menu" role="menu">${items.map(([act, icon, label]) => `<button type="button" role="menuitem" data-act="m-${act}">${icon}<span>${label}</span></button>`).join("")}</div>`;
 }
 
 function hudHTML(view) {
@@ -2495,7 +2503,8 @@ function renderSeat(i, v) {
     if (place) tag = `<span class="gd-av-tag is-place ${place <= 2 ? "is-warm" : "is-cool"}">${PLACE_LABELS[uiLang][place - 1]}</span>`;
     else if (!bottom && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
     else if (!bottom) tag = `<span class="gd-av-tag">${relation.label}</span>`;
-    const chip = !bottom && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
+    // Tencent shows nothing above 10 cards; the exact count is a 记牌器 extra.
+    const chip = jipaiOpen && !bottom && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
     const first = v.leader === i ? `<span class="gd-first">${L("Lead", "首")}</span>` : "";
     setRegion(`deco${pos}`, tag + chip + first);
     const stat = seat?.type === "human" ? seatMemberStat(name) : "";
