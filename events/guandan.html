@@ -1745,13 +1745,19 @@ function saveNickname(input) {
         if (input) input.value = nickname;
         return;
     }
-    if (name === nickname) return;
-    nickname = name;
-    storageSet("picasso.guandan.name", name);
-    updateTopbarStatus();
-    // A seated player re-takes the same seat so the table shows the new name.
-    const seat = mySeat();
-    if (game?.phase === "lobby" && seat >= 0 && game.seats[seat]?.name !== name) takeSeat(seat);
+    if (name !== nickname) {
+        nickname = name;
+        storageSet("picasso.guandan.name", name);
+        updateTopbarStatus();
+    }
+    // A seated player re-takes the same seat so the table shows the new name. It goes through
+    // the room queue, so a seat / start tap that blurred the field waits for it instead of failing.
+    if (document.body.dataset.screen === "room") {
+        queueRoomAction(() => {
+            const seat = mySeat();
+            if (game?.phase === "lobby" && seat >= 0 && game.seats[seat]?.name !== nickname) return takeSeat(seat);
+        });
+    }
 }
 
 function blurNicknameOnEnter(event) {
@@ -2194,31 +2200,49 @@ function openSettings() {
 // ---------- room (好友同玩): the room is a small table with four seat plates ----------
 const roomRegionHTML = new WeakMap();
 
-// Re-render one region only when its markup changed; keep keyboard focus on the same control.
+// Re-render one region only when its markup changed. Keyboard focus stays on the same control,
+// and a name being typed survives the re-render.
 function patchRegion(scope, name, html) {
     const node = scope.querySelector(`[data-region="${name}"]`);
     if (!node || roomRegionHTML.get(node) === html) return;
     const active = node.contains(document.activeElement) ? document.activeElement : null;
     roomRegionHTML.set(node, html);
     node.innerHTML = html;
-    if (!active) return;
-    const again = active.type === "radio"
-        ? node.querySelector(`input[name="${active.name}"]:checked`)
-        : active.id ? node.querySelector(`#${active.id}`) : null;
-    again?.focus({ preventScroll: true });
+    const again = active?.id ? node.querySelector(`#${active.id}`) : null;
+    if (!again) return;
+    if (active.tagName === "INPUT") {
+        again.value = active.value;
+        again.setSelectionRange(active.selectionStart, active.selectionEnd);
+    }
+    again.focus({ preventScroll: true });
 }
 
-function levelOptionsHTML(team, selectedLevel, disabled) {
-    return ranks.map(rank => `<label class="lv-opt"><input type="radio" name="level-team-${team}" value="${rank}"${rank === selectedLevel ? " checked" : ""}${disabled ? " disabled" : ""}><span>${rank}</span></label>`).join("");
+// Room writes run one after another. A tap that lands while another write is in flight (e.g. the
+// rename that blurring the name field just started) waits for it instead of bouncing off
+// withAction's busy lock. `valid` is checked when the action's turn comes.
+let roomQueue = Promise.resolve();
+function queueRoomAction(run, valid = () => true) {
+    roomQueue = roomQueue.then(() => (valid() ? run() : undefined)).catch(err => console.error(err));
+    return roomQueue;
 }
 
-// 起始级牌: one gold radio strip per team; the group keeps the #level-team-N id.
+// 起始级: a gold ‹ N › stepper per team (host only); the group keeps the #level-team-N id.
+// Taps queue up (queueRoomAction), so the arrows stay enabled and keep keyboard focus.
 function levelSetupHTML() {
-    const disabled = !isHost() || actionBusy;
-    return [0, 1].map(team => `<div class="room-row is-level">
-        <span class="room-k"><i class="team-dot t${team}"></i>${teamName(team)}<small>${L("start", "起始级")}</small></span>
-        <div class="room-level" id="level-team-${team}" role="radiogroup" aria-label="${teamName(team)} ${L("start level", "起始级牌")}">${levelOptionsHTML(team, game.levels[team] || "2", disabled)}</div>
-    </div>`).join("");
+    const host = isHost();
+    return [0, 1].map(team => {
+        const level = game.levels[team] || "2";
+        const idx = ranks.indexOf(level);
+        const step = (dir, glyph, label, off) => host
+            ? `<button class="room-step-btn" id="level-${team}-${dir > 0 ? "up" : "down"}" type="button" data-team="${team}" data-step="${dir}" aria-label="${label}"${off ? " disabled" : ""}>${glyph}</button>`
+            : "";
+        return `<div class="room-row is-level">
+            <span class="room-k">${L(`${teamShortName(team)} start`, `${teamShortName(team)}起始`)}</span>
+            <div class="room-step" id="level-team-${team}" role="group" aria-label="${teamName(team)} ${L("start level", "起始级牌")}">
+                ${step(-1, "‹", L("Lower", "降一级"), idx <= 0)}<b class="room-step-v t${team}" aria-live="polite">${encodeHTML(level)}</b>${step(1, "›", L("Higher", "升一级"), idx >= ranks.length - 1)}
+            </div>
+        </div>`;
+    }).join("");
 }
 
 async function updateStartLevel(team, level) {
@@ -2233,28 +2257,37 @@ async function updateStartLevel(team, level) {
     if (!updated) showToast(L("Level setup changed. Please retry.", "级牌设置变化了，请重试。"));
 }
 
+// Steps from the level current when the queued step runs, so quick taps add up.
+function stepStartLevel(team, dir) {
+    const idx = ranks.indexOf(game?.levels?.[team] || "2");
+    const next = ranks[idx + dir];
+    return next ? updateStartLevel(team, next) : undefined;
+}
+
 function roomShellHTML() {
-    const checks = [L("Wild", "逢人配"), L("Tribute", "进贡"), L("Block", "抗贡"), L("Catch-wind", "接风")];
+    const checks = [L("Wild", "逢人配"), L("Catch-wind", "接风")];
     return `
     <section class="room">
         <aside class="room-panel room-settings">
             <h3 class="room-panel-head">${L("Table", "对局设置")}</h3>
             <div class="room-panel-body">
                 <div class="room-levels-setup" data-region="levels"></div>
-                <div class="room-row"><span class="room-k">${L("Goal", "目标")}</span><span class="room-v">${L("Pass A · 3 misses → 2", "过 A · 三次不过回 2")}</span></div>
+                <div class="room-row"><span class="room-k">${L("Goal", "目标")}</span><span class="room-v">${L("Pass A", "过 A")}<small>${L("3 misses → 2", "（3 把不过回 2）")}</small></span></div>
+                <div class="room-row"><span class="room-k">${L("Tribute", "进贡")}</span><span class="room-v">${L("Tribute", "进贡")}<small>${L("two Red Jokers block it", "（双大王抗贡）")}</small></span></div>
+                <div class="room-row"><span class="room-k">${L("Level", "升级")}</span><span class="room-v">${L("1-2 finish +3", "双上升 3 级")}</span></div>
                 <div class="room-row"><span class="room-k">${L("Turn", "出牌时间")}</span><span class="room-v">${L("3 min", "3 分钟")}</span></div>
                 <div class="room-row"><span class="room-k">${L("Rules", "规则")}</span><span class="room-checks">${checks.map(c => `<span class="room-chk">${c}</span>`).join("")}</span></div>
-                <label class="room-row is-nick"><span class="room-k">${L("Name", "昵称")}</span><input id="nick-input" value="${encodeHTML(nickname)}" maxlength="24" autocomplete="nickname" spellcheck="false" placeholder="${L("Your name", "你的名字")}"></label>
                 <div class="room-admin" data-region="admin"></div>
             </div>
         </aside>
         <div class="room-center">
-            <div class="room-table" data-region="table"></div>
+            <div class="room-table"><div class="room-board" data-region="table"></div></div>
             <div class="room-actions" data-region="actions"></div>
         </div>
         <aside class="room-panel room-roster">
             <h3 class="room-panel-head">${L("Lab members", "实验室成员")}</h3>
             <div class="room-roster-list" data-region="roster"></div>
+            <div class="room-roster-foot"><button class="btn ok" type="button" data-room="invite">${L("Invite friends", "邀请好友")}</button></div>
         </aside>
     </section>`;
 }
@@ -2290,22 +2323,33 @@ function bindRoom(el) {
     el.addEventListener("click", event => {
         const btn = event.target.closest("button");
         if (!btn || btn.disabled) return;
+        if (btn.dataset.room === "invite") return copyLinkBtn.click();
+        if (btn.dataset.step) {
+            const team = Number(btn.dataset.team);
+            const dir = Number(btn.dataset.step);
+            return queueRoomAction(() => stepStartLevel(team, dir), () => isHost());
+        }
+        const run = {
+            "start-game": startGame,
+            "fill-ai": fillAISeats,
+            "delete-room": dissolveRoom
+        }[btn.id];
         const seatAction = /^(seat|ai|leave)-(\d)$/.exec(btn.id);
-        if (seatAction) {
+        const action = run || (seatAction && (() => {
             const i = Number(seatAction[2]);
-            if (seatAction[1] === "seat") takeSeat(i);
-            else if (seatAction[1] === "ai") addAI(i);
-            else leaveSeat(i);
-        } else if (btn.id === "start-game") startGame();
-        else if (btn.id === "fill-ai") fillAISeats();
-        else if (btn.id === "delete-room") dissolveRoom();
-        else if (btn.dataset.room === "invite") copyLinkBtn.click();
+            return seatAction[1] === "seat" ? takeSeat(i) : seatAction[1] === "ai" ? addAI(i) : leaveSeat(i);
+        }));
+        if (!action) return;
+        // When its turn comes the control must still be there and enabled (a double tap on
+        // 入座 or 开始游戏 finds it gone and does nothing).
+        const id = btn.id;
+        queueRoomAction(action, () => {
+            const now = document.getElementById(id);
+            return !!now && !now.disabled;
+        });
     });
     el.addEventListener("change", event => {
-        const t = event.target;
-        const level = /^level-team-(\d)$/.exec(t.name || "");
-        if (level) updateStartLevel(Number(level[1]), t.value);
-        else if (t.id === "nick-input") saveNickname(t);
+        if (event.target.id === "nick-input") saveNickname(event.target);
     });
     el.addEventListener("keydown", blurNicknameOnEnter);
 }
@@ -2322,7 +2366,7 @@ function teamShortName(team) {
 
 function roomTableHTML(mine) {
     return `<div class="room-felt">
-            <div class="room-felt-mark"><b>PICASSO ${L("Guandan", "掼蛋")}</b><span>${L(`Classic · level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span></div>
+            <div class="room-felt-mark">PICASSO ${L("Guandan", "掼蛋")} · ${L(`level ${game.currentLevelRank}`, `打${game.currentLevelRank}`)}</div>
             <div class="room-lvs">${[0, 1].map(t => `<span class="room-lv t${t}"><i>${teamShortName(t)}</i><b>${encodeHTML(teamLevelDisplay(t))}</b></span>`).join("")}</div>
         </div>
         ${[0, 1, 2, 3].map(i => seatHTML(i, mine)).join("")}`;
@@ -2350,34 +2394,41 @@ function rosterHTML() {
     }).join("");
 }
 
-// Seat plate: circular avatar with the team ring (蓝队 cyan, 红队 red), a pill label for
-// me / partner / rival / AI, host tag, name plate; empty seats are a "+ 入座" disc.
+// Seat plate around the room table. Ring and pill follow the relation to the viewer (me and my
+// partner cyan, opponents red; an unseated viewer sees the table from seat 1, so 蓝队 cyan);
+// the team is the chip on the name plate. My own name is edited in place (#nick-input).
+// An empty seat is one dashed "+ 入座" disc, with the host's small "AI" badge on it.
 function seatHTML(i, mine) {
     const s = game.seats[i];
     const pos = visualSeatPos(i, mine);
     const team = i % 2;
+    const opp = mine >= 0 ? team !== mine % 2 : team === 1;
     const busy = actionBusy ? " disabled" : "";
     const host = isHost();
-    const plate = name => `<span class="room-seat-plate"><b>${name}</b><em class="team-pill t${team}">${teamShortName(team)}</em></span>`;
     if (!s) {
-        return `<div class="room-seat p${pos} t${team} is-empty">
-            <button class="room-seat-sit" id="seat-${i}" type="button"${busy} aria-label="${L(`Take seat ${i + 1}`, `坐 ${i + 1} 号位`)}"><b>+</b><span>${L("Sit", "入座")}</span></button>
-            ${plate(L(`Seat ${i + 1}`, `${i + 1} 号位`))}
-            ${host ? `<span class="room-seat-acts"><button class="room-mini is-ai" id="ai-${i}" type="button"${busy}>${L("+ AI", "AI 入座")}</button></span>` : ""}
+        return `<div class="room-seat p${pos} is-empty${opp ? " is-opp" : ""}">
+            <button class="room-seat-sit" id="seat-${i}" type="button"${busy} aria-label="${L(`Take seat ${i + 1} (${teamShortName(team)})`, `坐 ${i + 1} 号位（${teamShortName(team)}）`)}"><b>+</b><span>${L("Sit", "入座")}</span></button>
+            ${host ? `<button class="room-seat-ai" id="ai-${i}" type="button"${busy} aria-label="${L(`AI takes seat ${i + 1}`, `AI 入座 ${i + 1} 号位`)}">AI</button>` : ""}
         </div>`;
     }
+    const me = mine === i;
     const name = displaySeatName(s, L(`Seat ${i + 1}`, `${i + 1} 号位`));
     const isAI = s.type === "ai";
     const photo = isAI ? null : seatMemberPhoto(name);
-    const relation = isAI ? "AI" : mine < 0 ? "" : i === mine ? L("Me", "我") : i % 2 === mine % 2 ? L("Partner", "队友") : L("Rival", "对手");
+    const relation = isAI ? "AI" : mine < 0 ? "" : me ? L("Me", "我") : opp ? L("Rival", "对手") : L("Partner", "队友");
     const face = photo
         ? `<img src="${encodeHTML(photo)}" alt="">`
         : `<span class="gd-avatar-initials">${encodeHTML(isAI ? name.charAt(0) : initials(name, String(i + 1)))}</span>`;
-    const canClear = mine === i || host;
-    return `<div class="room-seat p${pos} t${team}${mine === i ? " is-me" : ""}${isAI ? " is-ai" : ""}">
-        <span class="gd-avatar room-seat-av${team ? " is-opp" : ""}">${face}${relation ? `<span class="gd-avatar-tag">${relation}</span>` : ""}${s.host ? `<span class="room-seat-host">${L("Host", "房主")}</span>` : ""}</span>
-        ${plate(encodeHTML(name))}
-        ${canClear ? `<span class="room-seat-acts"><button class="room-mini${mine === i ? "" : " is-danger"}" id="leave-${i}" type="button"${busy}>${mine === i ? L("Leave", "离开") : L("Remove", "移除")}</button></span>` : ""}
+    const nameHTML = me
+        ? `<label class="room-seat-name"><input id="nick-input" value="${encodeHTML(name)}" maxlength="24" autocomplete="nickname" spellcheck="false" aria-label="${L("Your name", "我的昵称")}"><svg class="room-pen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17.2V21h3.8L17.9 9.9l-3.8-3.8L3 17.2Zm17.7-10.1c.4-.4.4-1 0-1.4l-2.4-2.4c-.4-.4-1-.4-1.4 0l-1.8 1.8 3.8 3.8 1.8-1.8Z"/></svg></label>`
+        : `<b>${encodeHTML(name)}</b>`;
+    const canClear = me || host;
+    return `<div class="room-seat p${pos}${opp ? " is-opp" : ""}${me ? " is-me" : ""}${isAI ? " is-ai" : ""}">
+        <span class="gd-avatar room-seat-av${opp ? " is-opp" : ""}">${face}${relation ? `<span class="gd-avatar-tag">${relation}</span>` : ""}${s.host ? `<span class="room-seat-host">${L("Host", "房主")}</span>` : ""}</span>
+        <span class="room-seat-info">
+            <span class="room-seat-plate">${nameHTML}<em class="team-pill t${team}">${teamShortName(team)}</em></span>
+            ${canClear ? `<button class="room-mini${me ? "" : " is-danger"}" id="leave-${i}" type="button"${busy}>${me ? L("Leave", "离开") : L("Remove", "移除")}</button>` : ""}
+        </span>
     </div>`;
 }
 
