@@ -199,6 +199,7 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
     flex-direction: column;
     align-items: center;
     padding: var(--hud-h) calc(34 * var(--lu) + var(--sr)) 0 calc(150 * var(--lu) + var(--sl));
+    overflow-x: clip;
     color: #fff;
 }
 .lobby.is-busy { cursor: progress; }
