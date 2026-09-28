@@ -1863,6 +1863,7 @@ function ensureTableSkeleton() {
                 <div class="gd-hud-right" data-region="hudRight"></div>
                 <div class="gd-jipai-host" data-region="jipai"></div>
                 <div class="gd-deal-host" data-region="deal" aria-hidden="true"></div>
+                <div class="gd-first-host" data-region="firstLead" aria-hidden="true"></div>
                 <div class="bomb-fx" aria-hidden="true"></div>
                 <div class="bomb-banner-slot" aria-hidden="true"></div>
                 <div class="gd-result-host" data-region="result"></div>
@@ -2586,29 +2587,51 @@ function toolsHTML(v) {
         <button class="gd-tool" type="button" data-act="hengpai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="${handMode === "row" ? "M4 5h24v6H4Zm0 8h24v6H4Zm0 8h24v6H4Z" : "M5 4h6v24H5Zm8 0h6v24h-6Zm8 0h6v24h-6Z"}"/></svg>${handMode === "row" ? L("Columns", "竖排") : L("Row", "横排")}</button>`;
 }
 
-// Deal: backs fly from a centre deck to the four seats over DEALING_MS, synced to dealStartedAt
-// (a rejoin mid-deal resumes mid-flight through negative delays); the hand then rises column by
-// column during SORTING_MS. Your hand is never face-up before the deal ends.
+// Deal: backs arc from a centre deck toward the four seats over DEALING_MS, synced to dealStartedAt
+// (a rejoin mid-deal resumes mid-flight through negative delays), each flight shrinking and fading
+// at the seat's inboard edge so no face is covered; the hand then rises column by column during
+// SORTING_MS. One flight stands for two cards. Your hand is never face-up before the deal ends.
+const DEAL_FLIGHTS = DEAL_CARD_COUNT / 2;
 function dealHTML(v) {
     if (v.dealPhase !== "dealing") return "";
     const { w, h } = tableView.layout;
     const ox = w / 2;
     const oy = h * .36;
     const targets = {
-        0: [0, h - HAND_BOTTOM - HAND_CARD_H / 2 - oy],
-        1: [90 - ox, 250 - oy],
-        2: [0, 60 - oy],
-        3: [w - 90 - ox, 250 - oy]
+        0: [0, h - HAND_BOTTOM - HAND_CARD_H * .6 - oy],
+        1: [196 - ox, 250 - oy],
+        2: [0, 172 - oy],
+        3: [w - 196 - ox, 250 - oy]
     };
     const elapsed = Math.max(0, Date.now() - Number(game.dealStartedAt || 0));
-    const gap = (DEALING_MS - 520) / DEAL_CARD_COUNT;
-    const flights = prefersReducedMotion() ? "" : Array.from({ length: DEAL_CARD_COUNT }, (_, idx) => {
+    const gap = (DEALING_MS - 560) / DEAL_FLIGHTS;
+    const back = `<i class="gd-back"><span class="gd-back-emblem">P</span></i>`;
+    const flights = prefersReducedMotion() ? "" : Array.from({ length: DEAL_FLIGHTS }, (_, idx) => {
         const pos = visualSeatPos(idx % 4, v.mine);
         const [tx, ty] = targets[pos];
-        const spread = pos === 0 ? ((idx >> 2) - 13) * 16 : 0;
-        return `<i class="gd-deal-card gd-back" style="--tx:${(tx + spread).toFixed(0)}px;--ty:${ty.toFixed(0)}px;animation-delay:${Math.round(idx * gap - elapsed)}ms"></i>`;
+        const spread = pos === 0 ? ((idx >> 2) - 6.5) * 40 : 0;
+        const tilt = ((idx * 37) % 13) - 6;
+        return `<i class="gd-deal-card" style="--tx:${(tx + spread).toFixed(0)}px;--ty:${ty.toFixed(0)}px;--r:${tilt}deg;animation-delay:${Math.round(idx * gap - elapsed)}ms">${back}</i>`;
     }).join("");
-    return `<div class="gd-deal" style="--deal-left:${Math.round(DEALING_MS - elapsed)}ms"><div class="gd-deck"><i class="gd-back"></i><i class="gd-back"></i><i class="gd-back"><span class="gd-back-emblem">P</span></i></div>${flights}</div>`;
+    return `<div class="gd-deal" style="--deal-left:${Math.round(DEALING_MS - elapsed)}ms"><div class="gd-deck"><i class="gd-back"></i><i class="gd-back"></i>${back}</div>${flights}</div>`;
+}
+
+// 首出 (qqg_result_zoom): when the deal ends, the round-1 starting card pops up at the centre
+// with a warm ribbon, then shrinks into the seat that holds it and leads (which keeps its 首 tag).
+// Keyed by the deal, so a re-render never replays it and a rejoin resumes it in step.
+const FIRST_LEAD_MS = 1500;
+function firstLeadKey(v) {
+    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    if (!game.startingCard || v.dealPhase === "dealing" || v.leader < 0 || since < 0 || since > FIRST_LEAD_MS) return "";
+    return `${dealKey()}:${v.leader}:${uiLang}`;
+}
+function firstLeadHTML(v) {
+    const { w, h } = tableView.layout;
+    const pos = visualSeatPos(v.leader, v.mine);
+    const seat = { 0: [92, h - 50], 1: [90, 240], 2: [w / 2, 58], 3: [w - 90, 240] }[pos];
+    const card = { ...game.startingCard, id: "first-lead" };
+    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
 }
 
 // Round/system messages become short toasts (plays and passes are already visible at the seats).
@@ -2619,7 +2642,7 @@ function maybeToastTableMessage() {
     if (key === tableView.lastMessage) return;
     tableView.lastMessage = key;
     if (first && !dealWindowOpen(game)) return;
-    if (game.phase !== "playing" || !msg || /出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$/.test(msg)) return;
+    if (game.phase !== "playing" || !msg || /出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局开始/.test(msg)) return;
     showToast(displayMessage(msg), 2600);
 }
 
@@ -2666,6 +2689,7 @@ function renderTable() {
     setRegion("spectate", mine < 0 ? `<span>${L("Spectating", "观战中")}</span>` : "");
     setRegion("actions", `${v.canAct}:${v.lead}:${v.noBeat}:${v.passHint}:${uiLang}`, () => actionsHTML(v));
     setRegion("deal", dealPhase === "dealing" ? `deal:${dealKey()}:${Math.round(t.layout.w)}` : "", () => dealHTML(v));
+    setRegion("firstLead", firstLeadKey(v), () => firstLeadHTML(v));
     const result = game.phase === "roundOver" ? "round" : game.phase === "gameOver" ? "game" : "";
     setRegion("result", result ? `${result}:${game.roundNo}:${uiLang}:${isHost()}` : "", result === "round" ? roundOverHTML : result ? gameOverHTML : "");
     refreshSelectionUI();

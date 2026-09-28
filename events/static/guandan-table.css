@@ -629,23 +629,60 @@ body[data-screen="table"] .topbar { display: none; }
 /* ---------- deal ---------- */
 .gd-deal-host { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
 .gd-deal { position: absolute; inset: 0; }
-.gd-deck, .gd-deal-card { position: absolute; left: calc(50% - 32px); top: calc(36% - 43px); }
-.gd-deck { width: 64px; height: 86px; animation: gd-deck-out 260ms ease-in both; animation-delay: calc(var(--deal-left) - 280ms); }
-.gd-deck .gd-back { position: absolute; inset: 0; --cw: 64px; }
+.gd-deck, .gd-deal-card { position: absolute; left: calc(50% - 32px); top: calc(36% - 43px); width: 64px; height: 86px; }
+.gd-deck { animation: gd-deck-out 260ms ease-in both; animation-delay: calc(var(--deal-left) - 280ms); }
+.gd-deck .gd-back, .gd-deal-card .gd-back { position: absolute; inset: 0; --cw: 64px; }
 .gd-deck .gd-back:nth-child(1) { translate: -3px 3px; }
 .gd-deck .gd-back:nth-child(2) { translate: -1.5px 1.5px; }
 @keyframes gd-deck-out { to { opacity: 0; scale: .8; } }
-.gd-deal-card {
-    --cw: 64px;
-    width: 64px; height: 86px;
-    animation: gd-deal-fly 420ms cubic-bezier(.3, .7, .3, 1) both;
-}
-@keyframes gd-deal-fly {
-    0% { opacity: 0; }
+/* each flight: the outer box travels (ease-out), the back arcs up, tilts, then shrinks and fades
+   into the seat's inboard edge over the last 30% */
+.gd-deal-card { animation: gd-deal-go 380ms cubic-bezier(.25, .7, .35, 1) both; }
+.gd-deal-card .gd-back { animation: gd-deal-arc 380ms linear both; animation-delay: inherit; }
+@keyframes gd-deal-go { to { translate: var(--tx) var(--ty); } }
+@keyframes gd-deal-arc {
+    0% { opacity: 0; transform: none; }
     10% { opacity: 1; }
-    80% { opacity: 1; }
-    100% { opacity: 0; translate: var(--tx) var(--ty); scale: .72; }
+    40% { transform: translateY(-24px) rotate(calc(var(--r) * .6)); }
+    70% { opacity: 1; transform: translateY(-8px) rotate(var(--r)) scale(.9); }
+    100% { opacity: 0; transform: rotate(var(--r)) scale(.55); }
 }
+
+/* ---------- 首出: the starting card pops up, then shrinks into the leading seat ---------- */
+.gd-first-host { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
+.gd-first-lead {
+    position: absolute;
+    left: 50%; top: 40%;
+    --card-w: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    translate: -50% -50%;
+    animation: gd-first-lead 1500ms linear both;
+}
+.gd-first-lead .card { box-shadow: 0 10px 24px rgba(0, 30, 26, .45); }
+@keyframes gd-first-lead {
+    0% { opacity: 0; transform: scale(.8); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
+    15% { opacity: 1; transform: none; }
+    78% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.35); }
+}
+.gd-first-ribbon {
+    position: relative;
+    margin-top: -24px;
+    padding: 4px 30px 5px;
+    border-radius: 6px;
+    background: var(--warm-plate);
+    box-shadow: 0 3px 0 rgba(120, 50, 0, .35);
+    color: #fff;
+    font: 900 34px/1.1 var(--font-ui);
+    letter-spacing: .3em;
+    text-indent: .3em;
+    -webkit-text-stroke: 6px rgba(140, 56, 0, .85);
+    paint-order: stroke fill;
+    white-space: nowrap;
+}
+.gd-first-ribbon:lang(en) { letter-spacing: .02em; text-indent: 0; font-size: 26px; }
 
 /* ---------- bomb celebration (minimal; the effects package replaces it) ---------- */
 .gd-stage.bomb-shake { animation: gd-shake 250ms linear; }
