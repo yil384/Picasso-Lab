@@ -404,10 +404,11 @@ body.gdr-modal-open { overflow: hidden; }
 }
 .gdr-mvp::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .07) 0 2px, transparent 2px 14px); }
 .gdr-mvp-art { --art: clamp(124px, calc(var(--gdr-sh) * .33), 190px); grid-area: art; position: relative; width: var(--art); aspect-ratio: 1; }
+/* gold ring drawn inside the circle (dark rim, gold band, photo) */
 .gdr-mvp-av {
     position: absolute; left: 0; bottom: 0; width: 84%; height: 84%;
-    border-radius: 50%; object-fit: cover; background: #c9d2e4;
-    border: 4px solid #ffd766; box-shadow: 0 0 0 2px #8a3a06;
+    padding: 5px; border: 2px solid #8a3a06; border-radius: 50%;
+    object-fit: cover; background: linear-gradient(180deg, #fff3b0 0%, #ffd766 45%, #f2b43c 100%);
 }
 .gdr-mvp-card { --cw: calc(var(--art) * .42); position: absolute; right: 0; top: 0; rotate: 10deg; }
 .gdr-mvp-art.no-card .gdr-mvp-av { left: 8%; bottom: 8%; }
@@ -440,11 +441,13 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-mvp-last > em.win { background: var(--gdr-gold-plate); color: #a3240c; }
 .gdr-mvp-last > em.lose { background: var(--gdr-cell-2); color: var(--gdr-ink-2); }
 .gdr-mvp-last > small { grid-area: txt; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; line-height: 1.4; color: rgba(255, 255, 255, .85); }
+.gdr-page-mvp .gdr-sec { margin: 10px 0 6px; }
 .gdr-chase { flex: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .gdr-chase .gdr-row { min-height: 60px; }
 .gdr-chase .gdr-row-pts { width: 66px; }
 .gdr-chase .gdr-row-pts b { font-size: 27px; }
 .gdr-chase .gdr-row-sub { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; }
+.gdr-chase > .gdr-row:nth-child(n + 3) { display: none; } /* ranks 4-5 only where there is room (.is-tall, .is-port) */
 
 /* ---------- events.html intro: MVP reveal ---------- */
 .gdr-splash {
@@ -467,8 +470,21 @@ body.gdr-modal-open { overflow: hidden; }
     box-shadow: inset 0 0 0 3px #f6c453, inset 0 0 0 5px rgba(90, 36, 0, .55), 0 6px 0 rgba(8, 14, 48, .45);
 }
 .gdr-splash-in > * { flex: none; }
-.gdr-rays { position: absolute; left: 50%; top: 46%; z-index: -2; width: 170%; aspect-ratio: 1; translate: -50% -50%; fill: rgba(255, 236, 170, .11); }
-.gdr-splash-title { font: 400 min(calc(var(--gdr-sh) * .105), calc(var(--gdr-sw) * .15)) var(--gdr-font-display); letter-spacing: .04em; }
+.gdr-rays { position: absolute; left: 50%; top: 46%; z-index: -2; width: 170%; aspect-ratio: 1; translate: -50% -50%; fill: rgba(255, 236, 170, .13); }
+.gdr-splash-in::before { /* the rays fade into the panel colour toward its edge */
+    content: ""; position: absolute; inset: 5px; z-index: -1; border-radius: 9px; /* inside the gold rim */
+    background: radial-gradient(62% 62% at 50% 46%, rgba(36, 58, 160, 0) 30%, rgba(36, 58, 160, .94) 100%);
+}
+/* red ribbon title plate with notched ends (Tencent reward popups) */
+.gdr-splash-plate {
+    display: inline-block;
+    padding: .1em 1.05em .14em;
+    font-size: min(calc(var(--gdr-sh) * .095), calc(var(--gdr-sw) * .13));
+    clip-path: polygon(0 0, 100% 0, calc(100% - .42em) 50%, 100% 100%, 0 100%, .42em 50%);
+    background: linear-gradient(180deg, #ff7b8f 0%, #e8435f 46%, #b8284a 100%);
+    box-shadow: inset 0 .06em 0 rgba(255, 255, 255, .35), inset 0 -.08em 0 rgba(90, 8, 30, .45);
+}
+.gdr-splash-title { font: 400 1em/1 var(--gdr-font-display); letter-spacing: .04em; }
 .gdr-app[lang="en"] .gdr-splash-title { font-family: var(--gdr-font-num); font-weight: 800; letter-spacing: .02em; }
 .gdr-splash .gdr-mvp-art { --art: min(calc(var(--gdr-sh) * .3), calc(var(--gdr-sw) * .5)); }
 .gdr-splash-name { font-size: min(calc(var(--gdr-sh) * .07), calc(var(--gdr-sw) * .08)); line-height: 1.1; }
@@ -543,6 +559,9 @@ body.gdr-modal-open { overflow: hidden; }
 .is-tall .gdr-mnames b { font-size: 15px; }
 .is-tall .gdr-rows .gdr-row { min-height: 74px; }
 .is-tall .gdr-row-name > b { font-size: 16px; }
+/* MVP: the card keeps its 16:9 size (the season MVP's photo is small) and ranks 2-5 fill the rest */
+.is-tall .gdr-mvp-art { --art: clamp(124px, calc(var(--gdr-sh) * .3), 150px); }
+.is-tall .gdr-chase > .gdr-row:nth-child(n + 3) { display: flex; }
 
 /* ---------- portrait phones (.is-port, stage = viewport): tabs across the top, stacked rows ---------- */
 .gdr-app.is-port {
@@ -604,4 +623,5 @@ body.gdr-modal-open { overflow: hidden; }
 .is-port .gdr-mvp-rib > span { flex: 1 1 25%; }
 .is-port .gdr-mvp-rib > .gdr-mvp-last { flex: 1 0 100%; box-shadow: 0 -1px 0 rgba(255, 255, 255, .16); padding: 8px 12px; }
 .is-port .gdr-chase { grid-template-columns: minmax(0, 1fr); }
+.is-port .gdr-chase > .gdr-row:nth-child(n + 3) { display: flex; }
 .is-port .gdr-splash-in { padding: 18px 14px; }

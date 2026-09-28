@@ -340,9 +340,10 @@
     }
 
     // Season MVP, composed like a result screen: framed portrait, name, gold score plate, one stat ribbon.
+    // Ranks 2-5 follow; a 16:9 phone stage shows the first two, taller stages and portrait all four.
     function mvpPage(d) {
         var s = d.mvp, p = P(s.key);
-        var chase = d.board.slice(1, 3).map(chaseCard).join("");
+        var chase = d.board.slice(1, 5).map(chaseCard).join("");
         return '<div class="gdr-mvp">' +
                 mvpArt(s.key) +
                 '<div class="gdr-mvp-id">' +
@@ -399,7 +400,7 @@
         var s = d.mvp, p = P(s.key);
         return '<div class="gdr-splash" role="button" tabindex="-1" aria-label="' + esc(T("跳过", "Skip")) + '">' +
             '<div class="gdr-splash-in">' + RAYS +
-                goldText(T("赛季MVP", "SEASON MVP"), "gdr-splash-title") +
+                '<span class="gdr-splash-plate">' + goldText(T("赛季MVP", "SEASON MVP"), "gdr-splash-title") + '</span>' +
                 mvpArt(s.key) +
                 '<b class="gdr-splash-name">' + esc(p.name) + '</b>' +
                 '<div class="gdr-splash-line">' +
