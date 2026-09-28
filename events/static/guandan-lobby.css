@@ -10,6 +10,8 @@
    ========================================================================== */
 
 html[data-gd-boot="lobby"] { background: #2b3c7c; }
+/* once the lobby or room is up, the page behind it (overscroll) is navy, also on a ?room= link */
+html:has(> body[data-screen="lobby"]), html:has(> body[data-screen="room"]) { background: #223066; }
 
 body[data-screen="lobby"],
 body[data-screen="room"],
@@ -64,6 +66,7 @@ html[data-gd-boot="lobby"] body:not([data-screen]) {
 body:not([data-screen]) .topbar { visibility: hidden; }
 .hud-status { order: 1; display: flex; align-items: center; min-width: 0; }
 .hud-btn {
+    position: relative;
     flex: none;
     display: inline-flex;
     flex-direction: column;
@@ -213,17 +216,28 @@ body[data-screen="room"] #hud-rules-btn { order: 3; }
 body[data-screen="room"] #hud-records-btn { order: 4; }
 body[data-screen="room"] #lang-toggle { order: 5; margin-left: auto; }
 body[data-screen="room"] #back-events-btn { display: none; }
+/* dark chips drawn at their design height (--chip-h); the button box keeps the --tap target */
 body[data-screen="room"] .hud-chip {
+    --chip-h: calc(42 * var(--lu));
     flex-direction: row;
     gap: calc(6 * var(--lu));
     min-width: 0;
-    height: max(var(--tap), calc(42 * var(--lu)));
+    height: max(var(--tap), var(--chip-h));
     padding: 0 calc(18 * var(--lu)) 0 calc(13 * var(--lu));
-    border-radius: calc(21 * var(--lu));
-    background: rgba(10, 18, 60, .45);
     color: #e6eeff;
     font-size: max(var(--fs-min) * 1.2, calc(21 * var(--lu)));
     text-shadow: none;
+    isolation: isolate;
+}
+body[data-screen="room"] .hud-chip::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 0; right: 0; top: 50%;
+    height: var(--chip-h);
+    translate: 0 -50%;
+    border-radius: calc(var(--chip-h) / 2);
+    background: rgba(10, 18, 60, .45);
 }
 body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height: calc(24 * var(--lu)); filter: none; }
 .hud-title { display: flex; align-items: baseline; gap: calc(16 * var(--lu)); margin-right: calc(10 * var(--lu)); white-space: nowrap; }
@@ -233,7 +247,7 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 
 @media (hover: hover) {
     .hud-btn:hover .hud-ic { translate: 0 calc(-1 * var(--lu)); }
-    body[data-screen="room"] .hud-chip:hover { background: rgba(10, 18, 60, .6); }
+    body[data-screen="room"] .hud-chip:hover::before { background: rgba(10, 18, 60, .6); }
 }
 
 /* ---------- lobby ---------- */
@@ -712,8 +726,6 @@ html[lang="en"] .tile-tag { writing-mode: horizontal-tb; bottom: auto; top: calc
     height: 100dvh;
     padding: calc(var(--hud-h) + 4 * var(--lu)) calc(26 * var(--lu) + var(--sr)) calc(18 * var(--lu)) calc(26 * var(--lu) + var(--sl));
 }
-/* 房间已创建 and other room toasts: top centre, clear of the table */
-body[data-screen="room"] .toast { top: calc(var(--hud-h) + 24 * var(--lu)); }
 .room-panel {
     display: flex;
     flex-direction: column;
@@ -724,6 +736,8 @@ body[data-screen="room"] .toast { top: calc(var(--hud-h) + 24 * var(--lu)); }
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), 0 calc(6 * var(--ru)) calc(18 * var(--ru)) rgba(0, 0, 30, .35);
     color: var(--ink);
 }
+/* the settings panel ends after its last row */
+.room-settings { align-self: start; max-height: 100%; }
 .room-panel-head {
     flex: none;
     margin: 0;
@@ -741,14 +755,14 @@ body[data-screen="room"] .toast { top: calc(var(--hud-h) + 24 * var(--lu)); }
     display: flex;
     align-items: center;
     gap: calc(14 * var(--ru));
-    min-height: calc(68 * var(--ru));
+    min-height: calc(64 * var(--ru));
     padding: calc(6 * var(--ru)) calc(18 * var(--ru));
     border-bottom: 1px solid var(--panel-line);
 }
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
-    /* the panel fits without scrolling: rows tighten and the notes (also in 玩法规则) drop */
+    /* the panel fits without scrolling: rows tighten, the notes (also in 玩法规则) and the extra rows drop */
     .room-row { min-height: calc(50 * var(--ru)); padding-top: calc(4 * var(--ru)); padding-bottom: calc(4 * var(--ru)); }
-    .room-v small { display: none; }
+    .room-v small, .room-row.is-extra { display: none; }
     .room-felt-mark { display: none; }
     .room { padding-bottom: calc(8 * var(--lu)); }
     .room-panel-head { height: calc(44 * var(--ru)); line-height: calc(44 * var(--ru)); }
@@ -786,26 +800,41 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
         linear-gradient(180deg, #ffe27a, #f6b92a);
     box-shadow: inset 0 0 0 1px #d99a0c;
 }
-.room-row.is-level { justify-content: space-between; }
-.room-row.is-level .room-k { white-space: nowrap; }
-/* 起始级: gold ‹ N › stepper */
-.room-step { display: flex; align-items: center; gap: calc(6 * var(--ru)); }
+.room-row.is-level { min-height: max(var(--tap), calc(64 * var(--ru))); }
+.room-row.is-level .room-k { width: auto; white-space: nowrap; }
+/* 起始级: gold ‹ N › stepper. Discs are drawn at their design size; the button box keeps the
+   --tap target and its side margins give the extra width back to the row. */
+.room-step { --d: calc(44 * var(--ru)); display: flex; align-items: center; gap: calc(6 * var(--ru)); margin-left: auto; }
 .room-step-btn {
+    position: relative;
     display: grid;
     place-items: center;
-    width: max(var(--tap), calc(44 * var(--ru)));
-    height: max(var(--tap), calc(44 * var(--ru)));
+    width: max(var(--tap), var(--d));
+    height: max(var(--tap), var(--d));
+    margin: 0 calc((var(--d) - max(var(--tap), var(--d))) / 2);
     padding: 0 0 calc(4 * var(--ru));
     border: 0;
+    background: none;
+    color: #7a3a00;
+    font: 900 calc(34 * var(--ru))/1 var(--font-ui);
+    isolation: isolate;
+    transition: translate var(--dur-fast) var(--ease-out);
+}
+.room-step-btn::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 50%; top: 50%;
+    width: var(--d);
+    height: var(--d);
+    translate: -50% -50%;
     border-radius: 50%;
     background: radial-gradient(circle at 50% 30%, #fff3b0 0%, #fcc83a 60%, #e0a21c 100%);
     box-shadow: inset 0 calc(-3 * var(--ru)) 0 rgba(160, 90, 0, .35), 0 calc(2 * var(--ru)) 0 #b87818;
-    color: #7a3a00;
-    font: 900 calc(34 * var(--ru))/1 var(--font-ui);
-    transition: translate var(--dur-fast) var(--ease-out);
 }
 .room-step-btn:active:not(:disabled) { translate: 0 calc(2 * var(--ru)); }
-.room-step-btn:disabled { background: var(--radio-off); box-shadow: none; color: rgba(255, 255, 255, .8); }
+.room-step-btn:disabled { color: rgba(255, 255, 255, .8); }
+.room-step-btn:disabled::before { background: var(--radio-off); box-shadow: none; }
 .room-step-v {
     display: grid;
     place-items: center;
@@ -830,24 +859,34 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 }
 .room-dissolve:disabled { opacity: .5; }
 
-/* centre: the room table, a wide landscape felt (1.7:1) with the seats around its edge */
+/* centre: the room table, a wide landscape felt (1.7:1) with the seats around its edge and the
+   action row right under the seat ring; the whole group is centred in the column. */
 .room-center { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.room-table { position: relative; flex: 1; min-height: 0; container-type: size; }
-.room-board {
+.room-table {
     --seat-av: calc(78 * var(--lu));
     --in: calc(20 * var(--lu));                          /* how far a seat avatar sits on the felt */
+    --in-top: var(--in);                                 /* the same for the partner's seat above */
     --plate-h: calc(30 * var(--lu));
-    --btn-h: max(var(--tap), calc(36 * var(--lu)));
-    --info-h: calc(var(--plate-h) + 6 * var(--lu) + var(--btn-h));
-    --side: calc(96 * var(--lu));                        /* a side seat reaches this far past the felt edge */
-    --vt: calc(var(--seat-av) - var(--in) + max(0px, (var(--info-h) - var(--seat-av)) / 2));
-    --vb: calc(var(--seat-av) - var(--in) + 8 * var(--lu) + max(var(--plate-h), var(--btn-h)));
+    --plate-gap: calc(14 * var(--lu));                   /* avatar to name plate, clear of the pill */
+    --side: calc(96 * var(--lu));                        /* a side seat reaches this far past the felt */
+    --edge: calc(24 * var(--lu));                        /* a side avatar's inner edge sits this far on the felt */
+    --act-h: calc(84 * var(--lu));
+    --vt: calc(var(--seat-av) - var(--in-top));
+    --vb: calc(var(--seat-av) - var(--in) + var(--plate-gap) + var(--plate-h));
+    /* felt width and top, resolved by the children against this container */
+    --bw: min(calc(100cqw - 2 * var(--side)), calc((100cqh - var(--vt) - var(--vb) - var(--act-h)) * 1.7));
+    --top: calc((100cqh - var(--vt) - var(--bw) / 1.7 - var(--vb) - var(--act-h)) / 2 + var(--vt));
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    container-type: size;
+}
+.room-board {
     position: absolute;
     left: 50%;
-    top: calc(var(--vt) + (100cqh - var(--vt) - var(--vb)) / 2);
-    translate: -50% -50%;
-    width: 60%;
-    width: min(calc(100cqw - 2 * var(--side)), calc((100cqh - var(--vt) - var(--vb)) * 1.7));
+    top: var(--top);
+    translate: -50% 0;
+    width: var(--bw);
     aspect-ratio: 1.7;
 }
 .room-felt {
@@ -885,16 +924,25 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 .room-lv b { color: var(--ink); font: 900 calc(36 * var(--lu))/calc(44 * var(--lu)) var(--font-rank); font-stretch: 62.5%; }
 .room-lv.t1 b { color: var(--card-red); }
 
-/* seats, all outside the felt: p2 = partner above (avatar centred, plate and button to its
-   right), p0 = me below (avatar centred, plate and button in a row under it), p1 / p3 =
-   rivals on the left / right edge a little above the middle (Tencent's opponent height). */
-.room-seat { position: absolute; display: flex; align-items: center; gap: calc(10 * var(--lu)); width: max-content; }
-.room-seat.p2 { left: 50%; bottom: calc(100% - var(--in)); margin-left: calc(var(--seat-av) / -2); }
-.room-seat.p0 { left: 50%; top: calc(100% - var(--in)); translate: -50% 0; flex-direction: column; gap: calc(8 * var(--lu)); }
-.room-seat.p1, .room-seat.p3 { top: calc(40% - var(--seat-av) / 2); flex-direction: column; gap: calc(8 * var(--lu)); }
-.room-seat.p1 { right: calc(100% - 24 * var(--lu)); align-items: flex-end; }
-.room-seat.p3 { left: calc(100% - 24 * var(--lu)); align-items: flex-start; }
-.room-seat-av { --av-size: var(--seat-av); border-width: calc(3 * var(--lu)); box-shadow: 0 calc(3 * var(--lu)) calc(6 * var(--lu)) rgba(0, 0, 30, .35); }
+/* seats, one layout for all four: the avatar, the name plate under it. p2 = partner above the
+   felt, p0 = me below it, p1 / p3 = rivals on the left / right edge a little above the middle
+   (Tencent's opponent height). A seat is placed by its avatar's centre. */
+.room-seat {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--plate-gap);
+    width: max-content;
+    translate: -50% 0;
+}
+.room-seat.p2 { left: 50%; top: calc(var(--in-top) - var(--seat-av)); }
+.room-seat.p0 { left: 50%; top: calc(100% - var(--in)); }
+.room-seat.p1, .room-seat.p3 { top: calc(40% - var(--seat-av) / 2); }
+.room-seat.p1 { left: calc(var(--edge) - var(--seat-av) / 2); }
+.room-seat.p3 { left: calc(100% - var(--edge) + var(--seat-av) / 2); }
+.room-seat-disc { position: relative; flex: none; width: var(--seat-av); height: var(--seat-av); }
+.room-seat-av { --av-size: var(--seat-av); display: block; border-width: calc(3 * var(--lu)); }
 .room-seat-av .gd-avatar-tag {
     height: max(calc(var(--fs-min) * 1.6), calc(22 * var(--lu)));
     bottom: calc(-10 * var(--lu));
@@ -914,23 +962,21 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     font: 900 max(var(--fs-min), calc(14 * var(--lu)))/1.5 var(--font-ui);
     white-space: nowrap;
 }
-.room-seat-info { display: flex; flex-direction: column; align-items: inherit; gap: calc(6 * var(--lu)); min-width: 0; }
-.room-seat.p2 .room-seat-info { align-items: flex-start; }
-.room-seat.p0 .room-seat-info { flex-direction: row; align-items: center; gap: calc(8 * var(--lu)); }
+/* dark name plate: name and team chip on one line, the name ellipsized */
 .room-seat-plate {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: calc(4 * var(--lu)) calc(6 * var(--lu));
-    max-width: calc(200 * var(--lu));
-    min-height: var(--plate-h);
-    padding: calc(2 * var(--lu)) calc(9 * var(--lu));
+    gap: calc(6 * var(--lu));
+    max-width: calc(210 * var(--lu));
+    height: var(--plate-h);
+    padding: 0 calc(8 * var(--lu)) 0 calc(10 * var(--lu));
     border-radius: calc(4 * var(--lu));
     background: rgba(0, 0, 0, .28);
     color: #fff;
+    white-space: nowrap;
 }
-.room-seat.p1 .room-seat-plate, .room-seat.p3 .room-seat-plate { flex-direction: column; gap: calc(2 * var(--lu)); max-width: calc(120 * var(--lu)); padding-bottom: calc(5 * var(--lu)); }
-.room-seat-plate > b { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 calc(19 * var(--lu))/1.35 var(--font-ui); }
+.room-seat.p1 .room-seat-plate, .room-seat.p3 .room-seat-plate { max-width: calc(2 * (var(--side) + var(--edge)) - var(--seat-av)); }
+.room-seat-plate > b { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 700 calc(19 * var(--lu))/1.2 var(--font-ui); }
 .team-pill {
     flex: none;
     padding: 0 calc(5 * var(--lu));
@@ -939,15 +985,15 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     color: #fff;
     font: 800 max(var(--fs-min), calc(14 * var(--lu)))/1.45 var(--font-ui);
     font-style: normal;
-    white-space: nowrap;
 }
 .team-pill.t1 { background: #d8433c; }
-/* my own name, edited in place */
+/* my own name, edited in place: plain text on the plate until the field is focused */
 .room-seat-name { position: relative; display: flex; align-items: center; min-width: 0; cursor: text; }
 .room-seat-name input {
-    width: calc(128 * var(--lu));
-    height: max(var(--tap), calc(28 * var(--lu)));
-    margin: min(0px, calc((28 * var(--lu) - var(--tap)) / 2)) 0;
+    width: 6em;
+    max-width: 6.5em;
+    height: max(var(--tap), var(--plate-h));
+    margin: min(0px, calc((var(--plate-h) - var(--tap)) / 2)) 0;
     padding: 0 calc(20 * var(--lu)) 0 0;
     border: 0;
     border-bottom: calc(2 * var(--lu)) solid transparent;
@@ -957,11 +1003,13 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     text-overflow: ellipsis;
     outline: none;
 }
+@supports (field-sizing: content) {
+    .room-seat-name input { width: auto; min-width: 3em; field-sizing: content; }
+}
 .room-seat-name input:focus { border-bottom-color: rgba(255, 255, 255, .75); }
-.room-pen { position: absolute; right: 0; width: calc(15 * var(--lu)); height: calc(15 * var(--lu)); fill: rgba(255, 255, 255, .65); pointer-events: none; }
+.room-pen { position: absolute; right: calc(2 * var(--lu)); width: calc(14 * var(--lu)); height: calc(14 * var(--lu)); fill: rgba(255, 255, 255, .6); pointer-events: none; }
 .room-seat-name input:focus + .room-pen { opacity: 0; }
-.room-seat.is-me .room-seat-plate { box-shadow: inset 0 0 0 calc(2 * var(--lu)) rgba(28, 180, 228, .85); }
-/* empty seat: one dashed + disc, ring colour = relation; the host's AI badge on its corner */
+/* empty seat: one dashed + disc, ring colour = relation */
 .room-seat.is-empty { --ring: var(--mate); }
 .room-seat.is-empty.is-opp { --ring: var(--opp); }
 .room-seat-sit {
@@ -969,8 +1017,8 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: var(--seat-av);
-    height: var(--seat-av);
+    width: 100%;
+    height: 100%;
     padding: 0;
     border: calc(3 * var(--lu)) dashed var(--ring);
     border-radius: 50%;
@@ -981,53 +1029,71 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 .room-seat-sit b { font: 300 calc(40 * var(--lu))/.8 var(--font-ui); }
 .room-seat-sit span { font: 800 max(var(--fs-min), calc(15 * var(--lu)))/1.2 var(--font-ui); }
 .room-seat-sit:active:not(:disabled) { scale: .95; }
-.room-seat-ai {
-    --ai: max(var(--tap), calc(36 * var(--lu)));
+/* small round badges on a seat disc (the host's AI add, × remove / leave): drawn at 40% of the
+   disc, just outside its ring; the button box keeps the --tap target and grows away from the
+   disc, so it never covers 入座 or the portrait. */
+.room-badge {
+    --v: calc(var(--seat-av) * .4);
+    --hit: max(var(--tap), var(--v));
     position: absolute;
-    right: calc(16 * var(--lu) - var(--ai));  /* overlaps the disc's corner by 16 design px */
-    bottom: calc(-6 * var(--lu));
-    display: grid;
-    place-items: center;
-    width: var(--ai);
-    height: var(--ai);
+    z-index: 1;
+    width: var(--hit);
+    height: var(--hit);
     padding: 0;
+    border: 0;
+    background: none;
+    color: #fff;
+    isolation: isolate;
+    transition: translate var(--dur-fast) var(--ease-out);
+}
+.room-badge::before, .room-badge > * { position: absolute; width: var(--v); height: var(--v); }
+.room-badge::before {
+    content: "";
+    z-index: -1;
+    box-sizing: border-box;
     border: calc(2 * var(--lu)) solid #fff;
     border-radius: 50%;
     background: linear-gradient(180deg, #8aebfe, #739cfb);
     box-shadow: 0 calc(2 * var(--lu)) 0 var(--sec-edge);
-    color: #fff;
-    font: 900 max(var(--fs-min) * 1.1, calc(15 * var(--lu)))/1 var(--font-num);
-    text-shadow: 0 1px 0 rgba(20, 60, 160, .6);
 }
-.room-seat.p1 .room-seat-ai { right: auto; left: calc(16 * var(--lu) - var(--ai)); }
-.room-seat-ai:active:not(:disabled) { translate: 0 calc(2 * var(--lu)); }
-.room-mini {
-    min-width: calc(76 * var(--lu));
-    height: var(--btn-h);
-    padding: 0 calc(16 * var(--lu));
-    border: 0;
-    border-radius: calc(17 * var(--lu));
-    background: var(--util-bg);
-    box-shadow: inset 0 calc(1 * var(--lu)) 0 rgba(255, 255, 255, .45), 0 calc(2 * var(--lu)) 0 var(--util-edge);
-    color: #fff;
-    font: 800 max(var(--fs-min) * 1.2, calc(17 * var(--lu)))/1 var(--font-ui);
-    white-space: nowrap;
-    transition: translate var(--dur-fast) var(--ease-out);
-}
-.room-mini:active:not(:disabled) { translate: 0 calc(2 * var(--lu)); }
-.room-mini.is-danger { background: linear-gradient(180deg, #ff9a8a, #d8433c); box-shadow: inset 0 calc(1 * var(--lu)) 0 rgba(255, 255, 255, .4), 0 calc(2 * var(--lu)) 0 var(--danger-edge); }
-.room-mini:disabled, .room-seat-sit:disabled, .room-seat-ai:disabled { opacity: .55; }
+.room-badge > span { display: grid; place-items: center; font: 900 max(var(--fs-min), calc(var(--v) * .44))/1 var(--font-num); text-shadow: 0 1px 0 rgba(20, 60, 160, .6); }
+.room-badge > .gd-glyph { box-sizing: border-box; padding: calc(var(--v) * .3); }
+/* AI: lower right of the disc (lower left on the left seat) */
+.room-badge.is-ai { left: calc(var(--seat-av) * .78); top: calc(var(--seat-av) * .7); }
+.room-badge.is-ai::before, .room-badge.is-ai > * { left: 0; top: 0; }
+.room-seat.p1 .room-badge.is-ai { left: auto; right: calc(var(--seat-av) * .78); }
+.room-seat.p1 .room-badge.is-ai::before, .room-seat.p1 .room-badge.is-ai > * { left: auto; right: 0; }
+/* × remove / leave: upper right of the avatar */
+.room-badge.is-remove, .room-badge.is-leave { left: calc(var(--seat-av) * .65); bottom: calc(var(--seat-av) * .65); }
+.room-badge.is-remove::before, .room-badge.is-remove > *, .room-badge.is-leave::before, .room-badge.is-leave > * { left: 0; bottom: 0; }
+.room-badge.is-remove::before { background: linear-gradient(180deg, #ff9a8a, #d8433c); box-shadow: 0 calc(2 * var(--lu)) 0 var(--danger-edge); }
+.room-badge.is-leave::before { background: var(--util-bg); box-shadow: 0 calc(2 * var(--lu)) 0 var(--util-edge); }
+.room-badge:active:not(:disabled) { translate: 0 calc(2 * var(--lu)); }
+.room-seat-sit:disabled, .room-badge:disabled { opacity: .55; }
 
 .room-actions {
-    flex: none;
+    position: absolute;
+    left: 0; right: 0;
+    top: calc(var(--top) + var(--bw) / 1.7 + var(--vb));
     display: flex;
     align-items: center;
     justify-content: center;
     gap: calc(24 * var(--lu));
-    height: calc(84 * var(--lu));
+    height: var(--act-h);
 }
 .room-actions .btn { --btn-h: max(var(--tap), calc(56 * var(--lu))); --btn-fs: calc(23 * var(--lu)); --btn-px: calc(28 * var(--lu)); --btn-minw: calc(168 * var(--lu)); }
 .room-actions .btn.lg { --btn-h: max(var(--tap), calc(64 * var(--lu))); --btn-fs: calc(28 * var(--lu)); --btn-px: calc(40 * var(--lu)); --btn-minw: calc(236 * var(--lu)); }
+/* a guest's waiting caption (the disabled #start-game) */
+.room-wait {
+    min-height: max(var(--tap), calc(46 * var(--lu)));
+    padding: 0 calc(30 * var(--lu));
+    border: 0;
+    border-radius: calc(23 * var(--lu));
+    background: rgba(10, 18, 60, .45);
+    color: #e6eeff;
+    font: 800 calc(22 * var(--lu))/1 var(--font-ui);
+    white-space: nowrap;
+}
 
 /* right: 实验室成员 (periwinkle panel, white rows, green 邀请, 邀请好友 at the bottom) */
 .room-roster { background: linear-gradient(180deg, rgba(128, 148, 242, .95), rgba(78, 98, 196, .92)); }
@@ -1037,36 +1103,54 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     flex: none;
     display: flex;
     align-items: center;
-    gap: calc(10 * var(--ru));
-    padding: calc(7 * var(--ru)) calc(8 * var(--ru));
+    gap: calc(8 * var(--ru));
+    padding: calc(8 * var(--ru)) calc(8 * var(--ru));
     border-radius: calc(5 * var(--ru));
     background: rgba(255, 255, 255, .92);
 }
-.roster-av { --av-size: calc(48 * var(--ru)); --ring: #dfe6f4; }
+.roster-av { --av-size: calc(40 * var(--ru)); --ring: #dfe6f4; }
 .roster-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.roster-name b { overflow: hidden; color: var(--ink); font: 800 calc(20 * var(--ru))/1.25 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.roster-name b { overflow: hidden; color: var(--ink); font: 800 calc(18 * var(--ru))/1.25 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
 .roster-name small { overflow: hidden; color: var(--ink-3); font: 500 max(var(--fs-min), calc(14 * var(--ru)))/1.3 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
 .roster-name small i { color: var(--card-black); font: 700 max(var(--fs-min), calc(15 * var(--ru)))/1 var(--font-num); font-style: normal; }
 .roster-name small i.is-red { color: var(--card-red); }
+/* green 邀请 pill drawn at 60 x 32 design px; the box keeps the --tap target */
 .roster-invite {
+    --h: calc(32 * var(--ru));
+    position: relative;
     flex: none;
-    height: max(var(--tap), calc(38 * var(--ru)));
-    padding: 0 calc(12 * var(--ru)) 0 calc(15 * var(--ru));
+    min-width: max(var(--tap), calc(60 * var(--ru)));
+    height: max(var(--tap), var(--h));
+    margin: calc((var(--h) - max(var(--tap), var(--h))) / 2) 0;
+    padding: 0 calc(10 * var(--ru)) 0 calc(12 * var(--ru));
     border: 0;
-    border-radius: calc(19 * var(--ru));
-    background: linear-gradient(180deg, #7ff0a8, #2fb865);
-    box-shadow: inset 0 calc(1 * var(--ru)) 0 rgba(255, 255, 255, .5), 0 calc(2 * var(--ru)) 0 var(--ok-edge);
+    background: none;
     color: #fff;
-    font: 800 max(var(--fs-min) * 1.2, calc(18 * var(--ru)))/1 var(--font-ui);
-    letter-spacing: .2em;
+    font: 800 max(var(--fs-min), calc(17 * var(--ru)))/1 var(--font-ui);
+    letter-spacing: .15em;
     text-shadow: 0 1px 0 rgba(0, 90, 40, .5);
+    isolation: isolate;
     transition: translate var(--dur-fast) var(--ease-out);
 }
+.roster-invite::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 0; right: 0; top: 50%;
+    height: var(--h);
+    translate: 0 -50%;
+    border-radius: calc(var(--h) / 2);
+    background: linear-gradient(180deg, #7ff0a8, #2fb865);
+    box-shadow: inset 0 calc(1 * var(--ru)) 0 rgba(255, 255, 255, .5), 0 calc(2 * var(--ru)) 0 var(--ok-edge);
+}
 .roster-invite:active { translate: 0 calc(2 * var(--ru)); }
-html[lang="en"] .roster-invite { letter-spacing: .02em; }
 .roster-in { flex: none; color: var(--ink-3); font: 700 max(var(--fs-min) * 1.1, calc(16 * var(--ru)))/1 var(--font-ui); }
 .room-roster-foot { flex: none; display: flex; justify-content: center; padding: calc(10 * var(--ru)) calc(8 * var(--ru)) calc(14 * var(--ru)); }
 .room-roster-foot .btn { --btn-h: max(var(--tap), calc(54 * var(--ru))); --btn-fs: calc(22 * var(--ru)); --btn-px: calc(26 * var(--ru)); --btn-minw: calc(176 * var(--ru)); }
+
+/* English: no letter-spaced labels */
+html[lang="en"] :is(.hud-title b, .room-panel-head, .room-felt-mark, .roster-invite, .lobby-quick b) { letter-spacing: 0; }
+html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --btn-ls: 0em; }
 
 /* ---------- portrait phones: vertical layout, same components, no rotation ---------- */
 @media (max-aspect-ratio: 1/1) {
@@ -1097,7 +1181,7 @@ html[lang="en"] .roster-invite { letter-spacing: .02em; }
     .hud-stat { height: calc(30 * var(--lu)); min-width: calc(96 * var(--lu)); padding: 0 calc(12 * var(--lu)) 0 calc(38 * var(--lu)); font-size: calc(20 * var(--lu)); }
     .hud-stat i { width: calc(34 * var(--lu)); height: calc(34 * var(--lu)); font-size: max(var(--fs-min), calc(15 * var(--lu))); }
     body[data-screen="room"] #new-room-btn .hud-ic { width: calc(34 * var(--lu)); height: calc(34 * var(--lu)); }
-    body[data-screen="room"] .hud-chip { order: 10; height: max(var(--tap), calc(34 * var(--lu))); font-size: max(var(--fs-min) * 1.2, calc(15 * var(--lu))); }
+    body[data-screen="room"] .hud-chip { --chip-h: calc(34 * var(--lu)); order: 10; font-size: max(var(--fs-min) * 1.2, calc(15 * var(--lu))); }
     body[data-screen="room"] #copy-link-btn { order: 10; }
     body[data-screen="room"] #hud-rules-btn { order: 11; }
     body[data-screen="room"] #hud-records-btn { order: 12; }
@@ -1164,21 +1248,26 @@ html[lang="en"] .roster-invite { letter-spacing: .02em; }
         padding: calc(6 * var(--lu)) calc(12 * var(--lu) + var(--sr)) calc(24 * var(--lu) + env(safe-area-inset-bottom, 0px)) calc(12 * var(--lu) + var(--sl));
     }
     .room { --ru: calc(var(--lu) * .82); }
-    body[data-screen="room"] .toast { top: 20%; }
+    /* room toasts (房间已创建 …) over the felt's centre, like Tencent's centre toast */
+    body[data-screen="room"] .toast { top: calc(213 * var(--lu) + max(var(--tap), 34 * var(--lu))); }
     .room-center { order: -1; }
-    .room-table { flex: none; height: calc(330 * var(--lu)); }
-    .room-board { --seat-av: calc(56 * var(--lu)); --in: calc(14 * var(--lu)); --plate-h: calc(26 * var(--lu)); --side: calc(62 * var(--lu)); }
-    .room-seat.p1 { right: calc(100% - 30 * var(--lu)); }
-    .room-seat.p3 { left: calc(100% - 30 * var(--lu)); }
-    .room-seat.p1 .room-seat-plate, .room-seat.p3 .room-seat-plate { max-width: calc(92 * var(--lu)); }
+    .room-settings { align-self: stretch; max-height: none; }
+    /* the table is as tall as the seat ring and the action row need at the full width */
+    .room-table {
+        /* the partner sits just above the short felt, so the plate under it clears the level tiles */
+        --seat-av: calc(56 * var(--lu)); --in: calc(14 * var(--lu)); --in-top: 0px; --plate-h: calc(26 * var(--lu)); --plate-gap: calc(12 * var(--lu));
+        --side: calc(64 * var(--lu)); --edge: calc(30 * var(--lu)); --act-h: calc(72 * var(--lu));
+        flex: none;
+        height: calc(var(--vt) + (100vw - 24 * var(--lu) - var(--sl) - var(--sr) - 2 * var(--side)) / 1.7 + var(--vb) + var(--act-h) + 8 * var(--lu));
+    }
     .room-seat-plate > b, .room-seat-name input { font-size: calc(15 * var(--lu)); }
-    .room-seat-name input { width: calc(104 * var(--lu)); }
     .room-seat-sit b { font-size: calc(30 * var(--lu)); }
     .room-felt-mark { display: none; }
     .room-lvs { gap: calc(8 * var(--lu)); }
-    .room-lv { width: calc(50 * var(--lu)); }
-    .room-lv b { font-size: calc(28 * var(--lu)); line-height: calc(34 * var(--lu)); }
-    .room-actions { height: calc(72 * var(--lu)); gap: calc(16 * var(--lu)); }
+    .room-lv { width: calc(46 * var(--lu)); }
+    .room-lv i { line-height: calc(20 * var(--lu)); }
+    .room-lv b { font-size: calc(26 * var(--lu)); line-height: calc(30 * var(--lu)); }
+    .room-actions { gap: calc(16 * var(--lu)); }
     .room-actions .btn { --btn-h: max(var(--tap), calc(50 * var(--lu))); --btn-fs: calc(21 * var(--lu)); --btn-px: calc(18 * var(--lu)); --btn-minw: calc(120 * var(--lu)); }
     .room-actions .btn.lg { --btn-h: max(var(--tap), calc(56 * var(--lu))); --btn-fs: calc(24 * var(--lu)); --btn-px: calc(26 * var(--lu)); --btn-minw: calc(190 * var(--lu)); }
     .room-row { min-height: calc(60 * var(--ru)); }
