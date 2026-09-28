@@ -1806,6 +1806,13 @@ function labTileArtHTML() {
     return `<span class="tile-art lab-art">${faces}</span>${keys.length ? `<span class="tile-bubble">${L(`${keys.length} members`, `${keys.length} 位成员`)}</span>` : ""}`;
 }
 
+// 好友房: a mini room table, three labmates seated and one open "+" seat.
+function friendsTileArtHTML() {
+    const PL = labPlayers();
+    const seated = labMemberKeys().slice(8, 11).map((k, i) => `<span class="gd-avatar is-plain mini-seat s${i}"><img src="${encodeHTML(PL[k].avatar)}" alt="" loading="lazy"></span>`).join("");
+    return `<span class="tile-art mini-table" aria-hidden="true"><span class="mini-felt">PICASSO</span>${seated}<i class="mini-seat s3">+</i></span>`;
+}
+
 function lobbyTilesHTML() {
     const straight = ["5♥", "6♥", "7♥", "8♥", "9♥"].map((c, i) => cardHTML(signatureCard(c, `pr${i}`), true)).join("");
     return `
@@ -1835,7 +1842,7 @@ function lobbyTilesHTML() {
             <b class="tile-title">${L("Join Room", "加入房间")}</b>
         </div>
         <button class="lobby-tile is-friends" type="button" data-lobby="friends" aria-label="${L("Create a room and copy the invite link", "创建房间并复制邀请链接")}">
-            <span class="tile-art mini-table" aria-hidden="true"><span class="mini-felt">${cardHTML({ back: true }, true)}</span><i class="mini-seat s0"></i><i class="mini-seat s1"></i><i class="mini-seat s2"></i><i class="mini-seat s3">+</i></span>
+            ${friendsTileArtHTML()}
             <b class="tile-title">${L("Friends", "好友房")}<span class="tile-tag">${L("INVITE", "邀请")}</span></b>
         </button>
         <button class="lobby-tile is-rules" type="button" data-lobby="rules" aria-label="${L("Rules", "玩法规则")}">
@@ -2211,10 +2218,14 @@ async function dissolveRoom() {
     location.href = GUANDAN_URL;
 }
 
+function teamShortName(team) {
+    return team ? L("Red", "红队") : L("Blue", "蓝队");
+}
+
 function roomTableHTML(mine) {
     return `<div class="room-felt">
             <div class="room-felt-mark"><b>PICASSO ${L("Guandan", "掼蛋")}</b><span>${L(`Classic · level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span></div>
-            <div class="room-lvs">${[0, 1].map(t => `<span class="room-lv t${t}"><i>${teamName(t)}</i><b>${encodeHTML(teamLevelDisplay(t))}</b></span>`).join("")}</div>
+            <div class="room-lvs">${[0, 1].map(t => `<span class="room-lv t${t}"><i>${teamShortName(t)}</i><b>${encodeHTML(teamLevelDisplay(t))}</b></span>`).join("")}</div>
         </div>
         ${[0, 1, 2, 3].map(i => seatHTML(i, mine)).join("")}`;
 }
@@ -2249,7 +2260,7 @@ function seatHTML(i, mine) {
     const team = i % 2;
     const busy = actionBusy ? " disabled" : "";
     const host = isHost();
-    const plate = name => `<span class="room-seat-plate"><b>${name}</b><em class="team-pill t${team}">${teamName(team)}</em></span>`;
+    const plate = name => `<span class="room-seat-plate"><b>${name}</b><em class="team-pill t${team}">${teamShortName(team)}</em></span>`;
     if (!s) {
         return `<div class="room-seat p${pos} t${team} is-empty">
             <button class="room-seat-sit" id="seat-${i}" type="button"${busy} aria-label="${L(`Take seat ${i + 1}`, `坐 ${i + 1} 号位`)}"><b>+</b><span>${L("Sit", "入座")}</span></button>
