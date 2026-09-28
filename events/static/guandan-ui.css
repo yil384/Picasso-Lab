@@ -639,7 +639,7 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
    one design px of a 1280x720 screen when mounted on <body>; inside a scaled stage
    (.in-stage) the stage already scales, so --pu is a fixed size there. */
 .gd-popup-layer {
-    --pu: clamp(.62px, min(calc(100vw / 1280), calc(100vh / 720)), 1.25px);
+    --pu: clamp(.7px, min(calc(100vw / 1280), calc(100vh / 720)), 1.25px);
     position: fixed;
     inset: 0;
     z-index: var(--z-modal);
@@ -764,14 +764,14 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
     border-bottom: 1px solid var(--panel-line);
 }
 .gd-rules-combo:last-child { border-bottom: 0; }
-.gd-rules-combo b { font: 900 calc(19 * var(--pu))/1.3 var(--font-ui); color: var(--ink); }
-.gd-rules-combo span { color: var(--ink-2); font-size: calc(17 * var(--pu)); line-height: 1.45; }
+.gd-rules-combo > b { font: 900 calc(19 * var(--pu))/1.3 var(--font-ui); color: var(--ink); }
+.gd-rules-combo > span { color: var(--ink-2); font-size: calc(17 * var(--pu)); line-height: 1.45; }
 .gd-rules-cards { --card-w-small: calc(46 * var(--pu)); display: flex; padding-right: calc(4 * var(--pu)); }
 .gd-rules-cards .card + .card { margin-left: calc(-20 * var(--pu)); }
-@media (max-aspect-ratio: 1/1) {
-    .gd-rules-combo { grid-template-columns: minmax(0, 1fr) auto; }
-    .gd-rules-combo span { grid-column: 1; grid-row: 2; }
-    .gd-rules-combo .gd-rules-cards { grid-column: 2; grid-row: 1 / span 2; }
+@media (max-aspect-ratio: 1/1) { /* portrait page; a rotated in-game stage stays landscape */
+    .gd-popup-layer:not(.in-stage) .gd-rules-combo { grid-template-columns: minmax(0, 1fr) auto; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-combo > span { grid-column: 1; grid-row: 2; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-combo .gd-rules-cards { grid-column: 2; grid-row: 1 / span 2; }
 }
 
 /* 实验室牌组 */
@@ -782,8 +782,8 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
     gap: calc(18 * var(--pu)) calc(12 * var(--pu));
 }
 .labdeck-item { display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--pu)); text-align: center; }
-.labdeck-item b { font: 900 calc(18 * var(--pu))/1.2 var(--font-ui); color: var(--ink); }
-.labdeck-item small { font: 500 calc(13 * var(--pu))/1.35 var(--font-ui); color: var(--ink-3); }
+.labdeck-item > b { font: 900 calc(18 * var(--pu))/1.2 var(--font-ui); color: var(--ink); }
+.labdeck-item > small { font: 500 calc(13 * var(--pu))/1.35 var(--font-ui); color: var(--ink-3); }
 
 /* 设置: Tencent rows (justified label, gold radios) */
 .gd-setrow {
