@@ -317,7 +317,11 @@
         if (!doc.querySelector('meta[name="viewport"]')) addHead('meta', { name: 'viewport', content: 'width=device-width, initial-scale=1' });
         addHead('meta', { name: 'color-scheme', content: 'light dark' });
         addHead('link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' });
-        addHead('link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap' });
+        /* Inter is optional: load it as a non-matching (print) sheet and switch it on when it arrives. A plain stylesheet link
+           added here is "pending" in WebKit, which holds back every style on the page until fonts.googleapis.com answers
+           (never, where it is blocked) and let the map canvas grow without bound meanwhile. */
+        var fontCss = addHead('link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap', media: 'print' });
+        fontCss.onload = function () { fontCss.media = 'all'; };
 
         /* ---------- formatting ---------- */
         var NF = new Intl.NumberFormat('en-US');
@@ -334,7 +338,7 @@
         function fmtAgoLong(ts, now) { var s = Math.max(0, (now - ts) / 1000);
             if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + ' min ago'; if (s < 86400) { var h = Math.floor(s / 3600); return h + (h === 1 ? ' hour ago' : ' hours ago'); }
             var d = Math.floor(s / 86400); return d === 1 ? 'yesterday' : d + ' days ago'; }
-        function plural(n, one, many) { return fmt(n) + ' ' + (n === 1 ? one : (many || one + 's')); }
+        function plural(n, one, many) { return fmt(n) + ' ' + (n === 1 ? one : (many || one + 's')); }
         function hourName(h) { return (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); }
         function hourSpan(h) { var a = h % 12 || 12, b = (h + 1) % 12 || 12, am = h < 12, bm = (h + 1) % 24 < 12; return a + (am === bm ? '' : (am ? ' AM' : ' PM')) + '–' + b + (bm ? ' AM' : ' PM'); }
         function tzName(style) { try { var p = new Intl.DateTimeFormat('en-US', { timeZoneName: style }).formatToParts(new Date()); for (var i = 0; i < p.length; i++) if (p[i].type === 'timeZoneName') return p[i].value; } catch (e) {} return ''; }
@@ -376,7 +380,7 @@
         function langLabel(k) { try { var s = LANG_DN ? LANG_DN.of(k) : k; return s || k; } catch (e) { return k; } }
         function srcKind(s) { if (!s) return 'unset'; if (s === 'Direct') return 'none'; var h = String(s).toLowerCase();
             return /(^|\.)googleusercontent\.com$/.test(h) || h === 'sites.google.com' || /(^|\.)yufeiding\.ucsd\.edu$/.test(h) || /(^|\.)github\.io$/.test(h) ? 'frame' : 'other'; }
-        function fold(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+        function fold(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
         function fLabel(k, v) { return k === 'country' ? cLabel(v) : k === 'lang' ? langLabel(v) : v; }
 
         /* visitor-local time for the busiest-times grid: the browser's time zone, else longitude / 15 */
@@ -394,26 +398,28 @@
         var D = null, FAILED = false, UPDATED = 0;
         function prep() {
             if (D && D.src === ROWS && D.len === ROWS.length) return D;
-            var rows = [], first = Infinity, last = -Infinity, firstRich = Infinity, posCount = {}, src = { none: 0, frame: 0, unset: 0, other: 0 };
+            var rows = [], first = Infinity, last = -Infinity, firstRich = Infinity, posCount = {}, pn = {}, bare = 0, ctry = {}, cities = {}, vals = { browser: {}, os: {}, device: {}, lang: {} }, src = { none: 0, frame: 0, unset: 0, other: 0 };
             ROWS.forEach(function (r) { var t = Date.parse(r.created_at); if (isNaN(t) || r.lat == null || r.lon == null) return;
                 var country = normCountry(r.country), city = (r.city || '').trim(), lat = +r.lat, lon = +r.lon;
                 if (city) city = CITY_ALIAS[country + '|' + city] || city; else if (CITY_STATE[country]) city = CITY_STATE[country];
                 var ck = city ? country + '|' + city : country + '|@' + lat.toFixed(1) + ',' + lon.toFixed(1);
                 var o = { t: t, country: country, city: city, ck: ck, lat: lat, lon: lon, browser: r.browser || '', os: r.os || '', device: r.device || '', lang: langKey(r.lang), tz: r.tz || '', lh: null, ld: null };
-                src[srcKind(r.source)]++;
+                src[srcKind(r.source)]++; pn[ck] = (pn[ck] || 0) + 1; if (!r.browser) bare++; if (country) ctry[country.toLowerCase()] = country; if (country && city) cities[country + '|' + city.toLowerCase()] = city;
+                ['browser', 'os', 'device', 'lang'].forEach(function (k) { if (o[k]) vals[k][o[k].toLowerCase()] = o[k]; });
                 if (r.browser && t < firstRich) firstRich = t;
                 var pk = lat.toFixed(1) + ',' + lon.toFixed(1), pc = posCount[ck] || (posCount[ck] = {}); pc[pk] = (pc[pk] || 0) + 1;
                 rows.push(o); if (t < first) first = t; if (t > last) last = t; });
             rows.sort(function (a, b) { return a.t - b.t; });
             var pos = {}; Object.keys(posCount).forEach(function (ck) { var best = null, bn = -1, pc = posCount[ck]; Object.keys(pc).forEach(function (k) { if (pc[k] > bn) { bn = pc[k]; best = k; } }); var q = best.split(','); pos[ck] = [+q[1], +q[0]]; });
             var legacy = 0; if (isFinite(firstRich)) for (var i = 0; i < rows.length && rows[i].t < firstRich; i++) if (!rows[i].browser) legacy++;
-            D = { src: ROWS, len: ROWS.length, rows: rows, first: first, last: last, legacy: legacy, firstRich: firstRich, pos: pos, bbox: {}, sources: src };
+            D = { src: ROWS, len: ROWS.length, rows: rows, first: first, last: last, legacy: legacy, bare: bare, firstRich: firstRich, pos: pos, pn: pn, vals: vals, ctry: ctry, cities: cities, bbox: {}, polys: {}, sources: src };
             return D;
         }
         function win(range, now) { var B = [], i;
-            if (range === '24h') { var h = new Date(now); h.setMinutes(0, 0, 0); var s0 = h.getTime() - 23 * HOUR;
-                for (i = 0; i < 24; i++) B.push({ a: s0 + i * HOUR, b: s0 + (i + 1) * HOUR });
-                return { unit: 'hour', start: s0, B: B, prev: { a: s0 - 24 * HOUR, b: now - 24 * HOUR } }; }
+            /* 24 hours = exactly now - 24 h .. now, in clock-hour buckets: the first (from 24 h ago) and the current one are partial */
+            if (range === '24h') { var s0 = now - DAY, h = new Date(s0); h.setMinutes(0, 0, 0);
+                for (var t = h.getTime(); t < now; t += HOUR) B.push({ a: t, b: t + HOUR });
+                return { unit: 'hour', start: s0, B: B, prev: { a: s0 - DAY, b: now - DAY } }; }
             if (range === '7d' || range === '30d') { var N = range === '7d' ? 7 : 30, s1 = addDays(sod(now), -(N - 1));
                 for (i = 0; i < N; i++) B.push({ a: addDays(s1, i), b: addDays(s1, i + 1) });
                 var pa = addDays(s1, -N); return { unit: 'day', start: s1, B: B, prev: { a: pa, b: addDays(sod(now), -N) + (now - sod(now)) } }; }
@@ -441,6 +447,8 @@
         var M = { box: $('va-map'), cv: $('va-map-c'), ctx: null, cw: 0, ch: 0, d: 1, base: null, v: { s: 1, tx: 0, ty: 0 }, L: null, pts: [], nmax: 1, tot: 0, hover: null, hl: null, latest: null, anim: null, raf: 0, dirty: true };
         M.ctx = M.cv.getContext('2d');
         M.box.style.aspectRatio = MAP_ASPECT.toFixed(4);    /* the whole projection, nothing cropped */
+        /* inline, so the canvas can never size its own box, even before the stylesheet applies (each resize would grow it) */
+        M.box.style.position = 'relative'; M.cv.style.position = 'absolute'; M.cv.style.left = M.cv.style.top = '0'; M.cv.style.width = M.cv.style.height = '100%';
         var REDUCED = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
         /* land dots on a square grid in screen (Mercator) space, sampled from the latitude-uniform mask, so high latitudes don't turn into stripes */
         var GRID_ROWS = Math.round(GW / MAP_ASPECT);
@@ -460,8 +468,8 @@
             v.tx = W <= cw ? (cw - W) / 2 - X0 : Math.min(-X0, Math.max(cw - W - X0, v.tx));
             v.ty = H <= ch ? (ch - H) / 2 - Y0 : Math.min(-Y0, Math.max(ch - H - Y0, v.ty)); return v; }
         function readTokens() { var cs = getComputedStyle(doc.documentElement), g = function (n) { return cs.getPropertyValue(n).trim(); };
-            TOK = { fill: g('--map-fill'), land: g('--map-land'), bc: g('--map-border'), bs: g('--map-border-2'), dot: g('--map-dot'), dim: g('--map-dim'), latest: g('--map-latest'), ring: g('--card'), ink: g('--ink') }; }
-        function mapResize() { var cw = M.box.clientWidth, ch = M.box.clientHeight; if (!cw || !ch) return;
+            TOK = { fill: g('--map-fill'), land: g('--map-land'), bc: g('--map-border'), bs: g('--map-border-2'), dot: g('--map-dot'), dim: g('--map-dim'), latest: g('--map-latest'), ring: g('--card'), ink: g('--ink'), sel: g('--map-sel'), selb: g('--map-sel-border') }; }
+        function mapResize() { var cw = M.box.clientWidth, ch = M.box.clientHeight; if (!cw || !ch || ch > cw * 2) return;
             var keep = M.L ? { mx: (M.cw / 2 - M.v.tx) / M.v.s / M.L.mw, my: (M.ch / 2 - M.v.ty) / M.v.s / M.L.mh, s: M.v.s } : null;
             M.d = Math.max(1, Math.min(3, window.devicePixelRatio || 1)); M.cw = cw; M.ch = ch; M.cv.width = Math.round(cw * M.d); M.cv.height = Math.round(ch * M.d); M.L = mapLayout();
             if (keep && keep.s > 1) { M.v.s = keep.s; M.v.tx = cw / 2 - keep.mx * M.L.mw * keep.s; M.v.ty = ch / 2 - keep.my * M.L.mh * keep.s; } else { M.v = { s: 1, tx: 0, ty: 0 }; }
@@ -475,32 +483,64 @@
             if (!TOK.land) readTokens();
             var o = M.base.getContext('2d'), s = M.v.s, L = M.L, cell = Math.min(L.mw / GW, L.mh / GRID_ROWS) * s;
             var r = Math.max(0.55, Math.min(cell * 0.3, 2.1)) * d, pad = r + 1;
-            var dotA = Math.max(0, Math.min(1, (2.7 - s) / 1.1));   /* dotted land at world scale, filled shapes once zoomed in (the mask is too coarse at country scale) */
+            /* dotted land at world scale, filled shapes once zoomed in (the mask is too coarse at country scale); the crossfade is over by the second zoom step */
+            var dotA = Math.max(0, Math.min(1, (2.1 - s) / 0.4));
             o.clearRect(0, 0, W, H);
             if (dotA < 1) { o.globalAlpha = 1 - dotA; o.fillStyle = TOK.fill; o.beginPath(); pathPolys(o, BUV.c, true); o.fill(); }
             if (dotA > 0) { o.globalAlpha = dotA; o.fillStyle = TOK.land; o.beginPath();
                 for (var i = 0; i < LANDUV.length; i += 2) { var x = sx(LANDUV[i]) * d, y = sy(LANDUV[i + 1]) * d; if (x < -pad || y < -pad || x > W + pad || y > H + pad) continue; o.moveTo(x + r, y); o.arc(x, y, r, 0, 6.2832); }
                 o.fill(); }
             o.globalAlpha = 1; o.lineJoin = 'round'; o.lineCap = 'round';
+            var sel = M.sel ? M.sel.map(function (k) { return BUV.c[k]; }) : null;
+            if (sel) { o.fillStyle = TOK.sel; o.beginPath(); pathPolys(o, sel, true); o.fill(); }   /* the selected country, a step darker */
             var lw = Math.min(1.1, 0.55 + 0.12 * Math.log2(s));
             o.strokeStyle = TOK.bs; o.lineWidth = lw * 0.85 * d; o.beginPath(); pathPolys(o, BUV.s, false); o.stroke();
-            o.strokeStyle = TOK.bc; o.lineWidth = lw * d; o.beginPath(); pathPolys(o, BUV.c, false); o.stroke(); }
-        function rOf(n) { var rmax = Math.max(9, Math.min(17, M.cw / 58)), rmin = M.cw < 520 ? 2 : 2.6; return rmin + (rmax - rmin) * Math.sqrt(n / Math.max(1, M.nmax)); }
+            o.strokeStyle = TOK.bc; o.lineWidth = lw * d; o.beginPath(); pathPolys(o, BUV.c, false); o.stroke();
+            if (sel) { o.strokeStyle = TOK.selb; o.lineWidth = Math.max(1, lw * 1.3) * d; o.beginPath(); pathPolys(o, sel, false); o.stroke(); } }
+        /* bubble radius: area follows visits. Lit places scale to the largest place in view (the selected country's own
+           largest city when one is selected); dimmed places keep the world scale, capped. */
+        function rOf(n, world) { var rmax = Math.max(9, Math.min(17, M.cw / 58)), rmin = M.cw < 520 ? 2 : 2.6; return rmin + (rmax - rmin) * Math.sqrt(Math.min(1, n / Math.max(1, world ? M.nmaxAll : M.nmax))); }
+        function rDim(p) { return Math.min(rOf(p.n, !onPt(p)), 7); }
+        /* countries drawn a step darker when selected: the border polygons that hold most of that country's visits */
+        function inPoly(a, u, v) { var inside = false; for (var i = 0, j = a.length - 2; i < a.length; j = i, i += 2) { var ui = a[i], vi = a[i + 1], uj = a[j], vj = a[j + 1]; if ((vi > v) !== (vj > v) && u < (uj - ui) * (v - vi) / (vj - vi) + ui) inside = !inside; } return inside; }
+        function countryPolys(c) { if (c in D.polys) return D.polys[c]; var res = null;
+            if (c && !CITY_STATE[c]) { var per = {}, tot = 0;
+                Object.keys(D.pn).forEach(function (ck) { var co = ck.slice(0, ck.indexOf('|')), n = D.pn[ck], q = D.pos[ck], uv = uvOf(q[0], q[1]); if (co === c) tot += n;
+                    for (var i = 0; i < BUV.c.length; i++) { var P = BUV.c[i]; if (uv[0] < P.x0 || uv[0] > P.x1 || uv[1] < P.y0 || uv[1] > P.y1 || !inPoly(P.a, uv[0], uv[1])) continue; var o = per[i] || (per[i] = {}); o[co] = (o[co] || 0) + n; break; } });
+                /* city-states sit inside a bigger ring at this resolution (Hong Kong in China's), so they don't compete for it */
+                res = Object.keys(per).filter(function (i) { var o = per[i], mine = o[c] || 0, best = 0; Object.keys(o).forEach(function (k) { if (!CITY_STATE[k] && o[k] > best) best = o[k]; }); return mine > 0 && mine === best && mine >= 0.1 * tot; }).map(Number);
+                /* the border data lists each country's islands next to each other: add neighbouring rings within about 1.5 degrees
+                   that hold no other country's visits and share no border with the rings found (a shared border means a different country) */
+                var sel = {}; res.forEach(function (i) { sel[i] = 1; });
+                var touches = function (a, b) { for (var i = 0; i < a.length; i += 2) for (var j = 0; j < b.length; j += 2) if (a[i] === b[j] && a[i + 1] === b[j + 1]) return true; return false; };
+                var sib = function (k) { if (k < 0 || k >= BUV.c.length || sel[k]) return false; var P = BUV.c[k], o = per[k];
+                    if (o) { var best = 0; Object.keys(o).forEach(function (x) { if (!CITY_STATE[x] && o[x] > best) best = o[x]; }); if ((o[c] || 0) !== best) return false; }
+                    return res.some(function (i) { var Q = BUV.c[i]; return P.x0 < Q.x1 + 0.0042 && P.x1 > Q.x0 - 0.0042 && P.y0 < Q.y1 + 0.012 && P.y1 > Q.y0 - 0.012; }) &&
+                        !res.some(function (i) { return touches(P.a, BUV.c[i].a); }); };
+                res.slice().forEach(function (i) { var k; for (k = i - 1; sib(k); k--) { sel[k] = 1; res.push(k); } for (k = i + 1; sib(k); k++) { sel[k] = 1; res.push(k); } });
+                if (!res.length) res = null; }
+            return (D.polys[c] = res); }
         function onPt(p) { return !S.country || (p.country === S.country && (!S.city || p.city === S.city)); }
         function hlPt(p) { var h = M.hl; return !h || (h.k === 'country' ? p.country === h.v : h.k === 'city' ? (p.country === S.country && p.city === h.v) : p.k === h.v); }
         function lit(p) { return onPt(p) && hlPt(p); }
-        function draw() { var c = M.ctx, d = M.d, i, p, x, y, r, pts = M.pts;
+        function draw() { var c = M.ctx, d = M.d, i, j, p, q, x, y, r, pts = M.pts, L = [];
             if (M.dirty) { M.dirty = false; buildBase(); }
             c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, M.cv.width, M.cv.height); c.drawImage(M.base, 0, 0);
-            c.lineWidth = 1.25 * d; c.strokeStyle = TOK.ring;
-            for (i = 0; i < pts.length; i++) { p = pts[i]; if (lit(p)) continue; x = sx(p.u) * d; y = sy(p.v) * d; r = Math.min(rOf(p.n), 7) * d; c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fillStyle = TOK.dim; c.fill(); }
-            for (i = 0; i < pts.length; i++) { p = pts[i]; if (!lit(p)) continue;
-                x = sx(p.u) * d; y = sy(p.v) * d; r = rOf(p.n) * d; if (x < -40 * d || y < -40 * d || x > M.cv.width + 40 * d || y > M.cv.height + 40 * d) continue;
-                c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fillStyle = TOK.dot; c.fill(); c.stroke(); }
-            var lp = M.latest; if (lp && lit(lp)) { x = sx(lp.u) * d; y = sy(lp.v) * d; r = Math.max(2.2, Math.min(3.5, rOf(lp.n) * 0.5)) * d;   /* the latest visit: one static core inside its bubble, no animation */
+            c.fillStyle = TOK.dim;
+            for (i = 0; i < pts.length; i++) { p = pts[i]; p.abs = p.kids = null; if (lit(p)) continue; c.beginPath(); c.arc(sx(p.u) * d, sy(p.v) * d, rDim(p) * d, 0, 6.2832); c.fill(); }
+            /* lit places, largest first. At this zoom a place whose bubble lies wholly inside a bigger one is folded into it
+               (its tooltip names them); zooming in separates them again. */
+            for (i = 0; i < pts.length; i++) { p = pts[i]; if (!lit(p)) continue; p.x = sx(p.u); p.y = sy(p.v); p.r = rOf(p.n);
+                if (p.x < -40 || p.y < -40 || p.x > M.cw + 40 || p.y > M.ch + 40) continue;
+                for (j = 0; j < L.length; j++) { q = L[j]; if (Math.hypot(p.x - q.x, p.y - q.y) + p.r <= q.r + 0.5) { p.abs = q; (q.kids || (q.kids = [])).push(p); break; } }
+                if (!p.abs) L.push(p); }
+            /* a card-coloured halo under every bubble first, then all the fills: touching bubbles read as one shape with one outline, never as rings */
+            c.fillStyle = TOK.ring; for (i = 0; i < L.length; i++) { p = L[i]; c.beginPath(); c.arc(p.x * d, p.y * d, (p.r + 1.25) * d, 0, 6.2832); c.fill(); }
+            c.fillStyle = TOK.dot; for (i = 0; i < L.length; i++) { p = L[i]; c.beginPath(); c.arc(p.x * d, p.y * d, p.r * d, 0, 6.2832); c.fill(); }
+            var lp = M.latest; if (lp && lit(lp)) { x = sx(lp.u) * d; y = sy(lp.v) * d; r = Math.max(2.2, Math.min(3.5, rOf(lp.n) * 0.4)) * d;   /* the latest visit: one static core, no animation */
                 c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fillStyle = TOK.latest; c.fill(); c.strokeStyle = TOK.ring; c.lineWidth = 1 * d; c.stroke(); }
-            var mark = function (pp, w) { if (!pp) return; var xx = sx(pp.u) * d, yy = sy(pp.v) * d, rr = (lit(pp) ? rOf(pp.n) : Math.min(rOf(pp.n), 7)) * d;
-                c.beginPath(); c.arc(xx, yy, rr + 2.5 * d, 0, 6.2832); c.strokeStyle = TOK.ink; c.lineWidth = w * d; c.stroke(); };
+            var mark = function (pp, w) { if (!pp) return; if (pp.abs) pp = pp.abs; var rr = (lit(pp) ? rOf(pp.n) : rDim(pp)) + w / 2;   /* outline right on the bubble's edge */
+                c.beginPath(); c.arc(sx(pp.u) * d, sy(pp.v) * d, rr * d, 0, 6.2832); c.strokeStyle = TOK.ink; c.lineWidth = w * d; c.stroke(); };
             if (S.city) for (i = 0; i < pts.length; i++) if (pts[i].country === S.country && pts[i].city === S.city) mark(pts[i], 2);
             if (M.hover) mark(M.hover, 1.5); }
         function kick() { if (!M.raf) M.raf = requestAnimationFrame(loop); }
@@ -509,7 +549,7 @@
                 var s = Math.exp(Math.log(a.f.s) + (Math.log(a.to.s) - Math.log(a.f.s)) * e), mx = a.f.mx + (a.to.mx - a.f.mx) * e, my = a.f.my + (a.to.my - a.f.my) * e;
                 M.v = clampV({ s: s, tx: M.cw / 2 - (M.L.ox + mx * M.L.mw) * s, ty: M.ch / 2 - (M.L.oy + my * M.L.mh) * s }); M.dirty = true; if (k >= 1) M.anim = null; }
             if (!M.L) return; draw(); syncZoomUI();
-            if (M.anim) kick(); }
+            if (M.anim) kick(); else if (M.after) { var f = M.after; M.after = null; f(); } }
         function centerOf(v) { return { s: v.s, mx: ((M.cw / 2 - v.tx) / v.s - M.L.ox) / M.L.mw, my: ((M.ch / 2 - v.ty) / v.s - M.L.oy) / M.L.mh }; }
         function flyTo(target, ms) { if (!M.L) return; var t = clampV({ s: target.s, tx: M.cw / 2 - (M.L.ox + target.mx * M.L.mw) * target.s, ty: M.ch / 2 - (M.L.oy + target.my * M.L.mh) * target.s });
             var to = centerOf(t); if (REDUCED.matches || !ms) { M.anim = null; M.v = t; M.dirty = true; kick(); return; } M.anim = { f: centerOf(M.v), to: to, ms: ms, t0: 0 }; kick(); }
@@ -529,7 +569,7 @@
         function syncZoomUI() { var z = M.v.s; $('va-zin').disabled = z >= 9.99; $('va-zout').disabled = z <= 1.001; $('va-zfit').disabled = z <= 1.001 && !M.anim;
             M.cv.style.touchAction = z > 1.001 ? 'none' : 'pan-y'; M.cv.classList.toggle('va-grab', z > 1.001); }
         function hit(cx, cy, tol) { var best = null, bd = Infinity, pts = M.pts; tol = tol || 7;
-            for (var i = pts.length - 1; i >= 0; i--) { var p = pts[i], on = onPt(p), r = Math.max(4, on ? rOf(p.n) : Math.min(rOf(p.n), 7)), dx = sx(p.u) - cx, dy = sy(p.v) - cy, dist = Math.sqrt(dx * dx + dy * dy);
+            for (var i = pts.length - 1; i >= 0; i--) { var p = pts[i]; if (p.abs) continue; var on = onPt(p), r = Math.max(4, on ? rOf(p.n) : rDim(p)), dx = sx(p.u) - cx, dy = sy(p.v) - cy, dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > r + tol) continue; var score = dist / r + (on ? 0 : 10); if (score < bd) { bd = score; best = p; } }
             return best; }
         function pickHint(p, touch) { var verb = touch ? 'Tap' : 'Click';
@@ -540,14 +580,24 @@
             var h = '<div class="va-tip-h">' + flag(p.country) + '<b>' + esc(same ? cLabel(p.country) : p.city || 'Unknown city') + '</b></div>' + (same ? '' : '<div class="va-tip-s">' + esc(cLabel(p.country)) + '</div>') +
                 '<div class="va-tip-row"><b>' + fmt(p.n) + '</b> ' + (p.n === 1 ? 'visit' : 'visits') + ' <span>· ' + fmtPct(share(p.n, M.tot)) + ' of ' + esc(scopeText()) + '</span></div>' +
                 '<div class="va-tip-s">' + (M.latest && p.k === M.latest.k ? 'Latest visit ' : 'Last visit ') + esc(fmtAgoLong(p.t, C.now)) + '</div>' +
+                (p.kids && p.kids.length ? '<div class="va-tip-s va-tip-near">' + esc(nearText(p)) + '</div>' : '') +
                 (hint ? '<div class="va-tip-hint">' + esc(hint) + '</div>' : '');
             showTip(h, x, y); }
+        function nearText(p) { var k = p.kids.slice().sort(function (a, b) { return b.n - a.n; }), n = 0;
+            k.forEach(function (q) { n += q.n; });
+            var names = k.slice(0, k.length > 3 ? 2 : 3).map(function (q) { return (q.city || 'Unknown city') + (q.country !== p.country ? ', ' + cLabel(q.country) : ''); });
+            return 'Also here: ' + names.join(', ') + (k.length > names.length ? ' and ' + (k.length - names.length) + ' more' : '') + ' (' + plural(n, 'visit') + '). Zoom in to separate them.'; }
+        /* after a tap the map may fly to the country: show the tooltip on the place once it has landed */
+        var TIP_HOLD = 0;
+        function tipAfterFly(k) { var show = function () { for (var i = 0; i < M.pts.length; i++) { var p = M.pts[i]; if (p.k !== k) continue; if (p.abs) p = p.abs;
+                var r = M.cv.getBoundingClientRect(); TIP_HOLD = performance.now() + 500; mapTip(p, r.left + sx(p.u), r.top + sy(p.v), true); return; } };
+            TIP_HOLD = performance.now() + 1500; if (M.anim) { hideTip(); M.after = show; } else show(); }
 
         /* ---------- map input: hover, click, drag, pinch, ctrl/⌘ + wheel, keys ---------- */
         (function () { var cv = M.cv, ptrs = {}, drag = null, pinch = null, moved = false, hintT = 0;
             function local(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
             function setHover(p, e) { if (p !== M.hover) { M.hover = p; kick(); } cv.style.cursor = p ? 'pointer' : ''; if (p && e) mapTip(p, e.clientX, e.clientY, false); else hideTip(); }
-            cv.addEventListener('pointerdown', function (e) { ptrs[e.pointerId] = local(e); moved = false; var ids = Object.keys(ptrs);
+            cv.addEventListener('pointerdown', function (e) { ptrs[e.pointerId] = local(e); moved = false; M.after = null; var ids = Object.keys(ptrs);
                 if (ids.length === 1) drag = { x: ptrs[ids[0]][0], y: ptrs[ids[0]][1] }; else if (ids.length === 2) { var a = ptrs[ids[0]], b = ptrs[ids[1]]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: M.v.s }; drag = null; }
                 try { cv.setPointerCapture(e.pointerId); } catch (x) {} });
             cv.addEventListener('pointermove', function (e) { var q = local(e);
@@ -557,7 +607,9 @@
                         M.v = clampV({ s: M.v.s, tx: M.v.tx + dx, ty: M.v.ty + dy }); M.dirty = true; kick(); hideTip(); cv.classList.add('va-dragging'); return; } }
                 if (e.pointerType === 'mouse') setHover(hit(q[0], q[1]), e); });
             function end(e) { var wasDrag = moved; delete ptrs[e.pointerId]; if (Object.keys(ptrs).length < 2) pinch = null; if (!Object.keys(ptrs).length) drag = null; cv.classList.remove('va-dragging');
-                if (e.type === 'pointerup' && !wasDrag) { var q = local(e), touch = e.pointerType !== 'mouse', p = hit(q[0], q[1], touch ? 14 : 7); if (p) { pick(p); if (touch) mapTip(p, e.clientX, e.clientY, true); else setHover(hit(q[0], q[1]), e); } else if (touch) hideTip(); } }
+                if (e.type === 'pointerup' && !wasDrag) { var q = local(e), touch = e.pointerType !== 'mouse', p = hit(q[0], q[1], touch ? 14 : 7);
+                    if (p) { var k = p.k; pick(p); if (touch) tipAfterFly(k); else if (M.anim) { M.hover = null; hideTip(); } else setHover(hit(q[0], q[1]), e); }
+                    else if (touch) hideTip(); } }
             cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
             cv.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse' && !drag) setHover(null); });
             cv.addEventListener('wheel', function (e) { if (e.ctrlKey || e.metaKey) { e.preventDefault(); var q = local(e); zoomBy(Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0022)), q[0], q[1]); return; }
@@ -572,9 +624,10 @@
         })();
         function pick(p) { if (S.country === p.country) { if (!p.city) return; S.city = S.city === p.city ? null : p.city; } else { S.country = p.country; S.city = null; S.locAll = false; fitCountry(p.country); }
             S.q = ''; $('va-q').value = ''; commit(); }
-        function renderMap(C) { var pl = places(C.RN), nmax = 1, F = C.F, lr = F.length ? F[F.length - 1] : null;
-            pl.forEach(function (p) { var q = uvOf(p.lon, p.lat); p.u = q[0]; p.v = q[1]; if (p.n > nmax) nmax = p.n; });
-            pl.sort(function (a, b) { return b.n - a.n; }); M.pts = pl; M.nmax = nmax; M.tot = C.RN.length; M.hover = null; M.latest = null;
+        function renderMap(C) { var pl = places(C.RN), nmax = 1, nall = 1, F = C.F, lr = F.length ? F[F.length - 1] : null;
+            pl.forEach(function (p) { var q = uvOf(p.lon, p.lat); p.u = q[0]; p.v = q[1]; if (p.n > nall) nall = p.n; if (p.country === S.country && p.n > nmax) nmax = p.n; });
+            pl.sort(function (a, b) { return b.n - a.n; }); M.pts = pl; M.nmax = S.country ? nmax : nall; M.nmaxAll = nall; M.tot = C.RN.length; M.hover = null; M.latest = null;
+            var sel = S.country ? countryPolys(S.country) : null, key = sel ? sel.join(',') : ''; if (key !== M.selKey) { M.selKey = key; M.sel = sel; M.dirty = true; }
             if (lr) for (var i = 0; i < pl.length; i++) if (pl[i].k === lr.ck) { M.latest = pl[i]; break; }
             var nC = {}, nCi = {}; F.forEach(function (r) { nC[r.country] = 1; if (r.city) nCi[r.ck] = 1; }); nCi = Object.keys(nCi).length;
             var sub = !F.length ? 'No visits in this period' : S.city ? plural(F.length, 'visit') + ' from ' + placeName(S.city, S.country)
@@ -582,9 +635,9 @@
             $('va-map-sub').textContent = sub;
             M.cv.setAttribute('aria-label', 'Map of visitor locations: ' + sub + '. The Locations list has the same data.');
             var note = $('va-map-note'); note.textContent = F.length ? '' : (D.rows.length ? 'No visits in this period.' : 'No visits recorded yet.'); note.classList.toggle('on', !F.length);
-            if (pl.length) renderLegend(nmax, !!M.latest); else $('va-legend').innerHTML = ''; kick(); }
+            if (pl.length) renderLegend(M.nmax, !!M.latest); else $('va-legend').innerHTML = ''; kick(); }
         function renderLegend(nmax, hasLatest) { var vals = [], cand = [1, 10, 100, 1000, 10000]; cand.forEach(function (v) { if (v <= nmax) vals.push(v); }); if (vals.length > 3) vals = [vals[0], vals[vals.length - 2], vals[vals.length - 1]];
-            if (!vals.length) vals = [1]; var rs = vals.map(rOf), R = Math.max.apply(null, rs), svg = '', gap = 10, x = 0;
+            if (!vals.length) vals = [1]; var rs = vals.map(function (v) { return rOf(v); }), R = Math.max.apply(null, rs), svg = '', gap = 10, x = 0;
             vals.forEach(function (v, i) { var r = rs[i], cw = Math.max(r * 2, fmt(v).length * 7 + 2), cx = x + cw / 2; svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + (R * 2 - r + 1).toFixed(1) + '" r="' + r.toFixed(1) + '" class="va-lg-c"/><text x="' + cx.toFixed(1) + '" y="' + (R * 2 + 15) + '" class="va-lg-t">' + fmt(v) + '</text>'; x += cw + gap; });
             var w = x - gap, h = '<div class="va-lg-title">Visits per city</div><svg width="' + Math.ceil(w + 8) + '" height="' + Math.ceil(R * 2 + 19) + '" viewBox="-4 0 ' + Math.ceil(w + 8) + ' ' + Math.ceil(R * 2 + 19) + '">' + svg + '</svg>';
             if (hasLatest) h += '<div class="va-lg-latest"><i></i>Latest visit</div>';
@@ -627,32 +680,34 @@
 
         /* ═════════ KPIs ═════════ */
         var SER = null;
-        function busiest(C) { var i, best = -1, bn = 0, part = false, B, cur;
+        function busiest(C) { var i, best = -1, bn = 0, B, cur, part;
             if (S.range !== 'all') { B = SER.B; cur = SER.cur; for (i = 0; i < B.length; i++) if (cur[i] > bn) { bn = cur[i]; best = i; }
-                if (best < 0) return null; part = SER.partial && best === B.length - 1;
-                return { label: S.range === '24h' ? 'Busiest hour' : 'Busiest day', n: bn, when: S.range === '24h' ? hourSpan(new Date(B[best].a).getHours()) + ', ' + fmtDay(B[best].a) : fmtWday(B[best].a), part: part }; }
+                if (best < 0) return null;
+                part = SER.partial && best === B.length - 1 ? ' (so far)' : SER.pf && best === 0 ? ' (from ' + fmtClock(SER.firstT) + ')' : '';
+                return { label: S.range === '24h' ? 'Busiest hour' : 'Busiest day', n: bn, when: (S.range === '24h' ? hourSpan(new Date(B[best].a).getHours()) + ', ' + fmtDay(B[best].a) : fmtWday(B[best].a)) + part }; }
             var m = {}, k; C.F.forEach(function (r) { var d = sod(r.t); m[d] = (m[d] || 0) + 1; });
             for (k in m) if (m[k] > bn) { bn = m[k]; best = +k; } if (best < 0) return null;
-            return { label: 'Busiest day', n: bn, when: fmtWday(best) + ', ' + new Date(best).getFullYear(), part: best === sod(C.now) }; }
-        function renderKPIs(C) { var F = C.F, RN = C.RN, set = function (id, v, html) { var el = $(id); if (html) el.innerHTML = v; else el.textContent = v; };
+            return { label: 'Busiest day', n: bn, when: fmtWday(best) + ', ' + new Date(best).getFullYear() + (best === sod(C.now) ? ' (so far)' : '') }; }
+        function renderKPIs(C) { var F = C.F, RN = C.RN, set = function (id, v, html) { var el = $(id); if (html) el.innerHTML = v; else el.textContent = v; }, NONE = 'No visits in this period';
             set('kv-1', fmt(F.length)); $('ks-1').title = '';
             if (C.P) { var p = C.P.length, c = F.length, dl;
                 if (!p && !c) dl = 'None in the ' + RANGES[S.range].cmp + ' either';
                 else if (!p) dl = 'None in the ' + RANGES[S.range].cmp;
                 else { var r = Math.round((c - p) / p * 100); dl = (r === 0 ? '<span class="va-delta">No change</span>' : '<span class="va-delta ' + (r > 0 ? 'up' : 'down') + '">' + (r > 0 ? '↑ ' : '↓ ') + Math.abs(r) + '%</span>') + ' vs ' + RANGES[S.range].cmp; }
-                set('ks-1', dl, true); $('ks-1').title = fmt(p) + ' visits in the ' + RANGES[S.range].cmp + ', counted up to the same point (' + fmtWhen(C.W.prev.b, C.now) + ')'; }
+                set('ks-1', dl, true); $('ks-1').title = fmt(p) + ' visits in the ' + RANGES[S.range].cmp + ', ' + fmtWhen(C.W.prev.a, C.now) + ' to ' + fmtWhen(C.W.prev.b, C.now) + (S.range === '24h' ? '' : ', counted up to the same point'); }
             else set('ks-1', D.rows.length ? 'Since ' + fmtDayY(D.first) : 'No visits recorded yet');
+            /* tile 2: how many countries, or, under a place filter, that place's share (the city's own when a city is picked) */
             if (!S.country) { var tc = tally(F, function (r) { return r.country; }); set('kl-2', 'Countries & regions'); set('kv-2', fmt(tc.length));
-                set('ks-2', tc.length ? 'Top: ' + cLabel(tc[0].k) + ' · ' + fmtPct(share(tc[0].n, F.length)) : 'No visits in this period'); }
-            else { var inC = S.city ? RN.filter(function (r) { return r.country === S.country; }).length : F.length; set('kl-2', anyNL() ? 'Share of matching visits' : 'Share of all visits'); set('kv-2', fmtPct(share(inC, RN.length))); set('ks-2', fmt(inC) + ' of ' + plural(RN.length, 'visit')); }
-            if (!S.city) { var ct = tally(F, function (r) { return r.city ? r.ck : ''; }); set('kl-3', S.country ? 'Cities in ' + cLabel(S.country) : 'Cities'); set('kv-3', fmt(ct.length));
-                set('ks-3', ct.length ? 'Top: ' + ct[0].k.split('|')[1] + ' · ' + fmtPct(share(ct[0].n, F.length)) : 'No city data'); }
-            else { var cc = RN.filter(function (r) { return r.country === S.country; }).length; set('kl-3', 'Share of ' + cLabel(S.country)); set('kv-3', fmtPct(share(F.length, cc))); set('ks-3', fmt(F.length) + ' of ' + plural(cc, 'visit')); }
+                set('ks-2', tc.length ? 'Top: ' + cLabel(tc[0].k) + ' · ' + fmtPct(share(tc[0].n, F.length)) : NONE); }
+            else { set('kl-2', anyNL() ? 'Share of matching visits' : 'Share of all visits'); set('kv-2', RN.length ? fmtPct(share(F.length, RN.length)) : '–'); set('ks-2', RN.length ? fmt(F.length) + ' of ' + plural(RN.length, 'visit') : NONE); }
+            if (!S.city) { var ct = tally(F, function (r) { return r.city ? r.ck : ''; }); set('kl-3', S.country ? 'Cities in ' + cLabel(S.country) : 'Cities'); set('kv-3', F.length ? fmt(ct.length) : '–');
+                set('ks-3', ct.length ? 'Top: ' + ct[0].k.split('|')[1] + ' · ' + fmtPct(share(ct[0].n, F.length)) : F.length ? 'No city recorded' : NONE); }
+            else { var cc = RN.filter(function (r) { return r.country === S.country; }).length; set('kl-3', 'Share of ' + cLabel(S.country)); set('kv-3', cc ? fmtPct(share(F.length, cc)) : '–'); set('ks-3', cc ? fmt(F.length) + ' of ' + plural(cc, 'visit') : NONE); }
             var b = busiest(C); set('kl-4', b ? b.label : (S.range === '24h' ? 'Busiest hour' : 'Busiest day'));
-            set('kv-4', b ? fmt(b.n) : '–'); set('ks-4', b ? b.when + (b.part ? ' (so far)' : '') : 'No visits in this period');
-            $('ks-4').title = b ? (S.range === '24h' ? 'The clock hour' : 'The calendar day') + ' with the most visits, in your time zone (' + TZ_SHORT + ')' : '';
+            set('kv-4', b ? fmt(b.n) : '–'); set('ks-4', b ? b.when + ' · ' + TZ_SHORT : NONE);
+            $('ks-4').title = b ? (S.range === '24h' ? 'The clock hour' : 'The calendar day') + ' with the most visits, in your time zone (' + TZ_NAME + ')' : '';
             var dev = 0, mob = 0; F.forEach(function (r) { if (r.device) { dev++; if (r.device === 'Mobile' || r.device === 'Tablet') mob++; } });
-            set('kv-5', dev ? fmtPct(share(mob, dev)) : '–'); set('ks-5', dev ? fmt(mob) + ' of ' + plural(dev, 'visit') : 'No device data');
+            set('kv-5', dev ? fmtPct(share(mob, dev)) : '–'); set('ks-5', dev ? fmt(mob) + ' of ' + plural(dev, 'visit') : F.length ? 'Device not recorded' : NONE);
             $('ks-5').title = dev ? 'Share of visits with a recorded device type that came from a phone or tablet' : ''; }
 
         /* ═════════ locations panel ═════════ */
@@ -674,7 +729,9 @@
                     items = Object.keys(byCi).map(function (k) { var o = byCi[k]; return { key: 'cityin:' + k, label: o.city, find: o.city + ' ' + cLabel(o.country), flag: flag(o.country), n: o.n, sub: cityIsCountry(o.city, o.country) ? '' : cLabel(o.country), two: true }; });
                     $('va-q').placeholder = items.length ? 'Search ' + plural(items.length, 'city', 'cities') : 'Search cities'; } }
             items.sort(function (a, b) { return (a.muted ? 1 : 0) - (b.muted ? 1 : 0) || b.n - a.n || (a.label < b.label ? -1 : 1); });
-            var all = items.length; if (q) items = items.filter(function (o) { return fold(o.find).indexOf(q) >= 0; });
+            /* counts name real places only: the muted "Unknown city" row is reported separately */
+            var unk = items.filter(function (o) { return o.muted; }), all = items.length - unk.length; if (q) items = items.filter(function (o) { return fold(o.find).indexOf(q) >= 0; });
+            var nReal = items.filter(function (o) { return !o.muted; }).length, noun = function (n) { return col === 'City' ? plural(n, 'city', 'cities') : plural(n, 'country or region', 'countries and regions'); };
             var max = 1; items.forEach(function (o) { if (o.n > max) max = o.n; });
             var lim = STACKED.matches && !S.locAll && !q ? 8 : Infinity, shown = items.slice(0, lim);
             $('va-lhead-n').textContent = col;
@@ -685,9 +742,9 @@
                         : '<span class="va-wrap' + (o.muted ? ' va-muted' : '') + '">' + esc(o.label) + '</span>' + (o.sub ? '<span class="va-lrow-sub">' + esc(o.sub) + '</span>' : '')) + '</span>' +
                     '<span class="va-num">' + fmt(o.n) + '</span><span class="va-pct">' + fmtPct(share(o.n, total)) + '</span></button>'; }).join('')
                 : '<div class="va-empty">' + (q ? 'No matches for “' + esc(S.q) + '”' : 'No visits in this period') + '</div>';
-            var f = $('va-loc-f'); if (lim < Infinity && items.length > lim) f.innerHTML = '<button type="button" class="va-link" id="va-loc-all">Show all ' + fmt(items.length) + '</button>';
+            var f = $('va-loc-f'); if (lim < Infinity && items.length > lim) f.innerHTML = '<button type="button" class="va-link" id="va-loc-all">Show all ' + noun(nReal) + '</button>';
             else if (STACKED.matches && S.locAll && items.length > 8 && !q) f.innerHTML = '<button type="button" class="va-link" id="va-loc-less">Show fewer</button>';
-            else f.innerHTML = '<span>' + (q ? fmt(items.length) + ' of ' + fmt(all) : fmt(all)) + ' ' + (col === 'City' ? (all === 1 ? 'city' : 'cities') : (all === 1 ? 'country or region' : 'countries and regions')) + '</span>'; }
+            else f.innerHTML = '<span>' + (q ? fmt(nReal) + ' of ' + noun(all) : noun(all)) + (unk.length && !q ? ' · ' + plural(unk[0].n, 'visit') + ' with no city recorded' : '') + '</span>'; }
         $('va-loc').addEventListener('click', function (e) { var t = e.target.closest('button'); if (!t) return;
             if (t.id === 'va-back') { S.country = null; S.city = null; S.q = ''; $('va-q').value = ''; flyTo(worldView(), 600); commit(); return; }
             if (t.id === 'va-loc-all') { S.locAll = true; renderLoc(LAST); return; } if (t.id === 'va-loc-less') { S.locAll = false; renderLoc(LAST); return; }
@@ -715,19 +772,23 @@
         function series(C) { var W = C.W, B = W.B, n = B.length, cur = B.map(function () { return 0; }), prev = C.P ? B.map(function () { return 0; }) : null;
             var idx = function (t) { var lo = 0, hi = n - 1; while (lo <= hi) { var m = (lo + hi) >> 1; if (t < B[m].a) hi = m - 1; else if (t >= B[m].b) lo = m + 1; else return m; } return -1; };
             C.F.forEach(function (r) { var k = idx(r.t); if (k >= 0) cur[k]++; });
-            if (prev) C.P.forEach(function (r) { var k = W.unit === 'hour' ? Math.floor((r.t - W.prev.a) / HOUR) : Math.round((sod(r.t) - W.prev.a) / DAY); if (k >= 0 && k < n) prev[k]++; });
-            return { B: B, cur: cur, prev: prev, unit: W.unit, partial: n > 0 && B[n - 1].b > C.now, first: D.first, now: C.now }; }
+            if (prev) C.P.forEach(function (r) { var k = W.unit === 'hour' ? Math.floor((r.t - (B[0].a - DAY)) / HOUR) : Math.round((sod(r.t) - W.prev.a) / DAY); if (k >= 0 && k < n) prev[k]++; });
+            /* partial buckets: the current one (in progress) and a first one that starts before the range or before tracking began */
+            var partial = n > 0 && B[n - 1].b > C.now, firstT = Math.max(W.start, D.first), pf = n > 1 && B[0].a < firstT && firstT < B[0].b;
+            return { B: B, cur: cur, prev: prev, unit: W.unit, partial: partial, pf: pf, firstT: firstT, now: C.now }; }
+        function firstNote() { return TR.unit === 'week' || S.range === 'all' ? 'tracking began ' + fmtDay(TR.firstT) : 'from ' + fmtClock(TR.firstT); }
         function prevShown() { return !!(TR && TR.prev && S.range !== '24h'); }
         function renderTrend(C) { TR = SER;
             $('va-trend-h').textContent = { hour: 'Visits per hour', day: 'Visits per day', week: 'Visits per week' }[TR.unit];
             var keys = '<span class="va-key"><i class="va-key-cur"></i>Visits</span>';
             if (prevShown()) keys += '<span class="va-key"><i class="va-key-prev"></i>' + RANGES[S.range].cmp.replace(/^previous/, 'Previous') + '</span>';
+            if (TR.pf && C.F.length) keys += '<span class="va-key"><i class="va-key-open va-key-first"></i>First ' + TR.unit + ', ' + (TR.unit === 'week' ? 'from ' + fmtDay(TR.firstT) : 'from ' + fmtClock(TR.firstT)) + '</span>';
             if (TR.partial && C.F.length) keys += '<span class="va-key"><i class="va-key-open"></i>' + RANGES[S.range].now + ', in progress</span>';
             $('va-trend-keys').innerHTML = keys; drawTrend(); }
         function drawTrend() { if (!TR) return; var el = trendEl, Wd = el.clientWidth - (parseFloat(getComputedStyle(el).paddingLeft) || 0) - (parseFloat(getComputedStyle(el).paddingRight) || 0); if (Wd <= 0) return;
-            var n = TR.B.length, done = TR.partial ? n - 1 : n, sp = prevShown();
-            if (S.table) { var rows = TR.B.map(function (b, i) { var so = i === n - 1 && TR.partial, fw = TR.unit === 'week' && b.a < TR.first && TR.first < b.b;
-                    return '<tr><th scope="row">' + esc(bucketLabel(b, TR.unit, true)) + (so ? ' <span class="va-muted">(so far)</span>' : fw ? ' <span class="va-muted">(tracking began ' + esc(fmtDay(TR.first)) + ')</span>' : '') + '</th><td>' + fmt(TR.cur[i]) + '</td>' + (sp ? '<td>' + fmt(TR.prev[i]) + (so ? ' <span class="va-muted">(same time)</span>' : '') + '</td>' : '') + '</tr>'; }).reverse().join('');
+            var n = TR.B.length, done = TR.partial ? n - 1 : n, f0 = TR.pf ? 1 : 0, sp = prevShown();
+            if (S.table) { var rows = TR.B.map(function (b, i) { var so = i === n - 1 && TR.partial, fw = i === 0 && TR.pf;
+                    return '<tr><th scope="row">' + esc(bucketLabel(b, TR.unit, true)) + (so ? ' <span class="va-muted">(so far)</span>' : fw ? ' <span class="va-muted">(' + esc(firstNote()) + ')</span>' : '') + '</th><td>' + fmt(TR.cur[i]) + '</td>' + (sp ? '<td>' + fmt(TR.prev[i]) + (so ? ' <span class="va-muted">(same time)</span>' : '') + '</td>' : '') + '</tr>'; }).reverse().join('');
                 el.innerHTML = '<div class="va-tablewrap va-tscroll"><table class="va-table va-table-num"><thead><tr><th>' + { hour: 'Hour', day: 'Day', week: 'Week' }[TR.unit] + '</th><th>Visits</th>' + (sp ? '<th>' + esc(RANGES[S.range].cmp.replace(/^previous/, 'Previous')) + '</th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table></div>'; return; }
             if (!LAST || !LAST.F.length) { el.innerHTML = '<div class="va-empty va-chart-empty">' + (D && D.rows.length ? 'No visits in this period' : 'No visits recorded yet') + '</div>'; TR.geom = null; return; }
             var H = Wd < 560 ? 200 : 250, vals = TR.cur.slice(); if (sp) vals = vals.concat(TR.prev.slice(0, done));
@@ -740,10 +801,12 @@
             var lw = TR.unit === 'hour' ? 50 : TR.unit === 'week' ? 58 : 60, every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(pw / lw))));
             for (var i = (n - 1) % every; i < n; i += every) s += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" class="va-xt">' + esc(bucketLabel(TR.B[i], TR.unit)) + '</text>';
             var line = function (arr, from, to) { var d = ''; for (var k = from; k <= to; k++) d += (k === from ? 'M' : 'L') + X(k).toFixed(1) + ' ' + Y(arr[k]).toFixed(1); return d; };
-            if (done > 0) {
-                if (sp && done > 1) s += '<path d="' + line(TR.prev, 0, done - 1) + '" class="va-l-prev"/>';
-                if (done > 1) s += '<path d="' + line(TR.cur, 0, done - 1) + ' L' + X(done - 1).toFixed(1) + ' ' + Y(0).toFixed(1) + ' L' + X(0).toFixed(1) + ' ' + Y(0).toFixed(1) + 'Z" class="va-area"/><path d="' + line(TR.cur, 0, done - 1) + '" class="va-l-cur"/>';
-                if (done <= 45) for (var j = 0; j < done; j++) s += '<circle cx="' + X(j).toFixed(1) + '" cy="' + Y(TR.cur[j]).toFixed(1) + '" r="' + (done > 20 ? 2.25 : 2.75) + '" class="va-pt"/>'; }
+            /* the line and area join complete buckets only; partial ones (first, current) are hollow points of their own */
+            if (done > f0) {
+                if (sp && done - f0 > 1) s += '<path d="' + line(TR.prev, f0, done - 1) + '" class="va-l-prev"/>';
+                if (done - f0 > 1) s += '<path d="' + line(TR.cur, f0, done - 1) + ' L' + X(done - 1).toFixed(1) + ' ' + Y(0).toFixed(1) + ' L' + X(f0).toFixed(1) + ' ' + Y(0).toFixed(1) + 'Z" class="va-area"/><path d="' + line(TR.cur, f0, done - 1) + '" class="va-l-cur"/>';
+                if (done - f0 <= 45) for (var j = f0; j < done; j++) s += '<circle cx="' + X(j).toFixed(1) + '" cy="' + Y(TR.cur[j]).toFixed(1) + '" r="' + (done > 20 ? 2.25 : 2.75) + '" class="va-pt"/>'; }
+            if (TR.pf) s += '<circle cx="' + X(0).toFixed(1) + '" cy="' + Y(TR.cur[0]).toFixed(1) + '" r="3.5" class="va-pt-open va-pt-first"/>';
             if (TR.partial) { var px = X(n - 1), py = Y(TR.cur[n - 1]), lab = fmt(TR.cur[n - 1]) + ' so far', tw = lab.length * 6.6 + 4;
                 /* the in-progress bucket is its own hollow point, never joined to the line */
                 var ya = py - 11, yb = py + 19, near = done > 0 && X(done - 1) > px - tw - 6 ? Y(TR.cur[done - 1]) : null, ly = ya;
@@ -752,13 +815,12 @@
             s += '<g class="va-cross" id="va-cross" style="display:none"><line y1="' + padT + '" y2="' + (padT + ph) + '" class="va-crossl"/>' + (sp ? '<circle r="3.5" class="va-pt-prev" id="va-cross-p"/>' : '') + '<circle r="4.5" class="va-pt-hot" id="va-cross-c"/></g></svg>';
             el.innerHTML = s; TR.geom = { X: X, Y: Y, n: n, padL: padL, pw: pw, padT: padT, sp: sp, done: done }; }
         function trendAt(i, clientX, clientY) { var g = TR && TR.geom; if (!g) return; i = Math.max(0, Math.min(g.n - 1, i)); TR.hi = i;
-            var cross = $('va-cross'); if (!cross) return; cross.style.display = ''; var x = g.X(i), so = TR.partial && i === g.n - 1; cross.querySelector('line').setAttribute('x1', x); cross.querySelector('line').setAttribute('x2', x);
-            var cc = $('va-cross-c'); cc.setAttribute('cx', x); cc.setAttribute('cy', g.Y(TR.cur[i])); cc.classList.toggle('va-pt-hot-open', so);
+            var cross = $('va-cross'); if (!cross) return; cross.style.display = ''; var x = g.X(i), so = TR.partial && i === g.n - 1, fp = TR.pf && i === 0; cross.querySelector('line').setAttribute('x1', x); cross.querySelector('line').setAttribute('x2', x);
+            var cc = $('va-cross-c'); cc.setAttribute('cx', x); cc.setAttribute('cy', g.Y(TR.cur[i])); cc.classList.toggle('va-pt-hot-open', so || fp);
             if (g.sp) { var cp = $('va-cross-p'); cp.setAttribute('cx', x); cp.setAttribute('cy', g.Y(TR.prev[i])); cp.style.display = so ? 'none' : ''; }
-            var b = TR.B[i], h = '<div class="va-tip-s">' + esc(bucketLabel(b, TR.unit, true)) + (so ? ' · so far' : '') + '</div>';
+            var b = TR.B[i], h = '<div class="va-tip-s">' + esc(bucketLabel(b, TR.unit, true)) + (so ? ' · so far' : fp ? ' · ' + esc(firstNote()) : '') + '</div>';
             h += '<div class="va-tip-kv"><i class="va-key-cur"></i><span>Visits</span><b>' + fmt(TR.cur[i]) + '</b></div>';
             if (g.sp) h += '<div class="va-tip-kv"><i class="va-key-prev"></i><span>' + esc(RANGES[S.range].cmp.replace(/^previous/, 'Previous')) + (so ? ', same time' : '') + '</span><b>' + fmt(TR.prev[i]) + '</b></div>';
-            if (TR.unit === 'week' && b.a < TR.first && TR.first < b.b) h += '<div class="va-tip-s">Partial week: tracking began ' + esc(fmtDay(TR.first)) + '</div>';
             var r = trendEl.getBoundingClientRect(), pl = parseFloat(getComputedStyle(trendEl).paddingLeft) || 0;
             showTip(h, clientX != null ? clientX : r.left + pl + x, clientY != null ? clientY : r.top + g.Y(TR.cur[i])); }
         function trendIdx(clientX) { var g = TR.geom, r = trendEl.getBoundingClientRect(), pl = parseFloat(getComputedStyle(trendEl).paddingLeft) || 0; return Math.round((clientX - r.left - pl - g.padL) / (g.n > 1 ? g.pw / (g.n - 1) : 1)); }
@@ -792,31 +854,52 @@
 
         /* ═════════ busiest times: weekday × hour in each visitor's local time ═════════ */
         var DOW = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], HM = null;
-        function renderHeat(C) { var d, h, g = [], dayT = [0, 0, 0, 0, 0, 0, 0], hrT = [], mx = 0, fallback = S.range === '24h';
+        function fmtAvg(v) { var t = v < 9.95 ? String(Math.round(v * 10) / 10) : fmt(Math.round(v)); return t + (t === '1' ? '\u00a0visit' : '\u00a0visits'); }
+        function renderHeat(C) { var d, h, g = [], dayT = [0, 0, 0, 0, 0, 0, 0], dayFull = [0, 0, 0, 0, 0, 0, 0], occ = [0, 0, 0, 0, 0, 0, 0], hrT = [], mx = 0, fallback = S.range === '24h';
             for (d = 0; d < 7; d++) { g.push([]); for (h = 0; h < 24; h++) g[d].push(0); } for (h = 0; h < 24; h++) hrT.push(0);
-            var rows = fallback ? D.rows.filter(function (r) { return r.t > C.now - 7 * DAY && r.t <= C.now && matchNL(r) && matchLoc(r); }) : C.F;
-            rows.forEach(function (r) { localHD(r); g[r.ld][r.lh]++; dayT[r.ld]++; hrT[r.lh]++; });
+            /* the same window as the rest of the page (24 hours borrows the 7-day one: too short for a weekly pattern) */
+            var W = fallback ? win('7d', C.now) : C.W, today = sod(C.now), todayD = (new Date(C.now).getDay() + 6) % 7, weekly = fallback || S.range === '7d';
+            var rows = fallback ? D.rows.filter(function (r) { return r.t >= W.start && r.t <= C.now && matchNL(r) && matchLoc(r); }) : C.F;
+            rows.forEach(function (r) { localHD(r); g[r.ld][r.lh]++; dayT[r.ld]++; hrT[r.lh]++; if (r.t < today) dayFull[r.ld]++; });
             for (d = 0; d < 7; d++) for (h = 0; h < 24; h++) if (g[d][h] > mx) mx = g[d][h];
-            var dMax = Math.max.apply(null, dayT.concat([1])), hMax = Math.max.apply(null, hrT.concat([1])), bd = dayT.indexOf(Math.max.apply(null, dayT)), bh = hrT.indexOf(Math.max.apply(null, hrT));
-            HM = { g: g, dayT: dayT, hrT: hrT };
+            /* rank weekdays by visits per complete day: today is still in progress, and a 30-day range holds some weekdays 5 times, others 4 */
+            for (var t = sod(Math.max(W.start, D.first)); t < today; t = addDays(t, 1)) occ[(new Date(t).getDay() + 6) % 7]++;
+            var avg = dayFull.map(function (v, i) { return occ[i] ? v / occ[i] : -1; }), bd = 0, bv = -1;
+            for (d = 0; d < 7; d++) if (avg[d] > bv) { bv = avg[d]; bd = d; }
+            if (bv <= 0) { bd = dayT.indexOf(Math.max.apply(null, dayT)); bv = -1; }
+            var dMax = Math.max.apply(null, dayT.concat([1])), hMax = Math.max.apply(null, hrT.concat([1])), bh = hrT.indexOf(Math.max.apply(null, hrT));
+            HM = { g: g, dayT: dayT, hrT: hrT, occ: occ, avg: avg, todayD: dayT[todayD] ? todayD : -1, weekly: weekly };
             var lvl = function (v) { return v ? Math.max(1, Math.ceil(v / mx * 6)) : 0; }, narrow = $('va-hm').clientWidth < 600;
             if (!rows.length) { $('va-hm').innerHTML = '<div class="va-empty">No visits in this period</div>'; $('va-hm-legend').innerHTML = ''; return; }
-            var html = '<div class="va-hm-grid" role="img" aria-label="Visits by weekday and hour in each visitor’s local time. Peak weekday ' + DOW[bd] + ', peak hour ' + hourSpan(bh) + '.">';
+            var html = '<div class="va-hm-grid" role="img" aria-label="Visits by weekday and hour in each visitor’s local time. Busiest weekday ' + DOW[bd] + ', busiest hour ' + hourSpan(bh) + '.">';
             html += '<div class="va-hm-corner">Total</div>'; for (h = 0; h < 24; h++) html += '<div class="va-hm-hb" data-h="' + h + '"><i style="height:' + (hrT[h] / hMax * 100).toFixed(1) + '%"></i></div>'; html += '<div></div>';
-            for (d = 0; d < 7; d++) { html += '<div class="va-hm-d">' + DOW[d].slice(0, 3) + '</div>'; for (h = 0; h < 24; h++) html += '<div class="va-hm-c l' + lvl(g[d][h]) + '" data-d="' + d + '" data-h="' + h + '"></div>';
-                html += '<div class="va-hm-t" data-d="' + d + '"><span class="va-hm-tb" style="--w:' + (dayT[d] / dMax).toFixed(3) + '"></span><span class="va-num">' + fmt(dayT[d]) + '</span></div>'; }
+            for (d = 0; d < 7; d++) { var pt = weekly && d === HM.todayD ? ' va-hm-part' : '';   /* on 7 days that row is only today, so far */
+                html += '<div class="va-hm-d' + pt + '">' + DOW[d].slice(0, 3) + '</div>'; for (h = 0; h < 24; h++) html += '<div class="va-hm-c l' + lvl(g[d][h]) + '" data-d="' + d + '" data-h="' + h + '"></div>';
+                html += '<div class="va-hm-t' + pt + '" data-d="' + d + '"><span class="va-hm-tb" style="--w:' + (dayT[d] / dMax).toFixed(3) + '"></span><span class="va-num">' + fmt(dayT[d]) + '</span></div>'; }
             html += '<div></div>'; for (h = 0; h < 24; h++) html += '<div class="va-hm-x">' + (h % (narrow ? 6 : 3) === 0 ? (narrow ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : hourName(h)) : '') + '</div>'; html += '<div></div></div>';
-            var one = fallback || S.range === '7d';
-            html += '<p class="va-hm-sum">By each visitor\u2019s own clock, the most visits came on <b>' + DOW[bd] + (one ? '' : 's') + '</b> (' + fmt(dayT[bd]) + ') and in the <b>' + hourSpan(bh) + '</b> hour (' + fmt(hrT[bh]) + ').' +
-                (fallback ? ' 24 hours is too short for a weekly pattern, so this shows the last 7 days.' : rows.length < 150 && S.range !== 'all' ? ' With only ' + plural(rows.length, 'visit') + ', a longer range gives a clearer pattern.' : '') + '</p>';
+            var sum = 'By each visitor\u2019s own clock, ';
+            if (bv < 0) sum += 'the most visits came on <b>' + DOW[bd] + '</b> (' + fmt(dayT[bd]) + ')';
+            else if (weekly) sum += '<b>' + DOW[bd] + '</b> had the most visits (' + fmt(dayT[bd]) + ')';
+            else sum += '<b>' + DOW[bd] + 's</b> were busiest, with ' + fmtAvg(bv) + ' on an average ' + DOW[bd];
+            sum += ', and <b>' + hourSpan(bh) + '</b> was the busiest hour (' + fmt(hrT[bh]) + (weekly ? '' : ' in total') + ').';
+            if (HM.todayD >= 0) sum += weekly ? ' The ' + DOW[todayD] + ' row is today, still in progress.' : ' Averages leave out today, which isn\u2019t over yet.';
+            if (S.range === '7d' && SER) { var kb = -1, kn = 0; for (var i = 0; i < SER.cur.length; i++) if (SER.cur[i] > kn) { kn = SER.cur[i]; kb = i; }
+                var kd = kb >= 0 ? (new Date(SER.B[kb].a).getDay() + 6) % 7 : -1;
+                if (kd >= 0 && kd !== bd) sum += ' The Busiest day figure above counts calendar days in your time zone (' + esc(TZ_SHORT) + '), where ' + DOW[kd] + ' led.'; }
+            if (fallback) sum += ' 24 hours is too short for a weekly pattern, so this shows the last 7 days (' + esc(dayRange(W.start, C.now)) + ').';
+            else if (rows.length < 150 && S.range !== 'all') sum += ' With only ' + plural(rows.length, 'visit') + ', a longer range gives a clearer pattern.';
+            html += '<p class="va-hm-sum">' + sum + '</p>';
             $('va-hm').innerHTML = html;
             var lg = '<span class="va-hm-lab">Fewer</span>'; for (var l = 0; l <= 6; l++) lg += '<i class="va-hm-sw l' + l + '"></i>'; lg += '<span class="va-hm-lab">More</span>';
             $('va-hm-legend').innerHTML = lg; }
         $('va-hm').addEventListener('pointermove', function (e) { if (!HM) return; var c = e.target.closest('.va-hm-c, .va-hm-hb, .va-hm-t'); if (!c) { hideTip(); return; }
-            var d = c.getAttribute('data-d'), h = c.getAttribute('data-h'), v, head;
-            if (c.classList.contains('va-hm-c')) { d = +d; h = +h; v = HM.g[d][h]; head = DOW[d] + 's, ' + hourSpan(h); }
-            else if (h != null) { h = +h; v = HM.hrT[h]; head = 'All days, ' + hourSpan(h); } else { d = +d; v = HM.dayT[d]; head = DOW[d] + 's, all day'; }
-            showTip('<div class="va-tip-s">' + esc(head) + ' · visitor’s local time</div><div class="va-tip-row"><b>' + fmt(v) + '</b> ' + (v === 1 ? 'visit' : 'visits') + '</div>', e.clientX, e.clientY, true); });
+            var d = c.getAttribute('data-d'), h = c.getAttribute('data-h'), v, head, extra = '', dn = function (d) { return HM.weekly ? DOW[d] : DOW[d] + 's'; };
+            if (c.classList.contains('va-hm-c')) { d = +d; h = +h; v = HM.g[d][h]; head = dn(d) + ', ' + hourSpan(h); }
+            else if (h != null) { h = +h; v = HM.hrT[h]; head = 'All days, ' + hourSpan(h); }
+            else { d = +d; v = HM.dayT[d]; head = dn(d) + ', all day';
+                if (HM.weekly) extra = d === HM.todayD ? 'Today, still in progress' : '';
+                else extra = (HM.occ[d] ? plural(HM.occ[d], 'full ' + DOW[d]) + ' in this range, ' + fmtAvg(HM.avg[d]) + ' on average' : 'No full ' + DOW[d] + ' in this range') + (d === HM.todayD ? '; the total includes today so far' : ''); }
+            showTip('<div class="va-tip-s">' + esc(head) + ' · visitor’s local time</div><div class="va-tip-row"><b>' + fmt(v) + '</b> ' + (v === 1 ? 'visit' : 'visits') + '</div>' + (extra ? '<div class="va-tip-s">' + esc(extra) + '</div>' : ''), e.clientX, e.clientY, true); });
         $('va-hm').addEventListener('pointerleave', hideTip);
 
         /* ═════════ recent visits ═════════ */
@@ -834,12 +917,16 @@
         function renderAbout(C) { var s = D.sources, li = [];
             li.push('A visit is one browser session in which the visitor map on the Picasso Lab website loaded. Opening this page counts as a visit too.');
             li.push('Locations are approximate and come from each visitor’s IP address. Spellings from the location service are merged: “Republic of Korea” counts as South Korea and “New York City” as New York, for example. Visits from Hong Kong, Singapore and Macau with no city are counted under that city.');
-            li.push('Dates, the chart and the busiest day use your time zone (' + esc(TZ_NAME) + '). The busiest-times grid uses each visitor’s own local time, taken from their browser or, for early visits without one, estimated from longitude.');
+            li.push('Dates, the chart and the busiest day use your time zone (' + esc(TZ_NAME) + '). The busiest-times grid uses each visitor’s own local time, taken from their browser or, for visits that didn’t record one, estimated from longitude.');
             li.push('Changes compare against the same stretch of the previous period. On the 7-day view at 9 AM today, for example, the previous 7 days are counted only up to 9 AM on their last day.');
             li.push('Unique visitors aren’t reported. Browsers keep storage separate inside embedded frames, so a returning visitor can’t be recognised reliably.');
-            li.push('Traffic sources aren’t reported. The map runs inside the lab website’s Google Sites frame, which hides the page a visitor came from: ' + plural(s.none, 'visit') + ' arrived with no referrer, ' + fmt(s.frame) + ' named the lab website’s own frame' +
-                (s.other ? ', ' + fmt(s.other) + ' named another site' : '') + (s.unset ? ', and ' + fmt(s.unset) + ' were recorded before the field existed.' : '.'));
-            if (D.legacy) li.push('The first ' + plural(D.legacy, 'visit') + ' (before ' + fmtDayY(D.firstRich) + ') were recorded with location only; browser, device, language and time zone were added later.');
+            if (D.rows.length) li.push('Traffic sources aren’t reported. The map runs inside the lab website’s Google Sites frame, which hides the page a visitor came from: ' + plural(s.none, 'visit') + ' arrived with no referrer, ' + fmt(s.frame) + ' named the lab website’s own frame' +
+                (s.other ? ', ' + fmt(s.other) + ' named another site' : '') + (s.unset ? ' and ' + fmt(s.unset) + ' have no source recorded.' : '.'));
+            if (D.bare) { var later = D.bare - D.legacy;
+                li.push(plural(D.bare, 'visit') + ' have a location only, with no browser, device, language, time zone or source: ' +
+                    (D.legacy ? (later ? 'the first ' + fmt(D.legacy) + ', from before ' : 'all from before ') + fmtDayY(D.firstRich) + ', when those details weren’t recorded yet' : '') +
+                    (later ? (D.legacy ? ', and ' : '') + fmt(later) + ' later ones, probably from an old cached copy of the map or a save that fell back to location only' : '') +
+                    '. They count everywhere except in Devices, Browser language and the mobile share.'); }
             $('va-about').innerHTML = li.map(function (x) { return '<li>' + x + '</li>'; }).join('');
             $('va-updated').textContent = 'Data loaded ' + fmtWhen(UPDATED, C.now) + ' · ' + (D.rows.length ? plural(D.rows.length, 'visit') + ' since ' + fmtDayY(D.first) + '.' : 'no visits recorded yet.'); }
 
@@ -849,12 +936,18 @@
             try { history.replaceState(null, '', p.length ? '#' + p.join('&') : location.pathname + location.search); } catch (e) {} }
         function readHash() { FKEYS.forEach(function (k) { S[k] = null; }); S.range = '7d';
             location.hash.replace(/^#/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='), k = i < 0 ? kv : kv.slice(0, i), v = ''; try { v = i < 0 ? '' : decodeURIComponent(kv.slice(i + 1)); } catch (e) {}
-                if (k === 'range' && RANGES[v]) S.range = v; else if (FKEYS.indexOf(k) >= 0 && v) S[k] = k === 'lang' ? langKey(v) : v; });
+                if (k === 'range') { if (RANGES[v]) S.range = v; }
+                else if (FKEYS.indexOf(k) >= 0 && v.trim()) S[k] = k === 'lang' ? langKey(v) : k === 'country' ? (LABEL_REV[v.trim().toLowerCase()] || normCountry(v)) : v.trim(); });
             if (!S.country) S.city = null; }
+        var LABEL_REV = {}; Object.keys(COUNTRY_LABEL).forEach(function (k) { LABEL_REV[COUNTRY_LABEL[k].toLowerCase()] = k; });
+        /* filters from a link are matched to the data (any letter case, the lab's display names, merged spellings); unknown ones are dropped */
+        function validate() { if (S.country) S.country = D.ctry[S.country.toLowerCase()] || null;
+            if (S.city) { var c = S.country ? CITY_ALIAS[S.country + '|' + S.city] || S.city : null; S.city = c ? D.cities[S.country + '|' + c.toLowerCase()] || null : null; }
+            ['browser', 'os', 'device', 'lang'].forEach(function (k) { if (S[k]) S[k] = D.vals[k][S[k].toLowerCase()] || null; }); }
         function commit() { writeHash(); render(); }
         function render() {
             if (!D || D.src !== ROWS || D.len !== ROWS.length) UPDATED = Date.now();
-            prep(); if (S.country && !D.rows.some(function (r) { return r.country === S.country; })) { S.country = null; S.city = null; }
+            prep(); validate(); writeHash();   /* the address bar always shows the view actually applied */
             var C = compute(); LAST = C; SER = series(C);
             renderHeader(); renderStatus(C); renderKPIs(C); renderMap(C); renderLoc(C); renderTrend(C); renderDevices(C); renderLang(C); renderHeat(C); renderRecent(C); renderAbout(C);
             doc.documentElement.classList.remove('va-loading'); }
@@ -874,17 +967,19 @@
         var scheme = window.matchMedia('(prefers-color-scheme: dark)'); if (scheme.addEventListener) scheme.addEventListener('change', function () { readTokens(); M.dirty = true; kick(); });
         window.addEventListener('load', function () { readTokens(); M.dirty = true; kick(); });
         window.addEventListener('hashchange', function () { var c0 = S.country; readHash(); if (!D) { renderHeader(); return; } render(); if (S.country && S.country !== c0) fitCountry(S.country); else if (!S.country && c0) flyTo(worldView(), 500); });
-        var bar = $('va-bar'); window.addEventListener('scroll', function () { bar.classList.toggle('va-scrolled', window.scrollY > 4); hideTip(); }, { passive: true });
+        /* scrolling hides a tooltip, except the scroll anchoring that follows a tap (the filter row appearing in the sticky bar) */
+        var bar = $('va-bar'); window.addEventListener('scroll', function () { bar.classList.toggle('va-scrolled', window.scrollY > 4); if (performance.now() > TIP_HOLD) hideTip(); }, { passive: true });
         setInterval(function () { if (LAST && !doc.hidden) renderStatus(LAST, Date.now()); }, 60000);
         setTimeout(function () { if (!D && !FAILED && (!ROWS || !ROWS.length)) fail(); }, 20000);
         VA = { render: function () { var first = !D; render(); if (first && S.country) fitCountry(S.country, 0); }, fail: fail };
-        if (DEBUG) window.__vaDebug = { S: S, locate: function (city) { for (var i = 0; i < M.pts.length; i++) { var p = M.pts[i]; if (p.city === city) { var r = M.cv.getBoundingClientRect(); return { x: r.left + sx(p.u), y: r.top + sy(p.v), n: p.n }; } } return null; }, view: function () { return M.v; } };
+        if (DEBUG) window.__vaDebug = { S: S, locate: function (city) { for (var i = 0; i < M.pts.length; i++) { var p = M.pts[i]; if (p.city === city) { var r = M.cv.getBoundingClientRect(); return { x: r.left + sx(p.u), y: r.top + sy(p.v), n: p.n }; } } return null; }, view: function () { return M.v; }, map: function () { return { nmax: M.nmax, nmaxAll: M.nmaxAll, s: M.v.s, cw: M.cw, sel: M.sel, pts: M.pts.filter(lit).slice(0, 6).map(function (p) { return [p.city, p.n, p.r && +p.r.toFixed(1), !!p.abs, p.kids ? p.kids.length : 0]; }) }; } };
     }
 
     /* one click = one tab: open without the "noopener" feature (with it, window.open returns null by spec and the
        Blob fallback below opened a second tab), cut the opener by hand, and fall back only if open() throws or returns null */
     function openAnalytics() { try { var _t = ANALYTICS_URL || (/^https?:/i.test(location.href) ? location.href : ''); if (_t) { var w = window.open(_t, '_blank'); if (w) { try { w.opener = null; } catch (e) {} return; } } } catch (e) {}
-        try { var html = '<!DOCTYPE html>' + document.documentElement.outerHTML, url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    /* fallback tab: a copy of this page, decoded as UTF-8 and without the "embed" class, so it opens as the dashboard */
+        try { var html = '<!DOCTYPE html>' + document.documentElement.outerHTML.replace('class="vmroot embed"', 'class="vmroot"'), url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
             var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 60000); } catch (e) {} }
 
     /* ---------- boot ---------- */
@@ -920,7 +1015,7 @@
         --ink: #161615; --ink-2: #56554f; --ink-3: #75746e;
         --accent: #2a78d6; --accent-ink: #1d5ba8; --wash: rgba(42,120,214,.10); --wash-2: rgba(42,120,214,.18); --focus: #2a78d6;
         --up: #177a17; --down: #c23a3a; --prev: #b9b8af;
-        --map-fill: #ebeae4; --map-land: #d6d5ce; --map-border: rgba(22,22,21,.13); --map-border-2: rgba(22,22,21,.06); --map-dot: rgba(42,120,214,.72); --map-dim: rgba(117,116,110,.26); --map-latest: #e2612b;
+        --map-fill: #ebeae4; --map-land: #d6d5ce; --map-border: rgba(22,22,21,.13); --map-border-2: rgba(22,22,21,.06); --map-dot: #4b8fe0; --map-dim: rgba(117,116,110,.26); --map-latest: #e2612b; --map-sel: rgba(22,22,21,.07); --map-sel-border: rgba(22,22,21,.34);
         --seq-0: #f0efea; --seq-1: #d6e7fb; --seq-2: #aacdf5; --seq-3: #78aeee; --seq-4: #3f8ae3; --seq-5: #2465b8; --seq-6: #16457f;
         --flag-ring: rgba(22,22,21,.10); --shadow-pop: 0 10px 28px rgba(22,22,21,.12), 0 2px 6px rgba(22,22,21,.06); }
     @media (prefers-color-scheme: dark) {
@@ -929,7 +1024,7 @@
             --ink: #f1f0eb; --ink-2: #bab9b1; --ink-3: #8f8e88;
             --accent: #3987e5; --accent-ink: #8dbbf2; --wash: rgba(57,135,229,.16); --wash-2: rgba(57,135,229,.28); --focus: #6da7ec;
             --up: #3fb93f; --down: #ec6b6b; --prev: #5b5a55;
-            --map-fill: #1f2831; --map-land: #2f3e4c; --map-border: rgba(150,196,236,.17); --map-border-2: rgba(150,196,236,.07); --map-dot: rgba(74,148,236,.9); --map-dim: rgba(143,142,136,.26); --map-latest: #e8733f;
+            --map-fill: #1f2831; --map-land: #2f3e4c; --map-border: rgba(150,196,236,.17); --map-border-2: rgba(150,196,236,.07); --map-dot: #4690e6; --map-dim: rgba(143,142,136,.26); --map-latest: #e8733f; --map-sel: rgba(150,196,236,.10); --map-sel-border: rgba(150,196,236,.5);
             --seq-0: #222221; --seq-1: #16345b; --seq-2: #1b4f93; --seq-3: #256abf; --seq-4: #3987e5; --seq-5: #6da7ec; --seq-6: #b7d3f6;
             --flag-ring: rgba(255,255,255,.12); --shadow-pop: 0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04); } }
     html.va-page body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
@@ -1011,6 +1106,7 @@
     .va-mapcard { position: relative; display: flex; flex-direction: column; overflow: hidden; }
     .va-map { position: relative; aspect-ratio: 1.7 / 1; border-top: 1px solid var(--line-2); }
     .va-map canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: pan-y; outline-offset: -3px; -webkit-tap-highlight-color: transparent; }
+    .va-map canvas:focus-visible { outline-offset: -3px; }   /* inside the card, which clips anything outside the canvas */
     .va-map canvas.va-grab { cursor: grab; } .va-map canvas.va-dragging { cursor: grabbing !important; }
     .va-zoom { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
     .va-zoom button { width: 32px; height: 30px; border: 0; padding: 0; background: none; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
@@ -1076,6 +1172,7 @@
     .va-key-cur, .va-key-prev { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--accent); }
     .va-key-prev { border-top-color: var(--prev); }
     .va-key-open { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--accent); background: var(--card); }
+    .va-key-open.va-key-first { border-color: var(--ink-3); } .va-pt-open.va-pt-first { stroke: var(--ink-3); }
     .va-chart { position: relative; padding: 2px 16px 12px 12px; min-height: 264px; border-radius: 0 0 12px 12px; }
     .va-chart:focus-visible { outline-offset: -4px; }
     .va-chart svg { display: block; }
@@ -1112,6 +1209,7 @@
     .va-hm-d { font-size: 12px; color: var(--ink-3); }
     .va-hm-c { height: 26px; border-radius: 3px; background: var(--seq-0); }
     .va-hm-c:hover { box-shadow: inset 0 0 0 2px var(--ink); }
+    .va-hm-d.va-hm-part, .va-hm-t.va-hm-part .va-num { color: var(--ink-3); font-style: italic; }
     .va-hm-t { position: relative; isolation: isolate; height: 26px; display: flex; align-items: center; justify-content: flex-end; padding-right: 2px; font-size: 12.5px; }
     .va-hm-tb { position: absolute; left: 8px; top: 5px; bottom: 5px; z-index: -1; width: calc((100% - 8px) * var(--w, 0)); background: var(--wash); border-radius: 3px; }
     .va-hm-x { font-size: 12px; color: var(--ink-3); white-space: nowrap; padding-top: 3px; overflow: visible; }
@@ -1152,6 +1250,7 @@
     .va-tip-h b { font-weight: 600; }
     .va-tip-s { color: var(--ink-3); }
     .va-tip-row { margin-top: 6px; } .va-tip-row b { font-size: 14px; font-weight: 600; } .va-tip-row span { color: var(--ink-3); }
+    .va-tip-near { margin-top: 4px; }
     .va-tip-hint { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line-2); color: var(--accent-ink); font-weight: 500; }
     .va-tip-kv { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-top: 5px; }
     .va-tip-kv span { color: var(--ink-2); } .va-tip-kv b { font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -1189,6 +1288,11 @@
         .va-main { padding: 0 16px 40px; gap: 12px; }
         .va-status { margin: 0; font-size: 12.5px; }
         .va-status { column-gap: 14px; } .va-status .va-sep { display: none; }
+        .va-status > span { white-space: normal; flex-wrap: wrap; row-gap: 0; min-width: 0; } .va-st-place { min-width: 0; overflow-wrap: anywhere; }
+        /* touch: bigger hit areas without changing how text links and tabs look */
+        .va-link, .va-tabs button { position: relative; } .va-link::after { content: ''; position: absolute; inset: -11px -8px; } .va-tabs button::after { content: ''; position: absolute; inset: -4px -8px; }
+        .va-seg button { height: 34px; }
+        .va-chip { height: 34px; } .va-chip button { width: 32px; height: 32px; }
         .va-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .va-kpi, .va-kpi-main + .va-kpi { grid-column: auto; padding: 12px 14px; } .va-kpi-main { grid-column: 1 / -1; }
         .va-kpi + .va-kpi, .va-kpi:nth-child(2), .va-kpi:nth-child(4), .va-kpi:nth-child(5) { border-left: 0; }
@@ -1210,8 +1314,8 @@
         .va-blist { padding: 0 8px 4px; } .va-note { padding: 6px 16px 14px; }
         .va-chart { padding: 0 12px 10px 4px; min-height: 214px; }
         .va-hm { padding: 2px 12px 14px 12px; }
-        .va-hm-grid { grid-template-columns: 30px repeat(24, minmax(0, 1fr)) 44px; gap: 2px; }
-        .va-hm-corner { font-size: 0; }
+        .va-hm-grid { grid-template-columns: 32px repeat(24, minmax(0, 1fr)) 44px; gap: 2px; }
+        .va-hm-corner { font-size: 12px; letter-spacing: -0.02em; }
         .va-hm-hb { height: 22px; }
         .va-hm-c, .va-hm-t { height: 20px; } .va-hm-c { border-radius: 2px; }
         .va-hm-t { font-size: 12px; } .va-hm-tb { left: 4px; }
