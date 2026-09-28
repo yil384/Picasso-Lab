@@ -534,7 +534,7 @@
             return best; }
         function pickHint(p, touch) { var verb = touch ? 'Tap' : 'Click';
             if (S.country !== p.country) return verb + ' to filter by ' + cLabel(p.country);
-            if (!p.city) return ''; if (S.city === p.city) return verb + ' to clear the city filter'; return verb + ' to filter by ' + p.city; }
+            if (!p.city) return ''; if (S.city === p.city) return verb + ' to clear the city filter'; return verb + ' to filter by ' + p.city + (cityIsCountry(p.city, p.country) ? ' (city)' : ''); }
         function mapTip(p, x, y, touch) { var C = LAST; if (!C) return; var hint = pickHint(p, touch);
             var same = cityIsCountry(p.city, p.country);
             var h = '<div class="va-tip-h">' + flag(p.country) + '<b>' + esc(same ? cLabel(p.country) : p.city || 'Unknown city') + '</b></div>' + (same ? '' : '<div class="va-tip-s">' + esc(cLabel(p.country)) + '</div>') +
@@ -849,7 +849,7 @@
             try { history.replaceState(null, '', p.length ? '#' + p.join('&') : location.pathname + location.search); } catch (e) {} }
         function readHash() { FKEYS.forEach(function (k) { S[k] = null; }); S.range = '7d';
             location.hash.replace(/^#/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='), k = i < 0 ? kv : kv.slice(0, i), v = ''; try { v = i < 0 ? '' : decodeURIComponent(kv.slice(i + 1)); } catch (e) {}
-                if (k === 'range' && RANGES[v]) S.range = v; else if (FKEYS.indexOf(k) >= 0 && v) S[k] = v; });
+                if (k === 'range' && RANGES[v]) S.range = v; else if (FKEYS.indexOf(k) >= 0 && v) S[k] = k === 'lang' ? langKey(v) : v; });
             if (!S.country) S.city = null; }
         function commit() { writeHash(); render(); }
         function render() {
