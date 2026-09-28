@@ -201,7 +201,7 @@ body.gdr-modal-open { overflow: hidden; }
     position: relative; overflow: hidden; isolation: isolate;
     display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px;
     min-height: clamp(260px, 46vh, 400px);
-    padding: 70px 9% 58px;
+    padding: 70px 4% 58px;
     border-radius: 10px;
     background: linear-gradient(104deg, #9a1f3d 0%, #c8304e 38%, #b52c5a 47.5%, #3e50d6 52.5%, #2c5ce4 62%, #1c3aa8 100%);
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22), 0 6px 18px rgba(8, 14, 48, .35);
@@ -210,18 +210,31 @@ body.gdr-modal-open { overflow: hidden; }
     content: ""; position: absolute; inset: 0; z-index: -1;
     background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 14px);
 }
-.gdr-poster-word { /* big translucent 红方 / 蓝方 at the edges */
+.gdr-poster-word { /* big translucent 红方 / 蓝方 at the edges, where there is room for them */
+    display: none;
     position: absolute; top: 50%; translate: 0 -50%; z-index: -1;
     writing-mode: vertical-rl; text-orientation: upright;
     font: 400 clamp(40px, 9vh, 76px)/1 var(--gdr-font-display); color: rgba(255, 255, 255, .13);
 }
 .gdr-poster-word.red { left: 2.4%; }
 .gdr-poster-word.blue { right: 2.4%; }
+@media (min-width: 1200px) {
+    .gdr-poster { padding-inline: 9%; }
+    .gdr-poster-word { display: block; }
+    .gdr-app[lang="en"] .gdr-poster-word { display: none; }
+}
 .gdr-poster-head { position: absolute; left: 50%; top: 16px; translate: -50% 0; text-align: center; white-space: nowrap; }
 .gdr-poster-head b { display: block; font: 400 30px/1.1 var(--gdr-font-display); letter-spacing: .06em; text-shadow: 0 3px 0 rgba(0, 0, 0, .22); }
 .gdr-poster-head span { font: 600 13px/1.8 var(--gdr-font-num); color: rgba(255, 255, 255, .78); letter-spacing: .02em; }
-.gdr-side { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; min-width: 0; }
-.gdr-side.blue { align-items: flex-end; }
+/* each team sits on a light plate with its result tag on the top edge */
+.gdr-side {
+    position: relative; justify-self: start; min-width: 0; max-width: 100%;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+    padding: 22px 22px 18px 16px; border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .04));
+    box-shadow: inset 0 0 0 2px rgba(255, 186, 202, .6);
+}
+.gdr-side.blue { justify-self: end; align-items: flex-end; padding: 22px 16px 18px 22px; box-shadow: inset 0 0 0 2px rgba(170, 200, 255, .65); }
 .gdr-mem { display: flex; align-items: center; gap: 12px; min-width: 0; max-width: 100%; }
 .gdr-side.blue .gdr-mem { flex-direction: row-reverse; text-align: right; }
 .gdr-av { flex: none; width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #c9d2e4; }
@@ -231,9 +244,11 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-mem-t > b { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 900 clamp(16px, 2.6vh, 22px)/1.25 var(--gdr-font-ui); text-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
 .gdr-mem-t > span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 700 12px/1.4 var(--gdr-font-ui); color: rgba(255, 255, 255, .82); }
 .gdr-mem-t > .gdr-mem-rec { color: #fff; }
-.gdr-plate { padding: 3px 16px; border-radius: 4px; font: 900 15px/1.3 var(--gdr-font-ui); letter-spacing: .2em; text-indent: .2em; }
+.gdr-plate { position: absolute; top: -13px; left: 16px; padding: 3px 16px; border-radius: 4px; font: 900 15px/1.3 var(--gdr-font-ui); letter-spacing: .2em; text-indent: .2em; }
+.gdr-side.blue .gdr-plate { left: auto; right: 16px; }
+.gdr-app[lang="en"] .gdr-plate { letter-spacing: .02em; text-indent: 0; }
 .gdr-plate.win { background: var(--gdr-gold-plate); color: #a3240c; box-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
-.gdr-plate.lose { background: rgba(255, 255, 255, .18); color: rgba(255, 255, 255, .78); }
+.gdr-plate.lose { background: #dfe6f3; color: #5a6688; box-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
 .gdr-bigscore { display: flex; align-items: center; gap: clamp(8px, 2vw, 26px); }
 .gdr-lv { min-width: .6em; text-align: center; font: 800 clamp(76px, 18vh, 156px)/.8 var(--gdr-font-num); color: #fff; text-shadow: 0 4px 0 rgba(20, 10, 60, .32); }
 .gdr-lv.lose { color: rgba(255, 255, 255, .5); }
@@ -286,9 +301,10 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-mscore .lose { color: #a3aec8; }
 .gdr-mres {
     grid-area: res; align-self: stretch; display: grid; place-items: center;
-    font: 900 17px/1.2 var(--gdr-font-ui); color: #fff; letter-spacing: .08em;
+    font: 900 17px/1.2 var(--gdr-font-ui); color: #fff; letter-spacing: .14em; text-indent: .14em;
     -webkit-text-stroke: 3px rgba(0, 0, 0, .18); paint-order: stroke fill;
 }
+.gdr-app[lang="en"] .gdr-mres { font-size: 14px; letter-spacing: 0; text-indent: 0; }
 .gdr-mres.red { background: linear-gradient(180deg, #ef6a7e 0%, #d63c58 55%, #b8284a 100%); }
 .gdr-mres.blue { background: linear-gradient(180deg, #7da4ff 0%, #4a78f0 55%, #2c5ce4 100%); }
 .gdr-mnote { grid-area: note; justify-self: center; margin: -4px 0 10px; }
@@ -370,11 +386,11 @@ body.gdr-modal-open { overflow: hidden; }
 }
 .gdr-splash.is-leaving { transform: translate3d(0, -100%, 0); pointer-events: none; }
 .gdr-splash-in {
-    width: min(100%, 420px); padding: 24px 28px 26px; border-radius: 12px;
+    width: min(100%, clamp(360px, 40vw, 540px)); padding: 24px 28px 26px; border-radius: 12px;
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .35), 0 4px 0 rgba(10, 18, 60, .35);
 }
-.gdr-splash .gdr-mvp-art { width: clamp(150px, 26vh, 190px); }
-.gdr-splash-name { font: 400 clamp(34px, 6vh, 48px)/1 var(--gdr-font-display); color: #fff; text-shadow: 0 3px 0 rgba(122, 30, 0, .45); }
+.gdr-splash .gdr-mvp-art { width: clamp(150px, 26vh, 220px); }
+.gdr-splash-name { font: 400 clamp(34px, 6vh, 56px)/1 var(--gdr-font-display); color: #fff; text-shadow: 0 3px 0 rgba(122, 30, 0, .45); }
 .gdr-splash-line { display: flex; gap: 20px; justify-content: center; font: 700 13px/1 var(--gdr-font-ui); color: rgba(255, 255, 255, .85); }
 .gdr-splash-line b { margin-right: 4px; font: 800 26px/1 var(--gdr-font-num); color: #fff; }
 
@@ -395,6 +411,7 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-bn-score .red { color: #ff8a9c; }
 .gdr-bn-score .blue { color: #8cb4ff; }
 .gdr-bn-score i { font-style: normal; color: rgba(255, 255, 255, .5); }
+.gdr-bn-score span:last-child { color: rgba(255, 255, 255, .6); }
 .gdr-bn-mut { flex: none; color: rgba(255, 255, 255, .65); }
 .gdr-bn-div { flex: none; width: 1px; height: 16px; background: rgba(255, 255, 255, .2); }
 .gdr-bn-chip { flex: none; display: inline-flex; align-items: center; gap: 4px; }
@@ -430,11 +447,12 @@ body.gdr-modal-open { overflow: hidden; }
     .gdr-tabs { padding-top: 6px; }
     .gdr-tab { height: 50px; padding-right: 18px; font-size: 16px; }
     .gdr-page { padding-top: 10px; }
-    .gdr-poster { min-height: calc(100vh - var(--gdr-head) - 24px); padding: 52px 5% 40px; }
+    .gdr-poster { min-height: calc(100vh - var(--gdr-head) - 24px); padding: 52px 4% 40px; }
     .gdr-poster-head { top: 8px; }
     .gdr-poster-head b { font-size: 24px; }
     .gdr-poster-note { bottom: 10px; }
-    .gdr-side { gap: 8px; }
+    .gdr-side { gap: 8px; padding: 18px 16px 12px 12px; }
+    .gdr-side.blue { padding: 18px 12px 12px 16px; }
     .gdr-mem { gap: 8px; }
     .gdr-mem-t > span { font-size: 11px; }
     .gdr-mrow { min-height: 70px; grid-template-columns: 70px minmax(0, 1fr) auto minmax(0, 1fr) 78px; column-gap: 10px; }
@@ -480,12 +498,12 @@ body.gdr-modal-open { overflow: hidden; }
     .gdr-bigscore { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
     .gdr-side.blue { grid-column: 2; grid-row: 1; }
     .gdr-side .gdr-mem, .gdr-side.blue .gdr-mem { flex-direction: column; align-items: center; text-align: center; gap: 6px; }
-    .gdr-side, .gdr-side.blue { align-items: center; }
+    .gdr-side, .gdr-side.blue { justify-self: stretch; align-items: center; padding: 20px 8px 12px; }
+    .gdr-plate, .gdr-side.blue .gdr-plate { left: 50%; right: auto; translate: -50% 0; }
     .gdr-mem-t > b { font-size: 15px; }
     .gdr-mem-t > span { font-size: 11px; }
     .gdr-lv { font-size: 104px; }
     .gdr-vs { font-size: 56px; }
-    .gdr-poster-word { display: none; }
     .gdr-poster-head b { font-size: 26px; }
 
     .gdr-mrow {
