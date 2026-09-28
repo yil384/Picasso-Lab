@@ -73,12 +73,17 @@ body.gdr-modal-open { overflow: hidden; }
     padding: env(safe-area-inset-top, 0px) calc(14px + env(safe-area-inset-right, 0px)) 0 calc(6px + env(safe-area-inset-left, 0px));
 }
 .gdr-back {
-    flex: none; width: 52px; height: 52px; margin: -2px 0; padding: 0; /* >= 40px even at s = .79 (667x375) */
+    position: relative; z-index: 1; flex: none; width: 52px; height: 52px; margin: -2px 0; padding: 0;
     display: grid; place-items: center;
     border: 0; border-radius: 8px; background: none; color: #fff; cursor: pointer;
 }
 .gdr-back-ic { width: 34px; height: 27px; fill: currentColor; stroke: rgba(10, 18, 60, .38); stroke-width: 2.4px; stroke-linejoin: round; paint-order: stroke fill; }
 .gdr-back:active { scale: .92; }
+/* small controls reach 40 CSS px however far the stage is scaled down (--gdr-hit = 40 / s) */
+.gdr-back::after, .gdr-link::after {
+    content: ""; position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+    width: max(100%, var(--gdr-hit, 40px)); height: max(100%, var(--gdr-hit, 40px));
+}
 .gdr-back:focus-visible { outline: 2px solid #ffd766; outline-offset: -2px; }
 .gdr-head-title { margin: 0; flex: none; font: 900 22px/1 var(--gdr-font-ui); color: #fff; text-shadow: 0 2px 0 rgba(10, 18, 60, .45); }
 .gdr-head-sub { min-width: 0; margin-left: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; color: rgba(255, 255, 255, .6); }
@@ -86,11 +91,10 @@ body.gdr-modal-open { overflow: hidden; }
 
 .gdr-tabs { grid-area: tabs; display: flex; flex-direction: column; padding: 4px 0 calc(12px + env(safe-area-inset-bottom, 0px)) env(safe-area-inset-left, 0px); }
 .gdr-tab {
-    position: relative; flex: none; height: 54px;
+    position: relative; flex: none; height: max(54px, var(--gdr-hit, 40px));
     padding: 0 22px 0 0; border: 0; background: none; cursor: pointer;
     text-align: right; font: 900 17px/1.1 var(--gdr-font-ui);
     color: rgba(255, 255, 255, .86);
-    transition: color 150ms ease;
 }
 .gdr-tab + .gdr-tab::before { content: ""; position: absolute; left: 22%; right: 12px; top: 0; height: 1px; background: rgba(255, 255, 255, .1); }
 .gdr-tab[aria-selected="true"] {
@@ -119,7 +123,7 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-sec > b { flex: none; font: 900 17px/1.2 var(--gdr-font-ui); text-shadow: 0 1px 0 rgba(10, 18, 60, .4); }
 .gdr-fine { min-width: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; line-height: 1.35; color: rgba(255, 255, 255, .6); }
 .gdr-fine .gdr-ic { font-size: 14px; color: rgba(255, 255, 255, .45); }
-.gdr-link { position: relative; margin-left: auto; min-height: 40px; padding: 0 4px; border: 0; background: none; cursor: pointer; font: 700 13px/1.2 var(--gdr-font-ui); color: #ffe39a; }
+.gdr-link { position: relative; z-index: 1; margin-left: auto; min-height: 40px; padding: 0 4px; border: 0; background: none; cursor: pointer; font: 700 13px/1.2 var(--gdr-font-ui); color: #ffe39a; }
 
 /* ---------- signature card (same language as the in-game card) ---------- */
 .gdr-card {

@@ -69,17 +69,18 @@
     var DESIGN_W = 844, DESIGN_H = 390; // landscape design stage (a phone on its side = 1:1)
 
     // English for the style tags and match notes above (quotes stay in the player's own words).
+    // Tags are kept to one short phrase so they fit a plate or a row on one line.
     var EN = {
-        "记牌反击 · 后发制人": "Card counter · strikes late",
-        "灵活接风 · 见缝插针": "Quick to take the lead · finds every gap",
-        "稳健控场 · 逢人配大师": "Steady control · wild-card master",
-        "炸弹强攻 · 火力全开": "Bomb assault · all guns blazing",
-        "冲 A 猛将 · 大牌敢出": "Ace charger · plays big cards",
-        "雷霆万钧 · 大牌压制": "Thunder strike · big-card pressure",
-        "新锐黑马 · 后劲十足": "Dark horse · strong finisher",
-        "团队核心 · 配合默契": "Team anchor · great teamwork",
-        "红方三冲 A 未过 · 掉回 2（非零封）": "Red failed at A three times · dropped to 2 (not a shutout)",
-        "蓝方三冲 A 未过 · 掉回 2（非零封）": "Blue failed at A three times · dropped to 2 (not a shutout)",
+        "记牌反击 · 后发制人": "Card counter",
+        "灵活接风 · 见缝插针": "Gap finder",
+        "稳健控场 · 逢人配大师": "Steady control",
+        "炸弹强攻 · 火力全开": "Bomb assault",
+        "冲 A 猛将 · 大牌敢出": "Ace charger",
+        "雷霆万钧 · 大牌压制": "Thunder strike",
+        "新锐黑马 · 后劲十足": "Dark horse",
+        "团队核心 · 配合默契": "Team anchor",
+        "红方三冲 A 未过 · 掉回 2（非零封）": "Red missed A 3× · back to 2 (not a shutout)",
+        "蓝方三冲 A 未过 · 掉回 2（非零封）": "Blue missed A 3× · back to 2 (not a shutout)",
         "以下克上 · 阻击蓝方冲 A": "Upset · stopped Blue at A",
         "双 A 决战 · 蓝方先终结": "A vs A decider · Blue finished first"
     };
