@@ -514,6 +514,28 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-played .card + .card { margin-left: calc(var(--card-w-small) * -.52); }
 .gd-played.is-enter { animation: gd-play-in 200ms var(--ease-out) both; }
 @keyframes gd-play-in { from { opacity: 0; scale: 1.12; } }
+/* combo label over a fresh play: display font, gold gradient, 1.4 -> 1 in 120 ms, hold, fade */
+.gd-combo-label {
+    position: absolute;
+    left: 50%; top: 72%;
+    z-index: 1;
+    translate: -50% -50%;
+    font: 400 64px/1 var(--font-display);
+    white-space: nowrap;
+    background: linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #ff9a1c 70%, #e4480e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 3px 0 #7a1e00) drop-shadow(0 0 1px #7a1e00);
+    opacity: 0;
+    animation: gd-combo-label 820ms linear 150ms both;
+}
+@keyframes gd-combo-label {
+    0% { opacity: 0; scale: 1.4; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    15% { opacity: 1; scale: 1; }
+    76% { opacity: 1; }
+    100% { opacity: 0; scale: 1; }
+}
 .gd-pass-word {
     color: var(--pass-fill);
     font: 900 46px/1 var(--font-ui);

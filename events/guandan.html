@@ -1776,6 +1776,7 @@ const tableView = {
     viewport: null, rot: null, stage: null, probe: null, ui: null, toast: null,
     regions: {}, keys: {}, seats: [], avatars: [],
     cardEls: new Map(),
+    handCardW: HAND_CARD_W,
     layout: { s: 1, w: STAGE_MIN_W, h: STAGE_H, rotated: false, left: 0, vw: 0 },
     menuOpen: false,
     jipaiTab: "count",
@@ -2083,6 +2084,7 @@ function renderHand(columns, rowCards, geo, dealPhase) {
     if (tableView.keys.hand === key) return;
     tableView.keys.hand = key;
     host.style.setProperty("--card-w", `${geo.cardW.toFixed(2)}px`);
+    tableView.handCardW = geo.cardW;
     if (dealPhase === "dealing" || !columns.length) {
         host.textContent = "";
         tableView.cardEls = new Map();
@@ -2516,8 +2518,15 @@ function renderSeat(i, v) {
 }
 
 // Played cards (or the 不出 word) at a seat's slot. The seat whose turn it is has its slot
-// cleared, as in Tencent. Entry animations are keyed by the play stamp so they never replay.
-function renderSlot(i, v, animate) {
+// cleared, as in Tencent. A fresh play flies in (see playFlightSources) or, without a source, pops
+// in; special combos get their label. All of it is keyed by the play stamp, so it never replays.
+const COMBO_LABELS = {
+    straight: ["Straight", "顺子"],
+    pairStraight: ["Pairs", "连对"],
+    tripleStraight: ["Plates", "钢板"],
+    fullhouse: ["Full House", "三带二"]
+};
+function renderSlot(i, v, animate, flights) {
     const pos = visualSeatPos(i, v.mine);
     const entry = game.trickPlays?.[i];
     if (!entry || v.dealPhase !== "done" || v.liveTurn === i) {
@@ -2526,11 +2535,54 @@ function renderSlot(i, v, animate) {
     }
     const stamp = seatPlayStamp(entry);
     setRegion(`slot${pos}`, `${stamp}:${uiLang}:${game.currentLevelRank}`, () => {
-        const enter = animate && !tableView.seenPlays.has(stamp) ? " is-enter" : "";
+        const fresh = animate && !tableView.seenPlays.has(stamp);
         tableView.seenPlays.add(stamp);
+        const enter = fresh && !flights.has(i) ? " is-enter" : "";
         if (entry.actionType === "pass") return `<div class="gd-pass-word${enter}">${L("Pass", "不出")}</div>`;
         const cards = displayCardsForCombo(valuesFromFirebase(entry.cards), entry.combo);
-        return `<div class="gd-played${enter}">${cards.map(c => cardHTML(c, true)).join("")}</div>`;
+        const label = fresh && COMBO_LABELS[entry.combo?.type];
+        return `<div class="gd-played${enter}">${cards.map(c => cardHTML(c, true, false, `data-pid="${encodeHTML(c.id)}"`)).join("")}</div>`
+            + (label ? `<span class="gd-combo-label">${L(...label)}</span>` : "");
+    });
+}
+
+// Fresh plays about to appear: mine fly from where the cards sat in my hand (read before the hand
+// re-lays out), everyone else's from their avatar. Returns seat -> source.
+function playFlightSources(v, animate) {
+    const out = new Map();
+    if (!animate || v.dealPhase !== "done" || prefersReducedMotion()) return out;
+    (game.trickPlays || []).forEach((entry, i) => {
+        if (!entry || entry.actionType === "pass" || v.liveTurn === i || tableView.seenPlays.has(seatPlayStamp(entry))) return;
+        if (i === v.mine) {
+            const rects = new Map();
+            valuesFromFirebase(entry.cards).forEach(c => {
+                const el = tableView.cardEls.get(c.id)?.el;
+                if (el?.isConnected) rects.set(c.id, el.getBoundingClientRect());
+            });
+            if (rects.size) out.set(i, { rects, scale: tableView.handCardW / (HAND_CARD_W * .79) });
+        } else {
+            out.set(i, { avatar: tableView.avatars[visualSeatPos(i, v.mine)].getBoundingClientRect(), scale: .45 });
+        }
+    });
+    return out;
+}
+
+// FLIP: each played card starts at its source (in stage design px, so the rotated stage works too)
+// and settles into the slot in ~200 ms. Transform and opacity only.
+function runPlayFlights(flights, v) {
+    const centre = r => stagePoint(r.left + r.width / 2, r.top + r.height / 2);
+    flights.forEach((src, i) => {
+        const slot = tableView.regions[`slot${visualSeatPos(i, v.mine)}`];
+        slot.querySelectorAll(".gd-played .card").forEach((el, k) => {
+            const from = src.rects ? src.rects.get(el.dataset.pid) : src.avatar;
+            if (!from) return;
+            const a = centre(from);
+            const b = centre(el.getBoundingClientRect());
+            el.animate([
+                { transform: `translate(${(a.x - b.x).toFixed(1)}px, ${(a.y - b.y).toFixed(1)}px) scale(${src.scale.toFixed(3)})`, opacity: src.rects ? 1 : 0 },
+                { transform: "none", opacity: 1 }
+            ], { duration: 210, delay: src.rects ? 0 : k * 16, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
+        });
     });
 }
 
@@ -2680,9 +2732,10 @@ function renderTable() {
 
     renderTableChrome();
     setRegion("watermark", `<b>${L("PICASSO Guandan", "PICASSO 掼蛋")}</b><span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span>`);
+    const flights = playFlightSources(v, !freshMount);
     [0, 1, 2, 3].forEach(i => {
         renderSeat(i, v);
-        renderSlot(i, v, !freshMount);
+        renderSlot(i, v, !freshMount, flights);
     });
     renderHand(columns, handMode === "row" && mine >= 0 ? orderedHandForDisplay(handCards, game.currentLevelRank, mine) : [], geo, dealPhase);
     setRegion("tools", toolsHTML(v));
@@ -2694,6 +2747,7 @@ function renderTable() {
     setRegion("result", result ? `${result}:${game.roundNo}:${uiLang}:${isHost()}` : "", result === "round" ? roundOverHTML : result ? gameOverHTML : "");
     refreshSelectionUI();
     updateTurnClockDOM();
+    runPlayFlights(flights, v);
     maybeCelebrateBomb();
     initResultOverlay();
     maybeToastTableMessage();
@@ -2744,7 +2798,7 @@ function triggerBombCelebration(combo) {
     const slot = stageEl.querySelector(".bomb-banner-slot");
     if (slot) {
         const bombLen = combo.bombLen || 0;
-        const text = combo.type === "jokerBomb" ? "天王炸!" : bombLen >= 8 ? "八张炸弹!" : bombLen >= 6 ? "六张炸弹!" : "炸弹!";
+        const text = combo.type === "jokerBomb" ? "天王炸!" : combo.type === "straightFlush" ? "同花顺!" : bombLen >= 8 ? "八张炸弹!" : bombLen >= 6 ? "六张炸弹!" : "炸弹!";
         slot.innerHTML = `<div class="bomb-banner show">${text}</div>`;
         setTimeout(() => {
             const banner = slot.querySelector(".bomb-banner");
