@@ -662,41 +662,7 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
 }
 .toast.show { opacity: 1; scale: 1; }
 
-/* ---------- shell overlays (the transition package styles their content) ---------- */
-.return-transition {
-    position: fixed;
-    inset: 0;
-    z-index: var(--z-transition);
-    pointer-events: none;
-}
-.return-transition:empty { display: none; }
-.return-transition.active { pointer-events: auto; }
-#return-type-hint {
-    position: fixed;
-    left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-    z-index: var(--z-toast);
-    padding: 6px 14px;
-    border-radius: var(--r-pill);
-    background: rgba(6, 24, 28, .8);
-    color: rgba(255, 255, 255, .88);
-    font: 600 var(--fs-11)/1.4 var(--font-ui);
-    white-space: nowrap;
-    translate: -50% 8px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 180ms ease, translate 180ms var(--ease-out);
-}
-#return-type-hint.show { opacity: 1; translate: -50% 0; }
-#return-type-hint kbd {
-    display: inline-block;
-    min-width: 1.4em;
-    margin: 0 1px;
-    padding: 1px 3px;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, .16);
-    font: 700 var(--fs-11)/1.2 var(--font-num);
-    text-align: center;
-}
+/* #return-transition and #return-type-hint are styled in guandan-transition.css. */
 
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {

@@ -42,16 +42,17 @@
 
     <audio id="guandan-bgm" src="https://yil384.github.io/Picasso-Lab/events/static/guandan_music.mp3" loop preload="auto" style="display:none"></audio>
 
-    <div class="gdr-cardmodal gdr-scope" id="gdr-cardmodal" style="display:none" aria-hidden="true">
-        <button class="gdr-cardmodal-close" id="gdr-card-close" type="button" aria-label="Close">&times;</button>
-        <div class="gdr-cardmodal-card"><div id="gdr-cardmodal-body"></div></div>
+    <div class="gdr-cardmodal gdr-scope" id="gdr-cardmodal" role="dialog" aria-modal="true" aria-label="巅峰对决" hidden>
+        <div class="gdr-cardmodal-card">
+            <div class="gdr-cardmodal-body" id="gdr-cardmodal-body"></div>
+        </div>
     </div>
 
     <main id="root"></main>
 </div>
 
 <div class="return-transition" id="return-transition" aria-hidden="true"></div>
-<div id="return-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd></div>
+<div id="return-type-hint">试试输入 <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd></div>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -264,7 +265,9 @@ function showToast(text, duration = 1700) {
 }
 
 function showReturnTypeHint() {
-    returnTypeHint?.classList.add("show");
+    if (!returnTypeHint) return;
+    returnTypeHint.firstChild.nodeValue = L("try typing ", "试试输入 ");
+    returnTypeHint.classList.add("show");
     clearTimeout(returnHintTimer);
     returnHintTimer = setTimeout(() => returnTypeHint?.classList.remove("show"), 2600);
 }
@@ -2392,60 +2395,79 @@ else render();
 </script>
 <script src="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.js"></script>
 <script>
+// 巅峰对决 board: window.GuandanRecordsUI.open(page) / close(). It opens only from a
+// [data-open-records] control (value = page key) and never by itself; the 战报 strip is
+// rendered only into [data-gdr-banner-slot] elements that a screen provides.
 (function () {
     var R = window.GuandanRecords;
-    if (!R) return;
     var modal = document.getElementById("gdr-cardmodal");
-    var mbody = document.getElementById("gdr-cardmodal-body");
-    var closeBtn = document.getElementById("gdr-card-close");
-    var rendered = false;
-    function openCard() {
-        if (!rendered && mbody) { mbody.innerHTML = R.buildHTML(); rendered = true; }
-        if (modal) { modal.style.display = "flex"; modal.setAttribute("aria-hidden", "false"); }
-        document.body.style.overflow = "hidden";
+    var host = document.getElementById("gdr-cardmodal-body");
+    if (!R || !R.mount || !modal || !host) return;
+    var board = null, opener = null, closeTimer = 0;
+    function setBackgroundInert(on) {
+        [document.getElementById("root"), document.querySelector(".topbar")].forEach(function (el) { if (el) el.inert = on; });
     }
-    function closeCard() {
-        if (!modal) return;
-        modal.classList.add("gdr-closing");
-        document.body.style.overflow = "";
-        setTimeout(function() {
-            modal.style.display = "none";
-            modal.setAttribute("aria-hidden", "true");
-            modal.classList.remove("gdr-closing");
-        }, 220);
+    function uiLang() {
+        try { return localStorage.getItem("picasso.guandan.lang") === "en" ? "en" : "zh"; } catch (_) { return "zh"; }
     }
-    closeBtn && closeBtn.addEventListener("click", closeCard);
-    modal && modal.addEventListener("click", function (e) { if (e.target === modal) closeCard(); });
-    document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape" && modal && modal.style.display === "flex") closeCard();
-        if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest(".gdr-banner")) { e.preventDefault(); openCard(); }
-    });
-    // open via delegation (banner is injected into the JS-rendered lobby)
-    document.addEventListener("click", function (e) {
-        if (e.target.closest && e.target.closest(".gdr-banner")) openCard();
-    });
-    // inject the records banner into the lobby (the "Open a Lab Guandan Table" page) whenever it (re)renders
-    function injectBanner() {
-        var lobby = document.querySelector(".lobby");
-        if (lobby && !lobby.querySelector(".gdr-banner")) {
-            var el = document.createElement("div");
-            el.className = "gdr-banner gdr-scope";
-            el.setAttribute("role", "button");
-            el.tabIndex = 0;
-            // main UI is a module (L/uiLang aren't global) — read the saved lang directly.
-            // The toggle writes localStorage before re-render, so re-injection picks up the switch.
-            var bnLang = "zh";
-            try { bnLang = localStorage.getItem("picasso.guandan.lang") === "en" ? "en" : "zh"; } catch (_) {}
-            var btnLabel = bnLang === "zh" ? "巅峰对决 · 完整战绩 ›" : "Peak Showdown · Full Record ›";
-            el.innerHTML = '<div class="gdr-banner-inner">' + (R.buildBanner ? R.buildBanner() : "") + '</div>' +
-                '<button class="gdr-banner-btn" type="button">' + btnLabel + '</button>';
-            lobby.insertBefore(el, lobby.firstChild);
+    function isOpen() { return !modal.hidden && modal.classList.contains("is-open"); }
+    function open(page) {
+        var lang = uiLang();
+        clearTimeout(closeTimer);
+        if (!board || board.lang !== lang) {
+            if (board) board.destroy();
+            board = R.mount(host, { lang: lang, onClose: close });
+            modal.setAttribute("aria-label", lang === "en" ? "Peak Showdown" : "巅峰对决");
         }
+        board.go(page == null || page === "" ? 0 : page, true);
+        if (!isOpen()) opener = document.activeElement;
+        modal.hidden = false;
+        setBackgroundInert(true);
+        document.body.classList.add("gdr-modal-open");
+        void modal.offsetWidth; // start the fade from the hidden state
+        modal.classList.add("is-open");
+        var back = host.querySelector(".gdr-back");
+        if (back) back.focus({ preventScroll: true });
     }
-    var root = document.getElementById("root") || document.body;
-    new MutationObserver(injectBanner).observe(root, { childList: true, subtree: true });
-    injectBanner();
-    // The board opens only from the banner/button; it never auto-opens over the lobby or a rejoin.
+    function close() {
+        if (modal.hidden) return;
+        modal.classList.remove("is-open");
+        setBackgroundInert(false);
+        document.body.classList.remove("gdr-modal-open");
+        clearTimeout(closeTimer);
+        closeTimer = setTimeout(function () { modal.hidden = true; }, 160);
+        var back = opener && document.contains(opener) ? opener : document.body;
+        opener = null;
+        try { back.focus({ preventScroll: true }); } catch (_) {}
+    }
+    document.addEventListener("click", function (e) {
+        var t = e.target.closest && e.target.closest("[data-open-records]");
+        if (!t) return;
+        e.preventDefault();
+        open(t.getAttribute("data-open-records"));
+    });
+    document.addEventListener("keydown", function (e) {
+        if (isOpen()) {
+            if (e.key === "Escape") { e.preventDefault(); close(); }
+            else if (e.key === "ArrowRight") { e.preventDefault(); board.next(); }
+            else if (e.key === "ArrowLeft") { e.preventDefault(); board.prev(); }
+            return;
+        }
+        var t = (e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("[data-open-records]");
+        if (t && t.tagName !== "BUTTON" && t.tagName !== "A") { e.preventDefault(); open(t.getAttribute("data-open-records")); }
+    });
+    function fillBannerSlots() {
+        if (!R.buildBanner) return;
+        var lang = uiLang();
+        [].forEach.call(document.querySelectorAll("[data-gdr-banner-slot]"), function (slot) {
+            var bn = slot.firstElementChild;
+            if (bn && bn.classList.contains("gdr-banner") && bn.getAttribute("data-lang") === lang) return;
+            slot.innerHTML = R.buildBanner({ lang: lang });
+        });
+    }
+    new MutationObserver(fillBannerSlots).observe(document.getElementById("root") || document.body, { childList: true, subtree: true });
+    fillBannerSlots();
+    window.GuandanRecordsUI = { open: open, close: close };
 })();
 
 // BGM: autoplay on load; fall back to first user gesture if browser blocks autoplay
