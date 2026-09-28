@@ -2612,8 +2612,6 @@ function renderTable() {
     const columns = mine >= 0 ? handColumns(handCards, game.currentLevelRank, mine) : [];
     const geo = handGeometry(columns);
     t.stage.style.setProperty("--hand-h", `${(mine >= 0 ? geo.height : 0).toFixed(1)}px`);
-    t.stage.classList.toggle("is-spectator", mine < 0);
-    t.stage.classList.toggle("is-row-hand", handMode === "row");
 
     renderTableChrome();
     setRegion("watermark", `<b>${L("PICASSO Guandan", "PICASSO 掼蛋")}</b><span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span>`);
@@ -2633,7 +2631,6 @@ function renderTable() {
     maybeCelebrateBomb();
     initResultOverlay();
     maybeToastTableMessage();
-    updateTopbarStatus();
 }
 
 // Bomb / combo celebration: purely presentational — reads entry.combo.isBomb

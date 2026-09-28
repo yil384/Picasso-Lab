@@ -324,7 +324,7 @@ body[data-screen="table"] .topbar { display: none; }
     background: rgba(0, 0, 0, .14);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 20px;
 }
 .gd-seat.is-p0 {
     left: 26px; bottom: 6px;
