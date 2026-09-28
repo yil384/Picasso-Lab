@@ -636,8 +636,8 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
 
 /* ---------- popup (window.GuandanUI.openPopup / openRules) ----------
    .gd-popup-layer > .gd-popup > .gd-popup-head/.gd-popup-close/.gd-popup-body. Sized in --pu:
-   one design px of a 1280x720 screen when mounted on <body>; inside a scaled stage
-   (.in-stage) the stage already scales, so --pu is a fixed size there. */
+   one design px of a 1280x720 screen. On <body> that is the viewport; mounted in another
+   container (.in-stage, e.g. the table's rotated UI layer) it is that container's box. */
 .gd-popup-layer {
     --pu: clamp(.7px, min(calc(100vw / 1280), calc(100vh / 720)), 1.25px);
     position: fixed;
@@ -652,7 +652,9 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
     .gd-popup-layer { --pu: min(calc(100vw / 520), 1.25px); }
     .gd-popup-layer:not(.in-stage) .gd-popup { max-height: 88%; }
 }
-.gd-popup-layer.in-stage { --pu: 1.15px; position: absolute; }
+.gd-popup-layer.in-stage { position: absolute; container-type: size; }
+.gd-popup-layer.in-stage .gd-popup { --pu: clamp(.7px, min(calc(100cqw / 1280), calc(100cqh / 720)), 1.25px); }
+@media (pointer: coarse) { .gd-popup-layer { --tap: 40px; } }
 .gd-popup-layer::before {
     content: "";
     position: absolute;
