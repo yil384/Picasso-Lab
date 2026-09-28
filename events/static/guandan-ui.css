@@ -498,12 +498,13 @@ body[data-screen="table"] .hud-status { display: none; }
 }
 .card.small .gd-wild-tag, .card-ix-v .card .gd-wild-tag { bottom: auto; top: calc(var(--cw) * .8); left: calc(var(--cw) * .1); }
 
-/* J/Q/K/A labmate portrait: lower-left body, under the index row, thin suit-colored frame */
+/* J/Q/K/A labmate portrait: lower-left body, thin suit-colored frame. Its top edge stays below
+   the index row including the long descender of the condensed serif "J". */
 .gd-portrait {
     position: absolute;
     left: 7%; bottom: 5.5%;
     width: 55%;
-    height: calc(var(--cw) * .7);
+    height: calc(var(--cw) * .62);
     overflow: hidden;
     border: max(1px, calc(var(--cw) * .018)) solid currentColor;
     border-radius: calc(var(--cw) * .05);
@@ -526,7 +527,10 @@ body[data-screen="table"] .hud-status { display: none; }
 .gd-portrait.art-failed .gd-portrait-initials { display: grid; }
 .card.has-portrait .gd-pip { width: calc(var(--cw) * .3); height: calc(var(--cw) * .3); right: 6.5%; }
 .card.has-portrait.wild .gd-portrait { left: 30%; width: 38%; }
-.card.small.has-portrait .gd-portrait, .card-ix-v .card.has-portrait .gd-portrait { left: auto; right: 6%; bottom: 5.5%; width: 46%; height: calc(var(--cw) * .66); }
+.card.small.has-portrait .gd-portrait { left: auto; right: 6%; bottom: 5.5%; width: 46%; height: calc(var(--cw) * .66); }
+/* overlapped rows only show each card's left strip: keep the portrait under the index there */
+.card-ix-v .card.has-portrait .gd-portrait { left: 6%; bottom: 5%; width: 38%; height: calc(var(--cw) * .5); }
+.card-ix-v .card.has-portrait.wild .gd-portrait { display: none; }
 .card.small.has-portrait .gd-pip, .card-ix-v .card.has-portrait .gd-pip { display: none; }
 
 /* Jokers: vertical JOKER + the joker figure; red = 大王, black = 小王 */
