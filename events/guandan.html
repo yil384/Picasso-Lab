@@ -2007,56 +2007,102 @@ function rulesCardsHTML(list) {
     return `<span class="gd-rules-cards">${list.map((c, i) => cardHTML(c === "RJ" || c === "BJ" ? { id: `rr${c}${i}`, joker: c } : signatureCard(c, `rr${i}`), true)).join("")}</span>`;
 }
 
-// 玩法规则 as this game implements them (engine combos/bomb order, tribute, 接风, 升级, 过A).
+// The examples are drawn "playing 7", whatever table is open, so 7♠ carries the level mark and
+// 7♥ the 逢人配 mark. cardHTML reads the level from `game`; it is swapped only for this
+// synchronous build and always restored.
+function atExampleLevel(rank, build) {
+    const live = game;
+    game = { currentLevelRank: rank };
+    try { return build(); } finally { game = live; }
+}
+
+// 玩法规则 as this game implements them (engine combos/bomb order, tribute, 接风, 升级, 过A):
+// Tencent left tabs, each pane a few short labelled rows, card examples on the right.
 function rulesHTML() {
-    const section = (title, body) => `<section class="gd-rules-sec"><h3>${title}</h3>${body}</section>`;
-    const list = items => `<ul>${items.map(t => `<li>${t}</li>`).join("")}</ul>`;
-    const combo = (name, desc, cards) => `<div class="gd-rules-combo"><b>${name}</b><span>${desc}</span>${rulesCardsHTML(cards)}</div>`;
+    return atExampleLevel("7", rulesBodyHTML);
+}
+
+function rulesBodyHTML() {
+    const row = (key, text, cards) => `<div class="gd-rules-row${cards ? " has-cards" : ""}"><b>${key}</b><span>${text}</span>${cards ? rulesCardsHTML(cards) : ""}</div>`;
+    const tabs = [
+        [L("Basics", "基本玩法"), [
+            row(L("Teams", "队伍"), L("Four players in two teams; partners sit opposite: seats 1 + 3 (Blue) against seats 2 + 4 (Red).", "四人两队，对家为队友：1、3 号位（蓝队）对 2、4 号位（红队）。")),
+            row(L("Cards", "牌数"), L("Two decks, 108 cards including four jokers; everyone gets 27.", "两副牌共 108 张（含四张王），每人 27 张。")),
+            row(L("Lead", "先出"), L("Round 1: a random card is turned up and its holder leads. Later rounds: the tribute payer or last round's first place leads.", "首局随机翻一张起始牌，拿到它的人先出；之后由进贡方或上局头游先出。")),
+            row(L("Turns", "出牌"), L("Lead any legal combo; the others follow with a bigger same combo or a bomb, or pass.", "领出任意合法牌型；其他人只能出更大的同牌型或炸弹，也可以不出。")),
+            row(L("Trick", "收牌"), L("When everyone else passes, the last player to play takes the trick and leads again. If that player has gone out, their partner leads (catch-wind).", "其他人都不出时，最后出牌的人收牌再出；他已出完时由对家「接风」。")),
+            row(L("Time", "限时"), L("3 minutes a turn (a round's opening lead has no limit); on timeout you pass, or play your smallest single when leading.", "每手 3 分钟（每局第一手不限时）；超时自动不出，领出时自动出最小的单张。"))
+        ]],
+        [L("Level card", "级牌"), [
+            row(L("Level", "级牌"), L("The level played is the level of last round's first-place team; both teams start at 2 (the host can change it in the room).", "本局打的级牌 = 上局头游所在队伍的级数；两队都从 2 打起（房主可在房间里调整）。")),
+            row(L("Order", "大小"), L("Red Joker > Black Joker > level card > A > K > … > 3 > 2. Playing 7:", "大王 > 小王 > 级牌 > A > K > … > 3 > 2。打 7 时："), ["RJ", "BJ", "7♠", "A♣", "K♦", "3♠", "2♣"]),
+            row(L("Wild", "逢人配"), L("The heart level card stands in for any card except a joker. Playing 7 it is 7♥:", "红桃级牌可以替代除大小王以外的任意一张牌。打 7 时就是红桃 7："), ["7♥"])
+        ]],
+        [L("Combos", "牌型"), [
+            `<p class="gd-rules-note">${L("Beat a play with the same combo, same number of cards, higher rank. In runs the level card counts at its natural rank.", "只能用同牌型、同张数且更大的牌去压；顺子、连对、钢板里的级牌按原点数算。")}</p>`,
+            row(L("Single", "单张"), L("Any one card", "任意一张"), ["K♠"]),
+            row(L("Pair", "对子"), L("Two of a rank (jokers pair only with the same joker)", "两张同点数（王只能和同色王成对）"), ["9♥", "9♣"]),
+            row(L("Triple", "三张"), L("Three of a rank", "三张同点数"), ["5♠", "5♥", "5♦"]),
+            row(L("Full House", "三带二"), L("A triple plus a pair; the triple decides", "三张加一对，比三张的大小"), ["8♠", "8♥", "8♣", "4♦", "4♣"]),
+            row(L("Straight", "顺子"), L("Five in a row, 2-6 up to 10-A", "五张连续，23456 到 10JQKA"), ["10♦", "J♣", "Q♠", "K♥", "A♠"]),
+            row(L("Pairs run", "三连对"), L("Three consecutive pairs, 223344 to QQKKAA", "三个连续的对子，223344 到 QQKKAA"), ["3♠", "3♦", "4♥", "4♣", "5♠", "5♥"]),
+            row(L("Triple run", "钢板"), L("Two consecutive triples, 222333 to KKKAAA", "两个连续的三张，222333 到 KKKAAA"), ["J♠", "J♥", "J♣", "Q♦", "Q♠", "Q♥"])
+        ]],
+        [L("Bombs", "炸弹"), [
+            `<p class="gd-rules-note">${L("A bomb beats any non-bomb. 4 of a kind < 5 of a kind < Straight Flush < 6 < 7 < 8 … < Joker Bomb; the same size compares by rank.", "炸弹能压任何非炸弹牌型。四炸 < 五炸 < 同花顺 < 六炸 < 七炸 < 八炸 … < 天王炸；张数相同比点数。")}</p>`,
+            row(L("Bomb", "炸弹"), L("Four or more of a rank", "四张及以上同点数"), ["6♠", "6♥", "6♦", "6♣"]),
+            row(L("Flush run", "同花顺"), L("A five-card straight in one suit", "同一花色的五张顺子"), ["8♠", "9♠", "10♠", "J♠", "Q♠"]),
+            row(L("Jokers", "天王炸"), L("All four jokers, the biggest play", "四张王，最大的牌"), ["RJ", "RJ", "BJ", "BJ"])
+        ]],
+        [L("Level up", "升级"), [
+            row(L("Places", "名次"), L("Finishing order: 1st, 2nd, 3rd, last.", "出完的顺序为头游、二游、三游、末游。")),
+            row(L("Up 3", "升 3 级"), L("Partner of first place finishes 2nd (a 1-2 finish).", "头游的队友二游（双上）。")),
+            row(L("Up 2", "升 2 级"), L("Partner of first place finishes 3rd.", "头游的队友三游。")),
+            row(L("Up 1", "升 1 级"), L("Partner of first place finishes last.", "头游的队友末游。")),
+            row(L("Pass A", "过 A"), L("At level A, first place with the partner not last wins the match. First place with the partner last is a failed attempt; after 3 the team drops back to 2.", "打 A 时拿到头游且队友不是末游即过 A，赢下整场；头游但队友末游算一次冲 A 失败，累计 3 次退回打 2。"))
+        ]],
+        [L("Tribute", "进贡"), [
+            row(L("Tribute", "进贡"), L("When the next round starts, the last place gives first place their highest card (never the Wild).", "下一局开始时，末游把手里最大的一张牌进贡给头游（红桃级牌不用进贡）。")),
+            row(L("Double", "双贡"), L("After a 1-2 finish both losers pay: the higher card goes to first place, the lower to first place's partner.", "双上时三游和末游都进贡：较大的给头游，较小的给头游的队友。")),
+            row(L("Return", "还贡"), L("Each receiver returns a card of 10 or lower.", "收到贡牌的人还一张不大于 10 的牌。")),
+            row(L("Block", "抗贡"), L("If the paying side holds both Red Jokers there is no tribute: the jokers are shown and first place leads.", "进贡方合计有两张大王即抗贡：不用进贡，大王亮明，头游先出。")),
+            row(L("Lead", "先出"), L("Otherwise a tribute payer leads (with two payers, the one who got the higher return).", "否则由进贡方先出（双贡时由拿到较大还贡牌的一方先出）。"))
+        ]]
+    ];
     return `<div class="gd-rules">
-        ${section(L("Basics", "基本玩法"), list([
-            L("Four players in two teams; partners sit opposite: seats 1 + 3 (Blue) against seats 2 + 4 (Red).", "四人两队，对家为队友：1、3 号位（蓝队）对 2、4 号位（红队）。"),
-            L("Two decks, 108 cards including four jokers; everyone gets 27.", "两副牌共 108 张（含四张王），每人 27 张。"),
-            L("Round 1: a random card is turned up and its holder leads. Later rounds: the tribute payer or last round's first place leads.", "首局随机翻一张起始牌，拿到它的玩家先出；之后由进贡方或上局头游先出。"),
-            L("Each turn has 3 minutes (a round's opening lead has no limit); on timeout you pass, or play your smallest single when leading.", "每手限时 3 分钟（每局第一手不限时）；超时自动不出，轮到领出时自动出最小的单张。")
-        ]))}
-        ${section(L("Level card and Wild", "级牌与逢人配"), `${list([
-            L("The level being played is the level of the team that took first place last round; both teams start at 2 (the host can change it in the room).", "本局打的级牌 = 上局头游所在队伍的级数；两队都从 2 打起（房主可在房间里调整）。"),
-            L("Card order: Red Joker > Black Joker > level card > A > K > … > 3 > 2.", "牌的大小：大王 > 小王 > 级牌 > A > K > … > 3 > 2。"),
-            L("The heart level card is Wild: it can stand in for any card except a joker.", "红桃级牌是「逢人配」，可以替代除大小王以外的任意一张牌。")
-        ])}<div class="gd-rules-combo"><b>${L("Order, playing 7", "打 7 时")}</b><span>${L("Heart 7 is Wild", "红桃 7 为逢人配")}</span>${rulesCardsHTML(["RJ", "BJ", "7♠", "A♣", "K♦", "3♠", "2♣"])}</div>`)}
-        ${section(L("Combos", "牌型"), `<p>${L("Only the same combo with the same number of cards can beat it, by rank. In runs the level card counts at its natural rank.", "只能用同牌型、同张数且更大的牌去压；顺子、连对、钢板里的级牌按原点数算。")}</p>
-            ${combo(L("Single", "单张"), L("Any one card", "任意一张"), ["K♠"])}
-            ${combo(L("Pair", "对子"), L("Two of a rank (jokers pair only with the same joker)", "两张同点数（王只能和同色王成对）"), ["9♥", "9♣"])}
-            ${combo(L("Triple", "三张"), L("Three of a rank", "三张同点数"), ["5♠", "5♥", "5♦"])}
-            ${combo(L("Full House", "三带二"), L("A triple plus a pair; the triple decides", "三张加一对，比三张的大小"), ["8♠", "8♥", "8♣", "4♦", "4♣"])}
-            ${combo(L("Straight", "顺子"), L("Five in a row, from 2-6 up to 10-A", "五张连续，最小 23456，最大 10JQKA"), ["10♦", "J♣", "Q♠", "K♥", "A♠"])}
-            ${combo(L("Three pairs", "三连对"), L("Three consecutive pairs, 223344 to QQKKAA", "三个连续的对子，223344 到 QQKKAA"), ["3♠", "3♦", "4♥", "4♣", "5♠", "5♥"])}
-            ${combo(L("Triple Run", "钢板"), L("Two consecutive triples, 222333 to KKKAAA", "两个连续的三张，222333 到 KKKAAA"), ["J♠", "J♥", "J♣", "Q♦", "Q♠", "Q♥"])}`)}
-        ${section(L("Bombs", "炸弹"), `<p>${L("A bomb beats any non-bomb. Order: 4 of a kind < 5 of a kind < Straight Flush < 6 < 7 < 8 of a kind … < Joker Bomb; the same size compares by rank (level card highest).", "炸弹可以压任何非炸弹牌型。大小：四炸 < 五炸 < 同花顺 < 六炸 < 七炸 < 八炸 … < 天王炸；张数相同比点数（级牌最大）。")}</p>
-            ${combo(L("Bomb", "炸弹"), L("Four or more of a rank", "四张及以上同点数"), ["6♠", "6♥", "6♦", "6♣"])}
-            ${combo(L("Straight Flush", "同花顺"), L("A five-card straight in one suit", "同一花色的五张顺子"), ["8♠", "9♠", "10♠", "J♠", "Q♠"])}
-            ${combo(L("Joker Bomb", "天王炸"), L("All four jokers, the biggest play", "四张王，最大的牌"), ["RJ", "RJ", "BJ", "BJ"])}`)}
-        ${section(L("Tricks and Catch-wind", "出牌与接风"), list([
-            L("Lead any legal combo; the others follow with a bigger same combo or a bomb, or pass.", "领出任意合法牌型；其他人只能出更大的同牌型或炸弹，也可以不出。"),
-            L("When everyone else passes, the last player to play takes the trick and leads again.", "其他人都不出时，最后出牌的人收牌并重新领出。"),
-            L("If that player has already gone out, their partner leads instead (catch-wind).", "如果他已经出完，由他的对家「接风」领出。")
-        ]))}
-        ${section(L("Levelling up and passing A", "升级与过 A"), list([
-            L("Finishing order is 1st, 2nd, 3rd, last. The first-place team goes up 3 levels if the partner is 2nd, 2 if 3rd, 1 if last.", "出完顺序为头游、二游、三游、末游。头游所在队伍升级：队友二游（双上）升 3 级，三游升 2 级，末游升 1 级。"),
-            L("At level A, taking 1st with the partner not last wins the match. Taking 1st with the partner last is a failed A attempt; after 3 failures the team drops back to 2.", "打 A 时，拿到头游且队友不是末游即过 A，赢下整场比赛；头游但队友末游算一次冲 A 失败，累计 3 次退回打 2。")
-        ]))}
-        ${section(L("Tribute, Return, Blocked tribute", "进贡 · 还贡 · 抗贡"), list([
-            L("Handled automatically when the next round starts: the last place gives first place their highest card (the Wild is never given).", "下一局开始时自动处理：末游把手里最大的一张牌进贡给头游（红桃级牌不用进贡）。"),
-            L("After a 1-2 finish both losers pay: the higher tribute goes to first place, the lower to first place's partner.", "双上时三游和末游都要进贡：较大的贡牌给头游，较小的给头游的队友。"),
-            L("Each receiver returns a card of 10 or lower.", "收到贡牌的人还一张不大于 10 的牌。"),
-            L("If the paying side holds both Red Jokers, tribute is blocked: the jokers are shown and first place leads.", "进贡方合计有两张大王即抗贡：不用进贡，大王亮明，头游先出。"),
-            L("Otherwise a tribute payer leads (with two payers, the one who got the higher return card).", "否则由进贡方先出（双贡时由拿到较大还贡牌的一方先出）。")
-        ]))}
+        <div class="gd-rules-tabs" role="tablist" aria-orientation="vertical">${tabs.map(([title], i) =>
+            `<button class="gd-rules-tab" type="button" role="tab" id="gd-rules-tab-${i}" aria-controls="gd-rules-pane-${i}" aria-selected="${i === 0}"${i ? ` tabindex="-1"` : ""}>${title}</button>`).join("")}</div>
+        <div class="gd-rules-panes">${tabs.map(([, rows], i) =>
+            `<section class="gd-rules-pane" role="tabpanel" id="gd-rules-pane-${i}" aria-labelledby="gd-rules-tab-${i}"${i ? " hidden" : ""}>${rows.join("")}</section>`).join("")}</div>
     </div>`;
 }
 
 function openRules(container) {
-    return openPopup({ title: L("Rules", "玩法规则"), html: rulesHTML(), container, wide: true });
+    const close = openPopup({ title: L("Rules", "玩法规则"), html: rulesHTML(), container, wide: true });
+    const panel = close.panel;
+    panel.querySelector(".gd-popup-body").classList.add("has-tabs");
+    const tabs = [...panel.querySelectorAll(".gd-rules-tab")];
+    const panes = [...panel.querySelectorAll(".gd-rules-pane")];
+    const show = (i, focus) => {
+        tabs.forEach((tab, j) => {
+            tab.setAttribute("aria-selected", String(i === j));
+            tab.tabIndex = i === j ? 0 : -1;
+            panes[j].hidden = i !== j;
+        });
+        panes[i].scrollTop = 0;
+        if (focus) tabs[i].focus();
+    };
+    panel.querySelector(".gd-rules-tabs").addEventListener("click", event => {
+        const tab = event.target.closest(".gd-rules-tab");
+        if (tab) show(tabs.indexOf(tab), false);
+    });
+    panel.querySelector(".gd-rules-tabs").addEventListener("keydown", event => {
+        const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+        if (!step) return;
+        event.preventDefault();
+        show((tabs.indexOf(document.activeElement) + step + tabs.length) % tabs.length, true);
+    });
+    return close;
 }
 
 window.GuandanUI = { openPopup, openRules };
