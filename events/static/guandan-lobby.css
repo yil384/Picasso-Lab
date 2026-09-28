@@ -1304,6 +1304,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .room-lv i { line-height: calc(20 * var(--lu)); }
     .room-lv b { font-size: calc(26 * var(--lu)); line-height: calc(30 * var(--lu)); }
     .room-actions { gap: calc(16 * var(--lu)); }
+    .room-wait { font-size: calc(19 * var(--lu)); }
     .room-actions .btn { --btn-h: max(var(--tap), calc(50 * var(--lu))); --btn-fs: calc(21 * var(--lu)); --btn-px: calc(18 * var(--lu)); --btn-minw: calc(120 * var(--lu)); }
     .room-actions .btn.lg { --btn-h: max(var(--tap), calc(56 * var(--lu))); --btn-fs: calc(24 * var(--lu)); --btn-px: calc(26 * var(--lu)); --btn-minw: calc(190 * var(--lu)); }
     .room-row { min-height: calc(60 * var(--ru)); }

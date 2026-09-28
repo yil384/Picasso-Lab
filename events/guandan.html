@@ -2400,7 +2400,7 @@ function roomTableHTML(mine) {
 
 // Guests see a waiting caption, not a dead button (it keeps the disabled #start-game hook).
 function roomActionsHTML() {
-    if (!isHost()) return `<button class="room-wait" id="start-game" type="button" disabled>${L("Waiting for the host to start…", "等待房主开始…")}</button>`;
+    if (!isHost()) return `<button class="room-wait" id="start-game" type="button" disabled>${L("Waiting for the host…", "等待房主开始…")}</button>`;
     const open = game.seats.some(s => !s);
     return `<button class="btn secondary" id="fill-ai" type="button"${actionBusy || !open ? " disabled" : ""}>${L("Fill AI", "AI 补位")}</button>
         <button class="btn lg" id="start-game" type="button"${actionBusy ? " disabled" : ""}>${L("Start", "开始游戏")}</button>`;
