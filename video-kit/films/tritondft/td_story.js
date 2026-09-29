@@ -59,7 +59,8 @@ const V3 = (x, y, z) => new W.THREE.Vector3(x, y, z);
 const deskP = (x, y, z) => [L.desk.x + x, y, L.desk.z + z];
 const HOOT = deskP(-0.3, 0.02, -0.95);
 const GIANT = deskP(0.48, 0, -0.28);           // upright spot of the giant hourglass
-const GIANT_LAY = deskP(0.66, 0, -0.86);        // where it lies (Hoot's pillow)
+const GIANT_LAY = deskP(1.08, 0, -0.92);        // where it lies (Hoot's pillow): its bottom cap at the upright spot's x, against
+                                                // Hoot's cheek; it stands up by pivoting about that cap
 const TINY = deskP(0.05, 0, 0.36);            // the tiny hourglass (Hoot's dare), same shape, 1/68 the volume
 const SCORE = deskP(-0.64, 0.004, 0.16);       // the DFTBench scorecard (98%)
 const faceYaw = (from, to) => Math.atan2(to[0] - from[0], to[2] - from[2]);
@@ -282,11 +283,11 @@ function updateHoot(F) {
   if (F < K.bubble[0] + 4 || F >= K.flop[0]) {
     // asleep, cheek on the sideways giant hourglass (leaning right)
     const k = F >= K.flop[0] ? sm((F - K.flop[0]) / 8) : 1;
-    bodyLean = -0.3 * k; headTilt = -0.25 * k; sq = breath * k; expr = 'sleep';
+    bodyLean = -0.4 * k; headTilt = -0.25 * k; sq = breath * k; expr = 'sleep';
     wingR = lerp(-0.4, 0.45, k); wingL = 0.12;
   } else if (F < K.S2) {
     const w0 = K.bubble[0] + 4;
-    bodyLean = -0.3 * (1 - sm((F - w0) / 6)); headTilt = -0.25 * (1 - sm((F - w0) / 6));
+    bodyLean = -0.4 * (1 - sm((F - w0) / 6)); headTilt = -0.25 * (1 - sm((F - w0) / 6));
     expr = 'tired';
     if (win(F, K.wake - 3, K.wake + 12)) { expr = F < K.wake ? 'squint' : 'surprised'; sq = takeSq(Fc - K.wake); tufts = F >= K.wake ? Math.exp(-(F - K.wake) / 8) : 0; }
     if (win(F, K.write[0], K.write[1])) { expr = 'squint'; wingR = -0.55 + 0.15 * Math.sin(Fc * 1.3); wingRx = 0.8; headTilt = 0.18; }
@@ -321,7 +322,7 @@ function updateHoot(F) {
     if (F >= K.yawn[0]) {
       const y = F - K.yawn[0]; expr = y < 12 ? 'surprised' : 'sleep';
       sq = -0.1 * arc(y, 0, 12); headTilt = -0.2 * arc(y, 0, 12);
-      if (F >= K.lay[0]) { const l = sm((F - K.lay[0]) / 10); wingR = lerp(-0.15, -1.0, arc(F, K.lay[0], K.lay[1])); bodyLean = -0.28 * l; headTilt = -0.25 * l; }
+      if (F >= K.lay[0]) { const l = sm((F - K.lay[0]) / 10); wingR = lerp(-0.15, -1.0, arc(F, K.lay[0], K.lay[1])); bodyLean = -0.4 * l; headTilt = -0.25 * l; }
     }
   }
   const [x, y, z] = HOOT;
@@ -375,10 +376,9 @@ function updateHourglasses(F) {
   if (F >= K.lay[0]) up = 1 - sm((F - K.lay[0]) / (K.lay[1] - K.lay[0] - 4));
   if (F >= K.heave[0] && F < K.clock) lift = 0.12 * arc(F, K.heave[0] + 2, K.clock);
   const over = F >= K.lay[0] && F < K.flop[1] ? 0.32 * arc(F, K.lay[0] + 6, K.flop[1]) : 0;   // past horizontal: the pinch pours back
-  const p = GIANT_LAY.map((v, i) => lerp(v, GIANT[i], up));
-  G.g.position.set(p[0], p[1] + lift, p[2]);
-  G.g.rotation.set(0, 0.25 * (1 - up), 0);
   const thG = -(Math.PI / 2) * (1 - up) - over;
+  G.g.position.set(GIANT[0] - Math.sin(thG) * G.h / 2, lift, lerp(GIANT_LAY[2], GIANT[2], up));   // bottom cap stays put
+  G.g.rotation.set(0, 0.08 * (1 - up), 0);
   pose(G, thG);
   let drained = F < K.clock ? 0 : (F - K.clock) / (RUN * 68);           // in loads: exactly 1/68 at K.land
   if (F >= K.lay[0]) drained = ((K.lay[0] - K.clock) / (RUN * 68)) * (1 - sm((F - K.lay[0] - 8) / 12));
@@ -613,7 +613,8 @@ function updateLoupe(F) {
 
 // ---- Tilt (Refiner) + console ----
 function kgrid(F) { if (F < K.click[0]) return 3; if (F < K.click[1]) return 4; if (F < K.click[2]) return 5; return 4; }
-function pennies(F) { if (F < K.click[0]) return 2; if (F < K.click[1]) return 4; if (F < K.click[2]) return 6; return 4; }
+// pennies plink in one at a time after each finer grid (2 -> 4 -> 6); backing off to 4x4 flicks two off (four = $0.04)
+function pennies(F) { if (F < K.click[0]) return 2; if (F < K.click[1]) return 2 + Math.min(2, 1 + Math.floor((F - K.click[0]) / 3)); if (F < K.click[2]) return 4 + Math.min(2, 1 + Math.floor((F - K.click[1]) / 3)); return 4; }
 function updateTilt(F) {
   const R = W.tilt;
   const home = station(ST.refn);
@@ -635,6 +636,7 @@ function updateTilt(F) {
   if (win(F, K.level, K.go + 6)) yaw = lerp(-0.3, 0.0, sm((F - K.level) / 5));
   if (win(F, K.click[1], K.click[2] + 2)) { expr = F < K.crash + 3 ? 'surprised' : 'worried'; sq = takeSq(F - K.crash); lean = -beam * 0.25 + 0.1 * Math.sin((F - K.crash) * 0.9) * Math.exp(-(F - K.crash) / 12); }
   if (win(F, K.cutoff, K.go)) expr = F < K.level ? 'squint' : 'happy';
+  for (const f0 of [...K.click, K.cutoff]) if (win(F, f0 - 5, f0 + 3)) { const k = arc(F, f0 - 5, f0 + 3); lean += 0.14 * k; sq += 0.06 * k; }   // a nod into the console on each click
   if (win(F, K.go - 3, K.go + 8)) { expr = 'grin'; sq = F < K.go ? 0.12 : ringv(F - K.go, 0.14, 1.0, 0.25); }
   if (win(F, K.S6, K.lap[1])) expr = 'happy';
   let panTip = 0;
@@ -827,7 +829,7 @@ const rigLens = (F) => {      // the lens rushes at the camera (iris match cut t
 const rigKnob = (F) => {      // from a knob close-up, pull out to Tilt; the roll follows the beam
   const rf = station(ST.refn), kn = W.con.knobs[0].getWorldPosition(V3(0, 0, 0)), k = oc(clamp((F - K.S5) / 14));
   const knob = { tg: [kn.x, kn.y + 0.04, kn.z], az: W.con.root.rotation.y, el: 0.9, r: 0.42, fov: 34, roll: 0 };
-  const med = { tg: [rf[0] - 0.04, 0.34, rf[2] - 0.02], az: 0.0, el: 0.2, r: 1.85, fov: 36, roll: 0.18 * (st.tilt ? st.tilt.beam : 0) };
+  const med = { tg: [rf[0] - 0.04, 0.34, rf[2] - 0.02], az: 0.0, el: 0.2, r: lerp(1.95, 1.72, sm((F - K.S5 - 10) / 60)), fov: 36, roll: 0.18 * (st.tilt ? st.tilt.beam : 0) };
   return mixRig(knob, med, k);
 };
 const rigLap = (F) => {       // ride round with the job (close orbit synced to the ring)
@@ -857,7 +859,7 @@ const rigS8 = (F) => {        // the desk-top wide (payoff framing); slow arc du
   const a = sm((F - K.S8b) / 60);
   return { tg: [L.desk.x + 0.02, 0.36, L.desk.z + 0.1], az: lerp(0.06, -0.03, a), el: 0.12, r: lerp(3.6, 3.4, a), fov: 40, roll: 0 };
 };
-const WHIPS = [[80, 100], [274, 288], [312, 328], [452, 466], [564, 588]];
+const WHIPS = [[80, 100], [274, 288], [312, 328], [452, 466], [496, 512], [564, 588]];
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);
@@ -876,8 +878,8 @@ export function camRig(F) {
   if (F < K.S5) return mixRig(rigLoupe(F), rigLens(F), ic(clamp((F - K.rush[0]) / 6)));
   if (F < K.go) return rigKnob(F);                                     // iris match cut: lens -> knob
   if (F < K.lap[0] + 6) return mixRig(rigKnob(F), rigLap(F), io((F - K.go) / (K.lap[0] + 6 - K.go)));
-  if (F < K.lap[1]) return rigLap(F);
-  if (F < K.S7 + 4) return mixRig(rigLap(F), rigS7(F), ease.inOutQuint(clamp((F - K.lap[1]) / (K.S7 + 4 - K.lap[1]))));
+  if (F < K.lap[1] - 10) return rigLap(F);
+  if (F < K.S7 + 6) return mixRig(rigLap(F), rigS7(F), io((F - K.lap[1] + 10) / (K.S7 + 16 - K.lap[1])));   // brake onto the gauge over 20 f
   if (F < 566) return rigS7(F);
   if (F < K.S8a + 10) return mixRig(rigS7(F), rigS8a(F), ease.inOutQuint(clamp((F - 566) / 20)));   // whip left with the return bulge
   if (F < K.S8b - 6) return rigS8a(F);
@@ -924,7 +926,7 @@ export function drawNPR(w, ctx) {
   npr.setLight({ dir: [-0.35, 0.85, 0.62], target: [-0.8, 0, -0.6], size: 7.5, dist: 22, shadows: !Q.get('nosh') });
   npr.pointLight(V3(L.desk.x - 0.6, 1.0, L.desk.z + 0.15), { color: 0xffd08a, radius: 2.0, i: 0.6 });
   const E = W.engine.fire.getWorldPosition(V3(0, 0, 0));
-  npr.pointLight(V3(E.x - 0.3, E.y, E.z + 0.6), { color: 0xff7a3a, radius: 1.4 + 1.2 * (st.roar || 0), i: 0.35 + 0.6 * (st.roar || 0) + 0.3 * (st.huff || 0) });
+  npr.pointLight(V3(E.x - 0.3, E.y, E.z + 0.6), { color: 0xff7a3a, radius: 0.8 + 0.5 * (st.roar || 0), i: 0.2 + 0.3 * (st.roar || 0) + 0.15 * (st.huff || 0) });   // small: no airbrushed halo on the cabinet
   npr.focusOn(camera, V3(...focusPoint(F)), 3.2);
   const bulb = W.desk.bulb.getWorldPosition(V3(0, 0, 0));
   npr.glowAt(ctx, camera, bulb, { radius: 0.08, i: 0.8, color: 0xffe2a0, behind: true, seed: 1 });
@@ -943,10 +945,6 @@ export function drawNPR(w, ctx) {
     const c = ctx.project(V3(L.engine.x - 0.3, 1.0, L.engine.z), camera);
     npr.focusLines({ x: c.x, y: c.y, r0: 360, amount: 1 - (F - K.roar) / 16, count: 110, width: 1.3, seed: 3 });
     if (F < K.roar + 2) npr.impact(1, { invert: F === K.roar + 1, threshold: 0.58 });
-  }
-  if (F >= K.ding && F < K.ding + 14) {
-    const lp = W.bead.getWorldPosition(V3(0, 0, 0));
-    npr.glowAt(ctx, camera, lp, { radius: 0.1, i: 0.9 * (1 - (F - K.ding) / 14), color: COL.gold, rays: 1, rayLen: 0.6, rayCount: 12, seed: 7 });
   }
   if (F >= K.land && F < K.land + 12) {
     const c = ctx.project(W.cart.getWorldPosition(V3(0, 0, 0)), camera);

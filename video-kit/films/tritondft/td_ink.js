@@ -1,6 +1,6 @@
 // td_ink.js - hand-drawn marks tracked to the 3D world (p5.brush layer, multiplied, boiling on twos) and the
 // Canvas2D top layer (baked p5.brush SFX sprites, Loupe's one eye behind the lens, '!' takes, verdict marks).
-import { PAL, TAU, clamp, sm, ob, win } from './td_core.js';
+import { PAL, TAU, clamp, sm, ob, oc, win } from './td_core.js';
 import { bakeWord, drawWord } from './td_letters.js';
 import { star4 } from './td_faces.js';
 import { K, NF, st, jobPos, TRI_TH } from './td_story.js';
@@ -11,8 +11,9 @@ export async function bakeLettering(W) {
   // condensed, slanted comic capitals: first letter big, the rest jostling (not a rounded web font)
   const sfx = (n) => ({ weight: 0.2, skew: -0.24, jaunt: 0.32, bounce: 0.16, gap: 0.08, scaleOf: (i) => (i === 0 ? 1.25 : 0.92 + 0.12 * ((i * 7) % 3) / 2) });
   SPR.vroom = await bakeWord(W.THREE, 'vroom2', 'VROOOM', 150, { ...sfx(6), fill: PAL.pop, shade: PAL.popD, arc: 0.14, seed: 4 }, 3);
-  SPR.ding = await bakeWord(W.THREE, 'ding2', 'DING!', 140, { ...sfx(5), fill: PAL.gold, shade: PAL.pop, arc: 0.06, seed: 7 }, 3);
-  SPR.clank = await bakeWord(W.THREE, 'clank2', 'CLANK!', 120, { ...sfx(6), fill: PAL.skyL, shade: PAL.sky, arc: -0.08, seed: 9 }, 3);
+  // DING: an upright, well-spaced I so it never jams into the N ('DWG'); CLANK in cream so it stands off the teal wainscot
+  SPR.ding = await bakeWord(W.THREE, 'ding3', 'DING!', 140, { ...sfx(5), gap: 0.26, jaunt: 0.12, skew: -0.14, fill: PAL.gold, shade: PAL.pop, arc: 0.06, seed: 7 }, 3);
+  SPR.clank = await bakeWord(W.THREE, 'clank3', 'CLANK!', 120, { ...sfx(6), fill: PAL.cream, shade: PAL.pop, arc: -0.08, seed: 9 }, 3);
 }
 
 const V = (W, x, y, z) => new W.THREE.Vector3(x, y, z);
@@ -95,12 +96,16 @@ export function inkOverlay(W, ctx, brush) {
   }
   // Refiner: click ticks; two pennies fly off when it backs off
   for (const f0 of [...K.click, K.cutoff]) if (win(F, f0, f0 + 6)) { const kn = W.con.knobs[f0 === K.cutoff ? 1 : 0], c = prj(W, ctx, wp(W, kn, [0, 0.06, 0])), u = pxu(W, ctx, wp(W, kn)); ticks(brush, c.x, c.y, 0.08 * u * (1 + (F - f0) * 0.1), 0.17 * u, 5, -2.8, -0.3, ink, 1.2); }
+  // a plink tick at the cost pan for every penny that drops in
+  for (const f0 of [K.click[0], K.click[0] + 3, K.click[1], K.click[1] + 3]) if (win(F, f0, f0 + 4)) { const pan = W.tilt.pans[1].g.position, c = prj(W, ctx, [pan.x, pan.y - 0.2, pan.z]), u = pxu(W, ctx, pan); ticks(brush, c.x, c.y - 0.1 * u, 0.08 * u, 0.16 * u, 4, -2.5, -0.6, ink, 1.1); }
   if (win(F, K.click[2], K.click[2] + 14)) for (const sd of [0, 1]) {
     const pan = W.tilt.pans[1].g.position, a = (F - K.click[2] - sd * 3) / 11;
     if (a < 0 || a > 1) continue;
     const c = prj(W, ctx, [pan.x + (0.35 + 0.1 * sd) * a, pan.y - 0.2 + 0.45 * Math.sin(Math.PI * a), pan.z + 0.25 * a]), u = pxu(W, ctx, pan);
     brush.noStroke(); brush.fill('#d6813f', 255); brush.fillBleed(0.01); brush.circle(c.x, c.y, 0.035 * u, 0.1); brush.noFill(); brush.set('inkpen', ink, 1.0); brush.circle(c.x, c.y, 0.035 * u, 0.1);
   }
+  // DING: an inked burst up and right of the gauge (never over the bead, which is the convergence evidence)
+  if (win(F, K.ding, K.ding + 12)) { const gp = W.gauge.localToWorld(V(W, 0.16, 0.5, 0.02)), c = prj(W, ctx, gp), u = pxu(W, ctx, gp), a = (F - K.ding) / 12; if (c.front) { ticks(brush, c.x, c.y, (0.06 + 0.1 * a) * u, (0.16 + 0.12 * a) * u, 9, -Math.PI * 0.95, Math.PI * 0.15, PAL.pop, 1.8); ticks(brush, c.x, c.y, (0.05 + 0.1 * a) * u, (0.11 + 0.1 * a) * u, 9, -Math.PI * 0.87, Math.PI * 0.23, ink, 1.1); } }
   // the tiny hourglass's last grain drops as the answer lands (tink)
   if (win(F, K.land, K.land + 7)) { const t = W.tiny.g.position, c = prj(W, ctx, [t.x, 0.34, t.z]), u = pxu(W, ctx, t); if (c.front) ticks(brush, c.x, c.y, 0.06 * u, 0.15 * u, 6, 0, TAU * 5 / 6, ink, 1.2); }
   // the agents land on the desk (puffs)
@@ -149,6 +154,18 @@ function lensEye(W, ctx, g, F) {
   if (!c.front || !ux.front || !uy.front || c.d < 0.4) return;
   if (c.x < -300 || c.x > ctx.DW + 300 || c.y < -300 || c.y > ctx.DH + 300) return;
   if (Math.hypot(ux.x - c.x, ux.y - c.y) > 700 || Math.hypot(uy.x - c.x, uy.y - c.y) > 700) return;
+  // the eye is 2D ink on top of the render, so depth-test it by hand: rays from the camera to the lens centre and six
+  // points round it; if nearer geometry covers the lens (a lampshade, a book), no eye is drawn
+  const T = W.THREE, rc = new T.Raycaster(), cam = W.camera.position, ownHead = (o) => { for (; o; o = o.parent) if (o === hd) return true; return false; };
+  rc.layers.set(0);                                           // npr LAYER.MAIN: opaque surfaces and hulls, not glass
+  let blocked = 0;
+  for (let q = 0; q < 7; q++) {
+    const an = q / 6 * TAU, rq = q ? rr * 0.6 : 0, p = wp(W, hd, [Math.cos(an) * rq, Math.sin(an) * rq, 0.0]), d = p.clone().sub(cam), len = d.length();
+    rc.set(cam, d.normalize()); rc.near = 0; rc.far = len - 0.01;
+    const hit = rc.intersectObjects(W.scene.children, true).find((h) => { for (let o = h.object; o; o = o.parent) if (!o.visible) return false; return true; });
+    if (hit && !ownHead(hit.object)) blocked += q ? 1 : 3;
+  }
+  if (blocked >= 3) return;
   const camToLens = W.camera.position.clone().sub(wp(W, hd, [0, 0, 0])), nrm = wp(W, hd, [0, 0, 1]).sub(wp(W, hd, [0, 0, 0]));
   // (a cartoon cheat: the one eye reads from either side of the lens)
   g.save();
@@ -175,6 +192,22 @@ function mark(g, x, y, s, kind, rot) {
   g.restore();
 }
 
+/** the S4 -> S5 iris: an inked iris closes on Loupe's lens as it rushes the camera and opens on Tilt's k-grid knob */
+function iris(W, ctx, g, F, jr) {
+  const a0 = K.rush[1] - 9, a1 = K.rush[1], b1 = K.S5 + 8;
+  if (F < a0 || F >= b1) return;
+  const closing = F < a1;
+  const c = closing ? prj(W, ctx, wp(W, W.loupe.head, [0, 0, 0])) : prj(W, ctx, wp(W, W.con.knobs[0], [0, 0.04, 0]));
+  const R = closing ? 1300 * (1 - sm((F - a0) / (a1 - a0 - 1))) : 1500 * oc((F - a1 - 1) / (b1 - a1 - 1));
+  const cx = clamp(c.x, 200, ctx.DW - 200), cy = clamp(c.y, 150, ctx.DH - 150);
+  g.save(); g.fillStyle = PAL.ink; g.strokeStyle = PAL.ink;
+  g.beginPath(); g.rect(-60, -60, ctx.DW + 120, ctx.DH + 120);
+  if (R > 2) { for (let q = 0; q <= 48; q++) { const an = -q / 48 * TAU, rr = R * (1 + 0.012 * Math.sin(q * 5.1 + F)) + jr.gauss(0, 0.6); const x = cx + Math.cos(an) * rr, y = cy + Math.sin(an) * rr; q ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); }
+  g.fill('evenodd');
+  if (R > 2) { g.lineWidth = 12; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke(); }
+  g.restore();
+}
+
 export function lettering(W, ctx, g) {
   const F = ctx.iw, jr = ctx.boilRng('letters');
   lensEye(W, ctx, g, F);
@@ -197,4 +230,5 @@ export function lettering(W, ctx, g) {
   if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 160, 420, 1500), clamp(pp.y + 60, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;
   if (dg >= 0 && dg < 24) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 24, rot: -0.12, scale: 1.0, popF: 4 }); }
+  iris(W, ctx, g, F, jr);
 }
