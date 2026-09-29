@@ -159,6 +159,9 @@ export { CREAM };
  * a mesh; strokes of a glyph share two materials (face, side), so overlaps merge visually. Returns { root, glyphs:[{g, w}] }
  * with the word laid out along +x, baseline at y = 0, facing +z.
  */
+// each stroke is its own extrusion with its own hull; where strokes join, a hull edge lies in the neighbour's front cap and
+// z-fights (crawling ink specks): push the letters' hulls back a little along the eye ray
+const pushHull = (m) => { for (const c of m.children) if (c.material?.uniforms?.uHullPush) c.material.uniforms.uHullPush.value = 0.15; return m; };
 export function word3D(THREE, add, parent, word, size, { face, side, depth = 0.22, weight = 0.24, track = 0.16, nib = -0.6, seed = 3 } = {}) {
   const root = new THREE.Group(); parent.add(root);
   const lay = layoutWord(word, size, { track, r: null });
@@ -172,11 +175,11 @@ export function word3D(THREE, add, parent, word, size, { face, side, depth = 0.2
       if (s.P.length < 2) continue;
       const poly = nibStroke(s.P, lw, nib, null, 0);
       const geo = new THREE.ExtrudeGeometry(toShape(poly), ext); geo.translate(0, 0, -depth / 2);
-      add(geo, [face, side], { outline: 1.15 }, [0, 0, 0], [0, 0, 0], g);
+      pushHull(add(geo, [face, side], { outline: 1.15 }, [0, 0, 0], [0, 0, 0], g));
     }
     for (const [dx, dy] of Lt.dots) {
       const geo = new THREE.ExtrudeGeometry(new THREE.Shape(ellipsePts(dx, -dy, lw * 0.62, lw * 0.62, 0, 20).map(([x, y]) => new THREE.Vector2(x, y))), ext); geo.translate(0, 0, -depth / 2);
-      add(geo, [face, side], { outline: 1.15 }, [0, 0, 0], [0, 0, 0], g);
+      pushHull(add(geo, [face, side], { outline: 1.15 }, [0, 0, 0], [0, 0, 0], g));
     }
     glyphs.push({ g, x: Lt.lx + lay.width / 2 });
   });

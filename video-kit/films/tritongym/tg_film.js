@@ -496,8 +496,8 @@ export function drawNPR(ctx) {
   const cut = (p) => camera.position.distanceTo(V(...p)) + 2.2;
   if (F >= K.clang && F < K.clang + 2) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(A.gate, R.ours, 0.5)), setIds: T.setIds, plate: F === K.clang ? [1, 0.84, 0.8] : [1, 1, 0.96] });
   if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(L2 + A.finish, R.track, 0.4)), setIds: T.setIds, plate: F === K.freeze[0] ? [0.84, 1, 0.9] : [1, 1, 0.96] });
-  const tokHole = tokEllipse(ctx, st);   // the lines never cross Tok
-  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 70, width: 6, seed, hole: tokHole }); };
+  const holes = [tokEllipse(ctx, st), kernFaceEllipse(ctx, st)];   // the lines never cross Tok or Kern's face
+  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 70, width: 6, seed, holes }); };
   fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
   if (st.kern.pos) fl(K.closeup[0] + 1, 5, [st.kern.pos[0], 0.45, st.kern.pos[2]], 220, 0.9, 11);   // the push onto the token lands with zoom lines (once Tok has left the frame)
   if (st.kern.pos) fl(K.crash[0] + 2, 12, [st.kern.pos[0], 0.2, st.kern.pos[2]], 260, 1.0, 7);     // the crash zoom lands with zoom lines
@@ -522,6 +522,12 @@ function tokEllipse(ctx, st) {
   const t = st.tok; if (!t || t.vis === false || !t.pos) return null;
   const p = [t.pos[0], t.pos[1] + 0.95, t.pos[2]], q = prj(ctx, p); if (!q.front) return null;
   const u = pxu(ctx, p); return { x: q.x, y: q.y, rx: u * 0.75, ry: u * 0.85 };
+}
+// Kern's face block on screen (design px)
+function kernFaceEllipse(ctx, st) {
+  if (!st.kern || st.kern.vis === false || !T.kern.nose) return null;
+  const w = T.kern.nose.getWorldPosition(V(0, 0, 0)).toArray(), q = prj(ctx, w); if (!q.front) return null;
+  const u = pxu(ctx, w) * T.kern.scale; return { x: q.x, y: q.y, rx: u * 0.4, ry: u * 0.36 };
 }
 const inEllipse = (e, x, y, pad = 0) => !!e && ((x - e.x) / (e.rx + pad)) ** 2 + ((y - e.y) / (e.ry + pad)) ** 2 < 1;
 function puff(g, x, y, s, a, r, fill = null) {
@@ -602,7 +608,10 @@ export function drawMarks(ctx, g) {
     const a = F - K.idea, hp = [tk.pos[0], tk.pos[1] + 1.0, tk.pos[2]], q = prj(ctx, hp);
     if (a >= 0 && a <= 16 && q.front) { const u = pxu(ctx, hp); bang(g, q.x - u * 0.95, q.y - u * 0.05, u * 0.55 * ob(a / 4) * (1 - sm((a - 12) / 4)), -0.2, PAL.emerald, r, PAL.cream); }   // a cream keyline: reads on the dark slab
   }
-  if (st.oro.pos) { const sx = [Math.cos(st.oro.yaw), 0, -Math.sin(st.oro.yaw)]; bangAt(K.dtake, [st.oro.pos[0] - sx[0] * 0.2, 0.5, st.oro.pos[2] - sx[2] * 0.2], 0.55, 0.12); }   // as big as Tok's, low beside the head: inside the card band through the dolly-zoom
+  if (st.oro.pos) {   // the double-take: beside the head at eye height (screen space, off the hull), a cream keyline off the coral
+    const a = F - K.dtake, hp = [st.oro.pos[0], 0.55, st.oro.pos[2]], q = prj(ctx, hp);
+    if (a >= 0 && a <= 16 && q.front) { const u = pxu(ctx, hp); bang(g, q.x + u * 0.62, q.y + u * 0.12, u * 0.5 * ob(a / 4) * (1 - sm((a - 12) / 4)), 0.15, PAL.coral, r, PAL.cream); }
+  }
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
     const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
     const kp = st.kern.pos || [0, 0, 0], an = q / 6 * TAU + 0.4;

@@ -212,3 +212,16 @@ Deferred, with reasons:
 - Tok's underside shadow band (TA n2): it conflicts with the web designer's praise of the clean cream balloon at 400 px, and risks the strobe again.
 - Kern's face on the drive (CD n5).
 - The push-in on Kern's win (CD n7).
+
+## Handoff status
+- **Reached:** review round 8 (r8 at 960×540, commit eabacbe) scored CD 8.6, TA 8.3, DE 8.8, WD 8.6. Only the tech-art lens is below 8.5. Round 8 is not yet written up as a table above. No 1080p deliverables exist yet: `out/tritongym/_final` is a stale r7 partial, so re-render with `--clean`.
+- **Verified in studio snaps (commit cdb9b57):** slam puffs are tested per frame against Tok (f595–599 clean); focus and zoom lines skip Tok's ellipse (f150, f364, f594); the idea "!" is on Tok's left with a cream keyline; Oro's jaw drop shows an open mouth (f614–628).
+- **In this wip commit, snap-checked:** a second focus-line hole for Kern's face block (f150–152), and Oro's double-take "!" beside its head with a cream keyline (f500–508, inside the band).
+- **In this wip commit, not verified:** letter hulls pushed back 0.15 along the eye ray (`uHullPush` in `tg_letter.js`). This shrinks the crawling join specks (TA must-fix 4) but does not remove them at the ">" joint or in the "@".
+- **Not yet seen in a full render or reviewed:** everything after r8.
+- **Next:**
+  1. Fix the letter specks properly: union each glyph's strokes before extruding, or drop the bevel on inner strokes, and simplify the "@". Then set the push back to about 0.05.
+  2. Render r9 at 960×540, run `tools/evidence.sh`, and do review round 9 (tech-art must reach 8.5).
+  3. Render the final 1080p pass with `--workers 2 --clean` into `_final`.
+  4. Run `encode_segs.py` for the master (CRF search, ≤ 70 MB), cardsrc, the card (`--start 628`, ≤ 4 MB), the poster (`--frame 628`) and the 1 f/s sheet, and copy them into `out/tritongym/`.
+  5. Commit, push and give the README §9 report.
