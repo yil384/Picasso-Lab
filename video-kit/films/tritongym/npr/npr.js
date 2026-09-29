@@ -177,9 +177,11 @@ void main() {
     float ca = cos(L_htAngle), sa = sin(L_htAngle);
     vec2 q = mat2(ca, sa, -sa, ca) * gl_FragCoord.xy / cell;
     float r = length(fract(q) - .5) * cell;
-    float dens = clamp((L_htT - (ndl + n1 * .2) * sh) / L_htRange, 0., 1.);
-    float dotR = sqrt(dens) * cell * .6;
-    float dc = clamp(dotR - r + .5, 0., 1.) * step(.02, dens);
+    // the material's tone bias lifts the dots too, and the dots grow in on an eased ramp (no hard on/off, so a flat
+    // face crossing the threshold doesn't strobe) (film-tritongym change)
+    float dens = clamp((L_htT - (ndl + n1 * .2 + uToneBias) * sh) / L_htRange, 0., 1.);
+    float dotR = mix(dens, sqrt(dens), .5) * cell * .6;
+    float dc = clamp(dotR - r + .5, 0., 1.) * smoothstep(.0, .12, dens);
     c = mix(c, c * L_htCol, dc * ht);
   }
 
@@ -946,7 +948,7 @@ export function createNPR(renderer, ctx, opts = {}) {
         ...shared, ...light,
         uAlbedo: { value: v3(o.color ?? 0xdddddd) },
         uMap: { value: o.map || white }, uHasMap: { value: o.map ? 1 : 0 }, uMapMix: { value: o.mapMix ?? 1 },
-        uId: { value: id }, uFlat: { value: o.flat ?? 0 }, uGlow: { value: o.glow ?? 0 }, uSpec: { value: o.spec ?? 1 },
+        uId: { value: id }, uFlat: { value: o.flat ?? 0 }, uGlow: { value: o.glow ?? 0 }, uSpec: { value: o.spec ?? 0 },   // (film-tritongym: matte unless asked)
         uHatchAmt: { value: o.hatch ?? 1 }, uHatchMode: { value: modes[o.hatchMode ?? 'planar'] ?? 0 },
         uHatchDirA: { value: new THREE.Vector3(...(o.hatchDir ?? [0, 1, 0.2])) },
         uHatchDirB: { value: new THREE.Vector3(...(o.hatchDir2 ?? [1, 0.25, 0.4])) },

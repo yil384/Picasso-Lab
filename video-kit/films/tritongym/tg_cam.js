@@ -47,7 +47,7 @@ function shotGate(F) {           // B2 at the gate: 3/4 on the gate, punch-in on
 }
 function shotPress(F) {          // B2 insert: close on the crooked token; a mitt comes down and presses it flat
   const k = sg(F, K.closeup[0], K.closeup[1], io), th = B2.thStop - 0.17, r = R.ours + 0.3;
-  return rig([th + 0.07, r + 2.1 - 0.25 * k, 1.2], [th + 0.005, r, 0.52], 30, 0.03);
+  return rig([th + 0.05, r + 1.7 - 0.2 * k, 1.4], [th + 0.01, r, 0.58], 26, 0.03);   // tight, from the side and above: the crooked token and the mitt are the subject
 }
 function shotThrough(F) {        // B2 end: from ahead of the gate, low, looking back: Kern drives through the arch at us
   const k = sg(F, K.through[0], K.toScale[0], io);
@@ -78,7 +78,7 @@ function shotRace1(F) {          // B4: fast low tracking, loses Oro, settles on
   const lead = lerp(oth, kth, sm((F - K.go1 - 4) / 10));
   const track = rig([lead + 0.46, 9.0, 2.3], [lead + 0.01, 6.0, 0.35], 33, -0.03);   // leading 3/4 front: the lanes stay side by side
   const fin = rig([A.finish + 0.02, 13.4, 1.9], [A.finish + 0.06, 5.0, 1.2], 38, 0.0);   // wide enough for the stopwatch face (upper left)
-  return mix(track, fin, sg(F, K.kernRun1[1] - 20, K.kernRun1[1] - 4, sm));
+  return mix(track, fin, sg(F, K.kernRun1[1] - 26, K.kernRun1[1] - 2, io));   // a slower crane up to the finish
 }
 function shotCrash(F) {          // B4 -> B5: crash zoom onto the square wheel, then the refine two-shot with a slow orbit
   const th = A.finish + 0.16;

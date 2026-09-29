@@ -169,3 +169,23 @@ Nice-to-haves taken: the crooked ':' on one face only (DE n1, not a die), the wa
 6. *PASS flag reads as a ✅ badge* (CD 3, TA n4): the flag leaves the scale; Torchy, the referee, snaps up a triangular emerald pennant on a stick (with overshoot and a cloth kink) — in B3 and again in lap 2.
 
 Nice-to-haves taken: the bench landing moved further along the track (TA n2), dust puffs shrink away inked instead of fading grey (TA n3), the GPU shroud lifted to a mid ink-violet (TA n5), zoom lines on the push into the token insert (TA n6), Oro's "!" inside the band (WD n1), the plate moved clear of the front wheel (DE n1), the storyboard's photo-finish text now states the honest gap (DE n4).
+
+## Round 6 — pass r6 (960×540, commit 416fad1)
+
+| lens | r1 | r2 | r3 | r4 | r5 | **r6** | verdict in one line |
+|---|---|---|---|---|---|---|---|
+| Creative director | 6.0 | 7.0 | 7.5 | 7.5 | 8.2 | **8.3** | the flag and the seam are fixed, Kern now acts first and Oro acts in both races; but in the payoff Oro turns nose-on (face hidden, the laurel reads as a sunflower), Kern is still upstaged, and the refine idea has no visible cause |
+| Tech-art lead | 6.0 | 7.0 | 7.5 | 7.0 | 8.0 | **8.2** | a lit comic world with a good camera grammar and continuous short smears; but Tok's dot screen switches on/off in one frame (the halftone ignored the tone bias), Dash's speed lines cross Tok's face, Kern's lap-2 launch snaps in the unsmeared frame f423, the token insert is cluttered |
+| Domain expert | 6.0 | 7.6 | 8.2 | 8.3 | 8.7 | **8.8** | **no must-fix**: nothing regressed with the pennant, the braking or the payoff staging |
+| Web designer | 6.3 | 7.4 | 7.8 | 8.0 | 8.1 | **8.6** | **no must-fix**: the seam pop and Kern-in-the-fade are fixed (face, check and plate above the fade); card 3.70 MB at CRF 32 |
+
+### Must-fix list (merged) and what r7 does about each
+1. *Oro's payoff reactions unreadable* (CD 1): Oro turns only ~0.15 rad at the jaw, so it stays ~3/4 to the payoff lens with its face (above the cone) in view; a new jaw-drop face (wide eyes, big open mouth); the laurel slides forward off the key and tips down over one eye as a band (never a ring round the cone); the nod is a 0.4-rad pitch of the whole body; Oro parks a little further into the frame.
+2. *The winner is upstaged* (CD 2): Kern's face block keeps a tone floor and takes no cast shadow (stays pale emerald through the hop); the hop is 0.72 high with a 1.6× squash on landing; Kern parks a little nearer the lens; Tok's leap is smaller (0.42) and starts after Kern lands.
+3. *The refine idea has no cause* (CD 3): Tok arrives (f360–370), stares blankly at the square wheel (f370–378, dot eyes, flat mouth), then the emerald "!" pops straight above its head against the sky (f378); the fresh tokens fly on a tighter arc from the mouth down to the wheels.
+4. *Tok's dot screen strobes* (TA 1): the halftone density now includes the material's tone bias (the round-4 tone floor never reached the dots) and the dots grow in on an eased ramp instead of a hard `step` — a flat face crossing the threshold no longer flips in one frame.
+5. *Dash's speed lines across Tok's face* (TA 2): the 2D trail is gone; Dash is smaller (1.2×) and flies in higher, so it reads as a dart.
+6. *Kern's lap-2 launch snaps in an unsmeared frame* (TA 3): Kern revs 3 frames longer and launches at f425, inside the whip's smear peak.
+7. *The token insert is cluttered and turns Tok grey* (TA 4): tight, from the side and above: the crooked ':' token, the mitt and the press are the subject; Tok is at the edge and brighter (the tone fix).
+
+Nice-to-haves taken: every material without an explicit `spec` is now matte (the default was a paper-white highlight: the pylon's coral ball and a white glint on the weigh-in base, TA n5, n8), CLANG! shrinks away over 5 frames (TA n3), Kern's post-CLANG tumble spins half as fast (TA n4), the race-1 crane to the finish is 24 frames (TA n2), Oro's double-take "!" sits low beside its head inside the card band (WD n1), the lap-2 weigh-in framed left (WD n5), the card encode's CRF search starts at 30 (WD n6).

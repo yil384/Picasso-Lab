@@ -328,7 +328,7 @@ export function buildDash(THREE, add, parent) {
     const pu = add(new THREE.SphereGeometry(0.04, 10, 8), { key: 'pupil', color: 0x1a1530 }, { outline: 0.2, cast: false }, [0.05, 0.03, s * 0.05], [0, 0, 0], e);
     return { e, pu };
   });
-  D.body.scale.setScalar(1.45);
+  D.body.scale.setScalar(1.2);
   return D;
 }
 

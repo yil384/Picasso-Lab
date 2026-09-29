@@ -546,7 +546,7 @@ export function drawMarks(ctx, g) {
   if (ca >= 0 && ca < K.closeup[0] - 4 - K.clang) {    // gone before the push onto the token
     const p = prj(ctx, polar(A.gate - 0.08, R.ours + 0.2, 2.3));
     const x = clamp(p.x - 260, 330, 1250), y = clamp(p.y + 20, 330, 560), c2 = ca - 2;   // top of the lettering below the card crop
-    comicWord(g, 'CLANG!', x, y, 150, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.12, r, pop: Math.min(c2 / 4, (K.closeup[0] - 4 - K.clang - ca) / 3), perLetter: (i) => (c2 - i * 0.8) / 3 });   // pops on, pops off before the push-in
+    comicWord(g, 'CLANG!', x, y, 150, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.12, r, pop: Math.min(c2 / 4, 0.25 + 0.75 * (K.closeup[0] - 4 - K.clang - ca) / 5), perLetter: (i) => (c2 - i * 0.8) / 3 });   // pops on, pops off before the push-in
   }
   const pf = (f0, p, s0) => { const a = F - f0; if (a < 0 || a >= 9) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); for (const sd of [-1, 1]) puff(g, q.x + sd * (u * 0.3 + a * 3), q.y - a, u * s0 * (1 + a * 0.08), 1 - a / 9, r); };
   pf(K.hopOff[1], polar(A.bench + 0.2, R.ours, 0.02), 0.12);
@@ -576,7 +576,6 @@ export function drawMarks(ctx, g) {
     speedLines(g, ctx, back, dir, len, n, r);
   };
   trail(st.oro, K.go1 + 2, K.oroRun1[1] - 2, 1.6, 5);
-  const ds = dashState(F); if (ds.vis && F < K.clang) { const back = [ds.pos[0], ds.pos[1], ds.pos[2]]; const th = toRing(ds.pos)[0]; speedLines(g, ctx, back, [-Math.sin(th), 0, -Math.cos(th)], 1.4, 4, r); }
   trail(st.oro, K.go2 + 2, K.cross, 1.2, 4);
   trail(st.kern, K.go2 + 2, K.cross, 1.2, 4);
   trail(st.kern, K.lap2[0] + 4, K.lap2[1] - 6, 1.0, 3);

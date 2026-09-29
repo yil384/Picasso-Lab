@@ -157,7 +157,7 @@ function kernRaw(F) {
     const a = lanePos(thGateStop, R.ours, 0), b = B2.land;
     const h = u < 0.65 ? 0.85 * Math.sin(Math.PI * u / 0.65) : 0.22 * Math.sin(Math.PI * (u - 0.65) / 0.35);
     S.pos = [lerp(a[0], b[0], sm(u)), h, lerp(a[2], b[2], sm(u))];
-    S.yaw = headingAt(thGateStop) + TAU * ob(u); S.roll = 0.5 * Math.sin(Math.PI * u);
+    S.yaw = headingAt(thGateStop) + 0.5 * TAU * ob(u); S.roll = 0.5 * Math.sin(Math.PI * u);
     S.face = 'dizzy'; S.sq = F < K.clang + 3 ? 0.25 : Math.abs(u - 0.65) < 0.06 ? 0.2 : 0;
     return S;
   }
@@ -210,7 +210,7 @@ function kernRaw(F) {
   }
   // ---- B5: refine at the finish
   const thRef = thF + P1.kEnd;
-  if (F < K.lap2[0]) {
+  if (F < K.lap2[0] + 3) {                                         // (it revs until the whip's smear covers the launch)
     const thr = kernTh(F);                                          // (= thRef once the race-1 coast has stopped)
     S.pos = lanePos(thr, R.ours, 0); S.yaw = headingAt(thr) - 0.45;
     S.face = F < K.idea ? 'nervous' : F < K.snapOn[1] ? 'wide' : 'happy';
@@ -222,7 +222,7 @@ function kernRaw(F) {
     // (segment 1 is a Hermite: out of the whip fast, into the gate at the speed of segment 2, so the arch shot isn't empty)
     const herm = (u, m0, m1) => (u * u * u - 2 * u * u + u) * m0 + (-2 * u * u * u + 3 * u * u) + (u * u * u - u * u) * m1;
   if (F < K.side2[0]) {
-    const keys = [[K.lap2[0], thRef], [K.gate2, L2 + A.gate], [K.scale2 - 5, L2 + A.scale - 0.18], [K.scale2 + 5, L2 + A.scale - 0.02], [K.lap2[1], L2 + thS]];
+    const keys = [[K.lap2[0] + 3, thRef], [K.gate2, L2 + A.gate], [K.scale2 - 5, L2 + A.scale - 0.18], [K.scale2 + 5, L2 + A.scale - 0.02], [K.lap2[1], L2 + thS]];
     let th = keys[keys.length - 1][1];
     for (let i = 1; i < keys.length; i++) if (F < keys[i][0]) { const [a, va] = keys[i - 1], [b, vb] = keys[i]; const u = (F - a) / (b - a); th = lerp(va, vb, i === 1 ? herm(u, 2.2, 0.77) : i === keys.length - 1 ? 1 - (1 - u) * (1 - u) : u); break; }
     const off = 1.2 * Math.sin(Math.PI * sg(F, K.scale2 - 9, K.scale2 + 9));      // swerve out to the weigh-in pan
@@ -467,7 +467,7 @@ export function dashState(F) {
   if (F < K.clang + 1) {
     const u = sg(F, K.dash[0], K.clang + 1);
     const th = lerp(A.gate - 0.62, thStick, u);                                  // zips in from inside the drive shot
-    return { vis: true, pos: polar(th, R.oro, 1.3 + 0.12 * Math.sin(u * 9)), yaw: headingAt(th), roll: 0, quiver: 0 };
+    return { vis: true, pos: polar(th, R.oro, lerp(1.7, 1.3, u) + 0.1 * Math.sin(u * 9)), yaw: headingAt(th), roll: 0, quiver: 0 };
   }
   const a = F - K.clang;
   return { vis: true, pos: polar(thStick, R.oro, 1.3), yaw: headingAt(thStick), roll: 0.05, quiver: 0.12 * Math.exp(-a / 14) * Math.sin(a * 2.4) + 0.02 * Math.sin(a * 0.9), droop: sm(a / 40) };
