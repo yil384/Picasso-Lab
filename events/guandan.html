@@ -144,6 +144,7 @@ let turnDeadlineTimer = null;
 let turnRenderTimer = null;
 let actionBusy = false;
 let closingOwnRoom = false;   // this client is removing its room (解散 / the host's ↩), no notice
+let roomHostSeen = null;      // { code, host } at the last room render: a guest handed the room is told
 let handOrderState = { key: "", ids: [] };
 
 // Storage can throw (blocked third-party storage in the Google Sites iframe, private modes);
@@ -2384,6 +2385,11 @@ function renderLobbyRoom() {
     enterScreen("room");
     updateTopbarStatus();
     const mine = mySeat();
+    const host = isHost();
+    if (host && roomHostSeen?.code === game.roomCode && !roomHostSeen.host) {
+        showToast(L("The host left. You are the host now", "房主已离开，你成为房主"), 2400);
+    }
+    roomHostSeen = { code: game.roomCode, host };
     const key = `${game.roomCode}:${uiLang}`;
     let el = root.querySelector(".room");
     if (!el || el.dataset.roomKey !== key) {
@@ -2393,7 +2399,7 @@ function renderLobbyRoom() {
         bindRoom(el);
     }
     patchRegion(el, "levels", levelSetupHTML());
-    patchRegion(el, "admin", isHost() ? `<button class="room-dissolve" id="delete-room" type="button"${actionBusy ? " disabled" : ""}>${L("Dissolve room", "解散房间")}</button>` : "");
+    patchRegion(el, "admin", host ? `<button class="room-dissolve" id="delete-room" type="button"${actionBusy ? " disabled" : ""}>${L("Dissolve room", "解散房间")}</button>` : "");
     patchRegion(el, "table", roomTableHTML(mine));
     patchRegion(el, "actions", roomActionsHTML());
     patchRegion(el, "roster", rosterHTML());
