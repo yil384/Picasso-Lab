@@ -1176,45 +1176,57 @@ body[data-screen="table"] .topbar { display: none; }
     80% { opacity: 1; scale: 1; }
     100% { opacity: 0; scale: 1.04; }
 }
-/* 天王炸: three cartoon blasts go off left, centre, right under the vertical word (FX_BLAST: dark
-   smoke behind a lobed fire body with a white-hot core). Each swells in, the core and fire burn
-   out, and the smoke lingers and rises. */
+/* 天王炸 (tg_ingame_tianwangzha): one fire-and-smoke column rising behind the vertical word: a blast
+   on the ground ring with debris, two puffs up the stem and the mushroom head over 天. Each puff
+   (FX_PUFF) swells in, its core and fire shrink away into the brown smoke, and the smoke rises and
+   drops out in the last 150 ms, so no half-transparent orange ever sits on the felt. */
+.gd-fx.is-joker .gd-fx-ring { top: 138px; }
+.gd-fx.is-joker .gd-fx-spark { top: 112px; background: linear-gradient(135deg, #a07c64, #3a2418); }
 .gd-fx-boom { width: 0; height: 0; }
-.gd-fx-boom:nth-child(1) { left: -175px; top: 80px; --s: .82; }
-.gd-fx-boom:nth-child(2) { left: 0; top: 20px; --s: 1; }
-.gd-fx-boom:nth-child(3) { left: 175px; top: 80px; --s: .82; }
+.gd-fx-boom:nth-of-type(1) { top: 112px; --sx: .78; --sy: .52; --d: 0ms; --rot: 0deg; }
+.gd-fx-boom:nth-of-type(2) { left: -14px; top: 46px; --sx: .58; --sy: .6; --d: 70ms; --rot: 70deg; }
+.gd-fx-boom:nth-of-type(3) { left: 12px; top: -20px; --sx: .62; --sy: .64; --d: 140ms; --rot: 140deg; }
+.gd-fx-boom:nth-of-type(4) { top: -92px; --sx: 1.18; --sy: .86; --d: 200ms; --rot: 200deg; }
 .gd-fx-boom svg {
     position: absolute;
-    left: -120px; top: -120px;
-    width: 240px; height: 240px;
+    left: -100px; top: -100px;
+    width: 200px; height: 200px;
     overflow: visible;
-    animation: gd-fx-blast 1400ms cubic-bezier(.2, .8, .3, 1) calc(var(--n) * 160ms) both;
+    animation: gd-fx-blast 1500ms cubic-bezier(.2, .8, .3, 1) var(--d) both;
 }
-.gd-fx-boom path { transform-box: fill-box; transform-origin: 50% 50%; }
-.gd-fx-smoke { fill: #5b4944; animation: gd-fx-smoke 1400ms ease-out calc(var(--n) * 160ms) both; }
-.gd-fx-fire { fill: url(#gd-g-fire); stroke: #8c2410; stroke-width: 3.5; stroke-linejoin: round; animation: gd-fx-fire 1400ms linear calc(var(--n) * 160ms) both; }
-.gd-fx-hot { fill: #fff8d8; animation: gd-fx-hot 1400ms linear calc(var(--n) * 160ms) both; }
+.gd-fx-boom path { transform-box: fill-box; transform-origin: 50% 50%; stroke-linejoin: round; paint-order: stroke fill; }
+.gd-fx-smoke { fill: url(#gd-g-smoke); stroke: #2a180c; stroke-width: 7; animation: gd-fx-smoke 1500ms ease-out var(--d) both; }
+.gd-fx-fire { fill: url(#gd-g-fire); stroke: #8c2410; stroke-width: 6; animation: gd-fx-fire 1500ms linear var(--d) both; }
+.gd-fx-hot { fill: #fff8d8; animation: gd-fx-hot 1500ms linear var(--d) both; }
 @keyframes gd-fx-blast {
-    0% { opacity: 0; transform: scale(calc(.15 * var(--s))); }
-    8% { opacity: 1; transform: scale(calc(.8 * var(--s))); }
-    35% { transform: scale(var(--s)); }
-    100% { opacity: 1; transform: translateY(-30px) scale(calc(1.08 * var(--s))); }
+    0% { opacity: 0; transform: translateY(0) scale(calc(.2 * var(--sx)), calc(.2 * var(--sy))) rotate(var(--rot)); }
+    6% { opacity: 1; }
+    20% { transform: translateY(0) scale(calc(1.06 * var(--sx)), calc(1.06 * var(--sy))) rotate(var(--rot)); }
+    32% { transform: translateY(-4px) scale(var(--sx), var(--sy)) rotate(var(--rot)); }
+    90% { opacity: 1; transform: translateY(calc(-60px * var(--sy))) scale(calc(1.12 * var(--sx)), calc(1.12 * var(--sy))) rotate(var(--rot)); }
+    100% { opacity: 0; transform: translateY(calc(-74px * var(--sy))) scale(calc(1.2 * var(--sx)), calc(1.2 * var(--sy))) rotate(var(--rot)); }
 }
 @keyframes gd-fx-smoke {
-    0%, 15% { opacity: 0; transform: none; }
-    35% { opacity: .8; }
-    100% { opacity: 0; transform: translateY(-34px) scale(1.2); }
+    0% { transform: scale(.85); }
+    40% { transform: scale(1); }
+    100% { transform: scale(1.12); }
 }
 @keyframes gd-fx-fire {
-    0%, 50% { opacity: 1; transform: none; }
-    100% { opacity: 0; transform: scale(.7); }
+    0%, 55% { transform: scale(1); animation-timing-function: cubic-bezier(.5, 0, .8, .6); }
+    92%, 100% { transform: scale(0); }
 }
 @keyframes gd-fx-hot {
-    0%, 18% { opacity: 1; transform: scale(1.15); }
-    55% { opacity: 0; transform: scale(.6); }
-    100% { opacity: 0; }
+    0%, 22% { transform: scale(1.1); animation-timing-function: ease-in; }
+    52%, 100% { transform: scale(0); }
 }
-.gd-fx.is-joker > .gd-word { font-size: 86px; letter-spacing: -.08em; animation-delay: 120ms; animation-duration: calc(var(--fx-ms) - 120ms); }
+/* the vertical word outlasts the column, then drops out as fast as the smoke */
+.gd-fx.is-joker > .gd-word { font-size: 80px; letter-spacing: -.08em; animation: gd-fx-word-tall calc(var(--fx-ms) - 120ms) linear 120ms both; }
+@keyframes gd-fx-word-tall {
+    0% { opacity: 0; scale: 1.7; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    7% { opacity: 1; scale: 1; }
+    91% { opacity: 1; scale: 1; }
+    100% { opacity: 0; scale: 1.06; }
+}
 .gd-word.is-vertical { writing-mode: vertical-rl; text-orientation: upright; }
 .gd-word.is-vertical:lang(en) { writing-mode: horizontal-tb; }
 .gd-fx.is-joker > .gd-word:lang(en) { font-size: 88px; }
