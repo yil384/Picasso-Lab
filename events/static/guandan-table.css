@@ -652,8 +652,8 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-row { display: flex; align-items: flex-end; --card-sel-lift: calc(var(--card-w) / .74 * -.18); }
 .gd-row .card + .card { margin-left: calc(var(--pitch) - var(--card-w)); }
 .gd-row .card.selected::after { background: rgba(70, 110, 230, .16); }
-/* the selection on its way to the table (sendingUI) */
-.gd-hand.is-sending .card.selected { opacity: .55; }
+/* the selection on its way to the table (sendingUI): its tint deepens */
+.gd-hand.is-sending .card.selected::after { background: rgba(28, 44, 100, .5); }
 .gd-cols.is-sorting .gd-col { animation: gd-col-in 300ms var(--ease-back) both; animation-delay: calc(var(--ci) * 42ms); }
 .gd-row.is-sorting .card { animation: gd-col-in 260ms var(--ease-back) both; animation-delay: calc(var(--ci) * 22ms); }
 @keyframes gd-col-in { from { opacity: 0; translate: 0 70px; } }
@@ -731,7 +731,7 @@ body[data-screen="table"] .topbar { display: none; }
         0 2px 0 var(--btn-edge),
         0 4px 8px rgba(0, 0, 0, .28);
 }
-.gd-actions .btn.is-pending { opacity: .72; }
+.gd-actions .btn.is-pending::before { opacity: 1; background: rgba(0, 0, 0, .16); }
 .gd-actions .btn:not(.spaced) { --btn-ls: .02em; }
 .gd-actions .btn.is-disabled { cursor: default; }
 /* 提示 advised a pass: 不出 turns primary with one pop (the region is keyed, so it never replays) */
