@@ -45,7 +45,7 @@ body[data-screen="table"] .topbar { display: none; }
     pointer-events: none;
 }
 .gd-rot::before {
-    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 3px);
+    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .026) 0 1px, transparent 1px 2px);
 }
 .gd-rot::after {
     background:
@@ -123,8 +123,7 @@ body[data-screen="table"] .topbar { display: none; }
     pointer-events: none;
 }
 .gd-watermark b { display: block; font: 400 54px/1 var(--font-display); letter-spacing: .03em; }
-.gd-watermark span { display: block; margin-top: 10px; font: 700 22px/1 var(--font-ui); letter-spacing: .24em; }
-.gd-watermark span:lang(en) { letter-spacing: .02em; }
+.gd-watermark span { display: block; margin-top: 10px; font: 700 22px/1 var(--font-ui); letter-spacing: .04em; }
 .gd-stage.is-acting .gd-watermark span { opacity: 0; }
 
 /* ---------- HUD: ☰ + level tiles (top-left), 记牌 / 规则 (top-right) ---------- */
