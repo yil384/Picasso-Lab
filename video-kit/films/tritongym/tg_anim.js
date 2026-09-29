@@ -5,8 +5,8 @@ import { TAU, clamp, lerp, sg, sm, io, ob, mj, mjv, ringv, bumpv, hsh, take, hop
 export const NF = 660;
 // station angles (radians) and radii
 export const A = { bench: 0.0, gate: 0.95, scale: 1.95, start: 3.0, finish: 4.85 };
-A.words = A.finish + 0.71;      // the payoff letters, on top of the graphics card (clear of the finish pylon from the payoff lens)
-A.tokWin = A.finish + 1.31;     // Tok's star-eyed spot at the payoff
+A.words = A.finish + 0.62;      // the payoff letters, on top of the graphics card (clear of the finish pylon from the payoff lens)
+A.tokWin = A.finish + 1.55;     // Tok's star-eyed spot at the payoff
 export const R = { track: 6.0, lanes: [5.45, 6.55], ours: 6.55, oro: 5.45, bench: 8.3, tokBench: 7.72, kerb: 4.62, scale: 8.15 };
 export const L2 = TAU;   // lap 2 offset
 
@@ -22,19 +22,19 @@ export const K = {
   press: [160, 168], lift: [166, 178], setDown: [164, 172], through: [172, 191], ripple: [180, 190],
   // B3 verify
   toScale: [192, 214], eject: [214, 223], settle: [223, 238], flag: 240, dialPush: [244, 264],
-  // B4 race 1
-  cut: 264, tune: [268, 284], side: [284, 296], kgulp: 292, go1: 300, oroRun1: [300, 326], kernRun1: [300, 352],
-  buff: [330, 359], crash: [352, 362],
+  // B4 race 1: the oracle always runs ORO_RUN frames; Kern takes 56 (Perf@1 ~ 0.64)
+  cut: 264, tune: [268, 284], side: [284, 296], kgulp: 292, go1: 300, oroRun1: [300, 336], kernRun1: [300, 356],
+  buff: [340, 363], crash: [356, 366],
   // B5 refine
-  tokIn: [356, 368], idea: 370, speak2: [378, 396], popOff: 380, snapOn: [386, 396], nose: 396, rev: [400, 418],
-  // B6 lap 2
-  lap2: [420, 486], gate2: 443, scale2: 459, oroBack: [420, 470],
-  // B7 race 2
-  side2: [488, 496], dtake: 497, go2: 508, run2: [508, 552], cross: 551, freeze: [552, 554],
+  tokIn: [360, 372], idea: 374, speak2: [382, 400], popOff: 384, snapOn: [390, 400], nose: 400, rev: [404, 420],
+  // B6 lap 2 (only Kern laps; the oracle backs up the home straight to the start line)
+  lap2: [422, 486], gate2: 445, scale2: 461, oroBack: [424, 474],
+  // B7 race 2: Kern takes 33 frames (Perf@1 ~ 1.09), the photo finish holds 12 frames, then the stopwatch insert
+  side2: [488, 496], dtake: 497, go2: 515, run2: [515, 551], cross: 548, freeze: [548, 550], hold: [548, 560], watch: [560, 580],
   // B8 payoff
-  slam: 566, check: 578, jaw: 586, laurel: 590, nod: [604, 614], leap: [596, 618],
+  slam: 590, check: 598, jaw: 602, laurel: 606, nod: [616, 626], leap: [608, 628],
   // B9 next
-  away: [630, 660],
+  away: [632, 660],
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -47,6 +47,8 @@ export const headingAt = (th) => th + Math.PI / 2;
 /** rotation.y of something built facing +z (faces) so it faces outward, towards a camera outside the ring */
 export const faceOut = (th) => th + Math.PI / 2;
 const wrapF = (F) => ((F % NF) + NF) % NF;
+/** the photo-finish hold: every character is frozen on the crossing frame */
+const held = (F) => (F >= K.hold[0] && F < K.hold[1] ? K.hold[0] : F);
 
 // ------------------------------------------------------------------------------------------------
 // Kern (the generated kernel)
@@ -68,13 +70,20 @@ function sprint(F, f0, fLine, thS, thF, pw, coastF, over) {
   const a = Math.min(F - fLine, coastF), k = a / coastF;
   return thF + Math.min(over, v * coastF * (k - k * k / 2));
 }
+export const ORO_RUN = 36;
+// the races are timed nose-on-the-line: centre angles at which each nose touches the finish line
+const LINE = { k1: A.finish - 0.65 / R.ours, k2: A.finish - 0.94 / R.ours, o: A.finish - 1.31 / R.oro };    // the oracle's time, identical in both races (it is the fixed yardstick)
+/** race time: the photo-finish hold freezes the racers at the crossing frame */
+export const raceF = (F) => (F >= K.hold[0] && F < K.hold[1] ? K.hold[0] : F >= K.hold[1] ? F - (K.hold[1] - K.hold[0]) : F);
 export function kernTh(F) {   // ring angle of Kern in the races (lap offset included for race 2)
-  if (F < K.lap2[0]) return sprint(F, K.go1, K.kernRun1[1], A.start, A.finish, 1.25, 10, P1.kEnd);
-  return L2 + sprint(F, K.go2, K.cross, A.start, A.finish, 1.5, 8, 0.2);
+  if (F < K.lap2[0]) return sprint(F, K.go1, K.kernRun1[1], A.start, LINE.k1, 1.25, 10, P1.kEnd + A.finish - LINE.k1);
+  // race 2: slow off the line (pw 1.5), fastest at the end; rolls on past the line and parks ahead
+  return L2 + sprint(raceF(F), K.go2, K.cross, A.start, LINE.k2, 1.5, 18, 0.6 + A.finish - LINE.k2);   // go2..cross = 33 f (Perf@1 ~ 1.09)
 }
 export function oroTh(F) {
-  if (F < K.lap2[0]) return sprint(F, K.go1, K.oroRun1[1], A.start, A.finish, 1.1, 16, P1.oEnd);   // the oracle blasts off
-  return L2 + sprint(F, K.go2, K.cross + 1.5, A.start, A.finish, 1.45, 18, 0.5);
+  if (F < K.lap2[0]) return sprint(F, K.go1, K.go1 + ORO_RUN, A.start, LINE.o, 1.1, 16, P1.oEnd + A.finish - LINE.o);   // blasts off
+  // race 2: the same run (36 f, same launch), but brakes hard at the line in shock
+  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 6, 0.06 + A.finish - LINE.o);
 }
 
 /**
@@ -82,6 +91,7 @@ export function oroTh(F) {
  * nose, face, onBench, tiles (assembly progress per tile), stuckAt }
  */
 export function kernState(F) {
+  F = held(F);
   const S = { vis: true, sq: 0, pitch: 0, roll: 0, wheelAng: 0, round: false, cow: 0, nose: false, compiled: 0, face: 'calm', keySpin: 0, lurch: 0, dizzy: 0 };
   const lanePos = (th, r = R.ours, y = 0) => polar(th, r, y);
   // compiled state: first ripple at the gate in B2; the refined parts are cream again from B5 until the lap-2 gate
@@ -214,6 +224,7 @@ export function kernState(F) {
 // Oro (the oracle)
 // ------------------------------------------------------------------------------------------------
 export function oroState(F) {
+  F = held(F);
   const S = { vis: F >= K.cut - 20 && F < K.away[0] + 6, face: 'smug', wheelAng: 0, keySpin: 0, sq: 0, stretch: 0, laurelSlip: 0, wrench: 0, buff: 0, pitch: 0 };
   const lane = (th) => polar(th, R.oro, 0);
   const thS = A.start, thF = A.finish;
@@ -235,10 +246,11 @@ export function oroState(F) {
     if (F >= K.idea) S.face = F < K.idea + 20 ? 'smug' : 'smug';
     return S;
   }
-  if (F < K.side2[0]) {   // cruises round ahead of Kern and parks at the start line again
+  if (F < K.side2[0]) {   // backs up the home straight to the start line (it never runs the loop), smug
     const u = sg(F, K.oroBack[0], K.oroBack[1], (x) => x * x * (3 - 2 * x));
-    const th = lerp(thF + P1.oEnd, L2 + thS, u);
+    const th = lerp(thF + P1.oEnd, thS, u);
     S.pos = lane(th); S.yaw = headingAt(th); S.wheelAng = (th - thF) * R.oro / 0.1; S.face = 'smug';
+    S.keySpin = F * 0.05;
     return S;
   }
   {
@@ -268,6 +280,7 @@ function pogo(F, f0, f1, P0, P1, nh = 3, h = 0.35) {
 }
 
 export function tokState(F) {
+  F = held(F);
   const S = { face: 'calm', sq: 0, lean: 0, armL: 0.35, armR: -0.35, armLz: 0, armRz: 0, lookUp: 0, speak: 0, tilt: 0, vis: true };
   const benchSpot = polar(A.bench - 0.02, R.tokBench, 0);
   const yawBench = faceOut(A.bench - 0.02);
@@ -365,10 +378,10 @@ export function tokState(F) {
   // ---- B8: star-eyed leap at the left of the letters; B9: zips back to the bench
   {
     const base = polar(A.tokWin, 5.3, 0);
-    const hopIn = pogo(F, K.cross + 4, K.leap[0] - 2, polar(A.finish + 0.85, 3.3, 0), base, 3, 0.45);
-    S.pos = F < K.leap[0] - 2 ? hopIn.pos : base.slice(); S.sq = F < K.leap[0] - 2 ? hopIn.sq : 0; S.yaw = faceOut(A.tokWin) - 0.55;
+    const hopIn = pogo(F, K.hold[1], K.watch[1] + 2, polar(A.finish + 0.85, 3.3, 0), base, 3, 0.45);
+    S.pos = F < K.watch[1] + 2 ? hopIn.pos : base.slice(); S.sq = F < K.watch[1] + 2 ? hopIn.sq : 0; S.yaw = faceOut(A.tokWin) - 0.55;
     S.face = F < K.leap[0] ? 'wide' : 'star';
-    if (F >= K.leap[0] && F < K.leap[1]) { const h = hop(F, K.leap[0] + 3, K.leap[1] - 4, 0.9); S.pos[1] += h.y; S.sq = h.sq; S.armL = 2.7; S.armR = -2.7; }
+    if (F >= K.leap[0] && F < K.leap[1]) { const h = hop(F, K.leap[0] + 3, K.leap[1] - 4, 0.6); S.pos[1] += h.y; S.sq = h.sq; S.armL = 2.7; S.armR = -2.7; }
     if (F >= K.away[0]) {
       const P = pogo(F, K.away[0], NF + K.skid, base, polar(L2 + A.bench + 0.02, R.tokBench, 0), 4, 0.4);
       S.pos = P.pos; S.sq = P.sq; S.yaw = headingAt(A.finish + 0.4); S.lean = -0.25; S.face = 'determined';
@@ -422,14 +435,24 @@ export function scaleState(F) {
   return { tilt, needle: -tilt * 1.6, flag, blockL };
 }
 
-/** stopwatch hands: returns angles (rad, clockwise from 12) for [coral (oracle), emerald (ours)] and the button press */
+/** stopwatch hands: angles (rad, clockwise from 12) for [coral (oracle), emerald (ours)] and the button press.
+ *  One turn per WATCH_TURN frames, so no hand laps: the coral hand stops at 6 o'clock in both races (the oracle's fixed
+ *  time); race 1 the emerald hand stops far past it, race 2 just short of it. The insert after the photo finish replays the
+ *  last race frames slowed down (race time 541 -> 552), so the emerald hand visibly stops first. */
+export const WATCH_TURN = 72;
 export function watchState(F) {
-  const run = (f0, f1, stop) => (F < f0 ? 0 : (Math.min(F, stop) - f0) / 36 * TAU);   // one turn per 1.5 s
-  let coral = 0, emerald = 0;
-  if (F >= K.go1 - 20 && F < K.lap2[0] + 20) { coral = run(K.go1, 0, K.oroRun1[1]); emerald = run(K.go1, 0, K.kernRun1[1]); }
-  if (F >= K.lap2[1] - 10) { coral = run(K.go2, 0, K.run2[1] + 1); emerald = run(K.go2, 0, K.cross); }
+  const ang = (t, f0, stop) => (Math.max(0, Math.min(t, stop) - f0)) / WATCH_TURN * TAU;
+  let coral = 0, emerald = 0, rt = F;
+  if (F >= K.go1 - 20 && F < K.lap2[0] + 20) { coral = ang(F, K.go1, K.go1 + ORO_RUN); emerald = ang(F, K.go1, K.kernRun1[1]); }
+  if (F >= K.lap2[1] - 10) {
+    rt = raceF(F);
+    if (F >= K.watch[0] && F < K.watch[1]) rt = lerp(K.cross - 3, K.go2 + ORO_RUN + 1, sg(F, K.watch[0] + 1, K.watch[1] - 5));
+    coral = ang(rt, K.go2, K.go2 + ORO_RUN); emerald = ang(rt, K.go2, K.cross);
+  }
   const press = Math.max(F >= K.go1 - 2 && F < K.go1 + 4 ? 1 : 0, F >= K.go2 - 2 && F < K.go2 + 4 ? 1 : 0);
-  return { coral, emerald, press };
+  // stop clicks (race time) for the insert: the emerald hand stops first
+  const inIns = F >= K.watch[0] && F < K.watch[1];
+  return { coral, emerald, press, rt, stopE: inIns && rt >= K.cross, stopC: inIns && rt >= K.go2 + ORO_RUN, inIns };
 }
 
 /** token flights: B1 builds the shell (8 tokens), B5 the fresh parts. Returns per-token progress (0 = in the mouth, 1 = placed). */

@@ -375,7 +375,7 @@ uniform vec4 uBeamA[${MAX_BEAMS}]; uniform vec4 uBeamB[${MAX_BEAMS}]; uniform ve
 uniform vec2 uSmear; uniform int uDebug; uniform sampler2D tColorG;
 uniform vec4 uGlowZ[${MAX_GLOWS}]; uniform vec4 uBeamZ[${MAX_BEAMS}];
 uniform vec4 uGlowX[${MAX_GLOWS}]; uniform vec4 uBeamX[${MAX_BEAMS}];
-uniform vec4 uFocus; uniform vec4 uFocusX; uniform vec4 uImpact;
+uniform vec4 uFocus; uniform vec4 uFocusX; uniform vec4 uImpact; uniform vec4 uImpactSet; uniform vec3 uImpactPlate;
 uniform mat4 uVP; uniform mat4 uInvVP; uniform vec3 uCamPos;
 uniform sampler2D uVShadowMap; uniform mat4 uVShadowMat;
 uniform vec4 uVolA[2]; uniform vec4 uVolB[2]; uniform vec4 uVolC[2]; uniform vec4 uVolD[2]; uniform int uVolN;
@@ -727,6 +727,16 @@ void main() {
     float l = lum(col) / max(lum(paper), 1e-3);
     float dark = 1. - smoothstep(uImpact.y - .03, uImpact.y + .03, l);
     vec3 lite = paper * mix(vec3(1.), L_burstFill, .3);
+    // by object (uImpact.w = depth cut > 0): the subject (nearer than the cut, not a set surface) stays a light plate
+    // with its ink; the set (floor ids in uImpactSet, the backdrop, anything beyond the cut) goes solid ink
+    if (uImpact.w > 0.) {
+      float sid = textureLod(tNormal, uv, 0.).a * 255.;
+      float isSet = max(step(uImpact.w, zc), 1. - isObj);
+      for (int i = 0; i < 4; i++) isSet = max(isSet, step(abs(sid - uImpactSet[i]), .5));
+      isSet = max(isSet, step(abs(sid - ${BACKDROP_ID}.), .5));
+      dark = max(dark, isSet);
+      lite = paper * uImpactPlate;
+    }
     vec3 two = uImpact.z > .5 ? mix(L_ink, lite, dark) : mix(lite, paper * L_ink, dark);
     col = mix(col, two, uImpact.x);
   }
@@ -851,7 +861,7 @@ export function createNPR(renderer, ctx, opts = {}) {
     uGlowX: { value: Array.from({ length: MAX_GLOWS }, () => new THREE.Vector4()) },
     uBeamX: { value: Array.from({ length: MAX_BEAMS }, () => new THREE.Vector4()) },
     uFocus: { value: new THREE.Vector4() }, uFocusX: { value: new THREE.Vector4(90, 0, 1, 0) },
-    uImpact: { value: new THREE.Vector4(0, 0.55, 0, 0) },
+    uImpact: { value: new THREE.Vector4(0, 0.55, 0, 0) }, uImpactSet: { value: new THREE.Vector4(-9, -9, -9, -9) }, uImpactPlate: { value: new THREE.Vector3(1, 1, 1) },
     uVP: { value: new THREE.Matrix4() }, uInvVP: { value: new THREE.Matrix4() }, uCamPos: { value: new THREE.Vector3() },
     uVShadowMap: light.uShadowMap, uVShadowMat: light.uShadowMat,
     uVolA: { value: [new THREE.Vector4(), new THREE.Vector4()] }, uVolB: { value: [new THREE.Vector4(), new THREE.Vector4()] },
@@ -1051,8 +1061,13 @@ export function createNPR(renderer, ctx, opts = {}) {
 
     /** Impact frame: posterise the frame to ink + light by `k` (0..1); threshold on luminance relative
      *  to the paper; invert = light lines on ink. Use for 1-2 frames on a hit. */
-    impact(k, { threshold = 0.55, invert = false } = {}) {
-      finalMat.uniforms.uImpact.value.set(k, threshold, invert ? 1 : 0, 0);
+    /** Impact frame. By luminance (default), or by object with depthCut > 0: nearer non-set surfaces become a light
+     *  plate (plate: rgb multiplier of the paper) keeping their darks/ink, the set (setIds, backdrop, beyond the cut) ink. */
+    impact(k, { threshold = 0.55, invert = false, depthCut = 0, setIds = [], plate = [1, 1, 1] } = {}) {
+      finalMat.uniforms.uImpact.value.set(k, threshold, invert ? 1 : 0, depthCut);
+      const ids = [...setIds, -9, -9, -9, -9].slice(0, 4);
+      finalMat.uniforms.uImpactSet.value.set(...ids);
+      finalMat.uniforms.uImpactPlate.value.set(...plate);
     },
 
     /** Painted point light (world): lifts nearby surfaces towards its colour in soft bands. Max 4. */

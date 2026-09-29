@@ -8,8 +8,8 @@ import { cachedBake, INK, TAU, pen, fillPoly, ellipsePts, starPts } from './tg_p
 import { ARENA, canvasTex, paintFloor, paintPlanks, buildCard, buildStands } from './tg_world.js';
 import { buildLLM, buildKern, buildOro, KERN_SLOTS } from './tg_cast.js';
 import { buildGate2, buildFinish, buildTower, buildBench, buildWeighIn, buildBlock, buildTorch, buildDash, buildSlip, buildCheck } from './tg_props.js';
-import { comicWord, bang, word3D } from './tg_letter.js';
-import { lerp, clamp, sg, sm, ob, ringv, hsh } from './tg_time.js';
+import { comicWord, bang, word3D, layoutWord } from './tg_letter.js';
+import { lerp, clamp, sg, sm, ob, ringv, hsh, ease, io } from './tg_time.js';
 import { NF, K, A, R, L2, polar, headingAt, faceOut, kernState, oroState, tokState, dashState, gateState, scaleState, watchState, tokenFlight } from './tg_anim.js';
 import { camWorld, WATCH, WHIPS, toRing } from './tg_cam.js';
 
@@ -63,10 +63,11 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   const floorTex = canvasTex(THREE, 4096, 4096, (g, w, h) => paintFloor(g, w, h, { startA: -A.start, finishA: -A.finish }));
   const boardTop = new THREE.CircleGeometry(BR, 128);
   { const uv = boardTop.attributes.uv, pos = boardTop.attributes.position; for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + F) / (2 * F), (pos.getY(i) + F) / (2 * F)); }
-  add(boardTop, { color: 0x0a9a6c, map: floorTex, hatchDir: [1, 0, 0.3], noiseScale: 0.4, spec: 0.1 }, { cast: false }, [0, 0.0, 0], [-Math.PI / 2, 0, 0]);
-  add(new THREE.CylinderGeometry(BR, BR + 0.05, 0.32, 128, 1, true), { color: 0x04684a, hatchDir: [0, 1, 0], side: THREE.DoubleSide }, { outline: 1, cast: false }, [0, -0.16, 0]);
+  const mTop = add(boardTop, { color: 0x0a9a6c, map: floorTex, hatchDir: [1, 0, 0.3], noiseScale: 0.4, spec: 0.1 }, { cast: false }, [0, 0.0, 0], [-Math.PI / 2, 0, 0]);
+  const mEdge = add(new THREE.CylinderGeometry(BR, BR + 0.05, 0.32, 128, 1, true), { color: 0x04684a, hatchDir: [0, 1, 0], side: THREE.DoubleSide }, { outline: 1, cast: false }, [0, -0.16, 0]);
   const plankTex = canvasTex(THREE, 2048, 2048, (g, w, h) => paintPlanks(g, w, h), { wrap: true, repeat: [3, 3] });
-  add(new THREE.PlaneGeometry(80, 80), { color: 0xe0a15a, map: plankTex, hatchDir: [1, 0, 0.3], spec: 0.2 }, { cast: false }, [0, -0.32, 0], [-Math.PI / 2, 0, 0]);
+  const mPlank = add(new THREE.PlaneGeometry(80, 80), { color: 0xe0a15a, map: plankTex, hatchDir: [1, 0, 0.3], spec: 0.2 }, { cast: false }, [0, -0.32, 0], [-Math.PI / 2, 0, 0]);
+  T.setIds = [mTop, mEdge, mPlank].map((m) => m.material.uniforms.uId.value);   // the set, for impact frames
   T.stands = buildStands(THREE, add, scene);
   T.card = buildCard(THREE, add, scene);
 
@@ -81,10 +82,11 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   const bannerTex = canvasTex(THREE, 2048, 470, (g, w, h) => {
     g.fillStyle = '#fff4dc'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#059669'; g.fillRect(0, 0, w, 36); g.fillRect(0, h - 36, w, 36);
-    comicWord(g, 'TRITONGYM', w / 2, h / 2 + 10, 250, { fill: '#10b981', shade: '#047857', rot: -0.03, track: 0.14, fan: 0.05 });
+    const fit = 0.8 * w / layoutWord('TRITONGYM', 100, { track: 0.14 }).width * 100;      // ~80% of the board, even margins
+    comicWord(g, 'TRITONGYM', w / 2, h / 2 + 10, Math.min(fit, 270), { fill: '#10b981', shade: '#047857', rot: -0.02, track: 0.14, fan: 0.03 });
   });
   T.finish = buildFinish(THREE, add, station(A.finish, R.track), { bannerTex });
-  const twr = station(WATCH.th, WATCH.r); T.tower = buildTower(THREE, add, twr, { y: WATCH.y }); twr.rotation.y = faceOut(WATCH.th);
+  const twr = station(WATCH.th, WATCH.r); T.tower = buildTower(THREE, add, twr, { y: WATCH.y }); twr.rotation.y = WATCH.yaw;
   T.startSt = station(A.start, R.track);
   for (const z of [0.55, -0.55]) add(new THREE.BoxGeometry(0.3, 0.16, 0.5), { key: 'blocks', color: 0x3b3558 }, { outline: 0.6, cast: false }, [-0.55, 0.08, z], [0, 0, 0.3], T.startSt);
 
@@ -99,15 +101,18 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   T.fresh = [0, 1, 2, 3, 4].map((i) => { const g = new THREE.Group(); scene.add(g); add(i < 4 ? new THREE.CylinderGeometry(0.16, 0.16, 0.1, 20).rotateX(Math.PI / 2) : new THREE.ConeGeometry(0.2, 0.36, 4, 1).rotateZ(-Math.PI / 2), { key: i < 4 ? 'freshwheel' : 'freshcone', color: 0xfff4dc, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; });
   // the square wheel that flops away
   T.flop = (() => { const g = new THREE.Group(); scene.add(g); add(new THREE.BoxGeometry(0.3, 0.3, 0.11), { key: 'wheel-sq', color: 0xef4b5f, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; })();
-  // the payoff: PERF@1 > 1, one line, coral faces, dark emerald sides
-  const face = { key: 'lt-face', color: 0xef4b5f, rim: 0.9, hatchDir: [0.3, 1, 0], shadeColor: 0x8a1f3a, shadeMix: 0.35 };
-  const side = { key: 'lt-side', color: 0x0b6b50, rim: 0.5, hatchDir: [0, 1, 0], shadeColor: 0x06382c, shadeMix: 0.4 };
+  // the payoff: PERF@1 > 1, one line, bold coral faces (light shade), ink-dark extrusion (no coloured underside)
+  const face = { key: 'lt-face', color: 0xef4b5f, rim: 0.9, hatchDir: [0.3, 1, 0], shadeColor: 0x8a1f3a, shadeMix: 0.15, spec: 0 };
+  const side = { key: 'lt-side', color: 0x2b2447, rim: 0.3, hatchDir: [0, 1, 0], spec: 0 };
   T.letters = new THREE.Group(); scene.add(T.letters);
   T.lettersIn = new THREE.Group(); T.letters.add(T.lettersIn);
-  T.w1 = word3D(THREE, add, T.lettersIn, 'PERF@1', 0.64, { face, side, depth: 0.3 });
-  T.w2 = word3D(THREE, add, T.lettersIn, '>1', 1.25, { face, side, depth: 0.4, track: 0.3 });
-  T.w1.root.position.x = -T.w1.width - 0.3; T.w2.root.position.x = 0.12;
-  T.lettersIn.position.x = (T.w1.width + 0.3 - T.w2.width - 0.12) / 2;
+  T.w1 = word3D(THREE, add, T.lettersIn, 'PERF@1', 0.9, { face, side, depth: 0.4, weight: 0.3 });
+  T.w2 = word3D(THREE, add, T.lettersIn, '>1', 1.35, { face, side, depth: 0.48, weight: 0.3, track: 0.26 });
+  T.w1.root.position.x = -T.w1.width - 0.35; T.w2.root.position.x = 0.15;
+  T.lettersIn.position.x = (T.w1.width + 0.35 - T.w2.width - 0.15) / 2;
+  // the slam's dust ring (a flat torus that spreads and fades under the letters)
+  T.dust = add(new THREE.TorusGeometry(1, 0.08, 8, 48), { key: 'dust', color: 0xfff4dc, rim: 0.2, spec: 0 }, { outline: 0.7, cast: false }, [0, 0, 0], [Math.PI / 2, 0, 0]);
+  T.dust.visible = false;
   T.letters.visible = false;
 
   // ---- painted cyclorama (warm)
@@ -362,13 +367,16 @@ function updateStations(F) {
 function updateLetters(F) {
   const on = F >= K.slam - 12 && F < K.away[0] + 10;
   T.letters.visible = on;
-  if (!on) return;
   const a = F - K.slam;
   const th = A.words;
   const base = polar(L2 + th, 1.05, 1.08);          // on top of the graphics card, behind the finish
+  const du = sg(F, K.slam, K.slam + 14);
+  T.dust.visible = on && du > 0 && du < 1;
+  if (T.dust.visible) { const r = 2.2 + 3.2 * ease.outCubic(du); T.dust.position.set(base[0], 1.1, base[2]); T.dust.scale.set(r, r, 1 - 0.8 * du); }
+  if (!on) return;
   let y = 0, sy = 1, sxz = 1;
-  if (a < 0) { const p = (a + 12) / 12; y = 6 * (1 - p * p); sy = 1.1; sxz = 0.94; }
-  else { sy = 1 - ringv(a, 0.28, 0.8, 0.18); sxz = 1 + ringv(a, 0.14, 0.8, 0.18); }
+  if (a < 0) { const p = (a + 12) / 12; y = 7 * (1 - p * p); sy = 1.12; sxz = 0.93; }
+  else { sy = 1 - ringv(a, 0.3, 0.8, 0.18); sxz = 1 + ringv(a, 0.15, 0.8, 0.18); }
   T.letters.position.set(base[0], base[1] + y + 0.02, base[2]);
   T.letters.rotation.set(0, faceOut(th) + 0.08, 0);
   T.letters.scale.set(sxz, sy, sxz);
@@ -392,11 +400,14 @@ export function drawNPR(ctx) {
   const fp = st.kern.vis && st.kern.pos ? st.kern.pos : st.tok.pos;
   npr.focusOn(camera, V(...fp), 10);     // wide sharp zone: the whole cast keeps its ink (a defocused character loses its lines and reads as a ghost)
   // impact frames: the CLANG and the photo finish (2 frames each, posterised; never a white frame)
-  if (F >= K.clang && F < K.clang + 2) npr.impact(1, { invert: false, threshold: F === K.clang ? 0.6 : 0.5 });   // two dark panels, never a cream flash
-  if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { invert: false, threshold: 0.55 });
-  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 110, width: 1.3, seed }); };
+  // impact frames by object: the subject stays a light plate with its ink, the set goes ink (never a cream flash)
+  const cut = (p) => camera.position.distanceTo(V(...p)) + 2.2;
+  if (F >= K.clang && F < K.clang + 2) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(A.gate, R.ours, 0.5)), setIds: T.setIds, plate: F === K.clang ? [1, 0.84, 0.8] : [1, 1, 0.96] });
+  if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(L2 + A.finish, R.track, 0.4)), setIds: T.setIds, plate: F === K.freeze[0] ? [0.84, 1, 0.9] : [1, 1, 0.96] });
+  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 90, width: 2.6, seed }); };
   fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
-  fl(K.slam, 16, polar(L2 + A.words, 1.2, 1.7), 460, 0.8, 9);
+  fl(K.slam, 18, polar(L2 + A.words, 1.2, 1.9), 420, 1.0, 9);
+  fl(K.hold[0] + 2, K.hold[1] - K.hold[0] - 2, polar(L2 + A.finish, R.track, 0.45), 380, 0.7, 5);
   if (F >= K.slam - 4 && F < K.away[0]) npr.pointLight(V(...polar(A.words, 3.6, 2.4)), { color: 0xffc23d, radius: 3.6, i: 0.5 * sm((F - K.slam + 4) / 8) });
   if (F >= K.ripple[0] && F < K.ripple[1] + 10) npr.pointLight(V(...polar(A.gate + 0.1, R.ours, 0.6)), { color: 0x34d399, radius: 1.6, i: 0.6 * (1 - sg(F, K.ripple[1], K.ripple[1] + 10)) });
   if (st.gate.lamp !== 'off') npr.glowAt(ctx, camera, T.gate.lamp.getWorldPosition(V(0, 0, 0)), { radius: 0.3, i: 0.7, color: st.gate.lamp === 'coral' ? 0xef4b5f : 0x10b981, behind: true, seed: 2 });
@@ -467,11 +478,27 @@ export function drawMarks(ctx, g) {
   const bangAt = (f0, p, s, rot) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, PAL.coral, r); };
   bangAt(K.idea, [tk.pos[0], tk.pos[1] + 2.0, tk.pos[2]], 0.42, 0.1);
   if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 1.25, st.oro.pos[2]], 0.34, 0.12);
-  if (F >= K.leap[0] && F < K.away[0]) for (let q = 0; q < 6; q++) {
-    const ph = ((F - K.leap[0]) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
-    const p = polar(L2 + A.finish + 0.05 + (q - 2.5) * 0.09, R.track - 0.3, 1.8 + 0.5 * hsh(q, 4));
+  if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
+    const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
+    const kp = st.kern.pos || [0, 0, 0], an = q / 6 * TAU + 0.4;
+    const p = [kp[0] + Math.cos(an) * 0.75, 0.75 + 0.45 * hsh(q, 4) + 0.2 * Math.sin(an), kp[2] + Math.sin(an) * 0.75];   // round the winner
     const s = prj(ctx, p); if (!s.front) continue;
     fillPoly(g, starPts(s.x, s.y, 18 * Math.sin(Math.PI * ph / 0.75), 0.36, 4, 0.2 * q), q % 2 ? PAL.ochre : PAL.cream);
+  }
+  // the stopwatch insert: an emerald wedge between the stopped emerald hand and the coral one (the time saved), and a
+  // click burst on each hand tip as it stops
+  const W = watchState(F);
+  if (W.inIns) {
+    const hp = (a, rho) => { const v = T.tower.head.localToWorld(V(rho * Math.sin(a), rho * Math.cos(a), 0.2)); return prj(ctx, [v.x, v.y, v.z]); };
+    if (W.stopE) {
+      const P = [hp(0, 0).x, hp(0, 0).y], pts = [[P[0], P[1]]];
+      for (let k = 0; k <= 12; k++) { const q = hp(lerp(W.emerald, W.coral, k / 12), 0.66); pts.push([q.x, q.y]); }
+      g.save(); g.globalAlpha = 0.55; fillPoly(g, pts, PAL.emerald); g.restore();
+    }
+    const click = (on, fStop, a, col) => { if (!on) return; const q = hp(a, 0.7); const u = pxu(ctx, T.tower.head.getWorldPosition(V(0, 0, 0)).toArray());
+      const age = F - fStop; if (age < 0 || age > 6) return; bang(g, q.x, q.y, u * 0.28 * ob(age / 3) * (1 - sm((age - 4) / 2)), 0.2, col, r); };
+    const fE = K.watch[0] + 1 + Math.ceil(3 / 7 * (K.watch[1] - 6 - K.watch[0])), fC = K.watch[0] + 1 + Math.ceil(6 / 7 * (K.watch[1] - 6 - K.watch[0]));
+    click(W.stopE, fE, W.emerald, PAL.emerald); click(W.stopC, fC, W.coral, PAL.coral);
   }
   if (Q.get('dbg')) { g.fillStyle = '#000'; g.fillRect(0, 0, 170, 40); g.fillStyle = '#fff'; g.font = '28px monospace'; g.fillText('f' + F, 10, 30); }
 }

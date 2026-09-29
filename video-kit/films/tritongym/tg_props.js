@@ -127,20 +127,24 @@ export function buildGate2(THREE, add, parent, { span = 2.8, h = 2.05, lanes = [
 /** The finish gantry: a cantilever. One striped pylon on the infield kerb, an arm over the track, and a name board on
  *  the arm that faces outward (towards the grandstand and the cameras), so nothing stands between them and the line.
  *  Frame: +x along the track, +z outward. */
-export function buildFinish(THREE, add, parent, { span = 3.1, h = 1.55, bannerTex = null, bw = 2.7, bh = 0.66 } = {}) {
+export function buildFinish(THREE, add, parent, { span = 3.1, h = 1.8, bannerTex = null, bw = 2.7, bh = 0.66, back = 1.9, reach = 0.26 } = {}) {
+  // the pylon stands on the infield kerb `back` units BEFORE the line and a diagonal arm carries the board over the line,
+  // so from the payoff lens (past the line) the pylon stays left of the letters and from the photo-finish lens it stays
+  // behind the racers
   const Fn = { root: new THREE.Group() }; parent.add(Fn.root);
-  const zi = -span / 2;
-  add(new THREE.CylinderGeometry(0.16, 0.21, h + 0.2, 16), { key: 'pylon', color: 0xfff0d0, hatchMode: 'u', rim: 0.6 }, { outline: 1 }, [0, (h + 0.2) / 2, zi], [0, 0, 0], Fn.root);
-  for (let k = 0; k < 4; k++) add(new THREE.CylinderGeometry(0.205, 0.205, 0.12, 16), { key: 'pylonband', color: 0x059669 }, { outline: 0.5, cast: false }, [0, 0.3 + k * 0.55, zi], [0, 0, 0], Fn.root);
-  add(new THREE.SphereGeometry(0.2, 14, 10), { key: 'pylontop', color: 0xef4b5f, rim: 0.6 }, { outline: 0.7 }, [0, h + 0.3, zi], [0, 0, 0], Fn.root);
-  // the arm over the track (with a diagonal brace)
-  add(new THREE.BoxGeometry(0.14, 0.14, span * 0.8), { key: 'beam', color: 0x3b3558, hatchDir: [0, 1, 0] }, { outline: 0.8 }, [0, h, zi + span * 0.4], [0, 0, 0], Fn.root);
-  add(new THREE.BoxGeometry(0.08, 0.08, 1.2), { key: 'beam', color: 0x3b3558 }, { outline: 0.6 }, [0, h - 0.4, zi + 0.45], [0.62, 0, 0], Fn.root);
-  // the board, standing on the arm, facing +z
-  Fn.board = new THREE.Group(); Fn.board.position.set(0, h + 0.07, zi + span * 0.62); Fn.root.add(Fn.board);
+  const zi = -span / 2, px = -back;
+  add(new THREE.CylinderGeometry(0.16, 0.21, h + 0.2, 16), { key: 'pylon', color: 0xfff0d0, hatchMode: 'u', rim: 0.6, spec: 0 }, { outline: 1 }, [px, (h + 0.2) / 2, zi], [0, 0, 0], Fn.root);
+  for (let k = 0; k < 4; k++) add(new THREE.CylinderGeometry(0.205, 0.205, 0.12, 16), { key: 'pylonband', color: 0x059669 }, { outline: 0.5, cast: false }, [px, 0.3 + k * 0.55, zi], [0, 0, 0], Fn.root);
+  add(new THREE.SphereGeometry(0.2, 14, 10), { key: 'pylontop', color: 0xef4b5f, rim: 0.6 }, { outline: 0.7 }, [px, h + 0.3, zi], [0, 0, 0], Fn.root);
+  // the diagonal arm from the pylon to the board over the line (with a brace)
+  const bz = zi + span * reach, ax = 0 - px, az = bz - zi, al = Math.hypot(ax, az), ay = Math.atan2(ax, az);
+  add(new THREE.BoxGeometry(0.14, 0.14, al + 0.3), { key: 'beam', color: 0x3b3558, hatchDir: [0, 1, 0] }, { outline: 0.8 }, [px + ax / 2, h, zi + az / 2], [0, ay, 0], Fn.root);
+  add(new THREE.BoxGeometry(0.08, 0.08, 1.2), { key: 'beam', color: 0x3b3558 }, { outline: 0.6 }, [px + ax * 0.16, h - 0.4, zi + az * 0.16], [0.62, ay, 0, 'YXZ'], Fn.root);
+  // the board, standing on the arm end over the inner lane at the line, facing +z (outward)
+  Fn.board = new THREE.Group(); Fn.board.position.set(0, h + 0.07, bz); Fn.root.add(Fn.board);
   for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.035, 0.035, 0.26, 8), { key: 'iron', color: 0x3b3558 }, { outline: 0.4 }, [s * bw * 0.32, 0.1, 0], [0, 0, 0], Fn.board);
   const bg = new THREE.BoxGeometry(bw, bh, 0.08);
-  Fn.banner = add(bg, [{ key: 'boardedge', color: 0x059669 }, { key: 'boardedge', color: 0x059669 }, { key: 'boardedge', color: 0x059669 }, { key: 'boardedge', color: 0x059669 }, { color: 0xffffff, map: bannerTex, rim: 0.4, hatch: 0.4 }, { key: 'boardedge', color: 0x059669 }],
+  Fn.banner = add(bg, [{ key: 'boardedge', color: 0x059669 }, { key: 'boardedge', color: 0x059669 }, { key: 'boardedge', color: 0x059669 }, { key: 'boardedge', color: 0x059669 }, { color: 0xffffff, map: bannerTex, rim: 0.4, hatch: 0.4, spec: 0 }, { key: 'boardedge', color: 0x059669 }],
     { outline: 1.0 }, [0, 0.22 + bh / 2, 0], [0, 0, 0], Fn.board);
   return Fn;
 }
@@ -166,7 +170,7 @@ export function buildTower(THREE, add, parent, { y = 3.3 } = {}) {
   C.hands = [0xef4b5f, 0x10b981].map((col, k) => {
     const g = new THREE.Group(); g.position.z = 0.15 + k * 0.03; C.head.add(g);
     // coral (the oracle): long and thin; emerald (ours): short and broad, so both read when they overlap at 12
-    add(new THREE.BoxGeometry(k ? 0.1 : 0.05, k ? 0.5 : 0.72, 0.03), { color: col, rim: 0.4 }, { outline: 0.45, cast: false }, [0, k ? 0.2 : 0.3, 0], [0, 0, 0], g);
+    add(new THREE.BoxGeometry(k ? 0.075 : 0.045, k ? 0.52 : 0.72, 0.03), { color: col, rim: 0.4 }, { outline: 0.45, cast: false }, [0, k ? 0.2 : 0.3, 0], [0, 0, 0], g);
     return g;
   });
   add(new THREE.CylinderGeometry(0.08, 0.08, 0.1, 14).rotateX(Math.PI / 2), { key: 'brass', color: 0xf2b134 }, { outline: 0.4 }, [0, 0, 0.22], [0, 0, 0], C.head);

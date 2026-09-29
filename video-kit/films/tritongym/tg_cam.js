@@ -2,15 +2,30 @@
 // A rig is { c: [th, r, y] (camera, ring coords), t: [th, r, y] (target), fov, roll }. Angles are unwrapped, so the
 // rig at F = NF equals the rig at F = 0 plus two turns (= the same camera).
 import { TAU, clamp, lerp, sg, sm, io, ioc, ease } from './tg_time.js';
-import { NF, K, A, R, L2, polar, kernState, oroState, tokState, kernTh, oroTh } from './tg_anim.js';
+import { NF, K, A, R, L2, polar, kernState, oroState, tokState, kernTh, oroTh, raceF } from './tg_anim.js';
 
-export const WATCH = { th: 3.92, r: 3.75, y: 3.3 };          // the timing stopwatch tower in the infield, mid-straight
+// the timing stopwatch tower in the infield, mid-straight; its face is turned towards the race-1 finish and payoff cameras so the
+// hands read there, and the match-cut / insert cameras sit on its face normal
+export const WATCH = { th: 3.92, r: 3.75, y: 2.55 };
+{
+  const w = polar(WATCH.th, WATCH.r), p = polar(A.finish + 0.02, 12.4), q = polar(A.finish + 0.6, 12.4);
+  const ya = Math.atan2(p[0] - w[0], p[2] - w[2]), yb = Math.atan2(q[0] - w[0], q[2] - w[2]);
+  WATCH.yaw = (ya + yb) / 2;          // rotation.y of the tower (face along +z): between the race-1 finish and payoff lenses
+  WATCH.n = [Math.sin(WATCH.yaw), 0, Math.cos(WATCH.yaw)];
+  WATCH.pos = [w[0], WATCH.y, w[2]];
+}
 
 const mix = (a, b, k) => ({ c: a.c.map((v, i) => lerp(v, b.c[i], k)), t: a.t.map((v, i) => lerp(v, b.t[i], k)), fov: lerp(a.fov, b.fov, k), roll: lerp(a.roll, b.roll, k) });
 const rig = (c, t, fov = 32, roll = 0) => ({ c, t, fov, roll });
 /** ring coords of a world point */
 export const toRing = (p) => { let th = Math.atan2(-p[2], p[0]); return [th, Math.hypot(p[0], p[2]), p[1]]; };
 const near = (th, ref) => th + TAU * Math.round((ref - th) / TAU);   // unwrap th close to ref
+/** rig looking square at the stopwatch face from dist along its normal (ring coords unwrapped near thRef) */
+function watchRig(dist, thRef, fov = 30, dy = 0) {
+  const W = WATCH.pos, c = [W[0] + WATCH.n[0] * dist, W[1] + dy, W[2] + WATCH.n[2] * dist];
+  const rc = toRing(c), rt = toRing(W);
+  return rig([near(rc[0], thRef), rc[1], c[1]], [near(rt[0], thRef), rt[1], W[1]], fov, 0);
+}
 
 // ------------------------------------------------------------------------------------------------
 // shots
@@ -41,15 +56,13 @@ function shotScale(F) {          // B3: medium on the weigh-in, then a push onto
 }
 function shotWatchToStart(F) {   // B4 open: from the stopwatch face (match cut) pull back and pan to the start line
   const k = sg(F, K.cut, K.cut + 16, ioc);
-  const a = rig([WATCH.th, WATCH.r + 3.2, WATCH.y], [WATCH.th, WATCH.r, WATCH.y], 30, 0);
-  const b = rig([A.start + 0.26, 10.0, 1.05], [A.start + 0.03, 6.0, 0.45], 32, 0.0);
-  const s = mix(a, b, k);
-  s.t[1] = lerp(WATCH.r, 5.95, k);
-  return s;
+  const a = watchRig(3.2, A.start);
+  const b = shotStart(K.cut + 16);
+  return mix(a, b, k);
 }
 function shotStart(F, lap = 0) { // B4 / B7: low 3/4-front two-shot at the start line (the racers face the lens)
   const drift = sm((F - (lap ? K.side2[0] : K.cut + 16)) / 40);
-  return rig([lap + A.start + 0.26 - 0.03 * drift, 10.0 - 0.3 * drift, 1.05], [lap + A.start + 0.03, 6.0, 0.45], 32, -0.02);
+  return rig([lap + A.start + 0.26 - 0.03 * drift, 10.0 - 0.3 * drift, 1.95], [lap + A.start + 0.03, 5.9, 0.3], 32, -0.02);
 }
 function shotRace1(F) {          // B4: fast low tracking, loses Oro, settles on the lumbering Kern, pans on to the finish
   const kth = kernTh(F), oth = oroTh(F);          // unwrapped ring angles (atan2 would wrap past pi mid-straight)
@@ -73,28 +86,37 @@ function shotLap2(F) {           // B6: high three-quarter crane over the ring f
   const kth = near(kth0, lerp(A.finish, L2 + A.start, sg(F, K.lap2[0], K.lap2[1])));
   return rig([kth - 0.35, 14.2, 7.6], [kth + 0.15, 4.2, 0.2], 36, 0.0);
 }
-function shotRace2(F) {          // B7: start two-shot (rhymes with B4), dolly-zoom on Oro's double-take, side tracking with growing dutch
+function shotRace2(F) {          // B7: start two-shot (rhymes with B4), dolly-zoom on Oro's double-take, raised side tracking
   const st = shotStart(F, L2);
   // vertigo on Oro: keep Oro's size while the fov opens
-  const vk = sg(F, K.dtake - 1, K.dtake + 9, ease.inCubic) * (1 - sg(F, K.go2 - 2, K.go2 + 4, sm));
-  const fov = lerp(32, 52, vk);
+  const vk = sg(F, K.dtake - 1, K.dtake + 9, ease.inCubic) * (1 - sg(F, K.go2 - 4, K.go2 + 2, sm));
+  const fov = lerp(32, 58, vk);
   const d0 = 10.0 - 5.45, d1 = d0 * Math.tan((32 / 2) * Math.PI / 180) / Math.tan((fov / 2) * Math.PI / 180);
-  st.c[1] = 5.45 + d1 + 0.0; st.fov = fov; st.t = [L2 + A.start + 0.03, 5.7, 0.5];
+  st.c[1] = 5.45 + d1; st.fov = fov; st.t = [L2 + A.start + 0.03, 5.7, 0.35];
   if (F < K.go2) return st;
-  const ks = kernState(F), [kth0] = toRing(ks.pos), kth = near(kth0, L2 + A.start);
-  const trk = rig([kth - 0.0, 11.0, 1.0], [kth + 0.09, 5.9, 0.5], 33, lerp(-0.02, -0.1, sg(F, K.go2, K.cross)));
-  return mix(st, trk, sg(F, K.go2, K.go2 + 8, sm));
+  // track the pack from a raised lens (both lanes in separate screen bands)
+  const rf = raceF(F), pack = (kernTh(rf) + oroTh(rf)) / 2;
+  if (F < K.hold[0]) {
+    const trk = rig([pack + 0.04, 11.6, 2.7], [pack + 0.05, 5.9, 0.25], 33, lerp(-0.02, -0.09, sg(F, K.go2, K.cross)));
+    return mix(st, trk, sg(F, K.go2, K.go2 + 8, sm));
+  }
+  // the photo finish: cut (under the impact frame) to a raised 3/4-front panel on the line, both noses towards the lens
+  const push = sg(F, K.hold[0], K.hold[1], io);
+  return rig([L2 + A.finish + 0.2 - 0.015 * push, 9.2 - 0.6 * push, 2.4 - 0.15 * push], [L2 + A.finish - 0.05, 5.9, 0.2], 34, 0.03);
 }
-function shotPayoff(F) {         // B8: low hero angle at the finish; slow push with an orbit
-  const k = sg(F, K.freeze[1], K.away[0], io);
-  // the orbit runs th-increasing so the finish pylon (nearer the lens) slides left, clear of the letters
-  return rig([L2 + A.finish + 0.53 + 0.035 * k, 13.9 - 0.5 * k, 1.5], [L2 + A.finish + 0.53 + 0.012 * k, 3.4, 0.98], 35, 0.0);
+function shotWatch(F) {          // the insert after the photo finish: the stopwatch face, square on, slow push
+  const k = sg(F, K.watch[0], K.watch[1], io);
+  return watchRig(3.2 - 0.7 * k, L2 + A.finish, 42);
+}
+function shotPayoff(F) {         // B8: low hero lens at the finish, a real push (~12%) with a ~16 deg orbit
+  const k = sg(F, K.watch[1], K.away[0], io);
+  return rig([L2 + A.finish + 0.57 + 0.06 * k, 13.0 - 1.1 * k, 1.0 + 0.25 * k], [L2 + A.finish + 0.6 + 0.02 * k, 3.0, 1.5 + 0.1 * k], 40, 0.0);
 }
 
 // ------------------------------------------------------------------------------------------------
 // the edit: shots joined by continuous moves and whips
 // ------------------------------------------------------------------------------------------------
-export const WHIPS = [[K.hopOff[0] + 2, K.drive1[0] + 6], [K.rev[1] - 2, K.lap2[0] + 8], [K.away[0], NF], [0, 6]];
+export const WHIPS = [[K.hopOff[0] + 2, K.drive1[0] + 6], [K.rev[1] - 2, K.lap2[0] + 8], [K.watch[1], K.watch[1] + 8], [K.away[0], NF], [0, 6]];
 
 export function camRig(F) {
   if (F < K.hopOff[0] + 2) return shotBench(F);
@@ -113,9 +135,9 @@ export function camRig(F) {
   if (F < K.lap2[0] + 8) return mix(shotCrash(F), shotLap2(F), sg(F, K.rev[1] - 2, K.lap2[0] + 8, ease.inOutQuint));   // whip up into the crane
   if (F < K.lap2[1] - 10) return shotLap2(F);
   if (F < K.side2[0]) return mix(shotLap2(F), shotStart(F, L2), sg(F, K.lap2[1] - 10, K.side2[0], ioc));
-  if (F < K.cross + 1) return shotRace2(F);
-  if (F < K.freeze[1] + 2) return shotRace2(K.cross);             // the freeze: camera holds on the photo finish
-  if (F < K.away[0]) return mix(shotRace2(K.cross), shotPayoff(F), sg(F, K.freeze[1] + 2, K.freeze[1] + 12, ioc));
+  if (F < K.hold[1]) return shotRace2(F);                         // incl. the photo-finish hold (a slow push on the line)
+  if (F < K.watch[1]) return shotWatch(F);                        // cut: the stopwatch insert
+  if (F < K.away[0]) return mix(shotWatch(K.watch[1] - 1), shotPayoff(F), sg(F, K.watch[1], K.watch[1] + 8, ease.inOutQuint));   // whip to the finish
   // B9: whip from the finish to the bench (two full turns == the f0 rig)
   const end = shotBench(0); end.c[0] += 2 * L2; end.t[0] += 2 * L2;
   return mix(shotPayoff(F), end, sg(F, K.away[0], NF, ease.inOutQuint));
