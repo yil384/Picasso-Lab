@@ -61,7 +61,7 @@ function shotScale(F) {          // B3: medium on the weigh-in, then a push onto
   return mix(a, b, push);
 }
 function shotWatchToStart(F) {   // B4 open: from the stopwatch face (match cut) pull back and pan to the start line
-  const k = sg(F, K.cut + 2, K.cut + 18, ioc);
+  const k = sg(F, K.cut, K.cut + 18, ioc);   // the pull back starts on the cut: the match cut keeps moving
   const a = watchRig(4.6, A.start);                        // same size and place as the dial
   const b = shotStart(K.cut + 18);
   return mix(a, b, k);
@@ -88,7 +88,7 @@ function shotCrash(F) {          // B4 -> B5: crash zoom onto the square wheel, 
   const orb = sg(F, K.tokIn[1], K.rev[1], io);
   const two = rig([th + 0.0 + 0.3 * orb, 12.2 - 0.4 * orb, 1.5], [th + 0.07, 6.1, 1.05], 34, 0.02 - 0.05 * orb);
   if (F < K.crash[1]) return mix(fin, wheel, z);
-  return mix(wheel, two, sg(F, K.crash[1] + 2, K.crash[1] + 22, ioc));   // pull out
+  return mix(wheel, two, sg(F, K.crash[1], K.crash[1] + 16, (x) => 1 - Math.pow(1 - x, 3)));   // a fast pull out: Tok's blank stare lands in the card band by f370
 }
 function shotLap2(F) {           // B6: three quick panels linked by whips, rhyming with B2/B3: the arch, the weigh-in, the start
   const gEnd = K.gate2 + 7, sIn = gEnd + 6;

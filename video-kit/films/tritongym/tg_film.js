@@ -498,7 +498,7 @@ export function drawNPR(ctx) {
   if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(L2 + A.finish, R.track, 0.4)), setIds: T.setIds, plate: F === K.freeze[0] ? [0.84, 1, 0.9] : [1, 1, 0.96] });
   const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 70, width: 6, seed }); };
   fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
-  if (st.kern.pos) fl(K.closeup[0] - 3, 7, [st.kern.pos[0], 0.45, st.kern.pos[2]], 220, 0.9, 11);   // the push onto the token lands with zoom lines
+  if (st.kern.pos) fl(K.closeup[0] + 1, 5, [st.kern.pos[0], 0.45, st.kern.pos[2]], 220, 0.9, 11);   // the push onto the token lands with zoom lines (once Tok has left the frame)
   if (st.kern.pos) fl(K.crash[0] + 2, 12, [st.kern.pos[0], 0.2, st.kern.pos[2]], 260, 1.0, 7);     // the crash zoom lands with zoom lines
   fl(K.slam, 18, polar(L2 + A.words, 1.2, 1.9), 420, 1.0, 9);
   fl(K.hold[0] + 2, K.hold[1] - K.hold[0] - 2, polar(L2 + A.finish, R.track, 0.45), 380, 0.7, 5);
@@ -560,6 +560,7 @@ export function drawMarks(ctx, g) {
         const lx = lerp(x0, x1, q / 6), wp = T.lettersIn.localToWorld(V(lx, -0.02, 0.45));
         const c = prj(ctx, [wp.x, wp.y, wp.z]); if (!c.front) continue;
         const u = pxu(ctx, [wp.x, wp.y, wp.z]), sd = q < 3 ? -1 : q > 3 ? 1 : 0;
+        { const tc = prj(ctx, [st.tok.pos[0], st.tok.pos[1] + 0.9, st.tok.pos[2]]), tu = pxu(ctx, [st.tok.pos[0], 0.9, st.tok.pos[2]]); if (tc.front && Math.abs(c.x - tc.x) < tu * 0.95 && Math.abs(c.y + u * 0.3 - tc.y) < tu * 1.1) continue; }   // never over Tok
         puff(g, c.x + sd * (0.25 + a * 0.14) * u, c.y + u * 0.3, u * (0.17 + 0.015 * a) * (0.8 + 0.4 * hsh(q, 7)) * (1 - sm((a - 6) / 5)), 1, r, PAL.cream);   // they shrink away, inked (no grey fade)   // below the letters' feet, rolling outward over the card's edge
       }
     } }
@@ -587,8 +588,11 @@ export function drawMarks(ctx, g) {
   }
   const tk = st.tok;
   const bangAt = (f0, p, s, rot, col = PAL.coral) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, col, r); };
-  bangAt(K.idea, [tk.pos[0], tk.pos[1] + 1.78, tk.pos[2]], 0.46, 0.06, PAL.emerald);   // straight above the head, against the sky
-  if (st.oro.pos) { const sx = [Math.cos(st.oro.yaw), 0, -Math.sin(st.oro.yaw)]; bangAt(K.dtake, [st.oro.pos[0] - sx[0] * 0.2, 0.62, st.oro.pos[2] - sx[2] * 0.2], 0.55, 0.12); }   // as big as Tok's, low beside the head: inside the card band through the dolly-zoom
+  {   // the idea: beside the head at eye height, on the open side towards Oro (inside the card band while the camera pulls out)
+    const a = F - K.idea, hp = [tk.pos[0], tk.pos[1] + 1.0, tk.pos[2]], q = prj(ctx, hp);
+    if (a >= 0 && a <= 16 && q.front) { const u = pxu(ctx, hp); bang(g, q.x + u * 0.95, q.y + u * 0.05, u * 0.55 * ob(a / 4) * (1 - sm((a - 12) / 4)), 0.2, PAL.emerald, r); }
+  }
+  if (st.oro.pos) { const sx = [Math.cos(st.oro.yaw), 0, -Math.sin(st.oro.yaw)]; bangAt(K.dtake, [st.oro.pos[0] - sx[0] * 0.2, 0.5, st.oro.pos[2] - sx[2] * 0.2], 0.55, 0.12); }   // as big as Tok's, low beside the head: inside the card band through the dolly-zoom
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
     const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
     const kp = st.kern.pos || [0, 0, 0], an = q / 6 * TAU + 0.4;
@@ -610,7 +614,7 @@ export function drawMarks(ctx, g) {
       g.restore();
       pen(g, pts.slice(1), 5, INK, { r, taper: [0, 0], smoothN: 1 });   // the rim arc only
     }
-    const click = (on, fStop, a, col) => { if (!on) return; const q = hp(a, 0.7); const u = pxu(ctx, T.tower.head.getWorldPosition(V(0, 0, 0)).toArray());
+    const click = (on, fStop, a, col) => { if (!on) return; const q = hp(a, 0.52); const u = pxu(ctx, T.tower.head.getWorldPosition(V(0, 0, 0)).toArray());   // (the burst sits inside the face)
       const age = F - fStop; if (age < 0 || age > 6) return; const k = ob(age / 3) * (1 - sm((age - 4) / 2)), R0 = u * 0.1, R1 = u * (0.1 + 0.2 * k);
       for (let n = 0; n < 8; n++) { const an = n / 8 * TAU + 0.2; pen(g, [[q.x + Math.cos(an) * R0, q.y + Math.sin(an) * R0], [q.x + Math.cos(an) * R1, q.y + Math.sin(an) * R1]], Math.max(3, u * 0.03), n % 2 ? INK : col, { r, taper: [0.1, 0.6] }); } };
     const fE = K.watch[0] + 1 + Math.ceil(3 / 7 * (K.watch[1] - 6 - K.watch[0])), fC = K.watch[0] + 1 + Math.ceil(6 / 7 * (K.watch[1] - 6 - K.watch[0]));

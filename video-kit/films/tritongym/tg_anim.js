@@ -32,7 +32,7 @@ export const K = {
   // B7 race 2: Kern takes 33 frames (Perf@1 ~ 1.09), the photo finish holds 12 frames, then the stopwatch insert
   side2: [488, 496], dtake: 497, go2: 515, run2: [515, 551], cross: 548, freeze: [548, 550], hold: [548, 560], watch: [560, 580],
   // B8 payoff
-  slam: 590, check: 604, jaw: 612, laurel: 616, nod: [622, 632], leap: [617, 635],
+  slam: 590, check: 604, jaw: 612, laurel: 616, nod: [629, 639], leap: [617, 635],
   // B9 next
   away: [640, 660],
 };
@@ -75,7 +75,7 @@ function squareBob(dist, wheelR = 0.12) {
 }
 
 /** Race curves: ring angle of each racer during the sprints (thS -> past thF), with a coast-to-stop after the line. */
-const P1 = { kEnd: 0.16, oEnd: 0.42 };
+const P1 = { kEnd: 0.16, oEnd: 0.72 };
 function sprint(F, f0, fLine, thS, thF, pw, coastF, over) {
   if (F < f0) return thS;
   const T_ = fLine - f0, u = (F - f0) / T_;
@@ -211,7 +211,7 @@ function kernRaw(F) {
   // ---- B5: refine at the finish
   const thRef = thF + P1.kEnd;
   if (F < K.lap2[0] + 3) {                                         // (it revs until the whip's smear covers the launch)
-    const thr = kernTh(F);                                          // (= thRef once the race-1 coast has stopped)
+    const thr = kernTh(Math.min(F, K.lap2[0] - 1));                 // (= thRef once the race-1 coast has stopped; never the race-2 curve)
     S.pos = lanePos(thr, R.ours, 0); S.yaw = headingAt(thr) - 0.45;
     S.face = F < K.idea ? 'nervous' : F < K.snapOn[1] ? 'wide' : 'happy';
     if (F >= K.rev[0]) { S.face = 'happy'; S.wheelAng = (F - K.rev[0]) * 0.9; S.sq = 0.05 * Math.sin(F * 1.7); }
@@ -287,7 +287,7 @@ function oroRaw(F) {
     const th = oroTh(F);
     S.pos = lane(th); S.yaw = headingAt(th) - 0.15 * sg(F, K.jaw - 8, K.jaw, sm);   // ~3/4 to the payoff lens: the face above the cone stays in view
     S.wheelAng = (th - L2 - thS) * R.oro / 0.1;   // (it turns its face to us for the jaw drop and the nod)
-    S.face = F < K.dtake ? 'smug' : F < K.go2 ? 'sweat' : F < K.cross + 2 ? 'shut' : F < K.jaw ? 'wide' : F < K.nod[0] ? 'jaw' : 'nod';
+    S.face = F < K.dtake ? 'smug' : F < K.go2 ? 'sweat' : F < K.cross + 2 ? 'shut' : F < K.jaw ? 'wide' : F < K.nod[0] ? 'jaw' : F < K.nod[1] - 3 ? 'nod' : 'wide';   // after the nod: the wide eye again (readable at card size)
     S.keySpin = F >= K.go2 ? (F - K.go2) * 2.2 : F * 0.05;
     if (F >= K.dtake && F < K.dtake + 8) S.sq = take(F, K.dtake, 0.9);
     if (F < K.go2) S.yaw -= 0.45 * sg(F, K.side2[0], K.side2[0] + 6, sm) * (1 - sg(F, K.go2 - 6, K.go2 - 2, sm));   // faces the lens for the side-eye and the double-take
@@ -349,7 +349,9 @@ function tokRaw(F) {
   if (Fw < K.skid) {
     const fromP = polar(A.tokWin, 5.3, 0);                       // from its payoff spot (waits there while the whip starts)
     const P = pogo(Fw, K.away[0] + 8 - NF, K.skid, fromP, benchSpot, 3, 0.45);
-    S.pos = P.pos; S.sq = Fw > K.skid - 3 ? 0.2 : P.sq; S.yaw = lerp(faceOut(A.tokWin) - 0.55, yawBench, sm((Fw - K.away[0] + NF) / 26)); S.lean = -0.2 * sg(Fw, K.away[0] + 8 - NF, K.away[0] + 12 - NF);
+    const dy = Math.atan2(Math.sin(faceOut(A.tokWin) - 0.55 - yawBench), Math.cos(faceOut(A.tokWin) - 0.55 - yawBench));   // the short way round
+    S.pos = P.pos; S.sq = Fw > K.skid - 3 ? 0.2 : P.sq; S.yaw = yawBench + dy * (1 - sm((Fw - K.away[0] - 2 + NF) / 10));   // turns under the whip's smear: never edge-on in a sharp frame
+    S.lean = -0.2 * sg(Fw, K.away[0] + 8 - NF, K.away[0] + 12 - NF);
     if (Fw < K.away[0] + 8 - NF) { S.face = 'star'; S.hands = [S.pos[0], 0.9, S.pos[2]]; return S; }
     S.face = 'determined';
     S.hands = [S.pos[0], S.pos[1] + 0.9, S.pos[2]];
@@ -407,16 +409,17 @@ function tokRaw(F) {
     S.pos = P.pos; S.sq = P.sq; S.yaw = faceOut(A.scale - 0.3) + 0.45;
     S.face = F >= K.settle[0] && F < K.flag ? 'worried' : F >= K.flag ? 'happy' : 'calm';
     if (F >= K.flag && F < K.flag + 14) { S.armR = -2.4; S.sq = -0.08 * Math.sin(Math.PI * (F - K.flag) / 14); }
-    if (F >= K.cut) { S.pos = polar(A.finish + 0.58, 3.9, 0); S.yaw = faceOut(A.finish + 0.58) - 0.9; S.face = 'worried'; }
+    if (F >= K.cut) { S.pos = polar(A.finish + 0.4, 3.9, 0); S.yaw = faceOut(A.finish + 0.4) - 0.9; S.face = 'worried'; }
     S.hands = [S.pos[0], 0.9, S.pos[2]];
     return S;
   }
   if (F < K.tokIn[1]) {   // watches the race from the infield, covers its eyes, then hops to the finish
     if (F < K.tokIn[0]) {
-      S.pos = polar(A.finish + 0.58, 3.9, 0); S.yaw = faceOut(A.finish + 0.58) - 0.9 + 0.3 * sm((F - K.go1) / 20);
+      S.pos = polar(A.finish + 0.4, 3.9, 0); S.yaw = faceOut(A.finish + 0.4) - 0.9 + 0.3 * sm((F - K.go1) / 20);
       S.face = F < K.oroRun1[1] ? 'wide' : 'wince'; if (F >= K.oroRun1[1] + 6) { S.armL = 2.6; S.armR = -2.6; S.armLz = 0.9; S.armRz = -0.9; }
+      if (F >= K.oroRun1[1] + 6 && F < K.oroRun1[1] + 20) { const h = hop(F, K.oroRun1[1] + 7, K.oroRun1[1] + 19, 0.38); S.pos[1] += h.y; S.sq = h.sq; }   // a startled hop as Oro whooshes past (clears its key)
     } else {
-      const P = pogo(F, K.tokIn[0], K.tokIn[1], polar(A.finish + 0.58, 3.9, 0), polar(A.finish + 0.27, 5.95, 0), 2, 0.5);
+      const P = pogo(F, K.tokIn[0], K.tokIn[1], polar(A.finish + 0.4, 3.9, 0), polar(A.finish + 0.27, 5.95, 0), 2, 0.5);
       S.pos = P.pos; S.sq = P.sq; S.yaw = faceOut(A.finish + 0.27) - 0.5; S.face = 'determined';
     }
     S.hands = [S.pos[0], 0.9, S.pos[2]];
