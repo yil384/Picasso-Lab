@@ -193,3 +193,10 @@ Four track branches (gd4/r1-table-core, gd4/r1-table-moments, gd4/r1-lobby, gd4/
 | R1-55 | eggs | fixed | The banner observer, fillBannerSlots, buildBanner and all gdr-banner/gdr-bn CSS are gone; a grep finds 0 references in events/. In node, stats(), PLAYERS, MATCHES and PAGE_KEYS are identical between base and new (check/stats.js).  |
 
 Accepted as not fixed this round: R1-07 (on a 390 px-high phone the 40 CSS px tap rule for 理牌/横排 keeps the hand bottom at 10.4% H instead of Tencent's 7.6%; the band itself is now a soft ramp), R1-26 (one 8-card rank column still shrinks the whole hand, as SPEC §5.1 prescribes; the index stays legible). Partial: R1-22 (landscape-phone lobby name field shows ~35 of its 40 px box), R1-51 (default faces on the table/VS/result; the room and lobby profile still use initials).
+
+## Handoff status
+- Done: gd3/table + gd3/lobby merged; harness (gdh.py, stage.js, scenes.py, play.py, sheet.py) built; review round 1 (55 findings) and fix round 1 (46 commits, four track branches gd4/r1-*, each passed an independent checker) merged into guandan-cloud.
+- Verified after the merge: module parse-check OK; scenes.py on all 5 viewports (59 scenes each), zero console errors; `play.py phone 2` = two full rounds through the tribute, zero errors, no long tasks.
+- Not verified yet: no independent review of the merged build (review round 2 was started and stopped before any result); desk/portrait full rounds not re-run after the merge; open lows R1-07, R1-26 (accepted), R1-22, R1-51 (partial).
+- Workflow scripts used for the rounds: guandan-kit/workflows/review-round.js and fix-round.js (paths inside them point at this session's scratchpad; adjust).
+- Next: 1) `cd guandan-kit/harness && python3 scenes.py desk hd ifr phone portrait` (shots are git-ignored); 2) review round 2 with the four lenses against those shots and scratch/shots-r0 (pre-fix), record it here; 3) fix → re-verify, then round 3 until every screen ≥ 8 with no high/medium; 4) merge origin/main (keep main's non-Guandan files), re-run a full round, push guandan-cloud; 5) final report per HANDOFF §6.
