@@ -1522,21 +1522,19 @@ async function hintMove() {
         return;
     }
     if (!packet?.options?.length) return showToast(L("No useful suggestion found.", "暂时没有可用提示。"));
-    const nextIndex = previousHint && previousHint.signature === packet.signature && packet.options.length > 1
-        ? (previousHint.index + 1) % packet.options.length
+    // Like Tencent's 提示, a press selects cards whenever the engine has a press to offer: its
+    // options cycle presses first. Its pass advice (partner owns the trick, or pressing costs too
+    // much) comes after them, or alone: the selection drops, 不出 lights up and says so in two words.
+    const options = [...packet.options.filter(o => o.move?.cards?.length), ...packet.options.filter(o => !o.move?.cards?.length)];
+    const nextIndex = previousHint && previousHint.signature === packet.signature && options.length > 1
+        ? (previousHint.index + 1) % options.length
         : 0;
-    const advice = packet.options[nextIndex];
-    const ids = advice.move?.cards?.map(c => c.id) || [];
+    const ids = options[nextIndex].move?.cards?.map(c => c.id) || [];
     const pass = !ids.length;
-    hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: packet.options.length, pass, turn: turnStateKey() };
-    // Like Tencent's 提示: a suggestion is simply selected in the hand, no advisor text. Pass advice
-    // (partner owns the trick, or pressing costs too much) keeps the selection, lights up 不出 and
-    // says so in two words; the next press moves on to the backup press if there is one.
+    hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: options.length, pass, turn: turnStateKey() };
+    selected = new Set(ids);
     if (pass) showToast(L("Pass suggested", "建议不出"), 1300);
-    else {
-        selected = new Set(ids);
-        if (thinkingShown) hideToast();
-    }
+    else if (thinkingShown) hideToast();
     render();
 }
 
@@ -3337,9 +3335,10 @@ function obviousPassNow(mine) {
 function actionsHTML(v) {
     if (!v.canAct) return "";
     const spaced = isZH() ? " spaced" : "";
-    const pass = v.lead ? "" : `<button class="btn ${v.noBeat || v.passHint ? "play" : "pass"}${spaced}" id="pass-btn" type="button">${L("Pass", "不出")}</button>`;
-    const hint = v.noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${L("Hint", "提示")}</button>`;
-    return `${pass}${clockHTML("hex")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${L("Play", "出牌")}</button>`;
+    const hit = `<i class="gd-hit" aria-hidden="true"></i>`;
+    const pass = v.lead ? "" : `<button class="btn ${v.noBeat ? "play" : v.passHint ? "play is-advised" : "pass"}${spaced}" id="pass-btn" type="button">${hit}${L("Pass", "不出")}</button>`;
+    const hint = v.noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${hit}${L("Hint", "提示")}</button>`;
+    return `${pass}${clockHTML("hex")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${hit}${L("Play", "出牌")}</button>`;
 }
 
 function toolsHTML(v) {
@@ -3462,7 +3461,10 @@ function renderTable() {
     t.stage.style.setProperty("--hand-bottom", `${bottom.toFixed(1)}px`);
     t.stage.style.setProperty("--hand-h", `${handH.toFixed(1)}px`);
     t.stage.style.setProperty("--actions-bottom", `${actionsBottom.toFixed(1)}px`);
-    t.stage.style.setProperty("--pill-w", `${actionPillWidth(v, t.layout.h - actionsBottom - ACTION_ROW_H)}px`);
+    const rowTop = t.layout.h - actionsBottom - ACTION_ROW_H;
+    t.stage.style.setProperty("--pill-w", `${actionPillWidth(v, rowTop)}px`);
+    // toasts sit over the felt centre, or just above the action row while it is up
+    t.rot.style.setProperty("--toast-y", `${v.canAct ? Math.max(150, Math.min(266, rowTop - 46)) : 266}px`);
     t.stage.classList.toggle("is-acting", v.canAct);
 
     renderTableChrome();
