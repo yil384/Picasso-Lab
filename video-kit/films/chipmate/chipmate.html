@@ -1,0 +1,67 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ChipMATE: Twin Check</title>
+<!-- ChipMATE project-card film (3D comic series): 30 s seamless loop (720 f @ 24 fps). See STORYBOARD.md.
+     One real three.js set (a chip city on a silicon die) rendered through the NPR comic toolkit (cel ramp, halftone,
+     inked hull + Sobel lines, off-register plates, paper grain). Every texture, face and label is painted with p5.brush
+     (baked once into work/tex by tools/bake.py); SFX and "!" marks are hand-built stroke lettering (no web font).
+     Lettering pop / burst / emote ideas follow ClaudeAnimationBase src/core.js (MIT, (c) JohnHeibel).
+     ?bake=1 bake textures   ?debug=1..5 npr G-buffer views   ?cam=x,y,z,tx,ty,tz inspection camera -->
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { Q, NF, FPS, PAL, T, st } from './cm_core.js';
+import { buildWorld } from './cm_world.js';
+import { updateAll } from './cm_anim.js';
+import { drawNPR, inkOverlay, lettering } from './cm_ink.js';
+import { addBrushes } from './cm_paint.js';
+
+const LOOK = {
+  extends: 'comic',
+  // comic cel + halftone in the shade, bold boiling ink, off-register plates (matches reference/style-comic)
+  hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.5, hatchWobble: 0.08, hatchSwell: 0.35,
+  htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0],
+  lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
+  bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.12,
+  rule: 0.0, bgDots: [0.96, 0.8, 0.62, 0.22],
+  // depth: colour fades toward the paper, ink and dots thin with distance (the skyline recedes)
+  atmos: 0.42, atmosStart: 10, atmosEnd: 34, atmosCol: [0.97, 0.9, 0.84], inkFar: 0.55, hatchFar: 0.7, htFar: 0.7,
+  dofMax: 0, grain: 0.018, vignette: 0.16,
+  ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
+};
+
+let brushesAdded = false;
+defineScene({
+  meta: {
+    title: 'ChipMATE - Twin Check', durationFrames: NF, fps: FPS, width: 1920, height: 1080, seed: 29,
+    design: [1920, 1080], background: PAL.paper, fonts: [],
+    boil: { every: 2, variants: 3 },            // ink boils at 12 drawings/s
+    poster: 652,
+  },
+  update(ctx) {
+    updateAll(ctx);
+    if (Q.get('cam')) {   // authoring: inspection camera
+      const c = Q.get('cam').split(',').map(Number);
+      T.camera.position.set(c[0], c[1], c[2]); T.camera.lookAt(c[3], c[4], c[5]); T.camera.fov = c[6] || 34;
+      T.camera.updateProjectionMatrix(); T.camera.updateMatrixWorld(true); st.smear = 0;
+      st.rig = { ...st.rig, tg: [c[3], c[4], c[5]], r: Math.hypot(c[0] - c[3], c[1] - c[4], c[2] - c[5]) };
+    }
+  },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(paperCanvas(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, three) {
+        if (!brushesAdded) { addBrushes(brush); brushesAdded = true; }
+        const r = await buildWorld(ctx, three, LOOK, paperCanvas(ctx));
+        T.npr.debug = Number(Q.get('debug') || 0);
+        return r;
+      },
+      draw(ctx) { drawNPR(ctx, LOOK); return false; } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw(ctx, p, brush) { inkOverlay(ctx, brush); } },
+    { name: 'letters', type: '2d', draw(ctx, g) { lettering(ctx, g); } },
+  ],
+});
+function paperCanvas(ctx) { return ctx.paper({ tone: PAL.paper, grain: 0.04, fibres: 0.05, blotch: 0.06, seed: 4 }); }
+</script></body></html>
