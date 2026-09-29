@@ -166,13 +166,21 @@ export { CREAM };
 function traceUnion(polys, cell) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const P of polys) for (const [x, y] of P) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-  x0 -= 3 * cell; y0 -= 3 * cell; x1 += 3 * cell; y1 += 3 * cell;
+  const RC = 4, pad = (3 + RC) * cell;
+  x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
   const W = Math.ceil((x1 - x0) / cell), H = Math.ceil((y1 - y0) / cell);
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d', { willReadFrequently: true });
   g.setTransform(1 / cell, 0, 0, 1 / cell, -x0 / cell, -y0 / cell);
   for (const P of polys) fillPoly(g, P, '#fff');
-  const px = g.getImageData(0, 0, W, H).data, v = (i, j) => px[(j * W + i) * 4 + 3] / 255;
+  const px = g.getImageData(0, 0, W, H).data;
+  // grey-level closing (max, then min, over a disc of RC cells): at a sharp inner corner the two ribbons' quads meet at a
+  // point pulled inward and leave a thin V-slit, which the hull flooded with boiling ink; closing fills slits and rounds
+  // concave corners a hair, and keeps straight edges and convex corners (with their sub-cell ramp) as they were
+  const disc = []; for (let dy = -RC; dy <= RC; dy++) for (let dx = -RC; dx <= RC; dx++) if (dx * dx + dy * dy <= RC * RC) disc.push([dx, dy]);
+  const morph = (A, op) => { const B = new Float32Array(W * H); for (let j = RC; j < H - RC; j++) for (let i = RC; i < W - RC; i++) { let m = op === 'max' ? 0 : 1; for (const [dx, dy] of disc) { const a = A[(j + dy) * W + i + dx]; m = op === 'max' ? Math.max(m, a) : Math.min(m, a); } B[j * W + i] = m; } return B; };
+  const A0 = new Float32Array(W * H); for (let k = 0; k < W * H; k++) A0[k] = px[k * 4 + 3] / 255;
+  const A = morph(morph(A0, 'max'), 'min'), v = (i, j) => A[j * W + i];
   // marching squares: sample (i, j) sits at the pixel centre; a crossing point is keyed by its grid edge
   const pos = new Map(), adj = new Map();
   const cross = (key, ax, ay, bx, by, a, b) => { if (!pos.has(key)) { const t = (0.5 - a) / (b - a); pos.set(key, [ax + (bx - ax) * t, ay + (by - ay) * t]); } return key; };

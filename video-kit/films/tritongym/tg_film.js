@@ -457,7 +457,7 @@ function updateLetters(F) {
   T.letters.rotation.set(0, faceOut(th) + 0.08, 0);
   T.letters.scale.set(sxz, sy, sxz);
   const bk = a < 0 ? 0 : ob(a / 5);
-  T.burst.visible = bk > 0.01; T.burst.scale.set(4.6 * bk, 1.55 * bk, 1); T.burst.rotation.z = 0.03 * Math.sin(F * 0.3);
+  T.burst.visible = bk > 0.01; T.burst.scale.set(4.6 * bk, 1.55 * bk, 1); T.burst.rotation.z = 0.02 + 0.01 * Math.sin(F * 0.3);   // rocks on the tilted side only: a notch never slides into the P's counter
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -483,6 +483,10 @@ export function drawNPR(ctx) {
   const { npr, camera } = T, F = ctx.iw;
   npr.frame(ctx);
   npr.setSmear(st.smear || 0, 0);
+  // while the payoff letters are up, the colour plate comes (almost) into register: the letters' front edge has only the
+  // thin screen-space ink line, and a full offset showed emerald as a crawling hairline on their ink-dark sides
+  { const reg = sg(F, K.slam - 12, K.slam) * (1 - sg(F, K.away[0], K.away[0] + 8)), m = npr.look.misreg, k = 1 - 0.7 * reg;
+    npr.shared.L_misreg.value.set(m[0] * k, m[1] * k); }
   // key light: from the upper left of the lens, a little from the front, but low-passed over +-1.25 s of the camera path
   // (a light that turned with every camera move popped shadows on the heroes); the shadow box follows the smoothed target
   {
@@ -529,6 +533,15 @@ function kernFaceEllipse(ctx, st) {
   const w = T.kern.nose.getWorldPosition(V(0, 0, 0)).toArray(), q = prj(ctx, w); if (!q.front) return null;
   const u = pxu(ctx, w) * T.kern.scale; return { x: q.x, y: q.y, rx: u * 0.4, ry: u * 0.36 };
 }
+// Kern's (or any root's) whole body on screen (design px): the ellipse round its projected bounding box
+function kernBodyEllipse(ctx, st) { return st.kern && st.kern.vis !== false ? rootEllipse(ctx, T.kern.root) : null; }
+function rootEllipse(ctx, root) {
+  if (!root) return null;
+  const b = new T.THREE.Box3().setFromObject(root); if (b.isEmpty()) return null;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let k = 0; k < 8; k++) { const q = prj(ctx, [k & 1 ? b.max.x : b.min.x, k & 2 ? b.max.y : b.min.y, k & 4 ? b.max.z : b.min.z]); if (!q.front) return null; x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, rx: (x1 - x0) * 0.5, ry: (y1 - y0) * 0.5 };
+}
 const inEllipse = (e, x, y, pad = 0) => !!e && ((x - e.x) / (e.rx + pad)) ** 2 + ((y - e.y) / (e.ry + pad)) ** 2 < 1;
 function puff(g, x, y, s, a, r, fill = null) {
   if (a <= 0 || s < 2) return;
@@ -541,7 +554,19 @@ function puff(g, x, y, s, a, r, fill = null) {
   for (let q = 0; q < 3; q++) { const cx = x + (q - 1) * s * 0.8, cy = y - (q === 1 ? s * 0.4 : 0); const P = []; for (let k = 0; k <= 8; k++) { const an = Math.PI + k / 8 * Math.PI; P.push([cx + Math.cos(an) * s * 0.6, cy + Math.sin(an) * s * 0.6]); } pen(g, P, Math.max(2, s * 0.14), INK, { r, taper: [0.2, 0.2] }); }
   g.restore();
 }
-function speedLines(g, ctx, p, dir, len, n, r, col = INK) {
+// length of a stroke from (x, y) along (ux, uy) before it first enters one of the hole ellipses (0 if it starts inside one)
+function cutAt(holes, x, y, ux, uy, l, pad) {
+  for (const e of holes) {
+    if (!e) continue;
+    const rx = e.rx + pad, ry = e.ry + pad, px = (x - e.x) / rx, py = (y - e.y) / ry, dx = ux / rx, dy = uy / ry;
+    const a = dx * dx + dy * dy, b = px * dx + py * dy, c = px * px + py * py - 1;
+    if (c < 0) return 0;
+    const D = b * b - a * c; if (D < 0) continue;
+    const t = (-b - Math.sqrt(D)) / a; if (t > 0 && t < l) l = t;
+  }
+  return l;
+}
+function speedLines(g, ctx, p, dir, len, n, r, holes = [], col = INK) {
   const a = prj(ctx, p), b = prj(ctx, [p[0] - dir[0], p[1] - dir[1], p[2] - dir[2]]);
   if (!a.front || !b.front) return;
   const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
@@ -549,7 +574,8 @@ function speedLines(g, ctx, p, dir, len, n, r, col = INK) {
   for (let k = 0; k < n; k++) {
     const off = (k - (n - 1) / 2) * u * 0.12 + r.gauss(0, u * 0.02), s0 = u * (0.25 + 0.1 * (k % 2)), l = len * u * (0.6 + 0.5 * hsh(k, 3.1) + r.gauss(0, 0.05));
     const x0 = a.x + ux * s0 - uy * off, y0 = a.y + uy * s0 + ux * off;
-    pen(g, [[x0, y0], [x0 + ux * l, y0 + uy * l]], Math.max(2, u * 0.03), col, { r, taper: [0.1, 0.8] });
+    const lk = cutAt(holes, x0, y0, ux, uy, l, u * 0.06); if (lk < u * 0.2) continue;   // a stroke stops where it meets a face in front of it
+    pen(g, [[x0, y0], [x0 + ux * lk, y0 + uy * lk]], Math.max(2, u * 0.03), col, { r, taper: [0.1, 0.8] });
   }
 }
 
@@ -570,30 +596,39 @@ export function drawMarks(ctx, g) {
   // the slam: chunky inked dust puffs rolling out from the letters' feet
   { const a = F - K.slam;
     if (a >= 0 && a < 11 && T.letters.visible) {
-      const x0 = -(T.w1.width + 0.35), x1 = T.w2.width + 0.15;
+      const x0 = -(T.w1.width + 0.35), x1 = T.w2.width + 0.15, oroBox = st.oro.vis !== false ? rootEllipse(ctx, T.oro.root) : null;
       for (let q = 0; q < 7; q++) {
         const lx = lerp(x0, x1, q / 6), wp = T.lettersIn.localToWorld(V(lx, -0.02, 0.45));
         const c = prj(ctx, [wp.x, wp.y, wp.z]); if (!c.front) continue;
         const u = pxu(ctx, [wp.x, wp.y, wp.z]), sd = q < 3 ? -1 : q > 3 ? 1 : 0;
-        const px = c.x + sd * (0.25 + a * 0.14) * u, py = c.y + u * 0.3, ps = u * (0.17 + 0.015 * a) * (0.8 + 0.4 * hsh(q, 7)) * (1 - sm((a - 6) / 5));
-        if (inEllipse(tokHole, px, py, ps * 1.3)) continue;   // never over Tok (tested where the puff is drawn, every frame)
+        const px = c.x + sd * (0.25 + a * 0.14) * u, py = c.y + u * 0.3, ps = u * (0.26 + 0.02 * a) * (0.8 + 0.4 * hsh(q, 7)) * (1 - sm((a - 6) / 5));
+        if (inEllipse(tokHole, px, py, ps * 1.3) || inEllipse(oroBox, px, py, ps)) continue;   // never over Tok or Oro (tested where the puff is drawn, every frame)
         puff(g, px, py, ps, 1, r, PAL.cream);   // below the letters' feet, rolling outward; they shrink away, inked (no grey fade)
       }
     } }
   // square-wheel THUNK ticks under the wheels on each flat landing
   if (st.kern.vis && st.kern.lurch && !st.kern.round && F >= K.drive1[0] && F < K.kernRun1[1]) {
     const q = prj(ctx, [st.kern.pos[0], 0.02, st.kern.pos[2]]); const u = pxu(ctx, st.kern.pos);
-    if (q.front) for (let k = 0; k < 5; k++) { const an = Math.PI + 0.3 + k * 0.6; pen(g, [[q.x + Math.cos(an) * u * 0.45, q.y + Math.sin(an) * u * 0.14], [q.x + Math.cos(an) * u * 0.7, q.y + Math.sin(an) * u * 0.24]], Math.max(2, u * 0.035), INK, { r }); }
+    const kf = prj(ctx, T.kern.nose.getWorldPosition(V(0, 0, 0)).toArray()).d < prj(ctx, st.kern.pos).d ? kernFaceEllipse(ctx, st) : null;   // face to the lens: the ticks keep off it
+    const rt = ctx.boilRng('thunk');   // own jitter stream: a skipped tick doesn't reshuffle the other marks' boil
+    if (q.front) for (let k = 0; k < 5; k++) {
+      const an = Math.PI + 0.3 + k * 0.6, x0 = q.x + Math.cos(an) * u * 0.45, y0 = q.y + Math.sin(an) * u * 0.14, x1 = q.x + Math.cos(an) * u * 0.7, y1 = q.y + Math.sin(an) * u * 0.24;
+      if (inEllipse(kf, x0, y0, u * 0.05) || inEllipse(kf, x1, y1, u * 0.05)) continue;
+      pen(g, [[x0, y0], [x1, y1]], Math.max(2, u * 0.035), INK, { r: rt });
+    }
   }
   // speed lines behind the racers
-  const trail = (S, f0, f1, len, n) => {
+  const trail = (S, f0, f1, len, n, holes = []) => {
     if (!S.vis || !S.pos || F < f0 || F >= f1) return;
     const th = toRing(S.pos)[0], dir = [-Math.sin(th), 0, -Math.cos(th)];   // track tangent (travel)
     const back = [S.pos[0] - dir[0] * 0.8, 0.4, S.pos[2] - dir[2] * 0.8];
-    speedLines(g, ctx, back, dir, len, n, r);
+    speedLines(g, ctx, back, dir, len, n, r, holes);
   };
-  trail(st.oro, K.go1 + 2, K.oroRun1[1] - 2, 1.6, 5);
-  trail(st.oro, K.go2 + 2, K.cross, 1.2, 4);
+  // Oro's wake stops at Tok, Kern's face and Kern's body (Kern's outer lane is in front of it); Kern's own trails start
+  // behind its centre, inside its own ellipses, so they take no holes
+  const oroHoles = [tokHole, kernFaceEllipse(ctx, st), kernBodyEllipse(ctx, st)];
+  trail(st.oro, K.go1 + 2, K.oroRun1[1] - 2, 1.6, 5, oroHoles);
+  trail(st.oro, K.go2 + 2, K.cross, 1.2, 4, oroHoles);
   trail(st.kern, K.go2 + 2, K.cross, 1.2, 4);
   trail(st.kern, K.lap2[0] + 4, K.lap2[1] - 6, 1.0, 3);
   if (st.kern.steam) for (let k = 0; k < 2; k++) {

@@ -237,7 +237,7 @@ function kernRaw(F) {
     S.wheelAng = (th - L2 - thS) * R.ours / 0.16;   // (it rolls up-stage after the line and turns its face 3/4 to us; the plate side stays in view)
     S.face = F < K.go2 ? 'determined' : F < K.cross - 12 ? 'squint' : F < K.cross + 1 ? 'strain' : F < K.check ? 'wide' : 'star';
     S.stretch = F >= K.cross - 4 && F < K.cross + 2 ? 0.25 : 0;
-    if (F >= K.check - 3 && F < K.check + 22) { const h = hop(F, K.check, K.check + 12, 0.72); S.pos[1] += h.y; S.sq = h.sq * 1.6; S.pitch = -0.35 * Math.sin(Math.PI * sg(F, K.check, K.check + 11)); }   // the winner's hop: a wheelie in the air, a squash on landing
+    if (F >= K.check - 3 && F < K.check + 22) { const h = hop(F, K.check, K.check + 12, 0.5); S.pos[1] += h.y; S.sq = h.sq * 1.6; S.pitch = -0.35 * Math.sin(Math.PI * sg(F, K.check, K.check + 11)); }   // the winner's hop: a wheelie in the air, a squash on landing (0.5 high: at 0.72 it rose into the letters)
     if (F >= K.away[0] + 10) S.vis = false;              // gone on the heaviest smear frame of the whip away
     S.showCheck = F >= K.check;
     return S;
@@ -430,7 +430,7 @@ function tokRaw(F) {
   if (F < K.lap2[0] + 4) {
     S.pos = refP; S.yaw = faceOut(A.finish + 0.27) - 0.5;
     if (F < K.tokIn[1] + 4) S.sq = ringv(F - K.tokIn[1], 0.2, 0.9, 0.25);
-    S.face = F < K.stare ? 'think' : F < K.idea ? 'stare' : F < K.speak2[0] ? 'idea' : F < K.speak2[1] + 2 ? ((F - K.speak2[0]) % 3 < 2 ? 'speak' : 'speak2') : 'happy';
+    S.face = F < K.stare ? 'think' : F < K.idea + 3 ? 'stare' : F < K.speak2[0] ? 'idea' : F < K.speak2[1] + 2 ? ((F - K.speak2[0]) % 3 < 2 ? 'speak' : 'speak2') : 'happy';
     if (F >= K.idea && F < K.idea + 10) { S.sq = take(F, K.idea, 1.1); S.lookUp = 0.4; }
     if (F >= K.speak2[0] && F < K.speak2[1]) { S.sq = (F - K.speak2[0]) % 3 < 1 ? 0.1 : -0.05; S.lean = 0.15; }
     if (F >= K.rev[0]) { S.armR = -2.3; S.face = 'happy'; }

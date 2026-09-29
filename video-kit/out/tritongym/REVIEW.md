@@ -242,3 +242,59 @@ name each fix and the frames it was checked on. Only the tech-art lens had must-
 
 Also in r9: Oro turns further to the payoff lens at the jaw drop, and the open mouth is painted under the eye that lens sees
 (f614–628). Oro's double-take "!" sits beside its head at eye height with a cream keyline (f500–508, inside the band).
+
+## Round 9 — pass r9 (960×540, commit b12fe0f)
+
+| lens | r1 | r2 | r3 | r4 | r5 | r6 | r7 | r8 | **r9** | verdict in one line |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Creative director | 6.0 | 7.0 | 7.5 | 7.5 | 8.2 | 8.3 | 8.5 | 8.6 | **8.7** | **no must-fix**: every beat has a character acting, and no marks cross faces; what is left is payoff polish (pea-sized slam puffs, the grin before the idea "!") |
+| Tech-art lead | 6.0 | 7.0 | 7.5 | 7.0 | 8.0 | 8.2 | 8.2 | 8.3 | **8.4** | the marks over Tok, the slam puffs and the join specks are fixed; but the letters still shimmer where their outlines turn inward, and 2D marks land on Kern's strain face in race 1 |
+| Domain expert | 6.0 | 7.6 | 8.2 | 8.3 | 8.7 | 8.8 | 8.9 | 8.8 | **8.9** | **no must-fix**: 36 / 56 / 33 f and the watch hands check out; the new "@" keeps PERF@1 > 1 correct |
+| Web designer | 6.3 | 7.4 | 7.8 | 8.0 | 8.1 | 8.6 | 8.4 | 8.6 | **8.7** | **no must-fix**: poster, seam, pill corner and budget hold (card 3.61 MB at CRF 32); polish: Kern's hop crosses "F@1" |
+
+Round 8 items confirmed on the r9 frames: focus/zoom lines stop at Tok and Kern's face (f150–155, f360–365, f590–591);
+the slam puffs never touch Tok (f590–599); the idea "!" reads on Tok's open side with its keyline (f380–392); Oro's
+double-take "!" sits beside its head inside the band (f498–508). The join specks are fixed, but the lenses judged the
+letters only *partly* fixed because of the shimmer below.
+
+From this round on, a second agent checks each must-fix on the frames and traces it to the code before it is fixed. Both
+tech-art must-fixes were confirmed real. In both cases the check found a different cause from the one the reviewer
+proposed.
+
+### Must-fix list (tech-art) and what r10 does about each
+1. *The payoff letters shimmer where their outlines turn inward* (f589–648). Three separate causes:
+   - *The P counter "breathes" and splits every 21 frames.* This was not the hull. The title burst rocked by ±0.03 rad
+     (`sin(0.3 F)`), and at its negative tilt a notch between two spikes slid into the P's counter. The burst now rocks
+     only on its tilted side (0.01–0.03 rad).
+   - *Ink hooks at the inner corners of E, F and the "1"'s flag* (f624–632). At a sharp skeleton corner the two ribbons'
+     quads meet at a point pulled inward and leave a thin V-slit, which the trace kept and the hull flooded with boiling
+     ink. `traceUnion` now closes the coverage raster (max, then min, over a disc of 4 cells) before tracing. That fills
+     the slits and rounds concave corners a hair, and leaves straight edges and convex corners as they were. The bevel
+     is also gone: at 1080p its offset faces z-fought the hull in the same corners (checked in studio snaps after r9).
+   - *An emerald hairline crawls on the letters' ink-dark sides, and a cream crescent shows in the "@" gap.* The
+     off-register colour plate (misreg [2.6, −2.0] design px) is wider than the thin screen-space ink line on the
+     letters' front edge, which has no hull. While the letters are up (ramping in over the drop and out under the whip),
+     the plate comes to 30 % of its offset. The rest of the film keeps the full offset.
+2. *2D marks on Kern's strain face in race 1* (f300–333). The reviewer blamed Oro's speed lines. The check found two
+   sources:
+   - *The square-wheel THUNK ticks* (f300, 302, 305, 310, 311). The tick fan is anchored under Kern's centre, which sits
+     behind its face block in the 3/4-front lens. Ticks that would land on the face are skipped whenever the face is
+     turned to the lens, so the back-view ticks in B2 are unchanged. They draw from their own boil stream.
+   - *Oro's wake* (f309–333). It crossed Kern's key, head cube and face. Every stroke of Oro's trail now stops where it
+     meets Tok, Kern's face or Kern's body (Kern's lane is in front of Oro's). Kern's own trails take no holes.
+   Checked in studio snaps f300–336: the face is clean, the two left ticks stay by the wheels, and the wake reads to the
+   right of Kern.
+
+Nice-to-haves taken (r10):
+- The idea "!" leads and Tok's grin follows three frames later (CD n5).
+- The slam puffs are about 1.5× bigger and skip Oro as well as Tok (CD n1).
+- Kern's winner hop is 0.5 high instead of 0.72, so its key and check no longer rise across "F@1" (TA n1, WD n2, CD).
+
+Deferred, with reasons:
+- Oro's laurel reading as a crest and its jaw drop at card size (CD n2): a re-model of Oro's payoff pose, and the lenses
+  that own it score ≥ 8.7.
+- Kern's face on the drive (CD n3): a re-stage of B2's opening that five rounds have signed off.
+- The watch insert hold (CD n4), the whip variety (CD n6), the plate size at card scale (DE n1), rays across the watch
+  face at the crash zoom (DE n2), the lap-2 recompile ramp (DE n3), the pennant under the pill at f252–256 (WD n3), the
+  race-1 watch above the desktop crop (WD n4), the gate face under the pill in B1 (WD n5), Kern's nose token reading as a
+  tongue (WD n6), and the "@" being darker than its neighbours (TA n2).
