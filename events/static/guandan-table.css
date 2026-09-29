@@ -732,15 +732,15 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-deal-host { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
 .gd-deal { position: absolute; inset: 0; }
 .gd-deck, .gd-deal-card { position: absolute; left: calc(50% - 32px); top: calc(36% - 43px); width: 64px; height: 86px; }
-.gd-deck { animation: gd-deck-out 260ms ease-in both; animation-delay: calc(var(--deal-left) - 280ms); }
 .gd-deck .gd-back, .gd-deal-card .gd-back { position: absolute; inset: 0; --cw: 64px; }
-.gd-deck .gd-back:nth-child(1) { translate: -3px 3px; }
-.gd-deck .gd-back:nth-child(2) { translate: -1.5px 1.5px; }
-@keyframes gd-deck-out { to { opacity: 0; scale: .8; } }
+/* the deck: six offset backs, the top one taken each time a sixth of the flights has left */
+.gd-deck .gd-back { translate: calc(var(--k) * -1.5px) calc(var(--k) * 1.5px); animation: gd-deck-take 140ms ease-in both; }
+@keyframes gd-deck-take { to { opacity: 0; transform: translateY(-10px) scale(.92); } }
 /* each flight: the outer box travels (ease-out), the back arcs up, tilts, then shrinks and fades
-   into the seat's inboard edge over the last 30% */
+   into the seat's inboard edge over the last 30%; mine settle face down, level, at hand size */
 .gd-deal-card { animation: gd-deal-go 380ms cubic-bezier(.25, .7, .35, 1) both; }
 .gd-deal-card .gd-back { animation: gd-deal-arc 380ms linear both; animation-delay: inherit; }
+.gd-deal-card.is-mine .gd-back { animation-name: gd-deal-land; }
 @keyframes gd-deal-go { to { translate: var(--tx) var(--ty); } }
 @keyframes gd-deal-arc {
     0% { opacity: 0; transform: none; }
@@ -748,6 +748,12 @@ body[data-screen="table"] .topbar { display: none; }
     40% { transform: translateY(-24px) rotate(calc(var(--r) * .6)); }
     70% { opacity: 1; transform: translateY(-8px) rotate(var(--r)) scale(.9); }
     100% { opacity: 0; transform: rotate(var(--r)) scale(.55); }
+}
+@keyframes gd-deal-land {
+    0% { opacity: 0; transform: none; }
+    10% { opacity: 1; }
+    45% { transform: translateY(-28px) rotate(calc(var(--r) * .6)) scale(1.1); }
+    100% { opacity: 1; transform: scale(1.35); }
 }
 
 /* ---------- 首出: the starting card pops up, then shrinks into the leading seat ---------- */

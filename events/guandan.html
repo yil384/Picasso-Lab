@@ -3550,17 +3550,20 @@ function toolsHTML(v) {
 }
 
 // Deal: backs arc from a centre deck toward the four seats over DEALING_MS, synced to dealStartedAt
-// (a rejoin mid-deal resumes mid-flight through negative delays), each flight shrinking and fading
-// at the seat's inboard edge so no face is covered; the hand then rises column by column during
-// SORTING_MS. One flight stands for two cards. Your hand is never face-up before the deal ends.
+// (a rejoin mid-deal resumes mid-flight through negative delays). The deck's six backs go one by
+// one as it empties. Other seats' flights shrink and fade at the seat's inboard edge so no face is
+// covered; mine land face down in a growing fan where the hand will be, which gives way to the
+// hand rising column by column during SORTING_MS. One flight stands for two cards. Your hand is
+// never face-up before the deal ends.
 const DEAL_FLIGHTS = DEAL_CARD_COUNT / 2;
+const DECK_BACKS = 6;
 function dealHTML(v) {
     if (v.dealPhase !== "dealing") return "";
     const { w, h } = tableView.layout;
     const ox = w / 2;
     const oy = h * .36;
     const targets = {
-        0: [0, h - handBottom() - HAND_CARD_H * .6 - oy],
+        0: [0, h - handBottom() - HAND_CARD_H * .42 - oy],
         1: [196 - ox, 250 - oy],
         2: [0, 172 - oy],
         3: [w - 196 - ox, 250 - oy]
@@ -3571,11 +3574,17 @@ function dealHTML(v) {
     const flights = prefersReducedMotion() ? "" : Array.from({ length: DEAL_FLIGHTS }, (_, idx) => {
         const pos = visualSeatPos(idx % 4, v.mine);
         const [tx, ty] = targets[pos];
-        const spread = pos === 0 ? ((idx >> 2) - 6.5) * 40 : 0;
+        const mine = pos === 0 && v.mine >= 0;
+        const spread = pos === 0 ? ((idx >> 2) - 6.5) * 60 : 0;
         const tilt = ((idx * 37) % 13) - 6;
-        return `<i class="gd-deal-card" style="--tx:${(tx + spread).toFixed(0)}px;--ty:${ty.toFixed(0)}px;--r:${tilt}deg;animation-delay:${Math.round(idx * gap - elapsed)}ms">${back}</i>`;
+        return `<i class="gd-deal-card${mine ? " is-mine" : ""}" style="--tx:${(tx + spread).toFixed(0)}px;--ty:${ty.toFixed(0)}px;--r:${tilt}deg;animation-delay:${Math.round(idx * gap - elapsed)}ms">${back}</i>`;
     }).join("");
-    return `<div class="gd-deal" style="--deal-left:${Math.round(DEALING_MS - elapsed)}ms"><div class="gd-deck"><i class="gd-back"></i><i class="gd-back"></i>${back}</div>${flights}</div>`;
+    // back k (0 = bottom) leaves with the flight that empties its share of the deck
+    const deck = Array.from({ length: DECK_BACKS }, (_, k) => {
+        const out = ((DECK_BACKS - k) * DEAL_FLIGHTS / DECK_BACKS - 1) * gap;
+        return `<i class="gd-back" style="--k:${DECK_BACKS - 1 - k};animation-delay:${Math.round(out - elapsed)}ms"><span class="gd-back-emblem">P</span></i>`;
+    }).join("");
+    return `<div class="gd-deal"><div class="gd-deck">${deck}</div>${flights}</div>`;
 }
 
 // 首出 (qqg_shouchu): when the deal ends, the round-1 starting card pops up at the centre with a
