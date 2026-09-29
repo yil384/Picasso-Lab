@@ -296,24 +296,38 @@ function hideToast() {
     tableView.toast?.classList.remove("show");
 }
 
-// The "try typing picasso" pill sits where it covers no control: on the table in the felt band
-// under the partner's played cards (turned with a rotated stage); in the lobby over the stat pills
-// (or where they would be); in the room in the top bar's free stretch, else over the felt's level
-// tiles between the side seats, else on the 对局设置 heading.
+// The "try typing picasso" pill sits where it covers no control: on the table in whichever felt
+// band shows least right now, under the partner's played cards or across the centre (turned with
+// a rotated stage); in the lobby over the stat pills (or where they would be); in the room in the
+// top bar's free stretch, else over the felt's level tiles between the side seats, else on the
+// 对局设置 heading.
 // Document coordinates, so on a scrolled portrait page it stays with what it was placed on.
-const HINT_TABLE_Y = 200;   // design px from the stage top
+const HINT_TABLE_YS = [200, 266];   // band centres, design px from the stage top
 function placeReturnTypeHint() {
     const el = returnTypeHint;
     const screen = document.body.dataset.screen;
+    const onTable = screen === "table" && !!tableView.stage?.isConnected;
+    el.classList.toggle("is-turned", onTable && tableView.layout.rotated);
     const hintW = el.offsetWidth;
+    const hintH = el.offsetHeight;
     let x = innerWidth / 2;
     let y = innerHeight / 2;
-    let turned = false;
-    if (screen === "table" && tableView.stage?.isConnected) {
+    if (onTable) {
         const { s, w, rotated, left, top, vw } = tableView.layout;
-        turned = rotated;
-        x = rotated ? vw - HINT_TABLE_Y * s : left + w / 2 * s;
-        y = rotated ? left + w / 2 * s : top + HINT_TABLE_Y * s;
+        const [bw, bh] = rotated ? [hintH, hintW] : [hintW, hintH];
+        const shown = [...tableView.stage.querySelectorAll(".gd-slot > *, .gd-actions > *, .gd-seat, [data-card-id], .gd-stage-toast.show")]
+            .map(n => n.getBoundingClientRect()).filter(r => r.width);
+        const band = designY => {
+            const cx = rotated ? vw - designY * s : left + w / 2 * s;
+            const cy = rotated ? left + w / 2 * s : top + designY * s;
+            const covered = shown.reduce((sum, r) => sum
+                + Math.max(0, Math.min(cx + bw / 2, r.right) - Math.max(cx - bw / 2, r.left))
+                * Math.max(0, Math.min(cy + bh / 2, r.bottom) - Math.max(cy - bh / 2, r.top)), 0);
+            return { cx, cy, covered };
+        };
+        const best = HINT_TABLE_YS.map(band).reduce((a, b) => (b.covered < a.covered ? b : a));
+        x = best.cx;
+        y = best.cy;
     } else if (screen === "lobby") {
         const r = document.querySelector(".hud-stats")?.getBoundingClientRect();
         if (r) {
@@ -344,7 +358,6 @@ function placeReturnTypeHint() {
             y = head.top + head.height / 2;
         }
     }
-    el.classList.toggle("is-turned", turned);
     el.style.left = `${Math.round(x + scrollX)}px`;
     el.style.top = `${Math.round(y + scrollY)}px`;
 }
