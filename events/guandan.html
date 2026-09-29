@@ -3395,27 +3395,34 @@ function firstLeadHTML(v) {
     return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
 }
 
-// 进贡/还贡/抗贡 (round 2+): when the deal ends each tribute card flies payer -> receiver under an
-// orange 进贡 plate, then the returned card flies back under a blue 还贡 plate; a blocked tribute
-// shows 抗贡 at the centre (the revealed jokers sit at the seats). Replaces the sentence toast.
-const TRIBUTE_MS = 2200;
+// 进贡/还贡/抗贡 (round 2+): as the last deal flights land, each tribute card flies payer -> receiver
+// under an orange 进贡 plate, then the returned card flies back under a blue 还贡 plate (a double
+// tribute flies both pairs at once); a blocked tribute shows 抗贡 at the centre (the revealed
+// jokers sit at the seats). The whole moment ends inside the deal window (DEALING_MS + SORTING_MS),
+// before anyone can act, so it never crosses the first lead or the action row. The region is
+// rendered with the deal and keyed by it: delays are synced to dealStartedAt and never replay.
+const TRIBUTE_AT = DEALING_MS - 200;        // the deal's last flights have landed
+const TRIBUTE_FLY_MS = 640;                 // pop, hold, 340 ms flight, fade (see gd-tribute)
+const TRIBUTE_RETURN_AT = 480;              // 还贡 leaves as the 进贡 card lands
+const TRIBUTE_MS = TRIBUTE_RETURN_AT + TRIBUTE_FLY_MS;
 function tributeKey(v) {
-    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
-    if (!game.selectedTributes?.length || game.startingCard || v.dealPhase === "dealing" || since < 0 || since > TRIBUTE_MS) return "";
+    const elapsed = Date.now() - Number(game.dealStartedAt || 0);
+    if (!game.selectedTributes?.length || game.startingCard || elapsed > TRIBUTE_AT + TRIBUTE_MS) return "";
     return `${dealKey()}:${v.mine}:${uiLang}`;
 }
 function tributeHTML(v) {
     const { w, h } = tableView.layout;
-    const at = { 0: [w / 2, h - 250], 1: [215, 250], 2: [w / 2, 172], 3: [w - 215, 250] };
-    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    // each seat's played-card slot, so nothing crosses the rising hand
+    const at = { 0: [w / 2, h * .32 + PLAYED_H / 2], 1: [215, 244], 2: [w / 2, 166], 3: [w - 215, 244] };
+    const since = Date.now() - Number(game.dealStartedAt || 0) - TRIBUTE_AT;
     const rows = game.selectedTributes.filter(r => r?.tributeCard);
     if (!rows.length) return `<div class="gd-kanggong" style="animation-delay:${-since}ms">${L("Tribute blocked", "抗贡")}</div>`;
     const fly = (card, from, to, cls, label, delay) => `<div class="gd-tribute ${cls}" style="left:${from[0].toFixed(0)}px;top:${from[1].toFixed(0)}px;--tx:${(to[0] - from[0]).toFixed(0)}px;--ty:${(to[1] - from[1]).toFixed(0)}px;animation-delay:${delay - since}ms"><span>${label}</span>${cardHTML(card, true)}</div>`;
-    return rows.map((r, n) => {
+    return rows.map(r => {
         const payer = at[visualSeatPos(r.payerSeat, v.mine)];
         const receiver = at[visualSeatPos(r.receiverSeat, v.mine)];
-        return fly(r.tributeCard, payer, receiver, "is-in", L("Tribute", "进贡"), n * 160)
-            + (r.returnCard ? fly(r.returnCard, receiver, payer, "is-back", L("Return", "还贡"), 820 + n * 160) : "");
+        return fly(r.tributeCard, payer, receiver, "is-in", L("Tribute", "进贡"), 0)
+            + (r.returnCard ? fly(r.returnCard, receiver, payer, "is-back", L("Return", "还贡"), TRIBUTE_RETURN_AT) : "");
     }).join("");
 }
 

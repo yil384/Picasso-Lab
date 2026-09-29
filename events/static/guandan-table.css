@@ -743,7 +743,7 @@ body[data-screen="table"] .topbar { display: none; }
     align-items: center;
     gap: 6px;
     translate: -50% -50%;
-    animation: gd-tribute 1200ms linear both;
+    animation: gd-tribute 640ms linear both;
 }
 .gd-tribute .card { box-shadow: 0 6px 14px rgba(0, 30, 26, .4); }
 .gd-tribute span {
@@ -759,11 +759,11 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-tribute span:lang(en) { letter-spacing: .02em; }
 .gd-tribute.is-back span { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
-@keyframes gd-tribute {
+@keyframes gd-tribute { /* pop 90 ms, hold, 340 ms flight, fade 140 ms */
     0% { opacity: 0; transform: scale(.7); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
     14% { opacity: 1; transform: none; }
-    32% { transform: none; animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
-    80% { opacity: 1; transform: translate(var(--tx), var(--ty)); }
+    25% { transform: none; animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+    78% { opacity: 1; transform: translate(var(--tx), var(--ty)); }
     100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.8); }
 }
 .gd-kanggong {
@@ -777,19 +777,20 @@ body[data-screen="table"] .topbar { display: none; }
     background-clip: text;
     color: transparent;
     filter: drop-shadow(0 4px 0 #7a1e00) drop-shadow(0 0 1px #7a1e00);
-    animation: gd-kanggong 1800ms linear both;
+    animation: gd-kanggong 1100ms linear both;
 }
 @keyframes gd-kanggong {
     0% { opacity: 0; scale: 1.4; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
-    10% { opacity: 1; scale: 1; }
-    82% { opacity: 1; }
+    14% { opacity: 1; scale: 1; }
+    80% { opacity: 1; }
     100% { opacity: 0; }
 }
 
 /* reduced motion: the transient labels still show, as a still frame that fades */
 @media (prefers-reduced-motion: reduce) {
     .gd-stage .gd-combo-label { animation: gd-still 820ms linear 150ms both !important; }
-    .gd-stage .gd-first-lead, .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation: gd-still 1600ms linear both !important; }
+    .gd-stage .gd-first-lead { animation: gd-still 1500ms linear both !important; }
+    .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation-name: gd-still !important; animation-duration: 640ms !important; }
 }
 @keyframes gd-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
