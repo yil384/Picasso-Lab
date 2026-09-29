@@ -249,6 +249,7 @@ void main() {
   float shade = clamp(.5 - .5 * dot(wn, normalize(uKeyDir)), 0., 1.);
   float press = .45 + 1.1 * vnoise3(position * 2.6 + uSeedObj + uBoilSeed * 3.7);
   float w = L_hullW * uHullScale * uS * press * mix(1., L_hullShadowW, shade);
+  w *= mix(1., L_inkFar, smoothstep(L_atmosStart, L_atmosEnd, -(modelViewMatrix * vec4(position, 1.)).z));   // set ink thins with depth
   clip.xy += dir * w * 2. / uRes * clip.w;
   gl_Position = clip;
   vViewN = vn;

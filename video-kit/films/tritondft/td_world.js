@@ -48,12 +48,12 @@ export async function buildRoom(W) {
   add(new THREE.PlaneGeometry(26, 26), { color: 0xf2dcae, map: floorTex, hatchDir: [1, 0, 0], toneBias: 0.02, spec: 0 }, { cast: false }, [0, L.floorY, 0], [-Math.PI / 2, 0, 0]);
 
   // ---- back wall: sky-blue plaster with the round moon window, a door-frame, pipes (baked wash) ----
-  const wallTex = await bake(THREE, { width: 2048, height: 768, seed: 12, key: 'wall-v2', background: '#ffffff' }, (p, brush, w, h) => paintWall(ctx, brush, w, h));
+  const wallTex = await bake(THREE, { width: 2048, height: 768, seed: 12, key: 'wall-v3', background: '#ffffff' }, (p, brush, w, h) => paintWall(ctx, brush, w, h));
   const wallW = 16, wallH = 6;
   const wallMat = { color: 0xffffff, map: wallTex, hatchDir: [0, 1, 0.3], toneBias: 0.0, spec: 0, receive: true, rim: 0 };
   add(new THREE.PlaneGeometry(wallW, wallH), wallMat, { cast: false }, [0, L.floorY + wallH / 2, L.wallZ]);
   // side walls (so orbits and whips always see a room), plain plaster
-  const sideTex = await bake(THREE, { width: 1024, height: 512, seed: 13, key: 'side-v2', background: '#ffffff' }, (p, brush, w, h) => paintPlaster(ctx, brush, w, h, 'side'));
+  const sideTex = await bake(THREE, { width: 1024, height: 512, seed: 13, key: 'side-v3', background: '#ffffff' }, (p, brush, w, h) => paintPlaster(ctx, brush, w, h, 'side'));
   const side = { color: 0xffffff, map: sideTex, hatchDir: [0, 1, 0.3], spec: 0, rim: 0 };
   add(new THREE.PlaneGeometry(12, wallH), side, { cast: false }, [-wallW / 2, L.floorY + wallH / 2, L.wallZ + 6], [0, Math.PI / 2, 0]);
   add(new THREE.PlaneGeometry(12, wallH), side, { cast: false }, [wallW / 2, L.floorY + wallH / 2, L.wallZ + 6], [0, -Math.PI / 2, 0]);
@@ -87,8 +87,8 @@ function paintPlaster(ctx, brush, w, h, key) {
   brush.fill('#f2e3c2', 255); brush.fillBleed(0.0); brush.fillTexture(0.3, 0.3); brush.rect(-10, -10, w + 20, h + 20);
   for (let k = 0; k < 10; k++) { brush.fill(k % 2 ? '#e6d0a4' : '#fbf1dc', 70); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.6, 0.5); brush.circle(r.range(0, w), r.range(0, h), r.range(90, 220), 0.6); }
   // sky-blue wainscot along the bottom third (the accent colour), with a navy rail
-  brush.fill('#2f9bd6', 255); brush.fillBleed(0.01); brush.fillTexture(0.35, 0.3); brush.rect(-10, h * 0.72, w + 20, h * 0.3);
-  brush.fill('#1f86c2', 90); brush.fillBleed(0.2, 'out'); for (let k = 0; k < 6; k++) brush.circle(r.range(0, w), r.range(h * 0.76, h), r.range(40, 90), 0.5);
+  brush.fill('#2b8de2', 255); brush.fillBleed(0.01); brush.fillTexture(0.35, 0.3); brush.rect(-10, h * 0.72, w + 20, h * 0.3);
+  brush.fill('#1c7bd0', 90); brush.fillBleed(0.2, 'out'); for (let k = 0; k < 6; k++) brush.circle(r.range(0, w), r.range(h * 0.76, h), r.range(40, 90), 0.5);
   brush.set('bigink', '#0b3558', 1.6); brush.line(0, h * 0.72, w, h * 0.72 + r.gauss(0, 1));
   brush.set('inkpen', '#6b4a2e', 0.8);
   for (let k = 0; k < 26; k++) { const x = r.range(0, w), y = r.range(0, h); brush.line(x, y, x + r.range(14, 40), y + r.gauss(0, 2)); }

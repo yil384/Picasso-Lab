@@ -16,9 +16,10 @@ export const LOOK = {
   htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0], htCol: [0.06, 0.18, 0.34],
   lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
   bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.22,
-  shadeGlaze: [0.62, 0.72, 0.9], coreGlaze: [0.62, 0.72, 0.9], keyTint: [1.0, 0.97, 0.9],
+  shadeGlaze: [0.62, 0.72, 0.9], coreGlaze: [0.62, 0.72, 0.9], keyTint: [1.0, 0.985, 0.97],   // near-neutral key: the warm paper already multiplies
   rule: 0.0, bgDots: [0.2, 0.52, 0.75, 0.22], dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16,
   glassGlint: 0.5,
+  atmosStart: 3.2, atmosEnd: 8.5, inkFar: 0.55, hatchFar: 0.35, htFar: 0.3,   // no haze (atmos 0): the set's ink, hatch and dots recede with depth
   ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
 };
 
@@ -61,7 +62,8 @@ const HOOT = deskP(-0.3, 0.02, -0.95);
 const GIANT = deskP(0.48, 0, -0.28);           // upright spot of the giant hourglass
 const GIANT_LAY = deskP(1.08, 0, -0.92);        // where it lies (Hoot's pillow): its bottom cap at the upright spot's x, against
                                                 // Hoot's cheek; it stands up by pivoting about that cap
-const TINY = deskP(0.05, 0, 0.36);            // the tiny hourglass (Hoot's dare), same shape, 1/68 the volume
+const TINY = deskP(0.98, 0.33, 0.12);         // the tiny hourglass (Hoot's dare), same shape, 1/68 the volume, on a stack of
+                                              // books so it sits inside the card band (and its top bulb clears the 68x)
 const SCORE = deskP(-0.56, 0.004, 0.12);       // the DFTBench scorecard (98%): on its easel between 98% and 68x, behind the row
 const faceYaw = (from, to) => Math.atan2(to[0] - from[0], to[2] - from[2]);
 
@@ -88,6 +90,11 @@ export async function buildAll(w) {
     return m;
   });
   W.tiny = buildHourglass(W, 1.2 / Math.cbrt(68), [...TINY], 'tiny');
+  W.tiny.g.rotation.y = Math.PI / 3;                   // posts flank the glass: the neck and the stream stay visible
+  [[0.12, COL.navy, 0.05], [0.11, COL.cream, -0.08], [0.1, COL.sky, 0.12]].reduce((y, [h, c, ry]) => {
+    add(new THREE.BoxGeometry(0.34, h, 0.26), { color: c, hatchMode: 'u', rim: 0.5 }, { outline: 0.6 }, [TINY[0], y + h / 2, TINY[2]], [0, ry, 0]);
+    return y + h;
+  }, 0);
   W.giant = buildHourglass(W, 1.2, [...GIANT], 'giant');
   W.tri = await buildTri(W); W.clack = await buildClack(W); W.loupe = buildLoupe(W); W.tilt = await buildTilt(W);
   W.con = await buildConsole(W); W.hoot = await buildHoot(W);
@@ -283,7 +290,7 @@ function updateCart(F) {
   }
   // pops out of the desk mouth and lands in Hoot's wings; handed to Tri at the end
   const m = W.tube.curve.getPointAt(0);
-  const hold = W.hoot.head.localToWorld(V3(0, -0.52, 0.72));
+  const hold = W.hoot.head.localToWorld(V3(-0.1, -0.54, 0.74));    // held at the chest, below the face
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k)];
@@ -894,7 +901,7 @@ const rigS8a = (F) => {       // medium on Hoot and both hourglasses; a push in 
 };
 const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the bottom, faces above the numerals); slow arc
   const a = sm((F - K.S8b) / 60);
-  return { tg: [L.desk.x + 0.1, 0.46, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.1, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };
+  return { tg: [L.desk.x + 0.1, 0.4, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.1, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };
 };
 const WHIPS = [[80, 100], [280, 292], [312, 328], [452, 466], [496, 512], [564, 588]];
 export function camRig(F) {
@@ -985,7 +992,7 @@ export function drawNPR(w, ctx) {
     npr.focusLines({ x: c.x, y: c.y, r0: 420, amount: 0.9 * (1 - s68 / 14), count: 100, width: 1.2, seed: 9 });
     if (s68 === 0) npr.impact(0.8, { threshold: 0.55 });
   }
-  if (F >= K.slam[0] && F < K.S9 + 4) npr.pointLight(V3(L.desk.x + 0.1, 0.8, L.desk.z + 1.0), { color: 0xffc94a, radius: 2.2, i: 0.45 * sm((F - K.slam[0]) / 8) });
+  if (F >= K.slam[0] && F < K.S9 + 4) npr.pointLight(V3(L.desk.x + 0.1, 0.8, L.desk.z + 1.0), { color: 0xfff2dc, radius: 2.2, i: 0.3 * sm((F - K.slam[0]) / 8) });   // near-white: a gold key turned the wall green
   npr.render(W.scene, camera);
 }
 function focusPoint(F) {

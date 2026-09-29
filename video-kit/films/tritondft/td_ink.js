@@ -235,6 +235,6 @@ export function lettering(W, ctx, g) {
   if (dg >= 0 && dg < 24) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 24, rot: -0.12, scale: 1.0, popF: 4 }); }
   // the tiny hourglass runs dry: TINK! (the same instant the answer pops out of the tube)
   const tk = F - K.land + 2;
-  if (tk >= 0 && tk < 16) { const t = W.tiny.g.position, c = prj(W, ctx, [t.x, 0.42, t.z]); if (c.front) drawWord(g, SPR.tink, F, clamp(c.x - 190, 300, 1620), clamp(c.y + 20, 260, 820), tk, { life: 16, rot: 0.1, scale: 1.0, popF: 3 }); }
+  if (tk >= 0 && tk < 16) { const t = W.tiny.g.position, c = prj(W, ctx, [t.x, 0.42, t.z]); if (c.front) drawWord(g, SPR.tink, F, clamp(c.x - 270, 300, 1620), clamp(c.y - 10, 260, 820), tk, { life: 16, rot: 0.1, scale: 1.0, popF: 3 }); }
   iris(W, ctx, g, F, jr);
 }
