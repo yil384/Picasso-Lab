@@ -109,6 +109,27 @@ Fixes made for round 4 (all spot-checked on single frames at 960×540):
 - Hoot's question is an opaque cream thought bubble below the plate; CLANK! clear of the pan; a hand-lettered PW.X header
   on the QE input; THUNK! on the giant's landing; bigger plan tickets; the tape ends in front of Loupe.
 
+## Round 4 — full 960×540 pass after the round-3 fixes (`snaps/full4`)
+
+| lens | score | verdict |
+|---|---|---|
+| CD | **8.2** | Both round-3 blockers fixed (payoff faces clear, no ghosted multi-exposures); the lens→knob iris is the best transition; the whole story reads without words. New blocker: the S3b→S4 whip lost its smear and strobed as sharp jumps (f318–325). Should: VROOOM has no visible reaction, crowded left third in the payoff hiding the result, hourglasses move without Hoot's hand, a quiet lap. |
+| TA | *(pending when round 5 was rendered; see round 5)* | |
+| DFT | **8.6** | No must-fix: the vc-relax now plays ~18 f on a locked camera against a bold ghost; density matte; PW.X on the input; honest hourglasses (TINK at f590), 42-cell scorecard with one ✗ never on the Si result. Should: the scorecard hid the result in Hoot's wings; the 68 numeral covers the giant's one-load pile; band-gap framing in S7; pennies read as two stacks. |
+| WEB | **8.2** | Poster f664 confirmed (settled, all five faces, plate in frame). Blockers: the iris still read as a dark dropout (f382–385); the film ~3× darker/heavier-inked than the siblings (poster 21% of pixels under luma 0.15 vs ~7%). Should: CLANK! under the LIVE pill, THUNK! in the bottom fade, S7 framed low, dark back of the turned page, brake speed-line flicker. |
+
+Fixes made for round 5:
+- Whip smear now also measures the on-screen slide of the focus point, so trucks and cranes smear (S3b→S4 streaks
+  horizontally again); the brake stops smearing at its first landing.
+- Iris: a true iris match inside a cream halftone paper panel (closes onto the lens, the knob replaces it inside the
+  same circle, opens again) — no dark frame at all.
+- Value: ink ~35% thinner than style-comic, lighter halftone/hatch, self-coloured offset-print lines (selfInk 0.42),
+  lighter numeral/desk outlines, more paper grain: the poster's dark share 24% → ~13% (card band).
+- Payoff: scorecard moved left behind 98%, the result (cell + band-gap planks) visible at Hoot's chest; pennies laid
+  out countably (a row of four, two extra at 5×5).
+- CLANK! low beside the pan (clear of the LIVE pill), THUNK! above the tiny hourglass (out of the fade), the turned page
+  flat-lit cream, S7 framed higher at band-gap height.
+
 ## Handoff status
 - Done: storyboard (4 angles judged), full 720-frame scene in `films/tritondft/`, review round 0 (storyboard) and round 1 (first cut: CD 6.4 / TA 6.7 / DFT 6.8 / WEB 7.0).
 - Round-1 fixes are committed and were spot-checked on single frames at 960×540 (whip instead of the smoke cover, S5 re-block + CLANK!, S8a/S8b payoff framing on the card, cream/sky grade, plate clear of the LIVE pill, SFX lettering, pillow pose, held result).
