@@ -322,7 +322,7 @@ function updateCart(F) {
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k) + 0.45 * Math.sin(Math.PI * k)];   // arcs in front of the giant
-  if (F >= K.handBack[0]) { const tp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0)), b = sm((F - K.handBack[0]) / (K.handBack[1] - K.handBack[0])), ts = W.tri.root.scale.x; p = [lerp(p[0], tp.x + 0.12 * ts, b), lerp(p[1], tp.y - 0.14 * ts, b), lerp(p[2], tp.z + 0.1 * ts, b)]; }
+  if (F >= K.handBack[0]) { const tp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0)), b = sm((F - K.handBack[0]) / (K.handBack[1] - K.handBack[0])), ts = W.tri.root.scale.x; p = [lerp(p[0], tp.x + 0.3 * ts, b), lerp(p[1], tp.y - 0.1 * ts, b) + 1.0 * Math.sin(Math.PI * b), lerp(p[2], tp.z + 0.18 * ts, b) + 0.5 * Math.sin(Math.PI * b)]; }   // over the giant's cap
   C.position.set(...p); C.rotation.set(0, 0.3 + (F < K.land + 8 ? (1 - k) * 4 : 0), 0);
   C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.56, k) : 0.56 * (F >= K.handBack[0] ? lerp(1, 0.75, sm((F - K.handBack[0]) / 6)) * W.tri.root.scale.x : 1));   // small in Tri's hand, squeezed with Tri
 }
@@ -478,7 +478,7 @@ function updateTube(F) {
 // k: 0 Tri, 1 Clack (late: rides the 68x down), 2 Loupe, 3 Tilt
 // one owner per number, faces clear: Tri stands on the paper tower, Clack photobombs at the far left of the desk (after
 // 68x has landed on its own), Loupe peeks over its scorecard (clear of the lamp), Tilt behind the $0.04 it tips its pennies into
-const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.72, 0.0, -0.3), deskP(-1.3, 0, 0.42), deskP(1.5, 0, 0.1)];   // Loupe in front of the lamp, its lens above 98%
+const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.72, 0.0, -0.3), deskP(-1.24, 0, 0.64), deskP(1.5, 0, 0.1)];   // Loupe on the 98% spot: it rides its numeral up
 const OUT_T = [K.outs[0], K.slam[1] + 2, K.outs[1], K.outs[2]];
 function outState(k, F) {
   const t0 = OUT_T[k];
@@ -488,9 +488,10 @@ function outState(k, F) {
   if (F >= K.dive[k] + 9) return F < NF - 3 ? hidden : null;
   const mouth = W.tube.curve.getPointAt(0), spot = OUT_SPOT[k];
   const a = F - t0, k1 = clamp(a / 12);
-  let pos = [lerp(mouth.x, spot[0], k1), lerp(mouth.y - 0.1, spot[1], k1) + 0.4 * Math.sin(Math.PI * k1), lerp(mouth.z, spot[2], k1)];
+  let pos = [lerp(mouth.x, spot[0], k1), lerp(mouth.y - 0.1, spot[1], k1) + 0.4 * Math.sin(Math.PI * k1), lerp(mouth.z, spot[2], k1) + 0.45 * Math.sin(Math.PI * k1)];   // arcs toward camera, in front of the lamp and the giant
   let sq = a < 12 ? -0.12 * Math.sin(Math.PI * k1) : ringv(a - 12, 0.16, 1.0, 0.25), expr = a < 12 ? 'surprised' : 'happy', arm = -0.5;
   const yaw = faceYaw(pos, [spot[0] * 0.8 + L.desk.x * 0.2, 0, spot[2] + 3]);
+  if (k === 2 && F >= K.slam[0]) pos[1] += 0.34 * Math.max(0, ob((F - K.slam[0] - 1) / 6)) * (1 - sm((F - K.puffs) / 4));   // stands on its 98% as it springs up
   if (F >= K.slam[2] + 6) { const ph = ((F + k * 5) % 14) / 14; pos[1] += 0.08 * Math.sin(Math.PI * ph); arm = -1.2 - 1.2 * Math.sin(Math.PI * ph); expr = 'grin'; }
   if (win(F, K.dive[k] - 4, K.dive[k])) { sq = 0.16 * sm((F - K.dive[k] + 4) / 3); expr = 'grin'; }   // crouch before the spring
   // at the brass mouth an agent is squeezed thin and small (it must fit the 0.1-radius pipe): popping out it grows from
@@ -499,7 +500,7 @@ function outState(k, F) {
   if (F >= K.dive[k]) {
     const b = clamp((F - K.dive[k]) / 9), under = [mouth.x, mouth.y - 0.55, mouth.z];
     pos = b < 0.6 ? [lerp(pos[0], under[0], sm(b / 0.6)), lerp(pos[1], under[1], sm(b / 0.6)) + 0.25 * Math.sin(Math.PI * b / 0.6), lerp(pos[2], under[2], sm(b / 0.6))]
-      : [mouth.x, lerp(under[1], mouth.y - 0.05, ic((b - 0.6) / 0.4)), mouth.z];
+      : [mouth.x, lerp(under[1], mouth.y - 0.16, ic((b - 0.6) / 0.4)), mouth.z];
     shrink = b < 0.5 ? 1 : lerp(1, 0.18, sm((b - 0.5) / 0.5)); sq = -0.2 - 0.25 * sm((b - 0.4) / 0.6); expr = 'grin';
   }
   return { pos, yaw, sq, expr, arm, a, shrink };
@@ -582,6 +583,7 @@ function updateClack(F) {
   }
   if (win(F, K.roar + 22, K.S3b)) expr = 'grin';
   if (win(F, K.huff - 8, K.huff + 10)) { expr = 'strain'; sq = 0.08 * arc(F, K.huff - 8, K.huff + 10); }
+  if (win(F, K.S6 - 4, K.S7)) { const b = arc(F, K.S6 - 4, K.S7); pos = station(ST.exec, L.stR + 0.14 * Math.min(1, b * 3)); }   // steps back so the lapping cell clears its carriage
   const out = outState(1, F);
   if (out) { pos = out.pos; yaw = out.yaw; sq = out.sq; expr = out.expr; armR = out.arm; armL = -out.arm; }
   R.root.visible = !out || !out.hidden;
@@ -956,7 +958,7 @@ const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the
   return { tg: [L.desk.x + 0.1, 0.38, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.15, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };   // a touch higher: Hoot's face clears the 68
 };
 // [a, b, cap px, 'h' = horizontal smear only: vertical tilts would streak like rain]
-const WHIPS = [[80, 100, 0, 'h'], [101, 108, 40, 'h'], [230, 243, 40, 'h'], [280, 294], [312, 330, 0, 'h'], [452, 466, 60], [500, 509, 60], [538, 548, 40, 'h'], [561, 588, 0, 'h'], [618, 630, 40]];
+const WHIPS = [[80, 100, 48, 'h'], [101, 108, 30, 'h'], [230, 243, 30, 'h'], [280, 294, 56], [312, 330, 56, 'h'], [452, 466, 50], [500, 509, 44], [538, 548, 30, 'h'], [561, 588, 56, 'h'], [618, 630, 24]];   // every streak capped (design px)
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);

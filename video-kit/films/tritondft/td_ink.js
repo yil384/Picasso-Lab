@@ -220,9 +220,9 @@ export function lettering(W, ctx, g) {
   const vr = F - K.roar;
   if (vr >= 0 && vr < 18) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 90, 330, 560), vr, { life: 18, rot: -0.1, scale: 1.05, popF: 4 }); }
   const ck = F - K.crash;
-  if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 330, 420, 1440), clamp(pp.y + 10, 360, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
+  if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 60, 420, 1440), clamp(pp.y + 190, 360, 760), ck, { life: 20, rot: 0.12, scale: 0.78, popF: 3 }); }
   const dg = F - K.ding;
-  if (dg >= 0 && dg < 16) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 16, rot: -0.12, scale: 1.0, popF: 4 }); }
+  if (dg >= 0 && dg < 16) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 340, 380, 1200), clamp(bp.y - 195, 250, 480), dg, { life: 16, rot: -0.12, scale: 1.0, popF: 4 }); }
   // the giant hourglass lands upright: THUNK! (both clocks start here)
   const th = F - K.clock;
   if (th >= 0 && th < 16) { const gp = W.giant.g.position, c = prj(W, ctx, [gp.x + 0.62, 0.3, gp.z + 0.3]); if (c.front) drawWord(g, SPR.thunk, F, clamp(c.x + 40, 300, 1620), clamp(c.y - 200, 280, 610), th, { life: 16, rot: -0.08, scale: 1.0, popF: 3 }); }
@@ -240,7 +240,12 @@ export function lettering(W, ctx, g) {
     g.fillStyle = PAL.ink; g.save(); g.translate(s * 0.05, s * 0.07); path(); g.fill(); g.restore();
     g.lineWidth = Math.max(3, s * 0.1); g.strokeStyle = PAL.ink; path(); g.stroke();
     g.fillStyle = PAL.cream; path(); g.fill();
-    g.fillStyle = 'rgba(11,53,88,0.13)'; for (const [dx, dy, r] of lobes.slice(0, 3)) { g.beginPath(); g.arc(c.x + dx * s + r * s * 0.26, c.y + dy * s + r * s * 0.28, r * s * 0.26, 0, TAU); g.fill(); }
+    g.save(); path(); g.clip();
+    if (W.paperCanvas) { g.globalCompositeOperation = 'multiply'; g.drawImage(W.paperCanvas, 0, 0, ctx.DW, ctx.DH); g.globalCompositeOperation = 'source-over'; }
+    g.fillStyle = 'rgba(2,132,199,0.3)';
+    const cell = Math.max(5, s * 0.1);
+    for (let y = c.y - s * 1.2; y < c.y + s * 1.2; y += cell) for (let x = c.x - s * 1.8; x < c.x + s * 1.8; x += cell) { const shade = clamp((y - c.y) / (s * 0.9) + 0.25, 0, 1); const r = cell * 0.42 * shade; if (r > 0.6) { g.beginPath(); g.arc(x + ((y / cell) % 2 ? cell / 2 : 0), y, r, 0, TAU); g.fill(); } }
+    g.restore();
     g.restore();
   });
   // the idea: an opaque cream thought bubble (normal blend) right of Hoot's head, below the TRITONDFT plate, holding a

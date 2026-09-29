@@ -184,7 +184,7 @@ export function buildSilicon(W, A = 0.5, parent = null) {
   const g = new THREE.Group(); (parent || scene).add(g);
   const inner = new THREE.Group(); g.add(inner);
   const atomGeo = new THREE.SphereGeometry(A * 0.1, 24, 16), inGeo = new THREE.SphereGeometry(A * 0.11, 24, 16);
-  const atoms = cell.atoms.map((p, i) => add(i >= 14 ? inGeo : atomGeo, { color: COL.cream, rim: 0.7, toneBias: 0.1, seed: 300 + i, hatch: 0.6 }, { outline: 0.55 }, p.map((v) => v * A + c0), [0, 0, 0], inner));
+  const atoms = cell.atoms.map((p, i) => add(i >= 14 ? inGeo : atomGeo, { color: COL.cream, rim: 0.7, toneBias: 0.1, seed: 300 + i, hatch: 0.6 }, { outline: 0.85 }, p.map((v) => v * A + c0), [0, 0, 0], inner));   // hero prop: a bolder silhouette than the lighter set ink
   const bondGeo = new THREE.CylinderGeometry(A * 0.028, A * 0.028, 1, 10);
   const bonds = cell.bonds.map(([a, b]) => {
     const pa = new THREE.Vector3(...cell.atoms[a]).multiplyScalar(A).addScalar(c0), pb = new THREE.Vector3(...cell.atoms[b]).multiplyScalar(A).addScalar(c0);

@@ -427,9 +427,10 @@ void main() {
   vec2 uvP = uv + L_misreg * uS * px;
   vec4 P;
   if (dot(uSmear, uSmear) > .25) {
-    P = vec4(0.);
-    for (int i = 0; i < 9; i++) P += textureLod(tPaint, uvP + uSmear * px * (float(i) / 8. - .5), 0.);
-    P /= 9.;
+    P = vec4(0.);                              // continuous streak (17 taps, tent-weighted): no stepped copies
+    float wsum = 0.;
+    for (int i = 0; i < 17; i++) { float t = float(i) / 16. - .5, w = 1. - abs(t) * 1.2; P += w * textureLod(tPaint, uvP + uSmear * px * t, 0.); wsum += w; }
+    P /= wsum;
   } else {
     P = paintAt(uvP, coc * L_dofMax * uS);
   }
@@ -704,11 +705,13 @@ void main() {
   }
 
   // whip-pan speed streaks
+  // (only on real whips - a long streak - and only towards the frame edges, never full-frame hairlines on slow moves)
   float sm = length(uSmear);
-  if (sm > .5) {
+  if (sm > 22. * uS) {
     vec2 dir = uSmear / sm, nrm = vec2(-dir.y, dir.x);
-    float st = vnoise(vec2(dot(dp, nrm) * .3, dot(dp, dir) * .003 + uBoilSeed));
-    col = mix(col, paper, smoothstep(.72, .8, st) * clamp(sm / (40. * uS), 0., 1.) * .8);
+    float st = vnoise(vec2(dot(dp, nrm) * .22, dot(dp, dir) * .003 + uBoilSeed));
+    float edgeM = smoothstep(.2, .46, abs(dot(uv - .5, nrm)));
+    col = mix(col, paper, smoothstep(.74, .8, st) * clamp((sm - 22. * uS) / (30. * uS), 0., 1.) * .75 * edgeM);
   }
 
   // comic concentration lines (manga 集中線): tapered ink wedges converging on a focal point, a clear
