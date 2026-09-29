@@ -727,6 +727,11 @@ function updateProps(F) {
     S.rotation.set(0, lerp(W.clack.root.rotation.y, -Math.PI / 2, k), 0.3 * Math.sin(Math.PI * k)); S.scale.set(1, 1 - 0.8 * sm((F - K.feed[1] + 4) / 4), 1);
   }
   updateTape(F);
+  { // Hoot turns ONE page of the lattice book in S3b (cube -> the honeycomb underneath: still not silicon); reset at f330,
+    // while the desk is off camera, so S1 / S8 / S9 see the unturned book
+    const t = win(F, K.page[0], 330) ? sm((F - K.page[0]) / (K.page[1] - K.page[0])) : 0;
+    W.flip.rotation.set(0, 0, Math.PI * t); W.flip.position.y = 0.085 + 0.06 * Math.sin(Math.PI * t);
+  }
   { // the scorecard: pops up on the desk as Loupe lands, folds away as Loupe dives back into the tube
     const on = F >= K.outs[1] + 10 && F < K.dive[2] + 4, k = on ? ob((F - K.outs[1] - 10) / 6) * (1 - sm((F - K.dive[2] + 2) / 6)) : 0;
     W.scoreG.visible = k > 0.02; W.scoreG.scale.set(Math.max(0.02, k), Math.max(0.02, k), Math.max(0.02, k));
@@ -826,9 +831,9 @@ const rigCell = (F) => {      // tilt down to the silicon cell: it breathes and 
   const jp = jobPos(F), k = sm((F - 236) / 10);
   return { tg: [jp[0], 0.42, jp[2]], az: lerp(0.62, 0.5, k), el: lerp(0.22, 0.26, k), r: lerp(1.6, 1.45, k), fov: 32, roll: 0.0 };   // locked while the cell relaxes
 };
-const rigS3b = (F) => {       // Hoot's eye level, slow push; both hourglasses in frame
-  const k = sm((F - K.S3b) / 40);
-  return { tg: [HT[0] - 0.05, 0.56, HT[2] + 0.55], az: lerp(-0.08, 0.0, k), el: 0.06, r: lerp(3.2, 2.8, k), fov: 30, roll: 0 };
+const rigS3b = (F) => {       // low at the desk edge: the tiny hourglass sharp in the foreground, Hoot and the giant behind it
+  const k = sm((F - K.S3b) / 40), m = [lerp(HT[0], TINY[0], 0.55), 0.46, lerp(HT[2], TINY[2], 0.5)];
+  return { tg: m, az: lerp(0.36, 0.28, k), el: lerp(0.1, 0.07, k), r: lerp(2.35, 2.05, k), fov: 32, roll: 0.02 };
 };
 const rigLoupe = (F) => {     // Loupe and its gauge side by side, the lens three-quarters to camera (its eye reads); slow push
   const an = station(ST.anlz), gp = station(ST.anlz - 0.36, 1.5), k = sm((F - K.S4) / 30);
@@ -863,9 +868,12 @@ const rigS7 = (F) => {        // gauge -> tilt up with the planks -> ride with t
   if (F < K.suck[0] - 2) return mixRig(cell, ride, io((F - K.toFunnel[0] - 2) / 8));
   return mixRig(ride, up, io((F - K.suck[0] + 2) / 8));
 };
-const rigS8a = (F) => {       // medium on Hoot and both hourglasses: the answer lands as the tiny one runs dry
-  const k = sm((F - K.S8a - 8) / 30);
-  return { tg: [L.desk.x + lerp(0.05, 0.1, k), 0.5, L.desk.z - 0.25], az: lerp(0.1, 0.02, k), el: 0.12, r: lerp(2.7, 2.35, k), fov: 38, roll: lerp(0.03, 0, k) };
+const rigS8a = (F) => {       // medium on Hoot and both hourglasses; a push in on the hourglasses as the tiny one runs dry
+  const k = sm((F - K.S8a - 8) / 30), p = arc(F, K.land - 12, K.land + 8);
+  const q = { tg: [L.desk.x + lerp(0.05, 0.1, k), 0.5, L.desk.z - 0.25], az: lerp(0.1, 0.02, k), el: 0.12, r: lerp(2.7, 2.35, k), fov: 38, roll: lerp(0.03, 0, k) };
+  const mid = [lerp(TINY[0], GIANT[0], 0.4), 0.36, lerp(TINY[2], GIANT[2], 0.4)];
+  q.tg = q.tg.map((v, i) => lerp(v, mid[i], 0.55 * p)); q.r -= 0.7 * p; q.el -= 0.04 * p;
+  return q;
 };
 const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the bottom, faces above the numerals); slow arc
   const a = sm((F - K.S8b) / 60);

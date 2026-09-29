@@ -13,6 +13,7 @@ export async function bakeLettering(W) {
   SPR.vroom = await bakeWord(W.THREE, 'vroom2', 'VROOOM', 150, { ...sfx(6), fill: PAL.pop, shade: PAL.popD, arc: 0.14, seed: 4 }, 3);
   // DING: an upright, well-spaced I so it never jams into the N ('DWG'); CLANK in cream so it stands off the teal wainscot
   SPR.ding = await bakeWord(W.THREE, 'ding3', 'DING!', 140, { ...sfx(5), gap: 0.26, jaunt: 0.12, skew: -0.14, fill: PAL.gold, shade: PAL.pop, arc: 0.06, seed: 7 }, 3);
+  SPR.tink = await bakeWord(W.THREE, 'tink1', 'TINK!', 70, { ...sfx(5), gap: 0.2, jaunt: 0.2, fill: PAL.skyP, shade: PAL.sky, arc: 0.04, seed: 13 }, 3);
   SPR.clank = await bakeWord(W.THREE, 'clank3', 'CLANK!', 120, { ...sfx(6), fill: PAL.cream, shade: PAL.pop, arc: -0.08, seed: 9 }, 3);
 }
 
@@ -230,5 +231,8 @@ export function lettering(W, ctx, g) {
   if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 160, 420, 1500), clamp(pp.y + 60, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;
   if (dg >= 0 && dg < 24) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 24, rot: -0.12, scale: 1.0, popF: 4 }); }
+  // the tiny hourglass runs dry: TINK! (the same instant the answer pops out of the tube)
+  const tk = F - K.land + 2;
+  if (tk >= 0 && tk < 16) { const t = W.tiny.g.position, c = prj(W, ctx, [t.x, 0.42, t.z]); if (c.front) drawWord(g, SPR.tink, F, clamp(c.x - 190, 300, 1620), clamp(c.y + 20, 260, 820), tk, { life: 16, rot: 0.1, scale: 1.0, popF: 3 }); }
   iris(W, ctx, g, F, jr);
 }
