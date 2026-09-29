@@ -23,10 +23,10 @@ for (const m of P.MOVERS) {
   console.log('mover', m.k, 'nearest', ds[0][0].toFixed(2), 'partner?', P.ATOMS[ds[0][1]] === P.partnerOf(m), 'second', ds[1][0].toFixed(2), 'ratio', (ds[1][0] / P.PAIR).toFixed(2));
 }
 
-// plan 1 (the verifier's catch): swap the front row's two left columns. At the bump exactly two ghosts touch, no third
+// plan 1 (the verifier's catch): swap the front row's middle and right columns. At the bump exactly two ghosts touch, no third
 // ghost or route is near the bump point, and the swap is plan 1's only violation (no ghost ever meets a real atom).
 {
-  const SWAP = { 0: 1, 1: 0 }, WRONG = P.MOVERS.map((m) => m.pr === 1 && m.pc in SWAP);
+  const SWAP = { 1: 2, 2: 1 }, WRONG = P.MOVERS.map((m) => m.pr === 1 && m.pc in SWAP);
   const path = (m, p) => P.planXZ(m, p, SWAP);
   const [a, b] = P.MOVERS.filter((_, i) => WRONG[i]);
   let pb = -1, X = null;
@@ -42,5 +42,5 @@ for (const m of P.MOVERS) {
   }
   console.log('plan1 bump at p', pb.toFixed(3), 'point', X.map((v) => v.toFixed(3)).join(','), 'ghost dists to it', near.map((d) => d.toFixed(2)).join(' '),
     '| nearest other route', routeNear.toFixed(2), '| nearest ghost-to-atom before the bump', ghostAtom.toFixed(2));
-  console.log('r (Pip circle)', P.RINT, 'dock inside r:', P.PAIR < P.RINT, '| circles on the 1.4 row pitch touch?', 2 * P.RINT >= 1.4);
+  console.log('r (Pip circle)', P.RINT, 'dock inside r:', P.PAIR < P.RINT, '| circles on the row pitch touch?', 2 * P.RINT >= P.PROW[1] - P.PROW[0], '| lane clearance', P.LANE);
 }

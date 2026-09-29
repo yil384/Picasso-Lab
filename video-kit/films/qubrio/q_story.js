@@ -41,8 +41,8 @@ export const LAYOUT = {
   plate: P.PLATE,
   zones: [{ ...P.STORE, color: '#c9bde9' }, { ...P.ZONE, color: '#7c3aed' }],
   sites: [],
-  objective: [(P.ZONE.x0 + P.ZONE.x1) / 2, 3.6, (P.ZONE.z0 + P.ZONE.z1) / 2 - 0.2],
-  posts: [[-6.4, -3.8, 1.8, 'mirror', 0.6], [7.8, -3.6, 1.5, 'lens', 1.1], [-6.6, 3.4, 1.2, 'box', 0.7]],
+  objective: [(P.ZONE.x0 + P.ZONE.x1) / 2, 4.3, (P.ZONE.z0 + P.ZONE.z1) / 2 - 0.2],
+  posts: [[-6.4, -3.8, 1.8, 'mirror', 0.6], [-8.6, -0.8, 1.5, 'lens', 1.1], [-6.6, 3.4, 1.2, 'box', 0.7]],
   laser: [-6.8, -7.0, 0.25],
   cables: [{ color: 0x4b2a9e, pts: [[4.6, -2.4], [6.0, -3.8], [3.4, -5.6], [0.2, -5.2], [-3.0, -5.8], [-6.4, -5.4]] }],
   wall: { z: -10.5, x0: -24, x1: 24, y1: 15, sideX0: -13, sideX1: 15, sideZ1: 14,
@@ -84,8 +84,11 @@ export async function build(ctx, { renderer }, Q) {
   const smallGeo = new THREE.SphereGeometry(P.R * 0.62, 28, 18);
   W.atomMat = (seed) => ({ color: COL.atom, hatch: 0.7, spec: 0.5, receive: false, toneBias: 0.14, rim: 1, seed, hatchMode: 'planar', hatchDir: [1, -1, 0.3], hatchDir2: [0.2, 1, 1] });
   const slot = (i) => [(i < 3 ? -0.13 : 0.13), 0.2, (i % 3 - 1) * 0.26];
-  W.pile = [0, 1, 2, 3].map((i) => { const m = add(smallGeo, W.atomMat(60 + i), { outline: 0.7 }); const s = slot(i); m.position.set(L.xA - 0.66 + s[0], s[1], L.z + s[2]); return m; });
-  W.tray = [0, 1, 2, 3, 4, 5].map((i) => { const m = add(smallGeo, W.atomMat(70 + i), { outline: 0.7 }); const s = slot(i); m.position.set(L.xB + 0.66 + s[0], s[1], L.z + s[2]); return m; });
+  // PowerMove's cargo in its own grey-lilac (not chip qubits); all of it shares one surface
+  const pmMat = npr.surface({ ...W.atomMat(60), color: 0xb3abc8, toneBias: 0.05 });
+  W.pmMat = pmMat;
+  W.pile = [0, 1, 2, 3].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slot(i); m.position.set(L.xA - 0.66 + s[0], s[1], L.z + s[2]); return m; });
+  W.tray = [0, 1, 2, 3, 4, 5].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slot(i); m.position.set(L.xB + 0.66 + s[0], s[1], L.z + s[2]); return m; });
 
   // atoms + pedestals
   const atomGeo = new THREE.SphereGeometry(P.R, 44, 30);
@@ -97,20 +100,21 @@ export async function build(ctx, { renderer }, Q) {
   // AOD lines: amber dashes laid on the plate (light on the plate, no outline)
   const amb = decal(0xffb020, { flat: 0.6, glow: 0.5, receive: false });
   W.aodRows = P.MROW.map(() => add(dashGeo(6.4, { width: 0.1, step: 0.3, dash: 0.19 }), amb, { cast: false }));
-  W.aodCols = P.MCOL.map(() => add(dashGeo(3.0, { width: 0.1, alongZ: true, step: 0.3, dash: 0.19 }), amb, { cast: false }));
+  W.aodCols = P.MCOL.map(() => add(dashGeo(3.0, { width: 0.12, alongZ: true, step: 0.3, dash: 0.19 }), amb, { cast: false }));
 
   // plate marks: placement circles (ochre pencil), dock dots, plan arrows (graphite), the verifier's ink ring
   const pencil = decal(OCHRE, { flat: 0.75, glow: 0.2, receive: true });
   const graphite = decal(0x3a2f66);
   W.circles = P.PARTNERS.map((p, k) => add(stripGeo(circlePts(P.PCOL[p.c], P.PROW[p.r], P.RINT, Math.PI, 1, 80, 0.012, k), (t) => 0.036 + 0.01 * Math.sin(t * 9)), pencil, { cast: false }));
   W.dockDots = P.MOVERS.map((m) => { const [x, z] = P.dockXZ(m); return add(stripGeo(circlePts(x, z, 0.1, 0, 1, 24), 0.1), pencil, { cast: false }); });
-  const mkArrow = (m, bad) => {   // the plan's route for mover m, sampled along the AOD path (starts clear of the atom)
+  const mkArrow = (m, bad, mat = graphite) => {   // the plan's route for mover m, sampled along the AOD path (starts clear of the atom)
     const home = P.homeXZ(m), pts = [];
-    for (let k = 0; k <= 48; k++) { const q = T.planPath(m, k / 48, bad); if (Math.hypot(q[0] - home[0], q[1] - home[1]) > P.R + 0.08) pts.push(q); }
-    return { body: add(stripGeo(pts, (t) => 0.05 * (0.65 + 0.35 * Math.sin(Math.PI * t))), graphite, { cast: false }), barbs: barbs(pts, 0.34, 0.55).map((b) => add(stripGeo(b, 0.045), graphite, { cast: false })) };
+    const off = m.pr === 0 ? -0.09 : 0.09;   // the two rows' routes run as separate parallel lines (no Y-forks)
+    for (let k = 0; k <= 48; k++) { const q = T.planPath(m, k / 48, bad); if (Math.hypot(q[0] - home[0], q[1] - home[1]) > P.R + 0.08) pts.push([q[0] + off * (1 - P.dockAt(k / 48)) * Math.min(1, k / 8), q[1]]); }
+    return { body: add(stripGeo(pts, (t) => 0.06 * (0.65 + 0.35 * Math.sin(Math.PI * t))), mat, { cast: false }), barbs: barbs(pts, 0.34, 0.55).map((b) => add(stripGeo(b, 0.05), mat, { cast: false })) };
   };
   W.plan1 = P.MOVERS.map((m) => mkArrow(m, true));
-  W.plan2 = P.MOVERS.map((m, i) => (T.WRONG[i] ? mkArrow(m, false) : null));
+  W.plan2 = P.MOVERS.map((m, i) => (T.WRONG[i] ? mkArrow(m, false, pencil) : null));   // the fix is redrawn in ochre
   W.inkRing = add(stripGeo(circlePts(T.CROSS_AT[0], T.CROSS_AT[1], 0.46, -0.6, 1.12, 60, 0.05, 3), (t) => 0.05 * (0.5 + 0.5 * Math.sin(Math.PI * t))), decal(0x1a1530), { cast: false });
 
   // ghosts: pencil stand-ins for the dry run and the simulator (engraved glass: outline, faint tint, glints)
@@ -129,10 +133,10 @@ export async function build(ctx, { renderer }, Q) {
   W.rook = buildLoco(add, scene, { scale: 0.9 });
   W.pencil = buildPencil(add, scene);
   W.loupe = buildLoupe(add, npr, scene, { scale: 1.0 });
-  W.slo = buildSnail(add, scene, { scale: 1.35, atomGeo, atomMat: (i) => W.atomMat(91.7 + i) });
+  W.slo = buildSnail(add, scene, { scale: 1.35, atomGeo, atomMat: () => W.pmMat });
 
   const occ = new Set(W.atoms);
-  for (const g of [W.pip.group, W.pip.legN, W.pip.legP, W.tick.group, W.slo.group, W.rook.group, W.loupe.group, W.gauge.group]) g.traverse((o) => { if (o.isMesh && !o.name.endsWith(':hull')) occ.add(o); });
+  for (const g of [W.pip.group, W.pip.legN, W.pip.legP, W.tick.group, W.slo.group, W.rook.group, W.loupe.group, W.gauge.group, W.pennant.group]) g.traverse((o) => { if (o.isMesh && !o.name.endsWith(':hull')) occ.add(o); });
   W.occluders = [...occ];
   console.log("npr surface ids used:", npr.idsUsed());
   return W;
@@ -190,7 +194,7 @@ export function update(ctx, W, st, Q) {
     m.geometry.setDrawRange(0, 36 * Math.round(n * clamp(ak * 1.2 - r * 0.1))); m.visible = ak > 0.01;
   });
   W.aodCols.forEach((m, c) => {
-    const n = m.geometry.userData.n, z0 = A.rowZ[0] - 0.5, z1 = A.rowZ[1] + 0.5, len = z1 - z0;
+    const n = m.geometry.userData.n, z0 = A.rowZ[0] - 1.1, z1 = A.rowZ[1] + 1.0, len = z1 - z0;   // full-length column rails across both rows
     m.scale.set(1, 1, len / 3.0); m.position.set(A.colX[c], 0.014, (z0 + z1) / 2);
     m.geometry.setDrawRange(0, 36 * Math.round(n * clamp(ak * 1.3 - 0.15 - c * 0.08))); m.visible = ak > 0.01;
   });
@@ -235,18 +239,20 @@ export function update(ctx, W, st, Q) {
   if (fs) { W.pflag.position.set(fs.x, fs.y, fs.z); W.pflag.rotation.set(0, fs.rot + 0.6, fs.planted ? 0.08 * Math.sin(fs.age * 0.9) * Math.exp(-fs.age / 8) : fs.rot); W.pflag.scale.setScalar(Math.max(0.01, fs.k)); }
   const ts = T.tickState(F);
   poseWatch(W.tick, { x: T.TICK.x, z: T.TICK.z, y: ts.y, yaw: ts.yaw, sq: ts.sq, rock: ts.rock, armL: ts.armL, armR: ts.armR, hand: ts.hand, ghost: ts.ghost, crown: ts.crown, bow: ts.bow });
-  const pk = F >= K.lap && F < T.CUT ? ob((F - K.lap) / 6) : 0;
-  posePennant(W.pennant, pk, sm((F - K.lap - 3) / 8), F * 0.35);
+  const pk = F >= K.flagUp && F < T.CUT ? backOut(clamp((F - K.flagUp) / 5)) : 0;   // CLICK at the lap, a beat, then the flag snaps up
+  posePennant(W.pennant, pk, sm((F - K.flagUp) / 4), F * 0.35);
   poseGauge(W.gauge, ts.fid);
   st.slate = T.slateState(F);
   W.slate.group.visible = !!st.slate && st.slate.vis > 0.02;
-  if (st.slate) W.slate.group.scale.setScalar(Math.max(0.01, ob(st.slate.vis)));
+  if (st.slate) { W.slate.group.scale.setScalar(Math.max(0.01, ob(st.slate.vis)) * (1 + 0.07 * st.slate.jolt)); W.slate.group.rotation.z = 0.04 + 0.08 * st.slate.jolt; }
   { const gk = F >= K.tickWake + 4 && F < T.CUT ? ob((F - K.tickWake - 4) / 8) : 0; W.gauge.group.visible = gk > 0.01; W.gauge.group.scale.setScalar(Math.max(0.01, gk)); }
   const ss = T.sloState(F);
   poseSnail(W.slo, { x: ss.x, z: ss.z, yaw: ss.yaw, lean: ss.lean, st: ss.st, sq: ss.sq, sway: ss.sway, stalk: ss.stalk });
-  W.slo.cargo.forEach((m) => { m.visible = ss.loaded; });
+  const sloOn = F >= K.whipG[0] && F < T.CUT;   // PowerMove's crew only shows up for the race (no clutter in S1-S4)
+  W.slo.group.visible = sloOn;
+  W.slo.cargo.forEach((m) => { m.visible = sloOn && ss.loaded; });
   const pileLeft = ss.leg < 0 ? 4 : Math.max(0, 4 - 2 * Math.floor((ss.leg + 1) / 2));
-  W.pile.forEach((m, i) => { m.visible = i < pileLeft; });
+  W.pile.forEach((m, i) => { m.visible = sloOn && i < pileLeft; });
   W.tray.forEach((m, i) => { m.visible = i < ss.delivered; });
   W.scene.updateMatrixWorld(true);
   st.ts = ts; st.ps = ps; st.rs = rs; st.ls = ls; st.ss = ss; st.fs = fs;
@@ -316,19 +322,21 @@ export function drawNPR(ctx, W, st, Q) {
     const k = za < 6 ? 1 : Math.exp(-(za - 6) / 8);
     const rect = [P.ZONE.x0, P.ZONE.x1, P.ZONE.z0, P.ZONE.z1];
     npr.volume({ apex: [tip[0], tip[1] - 0.05, tip[2]], rect, Ty: 0, color: FLOOD, i: 0.75 * k, density: 0.6, shadowed: true, seed: 2 });
-    npr.setProjector({ apex: [tip[0], tip[1], tip[2]], rect, Ty: 0, soft: 0.05, amount: 0.85 * k, point: 0.75, tint: [1.22, 1.1, 1.42], tintAmt: k });   // the zone is the brightest thing on screen
+    npr.setProjector({ apex: [tip[0], tip[1], tip[2]], rect, Ty: 0, soft: 0.05, amount: 0.85 * k, point: 0.75, tint: [1.3, 1.55, 1.3], tintAmt: k });   // lighter violet toward lilac (never pink)   // the zone is the brightest thing on screen
     npr.pointLight(zc, { color: FLOOD, radius: 3.6, i: 0.9 * k });
     if (za < 22) { const c = ctx.project(zc, camera); npr.focusLines({ x: c.x, y: c.y, r0: 420, amount: 0.9 * (1 - za / 22), count: 120, width: 1.3, seed: 3 }); }
     if (za === 0) npr.impact(1, { threshold: 0.55 });
     if (za === 1) npr.impact(1, { threshold: 0.55, invert: true });
   }
   if (za >= 4 && F < T.CUT) st.atomS.forEach((s, i) => { if (P.ATOMS[i].kind === 'store') return; const p = V3(s.x, P.AY, s.z); if (ahead(p)) npr.glowAt(ctx, camera, p, { radius: 0.36, i: 0.3 * Math.exp(-(za - 4) / 40) + 0.1, color: FLOOD, behind: true, seed: i }); });
+  const cz = F - K.steps1[1] + 2;   // the crash zoom onto the bump: radial speed lines while the camera rushes in
+  if (cz >= 0 && cz < 7) { const c = ctx.project(V3(T.CROSS_AT[0], 0.5, T.CROSS_AT[1]), camera); npr.focusLines({ x: c.x, y: c.y, r0: 260, amount: 0.9 * Math.sin(Math.PI * (cz + 1) / 8), count: 120, width: 1.6, seed: 12 }); }
   const wa = F - K.whistle;
   if (wa >= 0 && wa < 14) { const c = ctx.project(V3(T.CROSS_AT[0], 0, T.CROSS_AT[1]), camera); npr.focusLines({ x: c.x, y: c.y, r0: 300, amount: 0.8 * (1 - wa / 14), count: 100, width: 1.2, seed: 9 }); }
   for (const c0 of [K.click, K.pulseClick, K.lap]) if (F >= c0 && F < c0 + 3) { const w = W.tick.crown.getWorldPosition(V3(0, 0, 0)); if (ahead(w)) npr.glowAt(ctx, camera, w, { radius: 0.16, i: 1, color: 0xffe066, rays: 1, rayLen: 0.42, rayCount: 10, seed: 8 }); }
   if (F >= K.lap && F < T.CUT) {
     npr.pointLight(V3(T.TICK.x - 0.4, 2.4, T.TICK.z + 1.2), { color: 0xffc23d, radius: 2.8, i: 0.5 * sm((F - K.lap) / 8) });
-    const fa = F - K.lap;
+    const fa = F - K.flagUp;
     if (fa >= 0 && fa < 14) { const c = ctx.project(W.pennant.flag.getWorldPosition(V3(0, 0, 0)), camera); npr.focusLines({ x: c.x, y: c.y, r0: 380, amount: 0.8 * (1 - fa / 14), count: 110, width: 1.2, seed: 5 }); }
   }
   npr.render(W.scene, camera);
@@ -337,17 +345,17 @@ export function drawNPR(ctx, W, st, Q) {
 // ---------------------------------------------------------------------------------------------------------------
 // ink layer (Canvas2D over the 3D): speed lines, tick marks, bonds, faces, the dial race, verdicts, emotes, lettered props
 /** a pencil-sketch ghost atom at screen point c, radius rp px: paper fill, graphite hatching, dashed double outline, eyes */
-function pencilGhost(g, c, rp, alpha, eyes, spin, gr, fillA = 0.62) {
-  const lw = Math.max(2.2, rp * 0.075);
+function pencilGhost(g, c, rp, alpha, eyes, spin, gr, fillA = 0.62, bold = false) {
+  const lw = bold ? Math.max(5, rp * 0.07) : Math.max(3, rp * 0.1);
   g.save(); g.globalAlpha = alpha;
   g.beginPath(); g.arc(c.x, c.y, rp, 0, TAU); g.fillStyle = `rgba(248,240,222,${fillA})`; g.fill();
   g.save(); g.clip(); g.translate(c.x, c.y); g.rotate(-0.8 + spin);
-  for (let k = -3; k <= 3; k++) stroke(g, [[k * rp * 0.3 + gr.gauss(0, 1), -rp * 1.1], [k * rp * 0.3 + gr.gauss(0, 1.5), rp * 1.1]], lw * 0.55, 'rgba(58,47,102,0.45)');
+  for (let k = -3; k <= 3; k++) stroke(g, [[k * rp * 0.3 + gr.gauss(0, 1), -rp * 1.1], [k * rp * 0.3 + gr.gauss(0, 1.5), rp * 1.1]], lw * 0.55, bold ? 'rgba(58,47,102,0.7)' : 'rgba(58,47,102,0.45)');
   g.restore();
-  g.setLineDash([rp * 0.42, rp * 0.2]); g.lineCap = 'round'; g.strokeStyle = '#3a2f66';
+  if (!bold) g.setLineDash([rp * 0.6, rp * 0.16]); g.lineCap = 'round'; g.strokeStyle = bold ? INK : '#3a2f66';
   for (const [dx, dy, wk] of [[0, 0, 1], [gr.gauss(0, 1.2), gr.gauss(0, 1.2), 0.55]]) { g.lineWidth = lw * wk; g.beginPath(); g.arc(c.x + dx, c.y + dy, rp * (wk < 1 ? 1.04 : 1), spin, spin + TAU); g.stroke(); }
   g.setLineDash([]);
-  const ex = rp * 0.34, ey = c.y - rp * 0.02, es = rp * 0.11;
+  const ex = rp * 0.34, ey = c.y - rp * 0.02, es = rp * (bold ? 0.14 : 0.11);
   for (const sd of [-1, 1]) {
     const x = c.x + sd * ex;
     if (eyes === 'x' || eyes === 'dizzy') { stroke(g, [[x - es, ey - es], [x + es, ey + es]], lw * 0.8, '#3a2f66'); stroke(g, [[x + es, ey - es], [x - es, ey + es]], lw * 0.8, '#3a2f66'); }
@@ -427,17 +435,35 @@ export function inkLayer(ctx, g, W, st, Q) {
     });
   }
   const fr = ctx.boilRng('faces');
-  // Slo's effort on the loaded legs: little huff clouds puffed out behind it (on twos)
+  // Slo's effort on the loaded legs: a small puffed breath cloud + two ink breath ticks behind its head (on twos)
   if (st.ss && st.ss.leg >= 0 && st.ss.leg < 5 && st.ss.loaded) {
-    const tr = T.sloTrip(F), dir = tr.dir;
-    for (let e = 0; e < 3; e++) {
-      const age = ((Math.floor(F / 2) * 2 - K.glide[0]) + e * 6) % 18; if (age > 12) continue;
-      const a3 = V3(st.ss.x - dir * (0.55 + 0.05 * age), 0.55 + 0.04 * age, T.SLO.z - 0.05 * age); if (!v.ahead(a3) || !v.clear(a3, [])) continue;
-      const c = P2(a3), u = v.pxu(a3) * (0.07 + 0.012 * age);
-      g.save(); g.globalAlpha = 1 - age / 13;
-      for (const [dx, dy, rr] of [[0, 0, 1], [0.8, 0.2, 0.7], [-0.7, 0.25, 0.65]]) { g.beginPath(); g.arc(c.x + dx * u, c.y + dy * u, rr * u, 0, TAU); g.fillStyle = '#fff6e0'; g.fill(); g.lineWidth = Math.max(2, u * 0.18); g.strokeStyle = INK; g.stroke(); }
-      g.restore();
+    const tr = T.sloTrip(F), dir = tr.dir, age = (Math.floor(F / 2) * 2 - K.glide[0]) % 10;
+    if (age <= 7) {
+      const a3 = V3(st.ss.x - dir * (0.35 + 0.03 * age), 0.62 + 0.03 * age, T.SLO.z);
+      if (v.ahead(a3) && v.clear(a3, [])) {
+        const c = P2(a3), u = v.pxu(a3) * 0.075, k = 1 - age / 8;
+        g.save(); g.globalAlpha = k;
+        for (const [dx, dy, rr] of [[0, 0, 1], [0.9, 0.25, 0.7], [-0.8, 0.3, 0.65]]) { g.beginPath(); g.arc(c.x + dx * u, c.y + dy * u, rr * u, 0, TAU); g.fillStyle = '#fff6e0'; g.fill(); g.lineWidth = Math.max(2, u * 0.22); g.strokeStyle = INK; g.stroke(); }
+        for (const t of [-0.5, 0.5]) stroke(g, [[c.x - dir * u * 1.4, c.y + t * u], [c.x - dir * u * 2.2, c.y + t * u * 1.4]], Math.max(2, u * 0.2), INK);
+        g.restore();
+      }
     }
+  }
+  // at the flag: the two AOD columns of the bad plan drawn scissoring into an X at the exact point (columns may not cross)
+  if (F >= K.whistle + 2 && F < K.erase[0] + 2 && F < T.CUT) {
+    const k = sm((F - K.whistle - 2) / 5) * (1 - sm((F - K.erase[0] + 2) / 4)), pb = T.CROSS_AT[2];
+    P.MOVERS.forEach((m, i) => {
+      if (!T.WRONG[i]) return;
+      const q0 = T.planPath(m, Math.max(0, pb - 0.12), true), q1 = T.planPath(m, Math.min(1, pb + 0.12), true);
+      const dx = q1[0] - q0[0], dz = q1[1] - q0[1], d = Math.hypot(dx, dz) || 1, L = 0.95;
+      const A3 = V3(T.CROSS_AT[0] - dx / d * L, 0.03, T.CROSS_AT[1] - dz / d * L), B3 = V3(T.CROSS_AT[0] + dx / d * L, 0.03, T.CROSS_AT[1] + dz / d * L);
+      if (!v.ahead(A3) || !v.ahead(B3)) return;
+      const a2 = P2(A3), b2 = P2(B3), w = Math.max(5, v.pxu(A3) * 0.09);
+      g.save(); g.globalAlpha = k; g.setLineDash([w * 2.2, w * 1.4]); g.lineCap = 'butt';
+      g.lineWidth = w * 1.5; g.strokeStyle = INK; g.beginPath(); g.moveTo(a2.x, a2.y); g.lineTo(b2.x, b2.y); g.stroke();
+      g.lineWidth = w; g.strokeStyle = '#ffb020'; g.beginPath(); g.moveTo(a2.x, a2.y); g.lineTo(b2.x, b2.y); g.stroke();
+      g.restore();
+    });
   }
   // eraser crumbs flicking off the rubbed-out routes
   if (st.pen && st.pen.erase) {
@@ -473,13 +499,13 @@ export function inkLayer(ctx, g, W, st, Q) {
       if (ss.hic) { g.globalAlpha = 0.8; stroke(g, [[c2.x - su * 0.25, c2.y + su * 0.3], [c2.x + su * 0.25, c2.y + su * 0.3]], 2.2, INK); g.globalAlpha = clamp(ss.vis * 1.4); }   // set down (the hiccup)
     });
     g.restore();
-    if (ss.fling >= 0 && ss.fling < 16) {   // the flung ghost leaves the board and flies at the lens, thunks off the glass
+    if (ss.fling >= 0 && ss.fling < 12) {   // the flung ghost leaves the board and flies at the lens, thunks off the glass
       const m = P.MOVERS[ss.flungIdx], [x, z] = T.planPath(m, 1, false), s0 = toS(x, z);
-      const u = clamp(ss.fling / 10), k = u * u, tgt = { x: 560, y: 700 };
+      const u = clamp(ss.fling / 7), k = u * u, tgt = { x: 560, y: 700 };
       const c2 = { x: lerp(s0.x, tgt.x, k), y: lerp(s0.y, tgt.y, k) - 140 * Math.sin(Math.PI * u) * 0.6 }, rp = lerp(su * P.R * 1.15, 190, k);
-      if (u < 1) for (let q = 1; q <= 3; q++) { const bk = { x: lerp(s0.x, tgt.x, Math.max(0, k - 0.08 * q)), y: lerp(s0.y, tgt.y, Math.max(0, k - 0.08 * q)) }; stroke(g, [[bk.x, bk.y], [c2.x, c2.y]], 4 + 3 * q, 'rgba(26,21,48,0.25)'); }
-      if (ss.fling >= 10) { const a2 = (ss.fling - 10) / 6; g.save(); g.globalAlpha = 1 - a2; burstMarks({ x: tgt.x, y: tgt.y }, ss.fling - 10, 9, 0, TAU, 150, 260); g.restore(); c2.y += 120 * a2 * a2; }
-      pencilGhost(g, c2, rp, ss.fling < 10 ? 1 : 1 - (ss.fling - 10) / 6, 'x', ss.fling * 0.5, sgr, 0.9);
+      if (u < 1) for (let q = -2; q <= 2; q++) { const bk = { x: lerp(s0.x, tgt.x, Math.max(0, k - 0.3)), y: lerp(s0.y, tgt.y, Math.max(0, k - 0.3)) }, nx = -(c2.y - bk.y), ny = c2.x - bk.x, nl = Math.hypot(nx, ny) || 1, o = q * rp * 0.35 / nl; stroke(g, [[bk.x + nx * o, bk.y + ny * o], [c2.x + nx * o * 0.9, c2.y + ny * o * 0.9]], 5 + 2 * (2 - Math.abs(q)), INK); }   // speed lines
+      if (ss.fling >= 7) { const a2 = (ss.fling - 7) / 5; g.save(); g.globalAlpha = 1 - a2; burstMarks({ x: tgt.x, y: tgt.y }, ss.fling - 7, 9, 0, TAU, 150, 260); g.restore(); c2.y += 120 * a2 * a2; }
+      pencilGhost(g, c2, rp, ss.fling < 7 ? 1 : 1 - (ss.fling - 7) / 5, 'x', ss.fling * 0.5, sgr, 0.95, true);
     }
   }
   for (const f of st.faces) drawFace(g, f, fr);
@@ -490,6 +516,14 @@ export function inkLayer(ctx, g, W, st, Q) {
     g.transform(b.x - a.x, b.y - a.y, -(c.x - a.x), -(c.y - a.y), a.x, a.y);
     const lap = clamp(st.ts.hand);
     if (lap > 0.002) { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 0.98, -Math.PI / 2, -Math.PI / 2 + TAU * lap); g.closePath(); g.fillStyle = 'rgba(124,58,237,0.55)'; g.fill(); }
+    // PowerMove's run in the race: a pencil-grey hatched sweep behind its hand, the rest of the lap after Qubrio's slice
+    const gh = clamp(st.ts.ghost);
+    if (F >= K.glide[0] && F < T.CUT && gh > lap + 0.004) {
+      g.save(); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 0.98, -Math.PI / 2 + TAU * lap, -Math.PI / 2 + TAU * gh); g.closePath();
+      g.fillStyle = 'rgba(141,134,163,0.32)'; g.fill(); g.clip();
+      for (let k = -8; k <= 8; k++) stroke(g, [[k * 0.13 - 1, -1], [k * 0.13 + 1, 1]], 0.018, 'rgba(90,82,120,0.45)');
+      g.restore();
+    }
     g.lineWidth = 0.06; g.strokeStyle = '#9a86c8'; g.setLineDash([0.12, 0.09]);
     g.beginPath(); g.arc(0, 0, 1.08, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(st.ts.ghost)); g.stroke(); g.setLineDash([]);
     g.restore();
@@ -501,6 +535,7 @@ export function inkLayer(ctx, g, W, st, Q) {
     const s = Math.max(110, u * 0.75) * (vd.age < 5 ? backOut(vd.age / 5) : 1), fade = 1 - clamp((vd.age - 17) / 3);
     g.save(); g.globalAlpha = fade; g.translate(clamp(t.x, 200, 1500), clamp(t.y, 260, 760)); g.rotate(-0.12);
     const col = vd.ok ? '#b48cff' : '#f2a922';
+    if (vd.age < 6) for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + 0.3, r0 = s * (0.62 + 0.12 * vd.age / 6), r1 = r0 + s * 0.18 * (1 - vd.age / 6); stroke(g, [[Math.cos(a) * r0, Math.sin(a) * r0], [Math.cos(a) * r1, Math.sin(a) * r1]], Math.max(3, s * 0.035), INK); }   // stamp dust ticks
     if (vd.ok) { const L = [[-0.5 * s, 0], [-0.1 * s, 0.4 * s], [0.6 * s, -0.5 * s]]; stroke(g, L.map(([x, y]) => [x + 6, y + 7]), 0.3 * s, INK); stroke(g, L, 0.3 * s, INK); stroke(g, L, 0.21 * s, col); }
     else for (const [p0, p1] of [[[-0.45, -0.45], [0.45, 0.45]], [[0.45, -0.45], [-0.45, 0.45]]]) { const L = [[p0[0] * s, p0[1] * s], [0, 0], [p1[0] * s, p1[1] * s]]; stroke(g, L.map(([x, y]) => [x + 6, y + 7]), 0.3 * s, INK); stroke(g, L, 0.3 * s, INK); stroke(g, L, 0.21 * s, col); }
     g.restore();
@@ -522,20 +557,23 @@ export function inkLayer(ctx, g, W, st, Q) {
   }
   // "POWERMOVE" on a paper flag stuck in Slo's shell
   {
-    const sh = W.slo.shellG.getWorldPosition(V3(0, 0, 0)), top = sh.clone().add(V3(0, 0.8, 0));
+    const sh = W.slo.shellG.getWorldPosition(V3(0, 0, 0)), top = sh.clone().add(V3(0, 0.64, 0));
     const ownS = []; W.slo.group.traverse((o) => { if (o.isMesh) ownS.push(o); });
-    // the flag springs up at GO (Slo is just a sleeping snail until then); a flag cut by the frame edge is not drawn
-    const up = F < T.CUT ? ob(clamp((F - K.glide[0] + 4) / 6)) * (1 - sm(clamp((F - K.lap - 2) / 8))) : 0;   // wilts when the lap closes
-    const bt = P2(top), ut = v.pxu(top), edge = clamp(Math.min(bt.x - 20, 1900 - bt.x - ut * 1.5, bt.y - 30, 1060 - bt.y - ut * 0.34) / 50);
+    // the flag springs up at GO (Slo is just a sleeping snail until then); it flies LEFT of the pole (away from Tick's dial)
+    // and droops - still legible - when the lap closes; a flag cut by the frame edge fades out
+    const s6 = F >= K.whip2[0] && F < K.whip3[1] ? 0 : 1;   // not in the pulse shot (it would sit on the card's bottom edge)
+    const up = F < T.CUT ? s6 * ob(clamp((F - K.whipG[1] + 2) / 6)) : 0, droop = F < T.CUT ? sm(clamp((F - K.lap - 1) / 8)) : 0;
+    const bt = P2(top), ut = v.pxu(top), edge = clamp(Math.min(bt.x - 20 - ut * 1.5, 1900 - bt.x, bt.y - 30, 1060 - bt.y - ut * 0.34) / 50);
     if (up > 0.02 && edge > 0.02 && v.ahead(sh) && v.clear(top, ownS) && v.clear(sh.clone().add(V3(0, 0.45, 0)), ownS)) {
-      const a = P2(sh.clone().add(V3(0, 0.1, 0))), u = v.pxu(top), b0 = P2(top), b = { x: lerp(a.x, b0.x, up), y: lerp(a.y, b0.y, up) };
+      const a = P2(sh.clone().add(V3(0, 0.1, 0))), u = v.pxu(top), b0 = P2(top), b = { x: lerp(a.x, b0.x, up), y: lerp(a.y, b0.y, up) + droop * u * 0.12 };
       g.save(); g.globalAlpha = edge;
-      stroke(g, [[a.x, a.y], [b.x, b.y]], Math.max(2.5, u * 0.02), INK);
-      const w = u * 1.5 * clamp(up), h = u * 0.3 * clamp(up), wave = Math.sin(F * 0.3) * h * 0.08;
-      const fl = [[b.x, b.y], [b.x + w * 0.5, b.y + wave], [b.x + w, b.y - wave], [b.x + w, b.y + h - wave], [b.x + w * 0.5, b.y + h + wave], [b.x, b.y + h]];
+      stroke(g, [[a.x, a.y], [lerp(a.x, b.x, 0.6) - droop * u * 0.05, lerp(a.y, b.y, 0.6)], [b.x, b.y]], Math.max(2.5, u * 0.02), INK);
+      g.translate(b.x, b.y); g.rotate(-0.55 * droop);
+      const w = u * 1.5 * clamp(up), h = u * 0.3 * clamp(up), wave = Math.sin(F * 0.3) * h * 0.08 * (1 - droop);
+      const fl = [[0, 0], [-w * 0.5, wave + droop * h * 0.15], [-w, -wave + droop * h * 0.3], [-w, h - wave + droop * h * 0.3], [-w * 0.5, h + wave + droop * h * 0.15], [0, h]];
       fillPoly(g, fl, '#e8e0ee'); g.lineWidth = Math.max(2, u * 0.012); g.strokeStyle = INK; g.lineJoin = 'round';
       g.beginPath(); fl.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.closePath(); g.stroke();
-      if (u > 55 && up > 0.85) brushWord(g, 'POWERMOVE', b.x + w / 2, b.y + h / 2, h * 0.46, { fill: '#6b5a8e', key: 0.05, shadow: [0, 0], weight: 0.22, gap: 0.1, fan: 0, jiggle: 0.1, bounce: 0.06, rot: -0.02, chisel: true, skew: -0.12 });
+      if (u > 55 && up > 0.85) brushWord(g, 'POWERMOVE', -w / 2, h / 2 + droop * h * 0.22, h * 0.46, { fill: '#6b5a8e', key: 0.05, shadow: [0, 0], weight: 0.22, gap: 0.1, fan: 0, jiggle: 0.1, bounce: 0.06, rot: -0.02, chisel: true, skew: -0.12 });
       g.restore();
     }
   }
@@ -551,22 +589,22 @@ export function fxLayer(ctx, g, W, st, Q) {
   const tw = sfxState(F - K.whistle, 22);
   if (tw) {
     const hp = W.loupe.head.getWorldPosition(V3(0, 0, 0)), h0 = P2(hp), hu = v.pxu(hp);
-    const p = safe({ x: h0.x - hu * 2.3, y: h0.y - hu * 0.45 }, 380, 1300, 250, 460);   // left of the lens (clear of it and of the crossing)
+    const p = safe({ x: h0.x - hu * 1.7, y: h0.y - hu * 0.75 }, 380, 1150, 330, 470);   // balloon top >= row ~200 (card-safe)   // left of the lens (clear of it, the crossing and the LIVE pill)
     burst(g, p.x, p.y, 270 * tw.pop, 125 * tw.pop, { fill: '#fff6e0', alpha: tw.alpha, seed: 5, spikes: 13 });
     brushWord(g, 'TWEET!', p.x, p.y + 4, 132 * tw.pop, { fill: '#f2a922', shade: '#b8741a', chisel: true, skew: -0.2, ramp: 0.22, rot: -0.12 + tw.wob, alpha: tw.alpha, arc: 12, jitter: r, weight: 0.27 });
   }
   const zp = sfxState(F - K.zap, 26);
   if (zp) {
-    const c = safe(P2(V3(-0.2, 1.1, (P.STORE.z0 + P.STORE.z1) / 2)), 420, 1400, 250, 420);   // over the dark storage, clear of the pairs
-    burst(g, c.x, c.y, 260 * zp.pop, 128 * zp.pop, { fill: '#f2a922', alpha: zp.alpha, seed: 9, spikes: 15 });
-    brushWord(g, 'ZAP!', c.x, c.y + 6, 165 * zp.pop, { fill: '#b48cff', shade: '#5b21b6', chisel: true, skew: -0.2, ramp: 0.25, rot: -0.1 + zp.wob, alpha: zp.alpha, arc: 10, jitter: r, weight: 0.3 });
+    const c = safe(P2(V3(-0.2, 1.1, (P.STORE.z0 + P.STORE.z1) / 2)), 420, 1300, 345, 430);   // over the dark storage, clear of the pairs; burst top >= row 225 (card-safe)
+    burst(g, c.x, c.y, 235 * zp.pop, 112 * zp.pop, { fill: '#f2a922', alpha: zp.alpha, seed: 9, spikes: 15 });
+    brushWord(g, 'ZAP!', c.x, c.y + 6, 148 * zp.pop, { fill: '#b48cff', shade: '#5b21b6', chisel: true, skew: -0.2, ramp: 0.25, rot: -0.1 + zp.wob, alpha: zp.alpha, arc: 10, jitter: r, weight: 0.3 });
   }
   // 4.7x lettered on the pennant (in the flag's plane) and 1.3x on the gauge's tag
-  if (F >= K.lap + 3 && F < T.CUT) {
+  if (F >= K.flagUp + 4 && F < T.CUT) {
     const fl = W.pennant.flag;
     const c = fl.localToWorld(V3(-0.64, -0.31, 0.02)), ex = fl.localToWorld(V3(-0.34, -0.31, 0.02)), ey = fl.localToWorld(V3(-0.64, -0.01, 0.02));
     const o = P2(c), px = P2(ex), py = P2(ey);
-    g.save(); g.globalAlpha = sm((F - K.lap - 3) / 6);
+    g.save(); g.globalAlpha = sm((F - K.flagUp - 4) / 3);   // only once the cloth is out
     g.transform((px.x - o.x) / 100, (px.y - o.y) / 100, -(py.x - o.x) / 100, -(py.y - o.y) / 100, o.x, o.y);
     brushWord(g, '4.7×', 0, 0, 120, { fill: '#7c3aed', shade: '#3b1f8a', chisel: true, skew: -0.14, ramp: 0.12, rot: -0.04, jitter: r, weight: 0.3, fan: 0.04, jiggle: 0.08, shadow: [0.05, 0.06] });
     g.restore();
@@ -575,8 +613,9 @@ export function fxLayer(ctx, g, W, st, Q) {
     const tp = W.gauge.top.getWorldPosition(V3(0, 0, 0)), t = P2(tp), u = v.pxu(tp);
     const k = backOut(clamp((F - K.tagUp) / 6)), sw = 0.05 * Math.sin((F - K.tagUp) * 0.22) * Math.exp(-(F - K.tagUp) / 30);
     const tw2 = Math.max(250, u * 1.25), th = tw2 * 0.46;
-    const ax = t.x + u * 0.14, ay = t.y, x = Math.min(ax + u * 0.3 + tw2 * 0.5, 1860 - tw2 / 2), y = ay + th * 0.15;
-    stroke(g, [[ax, ay], [(ax + x - tw2 / 2) / 2, ay + th * 0.12], [x - tw2 / 2 + th * 0.2, y]], Math.max(3, u * 0.018), INK);
+    const ax = t.x + u * 0.16, ay = t.y, x = Math.min(ax + u * 0.3 + tw2 * 0.5, 1860 - tw2 / 2), y = ay + th * 0.15;
+    stroke(g, [[ax, ay], [(ax + x - tw2 / 2) / 2, ay + th * 0.18], [x - tw2 / 2 + th * 0.2, y]], Math.max(4.5, u * 0.03), INK);   // the string
+    g.beginPath(); g.arc(ax, ay, Math.max(6, u * 0.045), 0, TAU); g.fillStyle = INK; g.fill();   // the knot on Qubrio's column
     g.save(); g.translate(x, y); g.rotate(-0.05 + sw); g.scale(k, k);
     const n = th * 0.3, tag = [[-tw2 / 2 + n, -th / 2], [tw2 / 2, -th / 2], [tw2 / 2, th / 2], [-tw2 / 2 + n, th / 2], [-tw2 / 2, 0]];
     fillPoly(g, tag.map(([a, b]) => [a + 7, b + 8]), INK); fillPoly(g, tag, '#fff6e0');
@@ -585,7 +624,14 @@ export function fxLayer(ctx, g, W, st, Q) {
     brushWord(g, '1.3×', th * 0.12, 2, th * 0.6, { fill: '#7c3aed', shade: '#3b1f8a', chisel: true, skew: -0.14, ramp: 0.12, rot: -0.03, jitter: r, weight: 0.28, fan: 0.03, jiggle: 0.06, key: 0.1 });
     g.restore();
   }
+  // CLICK! at GO (Tick starts both hands) and as PowerMove's hand closes the lap (the cause of the 4.7x)
+  const ck = sfxState(F - K.lap, 8) || sfxState(F - K.click, 12);
+  if (ck) {
+    const cp = W.tick.crown.getWorldPosition(V3(0, 0, 0)), c0 = P2(cp), cu = v.pxu(cp);
+    const c = safe({ x: c0.x + cu * 0.85, y: c0.y - cu * 0.2 }, 300, 1500, 280, 700);
+    brushWord(g, 'CLICK!', c.x, c.y, 78 * ck.pop, { fill: '#fff6e0', shade: '#c9bde9', chisel: true, skew: -0.18, ramp: 0.2, rot: -0.14 + ck.wob, alpha: ck.alpha, arc: 6, jitter: r, weight: 0.3 });
+  }
   postInk(g, st, F);
   const wp = sg(F, K.wipe[0], K.wipe[1], (x) => x);
-  if (wp > 0 && wp < 1) brushWipe(g, wp, { c1: '#4b2a9e', c2: '#7c3aed', bristle: '#f4e6c8', seed: 3, cover: 0.12 });   // full cover ~2-4 frames around the cut
+  if (wp > 0 && wp < 1) brushWipe(g, wp, { c1: '#4b2a9e', c2: '#7c3aed', bristle: '#f4e6c8', seed: 3, cover: 0.0 });   // full cover ~4 frames around the cut
 }

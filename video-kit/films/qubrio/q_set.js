@@ -38,13 +38,15 @@ export function buildSet(npr, scene, L) {
   const P = L.plate, TY = L.tableY;
 
   // ---------------- optical table: dark indigo top with a painted hole grid ----------------
-  const tableTex = canvasTex(1024, 1024, (g, w, h) => {
+  // (the npr surface ignores texture.repeat, so the breadboard's hole grid is painted at its true density: one hole
+  // every 0.8 units over the whole 44 x 26 top, small and dark violet - not giant black ovals)
+  const tableTex = canvasTex(2816, 1664, (g, w, h) => {
     g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
-    for (let k = 0; k < 14; k++) { g.fillStyle = `rgba(160,150,230,${0.10 + 0.08 * hsh(k, 1)})`; g.beginPath(); g.ellipse(hsh(k, 2) * w, hsh(k, 3) * h, 60 + 120 * hsh(k, 4), 40 + 80 * hsh(k, 5), hsh(k, 6) * 3, 0, TAU); g.fill(); }
-    g.fillStyle = '#1c1838';
-    for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { g.beginPath(); g.ellipse(64 + i * 128, 64 + j * 128, 13, 13, 0, 0, TAU); g.fill(); }
+    for (let k = 0; k < 30; k++) { g.fillStyle = `rgba(160,150,230,${0.08 + 0.07 * hsh(k, 1)})`; g.beginPath(); g.ellipse(hsh(k, 2) * w, hsh(k, 3) * h, 60 + 160 * hsh(k, 4), 40 + 110 * hsh(k, 5), hsh(k, 6) * 3, 0, TAU); g.fill(); }
+    g.fillStyle = 'rgba(42,34,80,0.8)';
+    const step = w / 55;
+    for (let i = 0; i < 55; i++) for (let j = 0; j < 32; j++) { g.beginPath(); g.arc((i + 0.5) * step, (j + 0.5) * step, step * 0.11, 0, TAU); g.fill(); }
   });
-  tableTex.wrapS = tableTex.wrapT = THREE.RepeatWrapping; tableTex.repeat.set(14, 9);
   const tSide = { color: COL.tableSide, hatchDir: [0, 1, 0] };
   S.table = add(new THREE.BoxGeometry(44, 0.5, 26), [tSide, tSide, { color: COL.table, map: tableTex, hatchDir: [1, 0, 0.3], noiseScale: 0.5, spec: 0.15, halftone: 0.6 }, tSide, tSide, tSide],
     { outline: 1.0, cast: false }, [0, TY - 0.25, -2]);

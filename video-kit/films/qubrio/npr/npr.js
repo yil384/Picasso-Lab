@@ -423,8 +423,8 @@ void main() {
   vec4 P;
   if (dot(uSmear, uSmear) > .25) {
     P = vec4(0.);
-    for (int i = 0; i < 9; i++) P += textureLod(tPaint, uvP + uSmear * px * (float(i) / 8. - .5), 0.);
-    P /= 9.;
+    for (int i = 0; i < 25; i++) P += textureLod(tPaint, uvP + uSmear * px * (float(i) / 24. - .5), 0.);
+    P /= 25.;
   } else {
     P = paintAt(uvP, coc * L_dofMax * uS);
   }

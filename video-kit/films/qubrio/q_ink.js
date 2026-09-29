@@ -178,7 +178,7 @@ export function drawEmote(g, E, r) {
     const k = backOut(age / 4), fade = 1 - clamp((age - 12) / 5);
     if (fade > 0) {
       g.globalAlpha = fade; g.translate(x + rs * (E.dx ?? 0.95), y - rs * 1.3); g.rotate(E.rot ?? 0.15); g.scale(k, k);
-      const s = Math.max(rs * 1.15, 34);
+      const s = Math.max(rs * 1.15, 34) * (E.sc || 1);
       const bar = ribbon([[0, -s * 0.62], [s * 0.02, -s * 0.12], [0, s * 0.18]], s * 0.3, s * 0.08, false);
       const draw = (dx, dy, col) => { g.save(); g.translate(dx, dy); fillPoly(g, bar, col); g.beginPath(); g.arc(0, s * 0.42, s * 0.11, 0, TAU); g.fillStyle = col; g.fill(); g.restore(); };
       draw(s * 0.06, s * 0.07, INK);
@@ -235,6 +235,7 @@ export function drawEmote(g, E, r) {
 // with staggered starts, full cover is held a few frames (the cut hides under it), then they drag off with ragged
 // ends. Each stroke: a watercolour body (two glazes, wet edge), dry-brush bristle streaks in cream, ink-free.
 // p in [0,1] over the whole wipe; `cover` = fraction of p where full cover holds (centre of the wipe).
+let _dots = null;
 export function brushWipe(g, p, { c1 = '#4b2a9e', c2 = '#7c3aed', bristle = '#f4e6c8', seed = 3, cover = 0.3 } = {}) {
   if (p <= 0 || p >= 1) return;
   const Wd = 1920, Hd = 1080, nS = 5, bh = (Hd + 460) / nS + 46;
@@ -257,9 +258,13 @@ export function brushWipe(g, p, { c1 = '#4b2a9e', c2 = '#7c3aed', bristle = '#f4
     if (p >= outStart) for (let k = 8; k > 0; k--) pts.push([x0 - rag(k + 20) + 40, y0 + bh * k / 9]);
     const RP = pts.map(R);
     const body = i % 2 ? c1 : c2, glaze = i % 2 ? c2 : c1;
+    fillPoly(g, RP.map(([x, y]) => [x + 7, y - 5]), '#b48cff');   // off-register second plate on the edge
     g.save();
     fillPoly(g, RP, body);
     g.clip();   // everything below stays inside the stroke
+    // Ben-Day dots (printed shade) inside the stroke, drifting with it
+    if (!_dots) { _dots = document.createElement('canvas'); _dots.width = _dots.height = 22; const d = _dots.getContext('2d'); d.fillStyle = 'rgba(26,21,48,0.28)'; d.beginPath(); d.arc(5.5, 5.5, 3.2, 0, TAU); d.arc(16.5, 16.5, 3.2, 0, TAU); d.fill(); }
+    g.save(); g.translate(p * 90, 0); g.fillStyle = g.createPattern(_dots, 'repeat'); g.fillRect(-200, y0 - 60, Wd + 800, bh + 120); g.restore();
     // second glaze, offset (wet edge / uneven pigment)
     g.globalAlpha = 0.35; g.translate(0, 10); fillPoly(g, RP, glaze); g.translate(0, -10); g.globalAlpha = 1;
     // dry-brush bristle streaks along the stroke

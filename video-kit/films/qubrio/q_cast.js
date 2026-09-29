@@ -225,7 +225,7 @@ export function buildLoco(add, scene, { scale = 1 } = {}) {
   let puffMat = null;
   for (let k = 0; k < 8; k++) {
     const g = new THREE.Group(); g.visible = false; scene.add(g);
-    const m = add(puffGeo, puffMat || { color: 0xfffaf0, hatch: 0, halftone: 0.15, toneBias: 0.45, spec: 0, rim: 0.5, flat: 0.55 }, { cast: false, outline: 0.9 }, [0, 0, 0], [0, 0, 0], g);
+    const m = add(puffGeo, puffMat || { color: 0xfffaf0, hatch: 0, halftone: 0, toneBias: 0.5, spec: 0, rim: 0.5, flat: 0.85 }, { cast: false, outline: 0.9 }, [0, 0, 0], [0, 0, 0], g);
     puffMat = m.material;
     L.puffs.push(g);
   }
@@ -301,25 +301,30 @@ export function poseLoupe(L, P) {
 // hand-lettered onto it in 2D, in the flag's own plane).
 // ---------------------------------------------------------------------------------------------------------------
 export function buildGauge(add, npr, scene, { hPM = 1.0, x = 0, z = 0, yaw = 0 } = {}) {
-  // the fidelity readout: two glass tubes side by side on one brass plinth - PowerMove's column (Slo's grey-lilac) and
-  // Qubrio's (violet) - with an ink reference bar at PowerMove's level, so 1.3x reads as a plain height comparison
-  const G = { group: new THREE.Group(), hPM, base: 0.4, dx: 0.21 }; scene.add(G.group);
+  // the fidelity readout: two fat tubes side by side on one brass plinth - PowerMove's column (Slo's grey-lilac) and
+  // Qubrio's (violet) - with a bold ink bar at PowerMove's level, so 1.3x reads as a plain height comparison at card size.
+  // Each tube is drawn as its pale inner back wall (open cylinder, back faces) with an ink hull: reads as a glass tube
+  // without default transparency, and the column in front of that wall stays fully visible.
+  const G = { group: new THREE.Group(), hPM, base: 0.6, dx: 0.3 }; scene.add(G.group);   // columns start at the bulb tops: the visible heights compare 1 : 1.3
   G.group.position.set(x, 0, z); G.group.rotation.y = yaw;
   const brass = { color: 0xe6ad42, hatchMode: 'u', spec: 0.2, rim: 0.8 };
-  add(new THREE.BoxGeometry(0.86, 0.14, 0.52), brass, { outline: 1.0 }, [0, 0.07, 0], [0, 0, 0], G.group);
-  const colGeo = cyl(0.09, 0.09, 1, 20); colGeo.translate(0, 0.5, 0);
+  add(new THREE.BoxGeometry(1.2, 0.16, 0.62), brass, { outline: 1.0 }, [0, 0.08, 0], [0, 0, 0], G.group);
+  const colGeo = cyl(0.15, 0.15, 1, 24); colGeo.translate(0, 0.5, 0);
+  const wallGeo = cyl(0.23, 0.23, 1.55, 32, true); wallGeo.translate(0, 0.775, 0);
+  let wallMat = null;
   const tube = (dx, col, shade) => {
-    add(new THREE.SphereGeometry(0.19, 28, 18), { color: col, rim: 1, spec: 0, shadeColor: shade, shadeMix: 0.3 }, { outline: 1.0 }, [dx, 0.33, 0], [0, 0, 0], G.group);
-    const c = add(colGeo, { color: col, rim: 0.8, spec: 0, flat: 0.3, shadeColor: shade, shadeMix: 0.3 }, { outline: 0.6, cast: false }, [dx, G.base, 0], [0, 0, 0], G.group);
-    const t = new THREE.Mesh(cyl(0.14, 0.14, 1.55, 28, true), npr.glass({ tint: 0xe6ecff, edge: 1.8, alpha: 1.3, glint: 0.8 }));
-    t.position.set(dx, G.base + 0.775, 0); npr.add(t, { glass: true }); G.group.add(t);
-    add(cyl(0.16, 0.16, 0.07, 24), brass, { outline: 0.8 }, [dx, G.base + 1.57, 0], [0, 0, 0], G.group);
+    add(new THREE.SphereGeometry(0.24, 28, 18), { color: col, rim: 1, spec: 0, shadeColor: shade, shadeMix: 0.3 }, { outline: 1.0 }, [dx, 0.36, 0], [0, 0, 0], G.group);
+    const c = add(colGeo, { color: col, rim: 0.8, spec: 0, flat: 0.25, shadeColor: shade, shadeMix: 0.35, halftone: 1 }, { outline: 0.8, cast: false }, [dx, G.base, 0], [0, 0, 0], G.group);
+    const w = add(wallGeo, wallMat || { color: 0xeee8fb, flat: 0.55, hatch: 0, halftone: 0.2, spec: 0, rim: 0, side: THREE.BackSide }, { outline: 1.2, cast: false }, [dx, G.base, 0], [0, 0, 0], G.group);
+    wallMat = w.material;
+    add(cyl(0.26, 0.26, 0.08, 28), brass, { outline: 0.8 }, [dx, G.base + 1.58, 0], [0, 0, 0], G.group);
     return c;
   };
   G.colPM = tube(-G.dx, 0xa39bb8, 0x5d5575);
   G.col = tube(G.dx, 0x8b5cf6, 0x4b2a9e);
-  // PowerMove's level: one ink bar across both tubes (the only mark on the gauge)
-  G.pm = add(new THREE.BoxGeometry(0.78, 0.045, 0.05), { color: 0x1a1530, flat: 0.8, hatch: 0 }, { outline: 0.3, cast: false }, [0, G.base + hPM, 0.15], [0, 0, 0], G.group);
+  // PowerMove's level: one bold ink bar across both tubes, with a grey-lilac cap (the only mark on the gauge)
+  G.pm = add(new THREE.BoxGeometry(1.0, 0.07, 0.07), { color: 0x1a1530, flat: 0.8, hatch: 0 }, { outline: 0.4, cast: false }, [0, G.base + hPM, 0.26], [0, 0, 0], G.group);
+  add(new THREE.BoxGeometry(0.16, 0.12, 0.08), { color: 0xa39bb8, flat: 0.6 }, { outline: 0.6, cast: false }, [-0.56, 0, 0], [0, 0, 0], G.pm);
   G.top = new THREE.Object3D(); G.group.add(G.top);
   G.pmTop = new THREE.Object3D(); G.group.add(G.pmTop);
   return G;
@@ -361,7 +366,7 @@ export function posePennant(F, k, unfurl, wave) {
 }
 
 /** Rook's pencil: built along +y with the graphite tip at the local origin and the eraser at +L */
-export function buildPencil(add, scene, { L = 1.15, r = 0.075 } = {}) {
+export function buildPencil(add, scene, { L = 2.2, r = 0.13 } = {}) {
   const Pn = { group: new THREE.Group(), L }; scene.add(Pn.group);
   const body = cyl(r, r, L * 0.62, 6); body.translate(0, L * 0.18 + L * 0.31, 0);
   add(body, { color: 0xf2a922, hatchMode: 'u', rim: 0.7, shadeColor: 0xb8741a, shadeMix: 0.35 }, { outline: 0.9 }, [0, 0, 0], [0, 0, 0], Pn.group);
