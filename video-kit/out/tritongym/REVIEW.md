@@ -298,3 +298,57 @@ Deferred, with reasons:
   face at the crash zoom (DE n2), the lap-2 recompile ramp (DE n3), the pennant under the pill at f252–256 (WD n3), the
   race-1 watch above the desktop crop (WD n4), the gate face under the pill in B1 (WD n5), Kern's nose token reading as a
   tongue (WD n6), and the "@" being darker than its neighbours (TA n2).
+
+## Round 10 — pass r10 (960×540, commit 283e357)
+
+| lens | r1 | r2 | r3 | r4 | r5 | r6 | r7 | r8 | r9 | **r10** | verdict in one line |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Creative director | 6.0 | 7.0 | 7.5 | 7.5 | 8.2 | 8.3 | 8.5 | 8.6 | 8.7 | **8.7** | **no must-fix**: alive and clearly told, Tok is a P(doom)-grade performer; the idea now visibly causes the grin; left: a whip-only transition grammar, a hero born with its back to us, Oro's payoff take |
+| Tech-art lead | 6.0 | 7.0 | 7.5 | 7.0 | 8.0 | 8.2 | 8.2 | 8.3 | 8.4 | **8.6** | **no must-fix**: both r9 must-fixes fixed on the frames (the P counter holds, clean E/F/"1" corners, no hairline, Kern's face clean f296–340); polish left |
+| Domain expert | 6.0 | 7.6 | 8.2 | 8.3 | 8.7 | 8.8 | 8.9 | 8.8 | 8.9 | **9.0** | **no must-fix**: no claim changed; the headline reads more cleanly than in r9; timings and watch angles exact |
+| Web designer | 6.3 | 7.4 | 7.8 | 8.0 | 8.1 | 8.6 | 8.4 | 8.6 | 8.7 | **8.8** | **no must-fix**: poster, seam (f659→f0 step 9.6 against a median of 13.7), pill corner and budget hold (card 3.59 MB at CRF 32); the hop no longer crosses "F@1" |
+
+**Every lens is ≥ 8.5 with no must-fix left: the target is reached.** The final 1920×1080 pass renders this commit
+unchanged.
+
+Round 9 items confirmed on the r10 frames:
+- *Letter shimmer* (TA): the P counter holds one shape across f596–647. The E/F inner corners (f622–630) and the "1"
+  flag (f610–635) are clean. The sides of the "1" and ">" are plain ink (f600–635). The "@" gap reads as see-through
+  burst, not a plate artifact (the tech-art lens calls this partly fixed: its tips thin on a few frames).
+- *Marks on Kern's face in race 1* (TA, CD, WD): the face is clean on every frame f296–340. The ticks stay by the rear
+  wheels, and Oro's wake stops at Kern's outline. Race 2 is clean too (f526–546).
+- *The "!" before the grin* (CD): the "!" pops at f380 on a blank mouth, and the grin lands at f383.
+- *The winner hop* (WD, CD, DE): the key and check stay under "F@1" (f604–612).
+- *Bigger puffs* (CD): bigger and clear of Tok and Oro, but they still read as a row of ovals on the slab edge (partly).
+
+### Polish left open (nice-to-haves, none blocking)
+- **Tech-art:**
+  - A sharp lead-in to the watch → start whip (f269–272, a 140 px step before the smear starts).
+  - A one-frame speck in the P counter (f604).
+  - 1–3 px nubs at the R and P counter corners that boil every frame in the hold.
+  - The "@" is the darkest glyph.
+  - The lap-2 arch pulses dark (f434–449).
+  - The crash-zoom peak is one frame (f366).
+  - The slam puffs sit on the slab edge, not at the letters' feet.
+  - CLANG! touches the top of Tok (f140–144).
+- **Creative director:**
+  - About 11 whips: swap two or three for panel moves or tilts.
+  - Kern's face on the drive (f64–124).
+  - Oro's laurel and jaw drop.
+  - Kern hidden at the lap-2 weigh-in (f458–478).
+  - The watch insert has no character.
+  - Puffs that billow.
+  - Tok edge-on at f424.
+  - The nose token reads as a tongue.
+- **Domain expert:**
+  - The plate at card scale.
+  - The rays over the race-1 watch (f358–360).
+  - The lap-2 recompile flip (f447–449).
+- **Web designer:**
+  - Re-run the card CRF search from the 1080p frames.
+  - Raise the payoff framing ~40 master px (Kern's lower face nears the desktop fade).
+  - The TRITONGYM board cut by the desktop top edge in the refine (f374–418).
+  - The gate face under the pill in B1.
+  - Torchy's flame under the pill (f246–258).
+  - The nose token.
+  - The race-1 watch rim above the desktop crop (f340–346).
