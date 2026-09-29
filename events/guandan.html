@@ -2604,6 +2604,7 @@ const ROW_GEM_W = 108;
 const ROW_GAP_X = 22;
 const ROW_TIGHT_GAP_X = 12;
 const SIDE_PLAY_MIN_SCALE = .6;             // a side play the row cannot pass shrinks to this, then lifts
+const TOOL_TAP = 40;                        // CSS px: the bottom pills' tap height (see handBottom)
 const TOAST_HALF = 20;                      // CSS px: half a one-line stage toast
 const COLUMN_SUIT_DEPTH = { D: 0, C: 1, H: 2, S: 3 };  // 方块 on top of a column, 黑桃 in front
 const PLACE_LABELS = { zh: ["头游", "二游", "三游", "末游"], en: ["1st", "2nd", "3rd", "4th"] };
@@ -2896,10 +2897,10 @@ function moveHandCard(dragId, targetId, before) {
     return true;
 }
 
-// Hand bottom edge: 7.6% of the stage like Tencent, raised on small screens so the 重选/理牌/横排
-// pills under it keep a 40 CSS px tap target that never reaches into the cards.
+// Hand bottom edge: 7.6% of the stage like Tencent, raised on small screens just enough for the
+// 重选/理牌/横排 pills under it to keep a TOOL_TAP CSS px tap target that never reaches into the cards.
 function handBottom() {
-    return Math.max(HAND_BOTTOM, 40 / tableView.layout.s + 6);
+    return Math.max(HAND_BOTTOM, TOOL_TAP / tableView.layout.s + 1);
 }
 
 // Column mode: every stacked card shows its whole index (the step is fixed at HAND_STEP). The
