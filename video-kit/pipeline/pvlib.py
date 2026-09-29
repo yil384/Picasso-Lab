@@ -99,13 +99,16 @@ def decode_frames(seg_path, local_indices):
     if r.returncode != 0:
         return None, f"decode {seg_path}: {r.stderr.decode()[-500:]}"
     data, ims, pos = r.stdout, [], 0
-    while pos < len(data):
-        end = data.find(b"IEND", pos)
-        if end < 0:
-            break
-        end += 8
-        ims.append(Image.open(io.BytesIO(data[pos:end])).convert("RGB"))
-        pos = end
+    # walk the PNG chunks (length-prefixed) instead of searching for b"IEND": compressed IDAT bytes can contain it
+    while pos + 8 <= len(data) and data[pos:pos + 8] == b"\x89PNG\r\n\x1a\n":
+        q = pos + 8
+        while q + 8 <= len(data):
+            n = int.from_bytes(data[q:q + 4], "big"); typ = data[q + 4:q + 8]
+            q += 12 + n
+            if typ == b"IEND":
+                break
+        ims.append(Image.open(io.BytesIO(data[pos:q])).convert("RGB"))
+        pos = q
     order = sorted(set(local_indices))
     if len(ims) != len(order):
         return None, f"decode {seg_path}: wanted {len(order)} frames, got {len(ims)}"
