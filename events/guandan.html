@@ -1302,16 +1302,21 @@ function applyTribute(g, result) {
     return rows;
 }
 
+// An action that waits (a play or pass on Firebase, 提示 on the engine): its pill stays pressed and
+// dims, and a play's cards fade in the hand, until the answer is in.
+function sendingUI(id, on) {
+    document.getElementById(id)?.classList.toggle("is-pending", on);
+    if (id === "play-btn") tableView.regions.hand?.classList.toggle("is-sending", on);
+}
+
 async function playSelected() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
-    const hand = game.hands[seat] || [];
-    const cards = hand.filter(c => selected.has(c.id));
-    if (!cards.length) return showToast(L("Select cards to play", "请选择要出的牌"));
-    const lastCombo = game.lastPlay?.combo || null;
-    const combo = choosePlayable(cards, lastCombo, game.currentLevelRank);
-    if (!combo) return showToast(L("Invalid combo or not strong enough", "这手牌型不合法或压不过上家"));
-    const ok = await playCards(seat, cards);
+    const verdict = selectionVerdict(seat);
+    if (!verdict.ok) return showToast(verdict.reason);
+    sendingUI("play-btn", true);
+    const ok = await playCards(seat, (game.hands[seat] || []).filter(c => selected.has(c.id)));
+    sendingUI("play-btn", false);
     if (ok) {
         selected.clear();
         hintAdvisor = null;
@@ -1363,9 +1368,11 @@ async function playCards(seat, cards, options = {}) {
 async function passTurn() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
-    if (!game.lastPlay) return showToast(L("You cannot pass when leading a new trick", "新一轮不能不要"));
+    if (!game.lastPlay) return showToast(L("You can't pass on a lead", "首出不能不出"));
     hintAdvisor = null;
+    sendingUI("pass-btn", true);
     await doPass(seat);
+    sendingUI("pass-btn", false);
 }
 
 async function doPass(seat, options = {}) {
@@ -1607,6 +1614,7 @@ async function hintMove() {
         thinkingShown = true;
         showToast(L("Thinking…", "思考中…"), 8000);
     }, 150);
+    sendingUI("hint-btn", true);
     let packet;
     try {
         packet = await requestHintPackage(seat, snapshot, lang);
@@ -1615,6 +1623,7 @@ async function hintMove() {
         packet = null;
     } finally {
         clearTimeout(thinkingTimer);
+        sendingUI("hint-btn", false);
     }
     if (token !== hintClickToken || !sameTurnState(game, snapshot) || mySeat() !== seat) {
         if (thinkingShown && token === hintClickToken) hideToast();
