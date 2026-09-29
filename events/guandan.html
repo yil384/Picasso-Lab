@@ -44,6 +44,7 @@
         <symbol id="gd-g-history" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 3h13l3 3v15H4V3Zm3 5v2h10V8H7Zm0 4v2h10v-2H7Zm0 4v2h6v-2H7Z"/></symbol>
         <symbol id="gd-g-close" viewBox="0 0 24 24"><path d="M5.6 3.4 12 9.8l6.4-6.4 2.2 2.2-6.4 6.4 6.4 6.4-2.2 2.2-6.4-6.4-6.4 6.4-2.2-2.2 6.4-6.4-6.4-6.4 2.2-2.2Z"/></symbol>
         <symbol id="gd-g-note" viewBox="0 0 24 24"><path d="M9 4.6 20.5 2v13.6a3.4 3.4 0 1 1-2.2-3.2V7.1L11.2 8.7v9.4A3.4 3.4 0 1 1 9 14.9V4.6Z"/></symbol>
+        <symbol id="gd-g-star" viewBox="0 0 24 24"><path d="M12 1.8 15.1 8.2l7 .9-5.1 4.9 1.3 7L12 17.6 5.7 21l1.3-7L1.9 9.1l7-.9L12 1.8Z"/></symbol>
         <symbol id="gd-g-cards" viewBox="0 0 24 24"><path d="M3.2 6.3 10.6 4.3c.7-.2 1.4.2 1.6.9l3.5 13c.2.7-.2 1.4-.9 1.6l-7.4 2c-.7.2-1.4-.2-1.6-.9l-3.5-13c-.2-.7.2-1.4.9-1.6Z"/><path d="M13.3 3.4 20 5.2c.7.2 1.1.9.9 1.6l-3.2 12.1-4.3-15.5Z" opacity=".75"/></symbol>
     </svg>
     <!-- Tencent-style top bar for the lobby and room (the table screen hides it and reuses these handlers). -->
@@ -266,7 +267,7 @@ function setStaticLabels() {
     setHudButton(hudRulesBtn, L("Rules", "规则"), L("Game rules", "玩法规则"));
     setHudButton(hudRecordsBtn, L("Records", "战绩"), L("Peak Showdown records", "巅峰对决战绩"));
     setHudButton(langToggleBtn, isZH() ? "EN" : "中文", isZH() ? "Switch to English" : "切换到中文");
-    setHudButton(backEventsBtn, L("Exit", "返回"), L("Back to Events", "返回活动"));
+    setHudButton(backEventsBtn, L("Exit", "返回"), L("Back to events", "返回活动"));
 }
 
 // Left side of the top bar: the player card on the lobby, the 好友同玩 title on the room screen.
@@ -1746,11 +1747,12 @@ function lobbyProfileHTML() {
         ? `<img src="${encodeHTML(p.avatar)}" alt="">`
         : `<span class="gd-avatar-initials">${encodeHTML(initials(nickname, "P"))}</span>`;
     const tier = st ? L(`Rank ${st.rank}`, `第 ${st.rank} 名`) : p ? L("Lab member", "实验室") : L("Rookie", "新手");
+    // coin discs marked 分 / 胜 / 场; in English a star, a trophy and cards, the word in the title
     const stats = st ? [
-        [L("R", "分"), st.pts, L("Rating", "评分")],
-        [L("W", "胜"), `${st.wr}%`, L("Win rate", "胜率")],
-        [L("G", "场"), st.p, L("Matches", "场次")]
-    ].map(([mark, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${mark}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("") : "";
+        ["分", "star", st.pts, L("Rating", "评分")],
+        ["胜", "trophy", `${st.wr}%`, L("Win rate", "胜率")],
+        ["场", "cards", st.p, L("Matches", "场次")]
+    ].map(([mark, glyph, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${isZH() ? mark : glyphHTML(glyph)}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("") : "";
     return `<div class="hud-profile">
         <span class="hud-avatar">${face}</span>
         <div class="hud-id">
@@ -2154,7 +2156,7 @@ function rulesBodyHTML() {
             row(L("Cards", "牌数"), L("Two decks, 108 cards including four jokers; everyone gets 27.", "两副牌共 108 张（含四张王），每人 27 张。")),
             row(L("Lead", "先出"), L("Round 1: a random card is turned up and its holder leads. Later rounds: the tribute payer or last round's first place leads.", "首局随机翻一张起始牌，拿到它的人先出；之后由进贡方或上局头游先出。")),
             row(L("Turns", "出牌"), L("Lead any legal combo; the others follow with a bigger same combo or a bomb, or pass.", "领出任意合法牌型；其他人只能出更大的同牌型或炸弹，也可以不出。")),
-            row(L("Trick", "收牌"), L("When everyone else passes, the last player to play takes the trick and leads again. If that player has gone out, their partner leads (catch-wind).", "其他人都不出时，最后出牌的人收牌再出；他已出完时由对家「接风」。")),
+            row(L("Trick", "收牌"), L("When everyone else passes, the last player to play takes the trick and leads again. If that player has gone out, their partner leads instead (Jiefeng).", "其他人都不出时，最后出牌的人收牌再出；他已出完时由对家「接风」。")),
             row(L("Time", "限时"), L("3 minutes a turn (a round's opening lead has no limit); on timeout you pass, or play your smallest single when leading.", "每手 3 分钟（每局第一手不限时）；超时自动不出，领出时自动出最小的单张。"))
         ]],
         [L("Level card", "级牌"), [
@@ -2169,14 +2171,14 @@ function rulesBodyHTML() {
             row(L("Triple", "三张"), L("Three of a rank", "三张同点数"), ["5♠", "5♥", "5♦"]),
             row(L("Full House", "三带二"), L("A triple plus a pair; the triple decides", "三张加一对，比三张的大小"), ["8♠", "8♥", "8♣", "4♦", "4♣"]),
             row(L("Straight", "顺子"), L("Five in a row, 2-6 up to 10-A", "五张连续，23456 到 10JQKA"), ["10♦", "J♣", "Q♠", "K♥", "A♠"]),
-            row(L("Pairs run", "三连对"), L("Three consecutive pairs, 223344 to QQKKAA", "三个连续的对子，223344 到 QQKKAA"), ["3♠", "3♦", "4♥", "4♣", "5♠", "5♥"]),
-            row(L("Triple run", "钢板"), L("Two consecutive triples, 222333 to KKKAAA", "两个连续的三张，222333 到 KKKAAA"), ["J♠", "J♥", "J♣", "Q♦", "Q♠", "Q♥"])
+            row(L("Pair Run", "三连对"), L("Three consecutive pairs, 223344 to QQKKAA", "三个连续的对子，223344 到 QQKKAA"), ["3♠", "3♦", "4♥", "4♣", "5♠", "5♥"]),
+            row(L("Triple Run", "钢板"), L("Two consecutive triples, 222333 to KKKAAA", "两个连续的三张，222333 到 KKKAAA"), ["J♠", "J♥", "J♣", "Q♦", "Q♠", "Q♥"])
         ]],
         [L("Bombs", "炸弹"), [
             `<p class="gd-rules-note">${L("A bomb beats any non-bomb. 4 of a kind < 5 of a kind < Straight Flush < 6 < 7 < 8 … < Joker Bomb; the same size compares by rank.", "炸弹能压任何非炸弹牌型。四炸 < 五炸 < 同花顺 < 六炸 < 七炸 < 八炸 … < 天王炸；张数相同比点数。")}</p>`,
             row(L("Bomb", "炸弹"), L("Four or more of a rank", "四张及以上同点数"), ["6♠", "6♥", "6♦", "6♣"]),
-            row(L("Flush run", "同花顺"), L("A five-card straight in one suit", "同一花色的五张顺子"), ["8♠", "9♠", "10♠", "J♠", "Q♠"]),
-            row(L("Jokers", "天王炸"), L("All four jokers, the biggest play", "四张王，最大的牌"), ["RJ", "RJ", "BJ", "BJ"])
+            row(L("Straight Flush", "同花顺"), L("A five-card straight in one suit", "同一花色的五张顺子"), ["8♠", "9♠", "10♠", "J♠", "Q♠"]),
+            row(L("Joker Bomb", "天王炸"), L("All four jokers, the biggest play", "四张王，最大的牌"), ["RJ", "RJ", "BJ", "BJ"])
         ]],
         [L("Level up", "升级"), [
             row(L("Places", "名次"), L("Finishing order: 1st, 2nd, 3rd, last.", "出完的顺序为头游、二游、三游、末游。")),

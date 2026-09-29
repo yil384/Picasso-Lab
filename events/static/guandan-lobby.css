@@ -211,6 +211,7 @@ body[data-screen="lobby"] #back-events-btn { order: 3; }
     font: 900 max(var(--fs-min), calc(19 * var(--lu)))/1 var(--font-ui);
     font-style: normal;
 }
+.hud-stat i .gd-glyph { width: 56%; height: 56%; }
 .hud-stat.s1 i { background: radial-gradient(circle at 36% 30%, #d8ffe6 0%, #5fe08e 48%, #22a458 100%); box-shadow: inset 0 calc(-3 * var(--lu)) 0 rgba(0, 90, 40, .35); color: #0d5a2a; }
 .hud-stat.s2 i { background: radial-gradient(circle at 36% 30%, #e0f2ff 0%, #6fb8ff 48%, #3a72e0 100%); box-shadow: inset 0 calc(-3 * var(--lu)) 0 rgba(20, 40, 140, .35); color: #10307a; }
 
