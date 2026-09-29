@@ -2455,7 +2455,9 @@ const tableView = {
     jipaiTab: "count",
     seenPlays: new Set(),
     lastMessage: null,
-    leader: { key: "", seat: -1 }
+    leader: { key: "", seat: -1 },
+    result: { id: "", peek: false, shown: false, fresh: false },
+    roundLevels: { key: "", levels: null }
 };
 let handMode = storageGet("picasso.guandan.handMode") === "row" ? "row" : "col";
 let jipaiOpen = storageGet("picasso.guandan.jipai") === "on";
@@ -3048,6 +3050,10 @@ function onTableClick(event) {
             break;
         }
         case "newroom": newRoomBtn.click(); return;
+        case "result-peek":
+        case "result-back":
+            tableView.result.peek = act === "result-peek";
+            return renderTable();
         case "exit": startReturnToEvents(); return;
         case "lipai": return groupSelection();
         case "hengpai":
@@ -3521,13 +3527,15 @@ function renderTable() {
     setRegion("firstLead", firstKey, firstKey ? () => firstLeadHTML(v) : "");
     const tributeMoment = tributeKey(v);
     setRegion("tribute", tributeMoment, tributeMoment ? () => tributeHTML(v) : "");
-    const result = game.phase === "roundOver" ? "round" : game.phase === "gameOver" ? "game" : "";
-    setRegion("result", result ? `${result}:${game.roundNo}:${uiLang}:${isHost()}` : "", result === "round" ? roundOverHTML : result ? gameOverHTML : "");
+    // the levels this round is played at, for the result's X -> Y tiles
+    if (game.phase === "playing") t.roundLevels = { key: `${roomCode}:${game.roundNo}`, levels: { ...game.levels } };
+    const resultId = game.phase === "roundOver" || game.phase === "gameOver" ? `${game.phase}:${roomCode}:${game.roundNo}` : "";
+    if (t.result.id !== resultId) t.result = { id: resultId, peek: false, shown: false, fresh: freshMount };
+    setRegion("result", resultId ? `${resultId}:${uiLang}:${isHost()}:${t.result.peek}` : "", resultId ? () => resultHTML(v) : "");
     refreshSelectionUI();
     updateTurnClockDOM();
     runPlayFlights(flights, v);
     runBursts(bursts);
-    initResultOverlay();
     maybeToastTableMessage();
 }
 
@@ -3612,109 +3620,99 @@ function runBursts(bursts) {
     });
 }
 
-function roundOverHTML() {
+// Round / match result (qqg_result): a viewer-centric title (胜利 gold, 失败 cool; spectators see a
+// neutral one), a meta line, the finishing order on a warm (头游/二游) vs cool (三游/末游) band with a
+// faint VS on the seam, both teams' level tiles X -> Y, and [查看牌桌] [继续游戏]. Only the host
+// gets #next-round; everyone else waits (等待房主). A round that ends live waits RESULT_IN_MS so
+// the last play and the ribbons land first; a reload shows it at once. 查看牌桌 folds the panel
+// away to see the final table and never replays the entrance.
+const RESULT_IN_MS = 1300;
+const LEVEL_ORDER = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+
+// The first team's level before this result: as recorded while the round was played, else derived
+// from the advance (null when a late joiner cannot tell at the A cap).
+function levelBefore(team) {
     const r = game.roundResult;
-    const mine = mySeat();
-    const isWin = mine >= 0 && mine % 2 === r.firstTeam;
-    const isLose = mine >= 0 && mine % 2 !== r.firstTeam;
-    const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
-    const title = r.aceChallenge
-        ? r.aceReset
-            ? `${teamName(r.firstTeam)} ${L("A challenge reset", "冲 A 失败退回 2")}`
-            : `${teamName(r.firstTeam)} ${L("A challenge failed", "冲 A 失败")}`
-        : `${teamName(r.firstTeam)} ${L(`advances ${r.advance}`, `本局升级 ${r.advance}`)}`;
-    const detail = r.aceChallenge
-        ? r.aceReset
-            ? L("This was the third failed A challenge. The team resets to level 2 next round.", "这是第 3 次冲 A 失败，下局该队退回打 2。")
-            : L(`A challenge failed. Failure ${r.aceFailureCount}/${ACE_FAIL_LIMIT}; the team keeps playing A next round.`, `冲 A 失败，第 ${r.aceFailureCount}/${ACE_FAIL_LIMIT} 次；下局继续打 A。`)
-        : L("The next round will automatically handle Tribute and Return. If the paying side holds two Red Jokers, Tribute is blocked.", "下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。");
-    // Confetti only for a clean round win (not a failed/aborted A challenge, even
-    // though the challenging team still technically held first place).
-    const showConfetti = isWin && !r.aceChallenge;
-    const resultKey = `round:${game.roundNo}:${r.firstTeam}:${r.advance}:${r.aceChallenge ? 1 : 0}:${r.aceReset ? 1 : 0}`;
-    return `<div class="phase-backdrop">
-        <div class="result-ticket ${isWin ? "win" : "lose"}" data-result-key="${encodeHTML(resultKey)}" data-result-score="${Number(r.advance) || 0}">
-            <div class="result-verdict">
-                <span class="result-verdict-label">${isWin ? "胜" : "负"}</span>
-                <span class="result-verdict-team">${teamName(r.firstTeam)}</span>
-            </div>
-            <div class="result-standings">
-                <h2>${title}</h2>
-                <p>${detail}</p>
-                <div class="tribute-list">${rows}</div>
-            </div>
-            <div class="result-action">
-                <div class="result-score"><span class="result-score-label">${L("Levels advanced", "本局升级")}</span><span class="result-score-value">0</span></div>
-                <button class="btn play" id="next-round" ${isHost() ? "" : "disabled"} type="button">${L("Next Round", "进入下一局")}</button>
-            </div>
-            ${showConfetti ? `<div class="result-confetti">${confettiPiecesHTML(28)}</div>` : ""}
+    if (r.aceChallenge) return "A";
+    const seen = tableView.roundLevels;
+    if (seen.key === `${roomCode}:${game.roundNo}` && seen.levels?.[team]) return seen.levels[team];
+    const now = game.levels?.[team] || "2";
+    const idx = LEVEL_ORDER.indexOf(now);
+    return now === "A" || idx < 0 ? null : LEVEL_ORDER[Math.max(0, idx - (Number(r.advance) || 0))];
+}
+
+// Level tile: only the first team's changes (X -> Y, A -> A with its failures, or 过A at the end).
+function resultLevelHTML(team, label, mineTeam) {
+    const now = game.levels?.[team] || "2";
+    const fails = now === "A" ? Number(game.aceFailures?.[team] || 0) : 0;
+    const level = `${rankGlyphHTML(now)}${fails ? `<small>${fails}/${ACE_FAIL_LIMIT}</small>` : ""}`;
+    const cls = `gd-res-lvl${team === mineTeam ? " is-us" : ""}`;
+    if (team !== game.roundResult.firstTeam) return `<div class="${cls}"><b>${label}</b><em>${level}</em></div>`;
+    const before = levelBefore(team);
+    const to = game.phase === "gameOver" ? `<span class="gd-res-win">${L("Win", "过A")}</span>` : level;
+    return `<div class="${cls}"><b>${label}</b>${before ? `<em>${rankGlyphHTML(before)}</em><i class="gd-res-arrow"></i>` : ""}<em class="is-new">${to}</em></div>`;
+}
+
+function resultPlayerHTML(i, place, mine) {
+    const name = displaySeatName(game.seats[i], L(`Seat ${i + 1}`, `${i + 1} 号位`));
+    const rel = relationForSeat(i, mine);
+    const tag = mine >= 0
+        ? `<span class="gd-res-tag is-${rel.key}">${rel.label}</span>`
+        : `<span class="gd-res-tag is-t${i % 2}">${encodeHTML(teamName(i % 2))}</span>`;
+    return `<div class="gd-res-p${i === mine ? " is-me" : ""}" style="--k:${place}">
+            <b class="gd-res-place">${PLACE_LABELS[uiLang][place]}</b>
+            <span class="gd-res-av"><span class="gd-av-face">${seatFaceHTML(i, name)}</span>${tag}</span>
+            <span class="gd-res-name">${encodeHTML(name)}</span>
+        </div>`;
+}
+
+function resultHTML(v) {
+    const state = tableView.result;
+    if (state.peek) return `<div class="gd-result is-peek"><button class="btn pass" type="button" data-act="result-back">${L("Back to result", "返回结算")}</button></div>`;
+    const enter = !state.shown;
+    state.shown = true;
+    const r = game.roundResult;
+    const over = game.phase === "gameOver";
+    const mine = v.mine;
+    const myTeam = mine >= 0 ? mine % 2 : -1;
+    const aceFail = !over && r.aceChallenge;
+    let title = over ? L("Match over", "比赛结束") : L("Round over", "本局结束");
+    let tone = "";
+    if (myTeam >= 0 && aceFail) {
+        if (myTeam === r.firstTeam) [title, tone] = [L("A failed", "冲A失败"), "is-cool"];
+    } else if (myTeam >= 0) {
+        [title, tone] = myTeam === r.firstTeam ? [L("Victory", "胜利"), ""] : [L("Defeat", "失败"), "is-cool"];
+    }
+    const team = teamName(r.firstTeam);
+    const meta = over
+        ? [L(`${team} cleared A`, `${team}冲 A 成功`), L(`${game.roundNo} rounds`, `共 ${game.roundNo} 局`)]
+        : aceFail
+            ? [L(`${team} missed A (${r.aceFailureCount}/${ACE_FAIL_LIMIT})`, `${team}冲 A 失败 ${r.aceFailureCount}/${ACE_FAIL_LIMIT}`), r.aceReset ? L("back to 2", "退回打 2") : L("still on A", "下局继续打 A")]
+            : [r.advance >= 3 ? L("Double win", "双上") : "", L(`${team} +${r.advance}`, `${team}升 ${r.advance} 级`), L(`Played ${game.currentLevelRank}`, `本局打 ${game.currentLevelRank}`)];
+    const order = valuesFromFirebase(r.order);
+    const us = Math.max(0, myTeam);
+    const label = t => mine >= 0 ? (t === us ? L("Us", "我方") : L("Them", "对方")) : teamName(t);
+    const next = over
+        ? `<button class="btn play" type="button" data-act="newroom">${L("Lobby", "返回大厅")}</button>`
+        : isHost()
+            ? `<button class="btn play${isZH() ? " spaced" : ""}" id="next-round" type="button">${L("Continue", "继续游戏")}</button>`
+            : `<button class="btn is-waiting" type="button" disabled>${L("Waiting for host", "等待房主")}</button>`;
+    return `<div class="gd-result ${tone}${enter ? "" : " is-still"}" style="--in:${enter && !state.fresh ? RESULT_IN_MS : 0}ms" role="dialog" aria-label="${encodeHTML(title)}">
+        <div class="gd-res-head">
+            <h2 class="gd-res-title">${wordHTML(title, tone)}</h2>
+            <p class="gd-res-meta">${meta.filter(Boolean).map(encodeHTML).join("<i>·</i>")}</p>
+        </div>
+        <div class="gd-res-band">
+            <div class="gd-res-half is-warm">${order.slice(0, 2).map((i, k) => resultPlayerHTML(i, k, mine)).join("")}</div>
+            <div class="gd-res-half is-cool">${order.slice(2, 4).map((i, k) => resultPlayerHTML(i, k + 2, mine)).join("")}</div>
+            <b class="gd-res-vs" aria-hidden="true"><i>V</i><i>S</i></b>
+        </div>
+        <div class="gd-res-levels">${resultLevelHTML(us, label(us), myTeam)}${resultLevelHTML(1 - us, label(1 - us), myTeam)}</div>
+        <div class="gd-res-actions">
+            <button class="btn pass" type="button" data-act="result-peek">${L("View table", "查看牌桌")}</button>
+            ${next}
         </div>
     </div>`;
-}
-
-function gameOverHTML() {
-    const r = game.roundResult;
-    const mine = mySeat();
-    const isWin = mine >= 0 && mine % 2 === r.firstTeam;
-    const isLose = mine >= 0 && mine % 2 !== r.firstTeam;
-    const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
-    const resultKey = `game:${game.roundNo}:${r.firstTeam}`;
-    return `<div class="phase-backdrop">
-        <div class="result-ticket ${isWin ? "win" : "lose"}" data-result-key="${encodeHTML(resultKey)}" data-result-score="${Number(game.roundNo) || 0}">
-            <div class="result-verdict">
-                <span class="result-verdict-label">${isWin ? "胜" : "负"}</span>
-                <span class="result-verdict-team">${teamName(r.firstTeam)}</span>
-            </div>
-            <div class="result-standings">
-                <h2>${teamName(r.firstTeam)} ${L("wins the match", "冲 A 成功")}</h2>
-                <p>${L("A-level victory requires first place with the partner in second or third. The match is complete.", "打 A 时必须头游且对家第二或第三才算升级成功；本场比赛结束。")}</p>
-                <div class="tribute-list">${rows}</div>
-            </div>
-            <div class="result-action">
-                <div class="result-score"><span class="result-score-label">${L("Rounds played", "共进行回合")}</span><span class="result-score-value">0</span></div>
-                <button class="btn play" id="next-round" disabled type="button">${L("Match Complete", "比赛结束")}</button>
-            </div>
-            ${isWin ? `<div class="result-confetti">${confettiPiecesHTML(28)}</div>` : ""}
-        </div>
-    </div>`;
-}
-
-function confettiPiecesHTML(n) {
-    let out = "";
-    for (let i = 0; i < n; i++) {
-        const cx = Math.round(Math.random() * 100);
-        const dx = Math.round((Math.random() * 2 - 1) * 120);
-        const rot = Math.round(Math.random() * 720 - 360);
-        const dur = Math.round(1800 + Math.random() * 800);
-        const delay = Math.round(Math.random() * 600);
-        out += `<span class="confetti-piece" style="--cx:${cx}%;--cdx:${dx}px;--crot:${rot}deg;--cdur:${dur}ms;--cdelay:${delay}ms"></span>`;
-    }
-    return out;
-}
-
-// Win/lose overlay entrance is handled by CSS (gdBackdropIn/gdResultIn); the
-// score count-up needs real per-frame JS for an eased 0 -> final-tally
-// animation. Guarded by lastResultOverlayKey so it only plays once per result
-// (renderTable() re-runs on every game-state tick while the panel is open).
-let lastResultOverlayKey = "";
-function initResultOverlay() {
-    const panel = document.querySelector(".result-ticket");
-    if (!panel) { lastResultOverlayKey = ""; return; }
-    const key = panel.dataset.resultKey || "";
-    if (!key || key === lastResultOverlayKey) return;
-    lastResultOverlayKey = key;
-    const valueEl = panel.querySelector(".result-score-value");
-    const target = Number(panel.dataset.resultScore) || 0;
-    if (!valueEl) return;
-    const duration = 700;
-    const start = performance.now();
-    function tick(now) {
-        const t = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - t, 3);
-        valueEl.textContent = String(Math.round(target * eased));
-        if (t < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
 }
 
 document.getElementById("copy-link-btn").addEventListener("click", async () => {
