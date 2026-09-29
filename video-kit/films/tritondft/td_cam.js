@@ -35,8 +35,13 @@ export function applyCamera(cam, ctx, F, camRig, { whips = [], hits = [], hand =
   let dy = yawAt(F + 0.5) - yawAt(F - 0.5);
   if (dy > Math.PI) dy -= TAU; if (dy < -Math.PI) dy += TAU;
   const dp = pitchAt(F + 0.5) - pitchAt(F - 0.5);
-  const inWhip = whips.some(([a, b]) => F > a && F < b);
-  const sx = inWhip && Math.abs(dy * FPS) > 0.5 ? yawSmear(cam, dy * FPS, FPS) * 0.9 : 0;
-  const sy = inWhip && Math.abs(dp * FPS) > 0.5 ? -yawSmear(cam, dp * FPS, FPS) * 0.9 : 0;
+  // whips: [a, b, cap?, 'h'?] - cap (design px) keeps the 9-tap smear a continuous streak instead of ghost copies on
+  // slower moves; 'h' drops the vertical component (a horizontal pan whose tilt would draw rain-like streaks)
+  const w = whips.find(([a, b]) => F > a && F < b);
+  let sx = w && Math.abs(dy * FPS) > 0.5 ? yawSmear(cam, dy * FPS, FPS) * 0.9 : 0;
+  let sy = w && Math.abs(dp * FPS) > 0.5 ? -yawSmear(cam, dp * FPS, FPS) * 0.9 : 0;
+  if (w && w[3] === 'h') sy = 0;
+  const L = Math.hypot(sx, sy);
+  if (w && w[2] && L > w[2]) { sx *= w[2] / L; sy *= w[2] / L; }
   return [sx, sy];
 }

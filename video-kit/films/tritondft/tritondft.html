@@ -43,7 +43,7 @@ defineScene({
         const npr = createNPR(renderer, ctx, { look: LOOK, paper: paperC(ctx), samples: 4 });
         npr.setUnder(window.__pv.canvas);
         npr.debug = Number(Q.get('debug') || 0);
-        W = { THREE, scene, camera, npr, ctx, bake, add: makeAdder(THREE, npr, scene) };
+        W = { THREE, scene, camera, npr, ctx, bake, add: makeAdder(THREE, npr, scene), paperCanvas: paperC(ctx) };
         await buildAll(W);
         await bakeLettering(W);
         return { scene, camera };

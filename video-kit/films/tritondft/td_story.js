@@ -32,7 +32,7 @@ export const K = {
   heave: [56, 70], clock: 70, smirk: [72, 90],
   pop: [98, 110], catch: 110, read: [114, 124], book: [124, 142], chop: 150, deal: [156, 162, 168],
   type: [178, 196], rip: 198, feed: [200, 208], jump: [208, 214], lever: 214, roar: 220, tape: [228, 262],
-  relax: [250, 264], scf: [264, 280], cover: [280, 292],
+  relax: [246, 264], scf: [262, 278], cover: [280, 292],
   gust: [288, 296], page: [294, 306], glance: [306, 316],
   hop4: [322, 330], read4: [330, 364], bead1: 334, fail: 362, rush: [372, 384],
   click: [398, 410, 430], crash: 410, cutoff: 438, level: 446, go: 452,
@@ -85,7 +85,7 @@ export async function buildAll(w) {
   // scf: electron density on the 16 bonds as flat, rimless sky-blue lozenges round each bond stick (depth-correct, no ink
   // rim or highlight, so they never read as a second species); grown in S3 only
   W.dens = W.si.bonds.map((b) => {
-    const m = add(new THREE.SphereGeometry(1, 16, 10), { color: 0x9ed8f3, hatch: 0.1, rim: 0, toneBias: 0.3, shadeColor: COL.skyL, shadeMix: 0.15 }, { outline: 0, cast: false }, [0, 0, 0], [0, 0, 0], W.si.inner);
+    const m = add(new THREE.SphereGeometry(1, 16, 10), { color: 0x9ed8f3, hatch: 0.1, rim: 0, spec: 0, toneBias: 0.3, shadeColor: COL.skyL, shadeMix: 0.15 }, { outline: 0, cast: false }, [0, 0, 0], [0, 0, 0], W.si.inner);
     m.position.copy(b.position); m.quaternion.copy(b.quaternion); m.userData.len = b.scale.y; m.visible = false;
     return m;
   });
@@ -270,7 +270,7 @@ export function updateAll(w, ctx) {
 function updateTurn(F) {
   W.turn.rotation.y = turnAngle(F);
   let s = 0.88;                                                          // unrelaxed guess (the dashed ghost in td_ink.js)
-  if (F >= K.relax[0]) { const a = F - K.relax[0]; s = 1 - 0.12 * Math.exp(-a / 5) * Math.cos(a * 0.5); }
+  if (F >= K.relax[0]) { const a = F - K.relax[0]; s = 1 - 0.12 * Math.exp(-a / 7) * Math.cos(a * 0.32); }   // ~18 f: out, one overshoot, damped settle
   if (win(F, K.huff - 2, K.S7)) { const a = F - K.huff + 2; s = 1 + 0.015 * Math.exp(-a / 6) * Math.sin(a * 0.7); }   // lap 2 re-settles
   if (F >= 700) s = lerp(1, 0.88, sm((F - 700) / 12));                  // reset off screen for the loop
   W.si.inner.scale.setScalar(s);
@@ -303,13 +303,13 @@ function updateCart(F) {
   }
   // pops out of the desk mouth and lands in Hoot's wings; handed to Tri at the end
   const m = W.tube.curve.getPointAt(0);
-  const hold = W.hoot.head.localToWorld(V3(-0.1, -0.54, 0.74));    // held at the chest, below the face
+  const hold = W.hoot.head.localToWorld(V3(-0.1, -0.78, 0.74));    // hugged at the belly: the planks stay under its beak
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k)];
   if (F >= K.handBack[0]) { const tp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0)), b = sm((F - K.handBack[0]) / (K.handBack[1] - K.handBack[0])); p = [lerp(p[0], tp.x, b), lerp(p[1], tp.y - 0.1, b), lerp(p[2], tp.z, b)]; }
   C.position.set(...p); C.rotation.set(0, 0.3 + (F < K.land + 8 ? (1 - k) * 4 : 0), 0);
-  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.62, k) : lerp(0.62, 1, sm((F - K.handBack[0]) / 8)));
+  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.56, k) : lerp(0.56, 1, sm((F - K.handBack[0]) / 8)));
 }
 
 // ---- Hoot (the researcher) ----
@@ -456,10 +456,10 @@ function updateTube(F) {
 
 // ---- the agents in S8/S9: out of the desk mouth onto the desk; S9 dive back in ----------------------
 // k: 0 Tri, 1 Clack (late: rides the 68x down), 2 Loupe, 3 Tilt
-// nobody in front of the giant hourglass: Tri behind its right post, Clack photobombs from the paper tower, Loupe peeks over
-// its scorecard (clear of the lamp), Tilt behind the $0.04 it tips its pennies into
-const OUT_SPOT = [deskP(0.98, 0, -0.62), deskP(1.25, 0.5, -0.4), deskP(-1.05, 0, -0.1), deskP(1.5, 0, 0.1)];
-const OUT_T = [K.outs[0], K.clack68[0], K.outs[1], K.outs[2]];
+// one owner per number, faces clear: Tri stands on the paper tower, Clack photobombs at the far left of the desk (after
+// 68x has landed on its own), Loupe peeks over its scorecard (clear of the lamp), Tilt behind the $0.04 it tips its pennies into
+const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.72, 0.0, -0.3), deskP(-1.05, 0, -0.1), deskP(1.5, 0, 0.1)];
+const OUT_T = [K.outs[0], K.slam[1] + 2, K.outs[1], K.outs[2]];
 function outState(k, F) {
   const t0 = OUT_T[k];
   if (F < K.S8a - 10) return null;
@@ -471,11 +471,6 @@ function outState(k, F) {
   let pos = [lerp(mouth.x, spot[0], k1), lerp(mouth.y - 0.1, spot[1], k1) + 0.4 * Math.sin(Math.PI * k1), lerp(mouth.z, spot[2], k1)];
   let sq = a < 12 ? -0.12 * Math.sin(Math.PI * k1) : ringv(a - 12, 0.16, 1.0, 0.25), expr = a < 12 ? 'surprised' : 'happy', arm = -0.5;
   const yaw = faceYaw(pos, [spot[0] * 0.8 + L.desk.x * 0.2, 0, spot[2] + 3]);
-  if (k === 1) {                                     // Clack rides the 68x down out of the mouth, tumbles off, grins
-    const n = n68Pos(F), top = [n[0] + 0.18, n[1] + 0.46 * 0.85 + 0.02, n[2]];   // (numerals update after the cast)
-    if (F < K.slam[1]) { pos = [top[0], top[1], top[2]]; sq = -0.12; expr = 'surprised'; arm = -2.6; }
-    else { const b = clamp((F - K.slam[1]) / 10); pos = [lerp(top[0], spot[0], b), lerp(top[1], 0, b) + 0.3 * Math.sin(Math.PI * b), lerp(top[2], spot[2], b)]; sq = b < 1 ? -0.1 : ringv(F - K.slam[1] - 10, 0.18, 1.0, 0.25); expr = b < 1 ? 'strain' : 'grin'; }
-  }
   if (F >= K.slam[2] + 6) { const ph = ((F + k * 5) % 14) / 14; pos[1] += 0.08 * Math.sin(Math.PI * ph); arm = -1.2 - 1.2 * Math.sin(Math.PI * ph); expr = 'grin'; }
   if (win(F, K.dive[k] - 4, K.dive[k])) { sq = 0.16 * sm((F - K.dive[k] + 4) / 3); expr = 'grin'; }   // crouch before the spring
   if (F >= K.dive[k]) { const b = clamp((F - K.dive[k]) / 10); pos = [lerp(pos[0], mouth.x, b), lerp(pos[1], mouth.y, b) + 0.3 * Math.sin(Math.PI * b), lerp(pos[2], mouth.z, b)]; sq = -0.15; expr = 'grin'; }
@@ -539,7 +534,7 @@ function updateClack(F) {
     sq = F < K.rip + 6 ? -0.06 * Math.sin(Math.PI * k) : 0;
   }
   const knob = eng.knob.getWorldPosition(V3(0, 0, 0));
-  if (win(F, K.feed[1], K.roar + 18)) {
+  if (win(F, K.feed[1], K.roar + 10)) {
     const k = sm((F - K.jump[0]) / (K.jump[1] - K.jump[0]));
     yaw = faceYaw(nearSlot, [knob.x, 0, knob.z]);
     const hang = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1];
@@ -550,12 +545,12 @@ function updateClack(F) {
       if (F >= K.lever) { pos = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1]; sq = -0.12 + 0.05 * Math.sin(F * 1.4) - 0.1 * arc(F, K.lever, K.roar + 2); rollerSpin = F * 0.9; yaw = lerp(faceYaw(nearSlot, [knob.x, 0, knob.z]), -0.2, sm((F - K.lever) / 4)); }   // hangs facing camera, stretched by the yank
     }
   }
-  if (win(F, K.roar + 18, K.roar + 32)) {
-    const k = sm((F - K.roar - 18) / 14), from = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1];
+  if (win(F, K.roar + 10, K.roar + 22)) {                      // lets go and hops home before the camera locks on the cell
+    const k = sm((F - K.roar - 10) / 12), from = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1];
     pos = [lerp(from[0], home[0], k), lerp(from[1], 0, k) + 0.25 * Math.sin(Math.PI * k), lerp(from[2], home[2], k)];
-    sq = F > K.roar + 28 ? ringv(F - K.roar - 28, 0.14, 1.0, 0.25) : 0; expr = 'grin';
+    sq = F > K.roar + 19 ? ringv(F - K.roar - 19, 0.14, 1.0, 0.25) : 0; expr = 'grin';
   }
-  if (win(F, K.roar + 32, K.S3b)) expr = 'grin';
+  if (win(F, K.roar + 22, K.S3b)) expr = 'grin';
   if (win(F, K.huff - 8, K.huff + 10)) { expr = 'strain'; sq = 0.08 * arc(F, K.huff - 8, K.huff + 10); }
   const out = outState(1, F);
   if (out) { pos = out.pos; yaw = out.yaw; sq = out.sq; expr = out.expr; armR = out.arm; armL = -out.arm; }
@@ -581,7 +576,7 @@ function updateEngine(F) {
   E.body.position.set(roar * 0.02 * Math.sin(F * 2.9), 0, 0);
   E.body.scale.set(1 - hum - roar * 0.03 * Math.sin(F * 1.7), 1 + hum + roar * 0.05 * Math.sin(F * 1.7) + 0.04 * huff, 1 - hum);
   E.pist.forEach((p, i) => { const y = 0.12 * (roar + huff * 0.6) * Math.abs(Math.sin(F * 0.9 + i * 1.6)) + 0.02 * Math.sin(TAU * F / 24 + i); p.rod.position.y = L.engine.h + 0.45 + y; p.cap.position.y = L.engine.h + 0.7 + y; });
-  const down = F >= K.lever && F < K.roar + 22 ? sm((F - K.lever) / (K.roar - K.lever - 1)) : F >= K.roar + 22 && F < K.roar + 30 ? 1 - ob((F - K.roar - 22) / 8) : 0;
+  const down = F >= K.lever && F < K.roar + 12 ? sm((F - K.lever) / (K.roar - K.lever - 1)) : F >= K.roar + 12 && F < K.roar + 20 ? 1 - ob((F - K.roar - 12) / 8) : 0;
   E.lever.rotation.set(-1.0 * down, 0, 0.1);
   const chomp = win(F, K.feed[1] - 3, K.feed[1] + 5) ? arc(F, K.feed[1] - 3, K.feed[1] + 5) : 0;
   E.lipU.position.y = E.slot[1] + 0.09 + 0.05 * chomp; E.lipD.position.y = E.slot[1] - 0.09 - 0.04 * chomp;
@@ -621,11 +616,11 @@ function updateLoupe(F) {
     lean = 0.3 * sm((F - K.S7) / 6); eye = 'big'; yaw = faceYaw(home, gp); headTilt = -0.1;
     if (F >= K.ding) { eye = 'star'; lean = lerp(lean, 0, sm((F - K.ding) / 4)); hop = 0.25 * arc(F, K.ding, K.ding + 10); sq = F < K.ding + 10 ? -0.12 * arc(F, K.ding, K.ding + 10) : ringv(F - K.ding - 10, 0.14, 1.0, 0.25); yaw = faceYaw(home, [home[0] - 0.3, 0, home[2] + 1]); }
   }
-  if (win(F, K.planks[1], K.S8a)) { eye = 'star'; yaw = faceYaw(home, jobPos(F)); }
+  if (win(F, K.planks[1], K.S8a)) { eye = F < K.planks[1] + 8 ? 'star' : 'happy'; yaw = faceYaw(home, jobPos(F)); }
   const out = outState(2, F);
   let stampOn = false;
   if (out) {
-    pos = out.pos; yaw = out.yaw; sq = out.sq; eye = out.expr === 'surprised' ? 'big' : out.expr === 'grin' ? 'star' : 'dot'; armR = out.arm;
+    pos = out.pos; yaw = out.yaw; sq = out.sq; eye = out.expr === 'surprised' ? 'big' : 'happy'; armR = out.arm;
     stampOn = F >= K.outs[1] + 12 && F < K.dive[2];
     if (F >= K.outs[1] + 12) yaw = faceYaw(pos, [SCORE[0] + 0.3, 0, SCORE[2] + 1.2]);
     if (F >= K.slam[0] - 8 && F < K.slam[0] + 10) { const a = F - K.slam[0]; armR = a < 0 ? lerp(-0.5, -2.8, sm((a + 8) / 6)) : lerp(-0.2, -0.6, sm(a / 8)); sq = a >= 0 ? ringv(a, 0.14, 1.0, 0.25) : 0.08; }
@@ -806,7 +801,7 @@ function updateTape(F) {
 
 // ---- the numerals: one row along the desk's front edge; 98% rises from the stamped scorecard, 68x drops out of the
 // tube mouth with Clack riding it, $0.04 springs from Tilt's cost pan
-const NUM_SPOT = { n98: deskP(-1.06, 0.0, 0.55), n68: deskP(0.04, 0.0, 0.53), n04: deskP(1.26, 0.0, 0.55) };   // a tight row with clear gaps (never '68x$0.04')
+const NUM_SPOT = { n98: deskP(-1.06, 0.0, 0.62), n68: deskP(0.08, 0.0, 0.6), n04: deskP(1.26, 0.0, 0.62) };   // a tight row with clear gaps (never '68x$0.04')
 /** 68x's group position at F: drops out of the desk mouth from clack68[0], lands on its spot at slam[1] */
 function n68Pos(F) {
   const s = NUM_SPOT.n68, mouth = W.tube.curve.getPointAt(0);
@@ -866,7 +861,7 @@ const rigClack = (F) => {     // medium on Clack; crash pull-back to a low dutch
   return mixRig(med, wide, k);
 };
 const rigCell = (F) => {      // tilt down to the silicon cell: it breathes and settles, density condenses on the bonds
-  const jp = jobPos(F), k = sm((F - 236) / 12);
+  const jp = jobPos(F), k = sm((F - 230) / 12);
   return { tg: [jp[0], 0.42, jp[2]], az: lerp(0.62, 0.5, k), el: lerp(0.22, 0.26, k), r: lerp(1.6, 1.45, k), fov: 32, roll: 0.0 };   // locked while the cell relaxes
 };
 const rigS3b = (F) => {       // low at the desk edge: the tiny hourglass sharp in the foreground, Hoot and the giant behind it
@@ -882,7 +877,7 @@ const rigLens = (F) => {      // the lens rushes at the camera (iris match cut t
   return { tg: [hp.x, hp.y, hp.z], az: W.loupe.root.rotation.y, el: 0.05, r: lerp(1.3, 0.34, k), fov: 34, roll: 0 };
 };
 const rigKnob = (F) => {      // from a knob close-up, pull out to Tilt; the roll follows the beam
-  const rf = station(ST.refn), kn = W.con.knobs[0].getWorldPosition(V3(0, 0, 0)), k = oc(clamp((F - K.S5) / 14));
+  const rf = station(ST.refn), kn = W.con.knobs[0].getWorldPosition(V3(0, 0, 0)), k = oc(clamp((F - K.S5 - 5) / 14));   // hold on the knob while the iris opens
   const knob = { tg: [kn.x, kn.y + 0.04, kn.z], az: W.con.root.rotation.y, el: 0.9, r: 0.42, fov: 34, roll: 0 };
   const med = { tg: [rf[0] - 0.04, 0.34, rf[2] - 0.02], az: 0.0, el: 0.2, r: lerp(1.95, 1.72, sm((F - K.S5 - 10) / 60)), fov: 36, roll: 0.18 * (st.tilt ? st.tilt.beam : 0) };
   return mixRig(knob, med, k);
@@ -915,9 +910,9 @@ const rigS8a = (F) => {       // medium on Hoot and both hourglasses; a push in 
 };
 const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the bottom, faces above the numerals); slow arc
   const a = sm((F - K.S8b) / 60);
-  return { tg: [L.desk.x + 0.1, 0.4, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.1, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };
+  return { tg: [L.desk.x + 0.1, 0.46, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.15, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };   // a touch higher: Hoot's face clears the 68
 };
-const WHIPS = [[80, 100], [280, 292], [312, 328], [452, 466], [496, 512], [564, 588]];
+const WHIPS = [[80, 100], [280, 292], [312, 328, 0, 'h'], [452, 466, 60], [500, 512, 60], [564, 588]];
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);
@@ -926,8 +921,8 @@ export function camRig(F) {
   if (F < K.catch + 12) return mixRig(rigFunnel(F), rigTri(F), io((F - K.catch - 2) / 10));
   if (F < K.deal[1]) return rigTri(F);
   if (F < K.type[0] + 4) { const k = io((F - K.deal[1]) / (K.type[0] + 4 - K.deal[1])), q = mixRig(rigTri(F), rigClack(F), k); q.r += 0.6 * Math.sin(Math.PI * k); q.el += 0.12 * Math.sin(Math.PI * k); return q; }   // truck wide of Loupe
-  if (F < 236) return rigClack(F);
-  if (F < 248) return mixRig(rigClack(F), rigCell(F), io((F - 236) / 12));   // locked on the cell before it relaxes
+  if (F < 230) return rigClack(F);
+  if (F < 242) return mixRig(rigClack(F), rigCell(F), io((F - 230) / 12));   // locked on the cell before it relaxes
   if (F < K.cover[0]) return rigCell(F);
   if (F < K.cover[1]) return mixRig(rigCell(F), rigS3b(F), ease.inOutQuint(clamp((F - K.cover[0]) / (K.cover[1] - K.cover[0]))));   // whip left across the room to the desk
   if (F < 312) return rigS3b(F);
@@ -936,8 +931,8 @@ export function camRig(F) {
   if (F < K.S5) return mixRig(rigLoupe(F), rigLens(F), ic(clamp((F - K.rush[0]) / 6)));
   if (F < K.go) return rigKnob(F);                                     // iris match cut: lens -> knob
   if (F < K.lap[0] + 6) return mixRig(rigKnob(F), rigLap(F), io((F - K.go) / (K.lap[0] + 6 - K.go)));
-  if (F < K.lap[1] - 10) return rigLap(F);
-  if (F < K.S7 + 6) return mixRig(rigLap(F), rigS7(F), io((F - K.lap[1] + 10) / (K.S7 + 16 - K.lap[1])));   // brake onto the gauge over 20 f
+  if (F < K.lap[1] - 4) return rigLap(F);
+  if (F < K.S7 + 6) { const t = clamp((F - K.lap[1] + 4) / 14); return mixRig(rigLap(F), rigS7(F), ob(t)); }   // brake onto the gauge: 14 f, overshoot and settle
   if (F < 566) return rigS7(F);
   if (F < K.S8a + 10) return mixRig(rigS7(F), rigS8a(F), ease.inOutQuint(clamp((F - 566) / 20)));   // whip left with the return bulge
   if (F < K.S8b - 6) return rigS8a(F);

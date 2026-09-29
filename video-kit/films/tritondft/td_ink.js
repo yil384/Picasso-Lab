@@ -91,10 +91,10 @@ export function inkOverlay(W, ctx, brush) {
   }
   // vc-relax: a bold dashed ghost of the starting (unrelaxed) cell; the real cell starts on it, breathes out and settles,
   // so a clear band opens between them (camera locked); the ghost stays 6 frames after the settle
-  if (win(F, K.relax[0] - 6, K.relax[1] + 6) && W.cart.visible) {
+  if (win(F, K.relax[0] - 5, K.relax[1] + 6) && W.cart.visible) {
     const E = [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3], [2, 6], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]];
     const P = W.si.atoms.slice(0, 8).map((a) => prj(W, ctx, W.si.g.localToWorld(a.position.clone().multiplyScalar(0.88))));
-    brush.set('bigink', PAL.pop, 1.7);
+    brush.set('bigink', PAL.pop, 2.6);
     for (const [i, j] of E) for (let q = 0; q < 5; q++) { const t0 = q / 5 + 0.02, t1 = t0 + 0.12; brush.line(P[i].x + (P[j].x - P[i].x) * t0, P[i].y + (P[j].y - P[i].y) * t0, P[i].x + (P[j].x - P[i].x) * t1, P[i].y + (P[j].y - P[i].y) * t1); }
   }
   // Refiner: click ticks; two pennies fly off when it backs off
@@ -180,6 +180,7 @@ function lensEye(W, ctx, g, F) {
   if (e === 'dot') { g.beginPath(); g.ellipse(ex, ey, 0.17, 0.25, 0, 0, TAU); g.fill(); g.fillStyle = PAL.cream; g.beginPath(); g.ellipse(ex - 0.05, ey + 0.08, 0.05, 0.04, 0, 0, TAU); g.fill(); }
   if (e === 'big') { const s = 0.55; g.beginPath(); g.ellipse(ex, ey - 0.05, s, s * 1.1, 0, 0, TAU); g.fill(); g.fillStyle = PAL.cream; g.beginPath(); g.ellipse(ex - s * 0.3, ey + s * 0.35, s * 0.24, s * 0.18, 0, 0, TAU); g.fill(); }
   if (e === 'spiral') { g.lineWidth = 0.08; g.beginPath(); for (let k = 0; k <= 40; k++) { const an = k / 40 * TAU * 2.4 + F * 0.4, rad = 0.03 + k * 0.011; const x = ex + Math.cos(an) * rad, y = ey + Math.sin(an) * rad; k ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+  if (e === 'happy') { g.lineWidth = 0.11; g.beginPath(); g.arc(ex, ey - 0.16, 0.3, Math.PI * 0.18, Math.PI * 0.82); g.stroke(); }   // a closed happy arc (the lens map is y-up)
   if (e === 'star') { g.beginPath(); star4(ex, ey, 0.5, 0.2).forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fillStyle = '#1d1a40'; g.fill(); }
   g.restore();
 }
@@ -198,17 +199,22 @@ function mark(g, x, y, s, kind, rot) {
 
 /** the S4 -> S5 iris: an inked iris closes on Loupe's lens as it rushes the camera and opens on Tilt's k-grid knob */
 function iris(W, ctx, g, F, jr) {
-  const a0 = K.rush[1] - 9, a1 = K.rush[1], b1 = K.S5 + 8;
+  const a0 = K.rush[1] - 9, a1 = K.rush[1], b1 = K.S5 + 9;
   if (F < a0 || F >= b1) return;
   const closing = F < a1;
   const c = closing ? prj(W, ctx, wp(W, W.loupe.head, [0, 0, 0])) : prj(W, ctx, wp(W, W.con.knobs[0], [0, 0.04, 0]));
-  const R = closing ? 1300 * (1 - sm((F - a0) / (a1 - a0 - 1))) : 1500 * oc((F - a1 - 1) / (b1 - a1 - 1));
+  // closes to a dot on the lens (fully shut for ~2 frames), then grows from a dot on the knob over 8 frames
+  // never a flat empty frame: it shuts to a pinhole on the lens, the pinhole jumps to the knob, then grows over 8 frames
+  const R = closing ? 16 + 1284 * (1 - sm((F - a0) / (a1 - a0 - 1))) : 16 + 1484 * Math.pow(clamp((F - a1) / (b1 - a1)), 1.6);
   const cx = clamp(c.x, 200, ctx.DW - 200), cy = clamp(c.y, 150, ctx.DH - 150);
   g.save(); g.fillStyle = PAL.ink; g.strokeStyle = PAL.ink;
   g.beginPath(); g.rect(-60, -60, ctx.DW + 120, ctx.DH + 120);
   if (R > 2) { for (let q = 0; q <= 48; q++) { const an = -q / 48 * TAU, rr = R * (1 + 0.012 * Math.sin(q * 5.1 + F)) + jr.gauss(0, 0.6); const x = cx + Math.cos(an) * rr, y = cy + Math.sin(an) * rr; q ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); }
   g.fill('evenodd');
-  if (R > 2) { g.lineWidth = 12; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke(); }
+  // paper grain printed into the ink, so the black reads as ink on paper, never as a dropped video frame
+  if (W.paperCanvas) { g.save(); g.clip('evenodd'); g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.9; g.drawImage(W.paperCanvas, 0, 0, ctx.DW, ctx.DH); g.restore(); }
+  g.lineWidth = Math.min(12, 2 + R * 0.2); g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
+  g.strokeStyle = PAL.cream; g.lineWidth = Math.min(3, 1 + R * 0.05); g.beginPath(); g.arc(cx, cy, R + g.lineWidth * 2, -2.4, -1.2); g.stroke();
   g.restore();
 }
 
@@ -231,7 +237,7 @@ export function lettering(W, ctx, g) {
     if (c.front) mark(g, c.x, Math.max(c.y, 250), clamp(0.16 * u, 18, 90) * ob((F - f0) / 5), fail ? 'x' : 'v', fail ? 0.08 : -0.06);
   }
   const vr = F - K.roar;
-  if (vr >= 0 && vr < 22) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 90, 330, 560), vr, { life: 22, rot: -0.1, scale: 1.05, popF: 4 }); }
+  if (vr >= 0 && vr < 18) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 90, 330, 560), vr, { life: 18, rot: -0.1, scale: 1.05, popF: 4 }); }
   const ck = F - K.crash;
   if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 160, 420, 1500), clamp(pp.y + 60, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;
