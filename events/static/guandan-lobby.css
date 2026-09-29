@@ -1308,11 +1308,13 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .is-classic .tile-title { font-size: calc(58 * var(--t)); }
     .joker-art { --card-w: calc(74 * var(--t)); }
     .peak-poster { scale: .9; }
+    .mini-table { scale: .86; }   /* the top seat stays inside the shorter tile, the + seat above the title */
     .join-art { flex-direction: column; gap: calc(6 * var(--lu)); bottom: calc(64 * var(--t)); }
     .join-cells i { width: calc(40 * var(--t)); height: calc(50 * var(--t)); }
     .join-go .btn { --btn-h: calc(44 * var(--t)); --btn-minw: calc(120 * var(--t)); }
     /* the dock stays on screen: 快速开始 full width over the nav row, on an opaque navy sheet (no
-       tile row shows through it); tiles scrolling under it fade out over 16px above its edge */
+       tile row shows through it); tiles scrolling under it fade out over one grid gap above its
+       edge, which at rest is the gap under the third row */
     .lobby-dock {
         position: sticky;
         bottom: 0;
@@ -1329,7 +1331,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
         content: "";
         position: absolute;
         left: 0; right: 0; bottom: 100%;
-        height: 16px;
+        height: calc(8 * var(--lu));
         background: linear-gradient(180deg, rgba(34, 48, 102, 0), #223066);
         pointer-events: none;
     }
