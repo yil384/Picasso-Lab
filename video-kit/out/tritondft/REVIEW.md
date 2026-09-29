@@ -114,7 +114,7 @@ Fixes made for round 4 (all spot-checked on single frames at 960×540):
 | lens | score | verdict |
 |---|---|---|
 | CD | **8.2** | Both round-3 blockers fixed (payoff faces clear, no ghosted multi-exposures); the lens→knob iris is the best transition; the whole story reads without words. New blocker: the S3b→S4 whip lost its smear and strobed as sharp jumps (f318–325). Should: VROOOM has no visible reaction, crowded left third in the payoff hiding the result, hourglasses move without Hoot's hand, a quiet lap. |
-| TA | *(pending when round 5 was rendered; see round 5)* | |
+| TA | **7.9** | (reported late, on the round-4 frames) Round-3 TA3-1 and TA3-3/TA3-4 resolved; TA3-2 only in a new form. New clips: the launch lever sank through Clack (f209–214), the tipping giant hourglass swept through Clack's dive (f701–704), the returned result flew into the tube full-size inside Tri (f688–698); whip artefacts (no smear S3b→S4, vertical 'rain' at f98, crisp ink doubled over the smear at f460/f510). |
 | DFT | **8.6** | No must-fix: the vc-relax now plays ~18 f on a locked camera against a bold ghost; density matte; PW.X on the input; honest hourglasses (TINK at f590), 42-cell scorecard with one ✗ never on the Si result. Should: the scorecard hid the result in Hoot's wings; the 68 numeral covers the giant's one-load pile; band-gap framing in S7; pennies read as two stacks. |
 | WEB | **8.2** | Poster f664 confirmed (settled, all five faces, plate in frame). Blockers: the iris still read as a dark dropout (f382–385); the film ~3× darker/heavier-inked than the siblings (poster 21% of pixels under luma 0.15 vs ~7%). Should: CLANK! under the LIVE pill, THUNK! in the bottom fade, S7 framed low, dark back of the turned page, brake speed-line flicker. |
 
@@ -129,6 +129,26 @@ Fixes made for round 5:
   out countably (a row of four, two extra at 5×5).
 - CLANK! low beside the pan (clear of the LIVE pill), THUNK! above the tiny hourglass (out of the fade), the turned page
   flat-lit cream, S7 framed higher at band-gap height.
+
+## Round 5 — full 960×540 pass after the round-4 fixes (`snaps/full5`)
+
+| lens | score | verdict |
+|---|---|---|
+| CD | **8.5** | No must-fix. Every whip streaks and lands; the lens→knob iris is a real shape match on paper; the whole story reads without words and the lighter self-coloured ink still reads as bold comic at card size (now close to ChipMate). Should: nobody reacts to VROOOM, the hourglasses move without Hoot's wing, Loupe half-hidden in the payoff, crisp ink over peak whip frames, the knowledge-base book never opened. |
+| TA | *(round-5 TA review still running when the final was rendered; the round-4 TA must-fixes were fixed and spot-checked, see below)* | |
+| DFT | **8.8** | No must-fix. Every shot maps to a real concept in order; vc-relax, scf, ΔE convergence, the Pareto back-off and all numbers honest (both clocks start f70, TINK at f590, 41/42 ticks ≈ 98% on the benchmark card only, four countable pennies). Should: the giant's front post hid the one-load pile, method book shut, band gap brief in S7, some scorecard doodles QR-like. |
+| WEB | **8.7** | No must-fix. Iris resolved (no frame > 3% dark); darkness resolved (film-wide 20.0% → 10.8% under luma 0.15, within the siblings' range); hue on target (198–199° on the poster); CLANK!/THUNK!/S7/page back resolved; poster **f664** confirmed. Should: numerals touching the 515 fade, a 58%-ink impact frame, warm desk vs ChipMate's amber, the scf ticket read as a refresh icon. |
+
+Fixes made after round 5 (spot-checked frame by frame at 960×540, then rendered in the final):
+- Round-4 TA must-fixes: Clack hangs from the knob beside the lever shaft; all four agents are squeezed into the tube
+  mouth before the giant hourglass tips (dives f686–704); the returned result rides small beside Tri's hand and goes in
+  with it; the arrival arc passes in front of the giant; ink and hatching fade with the whip smear (no crisp or doubled
+  lines over a streak); the S1→S2 whip smears horizontally (no rain).
+- Round-5 should-fixes: cream-dominant VROOOM impact frame; the locked cell close-up framed higher; payoff row higher;
+  Loupe in front of the lamp; hourglass posts turned off the neck (stream and one-load pile visible); band-gap planks
+  float without a bracket and sit in frame in S7; mid-blue wall rail; the scf ticket shows a bond pair with density
+  lozenges; a larger iris pinhole.
+- Purity and loop verified after every batch (`shoot.py purity … --loop`: repeats match, f720 == f0).
 
 ## Handoff status
 - Done: storyboard (4 angles judged), full 720-frame scene in `films/tritondft/`, review round 0 (storyboard) and round 1 (first cut: CD 6.4 / TA 6.7 / DFT 6.8 / WEB 7.0).
