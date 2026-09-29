@@ -90,12 +90,23 @@ def main():
     ap.add_argument("--vf")
     ap.add_argument("--crf", default="16")
     ap.add_argument("--boot-timeout", type=int, default=1500)
+    ap.add_argument("--all", action="store_true", help="bake: repaint every texture (default: only the missing ones)")
+    ap.add_argument("--bake-out", default="work/bake", help="where freshly painted textures are cached")
     a = ap.parse_args()
-    if a.mode == "bake":
+    if a.mode == "bake" and a.all:
         a.q.append("rebake=1")
     from playwright.sync_api import sync_playwright
     with sync_playwright() as pw:
         srv, b, page, meta = boot(pw, a)
+        if a.mode != "bake":
+            keys = page.evaluate("() => Object.keys(window.__bakes || {})")
+            if keys:
+                os.makedirs(a.bake_out, exist_ok=True)
+                for k in keys:
+                    url = page.evaluate("(k) => window.__bakes[k].toDataURL('image/png')", k)
+                    with open(os.path.join(a.bake_out, f"{k}.png"), "wb") as f:
+                        f.write(base64.b64decode(url.split(",", 1)[1]))
+                print(f"cached {len(keys)} freshly painted textures -> {a.bake_out}: {' '.join(keys)}", flush=True)
         try:
             if a.mode == "stills":
                 os.makedirs(a.out, exist_ok=True)

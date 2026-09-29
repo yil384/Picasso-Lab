@@ -274,17 +274,20 @@ const GLASS_FRAG = /* glsl */ `
 ${COMMON}
 layout(location = 0) out vec4 oG;
 in vec3 vWorldPos; in vec3 vObjPos; in vec3 vViewN; in vec3 vWorldN; in vec2 vUv; in float vViewZ;
-uniform sampler2D tDepth; uniform vec3 uTint; uniform float uAlpha; uniform float uEdgeMul; uniform float uGlint;
+uniform sampler2D tDepth; uniform vec3 uTint; uniform float uAlpha; uniform float uEdgeMul; uniform float uGlint; uniform float uSil;
 void main() {
   vec2 fw = max(fwidth(vUv), vec2(1e-6));
   float sd = textureLod(tDepth, gl_FragCoord.xy / uRes, 0.).r;
   if (gl_FragCoord.z > sd + 2e-6) discard;
   vec2 e2 = min(vUv, 1. - vUv);
-  float d = min(e2.x / fw.x, e2.y / fw.y);                    // px to the face border
+  float d = uSil > .5 ? e2.y / fw.y : min(e2.x / fw.x, e2.y / fw.y);   // px to the face border (lathes: no seam)
+  // silhouette (lathes / round glass): px to where the surface turns edge-on
+  float ndv = abs(normalize(vViewN).z), dsil = ndv / max(fwidth(ndv), 1e-4);
   vec2 dp = gl_FragCoord.xy / uS;
   float wob = (vnoise(dp * .045 + uBoilSeed * 1.7) - .5) * 1.6 * uS;
   float w = L_glassEdge * uEdgeMul * uS;
   float line = clamp(w - d - wob * .5 + .5, 0., 1.);
+  if (uSil > .5) line = max(line, clamp(w * 1.1 - dsil - wob * .5 + .5, 0., 1.));
   vec3 ink = L_ink;
   if (gl_FrontFacing) {
     // glints: two diagonal lifted streaks (px widths), fading towards the face ends
@@ -298,6 +301,7 @@ void main() {
     float gm = max(gl1, gl2) * along * L_glassGlint * uGlint;
     // thicker-looking glass towards the face border
     float thick = 1. - smoothstep(0., 40. * uS, d);
+    if (uSil > .5) thick = max(thick, 1. - smoothstep(0., 26. * uS, dsil));
     float a = L_glassA * uAlpha * (.35 + .9 * thick);
     vec3 col = uTint * L_glassTint;
     vec4 o = vec4(col * a, a);
@@ -949,7 +953,7 @@ export function createNPR(renderer, ctx, opts = {}) {
         glslVersion: THREE.GLSL3, vertexShader: SURFACE_VERT, fragmentShader: GLASS_FRAG,
         uniforms: {
           ...shared, tDepth: { value: depthTex }, uTint: { value: v3(o.tint ?? 0xffffff) },
-          uAlpha: { value: o.alpha ?? 1 }, uEdgeMul: { value: o.edge ?? 1 }, uGlint: { value: o.glint ?? 1 },
+          uAlpha: { value: o.alpha ?? 1 }, uEdgeMul: { value: o.edge ?? 1 }, uGlint: { value: o.glint ?? 1 }, uSil: { value: o.silhouette ? 1 : 0 },
         },
         side: THREE.DoubleSide, transparent: true, depthTest: false, depthWrite: false,
         blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,

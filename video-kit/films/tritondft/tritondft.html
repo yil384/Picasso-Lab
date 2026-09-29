@@ -1,0 +1,56 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>TritonDFT: The All-Nighter</title>
+<!-- TritonDFT project-card film, 3D comic series. One real three.js set (a night attic lab) rendered through a local
+     copy of the comic NPR toolkit (cel ramp, halftone, off-register plates, boiling ink, paper grain). Every texture,
+     face and SFX is painted with p5.brush (baked once, see td_core.js bake cache); numerals are extruded hand-cut 3D
+     glyphs. Everything is a pure function of the frame index; the film loops seamlessly (frame N == frame 0).
+     Lettering pop / emote / take recipes follow ClaudeAnimationBase src/core.js (MIT, (c) JohnHeibel).
+     Modules: td_core (palette, helpers, bake cache), td_world (set), td_cast (characters), td_faces, td_letters,
+     td_glyph3d, td_cam, td_story (timeline, acting, camera), td_ink (ink overlay + lettering).
+     Authoring: ?debug=1..5 npr G-buffer views, ?lk={json} look overrides, ?rebake=1 repaint textures. -->
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { createNPR } from './npr/npr.js';
+import { PAL, Q, bake } from './td_core.js';
+import { addLetterBrushes } from './td_letters.js';
+import { makeAdder } from './td_world.js';
+import { NF, LOOK, buildAll, updateAll, drawNPR, POSTER } from './td_story.js';
+import { inkOverlay, lettering, bakeLettering } from './td_ink.js';
+
+// modules imported indirectly, listed so render.py's scene hash covers them:
+// './td_cast.js' './td_faces.js' './td_glyph3d.js' './td_cam.js' './npr/brush.js' './npr/camera.js' './npr/looks.js' './npr/glsl.js'
+const paperC = (ctx) => ctx.paper({ tone: PAL.paper, grain: 0.04, fibres: 0.05, blotch: 0.06, seed: 4 });
+let W = null;
+
+defineScene({
+  meta: {
+    title: 'TritonDFT - The All-Nighter', durationFrames: NF, fps: 24, width: 1920, height: 1080, seed: 23,
+    design: [1920, 1080], background: PAL.paper, fonts: [],
+    boil: { every: 2, variants: 3 },            // ink boils at 12 drawings/s
+    poster: POSTER,
+  },
+  update(ctx) { updateAll(W, ctx); },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(paperC(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, { THREE, renderer }) {
+        addLetterBrushes(brush);
+        const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(32, ctx.W / ctx.H, 0.2, 60);
+        const npr = createNPR(renderer, ctx, { look: LOOK, paper: paperC(ctx), samples: 4 });
+        npr.setUnder(window.__pv.canvas);
+        npr.debug = Number(Q.get('debug') || 0);
+        W = { THREE, scene, camera, npr, ctx, bake, add: makeAdder(THREE, npr, scene) };
+        await buildAll(W);
+        await bakeLettering(W);
+        return { scene, camera };
+      },
+      draw(ctx) { drawNPR(W, ctx); return false; } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw(ctx, p, brush) { inkOverlay(W, ctx, brush); } },
+    { name: 'letters', type: '2d', draw(ctx, g) { lettering(W, ctx, g); } },
+  ],
+});
+</script></body></html>

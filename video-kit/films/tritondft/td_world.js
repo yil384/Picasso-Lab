@@ -6,12 +6,12 @@ import { PAL, COL, TAU, hsh, bake, lerp } from './td_core.js';
 
 export const L = {
   floorY: -0.95,
-  bench: { x: 1.6, z: -0.25, r: 1.95, th: 0.16 },
-  turn: { r: 0.72 },
-  stR: 1.38,                                   // station radius from the bench centre
-  desk: { x: -3.65, z: 0.15, w: 2.7, d: 1.3 },
+  bench: { x: 1.6, z: -0.25, r: 1.75, th: 0.16 },
+  turn: { r0: 0.44, r1: 1.02, rJob: 0.74 },     // the turntable ring round the Library hub; the job rides at rJob
+  stR: 1.34,                                   // station radius from the bench centre
+  desk: { x: -3.65, z: 0.15, w: 3.5, d: 1.3 },
   wallZ: -3.0,
-  engine: { x: 4.05, z: -2.25, w: 1.5, h: 2.5, d: 1.0 },
+  engine: { x: 3.78, z: -2.02, w: 1.5, h: 2.5, d: 1.0 },
 };
 /** station position (world) for angle th (rad; 0 = +x, positive = towards the back, -z) */
 export const station = (th, r = L.stR) => [L.bench.x + r * Math.cos(th), 0, L.bench.z - r * Math.sin(th)];
@@ -126,7 +126,7 @@ function paintWall(ctx, brush, w, h) {
 }
 
 /** the agents' round workbench: a thick round top on a central post, and the turntable (a group that spins) */
-export function buildBench(W) {
+export async function buildBench(W) {
   const { THREE, scene, add } = W;
   const B = L.bench;
   const top = { color: 0xe7f4fb, hatchDir: [1, 0, 0.2], toneBias: 0.06, rim: 0.3 };
@@ -135,12 +135,37 @@ export function buildBench(W) {
   add(new THREE.TorusGeometry(B.r, 0.045, 10, 96), { color: COL.pop, hatchMode: 'u', rim: 0.5 }, { outline: 0.6, cast: false }, [B.x, 0.0, B.z], [Math.PI / 2, 0, 0]);
   add(new THREE.CylinderGeometry(0.28, 0.42, -L.floorY - B.th, 28), { color: COL.navy, hatchMode: 'u' }, { outline: 0.9 }, [B.x, (L.floorY - B.th) / 2, B.z]);
   add(new THREE.CylinderGeometry(0.9, 1.0, 0.1, 40), { color: COL.navy }, { outline: 0.8 }, [B.x, L.floorY + 0.05, B.z]);
-  // turntable: a raised disc with painted loop arrows (the Plan -> Execute -> Analyze -> Refine loop)
+  // turntable ring (carries the job past the stations) with vermilion chevrons pointing the loop direction
   const turn = new THREE.Group(); turn.position.set(B.x, 0, B.z); scene.add(turn);
-  add(new THREE.CylinderGeometry(L.turn.r, L.turn.r + 0.03, 0.07, 64), [{ color: COL.navy, hatchMode: 'u' }, { color: COL.skyL, hatchDir: [1, 0, 0], rim: 0.3, toneBias: 0.05 }, { color: COL.navy }], { outline: 0.9 }, [0, 0.035, 0], [0, 0, 0], turn);
+  const T0 = L.turn;
+  const ringTex = await bake(THREE, { width: 1024, height: 1024, seed: 15, key: 'ring-v1', background: '#ffffff' }, (p, brush, w, h) => {
+    brush.noStroke(); brush.fill('#8fd0f0', 255); brush.fillTexture(0.3, 0.3); brush.rect(-5, -5, w + 10, h + 10);
+    const c = w / 2, sc = (w / 2) / T0.r1;
+    for (let k = 0; k < 12; k++) {             // chevrons around the ring at r = (r0 + r1) / 2, pointing clockwise (from above)
+      const a = k / 12 * TAU, r = (T0.r0 + T0.r1) / 2 * sc, s = 38;
+      const px = c + Math.cos(a) * r, py = c + Math.sin(a) * r, tx = -Math.sin(a), ty = Math.cos(a), nx = Math.cos(a), ny = Math.sin(a);
+      brush.fill('#ff5a2e', 255); brush.fillBleed(0.01);
+      brush.polygon([[px + tx * s, py + ty * s], [px - tx * s * 0.2 + nx * s * 0.9, py - ty * s * 0.2 + ny * s * 0.9], [px - tx * s * 0.6 + nx * s * 0.9, py - ty * s * 0.6 + ny * s * 0.9], [px + tx * s * 0.25, py + ty * s * 0.25], [px - tx * s * 0.6 - nx * s * 0.9, py - ty * s * 0.6 - ny * s * 0.9], [px - tx * s * 0.2 - nx * s * 0.9, py - ty * s * 0.2 - ny * s * 0.9]]);
+    }
+    brush.set('bigink', '#0b3558', 1.3); brush.circle(c, c, T0.r1 * sc - 18, 0.1); brush.circle(c, c, T0.r0 * sc + 14, 0.1);
+  });
+  const ringGeo = new THREE.RingGeometry(T0.r0, T0.r1, 72, 1); ringGeo.rotateX(-Math.PI / 2);
+  add(ringGeo, { color: 0xffffff, map: ringTex, rim: 0.3, hatchDir: [1, 0, 0], toneBias: 0.04 }, { outline: 0.8 }, [0, 0.06, 0], [0, 0, 0], turn);
+  add(new THREE.CylinderGeometry(T0.r1, T0.r1 + 0.02, 0.06, 72, 1, true), { color: COL.navy, side: THREE.DoubleSide, hatchMode: 'u' }, { outline: 0.8 }, [0, 0.03, 0], [0, 0, 0], turn);
   W.turn = turn;
-  // a pedestal in the pop colour carrying the job (the material)
-  add(new THREE.CylinderGeometry(0.22, 0.27, 0.12, 36), { color: COL.pop, hatchMode: 'u', rim: 0.8, shadeColor: COL.popD, shadeMix: 0.45 }, { outline: 0.8 }, [0, 0.13, 0], [0, 0, 0], turn);
+  // the Library: the shared knowledge base, three drums of fat books at the hub
+  const hub = new THREE.Group(); hub.position.set(B.x, 0, B.z); scene.add(hub);
+  const spineTex = await bake(THREE, { width: 1024, height: 256, seed: 16, key: 'spines-v1', background: '#ffffff', wrap: true }, (p, brush, w, h) => {
+    const cols = ['#0284c7', '#6cc4ee', '#0b3558', '#fff6e0', '#0284c7', '#ff5a2e', '#6cc4ee', '#0b3558', '#ffc94a', '#0284c7', '#bfe6f7', '#0b3558'];
+    let x = 0, k = 0;
+    while (x < w) { const bw = 60 + (k * 37) % 40; brush.noStroke(); brush.fill(cols[k % cols.length], 255); brush.fillTexture(0.3, 0.3); brush.rect(x, -4, bw, h + 8); brush.set('bigink', '#16162c', 1.2); brush.line(x, 0, x, h); brush.set('inkpen', k % 3 ? '#fff6e0' : '#16162c', 1.0); brush.line(x + 10, 40, x + bw - 10, 40); brush.line(x + 10, h - 40, x + bw - 10, h - 40); x += bw; k++; }
+  });
+  // one low drum of fat books (low enough that the job on the ring and the agents read past it) + a brass finial
+  const tex = spineTex.clone(); tex.needsUpdate = true; tex.repeat.set(2, 1); tex.wrapS = THREE.RepeatWrapping;
+  W.hubDrums = [add(new THREE.CylinderGeometry(0.3, 0.3, 0.24, 40), [{ color: 0xffffff, map: tex, rim: 0.7, hatchDir: [0, 1, 0], seed: 17 }, { color: COL.cream, rim: 0.3, hatch: 0.4 }, { color: COL.cream }], { outline: 0.9 }, [0, 0.07 + 0.12, 0], [0, 0, 0], hub)];
+  add(new THREE.CylinderGeometry(0.05, 0.07, 0.1, 16), { color: COL.gold, hatchMode: 'u', rim: 0.7 }, { outline: 0.6 }, [0, 0.36, 0], [0, 0, 0], hub);
+  add(new THREE.SphereGeometry(0.06, 16, 10), { color: COL.pop, rim: 0.7 }, { outline: 0.6 }, [0, 0.44, 0], [0, 0, 0], hub);
+  W.hub = hub;
 }
 
 /** the silicon model: ball-and-stick conventional diamond-cubic cell (matte; never glassy). Returns the group. */
@@ -228,7 +253,7 @@ export function buildHourglass(W, h, pos, key) {
   const cap = { color: 0xb8773f, hatchMode: 'u', rim: 0.6, shadeColor: 0x5e3419, shadeMix: 0.4 };
   add(new THREE.CylinderGeometry(0.34 * s, 0.34 * s, 0.07 * s, 32), cap, { outline: 0.8 }, [0, 0.035 * s, 0], [0, 0, 0], pivot);
   add(new THREE.CylinderGeometry(0.34 * s, 0.34 * s, 0.07 * s, 32), cap, { outline: 0.8 }, [0, 1.165 * s, 0], [0, 0, 0], pivot);
-  for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + 0.5; add(new THREE.CylinderGeometry(0.022 * s, 0.022 * s, 1.1 * s, 8), cap, { outline: 0.5 }, [Math.cos(a) * 0.29 * s, 0.6 * s, Math.sin(a) * 0.29 * s], [0, 0, 0], pivot); }
+  for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + Math.PI / 2; add(new THREE.CylinderGeometry(0.022 * s, 0.022 * s, 1.1 * s, 8), cap, { outline: 0.5 }, [Math.cos(a) * 0.29 * s, 0.6 * s, Math.sin(a) * 0.29 * s], [0, 0, 0], pivot); }
   // glass profile (lathe): r(y) with a narrow neck at y = 0.6
   const prof = [];
   for (let i = 0; i <= 32; i++) {
@@ -237,13 +262,14 @@ export function buildHourglass(W, h, pos, key) {
     prof.push(new THREE.Vector2(r * s, y * s));
   }
   const glassGeo = new THREE.LatheGeometry(prof, 40);
-  const glass = new THREE.Mesh(glassGeo, npr.glass({ tint: 0xcfeefd, alpha: 0.9, edge: 1.4, glint: 1.0 }));
+  const glass = new THREE.Mesh(glassGeo, npr.glass({ tint: 0xb8e2f8, alpha: 3.2, edge: 2.6, glint: 1.0, silhouette: true }));
   npr.add(glass, { glass: true }); pivot.add(glass);
   // sand: top cone (points down into the neck) and bottom heap; plus the stream
   const sandM = { color: 0xe9b04f, hatchDir: [0, 1, 0.3], rim: 0.5, shadeColor: 0xa9651f, shadeMix: 0.35, toneBias: 0.05 };
-  const topSand = add(new THREE.ConeGeometry(0.22 * s, 0.4 * s, 32, 1), sandM, { outline: 0.4, cast: false }, [0, 0, 0], [Math.PI, 0, 0], pivot);
-  const botSand = add(new THREE.ConeGeometry(0.23 * s, 0.3 * s, 32, 1), sandM, { outline: 0.4, cast: false }, [0, 0, 0], [0, 0, 0], pivot);
-  const stream = add(new THREE.CylinderGeometry(0.008 * s + 0.004, 0.008 * s + 0.004, 1, 6), sandM, { cast: false }, [0, 0.4 * s, 0], [0, 0, 0], pivot);
+  const sandGeo = new THREE.ConeGeometry(0.22 * s, 0.3 * s, 32, 1);
+  const topSand = add(sandGeo, sandM, { outline: 0.4, cast: false }, [0, 0, 0], [0, 0, 0], pivot);   // sand of the local-top bulb
+  const botSand = add(sandGeo, sandM, { outline: 0.4, cast: false }, [0, 0, 0], [0, 0, 0], pivot);   // sand of the local-bottom bulb
+  const stream = add(new THREE.CylinderGeometry(0.007, 0.007, 1, 6), sandM, { cast: false }, [0, 0.4 * s, 0], [0, 0, 0], pivot);  // same width at any scale: same flow
   return { g, pivot, glass, topSand, botSand, stream, s, h, key };
 }
 
@@ -258,7 +284,7 @@ export async function buildDesk(W) {
   add(new THREE.BoxGeometry(D.w - 0.2, 0.22, D.d - 0.1), { ...wood, color: 0xb57a3f }, { outline: 0.9 }, [0, -0.23, -0.02], [0, 0, 0], g);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.BoxGeometry(0.1, -L.floorY - 0.12, 0.1), wood, { outline: 0.8 }, [sx * (D.w / 2 - 0.12), (L.floorY - 0.12) / 2, sz * (D.d / 2 - 0.1)], [0, 0, 0], g);
   // gooseneck lamp (back-left of the desk), shade aimed at the book
-  const lamp = new THREE.Group(); lamp.position.set(-0.95, 0, -0.35); g.add(lamp);
+  const lamp = new THREE.Group(); lamp.position.set(-1.3, 0, 0.28); lamp.rotation.y = 0.55; g.add(lamp);
   const skyM = { color: COL.sky, rim: 0.8, hatchMode: 'u', shadeColor: COL.navy, shadeMix: 0.35 };
   add(new THREE.CylinderGeometry(0.16, 0.19, 0.06, 28), skyM, { outline: 0.8 }, [0, 0.03, 0], [0, 0, 0], lamp);
   const neck = new THREE.CatmullRomCurve3([[0, 0.05, 0], [0.02, 0.5, -0.02], [0.18, 0.86, 0.02], [0.45, 0.92, 0.12]].map((q) => new THREE.Vector3(...q)));
@@ -272,7 +298,7 @@ export async function buildDesk(W) {
     brush.set('inkpen', '#6d6a78', 0.8); for (let y = 6; y < h; y += 11) brush.line(0, y, w, y + (y % 3) - 1);
   });
   const paperM = { color: COL.cream, map: stackTex, rim: 0.4, hatchDir: [0, 1, 0], toneBias: 0.05 };
-  W.stacks = [[-0.4, -0.35, 0.62, 0.04], [-0.12, -0.42, 0.9, -0.05], [1.05, -0.3, 0.5, 0.07]].map(([x, z, h, lean], i) => {
+  W.stacks = [[-1.25, -0.42, 0.95, 0.04], [-0.95, -0.5, 0.62, -0.05], [1.25, -0.4, 0.5, 0.07]].map(([x, z, h, lean], i) => {
     const m = add(new THREE.BoxGeometry(0.34, h, 0.26), paperM, { outline: 0.8 }, [x, h / 2, z], [0.02 * i, 0.15 * i - 0.1, lean], g);
     return m;
   });
@@ -281,7 +307,7 @@ export async function buildDesk(W) {
   for (const [k, kind] of [[0, 'blank'], [1, 'cube'], [2, 'honey'], [3, 'si']]) {
     W.bookTex.push(await bake(THREE, { width: 512, height: 384, seed: 30 + k, key: `page-${kind}-v1`, background: '#ffffff' }, (p, brush, w, h) => paintPage(ctx, brush, w, h, kind)));
   }
-  const book = new THREE.Group(); book.position.set(0.12, 0.0, 0.05); book.rotation.y = 0.12; g.add(book);
+  const book = new THREE.Group(); book.position.set(-0.3, 0.0, 0.02); book.rotation.y = 0.08; g.add(book);
   const pageM = (tex) => ({ color: COL.cream, map: tex, rim: 0.3, toneBias: 0.1, hatch: 0.5 });
   const cover = { color: COL.navy, rim: 0.5 };
   add(new THREE.BoxGeometry(1.02, 0.03, 0.66), cover, { outline: 0.8 }, [0, 0.015, 0], [0, 0, 0], book);
@@ -291,12 +317,12 @@ export async function buildDesk(W) {
   W.flipPage = add(new THREE.PlaneGeometry(0.48, 0.6).rotateX(-Math.PI / 2).translate(0.24, 0, 0), { color: COL.cream, map: W.bookTex[1], side: THREE.DoubleSide, rim: 0.3, toneBias: 0.1, hatch: 0.5 }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], W.flip);
   W.book = book;
   // mug + steam anchor, pencil cup
-  const mug = new THREE.Group(); mug.position.set(0.72, 0, 0.3); g.add(mug);
+  const mug = new THREE.Group(); mug.position.set(-0.98, 0, 0.16); g.add(mug);
   add(new THREE.CylinderGeometry(0.09, 0.085, 0.2, 24, 1, false), { color: COL.pop, rim: 0.7, hatchMode: 'u', shadeColor: COL.popD, shadeMix: 0.45 }, { outline: 0.8 }, [0, 0.1, 0], [0, 0, 0], mug);
   add(new THREE.TorusGeometry(0.055, 0.017, 10, 24), { color: COL.pop, rim: 0.5 }, { outline: 0.5 }, [0.1, 0.11, 0], [0, 0, 0], mug);
   add(new THREE.CircleGeometry(0.08, 20), { color: 0x4a2a18, hatch: 0 }, { cast: false }, [0, 0.19, 0], [-Math.PI / 2, 0, 0], mug);
   W.mug = mug;
-  const cup = new THREE.Group(); cup.position.set(-0.7, 0, 0.35); g.add(cup);
+  const cup = new THREE.Group(); cup.position.set(-1.35, 0, -0.1); g.add(cup);
   add(new THREE.CylinderGeometry(0.07, 0.07, 0.16, 20, 1, true), { color: COL.navy, side: THREE.DoubleSide }, { outline: 0.7 }, [0, 0.08, 0], [0, 0, 0], cup);
   [[0.02, 0.12, COL.pop], [-0.02, 0.2, COL.gold], [0.0, -0.18, COL.skyL]].forEach(([x, rz, c]) => add(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 6), { color: c }, { outline: 0.4 }, [x, 0.2, 0], [0, 0, rz], cup));
   W.desk = { g, lamp, bulb, shade };
@@ -324,12 +350,12 @@ export async function buildTube(W, paintWordFn) {
   const { THREE, scene, add } = W;
   const tri = station(ST.plan);
   const pts = [
-    [L.desk.x + 0.55, 0.95, L.desk.z - 0.38], [L.desk.x + 0.62, 1.55, L.desk.z - 0.62], [L.desk.x + 0.9, 2.45, L.wallZ + 0.35],
-    [L.desk.x + 1.8, 2.72, L.wallZ + 0.32], [tri[0] - 0.9, 2.72, L.wallZ + 0.32], [tri[0] - 0.25, 2.62, tri[2] - 0.55], [tri[0], 2.1, tri[2] - 0.05],
+    [L.desk.x + 1.02, 1.12, L.desk.z - 0.5], [L.desk.x + 1.06, 1.62, L.desk.z - 0.88], [L.desk.x + 1.3, 2.45, L.wallZ + 0.35],
+    [L.desk.x + 2.1, 2.72, L.wallZ + 0.32], [tri[0] - 0.9, 2.72, L.wallZ + 0.32], [tri[0] - 0.25, 2.62, tri[2] - 0.55], [tri[0], 2.1, tri[2] - 0.05],
   ].map((q) => new THREE.Vector3(...q));
   const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
   const tubeM = { color: COL.skyL, rim: 0.8, hatchMode: 'u', shadeColor: COL.sky, shadeMix: 0.4, seed: 91 };
-  add(new THREE.TubeGeometry(curve, 160, 0.09, 14), tubeM, { outline: 0.9 }, [0, 0, 0], [0, 0, 0]);
+  add(new THREE.TubeGeometry(curve, 160, 0.09, 14), tubeM, { outline: 0.9, cast: false }, [0, 0, 0], [0, 0, 0]);
   // brass collars every so often
   const brass = { color: COL.gold, hatchMode: 'u', rim: 0.7, shadeColor: 0x9a5a2a, shadeMix: 0.35 };
   for (const u of [0.12, 0.3, 0.5, 0.7, 0.88]) {
@@ -346,15 +372,16 @@ export async function buildTube(W, paintWordFn) {
   const fun = new THREE.Group(); fun.position.copy(m1); scene.add(fun);
   add(new THREE.CylinderGeometry(0.09, 0.3, 0.34, 32, 1, true), { ...brass, side: THREE.DoubleSide }, { outline: 1.0 }, [0, -0.17, 0], [0, 0, 0], fun);
   add(new THREE.TorusGeometry(0.3, 0.025, 8, 40), brass, { outline: 0.6 }, [0, -0.34, 0], [Math.PI / 2, 0, 0], fun);
-  const plateTex = await bake(THREE, { width: 900, height: 300, seed: 41, key: 'plate-v1', background: '#ffffff' }, (p, brush, w, h) => {
+  const plateTex = await bake(THREE, { width: 1024, height: 300, seed: 41, key: 'plate-v2', background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill('#0284c7', 255); brush.fillBleed(0.004); brush.fillTexture(0.15, 0.2);
     const rr = 50; const pts = []; for (let k = 0; k < 40; k++) { const a = k / 40 * TAU, cx = a < Math.PI / 2 || a > 1.5 * Math.PI ? w - rr - 14 : rr + 14, cy = a < Math.PI ? h - rr - 14 : rr + 14; pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]); }
     brush.polygon(pts); brush.polygon(pts);
     brush.set('bigink', '#fff6e0', 1.2); brush.beginShape(0.3); pts.forEach(([a, b]) => brush.vertex(a + (w / 2 - a) * 0.04, b + (h / 2 - b) * 0.1)); brush.endShape(true);
-    paintWordFn(brush, 'TRITONDFT', w / 2, h / 2 + 4, 132, { fill: '#fff6e0', shade: '#bfe6f7', ink: '#0b3558', extrude: [0.04, 0.05], jaunt: 0.08, bounce: 0.05, skew: -0.08, gap: 0.12 });
+    paintWordFn(brush, 'TRITONDFT', w / 2, h / 2 + 4, 100, { fill: '#fff6e0', shade: '#bfe6f7', ink: '#0b3558', extrude: [0.04, 0.05], jaunt: 0.08, bounce: 0.05, skew: -0.08, gap: 0.12 });
     for (const x of [34, w - 34]) { brush.noStroke(); brush.fill('#e9b04f', 255); brush.circle(x, h / 2, 12, 0.1); }
   });
-  const plate = add(new THREE.PlaneGeometry(0.72, 0.24), { color: 0xffffff, map: plateTex, rim: 0.3, hatch: 0.4, toneBias: 0.08, side: THREE.DoubleSide }, { outline: 0.6 }, [0, -0.18, 0.33], [-0.18, 0, 0], fun);
+  const plate = add(new THREE.PlaneGeometry(0.75, 0.22), { color: 0xffffff, map: plateTex, rim: 0.3, hatch: 0.4, toneBias: 0.08, side: THREE.DoubleSide }, { outline: 0.6 }, [m0.x + 0.58, m0.y + 0.02, m0.z + 0.1], [-0.05, -0.12, 0.02]);
+  add(new THREE.CylinderGeometry(0.014, 0.014, 0.3, 8), brass, { outline: 0.4, cast: false }, [m0.x + 0.2, m0.y + 0.05, m0.z + 0.05], [0, 0, Math.PI / 2]);
   W.tube = { curve, mouth, fun, plate, len: curve.getLength() };
   // the travelling bulge (a slightly fatter sleeve that slides along the tube)
   W.tube.bulge = add(new THREE.SphereGeometry(0.15, 20, 14), tubeM, { outline: 0.8, cast: false }, [0, 0, 0]);
