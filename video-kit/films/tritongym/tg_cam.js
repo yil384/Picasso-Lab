@@ -102,7 +102,7 @@ function shotRace2(F) {          // B7: start two-shot (rhymes with B4), dolly-z
   // track the pack from a raised lens (both lanes in separate screen bands)
   const rf = raceF(F), pack = (kernTh(rf) + oroTh(rf)) / 2;
   if (F < K.hold[0]) {
-    const trk = rig([pack + 0.04, 11.6, 2.7], [pack + 0.05, 5.9, 0.25], 33, lerp(-0.02, -0.09, sg(F, K.go2, K.cross)));
+    const trk = rig([pack + 0.03, 10.5, 2.45], [pack + 0.05, 5.9, 0.3], 33, lerp(-0.02, -0.09, sg(F, K.go2, K.cross)));
     return mix(st, trk, sg(F, K.go2, K.go2 + 8, sm));
   }
   // the photo finish: cut (under the impact frame) to a raised 3/4-front panel on the line, both noses towards the lens
