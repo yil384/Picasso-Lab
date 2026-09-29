@@ -3618,7 +3618,7 @@ function tributeHTML(v) {
     const since = Date.now() - Number(game.dealStartedAt || 0) - TRIBUTE_AT;
     const rows = game.selectedTributes.filter(r => r?.tributeCard);
     if (!rows.length) return `<div class="gd-kanggong" style="animation-delay:${-since}ms">${wordHTML(L("Tribute blocked", "抗贡"))}</div>`;
-    const fly = (card, from, to, cls, label, delay) => `<div class="gd-tribute ${cls}" style="left:${from[0].toFixed(0)}px;top:${from[1].toFixed(0)}px;--tx:${(to[0] - from[0]).toFixed(0)}px;--ty:${(to[1] - from[1]).toFixed(0)}px;animation-delay:${delay - since}ms"><span>${label}</span>${cardHTML(card, true)}</div>`;
+    const fly = (card, from, to, cls, label, delay) => `<div class="gd-tribute ${cls}" style="left:${from[0].toFixed(0)}px;top:${from[1].toFixed(0)}px;--tx:${(to[0] - from[0]).toFixed(0)}px;--ty:${(to[1] - from[1]).toFixed(0)}px;animation-delay:${delay - since}ms"><span class="gd-tribute-tag">${label}</span>${cardHTML(card, true)}</div>`;
     return rows.map(r => {
         const payer = at[visualSeatPos(r.payerSeat, v.mine)];
         const receiver = at[visualSeatPos(r.receiverSeat, v.mine)];

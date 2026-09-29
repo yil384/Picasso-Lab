@@ -803,7 +803,7 @@ body[data-screen="table"] .topbar { display: none; }
     animation: gd-tribute 640ms linear both;
 }
 .gd-tribute .card { box-shadow: 0 6px 14px rgba(0, 30, 26, .4); }
-.gd-tribute span {
+.gd-tribute-tag {
     padding: 3px 12px;
     border-radius: 5px;
     background: var(--warm-plate);
@@ -814,8 +814,8 @@ body[data-screen="table"] .topbar { display: none; }
     paint-order: stroke fill;
     white-space: nowrap;
 }
-.gd-tribute span:lang(en) { letter-spacing: .02em; }
-.gd-tribute.is-back span { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
+.gd-tribute-tag:lang(en) { letter-spacing: .02em; }
+.gd-tribute.is-back .gd-tribute-tag { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
 @keyframes gd-tribute { /* pop 90 ms, hold, 340 ms flight, fade 140 ms */
     0% { opacity: 0; transform: scale(.7); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
     14% { opacity: 1; transform: none; }
