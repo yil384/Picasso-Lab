@@ -271,7 +271,7 @@ function updateCart(F) {
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k)];
   if (F >= K.handBack[0]) { const tp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0)), b = sm((F - K.handBack[0]) / (K.handBack[1] - K.handBack[0])); p = [lerp(p[0], tp.x, b), lerp(p[1], tp.y - 0.1, b), lerp(p[2], tp.z, b)]; }
   C.position.set(...p); C.rotation.set(0, 0.3 + (F < K.land + 8 ? (1 - k) * 4 : 0), 0);
-  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.5, k) : lerp(0.5, 1, sm((F - K.handBack[0]) / 8)));
+  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.62, k) : lerp(0.62, 1, sm((F - K.handBack[0]) / 8)));
 }
 
 // ---- Hoot (the researcher) ----
@@ -931,11 +931,12 @@ export function drawNPR(w, ctx) {
   W.engine.lamps.forEach((m, i) => { const p = m.getWorldPosition(V3(0, 0, 0)); npr.glowAt(ctx, camera, p, { radius: 0.05, i: 0.35 + 0.35 * ((Math.floor(F / 6) + i) % 2) + 0.3 * (st.roar || 0), color: i % 2 ? 0xff9a6a : 0xfff0c0, behind: true, seed: 10 + i }); });
   // scf: halftone electron density condensing, one blob at a time, onto the 16 bond midpoints (symmetric)
   if (F >= K.scf[0] && W.cart.visible && F < NF - 8) {
+    const cs = W.cart.getWorldScale(V3(0, 0, 0)).x;          // the cart shrinks to half in Hoot's wings
     W.si.bonds.forEach((b, i) => {
       const age = F - K.scf[0] - (i % 8) * 2.5;
       if (age < 0) return;
       const p = b.getWorldPosition(V3(0, 0, 0));
-      npr.glowAt(ctx, camera, p, { radius: 0.045 * ob(age / 6) * st.siScale, i: 0.6, color: 0x6cc4ee, behind: false, seed: 40 + i, occluded: 0.3 });
+      npr.glowAt(ctx, camera, p, { radius: 0.045 * ob(age / 6) * st.siScale * cs, i: 0.6, color: 0x6cc4ee, behind: false, seed: 40 + i, occluded: 0.3 });
     });
   }
   if (F >= K.roar && F < K.roar + 16) {
