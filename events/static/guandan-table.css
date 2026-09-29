@@ -709,7 +709,7 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-actions .btn::after { top: 5px; opacity: .75; }
 /* 40+ CSS px tap height even on the smallest phones, without a bigger pill */
-.gd-actions .btn > .gd-hit { position: absolute; left: 0; right: 0; top: 50%; height: max(100%, calc(42px / var(--gd-s, 1))); translate: 0 -50%; z-index: 0; }
+.gd-actions .btn > .gd-hit, .gd-result .btn > .gd-hit { position: absolute; left: 0; right: 0; top: 50%; height: max(100%, calc(42px / var(--gd-s, 1))); translate: 0 -50%; z-index: 0; }
 .gd-actions .btn:active:not(.is-disabled) {
     translate: 0 4px;
     box-shadow:
@@ -1231,7 +1231,13 @@ body[data-screen="table"] .topbar { display: none; }
 /* ---------- round / match result (qqg_result) ----------
    Over the dimmed table: the title word, a meta band, the warm | cool finishing band with a faint VS
    on its slanted seam, the level tiles and the two buttons. --in delays the whole entrance while the
-   last play lands; .is-still (coming back from 查看牌桌) shows it without replaying. */
+   last play lands; .is-still (coming back from 查看牌桌) shows it without replaying. The table's own
+   parts fade out as the panel lands (--result-in on the stage) and come back with 查看牌桌; the HUD
+   stays under the scrim. */
+.gd-stage.has-result :is(.gd-seat, .gd-slot, .gd-hand, .gd-tools, .gd-actions, .gd-spectate, .gd-jipai-host) {
+    opacity: 0;
+    transition: opacity 200ms ease var(--result-in, 0ms);
+}
 .gd-result-host { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
 .gd-result-host > * { pointer-events: auto; }
 @keyframes gd-fade-in { from { opacity: 0; } }
@@ -1253,18 +1259,26 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-result > * { position: relative; }
 .gd-res-head { display: flex; flex-direction: column; align-items: center; }
+/* qqg_result's title: ~12% of the height, a thin outline and no drop edge */
 .gd-res-title {
     margin: 0;
-    font-size: 100px;
+    font-size: 84px;
     line-height: 1.02;
     animation: gd-res-title 420ms var(--ease-back) var(--in) both;
 }
-.gd-res-title:lang(en) { font-size: 84px; }
-@keyframes gd-res-title { from { opacity: 0; transform: translateY(-46px) scale(1.25); } }
+.gd-res-title:lang(en) { font-size: 72px; }
+.gd-res-title .gd-word { -webkit-text-stroke-width: 6px; text-shadow: none; }
+/* the match end: the records crown over 比赛胜利 / 比赛失败 */
+.gd-res-crown {
+    width: 64px; height: 45px;
+    margin-bottom: -10px;
+    rotate: -8deg;
+    animation: gd-res-title 420ms var(--ease-back) calc(var(--in) + 60ms) both;
+}@keyframes gd-res-title { from { opacity: 0; transform: translateY(-46px) scale(1.25); } }
 .gd-res-meta {
     margin: 6px 0 0;
     padding: 6px 70px;
-    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .34) 22% 78%, transparent);
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .5) 22% 78%, transparent);
     font: 700 22px/1.3 var(--font-ui);
     white-space: nowrap;
     animation: gd-fade-in 240ms ease calc(var(--in) + 160ms) both;
@@ -1273,7 +1287,7 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-res-band {
     display: flex;
     width: min(1160px, calc(100% - 100px));
-    height: 272px;
+    height: 300px;
     margin-top: 16px;
     animation: gd-res-band 320ms var(--ease-out) calc(var(--in) + 120ms) both;
 }
@@ -1284,16 +1298,17 @@ body[data-screen="table"] .topbar { display: none; }
     grid-template-columns: 1fr 1fr;
     align-items: center;
 }
+/* solid halves; only the outer 28 px soften into the scrim, as in qqg_result */
 .gd-res-half.is-warm {
     padding-left: 44px;
-    background: linear-gradient(90deg, rgba(255, 244, 214, 0), rgba(255, 244, 214, .97) 16%, #ffefc4 58%, #ffe39c);
+    background: linear-gradient(90deg, rgba(255, 244, 214, 0), #fff4d6 28px, #ffefc4 58%, #ffe39c);
     clip-path: polygon(0 0, 100% 0, calc(100% - 40px) 100%, 0 100%);
 }
 .gd-res-half.is-cool {
     margin-left: -40px;
     padding-right: 44px;
     padding-left: 40px;
-    background: linear-gradient(90deg, #c9dcff, #d9e7ff 42%, rgba(227, 239, 255, .97) 84%, rgba(227, 239, 255, 0));
+    background: linear-gradient(90deg, #c9dcff, #d9e7ff 42%, #e3efff calc(100% - 28px), rgba(227, 239, 255, 0));
     clip-path: polygon(40px 0, 100% 0, 100% 100%, 0 100%);
 }
 .gd-res-vs {
@@ -1351,6 +1366,17 @@ body[data-screen="table"] .topbar { display: none; }
     white-space: nowrap;
 }
 .gd-res-p.is-me .gd-res-name { color: #10152a; font-weight: 900; }
+/* +N 级 / 冲A n/3 / 过A for the first team, 剩N张 for a hand still held; the height stays when empty */
+.gd-res-note {
+    height: 34px;
+    margin-top: 8px;
+    color: #5a6688;
+    font: 700 21px/34px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-res-note b { margin: 0 3px; font: 700 31px/34px var(--font-num); }
+.gd-res-note.is-up { color: #d6301a; }
+.is-cool > .gd-res-p .gd-res-note.is-up { color: #2a5fd6; }
 .gd-res-levels {
     display: flex;
     gap: 28px;
@@ -1405,6 +1431,7 @@ body[data-screen="table"] .topbar { display: none; }
     animation: gd-res-p 280ms var(--ease-out) calc(var(--in) + 460ms) both;
 }
 .gd-res-actions .btn, .gd-result.is-peek .btn { --btn-h: 70px; --btn-fs: 30px; --btn-px: 26px; --btn-minw: 250px; }
+.gd-result .btn:lang(en) { --btn-ls: .02em; }
 .gd-result.is-peek { inset: auto; right: 22px; bottom: 16px; padding: 0; }
 .gd-result.is-peek::before { display: none; }
 .gd-result.is-peek .btn { --btn-h: 58px; --btn-fs: 25px; --btn-minw: 210px; }
