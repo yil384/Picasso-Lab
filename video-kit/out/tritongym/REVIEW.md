@@ -213,15 +213,32 @@ Deferred, with reasons:
 - Kern's face on the drive (CD n5).
 - The push-in on Kern's win (CD n7).
 
-## Handoff status
-- **Reached:** review round 8 (r8 at 960×540, commit eabacbe) scored CD 8.6, TA 8.3, DE 8.8, WD 8.6. Only the tech-art lens is below 8.5. Round 8 is not yet written up as a table above. No 1080p deliverables exist yet: `out/tritongym/_final` is a stale r7 partial, so re-render with `--clean`.
-- **Verified in studio snaps (commit cdb9b57):** slam puffs are tested per frame against Tok (f595–599 clean); focus and zoom lines skip Tok's ellipse (f150, f364, f594); the idea "!" is on Tok's left with a cream keyline; Oro's jaw drop shows an open mouth (f614–628).
-- **In this wip commit, snap-checked:** a second focus-line hole for Kern's face block (f150–152), and Oro's double-take "!" beside its head with a cream keyline (f500–508, inside the band).
-- **In this wip commit, not verified:** letter hulls pushed back 0.15 along the eye ray (`uHullPush` in `tg_letter.js`). This shrinks the crawling join specks (TA must-fix 4) but does not remove them at the ">" joint or in the "@".
-- **Not yet seen in a full render or reviewed:** everything after r8.
-- **Next:**
-  1. Fix the letter specks properly: union each glyph's strokes before extruding, or drop the bevel on inner strokes, and simplify the "@". Then set the push back to about 0.05.
-  2. Render r9 at 960×540, run `tools/evidence.sh`, and do review round 9 (tech-art must reach 8.5).
-  3. Render the final 1080p pass with `--workers 2 --clean` into `_final`.
-  4. Run `encode_segs.py` for the master (CRF search, ≤ 70 MB), cardsrc, the card (`--start 628`, ≤ 4 MB), the poster (`--frame 628`) and the 1 f/s sheet, and copy them into `out/tritongym/`.
-  5. Commit, push and give the README §9 report.
+## Round 8 — pass r8 (960×540, commit eabacbe)
+
+| lens | r1 | r2 | r3 | r4 | r5 | r6 | r7 | **r8** | verdict in one line |
+|---|---|---|---|---|---|---|---|---|---|
+| Creative director | 6.0 | 7.0 | 7.5 | 7.5 | 8.2 | 8.3 | 8.5 | **8.6** | **no must-fix**: the refine stare now reads in the band and Oro's key no longer covers Tok in the race-1 loss |
+| Tech-art lead | 6.0 | 7.0 | 7.5 | 7.0 | 8.0 | 8.2 | 8.2 | **8.3** | Kern's lap-2 vanish and the key over Tok are fixed; 2D marks still cross faces, and the payoff letters crawl with ink specks at their stroke joins |
+| Domain expert | 6.0 | 7.6 | 8.2 | 8.3 | 8.7 | 8.8 | 8.9 | **8.8** | **no must-fix**: every claim, timing and colour meaning still holds |
+| Web designer | 6.3 | 7.4 | 7.8 | 8.0 | 8.1 | 8.6 | 8.4 | **8.6** | **no must-fix**: the stare and the "!" sit inside both card bands, and the poster, seam and budget hold |
+
+The session was interrupted before this round was written up, and the reviewers' notes did not survive. The scores are
+from the handoff note. The must-fix list below comes from the r9 fix commits (cdb9b57, 9cf6fee) and the handoff, which
+name each fix and the frames it was checked on. Only the tech-art lens had must-fixes.
+
+### Must-fix list (tech-art) and what r9 does about each
+1. *Focus/zoom lines cross Tok's face* (the token insert f150, the crash zoom f364, the slam f594): `focusLines` takes up to
+   two screen-space holes, one for Tok's projected ellipse and one for Kern's face block, and every line stops at their outlines.
+2. *Slam puffs roll over Tok* (f595–599): the puffs are tested against Tok's ellipse every frame where they are drawn (they
+   roll outward after spawning, so a spawn-time test missed them).
+3. *The idea "!" lands against Oro / the dark slab*: it pops on Tok's side away from Oro, with a cream keyline.
+4. *Crawling ink specks where the payoff letters' strokes join* (the ">" apex, the "@", P/E/R/F joins, f590–650): each
+   stroke was its own extrusion with its own inverted hull, so a hull edge lay in the neighbouring stroke's front cap and
+   z-fought. Pushing the hulls back (`uHullPush` 0.15) only shrank them. **r9 merges each glyph's strokes before extruding:**
+   they are rasterised with coverage AA as quads (a folded ribbon still fills), traced at 50 % coverage (marching squares),
+   simplified and nested into outlines with holes. One outline per glyph means one extrusion and one hull, with no joins
+   inside a letter. The hull push goes back to 0.05. The "@" is redrawn as a ring-and-stem "a" with an outer swing, at 0.62
+   of the payoff weight, so both counters stay open (it had filled into a disc).
+
+Also in r9: Oro turns further to the payoff lens at the jaw drop, and the open mouth is painted under the eye that lens sees
+(f614–628). Oro's double-take "!" sits beside its head at eye height with a cream keyline (f500–508, inside the band).

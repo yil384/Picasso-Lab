@@ -42,7 +42,7 @@ export const GLYPHS = {
   '9': { w: 0.6, s: [{ c: true, p: [[0.54, 0.4], [0.3, 0.52], [0.06, 0.4], [0.06, 0.14], [0.3, 0.0], [0.54, 0.12], [0.58, 0.44], [0.44, 0.8], [0.12, 1.0]] }] },
   '!': { w: 0.0, s: [[[0, 0], [0, 0.64]]], dots: [[0, 0.94]] },
   '.': { w: 0.0, s: [], dots: [[0, 0.94]] },
-  '@': { w: 0.96, s: [{ c: true, p: [[0.66, 0.54], [0.52, 0.76], [0.3, 0.72], [0.25, 0.5], [0.42, 0.3], [0.66, 0.34], [0.66, 0.74], [0.8, 0.8], [0.95, 0.56], [0.88, 0.2], [0.56, 0.02], [0.2, 0.1], [0.0, 0.5], [0.15, 0.92], [0.54, 1.02], [0.8, 0.94]] }] },   // an open inner 'a' (it filled in at payoff weight)
+  '@': { w: 1.02, wk: 0.62, s: [{ c: true, p: E(0.5, 0.56, 0.19, 0.21, 0, TAU, 14) }, { c: true, p: [[0.7, 0.34], [0.7, 0.7], [0.76, 0.8], [0.88, 0.8], [0.99, 0.6], [0.98, 0.34], [0.84, 0.1], [0.54, 0.0], [0.22, 0.06], [0.03, 0.3], [0.0, 0.6], [0.14, 0.9], [0.42, 1.04], [0.68, 1.02]] }] },   // an 'a' (ring + stem) and the outer swing, drawn lighter (wk) so both counters stay open at payoff weight
   '>': { w: 0.56, s: [[[0.02, 0.18], [0.56, 0.52], [0.02, 0.86]]] },
   '<': { w: 0.56, s: [[[0.54, 0.18], [0.0, 0.52], [0.54, 0.86]]] },
   '=': { w: 0.56, s: [[[0, 0.38], [0.56, 0.38]], [[0, 0.68], [0.56, 0.68]]] },
@@ -70,7 +70,7 @@ export function layoutWord(word, size, { track = 0.2, r = null, fan = 0, arc = 0
       const P = pts.map(([u, v]) => [(u - G.w / 2) * size + j(size * 0.008), (v - 0.5) * size + j(size * 0.008)]);
       return { P: st.c ? smooth(P, 4) : P, curve: !!st.c };
     });
-    out.push({ lx, ly: -arc * (1 - 4 * t * t), rot: t * fan, strokes, dots: (G.dots || []).map(([u, v]) => [(u - G.w / 2) * size, (v - 0.5) * size]) });
+    out.push({ lx, ly: -arc * (1 - 4 * t * t), rot: t * fan, wk: G.wk || 1, strokes, dots: (G.dots || []).map(([u, v]) => [(u - G.w / 2) * size, (v - 0.5) * size]) });
     x += w + track * size + (G.rb || 0) * size;
   });
   return { letters: out, width: total };
@@ -159,9 +159,67 @@ export { CREAM };
  * a mesh; strokes of a glyph share two materials (face, side), so overlaps merge visually. Returns { root, glyphs:[{g, w}] }
  * with the word laid out along +x, baseline at y = 0, facing +z.
  */
-// each stroke is its own extrusion with its own hull; where strokes join, a hull edge lies in the neighbour's front cap and
-// z-fights (crawling ink specks): push the letters' hulls back a little along the eye ray
-const pushHull = (m) => { for (const c of m.children) if (c.material?.uniforms?.uHullPush) c.material.uniforms.uHullPush.value = 0.15; return m; };
+// A glyph's strokes overlap at every join; extruded one by one, each has its own hull, and a hull edge lying in the
+// neighbour's front cap z-fights (crawling ink specks at the joins). So the strokes are merged first: rasterised with
+// coverage AA as quads (a folded ribbon still fills), traced at 50% coverage (marching squares, sub-cell), simplified,
+// nested into outlines with holes. One outline per glyph -> one extrusion, one hull, no joins inside a letter.
+function traceUnion(polys, cell) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const P of polys) for (const [x, y] of P) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  x0 -= 3 * cell; y0 -= 3 * cell; x1 += 3 * cell; y1 += 3 * cell;
+  const W = Math.ceil((x1 - x0) / cell), H = Math.ceil((y1 - y0) / cell);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d', { willReadFrequently: true });
+  g.setTransform(1 / cell, 0, 0, 1 / cell, -x0 / cell, -y0 / cell);
+  for (const P of polys) fillPoly(g, P, '#fff');
+  const px = g.getImageData(0, 0, W, H).data, v = (i, j) => px[(j * W + i) * 4 + 3] / 255;
+  // marching squares: sample (i, j) sits at the pixel centre; a crossing point is keyed by its grid edge
+  const pos = new Map(), adj = new Map();
+  const cross = (key, ax, ay, bx, by, a, b) => { if (!pos.has(key)) { const t = (0.5 - a) / (b - a); pos.set(key, [ax + (bx - ax) * t, ay + (by - ay) * t]); } return key; };
+  const link = (p, q) => { (adj.get(p) || adj.set(p, []).get(p)).push(q); (adj.get(q) || adj.set(q, []).get(q)).push(p); };
+  for (let j = 0; j < H - 1; j++) for (let i = 0; i < W - 1; i++) {
+    const tl = v(i, j), tr = v(i + 1, j), br = v(i + 1, j + 1), bl = v(i, j + 1);
+    const c = (tl >= 0.5 ? 8 : 0) | (tr >= 0.5 ? 4 : 0) | (br >= 0.5 ? 2 : 0) | (bl >= 0.5 ? 1 : 0);
+    if (c === 0 || c === 15) continue;
+    const T_ = () => cross(`h${i},${j}`, i, j, i + 1, j, tl, tr), B_ = () => cross(`h${i},${j + 1}`, i, j + 1, i + 1, j + 1, bl, br);
+    const L_ = () => cross(`v${i},${j}`, i, j, i, j + 1, tl, bl), R_ = () => cross(`v${i + 1},${j}`, i + 1, j, i + 1, j + 1, tr, br);
+    const mid = (tl + tr + br + bl) / 4 >= 0.5;
+    switch (c) {
+      case 1: case 14: link(L_(), B_()); break;
+      case 2: case 13: link(B_(), R_()); break;
+      case 3: case 12: link(L_(), R_()); break;
+      case 4: case 11: link(T_(), R_()); break;
+      case 6: case 9: link(T_(), B_()); break;
+      case 7: case 8: link(L_(), T_()); break;
+      case 5: if (mid) { link(L_(), T_()); link(B_(), R_()); } else { link(T_(), R_()); link(L_(), B_()); } break;
+      case 10: if (mid) { link(T_(), R_()); link(L_(), B_()); } else { link(L_(), T_()); link(B_(), R_()); } break;
+    }
+  }
+  const seen = new Set(), loops = [];
+  for (const k0 of adj.keys()) {
+    if (seen.has(k0)) continue;
+    const loop = []; let prev = null, k = k0;
+    while (k && !seen.has(k)) { seen.add(k); const [x, y] = pos.get(k); loop.push([x0 + (x + 0.5) * cell, y0 + (y + 0.5) * cell]); const nb = adj.get(k); const nx = nb[0] !== prev ? nb[0] : nb[1]; prev = k; k = nx; }
+    if (loop.length >= 4) loops.push(simplifyLoop(loop, cell * 0.12));
+  }
+  // nesting: a loop inside an even number of others is an outline, inside an odd number a hole (of its tightest container)
+  const area = (L) => L.reduce((s, p, i) => { const q = L[(i + 1) % L.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0) / 2;
+  const inside = (L, [x, y]) => { let c = false; for (let i = 0, j = L.length - 1; i < L.length; j = i++) { const [xi, yi] = L[i], [xj, yj] = L[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const info = loops.map((L) => ({ L, a: Math.abs(area(L)), holes: [] }));
+  for (const o of info) o.parents = info.filter((p) => p !== o && p.a > o.a && inside(p.L, o.L[0]));
+  const outers = info.filter((o) => o.parents.length % 2 === 0);
+  for (const o of info) if (o.parents.length % 2 === 1) o.parents.reduce((m, p) => (p.a < m.a ? p : m)).holes.push(o.L);
+  return outers.map((o) => ({ outline: o.L, holes: o.holes }));
+}
+function simplifyLoop(L, tol) {   // Ramer-Douglas-Peucker on a closed loop (split at the point farthest from L[0])
+  const d2 = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy || 1e-12; const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l)); return (p[0] - a[0] - t * dx) ** 2 + (p[1] - a[1] - t * dy) ** 2; };
+  const rdp = (P) => { let m = 0, k = 0; for (let i = 1; i < P.length - 1; i++) { const d = d2(P[i], P[0], P[P.length - 1]); if (d > m) { m = d; k = i; } } return m > tol * tol ? rdp(P.slice(0, k + 1)).slice(0, -1).concat(rdp(P.slice(k))) : [P[0], P[P.length - 1]]; };
+  let f = 0, fm = 0; L.forEach((p, i) => { const d = (p[0] - L[0][0]) ** 2 + (p[1] - L[0][1]) ** 2; if (d > fm) { fm = d; f = i; } });
+  return rdp(L.slice(0, f + 1)).slice(0, -1).concat(rdp(L.slice(f).concat([L[0]])).slice(0, -1));
+}
+const nibQuads = (P, w, nib) => { const R = nibStroke(P, w, nib, null, 0), n = R.length / 2, q = []; for (let i = 0; i < n - 1; i++) q.push([R[i], R[i + 1], R[2 * n - 2 - i], R[2 * n - 1 - i]]); return q; };
+// hulls pushed back a hair along the eye ray, so a hull edge never z-fights a neighbouring letter's front cap
+const pushHull = (m) => { for (const c of m.children) if (c.material?.uniforms?.uHullPush) c.material.uniforms.uHullPush.value = 0.05; return m; };
 export function word3D(THREE, add, parent, word, size, { face, side, depth = 0.22, weight = 0.24, track = 0.16, nib = -0.6, seed = 3 } = {}) {
   const root = new THREE.Group(); parent.add(root);
   const lay = layoutWord(word, size, { track, r: null });
@@ -169,16 +227,17 @@ export function word3D(THREE, add, parent, word, size, { face, side, depth = 0.2
   const glyphs = [];
   lay.letters.forEach((Lt, i) => {
     const g = new THREE.Group(); g.position.set(Lt.lx + lay.width / 2, size / 2, 0); root.add(g);
-    const toShape = (poly) => { const pts = poly.map(([x, y]) => new THREE.Vector2(x, -y)); return new THREE.Shape(pts); };
     const ext = { depth, bevelEnabled: true, bevelThickness: depth * 0.18, bevelSize: lw * 0.08, bevelSegments: 2, curveSegments: 4 };
-    for (const s of Lt.strokes) {
-      if (s.P.length < 2) continue;
-      const poly = nibStroke(s.P, lw, nib, null, 0);
-      const geo = new THREE.ExtrudeGeometry(toShape(poly), ext); geo.translate(0, 0, -depth / 2);
-      pushHull(add(geo, [face, side], { outline: 1.15 }, [0, 0, 0], [0, 0, 0], g));
-    }
-    for (const [dx, dy] of Lt.dots) {
-      const geo = new THREE.ExtrudeGeometry(new THREE.Shape(ellipsePts(dx, -dy, lw * 0.62, lw * 0.62, 0, 20).map(([x, y]) => new THREE.Vector2(x, y))), ext); geo.translate(0, 0, -depth / 2);
+    const polys = [];
+    for (const s of Lt.strokes) if (s.P.length > 1) polys.push(...nibQuads(s.P, lw * Lt.wk, nib));
+    for (const [dx, dy] of Lt.dots) polys.push(ellipsePts(dx, dy, lw * 0.62, lw * 0.62, 0, 24));
+    if (polys.length) {
+      const shapes = traceUnion(polys, size / 180).map(({ outline, holes }) => {
+        const sh = new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, -y)));
+        for (const h of holes) sh.holes.push(new THREE.Path(h.map(([x, y]) => new THREE.Vector2(x, -y))));
+        return sh;
+      });
+      const geo = new THREE.ExtrudeGeometry(shapes, ext); geo.translate(0, 0, -depth / 2);
       pushHull(add(geo, [face, side], { outline: 1.15 }, [0, 0, 0], [0, 0, 0], g));
     }
     glyphs.push({ g, x: Lt.lx + lay.width / 2 });
