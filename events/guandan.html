@@ -898,7 +898,7 @@ function attachRoom(code) {
     unsubscribe = onValue(roomRef(code), (snap) => {
         if (!snap.exists()) return roomClosed(!!game);
         game = normalizeGame(snap.val());
-        hintAdvisor = null;
+        if (hintAdvisor && hintAdvisor.turn !== turnStateKey()) hintAdvisor = null;
         syncDealAnimation();
         render();
         maybeRunAI();
@@ -1578,10 +1578,11 @@ function sameTurnState(g, snapshot) {
         && g.currentTurn === snapshot.currentTurn;
 }
 
-// One 提示 package per table state + language: repeat clicks cycle through it without recomputing,
-// and a prefetch that is still running is simply awaited.
+// One 提示 package per turn state (turnStateKey) + language: repeat clicks cycle through it without
+// recomputing, even across ticks that leave the turn as it was, and a prefetch that is still
+// running is simply awaited.
 function requestHintPackage(seat, g, lang) {
-    const key = `${g.roomCode || roomCode}:${Number(g.revision) || 0}:${g.currentTurn}:${seat}:${lang}`;
+    const key = `${turnStateKey(g)}:${seat}:${lang}`;
     if (hintRequest?.key !== key) {
         const promise = buildPlayerHintPackageAsync(seat, g, lang);
         hintRequest = { key, promise };
@@ -1625,7 +1626,7 @@ async function hintMove() {
         clearTimeout(thinkingTimer);
         sendingUI("hint-btn", false);
     }
-    if (token !== hintClickToken || !sameTurnState(game, snapshot) || mySeat() !== seat) {
+    if (token !== hintClickToken || turnStateKey(game) !== turnStateKey(snapshot) || mySeat() !== seat) {
         if (thinkingShown && token === hintClickToken) hideToast();
         return;
     }
@@ -1647,8 +1648,12 @@ async function hintMove() {
     render();
 }
 
+// What a 提示 answer depends on (as the engine's hint signature): whose turn, the play to beat and
+// my hand. A tick that changes none of them (a rename, a remote write) keeps the 提示 cycle.
 function turnStateKey(g = game) {
-    return `${g?.roomCode || roomCode}:${Number(g?.revision) || 0}:${g?.currentTurn}`;
+    const seat = mySeat(g);
+    const ids = cards => valuesFromFirebase(cards).map(c => c.id).sort().join("-");
+    return `${g?.roomCode || roomCode}:${g?.phase}:${g?.roundNo || 0}:${g?.currentTurn}:${g?.passCount || 0}:${g?.lastPlay?.player ?? "lead"}:${ids(g?.lastPlay?.cards)}:${seat}:${ids(g?.hands?.[seat])}`;
 }
 
 function activeHintForSelection(selectedCards, canAct) {
