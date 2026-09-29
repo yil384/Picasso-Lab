@@ -182,7 +182,9 @@ function iris(W, ctx, g, F, jr) {
   const c = closing ? prj(W, ctx, wp(W, W.loupe.head, [0, 0, 0])) : prj(W, ctx, wp(W, W.con.knobs[0], [0, 0.04, 0]));
   // closes to a dot on the lens (fully shut for ~2 frames), then grows from a dot on the knob over 8 frames
   // never a flat empty frame: it shuts to a pinhole on the lens, the pinhole jumps to the knob, then grows over 8 frames
-  const R = closing ? 16 + 1284 * (1 - sm((F - a0) / (a1 - a0 - 1))) : 16 + 1484 * Math.pow(clamp((F - a1) / (b1 - a1)), 1.6);
+  // a true iris match: it closes onto the round lens (never smaller than the knob's face), the round knob replaces the lens
+  // inside the same circle on the cut, and the circle opens again: no empty frame
+  const R = closing ? 150 + 1150 * (1 - sm((F - a0) / (a1 - a0))) : 150 + 1350 * Math.pow(clamp((F - a1) / (b1 - a1)), 1.5);
   const cx = clamp(c.x, 200, ctx.DW - 200), cy = clamp(c.y, 150, ctx.DH - 150);
   g.save(); g.fillStyle = PAL.ink; g.strokeStyle = PAL.ink;
   g.beginPath(); g.rect(-60, -60, ctx.DW + 120, ctx.DH + 120);
@@ -216,7 +218,7 @@ export function lettering(W, ctx, g) {
   const vr = F - K.roar;
   if (vr >= 0 && vr < 18) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 90, 330, 560), vr, { life: 18, rot: -0.1, scale: 1.05, popF: 4 }); }
   const ck = F - K.crash;
-  if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 280, 420, 1500), clamp(pp.y - 150, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
+  if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 330, 420, 1440), clamp(pp.y + 10, 360, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;
   if (dg >= 0 && dg < 16) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 16, rot: -0.12, scale: 1.0, popF: 4 }); }
   // the giant hourglass lands upright: THUNK! (both clocks start here)
