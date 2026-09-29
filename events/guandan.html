@@ -2919,20 +2919,21 @@ function handBottom() {
 }
 
 // Column mode: every stacked card shows its whole index (the step is fixed at HAND_STEP). The
-// pitch shrinks to fit the stage width down to HAND_MIN_PITCH; a column too tall for the room
-// under the raised action row shrinks all hand cards (down to HAND_MIN_SCALE). Only a 理牌 group
-// taller than that compresses its step. The geometry does not depend on whose turn it is, so the
-// cards never resize when the turn comes round. Played cards keep their size.
+// pitch shrinks to fit the stage width down to HAND_MIN_PITCH; a rank column too tall for the room
+// under the raised action row shrinks all hand cards (down to HAND_MIN_SCALE). A 理牌 group never
+// does: only its own step compresses when it is taller than the room. The geometry does not
+// depend on whose turn it is, so the cards never resize when the turn comes round. Played cards
+// keep their size. `steps` holds each column's step.
 function handGeometry(columns) {
     const { w, h } = tableView.layout;
     const avail = w - 64;
     if (handMode === "row") {
         const n = columns.reduce((sum, col) => sum + col.cards.length, 0);
         const pitch = n > 1 ? Math.min(HAND_CARD_W * .52, (avail - HAND_CARD_W) / (n - 1)) : HAND_CARD_W;
-        return { cardW: HAND_CARD_W, pitch, step: 0, height: HAND_CARD_H * 1.18 };
+        return { cardW: HAND_CARD_W, pitch, step: 0, steps: [], height: HAND_CARD_H * 1.18 };
     }
     const n = columns.length;
-    const tallest = Math.max(1, ...columns.map(col => col.cards.length));
+    const tallest = Math.max(1, ...columns.filter(col => !col.group).map(col => col.cards.length));
     const room = h - handBottom() - ACTION_ROW_GAP - ACTION_ROW_H - ROW_MIN_TOP;
     const fitW = n > 1 ? avail / (HAND_CARD_W * (HAND_MIN_PITCH * (n - 1) + 1)) : 1;
     const fitH = room / (HAND_CARD_H * (1 + HAND_STEP * (tallest - 1)));
@@ -2940,8 +2941,10 @@ function handGeometry(columns) {
     const cardW = HAND_CARD_W * k;
     const cardH = HAND_CARD_H * k;
     const pitch = n > 1 ? Math.min(cardW + 1, (avail - cardW) / (n - 1)) : cardW;
-    const step = tallest > 1 ? Math.min(cardH * HAND_STEP, Math.max(0, room - cardH) / (tallest - 1)) : cardH * HAND_STEP;
-    return { cardW, pitch, step, height: cardH + (tallest - 1) * step };
+    const stepFor = len => len > 1 ? Math.min(cardH * HAND_STEP, Math.max(0, room - cardH) / (len - 1)) : cardH * HAND_STEP;
+    const steps = columns.map(col => stepFor(col.group ? col.cards.length : tallest));
+    const height = Math.max(cardH, ...columns.map((col, i) => cardH + (col.cards.length - 1) * steps[i]));
+    return { cardW, pitch, step: stepFor(tallest), steps, height };
 }
 
 // How far a side slot's content reaches in from the stage edge (design px, 0 when empty): its
@@ -3028,7 +3031,7 @@ function renderHand(columns, rowCards, geo, dealPhase) {
     const layoutIds = handMode === "row"
         ? rowCards.map(c => c.id).join(",")
         : columns.map(col => col.cards.map(c => c.id).join(",")).join("|");
-    const key = `${handMode}:${geo.cardW.toFixed(2)}:${geo.pitch.toFixed(2)}:${geo.step.toFixed(2)}:${dealPhase}:${uiLang}:${game.currentLevelRank}:${layoutIds}`;
+    const key = `${handMode}:${geo.cardW.toFixed(2)}:${geo.pitch.toFixed(2)}:${geo.steps.map(x => x.toFixed(2))}:${dealPhase}:${uiLang}:${game.currentLevelRank}:${layoutIds}`;
     if (tableView.keys.hand === key) return;
     tableView.keys.hand = key;
     host.style.setProperty("--card-w", `${geo.cardW.toFixed(2)}px`);
@@ -3068,6 +3071,7 @@ function renderHand(columns, rowCards, geo, dealPhase) {
             const colEl = document.createElement("div");
             colEl.className = col.group ? "gd-col is-group" : "gd-col";
             colEl.style.setProperty("--ci", ci);
+            if (geo.steps[ci] !== geo.step) colEl.style.setProperty("--step", `${geo.steps[ci]}px`);
             col.cards.forEach(card => {
                 const el = cardEl(card);
                 el.style.removeProperty("--ci");
