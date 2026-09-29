@@ -3393,7 +3393,8 @@ function renderSeat(i, v) {
     setRegion(`deco${pos}`, tag + chip + first);
     const stat = seat?.type === "human" ? seatMemberStat(name) : "";
     setRegion(`name${pos}`, `<span class="nm">${encodeHTML(name)}</span>${stat ? `<span class="st">${stat}</span>` : ""}`);
-    const jokers = valuesFromFirebase(game.publicJokerSeats).includes(i) ? (game.hands[i] || []).filter(c => c.joker === "RJ") : [];
+    // my own revealed jokers are already in my hand
+    const jokers = valuesFromFirebase(game.publicJokerSeats).includes(i) && !(bottom && v.mine >= 0) ? (game.hands[i] || []).filter(c => c.joker === "RJ") : [];
     const jokerHTML = jokers.length ? `<div class="gd-public-jokers" title="${L("Revealed by blocked tribute", "抗贡亮出的大王")}">${jokers.map(c => cardHTML(c, true)).join("")}</div>` : "";
     setRegion(`extra${pos}`, (turn ? clockHTML("clock") : "") + jokerHTML);
 }
