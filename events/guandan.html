@@ -143,6 +143,7 @@ let aiTimer = null;
 let turnDeadlineTimer = null;
 let turnRenderTimer = null;
 let actionBusy = false;
+let closingOwnRoom = false;   // this client is removing its room (解散 / the host's ↩), no notice
 let handOrderState = { key: "", ids: [] };
 
 // Storage can throw (blocked third-party storage in the Google Sites iframe, private modes);
@@ -295,9 +296,50 @@ function hideToast() {
     tableView.toast?.classList.remove("show");
 }
 
+// The "try typing picasso" pill sits where it covers no control: on the table in the felt band
+// under the partner's played cards (turned with a rotated stage); in the lobby over the stat pills
+// (or where they would be); in the room in the top bar's free stretch, else on the 对局设置 heading.
+// Document coordinates, so on a scrolled portrait page it stays with what it was placed on.
+const HINT_TABLE_Y = 200;   // design px from the stage top
+function placeReturnTypeHint() {
+    const el = returnTypeHint;
+    const screen = document.body.dataset.screen;
+    const hintW = el.offsetWidth;
+    let x = innerWidth / 2;
+    let y = innerHeight / 2;
+    let turned = false;
+    if (screen === "table" && tableView.stage?.isConnected) {
+        const { s, w, rotated, left, top, vw } = tableView.layout;
+        turned = rotated;
+        x = rotated ? vw - HINT_TABLE_Y * s : left + w / 2 * s;
+        y = rotated ? left + w / 2 * s : top + HINT_TABLE_Y * s;
+    } else if (screen === "lobby") {
+        const r = document.querySelector(".hud-stats")?.getBoundingClientRect();
+        if (r) {
+            x = r.width > hintW ? r.left + r.width / 2 : r.left + hintW / 2;
+            y = r.top + r.height / 2;
+        }
+    } else if (screen === "room") {
+        const a = hudRecordsBtn.getBoundingClientRect();
+        const b = langToggleBtn.getBoundingClientRect();
+        const head = document.querySelector(".room-settings .room-panel-head")?.getBoundingClientRect();
+        if (b.left - a.right >= hintW + 16 && Math.abs(a.top + a.height / 2 - (b.top + b.height / 2)) < 8) {
+            x = (a.right + b.left) / 2;
+            y = b.top + b.height / 2;
+        } else if (head) {
+            x = head.left + head.width / 2;
+            y = head.top + head.height / 2;
+        }
+    }
+    el.classList.toggle("is-turned", turned);
+    el.style.left = `${Math.round(x + scrollX)}px`;
+    el.style.top = `${Math.round(y + scrollY)}px`;
+}
+
 function showReturnTypeHint() {
     if (!returnTypeHint) return;
     returnTypeHint.firstChild.nodeValue = L("try typing ", "试试输入 ");
+    placeReturnTypeHint();
     returnTypeHint.classList.add("show");
     clearTimeout(returnHintTimer);
     returnHintTimer = setTimeout(() => returnTypeHint?.classList.remove("show"), 2600);
@@ -636,22 +678,26 @@ function initials(name, fallback = "P") {
     return clean.slice(0, 2).toUpperCase();
 }
 
-// Reuse the same labmate photo pool already wired for card-face portraits
-// (facePortraitMap/faceCardPortrait) so a seat's live avatar shows a real
-// photo when the seat's display name matches a Picasso Lab member; no new
-// photo asset map needed. Falls back to null (→ initials) otherwise.
-function seatMemberPhoto(name) {
-    const clean = String(name || "").trim().toLowerCase();
-    if (!clean) return null;
+// A nickname names a Picasso Lab member only exactly: the full name in either order ("Yichen Lin",
+// "Lin Yichen") or the first name ("Yichen"), ignoring case and spacing. A surname or a fragment
+// ("Lin", "Chen", "a") matches nobody, so nobody is shown with another member's photo or stats.
+function labPlayerKey(name) {
+    const words = String(name || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return "";
     const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    for (const key in PL) {
-        const p = PL[key];
-        if (!p || !p.avatar) continue;
-        const pname = String(p.name || "").trim().toLowerCase();
-        if (!pname) continue;
-        if (clean === pname || clean.includes(pname) || pname.includes(clean)) return p.avatar;
-    }
-    return null;
+    return Object.keys(PL).find(key => {
+        const parts = String(PL[key]?.name || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+        if (!parts.length) return false;
+        if (words.length === 1) return words[0] === parts[0];
+        return words.length === parts.length && (words.join(" ") === parts.join(" ") || words.join(" ") === parts.slice().reverse().join(" "));
+    }) || "";
+}
+
+// A seat's live avatar shows the member's photo (the same pool as the card-face portraits);
+// null falls back to initials.
+function seatMemberPhoto(name) {
+    const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
+    return PL[labPlayerKey(name)]?.avatar || null;
 }
 
 function makeDeck() {
@@ -816,6 +862,7 @@ function attachRoom(code) {
     roomCode = code;
     if (unsubscribe) unsubscribe();
     unsubscribe = onValue(roomRef(code), (snap) => {
+        if (!snap.exists()) return roomClosed(!!game);
         game = normalizeGame(snap.val());
         hintAdvisor = null;
         syncDealAnimation();
@@ -824,6 +871,22 @@ function attachRoom(code) {
         scheduleTurnClock();
         maybePrefetchHint();
     });
+}
+
+// The room is gone: dissolved by its host while we were in it, or a ?room= link to a closed room.
+// Back to the lobby with a notice, a clean URL and an empty code field (our own dissolve or
+// leave navigates away by itself).
+function roomClosed(wasHere) {
+    if (closingOwnRoom) return;
+    if (unsubscribe) unsubscribe();
+    unsubscribe = null;
+    clearTurnTimers();
+    game = null;
+    roomCode = "";
+    lobbyCodeDraft = "";
+    history.replaceState(null, "", location.pathname);
+    render();
+    showToast(wasHere ? L("The host dissolved the room", "房主已解散房间") : L("This room has closed", "房间不存在或已解散"), 2400);
 }
 
 async function mutateGame(fn) {
@@ -1611,17 +1674,6 @@ function labMemberKeys() {
     return Object.keys(PL).filter(k => PL[k]?.card && PL[k]?.avatar);
 }
 
-// Same matching as seatMemberPhoto: exact name, or either name containing the other.
-function labPlayerKey(name) {
-    const clean = String(name || "").trim().toLowerCase();
-    if (!clean) return "";
-    const PL = labPlayers();
-    return Object.keys(PL).find(k => {
-        const pname = String(PL[k]?.name || "").trim().toLowerCase();
-        return !!pname && (clean === pname || clean.includes(pname) || pname.includes(clean));
-    }) || "";
-}
-
 // 评分 / 胜率 / 场次 come from the records module's own standings; without them no stats are shown.
 function labStandings() {
     try { return window.GuandanRecords?.stats?.() || null; } catch (_) { return null; }
@@ -1672,7 +1724,7 @@ function lobbyProfileHTML() {
             <label class="hud-name"><input id="nick-input" value="${encodeHTML(nickname)}" maxlength="24" autocomplete="nickname" spellcheck="false" placeholder="${L("Set a name", "设置昵称")}" aria-label="${L("Nickname", "昵称")}"><svg class="hud-pen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17.2V21h3.8L17.9 9.9l-3.8-3.8L3 17.2Zm17.7-10.1c.4-.4.4-1 0-1.4l-2.4-2.4c-.4-.4-1-.4-1.4 0l-1.8 1.8 3.8 3.8 1.8-1.8Z"/></svg></label>
             <span class="hud-tier"><span>${tier}</span></span>
         </div>
-    </div>${stats ? `<div class="hud-stats">${stats}</div>` : ""}`;
+    </div><div class="hud-stats">${stats}</div>`;
 }
 
 function roomTitleHTML() {
@@ -1858,7 +1910,7 @@ function bindLobby(el) {
         if (!target || target.disabled) return;
         const creating = L("Creating room…", "正在创建房间…");
         if (target.id === "create-room") return runLobbyAction(createRoom, target, creating);
-        if (target.id === "join-room") return joinRoom();
+        if (target.id === "join-room") return joinFromLobby(el);
         const action = target.dataset.lobby;
         if (action === "practice") return runLobbyAction(quickPractice, target, L("Dealing…", "正在开局…"));
         if (action === "friends") return runLobbyAction(createAndInvite, target, creating);
@@ -1879,9 +1931,16 @@ function bindLobby(el) {
     codeInput.addEventListener("keydown", event => {
         if (event.key === "Enter") {
             event.preventDefault();
-            joinRoom();
+            joinFromLobby(el);
         }
     });
+}
+
+// 加入: the code tile shows 正在进入房间… while the room is looked up and loaded.
+function joinFromLobby(lobby) {
+    const code = lobby.querySelector("#room-input")?.value.trim();
+    if (!code) return joinRoom();
+    return runLobbyAction(joinRoom, lobby.querySelector(".lobby-tile.is-join"), L("Joining…", "正在进入房间…"));
 }
 
 // One lobby action at a time: a double tap must not create two rooms. The tapped tile stays
@@ -1896,6 +1955,8 @@ async function runLobbyAction(fn, source, label) {
     }
     try {
         await fn();
+        // a room was attached: stay pressed until its first snapshot replaces the lobby
+        if (roomCode) await waitFor(() => document.body.dataset.screen !== "lobby" || !roomCode, 8000);
     } finally {
         lobbyActionBusy = false;
         root.querySelector(".lobby")?.classList.remove("is-busy");
@@ -1968,12 +2029,13 @@ function refreshLobbyRail() {
 
 // ---------- shared popup service (window.GuandanUI) ----------
 // Tencent popup: near-white panel, periwinkle title bar, round close button. Mounts into
-// `container` (default body; the table mounts it inside its scaled stage). Returns close().
-function openPopup({ title = "", html = "", container = document.body, wide = false } = {}) {
+// `container` (default body; the table mounts it inside its scaled stage). Returns close();
+// `onClose` runs once however the popup is closed.
+function openPopup({ title = "", html = "", container = document.body, wide = false, narrow = false, onClose = null } = {}) {
     const host = container || document.body;
     const layer = document.createElement("div");
     layer.className = `gd-popup-layer${host === document.body ? "" : " in-stage"}`;
-    layer.innerHTML = `<div class="gd-popup${wide ? " is-wide" : ""}" role="dialog" aria-modal="true" tabindex="-1">
+    layer.innerHTML = `<div class="gd-popup${wide ? " is-wide" : narrow ? " is-narrow" : ""}" role="dialog" aria-modal="true" tabindex="-1">
         <div class="gd-popup-head"><h2 class="gd-popup-title"></h2></div>
         <button class="gd-popup-close" type="button" aria-label="${L("Close", "关闭")}"></button>
         <div class="gd-popup-body">${html}</div>
@@ -1995,6 +2057,7 @@ function openPopup({ title = "", html = "", container = document.body, wide = fa
         layer.classList.remove("is-open");
         setTimeout(() => layer.remove(), 180);
         if (opener && opener !== document.body) opener.focus?.({ preventScroll: true });
+        onClose?.();
     }
     layer.addEventListener("click", event => {
         if (event.target === layer || event.target.closest(".gd-popup-close")) close();
@@ -2007,6 +2070,28 @@ function openPopup({ title = "", html = "", container = document.body, wide = fa
     });
     close.panel = panel;
     return close;
+}
+
+// Tencent 提示 dialog: one question, 取消 (blue) and 确定 (orange). Resolves true only on 确定;
+// ×, the backdrop and Esc count as 取消.
+function confirmPopup({ title, text, ok = L("OK", "确定"), cancel = L("Cancel", "取消") }) {
+    hideToast();
+    return new Promise(resolve => {
+        let answer = false;
+        const close = openPopup({
+            title,
+            narrow: true,
+            html: `<p class="gd-confirm-text"></p><div class="gd-confirm-row"><button class="btn secondary" type="button" data-confirm="0">${cancel}</button><button class="btn primary" type="button" data-confirm="1">${ok}</button></div>`,
+            onClose: () => resolve(answer)
+        });
+        close.panel.querySelector(".gd-confirm-text").textContent = text;
+        close.panel.querySelector(".gd-confirm-row").addEventListener("click", event => {
+            const btn = event.target.closest("[data-confirm]");
+            if (!btn) return;
+            answer = btn.dataset.confirm === "1";
+            close();
+        });
+    });
 }
 
 function rulesCardsHTML(list) {
@@ -2171,6 +2256,7 @@ function patchRegion(scope, name, html) {
 // rename that blurring the name field just started) waits for it instead of bouncing off
 // withAction's busy lock. `valid` is checked when the action's turn comes.
 let roomQueue = Promise.resolve();
+let roomPending = "";   // id of the room control whose write is running
 function queueRoomAction(run, valid = () => true) {
     roomQueue = roomQueue.then(() => (valid() ? run() : undefined)).catch(err => console.error(err));
     return roomQueue;
@@ -2284,11 +2370,8 @@ function bindRoom(el) {
             const dir = Number(btn.dataset.step);
             return queueRoomAction(() => stepStartLevel(team, dir), () => isHost());
         }
-        const run = {
-            "start-game": startGame,
-            "fill-ai": fillAISeats,
-            "delete-room": dissolveRoom
-        }[btn.id];
+        if (btn.id === "delete-room") return dissolveRoom();
+        const run = { "start-game": startGame, "fill-ai": fillAISeats }[btn.id];
         const seatAction = /^(seat|ai|leave)-(\d)$/.exec(btn.id);
         const action = run || (seatAction && (() => {
             const i = Number(seatAction[2]);
@@ -2298,7 +2381,11 @@ function bindRoom(el) {
         // When its turn comes the control must still be there and enabled (a double tap on
         // 入座 or 开始游戏 finds it gone and does nothing).
         const id = btn.id;
-        queueRoomAction(action, () => {
+        queueRoomAction(async () => {
+            roomPending = id;
+            if (id === "start-game") render();
+            try { await action(); } finally { roomPending = ""; }
+        }, () => {
             const now = document.getElementById(id);
             return !!now && !now.disabled;
         });
@@ -2309,10 +2396,21 @@ function bindRoom(el) {
     el.addEventListener("keydown", blurNicknameOnEnter);
 }
 
+// 解散房间 asks first; everyone else in the room is sent to the lobby with a notice (roomClosed).
 async function dissolveRoom() {
     if (!isHost()) return showToast(L("Only the host can dissolve the room", "只有房主能解散房间"));
-    await remove(roomRef());
-    location.href = GUANDAN_URL;
+    const ok = await confirmPopup({
+        title: L("Dissolve room", "解散房间"),
+        text: L("Dissolve this room? Everyone in it goes back to the lobby.", "确定解散房间吗？房间里的玩家都会回到大厅。"),
+        ok: L("Dissolve", "解散")
+    });
+    if (!ok) return;
+    await queueRoomAction(async () => {
+        if (!isHost() || game?.phase !== "lobby") return;
+        closingOwnRoom = true;
+        await remove(roomRef());
+        location.href = GUANDAN_URL;
+    });
 }
 
 // Leaving through ↩: a host with no other player here closes the room (as 好友同玩 does when the
@@ -2321,7 +2419,11 @@ function leaveRoom() {
     const seat = mySeat();
     if (seat < 0) return;
     const others = game.seats.some((s, i) => i !== seat && s?.type === "human");
-    return isHost() && !others ? remove(roomRef()) : leaveSeat(seat);
+    if (isHost() && !others) {
+        closingOwnRoom = true;
+        return remove(roomRef());
+    }
+    return leaveSeat(seat);
 }
 
 function teamShortName(team) {
@@ -2337,11 +2439,13 @@ function roomTableHTML(mine) {
 }
 
 // Guests see a waiting caption, not a dead button (it keeps the disabled #start-game hook).
+// While the start is being written, 开始游戏 stays orange and reads 正在开局….
 function roomActionsHTML() {
     if (!isHost()) return `<button class="room-wait" id="start-game" type="button" disabled>${L("Waiting for the host…", "等待房主开始…")}</button>`;
     const open = game.seats.some(s => !s);
-    return `<button class="btn secondary" id="fill-ai" type="button"${actionBusy || !open ? " disabled" : ""}>${L("Fill AI", "AI 补位")}</button>
-        <button class="btn lg" id="start-game" type="button"${actionBusy ? " disabled" : ""}>${L("Start", "开始游戏")}</button>`;
+    const starting = roomPending === "start-game";
+    return `<button class="btn secondary" id="fill-ai" type="button"${actionBusy || starting || !open ? " disabled" : ""}>${L("Add AI", "AI 补位")}</button>
+        <button class="btn lg${starting ? " is-loading" : ""}" id="start-game" type="button"${actionBusy || starting ? " disabled" : ""}>${starting ? L("Dealing…", "正在开局…") : L("Start", "开始游戏")}</button>`;
 }
 
 function rosterHTML() {
@@ -3127,14 +3231,9 @@ function renderTableChrome() {
 
 // Lab stat on a seat plate: the labmate's win rate on the 巅峰对决 board (read-only).
 function seatMemberStat(name) {
-    const clean = String(name || "").trim().toLowerCase();
     const R = window.GuandanRecords;
-    if (!clean || !R?.PLAYERS || !Array.isArray(R.MATCHES)) return "";
-    const key = Object.keys(R.PLAYERS).find(k => {
-        const pname = String(R.PLAYERS[k]?.name || "").trim().toLowerCase();
-        return pname && (clean === pname || clean.includes(pname) || pname.includes(clean));
-    });
-    if (!key) return "";
+    const key = labPlayerKey(name);
+    if (!key || !Array.isArray(R?.MATCHES)) return "";
     let played = 0;
     let won = 0;
     for (const m of R.MATCHES) {
@@ -3682,8 +3781,12 @@ document.addEventListener("keydown", event => {
 window.addEventListener("resize", scheduleStageLayout);
 window.addEventListener("orientationchange", scheduleStageLayout);
 
-if (roomCode) attachRoom(roomCode);
-else render();
+if (roomCode) {
+    root.innerHTML = `<div class="gd-boot" role="status">${L("Joining the room…", "正在进入房间…")}</div>`;
+    attachRoom(roomCode);
+} else {
+    render();
+}
 </script>
 <script src="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.js"></script>
 <script>
