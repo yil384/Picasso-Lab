@@ -498,6 +498,7 @@ export function drawNPR(ctx) {
   if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(L2 + A.finish, R.track, 0.4)), setIds: T.setIds, plate: F === K.freeze[0] ? [0.84, 1, 0.9] : [1, 1, 0.96] });
   const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 70, width: 6, seed }); };
   fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
+  if (st.kern.pos) fl(K.closeup[0] - 3, 7, [st.kern.pos[0], 0.45, st.kern.pos[2]], 220, 0.9, 11);   // the push onto the token lands with zoom lines
   if (st.kern.pos) fl(K.crash[0] + 2, 12, [st.kern.pos[0], 0.2, st.kern.pos[2]], 260, 1.0, 7);     // the crash zoom lands with zoom lines
   fl(K.slam, 18, polar(L2 + A.words, 1.2, 1.9), 420, 1.0, 9);
   fl(K.hold[0] + 2, K.hold[1] - K.hold[0] - 2, polar(L2 + A.finish, R.track, 0.45), 380, 0.7, 5);
@@ -559,7 +560,7 @@ export function drawMarks(ctx, g) {
         const lx = lerp(x0, x1, q / 6), wp = T.lettersIn.localToWorld(V(lx, -0.02, 0.45));
         const c = prj(ctx, [wp.x, wp.y, wp.z]); if (!c.front) continue;
         const u = pxu(ctx, [wp.x, wp.y, wp.z]), sd = q < 3 ? -1 : q > 3 ? 1 : 0;
-        puff(g, c.x + sd * (0.25 + a * 0.14) * u, c.y + u * 0.3, u * (0.17 + 0.015 * a) * (0.8 + 0.4 * hsh(q, 7)), 1 - a / 11, r, PAL.cream);   // below the letters' feet, rolling outward over the card's edge
+        puff(g, c.x + sd * (0.25 + a * 0.14) * u, c.y + u * 0.3, u * (0.17 + 0.015 * a) * (0.8 + 0.4 * hsh(q, 7)) * (1 - sm((a - 6) / 5)), 1, r, PAL.cream);   // they shrink away, inked (no grey fade)   // below the letters' feet, rolling outward over the card's edge
       }
     } }
   // square-wheel THUNK ticks under the wheels on each flat landing

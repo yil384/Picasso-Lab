@@ -150,3 +150,22 @@ Root cause of the worst r4 fault: three statements (`S.yaw …` on the drive, th
 11. *The PASS flag reads as a web badge; the dial fills the frame* (CD 7): a printed cloth flag (halftone folds, a wobbly inked edge, a brush tick) that waves; the push stops with the dial at ~70% of the frame, and the stopwatch is framed to the same size for the match cut.
 
 Nice-to-haves taken: the crooked ':' on one face only (DE n1, not a die), the wall's coral stripe → brick (DE n4), the check with a cream keyline (WD n2), the weigh-in framed higher (WD n4), the crash-zoom lines last until the close-up lands and the refine pull-out is longer (TA n1), the race-1 launch plays before the move (TA n6).
+
+## Round 5 — pass r5 (960×540, commit 50794f5)
+
+| lens | r1 | r2 | r3 | r4 | **r5** | verdict in one line |
+|---|---|---|---|---|---|---|
+| Creative director | 6.0 | 7.0 | 7.5 | 7.5 | **8.2** | reads start to finish without help; B1 and B2 are P(doom)-grade; the race-2 double-take lands; but the payoff belongs to everyone except the winner, Oro has no readable acting outside the double-take, the PASS flag still reads as a ✅ badge |
+| Tech-art lead | 6.0 | 7.0 | 7.5 | 7.0 | **8.0** | Kern on the drive, rolling wheels, side-by-side lanes, a continuous short smear, the frozen photo finish and a real slam all fixed; remaining: one-frame pose/position pops at section hand-overs (Tok f37/f128, Kern f144/f179, Oro f421) and the payoff set popping out at the seam |
+| Domain expert | 6.0 | 7.6 | 8.2 | 8.3 | **8.7** | **no must-fix left**: pipeline order, outputs-vs-reference verify, 36 / 56 / 33 f, the honest photo-finish gap, colour meanings and the plate all check out |
+| Web designer | 6.3 | 7.4 | 7.8 | 8.0 | **8.1** | Kern on the drive and the side-by-side racers fixed, card 3.63 MB at CRF 32; but the payoff set pops out in sharp frames at f653–655 (first second of the rotated card) and Kern is still in the desktop bottom fade in the poster |
+
+### Must-fix list (merged) and what r6 does about each
+1. *Payoff set pops out at the seam* (WD 1, TA 2): the letters, burst, Kern and Oro leave on the heaviest smear frame (f650).
+2. *One-frame pose / position pops at section hand-overs* (TA 1): every actor's yaw is now eased over ±2 frames (circular, never across a teleport/cut), and the race sprints brake uniformly to stop exactly on the pose the next beat starts from (the old coast stopped short, so Oro jumped 1.4 units at f422 and Kern 0.4 at f364; Oro in race 2 also parked short of where the payoff wanted it). A node scan of every frame now finds no yaw step > 0.2 rad or position step > 0.3 outside whips except the intended flick spin, race speeds and the off-screen reset under the dial → watch match cut.
+3. *Kern in the desktop fade in the poster* (WD 2): Kern rolls ~1 unit up-stage after the line, the payoff lens aims lower and ends wider (fov 36); Oro brakes just past the line so the three (Oro | Kern | Tok) sit apart.
+4. *The payoff belongs to everyone except the winner* (CD 1): Kern gets the first and biggest action — a wheelie hop (0.62 high, pitched up, big squash) the moment the check pops (f604); Oro's jaw f612, laurel f616 (now sliding forward and tilting down across an eye), nod f622–632; Tok's star-eyed leap starts after Kern lands (f617–635).
+5. *Oro has no readable acting* (CD 2): Oro's face is repainted straight ahead above the cone (every front-ish lens sees it), with a bolder smug look (grin, bigger lids); a gentle push onto Oro for the race-1 side-eye; parked after race 1 it turns its face to the lens.
+6. *PASS flag reads as a ✅ badge* (CD 3, TA n4): the flag leaves the scale; Torchy, the referee, snaps up a triangular emerald pennant on a stick (with overshoot and a cloth kink) — in B3 and again in lap 2.
+
+Nice-to-haves taken: the bench landing moved further along the track (TA n2), dust puffs shrink away inked instead of fading grey (TA n3), the GPU shroud lifted to a mid ink-violet (TA n5), zoom lines on the push into the token insert (TA n6), Oro's "!" inside the band (WD n1), the plate moved clear of the front wheel (DE n1), the storyboard's photo-finish text now states the honest gap (DE n4).

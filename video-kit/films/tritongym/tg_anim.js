@@ -55,7 +55,7 @@ B2.tok = polar(B2.thStop - 0.33, R.ours - 0.3, 0); B2.land = polar(B2.thStop - 0
 export const B1 = {
   tok: polar(bx(-0.55), R.bench + 0.08, 0),            // Tok stands between the stack and the bench, nothing in front of it
   kern: polar(bx(1.2), R.bench + 0.24, 0.8),           // Kern is built on the bench top, at its lens-side edge, clear of Tok
-  land: polar(bx(2.4), 7.55, 0), thLand: bx(2.4), rLand: 7.55,   // it hops off the bench's right end onto the board, clear of it
+  land: polar(bx(2.75), 7.55, 0), thLand: bx(2.75), rLand: 7.55,   // it hops off the bench's right end onto the board, clear of it
   stackTop: polar(bx(-1.75), R.bench + 0.05, 1.655),     // the top card of the 164 stack
   cardRest: polar(bx(0.42), R.bench + 0.2, 0.812),      // where Tok lays the operator card down
   thTok: bx(-0.55), thKern: bx(1.2),
@@ -81,8 +81,9 @@ function sprint(F, f0, fLine, thS, thF, pw, coastF, over) {
   const T_ = fLine - f0, u = (F - f0) / T_;
   if (u <= 1) return thS + (thF - thS) * Math.pow(u, pw);
   const v = (thF - thS) * pw / T_;                  // speed at the line (rad / frame)
-  const a = Math.min(F - fLine, coastF), k = a / coastF;
-  return thF + Math.min(over, v * coastF * (k - k * k / 2));
+  const cf = Math.max(4, 2 * over / v);                // brake uniformly and stop exactly at thF + over (the parked pose
+  const a = Math.min(F - fLine, cf), k = a / cf;       //  the next beat starts from): no jump at the hand-over
+  return thF + v * cf * (k - k * k / 2);
 }
 export const ORO_RUN = 36;    // the oracle's time, identical in both races (it is the fixed yardstick)
 // the races are timed nose-on-the-line: centre angles at which each nose touches the finish line
@@ -97,7 +98,7 @@ export function kernTh(F) {   // ring angle of Kern in the races (lap offset inc
 export function oroTh(F) {
   if (F < K.lap2[0]) return sprint(F, K.go1, K.go1 + ORO_RUN, A.start, LINE.o, 1.1, 16, P1.oEnd + A.finish - LINE.o);   // blasts off
   // race 2: the same run (36 f, same launch), but brakes hard at the line in shock
-  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 12, 0.42 + A.finish - LINE.o);
+  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 12, 0.16 + A.finish - LINE.o);   // brakes in shock just past the line
 }
 
 /**
@@ -105,6 +106,11 @@ export function oroTh(F) {
  * nose, face, onBench, tiles (assembly progress per tile), stuckAt }
  */
 export function kernState(F) {
+  const S = kernRaw(F);
+  if (S.vis && Number.isFinite(S.yaw)) S.yaw = easeYaw((f) => { const Q = kernRaw(f); return Q.vis ? Q : { yaw: NaN }; }, F, S.yaw, S.pos);
+  return S;
+}
+function kernRaw(F) {
   F = held(F);
   const S = { vis: true, sq: 0, pitch: 0, roll: 0, wheelAng: 0, round: false, cow: 0, nose: false, compiled: 0, face: 'calm', keySpin: 0, lurch: 0, dizzy: 0 };
   const lanePos = (th, r = R.ours, y = 0) => polar(th, r, y);
@@ -205,7 +211,8 @@ export function kernState(F) {
   // ---- B5: refine at the finish
   const thRef = thF + P1.kEnd;
   if (F < K.lap2[0]) {
-    S.pos = lanePos(thRef, R.ours, 0); S.yaw = headingAt(thRef) - 0.45;
+    const thr = kernTh(F);                                          // (= thRef once the race-1 coast has stopped)
+    S.pos = lanePos(thr, R.ours, 0); S.yaw = headingAt(thr) - 0.45;
     S.face = F < K.idea ? 'nervous' : F < K.snapOn[1] ? 'wide' : 'happy';
     if (F >= K.rev[0]) { S.face = 'happy'; S.wheelAng = (F - K.rev[0]) * 0.9; S.sq = 0.05 * Math.sin(F * 1.7); }
     if (F >= K.snapOn[0] && F < K.snapOn[1] + 4) S.sq = take(F, K.snapOn[1] - 2, 0.6);
@@ -226,7 +233,7 @@ export function kernState(F) {
   // ---- B7: race 2 (the nose win) and B8 payoff parked past the line
   {
     const th = kernTh(F);
-    S.pos = lanePos(th, R.ours - 1.4 * sg(F, K.cross + 2, K.cross + 16, sm), 0); S.yaw = headingAt(th) - 0.8 * sg(F, K.check - 8, K.check + 2, sm);
+    S.pos = lanePos(th, R.ours - 1.05 * sg(F, K.cross + 2, K.cross + 16, sm), 0); S.yaw = headingAt(th) - 0.8 * sg(F, K.check - 8, K.check + 2, sm);
     S.wheelAng = (th - L2 - thS) * R.ours / 0.16;   // (it rolls up-stage after the line and turns its face 3/4 to us; the plate side stays in view)
     S.face = F < K.go2 ? 'determined' : F < K.cross - 12 ? 'squint' : F < K.cross + 1 ? 'strain' : F < K.check ? 'wide' : 'star';
     S.stretch = F >= K.cross - 4 && F < K.cross + 2 ? 0.25 : 0;
@@ -241,6 +248,11 @@ export function kernState(F) {
 // Oro (the oracle)
 // ------------------------------------------------------------------------------------------------
 export function oroState(F) {
+  const S = oroRaw(F);
+  if (S.vis && S.pos && Number.isFinite(S.yaw)) S.yaw = easeYaw((f) => { const Q = oroRaw(f); return Q.vis && Q.pos ? Q : { yaw: NaN }; }, F, S.yaw, S.pos);
+  return S;
+}
+function oroRaw(F) {
   F = held(F);
   const S = { vis: F >= K.cut - 20 && F < K.away[0] + 10, face: 'smug', wheelAng: 0, keySpin: 0, sq: 0, stretch: 0, laurelSlip: 0, wrench: 0, buff: 0, pitch: 0 };
   const lane = (th) => polar(th, R.oro, 0);
@@ -312,7 +324,20 @@ export function tokState(F) {
     wsum += w;
   }
   for (const k of POSE) S[k] = acc[k] / wsum;
+  S.yaw = easeYaw(tokRaw, F, S.yaw, S.pos);
   return S;
+}
+/** tent-average an actor's yaw over +-2 frames (unwrapped around the raw value): section hand-overs become 4-frame turns */
+function easeYaw(fn, F, y0, p0 = null) {
+  let acc = 0, wsum = 0;
+  for (const [o, w] of [[-2, 1], [-1, 2], [0, 3], [1, 2], [2, 1]]) {
+    const Q = o ? fn(F + o) : null; let y = o ? Q.yaw : y0;
+    if (!Number.isFinite(y)) continue;
+    if (o && p0 && Q.pos && Math.hypot(Q.pos[0] - p0[0], Q.pos[2] - p0[2]) > 0.8) continue;   // never ease across a teleport (a cut)
+    y = y0 + Math.atan2(Math.sin(y - y0), Math.cos(y - y0));
+    acc += w * y; wsum += w;
+  }
+  return wsum ? acc / wsum : y0;
 }
 function tokRaw(F) {
   F = held(F);

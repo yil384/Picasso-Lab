@@ -123,8 +123,8 @@ export function buildCard(THREE, add, parent) {
   // gold fingers along the front edge
   for (let k = 0; k < 22; k++) add(new THREE.BoxGeometry(0.11, 0.03, 0.34), { key: 'goldfinger', color: 0xf7c24a, spec: 0.6 }, { outline: 0.4, cast: false }, [-2.4 + k * 0.2, 0.15, D / 2 + 0.1], [0, 0, 0], C.root);
   // shroud
-  const sh = { color: 0x2b2447, hatchDir: [0, 1, 0.2], rim: 0.6 };
-  C.shroud = add(new THREE.BoxGeometry(L, 0.9, D), [sh, sh, { color: 0x3a3160, hatchDir: [1, 0, 0.3], rim: 0.5 }, sh, sh, sh], { outline: 1.2 }, [0, 0.62, 0], [0, 0, 0], C.root);
+  const sh = { color: 0x463e6e, hatchDir: [0, 1, 0.2], rim: 0.6 };   // a mid ink-violet: the winner reads against it
+  C.shroud = add(new THREE.BoxGeometry(L, 0.9, D), [sh, sh, { color: 0x524880, hatchDir: [1, 0, 0.3], rim: 0.5 }, sh, sh, sh], { outline: 1.2 }, [0, 0.62, 0], [0, 0, 0], C.root);
   // emerald racing stripe on the long sides
   for (const s of [-1, 1]) add(new THREE.BoxGeometry(L - 0.6, 0.16, 0.04), { key: 'cardstripe', color: 0x10b981, rim: 0.5 }, { outline: 0.5, cast: false }, [0, 0.72, s * (D / 2 + 0.02)], [0, 0, 0], C.root);
   // fin slats visible along the long sides (below the stripe)
