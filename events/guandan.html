@@ -1974,14 +1974,15 @@ function joinFromLobby(lobby) {
 }
 
 // One lobby action at a time: a double tap must not create two rooms. The tapped tile stays
-// pressed under a "正在开局…" veil until the next screen arrives (Firebase can take a second or two).
+// pressed under a dark "正在开局…" plate with a turning ring until the next screen arrives
+// (Firebase can take a second or two).
 async function runLobbyAction(fn, source, label) {
     if (lobbyActionBusy) return;
     lobbyActionBusy = true;
     root.querySelector(".lobby")?.classList.add("is-busy");
     if (source) {
-        source.dataset.loading = label;
         source.classList.add("is-loading");
+        source.insertAdjacentHTML("beforeend", `<span class="lobby-busy" role="status"><i></i>${encodeHTML(label)}</span>`);
     }
     // a tile scrolled out of view (portrait) is backed by a toast with the same caption
     const r = source?.getBoundingClientRect();
@@ -1995,6 +1996,7 @@ async function runLobbyAction(fn, source, label) {
         lobbyActionBusy = false;
         root.querySelector(".lobby")?.classList.remove("is-busy");
         source?.classList.remove("is-loading");
+        source?.querySelector(".lobby-busy")?.remove();
         if (!seen && toastEl.textContent === label) toastEl.classList.remove("show");
     }
 }

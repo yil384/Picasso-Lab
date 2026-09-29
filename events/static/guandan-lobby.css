@@ -291,24 +291,47 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu) + var(--sl)); }
 .lobby.is-busy { cursor: progress; }
 .lobby.is-busy .lobby-tile, .lobby.is-busy .lobby-quick { pointer-events: none; }
-/* the tapped tile stays pressed under a caption until the next screen arrives */
+/* the tapped tile stays pressed under a dim veil and a dark plate (a turning ring, 正在开局…)
+   until the next screen arrives; the ring stands still under reduced motion */
 .lobby-tile.is-loading, .lobby-quick.is-loading { scale: .97; }
-.lobby-tile.is-loading::after, .lobby-quick.is-loading::after {
-    content: attr(data-loading);
+.lobby-tile.is-loading::after {
+    content: "";
     position: absolute;
     inset: 0;
     z-index: 2;
-    display: grid;
-    place-items: center;
     border-radius: inherit;
-    background: rgba(24, 34, 86, .62);
-    color: #fff;
-    font: 900 max(var(--fs-min) * 1.2, calc(22 * var(--lu)))/1.2 var(--font-ui);
-    text-shadow: 0 calc(2 * var(--lu)) 0 rgba(10, 16, 50, .6);
+    background: rgba(24, 34, 86, .3);
 }
-/* on the gold bar the caption replaces the label */
-.lobby-quick.is-loading > * { visibility: hidden; }
-.lobby-quick.is-loading::after { background: none; color: #a3240c; font-size: calc(28 * var(--lu)); text-shadow: none; }
+.lobby-busy {
+    position: absolute;
+    left: 50%; top: 50%;
+    z-index: 3;
+    translate: -50% -50%;
+    display: flex;
+    align-items: center;
+    gap: calc(10 * var(--lu));
+    padding: calc(10 * var(--lu)) calc(20 * var(--lu)) calc(10 * var(--lu)) calc(14 * var(--lu));
+    border-radius: calc(26 * var(--lu));
+    background: rgba(10, 18, 60, .78);
+    color: #fff;
+    font: 800 max(var(--fs-min) * 1.2, calc(20 * var(--lu)))/1.2 var(--font-ui);
+    white-space: nowrap;
+}
+.lobby-busy i {
+    flex: none;
+    width: calc(22 * var(--lu));
+    height: calc(22 * var(--lu));
+    box-sizing: border-box;
+    border: calc(3 * var(--lu)) solid rgba(255, 255, 255, .28);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: gd-busy-turn 800ms linear infinite;
+}
+@keyframes gd-busy-turn { to { rotate: 1turn; } }
+/* on the gold bar the ring and caption replace the label, in the bar's dark red */
+.lobby-quick.is-loading > :not(.lobby-busy) { visibility: hidden; }
+.lobby-quick .lobby-busy { background: none; color: #a3240c; font-size: calc(26 * var(--lu)); }
+.lobby-quick .lobby-busy i { border-color: rgba(163, 36, 12, .25); border-top-color: #a3240c; }
 
 /* left rail: three free-standing objects (the MVP's portrait, the shared card back, a record),
    each with its label over the bottom edge, spread over the grid's height. --r is the rail's
@@ -1242,7 +1265,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .hud-profile { gap: calc(8 * var(--lu)); }
     .hud-avatar { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); border-radius: calc(11 * var(--lu)); }
     .hud-avatar > img, .hud-avatar > .gd-avatar-initials { border-radius: calc(8 * var(--lu)); }
-    .hud-name input { width: calc(128 * var(--lu)); height: max(var(--tap), calc(26 * var(--lu))); margin: min(0px, calc((26 * var(--lu) - var(--tap)) / 2)) 0; font-size: calc(19 * var(--lu)); }
+    .hud-name input { max-width: calc(128 * var(--lu)); height: max(var(--tap), calc(26 * var(--lu))); margin: min(0px, calc((26 * var(--lu) - var(--tap)) / 2)) 0; font-size: calc(19 * var(--lu)); }
     .hud-tier > span { font-size: max(var(--fs-min), calc(12 * var(--lu))); line-height: max(calc(var(--fs-min) * 1.6), calc(20 * var(--lu))); padding: 0 calc(14 * var(--lu)); }
     .hud-stats { order: 10; gap: calc(10 * var(--lu)); margin: 0 0 0 calc(4 * var(--lu)); }
     .hud-stats:empty { height: calc(30 * var(--lu)); }   /* the same rhythm without stats; the type hint's slot */
@@ -1283,7 +1306,8 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .join-art { flex-direction: column; gap: calc(6 * var(--lu)); bottom: calc(64 * var(--t)); }
     .join-cells i { width: calc(40 * var(--t)); height: calc(50 * var(--t)); }
     .join-go .btn { --btn-h: calc(44 * var(--t)); --btn-minw: calc(120 * var(--t)); }
-    /* the dock stays on screen: 快速开始 full width over an opaque nav row, a 12px fade above */
+    /* the dock stays on screen: 快速开始 full width over the nav row, on an opaque navy sheet (no
+       tile row shows through it); tiles scrolling under it fade out over 16px above its edge */
     .lobby-dock {
         position: sticky;
         bottom: 0;
@@ -1294,7 +1318,15 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
         height: auto;
         margin: 0 calc(-12 * var(--lu) - var(--sr)) 0 calc(-12 * var(--lu) - var(--sl));
         padding: 12px calc(12 * var(--lu) + var(--sr)) calc(6 * var(--lu) + env(safe-area-inset-bottom, 0px)) calc(12 * var(--lu) + var(--sl));
-        background: linear-gradient(180deg, rgba(34, 48, 102, 0), #223066 12px);
+        background: #223066;
+    }
+    .lobby-dock::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0; bottom: 100%;
+        height: 16px;
+        background: linear-gradient(180deg, rgba(34, 48, 102, 0), #223066);
+        pointer-events: none;
     }
     .lobby-quick { min-width: 0; height: calc(58 * var(--lu)); margin-left: 0; }
     .lobby-quick b { font-size: calc(28 * var(--lu)); }
