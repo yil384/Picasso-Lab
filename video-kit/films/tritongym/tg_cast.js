@@ -32,7 +32,7 @@ export function buildLLM(THREE, add, parent, { col = 0xfff4dc, accent = 0x059669
     calm: { eyes: 'dot', mouth: 'smile' }, happy: { eyes: 'happy', mouth: 'open' }, think: { eyes: 'up', mouth: 'flat' },
     determined: { eyes: 'determined', mouth: 'flat' }, wide: { eyes: 'wide', mouth: 'o' }, squint: { eyes: 'squint', mouth: 'wobble' },
     worried: { eyes: 'worried', mouth: 'wobble', sweat: true }, star: { eyes: 'star', mouth: 'open', es: 1.7 }, shut: { eyes: 'shut', mouth: 'grin' },
-    wince: { eyes: 'shut', mouth: 'wobble', sweat: true },
+    wince: { eyes: 'shut', mouth: 'wobble', sweat: true }, stare: { eyes: 'dot', mouth: 'flat' },
     gulp: { eyes: 'up', mouth: 'wobble', sweat: true }, speak: { eyes: 'dot', mouth: 'open' }, speak2: { eyes: 'dot', mouth: 'o' }, idea: { eyes: 'wide', mouth: 'open' },
   }, { w: 512, h: 512, base: '#ffffff', cx: 256, cy: 250, s: 1.25, seed });
   // planar UV on the front face: map x,y in [-0.75,0.75] to the face canvas
@@ -160,7 +160,7 @@ export function buildKern(THREE, add, parent, { seed = 7, scale = 1.0 } = {}) {
   { const p = noseGeo.attributes.position, uv = noseGeo.attributes.uv, nr = noseGeo.attributes.normal; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i)); if (nr.getX(i) > 0.5) uv.setXY(i, 0.5 - p.getZ(i) / 0.46, 0.5 + p.getY(i) / 0.4); else uv.setXY(i, 0.03, 0.97); const sp = v.clone().normalize().multiplyScalar(0.26); v.lerp(sp, 0.18); p.setXYZ(i, v.x, v.y, v.z); } noseGeo.computeVertexNormals(); }
   K.noseG = new THREE.Group(); K.noseG.position.set(...KERN_SLOTS[7]); K.body.add(K.noseG);
   K.noseS = 1.3;                                                   // the face block, 1.3x: the hero's face must read in the wides
-  K.nose = add(noseGeo, { color: 0xfff4dc, map: K.faces.calm[0], rim: 0.6, spec: 0, toneBias: 0.2, seed: seed + 20 }, { outline: 0.75 }, [0, 0, 0], [0, 0, 0], K.noseG);
+  K.nose = add(noseGeo, { color: 0xfff4dc, map: K.faces.calm[0], rim: 0.6, spec: 0, toneBias: 0.5, receive: false, seed: seed + 20 }, { outline: 0.75 }, [0, 0, 0], [0, 0, 0], K.noseG);
   // a dark-emerald chassis tray under the tiles: the tokens read as one car body
   K.chassis = add(new THREE.BoxGeometry(0.98, 0.07, 0.66), { key: 'chassis', color: 0x0b5e46, rim: 0.5, spec: 0, hatchDir: [1, 0, 0] }, { outline: 0.7 }, [0.02, -0.15, 0], [0, 0, 0], K.body);
   // the crooked cowlick token (compile bug)
@@ -206,6 +206,7 @@ export function buildOro(THREE, add, parent, { seed = 11 } = {}) {
   O.faces = faceSet(THREE, {
     smug: { eyes: 'smug', mouth: 'grin', es: 1.7 }, wide: { eyes: 'wide', mouth: 'o' }, determined: { eyes: 'determined', mouth: 'teeth' },
     sweat: { eyes: 'worried', mouth: 'wobble', sweat: true }, shut: { eyes: 'shut', mouth: 'teeth' }, nod: { eyes: 'happy', mouth: 'smile' },
+    jaw: { eyes: 'wide', mouth: 'open', es: 1.3 },
   }, { w: 1024, h: 512, base: '#ef4b5f', cx: 256, cy: 176, s: 2.1, seed, spacing: 0.8, mouthY: 48 });   // a big face straight ahead, above the cone (every front-ish lens sees it): the rival's comedy reads
   const bodyGeo = new THREE.CapsuleGeometry(0.22, 0.9, 8, 24); bodyGeo.rotateZ(-Math.PI / 2);
   // face texture on the front hemisphere: sphere-like uv around +x

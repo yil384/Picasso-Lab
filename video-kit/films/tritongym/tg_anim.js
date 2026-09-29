@@ -26,7 +26,7 @@ export const K = {
   cut: 264, tune: [268, 284], side: [284, 296], kgulp: 292, go1: 300, oroRun1: [300, 336], kernRun1: [300, 356],
   buff: [340, 363], crash: [356, 366],
   // B5 refine
-  tokIn: [360, 372], idea: 374, speak2: [382, 400], popOff: 384, snapOn: [390, 400], nose: 400, rev: [404, 420],
+  tokIn: [360, 370], stare: 370, idea: 378, speak2: [384, 402], popOff: 386, snapOn: [392, 402], nose: 402, rev: [406, 420],
   // B6 lap 2 (only Kern laps; the oracle backs up the home straight to the start line)
   lap2: [422, 486], gate2: 445, scale2: 461, oroBack: [424, 474],
   // B7 race 2: Kern takes 33 frames (Perf@1 ~ 1.09), the photo finish holds 12 frames, then the stopwatch insert
@@ -98,7 +98,7 @@ export function kernTh(F) {   // ring angle of Kern in the races (lap offset inc
 export function oroTh(F) {
   if (F < K.lap2[0]) return sprint(F, K.go1, K.go1 + ORO_RUN, A.start, LINE.o, 1.1, 16, P1.oEnd + A.finish - LINE.o);   // blasts off
   // race 2: the same run (36 f, same launch), but brakes hard at the line in shock
-  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 12, 0.16 + A.finish - LINE.o);   // brakes in shock just past the line
+  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 12, 0.24 + A.finish - LINE.o);   // brakes in shock just past the line
 }
 
 /**
@@ -233,11 +233,11 @@ function kernRaw(F) {
   // ---- B7: race 2 (the nose win) and B8 payoff parked past the line
   {
     const th = kernTh(F);
-    S.pos = lanePos(th, R.ours - 1.05 * sg(F, K.cross + 2, K.cross + 16, sm), 0); S.yaw = headingAt(th) - 0.8 * sg(F, K.check - 8, K.check + 2, sm);
+    S.pos = lanePos(th, R.ours - 0.75 * sg(F, K.cross + 2, K.cross + 16, sm), 0); S.yaw = headingAt(th) - 0.8 * sg(F, K.check - 8, K.check + 2, sm);
     S.wheelAng = (th - L2 - thS) * R.ours / 0.16;   // (it rolls up-stage after the line and turns its face 3/4 to us; the plate side stays in view)
     S.face = F < K.go2 ? 'determined' : F < K.cross - 12 ? 'squint' : F < K.cross + 1 ? 'strain' : F < K.check ? 'wide' : 'star';
     S.stretch = F >= K.cross - 4 && F < K.cross + 2 ? 0.25 : 0;
-    if (F >= K.check - 3 && F < K.check + 20) { const h = hop(F, K.check, K.check + 11, 0.62); S.pos[1] += h.y; S.sq = h.sq * 1.4; S.pitch = -0.35 * Math.sin(Math.PI * sg(F, K.check, K.check + 11)); }   // the winner's hop: a wheelie in the air, a squash on landing
+    if (F >= K.check - 3 && F < K.check + 22) { const h = hop(F, K.check, K.check + 12, 0.72); S.pos[1] += h.y; S.sq = h.sq * 1.6; S.pitch = -0.35 * Math.sin(Math.PI * sg(F, K.check, K.check + 11)); }   // the winner's hop: a wheelie in the air, a squash on landing
     if (F >= K.away[0] + 10) S.vis = false;              // gone on the heaviest smear frame of the whip away
     S.showCheck = F >= K.check;
     return S;
@@ -285,9 +285,9 @@ function oroRaw(F) {
   }
   {
     const th = oroTh(F);
-    S.pos = lane(th); S.yaw = headingAt(th) - 0.9 * sg(F, K.jaw - 8, K.jaw, sm);
+    S.pos = lane(th); S.yaw = headingAt(th) - 0.15 * sg(F, K.jaw - 8, K.jaw, sm);   // ~3/4 to the payoff lens: the face above the cone stays in view
     S.wheelAng = (th - L2 - thS) * R.oro / 0.1;   // (it turns its face to us for the jaw drop and the nod)
-    S.face = F < K.dtake ? 'smug' : F < K.go2 ? 'sweat' : F < K.cross + 2 ? 'shut' : F < K.jaw ? 'wide' : F < K.nod[0] ? 'sweat' : 'nod';
+    S.face = F < K.dtake ? 'smug' : F < K.go2 ? 'sweat' : F < K.cross + 2 ? 'shut' : F < K.jaw ? 'wide' : F < K.nod[0] ? 'jaw' : 'nod';
     S.keySpin = F >= K.go2 ? (F - K.go2) * 2.2 : F * 0.05;
     if (F >= K.dtake && F < K.dtake + 8) S.sq = take(F, K.dtake, 0.9);
     if (F < K.go2) S.yaw -= 0.45 * sg(F, K.side2[0], K.side2[0] + 6, sm) * (1 - sg(F, K.go2 - 6, K.go2 - 2, sm));   // faces the lens for the side-eye and the double-take
@@ -427,7 +427,7 @@ function tokRaw(F) {
   if (F < K.lap2[0] + 4) {
     S.pos = refP; S.yaw = faceOut(A.finish + 0.27) - 0.5;
     if (F < K.tokIn[1] + 4) S.sq = ringv(F - K.tokIn[1], 0.2, 0.9, 0.25);
-    S.face = F < K.idea ? 'think' : F < K.speak2[0] ? 'idea' : F < K.speak2[1] + 2 ? ((F - K.speak2[0]) % 3 < 2 ? 'speak' : 'speak2') : 'happy';
+    S.face = F < K.stare ? 'think' : F < K.idea ? 'stare' : F < K.speak2[0] ? 'idea' : F < K.speak2[1] + 2 ? ((F - K.speak2[0]) % 3 < 2 ? 'speak' : 'speak2') : 'happy';
     if (F >= K.idea && F < K.idea + 10) { S.sq = take(F, K.idea, 1.1); S.lookUp = 0.4; }
     if (F >= K.speak2[0] && F < K.speak2[1]) { S.sq = (F - K.speak2[0]) % 3 < 1 ? 0.1 : -0.05; S.lean = 0.15; }
     if (F >= K.rev[0]) { S.armR = -2.3; S.face = 'happy'; }
@@ -448,7 +448,7 @@ function tokRaw(F) {
     const hopIn = pogo(F, K.hold[1], K.watch[1] + 2, polar(A.finish + 0.85, 3.3, 0), base, 3, 0.45);
     S.pos = F < K.watch[1] + 2 ? hopIn.pos : base.slice(); S.sq = F < K.watch[1] + 2 ? hopIn.sq : 0; S.yaw = faceOut(A.tokWin) - 0.55;
     S.face = F < K.leap[0] ? 'wide' : 'star';
-    if (F >= K.leap[0] && F < K.leap[1]) { const h = hop(F, K.leap[0] + 3, K.leap[1] - 4, 0.6); S.pos[1] += h.y; S.sq = h.sq; S.armL = 2.7; S.armR = -2.7; }
+    if (F >= K.leap[0] && F < K.leap[1]) { const h = hop(F, K.leap[0] + 3, K.leap[1] - 4, 0.42); S.pos[1] += h.y; S.sq = h.sq; S.armL = 2.7; S.armR = -2.7; }
     if (F >= K.away[0]) {
       const P = pogo(F, K.away[0], NF + K.skid, base, B1.tok, 4, 0.4);
       S.pos = P.pos; S.sq = P.sq; S.yaw = headingAt(A.finish + 0.4); S.lean = -0.25; S.face = 'determined';

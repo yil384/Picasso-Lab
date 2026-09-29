@@ -314,13 +314,13 @@ function updateOro(F) {
   O.root.rotation.set(0, S.yaw, 0);
   const sq = S.sq || 0, str = S.stretch || 0;
   O.body.scale.set(1.35 * (1 + str), 1.35 * (1 - sq - str * 0.2), 1.35 * (1 + sq * 0.4));
-  O.body.rotation.z = (S.nod || 0) * 0.18 + (S.buff ? 0.03 * Math.sin(F * 0.8) : 0);
+  O.body.rotation.z = (S.nod || 0) * 0.4 + (S.buff ? 0.03 * Math.sin(F * 0.8) : 0);
   setMap(O.bodyM, (O.faces[S.face] || O.faces.smug)[vb(F)]);
   O.wheels.forEach((w) => { w.rotation.z = -S.wheelAng; });
   O.key.rotation.y = S.keySpin || 0;
   const ls = S.laurelSlip || 0;                                    // the laurel slides forward and tilts down across one eye
-  O.laurel.position.set(-0.2 + 0.72 * ls, 0.2 - 0.06 * ls, 0.08 * ls);
-  O.laurel.rotation.set(0.35 * ls, 0, -0.75 * ls);
+  O.laurel.position.set(-0.2 + 0.46 * ls, 0.2 + 0.02 * ls, 0.1 * ls);   // slides forward off the key and tips down over one eye (a band, never a ring round the cone)
+  O.laurel.rotation.set(0.55 * ls, 0, -1.15 * ls);
 }
 
 // ---- Dash
@@ -426,7 +426,7 @@ function updateStations(F) {
     const toW = T.kern.body.localToWorld(V(...slot));
     const e = sm(uu);
     // out of the mouth, down and out towards the lens (never across Tok's eyes), onto the axle
-    const ml = Math.hypot(mouth[0], mouth[2]) || 1, bo = 0.55 * Math.sin(Math.PI * uu);
+    const ml = Math.hypot(mouth[0], mouth[2]) || 1, bo = 0.25 * Math.sin(Math.PI * uu);
     gq.position.set(lerp(mouth[0], toW.x, e) + mouth[0] / ml * bo, lerp(mouth[1], toW.y, e) + 0.12 * Math.sin(Math.PI * uu), lerp(mouth[2], toW.z, e) + mouth[2] / ml * bo);
     gq.rotation.set(0, st.kern.yaw, (1 - uu) * 4);
   });
@@ -588,7 +588,7 @@ export function drawMarks(ctx, g) {
   }
   const tk = st.tok;
   const bangAt = (f0, p, s, rot, col = PAL.coral) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, col, r); };
-  { const sx = [Math.cos(tk.yaw), 0, -Math.sin(tk.yaw)]; bangAt(K.idea, [tk.pos[0] + sx[0] * 0.95, tk.pos[1] + 1.35, tk.pos[2] + sx[2] * 0.95], 0.42, 0.1, PAL.emerald); }   // beside the head, inside the card crop
+  bangAt(K.idea, [tk.pos[0], tk.pos[1] + 1.78, tk.pos[2]], 0.46, 0.06, PAL.emerald);   // straight above the head, against the sky
   if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 0.85, st.oro.pos[2]], 0.62, 0.12);   // as big as Tok's, inside the card band
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
     const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
