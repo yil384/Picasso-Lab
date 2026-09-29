@@ -9,7 +9,7 @@
          The header's back arrow (.gdr-back) calls onClose. `page` is an index or one of PAGE_KEYS.
          Like the game table, the board is laid out in design px on a stage scaled to the viewport
          (landscape: s = min(W/844, H/390)); portrait phones get their own layout at s = 1.
-     buildBanner({ lang }) -> slim 战报 strip; clicking it opens the board ([data-open-records]).
+     styleText(key, lang) -> the player's style tag in that language ("" when it has none there).
      stats() -> { matches, board, mvp }, PLAYERS, MATCHES, PAGE_KEYS
 
    SCORING (掼蛋升级制): teams climb 2→3→…→10→J→Q→K→A. Win by
@@ -183,6 +183,11 @@
         return '<span class="gdr-gold ' + (cls || "") + '"><i aria-hidden="true">' + text + '</i><i aria-hidden="true">' + text + '</i><i>' + text + '</i></span>';
     }
     function winLossText(s) { return s ? T(s.w + " 胜 " + s.l + " 负", s.w + "W " + s.l + "L") : ""; }
+    // One quiet line of a leaderboard row: record · win rate · A cleared.
+    function recordHTML(s) {
+        return '<span class="gdr-rec"><span>' + T("<b>" + s.w + "</b> 胜 <b>" + s.l + "</b> 负", "<b>" + s.w + "</b>W <b>" + s.l + "</b>L") + "</span>" +
+            " <i>·</i> <span>" + T("胜率 ", "") + "<b>" + s.wr + "%</b></span> <i>·</i> <span>" + T("过 A ", "Cleared A ") + "<b>" + s.aw + "</b></span></span>";
+    }
 
     function ensureFonts() {
         if (!global.document) return;
@@ -372,12 +377,8 @@
                 rankBadge(i) + avatarImg(s.key, "gdr-av") +
                 '<div class="gdr-row-main">' +
                     '<div class="gdr-row-name"><b>' + esc(p.name) + '</b>' + cardChip(s.key) + (p.style ? '<span class="gdr-tag">' + esc(tx(p.style)) + '</span>' : "") + '</div>' +
-                    (p.quote ? '<div class="gdr-row-sub">' + ICONS.quote + '<span>' + esc(p.quote) + '</span></div>' : "") +
-                '</div>' +
-                '<div class="gdr-cells">' +
-                    '<span><b>' + s.w + '-' + s.l + '</b><i>' + T("胜负", "W-L") + '</i></span>' +
-                    '<span><b>' + s.wr + '%</b><i>' + T("胜率", "Win rate") + '</i></span>' +
-                    '<span><b>' + s.aw + '</b><i>' + T("过 A", "Cleared A") + '</i></span>' +
+                    '<div class="gdr-row-sub">' + recordHTML(s) +
+                        (p.quote ? '<span class="gdr-row-q">' + ICONS.quote + '<span>' + esc(p.quote) + '</span></span>' : "") + '</div>' +
                 '</div>' +
                 '<div class="gdr-row-pts"><b>' + s.pts + '</b><i>' + T("评分", "Score") + '</i></div>' +
             '</div>';
@@ -385,7 +386,10 @@
         var deck = LAB.filter(function (k) { return PLAYERS[k]; }).map(function (k) {
             return '<div class="gdr-deck-item">' + sigCard(k, "") + '<b>' + esc(firstName(k)) + '</b></div>';
         }).join("");
-        return sectionHead(T("选手排行榜", "Leaderboard"), '<span class="gdr-fine">' + ICONS.help + T("评分 = 赛量修正胜率：(胜 + 2) ÷ (场次 + 4)", "Score = volume-adjusted win rate: (W + 2) / (games + 4)") + '</span>') +
+        // the score formula waits behind the ? button (a tap note, closed by any other tap)
+        var help = '<button class="gdr-help" type="button" aria-expanded="false" aria-controls="gdr-score-note" aria-label="' + esc(T("评分怎么算", "How the score works")) + '">' + ICONS.help + '</button>' +
+            '<span class="gdr-note" id="gdr-score-note" hidden>' + T("评分 = 赛量修正胜率：(胜 + 2) ÷ (场次 + 4)，场次少的胜率向 50% 靠拢", "Score = volume-adjusted win rate: (W + 2) / (games + 4), so a short record leans toward 50%") + '</span>';
+        return sectionHead(T("选手排行榜", "Leaderboard"), help) +
             '<div class="gdr-rows">' + rows + '</div>' +
             sectionHead(T("实验室牌谱", "Lab deck"), '<span class="gdr-fine">' + T("每位成员的招牌牌，也是对局里的人像牌", "Each member's signature card, as it appears in game") + '</span>') +
             '<div class="gdr-deck">' + deck + '</div>';
@@ -454,6 +458,7 @@
         var tabs = [].slice.call(app.querySelectorAll(".gdr-tab"));
         var splash = app.querySelector(".gdr-splash");
         var reduce = !!(global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches);
+        var help = app.querySelector(".gdr-help"), note = help && help.nextElementSibling;
         var idx = 0, drag = null, swallowClick = false, timers = [], scale = 1, ro = null;
 
         // Design stage: landscape screens show the 844x390 layout scaled by s (so a 1440x900 desktop
@@ -495,7 +500,13 @@
         // A page's entry animation starts the first time it is shown or dragged into view. The
         // guandan modal hides with display:none, so each re-open plays the shown page's entry again.
         function reveal(page) { if (page && !splash) page.classList.add("is-shown"); }
+        function showNote(on) {
+            if (!help) return;
+            help.setAttribute("aria-expanded", String(on));
+            note.hidden = !on;
+        }
         function go(p, instant) {
+            showNote(false);
             idx = Math.max(0, Math.min(pages.length - 1, pageIndex(p)));
             track.classList.toggle("no-anim", !!instant || reduce);
             place(0);
@@ -507,9 +518,11 @@
 
         function onClick(e) {
             if (swallowClick) { swallowClick = false; e.stopPropagation(); e.preventDefault(); return; }
-            var t = e.target.closest && e.target.closest("[data-gdr-go], .gdr-back");
+            var t = e.target.closest && e.target.closest("[data-gdr-go], .gdr-back, .gdr-help");
+            if (t !== help) showNote(false); // any other tap closes the score note
             if (!t || !app.contains(t)) return;
-            if (t.classList.contains("gdr-back")) { if (opts.onClose) opts.onClose(); }
+            if (t === help) showNote(note.hidden);
+            else if (t.classList.contains("gdr-back")) { if (opts.onClose) opts.onClose(); }
             else go(t.getAttribute("data-gdr-go"));
         }
         // Touch/pen drag follows the finger; vertical pans stay native (touch-action: pan-y).
@@ -593,33 +606,15 @@
         };
     }
 
-    // Slim 战报 strip for the lobby: latest result + top three. Opens the board.
-    function buildBanner(opts) {
-        lang = opts && opts.lang === "en" ? "en" : "zh";
-        var d = buildStats();
-        var L = d.matches[0];
-        var aWin = L.winner === "A";
-        var winT = aWin ? L.teamA : L.teamB, loseT = aWin ? L.teamB : L.teamA;
-        var top = d.board.slice(0, 3).map(function (s, i) {
-            return '<span class="gdr-bn-chip">' + rankBadge(i) + '<span>' + esc(firstName(s.key)) + '</span><b>' + s.pts + '</b></span>';
-        }).join("");
-        return '<div class="gdr-banner gdr-scope" role="button" tabindex="0" data-open-records="latest" data-lang="' + lang + '" aria-label="' + esc(T("打开巅峰对决战绩", "Open the Peak Showdown records")) + '">' +
-            '<span class="gdr-bn-tag">' + T("战报", "News") + '</span>' +
-            '<span class="gdr-bn-body">' +
-                '<span class="gdr-bn-avs">' + winT.map(function (k) { return avatarImg(k, ""); }).join("") + '</span>' +
-                '<b>' + winT.map(function (k) { return esc(firstName(k)); }).join(" · ") + '</b>' +
-                '<span class="gdr-bn-score"><span class="' + (aWin ? "red" : "blue") + '">' + esc(aWin ? L.levelA : L.levelB) + '</span><i>:</i><span>' + esc(aWin ? L.levelB : L.levelA) + '</span></span>' +
-                '<span class="gdr-bn-mut">' + T("胜 ", "def. ") + loseT.map(function (k) { return esc(firstName(k)); }).join(" · ") + '</span>' +
-                '<span class="gdr-bn-div" aria-hidden="true"></span>' +
-                top +
-            '</span>' +
-            '<span class="gdr-bn-go">' + T("巅峰对决", "Records") + ' ›</span>' +
-        '</div>';
+    // Read-only: a player's style tag as the board shows it in `lng` ("" when there is none there).
+    function styleText(key, lng) {
+        var style = P(key).style;
+        return lng === "en" ? (style && EN[style]) || "" : style;
     }
 
     global.GuandanRecords = {
         mount: mount,
-        buildBanner: buildBanner,
+        styleText: styleText,
         stats: function () { var d = buildStats(); return { matches: d.matches, board: d.board, mvp: d.mvp }; },
         PAGE_KEYS: PAGE_KEYS,
         PLAYERS: PLAYERS,

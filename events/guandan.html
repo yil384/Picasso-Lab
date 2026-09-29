@@ -4004,8 +4004,7 @@ if (roomCode) {
 <script src="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.js"></script>
 <script>
 // 巅峰对决 board: window.GuandanRecordsUI.open(page) / close(). It opens only from a
-// [data-open-records] control (value = page key) and never by itself; the 战报 strip is
-// rendered only into [data-gdr-banner-slot] elements that a screen provides.
+// [data-open-records] control (value = page key) and never by itself.
 (function () {
     var R = window.GuandanRecords;
     var modal = document.getElementById("gdr-cardmodal");
@@ -4064,17 +4063,6 @@ if (roomCode) {
         var t = (e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("[data-open-records]");
         if (t && t.tagName !== "BUTTON" && t.tagName !== "A") { e.preventDefault(); open(t.getAttribute("data-open-records")); }
     });
-    function fillBannerSlots() {
-        if (!R.buildBanner) return;
-        var lang = uiLang();
-        [].forEach.call(document.querySelectorAll("[data-gdr-banner-slot]"), function (slot) {
-            var bn = slot.firstElementChild;
-            if (bn && bn.classList.contains("gdr-banner") && bn.getAttribute("data-lang") === lang) return;
-            slot.innerHTML = R.buildBanner({ lang: lang });
-        });
-    }
-    new MutationObserver(fillBannerSlots).observe(document.getElementById("root") || document.body, { childList: true, subtree: true });
-    fillBannerSlots();
     window.GuandanRecordsUI = { open: open, close: close };
 })();
 
