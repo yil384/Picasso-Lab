@@ -12,10 +12,11 @@ export const POSTER = 664;
 
 export const LOOK = {
   extends: 'comic',
-  hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.5, hatchWobble: 0.08, hatchSwell: 0.35,
-  htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0], htCol: [0.06, 0.18, 0.34],
-  lineW: 1.8, lineWShadow: 2.9, hullW: 2.65, hullShadowW: 1.45,   // a step lighter than style-comic: the card was the darkest of the four
-  bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.22,
+  hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.1, hatchWobble: 0.08, hatchSwell: 0.35,
+  htAmt: 0.45, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0], htCol: [0.18, 0.34, 0.55],
+  lineW: 1.3, lineWShadow: 2.1, hullW: 1.9, hullShadowW: 1.45,   // ~35% lighter than style-comic: the set is full of dark props, and the card read as the darkest of the four
+  selfInk: 0.42,                                  // lines take a darkened tint of their own colour (offset print), not all near-black
+  bleed: 1.6, edgeDark: 0.2, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.22,
   shadeGlaze: [0.62, 0.72, 0.9], coreGlaze: [0.62, 0.72, 0.9], keyTint: [1.0, 0.985, 0.97],   // near-neutral key: the warm paper already multiplies
   rule: 0.0, bgDots: [0.2, 0.52, 0.75, 0.22], dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16,
   glassGlint: 0.5,
@@ -246,9 +247,9 @@ async function buildProps(W) {
   const sideB = { color: COL.skyP, hatchDir: [0, 1, 0], rim: 0.5, shadeColor: COL.sky, shadeMix: 0.4, seed: 62 };
   const faceG = { color: COL.gold, hatchDir: [0.3, 1, 0], rim: 0.9, shadeColor: 0xb0521e, shadeMix: 0.35, seed: 54 };
   W.num = {
-    n98: buildWord3D(W, '98%', { h: 0.34, depth: 0.12, face: faceB, side: sideB, outline: 1.1, layout: [{ rz: 0.05 }, { rz: -0.04, dy: 0.01 }, { rz: 0.06, s: 0.9 }] }),
-    n68: buildWord3D(W, '68x', { h: 0.46, depth: 0.15, face, side, outline: 1.25, layout: [{ rz: -0.06 }, { rz: 0.04, dy: 0.015 }, { rz: -0.1, s: 0.85 }] }),
-    n04: buildWord3D(W, '$0.04', { h: 0.27, depth: 0.1, face: faceG, side: { ...side, color: COL.pop, shadeColor: COL.popD }, outline: 1.0, layout: [{ rz: 0.05 }, { rz: -0.03 }, {}, { rz: 0.04 }, { rz: -0.05 }] }),
+    n98: buildWord3D(W, '98%', { h: 0.34, depth: 0.12, face: faceB, side: sideB, outline: 0.75, layout: [{ rz: 0.05 }, { rz: -0.04, dy: 0.01 }, { rz: 0.06, s: 0.9 }] }),
+    n68: buildWord3D(W, '68x', { h: 0.46, depth: 0.15, face, side, outline: 0.85, layout: [{ rz: -0.06 }, { rz: 0.04, dy: 0.015 }, { rz: -0.1, s: 0.85 }] }),
+    n04: buildWord3D(W, '$0.04', { h: 0.27, depth: 0.1, face: faceG, side: { ...side, color: COL.pop, shadeColor: COL.popD }, outline: 0.7, layout: [{ rz: 0.05 }, { rz: -0.03 }, {}, { rz: 0.04 }, { rz: -0.05 }] }),
   };
   Object.values(W.num).forEach((q) => scene.add(q.group));
   if (Q.get('dbg')) console.log('numW', JSON.stringify(Object.fromEntries(Object.entries(W.num).map(([k, q]) => [k, q.width]))));

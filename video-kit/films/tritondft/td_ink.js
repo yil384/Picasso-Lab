@@ -186,14 +186,16 @@ function iris(W, ctx, g, F, jr) {
   // inside the same circle on the cut, and the circle opens again: no empty frame
   const R = closing ? 150 + 1150 * (1 - sm((F - a0) / (a1 - a0))) : 150 + 1350 * Math.pow(clamp((F - a1) / (b1 - a1)), 1.5);
   const cx = clamp(c.x, 200, ctx.DW - 200), cy = clamp(c.y, 150, ctx.DH - 150);
-  g.save(); g.fillStyle = PAL.ink; g.strokeStyle = PAL.ink;
-  g.beginPath(); g.rect(-60, -60, ctx.DW + 120, ctx.DH + 120);
-  if (R > 2) { for (let q = 0; q <= 48; q++) { const an = -q / 48 * TAU, rr = R * (1 + 0.012 * Math.sin(q * 5.1 + F)) + jr.gauss(0, 0.6); const x = cx + Math.cos(an) * rr, y = cy + Math.sin(an) * rr; q ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); }
-  g.fill('evenodd');
-  // paper grain printed into the ink, so the black reads as ink on paper, never as a dropped video frame
-  if (W.paperCanvas) { g.save(); g.clip('evenodd'); g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.9; g.drawImage(W.paperCanvas, 0, 0, ctx.DW, ctx.DH); g.restore(); }
-  g.lineWidth = Math.min(12, 2 + R * 0.2); g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
-  g.strokeStyle = PAL.cream; g.lineWidth = Math.min(3, 1 + R * 0.05); g.beginPath(); g.arc(cx, cy, R + g.lineWidth * 2, -2.4, -1.2); g.stroke();
+  // the mask is a cream paper page with halftone (a comic panel closing round the lens), never a black frame
+  const ring = (fresh = true) => { if (fresh) g.beginPath(); for (let q = 0; q <= 48; q++) { const an = -q / 48 * TAU, rr = R * (1 + 0.012 * Math.sin(q * 5.1 + F)) + jr.gauss(0, 0.6); const x = cx + Math.cos(an) * rr, y = cy + Math.sin(an) * rr; q ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
+  g.save();
+  g.beginPath(); g.rect(-60, -60, ctx.DW + 120, ctx.DH + 120); ring(false); g.clip('evenodd');
+  if (W.paperCanvas) g.drawImage(W.paperCanvas, 0, 0, ctx.DW, ctx.DH); else { g.fillStyle = PAL.paper; g.fillRect(0, 0, ctx.DW, ctx.DH); }
+  g.fillStyle = 'rgba(2,132,199,0.22)';
+  for (let y = 0; y < ctx.DH; y += 24) for (let x = (y / 24) % 2 ? 12 : 0; x < ctx.DW; x += 24) { const d = Math.hypot(x - cx, y - cy) - R; const r = clamp(d / 260, 0, 1) * 7; if (r > 0.6) { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); } }
+  g.restore();
+  g.save(); g.strokeStyle = PAL.ink; g.lineWidth = Math.min(14, 3 + R * 0.03); ring(); g.stroke();
+  g.strokeStyle = PAL.pop; g.lineWidth = 4; g.beginPath(); g.arc(cx, cy, R + 14, -2.5, -1.3); g.stroke();
   g.restore();
 }
 

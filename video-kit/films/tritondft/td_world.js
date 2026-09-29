@@ -135,7 +135,7 @@ export async function buildBench(W) {
   const B = L.bench;
   const top = { color: 0xe7f4fb, hatchDir: [1, 0, 0.2], toneBias: 0.06, rim: 0.3 };
   const edge = { color: COL.sky, hatchMode: 'u', shadeColor: COL.navy, shadeMix: 0.4, rim: 0.6 };
-  add(new THREE.CylinderGeometry(B.r, B.r, B.th, 72), [edge, top, top], { outline: 1.1 }, [B.x, -B.th / 2, B.z]);
+  add(new THREE.CylinderGeometry(B.r, B.r, B.th, 72), [edge, top, top], { outline: 0.8 }, [B.x, -B.th / 2, B.z]);
   add(new THREE.TorusGeometry(B.r, 0.045, 10, 96), { color: COL.pop, hatchMode: 'u', rim: 0.5 }, { outline: 0.6, cast: false }, [B.x, 0.0, B.z], [Math.PI / 2, 0, 0]);
   add(new THREE.CylinderGeometry(0.28, 0.42, -L.floorY - B.th, 28), { color: COL.navy, hatchMode: 'u' }, { outline: 0.9 }, [B.x, (L.floorY - B.th) / 2, B.z]);
   add(new THREE.CylinderGeometry(0.9, 1.0, 0.1, 40), { color: COL.navy }, { outline: 0.8 }, [B.x, L.floorY + 0.05, B.z]);
@@ -290,7 +290,7 @@ export async function buildDesk(W) {
   const { THREE, scene, add, ctx } = W;
   const D = L.desk, g = new THREE.Group(); g.position.set(D.x, 0, D.z); scene.add(g);
   const wood = { color: 0xc98b4a, hatchDir: [1, 0, 0.1], rim: 0.5, shadeColor: 0x6b3f22, shadeMix: 0.4, seed: 81 };
-  add(new THREE.BoxGeometry(D.w, 0.12, D.d), wood, { outline: 1.1 }, [0, -0.06, 0], [0, 0, 0], g);
+  add(new THREE.BoxGeometry(D.w, 0.12, D.d), wood, { outline: 0.75 }, [0, -0.06, 0], [0, 0, 0], g);
   add(new THREE.BoxGeometry(D.w - 0.2, 0.22, D.d - 0.1), { ...wood, color: 0xb57a3f }, { outline: 0.9 }, [0, -0.23, -0.02], [0, 0, 0], g);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.BoxGeometry(0.1, -L.floorY - 0.12, 0.1), wood, { outline: 0.8 }, [sx * (D.w / 2 - 0.12), (L.floorY - 0.12) / 2, sz * (D.d / 2 - 0.1)], [0, 0, 0], g);
   // gooseneck lamp (back-left of the desk), shade aimed at the book

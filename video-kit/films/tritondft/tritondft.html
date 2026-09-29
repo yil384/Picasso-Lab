@@ -23,7 +23,7 @@ import { inkOverlay, lettering, bakeLettering } from './td_ink.js';
 
 // modules imported indirectly, listed so render.py's scene hash covers them:
 // './td_cast.js' './td_faces.js' './td_glyph3d.js' './td_cam.js' './npr/brush.js' './npr/camera.js' './npr/looks.js' './npr/glsl.js'
-const paperC = (ctx) => ctx.paper({ tone: PAL.paper, grain: 0.04, fibres: 0.05, blotch: 0.06, seed: 4 });
+const paperC = (ctx) => ctx.paper({ tone: PAL.paper, grain: 0.07, fibres: 0.07, blotch: 0.06, seed: 4 });   // grain on par with the series
 let W = null;
 
 defineScene({
