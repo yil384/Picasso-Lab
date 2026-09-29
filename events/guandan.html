@@ -69,7 +69,7 @@
 </div>
 
 <div class="return-transition" id="return-transition" aria-hidden="true"></div>
-<div id="return-type-hint">试试输入 <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd></div>
+<div id="return-type-hint">试试输入 <b>picasso</b></div>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -297,77 +297,109 @@ function hideToast() {
     tableView.toast?.classList.remove("show");
 }
 
-// The "try typing picasso" pill sits where it covers no control: on the table in whichever felt
-// band shows least right now, under the partner's played cards or across the centre (turned with
-// a rotated stage); in the lobby over the stat pills (or where they would be); in the room in the
-// top bar's free stretch, else over the felt's level tiles between the side seats, else on the
-// 对局设置 heading.
-// Document coordinates, so on a scrolled portrait page it stays with what it was placed on.
-const HINT_TABLE_YS = [200, 266];   // band centres, design px from the stage top
-function placeReturnTypeHint() {
-    const el = returnTypeHint;
-    const screen = document.body.dataset.screen;
-    const onTable = screen === "table" && !!tableView.stage?.isConnected;
-    el.classList.toggle("is-turned", onTable && tableView.layout.rotated);
-    const hintW = el.offsetWidth;
-    const hintH = el.offsetHeight;
-    let x = innerWidth / 2;
-    let y = innerHeight / 2;
-    if (onTable) {
-        const { s, w, rotated, left, top, vw } = tableView.layout;
-        const [bw, bh] = rotated ? [hintH, hintW] : [hintW, hintH];
-        const shown = [...tableView.stage.querySelectorAll(".gd-slot > *, .gd-actions > *, .gd-seat, [data-card-id], .gd-stage-toast.show")]
-            .map(n => n.getBoundingClientRect()).filter(r => r.width);
-        const band = designY => {
-            const cx = rotated ? vw - designY * s : left + w / 2 * s;
-            const cy = rotated ? left + w / 2 * s : top + designY * s;
-            const covered = shown.reduce((sum, r) => sum
-                + Math.max(0, Math.min(cx + bw / 2, r.right) - Math.max(cx - bw / 2, r.left))
-                * Math.max(0, Math.min(cy + bh / 2, r.bottom) - Math.max(cy - bh / 2, r.top)), 0);
-            return { cx, cy, covered };
-        };
-        const best = HINT_TABLE_YS.map(band).reduce((a, b) => (b.covered < a.covered ? b : a));
-        x = best.cx;
-        y = best.cy;
-    } else if (screen === "lobby") {
-        const r = document.querySelector(".hud-stats")?.getBoundingClientRect();
-        if (r) {
-            x = r.width > hintW ? r.left + r.width / 2 : r.left + hintW / 2;
-            y = r.top + r.height / 2;
+// The "try typing picasso" pill goes to the free spot nearest its anchor, measured at every show
+// so it follows whatever the screen holds right now. Anchor: on the table the felt between the
+// partner's played cards and mine (stage px, so a rotated stage turns the pill with it), in the
+// lobby and the room the middle of the top bar. The search runs along the anchor's band before it
+// leaves it (the thin top bar more so than the open felt); a roomy clearance is tried first, then
+// a tight one, then a smaller pill. Placed in document px, so on a scrolled portrait page it stays
+// beside what it was placed next to.
+const HINT_ANCHOR_Y = 233;                        // design px from the stage top
+const HINT_FITS = [[1, 16], [1, 8], [.85, 8]];    // [pill scale, clearance in CSS px]
+const HINT_SOLID = "button, a[href], input, select, textarea, label, img, svg, canvas, .card";
+// What the pill must not cover, as viewport rects: controls, images, cards and the timer, every
+// line of text, and every painted box smaller than a surface (pills, plates, tiles, avatars, rows,
+// panel heads). Surfaces (felt, panels, bars wider or taller than 60% of the screen) and the
+// felt's watermark are backdrop.
+function hintObstacles(...scopes) {
+    const rects = [];
+    const range = document.createRange();
+    const bigW = innerWidth * .6;
+    const bigH = innerHeight * .6;
+    const walk = el => {
+        for (const n of el.childNodes) {
+            if (n.nodeType === Node.TEXT_NODE) {
+                if (!n.nodeValue.trim()) continue;
+                range.selectNodeContents(n);
+                rects.push(...range.getClientRects());
+                continue;
+            }
+            if (n.nodeType !== Node.ELEMENT_NODE || n.matches(".gd-watermark")) continue;
+            const cs = getComputedStyle(n);
+            if (cs.display === "contents") {   // no box of its own (and so "not visible")
+                walk(n);
+                continue;
+            }
+            if (n.checkVisibility?.({ opacityProperty: true, visibilityProperty: true }) === false) continue;
+            const r = n.getBoundingClientRect();
+            if (n.matches(HINT_SOLID)) {
+                rects.push(r);
+                continue;
+            }
+            const painted = cs.backgroundImage !== "none" || !/^transparent$|,\s*0\)$/.test(cs.backgroundColor)
+                || cs.boxShadow !== "none" || ["Top", "Right", "Bottom", "Left"].some(side => parseFloat(cs[`border${side}Width`]));
+            if (painted && r.width < bigW && r.height < bigH) rects.push(r);
+            walk(n);   // children may overflow their box (tags under an avatar)
         }
-    } else if (screen === "room") {
-        const rect = sel => document.querySelector(sel)?.getBoundingClientRect();
-        // a side seat as drawn: its disc and name plate
-        const seatEdge = (pos, side) => {
-            const rects = [...document.querySelectorAll(`.room-seat.p${pos} :is(.room-seat-disc, .room-seat-plate)`)].map(n => n.getBoundingClientRect());
-            return rects.length ? Math[side === "right" ? "max" : "min"](...rects.map(r => r[side])) : null;
-        };
-        const a = hudRecordsBtn.getBoundingClientRect();
-        const b = langToggleBtn.getBoundingClientRect();
-        const lvs = rect(".room-lvs");
-        const west = seatEdge(1, "right");
-        const east = seatEdge(3, "left");
-        const head = rect(".room-settings .room-panel-head");
-        if (b.left - a.right >= hintW + 16 && Math.abs(a.top + a.height / 2 - (b.top + b.height / 2)) < 8) {
-            x = (a.right + b.left) / 2;
-            y = b.top + b.height / 2;
-        } else if (lvs && west != null && east != null && east - west >= hintW + 12) {
-            x = (west + east) / 2;
-            y = lvs.top + lvs.height / 2;
-        } else if (head) {
-            x = head.left + head.width / 2;
-            y = head.top + head.height / 2;
-        }
-    }
-    el.style.left = `${Math.round(x + scrollX)}px`;
-    el.style.top = `${Math.round(y + scrollY)}px`;
+    };
+    scopes.forEach(scope => scope && walk(scope));
+    return rects.filter(r => r.width && r.height);
 }
 
+function placeReturnTypeHint() {
+    const el = returnTypeHint;
+    const onTable = document.body.dataset.screen === "table" && !!tableView.stage?.isConnected;
+    const { s, w, h, rotated, left, top, vw } = onTable ? tableView.layout : { s: 1 };
+    el.classList.toggle("is-turned", onTable && rotated);
+    // the search frame: stage design px on the table, viewport px elsewhere
+    const toFrame = onTable ? stagePoint : (x, y) => ({ x, y });
+    const toView = !onTable ? (x, y) => ({ x, y })
+        : rotated ? (x, y) => ({ x: vw - y * s, y: left + x * s }) : (x, y) => ({ x: left + x * s, y: top + y * s });
+    const fw = onTable ? w : document.documentElement.clientWidth;
+    const fh = onTable ? h : document.documentElement.clientHeight;
+    const boxes = hintObstacles(document.querySelector(".app-shell"), toastEl).map(r => {
+        const a = toFrame(r.left, r.top);
+        const b = toFrame(r.right, r.bottom);
+        return [Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y)];
+    });
+    const bar = onTable ? null : document.querySelector(".topbar")?.getBoundingClientRect();
+    const ax = fw / 2;
+    const ay = onTable ? HINT_ANCHOR_Y : bar?.height ? bar.top + bar.height / 2 : fh / 2;
+    const band = onTable ? 4 : 8;   // how much dearer a step off the anchor's band is than one along it
+    const cover = (x, y, hw, hh) => boxes.reduce((sum, [x0, y0, x1, y1]) => sum
+        + Math.max(0, Math.min(x + hw, x1) - Math.max(x - hw, x0)) * Math.max(0, Math.min(y + hh, y1) - Math.max(y - hh, y0)), 0);
+    const spots = (hw, hh) => {
+        const out = [];
+        const step = Math.max(4, hh / 2);
+        for (let y = hh; y <= fh - hh; y += step) {
+            for (let x = hw; x <= fw - hw; x += step) out.push({ x, y, d: Math.abs(x - ax) + band * Math.abs(y - ay) });
+        }
+        return out.sort((p, q) => p.d - q.d);
+    };
+    const half = (k, gap) => [(el.offsetWidth * k / 2 + gap) / s, (el.offsetHeight * k / 2 + gap) / s];
+    let best = null;
+    let scale = 1;
+    for (const [k, gap] of HINT_FITS) {
+        const [hw, hh] = half(k, gap);
+        best = spots(hw, hh).find(p => !cover(p.x, p.y, hw, hh));
+        scale = k;
+        if (best) break;
+    }
+    if (!best) {   // nothing is free (a crowded small screen): the smaller pill where it covers least
+        const [hw, hh] = half(scale, 0);
+        best = spots(hw, hh).reduce((a, p) => ((p.area = cover(p.x, p.y, hw, hh)) < a.area ? p : a), { area: Infinity, x: ax, y: ay });
+    }
+    const at = toView(best.x, best.y);
+    el.style.setProperty("--hint-s", scale);
+    el.style.left = `${Math.round(at.x + scrollX)}px`;
+    el.style.top = `${Math.round(at.y + scrollY)}px`;
+}
+
+// Not over a popup, the 巅峰对决 board, the ☰ menu, the match intro or a result (typing picasso
+// still works there); guandan-transition.css hides a showing pill when one of them opens.
+const HINT_BLOCKERS = ".gd-popup-layer, .gd-menu, .gd-intro, .gd-result:not(.is-peek)";
 function showReturnTypeHint() {
-    if (!returnTypeHint) return;
-    // not over a popup, the 巅峰对决 board or a result screen (typing picasso still works there)
-    if (document.querySelector(".gd-popup-layer") || document.body.classList.contains("gdr-modal-open")
-        || (document.body.dataset.screen === "table" && tableView.regions.result?.childElementCount)) return;
+    if (!returnTypeHint || document.body.classList.contains("gdr-modal-open") || document.querySelector(HINT_BLOCKERS)) return;
     returnTypeHint.firstChild.nodeValue = L("try typing ", "试试输入 ");
     placeReturnTypeHint();
     returnTypeHint.classList.add("show");

@@ -2,12 +2,12 @@
    Picasso Lab Guandan: easter-egg layers (records/eggs track).
    #return-transition: the "picasso" card-fan victory exit back to events.html
    (startReturnToEvents + returnCardsHTML/returnShardsHTML/returnCoinsHTML).
-   #return-type-hint: the "try typing picasso" pill, placed per screen by placeReturnTypeHint().
+   #return-type-hint: the "try typing picasso" toast, placed by placeReturnTypeHint().
    Both are body-level. On a portrait phone the table stage is turned
    90deg (the phone is held sideways), and both layers turn with it; sizes inside
    the transition use container units so the turned layer lays out as the
-   landscape screen the player sees. The look is the pre-redesign one (ec32e31),
-   so it keeps its own warm palette instead of the Tencent tokens in guandan-ui.css.
+   landscape screen the player sees. The transition's look is the pre-redesign one
+   (ec32e31), so it keeps its own warm palette instead of the Tencent tokens in guandan-ui.css.
    ========================================================================== */
 
 .return-transition {
@@ -218,41 +218,28 @@ body[data-screen="table"]:has(.gd-viewport.is-rotated) .return-transition {
 }
 
 /* ---------- "try typing picasso" hint ----------
-   Centred on the point placeReturnTypeHint() picks for the screen (document px): the felt band
-   under the partner's played cards, the lobby's stat pills, the room's free top bar. */
+   The product's navy toast, centred on the free spot placeReturnTypeHint() measures (document px);
+   the word to type is set in gold Barlow. Hidden while a popup, the 巅峰对决 board, the ☰ menu, the
+   match intro or a result is up (showReturnTypeHint() does not show it over them either). */
 #return-type-hint {
+    --hint-r: 0deg;
+    --hint-s: 1;   /* set smaller by placeReturnTypeHint() on a crowded screen */
     position: absolute; left: 50%; top: 50%;
     z-index: var(--z-toast, 70);
-    padding: 9px 14px;
-    border: 1px solid rgba(232, 189, 99, .4); border-radius: 999px;
-    background: rgba(10, 18, 16, .96);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+    padding: 6px 16px;
+    border-radius: var(--r-pill);
+    background: rgba(12, 20, 64, .85);
     color: #fff;
-    font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-    font-size: .76rem; font-weight: 750; line-height: normal;
+    font: 700 var(--fs-13)/1.35 var(--font-ui);
     white-space: nowrap;
-    transform: translate(-50%, -50%) translateY(8px);
+    transform: translate(-50%, -50%) rotate(var(--hint-r)) scale(var(--hint-s)) translateY(8px);
     opacity: 0;
     pointer-events: none;
     transition: opacity .22s ease, transform .22s ease;
 }
-#return-type-hint.show { opacity: 1; transform: translate(-50%, -50%); }
-#return-type-hint kbd {
-    display: inline-block;
-    margin: 0 1px; padding: 1px 5px;
-    border: 1px solid rgba(255, 255, 255, .24); border-radius: 5px;
-    background: rgba(255, 255, 255, .12);
-    color: #ffcd00;
-    font: inherit; font-size: .7rem;
-}
-@media (max-width: 860px), (max-height: 600px) and (pointer: coarse) {
-    #return-type-hint {
-        width: max-content; /* a left offset would otherwise cap the shrink-to-fit width */
-        max-width: calc(100vw - 24px);
-        white-space: normal;
-        text-align: center;
-    }
-}
-/* Over the turned portrait table the pill reads top to bottom like the table. */
-#return-type-hint.is-turned { max-width: calc(100dvh - 24px); transform: translate(-50%, -50%) rotate(90deg) translateY(8px); }
-#return-type-hint.is-turned.show { transform: translate(-50%, -50%) rotate(90deg); }
+#return-type-hint.show { opacity: 1; transform: translate(-50%, -50%) rotate(var(--hint-r)) scale(var(--hint-s)); }
+/* over the turned portrait table the pill reads top to bottom like the table */
+#return-type-hint.is-turned { --hint-r: 90deg; }
+#return-type-hint b { margin-left: .1em; color: var(--gold-2); font: 700 1.2em/1 var(--font-num); letter-spacing: .08em; }
+body.gdr-modal-open #return-type-hint,
+body:has(.gd-popup-layer, .gd-menu, .gd-intro, .gd-result:not(.is-peek)) #return-type-hint { opacity: 0; }
