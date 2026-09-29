@@ -118,7 +118,6 @@ body[data-screen="lobby"] #back-events-btn { order: 5; }
     padding: calc(3 * var(--lu));
     border-radius: calc(14 * var(--lu));
     background: linear-gradient(180deg, #fff8d8 0%, #f3cc62 55%, #c9871c 100%);
-    box-shadow: 0 calc(2 * var(--lu)) 0 rgba(20, 30, 90, .55);
 }
 .hud-avatar > img {
     display: block;
@@ -144,17 +143,26 @@ body[data-screen="lobby"] #back-events-btn { order: 5; }
     margin: min(0px, calc((34 * var(--lu) - var(--tap)) / 2)) 0;
     padding: 0 calc(22 * var(--lu)) 0 0;
     border: 0;
-    border-bottom: calc(2 * var(--lu)) solid transparent;
     background: none;
     color: #fff;
     font: 900 calc(25 * var(--lu))/1.15 var(--font-ui);
     text-overflow: ellipsis;
     text-shadow: 0 calc(1 * var(--lu)) calc(2 * var(--lu)) rgba(20, 30, 90, .7);
     outline: none;
-    transition: border-color var(--dur-fast) ease;
 }
 .hud-name input::placeholder { color: rgba(255, 255, 255, .6); }
-.hud-name input:focus { border-bottom-color: rgba(255, 255, 255, .7); }
+/* editing: an underline under the name row (the field's tap box reaches past it) */
+.hud-name::after {
+    content: "";
+    position: absolute;
+    left: 0; right: calc(22 * var(--lu)); bottom: 0;
+    height: calc(2 * var(--lu));
+    background: rgba(255, 255, 255, .7);
+    opacity: 0;
+    transition: opacity var(--dur-fast) ease;
+    pointer-events: none;
+}
+.hud-name:focus-within::after { opacity: 1; }
 @supports (field-sizing: content) {
     .hud-name input { width: auto; min-width: 4em; max-width: calc(210 * var(--lu)); field-sizing: content; }
 }
@@ -347,9 +355,10 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
     font: 800 max(var(--fs-min), calc(13 * var(--lu)))/1.4 var(--font-num);
     letter-spacing: .04em;
 }
-.rail-badge.is-off { background: linear-gradient(180deg, #ff9a8a, #d8433c); color: #fff; font-family: var(--font-ui); }
+/* 音乐 off: a red corner chip at the record's top-left, clear of the label */
+.rail-badge.is-off { top: calc(2 * var(--lu)); left: calc(4 * var(--lu)); translate: none; background: linear-gradient(180deg, #ff9a8a, #d8433c); color: #fff; font-family: var(--font-ui); }
 /* 赛季MVP: the MVP's photo in a gold ring */
-.is-mvp .rail-disc { border-radius: 50%; background: linear-gradient(180deg, #ffe9a0, #d99a2a); box-shadow: 0 calc(3 * var(--lu)) 0 rgba(20, 30, 90, .45); }
+.is-mvp .rail-disc { border-radius: 50%; background: linear-gradient(180deg, #ffe9a0, #d99a2a); }
 .is-mvp .rail-disc img {
     width: calc(53 * var(--lu));
     height: calc(53 * var(--lu));
@@ -790,6 +799,10 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     padding: calc(6 * var(--ru)) calc(18 * var(--ru));
     border-bottom: 1px solid var(--panel-line);
 }
+/* wider than 16:10 the panel is one screen high only without 发牌 / 旁观, so 解散房间 stays in view */
+@media (min-aspect-ratio: 81/50) {
+    .room-row.is-extra { display: none; }
+}
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
     /* the panel fits without scrolling: rows tighten, the notes (also in 玩法规则) and the extra rows drop */
     .room-row { min-height: calc(50 * var(--ru)); padding-top: calc(4 * var(--ru)); padding-bottom: calc(4 * var(--ru)); }
@@ -1027,7 +1040,6 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     margin: min(0px, calc((var(--plate-h) - var(--tap)) / 2)) 0;
     padding: 0 calc(20 * var(--lu)) 0 0;
     border: 0;
-    border-bottom: calc(2 * var(--lu)) solid transparent;
     background: none;
     color: #fff;
     font: 700 calc(19 * var(--lu))/1 var(--font-ui);
@@ -1037,7 +1049,17 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 @supports (field-sizing: content) {
     .room-seat-name input { width: auto; min-width: 3em; field-sizing: content; }
 }
-.room-seat-name input:focus { border-bottom-color: rgba(255, 255, 255, .75); }
+/* editing: an underline under the text, inside the plate (the field's tap box reaches past it) */
+.room-seat-name::after {
+    content: "";
+    position: absolute;
+    left: 0; right: calc(20 * var(--lu)); bottom: calc(1 * var(--lu));
+    height: calc(2 * var(--lu));
+    background: rgba(255, 255, 255, .75);
+    opacity: 0;
+    pointer-events: none;
+}
+.room-seat-name:focus-within::after { opacity: 1; }
 .room-pen { position: absolute; right: calc(2 * var(--lu)); width: calc(14 * var(--lu)); height: calc(14 * var(--lu)); fill: rgba(255, 255, 255, .6); pointer-events: none; }
 .room-seat-name input:focus + .room-pen { opacity: 0; }
 /* empty seat: one dashed + disc, ring colour = relation */
@@ -1176,9 +1198,36 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     box-shadow: inset 0 calc(1 * var(--ru)) 0 rgba(255, 255, 255, .5), 0 calc(2 * var(--ru)) 0 var(--ok-edge);
 }
 .roster-invite:active { translate: 0 calc(2 * var(--ru)); }
+html[lang="en"] .roster-invite { padding: 0 calc(7 * var(--ru)); }   /* "Invite" is wider than 邀请; names keep the room */
 .roster-in { flex: none; color: var(--ink-3); font: 700 max(var(--fs-min) * 1.1, calc(16 * var(--ru)))/1 var(--font-ui); }
 .room-roster-foot { flex: none; display: flex; justify-content: center; padding: calc(10 * var(--ru)) calc(8 * var(--ru)) calc(14 * var(--ru)); }
 .room-roster-foot .btn { --btn-h: max(var(--tap), calc(54 * var(--ru))); --btn-fs: calc(22 * var(--ru)); --btn-px: calc(26 * var(--ru)); --btn-minw: calc(176 * var(--ru)); }
+
+/* a seat, badge or stepper tap waiting for Firebase stays pressed and dimmed */
+.room :is(.room-seat-sit, .room-badge, .room-step-btn, #fill-ai).is-pending { opacity: .6; translate: 0 calc(2 * var(--lu)); }
+/* 正在开局…: the start button keeps its orange while it waits (disabled against a second tap) */
+.room-actions .btn.is-loading:disabled { --btn-bg: var(--pri); --btn-edge: var(--pri-edge); --btn-stroke: var(--pri-stroke); --btn-inset: var(--pri-inset); translate: 0 2px; }
+
+/* a ?room= link while the room is fetched (the first render replaces it) */
+.gd-boot {
+    position: fixed;
+    left: 50%; top: 50%;
+    translate: -50% -50%;
+    padding: 10px 24px;
+    border-radius: 999px;
+    background: rgba(0, 30, 28, .55);
+    color: #fff;
+    font: 700 15px/1.4 var(--font-ui);
+    white-space: nowrap;
+}
+
+/* confirm popup (confirmPopup: 解散房间 …): one centred question, 取消 / 确定 */
+.gd-popup.is-narrow { width: min(calc(540 * var(--pu)), 94%); }
+.gd-confirm-text { margin: calc(14 * var(--pu)) 0 calc(28 * var(--pu)); color: var(--ink); font: 700 calc(22 * var(--pu))/1.55 var(--font-ui); text-align: center; }
+.gd-confirm-row { display: flex; justify-content: center; gap: calc(30 * var(--pu)); padding-bottom: calc(4 * var(--pu)); }
+.gd-confirm-row .btn { --btn-h: max(var(--tap, 0px), calc(56 * var(--pu))); --btn-fs: calc(23 * var(--pu)); --btn-px: calc(26 * var(--pu)); --btn-minw: calc(170 * var(--pu)); }
+html[lang="en"] .gd-confirm-row .btn { --btn-ls: 0em; }
+html[lang="en"] .gd-popup-title { letter-spacing: 0; text-indent: 0; }
 
 /* English: no letter-spaced labels */
 html[lang="en"] :is(.hud-title b, .room-panel-head, .room-felt-mark, .roster-invite, .lobby-quick b) { letter-spacing: 0; }
@@ -1208,6 +1257,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .hud-name input { width: calc(128 * var(--lu)); height: max(var(--tap), calc(26 * var(--lu))); margin: min(0px, calc((26 * var(--lu) - var(--tap)) / 2)) 0; font-size: calc(19 * var(--lu)); }
     .hud-tier > span { font-size: max(var(--fs-min), calc(12 * var(--lu))); line-height: max(calc(var(--fs-min) * 1.6), calc(20 * var(--lu))); padding: 0 calc(14 * var(--lu)); }
     .hud-stats { order: 10; gap: calc(10 * var(--lu)); margin: 0 0 0 calc(4 * var(--lu)); }
+    .hud-stats:empty { height: calc(30 * var(--lu)); }   /* the same rhythm without stats; the type hint's slot */
     body[data-screen="lobby"] .hud-status { display: contents; }
     body[data-screen="lobby"] .hud-profile { order: 1; flex: 1; }
     .hud-stat { height: calc(30 * var(--lu)); min-width: calc(96 * var(--lu)); padding: 0 calc(12 * var(--lu)) 0 calc(38 * var(--lu)); font-size: calc(20 * var(--lu)); }
@@ -1225,7 +1275,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     body[data-screen="lobby"] .topbar { padding-left: calc(12 * var(--lu) + var(--sl)); }
     .lobby { display: block; min-height: 0; padding: 0 calc(12 * var(--lu) + var(--sr)) 0 calc(12 * var(--lu) + var(--sl)); }
     .lobby-rail { height: auto; translate: none; flex-direction: row; justify-content: space-between; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
-    .rail-item { width: calc(66 * var(--lu)); }
+    .rail-item { width: auto; min-width: calc(62 * var(--lu)); }   /* as wide as its label, so long English labels never touch */
     .rail-disc { width: calc(54 * var(--lu)); height: calc(54 * var(--lu)); }
     .is-mvp .rail-disc img { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
     .is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(38 * var(--lu)); }
@@ -1236,6 +1286,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .rail-vs b { font-size: calc(26 * var(--lu)); }
     .rail-badge { top: calc(36 * var(--lu)); }
     .rail-lb { font-size: max(var(--fs-min) * 1.1, calc(14 * var(--lu))); margin-top: calc(-8 * var(--lu)); }
+    html[lang="en"] .rail-lb { font-size: max(var(--fs-min), calc(12 * var(--lu))); }
     .lobby-tiles {
         --t: calc(var(--lu) * .7);
         height: auto;

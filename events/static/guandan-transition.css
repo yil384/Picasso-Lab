@@ -2,8 +2,8 @@
    Picasso Lab Guandan: easter-egg layers (records/eggs track).
    #return-transition: the "picasso" card-fan victory exit back to events.html
    (startReturnToEvents + returnCardsHTML/returnShardsHTML/returnCoinsHTML).
-   #return-type-hint: the "try typing picasso" pill.
-   Both are body-level and fixed. On a portrait phone the table stage is turned
+   #return-type-hint: the "try typing picasso" pill, placed per screen by placeReturnTypeHint().
+   Both are body-level. On a portrait phone the table stage is turned
    90deg (the phone is held sideways), and both layers turn with it; sizes inside
    the transition use container units so the turned layer lays out as the
    landscape screen the player sees. The look is the pre-redesign one (ec32e31),
@@ -217,9 +217,11 @@ body[data-screen="table"]:has(.gd-viewport.is-rotated) .return-transition {
     transform: translate(100vw, 0) rotate(90deg);
 }
 
-/* ---------- "try typing picasso" hint ---------- */
+/* ---------- "try typing picasso" hint ----------
+   Centred on the point placeReturnTypeHint() picks for the screen (document px): the felt band
+   under the partner's played cards, the lobby's stat pills, the room's free top bar. */
 #return-type-hint {
-    position: fixed; left: 50%; bottom: 74px;
+    position: absolute; left: 50%; top: 50%;
     z-index: var(--z-toast, 70);
     padding: 9px 14px;
     border: 1px solid rgba(232, 189, 99, .4); border-radius: 999px;
@@ -229,12 +231,12 @@ body[data-screen="table"]:has(.gd-viewport.is-rotated) .return-transition {
     font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
     font-size: .76rem; font-weight: 750; line-height: normal;
     white-space: nowrap;
-    transform: translateX(-50%) translateY(12px);
+    transform: translate(-50%, -50%) translateY(8px);
     opacity: 0;
     pointer-events: none;
     transition: opacity .22s ease, transform .22s ease;
 }
-#return-type-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#return-type-hint.show { opacity: 1; transform: translate(-50%, -50%); }
 #return-type-hint kbd {
     display: inline-block;
     margin: 0 1px; padding: 1px 5px;
@@ -245,20 +247,12 @@ body[data-screen="table"]:has(.gd-viewport.is-rotated) .return-transition {
 }
 @media (max-width: 860px), (max-height: 600px) and (pointer: coarse) {
     #return-type-hint {
-        bottom: calc(68px + env(safe-area-inset-bottom));
-        width: max-content; /* left: 50% would otherwise cap the shrink-to-fit width at half the viewport */
+        width: max-content; /* a left offset would otherwise cap the shrink-to-fit width */
         max-width: calc(100vw - 24px);
         white-space: normal;
         text-align: center;
     }
 }
-/* Over the turned portrait table the pill stands on the physical left edge (the landscape bottom),
-   centred along it and reading top to bottom like the table. */
-body[data-screen="table"]:has(.gd-viewport.is-rotated) #return-type-hint {
-    left: calc(68px + env(safe-area-inset-left)); top: 50%; bottom: auto;
-    max-width: calc(100dvh - 24px);
-    transform: translate(-50%, -50%) rotate(90deg) translateY(calc(-50% + 12px));
-}
-body[data-screen="table"]:has(.gd-viewport.is-rotated) #return-type-hint.show {
-    transform: translate(-50%, -50%) rotate(90deg) translateY(-50%);
-}
+/* Over the turned portrait table the pill reads top to bottom like the table. */
+#return-type-hint.is-turned { max-width: calc(100dvh - 24px); transform: translate(-50%, -50%) rotate(90deg) translateY(8px); }
+#return-type-hint.is-turned.show { transform: translate(-50%, -50%) rotate(90deg); }
