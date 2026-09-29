@@ -18,7 +18,7 @@ export const COL = {
   paper: 0xf4ebd6, cream: 0xfff6e0, ink: 0x16162c,
   // 3D albedos: the blues are pre-rotated a few degrees toward violet so that after the warm paper multiply they render
   // at the accent hue (#0284c7, ~200 deg) instead of drifting teal; navy lifted a step (the film ran darker than the series)
-  sky: 0x0a80d8, skyL: 0x6ab9f4, skyP: 0xbfe6f7, navy: 0x1a4d7e, steel: 0x9fb9cc, steelD: 0x5d7a92,
+  sky: 0x0a80d8, skyL: 0x6ab9f4, skyP: 0xbfe6f7, navy: 0x245f94, steel: 0x9fb9cc, steelD: 0x5d7a92,
   pop: 0xff5a2e, popD: 0xc8361c, popL: 0xffb08a, gold: 0xffc94a,
 };
 

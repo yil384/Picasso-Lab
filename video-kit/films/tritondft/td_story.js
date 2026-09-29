@@ -14,7 +14,7 @@ export const LOOK = {
   extends: 'comic',
   hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.5, hatchWobble: 0.08, hatchSwell: 0.35,
   htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0], htCol: [0.06, 0.18, 0.34],
-  lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
+  lineW: 1.8, lineWShadow: 2.9, hullW: 2.65, hullShadowW: 1.45,   // a step lighter than style-comic: the card was the darkest of the four
   bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.22,
   shadeGlaze: [0.62, 0.72, 0.9], coreGlaze: [0.62, 0.72, 0.9], keyTint: [1.0, 0.985, 0.97],   // near-neutral key: the warm paper already multiplies
   rule: 0.0, bgDots: [0.2, 0.52, 0.75, 0.22], dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16,
@@ -143,10 +143,11 @@ async function buildProps(W) {
   // the tickets are big enough to read their icons
   W.tickets = texs.map((tx) => add(new THREE.PlaneGeometry(0.4, 0.28), { color: COL.cream, map: tx, side: THREE.DoubleSide, rim: 0.3, toneBias: 0.12, hatch: 0.4 }, { outline: 0.45 }, [0, 0, 0]));
   // the Quantum ESPRESSO input sheet (a namelist-like scribble texture) torn from Clack and fed to Big Iron
-  const sheetTex = await bake(THREE, { width: 256, height: 320, seed: 71, key: 'sheet-v1', background: '#ffffff' }, (p, brush, w, h) => {
+  const sheetTex = await bake(THREE, { width: 256, height: 320, seed: 71, key: 'sheet-v2', background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill('#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
+    paintWord(brush, 'PW.X', 150, 34, 30, { fill: '#0284c7', shade: '#0b3558', extrude: [0.03, 0.04], jaunt: 0.1, bounce: 0.05, skew: -0.1, gap: 0.12 });   // Quantum ESPRESSO's pw.x
     brush.set('inkpen', '#1d2a44', 1.0);
-    for (let k = 0; k < 11; k++) { const y = 28 + k * 26; let x = 20 + (k % 4 === 0 ? 0 : 22); while (x < w - 30) { const L2 = 12 + ((k * 7 + x) % 26); brush.line(x, y, x + L2, y); x += L2 + 8; } }
+    for (let k = 0; k < 10; k++) { const y = 70 + k * 24; let x = 20 + (k % 4 === 0 ? 0 : 22); while (x < w - 30) { const L2 = 12 + ((k * 7 + x) % 26); brush.line(x, y, x + L2, y); x += L2 + 8; } }
     brush.set('inkpen', '#ff5a2e', 1.1); brush.line(16, 20, 16, h - 20);
   });
   W.sheet = add(new THREE.PlaneGeometry(0.3, 0.38), { color: COL.cream, map: sheetTex, side: THREE.DoubleSide, rim: 0.3, toneBias: 0.12, hatch: 0.4 }, { outline: 0.45 }, [0, 0, 0]);

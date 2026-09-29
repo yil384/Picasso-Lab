@@ -324,7 +324,9 @@ export async function buildDesk(W) {
   W.pageL = add(new THREE.BoxGeometry(0.48, 0.05, 0.6), [cover, cover, pageM(W.bookTex[0]), cover, cover, cover], { outline: 0.6 }, [-0.25, 0.055, 0], [0, 0, 0.04], book);
   W.pageR = add(new THREE.BoxGeometry(0.48, 0.05, 0.6), [cover, cover, pageM(W.bookTex[2]), cover, cover, cover], { outline: 0.6 }, [0.25, 0.055, 0], [0, 0, -0.04], book);
   W.flip = new THREE.Group(); W.flip.position.set(0, 0.085, 0); book.add(W.flip);
-  W.flipPage = add(new THREE.PlaneGeometry(0.48, 0.6).rotateX(-Math.PI / 2).translate(0.24, 0, 0), { color: COL.cream, map: W.bookTex[1], side: THREE.DoubleSide, rim: 0.3, toneBias: 0.1, hatch: 0.5 }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], W.flip);
+  W.flipPage = add(new THREE.PlaneGeometry(0.48, 0.6).rotateX(-Math.PI / 2).translate(0.24, 0, 0), { color: COL.cream, map: W.bookTex[1], side: THREE.FrontSide, rim: 0.3, toneBias: 0.1, hatch: 0.5 }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], W.flip);
+  // its back is a separate cream sheet (a DoubleSide plane shaded its unlit back face as a dark grey blade)
+  add(new THREE.PlaneGeometry(0.48, 0.6).rotateX(Math.PI / 2).translate(0.24, -0.002, 0), { color: COL.cream, map: W.bookTex[0], side: THREE.FrontSide, rim: 0.3, toneBias: 0.18, hatch: 0.3 }, { outline: 0.4 }, [0, 0, 0], [0, 0, 0], W.flip);
   W.book = book;
   // mug + steam anchor, pencil cup
   const mug = new THREE.Group(); mug.position.set(-0.98, 0, 0.16); g.add(mug);

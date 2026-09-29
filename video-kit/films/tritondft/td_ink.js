@@ -228,7 +228,7 @@ export function lettering(W, ctx, g) {
     [K.crash, prj(W, ctx, wp(W, W.tilt.head, [0.12, 0.12, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.22, -0.1], [K.take, hp, hu * 0.55, -0.12, -1]];
   // (kept below the card's top crop: the desktop card shows only y 176..904 of the 1080 design)
   for (const [f0, p, s, rot, side = 1] of takes) { const a = F - f0; if (a < 0 || a > 16 || !p.front) continue; bang(g, p.x + side * s * 0.75, Math.max(p.y - s * 0.1, 200 + s * 1.05), s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, jr); }
-  const sw = [[K.glance[0] + 8, K.S4, hp, hu * 0.12], [K.crash + 4, K.click[2] + 6, prj(W, ctx, wp(W, W.tilt.head, [0.14, 0.05, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.06], [K.fail + 2, K.rush[0], prj(W, ctx, wp(W, W.loupe.head, [0.25, 0.15, 0])), pxu(W, ctx, wp(W, W.loupe.head)) * 0.06]];
+  const sw = [[K.glance[0] + 8, K.S4, hp, hu * 0.12], [K.crash + 4, K.click[2] + 6, prj(W, ctx, wp(W, W.tilt.head, [-0.2, 0.05, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.06], [K.fail + 2, K.rush[0], prj(W, ctx, wp(W, W.loupe.head, [0.25, 0.15, 0])), pxu(W, ctx, wp(W, W.loupe.head)) * 0.06]];
   for (const [a0, a1, p, s] of sw) if (win(F, a0, a1) && p.front) sweat(g, p.x + s * 2, p.y - s * 0.8 + (F - a0) * 0.6, s);
   // the Analyzer's verdicts on the job: X when the check fails (carried round until the refined lap), a check after the DING
   if (W.cart.visible && (win(F, K.fail + 2, K.lap[0]) || win(F, K.ding + 4, K.suck[0]))) {
@@ -239,7 +239,7 @@ export function lettering(W, ctx, g) {
   const vr = F - K.roar;
   if (vr >= 0 && vr < 18) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 90, 330, 560), vr, { life: 18, rot: -0.1, scale: 1.05, popF: 4 }); }
   const ck = F - K.crash;
-  if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 160, 420, 1500), clamp(pp.y + 60, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
+  if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 280, 420, 1500), clamp(pp.y - 150, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;
   if (dg >= 0 && dg < 24) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 24, rot: -0.12, scale: 1.0, popF: 4 }); }
   // the giant hourglass lands upright: THUNK! (both clocks start here)
