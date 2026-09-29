@@ -26,7 +26,7 @@ export const LOOK = {
   bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.12,
   rule: 0.17, rulePx: 10, ruleTop: 0.3, ruleBot: 0.04, bgDots: [0.95, 0.6, 0.42, 0.28],
   dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16, shadowNoise: 0.05, shadowSoft: 0.02,
-  atmos: 0.2, atmosStart: 14, atmosEnd: 34, atmosCol: [0.96, 0.92, 0.84], inkFar: 0.7, hatchFar: 0.5, htFar: 0.5,
+  atmos: 0.12, atmosStart: 20, atmosEnd: 44, atmosCol: [0.96, 0.92, 0.84], inkFar: 0.85, hatchFar: 0.4, htFar: 0.4,
   ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
 };
 
@@ -390,7 +390,7 @@ export function drawNPR(ctx) {
     npr.setLight({ dir: [d.x, d.y, d.z], target: [tg[0], 0.5, tg[2]], size: 9, dist: 26, shadows: !Q.get('noshadow') });
   }
   const fp = st.kern.vis && st.kern.pos ? st.kern.pos : st.tok.pos;
-  npr.focusOn(camera, V(...fp), 4);
+  npr.focusOn(camera, V(...fp), 10);     // wide sharp zone: the whole cast keeps its ink (a defocused character loses its lines and reads as a ghost)
   // impact frames: the CLANG and the photo finish (2 frames each, posterised; never a white frame)
   if (F >= K.clang && F < K.clang + 2) npr.impact(1, { invert: false, threshold: F === K.clang ? 0.6 : 0.5 });   // two dark panels, never a cream flash
   if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { invert: false, threshold: 0.55 });
