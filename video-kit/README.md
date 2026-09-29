@@ -13,8 +13,8 @@ blobs, morphing crystals) and don't show what the projects do. We are replacing 
 code-rendered 3D comic films**, made the way viral Claude-made videos are made: code (p5.js + p5.brush + three.js) rendered
 deterministically frame by frame, then encoded with ffmpeg.
 
-You make **one** film: the project named in your launch prompt. Two other sessions make the other two projects in parallel,
-and a local session makes Qubrio — so follow the **series rules (§4)** exactly, or the four cards won't look like a set.
+You make **one** film: the project named in your launch prompt. Other sessions make the other three projects in parallel,
+so follow the **series rules (§4)** exactly, or the four cards won't look like a set.
 
 ## 2. What the user has said so far (the taste history — this matters more than anything else here)
 
