@@ -307,10 +307,10 @@ function hideToast() {
 const HINT_ANCHOR_Y = 233;                        // design px from the stage top
 const HINT_FITS = [[1, 16], [1, 8], [.85, 8]];    // [pill scale, clearance in CSS px]
 const HINT_SOLID = "button, a[href], input, select, textarea, label, img, svg, canvas, .card";
-// What the pill must not cover, as viewport rects: controls, images, cards and the timer, every
-// line of text, and every painted box smaller than a surface (pills, plates, tiles, avatars, rows,
-// panel heads). Surfaces (felt, panels, bars wider or taller than 60% of the screen) and the
-// felt's watermark are backdrop.
+// What the pill must not cover, as viewport rects with a weight: controls, images, cards and the
+// timer, and every line of text (50), and every painted box smaller than a surface (1: pills,
+// plates, tiles, avatars, rows, panel heads). Surfaces (felt, panels, bars wider or taller than 60%
+// of the screen) and the felt's watermark are backdrop. The weight only matters when nothing is free.
 function hintObstacles(...scopes) {
     const rects = [];
     const range = document.createRange();
@@ -321,7 +321,7 @@ function hintObstacles(...scopes) {
             if (n.nodeType === Node.TEXT_NODE) {
                 if (!n.nodeValue.trim()) continue;
                 range.selectNodeContents(n);
-                rects.push(...range.getClientRects());
+                for (const r of range.getClientRects()) rects.push([r, 50]);
                 continue;
             }
             if (n.nodeType !== Node.ELEMENT_NODE || n.matches(".gd-watermark")) continue;
@@ -333,17 +333,17 @@ function hintObstacles(...scopes) {
             if (n.checkVisibility?.({ opacityProperty: true, visibilityProperty: true }) === false) continue;
             const r = n.getBoundingClientRect();
             if (n.matches(HINT_SOLID)) {
-                rects.push(r);
+                rects.push([r, 50]);
                 continue;
             }
             const painted = cs.backgroundImage !== "none" || !/^transparent$|,\s*0\)$/.test(cs.backgroundColor)
                 || cs.boxShadow !== "none" || ["Top", "Right", "Bottom", "Left"].some(side => parseFloat(cs[`border${side}Width`]));
-            if (painted && r.width < bigW && r.height < bigH) rects.push(r);
+            if (painted && r.width < bigW && r.height < bigH) rects.push([r, 1]);
             walk(n);   // children may overflow their box (tags under an avatar)
         }
     };
     scopes.forEach(scope => scope && walk(scope));
-    return rects.filter(r => r.width && r.height);
+    return rects.filter(([r]) => r.width && r.height);
 }
 
 function placeReturnTypeHint() {
@@ -357,17 +357,17 @@ function placeReturnTypeHint() {
         : rotated ? (x, y) => ({ x: vw - y * s, y: left + x * s }) : (x, y) => ({ x: left + x * s, y: top + y * s });
     const fw = onTable ? w : document.documentElement.clientWidth;
     const fh = onTable ? h : document.documentElement.clientHeight;
-    const boxes = hintObstacles(document.querySelector(".app-shell"), toastEl).map(r => {
+    const boxes = hintObstacles(document.querySelector(".app-shell"), toastEl).map(([r, weight]) => {
         const a = toFrame(r.left, r.top);
         const b = toFrame(r.right, r.bottom);
-        return [Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y)];
+        return [Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y), weight];
     });
     const bar = onTable ? null : document.querySelector(".topbar")?.getBoundingClientRect();
     const ax = fw / 2;
     const ay = onTable ? HINT_ANCHOR_Y : bar?.height ? bar.top + bar.height / 2 : fh / 2;
     const band = onTable ? 4 : 8;   // how much dearer a step off the anchor's band is than one along it
-    const cover = (x, y, hw, hh) => boxes.reduce((sum, [x0, y0, x1, y1]) => sum
-        + Math.max(0, Math.min(x + hw, x1) - Math.max(x - hw, x0)) * Math.max(0, Math.min(y + hh, y1) - Math.max(y - hh, y0)), 0);
+    const cover = (x, y, hw, hh) => boxes.reduce((sum, [x0, y0, x1, y1, weight]) => sum
+        + weight * Math.max(0, Math.min(x + hw, x1) - Math.max(x - hw, x0)) * Math.max(0, Math.min(y + hh, y1) - Math.max(y - hh, y0)), 0);
     const spots = (hw, hh) => {
         const out = [];
         const step = Math.max(4, hh / 2);
@@ -385,7 +385,7 @@ function placeReturnTypeHint() {
         scale = k;
         if (best) break;
     }
-    if (!best) {   // nothing is free (a crowded small screen): the smaller pill where it covers least
+    if (!best) {   // nothing is free (a crowded small screen): the smaller pill where it hides least
         const [hw, hh] = half(scale, 0);
         best = spots(hw, hh).reduce((a, p) => ((p.area = cover(p.x, p.y, hw, hh)) < a.area ? p : a), { area: Infinity, x: ax, y: ay });
     }
