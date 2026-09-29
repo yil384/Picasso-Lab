@@ -484,8 +484,14 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-name .st { display: block; color: #ffe9a6; font: 600 19px/1.25 var(--font-num); white-space: nowrap; }
 
 .gd-seat-extra { display: contents; }
-.gd-public-jokers { display: flex; gap: 4px; margin-top: 6px; --card-w-small: 34px; }
-.gd-seat.is-p2 .gd-public-jokers { margin-top: 0; }
+/* Red Jokers revealed by 抗贡: legible cards overlapping like a play, after the name on the top and
+   bottom seats. A side seat shows them atop its inboard column, clear above its clock and plays:
+   below those a tall edge column of the hand can reach the seat */
+.gd-public-jokers { display: flex; --card-w-small: 50px; }
+.gd-public-jokers .card + .card { margin-left: calc(var(--card-w-small) * -.52); }
+.gd-seat.is-p1 .gd-public-jokers, .gd-seat.is-p3 .gd-public-jokers { position: absolute; bottom: calc(100% + 8px); }
+.gd-seat.is-p1 .gd-public-jokers { left: calc(100% + 16px); }
+.gd-seat.is-p3 .gd-public-jokers { right: calc(100% + 16px); }
 
 /* other seats' turn: gold alarm clock on the inboard side (tg_table6) */
 .gd-clock {
@@ -613,25 +619,20 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-ribbon::after { top: auto; bottom: 0; background: linear-gradient(90deg, transparent 4%, rgba(150, 60, 0, .45) 30% 70%, transparent 96%); }
 .gd-ribbon.is-cool::after { background: linear-gradient(90deg, transparent 4%, rgba(20, 50, 150, .45) 30% 70%, transparent 96%); }
-.gd-ribbon b {
-    color: #fff6cf;
-    font: 900 34px/1 var(--font-ui);
-    letter-spacing: .12em;
-    text-indent: .12em;
-    -webkit-text-stroke: 6px #9a4200;
-    paint-order: stroke fill;
-    white-space: nowrap;
-}
+/* the place in qqg_ribbons' display lettering: pale cream on the warm band, pale blue on the cool,
+   a thin outline and no drop edge */
+.gd-ribbon .gd-word { font-size: 42px; letter-spacing: .06em; -webkit-text-stroke-width: 5px; text-shadow: none; }
+.gd-ribbon .gd-word::after { background-image: linear-gradient(180deg, #fffdf2 12%, #fff1bf 48%, #ffd073 92%); }
+.gd-ribbon .gd-word.is-cool::after { background-image: linear-gradient(180deg, #fff 12%, #eaf2ff 48%, #b9d3ff 92%); }
+.gd-ribbon .gd-word:lang(en) { font-size: 36px; letter-spacing: 0; }
 .gd-ribbon.is-cool { background: linear-gradient(90deg, rgba(70, 130, 240, 0), #3f7fe8 22%, #6fb2ff 50%, #3f7fe8 78%, rgba(70, 130, 240, 0)); }
-.gd-ribbon.is-cool b { color: #fff; -webkit-text-stroke-color: #1f449e; }
-.gd-ribbon b:lang(en) { letter-spacing: .02em; text-indent: 0; font-size: 30px; }
 /* alone at a side slot (no play left on the table): it sits where the cards were */
 .gd-slot.is-p1 .gd-ribbon:only-child { left: 0; translate: 0 0; top: 30px; }
 .gd-slot.is-p3 .gd-ribbon:only-child { left: auto; right: 0; translate: 0 0; top: 30px; }
 .gd-slot.is-p2 .gd-ribbon:only-child { top: 30px; }
 .gd-slot.is-p0 .gd-ribbon:only-child { top: 76px; }
 .gd-ribbon.is-enter { animation: gd-ribbon-in 320ms var(--ease-back) both; }
-.gd-ribbon.is-enter b { animation: gd-ribbon-word 360ms var(--ease-back) 120ms both; }
+.gd-ribbon.is-enter .gd-word { animation: gd-ribbon-word 360ms var(--ease-back) 120ms both; }
 @keyframes gd-ribbon-in { from { opacity: 0; transform: scaleX(.2); } }
 @keyframes gd-ribbon-word { from { opacity: 0; transform: scale(1.5); } }
 
@@ -721,7 +722,7 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-actions .btn::after { top: 5px; opacity: .75; }
 /* 40+ CSS px tap height even on the smallest phones, without a bigger pill */
-.gd-actions .btn > .gd-hit { position: absolute; left: 0; right: 0; top: 50%; height: max(100%, calc(42px / var(--gd-s, 1))); translate: 0 -50%; z-index: 0; }
+.gd-actions .btn > .gd-hit, .gd-result .btn > .gd-hit { position: absolute; left: 0; right: 0; top: 50%; height: max(100%, calc(42px / var(--gd-s, 1))); translate: 0 -50%; z-index: 0; }
 /* pressed, and held down while its action waits on Firebase or the engine (is-pending, sendingUI) */
 .gd-actions .btn:active:not(.is-disabled), .gd-actions .btn.is-pending {
     translate: 0 4px;
@@ -750,15 +751,15 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-deal-host { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
 .gd-deal { position: absolute; inset: 0; }
 .gd-deck, .gd-deal-card { position: absolute; left: calc(50% - 32px); top: calc(36% - 43px); width: 64px; height: 86px; }
-.gd-deck { animation: gd-deck-out 260ms ease-in both; animation-delay: calc(var(--deal-left) - 280ms); }
 .gd-deck .gd-back, .gd-deal-card .gd-back { position: absolute; inset: 0; --cw: 64px; }
-.gd-deck .gd-back:nth-child(1) { translate: -3px 3px; }
-.gd-deck .gd-back:nth-child(2) { translate: -1.5px 1.5px; }
-@keyframes gd-deck-out { to { opacity: 0; scale: .8; } }
+/* the deck: six offset backs, the top one taken each time a sixth of the flights has left */
+.gd-deck .gd-back { translate: calc(var(--k) * -1.5px) calc(var(--k) * 1.5px); animation: gd-deck-take 140ms ease-in both; }
+@keyframes gd-deck-take { to { opacity: 0; transform: translateY(-10px) scale(.92); } }
 /* each flight: the outer box travels (ease-out), the back arcs up, tilts, then shrinks and fades
-   into the seat's inboard edge over the last 30% */
+   into the seat's inboard edge over the last 30%; mine settle face down, level, at hand size */
 .gd-deal-card { animation: gd-deal-go 380ms cubic-bezier(.25, .7, .35, 1) both; }
 .gd-deal-card .gd-back { animation: gd-deal-arc 380ms linear both; animation-delay: inherit; }
+.gd-deal-card.is-mine .gd-back { animation-name: gd-deal-land; }
 @keyframes gd-deal-go { to { translate: var(--tx) var(--ty); } }
 @keyframes gd-deal-arc {
     0% { opacity: 0; transform: none; }
@@ -766,6 +767,12 @@ body[data-screen="table"] .topbar { display: none; }
     40% { transform: translateY(-24px) rotate(calc(var(--r) * .6)); }
     70% { opacity: 1; transform: translateY(-8px) rotate(var(--r)) scale(.9); }
     100% { opacity: 0; transform: rotate(var(--r)) scale(.55); }
+}
+@keyframes gd-deal-land {
+    0% { opacity: 0; transform: none; }
+    10% { opacity: 1; }
+    45% { transform: translateY(-28px) rotate(calc(var(--r) * .6)) scale(1.1); }
+    100% { opacity: 1; transform: scale(1.35); }
 }
 
 /* ---------- 首出: the starting card pops up, then shrinks into the leading seat ---------- */
@@ -816,7 +823,7 @@ body[data-screen="table"] .topbar { display: none; }
     animation: gd-tribute 640ms linear both;
 }
 .gd-tribute .card { box-shadow: 0 6px 14px rgba(0, 30, 26, .4); }
-.gd-tribute span {
+.gd-tribute-tag {
     padding: 3px 12px;
     border-radius: 5px;
     background: var(--warm-plate);
@@ -827,8 +834,8 @@ body[data-screen="table"] .topbar { display: none; }
     paint-order: stroke fill;
     white-space: nowrap;
 }
-.gd-tribute span:lang(en) { letter-spacing: .02em; }
-.gd-tribute.is-back span { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
+.gd-tribute-tag:lang(en) { letter-spacing: .02em; }
+.gd-tribute.is-back .gd-tribute-tag { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
 @keyframes gd-tribute { /* pop 90 ms, hold, 340 ms flight, fade 140 ms */
     0% { opacity: 0; transform: scale(.7); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
     14% { opacity: 1; transform: none; }
@@ -852,17 +859,19 @@ body[data-screen="table"] .topbar { display: none; }
 }
 
 /* ---------- 巅峰对决 match intro (yxrb_vs), over the first deal ----------
-   Every part runs on the deal clock: --since is minus the time since dealStartedAt. In 0-600 ms
-   the halves slide in, the title drops and VS stamps; it holds, fades out by 2 s and is then hidden,
-   so it never catches a tap meant for the table. */
+   Every part runs on the deal clock: --since is minus the time since dealStartedAt. In 0-600 ms the
+   poster opens, the team frames slide in, the title drops and VS stamps; it holds, fades out by 2 s
+   and is then hidden, so it never catches a tap meant for the table. The HUD's right-hand buttons
+   and the hand tools step aside until it starts to fade (.has-intro, INTRO_HOLD_MS). */
 .gd-intro-host { position: absolute; inset: 0; z-index: 56; pointer-events: none; }
 .gd-intro-host:empty { display: none; }
+.gd-stage.has-intro :is(.gd-hud-right, .gd-tools) { opacity: 0; pointer-events: none; }
 .gd-intro {
     position: absolute;
     inset: 0;
     display: grid;
     place-items: center;
-    background: rgba(8, 14, 44, .74);
+    background: rgba(8, 14, 44, .85);
     pointer-events: auto;
     animation: gd-intro 2000ms linear var(--since) both;
 }
@@ -872,110 +881,172 @@ body[data-screen="table"] .topbar { display: none; }
     100% { opacity: 0; transform: scale(1.04); visibility: hidden; }
 }
 @keyframes gd-intro-still { 0%, 86% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-.gd-vs { position: relative; width: 1080px; height: 540px; }
+/* the records poster's field (.gdr-poster): red -> violet -> blue, lit behind the title and the VS */
+.gd-vs {
+    position: relative;
+    width: 1040px; height: 490px;
+    overflow: hidden;
+    border-radius: 10px;
+    background:
+        radial-gradient(32% 30% at 50% 0%, rgba(196, 206, 255, .5), transparent),
+        radial-gradient(24% 34% at 50% 56%, rgba(120, 132, 255, .42), transparent),
+        linear-gradient(100deg, #b11f42 0%, #d23a5c 17%, #b23c7c 33%, #5a3db0 50%, #3552d4 66%, #2c5ce4 82%, #1d3caa 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22);
+    animation: gd-vs-open 260ms var(--ease-out) var(--since) both;
+}
+.gd-vs::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .045) 0 2px, transparent 2px 14px);
+}
+@keyframes gd-vs-open { from { opacity: 0; transform: scale(.92); } }
+.gd-vs-title {
+    position: absolute;
+    left: 0; right: 0; top: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 64px;
+    animation: gd-vs-title 360ms var(--ease-back) calc(var(--since) + 80ms) both;
+}
+.gd-vs-title:lang(en) { font-size: 54px; }
+.gd-vs-title span { color: #fff; font: 900 26px/1 var(--font-ui); letter-spacing: .04em; white-space: nowrap; }
+@keyframes gd-vs-title { from { opacity: 0; transform: translateY(-30px); } }
+/* a team: the big faint name at the outer edge, its pair in a frame with a bracket to the centre */
 .gd-vs-side {
     position: absolute;
-    top: 120px; bottom: 0;
-    width: 57%;
+    top: 136px; bottom: 22px;
+    width: 50%;
     display: flex;
     align-items: center;
 }
-.gd-vs-side.is-red {
-    left: 0;
-    justify-content: flex-end;
-    padding-right: 150px;
-    border-radius: 14px 0 0 14px;
-    background: linear-gradient(160deg, #e0587a, #c8304e 45%, #8a2240);
-    clip-path: polygon(0 0, 100% 0, 75% 100%, 0 100%);
-    animation: gd-vs-in-l 320ms var(--ease-out) var(--since) both;
-}
-.gd-vs-side.is-blue {
-    right: 0;
-    padding-left: 150px;
-    border-radius: 0 14px 14px 0;
-    background: linear-gradient(200deg, #5f93ff, #2c5ce4 45%, #1a3a9e);
-    clip-path: polygon(25% 0, 100% 0, 100% 100%, 0 100%);
-    animation: gd-vs-in-r 320ms var(--ease-out) var(--since) both;
-}
-@keyframes gd-vs-in-l { from { opacity: 0; transform: translateX(-120px); } }
-@keyframes gd-vs-in-r { from { opacity: 0; transform: translateX(120px); } }
-/* the team name, big and faint, stands at the outer edge */
+.gd-vs-side.is-red { left: 0; padding-left: 96px; animation: gd-vs-in-l 320ms var(--ease-out) calc(var(--since) + 60ms) both; }
+.gd-vs-side.is-blue { right: 0; flex-direction: row-reverse; padding-right: 96px; animation: gd-vs-in-r 320ms var(--ease-out) calc(var(--since) + 60ms) both; }
+@keyframes gd-vs-in-l { from { opacity: 0; transform: translateX(-90px); } }
+@keyframes gd-vs-in-r { from { opacity: 0; transform: translateX(90px); } }
 .gd-vs-side em {
     position: absolute;
     top: 50%;
     translate: 0 -50%;
-    color: rgba(255, 255, 255, .2);
-    font: 400 104px/1 var(--font-display);
+    font: 400 72px/1 var(--font-display);
     font-style: normal;
     writing-mode: vertical-rl;
     text-orientation: upright;
-    letter-spacing: -.04em;
+    letter-spacing: .04em;
 }
-.gd-vs-side em:lang(en) { writing-mode: horizontal-tb; font-size: 56px; rotate: -90deg; }
-.gd-vs-side.is-red em { left: 34px; }
-.gd-vs-side.is-blue em { right: 34px; }
-.gd-vs-list { display: flex; flex-direction: column; gap: 26px; }
+.gd-vs-side em:lang(en) { text-orientation: mixed; font-size: 40px; letter-spacing: .02em; }
+.gd-vs-side.is-red em { left: 22px; color: rgba(255, 150, 172, .6); }
+.gd-vs-side.is-blue em { right: 22px; color: rgba(150, 196, 255, .6); }
+.gd-vs-team {
+    --line: rgba(255, 176, 194, .9);
+    position: relative;
+    width: 330px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+    border: 2px solid #ff9db0;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(236, 72, 104, .72), rgba(214, 58, 96, .42));
+}
+.is-blue .gd-vs-team {
+    --line: rgba(166, 200, 255, .9);
+    border-color: #8fb4ff;
+    background: linear-gradient(270deg, rgba(64, 118, 246, .72), rgba(52, 96, 222, .42));
+}
+/* bracket: from both seat chips out past the frame, joined, then one line toward the VS */
+.gd-vs-team::before, .gd-vs-team::after { content: ""; position: absolute; }
+.gd-vs-team::before {
+    left: calc(100% - 35px); top: 62px; bottom: 62px;
+    width: 55px;
+    border: 2px solid var(--line);
+    border-left: 0;
+}
+.gd-vs-team::after { left: calc(100% + 20px); top: 50%; width: 16px; height: 2px; background: var(--line); }
+.is-blue .gd-vs-team::before { left: auto; right: calc(100% - 35px); border-left: 2px solid var(--line); border-right: 0; }
+.is-blue .gd-vs-team::after { left: auto; right: calc(100% + 20px); }
 .gd-vs-p {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: 14px;
+    height: 96px;
     animation: gd-vs-p 280ms var(--ease-back) calc(var(--since) + 260ms) both;
 }
 .gd-vs-p + .gd-vs-p { animation-delay: calc(var(--since) + 340ms); }
 @keyframes gd-vs-p { from { opacity: 0; transform: scale(.7); } }
-.is-red .gd-vs-p { flex-direction: row-reverse; }
+.is-blue .gd-vs-p { flex-direction: row-reverse; }
 .gd-vs-av {
     position: relative;
     flex: none;
-    width: 104px; height: 104px;
-    border: 4px solid #fff;
-    border-radius: 50%;
+    width: 96px; height: 96px;
+    border: 4px solid #e0546e;
+    border-radius: 8px;
     background: #dfe6ee;
 }
+.is-blue .gd-vs-av { border-color: #5a86ff; }
+/* the lab photos are round cut-outs: enlarged, the circle covers the whole square */
+.gd-vs-av .gd-av-face, .gd-vs-av .gd-av-face > * { border-radius: 4px; }
+.gd-vs-av .gd-av-face { overflow: hidden; }
+.gd-vs-av .gd-av-face img { scale: 1.42; }
 .gd-vs-p b {
-    max-width: 190px;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     color: #fff;
-    font: 900 26px/1.2 var(--font-ui);
+    font: 900 24px/1.2 var(--font-ui);
     text-overflow: ellipsis;
     white-space: nowrap;
     -webkit-text-stroke: 5px rgba(40, 10, 40, .35);
     paint-order: stroke fill;
 }
-.gd-vs-title {
-    position: absolute;
-    left: 50%; top: 0;
-    translate: -50% 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    font-size: 72px;
-    animation: gd-vs-title 360ms var(--ease-back) calc(var(--since) + 80ms) both;
+.is-blue .gd-vs-p b { text-align: right; }
+.gd-vs-seat {
+    flex: none;
+    width: 42px; height: 42px;
+    border: 2px solid #ffd0da;
+    border-radius: 50%;
+    background: linear-gradient(#f2677f, #d63a58);
+    color: #fff;
+    font: 900 21px/38px var(--font-ui);
+    font-style: normal;
+    text-align: center;
 }
-.gd-vs-title:lang(en) { font-size: 60px; }
-.gd-vs-title span { color: #fff; font: 700 22px/1 var(--font-ui); letter-spacing: .2em; white-space: nowrap; }
-.gd-vs-title span:lang(en) { letter-spacing: .02em; }
-@keyframes gd-vs-title { from { opacity: 0; transform: translateY(-40px); } }
+.is-blue .gd-vs-seat { border-color: #cfe0ff; background: linear-gradient(#6e97ff, #3a66e6); }
+/* light-gold VS under the records crown (#fcecac -> #b8660c, thin outline, no drop edge) */
 .gd-vs-mark {
     position: absolute;
-    left: 50%; top: calc(120px + 210px);
+    left: 50%; top: calc(50% + (136px - 22px) / 2); /* level with the team frames */
     translate: -50% -50%;
-    font-size: 170px;
-    font-style: italic;
     animation: gd-vs-mark 380ms var(--ease-back) calc(var(--since) + 200ms) both;
 }
-@keyframes gd-vs-mark { from { opacity: 0; transform: scale(2.4) rotate(-8deg); } }
+@keyframes gd-vs-mark { from { opacity: 0; transform: scale(2.2) rotate(-8deg); } }
+.gd-word.is-vs {
+    font: 800 140px/.86 var(--font-num);
+    color: #8a4a0c;
+    -webkit-text-stroke: 4px #8a4a0c;
+    text-shadow: none;
+    transform: skewX(-12deg);
+}
+.gd-word.is-vs::after { background-image: linear-gradient(180deg, #fffdf0 10%, #fcecac 38%, #f0c666 66%, #b8660c 100%); }
+.gd-crown { overflow: visible; fill: #ffd766; stroke: #6a2c02; stroke-width: 2.5px; stroke-linejoin: round; paint-order: stroke fill; }
+.gd-crown.is-cool { fill: #dfe8fb; stroke: #1d2f63; }
+.gd-vs-mark .gd-crown { position: absolute; left: 6px; top: -30px; width: 56px; height: 39px; rotate: -16deg; }
+/* 跳过 in the poster's top-right corner, where yxrb_vs has its close button */
 .gd-vs-skip {
     position: absolute;
-    right: 28px; top: 22px;
+    right: 16px; top: 16px;
+    z-index: 2;
     height: 44px;
     padding: 0 22px;
-    border: 0;
+    border: 1px solid rgba(255, 255, 255, .35);
     border-radius: 22px;
-    background: rgba(255, 255, 255, .16);
+    background: rgba(10, 16, 48, .9);
     color: #fff;
-    font: 700 21px/44px var(--font-ui);
+    font: 700 21px/42px var(--font-ui);
 }
 .gd-vs-skip::after {
     content: "";
@@ -995,7 +1066,8 @@ body[data-screen="table"] .topbar { display: none; }
     .gd-stage .gd-combo-label { animation: gd-still 820ms linear 150ms both !important; }
     .gd-stage .gd-first-lead { animation: gd-still var(--first-ms) linear both !important; }
     .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation-name: gd-still !important; animation-duration: 640ms !important; }
-    .gd-stage .gd-ribbon, .gd-stage .gd-ribbon b { animation: none !important; }
+    .gd-stage .gd-ribbon, .gd-stage .gd-ribbon .gd-word { animation: none !important; }
+    .gd-stage .gd-deck .gd-back { animation-name: gd-still !important; }
 }
 @keyframes gd-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -1130,45 +1202,57 @@ body[data-screen="table"] .topbar { display: none; }
     80% { opacity: 1; scale: 1; }
     100% { opacity: 0; scale: 1.04; }
 }
-/* 天王炸: three cartoon blasts go off left, centre, right under the vertical word (FX_BLAST: dark
-   smoke behind a lobed fire body with a white-hot core). Each swells in, the core and fire burn
-   out, and the smoke lingers and rises. */
+/* 天王炸 (tg_ingame_tianwangzha): one fire-and-smoke column rising behind the vertical word: a blast
+   on the ground ring with debris, two puffs up the stem and the mushroom head over 天. Each puff
+   (FX_PUFF) swells in, its core and fire shrink away into the brown smoke, and the smoke rises and
+   drops out in the last 150 ms, so no half-transparent orange ever sits on the felt. */
+.gd-fx.is-joker .gd-fx-ring { top: 138px; }
+.gd-fx.is-joker .gd-fx-spark { top: 112px; background: linear-gradient(135deg, #a07c64, #3a2418); }
 .gd-fx-boom { width: 0; height: 0; }
-.gd-fx-boom:nth-child(1) { left: -175px; top: 80px; --s: .82; }
-.gd-fx-boom:nth-child(2) { left: 0; top: 20px; --s: 1; }
-.gd-fx-boom:nth-child(3) { left: 175px; top: 80px; --s: .82; }
+.gd-fx-boom:nth-of-type(1) { top: 112px; --sx: .78; --sy: .52; --d: 0ms; --rot: 0deg; }
+.gd-fx-boom:nth-of-type(2) { left: -14px; top: 46px; --sx: .58; --sy: .6; --d: 70ms; --rot: 70deg; }
+.gd-fx-boom:nth-of-type(3) { left: 12px; top: -20px; --sx: .62; --sy: .64; --d: 140ms; --rot: 140deg; }
+.gd-fx-boom:nth-of-type(4) { top: -92px; --sx: 1.18; --sy: .86; --d: 200ms; --rot: 200deg; }
 .gd-fx-boom svg {
     position: absolute;
-    left: -120px; top: -120px;
-    width: 240px; height: 240px;
+    left: -100px; top: -100px;
+    width: 200px; height: 200px;
     overflow: visible;
-    animation: gd-fx-blast 1400ms cubic-bezier(.2, .8, .3, 1) calc(var(--n) * 160ms) both;
+    animation: gd-fx-blast 1500ms cubic-bezier(.2, .8, .3, 1) var(--d) both;
 }
-.gd-fx-boom path { transform-box: fill-box; transform-origin: 50% 50%; }
-.gd-fx-smoke { fill: #5b4944; animation: gd-fx-smoke 1400ms ease-out calc(var(--n) * 160ms) both; }
-.gd-fx-fire { fill: url(#gd-g-fire); stroke: #8c2410; stroke-width: 3.5; stroke-linejoin: round; animation: gd-fx-fire 1400ms linear calc(var(--n) * 160ms) both; }
-.gd-fx-hot { fill: #fff8d8; animation: gd-fx-hot 1400ms linear calc(var(--n) * 160ms) both; }
+.gd-fx-boom path { transform-box: fill-box; transform-origin: 50% 50%; stroke-linejoin: round; paint-order: stroke fill; }
+.gd-fx-smoke { fill: url(#gd-g-smoke); stroke: #2a180c; stroke-width: 7; animation: gd-fx-smoke 1500ms ease-out var(--d) both; }
+.gd-fx-fire { fill: url(#gd-g-fire); stroke: #8c2410; stroke-width: 6; animation: gd-fx-fire 1500ms linear var(--d) both; }
+.gd-fx-hot { fill: #fff8d8; animation: gd-fx-hot 1500ms linear var(--d) both; }
 @keyframes gd-fx-blast {
-    0% { opacity: 0; transform: scale(calc(.15 * var(--s))); }
-    8% { opacity: 1; transform: scale(calc(.8 * var(--s))); }
-    35% { transform: scale(var(--s)); }
-    100% { opacity: 1; transform: translateY(-30px) scale(calc(1.08 * var(--s))); }
+    0% { opacity: 0; transform: translateY(0) scale(calc(.2 * var(--sx)), calc(.2 * var(--sy))) rotate(var(--rot)); }
+    6% { opacity: 1; }
+    20% { transform: translateY(0) scale(calc(1.06 * var(--sx)), calc(1.06 * var(--sy))) rotate(var(--rot)); }
+    32% { transform: translateY(-4px) scale(var(--sx), var(--sy)) rotate(var(--rot)); }
+    90% { opacity: 1; transform: translateY(calc(-60px * var(--sy))) scale(calc(1.12 * var(--sx)), calc(1.12 * var(--sy))) rotate(var(--rot)); }
+    100% { opacity: 0; transform: translateY(calc(-74px * var(--sy))) scale(calc(1.2 * var(--sx)), calc(1.2 * var(--sy))) rotate(var(--rot)); }
 }
 @keyframes gd-fx-smoke {
-    0%, 15% { opacity: 0; transform: none; }
-    35% { opacity: .8; }
-    100% { opacity: 0; transform: translateY(-34px) scale(1.2); }
+    0% { transform: scale(.85); }
+    40% { transform: scale(1); }
+    100% { transform: scale(1.12); }
 }
 @keyframes gd-fx-fire {
-    0%, 50% { opacity: 1; transform: none; }
-    100% { opacity: 0; transform: scale(.7); }
+    0%, 55% { transform: scale(1); animation-timing-function: cubic-bezier(.5, 0, .8, .6); }
+    92%, 100% { transform: scale(0); }
 }
 @keyframes gd-fx-hot {
-    0%, 18% { opacity: 1; transform: scale(1.15); }
-    55% { opacity: 0; transform: scale(.6); }
-    100% { opacity: 0; }
+    0%, 22% { transform: scale(1.1); animation-timing-function: ease-in; }
+    52%, 100% { transform: scale(0); }
 }
-.gd-fx.is-joker > .gd-word { font-size: 86px; letter-spacing: -.08em; animation-delay: 120ms; animation-duration: calc(var(--fx-ms) - 120ms); }
+/* the vertical word outlasts the column, then drops out as fast as the smoke */
+.gd-fx.is-joker > .gd-word { font-size: 80px; letter-spacing: -.08em; animation: gd-fx-word-tall calc(var(--fx-ms) - 120ms) linear 120ms both; }
+@keyframes gd-fx-word-tall {
+    0% { opacity: 0; scale: 1.7; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    7% { opacity: 1; scale: 1; }
+    91% { opacity: 1; scale: 1; }
+    100% { opacity: 0; scale: 1.06; }
+}
 .gd-word.is-vertical { writing-mode: vertical-rl; text-orientation: upright; }
 .gd-word.is-vertical:lang(en) { writing-mode: horizontal-tb; }
 .gd-fx.is-joker > .gd-word:lang(en) { font-size: 88px; }
@@ -1180,7 +1264,13 @@ body[data-screen="table"] .topbar { display: none; }
 /* ---------- round / match result (qqg_result) ----------
    Over the dimmed table: the title word, a meta band, the warm | cool finishing band with a faint VS
    on its slanted seam, the level tiles and the two buttons. --in delays the whole entrance while the
-   last play lands; .is-still (coming back from 查看牌桌) shows it without replaying. */
+   last play lands; .is-still (coming back from 查看牌桌) shows it without replaying. The table's own
+   parts fade out as the panel lands (--result-in on the stage) and come back with 查看牌桌; the HUD
+   stays under the scrim. */
+.gd-stage.has-result :is(.gd-seat, .gd-slot, .gd-hand, .gd-tools, .gd-actions, .gd-spectate, .gd-jipai-host) {
+    opacity: 0;
+    transition: opacity 200ms ease var(--result-in, 0ms);
+}
 .gd-result-host { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
 .gd-result-host > * { pointer-events: auto; }
 @keyframes gd-fade-in { from { opacity: 0; } }
@@ -1202,18 +1292,27 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-result > * { position: relative; }
 .gd-res-head { display: flex; flex-direction: column; align-items: center; }
+/* qqg_result's title: ~12% of the height, a thin outline and no drop edge */
 .gd-res-title {
     margin: 0;
-    font-size: 100px;
+    font-size: 84px;
     line-height: 1.02;
     animation: gd-res-title 420ms var(--ease-back) var(--in) both;
 }
-.gd-res-title:lang(en) { font-size: 84px; }
+.gd-res-title:lang(en) { font-size: 72px; }
+.gd-res-title .gd-word { -webkit-text-stroke-width: 6px; text-shadow: none; }
+/* the match end: the records crown over 比赛胜利 / 比赛失败 */
+.gd-res-crown {
+    width: 64px; height: 45px;
+    margin-bottom: -10px;
+    rotate: -8deg;
+    animation: gd-res-title 420ms var(--ease-back) calc(var(--in) + 60ms) both;
+}
 @keyframes gd-res-title { from { opacity: 0; transform: translateY(-46px) scale(1.25); } }
 .gd-res-meta {
     margin: 6px 0 0;
     padding: 6px 70px;
-    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .34) 22% 78%, transparent);
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .5) 22% 78%, transparent);
     font: 700 22px/1.3 var(--font-ui);
     white-space: nowrap;
     animation: gd-fade-in 240ms ease calc(var(--in) + 160ms) both;
@@ -1222,7 +1321,7 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-res-band {
     display: flex;
     width: min(1160px, calc(100% - 100px));
-    height: 272px;
+    height: 300px;
     margin-top: 16px;
     animation: gd-res-band 320ms var(--ease-out) calc(var(--in) + 120ms) both;
 }
@@ -1233,16 +1332,17 @@ body[data-screen="table"] .topbar { display: none; }
     grid-template-columns: 1fr 1fr;
     align-items: center;
 }
+/* solid halves; only the outer 28 px soften into the scrim, as in qqg_result */
 .gd-res-half.is-warm {
     padding-left: 44px;
-    background: linear-gradient(90deg, rgba(255, 244, 214, 0), rgba(255, 244, 214, .97) 16%, #ffefc4 58%, #ffe39c);
+    background: linear-gradient(90deg, rgba(255, 244, 214, 0), #fff4d6 28px, #ffefc4 58%, #ffe39c);
     clip-path: polygon(0 0, 100% 0, calc(100% - 40px) 100%, 0 100%);
 }
 .gd-res-half.is-cool {
     margin-left: -40px;
     padding-right: 44px;
     padding-left: 40px;
-    background: linear-gradient(90deg, #c9dcff, #d9e7ff 42%, rgba(227, 239, 255, .97) 84%, rgba(227, 239, 255, 0));
+    background: linear-gradient(90deg, #c9dcff, #d9e7ff 42%, #e3efff calc(100% - 28px), rgba(227, 239, 255, 0));
     clip-path: polygon(40px 0, 100% 0, 100% 100%, 0 100%);
 }
 .gd-res-vs {
@@ -1300,6 +1400,17 @@ body[data-screen="table"] .topbar { display: none; }
     white-space: nowrap;
 }
 .gd-res-p.is-me .gd-res-name { color: #10152a; font-weight: 900; }
+/* +N 级 / 冲A n/3 / 过A for the first team, 剩N张 for a hand still held; the height stays when empty */
+.gd-res-note {
+    height: 34px;
+    margin-top: 8px;
+    color: #5a6688;
+    font: 700 21px/34px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-res-note b { margin: 0 3px; font: 700 31px/34px var(--font-num); }
+.gd-res-note.is-up { color: #d6301a; }
+.is-cool > .gd-res-p .gd-res-note.is-up { color: #2a5fd6; }
 .gd-res-levels {
     display: flex;
     gap: 28px;
@@ -1354,6 +1465,7 @@ body[data-screen="table"] .topbar { display: none; }
     animation: gd-res-p 280ms var(--ease-out) calc(var(--in) + 460ms) both;
 }
 .gd-res-actions .btn, .gd-result.is-peek .btn { --btn-h: 70px; --btn-fs: 30px; --btn-px: 26px; --btn-minw: 250px; }
+.gd-result .btn:lang(en) { --btn-ls: .02em; }
 .gd-result.is-peek { inset: auto; right: 22px; bottom: 16px; padding: 0; }
 .gd-result.is-peek::before { display: none; }
 .gd-result.is-peek .btn { --btn-h: 58px; --btn-fs: 25px; --btn-minw: 210px; }
