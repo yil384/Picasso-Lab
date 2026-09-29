@@ -88,12 +88,13 @@ export function inkOverlay(W, ctx, brush) {
     const a = (F - K.gust[0]) / 12;
     for (let q = 0; q < 4; q++) { const y = hp.y + (q - 1.5) * 0.35 * hu, x0 = hp.x + 2.4 * hu - a * 3.4 * hu; brush.set('inkpen', '#6d7a90', 1.3); brush.spline([[x0, y], [x0 - 0.5 * hu, y - 0.08 * hu], [x0 - 1.0 * hu, y + 0.02 * hu]], 0.6); }
   }
-  // vc-relax: a dashed ghost of the starting cell, so the settle to the relaxed size reads
-  if (win(F, K.relax[0] - 4, K.cover[0]) && W.cart.visible) {
+  // vc-relax: a bold dashed ghost of the starting (unrelaxed) cell; the real cell starts on it, breathes out and settles,
+  // so a clear band opens between them (camera locked); the ghost stays 6 frames after the settle
+  if (win(F, K.relax[0] - 6, K.relax[1] + 6) && W.cart.visible) {
     const E = [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3], [2, 6], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]];
-    const P = W.si.atoms.slice(0, 8).map((a) => prj(W, ctx, W.si.g.localToWorld(a.position.clone().multiplyScalar(0.92))));
-    brush.set('inkpen', PAL.popD, 1.3);
-    for (const [i, j] of E) for (let q = 0; q < 6; q++) { const t0 = q / 6, t1 = t0 + 0.09; brush.line(P[i].x + (P[j].x - P[i].x) * t0, P[i].y + (P[j].y - P[i].y) * t0, P[i].x + (P[j].x - P[i].x) * t1, P[i].y + (P[j].y - P[i].y) * t1); }
+    const P = W.si.atoms.slice(0, 8).map((a) => prj(W, ctx, W.si.g.localToWorld(a.position.clone().multiplyScalar(0.88))));
+    brush.set('bigink', PAL.pop, 1.7);
+    for (const [i, j] of E) for (let q = 0; q < 5; q++) { const t0 = q / 5 + 0.02, t1 = t0 + 0.12; brush.line(P[i].x + (P[j].x - P[i].x) * t0, P[i].y + (P[j].y - P[i].y) * t0, P[i].x + (P[j].x - P[i].x) * t1, P[i].y + (P[j].y - P[i].y) * t1); }
   }
   // Refiner: click ticks; two pennies fly off when it backs off
   for (const f0 of [...K.click, K.cutoff]) if (win(F, f0, f0 + 6)) { const kn = W.con.knobs[f0 === K.cutoff ? 1 : 0], c = prj(W, ctx, wp(W, kn, [0, 0.06, 0])), u = pxu(W, ctx, wp(W, kn)); ticks(brush, c.x, c.y, 0.08 * u * (1 + (F - f0) * 0.1), 0.17 * u, 5, -2.8, -0.3, ink, 1.2); }

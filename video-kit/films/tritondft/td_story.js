@@ -31,8 +31,8 @@ export const K = {
   heave: [56, 70], clock: 70, smirk: [72, 90],
   pop: [98, 110], catch: 110, read: [114, 124], book: [124, 142], chop: 150, deal: [156, 162, 168],
   type: [178, 196], rip: 198, feed: [200, 208], jump: [208, 214], lever: 214, roar: 220, tape: [228, 262],
-  relax: [238, 258], scf: [256, 274], cover: [274, 288],
-  gust: [280, 288], page: [290, 302], glance: [304, 316],
+  relax: [250, 264], scf: [264, 280], cover: [280, 292],
+  gust: [288, 296], page: [294, 306], glance: [306, 316],
   hop4: [322, 330], read4: [330, 364], bead1: 334, fail: 362, rush: [372, 384],
   click: [398, 410, 430], crash: 410, cutoff: 438, level: 446, go: 452,
   lap: [460, 504], salute: 470, huff: 484,
@@ -62,7 +62,7 @@ const GIANT = deskP(0.48, 0, -0.28);           // upright spot of the giant hour
 const GIANT_LAY = deskP(1.08, 0, -0.92);        // where it lies (Hoot's pillow): its bottom cap at the upright spot's x, against
                                                 // Hoot's cheek; it stands up by pivoting about that cap
 const TINY = deskP(0.05, 0, 0.36);            // the tiny hourglass (Hoot's dare), same shape, 1/68 the volume
-const SCORE = deskP(-0.64, 0.004, 0.16);       // the DFTBench scorecard (98%)
+const SCORE = deskP(-0.56, 0.004, 0.12);       // the DFTBench scorecard (98%): on its easel between 98% and 68x, behind the row
 const faceYaw = (from, to) => Math.atan2(to[0] - from[0], to[2] - from[2]);
 
 // ---------------------------------------------------------------------------------------------------
@@ -80,6 +80,13 @@ export async function buildAll(w) {
   W.cart = new THREE.Group(); W.turn.add(W.cart);
   add(new THREE.CylinderGeometry(0.2, 0.24, 0.1, 32), { color: COL.pop, hatchMode: 'u', rim: 0.8, shadeColor: COL.popD, shadeMix: 0.45 }, { outline: 0.8 }, [0, 0.05, 0], [0, 0, 0], W.cart);
   W.si = buildSilicon(W, 0.4, W.cart); W.si.g.position.set(0, 0.33, 0);
+  // scf: electron density on the 16 bonds as flat, rimless sky-blue lozenges round each bond stick (depth-correct, no ink
+  // rim or highlight, so they never read as a second species); grown in S3 only
+  W.dens = W.si.bonds.map((b) => {
+    const m = add(new THREE.SphereGeometry(1, 16, 10), { color: 0x9ed8f3, hatch: 0.1, rim: 0, toneBias: 0.3, shadeColor: COL.skyL, shadeMix: 0.15 }, { outline: 0, cast: false }, [0, 0, 0], [0, 0, 0], W.si.inner);
+    m.position.copy(b.position); m.quaternion.copy(b.quaternion); m.userData.len = b.scale.y; m.visible = false;
+    return m;
+  });
   W.tiny = buildHourglass(W, 1.2 / Math.cbrt(68), [...TINY], 'tiny');
   W.giant = buildHourglass(W, 1.2, [...GIANT], 'giant');
   W.tri = await buildTri(W); W.clack = await buildClack(W); W.loupe = buildLoupe(W); W.tilt = await buildTilt(W);
@@ -168,7 +175,7 @@ async function buildProps(W) {
   W.plankC = add(new THREE.BoxGeometry(0.46, 0.05, 0.14), { color: COL.pop, rim: 0.7, hatchDir: [1, 0, 0], shadeColor: COL.popD, shadeMix: 0.4 }, { outline: 0.7 }, [0, 0.86, 0], [0, 0, 0], W.planks);
   W.stalk = add(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 6), { color: COL.navy }, { outline: 0.3 }, [-0.25, 0.66, 0], [0, 0, 0], W.planks);
   // the DFTBench scorecard (many small material doodles, uncountable, one faint X) and Loupe's stamp
-  const scTex = await bake(THREE, { width: 512, height: 368, seed: 74, key: 'score-v1', background: '#ffffff' }, (p, brush, w, h) => {
+  const scoreTex = async (upto, key) => bake(THREE, { width: 512, height: 368, seed: 74, key, background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill('#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
     const doodle = (x, y, k) => {
       brush.set('inkpen', '#16162c', 0.8);
@@ -180,15 +187,21 @@ async function buildProps(W) {
     let k = 0;
     for (let r = 0; r < 7; r++) for (let c = 0; c < 6; c++) {
       const x = 22 + c * 80, y = 30 + r * 46; doodle(x, y, k * 7 + r);
-      if (r === 4 && c === 3) { brush.set('inkpen', '#c8361c', 0.9); brush.line(x + 36, y - 4, x + 52, y + 12); brush.line(x + 52, y - 4, x + 36, y + 12); }
-      else { brush.set('inkpen', '#0284c7', 1.0); brush.line(x + 36, y + 6, x + 42, y + 12); brush.line(x + 42, y + 12, x + 56, y - 4); }
+      if (Math.hypot(r - 3, c - 2.5) / 4.3 <= upto) {             // the ticks ripple out from the stamp in the middle
+        if (r === 4 && c === 3) { brush.set('inkpen', '#c8361c', 0.9); brush.line(x + 36, y - 4, x + 52, y + 12); brush.line(x + 52, y - 4, x + 36, y + 12); }
+        else { brush.set('inkpen', '#0284c7', 1.0); brush.line(x + 36, y + 6, x + 42, y + 12); brush.line(x + 42, y + 12, x + 56, y - 4); }
+      }
       k++;
     }
   });
+  // DFTBench: a sheet of many material doodles, blank when Loupe brings it; the stamp ripples ticks across it (one faint X)
+  W.scoreTex = [await scoreTex(-1, 'score-blank-v1'), await scoreTex(0.5, 'score-half-v1'), await scoreTex(1.01, 'score-v1')];
+  const scTex = W.scoreTex[0];
   // Loupe brings the scorecard out of the tube for the payoff and takes it back in S9 (it is not on the desk before the run)
   W.scoreG = new THREE.Group(); W.scoreG.position.set(SCORE[0], 0, SCORE[2]); scene.add(W.scoreG);
-  W.score = add(new THREE.PlaneGeometry(0.52, 0.37), { color: COL.cream, map: scTex, rim: 0.2, toneBias: 0.1, hatch: 0.4, side: THREE.DoubleSide }, { outline: 0.6 }, [0, 0.13, 0], [-Math.PI / 2 + 0.75, 0.15, 0], W.scoreG);   // propped up, tilted to camera
-  add(new THREE.BoxGeometry(0.4, 0.2, 0.04), { color: 0x8a5a33, hatchMode: 'u' }, { outline: 0.5 }, [0, 0.1, -0.13], [-0.3, 0.15, 0], W.scoreG);
+  W.score = add(new THREE.PlaneGeometry(0.52, 0.37), { unique: true, color: COL.cream, map: scTex, rim: 0.2, toneBias: 0.1, hatch: 0.4, side: THREE.DoubleSide }, { outline: 0.6 }, [0, 0.4, 0], [-0.3, 0.1, 0], W.scoreG);   // on an easel, above the numeral row
+  for (const sx of [-0.16, 0.16]) add(new THREE.CylinderGeometry(0.014, 0.018, 0.5, 6), { color: 0x8a5a33, hatchMode: 'u' }, { outline: 0.5 }, [sx, 0.24, 0.05], [0.25, 0, sx * 0.4], W.scoreG);
+  add(new THREE.CylinderGeometry(0.012, 0.012, 0.46, 6), { color: 0x8a5a33, hatchMode: 'u' }, { outline: 0.4 }, [0, 0.22, -0.12], [-0.45, 0, 0], W.scoreG);
   W.stamp = new THREE.Group(); scene.add(W.stamp);
   add(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 8), { color: 0xc08a4c, hatchMode: 'u' }, { outline: 0.5 }, [0, 0.12, 0], [0, 0, 0], W.stamp);
   add(new THREE.SphereGeometry(0.04, 12, 8), { color: COL.pop }, { outline: 0.5 }, [0, 0.21, 0], [0, 0, 0], W.stamp);
@@ -236,12 +249,14 @@ export function updateAll(w, ctx) {
 // ---- turntable + the silicon cell (vc-relax breathing) ----
 function updateTurn(F) {
   W.turn.rotation.y = turnAngle(F);
-  let s = 0.92;                                                          // unrelaxed guess
-  if (F >= K.relax[0]) { const a = F - K.relax[0]; s = 1 - 0.08 * Math.exp(-a / 5) * Math.cos(a * 0.5); }
+  let s = 0.88;                                                          // unrelaxed guess (the dashed ghost in td_ink.js)
+  if (F >= K.relax[0]) { const a = F - K.relax[0]; s = 1 - 0.12 * Math.exp(-a / 5) * Math.cos(a * 0.5); }
   if (win(F, K.huff - 2, K.S7)) { const a = F - K.huff + 2; s = 1 + 0.015 * Math.exp(-a / 6) * Math.sin(a * 0.7); }   // lap 2 re-settles
-  if (F >= 700) s = lerp(1, 0.92, sm((F - 700) / 12));                  // reset off screen for the loop
+  if (F >= 700) s = lerp(1, 0.88, sm((F - 700) / 12));                  // reset off screen for the loop
   W.si.inner.scale.setScalar(s);
   st.siScale = s;
+  const d = win(F, K.scf[0], K.cover[1] + 2) ? ob((F - K.scf[0]) / 10) * (1 - sm((F - K.cover[1] + 4) / 6)) : 0;
+  W.dens.forEach((m) => { m.visible = d > 0.02; m.scale.set(0.021 * d + 0.001, m.userData.len * 0.3 * Math.max(0.2, d), 0.021 * d + 0.001); });
   st.jobV = Math.abs(jobTheta(F + 0.5) - jobTheta(F - 0.5));
 }
 
@@ -606,7 +621,7 @@ function updateLoupe(F) {
     W.scene.updateMatrixWorld(true);
     const hp = R.arms[1].children[1].getWorldPosition(V3(0, 0, 0));
     let sp = [hp.x, hp.y - 0.14, hp.z];
-    if (F >= K.slam[0] - 3 && F < K.slam[0] + 8) { const k = F < K.slam[0] ? sm((F - K.slam[0] + 3) / 3) : 1 - sm((F - K.slam[0] - 3) / 5); sp = [lerp(sp[0], SCORE[0], k), lerp(sp[1], 0.15, k), lerp(sp[2], SCORE[2] + 0.04, k)]; }
+    if (F >= K.slam[0] - 3 && F < K.slam[0] + 8) { const k = F < K.slam[0] ? sm((F - K.slam[0] + 3) / 3) : 1 - sm((F - K.slam[0] - 3) / 5); sp = [lerp(sp[0], SCORE[0], k), lerp(sp[1], 0.36, k), lerp(sp[2], SCORE[2] + 0.08, k)]; }
     W.stamp.position.set(...sp); W.stamp.rotation.set(0, yaw, 0);
   }
   W.gauge.position.set(gp[0], 0, gp[2]); W.gauge.rotation.y = faceYaw(gp, [gp[0] + 0.25, 0, gp[2] + 1]);
@@ -735,6 +750,7 @@ function updateProps(F) {
   { // the scorecard: pops up on the desk as Loupe lands, folds away as Loupe dives back into the tube
     const on = F >= K.outs[1] + 10 && F < K.dive[2] + 4, k = on ? ob((F - K.outs[1] - 10) / 6) * (1 - sm((F - K.dive[2] + 2) / 6)) : 0;
     W.scoreG.visible = k > 0.02; W.scoreG.scale.set(Math.max(0.02, k), Math.max(0.02, k), Math.max(0.02, k));
+    W.score.material.uniforms.uMap.value = W.scoreTex[F < K.slam[0] ? 0 : F < K.slam[0] + 3 ? 1 : 2];
   }
   const pk = F >= K.planks[0] && F < NF - 8 ? ob((F - K.planks[0]) / 10) : 0;
   W.planks.visible = pk > 0.01;
@@ -829,7 +845,7 @@ const rigClack = (F) => {     // medium on Clack; crash pull-back to a low dutch
   return mixRig(med, wide, k);
 };
 const rigCell = (F) => {      // tilt down to the silicon cell: it breathes and settles, density condenses on the bonds
-  const jp = jobPos(F), k = sm((F - 236) / 10);
+  const jp = jobPos(F), k = sm((F - 236) / 12);
   return { tg: [jp[0], 0.42, jp[2]], az: lerp(0.62, 0.5, k), el: lerp(0.22, 0.26, k), r: lerp(1.6, 1.45, k), fov: 32, roll: 0.0 };   // locked while the cell relaxes
 };
 const rigS3b = (F) => {       // low at the desk edge: the tiny hourglass sharp in the foreground, Hoot and the giant behind it
@@ -880,7 +896,7 @@ const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the
   const a = sm((F - K.S8b) / 60);
   return { tg: [L.desk.x + 0.1, 0.46, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.1, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };
 };
-const WHIPS = [[80, 100], [274, 288], [312, 328], [452, 466], [496, 512], [564, 588]];
+const WHIPS = [[80, 100], [280, 292], [312, 328], [452, 466], [496, 512], [564, 588]];
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);
@@ -890,7 +906,7 @@ export function camRig(F) {
   if (F < K.deal[1]) return rigTri(F);
   if (F < K.type[0] + 4) { const k = io((F - K.deal[1]) / (K.type[0] + 4 - K.deal[1])), q = mixRig(rigTri(F), rigClack(F), k); q.r += 0.6 * Math.sin(Math.PI * k); q.el += 0.12 * Math.sin(Math.PI * k); return q; }   // truck wide of Loupe
   if (F < 236) return rigClack(F);
-  if (F < 250) return mixRig(rigClack(F), rigCell(F), io((F - 236) / 14));
+  if (F < 248) return mixRig(rigClack(F), rigCell(F), io((F - 236) / 12));   // locked on the cell before it relaxes
   if (F < K.cover[0]) return rigCell(F);
   if (F < K.cover[1]) return mixRig(rigCell(F), rigS3b(F), ease.inOutQuint(clamp((F - K.cover[0]) / (K.cover[1] - K.cover[0]))));   // whip left across the room to the desk
   if (F < 312) return rigS3b(F);
@@ -953,15 +969,6 @@ export function drawNPR(w, ctx) {
   npr.glowAt(ctx, camera, bulb, { radius: 0.08, i: 0.8, color: 0xffe2a0, behind: true, seed: 1 });
   W.engine.lamps.forEach((m, i) => { const p = m.getWorldPosition(V3(0, 0, 0)); npr.glowAt(ctx, camera, p, { radius: 0.05, i: 0.35 + 0.35 * ((Math.floor(F / 6) + i) % 2) + 0.3 * (st.roar || 0), color: i % 2 ? 0xff9a6a : 0xfff0c0, behind: true, seed: 10 + i }); });
   // scf: halftone electron density condensing, one blob at a time, onto the 16 bond midpoints (symmetric)
-  if (F >= K.scf[0] && W.cart.visible && F < NF - 8) {
-    const cs = W.cart.getWorldScale(V3(0, 0, 0)).x;          // the cart shrinks to half in Hoot's wings
-    W.si.bonds.forEach((b, i) => {
-      const age = F - K.scf[0] - (i % 8) * 2.5;
-      if (age < 0) return;
-      const p = b.getWorldPosition(V3(0, 0, 0));
-      npr.glowAt(ctx, camera, p, { radius: 0.045 * ob(age / 6) * st.siScale * cs, i: 0.6, color: 0x6cc4ee, behind: false, seed: 40 + i, occluded: 0.3 });
-    });
-  }
   if (F >= K.roar && F < K.roar + 16) {
     const c = ctx.project(V3(L.engine.x - 0.3, 1.0, L.engine.z), camera);
     npr.focusLines({ x: c.x, y: c.y, r0: 360, amount: 1 - (F - K.roar) / 16, count: 110, width: 1.3, seed: 3 });
