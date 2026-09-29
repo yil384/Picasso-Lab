@@ -206,7 +206,7 @@ export function buildOro(THREE, add, parent, { seed = 11 } = {}) {
   O.faces = faceSet(THREE, {
     smug: { eyes: 'smug', mouth: 'grin', es: 1.7 }, wide: { eyes: 'wide', mouth: 'o' }, determined: { eyes: 'determined', mouth: 'teeth' },
     sweat: { eyes: 'worried', mouth: 'wobble', sweat: true }, shut: { eyes: 'shut', mouth: 'teeth' }, nod: { eyes: 'happy', mouth: 'smile' },
-    jaw: { eyes: 'wide', mouth: 'open', es: 1.3 },
+    jaw: { eyes: 'wide', mouth: 'open', es: 1.15, mouthY: 36, mouthX: -42 },   // the dropped jaw under the eye the payoff lens sees (centred, the cone hides it)
   }, { w: 1024, h: 512, base: '#ef4b5f', cx: 256, cy: 176, s: 2.1, seed, spacing: 0.8, mouthY: 48 });   // a big face straight ahead, above the cone (every front-ish lens sees it): the rival's comedy reads
   const bodyGeo = new THREE.CapsuleGeometry(0.22, 0.9, 8, 24); bodyGeo.rotateZ(-Math.PI / 2);
   // face texture on the front hemisphere: sphere-like uv around +x

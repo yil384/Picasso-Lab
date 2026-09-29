@@ -285,7 +285,7 @@ function oroRaw(F) {
   }
   {
     const th = oroTh(F);
-    S.pos = lane(th); S.yaw = headingAt(th) - 0.15 * sg(F, K.jaw - 8, K.jaw, sm);   // ~3/4 to the payoff lens: the face above the cone stays in view
+    S.pos = lane(th); S.yaw = headingAt(th) - 0.38 * sg(F, K.jaw - 8, K.jaw, sm);   // ~3/4 to the payoff lens (the open jaw faces us): the face above the cone stays in view
     S.wheelAng = (th - L2 - thS) * R.oro / 0.1;   // (it turns its face to us for the jaw drop and the nod)
     S.face = F < K.dtake ? 'smug' : F < K.go2 ? 'sweat' : F < K.cross + 2 ? 'shut' : F < K.jaw ? 'wide' : F < K.nod[0] ? 'jaw' : F < K.nod[1] - 3 ? 'nod' : 'wide';   // after the nod: the wide eye again (readable at card size)
     S.keySpin = F >= K.go2 ? (F - K.go2) * 2.2 : F * 0.05;

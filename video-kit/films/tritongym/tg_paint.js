@@ -112,14 +112,14 @@ export function paintFace(g, cx, cy, s, e, seed = 1, o = {}) {
     }
   };
   eye(L, 1); eye(R, -1);
-  const my = cy + (o.mouthY ?? 44) * s;
+  const my = cy + (e.mouthY ?? o.mouthY ?? 44) * s;   // (an expression may lift its mouth)
   switch (e.mouth) {
     case 'smile': pen(g, [[cx - 20 * s, my - 4 * s], [cx, my + 9 * s], [cx + 20 * s, my - 4 * s]], 8 * s, ink, { r }); break;
     case 'tiny': pen(g, [[cx - 8 * s, my], [cx, my + 5 * s], [cx + 8 * s, my]], 6 * s, ink, { r }); break;
     case 'flat': pen(g, [[cx - 16 * s, my + 2 * s], [cx + 16 * s, my]], 7 * s, ink, { r, taper: [0.1, 0.1] }); break;
     case 'wobble': pen(g, [[cx - 22 * s, my + 2 * s], [cx - 11 * s, my - 4 * s], [cx, my + 3 * s], [cx + 11 * s, my - 4 * s], [cx + 22 * s, my + 2 * s]], 6 * s, ink, { r }); break;
     case 'o': fillPoly(g, ellipsePts(cx, my + 4 * s, 11 * s, 14 * s), ink); break;
-    case 'open': { const P = [[cx - 26 * s, my - 6 * s], [cx + 26 * s, my - 6 * s], [cx + 16 * s, my + 16 * s], [cx, my + 22 * s], [cx - 16 * s, my + 16 * s]]; fillPoly(g, P, ink); } break;   // ink only, no pink tongue
+    case 'open': { const x0 = cx + (e.mouthX ?? 0) * s; const P = [[x0 - 26 * s, my - 6 * s], [x0 + 26 * s, my - 6 * s], [x0 + 16 * s, my + 16 * s], [x0, my + 22 * s], [x0 - 16 * s, my + 16 * s]]; fillPoly(g, P, ink); } break;   // ink only, no pink tongue (mouthX: off-centre, e.g. under the eye a side lens sees)
     case 'grin': { const P = [[cx - 32 * s, my - 8 * s], [cx + 32 * s, my - 8 * s], [cx + 20 * s, my + 14 * s], [cx - 20 * s, my + 14 * s]]; fillPoly(g, P, ink); fillPoly(g, [[cx - 25 * s, my - 5 * s], [cx + 25 * s, my - 5 * s], [cx + 22 * s, my + 1 * s], [cx - 22 * s, my + 1 * s]], CREAM); } break;
     case 'teeth': { const P = [[cx - 28 * s, my - 9 * s], [cx + 28 * s, my - 9 * s], [cx + 28 * s, my + 11 * s], [cx - 28 * s, my + 11 * s]]; fillPoly(g, P, CREAM); pen(g, [...P, P[0]], 5 * s, ink, { taper: [0, 0], smoothN: 1 }); pen(g, [[cx - 28 * s, my + 1 * s], [cx + 28 * s, my + 1 * s]], 4 * s, ink, { taper: [0, 0] }); for (let q = -1; q <= 1; q++) pen(g, [[cx + q * 12 * s, my - 9 * s], [cx + q * 12 * s, my + 11 * s]], 4 * s, ink, { taper: [0, 0] }); } break;
     default: break;

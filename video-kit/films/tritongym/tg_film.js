@@ -496,7 +496,8 @@ export function drawNPR(ctx) {
   const cut = (p) => camera.position.distanceTo(V(...p)) + 2.2;
   if (F >= K.clang && F < K.clang + 2) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(A.gate, R.ours, 0.5)), setIds: T.setIds, plate: F === K.clang ? [1, 0.84, 0.8] : [1, 1, 0.96] });
   if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(L2 + A.finish, R.track, 0.4)), setIds: T.setIds, plate: F === K.freeze[0] ? [0.84, 1, 0.9] : [1, 1, 0.96] });
-  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 70, width: 6, seed }); };
+  const tokHole = tokEllipse(ctx, st);   // the lines never cross Tok
+  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 70, width: 6, seed, hole: tokHole }); };
   fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
   if (st.kern.pos) fl(K.closeup[0] + 1, 5, [st.kern.pos[0], 0.45, st.kern.pos[2]], 220, 0.9, 11);   // the push onto the token lands with zoom lines (once Tok has left the frame)
   if (st.kern.pos) fl(K.crash[0] + 2, 12, [st.kern.pos[0], 0.2, st.kern.pos[2]], 260, 1.0, 7);     // the crash zoom lands with zoom lines
@@ -516,6 +517,13 @@ export function drawInk(ctx, brush) { }
 // ------------------------------------------------------------------------------------------------
 function prj(ctx, p) { const v = V(...p); const s = ctx.project(v, T.camera); const vc = v.clone().applyMatrix4(T.camera.matrixWorldInverse); return { x: s.x, y: s.y, front: vc.z < 0, d: -vc.z }; }
 function pxu(ctx, p) { const q = prj(ctx, p); return q.front ? (ctx.DH / 2) / (Math.tan(T.camera.fov * Math.PI / 360) * q.d) : 0; }
+// Tok's body on screen as an ellipse (design px), so 2D marks can keep off its face; null when Tok is hidden or behind
+function tokEllipse(ctx, st) {
+  const t = st.tok; if (!t || t.vis === false || !t.pos) return null;
+  const p = [t.pos[0], t.pos[1] + 0.95, t.pos[2]], q = prj(ctx, p); if (!q.front) return null;
+  const u = pxu(ctx, p); return { x: q.x, y: q.y, rx: u * 0.75, ry: u * 0.85 };
+}
+const inEllipse = (e, x, y, pad = 0) => !!e && ((x - e.x) / (e.rx + pad)) ** 2 + ((y - e.y) / (e.ry + pad)) ** 2 < 1;
 function puff(g, x, y, s, a, r, fill = null) {
   if (a <= 0 || s < 2) return;
   if (fill) {   // a filled cloud: cream lobes with an ink keyline (reads on dark ground)
@@ -541,6 +549,7 @@ function speedLines(g, ctx, p, dir, len, n, r, col = INK) {
 
 export function drawMarks(ctx, g) {
   const F = ctx.iw, r = ctx.boilRng('marks');
+  const tokHole = tokEllipse(ctx, st);
   // CLANG! on a diagonal beside the gate
   const ca = F - K.clang;
   if (ca >= 0 && ca < K.closeup[0] - 4 - K.clang) {    // gone before the push onto the token
@@ -560,8 +569,9 @@ export function drawMarks(ctx, g) {
         const lx = lerp(x0, x1, q / 6), wp = T.lettersIn.localToWorld(V(lx, -0.02, 0.45));
         const c = prj(ctx, [wp.x, wp.y, wp.z]); if (!c.front) continue;
         const u = pxu(ctx, [wp.x, wp.y, wp.z]), sd = q < 3 ? -1 : q > 3 ? 1 : 0;
-        { const tc = prj(ctx, [st.tok.pos[0], st.tok.pos[1] + 0.9, st.tok.pos[2]]), tu = pxu(ctx, [st.tok.pos[0], 0.9, st.tok.pos[2]]); if (tc.front && Math.abs(c.x - tc.x) < tu * 0.95 && Math.abs(c.y + u * 0.3 - tc.y) < tu * 1.1) continue; }   // never over Tok
-        puff(g, c.x + sd * (0.25 + a * 0.14) * u, c.y + u * 0.3, u * (0.17 + 0.015 * a) * (0.8 + 0.4 * hsh(q, 7)) * (1 - sm((a - 6) / 5)), 1, r, PAL.cream);   // they shrink away, inked (no grey fade)   // below the letters' feet, rolling outward over the card's edge
+        const px = c.x + sd * (0.25 + a * 0.14) * u, py = c.y + u * 0.3, ps = u * (0.17 + 0.015 * a) * (0.8 + 0.4 * hsh(q, 7)) * (1 - sm((a - 6) / 5));
+        if (inEllipse(tokHole, px, py, ps * 1.3)) continue;   // never over Tok (tested where the puff is drawn, every frame)
+        puff(g, px, py, ps, 1, r, PAL.cream);   // below the letters' feet, rolling outward; they shrink away, inked (no grey fade)
       }
     } }
   // square-wheel THUNK ticks under the wheels on each flat landing
@@ -588,9 +598,9 @@ export function drawMarks(ctx, g) {
   }
   const tk = st.tok;
   const bangAt = (f0, p, s, rot, col = PAL.coral) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, col, r); };
-  {   // the idea: beside the head at eye height, on the open side towards Oro (inside the card band while the camera pulls out)
+  {   // the idea: beside the head at eye height, on the side away from Oro (inside the card band while the camera pulls out)
     const a = F - K.idea, hp = [tk.pos[0], tk.pos[1] + 1.0, tk.pos[2]], q = prj(ctx, hp);
-    if (a >= 0 && a <= 16 && q.front) { const u = pxu(ctx, hp); bang(g, q.x + u * 0.95, q.y + u * 0.05, u * 0.55 * ob(a / 4) * (1 - sm((a - 12) / 4)), 0.2, PAL.emerald, r); }
+    if (a >= 0 && a <= 16 && q.front) { const u = pxu(ctx, hp); bang(g, q.x - u * 0.95, q.y - u * 0.05, u * 0.55 * ob(a / 4) * (1 - sm((a - 12) / 4)), -0.2, PAL.emerald, r, PAL.cream); }   // a cream keyline: reads on the dark slab
   }
   if (st.oro.pos) { const sx = [Math.cos(st.oro.yaw), 0, -Math.sin(st.oro.yaw)]; bangAt(K.dtake, [st.oro.pos[0] - sx[0] * 0.2, 0.5, st.oro.pos[2] - sx[2] * 0.2], 0.55, 0.12); }   // as big as Tok's, low beside the head: inside the card band through the dolly-zoom
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {

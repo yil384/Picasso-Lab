@@ -138,7 +138,7 @@ export function comicWord(g, word, x, y, size, o = {}) {
 }
 
 /** Comic "!" emote (Canvas2D): tapered bar + dot with ink keyline and drop shadow. */
-export function bang(g, x, y, s, rot, col = '#ef4b5f', r = null) {
+export function bang(g, x, y, s, rot, col = '#ef4b5f', r = null, key = null) {
   if (s < 3) return;
   const j = () => (r ? r.gauss(0, s * 0.012) : 0);
   const bar = [[-0.21, -1.0], [0.21, -1.03], [0.075, -0.3], [-0.075, -0.29]].map(([u, v]) => [u * s + j(), v * s + j()]);
@@ -147,7 +147,8 @@ export function bang(g, x, y, s, rot, col = '#ef4b5f', r = null) {
     fillPoly(g, b, colr); fillPoly(g, ellipsePts(dx, dy, 0.14 * s * (1 + grow), 0.14 * s * (1 + grow), 0, 14), colr);
   };
   g.save(); g.translate(x, y); g.rotate(rot);
-  shape(s * 0.06, s * 0.07, 0.35, INK); shape(0, 0, 0.35, INK); shape(0, 0, 0, col);
+  if (key) { shape(s * 0.06, s * 0.07, 0.8, INK); shape(0, 0, 0.8, INK); shape(0, 0, 0.55, key); shape(0, 0, 0.3, INK); shape(0, 0, 0, col); }   // (with a keyline)
+  else { shape(s * 0.06, s * 0.07, 0.35, INK); shape(0, 0, 0.35, INK); shape(0, 0, 0, col); }
   g.restore();
 }
 

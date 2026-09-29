@@ -377,7 +377,7 @@ uniform vec4 uBeamA[${MAX_BEAMS}]; uniform vec4 uBeamB[${MAX_BEAMS}]; uniform ve
 uniform vec2 uSmear; uniform int uDebug; uniform sampler2D tColorG;
 uniform vec4 uGlowZ[${MAX_GLOWS}]; uniform vec4 uBeamZ[${MAX_BEAMS}];
 uniform vec4 uGlowX[${MAX_GLOWS}]; uniform vec4 uBeamX[${MAX_BEAMS}];
-uniform vec4 uFocus; uniform vec4 uFocusX; uniform vec4 uImpact; uniform vec4 uImpactSet; uniform vec3 uImpactPlate;
+uniform vec4 uFocus; uniform vec4 uFocusX; uniform vec4 uFocusHole; uniform vec4 uImpact; uniform vec4 uImpactSet; uniform vec3 uImpactPlate;
 uniform mat4 uVP; uniform mat4 uInvVP; uniform vec3 uCamPos;
 uniform sampler2D uVShadowMap; uniform mat4 uVShadowMat;
 uniform vec4 uVolA[2]; uniform vec4 uVolB[2]; uniform vec4 uVolC[2]; uniform vec4 uVolD[2]; uniform int uVolN;
@@ -729,6 +729,7 @@ void main() {
     float wpx = along * (.5 + 2.4 * hk) * uS * uFocusX.z;
     float dpx = abs(fa) * 6.2831853 / nF * r;
     float ln = clamp(wpx - dpx + .5, 0., 1.) * step(rs, r) * on;
+    if (uFocusHole.z > 0.) ln *= smoothstep(1., 1.06, length((fc - uFocusHole.xy) / uFocusHole.zw));   // (film-tritongym: never across a face)
     col = mix(col, paper * L_ink, ln * uFocus.w);
   }
   // impact frame: 1-2 frames posterised to ink + light (optionally inverted), the comic 'hit'
@@ -871,7 +872,7 @@ export function createNPR(renderer, ctx, opts = {}) {
     uBeamZ: { value: Array.from({ length: MAX_BEAMS }, () => new THREE.Vector4()) },
     uGlowX: { value: Array.from({ length: MAX_GLOWS }, () => new THREE.Vector4()) },
     uBeamX: { value: Array.from({ length: MAX_BEAMS }, () => new THREE.Vector4()) },
-    uFocus: { value: new THREE.Vector4() }, uFocusX: { value: new THREE.Vector4(90, 0, 1, 0) },
+    uFocus: { value: new THREE.Vector4() }, uFocusX: { value: new THREE.Vector4(90, 0, 1, 0) }, uFocusHole: { value: new THREE.Vector4() },
     uImpact: { value: new THREE.Vector4(0, 0.55, 0, 0) }, uImpactSet: { value: new THREE.Vector4(-9, -9, -9, -9) }, uImpactPlate: { value: new THREE.Vector3(1, 1, 1) },
     uVP: { value: new THREE.Matrix4() }, uInvVP: { value: new THREE.Matrix4() }, uCamPos: { value: new THREE.Vector3() },
     uVShadowMap: light.uShadowMap, uVShadowMat: light.uShadowMat,
@@ -1030,7 +1031,7 @@ export function createNPR(renderer, ctx, opts = {}) {
       shared.uFrameSeed.value = (ctx.iw % 1009) * 0.731 + 0.11;
       npr.glowList.length = 0; npr.beamList.length = 0; npr.smear = [0, 0];
       light.uPLN.value = 0;
-      finalMat.uniforms.uFocus.value.set(0, 0, 0, 0);
+      finalMat.uniforms.uFocus.value.set(0, 0, 0, 0); finalMat.uniforms.uFocusHole.value.set(0, 0, 0, 0);
       finalMat.uniforms.uImpact.value.x = 0;
       finalMat.uniforms.uVolN.value = 0;
       light.uProjA.value.set(0, 0, 0, 0); light.uProjD.value.set(1, 1, 1, 0);
@@ -1062,10 +1063,12 @@ export function createNPR(renderer, ctx, opts = {}) {
     },
 
     /** Comic concentration lines converging on a design-space point.
-     *  { x, y, r0 (clear radius, design px), amount (0..1), count=90, width=1, seed=0 } */
-    focusLines({ x, y, r0 = 300, amount = 1, count = 90, width = 1, seed = 0 } = {}) {
+     *  { x, y, r0 (clear radius, design px), amount (0..1), count=90, width=1, seed=0,
+     *    hole: { x, y, rx, ry } (design px: an ellipse the lines never cross, e.g. a face) } */
+    focusLines({ x, y, r0 = 300, amount = 1, count = 90, width = 1, seed = 0, hole = null } = {}) {
       if (amount <= 0.002) return;
       const [px, py] = npr.toPx(x, y);
+      if (hole) { const [hx, hy] = npr.toPx(hole.x, hole.y); finalMat.uniforms.uFocusHole.value.set(hx, hy, hole.rx * S, hole.ry * S); }
       finalMat.uniforms.uFocus.value.set(px, py, r0 * S, amount);
       finalMat.uniforms.uFocusX.value.set(count, seed * 1.31 + 0.2, width, 0);
     },
