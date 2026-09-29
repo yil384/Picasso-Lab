@@ -188,30 +188,41 @@ export function inkOverlay(ctx, brush) {
 const dg = (F) => F - K.ding;
 
 // ---------------------------------------------------------------------------------------------------
-// lettering (Canvas2D): hand-built stroke letters -> ink drop shadow, ink outline, colour, sheen
+// lettering (Canvas2D): hand-built stroke letters, tapered like brush strokes -> ink drop shadow, ink outline, colour
 // ---------------------------------------------------------------------------------------------------
+// a stroke inked like a brush: width swells in the middle and tapers to the ends (filled polygon, no round caps)
+function taper(g, pts, w, jr) {
+  let P = pts;
+  if (P.length === 2) { P = []; for (let k = 0; k <= 8; k++) P.push([lerp(pts[0][0], pts[1][0], k / 8), lerp(pts[0][1], pts[1][1], k / 8)]); }
+  const n = P.length, L = [], Rr = [];
+  for (let i = 0; i < n; i++) {
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)];
+    let nx = -(b[1] - a[1]), ny = b[0] - a[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+    const t = i / (n - 1), wi = w * (0.55 + 0.6 * Math.sin(Math.PI * (0.08 + 0.84 * t))) * (jr ? 1 + jr.gauss(0, 0.05) : 1) / 2;
+    L.push([P[i][0] + nx * wi, P[i][1] + ny * wi]); Rr.push([P[i][0] - nx * wi, P[i][1] - ny * wi]);
+  }
+  g.beginPath(); [...L, ...Rr.reverse()].forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fill();
+}
 function handWord(g, word, x, y, size, o) {
   const { letters } = layoutWord(word, 0.16);
   const lw = size * (o.weight ?? 0.24), jr = o.jitter;
   g.save(); g.translate(x, y); g.rotate(o.rot || 0);
   if (o.skew) g.transform(1, 0, o.skew, 1, 0, 0);
-  g.globalAlpha = o.alpha ?? 1; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.globalAlpha = o.alpha ?? 1;
   const L = letters.map((Lt, i) => ({ ...Lt, k: o.pops ? o.pops(i) : 1, ly: -o.arc * (1 - 4 * ((i / Math.max(1, letters.length - 1)) - 0.5) ** 2) + (hsh(i, word.length, 3) - 0.5) * size * 0.1, rot: (hsh(i, word.length, 5) - 0.5) * 0.2 }));
   const pass = (col, w, dx, dy) => {
-    g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w;
+    g.fillStyle = col;
     for (const Lt of L) {
       if (Lt.k <= 0.01) continue;
       g.save(); g.translate(Lt.x * size + dx, Lt.ly + dy); g.rotate(Lt.rot); g.scale(Lt.k, Lt.k);
-      for (const s of Lt.strokes) { g.beginPath(); s.forEach(([u, v], j) => { const px = u * size + (jr ? jr.gauss(0, size * 0.005) : 0), py = v * size + (jr ? jr.gauss(0, size * 0.005) : 0); j ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke(); }
+      for (const s of Lt.strokes) taper(g, s.map(([u, v]) => [u * size, v * size]), w, jr);
       for (const [u, v] of Lt.dots) { g.beginPath(); g.arc(u * size, v * size, w * 0.55, 0, TAU); g.fill(); }
       g.restore();
     }
   };
-  pass(o.ink, lw + size * 0.13, size * 0.07, size * 0.085);
-  pass(o.ink, lw + size * 0.13, 0, 0);
-  if (o.stroke2) pass(o.stroke2, lw + size * 0.06, 0, 0);
-  pass(o.fill, lw, 0, 0);
-  if (o.sheen) { g.globalAlpha = (o.alpha ?? 1) * 0.5; pass(o.sheen, lw * 0.26, -lw * 0.16, -lw * 0.2); }
+  pass(o.ink, lw + size * 0.16, size * 0.07, size * 0.085);   // ink drop shadow
+  pass(o.ink, lw + size * 0.16, 0, 0);                          // ink outline
+  pass(o.fill, lw, 0, 0);                                       // colour
   g.restore();
 }
 function bang(g, x, y, s, rot, r) {   // comic "!" take mark
@@ -224,7 +235,6 @@ function bang(g, x, y, s, rot, r) {   // comic "!" take mark
   shape(s * 0.06, s * 0.07); g.fill(); g.stroke();
   shape(0, 0); g.stroke();
   g.fillStyle = PAL.red; shape(0, 0); g.fill();
-  g.strokeStyle = '#ffd9c8'; g.lineWidth = s * 0.045; g.beginPath(); g.moveTo(-0.1 * s, -0.9 * s); g.lineTo(-0.035 * s, -0.45 * s); g.stroke();
   g.restore();
 }
 export function lettering(ctx, g) {
@@ -233,7 +243,7 @@ export function lettering(ctx, g) {
   const bz = F - BAD();
   if (bz >= 0 && bz < 22) {
     const x = stationX(K.bad), p = prj(ctx, x + 0.2, 1.05, W.lampZ);
-    if (p.front) handWord(g, 'BZZT!', clamp(p.x, 360, 1560), clamp(p.y, 240, 640), 150, { fill: PAL.red, ink: PAL.ink, sheen: '#ffd9c8', stroke2: PAL.cream, arc: 14, rot: -0.12, skew: -0.18, weight: 0.26,
+    if (p.front) handWord(g, 'BZZT!', clamp(p.x, 360, 1560), clamp(p.y, 240, 640), 150, { fill: PAL.red, ink: PAL.ink, arc: 14, rot: -0.12, skew: -0.18, weight: 0.3,
       alpha: 1 - sm((bz - 17) / 5), pops: (i) => ob((bz - i) / 3) * (1 + 0.05 * Math.sin(bz * 1.7 + i)), jitter: jr });
   }
   // "!" takes
