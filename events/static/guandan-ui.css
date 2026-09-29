@@ -1,7 +1,7 @@
 /* ==========================================================================
    Picasso Lab Guandan: design-system foundation.
-   Tokens, fonts, base, app shell, buttons, card component, CSS felt fallback,
-   toast, pill/badge/avatar primitives, popup, z-index scale, reduced motion.
+   Tokens, fonts, base, app shell, buttons, avatar, card component, toast,
+   popup, z-index scale, reduced motion.
    The lobby/room top bar (.topbar) is styled in guandan-lobby.css.
    Screen layouts live in guandan-lobby.css / guandan-table.css (loaded after
    this file); they override the defaults here through the documented vars.
@@ -23,7 +23,7 @@
     --sec: linear-gradient(180deg, #8aebfe 0%, #72bfff 30%, #739cfb 70%, #7385f9 100%);
     --sec-edge: #4a5bc9; --sec-stroke: #3b53b8; --sec-inset: rgba(40, 50, 160, .3);
     --util: #6484f4; --util-bg: linear-gradient(180deg, #8aa2ff 0%, #6f8cf6 55%, #6484f4 100%);
-    --util-edge: #4a5bc9; --util-stroke: #3b53b8;
+    --util-edge: #4a5bc9;
     --chat: #18c474; --ok: linear-gradient(180deg, #7ff0a8 0%, #5fe08e 40%, #2fb865 100%);
     --ok-edge: #1f8c49; --ok-stroke: #17703a;
     --danger: linear-gradient(180deg, #ffa39a 0%, #f06a5e 42%, #d8433c 100%);
@@ -109,13 +109,6 @@ img { max-width: 100%; }
     overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
 
-/* Legacy stroke icons (iconHTML) still appear in some markup; keep them text-sized. */
-.ui-icon {
-    width: 1em; height: 1em; flex: none; display: inline-block; vertical-align: -.125em;
-    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-}
-.ui-icon-label { display: inline-flex; align-items: center; gap: .35em; }
-
 /* ---------- app shell ---------- */
 #stage-mount {
     position: fixed;
@@ -134,8 +127,8 @@ img { max-width: 100%; }
 }
 #root { position: relative; min-height: 100vh; min-height: 100dvh; }
 /* ---------- buttons ----------
-   .btn = primary orange (出牌). Variants: .secondary/.pass (blue), .util (periwinkle),
-   .ok (green), .danger, .ghost. Size through --btn-h / --btn-fs / --btn-px / --btn-ls
+   .btn = primary orange (出牌). Variants: .secondary/.pass (blue), .ok (green),
+   .danger, .ghost. Size through --btn-h / --btn-fs / --btn-px / --btn-ls
    or the .sm / .lg presets; 2-char action labels want .spaced (letter-spacing .35em). */
 .btn {
     --btn-h: 40px; --btn-fs: 17px; --btn-px: 18px; --btn-minw: 96px; --btn-ls: .12em;
@@ -194,7 +187,6 @@ img { max-width: 100%; }
 .btn:active:not(:disabled)::before { opacity: 1; background: rgba(0, 0, 0, .06); }
 .btn.primary, .btn.play { --btn-bg: var(--pri); --btn-edge: var(--pri-edge); --btn-stroke: var(--pri-stroke); --btn-inset: var(--pri-inset); }
 .btn.secondary, .btn.pass { --btn-bg: var(--sec); --btn-edge: var(--sec-edge); --btn-stroke: var(--sec-stroke); --btn-inset: var(--sec-inset); }
-.btn.util { --btn-bg: var(--util-bg); --btn-edge: var(--util-edge); --btn-stroke: var(--util-stroke); --btn-inset: rgba(30, 40, 150, .28); }
 .btn.ok { --btn-bg: var(--ok); --btn-edge: var(--ok-edge); --btn-stroke: var(--ok-stroke); --btn-inset: rgba(0, 90, 40, .28); }
 .btn.danger { --btn-bg: var(--danger); --btn-edge: var(--danger-edge); --btn-stroke: var(--danger-stroke); --btn-inset: rgba(120, 10, 10, .28); }
 .btn.ghost {
@@ -211,63 +203,12 @@ img { max-width: 100%; }
 .btn.sm { --btn-h: 28px; --btn-fs: 13px; --btn-px: 12px; --btn-minw: 0px; }
 .btn.lg { --btn-h: 48px; --btn-fs: 20px; --btn-px: 28px; --btn-minw: 140px; }
 .btn.spaced { --btn-ls: .35em; }
-.btn .ui-icon { -webkit-text-stroke: 0; }
 @media (hover: hover) {
     .btn:hover:not(:disabled)::before { opacity: 1; }
 }
 
-/* ---------- pills, badges, plates, avatars ---------- */
-.gd-pill {
-    --pill-h: 22px;
-    display: inline-flex; align-items: center; gap: 4px;
-    height: var(--pill-h);
-    padding: 0 10px;
-    border-radius: var(--r-pill);
-    background: var(--util-bg);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, .45) inset, 0 -2px 0 rgba(0, 0, 0, .18) inset, 0 1px 2px rgba(0, 0, 0, .3);
-    color: #fff;
-    font: 800 var(--fs-11)/1 var(--font-ui);
-    letter-spacing: .06em;
-    white-space: nowrap;
-}
-.gd-pill.is-ok { background: linear-gradient(#43dc8e, var(--chat)); }
-.gd-pill.is-dark { background: rgba(10, 18, 60, .45); box-shadow: none; font-weight: 700; }
-.gd-pill.is-gold { background: linear-gradient(#fff6c4, #ffd766 55%, #f2b43c); color: #a3240c; box-shadow: 0 0 0 1px #fff8d8 inset, 0 1px 2px rgba(0, 0, 0, .3); }
-
-.gd-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    white-space: nowrap;
-    min-width: 18px; height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    background: rgba(0, 0, 0, .5);
-    color: #fff;
-    font: 700 13px/1 var(--font-num);
-}
-.gd-badge.is-report { /* 剩N张 at <=10 cards */
-    background: var(--report-bg);
-    color: var(--report-ink);
-    font: 800 10px/1 var(--font-ui);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
-    border-radius: 3px;
-}
-.gd-badge.is-report b { color: var(--report-num); font: 800 13px/1 var(--font-num); margin: 0 1px; }
-.is-pulse { animation: gd-pulse 1s ease-in-out infinite; }
-@keyframes gd-pulse { 50% { scale: 1.12; } }
-
-.gd-plate {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: var(--r-tile);
-    background: rgba(0, 0, 0, .28);
-    color: #fff;
-    font: 700 11px/1.3 var(--font-ui);
-    white-space: nowrap;
-    text-align: center;
-}
-.gd-plate .num { font: 600 11px/1.3 var(--font-num); color: #ffe9a6; letter-spacing: .02em; }
-
-/* Circular photo, 2px identity ring, pill label overlapping the bottom edge.
+/* ---------- avatar ----------
+   Circular photo, 2px identity ring, pill label overlapping the bottom edge.
    Nothing is ever drawn outside the circle except that label (standing rule). */
 .gd-avatar {
     --av-size: 46px; --ring: var(--mate); --ring-d: var(--mate-d);
@@ -305,17 +246,6 @@ img { max-width: 100%; }
     font: 700 10px/14px var(--font-ui);
     white-space: nowrap;
 }
-.gd-avatar-tag.gd-badge { height: 15px; bottom: -8px; }
-/* Display-font words (combo labels, 胜利, VS). Static filter only; animate transform/opacity. */
-.gd-display { font-family: var(--font-display); font-weight: 400; }
-.gd-gold-text {
-    background: linear-gradient(180deg, #fffbe0 0%, #ffe066 38%, #ff9a1c 70%, #e4480e 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 2px 0 #7a1e00) drop-shadow(0 0 1px #7a1e00);
-}
-.gd-stroke-text { color: #fff; -webkit-text-stroke: 3px rgba(40, 30, 10, .8); paint-order: stroke fill; }
 
 /* ---------- card component ----------
    Markup (cardHTML): div.card[.red|.black][.small][.back][.wild][.level-card][.has-portrait]
@@ -547,32 +477,6 @@ img { max-width: 100%; }
 @media (hover: hover) {
     .card[data-card-id]:not(.selected):hover { translate: 0 var(--card-hover-lift, calc(var(--cw) * -.06)); }
 }
-
-/* ---------- CSS felt (fallback when the three.js stage is not live) ----------
-   Put .felt on a positioned full-bleed element; the stage package sets
-   html.gd-stage-live to make it transparent over the WebGL canvas. */
-.felt {
-    position: relative;
-    isolation: isolate;
-    background: radial-gradient(130% 100% at 50% 38%, var(--felt-c) 0%, var(--felt-1) 28%, var(--felt-2) 52%, var(--felt-3) 72%, var(--felt-4) 88%, var(--felt-5) 100%);
-}
-.felt::before, .felt::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-}
-.felt::before { /* twill */
-    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 4px);
-}
-.felt::after { /* thin rim arc + floor in the bottom corners + soft bottom falloff */
-    background:
-        radial-gradient(86.5% 98% at 50% 0%, transparent 0 99.3%, rgba(255, 255, 255, .22) 99.5% 100.1%, rgba(0, 0, 0, .32) 100.3% 101.6%, var(--floor) 101.8% 112%, var(--floor-2) 130%),
-        linear-gradient(transparent 70%, rgba(0, 0, 0, .22));
-}
-html.gd-stage-live .felt { background: transparent; }
-html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: none; }
 
 /* ---------- toast ---------- */
 .toast {
