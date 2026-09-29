@@ -3773,7 +3773,8 @@ document.getElementById("copy-link-btn").addEventListener("click", async () => {
         await navigator.clipboard.writeText(url.toString());
         showToast(L("Room link copied", "房间链接已复制"));
     } catch (_) {
-        showToast(roomCode);
+        // clipboard blocked (the Google Sites iframe): the code to pass on, labelled
+        showToast(L(`Room code ${roomCode}`, `房间号 ${roomCode}`), 3200);
     }
 });
 
