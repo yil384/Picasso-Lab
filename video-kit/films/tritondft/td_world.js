@@ -48,12 +48,12 @@ export async function buildRoom(W) {
   add(new THREE.PlaneGeometry(26, 26), { color: 0xf2dcae, map: floorTex, hatchDir: [1, 0, 0], toneBias: 0.02, spec: 0 }, { cast: false }, [0, L.floorY, 0], [-Math.PI / 2, 0, 0]);
 
   // ---- back wall: sky-blue plaster with the round moon window, a door-frame, pipes (baked wash) ----
-  const wallTex = await bake(THREE, { width: 2048, height: 768, seed: 12, key: 'wall-v1', background: '#ffffff' }, (p, brush, w, h) => paintWall(ctx, brush, w, h));
+  const wallTex = await bake(THREE, { width: 2048, height: 768, seed: 12, key: 'wall-v2', background: '#ffffff' }, (p, brush, w, h) => paintWall(ctx, brush, w, h));
   const wallW = 16, wallH = 6;
   const wallMat = { color: 0xffffff, map: wallTex, hatchDir: [0, 1, 0.3], toneBias: 0.0, spec: 0, receive: true, rim: 0 };
   add(new THREE.PlaneGeometry(wallW, wallH), wallMat, { cast: false }, [0, L.floorY + wallH / 2, L.wallZ]);
   // side walls (so orbits and whips always see a room), plain plaster
-  const sideTex = await bake(THREE, { width: 1024, height: 512, seed: 13, key: 'side-v1', background: '#ffffff' }, (p, brush, w, h) => paintPlaster(ctx, brush, w, h, 'side'));
+  const sideTex = await bake(THREE, { width: 1024, height: 512, seed: 13, key: 'side-v2', background: '#ffffff' }, (p, brush, w, h) => paintPlaster(ctx, brush, w, h, 'side'));
   const side = { color: 0xffffff, map: sideTex, hatchDir: [0, 1, 0.3], spec: 0, rim: 0 };
   add(new THREE.PlaneGeometry(12, wallH), side, { cast: false }, [-wallW / 2, L.floorY + wallH / 2, L.wallZ + 6], [0, Math.PI / 2, 0]);
   add(new THREE.PlaneGeometry(12, wallH), side, { cast: false }, [wallW / 2, L.floorY + wallH / 2, L.wallZ + 6], [0, -Math.PI / 2, 0]);
@@ -84,9 +84,13 @@ export async function buildRoom(W) {
 function paintPlaster(ctx, brush, w, h, key) {
   const r = ctx.rng('plaster', key);
   brush.noStroke();
-  brush.fill('#5fb1dc', 255); brush.fillBleed(0.0); brush.fillTexture(0.3, 0.3); brush.rect(-10, -10, w + 20, h + 20);
-  for (let k = 0; k < 10; k++) { brush.fill(k % 2 ? '#4a9fd0' : '#79c0e6', 70); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.6, 0.5); brush.circle(r.range(0, w), r.range(0, h), r.range(90, 220), 0.6); }
-  brush.set('inkpen', '#1d3f63', 0.8);
+  brush.fill('#f2e3c2', 255); brush.fillBleed(0.0); brush.fillTexture(0.3, 0.3); brush.rect(-10, -10, w + 20, h + 20);
+  for (let k = 0; k < 10; k++) { brush.fill(k % 2 ? '#e6d0a4' : '#fbf1dc', 70); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.6, 0.5); brush.circle(r.range(0, w), r.range(0, h), r.range(90, 220), 0.6); }
+  // sky-blue wainscot along the bottom third (the accent colour), with a navy rail
+  brush.fill('#2f9bd6', 255); brush.fillBleed(0.01); brush.fillTexture(0.35, 0.3); brush.rect(-10, h * 0.72, w + 20, h * 0.3);
+  brush.fill('#1f86c2', 90); brush.fillBleed(0.2, 'out'); for (let k = 0; k < 6; k++) brush.circle(r.range(0, w), r.range(h * 0.76, h), r.range(40, 90), 0.5);
+  brush.set('bigink', '#0b3558', 1.6); brush.line(0, h * 0.72, w, h * 0.72 + r.gauss(0, 1));
+  brush.set('inkpen', '#6b4a2e', 0.8);
   for (let k = 0; k < 26; k++) { const x = r.range(0, w), y = r.range(0, h); brush.line(x, y, x + r.range(14, 40), y + r.gauss(0, 2)); }
 }
 
@@ -160,11 +164,16 @@ export async function buildBench(W) {
     let x = 0, k = 0;
     while (x < w) { const bw = 60 + (k * 37) % 40; brush.noStroke(); brush.fill(cols[k % cols.length], 255); brush.fillTexture(0.3, 0.3); brush.rect(x, -4, bw, h + 8); brush.set('bigink', '#16162c', 1.2); brush.line(x, 0, x, h); brush.set('inkpen', k % 3 ? '#fff6e0' : '#16162c', 1.0); brush.line(x + 10, 40, x + bw - 10, 40); brush.line(x + 10, h - 40, x + bw - 10, h - 40); x += bw; k++; }
   });
-  // one low drum of fat books (low enough that the job on the ring and the agents read past it) + a brass finial
-  const tex = spineTex.clone(); tex.needsUpdate = true; tex.repeat.set(2, 1); tex.wrapS = THREE.RepeatWrapping;
-  W.hubDrums = [add(new THREE.CylinderGeometry(0.3, 0.3, 0.24, 40), [{ color: 0xffffff, map: tex, rim: 0.7, hatchDir: [0, 1, 0], seed: 17 }, { color: COL.cream, rim: 0.3, hatch: 0.4 }, { color: COL.cream }], { outline: 0.9 }, [0, 0.07 + 0.12, 0], [0, 0, 0], hub)];
-  add(new THREE.CylinderGeometry(0.05, 0.07, 0.1, 16), { color: COL.gold, hatchMode: 'u', rim: 0.7 }, { outline: 0.6 }, [0, 0.36, 0], [0, 0, 0], hub);
-  add(new THREE.SphereGeometry(0.06, 16, 10), { color: COL.pop, rim: 0.7 }, { outline: 0.6 }, [0, 0.44, 0], [0, 0, 0], hub);
+  // the Library: a ring of fat standing books (varied heights, a few leaning) round a brass finial
+  add(new THREE.CylinderGeometry(0.34, 0.36, 0.06, 40), { color: 0x8a5a33, hatchMode: 'u', shadeColor: 0x4a2c16, shadeMix: 0.4 }, { outline: 0.8 }, [0, 0.09, 0], [0, 0, 0], hub);
+  const bcols = [COL.sky, COL.navy, COL.pop, COL.skyL, COL.cream, COL.sky, COL.gold, COL.navy, COL.skyL, COL.pop, COL.sky, COL.cream, COL.navy, COL.skyL, COL.gold, COL.sky, COL.pop, COL.navy];
+  W.hubBooks = bcols.map((c, k) => {
+    const a = k / bcols.length * TAU, h = 0.2 + 0.13 * hsh(k, 21), lean = [3, 8, 13].includes(k) ? 0.22 : 0;
+    const m = add(new THREE.BoxGeometry(0.15, h, 0.085), { color: c, hatchDir: [0, 1, 0], rim: 0.5, seed: 400 + k }, { outline: 0.7 }, [Math.cos(a) * 0.25, 0.12 + h / 2, -Math.sin(a) * 0.25], [0, a, lean], hub);
+    return { m, a };
+  });
+  add(new THREE.CylinderGeometry(0.035, 0.05, 0.3, 12), { color: COL.gold, hatchMode: 'u', rim: 0.7 }, { outline: 0.6 }, [0, 0.27, 0], [0, 0, 0], hub);
+  add(new THREE.SphereGeometry(0.06, 16, 10), { color: COL.pop, rim: 0.7 }, { outline: 0.6 }, [0, 0.45, 0], [0, 0, 0], hub);
   W.hub = hub;
 }
 
@@ -175,7 +184,7 @@ export function buildSilicon(W, A = 0.5, parent = null) {
   const g = new THREE.Group(); (parent || scene).add(g);
   const inner = new THREE.Group(); g.add(inner);
   const atomGeo = new THREE.SphereGeometry(A * 0.1, 24, 16), inGeo = new THREE.SphereGeometry(A * 0.11, 24, 16);
-  const atoms = cell.atoms.map((p, i) => add(i >= 14 ? inGeo : atomGeo, { color: i >= 14 ? COL.skyL : COL.cream, rim: 0.7, toneBias: 0.1, seed: 300 + i, hatch: 0.6 }, { outline: 0.55 }, p.map((v) => v * A + c0), [0, 0, 0], inner));
+  const atoms = cell.atoms.map((p, i) => add(i >= 14 ? inGeo : atomGeo, { color: COL.cream, rim: 0.7, toneBias: 0.1, seed: 300 + i, hatch: 0.6 }, { outline: 0.55 }, p.map((v) => v * A + c0), [0, 0, 0], inner));
   const bondGeo = new THREE.CylinderGeometry(A * 0.028, A * 0.028, 1, 10);
   const bonds = cell.bonds.map(([a, b]) => {
     const pa = new THREE.Vector3(...cell.atoms[a]).multiplyScalar(A).addScalar(c0), pb = new THREE.Vector3(...cell.atoms[b]).multiplyScalar(A).addScalar(c0);

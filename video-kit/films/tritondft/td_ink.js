@@ -8,8 +8,11 @@ import { L, station, ST } from './td_world.js';
 
 const SPR = {};
 export async function bakeLettering(W) {
-  SPR.vroom = await bakeWord(W.THREE, 'vroom', 'VROOOM', 150, { fill: PAL.pop, shade: PAL.popD, arc: 0.14, jaunt: 0.22, seed: 4 }, 3);
-  SPR.ding = await bakeWord(W.THREE, 'ding', 'DING!', 140, { fill: PAL.gold, shade: PAL.pop, arc: 0.06, jaunt: 0.2, seed: 7 }, 3);
+  // condensed, slanted comic capitals: first letter big, the rest jostling (not a rounded web font)
+  const sfx = (n) => ({ weight: 0.2, skew: -0.24, jaunt: 0.32, bounce: 0.16, gap: 0.08, scaleOf: (i) => (i === 0 ? 1.25 : 0.92 + 0.12 * ((i * 7) % 3) / 2) });
+  SPR.vroom = await bakeWord(W.THREE, 'vroom2', 'VROOOM', 150, { ...sfx(6), fill: PAL.pop, shade: PAL.popD, arc: 0.14, seed: 4 }, 3);
+  SPR.ding = await bakeWord(W.THREE, 'ding2', 'DING!', 140, { ...sfx(5), fill: PAL.gold, shade: PAL.pop, arc: 0.06, seed: 7 }, 3);
+  SPR.clank = await bakeWord(W.THREE, 'clank2', 'CLANK!', 120, { ...sfx(6), fill: PAL.skyL, shade: PAL.sky, arc: -0.08, seed: 9 }, 3);
 }
 
 const V = (W, x, y, z) => new W.THREE.Vector3(x, y, z);
@@ -83,6 +86,13 @@ export function inkOverlay(W, ctx, brush) {
     const a = (F - K.gust[0]) / 12;
     for (let q = 0; q < 4; q++) { const y = hp.y + (q - 1.5) * 0.35 * hu, x0 = hp.x + 2.4 * hu - a * 3.4 * hu; brush.set('inkpen', '#6d7a90', 1.3); brush.spline([[x0, y], [x0 - 0.5 * hu, y - 0.08 * hu], [x0 - 1.0 * hu, y + 0.02 * hu]], 0.6); }
   }
+  // vc-relax: a dashed ghost of the starting cell, so the settle to the relaxed size reads
+  if (win(F, K.relax[0] - 4, K.cover[0]) && W.cart.visible) {
+    const E = [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3], [2, 6], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]];
+    const P = W.si.atoms.slice(0, 8).map((a) => prj(W, ctx, W.si.g.localToWorld(a.position.clone().multiplyScalar(0.92))));
+    brush.set('inkpen', PAL.popD, 1.3);
+    for (const [i, j] of E) for (let q = 0; q < 6; q++) { const t0 = q / 6, t1 = t0 + 0.09; brush.line(P[i].x + (P[j].x - P[i].x) * t0, P[i].y + (P[j].y - P[i].y) * t0, P[i].x + (P[j].x - P[i].x) * t1, P[i].y + (P[j].y - P[i].y) * t1); }
+  }
   // Refiner: click ticks; two pennies fly off when it backs off
   for (const f0 of [...K.click, K.cutoff]) if (win(F, f0, f0 + 6)) { const kn = W.con.knobs[f0 === K.cutoff ? 1 : 0], c = prj(W, ctx, wp(W, kn, [0, 0.06, 0])), u = pxu(W, ctx, wp(W, kn)); ticks(brush, c.x, c.y, 0.08 * u * (1 + (F - f0) * 0.1), 0.17 * u, 5, -2.8, -0.3, ink, 1.2); }
   if (win(F, K.click[2], K.click[2] + 14)) for (const sd of [0, 1]) {
@@ -136,7 +146,7 @@ function lensEye(W, ctx, g, F) {
   const c = prj(W, ctx, wp(W, hd, [0, 0, 0.01])), ux = prj(W, ctx, wp(W, hd, [rr, 0, 0.01])), uy = prj(W, ctx, wp(W, hd, [0, rr, 0.01]));
   if (!c.front) return;
   const camToLens = W.camera.position.clone().sub(wp(W, hd, [0, 0, 0])), nrm = wp(W, hd, [0, 0, 1]).sub(wp(W, hd, [0, 0, 0]));
-  if (camToLens.dot(nrm) <= 0) return;                 // seen from behind: no eye
+  // (a cartoon cheat: the one eye reads from either side of the lens)
   g.save();
   g.transform(ux.x - c.x, ux.y - c.y, -(uy.x - c.x), -(uy.y - c.y), c.x, c.y);   // unit disc -> lens ellipse (y up)
   g.beginPath(); g.arc(0, 0, 1, 0, TAU); g.clip();
@@ -194,11 +204,12 @@ export function lettering(W, ctx, g) {
   if (W.cart.visible && (win(F, K.fail + 2, K.lap[0]) || win(F, K.ding + 4, K.suck[0]))) {
     const fail = F < K.lap[0], f0 = fail ? K.fail + 2 : K.ding + 4, sp = W.si.g.getWorldPosition(V(W, 0, 0, 0));
     const c = prj(W, ctx, [sp.x, sp.y + 0.36, sp.z]), u = pxu(W, ctx, sp);
-    if (c.front) mark(g, c.x, c.y, clamp(0.16 * u, 18, 90) * ob((F - f0) / 5), fail ? 'x' : 'v', fail ? 0.08 : -0.06);
+    if (c.front) mark(g, c.x, Math.max(c.y, 250), clamp(0.16 * u, 18, 90) * ob((F - f0) / 5), fail ? 'x' : 'v', fail ? 0.08 : -0.06);
   }
   const vr = F - K.roar;
   if (vr >= 0 && vr < 30) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 40, 260, 520), vr, { life: 30, rot: -0.1, scale: 1.05, popF: 4 }); }
+  const ck = F - K.crash;
+  if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 160, 420, 1500), clamp(pp.y + 60, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;
   if (dg >= 0 && dg < 24) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 24, rot: -0.12, scale: 1.0, popF: 4 }); }
-  smokeCover(g, F);
 }

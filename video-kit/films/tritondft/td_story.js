@@ -15,7 +15,7 @@ export const LOOK = {
   hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.5, hatchWobble: 0.08, hatchSwell: 0.35,
   htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0], htCol: [0.06, 0.18, 0.34],
   lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
-  bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.1,
+  bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.22,
   shadeGlaze: [0.62, 0.72, 0.9], coreGlaze: [0.62, 0.72, 0.9], keyTint: [1.0, 0.97, 0.9],
   rule: 0.0, bgDots: [0.2, 0.52, 0.75, 0.22], dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16,
   glassGlint: 0.5,
@@ -31,7 +31,7 @@ export const K = {
   heave: [56, 70], clock: 70, smirk: [72, 90],
   pop: [98, 110], catch: 110, read: [114, 124], book: [124, 142], chop: 150, deal: [156, 162, 168],
   type: [178, 196], rip: 198, feed: [200, 210], jump: [210, 216], lever: 218, roar: 220, tape: [228, 262],
-  relax: [240, 272], scf: [246, 272], cover: [272, 280],
+  relax: [238, 258], scf: [256, 274], cover: [274, 288],
   gust: [280, 288], page: [290, 302], glance: [304, 316],
   hop4: [322, 330], read4: [330, 364], bead1: 334, fail: 362, rush: [372, 384],
   click: [398, 410, 430], crash: 410, cutoff: 438, level: 446, go: 452,
@@ -58,9 +58,9 @@ const V3 = (x, y, z) => new W.THREE.Vector3(x, y, z);
 const deskP = (x, y, z) => [L.desk.x + x, y, L.desk.z + z];
 const HOOT = deskP(-0.3, 0.02, -0.95);
 const GIANT = deskP(0.48, 0, -0.28);           // upright spot of the giant hourglass
-const GIANT_LAY = deskP(0.2, 0, -0.34);        // where it lies (Hoot's pillow)
+const GIANT_LAY = deskP(0.66, 0, -0.86);        // where it lies (Hoot's pillow)
 const TINY = deskP(0.05, 0, 0.36);            // the tiny hourglass (Hoot's dare), same shape, 1/68 the volume
-const SCORE = deskP(-0.85, 0.004, 0.22);       // the DFTBench scorecard (98%)
+const SCORE = deskP(-0.64, 0.004, 0.16);       // the DFTBench scorecard (98%)
 const faceYaw = (from, to) => Math.atan2(to[0] - from[0], to[2] - from[2]);
 
 // ---------------------------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ async function buildProps(W) {
   add(new THREE.BoxGeometry(0.05, 0.19, 0.14), { color: COL.navy, hatchMode: 'u', rim: 0.5 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], W.mbook);
   add(new THREE.BoxGeometry(0.056, 0.035, 0.146), { color: COL.pop, rim: 0.5 }, { outline: 0.4 }, [0, 0.04, 0], [0, 0, 0], W.mbook);
   add(new THREE.BoxGeometry(0.04, 0.18, 0.02), { color: COL.cream, hatch: 0.3 }, { outline: 0.3 }, [0, 0, 0.065], [0, 0, 0], W.mbook);
-  W.tickets = texs.map((tx) => add(new THREE.PlaneGeometry(0.2, 0.14), { color: COL.cream, map: tx, side: THREE.DoubleSide, rim: 0.3, toneBias: 0.12, hatch: 0.4 }, { outline: 0.45 }, [0, 0, 0]));
+  W.tickets = texs.map((tx) => add(new THREE.PlaneGeometry(0.28, 0.2), { color: COL.cream, map: tx, side: THREE.DoubleSide, rim: 0.3, toneBias: 0.12, hatch: 0.4 }, { outline: 0.45 }, [0, 0, 0]));
   // the Quantum ESPRESSO input sheet (a namelist-like scribble texture) torn from Clack and fed to Big Iron
   const sheetTex = await bake(THREE, { width: 256, height: 320, seed: 71, key: 'sheet-v1', background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill('#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
@@ -151,11 +151,11 @@ async function buildProps(W) {
   W.bead = add(new THREE.SphereGeometry(0.03, 16, 12), { color: COL.pop, rim: 0.8, shadeColor: COL.popD, shadeMix: 0.4 }, { outline: 0.5 }, [0, 0.2, 0.035], [0, 0, 0], gauge);
   W.gauge = gauge;
   // the Refiner's k-grid pegboard on the console (at most 5x5 = 25 pegs) and the accuracy gem
-  const pb = new THREE.Group(); pb.position.set(0, 0.205, -0.02); W.con.root.add(pb);
+  const pb = new THREE.Group(); pb.position.set(0, 0.26, 0.02); pb.rotation.x = 0.95; W.con.root.add(pb);
   add(new THREE.BoxGeometry(0.28, 0.02, 0.2), { color: COL.cream, rim: 0.3, hatch: 0.4 }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], pb);
   W.pegs = [];
-  const pegGeo = new THREE.CylinderGeometry(0.011, 0.011, 0.055, 6);
-  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) W.pegs.push({ i, j, m: add(pegGeo, { color: COL.navy, rim: 0.3, hatch: 0 }, { outline: 0.3, cast: false }, [0, 0.02, 0], [0, 0, 0], pb) });
+  const pegGeo = new THREE.CylinderGeometry(0.017, 0.017, 0.05, 8);
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) W.pegs.push({ i, j, m: add(pegGeo, { color: COL.pop, rim: 0.5, hatch: 0 }, { outline: 0.5, cast: false }, [0, 0.02, 0], [0, 0, 0], pb) });
   W.con.knobs[0].position.set(-0.19, 0.24, 0.1); W.con.knobs[1].position.set(0.19, 0.24, 0.1);
   W.con.knobs.forEach((k) => k.scale.setScalar(0.8));
   W.gem = add(new THREE.OctahedronGeometry(0.06, 0), { color: COL.skyL, rim: 0.8, hatch: 0.5, shadeColor: COL.sky, shadeMix: 0.4 }, { outline: 0.5 }, [0, -0.2, 0], [0, 0, 0], W.tilt.pans[0].g);
@@ -183,7 +183,8 @@ async function buildProps(W) {
       k++;
     }
   });
-  W.score = add(new THREE.PlaneGeometry(0.4, 0.29), { color: COL.cream, map: scTex, rim: 0.2, toneBias: 0.1, hatch: 0.4 }, { outline: 0.5, cast: false }, [...SCORE], [-Math.PI / 2, 0, 0.12]);
+  W.score = add(new THREE.PlaneGeometry(0.52, 0.37), { color: COL.cream, map: scTex, rim: 0.2, toneBias: 0.1, hatch: 0.4, side: THREE.DoubleSide }, { outline: 0.6 }, [SCORE[0], 0.13, SCORE[2]], [-Math.PI / 2 + 0.75, 0.15, 0]);   // propped up, tilted to camera
+  add(new THREE.BoxGeometry(0.4, 0.2, 0.04), { color: 0x8a5a33, hatchMode: 'u' }, { outline: 0.5 }, [SCORE[0], 0.1, SCORE[2] - 0.13], [-0.3, 0.15, 0]);
   W.stamp = new THREE.Group(); scene.add(W.stamp);
   add(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 8), { color: 0xc08a4c, hatchMode: 'u' }, { outline: 0.5 }, [0, 0.12, 0], [0, 0, 0], W.stamp);
   add(new THREE.SphereGeometry(0.04, 12, 8), { color: COL.pop }, { outline: 0.5 }, [0, 0.21, 0], [0, 0, 0], W.stamp);
@@ -231,10 +232,10 @@ export function updateAll(w, ctx) {
 // ---- turntable + the silicon cell (vc-relax breathing) ----
 function updateTurn(F) {
   W.turn.rotation.y = turnAngle(F);
-  let s = 0.94;                                                          // unrelaxed guess
-  if (F >= K.relax[0]) { const a = F - K.relax[0]; s = 1 - 0.06 * Math.exp(-a / 9) * Math.cos(a * 0.45); }
+  let s = 0.92;                                                          // unrelaxed guess
+  if (F >= K.relax[0]) { const a = F - K.relax[0]; s = 1 - 0.08 * Math.exp(-a / 5) * Math.cos(a * 0.5); }
   if (win(F, K.huff - 2, K.S7)) { const a = F - K.huff + 2; s = 1 + 0.015 * Math.exp(-a / 6) * Math.sin(a * 0.7); }   // lap 2 re-settles
-  if (F >= 700) s = lerp(1, 0.94, sm((F - 700) / 12));                  // reset off screen for the loop
+  if (F >= 700) s = lerp(1, 0.92, sm((F - 700) / 12));                  // reset off screen for the loop
   W.si.inner.scale.setScalar(s);
   st.siScale = s;
   st.jobV = Math.abs(jobTheta(F + 0.5) - jobTheta(F - 0.5));
@@ -263,13 +264,13 @@ function updateCart(F) {
   }
   // pops out of the desk mouth and lands in Hoot's wings; handed to Tri at the end
   const m = W.tube.curve.getPointAt(0);
-  const hold = W.hoot.head.localToWorld(V3(0, -0.66, 0.5));
+  const hold = W.hoot.head.localToWorld(V3(0, -0.52, 0.72));
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k)];
   if (F >= K.handBack[0]) { const tp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0)), b = sm((F - K.handBack[0]) / (K.handBack[1] - K.handBack[0])); p = [lerp(p[0], tp.x, b), lerp(p[1], tp.y - 0.1, b), lerp(p[2], tp.z, b)]; }
   C.position.set(...p); C.rotation.set(0, 0.3 + (F < K.land + 8 ? (1 - k) * 4 : 0), 0);
-  C.scale.setScalar(F < K.land + 8 ? lerp(0.4, 0.62, k) : lerp(0.62, 1, sm((F - K.handBack[0]) / 8)));
+  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.5, k) : lerp(0.5, 1, sm((F - K.handBack[0]) / 8)));
 }
 
 // ---- Hoot (the researcher) ----
@@ -459,7 +460,7 @@ function updateTri(F) {
   }
   if (win(F, K.book[1], K.deal[2] + 6)) {
     const a = F - K.chop;
-    yaw = faceYaw(home, [home[0] + 1, 0, home[2] + 0.5]);
+    yaw = faceYaw(home, [home[0] + 0.7, 0, home[2] + 1.0]);
     if (a < 0) { lean = -0.35 * sm((F - K.book[1]) / (K.chop - K.book[1])); expr = 'squint'; }
     else { lean = lerp(0.55, 0, sm(a / 5)); sq = ringv(a, 0.12, 1.0, 0.25); expr = a < 8 ? 'grin' : 'determined'; }
     if (F >= K.deal[0]) { const d = K.deal.findIndex((f, i) => F >= f && (i === 2 || F < K.deal[i + 1])); armR = -0.6 - 1.2 * (d % 2); expr = 'determined'; }
@@ -556,7 +557,7 @@ function updateEngine(F) {
 // ---- Loupe (Analyzer) + gauge ----
 function beadY(F) {                     // bead offset from the band centre (board units); band half-height 0.028
   if (F < K.bead1) return -0.13;
-  if (F < K.S6) { const a = F - K.bead1; return 0.1 * Math.sin(a * 0.42) * (0.85 + 0.15 * Math.cos(a * 0.13)) * Math.min(1, a / 4); }   // lap 1: never inside
+  if (F < K.S6) { const a = F - K.bead1; return 0.095 + 0.07 * Math.exp(-a / 7) * Math.cos(a * 0.5) - 0.2 * Math.exp(-a / 2); }   // lap 1: settles outside (above) the band
   if (F < K.read7) return -0.13 * sm((F - K.S6) / 10);
   if (F < 700) { const a = F - K.read7; return 0.11 * Math.exp(-a / 6.5) * Math.cos(a * 0.55); }                          // lap 2: settles inside
   return -0.13 * sm((F - 700) / 10);
@@ -600,7 +601,7 @@ function updateLoupe(F) {
     W.scene.updateMatrixWorld(true);
     const hp = R.arms[1].children[1].getWorldPosition(V3(0, 0, 0));
     let sp = [hp.x, hp.y - 0.14, hp.z];
-    if (F >= K.slam[0] - 3 && F < K.slam[0] + 8) { const k = F < K.slam[0] ? sm((F - K.slam[0] + 3) / 3) : 1 - sm((F - K.slam[0] - 3) / 5); sp = [lerp(sp[0], SCORE[0], k), lerp(sp[1], 0.005, k), lerp(sp[2], SCORE[2], k)]; }
+    if (F >= K.slam[0] - 3 && F < K.slam[0] + 8) { const k = F < K.slam[0] ? sm((F - K.slam[0] + 3) / 3) : 1 - sm((F - K.slam[0] - 3) / 5); sp = [lerp(sp[0], SCORE[0], k), lerp(sp[1], 0.15, k), lerp(sp[2], SCORE[2] + 0.04, k)]; }
     W.stamp.position.set(...sp); W.stamp.rotation.set(0, yaw, 0);
   }
   W.gauge.position.set(gp[0], 0, gp[2]); W.gauge.rotation.y = faceYaw(gp, [gp[0] + 0.25, 0, gp[2] + 1]);
@@ -650,9 +651,9 @@ function updateTilt(F) {
   R.pennies.forEach((m, k) => { m.visible = k < n; });
   const kg = kgrid(F);
   W.gem.scale.setScalar(kg === 3 ? 0.7 : kg === 4 ? 1.0 : 1.3);
-  const cpos = station(ST.refn + 0.4, 1.42);
+  const cpos = [home[0] - 0.42, 0, home[2] + 0.02];
   W.con.root.position.set(cpos[0], 0, cpos[2]);
-  W.con.root.rotation.y = faceYaw(cpos, [cpos[0] + 0.2, 0, cpos[2] + 1.0]);
+  W.con.root.rotation.y = faceYaw(cpos, [cpos[0] + 0.15, 0, cpos[2] + 1.0]);
   const since = F - (kg === 4 && F < K.click[1] ? K.click[0] : kg === 5 ? K.click[1] : kg === 4 ? K.click[2] : -99);
   W.pegs.forEach(({ i, j, m }) => {
     const on = i < kg && j < kg, sp = 0.2 / (kg - 1);
@@ -671,6 +672,8 @@ function updateProps(F) {
   { // Tri's method book: slides out of the Library drum into its hand, riffles, flies back
     const Bk = W.mbook, b0 = K.book[0], b1 = K.book[1];
     Bk.visible = win(F, b0, b1 + 8);
+    const tth = TRI_TH, slot = W.hubBooks.reduce((best, b) => (Math.abs(Math.atan2(Math.sin(b.a - tth), Math.cos(b.a - tth))) < Math.abs(Math.atan2(Math.sin(best.a - tth), Math.cos(best.a - tth))) ? b : best));
+    W.hubBooks.forEach((b) => { b.m.visible = b !== slot || !Bk.visible; });
     if (Bk.visible) {
       const tri = station(TRI_TH), dx = tri[0] - L.bench.x, dz = tri[2] - L.bench.z, dl = Math.hypot(dx, dz);
       const edge = [L.bench.x + dx / dl * 0.32, 0.19, L.bench.z + dz / dl * 0.32];
@@ -786,7 +789,7 @@ const rigS1 = (F) => {        // medium 3/4 on Hoot with the tube plate in frame
 };
 const rigHome = (F) => rigS1(F);
 const rigFunnel = (F) => {    // low on the funnel, crane down to Tri
-  const k = sm((F - 96) / 22), tri = station(TRI_TH);
+  const k = sm((F - 96) / 14), tri = station(TRI_TH);
   return { tg: [tri[0] + 0.32, lerp(1.45, 0.5, k), tri[2] + 0.12], az: lerp(0.1, 0.25, k), el: lerp(-0.08, 0.38, k), r: lerp(3.0, 2.2, k), fov: 34, roll: 0.03 };
 };
 const rigTri = (F) => {
@@ -801,8 +804,8 @@ const rigClack = (F) => {     // medium on Clack; crash pull-back to a low dutch
   return mixRig(med, wide, k);
 };
 const rigCell = (F) => {      // tilt down to the silicon cell: it breathes and settles, density condenses on the bonds
-  const jp = jobPos(F), k = sm((F - 244) / 24);
-  return { tg: [jp[0], 0.46, jp[2]], az: lerp(0.62, 0.45, k), el: lerp(0.22, 0.26, k), r: lerp(1.6, 1.3, k), fov: 32, roll: 0.0 };
+  const jp = jobPos(F), k = sm((F - 236) / 10);
+  return { tg: [jp[0], 0.42, jp[2]], az: lerp(0.62, 0.5, k), el: lerp(0.22, 0.26, k), r: lerp(1.6, 1.45, k), fov: 32, roll: 0.0 };   // locked while the cell relaxes
 };
 const rigS3b = (F) => {       // Hoot's eye level, slow push; both hourglasses in frame
   const k = sm((F - K.S3b) / 40);
@@ -819,13 +822,16 @@ const rigLens = (F) => {      // the lens rushes at the camera (iris match cut t
 const rigKnob = (F) => {      // from a knob close-up, pull out to Tilt; the roll follows the beam
   const rf = station(ST.refn), kn = W.con.knobs[0].getWorldPosition(V3(0, 0, 0)), k = oc(clamp((F - K.S5) / 14));
   const knob = { tg: [kn.x, kn.y + 0.04, kn.z], az: W.con.root.rotation.y, el: 0.9, r: 0.42, fov: 34, roll: 0 };
-  const med = { tg: [lerp(rf[0], kn.x, 0.35) + 0.12, 0.36, lerp(rf[2], kn.z, 0.35) - 0.1], az: 0.3, el: 0.16, r: 2.45, fov: 34, roll: 0.3 * (st.tilt ? st.tilt.beam : 0) };
+  const med = { tg: [rf[0] - 0.12, 0.36, rf[2] - 0.05], az: -0.08, el: 0.2, r: 1.75, fov: 36, roll: 0.25 * (st.tilt ? st.tilt.beam : 0) };
   return mixRig(knob, med, k);
 };
 const rigLap = (F) => {       // ride round with the job (close orbit synced to the ring)
   const th = jobTheta(F), k = ease.inOutCubic(clamp((F - K.lap[0]) / (K.lap[1] - K.lap[0])));
-  const c = station(th, 0.6);
-  return { tg: [c[0], 0.42, c[2]], az: Math.PI / 2 + th + 0.55, el: 0.26, r: 2.4, fov: 38, roll: 0.03 * Math.sin(Math.PI * k) };
+  // camera trails the job round the bench on a circle (radius 1.65 from the bench centre, above the agents' heads)
+  // that stays clear of Big Iron; it looks across at the job and the next station
+  const cp = station(th + 0.75, 1.65), tg = station(th - 0.35, 0.55);
+  const dx = cp[0] - tg[0], dz = cp[2] - tg[2], h = Math.hypot(dx, dz), dy = 1.15 - 0.36;
+  return { tg: [tg[0], 0.36, tg[2]], az: Math.atan2(dx, dz), el: Math.atan2(dy, h), r: Math.hypot(h, dy), fov: 40, roll: 0.03 * Math.sin(Math.PI * k) };
 };
 const rigS7 = (F) => {        // gauge -> tilt up with the planks -> pan to the funnel as the result is sucked up
   const gp = station(ST.anlz - 0.36, 1.5), an = station(ST.anlz), jp = jobPos(F), tri = station(ST.plan);
@@ -836,11 +842,15 @@ const rigS7 = (F) => {        // gauge -> tilt up with the planks -> pan to the 
   if (F < K.toFunnel[0] + 2) return mixRig(gauge, cell, io((F - K.planks[0]) / 10));
   return mixRig(cell, fun, io((F - K.toFunnel[0] - 2) / 14));
 };
+const rigS8a = (F) => {       // medium on Hoot and both hourglasses: the answer lands as the tiny one runs dry
+  const k = sm((F - K.S8a - 8) / 30);
+  return { tg: [L.desk.x + lerp(0.05, 0.1, k), 0.5, L.desk.z - 0.25], az: lerp(0.1, 0.02, k), el: 0.12, r: lerp(2.7, 2.35, k), fov: 38, roll: lerp(0.03, 0, k) };
+};
 const rigS8 = (F) => {        // the desk-top wide (payoff framing); slow arc during the hold
   const a = sm((F - K.S8b) / 60);
   return { tg: [L.desk.x + 0.02, 0.36, L.desk.z + 0.1], az: lerp(0.06, -0.03, a), el: 0.12, r: lerp(3.6, 3.4, a), fov: 40, roll: 0 };
 };
-const WHIPS = [[80, 100], [312, 328], [452, 466], [564, 588]];
+const WHIPS = [[80, 100], [274, 288], [312, 328], [452, 466], [570, 588]];
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);
@@ -851,7 +861,8 @@ export function camRig(F) {
   if (F < K.type[0] + 4) { const k = io((F - K.deal[1]) / (K.type[0] + 4 - K.deal[1])), q = mixRig(rigTri(F), rigClack(F), k); q.r += 0.6 * Math.sin(Math.PI * k); q.el += 0.12 * Math.sin(Math.PI * k); return q; }   // truck wide of Loupe
   if (F < 236) return rigClack(F);
   if (F < 250) return mixRig(rigClack(F), rigCell(F), io((F - 236) / 14));
-  if (F < K.S3b) return rigCell(F);                                    // the smoke-ring cover hides the cut
+  if (F < K.cover[0]) return rigCell(F);
+  if (F < K.cover[1]) return mixRig(rigCell(F), rigS3b(F), ease.inOutQuint(clamp((F - K.cover[0]) / (K.cover[1] - K.cover[0]))));   // whip left across the room to the desk
   if (F < 312) return rigS3b(F);
   if (F < 330) return mixRig(rigS3b(F), rigLoupe(F), ease.inOutCubic(clamp((F - 312) / 18)));
   if (F < K.rush[0]) return rigLoupe(F);
@@ -860,8 +871,10 @@ export function camRig(F) {
   if (F < K.lap[0] + 6) return mixRig(rigKnob(F), rigLap(F), io((F - K.go) / (K.lap[0] + 6 - K.go)));
   if (F < K.lap[1]) return rigLap(F);
   if (F < K.S7 + 4) return mixRig(rigLap(F), rigS7(F), ease.inOutQuint(clamp((F - K.lap[1]) / (K.S7 + 4 - K.lap[1]))));
-  if (F < 566) return rigS7(F);
-  if (F < K.S8a + 14) return mixRig(rigS7(F), rigS8(F), ease.inOutQuint(clamp((F - 566) / 24)));   // whip left with the return bulge
+  if (F < 572) return rigS7(F);
+  if (F < K.S8a + 14) return mixRig(rigS7(F), rigS8a(F), ease.inOutQuint(clamp((F - 572) / 14)));   // whip left with the return bulge
+  if (F < K.S8b - 6) return rigS8a(F);
+  if (F < K.S8b + 6) return mixRig(rigS8a(F), rigS8(F), ease.inOutCubic(clamp((F - K.S8b + 6) / 12)));   // pull back for the slams
   if (F < K.S9 + 4) return rigS8(F);
   return mixRig(rigS8(F), rigHome(F - NF), io((F - K.S9 - 4) / (NF - K.S9 - 4)));
 }
