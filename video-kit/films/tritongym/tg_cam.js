@@ -115,17 +115,17 @@ function shotRace2(F) {          // B7: start two-shot (rhymes with B4), dolly-z
 }
 function shotWatch(F) {          // the insert after the photo finish: the stopwatch face, square on, slow push
   const k = sg(F, K.watch[0], K.watch[1], io);
-  return watchRig(3.5 - 0.6 * k, L2 + A.finish, 42, 0, -0.2 + 0.03 * k);   // the dial sits high in the panel: the 6 o'clock stop stays above the card fade
+  return watchRig(3.3 - 0.4 * k, L2 + A.finish, 42, 0, -0.24 + 0.04 * k);   // the dial sits high in the panel: the 6 o'clock stop stays above the card fade
 }
 function shotPayoff(F) {         // B8: low hero lens at the finish, a real push (~12%) with a ~16 deg orbit
   const k = sg(F, K.watch[1], K.away[0], io);
-  return rig([L2 + A.finish + 0.61 + 0.05 * k, 13.0 - 1.3 * k, 1.05 + 0.1 * k], [L2 + A.finish + 0.62 + 0.02 * k, 3.0, 1.48 - 0.06 * k], lerp(40, 35, k), 0.0);   // push = dolly + a little zoom
+  return rig([L2 + A.finish + 0.61 + 0.05 * k, 13.0 - 1.3 * k, 1.05 + 0.1 * k], [L2 + A.finish + 0.62 + 0.02 * k, 3.0, 1.48 - 0.06 * k], lerp(40, 37, k), 0.0);   // push = dolly + a little zoom
 }
 
 // ------------------------------------------------------------------------------------------------
 // the edit: shots joined by continuous moves and whips
 // ------------------------------------------------------------------------------------------------
-export const WHIPS = [[K.hopOff[0] + 2, K.drive1[0] + 6], [K.gate2 + 7, K.gate2 + 13], [K.lap2[1] - 10, K.side2[0]], [K.closeup[1] - 2, K.closeup[1] + 5], [K.lift[1] - 4, K.through[0] + 4], [K.cut + 4, K.cut + 20], [K.go1 + 3, K.go1 + 13], [K.hold[1] - 2, K.watch[0] + 5], [K.toScale[0] + 2, K.toScale[0] + 14], [K.rev[1] - 2, K.lap2[0] + 8], [K.watch[1], K.watch[1] + 8], [K.away[0], NF], [0, 6]];
+export const WHIPS = [[K.hopOff[0] + 2, K.drive1[0] + 6], [K.gate2 + 7, K.gate2 + 13], [K.lap2[1] - 10, K.side2[0]], [K.closeup[1] - 2, K.closeup[1] + 5], [K.lift[1] - 4, K.through[0] + 4], [K.cut + 4, K.cut + 20], [K.go1 + 3, K.go1 + 13], [K.hold[1] - 2, K.watch[0] + 5], [K.toScale[0] + 2, K.toScale[0] + 14], [K.rev[1] - 2, K.lap2[0] + 13], [K.watch[1], K.watch[1] + 8], [K.away[0], NF], [0, 6]];
 
 export function camRig(F) {
   if (F < K.hopOff[0] + 2) return shotBench(F);
@@ -145,7 +145,7 @@ export function camRig(F) {
   if (F < K.go1 + 2) return shotStart(F);
   if (F < K.crash[0]) return mix(shotStart(F), shotRace1(F), sg(F, K.go1 + 2, K.go1 + 14, ioc));
   if (F < K.rev[1] - 2) return shotCrash(F);
-  if (F < K.lap2[0] + 8) return mix(shotCrash(F), shotLap2(F), sg(F, K.rev[1] - 2, K.lap2[0] + 8, ease.inOutQuint));   // whip up into the crane
+  if (F < K.lap2[0] + 13) return mix(shotCrash(F), shotLap2(F), sg(F, K.rev[1] - 2, K.lap2[0] + 13, ease.inOutQuint));   // whip to the arch
   if (F < K.lap2[1] - 10) return shotLap2(F);
   if (F < K.side2[0]) return mix(shotLap2(F), shotStart(F, L2), sg(F, K.lap2[1] - 10, K.side2[0], ease.inOutQuint));   // whip to the start line
   if (F < K.hold[1] - 2) return shotRace2(F);                     // incl. the photo-finish hold (a slow push on the line)

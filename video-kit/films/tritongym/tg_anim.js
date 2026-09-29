@@ -6,7 +6,7 @@ export const NF = 660;
 // station angles (radians) and radii
 export const A = { bench: 0.0, gate: 0.95, scale: 1.95, start: 3.0, finish: 4.85 };
 A.words = A.finish + 0.69;      // the payoff letters, on top of the graphics card (clear of the finish pylon from the payoff lens)
-A.tokWin = A.finish + 1.56;     // Tok's star-eyed spot at the payoff
+A.tokWin = A.finish + 1.5;     // Tok's star-eyed spot at the payoff
 export const R = { track: 6.0, lanes: [5.45, 6.55], ours: 6.55, oro: 5.45, bench: 8.3, tokBench: 7.72, kerb: 4.62, scale: 8.15 };
 export const L2 = TAU;   // lap 2 offset
 
@@ -207,10 +207,12 @@ export function kernState(F) {
     return S;
   }
   // ---- B6: lap 2 (finish -> gate -> weigh-in detour -> start), round wheels
+    // (segment 1 is a Hermite: out of the whip fast, into the gate at the speed of segment 2, so the arch shot isn't empty)
+    const herm = (u, m0, m1) => (u * u * u - 2 * u * u + u) * m0 + (-2 * u * u * u + 3 * u * u) + (u * u * u - u * u) * m1;
   if (F < K.side2[0]) {
     const keys = [[K.lap2[0], thRef], [K.gate2, L2 + A.gate], [K.scale2 - 5, L2 + A.scale - 0.18], [K.scale2 + 5, L2 + A.scale - 0.02], [K.lap2[1], L2 + thS]];
     let th = keys[keys.length - 1][1];
-    for (let i = 1; i < keys.length; i++) if (F < keys[i][0]) { const [a, va] = keys[i - 1], [b, vb] = keys[i]; const u = (F - a) / (b - a); th = lerp(va, vb, i === 1 ? u * u * (3 - 2 * u) * 0.5 + 0.5 * u : i === keys.length - 1 ? 1 - (1 - u) * (1 - u) : u); break; }
+    for (let i = 1; i < keys.length; i++) if (F < keys[i][0]) { const [a, va] = keys[i - 1], [b, vb] = keys[i]; const u = (F - a) / (b - a); th = lerp(va, vb, i === 1 ? herm(u, 2.2, 0.77) : i === keys.length - 1 ? 1 - (1 - u) * (1 - u) : u); break; }
     const off = 1.2 * Math.sin(Math.PI * sg(F, K.scale2 - 9, K.scale2 + 9));      // swerve out to the weigh-in pan
     S.pos = lanePos(th, R.ours + off, 0); S.yaw = headingAt(th) - 0.5 * Math.cos(Math.PI * sg(F, K.scale2 - 9, K.scale2 + 9)) * (off > 0.05 ? 1 : 0);
     S.wheelAng = (th - thRef) * R.ours / 0.13; S.face = 'determined';
