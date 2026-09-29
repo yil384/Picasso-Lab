@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>probe</title>
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+defineScene({
+  meta: { title: 'probe', durationFrames: 30, background: '#f4efe4', fonts: ['Caveat'] },
+  layers: [
+    { name: 'grid', type: '2d', draw(ctx, g) {
+      g.strokeStyle = '#0003'; g.lineWidth = 2;
+      for (let x = 0; x <= 1920; x += 240) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 1080); g.stroke(); }
+      for (let y = 0; y <= 1080; y += 270) { g.beginPath(); g.moveTo(0, y); g.lineTo(1920, y); g.stroke(); }
+      g.fillStyle = '#c00'; g.fillRect(960 - 20, 540 - 20, 40, 40);
+    } },
+    { name: 'wash', type: 'brush', draw(ctx, p, brush) {
+      brush.noStroke();
+      brush.fill('#3b6fb6', 90); brush.fillBleed(0.3); brush.fillTexture(0.5, 0.4);
+      brush.circle(480, 270, 200, 0.5);
+      brush.noFill();
+      brush.set('HB', '#222', 1.5);
+      brush.rect(960, 540, 480, 270);
+      brush.set('marker', '#d9482b', 2);
+      brush.line(1440, 810, 1800, 1000);
+    } },
+    { name: 'label', type: '2d', draw(ctx, g) {
+      g.fillStyle = '#222'; g.font = ctx.font('Caveat', 64, 600); g.fillText('probe (480,270) circle; rect at (960,540)', 60, 1000);
+    } },
+  ],
+});
+</script></body></html>

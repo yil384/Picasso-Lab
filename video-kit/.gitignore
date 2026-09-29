@@ -1,0 +1,13 @@
+# render intermediates never go into git — only final deliverables in out/<project>/
+pipeline/node_modules/
+__pycache__/
+out/**/frames/
+out/**/segments/
+out/**/verify/
+out/**/_*/
+out/_*/
+films/**/snaps/
+films/**/work/
+*.mkv
+*.tmp
+*.tmp.*

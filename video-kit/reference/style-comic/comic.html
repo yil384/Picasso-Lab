@@ -1,0 +1,1565 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Qubrio: The Convoy Job</title>
+<!-- Qubrio project-card film, concept "comic-book 3D": 15 s seamless loop (360 f @ 24 fps).
+     The whole film is one real three.js set rendered through a local copy of runtime/npr (painted cel ramp,
+     burin hatching, halftone, watercolour pass, boiling ink). p5.brush paints every texture, every face and the
+     ink overlay. All lettering is built from hand-authored stroke / outline data (no web font).
+     Lettering pop / burst / emote ideas follow ClaudeAnimationBase src/core.js (MIT, (c) JohnHeibel).
+     ?sheet=1 model sheet camera   ?top=1 top-down layout check   ?debug=1..5 npr G-buffer views -->
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene, ease, clamp, lerp, loopNoise } from '/pv/runtime/pv.js';
+import { createNPR, rgb } from '/scene/npr/npr.js';
+import { bakeBrushTexture, burst } from '/scene/npr/brush.js';
+import { orbit, handheld, applyRig, yawSmear } from '/scene/npr/camera.js';
+
+const Q = new URLSearchParams(location.search);
+const SHEET = Q.get('sheet');
+const TOP = Q.get('top') === '1';
+const FPS = 24, NF = 360, TAU = Math.PI * 2;
+
+// =====================================================================================================
+// palette (paint space)
+// =====================================================================================================
+const PAL = {
+  paper: '#f4ebd6', ink: '#1a1530', ochre: '#f2b134', red: '#e5463b', pink: '#ff3d7f', violet: '#6f52c8',
+  teal: '#2f9d97', cream: '#fff6e0', blush: '#ff7a8e', sky: '#5b8fd8',
+};
+const COL = {
+  atom: 0xfff1cf, brass: 0xe6ad42, red: 0xe5463b, steel: 0x74b0f2, cream: 0xf8eed6, violet: 0x6f52c8,
+  teal: 0x39a6a0, pink: 0xff3d7f, ochre: 0xf2b134, slabSide: 0xd98f45, table: 0x7b86c9, dark: 0x2b2447,
+  paper: 0xf6ecd4, letter: 0xe5463b, letterSide: 0xf6b93b,
+};
+
+// =====================================================================================================
+// timeline helpers (all pure functions of the frame)
+// =====================================================================================================
+const mj = (x) => { x = clamp(x); return x * x * x * (10 + x * (-15 + 6 * x)); };      // minimum jerk
+const sm = (x) => ease.smooth(clamp(x));
+const io = (x) => ease.inOutSine(clamp(x));
+const ob = (x) => ease.outBack(clamp(x));
+const twos = (F) => F - (F % 2);                                                          // characters on twos
+const ringv = (a, amp, w = 1.1, k = 0.2) => (a < 0 ? 0 : amp * Math.exp(-k * a) * Math.cos(w * a)); // a in frames
+const bumpv = (a, amp, w = 0.9, k = 0.16) => (a < 0 ? 0 : amp * Math.exp(-k * a) * Math.sin(w * a));
+const hsh = (...n) => { let x = Math.sin(n.reduce((s, v, i) => s + v * (12.9898 + i * 78.233), 0.5)) * 43758.5453; return x - Math.floor(x); };
+const wrapF = (F) => ((F % NF) + NF) % NF;
+const dimK = (F) => (F >= K.dim && F < K.zap ? sm((F - K.dim) / 14) : 0);   // lights-down amount
+
+// key frames of the story
+const K = {
+  tick: [14, 26, 38],          // Compass lands on the selected columns 3, 4, 5
+  hop: [44, 54], point: 56,     // hero hop into the gap, point at the Fork
+  thwip: [72, 80], taut: 88,    // Fork shoots the AOD threads; reins snap taut
+  glide: [92, 132],             // convoy: one rigid AOD move
+  enter: [126, 135, 144],       // Stopwatch hops in from off-screen right (two hops)
+  dim: 160, vert: [158, 178],   // lights go down; dolly-zoom (vertigo) on the Stopwatch's wind-up
+  click: 176, zap: 182,         // Stopwatch slaps its crown; Rydberg impact (flash cut to the wide under the impact frames)
+  kick: 222, roll: [224, 244],  // paper roll unrolls the schedule tape
+  snip: 254,
+  slam: [266, 268, 270, 272],   // 4 . 7 x land
+  back: [300, 340],             // convoy glides home
+  reset: 318,                   // Compass off-screen reset during the whip pan home
+  resetW: 324,                  // Stopwatch reset (the 4.7x has left the frame by then)
+};
+
+// =====================================================================================================
+// world layout (1 unit ~ one atom pitch / 0.62)
+// =====================================================================================================
+const R = 0.2, AY = 0.3;
+const SX = (c) => -3.7 + 0.62 * c, SZ = (r) => -0.62 + 0.62 * r;           // storage lattice 6 x 3
+const PX = (k) => 1.25 + 1.24 * k, PZ = (r) => -1.0 + 1.0 * r;             // entanglement-zone partners 3 x 3
+const PAIR = 0.44, LANE = 0.5, LIG_SEG = 24;
+const SLAB = { x0: -6.4, x1: 5.0, z0: -1.8, z1: 2.9, h: 0.5 };
+const TABLE_Y = -0.5;
+const FORK = { x: 4.45, z: 0.0 };
+const WATCH = { x: 4.0, z: 2.5 };
+const TAPE = { x0: 3.56, z: 2.5, w: 0.42, len: 4.7, stub: 1.0 };
+const CUTX = TAPE.x0 - TAPE.stub;
+const CMP = { z: 1.55, s: 0.62, leg: 1.25, standX: -0.7, standZ: 2.12, spread: 1.1 };
+const LET = { z: 3.45, h: 1.0, x: 0.0 };
+
+// ---- mover path: the AOD block (storage cols 3-5 x rows 0-2) -> pairs in the zone.
+// z first spreads into lanes between partner rows, then x glides, then the block docks (min-jerk each).
+function moverP(F) {
+  if (F >= K.glide[0] && F < K.glide[1]) return (F - K.glide[0]) / (K.glide[1] - K.glide[0]);
+  if (F >= K.glide[1] && F < K.back[0]) return 1;
+  if (F >= K.back[0] && F < K.back[1]) return 1 - (F - K.back[0]) / (K.back[1] - K.back[0]);
+  return 0;
+}
+function moverXZ(k, r, p) {
+  const sx = SX(3 + k), sz = SZ(r), fx = PX(k) - PAIR, fz = PZ(r), lz = fz + LANE;
+  const x = lerp(sx, fx, mj(p));
+  const z = sz + (lz - sz) * mj(p / 0.26) + (fz - lz) * mj((p - 0.8) / 0.2);
+  return [x, z];
+}
+const convoyV = (p) => { const x = clamp(p); return 30 * x * x * (1 - x) * (1 - x); }; // mj'(p), peak 1.875
+// frame at which pair q's ligature breaks on the way home (stretch >= 1.8); pure, cached
+const SNAP = {};
+function snapFrame(q) {
+  if (SNAP[q] != null) return SNAP[q];
+  const k = Math.floor(q / 3), r = q % 3;
+  let f = K.back[0];
+  for (; f < K.back[1]; f++) { const [x, z] = moverXZ(k, r, moverP(f)); if (Math.hypot(PX(k) - x, PZ(r) - z) / PAIR >= 1.8) break; }
+  return (SNAP[q] = f);
+}
+
+// =====================================================================================================
+// camera: shot rigs + transitions (orbit params), all closed-form; rig(360) == rig(0)
+// =====================================================================================================
+function rigA(F) {   // storage, low and close, tracking the Compass (valid for F in [-60, 70])
+  const k = sm((F + 34) / 92);
+  const hop = Math.sin(Math.PI * clamp((F - 42) / 16));
+  return { tg: [lerp(-3.0, -0.3, k), lerp(0.8, 0.92, sm((F - 36) / 22)) + 0.5 * hop, lerp(1.1, 1.55, sm((F - 30) / 28))],
+    az: lerp(-0.46, -0.1, k), el: lerp(0.12, 0.07, sm((F - 20) / 40)), r: lerp(5.9, 5.1, sm((F - 10) / 50)) + 1.25 * hop, fov: 30,
+    roll: lerp(-0.045, 0.06, sm((F - 44) / 16)) };
+}
+function rigB(F) {   // close on the Fork; pull back with the threads into a tug-of-war wide; swing into the ride
+  const fork = { tg: [4.2, 0.9, 0.35], az: 0.78, el: 0.1, r: 4.2 - 0.4 * sm((F - 62) / 14), fov: 30, roll: 0.07 };
+  // tug-of-war: the straining Fork big on the right, the reins running back to the block on the left
+  const haul = { tg: [lerp(2.6, 2.2, sm((F - 82) / 20)), 0.66, 0.3], az: 0.52, el: 0.12, r: 6.1 - 0.35 * sm((F - 84) / 18), fov: 32, roll: 0.06 - 0.03 * sm((F - 84) / 16) };
+  const cx = lerp(SX(4), PX(1) - PAIR, mj(moverP(F)));
+  const ride = { tg: [cx + 0.5 + 0.9 * sm((F - 128) / 16), 0.5, 0.62], az: -0.13, el: 0.17 + 0.03 * sm((F - 120) / 12), r: 4.2 + 0.5 * sm((F - 118) / 16), fov: 32, roll: -0.045 };
+  if (F < 72) return fork;
+  if (F < 100) return mixRig(fork, haul, ease.inOutCubic(clamp((F - 72) / 11)));
+  return mixRig(haul, ride, ease.inOutQuint(clamp((F - 100) / 11)));
+}
+function rigC(F) {   // after the flash cut: high 3/4 over the whole zone, slow push-in while the pairs glow
+  const push = sm((F - K.zap) / 26);
+  return { tg: [2.45, 0.35, 0.35 + 0.3 * push], az: lerp(0.58, 0.44, sm((F - K.zap) / 40)), el: lerp(0.5, 0.43, push),
+    r: lerp(7.6, 6.2, push), fov: 30, roll: lerp(0.03, -0.04, push) };
+}
+// the wind-up: low hero angle on the Stopwatch, the zone and the objective lens behind it. A dolly-zoom (vertigo)
+// keeps the watch the same size while the fov opens 27 -> 66 deg: the lab stretches away behind it as the lights go down.
+function rigV(F) {
+  const k = ease.inCubic(clamp((F - K.vert[0]) / (K.vert[1] - K.vert[0])));
+  const fov = lerp(27, 66, k), r0 = 5.3;
+  const r = r0 * Math.tan((27 / 2) * Math.PI / 180) / Math.tan((fov / 2) * Math.PI / 180);
+  return { tg: [WATCH.x - 0.5, lerp(0.95, 1.05, k), WATCH.z - 0.3], az: lerp(0.36, 0.3, k), el: lerp(0.13, 0.07, k), r, fov,
+    roll: lerp(0.0, -0.09, k) };
+}
+function rigD(F) {   // the watch kicks the roll; pan along the long tape; whip back for the snip; team shot
+  const rx = tapeState(F).rollX;
+  const pre = { tg: [3.3, 0.5, 2.3], az: 0.32, el: 0.2, r: 5.0, fov: 31, roll: 0.02 };
+  // low along the tape: the roll races towards the lens, the tape recedes to the watch in deep perspective
+  const follow = { tg: [rx + 1.0, 0.3, 2.45], az: -0.6, el: 0.2, r: 3.6, fov: 34, roll: 0.05 };
+  const snip = { tg: [CUTX - 0.15, 0.5, 2.45], az: 0.14, el: 0.18, r: 3.8, fov: 31, roll: -0.04 };
+  // hero orbit round the team: the extruded 4.7x slides across the set with real parallax
+  const orb = io((F - 262) / 50);
+  const team = { tg: [lerp(1.75, 2.05, orb), 0.3, 2.45], az: lerp(0.34, -0.26, orb), el: lerp(0.3, 0.21, sm((F - 266) / 40)),
+    r: lerp(7.3, 6.5, sm((F - 266) / 40)), fov: 32, roll: lerp(-0.07, 0.03, orb) };
+  if (F < 224) return pre;
+  if (F < 243) return mixRig(pre, follow, sm((F - 224) / 6));
+  if (F < 258) return mixRig(follow, snip, ease.inOutQuint(clamp((F - 243) / 7)));
+  return mixRig(snip, team, ease.inOutCubic(clamp((F - 258) / 10)));
+}
+const WHIPS = [[58, 70], [100, 111], [243, 250], [312, 326]];
+function mixRig(a, b, k) {
+  return { tg: a.tg.map((v, i) => lerp(v, b.tg[i], k)), az: lerp(a.az, b.az, k), el: lerp(a.el, b.el, k), r: lerp(a.r, b.r, k),
+    fov: lerp(a.fov, b.fov, k), roll: lerp(a.roll, b.roll, k) };
+}
+function camRig(F) {
+  if (F < 58) return rigA(F);
+  if (F < 70) return mixRig(rigA(F), rigB(F), ease.inOutQuint((F - 58) / 12));      // whip right
+  if (F < 140) return rigB(F);
+  if (F < 158) return mixRig(rigB(F), rigV(F), io((F - 140) / 18));                 // settle round to the Stopwatch
+  if (F < K.zap) return rigV(F);                                                    // vertigo wind-up
+  if (F < 210) return rigC(F);                                                      // flash cut (impact frames) to the wide
+  if (F < 226) return mixRig(rigC(F), rigD(F), io((F - 210) / 16));                 // swing down to the tape
+  if (F < 312) return rigD(F);
+  if (F < 326) return mixRig(rigD(F), rigA(F - NF), ease.inOutQuint((F - 312) / 14)); // whip home
+  return rigA(F - NF);
+}
+function camShake(F) {   // decaying hash shake on the hits (radians)
+  let s = [0, 0, 0];
+  const hit = (f0, amp, dec = 5) => {
+    const a = F - f0; if (a < 0 || a > 30) return;
+    const k = amp * Math.exp(-a / dec);
+    s[0] += (hsh(F, 1.3, f0) * 2 - 1) * k; s[1] += (hsh(F, 2.7, f0) * 2 - 1) * k; s[2] += (hsh(F, 5.1, f0) * 2 - 1) * k * 0.6;
+  };
+  hit(K.taut, 0.006, 3); hit(K.glide[1], 0.006, 4); hit(K.zap, 0.02, 6); hit(K.snip, 0.006, 3);
+  K.slam.forEach((f, i) => hit(f, i === 2 ? 0.02 : 0.011, 4));
+  return s;
+}
+
+// =====================================================================================================
+// character state
+// =====================================================================================================
+// ---- atoms ----
+const ATOMS = [];
+for (let c = 0; c < 6; c++) for (let r = 0; r < 3; r++) ATOMS.push({ kind: c >= 3 ? 'mover' : 'store', c, r, k: c - 3 });
+for (let k = 0; k < 3; k++) for (let r = 0; r < 3; r++) ATOMS.push({ kind: 'partner', c: k, r, k });
+ATOMS.forEach((a, i) => { a.i = i; a.o = Math.floor(hsh(i, 7.7) * 5); a.ph = hsh(i, 3.3); });
+
+function exprTimeline(F, keys) {   // keys: [[frame, expr], ...] ascending; returns expr and the squash of the take
+  let e = keys[0][1], last = -999;
+  for (const [f, x] of keys) if (F >= f) { e = x; last = f; }
+  return { e, age: F - last };
+}
+function atomState(a, F) {
+  const Fc = twos(F);
+  const o = a.o;
+  let x, z, e, sq = 0, sx = 1, hop = 0, look = 0, emote = null;
+  const breath = 0.035 * Math.sin(TAU * (F / 45 + a.ph));          // 8 breaths per loop
+  if (a.kind === 'store') {
+    x = SX(a.c); z = SZ(a.r);
+    const T = exprTimeline(Fc, [[0, 'sleep'], [K.zap - 4 + o, 'squint'], [K.zap + 8 + o, 'sleep']]);
+    e = T.e;
+  } else if (a.kind === 'mover') {
+    const p = moverP(F);
+    [x, z] = moverXZ(a.k, a.r, p);
+    const tk = K.tick[a.k] + (2 - a.r) * 2 + (o % 2) * 2;
+    const T = exprTimeline(Fc, [[0, 'sleep'], [tk, 'squint'], [tk + 3, 'surprised'], [tk + 20, 'awake'],
+      [K.glide[0] - 6, 'squint'], [K.glide[0], 'whee'], [K.glide[1] - 2, 'surprised'], [K.glide[1] + 10 + o, 'love'],
+      [K.zap - 7, 'squint'], [K.zap + 5 + o, 'sparkle'], [K.back[0] - 8 - o, 'awake'], [K.back[0] + 4, 'whee'],
+      [K.back[1] - 2, 'yawn'], [K.back[1] + 8 + o * 2, 'sleep']]);
+    e = T.e;
+    if (T.e === 'surprised' && Fc < tk + 20) { sq = takeSq(Fc - tk - 3); emote = { type: '!', age: Fc - tk - 3 }; hop = 0.16 * Math.sin(Math.PI * clamp((Fc - tk - 3) / 9)); }
+    if (T.e === 'surprised' && Fc >= K.glide[1] - 2 && Fc < K.glide[1] + 12) sq = ringv(Fc - K.glide[1], 0.2, 0.9, 0.16);
+    if (Fc >= K.glide[0] - 6 && Fc < K.glide[0]) sq = 0.1 * sm((Fc - K.glide[0] + 6) / 4);                 // crouch before the move
+    const v = (F >= K.glide[0] && F < K.glide[1]) ? convoyV((F - K.glide[0]) / (K.glide[1] - K.glide[0])) / 1.875
+      : (F >= K.back[0] && F < K.back[1]) ? -convoyV((F - K.back[0]) / (K.back[1] - K.back[0])) / 1.875 : 0;
+    sx = 1 + 0.2 * Math.abs(v);
+    look = v;
+    if (T.e === 'sparkle' || T.e === 'love') hop = cheer(a, Fc);
+    if (T.e === 'squint' && Fc >= K.zap - 7 && Fc < K.zap + 5) sq = 0.12;
+  } else {
+    x = PX(a.k); z = PZ(a.r);
+    const arr = K.glide[1] - 3 + a.k * 0;
+    const T = exprTimeline(Fc, [[0, 'sleep'], [arr - 6 + o, 'squint'], [arr - 3 + o, 'surprised'], [K.glide[1] + 12 + o, 'love'],
+      [K.zap - 7, 'squint'], [K.zap + 5 + o, 'sparkle'], [K.back[0] + 2 + o, 'surprised'], [K.back[0] + 16, 'awake'],
+      [K.back[1] - 6 + o, 'yawn'], [K.back[1] + 6 + o * 2, 'sleep']]);
+    e = T.e;
+    if (T.e === 'surprised') sq = takeSq(T.age);
+    if (T.e === 'surprised' && Fc < K.back[0]) emote = { type: '!', age: T.age };
+    if (T.e === 'sparkle' || T.e === 'love') hop = cheer(a, Fc);
+    if (T.e === 'squint' && Fc >= K.zap - 7 && Fc < K.zap + 5) sq = 0.12;
+  }
+  if (e === 'yawn') sq = -0.12 * Math.sin(Math.PI * clamp(((Fc % 40) + 0) / 18));
+  return { x, z, y: AY + hop + (e === 'sleep' ? -0.02 : 0), e, sq: sq + (e === 'sleep' ? breath : breath * 0.4), sx, look, emote };
+}
+function takeSq(age) {   // squint-squash then stretch pop and ring (age in frames from the eye pop)
+  if (age < -3) return 0;
+  if (age < 0) return 0.14 * sm((age + 3) / 3);
+  return -0.24 * Math.exp(-age / 4.5) * Math.cos(age * 0.75);
+}
+function cheer(a, Fc) {   // cheer hops in the team shot, out of phase per atom (no twinning)
+  const w0 = 276 + a.o * 3 + a.r * 2, w1 = 300;
+  if (Fc < w0 || Fc >= w1) return 0;
+  const ph = ((Fc - w0) % 12) / 12;
+  return 0.16 * Math.sin(Math.PI * ph) * (1 - 0.3 * a.r / 2);
+}
+
+// ---- the Compass (placement): divider walk ----
+const FL = (k) => 14 + 12 * (k - 6);                 // landing frame of tip k
+const XK = (k) => -5.56 + CMP.s * k;                  // tip k position
+function hingeFrom(A, B, L) {   // hinge point of a divider with legs L on tips A and B (above the tips)
+  const m = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, (A[2] + B[2]) / 2];
+  const d = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], dl = Math.hypot(...d) || 1;
+  const h = Math.sqrt(Math.max(0.01, L * L - dl * dl / 4));
+  const u = [0, 1, 0], dd = (u[0] * d[0] + u[1] * d[1] + u[2] * d[2]) / (dl * dl);
+  const up = [u[0] - d[0] * dd, u[1] - d[1] * dd, u[2] - d[2] * dd], ul = Math.hypot(...up) || 1;
+  return [m[0] + up[0] / ul * h, m[1] + up[1] / ul * h, m[2] + up[2] / ul * h];
+}
+// Tip landings [frame (loop time; negative = end of the previous loop), x] along z = CMP.z. The last landed tip is
+// the pivot, the one before is the free tip, which swings 180 deg round the front to the next landing. Landing on
+// the spot where a tip already stands only swaps the pivot (to turn round).
+const CMP_EV = [
+  ...Array.from({ length: 9 }, (_, k) => [14 + 12 * (k - 6), -5.56 + 0.62 * k]),     // walk in; ticks at 14 / 26 / 38
+  [53, 0.21], [54, -0.41],                                                           // where the hop lands
+  [70, -1.03], [73, -1.65], [76, -2.27], [79, -2.89], [82, -3.51],                    // scurry off left, clear of the convoy
+  [256, -2.89], [262, -2.27], [268, -1.65], [274, -1.03], [280, -0.41], [282, -1.03], // walk back in for the team shot
+];
+function walkPose(Fw) {
+  let j = 0; for (let i = 0; i < CMP_EV.length; i++) if (CMP_EV[i][0] <= Fw) j = i;
+  const pv = CMP_EV[j][1], prev = j > 0 ? CMP_EV[j - 1][1] : pv - CMP.s;
+  const nxt = CMP_EV[j + 1];
+  let p = 0, to = prev;
+  if (nxt) { const dur = Math.min(8, nxt[0] - CMP_EV[j][0] - 1); p = clamp((Fw - (nxt[0] - dur)) / dur); to = nxt[1]; }
+  const th0 = prev < pv ? Math.PI : 0, th1 = to < pv ? Math.PI : 0;
+  const moving = th0 !== th1 && p > 0 && p < 1;
+  const th = th0 === th1 ? th0 : lerp(th0, th1, ease.inOutCubic(p));
+  const s = Math.abs(prev - pv) || CMP.s;
+  const A = [pv, 0, CMP.z], B = [pv + Math.cos(th) * s, moving ? 0.22 * Math.sin(Math.PI * p) : 0, CMP.z + Math.sin(th) * s * 0.9];
+  return { A, B, p: moving ? p : 0, landAge: Fw - CMP_EV[j][0], j, dir: Math.sign((to - prev) || 1) };
+}
+function compassPose(F) {
+  const Fc = twos(F);
+  const Fw = F >= K.reset ? Fc - NF : Fc;
+  const L = CMP.leg;
+  let A, B, H, yaw = 0, spin = 0, headSq = 0, expr = 'determined', cape = 0.2, lookX = 0;
+  if (Fw < K.hop[0] - 4 || Fw >= K.hop[1]) {
+    const W = walkPose(Fw);
+    A = W.A; B = W.B;
+    H = hingeFrom(A, B, L);
+    headSq = ringv(W.landAge, 0.16, 1.0, 0.25);
+    cape = 0.25 + 0.5 * Math.sin(Math.PI * W.p);
+    yaw = 0.25 * Math.sin(Math.PI * W.p) * W.dir;
+    lookX = Fw < 40 ? 1 : 0;
+    if (Fw < 40 && W.j >= 6 && W.landAge < 10) expr = W.landAge < 2 ? 'squint' : 'happy';
+    if (Fw >= 66 && Fw < 92) expr = 'surprised';
+    // points: at the Fork (56-66) and at the 4.7x (284-306): lean over the planted tip, swing the free leg up
+    const pt1 = Fw >= K.hop[1] && Fw < 70 ? sm((Fw - K.point) / 4) * (1 - sm((Fw - 64) / 5)) : 0;
+    const pt2 = sm((Fw - 284) / 5) * (1 - sm((Fw - 304) / 4));
+    const pt = Math.max(pt1, pt2);
+    if (pt > 0.001) {
+      const Hp = [A[0] + 0.28, Math.sqrt(L * L - 0.28 * 0.28) - 0.02, A[2]];
+      H = [lerp(H[0], Hp[0], pt), lerp(H[1], Hp[1], pt), lerp(H[2], Hp[2], pt)];
+      const ang = lerp(Math.atan2(B[1] - H[1], B[0] - H[0]), pt2 > pt1 ? 0.5 : 0.25, pt);
+      B = [H[0] + Math.cos(ang) * L, H[1] + Math.sin(ang) * L, H[2] - 0.12 * pt];
+      expr = pt2 > pt1 ? 'happy' : 'determined'; cape = 0.4 + 0.5 * pt;
+    }
+    if (Fw >= K.hop[1] && Fw < K.hop[1] + 3) expr = 'squint';
+    if (Fw >= K.hop[1]) headSq += ringv(Fw - K.hop[1], 0.2, 0.9, 0.2);
+  } else {
+    // crouch (the free leg slides back), then hop with a full spin and a split, landing on (-0.41, 0.21)
+    const Hc = hingeFrom([XK(8) - 1.25, 0, CMP.z], [XK(8), 0, CMP.z], L);   // the crouched pose
+    const Hl = hingeFrom([-0.41, 0, CMP.z], [0.21, 0, CMP.z], L);
+    if (Fw < K.hop[0]) {
+      const c = sm((Fw - K.hop[0] + 4) / 4);
+      A = [lerp(XK(7), XK(8) - 1.25, c), 0, CMP.z]; B = [XK(8), 0, CMP.z];
+      H = hingeFrom(A, B, L); expr = 'squint'; cape = 0.1;
+    } else {
+      const p = (Fw - K.hop[0]) / (K.hop[1] - K.hop[0]);
+      const e = ease.inOutSine(p);
+      H = [lerp(Hc[0], Hl[0], e), lerp(Hc[1], Hl[1], e) + 0.8 * Math.sin(Math.PI * p), CMP.z];
+      spin = TAU * ease.inOutCubic(p);
+      const split = lerp(0.52, 0.25, e) + 0.55 * Math.sin(Math.PI * p);   // crouch spread -> split -> landing spread
+      A = [H[0] - Math.sin(split) * L, H[1] - Math.cos(split) * L, H[2]]; B = [H[0] + Math.sin(split) * L, H[1] - Math.cos(split) * L, H[2]];
+      expr = 'determined'; cape = 0.9;
+    }
+  }
+  return { A, B, H, yaw, spin, headSq, expr, cape, lookX };
+}
+
+// ---- the Fork (routing) ----
+// tine angles: pL rotates the left tine (the rein hand, on the convoy side), positive = out to the left;
+// pR rotates the right tine, negative = out to the right. lean > 0 = leaning back, away from the convoy.
+function forkPose(F) {
+  const Fc = twos(F);
+  let lean = 0, crouch = 0, pL = 0.3, pR = -0.3, hopY = 0, expr = 'determined', footX = 0;
+  const idle = Math.sin(TAU * Fc / 30);
+  pL += 0.07 * idle; pR -= 0.06 * Math.sin(TAU * Fc / 30 + 1.9);
+  if (Fc >= 62 && Fc < K.thwip[0]) { const u = sm((Fc - 62) / 8); crouch = 0.16 * u; pL = lerp(pL, -0.35, u); pR = lerp(pR, -0.7, u); expr = 'squint'; }
+  if (Fc >= K.thwip[0] && Fc < K.taut) {   // THWIP: the left tine fires the threads at the block
+    const a = Fc - K.thwip[0];
+    crouch = -0.14 * Math.exp(-a / 3); pL = lerp(-0.35, 1.5, ob(a / 4)); pR = -0.8; lean = -0.12 * Math.exp(-a / 4);
+    expr = 'determined';
+    if (Fc >= K.taut - 6) { const u = sm((Fc - K.taut + 6) / 6); lean = lerp(lean, 0.32, u); pL = lerp(pL, 1.2, u); pR = lerp(pR, 0.95, u); crouch = 0.1 * u; expr = 'strain'; }
+  }
+  if (Fc >= K.taut && Fc < K.glide[1] + 2) {   // haul: lean back, hand over hand, feet skid
+    const a = Fc - K.taut, hand = Math.floor(a / 6) % 2;
+    lean = 0.42 + 0.05 * Math.sin(a * 0.9);
+    pL = 1.2 + (hand ? 0.25 : -0.12); pR = 0.95 + (hand ? -0.12 : 0.25);
+    crouch = 0.08; expr = 'strain'; footX = 0.05 * Math.sin(a * 1.3) * Math.exp(-a / 30);
+  }
+  if (Fc >= K.glide[1] + 2 && Fc < 150) {     // the load stops: stumble back, then tines up in a V
+    const a = Fc - K.glide[1] - 2;
+    lean = lerp(0.42, 0, sm(a / 6)) + bumpv(a, 0.35, 0.7, 0.14);
+    hopY = bumpv(a, 0.12, 0.6, 0.15);
+    pL = lerp(1.2, 0.6, sm((a - 6) / 6)); pR = lerp(0.95, -0.6, sm((a - 6) / 6));
+    expr = a < 5 ? 'surprised' : 'happy';
+  }
+  if (Fc >= 150 && Fc < K.back[0] - 6) {
+    pL = 1.05 + 0.08 * idle; pR = -0.3 - 0.05 * idle; expr = 'happy';
+    if (Fc >= K.zap && Fc < K.zap + 14) { hopY = 0.3 * Math.sin(Math.PI * (Fc - K.zap) / 14); expr = 'surprised'; pR = -1.3; }
+    if (Fc >= 276 && Fc < 306) { const u = sm((Fc - 276) / 5); pR = lerp(pR, -0.75, u); hopY = 0.1 * Math.abs(Math.sin(TAU * (Fc - 276) / 16)); pR += 0.25 * Math.sin(TAU * (Fc - 276) / 8) * u; expr = 'happy'; }
+  }
+  if (Fc >= K.back[0] - 6 && Fc < K.back[1] + 10) { pL = 1.2 - 0.3 * Math.sin(Math.PI * clamp((Fc - K.back[0]) / 40)); lean = -0.12 * Math.sin(Math.PI * clamp((Fc - K.back[0] + 6) / 46)); expr = 'determined'; }
+  return { lean, crouch, pL, pR, hopY, expr, footX };
+}
+
+// ---- the Stopwatch (optimize) ----
+function watchPose(F) {
+  const Fc = twos(F);
+  let x = WATCH.x, z = WATCH.z, y = 0, sq = 0, rock = 0.07 * Math.sin(TAU * Fc / 24), expr = 'calm', armL = 0.5, armR = -0.5, scis = 0.35, crown = 0, yaw = -0.2, kick = 0;
+  const Fw = F >= K.resetW ? Fc - NF : Fc;
+  let vis = Fw >= K.enter[0];
+  if (Fw >= K.enter[0] && Fw < K.enter[2]) {
+    // two hops in from off-screen right: crouch -> stretch in the air -> land (arms flung up)
+    const E = [[K.enter[0], 6.9, 3.25], [K.enter[1], 5.4, 2.9], [K.enter[2], WATCH.x, WATCH.z]];
+    const h = Fw < K.enter[1] ? 0 : 1, f0 = E[h][0], f1 = E[h + 1][0], p = (Fw - f0) / (f1 - f0);
+    const air = clamp((p - 0.22) / 0.7);
+    x = lerp(E[h][1], E[h + 1][1], sm(air)); z = lerp(E[h][2], E[h + 1][2], sm(air));
+    y = 0.62 * Math.sin(Math.PI * air);
+    sq = p < 0.22 ? 0.18 * sm(p / 0.22) : -0.16 * Math.sin(Math.PI * air);
+    armL = lerp(0.5, 2.3, Math.sin(Math.PI * air)); armR = lerp(-0.5, 2.4, Math.sin(Math.PI * air));
+    expr = 'fierce'; rock = 0.12 * Math.sin(Math.PI * air) * (h ? -1 : 1); yaw = -0.45;
+  }
+  if (Fw >= K.enter[2] && Fw < 150) { sq = ringv(Fw - K.enter[2], 0.2, 0.9, 0.22); expr = Fw < K.enter[2] + 3 ? 'squint' : 'grin'; yaw = lerp(-0.45, -0.2, sm((Fw - K.enter[2]) / 6)); rock = 0; }
+  if (Fw >= 150 && Fw < K.click) { yaw = lerp(-0.2, 0.18, sm((Fw - 150) / 8)); expr = 'calm'; }
+  if (Fw >= 162 && Fw < K.click) { sq = 0.16 * sm((Fw - 162) / 8); armL = lerp(0.5, 2.9, sm((Fw - 166) / 6)); expr = 'fierce'; rock = 0; yaw = lerp(0.18, 0.1, sm((Fw - 162) / 5)); }
+  if (Fw >= K.click && Fw < K.click + 24) {
+    const a = Fw - K.click;
+    crown = Math.max(0, 1 - a / 4); armL = lerp(2.7, 0.6, sm((a - 3) / 6));
+    sq = ringv(a, -0.18, 0.9, 0.2); y = bumpv(a, 0.12, 0.5, 0.12);
+    expr = a < 8 ? 'squint' : 'grin'; rock = 0; yaw = lerp(0.1, -0.55, sm((a - 6) / 8));
+  }
+  if (Fw >= 200 && Fw < K.kick) { yaw = lerp(-0.6, 0.1, sm((Fw - 200) / 10)); expr = 'calm'; }
+  if (Fw >= K.kick - 6 && Fw < K.kick + 8) { kick = Math.sin(Math.PI * clamp((Fw - K.kick + 6) / 14)); expr = 'fierce'; rock = 0; yaw = -0.25; }
+  if (Fw >= K.kick + 8 && Fw < 246) { yaw = lerp(-0.25, -0.95, sm((Fw - K.kick - 8) / 10)); expr = Fw > 236 ? 'annoyed' : 'calm'; rock = 0.03 * Math.sin(TAU * Fc / 12); }
+  if (Fw >= 244 && Fw < K.resetW) {
+    // scissors up, leap to the cut, chop: SNIP; look up at the falling letters; hop on top of the 7 and pose
+    const cutX = CUTX - 0.95, top = [LET.x + GL_LAYOUT[2].dx + 0.36, TABLE_Y + LET.h, LET.z];
+    const h2 = sm((Fw - 280) / 8);
+    x = lerp(lerp(WATCH.x, cutX, sm((Fw - 247) / 6)), top[0], h2);
+    z = lerp(WATCH.z, top[2], h2);
+    y = 0.42 * Math.sin(Math.PI * clamp((Fw - 247) / 6)) + lerp(0, top[1], h2) + 0.6 * Math.sin(Math.PI * clamp((Fw - 280) / 8));
+    yaw = lerp(-0.95, 0.0, sm((Fw - 245) / 5));
+    armR = lerp(-0.5, 2.6, sm((Fw - 244) / 5));
+    if (Fw >= K.snip - 1) armR = lerp(2.6, 0.9, sm((Fw - K.snip + 1) / 2));
+    if (Fw >= 262) armR = lerp(0.9, 0.4, sm((Fw - 262) / 6));
+    scis = Fw < K.snip ? 0.6 : lerp(0.0, 0.3, sm((Fw - K.snip - 6) / 6));
+    expr = Fw < K.snip - 1 ? 'fierce' : Fw < K.snip + 3 ? 'squint' : 'grin';
+    sq = Fw >= K.snip && Fw < 266 ? ringv(Fw - K.snip, 0.14, 0.9, 0.2) : (Fw >= 288 ? ringv(Fw - 288, 0.22, 0.9, 0.2) : 0);
+    if (Fw >= K.slam[0] - 4 && Fw < 280) { expr = 'surprised'; yaw = lerp(0, 0.25, sm((Fw - 262) / 4)); y += Fw >= K.slam[2] && Fw < K.slam[2] + 8 ? 0.2 * Math.sin(Math.PI * (Fw - K.slam[2]) / 8) : 0; }
+    if (Fw >= 278 && Fw < 288) sq = Fw < 280 ? 0.14 * sm((Fw - 278) / 2) : -0.1;          // crouch, stretch in the air
+    if (Fw >= 288) { armL = lerp(0.5, 2.2, sm((Fw - 288) / 5)); armR = lerp(0.4, 2.7, sm((Fw - 289) / 5)); expr = 'grin'; }
+    rock = Fw > 292 ? 0.05 * Math.sin(TAU * Fc / 16) : 0;
+  }
+  return { x, z, y, sq, rock, expr, armL, armR, scis, crown, yaw, kick, vis };
+}
+
+// ---- tape + roll + letters ----
+function tapeState(F) {
+  const vis = F >= K.kick && F < K.reset + 12;
+  const rollX = lerp(TAPE.x0, TAPE.x0 - TAPE.len, ease.outCubic(clamp((F - K.roll[0]) / (K.roll[1] - K.roll[0]))));
+  const fly = F >= K.snip ? F - K.snip : -1;
+  return { vis, rollX, rollOn: F >= K.kick && F < K.roll[1] + 1, fly };
+}
+const GL_LAYOUT = [ // x offset (world), rot z, rot y (hand-placed, jaunty)
+  { ch: '4', dx: 0.0, rz: -0.07, ry: 0.12 }, { ch: '.', dx: 0.84, rz: 0.0, ry: 0.05 },
+  { ch: '7', dx: 1.1, rz: 0.06, ry: -0.02 }, { ch: 'x', dx: 1.86, rz: -0.1, ry: -0.1 },
+];
+function letterState(i, F) {
+  const land = K.slam[i];
+  if (F < land - 14 || F >= K.reset + 12) return { vis: false };
+  const a = F - land;
+  let y = 0, sy = 1, sxz = 1, rz = 0;
+  if (a < 0) { const p = (a + 14) / 14; y = 6.5 * (1 - p * p); sy = 1.08; sxz = 0.95; }
+  else { sy = 1 - ringv(a, 0.3, 0.8, 0.18); sxz = 1 + ringv(a, 0.14, 0.8, 0.18); rz = bumpv(a, 0.06, 0.7, 0.15); }
+  return { vis: true, y, sy, sxz, rz, a };
+}
+
+// =====================================================================================================
+// scene
+// =====================================================================================================
+let T = null;
+const st = {};
+
+const LOOK = {
+  extends: 'comic',
+  // engraved plate: burin hatching in half-tone and core, a light ruled background
+  // (cast shadows and the set's shade sides become burin hatching; the characters keep a little Ben-Day)
+  hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.5, hatchWobble: 0.08, hatchSwell: 0.35,
+  // comic: halftone in the shade, hard rim, off-register plates, bold wobbly ink
+  htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0],
+  lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
+  // watercolour notebook: wet edges and granulation on the washes
+  bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.12,
+  rule: 0.17, rulePx: 10, ruleTop: 0.3, ruleBot: 0.04,
+  bgDots: [0.95, 0.6, 0.42, 0.28],
+  dofMax: 3.5, dofRange: 3.0,
+  grain: 0.018, vignette: 0.16,
+  ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),   // authoring only: ?lk={"hatchCut":0.3}
+};
+
+defineScene({
+  meta: {
+    title: 'Qubrio - The Convoy Job', durationFrames: NF, fps: FPS, width: 1920, height: 1080, seed: 17,
+    design: [1920, 1080], background: PAL.paper, fonts: [],
+    boil: { every: 2, variants: 3 },            // ink boils at 12 drawings/s
+    poster: 300,
+  },
+
+  update(ctx) {
+    const F = ctx.iw;
+    updateCamera(ctx, F);
+    updateCompass(F);
+    updateFork(F);
+    updateWatch(F);
+    updateAtoms(F);     // after the Fork: the reins hang from its tine
+    updateTape(F);
+    updateLetters(F);
+    updateBackdrop(F);
+  },
+
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(paperCanvas(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, three) { return buildWorld(ctx, three); },
+      draw(ctx) { drawNPR(ctx); return false; } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw(ctx, p, brush) { inkOverlay(ctx, brush); } },
+    { name: 'letters', type: '2d', draw(ctx, g) { lettering(ctx, g); } },
+  ],
+});
+
+function paperCanvas(ctx) { return ctx.paper({ tone: PAL.paper, grain: 0.04, fibres: 0.05, blotch: 0.06, seed: 4 }); }
+
+// =====================================================================================================
+// build
+// =====================================================================================================
+let brushesAdded = false;
+function addBrushes() {
+  if (brushesAdded) return; brushesAdded = true;
+  brush.add('inkpen', { type: 'default', weight: 3.2, scatter: 0.12, sharpness: 0.85, grain: 30, opacity: 235, spacing: 0.2, pressure: [1.15, 0.75], rotate: 'natural', noise: 0.1 });
+  brush.add('bigink', { type: 'default', weight: 6, scatter: 0.2, sharpness: 0.8, grain: 30, opacity: 235, spacing: 0.2, pressure: [1.2, 0.7], rotate: 'natural', noise: 0.15 });
+  brush.add('fatink', { type: 'default', weight: 11, scatter: 0.18, sharpness: 0.75, grain: 24, opacity: 240, spacing: 0.18, pressure: [1.25, 0.6], rotate: 'natural', noise: 0.12 });
+}
+
+const V = (x, y, z) => new T.THREE.Vector3(x, y, z);
+
+async function buildWorld(ctx, { THREE, renderer }) {
+  addBrushes();
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, ctx.W / ctx.H, 0.6, 60);
+  const npr = createNPR(renderer, ctx, { look: LOOK, paper: paperCanvas(ctx), samples: 4 });
+  npr.setUnder(window.__pv.canvas);
+  npr.setLight({ dir: [-0.55, 0.8, 0.6], target: [0, 0, 0.4], size: 7.2, dist: 20 });
+  npr.debug = Number(Q.get('debug') || 0);
+  T = { THREE, scene, camera, npr };
+
+  const add = (geo, mo, ao = {}, pos = [0, 0, 0], rot = [0, 0, 0], parent = scene) => {
+    const m = npr.add(new THREE.Mesh(geo, Array.isArray(mo) ? mo.map((o) => npr.surface(o)) : npr.surface(mo)), ao);
+    m.position.set(...pos); m.rotation.set(...rot); parent.add(m); return m;
+  };
+  T.add = add;
+
+  // ---------------- faces (p5.brush bakes; 2 hand-drawn variants each, swapped on twos) ----------------
+  T.faces = await bakeFaces(THREE);
+
+  // ---------------- painted cyclorama: a sunburst (neutral values, tinted per chapter) ----------------
+  const bdTex = await bakeBrushTexture(THREE, { width: 4096, height: 1024, seed: 21, key: 'backdrop', background: '#ffffff' },
+    (p, brush, w, h) => paintBackdrop(ctx, brush, w, h));
+  T.backdrop = npr.backdrop(bdTex, { radius: 18, height: 23, y: -6, center: [0.5, 0, 0.5], arc: [Math.PI - 2.4, 4.8] });
+  scene.add(T.backdrop);
+
+  // ---------------- optical table (periwinkle, cream holes) ----------------
+  const tableTex = await bakeBrushTexture(THREE, { width: 1024, height: 1024, seed: 7, key: 'table', background: '#ffffff' }, (p, brush) => {
+    const rr = ctx.rng('tabletex');
+    brush.noStroke();
+    for (let k = 0; k < 6; k++) { brush.fill(k % 2 ? '#9aa3d8' : '#c9cfee', 60); brush.fillBleed(0.25); brush.fillTexture(0.7, 0.6); brush.circle(rr.range(80, 940), rr.range(80, 940), rr.range(40, 110), 0.6); }
+    brush.set('inkpen', '#2c2750', 1.3);
+    for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) brush.circle(64 + i * 128, 64 + j * 128, 13 + rr.gauss(0, 0.6), 0.35);
+  });
+  tableTex.wrapS = tableTex.wrapT = THREE.RepeatWrapping; tableTex.repeat.set(9, 6);
+  const tSide = { color: 0x5a63a8, hatchDir: [0, 1, 0] };
+  add(new THREE.BoxGeometry(36, 0.4, 24), [tSide, tSide, { color: COL.table, map: tableTex, hatchDir: [1, 0, 0.3], noiseScale: 0.5, spec: 0.2 }, tSide, tSide, tSide],
+    { outline: 1.0, cast: false }, [0, TABLE_Y - 0.2, 1]);
+
+  // ---------------- the chip slab ----------------
+  const slabTex = await bakeBrushTexture(THREE, { width: 3072, height: 1266, seed: 9, key: 'slab', background: '#ffffff' }, (p, brush, w, h) => paintSlab(ctx, brush, w, h));
+  const sw = SLAB.x1 - SLAB.x0, sd = SLAB.z1 - SLAB.z0;
+  const sSide = { color: COL.slabSide, hatchDir: [0, 1, 0], shadeColor: 0x8a4a3a, shadeMix: 0.35 };
+  const sFront = { color: COL.slabSide, hatchDir: [0, 1, 0], shadeColor: 0x8a4a3a, shadeMix: 0.35 };
+  T.slab = add(new THREE.BoxGeometry(sw, SLAB.h, sd), [sSide, sSide, { color: COL.cream, map: slabTex, hatchDir: [1, 0, 0.2], hatchDir2: [0.2, 0, -1], noiseScale: 0.5, spec: 0.2, toneBias: 0.08 }, sSide, sFront, sSide],
+    { outline: 1.2 }, [(SLAB.x0 + SLAB.x1) / 2, -SLAB.h / 2, (SLAB.z0 + SLAB.z1) / 2]);
+  // brass edge rail on the slab top rim (engraved)
+  const railMat = { color: COL.brass, hatchMode: 'u', spec: 1 };
+  add(new THREE.BoxGeometry(sw + 0.08, 0.07, 0.08), railMat, { outline: 0.7 }, [(SLAB.x0 + SLAB.x1) / 2, 0.035, SLAB.z1 + 0.0]);
+  add(new THREE.BoxGeometry(sw + 0.08, 0.07, 0.08), railMat, { outline: 0.7 }, [(SLAB.x0 + SLAB.x1) / 2, 0.035, SLAB.z0]);
+
+  // ---------------- objective lens above the zone (the Rydberg source) ----------------
+  const objX = 2.45, objY = 3.3, objZ = -0.1;
+  const dk = { color: 0x3b3558, hatchMode: 'u', spec: 1 };
+  add(new THREE.CylinderGeometry(0.55, 0.42, 0.9, 48), dk, { outline: 1 }, [objX, objY + 0.45, objZ]);
+  add(new THREE.CylinderGeometry(0.6, 0.6, 0.12, 48), { color: COL.brass, hatchMode: 'u', spec: 1 }, { outline: 0.8 }, [objX, objY + 0.08, objZ]);
+  add(new THREE.CylinderGeometry(0.4, 0.26, 0.3, 48), dk, { outline: 0.8 }, [objX, objY - 0.14, objZ]);
+  T.lensTip = add(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 32), { color: 0xffd6e6, glow: 0.4, hatch: 0 }, { outline: 0.5, cast: false }, [objX, objY - 0.3, objZ]);
+  add(new THREE.CylinderGeometry(0.08, 0.08, 4, 16), { color: 0x6e6a8a, hatchMode: 'u' }, { outline: 0.7, cast: false }, [objX, objY + 2.9, objZ]);
+  T.OBJ = [objX, objY - 0.32, objZ];
+
+  // ---------------- background props on the table for depth ----------------
+  const post = (x, z, h, top) => {
+    add(new THREE.CylinderGeometry(0.06, 0.06, h, 20), { color: 0xc4c9dc, hatchMode: 'u' }, { outline: 0.8 }, [x, TABLE_Y + h / 2, z]);
+    add(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 28), { color: 0x4a4a6e }, { outline: 0.6 }, [x, TABLE_Y + 0.025, z]);
+    top(TABLE_Y + h);
+  };
+  post(-8.2, -2.6, 1.6, (y) => add(new THREE.BoxGeometry(0.5, 0.5, 0.12), { color: COL.steel }, { outline: 0.9 }, [-8.2, y + 0.2, -2.6], [0, 0.5, 0]));
+  post(7.6, -2.2, 1.3, (y) => add(new THREE.TorusGeometry(0.28, 0.07, 16, 40), { color: COL.dark, hatchMode: 'u' }, { outline: 0.8 }, [7.6, y + 0.3, -2.2], [0, 1.1, 0]));
+  post(-7.2, 4.6, 1.1, (y) => add(new THREE.BoxGeometry(0.42, 0.42, 0.42), { color: COL.ochre }, { outline: 0.9 }, [-7.2, y + 0.2, 4.6], [0, 0.7, 0]));
+  post(8.2, 4.2, 1.0, (y) => add(new THREE.CylinderGeometry(0.22, 0.22, 0.1, 32), { color: 0xdfe8f4, spec: 1 }, { outline: 0.7 }, [8.2, y + 0.2, 4.2], [Math.PI / 2, 0, 0.4]));
+  // a coiled cable behind the slab
+  const cable = new THREE.CatmullRomCurve3([[5.3, TABLE_Y + 0.05, -1.2], [6.4, TABLE_Y + 0.05, -2.8], [4.0, TABLE_Y + 0.05, -3.6], [0.5, TABLE_Y + 0.05, -3.0], [-2.5, TABLE_Y + 0.05, -3.6], [-6, TABLE_Y + 0.05, -2.9]].map((q) => new THREE.Vector3(...q)));
+  add(new THREE.TubeGeometry(cable, 120, 0.07, 10), { color: COL.red, hatchMode: 'u', hatchScale: 30 }, { outline: 0.8 }, [0, 0, 0]);
+
+  // ---------------- atoms ----------------
+  const atomGeo = new THREE.SphereGeometry(R, 40, 28);
+  T.atoms = ATOMS.map((a) => add(atomGeo, { color: COL.atom, map: T.faces.atom.sleep[0], hatchMode: 'screen', hatchDir: [1, -1, 0], toneBias: 0.15, rim: 0.7, spec: 1, receive: false, seed: a.i },
+    { outline: 0.62, cast: true }, [0, AY, 0]));
+
+  // ---------------- entanglement ligatures: real 3D arcs (so the characters occlude them) + a heart ----------------
+  // unit arc spans PAIR along +x; drawn on with setDrawRange after the ZAP, stretched and popped when the pairs part
+  const arcCurve = new THREE.QuadraticBezierCurve3(V(0, 0, 0), V(PAIR / 2, 0.62, 0), V(PAIR, 0, 0));
+  const heartShape = new THREE.Shape();
+  for (let k = 0; k <= 28; k++) {
+    const t = k / 28 * TAU, x = 16 * Math.pow(Math.sin(t), 3) / 16, y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 16;
+    k ? heartShape.lineTo(x, y) : heartShape.moveTo(x, y);
+  }
+  const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 0.35, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.1, bevelSegments: 2, curveSegments: 6 });
+  heartGeo.translate(0, 0, -0.175); heartGeo.scale(0.075, 0.075, 0.075);
+  T.ligs = Array.from({ length: 9 }, (_, q) => {
+    const g = new THREE.Group(); scene.add(g);
+    const geo = new THREE.TubeGeometry(arcCurve, LIG_SEG, 0.026, 8, false);
+    const m = add(geo, { color: COL.pink, glow: 0.45, hatch: 0, rim: 0.3, seed: 70 + q }, { outline: 0.5, cast: false }, [0, 0, 0], [0, 0, 0], g);
+    const heart = add(heartGeo, { color: 0xff4f86, glow: 0.2, rim: 0.7, hatch: 0.3, seed: 80 + q }, { outline: 0.6, cast: false }, [PAIR / 2, 0.36, 0], [0, 0, 0], g);
+    return { g, m, geo, heart };
+  });
+
+  // ---------------- AOD threads (unit cylinders, oriented per frame) ----------------
+  const thGeo = new THREE.CylinderGeometry(1, 1, 1, 10, 1);
+  const thMat = { color: COL.ochre, hatch: 0.3, toneBias: 0.25, rim: 0.4, glow: 0.2 };
+  T.rowTh = [0, 1, 2].map(() => add(thGeo, thMat, { outline: 0.45, cast: false }));
+  T.colTh = [0, 1, 2].map(() => add(thGeo, thMat, { outline: 0.45, cast: false }));
+  T.rein = [0, 1, 2].map(() => [add(thGeo, thMat, { outline: 0.45, cast: false }), add(thGeo, thMat, { outline: 0.45, cast: false })]);
+
+  buildCompass(THREE, add);
+  buildFork(THREE, add);
+  buildWatch(THREE, add);
+  await buildTape(ctx, THREE, add);
+  buildLetters(THREE, add);
+
+  return { scene, camera };
+}
+
+// ---------------- characters ----------------
+function buildCompass(THREE, add) {
+  const C = {};
+  const brass = { color: COL.brass, hatchMode: 'u', spec: 1, rim: 0.8, shadeColor: 0x9a5a2a, shadeMix: 0.3 };
+  const legGeo = new THREE.CylinderGeometry(0.075, 0.02, 1, 20, 1);
+  C.legA = add(legGeo, brass, { outline: 0.95 });
+  C.legB = add(legGeo, brass, { outline: 0.95 });
+  const tipGeo = new THREE.ConeGeometry(0.03, 0.14, 12); tipGeo.translate(0, -0.07, 0);
+  C.tipA = add(tipGeo, { color: 0x5b6280, spec: 1 }, { outline: 0.5 });
+  C.tipB = add(tipGeo, { color: 0x5b6280, spec: 1 }, { outline: 0.5 });
+  C.hinge = add(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 28), { color: COL.brass, hatchMode: 'u', spec: 1 }, { outline: 0.8 });
+  C.head = new THREE.Group(); T.scene.add(C.head);
+  C.headM = add(new THREE.SphereGeometry(0.31, 40, 28), { color: 0xf2c060, map: T.faces.compass.determined[0], hatchMode: 'v', rim: 0.9, spec: 0.5, seed: 11 }, { outline: 1.0 }, [0, 0.25, 0], [0, 0, 0], C.head);
+  add(new THREE.TorusGeometry(0.1, 0.034, 12, 32), { color: COL.brass, hatchMode: 'u', spec: 1 }, { outline: 0.7 }, [0, 0.65, 0], [0, 0, 0], C.head);
+  add(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 12), { color: COL.brass }, { outline: 0.6 }, [0, 0.56, 0], [0, 0, 0], C.head);
+  // cape: a bent sheet hung from the back of the head, deformed per frame
+  const capeGeo = new THREE.PlaneGeometry(0.62, 0.95, 8, 12); capeGeo.translate(0, -0.47, 0);
+  C.capeBase = capeGeo.attributes.position.array.slice();
+  C.cape = add(capeGeo, { color: COL.red, side: THREE.DoubleSide, hatchDir: [0, 1, 0.3], rim: 0.6, shadeColor: 0x7a2340, shadeMix: 0.5 }, { cast: true }, [0, 0.14, -0.2], [0.1, 0, 0], C.head);
+  T.cmp = C;
+}
+function buildFork(THREE, add) {
+  const G = {};
+  G.root = new THREE.Group(); T.scene.add(G.root);
+  G.lean = new THREE.Group(); G.root.add(G.lean);
+  const steel = { color: COL.steel, hatchMode: 'v', spec: 0.35, rim: 0.9, shadeColor: 0x2c3f8a, shadeMix: 0.3 };
+  G.foot = add(new THREE.SphereGeometry(0.2, 28, 16), { color: 0x3e4f9a, spec: 1 }, { outline: 0.9 }, [0, 0.07, 0], [0, 0, 0], G.lean);
+  G.foot.scale.set(1.3, 0.45, 1.3);
+  add(new THREE.CylinderGeometry(0.06, 0.07, 0.3, 16), { color: 0xb9c3dc, hatchMode: 'u' }, { outline: 0.7 }, [0, 0.25, 0], [0, 0, 0], G.lean);
+  G.body = add(new THREE.SphereGeometry(0.37, 40, 28), { ...steel, map: T.faces.fork.determined[0], seed: 21 }, { outline: 1.1 }, [0, 0.66, 0], [0, 0, 0], G.lean);
+  G.tines = [-1, 1].map((s) => {
+    const pv = new THREE.Group(); pv.position.set(0.2 * s, 0.95, 0); G.lean.add(pv);
+    const tg = new THREE.CapsuleGeometry(0.085, 0.85, 6, 16); tg.translate(0, 0.5, 0);
+    add(tg, steel, { outline: 0.95 }, [0, 0, 0], [0, 0, 0], pv);
+    const tipM = new THREE.Object3D(); tipM.position.set(0, 1.0, 0); pv.add(tipM);
+    return { pv, tipM };
+  });
+  // a stubby cape collar (ochre scarf) so it reads as a hero at card size
+  G.scarf = add(new THREE.TorusGeometry(0.2, 0.06, 12, 32), { color: COL.ochre, hatchMode: 'u', rim: 0.6 }, { outline: 0.8 }, [0, 0.93, 0], [Math.PI / 2, 0, 0], G.lean);
+  G.root.position.set(FORK.x, 0, FORK.z);
+  T.fork = G;
+}
+function buildWatch(THREE, add) {
+  const W = {};
+  W.root = new THREE.Group(); T.scene.add(W.root);
+  W.body = new THREE.Group(); W.root.add(W.body);
+  const brass = { color: COL.brass, hatchMode: 'u', spec: 1, rim: 0.9, shadeColor: 0x9a5a2a, shadeMix: 0.3 };
+  const by = 0.72;
+  add(new THREE.CylinderGeometry(0.42, 0.42, 0.22, 48), brass, { outline: 1.05 }, [0, by, 0], [Math.PI / 2, 0, 0], W.body);
+  add(new THREE.TorusGeometry(0.42, 0.05, 14, 56), brass, { outline: 0.9 }, [0, by, 0.11], [0, 0, 0], W.body);
+  W.dial = add(new THREE.CircleGeometry(0.37, 48), { color: 0xfff8e6, map: T.faces.watch.calm[0], hatch: 0.5, toneBias: 0.2, rim: 0.5, spec: 0.5, seed: 31 }, { outline: 0.0 }, [0, by, 0.116], [0, 0, 0], W.body);
+  W.crown = add(new THREE.CylinderGeometry(0.07, 0.07, 0.12, 16), brass, { outline: 0.7 }, [0, by + 0.49, 0], [0, 0, 0], W.body);
+  W.btn = add(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 20), { color: COL.red, rim: 0.6 }, { outline: 0.7 }, [0, by + 0.58, 0], [0, 0, 0], W.body);
+  add(new THREE.TorusGeometry(0.1, 0.03, 10, 28), brass, { outline: 0.6 }, [0.2, by + 0.44, 0], [0, 0, 0.9], W.body);
+  // legs
+  W.legs = [-1, 1].map((s) => {
+    const g = new THREE.Group(); g.position.set(0.17 * s, 0.34, 0); W.root.add(g);
+    const lg = new THREE.CapsuleGeometry(0.05, 0.18, 4, 10); lg.translate(0, -0.14, 0);
+    add(lg, { color: COL.dark }, { outline: 0.7 }, [0, 0, 0], [0, 0, 0], g);
+    const ft = add(new THREE.SphereGeometry(0.09, 16, 10), { color: COL.red }, { outline: 0.7 }, [0.02 * s, -0.3, 0.05], [0, 0, 0], g);
+    ft.scale.set(1.2, 0.6, 1.5);
+    return g;
+  });
+  // arms (the right one holds the scissors)
+  const armGeo = new THREE.CapsuleGeometry(0.045, 0.3, 4, 10); armGeo.translate(0, -0.2, 0);
+  W.arms = [-1, 1].map((s) => {
+    const g = new THREE.Group(); g.position.set(0.43 * s, by + 0.05, 0.02); W.body.add(g);
+    add(armGeo, { color: COL.dark }, { outline: 0.7 }, [0, 0, 0], [0, 0, 0], g);
+    add(new THREE.SphereGeometry(0.07, 14, 10), { color: COL.cream }, { outline: 0.6 }, [0, -0.42, 0], [0, 0, 0], g);
+    return g;
+  });
+  // scissors in the right hand: two blades on a rivet
+  W.scis = new THREE.Group(); W.scis.position.set(0, -0.46, 0.04); W.scis.rotation.z = -Math.PI / 2; W.arms[1].add(W.scis);
+  const bladeShape = new THREE.Shape([[0, 0], [0.05, 0.02], [0.44, 0.012], [0.46, 0], [0.05, -0.03]].map((q) => new THREE.Vector2(...q)));
+  const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.02, bevelEnabled: false });
+  const ringGeo = new THREE.TorusGeometry(0.06, 0.02, 8, 20);
+  W.blades = [-1, 1].map((s) => {
+    const g = new THREE.Group(); W.scis.add(g);
+    add(bladeGeo, { color: 0xc9d3e6, spec: 1, hatch: 0.4 }, { outline: 0.6 }, [0, 0, s * 0.012], [0, 0, 0], g);
+    add(ringGeo, { color: COL.red }, { outline: 0.5 }, [-0.1, s * 0.03, 0], [0, 0, 0], g);
+    return g;
+  });
+  W.root.position.set(WATCH.x, 0, WATCH.z);
+  T.watch = W;
+}
+
+// ---------------- tape (stub + tail, deformed per frame) + paper roll ----------------
+async function buildTape(ctx, THREE, add) {
+  const stubTex = await bakeBrushTexture(THREE, { width: 1024, height: 430, seed: 5, key: 'stub', background: '#ffffff' }, (p, brush, w, h) => paintTape(brush, w, h, true));
+  const tailTex = await bakeBrushTexture(THREE, { width: 3072, height: 348, seed: 6, key: 'tail', background: '#ffffff' }, (p, brush, w, h) => paintTape(brush, w, h, false));
+  const mk = (len, n, tex, seed) => {
+    const geo = new THREE.PlaneGeometry(len, TAPE.w, n, 1);
+    const m = add(geo, { color: 0xfffaf0, map: tex, side: THREE.DoubleSide, hatch: 0.6, toneBias: 0.12, rim: 0.3, spec: 0.3, seed }, { cast: true });
+    m.userData.base = geo.attributes.position.array.slice();
+    m.userData.len = len;
+    m.frustumCulled = false;
+    return m;
+  };
+  T.stub = mk(TAPE.stub, 12, stubTex, 41);
+  T.tail = mk(TAPE.len - TAPE.stub, 80, tailTex, 42);
+  const rollSide = { color: 0x2f9d97, hatchMode: 'u', rim: 0.6, shadeColor: 0x1d4f6a, shadeMix: 0.35 }, rollCap = { color: 0xfff3dc, hatchMode: 'planar', rim: 0.4 };
+  T.roll = add(new THREE.CylinderGeometry(0.28, 0.28, TAPE.w + 0.04, 32), [rollSide, rollCap, rollCap], { outline: 0.9 }, [0, 0.13, TAPE.z], [Math.PI / 2, 0, 0]);
+}
+
+// ---------------- 4.7x: hand-cut outlines, extruded as comic block letters ----------------
+function glyphShape(THREE, ch, seed) {
+  const P = {
+    '4': [[[0.44, 1.0], [0.63, 1.0], [0.63, 0.40], [0.77, 0.40], [0.77, 0.23], [0.63, 0.23], [0.63, 0.0], [0.43, 0.0], [0.43, 0.23], [0.0, 0.23], [0.0, 0.41]],
+      [[0.43, 0.40], [0.43, 0.70], [0.21, 0.40]]],
+    '7': [[[0.0, 1.0], [0.68, 1.0], [0.68, 0.85], [0.35, 0.0], [0.13, 0.0], [0.45, 0.83], [0.0, 0.83]]],
+    '.': [Array.from({ length: 12 }, (_, i) => [0.11 + 0.11 * Math.cos(i / 12 * TAU), 0.11 + 0.11 * Math.sin(i / 12 * TAU)])],
+    'x': [(() => {   // a plus sign (arm half-width w, half-length L) turned 45 degrees
+      const c = [0.3, 0.36], w = 0.08, L = 0.3, a = Math.PI / 4, ca = Math.cos(a), sa = Math.sin(a);
+      const plus = [[w, L], [w, w], [L, w], [L, -w], [w, -w], [w, -L], [-w, -L], [-w, -w], [-L, -w], [-L, w], [-w, w], [-w, L]];
+      return plus.map(([px, py]) => [c[0] + px * ca - py * sa, c[1] + px * sa + py * ca]).reverse();
+    })()],
+  }[ch];
+  // hand wobble: subdivide edges and nudge
+  const wob = (poly, k) => {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      const n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.12));
+      for (let j = 0; j < n; j++) {
+        const t = j / n;
+        out.push([a[0] + (b[0] - a[0]) * t + (hsh(seed, k, i, j, 1) - 0.5) * 0.018, a[1] + (b[1] - a[1]) * t + (hsh(seed, k, i, j, 2) - 0.5) * 0.018]);
+      }
+    }
+    return out;
+  };
+  const outer = wob(P[0], 0).map((q) => new THREE.Vector2(q[0], q[1]));
+  const shape = new THREE.Shape(outer);
+  for (let h = 1; h < P.length; h++) shape.holes.push(new THREE.Path(wob(P[h], h).map((q) => new THREE.Vector2(q[0], q[1]))));
+  return shape;
+}
+function buildLetters(THREE, add) {
+  T.letters = GL_LAYOUT.map((L, i) => {
+    const geo = new THREE.ExtrudeGeometry(glyphShape(THREE, L.ch, i + 1), { depth: 0.3, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.03, bevelSegments: 2, curveSegments: 4 });
+    geo.scale(LET.h, LET.h, 1);
+    geo.translate(0, 0, -0.15);
+    const g = new T.THREE.Group(); T.scene.add(g);
+    const m = add(geo, [{ color: COL.letter, hatchDir: [0.3, 1, 0], rim: 0.9, shadeColor: 0x7a1f3a, shadeMix: 0.35, seed: 50 + i },
+      { color: COL.letterSide, hatchDir: [0, 1, 0], rim: 0.5, shadeColor: 0xb0521e, shadeMix: 0.4, seed: 60 + i }], { outline: 1.25 }, [0, 0, 0], [0, 0, 0], g);
+    return { g, m };
+  });
+}
+
+// =====================================================================================================
+// painted textures (p5.brush)
+// =====================================================================================================
+function ell(x, y, rx, ry, rot = 0, n = 22) {
+  const pts = [];
+  for (let i = 0; i < n; i++) { const a = i / n * TAU, px = Math.cos(a) * rx, py = Math.sin(a) * ry; pts.push([x + px * Math.cos(rot) - py * Math.sin(rot), y + px * Math.sin(rot) + py * Math.cos(rot)]); }
+  return pts;
+}
+function fillP(brush, pts, col, op = 255, bleed = 0.015, tex = 0.12) { brush.noStroke(); brush.noHatch(); brush.fill(col, op); brush.fillBleed(bleed); brush.fillTexture(tex, 0.2); brush.polygon(pts); brush.noFill(); }
+function star4(x, y, r, rot = 0) { const pts = []; for (let i = 0; i < 8; i++) { const a = rot + i * Math.PI / 4, rr = i % 2 ? r * 0.3 : r; pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]); } return pts; }
+
+// faces: one painter for atoms / compass / fork (sphere, equirect, face at u=0.25) and the watch dial (planar)
+function paintFace(brush, who, expr, W, Hh, v) {
+  const sphere = who !== 'watch';
+  const cx = sphere ? W * 0.25 : W / 2, cy = sphere ? Hh * 0.5 : Hh * 0.47;
+  // bigger features on the small spheres so they read at card size
+  const s = (sphere ? W / 1024 : W / 512 * 0.95) * ({ atom: 1.55, compass: 1.4, fork: 1.15, watch: 1 }[who]);
+  const ink = PAL.ink, j = (a) => (hsh(v, a) - 0.5) * 3 * s;
+  const ex = (who === 'fork' ? 60 : who === 'watch' ? 72 : 52) * s, ey = (who === 'watch' ? -40 : -24) * s;
+  const er = (who === 'watch' ? 1.5 : 1) * s;
+  const my = cy + (who === 'watch' ? 70 : 40) * s;
+  const eyes = [[cx - ex, cy + ey], [cx + ex, cy + ey]];
+  if (who === 'watch') {   // dial ticks
+    brush.set('bigink', ink, 1.2);
+    for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, r0 = W * 0.44, r1 = W * (i % 3 ? 0.4 : 0.37); brush.line(W / 2 + Math.cos(a) * r0, Hh / 2 + Math.sin(a) * r0, W / 2 + Math.cos(a) * r1, Hh / 2 + Math.sin(a) * r1); }
+  }
+  if (who === 'fork') {    // domino mask
+    const mk = [[cx - 125 * s, cy - 58 * s], [cx - 40 * s, cy - 70 * s], [cx, cy - 52 * s], [cx + 40 * s, cy - 70 * s], [cx + 125 * s, cy - 58 * s], [cx + 150 * s, cy - 90 * s], [cx + 118 * s, cy - 8 * s], [cx + 30 * s, cy + 2 * s], [cx, cy - 16 * s], [cx - 30 * s, cy + 2 * s], [cx - 118 * s, cy - 8 * s], [cx - 150 * s, cy - 90 * s]];
+    fillP(brush, mk, '#e0352f', 255, 0.01, 0.08); fillP(brush, mk, '#d42a2a', 200, 0.01, 0.08);
+    brush.set('bigink', ink, 1.3); brush.beginShape(0.3); mk.forEach(([x, y]) => brush.vertex(x, y)); brush.endShape(true);
+  }
+  const eyeCol = who === 'fork' ? '#fff8e8' : ink;
+  const dotEyes = (rx, ry) => eyes.forEach(([x, y], i) => {
+    const X = x + j(i), Y = y + j(i + 3);
+    if (who === 'fork') {   // white mask eyes with ink pupils
+      fillP(brush, ell(X, Y, rx * er * 1.25, ry * er * 1.05), eyeCol); fillP(brush, ell(X, Y, rx * er * 1.25, ry * er * 1.05), eyeCol, 200);
+      fillP(brush, ell(X + 3 * s, Y + 3 * s, rx * er * 0.6, ry * er * 0.6), ink);
+      return;
+    }
+    const E = ell(X, Y, rx * er, ry * er);
+    fillP(brush, E, eyeCol); fillP(brush, E, eyeCol); fillP(brush, E, eyeCol, 200);
+    brush.set('bigink', ink, 0.7 * s * (who === 'watch' ? 1.3 : 1)); brush.beginShape(0.4); E.forEach(([x2, y2]) => brush.vertex(x2, y2)); brush.endShape(true);
+    fillP(brush, ell(x - rx * 0.3 * er, y - ry * 0.45 * er, rx * 0.32 * er, ry * 0.22 * er), '#fffaf0'); });
+  const arcs = (dir, w = 22, h = 14) => eyes.forEach(([x, y]) => { brush.set('fatink', eyeCol, 0.9 * s * (who === 'watch' ? 1.4 : 1)); brush.spline([[x - w * er, y + dir * h * 0.3 * er], [x, y - dir * h * er], [x + w * er, y + dir * h * 0.3 * er]], 0.7); });
+  const mouth = (kind) => {
+    const mw = (who === 'watch' ? 1.5 : 1) * s;
+    if (kind === 'smile') { brush.set('bigink', ink, 1.1 * mw); brush.spline([[cx - 22 * mw, my - 4 * mw], [cx, my + 10 * mw], [cx + 22 * mw, my - 4 * mw]], 0.7); }
+    if (kind === 'o') { for (let q = 0; q < 3; q++) fillP(brush, ell(cx, my + 4 * mw, 11 * mw, 14 * mw), ink); fillP(brush, ell(cx, my + 8 * mw, 6 * mw, 6 * mw), '#e8546a'); }
+    if (kind === 'open') { const pts = [[cx - 30 * mw, my - 8 * mw], [cx + 30 * mw, my - 8 * mw], [cx + 22 * mw, my + 14 * mw], [cx, my + 24 * mw], [cx - 22 * mw, my + 14 * mw]]; for (let q = 0; q < 3; q++) fillP(brush, pts, ink); fillP(brush, ell(cx, my + 14 * mw, 14 * mw, 8 * mw), '#e8546a'); fillP(brush, ell(cx, my + 14 * mw, 14 * mw, 8 * mw), '#e8546a'); }
+    if (kind === 'grin') { const pts = [[cx - 40 * mw, my - 10 * mw], [cx + 40 * mw, my - 10 * mw], [cx + 26 * mw, my + 16 * mw], [cx - 26 * mw, my + 16 * mw]]; for (let q = 0; q < 3; q++) fillP(brush, pts, ink); fillP(brush, [[cx - 32 * mw, my - 7 * mw], [cx + 32 * mw, my - 7 * mw], [cx + 28 * mw, my + 1 * mw], [cx - 28 * mw, my + 1 * mw]], '#fffaf0'); }
+    if (kind === 'flat') { brush.set('bigink', ink, 1.1 * mw); brush.line(cx - 20 * mw, my, cx + 20 * mw, my + 2 * mw); }
+    if (kind === 'teeth') { const pts = [[cx - 34 * mw, my - 10 * mw], [cx + 34 * mw, my - 10 * mw], [cx + 34 * mw, my + 12 * mw], [cx - 34 * mw, my + 12 * mw]]; fillP(brush, pts, '#fffaf0'); brush.set('bigink', ink, 1.0 * mw); brush.polygon(pts); brush.line(cx - 34 * mw, my + 1 * mw, cx + 34 * mw, my + 1 * mw); for (let q = -2; q <= 2; q++) brush.line(cx + q * 12 * mw, my - 10 * mw, cx + q * 12 * mw, my + 12 * mw); }
+    if (kind === 'tiny') { brush.set('bigink', ink, 0.8 * mw); brush.spline([[cx - 8 * mw, my], [cx, my + 5 * mw], [cx + 8 * mw, my]], 0.6); }
+  };
+  const blush = () => [[cx - ex * 1.55, cy + 18 * s], [cx + ex * 1.55, cy + 18 * s]].forEach(([x, y]) => { fillP(brush, ell(x, y, 22 * er, 12 * er), PAL.blush, 150, 0.08, 0.3); });
+  const brows = (dir) => eyes.forEach(([x, y], i) => { const sg = i ? 1 : -1; brush.set('fatink', ink, 0.85 * s * (who === 'watch' ? 1.4 : 1)); brush.line(x - 22 * er, y - 38 * er - dir * sg * 8 * er, x + 22 * er, y - 38 * er + dir * sg * 8 * er); });
+  switch (expr) {
+    case 'sleep': arcs(-1, 20, 9); mouth('tiny'); break;
+    case 'awake': dotEyes(12, 22); mouth('tiny'); break;
+    case 'surprised': dotEyes(16, 29); mouth('o'); break;
+    case 'whee': eyes.forEach(([x, y], i) => { const sg = i ? -1 : 1; brush.set('fatink', eyeCol, 0.9 * s); brush.spline([[x - 16 * sg * er, y - 16 * er], [x + 14 * sg * er, y], [x - 16 * sg * er, y + 16 * er]], 0.2); }); mouth('open'); break;
+    case 'love': arcs(1, 20, 14); mouth('smile'); blush(); break;
+    case 'sparkle': eyes.forEach(([x, y], i) => { fillP(brush, star4(x, y, 30 * er, 0.1 * i), eyeCol === ink ? '#2a1d4a' : eyeCol); }); mouth('open'); blush(); break;
+    case 'squint': eyes.forEach(([x, y], i) => { const sg = i ? -1 : 1; brush.set('fatink', eyeCol, 0.9 * s); brush.line(x - 18 * er, y - sg * 3 * er, x + 18 * er, y + sg * 3 * er); }); mouth(who === 'fork' ? 'teeth' : 'tiny'); break;
+    case 'yawn': arcs(-1, 18, 8); mouth('o'); break;
+    case 'determined': dotEyes(13, 21); brows(1); mouth(who === 'fork' ? 'smile' : 'flat'); break;
+    case 'happy': arcs(1, 20, 14); mouth(who === 'watch' ? 'grin' : 'open'); if (who !== 'fork') blush(); break;
+    case 'strain': eyes.forEach(([x, y], i) => { const sg = i ? -1 : 1; brush.set('fatink', eyeCol, 0.9 * s); brush.spline([[x - 16 * sg * er, y - 14 * er], [x + 12 * sg * er, y], [x - 16 * sg * er, y + 14 * er]], 0.2); }); mouth('teeth'); break;
+    case 'calm': dotEyes(11, 18); mouth('smile'); break;
+    case 'fierce': dotEyes(12, 16); brows(1); mouth('grin'); break;
+    case 'annoyed': eyes.forEach(([x, y]) => { fillP(brush, [[x - 14 * er, y - 4 * er], [x + 14 * er, y - 4 * er], [x + 12 * er, y + 12 * er], [x - 12 * er, y + 12 * er]], eyeCol); }); brows(-0.6); mouth('flat'); break;
+    case 'grin': arcs(1, 22, 15); mouth(who === 'watch' ? 'open' : 'grin'); blush(); break;
+    default: dotEyes(12, 22);
+  }
+}
+async function bakeFaces(THREE) {
+  const sets = {
+    atom: ['sleep', 'awake', 'surprised', 'whee', 'love', 'sparkle', 'squint', 'yawn'],
+    compass: ['determined', 'happy', 'surprised', 'squint'],
+    fork: ['determined', 'strain', 'happy', 'surprised', 'squint'],
+    watch: ['calm', 'fierce', 'squint', 'grin', 'annoyed', 'surprised'],
+  };
+  const out = {};
+  for (const who of Object.keys(sets)) {
+    out[who] = {};
+    for (const e of sets[who]) {
+      out[who][e] = [];
+      for (let v = 0; v < 2; v++) {
+        const W = who === 'watch' ? 512 : 1024, Hh = who === 'watch' ? 512 : 512;
+        out[who][e].push(await bakeBrushTexture(THREE, { width: W, height: Hh, seed: 100 + v * 7, key: `face-${who}-${e}-${v}`, background: '#ffffff' },
+          (p, brush) => paintFace(brush, who, e, W, Hh, v)));
+      }
+    }
+  }
+  return out;
+}
+
+function paintBackdrop(ctx, brush, w, h) {
+  const r = ctx.rng('backdrop');
+  const cx = w * 0.5, cy = h * 0.62;
+  brush.noStroke();
+  // sunburst rays in neutral values (tinted per chapter in the material)
+  const n = 44;
+  for (let k = 0; k < n; k++) {
+    const a0 = (k / n) * TAU, a1 = a0 + TAU / n * 0.5;
+    brush.fill('#b9b9b9', 215); brush.fillBleed(0.03); brush.fillTexture(0.35, 0.3);
+    brush.polygon([[cx, cy], [cx + Math.cos(a0) * 3000, cy + Math.sin(a0) * 1400], [cx + Math.cos(a1) * 3000, cy + Math.sin(a1) * 1400]]);
+  }
+  // soft neutral watercolour clouds and a pale core (the tint colours them)
+  brush.fill('#ffffff', 190); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.5, 0.4);
+  blob(brush, r, cx, cy, 360, 170, 24, 0.1);
+  for (let k = 0; k < 7; k++) { brush.fill('#a9a9a9', 60); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.6, 0.5); blob(brush, r, r.range(200, w - 200), r.range(80, h * 0.45), r.range(160, 320), r.range(50, 90), 20, 0.14); }
+}
+function blob(brush, r, cx, cy, rx, ry, n, jit) { brush.beginShape(0.4); for (let k = 0; k < n; k++) { const a = (k / n) * TAU, q = 1 + r.gauss(0, jit); brush.vertex(cx + Math.cos(a) * rx * q, cy + Math.sin(a) * ry * q); } brush.endShape(true); }
+
+function paintSlab(ctx, brush, w, h) {
+  const r = ctx.rng('slab');
+  const X = (x) => (x - SLAB.x0) / (SLAB.x1 - SLAB.x0) * w, Z = (z) => (z - SLAB.z0) / (SLAB.z1 - SLAB.z0) * h;
+  const upx = w / (SLAB.x1 - SLAB.x0);
+  const rect = (x0, z0, x1, z1, col, op, bl) => { brush.noStroke(); brush.fill(col, op); brush.fillBleed(bl, 'out'); brush.fillTexture(0.55, 0.45); brush.beginShape(0.25);
+    const pts = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]]; for (const [x, z] of pts) brush.vertex(X(x) + r.gauss(0, 6), Z(z) + r.gauss(0, 6)); brush.endShape(true); brush.noFill(); };
+  // zone washes: teal storage, violet entanglement band, a thin ochre readout strip at the far left
+  rect(-4.25, -1.05, -0.12, 1.05, '#39a6a0', 150, 0.12); rect(-4.1, -0.95, -0.25, 0.95, '#39a6a0', 90, 0.1);
+  rect(0.35, -1.55, 4.3, 1.9, '#7a5bd6', 150, 0.12); rect(0.5, -1.4, 4.15, 1.75, '#7a5bd6', 90, 0.1);
+  rect(-6.2, -1.6, -5.2, 1.4, '#f2b134', 120, 0.15);
+  // SLM trap sites: dotted ink rings
+  const ring = (x, z, rad) => { brush.set('inkpen', '#1f1a3a', 1.25); const n = 12; for (let i = 0; i < n; i += 1) { const a0 = i / n * TAU, a1 = a0 + TAU / n * 0.5; brush.line(X(x) + Math.cos(a0) * rad * upx, Z(z) + Math.sin(a0) * rad * upx, X(x) + Math.cos(a1) * rad * upx, Z(z) + Math.sin(a1) * rad * upx); } };
+  for (let c = 0; c < 6; c++) for (let rr = 0; rr < 3; rr++) ring(SX(c), SZ(rr), 0.25);
+  for (let k = 0; k < 3; k++) for (let rr = 0; rr < 3; rr++) { ring(PX(k), PZ(rr), 0.25); ring(PX(k) - PAIR, PZ(rr), 0.22); }
+  // engraved border lines + hand ruling on the front strip
+  brush.set('inkpen', '#2a2448', 1.1);
+  brush.line(X(SLAB.x0 + 0.12), Z(SLAB.z1 - 0.12), X(SLAB.x1 - 0.12), Z(SLAB.z1 - 0.12));
+  brush.line(X(SLAB.x0 + 0.12), Z(SLAB.z0 + 0.12), X(SLAB.x1 - 0.12), Z(SLAB.z0 + 0.12));
+  for (let k = 0; k < 90; k++) { const x = lerp(SLAB.x0 + 0.3, SLAB.x1 - 0.3, k / 89); brush.set('inkpen', '#2a2448', 0.7); brush.line(X(x), Z(SLAB.z1 - 0.2), X(x) + r.gauss(0, 1), Z(SLAB.z1 - 0.2) - 10 - (k % 5 ? 0 : 12)); }
+  // coffee ring (lab notebook)
+  brush.set('inkpen', '#9a6b43', 1.0); brush.circle(X(-5.3), Z(2.3), 60, 0.5);
+}
+
+function paintTape(brush, w, h, stub) {
+  // a teal paper ribbon (two watercolour glazes) with cream stitch rules: it has to read against the cream slab
+  const ink = PAL.ink, cream = '#fff6e0';
+  const rect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  fillP(brush, rect(-12, -12, w + 12, h + 12), '#2f9d97', 255, 0.004, 0.22);
+  fillP(brush, rect(-12, -12, w + 12, h + 12), '#2a8f8c', 150, 0.01, 0.35);
+  brush.set('inkpen', cream, 1.3);
+  for (let x = 10; x < w; x += 30) { brush.line(x, h * 0.1, x + 15, h * 0.1); brush.line(x + 6, h * 0.9, x + 21, h * 0.9); }
+  if (stub) {
+    // a cream name tag with "Qubrio" hand-written
+    // "Qubrio" lettered straight onto the ribbon (no box): ochre swash, fat ink under-stroke, cream letters
+    const size = h * 0.56, x0 = w * 0.1, yb = h * 0.78;
+    brush.set('fatink', PAL.ochre, 3.2); brush.spline([[x0 - 10, yb + 34], [w * 0.45, yb + 18], [w * 0.9, yb + 30]], 0.6);
+    handScript(brush, 'Qubrio', x0, yb, size, ink, 2.7);
+    handScript(brush, 'Qubrio', x0, yb, size, ink, 2.7);
+    handScript(brush, 'Qubrio', x0, yb, size, cream, 1.3);
+    handScript(brush, 'Qubrio', x0, yb, size, cream, 1.3);
+  } else {
+    // the old schedule: a few busy blocks and long idle gaps (hand-ruled dashes)
+    let x = 40, k = 0;
+    while (x < w - 60) {
+      const bw = 34 + (k * 23) % 30;
+      fillP(brush, rect(x, h * 0.28, x + bw, h * 0.72), k % 3 ? '#f2b134' : cream, 255, 0.01, 0.15);
+      brush.set('inkpen', ink, 0.9); brush.beginShape(0.1); rect(x, h * 0.28, x + bw, h * 0.72).forEach(([a, b]) => brush.vertex(a, b)); brush.endShape(true);
+      brush.set('inkpen', cream, 1.1);
+      for (let t = 1; t < 6; t++) brush.line(x + bw + t * 24, h * 0.5, x + bw + t * 24 + 10, h * 0.5);
+      x += bw + 150 + (k * 37) % 110; k++;
+    }
+  }
+}
+
+// ---- hand-authored script for "Qubrio" (stroke skeletons, height 1 = cap height, y down) ----
+const SCRIPT = {
+  Q: { w: 0.86, s: [[...ell(0.4, 0.46, 0.38, 0.46, 0, 20), ell(0.4, 0.46, 0.38, 0.46, 0, 20)[0]], [[0.4, 0.7], [0.6, 0.98], [0.92, 1.04]]] },
+  u: { w: 0.42, s: [[[0.0, 0.5], [0.0, 0.86], [0.1, 1.0], [0.25, 0.97], [0.34, 0.82]], [[0.34, 0.5], [0.35, 1.0]]] },
+  b: { w: 0.42, s: [[[0.0, -0.02], [0.0, 1.0]], [[0.0, 0.66], [0.14, 0.5], [0.34, 0.56], [0.38, 0.8], [0.22, 1.0], [0.0, 0.96]]] },
+  r: { w: 0.32, s: [[[0.0, 0.5], [0.0, 1.0]], [[0.0, 0.68], [0.12, 0.52], [0.32, 0.5]]] },
+  i: { w: 0.08, s: [[[0.0, 0.52], [0.0, 1.0]]], dots: [[0.0, 0.3]] },
+  o: { w: 0.44, s: [[...ell(0.22, 0.75, 0.22, 0.25, 0, 14), ell(0.22, 0.75, 0.22, 0.25, 0, 14)[0]]] },
+};
+function handScript(brush, word, x0, yBase, size, col, wmul = 1) {
+  let x = x0;
+  for (const ch of word) {
+    const G = SCRIPT[ch];
+    brush.set('fatink', col, size / 150 * wmul);
+    for (const s of G.s) {
+      const pts = s.map(([u, v]) => [x + u * size, yBase - size + v * size]);
+      if (pts.length === 2) brush.line(pts[0][0], pts[0][1], pts[1][0], pts[1][1]); else brush.spline(pts, 0.5);
+    }
+    if (G.dots) for (const [u, v] of G.dots) { brush.noStroke(); brush.fill(col, 255); brush.fillBleed(0.01); brush.circle(x + u * size, yBase - size + v * size, size * 0.07 * Math.sqrt(wmul), 0.2); brush.noFill(); }
+    x += (G.w + 0.16) * size;
+  }
+}
+
+// =====================================================================================================
+// per-frame updates
+// =====================================================================================================
+function updateCamera(ctx, F) {
+  const cam = T.camera;
+  if (TOP) {
+    cam.position.set(0, 26, 0.5); cam.up.set(0, 0, -1); cam.lookAt(0, 0, 0.5); cam.fov = 30; cam.updateProjectionMatrix(); cam.updateMatrixWorld(true);
+    ctx.camera = cam; st.smear = 0; return;
+  }
+  if (SHEET) {
+    applyRig(cam, orbit({ target: [SHEET === '2' ? 2.4 : 1.6, 0.6, 1.6], radius: SHEET === '2' ? 7 : 9, az: 0.1, el: 0.2, fov: 30 }));
+    ctx.camera = cam; st.smear = 0; return;
+  }
+  const rg = camRig(F);
+  const sh = camShake(F);
+  const hand = handheld(ctx.t, { amp: 0.035, rot: 0.004, speed: 4, seed: 5 });
+  hand.rot = [hand.rot[0] + sh[0], hand.rot[1] + sh[1], hand.rot[2] + sh[2]];
+  applyRig(cam, orbit({ target: rg.tg, radius: rg.r, az: rg.az, el: rg.el, fov: rg.fov, roll: rg.roll }), { hand });
+  // whip smear from the view-direction yaw rate
+  const yawAt = (f) => { const q = camRig(f), o = orbit({ target: q.tg, radius: q.r, az: q.az, el: q.el }); return Math.atan2(q.tg[0] - o.pos[0], q.tg[2] - o.pos[2]); };
+  let dy = yawAt(F + 0.5) - yawAt(F - 0.5);
+  if (dy > Math.PI) dy -= TAU; if (dy < -Math.PI) dy += TAU;
+  const speed = dy * FPS;
+  const inWhip = WHIPS.some(([a, b]) => F > a && F < b);
+  st.smear = inWhip && Math.abs(speed) > 0.6 ? yawSmear(cam, speed, FPS) * 0.9 : 0;
+  ctx.camera = cam;
+}
+
+function updateAtoms(F) {
+  const cam = T.camera, vb = Math.floor(F / 2) % 2;
+  st.atoms = ATOMS.map((a, i) => {
+    const s = atomState(a, F);
+    const m = T.atoms[i];
+    m.position.set(s.x, s.y - s.sq * R * 0.5, s.z);
+    const sy = (1 - s.sq) / Math.sqrt(s.sx), sxz = 1 + s.sq * 0.5;
+    m.scale.set(sxz * s.sx, sy, sxz);
+    // face: towards the camera, turned towards the partner once paired, forward on the ride
+    const camYaw = Math.atan2(cam.position.x - s.x, cam.position.z - s.z);
+    let yaw = camYaw * 0.8;
+    const paired = ['love', 'sparkle'].includes(s.e) && a.kind !== 'store';
+    if (paired) yaw = lerp(camYaw, a.kind === 'mover' ? Math.PI / 2 : -Math.PI / 2, 0.42);
+    if (a.kind === 'mover' && Math.abs(s.look) > 0.05) yaw = lerp(camYaw, Math.sign(s.look) * Math.PI / 2, 0.18 * Math.abs(s.look));
+    if (a.kind === 'mover' && F >= K.tick[a.k] - 8 && F < K.tick[a.k] + 18) yaw = lerp(yaw, -0.3, 0.5);
+    m.rotation.set(-0.12 + (s.e === 'sleep' ? 0.12 : 0), yaw + 0.08 * Math.sin(TAU * F / 72 + a.ph * 6), 0.05 * Math.sin(TAU * F / 45 + a.ph * 5));
+    m.material.uniforms.uMap.value = T.faces.atom[s.e][vb];
+    return s;
+  });
+  // entanglement ligatures: draw on after the ZAP (one row after another), stretch and pop when the pairs part
+  const mvA = st.atoms.filter((s, i) => ATOMS[i].kind === 'mover'), ptA = st.atoms.filter((s, i) => ATOMS[i].kind === 'partner');
+  const lg = F - K.zap - 3, X1 = new T.THREE.Vector3(1, 0, 0);
+  T.ligs.forEach((L, q) => {
+    const a = mvA[q], b = ptA[q];
+    const d = new T.THREE.Vector3(b.x - a.x, b.y - a.y, b.z - a.z), dist = d.length(), stretch = dist / PAIR;
+    const k = sm((lg - (q % 3) * 2) / 6);
+    const on = lg >= 0 && k > 0.02 && stretch < 1.8 && F < K.back[1];
+    L.g.visible = on;
+    if (!on) return;
+    L.g.position.set(a.x, a.y + 0.1, a.z);
+    L.g.quaternion.setFromUnitVectors(X1, d.normalize());
+    L.g.scale.set(stretch, 1 / Math.sqrt(stretch), 1);
+    L.geo.setDrawRange(0, 48 * Math.max(1, Math.round(LIG_SEG * k)));
+    const hk = ob((lg - 6 - (q % 3) * 2) / 5) * (stretch > 1.3 ? 0 : 1);
+    L.heart.visible = hk > 0.02;
+    L.heart.scale.setScalar(Math.max(0.001, hk) * (1 + 0.08 * Math.sin(F * 0.45 + q)));
+    L.heart.position.y = 0.36 + 0.025 * Math.sin(F * 0.3 + q * 1.7);
+    L.heart.rotation.set(0, 0.25 * Math.sin(F * 0.2 + q), 0.12 * Math.sin(F * 0.27 + q * 2.1));
+  });
+  // AOD threads + reins
+  const Fv = F >= K.thwip[0] && F < K.back[1] + 8;
+  const grow = sm((F - K.thwip[0]) / 8), shrink = 1 - sm((F - K.back[1]) / 8);
+  const mv = st.atoms.filter((s, i) => ATOMS[i].kind === 'mover');
+  const P = (k, r) => mv[k * 3 + r];
+  const tipW = T.fork.tines[0].tipM.getWorldPosition(new T.THREE.Vector3());
+  st.tine = tipW;
+  const twang = F >= K.taut && F < K.taut + 14 ? Math.exp(-(F - K.taut) / 4) * Math.sin((F - K.taut) * 2.2) * 0.12 : 0;
+  for (let r = 0; r < 3; r++) {
+    const a = P(0, r), b = P(2, r);
+    const y = AY;
+    const x0 = a.x - 0.36, x1 = b.x + 0.28;
+    const rowOn = Fv ? sm((F - K.thwip[0] - 5) / 4) * shrink : 0;
+    placeTh(T.rowTh[r], [x1 - (x1 - x0) * rowOn, y, a.z], [x1, y, a.z], 0.022, rowOn > 0.01);
+    const lead = [x1, y, b.z];
+    const end = [lerp(tipW.x, lead[0], grow), lerp(tipW.y, lead[1], grow), lerp(tipW.z, lead[2], grow)];
+    const mid = [(tipW.x + end[0]) / 2, (tipW.y + end[1]) / 2 + (F < K.taut ? -0.18 * (1 - sm((F - 80) / 6)) : 0) + twang * (r - 1 + 1.3), (tipW.z + end[2]) / 2];
+    const on = Fv && grow > 0.01 && shrink > 0.01;
+    placeTh(T.rein[r][0], [tipW.x, tipW.y, tipW.z], mid, 0.02, on);
+    placeTh(T.rein[r][1], mid, [end[0] + (1 - shrink) * (tipW.x - end[0]), end[1], end[2] + (1 - shrink) * (tipW.z - end[2])], 0.02, on);
+  }
+  for (let k = 0; k < 3; k++) {
+    const a = P(k, 0), b = P(k, 2);
+    const colOn = Fv ? sm((F - K.thwip[0] - 8) / 4) * shrink : 0;
+    const z0 = a.z - 0.34, z1 = b.z + 0.34, zm = (z0 + z1) / 2, hl = (z1 - z0) / 2 * colOn;
+    placeTh(T.colTh[k], [a.x, AY, zm - hl], [a.x, AY, zm + hl], 0.02, colOn > 0.01);
+  }
+}
+function placeTh(m, a, b, rad, vis) {
+  m.visible = vis;
+  if (!vis) return;
+  const THREE = T.THREE;
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A), L = d.length() || 1e-4;
+  m.position.copy(A).addScaledVector(d, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+  m.scale.set(rad, L, rad);
+}
+
+function updateCompass(F) {
+  const P = compassPose(F), C = T.cmp, THREE = T.THREE, L = CMP.leg;
+  const H = new THREE.Vector3(...P.H), A = new THREE.Vector3(...P.A), B = new THREE.Vector3(...P.B);
+  const spinQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), P.spin);
+  if (P.spin) { const rot = (v) => v.clone().sub(H).applyQuaternion(spinQ).add(H); A.copy(rot(A)); B.copy(rot(B)); }
+  const leg = (m, tipM, tip) => {
+    const d = H.clone().sub(tip), l = d.length();
+    m.position.copy(tip).addScaledVector(d, 0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+    m.scale.set(1, l, 1);
+    tipM.position.copy(tip).addScaledVector(d.clone().normalize(), 0.07);
+    tipM.quaternion.copy(m.quaternion);
+  };
+  leg(C.legA, C.tipA, A); leg(C.legB, C.tipB, B);
+  C.hinge.position.copy(H);
+  const nrm = B.clone().sub(A).cross(H.clone().sub(A));        // hinge axle: normal of the legs' plane
+  if (nrm.lengthSq() < 1e-8) nrm.set(0, 0, 1);
+  C.hinge.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), nrm.normalize());
+  // head: on the hinge, looks at the camera / the action
+  C.head.position.copy(H);
+  const cam = T.camera.position;
+  let yaw = Math.atan2(cam.x - H.x, cam.z - H.z) * 0.75 + P.yaw + P.spin;
+  if (P.lookX) yaw = lerp(yaw, Math.PI / 2, 0.35);
+  C.head.rotation.set(0.08, yaw, 0.1 * Math.sin(TAU * F / 40));
+  C.head.scale.set(1 + P.headSq * 0.5, 1 - P.headSq, 1 + P.headSq * 0.5);
+  C.headM.material.uniforms.uMap.value = T.faces.compass[P.expr][Math.floor(F / 2) % 2];
+  // cape: flutter (on twos), stronger when moving
+  const pos = C.cape.geometry.attributes.position, base = C.capeBase, Fc = twos(F);
+  for (let i = 0; i < pos.count; i++) {
+    const x = base[i * 3], y = base[i * 3 + 1];
+    const d = -y;   // 0 at the top edge, 0.95 at the hem
+    const wv = Math.sin(d * 5.5 - Fc * 0.55 + x * 3) * 0.07 * d + Math.sin(d * 3 - Fc * 0.33) * 0.04 * d;
+    pos.setXYZ(i, x * (1 + 0.35 * d), y * (1 - 0.25 * P.cape), -P.cape * d * 0.5 * d - wv);
+  }
+  pos.needsUpdate = true; C.cape.geometry.computeVertexNormals();
+  st.cmp = { P, H, A, B };
+}
+
+function updateFork(F) {
+  const P = forkPose(F), G = T.fork;
+  G.root.position.set(FORK.x + P.footX, P.hopY, FORK.z);
+  G.root.rotation.y = 0.42;                        // face out front, towards the cameras on the right
+  G.lean.rotation.set(0, 0, -P.lean);              // lean back = top towards +x
+  G.lean.scale.set(1 + P.crouch * 0.5, 1 - P.crouch, 1 + P.crouch * 0.5);
+  G.tines[0].pv.rotation.set(0, 0, P.pL);
+  G.tines[1].pv.rotation.set(0, 0, P.pR);
+  G.body.material.uniforms.uMap.value = T.faces.fork[P.expr][Math.floor(F / 2) % 2];
+  G.root.updateMatrixWorld(true);
+  st.fork = P;
+}
+
+function updateWatch(F) {
+  const P = watchPose(F), W = T.watch;
+  W.root.visible = P.vis;
+  W.root.position.set(P.x, P.y, P.z);
+  W.root.rotation.set(0, P.yaw, P.rock);
+  W.body.scale.set(1 + P.sq * 0.5, 1 - P.sq, 1 + P.sq * 0.5);
+  W.arms[0].rotation.set(0, 0, -P.armL);
+  W.arms[1].rotation.set(0, 0, P.armR);
+  W.blades[0].rotation.set(0, 0, P.scis); W.blades[1].rotation.set(0, 0, -P.scis);
+  W.btn.position.y = 0.72 + 0.58 - 0.05 * P.crown;
+  W.legs[0].rotation.set(0, 0, -1.0 * P.kick);   // kick the paper roll out to the left
+  W.dial.material.uniforms.uMap.value = T.faces.watch[P.expr][Math.floor(F / 2) % 2];
+  W.root.updateMatrixWorld(true);
+  st.watch = P;
+}
+
+function updateTape(F) {
+  const S = tapeState(F);
+  T.stub.visible = T.tail.visible = S.vis;
+  T.roll.visible = S.rollOn;
+  if (S.rollOn) { const rr = lerp(0.28, 0.1, (TAPE.x0 - S.rollX) / TAPE.len); T.roll.scale.set(rr / 0.28, 1, rr / 0.28); T.roll.position.set(S.rollX, rr, TAPE.z); T.roll.rotation.set(Math.PI / 2, (TAPE.x0 - S.rollX) / 0.19, 0); }
+  if (!S.vis) { st.tape = S; return; }
+  const THREE = T.THREE;
+  // stub: from x0 - stub to x0, lying flat; collapses into the roll during the unroll
+  const lay = (m, xStart, curveFn) => {
+    const pos = m.geometry.attributes.position, base = m.userData.base, len = m.userData.len;
+    for (let i = 0; i < pos.count; i++) {
+      const bx = base[i * 3], by = base[i * 3 + 1];          // plane x in [-len/2, len/2], y in [-w/2, w/2]
+      const u = len / 2 - bx;                                // distance from the right end (towards -x)
+      let p = curveFn(u, by);
+      pos.setXYZ(i, p[0], p[1], p[2]);
+    }
+    pos.needsUpdate = true; m.geometry.computeVertexNormals();
+  };
+  const y0 = 0.014;
+  // plane y (by) -> -z, so the canvas top is the far edge and the writing reads upright from the front
+  const flat = (x, w) => [Math.max(x, S.rollX), y0, TAPE.z - w];
+  const recoil = S.fly >= 0 ? bumpv(S.fly, 0.05, 0.9, 0.2) : 0;
+  // the stub pops up like a card (hinged on its front edge) so "Qubrio" faces the camera
+  const phi = (Math.PI / 2) * ob((F - 272) / 8);
+  lay(T.stub, TAPE.x0, (u, w) => {
+    const f = flat(TAPE.x0 - u, w); f[1] += recoil * Math.sin(Math.PI * u / TAPE.stub);
+    if (F >= 272) {   // flip up on the front edge, then grow (toon exaggeration: ta-da)
+      const zf = TAPE.z + TAPE.w / 2, dd = zf - f[2]; f[1] = y0 + dd * Math.sin(phi); f[2] = zf - dd * Math.cos(phi);
+      const g = 1 + 0.45 * ob((F - 275) / 8), cxm = 2.69;
+      f[0] = cxm + (f[0] - cxm) * g; f[1] = y0 + (f[1] - y0) * g;
+    }
+    return f;
+  });
+  // tail: flat until the snip; then yanked up along a spiralling leader path and away
+  const d = S.fly >= 0 ? 9 * Math.pow(clamp(S.fly / 18), 1.3) : 0;
+  const gam = (lam, w) => {
+    if (lam <= 0) return flat(CUTX + lam, w);
+    const c = [CUTX + 0.9 * Math.sin(1.3 * lam) - 0.55 * lam, y0 + 0.5 * lam + 0.3 * (1 - Math.cos(1.3 * lam)), TAPE.z + 0.45 * lam];
+    const e = 0.02, c2 = [CUTX + 0.9 * Math.sin(1.3 * (lam + e)) - 0.55 * (lam + e), y0 + 0.5 * (lam + e) + 0.3 * (1 - Math.cos(1.3 * (lam + e))), TAPE.z + 0.45 * (lam + e)];
+    const tg = [c2[0] - c[0], c2[1] - c[1], c2[2] - c[2]], tl = Math.hypot(...tg);
+    let b = [-tg[2] / tl, 0, tg[0] / tl]; const bl = Math.hypot(...b) || 1; b = b.map((q) => q / bl);
+    const twist = Math.sin(lam * 2.2) * 0.8;
+    const n = [0, 1, 0];
+    const bw = [b[0] * Math.cos(twist) + n[0] * Math.sin(twist), b[1] * Math.cos(twist) + n[1] * Math.sin(twist), b[2] * Math.cos(twist) + n[2] * Math.sin(twist)];
+    return [c[0] - bw[0] * w, c[1] - bw[1] * w, c[2] - bw[2] * w];
+  };
+  lay(T.tail, CUTX, (u, w) => gam(d - u, w));
+  T.tail.visible = S.vis && (S.fly < 0 || S.fly < 20);
+  st.tape = { ...S, d };
+}
+
+function updateLetters(F) {
+  T.letters.forEach((L, i) => {
+    const s = letterState(i, F), lay = GL_LAYOUT[i];
+    L.g.visible = s.vis;
+    if (!s.vis) return;
+    L.g.position.set(LET.x + lay.dx, TABLE_Y + s.y, LET.z);
+    L.g.rotation.set(0, lay.ry, lay.rz + s.rz);
+    L.g.scale.set(s.sxz, s.sy, s.sxz);
+  });
+}
+
+function updateBackdrop(F) {
+  // colour arc: cool dawn -> warm action -> hot pink ZAP -> gold triumph -> cool
+  const dawn = [0.62, 0.66, 1.0], warm = [1.0, 0.8, 0.4], zap = [1.0, 0.5, 0.72], gold = [1.0, 0.76, 0.3];
+  const keys = [[0, dawn], [62, dawn], [76, warm], [172, warm], [180, zap], [204, zap], [228, warm], [262, warm], [272, gold], [312, gold], [326, dawn], [360, dawn]];
+  let c = keys[0][1];
+  for (let i = 1; i < keys.length; i++) if (F < keys[i][0]) { const [a, ca] = keys[i - 1], [b, cb] = keys[i]; const k = io((F - a) / (b - a)); c = ca.map((v, j) => lerp(v, cb[j], k)); break; }
+  const dk = dimK(F), night = [0.34, 0.3, 0.62];
+  c = c.map((v, j) => lerp(v, night[j], 0.8 * dk));
+  T.backdrop.material.uniforms.uAlbedo.value.set(...c);
+}
+
+// =====================================================================================================
+// npr per-frame: lights, glows, beams, comic FX
+// =====================================================================================================
+function drawNPR(ctx) {
+  const { npr, camera, THREE } = T, F = ctx.iw;
+  npr.frame(ctx);
+  // lights down for the wind-up: more pigment, cooler key, heavy vignette (set every frame: pure)
+  const dk = dimK(F);
+  npr.setLook(dk > 0 ? { ...LOOK, value: 1 + 0.35 * dk, vignette: 0.16 + 0.42 * dk, keyTint: [1 - 0.28 * dk, 1 - 0.32 * dk, 1 - 0.12 * dk] } : LOOK);
+  // ...but a warm follow-spot stays on the Stopwatch
+  if (dk > 0) npr.pointLight(V(st.watch.x + 0.3, 1.4, st.watch.z + 0.9), { color: 0xffe9b0, radius: 1.5, i: 0.75 * dk });
+  npr.setSmear(st.smear || 0, 0);
+  // the Rydberg flash comes from the lens overhead: the key light swings up and every shadow snaps under its atom
+  const zs = F >= K.zap - 1 && F < K.zap + 34 ? (F < K.zap + 2 ? sm((F - K.zap + 1) / 3) : 1 - sm((F - K.zap - 8) / 26)) : 0;
+  const kd = [lerp(-0.55, 0.06, zs), lerp(0.8, 1.0, zs), lerp(0.6, 0.12, zs)];
+  npr.setLight({ dir: kd, target: [0, 0, 0.4], size: 7.2, dist: 20 });
+  // focus follows the story
+  const focusPts = [[0, [-1.6, 0.4, 1.0]], [64, [-0.2, 0.5, 1.4]], [70, [4.2, 0.8, 0.2]], [80, [2.6, 0.6, 0.2]], [104, [1.0, 0.4, 0.4]], [140, [2.2, 0.4, 0.2]], [150, [WATCH.x, 0.8, WATCH.z]], [K.zap, [2.2, 0.4, 0.2]], [220, [2.8, 0.3, 2.4]], [262, [2.8, 0.5, 2.7]], [320, [-2.0, 0.4, 0.8]]];
+  let fp = focusPts[0][1]; for (const [f, p] of focusPts) if (F >= f) fp = p;
+  npr.focusOn(camera, V(...fp), 3.2);
+  // tweezer light: soft painted halos behind the atoms in view (storage early/late, the zone in between)
+  const zapWin = F >= K.zap - 2 && F < K.zap + 60;
+  if (!zapWin) st.atoms.forEach((s, i) => {
+    const a = ATOMS[i], storageShot = F < 84 || F >= 318;
+    if (storageShot ? a.kind !== 'store' && a.kind !== 'mover' : a.kind === 'store') return;
+    const tw = 0.4 + 0.12 * Math.sin(TAU * (F / 60 + a.ph));
+    npr.glowAt(ctx, camera, V(s.x, s.y, s.z), { radius: 0.27, i: tw, color: storageShot ? 0xfff0b0 : 0xffd98a, behind: true, seed: i });
+  });
+  // warm spill from the tweezer lattice, cool from the zone
+  npr.pointLight(V(-2.1, 0.8, 0), { color: 0xffe08a, radius: 2.6, i: 0.35 });
+  // Rydberg: the lens charges, a light sheet sweeps the zone, then the flash
+  const charge = clamp((F - 164) / 12) * (1 - clamp((F - K.zap - 10) / 10));
+  if (charge > 0) {
+    npr.glowAt(ctx, camera, V(...T.OBJ), { radius: 0.35, i: charge, color: COL.pink, rays: 0.6 * charge, rayLen: 0.5, rayCount: 12, seed: 4 });
+    npr.beamAt(ctx, camera, V(T.OBJ[0], T.OBJ[1], T.OBJ[2]), V(2.45, 0.3, 0.2), { width: 0.25 + 1.4 * clamp((F - K.click) / 5), i: 0.2 + 0.7 * charge, color: COL.pink, lines: 0, seed: 1, occluded: 0.2 });
+  }
+  const sweep = clamp((F - K.click) / (K.zap - K.click));
+  if (F >= K.click && F < K.zap + 16) npr.pointLight(V(lerp(0.2, 4.2, sweep), 0.9, 0.2), { color: COL.pink, radius: 1.8 + 1.5 * clamp((F - K.zap) / 4), i: 1.0 - 0.5 * clamp((F - K.zap - 4) / 12) });
+  const zapAge = F - K.zap;
+  if (zapAge >= -2 && zapAge < 60) {
+    const k = zapAge < 0 ? 0.4 : Math.exp(-zapAge / 14);
+    st.atoms.forEach((s, i) => {
+      const a = ATOMS[i]; if (a.kind === 'store') return;
+      npr.glowAt(ctx, camera, V(s.x, s.y, s.z), { radius: 0.28 + 0.15 * k, i: 0.35 + 0.6 * k, color: COL.pink, behind: true, seed: i });
+    });
+    if (zapAge >= 0 && zapAge < 22) {
+      const c = ctx.project(V(2.3, 0.4, 0.2), camera);
+      npr.focusLines({ x: c.x, y: c.y, r0: 380, amount: 1 - zapAge / 22, count: 120, width: 1.4, seed: 3 });
+      if (zapAge < 2) npr.impact(1, { invert: zapAge === 1, threshold: 0.6 });
+    }
+  }
+  // AOD threads glow faintly while they carry the block
+  if (F >= K.glide[0] && F < K.glide[1]) npr.pointLight(V(st.atoms[13].x, 0.6, 0.4), { color: COL.ochre, radius: 1.6, i: 0.5 });
+  // wind-up: concentration lines close in on the Stopwatch
+  if (F >= 166 && F < K.zap) {
+    const c = ctx.project(V(st.watch.x, st.watch.y + 0.75, st.watch.z), camera);
+    npr.focusLines({ x: c.x, y: c.y, r0: 330 - 60 * sm((F - 166) / 12), amount: 0.75 * sm((F - 166) / 6), count: 110, width: 1.3, seed: 12 });
+  }
+  // crown click spark
+  if (F >= K.click && F < K.click + 3) { const w = T.watch.btn.getWorldPosition(new THREE.Vector3()); npr.glowAt(ctx, camera, w, { radius: 0.16, i: 1, color: 0xffe066, rays: 1, rayLen: 0.42, rayCount: 10, seed: 8 }); }
+  // golden spill on the 4.7x and the team
+  if (F >= K.slam[0] && F < K.reset + 6) npr.pointLight(V(LET.x + 1.2, TABLE_Y + 1.4, LET.z + 0.9), { color: 0xffc23d, radius: 2.4, i: 0.55 * sm((F - K.slam[0]) / 8) });
+  // the slam: concentration lines on the middle letter
+  const sa = F - K.slam[2];
+  if (sa >= 0 && sa < 14) {
+    const c = ctx.project(V(LET.x + 1.4, TABLE_Y + 0.6, LET.z), camera);
+    npr.focusLines({ x: c.x, y: c.y, r0: 430, amount: 0.9 * (1 - sa / 14), count: 100, width: 1.2, seed: 9 });
+    if (sa === 0) npr.impact(0.8, { threshold: 0.55 });
+  }
+  npr.render(T.scene, camera);
+}
+
+// =====================================================================================================
+// ink overlay (p5.brush): marks that follow the 3D world, boiling on twos
+// =====================================================================================================
+function prj(ctx, x, y, z) { const v = new T.THREE.Vector3(x, y, z); const s = ctx.project(v, T.camera); const vc = v.clone().applyMatrix4(T.camera.matrixWorldInverse); return { x: s.x, y: s.y, front: vc.z < 0, d: -vc.z }; }
+function pxu(ctx, x, y, z) { const p = prj(ctx, x, y, z); return p.front ? (ctx.DH / 2) / (Math.tan(T.camera.fov * Math.PI / 360) * p.d) : 0; }
+// screen-space occluders for the 2D ink marks (they have no depth): the characters' big round parts
+function occluders(ctx) {
+  const list = [];
+  const addO = (obj, local, rad) => {
+    const w = obj.localToWorld(new T.THREE.Vector3(...local)), p = prj(ctx, w.x, w.y, w.z);
+    if (p.front) list.push({ x: p.x, y: p.y, d: p.d, r: rad * pxu(ctx, w.x, w.y, w.z) });
+  };
+  if (T.watch.root.visible) { addO(T.watch.body, [0, 0.72, 0], 0.52); addO(T.watch.body, [0, 0.3, 0], 0.3); }
+  addO(T.fork.body, [0, 0, 0], 0.42);
+  addO(T.cmp.headM, [0, 0, 0], 0.34);
+  return list;
+}
+function hidden(occ, p) { return occ.some((o) => p.d > o.d + 0.05 && Math.hypot(p.x - o.x, p.y - o.y) < o.r); }
+
+function inkOverlay(ctx, brush) {
+  if (SHEET || TOP) return;
+  const F = ctx.iw, r = ctx.boilRng('ink');
+  const ink = PAL.ink;
+  const occ = occluders(ctx);
+  brush.noHatch();
+  // --- zzz over sleepers (loop-periodic) ---
+  st.atoms.forEach((s, i) => {
+    if (s.e !== 'sleep' || i % 4 !== 1) return;
+    const a = prj(ctx, s.x, s.y + 0.28, s.z); if (!a.front || hidden(occ, a)) return;
+    const u = pxu(ctx, s.x, s.y, s.z) * 0.12;
+    for (let q = 0; q < 2; q++) {
+      const ph = ((F / 40 + q * 0.5 + ATOMS[i].ph) % 1);
+      const sz = u * (0.6 + 0.6 * ph), x = a.x + 22 * ph * u / 20 + 10, y = a.y - ph * 55 * u / 20;
+      if (ph > 0.85) continue;
+      brush.set('inkpen', ink, clamp(u / 14, 0.6, 1.6));
+      brush.spline([[x - sz / 2, y - sz / 2], [x + sz / 2, y - sz / 2 + r.gauss(0, 0.5)], [x - sz / 2, y + sz / 2], [x + sz / 2, y + sz / 2]], 0.0);
+    }
+  });
+  // --- compass ticks: impact star at the tip + ochre target rings that draw on round the column ---
+  K.tick.forEach((tf, k) => {
+    const age = F - tf;
+    const tip = [SX(3 + k), 0.0, CMP.z];
+    if (age >= 0 && age < 6) {
+      const a = prj(ctx, ...tip), u = pxu(ctx, ...tip);
+      brush.set('bigink', ink, 1.3);
+      for (let q = 0; q < 7; q++) { const an = -Math.PI * (0.1 + 0.8 * q / 6), r0 = 0.1 * u * (1 + age * 0.25), r1 = 0.26 * u * (1 + age * 0.12); brush.line(a.x + Math.cos(an) * r0, a.y + Math.sin(an) * r0, a.x + Math.cos(an) * r1, a.y + Math.sin(an) * r1); }
+    }
+    if (age >= 0 && F < K.glide[0] + 8) {
+      const fade = 1 - sm((F - K.glide[0]) / 8);
+      for (let rr = 0; rr < 3; rr++) {
+        const s = st.atoms[ATOMS.findIndex((A) => A.kind === 'mover' && A.k === k && A.r === rr)];
+        const draw = sm((age - rr * 2) / 5) * fade;
+        if (draw <= 0.02) continue;
+        const pts = [];
+        const n = Math.max(3, Math.round(24 * draw));
+        for (let q = 0; q <= n; q++) { const an = -0.6 + q / 24 * TAU * 1.05; const p = prj(ctx, s.x + Math.cos(an) * 0.34, 0.01, s.z + Math.sin(an) * 0.34); pts.push([p.x + r.gauss(0, 0.8), p.y + r.gauss(0, 0.8)]); }
+        brush.set('bigink', PAL.ochre, 1.6); brush.spline(pts, 0.5);
+      }
+    }
+  });
+  // --- THWIP: motion streaks along the threads; TWANG vibration arcs at the tine ---
+  if (F >= K.thwip[0] && F < K.thwip[0] + 8 && st.tine) {
+    const a = prj(ctx, st.tine.x, st.tine.y, st.tine.z);
+    brush.set('inkpen', ink, 1.2);
+    for (let q = 0; q < 4; q++) { const dx = -(80 + q * 50) * (F - K.thwip[0] + 1) / 3, dy = (q - 1.5) * 16; brush.line(a.x + dx * 0.4, a.y + dy + dx * 0.12, a.x + dx, a.y + dy + dx * 0.2); }
+  }
+  if (F >= K.taut && F < K.taut + 10 && st.tine) {
+    const a = prj(ctx, st.tine.x, st.tine.y, st.tine.z);
+    brush.set('bigink', ink, 1.2);
+    for (let q = 1; q <= 3; q++) brush.spline([[a.x - 30 * q, a.y - 18 * q], [a.x - 36 * q - 6, a.y], [a.x - 30 * q, a.y + 18 * q]], 0.7);
+  }
+  // --- convoy speed lines trailing each row ---
+  if (F >= K.glide[0] + 2 && F < K.glide[1] - 4) {
+    const v = convoyV((F - K.glide[0]) / (K.glide[1] - K.glide[0])) / 1.875;
+    const mv = st.atoms.filter((s, i) => ATOMS[i].kind === 'mover');
+    for (let rr = 0; rr < 3; rr++) {
+      const s = mv[rr];
+      for (let q = 0; q < 3; q++) {
+        const y = s.y + (q - 1) * 0.11, len = (0.6 + 0.9 * v) * (1 - q * 0.15);
+        const a = prj(ctx, s.x - 0.3, y, s.z), b = prj(ctx, s.x - 0.3 - len * (1 + hsh(F >> 1, q, rr) * 0.4), y, s.z);
+        brush.set('bigink', ink, 1.3); brush.line(a.x, a.y + r.gauss(0, 1), b.x, b.y + r.gauss(0, 1));
+      }
+    }
+  }
+  // --- dock puffs ---
+  const da = F - K.glide[1];
+  if (da >= 0 && da < 9) st.atoms.forEach((s, i) => { if (ATOMS[i].kind !== 'mover' || i % 2) return; const a = prj(ctx, s.x + 0.2, s.y - 0.18, s.z), u = pxu(ctx, s.x, s.y, s.z); if (hidden(occ, a)) return; puff(brush, a.x, a.y, 0.12 * u * (1 + da * 0.12), ink, r, 1 - da / 9); });
+  // --- Stopwatch hop landings: dust puffs ---
+  [K.enter[1], K.enter[2]].forEach((f) => {
+    const a0 = F - f; if (a0 < 0 || a0 >= 9 || !T.watch.root.visible) return;
+    for (const sd of [-1, 1]) { const a = prj(ctx, st.watch.x + sd * 0.42, 0.04, st.watch.z + 0.1), u = pxu(ctx, st.watch.x, 0, st.watch.z); if (a.front) puff(brush, a.x + sd * a0 * 3, a.y - a0, 0.12 * u * (1 + a0 * 0.1), PAL.ink, r, 1 - a0 / 9); }
+  });
+  // --- the pair snaps apart when the convoy leaves: a little ink "pop" where each ligature broke ---
+  for (let q = 0; q < 9; q++) {
+    const sf = snapFrame(q), age = F - sf;
+    if (age < 0 || age >= 8) continue;
+    const k = Math.floor(q / 3), rr = q % 3, [mx, mz] = moverXZ(k, rr, moverP(sf));
+    const a = prj(ctx, (mx + PX(k)) / 2, AY + 0.4, (mz + PZ(rr)) / 2), u = pxu(ctx, mx, AY, mz);
+    if (!a.front || hidden(occ, a)) continue;
+    brush.set('bigink', PAL.pink, 1.2);
+    for (let j = 0; j < 6; j++) { const an = j / 6 * TAU + q, r0 = 0.06 * u * (1 + age * 0.3), r1 = 0.16 * u * (1 + age * 0.15); brush.line(a.x + Math.cos(an) * r0, a.y + Math.sin(an) * r0, a.x + Math.cos(an) * r1, a.y + Math.sin(an) * r1); }
+  }
+  // --- sparkles on the pairs just after the ZAP ---
+  if (F >= K.zap + 4 && F < K.zap + 40) st.atoms.forEach((s, i) => { if (ATOMS[i].kind === 'store' || (i + (F >> 2)) % 3) return; const a = prj(ctx, s.x + 0.22, s.y + 0.25, s.z), u = pxu(ctx, s.x, s.y, s.z); if (hidden(occ, a)) return; brush.noStroke(); brush.fill(PAL.ochre, 255); brush.fillBleed(0.02); brush.polygon(star4(a.x, a.y, 0.12 * u, 0.3)); brush.noFill(); });
+  // --- crown CLICK lines ---
+  if (F >= K.click && F < K.click + 6) {
+    const w = T.watch.btn.getWorldPosition(new T.THREE.Vector3()), a = prj(ctx, w.x, w.y + 0.05, w.z);
+    brush.set('bigink', ink, 1.4);
+    for (let q = 0; q < 5; q++) { const an = -Math.PI * (0.15 + 0.7 * q / 4), r0 = 26 + (F - K.click) * 5, r1 = 60 + (F - K.click) * 7; brush.line(a.x + Math.cos(an) * r0, a.y + Math.sin(an) * r0, a.x + Math.cos(an) * r1, a.y + Math.sin(an) * r1); }
+  }
+  // --- ZAP burst balloon (behind the lettering) ---
+  if (zapBox(ctx, F)) { const Z = zapBox(ctx, F); burst(brush, ctx, Z.x, Z.y, 330 * Z.k, 190 * Z.k, { fill: '#ffe14d', ink, weight: 2.6, spikes: 14, key: 'zap', brush: 'bigink' }); }
+  // --- roll motion lines ---
+  if (st.tape && st.tape.rollOn && F > K.roll[0] && F < K.roll[1] - 3) {
+    const a = prj(ctx, st.tape.rollX + 0.2, 0.13, TAPE.z);
+    brush.set('bigink', ink, 1.2);
+    for (let q = 0; q < 3; q++) brush.line(a.x + 30, a.y - 20 + q * 20, a.x + 90 + q * 10, a.y - 20 + q * 20);
+  }
+  // --- SNIP: cut burst ---
+  const sn = F - K.snip;
+  if (sn >= 0 && sn < 7) {
+    const a = prj(ctx, CUTX, 0.03, TAPE.z), u = pxu(ctx, CUTX, 0, TAPE.z);
+    brush.set('bigink', ink, 1.5);
+    for (let q = 0; q < 8; q++) { const an = q / 8 * TAU + 0.2, r0 = 0.12 * u * (1 + sn * 0.3), r1 = 0.32 * u * (1 + sn * 0.15); brush.line(a.x + Math.cos(an) * r0, a.y + Math.sin(an) * r0 * 0.7, a.x + Math.cos(an) * r1, a.y + Math.sin(an) * r1 * 0.7); }
+  }
+  // --- slam dust puffs ---
+  K.slam.forEach((f, i) => {
+    const a0 = F - f; if (a0 < 0 || a0 >= 12) return;
+    const lay = GL_LAYOUT[i], x = LET.x + lay.dx + 0.35;
+    for (const s of [-1, 1]) { const a = prj(ctx, x + s * 0.45 * (1 + a0 * 0.05), TABLE_Y + 0.08, LET.z + 0.2), u = pxu(ctx, x, TABLE_Y, LET.z); puff(brush, a.x + s * a0 * 3, a.y - a0 * 1.5, 0.14 * u * (1 + a0 * 0.08), ink, r, 1 - a0 / 12); }
+  });
+  // --- team shot sparkles ---
+  if (F >= 280 && F < 312) for (let q = 0; q < 5; q++) {
+    const ph = ((F - 280) / 16 + q * 0.37) % 1; if (ph > 0.7) continue;
+    const a = prj(ctx, LET.x + 0.2 + q * 0.7, TABLE_Y + 1.4 + 0.3 * hsh(q, 9), LET.z);
+    brush.noStroke(); brush.fill(q % 2 ? PAL.ochre : '#ffffff', 255); brush.fillBleed(0.02); brush.polygon(star4(a.x, a.y, 16 * Math.sin(Math.PI * ph / 0.7), 0.2 * q)); brush.noFill();
+  }
+}
+function exclaim(brush, x, y, s, col, r) {
+  if (s < 2) return;
+  s *= 1.6;
+  const bar = [[x - s * 0.2, y - s], [x + s * 0.2, y - s * 1.02], [x + s * 0.07, y - s * 0.28], [x - s * 0.07, y - s * 0.28]];
+  brush.noStroke(); brush.fillBleed(0.01); brush.fillTexture(0.1, 0.1);
+  brush.fill(PAL.red, 255); brush.polygon(bar); brush.polygon(bar); brush.circle(x, y - s * 0.02, s * 0.14, 0.2); brush.circle(x, y - s * 0.02, s * 0.14, 0.2);
+  brush.noFill(); brush.set('bigink', col, 1.1); brush.beginShape(0); bar.forEach(([a, b]) => brush.vertex(a, b)); brush.endShape(true);
+}
+function puff(brush, x, y, s, col, r, a) {
+  if (a <= 0 || s < 2) return;
+  brush.set('inkpen', col, 1.0 * a + 0.2);
+  for (let q = 0; q < 3; q++) { const cx = x + (q - 1) * s * 0.8, cy = y - (q === 1 ? s * 0.4 : 0); const pts = []; for (let k = 0; k <= 8; k++) { const an = Math.PI + k / 8 * Math.PI; pts.push([cx + Math.cos(an) * s * 0.6, cy + Math.sin(an) * s * 0.6]); } brush.spline(pts, 0.5); }
+}
+function heartAt(brush, x, y, s) { const pts = []; for (let k = 0; k < 20; k++) { const t = k / 20 * TAU; pts.push([x + s * 0.06 * 16 * Math.pow(Math.sin(t), 3), y - s * 0.06 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]); } brush.polygon(pts); }
+
+// =====================================================================================================
+// hand-built comic lettering (Canvas2D): stroke skeletons -> ink shadow, ink outline, colour, sheen
+// =====================================================================================================
+const GLYPH = {
+  W: { w: 1.0, s: [[[0, 0], [0.22, 1], [0.5, 0.34], [0.78, 1], [1.0, 0]]] },
+  H: { w: 0.62, s: [[[0, 0], [0, 1]], [[0.62, 0], [0.62, 1]], [[0, 0.52], [0.62, 0.5]]] },
+  O: { w: 0.8, s: [[...ell(0.4, 0.5, 0.4, 0.5, 0, 20), ell(0.4, 0.5, 0.4, 0.5, 0, 20)[0]]] },
+  S: { w: 0.64, s: [[[0.62, 0.12], [0.36, 0.0], [0.08, 0.1], [0.06, 0.32], [0.3, 0.47], [0.56, 0.6], [0.62, 0.84], [0.38, 1.0], [0.02, 0.9]]], smooth: true },
+  Z: { w: 0.72, s: [[[0.02, 0.02], [0.72, 0.0], [0.0, 1.0], [0.74, 0.98]]] },
+  A: { w: 0.78, s: [[[0, 1], [0.39, 0], [0.78, 1]], [[0.17, 0.64], [0.61, 0.64]]] },
+  P: { w: 0.62, s: [[[0, 1], [0, 0], [0.4, 0], [0.62, 0.15], [0.62, 0.35], [0.4, 0.5], [0, 0.5]]], smooth: true },
+  N: { w: 0.66, s: [[[0, 1], [0, 0], [0.66, 1], [0.66, 0]]] },
+  I: { w: 0.0, s: [[[0, 0], [0, 1]]] },
+  '!': { w: 0.0, s: [[[0, 0], [0, 0.62]]], dots: [[0, 0.93]] },
+};
+function smoothPts(pts, n = 5) {
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    for (let k = 0; k < n; k++) { const t = k / n, t2 = t * t, t3 = t2 * t;
+      out.push([0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+        0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]); }
+  }
+  out.push(pts[pts.length - 1]); return out;
+}
+/**
+ * word: string, (x, y): centre, size: cap height (design px). o: { fill, ink, sheen, rot, arc (px of bow), pops: fn(i)->0..1+,
+ * jitter: boil rng, alpha, skew }
+ */
+function handWord(g, word, x, y, size, o) {
+  const lw = size * (o.weight ?? 0.24), gap = size * 0.2;
+  const L = [...word].map((ch) => GLYPH[ch]);
+  const widths = L.map((G) => G.w * size + lw);
+  const total = widths.reduce((s, w) => s + w, 0) + gap * (L.length - 1);
+  const r = o.jitter;
+  const letters = [];
+  let cx = -total / 2;
+  L.forEach((G, i) => {
+    const w = widths[i], lx = cx + w / 2, t = L.length > 1 ? i / (L.length - 1) - 0.5 : 0;
+    const k = o.pops ? o.pops(i) : 1;
+    const ly = -o.arc * (1 - 4 * t * t) + (hsh(i, word.length, 3) - 0.5) * size * 0.12;
+    const rot = (hsh(i, word.length, 5) - 0.5) * 0.22 + t * (o.fan ?? 0.25);
+    const strokes = G.s.map((s) => { const pts = (G.smooth ? smoothPts(s) : s).map(([u, v]) => [(u - G.w / 2) * size + (r ? r.gauss(0, size * 0.006) : 0), (v - 0.5) * size + (r ? r.gauss(0, size * 0.006) : 0)]); return pts; });
+    letters.push({ lx, ly, rot, k, strokes, dots: (G.dots || []).map(([u, v]) => [(u - G.w / 2) * size, (v - 0.5) * size]) });
+    cx += w + gap;
+  });
+  g.save();
+  g.translate(x, y); g.rotate(o.rot || 0);
+  if (o.skew) g.transform(1, 0, o.skew, 1, 0, 0);
+  g.globalAlpha = o.alpha ?? 1;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const pass = (col, w, dx, dy) => {
+    g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w;
+    for (const Lt of letters) {
+      if (Lt.k <= 0.01) continue;
+      g.save(); g.translate(Lt.lx + dx, Lt.ly + dy); g.rotate(Lt.rot); g.scale(Lt.k, Lt.k);
+      for (const s of Lt.strokes) { g.beginPath(); s.forEach(([px, py], j) => (j ? g.lineTo(px, py) : g.moveTo(px, py))); g.stroke(); }
+      for (const [px, py] of Lt.dots) { g.beginPath(); g.arc(px, py, w * 0.55, 0, TAU); g.fill(); }
+      g.restore();
+    }
+  };
+  pass(o.ink, lw + size * 0.13, size * 0.07, size * 0.085);   // ink drop shadow
+  pass(o.ink, lw + size * 0.13, 0, 0);                          // ink outline
+  if (o.stroke2) pass(o.stroke2, lw + size * 0.06, 0, 0);        // optional cream keyline
+  pass(o.fill, lw, 0, 0);                                       // colour
+  if (o.sheen) { g.globalAlpha = (o.alpha ?? 1) * 0.55; pass(o.sheen, lw * 0.28, -lw * 0.16, -lw * 0.2); }
+  g.restore();
+}
+function bang(g, x, y, s, rot, r) {   // comic "!" (Canvas2D): tapered bar + dot, ink shadow, ink outline, red, cream sheen
+  if (s < 3) return;
+  const j = () => (r ? r.gauss(0, s * 0.012) : 0);
+  const bar = [[-0.21, -1.0], [0.21, -1.03], [0.075, -0.3], [-0.075, -0.29]].map(([u, v]) => [u * s + j(), v * s + j()]);
+  const shape = (dx, dy) => { g.beginPath(); bar.forEach(([u, v], q) => (q ? g.lineTo(u + dx, v + dy) : g.moveTo(u + dx, v + dy))); g.closePath();
+    g.moveTo(0.14 * s + dx, dy); g.arc(dx, dy, 0.14 * s, 0, TAU); };
+  g.save(); g.translate(x, y); g.rotate(rot); g.lineJoin = 'round'; g.lineCap = 'round';
+  g.fillStyle = PAL.ink; g.strokeStyle = PAL.ink; g.lineWidth = s * 0.13;
+  shape(s * 0.06, s * 0.07); g.fill(); g.stroke();
+  shape(0, 0); g.stroke();
+  g.fillStyle = PAL.red; shape(0, 0); g.fill();
+  g.strokeStyle = '#ffd9c8'; g.lineWidth = s * 0.045; g.beginPath(); g.moveTo(-0.1 * s, -0.9 * s); g.lineTo(-0.035 * s, -0.45 * s); g.stroke();
+  g.restore();
+}
+function zapBox(ctx, F) {
+  const a = F - K.zap;
+  if (a < 0 || a >= 26) return null;
+  const c = prj(ctx, 2.2, 1.35, 0.3);
+  const k = ob(a / 5) * (1 - sm((a - 22) / 4));
+  return { x: clamp(c.x, 420, 1500), y: clamp(c.y, 230, 520), k };
+}
+function lettering(ctx, g) {
+  if (Q.get('tex')) {   // debug: show baked textures
+    const [who, e] = Q.get('tex').split(':');
+    g.fillStyle = '#f0f'; g.fillRect(0, 0, 1920, 1080);
+    const list = who === 'slab' ? [T.slab.material[2].uniforms.uMap.value] : T.faces[who][e];
+    list.forEach((tx, i) => { const c = tx.userData.canvas; const w = 900, h = w * c.height / c.width; g.drawImage(c, 40 + i * 940, 40, w, h); });
+    return;
+  }
+  if (SHEET || TOP) return;
+  const F = ctx.iw, jr = ctx.boilRng('letters');
+  // "!" takes: front row only (r = 2), so the marks never stack; crisp cut-paper marks with an ink shadow
+  const occ = occluders(ctx);
+  st.atoms.forEach((s, i) => {
+    if (!s.emote || s.emote.age < 0 || s.emote.age > 16 || ATOMS[i].r !== 2) return;
+    const a = prj(ctx, s.x, s.y + 0.3, s.z); if (!a.front || hidden(occ, a)) return;
+    const u = pxu(ctx, s.x, s.y, s.z);
+    const k = ob(s.emote.age / 4) * (1 - sm((s.emote.age - 12) / 4));
+    bang(g, a.x + 0.13 * u, a.y - 0.02 * u, 0.44 * u * k, (hsh(i, 4) - 0.5) * 0.5 + 0.12, jr);
+  });
+  // WHOOSH trailing the convoy
+  const wa = F - 108;
+  if (wa >= 0 && wa < 28) {
+    const mv = st.atoms[ATOMS.findIndex((A) => A.kind === 'mover' && A.k === 1 && A.r === 0)];
+    const c = prj(ctx, mv.x - 0.2, 1.25, mv.z);
+    const fade = 1 - sm((wa - 22) / 6);
+    handWord(g, 'WHOOSH', c.x, c.y, 120, { fill: PAL.sky, ink: PAL.ink, sheen: '#ffffff', stroke2: PAL.cream, arc: 26, rot: -0.1, skew: -0.25, alpha: fade,
+      pops: (i) => ob((wa - i * 1.5) / 4), jitter: jr });
+  }
+  // ZAP!
+  const Z = zapBox(ctx, F);
+  if (Z) handWord(g, 'ZAP!', Z.x, Z.y, 190, { fill: PAL.pink, ink: PAL.ink, sheen: '#ffe0ec', stroke2: PAL.cream, arc: 18, rot: -0.12, weight: 0.27,
+    pops: (i) => ob((F - K.zap - i) / 4) * (1 + 0.04 * Math.sin((F - K.zap) * 1.3)), jitter: jr });
+  // SNIP!
+  const sa = F - K.snip;
+  if (sa >= 0 && sa < 18) {
+    const c = prj(ctx, CUTX - 0.3, 0.75, TAPE.z);
+    handWord(g, 'SNIP!', c.x, c.y, 96, { fill: PAL.ochre, ink: PAL.ink, sheen: '#fff6c8', stroke2: PAL.cream, arc: 10, rot: 0.1, alpha: 1 - sm((sa - 14) / 4),
+      pops: (i) => ob((sa - i) / 3), jitter: jr });
+  }
+}
+</script></body></html>

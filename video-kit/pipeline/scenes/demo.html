@@ -1,0 +1,199 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>pv demo</title>
+<!-- Scene template: fonts + p5 + p5.brush (classic scripts) + three via importmap, all vendored. -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene, loopNoise, ease, seg, clamp } from '/pv/runtime/pv.js';
+
+// Palette: warm paper, indigo ink, violet + ochre watercolour, clay object.
+const C = { paper: '#f3ecdf', ink: '#1d2340', violet: '#6a4fb3', indigo: '#2f3f8f', ochre: '#d9a441', rust: '#c4553a', teal: '#2f8f8a' };
+const TAU = Math.PI * 2;
+const OBJ = { x: 0, y: 0.05, z: 0 };
+const ORBITS = [ // tilted rings around the object; atoms go round an integer number of times per loop
+  { r: 1.55, tiltX: 1.15, tiltZ: 0.35, turns: 1, color: 0x6a4fb3, phase: 0.0 },
+  { r: 1.85, tiltX: 1.35, tiltZ: -0.6, turns: 2, color: 0xc4553a, phase: 0.35 },
+];
+
+let T = null; // three.js handles, filled by the three layer's init
+
+defineScene({
+  meta: {
+    title: 'pv pipeline demo', durationFrames: 90, fps: 30, width: 1920, height: 1080, seed: 7,
+    background: C.paper, fonts: ['Fraunces', 'Caveat', 'Inter', 'JetBrains Mono'],
+    boil: { every: 3, variants: 3 },   // ink "boils" on threes, 3 drawings cycling (90/3 = 30 steps, 30 % 3 == 0 -> seamless)
+    brushScale: 2.6, poster: 22,
+  },
+
+  // Everything animated is computed here from ctx.t only (pure), before any layer draws.
+  update(ctx) {
+    const { THREE } = T;
+    const t = ctx.t;
+    T.obj.rotation.set(0.35 + 0.08 * Math.sin(TAU * t), TAU * t, 0.12 * Math.cos(TAU * t));
+    T.obj.position.y = OBJ.y + 0.06 * Math.sin(TAU * t * 2);
+    T.atoms.forEach((a, k) => {
+      const o = ORBITS[k], th = TAU * (o.turns * t + o.phase);
+      a.position.copy(orbitPoint(THREE, o, th));
+    });
+    ctx.camera = T.camera;
+  },
+
+  layers: [
+    // 1. paper (2D, static -> rendered once per browser process)
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.drawImage(ctx.paper({ tone: C.paper, grain: 0.05, fibres: 0.06, blotch: 0.06 }), 0, 0);
+    } },
+
+    // 2. watercolour washes (p5.brush fill), boiling on threes -> only 3 distinct renders, cached
+    { name: 'wash', type: 'brush', cache: (ctx) => ctx.boil(), draw(ctx, p, brush) {
+      brush.noStroke();
+      // ochre ground wash
+      brush.fill(C.ochre, 60); brush.fillBleed(0.18, 'out'); brush.fillTexture(0.55, 0.5);
+      blob(brush, ctx.rng('ground'), 980, 820, 620, 150, 18);
+      // violet pool behind the object
+      brush.fill(C.violet, 70); brush.fillBleed(0.25, 'out'); brush.fillTexture(0.6, 0.6);
+      blob(brush, ctx.rng('pool'), 960, 470, 360, 300, 22);
+      // small teal accent under the note
+      brush.fill(C.teal, 55); brush.fillBleed(0.2); brush.fillTexture(0.5, 0.45);
+      blob(brush, ctx.rng('accent'), 1510, 300, 170, 80, 14);
+      brush.noFill();
+    } },
+
+    // 3. three.js: a lit clay object + two atoms, soft shadow onto transparent ground
+    { name: 'object', type: 'three',
+      async init(ctx, { THREE, renderer }) {
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(28, ctx.W / ctx.H, 0.1, 100);
+        camera.position.set(0, 1.2, 9.2); camera.lookAt(0, 0.1, 0);
+        scene.add(new THREE.HemisphereLight(0xfff4e0, 0x5a4a7a, 1.1));
+        const key = new THREE.DirectionalLight(0xfff1dc, 2.6);
+        key.position.set(-4, 6, 5); key.castShadow = true;
+        key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 6; key.shadow.bias = -0.0005;
+        Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 20 });
+        scene.add(key);
+        const rim = new THREE.DirectionalLight(0x9fb4ff, 1.4); rim.position.set(5, 2, -4); scene.add(rim);
+        const geo = new THREE.TorusKnotGeometry(0.72, 0.26, 360, 48, 2, 3);
+        const mat = new THREE.MeshPhysicalMaterial({ color: 0xe9d9c4, roughness: 0.55, clearcoat: 0.25, clearcoatRoughness: 0.5, sheen: 0.4, sheenColor: 0xffe2c0 });
+        const obj = new THREE.Mesh(geo, mat); obj.castShadow = true; scene.add(obj);
+        const atoms = ORBITS.map((o) => {
+          const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 48, 32),
+            new THREE.MeshStandardMaterial({ color: o.color, roughness: 0.35, emissive: o.color, emissiveIntensity: 0.15 }));
+          m.castShadow = true; scene.add(m); return m;
+        });
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.ShadowMaterial({ color: 0x2a1f4a, opacity: 0.28 }));
+        ground.rotation.x = -Math.PI / 2; ground.position.y = -1.25; ground.receiveShadow = true; scene.add(ground);
+        T = { THREE, renderer, scene, camera, obj, atoms };
+        return { scene, camera };
+      },
+      draw() { /* state already set in update(); runtime calls renderer.render(scene, camera) */ } },
+
+    // 4. ink: projected orbit rings (front/back halves), hatched shadow, arrow; boils on threes
+    { name: 'ink', type: 'brush', draw(ctx, p, brush) {
+      const { THREE } = T;
+      // hatched cast-shadow ellipse under the object
+      const sh = ellipsePts(960, 818, 250, 34, 40, ctx.boilRng('shadow'), 3);
+      brush.noStroke(); brush.noFill();
+      brush.hatch(9, 0.35, { rand: 0.15, continuous: false, gradient: 0.25 });
+      brush.hatchStyle('HB', C.ink, 0.9);
+      brush.polygon(sh);
+      brush.noHatch();
+      // orbit rings: sample the 3D circle, project, split into back (light) / front (dark) runs
+      ORBITS.forEach((o, k) => {
+        const pts = [];
+        for (let j = 0; j <= 96; j++) {
+          const w = orbitPoint(THREE, o, (j / 96) * TAU);
+          const s = ctx.project(w);
+          const depth = w.clone().applyMatrix4(T.camera.matrixWorldInverse).z; // camera space
+          pts.push({ x: s.x, y: s.y, back: depth < -9.2 });
+        }
+        const jit = ctx.boilRng('ring', k);
+        for (const run of runs(pts)) {
+          if (run.length < 3) continue;
+          const arr = run.map((q) => [q.x + jit.gauss(0, 0.8), q.y + jit.gauss(0, 0.8)]);
+          if (run[0].back) brush.set('HB', C.ink, 0.7); else brush.set('rotring', C.ink, 1.1);
+          brush.spline(arr, 0.5);
+        }
+      });
+      // arrow from the note to the object
+      const r = ctx.boilRng('arrow');
+      const a0 = [1440 + r.gauss(0, 1.5), 330 + r.gauss(0, 1.5)], a1 = [1300, 380], a2 = [1195 + r.gauss(0, 1), 455 + r.gauss(0, 1)];
+      brush.set('pen', C.ink, 1.2);
+      brush.spline([[...a0, 0.6], [...a1, 1.1], [...a2, 0.9]], 0.6);
+      const ang = Math.atan2(a2[1] - a1[1], a2[0] - a1[0]);
+      for (const s of [-1, 1]) brush.line(a2[0], a2[1], a2[0] - 26 * Math.cos(ang + s * 0.45), a2[1] - 26 * Math.sin(ang + s * 0.45));
+      // a quick underline beneath the title
+      brush.set('marker', C.rust, 0.9);
+      brush.spline([[160, 214, 0.8], [420, 210 + r.gauss(0, 1.5), 1.2], [690, 216, 0.7]], 0.4);
+    } },
+
+    // 5. text (Canvas2D): title, handwritten note (jittered per boil step), frame counter
+    { name: 'text', type: '2d', draw(ctx, g) {
+      g.fillStyle = C.ink;
+      g.font = ctx.font('Fraunces', 84, 500);
+      g.fillText('Deterministic frames', 150, 190);
+      g.font = ctx.font('Inter', 26, 400);
+      g.fillStyle = '#4a4f66';
+      g.fillText('p5.js  ·  p5.brush  ·  three.js  →  one canvas per frame', 154, 262);
+      const r = ctx.boilRng('note');
+      g.save();
+      g.translate(1450 + r.gauss(0, 1.2), 300 + r.gauss(0, 1.2)); g.rotate(-0.05 + r.gauss(0, 0.006));
+      g.font = ctx.font('Caveat', 52, 600); g.fillStyle = C.ink;
+      g.fillText('lit 3D object', 0, 0);
+      g.font = ctx.font('Caveat', 36, 500); g.fillStyle = '#3c4470';
+      g.fillText('ink + wash boil on threes', 4, 44);
+      g.restore();
+      g.font = ctx.font('JetBrains Mono', 22, 500); g.fillStyle = '#6b6f80';
+      g.textAlign = 'right';
+      g.fillText(`frame ${String(ctx.i).padStart(3, '0')} / ${ctx.N}   t=${ctx.t.toFixed(3)}   boil ${ctx.boil()}`, 1770, 1000);
+      g.textAlign = 'left';
+    } },
+  ],
+
+  // Post: re-apply paper grain on top (multiply) so the 3D render sits "in" the paper, plus light vignette.
+  post(ctx, g) {
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.55;
+    g.drawImage(ctx.paper({ tone: '#ffffff', seed: 99, grain: 0.06, fibres: 0.05, blotch: 0.04 }), 0, 0);
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    const v = g.createRadialGradient(ctx.W / 2, ctx.H / 2, ctx.H * 0.45, ctx.W / 2, ctx.H / 2, ctx.H * 1.05);
+    v.addColorStop(0, 'rgba(60,40,20,0)'); v.addColorStop(1, 'rgba(60,40,20,0.16)');
+    g.fillStyle = v; g.fillRect(0, 0, ctx.W, ctx.H);
+    g.restore();
+  },
+});
+
+// ---- helpers --------------------------------------------------------------
+function orbitPoint(THREE, o, th) {
+  const v = new THREE.Vector3(Math.cos(th) * o.r, 0, Math.sin(th) * o.r);
+  v.applyEuler(new THREE.Euler(o.tiltX - Math.PI / 2, 0, o.tiltZ));
+  return v.add(new THREE.Vector3(OBJ.x, T.obj.position.y, OBJ.z));
+}
+function runs(pts) { // split a sampled ring into contiguous front/back runs (sharing endpoints)
+  const out = []; let cur = [pts[0]];
+  for (let j = 1; j < pts.length; j++) {
+    if (pts[j].back !== cur[0].back) { cur.push(pts[j]); out.push(cur); cur = [pts[j]]; } else cur.push(pts[j]);
+  }
+  out.push(cur); return out;
+}
+function ellipsePts(cx, cy, rx, ry, n, r, jitter) {
+  const pts = [];
+  for (let j = 0; j < n; j++) { const a = (j / n) * TAU; pts.push([cx + Math.cos(a) * rx + r.gauss(0, jitter), cy + Math.sin(a) * ry + r.gauss(0, jitter * 0.5)]); }
+  return pts;
+}
+function blob(brush, r, cx, cy, rx, ry, n) { // organic closed shape for watercolour fills
+  brush.beginShape(0.35);
+  for (let j = 0; j < n; j++) {
+    const a = (j / n) * TAU, k = 1 + r.gauss(0, 0.07);
+    brush.vertex(cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k);
+  }
+  brush.endShape(true);
+}
+</script></body></html>

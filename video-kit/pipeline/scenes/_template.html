@@ -1,0 +1,59 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>new scene</title>
+<!-- Copy this file next to your assets (anywhere). /pv/* is always the pipeline folder,
+     /scene/* is the folder of the scene file, so ./assets/x.glb is /scene/assets/x.glb. -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene, ease, seg, loopNoise } from '/pv/runtime/pv.js';
+
+let T; // three.js handles
+
+defineScene({
+  meta: {
+    title: 'new scene', durationFrames: 720, fps: 30, width: 1920, height: 1080, seed: 1,
+    design: [1920, 1080],            // author everything in these units at any output size
+    background: '#f3ecdf', fonts: ['Fraunces', 'Inter', 'Caveat'],
+    boil: { every: 3, variants: 3 }, // ink redraw cadence; keep (durationFrames / every) % variants == 0
+    brushScale: 2.6,                 // p5.brush built-in brush size multiplier (applied once)
+    poster: 0,                       // frame used for the webp poster
+  },
+  // brushes(brush) { brush.add('myInk', {...}); },   // custom brushes: registered once, before scaling
+  // async setup(ctx) { ... },                        // load assets once (await loaders here)
+
+  update(ctx) {             // PURE: set every animated property from ctx.t / ctx.i only
+    T.mesh.rotation.y = ctx.t * Math.PI * 2;
+    ctx.camera = T.camera;  // enables ctx.project(vec3) -> design-space {x, y}
+  },
+
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) {
+      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(ctx.paper(), 0, 0);
+    } },
+    { name: 'wash', type: 'brush', cache: (ctx) => ctx.boil(), draw(ctx, p, brush) {
+      brush.noStroke(); brush.fill('#6a4fb3', 70); brush.fillBleed(0.2); brush.fillTexture(0.55, 0.5);
+      brush.rect(660, 290, 600, 500);
+    } },
+    { name: '3d', type: 'three', init(ctx, { THREE }) {
+      const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, ctx.W / ctx.H, 0.1, 100);
+      camera.position.set(0, 0, 8);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x444466, 2));
+      const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xe9d9c4, flatShading: true }));
+      scene.add(mesh);
+      T = { THREE, scene, camera, mesh };
+      return { scene, camera };
+    }, draw() {} },
+    { name: 'ink', type: 'brush', draw(ctx, p, brush) {
+      brush.set('pen', '#1d2340', 2);
+      const r = ctx.boilRng('outline');
+      brush.circle(960, 540, 260 + r.gauss(0, 2), 0.3);
+    } },
+    { name: 'text', type: '2d', draw(ctx, g) {
+      g.font = ctx.font('Fraunces', 72, 500); g.fillStyle = '#1d2340'; g.fillText('Title', 150, 180);
+    } },
+  ],
+});
+</script></body></html>

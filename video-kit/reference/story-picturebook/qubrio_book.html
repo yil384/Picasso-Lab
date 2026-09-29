@@ -1,0 +1,413 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Qubrio: The Convoy</title>
+<!-- Qubrio picture-book film: painted 3D (three.js through runtime/npr) + p5.brush ink + comic hits.
+     15 s seamless loop, 360 frames @ 24 fps. See STORYBOARD.md.   ?debug=1..5  ?nofx=1 -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene, ease, clamp, lerp } from '/pv/runtime/pv.js';
+import { orbit, handheld, applyRig } from '/pv/runtime/npr/camera.js';
+import * as A from './qb_anim.js';
+import { buildWorld, PAL, LOOK } from './qb_world.js';
+import * as I from './qb_ink.js';
+
+const Q = new URLSearchParams(location.search);
+const F = A.F;
+let W = null;
+const st = { smear: [0, 0], dbgInk: !!Q.get('dbgink') };
+const paperCanvas = (ctx) => ctx.paper({ tone: PAL.paper, grain: 0.05, fibres: 0.06, blotch: 0.08, seed: 4 });
+
+defineScene({
+  meta: {
+    title: 'Qubrio: The Convoy', durationFrames: A.NF, fps: A.FPS, width: 1920, height: 1080, seed: 7,
+    design: [1920, 1080], background: PAL.paper,
+    fonts: ['Instrument Serif', 'Caveat', 'Permanent Marker'],
+    boil: { every: 2, variants: 3 },            // 12 drawings/s; 180 steps % 3 == 0
+    poster: 272,
+  },
+  update(ctx) { update(ctx); },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(paperCanvas(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, three) { W = await buildWorld(ctx, three, paperCanvas(ctx)); W.npr.debug = Number(Q.get('debug') || 0); W.cam2 = W.camera.clone(); return { scene: W.scene, camera: W.camera }; },
+      draw(ctx) { drawNPR(ctx); return false; } },
+    { name: 'ink', type: 'brush', underlay: !Q.get('nob'), blend: Q.get('nob') ? 'multiply' : undefined, draw(ctx, p, brush) { if (!Q.get('noink')) I.inkLayer(ctx, p, brush, st, W); } },
+    { name: 'faces', type: '2d', draw(ctx, g) {
+      if (Q.get('tex')) { const c = W.tex[Q.get('tex')].userData.canvas; g.fillStyle = '#f0f'; g.fillRect(0, 0, 1920, 1080); g.drawImage(c, 0, 0, 1920, Math.min(1080, 1920 * c.height / c.width)); return; }
+      I.facesLayer(ctx, g, st); } },
+    { name: 'fx', type: 'brush', underlay: !Q.get('nob'), blend: Q.get('nob') ? 'multiply' : undefined, draw(ctx, p, brush) { if (!Q.get('nofx')) I.fxLayer(ctx, p, brush, st); } },
+  ],
+});
+
+// ---------------------------------------------------------------------------------------------------------
+function rigAt(f, t) {
+  const cam = A.cameraAt(f);
+  const rig = orbit({ target: cam.rig.t, radius: cam.rig.r, az: cam.rig.az, el: cam.rig.el, fov: cam.rig.fov });
+  const hand = handheld(t, { amp: 0.035, rot: 0.0025, speed: 3, seed: 5 });
+  hand.pos = [hand.pos[0] + cam.shake[0], hand.pos[1] + cam.shake[1], hand.pos[2]];
+  hand.rot = [hand.rot[0], hand.rot[1], hand.rot[2] + cam.shake[2]];
+  return { rig, hand, cam };
+}
+
+function update(ctx) {
+  const { THREE } = W, f = ctx.iw, ft = A.tw(f);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  // ---- camera (on ones) + whip smear ----
+  const R0 = rigAt(f, ctx.t);
+  applyRig(W.camera, R0.rig, { hand: R0.hand });
+  ctx.camera = W.camera;
+  st.focus = V(...R0.cam.rig.t); st.focusRange = 2.4;
+  st.smear = [0, 0];
+  if (f > F.whip[0] - 1 && f <= F.whip[1] + 1) {
+    const R1 = rigAt(f - 1, (f - 1) / A.NF);
+    applyRig(W.cam2, R1.rig, { hand: R1.hand });
+    const P0 = V(2.8, 1.0, -0.6);
+    const a = ctx.project(P0, W.camera), b = ctx.project(P0, W.cam2);
+    const dx = a.x - b.x, dy = a.y - b.y;
+    if (Math.hypot(dx, dy) > 10) st.smear = [dx * 0.85, dy * 0.85];
+  }
+
+  // ---- atoms (rigid AOD centres on ones; acting on twos) ----
+  const aod = A.aodK(f);
+  st.atomActs = [];
+  for (let r = 0; r < A.NROW; r++) for (let c = 0; c < A.NCOL; c++) {
+    const k = r * A.NCOL + c, m = W.atoms[k];
+    const ac = A.atomActing(r, c, ft);
+    const x = A.atomX(r, c, f);
+    const sq = ac.sq, stch = ac.st;
+    const sy = (1 - sq) * (1 - stch * 0.45), sxz = 1 + sq * 0.5;
+    m.scale.set(sxz * (1 + stch), sy, sxz);
+    m.position.set(x + ac.lean * 0.25, A.HOVER + ac.dy - (1 - sy) * A.AR * 0.6, A.ROWZ[r]);
+    m.rotation.set(0, 0, -ac.lean);
+    st.atomActs.push(ac);
+    // SLM pedestal: full while its atom sits there, faint when the trap is empty
+    const sc = W.slmCones[k];
+    const away = Math.abs(x - A.COLX(c));
+    sc.material.uniforms.uAmt.value = 0.3 + 0.6 * clamp(1 - away / 0.45);
+  }
+  for (const ac of W.aodCones) {
+    const x = A.atomX(ac.r, ac.c, f);
+    ac.mesh.position.x = x;
+    const pop = aod > 0 ? clamp(aod * 1.15) : 0;
+    ac.mesh.visible = pop > 0.01;
+    ac.mesh.scale.set(0.6 + 0.4 * A.easeOutBack(aod), 1, 0.6 + 0.4 * A.easeOutBack(aod));
+    ac.mesh.material.uniforms.uAmt.value = pop;
+  }
+  // AOD rails draw on left->right, un-draw right->left; column bars ride with their atoms
+  for (const rl of W.rails) { const n = rl.geometry.userData.n; rl.geometry.setDrawRange(0, 36 * Math.round(n * aod)); rl.visible = aod > 0.01; }
+  [2, 3, 4, 5].forEach((c, i) => {
+    const b = W.colBars[i], n = b.geometry.userData.n;
+    b.position.x = A.atomX(0, c, f);
+    const k = clamp(aod * 1.3 - i * 0.08);
+    b.geometry.setDrawRange(0, 36 * Math.round(n * k)); b.visible = k > 0.01;
+  });
+
+  // ---- Pip ----
+  const ps = A.pipState(f), pf = A.pipFace(f);
+  const pip = W.pip;
+  const hip = V(ps.head[0], ps.head[1], ps.head[2]);
+  pip.headG.position.copy(hip);
+  pip.headG.rotation.set(0, (pf.turn?.[0] || 0) * 0.7, ps.lean);
+  pip.headG.scale.set(1 + ps.sq * 0.5, 1 - ps.sq, 1 + ps.sq * 0.5);
+  const legTo = (leg, tip, footXZ, lift, lead) => {
+    const foot = V(footXZ[0], lift, footXZ[1]);
+    const dir = foot.clone().sub(hip); const L = dir.length(); dir.normalize();
+    const q = new THREE.Quaternion().setFromUnitVectors(V(0, -1, 0), dir);
+    leg.position.copy(hip); leg.quaternion.copy(q); leg.scale.set(1, Math.max(0.05, L - 0.22), 1);
+    tip.position.copy(hip).addScaledVector(dir, L - 0.22); tip.quaternion.copy(q);
+    if (lead) { lead.position.copy(foot).addScaledVector(dir, -0.075); lead.quaternion.copy(q); }
+  };
+  legTo(pip.legN, pip.tipN, ps.N, ps.liftN);
+  legTo(pip.legP, pip.tipP, ps.P, ps.liftP, pip.lead);
+
+  // ---- Rook ----
+  const rs = A.rookState(f), rf = A.rookFace(f);
+  const rook = W.rook;
+  rook.group.position.set(rs.x, 0, A.ROWZ[0]);
+  rook.body.position.y = rs.dy;
+  rook.body.rotation.z = rs.tilt;
+  rook.body.scale.set(1 + rs.sq * 0.4, 1 - rs.sq, 1 + rs.sq * 0.4);
+  for (const w of rook.wheels) w.g.rotation.z = -(rs.x - A.ROOK0) / w.r;
+  // steam puffs: pure functions of emit frame (toot from the whistle, chugs from the chimney)
+  const events = [];
+  for (const e of [86, 87, 89, 91]) events.push({ e, src: 'w', life: 22, s: 0.2, rise: 0.05, drift: -0.012 });
+  for (let e = 96; e <= 126; e += 6) events.push({ e, src: 'c', life: 18, s: 0.15, rise: 0.03, drift: -0.004 });
+  for (let e = 316; e <= 344; e += 7) events.push({ e, src: 'c', life: 18, s: 0.13, rise: 0.03, drift: 0.004 });
+  rook.puffs.forEach((m) => { m.visible = false; });
+  events.forEach((ev, i) => {
+    const age = ft - ev.e;
+    if (age < 0 || age >= ev.life) return;
+    const m = rook.puffs[i % rook.puffs.length];
+    const rx = A.rookX(ev.e);
+    const loc = ev.src === 'w' ? [-0.3, 1.22] : [0.55, 1.32];
+    const u = age / ev.life;
+    const sc = ev.s * (0.35 + 1.0 * ease.outCubic(clamp(u * 2.2))) * (1 - 0.7 * clamp((u - 0.6) / 0.4));
+    m.visible = true;
+    m.position.set(rx + loc[0] + ev.drift * age * 3 + (ev.src === 'w' ? -0.02 * age : 0), loc[1] + ev.rise * age + 0.02 * Math.sin(i), A.ROWZ[0] + 0.03 * Math.sin(i * 2.1));
+    m.scale.set(sc * 1.1, sc * 0.9, sc);
+  });
+
+  // ---- Tick ----
+  const ts = A.tickState(f), tf = A.tickFace(f);
+  const tick = W.tick;
+  tick.body.position.y = 1.02 + ts.rise + ts.jump;
+  tick.body.rotation.set(ts.bow, 0, ts.sway);
+  tick.body.scale.set(1 + ts.sq * 0.45, 1 - ts.sq, 1 + ts.sq * 0.45);
+  tick.armR.rotation.z = ts.armR; tick.armL.rotation.z = ts.armL;
+  tick.hand.rotation.z = -ts.hand;
+  tick.pusher.position.set(-0.4 + 0.03 * ts.crown, 0.58 - 0.04 * ts.crown, 0);
+  const flK = f >= F.hit && f < F.hit + 12 ? A.easeOutBack(clamp((f - F.hit) / 3)) * (1 - ease.inCubic(clamp((f - F.hit - 5) / 7))) : 0;
+  tick.flash.visible = flK > 0.01;
+  tick.flash.scale.set(2.9 * Math.max(0.01, flK), 2.3 * Math.max(0.01, flK), 1);
+  tick.flash.lookAt(W.camera.position.x, tick.flash.position.y, W.camera.position.z);
+  tick.flash.rotateZ(0.08 * (f - F.hit));
+  const sunK = f >= F.slam && f < F.wipeCut ? A.easeOutBack(clamp((f - F.slam) / 6)) : 0;
+  tick.sun.visible = sunK > 0.01;
+  tick.sun.scale.setScalar(Math.max(0.01, sunK));
+  tick.sun.rotation.z = -0.012 * (f - F.slam);
+  // confetti: two paper cannons just out of shot (lower left and lower right) fire on the slam; the chips cross the
+  // frame in real depth and flutter down through the hold (pure function of the frame: drag-damped launch,
+  // flutter, slow terminal fall, tumbling so the cel ramp flickers them)
+  W.confetti.forEach((m, i) => {
+    const side = i % 2 ? 1 : -1, t0 = F.slam + 1 + (i % 5), a = (f - t0) / A.FPS;
+    m.visible = f >= t0 && f < F.wipeCut;
+    if (!m.visible) return;
+    const h = (k) => A.hash(i * 7.31 + k);
+    const v = [-side * (0.6 + 2.8 * h(1)), 7.5 + 3.0 * h(2), 0.2 + 1.6 * h(3)], D = (1 - Math.exp(-1.4 * a)) / 1.4;
+    const fl = 0.1 * Math.sin(a * (5 + 4 * h(4)) + 6 * h(5)) * clamp(a * 2);
+    const x0 = side < 0 ? A.TICK.x - 1.55 : A.TICK.x + 2.7;
+    m.position.set(x0 + (h(6) - 0.5) * 0.3 + v[0] * D + fl, -0.25 + v[1] * D - 2.2 * a, A.TICK.z + 0.5 + (h(7) - 0.5) * 0.4 + v[2] * D);
+    m.rotation.set(a * (6 + 8 * h(8)) + 6 * h(9), a * (4 + 6 * h(10)), a * (3 + 5 * h(11)));
+    m.scale.setScalar(1.25 * clamp(0.3 + a * 5));
+  });
+  for (const L of tick.legs) { L.l.position.y = 0.2 + ts.jump + ts.rise * 0.5; L.l.scale.y = 1 + ts.rise * 1.2; L.sh.position.y = 0.03 + ts.jump; }
+
+  // ---- Slo, the baseline snail: inches along the bench's front lane all loop long with its one atom ----
+  const ss = A.sloState(f), slo = W.slo;
+  slo.group.position.set(ss.x, -A.SLAB.h + ss.dy * A.SLO.scale, A.SLO.z);
+  slo.group.rotation.set(0, ss.yaw, ss.lean);
+  slo.body.scale.set(1 + ss.st - ss.sq * 0.3, 1 - ss.st * 0.45 - ss.sq, 1 + ss.sq * 0.4);
+  slo.shellG.rotation.z = ss.sway;
+  slo.cargo.rotation.z = -ss.sway * 0.6;
+  for (const s of slo.stalks) s.g.rotation.set(s.s * 0.25, 0, -0.3 + ss.stalk);
+  {  // slime revealed up to the tail (the trail stays put while it spins)
+    const u = slo.slime.geometry.userData, tail = A.sloX(f) - 0.42 * A.SLO.scale;
+    const k = clamp((tail - u.xa) / (u.xb - u.xa));
+    slo.slime.geometry.setDrawRange(0, 6 * Math.round(u.n * k));
+  }
+
+  if (Q.get('hide')) {
+    const hs = Q.get('hide').split(',');
+    if (hs.includes('rook')) rook.group.visible = false;
+    if (hs.includes('pip')) { pip.headG.visible = false; for (const m of [pip.legN, pip.legP, pip.tipN, pip.tipP, pip.lead]) m.visible = false; }
+    if (hs.includes('atoms')) W.atoms.forEach((m) => { m.visible = false; });
+    if (hs.includes('puffs')) rook.puffs.forEach((m) => { m.visible = false; });
+    if (hs.includes('cones')) { W.slmCones.forEach((m) => { m.visible = false; }); W.aodCones.forEach((c) => { c.mesh.visible = false; }); }
+    if (hs.includes('allbutbd')) W.scene.children.forEach((o) => { if (o.name !== 'backdrop') o.visible = false; });
+    if (hs.includes('rails')) { W.rails.forEach((m) => { m.visible = false; }); W.colBars.forEach((m) => { m.visible = false; }); }
+  }
+  W.scene.updateMatrixWorld(true);
+  if (Q.get('listvis')) {
+    const out = [];
+    W.scene.traverseVisible((o) => { if (o.isMesh) { const u = o.material?.uniforms; const c = u?.uAlbedo?.value; out.push(`${o.name || o.geometry.type}${c ? ' col=' + [c.x, c.y, c.z].map((v) => v.toFixed(2)).join(',') : ''} layer=${o.layers.mask}`); } });
+    console.log('VIS', out.length, out.join(' | '));
+  }
+
+  // ---- faces + emotes (world anchors; the faces layer projects them) ----
+  const camPos = W.camera.position.clone();
+  const camRight = V(1, 0, 0).applyQuaternion(W.camera.quaternion), camUp = V(0, 1, 0).applyQuaternion(W.camera.quaternion);
+  const ray = new THREE.Raycaster();
+  const camFwd = V(0, 0, -1).applyQuaternion(W.camera.quaternion);
+  const visible = (anchor, own) => {
+    // must be well in front of the camera and on frame, else a tangent-plane face explodes when projected
+    if (anchor.clone().sub(camPos).dot(camFwd) < 1.2) return 0;
+    const sp = ctx.project(anchor); if (sp.x < -200 || sp.x > 2120 || sp.y < -200 || sp.y > 1280) return 0;
+    const dir = anchor.clone().sub(camPos); const d = dir.length(); dir.normalize();
+    ray.set(camPos, dir); ray.far = d - 0.03;
+    const shown = (o) => { for (let q = o; q; q = q.parent) if (!q.visible) return false; return true; };
+    for (const h of ray.intersectObjects(W.occluders, false)) { if (own.includes(h.object) || !shown(h.object)) continue; return 0; }
+    return 1;
+  };
+  const faces = [], emotes = [];
+  const spherical = (kind, center, R, face, own, sc = [1, 1]) => {
+    const toCam = camPos.clone().sub(center).normalize();
+    const turn = face.turn || [0, 0];
+    const n = toCam.clone().addScaledVector(camRight, turn[0] * 1.3).addScaledVector(camUp, -turn[1] * 1.3).normalize();
+    const anchor = center.clone().addScaledVector(n, R * 0.98);
+    const right = V(0, 1, 0).cross(n).normalize(), up = n.clone().cross(right).normalize();
+    const vis = visible(anchor, own);
+    faces.push({ kind, anchor, px: anchor.clone().addScaledVector(right, R * sc[0]), py: anchor.clone().addScaledVector(up, R * sc[1]), vis, face });
+    return vis;
+  };
+  const pxu = (p) => W.npr.pxPerUnit(W.camera, p);
+  const emo = (center, R, e, zzz, vis) => {
+    if (!vis) return;
+    const s = ctx.project(center), rsz = pxu(center) * R;
+    if (rsz > 400) return;
+    if (e) emotes.push({ ...e, x: s.x, y: s.y, rs: rsz, f });
+    if (zzz) emotes.push({ type: 'zzz', x: s.x, y: s.y, rs: rsz, f: f + Math.round(center.x * 7) });
+  };
+  W.atoms.forEach((m, k) => {
+    const ac = st.atomActs[k];
+    const vis = spherical('atom', m.position.clone(), A.AR * Math.max(m.scale.x, m.scale.y) * 0.98, ac, [m], [m.scale.x, m.scale.y]);
+    emo(m.position, A.AR, ac.emote, ac.zzz, vis);
+  });
+  const headC = pip.head.getWorldPosition(V(0, 0, 0));
+  const pv = spherical('pip', headC, 0.36, pf, [pip.head], [pip.headG.scale.x, pip.headG.scale.y]);
+  emo(headC, 0.36, pf.emote, pf.zzz, pv);
+  {
+    const c = rook.plate.getWorldPosition(V(0, 0, 0));
+    const n = V(1, 0, 0).applyQuaternion(rook.plate.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const nx = V(1, 0, 0).transformDirection(rook.body.matrixWorld).normalize();
+    const anchor = c.clone().addScaledVector(nx, 0.02);
+    const right = V(0, 1, 0).cross(nx).normalize(), up = nx.clone().cross(right).normalize();
+    const facing = camPos.clone().sub(anchor).normalize().dot(nx);
+    const vis = clamp((facing - 0.05) / 0.25) * visible(anchor, [rook.plate]);
+    faces.push({ kind: 'rook', anchor, px: anchor.clone().addScaledVector(right, 0.29), py: anchor.clone().addScaledVector(up, 0.29), vis, face: rf });
+    const top = c.clone().add(V(0, 0.35, 0));
+    emo(top, 0.4, rf.emote, rf.zzz, vis > 0.3 || rf.zzz ? 1 : 0);
+    void n;
+  }
+  {
+    const c = tick.dial.getWorldPosition(V(0, 0, 0));
+    const nz = V(0, 0, 1).transformDirection(tick.body.matrixWorld).normalize();
+    const anchor = c.clone().addScaledVector(nz, 0.07);
+    const right = V(0, 1, 0).cross(nz).normalize(), up = nz.clone().cross(right).normalize();
+    const facing = camPos.clone().sub(anchor).normalize().dot(nz);
+    const ownT = []; tick.body.traverse((o) => { if (o.isMesh) ownT.push(o); });
+    const vis = clamp((facing - 0.05) / 0.25) * visible(anchor, ownT);
+    faces.push({ kind: 'tick', anchor, px: anchor.clone().addScaledVector(right, 0.56 * tick.body.scale.x), py: anchor.clone().addScaledVector(up, 0.56 * tick.body.scale.y), vis, face: tf });
+    emo(c.clone().add(V(0, 0.15, 0)), 0.62, tf.emote, 0, vis);
+  }
+  {
+    const hc = slo.head.getWorldPosition(V(0, 0, 0)), S = A.SLO.scale;
+    // its face turns with the body when the gust spins it round (hidden while it faces away)
+    const fwd = V(1, 0, 0).applyQuaternion(slo.group.quaternion);
+    const facing = fwd.dot(camPos.clone().sub(hc).normalize());
+    const sf = { ...A.sloFace(f) };
+    sf.turn = [(sf.turn?.[0] || 0) * clamp(facing * 3) + 0.9 * fwd.dot(camRight) * (1 - clamp(facing * 3)), sf.turn?.[1] || 0];
+    const sv = spherical('slo', hc, 0.17 * S, sf, [slo.head], [slo.body.scale.x, slo.body.scale.y]) * clamp((facing + 0.35) / 0.3);
+    faces[faces.length - 1].vis = sv;
+    emo(hc, 0.3 * S, sf.emote, 0, sv > 0.5 ? 1 : 0);
+    const cc = slo.cargo.getWorldPosition(V(0, 0, 0)), cf = A.sloCargoFace(f);
+    const cv = spherical('atom', cc, A.AR * 0.86 * 0.98 * S, cf, [slo.cargo]);
+    emo(cc, A.AR * 0.86 * S, null, cf.zzz || 0, cv);
+    st.sloNote = f >= 123 && f < 148 ? { at: ctx.project(hc), age: f - 123 } : null;
+    const tc = ctx.project(slo.shellG.getWorldPosition(V(0, 0, 0)));
+    if (Q.get('dbgslo')) { const h = ctx.project(hc), c = ctx.project(cc); console.log('SLO', f, Math.round(h.x), Math.round(h.y), Math.round(c.x), Math.round(c.y), Math.round(pxu(cc) * A.AR * 0.86 * S)); }
+    st.gust = f >= A.SLO.spin[0] - 2 && f < A.SLO.spin[1] + 4 ? { x: tc.x, y: tc.y, R: pxu(hc) * 0.55 * S, age: f - A.SLO.spin[0] + 2 } : null;
+  }
+  st.faces = faces; st.emotes = emotes;
+
+  // ---- ink marks ----
+  st.arcs = [];
+  if (f >= 36 && f < 78) {
+    const keep = 1 - A.sg(f, 68, 78);   // the pencil marks are rubbed out once Pip points at the loco
+    for (const [fc, fe] of [[46, 36], [63, 55]]) {
+      if (f < fe) continue;
+      const arc = A.pipState(Math.min(f, fc)).arc;
+      if (arc && arc.a0 - arc.a1 > 0.01) st.arcs.push({ ...arc, keep, done: arc.done && keep > 0.6 });
+    }
+  }
+  const v = A.convoyV(f);
+  st.speed = v; st.speedDir = f < 200 ? 1 : -1; st.speedRows = [];
+  if (v > 0.08) {
+    if (st.speedDir > 0) for (const r of [0, 1]) { const m = W.atoms[r * A.NCOL + 2]; st.speedRows.push({ tail: [m.position.x - A.AR, m.position.y, m.position.z] }); }
+    else { st.speedRows.push({ tail: [rs.x + 0.95, 0.6, A.ROWZ[0]] }); const m = W.atoms[A.NCOL + 5]; st.speedRows.push({ tail: [m.position.x + A.AR, m.position.y, m.position.z] }); }
+  }
+  st.marks = [];
+  if (ft >= F.toot && ft < F.toot + 16) {
+    const s = ctx.project(rook.whistleTip.getWorldPosition(V(0, 0, 0)));
+    st.marks.push({ x: s.x, y: s.y, age: ft - F.toot, n: 4, a0: -2.5, a1: -0.7, r0: 26, len: 38 });
+  }
+  if (ft >= F.click && ft < F.click + 14) {
+    const s = ctx.project(tick.pusher.getWorldPosition(V(0, 0, 0)));
+    st.marks.push({ x: s.x, y: s.y, age: ft - F.click, n: 5, a0: -2.9, a1: -1.2, r0: 34, len: 44 });
+  }
+  st.ligs = [];
+  if (f >= F.hit + 2 && f < F.push4[0] + 6) {
+    // front pairs get a painted infinity bond tied above their heads (the back pairs glow)
+    [[2, 3], [4, 5]].forEach(([ca, cb], i) => {
+      const ma = W.atoms[ca], mb = W.atoms[cb];
+      const c = ma.position.clone().add(mb.position).multiplyScalar(0.5).add(V(0, A.AR * 1.05, 0));
+      st.ligs.push({ c, right: camRight, up: camUp, k: A.sg(f, F.hit + 3 + i * 4, F.hit + 11 + i * 4) });
+    });
+  }
+  // ---- fx ----
+  st.slam = null;
+  if (f >= F.slam && f < F.wipeCut) st.slam = { x: 1395, y: 455, age: f - F.slam };
+  st.wipe = A.sg(f, F.wipe[0], F.wipe[1]);
+}
+
+function drawNPR(ctx) {
+  const { THREE } = W, camera = W.camera, f = ctx.iw;
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  // painted lights only for points comfortably in front of the camera (a point behind it would project to garbage)
+  const fwd = V(0, 0, -1).applyQuaternion(camera.quaternion);
+  const ahead = (p) => p.clone().sub(camera.position).dot(fwd) > 1.0;
+  const npr = Object.create(W.npr);
+  const onFrame = (p) => { const q = ctx.project(p, camera); return q.x > -160 && q.x < 2080 && q.y > -160 && q.y < 1240; };
+  npr.glowAt = (c, cam, p, o) => { if (ahead(p) && onFrame(p)) W.npr.glowAt(c, cam, p, o); };
+  npr.beamAt = (c, cam, a, b, o) => { if (ahead(a) && ahead(b)) W.npr.beamAt(c, cam, a, b, o); };
+  npr.frame(ctx);
+  W.npr.shared.uFrameSeed.value = 0.37;   // static film grain in screen space (like printed paper): no per-frame noise
+  // the look, with a brief comic pulse (Ben-Day dots, off-register plates) on the two big hits
+  const c1 = f >= F.hit && f < F.hit + 16 ? Math.exp(-(f - F.hit) / 5) : 0;
+  const c2 = f >= F.slam && f < F.slam + 14 ? Math.exp(-(f - F.slam) / 5) : 0;
+  const ck = Math.max(c1, c2);
+  npr.setLook(ck > 0.01 ? { ...LOOK, htAmt: ck, bgDots: [0.97, 0.55, 0.66, 0.7 * ck], misreg: [3.2 * ck, -2.4 * ck], sat: 1.14 + 0.3 * ck } : LOOK);
+  npr.focusOn(camera, st.focus, st.focusRange);
+  npr.setSmear(st.smear[0], st.smear[1]);
+  const K = A.convoyK(f), aod = A.aodK(f);
+  // AOD grip: ochre halo behind each held atom + ochre spill on the plate
+  if (aod > 0.02) {
+    let cx = 0;
+    for (const ac of W.aodCones) {
+      const m = W.atoms[ac.k]; cx += m.position.x / 8;
+      npr.glowAt(ctx, camera, m.position, { radius: 0.44, i: 0.38 * aod, color: PAL.aod, behind: true, seed: ac.k });
+    }
+    npr.pointLight(V(cx, 0.35, 0.55), { color: PAL.aod, radius: 2.4, i: 0.4 * aod });
+  }
+  // the entanglement zone breathes violet; stronger once the pairs are in it
+  npr.pointLight(V((A.ZONE.x0 + A.ZONE.x1) / 2, 0.45, 0.3), { color: PAL.violet, radius: 2.8, i: 0.18 + 0.3 * K });
+  // Rydberg: the conductor's baton lights, the light sheet sweeps the zone, the pairs flash
+  const zc = V((A.ZONE.x0 + A.ZONE.x1) / 2, 0.7, 0.5);
+  const tipOn = A.sg(f, 176, 184) * (1 - A.sg(f, 190, 198));
+  if (tipOn > 0.01) npr.glowAt(ctx, camera, W.tick.batonTip.getWorldPosition(V(0, 0, 0)), { radius: 0.13, i: tipOn, color: PAL.ryd, rays: 0.7 * tipOn, rayLen: 0.5, rayCount: 18, seed: 11 });
+  let xs = null;
+  if (f >= F.sweep[0] && f < F.hit + 3) {
+    xs = lerp(A.ZONE.x0 - 0.4, A.ZONE.x1 + 0.4, A.sg(f, F.sweep[0], F.sweep[1], ease.inOutSine));
+    npr.beamAt(ctx, camera, V(xs, 2.9, 0.5), V(xs, -0.02, 0.5), { width: 0.34, i: 0.95, color: PAL.ryd, lines: 7, seed: 4 });
+    npr.pointLight(V(xs, 0.75, 0.7), { color: PAL.ryd, radius: 1.5, i: 1.2 });
+  }
+  const pairs = [];
+  for (const r of [0, 1]) for (const [a, b] of [[2, 3], [4, 5]]) pairs.push(W.atoms[r * A.NCOL + a].position.clone().add(W.atoms[r * A.NCOL + b].position).multiplyScalar(0.5));
+  pairs.forEach((pc, i) => {
+    let I = 0;
+    if (xs != null) I = Math.max(I, Math.exp(-Math.pow((xs - pc.x) / 0.55, 2)));
+    if (f >= F.hit && f < F.wipeCut) I = Math.max(I, 0.6 * Math.exp(-(f - F.hit) / 6) + 0.3);
+    if (I > 0.02) npr.glowAt(ctx, camera, pc, { radius: 0.66, i: clamp(I), color: PAL.ryd, behind: true, seed: 20 + i });
+  });
+  if (f >= F.hit && f < F.hit + 22) {
+    const k = Math.exp(-(f - F.hit) / 5);
+    npr.glowAt(ctx, camera, zc, { radius: 0.9, i: 0.8 * k, color: PAL.ryd, rays: k, rayLen: 1.1, rayCount: 34, seed: 7, probe: 0.2 });
+    if (xs == null) npr.pointLight(zc, { color: PAL.ryd, radius: 2.8, i: 1.3 * k });
+    const s = ctx.project(zc);
+    npr.focusLines({ x: s.x, y: s.y, r0: 400, amount: (1 - (f - F.hit) / 22) * 0.95, count: 130, width: 1.15, seed: 3 });
+    if (f === F.hit) npr.impact(1, { threshold: 0.55 });
+    if (f === F.hit + 1) npr.impact(1, { threshold: 0.55, invert: true });
+  } else if (f >= F.hit && f < F.wipeCut) {
+    npr.pointLight(zc, { color: PAL.ryd, radius: 2.2, i: 0.35 });
+  }
+  // the click and the slam
+  if (f >= F.click && f < F.click + 8) {
+    const k = Math.exp(-(f - F.click) / 3);
+    npr.glowAt(ctx, camera, W.tick.pusher.getWorldPosition(V(0, 0, 0)), { radius: 0.2, i: k, color: PAL.aod, rays: k, rayLen: 0.6, rayCount: 16, seed: 13 });
+  }
+  if (st.slam && st.slam.age < 16) npr.focusLines({ x: st.slam.x, y: st.slam.y, r0: 560, amount: 0.7 * (1 - st.slam.age / 16), count: 110, width: 1.2, seed: 9 });
+  npr.render(W.scene, camera);
+}
+</script></body></html>

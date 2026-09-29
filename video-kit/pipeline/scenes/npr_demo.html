@@ -1,0 +1,492 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>npr demo</title>
+<!-- Painterly three.js toolkit demo: a neutral-atom optical-table diorama rendered through runtime/npr.
+     ?look=engrave (default) | comic | book     ?debug=1..5 (G-buffer views)     ?whip=1 (whip-pan camera) -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene, ease, seg, clamp, lerp, loopNoise } from '/pv/runtime/pv.js';
+import { createNPR, rgb } from '/pv/runtime/npr/npr.js';
+import { bakeBrushTexture, track, callout, letter, sfx, leader, burst } from '/pv/runtime/npr/brush.js';
+import { orbit, dolly, crane, handheld, applyRig, whip, yawSmear, kf } from '/pv/runtime/npr/camera.js';
+
+const Q = new URLSearchParams(location.search);
+const LOOK = Q.get('look') || 'engrave';
+const WHIP = Q.get('whip') === '1';
+const SYNC = Q.get('sync') === '1';            // profiling: wait for the GPU so the npr layer time is honest
+const FPS = 24, NF = 144;                       // 6 s seamless loop
+const TAU = Math.PI * 2;
+
+// ---- palettes per look (paint space) -------------------------------------------------------------
+const PALS = {
+  engrave: { paper: '#f2e9d8', night: '#2c3163', wash2: '#6f5aa8', ochre: '#d9a54a', umber: '#9a6b43', ink: '#231c33',
+    table: 0xcdbd9c, steel: 0x98a4b8, copper: 0xc8743f, laser: 0x46508f, body: 0xe58a62, atom: 0xfff0c4, ryd: 0xff5d8f, tw: 0xffd680 },
+  comic: { paper: '#f6efdc', night: '#3a4bb0', wash2: '#ff8a5c', ochre: '#ffd24a', umber: '#e85d4a', ink: '#14122a',
+    table: 0xe7c98f, steel: 0x8fb2dc, copper: 0xf07b2e, laser: 0x3d57c8, body: 0xff7a5c, atom: 0xfff6b0, ryd: 0xff3d7f, tw: 0xffe066 },
+  book: { paper: '#f7efe2', night: '#8fa5d8', wash2: '#e9a3b8', ochre: '#f1c27a', umber: '#c98a6a', ink: '#5b3a36',
+    table: 0xf0d6a4, steel: 0xa9b8e2, copper: 0xe8906a, laser: 0x8190c9, body: 0xf29b7c, atom: 0xfff4d6, ryd: 0xff7aa2, tw: 0xffe1a0 },
+};
+const PAL = PALS[LOOK] || PALS.engrave;
+
+// ---- world layout (1 unit ~ 10 cm) ---------------------------------------------------------------
+const CELL = { x: 0.62, y: 1.28, z: 0, w: 1.25, h: 0.82, d: 0.82 };
+const ROWS = [1.53, 1.28, 1.03];              // atom rows (y); row 0 is carried by the AOD
+const COLS = 6, PITCH = 0.19, ATOM_R = 0.058;
+const ROW_DROP = 0.12;                         // AOD move: row 0 comes down next to row 1 -> pairs (gap 0.13)
+const BEAM_Y = (ROWS[0] - ROW_DROP + ROWS[1]) / 2;   // Rydberg beam runs through the paired rows
+const CHAR = { x: 2.05, z: 1.45 };
+
+// ---- timeline (t = loop phase 0..1) ----------------------------------------------------------------
+const aod = (t) => seg(t, 0.10, 0.27, ease.inOutCubic) - seg(t, 0.64, 0.82, ease.inOutCubic);
+const PULSE_T = 0.47;
+const pulse = (t) => Math.exp(-Math.pow((t - PULSE_T) / 0.018, 2));            // flash envelope
+const packet = (t) => seg(t, 0.405, 0.465, ease.inOutSine);                     // beam packet travel
+const spring = (x, k = 6, w = 18) => (x < 0 ? 0 : Math.exp(-k * x) * Math.sin(w * x));
+function take(sec, t0) {                                                          // surprise take (after core.js)
+  if (sec < t0 - 0.1) return { sq: 0, dy: 0 };
+  if (sec < t0) return { sq: 0.12 * ease.smooth(clamp((sec - t0 + 0.1) / 0.1)), dy: 0 };
+  const a = sec - t0; return { sq: -0.26 * Math.exp(-6 * a) * Math.cos(16 * a), dy: 1.1 * Math.exp(-7 * a) * Math.max(0, Math.cos(9 * a)) };
+}
+
+let T = null;
+const st = {};
+
+defineScene({
+  meta: {
+    title: 'npr demo (' + LOOK + ')', durationFrames: NF, fps: FPS, width: 1920, height: 1080, seed: 11,
+    design: [1920, 1080], background: PAL.paper,
+    fonts: ['Instrument Serif', 'Caveat', 'Permanent Marker'],
+    boil: { every: 2, variants: 3 },            // 12 drawings/s; 72 steps % 3 == 0
+    poster: 113,
+  },
+
+  update(ctx) {
+    const t = ctx.t, sec = ctx.sec, { THREE } = T;
+    // ---- camera: low hero orbit that swings round the cell (parallax through foreground optics), crane
+    //      up/down with it, a breathing dolly and handheld drift; optional whip pans ----
+    const sw = Math.sin(TAU * t);
+    const az = -0.32 + 0.62 * sw;
+    const el = 0.2 + 0.1 * Math.sin(TAU * t + 1.3);
+    const tg = [lerp(0.45, 0.85, 0.5 + 0.5 * sw), 1.02 + 0.08 * Math.sin(TAU * t + 1.3), 0.3];
+    let rig = orbit({ target: tg, radius: 7.7, az, el, fov: 28 });
+    rig = dolly(rig, 0.45 * Math.sin(TAU * t * 2 + 0.4));
+    const hand = handheld(t, { amp: 0.03, rot: 0.003, speed: 4, seed: 5 });
+    let yaw = 0, speed = 0;
+    if (WHIP) {
+      const a = whip(sec, 1.8, 0.28, 0.55), b = whip(sec, 4.6, 0.3, -0.55);
+      yaw = a.yaw + b.yaw; speed = a.speed + b.speed;
+    }
+    applyRig(T.camera, rig, { hand, yaw });
+    st.smear = WHIP ? yawSmear(T.camera, speed, FPS) : 0;
+    ctx.camera = T.camera;
+
+    // ---- atoms ----
+    const drop = aod(t) * ROW_DROP;
+    st.atoms = [];
+    for (let r = 0; r < ROWS.length; r++) for (let c = 0; c < COLS; c++) {
+      const m = T.atoms[r * COLS + c];
+      const x = CELL.x - (COLS - 1) * PITCH / 2 + c * PITCH;
+      const y = ROWS[r] - (r === 0 ? drop : 0);
+      const wig = r === 0 ? Math.sin(TAU * (t * 3) + c) * 0.005 * (seg(t, 0.08, 0.3) - seg(t, 0.62, 0.85)) : 0;
+      m.position.set(x + wig, y, CELL.z);
+      st.atoms.push({ r, c, m, paired: (r === 0 || r === 1) && c % 1 === 0 });
+    }
+    // ---- character: idle bounce, blink, gaze, surprise take on the pulse ----
+    const hop = Math.abs(Math.sin(TAU * t * 6)) * 0.035;
+    const tk = take(sec, PULSE_T * NF / FPS + 0.04);
+    const sq = tk.sq + 0.05 * Math.sin(TAU * t * 12);
+    const ch = T.char;
+    ch.group.position.set(CHAR.x, hop + tk.dy * 0.35, CHAR.z);
+    ch.body.scale.set(1 + sq * 0.5, 0.94 * (1 - sq), 1 + sq * 0.5);
+    // face between the camera and the atoms (3/4 view to camera, attention on the cell)
+    const camYaw = Math.atan2(T.camera.position.x - CHAR.x, T.camera.position.z - CHAR.z);
+    const cellYaw = Math.atan2(CELL.x - CHAR.x, CELL.z - CHAR.z);
+    ch.group.rotation.y = lerp(camYaw, cellYaw, 0.3) + 0.08 * Math.sin(TAU * t * 2);
+    ch.group.rotation.z = 0.05 * Math.sin(TAU * t * 3 + 0.5) + 0.12 * spring(sec - PULSE_T * NF / FPS - 0.04, 5, 14);
+    const blink = [0.2, 0.705, 0.9].some((b) => Math.abs(t - b) < 1.6 / NF);
+    ch.eyes.forEach((e) => { e.scale.y = blink ? 0.12 : 1; });
+    const gaze = new THREE.Vector3(CELL.x - 0.1 + 0.25 * aod(t), ROWS[1] + 0.1, CELL.z);
+    ch.group.updateMatrixWorld(true);
+    ch.eyes.forEach((e, k) => {
+      const ew = e.getWorldPosition(new THREE.Vector3());
+      const dir = gaze.clone().sub(ew).normalize();
+      const local = dir.clone().transformDirection(new THREE.Matrix4().copy(e.parent.matrixWorld).invert());
+      local.z = Math.max(local.z, 0) + 0.9; local.normalize();   // keep the pupils on the visible hemisphere
+      ch.pupils[k].position.copy(e.position).addScaledVector(local, 0.072);
+      ch.pupils[k].visible = !blink;
+    });
+    ch.armR.rotation.z = -0.4 + 1.5 * seg(t, 0.38, 0.45, ease.outBack) - 1.5 * seg(t, 0.6, 0.7, ease.inOutSine);
+    ch.antenna.rotation.z = 0.15 * Math.sin(TAU * t * 6 + 0.8) + 0.25 * spring(sec - 2.86, 4, 16);
+  },
+
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.drawImage(paperCanvas(ctx), 0, 0);
+    } },
+
+    // the painterly 3D render (world-locked painted backdrop included), composited over the paper
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, three) { return buildWorld(ctx, three); },
+      draw(ctx) {
+        const { npr, THREE } = T;
+        npr.frame(ctx);
+        paintLights(ctx);
+        npr.setSmear(st.smear || 0, 0);
+        // the hit: concentration lines (comic bold, engraving fine) + a 2-frame impact in comic
+        const fr = ctx.iw - Math.round(PULSE_T * NF);
+        if (LOOK !== 'book' && fr >= -1 && fr < 18) {
+          const c = ctx.project(new THREE.Vector3(CELL.x, BEAM_Y, 0), T.camera), comic = LOOK === 'comic';
+          npr.focusLines({ x: c.x, y: c.y, r0: comic ? 330 : 400, amount: (1 - Math.max(0, fr) / 18) * (comic ? 1 : 0.85),
+            count: comic ? 110 : 150, width: comic ? 1.3 : 0.75, seed: 3 });
+          if (comic && (fr === 0 || fr === 1)) npr.impact(1, { invert: fr === 1 });
+        }
+        npr.render(T.scene, T.camera);
+        if (SYNC) npr.sync();
+        return false;
+      } },
+
+    // ink overlay: leaders / comic bursts / speed lines tracking 3D points (boils on twos)
+    { name: 'ink', type: 'brush', blend: 'multiply', draw(ctx, p, brush) { inkOverlay(ctx, brush); } },
+
+    // lettering tracking 3D points
+    { name: 'letters', type: '2d', draw(ctx, g) {
+      if (Q.get('showtex')) { const c = T.bdTex.userData.canvas; g.fillStyle = '#f0f'; g.fillRect(0, 0, 1920, 1080); g.drawImage(c, 0, 0, 1920, 1920 * c.height / c.width); const t2 = T.tableTex.userData.canvas; g.drawImage(t2, 0, 500, 560, 560); return; }
+      lettering(ctx, g); } },
+  ],
+});
+
+// =====================================================================================================
+function paperCanvas(ctx) {
+  const tone = { engrave: '#f2e9d8', comic: '#f6efdc', book: '#f7efe2' }[LOOK] || '#f2e9d8';
+  return ctx.paper({ tone, grain: 0.05, fibres: 0.06, blotch: 0.07, seed: 4 });
+}
+
+// Painted cyclorama texture (p5.brush, baked once). u runs along the backdrop arc (0.45 ~ behind the
+// cell in the average camera view); rows map world height y in [-5, 7] (top row = y 7).
+function paintBackdrop(ctx, brush, w, h) {
+  const r = ctx.rng('backdrop', LOOK);
+  const U = (u) => u * w, Y = (y) => ((7 - y) / 12) * h;
+  brush.noStroke();
+  if (LOOK === 'comic') {
+    const cx = U(0.53), cy = Y(0.3);
+    for (let k = 0; k < 30; k++) {
+      const a0 = (k / 30) * TAU, a1 = a0 + TAU / 60;
+      brush.fill(k % 2 ? PAL.ochre : '#ffe9a8', 165); brush.fillBleed(0.02); brush.fillTexture(0.2, 0.2);
+      brush.polygon([[cx, cy], [cx + Math.cos(a0) * 2600, cy + Math.sin(a0) * 1500], [cx + Math.cos(a1) * 2600, cy + Math.sin(a1) * 1500]]);
+    }
+    return;
+  }
+  const book = LOOK === 'book';
+  // far warm ground just above the table's back edge
+  brush.fill(PAL.ochre, book ? 70 : 90); brush.fillBleed(0.25, 'out'); brush.fillTexture(0.55, 0.5);
+  blob(brush, r, U(0.5), Y(-3.1), 1500, 170, 30, 0.08);
+  // violet haze drifting to one side, a second smaller pool on the far side of the orbit
+  brush.fill(PAL.wash2, book ? 75 : 90); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.6, 0.5);
+  blob(brush, r, U(0.33), Y(1.8), 460, 170, 22, 0.12);
+  blob(brush, r, U(0.74), Y(1.0), 380, 150, 22, 0.12);
+  // night: glazes of the same pigment, each smaller, so the pool deepens behind the cell (the light reads)
+  const glz = book ? [[120, 460, 260], [90, 330, 190], [60, 210, 130]] : [[235, 520, 290], [225, 420, 240], [210, 320, 190], [190, 220, 140], [160, 130, 90]];
+  glz.forEach(([op, rx, ry], k) => {
+    brush.fill(PAL.night, op); brush.fillBleed(0.2 + 0.04 * k, 'out'); brush.fillTexture(0.6 + 0.05 * k, 0.6);
+    blob(brush, r, U(0.53) - 14 * k, Y(0.3) - 8 * k, rx, ry, 24, 0.1);
+  });
+  // splatter
+  for (let k = 0; k < 40; k++) {
+    const a = r.range(0, TAU), d = r.range(380, 900);
+    brush.fill(r.chance(0.5) ? PAL.night : PAL.umber, r.range(60, 140)); brush.fillBleed(0.05); brush.fillTexture(0.3, 0.3);
+    brush.circle(U(0.53) + Math.cos(a) * d, Y(0.3) + Math.sin(a) * d * 0.4, r.range(2, 8), 0.5);
+  }
+}
+
+function blob(brush, r, cx, cy, rx, ry, n, j) {
+  brush.beginShape(0.4);
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * TAU, q = 1 + r.gauss(0, j);
+    brush.vertex(cx + Math.cos(a) * rx * q, cy + Math.sin(a) * ry * q);
+  }
+  brush.endShape(true);
+}
+
+let brushesAdded = false;
+function addBrushes() {   // custom brushes must exist before the textures are baked (layer init runs before setup)
+  if (brushesAdded) return; brushesAdded = true;
+  brush.add('inkpen', { type: 'default', weight: 3.2, scatter: 0.12, sharpness: 0.85, grain: 30, opacity: 235, spacing: 0.2, pressure: [1.15, 0.75], rotate: 'natural', noise: 0.1 });
+  brush.add('bigink', { type: 'default', weight: 6, scatter: 0.2, sharpness: 0.8, grain: 30, opacity: 235, spacing: 0.2, pressure: [1.2, 0.7], rotate: 'natural', noise: 0.15 });
+}
+
+async function buildWorld(ctx, { THREE, renderer }) {
+  addBrushes();
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(27, ctx.W / ctx.H, 1.5, 40);
+  const npr = createNPR(renderer, ctx, { look: LOOK, paper: paperCanvas(ctx), samples: 4 });
+  npr.setUnder(window.__pv.canvas);
+  npr.setLight({ dir: [-0.62, 0.78, 0.55], target: [0.2, 0.6, 0], size: 5.2, dist: 16 });
+  npr.debug = Number(Q.get('debug') || 0);
+
+  // ---- textures painted once with p5.brush ----
+  const tableTex = await bakeBrushTexture(THREE, { width: 1024, height: 1024, seed: 7, key: 'table', background: '#ffffff' }, (p, brush, w, h) => {
+    const rr = ctx.rng('tabletex');
+    brush.noStroke();
+    for (let k = 0; k < 7; k++) { // coffee rings & stains
+      brush.fill(k % 2 ? '#b89a6a' : '#9aa3b8', 45); brush.fillBleed(0.25); brush.fillTexture(0.7, 0.6);
+      brush.circle(rr.range(80, 940), rr.range(80, 940), rr.range(30, 90), 0.6);
+    }
+    brush.set('inkpen', '#3a3040', 1.1);
+    for (let i = 0; i < 16; i++) for (let j = 0; j < 9; j++) {
+      brush.circle(32 + i * 64, 58 + j * 113, 9.5 + rr.gauss(0, 0.4), 0.35);   // threaded holes, 16 x 9
+    }
+  });
+  tableTex.repeat.set(1, 1);
+  const faceTex = await bakeBrushTexture(THREE, { width: 1024, height: 512, seed: 3, key: 'face', background: '#ffffff' }, (p, brush) => {
+    brush.noStroke();
+    brush.fill('#ff6f7f', 110); brush.fillBleed(0.3); brush.fillTexture(0.5, 0.5);
+    brush.circle(256 - 92, 292, 26, 0.5); brush.circle(256 + 92, 292, 26, 0.5);        // blush
+    brush.set('bigink', '#2a1d2a', 1.4);
+    brush.spline([[222, 300], [256, 322], [290, 300]], 0.6);                              // smile
+    brush.set('inkpen', '#2a1d2a', 0.9);
+    for (let k = 0; k < 3; k++) brush.line(360 + k * 10, 130 + k * 4, 372 + k * 10, 110 + k * 4); // freckles
+  });
+  const labelTex = await bakeBrushTexture(THREE, { width: 512, height: 256, seed: 5, key: 'label', background: '#ffffff' }, (p, brush) => {
+    brush.noStroke(); brush.fill('#f4d35e', 200); brush.fillBleed(0.05); brush.fillTexture(0.3, 0.3);
+    brush.polygon([[60, 200], [140, 50], [220, 200]]);
+    brush.set('bigink', '#231c33', 1.2);
+    brush.polygon([[60, 200], [140, 50], [220, 200]]);
+    brush.line(140, 95, 140, 150); brush.circle(140, 175, 5, 0.2);
+    for (let k = 0; k < 4; k++) brush.line(270, 90 + k * 30, 460 - k * 25, 90 + k * 30);
+  });
+
+  // ---- painted cyclorama (world-locked washes: real parallax, DoF and haze as the camera orbits) ----
+  const bdTex = await bakeBrushTexture(THREE, { width: 4096, height: 1024, seed: 21, key: 'backdrop-' + LOOK, background: '#ffffff' },
+    (p, brush, w, h) => paintBackdrop(ctx, brush, w, h));
+  scene.add(npr.backdrop(bdTex, { radius: 14, height: 12, y: -5, center: [0.3, 0, 0], arc: [Math.PI - 2.5, 4.4] }));
+
+  // ---- helpers ----
+  const add = (geo, mo, ao = {}, pos = [0, 0, 0], rot = [0, 0, 0], parent = scene) => {
+    const m = npr.add(new THREE.Mesh(geo, Array.isArray(mo) ? mo.map((o) => npr.surface(o)) : npr.surface(mo)), ao);
+    m.position.set(...pos); m.rotation.set(...rot); parent.add(m); return m;
+  };
+  const cyl = (r0, r1, h, n = 48) => new THREE.CylinderGeometry(r0, r1, h, n, 1);
+
+  // ---- optical table (top gets the hole grid; sides are engraved along x) ----
+  const tSide = { color: PAL.table, hatchDir: [0, 1, 0], shadeColor: 0x7b6f86, shadeMix: 0.25, noiseScale: 0.6 };
+  const tTop = { color: PAL.table, map: tableTex, hatchDir: [1, 0, 0.35], hatchDir2: [0.3, 0, -1], noiseScale: 0.6, spec: 0.3 };
+  add(new THREE.BoxGeometry(8.4, 0.34, 4.6), [tSide, tSide, tTop, tSide, tSide, tSide], { outline: 1.1, cast: false }, [0.2, -0.17, 0.1]);
+
+  // ---- vacuum chamber: octagonal body with a big front viewport, neck, glass cell, coils ----
+  const steel = { color: PAL.steel, hatchMode: 'planar', hatchDir: [0, 1, 0.15], spec: 1 };
+  const ch = add(cyl(0.72, 0.72, 0.62, 8), steel, { outline: 1 }, [-1.25, CELL.y, 0], [Math.PI / 2, 0, Math.PI / 8]);
+  add(cyl(0.44, 0.44, 0.08, 48), { color: PAL.steel, hatchMode: 'u' }, { outline: 0.8 }, [-1.25, CELL.y, 0.35], [Math.PI / 2, 0, 0]);
+  add(cyl(0.32, 0.32, 0.05, 48), { color: 0x3b4679, spec: 1, hatch: 0.3, toneBias: 0.1 }, { outline: 0.6 }, [-1.25, CELL.y, 0.4], [Math.PI / 2, 0, 0]);
+  for (const a of [0.25, 0.75, 1.25, 1.75]) {     // small viewport flanges on the diagonal faces
+    const ang = a * Math.PI;
+    const px = -1.25 + Math.cos(ang) * 0.72, py = CELL.y + Math.sin(ang) * 0.72;
+    add(cyl(0.13, 0.13, 0.16, 32), { color: PAL.steel, hatchMode: 'u' }, { outline: 0.7 }, [px, py, 0], [0, 0, ang - Math.PI / 2]);
+  }
+  add(cyl(0.17, 0.17, 0.7, 40), { color: PAL.steel, hatchMode: 'u' }, { outline: 0.9 }, [-0.3, CELL.y, 0], [0, 0, Math.PI / 2]);
+  add(cyl(0.3, 0.3, 0.07, 48), { color: PAL.steel, hatchMode: 'u' }, { outline: 0.8 }, [-0.02, CELL.y, 0], [0, 0, Math.PI / 2]);
+  add(cyl(0.12, 0.16, CELL.y - 0.7, 32), { color: 0x6f7890, hatchMode: 'u' }, { outline: 0.8 }, [-1.25, (CELL.y - 0.7) / 2, 0]);
+  add(new THREE.BoxGeometry(0.8, 0.12, 0.8), { color: 0x5a5f78 }, { outline: 0.8 }, [-1.25, 0.06, 0]);
+  // ion pump behind
+  add(new THREE.BoxGeometry(0.9, 0.78, 0.62), { color: 0x8a93a8, hatchDir: [0, 1, 0] }, { outline: 1 }, [-1.3, 0.39, -1.05]);
+  for (let k = 0; k < 5; k++) add(new THREE.BoxGeometry(0.06, 0.62, 0.7), { color: 0x9aa3b8 }, { outline: 0.5 }, [-1.62 + k * 0.16, 0.39, -1.05]);
+  // glass cell (overlay pass: ink edges, tint, glints; back edges dashed)
+  const cell = new THREE.Mesh(new THREE.BoxGeometry(CELL.w, CELL.h, CELL.d), npr.glass({ tint: 0xe6f6ff, edge: 1.7, alpha: 1.6 }));
+  cell.position.set(CELL.x, CELL.y, CELL.z); npr.add(cell, { glass: true }); scene.add(cell);
+  // anti-Helmholtz coils: copper windings engraved around the tube
+  const coil = { color: PAL.copper, hatchMode: 'u', spec: 1, shadeColor: 0x7a3f3a, shadeMix: 0.3 };
+  for (const y of [CELL.y + 0.58, CELL.y - 0.58]) {
+    add(new THREE.TorusGeometry(0.62, 0.11, 32, 128), coil, { outline: 1 }, [CELL.x, y, 0], [Math.PI / 2, 0, 0]);
+  }
+  // objective above the cell
+  const objY = CELL.y + 0.95;
+  add(cyl(0.26, 0.2, 0.5, 48), { color: 0x3b3552, hatchMode: 'u', spec: 1 }, { outline: 1 }, [CELL.x, objY + 0.25, 0]);
+  add(cyl(0.28, 0.28, 0.08, 48), { color: 0xc9a14a, hatchMode: 'u', spec: 1 }, { outline: 0.8 }, [CELL.x, objY + 0.08, 0]);
+  add(cyl(0.2, 0.12, 0.16, 48), { color: 0x3b3552, hatchMode: 'u', spec: 1 }, { outline: 0.8 }, [CELL.x, objY - 0.06, 0]);
+  add(cyl(0.3, 0.3, 0.28, 48), { color: 0x4a4466, hatchMode: 'u' }, { outline: 0.9 }, [CELL.x, objY + 0.62, 0]);
+
+  // ---- laser head on posts, lens on a post, cable ----
+  const lx = 3.35;
+  add(new THREE.BoxGeometry(1.25, 0.52, 0.62), [
+    { color: PAL.laser }, { color: PAL.laser }, { color: PAL.laser }, { color: PAL.laser },
+    { color: 0xf3ead6, map: labelTex, hatch: 0.4 }, { color: PAL.laser }], { outline: 1.1 }, [lx, BEAM_Y, 0]);
+  add(cyl(0.09, 0.09, 0.14, 32), { color: 0x2d2b40, hatchMode: 'u' }, { outline: 0.8 }, [lx - 0.66, BEAM_Y, 0], [0, 0, Math.PI / 2]);
+  for (const dx of [-0.35, 0.35]) {
+    add(cyl(0.05, 0.05, BEAM_Y - 0.26, 24), { color: 0xb4bccb, hatchMode: 'u' }, { outline: 0.7 }, [lx + dx, (BEAM_Y - 0.26) / 2, 0]);
+    add(cyl(0.12, 0.12, 0.06, 32), { color: 0x4a4a5e }, { outline: 0.6 }, [lx + dx, 0.03, 0]);
+  }
+  const lensX = 2.25;
+  add(cyl(0.045, 0.045, BEAM_Y - 0.2, 24), { color: 0xb4bccb, hatchMode: 'u' }, { outline: 0.7 }, [lensX, (BEAM_Y - 0.2) / 2, 0]);
+  add(new THREE.TorusGeometry(0.2, 0.045, 24, 64), { color: 0x3a3a52, hatchMode: 'u' }, { outline: 0.8 }, [lensX, BEAM_Y, 0], [0, Math.PI / 2, 0]);
+  add(cyl(0.18, 0.18, 0.04, 48), { color: 0xcfe8f5, spec: 1, hatch: 0.25, toneBias: 0.2 }, { outline: 0.4 }, [lensX, BEAM_Y, 0], [0, 0, Math.PI / 2]);
+  add(new THREE.BoxGeometry(0.34, 0.06, 0.34), { color: 0x4a4a5e }, { outline: 0.6 }, [lensX, 0.03, 0]);
+  const cable = new THREE.CatmullRomCurve3([[lx + 0.62, BEAM_Y - 0.1, -0.1], [lx + 0.95, 0.9, -0.5], [lx + 0.5, 0.06, -1.3], [lx - 0.6, 0.06, -1.7], [lx - 1.3, 0.1, -2.35]].map((p) => new THREE.Vector3(...p)));
+  add(new THREE.TubeGeometry(cable, 96, 0.05, 12), { color: 0x3a2f45, hatchMode: 'u', hatchScale: 40 }, { outline: 0.8 }, [0, 0, 0]);
+  // a couple of background mounts for depth
+  for (const [x, z, h] of [[-3.2, -1.2, 0.9], [-2.6, -1.6, 0.6], [1.6, -1.7, 0.75]]) {
+    add(cyl(0.045, 0.045, h, 24), { color: 0xb4bccb, hatchMode: 'u' }, { outline: 0.7 }, [x, h / 2, z]);
+    add(new THREE.BoxGeometry(0.3, 0.3, 0.08), { color: PAL.laser }, { outline: 0.7 }, [x, h + 0.1, z], [0, 0.6, 0]);
+    add(cyl(0.11, 0.11, 0.04, 32), { color: 0xdfe6f0, spec: 1 }, { outline: 0.4 }, [x + 0.03, h + 0.1, z + 0.05], [Math.PI / 2, 0, 0.6]);
+  }
+
+  // ---- atoms: shaded, outlined pearls (the glow sits behind them) ----
+  const atomGeo = new THREE.SphereGeometry(ATOM_R, 32, 20);
+  const atoms = [];
+  for (let r = 0; r < ROWS.length; r++) for (let c = 0; c < COLS; c++) {
+    atoms.push(add(atomGeo, { color: PAL.atom, glow: 0.25, hatch: 0.7, spec: 1, receive: false, toneBias: 0.2, rim: 0.6,
+      hatchMode: 'screen', hatchDir: [1, -1, 0] }, { cast: false, outline: 0.38 }, [0, 0, 0]));
+  }
+
+  // ---- foreground optics (near the camera path): out of focus, they sell the depth ----
+  const post = (x, z, h, top) => {
+    add(cyl(0.05, 0.05, h, 24), { color: 0xb4bccb, hatchMode: 'u' }, { outline: 0.8 }, [x, h / 2, z]);
+    add(cyl(0.13, 0.13, 0.05, 32), { color: 0x4a4a5e }, { outline: 0.6 }, [x, 0.025, z]);
+    top(h);
+  };
+  post(-2.3, 1.9, 0.95, (h) => {
+    add(new THREE.BoxGeometry(0.42, 0.42, 0.09), { color: PAL.laser }, { outline: 0.9 }, [-2.3, h + 0.16, 1.9], [0, 0.55, 0]);
+    add(cyl(0.16, 0.16, 0.04, 48), { color: 0xdfe6f0, spec: 1, hatch: 0.4 }, { outline: 0.5 }, [-2.3 + 0.03, h + 0.16, 1.9 + 0.05], [Math.PI / 2, 0, 0.55]);
+    for (const [dx, dy] of [[0.15, 0.15], [-0.15, -0.15]]) add(cyl(0.03, 0.03, 0.14, 16), { color: 0xc9a14a, hatchMode: 'u' }, { outline: 0.5 }, [-2.3 + dx * 0.85, h + 0.16 + dy, 1.9 - 0.1], [Math.PI / 2, 0, 0]);
+  });
+  post(3.75, 1.75, 0.7, (h) => {
+    add(new THREE.BoxGeometry(0.3, 0.3, 0.3), { color: 0xcfe8f5, spec: 1, hatch: 0.5, toneBias: 0.15 }, { outline: 0.9 }, [3.75, h + 0.15, 1.75], [0, 0.785, 0]);
+  });
+
+  // ---- the lens-bug (original character): a coral optics creature with a lens-ring antenna ----
+  const group = new THREE.Group(); scene.add(group);
+  const body = add(new THREE.SphereGeometry(0.36, 64, 48), { color: PAL.body, map: faceTex, hatchMode: 'v', seed: 3.3, noiseScale: 1.6, spec: 0, rim: 0.8 }, { outline: 1.3 }, [0, 0.42, 0], [0, 0, 0], group);
+  const eyes = [], pupils = [];
+  for (const s of [-1, 1]) {
+    const eg = new THREE.Group(); eg.position.set(s * 0.135, 0.12, 0.3); body.add(eg);
+    const e = add(new THREE.SphereGeometry(0.115, 32, 24), { color: 0xfffaf0, hatch: 0.15, spec: 0, toneBias: 0.45, receive: false, shadeColor: 0xd8d4ea, shadeMix: 0.8 }, { outline: 0.75, cast: false }, [0, 0, 0], [0, 0, 0], eg);
+    const pu = add(new THREE.SphereGeometry(0.056, 24, 16), { color: 0x1d1628, hatch: 0, spec: 1, flat: 0.7, receive: false }, { cast: false }, [0, 0, 0.08], [0, 0, 0], eg);
+    eyes.push(e); pupils.push(pu);
+    // pupils live in the eye group so they can be placed on the eyeball surface
+    e.position.set(0, 0, 0);
+  }
+  // make pupils/eyes siblings: eye scale (blink) must not squash the pupil offset math
+  const feet = [-1, 1].map((s) => add(new THREE.SphereGeometry(0.11, 24, 16), { color: 0xb8573f, hatchMode: 'v' }, { outline: 1 }, [s * 0.15, 0.06, 0.04], [0, 0, 0], group));
+  feet.forEach((f) => f.scale.set(1.25, 0.6, 1.5));
+  const armGeo = new THREE.CapsuleGeometry(0.06, 0.13, 6, 16); armGeo.translate(0, 0.12, 0);
+  const armL = add(armGeo, { color: PAL.body, hatchMode: 'v' }, { outline: 0.8 }, [-0.33, 0.4, 0.02], [0, 0, 1.9], group);
+  const armR = add(armGeo, { color: PAL.body, hatchMode: 'v' }, { outline: 0.8 }, [0.33, 0.42, 0.02], [0, 0, -0.4], group);
+  const antenna = new THREE.Group(); antenna.position.set(0.04, 0.76, 0); group.add(antenna);
+  const ac = new THREE.CatmullRomCurve3([[0, 0, 0], [0.04, 0.12, 0], [-0.02, 0.24, 0], [0.03, 0.34, 0]].map((p) => new THREE.Vector3(...p)));
+  add(new THREE.TubeGeometry(ac, 32, 0.016, 8), { color: 0x3a2f45, hatch: 0 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], antenna);
+  add(new THREE.TorusGeometry(0.075, 0.022, 16, 48), { color: 0xc9a14a, hatchMode: 'u', spec: 1 }, { outline: 0.7 }, [0.03, 0.42, 0], [0, 0, 0], antenna);
+  const tip = add(new THREE.SphereGeometry(0.035, 16, 12), { color: PAL.atom, glow: 0.8, hatch: 0 }, { cast: false }, [0.03, 0.42, 0], [0, 0, 0], antenna);
+
+  T = { THREE, scene, camera, npr, bdTex, tableTex, atoms, char: { group, body, eyes, pupils, feet, armL, armR, antenna, tip } };
+  return { scene, camera };
+}
+
+// ---- painted lights: atom glows, Rydberg + tweezer beams (projected every frame) ----------------
+function paintLights(ctx) {
+  const { npr, THREE, camera } = T;
+  const t = ctx.t, pk = pulse(t), drop = aod(t);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const comic = LOOK === 'comic';
+  npr.focusOn(camera, V(CELL.x, CELL.y, 0.2), 1.1);
+  // the tweezer light column from the objective (drawn first: the atoms' glows sit on top of it)
+  npr.beamAt(ctx, camera, V(CELL.x, CELL.y + 0.86, 0), V(CELL.x, CELL.y - 0.38, 0), { width: 0.46, i: 0.26, color: PAL.tw, occluded: 0.3, lines: comic ? 0 : 9, seed: 2 });
+  st.atoms.forEach((a, k) => {
+    const w = a.m.getWorldPosition(new THREE.Vector3());
+    const tw = 0.7 + 0.2 * loopNoise(t, k * 3.1, { seed: 9, radius: 3 });
+    const pairFlash = (a.r <= 1) ? pk * drop : 0;
+    npr.glowAt(ctx, camera, w, { radius: 0.13 + 0.05 * pairFlash, i: clamp(tw + pairFlash * 0.4), behind: true,
+      color: pairFlash > 0.25 ? PAL.ryd : PAL.tw, seed: k });
+  });
+  const armed = seg(t, 0.36, 0.41) * (1 - seg(t, 0.52, 0.6));
+  npr.beamAt(ctx, camera, V(3.35 - 0.72, BEAM_Y, 0), V(-0.08, BEAM_Y, 0), { width: 0.055 * (1 + 0.6 * pk),
+    i: 0.3 + 0.65 * armed, color: PAL.ryd, pulse: armed > 0.01 ? packet(t) : -1, pulseAmp: 1.2 * armed, pulseW: 0.07, occluded: 0.1, lines: 4, seed: 1 });
+  // the entangling flash: ONE hero radiance / burst on the paired rows, not a spike on every atom
+  if (pk * drop > 0.02) {
+    npr.glowAt(ctx, camera, V(CELL.x, BEAM_Y, 0.05), { radius: 0.34 + 0.12 * pk, i: pk * drop, color: PAL.ryd, behind: true,
+      rays: pk * drop, rayLen: comic ? 0.55 : 0.8, rayCount: comic ? 14 : 36, seed: 7, probe: 0.2 });
+  }
+  const tp = T.char.tip.getWorldPosition(new THREE.Vector3());
+  npr.glowAt(ctx, camera, tp, { radius: 0.1, i: 0.75 + 0.25 * pk, color: PAL.ryd, rays: 0.35 + 0.4 * pk, rayLen: 0.3, rayCount: 16, seed: 3 });
+  npr.glowAt(ctx, camera, V(3.35 - 0.76, BEAM_Y, 0), { radius: 0.14, i: 0.55 + 0.45 * armed, color: PAL.ryd, behind: true,
+    rays: 0.6 * armed, rayLen: 0.35, rayCount: 20, seed: 5 });
+  // painted light spill: the array lights the coils gold; the pulse washes the cell rose
+  npr.pointLight(V(CELL.x, ROWS[1], 0.1), { color: PAL.tw, radius: 1.0, i: 0.5 });
+  npr.pointLight(V(CELL.x, BEAM_Y, 0.15), { color: PAL.ryd, radius: 1.4, i: 0.9 * pk + 0.2 * armed });
+  npr.pointLight(V(3.35 - 0.8, BEAM_Y, 0.1), { color: PAL.ryd, radius: 0.6, i: 0.45 + 0.45 * armed });
+}
+
+// ---- ink overlay (p5.brush), tracking 3D points ------------------------------------------------------
+function inkOverlay(ctx, brush) {
+  const { THREE } = T, t = ctx.t, sec = ctx.sec;
+  if (LOOK === 'engrave') {
+    const L = labels(ctx);
+    leader(brush, ctx, L.rb.from, [L.rb.a.x - 10, L.rb.a.y - 10], { color: PAL.ink, weight: 1.1, brush: 'inkpen', key: 'rb', bend: -0.15 });
+    leader(brush, ctx, L.ry.from, [L.ry.a.x, L.ry.a.y - 16], { color: PAL.ink, weight: 1.1, brush: 'inkpen', key: 'ryd', bend: 0.2 });
+  } else if (LOOK === 'comic') {
+    const age = sec - PULSE_T * NF / FPS;
+    const p = track(ctx, new THREE.Vector3(CELL.x - 0.3, BEAM_Y + 0.5, 0.4));
+    if (age > -0.05 && age < 1.0) {
+      const k = clamp((age + 0.05) * 6);
+      burst(brush, ctx, p.x - 40, p.y - 110, 190 * ease.outBack(k), 120 * ease.outBack(k), { fill: '#ffe14d', ink: PAL.ink, weight: 2.4, spikes: 13, key: 'zap' });
+    }
+    // speed lines on the moving row
+    const mv = Math.max(seg(t, 0.1, 0.27) * (1 - seg(t, 0.25, 0.3)), seg(t, 0.64, 0.82) * (1 - seg(t, 0.8, 0.85)));
+    if (mv > 0.05) {
+      const r = ctx.boilRng('speed');
+      for (let c = 0; c < COLS; c++) {
+        const a = track(ctx, T.atoms[c].getWorldPosition(new THREE.Vector3()));
+        const dir = t < 0.5 ? -1 : 1;
+        brush.set('inkpen', PAL.ink, 1.2);
+        for (let k = -1; k <= 1; k++) brush.line(a.x + k * 9 + r.gauss(0, 1), a.y + dir * 22, a.x + k * 9 + r.gauss(0, 1), a.y + dir * (22 + 50 * mv));
+      }
+    }
+  } else {
+    const N = note(ctx);
+    leader(brush, ctx, N.from, [N.a.x + 12, N.a.y - 14], { color: '#7a4a52', weight: 1.4, brush: 'inkpen', key: 'hi', bend: 0.3 });
+  }
+}
+
+// picture-book note: handwritten, upper right of the array, leader down to the corner atom
+function note(ctx) {
+  const font = ctx.font('Caveat', 66, 700);
+  const a = track(ctx, T.atoms[5].getWorldPosition(new T.THREE.Vector3()));
+  return { ...callout(ctx, a, { text: 'hello, atoms!', font, dx: 150, dy: -200 }), a, font, text: 'hello, atoms!' };
+}
+
+// engraved-plate figure labels: shared layout for the leader (ink layer) and the text (letters layer)
+function labels(ctx) {
+  const { THREE } = T;
+  const font = ctx.font('Instrument Serif', 50, 400, 'italic');
+  const a = track(ctx, T.atoms[0].getWorldPosition(new THREE.Vector3()));
+  const lb = track(ctx, new THREE.Vector3(2.25, BEAM_Y + 0.2, 0));
+  const rb = { ...callout(ctx, a, { text: '⁸⁷Rb in tweezers', font, dx: -250, dy: -190 }), a, text: '⁸⁷Rb in tweezers' };
+  const ry = { ...callout(ctx, lb, { text: 'Rydberg pulse', font, dx: 170, dy: -230 }), a: lb, text: 'Rydberg pulse' };
+  return { font, rb, ry };
+}
+
+function lettering(ctx, g) {
+  const { THREE } = T, sec = ctx.sec;
+  const jr = ctx.boilRng('letters');
+  if (LOOK === 'engrave') {
+    const L = labels(ctx);
+    g.fillStyle = PAL.ink; g.font = L.font;
+    for (const k of ['rb', 'ry']) { g.textAlign = L[k].align; g.fillText(L[k].text, L[k].x + jr.gauss(0, 0.5), L[k].y); }
+  } else if (LOOK === 'comic') {
+    const age = sec - PULSE_T * NF / FPS;
+    const p = track(ctx, new THREE.Vector3(CELL.x - 0.3, BEAM_Y + 0.5, 0.4));
+    sfx(g, ctx, 'ZAP!', p.x - 40, p.y - 108, 110, '#ff3d7f', age + 0.05, { life: 1.0, stroke: '#fff8e0', ink: PAL.ink, jitter: jr });
+    const mv = seg(ctx.t, 0.1, 0.2) * (1 - seg(ctx.t, 0.28, 0.33));
+    if (mv > 0.02) {
+      const a = track(ctx, T.atoms[5].getWorldPosition(new THREE.Vector3()));
+      letter(g, ctx, 'whoosh', a.x + 150, a.y - 70, 54, '#3d57c8', { pop: mv * 1.2, rot: -0.12, stroke: '#fff8e0', ink: PAL.ink, jitter: jr });
+    }
+  } else {
+    const N = note(ctx);
+    g.save(); g.translate(N.x + jr.gauss(0, 0.6), N.y); g.rotate(-0.05 + jr.gauss(0, 0.004));
+    g.font = N.font; g.fillStyle = '#7a4a52'; g.textAlign = N.align;
+    g.fillText(N.text, 0, 0); g.restore();
+  }
+}
+</script></body></html>

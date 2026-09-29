@@ -1,0 +1,18 @@
+{
+  "name": "pipeline",
+  "version": "1.0.0",
+  "description": "This pipeline turns scenes written in p5.js, p5.brush, three.js and Canvas2D into frames. It renders them in headless Chromium and encodes them with ffmpeg. It is the \"Claude writes the code, the browser draws every frame\" workflow. Every frame is a pure function of its index, so frames can render in any order and in parallel, an interrupted render can resume, and a loop is seamless by construction (frame N == frame 0).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "p5": "^2.3.4",
+    "p5.brush": "^2.2.3",
+    "three": "^0.186.1"
+  }
+}
