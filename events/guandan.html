@@ -1158,7 +1158,7 @@ async function startGame() {
         ensureHost(g);
         startRound(g, null);
     }));
-    if (!updated) showToast(L("The table changed. Please retry.", "牌桌状态变了，请重试。"));
+    if (!updated) showToast(L("The table changed. Try again.", "牌局已变化，请重试"));
 }
 
 function startRound(g, previousResult) {
@@ -1361,7 +1361,7 @@ async function playCards(seat, cards, options = {}) {
         setCurrentTurn(g, nextSeat(seat, g));
         g.message = `${g.seats[seat].name} 出了 ${comboName(combo, "zh")}。`;
     }, options);
-    if (!updated && !options.silent) showToast(L("Move expired. Check the table and retry.", "牌局已经变化，请看牌桌后重试。"));
+    if (!updated && !options.silent) showToast(L("The table changed. Try again.", "牌局已变化，请重试"));
     return !!updated;
 }
 
@@ -1404,7 +1404,7 @@ async function doPass(seat, options = {}) {
             g.message = `${g.seats[seat].name} 不要。`;
         }
     }, options);
-    if (!updated && !options.silent) showToast(L("Pass expired. Check the table and retry.", "牌局已经变化，请看牌桌后重试。"));
+    if (!updated && !options.silent) showToast(L("The table changed. Try again.", "牌局已变化，请重试"));
     return !!updated;
 }
 
@@ -1633,7 +1633,7 @@ async function hintMove() {
     if (!packet?.options?.length) return showToast(L("No useful suggestion found.", "暂时没有可用提示。"));
     // Like Tencent's 提示, a press selects cards whenever the engine has a press to offer: its
     // options cycle presses first. Its pass advice (partner owns the trick, or pressing costs too
-    // much) comes after them, or alone: the selection drops, 不出 lights up and says so in two words.
+    // much) comes after them, or alone: the selection drops and 不出 turns primary with a pop.
     const options = [...packet.options.filter(o => o.move?.cards?.length), ...packet.options.filter(o => !o.move?.cards?.length)];
     const nextIndex = previousHint && previousHint.signature === packet.signature && options.length > 1
         ? (previousHint.index + 1) % options.length
@@ -1642,9 +1642,7 @@ async function hintMove() {
     const pass = !ids.length;
     hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: options.length, pass, turn: turnStateKey() };
     selected = new Set(ids);
-    const passWord = L("Pass suggested", "建议不出");
-    if (pass) showToast(passWord, 1300);
-    else if (thinkingShown || tableView.toast?.textContent === passWord) hideToast();
+    if (thinkingShown) hideToast();
     render();
 }
 
@@ -2587,7 +2585,7 @@ function visualSeatPos(i, mine) {
 // Spectators watch from seat 0, so relations are taken from that seat.
 function relationForSeat(i, mine) {
     const view = mine >= 0 ? mine : 0;
-    if (i === view) return { key: "self", label: L("You", "自己") };
+    if (i === view) return { key: "self", label: L("Me", "我") };
     if (i % 2 === view % 2) return { key: "ally", label: L("Partner", "队友") };
     return { key: "opponent", label: L("Rival", "对手") };
 }
