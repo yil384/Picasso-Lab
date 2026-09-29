@@ -277,7 +277,10 @@ async def run_vp(vp, only):
                 except Exception:
                     pass
         out = os.path.join(SHOTS, f'{vp}-scenes.json')
-        json.dump(dict(scenes=r.meta, groups=report), open(out, 'w'), ensure_ascii=False, indent=1)
+        prev = json.load(open(out)) if os.path.exists(out) else dict(scenes={}, groups={})   # --only runs add to it
+        prev['scenes'].update(r.meta)
+        prev['groups'].update(report)
+        json.dump(prev, open(out, 'w'), ensure_ascii=False, indent=1)
         print(vp, json.dumps(report, ensure_ascii=False)[:1500])
 
 
