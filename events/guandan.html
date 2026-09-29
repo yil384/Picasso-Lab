@@ -2114,13 +2114,14 @@ function openPopup({ title = "", html = "", container = document.body, wide = fa
 }
 
 // Tencent 提示 dialog: one question, 取消 (blue) and 确定 (orange). Resolves true only on 确定;
-// ×, the backdrop and Esc count as 取消.
-function confirmPopup({ title, text, ok = L("OK", "确定"), cancel = L("Cancel", "取消") }) {
+// ×, the backdrop and Esc count as 取消. `container` as for openPopup.
+function confirmPopup({ title, text, ok = L("OK", "确定"), cancel = L("Cancel", "取消"), container }) {
     hideToast();
     return new Promise(resolve => {
         let answer = false;
         const close = openPopup({
             title,
+            container,
             narrow: true,
             html: `<p class="gd-confirm-text"></p><div class="gd-confirm-row"><button class="btn secondary" type="button" data-confirm="0">${cancel}</button><button class="btn primary" type="button" data-confirm="1">${ok}</button></div>`,
             onClose: () => resolve(answer)
@@ -3270,12 +3271,14 @@ function onTableClick(event) {
             showToast(music.isOn() ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
             break;
         }
-        case "newroom": newRoomBtn.click(); return;
+        case "newroom":
+        case "exit":
+            renderTableChrome();
+            return leaveTable(act === "m-exit");
         case "result-peek":
         case "result-back":
             tableView.result.peek = act === "result-peek";
             return renderTable();
-        case "exit": startReturnToEvents(); return;
         case "lipai": return groupSelection();
         case "hengpai":
             handMode = handMode === "row" ? "col" : "row";
@@ -3285,6 +3288,23 @@ function onTableClick(event) {
         default: return;
     }
     renderTableChrome();
+}
+
+// ☰ 新桌 / 返回活动 while a round is on or its result is up: the seat would stay taken (its turns
+// time out) and a host takes the next round with them, so ask first. The typed "picasso" egg and
+// 返回大厅 after the match leave at once.
+async function leaveTable(toEvents) {
+    const live = mySeat() >= 0 && (game.phase === "playing" || game.phase === "roundOver");
+    if (live && !await confirmPopup({
+        title: L("Leave the game", "离开牌局"),
+        text: isHost()
+            ? L("You are the host: the game cannot go on without you.", "你是房主，离开后牌局将无法继续。")
+            : L("The game is still on. Leave anyway?", "牌局还在进行，确定离开吗？"),
+        ok: L("Leave", "离开"),
+        container: tableView.ui
+    })) return;
+    if (toEvents) startReturnToEvents();
+    else newRoomBtn.click();
 }
 
 // 理牌: selected cards become their own column; with nothing selected it restores the default.
