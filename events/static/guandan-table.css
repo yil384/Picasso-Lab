@@ -870,7 +870,7 @@ body[data-screen="table"] .topbar { display: none; }
 /* the records poster's field (.gdr-poster): red -> violet -> blue, lit behind the title and the VS */
 .gd-vs {
     position: relative;
-    width: 1040px; height: 530px;
+    width: 1040px; height: 490px;
     overflow: hidden;
     border-radius: 10px;
     background:
@@ -898,12 +898,12 @@ body[data-screen="table"] .topbar { display: none; }
     animation: gd-vs-title 360ms var(--ease-back) calc(var(--since) + 80ms) both;
 }
 .gd-vs-title:lang(en) { font-size: 54px; }
-.gd-vs-title span { color: #fff; font: 900 26px/1 var(--font-ui); letter-spacing: .04em; white-space: nowrap; text-shadow: 0 2px 0 rgba(40, 14, 90, .4); }
+.gd-vs-title span { color: #fff; font: 900 26px/1 var(--font-ui); letter-spacing: .04em; white-space: nowrap; }
 @keyframes gd-vs-title { from { opacity: 0; transform: translateY(-30px); } }
 /* a team: the big faint name at the outer edge, its pair in a frame with a bracket to the centre */
 .gd-vs-side {
     position: absolute;
-    top: 150px; bottom: 36px;
+    top: 136px; bottom: 22px;
     width: 50%;
     display: flex;
     align-items: center;
@@ -1005,7 +1005,7 @@ body[data-screen="table"] .topbar { display: none; }
 /* light-gold VS under the records crown (#fcecac -> #b8660c, thin outline, no drop edge) */
 .gd-vs-mark {
     position: absolute;
-    left: 50%; top: calc(150px + (530px - 150px - 36px) / 2);
+    left: 50%; top: calc(50% + (136px - 22px) / 2); /* level with the team frames */
     translate: -50% -50%;
     animation: gd-vs-mark 380ms var(--ease-back) calc(var(--since) + 200ms) both;
 }
