@@ -453,10 +453,10 @@ export function scaleState(F) {
 }
 
 /** stopwatch hands: angles (rad, clockwise from 12) for [coral (oracle), emerald (ours)] and the button press.
- *  One turn per WATCH_TURN frames, so no hand laps: the coral hand stops at 6 o'clock in both races (the oracle's fixed
- *  time); race 1 the emerald hand stops far past it, race 2 just short of it. The insert after the photo finish replays the
- *  last race frames slowed down (race time 541 -> 552), so the emerald hand visibly stops first. */
-export const WATCH_TURN = 72;
+ *  One turn per WATCH_TURN frames, so no hand laps: the coral hand stops at the same angle in both races (the oracle's
+ *  fixed time); race 1 the emerald hand stops far past it, race 2 just short of it. The insert after the photo finish
+ *  replays the last race frames slowed down, so the emerald hand visibly stops first. */
+export const WATCH_TURN = 60;     // coral stops at ~7 o'clock (36 f), race-1 emerald at ~11 (56 f), race-2 emerald 18° short (33 f)
 export function watchState(F) {
   const ang = (t, f0, stop) => (Math.max(0, Math.min(t, stop) - f0)) / WATCH_TURN * TAU;
   let coral = 0, emerald = 0, rt = F;

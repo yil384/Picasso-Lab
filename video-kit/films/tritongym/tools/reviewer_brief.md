@@ -20,6 +20,10 @@ the bottom fade). Frame labels are "f<frame> <seconds>". Also look at a few fram
 (the master video is `tritongym_master.mp4` in the parent folder; you may extract frames with
 `python3 video-kit/films/tritongym/tools/sheet.py video OUT.jpg VIDEO --frames N ... --cols 2 --thumb 960`).
 
+If `video-kit/out/tritongym/REVIEW.md` already has rounds, read the latest round's must-fix list: check each item that
+touches your lens on the NEW frames and say plainly whether it is fixed. Do not assume a fix works because REVIEW.md says
+so; judge only what the frames show.
+
 Score the film 0–10 from YOUR lens only, and return (as your final message, markdown):
 
 ```

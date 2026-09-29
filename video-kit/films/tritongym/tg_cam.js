@@ -73,13 +73,13 @@ function shotRace1(F) {          // B4: fast low tracking, loses Oro, settles on
   const kth = kernTh(F), oth = oroTh(F);          // unwrapped ring angles (atan2 would wrap past pi mid-straight)
   const lead = lerp(oth, kth, sm((F - K.go1 - 4) / 10));
   const track = rig([lead - 0.02, 10.4, 0.8], [lead + 0.09, 6.0, 0.5], 33, -0.03);
-  const fin = rig([A.finish + 0.02, 12.4, 1.6], [A.finish + 0.08, 5.0, 1.2], 34, 0.0);
+  const fin = rig([A.finish + 0.02, 12.8, 1.75], [A.finish + 0.06, 5.0, 1.62], 36, 0.0);   // wide enough for the stopwatch face (upper left)
   return mix(track, fin, sg(F, K.kernRun1[1] - 20, K.kernRun1[1] - 4, sm));
 }
 function shotCrash(F) {          // B4 -> B5: crash zoom onto the square wheel, then the refine two-shot with a slow orbit
   const th = A.finish + 0.16;
   const z = sg(F, K.crash[0], K.crash[1], (x) => x * x);
-  const fin = rig([A.finish + 0.02, 12.4, 1.6], [A.finish + 0.08, 5.0, 1.2], 34, 0.0);
+  const fin = rig([A.finish + 0.02, 12.8, 1.75], [A.finish + 0.06, 5.0, 1.62], 36, 0.0);   // wide enough for the stopwatch face (upper left)
   const wheel = rig([th + 0.02, 8.7, 0.42], [th - 0.01, 6.9, 0.16], 30, 0.04);
   const orb = sg(F, K.tokIn[1], K.rev[1], io);
   const two = rig([th + 0.0 + 0.3 * orb, 11.7 - 0.4 * orb, 1.4], [th + 0.07, 6.1, 0.85], 33, 0.02 - 0.05 * orb);

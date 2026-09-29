@@ -34,7 +34,7 @@ outputs, not code" (the kernel drops its *output block* on the scale against the
 | **Kern**, the racer: cream token shell while it is source code, emerald after the compile gate | the generated kernel (compiled = runnable) |
 | the operator card on top of the stack (a matmul pictogram: grid × grid) | one Standard operator (oracles exist for Standard ops) |
 | the **compile gate** (a grumpy portcullis) CLANGs on the crooked token and flicks back an error slip | the standardised compile tool and its feedback |
-| **Dash**, a violet paper dart from another entrant, CLANGs on the same gate and stays stuck all film | the One-shot workflow: single pass, no feedback, a failure scores 0; the tools are the same for every workflow |
+| **Dash**, a grey paper dart from another entrant, CLANGs on the same gate and stays stuck all film | the One-shot workflow: single pass, no feedback, a failure scores 0; the tools are the same for every workflow |
 | Tok presses the crooked token flat (a targeted edit) | iterative refinement from tool feedback |
 | **the weigh-in**: Kern drops its output block on one pan, **Torchy** (a torch) has the reference block on the other; the needle settles in a hairline green notch | verify: max absolute error ≤ 0.01 against the PyTorch reference (Pass@1 for the final kernel) |
 | **Oro**, a long coral racer with brass tuning knobs, a laurel and a key it winds itself | the hand-tuned oracle Triton kernel |
@@ -56,7 +56,7 @@ Not claimed: no model is named or ranked, no leaderboard is shown, no speed-up n
 - **Oro** (oracle kernel): the same species, longer and sleeker: coral dart body, cone nose, fin, spoked wheels, brass
   tuning knobs down the flank, a laurel round its key. Smug lids; tunes a knob with a tiny wrench; double-take; laurel
   slips over one eye; sporting nod.
-- **Dash** (a one-shot kernel): a violet paper dart. One throw, stuck quivering in the gate for the rest of the film.
+- **Dash** (a one-shot kernel): a grey paper dart. One throw, stuck quivering in the gate for the rest of the film.
 - **The gate**: two posts and a lintel with a grumpy painted face, one portcullis per lane, a lamp (coral / emerald).
 - **The weigh-in** + **Torchy**: a brass balance with a round dial (hairline emerald notch); Torchy is a stout torch
   (handle, cup, teardrop flame, dot eyes on the cup) standing beside it — a pun, not the PyTorch logo.

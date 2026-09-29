@@ -162,7 +162,7 @@ export function buildTower(THREE, add, parent, { y = 3.3 } = {}) {
   })();
   C.head = new THREE.Group(); C.head.position.y = y; C.root.add(C.head);
   const fg = new THREE.CylinderGeometry(0.8, 0.8, 0.24, 48); fg.rotateX(Math.PI / 2);
-  add(fg, [{ key: 'brass', color: 0xf2b134, hatchMode: 'u', rim: 0.8 }, { color: 0xffffff, map: face, hatch: 0.3, rim: 0.3 }, { color: 0xffffff, map: face, hatch: 0.3 }], { outline: 1.1 }, [0, 0, 0], [0, 0, 0], C.head);
+  add(fg, [{ key: 'brass', color: 0xf2b134, hatchMode: 'u', rim: 0.8 }, { color: 0xffffff, map: face, hatch: 0.1, rim: 0.3, flat: 0.85, spec: 0, receive: false }, { color: 0xffffff, map: face, hatch: 0.1, flat: 0.85, spec: 0, receive: false }], { outline: 1.1 }, [0, 0, 0], [0, 0, 0], C.head);
   add(new THREE.TorusGeometry(0.8, 0.07, 10, 48), { key: 'brass', color: 0xf2b134, hatchMode: 'u' }, { outline: 0.7 }, [0, 0, 0.12], [0, 0, 0], C.head);
   add(new THREE.CylinderGeometry(0.11, 0.11, 0.2, 14), { key: 'brass', color: 0xf2b134 }, { outline: 0.7 }, [0, 0.9, 0], [0, 0, 0], C.head);
   C.btn = add(new THREE.CylinderGeometry(0.17, 0.17, 0.1, 18), { key: 'coralbtn', color: 0xef4b5f }, { outline: 0.7 }, [0, 1.04, 0], [0, 0, 0], C.head);
@@ -170,7 +170,7 @@ export function buildTower(THREE, add, parent, { y = 3.3 } = {}) {
   C.hands = [0xef4b5f, 0x10b981].map((col, k) => {
     const g = new THREE.Group(); g.position.z = 0.15 + k * 0.03; C.head.add(g);
     // coral (the oracle): long and thin; emerald (ours): short and broad, so both read when they overlap at 12
-    add(new THREE.BoxGeometry(k ? 0.075 : 0.045, k ? 0.52 : 0.72, 0.03), { color: col, rim: 0.4 }, { outline: 0.45, cast: false }, [0, k ? 0.2 : 0.3, 0], [0, 0, 0], g);
+    add(new THREE.BoxGeometry(k ? 0.09 : 0.055, k ? 0.52 : 0.72, 0.03), { color: col, rim: 0.4, flat: 0.6, spec: 0 }, { outline: 0.5, cast: false }, [0, k ? 0.2 : 0.3, 0], [0, 0, 0], g);
     return g;
   });
   add(new THREE.CylinderGeometry(0.08, 0.08, 0.1, 14).rotateX(Math.PI / 2), { key: 'brass', color: 0xf2b134 }, { outline: 0.4 }, [0, 0, 0.22], [0, 0, 0], C.head);
@@ -306,7 +306,7 @@ export function buildDash(THREE, add, parent) {
   const P = [[0.62, 0, 0], [-0.5, 0.03, 0.36], [-0.4, -0.04, 0], [0.62, 0, 0], [-0.4, -0.04, 0], [-0.5, 0.03, -0.36], [0.62, 0, 0], [-0.4, -0.04, 0], [-0.46, -0.26, 0]];
   g.setAttribute('position', new THREE.Float32BufferAttribute(P.flat(), 3)); g.computeVertexNormals();
   g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array(P.length * 2).fill(0.5), 2));
-  D.dart = add(g, { color: 0xb9a8ec, side: THREE.DoubleSide, rim: 0.5 }, { outline: 0.8 }, [0, 0, 0], [0, 0, 0], D.body);
+  D.dart = add(g, { color: 0xb3aa9c, side: THREE.DoubleSide, rim: 0.5, spec: 0 }, { outline: 0.8 }, [0, 0, 0], [0, 0, 0], D.body);
   // two googly eyes on the back (it stays stuck, eyes rolling)
   D.eyes = [-1, 1].map((s) => {
     const e = new THREE.Group(); e.position.set(-0.3, 0.1, s * 0.1); D.body.add(e);

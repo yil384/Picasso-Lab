@@ -466,6 +466,7 @@ export function drawNPR(ctx) {
   fl(K.slam, 18, polar(L2 + A.words, 1.2, 1.9), 420, 1.0, 9);
   fl(K.hold[0] + 2, K.hold[1] - K.hold[0] - 2, polar(L2 + A.finish, R.track, 0.45), 380, 0.7, 5);
   if (F >= K.slam - 4 && F < K.away[0]) npr.pointLight(V(...polar(A.words, 3.6, 2.4)), { color: 0xffc23d, radius: 3.6, i: 0.5 * sm((F - K.slam + 4) / 8) });
+  if (F >= K.gate2 - 1 && F < K.gate2 + 12) npr.pointLight(V(...polar(A.gate + 0.12, R.ours, 0.6)), { color: 0x34d399, radius: 2.0, i: 0.8 * (1 - sg(F, K.gate2 + 2, K.gate2 + 12)) });   // lap-2 recompile flash
   if (F >= K.ripple[0] && F < K.ripple[1] + 10) npr.pointLight(V(...polar(A.gate + 0.1, R.ours, 0.6)), { color: 0x34d399, radius: 1.6, i: 0.6 * (1 - sg(F, K.ripple[1], K.ripple[1] + 10)) });
   if (st.gate.lamp !== 'off') npr.glowAt(ctx, camera, T.gate.lamp.getWorldPosition(V(0, 0, 0)), { radius: 0.55, i: 1.0, color: st.gate.lamp === 'coral' ? 0xef4b5f : 0x10b981, behind: true, seed: 2 });
   npr.render(T.scene, camera);
@@ -500,10 +501,10 @@ export function drawMarks(ctx, g) {
   const F = ctx.iw, r = ctx.boilRng('marks');
   // CLANG! on a diagonal beside the gate
   const ca = F - K.clang;
-  if (ca >= 0 && ca < 26) {
+  if (ca >= 0 && ca < K.closeup[0] - K.clang) {        // gone by the cut to the insert
     const p = prj(ctx, polar(A.gate - 0.08, R.ours + 0.2, 2.3));
     const x = clamp(p.x - 260, 330, 1250), y = clamp(p.y + 20, 330, 560), c2 = ca - 2;   // top of the lettering below the card crop
-    comicWord(g, 'CLANG!', x, y, 150, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.12, r, pop: c2 / 4, alpha: 1 - sg(ca, 20, 26), perLetter: (i) => (c2 - i * 0.8) / 3 });
+    comicWord(g, 'CLANG!', x, y, 150, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.12, r, pop: c2 / 4, alpha: 1 - sg(ca, K.closeup[0] - K.clang - 5, K.closeup[0] - K.clang), perLetter: (i) => (c2 - i * 0.8) / 3 });
   }
   const pf = (f0, p, s0) => { const a = F - f0; if (a < 0 || a >= 9) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); for (const sd of [-1, 1]) puff(g, q.x + sd * (u * 0.3 + a * 3), q.y - a, u * s0 * (1 + a * 0.08), 1 - a / 9, r); };
   pf(K.hopOff[1], polar(A.bench + 0.2, R.ours, 0.02), 0.12);

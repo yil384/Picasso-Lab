@@ -16,8 +16,8 @@ strip b3_verify 192 262
 strip b4_race1 264 358
 strip b5_refine 360 418
 strip b6_lap2 420 486
-strip b7_race2 488 562
-strip b8_payoff 564 634
-$S "$EV/strip_seam.jpg" "$V" --frames $(seq -s ' ' 636 2 658) $(seq -s ' ' 0 2 14) --cols 10 --thumb 240 > /dev/null
-$S "$EV/card.jpg" "$V" --frames 30 70 131 150 186 238 270 330 400 450 530 552 600 620 --cols 2 --card > /dev/null
+strip b7_race2 488 578
+strip b8_payoff 580 630
+$S "$EV/strip_seam.jpg" "$V" --frames $(seq -s ' ' 632 2 658) $(seq -s ' ' 0 2 14) --cols 10 --thumb 240 > /dev/null
+$S "$EV/card.jpg" "$V" --frames 32 60 131 142 160 188 244 270 344 392 445 530 556 570 600 628 --cols 2 --card > /dev/null
 echo "$EV"; ls "$EV"
