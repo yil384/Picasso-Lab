@@ -3765,8 +3765,9 @@ function introHTML(v) {
 }
 
 // Round/system messages become short toasts (plays and passes are already visible at the seats).
-// A turn that ran out is always said, in my own words when it was mine (even when that pass
-// collected the trick and the message moved on).
+// A turn that ran out is always said, once, from the history (so also when that pass collected
+// the trick and the message moved on): 超时，自动不出 / 超时，自动出 ♠3, with the seat's name
+// unless it was mine.
 function maybeToastTableMessage() {
     const msg = game.message || "";
     const key = `${game.roomCode}:${game.roundNo}:${msg}`;
@@ -3779,13 +3780,15 @@ function maybeToastTableMessage() {
     if (timeout) tableView.seenPlays.add(timeout);
     if (first && !dealWindowOpen(game)) return;
     if (game.phase !== "playing" || !msg) return;
-    if (freshTimeout && last.player === mySeat()) {
+    if (freshTimeout) {
         const card = valuesFromFirebase(last.cards)[0];
-        return showToast(card
-            ? L(`Timed out: played ${cardText(card, "en")}`, `超时，自动出 ${cardText(card, "zh")}`)
-            : L("Timed out: passed", "超时，自动不出"), 2600);
+        const zh = card ? `超时，自动出 ${cardText(card, "zh")}` : "超时，自动不出";
+        const en = card ? `timed out: played ${cardText(card, "en")}` : "timed out: passed";
+        if (last.player === mySeat()) return showToast(L(`${en[0].toUpperCase()}${en.slice(1)}`, zh), 2600);
+        const who = displaySeatName(game.seats[last.player]);
+        return showToast(L(`${who} ${en}`, `${who} ${zh}`), 2600);
     }
-    if (!/超时/.test(msg) && /出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局(开始| · )/.test(msg)) return;
+    if (/超时|出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局(开始| · )/.test(msg)) return;
     showToast(displayMessage(msg), 2600);
 }
 
