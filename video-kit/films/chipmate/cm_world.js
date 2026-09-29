@@ -474,13 +474,13 @@ function buildFair(add, grp, tx) {
   const pgeo = new THREE.PlaneGeometry(1.4, 0.58); pgeo.translate(0.7, 0, 0);
   T.pennantFlag = add(pgeo, { color: 0xffffff, map: tx.pennant, hatch: 0.2, toneBias: 0.15, rim: 0, spec: 0, side: THREE.DoubleSide, seed: 606 }, { outline: 0.7 }, [0.15, 0, 0], [0, 0, 0], T.pennant);
   // striped tent and bunting behind the stage
-  const tent = grp(T.scene, [7.4, 0, -2.75]);
+  const tent = grp(T.scene, [5.35, 0, -3.3]);
   add(new THREE.CylinderGeometry(0.8, 0.8, 1.0, 16, 1, true), { color: 0xfff1d6, hatchMode: 'u', rim: 0.4, side: THREE.DoubleSide, seed: 610 }, { outline: 1.0 }, [0, 0.5, 0], [0, 0, 0], tent);
   add(new THREE.ConeGeometry(0.92, 0.85, 16), { color: COL.red, hatchMode: 'u', rim: 0.5, seed: 611 }, { outline: 1.0 }, [0, 1.42, 0], [0, 0, 0], tent);
   for (let k = 0; k < 8; k++) add(new THREE.BoxGeometry(0.06, 1.0, 0.02), { color: COL.red }, { outline: 0 }, [Math.cos(k / 8 * TAU) * 0.81, 0.5, Math.sin(k / 8 * TAU) * 0.81], [0, -k / 8 * TAU, 0], tent);
   add(new THREE.SphereGeometry(0.07, 12, 8), { color: COL.amberL }, { outline: 0.5 }, [0, 1.9, 0], [0, 0, 0], tent);
   const bun = new THREE.BufferGeometry(), bp = [];
-  for (let k = 0; k < 10; k++) { const t0 = k / 10, t1 = (k + 0.7) / 10; const X = (t) => lerp3(7.4, 10.5, t), Y = (t) => 2.1 - Math.sin(Math.PI * t) * 0.4, Z = (t) => lerp3(-2.75, -2.1, t); bp.push(X(t0), Y(t0), Z(t0), X((t0 + t1) / 2), Y((t0 + t1) / 2) - 0.2, Z((t0 + t1) / 2), X(t1), Y(t1), Z(t1)); }
+  for (let k = 0; k < 10; k++) { const t0 = k / 10, t1 = (k + 0.7) / 10; const X = (t) => lerp3(5.35, 10.5, t), Y = (t) => 2.1 - Math.sin(Math.PI * t) * 0.4, Z = (t) => lerp3(-3.3, -2.1, t); bp.push(X(t0), Y(t0), Z(t0), X((t0 + t1) / 2), Y((t0 + t1) / 2) - 0.2, Z((t0 + t1) / 2), X(t1), Y(t1), Z(t1)); }
   bun.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bp), 3)); bun.computeVertexNormals();
   add(bun, { color: COL.amberL, side: THREE.DoubleSide, rim: 0.3, seed: 612 }, { outline: 0 }, [0, 0, 0]);
   add(new THREE.CylinderGeometry(0.03, 0.03, 2.1, 8), { color: COL.ink }, { outline: 0.4 }, [10.5, 1.05, -2.1]);

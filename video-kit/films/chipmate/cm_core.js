@@ -36,7 +36,7 @@ export const K = {
   slip: 294, planes: 314, landPl: [338, 341], blame: [298, 334], readPl: [342, 354],
   eject: 350, ejectLand: 364, check: 372, bugPeek: 372, spot: 377,
   // S5 fix + round 2 of at most 5
-  grab: 381, whack: 392, tally: 404, retoss: 404, retossLand: 418, retossP: 407, retossPLand: 420, lever2: 420, rewind: [422, 430],
+  grab: 381, whack: 392, tally: 413, retoss: 404, retossLand: 418, retossP: 407, retossPLand: 420, lever2: 420, rewind: [422, 430],
   // S6 run 2 -> match rate 1.0
   run2: 432, cyc2: 8, gauge2: 490, ding: 492, five: [498, 508], lights: [504, 522],
   // S7 the giant

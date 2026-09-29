@@ -58,3 +58,50 @@ moving fast there), so there is no pop.
 5. Bigger tally slate.
 6. Signal pulses running along the copper-trace roads (city traffic, loop-periodic).
 7. Glass dome edges stronger.
+
+---
+
+## Round 2 - v2 (all round-1 fixes in; 960x540 preview render + four 1080p stills)
+
+Evidence: `review/r2_sheet.jpg` (1 frame/s), `review/r2_card400.jpg` (every 2 s, centre 1.82:1 crop at 400 px),
+`review/r2_grid.jpg` (f264 BZZT on the new asphalt, f372 inspection at 1080p, f648 payoff at 1080p, f526 whip),
+`review/r2_fixes.jpg` (v3 checks, see below). Seam: f719->f0 = 24.2 vs neighbours 22.2-26.6 (no pop).
+Card test encode: 3.70 MB, but only at CRF 32.
+
+### 1. Creative director - 8.1 (was 7.0)
+- + The runs are acted now: every check-lamp grins as its cycle matches, and the failing one pulls X-eyes under the
+  BZZT! (f257-275). The inspection beat is funny and fair: both candidates come home, Py sniffs its own model and
+  ticks it clean (f364-376), then spots the bug in Chip's chip and points. The giant's reaction reads (huge round eye,
+  "!", sweat, f666-682).
+- **must-fix** At the sheepish moment Chip turns its back to the camera (f372, `r2_grid.jpg` top right): the key
+  reaction face is not visible.
+- **must-fix** At the payoff Py is hidden behind Chip's raised arm (f648): one of the two heroes is missing from the
+  poster.
+- nice: the round-2 tally dot fills while the camera is still leaving the anvil (f404), so it is missed.
+
+### 2. Tech-art lead - 8.2 (was 7.2)
+- + Dark asphalt gives the trace viewer real contrast; the lamps' comic glow + faces pop; the giant's visor is now a
+  flat bright screen. At 1080p line weights are 3-6 px, halftone 14 px, and the lettering holds (f648).
+- **must-fix** The red fairground tent sits right behind "80.1%" and fills the gap of the decimal point (f648).
+- **must-fix** The whip smear is so strong that colour slides off the ink and leaves outline-only ghosts (f204, f528),
+  the "see-through ghosts" round 1 of the Qubrio films was criticised for.
+- nice: per-frame film grain costs a lot of bitrate for no visible gain at card size.
+
+### 3. Domain expert - 8.7 (was 8.0)
+- + The one inaccuracy is gone: after the diagnostic both the Verilog chip and the Python model are returned and
+  checked; the model is clean, the bug is in the chip. Everything else unchanged and right (see round 1).
+- small: the tally slate (round 2 of at most 5) is bigger now but the fill should happen on camera.
+
+### 4. Web designer - 8.0 (was 7.5)
+- + At 400 px every beat reads (`r2_card400.jpg`): sign, duo, lanes stacked like a trace viewer, BZZT!, "71.2%" vs
+  "80.1%", "1.6T". The card loop starts on the poster frame (f648), so the poster and the first video frame match.
+- **must-fix** The card needs CRF 32 to fit 4 MB; halftone and hatching break up at that CRF. Remove the per-frame
+  grain (static paper grain stays) to buy several CRF steps.
+
+### Fixes for v3 (applied, checked on stills in `review/r2_fixes.jpg`)
+1. Chip turns to camera for the sheepish look (f372-380).
+2. Py sits a bit left and lifts its head over Chip's arms during the cheer (f634+).
+3. Tent moved left out of the payoff background.
+4. Whip smear clamp 260 -> 170 px and 0.8 -> 0.55 strength: colour stays with the ink, speed streaks remain.
+5. Tally fill moved to f413, when the harness is in shot.
+6. Per-frame grain 0.018 -> 0.006.

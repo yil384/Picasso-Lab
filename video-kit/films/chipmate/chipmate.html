@@ -28,7 +28,7 @@ const LOOK = {
   rule: 0.0, bgDots: [0.96, 0.8, 0.62, 0.22],
   // depth: colour fades toward the paper, ink and dots thin with distance (the skyline recedes)
   atmos: 0.42, atmosStart: 10, atmosEnd: 34, atmosCol: [0.97, 0.9, 0.84], inkFar: 0.55, hatchFar: 0.7, htFar: 0.7,
-  dofMax: 0, grain: 0.018, vignette: 0.16,
+  dofMax: 0, grain: 0.006, vignette: 0.16,
   ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
 };
 

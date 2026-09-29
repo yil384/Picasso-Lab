@@ -15,7 +15,7 @@ const HOP_B = [H.x - 0.25, H.h + 0.3, H.z + 0.3];    // front hopper mouth (the 
 const ANVIL = [-6.15, 0.36, -0.3];
 const LECTERN = [-3.55, 0.47, -0.25];
 const MOUTH = [W.screenX, 1.35, -1.45];
-const FAIR_C = [9.86, STG, -0.52], FAIR_P = [9.46, STG, -1.0];
+const FAIR_C = [9.86, STG, -0.52], FAIR_P = [9.42, STG, -1.18];
 
 // ---------------------------------------------------------------------------------------------------
 // camera
@@ -132,7 +132,7 @@ function updateCamera(ctx, F) {
     const truck = Math.hypot(pb.tg[0] - pa.tg[0], pb.tg[2] - pa.tg[2]) * Math.sign(pb.tg[0] - pa.tg[0]);
     const pxu = (ctx.DH / 2) / Math.tan(rg.fov * Math.PI / 360) / rg.r;
     const sx = yawSmear(cam, dy * FPS, FPS) - truck * pxu;
-    st.smear = Math.abs(sx) > 12 ? clamp(sx, -260, 260) * 0.8 : 0;
+    st.smear = Math.abs(sx) > 12 ? clamp(sx, -170, 170) * 0.55 : 0;
   }
   st.rig = rg;
   ctx.camera = cam;
@@ -360,7 +360,7 @@ export function chipPose(F) {
   if (F >= K.readPl[0] && F < K.eject + 4) { P.yaw = lerp(toPy * 0.85, 0, sm((F - K.readPl[0]) / 5)); P.aL = { f: 1.25, s: 0.35 }; P.aR = { f: 1.25, s: 0.35 }; P.lean = 0.1; }
   if (F >= K.eject + 4 && F < K.grab) {
     P.yaw = lerp(0, toAnvil * 0.8, sm((F - K.eject - 4) / 8));
-    if (F >= K.bugPeek) { P.aL = { f: 2.4, s: 0.7 }; P.aR = { f: 0.3, s: 0.3 }; P.tilt = 0.08 * Math.sin((F - K.bugPeek) * 0.5); P.lean = -0.06; }
+    if (F >= K.bugPeek) { P.yaw = lerp(toAnvil * 0.8, 0.12, sm((F - K.bugPeek - 2) / 5)); P.aL = { f: 2.4, s: 0.7 }; P.aR = { f: 0.3, s: 0.3 }; P.tilt = 0.08 * Math.sin((F - K.bugPeek) * 0.5); P.lean = -0.06; }
   }
   // ---- S5: whack the bug out with the wrench, pick the chip up, toss it back
   if (F >= K.grab && F < K.retoss + 8) {
@@ -528,7 +528,7 @@ export function pyPose(F) {
     if (F >= K.slam) {
       const a = F - K.slam;
       P.hyaw = 0.35 + 0.25 * Math.sin(a * 0.25); P.hpitch = -0.15;
-      P.head = [0.02 * Math.sin(a * 0.5), 0.1 + 0.08 * Math.abs(Math.sin(a * 0.33 + 1.1)), 0];
+      P.head = [-0.06 + 0.02 * Math.sin(a * 0.5), 0.1 + 0.3 * sm(a / 8) + 0.08 * Math.abs(Math.sin(a * 0.33 + 1.1)), 0.1];
       P.tail = { w: [P.x + 0.3 + 0.1 * Math.sin(a * 0.6), STG + 0.95 + 0.1 * Math.sin(a * 0.45), P.z + 0.25], k: sm(a / 6) };
       if (a < 10) P.sq += takeSq(a - 2);
     }
