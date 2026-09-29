@@ -522,6 +522,8 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-slot.is-p3 { right: 176px; top: 190px; justify-content: flex-end; }
 /* own plays sit at 32% like Tencent, rising only if a tall hand would reach them */
 .gd-slot.is-p0 { left: 0; right: 0; top: min(32%, calc(100% - var(--hand-bottom, 55px) - var(--hand-h) - 8px - 109px)); justify-content: center; }
+/* my play lifts out over the hand while it flies (runPlayFlights) */
+.gd-slot.is-p0.is-flying { z-index: 11; }
 .gd-played { display: flex; }
 .gd-played .card + .card { margin-left: calc(var(--card-w-small) * -.52); }
 .gd-played.is-enter { animation: gd-play-in 200ms var(--ease-out) both; }

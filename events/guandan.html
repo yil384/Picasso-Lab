@@ -3321,21 +3321,26 @@ function playFlightSources(v, animate) {
 }
 
 // FLIP: each played card starts at its source (in stage design px, so the rotated stage works too)
-// and settles into the slot in ~200 ms. Transform and opacity only.
+// and settles into the slot in ~200 ms. Transform and opacity only. My cards lift out over the
+// hand (the slot rides above it until they land) instead of sliding out from under its columns.
 function runPlayFlights(flights, v) {
     const centre = r => stagePoint(r.left + r.width / 2, r.top + r.height / 2);
     flights.forEach((src, i) => {
         const slot = tableView.regions[`slot${visualSeatPos(i, v.mine)}`];
+        const runs = [];
         slot.querySelectorAll(".gd-played .card").forEach((el, k) => {
             const from = src.rects ? src.rects.get(el.dataset.pid) : src.avatar;
             if (!from) return;
             const a = centre(from);
             const b = centre(el.getBoundingClientRect());
-            el.animate([
+            runs.push(el.animate([
                 { transform: `translate(${(a.x - b.x).toFixed(1)}px, ${(a.y - b.y).toFixed(1)}px) scale(${src.scale.toFixed(3)})`, opacity: src.rects ? 1 : 0 },
                 { transform: "none", opacity: 1 }
-            ], { duration: 210, delay: src.rects ? 0 : k * 16, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
+            ], { duration: 210, delay: src.rects ? 0 : k * 16, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" }).finished);
         });
+        if (!src.rects || !runs.length) return;
+        slot.classList.add("is-flying");
+        Promise.allSettled(runs).then(() => slot.classList.remove("is-flying"));
     });
 }
 
