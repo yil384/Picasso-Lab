@@ -1,17 +1,22 @@
-// tg_film.js - "TritonGym: The Loop" (see STORYBOARD.md). World build + per-frame update + npr extras + marks.
+// tg_film.js - "TritonGym: The Loop" (see STORYBOARD.md): builds the set and cast, poses everything per frame from the
+// pure timeline in tg_anim.js / tg_cam.js, drives the npr extras (lights, impact frames, focus lines, smear) and draws
+// the hand-made 2D marks (lettering, speed lines, puffs, emotes).
 import { createNPR } from './npr/npr.js';
 import { bakeBrushTexture } from './npr/brush.js';
-import { orbit, handheld, applyRig } from './npr/camera.js';
-import { cachedBake, INK, TAU } from './tg_paint.js';
+import { applyRig, handheld, yawSmear } from './npr/camera.js';
+import { cachedBake, INK, TAU, pen, fillPoly, ellipsePts, starPts } from './tg_paint.js';
 import { ARENA, canvasTex, paintFloor, paintPlanks, buildCard, buildStands } from './tg_world.js';
-import { lerp, clamp } from './tg_time.js';
-import { buildLLM, buildKern, buildOro } from './tg_cast.js';
-import { buildGate2, buildScale, buildTorchy, buildFinish, buildBench, buildDash } from './tg_props.js';
-import { comicWord } from './tg_letter.js';
+import { buildLLM, buildKern, buildOro, KERN_SLOTS } from './tg_cast.js';
+import { buildGate2, buildFinish, buildTower, buildBench, buildWeighIn, buildBlock, buildTorch, buildDash, buildSlip, buildCheck } from './tg_props.js';
+import { comicWord, bang, word3D } from './tg_letter.js';
+import { lerp, clamp, sg, sm, ob, ringv, hsh } from './tg_time.js';
+import { NF, K, A, R, L2, polar, headingAt, faceOut, kernState, oroState, tokState, dashState, gateState, scaleState, watchState, tokenFlight } from './tg_anim.js';
+import { camWorld, WATCH, WHIPS, toRing } from './tg_cam.js';
 
-export const NF = 600;
+export { NF };
 const Q = new URLSearchParams(location.search);
 export const PAPER = { tone: '#f4ebd6', grain: 0.04, fibres: 0.05, blotch: 0.06, seed: 4 };
+const PAL = { ink: '#1a1530', coral: '#ef4b5f', coralDk: '#b8283f', emerald: '#10b981', emeraldDk: '#047857', cream: '#fff6e0', ochre: '#f2b134' };
 
 export const LOOK = {
   extends: 'comic',
@@ -20,27 +25,26 @@ export const LOOK = {
   lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
   bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.12,
   rule: 0.17, rulePx: 10, ruleTop: 0.3, ruleBot: 0.04, bgDots: [0.95, 0.6, 0.42, 0.28],
-  dofMax: 3.5, dofRange: 3.0, grain: 0.018, vignette: 0.16,
-  atmos: 0.22, atmosStart: 14, atmosEnd: 34, atmosCol: [0.95, 0.92, 0.84], inkFar: 0.7, hatchFar: 0.5, htFar: 0.5,
+  dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16,
+  atmos: 0.2, atmosStart: 14, atmosEnd: 34, atmosCol: [0.96, 0.92, 0.84], inkFar: 0.7, hatchFar: 0.5, htFar: 0.5,
   ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
 };
 
-// station angles on the ring (radians, measured from +x towards +z)
-export const A = { bench: 0.0, gate: 1.3, scale: 2.55, start: 3.7, finish: 5.3 };
-
 let T = null;
+const st = {};
 const V = (x, y, z) => new T.THREE.Vector3(x, y, z);
-export const polar = (a, r, y = 0) => [Math.cos(a) * r, y, Math.sin(a) * r];
 
+// ------------------------------------------------------------------------------------------------
+// build
+// ------------------------------------------------------------------------------------------------
 export async function buildWorld(ctx, { THREE, renderer }) {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(32, ctx.W / ctx.H, 0.4, 90);
+  const camera = new THREE.PerspectiveCamera(32, ctx.W / ctx.H, 0.3, 90);
   const npr = createNPR(renderer, ctx, { look: LOOK, paper: ctx.paper(PAPER), samples: 4 });
   npr.setUnder(window.__pv.canvas);
-  npr.setLight({ dir: [-0.45, 0.85, 0.5], target: [0, 0, 0], size: 13, dist: 30 });
+  npr.setLight({ dir: [-0.35, 0.85, 0.55], target: [0, 0, 0], size: 13, dist: 30 });
   npr.debug = Number(Q.get('debug') || 0);
   T = { THREE, scene, camera, npr };
-  // surfaces: options with a `key` share one material (and one surface id: npr has 253 of them)
   const mats = new Map();
   const surf = (o) => {
     if (o && o.isMaterial) return o;
@@ -51,11 +55,12 @@ export async function buildWorld(ctx, { THREE, renderer }) {
     const m = npr.add(new THREE.Mesh(geo, Array.isArray(mo) ? mo.map(surf) : surf(mo)), ao);
     m.position.set(...pos); m.rotation.set(...rot); parent.add(m); return m;
   };
-  T.add = add;
+  T.add = add; T.surf = surf;
+  const station = (th, r, y = 0) => { const g = new THREE.Group(); g.position.set(...polar(th, r, y)); g.rotation.y = headingAt(th); scene.add(g); return g; };
 
-  // ---- the arena: a raised emerald circuit board (painted top view: PCB + ring track) on a wooden gym floor
-  const floorTex = canvasTex(THREE, 4096, 4096, (g, w, h) => paintFloor(g, w, h, { startA: A.start, finishA: A.finish }));
-  const F = ARENA.floor, BR = 8.6;   // board radius (a rounded-square board would read as a card; a disc reads as an arena)
+  // ---- the arena: a raised emerald circuit board (PCB + ring track, one painted top view) on a wooden gym floor
+  const F = ARENA.floor, BR = 8.6;
+  const floorTex = canvasTex(THREE, 4096, 4096, (g, w, h) => paintFloor(g, w, h, { startA: -A.start, finishA: -A.finish }));
   const boardTop = new THREE.CircleGeometry(BR, 128);
   { const uv = boardTop.attributes.uv, pos = boardTop.attributes.position; for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + F) / (2 * F), (pos.getY(i) + F) / (2 * F)); }
   add(boardTop, { color: 0x0a9a6c, map: floorTex, hatchDir: [1, 0, 0.3], noiseScale: 0.4, spec: 0.1 }, { cast: false }, [0, 0.0, 0], [-Math.PI / 2, 0, 0]);
@@ -63,37 +68,49 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   const plankTex = canvasTex(THREE, 2048, 2048, (g, w, h) => paintPlanks(g, w, h), { wrap: true, repeat: [3, 3] });
   add(new THREE.PlaneGeometry(80, 80), { color: 0xe0a15a, map: plankTex, hatchDir: [1, 0, 0.3], spec: 0.2 }, { cast: false }, [0, -0.32, 0], [-Math.PI / 2, 0, 0]);
   T.stands = buildStands(THREE, add, scene);
-
-  // ---- the graphics card in the infield
   T.card = buildCard(THREE, add, scene);
 
-  // ---- stations (station frame: +x = travel direction, +z = inward, -z = outward towards the camera)
-  const station = (a, r) => { const g = new THREE.Group(); g.position.set(...polar(a, r)); g.rotation.y = -a - Math.PI / 2; scene.add(g); return g; };
-  T.stGate = station(A.gate, ARENA.R); T.gate = buildGate2(THREE, add, T.stGate, { lanes: [-0.55, 0.55] });
-  T.stScale = station(A.scale, 8.35); T.scale = buildScale(THREE, add, T.stScale, { span: 0.9 });
-  T.scale.root.rotation.y = 0; T.scale.pans.forEach((P) => { P.g.position.set(P.side * T.scale.span, 1.05, 0); P.rods.forEach((m) => { m.scale.y = 0.62; }); });
-  T.torchy = buildTorchy(THREE, add, T.scale.pans[1].g); T.torchy.root.position.y = 0.04; T.torchy.root.scale.setScalar(0.85);
-  const bannerTex = canvasTex(THREE, 2048, 440, (g, w, h) => {
+  // ---- stations
+  T.bench = buildBench(THREE, add, station(A.bench, R.bench));
+  T.gate = buildGate2(THREE, add, station(A.gate, R.track), { lanes: [0.55, -0.55] });     // +z = outward: lane 0 = ours (outer)
+  const scaleSt = station(A.scale, R.scale); T.weigh = buildWeighIn(THREE, add, scaleSt);
+  T.weigh.pans.forEach((P) => { P.g.position.set(P.side * T.weigh.span, 1.08, 0); P.rods.forEach((m) => { m.scale.y = T.weigh.h - 1.12; }); });
+  T.refBlock = buildBlock(THREE, add, T.weigh.pans[1].g, { ref: true }); T.refBlock.root.position.y = 0.04;
+  T.outBlock = buildBlock(THREE, add, scene, {});
+  T.torch = buildTorch(THREE, add, station(A.scale + 0.155, R.scale + 0.1)); T.torch.root.rotation.y = -0.35;
+  const bannerTex = canvasTex(THREE, 2048, 470, (g, w, h) => {
     g.fillStyle = '#fff4dc'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#059669'; g.fillRect(0, 0, w, 34); g.fillRect(0, h - 34, w, 34);
-    comicWord(g, 'TRITONGYM', w / 2, h / 2 + 8, 230, { fill: '#10b981', shade: '#047857', rot: -0.03, track: 0.16, fan: 0.06 });
+    g.fillStyle = '#059669'; g.fillRect(0, 0, w, 36); g.fillRect(0, h - 36, w, 36);
+    comicWord(g, 'TRITONGYM', w / 2, h / 2 + 10, 250, { fill: '#10b981', shade: '#047857', rot: -0.03, track: 0.14, fan: 0.05 });
   });
-  T.stFinish = station(A.finish, ARENA.R); T.finish = buildFinish(THREE, add, T.stFinish, { span: 2.9, bannerTex });
-  T.finish.watch.rotation.y = Math.PI / 2;
-  T.stBench = station(A.bench, 8.4); T.bench = buildBench(THREE, add, T.stBench); T.bench.root.rotation.y = Math.PI;
-  T.stStart = station(A.start, ARENA.R);
+  T.finish = buildFinish(THREE, add, station(A.finish, R.track), { bannerTex });
+  const twr = station(WATCH.th, WATCH.r); T.tower = buildTower(THREE, add, twr, { y: WATCH.y }); twr.rotation.y = faceOut(WATCH.th);
+  T.startSt = station(A.start, R.track);
+  for (const z of [0.55, -0.55]) add(new THREE.BoxGeometry(0.3, 0.16, 0.5), { key: 'blocks', color: 0x3b3558 }, { outline: 0.6, cast: false }, [-0.55, 0.08, z], [0, 0, 0.3], T.startSt);
+
   // ---- cast
   T.tok = buildLLM(THREE, add, scene, {});
   T.kern = buildKern(THREE, add, scene, {});
   T.oro = buildOro(THREE, add, scene, {});
   T.dash = buildDash(THREE, add, scene);
-  const put = (o, a, r, yaw = 0) => { o.root.position.set(...polar(a, r)); o.root.rotation.y = -a - Math.PI / 2 + yaw; };
-  put(T.tok, A.bench + 0.06, 7.7, Math.PI);
-  put(T.kern, A.start, ARENA.lanes[0]);
-  put(T.oro, A.start, ARENA.lanes[1]);
-  put(T.dash, A.gate - 0.12, ARENA.lanes[1]);
+  T.slip = buildSlip(THREE, add, scene);
+  T.check = buildCheck(THREE, add, scene, {});
+  // fresh tokens for the refine (B5): 4 round wheels + the nose cone fly from Tok's mouth
+  T.fresh = [0, 1, 2, 3, 4].map((i) => { const g = new THREE.Group(); scene.add(g); add(i < 4 ? new THREE.CylinderGeometry(0.16, 0.16, 0.1, 20).rotateX(Math.PI / 2) : new THREE.ConeGeometry(0.2, 0.36, 4, 1).rotateZ(-Math.PI / 2), { key: i < 4 ? 'freshwheel' : 'freshcone', color: 0xfff4dc, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; });
+  // the square wheel that flops away
+  T.flop = (() => { const g = new THREE.Group(); scene.add(g); add(new THREE.BoxGeometry(0.3, 0.3, 0.11), { key: 'wheel-sq', color: 0xef4b5f, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; })();
+  // the payoff: PERF@1 > 1, one line, coral faces, dark emerald sides
+  const face = { key: 'lt-face', color: 0xef4b5f, rim: 0.9, hatchDir: [0.3, 1, 0], shadeColor: 0x8a1f3a, shadeMix: 0.35 };
+  const side = { key: 'lt-side', color: 0x0b6b50, rim: 0.5, hatchDir: [0, 1, 0], shadeColor: 0x06382c, shadeMix: 0.4 };
+  T.letters = new THREE.Group(); scene.add(T.letters);
+  T.lettersIn = new THREE.Group(); T.letters.add(T.lettersIn);
+  T.w1 = word3D(THREE, add, T.lettersIn, 'PERF@1', 0.64, { face, side, depth: 0.3 });
+  T.w2 = word3D(THREE, add, T.lettersIn, '>1', 1.25, { face, side, depth: 0.4, track: 0.3 });
+  T.w1.root.position.x = -T.w1.width - 0.3; T.w2.root.position.x = 0.12;
+  T.lettersIn.position.x = (T.w1.width + 0.3 - T.w2.width - 0.12) / 2;
+  T.letters.visible = false;
 
-  // ---- painted cyclorama
+  // ---- painted cyclorama (warm)
   const bdTex = await cachedBake(THREE, bakeBrushTexture, { width: 4096, height: 1024, seed: 21, key: 'tgbackdrop', background: '#ffffff' }, (p, brush, w, h) => {
     const cx = w * 0.5, cy = h * 0.66;
     brush.noStroke();
@@ -112,29 +129,334 @@ export async function buildWorld(ctx, { THREE, renderer }) {
 // ------------------------------------------------------------------------------------------------
 // per frame
 // ------------------------------------------------------------------------------------------------
-function camRig(F) {
-  if (Q.get('cam')) { const c = Q.get('cam').split(',').map(Number); return { tg: [c[3] || 0, c[4] || 0, c[5] || 0], az: c[0], el: c[1], r: c[2], fov: c[6] || 32, roll: 0 }; }
-  const t = F / NF;
-  return { tg: [0, 0.6, 0], az: t * TAU, el: 0.35, r: 14, fov: 32, roll: 0 };
-}
+function setMap(m, tex) { (Array.isArray(m.material) ? m.material[0] : m.material).uniforms.uMap.value = tex; }
+const vb = (F) => Math.floor(F / 2) % 2;                            // face-drawing variant (boils on twos)
 
 export function updateWorld(ctx) {
   const F = ctx.iw;
-  const rg = camRig(F);
-  applyRig(T.camera, orbit({ target: rg.tg, radius: rg.r, az: rg.az, el: rg.el, fov: rg.fov, roll: rg.roll }));
-  ctx.camera = T.camera;
-  T.card.fans.forEach((f, i) => { f.rotation.y = (F / NF) * TAU * 30 * (i % 2 ? -1 : 1); });
+  updateCamera(ctx, F);
+  updateTok(F); updateKern(F); updateOro(F); updateDash(F);
+  updateStations(F); updateLetters(F);
+  const racing = (F >= K.go1 && F < K.lap2[0]) || (F >= K.go2 && F < K.freeze[1]);
+  T.card.fans.forEach((f, i) => { f.rotation.y = (F / NF) * TAU * 22 * (i % 2 ? -1 : 1) + (racing ? 0 : 0); });
 }
 
+function updateCamera(ctx, F) {
+  const cam = T.camera;
+  let w = camWorld(F);
+  if (Q.get('cam')) { const c = Q.get('cam').split(',').map(Number); w = { pos: polar(c[0], c[1], c[2]), target: polar(c[3], c[4], c[5]), fov: c[6] || 32, roll: 0 }; }
+  const hand = handheld(ctx.t, { amp: 0.02, rot: 0.003, speed: 5, seed: 7 });
+  const hit = (f0, amp, dec = 4) => { const a = F - f0; if (a < 0 || a > 24) return [0, 0, 0]; const k = amp * Math.exp(-a / dec); return [(hsh(F, 1.3, f0) * 2 - 1) * k, (hsh(F, 2.7, f0) * 2 - 1) * k, (hsh(F, 5.1, f0) * 2 - 1) * k * 0.5]; };
+  const sh = [hit(K.clang, 0.02), hit(K.slam, 0.022, 5), hit(K.cross, 0.008)].reduce((a, b) => a.map((v, i) => v + b[i]), [0, 0, 0]);
+  hand.rot = hand.rot.map((v, i) => v + sh[i]);
+  applyRig(cam, { pos: w.pos, target: w.target, fov: w.fov, roll: w.roll }, { hand });
+  const yawAt = (f) => { const q = camWorld(f); return Math.atan2(q.target[0] - q.pos[0], q.target[2] - q.pos[2]); };
+  let dy = yawAt(F + 0.5) - yawAt(F - 0.5);
+  if (dy > Math.PI) dy -= TAU; if (dy < -Math.PI) dy += TAU;
+  const inWhip = WHIPS.some(([a, b]) => F > a && F < b);
+  st.smear = inWhip && Math.abs(dy * 24) > 0.6 ? yawSmear(cam, dy * 24, 24) * 0.9 : 0;
+  ctx.camera = cam;
+}
+
+// ---- Tok
+function updateTok(F) {
+  const S = tokState(F), R_ = T.tok;
+  st.tok = S;
+  R_.root.visible = S.vis !== false;
+  R_.root.position.set(...S.pos);
+  R_.root.rotation.set(0, S.yaw, 0);
+  R_.hips.rotation.set(S.lean || 0, 0, S.tilt || 0);
+  R_.body.scale.set(1 + S.sq * 0.5, 1 - S.sq, 1 + S.sq * 0.5);
+  R_.body.rotation.x = -0.25 * (S.lookUp || 0);
+  R_.arms[0].g.rotation.set(S.armLz || 0, 0, -(S.armL ?? 0.35));
+  R_.arms[1].g.rotation.set(S.armRz ? -S.armRz : 0, 0, -(S.armR ?? -0.35));
+  setMap(R_.bodyM, (R_.faces[S.face] || R_.faces.calm)[vb(F)]);
+  const air = S.pos[1] > 0.02;
+  R_.legs.forEach((L, i) => { L.g.rotation.x = air ? -0.4 + 0.2 * i : 0; });
+}
+
+// ---- Kern
+function updateKern(F) {
+  const S = kernState(F), K_ = T.kern;
+  st.kern = S;
+  K_.root.visible = S.vis;
+  if (!S.vis) return;
+  K_.root.position.set(...S.pos);
+  K_.root.rotation.set(0, S.yaw, 0);
+  K_.body.rotation.set(S.roll || 0, 0, S.pitch || 0);
+  const sq = S.sq || 0, str = S.stretch || 0;
+  K_.body.scale.set(K_.scale * (1 + str - sq * 0.3), K_.scale * (1 - sq), K_.scale * (1 + sq * 0.5));
+  K_.root.updateMatrixWorld(true);
+  // B1 assembly: tokens fly from Tok's mouth to their slots; wheels plonk; the cowlick lands crooked
+  const building = F < K.hopOff[0];
+  const mouth = tokMouth();
+  K_.tiles.forEach((t, n) => {
+    const u = building ? tokenFlight(F, n, 1) : 1;
+    t.g.visible = u > 0;
+    if (u >= 1) { t.g.position.set(...t.home); t.g.rotation.set(0, 0, 0); t.g.scale.setScalar(1); }
+    else if (u > 0) placeFlying(t.g, mouth, t.home, u, n);
+  });
+  const un = building ? tokenFlight(F, 7, 1) : 1;
+  K_.noseG.visible = un > 0;
+  if (un >= 1) { K_.noseG.position.set(...KERN_SLOTS[7]); K_.noseG.rotation.set(0, 0, 0); K_.noseG.scale.setScalar(1); } else if (un > 0) placeFlying(K_.noseG, mouth, KERN_SLOTS[7], un, 7);
+  setMap(K_.nose, (K_.faces[S.face] || K_.faces.calm)[vb(F)]);
+  const uc = sg(F, K.cow, K.cow + 7);
+  K_.cowlick.visible = uc > 0 && F < K.lift[1];
+  if (uc > 0 && uc < 1) placeFlying(K_.cowlick, mouth, [0.1, 0.25, 0.02], uc, 9);
+  else if (uc >= 1) { K_.cowlick.position.set(0.1, 0.25 - 0.1 * S.cow, 0.02); K_.cowlick.rotation.set(0.25 * (1 - S.cow), 0.3 * (1 - S.cow), 0.62 * (1 - S.cow)); K_.cowlick.scale.set(1, 1 - 0.6 * S.cow, 1); }
+  // wheels
+  const wIn = building ? sg(F, K.wheels[0], K.wheels[1]) : 1;
+  K_.wheelsSq.forEach((w, i) => {
+    w.visible = !S.round && wIn > i * 0.25;
+    const drop = building ? clamp(1 - (wIn * 4 - i)) : 0;
+    w.position.y = -0.14 + 0.5 * drop * drop;
+    w.rotation.z = -S.wheelAng;
+  });
+  K_.wheelsRd.forEach((w) => { w.visible = S.round; w.rotation.z = -S.wheelAng; });
+  K_.cone.visible = S.nose;
+  // compile ripple: tiles flood from cream to emerald front to back; fresh parts stay cream until the lap-2 gate
+  K_.tiles.forEach((t, n) => {
+    const k = S.compiled * 1.5 - (0.3 - t.home[0]) * 0.8;
+    setMap(t.m, k > 0.5 ? K_.texCmp[n] : K_.tex[n]);
+  });
+  const fresh = S.freshParts;
+  K_.wheelsRd.forEach((w) => { w.userData.disc.material = T.surf(fresh ? { key: 'freshwheel', color: 0xfff4dc, rim: 0.6 } : { key: 'wheel-rd', color: 0xef4b5f, rim: 0.6 }); });
+  K_.coneM.material = T.surf(fresh ? { key: 'freshcone', color: 0xfff4dc, rim: 0.6 } : { key: 'cone-cmp', color: 0x10b981, rim: 0.6 });
+  K_.keyBow.rotation.x = (S.keySpin || 0) + (F >= K.go1 && F < K.lap2[0] ? F * 0.4 : F >= K.go2 && F < K.cross ? F * 0.9 : 0);
+}
+function tokMouth() {
+  const S = st.tok, yaw = S.yaw;
+  return [S.pos[0] + Math.sin(yaw) * 0.45, S.pos[1] + 1.0, S.pos[2] + Math.cos(yaw) * 0.45];
+}
+/** place a group on an arc from a world point (Tok's mouth) to a local slot of Kern's body */
+function placeFlying(g, fromW, slot, u, n) {
+  const K_ = T.kern;
+  const toW = K_.body.localToWorld(V(...slot));
+  const e = sm(u);
+  const p = [lerp(fromW[0], toW.x, e), lerp(fromW[1], toW.y, e) + 0.7 * Math.sin(Math.PI * u), lerp(fromW[2], toW.z, e)];
+  const loc = K_.body.worldToLocal(V(...p));
+  g.position.copy(loc);
+  g.rotation.set(0, 0, (1 - u) * (2 + n) * 1.3);
+  const pop = u < 0.2 ? 0.4 + 3 * u : 1 + 0.25 * Math.sin(Math.PI * clamp((u - 0.85) / 0.15));
+  g.scale.setScalar(pop);
+}
+
+// ---- Oro
+function updateOro(F) {
+  const S = oroState(F), O = T.oro;
+  st.oro = S;
+  O.root.visible = S.vis;
+  if (!S.vis) return;
+  O.root.position.set(...S.pos);
+  O.root.rotation.set(0, S.yaw, 0);
+  const sq = S.sq || 0, str = S.stretch || 0;
+  O.body.scale.set(1.35 * (1 + str), 1.35 * (1 - sq - str * 0.2), 1.35 * (1 + sq * 0.4));
+  O.body.rotation.z = (S.nod || 0) * 0.18 + (S.buff ? 0.03 * Math.sin(F * 0.8) : 0);
+  setMap(O.bodyM, (O.faces[S.face] || O.faces.smug)[vb(F)]);
+  O.wheels.forEach((w) => { w.rotation.z = -S.wheelAng; });
+  O.key.rotation.y = S.keySpin || 0;
+  O.laurel.position.set(-0.2 + 0.45 * (S.laurelSlip || 0), 0.2 - 0.05 * (S.laurelSlip || 0), 0);
+  O.laurel.rotation.z = -0.9 * (S.laurelSlip || 0);
+}
+
+// ---- Dash
+function updateDash(F) {
+  const S = dashState(F), D = T.dash;
+  D.root.visible = S.vis;
+  if (!S.vis) return;
+  D.root.position.set(...S.pos);
+  D.root.rotation.set(0, S.yaw, 0);
+  D.body.rotation.set(S.roll || 0, S.quiver || 0, -0.25 * (S.droop || 0));
+}
+
+// ---- stations
+function updateStations(F) {
+  const G = gateState(F), g = T.gate;
+  st.gate = G;
+  const drop = (d) => (1 - d) * (g.h - 0.25);
+  g.grates[0].slide.position.y = drop(G.ours);
+  g.grates[1].slide.position.y = drop(G.theirs);
+  g.grates[0].pivot.rotation.z = 0.95 * G.bat;
+  setMap(g.lintel, g.faces[G.face][vb(F)]);
+  g.lamp.material.uniforms.uAlbedo.value.set(...(G.lamp === 'coral' ? [0.94, 0.29, 0.37] : G.lamp === 'emerald' ? [0.06, 0.73, 0.5] : [0.98, 0.93, 0.8]));
+  g.root.position.y = G.shake * 0.03 * Math.sin(F * 3.1);
+  // weigh-in
+  const W = scaleState(F), w = T.weigh;
+  st.weigh = W;
+  w.beam.rotation.z = W.tilt;
+  w.pans.forEach((P) => { const bx = P.side * w.span; P.g.position.set(bx * Math.cos(W.tilt), 1.08 + bx * Math.sin(W.tilt), 0); });
+  w.needle.rotation.z = W.needle;
+  w.flag.visible = W.flag > 0.01;
+  w.flag.scale.set(1, Math.max(0.01, W.flag), 1);
+  w.flagCloth.rotation.y = 0.2 * Math.sin(F * 0.5);
+  // the output block: ejected from Kern's tail onto the left pan (B3), again in lap 2
+  const ob_ = T.outBlock, leftPan = w.pans[0].g; leftPan.updateMatrixWorld(true);
+  const panW = leftPan.localToWorld(V(0, 0.04, 0));
+  let u = -1;
+  if (F >= K.eject[0] && F < K.cut + 30) u = sg(F, K.eject[0], K.eject[1]);
+  if (F >= K.scale2 - 6 && F < K.side2[0]) u = sg(F, K.scale2 - 6, K.scale2);
+  ob_.root.visible = u >= 0 && st.kern.vis;
+  if (ob_.root.visible) {
+    const from = T.kern.body.localToWorld(V(-0.4, 0.3, 0));
+    const e = sm(u);
+    ob_.root.position.set(lerp(from.x, panW.x, e), lerp(from.y, panW.y, e) + 0.8 * Math.sin(Math.PI * u), lerp(from.z, panW.z, e));
+    ob_.root.rotation.set(0, (1 - u) * 3 + 0.2, (1 - u) * 2);
+  }
+  // Torchy
+  const tf = F >= K.flag && F < K.cut + 12 ? 'happy' : F >= K.eject[1] && F < K.flag ? 'squint' : 'calm';
+  setMap(T.torch.cup, T.torch.faces[tf][vb(F)]);
+  const flare = F >= K.flag && F < K.flag + 16 ? ob(sg(F, K.flag, K.flag + 6)) * 0.35 * (1 - sg(F, K.flag + 8, K.flag + 16)) : 0;
+  T.torch.flame.scale.set(1 + 0.08 * Math.sin(F * 0.9), 1 + flare + 0.1 * Math.sin(F * 0.7 + 1), 1);
+  // stopwatch
+  const Wt = watchState(F);
+  T.tower.hands[0].rotation.z = -Wt.coral; T.tower.hands[1].rotation.z = -Wt.emerald;
+  T.tower.btn.position.y = 1.04 - 0.06 * Wt.press;
+  // the error slip: spat from the lintel, flutters onto Tok's balloon, peeled off, dropped
+  const sl = T.slip.root, tk = st.tok;
+  sl.visible = F >= K.slip[0] && F < K.peel[1] + 10;
+  if (sl.visible) {
+    const lintel = polar(A.gate, R.ours, 2.45);
+    const faceP = [tk.pos[0] + Math.sin(tk.yaw) * 0.52, tk.pos[1] + 1.05, tk.pos[2] + Math.cos(tk.yaw) * 0.52];
+    const u2 = sg(F, K.slip[0], K.slip[1], sm);
+    let p = lintel.map((v, i) => lerp(v, faceP[i], u2)); p[1] += 0.6 * Math.sin(Math.PI * u2);
+    if (F >= K.peel[0]) { const u3 = sg(F, K.peel[0], K.peel[1] + 10); p = [faceP[0] + Math.sin(tk.yaw + 1.2) * 0.5 * u3, faceP[1] + 0.4 * u3 - 1.4 * u3 * u3, faceP[2] + Math.cos(tk.yaw + 1.2) * 0.5 * u3]; }
+    sl.position.set(...p);
+    sl.rotation.set(0.3 * Math.sin(F * 0.7), tk.yaw + (F < K.slip[1] ? (K.slip[1] - F) * 0.6 : 0), 0.2 * Math.sin(F * 0.5));
+  }
+  // the green check on Kern at the payoff
+  const ck = T.check.root;
+  ck.visible = !!st.kern.showCheck && st.kern.vis;
+  if (ck.visible) {
+    const p = T.kern.body.localToWorld(V(0.0, 0.2, 0.42));
+    ck.position.copy(p); ck.rotation.set(0, faceOut(toRing([p.x, p.y, p.z])[0]), 0);
+    ck.scale.setScalar(ob(sg(F, K.check, K.check + 6)) * 0.6);
+  }
+  // fresh tokens (B5): 4 round wheels + the cone fly from Tok's mouth to Kern; a square wheel flops away
+  const mouth = tokMouth();
+  T.fresh.forEach((gq, i) => {
+    const uu = sg(F, K.speak2[0] + i * 3, K.speak2[0] + i * 3 + 8);
+    gq.visible = uu > 0 && uu < 1 && st.kern.vis;
+    if (!gq.visible) return;
+    const slot = i < 4 ? T.kern.wheelsRd[i].position.toArray() : [0.76, 0.02, 0];
+    const toW = T.kern.body.localToWorld(V(...slot));
+    const e = sm(uu);
+    gq.position.set(lerp(mouth[0], toW.x, e), lerp(mouth[1], toW.y, e) + 0.6 * Math.sin(Math.PI * uu), lerp(mouth[2], toW.z, e));
+    gq.rotation.set(0, st.kern.yaw, (1 - uu) * 4);
+  });
+  const fl = T.flop, uf = sg(F, K.popOff, K.popOff + 30);
+  fl.visible = uf > 0 && uf < 1;
+  if (fl.visible) {
+    const d = uf * 1.6;
+    fl.position.set(...polar(A.finish + 0.05 - d / 7, R.ours + 0.5 + d * 0.5, 0.2 + Math.abs(Math.sin(uf * Math.PI * 4)) * 0.35 * (1 - uf)));
+    fl.rotation.set(0, headingAt(A.finish), -uf * Math.PI * 4);
+  }
+}
+
+function updateLetters(F) {
+  const on = F >= K.slam - 12 && F < K.away[0] + 10;
+  T.letters.visible = on;
+  if (!on) return;
+  const a = F - K.slam;
+  const th = A.finish + 0.64;
+  const base = polar(L2 + th, 1.05, 1.08);          // on top of the graphics card, behind the finish
+  let y = 0, sy = 1, sxz = 1;
+  if (a < 0) { const p = (a + 12) / 12; y = 6 * (1 - p * p); sy = 1.1; sxz = 0.94; }
+  else { sy = 1 - ringv(a, 0.28, 0.8, 0.18); sxz = 1 + ringv(a, 0.14, 0.8, 0.18); }
+  T.letters.position.set(base[0], base[1] + y + 0.02, base[2]);
+  T.letters.rotation.set(0, faceOut(th) + 0.08, 0);
+  T.letters.scale.set(sxz, sy, sxz);
+}
+
+// ------------------------------------------------------------------------------------------------
+// npr extras
+// ------------------------------------------------------------------------------------------------
 export function drawNPR(ctx) {
-  const { npr, camera } = T;
+  const { npr, camera } = T, F = ctx.iw;
   npr.frame(ctx);
-  npr.focusOn(camera, V(0, 0.5, 0), 6);
+  npr.setSmear(st.smear || 0, 0);
+  const fp = st.kern.vis && st.kern.pos ? st.kern.pos : st.tok.pos;
+  npr.focusOn(camera, V(...fp), 4);
+  // impact frames: the CLANG and the photo finish (2 frames each, posterised; never a white frame)
+  if (F >= K.clang && F < K.clang + 2) npr.impact(1, { invert: F === K.clang + 1, threshold: 0.58 });
+  if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { invert: false, threshold: 0.55 });
+  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 110, width: 1.3, seed }); };
+  fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
+  fl(K.slam, 16, polar(L2 + A.finish + 0.64, 1.2, 1.7), 460, 0.8, 9);
+  if (F >= K.slam - 4 && F < K.away[0]) npr.pointLight(V(...polar(A.finish + 0.64, 3.6, 2.4)), { color: 0xffc23d, radius: 3.6, i: 0.5 * sm((F - K.slam + 4) / 8) });
+  if (F >= K.ripple[0] && F < K.ripple[1] + 10) npr.pointLight(V(...polar(A.gate + 0.1, R.ours, 0.6)), { color: 0x34d399, radius: 1.6, i: 0.6 * (1 - sg(F, K.ripple[1], K.ripple[1] + 10)) });
+  if (st.gate.lamp !== 'off') npr.glowAt(ctx, camera, T.gate.lamp.getWorldPosition(V(0, 0, 0)), { radius: 0.3, i: 0.7, color: st.gate.lamp === 'coral' ? 0xef4b5f : 0x10b981, behind: true, seed: 2 });
   npr.render(T.scene, camera);
 }
 
 export function drawInk(ctx, brush) { }
 
+// ------------------------------------------------------------------------------------------------
+// 2D marks: SFX lettering, speed lines, puffs, emotes (all tracked to 3D points)
+// ------------------------------------------------------------------------------------------------
+function prj(ctx, p) { const v = V(...p); const s = ctx.project(v, T.camera); const vc = v.clone().applyMatrix4(T.camera.matrixWorldInverse); return { x: s.x, y: s.y, front: vc.z < 0, d: -vc.z }; }
+function pxu(ctx, p) { const q = prj(ctx, p); return q.front ? (ctx.DH / 2) / (Math.tan(T.camera.fov * Math.PI / 360) * q.d) : 0; }
+function puff(g, x, y, s, a, r) {
+  if (a <= 0 || s < 2) return;
+  g.save(); g.globalAlpha = Math.min(1, a * 1.3);
+  for (let q = 0; q < 3; q++) { const cx = x + (q - 1) * s * 0.8, cy = y - (q === 1 ? s * 0.4 : 0); const P = []; for (let k = 0; k <= 8; k++) { const an = Math.PI + k / 8 * Math.PI; P.push([cx + Math.cos(an) * s * 0.6, cy + Math.sin(an) * s * 0.6]); } pen(g, P, Math.max(2, s * 0.14), INK, { r, taper: [0.2, 0.2] }); }
+  g.restore();
+}
+function speedLines(g, ctx, p, dir, len, n, r, col = INK) {
+  const a = prj(ctx, p), b = prj(ctx, [p[0] - dir[0], p[1] - dir[1], p[2] - dir[2]]);
+  if (!a.front || !b.front) return;
+  const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+  const u = pxu(ctx, p);
+  for (let k = 0; k < n; k++) {
+    const off = (k - (n - 1) / 2) * u * 0.12 + r.gauss(0, u * 0.02), s0 = u * (0.25 + 0.1 * (k % 2)), l = len * u * (0.6 + 0.5 * hsh(k, 3.1) + r.gauss(0, 0.05));
+    const x0 = a.x + ux * s0 - uy * off, y0 = a.y + uy * s0 + ux * off;
+    pen(g, [[x0, y0], [x0 + ux * l, y0 + uy * l]], Math.max(2, u * 0.03), col, { r, taper: [0.1, 0.8] });
+  }
+}
+
 export function drawMarks(ctx, g) {
-  if (Q.get('dbg')) { g.fillStyle = '#000'; g.fillRect(0, 0, 150, 40); g.fillStyle = '#fff'; g.font = '28px monospace'; g.fillText('f' + ctx.iw, 10, 30); }
+  const F = ctx.iw, r = ctx.boilRng('marks');
+  // CLANG! on a diagonal beside the gate
+  const ca = F - K.clang;
+  if (ca >= 0 && ca < 26) {
+    const p = prj(ctx, polar(A.gate - 0.08, R.ours + 0.2, 2.3));
+    const x = clamp(p.x - 260, 330, 1250), y = clamp(p.y - 40, 240, 520);
+    comicWord(g, 'CLANG!', x, y, 170, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.14, r, pop: ca / 4, alpha: 1 - sg(ca, 20, 26), perLetter: (i) => (ca - i * 0.8) / 3 });
+  }
+  const pf = (f0, p, s0) => { const a = F - f0; if (a < 0 || a >= 9) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); for (const sd of [-1, 1]) puff(g, q.x + sd * (u * 0.3 + a * 3), q.y - a, u * s0 * (1 + a * 0.08), 1 - a / 9, r); };
+  pf(K.hopOff[1], polar(A.bench + 0.16, R.ours, 0.02), 0.12);
+  pf(K.skid, polar(A.bench + 0.02, R.tokBench, 0.02), 0.14);
+  pf(K.lap2[1] - 4, polar(L2 + A.start, R.ours, 0.02), 0.12);
+  // square-wheel THUNK ticks under the wheels on each flat landing
+  if (st.kern.vis && st.kern.lurch && !st.kern.round && F >= K.drive1[0] && F < K.kernRun1[1]) {
+    const q = prj(ctx, [st.kern.pos[0], 0.02, st.kern.pos[2]]); const u = pxu(ctx, st.kern.pos);
+    if (q.front) for (let k = 0; k < 5; k++) { const an = Math.PI + 0.3 + k * 0.6; pen(g, [[q.x + Math.cos(an) * u * 0.45, q.y + Math.sin(an) * u * 0.14], [q.x + Math.cos(an) * u * 0.7, q.y + Math.sin(an) * u * 0.24]], Math.max(2, u * 0.035), INK, { r }); }
+  }
+  // speed lines behind the racers
+  const trail = (S, f0, f1, len, n) => {
+    if (!S.vis || !S.pos || F < f0 || F >= f1) return;
+    const th = toRing(S.pos)[0], dir = [-Math.sin(th), 0, -Math.cos(th)];   // track tangent (travel)
+    const back = [S.pos[0] - dir[0] * 0.8, 0.4, S.pos[2] - dir[2] * 0.8];
+    speedLines(g, ctx, back, dir, len, n, r);
+  };
+  trail(st.oro, K.go1 + 2, K.oroRun1[1] - 2, 1.6, 5);
+  trail(st.oro, K.go2 + 2, K.cross, 1.2, 4);
+  trail(st.kern, K.go2 + 2, K.cross, 1.2, 4);
+  trail(st.kern, K.lap2[0] + 4, K.lap2[1] - 6, 1.0, 3);
+  if (st.kern.steam) for (let k = 0; k < 2; k++) {
+    const ph = ((F - K.kernRun1[1] + 10) / 14 + k * 0.5) % 1;
+    const kp = T.kern.body.localToWorld(V(-0.6, 0.5, 0));
+    const q = prj(ctx, [kp.x, kp.y + ph * 0.5, kp.z]); const u = pxu(ctx, [kp.x, kp.y, kp.z]);
+    if (q.front) puff(g, q.x, q.y, u * 0.12 * (0.6 + ph), 1 - ph, r);
+  }
+  const tk = st.tok;
+  const bangAt = (f0, p, s, rot) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, PAL.coral, r); };
+  bangAt(K.idea, [tk.pos[0], tk.pos[1] + 2.0, tk.pos[2]], 0.42, 0.1);
+  if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 1.25, st.oro.pos[2]], 0.34, 0.12);
+  if (F >= K.leap[0] && F < K.away[0]) for (let q = 0; q < 6; q++) {
+    const ph = ((F - K.leap[0]) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
+    const p = polar(L2 + A.finish + 0.05 + (q - 2.5) * 0.09, R.track - 0.3, 1.8 + 0.5 * hsh(q, 4));
+    const s = prj(ctx, p); if (!s.front) continue;
+    fillPoly(g, starPts(s.x, s.y, 18 * Math.sin(Math.PI * ph / 0.75), 0.36, 4, 0.2 * q), q % 2 ? PAL.ochre : PAL.cream);
+  }
+  if (Q.get('dbg')) { g.fillStyle = '#000'; g.fillRect(0, 0, 170, 40); g.fillStyle = '#fff'; g.font = '28px monospace'; g.fillText('f' + F, 10, 30); }
 }

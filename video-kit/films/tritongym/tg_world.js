@@ -83,7 +83,7 @@ export const ARENA = {
   R: 6.0, RI: 4.95, RO: 7.05,     // track centre-line radius, inner / outer edge
   lanes: [5.45, 6.55],            // lane centre radii (inner: ours, outer: the oracle)
   floor: 12,                      // half size of the painted floor texture (world units)
-  stands: 12.6,                   // bleacher radius
+  stands: 14.6,                   // bleacher radius
 };
 
 /** Top view of the floor (PCB + the ring track + lane traces + start / finish lines), one canvas. */

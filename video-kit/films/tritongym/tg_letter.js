@@ -152,3 +152,32 @@ export function bang(g, x, y, s, rot, col = '#ef4b5f', r = null) {
 }
 
 export { CREAM };
+
+/**
+ * 3D block lettering from the same hand-built skeletons: every stroke's brush outline is extruded (with a bevel) into
+ * a mesh; strokes of a glyph share two materials (face, side), so overlaps merge visually. Returns { root, glyphs:[{g, w}] }
+ * with the word laid out along +x, baseline at y = 0, facing +z.
+ */
+export function word3D(THREE, add, parent, word, size, { face, side, depth = 0.22, weight = 0.24, track = 0.16, nib = -0.6, seed = 3 } = {}) {
+  const root = new THREE.Group(); parent.add(root);
+  const lay = layoutWord(word, size, { track, r: null });
+  const lw = size * weight;
+  const glyphs = [];
+  lay.letters.forEach((Lt, i) => {
+    const g = new THREE.Group(); g.position.set(Lt.lx + lay.width / 2, size / 2, 0); root.add(g);
+    const toShape = (poly) => { const pts = poly.map(([x, y]) => new THREE.Vector2(x, -y)); return new THREE.Shape(pts); };
+    const ext = { depth, bevelEnabled: true, bevelThickness: depth * 0.18, bevelSize: lw * 0.08, bevelSegments: 2, curveSegments: 4 };
+    for (const s of Lt.strokes) {
+      if (s.P.length < 2) continue;
+      const poly = nibStroke(s.P, lw, nib, null, 0);
+      const geo = new THREE.ExtrudeGeometry(toShape(poly), ext); geo.translate(0, 0, -depth / 2);
+      add(geo, [face, side], { outline: 1.15 }, [0, 0, 0], [0, 0, 0], g);
+    }
+    for (const [dx, dy] of Lt.dots) {
+      const geo = new THREE.ExtrudeGeometry(new THREE.Shape(ellipsePts(dx, -dy, lw * 0.62, lw * 0.62, 0, 20).map(([x, y]) => new THREE.Vector2(x, y))), ext); geo.translate(0, 0, -depth / 2);
+      add(geo, [face, side], { outline: 1.15 }, [0, 0, 0], [0, 0, 0], g);
+    }
+    glyphs.push({ g, x: Lt.lx + lay.width / 2 });
+  });
+  return { root, glyphs, width: lay.width };
+}

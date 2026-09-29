@@ -28,9 +28,10 @@ export function buildLLM(THREE, add, parent, { col = 0xfff4dc, accent = 0x059669
   const geo = new THREE.ExtrudeGeometry(balloonShape(THREE), { depth: 0.34, bevelEnabled: true, bevelThickness: 0.14, bevelSize: 0.12, bevelSegments: 5, curveSegments: 24, steps: 1 });
   geo.translate(0, 0.05, -0.17); geo.computeVertexNormals();
   R.faces = faceSet(THREE, {
-    calm: { eyes: 'dot', mouth: 'smile' }, happy: { eyes: 'happy', mouth: 'open', blush: true }, think: { eyes: 'up', mouth: 'tiny' },
+    calm: { eyes: 'dot', mouth: 'smile' }, happy: { eyes: 'happy', mouth: 'open', blush: true }, think: { eyes: 'up', mouth: 'flat' },
     determined: { eyes: 'determined', mouth: 'flat' }, wide: { eyes: 'wide', mouth: 'o' }, squint: { eyes: 'squint', mouth: 'wobble' },
-    sad: { eyes: 'worried', mouth: 'wobble', sweat: true }, star: { eyes: 'star', mouth: 'open', blush: true }, shut: { eyes: 'shut', mouth: 'grin' },
+    worried: { eyes: 'worried', mouth: 'wobble', sweat: true }, star: { eyes: 'star', mouth: 'open', blush: true }, shut: { eyes: 'shut', mouth: 'grin' },
+    gulp: { eyes: 'up', mouth: 'wobble', sweat: true }, speak: { eyes: 'dot', mouth: 'open' }, speak2: { eyes: 'dot', mouth: 'o' }, idea: { eyes: 'wide', mouth: 'open' },
   }, { w: 512, h: 512, base: '#ffffff', cx: 256, cy: 250, s: 1.25, seed });
   // planar UV on the front face: map x,y in [-0.75,0.75] to the face canvas
   const uv = geo.attributes.uv, pos = geo.attributes.position;
@@ -93,83 +94,97 @@ export function buildKernel(THREE, add, parent, { col = 0x10b981, crest = 0xfff4
 // ------------------------------------------------------------------------------------------------
 // racers (kernels): forward = +x in the racer's local frame
 // ------------------------------------------------------------------------------------------------
-function tokenTexture(THREE, seed, { base = '#fff4dc', ink = '#1a1530' } = {}) {
+/** A token tile texture: one real code-punctuation glyph, fat, in ink on cream. */
+export const TOKEN_GLYPHS = ['{', '}', '(', ')', '=', '*', '+', ';', ':'];
+export function tokenTexture(THREE, k, { base = '#fff4dc', ink = '#1a1530' } = {}) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d');
   g.fillStyle = base; g.fillRect(0, 0, 256, 256);
-  g.strokeStyle = ink; g.lineCap = 'round'; g.lineJoin = 'round';
-  // one code-ish glyph per token (never words): brace, equals, star, bracket, arrow, dot-dot
-  const k = seed % 6;
-  g.lineWidth = 16;
+  g.strokeStyle = ink; g.fillStyle = ink; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 26;
+  const ch = TOKEN_GLYPHS[k % TOKEN_GLYPHS.length];
   g.beginPath();
-  if (k === 0) { g.moveTo(150, 60); g.quadraticCurveTo(100, 70, 110, 110); g.quadraticCurveTo(115, 128, 90, 128); g.quadraticCurveTo(115, 128, 110, 150); g.quadraticCurveTo(100, 190, 150, 196); }
-  if (k === 1) { g.moveTo(70, 105); g.lineTo(186, 105); g.moveTo(70, 150); g.lineTo(186, 150); }
-  if (k === 2) { for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; g.moveTo(128 - Math.cos(a) * 60, 128 - Math.sin(a) * 60); g.lineTo(128 + Math.cos(a) * 60, 128 + Math.sin(a) * 60); } }
-  if (k === 3) { g.moveTo(150, 62); g.lineTo(100, 62); g.lineTo(100, 194); g.lineTo(150, 194); }
-  if (k === 4) { g.moveTo(66, 128); g.lineTo(184, 128); g.moveTo(144, 88); g.lineTo(186, 128); g.lineTo(144, 168); }
-  if (k === 5) { g.moveTo(90, 180); g.lineTo(166, 76); }
-  g.stroke();
-  g.lineWidth = 7; g.strokeStyle = 'rgba(26,21,48,0.5)'; g.strokeRect(10, 10, 236, 236);
+  if (ch === '{' || ch === '}') { g.save(); if (ch === '}') { g.translate(256, 0); g.scale(-1, 1); } g.moveTo(158, 48); g.quadraticCurveTo(104, 52, 112, 98); g.quadraticCurveTo(118, 124, 86, 128); g.quadraticCurveTo(118, 132, 112, 158); g.quadraticCurveTo(104, 204, 158, 208); g.stroke(); g.restore(); }
+  if (ch === '(' || ch === ')') { g.save(); if (ch === ')') { g.translate(256, 0); g.scale(-1, 1); } g.moveTo(150, 44); g.quadraticCurveTo(80, 128, 150, 212); g.stroke(); g.restore(); }
+  if (ch === '=') { g.moveTo(70, 100); g.lineTo(186, 100); g.moveTo(70, 156); g.lineTo(186, 156); g.stroke(); }
+  if (ch === '+') { g.moveTo(128, 64); g.lineTo(128, 192); g.moveTo(64, 128); g.lineTo(192, 128); g.stroke(); }
+  if (ch === '*') { for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3 + Math.PI / 2; g.moveTo(128 - Math.cos(a) * 62, 128 - Math.sin(a) * 62); g.lineTo(128 + Math.cos(a) * 62, 128 + Math.sin(a) * 62); } g.stroke(); }
+  if (ch === ';' || ch === ':') { g.beginPath(); g.arc(128, 84, 20, 0, Math.PI * 2); g.fill(); g.beginPath(); if (ch === ';') { g.arc(128, 160, 20, 0, Math.PI * 2); g.fill(); g.beginPath(); g.moveTo(138, 166); g.quadraticCurveTo(134, 200, 108, 214); g.stroke(); } else { g.arc(128, 172, 20, 0, Math.PI * 2); g.fill(); } }
+  g.lineWidth = 10; g.strokeStyle = 'rgba(26,21,48,0.45)'; g.strokeRect(8, 8, 240, 240);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; return t;
 }
 
+/** rounded token tile geometry of side s */
+export function tokenGeo(THREE, s) {
+  const tile = new THREE.BoxGeometry(s, s, s, 3, 3, 3);
+  const p = tile.attributes.position;
+  for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i)); const sp = v.clone().normalize().multiplyScalar(s * 0.72); v.lerp(sp, 0.3); p.setXYZ(i, v.x, v.y, v.z); }
+  tile.computeVertexNormals();
+  return tile;
+}
+
 /**
- * Kern, the generated Triton kernel: a stubby soapbox racer assembled from the LLM's token tiles. Tiles are
- * cream "source" until compiled, then emerald. Square (first draft) or round (refined) wheels, a crooked
- * cowlick token (the compile bug), a wind-up key on the back, headlight eyes (face texture on the nose tile).
+ * Kern, the generated Triton kernel: a low soapbox racer assembled from the LLM's tokens (8 fat code-punctuation tiles:
+ * 6 on the floor, 1 hump, 1 nose with the face) + the crooked cowlick token (the compile bug). Tiles are cream source
+ * until compiled, then emerald (the glyph stays). Square wheels (first draft) or round ones (refined), visible axles,
+ * a wind-up key.
  */
-export function buildKern(THREE, add, parent, { seed = 7 } = {}) {
+export const KERN_SLOTS = [
+  [0.28, 0, -0.15], [0.28, 0, 0.15], [0.0, 0, -0.15], [0.0, 0, 0.15], [-0.28, 0, -0.15], [-0.28, 0, 0.15],   // floor
+  [-0.2, 0.27, 0],                                                                                          // hump
+  [0.54, 0.06, 0],                                                                                          // nose (face)
+];
+export function buildKern(THREE, add, parent, { seed = 7, scale = 1.0 } = {}) {
   const K = { root: new THREE.Group() }; parent.add(K.root);
-  K.body = new THREE.Group(); K.body.position.y = 0.22; K.root.add(K.body);
-  K.src = Array.from({ length: 6 }, (_, i) => ({ key: 'tok-src-' + i, color: 0xffffff, map: tokenTexture(THREE, i), rim: 0.6, spec: 0.2, seed: seed + i }));
-  K.cmp = { key: 'tok-cmp', color: 0x10b981, rim: 0.7, spec: 0.3, seed: seed + 9 };
-  const tile = new THREE.BoxGeometry(0.2, 0.2, 0.2, 2, 2, 2);
-  // rounded token: push box vertices towards a sphere a little
-  { const p = tile.attributes.position; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i)); const s = v.clone().normalize().multiplyScalar(0.15); v.lerp(s, 0.35); p.setXYZ(i, v.x, v.y, v.z); } tile.computeVertexNormals(); }
-  // layout: a low soapbox car: 4 x 2 floor tiles + a 2 x 2 hump at the back = 12 token tiles
+  K.body = new THREE.Group(); K.body.position.y = 0.3 * scale; K.body.scale.setScalar(scale); K.root.add(K.body);
+  K.tex = TOKEN_GLYPHS.map((_, i) => tokenTexture(THREE, i));
+  K.texCmp = TOKEN_GLYPHS.map((_, i) => tokenTexture(THREE, i, { base: '#34d399' }));
+  const tile = tokenGeo(THREE, 0.28);
   K.tiles = [];
-  const slots = [];
-  for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) slots.push([-0.3 + i * 0.2, 0, -0.1 + j * 0.2]);
-  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) slots.push([-0.3 + i * 0.2, 0.2, -0.1 + j * 0.2]);
-  slots.forEach((p, n) => {
+  KERN_SLOTS.slice(0, 7).forEach((p, n) => {
     const g = new THREE.Group(); g.position.set(...p); K.body.add(g);
-    const m = add(tile, K.src[n % 6], { outline: 0.55 }, [0, 0, 0], [0, 0, 0], g);
+    const m = add(tile, { color: 0xffffff, map: K.tex[n], rim: 0.6, spec: 0.15, seed: seed + n }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g);
     K.tiles.push({ g, m, home: p, n });
   });
-  // nose tile with the face (headlight eyes)
+  // nose block with the face (headlight eyes)
   K.faces = faceSet(THREE, {
     calm: { eyes: 'dot', mouth: 'smile' }, wide: { eyes: 'wide', mouth: 'o' }, dizzy: { eyes: 'spiral', mouth: 'wobble' }, determined: { eyes: 'determined', mouth: 'teeth' },
     happy: { eyes: 'happy', mouth: 'open', blush: true }, nervous: { eyes: 'worried', mouth: 'wobble', sweat: true }, star: { eyes: 'star', mouth: 'grin', blush: true }, squint: { eyes: 'squint', mouth: 'teeth' }, shut: { eyes: 'shut', mouth: 'flat' },
-  }, { w: 512, h: 512, base: '#fff4dc', cx: 256, cy: 236, s: 1.3, seed, spacing: 1.05, mouthY: 70 });
-  const noseGeo = new THREE.BoxGeometry(0.2, 0.4, 0.4, 2, 3, 3);
-  { const p = noseGeo.attributes.position, uv = noseGeo.attributes.uv, nr = noseGeo.attributes.normal; for (let i = 0; i < p.count; i++) { if (nr.getX(i) > 0.5) uv.setXY(i, 0.5 - p.getZ(i) / 0.4, 0.5 + p.getY(i) / 0.4); else uv.setXY(i, 0.02, 0.02); } }
-  K.nose = add(noseGeo, { color: 0xffffff, map: K.faces.calm[0], rim: 0.6, spec: 0.2, seed: seed + 20 }, { outline: 0.7 }, [0.5, 0.1, 0], [0, 0, 0], K.body);
+  }, { w: 512, h: 512, base: '#ffffff', cx: 256, cy: 232, s: 1.35, seed, spacing: 1.05, mouthY: 72 });
+  const noseGeo = new THREE.BoxGeometry(0.22, 0.4, 0.46, 2, 3, 3);
+  { const p = noseGeo.attributes.position, uv = noseGeo.attributes.uv, nr = noseGeo.attributes.normal; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i)); if (nr.getX(i) > 0.5) uv.setXY(i, 0.5 - p.getZ(i) / 0.46, 0.5 + p.getY(i) / 0.4); else uv.setXY(i, 0.03, 0.97); const sp = v.clone().normalize().multiplyScalar(0.26); v.lerp(sp, 0.18); p.setXYZ(i, v.x, v.y, v.z); } noseGeo.computeVertexNormals(); }
+  K.noseG = new THREE.Group(); K.noseG.position.set(...KERN_SLOTS[7]); K.body.add(K.noseG);
+  K.nose = add(noseGeo, { color: 0xfff4dc, map: K.faces.calm[0], rim: 0.6, spec: 0.2, seed: seed + 20 }, { outline: 0.75 }, [0, 0, 0], [0, 0, 0], K.noseG);
   // the crooked cowlick token (compile bug)
-  K.cowlick = new THREE.Group(); K.cowlick.position.set(-0.12, 0.33, 0.05); K.body.add(K.cowlick);
-  add(tile, { key: 'tok-bug', color: 0xffe0d8, map: tokenTexture(THREE, 5), rim: 0.6 }, { outline: 0.55 }, [0, 0.08, 0], [0.3, 0.2, 0.62], K.cowlick);
+  K.cowlick = new THREE.Group(); K.cowlick.position.set(0.1, 0.25, 0.02); K.body.add(K.cowlick);
+  K.cowM = add(tokenGeo(THREE, 0.2), { color: 0xffffff, map: tokenTexture(THREE, 8, { base: '#ffe3d6' }), rim: 0.6 }, { outline: 0.6 }, [0, 0.09, 0], [0, 0, 0], K.cowlick);
   // pointed nose cone token (added by the refinement)
-  K.cone = add(new THREE.ConeGeometry(0.2, 0.36, 4, 1), { key: 'tok-cone', color: 0xfff4dc, rim: 0.6 }, { outline: 0.6 }, [0.78, 0.1, 0], [0, Math.PI / 4, -Math.PI / 2], K.body);
-  K.cone.visible = false;
+  K.cone = new THREE.Group(); K.cone.position.set(0.76, 0.02, 0); K.body.add(K.cone);
+  K.coneM = add(new THREE.ConeGeometry(0.2, 0.36, 4, 1), { color: 0xfff4dc, rim: 0.6 }, { outline: 0.65 }, [0, 0, 0], [Math.PI / 4, 0, -Math.PI / 2], K.cone);
   // wind-up key on the back
-  K.key = new THREE.Group(); K.key.position.set(-0.42, 0.22, 0); K.body.add(K.key);
-  add(new THREE.CylinderGeometry(0.03, 0.03, 0.18, 8), { color: 0xf2b134 }, { outline: 0.4 }, [-0.07, 0, 0], [0, 0, Math.PI / 2], K.key);
-  const bow = add(new THREE.TorusGeometry(0.1, 0.035, 8, 20), { key: 'keybow', color: 0xf2b134, hatchMode: 'u', rim: 0.6 }, { outline: 0.5 }, [-0.22, 0, 0], [0, Math.PI / 2, 0], K.key);
+  K.key = new THREE.Group(); K.key.position.set(-0.44, 0.27, 0); K.body.add(K.key);
+  add(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 8), { key: 'keyshaft', color: 0xf2b134 }, { outline: 0.4 }, [-0.08, 0, 0], [0, 0, Math.PI / 2], K.key);
+  K.keyBow = new THREE.Group(); K.keyBow.position.x = -0.24; K.key.add(K.keyBow);
+  const bow = add(new THREE.TorusGeometry(0.11, 0.038, 8, 20), { key: 'keybow', color: 0xf2b134, hatchMode: 'u', rim: 0.6 }, { outline: 0.5 }, [0, 0, 0], [0, Math.PI / 2, 0], K.keyBow);
   bow.scale.set(1, 1.35, 1);
-  // wheels: square (cube tokens) and round (discs)
-  K.wheelsSq = [], K.wheelsRd = [];
-  const cube = new THREE.BoxGeometry(0.24, 0.24, 0.1);
-  const disc = new THREE.CylinderGeometry(0.13, 0.13, 0.09, 24); disc.rotateX(Math.PI / 2);
-  for (const x of [-0.24, 0.3]) add(new THREE.CylinderGeometry(0.025, 0.025, 0.66, 8).rotateX(Math.PI / 2), { key: 'axle', color: 0x3b3558 }, { outline: 0.3, cast: false }, [x, -0.1, 0], [0, 0, 0], K.body);
-  for (const [x, z] of [[-0.24, -0.31], [0.3, -0.31], [-0.24, 0.31], [0.3, 0.31]]) {
-    const gs = new THREE.Group(); gs.position.set(x, -0.1, z); K.body.add(gs);
-    add(cube, { key: 'wheel-sq', color: 0xef4b5f, rim: 0.6 }, { outline: 0.55 }, [0, 0, 0], [0, 0, 0], gs);
-    add(new THREE.CylinderGeometry(0.05, 0.05, 0.11, 10).rotateX(Math.PI / 2), { key: 'hub', color: 0xfff4dc }, { outline: 0.35 }, [0, 0, 0], [0, 0, 0], gs);
+  // axles + wheels (square cubes, round discs), outboard
+  K.wheelsSq = []; K.wheelsRd = [];
+  const cube = new THREE.BoxGeometry(0.3, 0.3, 0.11);
+  const disc = new THREE.CylinderGeometry(0.16, 0.16, 0.1, 24); disc.rotateX(Math.PI / 2);
+  const hub = new THREE.CylinderGeometry(0.06, 0.06, 0.12, 12); hub.rotateX(Math.PI / 2);
+  for (const x of [-0.28, 0.3]) add(new THREE.CylinderGeometry(0.025, 0.025, 0.72, 8).rotateX(Math.PI / 2), { key: 'axle', color: 0x3b3558 }, { outline: 0.3, cast: false }, [x, -0.14, 0], [0, 0, 0], K.body);
+  for (const [x, z] of [[-0.28, -0.34], [0.3, -0.34], [-0.28, 0.34], [0.3, 0.34]]) {
+    const gs = new THREE.Group(); gs.position.set(x, -0.14, z); K.body.add(gs);
+    add(cube, { key: 'wheel-sq', color: 0xef4b5f, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], gs);
+    add(hub, { key: 'hub', color: 0xfff4dc }, { outline: 0.35 }, [0, 0, 0], [0, 0, 0], gs);
     K.wheelsSq.push(gs);
-    const gr = new THREE.Group(); gr.position.set(x, -0.1, z); K.body.add(gr);
-    add(disc, { key: 'wheel-rd', color: 0xef4b5f, rim: 0.6 }, { outline: 0.55 }, [0, 0, 0], [0, 0, 0], gr);
-    add(new THREE.CylinderGeometry(0.05, 0.05, 0.11, 12).rotateX(Math.PI / 2), { key: 'hub', color: 0xfff4dc }, { outline: 0.35 }, [0, 0, 0], [0, 0, 0], gr);
+    const gr = new THREE.Group(); gr.position.set(x, -0.14, z); K.body.add(gr);
+    gr.userData.disc = add(disc, { key: 'wheel-rd', color: 0xef4b5f, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], gr);
+    add(hub, { key: 'hub', color: 0xfff4dc }, { outline: 0.35 }, [0, 0, 0], [0, 0, 0], gr);
+    // a spoke mark so the rotation reads
+    add(new THREE.BoxGeometry(0.26, 0.035, 0.11), { key: 'spoke-rd', color: 0xfff4dc }, { outline: 0.2, cast: false }, [0, 0, 0], [0, 0, 0], gr);
     gr.visible = false;
     K.wheelsRd.push(gr);
   }
+  K.scale = scale;
   return K;
 }
 

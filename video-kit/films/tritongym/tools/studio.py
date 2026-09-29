@@ -56,7 +56,7 @@ class Handler(pvlib._Handler):
         u = urlparse(self.path)
         if u.path.startswith("/__ctl/"):
             cmd = u.path[len("/__ctl/"):]
-            q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            q = {k: v[0] for k, v in parse_qs(u.query, keep_blank_values=True).items()}
             ev, box = threading.Event(), {}
             JOBS.put((cmd, q, ev, box))
             ev.wait(timeout=3600)

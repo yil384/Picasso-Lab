@@ -94,6 +94,7 @@ export function paintFace(g, cx, cy, s, e, seed = 1, o = {}) {
     const [x, y] = [p[0] + lk[0] * 10 * s, p[1] + lk[1] * 10 * s];
     const j = () => r.gauss(0, 1.2 * s);
     switch (e.eyes) {
+      case 'up': fillPoly(g, ellipsePts(x + j(), y - 12 * s + j(), 12 * s, 17 * s), ink); fillPoly(g, ellipsePts(x - 4 * s, y - 18 * s, 3.5 * s, 4.5 * s), CREAM); break;
       case 'wide': fillPoly(g, ellipsePts(x + j(), y + j(), 17 * s, 25 * s), ink); fillPoly(g, ellipsePts(x - 5 * s, y - 9 * s, 5 * s, 6 * s), CREAM); break;
       case 'sleep': pen(g, [[x - 18 * s, y - 2 * s], [x, y + 8 * s], [x + 18 * s, y - 2 * s]], 8 * s, ink, { r }); break;
       case 'happy': pen(g, [[x - 18 * s, y + 6 * s], [x, y - 10 * s], [x + 18 * s, y + 6 * s]], 9 * s, ink, { r }); break;
