@@ -1453,7 +1453,6 @@ const engineClient = createEngineClient(AI_WORKER_URL);
 let aiRunToken = 0;
 let hintClickToken = 0;
 let hintRequest = null;
-let hintUsedThisSession = false;
 
 function findAIMoveAsync(hand, lastCombo, levelRank, seat, g) {
     return engineClient.findAIMove(hand, lastCombo, levelRank, seat, g);
@@ -1487,8 +1486,10 @@ function requestHintPackage(seat, g, lang) {
     return hintRequest.promise;
 }
 
+// The package for my turn is computed as the turn starts (in the worker), so the first 提示 press
+// answers at once instead of waiting for the hint worker to boot and search.
 function maybePrefetchHint() {
-    if (!hintUsedThisSession || !game || game.phase !== "playing" || dealWindowOpen(game)) return;
+    if (!game || game.phase !== "playing" || dealWindowOpen(game)) return;
     const seat = mySeat();
     if (seat < 0 || seat !== game.currentTurn) return;
     requestHintPackage(seat, game, uiLang).catch(() => {});
@@ -1497,7 +1498,6 @@ function maybePrefetchHint() {
 async function hintMove() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
-    hintUsedThisSession = true;
     const snapshot = game;
     const lang = uiLang;
     const token = ++hintClickToken;
@@ -1522,21 +1522,20 @@ async function hintMove() {
         return;
     }
     if (!packet?.options?.length) return showToast(L("No useful suggestion found.", "暂时没有可用提示。"));
-    const nextIndex = previousHint && previousHint.signature === packet.signature && packet.options.length > 1
-        ? (previousHint.index + 1) % packet.options.length
+    // Like Tencent's 提示, a press selects cards whenever the engine has a press to offer: its
+    // options cycle presses first. Its pass advice (partner owns the trick, or pressing costs too
+    // much) comes after them, or alone: the selection drops, 不出 lights up and says so in two words.
+    const options = [...packet.options.filter(o => o.move?.cards?.length), ...packet.options.filter(o => !o.move?.cards?.length)];
+    const nextIndex = previousHint && previousHint.signature === packet.signature && options.length > 1
+        ? (previousHint.index + 1) % options.length
         : 0;
-    const advice = packet.options[nextIndex];
-    const ids = advice.move?.cards?.map(c => c.id) || [];
+    const ids = options[nextIndex].move?.cards?.map(c => c.id) || [];
     const pass = !ids.length;
-    hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: packet.options.length, pass, turn: turnStateKey() };
-    // Like Tencent's 提示: a suggestion is simply selected in the hand, no advisor text. Pass advice
-    // (partner owns the trick, or pressing costs too much) keeps the selection, lights up 不出 and
-    // says so in two words; the next press moves on to the backup press if there is one.
-    if (pass) showToast(L("Pass suggested", "建议不出"), 1300);
-    else {
-        selected = new Set(ids);
-        if (thinkingShown) hideToast();
-    }
+    hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: options.length, pass, turn: turnStateKey() };
+    selected = new Set(ids);
+    const passWord = L("Pass suggested", "建议不出");
+    if (pass) showToast(passWord, 1300);
+    else if (thinkingShown || tableView.toast?.textContent === passWord) hideToast();
     render();
 }
 
@@ -2427,14 +2426,21 @@ const STAGE_H = 720;
 const STAGE_MIN_W = 1280;
 const HAND_CARD_W = 102;                    // 102 x 138: 19.1% of the stage height
 const HAND_CARD_H = HAND_CARD_W / .74;
-const HAND_BOTTOM = 55;                     // hand bottom edge, 7.6% of 720
-const HAND_STEP = .35;                      // same-rank stack step, share of the card height
-const HAND_MIN_STEP = .25;                  // tall columns compress down to this
+const HAND_BOTTOM = 55;                     // hand bottom edge, 7.6% of 720 (see handBottom)
+const HAND_STEP = .35;                      // same-rank stack step: the whole rank + suit index shows
 const HAND_MIN_PITCH = .93;                 // columns never cover more than 7% of a card (Tencent: ~1px gap)
-const HAND_MIN_SCALE = .75;                 // before that, hand cards shrink down to this
-const ACTION_ROW_TOP = 312;                 // action row never rises into the side seats' played cards (196 + 109)
-const ACTION_ROW_H = 87;                    // pills 78 + the hexagon's crown
-const ACTION_ROW_GAP = 20;                  // between the row and the tallest hand column
+const HAND_MIN_SCALE = .5;                  // tall columns shrink the cards, never the step, down to this
+const PLAYED_H = 80.6 / .74;                // a played (small) card: 79% of the hand card
+const PARTNER_PLAY_TOP = 112;               // .gd-slot.is-p2
+const SIDE_PLAY_TOP = 190;                  // .gd-slot.is-p1 / .is-p3, inboard of the side seats
+const SIDE_PLAY_INSET = 176;
+const ROW_MIN_TOP = PARTNER_PLAY_TOP + PLAYED_H + 6;  // the action row may rise to just under the partner's cards
+const ACTION_ROW_H = 80;                    // pills 74 + their 3D edge (the hexagon's crown overhangs)
+const ACTION_ROW_GAP = 12;                  // between the row and the tallest hand column
+const PILL_W = 200;                         // action pill: 2x the hand card width (大掼蛋 2026)
+const PILL_MIN_W = 132;
+const ROW_HEX_W = 90;
+const ROW_GAP_X = 22;
 const COLUMN_SUIT_DEPTH = { D: 0, C: 1, H: 2, S: 3 };  // 方块 on top of a column, 黑桃 in front
 const PLACE_LABELS = { zh: ["头游", "二游", "三游", "末游"], en: ["1st", "2nd", "3rd", "4th"] };
 const JIPAI_ORDER = ["wild", "RJ", "BJ", "A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
@@ -2449,7 +2455,10 @@ const tableView = {
     jipaiTab: "count",
     seenPlays: new Set(),
     lastMessage: null,
-    leader: { key: "", seat: -1 }
+    leader: { key: "", seat: -1 },
+    result: { id: "", peek: false, shown: false, fresh: false },
+    intro: { key: "", show: false },
+    roundLevels: { key: "", levels: null }
 };
 let handMode = storageGet("picasso.guandan.handMode") === "row" ? "row" : "col";
 let jipaiOpen = storageGet("picasso.guandan.jipai") === "on";
@@ -2487,6 +2496,7 @@ const TABLE_DEFS_HTML = `<svg class="gd-defs" aria-hidden="true" focusable="fals
         <linearGradient id="gd-g-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff5bd"/><stop offset=".45" stop-color="#ffd66b"/><stop offset="1" stop-color="#d8911c"/></linearGradient>
         <radialGradient id="gd-g-face" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#ffd35a"/><stop offset=".65" stop-color="#f7a21c"/><stop offset="1" stop-color="#e27d0b"/></radialGradient>
         <linearGradient id="gd-g-bell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfcfd"/><stop offset="1" stop-color="#a3acb6"/></linearGradient>
+        <radialGradient id="gd-g-fire" cx=".5" cy=".58" r=".56"><stop offset="0" stop-color="#fff1a8"/><stop offset=".38" stop-color="#ffc23a"/><stop offset=".72" stop-color="#f7771c"/><stop offset="1" stop-color="#d2381a"/></radialGradient>
     </defs>
     <symbol id="gd-sym-hex" viewBox="0 0 100 112">
         <path d="M24 33 17 9l17 12L50 3l16 18 17-12-7 24Z" fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="2.5" stroke-linejoin="round"/>
@@ -2533,9 +2543,9 @@ function ensureTableSkeleton() {
                 <div class="gd-deal-host" data-region="deal" aria-hidden="true"></div>
                 <div class="gd-first-host" data-region="firstLead" aria-hidden="true"></div>
                 <div class="gd-tribute-host" data-region="tribute" aria-hidden="true"></div>
-                <div class="bomb-fx" aria-hidden="true"></div>
-                <div class="bomb-banner-slot" aria-hidden="true"></div>
+                <div class="gd-fx-host" aria-hidden="true"></div>
                 <div class="gd-result-host" data-region="result"></div>
+                <div class="gd-intro-host" data-region="intro"></div>
                 <div class="gd-menu-host" data-region="menu"></div>
             </div>
             <div class="gd-ui-layer"><div class="toast gd-stage-toast" role="status" aria-live="polite"></div></div>
@@ -2547,6 +2557,7 @@ function ensureTableSkeleton() {
     t.probe = t.viewport.querySelector(".gd-safe-probe");
     t.ui = t.viewport.querySelector(".gd-ui-layer");
     t.toast = t.ui.querySelector(".gd-stage-toast");
+    t.fx = t.stage.querySelector(".gd-fx-host");
     t.regions = {};
     t.stage.querySelectorAll("[data-region]").forEach(el => { t.regions[el.dataset.region] = el; });
     t.seats = [0, 1, 2, 3].map(pos => t.stage.querySelector(`.gd-seat.is-p${pos}`));
@@ -2619,12 +2630,15 @@ function stagePoint(x, y) {
 }
 
 // Rewrites one region only when its key changed; `html` may be a builder so unchanged regions
-// cost nothing. Returns true when the region was rewritten.
+// cost nothing. A focused control that comes back (same id) keeps the focus, so the keyboard can
+// press 提示 again after its advice rebuilt the action row. Returns true when the region was rewritten.
 function setRegion(name, key, html = key) {
     const el = tableView.regions[name];
     if (!el || tableView.keys[name] === key) return false;
     tableView.keys[name] = key;
+    const focusId = el.contains(document.activeElement) ? document.activeElement.id : "";
     el.innerHTML = typeof html === "function" ? html() : html;
+    if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
     return true;
 }
 
@@ -2707,9 +2721,17 @@ function moveHandCard(dragId, targetId, before) {
     return true;
 }
 
-// Column mode: the pitch shrinks to fit the stage width down to HAND_MIN_PITCH, tall columns
-// compress their step so the hand stays under the action row, and only past both limits do the
-// hand cards themselves shrink (never below HAND_MIN_SCALE). Played cards keep their size.
+// Hand bottom edge: 7.6% of the stage like Tencent, raised on small screens so the 重选/理牌/横排
+// pills under it keep a 40 CSS px tap target that never reaches into the cards.
+function handBottom() {
+    return Math.max(HAND_BOTTOM, 40 / tableView.layout.s + 6);
+}
+
+// Column mode: every stacked card shows its whole index (the step is fixed at HAND_STEP). The
+// pitch shrinks to fit the stage width down to HAND_MIN_PITCH; a column too tall for the room
+// under the raised action row shrinks all hand cards (down to HAND_MIN_SCALE). Only a 理牌 group
+// taller than that compresses its step. The geometry does not depend on whose turn it is, so the
+// cards never resize when the turn comes round. Played cards keep their size.
 function handGeometry(columns) {
     const { w, h } = tableView.layout;
     const avail = w - 64;
@@ -2720,17 +2742,37 @@ function handGeometry(columns) {
     }
     const n = columns.length;
     const tallest = Math.max(1, ...columns.map(col => col.cards.length));
-    const room = h - HAND_BOTTOM - ACTION_ROW_GAP - ACTION_ROW_H - ACTION_ROW_TOP;
+    const room = h - handBottom() - ACTION_ROW_GAP - ACTION_ROW_H - ROW_MIN_TOP;
     const fitW = n > 1 ? avail / (HAND_CARD_W * (HAND_MIN_PITCH * (n - 1) + 1)) : 1;
-    const fitH = room / (HAND_CARD_H * (1 + HAND_MIN_STEP * (tallest - 1)));
+    const fitH = room / (HAND_CARD_H * (1 + HAND_STEP * (tallest - 1)));
     const k = Math.max(HAND_MIN_SCALE, Math.min(1, fitW, fitH));
     const cardW = HAND_CARD_W * k;
     const cardH = HAND_CARD_H * k;
     const pitch = n > 1 ? Math.min(cardW + 1, (avail - cardW) / (n - 1)) : cardW;
-    const step = tallest > 1
-        ? Math.max(cardH * HAND_MIN_STEP, Math.min(cardH * HAND_STEP, (room - cardH) / (tallest - 1)))
-        : cardH * HAND_STEP;
+    const step = tallest > 1 ? Math.min(cardH * HAND_STEP, Math.max(0, room - cardH) / (tallest - 1)) : cardH * HAND_STEP;
     return { cardW, pitch, step, height: cardH + (tallest - 1) * step };
+}
+
+// How far a side seat's played cards (or its 不出) reach in from the stage edge, in design px.
+function sidePlayReach(i, v) {
+    const entry = game.trickPlays?.[i];
+    if (!entry || v.liveTurn === i) return 0;
+    if (entry.actionType === "pass") return SIDE_PLAY_INSET + 110;
+    const n = valuesFromFirebase(entry.cards).length;
+    return n ? SIDE_PLAY_INSET + 80.6 * (1 + .48 * (n - 1)) : 0;
+}
+
+// The row sits just above the tallest hand column. When that lifts it into the band of the side
+// seats' played cards (大掼蛋 2026 keeps it there, inboard of them), its pills narrow to pass
+// between those plays, down to PILL_MIN_W.
+function actionPillWidth(v, rowTop) {
+    if (!v.canAct || rowTop >= SIDE_PLAY_TOP + PLAYED_H) return PILL_W;
+    const { w } = tableView.layout;
+    const reach = Math.max(...[1, 3].map(pos => sidePlayReach((v.mine + pos) % 4, v)));
+    if (!reach) return PILL_W;
+    const pills = v.lead || v.noBeat ? 2 : 3;
+    const free = w - 2 * (reach + 16) - ROW_HEX_W - pills * ROW_GAP_X;
+    return Math.max(PILL_MIN_W, Math.min(PILL_W, Math.floor(free / pills)));
 }
 
 // Selection survives ticks: it is only pruned to the cards still in hand, and dropped when a
@@ -2969,6 +3011,10 @@ function onTablePointerDown(event) {
 }
 
 function onTableClick(event) {
+    if (event.target.closest(".gd-intro")) {
+        tableView.intro.show = false;
+        return renderTable();
+    }
     if (event.target.closest(".gd-scrim")) {
         tableView.menuOpen = false;
         return renderTableChrome();
@@ -3009,6 +3055,10 @@ function onTableClick(event) {
             break;
         }
         case "newroom": newRoomBtn.click(); return;
+        case "result-peek":
+        case "result-back":
+            tableView.result.peek = act === "result-peek";
+            return renderTable();
         case "exit": startReturnToEvents(); return;
         case "lipai": return groupSelection();
         case "hengpai":
@@ -3177,9 +3227,9 @@ function renderSeat(i, v) {
     el.className = `gd-seat is-p${pos} is-${relation.key}${turn ? " is-turn" : ""}${place ? " is-done" : ""}`;
     tableView.avatars[pos].className = `gd-av${relation.key === "opponent" ? " is-opp" : ""}`;
     setRegion(`face${pos}`, seatFaceHTML(i, name));
+    // a finished seat's place is the ribbon at its play slot (renderSlot)
     let tag = "";
-    if (place) tag = `<span class="gd-av-tag is-place ${place <= 2 ? "is-warm" : "is-cool"}">${PLACE_LABELS[uiLang][place - 1]}</span>`;
-    else if (!bottom && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
+    if (!place && !bottom && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
     else if (!bottom) tag = `<span class="gd-av-tag">${relation.label}</span>`;
     // Tencent shows nothing above 10 cards; the exact count is a 记牌器 extra.
     const chip = jipaiOpen && !bottom && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
@@ -3201,24 +3251,52 @@ const COMBO_LABELS = {
     tripleStraight: ["Plates", "钢板"],
     fullhouse: ["Full House", "三带二"]
 };
-function renderSlot(i, v, animate, flights) {
+function renderSlot(i, v, animate, flights, bursts) {
     const pos = visualSeatPos(i, v.mine);
-    const entry = game.trickPlays?.[i];
-    if (!entry || v.dealPhase !== "done" || v.liveTurn === i) {
+    const place = v.dealPhase === "done" ? seatPlace(i) : 0;
+    const entry = v.dealPhase === "done" && v.liveTurn !== i ? game.trickPlays?.[i] : null;
+    if (!entry && !place) {
         setRegion(`slot${pos}`, "");
         return;
     }
     const stamp = seatPlayStamp(entry);
-    setRegion(`slot${pos}`, `${stamp}:${uiLang}:${game.currentLevelRank}`, () => {
-        const fresh = animate && !tableView.seenPlays.has(stamp);
-        tableView.seenPlays.add(stamp);
-        const enter = fresh && !flights.has(i) ? " is-enter" : "";
-        if (entry.actionType === "pass") return `<div class="gd-pass-word${enter}">${L("Pass", "不出")}</div>`;
-        const cards = displayCardsForCombo(valuesFromFirebase(entry.cards), entry.combo);
-        const label = fresh && COMBO_LABELS[entry.combo?.type];
-        return `<div class="gd-played${enter}">${cards.map(c => cardHTML(c, true, false, `data-pid="${encodeHTML(c.id)}"`)).join("")}</div>`
-            + (label ? `<span class="gd-combo-label">${L(...label)}</span>` : "");
+    setRegion(`slot${pos}`, `${stamp}:${place}:${uiLang}:${game.currentLevelRank}`, () => {
+        let html = "";
+        if (entry) {
+            const fresh = animate && !tableView.seenPlays.has(stamp);
+            tableView.seenPlays.add(stamp);
+            const enter = fresh && !flights.has(i) ? " is-enter" : "";
+            if (entry.actionType === "pass") {
+                html = `<div class="gd-pass-word${enter}">${L("Pass", "不出")}</div>`;
+            } else {
+                const cards = displayCardsForCombo(valuesFromFirebase(entry.cards), entry.combo);
+                const label = fresh && !entry.combo?.isBomb && COMBO_LABELS[entry.combo?.type];
+                html = `<div class="gd-played${enter}">${cards.map(c => cardHTML(c, true, false, `data-pid="${encodeHTML(c.id)}"`)).join("")}</div>`
+                    + (label ? `<span class="gd-combo-label">${wordHTML(L(...label))}</span>` : "");
+                if (fresh && entry.combo?.isBomb) bursts.push({ seat: i, pos, combo: entry.combo });
+            }
+        }
+        if (place) {
+            const key = `rb:${game.roomCode}:${game.roundNo}:${i}:${place}`;
+            const enter = animate && !tableView.seenPlays.has(key) ? " is-enter" : "";
+            tableView.seenPlays.add(key);
+            html += `<span class="gd-ribbon ${place <= 2 ? "is-warm" : "is-cool"}${enter}"><b>${PLACE_LABELS[uiLang][place - 1]}</b></span>`;
+        }
+        return html;
     });
+}
+
+// Finishing place (1-4) of a seat this round, 0 while it still plays.
+function seatPlace(i) {
+    const order = game.phase === "playing" ? finishedList(game) : valuesFromFirebase(game.roundResult?.order);
+    return order.indexOf(i) + 1;
+}
+
+// Display words (combo labels, bomb names, 抗贡, 胜利): gold gradient over a dark-brown outline.
+// The outline is the element's own stroked text; the gradient fill is the ::after copy on top.
+function wordHTML(text, cls = "") {
+    const t = encodeHTML(text);
+    return `<b class="gd-word${cls ? ` ${cls}` : ""}" data-t="${t}">${t}</b>`;
 }
 
 // Fresh plays about to appear: mine fly from where the cards sat in my hand (read before the hand
@@ -3243,31 +3321,32 @@ function playFlightSources(v, animate) {
 }
 
 // FLIP: each played card starts at its source (in stage design px, so the rotated stage works too)
-// and settles into the slot in ~200 ms. Transform and opacity only.
+// and settles into the slot in ~200 ms. Transform and opacity only. My cards lift out over the
+// hand (the slot rides above it until they land) instead of sliding out from under its columns.
 function runPlayFlights(flights, v) {
     const centre = r => stagePoint(r.left + r.width / 2, r.top + r.height / 2);
     flights.forEach((src, i) => {
         const slot = tableView.regions[`slot${visualSeatPos(i, v.mine)}`];
+        const runs = [];
         slot.querySelectorAll(".gd-played .card").forEach((el, k) => {
             const from = src.rects ? src.rects.get(el.dataset.pid) : src.avatar;
             if (!from) return;
             const a = centre(from);
             const b = centre(el.getBoundingClientRect());
-            el.animate([
+            runs.push(el.animate([
                 { transform: `translate(${(a.x - b.x).toFixed(1)}px, ${(a.y - b.y).toFixed(1)}px) scale(${src.scale.toFixed(3)})`, opacity: src.rects ? 1 : 0 },
                 { transform: "none", opacity: 1 }
-            ], { duration: 210, delay: src.rects ? 0 : k * 16, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
+            ], { duration: 210, delay: src.rects ? 0 : k * 16, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" }).finished);
         });
+        if (!src.rects || !runs.length) return;
+        slot.classList.add("is-flying");
+        Promise.allSettled(runs).then(() => slot.classList.remove("is-flying"));
     });
 }
 
 function seatPlayStamp(entry) {
     if (!entry) return "";
     return `${entry.player ?? ""}:${entry.actionType || ""}:${entry.at || ""}:${valuesFromFirebase(entry.cards).map(c => c.id).join("-")}`;
-}
-
-function latestTrickPlayAt() {
-    return Math.max(0, ...(game.trickPlays || []).map(entry => Number(entry?.at) || 0));
 }
 
 function displayCardsForCombo(cards = [], combo = null) {
@@ -3302,9 +3381,10 @@ function obviousPassNow(mine) {
 function actionsHTML(v) {
     if (!v.canAct) return "";
     const spaced = isZH() ? " spaced" : "";
-    const pass = v.lead ? "" : `<button class="btn ${v.noBeat || v.passHint ? "play" : "pass"}${spaced}" id="pass-btn" type="button">${L("Pass", "不出")}</button>`;
-    const hint = v.noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${L("Hint", "提示")}</button>`;
-    return `${pass}${clockHTML("hex")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${L("Play", "出牌")}</button>`;
+    const hit = `<i class="gd-hit" aria-hidden="true"></i>`;
+    const pass = v.lead ? "" : `<button class="btn ${v.noBeat ? "play" : v.passHint ? "play is-advised" : "pass"}${spaced}" id="pass-btn" type="button">${hit}${L("Pass", "不出")}</button>`;
+    const hint = v.noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${hit}${L("Hint", "提示")}</button>`;
+    return `${pass}${clockHTML("hex")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${hit}${L("Play", "出牌")}</button>`;
 }
 
 function toolsHTML(v) {
@@ -3325,7 +3405,7 @@ function dealHTML(v) {
     const ox = w / 2;
     const oy = h * .36;
     const targets = {
-        0: [0, h - HAND_BOTTOM - HAND_CARD_H * .6 - oy],
+        0: [0, h - handBottom() - HAND_CARD_H * .6 - oy],
         1: [196 - ox, 250 - oy],
         2: [0, 172 - oy],
         3: [w - 196 - ox, 250 - oy]
@@ -3343,10 +3423,11 @@ function dealHTML(v) {
     return `<div class="gd-deal" style="--deal-left:${Math.round(DEALING_MS - elapsed)}ms"><div class="gd-deck"><i class="gd-back"></i><i class="gd-back"></i>${back}</div>${flights}</div>`;
 }
 
-// 首出 (qqg_result_zoom): when the deal ends, the round-1 starting card pops up at the centre
-// with a warm ribbon, then shrinks into the seat that holds it and leads (which keeps its 首 tag).
-// Keyed by the deal, so a re-render never replays it and a rejoin resumes it in step.
-const FIRST_LEAD_MS = 1500;
+// 首出 (qqg_shouchu): when the deal ends, the round-1 starting card pops up at the centre with a
+// warm ribbon, then shrinks into the seat that holds it and leads (which keeps its 首 tag). It ends
+// with the sorting window (DEALING_MS + SORTING_MS), before anyone can act, so it never crosses the
+// first lead or the action row. Keyed by the deal: a re-render never replays it, a rejoin resumes it.
+const FIRST_LEAD_MS = SORTING_MS - 20;
 function firstLeadKey(v) {
     const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
     if (!game.startingCard || v.dealPhase === "dealing" || v.leader < 0 || since < 0 || since > FIRST_LEAD_MS) return "";
@@ -3358,31 +3439,70 @@ function firstLeadHTML(v) {
     const seat = { 0: [92, h - 50], 1: [90, 240], 2: [w / 2, 58], 3: [w - 90, 240] }[pos];
     const card = { ...game.startingCard, id: "first-lead" };
     const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
-    return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
+    return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;--first-ms:${FIRST_LEAD_MS}ms;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
 }
 
-// 进贡/还贡/抗贡 (round 2+): when the deal ends each tribute card flies payer -> receiver under an
-// orange 进贡 plate, then the returned card flies back under a blue 还贡 plate; a blocked tribute
-// shows 抗贡 at the centre (the revealed jokers sit at the seats). Replaces the sentence toast.
-const TRIBUTE_MS = 2200;
+// 进贡/还贡/抗贡 (round 2+): as the last deal flights land, each tribute card flies payer -> receiver
+// under an orange 进贡 plate, then the returned card flies back under a blue 还贡 plate (a double
+// tribute flies both pairs at once); a blocked tribute shows 抗贡 at the centre (the revealed
+// jokers sit at the seats). The whole moment ends inside the deal window (DEALING_MS + SORTING_MS),
+// before anyone can act, so it never crosses the first lead or the action row. The region is
+// rendered with the deal and keyed by it: delays are synced to dealStartedAt and never replay.
+const TRIBUTE_AT = DEALING_MS - 200;        // the deal's last flights have landed
+const TRIBUTE_FLY_MS = 640;                 // pop, hold, 340 ms flight, fade (see gd-tribute)
+const TRIBUTE_RETURN_AT = 480;              // 还贡 leaves as the 进贡 card lands
+const TRIBUTE_MS = TRIBUTE_RETURN_AT + TRIBUTE_FLY_MS;
 function tributeKey(v) {
-    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
-    if (!game.selectedTributes?.length || game.startingCard || v.dealPhase === "dealing" || since < 0 || since > TRIBUTE_MS) return "";
+    const elapsed = Date.now() - Number(game.dealStartedAt || 0);
+    if (!game.selectedTributes?.length || game.startingCard || elapsed > TRIBUTE_AT + TRIBUTE_MS) return "";
     return `${dealKey()}:${v.mine}:${uiLang}`;
 }
 function tributeHTML(v) {
     const { w, h } = tableView.layout;
-    const at = { 0: [w / 2, h - 250], 1: [215, 250], 2: [w / 2, 172], 3: [w - 215, 250] };
-    const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
+    // each seat's played-card slot, so nothing crosses the rising hand
+    const at = { 0: [w / 2, h * .32 + PLAYED_H / 2], 1: [215, 244], 2: [w / 2, 166], 3: [w - 215, 244] };
+    const since = Date.now() - Number(game.dealStartedAt || 0) - TRIBUTE_AT;
     const rows = game.selectedTributes.filter(r => r?.tributeCard);
-    if (!rows.length) return `<div class="gd-kanggong" style="animation-delay:${-since}ms">${L("Tribute blocked", "抗贡")}</div>`;
+    if (!rows.length) return `<div class="gd-kanggong" style="animation-delay:${-since}ms">${wordHTML(L("Tribute blocked", "抗贡"))}</div>`;
     const fly = (card, from, to, cls, label, delay) => `<div class="gd-tribute ${cls}" style="left:${from[0].toFixed(0)}px;top:${from[1].toFixed(0)}px;--tx:${(to[0] - from[0]).toFixed(0)}px;--ty:${(to[1] - from[1]).toFixed(0)}px;animation-delay:${delay - since}ms"><span>${label}</span>${cardHTML(card, true)}</div>`;
-    return rows.map((r, n) => {
+    return rows.map(r => {
         const payer = at[visualSeatPos(r.payerSeat, v.mine)];
         const receiver = at[visualSeatPos(r.receiverSeat, v.mine)];
-        return fly(r.tributeCard, payer, receiver, "is-in", L("Tribute", "进贡"), n * 160)
-            + (r.returnCard ? fly(r.returnCard, receiver, payer, "is-back", L("Return", "还贡"), 820 + n * 160) : "");
+        return fly(r.tributeCard, payer, receiver, "is-in", L("Tribute", "进贡"), 0)
+            + (r.returnCard ? fly(r.returnCard, receiver, payer, "is-back", L("Return", "还贡"), TRIBUTE_RETURN_AT) : "");
     }).join("");
+}
+
+// 巅峰对决 match intro (yxrb_vs): once per match, over the first deal. 红队 left, 蓝队 right on a
+// diagonal split, each pair of players, a gold VS; it leaves before the deal's last flights.
+// Decided once per deal (room + dealStartedAt): a client that arrives late, a reload (the key is
+// remembered) or a re-render never replays it. A tap skips it.
+const INTRO_STORE = "picasso.guandan.intro";
+function introKey(v) {
+    if (game.roundNo !== 1 || v.dealPhase !== "dealing") return "";
+    const key = `${roomCode}:${game.dealStartedAt}`;
+    if (tableView.intro.key !== key) {
+        const show = Date.now() - Number(game.dealStartedAt || 0) < 1200 && storageGet(INTRO_STORE) !== key;
+        tableView.intro = { key, show };
+        if (show) storageSet(INTRO_STORE, key);
+    }
+    return tableView.intro.show ? `${key}:${uiLang}` : "";
+}
+function introHTML(v) {
+    const since = Math.max(0, Date.now() - Number(game.dealStartedAt || 0));
+    const player = i => {
+        const name = displaySeatName(game.seats[i], L(`Seat ${i + 1}`, `${i + 1} 号位`));
+        return `<div class="gd-vs-p"><span class="gd-vs-av"><span class="gd-av-face">${seatFaceHTML(i, name)}</span>${i === v.mine ? `<span class="gd-res-tag">${L("You", "自己")}</span>` : ""}</span><b>${encodeHTML(name)}</b></div>`;
+    };
+    const side = (team, cls) => `<div class="gd-vs-side ${cls}"><em>${encodeHTML(teamName(team))}</em><div class="gd-vs-list">${player(team)}${player(team + 2)}</div></div>`;
+    return `<div class="gd-intro" style="--since:${-since}ms">
+        <div class="gd-vs">
+            ${side(1, "is-red")}${side(0, "is-blue")}
+            <div class="gd-vs-title">${wordHTML(L("Peak Showdown", "巅峰对决"))}<span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span></div>
+            <div class="gd-vs-mark">${wordHTML("VS")}</div>
+        </div>
+        <button class="gd-vs-skip" type="button">${L("Skip", "跳过")}</button>
+    </div>`;
 }
 
 // Round/system messages become short toasts (plays and passes are already visible at the seats).
@@ -3422,199 +3542,227 @@ function renderTable() {
     const columns = mine >= 0 ? handColumns(handCards, game.currentLevelRank, mine) : [];
     const geo = handGeometry(columns);
     const handH = mine >= 0 ? geo.height : 0;
+    const bottom = handBottom();
+    const actionsBottom = bottom + handH + ACTION_ROW_GAP;
+    t.stage.style.setProperty("--hand-bottom", `${bottom.toFixed(1)}px`);
     t.stage.style.setProperty("--hand-h", `${handH.toFixed(1)}px`);
-    // Just above the tallest column, but never up into the side seats' played cards: a hand
-    // taller than that runs behind the row.
-    const actionsBottom = Math.min(HAND_BOTTOM + handH + ACTION_ROW_GAP, t.layout.h - ACTION_ROW_TOP - ACTION_ROW_H);
     t.stage.style.setProperty("--actions-bottom", `${actionsBottom.toFixed(1)}px`);
+    const rowTop = t.layout.h - actionsBottom - ACTION_ROW_H;
+    t.stage.style.setProperty("--pill-w", `${actionPillWidth(v, rowTop)}px`);
+    // toasts sit over the felt centre, or just above the action row while it is up
+    t.rot.style.setProperty("--toast-y", `${v.canAct ? Math.max(150, Math.min(266, rowTop - 46)) : 266}px`);
     t.stage.classList.toggle("is-acting", v.canAct);
 
     renderTableChrome();
     setRegion("watermark", `<b>${L("PICASSO Guandan", "PICASSO 掼蛋")}</b><span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span>`);
     const flights = playFlightSources(v, !freshMount);
+    const bursts = [];
     [0, 1, 2, 3].forEach(i => {
         renderSeat(i, v);
-        renderSlot(i, v, !freshMount, flights);
+        renderSlot(i, v, !freshMount, flights, bursts);
     });
     renderHand(columns, handMode === "row" && mine >= 0 ? orderedHandForDisplay(handCards, game.currentLevelRank, mine) : [], geo, dealPhase);
     setRegion("tools", toolsHTML(v));
     setRegion("spectate", mine < 0 ? `<span>${L("Spectating", "观战中")}</span>` : "");
     setRegion("actions", `${v.canAct}:${v.lead}:${v.noBeat}:${v.passHint}:${uiLang}`, () => actionsHTML(v));
     setRegion("deal", dealPhase === "dealing" ? `deal:${dealKey()}:${Math.round(t.layout.w)}` : "", () => dealHTML(v));
+    const intro = introKey(v);
+    setRegion("intro", intro, intro ? () => introHTML(v) : "");
     const firstKey = firstLeadKey(v);
     setRegion("firstLead", firstKey, firstKey ? () => firstLeadHTML(v) : "");
     const tributeMoment = tributeKey(v);
     setRegion("tribute", tributeMoment, tributeMoment ? () => tributeHTML(v) : "");
-    const result = game.phase === "roundOver" ? "round" : game.phase === "gameOver" ? "game" : "";
-    setRegion("result", result ? `${result}:${game.roundNo}:${uiLang}:${isHost()}` : "", result === "round" ? roundOverHTML : result ? gameOverHTML : "");
+    // the levels this round is played at, for the result's X -> Y tiles
+    if (game.phase === "playing") t.roundLevels = { key: `${roomCode}:${game.roundNo}`, levels: { ...game.levels } };
+    const resultId = game.phase === "roundOver" || game.phase === "gameOver" ? `${game.phase}:${roomCode}:${game.roundNo}` : "";
+    if (t.result.id !== resultId) t.result = { id: resultId, peek: false, shown: false, fresh: freshMount };
+    setRegion("result", resultId ? `${resultId}:${uiLang}:${isHost()}:${t.result.peek}` : "", resultId ? () => resultHTML(v) : "");
     refreshSelectionUI();
     updateTurnClockDOM();
     runPlayFlights(flights, v);
-    maybeCelebrateBomb();
-    initResultOverlay();
+    runBursts(bursts);
     maybeToastTableMessage();
 }
 
-// Bomb / combo celebration: purely presentational — reads entry.combo.isBomb
-// (already computed by the scoring logic in evaluateCombos/normalizeActionEntry)
-// and never changes game state. Guarded by lastCelebratedBombAt so each real
-// bomb play triggers the shake/particles/banner exactly once per client.
-let lastCelebratedBombAt = 0;
-function maybeCelebrateBomb() {
-    if (!game || !Array.isArray(game.trickPlays)) return;
-    const latestAt = latestTrickPlayAt();
-    if (!latestAt || latestAt === lastCelebratedBombAt) return;
-    const entry = game.trickPlays.find(e => e && Number(e.at) === latestAt);
-    lastCelebratedBombAt = latestAt;
-    const combo = entry?.combo;
-    if (!entry || entry.actionType === "pass" || !combo?.isBomb) return;
-    triggerBombCelebration(combo);
+// Bomb tiers (tg_ingame_bomb, tg_ingame_tianwangzha): authored one-shot FX over a fresh bomb.
+// renderSlot reports a bomb only the first time its play is shown, so re-renders and reloads never
+// replay it. 4-5 炸弹: burst, floor ring, cracks and the word at the seat, 6 px shake; 6+: bigger,
+// a second ring and a flash; 同花顺: gold ring sweep; 天王炸: three explosions under the vertical
+// word at the table centre. Transform/opacity only; reduced motion keeps the still word.
+const FX_MS = { bomb: 1000, big: 1300, flush: 1150, joker: 1900 };
+const FX_RAYS = "M" + Array.from({ length: 32 }, (_, k) => {
+    const r = k % 2 ? 24 : k % 4 ? 78 : 100;
+    const a = k * Math.PI / 16;
+    return `${(Math.sin(a) * r).toFixed(1)} ${(-Math.cos(a) * r).toFixed(1)}`;
+}).join(" L") + "Z";
+const FX_CRACKS = "M0 0 L-30 6 L-52 2 L-80 12 L-106 8 M-52 2 L-66 -12 L-84 -16 M0 0 L26 -8 L48 -4 L72 -14 L100 -10 M48 -4 L62 10 L86 16 M0 0 L-12 16 L-32 28 L-44 46 M0 0 L10 18 L30 26 L40 46 M0 0 L-18 -16 L-40 -24 M0 0 L16 -20 L20 -38";
+// A cartoon blast outline: n points round a circle (radius jittered), joined by outward arcs.
+function fxCloudPath(r, n, seed) {
+    const pts = Array.from({ length: n }, (_, k) => {
+        const a = (k + ((k * 7 + seed) % 5) * .08) * 2 * Math.PI / n;
+        const rr = r * (.84 + ((k * 37 + seed * 11) % 9) * .02);
+        return [Math.cos(a) * rr, Math.sin(a) * rr];
+    });
+    let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+    for (let k = 1; k <= n; k++) {
+        const [x, y] = pts[k % n];
+        const arc = (Math.hypot(x - pts[k - 1][0], y - pts[k - 1][1]) * .6).toFixed(1);
+        d += `A${arc} ${arc} 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}`;
+    }
+    return `${d}Z`;
+}
+const FX_BLAST = `<svg viewBox="-100 -100 200 200"><path class="gd-fx-smoke" d="${fxCloudPath(90, 9, 2)}"/><path class="gd-fx-fire" d="${fxCloudPath(74, 11, 5)}"/><path class="gd-fx-hot" d="${fxCloudPath(38, 7, 3)}"/></svg>`;
+
+function burstTier(combo) {
+    if (combo.type === "jokerBomb") return "joker";
+    if (combo.type === "straightFlush") return "flush";
+    return (combo.bombLen || 4) >= 6 ? "big" : "bomb";
 }
 
-function triggerBombCelebration(combo) {
-    const stageEl = tableView.stage;
-    if (!stageEl?.isConnected) return;
-    stageEl.classList.remove("bomb-shake");
-    void stageEl.offsetWidth; // restart the animation if it's already mid-shake
-    requestAnimationFrame(() => stageEl.classList.add("bomb-shake"));
+function burstWord(combo, tier) {
+    if (tier === "joker") return L("Joker Bomb", "天王炸");
+    if (tier === "flush") return L("Straight Flush", "同花顺");
+    const n = combo.bombLen || 4;
+    return tier === "big" ? L(`${n}-Bomb`, `${"六七八九十"[n - 6] || n}炸`) : L("Bomb", "炸弹");
+}
 
-    const fx = stageEl.querySelector(".bomb-fx");
-    if (fx) {
-        const frag = document.createDocumentFragment();
-        for (let i = 0; i < 28; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const mag = 60 + Math.random() * 100;
-            const px = Math.round(Math.cos(angle) * mag);
-            const py = Math.round(Math.sin(angle) * mag);
-            const rot = Math.round(Math.random() * 360);
-            const span = document.createElement("span");
-            span.className = "bomb-particle";
-            span.style.cssText = `--px:${px}px;--py:${py}px;--rot:${rot}deg;animation-delay:${Math.round(Math.random() * 80)}ms`;
-            frag.appendChild(span);
+function burstHTML(tier, word, x, y) {
+    const n = tier === "bomb" ? 10 : 16;
+    const sparks = Array.from({ length: n }, (_, k) => `<i class="gd-fx-spark" style="--a:${Math.round(k * 360 / n + (k % 3) * 9)}deg;--d:${150 + (k * 53) % 90}px"></i>`).join("");
+    const flash = tier === "big" || tier === "joker" ? `<i class="gd-fx-flash"></i>` : "";
+    const body = tier === "joker"
+        ? [0, 1, 2].map(k => `<span class="gd-fx-boom" style="--n:${k}">${FX_BLAST}</span>`).join("") + sparks + wordHTML(word, "is-vertical")
+        : `<i class="gd-fx-ring"></i>${tier === "big" ? `<i class="gd-fx-ring is-2"></i>` : ""}${tier === "flush" ? "" : `<i class="gd-fx-dome"></i>`}`
+            + (tier === "flush" ? `<svg class="gd-fx-sweep" viewBox="0 0 200 200"><circle cx="100" cy="100" r="92"/></svg>` : `<svg class="gd-fx-cracks" viewBox="-120 -60 240 120"><path d="${FX_CRACKS}"/></svg>`)
+            + `<svg class="gd-fx-rays" viewBox="-100 -100 200 200"><path d="${FX_RAYS}"/></svg><i class="gd-fx-core"></i>${sparks}${wordHTML(word)}`;
+    return `<div class="gd-fx-set">${flash}<div class="gd-fx is-${tier}" style="left:${x.toFixed(0)}px;top:${y.toFixed(0)}px">${body}</div></div>`;
+}
+
+// Starts once the played cards have landed (their flight is ~200 ms).
+function runBursts(bursts) {
+    const t = tableView;
+    bursts.forEach(({ pos, combo }) => {
+        const tier = burstTier(combo);
+        let x = t.layout.w / 2;
+        let y = t.layout.h * .35;
+        const played = t.regions[`slot${pos}`]?.querySelector(".gd-played");
+        if (tier !== "joker" && played) {
+            const r = played.getBoundingClientRect();
+            const c = stagePoint(r.left + r.width / 2, r.top + r.height / 2);
+            x = Math.min(t.layout.w - 170, Math.max(170, c.x));
+            y = c.y;
         }
-        fx.innerHTML = "";
-        fx.appendChild(frag);
-        setTimeout(() => { fx.innerHTML = ""; }, 1000);
-    }
-
-    const slot = stageEl.querySelector(".bomb-banner-slot");
-    if (slot) {
-        const bombLen = combo.bombLen || 0;
-        const text = combo.type === "jokerBomb" ? "天王炸!" : combo.type === "straightFlush" ? "同花顺!" : bombLen >= 8 ? "八张炸弹!" : bombLen >= 6 ? "六张炸弹!" : "炸弹!";
-        slot.innerHTML = `<div class="bomb-banner show">${text}</div>`;
         setTimeout(() => {
-            const banner = slot.querySelector(".bomb-banner");
-            if (!banner) return;
-            banner.classList.remove("show");
-            banner.classList.add("hide");
-            setTimeout(() => banner.remove(), 220);
-        }, 900);
-    }
+            if (!t.fx?.isConnected) return;
+            t.fx.insertAdjacentHTML("beforeend", burstHTML(tier, burstWord(combo, tier), x, y));
+            const set = t.fx.lastElementChild;
+            setTimeout(() => set.remove(), FX_MS[tier] + 100);
+            if (prefersReducedMotion()) return;
+            const d = tier === "bomb" ? 6 : 11;
+            t.stage.animate({ translate: ["0 0", `${d}px 0`, `-${d}px 0`, `${d * .6}px 0`, `-${d * .3}px 0`, "0 0"] },
+                { duration: tier === "bomb" ? 250 : 400, easing: "linear" });
+        }, 150);
+    });
 }
 
-function roundOverHTML() {
+// Round / match result (qqg_result): a viewer-centric title (胜利 gold, 失败 cool; spectators see a
+// neutral one), a meta line, the finishing order on a warm (头游/二游) vs cool (三游/末游) band with a
+// faint VS on the seam, both teams' level tiles X -> Y, and [查看牌桌] [继续游戏]. Only the host
+// gets #next-round; everyone else waits (等待房主). A round that ends live waits RESULT_IN_MS so
+// the last play and the ribbons land first; a reload shows it at once. 查看牌桌 folds the panel
+// away to see the final table and never replays the entrance.
+const RESULT_IN_MS = 1300;
+const LEVEL_ORDER = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+
+// The first team's level before this result: as recorded while the round was played, else derived
+// from the advance (null when a late joiner cannot tell at the A cap).
+function levelBefore(team) {
     const r = game.roundResult;
-    const mine = mySeat();
-    const isWin = mine >= 0 && mine % 2 === r.firstTeam;
-    const isLose = mine >= 0 && mine % 2 !== r.firstTeam;
-    const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
-    const title = r.aceChallenge
-        ? r.aceReset
-            ? `${teamName(r.firstTeam)} ${L("A challenge reset", "冲 A 失败退回 2")}`
-            : `${teamName(r.firstTeam)} ${L("A challenge failed", "冲 A 失败")}`
-        : `${teamName(r.firstTeam)} ${L(`advances ${r.advance}`, `本局升级 ${r.advance}`)}`;
-    const detail = r.aceChallenge
-        ? r.aceReset
-            ? L("This was the third failed A challenge. The team resets to level 2 next round.", "这是第 3 次冲 A 失败，下局该队退回打 2。")
-            : L(`A challenge failed. Failure ${r.aceFailureCount}/${ACE_FAIL_LIMIT}; the team keeps playing A next round.`, `冲 A 失败，第 ${r.aceFailureCount}/${ACE_FAIL_LIMIT} 次；下局继续打 A。`)
-        : L("The next round will automatically handle Tribute and Return. If the paying side holds two Red Jokers, Tribute is blocked.", "下一局将自动处理进贡/还贡；如果进贡方合计拿到两张大王，则抗贡成功。");
-    // Confetti only for a clean round win (not a failed/aborted A challenge, even
-    // though the challenging team still technically held first place).
-    const showConfetti = isWin && !r.aceChallenge;
-    const resultKey = `round:${game.roundNo}:${r.firstTeam}:${r.advance}:${r.aceChallenge ? 1 : 0}:${r.aceReset ? 1 : 0}`;
-    return `<div class="phase-backdrop">
-        <div class="result-ticket ${isWin ? "win" : "lose"}" data-result-key="${encodeHTML(resultKey)}" data-result-score="${Number(r.advance) || 0}">
-            <div class="result-verdict">
-                <span class="result-verdict-label">${isWin ? "胜" : "负"}</span>
-                <span class="result-verdict-team">${teamName(r.firstTeam)}</span>
-            </div>
-            <div class="result-standings">
-                <h2>${title}</h2>
-                <p>${detail}</p>
-                <div class="tribute-list">${rows}</div>
-            </div>
-            <div class="result-action">
-                <div class="result-score"><span class="result-score-label">${L("Levels advanced", "本局升级")}</span><span class="result-score-value">0</span></div>
-                <button class="btn play" id="next-round" ${isHost() ? "" : "disabled"} type="button">${L("Next Round", "进入下一局")}</button>
-            </div>
-            ${showConfetti ? `<div class="result-confetti">${confettiPiecesHTML(28)}</div>` : ""}
+    if (r.aceChallenge) return "A";
+    const seen = tableView.roundLevels;
+    if (seen.key === `${roomCode}:${game.roundNo}` && seen.levels?.[team]) return seen.levels[team];
+    const now = game.levels?.[team] || "2";
+    const idx = LEVEL_ORDER.indexOf(now);
+    return now === "A" || idx < 0 ? null : LEVEL_ORDER[Math.max(0, idx - (Number(r.advance) || 0))];
+}
+
+// Level tile: only the first team's changes (X -> Y, A -> A with its failures, or 过A at the end).
+function resultLevelHTML(team, label, mineTeam) {
+    const now = game.levels?.[team] || "2";
+    const fails = now === "A" ? Number(game.aceFailures?.[team] || 0) : 0;
+    const level = `${rankGlyphHTML(now)}${fails ? `<small>${fails}/${ACE_FAIL_LIMIT}</small>` : ""}`;
+    const cls = `gd-res-lvl${team === mineTeam ? " is-us" : ""}`;
+    if (team !== game.roundResult.firstTeam) return `<div class="${cls}"><b>${label}</b><em>${level}</em></div>`;
+    const before = levelBefore(team);
+    const to = game.phase === "gameOver" ? `<span class="gd-res-win">${L("Win", "过A")}</span>` : level;
+    return `<div class="${cls}"><b>${label}</b>${before ? `<em>${rankGlyphHTML(before)}</em><i class="gd-res-arrow"></i>` : ""}<em class="is-new">${to}</em></div>`;
+}
+
+function resultPlayerHTML(i, place, mine) {
+    const name = displaySeatName(game.seats[i], L(`Seat ${i + 1}`, `${i + 1} 号位`));
+    const rel = relationForSeat(i, mine);
+    const tag = mine >= 0
+        ? `<span class="gd-res-tag is-${rel.key}">${rel.label}</span>`
+        : `<span class="gd-res-tag is-t${i % 2}">${encodeHTML(teamName(i % 2))}</span>`;
+    return `<div class="gd-res-p${i === mine ? " is-me" : ""}" style="--k:${place}">
+            <b class="gd-res-place">${PLACE_LABELS[uiLang][place]}</b>
+            <span class="gd-res-av"><span class="gd-av-face">${seatFaceHTML(i, name)}</span>${tag}</span>
+            <span class="gd-res-name">${encodeHTML(name)}</span>
+        </div>`;
+}
+
+function resultHTML(v) {
+    const state = tableView.result;
+    if (state.peek) return `<div class="gd-result is-peek"><button class="btn pass" type="button" data-act="result-back">${L("Back to result", "返回结算")}</button></div>`;
+    const enter = !state.shown;
+    state.shown = true;
+    // a table toast still up as the panel lands (a late 接风 line) would sit on the band
+    if (enter) {
+        const text = tableView.toast?.textContent;
+        setTimeout(() => { if (tableView.toast?.textContent === text) hideToast(); }, state.fresh ? 0 : RESULT_IN_MS);
+    }
+    const r = game.roundResult;
+    const over = game.phase === "gameOver";
+    const mine = v.mine;
+    const myTeam = mine >= 0 ? mine % 2 : -1;
+    const aceFail = !over && r.aceChallenge;
+    let title = over ? L("Match over", "比赛结束") : L("Round over", "本局结束");
+    let tone = "";
+    if (myTeam >= 0 && aceFail) {
+        if (myTeam === r.firstTeam) [title, tone] = [L("A failed", "冲A失败"), "is-cool"];
+    } else if (myTeam >= 0) {
+        [title, tone] = myTeam === r.firstTeam ? [L("Victory", "胜利"), ""] : [L("Defeat", "失败"), "is-cool"];
+    }
+    const team = teamName(r.firstTeam);
+    const meta = over
+        ? [L(`${team} cleared A`, `${team}冲 A 成功`), L(`${game.roundNo} rounds`, `共 ${game.roundNo} 局`)]
+        : aceFail
+            ? [L(`${team} missed A (${r.aceFailureCount}/${ACE_FAIL_LIMIT})`, `${team}冲 A 失败 ${r.aceFailureCount}/${ACE_FAIL_LIMIT}`), r.aceReset ? L("back to 2", "退回打 2") : L("still on A", "下局继续打 A")]
+            : [r.advance >= 3 ? L("Double win", "双上") : "", L(`${team} +${r.advance}`, `${team}升 ${r.advance} 级`), L(`Played ${game.currentLevelRank}`, `本局打 ${game.currentLevelRank}`)];
+    const order = valuesFromFirebase(r.order);
+    const us = Math.max(0, myTeam);
+    const label = t => mine >= 0 ? (t === us ? L("Us", "我方") : L("Them", "对方")) : teamName(t);
+    const next = over
+        ? `<button class="btn play" type="button" data-act="newroom">${L("Lobby", "返回大厅")}</button>`
+        : isHost()
+            ? `<button class="btn play${isZH() ? " spaced" : ""}" id="next-round" type="button">${L("Continue", "继续游戏")}</button>`
+            : `<button class="btn is-waiting" type="button" disabled>${L("Waiting for host", "等待房主")}</button>`;
+    return `<div class="gd-result ${tone}${enter ? "" : " is-still"}" style="--in:${enter && !state.fresh ? RESULT_IN_MS : 0}ms" role="dialog" aria-label="${encodeHTML(title)}">
+        <div class="gd-res-head">
+            <h2 class="gd-res-title">${wordHTML(title, tone)}</h2>
+            <p class="gd-res-meta">${meta.filter(Boolean).map(encodeHTML).join("<i>·</i>")}</p>
+        </div>
+        <div class="gd-res-band">
+            <div class="gd-res-half is-warm">${order.slice(0, 2).map((i, k) => resultPlayerHTML(i, k, mine)).join("")}</div>
+            <div class="gd-res-half is-cool">${order.slice(2, 4).map((i, k) => resultPlayerHTML(i, k + 2, mine)).join("")}</div>
+            <b class="gd-res-vs" aria-hidden="true"><i>V</i><i>S</i></b>
+        </div>
+        <div class="gd-res-levels">${resultLevelHTML(us, label(us), myTeam)}${resultLevelHTML(1 - us, label(1 - us), myTeam)}</div>
+        <div class="gd-res-actions">
+            <button class="btn pass" type="button" data-act="result-peek">${L("View table", "查看牌桌")}</button>
+            ${next}
         </div>
     </div>`;
-}
-
-function gameOverHTML() {
-    const r = game.roundResult;
-    const mine = mySeat();
-    const isWin = mine >= 0 && mine % 2 === r.firstTeam;
-    const isLose = mine >= 0 && mine % 2 !== r.firstTeam;
-    const rows = r.order.map((i, idx) => `<div class="tribute-row">${L(`#${idx + 1}`, `第 ${idx + 1} 名`)}: ${encodeHTML(displaySeatName(game.seats[i]))} · ${teamName(i % 2)}</div>`).join("");
-    const resultKey = `game:${game.roundNo}:${r.firstTeam}`;
-    return `<div class="phase-backdrop">
-        <div class="result-ticket ${isWin ? "win" : "lose"}" data-result-key="${encodeHTML(resultKey)}" data-result-score="${Number(game.roundNo) || 0}">
-            <div class="result-verdict">
-                <span class="result-verdict-label">${isWin ? "胜" : "负"}</span>
-                <span class="result-verdict-team">${teamName(r.firstTeam)}</span>
-            </div>
-            <div class="result-standings">
-                <h2>${teamName(r.firstTeam)} ${L("wins the match", "冲 A 成功")}</h2>
-                <p>${L("A-level victory requires first place with the partner in second or third. The match is complete.", "打 A 时必须头游且对家第二或第三才算升级成功；本场比赛结束。")}</p>
-                <div class="tribute-list">${rows}</div>
-            </div>
-            <div class="result-action">
-                <div class="result-score"><span class="result-score-label">${L("Rounds played", "共进行回合")}</span><span class="result-score-value">0</span></div>
-                <button class="btn play" id="next-round" disabled type="button">${L("Match Complete", "比赛结束")}</button>
-            </div>
-            ${isWin ? `<div class="result-confetti">${confettiPiecesHTML(28)}</div>` : ""}
-        </div>
-    </div>`;
-}
-
-function confettiPiecesHTML(n) {
-    let out = "";
-    for (let i = 0; i < n; i++) {
-        const cx = Math.round(Math.random() * 100);
-        const dx = Math.round((Math.random() * 2 - 1) * 120);
-        const rot = Math.round(Math.random() * 720 - 360);
-        const dur = Math.round(1800 + Math.random() * 800);
-        const delay = Math.round(Math.random() * 600);
-        out += `<span class="confetti-piece" style="--cx:${cx}%;--cdx:${dx}px;--crot:${rot}deg;--cdur:${dur}ms;--cdelay:${delay}ms"></span>`;
-    }
-    return out;
-}
-
-// Win/lose overlay entrance is handled by CSS (gdBackdropIn/gdResultIn); the
-// score count-up needs real per-frame JS for an eased 0 -> final-tally
-// animation. Guarded by lastResultOverlayKey so it only plays once per result
-// (renderTable() re-runs on every game-state tick while the panel is open).
-let lastResultOverlayKey = "";
-function initResultOverlay() {
-    const panel = document.querySelector(".result-ticket");
-    if (!panel) { lastResultOverlayKey = ""; return; }
-    const key = panel.dataset.resultKey || "";
-    if (!key || key === lastResultOverlayKey) return;
-    lastResultOverlayKey = key;
-    const valueEl = panel.querySelector(".result-score-value");
-    const target = Number(panel.dataset.resultScore) || 0;
-    if (!valueEl) return;
-    const duration = 700;
-    const start = performance.now();
-    function tick(now) {
-        const t = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - t, 3);
-        valueEl.textContent = String(Math.round(target * eased));
-        if (t < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
 }
 
 document.getElementById("copy-link-btn").addEventListener("click", async () => {
