@@ -1061,18 +1061,20 @@ function scheduleTurnClock() {
     turnRenderTimer = setTimeout(scheduleTurnClock, Math.min(1000, remaining + 80));
 }
 
-// Every visible turn timer ([data-turn-clock]: my purple hexagon or another seat's alarm clock)
-// shows whole seconds; the untimed opening lead shows clock hands instead. <=10 s pulses red.
+// Every visible turn timer ([data-turn-clock]: my crowned gem or another seat's alarm clock) shows
+// at most two digits, like Tencent's: clock hands while the turn is untimed (the opening lead) or
+// still has more than 99 s, then whole seconds. <=10 s pulses red.
 function updateTurnClockDOM() {
     if (!game) return;
     const remaining = turnRemainingMs(game);
-    const secs = remaining == null ? "" : String(Math.ceil(remaining / 1000));
+    const secs = remaining == null ? 0 : Math.ceil(remaining / 1000);
+    const free = remaining == null || secs > 99;
+    const text = free ? "" : String(secs);
     document.querySelectorAll("[data-turn-clock]").forEach(el => {
         const num = el.querySelector("b");
-        if (num && num.textContent !== secs) num.textContent = secs;
-        el.classList.toggle("is-free", remaining == null);
-        el.classList.toggle("is-3", secs.length > 2);
-        el.classList.toggle("is-danger", remaining != null && remaining <= 10000);
+        if (num && num.textContent !== text) num.textContent = text;
+        el.classList.toggle("is-free", free);
+        el.classList.toggle("is-danger", !free && secs <= 10);
     });
 }
 
@@ -2597,7 +2599,7 @@ const ROW_MIN_TOP = PARTNER_PLAY_TOP + PLAYED_H + 6;  // the action row may rise
 const ACTION_ROW_H = 80;                    // pills 74 + their 3D edge (the timer crown overhangs)
 const ACTION_ROW_GAP = 12;                  // between the row and the tallest hand column
 const PILL_W = 200;                         // action pill: 2x the hand card width (大掼蛋 2026)
-const PILL_MIN_W = 132;
+const PILL_MIN_W = 132;                     // still fits "出 牌" at 40px with its .35em spacing
 const ROW_GEM_W = 108;
 const ROW_GAP_X = 22;
 const ROW_TIGHT_GAP_X = 12;
@@ -2649,22 +2651,33 @@ function tableIcon(name) {
     return `<svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${TABLE_ICONS[name] || ""}</svg>`;
 }
 
-// Timer art: the purple crowned hexagon (own turn, 大掼蛋 2026) and the gold alarm clock
-// (other seats, 腾讯掼蛋). Gradients live once in the stage; --hands shows the clock hands
-// instead of seconds on the untimed opening lead.
+// Timer art: the purple heart gem set in a gold crown (own turn, 大掼蛋 2026) and the gold alarm
+// clock (other seats, 腾讯掼蛋). Gradients live once in the stage; --hands shows clock hands
+// instead of seconds while the turn is untimed or has more than 99 s left.
 const TABLE_DEFS_HTML = `<svg class="gd-defs" aria-hidden="true" focusable="false">
     <defs>
-        <linearGradient id="gd-g-hex" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d98bff"/><stop offset=".5" stop-color="#a23cf0"/><stop offset="1" stop-color="#6a06c4"/></linearGradient>
+        <linearGradient id="gd-g-gem" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaa6ff"/><stop offset=".45" stop-color="#b447f0"/><stop offset="1" stop-color="#7010c6"/></linearGradient>
+        <linearGradient id="gd-g-gem-d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b95cf2"/><stop offset="1" stop-color="#6208b4"/></linearGradient>
         <linearGradient id="gd-g-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff5bd"/><stop offset=".45" stop-color="#ffd66b"/><stop offset="1" stop-color="#d8911c"/></linearGradient>
         <radialGradient id="gd-g-face" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#ffd35a"/><stop offset=".65" stop-color="#f7a21c"/><stop offset="1" stop-color="#e27d0b"/></radialGradient>
         <linearGradient id="gd-g-bell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfcfd"/><stop offset="1" stop-color="#a3acb6"/></linearGradient>
         <radialGradient id="gd-g-fire" cx=".5" cy=".58" r=".56"><stop offset="0" stop-color="#fff1a8"/><stop offset=".38" stop-color="#ffc23a"/><stop offset=".72" stop-color="#f7771c"/><stop offset="1" stop-color="#d2381a"/></radialGradient>
     </defs>
-    <symbol id="gd-sym-hex" viewBox="0 0 100 112">
-        <path d="M24 33 17 9l17 12L50 3l16 18 17-12-7 24Z" fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="2.5" stroke-linejoin="round"/>
-        <path d="M50 21 87 42.5v43L50 107 13 85.5v-43Z" fill="url(#gd-g-hex)" stroke="url(#gd-g-gold)" stroke-width="6" stroke-linejoin="round"/>
-        <path d="M50 30 79 47v13c-17-7-41-7-58 0V47Z" fill="#fff" opacity=".24"/>
-        <path d="M50 64V47M50 64l12 7" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" style="opacity:var(--hands,0)"/>
+    <symbol id="gd-sym-gem" viewBox="0 0 112 104">
+        <g fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="1.6" stroke-linejoin="round">
+            <path d="M9 50C7 40 5 31 3 20c7 8 12 18 15 31Z"/><path d="M103 50c2-10 4-19 6-30-7 8-12 18-15 31Z"/>
+            <circle cx="3" cy="18" r="3.2"/><circle cx="109" cy="18" r="3.2"/>
+            <path d="M56 0l7 10-4 2v8h-6v-8l-4-2Z"/>
+        </g>
+        <path d="M12 94 8 46l22 14h52l22-14-4 48Z" fill="url(#gd-g-gem-d)" stroke="url(#gd-g-gold)" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M9 84q47-7 94 0l-2 14q-45-7-90 0Z" fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M56 16c8 10 34 22 34 46 0 15-10 26-22 26-6 0-10-3-12-7-2 4-6 7-12 7-12 0-22-11-22-26 0-24 26-36 34-46Z" fill="url(#gd-g-gem)" stroke="url(#gd-g-gold)" stroke-width="4.5" stroke-linejoin="round"/>
+        <path d="M56 23 29 57l13 3Z" fill="#fff" opacity=".32"/>
+        <path d="M56 23l27 34-13-1Z" fill="#fff" opacity=".18"/>
+        <path d="M30 70c3 8 9 12 15 12-7-3-11-7-15-12Z" fill="#fff" opacity=".25"/>
+        <path d="m50 99 6-11 6 11Z" fill="url(#gd-g-gem)" stroke="#a8650e" stroke-width="1.2" stroke-linejoin="round"/>
+        <g fill="#f7a6d8" stroke="#a8367c" stroke-width=".8"><circle cx="22" cy="92" r="2.4"/><circle cx="35" cy="90.6" r="2.4"/><circle cx="77" cy="90.6" r="2.4"/><circle cx="90" cy="92" r="2.4"/></g>
+        <path d="M56 60V44m0 16 11 7" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" style="opacity:var(--hands,0)"/>
     </symbol>
     <symbol id="gd-sym-clock" viewBox="0 0 100 106">
         <path d="M7 31C4 18 13 7 27 8Z" fill="url(#gd-g-bell)" stroke="#78818c" stroke-width="2.5" stroke-linejoin="round"/>
@@ -3404,8 +3417,8 @@ function seatFaceHTML(i, name) {
 }
 
 function clockHTML(kind) {
-    return kind === "hex"
-        ? `<div class="gd-hex" data-turn-clock><svg viewBox="0 0 100 112" aria-hidden="true"><use href="#gd-sym-hex"/></svg><b id="turn-clock"></b></div>`
+    return kind === "gem"
+        ? `<div class="gd-gem" data-turn-clock><svg viewBox="0 0 112 104" aria-hidden="true"><use href="#gd-sym-gem"/></svg><b id="turn-clock"></b></div>`
         : `<div class="gd-clock" data-turn-clock><svg viewBox="0 0 100 106" aria-hidden="true"><use href="#gd-sym-clock"/></svg><b id="turn-clock"></b></div>`;
 }
 
@@ -3581,7 +3594,7 @@ function actionsHTML(v) {
     const hit = `<i class="gd-hit" aria-hidden="true"></i>`;
     const pass = v.lead ? "" : `<button class="btn ${v.noBeat ? "play" : v.passHint ? "play is-advised" : "pass"}${spaced}" id="pass-btn" type="button">${hit}${L("Pass", "不出")}</button>`;
     const hint = v.noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${hit}${L("Hint", "提示")}</button>`;
-    return `${pass}${clockHTML("hex")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${hit}${L("Play", "出牌")}</button>`;
+    return `${pass}${clockHTML("gem")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${hit}${L("Play", "出牌")}</button>`;
 }
 
 function toolsHTML(v) {
