@@ -111,7 +111,7 @@ export function paintFace(brush, who, expr, Wd, Hh, v) {
     default: dotEyes(13, 21);
   }
 }
-function paintVisor(brush, expr, Wd, Hh, v) {
+export function paintVisor(brush, expr, Wd, Hh, v) {
   // the giant's face plate: a dark visor band with one wide cold eye (smug / fierce) or a huge round eye (shock)
   const cx = Wd / 2, cy = Hh * 0.48;
   fillP(brush, rect(-10, -10, Wd + 10, Hh + 10), '#2a2944', 255, 0.005, 0.2);
@@ -157,8 +157,17 @@ export function paintChest(brush, w, h) {  // giant chest plate "1.6T"
   fillP(brush, rect(w * 0.08, h * 0.12, w * 0.92, h * 0.88), '#e8e1cc', 255, 0.004, 0.15);
   brush.set('bigink', PAL.ink, 1.2); brush.polygon(rect(w * 0.08, h * 0.12, w * 0.92, h * 0.88));
   for (const [x, y] of [[0.04, 0.06], [0.96, 0.06], [0.04, 0.94], [0.96, 0.94]]) fillP(brush, ell(x * w, y * h, 9, 9), '#2a2944');
-  brushWord(brush, '1.6T', w / 2 + 6, h * 0.52 + 7, h * 0.52, PAL.ink, 2.6, 0.16, 0.06);
-  brushWord(brush, '1.6T', w / 2, h * 0.52, h * 0.52, '#3a3960', 1.8, 0.16, 0.06);
+  // "1.6" + a wide, upright T (a narrow slanted T reads as "7" at card size)
+  const sz = h * 0.52, cy = h * 0.52;
+  const T_ = (dx, dy, col, wt) => {
+    brush.set('fatink', col, sz / 150 * wt);
+    brush.line(w * 0.6 + dx, cy - sz * 0.46 + dy, w * 0.88 + dx, cy - sz * 0.48 + dy);
+    brush.line(w * 0.74 + dx, cy - sz * 0.47 + dy, w * 0.745 + dx, cy + sz * 0.5 + dy);
+  };
+  brushWord(brush, '1.6', w * 0.33 + 6, cy + 7, sz, PAL.ink, 2.6, 0.16, 0);
+  T_(6, 7, PAL.ink, 2.6);
+  brushWord(brush, '1.6', w * 0.33, cy, sz, '#3a3960', 1.8, 0.16, 0);
+  T_(0, 0, '#3a3960', 1.8);
 }
 export function paintPennant(brush, w, h) { // "71.2%" pennant (triangle flag, teal-slate), text on the left 70%
   fillP(brush, [[0, 0], [w, h * 0.5], [0, h]], '#6b6a9c', 255, 0.004, 0.2);

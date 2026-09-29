@@ -15,7 +15,12 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // ---------------------------------------------------------------------------------------------------
 async function bakeAll(ctx) {
   const tx = {};
-  const B = (key, w, h, paint, extra = {}, src = '') => cachedTexture(THREE, bakeBrushTexture, { width: w, height: h, seed: extra.seed ?? 11, key, background: '#ffffff', wrap: extra.wrap }, paint, src + (extra.src || ''));
+  // the cache hash covers the painter module's source for this texture (PAINTER[key]) as well as the call site
+  const PAINTER = { sign: P.paintSign, hat: P.paintHat, chest: P.paintChest, pennant: P.paintPennant, ticket: P.paintTicket, slip: P.paintTicket,
+    can: P.paintCan, dut: P.paintDUT, gauge: P.paintGauge, clock: P.paintClock, win: P.paintWindows, winlit: P.paintWindows, skin: P.paintSkin,
+    striker: P.paintStriker, die: P.paintDie, pcb: P.paintPCB, sky: P.paintSky };
+  const painterSrc = (key) => { const f = PAINTER[key] || (key.startsWith('scroll') ? P.paintScroll : key.startsWith('gate') ? P.paintGateBlock : key.startsWith('tally') ? P.paintTally : key.startsWith('dice') ? P.paintDice : key.startsWith('face') ? P.paintFace : null); return f ? f.toString() + P.fillP.toString() + (key.startsWith('face') ? P.paintVisor.toString() : '') : ''; };
+  const B = (key, w, h, paint, extra = {}, src = '') => cachedTexture(THREE, bakeBrushTexture, { width: w, height: h, seed: extra.seed ?? 11, key, background: '#ffffff', wrap: extra.wrap }, paint, src + (extra.src || '') + painterSrc(key));
   const faceSrc = P.paintFace.toString() + P.fillP.toString();
   tx.face = {};
   for (const who of ['chip', 'py', 'giant']) {

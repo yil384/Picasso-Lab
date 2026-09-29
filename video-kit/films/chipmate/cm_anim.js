@@ -614,7 +614,7 @@ function updateProps(F) {
   const [tC, tP, t0] = T.tickets;
   const handsMid = () => { const a = st.handL, b = st.handR; return [(a.x + b.x) / 2, (a.y + b.y) / 2 + 0.03, (a.z + b.z) / 2 + 0.04]; };
   // ---- the order ticket: out of the tube, poof into two identical copies ----
-  [tC, tP, t0].forEach(hide);
+  [tC, tP, t0].forEach((m) => { hide(m); m.scale.setScalar(1); });   // every animated value is set every frame (purity)
   t0.material.uniforms.uMap.value = T.tx.ticket; tC.material.uniforms.uMap.value = T.tx.ticket;
   const poofP = [MOUTH[0], 1.78, MOUTH[2] + 0.55];
   if (F >= K.pop && F < K.split) {
@@ -733,6 +733,7 @@ function updateProps(F) {
   }
   // ---- the bug ----
   const bg = T.bug; bg.visible = false;
+  T.bugLegs.forEach((L) => L.g.rotation.set(0, 0, 0));
   if (F >= K.bugPeek && F < K.whack) {
     const peek = sm((F - K.bugPeek) / 5);
     place(bg, [dutAnvil[0] + 0.02, dutAnvil[1] - 0.06 + 0.07 * peek + 0.01 * Math.sin(F * 0.8), dutAnvil[2] + 0.06], [0, 0.4 + 0.3 * Math.sin(F * 0.3), 0]);
