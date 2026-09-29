@@ -5,9 +5,9 @@ pipeline/encode.py only reads PNG frames; render.py --store segments leaves bit-
 
     python3 encode_segs.py OUT master  NAME [--crf 18 --preset slow]
     python3 encode_segs.py OUT cardsrc NAME                      # once: 960x528 lossless intermediate
-    python3 encode_segs.py OUT card    NAME [--max-mb 2.5 --crf-start 30]
+    python3 encode_segs.py OUT card    NAME [--max-mb 2.5 --crf-start 30 --start POSTER]
     python3 encode_segs.py OUT poster  NAME --frame 300
-    python3 encode_segs.py OUT sheet   NAME [--grid 4 --thumb 480]
+    python3 encode_segs.py OUT sheet   NAME [--grid 4 --thumb 480 | --every 24 --cols 6]
     python3 encode_segs.py OUT still   NAME --frame K [--jpg path]
 
 Master: 1920x1080, H.264 High, yuv420p, bt709 tagged, +faststart, no audio (same args as pipeline/encode.py).
@@ -103,16 +103,21 @@ def card_source(out_dir):
     return (src, None) if ok else (None, err)
 
 
-def encode_card(out_dir, name, max_mb, crf_start):
-    """CRF search on the card intermediate (veryslow; light hqdn3d: grain is invisible at ~400 px)."""
+def encode_card(out_dir, name, max_mb, crf_start, start=0):
+    """CRF search on the card intermediate (veryslow; light hqdn3d: grain is invisible at ~400 px). start > 0 rotates
+    the (seamless) loop so it begins on that frame: the <video> poster then equals the first decoded frame, so the card
+    does not jump-cut from the poster to frame 0 when playback starts."""
     src = os.path.join(out_dir, "card_src_lossless.mkv")
     if not os.path.exists(src):
         return None, "run the cardsrc target first"
     out = os.path.join(out_dir, f"{name}_loop.mp4")
     vf = "hqdn3d=1.2:1.2:4:4," + TO_YUV
+    if start:
+        vf = (f"split[a][b];[a]trim=start_frame={start},setpts=PTS-STARTPTS[a1];[b]trim=end_frame={start},setpts=PTS-STARTPTS[b1];"
+              f"[a1][b1]concat=n=2:v=1," + vf)
     crf = crf_start
     for _ in range(8):
-        ok, err = ffmpeg(["-i", src, "-vf", vf, "-c:v", "libx264", "-profile:v", "high", "-preset", "veryslow",
+        ok, err = ffmpeg(["-i", src, "-filter_complex" if start else "-vf", vf, "-c:v", "libx264", "-profile:v", "high", "-preset", "veryslow",
                           "-crf", str(crf), "-pix_fmt", "yuv420p", *BT709, "-movflags", "+faststart", "-an", out],
                          f"card crf{crf}")
         if err:
@@ -170,23 +175,28 @@ def encode_poster(out_dir, name, frame):
     return dst, None
 
 
-def encode_sheet(out_dir, name, grid, thumb):
-    """grid x grid contact sheet of evenly spaced master frames, labelled with frame and seconds (JPEG)."""
+def encode_sheet(out_dir, name, grid, thumb, every=0, cols=6):
+    """Contact sheet of master frames, labelled with frame and seconds (JPEG): grid x grid evenly spaced frames, or with
+    every=24 one frame per second of the loop in `cols` columns."""
     from PIL import Image, ImageDraw
     master = os.path.join(out_dir, f"{name}_master.mp4")
     info, err = probe(master)
     if err:
         return None, err
-    n, k = info["frames"], grid * grid
-    idx = [round(i * n / k) for i in range(k)]
+    n = info["frames"]
+    if every:
+        idx = list(range(0, n, every))
+    else:
+        cols, idx = grid, [round(i * n / (grid * grid)) for i in range(grid * grid)]
+    rows = -(-len(idx) // cols)
     ims, err = frames_png(master, idx)
     if err:
         return None, err
     th, pad = round(thumb * 9 / 16), 6
-    sheet = Image.new("RGB", (grid * (thumb + pad) + pad, grid * (th + pad) + pad), (24, 22, 30))
+    sheet = Image.new("RGB", (cols * (thumb + pad) + pad, rows * (th + pad) + pad), (24, 22, 30))
     d = ImageDraw.Draw(sheet)
     for j, (f, im) in enumerate(zip(idx, ims)):
-        x, y = pad + (j % grid) * (thumb + pad), pad + (j // grid) * (th + pad)
+        x, y = pad + (j % cols) * (thumb + pad), pad + (j // cols) * (th + pad)
         sheet.paste(im.resize((thumb, th), Image.LANCZOS), (x, y))
         lab = f"f{f}  {f / 24:.2f}s"
         d.rectangle([x, y, x + 8 + 7 * len(lab), y + 16], fill=(0, 0, 0))
@@ -209,17 +219,20 @@ def main():
     ap.add_argument("--grid", type=int, default=4)
     ap.add_argument("--thumb", type=int, default=480)
     ap.add_argument("--jpg")
+    ap.add_argument("--start", type=int, default=0, help="card: rotate the loop to begin on this frame")
+    ap.add_argument("--every", type=int, default=0, help="sheet: one frame every N frames (24 = 1 fps)")
+    ap.add_argument("--cols", type=int, default=6)
     a = ap.parse_args()
     if a.target == "master":
         res, err = encode_master(a.out, a.name, a.crf, a.preset)
     elif a.target == "cardsrc":
         res, err = card_source(a.out)
     elif a.target == "card":
-        res, err = encode_card(a.out, a.name, a.max_mb, a.crf_start)
+        res, err = encode_card(a.out, a.name, a.max_mb, a.crf_start, a.start)
     elif a.target == "poster":
         res, err = encode_poster(a.out, a.name, a.frame)
     elif a.target == "sheet":
-        res, err = encode_sheet(a.out, a.name, a.grid, a.thumb)
+        res, err = encode_sheet(a.out, a.name, a.grid, a.thumb, a.every, a.cols)
     else:
         res, err = grab(a.out, a.frame, "null", a.jpg or os.path.join(a.out, f"{a.name}_f{a.frame:04d}.jpg"), ["-q:v", "2"])
     if err:
