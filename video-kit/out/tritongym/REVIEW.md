@@ -352,3 +352,30 @@ Round 9 items confirmed on the r10 frames:
   - Torchy's flame under the pill (f246–258).
   - The nose token.
   - The race-1 watch rim above the desktop crop (f340–346).
+
+## Final — 1920×1080 pass (commit 283e357, the r10 code unchanged)
+
+Rendered in 60–90-frame chunks (`render.py --range`, every command under 8 minutes), SwiftShader at about 3.6 s per frame
+with 3 workers. Checks on the lossless segments: frame 660 is bit-identical to frame 0 (seamless by construction), and 4
+random frames re-rendered in a fresh browser are bit-identical (f10, f305, f377, f426).
+
+| file | spec | size |
+|---|---|---|
+| `tritongym_master.mp4` | 1920×1080, 24 fps, 660 frames (27.5 s), H.264 High yuv420p bt709, CRF 21 (lowest CRF from 18 that fits 70 MB), `+faststart` | 61.6 MB |
+| `tritongym_loop.mp4` | 960×528 centre crop (1.82:1), H.264 High yuv420p, CRF 32 (lowest from 30 under 3.9 MB), `+faststart`, rotated to start on the poster frame f628 | 3.46 MB |
+| `tritongym_poster.webp` | 960×528, f628 (the settled payoff: TRITONGYM, PERF@1 > 1, Kern ahead with its check and star eyes, Oro's jaw drop, Tok star-eyed) | 80 KB |
+| `tritongym_sheet.jpg` | contact sheet, 1 frame per second (28 frames, labelled) | 0.9 MB |
+
+Checks on the delivered files:
+- *Sheet*: every beat reads in order.
+- *400 px card crop* (`sheet.py --card` on the delivered loop): the poster, the 164 stack and matmul card, CLANG!, the dial,
+  race 1, the refine "!", lap 2, Oro's "!", the photo finish, the watch and the payoff all read at 400 and 515 px. Only
+  props sit under the LIVE pill.
+- *Seam*: the master's f659→f0 step is 11.4 against a median frame step of 15.5. The card's own wrap (film f627→f628,
+  inside the payoff hold) is 12.7, and the film seam inside the card is 8.8. Both read as continuous motion.
+- *Poster*: it equals card frame 0 to codec noise (mean absolute difference 5.9).
+- *Files*: both mp4s are faststart (moov before mdat), 660 frames and 27.500 s.
+
+## Status
+Done. Ten review rounds; the final scores (round 10) are CD 8.7, TA 8.6, DE 9.0 and WD 8.8, with no must-fix. The polish
+left open is listed under round 10.
