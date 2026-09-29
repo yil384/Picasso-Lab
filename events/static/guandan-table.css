@@ -3,7 +3,8 @@
    Everything inside .gd-stage is in design px: the stage is 720 high and >= 1280 wide and
    layoutStage() scales it (and rotates it on portrait phones) with one transform, so every
    proportion below holds on every screen. Anchors: top/bottom of the stage, its centre line,
-   --hand-h (height of the tallest hand column) and --actions-bottom, both set by renderTable.
+   --hand-bottom / --hand-h (the hand's bottom edge and tallest column), --actions-bottom and
+   --pill-w (action row), all set by renderTable.
    ========================================================================== */
 
 body[data-screen="table"] { overflow: hidden; overscroll-behavior: none; }
@@ -69,7 +70,8 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .gd-ico { display: block; flex: none; width: 28px; height: 28px; }
 /* Invisible hit slop: on small scales (--gd-s ~ .54 on phones) the small controls still take a
-   >= 44 CSS px tap without growing visually. The bottom pills stop short of the hand. */
+   >= 44 CSS px tap without growing visually. The bottom pills' slop runs from the stage bottom
+   up to just under the hand (handBottom() keeps the hand clear of it). */
 .gd-menu-btn, .gd-round-btn, .gd-tool, .gd-jp-tabs button { position: relative; }
 .gd-jp-tabs button { z-index: 1; }
 .gd-menu-btn::after, .gd-round-btn::after, .gd-tool::after, .gd-jp-tabs button::after {
@@ -80,7 +82,12 @@ body[data-screen="table"] .topbar { display: none; }
     height: max(100%, calc(44px / var(--gd-s, 1)));
     translate: -50% -50%;
 }
-.gd-tool::after { height: max(100%, min(calc(44px / var(--gd-s, 1)), 58px)); }
+.gd-tool::after {
+    top: auto; bottom: -8px;
+    width: max(100% + 16px, calc(44px / var(--gd-s, 1)));
+    height: max(100% + 8px, calc(42px / var(--gd-s, 1)));
+    translate: -50% 0;
+}
 
 .gd-ui-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .gd-ui-layer > :not(.toast) { pointer-events: auto; }
@@ -97,7 +104,7 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-bottombar {
     position: absolute;
     left: 0; right: 0; bottom: 0;
-    height: 50px;
+    height: calc(var(--hand-bottom, 55px) - 5px);
     background: linear-gradient(rgba(10, 14, 22, .42), rgba(10, 14, 22, .58));
     pointer-events: none;
 }
@@ -355,7 +362,7 @@ body[data-screen="table"] .topbar { display: none; }
 /* ---------- seats ---------- */
 .gd-seat { position: absolute; z-index: 6; }
 .gd-seat.is-p1, .gd-seat.is-p3 {
-    top: 190px;
+    top: 184px;
     width: 140px;
     padding: 10px 6px 8px;
     border-radius: 12px;
@@ -520,10 +527,10 @@ body[data-screen="table"] .topbar { display: none; }
     pointer-events: none;
 }
 .gd-slot.is-p2 { left: 0; right: 0; top: 112px; justify-content: center; }
-.gd-slot.is-p1 { left: 176px; top: 196px; }
-.gd-slot.is-p3 { right: 176px; top: 196px; justify-content: flex-end; }
-/* own plays sit at 32% like Tencent, rising only if an unusually tall hand would reach them */
-.gd-slot.is-p0 { left: 0; right: 0; top: min(32%, calc(100% - 55px - var(--hand-h) - 14px - 109px)); justify-content: center; }
+.gd-slot.is-p1 { left: 176px; top: 190px; }
+.gd-slot.is-p3 { right: 176px; top: 190px; justify-content: flex-end; }
+/* own plays sit at 32% like Tencent, rising only if a tall hand would reach them */
+.gd-slot.is-p0 { left: 0; right: 0; top: min(32%, calc(100% - var(--hand-bottom, 55px) - var(--hand-h) - 8px - 109px)); justify-content: center; }
 .gd-played { display: flex; }
 .gd-played .card + .card { margin-left: calc(var(--card-w-small) * -.52); }
 .gd-played.is-enter { animation: gd-play-in 200ms var(--ease-out) both; }
@@ -565,7 +572,7 @@ body[data-screen="table"] .topbar { display: none; }
 /* ---------- hand: 竖排 rank columns (default) or 横排 row ---------- */
 .gd-hand {
     position: absolute;
-    left: 0; right: 0; bottom: 55px;
+    left: 0; right: 0; bottom: var(--hand-bottom, 55px);
     z-index: 10;
     display: flex;
     justify-content: center;
@@ -586,7 +593,7 @@ body[data-screen="table"] .topbar { display: none; }
 /* bottom-right pills: 重选 · 理牌 · 横排 */
 .gd-tools {
     position: absolute;
-    right: 22px; bottom: 6px;
+    right: 22px; bottom: 8px;
     z-index: 12;
     display: flex;
     gap: 12px;
@@ -632,7 +639,8 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-actions > * { pointer-events: auto; }
 .gd-actions .btn {
-    --btn-h: 78px; --btn-fs: 36px; --btn-px: 26px; --btn-minw: 200px;
+    --btn-h: 74px; --btn-fs: 34px; --btn-px: 12px; --btn-minw: 0px;
+    width: var(--pill-w, 200px);
     -webkit-text-stroke: 3px var(--btn-stroke);
     text-shadow: 0 2px 0 var(--btn-stroke);
     box-shadow:
@@ -653,7 +661,7 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-actions .btn:not(.spaced) { --btn-ls: .02em; }
 .gd-actions .btn.is-disabled { cursor: default; }
 #root.action-busy .gd-actions, #root.action-busy .gd-tools { pointer-events: none; }
-.gd-hex { position: relative; flex: none; width: 90px; height: 101px; margin: -14px 0 0; }
+.gd-hex { position: relative; flex: none; width: 90px; height: 101px; margin: -21px 0 -6px; }
 .gd-hex b { top: 44px; -webkit-text-stroke: 6px #4a0a86; }
 .gd-clock.is-3 b, .gd-hex.is-3 b { font-size: 28px; letter-spacing: -.02em; }
 .gd-clock.is-3 b { top: 40px; }

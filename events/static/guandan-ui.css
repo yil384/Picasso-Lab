@@ -356,9 +356,11 @@ img { max-width: 100%; }
 .card[data-card-id] { cursor: pointer; }
 .card svg { display: block; fill: currentColor; overflow: visible; }
 
+/* The row index hugs the top edge (cap line at ~5% of the card height, as Tencent's) so a stacked
+   column's 35% strips show the whole glyph, Q's tail included. */
 .gd-ix {
     position: absolute;
-    left: 6.5%; top: 3.5%;
+    left: 6.5%; top: calc(var(--cw) * -.012);
     display: flex;
     flex-direction: row;
     align-items: center;

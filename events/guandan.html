@@ -2427,14 +2427,21 @@ const STAGE_H = 720;
 const STAGE_MIN_W = 1280;
 const HAND_CARD_W = 102;                    // 102 x 138: 19.1% of the stage height
 const HAND_CARD_H = HAND_CARD_W / .74;
-const HAND_BOTTOM = 55;                     // hand bottom edge, 7.6% of 720
-const HAND_STEP = .35;                      // same-rank stack step, share of the card height
-const HAND_MIN_STEP = .25;                  // tall columns compress down to this
+const HAND_BOTTOM = 55;                     // hand bottom edge, 7.6% of 720 (see handBottom)
+const HAND_STEP = .35;                      // same-rank stack step: the whole rank + suit index shows
 const HAND_MIN_PITCH = .93;                 // columns never cover more than 7% of a card (Tencent: ~1px gap)
-const HAND_MIN_SCALE = .75;                 // before that, hand cards shrink down to this
-const ACTION_ROW_TOP = 312;                 // action row never rises into the side seats' played cards (196 + 109)
-const ACTION_ROW_H = 87;                    // pills 78 + the hexagon's crown
-const ACTION_ROW_GAP = 20;                  // between the row and the tallest hand column
+const HAND_MIN_SCALE = .5;                  // tall columns shrink the cards, never the step, down to this
+const PLAYED_H = 80.6 / .74;                // a played (small) card: 79% of the hand card
+const PARTNER_PLAY_TOP = 112;               // .gd-slot.is-p2
+const SIDE_PLAY_TOP = 190;                  // .gd-slot.is-p1 / .is-p3, inboard of the side seats
+const SIDE_PLAY_INSET = 176;
+const ROW_MIN_TOP = PARTNER_PLAY_TOP + PLAYED_H + 6;  // the action row may rise to just under the partner's cards
+const ACTION_ROW_H = 80;                    // pills 74 + their 3D edge (the hexagon's crown overhangs)
+const ACTION_ROW_GAP = 12;                  // between the row and the tallest hand column
+const PILL_W = 200;                         // action pill: 2x the hand card width (大掼蛋 2026)
+const PILL_MIN_W = 132;
+const ROW_HEX_W = 90;
+const ROW_GAP_X = 22;
 const COLUMN_SUIT_DEPTH = { D: 0, C: 1, H: 2, S: 3 };  // 方块 on top of a column, 黑桃 in front
 const PLACE_LABELS = { zh: ["头游", "二游", "三游", "末游"], en: ["1st", "2nd", "3rd", "4th"] };
 const JIPAI_ORDER = ["wild", "RJ", "BJ", "A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
@@ -2707,9 +2714,17 @@ function moveHandCard(dragId, targetId, before) {
     return true;
 }
 
-// Column mode: the pitch shrinks to fit the stage width down to HAND_MIN_PITCH, tall columns
-// compress their step so the hand stays under the action row, and only past both limits do the
-// hand cards themselves shrink (never below HAND_MIN_SCALE). Played cards keep their size.
+// Hand bottom edge: 7.6% of the stage like Tencent, raised on small screens so the 重选/理牌/横排
+// pills under it keep a 40 CSS px tap target that never reaches into the cards.
+function handBottom() {
+    return Math.max(HAND_BOTTOM, 40 / tableView.layout.s + 6);
+}
+
+// Column mode: every stacked card shows its whole index (the step is fixed at HAND_STEP). The
+// pitch shrinks to fit the stage width down to HAND_MIN_PITCH; a column too tall for the room
+// under the raised action row shrinks all hand cards (down to HAND_MIN_SCALE). Only a 理牌 group
+// taller than that compresses its step. The geometry does not depend on whose turn it is, so the
+// cards never resize when the turn comes round. Played cards keep their size.
 function handGeometry(columns) {
     const { w, h } = tableView.layout;
     const avail = w - 64;
@@ -2720,17 +2735,37 @@ function handGeometry(columns) {
     }
     const n = columns.length;
     const tallest = Math.max(1, ...columns.map(col => col.cards.length));
-    const room = h - HAND_BOTTOM - ACTION_ROW_GAP - ACTION_ROW_H - ACTION_ROW_TOP;
+    const room = h - handBottom() - ACTION_ROW_GAP - ACTION_ROW_H - ROW_MIN_TOP;
     const fitW = n > 1 ? avail / (HAND_CARD_W * (HAND_MIN_PITCH * (n - 1) + 1)) : 1;
-    const fitH = room / (HAND_CARD_H * (1 + HAND_MIN_STEP * (tallest - 1)));
+    const fitH = room / (HAND_CARD_H * (1 + HAND_STEP * (tallest - 1)));
     const k = Math.max(HAND_MIN_SCALE, Math.min(1, fitW, fitH));
     const cardW = HAND_CARD_W * k;
     const cardH = HAND_CARD_H * k;
     const pitch = n > 1 ? Math.min(cardW + 1, (avail - cardW) / (n - 1)) : cardW;
-    const step = tallest > 1
-        ? Math.max(cardH * HAND_MIN_STEP, Math.min(cardH * HAND_STEP, (room - cardH) / (tallest - 1)))
-        : cardH * HAND_STEP;
+    const step = tallest > 1 ? Math.min(cardH * HAND_STEP, Math.max(0, room - cardH) / (tallest - 1)) : cardH * HAND_STEP;
     return { cardW, pitch, step, height: cardH + (tallest - 1) * step };
+}
+
+// How far a side seat's played cards (or its 不出) reach in from the stage edge, in design px.
+function sidePlayReach(i, v) {
+    const entry = game.trickPlays?.[i];
+    if (!entry || v.liveTurn === i) return 0;
+    if (entry.actionType === "pass") return SIDE_PLAY_INSET + 110;
+    const n = valuesFromFirebase(entry.cards).length;
+    return n ? SIDE_PLAY_INSET + 80.6 * (1 + .48 * (n - 1)) : 0;
+}
+
+// The row sits just above the tallest hand column. When that lifts it into the band of the side
+// seats' played cards (大掼蛋 2026 keeps it there, inboard of them), its pills narrow to pass
+// between those plays, down to PILL_MIN_W.
+function actionPillWidth(v, rowTop) {
+    if (!v.canAct || rowTop >= SIDE_PLAY_TOP + PLAYED_H) return PILL_W;
+    const { w } = tableView.layout;
+    const reach = Math.max(...[1, 3].map(pos => sidePlayReach((v.mine + pos) % 4, v)));
+    if (!reach) return PILL_W;
+    const pills = v.lead || v.noBeat ? 2 : 3;
+    const free = w - 2 * (reach + 16) - ROW_HEX_W - pills * ROW_GAP_X;
+    return Math.max(PILL_MIN_W, Math.min(PILL_W, Math.floor(free / pills)));
 }
 
 // Selection survives ticks: it is only pruned to the cards still in hand, and dropped when a
@@ -3325,7 +3360,7 @@ function dealHTML(v) {
     const ox = w / 2;
     const oy = h * .36;
     const targets = {
-        0: [0, h - HAND_BOTTOM - HAND_CARD_H * .6 - oy],
+        0: [0, h - handBottom() - HAND_CARD_H * .6 - oy],
         1: [196 - ox, 250 - oy],
         2: [0, 172 - oy],
         3: [w - 196 - ox, 250 - oy]
@@ -3422,11 +3457,12 @@ function renderTable() {
     const columns = mine >= 0 ? handColumns(handCards, game.currentLevelRank, mine) : [];
     const geo = handGeometry(columns);
     const handH = mine >= 0 ? geo.height : 0;
+    const bottom = handBottom();
+    const actionsBottom = bottom + handH + ACTION_ROW_GAP;
+    t.stage.style.setProperty("--hand-bottom", `${bottom.toFixed(1)}px`);
     t.stage.style.setProperty("--hand-h", `${handH.toFixed(1)}px`);
-    // Just above the tallest column, but never up into the side seats' played cards: a hand
-    // taller than that runs behind the row.
-    const actionsBottom = Math.min(HAND_BOTTOM + handH + ACTION_ROW_GAP, t.layout.h - ACTION_ROW_TOP - ACTION_ROW_H);
     t.stage.style.setProperty("--actions-bottom", `${actionsBottom.toFixed(1)}px`);
+    t.stage.style.setProperty("--pill-w", `${actionPillWidth(v, t.layout.h - actionsBottom - ACTION_ROW_H)}px`);
     t.stage.classList.toggle("is-acting", v.canAct);
 
     renderTableChrome();
