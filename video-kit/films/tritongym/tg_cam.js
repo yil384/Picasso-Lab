@@ -2,7 +2,7 @@
 // A rig is { c: [th, r, y] (camera, ring coords), t: [th, r, y] (target), fov, roll }. Angles are unwrapped, so the
 // rig at F = NF equals the rig at F = 0 plus two turns (= the same camera).
 import { TAU, clamp, lerp, sg, sm, io, ioc, ease } from './tg_time.js';
-import { NF, K, A, R, L2, polar, kernState, oroState, tokState } from './tg_anim.js';
+import { NF, K, A, R, L2, polar, kernState, oroState, tokState, kernTh, oroTh } from './tg_anim.js';
 
 export const WATCH = { th: 3.92, r: 3.75, y: 3.3 };          // the timing stopwatch tower in the infield, mid-straight
 
@@ -52,9 +52,8 @@ function shotStart(F, lap = 0) { // B4 / B7: low 3/4-front two-shot at the start
   return rig([lap + A.start + 0.26 - 0.03 * drift, 10.0 - 0.3 * drift, 1.05], [lap + A.start + 0.03, 6.0, 0.45], 32, -0.02);
 }
 function shotRace1(F) {          // B4: fast low tracking, loses Oro, settles on the lumbering Kern, pans on to the finish
-  const ks = kernState(F), [kth] = toRing(ks.pos);
-  const os = oroState(F), [oth] = toRing(os.pos);
-  const lead = lerp(near(oth, kth), kth, sm((F - K.go1 - 4) / 10));
+  const kth = kernTh(F), oth = oroTh(F);          // unwrapped ring angles (atan2 would wrap past pi mid-straight)
+  const lead = lerp(oth, kth, sm((F - K.go1 - 4) / 10));
   const track = rig([lead - 0.02, 10.4, 0.8], [lead + 0.09, 6.0, 0.5], 33, -0.03);
   const fin = rig([A.finish + 0.02, 12.4, 1.6], [A.finish + 0.08, 5.0, 1.2], 34, 0.0);
   return mix(track, fin, sg(F, K.kernRun1[1] - 20, K.kernRun1[1] - 4, sm));
@@ -88,7 +87,8 @@ function shotRace2(F) {          // B7: start two-shot (rhymes with B4), dolly-z
 }
 function shotPayoff(F) {         // B8: low hero angle at the finish; slow push with an orbit
   const k = sg(F, K.freeze[1], K.away[0], io);
-  return rig([L2 + A.finish + 0.53 - 0.04 * k, 13.9 - 0.5 * k, 1.5], [L2 + A.finish + 0.53 - 0.02 * k, 3.4, 0.98], 35, 0.0);
+  // the orbit runs th-increasing so the finish pylon (nearer the lens) slides left, clear of the letters
+  return rig([L2 + A.finish + 0.53 + 0.035 * k, 13.9 - 0.5 * k, 1.5], [L2 + A.finish + 0.53 + 0.012 * k, 3.4, 0.98], 35, 0.0);
 }
 
 // ------------------------------------------------------------------------------------------------

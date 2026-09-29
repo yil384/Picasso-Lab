@@ -5,6 +5,8 @@ import { TAU, clamp, lerp, sg, sm, io, ob, mj, mjv, ringv, bumpv, hsh, take, hop
 export const NF = 660;
 // station angles (radians) and radii
 export const A = { bench: 0.0, gate: 0.95, scale: 1.95, start: 3.0, finish: 4.85 };
+A.words = A.finish + 0.71;      // the payoff letters, on top of the graphics card (clear of the finish pylon from the payoff lens)
+A.tokWin = A.finish + 1.31;     // Tok's star-eyed spot at the payoff
 export const R = { track: 6.0, lanes: [5.45, 6.55], ours: 6.55, oro: 5.45, bench: 8.3, tokBench: 7.72, kerb: 4.62, scale: 8.15 };
 export const L2 = TAU;   // lap 2 offset
 
@@ -71,7 +73,7 @@ export function kernTh(F) {   // ring angle of Kern in the races (lap offset inc
   return L2 + sprint(F, K.go2, K.cross, A.start, A.finish, 1.5, 8, 0.2);
 }
 export function oroTh(F) {
-  if (F < K.lap2[0]) return sprint(F, K.go1, K.oroRun1[1], A.start, A.finish, 1.4, 16, P1.oEnd);
+  if (F < K.lap2[0]) return sprint(F, K.go1, K.oroRun1[1], A.start, A.finish, 1.1, 16, P1.oEnd);   // the oracle blasts off
   return L2 + sprint(F, K.go2, K.cross + 1.5, A.start, A.finish, 1.45, 18, 0.5);
 }
 
@@ -283,7 +285,7 @@ export function tokState(F) {
     S.pos = benchSpot; S.yaw = yawBench;
     if (F < K.skid + 6) S.sq = ringv(F - K.skid, 0.2, 0.9, 0.25);
     // look up at the stack (it stands to Tok's right), gulp
-    if (F >= K.lookUp[0] && F < K.crack[0]) { S.lookUp = sm((F - K.lookUp[0]) / 5); S.yaw = yawBench + 0.5 * S.lookUp; S.face = F < K.gulp ? 'wide' : 'gulp'; S.tilt = -0.12 * S.lookUp; }
+    if (F >= K.lookUp[0] && F < K.crack[0]) { S.lookUp = sm((F - K.lookUp[0]) / 5) * (1 - sm((F - K.crack[0] + 3) / 3)); S.yaw = yawBench - 0.75 * S.lookUp; S.face = F < K.gulp ? 'wide' : 'gulp'; S.tilt = 0.1 * S.lookUp; }
     if (F >= K.gulp && F < K.gulp + 6) S.sq = 0.1 * Math.sin(Math.PI * (F - K.gulp) / 6);
     // crack knuckles + inhale (balloon swells)
     if (F >= K.crack[0] && F < K.speak[0]) { const u = sg(F, K.crack[0], K.speak[0]); S.face = 'determined'; S.armL = 1.2; S.armR = -1.2; S.armLz = 0.9; S.armRz = -0.9; S.sq = -0.14 * sm(u); if (F < K.crack[0] + 8 && (F - K.crack[0]) % 4 < 2) S.armLz += 0.2; }
@@ -362,9 +364,9 @@ export function tokState(F) {
   }
   // ---- B8: star-eyed leap at the left of the letters; B9: zips back to the bench
   {
-    const base = polar(A.finish + 1.22, 5.3, 0);
+    const base = polar(A.tokWin, 5.3, 0);
     const hopIn = pogo(F, K.cross + 4, K.leap[0] - 2, polar(A.finish + 0.85, 3.3, 0), base, 3, 0.45);
-    S.pos = F < K.leap[0] - 2 ? hopIn.pos : base.slice(); S.sq = F < K.leap[0] - 2 ? hopIn.sq : 0; S.yaw = faceOut(A.finish + 1.22) - 0.55;
+    S.pos = F < K.leap[0] - 2 ? hopIn.pos : base.slice(); S.sq = F < K.leap[0] - 2 ? hopIn.sq : 0; S.yaw = faceOut(A.tokWin) - 0.55;
     S.face = F < K.leap[0] ? 'wide' : 'star';
     if (F >= K.leap[0] && F < K.leap[1]) { const h = hop(F, K.leap[0] + 3, K.leap[1] - 4, 0.9); S.pos[1] += h.y; S.sq = h.sq; S.armL = 2.7; S.armR = -2.7; }
     if (F >= K.away[0]) {
@@ -385,10 +387,10 @@ export function dashState(F) {
   if (F < K.clang + 1) {
     const u = sg(F, K.dash[0], K.clang + 1);
     const th = lerp(A.bench - 0.5, thStick, u);
-    return { vis: true, pos: polar(th, R.oro, 0.45 + 0.1 * Math.sin(u * 9)), yaw: headingAt(th), roll: 0, quiver: 0 };
+    return { vis: true, pos: polar(th, R.oro, 0.9 + 0.12 * Math.sin(u * 9)), yaw: headingAt(th), roll: 0, quiver: 0 };
   }
   const a = F - K.clang;
-  return { vis: true, pos: polar(thStick, R.oro, 0.45), yaw: headingAt(thStick), roll: 0.05, quiver: 0.12 * Math.exp(-a / 14) * Math.sin(a * 2.4) + 0.02 * Math.sin(a * 0.9), droop: sm(a / 40) };
+  return { vis: true, pos: polar(thStick, R.oro, 0.9), yaw: headingAt(thStick), roll: 0.05, quiver: 0.12 * Math.exp(-a / 14) * Math.sin(a * 2.4) + 0.02 * Math.sin(a * 0.9), droop: sm(a / 40) };
 }
 
 // ------------------------------------------------------------------------------------------------

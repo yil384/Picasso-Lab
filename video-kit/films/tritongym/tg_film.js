@@ -168,7 +168,7 @@ function updateTok(F) {
   R_.root.rotation.set(0, S.yaw, 0);
   R_.hips.rotation.set(S.lean || 0, 0, S.tilt || 0);
   R_.body.scale.set(1 + S.sq * 0.5, 1 - S.sq, 1 + S.sq * 0.5);
-  R_.body.rotation.x = -0.25 * (S.lookUp || 0);
+  R_.body.rotation.x = -0.4 * (S.lookUp || 0);
   R_.arms[0].g.rotation.set(S.armLz || 0, 0, -(S.armL ?? 0.35));
   R_.arms[1].g.rotation.set(S.armRz ? -S.armRz : 0, 0, -(S.armR ?? -0.35));
   setMap(R_.bodyM, (R_.faces[S.face] || R_.faces.calm)[vb(F)]);
@@ -268,6 +268,12 @@ function updateDash(F) {
   D.root.position.set(...S.pos);
   D.root.rotation.set(0, S.yaw, 0);
   D.body.rotation.set(S.roll || 0, S.quiver || 0, -0.25 * (S.droop || 0));
+  // pupils: forward while flying, then rolling (dizzy) once stuck
+  const a = F - K.clang;
+  D.eyes.forEach(({ pu }, i) => {
+    if (a < 0) pu.position.set(0.05, 0.02, (i ? 1 : -1) * 0.02);
+    else { const w = a * 0.35 + i * 1.3; pu.position.set(0.05 * Math.cos(w), 0.05 * Math.sin(w), (i ? 1 : -1) * 0.02 + 0.04 * Math.sin(w * 0.7)); }
+  });
 }
 
 // ---- stations
@@ -358,7 +364,7 @@ function updateLetters(F) {
   T.letters.visible = on;
   if (!on) return;
   const a = F - K.slam;
-  const th = A.finish + 0.64;
+  const th = A.words;
   const base = polar(L2 + th, 1.05, 1.08);          // on top of the graphics card, behind the finish
   let y = 0, sy = 1, sxz = 1;
   if (a < 0) { const p = (a + 12) / 12; y = 6 * (1 - p * p); sy = 1.1; sxz = 0.94; }
@@ -386,12 +392,12 @@ export function drawNPR(ctx) {
   const fp = st.kern.vis && st.kern.pos ? st.kern.pos : st.tok.pos;
   npr.focusOn(camera, V(...fp), 4);
   // impact frames: the CLANG and the photo finish (2 frames each, posterised; never a white frame)
-  if (F >= K.clang && F < K.clang + 2) npr.impact(1, { invert: F === K.clang + 1, threshold: 0.58 });
+  if (F >= K.clang && F < K.clang + 2) npr.impact(1, { invert: false, threshold: F === K.clang ? 0.6 : 0.5 });   // two dark panels, never a cream flash
   if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { invert: false, threshold: 0.55 });
   const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 110, width: 1.3, seed }); };
   fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
-  fl(K.slam, 16, polar(L2 + A.finish + 0.64, 1.2, 1.7), 460, 0.8, 9);
-  if (F >= K.slam - 4 && F < K.away[0]) npr.pointLight(V(...polar(A.finish + 0.64, 3.6, 2.4)), { color: 0xffc23d, radius: 3.6, i: 0.5 * sm((F - K.slam + 4) / 8) });
+  fl(K.slam, 16, polar(L2 + A.words, 1.2, 1.7), 460, 0.8, 9);
+  if (F >= K.slam - 4 && F < K.away[0]) npr.pointLight(V(...polar(A.words, 3.6, 2.4)), { color: 0xffc23d, radius: 3.6, i: 0.5 * sm((F - K.slam + 4) / 8) });
   if (F >= K.ripple[0] && F < K.ripple[1] + 10) npr.pointLight(V(...polar(A.gate + 0.1, R.ours, 0.6)), { color: 0x34d399, radius: 1.6, i: 0.6 * (1 - sg(F, K.ripple[1], K.ripple[1] + 10)) });
   if (st.gate.lamp !== 'off') npr.glowAt(ctx, camera, T.gate.lamp.getWorldPosition(V(0, 0, 0)), { radius: 0.3, i: 0.7, color: st.gate.lamp === 'coral' ? 0xef4b5f : 0x10b981, behind: true, seed: 2 });
   npr.render(T.scene, camera);
