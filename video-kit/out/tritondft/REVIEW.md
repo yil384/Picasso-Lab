@@ -85,6 +85,30 @@ full of ticks in the payoff, kept visible beside the numeral (M3). WEB: rotate t
 (M1); the tiny hourglass inside the card band (M2); DING! (M3, as above).
 
 
+## Round 3 — full 960×540 pass after the round-2 fixes (`snaps/full3`)
+
+Four independent reviewer agents (one per lens) on the new pack and individual frames.
+
+| lens | score | verdict |
+|---|---|---|
+| CD | **7.8** | Clear step up: the fail → adjust → lap → DING loop reads without words; Tri, Loupe and Tilt act face-on in their beats; the Pareto gag and the 68× race are in front of the camera; Hoot's takes are funny. Blockers: in the payoff Hoot's face is crossed by the band-gap plank and hidden behind the 68, the right third is a tangle; the S5→S6 kick and the lap brake smear read as ghosted multi-exposures. |
+| TA | **8.0** | All seven round-2 TA must-fixes fixed on screen. New defects: the result passes through the funnel (f565–568) and the agents pass through the tube wall at the seam (f694–716); Tilt's cost pan hangs through the cell in the lap (f466–472); the payoff's right third is an ink knot. |
+| DFT | **8.2** | Every shot maps to a real concept in the right order; scf density and 98% resolved (blank scorecard stamped full of ticks, one ✗; never on the Si result). Blocker: the vc-relax is a 5-frame pop under Clack's drop, with a thin ghost. Should: density specular, band gap too brief, pennies not countable, QE input unlabelled. |
+| WEB | **8.2** | Hue resolved (median 198–203°), tiny hourglass inside the band, DING reads. Blocker: the iris goes to 3–4 perfectly flat navy frames (reads as a video dropout). Should: plank across Hoot's eyes in the poster, ink ~1.6–3× the siblings', grey back face of the turned page, UI-ish marks. Poster pick: f664. |
+
+Fixes made for round 4 (all spot-checked on single frames at 960×540):
+- vc-relax: Clack lets go and is home before the camera locks (f242); the ghost shows alone, then an 18-frame damped
+  relax; thicker ghost; the density lozenges are matte and held longer.
+- Iris: shuts to a pinhole with paper grain printed into the ink (no flat frame), reopens from a pinhole on the knob.
+- Whips: smear capped per window (a continuous streak instead of ghost copies), the S3b→S4 whip horizontal only, a
+  14-frame overshoot brake onto the gauge.
+- Payoff: Hoot hugs the result below its beak, higher camera, Tri on the paper tower, Clack photobombs at the far left
+  (68× drops on its own), Loupe's eye a happy arc; the band gap stays open on the ride to the funnel; Tri and Tilt cheer.
+- Value: navy lifted a step and ink a step lighter than style-comic (dark share 13–17% → 11–15%); the turned page's back
+  is cream paper.
+- Hoot's question is an opaque cream thought bubble below the plate; CLANK! clear of the pan; a hand-lettered PW.X header
+  on the QE input; THUNK! on the giant's landing; bigger plan tickets; the tape ends in front of Loupe.
+
 ## Handoff status
 - Done: storyboard (4 angles judged), full 720-frame scene in `films/tritondft/`, review round 0 (storyboard) and round 1 (first cut: CD 6.4 / TA 6.7 / DFT 6.8 / WEB 7.0).
 - Round-1 fixes are committed and were spot-checked on single frames at 960×540 (whip instead of the smoke cover, S5 re-block + CLANK!, S8a/S8b payoff framing on the card, cream/sky grade, plate clear of the LIVE pill, SFX lettering, pillow pose, held result).
