@@ -3388,7 +3388,8 @@ function renderSeat(i, v) {
     else if (!bottom) tag = `<span class="gd-av-tag">${relation.label}</span>`;
     // Tencent shows nothing above 10 cards; the exact count is a 记牌器 extra.
     const chip = jipaiOpen && !bottom && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
-    const first = v.leader === i ? `<span class="gd-first">${L("Lead", "首")}</span>` : "";
+    // 首 lands with the deal: after the sort, as the 首出 card reaches its seat
+    const first = v.leader === i && v.dealPhase === "done" ? `<span class="gd-first">${L("Lead", "首")}</span>` : "";
     setRegion(`deco${pos}`, tag + chip + first);
     const stat = seat?.type === "human" ? seatMemberStat(name) : "";
     setRegion(`name${pos}`, `<span class="nm">${encodeHTML(name)}</span>${stat ? `<span class="st">${stat}</span>` : ""}`);
