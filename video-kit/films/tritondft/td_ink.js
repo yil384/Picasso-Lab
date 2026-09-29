@@ -1,5 +1,5 @@
 // td_ink.js - hand-drawn marks tracked to the 3D world (p5.brush layer, multiplied, boiling on twos) and the
-// Canvas2D top layer (baked p5.brush SFX sprites, Loupe's one eye behind the lens, '!' takes, the smoke-ring cover).
+// Canvas2D top layer (baked p5.brush SFX sprites, Loupe's one eye behind the lens, '!' takes, verdict marks).
 import { PAL, TAU, clamp, sm, ob, win } from './td_core.js';
 import { bakeWord, drawWord } from './td_letters.js';
 import { star4 } from './td_faces.js';
@@ -144,7 +144,11 @@ function lensEye(W, ctx, g, F) {
   const Lp = st.loupe; if (!Lp || !W.loupe.root.visible) return;
   const hd = W.loupe.head, rr = Lp.rimR - 0.012;
   const c = prj(W, ctx, wp(W, hd, [0, 0, 0.01])), ux = prj(W, ctx, wp(W, hd, [rr, 0, 0.01])), uy = prj(W, ctx, wp(W, hd, [0, rr, 0.01]));
-  if (!c.front) return;
+  // only when the lens is really on screen: a lens just beside or behind the camera projects to a huge affine map
+  // whose ink-filled eye would cover the frame
+  if (!c.front || !ux.front || !uy.front || c.d < 0.4) return;
+  if (c.x < -300 || c.x > ctx.DW + 300 || c.y < -300 || c.y > ctx.DH + 300) return;
+  if (Math.hypot(ux.x - c.x, ux.y - c.y) > 700 || Math.hypot(uy.x - c.x, uy.y - c.y) > 700) return;
   const camToLens = W.camera.position.clone().sub(wp(W, hd, [0, 0, 0])), nrm = wp(W, hd, [0, 0, 1]).sub(wp(W, hd, [0, 0, 0]));
   // (a cartoon cheat: the one eye reads from either side of the lens)
   g.save();
@@ -156,26 +160,6 @@ function lensEye(W, ctx, g, F) {
   if (e === 'big') { const s = 0.55; g.beginPath(); g.ellipse(ex, ey - 0.05, s, s * 1.1, 0, 0, TAU); g.fill(); g.fillStyle = PAL.cream; g.beginPath(); g.ellipse(ex - s * 0.3, ey + s * 0.35, s * 0.24, s * 0.18, 0, 0, TAU); g.fill(); }
   if (e === 'spiral') { g.lineWidth = 0.08; g.beginPath(); for (let k = 0; k <= 40; k++) { const an = k / 40 * TAU * 2.4 + F * 0.4, rad = 0.03 + k * 0.011; const x = ex + Math.cos(an) * rad, y = ey + Math.sin(an) * rad; k ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
   if (e === 'star') { g.beginPath(); star4(ex, ey, 0.5, 0.2).forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fillStyle = '#1d1a40'; g.fill(); }
-  g.restore();
-}
-
-function smokeCover(g, F) {
-  // Big Iron's smoke ring rolls into the lens and covers the frame for 4 frames; the cut to the desk hides under it
-  const a = F - K.cover[0], b = F - K.S3b;
-  let k = 0;
-  if (a >= 0 && F < K.S3b) k = sm(a / 4);
-  if (b >= 0 && b < 8) k = 1 - sm((b - 2) / 6);
-  if (k <= 0) return;
-  const cx = 960 + 80 * Math.sin(F * 0.3), cy = 520, R = 1400 * k;
-  g.save();
-  g.beginPath(); for (let q = 0; q <= 40; q++) { const an = q / 40 * TAU, rr = R * (1 + 0.06 * Math.sin(q * 5.3 + F)); q ? g.lineTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr * 0.8) : g.moveTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr * 0.8); }
-  g.closePath();
-  g.globalAlpha = Math.min(1, 1.2 * k);
-  g.fillStyle = '#e2ecf2'; g.fill();
-  g.lineWidth = 9; g.strokeStyle = PAL.ink; g.stroke();
-  g.clip();
-  g.fillStyle = 'rgba(11,53,88,0.28)';
-  for (let y = 0; y < 1080; y += 22) for (let x = (y / 22) % 2 ? 11 : 0; x < 1920; x += 22) { const dd = Math.hypot(x - cx, y - cy) / (R + 1); const rad = 5.5 * clamp(1.2 - dd) * k; if (rad > 0.6) { g.beginPath(); g.arc(x, y, rad, 0, TAU); g.fill(); } }
   g.restore();
 }
 
@@ -197,7 +181,8 @@ export function lettering(W, ctx, g) {
   const hoot = W.hoot, headW = wp(W, hoot.head, [0, 0.35, 0.1]), hu = pxu(W, ctx, headW), hp = prj(W, ctx, headW);
   const takes = [[K.wake, hp, hu * 0.5, 0.15], [K.deal[0] + 2, prj(W, ctx, wp(W, W.clack.body, [0.2, 0.5, 0])), pxu(W, ctx, wp(W, W.clack.body)) * 0.22, 0.1],
     [K.crash, prj(W, ctx, wp(W, W.tilt.head, [0.12, 0.12, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.22, -0.1], [K.take, hp, hu * 0.55, -0.12]];
-  for (const [f0, p, s, rot] of takes) { const a = F - f0; if (a < 0 || a > 16 || !p.front) continue; bang(g, p.x + s * 0.45, p.y - s * 0.1, s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, jr); }
+  // (kept below the card's top crop: the desktop card shows only y 176..904 of the 1080 design)
+  for (const [f0, p, s, rot] of takes) { const a = F - f0; if (a < 0 || a > 16 || !p.front) continue; bang(g, p.x + s * 0.45, Math.max(p.y - s * 0.1, 200 + s * 1.05), s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, jr); }
   const sw = [[K.glance[0] + 8, K.S4, hp, hu * 0.12], [K.crash + 4, K.click[2] + 6, prj(W, ctx, wp(W, W.tilt.head, [0.14, 0.05, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.06], [K.fail + 2, K.rush[0], prj(W, ctx, wp(W, W.loupe.head, [0.25, 0.15, 0])), pxu(W, ctx, wp(W, W.loupe.head)) * 0.06]];
   for (const [a0, a1, p, s] of sw) if (win(F, a0, a1) && p.front) sweat(g, p.x + s * 2, p.y - s * 0.8 + (F - a0) * 0.6, s);
   // the Analyzer's verdicts on the job: X when the check fails (carried round until the refined lap), a check after the DING
@@ -207,7 +192,7 @@ export function lettering(W, ctx, g) {
     if (c.front) mark(g, c.x, Math.max(c.y, 250), clamp(0.16 * u, 18, 90) * ob((F - f0) / 5), fail ? 'x' : 'v', fail ? 0.08 : -0.06);
   }
   const vr = F - K.roar;
-  if (vr >= 0 && vr < 30) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 40, 260, 520), vr, { life: 30, rot: -0.1, scale: 1.05, popF: 4 }); }
+  if (vr >= 0 && vr < 22) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 40, 260, 520), vr, { life: 22, rot: -0.1, scale: 1.05, popF: 4 }); }
   const ck = F - K.crash;
   if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 160, 420, 1500), clamp(pp.y + 60, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;

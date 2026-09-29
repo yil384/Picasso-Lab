@@ -151,12 +151,15 @@ const backOut = (x) => { x = Math.max(0, Math.min(1, x)); const s = 1.9; return 
 export function drawWord(g, sprites, F, x, y, age, { life = 26, rot = -0.08, scale = 1, popF = 5, fadeF = 5, squash = 0 } = {}) {
   if (age < 0 || age >= life || !sprites) return;
   const img = sprites[Math.floor(F / 2) % sprites.length];
-  const k = backOut(age / popF) * scale;
-  const fade = 1 - Math.max(0, Math.min(1, (age - (life - fadeF)) / fadeF));
+  // exit: no alpha fade (a ghosted word over the next shot reads as a web cross-fade); it swells a touch, then
+  // shrinks to nothing like a popped balloon
+  const out = Math.max(0, Math.min(1, (age - (life - fadeF)) / fadeF));
+  const pop = out < 0.3 ? 1 + 0.4 * out : 1.12 * (1 - out) / 0.7;
+  const k = backOut(age / popF) * scale * pop;
+  if (k < 0.02) return;
   const wob = Math.sin(age * 0.9) * 0.035 * Math.max(0, 1 - age / life);
   g.save();
   g.translate(x, y); g.rotate(rot + wob); g.scale(k * (1 + squash), k * (1 - squash));
-  g.globalAlpha = fade;
   g.drawImage(img, -img.width / 2, -img.height / 2);
   g.restore();
 }

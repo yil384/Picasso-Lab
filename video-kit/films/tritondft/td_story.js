@@ -452,7 +452,7 @@ function updateTri(F) {
     armR = lerp(-0.4, -2.6, sm((F - K.catch + 8) / 6)); expr = F < K.catch ? 'look' : 'surprised';
     if (F >= K.catch) sq = ringv(F - K.catch, 0.14, 1.0, 0.25);
   }
-  if (win(F, K.read[0] - 4, K.book[0])) { expr = 'squint'; armR = -1.5; armL = 1.5; armLx = -0.6; armRx = -0.6; }
+  if (win(F, K.read[0] - 4, K.book[0])) { expr = 'squint'; armR = 1.3; armL = 0.5; armRx = -0.3; lean = 0.08 * Math.sin((F - K.read[0]) * 0.5); }   // card held out to the side
   if (win(F, K.book[0], K.book[1])) {                // a method book from the Library hub: tug, riffle, snap shut
     const toHub = faceYaw(home, [L.bench.x, 0, L.bench.z]);
     yaw = lerp(yaw, toHub, sm((F - K.book[0]) / 4)); armR = lerp(-0.4, -2.2, sm((F - K.book[0]) / 5)); lean = 0.15 * arc(F, K.book[0], K.book[0] + 10);
@@ -692,9 +692,9 @@ function updateProps(F) {
     C.position.set(lerp(p0[0], mouth.x, k), lerp(p0[1], mouth.y - 0.05, k) + 0.35 * Math.sin(Math.PI * k), lerp(p0[2], mouth.z, k));
     C.rotation.set(-Math.PI / 2 * (1 - k), 0.1 + k * 3, 0.2 * k); C.scale.set(1 - 0.7 * k, 1 - 0.5 * k, 1);
   }
-  if (win(F, K.catch + 4, K.book[0] + 4)) {          // Tri reads it
-    C.visible = true; const hp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0));
-    C.position.set(hp.x, hp.y + 0.14, hp.z + 0.04); C.rotation.set(0, W.tri.root.rotation.y, 0); C.scale.setScalar(ob((F - K.catch - 4) / 5));
+  if (win(F, K.catch + 4, K.book[0] + 4)) {          // Tri reads it, held out to its side so its squint stays in view
+    C.visible = true; const cp = W.tri.root.localToWorld(V3(0.36, 0.5 + 0.015 * Math.sin(F * 0.7), 0.12));
+    C.position.copy(cp); C.rotation.set(-0.08, W.tri.root.rotation.y - 0.45, 0.06); C.scale.setScalar(ob((F - K.catch - 4) / 5));
   }
   const tri = station(TRI_TH), cl = station(ST.exec);
   W.tickets.forEach((m, k) => {
@@ -833,14 +833,16 @@ const rigLap = (F) => {       // ride round with the job (close orbit synced to 
   const dx = cp[0] - tg[0], dz = cp[2] - tg[2], h = Math.hypot(dx, dz), dy = 1.15 - 0.36;
   return { tg: [tg[0], 0.36, tg[2]], az: Math.atan2(dx, dz), el: Math.atan2(dy, h), r: Math.hypot(h, dy), fov: 40, roll: 0.03 * Math.sin(Math.PI * k) };
 };
-const rigS7 = (F) => {        // gauge -> tilt up with the planks -> pan to the funnel as the result is sucked up
-  const gp = station(ST.anlz - 0.36, 1.5), an = station(ST.anlz), jp = jobPos(F), tri = station(ST.plan);
+const rigS7 = (F) => {        // gauge -> tilt up with the planks -> ride with the result to the funnel -> look up as it's gulped
+  const gp = station(ST.anlz - 0.36, 1.5), an = station(ST.anlz), jp = jobPos(F), fp = W.tube.curve.getPointAt(1);
   const gauge = { tg: [lerp(an[0], gp[0], 0.6), 0.36, lerp(an[2], gp[2], 0.6)], az: 0.6, el: 0.2, r: 1.9, fov: 34, roll: 0 };
   const cell = { tg: [jp[0], 0.7, jp[2]], az: 0.55, el: 0.18, r: 2.3, fov: 34, roll: 0.02 };
-  const fun = { tg: [tri[0] + 0.25, 1.0, tri[2] + 0.2], az: 0.35, el: 0.02, r: 3.2, fov: 34, roll: 0.02 };
+  const ride = { tg: [jp[0], 0.8, jp[2]], az: 0.45, el: 0.12, r: 2.6, fov: 34, roll: 0.02 };
+  const up = { tg: [fp.x + 0.1, fp.y - 0.4, fp.z + 0.1], az: 0.35, el: -0.1, r: 2.6, fov: 36, roll: -0.04 };
   if (F < K.planks[0]) return gauge;
   if (F < K.toFunnel[0] + 2) return mixRig(gauge, cell, io((F - K.planks[0]) / 10));
-  return mixRig(cell, fun, io((F - K.toFunnel[0] - 2) / 14));
+  if (F < K.suck[0] - 2) return mixRig(cell, ride, io((F - K.toFunnel[0] - 2) / 8));
+  return mixRig(ride, up, io((F - K.suck[0] + 2) / 8));
 };
 const rigS8a = (F) => {       // medium on Hoot and both hourglasses: the answer lands as the tiny one runs dry
   const k = sm((F - K.S8a - 8) / 30);
@@ -850,7 +852,7 @@ const rigS8 = (F) => {        // the desk-top wide (payoff framing); slow arc du
   const a = sm((F - K.S8b) / 60);
   return { tg: [L.desk.x + 0.02, 0.36, L.desk.z + 0.1], az: lerp(0.06, -0.03, a), el: 0.12, r: lerp(3.6, 3.4, a), fov: 40, roll: 0 };
 };
-const WHIPS = [[80, 100], [274, 288], [312, 328], [452, 466], [570, 588]];
+const WHIPS = [[80, 100], [274, 288], [312, 328], [452, 466], [564, 588]];
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);
@@ -871,8 +873,8 @@ export function camRig(F) {
   if (F < K.lap[0] + 6) return mixRig(rigKnob(F), rigLap(F), io((F - K.go) / (K.lap[0] + 6 - K.go)));
   if (F < K.lap[1]) return rigLap(F);
   if (F < K.S7 + 4) return mixRig(rigLap(F), rigS7(F), ease.inOutQuint(clamp((F - K.lap[1]) / (K.S7 + 4 - K.lap[1]))));
-  if (F < 572) return rigS7(F);
-  if (F < K.S8a + 14) return mixRig(rigS7(F), rigS8a(F), ease.inOutQuint(clamp((F - 572) / 14)));   // whip left with the return bulge
+  if (F < 566) return rigS7(F);
+  if (F < K.S8a + 10) return mixRig(rigS7(F), rigS8a(F), ease.inOutQuint(clamp((F - 566) / 20)));   // whip left with the return bulge
   if (F < K.S8b - 6) return rigS8a(F);
   if (F < K.S8b + 6) return mixRig(rigS8a(F), rigS8(F), ease.inOutCubic(clamp((F - K.S8b + 6) / 12)));   // pull back for the slams
   if (F < K.S9 + 4) return rigS8(F);
@@ -883,7 +885,26 @@ function updateCamera(ctx, F) {
   st.smear = applyCamera(W.camera, ctx, F, camRig, { whips: WHIPS, hits: HITS, hand: { amp: 0.02, rot: 0.003, speed: 4, seed: 5 } });
   if (Q.get('cam')) { const c = Q.get('cam').split(',').map(Number); W.camera.position.set(c[0], c[1], c[2]); W.camera.up.set(0, 1, 0); W.camera.lookAt(c[3], c[4], c[5]); if (c[6]) { W.camera.fov = c[6]; W.camera.updateProjectionMatrix(); } W.camera.updateMatrixWorld(true); st.smear = [0, 0]; }
   ctx.camera = W.camera;
+  if (Q.get('nearchk')) nearCheck(F);
   if (Q.get('dbg')) { const f = (v) => v.toArray().map((x) => x.toFixed(2)).join(','); console.log(`F${F} cam ${f(W.camera.position)} tri ${f(W.tri.root.position)} clack ${f(W.clack.root.position)} loupe ${f(W.loupe.root.position)} tilt ${f(W.tilt.root.position)} con ${f(W.con.root.position)} cart ${f(W.cart.getWorldPosition(V3(0, 0, 0)))}`); }
+}
+
+/** authoring aid (?nearchk=1): cast a grid of rays from the camera and log geometry closer than the near plane
+ *  (+ a margin), i.e. anything the camera is about to cut open */
+function nearCheck(F) {
+  const cam = W.camera, T = W.THREE, rc = new T.Raycaster(), seen = new Map();
+  rc.near = 0; rc.far = cam.near + 0.1; rc.layers.enableAll();
+  for (let i = 0; i <= 12; i++) for (let j = 0; j <= 6; j++) {
+    rc.setFromCamera(new T.Vector2(-1 + i / 6, -1 + j / 3), cam);
+    for (const h of rc.intersectObjects(W.scene.children, true)) {
+      if (!h.object.visible || seen.has(h.object)) continue;
+      let vis = true; for (let o = h.object; o; o = o.parent) if (!o.visible) vis = false;
+      if (vis) seen.set(h.object, h.distance);
+    }
+  }
+  if (!seen.size) return;
+  const p = new T.Vector3();
+  console.log(`NEAR F${F} ` + [...seen].slice(0, 5).map(([m, d]) => { m.getWorldPosition(p); return `${m.geometry.type}@${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)} d=${d.toFixed(2)}`; }).join(' | '));
 }
 
 // ---------------------------------------------------------------------------------------------------
