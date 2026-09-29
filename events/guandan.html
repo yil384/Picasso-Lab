@@ -3575,10 +3575,13 @@ function playFlightSources(v, animate) {
 // FLIP: each played card starts at its source (in stage design px, so the rotated stage works too)
 // and settles into the slot in ~200 ms. Transform and opacity only. My cards lift out over the
 // hand (the slot rides above it until they land) instead of sliding out from under its columns.
-function runPlayFlights(flights, v) {
+// In a side slot drawn smaller (actionRowFit's sides) the card's transform is scaled with it.
+function runPlayFlights(flights, v, sides) {
     const centre = r => stagePoint(r.left + r.width / 2, r.top + r.height / 2);
     flights.forEach((src, i) => {
-        const slot = tableView.regions[`slot${visualSeatPos(i, v.mine)}`];
+        const pos = visualSeatPos(i, v.mine);
+        const slot = tableView.regions[`slot${pos}`];
+        const fitK = sides[pos]?.k || 1;
         const runs = [];
         slot.querySelectorAll(".gd-played .card").forEach((el, k) => {
             const from = src.rects ? src.rects.get(el.dataset.pid) : src.avatar;
@@ -3586,7 +3589,7 @@ function runPlayFlights(flights, v) {
             const a = centre(from);
             const b = centre(el.getBoundingClientRect());
             runs.push(el.animate([
-                { transform: `translate(${(a.x - b.x).toFixed(1)}px, ${(a.y - b.y).toFixed(1)}px) scale(${src.scale.toFixed(3)})`, opacity: src.rects ? 1 : 0 },
+                { transform: `translate(${((a.x - b.x) / fitK).toFixed(1)}px, ${((a.y - b.y) / fitK).toFixed(1)}px) scale(${(src.scale / fitK).toFixed(3)})`, opacity: src.rects ? 1 : 0 },
                 { transform: "none", opacity: 1 }
             ], { duration: 210, delay: src.rects ? 0 : k * 16, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" }).finished);
         });
@@ -3829,6 +3832,7 @@ function renderTable() {
     setRegion("watermark", `<b>${L("PICASSO Guandan", "PICASSO 掼蛋")}</b><span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span>`);
     const flights = playFlightSources(v, !freshMount);
     const bursts = [];
+    const sideKeys = { 1: t.keys.slot1, 3: t.keys.slot3 };
     [0, 1, 2, 3].forEach(i => {
         renderSeat(i, v);
         renderSlot(i, v, !freshMount, flights, bursts);
@@ -3839,10 +3843,13 @@ function renderTable() {
     t.stage.style.setProperty("--pill-w", `${fit.pill}px`);
     t.stage.style.setProperty("--row-gap", `${fit.gap}px`);
     [1, 3].forEach(pos => {
-        const style = t.regions[`slot${pos}`].style;
+        const slot = t.regions[`slot${pos}`];
         const side = fit.sides[pos];
-        style.setProperty("--fit-k", side ? side.k.toFixed(3) : "1");
-        style.setProperty("--fit-y", `${side ? side.y.toFixed(1) : 0}px`);
+        slot.style.setProperty("--fit-k", side ? side.k.toFixed(3) : "1");
+        slot.style.setProperty("--fit-y", `${side ? side.y.toFixed(1) : 0}px`);
+        // a play that just landed takes its fit at once, so its flight and burst aim where it is
+        // drawn; the ease is for a fit that changes under a play already there
+        if (t.keys[`slot${pos}`] !== sideKeys[pos]) slot.getAnimations().forEach(a => a.finish());
     });
     t.rot.style.setProperty("--toast-y", `${stageToastY(v, rowTop).toFixed(1)}px`);
     setRegion("tools", toolsHTML(v));
@@ -3862,7 +3869,7 @@ function renderTable() {
     setRegion("result", resultId ? `${resultId}:${uiLang}:${isHost()}:${t.result.peek}` : "", resultId ? () => resultHTML(v) : "");
     refreshSelectionUI();
     updateTurnClockDOM();
-    runPlayFlights(flights, v);
+    runPlayFlights(flights, v, fit.sides);
     runBursts(bursts);
     maybeToastTableMessage();
 }
