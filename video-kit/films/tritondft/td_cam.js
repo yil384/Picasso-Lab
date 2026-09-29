@@ -1,5 +1,6 @@
 // td_cam.js - closed-form camera: orbit rigs {tg, az, el, r, fov, roll}, blends, whip smear from the real
 // view-direction yaw rate, decaying hash shakes on hits, loop-safe handheld drift. Pure functions of the frame.
+import * as THREE from 'three';
 import { orbit, handheld, applyRig, yawSmear } from './npr/camera.js';
 import { lerp, hsh, TAU, FPS } from './td_core.js';
 
@@ -40,6 +41,16 @@ export function applyCamera(cam, ctx, F, camRig, { whips = [], hits = [], hand =
   const w = whips.find(([a, b]) => F > a && F < b);
   let sx = w && Math.abs(dy * FPS) > 0.5 ? yawSmear(cam, dy * FPS, FPS) * 0.9 : 0;
   let sy = w && Math.abs(dp * FPS) > 0.5 ? -yawSmear(cam, dp * FPS, FPS) * 0.9 : 0;
+  if (w) {
+    // a truck or crane barely turns the camera, so also measure how far the world at the focus point slides on screen
+    // between F-0.5 and F+0.5; keep whichever streak is longer
+    const P = new THREE.Vector3(...rg.tg), c2 = cam.clone(), scr = (f) => {
+      const q = camRig(f); applyRig(c2, orbit({ target: q.tg, radius: q.r, az: q.az, el: q.el, fov: q.fov, roll: q.roll }), {});
+      c2.updateProjectionMatrix(); c2.updateMatrixWorld(true); const v = P.clone().project(c2); return [v.x * ctx.DW / 2, -v.y * ctx.DH / 2];
+    };
+    const a0 = scr(F - 0.5), a1 = scr(F + 0.5), px = (a1[0] - a0[0]) * 0.9, py = (a1[1] - a0[1]) * 0.9;
+    if (Math.hypot(px, py) > Math.hypot(sx, sy)) { sx = px; sy = py; }
+  }
   if (w && w[3] === 'h') sy = 0;
   const L = Math.hypot(sx, sy);
   if (w && w[2] && L > w[2]) { sx *= w[2] / L; sy *= w[2] / L; }

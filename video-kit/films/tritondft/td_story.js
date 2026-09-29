@@ -957,7 +957,7 @@ const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the
   return { tg: [L.desk.x + 0.1, 0.46, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.15, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };   // a touch higher: Hoot's face clears the 68
 };
 // [a, b, cap px, 'h' = horizontal smear only: vertical tilts would streak like rain]
-const WHIPS = [[80, 100], [101, 108, 40, 'h'], [230, 243, 40, 'h'], [280, 294], [312, 330, 0, 'h'], [452, 466, 60], [500, 512, 60], [538, 548, 40, 'h'], [561, 588, 0, 'h'], [618, 630, 40]];
+const WHIPS = [[80, 100], [101, 108, 40, 'h'], [230, 243, 40, 'h'], [280, 294], [312, 330, 0, 'h'], [452, 466, 60], [500, 509, 60], [538, 548, 40, 'h'], [561, 588, 0, 'h'], [618, 630, 40]];
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);
