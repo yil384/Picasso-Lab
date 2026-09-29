@@ -37,7 +37,7 @@ export const K = {
   hop4: [322, 330], read4: [330, 364], bead1: 334, fail: 362, rush: [372, 384],
   click: [398, 410, 430], crash: 410, cutoff: 438, level: 446, go: 452,
   lap: [460, 504], salute: 470, huff: 484,
-  read7: 510, ding: 530, planks: [534, 546], toFunnel: [548, 562], suck: [562, 568],
+  read7: 510, ding: 530, planks: [534, 546], toFunnel: [548, 561], suck: [561, 568],
   land: 590, take: 590, outs: [598, 604, 610], clack68: [622, 636],
   slam: [628, 636, 644],
   puffs: 686, handBack: [686, 692], dive: [692, 697, 702, 707], yawn: [686, 700], lay: [698, 712], flop: [710, 718],
@@ -82,6 +82,18 @@ export async function buildAll(w) {
   W.cart = new THREE.Group(); W.turn.add(W.cart);
   add(new THREE.CylinderGeometry(0.2, 0.24, 0.1, 32), { color: COL.pop, hatchMode: 'u', rim: 0.8, shadeColor: COL.popD, shadeMix: 0.45 }, { outline: 0.8 }, [0, 0.05, 0], [0, 0, 0], W.cart);
   W.si = buildSilicon(W, 0.4, W.cart); W.si.g.position.set(0, 0.33, 0);
+  // vc-relax: a dashed vermilion ghost of the unrelaxed cell (0.88), 3D so nearer atoms cover it where they overlap
+  W.ghost = new THREE.Group(); W.si.g.add(W.ghost); W.ghost.visible = false;
+  { const A = W.si.A, h = A * 0.88 / 2, dashGeo = new THREE.CylinderGeometry(A * 0.016, A * 0.016, A * 0.88 / 9, 6);
+    const corners = [[-h, -h, -h], [h, -h, -h], [-h, h, -h], [h, h, -h], [-h, -h, h], [h, -h, h], [-h, h, h], [h, h, h]];
+    const E = [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3], [2, 6], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]];
+    for (const [i, j] of E) for (let q = 0; q < 5; q++) {
+      const pa = new THREE.Vector3(...corners[i]), pb = new THREE.Vector3(...corners[j]), t = (q * 2 + 0.5) / 9;
+      const m = add(dashGeo, { color: COL.pop, hatch: 0, rim: 0.3, toneBias: 0.1 }, { outline: 0.3, cast: false }, [0, 0, 0], [0, 0, 0], W.ghost);
+      m.position.copy(pa.clone().lerp(pb, t + 0.5 / 9)); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pb.clone().sub(pa).normalize());
+    }
+    for (const c of corners) add(new THREE.SphereGeometry(A * 0.035, 10, 8), { color: COL.pop, hatch: 0, rim: 0.3 }, { outline: 0.3, cast: false }, c, [0, 0, 0], W.ghost);
+  }
   // scf: electron density on the 16 bonds as flat, rimless sky-blue lozenges round each bond stick (depth-correct, no ink
   // rim or highlight, so they never read as a second species); grown in S3 only
   W.dens = W.si.bonds.map((b) => {
@@ -202,8 +214,8 @@ async function buildProps(W) {
       brush.set('inkpen', '#16162c', 0.8);
       if (k % 4 === 0) { brush.rect(x, y, 16, 16); brush.line(x, y, x + 6, y - 6); brush.line(x + 16, y, x + 22, y - 6); brush.line(x + 6, y - 6, x + 22, y - 6); }
       if (k % 4 === 1) { const pts = []; for (let q = 0; q <= 6; q++) pts.push([x + 10 + 10 * Math.cos(q * Math.PI / 3), y + 6 + 10 * Math.sin(q * Math.PI / 3)]); brush.spline(pts, 0); }
-      if (k % 4 === 2) { brush.circle(x + 6, y + 6, 5, 0.2); brush.circle(x + 18, y + 6, 5, 0.2); brush.line(x + 11, y + 6, x + 13, y + 6); }
-      if (k % 4 === 3) { brush.line(x, y + 14, x + 10, y - 2); brush.line(x + 10, y - 2, x + 20, y + 14); brush.line(x, y + 14, x + 20, y + 14); }
+      if (k % 4 === 2) { brush.rect(x, y - 2, 18, 18); for (const [dx, dy] of [[0, 0], [18, 0], [0, 18], [18, 18], [9, 9]]) brush.circle(x + dx, y - 2 + dy, 2.2, 0); }   // bcc (iron)
+      if (k % 4 === 3) { for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) brush.circle(x + a * 9, y - 2 + b * 9, (a + b) % 2 ? 1.6 : 3.2, 0); }   // rock-salt
     };
     let k = 0;
     for (let r = 0; r < 7; r++) for (let c = 0; c < 6; c++) {
@@ -216,7 +228,7 @@ async function buildProps(W) {
     }
   });
   // DFTBench: a sheet of many material doodles, blank when Loupe brings it; the stamp ripples ticks across it (one faint X)
-  W.scoreTex = [await scoreTex(-1, 'score-blank-v1'), await scoreTex(0.5, 'score-half-v1'), await scoreTex(1.01, 'score-v1')];
+  W.scoreTex = [await scoreTex(-1, 'score-blank-v2'), await scoreTex(0.5, 'score-half-v2'), await scoreTex(1.01, 'score-v2')];
   const scTex = W.scoreTex[0];
   // Loupe brings the scorecard out of the tube for the payoff and takes it back in S9 (it is not on the desk before the run)
   W.scoreG = new THREE.Group(); W.scoreG.position.set(SCORE[0], 0, SCORE[2]); scene.add(W.scoreG);
@@ -276,6 +288,7 @@ function updateTurn(F) {
   if (F >= 700) s = lerp(1, 0.88, sm((F - 700) / 12));                  // reset off screen for the loop
   W.si.inner.scale.setScalar(s);
   st.siScale = s;
+  W.ghost.visible = win(F, K.relax[0] - 5, K.relax[1] + 6);
   const d = win(F, K.scf[0], K.cover[1] + 2) ? ob((F - K.scf[0]) / 10) * (1 - sm((F - K.cover[1] + 4) / 6)) : 0;
   W.dens.forEach((m) => { m.visible = d > 0.02; m.scale.set(0.021 * d + 0.001, m.userData.len * 0.3 * Math.max(0.2, d), 0.021 * d + 0.001); });
   st.jobV = Math.abs(jobTheta(F + 0.5) - jobTheta(F - 0.5));
@@ -297,9 +310,11 @@ function updateCart(F) {
   }
   if (C.parent !== W.scene) W.scene.add(C);
   C.scale.setScalar(1);
-  if (F < K.suck[1]) {                                    // up into the funnel
-    const k = ic((F - K.suck[0]) / (K.suck[1] - K.suck[0])), p0 = station(135 * D, L.turn.rJob), f = W.tube.curve.getPointAt(1);
-    C.position.set(lerp(p0[0], f.x, k), lerp(0.06, f.y - 0.3, k), lerp(p0[2], f.z, k)); C.rotation.set(0, k * 2, 0); C.scale.set(1 - 0.4 * k, 1 + 0.3 * k, 1 - 0.4 * k);
+  if (F < K.suck[1]) {                                    // up into the funnel: squeezed thin below the mouth, then sucked inside it
+    const k = (F - K.suck[0]) / (K.suck[1] - K.suck[0]), p0 = station(135 * D, L.turn.rJob), f = W.tube.curve.getPointAt(1);
+    const k1 = sm(k / 0.5), k2 = ic(clamp((k - 0.5) / 0.5)), mouthY = f.y - 0.34;
+    C.position.set(lerp(p0[0], f.x, k1), lerp(0.06, mouthY - 0.62, k1) + k2 * 0.75, lerp(p0[2], f.z, k1)); C.rotation.set(0, k * 2, 0);
+    C.scale.set(lerp(1, 0.26, k1), lerp(1, 1.25, k1), lerp(1, 0.26, k1));
     return;
   }
   // pops out of the desk mouth and lands in Hoot's wings; handed to Tri at the end
@@ -345,8 +360,8 @@ function updateHoot(F) {
     expr = 'tired'; headTilt = 0.12 + 0.05 * Math.sin(TAU * F / 64); bodyLean = 0.04;
     if (win(F, K.gust[0], K.gust[1] + 6)) { const k = arc(F, K.gust[0], K.gust[1] + 6); bodyLean -= 0.12 * k; tufts = -0.6 * k; expr = 'squint'; }
     if (win(F, K.page[0] - 4, K.page[1] + 2)) { const k = arc(F, K.page[0] - 4, K.page[1] + 2); wingR = lerp(-0.15, -0.9, k); wingRx = 0.6 * k; headTilt = 0.22; }
-    if (win(F, K.glance[0], K.S4)) { headYaw = -0.55 * sm((F - K.glance[0]) / 4); expr = F < K.glance[0] + 8 ? 'look' : 'worried'; headTilt = 0.05; }
-    if (win(F, K.glance[0] + 8, K.S4)) headYaw = 0.6 * sm((F - K.glance[0] - 8) / 4);
+    if (win(F, K.glance[0], K.S4)) { headYaw = -0.32 * sm((F - K.glance[0]) / 4); expr = F < K.glance[0] + 8 ? 'look' : 'worried'; headTilt = 0.05; }
+    if (win(F, K.glance[0] + 8, K.S4)) headYaw = 0.34 * sm((F - K.glance[0] - 8) / 4);
   } else {
     // the answer arrives: the big take, the hug, relief; S9: yawn, lay the hourglass down
     const a = F - K.take;
@@ -437,6 +452,11 @@ function updateHourglasses(F) {
 // ---- the tube: bulge + capsule ----
 function updateTube(F) {
   const T0 = W.tube, b = T0.bulge;
+  const gulp = win(F, K.suck[0] + 1, K.suck[1] + 4) ? arc(F, K.suck[0] + 1, K.suck[1] + 4) : 0;
+  T0.fun.scale.set(1 + 0.16 * gulp, 1 - 0.1 * gulp, 1 + 0.16 * gulp);                       // the funnel gulps the result
+  let spit = 0;
+  for (const f0 of [K.land - 2, ...K.outs, K.slam[1] + 2, ...K.dive.map((d) => d + 6)]) if (win(F, f0 - 2, f0 + 4)) spit = Math.max(spit, arc(F, f0 - 2, f0 + 4));
+  T0.mouth.scale.setScalar(1 + 0.18 * spit);                                                // the desk mouth bulges as things pass
   let u = -1;
   if (F >= K.bulge[0] && F < K.bulge[1]) u = ease.inOutSine(clamp((F - K.bulge[0]) / (K.bulge[1] - K.bulge[0])));
   if (F >= K.suck[1] && F < K.land) u = 1 - ease.inOutSine(clamp((F - K.suck[1]) / (K.land - K.suck[1])));
@@ -466,7 +486,7 @@ function outState(k, F) {
   if (F < K.S8a - 10) return null;
   const hidden = { hidden: true, pos: [0, -9, 0], yaw: 0, sq: 0, expr: 'happy', arm: 0 };
   if (F < t0) return hidden;
-  if (F >= K.dive[k] + 10) return F < NF - 3 ? hidden : null;
+  if (F >= K.dive[k] + 9) return F < NF - 3 ? hidden : null;
   const mouth = W.tube.curve.getPointAt(0), spot = OUT_SPOT[k];
   const a = F - t0, k1 = clamp(a / 12);
   let pos = [lerp(mouth.x, spot[0], k1), lerp(mouth.y - 0.1, spot[1], k1) + 0.4 * Math.sin(Math.PI * k1), lerp(mouth.z, spot[2], k1)];
@@ -474,8 +494,16 @@ function outState(k, F) {
   const yaw = faceYaw(pos, [spot[0] * 0.8 + L.desk.x * 0.2, 0, spot[2] + 3]);
   if (F >= K.slam[2] + 6) { const ph = ((F + k * 5) % 14) / 14; pos[1] += 0.08 * Math.sin(Math.PI * ph); arm = -1.2 - 1.2 * Math.sin(Math.PI * ph); expr = 'grin'; }
   if (win(F, K.dive[k] - 4, K.dive[k])) { sq = 0.16 * sm((F - K.dive[k] + 4) / 3); expr = 'grin'; }   // crouch before the spring
-  if (F >= K.dive[k]) { const b = clamp((F - K.dive[k]) / 10); pos = [lerp(pos[0], mouth.x, b), lerp(pos[1], mouth.y, b) + 0.3 * Math.sin(Math.PI * b), lerp(pos[2], mouth.z, b)]; sq = -0.15; expr = 'grin'; }
-  return { pos, yaw, sq, expr, arm, a };
+  // at the brass mouth an agent is squeezed thin and small (it must fit the 0.1-radius pipe): popping out it grows from
+  // that, diving back it springs up under the mouth, stretches and is sucked in from below (never through the pipe wall)
+  let shrink = a < 4 ? lerp(0.22, 1, oc(a / 4)) : 1;
+  if (F >= K.dive[k]) {
+    const b = clamp((F - K.dive[k]) / 9), under = [mouth.x, mouth.y - 0.55, mouth.z];
+    pos = b < 0.6 ? [lerp(pos[0], under[0], sm(b / 0.6)), lerp(pos[1], under[1], sm(b / 0.6)) + 0.25 * Math.sin(Math.PI * b / 0.6), lerp(pos[2], under[2], sm(b / 0.6))]
+      : [mouth.x, lerp(under[1], mouth.y - 0.05, ic((b - 0.6) / 0.4)), mouth.z];
+    shrink = b < 0.5 ? 1 : lerp(1, 0.18, sm((b - 0.5) / 0.5)); sq = -0.2 - 0.25 * sm((b - 0.4) / 0.6); expr = 'grin';
+  }
+  return { pos, yaw, sq, expr, arm, a, shrink };
 }
 
 // ---- Tri (Planner) ----
@@ -508,6 +536,7 @@ function updateTri(F) {
   const out = outState(0, F);
   if (out) { pos = out.pos; yaw = out.yaw; sq = out.sq; expr = out.expr; armR = out.arm; armL = -out.arm * 0.8; if (F >= K.handBack[0] && F < K.dive[0] + 10) armR = -1.4; }
   R.root.visible = !out || !out.hidden;
+  R.root.scale.set(out && out.shrink ? out.shrink : 1, out && out.shrink ? out.shrink : 1, out && out.shrink ? out.shrink : 1);
   R.root.position.set(pos[0], pos[1] + hop, pos[2]);
   R.root.rotation.set(0, yaw, 0);
   R.body.rotation.set(lean * 0.3, 0, -lean);
@@ -557,6 +586,7 @@ function updateClack(F) {
   const out = outState(1, F);
   if (out) { pos = out.pos; yaw = out.yaw; sq = out.sq; expr = out.expr; armR = out.arm; armL = -out.arm; }
   R.root.visible = !out || !out.hidden;
+  R.root.scale.set(out && out.shrink ? out.shrink : 1, out && out.shrink ? out.shrink : 1, out && out.shrink ? out.shrink : 1);
   R.root.position.set(pos[0], pos[1], pos[2]);
   R.root.rotation.set(0, yaw, 0);
   R.body.rotation.set(lean, 0, 0);
@@ -628,6 +658,7 @@ function updateLoupe(F) {
     if (F >= K.slam[0] - 8 && F < K.slam[0] + 10) { const a = F - K.slam[0]; armR = a < 0 ? lerp(-0.5, -2.8, sm((a + 8) / 6)) : lerp(-0.2, -0.6, sm(a / 8)); sq = a >= 0 ? ringv(a, 0.14, 1.0, 0.25) : 0.08; }
   }
   R.root.visible = !out || !out.hidden;
+  R.root.scale.set(out && out.shrink ? out.shrink : 1, out && out.shrink ? out.shrink : 1, out && out.shrink ? out.shrink : 1);
   R.root.position.set(pos[0], pos[1] + hop, pos[2]);
   R.root.rotation.set(0, yaw + shakeNo, 0);
   R.body.rotation.set(lean, 0, 0);
@@ -677,6 +708,7 @@ function updateTilt(F) {
   if (win(F, K.go - 3, K.go + 8)) { expr = 'grin'; sq = F < K.go ? 0.12 : ringv(F - K.go, 0.14, 1.0, 0.25); }
   if (win(F, K.S6, K.lap[1])) expr = 'happy';
   if (win(F, K.ding + 4, K.suck[0])) { expr = 'grin'; sq = ringv(F - K.ding - 6, 0.12, 1.0, 0.25); }
+  if (win(F, K.go + 2, K.S8a)) { const k = sm((F - K.go - 2) / 8); pos = station(ST.refn, lerp(L.stR, 1.66, k)); pos[1] = 0.12 * arc(F, K.go + 2, K.go + 10); }   // hops back off the ring edge for the lap
   let panTip = 0;
   const out = outState(3, F);
   if (out) {
@@ -684,6 +716,7 @@ function updateTilt(F) {
     if (F >= K.slam[2] - 8 && F < K.slam[2] + 16) { panTip = arc(F, K.slam[2] - 8, K.slam[2] + 16); beam = -0.3 * panTip; }
   }
   R.root.visible = !out || !out.hidden;
+  R.root.scale.set(out && out.shrink ? out.shrink : 1, out && out.shrink ? out.shrink : 1, out && out.shrink ? out.shrink : 1);
   R.root.position.set(pos[0], pos[1], pos[2]);
   R.root.rotation.set(0, yaw, 0);
   R.body.rotation.set(0, 0, lean);
@@ -691,7 +724,7 @@ function updateTilt(F) {
   R.beam.rotation.set(0, 0, beam);
   R.headM.material.uniforms.uMap.value = R.faceTex[expr in R.faceTex ? expr : 'determined'][Math.floor(F / 2) % 2];
   W.scene.updateMatrixWorld(true);
-  R.pans.forEach((p, i) => { const w = R.hands[i].getWorldPosition(V3(0, 0, 0)); p.g.position.copy(w); p.g.rotation.set(i === 1 ? 0.9 * panTip : 0, yaw, 0.12 * Math.sin(F * 0.5 + i) * Math.abs(beam)); p.g.visible = R.root.visible; });
+  R.pans.forEach((p, i) => { const w = R.hands[i].getWorldPosition(V3(0, 0, 0)); p.g.position.copy(w); p.g.scale.setScalar(R.root.scale.x); p.g.rotation.set(i === 1 ? 0.9 * panTip : 0, yaw, 0.12 * Math.sin(F * 0.5 + i) * Math.abs(beam)); p.g.visible = R.root.visible; });
   const n = out ? 4 : pennies(F);
   R.pennies.forEach((m, k) => { m.visible = k < n; });
   const kg = kgrid(F);
@@ -767,11 +800,19 @@ function updateProps(F) {
     W.flip.rotation.set(0, 0, Math.PI * t); W.flip.position.y = 0.085 + 0.06 * Math.sin(Math.PI * t);
   }
   { // the scorecard: pops up on the desk as Loupe lands, folds away as Loupe dives back into the tube
-    const on = F >= K.outs[1] + 10 && F < K.dive[2] + 4, k = on ? ob((F - K.outs[1] - 10) / 6) * (1 - sm((F - K.dive[2] + 2) / 6)) : 0;
-    W.scoreG.visible = k > 0.02; W.scoreG.scale.set(Math.max(0.02, k), Math.max(0.02, k), Math.max(0.02, k));
+    const on = F >= K.outs[1] + 10 && F < K.dive[2] + 8;
+    let k = on ? ob((F - K.outs[1] - 10) / 6) : 0;
+    W.scoreG.position.set(SCORE[0], 0, SCORE[2]);
+    if (F >= K.dive[2] - 5) {                        // Loupe grabs it and carries it into the tube (it shrinks with Loupe)
+      const lp = W.loupe.root.position, g = sm((F - K.dive[2] + 5) / 4);
+      W.scoreG.position.set(lerp(SCORE[0], lp.x + 0.1, g), lerp(0, lp.y + 0.05, g), lerp(SCORE[2], lp.z + 0.05, g));
+      k = lerp(1, 0.45, g) * W.loupe.root.scale.x;
+    }
+    W.scoreG.visible = on && W.loupe.root.visible && k > 0.02; W.scoreG.scale.setScalar(Math.max(0.02, k));
     W.score.material.uniforms.uMap.value = W.scoreTex[F < K.slam[0] ? 0 : F < K.slam[0] + 3 ? 1 : 2];
   }
-  const pk = F >= K.planks[0] && F < NF - 8 ? ob((F - K.planks[0]) / 10) : 0;
+  let pk = F >= K.planks[0] && F < NF - 8 ? ob((F - K.planks[0]) / 10) : 0;
+  if (win(F, K.suck[0], K.suck[1])) pk *= 1 - sm((F - K.suck[0]) / 3);   // the planks fold down before the gulp
   W.planks.visible = pk > 0.01;
   W.planks.scale.set(1, Math.max(0.01, pk), 1);
 }
@@ -900,7 +941,7 @@ const rigS7 = (F) => {        // gauge -> tilt up with the planks -> ride with t
   const ride = { tg: [jp[0], 0.8, jp[2]], az: 0.45, el: 0.02, r: 2.6, fov: 34, roll: 0.02 };   // stays level: the band gap never closes
   const up = { tg: [fp.x + 0.1, fp.y - 0.4, fp.z + 0.1], az: 0.35, el: -0.1, r: 2.6, fov: 36, roll: -0.04 };
   if (F < K.planks[0]) return gauge;
-  if (F < K.toFunnel[0] + 2) return mixRig(gauge, cell, io((F - K.planks[0]) / 10));
+  if (F < K.toFunnel[0] + 2) return mixRig(gauge, cell, io((F - K.planks[0] - 4) / 10));
   if (F < K.suck[0] - 2) return mixRig(cell, ride, io((F - K.toFunnel[0] - 2) / 8));
   return mixRig(ride, up, io((F - K.suck[0] + 2) / 8));
 };
@@ -915,7 +956,8 @@ const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the
   const a = sm((F - K.S8b) / 60);
   return { tg: [L.desk.x + 0.1, 0.46, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.15, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };   // a touch higher: Hoot's face clears the 68
 };
-const WHIPS = [[80, 100], [280, 292], [312, 328, 0, 'h'], [452, 466, 60], [500, 512, 60], [564, 588]];
+// [a, b, cap px, 'h' = horizontal smear only: vertical tilts would streak like rain]
+const WHIPS = [[80, 100], [101, 108, 40, 'h'], [230, 243, 40, 'h'], [280, 294], [312, 330, 0, 'h'], [452, 466, 60], [500, 512, 60], [538, 548, 40, 'h'], [561, 588, 0, 'h'], [618, 630, 40]];
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);

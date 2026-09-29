@@ -163,7 +163,8 @@ export async function buildTilt(W) {
   });
   // left pan: a tiny silicon cell (hidden; the accuracy gem is added in td_story.js); right pan: up to six pennies (cost)
   const si = buildSilicon(W, 0.1, R.pans[0].g); si.g.position.set(0, -0.2, 0); R.panSi = si;
-  R.pennies = Array.from({ length: 6 }, (_, k) => add(new THREE.CylinderGeometry(0.035, 0.035, 0.012, 20), { color: 0xd6813f, rim: 0.7, hatchMode: 'u', shadeColor: 0x7a3a18, shadeMix: 0.4, seed: 60 + k }, { outline: 0.4 }, [(k % 2 - 0.5) * 0.05, -0.27 + 0.013 * k, [-0.02, 0.03, 0.0][Math.floor(k / 2)]], [0.1 * k, 0, 0.12 * (k - 2.5)], R.pans[1].g));
+  // laid apart in a 2 x 3 grid (not a heap) so 2 / 4 / 6 pennies can be counted
+  R.pennies = Array.from({ length: 6 }, (_, k) => add(new THREE.CylinderGeometry(0.029, 0.029, 0.012, 20), { color: 0xd6813f, rim: 0.7, hatchMode: 'u', shadeColor: 0x7a3a18, shadeMix: 0.4, seed: 60 + k }, { outline: 0.45 }, [(k % 2 - 0.5) * 0.072, -0.266, [0, 0.064, -0.064][Math.floor(k / 2)]], [0.05 * (k % 3 - 1), 0, 0.04 * (k % 2 - 0.5)], R.pans[1].g));
   return R;
 }
 

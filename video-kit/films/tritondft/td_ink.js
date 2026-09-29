@@ -74,14 +74,6 @@ export function inkOverlay(W, ctx, brush) {
     const a = (F - K.gust[0]) / 12;
     for (let q = 0; q < 4; q++) { const y = hp.y + (q - 1.5) * 0.35 * hu, x0 = hp.x + 2.4 * hu - a * 3.4 * hu; brush.set('inkpen', '#6d7a90', 1.3); brush.spline([[x0, y], [x0 - 0.5 * hu, y - 0.08 * hu], [x0 - 1.0 * hu, y + 0.02 * hu]], 0.6); }
   }
-  // vc-relax: a bold dashed ghost of the starting (unrelaxed) cell; the real cell starts on it, breathes out and settles,
-  // so a clear band opens between them (camera locked); the ghost stays 6 frames after the settle
-  if (win(F, K.relax[0] - 5, K.relax[1] + 6) && W.cart.visible) {
-    const E = [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3], [2, 6], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]];
-    const P = W.si.atoms.slice(0, 8).map((a) => prj(W, ctx, W.si.g.localToWorld(a.position.clone().multiplyScalar(0.88))));
-    brush.set('bigink', PAL.pop, 2.6);
-    for (const [i, j] of E) for (let q = 0; q < 5; q++) { const t0 = q / 5 + 0.02, t1 = t0 + 0.12; brush.line(P[i].x + (P[j].x - P[i].x) * t0, P[i].y + (P[j].y - P[i].y) * t0, P[i].x + (P[j].x - P[i].x) * t1, P[i].y + (P[j].y - P[i].y) * t1); }
-  }
   // Refiner: click ticks; two pennies fly off when it backs off
   for (const f0 of [...K.click, K.cutoff]) if (win(F, f0, f0 + 6)) { const kn = W.con.knobs[f0 === K.cutoff ? 1 : 0], c = prj(W, ctx, wp(W, kn, [0, 0.06, 0])), u = pxu(W, ctx, wp(W, kn)); ticks(brush, c.x, c.y, 0.08 * u * (1 + (F - f0) * 0.1), 0.17 * u, 5, -2.8, -0.3, ink, 1.2); }
   // a plink tick at the cost pan for every penny that drops in
@@ -226,7 +218,7 @@ export function lettering(W, ctx, g) {
   const ck = F - K.crash;
   if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 280, 420, 1500), clamp(pp.y - 150, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;
-  if (dg >= 0 && dg < 24) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 24, rot: -0.12, scale: 1.0, popF: 4 }); }
+  if (dg >= 0 && dg < 16) { const bp = prj(W, ctx, W.bead.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.ding, F, clamp(bp.x - 300, 380, 1200), clamp(bp.y - 160, 260, 480), dg, { life: 16, rot: -0.12, scale: 1.0, popF: 4 }); }
   // the giant hourglass lands upright: THUNK! (both clocks start here)
   const th = F - K.clock;
   if (th >= 0 && th < 16) { const gp = W.giant.g.position, c = prj(W, ctx, [gp.x - 0.5, 0.25, gp.z + 0.3]); if (c.front) drawWord(g, SPR.thunk, F, clamp(c.x, 300, 1620), clamp(c.y, 300, 820), th, { life: 16, rot: -0.08, scale: 1.0, popF: 3 }); }
