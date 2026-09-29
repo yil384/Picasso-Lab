@@ -42,11 +42,12 @@ export const K = {
   puffs: 686, handBack: [688, 696], dive: [694, 698, 702, 706], yawn: [686, 700], lay: [698, 712], flop: [710, 718],
 };
 
-// the job on the turntable ring: world theta (plan 135, exec 45, anlz -45, refn -135 deg); two full turns per loop
+// the job on the turntable ring: world theta (plan 135, exec 45, anlz -45 deg; the Refiner's stop is at -100, short of
+// Tilt at -135, so the cart stands clear of its cost pan); two full turns per loop
 const D = Math.PI / 180;
 function jobTheta(F) {
-  return kf(F, [[0, 135 * D], [168, 135 * D], [184, 45 * D], [282, 45 * D], [300, -45 * D], [372, -45 * D], [388, -135 * D],
-    [K.lap[0], -135 * D], [K.lap[1], -405 * D], [K.toFunnel[0], -405 * D], [K.toFunnel[1], -585 * D], [NF, -585 * D]], (x) => mj(x));
+  return kf(F, [[0, 135 * D], [168, 135 * D], [184, 45 * D], [282, 45 * D], [300, -45 * D], [372, -45 * D], [388, -100 * D],
+    [K.lap[0], -100 * D], [K.lap[1], -405 * D], [K.toFunnel[0], -405 * D], [K.toFunnel[1], -585 * D], [NF, -585 * D]], (x) => mj(x));
 }
 const turnAngle = (F) => jobTheta(F) - 135 * D;
 export const jobPos = (F, r = L.turn.rJob) => station(jobTheta(F), r);
@@ -626,9 +627,13 @@ function updateTilt(F) {
   if (F >= K.level + 8) beam = 0.01 * Math.sin(TAU * F / 40);
   if (F < K.S5) beam = 0.2 + 0.03 * Math.sin(TAU * F / 48);
   if (F >= K.S6 + 40) beam = 0.01 * Math.sin(TAU * F / 40);
-  if (win(F, K.S5, K.click[0])) { expr = 'squint'; yaw = faceYaw(home, [home[0] + 0.6, 0, home[2] + 0.4]); }
-  if (win(F, K.click[0], K.go + 6)) { yaw = faceYaw(home, [home[0] + 0.5, 0, home[2] + 0.5]); expr = 'determined'; }
-  if (win(F, K.click[1], K.click[2] + 2)) { expr = F < K.crash + 3 ? 'surprised' : 'worried'; sq = takeSq(F - K.crash); lean = -beam * 0.6 + 0.12 * Math.sin((F - K.crash) * 0.9) * Math.exp(-(F - K.crash) / 12); }
+  // S5: face to camera, eyes on the console at its right hand (screen left); a glance at the crashing pan
+  if (win(F, K.S5, K.click[0])) { expr = 'squint'; yaw = -0.5; }
+  if (win(F, K.click[0], K.go + 6)) { yaw = lerp(-0.5, -0.22, sm((F - K.click[0]) / 5)); expr = 'determined'; }
+  if (win(F, K.crash, K.click[2])) yaw = lerp(-0.22, 0.3, sm((F - K.crash) / 3));
+  if (win(F, K.click[2], K.go + 6)) yaw = lerp(0.3, -0.3, sm((F - K.click[2]) / 5));
+  if (win(F, K.level, K.go + 6)) yaw = lerp(-0.3, 0.0, sm((F - K.level) / 5));
+  if (win(F, K.click[1], K.click[2] + 2)) { expr = F < K.crash + 3 ? 'surprised' : 'worried'; sq = takeSq(F - K.crash); lean = -beam * 0.25 + 0.1 * Math.sin((F - K.crash) * 0.9) * Math.exp(-(F - K.crash) / 12); }
   if (win(F, K.cutoff, K.go)) expr = F < K.level ? 'squint' : 'happy';
   if (win(F, K.go - 3, K.go + 8)) { expr = 'grin'; sq = F < K.go ? 0.12 : ringv(F - K.go, 0.14, 1.0, 0.25); }
   if (win(F, K.S6, K.lap[1])) expr = 'happy';
@@ -651,7 +656,7 @@ function updateTilt(F) {
   R.pennies.forEach((m, k) => { m.visible = k < n; });
   const kg = kgrid(F);
   W.gem.scale.setScalar(kg === 3 ? 0.7 : kg === 4 ? 1.0 : 1.3);
-  const cpos = [home[0] - 0.42, 0, home[2] + 0.02];
+  const cpos = [home[0] - 0.66, 0, home[2] + 0.16];            // left-front of Tilt, clear of the accuracy pan
   W.con.root.position.set(cpos[0], 0, cpos[2]);
   W.con.root.rotation.y = faceYaw(cpos, [cpos[0] + 0.15, 0, cpos[2] + 1.0]);
   const since = F - (kg === 4 && F < K.click[1] ? K.click[0] : kg === 5 ? K.click[1] : kg === 4 ? K.click[2] : -99);
@@ -822,7 +827,7 @@ const rigLens = (F) => {      // the lens rushes at the camera (iris match cut t
 const rigKnob = (F) => {      // from a knob close-up, pull out to Tilt; the roll follows the beam
   const rf = station(ST.refn), kn = W.con.knobs[0].getWorldPosition(V3(0, 0, 0)), k = oc(clamp((F - K.S5) / 14));
   const knob = { tg: [kn.x, kn.y + 0.04, kn.z], az: W.con.root.rotation.y, el: 0.9, r: 0.42, fov: 34, roll: 0 };
-  const med = { tg: [rf[0] - 0.12, 0.36, rf[2] - 0.05], az: -0.08, el: 0.2, r: 1.75, fov: 36, roll: 0.25 * (st.tilt ? st.tilt.beam : 0) };
+  const med = { tg: [rf[0] - 0.04, 0.34, rf[2] - 0.02], az: 0.0, el: 0.2, r: 1.85, fov: 36, roll: 0.18 * (st.tilt ? st.tilt.beam : 0) };
   return mixRig(knob, med, k);
 };
 const rigLap = (F) => {       // ride round with the job (close orbit synced to the ring)
