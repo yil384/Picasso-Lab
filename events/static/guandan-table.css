@@ -839,17 +839,19 @@ body[data-screen="table"] .topbar { display: none; }
 }
 
 /* ---------- 巅峰对决 match intro (yxrb_vs), over the first deal ----------
-   Every part runs on the deal clock: --since is minus the time since dealStartedAt. In 0-600 ms
-   the halves slide in, the title drops and VS stamps; it holds, fades out by 2 s and is then hidden,
-   so it never catches a tap meant for the table. */
+   Every part runs on the deal clock: --since is minus the time since dealStartedAt. In 0-600 ms the
+   poster opens, the team frames slide in, the title drops and VS stamps; it holds, fades out by 2 s
+   and is then hidden, so it never catches a tap meant for the table. The HUD's right-hand buttons
+   and the hand tools step aside meanwhile (.has-intro). */
 .gd-intro-host { position: absolute; inset: 0; z-index: 56; pointer-events: none; }
 .gd-intro-host:empty { display: none; }
+.gd-stage.has-intro :is(.gd-hud-right, .gd-tools) { opacity: 0; pointer-events: none; }
 .gd-intro {
     position: absolute;
     inset: 0;
     display: grid;
     place-items: center;
-    background: rgba(8, 14, 44, .74);
+    background: rgba(8, 14, 44, .85);
     pointer-events: auto;
     animation: gd-intro 2000ms linear var(--since) both;
 }
@@ -859,110 +861,172 @@ body[data-screen="table"] .topbar { display: none; }
     100% { opacity: 0; transform: scale(1.04); visibility: hidden; }
 }
 @keyframes gd-intro-still { 0%, 86% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-.gd-vs { position: relative; width: 1080px; height: 540px; }
+/* the records poster's field (.gdr-poster): red -> violet -> blue, lit behind the title and the VS */
+.gd-vs {
+    position: relative;
+    width: 1040px; height: 530px;
+    overflow: hidden;
+    border-radius: 10px;
+    background:
+        radial-gradient(32% 30% at 50% 0%, rgba(196, 206, 255, .5), transparent),
+        radial-gradient(24% 34% at 50% 56%, rgba(120, 132, 255, .42), transparent),
+        linear-gradient(100deg, #b11f42 0%, #d23a5c 17%, #b23c7c 33%, #5a3db0 50%, #3552d4 66%, #2c5ce4 82%, #1d3caa 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22);
+    animation: gd-vs-open 260ms var(--ease-out) var(--since) both;
+}
+.gd-vs::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .045) 0 2px, transparent 2px 14px);
+}
+@keyframes gd-vs-open { from { opacity: 0; transform: scale(.92); } }
+.gd-vs-title {
+    position: absolute;
+    left: 0; right: 0; top: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 64px;
+    animation: gd-vs-title 360ms var(--ease-back) calc(var(--since) + 80ms) both;
+}
+.gd-vs-title:lang(en) { font-size: 54px; }
+.gd-vs-title span { color: #fff; font: 900 26px/1 var(--font-ui); letter-spacing: .04em; white-space: nowrap; text-shadow: 0 2px 0 rgba(40, 14, 90, .4); }
+@keyframes gd-vs-title { from { opacity: 0; transform: translateY(-30px); } }
+/* a team: the big faint name at the outer edge, its pair in a frame with a bracket to the centre */
 .gd-vs-side {
     position: absolute;
-    top: 120px; bottom: 0;
-    width: 57%;
+    top: 150px; bottom: 36px;
+    width: 50%;
     display: flex;
     align-items: center;
 }
-.gd-vs-side.is-red {
-    left: 0;
-    justify-content: flex-end;
-    padding-right: 150px;
-    border-radius: 14px 0 0 14px;
-    background: linear-gradient(160deg, #e0587a, #c8304e 45%, #8a2240);
-    clip-path: polygon(0 0, 100% 0, 75% 100%, 0 100%);
-    animation: gd-vs-in-l 320ms var(--ease-out) var(--since) both;
-}
-.gd-vs-side.is-blue {
-    right: 0;
-    padding-left: 150px;
-    border-radius: 0 14px 14px 0;
-    background: linear-gradient(200deg, #5f93ff, #2c5ce4 45%, #1a3a9e);
-    clip-path: polygon(25% 0, 100% 0, 100% 100%, 0 100%);
-    animation: gd-vs-in-r 320ms var(--ease-out) var(--since) both;
-}
-@keyframes gd-vs-in-l { from { opacity: 0; transform: translateX(-120px); } }
-@keyframes gd-vs-in-r { from { opacity: 0; transform: translateX(120px); } }
-/* the team name, big and faint, stands at the outer edge */
+.gd-vs-side.is-red { left: 0; padding-left: 96px; animation: gd-vs-in-l 320ms var(--ease-out) calc(var(--since) + 60ms) both; }
+.gd-vs-side.is-blue { right: 0; flex-direction: row-reverse; padding-right: 96px; animation: gd-vs-in-r 320ms var(--ease-out) calc(var(--since) + 60ms) both; }
+@keyframes gd-vs-in-l { from { opacity: 0; transform: translateX(-90px); } }
+@keyframes gd-vs-in-r { from { opacity: 0; transform: translateX(90px); } }
 .gd-vs-side em {
     position: absolute;
     top: 50%;
     translate: 0 -50%;
-    color: rgba(255, 255, 255, .2);
-    font: 400 104px/1 var(--font-display);
+    font: 400 72px/1 var(--font-display);
     font-style: normal;
     writing-mode: vertical-rl;
     text-orientation: upright;
-    letter-spacing: -.04em;
+    letter-spacing: .04em;
 }
-.gd-vs-side em:lang(en) { writing-mode: horizontal-tb; font-size: 56px; rotate: -90deg; }
-.gd-vs-side.is-red em { left: 34px; }
-.gd-vs-side.is-blue em { right: 34px; }
-.gd-vs-list { display: flex; flex-direction: column; gap: 26px; }
+.gd-vs-side em:lang(en) { text-orientation: mixed; font-size: 40px; letter-spacing: .02em; }
+.gd-vs-side.is-red em { left: 22px; color: rgba(255, 150, 172, .6); }
+.gd-vs-side.is-blue em { right: 22px; color: rgba(150, 196, 255, .6); }
+.gd-vs-team {
+    --line: rgba(255, 176, 194, .9);
+    position: relative;
+    width: 330px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+    border: 2px solid #ff9db0;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(236, 72, 104, .72), rgba(214, 58, 96, .42));
+}
+.is-blue .gd-vs-team {
+    --line: rgba(166, 200, 255, .9);
+    border-color: #8fb4ff;
+    background: linear-gradient(270deg, rgba(64, 118, 246, .72), rgba(52, 96, 222, .42));
+}
+/* bracket: from both seat chips out past the frame, joined, then one line toward the VS */
+.gd-vs-team::before, .gd-vs-team::after { content: ""; position: absolute; }
+.gd-vs-team::before {
+    left: calc(100% - 35px); top: 62px; bottom: 62px;
+    width: 55px;
+    border: 2px solid var(--line);
+    border-left: 0;
+}
+.gd-vs-team::after { left: calc(100% + 20px); top: 50%; width: 16px; height: 2px; background: var(--line); }
+.is-blue .gd-vs-team::before { left: auto; right: calc(100% - 35px); border-left: 2px solid var(--line); border-right: 0; }
+.is-blue .gd-vs-team::after { left: auto; right: calc(100% + 20px); }
 .gd-vs-p {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: 14px;
+    height: 96px;
     animation: gd-vs-p 280ms var(--ease-back) calc(var(--since) + 260ms) both;
 }
 .gd-vs-p + .gd-vs-p { animation-delay: calc(var(--since) + 340ms); }
 @keyframes gd-vs-p { from { opacity: 0; transform: scale(.7); } }
-.is-red .gd-vs-p { flex-direction: row-reverse; }
+.is-blue .gd-vs-p { flex-direction: row-reverse; }
 .gd-vs-av {
     position: relative;
     flex: none;
-    width: 104px; height: 104px;
-    border: 4px solid #fff;
-    border-radius: 50%;
+    width: 96px; height: 96px;
+    border: 4px solid #e0546e;
+    border-radius: 8px;
     background: #dfe6ee;
 }
+.is-blue .gd-vs-av { border-color: #5a86ff; }
+/* the lab photos are round cut-outs: enlarged, the circle covers the whole square */
+.gd-vs-av .gd-av-face, .gd-vs-av .gd-av-face > * { border-radius: 4px; }
+.gd-vs-av .gd-av-face { overflow: hidden; }
+.gd-vs-av .gd-av-face img { scale: 1.42; }
 .gd-vs-p b {
-    max-width: 190px;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     color: #fff;
-    font: 900 26px/1.2 var(--font-ui);
+    font: 900 24px/1.2 var(--font-ui);
     text-overflow: ellipsis;
     white-space: nowrap;
     -webkit-text-stroke: 5px rgba(40, 10, 40, .35);
     paint-order: stroke fill;
 }
-.gd-vs-title {
-    position: absolute;
-    left: 50%; top: 0;
-    translate: -50% 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    font-size: 72px;
-    animation: gd-vs-title 360ms var(--ease-back) calc(var(--since) + 80ms) both;
+.is-blue .gd-vs-p b { text-align: right; }
+.gd-vs-seat {
+    flex: none;
+    width: 42px; height: 42px;
+    border: 2px solid #ffd0da;
+    border-radius: 50%;
+    background: linear-gradient(#f2677f, #d63a58);
+    color: #fff;
+    font: 900 21px/38px var(--font-ui);
+    font-style: normal;
+    text-align: center;
 }
-.gd-vs-title:lang(en) { font-size: 60px; }
-.gd-vs-title span { color: #fff; font: 700 22px/1 var(--font-ui); letter-spacing: .2em; white-space: nowrap; }
-.gd-vs-title span:lang(en) { letter-spacing: .02em; }
-@keyframes gd-vs-title { from { opacity: 0; transform: translateY(-40px); } }
+.is-blue .gd-vs-seat { border-color: #cfe0ff; background: linear-gradient(#6e97ff, #3a66e6); }
+/* light-gold VS under the records crown (#fcecac -> #b8660c, thin outline, no drop edge) */
 .gd-vs-mark {
     position: absolute;
-    left: 50%; top: calc(120px + 210px);
+    left: 50%; top: calc(150px + (530px - 150px - 36px) / 2);
     translate: -50% -50%;
-    font-size: 170px;
-    font-style: italic;
     animation: gd-vs-mark 380ms var(--ease-back) calc(var(--since) + 200ms) both;
 }
-@keyframes gd-vs-mark { from { opacity: 0; transform: scale(2.4) rotate(-8deg); } }
+@keyframes gd-vs-mark { from { opacity: 0; transform: scale(2.2) rotate(-8deg); } }
+.gd-word.is-vs {
+    font: 800 140px/.86 var(--font-num);
+    color: #8a4a0c;
+    -webkit-text-stroke: 4px #8a4a0c;
+    text-shadow: none;
+    transform: skewX(-12deg);
+}
+.gd-word.is-vs::after { background-image: linear-gradient(180deg, #fffdf0 10%, #fcecac 38%, #f0c666 66%, #b8660c 100%); }
+.gd-crown { overflow: visible; fill: #ffd766; stroke: #6a2c02; stroke-width: 2.5px; stroke-linejoin: round; paint-order: stroke fill; }
+.gd-crown.is-cool { fill: #dfe8fb; stroke: #1d2f63; }
+.gd-vs-mark .gd-crown { position: absolute; left: 6px; top: -30px; width: 56px; height: 39px; rotate: -16deg; }
+/* 跳过 in the poster's top-right corner, where yxrb_vs has its close button */
 .gd-vs-skip {
     position: absolute;
-    right: 28px; top: 22px;
+    right: 16px; top: 16px;
+    z-index: 2;
     height: 44px;
     padding: 0 22px;
-    border: 0;
+    border: 1px solid rgba(255, 255, 255, .35);
     border-radius: 22px;
-    background: rgba(255, 255, 255, .16);
+    background: rgba(10, 16, 48, .9);
     color: #fff;
-    font: 700 21px/44px var(--font-ui);
+    font: 700 21px/42px var(--font-ui);
 }
 .gd-vs-skip::after {
     content: "";

@@ -3627,11 +3627,16 @@ function tributeHTML(v) {
     }).join("");
 }
 
-// 巅峰对决 match intro (yxrb_vs): once per match, over the first deal. 红队 left, 蓝队 right on a
-// diagonal split, each pair of players, a gold VS; it leaves before the deal's last flights.
-// Decided once per deal (room + dealStartedAt): a client that arrives late, a reload (the key is
-// remembered) or a re-render never replays it. A tap skips it.
+// 巅峰对决 match intro (yxrb_vs): once per match, over the first deal. One poster on a red -> violet
+// -> blue field: the title at the top, 红队 left and 蓝队 right in framed pairs (square photo, seat
+// chip 南/西/北/东, a bracket to the centre) and a light-gold VS under the crown; it leaves before the
+// deal's last flights. Decided once per deal (room + dealStartedAt): a client that arrives late, a
+// reload (the key is remembered) or a re-render never replays it. A tap skips it.
 const INTRO_STORE = "picasso.guandan.intro";
+// The 巅峰对决 crown (as on the records poster): over the intro's VS and a match result's title.
+function crownHTML(cls = "") {
+    return `<svg class="${`gd-crown ${cls}`.trim()}" viewBox="0 0 40 28" aria-hidden="true"><path d="M5 25 2.5 7l10 7.5L20 2.5l7.5 12 10-7.5L35 25Z"/></svg>`;
+}
 function introKey(v) {
     if (game.roundNo !== 1 || v.dealPhase !== "dealing") return "";
     const key = `${roomCode}:${game.dealStartedAt}`;
@@ -3646,16 +3651,17 @@ function introHTML(v) {
     const since = Math.max(0, Date.now() - Number(game.dealStartedAt || 0));
     const player = i => {
         const name = displaySeatName(game.seats[i], L(`Seat ${i + 1}`, `${i + 1} 号位`));
-        return `<div class="gd-vs-p"><span class="gd-vs-av"><span class="gd-av-face">${seatFaceHTML(i, name)}</span>${i === v.mine ? `<span class="gd-res-tag">${L("You", "自己")}</span>` : ""}</span><b>${encodeHTML(name)}</b></div>`;
+        const me = i === v.mine ? `<span class="gd-res-tag">${relationForSeat(i, v.mine).label}</span>` : "";
+        return `<div class="gd-vs-p"><span class="gd-vs-av"><span class="gd-av-face">${seatFaceHTML(i, name)}</span>${me}</span><b>${encodeHTML(name)}</b><i class="gd-vs-seat">${L("SWNE", "南西北东")[i]}</i></div>`;
     };
-    const side = (team, cls) => `<div class="gd-vs-side ${cls}"><em>${encodeHTML(teamName(team))}</em><div class="gd-vs-list">${player(team)}${player(team + 2)}</div></div>`;
+    const side = (team, cls) => `<div class="gd-vs-side ${cls}"><em>${encodeHTML(teamName(team))}</em><div class="gd-vs-team">${player(team)}${player(team + 2)}</div></div>`;
     return `<div class="gd-intro" style="--since:${-since}ms">
         <div class="gd-vs">
-            ${side(1, "is-red")}${side(0, "is-blue")}
             <div class="gd-vs-title">${wordHTML(L("Peak Showdown", "巅峰对决"))}<span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span></div>
-            <div class="gd-vs-mark">${wordHTML("VS")}</div>
+            ${side(1, "is-red")}${side(0, "is-blue")}
+            <div class="gd-vs-mark">${crownHTML()}${wordHTML("VS", "is-vs")}</div>
+            <button class="gd-vs-skip" type="button">${L("Skip", "跳过")}</button>
         </div>
-        <button class="gd-vs-skip" type="button">${L("Skip", "跳过")}</button>
     </div>`;
 }
 
@@ -3722,6 +3728,7 @@ function renderTable() {
     setRegion("deal", dealPhase === "dealing" ? `deal:${dealKey()}:${Math.round(t.layout.w)}` : "", () => dealHTML(v));
     const intro = introKey(v);
     setRegion("intro", intro, intro ? () => introHTML(v) : "");
+    t.stage.classList.toggle("has-intro", !!intro);
     const firstKey = firstLeadKey(v);
     setRegion("firstLead", firstKey, firstKey ? () => firstLeadHTML(v) : "");
     const tributeMoment = tributeKey(v);
