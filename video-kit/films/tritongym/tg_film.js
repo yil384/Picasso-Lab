@@ -116,6 +116,9 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   T.dust = add(new THREE.TorusGeometry(1, 0.08, 8, 48), { key: 'dust', color: 0xfff4dc, rim: 0.2, spec: 0 }, { outline: 0.7, cast: false }, [0, 0, 0], [Math.PI / 2, 0, 0]);
   T.dust.visible = false;
   T.letters.visible = false;
+  // a comic title burst behind the letters (pops on the slam)
+  { const sh = new THREE.Shape(), n = 18; for (let k = 0; k <= 2 * n; k++) { const a = k / (2 * n) * TAU, rr = k % 2 ? 0.7 + 0.08 * Math.sin(k * 2.3) : 1; (k ? sh.lineTo : sh.moveTo).call(sh, Math.cos(a) * rr, Math.sin(a) * rr); }
+    T.burst = add(new THREE.ShapeGeometry(sh), { color: 0xf7d27a, flat: 0.55, rim: 0.2, spec: 0, halftone: 0.6, receive: false }, { outline: 1.1, cast: false }, [0, 0.62, -0.55], [0, 0, 0], T.letters); }
 
   // ---- painted cyclorama (warm)
   const bdTex = await cachedBake(THREE, bakeBrushTexture, { width: 4096, height: 1024, seed: 21, key: 'tgbackdrop2', background: '#ffffff' }, (p, brush, w, h) => {
@@ -144,6 +147,8 @@ export function updateWorld(ctx) {
   updateCamera(ctx, F);
   updateTok(F); updateKern(F); updateOro(F); updateDash(F);
   updateStations(F); updateLetters(F); updateOpCard(F);
+  window.__tg = { st, T };                                           // (debug handle for the studio)
+  for (const [n, S] of [['kern', st.kern], ['oro', st.oro], ['tok', st.tok]]) if (S && S.vis !== false && S.pos && (!S.pos.every(Number.isFinite) || !Number.isFinite(S.yaw))) throw new Error(`frame ${F}: ${n} has a non-finite pos/yaw`);
   const racing = (F >= K.go1 && F < K.lap2[0]) || (F >= K.go2 && F < K.freeze[1]);
   T.card.fans.forEach((f, i) => { f.rotation.y = (F / NF) * TAU * 22 * (i % 2 ? -1 : 1) + (racing ? 0 : 0); });
 }
@@ -162,10 +167,13 @@ function updateCamera(ctx, F) {
   let dy = yawAt(F + 0.5) - yawAt(F - 0.5);
   if (dy > Math.PI) dy -= TAU; if (dy < -Math.PI) dy += TAU;
   const inWhip = WHIPS.some(([a, b]) => F > a && F < b);
-  // smear peaks mid-whip (a bell over the whip window) and is capped: the 2D streaks carry the rest of the speed
+  // smear only over the 7 fastest frames of a whip (a bell round the window's middle: 1 light, 2 heavy, 1 light ...),
+  // capped at 60 design px: the 2D streaks and the move itself carry the speed
   const wh = WHIPS.find(([a, b]) => F > a && F < b);
-  const bell = wh ? Math.pow(Math.sin(Math.PI * (F - wh[0]) / (wh[1] - wh[0])), 2) : 0;
-  st.smear = inWhip && Math.abs(dy * 24) > 0.6 ? clamp(yawSmear(cam, dy * 24, 24) * 0.9 * bell, -120, 120) : 0;
+  const mid = wh ? (wh[0] + wh[1]) / 2 : 0, u = (F - mid + 3.5) / 7;
+  const bell = wh && u > 0 && u < 1 ? Math.pow(Math.sin(Math.PI * u), 2) : 0;
+  const ys = yawSmear(cam, dy * 24, 24);
+  st.smear = inWhip && Math.abs(dy * 24) > 0.6 ? Math.sign(ys) * Math.min(Math.abs(ys), 60) * bell : 0;
   ctx.camera = cam;
 }
 
@@ -262,7 +270,7 @@ function placeFlying(g, fromW, slot, u, n) {
 }
 
 // ---- the operator card: off the stack, shown to the lens, laid on the bench, then Kern's racing number plate
-const PLATE = { pos: [-0.02, 0.0, 0.305], s: 0.62 };
+const PLATE = { pos: [-0.04, 0.0, 0.305], s: 0.8 };
 function updateOpCard(F) {
   const C = T.opCard.root, kb = T.kern.body, Sk = st.kern;
   const onKern = F >= K.plate[1] && Sk.vis;
@@ -361,7 +369,9 @@ function updateStations(F) {
   w.flag.visible = W.flag > 0.01;
   w.flag.scale.set(Math.max(0.01, W.flag), Math.max(0.01, W.flag), 1);
   w.flood.visible = W.flood > 0.02; w.flood.scale.setScalar(Math.max(0.02, W.flood));
-  w.flagCloth.rotation.y = 0.2 * Math.sin(F * 0.5);
+  w.flagCloth.rotation.y = 0.12 * Math.sin(F * 0.5);
+  { const pos = w.flagCloth.geometry.attributes.position; if (!w.flagBase) w.flagBase = pos.array.slice();   // a cloth wave
+    for (let i = 0; i < pos.count; i++) { const x = w.flagBase[3 * i]; pos.setZ(i, w.flagBase[3 * i + 2] + 0.045 * x * 2.5 * Math.sin(x * 9 - F * 0.7)); } pos.needsUpdate = true; }
   // the output block: ejected from Kern's tail onto the left pan (B3), again in lap 2
   const ob_ = T.outBlock, leftPan = w.pans[0].g; leftPan.updateMatrixWorld(true);
   const panW = leftPan.localToWorld(V(0, 0.04, 0));
@@ -400,7 +410,7 @@ function updateStations(F) {
   const ck = T.check.root;
   ck.visible = !!st.kern.showCheck && st.kern.vis;
   if (ck.visible) {
-    const p = T.kern.body.localToWorld(V(0.32, 0.12, 0.46));   // low on the flank by the face, below the letters' band
+    const p = T.kern.body.localToWorld(V(0.66, 0.5, 0.26));    // on the face block's top corner: clear of the plate and below the letters
     ck.position.copy(p); ck.rotation.set(0, faceOut(toRing([p.x, p.y, p.z])[0]), 0);
     ck.scale.setScalar(ob(sg(F, K.check, K.check + 6)) * 0.5);
   }
@@ -439,11 +449,13 @@ function updateLetters(F) {
   if (!on) return;
   let y = 0, sy = 1, sxz = 1;
   if (a < 0) { const p = (a + 12) / 12; y = 7 * (1 - p * p); sy = 1.12; sxz = 0.93; }
-  else if (a < 3) { sy = 0.7; sxz = 1.14; }                              // the squash holds 3 frames
-  else { sy = 1 - ringv(a - 3, 0.3, 0.8, 0.18); sxz = 1 + ringv(a - 3, 0.15, 0.8, 0.18); }
+  else if (a < 3) { sy = 0.78; sxz = 1.1; }                              // the squash holds 3 frames
+  else { sy = 1 - ringv(a - 3, 0.2, 0.8, 0.2); sxz = 1 + ringv(a - 3, 0.1, 0.8, 0.2); }
   T.letters.position.set(base[0], base[1] + y + 0.02, base[2]);
   T.letters.rotation.set(0, faceOut(th) + 0.08, 0);
   T.letters.scale.set(sxz, sy, sxz);
+  const bk = a < 0 ? 0 : ob(a / 5);
+  T.burst.visible = bk > 0.01; T.burst.scale.set(4.6 * bk, 1.55 * bk, 1); T.burst.rotation.z = 0.03 * Math.sin(F * 0.3);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -482,9 +494,9 @@ export function drawNPR(ctx) {
   const cut = (p) => camera.position.distanceTo(V(...p)) + 2.2;
   if (F >= K.clang && F < K.clang + 2) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(A.gate, R.ours, 0.5)), setIds: T.setIds, plate: F === K.clang ? [1, 0.84, 0.8] : [1, 1, 0.96] });
   if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(L2 + A.finish, R.track, 0.4)), setIds: T.setIds, plate: F === K.freeze[0] ? [0.84, 1, 0.9] : [1, 1, 0.96] });
-  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 80, width: 3.4, seed }); };
+  const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 70, width: 6, seed }); };
   fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
-  if (st.kern.pos) fl(K.crash[0] + 4, 8, [st.kern.pos[0], 0.2, st.kern.pos[2]], 260, 1.0, 7);     // the crash zoom lands with zoom lines
+  if (st.kern.pos) fl(K.crash[0] + 2, 12, [st.kern.pos[0], 0.2, st.kern.pos[2]], 260, 1.0, 7);     // the crash zoom lands with zoom lines
   fl(K.slam, 18, polar(L2 + A.words, 1.2, 1.9), 420, 1.0, 9);
   fl(K.hold[0] + 2, K.hold[1] - K.hold[0] - 2, polar(L2 + A.finish, R.track, 0.45), 380, 0.7, 5);
   if (F >= K.slam - 4 && F < K.away[0]) npr.pointLight(V(...polar(A.words, 3.6, 2.4)), { color: 0xffc23d, radius: 3.6, i: 0.5 * sm((F - K.slam + 4) / 8) });
@@ -545,7 +557,7 @@ export function drawMarks(ctx, g) {
         const lx = lerp(x0, x1, q / 6), wp = T.lettersIn.localToWorld(V(lx, -0.02, 0.45));
         const c = prj(ctx, [wp.x, wp.y, wp.z]); if (!c.front) continue;
         const u = pxu(ctx, [wp.x, wp.y, wp.z]), sd = q < 3 ? -1 : q > 3 ? 1 : 0;
-        puff(g, c.x + sd * (0.2 + a * 0.12) * u, c.y + u * 0.04, u * (0.14 + 0.012 * a) * (0.8 + 0.4 * hsh(q, 7)), 1 - a / 11, r, PAL.cream);   // low, rolling outward along the card top
+        puff(g, c.x + sd * (0.25 + a * 0.14) * u, c.y + u * 0.3, u * (0.17 + 0.015 * a) * (0.8 + 0.4 * hsh(q, 7)), 1 - a / 11, r, PAL.cream);   // below the letters' feet, rolling outward over the card's edge
       }
     } }
   // square-wheel THUNK ticks under the wheels on each flat landing
@@ -561,6 +573,7 @@ export function drawMarks(ctx, g) {
     speedLines(g, ctx, back, dir, len, n, r);
   };
   trail(st.oro, K.go1 + 2, K.oroRun1[1] - 2, 1.6, 5);
+  const ds = dashState(F); if (ds.vis && F < K.clang) { const back = [ds.pos[0], ds.pos[1], ds.pos[2]]; const th = toRing(ds.pos)[0]; speedLines(g, ctx, back, [-Math.sin(th), 0, -Math.cos(th)], 1.4, 4, r); }
   trail(st.oro, K.go2 + 2, K.cross, 1.2, 4);
   trail(st.kern, K.go2 + 2, K.cross, 1.2, 4);
   trail(st.kern, K.lap2[0] + 4, K.lap2[1] - 6, 1.0, 3);
@@ -573,7 +586,7 @@ export function drawMarks(ctx, g) {
   const tk = st.tok;
   const bangAt = (f0, p, s, rot, col = PAL.coral) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, col, r); };
   { const sx = [Math.cos(tk.yaw), 0, -Math.sin(tk.yaw)]; bangAt(K.idea, [tk.pos[0] + sx[0] * 0.95, tk.pos[1] + 1.35, tk.pos[2] + sx[2] * 0.95], 0.42, 0.1, PAL.emerald); }   // beside the head, inside the card crop
-  if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 0.95, st.oro.pos[2]], 0.34, 0.12);
+  if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 1.05, st.oro.pos[2]], 0.62, 0.12);   // as big as Tok's
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
     const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
     const kp = st.kern.pos || [0, 0, 0], an = q / 6 * TAU + 0.4;

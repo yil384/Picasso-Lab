@@ -259,8 +259,11 @@ export function buildWeighIn(THREE, add, parent, { span = 0.95, h = 1.75 } = {})
   add(new THREE.CylinderGeometry(0.025, 0.025, 0.42, 6), { key: 'rod', color: 0x3b3558 }, { outline: 0.4 }, [0, 0.21, 0], [0, 0, 0], S.flag);
   const fg = new THREE.PlaneGeometry(0.62, 0.42, 6, 2); fg.translate(0.32, 0.22, 0);   // a short pole: the check stays inside the card band
   const flagTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 176; const g = c.getContext('2d');
-    g.fillStyle = '#10b981'; g.fillRect(0, 0, 256, 176); g.strokeStyle = '#1a1530'; g.lineWidth = 10; g.strokeRect(5, 5, 246, 166);
-    g.strokeStyle = '#fff6e0'; g.lineWidth = 26; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(70, 92); g.lineTo(110, 128); g.lineTo(186, 52); g.stroke();
+    g.fillStyle = '#10b981'; g.fillRect(0, 0, 256, 176);
+    // a printed cloth: halftone folds, a wobbly inked edge and a brush tick (not a flat UI badge)
+    g.fillStyle = '#047857'; for (let y = 6; y < 176; y += 9) for (let x = (y / 9) % 2 ? 4 : 0; x < 256; x += 9) { const f = 0.5 + 0.5 * Math.sin(x * 0.045); if (f > 0.55) { g.beginPath(); g.arc(x, y, 2.6 * f, 0, Math.PI * 2); g.fill(); } }
+    g.strokeStyle = '#1a1530'; g.lineWidth = 9; g.lineJoin = 'round'; g.beginPath(); for (let k = 0; k <= 40; k++) { const t = k / 40, P = t < 0.25 ? [6 + t * 4 * 244, 6] : t < 0.5 ? [250, 6 + (t - 0.25) * 4 * 164] : t < 0.75 ? [250 - (t - 0.5) * 4 * 244, 170] : [6, 170 - (t - 0.75) * 4 * 164]; const w = 2.5 * Math.sin(k * 1.9); k ? g.lineTo(P[0] + w, P[1] - w) : g.moveTo(P[0], P[1]); } g.closePath(); g.stroke();
+    g.lineCap = 'round'; for (const [dx, dy, w, c] of [[3, 4, 30, '#1a1530'], [0, 0, 24, '#fff6e0']]) { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.moveTo(66 + dx, 90 + dy); g.quadraticCurveTo(92 + dx, 108 + dy, 108 + dx, 132 + dy); g.quadraticCurveTo(140 + dx, 80 + dy, 192 + dx, 44 + dy); g.stroke(); }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; return t; })();
   S.flagCloth = add(fg, { key: 'flagcloth', color: 0xffffff, map: flagTex, side: THREE.DoubleSide, rim: 0.4, spec: 0, flat: 0.3 }, { outline: 0.7, cast: false }, [0, 0, 0], [0, 0, 0], S.flag);
   S.span = span; S.h = h;
@@ -366,6 +369,8 @@ export function buildCheck(THREE, add, parent, { col = 0x10b981 } = {}) {
   const s = new THREE.Shape(); s.moveTo(-0.3, 0.02); s.lineTo(-0.17, 0.14); s.lineTo(-0.06, 0.02); s.lineTo(0.24, 0.36); s.lineTo(0.36, 0.24); s.lineTo(-0.06, -0.22); s.closePath();
   const geo = new THREE.ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
   const C = { root: new THREE.Group() }; parent.add(C.root);
-  C.m = add(geo, { color: col, rim: 0.6 }, { outline: 0.7, cast: false }, [0, 0, 0], [0, 0, 0], C.root);
+  C.m = add(geo, { color: col, rim: 0.6, spec: 0 }, { outline: 0.7, cast: false }, [0, 0, 0], [0, 0, 0], C.root);
+  const back = add(geo, { key: 'checkback', color: 0xfff4dc, rim: 0.3, spec: 0, flat: 0.5 }, { outline: 0.7, cast: false }, [0.0, 0.0, -0.05], [0, 0, 0], C.root);   // a cream keyline so it reads on emerald
+  back.scale.set(1.35, 1.35, 1);
   return C;
 }

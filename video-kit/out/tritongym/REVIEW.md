@@ -124,3 +124,29 @@ Confirmed fixed on r3 frames (by the lens that raised them): the headline colour
 14. *PASS flag check and lamp outside the desktop band* (WD 3, DE n4): the flag pole is shorter; the gate shot is framed wider and higher so the lamp sits inside the band before the slam and after the nod.
 
 Nice-to-haves taken: Tok's idea "!" in emerald (DE n1), click bursts as radial spikes (CD n6, TA n7), the crooked token on a cream tile (CD n5), start blocks removed (TA n8), the double-take vertigo eased (TA n1), the B5 board no longer cropped (TA n6), the weigh-in framed away from the LIVE pill (WD n2), impact-frame set plate deep emerald instead of near-black (WD n3), `--master-max-mb 70` and `--nframes 660` as encode defaults (WD n6). Deferred: marks depth test (TA 6 — the one case, Kern behind the bench leg, is removed by the new bench exit), Torchy's face, a painted start line with aligned noses.
+
+## Round 4 — pass r4 (960×540, commit 2429c81)
+
+| lens | r1 | r2 | r3 | **r4** | verdict in one line |
+|---|---|---|---|---|---|
+| Creative director | 6.0 | 7.0 | 7.5 | **7.5** | Tok is P(doom)-grade, the fail → fix → pass chain is funny, race 2 now has tension; but the hero vanishes on the drive to the gate (f96–130), Oro is still a prop, the starts are dead and the racers merge, whips eat time |
+| Tech-art lead | 6.0 | 7.0 | 7.5 | **7.0** | the strongest look so far and no stacked smear copies; but three Kern/Oro statements were pasted inside `//` comments (Kern's matrix went NaN for the whole drive; race-2 wheels skate), the bench hop clips the table, racers still stacked, smear switches on/off in a frame, the photo-finish hold releases one frame early |
+| Domain expert | 6.0 | 7.6 | 8.2 | **8.3** | the coral hand, the check over the "R" and "164" are fixed; the profile numbers are exact (36 / 56 / 33 f); but the check now hides the matmul plate (the only thing tying the win to one operator), and Kern is never seen going into the gate |
+| Web designer | 6.3 | 7.4 | 7.8 | **8.0** | the poster reads at card size (caps ≈ 33 / 43 CSS px), card 3.50 MB at CRF 32, the seam is one continuous hop, the whip out of the poster no longer pops; but Kern is missing from the compile approach and still sits in the desktop bottom fade in the poster |
+
+Root cause of the worst r4 fault: three statements (`S.yaw …` on the drive, the race-2 wheel angles of Kern and Oro) had been appended after `//` comments while editing, so they never ran. All three are restored, a scan of every source file for code after a line comment now comes back clean, and `updateWorld` throws on any non-finite position or yaw of the cast, so this class of bug stops the render instead of shipping.
+
+### Must-fix list (merged) and what r5 does about each
+1. *Kern invisible on the drive; bench hop clips the table* (TA 1/2, CD 1, DE 2, WD 1): the swallowed yaw is restored and guarded; the hop arcs higher (clears the table top), lands clear of the bench end (r 7.55) with a squash, and the trundle to the gate is a steady pace in view from f98; Dash flies in inside the drive shot (f117–131) with speed lines.
+2. *Race-2 wheels skate* (TA 3): the swallowed wheel-angle statements are restored for Kern and Oro.
+3. *Racers merge; dead starts* (TA 4, CD 3, WD n3): the start two-shots and both races' tracking lenses are now 3/4 front, well ahead of the pack (≈22° down): the lanes sit side by side and both faces point at the lens; both racers crouch for GO; the double-take vertigo moves the lens along its line to Oro; the photo finish is shot high and side-on to the line (≈48° down) so both noses sit on the chequer in separate bands.
+4. *Oro is a prop* (CD 2): Oro's face is repainted on the front-outer quarter of the hull (where the lenses see it) at ~1.4× the r4 size; Oro turns ¾ to the lens for the side-eye and the double-take; its "!" is as big as Tok's; in the payoff it faces the lens for the jaw drop and nod.
+5. *The check hides the plate* (DE 1): the check sits on the face block's top corner (clear of the plate and below the letters); the plate is 0.8 (was 0.62) and Kern turns 0.8 rad to the lens in the payoff.
+6. *Kern in the desktop fade in the poster* (WD 2): Kern rolls ~one car-width further up-stage after the line, the payoff lens aims lower and pushes tighter (fov 40 → 34).
+7. *Smear switches on/off; whips eat time* (TA 5, CD 6): the smear now runs only over the 7 fastest frames of each whip (1 light, 2 heavy, 1 light …) and is capped at 60 design px; the whip out of the payoff starts at f640 (was 632).
+8. *Photo-finish hold releases a frame early* (TA 6): time stays frozen until the whip to the watch has covered the frame (f563).
+9. *Payoff slam still soft* (CD 5, TA 8): a comic title burst pops behind the letters on the slam; squash 78% held 3 frames; focus lines 6 px; bigger cream dust puffs roll out below the letters' feet.
+10. *Tok tone strobe* (TA 7): Tok's body tone floor raised again (toneBias 0.5) on top of the eased pose.
+11. *The PASS flag reads as a web badge; the dial fills the frame* (CD 7): a printed cloth flag (halftone folds, a wobbly inked edge, a brush tick) that waves; the push stops with the dial at ~70% of the frame, and the stopwatch is framed to the same size for the match cut.
+
+Nice-to-haves taken: the crooked ':' on one face only (DE n1, not a die), the wall's coral stripe → brick (DE n4), the check with a cream keyline (WD n2), the weigh-in framed higher (WD n4), the crash-zoom lines last until the close-up lands and the refine pull-out is longer (TA n1), the race-1 launch plays before the move (TA n6).

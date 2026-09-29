@@ -180,7 +180,7 @@ export function buildStands(THREE, add, parent, { gapA = null } = {}) {
     const a = (k + 0.5) / seg * TAU;
     const pad = new THREE.Group(); pad.position.set(Math.cos(a) * R0, 0, Math.sin(a) * R0); pad.rotation.y = -a + Math.PI / 2; S.root.add(pad);
     const wseg = TAU * R0 / seg + 0.02;
-    add(new THREE.BoxGeometry(wseg, 0.7, 0.3), { key: 'pad' + (k % 2), color: k % 2 ? 0xef4b5f : 0xe23e55, hatchDir: [0, 1, 0] }, { outline: 0.7, cast: false }, [0, 0.35, 0], [0, 0, 0], pad);
+    add(new THREE.BoxGeometry(wseg, 0.7, 0.3), { key: 'pad' + (k % 2), color: k % 2 ? 0xa8434b : 0x96363f, hatchDir: [0, 1, 0] }, { outline: 0.7, cast: false }, [0, 0.35, 0], [0, 0, 0], pad);
     for (let t = 0; t < 3; t++) add(new THREE.BoxGeometry(wseg + 0.05 + t * 0.12, 0.5, 0.9), { key: 'tier' + t, color: t % 2 ? 0xf2d8a8 : 0xfff0d0, hatchDir: [0, 1, 0] }, { outline: 0.6, cast: false }, [0, 0.95 + t * 0.5, 0.65 + t * 0.9], [0, 0, 0], pad);
   }
   // lamp posts with cone shades and pennant strings between them

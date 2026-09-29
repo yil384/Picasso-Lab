@@ -38,7 +38,7 @@ export function buildLLM(THREE, add, parent, { col = 0xfff4dc, accent = 0x059669
   // planar UV on the front face: map x,y in [-0.75,0.75] to the face canvas
   const uv = geo.attributes.uv, pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) uv.setXY(i, 0.5 + pos.getX(i) / 1.5, 0.5 + (pos.getY(i) - 0.02) / 1.5);
-  R.bodyM = add(geo, { color: col, map: R.faces.calm[0], rim: 0.8, spec: 0, toneBias: 0.38, receive: false, seed }, { outline: 1.1 }, [0, 0, 0], [0, 0, 0], R.body);
+  R.bodyM = add(geo, { color: col, map: R.faces.calm[0], rim: 0.8, spec: 0, toneBias: 0.5, receive: false, seed }, { outline: 1.1 }, [0, 0, 0], [0, 0, 0], R.body);
   // emerald sweatband round the top of the balloon (a tube hugging its outline, visible from every side)
   { const yb = 0.4, hw = 0.62 * Math.sqrt(1 - Math.pow((yb - 0.05) / 0.5, 2)) + 0.115, hd = 0.2;
     const pts = []; for (let k = 0; k < 48; k++) { const a = k / 48 * TAU; pts.push(new THREE.Vector3(Math.cos(a) * hw, yb, Math.sin(a) * hd)); }
@@ -153,7 +153,7 @@ export function buildKern(THREE, add, parent, { seed = 7, scale = 1.0 } = {}) {
   // nose block with the face (headlight eyes)
   K.faces = faceSet(THREE, {
     calm: { eyes: 'dot', mouth: 'smile' }, wide: { eyes: 'wide', mouth: 'o' }, dizzy: { eyes: 'spiral', mouth: 'wobble' }, determined: { eyes: 'determined', mouth: 'teeth' },
-    happy: { eyes: 'happy', mouth: 'open' }, nervous: { eyes: 'worried', mouth: 'wobble', sweat: true }, star: { eyes: 'star', mouth: 'grin', es: 1.35 }, squint: { eyes: 'squint', mouth: 'teeth' }, shut: { eyes: 'shut', mouth: 'flat' },
+    happy: { eyes: 'happy', mouth: 'open' }, nervous: { eyes: 'worried', mouth: 'wobble', sweat: true }, star: { eyes: 'star', mouth: 'grin', es: 1.6 }, squint: { eyes: 'squint', mouth: 'teeth' }, shut: { eyes: 'shut', mouth: 'flat' },
     strain: { eyes: 'squint', mouth: 'teeth', sweat: true },
   }, { w: 512, h: 512, base: '#ffffff', cx: 256, cy: 160, s: 2.5, seed, spacing: 0.95, mouthY: 42 });   // big eyes, high on the block (the refined nose sits under them)
   const noseGeo = new THREE.BoxGeometry(0.22, 0.4, 0.46, 2, 3, 3);
@@ -165,7 +165,8 @@ export function buildKern(THREE, add, parent, { seed = 7, scale = 1.0 } = {}) {
   K.chassis = add(new THREE.BoxGeometry(0.98, 0.07, 0.66), { key: 'chassis', color: 0x0b5e46, rim: 0.5, spec: 0, hatchDir: [1, 0, 0] }, { outline: 0.7 }, [0.02, -0.15, 0], [0, 0, 0], K.body);
   // the crooked cowlick token (compile bug)
   K.cowlick = new THREE.Group(); K.cowlick.position.set(0.1, 0.25, 0.02); K.body.add(K.cowlick);
-  K.cowM = add(tokenGeo(THREE, 0.2), { color: 0xffffff, map: tokenTexture(THREE, 8), rim: 0.6, spec: 0 }, { outline: 0.6 }, [0, 0.09, 0], [0, 0, 0], K.cowlick);
+  const blank = { key: 'cowblank', color: 0xfff4dc, rim: 0.6, spec: 0 };                 // the ':' on the lens face only (not a die)
+  K.cowM = add(tokenGeo(THREE, 0.2), [blank, blank, blank, blank, { color: 0xffffff, map: tokenTexture(THREE, 8), rim: 0.6, spec: 0 }, blank], { outline: 0.6 }, [0, 0.09, 0], [0, 0, 0], K.cowlick);
   // pointed nose cone token (added by the refinement)
   K.cone = new THREE.Group(); K.cone.position.set(0.8, -0.14, 0); K.body.add(K.cone);     // under the eyes, like a snout
   K.coneM = add(new THREE.ConeGeometry(0.12, 0.32, 4, 1), { color: 0xfff4dc, rim: 0.6, spec: 0 }, { outline: 0.65 }, [0, 0, 0], [Math.PI / 4, 0, -Math.PI / 2], K.cone);
@@ -205,7 +206,7 @@ export function buildOro(THREE, add, parent, { seed = 11 } = {}) {
   O.faces = faceSet(THREE, {
     smug: { eyes: 'smug', mouth: 'smile' }, wide: { eyes: 'wide', mouth: 'o' }, determined: { eyes: 'determined', mouth: 'teeth' },
     sweat: { eyes: 'worried', mouth: 'wobble', sweat: true }, shut: { eyes: 'shut', mouth: 'teeth' }, nod: { eyes: 'happy', mouth: 'smile' },
-  }, { w: 1024, h: 512, base: '#ef4b5f', s: 1.7, seed, spacing: 0.9, mouthY: 52 });   // big eyes: the rival's comedy reads
+  }, { w: 1024, h: 512, base: '#ef4b5f', cx: 150, cy: 236, s: 2.3, seed, spacing: 0.85, mouthY: 50 });   // a big face on the front-outer quarter (where the lenses see it): the rival's comedy reads
   const bodyGeo = new THREE.CapsuleGeometry(0.22, 0.9, 8, 24); bodyGeo.rotateZ(-Math.PI / 2);
   // face texture on the front hemisphere: sphere-like uv around +x
   { const p = bodyGeo.attributes.position, uv = bodyGeo.attributes.uv; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (x > 0.25) { const lon = Math.atan2(-z, x - 0.25), lat = Math.atan2(y, Math.hypot(x - 0.25, z)); uv.setXY(i, 0.25 + lon / (2 * Math.PI), 0.5 + lat / Math.PI); } else uv.setXY(i, 0.75, 0.5); } }
