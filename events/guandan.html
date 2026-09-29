@@ -1303,7 +1303,7 @@ function applyTribute(g, result) {
 }
 
 // An action that waits (a play or pass on Firebase, 提示 on the engine): its pill stays pressed and
-// dims, and a play's cards fade in the hand, until the answer is in.
+// darkens, and a play's selected cards take a deeper tint, until the answer is in.
 function sendingUI(id, on) {
     document.getElementById(id)?.classList.toggle("is-pending", on);
     if (id === "play-btn") tableView.regions.hand?.classList.toggle("is-sending", on);
