@@ -1,0 +1,173 @@
+[
+ {
+  "track": "lobby",
+  "judge": "judge-fid:lobby:r2",
+  "severity": "high",
+  "area": "room: empty seat + host AI badge (touch sizes)",
+  "problem": "On coarse pointers the host's 'AI' badge is drawn at the 40px tap floor. In portrait (390x844) it physically overlaps the '入座' label on all three empty seats. In landscape (844x390) it is a 40px disc next to the 51px '+入座' disc, overlapping it by 10px, so each empty seat reads as two separate seats. It looks broken and amateur.",
+  "evidence": "/private/tmp/claude-501/-Users-yil384-UCSD-Picasso-Web/fb737ac8-226a-4bbe-b0c1-8dcd1e181388/scratchpad/judge/lobby-r2-fidelity/sbs/pp390-room-alone-seats-zoom.png ; .../sbs/pl844-room-alone-seats-zoom.png ; overlap.py measurements (390x844): seat-1 label [59,261,89,279] vs ai-1 [22,251,62,291] overlap=true, same for seats 2 and 3; (844x390): #seat-1 51x51 vs #ai-1 40x40",
+  "fix": "Draw the AI affordance as a small corner badge, about 40% of the seat diameter (for example a 22px chip on the lower-right of the dashed ring), clear of the label. Give it the 40px hit area with a transparent ::before (inset:-9px) instead of a 40px visual. Alternatively, use a small 'AI' pill under the disc. The '+ 入座' text must never be covered."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-fid:lobby:r2",
+  "severity": "medium",
+  "area": "room: host seat controls (移除 / 离开)",
+  "problem": "Every AI or guest seat gets a full-size glossy red 移除 pill (40px tall on phones), and the own seat gets a periwinkle 离开 pill. A full room shows six glossy pills around a small table. Their placement changes by seat: the top seat's plate is right of the avatar with 移除 under it overlapping the felt, while the side seats stack plate and pill below. Tencent shows host controls as a small corner ×/踢 badge or a tap-avatar menu, not big buttons.",
+  "evidence": ".../shots/pl844-08-room-full.png ; .../shots/pp390-08-room-full.png ; .../sbs/pp390-en-room-top.png ; .../sbs/d1440-seat-zoom.png",
+  "fix": "Replace 移除 with a round × badge (about 22px visual, 40px hit via a pseudo-element) on the avatar's top-right. Make 离开 a small × or text chip on the own plate, or put it behind the header back arrow. Use one plate layout for all four seats (plate directly under the avatar)."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-fid:lobby:r2",
+  "severity": "medium",
+  "area": "room + lobby: the tap floor inflates visual size",
+  "problem": "The --tap:40px floor is applied to the drawn size of controls instead of their hit area, which breaks Tencent component proportions on phones. At 844x390: header chips 邀请/规则/战绩 are 67x40 (10% of screen height; Tencent chips are about 5%), roster 邀请 buttons are 49x40 (nearly square; Tencent is about a 2.4:1 pill), which truncates names to 'Zhen…'/'Cha…', 离开 is 49x40, and the level-stepper discs are 40px.",
+  "evidence": "measure.py (844x390): chips [280,6,67,40], roster invite [768,93,49,40], leave [489,290,49,40] ; .../sbs/pl844-roomfull-vs-yxrb181.png (ours vs Tencent 邀请 pills and header chips)",
+  "fix": "Keep Tencent visual sizes (header chip about 28px tall; invite pill about 62x28 design px; stepper discs about 30px) and meet the 40px target with an absolutely positioned transparent ::after (for example inset:-6px -4px) or negative-margin padding. Hit area and drawn size must be separate."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-fid:lobby:r2",
+  "severity": "medium",
+  "area": "room: own name plate",
+  "problem": "The own seat's name is a text input with a cyan rectangular outline and a pen icon. It reads as a web form field, not the dark name plates used on the other seats (and in Tencent). In EN at 844 the 'Blue' team chip wraps to a second line inside the outlined box.",
+  "evidence": ".../sbs/pl844-room-alone-seats-zoom.png ; .../shots/pl844-en-room-full.png ; .../shots/d1440-08-room-full.png",
+  "fix": "Render it as the same rgba-dark name plate as the other seats (no outline), with name, small pen glyph and team chip on one line (nowrap, name ellipsized, chip flex:none). Show focus or editing state only while the field is focused."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-fid:lobby:r2",
+  "severity": "medium",
+  "area": "room: 房间已创建 toast placement",
+  "problem": "The room-entry toast sits top-centre of the centre column, right over the partner seat's '+入座' disc, for 1.7 s at the moment the host lands. This happens in both landscape and portrait.",
+  "evidence": ".../shots/pl844-06-room-alone.png ; .../shots/d1440-06-room-alone.png ; .../sbs/pp390-room-alone-seats-zoom.png ; overlap.py: toastOverSeat=true at 390x844 and 844x390",
+  "fix": "Show room toasts in the vertical centre of the screen or the felt, over the level tiles, like Tencent's centre toast, or drop this toast since the room screen itself confirms creation."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-fid:lobby:r2",
+  "severity": "medium",
+  "area": "EN layout (lobby tiles + room settings)",
+  "problem": "English mode has visible collisions and a §3.1 violation. 'SOLO' sits on top of the joker card. 'INVITE' collides with the mini-table's '+' seat at 844. The hero 'Classic' title is smaller than the small tiles' titles. In the room, 'Blue start' runs under the gray ‹ stepper disc. The panel headings 'Table'/'Lab members' and the 'Invite friends' button are letter-spaced English, which §3.1 forbids ('no letter-spaced English kickers').",
+  "evidence": ".../shots/pl844-03-lobby-en.png ; .../shots/d1440-03-lobby-en.png ; .../sbs/pl844-en-settings-zoom.png ; .../shots/pl844-en-room-full.png ; guandan-lobby.css:1061 (letter-spacing .2em)",
+  "fix": "In EN, render tile tags as a small corner chip at the tile's top-right, in the 加倍 position, never next to the art. Give 'Classic' the same or larger size than the other titles. Shorten the room keys to 'Blue'/'Red' under a 'Start level' group, or widen the key column. Add html[lang=en] { letter-spacing:0 } for .room-panel-head and the big button labels."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-fid:lobby:r2",
+  "severity": "medium",
+  "area": "SPEC §3.2 avatar rule",
+  "problem": "The room seat avatars have a drop shadow outside the circle: `.room-seat-av { box-shadow: 0 calc(3*var(--lu)) calc(6*var(--lu)) rgba(0,0,30,.35) }`. This violates the standing user rule 'Never any glow/halo/shadow outside the avatar circle'. It is visually subtle but is a hard rule.",
+  "evidence": "/private/tmp/claude-501/-Users-yil384-UCSD-Picasso-Web/fb737ac8-226a-4bbe-b0c1-8dcd1e181388/scratchpad/wt/lobby/events/static/guandan-lobby.css:897 ; .../sbs/d1440-seat-zoom.png",
+  "fix": "Remove the box-shadow from .room-seat-av. If depth is wanted, put it on the plate or the felt, never outside the avatar circle."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-fid:lobby:r2",
+  "severity": "medium",
+  "area": "lobby: tile grid proportions",
+  "problem": "The tile grid spans 12.9% to 96.1% of the width at 844 (Tencent: about 19.9% to 88.9%). Tiles are about 20% wider: small tiles are 1.39:1 vs 1.22:1, and the 经典 tile is 22% W vs 18% W. The grid, rail and avatar hug the screen edges (rail at 2.6-9.2% W vs Tencent 6.6-11.6%), and 快速开始 is flush with the grid instead of overhanging its right edge. In the overlay the whole composition reads stretched to fill the page, which is a web-layout tell.",
+  "evidence": ".../sbs/pl844-lobby-blend.png (50% overlay on the reference) ; .../sbs/pl844-lobby-vs-yxrb.png ; measure.py 844x390: grid [0.129,0.152,0.961,0.785], small tile width 0.198 vs Tencent 0.166",
+  "fix": "Cap the grid to about 69-72% of stage width, centred in the space right of the rail (right edge at about 89-90% W), with a tile aspect of about 1.2:1. Inset the rail and top-bar avatar to about 6% W. Let the 快速开始 bar extend about 4% W past the grid's right edge as in the reference."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-qa:lobby:r2",
+  "severity": "medium",
+  "area": "Room portrait (390x844): empty seats",
+  "problem": "When the host views an empty seat, the AI badge sits on top of the '+ 入座' disc and covers the 入座 / Sit label. The top seat loses half of 座 and the side seats lose 入 or 座. This is the first thing a host sees after creating a room on a phone.",
+  "evidence": "shots/crop-pp390-empty.png and shots/crop-pp390-topseat.png. room_visual.py OVL measured #seat-N x #ai-N overlapping by 16x34 CSS px at 390x844 on all three empty seats. In landscape the badge sits outside the label.",
+  "fix": "In the portrait room layout, move .room-seat-ai off the disc as landscape does: an outer side badge, or a small pill below the disc. Alternatively shrink or offset the disc label so no glyph sits under the badge."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-qa:lobby:r2",
+  "severity": "medium",
+  "area": "Lobby: 快速开始 / 人机练习 / 经典 / 好友房 under real latency",
+  "problem": "Nothing visible happens between the tap and the next screen. Only `cursor: progress` is set and tiles get pointer-events: none. On Firebase, a set, a transaction and a get take roughly 1–2 s on phones. Quick start also shows a stray '房间已创建' toast, left over from createRoom, stacked with the table's round-start toast.",
+  "evidence": "qs_slow2.py with a 600 ms stub: at 150 ms the lobby is unchanged (shots/qsslow-pl844-150.png, `.lobby.is-busy` only) and the table appears at about 1.29 s. The lobby_flows toast list for quick start reads '第 1 局开始，打 2。起始牌：♠K | 房间已创建'.",
+  "fix": "While lobbyActionBusy is set, show a Tencent-style loading veil or pressed state on the tapped tile ('正在开局…' / '正在创建房间…'). For quickPractice, cover or replace the createRoom toast, for example by calling showToast with the loading text right after createRoom resolves. createRoom itself must not be edited."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-qa:lobby:r2",
+  "severity": "medium",
+  "area": "Room: ↩ back arrow",
+  "problem": "↩ is now the only exit in the room header, but it runs the old 新桌 handler (`location.href = GUANDAN_URL`) and never leaves the seat. The player stays seated in Firebase as a ghost. If the host uses it, guests are left on '等待房主开始' forever. If they start anyway, the ghost seat plays out 3-minute timeouts. The handler is unchanged from base, but it is now presented as 'back', so players will use it to leave.",
+  "evidence": "room_header.py: tapping #new-room-btn in the room navigates straight to guandan.html. The newRoomBtn click handler contains no leaveSeat call. The header buttons shown are new-room-btn:大厅, copy-link-btn, hud-rules-btn, hud-records-btn and lang-toggle.",
+  "fix": "On the room screen (phase lobby, seated), make the back arrow run queueRoomAction(() => leaveSeat(mySeat())) before newRoomBtn.click(), with an optional confirm for the host. This is composed from existing functions and changes no logic."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-qa:lobby:r2",
+  "severity": "medium",
+  "area": "Room: host 离开 dead end",
+  "problem": "When the other seats are AI, a host who taps 离开 on their own seat hands host to an AI through ensureHost. After that nobody can start, remove an AI, fill or dissolve, and sitting back down does not restore host. The UI offers this big blue button right next to the host's name.",
+  "evidence": "hostleave.py: before, the seats are [host, AI, AI, AI]. After tapping #leave-0 the seats are [null, 'ai:西家 AI*', 'ai:北家 AI', 'ai:东家 AI'] and the only controls left are ['seat-0=+入座', 'start-game=等待房主开始(dis)'] (shots/hostleave-1.png). The logic is pre-existing, but the dead end is reachable in one tap.",
+  "fix": "UI only: do not render 离开 on the host's own seat, since moving seats already works by tapping another seat and keeps host. Or, when no other human is seated, turn it into 解散 or back to the lobby behind a confirm."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-qa:lobby:r2",
+  "severity": "medium",
+  "area": "Lobby top bar: labmate profile matching",
+  "problem": "labPlayerKey copies seatMemberPhoto's loose substring match. The lobby now uses it to show another labmate's rank, rating, win rate and match count as the viewer's own profile whenever the nickname is a substring of a member's full name. Common surnames and short names are misattributed.",
+  "evidence": "fuzzy.py: 'Lin' shows yichen.webp, 第 5 名, 50/50%/8 (shots/fuzzy-Lin.png). 'Hu' shows zhengding.webp, 第 2 名, 56/60%/5. 'a' shows yue.webp with 实验室. 'Chen' shows chang.webp. 'Yu' shows Yufei, not Zhongkai Yu.",
+  "fix": "For the profile tier and stats (and the roster 已入座 check), require an exact full-name or exact first-name match, case-insensitive. The seat photo rule can stay unchanged if the lead wants to keep it."
+ },
+ {
+  "track": "lobby",
+  "judge": "judge-qa:lobby:r2",
+  "severity": "medium",
+  "area": "Room: 解散房间",
+  "problem": "One tap on the small red 解散房间 link deletes the room for all four players, with no confirmation. Guests get no notice: they silently land on the lobby with a stale ?room= URL and the dead code prefilled in the join field.",
+  "evidence": "room_flows.py: tapping #delete-room removes the store key and navigates immediately (dissolve.after). The guest's remote-dissolve result is ['lobby', '?room=GUEST', 'GUEST'] with no toast (shots/rm-*-guest-dissolved.png). Base behaved the same, so this is not a regression, but it reads as amateur next to Tencent's 确定解散房间？",
+  "fix": "Put dissolveRoom behind GuandanUI.openPopup with 确定 / 取消. When a room disappears under a room-screen viewer, show a '房间已解散' toast and clear ?room= with history.replaceState. Both are UI-only."
+ },
+ {
+  "track": "records",
+  "judge": "judge-fid:records:r3",
+  "severity": "medium",
+  "area": "type hint placement (guandan-transition.css #return-type-hint)",
+  "problem": "The hint keeps the old fixed position, bottom 74px (68px on phones), which now collides with the redesigned screens. On the table it covers the middle hand columns' rank indices and pips. On the lobby it covers the 加入房间/好友房 tile titles at 844x390, the 历史对阵/排行榜 nav icons at 1440x900, and the 快速开始 bar in portrait. On the rotated table it sits on the hand along the physical left edge. It shows for 2.6 s after any 2 keystrokes outside an input, so anyone trying the egg on the table sees a pill over their own cards. That reads as a web overlay stuck on a game, which Tencent toasts never do.",
+  "evidence": "Measured rect at 844x390 (table): x311 y282 w222 h40, inside the hand band. Rotated 390x844: x68..108. Images: judge/records-r3-fidelity/shots/crop-m844-table-hint.png, crop-m844-lobby-hint.png, crop-d1440-table-hint.png, crop-d1440-lobby-hint.png, ig3-sheet-m390.png, rot-sheet.png (all under /private/tmp/claude-501/-Users-yil384-UCSD-Picasso-Web/fb737ac8-226a-4bbe-b0c1-8dcd1e181388/scratchpad/judge/records-r3-fidelity/shots/)",
+  "fix": "Keep the look and change only the position, per screen, in guandan-transition.css. body[data-screen=table]: centre it in the empty felt between the side seats and the action row, about 28-30% from the stage top. For the rotated table, use the same landscape offset: left ≈ 70% of 100vw, rotated as now. body[data-screen=lobby|room]: put it just under the top bar (top: calc(top-bar height + 8px)) or above the bottom nav, with an offset the lobby track exposes as a CSS var. Check that it never intersects [data-card-id], .lobby-nav or the 快速开始 bar at 844x390, 1440x900 and 390x844."
+ },
+ {
+  "track": "table-core",
+  "judge": "judge-fid:table-core:r2",
+  "severity": "high",
+  "area": "hand columns: index legibility (J reads as I, Q as O, other ranks cut) on every 720-high stage (844x390 phone, 390x844 rotated, 1280x720) whenever a column has 4 or more cards",
+  "problem": "The round-1 high issue 'J glyph' is only fixed when the step is 35%. handGeometry reserves a fixed room of 720-55-20-87-312 = 246 design px for the hand, whether or not the action row is showing. Any column of 4 or more cards (bombs, very common in Guandan) has its step compressed to HAND_MIN_STEP .25 (36 px on a 138 px card). The strip is then shorter than the rank glyph's top padding plus cap height (44.9 px font). As a result J♦/J♣ read as 'I', Q reads as 'O', and A/10/5/7 plus the suits are cut in half. With a 6-card bomb the hand also shrinks to 79% and the step to 27 px, so strips are illegible. Tencent never compresses the strip: tg_table5 has a 5-card J column at a full ~33% step with the hand top at about 46% H, and tx_table_center shows the same for 4-card columns.",
+  "evidence": "judge/table-core-r2-fidelity/cmp/land-lead0-jcol.png (zoom: 'I♦ I♦ I♣', 'O♠'); cmp/land-wait-crop.png (the same happens with no action row visible); shots/hd-bomb6.png (1280x720, 5♦/5♣/5♥ strips half-cut, cards shrunk); cmp/land-lead5-crop.png vs cmp/mock-sel.png; cmp/hd-wait.png (ours vs tg_table6 side by side: Tencent's J strips complete, ours read I). measure.py at land/hd lead0 and wait gives steps=[36] with cardH 137.8; bomb6 gives cardH 109.3 and steps 27.3. Desk and iframe (800-high stage) keep 41-48 px (35%) and are fine. All paths are under /private/tmp/claude-501/-Users-yil384-UCSD-Picasso-Web/fb737ac8-226a-4bbe-b0c1-8dcd1e181388/scratchpad/",
+  "fix": "Treat the full index strip as non-negotiable: raise HAND_MIN_STEP to about .33 (the rank glyph plus suit must fit, as in Tencent). Only subtract ACTION_ROW_H + GAP from the room when the action row is actually shown (not in wait or spectator states). When a tall column still does not fit under the row, do not push the hand down. Instead, lift the row above design y=312 and make it fit horizontally between the side seats' played-card slots, as dagd_new_ingame does with its row at the height of the side players' cards and inboard of them. Options are a narrower row (pill width about 1.6×card w, smaller gaps) or letting the row overlap the centre and watermark band. Shrink cards (HAND_MIN_SCALE) only as a last resort, and never below a step that shows the whole index. Verify on land/hd with 4-, 5-, 6- and 8-card columns and zoom in on the strips."
+ },
+ {
+  "track": "table-core",
+  "judge": "judge-qa:table-core:r2",
+  "severity": "high",
+  "area": "Hand columns: stacked-strip readability on phones (regression of r1 high #1, J glyph)",
+  "problem": "handGeometry lets tall columns compress the stack step down to HAND_MIN_STEP (.25) before shrinking cards. On 16:9-and-wider stages (all phones, stage 1558x720) any column of 4 or more cards compresses every column to a 36 px step while the card stays at 102 px. The 45 px rank glyph (.44×card width) of every stacked card then loses its bottom 15 px. J reads as 'I' (hook hidden 6/35 px even with the .77 squash), Q reads as 'O', and 8/5/10 are cut off. By simulation, 85% of random 27-card hands contain a 4+ rank column, so most phone deals open like this. The builder's claim that 'it reads as J, not I, in columns' holds only at the uncompressed 35% step (desk/iframe).",
+  "evidence": "glyph.py, lead scene. land/port: step 36.05 px, cardW 102, hidden rank px per stacked card = 0C7 15/45, 0DA 15/45, 0SQ 15/45, 0DJ 6/35, 1DJ 6/35, 0CJ 6/35, 0H10 15/45 … Desk/hd/iframe: 2/38. Real game start on land: J♦/J♥ strips read 'I', 8 strips cut. Screenshots in /private/tmp/claude-501/-Users-yil384-UCSD-Picasso-Web/fb737ac8-226a-4bbe-b0c1-8dcd1e181388/scratchpad/judge/table-core-r2-qa/shots/: zoom-land-lead-strips.jpg (Q strip reads O, J strips read I), fl-land-r1-deal-e.jpg, tg-land-lead.jpg. Also judge/table-core-r2-qa/r1/shots/e2-hd-5s.jpg (5-card column cut at 1280x720).",
+  "fix": "Never let the step drop below the glyph height: set the minimum step to about .37×card height (index top 3.5% + rank .44·cw + 2 px), and let the card scale k (fitH) absorb the rest. Alternatively, allow a hand taller than that to run behind the action row. Re-run glyph.py: 'hidden' must be ≤2 px on land/port with 4-, 5-, 6- and 8-card columns."
+ },
+ {
+  "track": "table-core",
+  "judge": "judge-qa:table-core:r2",
+  "severity": "medium",
+  "area": "Round 2+: 进贡/还贡 moment vs the first lead",
+  "problem": "The tribute moment (TRIBUTE_MS 2200, starts at deal end = 2.8 s; 还贡 delayed 820 ms) is still running when play starts. The sorting window ends at 3.78 s, my action row appears at about 3.9–4.1 s, and an AI leader plays at about 4.3 s. So 还贡 cards fly across the fresh play and its 顺子 label, and across the action row and hand, for about 1 s. This happens at the start of every round 2+ where tribute applies.",
+  "evidence": "tribute2.py (desk). Leader AI: t=4314 ms plays=1 while 2 tribute flights are still visible until 5175 ms. Leader me: actions=2 at 4098 ms with 3 flights visible until about 5127 ms. Screenshots in judge/table-core-r2-qa/shots/: tr-desk-lead1-bcd.jpg (frame b: the 还贡 A♥ plate sits on 西家's fresh straight and 顺子 label, action row up), fl-r2-de.jpg (real flow: 还贡 card over 东家's QQ play; iframe: 还贡 card over my hand while 提示/出牌 are up), rj-desk-r2-tribute-reloaded.jpg.",
+  "fix": "Stay in the table lane (do not touch maybeRunAI or the timings): fit the whole 进贡→还贡 sequence inside the deal-end to sorting-end window (about 2.8–3.8 s), for example by overlapping the flights and shortening them to about 900 ms. Alternatively, start the flights during the last part of the deal. Or cancel/fast-forward the remaining flights as soon as the first play arrives or canAct becomes true."
+ },
+ {
+  "track": "table-core",
+  "judge": "judge-qa:table-core:r2",
+  "severity": "medium",
+  "area": "Touch targets on phones (spec §6 ≥ 40 CSS px)",
+  "problem": "The bottom pills 重选/理牌/横排 (Reset/Group/Row) have an effective tap height of only about 30 CSS px on phones. The ::after slop is capped at 58 design px, and the pill sits 6 px above the stage bottom, so part of the slop falls off-screen. The builder reported the bottom pills as fixed.",
+  "evidence": "targets2.py HIT scan (elementFromPoint including ::after). land: tool:重选 [45,30], 理牌 [54,30], 横排 [54,30]; port (rotated): [30,45], [30,54], [30,54]. The same holds in English (Reset/Group/Row, 30 px). Tracker tabs 39–40 px. Output: judge/table-core-r2-qa/out-tg-land.txt, out-tg-port.txt.",
+  "fix": "Grow the slop sideways and downward rather than upward: the pills can use the full 50 design px bar plus the bottom inset. Or raise the pills to 44 design px and move them to bottom 3 px with a slop of max(100%, 44px/--gd-s) that is not capped by the hand. Re-measure to at least 40 px."
+ }
+]
