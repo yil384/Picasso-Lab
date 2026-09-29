@@ -55,6 +55,10 @@ high/medium issues the previous reviewers found **before** those commits — man
   apt-get update -y && apt-get install -y fonts-noto-cjk fonts-noto-color-emoji
   python3 -m pip install --break-system-packages --quiet playwright pillow
   python3 -m playwright install --with-deps chromium
+  # behind the claude.ai/code TLS proxy Chromium needs the proxy CA in its NSS store, or every font request fails
+  # with ERR_CERT_AUTHORITY_INVALID (the shots then fall back to system fonts and are not comparable):
+  apt-get install -y libnss3-tools && mkdir -p ~/.pki/nssdb && certutil -d sql:$HOME/.pki/nssdb -N --empty-password
+  certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n agent-proxy-ca -i /root/.ccr/agent-proxy-ca.crt
   ```
 - Network: the page loads Google Fonts (fonts.googleapis.com, fonts.gstatic.com) and a font from cdn.jsdelivr.net, and the reference
   script downloads from news.yxrb.net, game.gtimg.cn, play-lh.googleusercontent.com, qqgame.qq.com and is1-ssl.mzstatic.com — use network
