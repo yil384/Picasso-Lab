@@ -135,7 +135,7 @@ Fixes made for round 5:
 | lens | score | verdict |
 |---|---|---|
 | CD | **8.5** | No must-fix. Every whip streaks and lands; the lens→knob iris is a real shape match on paper; the whole story reads without words and the lighter self-coloured ink still reads as bold comic at card size (now close to ChipMate). Should: nobody reacts to VROOOM, the hourglasses move without Hoot's wing, Loupe half-hidden in the payoff, crisp ink over peak whip frames, the knowledge-base book never opened. |
-| TA | *(round-5 TA review still running when the final was rendered; the round-4 TA must-fixes were fixed and spot-checked, see below)* | |
+| TA | **7.8** | Best NPR base so far; the iris is a true match with no dark frame; round-3 TA3-1/3/4 resolved, TA3-2 largely. Blockers: the projected-slide smear brought back stepped ghost copies and see-through line-drawing characters, and speed lines fired as full-frame 'rain' on slow tilts/cranes/pull-backs; in S8a/S9 Loupe flew through the lampshade, the returned result through the giant's bulbs and Tri, Clack through the tipping giant, and heads poked through the funnel cone for a frame. Should: small props' ink too thin, cell grazing Clack's carriage in the lap, flat cloud stickers, CLANK!/DING! covering the job and the gauge label. |
 | DFT | **8.8** | No must-fix. Every shot maps to a real concept in order; vc-relax, scf, ΔE convergence, the Pareto back-off and all numbers honest (both clocks start f70, TINK at f590, 41/42 ticks ≈ 98% on the benchmark card only, four countable pennies). Should: the giant's front post hid the one-load pile, method book shut, band gap brief in S7, some scorecard doodles QR-like. |
 | WEB | **8.7** | No must-fix. Iris resolved (no frame > 3% dark); darkness resolved (film-wide 20.0% → 10.8% under luma 0.15, within the siblings' range); hue on target (198–199° on the poster); CLANK!/THUNK!/S7/page back resolved; poster **f664** confirmed. Should: numerals touching the 515 fade, a 58%-ink impact frame, warm desk vs ChipMate's amber, the scf ticket read as a refresh icon. |
 
@@ -149,6 +149,12 @@ Fixes made after round 5 (spot-checked frame by frame at 960×540, then rendered
   float without a bracket and sit in frame in S7; mid-blue wall rail; the scf ticket shows a bond pair with density
   lozenges; a larger iris pinhole.
 - Purity and loop verified after every batch (`shoot.py purity … --loop`: repeats match, f720 == f0).
+- Round-5 TA must-fixes (then rendered in the final): a continuous 17-tap tent-weighted smear with every whip capped
+  (characters keep their colour; ink and hatching fade with the streak), speed lines only on real whips and only toward
+  the frame edges; flights arc toward camera clear of the lampshade and the giant; funnel entries end inside the bell;
+  the returned result goes over the giant's cap and is held out beside Tri; Loupe rides its own 98% up (face-on, clear
+  of the lamp); Clack steps back from the ring for the lap; bolder cell atoms; cloud puffs with grain and halftone;
+  CLANK!/DING! clear of the job and the gauge label.
 
 ## Handoff status
 - Done: storyboard (4 angles judged), full 720-frame scene in `films/tritondft/`, review round 0 (storyboard) and round 1 (first cut: CD 6.4 / TA 6.7 / DFT 6.8 / WEB 7.0).
