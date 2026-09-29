@@ -188,4 +188,27 @@ Nice-to-haves taken: the bench landing moved further along the track (TA n2), du
 6. *Kern's lap-2 launch snaps in an unsmeared frame* (TA 3): Kern revs 3 frames longer and launches at f425, inside the whip's smear peak.
 7. *The token insert is cluttered and turns Tok grey* (TA 4): tight, from the side and above: the crooked ':' token, the mitt and the press are the subject; Tok is at the edge and brighter (the tone fix).
 
-Nice-to-haves taken: every material without an explicit `spec` is now matte (the default was a paper-white highlight: the pylon's coral ball and a white glint on the weigh-in base, TA n5, n8), CLANG! shrinks away over 5 frames (TA n3), Kern's post-CLANG tumble spins half as fast (TA n4), the race-1 crane to the finish is 24 frames (TA n2), Oro's double-take "!" sits low beside its head inside the card band (WD n1), the lap-2 weigh-in framed left (WD n5), the card encode's CRF search starts at 30 (WD n6).
+Nice-to-haves taken (r7): every material without an explicit `spec` is now matte (the default was a paper-white highlight: the pylon's coral ball and a white glint on the weigh-in base, TA n5, n8), CLANG! shrinks away over 5 frames (TA n3), Kern's post-CLANG tumble spins half as fast (TA n4), the race-1 crane to the finish is 24 frames (TA n2), Oro's double-take "!" sits low beside its head inside the card band (WD n1), the lap-2 weigh-in framed left (WD n5), the card encode's CRF search starts at 30 (WD n6).
+
+## Round 7 — pass r7 (960×540, commit e9dceaf)
+
+| lens | r1 | r2 | r3 | r4 | r5 | r6 | **r7** | verdict in one line |
+|---|---|---|---|---|---|---|---|---|
+| Creative director | 6.0 | 7.0 | 7.5 | 7.5 | 8.2 | 8.3 | **8.5** | **no must-fix**: Oro's payoff reactions read, the winner acts first and biggest, the refine idea now has a visible cause; what is left is payoff polish (dust over Tok, Oro faceless in the hold, key over Tok's mouth in race 1) |
+| Tech-art lead | 6.0 | 7.0 | 7.5 | 7.0 | 8.0 | 8.2 | **8.2** | the Tok strobe, Dash's trail and the insert clutter are fixed; but Kern vanishes for three sharp frames at the lap-2 launch (f422–424), 2D marks still land on the cast's faces (slam puffs f590–600, insert zoom lines f146–149), and Oro's key covers Tok's face in the race-1 loss |
+| Domain expert | 6.0 | 7.6 | 8.2 | 8.3 | 8.7 | 8.8 | **8.9** | **no must-fix**: the stare before the idea and the new Oro reactions make the claims clearer; timings, colours, verify-by-outputs and the honest photo-finish gap all hold |
+| Web designer | 6.3 | 7.4 | 7.8 | 8.0 | 8.1 | 8.6 | **8.4** | the poster (f628) is better and the seam, pill corner and budget hold (card 3.62 MB at CRF 32, master ≈ CRF 21 for 70 MB); but the new refine beat happens above the desktop card band — the blank stare is on screen for about one frame and the "!" pops above the crop |
+
+### Must-fix list (merged) and what r8 does about each
+1. *Kern disappears at the lap-2 launch, f422–424* (TA 1): the refine hold reads Kern's position from `kernTh(min(F, lap2[0] − 1))`, so it can never pick up the race-2 curve (which starts at the start line) before the launch at f425. A per-frame scan of all three cast members finds no visibility flip and no position step outside motion, whips and the match cut.
+2. *2D marks over the cast's faces* (TA 2, CD n1): the slam's dust puffs skip any puff whose centre falls inside Tok's projected screen box; the insert's zoom lines start one frame into the close-up, after Tok has left the frame; the stopwatch click bursts sit inside the watch face.
+3. *Oro's key over Tok's face in the race-1 loss* (TA 3, CD n4): Oro coasts further past the line (rest at finish + 0.72 instead of + 0.42), so it parks clear of Tok. Tok watches from the near side of it (finish + 0.40) and does a small startled hop as Oro whooshes past (f343–355), so the passing key goes under its chin, not across its face.
+4. *The refine stare and "!" happen above the desktop card band* (WD 1, CD n3): the pull-out after the crash zoom is a fast ease-out (f366–382 instead of an in-out f368–388), so Tok's blank stare is inside both card bands from f370 to f378 (8 frames). The emerald "!" pops beside Tok's head at eye height, on the open side towards Oro, instead of above it. Checked with `sheet.py --card` on f366–392.
+
+Nice-to-haves taken (r8): Oro's nod moves after the poster frame (f629–639), so f628 shows its wide-eyed jaw drop and it settles on the wide eye after the nod rather than a closed-eye arc (WD n1, CD n2). Oro's race-2 "!" is about 40 master px lower, inside the band (WD n3). Tok turns the short way round, under the seam whip's smear, so it is never edge-on in a sharp frame at f656–659 (TA n3, CD n8). The match-cut pull-back starts on the cut (TA n1). A comment lint (`tools/lint_comments.py`) now catches code accidentally swallowed by a `//` comment, the cause of three earlier bugs.
+Deferred, with reasons:
+- Seat the payoff letters on the GPU slab (CD n6): a re-stage of the headline composition that three lenses have signed off.
+- A painted start line with the noses on it (DE n2): the offset favours the oracle, so it doesn't weaken the claim.
+- Tok's underside shadow band (TA n2): it conflicts with the web designer's praise of the clean cream balloon at 400 px, and risks the strobe again.
+- Kern's face on the drive (CD n5).
+- The push-in on Kern's win (CD n7).
