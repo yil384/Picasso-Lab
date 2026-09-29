@@ -79,12 +79,12 @@ export function buildWatch(add, scene, o = {}) {
     void tk;
   }
   const handGeo = new THREE.BoxGeometry(0.05, R * 0.72, 0.02); handGeo.translate(0, R * 0.3, 0);
-  W.hand = add(handGeo, { color: 0xe5463b, flat: 0.35, hatch: 0 }, { outline: 0.5, cast: false }, [0, 0, 0.15], [0, 0, 0], W.body);
+  W.hand = add(handGeo, { color: 0x7c3aed, flat: 0.35, hatch: 0 }, { outline: 0.5, cast: false }, [0, 0, 0.15], [0, 0, 0], W.body);
   W.ghost = add(handGeo, { color: 0xb9a3f0, flat: 0.6, hatch: 0 }, { outline: 0.35, cast: false }, [0, 0, 0.145], [0, 0, 0], W.body);
   W.ghost.visible = false;
-  add(new THREE.SphereGeometry(0.06, 16, 12), { color: 0xe5463b }, { outline: 0.4, cast: false }, [0, 0, 0.16], [0, 0, 0], W.body);
+  add(new THREE.SphereGeometry(0.06, 16, 12), { color: 0x7c3aed }, { outline: 0.4, cast: false }, [0, 0, 0.16], [0, 0, 0], W.body);
   add(cyl(0.07, 0.07, 0.12, 20), brass, { outline: 0.6 }, [0, R + 0.08, 0], [0, 0, 0], W.body);
-  W.crown = add(cyl(0.13, 0.13, 0.1, 28), { color: 0xe5463b, rim: 0.7, hatchMode: 'u' }, { outline: 0.8 }, [0, R + 0.18, 0], [0, 0, 0], W.body);
+  W.crown = add(cyl(0.13, 0.13, 0.1, 28), { color: 0x7c3aed, rim: 0.7, hatchMode: 'u' }, { outline: 0.8 }, [0, R + 0.18, 0], [0, 0, 0], W.body);
   add(new THREE.TorusGeometry(0.12, 0.035, 12, 36), brass, { outline: 0.6 }, [0, R + 0.34, 0], [0, 0, 0], W.body);
   // arms (groups at the shoulders; rotate z to raise), gloves
   const armGeo = new THREE.CapsuleGeometry(0.055, 0.42, 6, 14); armGeo.translate(0, -0.27, 0);
@@ -98,7 +98,7 @@ export function buildWatch(add, scene, o = {}) {
   const legGeo = new THREE.CapsuleGeometry(0.065, 0.26, 6, 14);
   W.legs = [-1, 1].map((s) => {
     const l = add(legGeo, { color: 0x2b2447, hatchMode: 'v' }, { outline: 0.8 }, [s * 0.2, 0.26, 0], [0, 0, 0], W.group);
-    const sh = add(new THREE.SphereGeometry(0.13, 22, 14), { color: 0xe5463b, rim: 1 }, { outline: 0.9 }, [s * 0.24, 0.05, 0.06], [0, 0, 0], W.group);
+    const sh = add(new THREE.SphereGeometry(0.13, 22, 14), { color: 0x7c3aed, rim: 1 }, { outline: 0.9 }, [s * 0.24, 0.05, 0.06], [0, 0, 0], W.group);
     sh.scale.set(1.2, 0.6, 1.5);
     return { l, sh, s };
   });
@@ -165,8 +165,9 @@ export function buildSnail(add, scene, { scale = 1.4, atomGeo = null, atomMat = 
     sg.rotation.set(s * 0.25, 0, -0.3); return { g: sg, s };
   });
   S.shellG = new THREE.Group(); S.shellG.position.set(-0.08, 0.34, 0); S.body.add(S.shellG);
-  S.shell = add(shellGeometry(), { color: 0x8e86a8, hatchMode: 'u', hatch: 0.5, rim: 1, spec: 0.3, toneBias: 0.1, seed: 6.2, noiseScale: 1.2 }, { outline: 1.1 }, [0, 0, 0], [0, 0, 0], S.shellG);
-  if (atomGeo) { S.cargo = add(atomGeo, atomMat, { cast: true, outline: 0.9 }, [0, 0.46, 0], [0, 0, 0], S.shellG); S.cargo.scale.setScalar(0.8 / scale); }
+  S.shell = add(shellGeometry(), { color: 0x9a92b0, hatchMode: 'u', hatch: 0.5, rim: 1, spec: 0.3, toneBias: 0.1, seed: 6.2, noiseScale: 1.2 }, { outline: 1.1 }, [0, 0, 0], [0, 0, 0], S.shellG);
+  // cargo: two atoms riding on the shell (PowerMove moves ~1.7 qubits per AOD move)
+  S.cargo = atomGeo ? [-0.13, 0.13].map((dz, i) => { const m = add(atomGeo, atomMat(i), { cast: true, outline: 0.9 }, [0.02, 0.44, dz], [0, 0, 0], S.shellG); m.scale.setScalar(0.72 / scale); return m; }) : [];
   return S;
 }
 /** P = { x, y, z, yaw, lean, sq, st (stretch), sway, stalk } */
@@ -189,11 +190,11 @@ export function buildLoco(add, scene, { scale = 1 } = {}) {
   L.group.scale.setScalar(scale);
   L.body = new THREE.Group(); L.group.add(L.body);
   const B = L.body;
-  const teal = { color: 0x2ea597, hatchMode: 'u', rim: 1, spec: 0.35, shadeColor: 0x1f5a55, shadeMix: 0.35 };
+  const teal = { color: 0x7c3aed, hatchMode: 'u', rim: 1, spec: 0.35, shadeColor: 0x3b1f8a, shadeMix: 0.35 };
   const brass = { color: 0xe6ad42, hatchMode: 'u', spec: 0.35 };
   add(cyl(0.34, 0.34, 0.95, 40), teal, { outline: 1.15 }, [0.2, 0.58, 0], [0, 0, Math.PI / 2], B);
   for (const x of [-0.08, 0.42]) add(new THREE.TorusGeometry(0.345, 0.03, 10, 44), brass, { outline: 0.5 }, [x, 0.58, 0], [0, Math.PI / 2, 0], B);
-  add(cyl(0.36, 0.36, 0.14, 40), { color: 0x1f5a55, hatchMode: 'u' }, { outline: 0.9 }, [0.72, 0.58, 0], [0, 0, Math.PI / 2], B);
+  add(cyl(0.36, 0.36, 0.14, 40), { color: 0x3b1f8a, hatchMode: 'u' }, { outline: 0.9 }, [0.72, 0.58, 0], [0, 0, Math.PI / 2], B);
   L.plate = add(cyl(0.29, 0.29, 0.03, 40), { color: 0xfff0dc, hatch: 0.4, toneBias: 0.25, spec: 0 }, { outline: 0.8 }, [0.8, 0.58, 0], [0, 0, Math.PI / 2], B);
   const chim = new THREE.LatheGeometry([[0.001, 0], [0.1, 0], [0.09, 0.18], [0.11, 0.3], [0.18, 0.38], [0.18, 0.44], [0.001, 0.44]].map(([x, y]) => new THREE.Vector2(x, y)), 32);
   add(chim, { color: 0x3b3552, hatchMode: 'v', spec: 0.4 }, { outline: 1 }, [0.55, 0.86, 0], [0, 0, 0], B);
@@ -202,17 +203,17 @@ export function buildLoco(add, scene, { scale = 1 } = {}) {
   // cab windows (cream insets) + nameplate board on the cab side (lettered in 2D)
   for (const z of [-0.365, 0.365]) add(new THREE.BoxGeometry(0.3, 0.22, 0.01), { color: 0xfff3dc, flat: 0.4, hatch: 0 }, { outline: 0.5, cast: false }, [-0.5, 0.78, z], [0, 0, 0], B);
   L.names = [0.366, -0.366].map((zz) => add(new THREE.BoxGeometry(0.5, 0.2, 0.012), { color: 0xe6ad42, hatch: 0.2, toneBias: 0.2, spec: 0 }, { outline: 0.55, cast: false }, [-0.5, 0.44, zz], [0, 0, 0], B));
-  add(new THREE.BoxGeometry(0.78, 0.09, 0.88), { color: 0xe5463b, hatchDir: [1, 0, 0] }, { outline: 1 }, [-0.5, 1.0, 0], [0, 0, 0], B);
+  add(new THREE.BoxGeometry(0.78, 0.09, 0.88), { color: 0xf2a922, hatchDir: [1, 0, 0] }, { outline: 1 }, [-0.5, 1.0, 0], [0, 0, 0], B);
   add(cyl(0.045, 0.045, 0.16, 14), brass, { outline: 0.6 }, [-0.3, 1.12, 0], [0, 0, 0], B);
   L.whistleTip = new THREE.Object3D(); L.whistleTip.position.set(-0.3, 1.22, 0); B.add(L.whistleTip);
   L.chimTop = new THREE.Object3D(); L.chimTop.position.set(0.55, 1.32, 0); B.add(L.chimTop);
   add(new THREE.BoxGeometry(1.72, 0.13, 0.62), { color: 0x3b3552 }, { outline: 0.9 }, [0.05, 0.27, 0], [0, 0, 0], L.group);
-  add(new THREE.BoxGeometry(0.09, 0.15, 0.7), { color: 0xe5463b }, { outline: 0.8 }, [0.92, 0.27, 0], [0, 0, 0], L.group);
+  add(new THREE.BoxGeometry(0.09, 0.15, 0.7), { color: 0xf2a922 }, { outline: 0.8 }, [0.92, 0.27, 0], [0, 0, 0], L.group);
   L.coupler = new THREE.Object3D(); L.coupler.position.set(-0.95, 0.28, 0); L.group.add(L.coupler);
   L.wheels = [];
   for (const [x, rr] of [[-0.42, 0.22], [0.06, 0.22], [0.56, 0.15]]) for (const z of [-0.33, 0.33]) {
     const wg = new THREE.Group(); wg.position.set(x, rr, z); L.group.add(wg);
-    add(cyl(rr, rr, 0.08, 28), { color: 0xe5463b, hatchMode: 'u', rim: 1 }, { outline: 0.8 }, [0, 0, 0], [Math.PI / 2, 0, 0], wg);
+    add(cyl(rr, rr, 0.08, 28), { color: 0xf2a922, hatchMode: 'u', rim: 1 }, { outline: 0.8 }, [0, 0, 0], [Math.PI / 2, 0, 0], wg);
     add(new THREE.BoxGeometry(rr * 1.8, 0.045, 0.1), { color: 0xfff0dc }, { outline: 0.4 }, [0, 0, 0], [0, 0, 0], wg);
     L.wheels.push({ g: wg, r: rr });
   }
@@ -276,8 +277,8 @@ export function buildLoupe(add, npr, scene, { scale = 1 } = {}) {
     return { g, s };
   });
   L.whistle = new THREE.Group(); L.whistle.position.set(0, -0.46, 0.06); L.arms[1].g.add(L.whistle);
-  add(cyl(0.06, 0.06, 0.18, 18), { color: 0xe5463b, rim: 0.8 }, { outline: 0.7 }, [0, 0, 0], [0, 0, Math.PI / 2], L.whistle);
-  add(new THREE.SphereGeometry(0.075, 16, 12), { color: 0xe5463b }, { outline: 0.7 }, [0.07, -0.04, 0], [0, 0, 0], L.whistle);
+  add(cyl(0.06, 0.06, 0.18, 18), { color: 0xf2a922, rim: 0.8 }, { outline: 0.7 }, [0, 0, 0], [0, 0, Math.PI / 2], L.whistle);
+  add(new THREE.SphereGeometry(0.075, 16, 12), { color: 0xf2a922 }, { outline: 0.7 }, [0.07, -0.04, 0], [0, 0, 0], L.whistle);
   L.whistleTip = new THREE.Object3D(); L.whistleTip.position.set(-0.12, 0, 0); L.whistle.add(L.whistleTip);
   return L;
 }
@@ -320,7 +321,7 @@ export function poseGauge(G, fid) {
   G.top.position.set(0, G.base + fid * G.hPM, 0);
 }
 export function buildPennant(add, W) {
-  const F = { group: new THREE.Group() }; W.body.add(F.group);
+  const F = { group: new THREE.Group() }; W.body.add(F.group); F.size = 1.3;
   F.group.position.set(0, W.R + 0.22, 0);
   const poleGeo = cyl(0.028, 0.028, 0.72, 10); poleGeo.translate(0, 0.36, 0);
   F.pole = add(poleGeo, { color: 0xe6ad42, hatchMode: 'u' }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], F.group);
@@ -334,7 +335,7 @@ export function buildPennant(add, W) {
 /** k: 0 (inside the crown) .. 1 (fully up), unfurl 0..1, wave phase */
 export function posePennant(F, k, unfurl, wave) {
   F.group.visible = k > 0.01;
-  F.group.scale.setScalar(Math.max(0.01, k));
+  F.group.scale.setScalar(Math.max(0.01, k) * F.size);
   const pos = F.flag.geometry.attributes.position, b = F.base;
   for (let i = 0; i < pos.count; i++) {
     const x = b[i * 3], y = b[i * 3 + 1];
