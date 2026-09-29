@@ -1,0 +1,105 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>TritonDFT proto</title>
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+// look / timing prototype: the silicon diamond-cubic cell on a sky-blue lab bench, comic NPR
+import { defineScene } from '/pv/runtime/pv.js';
+import { createNPR } from './npr/npr.js';
+import { orbit, handheld, applyRig } from './npr/camera.js';
+import { PAL, COL, TAU, Q, bake, lerp } from './td_core.js';
+import { addLetterBrushes } from './td_letters.js';
+
+const LOOK = {
+  extends: 'comic',
+  hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.5, hatchWobble: 0.08, hatchSwell: 0.35,
+  htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0], htCol: [0.08, 0.2, 0.36],
+  lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
+  bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.1,
+  rule: 0.0, bgDots: [0.2, 0.52, 0.75, 0.3],
+  shadeGlaze: [0.62, 0.74, 0.9], coreGlaze: [0.62, 0.74, 0.9],
+  dofMax: 3.5, dofRange: 3.0, grain: 0.018, vignette: 0.16,
+  ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
+};
+let T;
+const paperC = (ctx) => ctx.paper({ tone: PAL.paper, grain: 0.04, fibres: 0.05, blotch: 0.06, seed: 4 });
+
+// silicon, diamond cubic: FCC corners + faces + 4 interior tetrahedral sites, 16 covalent bonds
+export function diamondCell() {
+  const P = [];
+  for (const x of [0, 1]) for (const y of [0, 1]) for (const z of [0, 1]) P.push([x, y, z]);
+  P.push([0.5, 0.5, 0], [0.5, 0.5, 1], [0.5, 0, 0.5], [0.5, 1, 0.5], [0, 0.5, 0.5], [1, 0.5, 0.5]);
+  const I = [[0.25, 0.25, 0.25], [0.75, 0.75, 0.25], [0.75, 0.25, 0.75], [0.25, 0.75, 0.75]];
+  const bonds = [];
+  I.forEach((q) => P.forEach((p, j) => { if (Math.abs(Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]) - Math.sqrt(3) / 4) < 1e-6) bonds.push([P.length + I.indexOf(q), j]); }));
+  return { atoms: [...P, ...I], bonds, interior: I.length };
+}
+
+defineScene({
+  meta: { title: 'proto', durationFrames: 96, fps: 24, width: 1920, height: 1080, design: [1920, 1080], background: PAL.paper, boil: { every: 2, variants: 3 }, seed: 5 },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(paperC(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, { THREE, renderer }) {
+        addLetterBrushes(brush);
+        const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, ctx.W / ctx.H, 0.5, 80);
+        const npr = createNPR(renderer, ctx, { look: LOOK, paper: paperC(ctx), samples: 4 });
+        npr.setUnder(window.__pv.canvas);
+        npr.setLight({ dir: [-0.5, 0.85, 0.55], target: [0, 0.5, 0], size: 6, dist: 20 });
+        const add = (geo, mo, ao = {}, pos = [0, 0, 0], rot = [0, 0, 0], parent = scene) => {
+          const m = npr.add(new THREE.Mesh(geo, Array.isArray(mo) ? mo.map((o) => npr.surface(o)) : npr.surface(mo)), ao);
+          m.position.set(...pos); m.rotation.set(...rot); parent.add(m); return m;
+        };
+        // backdrop wash (baked once)
+        const bd = await bake(THREE, { width: 2048, height: 512, seed: 3, key: 'proto-bd-1', background: '#ffffff' }, (p, brush, w, h) => {
+          brush.noStroke();
+          for (let k = 0; k < 9; k++) { brush.fill(k % 2 ? '#8fcbe8' : '#5aaedb', 90); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.55, 0.45); brush.circle(120 + k * 230, 240 + 60 * Math.sin(k), 220, 0.5); }
+          brush.set('bigink', '#1b3552', 1.2);
+          for (let k = 0; k < 7; k++) { const x = 200 + k * 270; brush.rect(x, 150, 120, 200); brush.line(x + 60, 150, x + 60, 350); }
+        });
+        scene.add(npr.backdrop(bd, { radius: 16, height: 18, y: -4, center: [0, 0, 0], arc: [Math.PI - 1.8, 3.6] }));
+        // bench
+        const benchTop = { color: COL.skyP, hatchDir: [1, 0, 0.2], toneBias: 0.05 };
+        const benchSide = { color: COL.sky, hatchDir: [0, 1, 0], shadeColor: COL.navy, shadeMix: 0.4 };
+        add(new THREE.BoxGeometry(12, 0.5, 6), [benchSide, benchSide, benchTop, benchSide, benchSide, benchSide], { outline: 1.2 }, [0, -0.25, 0]);
+        // pedestal
+        add(new THREE.CylinderGeometry(0.7, 0.8, 0.3, 40), { color: COL.pop, hatchMode: 'u', rim: 0.8, shadeColor: COL.popD, shadeMix: 0.4 }, { outline: 1 }, [0, 0.15, 0]);
+        // crystal
+        const cell = diamondCell(), A = 1.6, g = new THREE.Group(); g.position.set(0, 0.45 + A / 2, 0); scene.add(g); const c0 = -A / 2;
+        const atomGeo = new THREE.SphereGeometry(0.15, 32, 20), inGeo = new THREE.SphereGeometry(0.17, 32, 20);
+        cell.atoms.forEach((p, i) => add(i >= cell.atoms.length - 4 ? inGeo : atomGeo, { color: i >= cell.atoms.length - 4 ? COL.skyL : COL.cream, rim: 0.7, toneBias: 0.1, seed: i }, { outline: 0.7 }, p.map((v) => v * A + c0), [0, 0, 0], g));
+        const bondGeo = new THREE.CylinderGeometry(0.045, 0.045, 1, 12);
+        cell.bonds.forEach(([a, b], i) => {
+          const pa = new THREE.Vector3(...cell.atoms[a]).multiplyScalar(A).addScalar(c0), pb = new THREE.Vector3(...cell.atoms[b]).multiplyScalar(A).addScalar(c0);
+          const m = add(bondGeo, { color: COL.steel, rim: 0.4, hatch: 0.5 }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], g);
+          m.position.copy(pa).lerp(pb, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pb.clone().sub(pa).normalize()); m.scale.y = pa.distanceTo(pb);
+        });
+        // cell edges
+        const edgeGeo = new THREE.CylinderGeometry(0.018, 0.018, A, 8);
+        for (const ax of [0, 1, 2]) for (const u of [0, 1]) for (const v of [0, 1]) {
+          const m = add(edgeGeo, { color: COL.navy, hatch: 0, rim: 0 }, { outline: 0.35, cast: false }, [0, 0, 0], [0, 0, 0], g);
+          const p = [0, 0, 0]; p[ax] = 0; p[(ax + 1) % 3] = u * A + c0; p[(ax + 2) % 3] = v * A + c0; m.position.set(...p);
+          if (ax === 0) m.rotation.z = Math.PI / 2; if (ax === 2) m.rotation.x = Math.PI / 2;
+        }
+        T = { THREE, npr, scene, camera, crystal: g };
+        return { scene, camera };
+      },
+      draw(ctx) {
+        const { npr, scene, camera } = T;
+        npr.frame(ctx);
+        npr.focusOn(camera, new T.THREE.Vector3(0, 1.2, 0), 3.2);
+        npr.render(scene, camera);
+        return false;
+      } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw() {} },
+  ],
+  update(ctx) {
+    const az = 0.6 + 0.5 * Math.sin(TAU * ctx.t);
+    T.crystal.rotation.y = TAU * ctx.t;
+    applyRig(T.camera, orbit({ target: [0, 1.1, 0], radius: 7.5, az, el: 0.28, fov: 30 }), { hand: handheld(ctx.t, { amp: 0.03, rot: 0.003 }) });
+    ctx.camera = T.camera;
+  },
+});
+</script></body></html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>lettering test</title>
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+// authoring aid only: bakes the SFX / number sprites and lays them out on paper and on dark swatches
+import { defineScene } from '/pv/runtime/pv.js';
+import * as THREE from 'three';
+import { PAL } from './td_core.js';
+import { bakeWord, addLetterBrushes, drawWord } from './td_letters.js';
+const S = {};
+const WORDS = [
+  ['clack', 'CLACK', 150, { fill: PAL.pop, shade: PAL.popD }],
+  ['vroom', 'VROOOM', 170, { fill: PAL.skyL, shade: PAL.sky, arc: 0.12 }],
+  ['ding', 'DING!', 150, { fill: PAL.gold, shade: PAL.pop }],
+  ['n68', '68x', 260, { fill: PAL.pop, shade: PAL.popD, jaunt: 0.1 }],
+  ['n98', '98%', 170, { fill: PAL.sky, shade: PAL.navy, jaunt: 0.1 }],
+  ['n004', '$0.04', 150, { fill: PAL.gold, shade: PAL.pop, jaunt: 0.1 }],
+  ['abc', 'ABCDEFGHIJKLM', 90, { fill: PAL.skyL, shade: PAL.sky }],
+  ['nop', 'NOPRSTUVWXYZ?', 90, { fill: PAL.popL, shade: PAL.pop }],
+];
+defineScene({
+  meta: { title: 'lettering', durationFrames: 24, fps: 24, width: 1920, height: 1080, design: [1920, 1080], background: PAL.paper, boil: { every: 2, variants: 2 } },
+  async setup(ctx) {
+    addLetterBrushes(brush);
+    for (const [k, w, s, o] of WORDS) S[k] = await bakeWord(THREE, k, w, s, o, 2);
+  },
+  layers: [
+    { name: 'paper', type: '2d', draw(ctx, g) { g.drawImage(ctx.paper({ tone: PAL.paper }), 0, 0, 1920, 1080); g.fillStyle = PAL.navy; g.fillRect(1100, 0, 820, 1080); } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw() {} },
+    { name: 'letters', type: '2d', draw(ctx, g) {
+      const F = ctx.iw + 10;
+      drawWord(g, S.clack, F, 330, 150, 20, { life: 99 });
+      drawWord(g, S.vroom, F, 1500, 150, 20, { life: 99 });
+      drawWord(g, S.ding, F, 330, 360, 20, { life: 99, rot: 0.1 });
+      drawWord(g, S.n68, F, 820, 400, 20, { life: 99, rot: -0.05 });
+      drawWord(g, S.n98, F, 1480, 400, 20, { life: 99 });
+      drawWord(g, S.n004, F, 1500, 620, 20, { life: 99 });
+      drawWord(g, S.abc, F, 700, 780, 20, { life: 99, rot: 0 });
+      drawWord(g, S.nop, F, 700, 950, 20, { life: 99, rot: 0 });
+    } },
+  ],
+});
+</script></body></html>
