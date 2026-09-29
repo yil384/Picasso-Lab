@@ -4,6 +4,7 @@ import { T, st, K, W, NF, FPS, TAU, BITS, CITY, COL, cycF, stationX, cityDelay, 
   clamp, lerp, ease, mj, sm, io, ob, oc, ic, twos, ringv, bumpv, hsh, arc, win, takeSq, track, kv } from './cm_core.js';
 import { orbit, handheld, applyRig, yawSmear } from './npr/camera.js';
 import { PY_SEG, PY_RAD } from './cm_world.js';
+import { cityRoutes } from './cm_core.js';
 
 const V3 = (x, y, z) => new T.THREE.Vector3(x, y, z);
 const wrap = (F) => ((F % NF) + NF) % NF;
@@ -13,8 +14,8 @@ const HOP_A = [H.x - 0.25, H.h + 0.3, H.z - 0.33];   // back hopper mouth (the c
 const HOP_B = [H.x - 0.25, H.h + 0.3, H.z + 0.3];    // front hopper mouth (the model)
 const ANVIL = [-6.15, 0.36, -0.3];
 const LECTERN = [-3.55, 0.47, -0.25];
-const MOUTH = [W.screenX, 1.94, -0.95];
-const FAIR_C = [7.28, STG, -0.5], FAIR_P = [6.82, STG, -0.9];
+const MOUTH = [W.screenX, 1.35, -1.45];
+const FAIR_C = [9.86, STG, -0.52], FAIR_P = [9.46, STG, -1.0];
 
 // ---------------------------------------------------------------------------------------------------
 // camera
@@ -22,17 +23,20 @@ const FAIR_C = [7.28, STG, -0.5], FAIR_P = [6.82, STG, -0.9];
 const R = {
   crane: { tg: [-2.3, 0.7, -1.7], az: -0.1, el: 0.64, r: 16.8, fov: 34, roll: 0 },
   after: { tg: [0.2, 1.4, -2.2], az: 0.02, el: 0.42, r: 13.5, fov: 34, roll: 0.02 },
-  shop: { tg: [-4.85, 1.1, -1.0], az: 0.04, el: 0.19, r: 5.7, fov: 32, roll: 0 },
-  two: { tg: [-4.05, 0.78, -0.95], az: 0.0, el: 0.17, r: 5.4, fov: 32, roll: 0.01 },
-  toss: { tg: [-3.9, 0.95, -1.0], az: -0.16, el: 0.24, r: 5.4, fov: 32, roll: -0.02 },
-  anvil: { tg: [-5.75, 0.52, -0.55], az: 0.3, el: 0.2, r: 3.3, fov: 32, roll: 0.03 },
-  harn: { tg: [-3.55, 0.78, -0.85], az: -0.18, el: 0.2, r: 4.3, fov: 32, roll: -0.02 },
-  duo: { tg: [-4.75, 0.8, -0.75], az: 0.06, el: 0.14, r: 3.9, fov: 32, roll: 0.03 },
+  sign: { tg: [-4.85, 1.72, -1.4], az: 0.02, el: 0.2, r: 6.4, fov: 32, roll: 0.01 },
+  shop: { tg: [-4.85, 0.8, -0.85], az: 0.03, el: 0.15, r: 4.4, fov: 32, roll: 0 },
+  two: { tg: [-4.25, 0.72, -0.9], az: 0.0, el: 0.15, r: 4.4, fov: 32, roll: 0.01 },
+  toss: { tg: [-3.9, 0.92, -1.0], az: -0.16, el: 0.22, r: 5.0, fov: 32, roll: -0.02 },
+  anvil: { tg: [-5.75, 0.5, -0.55], az: 0.3, el: 0.18, r: 3.1, fov: 32, roll: 0.03 },
+  inspect: { tg: [-4.85, 0.6, -0.45], az: 0.04, el: 0.2, r: 4.3, fov: 32, roll: 0.01 },
+  harn: { tg: [-3.55, 0.78, -0.85], az: -0.18, el: 0.19, r: 3.9, fov: 32, roll: -0.02 },
+  duo: { tg: [-4.8, 0.78, -0.75], az: 0.06, el: 0.13, r: 3.4, fov: 32, roll: 0.03 },
   city: { tg: [0.3, 0.9, -2.3], az: -0.06, el: 0.46, r: 12.8, fov: 34, roll: 0 },
-  fair: { tg: [8.3, 1.95, -1.3], az: -0.45, el: 0.07, r: 8.8, fov: 36, roll: 0.02 },
-  fairUp: { tg: [8.9, 3.1, -1.4], az: -0.5, el: -0.02, r: 9.6, fov: 36, roll: 0.0 },
-  fairDuo: { tg: [7.25, 1.55, -0.85], az: -0.22, el: 0.08, r: 4.8, fov: 34, roll: -0.02 },
-  pay: { tg: [6.75, 1.85, -0.95], az: -0.24, el: 0.05, r: 7.4, fov: 34, roll: 0.02 },
+  fair: { tg: [10.7, 1.95, -1.3], az: -0.45, el: 0.07, r: 8.8, fov: 36, roll: 0.02 },
+  fairUp: { tg: [11.3, 3.1, -1.4], az: -0.5, el: -0.02, r: 9.6, fov: 36, roll: 0.0 },
+  fairDuo: { tg: [9.75, 1.62, -0.85], az: -0.22, el: 0.16, r: 4.4, fov: 34, roll: -0.02 },
+  gape: { tg: [12.2, 4.75, -2.15], az: -1.12, el: -0.06, r: 4.8, fov: 36, roll: -0.05 },
+  pay: { tg: [9.3, 1.86, -0.8], az: -0.2, el: 0.1, r: 6.0, fov: 34, roll: 0.02 },
 };
 export const WHIPS = [[196, 210], [284, 298], [420, 432], [488, 498], [K.whipG[0], K.whipG[1]], [K.whipH[0], K.whipH[1]]];
 function mixRig(a, b, k) {
@@ -64,14 +68,14 @@ function runRig(run, F) {
     : { tg: [xw - 0.1, 0.24, -1.05], az: -0.3, el: 0.48, r: 4.6, fov: 30, roll: 0.03 };
 }
 function homeRig(F) {   // 696 -> 720|0 -> 46: one continuous crane through the loop seam
-  const G = wrap(F - K.whipH[1]);           // 0 at 696
-  return crRig([R.after, R.crane, withTg(R.shop, [-4.7, 1.3, -1.1], { r: 7.0, el: 0.26 }), R.shop], io(G / 70));
+  const G = wrap(F - K.whipH[1]), L = NF - K.whipH[1] + 46;
+  return crRig([R.after, R.crane, R.sign, R.shop], io(G / L));
 }
 export function camRig(F) {
   if (F >= K.whipH[1] || F < 46) return homeRig(F);
   if (F < 160) {   // S2: truck from Chip's anvil to Py's lectern, punch-in on the bonk
-    const a = mixRig(R.shop, withTg(R.shop, [-5.2, 0.82, -0.8], { r: 4.7, az: 0.08, el: 0.17 }), io((F - 46) / 50));
-    const b = mixRig(a, withTg(R.shop, [-4.45, 0.82, -0.8], { r: 4.5, az: -0.06, el: 0.17 }), io((F - 104) / 44));
+    const a = mixRig(R.shop, withTg(R.shop, [-5.25, 0.72, -0.75], { r: 3.7, az: 0.1, el: 0.14 }), io((F - 60) / 34));
+    const b = mixRig(a, withTg(R.shop, [-4.45, 0.72, -0.75], { r: 3.6, az: -0.06, el: 0.14 }), io((F - 104) / 40));
     b.r *= 1 - 0.07 * Math.sin(Math.PI * clamp((F - K.bonk) / 16));
     return b;
   }
@@ -80,7 +84,8 @@ export function camRig(F) {
   if (F < 284) return runRig(1, F);
   if (F < 298) return mixRig(runRig(1, F), R.two, ease.inOutQuint(clamp((F - 284) / 14)));
   if (F < 350) { const k = sm((F - 298) / 50); return { ...R.two, r: lerp(5.4, 4.6, k), az: lerp(0, 0.06, k) }; }
-  if (F < 400) return mixRig({ ...R.two, r: 4.6, az: 0.06 }, R.anvil, io((F - 350) / 16));
+  if (F < 376) return mixRig({ ...R.two, r: 4.6, az: 0.06 }, R.inspect, io((F - 350) / 14));
+  if (F < 400) return mixRig(R.inspect, R.anvil, io((F - 376) / 10));
   if (F < 420) return mixRig(R.anvil, R.harn, io((F - 400) / 16));
   if (F < 432) return mixRig(R.harn, runRig(2, F), ease.inOutQuint(clamp((F - 420) / 12)));
   if (F < 488) return runRig(2, F);
@@ -90,9 +95,15 @@ export function camRig(F) {
   if (F < K.whipG[1]) return mixRig(R.city, R.fair, ease.inOutQuint(clamp((F - K.whipG[0]) / 12)));
   if (F < 562) return mixRig(R.fair, R.fairUp, io((F - 540) / 16));
   if (F < 606) return mixRig(R.fairUp, R.fairDuo, io((F - 580) / 22));
-  if (F < 632) return mixRig(R.fairDuo, withTg(R.fairDuo, [7.35, 2.2, -0.9], { r: 5.6 }), io((F - 619) / 10));
-  if (F < K.whipH[0]) { const p = mixRig(withTg(R.fairDuo, [7.35, 2.2, -0.9], { r: 5.6 }), R.pay, ease.inOutCubic(clamp((F - 632) / 10))); p.az += 0.12 * sm((F - 640) / 36); return p; }
-  return mixRig(R.pay, R.after, ease.inOutQuint(clamp((F - K.whipH[0]) / 20)));
+  const mid = withTg(R.fairDuo, [9.9, 1.9, -0.9], { r: 5.0 });
+  if (F < 632) return mixRig(R.fairDuo, mid, io((F - 619) / 10));
+  const pay = (f) => { const p = mixRig(mid, R.pay, ease.inOutCubic(clamp((f - 630) / 10))); p.az += 0.1 * sm((f - 640) / 50); return p; };
+  if (F < K.gape[0]) return pay(F);
+  if (F < K.gape[0] + 10) return mixRig(pay(F), R.gape, io((F - K.gape[0]) / 10));
+  if (F < 678) return { ...R.gape, r: R.gape.r - 0.4 * sm((F - K.gape[0] - 10) / 12) };
+  if (F < 688) return mixRig({ ...R.gape, r: R.gape.r - 0.4 }, pay(F), io((F - 678) / 10));
+  if (F < K.whipH[0]) return pay(F);
+  return mixRig(pay(F), R.after, ease.inOutQuint(clamp((F - K.whipH[0]) / (K.whipH[1] - K.whipH[0]))));
 }
 const SHAKES = () => [[97, 0.006, 3], [K.catchC, 0.004, 3], [cycF(1, K.bad), 0.018, 5], [K.whack, 0.012, 4], [K.ding, 0.008, 4],
   [K.stomp, 0.02, 6], [K.gHit, 0.022, 6], [K.dHit, 0.02, 5], [K.slam, 0.02, 5], [K.landC, 0.004, 3]];
@@ -262,6 +273,23 @@ function updateCity(F) {
   T.clockFace.material.uniforms.uGlow.value = tl ? 0.5 : 0;
 }
 
+let ROUTES = null;
+function updatePulses(F) {   // loop-periodic: each pulse runs its route an integer number of times per loop
+  if (!ROUTES) ROUTES = cityRoutes().map((r) => { const seg = []; let L = 0; for (let k = 0; k < r.length - 1; k++) { const l = Math.hypot(r[k + 1][0] - r[k][0], r[k + 1][1] - r[k][1]); seg.push([r[k], r[k + 1], L, l]); L += l; } return { seg, L }; }).filter((r) => r.L > 1.6);
+  T.pulses.forEach((m, j) => {
+    const rt = ROUTES[(j * 7) % ROUTES.length];
+    const laps = Math.max(1, Math.round(rt.L * 4.5));        // ~1.5 units/s
+    const u = ((F / NF) * laps + hsh(j, 4.4)) % 1, d = u * rt.L;
+    const sg = rt.seg.find((q) => d >= q[2] && d <= q[2] + q[3]) || rt.seg[rt.seg.length - 1];
+    const k = clamp((d - sg[2]) / sg[3]);
+    m.visible = true;
+    m.position.set(lerp(sg[0][0], sg[1][0], k), 0.055, lerp(sg[0][1], sg[1][1], k));
+    m.rotation.set(0, -Math.atan2(sg[1][1] - sg[0][1], sg[1][0] - sg[0][0]), 0);
+    const e = Math.min(u, 1 - u) * rt.L;                     // fade in/out at the route ends (pins)
+    m.scale.setScalar(clamp(e / 0.25));
+  });
+}
+
 // ---------------------------------------------------------------------------------------------------
 // Chip
 // ---------------------------------------------------------------------------------------------------
@@ -362,7 +390,7 @@ export function chipPose(F) {
     P.x = FAIR_C[0]; P.z = FAIR_C[2];
     const toPad = yawTo([P.x, 0, P.z], [W.pad[0], 0, W.pad[1]]);
     P.yaw = toPad * 0.6;
-    if (F < K.duoIn[1]) { const u = (F - K.duoIn[0]) / (K.duoIn[1] - K.duoIn[0]); P.x = lerp(6.2, FAIR_C[0], u); P.y = STG * sm(u * 1.4) + 0.5 * Math.sin(Math.PI * u); P.sq = -0.12 * Math.sin(Math.PI * u); P.aL = { f: 2.2, s: 0.6 }; P.aR = { f: 2.2, s: 0.6 }; }
+    if (F < K.duoIn[1]) { const u = (F - K.duoIn[0]) / (K.duoIn[1] - K.duoIn[0]); P.x = lerp(8.6, FAIR_C[0], u); P.y = STG * sm(u * 1.4) + 0.5 * Math.sin(Math.PI * u); P.sq = -0.12 * Math.sin(Math.PI * u); P.aL = { f: 2.2, s: 0.6 }; P.aR = { f: 2.2, s: 0.6 }; }
     else P.y = STG;
     if (F >= K.duoIn[1] && F < K.duoIn[1] + 10) P.sq += ringv(F - K.duoIn[1], 0.14, 1.0, 0.25);
     if (F >= K.duoIn[1]) P.aR = { f: 0.9, s: 0.15 };
@@ -412,7 +440,7 @@ export function pyPose(F) {
     [K.screenUp + 1, 'surprised'], [82, 'smug'], [K.bonk, 'shock'], [K.bonk + 2, 'swirl'], [114, 'determined'], [K.roll[1], 'smug'],
     [168, 'surprised'], [K.tossP, 'determined'], [K.landP, 'happy'], [K.lever1, 'determined'], [204, 'calm'],
     [cycF(1, K.bad) + 2, 'shock'], [cycF(1, K.bad) + 26, 'calm'],
-    [K.blame[0], 'angry'], [K.landPl[1], 'squint'], [K.readPl[0], 'determined'], [K.eject, 'surprised'], [K.bugPeek, 'shock'], [K.spot + 2, 'smug'],
+    [K.blame[0], 'angry'], [K.landPl[1], 'squint'], [K.readPl[0], 'determined'], [K.eject, 'surprised'], [K.eject + 12, 'determined'], [K.check, 'happy'], [K.spot - 2, 'shock'], [K.spot + 3, 'smug'],
     [K.whack, 'squint'], [K.whack + 4, 'happy'], [K.lever2 - 2, 'determined'], [cycF(2, 7) + 8, 'happy'], [K.five[0], 'grin'], [520, 'happy'],
     [600, 'determined'], [K.wind[0], 'strain'], [K.dHit + 2, 'surprised'], [K.slam, 'grin'], [652, 'happy'], [666, 'grin'], [K.reset, 'calm']]);
   P.e = E.e === 'strain' ? 'squint' : E.e;
@@ -462,11 +490,20 @@ export function pyPose(F) {
   }
   if (F >= K.landPl[1] && F < K.landPl[1] + 10) P.sq += ringv(F - K.landPl[1], 0.16, 1.0, 0.25);
   if (F >= K.readPl[0] && F < K.eject + 6) { P.hyaw = 0.2; P.hpitch = 0.25; P.tail = { w: [P.x + 0.08, 0.72, P.z + 0.42], k: sm((F - K.readPl[0]) / 4) }; }
-  if (F >= K.eject + 6 && F < K.grab + 4) {
-    P.hyaw = lerp(0.2, toChip, sm((F - K.eject - 6) / 6));
-    if (F >= K.bugPeek && F < K.bugPeek + 8) P.sq += takeSq(F - K.bugPeek - 2);
-    if (F >= K.spot) P.tail = { w: [ANVIL[0] + 0.55, 0.62, ANVIL[2] + 0.25], k: sm((F - K.spot) / 4) * (1 - sm((F - K.grab) / 4)) };
+  if (F >= K.eject + 6 && F < K.spot - 3) {   // checks its own model on the lectern: clean
+    hopTo([0.3, -0.12, 0.14], K.eject + 6, K.eject + 12); P.hyaw = 0.75; P.hpitch = 0.45;
+  }
+  if (F >= K.spot - 3 && F < K.grab + 4) {
+    P.hyaw = lerp(0.75, toChip, sm((F - K.spot + 3) / 5));
+    if (F >= K.spot - 3 && F < K.spot + 5) P.sq += takeSq(F - K.spot);
+    if (F >= K.spot) P.tail = { w: [ANVIL[0] + 0.55, 0.62, ANVIL[2] + 0.25], k: sm((F - K.spot) / 4) * (1 - sm((F - K.grab - 2) / 4)) };
     P.head = [-0.08, 0.06, 0.02];
+  }
+  if (F >= K.retossP - 7 && F < K.retossP + 6) {   // pick the model up with the tail and toss it back in
+    const pk = F < K.retossP - 3;
+    P.tail = pk ? { w: [LECTERN[0] + 0.05, LECTERN[1] + 0.12, LECTERN[2]], k: sm((F - K.retossP + 7) / 3) }
+      : { w: [P.x + lerp(-0.1, 0.55, oc((F - K.retossP + 3) / 9)), lerp(0.7, 1.05, (F - K.retossP + 3) / 9), P.z + lerp(-0.35, 0.1, oc((F - K.retossP + 3) / 9))], k: 1 };
+    P.hyaw = 0.9;
   }
   if (F >= K.grab + 4 && F < K.retossLand) { P.hyaw = toChip * 0.8; if (F >= K.whack && F < K.whack + 10) P.sq += takeSq(F - K.whack - 1); }
   if (F >= K.lever2 - 4 && F < K.lever2 + 12) { P.tail = { w: leverKnob(F), k: sm((F - K.lever2 + 4) / 4) * (1 - sm((F - K.lever2 - 7) / 5)) }; P.hyaw = 0.9; }
@@ -483,14 +520,14 @@ export function pyPose(F) {
   if (F >= 528 && F < K.duoIn[0]) P.vis = false;
   if (F >= K.duoIn[0] && F < K.whipH[0] + 8) {
     P.x = FAIR_P[0]; P.z = FAIR_P[2]; P.y = STG;
-    if (F < K.duoIn[1] + 2) { const u = clamp((F - K.duoIn[0] - 2) / (K.duoIn[1] - K.duoIn[0])); P.x = lerp(5.9, FAIR_P[0], u); P.y = STG * sm(u * 1.4) + 0.6 * Math.sin(Math.PI * u); P.sq = -0.2 * Math.sin(Math.PI * u); }
+    if (F < K.duoIn[1] + 2) { const u = clamp((F - K.duoIn[0] - 2) / (K.duoIn[1] - K.duoIn[0])); P.x = lerp(8.3, FAIR_P[0], u); P.y = STG * sm(u * 1.4) + 0.6 * Math.sin(Math.PI * u); P.sq = -0.2 * Math.sin(Math.PI * u); }
     if (F >= K.duoIn[1] + 2 && F < K.duoIn[1] + 12) P.sq += ringv(F - K.duoIn[1] - 2, 0.16, 1.0, 0.25);
     P.hyaw = 0.5;
     if (F >= K.wind[0] && F < K.dHit + 6) { P.tail = { w: 'mallet', k: sm((F - K.wind[0]) / 4) }; P.hyaw = 0.8; P.head = [0.05, -0.05 + 0.1 * sm((F - K.wind[0]) / 8), 0]; }
     if (F >= K.dHit + 6 && F < K.slam) { P.hyaw = 0.4; P.hpitch = -0.45 * sm((F - K.dHit - 6) / 5); P.head = [0.05, 0.12, 0]; }
     if (F >= K.slam) {
       const a = F - K.slam;
-      P.hyaw = -0.2 + 0.25 * Math.sin(a * 0.25); P.hpitch = -0.1;
+      P.hyaw = 0.35 + 0.25 * Math.sin(a * 0.25); P.hpitch = -0.15;
       P.head = [0.02 * Math.sin(a * 0.5), 0.1 + 0.08 * Math.abs(Math.sin(a * 0.33 + 1.1)), 0];
       P.tail = { w: [P.x + 0.3 + 0.1 * Math.sin(a * 0.6), STG + 0.95 + 0.1 * Math.sin(a * 0.45), P.z + 0.25], k: sm(a / 6) };
       if (a < 10) P.sq += takeSq(a - 2);
@@ -579,10 +616,10 @@ function updateProps(F) {
   // ---- the order ticket: out of the tube, poof into two identical copies ----
   [tC, tP, t0].forEach(hide);
   t0.material.uniforms.uMap.value = T.tx.ticket; tC.material.uniforms.uMap.value = T.tx.ticket;
-  const poofP = [MOUTH[0], 2.25, MOUTH[2] + 0.2];
+  const poofP = [MOUTH[0], 1.78, MOUTH[2] + 0.55];
   if (F >= K.pop && F < K.split) {
     const u = (F - K.pop) / (K.split - K.pop);
-    place(t0, [MOUTH[0], lerp(MOUTH[1] - 0.1, poofP[1], oc(u)), lerp(MOUTH[2], poofP[2], u)], [-0.3 + u * TAU, 0.2, 0.1]);
+    place(t0, [MOUTH[0], lerp(MOUTH[1], poofP[1], oc(u)), lerp(MOUTH[2] + 0.1, poofP[2], oc(u))], [-0.3 + u * TAU, 0.2, 0.1]);
     t0.scale.setScalar(lerp(0.4, 1, oc(u * 2)));
   }
   if (F >= K.split && F < K.catchC) { const u = (F - K.split) / (K.catchC - K.split); place(tC, arcPos(poofP, handsMid(), oc(u), 0.2), [-0.4, 0.3 - u * 3, 0.2]); tC.scale.setScalar(1); }
@@ -653,6 +690,18 @@ function updateProps(F) {
     const src = [W.py[0] + 0.5, 1.1, W.py[1] + 0.1];
     place(can, F < K.landP ? arcPos(src, HOP_B, u, 0.8) : [HOP_B[0], HOP_B[1] - 0.25 * sm((F - K.landP) / 5), HOP_B[2]], [u * 6, 0, u * 3]);
   }
+  const canDesk = v2a(T.lecternTop.localToWorld(V3(0.05, 0.08, 0.02)));
+  if (F >= K.eject && F < K.retossP - 3) {   // the diagnostic sends both candidates back for inspection
+    const u = clamp((F - K.eject) / (K.ejectLand - K.eject));
+    place(can, F < K.ejectLand ? arcPos(HOP_B, canDesk, u, 0.8) : canDesk, [F < K.ejectLand ? u * 6 : 0, 0.3, Math.PI / 2]);
+  }
+  if (F >= K.retossP - 3 && F < K.retossP) place(can, [st.pyTail.x, st.pyTail.y + 0.1, st.pyTail.z], [0.2, 0, 0.3]);
+  if (F >= K.retossP && F < K.retossPLand + 6) {
+    const u = clamp((F - K.retossP) / (K.retossPLand - K.retossP));
+    const src = [W.py[0] + 0.5, 1.0, W.py[1] + 0.1];
+    place(can, F < K.retossPLand ? arcPos(src, HOP_B, u, 0.7) : [HOP_B[0], HOP_B[1] - 0.25 * sm((F - K.retossPLand) / 5), HOP_B[2]], [u * 6, 0, u * 3]);
+  }
+  st.can = can.visible ? v2a(can.position) : null;
   // ---- printer slip -> two paper planes ----
   const sl = T.slip; sl.visible = false;
   const slot = T.harness.localToWorld(V3(0.18, 0.26, 1.3 / 2 + 0.03));
@@ -738,10 +787,10 @@ function updateFair(F) {
   T.pennant.rotation.set(0, lerp(-Math.PI / 2, -0.25, clamp(pn)), 0.04 * Math.sin(F * 0.4));
   T.pennant.scale.setScalar(Math.max(0.01, pn));
   // "80.1%": the numerals fall onto the stage and slam, left of the striker
-  const N = T.num, x0 = W.stage.x0 + 0.35, z = -0.62;
+  const N = T.num, x0 = W.podium.x0 + 0.08, z = (W.podium.z0 + W.podium.z1) / 2 + 0.05;
   N.g.visible = F >= K.slam - 12 && F < K.reset;
-  N.g.position.set(x0, STG, z);
-  N.g.rotation.set(0, 0.18, 0);
+  N.g.position.set(x0, STG + W.podium.h + 0.05, z);
+  N.g.rotation.set(0, 0.08, 0);
   N.letters.forEach((L, i) => {
     const land = K.slam - 4 + i * 2, a = F - land;
     let y = 0, sy = 1, sxz = 1, rz = 0;
@@ -792,10 +841,11 @@ function updateGiant(F) {
     shL = lerp(0.1, -1.6, u); elL = lerp(-0.3, -2.1, u); visorE = 'smug';
     headYaw = 0.25 * u;
   }
-  if (F >= K.slam) {             // gape: lean in to look, jaw drops
-    const u = sm((F - K.slam) / 6);
-    lean = lerp(0, 0.38, u); shR = 2.9 - 1.8 * u; elR = -2.2 + 1.2 * u; shL = lerp(-1.6, -0.3, u); elL = lerp(-2.1, -0.4, u);
-    jaw = 0.32 * u + 0.03 * Math.sin((F - K.slam) * 0.7); headPitch = 0.25 * u; headYaw = -0.15 * u; visorE = 'shock';
+  if (F >= K.gape[0] + 4) {      // notices "80.1%": leans in, jaw drops, hammer droops
+    const u = sm((F - K.gape[0] - 4) / 6);
+    lean = lerp(0, 0.34, u); shR = lerp(2.9, 0.25, sm((F - K.gape[0] - 8) / 8)); elR = lerp(-2.2, -0.1, sm((F - K.gape[0] - 8) / 8));
+    shL = lerp(-1.6, -0.2, u); elL = lerp(-2.1, -0.3, u);
+    jaw = 0.34 * u + 0.03 * Math.sin((F - K.gape[0]) * 0.7); headPitch = 0.3 * u; headYaw = -0.12 * u; visorE = 'shock';
   }
   G.hips.rotation.z = lean;
   G.arms[1].sh.rotation.z = shR; G.arms[1].el.rotation.z = elR;
@@ -822,6 +872,7 @@ export function updateAll(ctx) {
   updatePy(F);
   updateRuns(F);
   updateCity(F);
+  updatePulses(F);
   updateProps(F);
   updateFair(F);
   updateGiant(F);

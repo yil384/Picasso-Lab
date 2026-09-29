@@ -1,5 +1,5 @@
 // cm_paint.js - every painted texture of the film (p5.brush, baked once; see cachedTexture in cm_core.js).
-import { PAL, W, CITY, stationX, hsh, TAU } from './cm_core.js';
+import { PAL, W, CITY, stationX, hsh, TAU, cityRoutes } from './cm_core.js';
 import { SKEL, ell, smoothPts } from './cm_glyphs.js';
 
 // ---------------------------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ export function brushWord(brush, word, cx, cy, size, col, w = 1, gap = 0.2, slan
       else if (G.smooth) brush.spline(pts, 0.4);
       else { for (let k = 0; k < pts.length - 1; k++) brush.line(pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1]); }
     }
-    for (const d of G.dots || []) { const [px, py] = P(d); fillP(brush, ell(px, py, size * 0.075 * Math.sqrt(w), size * 0.075 * Math.sqrt(w)), col, 255, 0.01, 0.05); fillP(brush, ell(px, py, size * 0.075 * Math.sqrt(w), size * 0.075 * Math.sqrt(w)), col, 255, 0.01, 0.05); }
+    for (const d of G.dots || []) { const [px, py] = P(d), rd = size * (G.s.length ? 0.075 : 0.1) * Math.sqrt(w); fillP(brush, ell(px, py, rd, rd), col, 255, 0.01, 0.05); fillP(brush, ell(px, py, rd, rd), col, 255, 0.01, 0.05); }
     x += (widths[i] + gap) * size;
   });
 }
@@ -60,10 +60,10 @@ export function paintFace(brush, who, expr, Wd, Hh, v) {
   const sphere = who === 'py';
   if (who === 'giant') return paintVisor(brush, expr, Wd, Hh, v);
   const cx = sphere ? Wd * 0.25 : Wd / 2, cy = sphere ? Hh * 0.47 : Hh * 0.5;
-  const s = sphere ? (Wd / 1024) * 1.5 : (Wd / 512) * 1.12;
+  const s = sphere ? (Wd / 1024) * 1.5 : (Wd / 512) * 1.3;
   const j = (a) => (hsh(v, a, 3.1) - 0.5) * 3 * s;
-  const ex = (sphere ? 62 : 92) * s, ey = (sphere ? -16 : -30) * s;
-  const my = cy + (sphere ? 58 : 62) * s;
+  const ex = (sphere ? 62 : 80) * s, ey = (sphere ? -16 : -26) * s;
+  const my = cy + (sphere ? 58 : 52) * s;
   const eyes = [[cx - ex, cy + ey], [cx + ex, cy + ey]];
   if (sphere) {   // Py's round glasses (the scholar twin)
     for (const [x, y] of eyes) { brush.set('bigink', ink, 1.25 * s); brush.circle(x, y, 44 * s, 0.12); }
@@ -112,16 +112,21 @@ export function paintFace(brush, who, expr, Wd, Hh, v) {
   }
 }
 function paintVisor(brush, expr, Wd, Hh, v) {
-  // a dark visor band (the giant's head front) with one wide cold eye
-  const ink = PAL.ink, cx = Wd / 2, cy = Hh * 0.5;
+  // the giant's face plate: a dark visor band with one wide cold eye (smug / fierce) or a huge round eye (shock)
+  const cx = Wd / 2, cy = Hh * 0.48;
   fillP(brush, rect(-10, -10, Wd + 10, Hh + 10), '#2a2944', 255, 0.005, 0.2);
   fillP(brush, rect(-10, -10, Wd + 10, Hh + 10), '#2a2944', 200, 0.005, 0.3);
-  const eye = (hw, top, bot, col) => { const pts = [[cx - hw, cy], [cx - hw * 0.7, cy - top], [cx + hw * 0.7, cy - top], [cx + hw, cy], [cx + hw * 0.7, cy + bot], [cx - hw * 0.7, cy + bot]]; fillP(brush, pts, col); fillP(brush, pts, col); fillP(brush, pts, col, 220); brush.set('bigink', '#0e0c1c', 1.2); brush.beginShape(0.2); pts.forEach(([a, b]) => brush.vertex(a, b)); brush.endShape(true); };
-  if (expr === 'smug') { eye(Wd * 0.36, Hh * 0.08, Hh * 0.16, '#8ee3f5'); brush.set('fatink', '#cfd4ea', 1.4); brush.line(cx - Wd * 0.34, cy - Hh * 0.2, cx + Wd * 0.3, cy - Hh * 0.08); }
-  if (expr === 'fierce') { eye(Wd * 0.36, Hh * 0.12, Hh * 0.12, '#8ee3f5'); brush.set('fatink', '#cfd4ea', 1.4); brush.line(cx - Wd * 0.36, cy - Hh * 0.32, cx + Wd * 0.36, cy - Hh * 0.12); }
-  if (expr === 'shock') { eye(Wd * 0.3, Hh * 0.34, Hh * 0.34, '#e8fbff'); fillP(brush, ell(cx + (v - 0.5) * 6, cy, Wd * 0.05, Hh * 0.16), '#1b5f70'); }
+  const outline = (pts) => { brush.set('bigink', '#0e0c1c', 1.4); brush.beginShape(0.2); pts.forEach(([a, b]) => brush.vertex(a, b)); brush.endShape(true); };
+  const eye = (hw, top, bot, col) => { const pts = [[cx - hw, cy], [cx - hw * 0.7, cy - top], [cx + hw * 0.7, cy - top], [cx + hw, cy], [cx + hw * 0.7, cy + bot], [cx - hw * 0.7, cy + bot]]; fillP(brush, pts, col); fillP(brush, pts, col); fillP(brush, pts, col, 220); outline(pts); };
+  if (expr === 'smug') { eye(Wd * 0.38, Hh * 0.08, Hh * 0.17, '#8ee3f5'); brush.set('fatink', '#cfd4ea', 1.8); brush.line(cx - Wd * 0.36, cy - Hh * 0.24, cx + Wd * 0.32, cy - Hh * 0.1); }
+  if (expr === 'fierce') { eye(Wd * 0.38, Hh * 0.13, Hh * 0.13, '#8ee3f5'); brush.set('fatink', '#cfd4ea', 1.8); brush.line(cx - Wd * 0.38, cy - Hh * 0.36, cx + Wd * 0.38, cy - Hh * 0.14); }
+  if (expr === 'shock') {
+    const E = ell(cx, cy, Hh * 0.4, Hh * 0.4, 0, 32);
+    fillP(brush, E, '#f4fdff'); fillP(brush, E, '#f4fdff'); fillP(brush, E, '#f4fdff', 220); outline(E);
+    fillP(brush, ell(cx + (v - 0.5) * 8, cy + 4, Hh * 0.07, Hh * 0.07), '#10303a'); fillP(brush, ell(cx + (v - 0.5) * 8, cy + 4, Hh * 0.07, Hh * 0.07), '#10303a');
+    brush.set('fatink', '#cfd4ea', 1.6); brush.spline([[cx - Hh * 0.55, cy - Hh * 0.52], [cx, cy - Hh * 0.66], [cx + Hh * 0.55, cy - Hh * 0.52]], 0.6);
+  }
 }
-
 // ---------------------------------------------------------------------------------------------------
 // props
 // ---------------------------------------------------------------------------------------------------
@@ -248,8 +253,8 @@ export function paintWindows(brush, w, h, lit) {   // building walls, repeating 
   fillP(brush, rect(-12, -12, w + 12, h + 12), '#fff1d6', 255, 0.004, 0.25);
   for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
     const x0 = w * (0.14 + i * 0.5), y0 = h * (0.14 + j * 0.5), x1 = x0 + w * 0.22, y1 = y0 + h * 0.26;
-    fillP(brush, rect(x0, y0, x1, y1), lit ? '#ffd257' : '#3f3b62', 255, 0.01, 0.15);
-    if (lit) fillP(brush, rect(x0, y0, x1, y1), '#ffe9a0', 160, 0.02, 0.3);
+    fillP(brush, rect(x0, y0, x1, y1), lit ? '#ffc93a' : '#3f3b62', 255, 0.01, 0.15);
+    if (lit) { fillP(brush, rect(x0, y0, x1, y1), '#ffe07a', 200, 0.02, 0.3); fillP(brush, rect(x0 + 5, y0 + 5, x1 - 5, y0 + (y1 - y0) * 0.45), '#fff6d0', 220, 0.02, 0.2); }
     else fillP(brush, rect(x0 + 4, y0 + 4, x0 + (x1 - x0) * 0.4, y1 - 4), '#5a5886', 150, 0.01, 0.2);
     brush.set('inkpen', PAL.ink, 1.1); brush.polygon(rect(x0, y0, x1, y1));
   }
@@ -265,7 +270,8 @@ export function paintSkin(brush, w, h) {   // Py's skin, repeating along the bod
   fillP(brush, rect(-12, -12, w + 12, h + 12), '#ffffff', 255, 0.004, 0.2);
   for (let k = 0; k < 8; k++) {
     const x = (k + 0.5) * w / 8, y = h * 0.5, s = h * 0.3;
-    fillP(brush, [[x - s, y], [x, y - s * 0.9], [x + s, y], [x, y + s * 0.9]], '#6f8fa8', 170, 0.03, 0.3);
+    fillP(brush, [[x - s, y], [x, y - s * 0.9], [x + s, y], [x, y + s * 0.9]], '#3f6a88', 220, 0.03, 0.3);
+    fillP(brush, ell(x + w / 16, y + (k % 2 ? -1 : 1) * h * 0.32, h * 0.07, h * 0.07), '#dff3fa', 200, 0.02, 0.2);
   }
   fillP(brush, rect(-12, h * 0.9, w + 12, h + 12), '#ffffff', 255, 0.01, 0.2);
 }
@@ -275,7 +281,7 @@ export function paintStriker(brush, w, h) {   // high-striker board: 0..100 with
   brush.set('bigink', PAL.ink, 1.2);
   for (let k = 0; k <= 10; k++) { const y = h * (1 - k / 10); const long = k % 5 === 0; brush.line(w * (long ? 0.05 : 0.18), y, w * (long ? 0.95 : 0.82), y); }
 }
-export function paintDie(brush, w, h) {   // the die top: cream silicon, amber copper traces, vias, the check street
+export function paintDie(brush, w, h, p) {   // the die top: cream silicon, amber copper traces, vias, the check street
   const X = (x) => (x - W.die.x0) / (W.die.x1 - W.die.x0) * w, Z = (z) => (z - W.die.z0) / (W.die.z1 - W.die.z0) * h;
   const u = w / (W.die.x1 - W.die.x0);
   fillP(brush, rect(-12, -12, w + 12, h + 12), '#fff7e4', 255, 0.004, 0.25);
@@ -285,32 +291,25 @@ export function paintDie(brush, w, h) {   // the die top: cream silicon, amber c
   for (let z = W.die.z0 + 0.5; z < W.die.z1; z += 1.0) brush.line(0, Z(z), w, Z(z));
   // plaza wash under the workshop and the fairground
   fillP(brush, rect(X(-7.4), Z(-2.4), X(-2.1), Z(0.6)), '#f3c98a', 150, 0.08, 0.4);
-  fillP(brush, rect(X(6.0), Z(-2.6), X(8.3), Z(0.4)), '#f3c98a', 150, 0.08, 0.4);
+  fillP(brush, rect(X(6.3), Z(-2.6), X(11.0), Z(0.4)), '#f3c98a', 150, 0.08, 0.4);
   // copper traces between the gate buildings (Manhattan routes), then vias
   const R = (a) => hsh(a, 5.5);
   const tr = (pts, wt = 2.6) => { brush.set('bigink', '#c56a0a', wt); for (let k = 0; k < pts.length - 1; k++) brush.line(X(pts[k][0]), Z(pts[k][1]), X(pts[k + 1][0]), Z(pts[k + 1][1])); };
-  const outs = CITY.map((b) => [b[1] + b[3] * 0.62, b[2]]), ins = CITY.map((b) => [b[1] - b[3] * 0.6, b[2]]);
-  CITY.forEach((b, i) => {
-    const o = outs[i];
-    let best = -1, bd = 1e9;
-    CITY.forEach((c, j) => { if (j === i) return; const dx = ins[j][0] - o[0], dz = Math.abs(ins[j][1] - o[1]); if (dx > 0.4 && dx + dz * 0.8 < bd) { bd = dx + dz * 0.8; best = j; } });
-    if (best < 0 || bd > 5.5) { tr([o, [o[0] + 0.7, o[1]], [o[0] + 0.7, o[1] + 0.9 * (R(i) > 0.5 ? 1 : -1)]]); return; }
-    const t = ins[best], mx = (o[0] + t[0]) / 2 + (R(i + 1) - 0.5) * 0.4;
-    tr([o, [mx, o[1]], [mx, t[1] + (R(i + 2) - 0.5) * 0.2], [t[0], t[1] + (R(i + 2) - 0.5) * 0.2]]);
-  });
+  for (const rt of cityRoutes()) tr(rt);
   // city power rails along the die edges
   tr([[W.die.x0 + 0.35, W.die.z0 + 0.35], [W.die.x1 - 0.35, W.die.z0 + 0.35], [W.die.x1 - 0.35, W.die.z1 - 0.35], [W.die.x0 + 0.35, W.die.z1 - 0.35], [W.die.x0 + 0.35, W.die.z0 + 0.35]], 3.2);
-  for (let k = 0; k < 40; k++) { const x = W.die.x0 + 0.6 + R(k * 3) * 16, z = W.die.z0 + 0.6 + R(k * 3 + 1) * 9; if (x > -7.6 && x < 8.4 && z > -2.2 && z < 0.6) continue; brush.set('inkpen', '#9a5206', 1.1); brush.circle(X(x), Z(z), 0.07 * u, 0.1); fillP(brush, ell(X(x), Z(z), 0.045 * u, 0.045 * u), '#e8b04a'); }
+  for (let k = 0; k < 40; k++) { const x = W.die.x0 + 0.6 + R(k * 3) * 18.6, z = W.die.z0 + 0.6 + R(k * 3 + 1) * 9; if (x > -7.6 && x < 11.0 && z > -2.2 && z < 0.6) continue; brush.set('inkpen', '#9a5206', 1.1); brush.circle(X(x), Z(z), 0.07 * u, 0.1); fillP(brush, ell(X(x), Z(z), 0.045 * u, 0.045 * u), '#e8b04a'); }
   // the check street: dark asphalt band, two lane traces (amber = Verilog lane, teal = Python lane), median
-  fillP(brush, rect(X(W.x0 - 0.2), Z(-2.15), X(stationX(7) + 0.9), Z(0.05)), '#6b5a7a', 190, 0.02, 0.35);
-  fillP(brush, rect(X(W.x0 - 0.2), Z(-2.15), X(stationX(7) + 0.9), Z(0.05)), '#5b4d6c', 120, 0.03, 0.4);
+  if (p) { p.push(); p.noStroke(); p.fill('#3a3350'); p.rect(X(W.x0 - 0.2), Z(-2.15), X(stationX(7) + 0.9) - X(W.x0 - 0.2), Z(0.05) - Z(-2.15)); p.pop(); }
+  fillP(brush, rect(X(W.x0 - 0.2), Z(-2.15), X(stationX(7) + 0.9), Z(0.05)), '#2e2942', 200, 0.02, 0.45);
+  fillP(brush, rect(X(W.x0 - 0.1), Z(-2.05), X(stationX(7) + 0.8), Z(-0.05)), '#453c5e', 120, 0.04, 0.5);
   brush.set('bigink', '#f5e7c8', 1.4);
   for (const z of [-2.1, 0.0]) brush.line(X(W.x0 - 0.2), Z(z), X(stationX(7) + 0.9), Z(z));
   for (let x = W.x0; x < stationX(7) + 0.8; x += 0.4) { brush.set('bigink', '#f5e7c8', 1.1); brush.line(X(x), Z(-1.05), X(x + 0.18), Z(-1.05)); }
   brush.set('fatink', '#e0891c', 1.3); brush.line(X(W.x0), Z(W.laneA), X(stationX(7) + 0.6), Z(W.laneA));
   brush.set('fatink', '#3aa6c8', 1.3); brush.line(X(W.x0), Z(W.laneB), X(stationX(7) + 0.6), Z(W.laneB));
   // station pads in the median
-  for (let k = 0; k < 8; k++) { fillP(brush, ell(X(stationX(k)), Z(W.lampZ), 0.2 * u, 0.2 * u), '#3a3050', 230, 0.01, 0.2); }
+  for (let k = 0; k < 8; k++) { fillP(brush, ell(X(stationX(k)), Z(W.lampZ), 0.24 * u, 0.24 * u), '#f5e7c8', 230, 0.01, 0.2); }
   // coffee-ring of a giant mug (the lab is outside the chip) - a wink, top-left corner
   brush.set('inkpen', '#9a6b43', 1.0); brush.circle(X(-7.7), Z(3.0), 0.5 * u, 0.4);
 }

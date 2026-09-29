@@ -50,10 +50,12 @@ def main():
         names = set()
         for i in range(n):
             name, url = page.evaluate(f"() => [window.__bakeOut[{i}].name, window.__bakeOut[{i}].url]")
+            names.add(name + ".png")
+            if url is None:
+                continue
             data = base64.b64decode(url.split(",", 1)[1])
             with open(os.path.join(out, name + ".png"), "wb") as f:
                 f.write(data)
-            names.add(name + ".png")
         b.close()
     srv.shutdown()
     stale = [f for f in os.listdir(out) if f.endswith(".png") and f not in names]

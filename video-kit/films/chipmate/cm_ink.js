@@ -54,7 +54,7 @@ export function drawNPR(ctx, LOOK) {
   fl(bad, 16, V3(stationX(K.bad), 0.3, W.lampZ), 260);
   fl(K.gHit, 12, V3(W.pad[0], W.stage.h + 0.3, W.pad[1]), 300, 0.7);
   fl(K.dHit, 14, V3(W.pad[0], W.stage.h + 0.3, W.pad[1]), 240);
-  fl(K.slam, 16, V3(W.stage.x0 + 1.7, W.stage.h + 0.6, -0.6), 380, 0.8);
+  fl(K.slam, 16, V3((W.podium.x0 + W.podium.x1) / 2, W.stage.h + 0.9, -0.7), 380, 0.8);
   if (F === bad) npr.impact(1, { invert: true, threshold: 0.55 });
   if (F === K.gHit) npr.impact(0.85, { threshold: 0.5 });
   if (F === K.dHit || F === K.dHit + 1) npr.impact(1, { invert: F === K.dHit, threshold: 0.55 });
@@ -94,10 +94,10 @@ export function inkOverlay(ctx, brush) {
   brush.noHatch();
   // ticket poof
   const pa = F - K.split;
-  if (pa >= 0 && pa < 9) { const p = prj(ctx, W.screenX, 2.25, -0.75), u = pxu(ctx, W.screenX, 2.25, -0.75); if (onScreen(p)) { puff(brush, p.x, p.y + 10, 0.14 * u * (1 + pa * 0.12), ink, 1 - pa / 9); starBurst(brush, p.x, p.y, 0.12 * u * (1 + pa * 0.2), 0.26 * u * (1 + pa * 0.1), 8, ink, 1.2, 0.3); } }
+  if (pa >= 0 && pa < 9) { const p = prj(ctx, W.screenX, 1.78, -0.9), u = pxu(ctx, W.screenX, 1.78, -0.9); if (onScreen(p)) { puff(brush, p.x, p.y + 10, 0.14 * u * (1 + pa * 0.12), ink, 1 - pa / 9); starBurst(brush, p.x, p.y, 0.12 * u * (1 + pa * 0.2), 0.26 * u * (1 + pa * 0.1), 8, ink, 1.2, 0.3); } }
   // tube THUNK lines
   const ta = F - K.tube;
-  if (ta >= 0 && ta < 8) { const p = prj(ctx, W.screenX, 2.2, -0.95), u = pxu(ctx, W.screenX, 2.2, -0.95); if (onScreen(p)) starBurst(brush, p.x, p.y, 0.25 * u, 0.42 * u, 6, ink, 1.2, -0.3 + ta * 0.02); }
+  if (ta >= 0 && ta < 8) { const p = prj(ctx, W.screenX, 1.4, -1.4), u = pxu(ctx, W.screenX, 1.4, -1.4); if (onScreen(p)) starBurst(brush, p.x, p.y, 0.25 * u, 0.42 * u, 6, ink, 1.2, -0.3 + ta * 0.02); }
   // the bonk (screen top vs Py's snout)
   const bk = F - K.bonk;
   if (bk >= 0 && bk < 7) { const p = prj(ctx, W.screenX + 0.12, 1.28, -0.75), u = pxu(ctx, W.screenX, 1.2, -0.75); if (onScreen(p)) { starBurst(brush, p.x, p.y, 0.08 * u * (1 + bk * 0.3), 0.22 * u * (1 + bk * 0.15), 8, ink, 1.4, 0.2); sparkle(brush, p.x + 0.2 * u, p.y - 0.15 * u, 0.07 * u, PAL.ochre, 0.3); } }
@@ -107,6 +107,24 @@ export function inkOverlay(ctx, brush) {
   if (fu >= 0 && fu < 24) { const p = prj(ctx, -6.15, 0.5, -0.3), u = pxu(ctx, -6.15, 0.5, -0.3); if (onScreen(p)) { if (fu < 8) puff(brush, p.x, p.y + 0.05 * u, 0.12 * u * (1 + fu * 0.1), ink, 1 - fu / 8); for (let q = 0; q < 4; q++) { const ph = ((fu / 14) + q * 0.27) % 1; sparkle(brush, p.x + Math.cos(q * 1.9) * 0.25 * u, p.y - 0.1 * u - Math.sin(q * 1.3 + 0.5) * 0.18 * u, 0.06 * u * Math.sin(Math.PI * ph), q % 2 ? PAL.ochre : '#ffffff', q); } } }
   // show-off sparkles (chip overhead, the can)
   if (F >= 136 && F < 152 && st.dut) { const u = pxu(ctx, ...st.dut); const p = prj(ctx, ...st.dut); for (let q = 0; q < 3; q++) { const ph = ((F - 136) / 10 + q * 0.33) % 1; sparkle(brush, p.x + (q - 1) * 0.22 * u, p.y - 0.18 * u - ph * 0.1 * u, 0.06 * u * Math.sin(Math.PI * ph), PAL.ochre, q); } }
+  // check-lamps have faces: a grin when both traces agree on the cycle, X-eyes when they disagree
+  st.lamps.forEach((L, k) => {
+    if (!L.s) return;
+    const x = stationX(k), p = prj(ctx, x, 0.13, W.lampZ + 0.06), u = pxu(ctx, x, 0.13, W.lampZ);
+    if (!onScreen(p) || u < 25) return;
+    const s = 0.1 * u * (L.s === 2 ? 1.15 : 1) * (1 + (L.age < 5 ? 0.25 * (1 - L.age / 5) : 0)), wl = Math.max(0.6, s / 22);
+    if (L.s === 1) {
+      for (const sg of [-1, 1]) { brush.noStroke(); brush.fill(ink, 255); brush.fillBleed(0.01); brush.circle(p.x + sg * s * 0.45, p.y - s * 0.2, s * 0.16, 0.2); brush.noFill(); }
+      brush.set('bigink', ink, wl); brush.spline([[p.x - s * 0.42, p.y + s * 0.18], [p.x, p.y + s * 0.5], [p.x + s * 0.42, p.y + s * 0.18]], 0.7);
+    } else {
+      brush.set('bigink', ink, wl * 1.1);
+      for (const sg of [-1, 1]) { const cx = p.x + sg * s * 0.45, cy = p.y - s * 0.2, r = s * 0.2; brush.line(cx - r, cy - r, cx + r, cy + r); brush.line(cx - r, cy + r, cx + r, cy - r); }
+      const pts = []; for (let q = 0; q <= 6; q++) pts.push([p.x - s * 0.45 + q * s * 0.15, p.y + s * 0.35 + (q % 2 ? -1 : 1) * s * 0.1]);
+      for (let q = 0; q < 6; q++) brush.line(pts[q][0], pts[q][1], pts[q + 1][0], pts[q + 1][1]);
+    }
+  });
+  // Py's model came back clean: a chalk tick next to it
+  if (F >= K.check && F < K.grab + 6 && st.can) { const c = st.can, p = prj(ctx, c[0] + 0.12, c[1] + 0.25, c[2] + 0.05), u = pxu(ctx, ...c); if (onScreen(p)) { const k = sm((F - K.check) / 4), s = 0.16 * u; brush.set('fatink', PAL.tealD, Math.max(0.7, s / 30)); brush.line(p.x - s * 0.5, p.y, p.x - s * 0.5 + s * 0.35 * Math.min(1, k * 2), p.y + s * 0.35 * Math.min(1, k * 2)); if (k > 0.5) brush.line(p.x - s * 0.15, p.y + s * 0.35, p.x - s * 0.15 + s * 0.75 * (k - 0.5) * 2, p.y + s * 0.35 - s * 1.0 * (k - 0.5) * 2); } }
   // blame: anger veins over both heads
   if (F >= K.blame[0] + 3 && F < K.landPl[0]) {
     const pulse = 1 + 0.12 * Math.sin(F * 0.9);
@@ -165,7 +183,7 @@ export function inkOverlay(ctx, brush) {
     if (onScreen(p)) sparkle(brush, p.x, p.y, 0.09 * u * Math.sin(Math.PI * ph / 0.75), q % 2 ? PAL.ochre : '#ffffff', 0.2 * q);
   }
   // the giant sweats
-  if (F >= K.slam + 10 && F < K.whipH[0] + 2 && st.giantHead) { const h = st.giantHead, ph = ((F - K.slam) % 16) / 16; const p = prj(ctx, h.x - 0.2, h.y + 0.1 - ph * 0.3, h.z + 0.5), u = pxu(ctx, h.x, h.y, h.z); if (onScreen(p)) drop(brush, p.x, p.y, 0.22 * u); }
+  if (F >= K.gape[0] + 10 && F < K.whipH[0] + 2 && st.giantHead) { const h = st.giantHead, ph = ((F - K.slam) % 16) / 16; const p = prj(ctx, h.x - 0.2, h.y + 0.1 - ph * 0.3, h.z + 0.5), u = pxu(ctx, h.x, h.y, h.z); if (onScreen(p)) drop(brush, p.x, p.y, 0.22 * u); }
 }
 const dg = (F) => F - K.ding;
 
@@ -219,12 +237,12 @@ export function lettering(ctx, g) {
       alpha: 1 - sm((bz - 17) / 5), pops: (i) => ob((bz - i) / 3) * (1 + 0.05 * Math.sin(bz * 1.7 + i)), jitter: jr });
   }
   // "!" takes
-  const takes = [[K.screenUp + 2, st.chipHead, 0.1], [K.screenUp + 3, st.pyHead, -0.12], [K.bugPeek + 1, st.pyHead, 0.12], [K.slam + 3, st.giantHead, -0.1]];
+  const takes = [[K.screenUp + 2, st.chipHead, 0.1], [K.screenUp + 3, st.pyHead, -0.12], [K.bugPeek + 1, st.pyHead, 0.12], [K.gape[0] + 9, st.giantHead, -0.1]];
   for (const [f, hd, rot] of takes) {
     const a = F - f; if (a < 0 || a > 16 || !hd) continue;
     const p = prj(ctx, hd.x + 0.12, hd.y + 0.34, hd.z), u = pxu(ctx, hd.x, hd.y, hd.z);
     if (!onScreen(p)) continue;
     const k = ob(a / 4) * (1 - sm((a - 12) / 4));
-    bang(g, p.x + 0.12 * u, p.y, Math.min(120, (f === K.slam + 3 ? 0.9 : 0.34) * u) * k, rot, jr);
+    bang(g, p.x + 0.12 * u, p.y, Math.min(130, (f === K.gape[0] + 9 ? 0.9 : 0.34) * u) * k, rot, jr);
   }
 }

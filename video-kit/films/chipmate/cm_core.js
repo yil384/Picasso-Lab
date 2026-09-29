@@ -34,17 +34,17 @@ export const K = {
   run1: 210, cyc1: 10, bad: 4,
   // S4 whose bug?
   slip: 294, planes: 314, landPl: [338, 341], blame: [298, 334], readPl: [342, 354],
-  eject: 350, ejectLand: 364, bugPeek: 366, spot: 368,
+  eject: 350, ejectLand: 364, check: 372, bugPeek: 372, spot: 377,
   // S5 fix + round 2 of at most 5
-  grab: 380, whack: 392, tally: 404, retoss: 404, retossLand: 418, lever2: 418, rewind: [420, 428],
+  grab: 381, whack: 392, tally: 404, retoss: 404, retossLand: 418, retossP: 407, retossPLand: 420, lever2: 420, rewind: [422, 430],
   // S6 run 2 -> match rate 1.0
   run2: 432, cyc2: 8, gauge2: 490, ding: 492, five: [498, 508], lights: [504, 522],
   // S7 the giant
   whipG: [522, 534], stomp: 540, gHit: 568, puckG: [568, 582], pennant: 582, puckFall: [588, 598], duoIn: [594, 604],
   // S8 80.1%
-  wind: [606, 617], dHit: 618, puckD: [618, 630], slam: 634,
+  wind: [606, 617], dHit: 618, puckD: [618, 630], slam: 634, gape: [656, 690],
   // S9 home
-  whipH: [676, 696], reset: 684,
+  whipH: [694, 710], reset: 700,
 };
 // cycle landing frames
 export const cycF = (run, k) => (run === 1 ? K.run1 + K.cyc1 * k : K.run2 + K.cyc2 * k);
@@ -60,14 +60,15 @@ export const BITS = {
 // world layout (1 unit ~ Chip's body width x 1.6)
 // ---------------------------------------------------------------------------------------------------
 export const W = {
-  die: { x0: -8.6, x1: 8.4, z0: -6.6, z1: 3.6, h: 0.6 },
+  die: { x0: -8.6, x1: 11.2, z0: -6.6, z1: 3.6, h: 0.6 },
   pcbY: -0.6,
   chip: [-5.55, -0.75], py: [-4.1, -0.75], screenX: -4.83,
   harness: { x: -2.75, z: -1.05, w: 1.0, h: 0.95, d: 0.9 },
   laneA: -1.6, laneB: -0.5, lampZ: -1.15, x0: -2.2, cw: 0.95, lo: 0.1, hi: 0.4,
   tower: [1.9, -4.3],
-  stage: { x0: 4.15, x1: 8.25, z0: -1.75, z1: -0.2, h: 0.8 },
-  striker: { x: 7.75, z: -1.35, y0: 1.05, y1: 3.25 }, pad: [7.75, -0.78], giant: [10.9, -2.25],
+  stage: { x0: 6.55, x1: 10.65, z0: -1.75, z1: -0.2, h: 0.8 },
+  striker: { x: 10.32, z: -1.35, y0: 1.0, y1: 2.6 }, pad: [10.32, -0.8],
+  podium: { x0: 6.6, x1: 9.12, z0: -1.05, z1: -0.35, h: 0.44 }, giant: [13.3, -2.25],
 };
 export const stationX = (k) => W.x0 + (k + 0.5) * W.cw;
 
@@ -126,14 +127,15 @@ export async function cachedTexture(THREE, bakeBrushTexture, opts, paint, srcKey
     tex.needsUpdate = true; tex.userData.canvas = canvas; tex.userData.name = name;
     return tex;
   };
-  if (!BAKE) {
+  {
     const img = await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = `/scene/work/tex/${name}.png`; });
     if (img) {
       const c = document.createElement('canvas'); c.width = opts.width; c.height = opts.height;
       c.getContext('2d').drawImage(img, 0, 0);
+      if (BAKE) window.__bakeOut.push({ name, url: null });
       return finish(c);
     }
-    console.warn('texture cache miss: ' + name + ' (painting live)');
+    if (!BAKE) console.warn('texture cache miss: ' + name + ' (painting live)');
   }
   const tex = await bakeBrushTexture(THREE, opts, paint);
   if (BAKE) window.__bakeOut.push({ name, url: tex.userData.canvas.toDataURL('image/png') });
@@ -161,3 +163,19 @@ export const CITY = [
 ];
 // light-up order for the city (after match 1.0): a wave outward from the check street
 export const cityDelay = (b) => Math.round(Math.hypot(b[1] - 1.5, (b[2] + 1.1) * 1.4) * 1.6);
+
+/** copper-trace roads between the gate buildings (Manhattan routes, output -> nearest input to the right).
+ *  Shared by the die painter and the signal pulses that travel along them. */
+export function cityRoutes() {
+  const R = (a) => hsh(a, 5.5), out = [];
+  const outs = CITY.map((b) => [b[1] + b[3] * 0.62, b[2]]), ins = CITY.map((b) => [b[1] - b[3] * 0.6, b[2]]);
+  CITY.forEach((b, i) => {
+    const o = outs[i];
+    let best = -1, bd = 1e9;
+    CITY.forEach((c, j) => { if (j === i) return; const dx = ins[j][0] - o[0], dz = Math.abs(ins[j][1] - o[1]); if (dx > 0.4 && dx + dz * 0.8 < bd) { bd = dx + dz * 0.8; best = j; } });
+    if (best < 0 || bd > 5.5) { out.push([o, [o[0] + 0.7, o[1]], [o[0] + 0.7, o[1] + 0.9 * (R(i) > 0.5 ? 1 : -1)]]); return; }
+    const t = ins[best], mx = (o[0] + t[0]) / 2 + (R(i + 1) - 0.5) * 0.4;
+    out.push([o, [mx, o[1]], [mx, t[1] + (R(i + 2) - 0.5) * 0.2], [t[0], t[1] + (R(i + 2) - 0.5) * 0.2]]);
+  });
+  return out;
+}

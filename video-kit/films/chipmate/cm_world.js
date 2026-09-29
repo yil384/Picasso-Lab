@@ -1,7 +1,7 @@
 // cm_world.js - builds the whole set and cast once (three.js geometry + npr surfaces + baked textures).
-import { T, COL, PAL, W, CITY, stationX, TAU, cachedTexture, hsh } from './cm_core.js';
+import { T, COL, PAL, W, CITY, stationX, TAU, cachedTexture, hsh, cityRoutes } from './cm_core.js';
 import * as P from './cm_paint.js';
-import { NUMERAL } from './cm_glyphs.js';
+import { NUMERAL, SKEL } from './cm_glyphs.js';
 import { createNPR } from './npr/npr.js';
 import { bakeBrushTexture } from './npr/brush.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -23,12 +23,12 @@ async function bakeAll(ctx) {
     for (const e of P.EXPR[who]) {
       tx.face[who][e] = [];
       for (let v = 0; v < 2; v++) {
-        const [w, h] = who === 'chip' ? [512, 372] : who === 'py' ? [1024, 512] : [512, 192];
+        const [w, h] = who === 'chip' ? [512, 372] : who === 'py' ? [1024, 512] : [512, 300];
         tx.face[who][e].push(await B(`face-${who}-${e}-${v}`, w, h, (p, brush) => P.paintFace(brush, who, e, w, h, v), { seed: 100 + v * 7 }, faceSrc));
       }
     }
   }
-  const wordSrc = P.brushWord.toString() + P.signWord.toString();
+  const wordSrc = P.brushWord.toString() + P.signWord.toString() + JSON.stringify(SKEL);
   tx.sign = await B('sign', 1024, 256, (p, brush, w, h) => P.paintSign(brush, w, h), {}, wordSrc);
   tx.hat = await B('hat', 1024, 512, (p, brush, w, h) => P.paintHat(brush, w, h), {}, wordSrc);
   tx.chest = await B('chest', 512, 320, (p, brush, w, h) => P.paintChest(brush, w, h), {}, wordSrc);
@@ -52,7 +52,7 @@ async function bakeAll(ctx) {
   for (let n = 1; n <= 6; n++) tx.dice.push(await B('dice' + n, 128, 128, (p, brush, w, h) => P.paintDice(brush, w, h, n)));
   tx.skin = await B('skin', 1024, 128, (p, brush, w, h) => P.paintSkin(brush, w, h), { wrap: true });
   tx.striker = await B('striker', 256, 2048, (p, brush, w, h) => P.paintStriker(brush, w, h));
-  tx.die = await B('die', 4096, 2458, (p, brush, w, h) => P.paintDie(brush, w, h), {}, JSON.stringify(CITY) + JSON.stringify(W));
+  tx.die = await B('die', 4096, 2458, (p, brush, w, h) => P.paintDie(brush, w, h, p), {}, JSON.stringify(CITY) + JSON.stringify(W) + cityRoutes.toString());
   tx.pcb = await B('pcb', 1024, 1024, (p, brush, w, h) => P.paintPCB(brush, w, h), { wrap: true });
   tx.sky = await B('sky', 4096, 1024, (p, brush, w, h) => P.paintSky(brush, w, h));
   return tx;
@@ -108,7 +108,7 @@ export async function buildWorld(ctx, three, LOOK, paperCanvas) {
     add(new THREE.CylinderGeometry(r * 1.02, r * 1.02, 0.18, 40), { color: 0xd9dde8, hatchMode: 'u', spec: 1 }, { outline: 1.0 }, [x, W.pcbY + h - 0.1, z]);
     add(new THREE.CylinderGeometry(r * 0.12, r * 0.12, 0.04, 8), { color: 0x9aa0b8 }, { outline: 0.6 }, [x, W.pcbY + h + 0.02, z]);
   };
-  cap(-16.5, -13.5, 1.5, 5.2, 0x3d6f9a); cap(-12.2, -17.5, 1.1, 3.6, 0x2f5f86); cap(15.5, -14.5, 1.7, 6.0, 0x3d6f9a); cap(19.5, -9.5, 1.0, 3.0, 0x2f5f86);
+  cap(-16.5, -13.5, 1.5, 5.2, 0x3d6f9a); cap(-12.2, -17.5, 1.1, 3.6, 0x2f5f86); cap(21.5, -17.5, 1.7, 6.0, 0x3d6f9a); cap(24.5, -9.5, 1.0, 3.0, 0x2f5f86);
   // resistor lying on the board, colour bands
   const res = grp(scene, [6.5, W.pcbY + 0.9, -16.5]);
   add(new THREE.CapsuleGeometry(0.9, 3.4, 8, 24), { color: 0xe9c79a, hatchMode: 'v', rim: 0.5, seed: 44 }, { outline: 1.3 }, [0, 0, 0], [0, 0, Math.PI / 2], res);
@@ -118,6 +118,10 @@ export async function buildWorld(ctx, three, LOOK, paperCanvas) {
 
   // ---------------- city ----------------
   T.city = CITY.map((b, i) => buildGate(b, i, add, tx));
+  // signal pulses: little lit capsules that run along the copper-trace roads (the city's traffic)
+  const pm = T.surf({ color: 0xffc23d, glow: 0.55, hatch: 0, rim: 0.4, spec: 0.5, seed: 95 });
+  const pg = new THREE.CapsuleGeometry(0.045, 0.16, 4, 10); pg.rotateZ(Math.PI / 2);
+  T.pulses = Array.from({ length: 14 }, () => add(pg, pm, { outline: 0.45, cast: false }, [0, -5, 0]));
 
   // ---------------- clock tower ----------------
   const [tx0, tz0] = W.tower;
@@ -194,12 +198,12 @@ function buildWorkshop(add, grp, tx) {
   // sign board above the awning
   const signM = { color: 0xffffff, map: tx.sign, hatch: 0.3, rim: 0.3, spec: 0, toneBias: 0.15, seed: 23 };
   const edge = { color: COL.amberD, rim: 0.3 };
-  T.sign = add(new THREE.BoxGeometry(2.7, 0.66, 0.1), [edge, edge, edge, edge, signM, edge], { outline: 1.2 }, [cx, 2.35, bz + 0.05]);
+  T.sign = add(new THREE.BoxGeometry(3.0, 0.73, 0.1), [edge, edge, edge, edge, signM, edge], { outline: 1.2 }, [cx, 2.6, bz + 0.05]);
   for (const sx of [-1.75, 1.75]) add(new THREE.CylinderGeometry(0.045, 0.045, 2.1, 12), { color: COL.amberD, hatchMode: 'u' }, { outline: 0.7 }, [cx + sx, 1.05, bz + 0.95]);
-  // pneumatic tube: comes down out of the sky, mouth above the screen line
-  const tp = new THREE.CatmullRomCurve3([V(-3.2, 9, -3.2), V(-3.6, 5.2, -2.7), V(-4.6, 3.3, -1.6), V(W.screenX, 2.55, -1.0), V(W.screenX, 2.12, -0.95)]);
-  add(new THREE.TubeGeometry(tp, 80, 0.1, 14), { color: COL.amberL, hatchMode: 'u', rim: 0.6, spec: 1, seed: 31, shadeColor: 0x9a5a1a, shadeMix: 0.3 }, { outline: 0.9 }, [0, 0, 0]);
-  T.tubeMouth = add(new THREE.CylinderGeometry(0.17, 0.12, 0.16, 24, 1, true), { color: COL.amberD, hatchMode: 'u', side: THREE.DoubleSide, rim: 0.4 }, { outline: 0.9 }, [W.screenX, 2.02, -0.95]);
+  // delivery pipe: pokes out of the shop wall between the two agents, mouth facing the street
+  const tp = new THREE.CatmullRomCurve3([V(W.screenX, 1.5, bz - 0.1), V(W.screenX, 1.48, bz + 0.35), V(W.screenX, 1.4, bz + 0.62)]);
+  add(new THREE.TubeGeometry(tp, 16, 0.09, 14), { color: COL.amberL, hatchMode: 'u', rim: 0.6, spec: 1, seed: 31, shadeColor: 0x9a5a1a, shadeMix: 0.3 }, { outline: 0.9 }, [0, 0, 0]);
+  T.tubeMouth = add(new THREE.CylinderGeometry(0.17, 0.11, 0.16, 24, 1, true), { color: COL.amberD, hatchMode: 'u', side: THREE.DoubleSide, rim: 0.4 }, { outline: 0.9 }, [W.screenX, 1.39, bz + 0.72], [Math.PI / 2 - 0.2, 0, 0]);
   // Chip's anvil (left-front of Chip)
   const av = grp(T.scene, [-6.15, 0, -0.3]);
   add(new THREE.BoxGeometry(0.22, 0.2, 0.2), { color: 0x4a4a6e, spec: 0.6, rim: 0.6 }, { outline: 0.9 }, [0, 0.1, 0], [0, 0, 0], av);
@@ -244,7 +248,7 @@ function buildHarness(add, grp, tx) {
   // glass dome with dice (right half of the top)
   const domeC = [0.18, H.h + 0.08, -0.05];
   add(new THREE.CylinderGeometry(0.3, 0.33, 0.08, 32), { color: COL.amberD, hatchMode: 'u', rim: 0.5 }, { outline: 0.8 }, domeC, [0, 0, 0], hg);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.29, 32, 16, 0, TAU, 0, Math.PI / 2), T.npr.glass({ tint: 0xd8f2ff, alpha: 1.0, edge: 1.3, glint: 1 }));
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.29, 32, 16, 0, TAU, 0, Math.PI / 2), T.npr.glass({ tint: 0xd8f2ff, alpha: 1.6, edge: 2.2, glint: 1.2 }));
   T.npr.add(dome, { glass: true }); dome.position.set(domeC[0], domeC[1] + 0.04, domeC[2]); hg.add(dome);
   const diceMats = tx.dice.map((t, i) => T.surf({ color: 0xffffff, map: t, hatch: 0.3, rim: 0.3, spec: 0.4, toneBias: 0.1, seed: 150 + i }));
   const dmOrder = (o) => [diceMats[(o) % 6], diceMats[(o + 5) % 6], diceMats[(o + 1) % 6], diceMats[(o + 4) % 6], diceMats[(o + 2) % 6], diceMats[(o + 3) % 6]];
@@ -267,7 +271,7 @@ function buildHarness(add, grp, tx) {
   add(new THREE.BoxGeometry(0.018, 0.22, 0.01), { color: COL.red, hatch: 0 }, { outline: 0.35, cast: false }, [0, 0.1, 0], [0, 0, 0], T.needle);
   add(new THREE.CylinderGeometry(0.025, 0.025, 0.02, 12), { color: COL.ink }, { outline: 0.3, cast: false }, [0, 0, 0.005], [Math.PI / 2, 0, 0], T.needle);
   add(new THREE.BoxGeometry(0.36, 0.05, 0.04), { color: COL.ink }, { outline: 0.4 }, [0.18, 0.26, fz], [0, 0, 0], hg);
-  T.tallyM = add(new THREE.PlaneGeometry(0.36, 0.126), { color: 0xffffff, map: tx.tally[0], hatch: 0, rim: 0, spec: 0, toneBias: 0.1, seed: 57 }, { outline: 0.5, cast: false }, [-0.26, 0.62, fz], [0, 0, 0], hg);
+  T.tallyM = add(new THREE.PlaneGeometry(0.5, 0.176), { color: 0xffffff, map: tx.tally[0], hatch: 0, rim: 0, spec: 0, toneBias: 0.1, seed: 57 }, { outline: 0.5, cast: false }, [-0.245, 0.31, fz], [0, 0, 0], hg);
   // lever on the left face (Py pulls it with its tail)
   T.lever = grp(hg, [-H.w / 2 - 0.02, 0.55, 0.3]);
   add(new THREE.CylinderGeometry(0.02, 0.02, 0.36, 10), { color: 0x4a4a6e, hatchMode: 'u' }, { outline: 0.5 }, [0, 0.18, 0], [0, 0, 0], T.lever);
@@ -291,8 +295,8 @@ function buildStreet(add, grp, tx) {
   T.lamps = [];
   for (let k = 0; k < 8; k++) {
     const g = grp(T.scene, [stationX(k), 0, W.lampZ]);
-    add(new THREE.CylinderGeometry(0.17, 0.19, 0.05, 24), { color: 0x3a3050, rim: 0.4 }, { outline: 0.6 }, [0, 0.025, 0], [0, 0, 0], g);
-    const bulb = add(new THREE.SphereGeometry(0.135, 28, 14, 0, TAU, 0, Math.PI / 2), { color: 0xcfc6b8, hatch: 0.4, rim: 0.6, spec: 1, seed: 170 + k }, { outline: 0.7 }, [0, 0.05, 0], [0, 0, 0], g);
+    add(new THREE.CylinderGeometry(0.2, 0.22, 0.05, 24), { color: 0x2b2447, rim: 0.4 }, { outline: 0.6 }, [0, 0.025, 0], [0, 0, 0], g);
+    const bulb = add(new THREE.SphereGeometry(0.17, 28, 14, 0, TAU, 0, Math.PI / 2), { color: 0xcfc6b8, hatch: 0.4, rim: 0.6, spec: 1, seed: 170 + k }, { outline: 0.7 }, [0, 0.05, 0], [0, 0, 0], g);
     T.lamps.push({ g, bulb });
   }
   const bar = new THREE.BoxGeometry(1, 1, 1);
@@ -368,10 +372,10 @@ function buildPy(add, grp, tx) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx);
   tx.skin.repeat.set(1, 1);
-  Pq.body = add(geo, { color: COL.teal, map: tx.skin, hatchMode: 'v', rim: 0.8, spec: 0.5, shadeColor: 0x0f4a66, shadeMix: 0.3, seed: 401 }, { outline: 1.0 }, [0, 0, 0], [0, 0, 0], Pq.root);
+  Pq.body = add(geo, { color: COL.teal, map: tx.skin, hatchMode: 'v', rim: 0.8, spec: 0.25, shadeColor: 0x0f4a66, shadeMix: 0.3, seed: 401 }, { outline: 1.0 }, [0, 0, 0], [0, 0, 0], Pq.root);
   Pq.body.frustumCulled = false;
   Pq.head = grp(Pq.root);
-  Pq.headM = add(new THREE.SphereGeometry(0.2, 40, 24), { color: COL.teal, map: tx.face.py.calm[0], hatchMode: 'v', rim: 0.8, spec: 0.5, shadeColor: 0x0f4a66, shadeMix: 0.3, seed: 402 }, { outline: 1.05 }, [0, 0, 0], [0, 0, 0], Pq.head);
+  Pq.headM = add(new THREE.SphereGeometry(0.2, 40, 24), { color: COL.teal, map: tx.face.py.calm[0], hatchMode: 'v', rim: 0.8, spec: 0.3, shadeColor: 0x0f4a66, shadeMix: 0.3, seed: 402 }, { outline: 1.05 }, [0, 0, 0], [0, 0, 0], Pq.head);
   Pq.headM.scale.set(1.12, 0.96, 1.0);
   // cream belly-snout
   add(new THREE.SphereGeometry(0.11, 20, 12), { color: 0xfff1d6, rim: 0.4 }, { outline: 0 }, [0, -0.1, 0.1], [0, 0, 0], Pq.head).scale.set(1.4, 0.5, 1.0);
@@ -450,6 +454,9 @@ function buildFair(add, grp, tx) {
   add(new THREE.BoxGeometry(sw + 0.08, 0.06, sd + 0.08), { color: 0xfff1d6, rim: 0.4 }, { outline: 0.8 }, [0, sh + 0.03, 0], [0, 0, 0], stg);
   for (let k = 0; k < 12; k++) add(new THREE.CylinderGeometry(sw / 24, sw / 24, 0.03, 16, 1, false, 0, Math.PI), { color: k % 2 ? 0xfff1d6 : COL.red, rim: 0.3 }, { outline: 0.5 }, [-sw / 2 + sw / 24 + k * sw / 12, sh - 0.02, sd / 2 + 0.03], [Math.PI / 2, 0, Math.PI], stg);
   T.stage = stg;
+  const pd = W.podium;
+  add(new THREE.BoxGeometry(pd.x1 - pd.x0, pd.h, pd.z1 - pd.z0), [{ color: COL.tealD, rim: 0.4 }, { color: COL.tealD, rim: 0.4 }, { color: COL.teal, hatchDir: [1, 0, 0], rim: 0.4, seed: 596 }, { color: COL.tealD }, { color: COL.teal, hatchDir: [0, 1, 0], rim: 0.5, seed: 597 }, { color: COL.tealD }], { outline: 1.1 }, [(pd.x0 + pd.x1) / 2, sh + 0.06 + pd.h / 2, (pd.z0 + pd.z1) / 2]);
+  add(new THREE.BoxGeometry(pd.x1 - pd.x0 + 0.06, 0.05, pd.z1 - pd.z0 + 0.06), { color: 0xfff1d6, rim: 0.4 }, { outline: 0.7 }, [(pd.x0 + pd.x1) / 2, sh + 0.06 + pd.h + 0.025, (pd.z0 + pd.z1) / 2]);
   // high-striker on the stage: pad, board 0..100 % (proportional), puck, bell
   const f = grp(T.scene, [S.x, sh, S.z]);
   T.fair = f;
@@ -464,19 +471,19 @@ function buildFair(add, grp, tx) {
   // pennant flag on a stub arm at 71.2 % (flips out when the giant's puck stops there)
   T.pennant = grp(f, [0.2, S.y0 - sh + 0.712 * (S.y1 - S.y0), 0.0]);
   add(new THREE.CylinderGeometry(0.014, 0.014, 0.16, 8), { color: COL.ink }, { outline: 0.4 }, [0.08, 0, 0], [0, 0, Math.PI / 2], T.pennant);
-  const pgeo = new THREE.PlaneGeometry(0.84, 0.35); pgeo.translate(0.42, 0, 0);
+  const pgeo = new THREE.PlaneGeometry(1.4, 0.58); pgeo.translate(0.7, 0, 0);
   T.pennantFlag = add(pgeo, { color: 0xffffff, map: tx.pennant, hatch: 0.2, toneBias: 0.15, rim: 0, spec: 0, side: THREE.DoubleSide, seed: 606 }, { outline: 0.7 }, [0.15, 0, 0], [0, 0, 0], T.pennant);
   // striped tent and bunting behind the stage
-  const tent = grp(T.scene, [5.0, 0, -2.75]);
+  const tent = grp(T.scene, [7.4, 0, -2.75]);
   add(new THREE.CylinderGeometry(0.8, 0.8, 1.0, 16, 1, true), { color: 0xfff1d6, hatchMode: 'u', rim: 0.4, side: THREE.DoubleSide, seed: 610 }, { outline: 1.0 }, [0, 0.5, 0], [0, 0, 0], tent);
   add(new THREE.ConeGeometry(0.92, 0.85, 16), { color: COL.red, hatchMode: 'u', rim: 0.5, seed: 611 }, { outline: 1.0 }, [0, 1.42, 0], [0, 0, 0], tent);
   for (let k = 0; k < 8; k++) add(new THREE.BoxGeometry(0.06, 1.0, 0.02), { color: COL.red }, { outline: 0 }, [Math.cos(k / 8 * TAU) * 0.81, 0.5, Math.sin(k / 8 * TAU) * 0.81], [0, -k / 8 * TAU, 0], tent);
   add(new THREE.SphereGeometry(0.07, 12, 8), { color: COL.amberL }, { outline: 0.5 }, [0, 1.9, 0], [0, 0, 0], tent);
   const bun = new THREE.BufferGeometry(), bp = [];
-  for (let k = 0; k < 10; k++) { const t0 = k / 10, t1 = (k + 0.7) / 10; const X = (t) => lerp3(5.0, 8.1, t), Y = (t) => 2.1 - Math.sin(Math.PI * t) * 0.4, Z = (t) => lerp3(-2.75, -2.1, t); bp.push(X(t0), Y(t0), Z(t0), X((t0 + t1) / 2), Y((t0 + t1) / 2) - 0.2, Z((t0 + t1) / 2), X(t1), Y(t1), Z(t1)); }
+  for (let k = 0; k < 10; k++) { const t0 = k / 10, t1 = (k + 0.7) / 10; const X = (t) => lerp3(7.4, 10.5, t), Y = (t) => 2.1 - Math.sin(Math.PI * t) * 0.4, Z = (t) => lerp3(-2.75, -2.1, t); bp.push(X(t0), Y(t0), Z(t0), X((t0 + t1) / 2), Y((t0 + t1) / 2) - 0.2, Z((t0 + t1) / 2), X(t1), Y(t1), Z(t1)); }
   bun.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bp), 3)); bun.computeVertexNormals();
   add(bun, { color: COL.amberL, side: THREE.DoubleSide, rim: 0.3, seed: 612 }, { outline: 0 }, [0, 0, 0]);
-  add(new THREE.CylinderGeometry(0.03, 0.03, 2.1, 8), { color: COL.ink }, { outline: 0.4 }, [8.1, 1.05, -2.1]);
+  add(new THREE.CylinderGeometry(0.03, 0.03, 2.1, 8), { color: COL.ink }, { outline: 0.4 }, [10.5, 1.05, -2.1]);
   // the payoff numerals "80.1%" (extruded, hidden until the slam)
   T.num = buildNumerals(add, grp);
 }
@@ -485,7 +492,7 @@ const lerp3 = (a, b, t) => a + (b - a) * t;
 function buildNumerals(add, grp) {
   const word = ['8', '0', '.', '1', '%'];
   const g = grp(T.scene, [0, -9, 0]);
-  const H = 0.95;
+  const H = 0.72;
   let x = 0;
   const letters = [];
   const front = { color: COL.amber, hatchDir: [0.3, 1, 0], rim: 0.9, shadeColor: 0x8a3a10, shadeMix: 0.35, seed: 700 };
@@ -531,9 +538,11 @@ function buildGiant(add, grp, tx) {
   add(new THREE.PlaneGeometry(1.3, 0.81), chestM, { outline: 0.9, cast: false }, [-0.755, 1.25, 0], [0, -Math.PI / 2, 0], G.torso);
   G.head = grp(G.torso, [0, 2.1, 0]);
   add(new RoundedBoxGeometry(1.0, 0.8, 1.1, 2, 0.12), sl, { outline: 1.3 }, [0, 0.45, 0], [0, 0, 0], G.head);
-  G.visor = add(new THREE.PlaneGeometry(0.96, 0.36), { color: 0xffffff, map: tx.face.giant.smug[0], hatch: 0, rim: 0, spec: 0, seed: 803 }, { outline: 0.8, cast: false }, [-0.505, 0.55, 0], [0, -Math.PI / 2, 0], G.head);
+  G.visor = add(new THREE.PlaneGeometry(0.92, 0.54), { color: 0xffffff, map: tx.face.giant.smug[0], hatch: 0, rim: 0, spec: 0, flat: 1, glow: 0.15, halftone: 0, seed: 803 }, { outline: 0.8, cast: false }, [-0.505, 0.5, 0], [0, -Math.PI / 2, 0], G.head);
+  add(new THREE.BoxGeometry(0.82, 0.3, 0.82), { color: 0x1a1530, hatch: 0, rim: 0 }, { outline: 0 }, [0, 0.1, 0], [0, 0, 0], G.head);   // mouth cavity (shows when the jaw drops)
   G.jaw = grp(G.head, [0, 0.12, 0]);
   add(new RoundedBoxGeometry(0.9, 0.22, 0.9, 2, 0.06), sd, { outline: 1.1 }, [-0.02, -0.08, 0], [0, 0, 0], G.jaw);
+  for (let k = 0; k < 5; k++) add(new THREE.BoxGeometry(0.03, 0.12, 0.1), { color: 0xe8e1cc, rim: 0.3 }, { outline: 0.4 }, [-0.475, 0.02, -0.3 + k * 0.15], [0, 0, 0], G.jaw);
   add(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 8), { color: COL.ink }, { outline: 0.5 }, [0.1, 1.05, 0.2], [0, 0, 0.2], G.head);
   add(new THREE.SphereGeometry(0.08, 12, 8), { color: COL.red }, { outline: 0.6 }, [0.15, 1.32, 0.25], [0, 0, 0], G.head);
   G.arms = [-1, 1].map((s) => {
