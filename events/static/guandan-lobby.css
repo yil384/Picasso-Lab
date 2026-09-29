@@ -790,6 +790,10 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     padding: calc(6 * var(--ru)) calc(18 * var(--ru));
     border-bottom: 1px solid var(--panel-line);
 }
+/* wider than 16:10 the panel is one screen high only without 发牌 / 旁观, so 解散房间 stays in view */
+@media (min-aspect-ratio: 81/50) {
+    .room-row.is-extra { display: none; }
+}
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
     /* the panel fits without scrolling: rows tighten, the notes (also in 玩法规则) and the extra rows drop */
     .room-row { min-height: calc(50 * var(--ru)); padding-top: calc(4 * var(--ru)); padding-bottom: calc(4 * var(--ru)); }
