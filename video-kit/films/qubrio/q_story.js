@@ -6,7 +6,7 @@ import { orbit, handheld, applyRig } from './npr/camera.js';
 import { buildSet, COL } from './q_set.js';
 import { pedestal, pedestalGeo, dashGeo } from './q_traps.js';
 import { makeAdder, buildCompass, poseCompass, buildWatch, poseWatch, buildSnail, poseSnail, buildLoco, poseLoco, buildLoupe, poseLoupe,
-  buildGauge, poseGauge, buildPennant, posePennant, buildPencil, posePencil } from './q_cast.js';
+  buildGauge, poseGauge, buildPennant, posePennant, buildPencil, posePencil, buildSlate } from './q_cast.js';
 import { stripGeo, circlePts, arrowPts, barbs, reveal } from './q_marks.js';
 import * as P from './q_phys.js';
 import * as T from './q_time.js';
@@ -30,7 +30,7 @@ export const LOOK = {
   htAmt: 0.5, htPx: 15, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0],
   lineW: 2.0, lineWShadow: 3.2, hullW: 3.2, hullShadowW: 1.5,
   bleed: 1.4, edgeDark: 0.4, gran: 0.28, flocc: 0.05, dryEdge: 0.18, sat: 1.1,
-  rule: 0.0, bgDots: [0.95, 0.6, 0.42, 0.18],
+  rule: 0.0, bgDots: [0.95, 0.6, 0.42, 0.18], beamLines: 0.3,
   atmos: 0.22, atmosStart: 11, atmosEnd: 27, atmosCol: [0.96, 0.92, 0.85], inkFar: 0.55, hatchFar: 0.7, htFar: 0.8,
   dofMax: 3.0, dofRange: 3.2,
   grain: 0.016, vignette: 0.14,
@@ -124,6 +124,7 @@ export async function build(ctx, { renderer }, Q) {
   W.pip = buildCompass(add, scene, { color: 0x8b5cf6 });
   W.tick = buildWatch(add, scene, { R: 0.66 });
   W.pennant = buildPennant(add, W.tick);
+  W.slate = buildSlate(add, W.tick);
   W.gauge = buildGauge(add, npr, scene, { hPM: 1.0, x: T.GAUGE.x, z: T.GAUGE.z, yaw: T.GAUGE.yaw });
   W.rook = buildLoco(add, scene, { scale: 0.9 });
   W.pencil = buildPencil(add, scene);
@@ -237,6 +238,9 @@ export function update(ctx, W, st, Q) {
   const pk = F >= K.lap && F < T.CUT ? ob((F - K.lap) / 6) : 0;
   posePennant(W.pennant, pk, sm((F - K.lap - 3) / 8), F * 0.35);
   poseGauge(W.gauge, ts.fid);
+  st.slate = T.slateState(F);
+  W.slate.group.visible = !!st.slate && st.slate.vis > 0.02;
+  if (st.slate) W.slate.group.scale.setScalar(Math.max(0.01, ob(st.slate.vis)));
   { const gk = F >= K.tickWake + 4 && F < T.CUT ? ob((F - K.tickWake - 4) / 8) : 0; W.gauge.group.visible = gk > 0.01; W.gauge.group.scale.setScalar(Math.max(0.01, gk)); }
   const ss = T.sloState(F);
   poseSnail(W.slo, { x: ss.x, z: ss.z, yaw: ss.yaw, lean: ss.lean, st: ss.st, sq: ss.sq, sway: ss.sway, stalk: ss.stalk });
@@ -290,11 +294,12 @@ export function update(ctx, W, st, Q) {
 export function drawNPR(ctx, W, st, Q) {
   const { npr, camera } = W, F = ctx.iw;
   npr.frame(ctx);
-  const c1 = F >= K.zap && F < K.zap + 16 ? Math.exp(-(F - K.zap) / 5) : 0;
-  const c2 = F >= K.lap && F < K.lap + 14 ? Math.exp(-(F - K.lap) / 5) : 0;
+  // comic print punch: only around the two impact frames (then the frame cleans up at once, no grey dot mush)
+  const c1 = F >= K.zap && F < K.zap + 4 ? Math.exp(-(F - K.zap) / 1.5) : 0;
+  const c2 = F >= K.flagUp && F < K.flagUp + 4 ? 0.6 * Math.exp(-(F - K.flagUp) / 1.5) : 0;
   const ck = Math.max(c1, c2);
   // light as acting: the room light dips while the objective draws the power, then comes back
-  const dip = sg(F, K.pulseClick - 4, K.zap) * (1 - sg(F, K.zap + 14, K.zap + 34));
+  const dip = sg(F, K.pulseClick - 4, K.zap - 1) * (1 - sg(F, K.zap, K.zap + 2));   // (then the flood itself leaves the room in shadow)
   const kt = 1 - 0.38 * dip;
   const look = dip > 0.01 ? { ...LOOK, keyTint: [kt, kt * 0.97, kt * 0.92] } : LOOK;
   npr.setLook(ck > 0.01 ? { ...look, htAmt: 0.5 + 0.5 * ck, misreg: [2.6 + 2 * ck, -2 - 1.5 * ck] } : look);
@@ -310,14 +315,14 @@ export function drawNPR(ctx, W, st, Q) {
   if (za >= 0 && za < 30) {
     const k = za < 6 ? 1 : Math.exp(-(za - 6) / 8);
     const rect = [P.ZONE.x0, P.ZONE.x1, P.ZONE.z0, P.ZONE.z1];
-    npr.volume({ apex: [tip[0], tip[1] - 0.05, tip[2]], rect, Ty: 0, color: FLOOD, i: k, density: 1.3, shadowed: true, seed: 2 });
-    npr.setProjector({ apex: [tip[0], tip[1], tip[2]], rect, Ty: 0, soft: 0.05, amount: 0.85 * k, point: 0.75, tint: [0.86, 0.78, 1.0], tintAmt: 0.5 * k });
+    npr.volume({ apex: [tip[0], tip[1] - 0.05, tip[2]], rect, Ty: 0, color: FLOOD, i: 0.75 * k, density: 0.6, shadowed: true, seed: 2 });
+    npr.setProjector({ apex: [tip[0], tip[1], tip[2]], rect, Ty: 0, soft: 0.05, amount: 0.85 * k, point: 0.75, tint: [1.22, 1.1, 1.42], tintAmt: k });   // the zone is the brightest thing on screen
     npr.pointLight(zc, { color: FLOOD, radius: 3.6, i: 0.9 * k });
     if (za < 22) { const c = ctx.project(zc, camera); npr.focusLines({ x: c.x, y: c.y, r0: 420, amount: 0.9 * (1 - za / 22), count: 120, width: 1.3, seed: 3 }); }
     if (za === 0) npr.impact(1, { threshold: 0.55 });
     if (za === 1) npr.impact(1, { threshold: 0.55, invert: true });
   }
-  if (za >= 4 && F < T.CUT) st.atomS.forEach((s, i) => { if (P.ATOMS[i].kind === 'store' || i % 2) return; const p = V3(s.x, P.AY, s.z); if (ahead(p)) npr.glowAt(ctx, camera, p, { radius: 0.36, i: 0.3 * Math.exp(-(za - 4) / 40) + 0.1, color: FLOOD, behind: true, seed: i }); });
+  if (za >= 4 && F < T.CUT) st.atomS.forEach((s, i) => { if (P.ATOMS[i].kind === 'store') return; const p = V3(s.x, P.AY, s.z); if (ahead(p)) npr.glowAt(ctx, camera, p, { radius: 0.36, i: 0.3 * Math.exp(-(za - 4) / 40) + 0.1, color: FLOOD, behind: true, seed: i }); });
   const wa = F - K.whistle;
   if (wa >= 0 && wa < 14) { const c = ctx.project(V3(T.CROSS_AT[0], 0, T.CROSS_AT[1]), camera); npr.focusLines({ x: c.x, y: c.y, r0: 300, amount: 0.8 * (1 - wa / 14), count: 100, width: 1.2, seed: 9 }); }
   for (const c0 of [K.click, K.pulseClick, K.lap]) if (F >= c0 && F < c0 + 3) { const w = W.tick.crown.getWorldPosition(V3(0, 0, 0)); if (ahead(w)) npr.glowAt(ctx, camera, w, { radius: 0.16, i: 1, color: 0xffe066, rays: 1, rayLen: 0.42, rayCount: 10, seed: 8 }); }
@@ -331,6 +336,27 @@ export function drawNPR(ctx, W, st, Q) {
 
 // ---------------------------------------------------------------------------------------------------------------
 // ink layer (Canvas2D over the 3D): speed lines, tick marks, bonds, faces, the dial race, verdicts, emotes, lettered props
+/** a pencil-sketch ghost atom at screen point c, radius rp px: paper fill, graphite hatching, dashed double outline, eyes */
+function pencilGhost(g, c, rp, alpha, eyes, spin, gr, fillA = 0.62) {
+  const lw = Math.max(2.2, rp * 0.075);
+  g.save(); g.globalAlpha = alpha;
+  g.beginPath(); g.arc(c.x, c.y, rp, 0, TAU); g.fillStyle = `rgba(248,240,222,${fillA})`; g.fill();
+  g.save(); g.clip(); g.translate(c.x, c.y); g.rotate(-0.8 + spin);
+  for (let k = -3; k <= 3; k++) stroke(g, [[k * rp * 0.3 + gr.gauss(0, 1), -rp * 1.1], [k * rp * 0.3 + gr.gauss(0, 1.5), rp * 1.1]], lw * 0.55, 'rgba(58,47,102,0.45)');
+  g.restore();
+  g.setLineDash([rp * 0.42, rp * 0.2]); g.lineCap = 'round'; g.strokeStyle = '#3a2f66';
+  for (const [dx, dy, wk] of [[0, 0, 1], [gr.gauss(0, 1.2), gr.gauss(0, 1.2), 0.55]]) { g.lineWidth = lw * wk; g.beginPath(); g.arc(c.x + dx, c.y + dy, rp * (wk < 1 ? 1.04 : 1), spin, spin + TAU); g.stroke(); }
+  g.setLineDash([]);
+  const ex = rp * 0.34, ey = c.y - rp * 0.02, es = rp * 0.11;
+  for (const sd of [-1, 1]) {
+    const x = c.x + sd * ex;
+    if (eyes === 'x' || eyes === 'dizzy') { stroke(g, [[x - es, ey - es], [x + es, ey + es]], lw * 0.8, '#3a2f66'); stroke(g, [[x + es, ey - es], [x - es, ey + es]], lw * 0.8, '#3a2f66'); }
+    else if (eyes === 'happy') stroke(g, [[x - es, ey + es * 0.3], [x, ey - es * 0.6], [x + es, ey + es * 0.3]], lw * 0.8, '#3a2f66');
+    else { g.beginPath(); g.arc(x, ey, es * 0.75, 0, TAU); g.fillStyle = '#3a2f66'; g.fill(); }
+  }
+  g.restore();
+}
+
 // the 2D ink layers follow the 3D post: smeared along a whip, 1-bit in the two impact frames
 let _tmp = null;
 function postInk(g, st, F) {
@@ -342,7 +368,9 @@ function postInk(g, st, F) {
   g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
   if (imp) { g.filter = za === 0 ? 'grayscale(1) contrast(40) brightness(0.3)' : 'grayscale(1) contrast(40) invert(1)'; g.drawImage(_tmp, 0, 0); g.filter = 'none'; }
   else {
-    const S = cv.width / 1920, N = 9;
+    // many faint copies (a blur, not a strobe), and the lines fade with the pan speed like the 3D ink does
+    const S = cv.width / 1920, N = 17, fade = 1 - 0.85 * clamp((sm - 6) / 30);
+    const tg2 = _tmp.getContext('2d'); tg2.globalCompositeOperation = 'destination-in'; tg2.fillStyle = `rgba(0,0,0,${fade})`; tg2.fillRect(0, 0, cv.width, cv.height); tg2.globalCompositeOperation = 'source-over';
     for (let i = 0; i < N; i++) { const t = i / (N - 1) - 0.5; g.globalAlpha = 1 / (i + 1); g.drawImage(_tmp, sx * S * t, sy * S * t); }
   }
   g.restore();
@@ -399,6 +427,18 @@ export function inkLayer(ctx, g, W, st, Q) {
     });
   }
   const fr = ctx.boilRng('faces');
+  // Slo's effort on the loaded legs: little huff clouds puffed out behind it (on twos)
+  if (st.ss && st.ss.leg >= 0 && st.ss.leg < 5 && st.ss.loaded) {
+    const tr = T.sloTrip(F), dir = tr.dir;
+    for (let e = 0; e < 3; e++) {
+      const age = ((Math.floor(F / 2) * 2 - K.glide[0]) + e * 6) % 18; if (age > 12) continue;
+      const a3 = V3(st.ss.x - dir * (0.55 + 0.05 * age), 0.55 + 0.04 * age, T.SLO.z - 0.05 * age); if (!v.ahead(a3) || !v.clear(a3, [])) continue;
+      const c = P2(a3), u = v.pxu(a3) * (0.07 + 0.012 * age);
+      g.save(); g.globalAlpha = 1 - age / 13;
+      for (const [dx, dy, rr] of [[0, 0, 1], [0.8, 0.2, 0.7], [-0.7, 0.25, 0.65]]) { g.beginPath(); g.arc(c.x + dx * u, c.y + dy * u, rr * u, 0, TAU); g.fillStyle = '#fff6e0'; g.fill(); g.lineWidth = Math.max(2, u * 0.18); g.strokeStyle = INK; g.stroke(); }
+      g.restore();
+    }
+  }
   // eraser crumbs flicking off the rubbed-out routes
   if (st.pen && st.pen.erase) {
     const c = P2(V3(...st.pen.tip)), u = v.pxu(V3(...st.pen.tip));
@@ -411,27 +451,37 @@ export function inkLayer(ctx, g, W, st, Q) {
   }
   // ghosts: pencil sketches of the movers (the plan / the simulator), never amber (amber = really held by the AOD)
   const gr = ctx.boilRng('ghosts');
-  st.ghosts.forEach((gh, i) => {
+  st.ghosts.forEach((gh) => {
     if (gh.vis < 0.05) return;
     const c3 = V3(gh.x, gh.y, gh.z); if (!v.ahead(c3)) return;
-    const c = P2(c3), rp = v.pxu(c3) * P.R * Math.max(0.2, gh.vis), lw = Math.max(2.4, rp * 0.075);
-    g.save(); g.globalAlpha = Math.min(1, gh.vis * 1.2);
-    g.beginPath(); g.arc(c.x, c.y, rp, 0, TAU); g.fillStyle = 'rgba(248,240,222,0.62)'; g.fill();
-    g.save(); g.clip(); g.translate(c.x, c.y); g.rotate(-0.8 + gh.spin);
-    for (let k = -3; k <= 3; k++) stroke(g, [[k * rp * 0.3 + gr.gauss(0, 1), -rp * 1.1], [k * rp * 0.3 + gr.gauss(0, 1.5), rp * 1.1]], lw * 0.55, 'rgba(58,47,102,0.45)');
-    g.restore();
-    g.setLineDash([rp * 0.42, rp * 0.2]); g.lineCap = 'round'; g.strokeStyle = '#3a2f66';
-    for (const [dx, dy, wk] of [[0, 0, 1], [gr.gauss(0, 1.2), gr.gauss(0, 1.2), 0.55]]) { g.lineWidth = lw * wk; g.beginPath(); g.arc(c.x + dx, c.y + dy, rp * (wk < 1 ? 1.04 : 1), gh.spin, gh.spin + TAU); g.stroke(); }
-    g.setLineDash([]);
-    const ex = rp * 0.34, ey = c.y - rp * 0.02, es = rp * 0.11;
-    for (const sd of [-1, 1]) {
-      const x = c.x + sd * ex;
-      if (gh.eyes === 'x' || gh.eyes === 'dizzy') { stroke(g, [[x - es, ey - es], [x + es, ey + es]], lw * 0.8, '#3a2f66'); stroke(g, [[x + es, ey - es], [x - es, ey + es]], lw * 0.8, '#3a2f66'); }
-      else if (gh.eyes === 'happy') stroke(g, [[x - es, ey + es * 0.3], [x, ey - es * 0.6], [x + es, ey + es * 0.3]], lw * 0.8, '#3a2f66');
-      else { g.beginPath(); g.arc(x, ey, es * 0.75, 0, TAU); g.fillStyle = '#3a2f66'; g.fill(); }
-    }
-    g.restore();
+    pencilGhost(g, P2(c3), v.pxu(c3) * P.R * Math.max(0.2, gh.vis), Math.min(1, gh.vis * 1.2), gh.eyes, gh.spin, gr);
   });
+  // Tick's slate: the simulator's pencil diagram, drawn in the board's plane
+  if (st.slate && W.slate.group.visible) {
+    const S = W.slate, ss = st.slate, sgr = ctx.boilRng('slate');
+    const toS = (x, z) => P2(S.paper.localToWorld(V3((x - 0.4) / 6.4 * S.BW, -(z + 0.9) / 7.0 * S.BH, 0.012)));
+    const cen = S.paper.getWorldPosition(V3(0, 0, 0)), su = v.pxu(cen) * S.BW / 6.4;
+    g.save(); g.globalAlpha = clamp(ss.vis * 1.4);
+    const rect = (R, fill) => { const pts = [toS(R.x0, R.z0), toS(R.x1, R.z0), toS(R.x1, R.z1), toS(R.x0, R.z1)].map((q) => [q.x, q.y]); fillPoly(g, pts, fill); stroke(g, [...pts, pts[0]], 2, 'rgba(58,47,102,0.55)'); };
+    rect(P.STORE, 'rgba(201,189,233,0.6)'); rect(P.ZONE, 'rgba(124,58,237,0.32)');
+    for (const m of P.MOVERS) { const pts = []; for (let k = 0; k <= 16; k++) { const q = T.planPath(m, k / 16, false), c2 = toS(q[0], q[1]); pts.push([c2.x, c2.y]); } stroke(g, pts, 1.8, 'rgba(58,47,102,0.3)'); }
+    for (const a of P.ATOMS) if (a.kind !== 'mover') { const [x, z] = P.homeXZ(a), c2 = toS(x, z); g.beginPath(); g.arc(c2.x, c2.y, Math.max(3, su * P.R), 0, TAU); g.fillStyle = '#fff6e0'; g.fill(); g.lineWidth = 2; g.strokeStyle = INK; g.stroke(); }
+    P.MOVERS.forEach((m, i) => {
+      if (i === ss.flungIdx && ss.fling >= 0) return;
+      const [x, z] = T.planPath(m, ss.p, false), c2 = toS(x, z);
+      pencilGhost(g, { x: c2.x, y: c2.y + (ss.hic ? su * 0.12 : 0) }, Math.max(5, su * P.R * 1.15), 1, 'dot', 0, sgr);
+      if (ss.hic) { g.globalAlpha = 0.8; stroke(g, [[c2.x - su * 0.25, c2.y + su * 0.3], [c2.x + su * 0.25, c2.y + su * 0.3]], 2.2, INK); g.globalAlpha = clamp(ss.vis * 1.4); }   // set down (the hiccup)
+    });
+    g.restore();
+    if (ss.fling >= 0 && ss.fling < 16) {   // the flung ghost leaves the board and flies at the lens, thunks off the glass
+      const m = P.MOVERS[ss.flungIdx], [x, z] = T.planPath(m, 1, false), s0 = toS(x, z);
+      const u = clamp(ss.fling / 10), k = u * u, tgt = { x: 560, y: 700 };
+      const c2 = { x: lerp(s0.x, tgt.x, k), y: lerp(s0.y, tgt.y, k) - 140 * Math.sin(Math.PI * u) * 0.6 }, rp = lerp(su * P.R * 1.15, 190, k);
+      if (u < 1) for (let q = 1; q <= 3; q++) { const bk = { x: lerp(s0.x, tgt.x, Math.max(0, k - 0.08 * q)), y: lerp(s0.y, tgt.y, Math.max(0, k - 0.08 * q)) }; stroke(g, [[bk.x, bk.y], [c2.x, c2.y]], 4 + 3 * q, 'rgba(26,21,48,0.25)'); }
+      if (ss.fling >= 10) { const a2 = (ss.fling - 10) / 6; g.save(); g.globalAlpha = 1 - a2; burstMarks({ x: tgt.x, y: tgt.y }, ss.fling - 10, 9, 0, TAU, 150, 260); g.restore(); c2.y += 120 * a2 * a2; }
+      pencilGhost(g, c2, rp, ss.fling < 10 ? 1 : 1 - (ss.fling - 10) / 6, 'x', ss.fling * 0.5, sgr, 0.9);
+    }
+  }
   for (const f of st.faces) drawFace(g, f, fr);
   // Tick's dial: PowerMove's lap (dashed lilac ring, drawn as far as its hand has run) and Qubrio's (violet wedge)
   if (st.dial && st.dial.vis > 0.1 && st.ts.ghost != null) {
@@ -446,10 +496,10 @@ export function inkLayer(ctx, g, W, st, Q) {
   }
   // verdicts by the gauge while optimising: a check (kept) or a cross (thrown away)
   const vd = st.ts.verdict;
-  if (vd && W.gauge.group.visible) {   // a big stamped verdict beside the readouts, held ~20 frames
-    const t = P2(W.gauge.top.getWorldPosition(V3(0, 0, 0))), u = v.pxu(W.gauge.top.getWorldPosition(V3(0, 0, 0)));
-    const s = Math.max(90, u * 0.85) * (vd.age < 5 ? backOut(vd.age / 5) : 1), fade = 1 - clamp((vd.age - 17) / 3);
-    g.save(); g.globalAlpha = fade; g.translate(clamp(t.x + u * 0.75, 200, 1500), clamp(t.y - u * 0.1, 260, 760)); g.rotate(-0.12);
+  if (vd && W.slate.group.visible) {   // a big stamped verdict beside the readouts, held ~20 frames
+    const sc = W.slate.paper.getWorldPosition(V3(0, 0, 0)), t = P2(sc), u = v.pxu(sc);
+    const s = Math.max(110, u * 0.75) * (vd.age < 5 ? backOut(vd.age / 5) : 1), fade = 1 - clamp((vd.age - 17) / 3);
+    g.save(); g.globalAlpha = fade; g.translate(clamp(t.x, 200, 1500), clamp(t.y, 260, 760)); g.rotate(-0.12);
     const col = vd.ok ? '#b48cff' : '#f2a922';
     if (vd.ok) { const L = [[-0.5 * s, 0], [-0.1 * s, 0.4 * s], [0.6 * s, -0.5 * s]]; stroke(g, L.map(([x, y]) => [x + 6, y + 7]), 0.3 * s, INK); stroke(g, L, 0.3 * s, INK); stroke(g, L, 0.21 * s, col); }
     else for (const [p0, p1] of [[[-0.45, -0.45], [0.45, 0.45]], [[0.45, -0.45], [-0.45, 0.45]]]) { const L = [[p0[0] * s, p0[1] * s], [0, 0], [p1[0] * s, p1[1] * s]]; stroke(g, L.map(([x, y]) => [x + 6, y + 7]), 0.3 * s, INK); stroke(g, L, 0.3 * s, INK); stroke(g, L, 0.21 * s, col); }
@@ -475,7 +525,7 @@ export function inkLayer(ctx, g, W, st, Q) {
     const sh = W.slo.shellG.getWorldPosition(V3(0, 0, 0)), top = sh.clone().add(V3(0, 0.8, 0));
     const ownS = []; W.slo.group.traverse((o) => { if (o.isMesh) ownS.push(o); });
     // the flag springs up at GO (Slo is just a sleeping snail until then); a flag cut by the frame edge is not drawn
-    const up = F < T.CUT ? ob(clamp((F - K.glide[0] + 4) / 6)) : 0;
+    const up = F < T.CUT ? ob(clamp((F - K.glide[0] + 4) / 6)) * (1 - sm(clamp((F - K.lap - 2) / 8))) : 0;   // wilts when the lap closes
     const bt = P2(top), ut = v.pxu(top), edge = clamp(Math.min(bt.x - 20, 1900 - bt.x - ut * 1.5, bt.y - 30, 1060 - bt.y - ut * 0.34) / 50);
     if (up > 0.02 && edge > 0.02 && v.ahead(sh) && v.clear(top, ownS) && v.clear(sh.clone().add(V3(0, 0.45, 0)), ownS)) {
       const a = P2(sh.clone().add(V3(0, 0.1, 0))), u = v.pxu(top), b0 = P2(top), b = { x: lerp(a.x, b0.x, up), y: lerp(a.y, b0.y, up) };
@@ -501,15 +551,15 @@ export function fxLayer(ctx, g, W, st, Q) {
   const tw = sfxState(F - K.whistle, 22);
   if (tw) {
     const hp = W.loupe.head.getWorldPosition(V3(0, 0, 0)), h0 = P2(hp), hu = v.pxu(hp);
-    const p = safe({ x: h0.x - hu * 0.3, y: h0.y - hu * 1.45 }, 380, 1300, 250, 430);   // above the lens, clear of it and of the crossing
+    const p = safe({ x: h0.x - hu * 2.3, y: h0.y - hu * 0.45 }, 380, 1300, 250, 460);   // left of the lens (clear of it and of the crossing)
     burst(g, p.x, p.y, 270 * tw.pop, 125 * tw.pop, { fill: '#fff6e0', alpha: tw.alpha, seed: 5, spikes: 13 });
     brushWord(g, 'TWEET!', p.x, p.y + 4, 132 * tw.pop, { fill: '#f2a922', shade: '#b8741a', chisel: true, skew: -0.2, ramp: 0.22, rot: -0.12 + tw.wob, alpha: tw.alpha, arc: 12, jitter: r, weight: 0.27 });
   }
   const zp = sfxState(F - K.zap, 26);
   if (zp) {
-    const c = safe(P2(V3((P.ZONE.x0 + P.ZONE.x1) / 2, 1.6, (P.ZONE.z0 + P.ZONE.z1) / 2)), 420, 1400, 230, 520);
-    burst(g, c.x, c.y, 300 * zp.pop, 150 * zp.pop, { fill: '#f2a922', alpha: zp.alpha, seed: 9, spikes: 15 });
-    brushWord(g, 'ZAP!', c.x, c.y + 6, 190 * zp.pop, { fill: '#b48cff', shade: '#5b21b6', chisel: true, skew: -0.2, ramp: 0.25, rot: -0.1 + zp.wob, alpha: zp.alpha, arc: 10, jitter: r, weight: 0.3 });
+    const c = safe(P2(V3(-0.2, 1.1, (P.STORE.z0 + P.STORE.z1) / 2)), 420, 1400, 250, 420);   // over the dark storage, clear of the pairs
+    burst(g, c.x, c.y, 260 * zp.pop, 128 * zp.pop, { fill: '#f2a922', alpha: zp.alpha, seed: 9, spikes: 15 });
+    brushWord(g, 'ZAP!', c.x, c.y + 6, 165 * zp.pop, { fill: '#b48cff', shade: '#5b21b6', chisel: true, skew: -0.2, ramp: 0.25, rot: -0.1 + zp.wob, alpha: zp.alpha, arc: 10, jitter: r, weight: 0.3 });
   }
   // 4.7x lettered on the pennant (in the flag's plane) and 1.3x on the gauge's tag
   if (F >= K.lap + 3 && F < T.CUT) {
@@ -537,5 +587,5 @@ export function fxLayer(ctx, g, W, st, Q) {
   }
   postInk(g, st, F);
   const wp = sg(F, K.wipe[0], K.wipe[1], (x) => x);
-  if (wp > 0 && wp < 1) brushWipe(g, wp, { c1: '#4b2a9e', c2: '#7c3aed', bristle: '#f4e6c8', seed: 3, cover: 0.3 });
+  if (wp > 0 && wp < 1) brushWipe(g, wp, { c1: '#4b2a9e', c2: '#7c3aed', bristle: '#f4e6c8', seed: 3, cover: 0.12 });   // full cover ~2-4 frames around the cut
 }

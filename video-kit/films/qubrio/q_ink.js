@@ -62,7 +62,7 @@ function heartPath(g, x, y, s) {
 export const FACE_LAYOUT = {
   atom: { ex: 0.34, ey: -0.02, es: 1.25, my: 0.34, bx: 0.58, by: 0.24 },
   hero: { ex: 0.32, ey: -0.06, es: 1.1, my: 0.32, bx: 0.56, by: 0.2 },
-  dial: { ex: 0.3, ey: -0.12, es: 1.0, my: 0.3, bx: 0.5, by: 0.1 },
+  dial: { ex: 0.3, ey: 0.2, es: 0.85, my: 0.5, bx: 0.52, by: 0.36 },   // below the hands' hub
   flat: { ex: 0.34, ey: -0.1, es: 1.1, my: 0.34, bx: 0.6, by: 0.16 },
 };
 function eye(g, type, x, y, s, side, look, r, ph = 0) {
@@ -265,7 +265,7 @@ export function brushWipe(g, p, { c1 = '#4b2a9e', c2 = '#7c3aed', bristle = '#f4
     // dry-brush bristle streaks along the stroke
     g.strokeStyle = bristle; g.lineCap = 'round';
     for (let k = 0; k < 16; k++) {
-      const yy = y0 + bh * (0.08 + 0.84 * h(i * 17 + k)), len = 0.25 + 0.6 * h(i * 5 + k * 3), xs = lerp(x0, x1, h(i * 7 + k * 11) * (1 - len));
+      const yy = y0 + bh * (0.08 + 0.84 * h(i * 17 + k)) + 4 * Math.sin(p * 40 + k), len = 0.25 + 0.6 * h(i * 5 + k * 3), xs = lerp(x0, x1, h(i * 7 + k * 11) * (1 - len)) + (p - 0.5) * (240 + 160 * h(k * 3 + i));   // the bristles drag on every frame
       g.globalAlpha = 0.25 + 0.35 * h(k + i);
       g.lineWidth = 2 + 5 * h(i + k * 13);
       const A = R([xs, yy]), B = R([xs + (x1 - x0) * len, yy + 6 * Math.sin(k)]);

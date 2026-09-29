@@ -23,8 +23,8 @@ export const K = {
   whip2: [428, 438], pulseClick: 444, zap: 450,
   // S7 the race result (484-640): Qubrio's hand stopped at the dock; PowerMove's ghost hand runs on while Slo ferries
   // two atoms per trip; it closes the lap as Slo drops the last pair -> 4.7x; then 1.3x
-  wait: [484, 563], lap: 563, flagUp: 567, tagUp: 582,
-  wipe: [642, 658],   // brush wipe: full cover only ~648-651, the cut (reset) at 650
+  wait: [484, 563], lap: 563, flagUp: 567, tagUp: 582, whip3: [482, 494],
+  wipe: [644, 656],   // brush wipe: full cover only ~649-651, the cut (reset) at 650
 };
 export const CUT = 650;
 export const TQ = K.glide[1] - K.glide[0];            // Qubrio's run: one convoy move (44 f)
@@ -87,21 +87,6 @@ export function ghostState(F) {
       out[i] = { vis: pk, x, y: P.AY + 0.3, z, spin: 0, eyes: F >= K.ok - 2 ? 'happy' : 'dot' };
     });
   }
-  // simulator replays during optimisation (the convoy path): try 1 too fast (one ghost is flung out of its grip), try 2 clean
-  K.tries.forEach(([a, b, ok]) => {
-    const g0 = a + 5, g1 = g0 + (ok ? 12 : 7);
-    if (F < a + 3 || F >= b + 2) return;
-    const pk = sm((F - a - 3) / 3) * (1 - sg(F, b - 4, b + 2));
-    P.MOVERS.forEach((m, i) => {
-      const u = mj((F - g0) / (g1 - g0));
-      let [x, z] = planPath(m, u, false), y = P.AY + 0.3, spin = 0, eyes = 'dot';
-      if (!ok && i === 4 && F >= g1 - 2) {   // lost: it pops out of its grip and tumbles toward the lens
-        const a2 = (F - g1 + 2) / 24;
-        z += 5.0 * a2; y += 2.6 * a2 - 1.6 * a2 * a2; x += 2.2 * a2; spin = a2 * 9; eyes = 'x';
-      }
-      out[i] = { vis: pk, x, y, z, spin, eyes };
-    });
-  });
   return out;
 }
 // Rook's pencil (the router's tool): pops out of the cab, draws plan 1's routes one after another (the reveal follows
@@ -142,6 +127,31 @@ export function pencilState(F, cab) {
   else if (Fc < K.plan2[1]) { const j = Math.min(1, Math.floor((Fc - K.plan2[0] - 1) / 4.5)); tip = tipAt(WI[j], (Fc - DRAW2(j)[0]) / 4.5, false); }
   else { const u = io((Fc - K.plan2[1]) / 12), e = tipAt(WI[1], 1, false); tip = [lerp(e[0], cab[0], u), lerp(e[1], cab[1], u) + 0.8 * Math.sin(Math.PI * u), lerp(e[2], cab[2], u)]; }
   return { tip: [tip[0], tip[1] + bob + jolt, tip[2]], erase, drawing: (Fc >= K.plan1[0] && Fc < K.plan1[1]) || (Fc >= K.plan2[0] + 1 && Fc < K.plan2[1]), rub: erase ? Fc - K.erase[0] : -1 };
+}
+// Tick's slate (the simulator): the plan replays as a pencil diagram on the board Tick holds up. Try 1 (faster) rushes;
+// one ghost is flung off the board at the lens and fidelity drops -> thrown away. Try 2 drops the set-down/re-pick
+// hiccup: the block glides in one go, time shrinks, fidelity rises -> kept. The real chip stays asleep meanwhile.
+export const tryVerdictAt = (a, ok) => a + (ok ? 16 : 11);
+export function slateState(F) {
+  if (F >= CUT) return null;
+  const vis = sg(F, K.tickWake + 2, K.tickWake + 8) * (1 - sg(F, K.aodOn[0] - 2, K.aodOn[0] + 4));
+  if (vis < 0.01) return null;
+  let p = 0, fling = -1, hic = 0, rewind = 0;
+  for (const [a, b, ok] of K.tries) {
+    if (F < a) break;
+    const g0 = a + 4;
+    if (ok) p = mj((F - g0) / 11);                           // one smooth glide
+    else {                                                  // rushed, with the old set-down/re-pick hiccup mid-way
+      const u = clamp((F - g0) / 6);
+      p = u < 0.4 ? mj(u / 0.4) * 0.45 : u < 0.6 ? 0.45 : 0.45 + 0.55 * mj((u - 0.6) / 0.4);
+      hic = u >= 0.4 && u < 0.6 ? 1 : 0;
+      fling = F >= g0 + 5 ? F - (g0 + 5) : -1;
+      rewind = sg(F, b - 5, b - 1);
+      if (F >= b - 1) { p = 0; fling = -1; }
+      else p *= 1 - rewind;
+    }
+  }
+  return { vis, p, fling, flungIdx: 4, hic, rewind };
 }
 export function planState(F) {
   // pencil route arrows: plan 1 (two routes cross) is drawn, flagged, those two rubbed out; plan 2 in order; all fade at GO
@@ -341,17 +351,17 @@ export function loupeState(F) {
     x = lerp(a[0], b[0], io(uu)); z = lerp(a[1], b[1], io(uu)); y = 0.45 * Math.sin(Math.PI * uu); sq = -0.1 * Math.sin(Math.PI * uu); yaw = -0.5;
   } else if (Fc < K.ok + 14) {
     x = insp[0]; z = insp[1]; yaw = lerp(-0.5, -0.35, sm((Fc - K.loupeIn[1]) / 6));   // lens (face) to camera, eyes on the crossing
-    pitch = 0.3; headTilt = 0.2; eyes = 'wide'; look = [-0.8, 0.3];
+    pitch = -0.15; headTilt = -0.35; eyes = 'wide'; look = [-0.8, 0.5];   // lens tipped back to face the high camera
     if (Fc >= K.whistle - 4) {
       const w = Fc - K.whistle;
       armR = w < 0 ? lerp(0.25, 2.5, sm((w + 4) / 4)) : w < 10 ? 2.5 : lerp(2.5, 0.4, sm((w - 10) / 6));
       eyes = w < 0 ? 'dot' : w < 10 ? 'squeeze' : 'slit'; mouth = w >= 0 && w < 10 ? 'o' : null;
-      sq = w >= 0 && w < 10 ? 0.08 + 0.04 * Math.sin(w * 2.2) : 0; pitch = lerp(0.45, 0.15, sm((w + 4) / 4));
+      sq = w >= 0 && w < 10 ? 0.08 + 0.04 * Math.sin(w * 2.2) : 0; pitch = lerp(-0.15, -0.3, sm((w + 4) / 4));
       if (w >= 0) armL = w < 2 ? lerp(0.25, 2.6, w / 2) : lerp(2.6, 1.3, sm((w - 2) / 5));   // the throw
     }
-    if (Fc >= K.erase[0]) { armL = lerp(1.3, 0.25, sm((Fc - K.erase[0]) / 5)); armR = 0.25; pitch = 0.3; eyes = 'slit'; mouth = 'flat'; look = [-0.8, 0.3]; }
+    if (Fc >= K.erase[0]) { armL = lerp(1.3, 0.25, sm((Fc - K.erase[0]) / 5)); armR = 0.25; pitch = -0.15; eyes = 'slit'; mouth = 'flat'; look = [-0.8, 0.5]; }
     if (Fc >= K.steps2[0]) { eyes = 'dot'; mouth = null; look = [-0.6, 0.3]; }
-    if (Fc >= K.ok - 2) { const a = Fc - K.ok; eyes = 'happy'; mouth = 'grin'; look = [0, 0]; armR = lerp(0.25, 2.4, sm(a / 4)); sq = ringv(Math.max(0, a), 0.1, 0.9, 0.2); pitch = 0.3 - 0.15 * Math.sin(Math.max(0, a) * 0.8) * Math.exp(-Math.max(0, a) / 8); if (a >= 0 && a < 14) emote = { type: 'sparkle', age: a }; }
+    if (Fc >= K.ok - 2) { const a = Fc - K.ok; eyes = 'happy'; mouth = 'grin'; look = [0, 0]; armR = lerp(0.25, 2.4, sm(a / 4)); sq = ringv(Math.max(0, a), 0.1, 0.9, 0.2); pitch = -0.15 - 0.15 * Math.sin(Math.max(0, a) * 0.8) * Math.exp(-Math.max(0, a) / 8); if (a >= 0 && a < 14) emote = { type: 'sparkle', age: a }; }
   } else if (Fc < K.aodOn[0]) {
     const u = clamp((Fc - K.ok - 14) / 16);
     x = lerp(insp[0], LOUPE_WATCH[0], io(u)); z = lerp(insp[1], LOUPE_WATCH[1], io(u)); y = 0.35 * Math.abs(Math.sin(Math.PI * u * 2)); yaw = lerp(-0.35, -0.8, io(u)); eyes = 'dot';
@@ -377,26 +387,28 @@ export function tickState(F) {
   let lap = LAP_RAW, fid = 1.12, ghost = null, verdict = null;
   if (F < K.tickWake || F >= CUT) { eyes = 'sleep'; sq = 0.03 * Math.sin(TAU * F / 50); rock = 0; lap = 0; }
   else if (F < K.tries[0][0] - 2) {
-    const a = Fc - K.tickWake; eyes = a < 4 ? 'squeeze' : 'dot'; sq = takeSq(a - 4); yaw = 0.8;
+    const a = Fc - K.tickWake; eyes = a < 4 ? 'squeeze' : 'dot'; sq = takeSq(a - 4); yaw = 0.3; armL = lerp(0.35, 1.25, sm((Fc - K.tickWake - 2) / 6));
     ghost = Math.max(0.0001, sg(F, K.tickWake + 2, K.tickWake + 12) * 0.9999); lap = LAP_RAW * sg(F, K.tickWake + 6, K.tickWake + 14);
   }
-  // simulator tries (compile time)
+  // simulator tries (compile time): Tick faces us, holds the slate up with its left arm, twists the crown with its right
   if (F >= K.tries[0][0] - 2 && F < K.aodOn[0]) {
-    ghost = 0.9999; yaw = 0.8;
+    ghost = 0.9999; yaw = 0.3; armL = 1.25 + 0.04 * Math.sin(Fc * 0.3);
     const lapSteps = [LAP_RAW, LAP_FINAL], fidSteps = [1.12, FID_FINAL];
     let acc = 0, lapNow = LAP_RAW, fidNow = 1.12;
     for (const [a, b, ok] of K.tries) {
       if (F < a - 2) break;
-      const u = sg(F, a + 5, a + 11), back = ok ? 0 : sg(F, b - 6, b);
+      const v0 = tryVerdictAt(a, ok);
+      const u = sg(F, a + 5, v0), back = ok ? 0 : sg(F, b - 6, b);
       const tl = ok ? lapSteps[acc + 1] : lapSteps[acc] - 0.1, tf = ok ? fidSteps[acc + 1] : fidSteps[acc] - 0.45;
       lapNow = lerp(lapSteps[acc], tl, u * (1 - back)); fidNow = lerp(fidSteps[acc], tf, u * (1 - back));
-      verdict = F >= a + 11 && F < b ? { ok, age: F - a - 11 } : null;
+      verdict = F >= v0 && F < b ? { ok, age: F - v0 } : null;
       if (F < b) {
-        armL = F < a + 6 ? lerp(0.35, 2.7, sm((Fc - a + 2) / 4)) : lerp(2.7, 0.5, sm((Fc - a - 6) / 4));
-        crown = F >= a && F < a + 6 ? 0.5 + 0.5 * Math.sin((Fc - a) * 1.4) : 0; eyes = 'slit'; look = [-0.5, 0.3];
+        armR = F < a + 6 ? lerp(0.35, 2.7, sm((Fc - a + 2) / 4)) : lerp(2.7, 0.5, sm((Fc - a - 6) / 4));
+        crown = F >= a && F < a + 6 ? 0.5 + 0.5 * Math.sin((Fc - a) * 1.4) : 0; eyes = 'slit'; look = [-0.7, 0.1];
       }
-      if (verdict && !verdict.ok) { eyes = verdict.age < 3 ? 'squeeze' : 'worried'; mouth = 'wobble'; rock = verdict.age < 16 ? 0.08 * Math.sin(verdict.age * 1.4) : rock; }
-      if (verdict && verdict.ok) { eyes = 'happy'; mouth = 'smile'; sq = ringv(verdict.age, 0.12, 0.9, 0.2); }
+      if (!ok && F >= a + 9 && F < a + 20) { const d = Fc - a - 9; y = -0.12 * Math.sin(Math.PI * clamp(d / 10)); sq = 0.16 * Math.sin(Math.PI * clamp(d / 10)); eyes = 'squeeze'; mouth = 'o'; }   // ducks the flung ghost
+      if (verdict && !ok && F >= a + 20) { eyes = 'worried'; mouth = 'wobble'; rock = 0.08 * Math.sin(verdict.age * 1.4) * Math.exp(-verdict.age / 12); }
+      if (verdict && ok) { eyes = 'happy'; mouth = 'grin'; sq = ringv(verdict.age, 0.12, 0.9, 0.2); }
       if (ok && F >= b) { acc++; lapNow = lapSteps[acc]; fidNow = fidSteps[acc]; }
     }
     lap = lapNow; fid = fidNow;
@@ -443,10 +455,10 @@ export function tickState(F) {
 
 // ---------------------------------------------------------------------------------------------------------------
 // camera: orbit rigs per shot, blended; whips get smear from the measured screen motion (q_story)
-export const WHIPS = [K.whip1, K.whipT, K.whipG, K.whip2];
+export const WHIPS = [K.whip1, K.whipT, K.whipG, K.whip2, K.whip3];
 const R_A = (F) => {   // establishing: slow crane down towards the sleeping lattice, Pip at the back-left
   const k = sm((F + 22) / 100);
-  return { tg: [lerp(-0.2, -1.2, k), lerp(0.2, 0.5, k), lerp(-0.6, -1.6, k)], az: lerp(0.42, 0.2, k), el: lerp(0.62, 0.42, k), r: lerp(14.5, 9.4, k), fov: 30, roll: lerp(0, -0.03, k) };
+  return { tg: [lerp(-0.4, -1.2, k), lerp(0.3, 0.5, k), lerp(-0.9, -1.6, k)], az: lerp(0.38, 0.2, k), el: lerp(0.58, 0.42, k), r: lerp(12.2, 9.2, k), fov: 30, roll: lerp(0, -0.03, k) };
 };
 const R_B = (F) => {   // placement: follow Pip across the partners, then rise to see all six circles
   const k = sm((F - 54) / 90);
@@ -456,32 +468,30 @@ const R_B = (F) => {   // placement: follow Pip across the partners, then rise t
 const R_C = (F) => {   // plan + dry run from high front-right; crash zoom onto the collision and the flag
   const cz = sm((F - K.steps1[1] + 2) / 6) * (1 - sm((F - K.flag[1] - 10) / 8));
   const base = { tg: [-0.4, 0.3, -1.0], az: 0.42, el: 0.7, r: 8.4, fov: 32, roll: 0.0 };
-  const zoom = { tg: [CROSS_AT[0] + 1.2, 0.6, CROSS_AT[1] + 0.1], az: 0.12, el: 0.62, r: 5.8, fov: 32, roll: -0.06 };
+  const zoom = { tg: [CROSS_AT[0] + 1.2, 0.95, CROSS_AT[1] + 0.1], az: 0.12, el: 0.58, r: 6.0, fov: 32, roll: -0.06 };
   return mixRig(base, zoom, cz);
 };
-const R_F = (F) => {   // optimise: over Tick on its stool, the plate behind (the ghost replays run there)
-  const k = sm((F - K.whipT[1]) / 50);
-  return { tg: [lerp(3.2, 3.0, k), 0.9, lerp(1.0, 0.8, k)], az: lerp(0.98, 0.9, k), el: lerp(0.3, 0.34, k), r: lerp(8.2, 7.8, k), fov: 32, roll: lerp(0.03, 0, k) };
+const R_F = (F) => {   // optimise: slate | Tick | gauge side by side in the card band, a slow push over the two tries
+  const k = sm((F - K.whipT[1]) / 64);
+  return { tg: [lerp(5.3, 5.45, k), 1.15, 2.6], az: lerp(0.34, 0.28, k), el: 0.2, r: lerp(9.2, 8.3, k), fov: 30, roll: lerp(0.02, -0.01, k) };
 };
-const R_D = (F) => {   // the real run: head-on, dollying back as the block comes at us; Rook (left), Slo (right)
-  const p = convoyP(F);
-  const zc = lerp(P.SROW[2] - 0.5, P.PROW[1] - 0.7, p);
-  const k = sm((F - K.whipG[1]) / 12);
-  return { tg: [0.15, 0.5, zc - 0.3], az: lerp(0.1, 0.02, p), el: lerp(0.36, 0.24, k), r: lerp(7.8, 8.8, p), fov: 34, roll: lerp(0.0, -0.04, k) };
+const R_D = (F) => {   // the real run: high 3/4 from the front-right, Rook whole on the left towing the rows; the pairs separate
+  const p = convoyP(F), k = sm((F - K.whipG[1]) / 16);
+  return { tg: [lerp(-1.1, -0.5, p), 0.35, lerp(-0.6, 0.7, p)], az: lerp(0.4, 0.43, p), el: lerp(0.6, 0.52, p), r: lerp(9.6, 10.2, p) + 0.4 * (1 - k), fov: 30, roll: lerp(0.02, -0.02, p) };
 };
 const R_E = (F) => {   // Tick winds up (low hero), then after the flash: high 3/4 over the whole zone with a push
   if (F < K.zap) return { tg: [TICK.x - 0.4, 1.1, TICK.z - 0.2], az: 0.25, el: 0.12, r: lerp(4.9, 4.4, sm((F - K.whip2[1]) / 12)), fov: 30, roll: -0.04 };
   const push = sm((F - K.zap) / 30);
   return { tg: [0.4, 0.3, 0.8], az: lerp(0.42, 0.3, push), el: lerp(0.74, 0.64, push), r: lerp(9.4, 7.9, push), fov: 30, roll: lerp(0.03, -0.03, push) };
 };
-const R_G = (F) => {   // the race result: Tick + dial + gauge in front, Slo's lane and the pairs behind; hero push at the pop
-  const o = io((F - K.wait[0]) / 100), pop = sm((F - K.lap) / 16);
-  const wide = { tg: [lerp(4.3, 4.2, o), 1.25, lerp(1.6, 1.8, o)], az: lerp(0.62, 0.5, o), el: lerp(0.22, 0.2, o), r: lerp(8.4, 8.0, o), fov: 30, roll: lerp(-0.03, 0.0, o) };
-  const hero = { tg: [TICK.x - 0.5, 1.95, TICK.z - 0.2], az: 0.38, el: 0.12, r: 6.6, fov: 30, roll: 0.02 };
+const R_G = (F) => {   // the race: Slo's lane across the front, Tick's dial right, the pairs behind; then the payoff band
+  const o = io((F - K.wait[0]) / 80), pop = sm((F - K.lap - 1) / 14);
+  const wide = { tg: [lerp(3.7, 4.0, o), 0.85, lerp(2.0, 2.15, o)], az: lerp(0.18, 0.24, o), el: lerp(0.45, 0.4, o), r: lerp(9.6, 9.1, o), fov: 30, roll: lerp(-0.02, 0.01, o) };
+  const hero = { tg: [6.0, 1.55, 2.7], az: 0.28, el: 0.18, r: lerp(8.6, 8.2, sm((F - K.flagUp) / 60)), fov: 30, roll: 0.0 };   // flag | dial | gauge + tag
   return mixRig(wide, hero, pop);
 };
 export function camRig(F) {
-  if (F >= K.wipe[0] + 10) return R_A(F - NF);
+  if (F >= CUT) return R_A(F - NF);
   if (F < 54) return R_A(F);
   if (F < 64) return mixRig(R_A(F), R_B(F), io((F - 54) / 10));
   if (F < K.whip1[0]) return R_B(F);
@@ -492,8 +502,8 @@ export function camRig(F) {
   if (F < K.whipG[1]) return mixRig(R_F(F), R_D(F), q5((F - K.whipG[0]) / (K.whipG[1] - K.whipG[0])));
   if (F < K.whip2[0]) return R_D(F);
   if (F < K.whip2[1]) return mixRig(R_D(F), R_E(F), q5((F - K.whip2[0]) / (K.whip2[1] - K.whip2[0])));
-  if (F < K.wait[0] - 4) return R_E(F);
-  if (F < K.wait[0] + 10) return mixRig(R_E(F), R_G(F), io((F - K.wait[0] + 4) / 14));
+  if (F < K.whip3[0]) return R_E(F);
+  if (F < K.whip3[1]) return mixRig(R_E(F), R_G(F), q5((F - K.whip3[0]) / (K.whip3[1] - K.whip3[0])));
   return R_G(F);
 }
 export function camShake(F) {

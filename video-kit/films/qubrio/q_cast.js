@@ -2,13 +2,14 @@
 // thick hull ink; never glossy plastic). Each builder returns a handle with the meshes a pose function drives.
 // Faces are NOT baked into textures: they are 2D ink drawn in each head's tangent plane (q_ink.js drawFace).
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const TAU = Math.PI * 2;
 const cyl = (r0, r1, h, n = 32, open = false) => new THREE.CylinderGeometry(r0, r1, h, n, 1, open);
 
 export function makeAdder(npr, scene) {
   return (geo, mo, ao = {}, pos = [0, 0, 0], rot = [0, 0, 0], parent = scene) => {
-    const m = npr.add(new THREE.Mesh(geo, Array.isArray(mo) ? mo.map((o) => npr.surface(o)) : npr.surface(mo)), ao);
+    const m = npr.add(new THREE.Mesh(geo, mo.isMaterial ? mo : Array.isArray(mo) ? mo.map((o) => npr.surface(o)) : npr.surface(mo)), ao);   // (pass a material to share its surface id)
     m.position.set(...pos); m.rotation.set(...rot); parent.add(m); return m;
   };
 }
@@ -71,16 +72,16 @@ export function buildWatch(add, scene, o = {}) {
   W.body = new THREE.Group(); W.body.position.set(0, R + 0.42, 0); W.group.add(W.body);
   add(cyl(R, R, 0.26, 56), brass, { outline: 1.2 }, [0, 0, 0], [Math.PI / 2, 0, 0], W.body);
   add(new THREE.TorusGeometry(R * 0.95, 0.06, 14, 60), brass, { outline: 0.8 }, [0, 0, 0.13], [0, 0, 0], W.body);
-  W.dial = add(new THREE.CircleGeometry(R * 0.88, 60), { color: 0xfff8e6, hatch: 0.35, toneBias: 0.2, spec: 0, rim: 0.4 }, { outline: 0 }, [0, 0, 0.134], [0, 0, 0], W.body);
-  // hour ticks (engraved little bars)
-  for (let i = 0; i < 12; i++) {
+  // the dial is the hero readout: keep it a clean cream in any light (flat, no hatching, light dots only)
+  W.dial = add(new THREE.CircleGeometry(R * 0.88, 60), { color: 0xfff8e6, flat: 0.7, hatch: 0, halftone: 0.25, toneBias: 0.3, spec: 0, rim: 0.4 }, { outline: 0 }, [0, 0, 0.134], [0, 0, 0], W.body);
+  // hour ticks (engraved little bars), one surface
+  add(mergeGeometries(Array.from({ length: 12 }, (_, i) => {
     const a = i / 12 * TAU, r0 = R * (i % 3 ? 0.74 : 0.68);
-    const tk = add(new THREE.BoxGeometry(0.03, R * 0.12 * (i % 3 ? 0.7 : 1.1), 0.01), { color: 0x1a1530, flat: 0.8, hatch: 0, rim: 0 }, { outline: 0, cast: false }, [Math.sin(a) * r0, Math.cos(a) * r0, 0.138], [0, 0, -a], W.body);
-    void tk;
-  }
+    return new THREE.BoxGeometry(0.03, R * 0.12 * (i % 3 ? 0.7 : 1.1), 0.01).rotateZ(-a).translate(Math.sin(a) * r0, Math.cos(a) * r0, 0);
+  })), { color: 0x1a1530, flat: 0.8, hatch: 0, rim: 0 }, { outline: 0, cast: false }, [0, 0, 0.138], [0, 0, 0], W.body);
   const handGeo = new THREE.BoxGeometry(0.05, R * 0.72, 0.02); handGeo.translate(0, R * 0.3, 0);
   W.hand = add(handGeo, { color: 0x7c3aed, flat: 0.35, hatch: 0 }, { outline: 0.5, cast: false }, [0, 0, 0.15], [0, 0, 0], W.body);
-  W.ghost = add(handGeo, { color: 0xb9a3f0, flat: 0.6, hatch: 0 }, { outline: 0.35, cast: false }, [0, 0, 0.145], [0, 0, 0], W.body);
+  W.ghost = add(handGeo, { color: 0x8d86a3, flat: 0.6, hatch: 0 }, { outline: 0.35, cast: false }, [0, 0, 0.145], [0, 0, 0], W.body);   // PowerMove's hand: pencil grey
   W.ghost.visible = false;
   add(new THREE.SphereGeometry(0.06, 16, 12), { color: 0x7c3aed }, { outline: 0.4, cast: false }, [0, 0, 0.16], [0, 0, 0], W.body);
   add(cyl(0.07, 0.07, 0.12, 20), brass, { outline: 0.6 }, [0, R + 0.08, 0], [0, 0, 0], W.body);
@@ -219,13 +220,13 @@ export function buildLoco(add, scene, { scale = 1 } = {}) {
   }
   // steam puffs: a small pool of three-ball clouds
   L.puffs = [];
-  const puffGeo = new THREE.SphereGeometry(1, 20, 14);
+  // one merged three-ball cloud; all puffs share one matte surface (round, clean, no crack-like hatching)
+  const puffGeo = mergeGeometries([[0, 0, 1], [0.75, -0.2, 0.7], [-0.7, -0.25, 0.62]].map(([dx, dy, s0]) => new THREE.SphereGeometry(s0, 20, 14).translate(dx, dy, 0)));
+  let puffMat = null;
   for (let k = 0; k < 8; k++) {
     const g = new THREE.Group(); g.visible = false; scene.add(g);
-    for (const [dx, dy, s0] of [[0, 0, 1], [0.75, -0.2, 0.7], [-0.7, -0.25, 0.62]]) {
-      const m = add(puffGeo, { color: 0xfffaf0, hatch: 0.25, toneBias: 0.35, spec: 0, rim: 0.4, seed: k * 3.3 + dx, noiseScale: 2, flat: 0.2 }, { cast: false, outline: 0.7 }, [dx, dy, 0], [0, 0, 0], g);
-      m.scale.setScalar(s0);
-    }
+    const m = add(puffGeo, puffMat || { color: 0xfffaf0, hatch: 0, halftone: 0.15, toneBias: 0.45, spec: 0, rim: 0.5, flat: 0.55 }, { cast: false, outline: 0.9 }, [0, 0, 0], [0, 0, 0], g);
+    puffMat = m.material;
     L.puffs.push(g);
   }
   return L;
@@ -310,9 +311,9 @@ export function buildGauge(add, npr, scene, { hPM = 1.0, x = 0, z = 0, yaw = 0 }
   const tube = (dx, col, shade) => {
     add(new THREE.SphereGeometry(0.19, 28, 18), { color: col, rim: 1, spec: 0, shadeColor: shade, shadeMix: 0.3 }, { outline: 1.0 }, [dx, 0.33, 0], [0, 0, 0], G.group);
     const c = add(colGeo, { color: col, rim: 0.8, spec: 0, flat: 0.3, shadeColor: shade, shadeMix: 0.3 }, { outline: 0.6, cast: false }, [dx, G.base, 0], [0, 0, 0], G.group);
-    const t = new THREE.Mesh(cyl(0.135, 0.135, 1.9, 28, true), npr.glass({ tint: 0xeef4ff, edge: 1.3, alpha: 1.0, glint: 0.8 }));
-    t.position.set(dx, G.base + 0.95, 0); npr.add(t, { glass: true }); G.group.add(t);
-    add(new THREE.SphereGeometry(0.14, 20, 12), brass, { outline: 0.8 }, [dx, G.base + 1.92, 0], [0, 0, 0], G.group);
+    const t = new THREE.Mesh(cyl(0.14, 0.14, 1.55, 28, true), npr.glass({ tint: 0xe6ecff, edge: 1.8, alpha: 1.3, glint: 0.8 }));
+    t.position.set(dx, G.base + 0.775, 0); npr.add(t, { glass: true }); G.group.add(t);
+    add(cyl(0.16, 0.16, 0.07, 24), brass, { outline: 0.8 }, [dx, G.base + 1.57, 0], [0, 0, 0], G.group);
     return c;
   };
   G.colPM = tube(-G.dx, 0xa39bb8, 0x5d5575);
@@ -331,14 +332,17 @@ export function poseGauge(G, fid, pm = 1) {
   G.pmTop.position.set(-G.dx, G.base + pm * G.hPM, 0);
 }
 export function buildPennant(add, W) {
-  const F = { group: new THREE.Group() }; W.body.add(F.group); F.size = 1.3;
-  F.group.position.set(0, W.R + 0.22, 0);
-  const poleGeo = cyl(0.028, 0.028, 0.72, 10); poleGeo.translate(0, 0.36, 0);
-  F.pole = add(poleGeo, { color: 0xe6ad42, hatchMode: 'u' }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], F.group);
-  // the flag: a cloth plane deformed per frame (wave), anchored on the pole
-  const geo = new THREE.PlaneGeometry(1.25, 0.62, 16, 4); geo.translate(-0.625, -0.31, 0);   // flies to the left (screen centre)
+  const F = { group: new THREE.Group() }; W.body.add(F.group); F.size = 1.2;
+  // the pole springs out of the crown leaning left, so the flag flies level beside the dial's upper-left (one horizontal
+  // band: flag | dial | gauge - it fits the wide card)
+  F.group.position.set(0, W.R + 0.22, 0); F.group.rotation.z = 0.95;
+  const poleGeo = cyl(0.03, 0.03, 0.62, 10); poleGeo.translate(0, 0.31, 0);
+  F.pole = add(poleGeo, { color: 0xe6ad42, hatchMode: 'u' }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], F.group);
+  F.tip = new THREE.Group(); F.tip.position.set(0, 0.62, 0); F.tip.rotation.z = -0.95; F.group.add(F.tip);
+  // the flag: a cloth plane deformed per frame (wave), hanging from the pole tip and flying left
+  const geo = new THREE.PlaneGeometry(1.25, 0.62, 16, 4); geo.translate(-0.625, -0.31, 0);
   F.base = geo.attributes.position.array.slice();
-  F.flag = add(geo, { color: 0xffd23f, side: THREE.DoubleSide, rim: 0.5, hatchDir: [0, 1, 0.2], shadeColor: 0xc9861a, shadeMix: 0.4 }, { outline: 0.9, cast: false }, [0, 0.7, 0.0], [0, 0, 0], F.group);
+  F.flag = add(geo, { color: 0xffd23f, side: THREE.DoubleSide, rim: 0.5, hatchDir: [0, 1, 0.2], shadeColor: 0xc9861a, shadeMix: 0.4 }, { outline: 1.1, cast: false }, [0, 0.12, 0.0], [0, 0, 0], F.tip);
   F.flag.frustumCulled = false;
   return F;
 }
@@ -350,7 +354,7 @@ export function posePennant(F, k, unfurl, wave) {
   for (let i = 0; i < pos.count; i++) {
     const x = b[i * 3], y = b[i * 3 + 1];
     const u = -x / 1.25;
-    const w = Math.sin(u * 5 - wave) * 0.06 * u;
+    const w = Math.sin(u * 5 - wave) * 0.09 * u + Math.sin(y * 7 + wave * 0.7) * 0.02 * u;
     pos.setXYZ(i, x * (0.15 + 0.85 * unfurl), y * (0.3 + 0.7 * unfurl) - (1 - unfurl) * 0.2 * u, w * unfurl + (1 - unfurl) * 0.1 * u);
   }
   pos.needsUpdate = true; F.flag.geometry.computeVertexNormals();
@@ -378,4 +382,16 @@ export function posePencil(Pn, s, axis) {
   const up = new THREE.Vector3(0, 1, 0);
   if (s.erase) { Pn.group.quaternion.setFromUnitVectors(up, a.clone().negate()); Pn.group.position.set(s.tip[0], s.tip[1], s.tip[2]).addScaledVector(a, Pn.L); }
   else { Pn.group.quaternion.setFromUnitVectors(up, a); Pn.group.position.set(s.tip[0], s.tip[1], s.tip[2]); }
+}
+
+/** Tick's slate: the simulator. A small framed drawing board Tick holds up beside itself while optimising; the plan
+ *  replays on it as a pencil diagram (drawn in its plane by the ink layer), so the real chip stays untouched. */
+export function buildSlate(add, W, { BW = 1.3, BH = 0.95 } = {}) {
+  const S = { group: new THREE.Group(), BW, BH }; W.group.add(S.group);
+  S.group.position.set(-1.5, 1.05, 0.25); S.group.rotation.set(-0.1, 0.3, 0.04);
+  add(new THREE.BoxGeometry(BW + 0.14, BH + 0.14, 0.07), { color: 0x6b4fc9, hatchMode: 'u', rim: 0.6, shadeColor: 0x3b1f8a, shadeMix: 0.3 }, { outline: 1.1 }, [0, 0, -0.02], [0, 0, 0], S.group);
+  S.paper = add(new THREE.PlaneGeometry(BW, BH), { color: 0xfff6e0, flat: 0.85, hatch: 0, halftone: 0, toneBias: 0.3, spec: 0, rim: 0 }, { outline: 0, cast: false }, [0, 0, 0.02], [0, 0, 0], S.group);
+  add(new THREE.BoxGeometry(0.34, 0.12, 0.06), { color: 0xe6ad42, hatchMode: 'u', rim: 0.7 }, { outline: 0.8, cast: false }, [0, BH / 2 + 0.03, 0.04], [0, 0, 0], S.group);
+  S.group.visible = false;
+  return S;
 }
