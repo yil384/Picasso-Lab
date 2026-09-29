@@ -782,7 +782,7 @@ const B = L.bench;
 const HT = [HOOT[0], 0.62, HOOT[2]];
 const rigS1 = (F) => {        // medium 3/4 on Hoot with the tube plate in frame; slow push; tilt up the tube at the end
   const k = sm(F / 80), up = sm((F - 78) / 18);
-  return { tg: [lerp(HT[0] + 0.8, HT[0] + 0.75, k) + 0.4 * up, 0.7 + 0.8 * up, HT[2] + 0.45], az: lerp(0.24, 0.16, k), el: lerp(0.1, 0.14, k), r: lerp(3.6, 3.2, k), fov: 32, roll: lerp(0.02, -0.02, k) };
+  return { tg: [lerp(HT[0] + 0.62, HT[0] + 0.58, k) + 0.4 * up, 0.8 + 0.7 * up, HT[2] + 0.45], az: lerp(0.3, 0.22, k), el: lerp(0.1, 0.14, k), r: lerp(3.8, 3.4, k), fov: 32, roll: lerp(0.02, -0.02, k) };
 };
 const rigHome = (F) => rigS1(F);
 const rigFunnel = (F) => {    // low on the funnel, crane down to Tri
@@ -838,7 +838,7 @@ const rigS7 = (F) => {        // gauge -> tilt up with the planks -> pan to the 
 };
 const rigS8 = (F) => {        // the desk-top wide (payoff framing); slow arc during the hold
   const a = sm((F - K.S8b) / 60);
-  return { tg: [L.desk.x + 0.05, 0.42, L.desk.z + 0.1], az: lerp(0.07, -0.03, a), el: 0.17, r: lerp(4.5, 4.25, a), fov: 34, roll: 0 };
+  return { tg: [L.desk.x + 0.02, 0.36, L.desk.z + 0.1], az: lerp(0.06, -0.03, a), el: 0.12, r: lerp(3.6, 3.4, a), fov: 40, roll: 0 };
 };
 const WHIPS = [[80, 100], [312, 328], [452, 466], [564, 588]];
 export function camRig(F) {

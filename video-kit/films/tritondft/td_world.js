@@ -380,8 +380,8 @@ export async function buildTube(W, paintWordFn) {
     paintWordFn(brush, 'TRITONDFT', w / 2, h / 2 + 4, 100, { fill: '#fff6e0', shade: '#bfe6f7', ink: '#0b3558', extrude: [0.04, 0.05], jaunt: 0.08, bounce: 0.05, skew: -0.08, gap: 0.12 });
     for (const x of [34, w - 34]) { brush.noStroke(); brush.fill('#e9b04f', 255); brush.circle(x, h / 2, 12, 0.1); }
   });
-  const plate = add(new THREE.PlaneGeometry(0.75, 0.22), { color: 0xffffff, map: plateTex, rim: 0.3, hatch: 0.4, toneBias: 0.08, side: THREE.DoubleSide }, { outline: 0.6 }, [m0.x + 0.58, m0.y + 0.02, m0.z + 0.1], [-0.05, -0.12, 0.02]);
-  add(new THREE.CylinderGeometry(0.014, 0.014, 0.3, 8), brass, { outline: 0.4, cast: false }, [m0.x + 0.2, m0.y + 0.05, m0.z + 0.05], [0, 0, Math.PI / 2]);
+  const plate = add(new THREE.PlaneGeometry(0.75, 0.22), { color: 0xffffff, map: plateTex, rim: 0.3, hatch: 0.4, toneBias: 0.08, side: THREE.DoubleSide }, { outline: 0.6 }, [m0.x - 0.95, m0.y + 0.2, m0.z - 0.05], [-0.05, 0.08, -0.02]);
+  add(new THREE.CylinderGeometry(0.014, 0.014, 0.62, 8), brass, { outline: 0.4, cast: false }, [m0.x - 0.3, m0.y + 0.22, m0.z - 0.07], [0, 0, Math.PI / 2]);
   W.tube = { curve, mouth, fun, plate, len: curve.getLength() };
   // the travelling bulge (a slightly fatter sleeve that slides along the tube)
   W.tube.bulge = add(new THREE.SphereGeometry(0.15, 20, 14), tubeM, { outline: 0.8, cast: false }, [0, 0, 0]);

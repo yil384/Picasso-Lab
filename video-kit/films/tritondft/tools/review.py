@@ -22,6 +22,8 @@ def load(d, prefix, frames):
         m = re.search(r"_(\d+)\.jpg$", p)
         if m and (not frames or int(m.group(1)) in frames):
             out.append((int(m.group(1)), p))
+    if frames:                                   # keep the requested order (e.g. a loop seam 712..719, 0..7)
+        out.sort(key=lambda fp: frames.index(fp[0]))
     return out
 
 
