@@ -30,7 +30,7 @@ export const K = {
   bubble: [16, 36], wake: 23, write: [36, 46], toss: [46, 54], gulp: 53, bulge: [53, 98],
   heave: [56, 70], clock: 70, smirk: [72, 90],
   pop: [98, 110], catch: 110, read: [114, 124], book: [124, 142], chop: 150, deal: [156, 162, 168],
-  type: [178, 196], rip: 198, feed: [200, 210], jump: [210, 216], lever: 218, roar: 220, tape: [228, 262],
+  type: [178, 196], rip: 198, feed: [200, 208], jump: [208, 214], lever: 214, roar: 220, tape: [228, 262],
   relax: [238, 258], scf: [256, 274], cover: [274, 288],
   gust: [280, 288], page: [290, 302], glance: [304, 316],
   hop4: [322, 330], read4: [330, 364], bead1: 334, fail: 362, rush: [372, 384],
@@ -460,7 +460,7 @@ function updateTri(F) {
   if (win(F, K.read[0] - 4, K.book[0])) { expr = 'squint'; armR = 1.3; armL = 0.5; armRx = -0.3; lean = 0.08 * Math.sin((F - K.read[0]) * 0.5); }   // card held out to the side
   if (win(F, K.book[0], K.book[1])) {                // a method book from the Library hub: tug, riffle, snap shut
     const toHub = faceYaw(home, [L.bench.x, 0, L.bench.z]);
-    yaw = lerp(yaw, toHub, sm((F - K.book[0]) / 4)); armR = lerp(-0.4, -2.2, sm((F - K.book[0]) / 5)); lean = 0.15 * arc(F, K.book[0], K.book[0] + 10);
+    yaw = lerp(yaw, lerp(yaw, toHub, 0.42), sm((F - K.book[0]) / 4));   // 3/4 to the hub, never edge-on to camera armR = lerp(-0.4, -2.2, sm((F - K.book[0]) / 5)); lean = 0.15 * arc(F, K.book[0], K.book[0] + 10);
     expr = F < K.book[0] + 10 ? 'look' : F < K.book[1] - 5 ? 'squint' : 'happy';
   }
   if (win(F, K.book[1], K.deal[2] + 6)) {
@@ -487,7 +487,7 @@ function updateTri(F) {
 function updateClack(F) {
   const R = W.clack, Fc = twos(F);
   const home = station(ST.exec);
-  let pos = [...home], yaw = faceYaw(home, [home[0] - 0.4, 0, home[2] + 1.0]), lean = 0, sq = 0, expr = 'determined', armL = 0.3, armR = -0.3, paperH = 0.18, keyHit = -1, rollerSpin = 0;
+  let pos = [...home], yaw = faceYaw(home, [home[0] + 0.2, 0, home[2] + 1.0]), lean = 0, sq = 0, expr = 'determined', armL = 0.3, armR = -0.3, paperH = 0.18, keyHit = -1, rollerSpin = 0;   // faces the S3 camera
   armL += 0.06 * Math.sin(TAU * Fc / 30);
   const eng = W.engine;
   if (win(F, K.deal[0], K.type[0])) { expr = F < K.deal[0] + 8 ? 'surprised' : 'determined'; sq = F < K.deal[0] + 10 ? takeSq(Fc - K.deal[0] - 2) : 0; }
@@ -511,7 +511,7 @@ function updateClack(F) {
     else {
       pos = [lerp(nearSlot[0], hang[0], k), lerp(0, hang[1], k) + 0.3 * Math.sin(Math.PI * k), lerp(nearSlot[2], hang[2], k)];
       sq = -0.18 * Math.sin(Math.PI * k); armL = -2.6 * k; armR = 2.6 * k; expr = F < K.lever ? 'determined' : 'strain';
-      if (F >= K.lever) { pos = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1]; sq = -0.12 + 0.05 * Math.sin(F * 1.4); rollerSpin = F * 0.9; }
+      if (F >= K.lever) { pos = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1]; sq = -0.12 + 0.05 * Math.sin(F * 1.4) - 0.1 * arc(F, K.lever, K.roar + 2); rollerSpin = F * 0.9; yaw = lerp(faceYaw(nearSlot, [knob.x, 0, knob.z]), -0.2, sm((F - K.lever) / 4)); }   // hangs facing camera, stretched by the yank
     }
   }
   if (win(F, K.roar + 18, K.roar + 32)) {
@@ -545,7 +545,7 @@ function updateEngine(F) {
   E.body.position.set(roar * 0.02 * Math.sin(F * 2.9), 0, 0);
   E.body.scale.set(1 - hum - roar * 0.03 * Math.sin(F * 1.7), 1 + hum + roar * 0.05 * Math.sin(F * 1.7) + 0.04 * huff, 1 - hum);
   E.pist.forEach((p, i) => { const y = 0.12 * (roar + huff * 0.6) * Math.abs(Math.sin(F * 0.9 + i * 1.6)) + 0.02 * Math.sin(TAU * F / 24 + i); p.rod.position.y = L.engine.h + 0.45 + y; p.cap.position.y = L.engine.h + 0.7 + y; });
-  const down = F >= K.lever - 2 && F < K.roar + 22 ? sm((F - K.lever + 2) / 4) : F >= K.roar + 22 && F < K.roar + 30 ? 1 - ob((F - K.roar - 22) / 8) : 0;
+  const down = F >= K.lever && F < K.roar + 22 ? sm((F - K.lever) / (K.roar - K.lever - 1)) : F >= K.roar + 22 && F < K.roar + 30 ? 1 - ob((F - K.roar - 22) / 8) : 0;
   E.lever.rotation.set(-1.0 * down, 0, 0.1);
   const chomp = win(F, K.feed[1] - 3, K.feed[1] + 5) ? arc(F, K.feed[1] - 3, K.feed[1] + 5) : 0;
   E.lipU.position.y = E.slot[1] + 0.09 + 0.05 * chomp; E.lipD.position.y = E.slot[1] - 0.09 - 0.04 * chomp;
@@ -822,8 +822,9 @@ const rigTri = (F) => {
 };
 const rigClack = (F) => {     // medium on Clack; crash pull-back to a low dutch wide of Big Iron at the lever
   const cl = station(ST.exec), E = L.engine;
-  const k = ic(clamp((F - K.lever + 3) / 6));
-  const med = { tg: [cl[0] + 0.3, 0.34, cl[2] - 0.2], az: 0.48, el: 0.14, r: 2.3, fov: 34, roll: 0.02 };
+  const k = ic(clamp((F - K.roar + 3) / 6));
+  const cp = W.clack.root.position, f = sm((F - K.rip) / 10);
+  const med = { tg: [lerp(cl[0] + 0.25, cp.x + 0.2, f), lerp(0.34, cp.y + 0.36, f), lerp(cl[2] - 0.1, cp.z, f)], az: lerp(0.3, 0.36, f), el: lerp(0.14, 0.22, f), r: lerp(2.2, 2.4, f), fov: 34, roll: 0.02 };   // just right of Loupe: Clack face-on
   const wide = { tg: [lerp(cl[0], E.x, 0.45), 0.55, lerp(cl[2], E.z, 0.4)], az: 0.3, el: 0.02, r: 4.6, fov: 36, roll: -0.12 };
   return mixRig(med, wide, k);
 };

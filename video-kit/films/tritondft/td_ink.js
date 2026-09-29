@@ -213,7 +213,8 @@ export function lettering(W, ctx, g) {
   const F = ctx.iw, jr = ctx.boilRng('letters');
   lensEye(W, ctx, g, F);
   const hoot = W.hoot, headW = wp(W, hoot.head, [0, 0.35, 0.1]), hu = pxu(W, ctx, headW), hp = prj(W, ctx, headW);
-  const takes = [[K.wake, hp, hu * 0.5, 0.15], [K.deal[0] + 2, prj(W, ctx, wp(W, W.clack.body, [0.2, 0.5, 0])), pxu(W, ctx, wp(W, W.clack.body)) * 0.22, 0.1],
+  const trp = prj(W, ctx, wp(W, W.tri.tri, [-0.1, 0.62, 0])), tru = pxu(W, ctx, wp(W, W.tri.tri, [0, 0.4, 0]));
+  const takes = [[K.wake, hp, hu * 0.5, 0.15], [K.catch, trp, tru * 0.28, 0.12], [K.deal[0] + 2, prj(W, ctx, wp(W, W.clack.body, [0.2, 0.5, 0])), pxu(W, ctx, wp(W, W.clack.body)) * 0.22, 0.1],
     [K.crash, prj(W, ctx, wp(W, W.tilt.head, [0.12, 0.12, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.22, -0.1], [K.take, hp, hu * 0.55, -0.12]];
   // (kept below the card's top crop: the desktop card shows only y 176..904 of the 1080 design)
   for (const [f0, p, s, rot] of takes) { const a = F - f0; if (a < 0 || a > 16 || !p.front) continue; bang(g, p.x + s * 0.7, Math.max(p.y - s * 0.1, 200 + s * 1.05), s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, jr); }
