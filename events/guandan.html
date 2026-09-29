@@ -1937,7 +1937,7 @@ function bindLobby(el) {
     el.addEventListener("click", event => {
         const target = event.target.closest("button, .lobby-tile");
         if (!target || target.disabled) return;
-        const creating = L("Creating room…", "正在创建房间…");
+        const creating = L("Creating…", "正在创建…");
         if (target.id === "create-room") return runLobbyAction(createRoom, target, creating);
         if (target.id === "join-room") return joinFromLobby(el);
         const action = target.dataset.lobby;
@@ -1966,11 +1966,11 @@ function bindLobby(el) {
     });
 }
 
-// 加入: the code tile shows 正在进入房间… while the room is looked up and loaded.
+// 加入: the code tile shows 正在加入… while the room is looked up and loaded.
 function joinFromLobby(lobby) {
     const code = lobby.querySelector("#room-input")?.value.trim();
     if (!code) return joinRoom();
-    return runLobbyAction(joinRoom, lobby.querySelector(".lobby-tile.is-join"), L("Joining…", "正在进入房间…"));
+    return runLobbyAction(joinRoom, lobby.querySelector(".lobby-tile.is-join"), L("Joining…", "正在加入…"));
 }
 
 // One lobby action at a time: a double tap must not create two rooms. The tapped tile stays

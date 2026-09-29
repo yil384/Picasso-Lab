@@ -292,7 +292,8 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
 .lobby.is-busy { cursor: progress; }
 .lobby.is-busy .lobby-tile, .lobby.is-busy .lobby-quick { pointer-events: none; }
 /* the tapped tile stays pressed under a dim veil and a dark plate (a turning ring, 正在开局…)
-   until the next screen arrives; the ring stands still under reduced motion */
+   until the next screen arrives; the ring stands still under reduced motion. The plate is sized
+   in the tile's unit and keeps 6px clear of the tile's sides: on a narrow tile the caption wraps. */
 .lobby-tile.is-loading, .lobby-quick.is-loading { scale: .97; }
 .lobby-tile.is-loading::after {
     content: "";
@@ -304,33 +305,36 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
 }
 .lobby-busy {
     position: absolute;
-    left: 50%; top: 50%;
+    left: 6px; right: 6px; top: 50%;
     z-index: 3;
-    translate: -50% -50%;
+    translate: 0 -50%;
+    width: fit-content;
+    margin: 0 auto;
     display: flex;
     align-items: center;
-    gap: calc(10 * var(--lu));
-    padding: calc(10 * var(--lu)) calc(20 * var(--lu)) calc(10 * var(--lu)) calc(14 * var(--lu));
-    border-radius: calc(26 * var(--lu));
+    gap: .5em;
+    padding: .5em 1em .5em .7em;
+    border-radius: 1.3em;
     background: rgba(10, 18, 60, .78);
     color: #fff;
-    font: 800 max(var(--fs-min) * 1.2, calc(20 * var(--lu)))/1.2 var(--font-ui);
-    white-space: nowrap;
+    font: 800 max(var(--fs-min) * 1.2, calc(20 * var(--t)))/1.2 var(--font-ui);
+    text-align: center;
+    text-wrap: balance;
 }
 .lobby-busy i {
     flex: none;
-    width: calc(22 * var(--lu));
-    height: calc(22 * var(--lu));
+    width: 1.1em;
+    height: 1.1em;
     box-sizing: border-box;
-    border: calc(3 * var(--lu)) solid rgba(255, 255, 255, .28);
+    border: .15em solid rgba(255, 255, 255, .28);
     border-top-color: #fff;
     border-radius: 50%;
     animation: gd-busy-turn 800ms linear infinite;
 }
 @keyframes gd-busy-turn { to { rotate: 1turn; } }
-/* on the gold bar the ring and caption replace the label, in the bar's dark red */
+/* on the gold bar the ring and caption replace the label, 26 design px in the bar's dark red */
 .lobby-quick.is-loading > :not(.lobby-busy) { visibility: hidden; }
-.lobby-quick .lobby-busy { background: none; color: #a3240c; font-size: calc(26 * var(--lu)); }
+.lobby-quick .lobby-busy { --t: calc(1.3 * var(--lu)); padding: 0; background: none; color: #a3240c; }
 .lobby-quick .lobby-busy i { border-color: rgba(163, 36, 12, .25); border-top-color: #a3240c; }
 
 /* left rail: three free-standing objects (the MVP's portrait, the shared card back, a record),
