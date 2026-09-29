@@ -482,13 +482,14 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-name .st { display: block; color: #ffe9a6; font: 600 19px/1.25 var(--font-num); white-space: nowrap; }
 
 .gd-seat-extra { display: contents; }
-/* Red Jokers revealed by 抗贡: legible cards overlapping like a play, inboard of a side seat under
-   its clock, after the name on the top and bottom seats */
+/* Red Jokers revealed by 抗贡: legible cards overlapping like a play, after the name on the top and
+   bottom seats. A side seat shows them atop its inboard column, clear above its clock and plays:
+   below those a tall edge column of the hand can reach the seat */
 .gd-public-jokers { display: flex; --card-w-small: 50px; }
 .gd-public-jokers .card + .card { margin-left: calc(var(--card-w-small) * -.52); }
-.gd-seat.is-p1 .gd-public-jokers, .gd-seat.is-p3 .gd-public-jokers { position: absolute; top: 112px; }
-.gd-seat.is-p1 .gd-public-jokers { left: calc(100% + 10px); }
-.gd-seat.is-p3 .gd-public-jokers { right: calc(100% + 10px); }
+.gd-seat.is-p1 .gd-public-jokers, .gd-seat.is-p3 .gd-public-jokers { position: absolute; bottom: calc(100% + 8px); }
+.gd-seat.is-p1 .gd-public-jokers { left: calc(100% + 16px); }
+.gd-seat.is-p3 .gd-public-jokers { right: calc(100% + 16px); }
 
 /* other seats' turn: gold alarm clock on the inboard side (tg_table6) */
 .gd-clock {
