@@ -1453,7 +1453,6 @@ const engineClient = createEngineClient(AI_WORKER_URL);
 let aiRunToken = 0;
 let hintClickToken = 0;
 let hintRequest = null;
-let hintUsedThisSession = false;
 
 function findAIMoveAsync(hand, lastCombo, levelRank, seat, g) {
     return engineClient.findAIMove(hand, lastCombo, levelRank, seat, g);
@@ -1487,8 +1486,10 @@ function requestHintPackage(seat, g, lang) {
     return hintRequest.promise;
 }
 
+// The package for my turn is computed as the turn starts (in the worker), so the first 提示 press
+// answers at once instead of waiting for the hint worker to boot and search.
 function maybePrefetchHint() {
-    if (!hintUsedThisSession || !game || game.phase !== "playing" || dealWindowOpen(game)) return;
+    if (!game || game.phase !== "playing" || dealWindowOpen(game)) return;
     const seat = mySeat();
     if (seat < 0 || seat !== game.currentTurn) return;
     requestHintPackage(seat, game, uiLang).catch(() => {});
@@ -1497,7 +1498,6 @@ function maybePrefetchHint() {
 async function hintMove() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
-    hintUsedThisSession = true;
     const snapshot = game;
     const lang = uiLang;
     const token = ++hintClickToken;
@@ -1533,8 +1533,9 @@ async function hintMove() {
     const pass = !ids.length;
     hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: options.length, pass, turn: turnStateKey() };
     selected = new Set(ids);
-    if (pass) showToast(L("Pass suggested", "建议不出"), 1300);
-    else if (thinkingShown) hideToast();
+    const passWord = L("Pass suggested", "建议不出");
+    if (pass) showToast(passWord, 1300);
+    else if (thinkingShown || tableView.toast?.textContent === passWord) hideToast();
     render();
 }
 
