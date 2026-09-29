@@ -64,7 +64,7 @@ const GIANT_LAY = deskP(1.08, 0, -0.92);        // where it lies (Hoot's pillow)
                                                 // Hoot's cheek; it stands up by pivoting about that cap
 const TINY = deskP(0.98, 0.33, 0.12);         // the tiny hourglass (Hoot's dare), same shape, 1/68 the volume, on a stack of
                                               // books so it sits inside the card band (and its top bulb clears the 68x)
-const SCORE = deskP(-0.56, 0.004, 0.12);       // the DFTBench scorecard (98%): on its easel between 98% and 68x, behind the row
+const SCORE = deskP(-0.86, 0.004, 0.14);       // the DFTBench scorecard (98%): on its easel between 98% and 68x, behind the row
 const faceYaw = (from, to) => Math.atan2(to[0] - from[0], to[2] - from[2]);
 
 // ---------------------------------------------------------------------------------------------------
@@ -319,7 +319,7 @@ function updateCart(F) {
   }
   // pops out of the desk mouth and lands in Hoot's wings; handed to Tri at the end
   const m = W.tube.curve.getPointAt(0);
-  const hold = W.hoot.head.localToWorld(V3(-0.1, -0.78, 0.74));    // hugged at the belly: the planks stay under its beak
+  const hold = W.hoot.head.localToWorld(V3(0.06, -0.68, 0.74));    // hugged at the belly, right of the scorecard: the planks stay under its beak
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k)];
@@ -479,7 +479,7 @@ function updateTube(F) {
 // k: 0 Tri, 1 Clack (late: rides the 68x down), 2 Loupe, 3 Tilt
 // one owner per number, faces clear: Tri stands on the paper tower, Clack photobombs at the far left of the desk (after
 // 68x has landed on its own), Loupe peeks over its scorecard (clear of the lamp), Tilt behind the $0.04 it tips its pennies into
-const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.72, 0.0, -0.3), deskP(-1.05, 0, -0.1), deskP(1.5, 0, 0.1)];
+const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.72, 0.0, -0.3), deskP(-1.28, 0, -0.12), deskP(1.5, 0, 0.1)];
 const OUT_T = [K.outs[0], K.slam[1] + 2, K.outs[1], K.outs[2]];
 function outState(k, F) {
   const t0 = OUT_T[k];
