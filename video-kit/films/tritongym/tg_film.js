@@ -100,16 +100,17 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   T.opCard = buildOpCard(THREE, add, scene);
   T.mitt = buildMitt(THREE, add, scene);
   // fresh tokens for the refine (B5): 4 round wheels + the nose cone fly from Tok's mouth
-  T.fresh = [0, 1, 2, 3, 4].map((i) => { const g = new THREE.Group(); scene.add(g); add(i < 4 ? new THREE.CylinderGeometry(0.16, 0.16, 0.1, 20).rotateX(Math.PI / 2) : new THREE.ConeGeometry(0.15, 0.32, 4, 1).rotateZ(-Math.PI / 2), { key: i < 4 ? 'freshwheel' : 'freshcone', color: 0xfff4dc, rim: 0.6, spec: 0 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; });
+  T.fresh = [0, 1, 2, 3, 4].map((i) => { const g = new THREE.Group(); scene.add(g); add(i < 4 ? new THREE.CylinderGeometry(0.16, 0.16, 0.1, 20).rotateX(Math.PI / 2) : new THREE.ConeGeometry(0.12, 0.32, 4, 1).rotateZ(-Math.PI / 2), { key: i < 4 ? 'freshwheel' : 'freshcone', color: 0xfff4dc, rim: 0.6, spec: 0 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; });
   // the square wheel that flops away
   T.flop = (() => { const g = new THREE.Group(); scene.add(g); add(new THREE.BoxGeometry(0.3, 0.3, 0.11), { key: 'wheel-sq', color: 0x0b5e46, rim: 0.6, spec: 0 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; })();
-  // the payoff: PERF@1 > 1, one line, bold coral faces (light shade), ink-dark extrusion (no coloured underside)
-  const face = { key: 'lt-face', color: 0xef4b5f, rim: 0.9, hatchDir: [0.3, 1, 0], shadeColor: 0x8a1f3a, shadeMix: 0.15, spec: 0 };
+  // the payoff: PERF@1 > 1, one line, bold emerald faces (ours; coral is the oracle's / an error), light shade, no
+  // halftone, ink-dark extrusion (no coloured underside)
+  const face = { key: 'lt-face', color: 0x10b981, rim: 0.9, hatchDir: [0.3, 1, 0], shadeColor: 0x047857, shadeMix: 0.15, spec: 0, halftone: 0, hatch: 0.25, toneBias: 0.2 };
   const side = { key: 'lt-side', color: 0x2b2447, rim: 0.3, hatchDir: [0, 1, 0], spec: 0 };
   T.letters = new THREE.Group(); scene.add(T.letters);
   T.lettersIn = new THREE.Group(); T.letters.add(T.lettersIn);
-  T.w1 = word3D(THREE, add, T.lettersIn, 'PERF@1', 0.82, { face, side, depth: 0.38, weight: 0.31 });
-  T.w2 = word3D(THREE, add, T.lettersIn, '>1', 1.24, { face, side, depth: 0.46, weight: 0.31, track: 0.26 });
+  T.w1 = word3D(THREE, add, T.lettersIn, 'PERF@1', 0.82, { face, side, depth: 0.38, weight: 0.28 });
+  T.w2 = word3D(THREE, add, T.lettersIn, '>1', 1.24, { face, side, depth: 0.46, weight: 0.29, track: 0.26 });
   T.w1.root.position.x = -T.w1.width - 0.35; T.w2.root.position.x = 0.15;
   T.lettersIn.position.x = (T.w1.width + 0.35 - T.w2.width - 0.15) / 2;
   // the slam's dust ring (a flat torus that spreads and fades under the letters)
@@ -118,17 +119,17 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   T.letters.visible = false;
 
   // ---- painted cyclorama (warm)
-  const bdTex = await cachedBake(THREE, bakeBrushTexture, { width: 4096, height: 1024, seed: 21, key: 'tgbackdrop', background: '#ffffff' }, (p, brush, w, h) => {
+  const bdTex = await cachedBake(THREE, bakeBrushTexture, { width: 4096, height: 1024, seed: 21, key: 'tgbackdrop2', background: '#ffffff' }, (p, brush, w, h) => {
     const cx = w * 0.5, cy = h * 0.66;
     brush.noStroke();
     const n = 48;
     for (let k = 0; k < n; k++) {
       const a0 = (k / n) * Math.PI * 2, a1 = a0 + Math.PI * 2 / n * 0.5;
-      brush.fill('#b9b9b9', 200); brush.fillBleed(0.03); brush.fillTexture(0.35, 0.3);
+      brush.fill('#c9c3b8', 120); brush.fillBleed(0.03); brush.fillTexture(0.25, 0.2);   // softer rays: warm cream wall, no khaki blotches
       brush.polygon([[cx, cy], [cx + Math.cos(a0) * 3200, cy + Math.sin(a0) * 1500], [cx + Math.cos(a1) * 3200, cy + Math.sin(a1) * 1500]]);
     }
   });
-  T.backdrop = npr.backdrop(bdTex, { radius: 30, height: 30, y: -6, arc: [0, TAU], color: 0xf6d9a4 });
+  T.backdrop = npr.backdrop(bdTex, { radius: 30, height: 30, y: -6, arc: [0, TAU], color: 0xf8e2b6 });
   scene.add(T.backdrop);
   return { scene, camera };
 }
@@ -208,6 +209,7 @@ function updateKern(F) {
   K_.noseG.visible = un > 0;
   if (un >= 1) { K_.noseG.position.set(...KERN_SLOTS[7]); K_.noseG.rotation.set(0, 0, 0); K_.noseG.scale.setScalar(1); } else if (un > 0) placeFlying(K_.noseG, mouth, KERN_SLOTS[7], un, 7);
   setMap(K_.nose, (K_.faces[S.face] || K_.faces.calm)[vb(F)]);
+  (Array.isArray(K_.nose.material) ? K_.nose.material[0] : K_.nose.material).uniforms.uAlbedo.value.set(...(S.compiled > 0.3 ? [0.74, 0.94, 0.84] : [1, 0.957, 0.863]));   // the head turns pale emerald once compiled
   const uc = sg(F, K.cow, K.cow + 7);
   K_.cowlick.visible = uc > 0 && F < K.lift[1];
   if (uc > 0 && uc < 1) placeFlying(K_.cowlick, mouth, [0.1, 0.25, 0.02], uc, 9);
@@ -243,10 +245,12 @@ function tokMouth() {
 function placeFlying(g, fromW, slot, u, n) {
   const K_ = T.kern;
   const toW = K_.body.localToWorld(V(...slot));
-  const e = sm(u);
-  // arc up and out towards the lens, so a token in flight reads against the wall, never across Tok's face
-  const mid = [(fromW[0] + toW.x) / 2, 0, (fromW[2] + toW.z) / 2], ml = Math.hypot(mid[0], mid[2]) || 1, bulge = 0.2 * Math.sin(Math.PI * u);
-  const p = [lerp(fromW[0], toW.x, e) + mid[0] / ml * bulge, lerp(fromW[1], toW.y, e) + 0.75 * Math.sin(Math.PI * Math.min(1, u * 1.3)) * (u < 0.77 ? 1 : Math.max(0, 1 - (u - 0.77) / 0.23)), lerp(fromW[2], toW.z, e) + mid[2] / ml * bulge];
+  // out of the mouth sideways first (ease-out across), then a small hop onto the slot: a token in flight never crosses
+  // Tok's face, and reads against the wall
+  const eh = 1 - (1 - u) * (1 - u), ev = sm(u);
+  const mid = [(fromW[0] + toW.x) / 2, 0, (fromW[2] + toW.z) / 2], ml = Math.hypot(mid[0], mid[2]) || 1, bulge = 0.18 * Math.sin(Math.PI * u);
+  const hump = 0.5 * Math.sin(Math.PI * u) * sm(u / 0.35);
+  const p = [lerp(fromW[0], toW.x, eh) + mid[0] / ml * bulge, lerp(fromW[1], toW.y, ev) + hump, lerp(fromW[2], toW.z, eh) + mid[2] / ml * bulge];
   const loc = K_.body.worldToLocal(V(...p));
   g.position.copy(loc);
   g.rotation.set(0, 0, (1 - u) * (2 + n) * 1.3);
@@ -393,7 +397,7 @@ function updateStations(F) {
   const ck = T.check.root;
   ck.visible = !!st.kern.showCheck && st.kern.vis;
   if (ck.visible) {
-    const p = T.kern.body.localToWorld(V(0.0, 0.2, 0.42));
+    const p = T.kern.body.localToWorld(V(-0.3, 0.62, 0.12));   // above the hump, clear of the plate and the face
     ck.position.copy(p); ck.rotation.set(0, faceOut(toRing([p.x, p.y, p.z])[0]), 0);
     ck.scale.setScalar(ob(sg(F, K.check, K.check + 6)) * 0.6);
   }
@@ -403,7 +407,7 @@ function updateStations(F) {
     const uu = sg(F, K.speak2[0] + i * 3, K.speak2[0] + i * 3 + 8);
     gq.visible = uu > 0 && uu < 1 && st.kern.vis;
     if (!gq.visible) return;
-    const slot = i < 4 ? T.kern.wheelsRd[i].position.toArray() : [0.74, -0.08, 0];
+    const slot = i < 4 ? T.kern.wheelsRd[i].position.toArray() : [0.74, -0.12, 0];
     const toW = T.kern.body.localToWorld(V(...slot));
     const e = sm(uu);
     // out of the mouth, down and out towards the lens (never across Tok's eyes), onto the axle
@@ -427,7 +431,7 @@ function updateLetters(F) {
   const th = A.words;
   const base = polar(L2 + th, 1.05, 1.08);          // on top of the graphics card, behind the finish
   const du = sg(F, K.slam, K.slam + 14);
-  T.dust.visible = on && du > 0 && du < 1;
+  T.dust.visible = false;   // (the 3D ring read as an underline edge-on: 2D inked dust puffs instead, see drawMarks)
   if (T.dust.visible) { const r = 2.2 + 3.2 * ease.outCubic(du); T.dust.position.set(base[0], 1.1, base[2]); T.dust.scale.set(r, r, 1 - 0.8 * du); }
   if (!on) return;
   let y = 0, sy = 1, sxz = 1;
@@ -441,17 +445,31 @@ function updateLetters(F) {
 // ------------------------------------------------------------------------------------------------
 // npr extras
 // ------------------------------------------------------------------------------------------------
+const WRAP = (f) => ((f % NF) + NF) % NF;
+function keyLight(F) {
+  const back = V(0, 0, 0), tg = V(0, 0, 0);
+  const offs = [-30, -20, -10, 0, 10, 20, 30];
+  for (const o of offs) {
+    const w = camWorld(WRAP(F + o)), wt = 1 - Math.abs(o) / 40;
+    back.addScaledVector(V(w.pos[0] - w.target[0], 0, w.pos[2] - w.target[2]).normalize(), wt);
+    tg.addScaledVector(V(...w.target), wt);
+  }
+  if (back.length() < 0.2) { const w = camWorld(F); back.set(w.pos[0] - w.target[0], 0, w.pos[2] - w.target[2]); }
+  back.normalize(); tg.multiplyScalar(1 / offs.reduce((a, o) => a + 1 - Math.abs(o) / 40, 0));
+  const right = V(back.z, 0, -back.x);
+  const d = V(0, 0, 0).addScaledVector(right, -0.62).addScaledVector(V(0, 1, 0), 0.9).addScaledVector(back, 0.42);
+  return { dir: [d.x, d.y, d.z], target: [tg.x, 0.5, tg.z] };
+}
+
 export function drawNPR(ctx) {
   const { npr, camera } = T, F = ctx.iw;
   npr.frame(ctx);
   npr.setSmear(st.smear || 0, 0);
-  // key light per shot, like a comic panel: from the upper left of the lens, a little from the front
+  // key light: from the upper left of the lens, a little from the front, but low-passed over +-1.25 s of the camera path
+  // (a light that turned with every camera move popped shadows on the heroes); the shadow box follows the smoothed target
   {
-    const cp = camera.position, tg = st.camTarget;
-    const back = V(cp.x - tg[0], 0, cp.z - tg[2]).normalize();
-    const right = V(back.z, 0, -back.x);
-    const d = V(0, 0, 0).addScaledVector(right, -0.62).addScaledVector(V(0, 1, 0), 0.9).addScaledVector(back, 0.42);
-    npr.setLight({ dir: [d.x, d.y, d.z], target: [tg[0], 0.5, tg[2]], size: 9, dist: 26, shadows: !Q.get('noshadow') });
+    const L = keyLight(F);
+    npr.setLight({ dir: L.dir, target: L.target, size: 12, dist: 30, shadows: !Q.get('noshadow') });
   }
   const fp = st.kern.vis && st.kern.pos ? st.kern.pos : st.tok.pos;
   npr.focusOn(camera, V(...fp), 10);     // wide sharp zone: the whole cast keeps its ink (a defocused character loses its lines and reads as a ghost)
@@ -501,15 +519,26 @@ export function drawMarks(ctx, g) {
   const F = ctx.iw, r = ctx.boilRng('marks');
   // CLANG! on a diagonal beside the gate
   const ca = F - K.clang;
-  if (ca >= 0 && ca < K.closeup[0] - K.clang) {        // gone by the cut to the insert
+  if (ca >= 0 && ca < K.closeup[0] - 4 - K.clang) {    // gone before the push onto the token
     const p = prj(ctx, polar(A.gate - 0.08, R.ours + 0.2, 2.3));
     const x = clamp(p.x - 260, 330, 1250), y = clamp(p.y + 20, 330, 560), c2 = ca - 2;   // top of the lettering below the card crop
-    comicWord(g, 'CLANG!', x, y, 150, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.12, r, pop: c2 / 4, alpha: 1 - sg(ca, K.closeup[0] - K.clang - 5, K.closeup[0] - K.clang), perLetter: (i) => (c2 - i * 0.8) / 3 });
+    comicWord(g, 'CLANG!', x, y, 150, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.12, r, pop: Math.min(c2 / 4, (K.closeup[0] - 4 - K.clang - ca) / 3), perLetter: (i) => (c2 - i * 0.8) / 3 });   // pops on, pops off before the push-in
   }
   const pf = (f0, p, s0) => { const a = F - f0; if (a < 0 || a >= 9) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); for (const sd of [-1, 1]) puff(g, q.x + sd * (u * 0.3 + a * 3), q.y - a, u * s0 * (1 + a * 0.08), 1 - a / 9, r); };
   pf(K.hopOff[1], polar(A.bench + 0.2, R.ours, 0.02), 0.12);
   pf(K.skid, [B1.tok[0], 0.02, B1.tok[2]], 0.14);
   pf(K.lap2[1] - 4, polar(L2 + A.start, R.ours, 0.02), 0.12);
+  // the slam: chunky inked dust puffs rolling out from the letters' feet
+  { const a = F - K.slam;
+    if (a >= 0 && a < 14 && T.letters.visible) {
+      const x0 = -(T.w1.width + 0.35), x1 = T.w2.width + 0.15;
+      for (let q = 0; q < 7; q++) {
+        const lx = lerp(x0, x1, q / 6), wp = T.lettersIn.localToWorld(V(lx, 0.05, 0.35));
+        const c = prj(ctx, [wp.x, wp.y, wp.z]); if (!c.front) continue;
+        const u = pxu(ctx, [wp.x, wp.y, wp.z]), sd = q < 3 ? -1 : q > 3 ? 1 : 0;
+        puff(g, c.x + sd * a * u * 0.09, c.y - a * u * 0.02, u * (0.22 + 0.03 * a) * (0.8 + 0.4 * hsh(q, 7)), 1 - a / 14, r);
+      }
+    } }
   // square-wheel THUNK ticks under the wheels on each flat landing
   if (st.kern.vis && st.kern.lurch && !st.kern.round && F >= K.drive1[0] && F < K.kernRun1[1]) {
     const q = prj(ctx, [st.kern.pos[0], 0.02, st.kern.pos[2]]); const u = pxu(ctx, st.kern.pos);
@@ -534,8 +563,8 @@ export function drawMarks(ctx, g) {
   }
   const tk = st.tok;
   const bangAt = (f0, p, s, rot) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, PAL.coral, r); };
-  bangAt(K.idea, [tk.pos[0], tk.pos[1] + 1.8, tk.pos[2]], 0.42, 0.1);
-  if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 1.25, st.oro.pos[2]], 0.34, 0.12);
+  { const sx = [Math.cos(tk.yaw), 0, -Math.sin(tk.yaw)]; bangAt(K.idea, [tk.pos[0] + sx[0] * 0.95, tk.pos[1] + 1.35, tk.pos[2] + sx[2] * 0.95], 0.42, 0.1); }   // beside the head, inside the card crop
+  if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 0.95, st.oro.pos[2]], 0.34, 0.12);
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
     const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
     const kp = st.kern.pos || [0, 0, 0], an = q / 6 * TAU + 0.4;
@@ -551,10 +580,14 @@ export function drawMarks(ctx, g) {
     if (W.stopE) {
       const P = [hp(0, 0).x, hp(0, 0).y], pts = [[P[0], P[1]]];
       for (let k = 0; k <= 12; k++) { const q = hp(lerp(W.emerald, W.coral, k / 12), 0.66); pts.push([q.x, q.y]); }
-      g.save(); g.globalAlpha = 0.55; fillPoly(g, pts, PAL.emerald); g.restore();
+      fillPoly(g, pts, PAL.emerald);
+      g.save(); g.beginPath(); pts.forEach((q, i) => (i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]))); g.closePath(); g.clip();   // printed: halftone dots in the wedge
+      const dstep = 9; g.fillStyle = PAL.emeraldDk; for (let yy = 0; yy < ctx.DH; yy += dstep) for (let xx = (yy / dstep) % 2 ? dstep / 2 : 0; xx < ctx.DW; xx += dstep) { if (Math.hypot(xx - P[0], yy - P[1]) > 400) continue; g.beginPath(); g.arc(xx, yy, 2.2, 0, TAU); g.fill(); }
+      g.restore();
+      pen(g, [...pts, pts[0]], 5, INK, { r, taper: [0, 0], smoothN: 1 });
     }
     const click = (on, fStop, a, col) => { if (!on) return; const q = hp(a, 0.7); const u = pxu(ctx, T.tower.head.getWorldPosition(V(0, 0, 0)).toArray());
-      const age = F - fStop; if (age < 0 || age > 6) return; bang(g, q.x, q.y, u * 0.28 * ob(age / 3) * (1 - sm((age - 4) / 2)), 0.2, col, r); };
+      const age = F - fStop; if (age < 0 || age > 6) return; bang(g, q.x, q.y, u * 0.45 * ob(age / 3) * (1 - sm((age - 4) / 2)), 0.2, col, r); };
     const fE = K.watch[0] + 1 + Math.ceil(3 / 7 * (K.watch[1] - 6 - K.watch[0])), fC = K.watch[0] + 1 + Math.ceil(6 / 7 * (K.watch[1] - 6 - K.watch[0]));
     click(W.stopE, fE, W.emerald, PAL.emerald); click(W.stopC, fC, W.coral, PAL.coral);
   }

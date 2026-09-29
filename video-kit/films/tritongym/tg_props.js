@@ -196,7 +196,7 @@ export function buildBench(THREE, add, parent) {
   B.stack = new THREE.Group(); B.stack.position.set(-1.75, 0, 0.05); B.root.add(B.stack);
   // bundles of operator cards, bottom to top: 12 DSL (violet), 13 OOD (coral, crinkled), 139 Standard (cream) on top, 0.01
   // per card; Tok takes its card off the (Standard) top
-  const bundles = [[12, '#a996d8', false], [13, '#f58a93', true]];
+  const bundles = [[12, '#a996d8', false], [13, '#e8b86a', true]];   // DSL violet, OOD tan (coral stays the oracle's)
   let left = 139; while (left > 0) { const n = Math.min(left, 24); bundles.push([n, '#fff4dc', false]); left -= n; }
   let y = 0;
   B.bands = bundles.map(([n, col, cr], i) => {
@@ -258,7 +258,11 @@ export function buildWeighIn(THREE, add, parent, { span = 0.95, h = 1.75 } = {})
   S.flag = new THREE.Group(); S.flag.position.set(0, h + 0.12, -0.02); S.root.add(S.flag);
   add(new THREE.CylinderGeometry(0.025, 0.025, 0.75, 6), { key: 'rod', color: 0x3b3558 }, { outline: 0.4 }, [0, 0.37, 0], [0, 0, 0], S.flag);
   const fg = new THREE.PlaneGeometry(0.62, 0.42, 6, 2); fg.translate(0.32, 0.53, 0);
-  S.flagCloth = add(fg, { key: 'flagcloth', color: 0x10b981, side: THREE.DoubleSide, rim: 0.4 }, { outline: 0.5, cast: false }, [0, 0, 0], [0, 0, 0], S.flag);
+  const flagTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 176; const g = c.getContext('2d');
+    g.fillStyle = '#10b981'; g.fillRect(0, 0, 256, 176); g.strokeStyle = '#1a1530'; g.lineWidth = 10; g.strokeRect(5, 5, 246, 166);
+    g.strokeStyle = '#fff6e0'; g.lineWidth = 26; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(70, 92); g.lineTo(110, 128); g.lineTo(186, 52); g.stroke();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; return t; })();
+  S.flagCloth = add(fg, { key: 'flagcloth', color: 0xffffff, map: flagTex, side: THREE.DoubleSide, rim: 0.4, spec: 0, flat: 0.3 }, { outline: 0.7, cast: false }, [0, 0, 0], [0, 0, 0], S.flag);
   S.span = span; S.h = h;
   return S;
 }
@@ -339,8 +343,8 @@ export function buildSlip(THREE, add, parent) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 192; const g = c.getContext('2d');
   g.fillStyle = '#fff8ea'; g.fillRect(0, 0, 256, 192);
   g.fillStyle = '#1a1530'; g.save(); g.translate(128, 84); g.rotate(0.5); g.beginPath(); g.arc(0, -26, 15, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(0, 26, 15, 0, Math.PI * 2); g.fill(); g.restore();
-  g.strokeStyle = '#ef4b5f'; g.lineWidth = 12; g.beginPath(); g.ellipse(128, 84, 58, 62, 0.2, 0, Math.PI * 2); g.stroke();
-  g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 16; g.beginPath(); g.moveTo(92, 176); g.lineTo(128, 150); g.lineTo(164, 176); g.stroke();
+  g.strokeStyle = '#ef4b5f'; g.lineWidth = 11; g.beginPath(); g.ellipse(128, 78, 50, 56, 0.2, 0, Math.PI * 2); g.stroke();
+  g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 13; g.beginPath(); g.moveTo(104, 184); g.lineTo(128, 160); g.lineTo(152, 184); g.stroke();   // a caret, clear of the circle
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true;
   const S = { root: new THREE.Group() }; parent.add(S.root);
   S.m = add(new THREE.PlaneGeometry(0.46, 0.35), { color: 0xffffff, map: t, side: THREE.DoubleSide, rim: 0.3, hatch: 0.4, spec: 0 }, { outline: 0.6, cast: false }, [0, 0, 0], [0, 0, 0], S.root);
@@ -351,6 +355,8 @@ export function buildSlip(THREE, add, parent) {
 export function buildMitt(THREE, add, parent, { col = 0xfff4dc } = {}) {
   const M = { root: new THREE.Group() }; parent.add(M.root);
   M.hand = add(new THREE.SphereGeometry(0.11, 18, 14), { key: 'tok-skin', color: col, rim: 0.6, spec: 0 }, { outline: 0.9 }, [0, 0, 0], [0, 0, 0], M.root);
+  M.hand.scale.set(1.35, 0.95, 1.15);                                                    // a mitten, not a knob
+  add(new THREE.SphereGeometry(0.05, 12, 10), { key: 'tok-skin', color: col, rim: 0.6, spec: 0 }, { outline: 0.7 }, [0.13, 0.03, 0.05], [0, 0, 0], M.root);   // thumb
   add(new THREE.CapsuleGeometry(0.065, 0.9, 4, 10), { key: 'tok-skin', color: col, rim: 0.6, spec: 0 }, { outline: 0.9 }, [0, 0.55, 0], [0, 0, 0], M.root);
   return M;
 }

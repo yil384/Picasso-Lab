@@ -61,3 +61,37 @@ Target: every lens ≥ 8.5 with no must-fix left.
 26. *Defocused Tok loses its ink and reads as a ghost* (CD 4, f306–334, f536–546): the DoF sharp zone was 4 units → 10 (fixed in source after r1).
 
 Nice-to-haves taken into r2: no blush dots/tongue (CD n1), Tok lands beside the stack at the seam (CD n7), fresh tokens launched down and out (WD n2), start blocks inked (TA n5), idea bang and gate face inside the crop (TA n6), CLANG! stagger after the impact (TA n8), card encode at `--max-mb 3.8` (WD n5). Deferred: world-fixed key light per beat (TA n1), PyTorch-like flame on Torchy (DE n5), the "done pile" at the seam (DE n4).
+
+## Round 2 — pass r2 (960×540, commit 457e32e)
+
+| lens | r1 | **r2** | verdict in one line |
+|---|---|---|---|
+| Creative director | 6.0 | **7.0** | the story now reads in order (write → CLANG → fix → PASS → lose → refine → lap → win); but Kern, the hero, has almost no face or acting, the B1 tokens still seem to leave from the top of Tok's head, the payoff reactions can't be read |
+| Tech-art lead | 6.0 | **7.0** | strobe, hard cut, luminance impact frames, gloss, screen-locked ruling and the ghosted Tok are fixed; the camera-relative key light now pops shadows, some fast moves have no smear, the insert and watch cuts break the "no hard cuts" rule, the slam is weak |
+| Domain expert | 6.0 | **7.6** | fixed oracle time, photo finish, watch insert, Triton glyphs, outputs-vs-reference verify, oracle not in the loop all correct; but the headline is painted in the oracle's coral, the operator plate is lost in the payoff, Dash still reads violet in shade, the race-1 watch can't be read |
+| Web designer | 6.3 | **7.4** | B1, verify, CLANG! and the seam read at 400 px, card fits at CRF 32 (3.54 MB); but the master won't fit 70 MB at CRF 18, the poster is too wide (letters ~30 px caps, Kern the smallest shape), the watch lands in the bottom fade, the racers still overlap, marks and the lamp fall outside the desktop crop |
+
+Round-1 items the reviewers confirmed fixed on frames: the camera strobe (#18), the hard cut at f177 (#13), impact frames by object (#15), the gloss (#24), the ruling (#25), the ghosted Tok (#26), the ")ERF" clipping and Tok over the letters (#5/#6), the banner (#7), the fixed oracle time and the photo finish (#1/#2), the watch insert (#4), CUDA glyphs (#12), the dial (#17), Oro out of the loop (#20), coral wheels (#21), the CLANG clipping (#16). Correction to the round-1 plan: race 2 is 33 f for Kern (Perf@1 ≈ 1.09, not 34 f), and the stopwatch turns once per 60 f in r3 (72 f in r2; neither laps).
+
+### Must-fix list (merged) and what r3 does about each
+1. *Headline in the oracle's colour* (DE 1): PERF@1 > 1 faces go **emerald** (ours) with ink extrusion, no halftone on the faces; coral stays Oro / errors only.
+2. *Kern has no face or acting* (CD 1, TA 6): the face is repainted bigger (eyes ~2×) and high on the nose block, the refined nose cone moves under the eyes (it covered them); Kern turns ¾ to the lens when dizzy after the CLANG and in the payoff (−0.5 rad, so the matmul plate stays in view, DE 2); a "strain" face (gritted teeth, sweat) at the line; the head goes pale emerald once compiled (DE n1).
+3. *Operator plate lost in the payoff* (DE 2): the smaller turn keeps the plate side ¾ on; the check moves above the hump, off the plate.
+4. *B1 tokens seem to leave from the head; build hidden* (CD 2/3): tokens now leave the mouth sideways first (ease-out across, a low hop after), Kern is built at the bench's lens-side edge, clear of Tok's arm.
+5. *Key light turns with the camera, shadow pops* (TA 1): the key is now low-passed over ±1.25 s of the camera path and the shadow box is larger (12) and follows the smoothed target; Tok is lighter (tone floor).
+6. *Hard cuts into/out of the insert and to the watch* (TA 5, README "transitions always"): push down onto the token, whip back out; whip from the photo-finish panel to the watch.
+7. *Fast moves without smear* (TA 4): the watch → start pull is 22 f and a whip; start → race-1 tracking 12 f with smear; the wheel close-up → two-shot is a 14 f pull-out; the gate tilt no longer jerks after the insert; the B6 → B7 bump at f488 (vertigo distance) is fixed.
+8. *Tok passes through the portcullis / Dash's beak* (TA 2, CD 7): Tok leaves the gate only after the arch shot; Dash sits higher on the bars.
+9. *CLANG! ghosts over the insert* (TA 3): it pops off (scale-out) before the push-in, no alpha fade.
+10. *Payoff slam weak / dust ring reads as an underline* (CD 5, TA 6): inked 2D dust puffs roll out from the letters' feet, focus lines heavier; the orbit starts clear of the pylon; Oro turns its face to us for the jaw drop and nod; Tok's star eyes are 1.7× bigger and Tok is lighter.
+11. *Poster too wide, Kern smallest* (WD 2): tightened as far as the board/letters/Tok spread allows (see r3 notes); Kern parks further on, front and centre.
+12. *Race-1 watch unreadable* (DE 4, CD 4, WD 3): the face is flat-lit cream, hands thicker and flat-coloured, the race-1 finish framing is widened to show it; the watch now turns once per 60 f so the coral hand stops at ~7 o'clock (not along the tower pole) and race 1's emerald far past it (~11).
+13. *Watch insert in the bottom fade; the hands merge* (WD 3, CD n5): (see r3 notes) insert re-framed higher; the "time saved" wedge is inked and halftoned (TA n1), click bursts bigger.
+14. *Racers still overlap* (TA 7, WD 4, CD 9): race 1 and race 2 tracking are raised (≈ 2.6–3.0) so the far lane sits above Kern with a gap.
+15. *Lap-2 recompile hidden behind the post* (CD 6, TA 8, WD 4): lap 2 becomes three quick panels linked by whips that rhyme with B2/B3: through the arch (the emerald flash lit), the weigh-in (block, flag, flood), the start line.
+16. *Dash reads violet in shade* (DE 3): recoloured warm grey (verify on lit and shaded frames).
+17. *Race-1 finish emotion wrong* (CD 4): Tok winces (eyes shut, wobble, sweat) behind its hands instead of grinning; Tok stands clear of Oro's key.
+18. *Master over 70 MB at CRF 18* (WD 1): the master encode searches the lowest CRF from 18 that fits 70 MB and the result is checked with ffprobe.
+19. *Marks/lamp outside the desktop crop* (WD 5, DE n3, CD n2): the gate shot is framed higher so the coral lamp is in frame before the slam and the nod.
+
+Nice-to-haves taken: the PASS flag carries an inked check (CD n6), the flood stays full through the match cut (CD n1), the slip's caret is separated so it can't read as ♀ (CD n3, DE n2, TA n6), a mitten for the press (TA n5), a thicker sweatband (TA n3), the OOD band recoloured tan (DE n6), a warmer, calmer cyclorama (TA n2), the pink tongue gone from every mouth. Declined: screen-space halftone swim (TA n7, a look-wide change for the whole series), a PyTorch-like flame (DE n5, avoids a brand mark).

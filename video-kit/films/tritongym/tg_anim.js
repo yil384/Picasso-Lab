@@ -6,7 +6,7 @@ export const NF = 660;
 // station angles (radians) and radii
 export const A = { bench: 0.0, gate: 0.95, scale: 1.95, start: 3.0, finish: 4.85 };
 A.words = A.finish + 0.69;      // the payoff letters, on top of the graphics card (clear of the finish pylon from the payoff lens)
-A.tokWin = A.finish + 1.62;     // Tok's star-eyed spot at the payoff
+A.tokWin = A.finish + 1.56;     // Tok's star-eyed spot at the payoff
 export const R = { track: 6.0, lanes: [5.45, 6.55], ours: 6.55, oro: 5.45, bench: 8.3, tokBench: 7.72, kerb: 4.62, scale: 8.15 };
 export const L2 = TAU;   // lap 2 offset
 
@@ -54,10 +54,10 @@ export const B2 = { thStop: A.gate - 0.105 };
 B2.tok = polar(B2.thStop - 0.33, R.ours - 0.3, 0); B2.land = polar(B2.thStop - 0.17, R.ours + 0.3, 0);
 export const B1 = {
   tok: polar(bx(-0.55), R.bench + 0.08, 0),            // Tok stands between the stack and the bench, nothing in front of it
-  kern: polar(bx(1.05), R.bench, 0.8),                  // Kern is built on the bench top
+  kern: polar(bx(1.2), R.bench + 0.24, 0.8),           // Kern is built on the bench top, at its lens-side edge, clear of Tok
   stackTop: polar(bx(-1.75), R.bench + 0.05, 1.655),     // the top card of the 164 stack
   cardRest: polar(bx(0.42), R.bench + 0.2, 0.812),      // where Tok lays the operator card down
-  thTok: bx(-0.55), thKern: bx(1.05),
+  thTok: bx(-0.55), thKern: bx(1.2),
 };
 /** the photo-finish hold: every character is frozen on the crossing frame */
 const held = (F) => (F >= K.hold[0] && F < K.hold[1] ? K.hold[0] : F);
@@ -82,9 +82,9 @@ function sprint(F, f0, fLine, thS, thF, pw, coastF, over) {
   const a = Math.min(F - fLine, coastF), k = a / coastF;
   return thF + Math.min(over, v * coastF * (k - k * k / 2));
 }
-export const ORO_RUN = 36;
+export const ORO_RUN = 36;    // the oracle's time, identical in both races (it is the fixed yardstick)
 // the races are timed nose-on-the-line: centre angles at which each nose touches the finish line
-const LINE = { k1: A.finish - 0.65 / R.ours, k2: A.finish - 0.94 / R.ours, o: A.finish - 1.31 / R.oro };    // the oracle's time, identical in both races (it is the fixed yardstick)
+const LINE = { k1: A.finish - 0.65 / R.ours, k2: A.finish - 0.94 / R.ours, o: A.finish - 1.31 / R.oro };
 /** race time: the photo-finish hold freezes the racers at the crossing frame */
 export const raceF = (F) => (F >= K.hold[0] && F < K.hold[1] ? K.hold[0] : F >= K.hold[1] ? F - (K.hold[1] - K.hold[0]) : F);
 export function kernTh(F) {   // ring angle of Kern in the races (lap offset included for race 2)
@@ -95,7 +95,7 @@ export function kernTh(F) {   // ring angle of Kern in the races (lap offset inc
 export function oroTh(F) {
   if (F < K.lap2[0]) return sprint(F, K.go1, K.go1 + ORO_RUN, A.start, LINE.o, 1.1, 16, P1.oEnd + A.finish - LINE.o);   // blasts off
   // race 2: the same run (36 f, same launch), but brakes hard at the line in shock
-  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 6, 0.06 + A.finish - LINE.o);
+  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 8, 0.16 + A.finish - LINE.o);
 }
 
 /**
@@ -153,7 +153,7 @@ export function kernState(F) {
     return S;
   }
   if (F < K.through[0]) {  // sits dizzy in front of Tok; the crooked token is pressed flat (close-up), then it perks up
-    S.pos = B2.land; S.yaw = headingAt(thGateStop) - 0.35;
+    S.pos = B2.land; S.yaw = headingAt(thGateStop) - 1.0;       // dizzy, face to the lens
     if (F < K.flick[1] + 6) S.sq = ringv(F - K.flick[1], 0.2, 0.9, 0.25);
     S.face = F < K.press[0] ? 'dizzy' : F < K.press[1] + 2 ? 'squint' : F < K.lift[0] ? 'calm' : 'determined';
     if (F >= K.press[0] && F < K.press[1]) S.sq = 0.2 * Math.sin(Math.PI * sg(F, K.press[0], K.press[1]));
@@ -219,8 +219,8 @@ export function kernState(F) {
   // ---- B7: race 2 (the nose win) and B8 payoff parked past the line
   {
     const th = kernTh(F);
-    S.pos = lanePos(th, R.ours, 0); S.yaw = headingAt(th) + 0.95 * sg(F, K.check - 8, K.check + 2, sm); S.wheelAng = (th - L2 - thS) * R.ours / 0.16;
-    S.face = F < K.go2 ? 'determined' : F < K.cross ? 'squint' : F < K.check ? 'wide' : 'star';
+    S.pos = lanePos(th, R.ours, 0); S.yaw = headingAt(th) - 0.5 * sg(F, K.check - 8, K.check + 2, sm);   // turns its face 3/4 to us (the plate side stays in view) S.wheelAng = (th - L2 - thS) * R.ours / 0.16;
+    S.face = F < K.go2 ? 'determined' : F < K.cross - 12 ? 'squint' : F < K.cross + 1 ? 'strain' : F < K.check ? 'wide' : 'star';
     S.stretch = F >= K.cross - 4 && F < K.cross + 2 ? 0.25 : 0;
     if (F >= K.check && F < K.check + 18) { const h = hop(F, K.check, K.check + 10, 0.35); S.pos[1] += h.y; S.sq = h.sq; }
     if (F >= K.away[0] + 10) S.vis = false;              // gone once the whip has left the finish
@@ -264,7 +264,7 @@ export function oroState(F) {
   }
   {
     const th = oroTh(F);
-    S.pos = lane(th); S.yaw = headingAt(th) + 0.85 * sg(F, K.jaw - 8, K.jaw, sm); S.wheelAng = (th - L2 - thS) * R.oro / 0.1;
+    S.pos = lane(th); S.yaw = headingAt(th) - 0.9 * sg(F, K.jaw - 8, K.jaw, sm);   // turns its face to us for the jaw drop and the nod S.wheelAng = (th - L2 - thS) * R.oro / 0.1;
     S.face = F < K.dtake ? 'smug' : F < K.go2 ? 'sweat' : F < K.cross + 2 ? 'shut' : F < K.jaw ? 'wide' : F < K.nod[0] ? 'sweat' : 'nod';
     S.keySpin = F >= K.go2 ? (F - K.go2) * 2.2 : F * 0.05;
     if (F >= K.dtake && F < K.dtake + 8) S.sq = take(F, K.dtake, 0.9);
@@ -350,20 +350,20 @@ export function tokState(F) {
   const kerb = (th) => polar(th, R.kerb, 0);
   if (F < K.go1) {
     const spot = polar(A.scale - 0.3, 7.25, 0);                // the open side of the scale, behind Kern, in view
-    const P = pogo(F, K.lift[1] + 6, K.toScale[1], catchP, spot, 5, 0.3);
+    const P = pogo(F, K.toScale[0] + 2, K.toScale[1] + 4, catchP, spot, 4, 0.3);   // leaves once the arch shot is over
     S.pos = P.pos; S.sq = P.sq; S.yaw = faceOut(A.scale - 0.3) + 0.45;
     S.face = F >= K.settle[0] && F < K.flag ? 'worried' : F >= K.flag ? 'happy' : 'calm';
     if (F >= K.flag && F < K.flag + 14) { S.armR = -2.4; S.sq = -0.08 * Math.sin(Math.PI * (F - K.flag) / 14); }
-    if (F >= K.cut) { S.pos = polar(A.finish + 0.4, 3.9, 0); S.yaw = faceOut(A.finish + 0.4) - 0.9; S.face = 'worried'; }
+    if (F >= K.cut) { S.pos = polar(A.finish + 0.58, 3.9, 0); S.yaw = faceOut(A.finish + 0.58) - 0.9; S.face = 'worried'; }
     S.hands = [S.pos[0], 0.9, S.pos[2]];
     return S;
   }
   if (F < K.tokIn[1]) {   // watches the race from the infield, covers its eyes, then hops to the finish
     if (F < K.tokIn[0]) {
-      S.pos = polar(A.finish + 0.4, 3.9, 0); S.yaw = faceOut(A.finish + 0.4) - 0.9 + 0.3 * sm((F - K.go1) / 20);
-      S.face = F < K.oroRun1[1] ? 'wide' : 'shut'; if (F >= K.oroRun1[1] + 6) { S.armL = 2.6; S.armR = -2.6; S.armLz = 0.9; S.armRz = -0.9; }
+      S.pos = polar(A.finish + 0.58, 3.9, 0); S.yaw = faceOut(A.finish + 0.58) - 0.9 + 0.3 * sm((F - K.go1) / 20);
+      S.face = F < K.oroRun1[1] ? 'wide' : 'wince'; if (F >= K.oroRun1[1] + 6) { S.armL = 2.6; S.armR = -2.6; S.armLz = 0.9; S.armRz = -0.9; }
     } else {
-      const P = pogo(F, K.tokIn[0], K.tokIn[1], polar(A.finish + 0.4, 3.9, 0), polar(A.finish + 0.27, 5.95, 0), 2, 0.5);
+      const P = pogo(F, K.tokIn[0], K.tokIn[1], polar(A.finish + 0.58, 3.9, 0), polar(A.finish + 0.27, 5.95, 0), 2, 0.5);
       S.pos = P.pos; S.sq = P.sq; S.yaw = faceOut(A.finish + 0.27) - 0.5; S.face = 'determined';
     }
     S.hands = [S.pos[0], 0.9, S.pos[2]];
@@ -414,10 +414,10 @@ export function dashState(F) {
   if (F < K.clang + 1) {
     const u = sg(F, K.dash[0], K.clang + 1);
     const th = lerp(A.bench - 0.5, thStick, u);
-    return { vis: true, pos: polar(th, R.oro, 0.9 + 0.12 * Math.sin(u * 9)), yaw: headingAt(th), roll: 0, quiver: 0 };
+    return { vis: true, pos: polar(th, R.oro, 1.3 + 0.12 * Math.sin(u * 9)), yaw: headingAt(th), roll: 0, quiver: 0 };
   }
   const a = F - K.clang;
-  return { vis: true, pos: polar(thStick, R.oro, 0.9), yaw: headingAt(thStick), roll: 0.05, quiver: 0.12 * Math.exp(-a / 14) * Math.sin(a * 2.4) + 0.02 * Math.sin(a * 0.9), droop: sm(a / 40) };
+  return { vis: true, pos: polar(thStick, R.oro, 1.3), yaw: headingAt(thStick), roll: 0.05, quiver: 0.12 * Math.exp(-a / 14) * Math.sin(a * 2.4) + 0.02 * Math.sin(a * 0.9), droop: sm(a / 40) };
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -447,7 +447,7 @@ export function scaleState(F) {
   const second = F >= K.scale2 && F < K.side2[0];
   if (first) { tilt = swing(F - K.eject[1]); blockL = 1; }
   if (second) { tilt = swing((F - K.scale2) * 1.6); blockL = 1; }
-  if (F >= K.flag && F < K.cut + 20) { flag = ob((F - K.flag) / 6); flood = sg(F, K.flag - 2, K.flag + 5, sm) * (1 - 0.6 * sg(F, K.flag + 14, K.flag + 22, sm)); }
+  if (F >= K.flag && F < K.cut + 20) { flag = ob((F - K.flag) / 6); flood = sg(F, K.flag - 2, K.flag + 5, sm); }
   if (F >= K.scale2 + 5 && F < K.side2[0]) { flag = ob((F - K.scale2 - 5) / 5); flood = sg(F, K.scale2 + 3, K.scale2 + 8, sm); }
   return { tilt, needle: tilt * 3.0, flag, blockL, flood };
 }

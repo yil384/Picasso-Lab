@@ -3,7 +3,7 @@
 
 pipeline/encode.py only reads PNG frames; render.py --store segments leaves bit-exact x264rgb segments instead.
 
-    python3 encode_segs.py OUT master  NAME [--crf 18 --preset slow]
+    python3 encode_segs.py OUT master  NAME [--crf 18 --preset slow --master-max-mb 70]
     python3 encode_segs.py OUT cardsrc NAME                      # once: 960x528 lossless intermediate
     python3 encode_segs.py OUT card    NAME [--max-mb 2.5 --crf-start 30]
     python3 encode_segs.py OUT poster  NAME --frame 300
@@ -77,17 +77,29 @@ def probe(path):
             "duration": float(f["duration"]), "bytes": int(f["size"]), "color_space": s.get("color_space")}, None
 
 
-def encode_master(out_dir, name, crf, preset):
+def encode_master(out_dir, name, crf, preset, max_mb=None):
+    """CRF `crf`; with max_mb, the lowest CRF from `crf` up whose file fits max_mb (a camera that never stops moving
+    over halftone costs bits at CRF 18)."""
     (lst, n), err = concat_list(out_dir)
     if err:
         return None, err
     out = os.path.join(out_dir, f"{name}_master.mp4")
-    ok, err = ffmpeg(["-f", "concat", "-safe", "0", "-i", lst, "-vf", TO_YUV, "-c:v", "libx264", "-profile:v", "high",
-                      "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", *BT709, "-movflags", "+faststart",
-                      "-an", out], "master")
-    if err:
-        return None, err
-    return probe(out)
+    for _ in range(8):
+        ok, err = ffmpeg(["-f", "concat", "-safe", "0", "-i", lst, "-vf", TO_YUV, "-c:v", "libx264", "-profile:v", "high",
+                          "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", *BT709, "-movflags", "+faststart",
+                          "-an", out], f"master crf{crf}")
+        if err:
+            return None, err
+        mb = os.path.getsize(out) / 1e6
+        print(f"[master] crf {crf}: {mb:.2f} MB", flush=True)
+        if max_mb is None or mb <= max_mb:
+            info, err = probe(out)
+            if err:
+                return None, err
+            info["crf"] = crf
+            return info, None
+        crf += 1
+    return None, "master did not fit the size budget"
 
 
 def card_source(out_dir):
@@ -209,6 +221,7 @@ def main():
     ap.add_argument("--crf", type=int, default=18)
     ap.add_argument("--preset", default="slow")
     ap.add_argument("--max-mb", type=float, default=4.0)
+    ap.add_argument("--master-max-mb", type=float, default=None, help="master: lowest CRF from --crf that fits")
     ap.add_argument("--start", type=int, default=0, help="card: rotate the loop to start on this frame")
     ap.add_argument("--nframes", type=int, default=720)
     ap.add_argument("--crf-start", type=int, default=22)
@@ -218,7 +231,7 @@ def main():
     ap.add_argument("--jpg")
     a = ap.parse_args()
     if a.target == "master":
-        res, err = encode_master(a.out, a.name, a.crf, a.preset)
+        res, err = encode_master(a.out, a.name, a.crf, a.preset, a.master_max_mb)
     elif a.target == "cardsrc":
         res, err = card_source(a.out)
     elif a.target == "card":
