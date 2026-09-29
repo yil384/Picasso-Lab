@@ -127,7 +127,8 @@ body[data-screen="lobby"] #back-events-btn { order: 3; }
     font-size: calc(24 * var(--lu));
 }
 .hud-id { display: flex; flex-direction: column; align-items: flex-start; gap: calc(5 * var(--lu)); min-width: 0; }
-.hud-name { position: relative; display: flex; align-items: center; cursor: text; }
+/* above the 段位 pill, so the field's --tap box is not cut by it */
+.hud-name { position: relative; z-index: 1; display: flex; align-items: center; cursor: text; }
 .hud-name input {
     width: calc(190 * var(--lu));
     /* a --tap high touch target; the negative margin keeps the row height */
@@ -639,7 +640,7 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     60% { translate: calc(-4 * var(--t)) 0; }
     80% { translate: calc(2 * var(--t)) 0; }
 }
-.join-go { display: grid; place-items: center; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; background: none; }
+.join-go { position: relative; z-index: 1; display: grid; place-items: center; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; background: none; }
 .join-go .btn { --btn-h: calc(54 * var(--t)); --btn-fs: calc(21 * var(--t)); --btn-px: calc(12 * var(--t)); --btn-minw: calc(58 * var(--t)); }
 
 /* 好友房: peach, a mini room table */
@@ -1108,6 +1109,7 @@ html[lang="en"] .room-k { text-align-last: auto; }
 .room-badge:active:not(:disabled) { translate: 0 calc(2 * var(--lu)); }
 .room-seat-sit:disabled, .room-badge:disabled { opacity: .55; }
 
+/* the row's empty ends pass taps through (my name field's tap box reaches under it) */
 .room-actions {
     position: absolute;
     left: 0; right: 0;
@@ -1117,7 +1119,9 @@ html[lang="en"] .room-k { text-align-last: auto; }
     justify-content: center;
     gap: calc(24 * var(--lu));
     height: var(--act-h);
+    pointer-events: none;
 }
+.room-actions > * { pointer-events: auto; }
 .room-actions .btn { --btn-h: max(var(--tap), calc(56 * var(--lu))); --btn-fs: calc(23 * var(--lu)); --btn-px: calc(28 * var(--lu)); --btn-minw: calc(168 * var(--lu)); }
 .room-actions .btn.lg { --btn-h: max(var(--tap), calc(64 * var(--lu))); --btn-fs: calc(28 * var(--lu)); --btn-px: calc(40 * var(--lu)); --btn-minw: calc(236 * var(--lu)); }
 /* a guest's waiting caption (the disabled #start-game) */
