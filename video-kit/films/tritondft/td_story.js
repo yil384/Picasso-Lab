@@ -938,8 +938,8 @@ const rigLap = (F) => {       // ride round with the job (close orbit synced to 
 const rigS7 = (F) => {        // gauge -> tilt up with the planks -> ride with the result to the funnel -> look up as it's gulped
   const gp = station(ST.anlz - 0.36, 1.5), an = station(ST.anlz), jp = jobPos(F), fp = W.tube.curve.getPointAt(1);
   const gauge = { tg: [lerp(an[0], gp[0], 0.5), 0.38, lerp(an[2], gp[2], 0.5)], az: 0.32, el: 0.2, r: 1.85, fov: 34, roll: 0 };
-  const cell = { tg: [jp[0], 0.78, jp[2]], az: 0.55, el: 0.03, r: 2.3, fov: 34, roll: 0.02 };   // level with the planks: the gap stays open
-  const ride = { tg: [jp[0], 0.8, jp[2]], az: 0.45, el: 0.02, r: 2.6, fov: 34, roll: 0.02 };   // stays level: the band gap never closes
+  const cell = { tg: [jp[0], 0.6, jp[2]], az: 0.55, el: 0.11, r: 2.3, fov: 34, roll: 0.02 };    // eye level with the band gap (camera at ~0.85): it stays open; cell framed higher
+  const ride = { tg: [jp[0], 0.62, jp[2]], az: 0.45, el: 0.09, r: 2.6, fov: 34, roll: 0.02 };   // stays level with the gap
   const up = { tg: [fp.x + 0.1, fp.y - 0.4, fp.z + 0.1], az: 0.35, el: -0.1, r: 2.6, fov: 36, roll: -0.04 };
   if (F < K.planks[0]) return gauge;
   if (F < K.toFunnel[0] + 2) return mixRig(gauge, cell, io((F - K.planks[0] - 4) / 10));
