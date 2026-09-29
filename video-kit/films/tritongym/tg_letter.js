@@ -155,8 +155,8 @@ export function bang(g, x, y, s, rot, col = '#ef4b5f', r = null, key = null) {
 export { CREAM };
 
 /**
- * 3D block lettering from the same hand-built skeletons: every stroke's brush outline is extruded (with a bevel) into
- * a mesh; strokes of a glyph share two materials (face, side), so overlaps merge visually. Returns { root, glyphs:[{g, w}] }
+ * 3D block lettering from the same hand-built skeletons: each glyph's merged brush outline is extruded into one mesh
+ * with two materials (face, side). Returns { root, glyphs:[{g, w}] }
  * with the word laid out along +x, baseline at y = 0, facing +z.
  */
 // A glyph's strokes overlap at every join; extruded one by one, each has its own hull, and a hull edge lying in the
@@ -227,7 +227,7 @@ export function word3D(THREE, add, parent, word, size, { face, side, depth = 0.2
   const glyphs = [];
   lay.letters.forEach((Lt, i) => {
     const g = new THREE.Group(); g.position.set(Lt.lx + lay.width / 2, size / 2, 0); root.add(g);
-    const ext = { depth, bevelEnabled: true, bevelThickness: depth * 0.18, bevelSize: lw * 0.08, bevelSegments: 2, curveSegments: 4 };
+    const ext = { depth, bevelEnabled: false, curveSegments: 4 };   // (no bevel: at concave corners its offset faces z-fought the hull: dotted specks)
     const polys = [];
     for (const s of Lt.strokes) if (s.P.length > 1) polys.push(...nibQuads(s.P, lw * Lt.wk, nib));
     for (const [dx, dy] of Lt.dots) polys.push(ellipsePts(dx, dy, lw * 0.62, lw * 0.62, 0, 24));
