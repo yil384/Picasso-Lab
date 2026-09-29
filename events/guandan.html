@@ -1807,23 +1807,19 @@ function previewCardsHTML() {
     return (aces.length ? aces : ["A♠", "A♥", "A♦", "A♣"]).slice(0, 4).map((card, i) => cardHTML(signatureCard(card, `pv${i}`))).join("");
 }
 
-// Left rail: 赛季MVP · 巅峰对决 · 实验室 · 分享 · 音乐, free-standing objects with the label over
-// their bottom edge.
+// Left rail: 赛季MVP · 分享 · 音乐, free-standing objects with the label over their bottom edge.
+// Every entry point appears once: 巅峰对决, 实验室 and 玩法规则 are tiles.
 function lobbyRailHTML() {
     const standings = labStandings();
-    const PL = labPlayers();
-    const mvp = standings?.mvp ? PL[standings.mvp.key] : null;
-    const labKey = labMemberKeys().find(k => !PL[k].card.startsWith("A")) || labMemberKeys()[0];
+    const mvp = standings?.mvp ? labPlayers()[standings.mvp.key] : null;
     const musicOn = window.GuandanMusic?.isOn?.() !== false;
     const item = (cls, attrs, disc, label, extra = "") => `<button class="rail-item ${cls}" type="button" ${attrs}>
             <span class="rail-disc">${disc}</span>${extra}<span class="rail-lb">${label}</span></button>`;
     return [
         mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, L("Season MVP", "赛季MVP"), `<span class="rail-badge">MVP</span>`) : "",
-        item("is-peak", `data-open-records="latest"`, `<span class="rail-vs"><b>VS</b></span>`, L("Showdown", "巅峰对决")),
-        labKey ? item("is-lab", `data-lobby="lab"`, cardHTML(signatureCard(PL[labKey].card, "rl0")), L("Lab", "实验室")) : "",
         item("is-share", `data-lobby="share"`, `${cardHTML({ back: true })}<span class="rail-share">${glyphHTML("share")}</span>`, L("Share", "分享")),
         item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-pressed="${musicOn}"`, `<span class="rail-vinyl"></span>${glyphHTML("note", "rail-note")}`, L("Music", "音乐"),
-            musicOn ? "" : `<span class="rail-badge is-off">${L("OFF", "关")}</span>`)
+            musicOn ? "" : `<span class="rail-badge is-off">${L("Off", "关")}</span>`)
     ].join("");
 }
 
@@ -1910,8 +1906,6 @@ function renderLobby() {
     statusText = "";
     const nav = [
         ["invite", `data-lobby="friends"`, L("Invite", "邀请")],
-        ["cards", `data-lobby="lab"`, L("Lab", "实验室")],
-        ["book", `data-lobby="rules"`, L("Rules", "规则")],
         ["history", `data-open-records="history"`, L("History", "历史对阵")],
         ["podium", `data-open-records="board"`, L("Ranking", "排行榜")],
         ["gear", `data-lobby="settings"`, L("Settings", "设置")]

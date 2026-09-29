@@ -24,16 +24,12 @@ html[data-gd-boot="lobby"] body:not([data-screen]) {
     --sr: env(safe-area-inset-right, 0px);
     --tap: 0px;
     --fs-min: 10px;
-    /* navy-periwinkle room: window light and a mullioned window top-left, tall glass panes on
-       the right, a lilac wash under the ceiling, a large soft room light, the lit horizon band
-       and a darker floor */
+    /* navy-periwinkle room, soft light only: window light top-left, a large room light behind
+       the grid, a lilac wash under the ceiling, the lit horizon band and a darker floor */
     background:
         radial-gradient(48% 42% at 8% 14%, rgba(150, 200, 255, .34), rgba(150, 200, 255, 0) 70%),
         radial-gradient(42% 46% at 56% 40%, rgba(176, 196, 255, .2), rgba(176, 196, 255, 0) 72%),
         radial-gradient(60% 55% at 88% 0%, rgba(132, 146, 236, .5), rgba(132, 146, 236, 0) 70%),
-        linear-gradient(90deg, transparent 2%, rgba(190, 215, 255, .08) 2% 7.5%, transparent 7.5% 8.2%, rgba(190, 215, 255, .08) 8.2% 13.7%, transparent 13.7%) 0 12% / 100% 38% no-repeat,
-        linear-gradient(180deg, transparent 49%, rgba(190, 215, 255, .12) 49% 51%, transparent 51%) 0 12% / 14% 38% no-repeat,
-        linear-gradient(90deg, transparent 74%, rgba(180, 205, 255, .07) 74% 81%, transparent 81% 82.5%, rgba(180, 205, 255, .07) 82.5% 89.5%, transparent 89.5% 91%, rgba(180, 205, 255, .05) 91% 98%, transparent 98%) 0 0 / 100% 58% no-repeat,
         linear-gradient(180deg, rgba(210, 222, 255, .1), rgba(210, 222, 255, 0)) 0 0 / 100% 4% no-repeat,
         linear-gradient(104deg, rgba(255, 255, 255, 0) 30%, rgba(190, 210, 255, .07) 42%, rgba(255, 255, 255, 0) 54%),
         linear-gradient(180deg, transparent 50%, rgba(170, 196, 255, .1) 56%, rgba(190, 212, 255, .22) 58.2%, rgba(160, 190, 255, .06) 59%, rgba(20, 30, 80, .1) 63%, rgba(10, 16, 50, .34) 100%),
@@ -98,15 +94,11 @@ body:not([data-screen]) .topbar { visibility: hidden; }
     filter: drop-shadow(0 calc(2 * var(--lu)) 0 rgba(28, 40, 110, .55));
 }
 
-/* lobby: player card left; 战绩 规则 语言 返回 right */
-body[data-screen="lobby"] #new-room-btn,
-body[data-screen="lobby"] #copy-link-btn,
-body:not([data-screen]) #new-room-btn,
-body:not([data-screen]) #copy-link-btn { display: none; }
-body[data-screen="lobby"] #hud-records-btn { order: 2; margin-left: auto; }
-body[data-screen="lobby"] #hud-rules-btn { order: 3; }
-body[data-screen="lobby"] #lang-toggle { order: 4; }
-body[data-screen="lobby"] #back-events-btn { order: 5; }
+/* lobby: player card left; 语言 返回 right (战绩 and 规则 are lobby tiles; the chips are the room's) */
+body[data-screen="lobby"] :is(#new-room-btn, #copy-link-btn, #hud-records-btn, #hud-rules-btn),
+body:not([data-screen]) :is(#new-room-btn, #copy-link-btn) { display: none; }
+body[data-screen="lobby"] #lang-toggle { order: 2; margin-left: auto; }
+body[data-screen="lobby"] #back-events-btn { order: 3; }
 
 .hud-profile { display: flex; align-items: center; gap: calc(12 * var(--lu)); min-width: 0; }
 /* profile photo: a rounded square in a gold frame (Tencent's framed head portrait) */
@@ -267,9 +259,11 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 /* ---------- lobby ---------- */
 /* Laid out on a centred 1280-wide design (大掼蛋 2026 lobby proportions): the rail at 6-12% of
    the width, the tile grid from 20% to 90%, the bottom row with the nav under the grid and the
-   快速开始 bar reaching past the grid's right edge. */
+   快速开始 bar reaching past the grid's right edge. The grid grows by 40% of the height a phone
+   has over 600 design px and by all of the height a 16:10 screen (desk, the Google Sites
+   iframe) has over 16:9, so it never floats between empty bands (about 61% of the height). */
 .lobby {
-    --tiles-h: clamp(calc(365 * var(--lu)), calc(365 * var(--lu) + (var(--vh) - 600 * var(--lu)) * .4), calc(420 * var(--lu)));
+    --tiles-h: clamp(calc(365 * var(--lu)), calc(365 * var(--lu) + (var(--vh) - 600 * var(--lu)) * .4 + max(0px, var(--vh) - 720 * var(--lu))), calc(520 * var(--lu)));
     position: relative;
     display: grid;
     grid-template-columns: calc(var(--fx) + 79 * var(--lu) + var(--sl)) calc(72 * var(--lu)) calc(104 * var(--lu)) calc(900 * var(--lu)) minmax(0, 1fr);
@@ -302,14 +296,14 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
 .lobby-quick.is-loading > * { visibility: hidden; }
 .lobby-quick.is-loading::after { background: none; color: #a3240c; font-size: calc(28 * var(--lu)); text-shadow: none; }
 
-/* left rail: free-standing objects (MVP portrait, VS disc, a labmate's card, the shared card
-   back, a record), each with its label over the bottom edge */
+/* left rail: three free-standing objects (the MVP's portrait, the shared card back, a record),
+   each with its label over the bottom edge, spread over the grid's height. --r is the rail's
+   unit: the objects are drawn a little larger than a 5-entry Tencent rail's. */
 .lobby-rail {
+    --r: calc(var(--lu) * 1.15);
     grid-area: 1 / 2;
     align-self: center;
-    /* from just under the top bar to the grid's bottom edge */
-    height: calc(var(--tiles-h) + 20 * var(--lu));
-    translate: 0 calc(-10 * var(--lu));
+    height: var(--tiles-h);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -320,7 +314,7 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: calc(80 * var(--lu));
+    width: calc(80 * var(--r));
     padding: 0;
     border: 0;
     background: none;
@@ -332,95 +326,81 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
     position: relative;
     display: grid;
     place-items: center;
-    width: calc(60 * var(--lu));
-    height: calc(60 * var(--lu));
+    width: calc(60 * var(--r));
+    height: calc(60 * var(--r));
 }
 .rail-lb {
     position: relative;
-    margin-top: calc(-10 * var(--lu));
-    font: 900 max(var(--fs-min), calc(17 * var(--lu)))/1.1 var(--font-ui);
+    margin-top: calc(-10 * var(--r));
+    font: 900 max(var(--fs-min), calc(17 * var(--r)))/1.1 var(--font-ui);
     white-space: nowrap;
-    -webkit-text-stroke: calc(4 * var(--lu)) #243268;
+    -webkit-text-stroke: calc(4 * var(--r)) #243268;
     paint-order: stroke fill;
 }
+/* the MVP plate over the portrait's lower edge, above the label */
 .rail-badge {
     position: absolute;
-    top: calc(41 * var(--lu));
+    top: calc(41 * var(--r));
     left: 50%;
     translate: -50% 0;
-    padding: 0 calc(7 * var(--lu));
-    border-radius: calc(4 * var(--lu));
+    padding: 0 calc(7 * var(--r));
+    border-radius: calc(4 * var(--r));
     background: linear-gradient(180deg, #fff1a8, #f4b03a);
     color: #7a2a00;
-    font: 800 max(var(--fs-min), calc(13 * var(--lu)))/1.4 var(--font-num);
+    font: 800 max(var(--fs-min), calc(13 * var(--r)))/1.4 var(--font-num);
     letter-spacing: .04em;
 }
-/* 音乐 off: a red corner chip at the record's top-left, clear of the label */
-.rail-badge.is-off { top: calc(2 * var(--lu)); left: calc(4 * var(--lu)); translate: none; background: linear-gradient(180deg, #ff9a8a, #d8433c); color: #fff; font-family: var(--font-ui); }
 /* 赛季MVP: the MVP's photo in a gold ring */
 .is-mvp .rail-disc { border-radius: 50%; background: linear-gradient(180deg, #ffe9a0, #d99a2a); }
 .is-mvp .rail-disc img {
-    width: calc(53 * var(--lu));
-    height: calc(53 * var(--lu));
+    width: calc(53 * var(--r));
+    height: calc(53 * var(--r));
     border-radius: 50%;
     object-fit: cover;
 }
-.is-mvp .rail-lb { margin-top: calc(-2 * var(--lu)); }
-/* 巅峰对决: a red / blue split disc with a gold VS */
-.is-peak .rail-disc {
-    border-radius: 50%;
-    background: linear-gradient(115deg, #e0546e 0%, #c8304e 49.5%, #2c5ce4 50.5%, #5a86ff 100%);
-    box-shadow: inset 0 0 0 calc(3 * var(--lu)) rgba(255, 255, 255, .85), 0 calc(3 * var(--lu)) 0 rgba(20, 30, 90, .45);
-}
-.rail-vs b {
-    display: block;
-    font: 400 calc(30 * var(--lu))/1 var(--font-display);
-    background: linear-gradient(180deg, #fffbe8 0%, #ffe39a 40%, #f6b33a 70%, #b8660c 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 calc(2 * var(--lu)) 0 #5a1c00);
-}
-/* 实验室: a labmate's signature card; 分享: the card back with a green share badge */
-.is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(42 * var(--lu)); }
-.is-lab .rail-disc .card { rotate: 10deg; }
-.is-share .rail-disc .card { rotate: -12deg; translate: calc(-4 * var(--lu)) 0; }
+.is-mvp .rail-lb { margin-top: calc(-2 * var(--r)); }
+/* 分享: the PICASSO card back, a green share badge off its lower right corner (the emblem stays
+   whole) */
+.is-share .rail-disc { --card-w: calc(42 * var(--r)); }
+.is-share .rail-disc .card { rotate: -12deg; translate: calc(-6 * var(--r)) 0; }
 .rail-share {
     position: absolute;
-    right: calc(2 * var(--lu));
-    bottom: calc(10 * var(--lu));
+    right: calc(-2 * var(--r));
+    bottom: calc(6 * var(--r));
     display: grid;
     place-items: center;
-    width: calc(30 * var(--lu));
-    height: calc(30 * var(--lu));
-    border: calc(2 * var(--lu)) solid #fff;
+    width: calc(25 * var(--r));
+    height: calc(25 * var(--r));
+    border: calc(2 * var(--r)) solid #fff;
     border-radius: 50%;
     background: linear-gradient(180deg, #7ff0a8, #2fb865);
     color: #fff;
 }
-.rail-share .gd-glyph { width: calc(17 * var(--lu)); height: calc(17 * var(--lu)); }
-/* 音乐: a record (grooves, sheen, red label) with a gold note */
+.rail-share .gd-glyph { width: calc(14 * var(--r)); height: calc(14 * var(--r)); }
+/* 音乐: a record (white rim, grooves, sheen, a big red label) with a gold note; dimmed when off */
 .rail-vinyl {
-    width: calc(52 * var(--lu));
-    height: calc(52 * var(--lu));
+    width: calc(52 * var(--r));
+    height: calc(52 * var(--r));
     border-radius: 50%;
     background:
-        radial-gradient(circle closest-side, #fff 0 5%, #e0546e 6% 30%, #fff3 31% 32%, transparent 33%),
-        linear-gradient(135deg, transparent 28%, rgba(255, 255, 255, .16) 42%, transparent 54%),
-        repeating-radial-gradient(circle closest-side, #1c2030 0 4%, #2d3350 4.5% 6%),
-        #1c2030;
-    box-shadow: 0 calc(3 * var(--lu)) 0 rgba(20, 30, 90, .45);
+        radial-gradient(circle closest-side, #fff 0 6%, #e0546e 7% 40%, #fff3 41% 42%, transparent 43%),
+        linear-gradient(135deg, transparent 28%, rgba(255, 255, 255, .2) 42%, transparent 54%),
+        repeating-radial-gradient(circle closest-side, #252b4d 0 4%, #363e6a 4.5% 6%),
+        #252b4d;
+    box-shadow: inset 0 0 0 calc(2 * var(--r)) rgba(255, 255, 255, .7), 0 calc(3 * var(--r)) 0 rgba(20, 30, 90, .45);
 }
 .rail-note {
     position: absolute;
-    top: calc(-2 * var(--lu));
-    right: calc(-4 * var(--lu));
-    width: calc(28 * var(--lu));
-    height: calc(28 * var(--lu));
+    top: calc(-2 * var(--r));
+    right: calc(-4 * var(--r));
+    width: calc(28 * var(--r));
+    height: calc(28 * var(--r));
     fill: #ffd766;
-    filter: drop-shadow(0 calc(2 * var(--lu)) 0 #7a3a00);
+    filter: drop-shadow(0 calc(2 * var(--r)) 0 #7a3a00);
 }
-.is-music.is-off .rail-vinyl, .is-music.is-off .rail-note { opacity: .45; }
+.is-music.is-off .rail-vinyl, .is-music.is-off .rail-note { opacity: .6; }
+/* off: a grey 关 plate on the record's centre */
+.rail-badge.is-off { top: calc(30 * var(--r)); translate: -50% -50%; background: #7c86a6; color: #fff; font-family: var(--font-ui); letter-spacing: 0; }
 
 .lobby-main { display: contents; }
 
@@ -699,8 +679,8 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
 .rules-art .card:nth-child(4) { rotate: 7deg; }
 .rules-art .card:nth-child(5) { rotate: 14deg; }
 
-/* bottom row: the white glyph nav from under the rail's edge, the gold 快速开始 bar reaching
-   69 design px past the grid */
+/* bottom row: the white glyph nav (邀请 历史对阵 排行榜 设置) spread under the grid from the rail's
+   edge, the gold 快速开始 bar reaching 69 design px past the grid */
 .lobby-dock {
     grid-area: 2 / 2 / 3 / 5;
     display: flex;
@@ -709,7 +689,7 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     margin: 0 calc(-69 * var(--lu)) 0 calc(101 * var(--lu));
     padding-bottom: calc(14 * var(--lu) + env(safe-area-inset-bottom, 0px));
 }
-.lobby-nav { flex: none; display: flex; justify-content: space-between; width: calc(660 * var(--lu)); }
+.lobby-nav { flex: none; display: flex; justify-content: space-around; width: calc(660 * var(--lu)); }
 .lobby-nav-item {
     display: flex;
     flex-direction: column;
@@ -1274,19 +1254,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
 
     body[data-screen="lobby"] .topbar { padding-left: calc(12 * var(--lu) + var(--sl)); }
     .lobby { display: block; min-height: 0; padding: 0 calc(12 * var(--lu) + var(--sr)) 0 calc(12 * var(--lu) + var(--sl)); }
-    .lobby-rail { height: auto; translate: none; flex-direction: row; justify-content: space-between; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
-    .rail-item { width: auto; min-width: calc(62 * var(--lu)); }   /* as wide as its label, so long English labels never touch */
-    .rail-disc { width: calc(54 * var(--lu)); height: calc(54 * var(--lu)); }
-    .is-mvp .rail-disc img { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
-    .is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(38 * var(--lu)); }
-    .rail-share { width: calc(26 * var(--lu)); height: calc(26 * var(--lu)); right: calc(2 * var(--lu)); bottom: calc(8 * var(--lu)); }
-    .rail-share .gd-glyph { width: calc(15 * var(--lu)); height: calc(15 * var(--lu)); }
-    .rail-vinyl { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
-    .rail-note { width: calc(24 * var(--lu)); height: calc(24 * var(--lu)); }
-    .rail-vs b { font-size: calc(26 * var(--lu)); }
-    .rail-badge { top: calc(36 * var(--lu)); }
-    .rail-lb { font-size: max(var(--fs-min) * 1.1, calc(14 * var(--lu))); margin-top: calc(-8 * var(--lu)); }
-    html[lang="en"] .rail-lb { font-size: max(var(--fs-min), calc(12 * var(--lu))); }
+    .lobby-rail { --r: calc(var(--lu) * .9); height: auto; flex-direction: row; justify-content: space-around; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
     .lobby-tiles {
         --t: calc(var(--lu) * .7);
         height: auto;
