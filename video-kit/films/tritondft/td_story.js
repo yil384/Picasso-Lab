@@ -811,9 +811,9 @@ const rigS3b = (F) => {       // Hoot's eye level, slow push; both hourglasses i
   const k = sm((F - K.S3b) / 40);
   return { tg: [HT[0] - 0.05, 0.56, HT[2] + 0.55], az: lerp(-0.08, 0.0, k), el: 0.06, r: lerp(3.2, 2.8, k), fov: 30, roll: 0 };
 };
-const rigLoupe = (F) => {     // over Loupe's shoulder onto the gauge
+const rigLoupe = (F) => {     // Loupe and its gauge side by side, the lens three-quarters to camera (its eye reads); slow push
   const an = station(ST.anlz), gp = station(ST.anlz - 0.36, 1.5), k = sm((F - K.S4) / 30);
-  return { tg: [lerp(an[0], gp[0], 0.5), 0.34, lerp(an[2], gp[2], 0.5)], az: lerp(0.95, 0.8, k), el: lerp(0.28, 0.24, k), r: lerp(2.3, 2.0, k), fov: 34, roll: 0.0 };
+  return { tg: [lerp(an[0], gp[0], 0.45), 0.4, lerp(an[2], gp[2], 0.45)], az: lerp(0.4, 0.28, k), el: lerp(0.24, 0.18, k), r: lerp(2.1, 1.75, k), fov: 34, roll: 0.03 };
 };
 const rigLens = (F) => {      // the lens rushes at the camera (iris match cut to the knob)
   const hp = W.loupe.head.getWorldPosition(V3(0, 0, 0)), k = ic(clamp((F - K.rush[0]) / (K.rush[1] - K.rush[0])));
@@ -835,7 +835,7 @@ const rigLap = (F) => {       // ride round with the job (close orbit synced to 
 };
 const rigS7 = (F) => {        // gauge -> tilt up with the planks -> ride with the result to the funnel -> look up as it's gulped
   const gp = station(ST.anlz - 0.36, 1.5), an = station(ST.anlz), jp = jobPos(F), fp = W.tube.curve.getPointAt(1);
-  const gauge = { tg: [lerp(an[0], gp[0], 0.6), 0.36, lerp(an[2], gp[2], 0.6)], az: 0.6, el: 0.2, r: 1.9, fov: 34, roll: 0 };
+  const gauge = { tg: [lerp(an[0], gp[0], 0.5), 0.38, lerp(an[2], gp[2], 0.5)], az: 0.32, el: 0.2, r: 1.85, fov: 34, roll: 0 };
   const cell = { tg: [jp[0], 0.7, jp[2]], az: 0.55, el: 0.18, r: 2.3, fov: 34, roll: 0.02 };
   const ride = { tg: [jp[0], 0.8, jp[2]], az: 0.45, el: 0.12, r: 2.6, fov: 34, roll: 0.02 };
   const up = { tg: [fp.x + 0.1, fp.y - 0.4, fp.z + 0.1], az: 0.35, el: -0.1, r: 2.6, fov: 36, roll: -0.04 };
