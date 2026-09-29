@@ -40,7 +40,7 @@ export const K = {
   read7: 510, ding: 530, planks: [534, 546], toFunnel: [548, 562], suck: [562, 568],
   land: 590, take: 590, outs: [598, 604, 610], clack68: [622, 636],
   slam: [628, 636, 644],
-  puffs: 686, handBack: [688, 696], dive: [694, 698, 702, 706], yawn: [686, 700], lay: [698, 712], flop: [710, 718],
+  puffs: 686, handBack: [686, 692], dive: [692, 697, 702, 707], yawn: [686, 700], lay: [698, 712], flop: [710, 718],
 };
 
 // the job on the turntable ring: world theta (plan 135, exec 45, anlz -45 deg; the Refiner's stop is at -100, short of
@@ -117,14 +117,22 @@ async function buildProps(W) {
   add(new THREE.CapsuleGeometry(0.07, 0.16, 6, 16), { color: COL.skyP, rim: 0.8, toneBias: 0.1, hatch: 0.4 }, { outline: 0.7 }, [0, 0, 0], [0, 0, Math.PI / 2], W.capsule);
   add(new THREE.TorusGeometry(0.072, 0.018, 8, 20), { color: COL.gold, hatchMode: 'u', rim: 0.6 }, { outline: 0.4 }, [0, 0, 0], [0, Math.PI / 2, 0], W.capsule);
   // the plan: three tickets (vc-relax: a cube squeezed by arrows; scf: a circular arrow; band gap: two bars and a gap)
-  const tick = async (k, paint) => bake(THREE, { width: 256, height: 176, seed: 60 + k, key: `ticket-${k}-v1`, background: '#ffffff' }, (p, brush, w, h) => {
+  const tick = async (k, paint) => bake(THREE, { width: 256, height: 176, seed: 60 + k, key: `ticket-${k}-v2`, background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill(k === 1 ? '#bfe6f7' : '#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
     brush.set('inkpen', '#16162c', 1.2); for (let x = 8; x < w; x += 16) brush.line(x, 6, x + 6, 6);
     paint(brush, w, h);
   });
   const texs = [
     await tick(0, (brush, w, h) => { brush.set('bigink', '#16162c', 1.3); brush.rect(w / 2 - 34, h / 2 - 30, 68, 68); brush.set('bigink', '#ff5a2e', 1.4); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const x0 = w / 2 + dx * 80, y0 = h / 2 + 4 + dy * 62, x1 = w / 2 + dx * 48, y1 = h / 2 + 4 + dy * 42; brush.line(x0, y0, x1, y1); brush.line(x1, y1, x1 - dx * 10 + dy * 9, y1 - dy * 10 + dx * 9); brush.line(x1, y1, x1 - dx * 10 - dy * 9, y1 - dy * 10 - dx * 9); } }),
-    await tick(1, (brush, w, h) => { brush.set('bigink', '#16162c', 1.5); const pts = []; for (let k = 0; k <= 20; k++) { const a = -0.4 + k / 20 * 5.2; pts.push([w / 2 + Math.cos(a) * 50, h / 2 + 6 + Math.sin(a) * 50]); } brush.spline(pts, 0.5); const e = pts[pts.length - 1]; brush.line(e[0], e[1], e[0] + 18, e[1] - 4); brush.line(e[0], e[1], e[0] + 2, e[1] - 20); }),
+    await tick(1, (brush, w, h) => {                // scf: two dashed arcs chasing each other round (iterate to self-consistency)
+      const cx = w / 2, cy = h / 2 + 6, R = 48;
+      for (const [a0, col] of [[0.25, '#16162c'], [0.25 + Math.PI, '#ff5a2e']]) {
+        brush.set('bigink', col, 1.5);
+        for (let q = 0; q < 4; q++) { const t0 = a0 + q * 0.62, t1 = t0 + 0.4; brush.line(cx + Math.cos(t0) * R, cy + Math.sin(t0) * R, cx + Math.cos(t1) * R, cy + Math.sin(t1) * R); }
+        const te = a0 + 2.5, ex = cx + Math.cos(te) * R, ey = cy + Math.sin(te) * R, tx = -Math.sin(te), ty = Math.cos(te);
+        brush.line(ex, ey, ex - tx * 16 + Math.cos(te) * 10, ey - ty * 16 + Math.sin(te) * 10); brush.line(ex, ey, ex - tx * 16 - Math.cos(te) * 10, ey - ty * 16 - Math.sin(te) * 10);
+      }
+    }),
     await tick(2, (brush, w, h) => { brush.set('bigink', '#0284c7', 2.2); brush.line(w / 2 - 70, h / 2 + 40, w / 2 + 70, h / 2 + 40); brush.set('bigink', '#ff5a2e', 2.2); brush.line(w / 2 - 70, h / 2 - 30, w / 2 + 70, h / 2 - 30); brush.set('inkpen', '#16162c', 1.2); brush.line(w / 2, h / 2 - 16, w / 2, h / 2 + 26); }),
   ];
   // the method book Tri pulls from the Library (navy, a vermilion band)
@@ -153,12 +161,16 @@ async function buildProps(W) {
   W.tape.userData.base = tapeGeo.attributes.position.array.slice();
   W.tape.frustumCulled = false;
   // the Analyzer's convergence gauge: a board with a narrow tolerance band and a vermilion bead on a spring wire
-  const gTex = await bake(THREE, { width: 256, height: 320, seed: 73, key: 'gauge-v1', background: '#ffffff' }, (p, brush, w, h) => {
+  // the gauge measures the CHANGE between iterations (a hand-lettered delta-E and a 0 tick at the centre of the tolerance band)
+  const gTex = await bake(THREE, { width: 256, height: 320, seed: 73, key: 'gauge-v2', background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill('#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
     brush.fill('#bfe6f7', 255); brush.rect(12, h / 2 - 22, w - 24, 44);
     brush.set('bigink', '#0284c7', 1.2);
     for (const y of [h / 2 - 22, h / 2 + 22]) for (let x = 14; x < w - 14; x += 24) brush.line(x, y, x + 13, y);
     brush.set('inkpen', '#16162c', 1.0); for (let y = 30; y < h - 20; y += 30) brush.line(w - 30, y, w - 16, y);
+    brush.set('bigink', '#16162c', 1.1); brush.line(w - 50, h / 2, w - 12, h / 2); brush.line(20, h / 2, 44, h / 2);
+    brush.set('bigink', '#16162c', 1.2); brush.line(26, 60, 42, 26); brush.line(42, 26, 58, 60); brush.line(58, 60, 26, 60);
+    brush.line(72, 26, 72, 60); brush.line(72, 26, 92, 26); brush.line(72, 43, 88, 43); brush.line(72, 60, 93, 60);
   });
   const gauge = new THREE.Group(); scene.add(gauge);
   add(new THREE.BoxGeometry(0.3, 0.38, 0.03), [{ color: COL.navy }, { color: COL.navy }, { color: COL.navy }, { color: COL.navy }, { color: COL.cream, map: gTex, rim: 0.2, toneBias: 0.1, hatch: 0.4 }, { color: COL.navy }], { outline: 0.7 }, [0, 0.33, 0], [0, 0, 0], gauge);
@@ -464,6 +476,7 @@ function outState(k, F) {
     else { const b = clamp((F - K.slam[1]) / 10); pos = [lerp(top[0], spot[0], b), lerp(top[1], 0, b) + 0.3 * Math.sin(Math.PI * b), lerp(top[2], spot[2], b)]; sq = b < 1 ? -0.1 : ringv(F - K.slam[1] - 10, 0.18, 1.0, 0.25); expr = b < 1 ? 'strain' : 'grin'; }
   }
   if (F >= K.slam[2] + 6) { const ph = ((F + k * 5) % 14) / 14; pos[1] += 0.08 * Math.sin(Math.PI * ph); arm = -1.2 - 1.2 * Math.sin(Math.PI * ph); expr = 'grin'; }
+  if (win(F, K.dive[k] - 4, K.dive[k])) { sq = 0.16 * sm((F - K.dive[k] + 4) / 3); expr = 'grin'; }   // crouch before the spring
   if (F >= K.dive[k]) { const b = clamp((F - K.dive[k]) / 10); pos = [lerp(pos[0], mouth.x, b), lerp(pos[1], mouth.y, b) + 0.3 * Math.sin(Math.PI * b), lerp(pos[2], mouth.z, b)]; sq = -0.15; expr = 'grin'; }
   return { pos, yaw, sq, expr, arm, a };
 }
@@ -878,13 +891,13 @@ const rigLap = (F) => {       // ride round with the job (close orbit synced to 
   // camera trails the job round the bench on a circle (radius 1.65 from the bench centre, above the agents' heads)
   // that stays clear of Big Iron; it looks across at the job and the next station
   const cp = station(th + 0.75, 1.65), tg = station(th - 0.35, 0.55);
-  const dx = cp[0] - tg[0], dz = cp[2] - tg[2], h = Math.hypot(dx, dz), dy = 1.15 - 0.36;
+  const dx = cp[0] - tg[0], dz = cp[2] - tg[2], h = Math.hypot(dx, dz), dy = 1.42 - 0.36;   // well above the agents' heads
   return { tg: [tg[0], 0.36, tg[2]], az: Math.atan2(dx, dz), el: Math.atan2(dy, h), r: Math.hypot(h, dy), fov: 40, roll: 0.03 * Math.sin(Math.PI * k) };
 };
 const rigS7 = (F) => {        // gauge -> tilt up with the planks -> ride with the result to the funnel -> look up as it's gulped
   const gp = station(ST.anlz - 0.36, 1.5), an = station(ST.anlz), jp = jobPos(F), fp = W.tube.curve.getPointAt(1);
   const gauge = { tg: [lerp(an[0], gp[0], 0.5), 0.38, lerp(an[2], gp[2], 0.5)], az: 0.32, el: 0.2, r: 1.85, fov: 34, roll: 0 };
-  const cell = { tg: [jp[0], 0.7, jp[2]], az: 0.55, el: 0.18, r: 2.3, fov: 34, roll: 0.02 };
+  const cell = { tg: [jp[0], 0.78, jp[2]], az: 0.55, el: 0.03, r: 2.3, fov: 34, roll: 0.02 };   // level with the planks: the gap stays open
   const ride = { tg: [jp[0], 0.8, jp[2]], az: 0.45, el: 0.12, r: 2.6, fov: 34, roll: 0.02 };
   const up = { tg: [fp.x + 0.1, fp.y - 0.4, fp.z + 0.1], az: 0.35, el: -0.1, r: 2.6, fov: 36, roll: -0.04 };
   if (F < K.planks[0]) return gauge;
@@ -979,7 +992,7 @@ export function drawNPR(w, ctx) {
   if (F >= K.roar && F < K.roar + 16) {
     const c = ctx.project(V3(L.engine.x - 0.3, 1.0, L.engine.z), camera);
     npr.focusLines({ x: c.x, y: c.y, r0: 360, amount: 1 - (F - K.roar) / 16, count: 110, width: 1.3, seed: 3 });
-    if (F < K.roar + 2) npr.impact(1, { invert: F === K.roar + 1, threshold: 0.58 });
+    if (F < K.roar + 1) npr.impact(1, { threshold: 0.58 });                       // one ink/cream impact frame (no photo negative)
   }
   if (F >= K.land && F < K.land + 12) {
     const c = ctx.project(W.cart.getWorldPosition(V3(0, 0, 0)), camera);
@@ -990,7 +1003,6 @@ export function drawNPR(w, ctx) {
     const p = W.num.n68.group.getWorldPosition(V3(0, 0, 0));
     const c = ctx.project(V3(p.x, p.y + 0.2, p.z), camera);
     npr.focusLines({ x: c.x, y: c.y, r0: 420, amount: 0.9 * (1 - s68 / 14), count: 100, width: 1.2, seed: 9 });
-    if (s68 === 0) npr.impact(0.8, { threshold: 0.55 });
   }
   if (F >= K.slam[0] && F < K.S9 + 4) npr.pointLight(V3(L.desk.x + 0.1, 0.8, L.desk.z + 1.0), { color: 0xfff2dc, radius: 2.2, i: 0.3 * sm((F - K.slam[0]) / 8) });   // near-white: a gold key turned the wall green
   npr.render(W.scene, camera);

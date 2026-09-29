@@ -106,6 +106,8 @@ export function inkOverlay(W, ctx, brush) {
     const c = prj(W, ctx, [pan.x + (0.35 + 0.1 * sd) * a, pan.y - 0.2 + 0.45 * Math.sin(Math.PI * a), pan.z + 0.25 * a]), u = pxu(W, ctx, pan);
     brush.noStroke(); brush.fill('#d6813f', 255); brush.fillBleed(0.01); brush.circle(c.x, c.y, 0.035 * u, 0.1); brush.noFill(); brush.set('inkpen', ink, 1.0); brush.circle(c.x, c.y, 0.035 * u, 0.1);
   }
+  // lap 2: a dashed ghost ring where the bead rested on lap 1, so the shrinking change reads when it settles inside the band
+  if (win(F, K.read7, K.S8a)) { const gp = W.gauge.localToWorld(V(W, 0, 0.33 + 0.095, 0.04)), c = prj(W, ctx, gp), u = pxu(W, ctx, gp); if (c.front) { brush.set('inkpen', PAL.popD, 1.0); for (let q = 0; q < 8; q++) { const a0 = q / 8 * TAU, a1 = a0 + 0.45; brush.line(c.x + Math.cos(a0) * 0.032 * u, c.y + Math.sin(a0) * 0.032 * u, c.x + Math.cos(a1) * 0.032 * u, c.y + Math.sin(a1) * 0.032 * u); } } }
   // DING: an inked burst up and right of the gauge (never over the bead, which is the convergence evidence)
   if (win(F, K.ding, K.ding + 12)) { const gp = W.gauge.localToWorld(V(W, 0.16, 0.5, 0.02)), c = prj(W, ctx, gp), u = pxu(W, ctx, gp), a = (F - K.ding) / 12; if (c.front) { ticks(brush, c.x, c.y, (0.06 + 0.1 * a) * u, (0.16 + 0.12 * a) * u, 9, -Math.PI * 0.95, Math.PI * 0.15, PAL.pop, 1.8); ticks(brush, c.x, c.y, (0.05 + 0.1 * a) * u, (0.11 + 0.1 * a) * u, 9, -Math.PI * 0.87, Math.PI * 0.23, ink, 1.1); } }
   // the tiny hourglass's last grain drops as the answer lands (tink)
@@ -121,7 +123,6 @@ export function inkOverlay(W, ctx, brush) {
     for (let q = 0; q < 6; q++) { const an = -Math.PI * (0.1 + 0.8 * q / 5), d = hu * (0.3 + 0.5 * a); const x = hp.x + Math.cos(an) * d, y = hp.y + Math.sin(an) * d + a * a * 40; brush.set('inkpen', '#8a5a36', 1.3); brush.spline([[x - 10, y], [x, y - 8], [x + 12, y - 2]], 0.6); }
   }
   // numerals pop into puffs
-  if (win(F, K.puffs, K.puffs + 10)) for (const key of ['n98', 'n68', 'n04']) { const n = W.num[key].group.position, c = prj(W, ctx, [n.x, 0.15, n.z]), u = pxu(W, ctx, n); puff(brush, c.x, c.y, 0.18 * u * (1 + (F - K.puffs) * 0.1), ink, 1 - (F - K.puffs) / 10); }
   // steam from Hoot's mug (loop-periodic wisps)
   const mug = W.mug.getWorldPosition(V(W, 0, 0, 0)), mc = prj(W, ctx, [mug.x, 0.25, mug.z]), mu = pxu(W, ctx, mug);
   if (mc.front && mu > 20) for (let q = 0; q < 2; q++) { const t = ((F / 36 + q * 0.5) % 1); const x = mc.x + (q - 0.5) * 0.06 * mu, y = mc.y - t * 0.25 * mu; brush.set('inkpen', '#9fb9cc', 1.0 * (1 - t) + 0.2); brush.spline([[x, y], [x + 0.03 * mu * Math.sin(t * 6 + q), y - 0.06 * mu], [x, y - 0.12 * mu]], 0.6); }
@@ -215,20 +216,21 @@ export function lettering(W, ctx, g) {
   lensEye(W, ctx, g, F);
   const hoot = W.hoot, headW = wp(W, hoot.head, [0, 0.35, 0.1]), hu = pxu(W, ctx, headW), hp = prj(W, ctx, headW);
   const trp = prj(W, ctx, wp(W, W.tri.tri, [-0.1, 0.62, 0])), tru = pxu(W, ctx, wp(W, W.tri.tri, [0, 0.4, 0]));
-  const takes = [[K.wake, hp, hu * 0.5, 0.15], [K.catch, trp, tru * 0.28, 0.12], [K.deal[0] + 2, prj(W, ctx, wp(W, W.clack.body, [0.2, 0.5, 0])), pxu(W, ctx, wp(W, W.clack.body)) * 0.22, 0.1],
-    [K.crash, prj(W, ctx, wp(W, W.tilt.head, [0.12, 0.12, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.22, -0.1], [K.take, hp, hu * 0.55, -0.12]];
+  // [frame, anchor, size, tilt, side]: Hoot's '!' goes to the LEFT of its head, away from the TRITONDFT plate
+  const takes = [[K.wake, hp, hu * 0.5, 0.15, -1], [K.catch, trp, tru * 0.28, 0.12], [K.deal[0] + 2, prj(W, ctx, wp(W, W.clack.body, [0.2, 0.5, 0])), pxu(W, ctx, wp(W, W.clack.body)) * 0.22, 0.1],
+    [K.crash, prj(W, ctx, wp(W, W.tilt.head, [0.12, 0.12, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.22, -0.1], [K.take, hp, hu * 0.55, -0.12, -1]];
   // (kept below the card's top crop: the desktop card shows only y 176..904 of the 1080 design)
-  for (const [f0, p, s, rot] of takes) { const a = F - f0; if (a < 0 || a > 16 || !p.front) continue; bang(g, p.x + s * 0.7, Math.max(p.y - s * 0.1, 200 + s * 1.05), s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, jr); }
+  for (const [f0, p, s, rot, side = 1] of takes) { const a = F - f0; if (a < 0 || a > 16 || !p.front) continue; bang(g, p.x + side * s * 0.75, Math.max(p.y - s * 0.1, 200 + s * 1.05), s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, jr); }
   const sw = [[K.glance[0] + 8, K.S4, hp, hu * 0.12], [K.crash + 4, K.click[2] + 6, prj(W, ctx, wp(W, W.tilt.head, [0.14, 0.05, 0])), pxu(W, ctx, wp(W, W.tilt.head)) * 0.06], [K.fail + 2, K.rush[0], prj(W, ctx, wp(W, W.loupe.head, [0.25, 0.15, 0])), pxu(W, ctx, wp(W, W.loupe.head)) * 0.06]];
   for (const [a0, a1, p, s] of sw) if (win(F, a0, a1) && p.front) sweat(g, p.x + s * 2, p.y - s * 0.8 + (F - a0) * 0.6, s);
   // the Analyzer's verdicts on the job: X when the check fails (carried round until the refined lap), a check after the DING
   if (W.cart.visible && (win(F, K.fail + 2, K.lap[0]) || win(F, K.ding + 4, K.suck[0]))) {
     const fail = F < K.lap[0], f0 = fail ? K.fail + 2 : K.ding + 4, sp = W.si.g.getWorldPosition(V(W, 0, 0, 0));
-    const c = prj(W, ctx, [sp.x, sp.y + 0.36, sp.z]), u = pxu(W, ctx, sp);
+    const c0 = prj(W, ctx, [sp.x, sp.y + 0.14, sp.z]), u = pxu(W, ctx, sp), c = { x: c0.x - 0.36 * u, y: c0.y, front: c0.front };   // beside the cell on screen, never in the band gap
     if (c.front) mark(g, c.x, Math.max(c.y, 250), clamp(0.16 * u, 18, 90) * ob((F - f0) / 5), fail ? 'x' : 'v', fail ? 0.08 : -0.06);
   }
   const vr = F - K.roar;
-  if (vr >= 0 && vr < 22) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 40, 260, 520), vr, { life: 22, rot: -0.1, scale: 1.05, popF: 4 }); }
+  if (vr >= 0 && vr < 22) { const E = prj(W, ctx, [L.engine.x - 0.6, 1.9, L.engine.z + 0.4]); drawWord(g, SPR.vroom, F, clamp(E.x - 120, 380, 1240), clamp(E.y + 90, 330, 560), vr, { life: 22, rot: -0.1, scale: 1.05, popF: 4 }); }
   const ck = F - K.crash;
   if (ck >= 0 && ck < 20) { const pp = prj(W, ctx, W.tilt.pans[1].g.getWorldPosition(V(W, 0, 0, 0))); drawWord(g, SPR.clank, F, clamp(pp.x + 160, 420, 1500), clamp(pp.y + 60, 300, 760), ck, { life: 20, rot: 0.12, scale: 0.9, popF: 3 }); }
   const dg = F - K.ding;
@@ -236,5 +238,19 @@ export function lettering(W, ctx, g) {
   // the tiny hourglass runs dry: TINK! (the same instant the answer pops out of the tube)
   const tk = F - K.land + 2;
   if (tk >= 0 && tk < 16) { const t = W.tiny.g.position, c = prj(W, ctx, [t.x, 0.42, t.z]); if (c.front) drawWord(g, SPR.tink, F, clamp(c.x - 270, 300, 1620), clamp(c.y - 10, 260, 820), tk, { life: 16, rot: 0.1, scale: 1.0, popF: 3 }); }
+  // each numeral pops into a cream cloud (2D, normal blend so the cream really covers the vanishing digits)
+  if (win(F, K.puffs, K.puffs + 10)) ['n98', 'n68', 'n04'].forEach((key, j) => {
+    const a = F - K.puffs - j * 2; if (a < 0 || a > 7) return;
+    const n = W.num[key].group.position, c = prj(W, ctx, [n.x, 0.2, n.z]), u = pxu(W, ctx, n), k = ob(a / 3) * (1 - sm((a - 4) / 3)), s = 0.3 * u * k;
+    if (s < 4 || !c.front) return;
+    const lobes = [[0, 0, 1], [-0.8, 0.15, 0.72], [0.8, 0.1, 0.76], [-0.35, -0.55, 0.66], [0.42, -0.5, 0.62]];
+    g.save(); g.lineJoin = 'round';
+    const path = () => { g.beginPath(); for (const [dx, dy, r] of lobes) { g.moveTo(c.x + dx * s + r * s * 0.62, c.y + dy * s); g.arc(c.x + dx * s, c.y + dy * s, r * s * 0.62, 0, TAU); } };
+    g.fillStyle = PAL.ink; g.save(); g.translate(s * 0.05, s * 0.07); path(); g.fill(); g.restore();
+    g.lineWidth = Math.max(3, s * 0.1); g.strokeStyle = PAL.ink; path(); g.stroke();
+    g.fillStyle = PAL.cream; path(); g.fill();
+    g.fillStyle = 'rgba(11,53,88,0.13)'; for (const [dx, dy, r] of lobes.slice(0, 3)) { g.beginPath(); g.arc(c.x + dx * s + r * s * 0.26, c.y + dy * s + r * s * 0.28, r * s * 0.26, 0, TAU); g.fill(); }
+    g.restore();
+  });
   iris(W, ctx, g, F, jr);
 }

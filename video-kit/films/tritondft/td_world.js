@@ -192,9 +192,10 @@ export function buildSilicon(W, A = 0.5, parent = null) {
     m.position.copy(pa).lerp(pb, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pb.clone().sub(pa).normalize()); m.scale.y = pa.distanceTo(pb);
     return m;
   });
-  const edgeGeo = new THREE.CylinderGeometry(A * 0.012, A * 0.012, A, 6);
+  // conventional-cell edges: thin plain lines (no ink hull), lighter than the Si-Si bond sticks, so they never read as bonds
+  const edgeGeo = new THREE.CylinderGeometry(A * 0.007, A * 0.007, A, 6);
   for (const ax of [0, 1, 2]) for (const u of [0, 1]) for (const v of [0, 1]) {
-    const m = add(edgeGeo, { color: COL.navy, hatch: 0, rim: 0 }, { outline: 0.3, cast: false }, [0, 0, 0], [0, 0, 0], inner);
+    const m = add(edgeGeo, { color: COL.navy, hatch: 0, rim: 0 }, { outline: 0, cast: false }, [0, 0, 0], [0, 0, 0], inner);
     const p = [0, 0, 0]; p[(ax + 1) % 3] = u * A + c0; p[(ax + 2) % 3] = v * A + c0; m.position.set(...p);
     if (ax === 0) m.rotation.z = Math.PI / 2; if (ax === 2) m.rotation.x = Math.PI / 2;
   }
