@@ -127,7 +127,7 @@ export function buildGate2(THREE, add, parent, { span = 2.8, h = 2.05, lanes = [
 /** The finish gantry: a cantilever. One striped pylon on the infield kerb, an arm over the track, and a name board on
  *  the arm that faces outward (towards the grandstand and the cameras), so nothing stands between them and the line.
  *  Frame: +x along the track, +z outward. */
-export function buildFinish(THREE, add, parent, { span = 3.1, h = 1.8, bannerTex = null, bw = 2.7, bh = 0.66, back = 1.9, reach = 0.26 } = {}) {
+export function buildFinish(THREE, add, parent, { span = 3.1, h = 1.72, bannerTex = null, bw = 2.7, bh = 0.66, back = 1.9, reach = 0.26 } = {}) {
   // the pylon stands on the infield kerb `back` units BEFORE the line and a diagonal arm carries the board over the line,
   // so from the payoff lens (past the line) the pylon stays left of the letters and from the photo-finish lens it stays
   // behind the racers

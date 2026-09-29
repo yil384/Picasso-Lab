@@ -24,7 +24,7 @@ export const LOOK = {
   htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0],
   lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
   bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.12,
-  rule: 0.17, rulePx: 10, ruleTop: 0.3, ruleBot: 0.04, bgDots: [0.95, 0.6, 0.42, 0.28],
+  rule: 0, rulePx: 10, ruleTop: 0.3, ruleBot: 0.04, bgDots: [0.95, 0.6, 0.42, 0],     // no screen-locked ruling or dots (round 1)
   dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16, shadowNoise: 0.05, shadowSoft: 0.02,
   atmos: 0.12, atmosStart: 20, atmosEnd: 44, atmosCol: [0.96, 0.92, 0.84], inkFar: 0.85, hatchFar: 0.4, htFar: 0.4,
   ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
@@ -88,7 +88,7 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   T.finish = buildFinish(THREE, add, station(A.finish, R.track), { bannerTex });
   const twr = station(WATCH.th, WATCH.r); T.tower = buildTower(THREE, add, twr, { y: WATCH.y }); twr.rotation.y = WATCH.yaw;
   T.startSt = station(A.start, R.track);
-  for (const z of [0.55, -0.55]) add(new THREE.BoxGeometry(0.3, 0.16, 0.5), { key: 'blocks', color: 0x3b3558 }, { outline: 0.6, cast: false }, [-0.55, 0.08, z], [0, 0, 0.3], T.startSt);
+  for (const z of [0.55, -0.55]) add(new THREE.BoxGeometry(0.3, 0.16, 0.5), { key: 'blocks', color: 0xfff0d0, hatchDir: [0, 1, 0] }, { outline: 0.9, cast: false }, [-0.55, 0.08, z], [0, 0, 0.3], T.startSt);
 
   // ---- cast
   T.tok = buildLLM(THREE, add, scene, {});
@@ -108,8 +108,8 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   const side = { key: 'lt-side', color: 0x2b2447, rim: 0.3, hatchDir: [0, 1, 0], spec: 0 };
   T.letters = new THREE.Group(); scene.add(T.letters);
   T.lettersIn = new THREE.Group(); T.letters.add(T.lettersIn);
-  T.w1 = word3D(THREE, add, T.lettersIn, 'PERF@1', 0.9, { face, side, depth: 0.4, weight: 0.3 });
-  T.w2 = word3D(THREE, add, T.lettersIn, '>1', 1.35, { face, side, depth: 0.48, weight: 0.3, track: 0.26 });
+  T.w1 = word3D(THREE, add, T.lettersIn, 'PERF@1', 0.82, { face, side, depth: 0.38, weight: 0.31 });
+  T.w2 = word3D(THREE, add, T.lettersIn, '>1', 1.24, { face, side, depth: 0.46, weight: 0.31, track: 0.26 });
   T.w1.root.position.x = -T.w1.width - 0.35; T.w2.root.position.x = 0.15;
   T.lettersIn.position.x = (T.w1.width + 0.35 - T.w2.width - 0.15) / 2;
   // the slam's dust ring (a flat torus that spreads and fades under the letters)
@@ -406,7 +406,9 @@ function updateStations(F) {
     const slot = i < 4 ? T.kern.wheelsRd[i].position.toArray() : [0.74, -0.08, 0];
     const toW = T.kern.body.localToWorld(V(...slot));
     const e = sm(uu);
-    gq.position.set(lerp(mouth[0], toW.x, e), lerp(mouth[1], toW.y, e) + 0.6 * Math.sin(Math.PI * uu), lerp(mouth[2], toW.z, e));
+    // out of the mouth, down and out towards the lens (never across Tok's eyes), onto the axle
+    const ml = Math.hypot(mouth[0], mouth[2]) || 1, bo = 0.55 * Math.sin(Math.PI * uu);
+    gq.position.set(lerp(mouth[0], toW.x, e) + mouth[0] / ml * bo, lerp(mouth[1], toW.y, e) + 0.12 * Math.sin(Math.PI * uu), lerp(mouth[2], toW.z, e) + mouth[2] / ml * bo);
     gq.rotation.set(0, st.kern.yaw, (1 - uu) * 4);
   });
   const fl = T.flop, uf = sg(F, K.popOff, K.popOff + 30);
@@ -460,6 +462,7 @@ export function drawNPR(ctx) {
   if (F >= K.freeze[0] && F < K.freeze[1]) npr.impact(1, { threshold: 0.36, depthCut: cut(polar(L2 + A.finish, R.track, 0.4)), setIds: T.setIds, plate: F === K.freeze[0] ? [0.84, 1, 0.9] : [1, 1, 0.96] });
   const fl = (f0, len, pt, r0, amt, seed) => { const a = F - f0; if (a < 0 || a >= len) return; const c = ctx.project(V(...pt), camera); npr.focusLines({ x: c.x, y: c.y, r0, amount: amt * (1 - a / len), count: 90, width: 2.6, seed }); };
   fl(K.clang, 14, polar(A.gate, R.ours, 1.0), 300, 0.9, 3);
+  if (st.kern.pos) fl(K.crash[0] + 4, 8, [st.kern.pos[0], 0.2, st.kern.pos[2]], 260, 1.0, 7);     // the crash zoom lands with zoom lines
   fl(K.slam, 18, polar(L2 + A.words, 1.2, 1.9), 420, 1.0, 9);
   fl(K.hold[0] + 2, K.hold[1] - K.hold[0] - 2, polar(L2 + A.finish, R.track, 0.45), 380, 0.7, 5);
   if (F >= K.slam - 4 && F < K.away[0]) npr.pointLight(V(...polar(A.words, 3.6, 2.4)), { color: 0xffc23d, radius: 3.6, i: 0.5 * sm((F - K.slam + 4) / 8) });
@@ -530,7 +533,7 @@ export function drawMarks(ctx, g) {
   }
   const tk = st.tok;
   const bangAt = (f0, p, s, rot) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, PAL.coral, r); };
-  bangAt(K.idea, [tk.pos[0], tk.pos[1] + 2.0, tk.pos[2]], 0.42, 0.1);
+  bangAt(K.idea, [tk.pos[0], tk.pos[1] + 1.8, tk.pos[2]], 0.42, 0.1);
   if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 1.25, st.oro.pos[2]], 0.34, 0.12);
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
     const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;

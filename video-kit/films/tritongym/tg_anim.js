@@ -5,8 +5,8 @@ import { TAU, clamp, lerp, sg, sm, io, ob, mj, mjv, ringv, bumpv, hsh, take, hop
 export const NF = 660;
 // station angles (radians) and radii
 export const A = { bench: 0.0, gate: 0.95, scale: 1.95, start: 3.0, finish: 4.85 };
-A.words = A.finish + 0.62;      // the payoff letters, on top of the graphics card (clear of the finish pylon from the payoff lens)
-A.tokWin = A.finish + 1.55;     // Tok's star-eyed spot at the payoff
+A.words = A.finish + 0.69;      // the payoff letters, on top of the graphics card (clear of the finish pylon from the payoff lens)
+A.tokWin = A.finish + 1.62;     // Tok's star-eyed spot at the payoff
 export const R = { track: 6.0, lanes: [5.45, 6.55], ours: 6.55, oro: 5.45, bench: 8.3, tokBench: 7.72, kerb: 4.62, scale: 8.15 };
 export const L2 = TAU;   // lap 2 offset
 
@@ -223,7 +223,7 @@ export function kernState(F) {
     S.face = F < K.go2 ? 'determined' : F < K.cross ? 'squint' : F < K.check ? 'wide' : 'star';
     S.stretch = F >= K.cross - 4 && F < K.cross + 2 ? 0.25 : 0;
     if (F >= K.check && F < K.check + 18) { const h = hop(F, K.check, K.check + 10, 0.35); S.pos[1] += h.y; S.sq = h.sq; }
-    if (F >= K.away[0]) S.vis = false;
+    if (F >= K.away[0] + 10) S.vis = false;              // gone once the whip has left the finish
     S.showCheck = F >= K.check;
     return S;
   }
@@ -234,7 +234,7 @@ export function kernState(F) {
 // ------------------------------------------------------------------------------------------------
 export function oroState(F) {
   F = held(F);
-  const S = { vis: F >= K.cut - 20 && F < K.away[0] + 6, face: 'smug', wheelAng: 0, keySpin: 0, sq: 0, stretch: 0, laurelSlip: 0, wrench: 0, buff: 0, pitch: 0 };
+  const S = { vis: F >= K.cut - 20 && F < K.away[0] + 10, face: 'smug', wheelAng: 0, keySpin: 0, sq: 0, stretch: 0, laurelSlip: 0, wrench: 0, buff: 0, pitch: 0 };
   const lane = (th) => polar(th, R.oro, 0);
   const thS = A.start, thF = A.finish;
   if (F < K.go1) {
@@ -296,9 +296,10 @@ export function tokState(F) {
   // ---- B9 -> B1: arrives from the finish (whip), skids beside the stack
   const Fw = F >= K.away[0] ? F - NF : F;
   if (Fw < K.skid) {
-    const fromP = polar(A.finish + 0.35 - L2, 7.4, 0);
-    const P = pogo(Fw, K.away[0] - NF, K.skid, fromP, benchSpot, 4, 0.4);
-    S.pos = P.pos; S.sq = Fw > K.skid - 3 ? 0.2 : P.sq; S.yaw = lerp(headingAt(A.finish), yawBench, sm((Fw - K.away[0] + NF) / 30)); S.lean = -0.25;
+    const fromP = polar(A.tokWin, 5.3, 0);                       // from its payoff spot (waits there while the whip starts)
+    const P = pogo(Fw, K.away[0] + 8 - NF, K.skid, fromP, benchSpot, 3, 0.45);
+    S.pos = P.pos; S.sq = Fw > K.skid - 3 ? 0.2 : P.sq; S.yaw = lerp(faceOut(A.tokWin) - 0.55, yawBench, sm((Fw - K.away[0] + NF) / 26)); S.lean = -0.2 * sg(Fw, K.away[0] + 8 - NF, K.away[0] + 12 - NF);
+    if (Fw < K.away[0] + 8 - NF) { S.face = 'star'; S.hands = [S.pos[0], 0.9, S.pos[2]]; return S; }
     S.face = 'determined';
     S.hands = [S.pos[0], S.pos[1] + 0.9, S.pos[2]];
     return S;

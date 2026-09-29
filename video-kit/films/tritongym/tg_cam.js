@@ -82,14 +82,14 @@ function shotCrash(F) {          // B4 -> B5: crash zoom onto the square wheel, 
   const fin = rig([A.finish + 0.02, 12.4, 1.6], [A.finish + 0.08, 5.0, 1.2], 34, 0.0);
   const wheel = rig([th + 0.02, 8.7, 0.42], [th - 0.01, 6.9, 0.16], 30, 0.04);
   const orb = sg(F, K.tokIn[1], K.rev[1], io);
-  const two = rig([th + 0.02 + 0.16 * orb, 10.9 - 0.3 * orb, 1.3], [th + 0.06, 6.1, 0.7], 33, 0.02 - 0.04 * orb);
+  const two = rig([th + 0.0 + 0.3 * orb, 11.7 - 0.4 * orb, 1.4], [th + 0.07, 6.1, 0.85], 33, 0.02 - 0.05 * orb);
   if (F < K.crash[1]) return mix(fin, wheel, z);
   return mix(wheel, two, sg(F, K.crash[1] + 6, K.tokIn[1] + 4, ioc));
 }
 function shotLap2(F) {           // B6: high three-quarter crane over the ring following Kern (slot-car view)
   const ks = kernState(F), [kth0] = toRing(ks.pos);
   const kth = near(kth0, lerp(A.finish, L2 + A.start, sg(F, K.lap2[0], K.lap2[1])));
-  return rig([kth - 0.35, 14.2, 7.6], [kth + 0.15, 4.2, 0.2], 36, 0.0);
+  return rig([kth - 0.3, 11.9, 4.4], [kth + 0.1, 5.4, 0.45], 34, 0.0);   // lower and tighter: Kern stays readable at card size
 }
 function shotRace2(F) {          // B7: start two-shot (rhymes with B4), dolly-zoom on Oro's double-take, raised side tracking
   const st = shotStart(F, L2);
@@ -115,7 +115,7 @@ function shotWatch(F) {          // the insert after the photo finish: the stopw
 }
 function shotPayoff(F) {         // B8: low hero lens at the finish, a real push (~12%) with a ~16 deg orbit
   const k = sg(F, K.watch[1], K.away[0], io);
-  return rig([L2 + A.finish + 0.57 + 0.06 * k, 13.0 - 1.1 * k, 1.0 + 0.25 * k], [L2 + A.finish + 0.6 + 0.02 * k, 3.0, 1.5 + 0.1 * k], 40, 0.0);
+  return rig([L2 + A.finish + 0.57 + 0.06 * k, 13.0 - 1.3 * k, 1.05 + 0.2 * k], [L2 + A.finish + 0.6 + 0.02 * k, 3.0, 1.48 + 0.02 * k], 40, 0.0);
 }
 
 // ------------------------------------------------------------------------------------------------
