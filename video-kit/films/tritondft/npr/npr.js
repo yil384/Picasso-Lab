@@ -499,8 +499,10 @@ void main() {
   // dry ink: the line skips on paper peaks; lines dissolve out of focus
   float dry = smoothstep(.55, .95, (ph * .5 + .5) * L_dryInk * 2. + (vnoise(dp * .5 + uBoilSeed * 3.) - .5) * L_dryInk);
   float focusK = 1. - smoothstep(.15, .15 + L_dofLines, coc);
-  float ink = edge * (1. - dry) * focusK * L_inkA;
-  float hatch = max(A0.r, A0.g) * focusK * L_hatchA * (1. - dry * .6) * (1. - L_hatchFar * farK);
+  // in a whip the colour is smeared, so the (unsmeared) ink and hatching fade with the streak instead of floating over it
+  float smK = clamp(length(uSmear) / (70. * uS), 0., 1.);
+  float ink = edge * (1. - dry) * focusK * L_inkA * (1. - .65 * smK);
+  float hatch = max(A0.r, A0.g) * focusK * L_hatchA * (1. - dry * .6) * (1. - L_hatchFar * farK) * (1. - .75 * smK);
   vec3 inkCol = mix(L_ink, P.rgb * P.rgb * .55, L_selfInk * P.a);
   vec3 hatchCol = mix(L_hatchInk, P.rgb * .5, L_selfInk * P.a);
   col = mix(col, paper * hatchCol, clamp(hatch, 0., 1.));

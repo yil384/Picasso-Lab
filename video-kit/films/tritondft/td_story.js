@@ -41,7 +41,7 @@ export const K = {
   read7: 510, ding: 530, planks: [534, 546], toFunnel: [548, 561], suck: [561, 568],
   land: 590, take: 590, outs: [598, 604, 610], clack68: [622, 636],
   slam: [628, 636, 644],
-  puffs: 686, handBack: [686, 692], dive: [692, 697, 702, 707], yawn: [686, 700], lay: [698, 712], flop: [710, 718],
+  puffs: 686, handBack: [680, 686], dive: [686, 689, 692, 695], yawn: [686, 700], lay: [698, 712], flop: [710, 718],
 };
 
 // the job on the turntable ring: world theta (plan 135, exec 45, anlz -45 deg; the Refiner's stop is at -100, short of
@@ -297,8 +297,8 @@ function updateTurn(F) {
 function updateCart(F) {
   const C = W.cart, a0 = 135 * D;
   const ringPos = [Math.cos(a0) * L.turn.rJob, 0.06, -Math.sin(a0) * L.turn.rJob];
-  const inTube = (F >= K.suck[1] && F < K.land) || (F >= K.dive[0] + 4 && F < NF - 2);
-  const onDesk = F >= K.land && F < K.dive[0] + 4;
+  const inTube = (F >= K.suck[1] && F < K.land) || (F >= K.dive[0] + 8 && F < NF - 2);   // goes in with Tri
+  const onDesk = F >= K.land && F < K.dive[0] + 8;
   C.visible = !inTube;
   if (!onDesk && !(F >= K.suck[0] && F < K.suck[1])) {
     if (C.parent !== W.turn) W.turn.add(C);
@@ -321,10 +321,10 @@ function updateCart(F) {
   const hold = W.hoot.head.localToWorld(V3(0.06, -0.86, 0.74));    // hugged at the belly, right of the scorecard: the planks stay under its beak
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
-  if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k)];
-  if (F >= K.handBack[0]) { const tp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0)), b = sm((F - K.handBack[0]) / (K.handBack[1] - K.handBack[0])); p = [lerp(p[0], tp.x, b), lerp(p[1], tp.y - 0.1, b), lerp(p[2], tp.z, b)]; }
+  if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k) + 0.45 * Math.sin(Math.PI * k)];   // arcs in front of the giant
+  if (F >= K.handBack[0]) { const tp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0)), b = sm((F - K.handBack[0]) / (K.handBack[1] - K.handBack[0])), ts = W.tri.root.scale.x; p = [lerp(p[0], tp.x + 0.12 * ts, b), lerp(p[1], tp.y - 0.14 * ts, b), lerp(p[2], tp.z + 0.1 * ts, b)]; }
   C.position.set(...p); C.rotation.set(0, 0.3 + (F < K.land + 8 ? (1 - k) * 4 : 0), 0);
-  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.56, k) : lerp(0.56, 1, sm((F - K.handBack[0]) / 8)));
+  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.56, k) : 0.56 * (F >= K.handBack[0] ? lerp(1, 0.75, sm((F - K.handBack[0]) / 6)) * W.tri.root.scale.x : 1));   // small in Tri's hand, squeezed with Tri
 }
 
 // ---- Hoot (the researcher) ----
@@ -567,16 +567,16 @@ function updateClack(F) {
   if (win(F, K.feed[1], K.roar + 10)) {
     const k = sm((F - K.jump[0]) / (K.jump[1] - K.jump[0]));
     yaw = faceYaw(nearSlot, [knob.x, 0, knob.z]);
-    const hang = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1];
+    const hang = [knob.x - 0.36, knob.y - 0.5, knob.z + 0.1];   // beside the shaft, right hand on the knob
     if (F < K.jump[0]) { pos = nearSlot; sq = 0.16 * sm((F - K.feed[1]) / 3); expr = 'squint'; }
     else {
       pos = [lerp(nearSlot[0], hang[0], k), lerp(0, hang[1], k) + 0.3 * Math.sin(Math.PI * k), lerp(nearSlot[2], hang[2], k)];
       sq = -0.18 * Math.sin(Math.PI * k); armL = -2.6 * k; armR = 2.6 * k; expr = F < K.lever ? 'determined' : 'strain';
-      if (F >= K.lever) { pos = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1]; sq = -0.12 + 0.05 * Math.sin(F * 1.4) - 0.1 * arc(F, K.lever, K.roar + 2); rollerSpin = F * 0.9; yaw = lerp(faceYaw(nearSlot, [knob.x, 0, knob.z]), -0.2, sm((F - K.lever) / 4)); }   // hangs facing camera, stretched by the yank
+      if (F >= K.lever) { pos = [knob.x - 0.36, knob.y - 0.5, knob.z + 0.1]; sq = -0.12 + 0.05 * Math.sin(F * 1.4) - 0.1 * arc(F, K.lever, K.roar + 2); rollerSpin = F * 0.9; yaw = lerp(faceYaw(nearSlot, [knob.x, 0, knob.z]), -0.2, sm((F - K.lever) / 4)); }   // hangs facing camera, stretched by the yank
     }
   }
   if (win(F, K.roar + 10, K.roar + 22)) {                      // lets go and hops home before the camera locks on the cell
-    const k = sm((F - K.roar - 10) / 12), from = [knob.x - 0.02, knob.y - 0.52, knob.z + 0.1];
+    const k = sm((F - K.roar - 10) / 12), from = [knob.x - 0.36, knob.y - 0.5, knob.z + 0.1];
     pos = [lerp(from[0], home[0], k), lerp(from[1], 0, k) + 0.25 * Math.sin(Math.PI * k), lerp(from[2], home[2], k)];
     sq = F > K.roar + 19 ? ringv(F - K.roar - 19, 0.14, 1.0, 0.25) : 0; expr = 'grin';
   }
@@ -956,7 +956,7 @@ const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the
   return { tg: [L.desk.x + 0.1, 0.38, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.15, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };   // a touch higher: Hoot's face clears the 68
 };
 // [a, b, cap px, 'h' = horizontal smear only: vertical tilts would streak like rain]
-const WHIPS = [[80, 100], [101, 108, 40, 'h'], [230, 243, 40, 'h'], [280, 294], [312, 330, 0, 'h'], [452, 466, 60], [500, 509, 60], [538, 548, 40, 'h'], [561, 588, 0, 'h'], [618, 630, 40]];
+const WHIPS = [[80, 100, 0, 'h'], [101, 108, 40, 'h'], [230, 243, 40, 'h'], [280, 294], [312, 330, 0, 'h'], [452, 466, 60], [500, 509, 60], [538, 548, 40, 'h'], [561, 588, 0, 'h'], [618, 630, 40]];
 export function camRig(F) {
   F = ((F % NF) + NF) % NF;
   if (F < 84) return rigS1(F);
