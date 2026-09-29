@@ -2,7 +2,7 @@
 // A rig is { c: [th, r, y] (camera, ring coords), t: [th, r, y] (target), fov, roll }. Angles are unwrapped, so the
 // rig at F = NF equals the rig at F = 0 plus two turns (= the same camera).
 import { TAU, clamp, lerp, sg, sm, io, ioc, ease } from './tg_time.js';
-import { NF, K, A, R, L2, polar, kernState, oroState, tokState, kernTh, oroTh, raceF } from './tg_anim.js';
+import { NF, K, A, R, L2, B2, polar, kernState, oroState, tokState, kernTh, oroTh, raceF } from './tg_anim.js';
 
 // the timing stopwatch tower in the infield, mid-straight; its face is turned towards the race-1 finish and payoff cameras so the
 // hands read there, and the match-cut / insert cameras sit on its face normal
@@ -31,26 +31,31 @@ function watchRig(dist, thRef, fov = 30, dy = 0) {
 // shots
 // ------------------------------------------------------------------------------------------------
 function shotBench(F) {          // B1: low 3/4 on the bench, slow push, dutch settles
-  const k = sm(F / 90);
-  return rig([0.07 - 0.02 * k, 12.9 - 0.7 * k, 1.5 - 0.1 * k], [0.02, 7.9, 1.05 + 0.1 * sm((F - 8) / 20) * (1 - sm((F - 40) / 20))], 32, lerp(0.06, 0.0, sm(F / 40)));
+  const k = sm(F / 90);    // push in with a slow drift right (towards the bench) and a settling dutch
+  return rig([0.0 + 0.05 * k, 13.5 - 0.9 * k, 1.5 - 0.1 * k], [-0.045 + 0.05 * k, 7.9, 1.05 + 0.1 * sm((F - 8) / 20) * (1 - sm((F - 40) / 20))], 33, lerp(0.06, 0.0, sm(F / 40)));
 }
 function shotDrive(F) {          // B2 approach: knee-height tracking alongside Kern towards the gate
   const ks = kernState(F), [th] = toRing(ks.pos);
   return rig([th - 0.02, 10.6, 0.8], [th + 0.1, 6.3, 0.55], 32, -0.03);
 }
-function shotGate(F) {           // B2 at the gate: 3/4 on the gate, punch-in on the CLANG, pan with the flick, two-shot for the fix
+function shotGate(F) {           // B2 at the gate: 3/4 on the gate, punch-in on the CLANG, pan to Tok and Kern for the slip
   const punch = F >= K.clang && F < K.clang + 10 ? 0.06 * Math.exp(-(F - K.clang) / 5) : 0;
-  const pan = sm((F - K.clang - 2) / 12);
-  const base = rig([A.gate - 0.3 + 0.02 * pan, 11.6 * (1 - punch), 1.25], [A.gate - 0.1 - 0.1 * pan, 6.3, 1.0 - 0.1 * pan], 33, 0.02);
-  return base;
+  const pan = sm((F - K.clang - 2) / 12) * (1 - sm((F - K.lift[0] + 2) / 6));
+  const up = sg(F, K.lift[0] - 2, K.lift[0] + 5, sm);      // tilt up for the lamp and the nod
+  return rig([A.gate - 0.33 - 0.06 * pan, 11.6 * (1 - punch) - 0.6 * pan, 1.3], [A.gate - 0.12 - 0.16 * pan + 0.08 * up, 6.3, 1.05 - 0.1 * pan + 0.75 * up], 33, 0.02);
 }
-function shotThrough(F) {        // B2 end: dolly behind Kern through the gate arch (camera inside the track, low)
-  const ks = kernState(F), [th] = toRing(ks.pos);
-  return rig([th - 0.36, 7.1, 1.35], [th + 0.1, 6.4, 0.45], 36, 0.0);
+function shotPress(F) {          // B2 insert: close on the crooked token; a mitt comes down and presses it flat
+  const k = sg(F, K.closeup[0], K.closeup[1], io), th = B2.thStop - 0.17, r = R.ours + 0.3;
+  return rig([th + 0.07, r + 2.1 - 0.25 * k, 1.2], [th + 0.005, r, 0.52], 30, 0.03);
+}
+function shotThrough(F) {        // B2 end: from ahead of the gate, low, looking back: Kern drives through the arch at us
+  const k = sg(F, K.through[0], K.toScale[0], io);
+  return rig([A.gate + 0.56, R.ours + 1.35, 0.8 + 0.1 * k], [A.gate - 0.02 + 0.2 * k, R.ours + 0.1, 0.62], 34, -0.02);
 }
 function shotScale(F) {          // B3: medium on the weigh-in, then a push onto the dial
   const push = sg(F, K.dialPush[0], K.dialPush[1], (x) => x * x * (3 - 2 * x));
-  const a = rig([A.scale + 0.06, 12.6, 1.45], [A.scale - 0.02, 7.9, 1.05], 32, 0.0);
+  const k = sg(F, K.toScale[1], K.dialPush[0], io);        // slow push while the needle swings
+  const a = rig([A.scale + 0.03, 14.1 - 0.6 * k, 1.6], [A.scale - 0.05, 7.9, 1.32], 32, 0.0);
   const b = rig([A.scale, 9.85, 1.02], [A.scale, 8.2, 1.02], 30, 0.0);
   return mix(a, b, push);
 }
@@ -116,17 +121,19 @@ function shotPayoff(F) {         // B8: low hero lens at the finish, a real push
 // ------------------------------------------------------------------------------------------------
 // the edit: shots joined by continuous moves and whips
 // ------------------------------------------------------------------------------------------------
-export const WHIPS = [[K.hopOff[0] + 2, K.drive1[0] + 6], [K.rev[1] - 2, K.lap2[0] + 8], [K.watch[1], K.watch[1] + 8], [K.away[0], NF], [0, 6]];
+export const WHIPS = [[K.hopOff[0] + 2, K.drive1[0] + 6], [K.lift[1] - 4, K.through[0] + 4], [K.toScale[0] + 2, K.toScale[0] + 14], [K.rev[1] - 2, K.lap2[0] + 8], [K.watch[1], K.watch[1] + 8], [K.away[0], NF], [0, 6]];
 
 export function camRig(F) {
   if (F < K.hopOff[0] + 2) return shotBench(F);
   if (F < K.drive1[0] + 6) return mix(shotBench(F), shotDrive(F), sg(F, K.hopOff[0] + 2, K.drive1[0] + 6, ease.inOutQuint));   // whip right after Kern
   if (F < K.clang - 10) return shotDrive(F);
   if (F < K.clang - 2) return mix(shotDrive(F), shotGate(F), sg(F, K.clang - 10, K.clang - 2, sm));
-  if (F < K.lift[1]) return shotGate(F);
-  if (F < K.through[0] + 6) return mix(shotGate(F), shotThrough(F), sg(F, K.lift[1], K.through[0] + 6, ioc));
-  if (F < K.toScale[0] + 4) return shotThrough(F);
-  if (F < K.toScale[1]) return mix(shotThrough(F), shotScale(F), sg(F, K.toScale[0] + 4, K.toScale[1], ioc));
+  if (F < K.closeup[0]) return shotGate(F);
+  if (F < K.closeup[1]) return shotPress(F);                        // cut: the insert on the crooked token
+  if (F < K.lift[1] - 4) return shotGate(F);                        // cut back: the lamp goes emerald, the gate nods and lifts
+  if (F < K.through[0] + 4) return mix(shotGate(F), shotThrough(F), sg(F, K.lift[1] - 4, K.through[0] + 4, ease.inOutQuint));   // whip ahead
+  if (F < K.toScale[0] + 2) return shotThrough(F);
+  if (F < K.toScale[0] + 14) return mix(shotThrough(F), shotScale(F), sg(F, K.toScale[0] + 2, K.toScale[0] + 14, ease.inOutQuint));   // whip to the weigh-in
   if (F < K.cut) return shotScale(F);
   if (F < K.cut + 16) return shotWatchToStart(F);                  // match cut: dial -> stopwatch face
   if (F < K.go1 + 2) return shotStart(F);

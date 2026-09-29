@@ -117,12 +117,12 @@ export function paintFace(g, cx, cy, s, e, seed = 1, o = {}) {
     case 'flat': pen(g, [[cx - 16 * s, my + 2 * s], [cx + 16 * s, my]], 7 * s, ink, { r, taper: [0.1, 0.1] }); break;
     case 'wobble': pen(g, [[cx - 22 * s, my + 2 * s], [cx - 11 * s, my - 4 * s], [cx, my + 3 * s], [cx + 11 * s, my - 4 * s], [cx + 22 * s, my + 2 * s]], 6 * s, ink, { r }); break;
     case 'o': fillPoly(g, ellipsePts(cx, my + 4 * s, 11 * s, 14 * s), ink); fillPoly(g, ellipsePts(cx, my + 9 * s, 6 * s, 5 * s), '#e8546a'); break;
-    case 'open': { const P = [[cx - 26 * s, my - 6 * s], [cx + 26 * s, my - 6 * s], [cx + 16 * s, my + 16 * s], [cx, my + 22 * s], [cx - 16 * s, my + 16 * s]]; fillPoly(g, P, ink); fillPoly(g, ellipsePts(cx, my + 13 * s, 12 * s, 6 * s), '#e8546a'); } break;
+    case 'open': { const P = [[cx - 26 * s, my - 6 * s], [cx + 26 * s, my - 6 * s], [cx + 16 * s, my + 16 * s], [cx, my + 22 * s], [cx - 16 * s, my + 16 * s]]; fillPoly(g, P, ink); } break;   // ink only, no pink tongue
     case 'grin': { const P = [[cx - 32 * s, my - 8 * s], [cx + 32 * s, my - 8 * s], [cx + 20 * s, my + 14 * s], [cx - 20 * s, my + 14 * s]]; fillPoly(g, P, ink); fillPoly(g, [[cx - 25 * s, my - 5 * s], [cx + 25 * s, my - 5 * s], [cx + 22 * s, my + 1 * s], [cx - 22 * s, my + 1 * s]], CREAM); } break;
     case 'teeth': { const P = [[cx - 28 * s, my - 9 * s], [cx + 28 * s, my - 9 * s], [cx + 28 * s, my + 11 * s], [cx - 28 * s, my + 11 * s]]; fillPoly(g, P, CREAM); pen(g, [...P, P[0]], 5 * s, ink, { taper: [0, 0], smoothN: 1 }); pen(g, [[cx - 28 * s, my + 1 * s], [cx + 28 * s, my + 1 * s]], 4 * s, ink, { taper: [0, 0] }); for (let q = -1; q <= 1; q++) pen(g, [[cx + q * 12 * s, my - 9 * s], [cx + q * 12 * s, my + 11 * s]], 4 * s, ink, { taper: [0, 0] }); } break;
     default: break;
   }
-  if (e.blush) for (const sd of [-1, 1]) fillPoly(g, blobPts(cx + sd * sp * 1.45, cy + 22 * s, 19 * s, 9 * s, r, 0.08), 'rgba(255,110,120,0.55)');
+  if (e.blush && false) for (const sd of [-1, 1]) fillPoly(g, blobPts(cx + sd * sp * 1.45, cy + 22 * s, 19 * s, 9 * s, r, 0.08), 'rgba(255,110,120,0.55)');
   if (e.sweat) { const x = cx + sp * 1.7, y = cy - 30 * s; fillPoly(g, [[x, y - 18 * s], [x + 9 * s, y + 2 * s], [x, y + 9 * s], [x - 9 * s, y + 2 * s]], '#7fd3ff'); pen(g, [[x, y - 18 * s], [x + 9 * s, y + 2 * s], [x, y + 9 * s], [x - 9 * s, y + 2 * s], [x, y - 18 * s]], 3.5 * s, ink, { taper: [0, 0], smoothN: 3 }); }
 }
 

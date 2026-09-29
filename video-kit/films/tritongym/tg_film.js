@@ -7,10 +7,10 @@ import { applyRig, handheld, yawSmear } from './npr/camera.js';
 import { cachedBake, INK, TAU, pen, fillPoly, ellipsePts, starPts } from './tg_paint.js';
 import { ARENA, canvasTex, paintFloor, paintPlanks, buildCard, buildStands } from './tg_world.js';
 import { buildLLM, buildKern, buildOro, KERN_SLOTS } from './tg_cast.js';
-import { buildGate2, buildFinish, buildTower, buildBench, buildWeighIn, buildBlock, buildTorch, buildDash, buildSlip, buildCheck } from './tg_props.js';
+import { buildGate2, buildFinish, buildTower, buildBench, buildWeighIn, buildBlock, buildTorch, buildDash, buildSlip, buildCheck, buildOpCard, buildMitt } from './tg_props.js';
 import { comicWord, bang, word3D, layoutWord } from './tg_letter.js';
 import { lerp, clamp, sg, sm, ob, ringv, hsh, ease, io } from './tg_time.js';
-import { NF, K, A, R, L2, polar, headingAt, faceOut, kernState, oroState, tokState, dashState, gateState, scaleState, watchState, tokenFlight } from './tg_anim.js';
+import { NF, K, A, R, L2, B1, polar, headingAt, faceOut, kernState, oroState, tokState, dashState, gateState, scaleState, watchState, tokenFlight } from './tg_anim.js';
 import { camWorld, WATCH, WHIPS, toRing } from './tg_cam.js';
 
 export { NF };
@@ -97,10 +97,12 @@ export async function buildWorld(ctx, { THREE, renderer }) {
   T.dash = buildDash(THREE, add, scene);
   T.slip = buildSlip(THREE, add, scene);
   T.check = buildCheck(THREE, add, scene, {});
+  T.opCard = buildOpCard(THREE, add, scene);
+  T.mitt = buildMitt(THREE, add, scene);
   // fresh tokens for the refine (B5): 4 round wheels + the nose cone fly from Tok's mouth
-  T.fresh = [0, 1, 2, 3, 4].map((i) => { const g = new THREE.Group(); scene.add(g); add(i < 4 ? new THREE.CylinderGeometry(0.16, 0.16, 0.1, 20).rotateX(Math.PI / 2) : new THREE.ConeGeometry(0.2, 0.36, 4, 1).rotateZ(-Math.PI / 2), { key: i < 4 ? 'freshwheel' : 'freshcone', color: 0xfff4dc, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; });
+  T.fresh = [0, 1, 2, 3, 4].map((i) => { const g = new THREE.Group(); scene.add(g); add(i < 4 ? new THREE.CylinderGeometry(0.16, 0.16, 0.1, 20).rotateX(Math.PI / 2) : new THREE.ConeGeometry(0.15, 0.32, 4, 1).rotateZ(-Math.PI / 2), { key: i < 4 ? 'freshwheel' : 'freshcone', color: 0xfff4dc, rim: 0.6, spec: 0 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; });
   // the square wheel that flops away
-  T.flop = (() => { const g = new THREE.Group(); scene.add(g); add(new THREE.BoxGeometry(0.3, 0.3, 0.11), { key: 'wheel-sq', color: 0xef4b5f, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; })();
+  T.flop = (() => { const g = new THREE.Group(); scene.add(g); add(new THREE.BoxGeometry(0.3, 0.3, 0.11), { key: 'wheel-sq', color: 0x0b5e46, rim: 0.6, spec: 0 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], g); g.scale.setScalar(T.kern.scale); return g; })();
   // the payoff: PERF@1 > 1, one line, bold coral faces (light shade), ink-dark extrusion (no coloured underside)
   const face = { key: 'lt-face', color: 0xef4b5f, rim: 0.9, hatchDir: [0.3, 1, 0], shadeColor: 0x8a1f3a, shadeMix: 0.15, spec: 0 };
   const side = { key: 'lt-side', color: 0x2b2447, rim: 0.3, hatchDir: [0, 1, 0], spec: 0 };
@@ -141,7 +143,7 @@ export function updateWorld(ctx) {
   const F = ctx.iw;
   updateCamera(ctx, F);
   updateTok(F); updateKern(F); updateOro(F); updateDash(F);
-  updateStations(F); updateLetters(F);
+  updateStations(F); updateLetters(F); updateOpCard(F);
   const racing = (F >= K.go1 && F < K.lap2[0]) || (F >= K.go2 && F < K.freeze[1]);
   T.card.fans.forEach((f, i) => { f.rotation.y = (F / NF) * TAU * 22 * (i % 2 ? -1 : 1) + (racing ? 0 : 0); });
 }
@@ -225,26 +227,66 @@ function updateKern(F) {
     const k = S.compiled * 1.5 - (0.3 - t.home[0]) * 0.8;
     setMap(t.m, k > 0.5 ? K_.texCmp[n] : K_.tex[n]);
   });
-  const fresh = S.freshParts;
-  K_.wheelsRd.forEach((w) => { w.userData.disc.material = T.surf(fresh ? { key: 'freshwheel', color: 0xfff4dc, rim: 0.6 } : { key: 'wheel-rd', color: 0xef4b5f, rim: 0.6 }); });
+  const fresh = S.freshParts, srcSq = S.compiled < 0.5;
+  const mSrc = T.surf({ key: 'freshwheel', color: 0xfff4dc, rim: 0.6, spec: 0 }), mCmp = T.surf({ key: 'wheel-rd', color: 0x0b5e46, rim: 0.6, spec: 0 });
+  K_.wheelsSq.forEach((w) => { w.userData.cube.material = srcSq ? mSrc : T.surf({ key: 'wheel-sq', color: 0x0b5e46, rim: 0.6, spec: 0 }); });
+  K_.wheelsRd.forEach((w) => { w.userData.disc.material = fresh ? mSrc : mCmp; });
   K_.coneM.material = T.surf(fresh ? { key: 'freshcone', color: 0xfff4dc, rim: 0.6 } : { key: 'cone-cmp', color: 0x10b981, rim: 0.6 });
   K_.keyBow.rotation.x = (S.keySpin || 0) + (F >= K.go1 && F < K.lap2[0] ? F * 0.4 : F >= K.go2 && F < K.cross ? F * 0.9 : 0);
 }
+/** Tok's painted mouth in world space (a little out in front of the balloon, towards the lens) */
 function tokMouth() {
   const S = st.tok, yaw = S.yaw;
-  return [S.pos[0] + Math.sin(yaw) * 0.45, S.pos[1] + 1.0, S.pos[2] + Math.cos(yaw) * 0.45];
+  return [S.pos[0] + Math.sin(yaw) * 0.42, S.pos[1] + 0.86 * (1 - (S.sq || 0)), S.pos[2] + Math.cos(yaw) * 0.42];
 }
 /** place a group on an arc from a world point (Tok's mouth) to a local slot of Kern's body */
 function placeFlying(g, fromW, slot, u, n) {
   const K_ = T.kern;
   const toW = K_.body.localToWorld(V(...slot));
   const e = sm(u);
-  const p = [lerp(fromW[0], toW.x, e), lerp(fromW[1], toW.y, e) + 0.7 * Math.sin(Math.PI * u), lerp(fromW[2], toW.z, e)];
+  // arc up and out towards the lens, so a token in flight reads against the wall, never across Tok's face
+  const mid = [(fromW[0] + toW.x) / 2, 0, (fromW[2] + toW.z) / 2], ml = Math.hypot(mid[0], mid[2]) || 1, bulge = 0.2 * Math.sin(Math.PI * u);
+  const p = [lerp(fromW[0], toW.x, e) + mid[0] / ml * bulge, lerp(fromW[1], toW.y, e) + 0.75 * Math.sin(Math.PI * Math.min(1, u * 1.3)) * (u < 0.77 ? 1 : Math.max(0, 1 - (u - 0.77) / 0.23)), lerp(fromW[2], toW.z, e) + mid[2] / ml * bulge];
   const loc = K_.body.worldToLocal(V(...p));
   g.position.copy(loc);
   g.rotation.set(0, 0, (1 - u) * (2 + n) * 1.3);
   const pop = u < 0.2 ? 0.4 + 3 * u : 1 + 0.25 * Math.sin(Math.PI * clamp((u - 0.85) / 0.15));
   g.scale.setScalar(pop);
+}
+
+// ---- the operator card: off the stack, shown to the lens, laid on the bench, then Kern's racing number plate
+const PLATE = { pos: [-0.02, 0.0, 0.305], s: 0.62 };
+function updateOpCard(F) {
+  const C = T.opCard.root, kb = T.kern.body, Sk = st.kern;
+  const onKern = F >= K.plate[1] && Sk.vis;
+  if (onKern) {
+    if (C.parent !== kb) kb.add(C);
+    C.visible = true; C.position.set(...PLATE.pos); C.rotation.set(0, 0, 0); C.scale.setScalar(PLATE.s / T.kern.scale);
+    return;
+  }
+  if (C.parent !== T.scene) T.scene.add(C);
+  C.visible = F < K.plate[1];
+  if (!C.visible) return;
+  C.scale.setScalar(1);
+  const tk = st.tok, fwd = [Math.sin(tk.yaw), 0, Math.cos(tk.yaw)];
+  const flat = new T.THREE.Quaternion().setFromEuler(new T.THREE.Euler(-Math.PI / 2, faceOut(B1.thTok) + 0.2, 0, 'YXZ'));
+  const side = [Math.cos(tk.yaw), 0, -Math.sin(tk.yaw)];      // Tok's local +x (screen right when it faces the lens)
+  const held = [tk.pos[0] + fwd[0] * 0.5 - side[0] * 0.72, tk.pos[1] + 1.28, tk.pos[2] + fwd[2] * 0.5 - side[2] * 0.72];   // up beside its face
+  const heldQ = new T.THREE.Quaternion().setFromEuler(new T.THREE.Euler(-0.08 + 0.05 * Math.sin(F * 0.7), tk.yaw, 0.04 * Math.sin(F * 0.5), 'YXZ'));
+  const restQ = new T.THREE.Quaternion().setFromEuler(new T.THREE.Euler(-Math.PI / 2, faceOut(B1.thTok) - 0.3, 0, 'YXZ'));
+  const set = (p, q) => { C.position.set(...p); C.quaternion.copy(q); };
+  const arc = (a, b, u, h) => a.map((v, i) => lerp(v, b[i], sm(u)) + (i === 1 ? h * Math.sin(Math.PI * u) : 0));
+  const top = [B1.stackTop[0], B1.stackTop[1] + 0.01, B1.stackTop[2]];
+  if (F < K.pull[0] + 2) return set(top, flat);
+  if (F < K.show[0]) { const u = sg(F, K.pull[0] + 2, K.show[0]); return set(arc(top, held, u, 0.35), flat.clone().slerp(heldQ, sm(u))); }
+  if (F < K.cardDown[0]) { set(held, heldQ); C.scale.setScalar(1 + 0.3 * ob(sg(F, K.show[0], K.show[0] + 5))); return; }
+  if (F < K.plate[0]) { const u = sg(F, K.cardDown[0], K.cardDown[1]); set(arc(held, B1.cardRest, u, 0.25), heldQ.clone().slerp(restQ, sm(u))); C.scale.setScalar(1.3 - 0.3 * sm(u)); return; }
+  // flips up and slaps onto Kern's side
+  const u = sg(F, K.plate[0], K.plate[1]);
+  kb.updateMatrixWorld(true);
+  const toP = kb.localToWorld(V(...PLATE.pos)), toQ = kb.getWorldQuaternion(new T.THREE.Quaternion());
+  set(arc(B1.cardRest, toP.toArray(), u, 0.4), restQ.clone().slerp(toQ, sm(u)));
+  C.scale.setScalar(lerp(1, PLATE.s, sm(u)));
 }
 
 // ---- Oro
@@ -292,6 +334,17 @@ function updateStations(F) {
   setMap(g.lintel, g.faces[G.face][vb(F)]);
   g.lamp.material.uniforms.uAlbedo.value.set(...(G.lamp === 'coral' ? [0.94, 0.29, 0.37] : G.lamp === 'emerald' ? [0.06, 0.73, 0.5] : [0.98, 0.93, 0.8]));
   g.root.position.y = G.shake * 0.03 * Math.sin(F * 3.1);
+  g.lintel.rotation.z = 0.16 * G.nod;
+  // the close-up press: a mitt comes down on the crooked token and squashes it flat
+  const mt = T.mitt.root;
+  mt.visible = F >= K.closeup[0] + 2 && F < K.closeup[1];
+  if (mt.visible) {
+    const cw = T.kern.body.localToWorld(V(0.1, 0.34, 0.02));
+    const down = sg(F, K.closeup[0] + 2, K.press[0], ease.inCubic) * (1 - sg(F, K.press[1], K.closeup[1], sm));
+    mt.position.set(cw.x, cw.y + 0.12 + 0.9 * (1 - down), cw.z); mt.rotation.set(0.15, 0, -0.25);
+    const sq = F >= K.press[0] && F < K.press[1] ? 0.25 * Math.sin(Math.PI * sg(F, K.press[0], K.press[1])) : 0;
+    T.mitt.hand.scale.set(1 + sq * 0.6, 1 - sq, 1 + sq * 0.6);
+  }
   // weigh-in
   const W = scaleState(F), w = T.weigh;
   st.weigh = W;
@@ -299,7 +352,8 @@ function updateStations(F) {
   w.pans.forEach((P) => { const bx = P.side * w.span; P.g.position.set(bx * Math.cos(W.tilt), 1.08 + bx * Math.sin(W.tilt), 0); });
   w.needle.rotation.z = W.needle;
   w.flag.visible = W.flag > 0.01;
-  w.flag.scale.set(1, Math.max(0.01, W.flag), 1);
+  w.flag.scale.set(Math.max(0.01, W.flag), Math.max(0.01, W.flag), 1);
+  w.flood.visible = W.flood > 0.02; w.flood.scale.setScalar(Math.max(0.02, W.flood));
   w.flagCloth.rotation.y = 0.2 * Math.sin(F * 0.5);
   // the output block: ejected from Kern's tail onto the left pan (B3), again in lap 2
   const ob_ = T.outBlock, leftPan = w.pans[0].g; leftPan.updateMatrixWorld(true);
@@ -349,7 +403,7 @@ function updateStations(F) {
     const uu = sg(F, K.speak2[0] + i * 3, K.speak2[0] + i * 3 + 8);
     gq.visible = uu > 0 && uu < 1 && st.kern.vis;
     if (!gq.visible) return;
-    const slot = i < 4 ? T.kern.wheelsRd[i].position.toArray() : [0.76, 0.02, 0];
+    const slot = i < 4 ? T.kern.wheelsRd[i].position.toArray() : [0.74, -0.08, 0];
     const toW = T.kern.body.localToWorld(V(...slot));
     const e = sm(uu);
     gq.position.set(lerp(mouth[0], toW.x, e), lerp(mouth[1], toW.y, e) + 0.6 * Math.sin(Math.PI * uu), lerp(mouth[2], toW.z, e));
@@ -410,7 +464,7 @@ export function drawNPR(ctx) {
   fl(K.hold[0] + 2, K.hold[1] - K.hold[0] - 2, polar(L2 + A.finish, R.track, 0.45), 380, 0.7, 5);
   if (F >= K.slam - 4 && F < K.away[0]) npr.pointLight(V(...polar(A.words, 3.6, 2.4)), { color: 0xffc23d, radius: 3.6, i: 0.5 * sm((F - K.slam + 4) / 8) });
   if (F >= K.ripple[0] && F < K.ripple[1] + 10) npr.pointLight(V(...polar(A.gate + 0.1, R.ours, 0.6)), { color: 0x34d399, radius: 1.6, i: 0.6 * (1 - sg(F, K.ripple[1], K.ripple[1] + 10)) });
-  if (st.gate.lamp !== 'off') npr.glowAt(ctx, camera, T.gate.lamp.getWorldPosition(V(0, 0, 0)), { radius: 0.3, i: 0.7, color: st.gate.lamp === 'coral' ? 0xef4b5f : 0x10b981, behind: true, seed: 2 });
+  if (st.gate.lamp !== 'off') npr.glowAt(ctx, camera, T.gate.lamp.getWorldPosition(V(0, 0, 0)), { radius: 0.55, i: 1.0, color: st.gate.lamp === 'coral' ? 0xef4b5f : 0x10b981, behind: true, seed: 2 });
   npr.render(T.scene, camera);
 }
 
@@ -445,12 +499,12 @@ export function drawMarks(ctx, g) {
   const ca = F - K.clang;
   if (ca >= 0 && ca < 26) {
     const p = prj(ctx, polar(A.gate - 0.08, R.ours + 0.2, 2.3));
-    const x = clamp(p.x - 260, 330, 1250), y = clamp(p.y - 40, 240, 520);
-    comicWord(g, 'CLANG!', x, y, 170, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.14, r, pop: ca / 4, alpha: 1 - sg(ca, 20, 26), perLetter: (i) => (ca - i * 0.8) / 3 });
+    const x = clamp(p.x - 260, 330, 1250), y = clamp(p.y + 20, 330, 560), c2 = ca - 2;   // top of the lettering below the card crop
+    comicWord(g, 'CLANG!', x, y, 150, { fill: PAL.coral, shade: PAL.coralDk, rot: -0.12, r, pop: c2 / 4, alpha: 1 - sg(ca, 20, 26), perLetter: (i) => (c2 - i * 0.8) / 3 });
   }
   const pf = (f0, p, s0) => { const a = F - f0; if (a < 0 || a >= 9) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); for (const sd of [-1, 1]) puff(g, q.x + sd * (u * 0.3 + a * 3), q.y - a, u * s0 * (1 + a * 0.08), 1 - a / 9, r); };
-  pf(K.hopOff[1], polar(A.bench + 0.16, R.ours, 0.02), 0.12);
-  pf(K.skid, polar(A.bench + 0.02, R.tokBench, 0.02), 0.14);
+  pf(K.hopOff[1], polar(A.bench + 0.2, R.ours, 0.02), 0.12);
+  pf(K.skid, [B1.tok[0], 0.02, B1.tok[2]], 0.14);
   pf(K.lap2[1] - 4, polar(L2 + A.start, R.ours, 0.02), 0.12);
   // square-wheel THUNK ticks under the wheels on each flat landing
   if (st.kern.vis && st.kern.lurch && !st.kern.round && F >= K.drive1[0] && F < K.kernRun1[1]) {

@@ -15,11 +15,11 @@ export const L2 = TAU;   // lap 2 offset
 // ------------------------------------------------------------------------------------------------
 export const K = {
   // B1 write
-  skid: 8, lookUp: [10, 26], gulp: 18, crack: [26, 38], speak: [40, 64], tokEvery: 3, tokFly: 9,
-  wheels: [58, 66], cow: 64, eyes: 70, wind: [72, 84], hopOff: [86, 95],
+  skid: 8, lookUp: [10, 22], gulp: 15, pull: [22, 28], show: [28, 38], cardDown: [38, 44], inhale: [42, 47],
+  speak: [47, 68], tokEvery: 3, tokFly: 8, wheels: [64, 72], cow: 70, plate: [74, 80], eyes: 80, wind: [81, 87], hopOff: [88, 95],
   // B2 compile
-  drive1: [96, 128], dash: [112, 131], clang: 131, flick: [133, 147], slip: [134, 150], peel: [150, 160],
-  press: [160, 168], lift: [166, 178], setDown: [164, 172], through: [172, 191], ripple: [180, 190],
+  drive1: [96, 128], dash: [112, 131], clang: 131, flick: [133, 145], slip: [134, 142], peel: [146, 154],
+  closeup: [154, 168], press: [159, 165], lift: [168, 178], through: [174, 192], ripple: [181, 190],
   // B3 verify
   toScale: [192, 214], eject: [214, 223], settle: [223, 238], flag: 240, dialPush: [244, 264],
   // B4 race 1: the oracle always runs ORO_RUN frames; Kern takes 56 (Perf@1 ~ 0.64)
@@ -47,6 +47,18 @@ export const headingAt = (th) => th + Math.PI / 2;
 /** rotation.y of something built facing +z (faces) so it faces outward, towards a camera outside the ring */
 export const faceOut = (th) => th + Math.PI / 2;
 const wrapF = (F) => ((F % NF) + NF) % NF;
+/** B1 spots, from the bench station's layout (x along the track, z outward; see buildBench) */
+const bx = (x) => A.bench + x / R.bench;
+/** B2: where Tok waits behind Kern at the gate, and where Kern lands after the CLANG (in front of Tok, nearer the lens) */
+export const B2 = { thStop: A.gate - 0.105 };
+B2.tok = polar(B2.thStop - 0.33, R.ours - 0.3, 0); B2.land = polar(B2.thStop - 0.17, R.ours + 0.3, 0);
+export const B1 = {
+  tok: polar(bx(-0.55), R.bench + 0.08, 0),            // Tok stands between the stack and the bench, nothing in front of it
+  kern: polar(bx(1.05), R.bench, 0.8),                  // Kern is built on the bench top
+  stackTop: polar(bx(-1.75), R.bench + 0.05, 1.655),     // the top card of the 164 stack
+  cardRest: polar(bx(0.42), R.bench + 0.2, 0.812),      // where Tok lays the operator card down
+  thTok: bx(-0.55), thKern: bx(1.05),
+};
 /** the photo-finish hold: every character is frozen on the crossing frame */
 const held = (F) => (F >= K.hold[0] && F < K.hold[1] ? K.hold[0] : F);
 
@@ -102,10 +114,10 @@ export function kernState(F) {
   S.cow = sg(F, K.press[0], K.press[1], sm);
   if (F < K.speak[0]) { S.vis = false; return S; }
   // ---- B1: built on the bench top, then hops down to the lane
-  const benchTop = polar(A.bench + 0.1, R.bench - 0.05, 0.8);
-  const laneStart = lanePos(A.bench + 0.16);
+  const benchTop = B1.kern;
+  const laneStart = lanePos(A.bench + 0.2);
   if (F < K.hopOff[0]) {
-    S.pos = benchTop; S.yaw = headingAt(A.bench) + 0.35; S.onBench = true;
+    S.pos = benchTop; S.yaw = headingAt(B1.thKern) - 0.4; S.onBench = true;      // nose and plate side 3/4 to the lens
     S.face = F < K.eyes ? 'shut' : F < K.eyes + 8 ? 'wide' : 'calm';
     if (F >= K.wind[0] && F < K.wind[1]) { const k = (F - K.wind[0]) % 4; S.sq = k < 2 ? 0.1 : -0.04; S.keySpin = (F - K.wind[0]) / 4 * Math.PI; S.face = 'squint'; }
     if (F >= K.eyes && F < K.eyes + 6) S.sq = take(F, K.eyes, 0.8);
@@ -115,7 +127,7 @@ export function kernState(F) {
     const u = (F - K.hopOff[0]) / (K.hopOff[1] - K.hopOff[0]);
     S.pos = benchTop.map((v, i) => lerp(v, laneStart[i], sm(u)));
     S.pos[1] += 0.5 * Math.sin(Math.PI * u);
-    S.yaw = lerp(headingAt(A.bench) + 0.35, headingAt(A.bench + 0.16), sm(u));
+    S.yaw = lerp(headingAt(B1.thKern) - 0.4, headingAt(A.bench + 0.2), sm(u));
     S.sq = u < 0.2 ? 0.12 : -0.1 * Math.sin(Math.PI * u);
     S.face = 'determined';
     return S;
@@ -124,39 +136,36 @@ export function kernState(F) {
   const thGateStop = A.gate - 0.105;
   if (F < K.clang) {
     const u = sg(F, K.drive1[0], K.drive1[1]);
-    const th = lerp(A.bench + 0.16, thGateStop, u * 0.35 + 0.65 * u * u);
-    const sb = squareBob((th - (A.bench + 0.16)) * R.ours);
+    const th = lerp(A.bench + 0.2, thGateStop, u * 0.35 + 0.65 * u * u);
+    const sb = squareBob((th - (A.bench + 0.2)) * R.ours);
     S.pos = lanePos(th, R.ours, sb.bob); S.yaw = headingAt(th); S.wheelAng = sb.ang; S.lurch = sb.thunk ? 1 : 0;
     S.pitch = 0.08 * Math.sin(sb.ang * 4);
     S.face = F > K.clang - 6 ? 'wide' : 'determined';
     return S;
   }
-  const tokCatch = tokState(K.flick[1]).hands;   // where Tok's mitts are at the catch
-  if (F < K.flick[1]) {    // bounce off the bars, flicked back in an arc, spinning
+  if (F < K.flick[1]) {    // bounces off the bars, back in two hops, lands on the ground in front of Tok, spinning
     const u = (F - K.clang) / (K.flick[1] - K.clang);
-    const a = lanePos(thGateStop, R.ours, 0);
-    S.pos = [lerp(a[0], tokCatch[0], sm(u)), lerp(0, tokCatch[1] - 0.25, u) + 0.9 * Math.sin(Math.PI * u), lerp(a[2], tokCatch[2], sm(u))];
-    S.yaw = headingAt(thGateStop) + TAU * ob(u) * 0.9; S.roll = 0.6 * Math.sin(Math.PI * u);
-    S.face = 'dizzy'; S.sq = F < K.clang + 3 ? 0.25 : 0;
+    const a = lanePos(thGateStop, R.ours, 0), b = B2.land;
+    const h = u < 0.65 ? 0.85 * Math.sin(Math.PI * u / 0.65) : 0.22 * Math.sin(Math.PI * (u - 0.65) / 0.35);
+    S.pos = [lerp(a[0], b[0], sm(u)), h, lerp(a[2], b[2], sm(u))];
+    S.yaw = headingAt(thGateStop) + TAU * ob(u); S.roll = 0.5 * Math.sin(Math.PI * u);
+    S.face = 'dizzy'; S.sq = F < K.clang + 3 ? 0.25 : Math.abs(u - 0.65) < 0.06 ? 0.2 : 0;
     return S;
   }
-  if (F < K.setDown[1]) {  // in Tok's mitts: held, cowlick pressed flat, then set down
-    const h = tokState(F).hands;
-    const u = sg(F, K.setDown[0], K.setDown[1], sm);
-    const down = lanePos(thGateStop - 0.1, R.ours, 0);
-    S.pos = [lerp(h[0], down[0], u), lerp(h[1] - 0.25, 0, u), lerp(h[2], down[2], u)];
-    S.yaw = headingAt(thGateStop) + 0.4 * (1 - u);
-    S.face = F < K.press[0] ? 'dizzy' : F < K.press[1] + 2 ? 'squint' : 'calm';
-    if (F >= K.press[0] && F < K.press[1]) S.sq = 0.18 * Math.sin(Math.PI * sg(F, K.press[0], K.press[1]));
+  if (F < K.through[0]) {  // sits dizzy in front of Tok; the crooked token is pressed flat (close-up), then it perks up
+    S.pos = B2.land; S.yaw = headingAt(thGateStop) - 0.35;
+    if (F < K.flick[1] + 6) S.sq = ringv(F - K.flick[1], 0.2, 0.9, 0.25);
+    S.face = F < K.press[0] ? 'dizzy' : F < K.press[1] + 2 ? 'squint' : F < K.lift[0] ? 'calm' : 'determined';
+    if (F >= K.press[0] && F < K.press[1]) S.sq = 0.2 * Math.sin(Math.PI * sg(F, K.press[0], K.press[1]));
     return S;
   }
   // through the gate (still square wheels) and on towards the weigh-in
   const thAfter = A.gate + 0.42;
   if (F < K.toScale[0]) {
     const u = sg(F, K.through[0], K.toScale[0]);
-    const th = lerp(thGateStop - 0.1, thAfter, u);
+    const th = lerp(thGateStop - 0.17, thAfter, u);
     const sb = squareBob((th - thGateStop) * R.ours);
-    S.pos = lanePos(th, R.ours, sb.bob); S.yaw = headingAt(th); S.wheelAng = sb.ang; S.lurch = sb.thunk ? 1 : 0;
+    S.pos = lanePos(th, R.ours + 0.3 * (1 - sm(u * 2.5)), sb.bob); S.yaw = headingAt(th); S.wheelAng = sb.ang; S.lurch = sb.thunk ? 1 : 0;
     S.face = F >= K.ripple[0] && F < K.ripple[1] + 6 ? 'wide' : 'happy';
     return S;
   }
@@ -282,14 +291,14 @@ function pogo(F, f0, f1, P0, P1, nh = 3, h = 0.35) {
 export function tokState(F) {
   F = held(F);
   const S = { face: 'calm', sq: 0, lean: 0, armL: 0.35, armR: -0.35, armLz: 0, armRz: 0, lookUp: 0, speak: 0, tilt: 0, vis: true };
-  const benchSpot = polar(A.bench - 0.02, R.tokBench, 0);
-  const yawBench = faceOut(A.bench - 0.02);
-  // ---- B9 -> B1: arrives from the finish (whip), skids at the bench
+  const benchSpot = B1.tok;
+  const yawBench = faceOut(B1.thTok) + 0.3;                  // faces the lens, turned a little towards the bench
+  // ---- B9 -> B1: arrives from the finish (whip), skids beside the stack
   const Fw = F >= K.away[0] ? F - NF : F;
   if (Fw < K.skid) {
     const fromP = polar(A.finish + 0.35 - L2, 7.4, 0);
     const P = pogo(Fw, K.away[0] - NF, K.skid, fromP, benchSpot, 4, 0.4);
-    S.pos = P.pos; S.sq = Fw > K.skid - 3 ? 0.2 : P.sq; S.yaw = lerp(headingAt(A.finish) , yawBench, sm((Fw - K.away[0] + NF) / 30)); S.lean = -0.25;
+    S.pos = P.pos; S.sq = Fw > K.skid - 3 ? 0.2 : P.sq; S.yaw = lerp(headingAt(A.finish), yawBench, sm((Fw - K.away[0] + NF) / 30)); S.lean = -0.25;
     S.face = 'determined';
     S.hands = [S.pos[0], S.pos[1] + 0.9, S.pos[2]];
     return S;
@@ -297,47 +306,51 @@ export function tokState(F) {
   if (F < K.hopOff[1] + 2) {
     S.pos = benchSpot; S.yaw = yawBench;
     if (F < K.skid + 6) S.sq = ringv(F - K.skid, 0.2, 0.9, 0.25);
-    // look up at the stack (it stands to Tok's right), gulp
-    if (F >= K.lookUp[0] && F < K.crack[0]) { S.lookUp = sm((F - K.lookUp[0]) / 5) * (1 - sm((F - K.crack[0] + 3) / 3)); S.yaw = yawBench - 0.75 * S.lookUp; S.face = F < K.gulp ? 'wide' : 'gulp'; S.tilt = 0.1 * S.lookUp; }
+    // looks up at the 164 stack beside it (to its right, screen left) and gulps
+    if (F >= K.lookUp[0] && F < K.show[0]) { S.lookUp = sm((F - K.lookUp[0]) / 4) * (1 - sm((F - K.pull[1] + 2) / 3)); S.yaw = yawBench - 1.0 * sm((F - K.lookUp[0]) / 4); S.face = F < K.gulp ? 'wide' : 'gulp'; S.tilt = 0.1 * S.lookUp; }
     if (F >= K.gulp && F < K.gulp + 6) S.sq = 0.1 * Math.sin(Math.PI * (F - K.gulp) / 6);
-    // crack knuckles + inhale (balloon swells)
-    if (F >= K.crack[0] && F < K.speak[0]) { const u = sg(F, K.crack[0], K.speak[0]); S.face = 'determined'; S.armL = 1.2; S.armR = -1.2; S.armLz = 0.9; S.armRz = -0.9; S.sq = -0.14 * sm(u); if (F < K.crack[0] + 8 && (F - K.crack[0]) % 4 < 2) S.armLz += 0.2; }
-    // speak the tokens: the balloon pumps once per token
-    if (F >= K.speak[0] && F < K.speak[1] + 4) { const k = (F - K.speak[0]) % K.tokEvery; S.speak = 1; S.face = k < 2 ? 'speak' : 'speak2'; S.sq = k < 1 ? 0.1 : -0.05; S.lean = 0.12; S.armL = 0.6; S.armR = -0.6; }
-    if (F >= K.speak[1] + 4 && F < K.wind[0]) { S.face = 'happy'; }
-    if (F >= K.wind[0] && F < K.wind[1]) { S.face = 'determined'; S.armR = -1.6 + 0.4 * Math.sin((F - K.wind[0]) * Math.PI / 2); S.lean = 0.2; }
+    // takes the top card off the stack ...
+    if (F >= K.pull[0] && F < K.show[0]) { S.face = 'determined'; S.armL = lerp(0.35, 2.7, sm(sg(F, K.pull[0], K.pull[0] + 3))) - 1.3 * sm(sg(F, K.pull[1] - 2, K.pull[1] + 1)); S.armLz = 0.3; }
+    // ... and holds it up to the lens: THIS operator
+    if (F >= K.show[0] && F < K.cardDown[0]) { const u = sg(F, K.show[0], K.show[0] + 4, sm); S.yaw = lerp(yawBench - 1.0, yawBench - 0.3, u); S.face = 'determined'; S.armL = 2.3; S.armR = -0.5; S.armLz = 0.6; S.armRz = 0; S.sq = take(F, K.show[0] + 1, 0.4); }
+    // lays it on the bench, inhales (the balloon swells) ...
+    if (F >= K.cardDown[0] && F < K.speak[0]) { S.armR = -1.1; S.armRz = -0.6; S.lean = 0.1; S.face = F < K.inhale[0] ? 'calm' : 'determined'; S.sq = -0.16 * sg(F, K.inhale[0], K.speak[0], sm); }
+    // ... and speaks the tokens: O-mouth, the balloon pumps once per token
+    if (F >= K.speak[0] && F < K.speak[1] + 3) { const k = (F - K.speak[0]) % K.tokEvery; S.speak = 1; S.face = k < 2 ? 'speak2' : 'speak'; S.sq = k < 1 ? 0.12 : -0.06; S.lean = 0.14; S.armL = 0.7; S.armR = -0.9; }
+    if (F >= K.speak[1] + 3 && F < K.wind[0]) { S.face = 'happy'; if (F >= K.plate[0] && F < K.plate[1]) { S.armR = -1.3; S.armRz = -0.7; } }
+    if (F >= K.wind[0] && F < K.wind[1]) { S.face = 'determined'; S.armR = -1.5 + 0.35 * Math.sin((F - K.wind[0]) * Math.PI / 2); S.armRz = -0.4; S.lean = 0.2; }
     if (F >= K.hopOff[0]) { S.face = 'happy'; S.armR = -2.4; S.armRz = -0.4; }
     S.hands = [S.pos[0], 0.9, S.pos[2]];
     return S;
   }
-  // ---- B2: follows Kern towards the gate (behind it, same lane), catches it, fixes it
-  const thGateStop = A.gate - 0.105;
-  const catchP = polar(thGateStop - 0.27, R.ours, 0);
+  // ---- B2: follows Kern towards the gate; CLANG; the error slip slaps its face; peels and reads it; fixes the token
+  const thGateStop = B2.thStop;
+  const catchP = B2.tok;
+  const yawG = faceOut(thGateStop - 0.33) + 0.45;              // faces the lens, turned towards Kern and the gate
   if (F < K.lift[1] + 6) {
     if (F < K.flick[1]) {
-      const P = pogo(F, K.drive1[0] + 4, K.flick[1] - 4, polar(A.bench + 0.06, 7.2, 0), catchP, 6, 0.3);
-      S.pos = P.pos; S.sq = P.sq; S.yaw = headingAt(lerp(A.bench, thGateStop, 0.6)); S.face = F < K.clang ? 'calm' : 'wide';
-      if (F >= K.clang && F < K.clang + 6) S.sq = take(F, K.clang, 0.7);
-      S.armL = F >= K.clang + 6 ? 1.3 : 0.35; S.armR = F >= K.clang + 6 ? -1.3 : -0.35;
+      const P = pogo(F, K.drive1[0] + 4, K.clang - 2, B1.tok, catchP, 6, 0.3);
+      S.pos = P.pos; S.sq = P.sq; S.yaw = F < K.clang - 2 ? headingAt(lerp(A.bench, thGateStop, 0.6)) : lerp(headingAt(thGateStop), yawG, sg(F, K.clang - 2, K.clang + 6, sm));
+      S.face = F < K.clang ? 'calm' : 'wide';
+      if (F >= K.clang && F < K.clang + 6) S.sq = take(F, K.clang, 0.8);
+      if (F >= K.slip[1]) { S.armL = 2.6; S.armR = -2.6; S.face = 'shut'; }       // splat: the slip is on its face
     } else {
-      S.pos = catchP; S.yaw = headingAt(thGateStop) + 0.9;
-      S.armL = 1.25; S.armR = -1.25; S.armLz = 0.5; S.armRz = -0.5;
-      if (F < K.flick[1] + 6) S.sq = ringv(F - K.flick[1], 0.18, 0.9, 0.25);
-      S.face = F < K.peel[0] ? 'squint' : F < K.peel[1] ? 'think' : F < K.press[0] ? 'wide' : F < K.press[1] ? 'determined' : 'happy';
-      if (F >= K.peel[0] && F < K.peel[1]) { S.armL = 2.2; S.armLz = 0.2; }
-      if (F >= K.press[0] && F < K.press[1]) { S.armR = -0.9; S.armRz = -1.0; }
-      if (F >= K.setDown[1]) { S.armL = 0.4; S.armR = -2.3; S.armLz = 0; S.armRz = 0; S.face = 'happy'; }
+      S.pos = catchP; S.yaw = yawG;
+      S.face = F < K.peel[0] ? 'shut' : F < K.peel[1] ? 'think' : F < K.lift[0] ? 'determined' : 'happy';
+      if (F < K.peel[0]) { S.armL = 2.6 - 0.4 * Math.sin(F * 1.3); S.armR = -2.6 + 0.4 * Math.sin(F * 1.1); }
+      if (F >= K.peel[0] && F < K.peel[1]) { S.armL = lerp(2.4, 1.3, sg(F, K.peel[0], K.peel[0] + 3)); S.armLz = 0.9; S.lookUp = -0.3; }
+      if (F >= K.peel[1] && F < K.lift[0]) { S.lean = 0.3; S.lookUp = -0.35; S.armR = -1.0; S.armRz = -0.9; }   // leans over Kern
+      if (F >= K.lift[0]) { S.armL = 0.4; S.armR = -2.3; S.face = 'happy'; if (F < K.lift[0] + 8) S.sq = take(F, K.lift[0], 0.5); }
     }
-    const fw = [Math.cos(S.yaw), 0, -Math.sin(S.yaw)];    // local +x in world
-    const fz = [Math.sin(S.yaw), 0, Math.cos(S.yaw)];     // local +z (face) in world
-    S.hands = [S.pos[0] + fz[0] * 0.55, S.pos[1] + 0.95, S.pos[2] + fz[2] * 0.55];
+    S.hands = [S.pos[0], S.pos[1] + 0.95, S.pos[2]];
     return S;
   }
   // ---- B3 .. B4: hops along the infield kerb behind the action; watches the weigh-in and the race
   const kerb = (th) => polar(th, R.kerb, 0);
   if (F < K.go1) {
-    const P = pogo(F, K.lift[1] + 6, K.toScale[1], catchP, kerb(A.scale - 0.05), 5, 0.3);
-    S.pos = P.pos; S.sq = P.sq; S.yaw = faceOut(A.scale - 0.05) + 0.3;
+    const spot = polar(A.scale - 0.3, 7.25, 0);                // the open side of the scale, behind Kern, in view
+    const P = pogo(F, K.lift[1] + 6, K.toScale[1], catchP, spot, 5, 0.3);
+    S.pos = P.pos; S.sq = P.sq; S.yaw = faceOut(A.scale - 0.3) + 0.45;
     S.face = F >= K.settle[0] && F < K.flag ? 'worried' : F >= K.flag ? 'happy' : 'calm';
     if (F >= K.flag && F < K.flag + 14) { S.armR = -2.4; S.sq = -0.08 * Math.sin(Math.PI * (F - K.flag) / 14); }
     if (F >= K.cut) { S.pos = polar(A.finish + 0.4, 3.9, 0); S.yaw = faceOut(A.finish + 0.4) - 0.9; S.face = 'worried'; }
@@ -383,7 +396,7 @@ export function tokState(F) {
     S.face = F < K.leap[0] ? 'wide' : 'star';
     if (F >= K.leap[0] && F < K.leap[1]) { const h = hop(F, K.leap[0] + 3, K.leap[1] - 4, 0.6); S.pos[1] += h.y; S.sq = h.sq; S.armL = 2.7; S.armR = -2.7; }
     if (F >= K.away[0]) {
-      const P = pogo(F, K.away[0], NF + K.skid, base, polar(L2 + A.bench + 0.02, R.tokBench, 0), 4, 0.4);
+      const P = pogo(F, K.away[0], NF + K.skid, base, B1.tok, 4, 0.4);
       S.pos = P.pos; S.sq = P.sq; S.yaw = headingAt(A.finish + 0.4); S.lean = -0.25; S.face = 'determined';
     }
     S.hands = [S.pos[0], 0.9, S.pos[2]];
@@ -417,22 +430,25 @@ export function gateState(F) {
   if (F >= K.gate2 - 12 && F < K.gate2 + 10) ours = 0;
   if (F < K.drive1[0] - 30 || F >= K.away[0]) { ours = 0; theirs = 0; }      // (reset while off-screen, before B2)
   if (F >= K.away[0] || F < K.clang - 2) theirs = 0;
-  const face = F >= K.clang - 6 && F < K.flick[1] ? 'angry' : F >= K.lift[0] && F < K.lift[1] + 10 ? 'ok' : F >= K.gate2 - 6 && F < K.gate2 + 8 ? 'ok' : F > K.lift[1] + 10 && F < K.lap2[0] ? 'doze' : 'grump';
+  const face = F >= K.clang - 6 && F < K.lift[0] ? 'angry' : F >= K.lift[0] && F < K.lift[1] + 10 ? 'ok' : F >= K.gate2 - 6 && F < K.gate2 + 8 ? 'ok' : F > K.lift[1] + 10 && F < K.lap2[0] ? 'doze' : 'grump';
   const lamp = F >= K.clang - 4 && F < K.lift[0] ? 'coral' : (F >= K.lift[0] && F < K.lift[1] + 16) || (F >= K.gate2 - 6 && F < K.gate2 + 10) ? 'emerald' : 'off';
-  const bat = F >= K.clang + 1 && F < K.flick[0] + 8 ? Math.sin(Math.PI * sg(F, K.clang + 1, K.flick[0] + 8)) : 0;
-  return { ours: clamp(ours), theirs: clamp(theirs), face, lamp, bat, shake: F >= K.clang && F < K.clang + 8 ? Math.exp(-(F - K.clang) / 3) : 0 };
+  const bat = 0;
+  const nod = F >= K.lift[0] && F < K.lift[0] + 10 ? Math.sin(Math.PI * sg(F, K.lift[0], K.lift[0] + 10)) : F >= K.gate2 - 4 && F < K.gate2 + 6 ? Math.sin(Math.PI * sg(F, K.gate2 - 4, K.gate2 + 6)) : 0;
+  return { ours: clamp(ours), theirs: clamp(theirs), face, lamp, bat, nod, shake: F >= K.clang && F < K.clang + 8 ? Math.exp(-(F - K.clang) / 3) : 0 };
 }
 
 export function scaleState(F) {
-  // beam tilt (rad, + = left pan down), needle angle, flag
-  let tilt = 0, flag = 0, blockL = 0;
+  // beam tilt (rad, + = left pan down), needle angle, flag, PASS flood. With only the reference block on the right pan the
+  // beam hangs right-down and the needle is pegged in the coral; when Kern's output lands it swings, overshoots, settles.
+  const TILT0 = 0.2, swing = (a) => -TILT0 * Math.exp(-a / 6) * Math.cos(a * 0.5);
+  let tilt = -TILT0, flag = 0, blockL = 0, flood = 0;
   const first = F >= K.eject[1] && F < K.cut + 30;
   const second = F >= K.scale2 && F < K.side2[0];
-  if (first) { const a = F - K.eject[1]; tilt = 0.22 * Math.exp(-a / 5) * Math.cos(a * 0.55); blockL = 1; }
-  if (second) { const a = F - K.scale2; tilt = 0.1 * Math.exp(-a / 3) * Math.cos(a * 0.7); blockL = 1; }
-  if (F >= K.flag && F < K.cut + 20) flag = ob((F - K.flag) / 6);
-  if (F >= K.scale2 + 3 && F < K.side2[0]) flag = ob((F - K.scale2 - 3) / 5);
-  return { tilt, needle: -tilt * 1.6, flag, blockL };
+  if (first) { tilt = swing(F - K.eject[1]); blockL = 1; }
+  if (second) { tilt = swing((F - K.scale2) * 1.6); blockL = 1; }
+  if (F >= K.flag && F < K.cut + 20) { flag = ob((F - K.flag) / 6); flood = sg(F, K.flag - 2, K.flag + 5, sm) * (1 - 0.6 * sg(F, K.flag + 14, K.flag + 22, sm)); }
+  if (F >= K.scale2 + 5 && F < K.side2[0]) { flag = ob((F - K.scale2 - 5) / 5); flood = sg(F, K.scale2 + 3, K.scale2 + 8, sm); }
+  return { tilt, needle: tilt * 3.0, flag, blockL, flood };
 }
 
 /** stopwatch hands: angles (rad, clockwise from 12) for [coral (oracle), emerald (ours)] and the button press.
