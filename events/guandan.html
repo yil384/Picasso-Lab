@@ -416,8 +416,12 @@ function startReturnToEvents() {
     if (returnNavigationStarted) return;
     returnNavigationStarted = true;
     hideReturnTypeHint();
+    // From the room the seat is given back first (as ↩ does), so nobody waits on a ghost seat.
+    const leaving = game?.phase === "lobby" && mySeat() >= 0 ? queueRoomAction(leaveRoom) : null;
+    const go = () => Promise.race([leaving, new Promise(resolve => setTimeout(resolve, 1500))])
+        .then(() => { location.href = `${EVENTS_URL}?from=guandan`; });
     if (!returnTransition) {
-        location.href = `${EVENTS_URL}?from=guandan`;
+        go();
         return;
     }
     returnTransition.innerHTML = `
@@ -433,7 +437,7 @@ function startReturnToEvents() {
         </div>`;
     returnTransition.setAttribute("aria-hidden", "false");
     requestAnimationFrame(() => returnTransition.classList.add("active"));
-    setTimeout(() => { location.href = `${EVENTS_URL}?from=guandan`; }, 1640);
+    setTimeout(go, 1640);
 }
 
 function primeReturnKeyboardCapture() {
@@ -3744,7 +3748,10 @@ document.getElementById("copy-link-btn").addEventListener("click", async () => {
 // ↩ on the room screen gives the seat back before going to the lobby, so nobody waits on a ghost
 // seat; mid-game it is the table's 新桌 and just opens a fresh lobby.
 document.getElementById("new-room-btn").addEventListener("click", async () => {
-    if (game?.phase === "lobby") await queueRoomAction(leaveRoom);
+    if (game?.phase === "lobby" && mySeat() >= 0) {
+        showToast(L("Leaving the room…", "正在离开房间…"), 4000);
+        await Promise.race([queueRoomAction(leaveRoom), new Promise(resolve => setTimeout(resolve, 4000))]);
+    }
     location.href = GUANDAN_URL;
 });
 
