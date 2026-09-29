@@ -1,0 +1,598 @@
+<!--
+  xinwei_masterchef.html — 厨神 = 美国厨神 MasterChef USA
+  ──────────────────────────────────────────────────────────
+  Palette: studio-black #1c1a1f | masterchef-gold #e3a822 | chef-white #fbfaf6 | steel #d3d9df
+           flame #ff5a1f / #ffa21f / #ffe14d | seal-red #c8302a
+  Style:   贴纸 / 漫画 — 2px 墨线描边, 平涂 (最多 2 色), 每个元素一个投影; 不用模糊, 不发光,
+           圆外没有任何光晕或边框.
+
+  默认: 干净的原照片 (只有中性投影); hover: 整个舞台轻微上浮; 点击 (或键盘 Enter/空格) 切换 .xc-on:
+    ① 平底锅     — 锅柄握在他真实的右手 (观者左侧) 里: 真手的手指从照片里重新叠回锅柄上面,
+                   不画假手. 锅一到手就 "轰" 地 flambé 一下.
+    ② 厨房片场   — 第一团火从锅里炸开, 火光扩散处原照片背景被烧成黑金演播厅厨房
+                   (金色吊灯, 挂锅架, 调料架, 黑色砖墙, 金色腰线). 人物还是原照片:
+                   布景按他的轮廓挖空 (内联矢量路径, 无额外图片), 轮廓只描一圈细墨线.
+    ③ 料理台     — 不锈钢灶台从圆底升起 (金线, 旋钮, 砧板), 台前一枚小小的 "厨神" 朱印.
+    ④ 厨师帽     — 高筒褶皱厨师帽落在头顶, 落地只轻轻一压, 帽檐不会压到眼镜.
+    ⑤ 围裙+领巾  — 白色参赛围裙, 黑金胸徽 (金色厨师帽), 红色领巾系在真实领口.
+    ⑥ 主厨刀     — 握在他真实的左手 (观者右侧) 里, 刀尖搭在砧板上; 真手的拳头同样叠在刀柄上.
+    ⑦ Flambé     — 每 3.2 s 一团大火 (只占节拍的 ~20%) + 火星 + 锅轻颠 + 刀光一闪;
+                   间隙里锅上只留小火苗, 冒两缕蒸汽.
+    ⑧ 金奖杯     — 冠军奖杯立在右上调料架上, 在吊灯光束里, 每拍中段闪一下.
+    ⑨ YES, CHEF! — 从他嘴边冒出的漫画对白气泡, 每次开启只喊一次, 然后退场.
+
+  微调 (改下方 style="" 里的数字):
+    --hat-x / --hat-y / --hat-rot   厨师帽位置 / 歪戴角度
+-->
+
+<div class="xc-wrap" role="button" tabindex="0" aria-pressed="false"
+     aria-label="Xinwei — 厨神 MasterChef effect" style="
+    --avatar-size: 200px;
+    --hat-x: 0px;
+    --hat-y: -1px;
+    --hat-rot: 0deg;
+  ">
+  <div class="xc-stage">
+
+    <!-- ② photo + kitchen set (both clipped by the circle) -->
+    <div class="xc-photo">
+      <img src="https://yil384.github.io/Picasso-Lab/people/static/xinwei.webp"
+           class="avatar xc-avatar" alt="avatar"/>
+
+      <svg class="xc-set" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+        <defs>
+          <!-- traced silhouette of him (matte → potrace), stage coordinates -->
+          <path id="xcSil" d="M97.2 46.7C94.6 47.6 90.5 51.3 89.3 54C88.6 55.2 88.2 58 88.3 60.8C88.4 62.4 88.5 62.8 89.6 65.4C90.6 68.3 90.6 68.4 90.3 68.8C90.1 69.1 89.8 69.3 89.6 69.3C89.3 69.3 87.9 70.3 86.7 71.4C86.4 71.7 85.8 72.5 85.6 73C84.1 76.5 83.8 77 81.9 78.6C81 79.6 79.8 80.5 79.1 80.8C75.2 82.6 74.2 83.4 72.4 85.6C70.4 88.2 67.7 92.3 66.9 94.1C66.6 94.9 66.1 96 65.1 98.2C64.7 99 64.5 99.7 64.5 99.8C64.5 99.8 64.2 100.7 63.8 101.6C63.2 103 62.7 104.6 61.7 107.3C61.5 107.9 61.2 108.8 60.6 110.9C60.4 111.5 60.2 112.4 60.1 113C59.9 113.5 59.7 114.4 59.6 114.8C59 117.4 58.7 118.8 58.3 120.2C58 121.5 57.9 122.4 57.9 124.8C57.9 127.9 57.9 127.9 57.4 128.4C56.6 129.3 56.7 130.9 57.7 132.1C58.4 133.1 58.4 133.2 58.4 141.2C58.4 149.9 58.6 152.5 59.4 154.3C60.3 156.2 60.6 158.9 60.4 161.3C60 165.2 60.3 170.2 60.9 171.5C61 171.7 61.2 172.2 61.3 172.6C61.4 173 61.7 173.6 62 173.9C62.4 174.2 63 174.9 63.4 175.5C63.8 176 64.7 176.9 65.5 177.4C66.3 178 67 178.6 67.2 178.8C67.3 179 67.7 179.1 68 179.1C68.8 179.1 68.9 178.8 68.4 172.9C68.1 169.9 68.2 168.9 68.7 168.9C68.9 168.9 69 169.2 69.2 171.1C69.4 172.7 69.6 173.2 70.2 173.2C70.8 173.2 71 172.9 71.2 171.4C71.6 167.9 72.3 167.6 76.3 169.3C76.8 169.5 77.6 169.8 78.2 170C84.5 171.8 86.5 172.3 87.1 172.4C87.5 172.5 88.2 172.7 88.7 172.8C93.8 174.4 101.6 174.8 107.9 173.8C112.9 173 115 172.5 117.2 171.4C117.9 171 118.5 171 119.4 171.5C120.3 171.9 121.8 172 122.9 171.7C124.3 171.3 124.8 170.4 125.9 166.6C126.1 166 126.3 164.2 126.4 162.6C126.7 158.5 126.7 158.2 127.4 157.3C127.8 156.7 128.2 155.9 128.6 154.6C129.1 152.9 129.2 152.7 129.6 152.7C130.3 152.7 130.8 151.9 130.6 150.9C130.2 148.5 130.3 146.8 130.7 145.8C132.2 142.1 133.2 129.3 132.1 126.6C131.7 125.7 131.7 125.1 132.2 124.2C132.7 123.1 132.7 122.4 132 119.9C131.6 118.5 131.4 117.5 131.4 116.3C131.4 114 131.1 111.2 130.7 110C130.5 109.4 130.2 108.3 130 107.5C129.8 106.7 129.6 105.9 129.5 105.5C129.3 104.9 129.1 103.4 128.5 100.3C128.2 98.5 127.1 95.2 126.8 94.3C126.5 93.9 125.9 92.8 125.3 91.6C124.3 89.7 123.7 88.7 122.8 87.2C122.6 86.9 122 86.3 121.5 85.9C121 85.5 120.1 84.9 119.5 84.4C118.9 83.8 117.8 83.1 117 82.8C115 82 113.5 80.4 112.3 78.1C112.1 77.6 111.5 76.9 111.2 76.5C109.4 74.1 109.3 72.9 110.7 69.9C111.1 69.1 111.7 67.8 112 67C112.2 66.2 112.7 65 113 64.4C114.5 60.8 114.1 56.4 111.9 53.1C111.2 52.1 107.8 48.5 106.5 47.6C105.1 46.4 99.3 45.9 97.2 46.7Z"/>
+          <!-- the hole = him + his legs below the hem (the station covers them once it is up) -->
+          <mask id="xcHole" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">
+            <rect width="200" height="200" fill="#fff"/>
+            <use href="#xcSil" fill="#000"/>
+            <path d="M67 168H122L123 201H66Z" fill="#000"/>
+          </mask>
+          <clipPath id="xcAboveHem"><rect width="200" height="170.5"/></clipPath>
+          <!-- black subway tiles -->
+          <pattern id="xcTile" width="16" height="16" patternUnits="userSpaceOnUse" x="0" y="111">
+            <rect width="16" height="16" fill="#2e2c33"/>
+            <path d="M0 .5H16M0 8.5H16M.5 0V8M8.5 8V16" fill="none" stroke="#18171c" stroke-width="1"/>
+          </pattern>
+        </defs>
+
+        <g mask="url(#xcHole)">
+          <!--WALL-->
+          <rect width="200" height="200" fill="#26232a"/>
+          <path d="M34 0V108M70 0V108M130 0V108M166 0V108" stroke="#302d35" stroke-width="2"/>
+          <rect y="111" width="200" height="70" fill="url(#xcTile)"/>
+          <!--/WALL-->
+          <rect x="-2" y="108" width="204" height="3.4" fill="#e3a822" stroke="#101014" stroke-width="1"/>
+
+          <!-- pendant lamps with flat light cones (drop in after the wipe) -->
+          <g class="xc-lamps">
+            <path class="xc-cone" d="M54 33L66 33L88 108L32 108Z M134 33L146 33L168 108L112 108Z" fill="#ffe7a3"/>
+            <path d="M60 0V21M140 0V21" stroke="#0c0c0f" stroke-width="1.4"/>
+            <path d="M51 32L69 32L65 21L55 21Z M131 32L149 32L145 21L135 21Z"
+                  fill="#e3a822" stroke="#101014" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M56 32.4A4 3.2 0 0 0 64 32.4Z M136 32.4A4 3.2 0 0 0 144 32.4Z" fill="#fff3bf"/>
+          </g>
+
+          <!-- pot rail (left): copper pan, ladle, whisk -->
+          <g stroke="#101014" stroke-linecap="round">
+            <path d="M12 60H56" stroke="#9aa1aa" stroke-width="2.2"/>
+            <path d="M22 60V71" stroke="#6b4a2c" stroke-width="2"/>
+            <circle cx="22" cy="79.5" r="8.4" fill="#c9773f" stroke-width="1.5"/>
+            <circle cx="22" cy="79.5" r="5.6" fill="#a95f2e" stroke="none"/>
+            <path d="M37 60V77" stroke="#b9c0c8" stroke-width="1.6"/>
+            <path d="M33.2 77.5A3.8 3.8 0 0 0 40.8 77.5Z" fill="#b9c0c8" stroke-width="1.2"/>
+            <path d="M49 60V67.5" stroke="#b9c0c8" stroke-width="1.6"/>
+            <path d="M49 67.5C45.2 71.5 45.4 79 49 82C52.6 79 52.8 71.5 49 67.5ZM49 67.5V82" fill="none" stroke="#c7cdd4" stroke-width="1.1"/>
+          </g>
+
+          <!-- pantry shelf (right): the trophy stands on it (see ⑧); a bottle, produce on the gold rail -->
+          <g stroke="#101014" stroke-width="1.3" stroke-linejoin="round">
+            <rect x="133" y="77" width="69" height="3" fill="#e3a822" stroke-width="1"/>
+            <path d="M177 77V66Q177 63.6 179 62.6V58H182V62.6Q184 63.6 184 66V77Z" fill="#4f8f45"/>
+            <rect x="178.2" y="56.4" width="4.6" height="2.4" rx=".6" fill="#e3a822" stroke-width="1"/>
+            <circle cx="147" cy="103.8" r="4.3" fill="#e5412c"/>
+            <path d="M145.2 99.8L147 100.9L148.8 99.8" fill="none" stroke="#3f8a2e" stroke-width="1.2"/>
+            <ellipse cx="157.5" cy="104.4" rx="4.8" ry="3.7" fill="#ffd43b"/>
+            <circle cx="167.5" cy="103.8" r="4.3" fill="#e5412c"/>
+            <path d="M165.7 99.8L167.5 100.9L169.3 99.8" fill="none" stroke="#3f8a2e" stroke-width="1.2"/>
+            <path d="M178 108C176 102 176.5 97 179 94C181 97.5 181.5 102 180 108Z" fill="#4f9a3a"/>
+          </g>
+        </g>
+
+        <!-- thin ink line along his outline (sticker cut, dark — no light halo) -->
+        <use href="#xcSil" fill="none" stroke="#15151a" stroke-width="1.8" stroke-linejoin="round" clip-path="url(#xcAboveHem)"/>
+      </svg>
+    </div>
+
+    <!-- ①③–⑨ costume, station, props -->
+    <svg class="xc-fx" viewBox="0 0 200 200" overflow="visible" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="xcShadow" x="-30%" y="-30%" width="160%" height="170%">
+          <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity=".38"/>
+        </filter>
+        <clipPath id="xcCircle"><circle cx="100" cy="100" r="100"/></clipPath>
+        <!-- his real hands, traced from the photo's skin pixels: re-composited over the handles -->
+        <clipPath id="xcHandL"><path d="M66.6 160C65.1 160.5 63.2 160.9 62.5 160.9C60.4 160.9 60 161.6 60 165.4C60 170.6 61 173.4 63.7 175.8C64.8 176.9 66.3 178.2 66.9 178.8C68.4 180.2 68.9 179.7 68.7 176.5C68.4 173.7 68.6 173.3 70.1 173.2C71.2 173.2 71.6 170.9 71.6 165.8C71.6 161.8 70.9 158.9 69.8 159C69.6 159 68.1 159.5 66.6 160Z"/></clipPath>
+        <clipPath id="xcHandR"><path d="M122 159C120.6 160.1 119.6 161.2 119.7 161.3C119.8 161.5 119.6 161.8 119.3 162.1C119 162.4 118.8 163 118.8 163.6C118.8 164.1 118.4 165 117.9 165.5C117.1 166.3 117.1 166.4 117.7 167.1C118.3 167.8 118.3 167.9 117.8 168.4C115.9 169.9 119.3 172.6 122.5 172.1C124.1 171.8 124.3 171.7 125 170.2C126.4 166.8 127.3 158.6 126.4 157.9C125.2 156.9 124.4 157.1 122 159Z"/></clipPath>
+        <clipPath id="xcAboveTop"><rect width="200" height="174"/></clipPath>
+        <path id="xcStar" d="M0 -4.6L1.2 -1.2L4.6 0L1.2 1.2L0 4.6L-1.2 1.2L-4.6 0L-1.2 -1.2Z"/>
+      </defs>
+
+      <!-- ⑤ apron + neckerchief -->
+      <g class="xc-apron" filter="url(#xcShadow)">
+        <g stroke="#15151a" stroke-width="2" stroke-linejoin="round">
+          <path d="M89.6 93.6L93 83.6L95.8 84.4L92.5 93.6Z M112.4 93.6L109 83.6L106.2 84.4L109.5 93.6Z" fill="#fbfaf6"/>
+          <path d="M90 93.4H112C112 103 113.6 112 117.4 119L116.8 182H83.2L82.6 119C86.4 112 90 103 90 93.4Z" fill="#fbfaf6"/>
+          <path d="M111.9 93.8C112 103 113.4 111.6 116.9 118.8L116.4 181H112.2L112.6 120C110.6 112 109.8 103 110 93.8Z" fill="#e9e4d8" stroke="none"/>
+          <path d="M89.6 141H111L110.6 150.4C110.5 151.6 109.8 152.2 108.6 152.2H92C90.8 152.2 90.1 151.6 90 150.4Z" fill="#fbfaf6" stroke-width="1.4"/>
+          <path d="M89.8 141H110.8" stroke="#e3a822" stroke-width="1.4"/>
+          <path d="M93 158C93.8 164 93.4 170 93 176M107.5 158C106.8 164 107.2 170 107.6 176" fill="none" stroke="#d6d0c3" stroke-width="1.1"/>
+          <!-- emblem: gold ring, black field, gold toque -->
+          <circle cx="100.8" cy="107" r="7.4" fill="#15151a" stroke="#e3a822" stroke-width="1.5"/>
+          <path d="M97.6 109.3C95.8 108.6 95.8 105.4 97.8 105C98.2 103.2 100.2 102.6 100.8 103.9C101.4 102.6 103.4 103.2 103.8 105C105.8 105.4 105.8 108.6 104 109.3Z M97.8 109.9H103.8V111.2H97.8Z" fill="#e3a822" stroke="none"/>
+        </g>
+        <g stroke="#15151a" stroke-width="1.5" stroke-linejoin="round" fill="#d8352a">
+          <path d="M93 80.8Q100.9 86.4 108.8 80.8L109.6 84.4Q100.9 90.8 92.2 84.4Z"/>
+          <path d="M96.6 88.2H105.2L101 98.4Z"/>
+          <path d="M98.2 85.4Q100.9 84.4 103.6 85.4L103.4 89.2Q100.9 90.2 98.4 89.2Z"/>
+        </g>
+        <path d="M100.9 90.6L101 96.4" stroke="#9e2219" stroke-width="1" stroke-linecap="round"/>
+      </g>
+
+      <!-- ④ toque -->
+      <g class="xc-hat">
+        <g class="xc-hat-fit" filter="url(#xcShadow)">
+          <g stroke="#15151a" stroke-width="2.1" stroke-linejoin="round">
+            <path d="M88.4 47.2C85.4 39.8 81.8 32.8 81.6 26C81.4 19 88.4 15.2 93.2 17.4C96.2 12.8 105.4 12.4 108.4 17C113.2 14.6 120.8 18 120.4 25.6C120 32.6 116.6 39.8 113.8 47.2Z" fill="#fbfaf6"/>
+            <path d="M113.8 47.2C116.2 39.8 119.8 32.4 120.2 25.6C120.4 21.8 118.6 19 116 17.8C117.6 25 115.8 36.6 110.6 47.2Z" fill="#e9e4d8" stroke="none"/>
+            <path d="M94 46.4C92.6 37.6 91.8 29 92.2 20M101 46.8V15.6M108 46.4C109.4 37.6 110.2 29 109.8 20" fill="none" stroke="#cfc8b9" stroke-width="1.2"/>
+            <path d="M87 46.2C95.4 48.4 106.4 48.4 115 46.2L115.6 54.6C106 57.6 96 57.6 86.4 54.6Z" fill="#fbfaf6"/>
+            <path d="M87.2 49.6C95.6 51.8 106.2 51.8 115 49.6" fill="none" stroke="#e3a822" stroke-width="1.2"/>
+          </g>
+        </g>
+      </g>
+
+      <!-- ③ station (clip on a static parent, so nothing ghosts outside the circle) -->
+      <g clip-path="url(#xcCircle)">
+        <g class="xc-counter">
+          <g stroke="#15151a" stroke-linejoin="round">
+            <path d="M-2 174H202V180.5H-2Z" fill="#e8ebee" stroke-width="2"/>
+            <path d="M-2 180.5H202V204H-2Z" fill="#aab1b9" stroke-width="2"/>
+            <path d="M-2 176H202" stroke="#ffffff" stroke-width="1" opacity=".9"/>
+            <path d="M-2 183.2H202" stroke="#e3a822" stroke-width="2.2"/>
+            <circle cx="76" cy="191.5" r="3.4" fill="#15151a" stroke="none"/>
+            <circle cx="124" cy="191.5" r="3.4" fill="#15151a" stroke="none"/>
+            <circle cx="76" cy="191.5" r="1.3" fill="#e3a822" stroke="none"/>
+            <circle cx="124" cy="191.5" r="1.3" fill="#e3a822" stroke="none"/>
+            <!-- cutting board + carrot coins -->
+            <path d="M126 173.2H166.5L168 178.6H124.6Z" fill="#c98a4b" stroke-width="1.4"/>
+            <circle cx="161" cy="175.4" r="2" fill="#ff8a2a" stroke-width="1"/>
+            <circle cx="165.4" cy="176.2" r="1.8" fill="#ff8a2a" stroke-width="1"/>
+          </g>
+          <!-- 厨神 seal on the station front (the only calligraphy — a small accent) -->
+          <g class="xc-seal">
+            <rect x="89.4" y="186.2" width="21.2" height="11" rx="1.6" fill="#c8302a" stroke="#15151a" stroke-width="1"/>
+            <rect x="90.9" y="187.7" width="18.2" height="8" rx=".8" fill="none" stroke="#fff4e6" stroke-width=".6"/>
+            <text x="100" y="194.6" text-anchor="middle" font-size="6.8" font-weight="700" fill="#fff4e6"
+                  font-family="'Kaiti SC', STKaiti, KaiTi, 'Songti SC', STSong, SimSun, serif">厨神</text>
+          </g>
+        </g>
+      </g>
+
+      <!-- ⑧ gold trophy on the pantry shelf, in the lamp's light -->
+      <g class="xc-trophy" filter="url(#xcShadow)">
+        <g stroke="#15151a" stroke-linejoin="round">
+          <path d="M147.6 52C141.6 52 141.6 61.4 148.6 62.2M166.4 52C172.4 52 172.4 61.4 165.4 62.2" fill="none" stroke-width="4" stroke-linecap="round"/>
+          <path d="M147.6 52C141.6 52 141.6 61.4 148.6 62.2M166.4 52C172.4 52 172.4 61.4 165.4 62.2" fill="none" stroke="#e3a822" stroke-width="2" stroke-linecap="round"/>
+          <path d="M149.6 70.2H164.4L166 77H148Z" fill="#15151a" stroke-width="1.3"/>
+          <rect x="152.6" y="72" width="8.8" height="3" rx=".5" fill="#e3a822" stroke="none"/>
+          <rect x="155.4" y="63.6" width="3.2" height="6.8" fill="#c98f1a" stroke-width="1.2"/>
+          <path d="M147.4 49.6H166.6C166.6 59.4 163.8 64.4 157 65.8C150.2 64.4 147.4 59.4 147.4 49.6Z" fill="#f2b632" stroke-width="1.8"/>
+          <path d="M161.8 50.6H165.4C165.4 58.8 163 63.4 157.4 64.8C160.8 61 162.2 56.4 161.8 50.6Z" fill="#c98f1a" stroke="none"/>
+          <path d="M150.6 52.6C150.6 57.2 151.8 60.4 153.6 62.2" fill="none" stroke="#fff3c4" stroke-width="1.4" stroke-linecap="round"/>
+          <ellipse cx="157" cy="49.6" rx="9.6" ry="2.2" fill="#ffd76a" stroke-width="1.5"/>
+          <path d="M157 53.4L158.2 55.9L160.9 56.2L158.9 58L159.4 60.6L157 59.3L154.6 60.6L155.1 58L153.1 56.2L155.8 55.9Z" fill="#15151a" stroke="none"/>
+        </g>
+        <use class="xc-glint xc-tglint" href="#xcStar" x="0" y="0" transform="translate(150.4 51)"
+             fill="#ffffff" stroke="#15151a" stroke-width=".9" stroke-linejoin="round"/>
+      </g>
+
+      <!-- ① pan in his real right hand (viewer-left); fire rises out of it (pan back → fire → front lip) -->
+      <g class="xc-pan" filter="url(#xcShadow)">
+        <g class="xc-flick">
+          <g stroke="#15151a" stroke-linejoin="round">
+            <!-- stainless handle, running on under his real fingers -->
+            <path d="M44.6 153.8L68 168.2L66.7 172.9L42.8 158.2Z" fill="#b7bec6" stroke-width="1.8"/>
+            <path d="M45.4 155.4L66 168.4" stroke="#eef1f4" stroke-width="1"/>
+            <g transform="translate(33.6 150.2) rotate(28)">
+              <path d="M-14 0A14 5 0 0 0 14 0L12.4 5.2A12.4 4 0 0 1 -12.4 5.2Z" fill="#8e969f" stroke-width="2"/>
+              <ellipse rx="14" ry="5" fill="#d3d9df" stroke-width="2"/>
+              <ellipse rx="11.2" ry="3.4" cy=".3" fill="#5d646c" stroke="none"/>
+            </g>
+          </g>
+          <g class="xc-fire">
+            <path d="M44.6 156A12.4 4.2 28 0 1 22.6 144.4C18.2 136.6 20 128.4 25.4 122C25 128.4 27.4 132 30.2 133.2C27.4 121.6 31.6 109.4 40.4 101C38.8 110.6 42 118.4 45.2 122.2C47.4 117.6 47.4 113 46.2 108.8C53.6 117 55.6 131.4 51.6 142.4C49.8 148 47.6 152.6 44.6 156Z"
+                  fill="#ff5a1f" stroke="#15151a" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M42.4 154.9A10 3.2 28 0 1 24.8 145.5C22.6 140.2 24.2 134.2 28.2 129.8C28.4 134.4 30.6 137.4 33.4 137.8C31.6 129 34.6 120.8 40 115C39.2 122.4 42 128 44.2 131.2C45.8 128.4 46.2 125.6 46 122.8C49.8 129.6 50.4 138.6 47.4 144.6C46 148.6 44.2 151.8 42.4 154.9Z"
+                  fill="#ffa21f"/>
+            <path d="M39.8 153.5A7 2.4 28 0 1 27.4 146.9C27.6 143.6 29.4 140.8 32.2 138C33.2 140.8 34.8 142 36.4 142.2C35.6 136.6 37.4 131.8 40.2 128.8C40.2 133.4 42.6 137.2 43 141C43.4 145.4 42 149.8 39.8 153.5Z"
+                  fill="#ffe14d"/>
+            <g fill="#ffd43b" stroke="#15151a" stroke-width=".9" stroke-linejoin="round">
+              <path class="xc-ember xc-e1" d="M26 118L27.1 120.9L30 122L27.1 123.1L26 126L24.9 123.1L22 122L24.9 120.9Z"/>
+              <path class="xc-ember xc-e2" d="M44 104L44.9 106.1L47 107L44.9 107.9L44 110L43.1 107.9L41 107L43.1 106.1Z"/>
+              <path class="xc-ember xc-e3" d="M52 122L52.8 123.7L54.5 124.5L52.8 125.3L52 127L51.2 125.3L49.5 124.5L51.2 123.7Z"/>
+              <circle class="xc-ember xc-e4" cx="34" cy="112" r="1.4"/>
+            </g>
+          </g>
+          <path transform="translate(33.6 150.2) rotate(28)" d="M-14 0A14 5 0 0 0 14 0L11.2 .3A11.2 3.4 0 0 1 -11.2 .3Z"
+                fill="#d3d9df" stroke="#15151a" stroke-width="2" stroke-linejoin="round"/>
+        </g>
+        <!-- steam: rises while the fire is low, between bursts -->
+        <g fill="none" stroke="#f4f1ea" stroke-width="1.8" stroke-linecap="round">
+          <path class="xc-wisp xc-w1" d="M30 140C27 135 33 131 30 126C27 121 32 118 30 114"/>
+          <path class="xc-wisp xc-w2" d="M40 138C37 133 43 129 40 124C37 119 42 116 40 112"/>
+        </g>
+      </g>
+      <!-- his real fingers over the pan handle (stops at the counter top) -->
+      <g class="xc-grip" clip-path="url(#xcAboveTop)">
+        <image href="https://yil384.github.io/Picasso-Lab/people/static/xinwei.webp"
+               x="0" y="0" width="200" height="200" preserveAspectRatio="none" clip-path="url(#xcHandL)"/>
+      </g>
+
+      <!-- ⑥ chef's knife in his real left hand (viewer-right) -->
+      <g class="xc-knife" filter="url(#xcShadow)">
+        <!-- drawn level, tilted 22° so the tip rests on the board; handle hidden in his fist -->
+        <g transform="translate(128.6 166.6) rotate(22)" stroke="#15151a" stroke-linejoin="round">
+          <path d="M-9.4 -3.4H-3.6V3.4H-9.4Z" fill="#2c2420" stroke-width="1.3"/>
+          <path d="M0 -4.4H22C25.5 -4.4 28.4 -3 29.6 -1.4C25 2.6 18.6 4.4 12 4.4H0Z" fill="#e6ebef" stroke-width="1.8"/>
+          <path d="M1.4 2.4H12C17.6 2.4 22.6 1.2 26.6 -.8" fill="none" stroke="#a3adb8" stroke-width="1.2"/>
+          <path d="M-3.6 -5H.6V5H-3.6Z" fill="#8f99a4" stroke-width="1.3"/>
+        </g>
+        <use class="xc-glint xc-kglint" href="#xcStar" x="0" y="0" transform="translate(148.8 169.6)"
+             fill="#ffffff" stroke="#15151a" stroke-width=".9" stroke-linejoin="round"/>
+      </g>
+      <g class="xc-grip">
+        <image href="https://yil384.github.io/Picasso-Lab/people/static/xinwei.webp"
+               x="0" y="0" width="200" height="200" preserveAspectRatio="none" clip-path="url(#xcHandR)"/>
+      </g>
+
+      <!-- ⑨ YES, CHEF! — speech balloon from his mouth, once per activation -->
+      <!-- tail tip lands at (93, 70): his cheek at mouth level, below the glasses -->
+      <g class="xc-yes">
+        <g transform="rotate(-6 55 40)">
+          <path d="M66.4 48.2L89.6 73.8L72.8 45.6" fill="#fffdf7" stroke="#15151a" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="55" cy="40" rx="24.6" ry="12.2" fill="#fffdf7" stroke="#15151a" stroke-width="2"/>
+          <path d="M67.6 47.2L85.6 68.4L71.6 46Z" fill="#fffdf7"/>
+          <text x="55" y="44" text-anchor="middle" textLength="40" lengthAdjust="spacingAndGlyphs"
+                font-family="'Avenir Next Condensed', Futura, 'Arial Narrow', Impact, 'Arial Black', sans-serif"
+                font-size="11.4" font-weight="800" font-style="italic" fill="#15151a">YES, CHEF!</text>
+        </g>
+      </g>
+    </svg>
+
+  </div><!-- /.xc-stage -->
+</div><!-- /.xc-wrap -->
+
+
+<style>
+/* Keep oversized animation layers from enlarging the Google Sites embed. */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  box-sizing: border-box;
+  padding: 8px;
+}
+
+.xc-wrap {
+  display: inline-block;
+  cursor: pointer;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  border-radius: 50%;
+  outline: none;
+}
+.xc-wrap *,
+.xc-wrap *::before,
+.xc-wrap *::after { box-sizing: border-box; }
+
+/* the whole stage lifts on hover, so every prop stays glued to the photo */
+.xc-stage {
+  position: relative;
+  width:  var(--avatar-size, 200px);
+  height: var(--avatar-size, 200px);
+  overflow: visible;
+  transform: translateY(var(--xc-lift, 0px)) scale(var(--xc-scale, 1));
+  transform-origin: 50% 50%;
+  transition: transform .4s cubic-bezier(.32, 1.3, .4, 1);
+}
+/* max 1.05 about the centre, so the lifted circle stays inside the 8 px embed padding */
+.xc-wrap:hover,
+.xc-wrap:focus-visible { --xc-scale: 1.05; --xc-lift: -2px; }
+.xc-wrap.xc-on       { --xc-scale: 1.03; }
+.xc-wrap.xc-on:hover,
+.xc-wrap.xc-on:focus-visible { --xc-scale: 1.05; --xc-lift: -2px; }
+
+/* ── photo + set ── */
+.xc-photo {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,.18);
+  transition: box-shadow .4s ease;
+}
+.xc-wrap:hover .xc-photo,
+.xc-wrap:focus-visible .xc-photo { box-shadow: 0 4px 10px rgba(0,0,0,.2); }
+.xc-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* ② the set floods out of the first flambé (a circle growing from the pan) and swallows the old backdrop.
+   The reveal is a clip-path TRANSITION (not a keyframe), so switching off at any moment keeps the clip
+   where it is while the set fades; the clip only resets after the fade (0s step at .25s).
+   Percentages scale with --avatar-size: 17% 69% = the pan, 116% reaches the far edge. */
+.xc-set {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  -webkit-clip-path: circle(0% at 17% 69%);
+          clip-path: circle(0% at 17% 69%);
+  transition: opacity .25s ease, -webkit-clip-path 0s linear .25s, clip-path 0s linear .25s;
+}
+.xc-wrap.xc-on .xc-set {
+  opacity: 1;
+  -webkit-clip-path: circle(116% at 17% 69%);
+          clip-path: circle(116% at 17% 69%);
+  transition: opacity .15s ease,
+              -webkit-clip-path .7s cubic-bezier(.3, 0, .3, 1) .3s,
+              clip-path .7s cubic-bezier(.3, 0, .3, 1) .3s;
+}
+
+.xc-cone { opacity: .17; }
+.xc-lamps {
+  transform-box: view-box;
+  transform-origin: 100px 0;
+  transform: translateY(-16px);
+  transition: transform 0s .3s;   /* stay put while the set fades out */
+}
+.xc-wrap.xc-on .xc-lamps {
+  transform: translateY(0);
+  transition: transform .6s cubic-bezier(.2, 1.5, .4, 1) .7s;
+}
+
+/* ── overlay (costume, station, props) ── */
+.xc-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.xc-fx g { transform-box: view-box; }
+
+/* Hidden state: quick exits, no delays. On state: staggered entrances. */
+.xc-hat, .xc-apron, .xc-counter, .xc-pan, .xc-knife, .xc-trophy, .xc-grip, .xc-seal {
+  opacity: 0;
+  transition: opacity .2s ease, transform .25s ease;
+}
+
+/* ① pan swings into his hand first; the grip overlay is the real photo, so it just fades in with it */
+.xc-pan {
+  transform-origin: 64px 167px;
+  transform: rotate(-38deg) scale(.4);
+}
+.xc-wrap.xc-on .xc-pan {
+  opacity: 1;
+  transform: none;
+  transition: opacity .15s ease, transform .4s cubic-bezier(.2, 1.4, .4, 1);
+}
+.xc-wrap.xc-on .xc-grip { opacity: 1; transition: opacity .15s ease; }
+
+/* ③ station comes up before the set reaches his legs */
+.xc-counter { transform: translateY(30px); }
+.xc-wrap.xc-on .xc-counter {
+  opacity: 1;
+  transform: none;
+  transition: opacity .2s ease .08s, transform .45s cubic-bezier(.2, 1.2, .4, 1) .08s;
+}
+
+/* ⑤ apron unrolls from the collar */
+.xc-apron {
+  transform-origin: 101px 84px;
+  transform: scaleY(.25);
+}
+.xc-wrap.xc-on .xc-apron {
+  opacity: 1;
+  transform: none;
+  transition: opacity .2s ease .5s, transform .5s cubic-bezier(.2, 1.3, .4, 1) .5s;
+}
+
+/* ④ toque drops onto his head: keyframed so the landing squash stays above the glasses (≤ 1.2 px);
+   the drop starts only 10 px up, so even the tilted crown stays inside the circle */
+.xc-hat-fit {
+  transform-origin: 101px 55px;
+  transform: translate(var(--hat-x), var(--hat-y)) rotate(var(--hat-rot));
+}
+.xc-hat { transform-origin: 101px 55px; }
+.xc-wrap.xc-on .xc-hat {
+  opacity: 1;
+  transition: opacity .14s ease .6s;
+  animation: xc-hat-in .7s ease-out .6s both;
+}
+@keyframes xc-hat-in {
+  0%   { transform: translateY(-10px) rotate(-6deg); animation-timing-function: cubic-bezier(.5, 0, .9, .6); }
+  52%  { transform: translateY(1.2px) scale(1.04, .95); animation-timing-function: ease-out; }
+  76%  { transform: translateY(-1.4px) scale(.99, 1.02); }
+  100% { transform: none; }
+}
+
+/* ⑥ knife swings into his other fist */
+.xc-knife {
+  transform-origin: 124px 165px;
+  transform: rotate(28deg) scale(.4);
+}
+.xc-wrap.xc-on .xc-knife {
+  opacity: 1;
+  transform: none;
+  transition: opacity .2s ease .55s, transform .5s cubic-bezier(.2, 1.4, .4, 1) .55s;
+}
+.xc-wrap.xc-on .xc-knife + .xc-grip { transition-delay: .55s; }
+
+/* ⑧ trophy lands on the shelf */
+.xc-trophy {
+  transform-origin: 157px 77px;
+  transform: scale(0);
+}
+.xc-wrap.xc-on .xc-trophy {
+  opacity: 1;
+  transform: none;
+  transition: opacity .15s ease 1.05s, transform .5s cubic-bezier(.2, 1.6, .4, 1) 1.05s;
+}
+
+/* ③ seal presses onto the station front */
+.xc-seal {
+  transform-origin: 100px 191.7px;
+  transform: scale(2);
+}
+.xc-wrap.xc-on .xc-seal {
+  opacity: 1;
+  transform: none;
+  transition: opacity .12s ease 1.3s, transform .3s cubic-bezier(.3, 1.5, .5, 1) 1.3s;
+}
+
+/* ⑦ one 3.2 s "service" beat: flambé burst (~20 % of the beat) + embers + wrist flick + knife glint;
+   then steam; the trophy glints mid-beat. Between bursts only a small still flame stays in the pan. */
+.xc-fire {
+  transform-origin: 33.6px 151px;
+  transform: scale(.4);
+}
+.xc-wrap.xc-on .xc-fire { animation: xc-flambe 3.2s ease-out .3s infinite both; }
+@keyframes xc-flambe {
+  0%   { transform: scale(.4); }
+  5%   { transform: scale(1.1, 1.16); }
+  10%  { transform: scale(.96, 1); }
+  15%  { transform: scale(.72); }
+  20%  { transform: scale(.42); }
+  100% { transform: scale(.4); }
+}
+.xc-flick { transform-origin: 64px 167px; }
+.xc-wrap.xc-on .xc-flick { animation: xc-flick 3.2s ease-out .3s infinite; }
+@keyframes xc-flick {
+  0%, 16%, 100% { transform: rotate(0deg); }
+  4%            { transform: rotate(-5deg); }
+  10%           { transform: rotate(1deg); }
+}
+.xc-ember { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
+.xc-wrap.xc-on .xc-ember    { animation: xc-ember 3.2s .3s ease-out infinite; }
+.xc-wrap.xc-on .xc-ember.xc-e2 { animation-delay: .36s; }
+.xc-wrap.xc-on .xc-ember.xc-e3 { animation-delay: .33s; }
+.xc-wrap.xc-on .xc-ember.xc-e4 { animation-delay: .39s; }
+@keyframes xc-ember {
+  0%, 3% { opacity: 0; transform: translateY(14px) scale(.4); }
+  7%     { opacity: 1; transform: translateY(0) scale(1); }
+  19%    { opacity: 0; transform: translateY(-16px) scale(.6) rotate(90deg); }
+  100%   { opacity: 0; transform: translateY(-16px) scale(.6); }
+}
+
+.xc-wisp { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; }
+.xc-wrap.xc-on .xc-wisp    { animation: xc-steam 3.2s .3s ease-in-out infinite; }
+.xc-wrap.xc-on .xc-wisp.xc-w2 { animation-delay: .55s; }
+@keyframes xc-steam {
+  0%, 30% { opacity: 0; transform: translateY(6px) scaleY(.7); }
+  46%     { opacity: .8; }
+  78%     { opacity: 0; transform: translateY(-8px) scaleY(1.05); }
+  100%    { opacity: 0; transform: translateY(-8px) scaleY(1.05); }
+}
+
+.xc-glint { opacity: 0; }
+.xc-wrap.xc-on .xc-kglint { animation: xc-kglint 3.2s .4s ease-out infinite; }
+.xc-wrap.xc-on .xc-tglint { animation: xc-tglint 3.2s .3s ease-out infinite; }
+@keyframes xc-kglint {
+  0%, 3% { opacity: 0; transform: translate(148.8px, 169.6px) scale(.2) rotate(0deg); }
+  8%     { opacity: 1; transform: translate(148.8px, 169.6px) scale(1.15) rotate(45deg); }
+  16%    { opacity: 0; transform: translate(148.8px, 169.6px) scale(.3) rotate(90deg); }
+  100%   { opacity: 0; transform: translate(148.8px, 169.6px) scale(.3) rotate(90deg); }
+}
+@keyframes xc-tglint {
+  0%, 50% { opacity: 0; transform: translate(150.4px, 51px) scale(.2) rotate(0deg); }
+  55%     { opacity: 1; transform: translate(150.4px, 51px) scale(1.2) rotate(45deg); }
+  62%     { opacity: 0; transform: translate(150.4px, 51px) scale(.3) rotate(90deg); }
+  100%    { opacity: 0; transform: translate(150.4px, 51px) scale(.3) rotate(90deg); }
+}
+
+/* ⑨ YES, CHEF! — pops once from his mouth, then leaves */
+.xc-yes {
+  opacity: 0;
+  transform-origin: 93px 70px;    /* the tail tip */
+  transform: scale(0);
+}
+.xc-wrap.xc-on .xc-yes { animation: xc-yes 2.6s .95s both; }
+/* small 4 % overshoot only, so the balloon never reaches the rim */
+@keyframes xc-yes {
+  0%   { opacity: 0; transform: scale(.15) rotate(10deg); animation-timing-function: ease-out; }
+  11%  { opacity: 1; transform: scale(1.04) rotate(-1deg); animation-timing-function: ease-in-out; }
+  17%  { opacity: 1; transform: scale(1) rotate(0deg); }
+  84%  { opacity: 1; transform: scale(1); animation-timing-function: ease-in; }
+  100% { opacity: 0; transform: scale(.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xc-stage,
+  .xc-wrap .xc-set,
+  .xc-wrap .xc-fx g,
+  .xc-wrap .xc-lamps { transition: none !important; }
+  .xc-wrap.xc-on .xc-set,
+  .xc-wrap.xc-on .xc-hat,
+  .xc-wrap.xc-on .xc-flick,
+  .xc-wrap.xc-on .xc-ember,
+  .xc-wrap.xc-on .xc-wisp,
+  .xc-wrap.xc-on .xc-glint { animation: none; }
+  .xc-wrap.xc-on .xc-yes { animation: none; opacity: 1; transform: none; }
+  .xc-wrap.xc-on .xc-fire { animation: none; transform: scale(.72); }
+}
+</style>
+
+
+<script>
+(function () {
+  document.querySelectorAll('.xc-wrap').forEach(function (wrap) {
+    if (wrap.dataset.xcReady === '1') return;
+    wrap.dataset.xcReady = '1';
+    var last = 0;
+    function toggle() {
+      // a double-click counts once, so a half-played entrance never gets restarted mid-way
+      var now = Date.now();
+      if (now - last < 400) return;
+      last = now;
+      var on = wrap.classList.toggle('xc-on');
+      wrap.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    wrap.addEventListener('click', toggle);
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+  });
+})();
+</script>
