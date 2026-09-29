@@ -11,6 +11,9 @@ import { createNPR } from '/scene/npr/npr.js';
 import { bakeBrushTexture } from '/scene/npr/brush.js';
 import { orbit, applyRig } from '/scene/npr/camera.js';
 import { faceSet, cachedBake } from '/scene/tg_paint.js';
+import { buildArena } from '/scene/tg_world.js';
+import { buildLLM, buildKernel } from '/scene/tg_cast.js';
+import { buildGate, buildScale, buildKettlebell, buildClock } from '/scene/tg_props.js';
 import { comicWord, bang } from '/scene/tg_letter.js';
 
 const LOOK = {
@@ -26,7 +29,7 @@ let T;
 defineScene({
   meta: { title: 'lookdev', durationFrames: 48, fps: 24, width: 1920, height: 1080, seed: 3, design: [1920, 1080], background: '#f4ebd6', fonts: [], boil: { every: 2, variants: 3 } },
   update(ctx) {
-    applyRig(T.camera, orbit({ target: [0, 0.7, 0], radius: 7, az: 0.5 * Math.sin(ctx.t * Math.PI * 2), el: 0.22, fov: 30 }));
+    applyRig(T.camera, orbit({ target: [0, 1.2, -0.8], radius: 10, az: 0.5 * Math.sin(ctx.t * Math.PI * 2), el: 0.22, fov: 30 }));
     ctx.camera = T.camera;
   },
   layers: [
@@ -46,26 +49,27 @@ defineScene({
         const back = npr.backdrop(bd, { radius: 16, height: 20, y: -5, arc: [Math.PI - 2.2, 4.4], color: 0x0b8a67 });
         scene.add(back);
         const add = (geo, o, ao = {}, pos = [0, 0, 0]) => { const m = npr.add(new THREE.Mesh(geo, npr.surface(o)), ao); m.position.set(...pos); scene.add(m); return m; };
-        add(new THREE.BoxGeometry(14, 0.4, 9), { color: 0x059669, hatchDir: [1, 0, 0.3] }, { outline: 1, cast: false }, [0, -0.2, 0]);
-        add(new THREE.BoxGeometry(3, 0.3, 3), { color: 0x2b2447, hatchDir: [1, 0, 0.3] }, { outline: 1.1 }, [0, 0.15, -1.5]);
+        const addP = (geo, mo, ao = {}, pos = [0, 0, 0], rot = [0, 0, 0], parent = scene) => { const m = npr.add(new THREE.Mesh(geo, Array.isArray(mo) ? mo.map((o) => npr.surface(o)) : npr.surface(mo)), ao); m.position.set(...pos); m.rotation.set(...rot); parent.add(m); return m; };
+        const A = buildArena(THREE, npr, scene, addP, {});
         const faces = faceSet(THREE, { happy: { eyes: 'happy', mouth: 'open', blush: true }, det: { eyes: 'determined', mouth: 'flat' } }, { base: '#fff4dc', s: 1.6 });
         T = { THREE, scene, camera, npr, faces };
-        const head = add(new THREE.SphereGeometry(0.6, 48, 32), { color: 0xffffff, map: faces.happy[0], rim: 0.8, spec: 0.6 }, { outline: 1.1 }, [-1.2, 0.8, 0.8]);
-        add(new THREE.SphereGeometry(0.5, 48, 32), { color: 0xef4b5f, rim: 0.8 }, { outline: 1.1 }, [1.2, 0.5, 0.9]);
-        add(new THREE.CylinderGeometry(0.4, 0.4, 1.4, 40), { color: 0xf2b134, hatchMode: 'u', rim: 0.8 }, { outline: 1.1 }, [0.2, 0.7, 0.2]);
+        const L = buildLLM(THREE, addP, scene, {}); L.root.position.set(-1.6, 0.48, 0.6); L.root.rotation.y = 0.35;
+        L.bodyM.material.uniforms.uMap.value = L.faces.happy[0];
+        L.arms[0].g.rotation.z = -2.3; L.arms[1].g.rotation.z = 0.5;
+        const K = buildKernel(THREE, addP, scene, {}); K.root.position.set(0.1, 0.48, 0.9); K.root.rotation.y = 0.1;
+        K.bodyM.material.uniforms.uMap.value = K.faces.determined[0];
+        const O = buildKernel(THREE, addP, scene, { col: 0xf2b134, crest: 0xfff4dc, oracle: true, seed: 9 }); O.root.position.set(1.5, 0.48, 0.3); O.root.rotation.y = -0.3; O.root.scale.setScalar(1.15);
+        const Gt = buildGate(THREE, addP, scene); Gt.root.position.set(-3.6, 0.48, -1.2); Gt.root.rotation.y = 0.25; Gt.grate.position.y = 0.5;
+        const Sc = buildScale(THREE, addP, scene); Sc.root.position.set(3.4, 0.48, -1.4); Sc.root.rotation.y = -0.3;
+        Sc.pans.forEach((P, k) => { P.g.position.set(P.side * Sc.span, 1.0, 0); P.rods.forEach((m) => m.scale.y = 0.7); });
+        const Kb = buildKettlebell(THREE, addP, Sc.pans[0].g); Kb.root.position.y = 0.04;
+        const Ck = buildClock(THREE, addP, scene); Ck.root.position.set(0.6, 0.48, -3.4);
         console.log(`lookdev init ${(performance.now() - t0).toFixed(0)}ms (bake ${(tb - t0).toFixed(0)}ms cached=${!!bd.userData.cached})`);
         return { scene, camera };
       },
       draw(ctx) { T.npr.frame(ctx); T.npr.focusOn(T.camera, new T.THREE.Vector3(0, 0.6, 0.5), 3); T.npr.render(T.scene, T.camera); return false; } },
     { name: 'ink', type: 'brush', blend: 'multiply', draw() {} },
-    { name: 'letters', type: '2d', draw(ctx, g) {
-      const r = ctx.boilRng('lt');
-      comicWord(g, 'CLANG!', 520, 250, 150, { fill: '#ef4b5f', shade: '#b8283f', r, rot: -0.1 });
-      comicWord(g, 'TRITONGYM', 1250, 180, 90, { fill: '#fff6e0', shade: '#e0c9a0', r, rot: 0.04 });
-      comicWord(g, '164', 1350, 520, 260, { fill: '#f2b134', shade: '#c7812a', r, rot: -0.06 });
-      comicWord(g, 'PERF@1 > 1', 900, 880, 120, { fill: '#10b981', shade: '#047857', r, rot: -0.05, keyline: '#fff6e0' });
-      bang(g, 300, 700, 90, 0.1, '#ef4b5f', r);
-    } },
+
   ],
 });
 </script></body></html>

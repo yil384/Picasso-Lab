@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>TritonGym: The Loop</title>
+<!-- TritonGym project-card film (3D comic series). See STORYBOARD.md. One real three.js set rendered through the npr
+     toolkit (cel ramp, halftone, burin hatching, boiling ink, off-register plates, paper grain); faces, lettering and
+     marks are hand-built (tg_paint.js / tg_letter.js), no web fonts.
+     Authoring: ?cam=az,el,r,tx,ty,tz overrides the camera  ?dbg=1 frame number  ?debug=1..5 npr G-buffer views -->
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { NF, LOOK, PAPER, buildWorld, updateWorld, drawNPR, drawMarks, drawInk } from './tg_film.js';
+
+defineScene({
+  meta: {
+    title: 'TritonGym - The Loop', durationFrames: NF, fps: 24, width: 1920, height: 1080, seed: 29,
+    design: [1920, 1080], background: PAPER.tone, fonts: [],
+    boil: { every: 2, variants: 3 },            // ink boils at 12 drawings/s
+    poster: 0,
+  },
+  update(ctx) { updateWorld(ctx); },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(ctx.paper(PAPER), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, three) { return buildWorld(ctx, three); },
+      draw(ctx) { drawNPR(ctx); return false; } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw(ctx, p, brush) { drawInk(ctx, brush); } },
+    { name: 'marks', type: '2d', draw(ctx, g) { drawMarks(ctx, g); } },
+  ],
+});
+</script></body></html>

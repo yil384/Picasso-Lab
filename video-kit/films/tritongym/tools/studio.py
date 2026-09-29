@@ -86,6 +86,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{a.port}"
     size = {"width": a.width, "height": a.height}
+    cur = {"file": sfile}
     extra = {}
     log = []
 
@@ -100,7 +101,7 @@ def main():
             log.clear()
             q = {"render": "1", **size, **extra}
             t0 = time.time()
-            page.goto(f"{base}/scene/{sfile}?{urlencode(q)}")
+            page.goto(f"{base}/scene/{cur['file']}?{urlencode(q)}")
             page.wait_for_function("() => window.__pv && (window.__pv.ready || window.__pv.error)", timeout=900000, polling=200)
             err = page.evaluate("() => window.__pv.error")
             return {"boot_s": round(time.time() - t0, 1), "error": err, "gl": page.evaluate(GL_INFO_JS), "log": log[-30:]}
@@ -115,6 +116,8 @@ def main():
                     ev.set()
                     break
                 if cmd == "reload":
+                    if "file" in q:
+                        cur["file"] = q.pop("file")
                     for k in ("width", "height"):
                         if k in q:
                             size[k] = int(q.pop(k))
