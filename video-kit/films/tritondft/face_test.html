@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>face test</title>
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+// authoring aid only: bakes every cast face (same keys as the film, so shoot.py caches them into work/bake) and lays
+// them out in a grid, one row per character, boil variant 0
+import { defineScene } from '/pv/runtime/pv.js';
+import * as THREE from 'three';
+import { PAL } from './td_core.js';
+import { addLetterBrushes } from './td_letters.js';
+import { bakeFaces } from './td_faces.js';
+import { FACES } from './td_cast.js';
+const S = {};
+defineScene({
+  meta: { title: 'faces', durationFrames: 2, fps: 24, width: 1920, height: 1080, design: [1920, 1080], background: PAL.paper, boil: { every: 2, variants: 2 } },
+  async setup(ctx) {
+    addLetterBrushes(brush);
+    for (const who of Object.keys(FACES)) S[who] = await bakeFaces(THREE, who, ...FACES[who]);
+  },
+  layers: [
+    { name: 'paper', type: '2d', draw(ctx, g) { g.drawImage(ctx.paper({ tone: PAL.paper }), 0, 0, 1920, 1080); } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw() {} },
+    { name: 'faces', type: '2d', draw(ctx, g) {
+      Object.keys(S).forEach((who, r) => {
+        Object.keys(S[who]).forEach((e, c) => {
+          const cv = S[who][e][ctx.iw % 2].userData.canvas, h = 230, sph = who === 'tilt';
+          const sw = sph ? cv.width / 2 : cv.width, sx = sph ? 0 : 0, w = Math.min(185, h * sw / cv.height);
+          g.drawImage(cv, sx, 0, sw, cv.height, 10 + c * 190, 20 + r * 262, w, w * cv.height / sw);
+          g.fillStyle = PAL.ink; g.font = '20px sans-serif'; g.fillText(`${who} ${e}`, 12 + c * 190, 18 + r * 262 + 250);
+        });
+      });
+    } },
+  ],
+});
+</script></body></html>

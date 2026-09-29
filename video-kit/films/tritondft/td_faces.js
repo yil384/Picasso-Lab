@@ -26,10 +26,24 @@ export function paintFace(brush, cfg, expr, W, H, v) {
   const ex = (cfg.ex ?? 56) * s, ey = (cfg.ey ?? -22) * s, my = cy + (cfg.my ?? 44) * s;
   const eyes = [[cx - ex, cy + ey], [cx + ex, cy + ey]];
   const W_ = (px) => px / 11;
+  // a solid ink ellipse: p5.brush's watercolour fill stays translucent (grey-violet) on big shapes, so a soft fill
+  // base is packed with overlapping fat-ink scanlines and ringed with an ink contour
+  const solidEll = (x, y, rx, ry, col) => {
+    const E = ell(x, y, rx, ry, 0, 30);
+    fillP(brush, E, col);
+    const w = Math.max(5, Math.min(rx, ry) * 0.6), stp = w * 0.42;
+    brush.set('fatink', col, W_(w));
+    for (let yy = -ry + w * 0.4; yy <= ry - w * 0.4 + 1e-6; yy += stp) {
+      const hx = rx * Math.sqrt(Math.max(0, 1 - (yy / ry) ** 2)) - w * 0.35;
+      if (hx > 1) brush.line(x - hx, y + yy, x + hx, y + yy);
+    }
+    brush.set('fatink', col, W_(Math.max(3, w * 0.5)));
+    brush.beginShape(0.2); E.forEach(([a, b]) => brush.vertex(a, b)); brush.endShape(true);
+  };
   const dotEyes = (rx, ry, look = 0) => eyes.forEach(([x, y], i) => {
-    const E = ell(x + j(i) + look * s, y + j(i + 3), rx * s, ry * s);
-    fillP(brush, E, eyeCol); fillP(brush, E, eyeCol); fillP(brush, E, eyeCol, 220);
-    fillP(brush, ell(x + look * s - rx * 0.32 * s, y - ry * 0.42 * s, rx * 0.3 * s, ry * 0.2 * s), PAL.cream);
+    solidEll(x + j(i) + look * s, y + j(i + 3), rx * s, ry * s, eyeCol);
+    const G = ell(x + look * s - rx * 0.32 * s, y - ry * 0.42 * s, rx * 0.3 * s, ry * 0.2 * s);
+    fillP(brush, G, PAL.cream); fillP(brush, G, PAL.cream);
   });
   const arcs = (dir, w = 22, h = 14) => eyes.forEach(([x, y]) => {
     brush.set('fatink', eyeCol, W_(10 * s)); brush.spline([[x - w * s, y + dir * h * 0.3 * s], [x, y - dir * h * s], [x + w * s, y + dir * h * 0.3 * s]], 0.7);
@@ -41,8 +55,14 @@ export function paintFace(brush, cfg, expr, W, H, v) {
   const mouth = (kind) => {
     const m = s;
     if (kind === 'smile') { brush.set('bigink', ink, W_(9 * m) * 1.6); brush.spline([[cx - 22 * m, my - 4 * m], [cx, my + 10 * m], [cx + 22 * m, my - 4 * m]], 0.7); }
-    if (kind === 'o') { const E = ell(cx, my + 4 * m, 11 * m, 14 * m); for (let q = 0; q < 3; q++) fillP(brush, E, ink); fillP(brush, ell(cx, my + 8 * m, 6 * m, 6 * m), '#e8546a'); }
-    if (kind === 'open') { const pts = [[cx - 28 * m, my - 8 * m], [cx + 28 * m, my - 8 * m], [cx + 20 * m, my + 14 * m], [cx, my + 22 * m], [cx - 20 * m, my + 14 * m]]; for (let q = 0; q < 3; q++) fillP(brush, pts, ink); fillP(brush, ell(cx, my + 13 * m, 12 * m, 7 * m), '#e8546a'); }
+    if (kind === 'o') { solidEll(cx, my + 4 * m, 11 * m, 14 * m, ink); const T = ell(cx, my + 8 * m, 6 * m, 6 * m); fillP(brush, T, '#e8546a'); fillP(brush, T, '#e8546a'); }
+    if (kind === 'open') {
+      const pts = [[cx - 28 * m, my - 8 * m], [cx + 28 * m, my - 8 * m], [cx + 20 * m, my + 14 * m], [cx, my + 22 * m], [cx - 20 * m, my + 14 * m]];
+      for (let q = 0; q < 3; q++) fillP(brush, pts, ink);
+      brush.set('fatink', ink, W_(9 * m)); for (let yy = -5; yy <= 15; yy += 5) { const hx = (26 - Math.max(0, yy - 4) * 1.1) * m; brush.line(cx - hx, my + yy * m, cx + hx, my + yy * m); }
+      brush.beginShape(0.2); pts.forEach(([a, b]) => brush.vertex(a, b)); brush.endShape(true);
+      const T = ell(cx, my + 13 * m, 12 * m, 7 * m); fillP(brush, T, '#e8546a'); fillP(brush, T, '#e8546a');
+    }
     if (kind === 'flat') { brush.set('bigink', ink, W_(9 * m) * 1.5); brush.line(cx - 18 * m, my, cx + 18 * m, my + 2 * m); }
     if (kind === 'wavy') { brush.set('bigink', ink, W_(9 * m) * 1.4); brush.spline([[cx - 22 * m, my], [cx - 11 * m, my - 6 * m], [cx, my], [cx + 11 * m, my - 6 * m], [cx + 22 * m, my]], 0.5); }
     if (kind === 'teeth') { const pts = [[cx - 32 * m, my - 10 * m], [cx + 32 * m, my - 10 * m], [cx + 32 * m, my + 12 * m], [cx - 32 * m, my + 12 * m]]; fillP(brush, pts, PAL.cream); fillP(brush, pts, PAL.cream); brush.set('bigink', ink, W_(8 * m) * 1.2); brush.beginShape(0); pts.forEach(([a, b]) => brush.vertex(a, b)); brush.endShape(true); brush.line(cx - 32 * m, my + 1 * m, cx + 32 * m, my + 1 * m); for (let q = -1; q <= 1; q++) brush.line(cx + q * 14 * m, my - 10 * m, cx + q * 14 * m, my + 12 * m); }

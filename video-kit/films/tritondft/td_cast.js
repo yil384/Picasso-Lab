@@ -12,6 +12,14 @@ import { buildSilicon } from './td_world.js';
 
 const ink = { color: COL.ink, hatch: 0, rim: 0.2, spec: 0 };
 
+/** face configs per character: [paintFace cfg, expressions, bake opts] (also used by face_test.html) */
+export const FACES = {
+  tri: [{ sphere: false, s: 2.5, ex: 40, ey: -12, my: 40, blush: false }, ['determined', 'squint', 'happy', 'surprised', 'strain', 'grin', 'look'], { W: 512, H: 512, bg: '#ffffff', version: 3 }],
+  clack: [{ sphere: false, s: 1.5, ex: 78, ey: -4, my: 34, cy: -12, blush: false }, ['determined', 'squint', 'happy', 'surprised', 'strain', 'grin', 'look'], { W: 512, H: 144, bg: '#ffffff', version: 4 }],
+  tilt: [{ sphere: true, s: 1.5, ex: 58, ey: -12, my: 48 }, ['determined', 'squint', 'happy', 'surprised', 'dizzy', 'grin', 'look', 'worried'], { W: 1024, H: 512, version: 3 }],
+  hoot: [{ sphere: false, s: 3.4, ex: 30, ey: -8, my: 38, eyeCol: PAL.ink }, ['tired', 'sleep', 'surprised', 'squint', 'happy', 'annoyed', 'look', 'grin', 'blank', 'awake'], { W: 768, H: 512, bg: '#fff1d6', version: 3 }],
+};
+
 async function faceSet(W, who, cfg, exprs, o) { return bakeFaces(W.THREE, who, cfg, exprs, o); }
 
 // ---------------------------------------------------------------------------------------------------
@@ -27,7 +35,7 @@ export async function buildTri(W) {
   const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 1, curveSegments: 4 });
   geo.translate(0, 0, -0.025);
   const id = 240;
-  R.faceTex = await faceSet(W, 'tri', { sphere: false, s: 2.5, ex: 40, ey: -12, my: 40, blush: false }, ['determined', 'squint', 'happy', 'surprised', 'strain', 'grin', 'look'], { W: 512, H: 512, bg: '#ffffff', version: 2 });
+  R.faceTex = await faceSet(W, 'tri', ...FACES.tri);
   R.mesh = add(geo, [{ color: COL.sky, id, rim: 0.8, hatchDir: [0.4, 1, 0], shadeColor: COL.navy, shadeMix: 0.35, seed: 11 }, { color: COL.cream, rim: 0.3, hatch: 0.4 }], { outline: 1.0 }, [0, 0, 0], [0, 0, 0], R.tri);
   // face decal on the solid band above the hole (same surface id, so no ink ring round it)
   R.face = add(new THREE.PlaneGeometry(0.26, 0.26), { unique: true, color: COL.sky, id, map: R.faceTex.determined[0], rim: 0.8, hatch: 0.6, seed: 11 }, { cast: false }, [-0.095, 0.34, 0.039], [0, 0, 0], R.tri);
@@ -78,7 +86,7 @@ export async function buildClack(W) {
     R.keys.push(g);
   }
   // front plate with the face (between keys and roller)
-  R.faceTex = await faceSet(W, 'clack', { sphere: false, s: 1.5, ex: 78, ey: -4, my: 34, blush: false }, ['determined', 'squint', 'happy', 'surprised', 'strain', 'grin', 'look'], { W: 512, H: 144, bg: '#ffffff', version: 2 });
+  R.faceTex = await faceSet(W, 'clack', ...FACES.clack);
   R.face = add(new THREE.PlaneGeometry(0.46, 0.13), { ...blue, unique: true, id, map: R.faceTex.determined[0], hatch: 0.5 }, { cast: false }, [0, 0.322, 0.172], [0, 0, 0], R.body);
   // platen roller (brow) with end knobs; the paper behind it
   R.roller = new THREE.Group(); R.roller.position.set(0, 0.445, -0.05); R.body.add(R.roller);
@@ -139,7 +147,7 @@ export async function buildTilt(W) {
   add(new THREE.CylinderGeometry(0.03, 0.04, 0.42, 14), blue, { outline: 0.7 }, [0, 0.26, 0], [0, 0, 0], R.body);
   R.feet = [-1, 1].map((s) => { const f = add(new THREE.SphereGeometry(0.04, 12, 8), { color: COL.pop, rim: 0.5 }, { outline: 0.5 }, [s * 0.09, 0.02, 0.08], [0, 0, 0], R.body); f.scale.set(1.1, 0.6, 1.5); return f; });
   R.head = new THREE.Group(); R.head.position.y = 0.52; R.body.add(R.head);
-  R.faceTex = await faceSet(W, 'tilt', { sphere: true, s: 1.5, ex: 58, ey: -12, my: 48 }, ['determined', 'squint', 'happy', 'surprised', 'dizzy', 'grin', 'look', 'worried'], { W: 1024, H: 512 });
+  R.faceTex = await faceSet(W, 'tilt', ...FACES.tilt);
   R.headM = add(new THREE.SphereGeometry(0.12, 32, 20), { ...blue, unique: true, hatchMode: 'screen', map: R.faceTex.determined[0], toneBias: 0.08 }, { outline: 0.9 }, [0, 0, 0], [0, 0, 0], R.head);
   // crossbeam = arms (rotates about the head); hands at the ends; pans hang from the hands (kept vertical)
   R.beam = new THREE.Group(); R.head.add(R.beam);
@@ -197,7 +205,7 @@ export async function buildHoot(W) {
   add(new THREE.CylinderGeometry(0.36, 0.44, 0.34, 32, 1, true), { color: COL.cream, side: THREE.DoubleSide, rim: 0.5, hatchDir: [0, 1, 0], toneBias: 0.05 }, { outline: 0.8 }, [0, 0.2, 0], [0, 0, 0], R.body);
   R.head = new THREE.Group(); R.head.position.set(0, 0.62, 0); R.body.add(R.head);
   // facial disc (cream) with the face; tufts; beak; glasses
-  R.faceTex = await faceSet(W, 'hoot', { sphere: false, s: 3.4, ex: 30, ey: -8, my: 38, eyeCol: PAL.ink }, ['tired', 'sleep', 'surprised', 'squint', 'happy', 'annoyed', 'look', 'grin', 'blank', 'awake'], { W: 768, H: 512, bg: '#fff1d6', version: 2 });
+  R.faceTex = await faceSet(W, 'hoot', ...FACES.hoot);
   R.disc = add(new THREE.SphereGeometry(0.3, 36, 24, Math.PI / 2 - Math.PI * 0.42, Math.PI * 0.84, Math.PI * 0.2, Math.PI * 0.62), { unique: true, color: 0xfff1d6, map: R.faceTex.tired[0], rim: 0.4, toneBias: 0.12, hatch: 0.5, seed: 72 }, { outline: 0.6 }, [0, 0.0, 0.16], [0, 0, 0], R.head);
   R.disc.scale.set(1.12, 1.0, 0.85);
   R.tufts = [-1, 1].map((s) => { const g = new THREE.Group(); g.position.set(s * 0.25, 0.3, -0.02); g.rotation.z = -s * 0.35; R.head.add(g); add(new THREE.ConeGeometry(0.07, 0.2, 14), tan, { outline: 0.8 }, [0, 0.09, 0], [0, 0, 0], g); return g; });
