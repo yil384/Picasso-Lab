@@ -132,10 +132,11 @@ export function buildSet(npr, scene, L) {
   if (L.laser) {
     const [x, z, ry] = L.laser;
     const g = new THREE.Group(); g.position.set(x, TY, z); g.rotation.y = ry; scene.add(g);
-    add(new THREE.BoxGeometry(2.2, 0.8, 0.9), { color: COL.cream, hatchDir: [0, 1, 0] }, { outline: 1 }, [0, 0.4, 0], [0, 0, 0], g);
+    add(new THREE.BoxGeometry(2.2, 0.8, 0.9), { color: 0xe9dcc0, hatchDir: [0, 1, 0] }, { outline: 1.6 }, [0, 0.4, 0], [0, 0, 0], g);
     add(new THREE.BoxGeometry(2.24, 0.12, 0.94), { color: COL.violet }, { outline: 0.7 }, [0, 0.7, 0], [0, 0, 0], g);
-    add(cyl(0.12, 0.12, 0.2, 20), { color: COL.red }, { outline: 0.6 }, [0.7, 0.55, 0.48], [Math.PI / 2, 0, 0], g);
-    add(cyl(0.1, 0.1, 0.2, 20), { color: COL.amber }, { outline: 0.6 }, [0.35, 0.55, 0.48], [Math.PI / 2, 0, 0], g);
+    add(cyl(0.12, 0.12, 0.2, 20), { color: COL.amber }, { outline: 1.0 }, [0.7, 0.55, 0.48], [Math.PI / 2, 0, 0], g);
+    add(new THREE.BoxGeometry(0.55, 0.36, 0.04), { color: COL.dark, hatchDir: [1, 0, 0], hatchScale: 12 }, { outline: 0.6, cast: false }, [-0.55, 0.42, 0.46], [0, 0, 0], g);   // vent grille
+    add(cyl(0.1, 0.1, 0.2, 20), { color: COL.violet }, { outline: 1.0 }, [0.35, 0.55, 0.48], [Math.PI / 2, 0, 0], g);
     add(cyl(0.16, 0.16, 0.3, 24), { color: COL.dark, hatchMode: 'u' }, { outline: 0.7 }, [1.2, 0.4, 0], [0, 0, Math.PI / 2], g);
   }
   // cables snaking over the table
@@ -154,19 +155,27 @@ export function buildSet(npr, scene, L) {
     });
     wallTex.wrapS = THREE.RepeatWrapping;
     const ww = W.x1 - W.x0, wh = W.y1 - TY;
-    add(new THREE.BoxGeometry(ww, wh, 0.4), { color: COL.wall, map: wallTex, hatchDir: [1, 0.1, 0], hatch: 0.7, noiseScale: 0.3, spec: 0, halftone: 0.9 }, { outline: 1.0, cast: false }, [(W.x0 + W.x1) / 2, TY + wh / 2, W.z - 0.2]);
+    add(new THREE.BoxGeometry(ww, wh, 0.4), { color: COL.wall, map: wallTex, hatchDir: [1, 0.1, 0], hatch: 0.7, noiseScale: 0.3, spec: 0, halftone: 0.9, receive: false }, { outline: 1.0, cast: false }, [(W.x0 + W.x1) / 2, TY + wh / 2, W.z - 0.2]);
+    // side (return) walls, so no camera ever sees past the set
+    for (const sx of [W.sideX0, W.sideX1]) {
+      if (sx === undefined) continue;
+      const depth = W.sideZ1 - W.z, cz = (W.z + W.sideZ1) / 2;
+      add(new THREE.BoxGeometry(0.4, wh, depth), { color: COL.wall, map: wallTex, hatchDir: [0, 0.1, 1], hatch: 0.7, noiseScale: 0.3, spec: 0, halftone: 0.9, receive: false }, { outline: 1.0, cast: false }, [sx, TY + wh / 2, cz]);
+      add(new THREE.BoxGeometry(0.2, 1.6, depth), { color: COL.wallDark, hatchDir: [0, 1, 0], receive: false }, { outline: 0.9, cast: false }, [sx + (sx < 0 ? 0.3 : -0.3), TY + 0.8, cz]);
+      add(new THREE.BoxGeometry(0.3, 0.14, depth), { color: COL.trim, hatchDir: [0, 1, 0], receive: false }, { outline: 0.8, cast: false }, [sx + (sx < 0 ? 0.34 : -0.34), TY + 1.62, cz]);
+    }
     // wainscot panel + chair rail (cream trim)
-    add(new THREE.BoxGeometry(ww, 1.6, 0.2), { color: COL.wallDark, hatchDir: [0, 1, 0] }, { outline: 0.9, cast: false }, [(W.x0 + W.x1) / 2, TY + 0.8, W.z + 0.1]);
-    add(new THREE.BoxGeometry(ww, 0.14, 0.3), { color: COL.trim, hatchDir: [0, 1, 0] }, { outline: 0.8, cast: false }, [(W.x0 + W.x1) / 2, TY + 1.62, W.z + 0.14]);
+    add(new THREE.BoxGeometry(ww, 1.6, 0.2), { color: COL.wallDark, hatchDir: [0, 1, 0], receive: false }, { outline: 0.9, cast: false }, [(W.x0 + W.x1) / 2, TY + 0.8, W.z + 0.1]);
+    add(new THREE.BoxGeometry(ww, 0.14, 0.3), { color: COL.trim, hatchDir: [0, 1, 0], receive: false }, { outline: 0.8, cast: false }, [(W.x0 + W.x1) / 2, TY + 1.62, W.z + 0.14]);
     // shelves with a few fat flasks (few, big, readable)
     for (const sh of W.shelves || []) {
       const [x, y, len] = sh;
-      add(new THREE.BoxGeometry(len, 0.12, 0.7), { color: COL.wood, hatchDir: [0, 1, 0] }, { outline: 0.9 }, [x, y, W.z + 0.35]);
+      add(new THREE.BoxGeometry(len, 0.12, 0.7), { color: COL.wood, hatchDir: [0, 1, 0] }, { outline: 1.4, cast: false }, [x, y, W.z + 0.35]);
       for (const [bx, lathe, col] of sh[3] || []) {
         const prof = { flask: [[0.001, 0], [0.34, 0], [0.36, 0.08], [0.3, 0.3], [0.1, 0.5], [0.09, 0.78], [0.12, 0.82], [0.001, 0.82]],
           jar: [[0.001, 0], [0.26, 0], [0.28, 0.06], [0.28, 0.6], [0.2, 0.66], [0.2, 0.74], [0.001, 0.74]],
           bulb: [[0.001, 0], [0.12, 0], [0.12, 0.1], [0.3, 0.3], [0.3, 0.45], [0.1, 0.66], [0.07, 0.8], [0.001, 0.8]] }[lathe];
-        add(new THREE.LatheGeometry(prof.map(([a, b]) => new THREE.Vector2(a, b)), 32), { color: col, spec: 1, rim: 0.8, hatchMode: 'v' }, { outline: 0.8 }, [x + bx, y + 0.06, W.z + 0.35]);
+        add(new THREE.LatheGeometry(prof.map(([a, b]) => new THREE.Vector2(a, b)), 32), { color: col, spec: 0, rim: 0.8, hatchMode: 'v' }, { outline: 1.6, cast: false }, [x + bx, y + 0.06, W.z + 0.35]);
       }
     }
     // round window (porthole) with a night-violet sky and a moon, a brass frame

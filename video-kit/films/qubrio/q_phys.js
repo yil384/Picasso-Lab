@@ -12,6 +12,7 @@
 import { clamp, lerp } from '/pv/runtime/pv.js';
 
 export const R = 0.22, AY = 0.44, PAIR = 0.52;
+export const RINT = 0.65;                            // the interaction radius r (Pip's circle): a docked mover sits well inside it
 export const SCOL = [-1.0, 0.0, 1.0];                // storage columns (x)
 export const SROW = [-3.5, -2.5, -1.5];              // storage rows (z), back -> front
 export const PCOL = [-1.42, 0.48, 2.38];            // partner columns (x) in the entanglement zone
@@ -48,10 +49,11 @@ export const homeXZ = (a) => a.kind === 'partner' ? [PCOL[a.c], PROW[a.r]] : [SC
  *   phase C (0.3 .. 1): glide forward to the partner rows
  * Returns { colX: [3], rowZ: [2] }.
  */
+const mjx = (x) => { x = clamp(x); return x * x * x * (10 + x * (-15 + 6 * x)); };
+export const stretchAt = (p) => mjx((clamp(p) - 0.08) / 0.36);   // stretch (done before the front row reaches the partner rows)
 export function aodAt(p) {
   p = clamp(p);
-  const mjx = (x) => { x = clamp(x); return x * x * x * (10 + x * (-15 + 6 * x)); };
-  const s = mjx((p - 0.08) / 0.36);          // stretch (done before the front row reaches the partner rows)
+  const s = stretchAt(p);
   const colX = MCOL.map((c, i) => lerp(SCOL[c], PCOL[i] - PAIR, s));
   const z0 = SROW[MROW[0]], z1 = SROW[MROW[1]];
   const fwd = mjx(p);                          // overall forward travel (one smooth min-jerk)
@@ -61,3 +63,14 @@ export function aodAt(p) {
   return { colX, rowZ };
 }
 export function moverXZ(m, p) { const A = aodAt(p); return [A.colX[m.pc], A.rowZ[m.pr]]; }
+
+/**
+ * A routing plan's path for mover m at progress p. The good plan IS the executed convoy (moverXZ). A 'swap' plan sends the
+ * listed front-row movers to each other's docks: their AOD columns would have to cross (the verifier's catch).
+ */
+export function planXZ(m, p, swap = null) {
+  const [x, z] = moverXZ(m, p);
+  if (!swap || m.pr !== 1 || !(m.pc in swap)) return [x, z];
+  const c = swap[m.pc];
+  return [lerp(SCOL[MCOL[m.pc]], PCOL[c] - PAIR, stretchAt(p)), z];
+}

@@ -496,6 +496,9 @@ void main() {
   float focusK = 1. - smoothstep(.15, .15 + L_dofLines, coc);
   float ink = edge * (1. - dry) * focusK * L_inkA;
   float hatch = max(A0.r, A0.g) * focusK * L_hatchA * (1. - dry * .6) * (1. - L_hatchFar * farK);
+  // in a whip the lines smear away with the paint (crisp lines over a smeared fill read as a double exposure)
+  float whipK = 1. - .9 * clamp((length(uSmear) - 6. * uS) / (30. * uS), 0., 1.);
+  ink *= whipK; hatch *= whipK;
   vec3 inkCol = mix(L_ink, P.rgb * P.rgb * .55, L_selfInk * P.a);
   vec3 hatchCol = mix(L_hatchInk, P.rgb * .5, L_selfInk * P.a);
   col = mix(col, paper * hatchCol, clamp(hatch, 0., 1.));
@@ -700,8 +703,12 @@ void main() {
   float sm = length(uSmear);
   if (sm > .5) {
     vec2 dir = uSmear / sm, nrm = vec2(-dir.y, dir.x);
-    float st = vnoise(vec2(dot(dp, nrm) * .3, dot(dp, dir) * .003 + uBoilSeed));
-    col = mix(col, paper, smoothstep(.72, .8, st) * clamp(sm / (40. * uS), 0., 1.) * .8);
+    // bold tapered ink streaks along the pan, broken into dashes, clustered toward the frame edges (centre clear)
+    float st = vnoise(vec2(dot(dp, nrm) * .045, dot(dp, dir) * .0012 + uBoilSeed));
+    float seg = smoothstep(.35, .65, vnoise(vec2(dot(dp, nrm) * .045 + 7.3, dot(dp, dir) * .0035 + uBoilSeed * 1.7)));
+    float edgeK = smoothstep(.18, .5, length((uv - .5) * vec2(1., .75)));
+    float ln = smoothstep(.8, .86, st) * seg * edgeK;
+    col = mix(col, L_ink, ln * clamp(sm / (40. * uS), 0., 1.) * .78);
   }
 
   // comic concentration lines (manga 集中線): tapered ink wedges converging on a focal point, a clear
@@ -1105,6 +1112,8 @@ export function createNPR(renderer, ctx, opts = {}) {
     },
     /** Directional smear in design px (whip pans). */
     setSmear(dx, dy) { npr.smear = [dx, dy]; },
+    /** surface ids handed out so far (max BACKDROP_ID - 1) */
+    idsUsed() { return nextId; },
 
     /** Run the whole pipeline and draw the frame into the layer canvas. Return false from the layer draw. */
     render(scene, camera) {

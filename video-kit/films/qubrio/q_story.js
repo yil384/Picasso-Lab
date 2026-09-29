@@ -1,17 +1,18 @@
 // q_story.js - build + per-frame logic for the Qubrio film (see STORYBOARD.md). Timeline and states: q_time.js.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createNPR } from './npr/npr.js';
 import { orbit, handheld, applyRig } from './npr/camera.js';
 import { buildSet, COL } from './q_set.js';
 import { pedestal, pedestalGeo, dashGeo } from './q_traps.js';
 import { makeAdder, buildCompass, poseCompass, buildWatch, poseWatch, buildSnail, poseSnail, buildLoco, poseLoco, buildLoupe, poseLoupe,
-  buildGauge, poseGauge, buildPennant, posePennant } from './q_cast.js';
+  buildGauge, poseGauge, buildPennant, posePennant, buildPencil, posePencil } from './q_cast.js';
 import { stripGeo, circlePts, arrowPts, barbs, reveal } from './q_marks.js';
 import * as P from './q_phys.js';
 import * as T from './q_time.js';
 import { makeView } from './q_view.js';
-import { drawFace, drawEmote, stroke, fillPoly, trunc, brushWipe, INK } from './q_ink.js';
-import { brushWord, scriptWord, sfxState } from './q_letters.js';
+import { drawFace, drawEmote, stroke, fillPoly, trunc, brushWipe, INK, backOut } from './q_ink.js';
+import { brushWord, scriptWord, sfxState, burst } from './q_letters.js';
 import { TAU, clamp, lerp, sm, io, ob, sg } from './q_util.js';
 
 export const NF = T.NF, FPS = T.FPS, POSTER = 612;
@@ -44,7 +45,7 @@ export const LAYOUT = {
   posts: [[-6.4, -3.8, 1.8, 'mirror', 0.6], [7.8, -3.6, 1.5, 'lens', 1.1], [-6.6, 3.4, 1.2, 'box', 0.7]],
   laser: [-6.8, -7.0, 0.25],
   cables: [{ color: 0x4b2a9e, pts: [[4.6, -2.4], [6.0, -3.8], [3.4, -5.6], [0.2, -5.2], [-3.0, -5.8], [-6.4, -5.4]] }],
-  wall: { z: -10.5, x0: -24, x1: 24, y1: 15,
+  wall: { z: -10.5, x0: -24, x1: 24, y1: 15, sideX0: -13, sideX1: 15, sideZ1: 14,
     shelves: [[-6.0, 2.4, 5, [[-1.6, 'flask', 0xb9a3f0], [0, 'jar', 0xf2c46a], [1.5, 'bulb', 0xfff3dc]]], [6.5, 3.2, 4, [[-1, 'jar', 0x8b5cf6], [0.8, 'flask', 0xf2c46a]]]],
     window: [0.6, 5.2, 1.9], lamp: [-2.4, 6.2] },
 };
@@ -68,10 +69,12 @@ export async function build(ctx, { renderer }, Q) {
   // Tick's stool (off the plate's front-right corner; top level with the plate)
   add(new THREE.CylinderGeometry(0.62, 0.7, 1.0, 36), { color: VIOLET, hatchMode: 'u', rim: 0.8, shadeColor: 0x3b1f8a, shadeMix: 0.35 }, { outline: 1.0, cast: false }, [T.TICK.x, -0.5, T.TICK.z]);
   add(new THREE.CylinderGeometry(0.66, 0.66, 0.07, 36), { color: COL.brass, hatchMode: 'u' }, { outline: 0.6, cast: false }, [T.TICK.x, 0.0, T.TICK.z]);
+  // the gauge's own little plinth beside the stool (top level with the plate)
+  add(new THREE.BoxGeometry(1.0, 1.0, 0.66), { color: 0x6b4fc9, hatchDir: [0, 1, 0], rim: 0.6, shadeColor: 0x3b1f8a, shadeMix: 0.35 }, { outline: 1.0, cast: false }, [T.GAUGE.x, -0.5, T.GAUGE.z], [0, T.GAUGE.yaw, 0]);
   // Rook's side track (two brass rails + sleepers)
   const railG = new THREE.BoxGeometry(0.05, 0.05, 7.4);
   for (const dx of [-0.3, 0.3]) add(railG, { color: COL.brass, hatchMode: 'u' }, { outline: 0.5, cast: false }, [P.TRACK_X + dx, 0.025, -0.95]);
-  for (let k = 0; k < 16; k++) add(new THREE.BoxGeometry(0.8, 0.03, 0.12), { color: 0x7a4a2e }, { outline: 0.4, cast: false }, [P.TRACK_X, 0.012, -4.4 + k * 0.47]);
+  add(mergeGeometries(Array.from({ length: 16 }, (_, k) => new THREE.BoxGeometry(0.8, 0.03, 0.12).translate(0, 0, k * 0.47))), { color: 0x7a4a2e }, { outline: 0.4, cast: false }, [P.TRACK_X, 0.012, -4.4]);   // sleepers (one surface)
   // Slo's lane along the plate's front: pencil-ruled edges, a pick-up tray (left) and a drop tray (right)
   const L = T.SLO;
   for (const dz of [-0.32, 0.32]) add(stripGeo([[L.xA - 0.75, L.z + dz], [L.xB + 0.75, L.z + dz]], 0.014), decal(0x3a2f66), { cast: false });
@@ -99,19 +102,19 @@ export async function build(ctx, { renderer }, Q) {
   // plate marks: placement circles (ochre pencil), dock dots, plan arrows (graphite), the verifier's ink ring
   const pencil = decal(OCHRE, { flat: 0.75, glow: 0.2, receive: true });
   const graphite = decal(0x3a2f66);
-  W.circles = P.PARTNERS.map((p, k) => add(stripGeo(circlePts(P.PCOL[p.c], P.PROW[p.r], P.PAIR, Math.PI, 1, 80, 0.012, k), (t) => 0.036 + 0.01 * Math.sin(t * 9)), pencil, { cast: false }));
+  W.circles = P.PARTNERS.map((p, k) => add(stripGeo(circlePts(P.PCOL[p.c], P.PROW[p.r], P.RINT, Math.PI, 1, 80, 0.012, k), (t) => 0.036 + 0.01 * Math.sin(t * 9)), pencil, { cast: false }));
   W.dockDots = P.MOVERS.map((m) => { const [x, z] = P.dockXZ(m); return add(stripGeo(circlePts(x, z, 0.1, 0, 1, 24), 0.1), pencil, { cast: false }); });
-  const mkArrow = (route, i) => {
-    const pts = arrowPts(route[0], route[1], 0.1 * (i % 2 ? 1 : -1), 30);
+  const mkArrow = (m, bad) => {   // the plan's route for mover m, sampled along the AOD path (starts clear of the atom)
+    const home = P.homeXZ(m), pts = [];
+    for (let k = 0; k <= 48; k++) { const q = T.planPath(m, k / 48, bad); if (Math.hypot(q[0] - home[0], q[1] - home[1]) > P.R + 0.08) pts.push(q); }
     return { body: add(stripGeo(pts, (t) => 0.05 * (0.65 + 0.35 * Math.sin(Math.PI * t))), graphite, { cast: false }), barbs: barbs(pts, 0.34, 0.55).map((b) => add(stripGeo(b, 0.045), graphite, { cast: false })) };
   };
-  W.plan1 = T.ROUTE1.map(mkArrow);
-  W.plan2 = T.ROUTE2.map((r, i) => (T.WRONG[i] ? mkArrow(r, i) : null));
+  W.plan1 = P.MOVERS.map((m) => mkArrow(m, true));
+  W.plan2 = P.MOVERS.map((m, i) => (T.WRONG[i] ? mkArrow(m, false) : null));
   W.inkRing = add(stripGeo(circlePts(T.CROSS_AT[0], T.CROSS_AT[1], 0.46, -0.6, 1.12, 60, 0.05, 3), (t) => 0.05 * (0.5 + 0.5 * Math.sin(Math.PI * t))), decal(0x1a1530), { cast: false });
 
   // ghosts: pencil stand-ins for the dry run and the simulator (engraved glass: outline, faint tint, glints)
-  const gGeo = new THREE.SphereGeometry(P.R, 36, 24);
-  W.ghosts = P.MOVERS.map((m, i) => { const g = add(gGeo, { color: 0xffc862, hatch: 1.0, toneBias: -0.05, rim: 0.4, spec: 0, flat: 0.25, receive: false, halftone: 1.0, seed: 300 + i, hatchMode: 'screen', hatchDir: [1, 1, 0] }, { outline: 0.7, cast: false }); g.visible = false; return g; });
+  W.ghosts = [];   // (drawn as pencil sketches in the ink layer)
   // the verifier's penalty flag (ochre cloth on a short pole)
   W.pflag = new THREE.Group(); scene.add(W.pflag);
   add(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 10).translate(0, 0.35, 0), { color: COL.brass }, { outline: 0.5, cast: false }, [0, 0, 0], [0, 0, 0], W.pflag);
@@ -121,14 +124,16 @@ export async function build(ctx, { renderer }, Q) {
   W.pip = buildCompass(add, scene, { color: 0x8b5cf6 });
   W.tick = buildWatch(add, scene, { R: 0.66 });
   W.pennant = buildPennant(add, W.tick);
-  W.gauge = buildGauge(add, npr, scene, { hPM: 1.05, x: T.GAUGE.x, z: T.GAUGE.z });
+  W.gauge = buildGauge(add, npr, scene, { hPM: 1.0, x: T.GAUGE.x, z: T.GAUGE.z, yaw: T.GAUGE.yaw });
   W.rook = buildLoco(add, scene, { scale: 0.9 });
+  W.pencil = buildPencil(add, scene);
   W.loupe = buildLoupe(add, npr, scene, { scale: 1.0 });
   W.slo = buildSnail(add, scene, { scale: 1.35, atomGeo, atomMat: (i) => W.atomMat(91.7 + i) });
 
   const occ = new Set(W.atoms);
   for (const g of [W.pip.group, W.pip.legN, W.pip.legP, W.tick.group, W.slo.group, W.rook.group, W.loupe.group, W.gauge.group]) g.traverse((o) => { if (o.isMesh && !o.name.endsWith(':hull')) occ.add(o); });
   W.occluders = [...occ];
+  console.log("npr surface ids used:", npr.idsUsed());
   return W;
 }
 
@@ -195,17 +200,11 @@ export function update(ctx, W, st, Q) {
   W.circles.forEach((m, k) => { const [a0, a1] = K.arcs[k]; reveal(m, markOn ? sg(F, a0, a1, io) * (circKeep > 0.02 ? 1 : 0) : 0); });
   W.dockDots.forEach((m, k) => { const d = P.MOVERS[k], pk = P.PARTNERS.indexOf(P.partnerOf(d)); reveal(m, markOn && F >= K.arcs[pk][1] - 2 ? circKeep : 0); });
   const pl = T.planState(F);
-  W.plan1.forEach((ar, i) => {
-    let k = pl ? pl.d1 : 0;
-    if (pl && T.WRONG[i]) k *= 1 - pl.erase;
-    if (pl && pl.fade < 0.02) k = 0;
-    reveal(ar.body, k); ar.barbs.forEach((b) => reveal(b, k >= 0.98 ? 1 : 0));
-  });
-  W.plan2.forEach((ar) => { if (!ar) return; const k = pl ? pl.d2 * (pl.fade > 0.02 ? 1 : 0) : 0; reveal(ar.body, k); ar.barbs.forEach((b) => reveal(b, k >= 0.98 ? 1 : 0)); });
+  W.plan1.forEach((ar, i) => { const k = T.routeK(i, F, 1); reveal(ar.body, k); ar.barbs.forEach((b) => reveal(b, k >= 0.98 ? 1 : 0)); });
+  W.plan2.forEach((ar, i) => { if (!ar) return; const k = T.routeK(i, F, 2); reveal(ar.body, k); ar.barbs.forEach((b) => reveal(b, k >= 0.98 ? 1 : 0)); });
   reveal(W.inkRing, pl && pl.flag >= 6 ? sg(pl.flag, 6, 12) * (1 - sg(F, K.erase[1], K.erase[1] + 4)) : 0);
   // ghosts
   const gs = T.ghostState(F);
-  W.ghosts.forEach((m, i) => { const g = gs[i]; m.visible = g.vis > 0.05; m.position.set(g.x, g.y, g.z); m.scale.setScalar(Math.max(0.01, g.vis)); m.rotation.set(g.spin, g.spin * 0.7, 0); });
   st.ghosts = gs;
 
   // ---- cast ----
@@ -213,6 +212,8 @@ export function update(ctx, W, st, Q) {
   poseCompass(W.pip, { hip: ps.hip, N: ps.N, Pn: ps.Pn, liftN: ps.liftN, liftP: ps.liftP, lean: ps.lean, yaw: ps.yaw, sq: ps.sq });
   const rs = T.rookState(F);
   poseLoco(W.rook, rs);
+  st.pen = T.pencilState(F, [rs.x + 0.15, 1.25, rs.z - 0.35]);
+  posePencil(W.pencil, st.pen, [0.35, 0.85, 0.4]);
   const puffEv = [];
   for (const e of [K.toot, K.toot + 1, K.toot + 3, K.toot2, K.toot2 + 1, K.toot2 + 3]) puffEv.push({ e, src: 'w', life: 22, s: 0.2 });
   for (let e = K.glide[0]; e < K.glide[1]; e += 7) puffEv.push({ e, src: 'c', life: 16, s: 0.14 });
@@ -292,7 +293,11 @@ export function drawNPR(ctx, W, st, Q) {
   const c1 = F >= K.zap && F < K.zap + 16 ? Math.exp(-(F - K.zap) / 5) : 0;
   const c2 = F >= K.lap && F < K.lap + 14 ? Math.exp(-(F - K.lap) / 5) : 0;
   const ck = Math.max(c1, c2);
-  npr.setLook(ck > 0.01 ? { ...LOOK, htAmt: 0.5 + 0.5 * ck, misreg: [2.6 + 2 * ck, -2 - 1.5 * ck] } : LOOK);
+  // light as acting: the room light dips while the objective draws the power, then comes back
+  const dip = sg(F, K.pulseClick - 4, K.zap) * (1 - sg(F, K.zap + 14, K.zap + 34));
+  const kt = 1 - 0.38 * dip;
+  const look = dip > 0.01 ? { ...LOOK, keyTint: [kt, kt * 0.97, kt * 0.92] } : LOOK;
+  npr.setLook(ck > 0.01 ? { ...look, htAmt: 0.5 + 0.5 * ck, misreg: [2.6 + 2 * ck, -2 - 1.5 * ck] } : look);
   npr.setSmear(st.smear[0], st.smear[1]);
   npr.focusOn(camera, V3(...st.rig.tg), 3.4);
   const ahead = (p) => st.v.ahead(p, 1.0);
@@ -326,6 +331,23 @@ export function drawNPR(ctx, W, st, Q) {
 
 // ---------------------------------------------------------------------------------------------------------------
 // ink layer (Canvas2D over the 3D): speed lines, tick marks, bonds, faces, the dial race, verdicts, emotes, lettered props
+// the 2D ink layers follow the 3D post: smeared along a whip, 1-bit in the two impact frames
+let _tmp = null;
+function postInk(g, st, F) {
+  const za = F - K.zap, [sx, sy] = st.smear, sm = Math.hypot(sx, sy), imp = za === 0 || za === 1;
+  if (sm < 8 && !imp) return;
+  const cv = g.canvas;
+  if (!_tmp || _tmp.width !== cv.width || _tmp.height !== cv.height) { _tmp = document.createElement('canvas'); _tmp.width = cv.width; _tmp.height = cv.height; }
+  const tg = _tmp.getContext('2d'); tg.clearRect(0, 0, cv.width, cv.height); tg.drawImage(cv, 0, 0);
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
+  if (imp) { g.filter = za === 0 ? 'grayscale(1) contrast(40) brightness(0.3)' : 'grayscale(1) contrast(40) invert(1)'; g.drawImage(_tmp, 0, 0); g.filter = 'none'; }
+  else {
+    const S = cv.width / 1920, N = 9;
+    for (let i = 0; i < N; i++) { const t = i / (N - 1) - 0.5; g.globalAlpha = 1 / (i + 1); g.drawImage(_tmp, sx * S * t, sy * S * t); }
+  }
+  g.restore();
+}
+
 export function inkLayer(ctx, g, W, st, Q) {
   const F = ctx.iw, r = ctx.boilRng('ink'), v = st.v;
   const P2 = (p) => ctx.project(p, W.camera);
@@ -377,6 +399,39 @@ export function inkLayer(ctx, g, W, st, Q) {
     });
   }
   const fr = ctx.boilRng('faces');
+  // eraser crumbs flicking off the rubbed-out routes
+  if (st.pen && st.pen.erase) {
+    const c = P2(V3(...st.pen.tip)), u = v.pxu(V3(...st.pen.tip));
+    for (let k = 0; k < 7; k++) {
+      const age = ((st.pen.rub + k * 1.7) % 6) / 6, ang = -2.4 + k * 0.55 + Math.sin(k * 7.1) * 0.3;
+      const x = c.x + Math.cos(ang) * u * (0.12 + 0.55 * age), y = c.y + Math.sin(ang) * u * (0.1 + 0.3 * age) + u * 0.4 * age * age;
+      g.globalAlpha = 1 - age; fillPoly(g, [[x - 4, y - 2], [x + 3, y - 4], [x + 5, y + 2], [x - 2, y + 4]], k % 2 ? '#b48cff' : '#5d5575');
+    }
+    g.globalAlpha = 1;
+  }
+  // ghosts: pencil sketches of the movers (the plan / the simulator), never amber (amber = really held by the AOD)
+  const gr = ctx.boilRng('ghosts');
+  st.ghosts.forEach((gh, i) => {
+    if (gh.vis < 0.05) return;
+    const c3 = V3(gh.x, gh.y, gh.z); if (!v.ahead(c3)) return;
+    const c = P2(c3), rp = v.pxu(c3) * P.R * Math.max(0.2, gh.vis), lw = Math.max(2.4, rp * 0.075);
+    g.save(); g.globalAlpha = Math.min(1, gh.vis * 1.2);
+    g.beginPath(); g.arc(c.x, c.y, rp, 0, TAU); g.fillStyle = 'rgba(248,240,222,0.62)'; g.fill();
+    g.save(); g.clip(); g.translate(c.x, c.y); g.rotate(-0.8 + gh.spin);
+    for (let k = -3; k <= 3; k++) stroke(g, [[k * rp * 0.3 + gr.gauss(0, 1), -rp * 1.1], [k * rp * 0.3 + gr.gauss(0, 1.5), rp * 1.1]], lw * 0.55, 'rgba(58,47,102,0.45)');
+    g.restore();
+    g.setLineDash([rp * 0.42, rp * 0.2]); g.lineCap = 'round'; g.strokeStyle = '#3a2f66';
+    for (const [dx, dy, wk] of [[0, 0, 1], [gr.gauss(0, 1.2), gr.gauss(0, 1.2), 0.55]]) { g.lineWidth = lw * wk; g.beginPath(); g.arc(c.x + dx, c.y + dy, rp * (wk < 1 ? 1.04 : 1), gh.spin, gh.spin + TAU); g.stroke(); }
+    g.setLineDash([]);
+    const ex = rp * 0.34, ey = c.y - rp * 0.02, es = rp * 0.11;
+    for (const sd of [-1, 1]) {
+      const x = c.x + sd * ex;
+      if (gh.eyes === 'x' || gh.eyes === 'dizzy') { stroke(g, [[x - es, ey - es], [x + es, ey + es]], lw * 0.8, '#3a2f66'); stroke(g, [[x + es, ey - es], [x - es, ey + es]], lw * 0.8, '#3a2f66'); }
+      else if (gh.eyes === 'happy') stroke(g, [[x - es, ey + es * 0.3], [x, ey - es * 0.6], [x + es, ey + es * 0.3]], lw * 0.8, '#3a2f66');
+      else { g.beginPath(); g.arc(x, ey, es * 0.75, 0, TAU); g.fillStyle = '#3a2f66'; g.fill(); }
+    }
+    g.restore();
+  });
   for (const f of st.faces) drawFace(g, f, fr);
   // Tick's dial: PowerMove's lap (dashed lilac ring, drawn as far as its hand has run) and Qubrio's (violet wedge)
   if (st.dial && st.dial.vis > 0.1 && st.ts.ghost != null) {
@@ -391,20 +446,22 @@ export function inkLayer(ctx, g, W, st, Q) {
   }
   // verdicts by the gauge while optimising: a check (kept) or a cross (thrown away)
   const vd = st.ts.verdict;
-  if (vd && vd.age < 14 && W.gauge.group.visible) {
-    const t = P2(W.gauge.top.getWorldPosition(V3(0, 0, 0))), s = 64 * ob(vd.age / 4), fade = 1 - clamp((vd.age - 10) / 4);
-    g.save(); g.globalAlpha = fade; g.translate(t.x - 80, t.y - 30); g.rotate(-0.1);
-    const col = vd.ok ? '#f2a922' : '#1a1530';
-    if (vd.ok) { const L = [[-0.5 * s, 0], [-0.1 * s, 0.4 * s], [0.6 * s, -0.5 * s]]; stroke(g, L.map(([x, y]) => [x + 5, y + 6]), 0.26 * s, INK); stroke(g, L, 0.2 * s, col); }
-    else for (const [p0, p1] of [[[-0.45, -0.45], [0.45, 0.45]], [[0.45, -0.45], [-0.45, 0.45]]]) { const L = [[p0[0] * s, p0[1] * s], [0, 0], [p1[0] * s, p1[1] * s]]; stroke(g, L, 0.22 * s, col); }
+  if (vd && W.gauge.group.visible) {   // a big stamped verdict beside the readouts, held ~20 frames
+    const t = P2(W.gauge.top.getWorldPosition(V3(0, 0, 0))), u = v.pxu(W.gauge.top.getWorldPosition(V3(0, 0, 0)));
+    const s = Math.max(90, u * 0.85) * (vd.age < 5 ? backOut(vd.age / 5) : 1), fade = 1 - clamp((vd.age - 17) / 3);
+    g.save(); g.globalAlpha = fade; g.translate(clamp(t.x + u * 0.75, 200, 1500), clamp(t.y - u * 0.1, 260, 760)); g.rotate(-0.12);
+    const col = vd.ok ? '#b48cff' : '#f2a922';
+    if (vd.ok) { const L = [[-0.5 * s, 0], [-0.1 * s, 0.4 * s], [0.6 * s, -0.5 * s]]; stroke(g, L.map(([x, y]) => [x + 6, y + 7]), 0.3 * s, INK); stroke(g, L, 0.3 * s, INK); stroke(g, L, 0.21 * s, col); }
+    else for (const [p0, p1] of [[[-0.45, -0.45], [0.45, 0.45]], [[0.45, -0.45], [-0.45, 0.45]]]) { const L = [[p0[0] * s, p0[1] * s], [0, 0], [p1[0] * s, p1[1] * s]]; stroke(g, L.map(([x, y]) => [x + 6, y + 7]), 0.3 * s, INK); stroke(g, L, 0.3 * s, INK); stroke(g, L, 0.21 * s, col); }
     g.restore();
   }
   for (const e of st.emotes) drawEmote(g, e, fr);
   // "Qubrio" on Rook's cab nameplate (the side facing the camera)
+  const ownR = []; W.rook.group.traverse((o) => { if (o.isMesh) ownR.push(o); });
   for (const plate of W.rook.names) {
     const c = plate.getWorldPosition(V3(0, 0, 0)), n = V3(0, 0, plate.position.z > 0 ? 1 : -1).transformDirection(W.rook.body.matrixWorld);
     const facing = v.camPos.clone().sub(c).normalize().dot(n);
-    if (facing < 0.25 || !v.ahead(c)) continue;
+    if (facing < 0.25 || !v.ahead(c) || !v.clear(c, ownR)) continue;
     const ex = V3(1, 0, 0).transformDirection(W.rook.body.matrixWorld), ey = V3(0, 1, 0).transformDirection(W.rook.body.matrixWorld);
     const base = c.clone().addScaledVector(n, 0.01);
     const o = P2(base), px = P2(base.clone().addScaledVector(ex, 0.2 * (plate.position.z > 0 ? 1 : -1))), py = P2(base.clone().addScaledVector(ey, 0.2));
@@ -417,16 +474,22 @@ export function inkLayer(ctx, g, W, st, Q) {
   {
     const sh = W.slo.shellG.getWorldPosition(V3(0, 0, 0)), top = sh.clone().add(V3(0, 0.8, 0));
     const ownS = []; W.slo.group.traverse((o) => { if (o.isMesh) ownS.push(o); });
-    if (v.ahead(sh) && v.clear(top, ownS) && v.clear(sh.clone().add(V3(0, 0.45, 0)), ownS)) {
-      const a = P2(sh.clone().add(V3(0, 0.1, 0))), b = P2(top), u = v.pxu(top);
+    // the flag springs up at GO (Slo is just a sleeping snail until then); a flag cut by the frame edge is not drawn
+    const up = F < T.CUT ? ob(clamp((F - K.glide[0] + 4) / 6)) : 0;
+    const bt = P2(top), ut = v.pxu(top), edge = clamp(Math.min(bt.x - 20, 1900 - bt.x - ut * 1.5, bt.y - 30, 1060 - bt.y - ut * 0.34) / 50);
+    if (up > 0.02 && edge > 0.02 && v.ahead(sh) && v.clear(top, ownS) && v.clear(sh.clone().add(V3(0, 0.45, 0)), ownS)) {
+      const a = P2(sh.clone().add(V3(0, 0.1, 0))), u = v.pxu(top), b0 = P2(top), b = { x: lerp(a.x, b0.x, up), y: lerp(a.y, b0.y, up) };
+      g.save(); g.globalAlpha = edge;
       stroke(g, [[a.x, a.y], [b.x, b.y]], Math.max(2.5, u * 0.02), INK);
-      const w = u * 0.9, h = u * 0.26, wave = Math.sin(F * 0.3) * h * 0.08;
+      const w = u * 1.5 * clamp(up), h = u * 0.3 * clamp(up), wave = Math.sin(F * 0.3) * h * 0.08;
       const fl = [[b.x, b.y], [b.x + w * 0.5, b.y + wave], [b.x + w, b.y - wave], [b.x + w, b.y + h - wave], [b.x + w * 0.5, b.y + h + wave], [b.x, b.y + h]];
       fillPoly(g, fl, '#e8e0ee'); g.lineWidth = Math.max(2, u * 0.012); g.strokeStyle = INK; g.lineJoin = 'round';
       g.beginPath(); fl.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.closePath(); g.stroke();
-      if (u > 55) brushWord(g, 'POWERMOVE', b.x + w / 2, b.y + h / 2, h * 0.52, { fill: '#6b5a8e', key: 0.05, shadow: [0, 0], weight: 0.2, gap: 0.12, fan: 0, jiggle: 0.08, bounce: 0.04, rot: 0 });
+      if (u > 55 && up > 0.85) brushWord(g, 'POWERMOVE', b.x + w / 2, b.y + h / 2, h * 0.46, { fill: '#6b5a8e', key: 0.05, shadow: [0, 0], weight: 0.22, gap: 0.1, fan: 0, jiggle: 0.1, bounce: 0.06, rot: -0.02, chisel: true, skew: -0.12 });
+      g.restore();
     }
   }
+  postInk(g, st, F);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -437,13 +500,16 @@ export function fxLayer(ctx, g, W, st, Q) {
   const safe = (p, x0, x1, y0, y1) => ({ x: clamp(p.x, x0, x1), y: clamp(p.y, y0, y1) });
   const tw = sfxState(F - K.whistle, 22);
   if (tw) {
-    const p = safe(P2(W.loupe.head.getWorldPosition(V3(0, 0, 0))), 520, 1380, 250, 520);
-    brushWord(g, 'TWEET!', p.x - 80, p.y - 20, 150 * tw.pop, { fill: '#f2a922', inner: '#e0851a', rot: -0.1 + tw.wob, alpha: tw.alpha, arc: 16, jitter: r });
+    const hp = W.loupe.head.getWorldPosition(V3(0, 0, 0)), h0 = P2(hp), hu = v.pxu(hp);
+    const p = safe({ x: h0.x - hu * 0.3, y: h0.y - hu * 1.45 }, 380, 1300, 250, 430);   // above the lens, clear of it and of the crossing
+    burst(g, p.x, p.y, 270 * tw.pop, 125 * tw.pop, { fill: '#fff6e0', alpha: tw.alpha, seed: 5, spikes: 13 });
+    brushWord(g, 'TWEET!', p.x, p.y + 4, 132 * tw.pop, { fill: '#f2a922', shade: '#b8741a', chisel: true, skew: -0.2, ramp: 0.22, rot: -0.12 + tw.wob, alpha: tw.alpha, arc: 12, jitter: r, weight: 0.27 });
   }
   const zp = sfxState(F - K.zap, 26);
   if (zp) {
     const c = safe(P2(V3((P.ZONE.x0 + P.ZONE.x1) / 2, 1.6, (P.ZONE.z0 + P.ZONE.z1) / 2)), 420, 1400, 230, 520);
-    brushWord(g, 'ZAP!', c.x, c.y, 210 * zp.pop, { fill: '#b48cff', inner: '#f2a922', rot: -0.08 + zp.wob, alpha: zp.alpha, arc: 14, jitter: r, weight: 0.27 });
+    burst(g, c.x, c.y, 300 * zp.pop, 150 * zp.pop, { fill: '#f2a922', alpha: zp.alpha, seed: 9, spikes: 15 });
+    brushWord(g, 'ZAP!', c.x, c.y + 6, 190 * zp.pop, { fill: '#b48cff', shade: '#5b21b6', chisel: true, skew: -0.2, ramp: 0.25, rot: -0.1 + zp.wob, alpha: zp.alpha, arc: 10, jitter: r, weight: 0.3 });
   }
   // 4.7x lettered on the pennant (in the flag's plane) and 1.3x on the gauge's tag
   if (F >= K.lap + 3 && F < T.CUT) {
@@ -452,21 +518,24 @@ export function fxLayer(ctx, g, W, st, Q) {
     const o = P2(c), px = P2(ex), py = P2(ey);
     g.save(); g.globalAlpha = sm((F - K.lap - 3) / 6);
     g.transform((px.x - o.x) / 100, (px.y - o.y) / 100, -(py.x - o.x) / 100, -(py.y - o.y) / 100, o.x, o.y);
-    brushWord(g, '4.7×', 0, 0, 120, { fill: '#7c3aed', inner: '#5b21b6', rot: -0.04, jitter: r, weight: 0.26, fan: 0.04, jiggle: 0.08, shadow: [0.05, 0.06] });
+    brushWord(g, '4.7×', 0, 0, 120, { fill: '#7c3aed', shade: '#3b1f8a', chisel: true, skew: -0.14, ramp: 0.12, rot: -0.04, jitter: r, weight: 0.3, fan: 0.04, jiggle: 0.08, shadow: [0.05, 0.06] });
     g.restore();
   }
-  if (F >= K.tagUp && F < T.CUT) {
+  if (F >= K.tagUp && F < T.CUT) {   // 1.3x: a paper luggage tag tied to the top of Qubrio's column (right of the gauge)
     const tp = W.gauge.top.getWorldPosition(V3(0, 0, 0)), t = P2(tp), u = v.pxu(tp);
-    const k = ob((F - K.tagUp) / 6), x = t.x - u * 0.3, y = t.y + u * 0.35;
-    stroke(g, [[t.x - u * 0.1, t.y + u * 0.05], [x, y]], Math.max(3, u * 0.02), INK);
-    g.save(); g.translate(x - u * 0.42, y); g.rotate(-0.06 * Math.sin(F * 0.2)); g.scale(k, k);
-    const tw2 = u * 1.15, th = u * 0.6;
-    const tag = [[-tw2 / 2, -th / 2], [tw2 / 2, -th / 2], [tw2 / 2 + th * 0.35, 0], [tw2 / 2, th / 2], [-tw2 / 2, th / 2]];
-    fillPoly(g, tag.map(([a, b]) => [a + 6, b + 7]), INK); fillPoly(g, tag, '#fff6e0');
-    g.lineWidth = Math.max(3, u * 0.025); g.strokeStyle = INK; g.lineJoin = 'round'; g.beginPath(); tag.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.closePath(); g.stroke();
-    brushWord(g, '1.3×', 0, 2, th * 0.62, { fill: '#f2a922', inner: '#e0851a', rot: -0.03, jitter: r, weight: 0.26, fan: 0.03, jiggle: 0.06, key: 0.1 });
+    const k = backOut(clamp((F - K.tagUp) / 6)), sw = 0.05 * Math.sin((F - K.tagUp) * 0.22) * Math.exp(-(F - K.tagUp) / 30);
+    const tw2 = Math.max(250, u * 1.25), th = tw2 * 0.46;
+    const ax = t.x + u * 0.14, ay = t.y, x = Math.min(ax + u * 0.3 + tw2 * 0.5, 1860 - tw2 / 2), y = ay + th * 0.15;
+    stroke(g, [[ax, ay], [(ax + x - tw2 / 2) / 2, ay + th * 0.12], [x - tw2 / 2 + th * 0.2, y]], Math.max(3, u * 0.018), INK);
+    g.save(); g.translate(x, y); g.rotate(-0.05 + sw); g.scale(k, k);
+    const n = th * 0.3, tag = [[-tw2 / 2 + n, -th / 2], [tw2 / 2, -th / 2], [tw2 / 2, th / 2], [-tw2 / 2 + n, th / 2], [-tw2 / 2, 0]];
+    fillPoly(g, tag.map(([a, b]) => [a + 7, b + 8]), INK); fillPoly(g, tag, '#fff6e0');
+    g.lineWidth = Math.max(3.5, u * 0.022); g.strokeStyle = INK; g.lineJoin = 'round'; g.beginPath(); tag.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.closePath(); g.stroke();
+    g.beginPath(); g.arc(-tw2 / 2 + th * 0.2, 0, th * 0.08, 0, TAU); g.stroke();
+    brushWord(g, '1.3×', th * 0.12, 2, th * 0.6, { fill: '#7c3aed', shade: '#3b1f8a', chisel: true, skew: -0.14, ramp: 0.12, rot: -0.03, jitter: r, weight: 0.28, fan: 0.03, jiggle: 0.06, key: 0.1 });
     g.restore();
   }
+  postInk(g, st, F);
   const wp = sg(F, K.wipe[0], K.wipe[1], (x) => x);
   if (wp > 0 && wp < 1) brushWipe(g, wp, { c1: '#4b2a9e', c2: '#7c3aed', bristle: '#f4e6c8', seed: 3, cover: 0.3 });
 }

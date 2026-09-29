@@ -299,26 +299,36 @@ export function poseLoupe(L, P) {
 // PowerMove mark at height hPM, the column at fid * hPM) and a pennant that pops out of Tick's crown ("4.7x" is
 // hand-lettered onto it in 2D, in the flag's own plane).
 // ---------------------------------------------------------------------------------------------------------------
-export function buildGauge(add, npr, scene, { hPM = 1.0, x = 0, z = 0 } = {}) {
-  const G = { group: new THREE.Group(), hPM, base: 0.42 }; scene.add(G.group);
-  G.group.position.set(x, 0, z);
-  const brass = { color: 0xe6ad42, hatchMode: 'u', spec: 0.35, rim: 0.8 };
-  add(cyl(0.34, 0.4, 0.12, 36), brass, { outline: 0.9 }, [0, 0.06, 0], [0, 0, 0], G.group);
-  G.bulb = add(new THREE.SphereGeometry(0.24, 32, 20), { color: 0x8b5cf6, rim: 1, spec: 0.3, glow: 0.15 }, { outline: 1.0 }, [0, 0.36, 0], [0, 0, 0], G.group);
-  const colGeo = cyl(0.075, 0.075, 1, 20); colGeo.translate(0, 0.5, 0);
-  G.col = add(colGeo, { color: 0x8b5cf6, rim: 0.8, spec: 0.2, glow: 0.12 }, { outline: 0.5, cast: false }, [0, G.base, 0], [0, 0, 0], G.group);
-  const tube = new THREE.Mesh(cyl(0.13, 0.13, 1.9, 28, true), npr.glass({ tint: 0xe6f6ff, edge: 1.2, alpha: 1.1, glint: 1.2 }));
-  tube.position.set(0, G.base + 0.95, 0); npr.add(tube, { glass: true }); G.group.add(tube);
-  add(new THREE.SphereGeometry(0.14, 20, 12), brass, { outline: 0.7 }, [0, G.base + 1.92, 0], [0, 0, 0], G.group);
-  // PowerMove mark: a dark ring round the tube at hPM, and tick rings every 0.25 hPM
-  G.pm = add(new THREE.TorusGeometry(0.15, 0.022, 8, 28), { color: 0x2b2447, flat: 0.6, hatch: 0 }, { outline: 0.3, cast: false }, [0, G.base + hPM, 0], [Math.PI / 2, 0, 0], G.group);
-  for (let k = 1; k <= 6; k++) if (k !== 4) add(new THREE.TorusGeometry(0.14, 0.01, 6, 24), { color: 0x6b5a8e, flat: 0.6, hatch: 0 }, { outline: 0, cast: false }, [0, G.base + hPM * k / 4, 0], [Math.PI / 2, 0, 0], G.group);
+export function buildGauge(add, npr, scene, { hPM = 1.0, x = 0, z = 0, yaw = 0 } = {}) {
+  // the fidelity readout: two glass tubes side by side on one brass plinth - PowerMove's column (Slo's grey-lilac) and
+  // Qubrio's (violet) - with an ink reference bar at PowerMove's level, so 1.3x reads as a plain height comparison
+  const G = { group: new THREE.Group(), hPM, base: 0.4, dx: 0.21 }; scene.add(G.group);
+  G.group.position.set(x, 0, z); G.group.rotation.y = yaw;
+  const brass = { color: 0xe6ad42, hatchMode: 'u', spec: 0.2, rim: 0.8 };
+  add(new THREE.BoxGeometry(0.86, 0.14, 0.52), brass, { outline: 1.0 }, [0, 0.07, 0], [0, 0, 0], G.group);
+  const colGeo = cyl(0.09, 0.09, 1, 20); colGeo.translate(0, 0.5, 0);
+  const tube = (dx, col, shade) => {
+    add(new THREE.SphereGeometry(0.19, 28, 18), { color: col, rim: 1, spec: 0, shadeColor: shade, shadeMix: 0.3 }, { outline: 1.0 }, [dx, 0.33, 0], [0, 0, 0], G.group);
+    const c = add(colGeo, { color: col, rim: 0.8, spec: 0, flat: 0.3, shadeColor: shade, shadeMix: 0.3 }, { outline: 0.6, cast: false }, [dx, G.base, 0], [0, 0, 0], G.group);
+    const t = new THREE.Mesh(cyl(0.135, 0.135, 1.9, 28, true), npr.glass({ tint: 0xeef4ff, edge: 1.3, alpha: 1.0, glint: 0.8 }));
+    t.position.set(dx, G.base + 0.95, 0); npr.add(t, { glass: true }); G.group.add(t);
+    add(new THREE.SphereGeometry(0.14, 20, 12), brass, { outline: 0.8 }, [dx, G.base + 1.92, 0], [0, 0, 0], G.group);
+    return c;
+  };
+  G.colPM = tube(-G.dx, 0xa39bb8, 0x5d5575);
+  G.col = tube(G.dx, 0x8b5cf6, 0x4b2a9e);
+  // PowerMove's level: one ink bar across both tubes (the only mark on the gauge)
+  G.pm = add(new THREE.BoxGeometry(0.78, 0.045, 0.05), { color: 0x1a1530, flat: 0.8, hatch: 0 }, { outline: 0.3, cast: false }, [0, G.base + hPM, 0.15], [0, 0, 0], G.group);
   G.top = new THREE.Object3D(); G.group.add(G.top);
+  G.pmTop = new THREE.Object3D(); G.group.add(G.pmTop);
   return G;
 }
-export function poseGauge(G, fid) {
+export function poseGauge(G, fid, pm = 1) {
   G.col.scale.set(1, Math.max(0.01, fid * G.hPM), 1);
-  G.top.position.set(0, G.base + fid * G.hPM, 0);
+  G.colPM.scale.set(1, Math.max(0.01, pm * G.hPM), 1);
+  G.pm.visible = pm > 0.5;
+  G.top.position.set(G.dx, G.base + fid * G.hPM, 0);
+  G.pmTop.position.set(-G.dx, G.base + pm * G.hPM, 0);
 }
 export function buildPennant(add, W) {
   const F = { group: new THREE.Group() }; W.body.add(F.group); F.size = 1.3;
@@ -344,4 +354,28 @@ export function posePennant(F, k, unfurl, wave) {
     pos.setXYZ(i, x * (0.15 + 0.85 * unfurl), y * (0.3 + 0.7 * unfurl) - (1 - unfurl) * 0.2 * u, w * unfurl + (1 - unfurl) * 0.1 * u);
   }
   pos.needsUpdate = true; F.flag.geometry.computeVertexNormals();
+}
+
+/** Rook's pencil: built along +y with the graphite tip at the local origin and the eraser at +L */
+export function buildPencil(add, scene, { L = 1.15, r = 0.075 } = {}) {
+  const Pn = { group: new THREE.Group(), L }; scene.add(Pn.group);
+  const body = cyl(r, r, L * 0.62, 6); body.translate(0, L * 0.18 + L * 0.31, 0);
+  add(body, { color: 0xf2a922, hatchMode: 'u', rim: 0.7, shadeColor: 0xb8741a, shadeMix: 0.35 }, { outline: 0.9 }, [0, 0, 0], [0, 0, 0], Pn.group);
+  const wood = new THREE.ConeGeometry(r, L * 0.18, 6); wood.rotateX(Math.PI); wood.translate(0, L * 0.09, 0);
+  add(wood, { color: 0xf3dcb0, hatch: 0.4 }, { outline: 0.8 }, [0, 0, 0], [0, 0, 0], Pn.group);
+  const lead = new THREE.ConeGeometry(r * 0.36, L * 0.065, 12); lead.rotateX(Math.PI); lead.translate(0, L * 0.032, 0);
+  add(lead, { color: 0x2b2447, flat: 0.5 }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], Pn.group);
+  add(cyl(r * 1.06, r * 1.06, L * 0.08, 16), { color: 0xe6ad42, hatchMode: 'u', spec: 0.2 }, { outline: 0.7 }, [0, L * 0.84, 0], [0, 0, 0], Pn.group);
+  add(cyl(r, r, L * 0.12, 16), { color: 0xb48cff, rim: 0.6 }, { outline: 0.8 }, [0, L * 0.94, 0], [0, 0, 0], Pn.group);
+  Pn.group.visible = false;
+  return Pn;
+}
+/** place the pencil so its working end touches `tip`: the tip (drawing) or the eraser (erase), leaning back along `axis` */
+export function posePencil(Pn, s, axis) {
+  Pn.group.visible = !!s;
+  if (!s) return;
+  const a = new THREE.Vector3(...axis).normalize();
+  const up = new THREE.Vector3(0, 1, 0);
+  if (s.erase) { Pn.group.quaternion.setFromUnitVectors(up, a.clone().negate()); Pn.group.position.set(s.tip[0], s.tip[1], s.tip[2]).addScaledVector(a, Pn.L); }
+  else { Pn.group.quaternion.setFromUnitVectors(up, a); Pn.group.position.set(s.tip[0], s.tip[1], s.tip[2]); }
 }

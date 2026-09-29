@@ -178,11 +178,11 @@ export function drawEmote(g, E, r) {
     const k = backOut(age / 4), fade = 1 - clamp((age - 12) / 5);
     if (fade > 0) {
       g.globalAlpha = fade; g.translate(x + rs * (E.dx ?? 0.95), y - rs * 1.3); g.rotate(E.rot ?? 0.15); g.scale(k, k);
-      const s = Math.max(rs, 26);
+      const s = Math.max(rs * 1.15, 34);
       const bar = ribbon([[0, -s * 0.62], [s * 0.02, -s * 0.12], [0, s * 0.18]], s * 0.3, s * 0.08, false);
       const draw = (dx, dy, col) => { g.save(); g.translate(dx, dy); fillPoly(g, bar, col); g.beginPath(); g.arc(0, s * 0.42, s * 0.11, 0, TAU); g.fillStyle = col; g.fill(); g.restore(); };
       draw(s * 0.06, s * 0.07, INK);
-      draw(0, 0, type === 'bang2' ? '#ffb020' : '#e8423f');
+      draw(0, 0, type === 'bang2' ? '#b48cff' : '#f2a922');
       g.lineWidth = Math.max(3, s * 0.05); g.strokeStyle = INK; g.lineJoin = 'round';
       g.beginPath(); bar.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.closePath(); g.stroke();
       g.beginPath(); g.arc(0, s * 0.42, s * 0.11, 0, TAU); g.stroke();

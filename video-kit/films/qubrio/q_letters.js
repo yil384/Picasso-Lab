@@ -54,13 +54,13 @@ function layoutWord(word, size, o, r) {
     const k = o.pops ? o.pops(i) : 1;
     const ly = -(o.arc || 0) * (1 - 4 * t * t) + (hs(i, 1) - 0.5) * size * (o.bounce ?? 0.1);
     const rot = (hs(i, 2) - 0.5) * (o.jiggle ?? 0.2) + t * (o.fan ?? 0.2);
-    const sc = 1 + (hs(i, 3) - 0.5) * (o.sizeVar ?? 0.1);
+    const sc = (1 + (hs(i, 3) - 0.5) * (o.sizeVar ?? 0.1)) * (1 + (o.ramp || 0) * (L.length > 1 ? 1 - i / (L.length - 1) : 0));
     const strokes = G.s.map((s, j) => {
       const sm = G.smooth ? G.smooth[j] : false;
       const pts = (sm ? through(s, 5) : densify(s)).map(([u, v]) => [(u - G.w / 2) * size * sc + (r ? r.gauss(0, size * 0.007) : 0), (v - 0.5) * size * sc + (r ? r.gauss(0, size * 0.007) : 0)]);
       return pts;
     });
-    out.push({ lx, ly, rot, k, strokes, dots: (G.dots || []).map(([u, v]) => [(u - G.w / 2) * size * sc, (v - 0.5) * size * sc]), lw, seed: i });
+    out.push({ lx, ly, rot, k, sc, strokes, dots: (G.dots || []).map(([u, v]) => [(u - G.w / 2) * size * sc, (v - 0.5) * size * sc]), lw, seed: i });
     cx += w + gap;
   });
   return { letters: out, total, lw };
@@ -72,12 +72,14 @@ function densify(P) {   // straight strokes: add points so the brush pressure ha
   return out;
 }
 /** brush ribbon with pressure: blunt start, swell, dry taper at the end (a loaded marker/brush) */
-function brushRibbon(C, w, seed) {
+function brushRibbon(C, w, seed, chisel = false) {
   const n = C.length, L = [], R = [];
   for (let i = 0; i < n; i++) {
     const a = C[Math.max(0, i - 1)], b = C[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1;
     const t = i / Math.max(1, n - 1);
-    const press = (0.78 + 0.22 * Math.sin(Math.PI * Math.min(1, t * 1.15))) * (1 - 0.3 * Math.pow(Math.max(0, t - 0.8) / 0.2, 2));
+    const press = chisel
+      ? (0.66 + 0.56 * Math.sin(Math.PI * Math.min(1, t * 1.25))) * (1 - 0.45 * Math.pow(Math.max(0, t - 0.72) / 0.28, 1.6))   // thick-thin
+      : (0.78 + 0.22 * Math.sin(Math.PI * Math.min(1, t * 1.15))) * (1 - 0.3 * Math.pow(Math.max(0, t - 0.8) / 0.2, 2));
     const wob = 1 + 0.06 * Math.sin(t * 9.1 + seed * 2.3);
     const hw = w / 2 * press * wob;
     L.push([C[i][0] - dy / d * hw, C[i][1] + dx / d * hw]); R.push([C[i][0] + dy / d * hw, C[i][1] - dx / d * hw]);
@@ -85,6 +87,13 @@ function brushRibbon(C, w, seed) {
   // round-ish caps
   const cap = (c, p, hw, dir) => { const out = []; const a0 = Math.atan2(p[1] - c[1], p[0] - c[0]); for (let j = 1; j < 6; j++) { const a = a0 + dir * (j / 6) * Math.PI; out.push([c[0] + Math.cos(a) * hw, c[1] + Math.sin(a) * hw]); } return out; };
   const hwE = Math.hypot(L[n - 1][0] - C[n - 1][0], L[n - 1][1] - C[n - 1][1]), hwS = Math.hypot(R[0][0] - C[0][0], R[0][1] - C[0][1]);
+  if (chisel) {   // cut terminals: the pen leaves at a slant (one corner pulled along the stroke)
+    const e = C[n - 1], p = C[Math.max(0, n - 2)], dl = Math.hypot(e[0] - p[0], e[1] - p[1]) || 1, ux = (e[0] - p[0]) / dl, uy = (e[1] - p[1]) / dl;
+    L[n - 1] = [L[n - 1][0] + ux * hwE * 0.9, L[n - 1][1] + uy * hwE * 0.9];
+    const s0 = C[0], s1 = C[Math.min(n - 1, 1)], dl0 = Math.hypot(s1[0] - s0[0], s1[1] - s0[1]) || 1, vx = (s0[0] - s1[0]) / dl0, vy = (s0[1] - s1[1]) / dl0;
+    R[0] = [R[0][0] + vx * hwS * 0.7, R[0][1] + vy * hwS * 0.7];
+    return [...L, ...R.reverse()];
+  }
   return [...L, ...cap(C[n - 1], L[n - 1], hwE, -1), ...R.reverse(), ...cap(C[0], R[R.length - 1], hwS, -1)];
 }
 function polyPath(g, P) { g.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) g.lineTo(P[i][0], P[i][1]); g.closePath(); }
@@ -102,7 +111,7 @@ export function brushWord(g, word, x, y, size, o = {}) {
   if (o.skew) g.transform(1, 0, o.skew, 1, 0, 0);
   g.globalAlpha = o.alpha ?? 1;
   const ink = o.ink || INK, key = (o.key ?? 0.12) * size, sh = o.shadow || [0.06, 0.075];
-  const shapes = letters.map((Lt) => ({ Lt, polys: Lt.strokes.map((s) => brushRibbon(s, lw, Lt.seed)) }));
+  const shapes = letters.map((Lt) => ({ Lt, polys: Lt.strokes.map((s) => brushRibbon(s, lw, Lt.seed, !!o.chisel)) }));
   const pass = (col, grow, dx, dy) => {
     g.fillStyle = col; g.strokeStyle = col; g.lineJoin = 'round'; g.lineCap = 'round';
     for (const { Lt, polys } of shapes) {
@@ -117,7 +126,23 @@ export function brushWord(g, word, x, y, size, o = {}) {
   pass(ink, key, sh[0] * size, sh[1] * size);   // ink drop shadow
   pass(ink, key, 0, 0);                          // ink keyline
   pass(o.fill || '#ff3d7f', 0, 0, 0);            // colour
-  if (o.inner) {                                 // optional second colour on the lower half (two-tone print)
+  if (o.shade) {                                 // Ben-Day shade band on the lower part of each letter (one fill + dots)
+    const dp = Math.max(4, size * 0.075), rr = dp * 0.36;
+    g.fillStyle = o.shade;
+    for (const { Lt, polys } of shapes) {
+      if (Lt.k <= 0.01) continue;
+      g.save(); g.translate(Lt.lx, Lt.ly); g.rotate(Lt.rot); g.scale(Lt.k, Lt.k);
+      g.beginPath(); for (const P of polys) polyPath(g, P); g.clip();
+      const h = size * Lt.sc;
+      for (let yy = h * 0.05; yy < h * 0.7; yy += dp) {
+        const k = clamp((yy - h * 0.05) / (h * 0.35)), row = Math.round(yy / dp);
+        g.beginPath();
+        for (let xx = -h; xx < h; xx += dp) { const ox = (row % 2) * dp / 2; g.moveTo(xx + ox + rr * (0.4 + 0.6 * k), yy); g.arc(xx + ox, yy, rr * (0.4 + 0.6 * k), 0, TAU); }
+        g.fill();
+      }
+      g.restore();
+    }
+  } else if (o.inner) {                          // optional second colour on the lower half (two-tone print)
     g.save(); g.beginPath(); g.rect(-9999, size * 0.12, 19999, 9999); g.clip(); g.globalAlpha = (o.alpha ?? 1) * 0.85; pass(o.inner, 0, 0, 0); g.restore();
   }
   g.restore();
@@ -161,5 +186,22 @@ export function scriptWord(g, word, x, y, size, col, o = {}) {
   if (o.shadow) pass(o.shadow, lw * 1.25, size * 0.05, size * 0.06);
   if (o.key) pass(o.key, lw * 1.7, 0, 0);
   pass(col, lw, 0, 0);
+  g.restore();
+}
+
+/** jagged comic burst balloon (behind an SFX): ink drop shadow, fill, ink keyline; centred at (x, y), radii rx, ry */
+export function burst(g, x, y, rx, ry, o = {}) {
+  const n = o.spikes || 14, seed = o.seed || 1, P = [];
+  const h = (i, k) => { const v = Math.sin(i * 91.7 + k * 37.1 + seed * 13.3) * 43758.5453; return v - Math.floor(v); };
+  for (let i = 0; i < n * 2; i++) {
+    const a = (i / (n * 2)) * TAU + (h(i, 1) - 0.5) * 0.12, out = i % 2 === 0;
+    const r = out ? 1 + 0.22 * h(i, 2) : 0.72 + 0.08 * h(i, 3);
+    P.push([x + Math.cos(a) * rx * r, y + Math.sin(a) * ry * r]);
+  }
+  const path = (dx, dy) => { g.beginPath(); P.forEach(([px, py], i) => (i ? g.lineTo(px + dx, py + dy) : g.moveTo(px + dx, py + dy))); g.closePath(); };
+  g.save(); g.globalAlpha = o.alpha ?? 1; g.lineJoin = 'miter';
+  path(rx * 0.05, ry * 0.07); g.fillStyle = o.ink || INK; g.fill();
+  path(0, 0); g.fillStyle = o.fill || '#fff6e0'; g.fill();
+  g.lineWidth = o.lw || Math.max(3, rx * 0.035); g.strokeStyle = o.ink || INK; g.stroke();
   g.restore();
 }

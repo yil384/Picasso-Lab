@@ -16,19 +16,19 @@ export const K = {
   whip1: [146, 158], toot: 162, plan1: [166, 184], peel: [184, 190], steps1: [194, 200],
   loupeIn: [180, 196], whistle: 204, flag: [206, 214], erase: [226, 236], plan2: [236, 246], steps2: [248, 252, 256, 260], ok: 262,
   // S4 optimise on the simulator (262-344): try (too fast: a ghost flies off, fidelity drops) -> rejected; try -> accepted
-  whipT: [262, 274], tickWake: 266, tries: [[282, 304, false], [308, 330, true]],
+  whipT: [262, 274], tickWake: 266, tries: [[276, 306, false], [308, 340, true]],
   // S5 GO: the real run - one convoy (344-434)
-  whipG: [338, 350], aodOn: [338, 352], click: 352, toot2: 354, crouch: [350, 356], glide: [356, 404], dock: 404,
+  whipG: [340, 352], aodOn: [340, 352], click: 352, toot2: 354, crouch: [350, 356], glide: [356, 400], dock: 400,
   // S6 one global pulse (434-484)
   whip2: [428, 438], pulseClick: 444, zap: 450,
   // S7 the race result (484-640): Qubrio's hand stopped at the dock; PowerMove's ghost hand runs on while Slo ferries
   // two atoms per trip; it closes the lap as Slo drops the last pair -> 4.7x; then 1.3x
-  wait: [484, 581], lap: 581, flagUp: 583, tagUp: 598,
-  wipe: [640, 660],   // brush wipe; covered ~646-654, the cut (reset) at 650
+  wait: [484, 563], lap: 563, flagUp: 567, tagUp: 582,
+  wipe: [642, 658],   // brush wipe: full cover only ~648-651, the cut (reset) at 650
 };
 export const CUT = 650;
-export const TQ = K.glide[1] - K.glide[0];            // Qubrio's run: one convoy move (48 f)
-export const TP = Math.round(TQ * 4.7);               // PowerMove's run: 4.7x as long (226 f)
+export const TQ = K.glide[1] - K.glide[0];            // Qubrio's run: one convoy move (44 f)
+export const TP = Math.round(TQ * 4.7);               // PowerMove's run: 4.7x as long (207 f); K.lap = glide[0] + TP
 export const LAP_FINAL = 1 / 4.7;                     // Qubrio's run as a fraction of PowerMove's lap
 // before optimisation Qubrio's schedule is 1.7x longer (site: "without optimization (K=0), schedules are 1.7x longer")
 export const LAP_RAW = 1.7 / 4.7;
@@ -40,63 +40,108 @@ export function convoyP(F) { return F >= CUT ? 0 : mj((F - K.glide[0]) / TQ); }
 export const convoyV = (F) => (F >= K.glide[0] && F < K.glide[1] ? mjv((F - K.glide[0]) / TQ) / 1.875 : 0);
 export const aodK = (F) => (F >= CUT ? 0 : sg(F, K.aodOn[0], K.aodOn[1]) * (1 - sg(F, K.dock + 10, K.dock + 22)));
 
-// routes of the plan (pencil) and of the ghost dry run: plan 1 swaps the front row's outer columns (their routes cross:
-// the AOD columns would have to cross), plan 2 keeps every column in order.
-export const ROUTE1 = P.MOVERS.map((m) => { const home = P.homeXZ(m); let c = m.pc; if (m.pr === 1 && m.pc !== 1) c = 2 - m.pc; return [home, [P.PCOL[c] - P.PAIR, P.PROW[m.pr]]]; });
-export const ROUTE2 = P.MOVERS.map((m) => [P.homeXZ(m), P.dockXZ(m)]);
-export const WRONG = P.MOVERS.map((m) => m.pr === 1 && m.pc !== 1);
-export const CROSS_AT = (() => {
-  const [a, b] = ROUTE1.filter((_, i) => WRONG[i]);
-  const r = [a[1][0] - a[0][0], a[1][1] - a[0][1]], s = [b[1][0] - b[0][0], b[1][1] - b[0][1]];
-  const t = ((b[0][0] - a[0][0]) * s[1] - (b[0][1] - a[0][1]) * s[0]) / (r[0] * s[1] - r[1] * s[0]);
-  return [a[0][0] + r[0] * t, a[0][1] + r[1] * t, t];
+// routing plans (pencil) and the ghost dry run. Plan 2 IS the executed convoy (the same AOD path, sampled); plan 1 swaps
+// the front row's two left columns, so those two AOD columns would have to cross: their ghosts meet (exactly two of them)
+// at one point on the way, and that is where the verifier's flag lands.
+export const SWAP = { 0: 1, 1: 0 };
+export const WRONG = P.MOVERS.map((m) => m.pr === 1 && m.pc in SWAP);
+export const planPath = (m, p, bad) => P.planXZ(m, p, bad ? SWAP : null);
+export const CROSS_AT = (() => {   // [x, z, p]: the first progress at which the two swapped ghosts touch (centres 2R apart)
+  const [a, b] = P.MOVERS.filter((_, i) => WRONG[i]);
+  for (let k = 0; k <= 2000; k++) {
+    const p = k / 2000, A = planPath(a, p, true), B = planPath(b, p, true);
+    if (Math.hypot(A[0] - B[0], A[1] - B[1]) <= 2 * P.R + 0.01) return [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, p];
+  }
+  return [0, 0, 0.5];
 })();
-const onRoute = (R, u) => [lerp(R[0][0], R[1][0], u), lerp(R[0][1], R[1][1], u)];
+export const STEPS1 = [CROSS_AT[2] * 0.5, CROSS_AT[2]];   // dry-run steps of plan 1 (step 2 = the bump)
+export const STEPS2 = [0.25, 0.5, 0.75, 1];               // the clean re-run of plan 2
 
-/** ghost atoms (pencil stand-ins of the movers) for the dry run and the simulator replays: [{vis, x, y, z, spin}] */
+/** ghost atoms (pencil stand-ins of the movers) for the dry run and the simulator replays: [{vis, x, y, z, spin, eyes}] */
 export function ghostState(F) {
-  const out = P.MOVERS.map(() => ({ vis: 0, x: 0, y: P.AY, z: 0, spin: 0 }));
+  const out = P.MOVERS.map(() => ({ vis: 0, x: 0, y: P.AY, z: 0, spin: 0, eyes: 'dot' }));
   if (F >= CUT) return out;
   const Fc = twos(F);
-  // dry run of plan 1: peel off the sleeping atoms, then stop-motion steps; step 2 = the two crossing routes meet
+  // dry run of plan 1: peel off the sleeping atoms, then stop-motion steps; step 2 = the two swapped ghosts bump
   if (F >= K.peel[0] && F < K.erase[1]) {
     const pk = sm((F - K.peel[0]) / (K.peel[1] - K.peel[0]));
     const rew = sg(F, K.erase[0], K.erase[1]);   // rewound while the routes are rubbed out
     P.MOVERS.forEach((m, i) => {
-      let u = 0;
-      if (Fc >= K.steps1[0]) u = 0.17;
-      if (Fc >= K.steps1[1]) u = WRONG[i] ? CROSS_AT[2] - 0.05 : 0.34;
-      const bump = Fc >= K.steps1[1] && WRONG[i] ? bumpv(Fc - K.steps1[1], 0.06, 1.2, 0.2) * (ROUTE1[i][0][0] < 0 ? -1 : 1) : 0;
-      const [x, z] = onRoute(ROUTE1[i], u * (1 - rew));
+      let p = 0;
+      if (Fc >= K.steps1[0]) p = STEPS1[0];
+      if (Fc >= K.steps1[1]) p = STEPS1[1];
+      const [x0, z] = planPath(m, p * (1 - rew), true);
+      const bump = Fc >= K.steps1[1] && WRONG[i] ? bumpv(Fc - K.steps1[1], 0.07, 1.2, 0.2) * (m.pc === 0 ? -1 : 1) : 0;
       const hop = (Fc >= K.steps1[0] && Fc < K.steps1[0] + 4) || (Fc >= K.steps1[1] && Fc < K.steps1[1] + 4) ? 0.08 : 0;
-      out[i] = { vis: pk * (1 - sg(F, K.erase[1] - 3, K.erase[1])), x: x + bump, y: P.AY + 0.3 * pk + hop, z, spin: 0 };
+      const hit = WRONG[i] && Fc >= K.steps1[1] && rew < 0.5;
+      const dim = WRONG[i] ? 1 : 1 - 0.6 * sg(F, K.steps1[1], K.steps1[1] + 4);
+      out[i] = { vis: pk * dim * (1 - sg(F, K.erase[1] - 3, K.erase[1])), x: x0 + bump, y: P.AY + 0.3 * pk + hop, z, spin: 0, eyes: hit ? (Fc < K.steps1[1] + 6 ? 'x' : 'dizzy') : 'dot' };
     });
   }
-  // re-run of plan 2 (in order): four clean steps into the docks
+  // re-run of plan 2 (the convoy path): four clean steps into the docks
   if (F >= K.plan2[1] && F < K.ok + 8) {
     const pk = sm((F - K.plan2[1]) / 4) * (1 - sg(F, K.ok + 2, K.ok + 8));
     P.MOVERS.forEach((m, i) => {
-      let u = 0; K.steps2.forEach((s, k) => { if (Fc >= s) u = (k + 1) / 4; });
-      const [x, z] = onRoute(ROUTE2[i], u);
-      out[i] = { vis: pk, x, y: P.AY + 0.3, z, spin: 0 };
+      let p = 0; K.steps2.forEach((s, k) => { if (Fc >= s) p = STEPS2[k]; });
+      const [x, z] = planPath(m, p, false);
+      out[i] = { vis: pk, x, y: P.AY + 0.3, z, spin: 0, eyes: F >= K.ok - 2 ? 'happy' : 'dot' };
     });
   }
-  // simulator replays during optimisation: try 1 too fast (one ghost overshoots and is flung), try 2 clean
+  // simulator replays during optimisation (the convoy path): try 1 too fast (one ghost is flung out of its grip), try 2 clean
   K.tries.forEach(([a, b, ok]) => {
-    const g0 = a + 6, g1 = g0 + (ok ? 14 : 9);
-    if (F < a + 4 || F >= b + 2) return;
-    const pk = sm((F - a - 4) / 3) * (1 - sg(F, b - 4, b + 2));
+    const g0 = a + 5, g1 = g0 + (ok ? 12 : 7);
+    if (F < a + 3 || F >= b + 2) return;
+    const pk = sm((F - a - 3) / 3) * (1 - sg(F, b - 4, b + 2));
     P.MOVERS.forEach((m, i) => {
       const u = mj((F - g0) / (g1 - g0));
-      let [x, z] = onRoute(ROUTE2[i], u), y = P.AY + 0.3, spin = 0;
+      let [x, z] = planPath(m, u, false), y = P.AY + 0.3, spin = 0, eyes = 'dot';
       if (!ok && i === 4 && F >= g1 - 2) {   // lost: it pops out of its grip and tumbles toward the lens
         const a2 = (F - g1 + 2) / 24;
-        z += 3.2 * a2; y += 2.2 * a2 - 2.4 * a2 * a2; x += 0.5 * a2; spin = a2 * 9;
+        z += 5.0 * a2; y += 2.6 * a2 - 1.6 * a2 * a2; x += 2.2 * a2; spin = a2 * 9; eyes = 'x';
       }
-      out[i] = { vis: pk, x, y, z, spin };
+      out[i] = { vis: pk, x, y, z, spin, eyes };
     });
   });
   return out;
+}
+// Rook's pencil (the router's tool): pops out of the cab, draws plan 1's routes one after another (the reveal follows
+// its tip), rubs out the two wrong ones with its eraser, redraws them in order, and ducks back into the cab.
+const P0 = P.MOVERS.map((m) => { const h = P.homeXZ(m); for (let k = 0; k <= 48; k++) { const q = P.planXZ(m, k / 48); if (Math.hypot(q[0] - h[0], q[1] - h[1]) > P.R + 0.08) return k / 48; } return 0; });
+const WI = P.MOVERS.map((_, i) => i).filter((i) => WRONG[i]);
+const DRAW1 = (i) => [K.plan1[0] + 3 * i, K.plan1[0] + 3 * i + 3];
+const DRAW2 = (j) => [K.plan2[0] + 1 + 4.5 * j, K.plan2[0] + 1 + 4.5 * j + 4.5];
+const RUB = (j) => [K.erase[0] + 5 * j, K.erase[0] + 5 * j + 5];
+/** revealed fraction of plan 1 / plan 2 route i at frame F (0..1) */
+export function routeK(i, F, which) {
+  if (F >= CUT || F >= K.glide[0]) return 0;
+  const fade = 1 - sg(F, K.aodOn[0], K.glide[0]);
+  if (which === 1) {
+    let k = clamp((F - DRAW1(i)[0]) / 3);
+    const j = WI.indexOf(i); if (j >= 0) k *= 1 - clamp((F - RUB(j)[0]) / 5);
+    return fade > 0.02 ? k : 0;
+  }
+  const j = WI.indexOf(i); if (j < 0) return 0;
+  return fade > 0.02 ? clamp((F - DRAW2(j)[0]) / 4.5) : 0;
+}
+const tipAt = (i, k, bad) => { const p = P0[i] + (1 - P0[i]) * clamp(k); const [x, z] = planPath(P.MOVERS[i], p, bad); return [x, 0.03, z]; };
+export function pencilState(F, cab) {
+  const Fc = twos(F);
+  if (F >= CUT || Fc < K.plan1[0] - 8 || Fc >= K.plan2[1] + 12) return null;
+  let tip, erase = false, bob = 0, jolt = 0;
+  const hover = [-1.6, 1.2, -2.2];
+  if (Fc < K.plan1[0]) { const u = io((Fc - K.plan1[0] + 8) / 8), t0 = tipAt(0, 0, true); tip = [lerp(cab[0], t0[0], u), lerp(cab[1], t0[1], u) + 0.8 * Math.sin(Math.PI * u), lerp(cab[2], t0[2], u)]; }
+  else if (Fc < K.plan1[1]) { const i = Math.min(5, Math.floor((Fc - K.plan1[0]) / 3)); tip = tipAt(i, (Fc - DRAW1(i)[0]) / 3, true); }
+  else if (Fc < K.erase[0]) {   // hovers by the plan; startles at the whistle
+    const u = io((Fc - K.plan1[1]) / 6), e = tipAt(5, 1, true);
+    tip = [lerp(e[0], hover[0], u), lerp(e[1], hover[1], u), lerp(e[2], hover[2], u)]; bob = 0.05 * Math.sin(Fc * 0.5);
+    if (Fc >= K.whistle && Fc < K.whistle + 8) jolt = 0.25 * Math.exp(-(Fc - K.whistle) / 3);
+  } else if (Fc < K.erase[1]) {   // eraser down, scrubbing each wrong route back from its tip
+    const j = Math.min(1, Math.floor((Fc - K.erase[0]) / 5)), i = WI[j], u = clamp((Fc - RUB(j)[0]) / 5);
+    const t = tipAt(i, 1 - u, true); tip = [t[0] + 0.1 * Math.sin(Fc * 2.6), t[1], t[2] + 0.06 * Math.cos(Fc * 2.6)]; erase = true;
+  } else if (Fc < K.plan2[0] + 1) { tip = tipAt(WI[0], 0, false); }
+  else if (Fc < K.plan2[1]) { const j = Math.min(1, Math.floor((Fc - K.plan2[0] - 1) / 4.5)); tip = tipAt(WI[j], (Fc - DRAW2(j)[0]) / 4.5, false); }
+  else { const u = io((Fc - K.plan2[1]) / 12), e = tipAt(WI[1], 1, false); tip = [lerp(e[0], cab[0], u), lerp(e[1], cab[1], u) + 0.8 * Math.sin(Math.PI * u), lerp(e[2], cab[2], u)]; }
+  return { tip: [tip[0], tip[1] + bob + jolt, tip[2]], erase, drawing: (Fc >= K.plan1[0] && Fc < K.plan1[1]) || (Fc >= K.plan2[0] + 1 && Fc < K.plan2[1]), rub: erase ? Fc - K.erase[0] : -1 };
 }
 export function planState(F) {
   // pencil route arrows: plan 1 (two routes cross) is drawn, flagged, those two rubbed out; plan 2 in order; all fade at GO
@@ -119,7 +164,7 @@ export function flagState(F, hand) {
 // ---------------------------------------------------------------------------------------------------------------
 // PowerMove (Slo): the same job with scalar routing: 2 atoms per trip (~1.7 per move on the site), legs at the SAME
 // speed limit as the convoy, so it needs 3 loaded + 2 empty legs = 5 legs; TP = 4.7 x TQ.
-export const SLO = { z: 3.15, xA: -1.6, xB: -1.6 + (P.PROW[1] - P.SROW[2]) };   // a front lane, as long as the convoy's travel
+export const SLO = { z: 3.15, xA: 0.7, xB: 0.7 + (P.PROW[1] - P.SROW[2]) };   // a front lane beside Tick, as long as the convoy's travel
 export const LEG = TP / 5;                                      // 45.2 f per leg (the convoy's one move takes 48 f)
 export function sloTrip(F) {
   if (F >= CUT || F < K.glide[0]) return { leg: -1, u: 0, x: SLO.xA, dir: 1, loaded: true, delivered: 0 };
@@ -166,6 +211,12 @@ export function atomState(a, F) {
     const T = keyed(Fc, [[0, 's'], [K.peel[0] + o, 'peek'], [K.ok + 6, 's'], [K.aodOn[0] + 2 + o, 'wake'], [K.crouch[0], 'crouch'], [K.glide[0], 'whee'], [K.dock - 2, 'land'], [K.dock + 6, 'love'], [K.zap - 6, 'sq'], [K.zap + 4, 'star'], [K.zap + 40, 'love'], [CUT, 's']]);
     zzz = T.v === 's';
     if (T.v === 'peek') { eyes = 'half'; look = [0, 0.5]; }
+    // dramatic irony: the two real atoms whose ghosts are about to collide see it coming, glance at each other, flinch
+    if (T.v === 'peek' && a.pr === 1 && a.pc !== 1 && Fc >= K.steps1[0] - 4 && Fc < K.whistle + 10) {
+      const t = Fc - (K.steps1[0] - 4);
+      eyes = 'wide'; look = [(a.pc === 0 ? 1 : -1) * (t < 6 ? 0.9 : 0.5), 0.2];
+      if (Fc >= K.steps1[1]) { eyes = Fc < K.steps1[1] + 4 ? 'squeeze' : 'worried'; mouth = 'wobble'; sq = takeSq(Fc - K.steps1[1]) * 0.6; emote = { type: 'sweat', age: Fc - K.steps1[1] }; }
+    }
     if (T.v === 'wake') { eyes = T.age < 3 ? 'squeeze' : 'wide'; mouth = 'o'; sq = takeSq(T.age - 3); if (a.pr === 1) emote = { type: 'bang', age: T.age }; }
     if (T.v === 'crouch') { eyes = 'squeeze'; mouth = 'teeth'; sq = 0.14 * sm(T.age / 3); }
     if (T.v === 'whee') { eyes = 'happy'; mouth = 'grin'; st = 0.18 * convoyV(F); }
@@ -220,7 +271,7 @@ export function pipState(F) {
     } else {
       const u = clamp((Fw - a0) / (a1 - a0));
       const ang = Math.PI + TAU * io(u);
-      const r = P.PAIR;
+      const r = P.RINT;
       N = [cx, cz]; Pn = [cx + Math.cos(ang) * r, cz + Math.sin(ang) * r];
       hip = [cx + Math.cos(ang) * r * 0.5, Math.sqrt(Math.max(0.2, L * L - (r * 0.5) ** 2)) - 0.02, cz + Math.sin(ang) * r * 0.5];
       eyes = u < 0.95 ? 'slit' : 'happy'; mouth = u < 0.95 ? null : 'smile'; lean = 0.05 * Math.sin(u * TAU);
@@ -275,7 +326,7 @@ export function rookState(F) {
 // throws its penalty flag onto that spot; beams at the in-order re-run; then watches from the right.
 export const LOUPE_HOME = [2.9, -2.9];
 export const LOUPE_WATCH = [2.75, -1.1];
-export const INSPECT = [CROSS_AT[0] + 0.62, CROSS_AT[1] - 0.52];   // just behind-right of the crossing
+export const INSPECT = [2.15, CROSS_AT[1] - 0.1];   // level with the crossing, right of the whole block (never in front of it)
 export function loupeState(F) {
   const Fc = twos(F);
   let x = LOUPE_HOME[0], z = LOUPE_HOME[1], y = 0, yaw = -0.6, lean = 0, pitch = 0, sq = 0, armL = 0.25, armR = 0.25, headTilt = 0;
@@ -287,10 +338,10 @@ export function loupeState(F) {
     const h = u < 0.5 ? 0 : 1, uu = (u - h * 0.5) / 0.5;
     const mid = [lerp(LOUPE_HOME[0], insp[0], 0.5), lerp(LOUPE_HOME[1], insp[1], 0.5)];
     const a = h ? mid : LOUPE_HOME, b = h ? insp : mid;
-    x = lerp(a[0], b[0], io(uu)); z = lerp(a[1], b[1], io(uu)); y = 0.45 * Math.sin(Math.PI * uu); sq = -0.1 * Math.sin(Math.PI * uu); yaw = -1.9;
+    x = lerp(a[0], b[0], io(uu)); z = lerp(a[1], b[1], io(uu)); y = 0.45 * Math.sin(Math.PI * uu); sq = -0.1 * Math.sin(Math.PI * uu); yaw = -0.5;
   } else if (Fc < K.ok + 14) {
-    x = insp[0]; z = insp[1]; yaw = lerp(-1.9, -2.5, sm((Fc - K.loupeIn[1]) / 6));
-    pitch = 0.45; headTilt = 0.3; eyes = 'wide'; look = [0, 0.6];
+    x = insp[0]; z = insp[1]; yaw = lerp(-0.5, -0.35, sm((Fc - K.loupeIn[1]) / 6));   // lens (face) to camera, eyes on the crossing
+    pitch = 0.3; headTilt = 0.2; eyes = 'wide'; look = [-0.8, 0.3];
     if (Fc >= K.whistle - 4) {
       const w = Fc - K.whistle;
       armR = w < 0 ? lerp(0.25, 2.5, sm((w + 4) / 4)) : w < 10 ? 2.5 : lerp(2.5, 0.4, sm((w - 10) / 6));
@@ -298,11 +349,12 @@ export function loupeState(F) {
       sq = w >= 0 && w < 10 ? 0.08 + 0.04 * Math.sin(w * 2.2) : 0; pitch = lerp(0.45, 0.15, sm((w + 4) / 4));
       if (w >= 0) armL = w < 2 ? lerp(0.25, 2.6, w / 2) : lerp(2.6, 1.3, sm((w - 2) / 5));   // the throw
     }
-    if (Fc >= K.erase[0]) { armL = lerp(1.3, 0.25, sm((Fc - K.erase[0]) / 5)); armR = 0.25; pitch = 0.4; eyes = 'dot'; mouth = null; }
-    if (Fc >= K.ok - 2) { const a = Fc - K.ok; eyes = 'happy'; mouth = 'smile'; armR = lerp(0.25, 2.2, sm(a / 4)); pitch = 0.4 - 0.15 * Math.sin(Math.max(0, a) * 0.8) * Math.exp(-Math.max(0, a) / 8); }
+    if (Fc >= K.erase[0]) { armL = lerp(1.3, 0.25, sm((Fc - K.erase[0]) / 5)); armR = 0.25; pitch = 0.3; eyes = 'slit'; mouth = 'flat'; look = [-0.8, 0.3]; }
+    if (Fc >= K.steps2[0]) { eyes = 'dot'; mouth = null; look = [-0.6, 0.3]; }
+    if (Fc >= K.ok - 2) { const a = Fc - K.ok; eyes = 'happy'; mouth = 'grin'; look = [0, 0]; armR = lerp(0.25, 2.4, sm(a / 4)); sq = ringv(Math.max(0, a), 0.1, 0.9, 0.2); pitch = 0.3 - 0.15 * Math.sin(Math.max(0, a) * 0.8) * Math.exp(-Math.max(0, a) / 8); if (a >= 0 && a < 14) emote = { type: 'sparkle', age: a }; }
   } else if (Fc < K.aodOn[0]) {
     const u = clamp((Fc - K.ok - 14) / 16);
-    x = lerp(insp[0], LOUPE_WATCH[0], io(u)); z = lerp(insp[1], LOUPE_WATCH[1], io(u)); y = 0.35 * Math.abs(Math.sin(Math.PI * u * 2)); yaw = lerp(-2.5, -0.8, io(u)); eyes = 'dot';
+    x = lerp(insp[0], LOUPE_WATCH[0], io(u)); z = lerp(insp[1], LOUPE_WATCH[1], io(u)); y = 0.35 * Math.abs(Math.sin(Math.PI * u * 2)); yaw = lerp(-0.35, -0.8, io(u)); eyes = 'dot';
   } else {
     x = LOUPE_WATCH[0]; z = LOUPE_WATCH[1]; yaw = -0.8; eyes = 'dot'; look = [-0.5, 0.2];
     if (F >= K.zap - 6 && F < K.zap + 6) { eyes = 'squeeze'; sq = 0.08; }
@@ -317,7 +369,7 @@ export function loupeState(F) {
 // (a full lap = PowerMove's run), the gauge the fidelity readout. It keeps a change only if one improves and the
 // other is not hurt. At GO both hands start from 12; its own stops when the convoy docks; PowerMove's ghost runs on.
 export const TICK = { x: 5.75, z: 2.75 };
-export const GAUGE = { x: 4.55, z: 3.25 };
+export const GAUGE = { x: 7.0, z: 2.3, yaw: 0.45 };
 export function tickState(F) {
   const Fc = twos(F);
   let y = 0, sq = 0, rock = 0.05 * Math.sin(TAU * Fc / 26), yaw = 0.45, armL = 0.35, armR = 0.35, crown = 0, bow = 0;
@@ -335,10 +387,10 @@ export function tickState(F) {
     let acc = 0, lapNow = LAP_RAW, fidNow = 1.12;
     for (const [a, b, ok] of K.tries) {
       if (F < a - 2) break;
-      const u = sg(F, a + 8, a + 18), back = ok ? 0 : sg(F, b - 6, b);
-      const tl = ok ? lapSteps[acc + 1] : lapSteps[acc] - 0.1, tf = ok ? fidSteps[acc + 1] : fidSteps[acc] - 0.3;
+      const u = sg(F, a + 5, a + 11), back = ok ? 0 : sg(F, b - 6, b);
+      const tl = ok ? lapSteps[acc + 1] : lapSteps[acc] - 0.1, tf = ok ? fidSteps[acc + 1] : fidSteps[acc] - 0.45;
       lapNow = lerp(lapSteps[acc], tl, u * (1 - back)); fidNow = lerp(fidSteps[acc], tf, u * (1 - back));
-      verdict = F >= a + 18 && F < b ? { ok, age: F - a - 18 } : null;
+      verdict = F >= a + 11 && F < b ? { ok, age: F - a - 11 } : null;
       if (F < b) {
         armL = F < a + 6 ? lerp(0.35, 2.7, sm((Fc - a + 2) / 4)) : lerp(2.7, 0.5, sm((Fc - a - 6) / 4));
         crown = F >= a && F < a + 6 ? 0.5 + 0.5 * Math.sin((Fc - a) * 1.4) : 0; eyes = 'slit'; look = [-0.5, 0.3];
@@ -404,7 +456,7 @@ const R_B = (F) => {   // placement: follow Pip across the partners, then rise t
 const R_C = (F) => {   // plan + dry run from high front-right; crash zoom onto the collision and the flag
   const cz = sm((F - K.steps1[1] + 2) / 6) * (1 - sm((F - K.flag[1] - 10) / 8));
   const base = { tg: [-0.4, 0.3, -1.0], az: 0.42, el: 0.7, r: 8.4, fov: 32, roll: 0.0 };
-  const zoom = { tg: [CROSS_AT[0] + 0.3, 0.7, CROSS_AT[1] - 0.2], az: 0.2, el: 0.5, r: 4.6, fov: 32, roll: -0.08 };
+  const zoom = { tg: [CROSS_AT[0] + 1.2, 0.6, CROSS_AT[1] + 0.1], az: 0.12, el: 0.62, r: 5.8, fov: 32, roll: -0.06 };
   return mixRig(base, zoom, cz);
 };
 const R_F = (F) => {   // optimise: over Tick on its stool, the plate behind (the ghost replays run there)
