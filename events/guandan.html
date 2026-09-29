@@ -2493,6 +2493,7 @@ const TABLE_DEFS_HTML = `<svg class="gd-defs" aria-hidden="true" focusable="fals
         <linearGradient id="gd-g-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff5bd"/><stop offset=".45" stop-color="#ffd66b"/><stop offset="1" stop-color="#d8911c"/></linearGradient>
         <radialGradient id="gd-g-face" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#ffd35a"/><stop offset=".65" stop-color="#f7a21c"/><stop offset="1" stop-color="#e27d0b"/></radialGradient>
         <linearGradient id="gd-g-bell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfcfd"/><stop offset="1" stop-color="#a3acb6"/></linearGradient>
+        <radialGradient id="gd-g-fire" cx=".5" cy=".58" r=".56"><stop offset="0" stop-color="#fff1a8"/><stop offset=".38" stop-color="#ffc23a"/><stop offset=".72" stop-color="#f7771c"/><stop offset="1" stop-color="#d2381a"/></radialGradient>
     </defs>
     <symbol id="gd-sym-hex" viewBox="0 0 100 112">
         <path d="M24 33 17 9l17 12L50 3l16 18 17-12-7 24Z" fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="2.5" stroke-linejoin="round"/>
@@ -2539,9 +2540,9 @@ function ensureTableSkeleton() {
                 <div class="gd-deal-host" data-region="deal" aria-hidden="true"></div>
                 <div class="gd-first-host" data-region="firstLead" aria-hidden="true"></div>
                 <div class="gd-tribute-host" data-region="tribute" aria-hidden="true"></div>
-                <div class="bomb-fx" aria-hidden="true"></div>
-                <div class="bomb-banner-slot" aria-hidden="true"></div>
+                <div class="gd-fx-host" aria-hidden="true"></div>
                 <div class="gd-result-host" data-region="result"></div>
+                <div class="gd-intro-host" data-region="intro"></div>
                 <div class="gd-menu-host" data-region="menu"></div>
             </div>
             <div class="gd-ui-layer"><div class="toast gd-stage-toast" role="status" aria-live="polite"></div></div>
@@ -2553,6 +2554,7 @@ function ensureTableSkeleton() {
     t.probe = t.viewport.querySelector(".gd-safe-probe");
     t.ui = t.viewport.querySelector(".gd-ui-layer");
     t.toast = t.ui.querySelector(".gd-stage-toast");
+    t.fx = t.stage.querySelector(".gd-fx-host");
     t.regions = {};
     t.stage.querySelectorAll("[data-region]").forEach(el => { t.regions[el.dataset.region] = el; });
     t.seats = [0, 1, 2, 3].map(pos => t.stage.querySelector(`.gd-seat.is-p${pos}`));
@@ -3211,9 +3213,9 @@ function renderSeat(i, v) {
     el.className = `gd-seat is-p${pos} is-${relation.key}${turn ? " is-turn" : ""}${place ? " is-done" : ""}`;
     tableView.avatars[pos].className = `gd-av${relation.key === "opponent" ? " is-opp" : ""}`;
     setRegion(`face${pos}`, seatFaceHTML(i, name));
+    // a finished seat's place is the ribbon at its play slot (renderSlot)
     let tag = "";
-    if (place) tag = `<span class="gd-av-tag is-place ${place <= 2 ? "is-warm" : "is-cool"}">${PLACE_LABELS[uiLang][place - 1]}</span>`;
-    else if (!bottom && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
+    if (!place && !bottom && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
     else if (!bottom) tag = `<span class="gd-av-tag">${relation.label}</span>`;
     // Tencent shows nothing above 10 cards; the exact count is a 记牌器 extra.
     const chip = jipaiOpen && !bottom && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
@@ -3235,24 +3237,52 @@ const COMBO_LABELS = {
     tripleStraight: ["Plates", "钢板"],
     fullhouse: ["Full House", "三带二"]
 };
-function renderSlot(i, v, animate, flights) {
+function renderSlot(i, v, animate, flights, bursts) {
     const pos = visualSeatPos(i, v.mine);
-    const entry = game.trickPlays?.[i];
-    if (!entry || v.dealPhase !== "done" || v.liveTurn === i) {
+    const place = v.dealPhase === "done" ? seatPlace(i) : 0;
+    const entry = v.dealPhase === "done" && v.liveTurn !== i ? game.trickPlays?.[i] : null;
+    if (!entry && !place) {
         setRegion(`slot${pos}`, "");
         return;
     }
     const stamp = seatPlayStamp(entry);
-    setRegion(`slot${pos}`, `${stamp}:${uiLang}:${game.currentLevelRank}`, () => {
-        const fresh = animate && !tableView.seenPlays.has(stamp);
-        tableView.seenPlays.add(stamp);
-        const enter = fresh && !flights.has(i) ? " is-enter" : "";
-        if (entry.actionType === "pass") return `<div class="gd-pass-word${enter}">${L("Pass", "不出")}</div>`;
-        const cards = displayCardsForCombo(valuesFromFirebase(entry.cards), entry.combo);
-        const label = fresh && COMBO_LABELS[entry.combo?.type];
-        return `<div class="gd-played${enter}">${cards.map(c => cardHTML(c, true, false, `data-pid="${encodeHTML(c.id)}"`)).join("")}</div>`
-            + (label ? `<span class="gd-combo-label">${L(...label)}</span>` : "");
+    setRegion(`slot${pos}`, `${stamp}:${place}:${uiLang}:${game.currentLevelRank}`, () => {
+        let html = "";
+        if (entry) {
+            const fresh = animate && !tableView.seenPlays.has(stamp);
+            tableView.seenPlays.add(stamp);
+            const enter = fresh && !flights.has(i) ? " is-enter" : "";
+            if (entry.actionType === "pass") {
+                html = `<div class="gd-pass-word${enter}">${L("Pass", "不出")}</div>`;
+            } else {
+                const cards = displayCardsForCombo(valuesFromFirebase(entry.cards), entry.combo);
+                const label = fresh && !entry.combo?.isBomb && COMBO_LABELS[entry.combo?.type];
+                html = `<div class="gd-played${enter}">${cards.map(c => cardHTML(c, true, false, `data-pid="${encodeHTML(c.id)}"`)).join("")}</div>`
+                    + (label ? `<span class="gd-combo-label">${wordHTML(L(...label))}</span>` : "");
+                if (fresh && entry.combo?.isBomb) bursts.push({ seat: i, pos, combo: entry.combo });
+            }
+        }
+        if (place) {
+            const key = `rb:${game.roomCode}:${game.roundNo}:${i}:${place}`;
+            const enter = animate && !tableView.seenPlays.has(key) ? " is-enter" : "";
+            tableView.seenPlays.add(key);
+            html += `<span class="gd-ribbon ${place <= 2 ? "is-warm" : "is-cool"}${enter}"><b>${PLACE_LABELS[uiLang][place - 1]}</b></span>`;
+        }
+        return html;
     });
+}
+
+// Finishing place (1-4) of a seat this round, 0 while it still plays.
+function seatPlace(i) {
+    const order = game.phase === "playing" ? finishedList(game) : valuesFromFirebase(game.roundResult?.order);
+    return order.indexOf(i) + 1;
+}
+
+// Display words (combo labels, bomb names, 抗贡, 胜利): gold gradient over a dark-brown outline.
+// The outline is the element's own stroked text; the gradient fill is the ::after copy on top.
+function wordHTML(text, cls = "") {
+    const t = encodeHTML(text);
+    return `<b class="gd-word${cls ? ` ${cls}` : ""}" data-t="${t}">${t}</b>`;
 }
 
 // Fresh plays about to appear: mine fly from where the cards sat in my hand (read before the hand
@@ -3298,10 +3328,6 @@ function runPlayFlights(flights, v) {
 function seatPlayStamp(entry) {
     if (!entry) return "";
     return `${entry.player ?? ""}:${entry.actionType || ""}:${entry.at || ""}:${valuesFromFirebase(entry.cards).map(c => c.id).join("-")}`;
-}
-
-function latestTrickPlayAt() {
-    return Math.max(0, ...(game.trickPlays || []).map(entry => Number(entry?.at) || 0));
 }
 
 function displayCardsForCombo(cards = [], combo = null) {
@@ -3417,7 +3443,7 @@ function tributeHTML(v) {
     const at = { 0: [w / 2, h * .32 + PLAYED_H / 2], 1: [215, 244], 2: [w / 2, 166], 3: [w - 215, 244] };
     const since = Date.now() - Number(game.dealStartedAt || 0) - TRIBUTE_AT;
     const rows = game.selectedTributes.filter(r => r?.tributeCard);
-    if (!rows.length) return `<div class="gd-kanggong" style="animation-delay:${-since}ms">${L("Tribute blocked", "抗贡")}</div>`;
+    if (!rows.length) return `<div class="gd-kanggong" style="animation-delay:${-since}ms">${wordHTML(L("Tribute blocked", "抗贡"))}</div>`;
     const fly = (card, from, to, cls, label, delay) => `<div class="gd-tribute ${cls}" style="left:${from[0].toFixed(0)}px;top:${from[1].toFixed(0)}px;--tx:${(to[0] - from[0]).toFixed(0)}px;--ty:${(to[1] - from[1]).toFixed(0)}px;animation-delay:${delay - since}ms"><span>${label}</span>${cardHTML(card, true)}</div>`;
     return rows.map(r => {
         const payer = at[visualSeatPos(r.payerSeat, v.mine)];
@@ -3478,9 +3504,10 @@ function renderTable() {
     renderTableChrome();
     setRegion("watermark", `<b>${L("PICASSO Guandan", "PICASSO 掼蛋")}</b><span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span>`);
     const flights = playFlightSources(v, !freshMount);
+    const bursts = [];
     [0, 1, 2, 3].forEach(i => {
         renderSeat(i, v);
-        renderSlot(i, v, !freshMount, flights);
+        renderSlot(i, v, !freshMount, flights, bursts);
     });
     renderHand(columns, handMode === "row" && mine >= 0 ? orderedHandForDisplay(handCards, game.currentLevelRank, mine) : [], geo, dealPhase);
     setRegion("tools", toolsHTML(v));
@@ -3496,66 +3523,90 @@ function renderTable() {
     refreshSelectionUI();
     updateTurnClockDOM();
     runPlayFlights(flights, v);
-    maybeCelebrateBomb();
+    runBursts(bursts);
     initResultOverlay();
     maybeToastTableMessage();
 }
 
-// Bomb / combo celebration: purely presentational — reads entry.combo.isBomb
-// (already computed by the scoring logic in evaluateCombos/normalizeActionEntry)
-// and never changes game state. Guarded by lastCelebratedBombAt so each real
-// bomb play triggers the shake/particles/banner exactly once per client.
-let lastCelebratedBombAt = 0;
-function maybeCelebrateBomb() {
-    if (!game || !Array.isArray(game.trickPlays)) return;
-    const latestAt = latestTrickPlayAt();
-    if (!latestAt || latestAt === lastCelebratedBombAt) return;
-    const entry = game.trickPlays.find(e => e && Number(e.at) === latestAt);
-    lastCelebratedBombAt = latestAt;
-    const combo = entry?.combo;
-    if (!entry || entry.actionType === "pass" || !combo?.isBomb) return;
-    triggerBombCelebration(combo);
+// Bomb tiers (tg_ingame_bomb, tg_ingame_tianwangzha): authored one-shot FX over a fresh bomb.
+// renderSlot reports a bomb only the first time its play is shown, so re-renders and reloads never
+// replay it. 4-5 炸弹: burst, floor ring, cracks and the word at the seat, 6 px shake; 6+: bigger,
+// a second ring and a flash; 同花顺: gold ring sweep; 天王炸: three explosions under the vertical
+// word at the table centre. Transform/opacity only; reduced motion keeps the still word.
+const FX_MS = { bomb: 1000, big: 1300, flush: 1150, joker: 1900 };
+const FX_RAYS = "M" + Array.from({ length: 32 }, (_, k) => {
+    const r = k % 2 ? 24 : k % 4 ? 78 : 100;
+    const a = k * Math.PI / 16;
+    return `${(Math.sin(a) * r).toFixed(1)} ${(-Math.cos(a) * r).toFixed(1)}`;
+}).join(" L") + "Z";
+const FX_CRACKS = "M0 0 L-30 6 L-52 2 L-80 12 L-106 8 M-52 2 L-66 -12 L-84 -16 M0 0 L26 -8 L48 -4 L72 -14 L100 -10 M48 -4 L62 10 L86 16 M0 0 L-12 16 L-32 28 L-44 46 M0 0 L10 18 L30 26 L40 46 M0 0 L-18 -16 L-40 -24 M0 0 L16 -20 L20 -38";
+// A cartoon blast outline: n points round a circle (radius jittered), joined by outward arcs.
+function fxCloudPath(r, n, seed) {
+    const pts = Array.from({ length: n }, (_, k) => {
+        const a = (k + ((k * 7 + seed) % 5) * .08) * 2 * Math.PI / n;
+        const rr = r * (.84 + ((k * 37 + seed * 11) % 9) * .02);
+        return [Math.cos(a) * rr, Math.sin(a) * rr];
+    });
+    let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+    for (let k = 1; k <= n; k++) {
+        const [x, y] = pts[k % n];
+        const arc = (Math.hypot(x - pts[k - 1][0], y - pts[k - 1][1]) * .6).toFixed(1);
+        d += `A${arc} ${arc} 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}`;
+    }
+    return `${d}Z`;
+}
+const FX_BLAST = `<svg viewBox="-100 -100 200 200"><path class="gd-fx-smoke" d="${fxCloudPath(90, 9, 2)}"/><path class="gd-fx-fire" d="${fxCloudPath(74, 11, 5)}"/><path class="gd-fx-hot" d="${fxCloudPath(38, 7, 3)}"/></svg>`;
+
+function burstTier(combo) {
+    if (combo.type === "jokerBomb") return "joker";
+    if (combo.type === "straightFlush") return "flush";
+    return (combo.bombLen || 4) >= 6 ? "big" : "bomb";
 }
 
-function triggerBombCelebration(combo) {
-    const stageEl = tableView.stage;
-    if (!stageEl?.isConnected) return;
-    stageEl.classList.remove("bomb-shake");
-    void stageEl.offsetWidth; // restart the animation if it's already mid-shake
-    requestAnimationFrame(() => stageEl.classList.add("bomb-shake"));
+function burstWord(combo, tier) {
+    if (tier === "joker") return L("Joker Bomb", "天王炸");
+    if (tier === "flush") return L("Straight Flush", "同花顺");
+    const n = combo.bombLen || 4;
+    return tier === "big" ? L(`${n}-Bomb`, `${"六七八九十"[n - 6] || n}炸`) : L("Bomb", "炸弹");
+}
 
-    const fx = stageEl.querySelector(".bomb-fx");
-    if (fx) {
-        const frag = document.createDocumentFragment();
-        for (let i = 0; i < 28; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const mag = 60 + Math.random() * 100;
-            const px = Math.round(Math.cos(angle) * mag);
-            const py = Math.round(Math.sin(angle) * mag);
-            const rot = Math.round(Math.random() * 360);
-            const span = document.createElement("span");
-            span.className = "bomb-particle";
-            span.style.cssText = `--px:${px}px;--py:${py}px;--rot:${rot}deg;animation-delay:${Math.round(Math.random() * 80)}ms`;
-            frag.appendChild(span);
+function burstHTML(tier, word, x, y) {
+    const n = tier === "bomb" ? 10 : 16;
+    const sparks = Array.from({ length: n }, (_, k) => `<i class="gd-fx-spark" style="--a:${Math.round(k * 360 / n + (k % 3) * 9)}deg;--d:${150 + (k * 53) % 90}px"></i>`).join("");
+    const flash = tier === "big" || tier === "joker" ? `<i class="gd-fx-flash"></i>` : "";
+    const body = tier === "joker"
+        ? [0, 1, 2].map(k => `<span class="gd-fx-boom" style="--n:${k}">${FX_BLAST}</span>`).join("") + sparks + wordHTML(word, "is-vertical")
+        : `<i class="gd-fx-ring"></i>${tier === "big" ? `<i class="gd-fx-ring is-2"></i>` : ""}${tier === "flush" ? "" : `<i class="gd-fx-dome"></i>`}`
+            + (tier === "flush" ? `<svg class="gd-fx-sweep" viewBox="0 0 200 200"><circle cx="100" cy="100" r="92"/></svg>` : `<svg class="gd-fx-cracks" viewBox="-120 -60 240 120"><path d="${FX_CRACKS}"/></svg>`)
+            + `<svg class="gd-fx-rays" viewBox="-100 -100 200 200"><path d="${FX_RAYS}"/></svg><i class="gd-fx-core"></i>${sparks}${wordHTML(word)}`;
+    return `<div class="gd-fx-set">${flash}<div class="gd-fx is-${tier}" style="left:${x.toFixed(0)}px;top:${y.toFixed(0)}px">${body}</div></div>`;
+}
+
+// Starts once the played cards have landed (their flight is ~200 ms).
+function runBursts(bursts) {
+    const t = tableView;
+    bursts.forEach(({ pos, combo }) => {
+        const tier = burstTier(combo);
+        let x = t.layout.w / 2;
+        let y = t.layout.h * .35;
+        const played = t.regions[`slot${pos}`]?.querySelector(".gd-played");
+        if (tier !== "joker" && played) {
+            const r = played.getBoundingClientRect();
+            const c = stagePoint(r.left + r.width / 2, r.top + r.height / 2);
+            x = Math.min(t.layout.w - 170, Math.max(170, c.x));
+            y = c.y;
         }
-        fx.innerHTML = "";
-        fx.appendChild(frag);
-        setTimeout(() => { fx.innerHTML = ""; }, 1000);
-    }
-
-    const slot = stageEl.querySelector(".bomb-banner-slot");
-    if (slot) {
-        const bombLen = combo.bombLen || 0;
-        const text = combo.type === "jokerBomb" ? "天王炸!" : combo.type === "straightFlush" ? "同花顺!" : bombLen >= 8 ? "八张炸弹!" : bombLen >= 6 ? "六张炸弹!" : "炸弹!";
-        slot.innerHTML = `<div class="bomb-banner show">${text}</div>`;
         setTimeout(() => {
-            const banner = slot.querySelector(".bomb-banner");
-            if (!banner) return;
-            banner.classList.remove("show");
-            banner.classList.add("hide");
-            setTimeout(() => banner.remove(), 220);
-        }, 900);
-    }
+            if (!t.fx?.isConnected) return;
+            t.fx.insertAdjacentHTML("beforeend", burstHTML(tier, burstWord(combo, tier), x, y));
+            const set = t.fx.lastElementChild;
+            setTimeout(() => set.remove(), FX_MS[tier] + 100);
+            if (prefersReducedMotion()) return;
+            const d = tier === "bomb" ? 6 : 11;
+            t.stage.animate({ translate: ["0 0", `${d}px 0`, `-${d}px 0`, `${d * .6}px 0`, `-${d * .3}px 0`, "0 0"] },
+                { duration: tier === "bomb" ? 250 : 400, easing: "linear" });
+        }, 150);
+    });
 }
 
 function roundOverHTML() {
