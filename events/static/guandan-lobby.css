@@ -143,17 +143,26 @@ body[data-screen="lobby"] #back-events-btn { order: 5; }
     margin: min(0px, calc((34 * var(--lu) - var(--tap)) / 2)) 0;
     padding: 0 calc(22 * var(--lu)) 0 0;
     border: 0;
-    border-bottom: calc(2 * var(--lu)) solid transparent;
     background: none;
     color: #fff;
     font: 900 calc(25 * var(--lu))/1.15 var(--font-ui);
     text-overflow: ellipsis;
     text-shadow: 0 calc(1 * var(--lu)) calc(2 * var(--lu)) rgba(20, 30, 90, .7);
     outline: none;
-    transition: border-color var(--dur-fast) ease;
 }
 .hud-name input::placeholder { color: rgba(255, 255, 255, .6); }
-.hud-name input:focus { border-bottom-color: rgba(255, 255, 255, .7); }
+/* editing: an underline under the name row (the field's tap box reaches past it) */
+.hud-name::after {
+    content: "";
+    position: absolute;
+    left: 0; right: calc(22 * var(--lu)); bottom: 0;
+    height: calc(2 * var(--lu));
+    background: rgba(255, 255, 255, .7);
+    opacity: 0;
+    transition: opacity var(--dur-fast) ease;
+    pointer-events: none;
+}
+.hud-name:focus-within::after { opacity: 1; }
 @supports (field-sizing: content) {
     .hud-name input { width: auto; min-width: 4em; max-width: calc(210 * var(--lu)); field-sizing: content; }
 }
@@ -1031,7 +1040,6 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     margin: min(0px, calc((var(--plate-h) - var(--tap)) / 2)) 0;
     padding: 0 calc(20 * var(--lu)) 0 0;
     border: 0;
-    border-bottom: calc(2 * var(--lu)) solid transparent;
     background: none;
     color: #fff;
     font: 700 calc(19 * var(--lu))/1 var(--font-ui);
@@ -1041,7 +1049,17 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 @supports (field-sizing: content) {
     .room-seat-name input { width: auto; min-width: 3em; field-sizing: content; }
 }
-.room-seat-name input:focus { border-bottom-color: rgba(255, 255, 255, .75); }
+/* editing: an underline under the text, inside the plate (the field's tap box reaches past it) */
+.room-seat-name::after {
+    content: "";
+    position: absolute;
+    left: 0; right: calc(20 * var(--lu)); bottom: calc(1 * var(--lu));
+    height: calc(2 * var(--lu));
+    background: rgba(255, 255, 255, .75);
+    opacity: 0;
+    pointer-events: none;
+}
+.room-seat-name:focus-within::after { opacity: 1; }
 .room-pen { position: absolute; right: calc(2 * var(--lu)); width: calc(14 * var(--lu)); height: calc(14 * var(--lu)); fill: rgba(255, 255, 255, .6); pointer-events: none; }
 .room-seat-name input:focus + .room-pen { opacity: 0; }
 /* empty seat: one dashed + disc, ring colour = relation */
