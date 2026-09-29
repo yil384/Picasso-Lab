@@ -21,7 +21,8 @@ export const K = {
   // S6 optimize (408-480): try, reject, try, accept, accept
   tries: [[416, 434, false], [438, 454, true], [458, 472, true]],
   // S7 payoff (480-588)
-  flag: 482, therm: 492, sloArrive: 556,
+  race: [486, 556], flag: 502, therm: 516, sloArrive: 556,
+  tickHop: [330, 346],
   wipe: [584, 604],   // brush wipe: covered 590-598, the cut (reset) at 594
 };
 export const CUT = 594;
@@ -99,7 +100,7 @@ export function atomXZ(a, F) {
 // ---------------------------------------------------------------------------------------------------------------
 // Pip (placement compass). Off-plate left at the loop start; boings in; measures circles of radius r round each
 // partner (needle on the partner's site, pencil swings a full turn at r); walks off to the left edge to watch.
-export const PIP_REST = [-4.0, 3.3];   // where it dozes / watches from (front-left of the plate)
+export const PIP_REST = [-2.4, -4.1];   // where it dozes / watches from (front-left of the plate)
 export function pipState(F) {
   const Fc = twos(F);
   const Fw = F >= CUT ? Fc - NF : Fc;
@@ -228,12 +229,21 @@ export function planState(F) {
 // schedule changes (turn the crown): the dial hand = this schedule's run time (a lap = PowerMove), the thermometer =
 // fidelity. A try is accepted only if one gets better and the other no worse.
 export const TICK = { x: 3.3, z: 3.05 };
+export const TICK_HOME = { x: 6.55, z: 3.0 };   // its stool off the plate's front-right corner
 export function tickState(F) {
   const Fc = twos(F);
   let y = 0, sq = 0, rock = 0.05 * Math.sin(TAU * Fc / 26), yaw = -0.55, armL = 0.35, armR = 0.35, crown = 0, bow = 0;
   let eyes = 'dot', mouth = null, emote = null, look = [0, 0];
   let lap = LAP_RAW, fid = 1.12, ghost = null, verdict = null;
-  if (F < K.click - 10 || F >= CUT) { eyes = F < K.whip2[0] || F >= CUT ? 'sleep' : 'dot'; }
+  let x = TICK.x, z = TICK.z;
+  if (F < K.tickHop[0] || F >= CUT) { x = TICK_HOME.x; z = TICK_HOME.z; eyes = 'sleep'; sq = 0.03 * Math.sin(TAU * F / 50); }
+  else if (F < K.tickHop[1]) {   // two hops from the stool onto the plate, ready for its cue
+    const p = (F - K.tickHop[0]) / (K.tickHop[1] - K.tickHop[0]), h = p < 0.5 ? 0 : 1, u = (p - h * 0.5) / 0.5;
+    const a = h ? [(TICK_HOME.x + TICK.x) / 2, (TICK_HOME.z + TICK.z) / 2] : [TICK_HOME.x, TICK_HOME.z], b = h ? [TICK.x, TICK.z] : [(TICK_HOME.x + TICK.x) / 2, (TICK_HOME.z + TICK.z) / 2];
+    const air = clamp((u - 0.2) / 0.7);
+    x = lerp(a[0], b[0], sm(air)); z = lerp(a[1], b[1], sm(air)); y = 0.55 * Math.sin(Math.PI * air);
+    sq = u < 0.2 ? 0.16 * sm(u / 0.2) : -0.14 * Math.sin(Math.PI * air); armL = armR = lerp(0.35, 2.2, Math.sin(Math.PI * air)); eyes = 'wide'; mouth = 'o'; yaw = -0.9;
+  } else if (F < K.whip2[0]) { sq = ringv(F - K.tickHop[1], 0.18, 0.9, 0.2); eyes = 'dot'; yaw = lerp(-0.9, -0.55, sm((F - K.tickHop[1]) / 6)); }
   if (F >= K.whip2[0] && F < K.click) { eyes = 'slit'; mouth = 'grin'; yaw = lerp(-0.55, -0.2, sm((F - K.whip2[0]) / 8)); armR = lerp(0.35, 2.6, sm((Fc - K.click + 8) / 6)); sq = 0.12 * sm((Fc - K.click + 8) / 6); }
   if (F >= K.click && F < K.zap + 20) {
     const a = Fc - K.click;
@@ -263,9 +273,18 @@ export function tickState(F) {
     if (cur) { armL = lerp(0.35, 2.7, sm((Fc - cur[0] + 4) / 4)); crown = 0.5 + 0.5 * Math.sin((Fc - cur[0]) * 1.2); eyes = 'slit'; }
     if (verdict && !verdict.ok) { eyes = verdict.age < 3 ? 'squeeze' : 'worried'; mouth = 'wobble'; if (verdict.age < 16) rock = 0.08 * Math.sin(verdict.age * 1.4); }
     if (verdict && verdict.ok) { eyes = 'happy'; mouth = 'smile'; sq = ringv(verdict.age, 0.12, 0.9, 0.2); }
+    if (F >= K.race[0] - 6 && F < K.flag) {   // the replay race: Tick holds its breath, then CLICKS when its hand stops
+      eyes = F < K.flag - 3 ? 'wide' : 'squeeze'; mouth = 'o'; armL = 0.5; sq = 0.06 * sm((F - K.race[0]) / 10);
+      if (F >= K.flag - 3) { crown = 1; armR = 2.6; }
+    }
   }
   lap = lapNow; fid = fidNow;
   if (F >= tries[0][0] - 10 && F < CUT) ghost = 0.9999;   // PowerMove's lap, for reference
+  // the race replay on the dial: both hands spin back to 12, then run at the SAME speed; Qubrio's stops at 1/4.7 turn,
+  // PowerMove's ghost runs on and closes the full turn 4.7x later (as Slo crawls in)
+  const [r0, r1] = K.race;
+  if (F >= r0 - 6 && F < r0) { const k = sm((F - r0 + 6) / 6); lap = lerp(LAP_FINAL, 0, k); ghost = lerp(0.9999, 0, k); }
+  if (F >= r0 && F < CUT) { const g = clamp((F - r0) / (r1 - r0)); ghost = Math.max(0.0001, g * 0.9999); lap = Math.min(g, LAP_FINAL); }
   if (F >= K.flag && F < CUT) {                           // payoff: arms up, holds the flag; star eyes
     const a = Fc - K.flag;
     eyes = a < 4 ? 'squeeze' : 'star'; mouth = 'grin';
@@ -274,7 +293,7 @@ export function tickState(F) {
     yaw = -0.3; rock = 0.04 * Math.sin(a * 0.35);
     if (F >= K.sloArrive && F < K.sloArrive + 24) { look = [0.9, 0.5]; eyes = 'happy'; }
   }
-  return { x: TICK.x, z: TICK.z, y, yaw, sq, rock, armL, armR, crown, bow, hand: lap, ghost, fid, verdict, face: { eyes, mouth, look }, emote };
+  return { x, z, y, yaw, sq, rock, armL, armR, crown, bow, hand: lap, ghost, fid, verdict, face: { eyes, mouth, look }, emote };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -295,7 +314,7 @@ export function sloState(F) {
 
 // ---------------------------------------------------------------------------------------------------------------
 // camera: orbit rigs per shot, blended; whips get smear from the measured screen motion (q_story)
-export const WHIPS = [K.whip1, K.whip2];
+export const WHIPS = [K.whip1, K.whip2, [400, 413]];
 const R_A = (F) => {   // establishing (S8 tail + S1): slow crane down towards the plate
   const k = sm((F + 28) / 110);
   return { tg: [lerp(-0.4, -1.2, k), lerp(0.2, 0.6, k), lerp(-0.8, 0.4, k)], az: lerp(0.42, 0.18, k), el: lerp(0.62, 0.36, k), r: lerp(14.5, 9.2, k), fov: 30, roll: lerp(0, -0.03, k) };
@@ -303,19 +322,19 @@ const R_A = (F) => {   // establishing (S8 tail + S1): slow crane down towards t
 const R_B = (F) => {   // placement: follow Pip across the partners, then rise to see all six circles
   const k = sm((F - 60) / 90);
   const up = sm((F - K.rise[0]) / (K.rise[1] - K.rise[0]));
-  return { tg: [lerp(-1.2, 1.2, k), lerp(0.55, 0.3, up), lerp(0.9, 1.0, k)], az: lerp(-0.2, 0.15, k), el: lerp(0.3, 0.78, up), r: lerp(5.8, 7.8, up), fov: 30, roll: lerp(0.04, 0, up) };
+  return { tg: [lerp(-1.2, 1.2, k), lerp(0.8, 0.3, up), lerp(0.9, 1.0, k)], az: lerp(-0.2, 0.1, k), el: lerp(0.36, 0.8, up), r: lerp(6.8, 8.2, up), fov: 30, roll: lerp(0.04, 0, up) };
 };
 const R_C = (F) => {   // routing plan from high front-right: Rook, the arrows, Loupe; crash-zoom into the lens on the whistle
   const cz = sm((F - K.look) / 7) * (1 - sm((F - K.whistle - 12) / 8));
   const base = { tg: [-0.6, 0.2, -1.1], az: 0.42, el: 0.72, r: 8.2, fov: 32, roll: 0.0 };
-  const lens = { tg: [CROSS_AT[0] + 0.3, 0.5, CROSS_AT[1] - 0.15], az: 0.18, el: 0.5, r: 4.3, fov: 32, roll: -0.08 };
+  const lens = { tg: [CROSS_AT[0] + 0.3, 0.85, CROSS_AT[1] - 0.25], az: 0.18, el: 0.46, r: 4.9, fov: 32, roll: -0.08 };
   return mixRig(base, lens, cz);
 };
-const R_D = (F) => {   // convoy: low tracking dolly from the left - Rook towing in the foreground, the block behind, Slo far right
+const R_D = (F) => {   // convoy: head-on from the front, dollying back as the block comes at us - Rook (left) and Slo (right) in frame
   const p = convoyP(F);
-  const zc = lerp(P.SROW[2] - 0.6, P.PROW[1] - 0.8, p);
+  const zc = lerp(P.SROW[2] - 0.5, P.PROW[1] - 0.7, p);
   const k = sm((F - K.aodOn[0]) / 16);
-  return { tg: [-0.9, 0.45, zc + 0.3], az: lerp(-0.98, -0.86, p), el: lerp(0.34, 0.24, k), r: lerp(7.4, 8.0, p), fov: 32, roll: lerp(0.0, 0.05, k) };
+  return { tg: [0.15, 0.5, zc - 0.3], az: lerp(0.1, 0.02, p), el: lerp(0.36, 0.24, k), r: lerp(7.8, 8.8, p), fov: 34, roll: lerp(0.0, -0.04, k) };
 };
 const R_E = (F) => {   // Tick winds up (low hero), then after the flash: high 3/4 over the whole zone with a push
   if (F < K.zap) return { tg: [TICK.x - 0.3, 1.1, TICK.z - 0.3], az: 0.35, el: 0.12, r: lerp(4.9, 4.4, sm((F - K.whip2[1]) / 16)), fov: 30, roll: -0.04 };
@@ -328,7 +347,7 @@ const R_F = (F) => {   // optimise: Tick's dial and the fidelity gauge, front, s
 };
 const R_G = (F) => {   // payoff: hero orbit - Tick, the pennant, the gauge; the entangled pairs behind; Slo arrives
   const o = io((F - K.flag) / 100);
-  return { tg: [lerp(TICK.x + 0.05, TICK.x - 0.25, o), 1.72, TICK.z - 0.5], az: lerp(0.42, 0.24, o), el: lerp(0.18, 0.24, o), r: lerp(7.3, 7.9, o), fov: 30, roll: lerp(-0.04, 0.02, o) };
+  return { tg: [lerp(TICK.x + 0.62, TICK.x + 0.5, o), 1.78, TICK.z - 0.15], az: lerp(0.3, 0.14, o), el: lerp(0.12, 0.18, o), r: lerp(6.1, 6.5, o), fov: 30, roll: lerp(-0.04, 0.02, o) };
 };
 export function camRig(F) {
   if (F >= K.wipe[0] + 10) return R_A(F - NF);                         // after the cut: the loop's opening move

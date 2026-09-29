@@ -74,6 +74,9 @@ export async function build(ctx, { renderer }, Q) {
   W.set = buildSet(npr, scene, LAYOUT);
   const plateId = W.set.plateTopId;
 
+  // Tick's stool (off the plate's front-right corner; top level with the plate)
+  add(new THREE.CylinderGeometry(0.62, 0.7, 1.0, 36), { color: 0xe5463b, hatchMode: 'u', rim: 0.8 }, { outline: 1.0, cast: false }, [T.TICK_HOME.x, -0.5, T.TICK_HOME.z]);
+  add(new THREE.CylinderGeometry(0.66, 0.66, 0.07, 36), { color: COL.brass, hatchMode: 'u' }, { outline: 0.6, cast: false }, [T.TICK_HOME.x, 0.0, T.TICK_HOME.z]);
   // Rook's side track (two brass rails + sleepers) and Slo's lane (pencil-ruled, with tick marks at 1/4.7 steps)
   const railG = new THREE.BoxGeometry(0.05, 0.05, 7.4);
   for (const dx of [-0.3, 0.3]) add(railG, { color: COL.brass, hatchMode: 'u' }, { outline: 0.5, cast: false }, [P.TRACK_X + dx, 0.025, -0.95]);
@@ -232,6 +235,7 @@ export function update(ctx, W, st, Q) {
   const pk = F >= K.flag && F < T.CUT ? ob((F - K.flag) / 6) : 0;
   posePennant(W.pennant, pk, sm((F - K.flag - 3) / 8), F * 0.35);
   poseGauge(W.gauge, ts.fid);
+  { const gk = F >= 402 && F < T.CUT ? ob((F - 402) / 8) : 0; W.gauge.group.visible = gk > 0.01; W.gauge.group.scale.setScalar(Math.max(0.01, gk)); }
   const ss = T.sloState(F);
   poseSnail(W.slo, { x: ss.x, z: ss.z, yaw: ss.yaw, lean: ss.lean, st: ss.st, sq: ss.sq, sway: ss.sway, stalk: ss.stalk });
   W.scene.updateMatrixWorld(true);
@@ -390,7 +394,7 @@ export function inkLayer(ctx, g, W, st, Q) {
     g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 0.98, -Math.PI / 2, -Math.PI / 2 + TAU * lap); g.closePath();
     g.fillStyle = 'rgba(124,58,237,0.55)'; g.fill();
     g.lineWidth = 0.05; g.strokeStyle = '#b9a3f0'; g.setLineDash([0.12, 0.09]);
-    g.beginPath(); g.arc(0, 0, 1.08, 0, TAU); g.stroke(); g.setLineDash([]);
+    g.beginPath(); g.arc(0, 0, 1.08, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(st.ts.ghost)); g.stroke(); g.setLineDash([]);
     g.restore();
   }
   // --- verdict marks by the gauge during optimisation: check (accepted) / cross (rejected) ---
@@ -403,6 +407,27 @@ export function inkLayer(ctx, g, W, st, Q) {
     g.restore();
   }
   for (const e of st.emotes) drawEmote(g, e, fr);
+  // --- the verifier's check card: one box per routing step, the failing step marked (no digits) ---
+  if (F >= K.whistle + 10 && F < K.erase[1] + 6) {
+    const gw = W.loupe.arms[0].g.localToWorld(V3(0, -0.5, 0.05));
+    if (v.ahead(gw)) {
+      const p = P2(gw), u = v.pxu(gw), k = ob((F - K.whistle - 10) / 5) * (1 - sg(F, K.erase[1], K.erase[1] + 6));
+      const cw = u * 0.62, ch = u * 0.86;
+      g.save(); g.translate(p.x - cw * 0.55, p.y - ch * 0.75); g.rotate(-0.12); g.scale(k, k);
+      const card = [[-cw / 2, -ch / 2], [cw / 2, -ch / 2], [cw / 2, ch / 2], [-cw / 2, ch / 2]];
+      fillPoly(g, card.map(([a, b]) => [a + 5, b + 6]), INK); fillPoly(g, card, '#fff6e0');
+      g.lineWidth = Math.max(3, u * 0.02); g.strokeStyle = INK; g.lineJoin = 'round';
+      g.beginPath(); card.forEach((q, i) => (i ? g.lineTo(...q) : g.moveTo(...q))); g.closePath(); g.stroke();
+      for (let i = 0; i < 4; i++) {
+        const by = -ch / 2 + ch * (0.16 + 0.22 * i), bs = ch * 0.15, bx = -cw * 0.28;
+        g.lineWidth = Math.max(2.5, u * 0.014); g.strokeRect(bx - bs / 2, by - bs / 2, bs, bs);
+        stroke(g, [[bx + bs * 0.9, by], [cw * 0.38, by + ch * 0.01]], Math.max(2.5, u * 0.012), '#8a7fa8');
+        if (i < 2) stroke(g, [[bx - bs * 0.35, by], [bx - bs * 0.05, by + bs * 0.3], [bx + bs * 0.45, by - bs * 0.4]], Math.max(3, u * 0.03), '#2f9d62');
+        if (i === 2) { stroke(g, [[bx - bs * 0.4, by - bs * 0.4], [bx + bs * 0.4, by + bs * 0.4]], Math.max(3, u * 0.03), '#e5463b'); stroke(g, [[bx + bs * 0.4, by - bs * 0.4], [bx - bs * 0.4, by + bs * 0.4]], Math.max(3, u * 0.03), '#e5463b'); }
+      }
+      g.restore();
+    }
+  }
   // --- "Qubrio" on Rook's cab nameplate (the side facing the camera) ---
   for (const plate of W.rook.names) {
     const c = plate.getWorldPosition(V3(0, 0, 0)), n = V3(0, 0, plate.position.z > 0 ? 1 : -1).transformDirection(W.rook.body.matrixWorld);
@@ -415,8 +440,8 @@ export function inkLayer(ctx, g, W, st, Q) {
     scriptWord(g, 'Qubrio', 0, 6, 62, '#3a1d6e', { weight: 0.2 });
     g.restore();
   }
-  // --- "POWERMOVE" on a paper flag stuck in Slo's shell ---
-  {
+  // --- "POWERMOVE" on a paper flag stuck in Slo's shell (shown for the race: the convoy shot and the finish) ---
+  if ((F >= K.aodOn[0] && F < K.whip2[0]) || (F >= K.race[0] && F < T.CUT) || F < 60 || F >= T.CUT) {
     const sh = W.slo.shellG.getWorldPosition(V3(0, 0, 0)), top = sh.clone().add(V3(0, 0.75, 0));
     const ownS = []; W.slo.group.traverse((o) => { if (o.isMesh) ownS.push(o); });
     if (v.ahead(sh) && v.clear(top, ownS) && v.clear(sh.clone().add(V3(0, 0.4, 0)), ownS)) {
