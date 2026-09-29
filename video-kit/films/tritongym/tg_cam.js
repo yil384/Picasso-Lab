@@ -94,7 +94,7 @@ function shotLap2(F) {           // B6: three quick panels linked by whips, rhym
   const gEnd = K.gate2 + 7, sIn = gEnd + 6;
   const arch = rig([L2 + A.gate + 0.56, R.ours + 1.35, 0.85], [L2 + A.gate - 0.04, R.ours + 0.1, 0.7], 34, -0.02);
   const k = sg(F, sIn, K.lap2[1] - 10, io);
-  const scale = rig([L2 + A.scale + 0.03, 13.6 - 0.5 * k, 1.6], [L2 + A.scale - 0.05, 7.9, 1.32], 32, 0.0);
+  const scale = rig([L2 + A.scale + 0.05, 13.6 - 0.5 * k, 1.6], [L2 + A.scale - 0.01, 7.9, 1.25], 32, 0.0);
   if (F < gEnd) return arch;
   return mix(arch, scale, sg(F, gEnd, sIn, ease.inOutQuint));
 }

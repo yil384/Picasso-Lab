@@ -589,7 +589,7 @@ export function drawMarks(ctx, g) {
   const tk = st.tok;
   const bangAt = (f0, p, s, rot, col = PAL.coral) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, col, r); };
   bangAt(K.idea, [tk.pos[0], tk.pos[1] + 1.78, tk.pos[2]], 0.46, 0.06, PAL.emerald);   // straight above the head, against the sky
-  if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 0.85, st.oro.pos[2]], 0.62, 0.12);   // as big as Tok's, inside the card band
+  if (st.oro.pos) { const sx = [Math.cos(st.oro.yaw), 0, -Math.sin(st.oro.yaw)]; bangAt(K.dtake, [st.oro.pos[0] - sx[0] * 0.2, 0.62, st.oro.pos[2] - sx[2] * 0.2], 0.55, 0.12); }   // as big as Tok's, low beside the head: inside the card band through the dolly-zoom
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
     const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
     const kp = st.kern.pos || [0, 0, 0], an = q / 6 * TAU + 0.4;

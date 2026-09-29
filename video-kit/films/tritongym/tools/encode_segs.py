@@ -224,7 +224,7 @@ def main():
     ap.add_argument("--master-max-mb", type=float, default=70.0, help="master: lowest CRF from --crf that fits")
     ap.add_argument("--start", type=int, default=0, help="card: rotate the loop to start on this frame")
     ap.add_argument("--nframes", type=int, default=660)
-    ap.add_argument("--crf-start", type=int, default=22)
+    ap.add_argument("--crf-start", type=int, default=30)
     ap.add_argument("--frame", type=int, default=0)
     ap.add_argument("--grid", type=int, default=4)
     ap.add_argument("--thumb", type=int, default=480)
