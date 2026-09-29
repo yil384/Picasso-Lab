@@ -765,13 +765,13 @@ body[data-screen="table"] .topbar { display: none; }
     flex-direction: column;
     align-items: center;
     translate: -50% -50%;
-    animation: gd-first-lead 1500ms linear both;
+    animation: gd-first-lead var(--first-ms) linear both;
 }
 .gd-first-lead .card { box-shadow: 0 10px 24px rgba(0, 30, 26, .45); }
 @keyframes gd-first-lead {
     0% { opacity: 0; transform: scale(.8); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
-    15% { opacity: 1; transform: none; }
-    78% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    16% { opacity: 1; transform: none; }
+    70% { opacity: 1; transform: none; animation-timing-function: ease-in; }
     100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.35); }
 }
 .gd-first-ribbon {
@@ -980,7 +980,7 @@ body[data-screen="table"] .topbar { display: none; }
 /* reduced motion: the transient labels still show, as a still frame that fades */
 @media (prefers-reduced-motion: reduce) {
     .gd-stage .gd-combo-label { animation: gd-still 820ms linear 150ms both !important; }
-    .gd-stage .gd-first-lead { animation: gd-still 1500ms linear both !important; }
+    .gd-stage .gd-first-lead { animation: gd-still var(--first-ms) linear both !important; }
     .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation-name: gd-still !important; animation-duration: 640ms !important; }
     .gd-stage .gd-ribbon, .gd-stage .gd-ribbon b { animation: none !important; }
 }

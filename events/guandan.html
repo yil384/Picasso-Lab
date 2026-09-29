@@ -3423,10 +3423,11 @@ function dealHTML(v) {
     return `<div class="gd-deal" style="--deal-left:${Math.round(DEALING_MS - elapsed)}ms"><div class="gd-deck"><i class="gd-back"></i><i class="gd-back"></i>${back}</div>${flights}</div>`;
 }
 
-// 首出 (qqg_result_zoom): when the deal ends, the round-1 starting card pops up at the centre
-// with a warm ribbon, then shrinks into the seat that holds it and leads (which keeps its 首 tag).
-// Keyed by the deal, so a re-render never replays it and a rejoin resumes it in step.
-const FIRST_LEAD_MS = 1500;
+// 首出 (qqg_shouchu): when the deal ends, the round-1 starting card pops up at the centre with a
+// warm ribbon, then shrinks into the seat that holds it and leads (which keeps its 首 tag). It ends
+// with the sorting window (DEALING_MS + SORTING_MS), before anyone can act, so it never crosses the
+// first lead or the action row. Keyed by the deal: a re-render never replays it, a rejoin resumes it.
+const FIRST_LEAD_MS = SORTING_MS - 20;
 function firstLeadKey(v) {
     const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
     if (!game.startingCard || v.dealPhase === "dealing" || v.leader < 0 || since < 0 || since > FIRST_LEAD_MS) return "";
@@ -3438,7 +3439,7 @@ function firstLeadHTML(v) {
     const seat = { 0: [92, h - 50], 1: [90, 240], 2: [w / 2, 58], 3: [w - 90, 240] }[pos];
     const card = { ...game.startingCard, id: "first-lead" };
     const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
-    return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
+    return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;--first-ms:${FIRST_LEAD_MS}ms;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
 }
 
 // 进贡/还贡/抗贡 (round 2+): as the last deal flights land, each tribute card flies payer -> receiver
@@ -3715,6 +3716,11 @@ function resultHTML(v) {
     if (state.peek) return `<div class="gd-result is-peek"><button class="btn pass" type="button" data-act="result-back">${L("Back to result", "返回结算")}</button></div>`;
     const enter = !state.shown;
     state.shown = true;
+    // a table toast still up as the panel lands (a late 接风 line) would sit on the band
+    if (enter) {
+        const text = tableView.toast?.textContent;
+        setTimeout(() => { if (tableView.toast?.textContent === text) hideToast(); }, state.fresh ? 0 : RESULT_IN_MS);
+    }
     const r = game.roundResult;
     const over = game.phase === "gameOver";
     const mine = v.mine;
