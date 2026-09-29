@@ -80,7 +80,7 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-back-ic { width: 34px; height: 27px; fill: currentColor; stroke: rgba(10, 18, 60, .38); stroke-width: 2.4px; stroke-linejoin: round; paint-order: stroke fill; }
 .gdr-back:active { scale: .92; }
 /* small controls reach 40 CSS px however far the stage is scaled down (--gdr-hit = 40 / s) */
-.gdr-back::after, .gdr-link::after {
+.gdr-back::after, .gdr-link::after, .gdr-help::after {
     content: ""; position: absolute; left: 50%; top: 50%; translate: -50% -50%;
     width: max(100%, var(--gdr-hit, 40px)); height: max(100%, var(--gdr-hit, 40px));
 }
@@ -118,12 +118,22 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-page-in { max-width: 900px; min-height: 100%; margin: 0 auto; }
 
 /* section header: heavy white title, gray aside, optional text link */
-.gdr-sec { display: flex; align-items: center; gap: 12px; min-width: 0; margin: 16px 0 8px; }
+.gdr-sec { position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; margin: 16px 0 8px; }
 .gdr-page-in > .gdr-sec:first-child { margin-top: 0; }
 .gdr-sec > b { flex: none; font: 900 17px/1.2 var(--gdr-font-ui); text-shadow: 0 1px 0 rgba(10, 18, 60, .4); }
 .gdr-fine { min-width: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; line-height: 1.35; color: rgba(255, 255, 255, .6); }
 .gdr-fine .gdr-ic { font-size: 14px; color: rgba(255, 255, 255, .45); }
 .gdr-link { position: relative; z-index: 1; margin-left: auto; min-height: 40px; padding: 0 4px; border: 0; background: none; cursor: pointer; font: 700 13px/1.2 var(--gdr-font-ui); color: #ffe39a; }
+/* ? beside a section title opens a note under the title (the leaderboard's score formula) */
+.gdr-help { position: relative; z-index: 1; display: grid; place-items: center; width: 22px; height: 22px; margin-left: -6px; padding: 0; border: 0; background: none; cursor: pointer; font-size: 16px; color: rgba(255, 255, 255, .5); }
+.gdr-help[aria-expanded="true"] { color: #ffd766; }
+.gdr-help:focus-visible { outline: 2px solid #ffd766; outline-offset: 1px; border-radius: 50%; }
+.gdr-note {
+    position: absolute; left: 0; top: calc(100% + 4px); z-index: 3;
+    max-width: 100%; padding: 8px 12px; border-radius: 6px;
+    background: rgba(10, 18, 60, .94);
+    font: 500 12px/1.5 var(--gdr-font-ui); color: rgba(255, 255, 255, .92);
+}
 
 /* ---------- signature card (same language as the in-game card) ---------- */
 .gdr-card {
@@ -370,13 +380,14 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-row-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .gdr-row-name > b { flex: none; font: 900 15px/1.3 var(--gdr-font-ui); color: var(--gdr-ink); }
 .gdr-row-name > .gdr-tag { flex: 0 1 auto; min-width: 0; }
-.gdr-row-sub { display: flex; align-items: flex-start; gap: 5px; margin-top: 2px; font-size: 12px; line-height: 1.4; color: var(--gdr-ink-3); }
+.gdr-row-sub { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 2px 14px; margin-top: 2px; font-size: 12px; line-height: 1.4; color: var(--gdr-ink-3); }
 .gdr-row-sub .gdr-ic { margin-top: 2px; color: #f4a92a; }
-.gdr-cells { flex: none; display: flex; align-self: stretch; margin: 7px 0; border-radius: 6px; background: var(--gdr-cell); }
-.gdr-cells span { width: 56px; display: grid; place-content: center; text-align: center; }
-.gdr-cells span + span { box-shadow: -1px 0 0 rgba(28, 47, 102, .08); }
-.gdr-cells b { font: 700 20px/1.05 var(--gdr-font-num); color: var(--gdr-ink); }
-.gdr-cells i { font: 600 11px/1.3 var(--gdr-font-ui); font-style: normal; color: var(--gdr-ink-3); }
+/* leaderboard sub-line: the record, then the quote */
+.gdr-rec { min-width: 0; }
+.gdr-rec > span { white-space: nowrap; }
+.gdr-rec b { font: 700 14px/1 var(--gdr-font-num); color: var(--gdr-ink-2); }
+.gdr-rec i { margin: 0 2px; font-style: normal; opacity: .6; }
+.gdr-row-q { display: inline-flex; align-items: flex-start; gap: 5px; min-width: 0; }
 .gdr-row-pts {
     flex: none; align-self: stretch; width: 78px;
     display: grid; place-content: center; text-align: center;
@@ -496,35 +507,6 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-splash-line span { display: inline-flex; align-items: baseline; }
 .gdr-splash-line b { margin-right: 4px; font: 800 24px/1 var(--gdr-font-num); color: #ffe39a; }
 
-/* ---------- lobby 战报 strip (rendered into [data-gdr-banner-slot], outside the stage) ---------- */
-.gdr-banner {
-    display: flex; align-items: center; gap: 10px; min-width: 0; height: 36px;
-    padding: 0 12px 0 5px; border-radius: 18px;
-    background: var(--gdr-dark); color: #fff; cursor: pointer;
-    font: 600 13px/1 var(--gdr-font-ui); white-space: nowrap; overflow: hidden;
-}
-.gdr-banner:focus-visible { outline: 2px solid #ffd766; outline-offset: 2px; }
-.gdr-bn-tag { flex: none; padding: 5px 10px; border-radius: 13px; background: var(--gdr-gold-plate); color: #a3240c; font: 900 12px/1.1 var(--gdr-font-ui); }
-.gdr-bn-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; }
-.gdr-bn-avs { flex: none; display: flex; }
-.gdr-bn-avs img { width: 24px; height: 24px; margin-right: -6px; border-radius: 50%; object-fit: cover; border: 1.5px solid #fff; background: #c9d2e4; }
-.gdr-bn-body > b { flex: none; margin-left: 6px; font-weight: 800; }
-.gdr-bn-score { flex: none; display: inline-flex; align-items: baseline; gap: 2px; font: 800 18px/1 var(--gdr-font-num); }
-.gdr-bn-score .red { color: #ff8a9c; }
-.gdr-bn-score .blue { color: #8cb4ff; }
-.gdr-bn-score i { font-style: normal; color: rgba(255, 255, 255, .5); }
-.gdr-bn-score span:last-child { color: rgba(255, 255, 255, .6); }
-.gdr-bn-mut { flex: none; color: rgba(255, 255, 255, .65); }
-.gdr-bn-div { flex: none; width: 1px; height: 16px; background: rgba(255, 255, 255, .2); }
-.gdr-bn-chip { flex: none; display: inline-flex; align-items: center; gap: 4px; }
-.gdr-bn-chip .gdr-rank { width: 22px; height: 19px; }
-.gdr-bn-chip .gdr-rank b { font-size: 12px; margin-top: -1px; -webkit-text-stroke-width: 2px; }
-.gdr-bn-chip > b { font: 800 15px/1 var(--gdr-font-num); color: #ffe39a; }
-.gdr-bn-go { flex: none; color: #ffe39a; font-weight: 800; }
-@media (max-width: 699px) {
-    .gdr-banner .gdr-bn-mut, .gdr-banner .gdr-bn-div, .gdr-banner .gdr-bn-chip { display: none; }
-}
-
 /* ---------- motion: a page's entry plays when it is first shown or dragged into view ---------- */
 @keyframes gdr-in-left { from { opacity: 0; transform: translateX(-36px); } }
 @keyframes gdr-in-right { from { opacity: 0; transform: translateX(36px); } }
@@ -608,11 +590,10 @@ body.gdr-modal-open { overflow: hidden; }
 .is-port .gdr-mnames b { font-size: 12px; }
 .is-port .gdr-mnote { margin-top: -2px; }
 
-.is-port .gdr-row { flex-wrap: wrap; gap: 0 8px; padding: 0 0 0 6px; min-height: 0; }
+.is-port .gdr-row { gap: 0 8px; padding: 0 0 0 6px; }
 .is-port .gdr-row-main { flex: 1 1 0; }
 .is-port .gdr-row-name { flex-wrap: wrap; gap: 4px 6px; }
-.is-port .gdr-row-pts { order: 1; align-self: stretch; width: 70px; }
-.is-port .gdr-rows .gdr-row > .gdr-cells { order: 2; flex: 1 0 100%; margin: 0 10px 10px 4px; justify-content: space-around; }
+.is-port .gdr-row-pts { align-self: stretch; width: 70px; }
 .is-port .gdr-sec { flex-wrap: wrap; row-gap: 0; }
 .is-port .gdr-deck { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 12px 8px; }
 

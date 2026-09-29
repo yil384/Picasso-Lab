@@ -2,12 +2,12 @@
    Picasso Lab Guandan: easter-egg layers (records/eggs track).
    #return-transition: the "picasso" card-fan victory exit back to events.html
    (startReturnToEvents + returnCardsHTML/returnShardsHTML/returnCoinsHTML).
-   #return-type-hint: the "try typing picasso" pill, placed per screen by placeReturnTypeHint().
+   #return-type-hint: the "try typing picasso" toast, placed by placeReturnTypeHint().
    Both are body-level. On a portrait phone the table stage is turned
    90deg (the phone is held sideways), and both layers turn with it; sizes inside
    the transition use container units so the turned layer lays out as the
-   landscape screen the player sees. The look is the pre-redesign one (ec32e31),
-   so it keeps its own warm palette instead of the Tencent tokens in guandan-ui.css.
+   landscape screen the player sees. The transition's look is the pre-redesign one
+   (ec32e31), so it keeps its own warm palette instead of the Tencent tokens in guandan-ui.css.
    ========================================================================== */
 
 .return-transition {
@@ -47,22 +47,25 @@
     /* the old page's primary font (Nunito) put the baseline .107em higher than Noto Sans SC does */
     margin-top: -.107em;
     color: var(--rvx-gold-2);
-    filter: drop-shadow(0 0 14px rgba(232, 189, 99, .4));
+    -webkit-text-stroke: 4px var(--rvx-gold-ink); /* 2px outside the glyph (paint-order) */
+    paint-order: stroke fill;
     opacity: 0;
     animation: rvxTitleIn .6s cubic-bezier(.2, .86, .22, 1) .46s forwards;
 }
 .rvx-title small {
     display: block; margin-top: calc(10px + .25em);
-    font-size: .3em; font-weight: 800; font-style: normal; letter-spacing: .46em; text-indent: .46em;
+    font-size: .3em; font-weight: 800; font-style: normal; letter-spacing: .2em; text-indent: .2em;
+    -webkit-text-stroke: 0;
     color: var(--rvx-gold-1);
 }
+.rvx-title small:lang(en) { letter-spacing: 0; text-indent: 0; }
 
 .rvx-ring {
     position: absolute; left: 50%; top: 50%;
     width: min(360px, 52cqw); aspect-ratio: 1;
     transform: translate(-50%, -50%) scale(.3);
-    border: 2px solid rgba(232, 189, 99, .85); border-radius: 50%;
-    box-shadow: 0 0 24px rgba(232, 189, 99, .4);
+    border: 2px solid var(--rvx-gold-2); border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--rvx-gold-ink);
     opacity: 0;
     animation: rvxRing .9s cubic-bezier(.16, .86, .24, 1) .16s forwards;
 }
@@ -73,7 +76,6 @@
     transform: translateX(-50%) scaleY(0); transform-origin: top;
     border-radius: 0 0 999px 999px;
     background: rgba(232, 189, 99, .55);
-    filter: blur(1px);
     opacity: 0;
     animation: rvxBeam .6s cubic-bezier(.2, .8, .2, 1) forwards;
 }
@@ -113,8 +115,8 @@
     transform: rotateY(180deg);
     border: 2px solid rgba(255, 255, 255, .6);
     background: var(--rvx-card-face);
-    font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 5cqw, 44px); font-weight: 900;
 }
+.rvx-pip { width: 48%; aspect-ratio: 1; fill: currentColor; }
 .rvx-face.front.red { color: var(--rvx-card-red); }
 .rvx-face.front.black { color: var(--rvx-card-black); }
 .rvx-emblem {
@@ -158,7 +160,7 @@
     position: absolute; left: 50%; top: 46%;
     width: 14px; height: 14px; border-radius: 50%;
     background: var(--rvx-gold-2);
-    box-shadow: 0 0 8px rgba(232, 189, 99, .5);
+    box-shadow: inset 0 1px 0 var(--rvx-gold-1), inset 0 -2px 0 rgba(120, 72, 8, .55);
     opacity: 0;
     animation: rvxCoinBurst .78s cubic-bezier(.14, .84, .18, 1) var(--delay) forwards;
 }
@@ -218,41 +220,28 @@ body[data-screen="table"]:has(.gd-viewport.is-rotated) .return-transition {
 }
 
 /* ---------- "try typing picasso" hint ----------
-   Centred on the point placeReturnTypeHint() picks for the screen (document px): the felt band
-   under the partner's played cards, the lobby's stat pills, the room's free top bar. */
+   The product's navy toast, centred on the free spot placeReturnTypeHint() measures (document px);
+   the word to type is set in gold Barlow. Hidden while a popup, the 巅峰对决 board, the ☰ menu, the
+   match intro or a result is up (showReturnTypeHint() does not show it over them either). */
 #return-type-hint {
+    --hint-r: 0deg;
+    --hint-s: 1;   /* set smaller by placeReturnTypeHint() on a crowded screen */
     position: absolute; left: 50%; top: 50%;
     z-index: var(--z-toast, 70);
-    padding: 9px 14px;
-    border: 1px solid rgba(232, 189, 99, .4); border-radius: 999px;
-    background: rgba(10, 18, 16, .96);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+    padding: 6px 16px;
+    border-radius: var(--r-pill);
+    background: rgba(12, 20, 64, .85);
     color: #fff;
-    font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-    font-size: .76rem; font-weight: 750; line-height: normal;
+    font: 700 var(--fs-13)/1.35 var(--font-ui);
     white-space: nowrap;
-    transform: translate(-50%, -50%) translateY(8px);
+    transform: translate(-50%, -50%) rotate(var(--hint-r)) scale(var(--hint-s)) translateY(8px);
     opacity: 0;
     pointer-events: none;
     transition: opacity .22s ease, transform .22s ease;
 }
-#return-type-hint.show { opacity: 1; transform: translate(-50%, -50%); }
-#return-type-hint kbd {
-    display: inline-block;
-    margin: 0 1px; padding: 1px 5px;
-    border: 1px solid rgba(255, 255, 255, .24); border-radius: 5px;
-    background: rgba(255, 255, 255, .12);
-    color: #ffcd00;
-    font: inherit; font-size: .7rem;
-}
-@media (max-width: 860px), (max-height: 600px) and (pointer: coarse) {
-    #return-type-hint {
-        width: max-content; /* a left offset would otherwise cap the shrink-to-fit width */
-        max-width: calc(100vw - 24px);
-        white-space: normal;
-        text-align: center;
-    }
-}
-/* Over the turned portrait table the pill reads top to bottom like the table. */
-#return-type-hint.is-turned { max-width: calc(100dvh - 24px); transform: translate(-50%, -50%) rotate(90deg) translateY(8px); }
-#return-type-hint.is-turned.show { transform: translate(-50%, -50%) rotate(90deg); }
+#return-type-hint.show { opacity: 1; transform: translate(-50%, -50%) rotate(var(--hint-r)) scale(var(--hint-s)); }
+/* over the turned portrait table the pill reads top to bottom like the table */
+#return-type-hint.is-turned { --hint-r: 90deg; }
+#return-type-hint b { margin-left: .1em; color: var(--gold-2); font: 700 1.2em/1 var(--font-num); letter-spacing: .08em; }
+body.gdr-modal-open #return-type-hint,
+body:has(.gd-popup-layer, .gd-menu, .gd-intro, .gd-result:not(.is-peek)) #return-type-hint { opacity: 0; }
