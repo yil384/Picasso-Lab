@@ -940,3 +940,13 @@ Disputed or downgraded by the consolidator:
   - The lime zone glow is removed, and the flood has fewer pinstripes.
   - Pip is matte, and the 2D ink turns off in step with the whip blur.
 
+
+## Handoff status
+
+- Done: 4 review→fix rounds (final scores: director 7.8, tech-art 8.1, domain 8.2, web 8.1; none at 8.5 yet), then all round-4 must-fixes applied in code.
+- Final 1920×1080 render complete (23 lossless segments in `out/qubrio/_render/`, git-ignored). Verified: 3 random frames re-render pixel-identical, f672 == f0 (seamless loop).
+- `qubrio_master.mp4` is committed (CRF 19, preset veryslow, 64.5 MB). Its specs and contents are not yet checked with ffprobe or by eye.
+- Round-4 fixes are checked only on 960×540 test stills; no full preview or review round has been run on them (round 5 is missing).
+- Not done: `qubrio_loop.mp4` (the file in `_render/` is from an interrupted run, so ignore it), `qubrio_poster.webp` and `qubrio_sheet.jpg`.
+- Next: `cd films/qubrio; R=../../out/qubrio/_render; python3 tools/encode_segs.py $R cardsrc qubrio && python3 tools/encode_segs.py $R card qubrio --crf-start 30 --max-mb 3.8 --start 612 && python3 tools/encode_segs.py $R poster qubrio --frame 612 && python3 tools/vsheet.py $R/qubrio_master.mp4 $R/qubrio_sheet.jpg --every 24 --cols 7 --thumb 480`, then move the outputs to `out/qubrio/`.
+- Then: build evidence from the master (`tools/evidence.py`), run review round 5 (`review.js`), and write the README §9 report. The Projects page expects `qubrio/qubrio.webp` (rename the poster at handoff).
