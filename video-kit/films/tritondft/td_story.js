@@ -291,7 +291,7 @@ function updateCart(F) {
   if (!onDesk && !(F >= K.suck[0] && F < K.suck[1])) {
     if (C.parent !== W.turn) W.turn.add(C);
     C.position.set(...ringPos); C.rotation.set(0, 0, 0);
-    const v = st.jobV;
+    const v = Math.min(st.jobV, F >= K.planks[0] ? 0.04 : 1);   // with the band-gap planks up, only a hint of squash (the gap must stay open)
     C.scale.set(1 + v * 0.8, 1 - v * 1.2, 1 + v * 0.8);
     return;
   }
@@ -503,6 +503,7 @@ function updateTri(F) {
     if (F >= K.deal[0]) { const d = K.deal.findIndex((f, i) => F >= f && (i === 2 || F < K.deal[i + 1])); armR = -0.6 - 1.2 * (d % 2); expr = 'determined'; }
   }
   if (F >= K.deal[2] + 6 && F < K.S3 + 20) { expr = 'happy'; armR = -0.6; }
+  if (win(F, K.ding + 4, K.suck[0])) { const c = arc(F, K.ding + 4, K.ding + 16); expr = 'grin'; armR = -2.6 * Math.max(c, 0.6); hop = 0.1 * c; }   // the team cheers the DING
   if (win(F, K.salute - 8, K.salute + 10)) { armR = -2.8 * arc(F, K.salute - 8, K.salute + 10); expr = 'grin'; yaw = faceYaw(home, jobPos(F)); }
   const out = outState(0, F);
   if (out) { pos = out.pos; yaw = out.yaw; sq = out.sq; expr = out.expr; armR = out.arm; armL = -out.arm * 0.8; if (F >= K.handBack[0] && F < K.dive[0] + 10) armR = -1.4; }
@@ -675,6 +676,7 @@ function updateTilt(F) {
   for (const f0 of [...K.click, K.cutoff]) if (win(F, f0 - 5, f0 + 3)) { const k = arc(F, f0 - 5, f0 + 3); lean += 0.14 * k; sq += 0.06 * k; }   // a nod into the console on each click
   if (win(F, K.go - 3, K.go + 8)) { expr = 'grin'; sq = F < K.go ? 0.12 : ringv(F - K.go, 0.14, 1.0, 0.25); }
   if (win(F, K.S6, K.lap[1])) expr = 'happy';
+  if (win(F, K.ding + 4, K.suck[0])) { expr = 'grin'; sq = ringv(F - K.ding - 6, 0.12, 1.0, 0.25); }
   let panTip = 0;
   const out = outState(3, F);
   if (out) {
@@ -895,7 +897,7 @@ const rigS7 = (F) => {        // gauge -> tilt up with the planks -> ride with t
   const gp = station(ST.anlz - 0.36, 1.5), an = station(ST.anlz), jp = jobPos(F), fp = W.tube.curve.getPointAt(1);
   const gauge = { tg: [lerp(an[0], gp[0], 0.5), 0.38, lerp(an[2], gp[2], 0.5)], az: 0.32, el: 0.2, r: 1.85, fov: 34, roll: 0 };
   const cell = { tg: [jp[0], 0.78, jp[2]], az: 0.55, el: 0.03, r: 2.3, fov: 34, roll: 0.02 };   // level with the planks: the gap stays open
-  const ride = { tg: [jp[0], 0.8, jp[2]], az: 0.45, el: 0.12, r: 2.6, fov: 34, roll: 0.02 };
+  const ride = { tg: [jp[0], 0.8, jp[2]], az: 0.45, el: 0.02, r: 2.6, fov: 34, roll: 0.02 };   // stays level: the band gap never closes
   const up = { tg: [fp.x + 0.1, fp.y - 0.4, fp.z + 0.1], az: 0.35, el: -0.1, r: 2.6, fov: 36, roll: -0.04 };
   if (F < K.planks[0]) return gauge;
   if (F < K.toFunnel[0] + 2) return mixRig(gauge, cell, io((F - K.planks[0]) / 10));
