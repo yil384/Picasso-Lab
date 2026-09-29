@@ -103,7 +103,6 @@ export async function buildAll(w) {
     return m;
   });
   W.tiny = buildHourglass(W, 1.2 / Math.cbrt(68), [...TINY], 'tiny');
-  W.tiny.g.rotation.y = Math.PI / 3;                   // posts flank the glass: the neck and the stream stay visible
   [[0.12, COL.navy, 0.05], [0.11, COL.cream, -0.08], [0.1, COL.sky, 0.12]].reduce((y, [h, c, ry]) => {
     add(new THREE.BoxGeometry(0.34, h, 0.26), { color: c, hatchMode: 'u', rim: 0.5 }, { outline: 0.6 }, [TINY[0], y + h / 2, TINY[2]], [0, ry, 0]);
     return y + h;
@@ -130,21 +129,19 @@ async function buildProps(W) {
   add(new THREE.CapsuleGeometry(0.07, 0.16, 6, 16), { color: COL.skyP, rim: 0.8, toneBias: 0.1, hatch: 0.4 }, { outline: 0.7 }, [0, 0, 0], [0, 0, Math.PI / 2], W.capsule);
   add(new THREE.TorusGeometry(0.072, 0.018, 8, 20), { color: COL.gold, hatchMode: 'u', rim: 0.6 }, { outline: 0.4 }, [0, 0, 0], [0, Math.PI / 2, 0], W.capsule);
   // the plan: three tickets (vc-relax: a cube squeezed by arrows; scf: a circular arrow; band gap: two bars and a gap)
-  const tick = async (k, paint) => bake(THREE, { width: 256, height: 176, seed: 60 + k, key: `ticket-${k}-v2`, background: '#ffffff' }, (p, brush, w, h) => {
+  const tick = async (k, paint) => bake(THREE, { width: 256, height: 176, seed: 60 + k, key: `ticket-${k}-v3`, background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill(k === 1 ? '#bfe6f7' : '#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
     brush.set('inkpen', '#16162c', 1.2); for (let x = 8; x < w; x += 16) brush.line(x, 6, x + 6, 6);
     paint(brush, w, h);
   });
   const texs = [
     await tick(0, (brush, w, h) => { brush.set('bigink', '#16162c', 1.3); brush.rect(w / 2 - 34, h / 2 - 30, 68, 68); brush.set('bigink', '#ff5a2e', 1.4); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const x0 = w / 2 + dx * 80, y0 = h / 2 + 4 + dy * 62, x1 = w / 2 + dx * 48, y1 = h / 2 + 4 + dy * 42; brush.line(x0, y0, x1, y1); brush.line(x1, y1, x1 - dx * 10 + dy * 9, y1 - dy * 10 + dx * 9); brush.line(x1, y1, x1 - dx * 10 - dy * 9, y1 - dy * 10 - dx * 9); } }),
-    await tick(1, (brush, w, h) => {                // scf: two dashed arcs chasing each other round (iterate to self-consistency)
-      const cx = w / 2, cy = h / 2 + 6, R = 48;
-      for (const [a0, col] of [[0.25, '#16162c'], [0.25 + Math.PI, '#ff5a2e']]) {
-        brush.set('bigink', col, 1.5);
-        for (let q = 0; q < 4; q++) { const t0 = a0 + q * 0.62, t1 = t0 + 0.4; brush.line(cx + Math.cos(t0) * R, cy + Math.sin(t0) * R, cx + Math.cos(t1) * R, cy + Math.sin(t1) * R); }
-        const te = a0 + 2.5, ex = cx + Math.cos(te) * R, ey = cy + Math.sin(te) * R, tx = -Math.sin(te), ty = Math.cos(te);
-        brush.line(ex, ey, ex - tx * 16 + Math.cos(te) * 10, ey - ty * 16 + Math.sin(te) * 10); brush.line(ex, ey, ex - tx * 16 - Math.cos(te) * 10, ey - ty * 16 - Math.sin(te) * 10);
-      }
+    await tick(1, (brush, w, h) => {                // scf: a ball-and-stick bond pair with blue density lozenges on the bonds
+      const P = [[w / 2 - 70, h / 2 + 34], [w / 2, h / 2 - 30], [w / 2 + 70, h / 2 + 34]];
+      brush.noStroke(); brush.fill('#6cc4ee', 255); brush.fillBleed(0.01);
+      for (const [a, b] of [[0, 1], [1, 2]]) { const mx = (P[a][0] + P[b][0]) / 2, my = (P[a][1] + P[b][1]) / 2, an = Math.atan2(P[b][1] - P[a][1], P[b][0] - P[a][0]); const pts = []; for (let q = 0; q < 16; q++) { const t = q / 16 * TAU, x = Math.cos(t) * 26, y = Math.sin(t) * 11; pts.push([mx + x * Math.cos(an) - y * Math.sin(an), my + x * Math.sin(an) + y * Math.cos(an)]); } brush.polygon(pts); brush.polygon(pts); }
+      brush.noFill(); brush.set('bigink', '#16162c', 1.3); brush.line(...P[0], ...P[1]); brush.line(...P[1], ...P[2]);
+      for (const [x, y] of P) { brush.noStroke(); brush.fill('#fff6e0', 255); brush.circle(x, y, 13, 0.1); brush.noFill(); brush.set('bigink', '#16162c', 1.1); brush.circle(x, y, 13, 0.1); }
     }),
     await tick(2, (brush, w, h) => { brush.set('bigink', '#0284c7', 2.2); brush.line(w / 2 - 70, h / 2 + 40, w / 2 + 70, h / 2 + 40); brush.set('bigink', '#ff5a2e', 2.2); brush.line(w / 2 - 70, h / 2 - 30, w / 2 + 70, h / 2 - 30); brush.set('inkpen', '#16162c', 1.2); brush.line(w / 2, h / 2 - 16, w / 2, h / 2 + 26); }),
   ];
@@ -208,6 +205,7 @@ async function buildProps(W) {
   W.plankV = add(new THREE.BoxGeometry(0.46, 0.05, 0.14), { color: COL.sky, rim: 0.7, hatchDir: [1, 0, 0], shadeColor: COL.navy, shadeMix: 0.4 }, { outline: 0.7 }, [0, 0.66, 0], [0, 0, 0], W.planks);
   W.plankC = add(new THREE.BoxGeometry(0.46, 0.05, 0.14), { color: COL.pop, rim: 0.7, hatchDir: [1, 0, 0], shadeColor: COL.popD, shadeMix: 0.4 }, { outline: 0.7 }, [0, 0.86, 0], [0, 0, 0], W.planks);
   W.stalk = add(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 6), { color: COL.navy }, { outline: 0.3 }, [-0.25, 0.66, 0], [0, 0, 0], W.planks);
+  W.stalk.visible = false;                              // two floating levels, no bracket (it read as a shelf / an 'E')
   // the DFTBench scorecard (many small material doodles, uncountable, one faint X) and Loupe's stamp
   const scoreTex = async (upto, key) => bake(THREE, { width: 512, height: 368, seed: 74, key, background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill('#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
@@ -320,7 +318,7 @@ function updateCart(F) {
   }
   // pops out of the desk mouth and lands in Hoot's wings; handed to Tri at the end
   const m = W.tube.curve.getPointAt(0);
-  const hold = W.hoot.head.localToWorld(V3(0.06, -0.68, 0.74));    // hugged at the belly, right of the scorecard: the planks stay under its beak
+  const hold = W.hoot.head.localToWorld(V3(0.06, -0.86, 0.74));    // hugged at the belly, right of the scorecard: the planks stay under its beak
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k)];
@@ -480,7 +478,7 @@ function updateTube(F) {
 // k: 0 Tri, 1 Clack (late: rides the 68x down), 2 Loupe, 3 Tilt
 // one owner per number, faces clear: Tri stands on the paper tower, Clack photobombs at the far left of the desk (after
 // 68x has landed on its own), Loupe peeks over its scorecard (clear of the lamp), Tilt behind the $0.04 it tips its pennies into
-const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.72, 0.0, -0.3), deskP(-1.28, 0, -0.12), deskP(1.5, 0, 0.1)];
+const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.72, 0.0, -0.3), deskP(-1.3, 0, 0.42), deskP(1.5, 0, 0.1)];   // Loupe in front of the lamp, its lens above 98%
 const OUT_T = [K.outs[0], K.slam[1] + 2, K.outs[1], K.outs[2]];
 function outState(k, F) {
   const t0 = OUT_T[k];
@@ -907,7 +905,7 @@ const rigClack = (F) => {     // medium on Clack; crash pull-back to a low dutch
 };
 const rigCell = (F) => {      // tilt down to the silicon cell: it breathes and settles, density condenses on the bonds
   const jp = jobPos(F), k = sm((F - 230) / 12);
-  return { tg: [jp[0], 0.42, jp[2]], az: lerp(0.62, 0.5, k), el: lerp(0.22, 0.26, k), r: lerp(1.6, 1.45, k), fov: 32, roll: 0.0 };   // locked while the cell relaxes
+  return { tg: [jp[0], 0.37, jp[2]], az: lerp(0.62, 0.5, k), el: lerp(0.22, 0.26, k), r: lerp(1.6, 1.45, k), fov: 32, roll: 0.0 };   // locked while the cell relaxes (whole cell + ghost in the card band)
 };
 const rigS3b = (F) => {       // low at the desk edge: the tiny hourglass sharp in the foreground, Hoot and the giant behind it
   const k = sm((F - K.S3b) / 40), m = [lerp(HT[0], TINY[0], 0.55), 0.46, lerp(HT[2], TINY[2], 0.5)];
@@ -938,8 +936,8 @@ const rigLap = (F) => {       // ride round with the job (close orbit synced to 
 const rigS7 = (F) => {        // gauge -> tilt up with the planks -> ride with the result to the funnel -> look up as it's gulped
   const gp = station(ST.anlz - 0.36, 1.5), an = station(ST.anlz), jp = jobPos(F), fp = W.tube.curve.getPointAt(1);
   const gauge = { tg: [lerp(an[0], gp[0], 0.5), 0.38, lerp(an[2], gp[2], 0.5)], az: 0.32, el: 0.2, r: 1.85, fov: 34, roll: 0 };
-  const cell = { tg: [jp[0], 0.6, jp[2]], az: 0.55, el: 0.11, r: 2.3, fov: 34, roll: 0.02 };    // eye level with the band gap (camera at ~0.85): it stays open; cell framed higher
-  const ride = { tg: [jp[0], 0.62, jp[2]], az: 0.45, el: 0.09, r: 2.6, fov: 34, roll: 0.02 };   // stays level with the gap
+  const cell = { tg: [jp[0], 0.7, jp[2]], az: 0.55, el: 0.08, r: 2.5, fov: 34, roll: 0.02 };    // eye level with the band gap (camera at ~0.85): it stays open; cell framed higher
+  const ride = { tg: [jp[0], 0.7, jp[2]], az: 0.45, el: 0.07, r: 2.7, fov: 34, roll: 0.02 };   // stays level with the gap
   const up = { tg: [fp.x + 0.1, fp.y - 0.4, fp.z + 0.1], az: 0.35, el: -0.1, r: 2.6, fov: 36, roll: -0.04 };
   if (F < K.planks[0]) return gauge;
   if (F < K.toFunnel[0] + 2) return mixRig(gauge, cell, io((F - K.planks[0] - 4) / 10));
@@ -955,7 +953,7 @@ const rigS8a = (F) => {       // medium on Hoot and both hourglasses; a push in 
 };
 const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the bottom, faces above the numerals); slow arc
   const a = sm((F - K.S8b) / 60);
-  return { tg: [L.desk.x + 0.1, 0.46, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.15, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };   // a touch higher: Hoot's face clears the 68
+  return { tg: [L.desk.x + 0.1, 0.38, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.15, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };   // a touch higher: Hoot's face clears the 68
 };
 // [a, b, cap px, 'h' = horizontal smear only: vertical tilts would streak like rain]
 const WHIPS = [[80, 100], [101, 108, 40, 'h'], [230, 243, 40, 'h'], [280, 294], [312, 330, 0, 'h'], [452, 466, 60], [500, 509, 60], [538, 548, 40, 'h'], [561, 588, 0, 'h'], [618, 630, 40]];
@@ -1034,7 +1032,7 @@ export function drawNPR(w, ctx) {
   if (F >= K.roar && F < K.roar + 16) {
     const c = ctx.project(V3(L.engine.x - 0.3, 1.0, L.engine.z), camera);
     npr.focusLines({ x: c.x, y: c.y, r0: 360, amount: 1 - (F - K.roar) / 16, count: 110, width: 1.3, seed: 3 });
-    if (F < K.roar + 1) npr.impact(1, { threshold: 0.58 });                       // one ink/cream impact frame (no photo negative)
+    if (F < K.roar + 1) npr.impact(1, { threshold: 0.32 });                       // one ink/cream impact frame (no photo negative)
   }
   if (F >= K.land && F < K.land + 12) {
     const c = ctx.project(W.cart.getWorldPosition(V3(0, 0, 0)), camera);

@@ -179,12 +179,12 @@ function iris(W, ctx, g, F, jr) {
   const a0 = K.rush[1] - 9, a1 = K.rush[1], b1 = K.S5 + 9;
   if (F < a0 || F >= b1) return;
   const closing = F < a1;
-  const c = closing ? prj(W, ctx, wp(W, W.loupe.head, [0, 0, 0])) : prj(W, ctx, wp(W, W.con.knobs[0], [0, 0.04, 0]));
+  const c = closing ? prj(W, ctx, wp(W, W.loupe.head, [0, 0, 0])) : prj(W, ctx, wp(W, W.con.knobs[0], [0.1, 0.05, -0.02]));   // opens between the knob and its vermilion pegs
   // closes to a dot on the lens (fully shut for ~2 frames), then grows from a dot on the knob over 8 frames
   // never a flat empty frame: it shuts to a pinhole on the lens, the pinhole jumps to the knob, then grows over 8 frames
   // a true iris match: it closes onto the round lens (never smaller than the knob's face), the round knob replaces the lens
   // inside the same circle on the cut, and the circle opens again: no empty frame
-  const R = closing ? 150 + 1150 * (1 - sm((F - a0) / (a1 - a0))) : 150 + 1350 * Math.pow(clamp((F - a1) / (b1 - a1)), 1.5);
+  const R = closing ? 190 + 1110 * (1 - sm((F - a0) / (a1 - a0))) : 190 + 1310 * Math.pow(clamp((F - a1) / (b1 - a1)), 1.5);
   const cx = clamp(c.x, 200, ctx.DW - 200), cy = clamp(c.y, 150, ctx.DH - 150);
   // the mask is a cream paper page with halftone (a comic panel closing round the lens), never a black frame
   const ring = (fresh = true) => { if (fresh) g.beginPath(); for (let q = 0; q <= 48; q++) { const an = -q / 48 * TAU, rr = R * (1 + 0.012 * Math.sin(q * 5.1 + F)) + jr.gauss(0, 0.6); const x = cx + Math.cos(an) * rr, y = cy + Math.sin(an) * rr; q ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
