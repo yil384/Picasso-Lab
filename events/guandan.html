@@ -2333,22 +2333,22 @@ function stepStartLevel(team, dir) {
     return next ? updateStartLevel(team, next) : undefined;
 }
 
-// The settings rows state what this game plays (read-only); 发牌 and 旁观 drop on short phones.
+// The settings panel: the host's start-level steppers, then what this game plays as plain values
+// (the rules are fixed, so nothing here looks like a control). The notes drop on short phones.
 function roomShellHTML() {
-    const checks = [L("Wild", "逢人配"), L("Catch-wind", "接风")];
+    const row = (key, value, note = "") => `<div class="room-row"><span class="room-k">${key}</span><span class="room-v">${value}${note ? `<small>${note}</small>` : ""}</span></div>`;
+    const tags = [L("Wild", "逢人配"), L("Jiefeng", "接风")].map(t => `<span class="room-tag">${t}</span>`).join("");
     return `
     <section class="room">
         <aside class="room-panel room-settings">
-            <h3 class="room-panel-head">${L("Table", "对局设置")}</h3>
+            <h3 class="room-panel-head">${L("Match settings", "对局设置")}</h3>
             <div class="room-panel-body">
                 <div class="room-levels-setup" data-region="levels"></div>
-                <div class="room-row"><span class="room-k">${L("Goal", "目标")}</span><span class="room-v">${L("Pass A", "过 A")}<small>${L("3 misses → 2", "（3 把不过回 2）")}</small></span></div>
-                <div class="room-row"><span class="room-k">${L("Tribute", "进贡")}</span><span class="room-v">${L("Tribute", "进贡")}<small>${L("two Red Jokers block it", "（双大王抗贡）")}</small></span></div>
-                <div class="room-row"><span class="room-k">${L("Level", "升级")}</span><span class="room-v">${L("1-2 finish +3", "双上升 3 级")}</span></div>
-                <div class="room-row"><span class="room-k">${L("Turn", "出牌时间")}</span><span class="room-v">${L("3 min", "3 分钟")}</span></div>
-                <div class="room-row is-extra"><span class="room-k">${L("Deal", "发牌")}</span><span class="room-v">${L("Shuffled", "随机发牌")}</span></div>
-                <div class="room-row"><span class="room-k">${L("Rules", "规则")}</span><span class="room-checks">${checks.map(c => `<span class="room-chk">${c}</span>`).join("")}</span></div>
-                <div class="room-row is-extra"><span class="room-k">${L("Watch", "旁观")}</span><span class="room-v">${L("Allowed", "允许旁观")}</span></div>
+                ${row(L("Goal", "目标"), L("Pass A", "过 A"), L("back to 2 after 3 misses", "（3 把不过回 2）"))}
+                ${row(L("Tribute", "进贡"), L("On", "开启"), L("two Red Jokers block it", "（双大王抗贡）"))}
+                ${row(L("Level", "升级"), L("1-2 finish +3", "双上升 3 级"))}
+                ${row(L("Turn", "出牌时间"), L("3 min", "3 分钟"))}
+                <div class="room-row"><span class="room-k">${L("Rules", "规则")}</span><span class="room-tags">${tags}</span></div>
                 <div class="room-admin" data-region="admin"></div>
             </div>
         </aside>
@@ -2392,7 +2392,7 @@ function renderLobbyRoom() {
         bindRoom(el);
     }
     patchRegion(el, "levels", levelSetupHTML());
-    patchRegion(el, "admin", host ? `<button class="room-dissolve" id="delete-room" type="button"${actionBusy ? " disabled" : ""}>${L("Dissolve room", "解散房间")}</button>` : "");
+    patchRegion(el, "admin", host ? `<button class="room-dissolve" id="delete-room" type="button"${actionBusy ? " disabled" : ""}><span class="btn danger">${L("Dissolve room", "解散房间")}</span></button>` : "");
     patchRegion(el, "table", roomTableHTML(mine));
     patchRegion(el, "actions", roomActionsHTML());
     patchRegion(el, "roster", rosterHTML());
@@ -2502,7 +2502,8 @@ function rosterHTML() {
     return labMemberKeys().map(k => {
         const p = PL[k];
         const red = /[♥♦]/.test(p.card);
-        const sub = [`<i class="${red ? "is-red" : ""}">${encodeHTML(p.card)}</i>`, isZH() && p.style ? encodeHTML(p.style) : ""].filter(Boolean).join(" · ");
+        // the signature card and the first half of the style ("记牌反击"), which fits the row
+        const sub = [`<i class="${red ? "is-red" : ""}">${encodeHTML(p.card)}</i>`, isZH() && p.style ? encodeHTML(p.style.split(" · ")[0]) : ""].filter(Boolean).join(" · ");
         return `<div class="roster-row">
             <span class="gd-avatar is-plain roster-av"><img src="${encodeHTML(p.avatar)}" alt="" loading="lazy"></span>
             <span class="roster-name"><b>${encodeHTML(firstNameOf(p.name))}</b><small>${sub}</small></span>

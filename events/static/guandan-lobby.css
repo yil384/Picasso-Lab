@@ -213,9 +213,21 @@ body[data-screen="lobby"] #back-events-btn { order: 3; }
 .hud-stat.s1 i { background: radial-gradient(circle at 36% 30%, #d8ffe6 0%, #5fe08e 48%, #22a458 100%); box-shadow: inset 0 calc(-3 * var(--lu)) 0 rgba(0, 90, 40, .35); color: #0d5a2a; }
 .hud-stat.s2 i { background: radial-gradient(circle at 36% 30%, #e0f2ff 0%, #6fb8ff 48%, #3a72e0 100%); box-shadow: inset 0 calc(-3 * var(--lu)) 0 rgba(20, 40, 140, .35); color: #10307a; }
 
-/* room: ↩ 好友同玩 房间号 · dark chips 邀请 规则 战绩 · 语言 right (↩ is the only exit, as in 好友同玩) */
+/* room: a dark header strip with ↩ 好友同玩 房间号 · dark chips 邀请 规则 战绩 · 语言 right (↩ is the
+   only exit, as in 好友同玩); the ↩ is a chunky light-blue arrow outlined in navy */
+body[data-screen="room"] .topbar { background: linear-gradient(180deg, rgba(14, 22, 66, .75), rgba(14, 22, 66, .5) 80%, rgba(14, 22, 66, 0)); }
 body[data-screen="room"] #new-room-btn { order: 0; min-width: max(var(--tap), calc(46 * var(--lu))); height: max(var(--tap), calc(56 * var(--lu))); }
-body[data-screen="room"] #new-room-btn .hud-ic { width: calc(46 * var(--lu)); height: calc(46 * var(--lu)); filter: drop-shadow(0 calc(3 * var(--lu)) 0 rgba(40, 60, 170, .8)); }
+body[data-screen="room"] #new-room-btn .hud-ic {
+    width: calc(46 * var(--lu));
+    height: calc(46 * var(--lu));
+    fill: #e2eeff;
+    stroke: #1c2f66;
+    stroke-width: 2.6px;
+    stroke-linejoin: round;
+    paint-order: stroke fill;
+    overflow: visible;
+    filter: drop-shadow(0 calc(3 * var(--lu)) 0 rgba(40, 60, 170, .8));
+}
 body[data-screen="room"] #new-room-btn .hud-lb { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 body[data-screen="room"] #copy-link-btn { order: 2; }
 body[data-screen="room"] #hud-rules-btn { order: 3; }
@@ -770,8 +782,10 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     text-shadow: 0 calc(2 * var(--ru)) 0 rgba(40, 50, 160, .35);
 }
 .room-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: calc(4 * var(--ru)) 0; }
-/* Tencent settings rows: justified heavy label, gold radios / checks */
+/* Tencent settings rows: justified heavy label, the value in plain ink; rows keep their height
+   and the panel body scrolls */
 .room-row {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: calc(14 * var(--ru));
@@ -779,14 +793,10 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     padding: calc(6 * var(--ru)) calc(18 * var(--ru));
     border-bottom: 1px solid var(--panel-line);
 }
-/* wider than 16:10 the panel is one screen high only without 发牌 / 旁观, so 解散房间 stays in view */
-@media (min-aspect-ratio: 81/50) {
-    .room-row.is-extra { display: none; }
-}
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
-    /* the panel fits without scrolling: rows tighten, the notes (also in 玩法规则) and the extra rows drop */
+    /* the panel fits without scrolling: rows tighten and the notes (also in 玩法规则) drop */
     .room-row { min-height: calc(50 * var(--ru)); padding-top: calc(4 * var(--ru)); padding-bottom: calc(4 * var(--ru)); }
-    .room-v small, .room-row.is-extra { display: none; }
+    .room-v small { display: none; }
     .room-felt-mark { display: none; }
     .room { padding-bottom: calc(8 * var(--lu)); }
     .room-panel-head { height: calc(44 * var(--ru)); line-height: calc(44 * var(--ru)); }
@@ -800,29 +810,17 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     text-align-last: justify;
 }
 html[lang="en"] .room-k { text-align-last: auto; }
-.room-v { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 calc(8 * var(--ru)); color: var(--ink); font: 700 calc(22 * var(--ru))/1.3 var(--font-ui); }
-.room-v small { flex-basis: 100%; padding-left: calc(30 * var(--ru)); color: var(--ink-3); font: 700 max(var(--fs-min), calc(16 * var(--ru)))/1.2 var(--font-ui); }
-/* a fixed setting reads as a selected gold radio */
-.room-v::before {
-    content: "";
-    width: calc(22 * var(--ru));
-    height: calc(22 * var(--ru));
-    border-radius: 50%;
-    background: radial-gradient(circle closest-side, #ffe27a 0 56%, #f6b92a 60% 86%, #d99a0c 90%);
-}
-.room-checks { display: grid; grid-template-columns: repeat(2, auto); justify-content: start; gap: calc(8 * var(--ru)) calc(18 * var(--ru)); }
-.room-chk { display: inline-flex; align-items: center; gap: calc(8 * var(--ru)); color: var(--ink); font: 700 calc(21 * var(--ru))/1.2 var(--font-ui); white-space: nowrap; }
-html[lang="en"] .room-checks { grid-template-columns: auto; }
-.room-chk::before {
-    content: "";
-    width: calc(20 * var(--ru));
-    height: calc(20 * var(--ru));
+.room-v { display: flex; flex-direction: column; color: var(--ink); font: 700 calc(22 * var(--ru))/1.3 var(--font-ui); }
+.room-v small { color: var(--ink-3); font: 700 max(var(--fs-min), calc(16 * var(--ru)))/1.2 var(--font-ui); }
+/* 逢人配 · 接风: small periwinkle tags, one line */
+.room-tags { display: flex; flex-wrap: wrap; gap: calc(6 * var(--ru)) calc(10 * var(--ru)); }
+.room-tag {
+    padding: 0 calc(10 * var(--ru));
     border-radius: calc(4 * var(--ru));
-    background:
-        linear-gradient(45deg, transparent 44%, #8a4a00 44% 56%, transparent 56%) 30% 62% / 40% 40% no-repeat,
-        linear-gradient(-45deg, transparent 44%, #8a4a00 44% 56%, transparent 56%) 72% 45% / 62% 62% no-repeat,
-        linear-gradient(180deg, #ffe27a, #f6b92a);
-    box-shadow: inset 0 0 0 1px #d99a0c;
+    background: #e3eafb;
+    color: var(--ink);
+    font: 700 calc(20 * var(--ru))/1.6 var(--font-ui);
+    white-space: nowrap;
 }
 .room-row.is-level { min-height: max(var(--tap), calc(64 * var(--ru))); }
 .room-row.is-level .room-k { width: auto; white-space: nowrap; }
@@ -872,15 +870,20 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     font-stretch: 62.5%;
 }
 .room-step-v.t1 { color: var(--card-red); }
-.room-admin { display: flex; justify-content: flex-end; margin-top: auto; padding: calc(4 * var(--ru)) calc(16 * var(--ru)); }
+/* 解散房间: a small red pill at the panel's foot; the button box keeps the --tap target */
+.room-admin { display: flex; justify-content: center; margin-top: auto; padding: calc(10 * var(--ru)) calc(16 * var(--ru)) calc(12 * var(--ru)); }
 .room-dissolve {
-    min-height: max(var(--tap), calc(36 * var(--ru)));
-    padding: calc(6 * var(--ru)) calc(4 * var(--ru));
+    --h: calc(40 * var(--ru));
+    display: grid;
+    place-items: center;
+    min-width: var(--tap);
+    height: max(var(--tap), var(--h));
+    margin: calc((var(--h) - max(var(--tap), var(--h))) / 2) 0;
+    padding: 0;
     border: 0;
     background: none;
-    color: #d8433c;
-    font: 700 max(var(--fs-min) * 1.2, calc(18 * var(--ru)))/1.2 var(--font-ui);
 }
+.room-dissolve .btn { --btn-h: var(--h); --btn-fs: calc(19 * var(--ru)); --btn-px: calc(20 * var(--ru)); --btn-minw: calc(140 * var(--ru)); }
 .room-dissolve:disabled { opacity: .5; }
 
 /* centre: the room table, a wide landscape felt (1.7:1) with the seats around its edge and the
@@ -1137,8 +1140,8 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     flex: none;
     display: flex;
     align-items: center;
-    gap: calc(8 * var(--ru));
-    padding: calc(8 * var(--ru)) calc(8 * var(--ru));
+    gap: calc(6 * var(--ru));
+    padding: calc(8 * var(--ru)) calc(6 * var(--ru));
     border-radius: calc(5 * var(--ru));
     background: rgba(255, 255, 255, .92);
 }
