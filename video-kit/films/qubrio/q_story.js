@@ -30,7 +30,7 @@ export const LOOK = {
   htAmt: 0.5, htPx: 15, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0],
   lineW: 2.0, lineWShadow: 3.2, hullW: 3.2, hullShadowW: 1.5,
   bleed: 1.4, edgeDark: 0.4, gran: 0.28, flocc: 0.05, dryEdge: 0.18, sat: 1.1,
-  rule: 0.0, bgDots: [0.95, 0.6, 0.42, 0.18], beamLines: 0.3,
+  rule: 0.0, bgDots: [0.95, 0.6, 0.42, 0.18], beamLines: 0.12,
   atmos: 0.22, atmosStart: 11, atmosEnd: 27, atmosCol: [0.96, 0.92, 0.85], inkFar: 0.55, hatchFar: 0.7, htFar: 0.8,
   dofMax: 3.0, dofRange: 3.2,
   grain: 0.016, vignette: 0.14,
@@ -79,18 +79,19 @@ export async function build(ctx, { renderer }, Q) {
   const L = T.SLO;
   for (const dz of [-0.32, 0.32]) add(stripGeo([[L.xA - 0.75, L.z + dz], [L.xB + 0.75, L.z + dz]], 0.014), decal(0x3a2f66), { cast: false });
   // trays long along z (across the lane): the pick-up holds singles at a gap, the drop tray three separated pairs
-  const tray = (x) => { add(new THREE.BoxGeometry(0.5, 0.08, 1.35), { color: 0xc98a52, hatchDir: [0, 1, 0] }, { outline: 0.7, cast: false }, [x, 0.04, L.z]); };
-  tray(L.xA - 0.5); tray(L.xB + 0.52);
+  const TZ = L.z + 0.47;   // trays in front of the lane (toward us), running along it: never in the entanglement zone
+  const tray = (x0, x1) => add(new THREE.BoxGeometry(x1 - x0, 0.08, 0.36), { color: 0xc98a52, hatchDir: [0, 1, 0] }, { outline: 0.7, cast: false }, [(x0 + x1) / 2, 0.04, TZ]);
+  W.trays = [tray(L.xA - 1.95, L.xA + 0.1), tray(L.xB - 0.1, L.xB + 1.95)];
   // its small atoms: the pile waiting at the pick-up end, and the ones delivered at the drop end (two per trip)
   const smallGeo = new THREE.SphereGeometry(P.R * 0.62, 28, 18);
   W.atomMat = (seed) => ({ color: COL.atom, hatch: 0.7, spec: 0.5, receive: false, toneBias: 0.14, rim: 1, seed, hatchMode: 'planar', hatchDir: [1, -1, 0.3], hatchDir2: [0.2, 1, 1] });
-  const slotPick = (i) => [0, 0.2, (i - 1.5) * 0.36];                                  // singles, never touching
-  const slotDrop = (i) => [(i % 2 ? 0.16 : -0.16), 0.2, (Math.floor(i / 2) - 1) * 0.46];   // three pairs, pair gap < pair spacing
+  const slotPick = (i) => [L.xA - 1.7 + i * 0.62, 0.2, TZ];                                         // singles at storage-like spacing
+  const slotDrop = (i) => [L.xB + 0.05 + Math.floor(i / 2) * 0.9 + (i % 2) * 0.32, 0.2, TZ];          // three pairs, 0.9 apart (> 2.65x the pair gap)
   // PowerMove's cargo in its own grey-lilac (not chip qubits); all of it shares one surface
   const pmMat = npr.surface({ ...W.atomMat(60), color: 0xb3abc8, toneBias: 0.05 });
   W.pmMat = pmMat;
-  W.pile = [0, 1, 2, 3].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slotPick(i); m.position.set(L.xA - 0.5 + s[0], s[1], L.z + s[2]); return m; });
-  W.tray = [0, 1, 2, 3, 4, 5].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slotDrop(i); m.position.set(L.xB + 0.52 + s[0], s[1], L.z + s[2]); return m; });
+  W.pile = [0, 1, 2, 3].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slotPick(i); m.position.set(s[0], s[1], s[2]); return m; });
+  W.tray = [0, 1, 2, 3, 4, 5].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slotDrop(i); m.position.set(s[0], s[1], s[2]); return m; });
 
   // atoms + pedestals
   const atomGeo = new THREE.SphereGeometry(P.R, 44, 30);
@@ -111,7 +112,8 @@ export async function build(ctx, { renderer }, Q) {
   W.dockDots = P.MOVERS.map((m) => { const [x, z] = P.dockXZ(m); return add(stripGeo(circlePts(x, z, 0.1, 0, 1, 24), 0.1), pencil, { cast: false }); });
   const mkArrow = (m, bad, mat = graphite) => {   // the plan's route for mover m, sampled along the AOD path (starts clear of the atom)
     const home = P.homeXZ(m), pts = [];
-    const off = m.pr === 0 ? -0.09 : 0.09;   // the two rows' routes run as separate parallel lines (no Y-forks)
+    const dirX = Math.sign(P.PCOL[bad && m.pc in T.SWAP ? T.SWAP[m.pc] : m.pc] - P.LANE - P.SCOL[P.MCOL[m.pc]]) || 1;
+    const off = (m.pr === 0 ? 1 : -1) * 0.09 * dirX;   // the two rows' routes run as parallel lines that never cross
     for (let k = 0; k <= 48; k++) { const q = T.planPath(m, k / 48, bad); if (Math.hypot(q[0] - home[0], q[1] - home[1]) > P.R + 0.08) pts.push([q[0] + off * (1 - P.dockAt(k / 48)) * Math.min(1, k / 8), q[1]]); }
     return { body: add(stripGeo(pts, (t) => 0.06 * (0.65 + 0.35 * Math.sin(Math.PI * t))), mat, { cast: false }), barbs: barbs(pts, 0.34, 0.55).map((b) => add(stripGeo(b, 0.05), mat, { cast: false })) };
   };
@@ -161,7 +163,7 @@ export async function build(ctx, { renderer }, Q) {
     // the cloth hangs to the LEFT of the pole (x < 0): flip u so the word reads left-to-right from the tip
     const uv = clothGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i));
     W.pmSign.uv0 = uv.array.slice();
-    W.pmSign.cloth = add(clothGeo, { color: 0xeee6f4, map: tex, flat: 0.45, hatch: 0.25, halftone: 0.5, rim: 0.3, side: THREE.DoubleSide, spec: 0 }, { outline: 1.0, cast: false }, [0, 0, 0], [0, 0, 0], W.pmSign.pivot);
+    W.pmSign.cloth = add(clothGeo, { color: 0xeee6f4, map: tex, flat: 0.15, hatch: 0.5, halftone: 0.8, rim: 0.3, side: THREE.DoubleSide, spec: 0, shadeColor: 0x9a92b0, shadeMix: 0.4 }, { outline: 1.0, cast: false }, [0, 0, 0], [0, 0, 0], W.pmSign.pivot);
     W.pmSign.cloth.frustumCulled = false;
   }
 
@@ -269,8 +271,8 @@ export function update(ctx, W, st, Q) {
   if (fs) { W.pflag.position.set(fs.x, fs.y, fs.z); W.pflag.rotation.set(0, fs.rot + 0.6, fs.planted ? 0.08 * Math.sin(fs.age * 0.9) * Math.exp(-fs.age / 8) : fs.rot); W.pflag.scale.setScalar(Math.max(0.01, fs.k)); }
   const ts = T.tickState(F);
   poseWatch(W.tick, { x: T.TICK.x, z: T.TICK.z, y: ts.y, yaw: ts.yaw, sq: ts.sq, rock: ts.rock, armL: ts.armL, armR: ts.armR, hand: ts.hand, ghost: ts.ghost, crown: ts.crown, bow: ts.bow });
-  const pk = F >= K.flagUp && F < T.CUT ? backOut(clamp((F - K.flagUp) / 5)) : 0;   // CLICK at the lap, a beat, then the flag snaps up
-  posePennant(W.pennant, pk, sm((F - K.flagUp) / 4), F * 0.35);
+  const pk = F >= K.flagUp && F < T.CUT ? backOut(clamp((F - K.flagUp) / 5)) : 0;   // CLICK at the lap, a beat, then the flag snaps up (digits with it)
+  posePennant(W.pennant, pk, 1, F * 0.35);
   { const a = F - K.flagUp + 1, bk = F >= K.flagUp - 1 && F < T.CUT ? backOut(clamp(a / 4)) * (0.5 + 0.55 * Math.exp(-Math.max(0, a - 3) / 7)) : 0;   // pops big, settles to a halo
     W.burst.visible = bk > 0.02; W.burst.scale.setScalar(Math.max(0.01, bk)); W.burst.rotation.z = a * 0.01; }
   poseGauge(W.gauge, ts.fid);
@@ -306,6 +308,7 @@ export function update(ctx, W, st, Q) {
   W.slo.cargo.forEach((m) => { m.visible = sloOn && ss.loaded; });
   const pileLeft = ss.leg < 0 ? 4 : Math.max(0, 4 - 2 * Math.floor((ss.leg + 1) / 2));
   W.pile.forEach((m, i) => { m.visible = sloOn && i < pileLeft; });
+  W.trays.forEach((m) => { m.visible = sloOn; });
   W.tray.forEach((m, i) => { m.visible = sloOn && i < ss.delivered; });
   W.scene.updateMatrixWorld(true);
   st.ts = ts; st.ps = ps; st.rs = rs; st.ls = ls; st.ss = ss; st.fs = fs;
@@ -367,7 +370,6 @@ export function drawNPR(ctx, W, st, Q) {
   const ahead = (p) => st.v.ahead(p, 1.0);
   const ak = T.aodK(F);
   const zc = V3((P.ZONE.x0 + P.ZONE.x1) / 2, 0.45, (P.ZONE.z0 + P.ZONE.z1) / 2);
-  npr.pointLight(zc, { color: 0x9a6ae0, radius: 3.4, i: 0.14 });
   // the global Rydberg pulse: ONE hard-edged flood of the whole zone rectangle from the objective; storage stays dark
   const tip = W.set.OBJ_TIP, za = F - K.zap;
   if (za >= 0 && za < 30) {
@@ -429,7 +431,7 @@ function postInk(g, st, F) {
   if (imp) { g.filter = za === 0 ? 'grayscale(1) contrast(40) brightness(0.3)' : 'grayscale(1) contrast(40) invert(1)'; g.drawImage(_tmp, 0, 0); g.filter = 'none'; }
   else {
     // many faint copies (a blur, not a strobe); the 2D ink is gone at peak pan speed (no double exposure of two shots)
-    const S = cv.width / 1920, N = 17, fade = 1 - clamp((sm - 6) / 22);
+    const S = cv.width / 1920, N = 17, fade = 1 - clamp((sm - 10) / 30);
     if (fade < 0.02) { g.restore(); return; }
     const tg2 = _tmp.getContext('2d'); tg2.globalCompositeOperation = 'destination-in'; tg2.fillStyle = `rgba(0,0,0,${fade})`; tg2.fillRect(0, 0, cv.width, cv.height); tg2.globalCompositeOperation = 'source-over';
     for (let i = 0; i < N; i++) { const t = i / (N - 1) - 0.5; g.globalAlpha = 1 / (i + 1); g.drawImage(_tmp, sx * S * t, sy * S * t); }
@@ -447,8 +449,8 @@ export function inkLayer(ctx, g, W, st, Q) {
       const s = st.atomS[m.i];
       if (!v.ahead(V3(s.x, P.AY, s.z))) continue;
       for (let k = 0; k < 3; k++) {
-        const oy = (k - 1) * 0.12, Lk = (0.6 + 0.5 * ((k * 7 + m.pc) % 3) / 2) * cv;
-        const a = P2(V3(s.x + oy * 0.3, P.AY + oy, s.z - P.R - 0.08)), b = P2(V3(s.x + oy * 0.3, P.AY + oy, s.z - P.R - 0.08 - Lk * 1.6));
+        const oy = (k - 1) * 0.12, Lk = (0.35 + 0.25 * ((k * 7 + m.pc) % 3) / 2) * cv;
+        const a = P2(V3(s.x + oy * 0.3, P.AY + oy, s.z - P.R - 0.08)), b = P2(V3(s.x + oy * 0.3, P.AY + oy, s.z - P.R - 0.08 - Lk * 0.7));
         stroke(g, [[a.x + r.gauss(0, 1), a.y], [(a.x + b.x) / 2, (a.y + b.y) / 2 + r.gauss(0, 1)], [b.x, b.y]], 5.5, INK, 1.5);
       }
     }
@@ -555,19 +557,19 @@ export function inkLayer(ctx, g, W, st, Q) {
       if (ss.hic) { g.globalAlpha = 0.8; stroke(g, [[c2.x - su * 0.25, c2.y + su * 0.3], [c2.x + su * 0.25, c2.y + su * 0.3]], 2.2, INK); g.globalAlpha = clamp(ss.vis * 1.4); }   // set down (the hiccup)
     });
     g.restore();
-    if (ss.fling >= 0 && ss.fling < 12) {   // the flung ghost leaves the board and flies at the lens, thunks off the glass
+    if (ss.fling >= 0 && ss.fling < 11) {   // the flung ghost leaves the board and flies at the lens, thunks off the glass
       const m = P.MOVERS[ss.flungIdx], [x, z] = T.planPath(m, 1, false), s0 = toS(x, z);
       const u = clamp(ss.fling / 7), k = u * u, tgt = { x: 560, y: 700 };
       const c2 = { x: lerp(s0.x, tgt.x, k), y: lerp(s0.y, tgt.y, k) - 140 * Math.sin(Math.PI * u) * 0.6 }, rp = lerp(su * P.R * 1.15, 190, k);
       if (u < 1) for (let q = -2; q <= 2; q++) { const bk = { x: lerp(s0.x, tgt.x, Math.max(0, k - 0.3)), y: lerp(s0.y, tgt.y, Math.max(0, k - 0.3)) }, nx = -(c2.y - bk.y), ny = c2.x - bk.x, nl = Math.hypot(nx, ny) || 1, o = q * rp * 0.35 / nl; stroke(g, [[bk.x + nx * o, bk.y + ny * o], [c2.x + nx * o * 0.9, c2.y + ny * o * 0.9]], 5 + 2 * (2 - Math.abs(q)), INK); }   // speed lines
       if (ss.fling >= 7) {   // SPLAT on the lens: squashed flat for 2 frames with ink droplets, then it slides off
         const a2 = (ss.fling - 7) / 5;
-        g.save(); g.globalAlpha = 1 - a2 * 0.6;
-        for (let k = 0; k < 9; k++) { const an = k / 9 * TAU + 0.4, rr = rp * (1.25 + 0.35 * ((k * 37) % 5) / 5) * (1 + a2 * 0.4); g.beginPath(); g.arc(tgt.x + Math.cos(an) * rr, tgt.y + Math.sin(an) * rr * 0.6, 6 + (k % 3) * 5, 0, TAU); g.fillStyle = INK; g.fill(); }
+        g.save();
+        for (let k = 0; k < 10; k++) { const an = k / 10 * TAU + 0.4, rr = rp * (1.25 + 0.35 * ((k * 37) % 5) / 5) * (1 + a2 * 0.3); g.beginPath(); g.arc(tgt.x + Math.cos(an) * rr, tgt.y + Math.sin(an) * rr * 0.6, 14 + (k % 3) * 7, 0, TAU); g.fillStyle = INK; g.fill(); }
         burstMarks({ x: tgt.x, y: tgt.y }, ss.fling - 7, 9, 0, TAU, 150, 260); g.restore();
         c2.y += 90 * a2 * a2;
         g.save(); g.translate(c2.x, c2.y); g.scale(ss.fling < 9 ? 1.35 : 1.1, ss.fling < 9 ? 0.6 : 0.85); g.translate(-c2.x, -c2.y);
-        pencilGhost(g, c2, rp, 1 - a2 * 0.8, 'x', 0, sgr, 0.95, true); g.restore();
+        pencilGhost(g, c2, rp, 1, 'x', 0, sgr, 0.95, true); g.restore();   // opaque, then cut
       } else pencilGhost(g, c2, rp, 1, 'x', ss.fling * 0.5, sgr, 0.95, true);
     }
   }
@@ -595,9 +597,10 @@ export function inkLayer(ctx, g, W, st, Q) {
   const vd = st.ts.verdict;
   if (vd && W.slate.group.visible) {   // a big stamped verdict beside the readouts, held ~20 frames
     const sc = W.slate.paper.getWorldPosition(V3(0, 0, 0)), t = P2(sc), u = v.pxu(sc);
-    const s = Math.max(110, u * 0.75) * (vd.age < 5 ? backOut(vd.age / 5) : 1), fade = 1 - clamp((vd.age - 17) / 3);
-    g.save(); g.globalAlpha = fade; g.translate(clamp(t.x, 200, 1500), clamp(t.y, 260, 760)); g.rotate(-0.12);
-    const col = vd.ok ? '#b48cff' : '#f2a922';
+    const ex = vd.left >= 3 ? 1 : [0.2, 0.55, 1.08][vd.left];   // snap exit (no alpha fade)
+    const s = Math.max(110, u * 0.75) * (vd.age < 5 ? backOut(vd.age / 5) : 1) * ex;
+    g.save(); g.translate(clamp(t.x, 200, 1500), clamp(t.y, 260, 760)); g.rotate(-0.12);
+    const col = vd.ok ? '#8b5cf6' : '#f2a922';
     if (vd.age < 6) for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + 0.3, r0 = s * (0.62 + 0.12 * vd.age / 6), r1 = r0 + s * 0.18 * (1 - vd.age / 6); stroke(g, [[Math.cos(a) * r0, Math.sin(a) * r0], [Math.cos(a) * r1, Math.sin(a) * r1]], Math.max(3, s * 0.035), INK); }   // stamp dust ticks
     if (vd.ok) { const L = [[-0.5 * s, 0], [-0.1 * s, 0.4 * s], [0.6 * s, -0.5 * s]]; stroke(g, L.map(([x, y]) => [x + 6, y + 7]), 0.3 * s, INK); stroke(g, L, 0.3 * s, INK); stroke(g, L, 0.21 * s, col); }
     else for (const [p0, p1] of [[[-0.45, -0.45], [0.45, 0.45]], [[0.45, -0.45], [-0.45, 0.45]]]) { const L = [[p0[0] * s, p0[1] * s], [0, 0], [p1[0] * s, p1[1] * s]]; stroke(g, L.map(([x, y]) => [x + 6, y + 7]), 0.3 * s, INK); stroke(g, L, 0.3 * s, INK); stroke(g, L, 0.21 * s, col); }
@@ -630,22 +633,22 @@ export function fxLayer(ctx, g, W, st, Q) {
   const tw = sfxState(F - K.whistle, 22);
   if (tw) {
     const hp = W.loupe.head.getWorldPosition(V3(0, 0, 0)), h0 = P2(hp), hu = v.pxu(hp);
-    const p = safe({ x: h0.x - hu * 1.7, y: h0.y - hu * 0.75 }, 380, 1150, 330, 470);   // balloon top >= row ~200 (card-safe)   // left of the lens (clear of it, the crossing and the LIVE pill)
+    const p = safe({ x: h0.x - hu * 1.55, y: h0.y - hu * 1.0 }, 380, 1150, 300, 440);   // balloon top >= row ~200 (card-safe)   // left of the lens (clear of it, the crossing and the LIVE pill)
     burst(g, p.x, p.y, 270 * tw.pop, 125 * tw.pop, { fill: '#fff6e0', alpha: tw.alpha, seed: 5, spikes: 13 });
     brushWord(g, 'TWEET!', p.x, p.y + 4, 132 * tw.pop, { fill: '#f2a922', shade: '#b8741a', chisel: true, skew: -0.2, ramp: 0.22, rot: -0.12 + tw.wob, alpha: tw.alpha, arc: 12, jitter: r, weight: 0.27 });
   }
   const zp = sfxState(F - K.zap, 26);
   if (zp) {
-    const c = safe(P2(V3(-2.2, 1.4, -1.25)), 330, 1300, 330, 470);   // over the dark left edge (Rook's track side), clear of every pair; burst top >= row ~220 (card-safe)
+    const c = safe(P2(V3(-2.7, 1.9, -2.1)), 330, 1300, 300, 470);   // over the dark left edge (Rook's track side), clear of every pair; burst top >= row ~220 (card-safe)
     burst(g, c.x, c.y, 235 * zp.pop, 112 * zp.pop, { fill: '#f2a922', alpha: zp.alpha, seed: 9, spikes: 15 });
     brushWord(g, 'ZAP!', c.x, c.y + 6, 148 * zp.pop, { fill: '#b48cff', shade: '#5b21b6', chisel: true, skew: -0.2, ramp: 0.25, rot: -0.1 + zp.wob, alpha: zp.alpha, arc: 10, jitter: r, weight: 0.3 });
   }
   // 4.7x lettered on the pennant (in the flag's plane) and 1.3x on the gauge's tag
-  if (F >= K.flagUp + 4 && F < T.CUT) {
+  if (F >= K.flagUp && F < T.CUT && W.pennant.group.visible) {
     const fl = W.pennant.flag;
     const c = fl.localToWorld(V3(-0.64, -0.31, 0.02)), ex = fl.localToWorld(V3(-0.34, -0.31, 0.02)), ey = fl.localToWorld(V3(-0.64, -0.01, 0.02));
     const o = P2(c), px = P2(ex), py = P2(ey);
-    g.save(); g.globalAlpha = sm((F - K.flagUp - 4) / 3);   // only once the cloth is out
+    g.save();   // the digits ride the flag from its first frame
     g.transform((px.x - o.x) / 100, (px.y - o.y) / 100, -(py.x - o.x) / 100, -(py.y - o.y) / 100, o.x, o.y);
     brushWord(g, '4.7×', 0, 0, 120, { fill: '#7c3aed', shade: '#3b1f8a', chisel: true, skew: -0.14, ramp: 0.12, rot: -0.04, jitter: r, weight: 0.3, fan: 0.04, jiggle: 0.08, shadow: [0.05, 0.06] });
     g.restore();
@@ -653,6 +656,7 @@ export function fxLayer(ctx, g, W, st, Q) {
   if (F >= K.tagUp && F < T.CUT) {   // 1.3x: a paper luggage tag tied to the top of Qubrio's column (right of the gauge)
     const tp = W.gauge.top.getWorldPosition(V3(0, 0, 0)), t = P2(tp), u = v.pxu(tp);
     const k = backOut(clamp((F - K.tagUp) / 6)), sw = 0.05 * Math.sin((F - K.tagUp) * 0.22) * Math.exp(-(F - K.tagUp) / 30);
+    if (F - K.tagUp < 4) burst(g, Math.min(t.x + u * 0.3 + Math.max(250, u * 1.25) * 0.5, 1860 - Math.max(250, u * 1.25) / 2), t.y + 20, 230 * backOut(clamp((F - K.tagUp) / 3)), 110 * backOut(clamp((F - K.tagUp) / 3)), { fill: '#f2a922', seed: 17, spikes: 14 });   // its own hit
     const tw2 = Math.max(250, u * 1.25), th = tw2 * 0.46;
     const ax = t.x + u * 0.16, ay = t.y, x = Math.min(ax + u * 0.3 + tw2 * 0.5, 1860 - tw2 / 2), y = ay + th * 0.15;
     stroke(g, [[ax, ay], [(ax + x - tw2 / 2) / 2, ay + th * 0.18], [x - tw2 / 2 + th * 0.2, y]], Math.max(4.5, u * 0.03), INK);   // the string

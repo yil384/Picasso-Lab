@@ -23,7 +23,7 @@ export function buildCompass(add, scene, o = {}) {
   const C = { group: new THREE.Group() }; scene.add(C.group);
   const brass = { color: 0xe6ad42, hatchMode: 'u', spec: 0.35, rim: 0.8, shadeColor: 0x9a5a2a, shadeMix: 0.3 };
   C.headG = new THREE.Group(); C.group.add(C.headG);
-  C.head = add(new THREE.SphereGeometry(o.headR ?? 0.36, 44, 30), { color: o.color ?? 0x8b5cf6, hatchMode: 'v', rim: 1, spec: 0.3, seed: 2.2, shadeColor: 0x3b1f8a, shadeMix: 0.35 }, { outline: 1.25 }, [0, 0.3, 0], [0, 0, 0], C.headG);
+  C.head = add(new THREE.SphereGeometry(o.headR ?? 0.36, 44, 30), { color: o.color ?? 0x8b5cf6, hatchMode: 'v', rim: 1, spec: 0, seed: 2.2, shadeColor: 0x3b1f8a, shadeMix: 0.35 }, { outline: 1.25 }, [0, 0.3, 0], [0, 0, 0], C.headG);
   add(cyl(0.2, 0.2, 0.09, 36), brass, { outline: 0.8 }, [0, -0.04, 0], [0, 0, 0], C.headG);            // collar
   add(cyl(0.07, 0.09, 0.28, 20), brass, { outline: 0.7 }, [0, 0.76, 0], [0, 0, 0], C.headG);            // handle
   add(new THREE.SphereGeometry(0.1, 20, 14), brass, { outline: 0.7 }, [0, 0.93, 0], [0, 0, 0], C.headG);
@@ -382,14 +382,20 @@ export function buildPencil(add, scene, { L = 2.2, r = 0.13 } = {}) {
   Pn.group.visible = false;
   return Pn;
 }
-/** place the pencil so its working end touches `tip`: the tip (drawing) or the eraser (erase), leaning back along `axis` */
+/** place the pencil so its working end touches `tip`, leaning back along `axis`. s.flip 0..1 turns it end-over-end
+ *  (through horizontal, about its middle): 0 = graphite tip down, 1 = eraser down. */
 export function posePencil(Pn, s, axis) {
   Pn.group.visible = !!s;
   if (!s) return;
-  const a = new THREE.Vector3(...axis).normalize();
-  const up = new THREE.Vector3(0, 1, 0);
-  if (s.erase) { Pn.group.quaternion.setFromUnitVectors(up, a.clone().negate()); Pn.group.position.set(s.tip[0], s.tip[1], s.tip[2]).addScaledVector(a, Pn.L); }
-  else { Pn.group.quaternion.setFromUnitVectors(up, a); Pn.group.position.set(s.tip[0], s.tip[1], s.tip[2]); }
+  const a = new THREE.Vector3(...axis).normalize(), up = new THREE.Vector3(0, 1, 0);
+  const f = s.flip ?? (s.erase ? 1 : 0);
+  const side = new THREE.Vector3().crossVectors(a, up); if (side.lengthSq() < 1e-6) side.set(1, 0, 0); side.normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(up, a).premultiply(new THREE.Quaternion().setFromAxisAngle(side, Math.PI * f));
+  Pn.group.quaternion.copy(q);
+  // the working end (tip at f=0, eraser at f=1) sits on `tip`: the middle is half a length back along the lean
+  const mid = new THREE.Vector3(...s.tip).addScaledVector(a, Pn.L / 2);
+  const localMid = new THREE.Vector3(0, Pn.L / 2, 0).applyQuaternion(q);
+  Pn.group.position.copy(mid).sub(localMid);
 }
 
 /** Tick's slate: the simulator. A small framed drawing board Tick holds up beside itself while optimising; the plan
