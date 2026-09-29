@@ -2627,12 +2627,15 @@ function stagePoint(x, y) {
 }
 
 // Rewrites one region only when its key changed; `html` may be a builder so unchanged regions
-// cost nothing. Returns true when the region was rewritten.
+// cost nothing. A focused control that comes back (same id) keeps the focus, so the keyboard can
+// press 提示 again after its advice rebuilt the action row. Returns true when the region was rewritten.
 function setRegion(name, key, html = key) {
     const el = tableView.regions[name];
     if (!el || tableView.keys[name] === key) return false;
     tableView.keys[name] = key;
+    const focusId = el.contains(document.activeElement) ? document.activeElement.id : "";
     el.innerHTML = typeof html === "function" ? html() : html;
+    if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
     return true;
 }
 
