@@ -1,0 +1,91 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>TritonDFT stage</title>
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+// authoring aid: the set alone, seen from a few fixed cameras (?cam=k)
+import { defineScene } from '/pv/runtime/pv.js';
+import { createNPR } from './npr/npr.js';
+import { orbit, applyRig } from './npr/camera.js';
+import { PAL, COL, Q } from './td_core.js';
+import { addLetterBrushes } from './td_letters.js';
+import { L, buildRoom, buildBench, buildSilicon, buildEngine, buildHourglass, buildDesk, buildTube } from './td_world.js';
+import { makeAdder } from './td_world.js';
+import { paintWord } from './td_letters.js';
+import { bake } from './td_core.js';
+import { buildTri, buildClack, buildLoupe, buildTilt, buildConsole, buildHoot } from './td_cast.js';
+import { station, ST } from './td_world.js';
+import { buildWord3D } from './td_glyph3d.js';
+
+const LOOK = {
+  extends: 'comic',
+  hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.5, hatchWobble: 0.08, hatchSwell: 0.35,
+  htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0], htCol: [0.06, 0.18, 0.34],
+  lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
+  bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.1,
+  shadeGlaze: [0.6, 0.72, 0.9], coreGlaze: [0.6, 0.72, 0.9], keyTint: [1.0, 0.97, 0.9],
+  rule: 0.0, bgDots: [0.2, 0.52, 0.75, 0.25], dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16,
+  ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
+};
+const CAMS = [
+  { tg: [-0.8, 0.3, -0.6], r: 11.5, az: 0.05, el: 0.22, fov: 34 },          // wide: the whole room
+  { tg: [L.bench.x, 0.45, L.bench.z], r: 5.2, az: 0.25, el: 0.3, fov: 32 },  // the agents' bench
+  { tg: [L.desk.x, 0.6, L.desk.z - 0.2], r: 4.6, az: -0.35, el: 0.12, fov: 32 }, // the desk
+  { tg: [L.engine.x - 0.3, 0.9, L.engine.z], r: 5.0, az: -0.45, el: 0.1, fov: 34 }, // the engine
+  { tg: [L.bench.x, 0.35, L.bench.z + 2.3], r: 4.8, az: 0.12, el: 0.18, fov: 32 },  // numerals
+];
+let T;
+const paperC = (ctx) => ctx.paper({ tone: PAL.paper, grain: 0.04, fibres: 0.05, blotch: 0.06, seed: 4 });
+defineScene({
+  meta: { title: 'stage', durationFrames: 60, fps: 24, width: 1920, height: 1080, design: [1920, 1080], background: PAL.paper, boil: { every: 2, variants: 3 }, seed: 5 },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(paperC(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, { THREE, renderer }) {
+        addLetterBrushes(brush);
+        const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, ctx.W / ctx.H, 0.3, 80);
+        const npr = createNPR(renderer, ctx, { look: LOOK, paper: paperC(ctx), samples: 4 });
+        npr.setUnder(window.__pv.canvas);
+        npr.setLight({ dir: [-0.45, 0.8, 0.5], target: [0, 0, -0.5], size: 8, dist: 22 });
+        const add = makeAdder(THREE, npr, scene);
+        const W = { THREE, scene, npr, add, ctx, bake };
+        await buildRoom(W);
+        buildBench(W);
+        const si = buildSilicon(W, 0.5, W.turn); si.g.position.set(0, 0.5, 0);
+        buildEngine(W);
+        await buildDesk(W); await buildTube(W, paintWord);
+        const C = { tri: await buildTri(W), clack: await buildClack(W), loupe: buildLoupe(W), tilt: await buildTilt(W), con: await buildConsole(W), hoot: await buildHoot(W) };
+        const face = (R, th) => { const p = station(th); R.root.position.set(...p); R.root.rotation.y = Math.atan2(L.bench.x - p[0], L.bench.z - p[2]) * 0 + 0.0; };
+        face(C.tri, ST.plan); face(C.clack, ST.exec); face(C.loupe, ST.anlz); face(C.tilt, ST.refn);
+        C.con.root.position.set(...station(ST.refn + 0.45, 1.5)); C.hoot.root.position.set(L.desk.x - 0.1, -0.3, L.desk.z - 0.75);
+        W.C = C;
+        const numFace = { color: COL.pop, hatchDir: [0.3, 1, 0], rim: 0.9, shadeColor: COL.popD, shadeMix: 0.35, seed: 50 };
+        const sideM = { color: COL.gold, hatchDir: [0, 1, 0], rim: 0.5, shadeColor: 0xb0521e, shadeMix: 0.4, seed: 60 };
+        [['98%', -1.6], ['68x', 0.0], ['$0.04', 1.7]].forEach(([w, dx], i) => { const q = buildWord3D(W, w, { h: 0.55, depth: 0.2, face: numFace, side: sideM }); q.group.position.set(L.bench.x + dx, 0.02, L.bench.z + 2.35); q.group.rotation.y = 0.0; scene.add(q.group); });
+        buildHourglass(W, 1.2, [L.desk.x + 1.02, 0, L.desk.z - 0.05], 'giant');
+        buildHourglass(W, 0.294, [L.bench.x + 0.42, 0.07, L.bench.z + 0.1], 'tiny');
+        T = { THREE, npr, scene, camera, W };
+        return { scene, camera };
+      },
+      draw(ctx) {
+        const { npr, scene, camera, THREE } = T;
+        npr.frame(ctx);
+        npr.pointLight(new THREE.Vector3(L.desk.x + 0.2, 1.2, L.desk.z + 0.3), { color: 0xffc97a, radius: 2.2, i: 0.7 });
+        npr.pointLight(new THREE.Vector3(L.engine.x - 0.4, 0.3, L.engine.z + 1.0), { color: 0xff8a4a, radius: 1.6, i: 0.5 });
+        npr.focusOn(camera, new THREE.Vector3(...T.cam.tg), 4);
+        npr.render(scene, camera);
+        return false;
+      } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw() {} },
+  ],
+  update(ctx) {
+    const c = CAMS[Q.get('cam') ? Number(Q.get('cam')) : Math.floor(ctx.iw / 12) % 5]; T.cam = c;
+    applyRig(T.camera, orbit({ target: c.tg, radius: c.r, az: c.az + 0.1 * Math.sin(ctx.t * 6.283), el: c.el, fov: c.fov }));
+    T.scene.updateMatrixWorld(true);
+    const Ct = T.W.C; Ct.tilt.pans.forEach((p, i) => { const w = Ct.tilt.hands[i].getWorldPosition(new T.THREE.Vector3()); p.g.position.copy(w); });
+    ctx.camera = T.camera;
+  },
+});
+</script></body></html>
