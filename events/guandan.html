@@ -2594,12 +2594,15 @@ const PARTNER_PLAY_TOP = 112;               // .gd-slot.is-p2
 const SIDE_PLAY_TOP = 190;                  // .gd-slot.is-p1 / .is-p3, inboard of the side seats
 const SIDE_PLAY_INSET = 176;
 const ROW_MIN_TOP = PARTNER_PLAY_TOP + PLAYED_H + 6;  // the action row may rise to just under the partner's cards
-const ACTION_ROW_H = 80;                    // pills 74 + their 3D edge (the hexagon's crown overhangs)
+const ACTION_ROW_H = 80;                    // pills 74 + their 3D edge (the timer crown overhangs)
 const ACTION_ROW_GAP = 12;                  // between the row and the tallest hand column
 const PILL_W = 200;                         // action pill: 2x the hand card width (大掼蛋 2026)
 const PILL_MIN_W = 132;
-const ROW_HEX_W = 90;
+const ROW_GEM_W = 108;
 const ROW_GAP_X = 22;
+const ROW_TIGHT_GAP_X = 12;
+const SIDE_PLAY_MIN_SCALE = .6;             // a side play the row cannot pass shrinks to this, then lifts
+const TOAST_HALF = 20;                      // CSS px: half a one-line stage toast
 const COLUMN_SUIT_DEPTH = { D: 0, C: 1, H: 2, S: 3 };  // 方块 on top of a column, 黑桃 in front
 const PLACE_LABELS = { zh: ["头游", "二游", "三游", "末游"], en: ["1st", "2nd", "3rd", "4th"] };
 const JIPAI_ORDER = ["wild", "RJ", "BJ", "A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
@@ -2912,26 +2915,66 @@ function handGeometry(columns) {
     return { cardW, pitch, step, height: cardH + (tallest - 1) * step };
 }
 
-// How far a side seat's played cards (or its 不出) reach in from the stage edge, in design px.
-function sidePlayReach(i, v) {
-    const entry = game.trickPlays?.[i];
-    if (!entry || v.liveTurn === i) return 0;
-    if (entry.actionType === "pass") return SIDE_PLAY_INSET + 110;
-    const n = valuesFromFirebase(entry.cards).length;
-    return n ? SIDE_PLAY_INSET + 80.6 * (1 + .48 * (n - 1)) : 0;
+// How far a side slot's content reaches in from the stage edge (design px, 0 when empty): its
+// played cards or 不出 word, and a finish ribbon, centred under them or alone at the slot's start.
+// Layout offsets, so the slot's own fit transform (actionRowFit) does not count.
+function sideSlotReach(pos) {
+    const slot = tableView.regions[`slot${pos}`];
+    const played = slot.offsetWidth;
+    const ribbon = slot.querySelector(".gd-ribbon")?.offsetWidth || 0;
+    const extent = played ? Math.max(played, (played + ribbon) / 2) : ribbon;
+    return extent && SIDE_PLAY_INSET + extent;
 }
 
 // The row sits just above the tallest hand column. When that lifts it into the band of the side
-// seats' played cards (大掼蛋 2026 keeps it there, inboard of them), its pills narrow to pass
-// between those plays, down to PILL_MIN_W.
-function actionPillWidth(v, rowTop) {
-    if (!v.canAct || rowTop >= SIDE_PLAY_TOP + PLAYED_H) return PILL_W;
+// seats' plays (大掼蛋 2026 keeps it there, inboard of them), it narrows to pass between them:
+// pills down to PILL_MIN_W, then tighter gaps. A play still in the way is drawn smaller about its
+// seat side, down to SIDE_PLAY_MIN_SCALE, and if even that is too long, lifted clear of the row,
+// so the play I have to beat is never under a pill.
+function actionRowFit(v, rowTop) {
+    const fit = { pill: PILL_W, gap: ROW_GAP_X, sides: {} };
+    if (!v.canAct || rowTop >= SIDE_PLAY_TOP + PLAYED_H) return fit;
+    const reach = { 1: sideSlotReach(1), 3: sideSlotReach(3) };
+    const widest = Math.max(reach[1], reach[3]);
+    if (!widest) return fit;
     const { w } = tableView.layout;
-    const reach = Math.max(...[1, 3].map(pos => sidePlayReach((v.mine + pos) % 4, v)));
-    if (!reach) return PILL_W;
     const pills = v.lead || v.noBeat ? 2 : 3;
-    const free = w - 2 * (reach + 16) - ROW_HEX_W - pills * ROW_GAP_X;
-    return Math.max(PILL_MIN_W, Math.min(PILL_W, Math.floor(free / pills)));
+    const free = w - 2 * (widest + 16) - ROW_GEM_W - pills * ROW_GAP_X;
+    fit.pill = Math.max(PILL_MIN_W, Math.min(PILL_W, Math.floor(free / pills)));
+    if (fit.pill > PILL_MIN_W) return fit;
+    fit.gap = ROW_TIGHT_GAP_X;
+    const limit = (w - pills * (PILL_MIN_W + fit.gap) - ROW_GEM_W) / 2 - 16;
+    for (const pos of [1, 3]) {
+        const len = reach[pos] - SIDE_PLAY_INSET;
+        if (reach[pos] <= limit) continue;
+        const k = Math.max(SIDE_PLAY_MIN_SCALE, (limit - SIDE_PLAY_INSET) / len);
+        const bottom = SIDE_PLAY_TOP + PLAYED_H * (1 + k) / 2;
+        const y = SIDE_PLAY_INSET + len * k > limit ? Math.min(0, rowTop - 6 - bottom) : 0;
+        fit.sides[pos] = { k, y };
+    }
+    return fit;
+}
+
+// Bottom edge (design px) of what a slot shows, 0 when it is empty; the transient combo label
+// does not count.
+function slotContentBottom(pos) {
+    const slot = tableView.regions[`slot${pos}`];
+    let bottom = 0;
+    for (const el of slot.children) {
+        if (!el.classList.contains("gd-combo-label")) bottom = Math.max(bottom, el.offsetTop + el.offsetHeight);
+    }
+    return bottom && slot.offsetTop + bottom;
+}
+
+// Toasts sit over the felt centre. While my action row is up they go in the band between the
+// partner's play and the timer crown, else (phones, tall hands) just under the pills' 3D edge,
+// over the top of my hand: never on the partner's play, never on a pill. The toast is sized in
+// CSS px. (The pills span rowTop + 6 to rowTop + ACTION_ROW_H, the crown rises 22 above them.)
+function stageToastY(v, rowTop) {
+    if (!v.canAct) return 266;
+    const half = TOAST_HALF / tableView.layout.s;
+    const y = Math.min(266, rowTop - 20 - half);
+    return y - half >= (slotContentBottom(2) || PARTNER_PLAY_TOP) + 6 ? y : rowTop + ACTION_ROW_H + 10 + half;
 }
 
 // Selection survives ticks: it is only pruned to the cards still in hand, and dropped when a
@@ -3702,9 +3745,6 @@ function renderTable() {
     t.stage.style.setProperty("--hand-h", `${handH.toFixed(1)}px`);
     t.stage.style.setProperty("--actions-bottom", `${actionsBottom.toFixed(1)}px`);
     const rowTop = t.layout.h - actionsBottom - ACTION_ROW_H;
-    t.stage.style.setProperty("--pill-w", `${actionPillWidth(v, rowTop)}px`);
-    // toasts sit over the felt centre, or just above the action row while it is up
-    t.rot.style.setProperty("--toast-y", `${v.canAct ? Math.max(150, Math.min(266, rowTop - 46)) : 266}px`);
     t.stage.classList.toggle("is-acting", v.canAct);
 
     renderTableChrome();
@@ -3716,6 +3756,17 @@ function renderTable() {
         renderSlot(i, v, !freshMount, flights, bursts);
     });
     renderHand(columns, handMode === "row" && mine >= 0 ? orderedHandForDisplay(handCards, game.currentLevelRank, mine) : [], geo, dealPhase);
+    // the action row and the toast make room around the plays just rendered
+    const fit = actionRowFit(v, rowTop);
+    t.stage.style.setProperty("--pill-w", `${fit.pill}px`);
+    t.stage.style.setProperty("--row-gap", `${fit.gap}px`);
+    [1, 3].forEach(pos => {
+        const style = t.regions[`slot${pos}`].style;
+        const side = fit.sides[pos];
+        style.setProperty("--fit-k", side ? side.k.toFixed(3) : "1");
+        style.setProperty("--fit-y", `${side ? side.y.toFixed(1) : 0}px`);
+    });
+    t.rot.style.setProperty("--toast-y", `${stageToastY(v, rowTop).toFixed(1)}px`);
     setRegion("tools", toolsHTML(v));
     setRegion("spectate", mine < 0 ? `<span>${L("Spectating", "观战中")}</span>` : "");
     setRegion("actions", `${v.canAct}:${v.lead}:${v.noBeat}:${v.passHint}:${uiLang}`, () => actionsHTML(v));

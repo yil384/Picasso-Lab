@@ -92,16 +92,17 @@ body[data-screen="table"] .topbar { display: none; }
 
 .gd-ui-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .gd-ui-layer > :not(.toast) { pointer-events: auto; }
-/* Toasts: a faded dark band between the partner's played cards and the action row (never on
-   the controls). The layer is in CSS px, so the design-px anchor goes through --gd-s. */
+/* Toasts: a compact solid plate at --toast-y (stageToastY: off the partner's play and the pills).
+   The layer is in CSS px, so the design-px anchor goes through --gd-s. */
 .gd-stage-toast {
     top: calc(var(--gd-s, 1) * var(--toast-y, 266px));
     max-width: 72%;
-    padding: .45em 3.4em;
-    border-radius: 0;
-    background: linear-gradient(90deg, transparent, rgba(0, 22, 20, .74) 20%, rgba(0, 22, 20, .74) 80%, transparent);
+    padding: 7px 28px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .72);
 }
 
+/* under the hand: a soft ramp down to the floor with no top edge; the tool pills sit in it */
 .gd-bottombar {
     position: absolute;
     left: 0; right: 0; bottom: 0;
@@ -518,8 +519,15 @@ body[data-screen="table"] .topbar { display: none; }
     pointer-events: none;
 }
 .gd-slot.is-p2 { left: 0; right: 0; top: 112px; justify-content: center; }
-.gd-slot.is-p1 { left: 176px; top: 190px; }
-.gd-slot.is-p3 { right: 176px; top: 190px; justify-content: flex-end; }
+.gd-slot.is-p1 { left: 176px; top: 190px; transform-origin: left center; }
+.gd-slot.is-p3 { right: 176px; top: 190px; justify-content: flex-end; transform-origin: right center; }
+/* a side play my action row cannot pass is drawn smaller about its seat side, and lifted if even
+   that is too long (actionRowFit) */
+.gd-slot.is-p1, .gd-slot.is-p3 {
+    scale: var(--fit-k, 1);
+    translate: 0 var(--fit-y, 0px);
+    transition: scale 160ms var(--ease-out), translate 160ms var(--ease-out);
+}
 /* own plays sit at 32% like Tencent, rising only if a tall hand would reach them */
 .gd-slot.is-p0 { left: 0; right: 0; top: min(32%, calc(100% - var(--hand-bottom, 55px) - var(--hand-h) - 8px - 109px)); justify-content: center; }
 /* my play lifts out over the hand while it flies (runPlayFlights) */
@@ -684,7 +692,8 @@ body[data-screen="table"] .topbar { display: none; }
     letter-spacing: .2em;
 }
 
-/* ---------- action row: [不出] [hexagon timer] [提示] [出牌] (dagd_new_ingame) ---------- */
+/* ---------- action row: [不出] [timer] [提示] [出牌] (dagd_store_4); --pill-w / --row-gap narrow it
+   between long side plays (actionRowFit) ---------- */
 .gd-actions {
     position: absolute;
     left: 0; right: 0; bottom: var(--actions-bottom);
@@ -692,7 +701,7 @@ body[data-screen="table"] .topbar { display: none; }
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 22px;
+    gap: var(--row-gap, 22px);
     pointer-events: none;
 }
 .gd-actions > * { pointer-events: auto; }
