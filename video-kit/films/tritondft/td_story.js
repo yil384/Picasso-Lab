@@ -140,7 +140,8 @@ async function buildProps(W) {
   add(new THREE.BoxGeometry(0.05, 0.19, 0.14), { color: COL.navy, hatchMode: 'u', rim: 0.5 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], W.mbook);
   add(new THREE.BoxGeometry(0.056, 0.035, 0.146), { color: COL.pop, rim: 0.5 }, { outline: 0.4 }, [0, 0.04, 0], [0, 0, 0], W.mbook);
   add(new THREE.BoxGeometry(0.04, 0.18, 0.02), { color: COL.cream, hatch: 0.3 }, { outline: 0.3 }, [0, 0, 0.065], [0, 0, 0], W.mbook);
-  W.tickets = texs.map((tx) => add(new THREE.PlaneGeometry(0.4, 0.28),   // big enough to read the icons { color: COL.cream, map: tx, side: THREE.DoubleSide, rim: 0.3, toneBias: 0.12, hatch: 0.4 }, { outline: 0.45 }, [0, 0, 0]));
+  // the tickets are big enough to read their icons
+  W.tickets = texs.map((tx) => add(new THREE.PlaneGeometry(0.4, 0.28), { color: COL.cream, map: tx, side: THREE.DoubleSide, rim: 0.3, toneBias: 0.12, hatch: 0.4 }, { outline: 0.45 }, [0, 0, 0]));
   // the Quantum ESPRESSO input sheet (a namelist-like scribble texture) torn from Clack and fed to Big Iron
   const sheetTex = await bake(THREE, { width: 256, height: 320, seed: 71, key: 'sheet-v1', background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill('#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
