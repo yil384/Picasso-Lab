@@ -45,7 +45,7 @@ body[data-screen="table"] .topbar { display: none; }
     pointer-events: none;
 }
 .gd-rot::before {
-    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 3px);
+    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .026) 0 1px, transparent 1px 2px);
 }
 .gd-rot::after {
     background:
@@ -71,7 +71,7 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-ico { display: block; flex: none; width: 28px; height: 28px; }
 /* Invisible hit slop: on small scales (--gd-s ~ .54 on phones) the small controls still take a
    >= 44 CSS px tap without growing visually. The bottom pills' slop runs from the stage bottom
-   up to just under the hand (handBottom() keeps the hand clear of it). */
+   up to just under the hand, >= 40 CSS px (handBottom() raises the hand that far). */
 .gd-menu-btn, .gd-round-btn, .gd-tool, .gd-jp-tabs button { position: relative; }
 .gd-jp-tabs button { z-index: 1; }
 .gd-menu-btn::after, .gd-round-btn::after, .gd-tool::after, .gd-jp-tabs button::after {
@@ -84,29 +84,30 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-jp-tabs button::after { top: 0; height: max(100%, calc(42px / var(--gd-s, 1))); translate: -50% 0; }
 .gd-tool::after {
-    top: auto; bottom: -8px;
+    top: auto; bottom: calc((38px - var(--hand-bottom, 55px)) / 2);
     width: max(100% + 16px, calc(44px / var(--gd-s, 1)));
-    height: max(100% + 8px, calc(42px / var(--gd-s, 1)));
+    height: calc(var(--hand-bottom, 55px) - 1px);
     translate: -50% 0;
 }
 
 .gd-ui-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .gd-ui-layer > :not(.toast) { pointer-events: auto; }
-/* Toasts: a faded dark band between the partner's played cards and the action row (never on
-   the controls). The layer is in CSS px, so the design-px anchor goes through --gd-s. */
+/* Toasts: a compact solid plate at --toast-y (stageToastY: off the partner's play and the pills).
+   The layer is in CSS px, so the design-px anchor goes through --gd-s. */
 .gd-stage-toast {
     top: calc(var(--gd-s, 1) * var(--toast-y, 266px));
     max-width: 72%;
-    padding: .45em 3.4em;
-    border-radius: 0;
-    background: linear-gradient(90deg, transparent, rgba(0, 22, 20, .74) 20%, rgba(0, 22, 20, .74) 80%, transparent);
+    padding: 7px 28px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .72);
 }
 
+/* under the hand: a soft ramp down to the floor with no top edge; the tool pills sit in it */
 .gd-bottombar {
     position: absolute;
     left: 0; right: 0; bottom: 0;
-    height: calc(var(--hand-bottom, 55px) - 5px);
-    background: linear-gradient(rgba(10, 14, 22, .42), rgba(10, 14, 22, .58));
+    height: calc(var(--hand-bottom, 55px) + 12px);
+    background: linear-gradient(rgba(4, 18, 22, 0), rgba(4, 18, 22, .3) 45%, rgba(4, 18, 22, .46));
     pointer-events: none;
 }
 
@@ -122,8 +123,7 @@ body[data-screen="table"] .topbar { display: none; }
     pointer-events: none;
 }
 .gd-watermark b { display: block; font: 400 54px/1 var(--font-display); letter-spacing: .03em; }
-.gd-watermark span { display: block; margin-top: 10px; font: 700 22px/1 var(--font-ui); letter-spacing: .24em; }
-.gd-watermark span:lang(en) { letter-spacing: .02em; }
+.gd-watermark span { display: block; margin-top: 10px; font: 700 22px/1 var(--font-ui); letter-spacing: .04em; }
 .gd-stage.is-acting .gd-watermark span { opacity: 0; }
 
 /* ---------- HUD: ☰ + level tiles (top-left), 记牌 / 规则 (top-right) ---------- */
@@ -181,6 +181,8 @@ body[data-screen="table"] .topbar { display: none; }
     white-space: nowrap;
 }
 .gd-lvl.is-them b { background: #7d8187; }
+.gd-lvl.is-t0 b { background: var(--mate-d); }
+.gd-lvl.is-t1 b { background: var(--opp-d); }
 .gd-lvl em {
     min-width: 46px;
     padding: 0 6px;
@@ -450,7 +452,7 @@ body[data-screen="table"] .topbar { display: none; }
     font: 700 21px/26px var(--font-num);
     text-align: center;
 }
-.gd-seat.is-p1 .gd-av-count, .gd-seat.is-p2 .gd-av-count { left: -14px; }
+.gd-seat.is-p0 .gd-av-count, .gd-seat.is-p1 .gd-av-count, .gd-seat.is-p2 .gd-av-count { left: -14px; }
 .gd-seat.is-p3 .gd-av-count { right: -14px; }
 .gd-first {
     position: absolute;
@@ -496,17 +498,16 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-seat.is-p3 .gd-clock { right: calc(100% + 12px); }
 .gd-seat.is-p2 .gd-clock { right: calc(100% + 12px); top: 4px; }
 .gd-seat.is-p0 .gd-clock { position: relative; top: auto; margin-bottom: 4px; }
-.gd-clock svg, .gd-hex svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.gd-clock b, .gd-hex b {
+.gd-clock svg, .gd-gem svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.gd-clock b, .gd-gem b {
     position: absolute;
     left: 0; right: 0;
     color: #fff;
-    font: 800 36px/1 var(--font-num);
     text-align: center;
     paint-order: stroke fill;
 }
-.gd-clock b { top: 36px; -webkit-text-stroke: 3px #9a4a00; }
-.gd-clock.is-free, .gd-hex.is-free { --hands: 1; }
+.gd-clock b { top: 36px; font: 800 36px/1 var(--font-num); -webkit-text-stroke: 3px #9a4a00; }
+.gd-clock.is-free, .gd-gem.is-free { --hands: 1; }
 
 /* ---------- played cards / 不出 at each seat's slot ---------- */
 .gd-slot {
@@ -518,8 +519,15 @@ body[data-screen="table"] .topbar { display: none; }
     pointer-events: none;
 }
 .gd-slot.is-p2 { left: 0; right: 0; top: 112px; justify-content: center; }
-.gd-slot.is-p1 { left: 176px; top: 190px; }
-.gd-slot.is-p3 { right: 176px; top: 190px; justify-content: flex-end; }
+.gd-slot.is-p1 { left: 176px; top: 190px; transform-origin: left center; }
+.gd-slot.is-p3 { right: 176px; top: 190px; justify-content: flex-end; transform-origin: right center; }
+/* a side play my action row cannot pass is drawn smaller about its seat side, and lifted if even
+   that is too long (actionRowFit) */
+.gd-slot.is-p1, .gd-slot.is-p3 {
+    scale: var(--fit-k, 1);
+    translate: 0 var(--fit-y, 0px);
+    transition: scale 160ms var(--ease-out), translate 160ms var(--ease-out);
+}
 /* own plays sit at 32% like Tencent, rising only if a tall hand would reach them */
 .gd-slot.is-p0 { left: 0; right: 0; top: min(32%, calc(100% - var(--hand-bottom, 55px) - var(--hand-h) - 8px - 109px)); justify-content: center; }
 /* my play lifts out over the hand while it flies (runPlayFlights) */
@@ -644,14 +652,16 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-row { display: flex; align-items: flex-end; --card-sel-lift: calc(var(--card-w) / .74 * -.18); }
 .gd-row .card + .card { margin-left: calc(var(--pitch) - var(--card-w)); }
 .gd-row .card.selected::after { background: rgba(70, 110, 230, .16); }
+/* the selection on its way to the table (sendingUI): its tint deepens */
+.gd-hand.is-sending .card.selected::after { background: rgba(28, 44, 100, .5); }
 .gd-cols.is-sorting .gd-col { animation: gd-col-in 300ms var(--ease-back) both; animation-delay: calc(var(--ci) * 42ms); }
 .gd-row.is-sorting .card { animation: gd-col-in 260ms var(--ease-back) both; animation-delay: calc(var(--ci) * 22ms); }
 @keyframes gd-col-in { from { opacity: 0; translate: 0 70px; } }
 
-/* bottom-right pills: 重选 · 理牌 · 横排 */
+/* bottom-right pills: 重选 · 理牌 · 横排, centred in the bar under the hand */
 .gd-tools {
     position: absolute;
-    right: 22px; bottom: 8px;
+    right: 22px; bottom: calc((var(--hand-bottom, 55px) - 38px) / 2);
     z-index: 12;
     display: flex;
     gap: 12px;
@@ -672,7 +682,7 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-tool .gd-ico { width: 24px; height: 24px; }
 .gd-tool#clear-btn { padding: 0 16px; }
-.gd-tool.is-idle { opacity: .55; }
+.gd-tool[hidden] { display: none; }
 
 .gd-spectate { position: absolute; left: 50%; bottom: 90px; translate: -50% 0; z-index: 12; }
 .gd-spectate span {
@@ -683,8 +693,10 @@ body[data-screen="table"] .topbar { display: none; }
     font: 700 24px/1.2 var(--font-ui);
     letter-spacing: .2em;
 }
+.gd-spectate span:lang(en) { letter-spacing: .02em; }
 
-/* ---------- action row: [不出] [hexagon timer] [提示] [出牌] (dagd_new_ingame) ---------- */
+/* ---------- action row: [不出] [timer] [提示] [出牌] (dagd_store_4); --pill-w / --row-gap narrow it
+   between long side plays (actionRowFit) ---------- */
 .gd-actions {
     position: absolute;
     left: 0; right: 0; bottom: var(--actions-bottom);
@@ -692,14 +704,14 @@ body[data-screen="table"] .topbar { display: none; }
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 22px;
+    gap: var(--row-gap, 22px);
     pointer-events: none;
 }
 .gd-actions > * { pointer-events: auto; }
 .gd-actions .btn {
-    --btn-h: 74px; --btn-fs: 34px; --btn-px: 12px; --btn-minw: 0px;
+    --btn-h: 74px; --btn-fs: 40px; --btn-px: 12px; --btn-minw: 0px;
     width: var(--pill-w, 200px);
-    -webkit-text-stroke: 3px var(--btn-stroke);
+    -webkit-text-stroke: 2.5px var(--btn-stroke);
     text-shadow: 0 2px 0 var(--btn-stroke);
     box-shadow:
         0 3px 0 rgba(255, 255, 255, .6) inset,
@@ -710,7 +722,8 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-actions .btn::after { top: 5px; opacity: .75; }
 /* 40+ CSS px tap height even on the smallest phones, without a bigger pill */
 .gd-actions .btn > .gd-hit { position: absolute; left: 0; right: 0; top: 50%; height: max(100%, calc(42px / var(--gd-s, 1))); translate: 0 -50%; z-index: 0; }
-.gd-actions .btn:active:not(.is-disabled) {
+/* pressed, and held down while its action waits on Firebase or the engine (is-pending, sendingUI) */
+.gd-actions .btn:active:not(.is-disabled), .gd-actions .btn.is-pending {
     translate: 0 4px;
     box-shadow:
         0 3px 0 rgba(255, 255, 255, .6) inset,
@@ -718,19 +731,19 @@ body[data-screen="table"] .topbar { display: none; }
         0 2px 0 var(--btn-edge),
         0 4px 8px rgba(0, 0, 0, .28);
 }
+.gd-actions .btn.is-pending::before { opacity: 1; background: rgba(0, 0, 0, .16); }
 .gd-actions .btn:not(.spaced) { --btn-ls: .02em; }
 .gd-actions .btn.is-disabled { cursor: default; }
 /* 提示 advised a pass: 不出 turns primary with one pop (the region is keyed, so it never replays) */
 .gd-actions .btn.is-advised { animation: gd-advised 380ms var(--ease-back) both; }
 @keyframes gd-advised { 0% { scale: 1; } 40% { scale: 1.12; } 100% { scale: 1; } }
 #root.action-busy .gd-actions, #root.action-busy .gd-tools { pointer-events: none; }
-.gd-hex { position: relative; flex: none; width: 90px; height: 101px; margin: -21px 0 -6px; }
-.gd-hex b { top: 44px; -webkit-text-stroke: 6px #4a0a86; }
-.gd-clock.is-3 b, .gd-hex.is-3 b { font-size: 28px; letter-spacing: -.02em; }
-.gd-clock.is-3 b { top: 40px; }
-.gd-hex.is-3 b { top: 48px; }
-.gd-clock.is-danger b, .gd-hex.is-danger b { color: #ffd9d4; -webkit-text-stroke-color: #b3140a; }
-.gd-clock.is-danger, .gd-hex.is-danger { animation: gd-timer-pulse .8s ease-in-out infinite; }
+/* my timer: the heart gem in its crown, spikes over the pills' top; a thin white number with a
+   light purple edge, centred in the heart (dagd_store_4) */
+.gd-gem { position: relative; flex: none; width: 108px; height: 100px; margin: -22px 0 -4px; }
+.gd-gem b { top: 39px; font: 500 34px/1 var(--font-ui); -webkit-text-stroke: 2.5px #5a1a9a; }
+.gd-clock.is-danger b, .gd-gem.is-danger b { color: #ffd9d4; -webkit-text-stroke-color: #b3140a; }
+.gd-clock.is-danger, .gd-gem.is-danger { animation: gd-timer-pulse .8s ease-in-out infinite; }
 @keyframes gd-timer-pulse { 50% { scale: 1.1; } }
 
 /* ---------- deal ---------- */

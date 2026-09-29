@@ -898,7 +898,7 @@ function attachRoom(code) {
     unsubscribe = onValue(roomRef(code), (snap) => {
         if (!snap.exists()) return roomClosed(!!game);
         game = normalizeGame(snap.val());
-        hintAdvisor = null;
+        if (hintAdvisor && hintAdvisor.turn !== turnStateKey()) hintAdvisor = null;
         syncDealAnimation();
         render();
         maybeRunAI();
@@ -1061,18 +1061,20 @@ function scheduleTurnClock() {
     turnRenderTimer = setTimeout(scheduleTurnClock, Math.min(1000, remaining + 80));
 }
 
-// Every visible turn timer ([data-turn-clock]: my purple hexagon or another seat's alarm clock)
-// shows whole seconds; the untimed opening lead shows clock hands instead. <=10 s pulses red.
+// Every visible turn timer ([data-turn-clock]: my crowned gem or another seat's alarm clock) shows
+// at most two digits, like Tencent's: clock hands while the turn is untimed (the opening lead) or
+// still has more than 99 s, then whole seconds. <=10 s pulses red.
 function updateTurnClockDOM() {
     if (!game) return;
     const remaining = turnRemainingMs(game);
-    const secs = remaining == null ? "" : String(Math.ceil(remaining / 1000));
+    const secs = remaining == null ? 0 : Math.ceil(remaining / 1000);
+    const free = remaining == null || secs > 99;
+    const text = free ? "" : String(secs);
     document.querySelectorAll("[data-turn-clock]").forEach(el => {
         const num = el.querySelector("b");
-        if (num && num.textContent !== secs) num.textContent = secs;
-        el.classList.toggle("is-free", remaining == null);
-        el.classList.toggle("is-3", secs.length > 2);
-        el.classList.toggle("is-danger", remaining != null && remaining <= 10000);
+        if (num && num.textContent !== text) num.textContent = text;
+        el.classList.toggle("is-free", free);
+        el.classList.toggle("is-danger", !free && secs <= 10);
     });
 }
 
@@ -1156,7 +1158,7 @@ async function startGame() {
         ensureHost(g);
         startRound(g, null);
     }));
-    if (!updated) showToast(L("The table changed. Please retry.", "牌桌状态变了，请重试。"));
+    if (!updated) showToast(L("The table changed. Try again.", "牌局已变化，请重试"));
 }
 
 function startRound(g, previousResult) {
@@ -1300,16 +1302,21 @@ function applyTribute(g, result) {
     return rows;
 }
 
+// An action that waits (a play or pass on Firebase, 提示 on the engine): its pill stays pressed and
+// darkens, and a play's selected cards take a deeper tint, until the answer is in.
+function sendingUI(id, on) {
+    document.getElementById(id)?.classList.toggle("is-pending", on);
+    if (id === "play-btn") tableView.regions.hand?.classList.toggle("is-sending", on);
+}
+
 async function playSelected() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
-    const hand = game.hands[seat] || [];
-    const cards = hand.filter(c => selected.has(c.id));
-    if (!cards.length) return showToast(L("Select cards to play", "请选择要出的牌"));
-    const lastCombo = game.lastPlay?.combo || null;
-    const combo = choosePlayable(cards, lastCombo, game.currentLevelRank);
-    if (!combo) return showToast(L("Invalid combo or not strong enough", "这手牌型不合法或压不过上家"));
-    const ok = await playCards(seat, cards);
+    const verdict = selectionVerdict(seat);
+    if (!verdict.ok) return showToast(verdict.reason);
+    sendingUI("play-btn", true);
+    const ok = await playCards(seat, (game.hands[seat] || []).filter(c => selected.has(c.id)));
+    sendingUI("play-btn", false);
     if (ok) {
         selected.clear();
         hintAdvisor = null;
@@ -1354,16 +1361,18 @@ async function playCards(seat, cards, options = {}) {
         setCurrentTurn(g, nextSeat(seat, g));
         g.message = `${g.seats[seat].name} 出了 ${comboName(combo, "zh")}。`;
     }, options);
-    if (!updated && !options.silent) showToast(L("Move expired. Check the table and retry.", "牌局已经变化，请看牌桌后重试。"));
+    if (!updated && !options.silent) showToast(L("The table changed. Try again.", "牌局已变化，请重试"));
     return !!updated;
 }
 
 async function passTurn() {
     const seat = mySeat();
     if (seat !== game.currentTurn) return showToast(L("Not your turn yet", "还没轮到你"));
-    if (!game.lastPlay) return showToast(L("You cannot pass when leading a new trick", "新一轮不能不要"));
+    if (!game.lastPlay) return showToast(L("You can't pass on a lead", "首出不能不出"));
     hintAdvisor = null;
+    sendingUI("pass-btn", true);
     await doPass(seat);
+    sendingUI("pass-btn", false);
 }
 
 async function doPass(seat, options = {}) {
@@ -1395,7 +1404,7 @@ async function doPass(seat, options = {}) {
             g.message = `${g.seats[seat].name} 不要。`;
         }
     }, options);
-    if (!updated && !options.silent) showToast(L("Pass expired. Check the table and retry.", "牌局已经变化，请看牌桌后重试。"));
+    if (!updated && !options.silent) showToast(L("The table changed. Try again.", "牌局已变化，请重试"));
     return !!updated;
 }
 
@@ -1569,10 +1578,11 @@ function sameTurnState(g, snapshot) {
         && g.currentTurn === snapshot.currentTurn;
 }
 
-// One 提示 package per table state + language: repeat clicks cycle through it without recomputing,
-// and a prefetch that is still running is simply awaited.
+// One 提示 package per turn state (turnStateKey) + language: repeat clicks cycle through it without
+// recomputing, even across ticks that leave the turn as it was, and a prefetch that is still
+// running is simply awaited.
 function requestHintPackage(seat, g, lang) {
-    const key = `${g.roomCode || roomCode}:${Number(g.revision) || 0}:${g.currentTurn}:${seat}:${lang}`;
+    const key = `${turnStateKey(g)}:${seat}:${lang}`;
     if (hintRequest?.key !== key) {
         const promise = buildPlayerHintPackageAsync(seat, g, lang);
         hintRequest = { key, promise };
@@ -1605,6 +1615,7 @@ async function hintMove() {
         thinkingShown = true;
         showToast(L("Thinking…", "思考中…"), 8000);
     }, 150);
+    sendingUI("hint-btn", true);
     let packet;
     try {
         packet = await requestHintPackage(seat, snapshot, lang);
@@ -1613,15 +1624,16 @@ async function hintMove() {
         packet = null;
     } finally {
         clearTimeout(thinkingTimer);
+        sendingUI("hint-btn", false);
     }
-    if (token !== hintClickToken || !sameTurnState(game, snapshot) || mySeat() !== seat) {
+    if (token !== hintClickToken || turnStateKey(game) !== turnStateKey(snapshot) || mySeat() !== seat) {
         if (thinkingShown && token === hintClickToken) hideToast();
         return;
     }
     if (!packet?.options?.length) return showToast(L("No useful suggestion found.", "暂时没有可用提示。"));
     // Like Tencent's 提示, a press selects cards whenever the engine has a press to offer: its
     // options cycle presses first. Its pass advice (partner owns the trick, or pressing costs too
-    // much) comes after them, or alone: the selection drops, 不出 lights up and says so in two words.
+    // much) comes after them, or alone: the selection drops and 不出 turns primary with a pop.
     const options = [...packet.options.filter(o => o.move?.cards?.length), ...packet.options.filter(o => !o.move?.cards?.length)];
     const nextIndex = previousHint && previousHint.signature === packet.signature && options.length > 1
         ? (previousHint.index + 1) % options.length
@@ -1630,14 +1642,16 @@ async function hintMove() {
     const pass = !ids.length;
     hintAdvisor = { ids, signature: packet.signature, index: nextIndex, total: options.length, pass, turn: turnStateKey() };
     selected = new Set(ids);
-    const passWord = L("Pass suggested", "建议不出");
-    if (pass) showToast(passWord, 1300);
-    else if (thinkingShown || tableView.toast?.textContent === passWord) hideToast();
+    if (thinkingShown) hideToast();
     render();
 }
 
+// What a 提示 answer depends on (as the engine's hint signature): whose turn, the play to beat and
+// my hand. A tick that changes none of them (a rename, a remote write) keeps the 提示 cycle.
 function turnStateKey(g = game) {
-    return `${g?.roomCode || roomCode}:${Number(g?.revision) || 0}:${g?.currentTurn}`;
+    const seat = mySeat(g);
+    const ids = cards => valuesFromFirebase(cards).map(c => c.id).sort().join("-");
+    return `${g?.roomCode || roomCode}:${g?.phase}:${g?.roundNo || 0}:${g?.currentTurn}:${g?.passCount || 0}:${g?.lastPlay?.player ?? "lead"}:${ids(g?.lastPlay?.cards)}:${seat}:${ids(g?.hands?.[seat])}`;
 }
 
 function activeHintForSelection(selectedCards, canAct) {
@@ -2112,13 +2126,14 @@ function openPopup({ title = "", html = "", container = document.body, wide = fa
 }
 
 // Tencent 提示 dialog: one question, 取消 (blue) and 确定 (orange). Resolves true only on 确定;
-// ×, the backdrop and Esc count as 取消.
-function confirmPopup({ title, text, ok = L("OK", "确定"), cancel = L("Cancel", "取消") }) {
+// ×, the backdrop and Esc count as 取消. `container` as for openPopup.
+function confirmPopup({ title, text, ok = L("OK", "确定"), cancel = L("Cancel", "取消"), container }) {
     hideToast();
     return new Promise(resolve => {
         let answer = false;
         const close = openPopup({
             title,
+            container,
             narrow: true,
             html: `<p class="gd-confirm-text"></p><div class="gd-confirm-row"><button class="btn secondary" type="button" data-confirm="0">${cancel}</button><button class="btn primary" type="button" data-confirm="1">${ok}</button></div>`,
             onClose: () => resolve(answer)
@@ -2570,7 +2585,7 @@ function visualSeatPos(i, mine) {
 // Spectators watch from seat 0, so relations are taken from that seat.
 function relationForSeat(i, mine) {
     const view = mine >= 0 ? mine : 0;
-    if (i === view) return { key: "self", label: L("You", "自己") };
+    if (i === view) return { key: "self", label: L("Me", "我") };
     if (i % 2 === view % 2) return { key: "ally", label: L("Partner", "队友") };
     return { key: "opponent", label: L("Rival", "对手") };
 }
@@ -2594,12 +2609,16 @@ const PARTNER_PLAY_TOP = 112;               // .gd-slot.is-p2
 const SIDE_PLAY_TOP = 190;                  // .gd-slot.is-p1 / .is-p3, inboard of the side seats
 const SIDE_PLAY_INSET = 176;
 const ROW_MIN_TOP = PARTNER_PLAY_TOP + PLAYED_H + 6;  // the action row may rise to just under the partner's cards
-const ACTION_ROW_H = 80;                    // pills 74 + their 3D edge (the hexagon's crown overhangs)
+const ACTION_ROW_H = 80;                    // pills 74 + their 3D edge (the timer crown overhangs)
 const ACTION_ROW_GAP = 12;                  // between the row and the tallest hand column
 const PILL_W = 200;                         // action pill: 2x the hand card width (大掼蛋 2026)
-const PILL_MIN_W = 132;
-const ROW_HEX_W = 90;
+const PILL_MIN_W = 132;                     // still fits "出 牌" at 40px with its .35em spacing
+const ROW_GEM_W = 108;
 const ROW_GAP_X = 22;
+const ROW_TIGHT_GAP_X = 12;
+const SIDE_PLAY_MIN_SCALE = .6;             // a side play the row cannot pass shrinks to this, then lifts
+const TOOL_TAP = 40;                        // CSS px: the bottom pills' tap height (see handBottom)
+const TOAST_HALF = 20;                      // CSS px: half a one-line stage toast
 const COLUMN_SUIT_DEPTH = { D: 0, C: 1, H: 2, S: 3 };  // 方块 on top of a column, 黑桃 in front
 const PLACE_LABELS = { zh: ["头游", "二游", "三游", "末游"], en: ["1st", "2nd", "3rd", "4th"] };
 const JIPAI_ORDER = ["wild", "RJ", "BJ", "A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
@@ -2646,22 +2665,33 @@ function tableIcon(name) {
     return `<svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${TABLE_ICONS[name] || ""}</svg>`;
 }
 
-// Timer art: the purple crowned hexagon (own turn, 大掼蛋 2026) and the gold alarm clock
-// (other seats, 腾讯掼蛋). Gradients live once in the stage; --hands shows the clock hands
-// instead of seconds on the untimed opening lead.
+// Timer art: the purple heart gem set in a gold crown (own turn, 大掼蛋 2026) and the gold alarm
+// clock (other seats, 腾讯掼蛋). Gradients live once in the stage; --hands shows clock hands
+// instead of seconds while the turn is untimed or has more than 99 s left.
 const TABLE_DEFS_HTML = `<svg class="gd-defs" aria-hidden="true" focusable="false">
     <defs>
-        <linearGradient id="gd-g-hex" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d98bff"/><stop offset=".5" stop-color="#a23cf0"/><stop offset="1" stop-color="#6a06c4"/></linearGradient>
+        <linearGradient id="gd-g-gem" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaa6ff"/><stop offset=".45" stop-color="#b447f0"/><stop offset="1" stop-color="#7010c6"/></linearGradient>
+        <linearGradient id="gd-g-gem-d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b95cf2"/><stop offset="1" stop-color="#6208b4"/></linearGradient>
         <linearGradient id="gd-g-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff5bd"/><stop offset=".45" stop-color="#ffd66b"/><stop offset="1" stop-color="#d8911c"/></linearGradient>
         <radialGradient id="gd-g-face" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#ffd35a"/><stop offset=".65" stop-color="#f7a21c"/><stop offset="1" stop-color="#e27d0b"/></radialGradient>
         <linearGradient id="gd-g-bell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfcfd"/><stop offset="1" stop-color="#a3acb6"/></linearGradient>
         <radialGradient id="gd-g-fire" cx=".5" cy=".58" r=".56"><stop offset="0" stop-color="#fff1a8"/><stop offset=".38" stop-color="#ffc23a"/><stop offset=".72" stop-color="#f7771c"/><stop offset="1" stop-color="#d2381a"/></radialGradient>
     </defs>
-    <symbol id="gd-sym-hex" viewBox="0 0 100 112">
-        <path d="M24 33 17 9l17 12L50 3l16 18 17-12-7 24Z" fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="2.5" stroke-linejoin="round"/>
-        <path d="M50 21 87 42.5v43L50 107 13 85.5v-43Z" fill="url(#gd-g-hex)" stroke="url(#gd-g-gold)" stroke-width="6" stroke-linejoin="round"/>
-        <path d="M50 30 79 47v13c-17-7-41-7-58 0V47Z" fill="#fff" opacity=".24"/>
-        <path d="M50 64V47M50 64l12 7" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" style="opacity:var(--hands,0)"/>
+    <symbol id="gd-sym-gem" viewBox="0 0 112 104">
+        <g fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="1.6" stroke-linejoin="round">
+            <path d="M9 50C7 40 5 31 3 20c7 8 12 18 15 31Z"/><path d="M103 50c2-10 4-19 6-30-7 8-12 18-15 31Z"/>
+            <circle cx="3" cy="18" r="3.2"/><circle cx="109" cy="18" r="3.2"/>
+            <path d="M56 0l7 10-4 2v8h-6v-8l-4-2Z"/>
+        </g>
+        <path d="M12 94 8 46l22 14h52l22-14-4 48Z" fill="url(#gd-g-gem-d)" stroke="url(#gd-g-gold)" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M9 84q47-7 94 0l-2 14q-45-7-90 0Z" fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M56 16c8 10 34 22 34 46 0 15-10 26-22 26-6 0-10-3-12-7-2 4-6 7-12 7-12 0-22-11-22-26 0-24 26-36 34-46Z" fill="url(#gd-g-gem)" stroke="url(#gd-g-gold)" stroke-width="4.5" stroke-linejoin="round"/>
+        <path d="M56 23 29 57l13 3Z" fill="#fff" opacity=".32"/>
+        <path d="M56 23l27 34-13-1Z" fill="#fff" opacity=".18"/>
+        <path d="M30 70c3 8 9 12 15 12-7-3-11-7-15-12Z" fill="#fff" opacity=".25"/>
+        <path d="m50 99 6-11 6 11Z" fill="url(#gd-g-gem)" stroke="#a8650e" stroke-width="1.2" stroke-linejoin="round"/>
+        <g fill="#f7a6d8" stroke="#a8367c" stroke-width=".8"><circle cx="22" cy="92" r="2.4"/><circle cx="35" cy="90.6" r="2.4"/><circle cx="77" cy="90.6" r="2.4"/><circle cx="90" cy="92" r="2.4"/></g>
+        <path d="M56 60V44m0 16 11 7" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" style="opacity:var(--hands,0)"/>
     </symbol>
     <symbol id="gd-sym-clock" viewBox="0 0 100 106">
         <path d="M7 31C4 18 13 7 27 8Z" fill="url(#gd-g-bell)" stroke="#78818c" stroke-width="2.5" stroke-linejoin="round"/>
@@ -2880,27 +2910,28 @@ function moveHandCard(dragId, targetId, before) {
     return true;
 }
 
-// Hand bottom edge: 7.6% of the stage like Tencent, raised on small screens so the 重选/理牌/横排
-// pills under it keep a 40 CSS px tap target that never reaches into the cards.
+// Hand bottom edge: 7.6% of the stage like Tencent, raised on small screens just enough for the
+// 重选/理牌/横排 pills under it to keep a TOOL_TAP CSS px tap target that never reaches into the cards.
 function handBottom() {
-    return Math.max(HAND_BOTTOM, 40 / tableView.layout.s + 6);
+    return Math.max(HAND_BOTTOM, TOOL_TAP / tableView.layout.s + 1);
 }
 
 // Column mode: every stacked card shows its whole index (the step is fixed at HAND_STEP). The
-// pitch shrinks to fit the stage width down to HAND_MIN_PITCH; a column too tall for the room
-// under the raised action row shrinks all hand cards (down to HAND_MIN_SCALE). Only a 理牌 group
-// taller than that compresses its step. The geometry does not depend on whose turn it is, so the
-// cards never resize when the turn comes round. Played cards keep their size.
+// pitch shrinks to fit the stage width down to HAND_MIN_PITCH; a rank column too tall for the room
+// under the raised action row shrinks all hand cards (down to HAND_MIN_SCALE). A 理牌 group never
+// does: only its own step compresses when it is taller than the room. The geometry does not
+// depend on whose turn it is, so the cards never resize when the turn comes round. Played cards
+// keep their size. `steps` holds each column's step.
 function handGeometry(columns) {
     const { w, h } = tableView.layout;
     const avail = w - 64;
     if (handMode === "row") {
         const n = columns.reduce((sum, col) => sum + col.cards.length, 0);
         const pitch = n > 1 ? Math.min(HAND_CARD_W * .52, (avail - HAND_CARD_W) / (n - 1)) : HAND_CARD_W;
-        return { cardW: HAND_CARD_W, pitch, step: 0, height: HAND_CARD_H * 1.18 };
+        return { cardW: HAND_CARD_W, pitch, step: 0, steps: [], height: HAND_CARD_H * 1.18 };
     }
     const n = columns.length;
-    const tallest = Math.max(1, ...columns.map(col => col.cards.length));
+    const tallest = Math.max(1, ...columns.filter(col => !col.group).map(col => col.cards.length));
     const room = h - handBottom() - ACTION_ROW_GAP - ACTION_ROW_H - ROW_MIN_TOP;
     const fitW = n > 1 ? avail / (HAND_CARD_W * (HAND_MIN_PITCH * (n - 1) + 1)) : 1;
     const fitH = room / (HAND_CARD_H * (1 + HAND_STEP * (tallest - 1)));
@@ -2908,30 +2939,72 @@ function handGeometry(columns) {
     const cardW = HAND_CARD_W * k;
     const cardH = HAND_CARD_H * k;
     const pitch = n > 1 ? Math.min(cardW + 1, (avail - cardW) / (n - 1)) : cardW;
-    const step = tallest > 1 ? Math.min(cardH * HAND_STEP, Math.max(0, room - cardH) / (tallest - 1)) : cardH * HAND_STEP;
-    return { cardW, pitch, step, height: cardH + (tallest - 1) * step };
+    const stepFor = len => len > 1 ? Math.min(cardH * HAND_STEP, Math.max(0, room - cardH) / (len - 1)) : cardH * HAND_STEP;
+    const steps = columns.map(col => stepFor(col.group ? col.cards.length : tallest));
+    const height = Math.max(cardH, ...columns.map((col, i) => cardH + (col.cards.length - 1) * steps[i]));
+    return { cardW, pitch, step: stepFor(tallest), steps, height };
 }
 
-// How far a side seat's played cards (or its 不出) reach in from the stage edge, in design px.
-function sidePlayReach(i, v) {
-    const entry = game.trickPlays?.[i];
-    if (!entry || v.liveTurn === i) return 0;
-    if (entry.actionType === "pass") return SIDE_PLAY_INSET + 110;
-    const n = valuesFromFirebase(entry.cards).length;
-    return n ? SIDE_PLAY_INSET + 80.6 * (1 + .48 * (n - 1)) : 0;
+// How far a side slot's content reaches in from the stage edge (design px, 0 when empty): its
+// played cards or 不出 word, and a finish ribbon, centred under them or alone at the slot's start.
+// Layout offsets, so the slot's own fit transform (actionRowFit) does not count.
+function sideSlotReach(pos) {
+    const slot = tableView.regions[`slot${pos}`];
+    const played = slot.offsetWidth;
+    const ribbon = slot.querySelector(".gd-ribbon")?.offsetWidth || 0;
+    const extent = played ? Math.max(played, (played + ribbon) / 2) : ribbon;
+    return extent && SIDE_PLAY_INSET + extent;
 }
 
 // The row sits just above the tallest hand column. When that lifts it into the band of the side
-// seats' played cards (大掼蛋 2026 keeps it there, inboard of them), its pills narrow to pass
-// between those plays, down to PILL_MIN_W.
-function actionPillWidth(v, rowTop) {
-    if (!v.canAct || rowTop >= SIDE_PLAY_TOP + PLAYED_H) return PILL_W;
+// seats' plays (大掼蛋 2026 keeps it there, inboard of them), it narrows to pass between them:
+// pills down to PILL_MIN_W, then tighter gaps. A play still in the way is drawn smaller about its
+// seat side, down to SIDE_PLAY_MIN_SCALE, and if even that is too long, lifted clear of the row,
+// so the play I have to beat is never under a pill.
+function actionRowFit(v, rowTop) {
+    const fit = { pill: PILL_W, gap: ROW_GAP_X, sides: {} };
+    if (!v.canAct || rowTop >= SIDE_PLAY_TOP + PLAYED_H) return fit;
+    const reach = { 1: sideSlotReach(1), 3: sideSlotReach(3) };
+    const widest = Math.max(reach[1], reach[3]);
+    if (!widest) return fit;
     const { w } = tableView.layout;
-    const reach = Math.max(...[1, 3].map(pos => sidePlayReach((v.mine + pos) % 4, v)));
-    if (!reach) return PILL_W;
     const pills = v.lead || v.noBeat ? 2 : 3;
-    const free = w - 2 * (reach + 16) - ROW_HEX_W - pills * ROW_GAP_X;
-    return Math.max(PILL_MIN_W, Math.min(PILL_W, Math.floor(free / pills)));
+    const free = w - 2 * (widest + 16) - ROW_GEM_W - pills * ROW_GAP_X;
+    fit.pill = Math.max(PILL_MIN_W, Math.min(PILL_W, Math.floor(free / pills)));
+    if (fit.pill > PILL_MIN_W) return fit;
+    fit.gap = ROW_TIGHT_GAP_X;
+    const limit = (w - pills * (PILL_MIN_W + fit.gap) - ROW_GEM_W) / 2 - 16;
+    for (const pos of [1, 3]) {
+        const len = reach[pos] - SIDE_PLAY_INSET;
+        if (reach[pos] <= limit) continue;
+        const k = Math.max(SIDE_PLAY_MIN_SCALE, (limit - SIDE_PLAY_INSET) / len);
+        const bottom = SIDE_PLAY_TOP + PLAYED_H * (1 + k) / 2;
+        const y = SIDE_PLAY_INSET + len * k > limit ? Math.min(0, rowTop - 6 - bottom) : 0;
+        fit.sides[pos] = { k, y };
+    }
+    return fit;
+}
+
+// Bottom edge (design px) of what a slot shows, 0 when it is empty; the transient combo label
+// does not count.
+function slotContentBottom(pos) {
+    const slot = tableView.regions[`slot${pos}`];
+    let bottom = 0;
+    for (const el of slot.children) {
+        if (!el.classList.contains("gd-combo-label")) bottom = Math.max(bottom, el.offsetTop + el.offsetHeight);
+    }
+    return bottom && slot.offsetTop + bottom;
+}
+
+// Toasts sit over the felt centre. While my action row is up they go in the band between the
+// partner's play and the timer crown, else (phones, tall hands) just under the pills' 3D edge,
+// over the top of my hand: never on the partner's play, never on a pill. The toast is sized in
+// CSS px. (The pills span rowTop + 6 to rowTop + ACTION_ROW_H, the crown rises 22 above them.)
+function stageToastY(v, rowTop) {
+    if (!v.canAct) return 266;
+    const half = TOAST_HALF / tableView.layout.s;
+    const y = Math.min(266, rowTop - 20 - half);
+    return y - half >= (slotContentBottom(2) || PARTNER_PLAY_TOP) + 6 ? y : rowTop + ACTION_ROW_H + 10 + half;
 }
 
 // Selection survives ticks: it is only pruned to the cards still in hand, and dropped when a
@@ -2956,7 +3029,7 @@ function renderHand(columns, rowCards, geo, dealPhase) {
     const layoutIds = handMode === "row"
         ? rowCards.map(c => c.id).join(",")
         : columns.map(col => col.cards.map(c => c.id).join(",")).join("|");
-    const key = `${handMode}:${geo.cardW.toFixed(2)}:${geo.pitch.toFixed(2)}:${geo.step.toFixed(2)}:${dealPhase}:${uiLang}:${game.currentLevelRank}:${layoutIds}`;
+    const key = `${handMode}:${geo.cardW.toFixed(2)}:${geo.pitch.toFixed(2)}:${geo.steps.map(x => x.toFixed(2))}:${dealPhase}:${uiLang}:${game.currentLevelRank}:${layoutIds}`;
     if (tableView.keys.hand === key) return;
     tableView.keys.hand = key;
     host.style.setProperty("--card-w", `${geo.cardW.toFixed(2)}px`);
@@ -2996,6 +3069,7 @@ function renderHand(columns, rowCards, geo, dealPhase) {
             const colEl = document.createElement("div");
             colEl.className = col.group ? "gd-col is-group" : "gd-col";
             colEl.style.setProperty("--ci", ci);
+            if (geo.steps[ci] !== geo.step) colEl.style.setProperty("--step", `${geo.steps[ci]}px`);
             col.cards.forEach(card => {
                 const el = cardEl(card);
                 el.style.removeProperty("--ci");
@@ -3029,7 +3103,7 @@ function refreshSelectionUI() {
         playBtn.setAttribute("aria-disabled", String(off));
     }
     const clearBtn = document.getElementById("clear-btn");
-    if (clearBtn) clearBtn.classList.toggle("is-idle", !selected.size);
+    if (clearBtn) clearBtn.hidden = !selected.size;
 }
 
 function handInteractive() {
@@ -3213,12 +3287,14 @@ function onTableClick(event) {
             showToast(music.isOn() ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
             break;
         }
-        case "newroom": newRoomBtn.click(); return;
+        case "newroom":
+        case "exit":
+            renderTableChrome();
+            return leaveTable(act === "m-exit");
         case "result-peek":
         case "result-back":
             tableView.result.peek = act === "result-peek";
             return renderTable();
-        case "exit": startReturnToEvents(); return;
         case "lipai": return groupSelection();
         case "hengpai":
             handMode = handMode === "row" ? "col" : "row";
@@ -3228,6 +3304,23 @@ function onTableClick(event) {
         default: return;
     }
     renderTableChrome();
+}
+
+// ☰ 新桌 / 返回活动 while a round is on or its result is up: the seat would stay taken (its turns
+// time out) and a host takes the next round with them, so ask first. The typed "picasso" egg and
+// 返回大厅 after the match leave at once.
+async function leaveTable(toEvents) {
+    const live = mySeat() >= 0 && (game.phase === "playing" || game.phase === "roundOver");
+    if (live && !await confirmPopup({
+        title: L("Leave the game", "离开牌局"),
+        text: isHost()
+            ? L("You are the host: the game cannot go on without you.", "你是房主，离开后牌局将无法继续。")
+            : L("The game is still on. Leave anyway?", "牌局还在进行，确定离开吗？"),
+        ok: L("Leave", "离开"),
+        container: tableView.ui
+    })) return;
+    if (toEvents) startReturnToEvents();
+    else newRoomBtn.click();
 }
 
 // 理牌: selected cards become their own column; with nothing selected it restores the default.
@@ -3316,8 +3409,12 @@ function hudHTML(view) {
         const fails = level === "A" ? Number(game.aceFailures?.[team] || 0) : 0;
         return `<div class="gd-lvl ${cls}"><b>${label}</b><em>${rankGlyphHTML(level)}${fails ? `<small>${fails}/${ACE_FAIL_LIMIT}</small>` : ""}</em></div>`;
     };
+    // a spectator is on neither side: the tiles name the teams
+    const tiles = mySeat() < 0
+        ? tile(0, "is-t0", teamShortName(0)) + tile(1, "is-t1", teamShortName(1))
+        : tile(view % 2, "is-us", L("Us", "我方")) + tile(1 - view % 2, "is-them", L("Them", "对方"));
     return `<button class="gd-menu-btn" type="button" data-act="menu" aria-label="${L("Menu", "菜单")}" aria-expanded="${tableView.menuOpen}"><i></i><i></i><i></i></button>
-        <div class="gd-lvls">${tile(view % 2, "is-us", L("Us", "我方"))}${tile(1 - view % 2, "is-them", L("Them", "对方"))}</div>`;
+        <div class="gd-lvls">${tiles}</div>`;
 }
 
 function hudRightHTML() {
@@ -3361,8 +3458,8 @@ function seatFaceHTML(i, name) {
 }
 
 function clockHTML(kind) {
-    return kind === "hex"
-        ? `<div class="gd-hex" data-turn-clock><svg viewBox="0 0 100 112" aria-hidden="true"><use href="#gd-sym-hex"/></svg><b id="turn-clock"></b></div>`
+    return kind === "gem"
+        ? `<div class="gd-gem" data-turn-clock><svg viewBox="0 0 112 104" aria-hidden="true"><use href="#gd-sym-gem"/></svg><b id="turn-clock"></b></div>`
         : `<div class="gd-clock" data-turn-clock><svg viewBox="0 0 100 106" aria-hidden="true"><use href="#gd-sym-clock"/></svg><b id="turn-clock"></b></div>`;
 }
 
@@ -3376,17 +3473,18 @@ function renderSeat(i, v) {
     const count = (game.hands[i] || []).length;
     const place = finishedList(game).indexOf(i) + 1;
     const bottom = pos === 0;
-    const turn = v.liveTurn === i && !(bottom && v.mine >= 0);
+    const other = !bottom || v.mine < 0;    // a spectator's bottom seat is someone else's too
+    const turn = v.liveTurn === i && other;
     const el = tableView.seats[pos];
     el.className = `gd-seat is-p${pos} is-${relation.key}${turn ? " is-turn" : ""}${place ? " is-done" : ""}`;
     tableView.avatars[pos].className = `gd-av${relation.key === "opponent" ? " is-opp" : ""}`;
     setRegion(`face${pos}`, seatFaceHTML(i, name));
     // a finished seat's place is the ribbon at its play slot (renderSlot)
     let tag = "";
-    if (!place && !bottom && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
-    else if (!bottom) tag = `<span class="gd-av-tag">${relation.label}</span>`;
+    if (!place && other && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
+    else if (other) tag = `<span class="gd-av-tag">${v.mine < 0 ? teamShortName(i % 2) : relation.label}</span>`;
     // Tencent shows nothing above 10 cards; the exact count is a 记牌器 extra.
-    const chip = jipaiOpen && !bottom && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
+    const chip = jipaiOpen && other && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
     const first = v.leader === i ? `<span class="gd-first">${L("Lead", "首")}</span>` : "";
     setRegion(`deco${pos}`, tag + chip + first);
     const stat = seat?.type === "human" ? seatMemberStat(name) : "";
@@ -3477,10 +3575,13 @@ function playFlightSources(v, animate) {
 // FLIP: each played card starts at its source (in stage design px, so the rotated stage works too)
 // and settles into the slot in ~200 ms. Transform and opacity only. My cards lift out over the
 // hand (the slot rides above it until they land) instead of sliding out from under its columns.
-function runPlayFlights(flights, v) {
+// In a side slot drawn smaller (actionRowFit's sides) the card's transform is scaled with it.
+function runPlayFlights(flights, v, sides) {
     const centre = r => stagePoint(r.left + r.width / 2, r.top + r.height / 2);
     flights.forEach((src, i) => {
-        const slot = tableView.regions[`slot${visualSeatPos(i, v.mine)}`];
+        const pos = visualSeatPos(i, v.mine);
+        const slot = tableView.regions[`slot${pos}`];
+        const fitK = sides[pos]?.k || 1;
         const runs = [];
         slot.querySelectorAll(".gd-played .card").forEach((el, k) => {
             const from = src.rects ? src.rects.get(el.dataset.pid) : src.avatar;
@@ -3488,7 +3589,7 @@ function runPlayFlights(flights, v) {
             const a = centre(from);
             const b = centre(el.getBoundingClientRect());
             runs.push(el.animate([
-                { transform: `translate(${(a.x - b.x).toFixed(1)}px, ${(a.y - b.y).toFixed(1)}px) scale(${src.scale.toFixed(3)})`, opacity: src.rects ? 1 : 0 },
+                { transform: `translate(${((a.x - b.x) / fitK).toFixed(1)}px, ${((a.y - b.y) / fitK).toFixed(1)}px) scale(${(src.scale / fitK).toFixed(3)})`, opacity: src.rects ? 1 : 0 },
                 { transform: "none", opacity: 1 }
             ], { duration: 210, delay: src.rects ? 0 : k * 16, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" }).finished);
         });
@@ -3507,17 +3608,22 @@ function displayCardsForCombo(cards = [], combo = null) {
     return engineDisplayCardsForCombo(cards, combo, game?.currentLevelRank || "2");
 }
 
-// The seat that led the round's first trick (the 首 tag). Remembered from the opening lead; a
-// mid-round rejoin falls back to the first history entry while the history is not yet capped.
+// The seat that led the round's first trick (the 首 tag): the opening lead's seat, or on a
+// mid-round rejoin the first history entry while the capped history still reaches it, else what
+// this browser remembered for the deal (so a reload late in the round keeps the tag).
+const LEADER_STORE = "picasso.guandan.leader";
 function roundLeaderSeat() {
     const key = dealKey();
-    if (isOpeningLead(game)) {
-        tableView.leader = { key, seat: game.currentTurn };
-        return game.currentTurn;
-    }
-    if (tableView.leader.key === key) return tableView.leader.seat;
+    const known = tableView.leader;
+    if (known.key === key && !isOpeningLead(game)) return known.seat;
     const hist = valuesFromFirebase(game.history);
-    return hist.length && hist.length < 16 ? hist[0].player : -1;
+    const [storedKey, storedSeat] = (storageGet(LEADER_STORE) || "").split("|");
+    const seat = isOpeningLead(game) ? game.currentTurn
+        : hist.length && hist.length < 16 ? hist[0].player
+        : key && storedKey === key ? Number(storedSeat) : -1;
+    tableView.leader = { key, seat };
+    if (key && seat >= 0 && storedKey !== key) storageSet(LEADER_STORE, `${key}|${seat}`);
+    return seat;
 }
 
 function obviousPassNow(mine) {
@@ -3538,13 +3644,15 @@ function actionsHTML(v) {
     const hit = `<i class="gd-hit" aria-hidden="true"></i>`;
     const pass = v.lead ? "" : `<button class="btn ${v.noBeat ? "play" : v.passHint ? "play is-advised" : "pass"}${spaced}" id="pass-btn" type="button">${hit}${L("Pass", "不出")}</button>`;
     const hint = v.noBeat ? "" : `<button class="btn pass${spaced}" id="hint-btn" type="button">${hit}${L("Hint", "提示")}</button>`;
-    return `${pass}${clockHTML("hex")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${hit}${L("Play", "出牌")}</button>`;
+    return `${pass}${clockHTML("gem")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${hit}${L("Play", "出牌")}</button>`;
 }
 
+// Bottom-right pills (tg_ingame_classic): 理牌 and 横排, with 重选 in front of them only while cards
+// are selected (refreshSelectionUI); none once my hand is gone.
 function toolsHTML(v) {
-    if (v.mine < 0 || game.phase !== "playing") return "";
-    return `<button class="gd-tool is-idle" id="clear-btn" type="button">${L("Reset", "重选")}</button>
-        <button class="gd-tool" type="button" data-act="lipai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="m16 4 13 6.5-13 6.5L3 10.5Zm-9.2 11 9.2 4.6 9.2-4.6 3.8 1.9-13 6.5-13-6.5Zm0 6 9.2 4.6 9.2-4.6 3.8 1.9L16 29.4 3 22.9Z"/></svg>${L("Group", "理牌")}</button>
+    if (v.mine < 0 || game.phase !== "playing" || !(game.hands[v.mine] || []).length) return "";
+    return `<button class="gd-tool" id="clear-btn" type="button" hidden>${L("Clear", "重选")}</button>
+        <button class="gd-tool" type="button" data-act="lipai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="m16 4 13 6.5-13 6.5L3 10.5Zm-9.2 11 9.2 4.6 9.2-4.6 3.8 1.9-13 6.5-13-6.5Zm0 6 9.2 4.6 9.2-4.6 3.8 1.9L16 29.4 3 22.9Z"/></svg>${L("Sort", "理牌")}</button>
         <button class="gd-tool" type="button" data-act="hengpai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="${handMode === "row" ? "M4 5h24v6H4Zm0 8h24v6H4Zm0 8h24v6H4Z" : "M5 4h6v24H5Zm8 0h6v24h-6Zm8 0h6v24h-6Z"}"/></svg>${handMode === "row" ? L("Columns", "竖排") : L("Row", "横排")}</button>`;
 }
 
@@ -3660,14 +3768,30 @@ function introHTML(v) {
 }
 
 // Round/system messages become short toasts (plays and passes are already visible at the seats).
+// A turn that ran out is always said, once, from the history (so also when that pass collected
+// the trick and the message moved on): 超时，自动不出 / 超时，自动出 ♠3, with the seat's name
+// unless it was mine.
 function maybeToastTableMessage() {
     const msg = game.message || "";
     const key = `${game.roomCode}:${game.roundNo}:${msg}`;
     const first = tableView.lastMessage === null;
     if (key === tableView.lastMessage) return;
     tableView.lastMessage = key;
+    const last = valuesFromFirebase(game.history).filter(h => h.actionType !== "finish").pop();
+    const timeout = last?.timedOut ? `timeout:${last.player}:${last.at}` : "";
+    const freshTimeout = !!timeout && !tableView.seenPlays.has(timeout);
+    if (timeout) tableView.seenPlays.add(timeout);
     if (first && !dealWindowOpen(game)) return;
-    if (game.phase !== "playing" || !msg || /出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局(开始| · )/.test(msg)) return;
+    if (game.phase !== "playing" || !msg) return;
+    if (freshTimeout) {
+        const card = valuesFromFirebase(last.cards)[0];
+        const zh = card ? `超时，自动出 ${cardText(card, "zh")}` : "超时，自动不出";
+        const en = card ? `timed out: played ${cardText(card, "en")}` : "timed out: passed";
+        if (last.player === mySeat()) return showToast(L(`${en[0].toUpperCase()}${en.slice(1)}`, zh), 2600);
+        const who = displaySeatName(game.seats[last.player]);
+        return showToast(L(`${who} ${en}`, `${who} ${zh}`), 2600);
+    }
+    if (/超时|出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局(开始| · )/.test(msg)) return;
     showToast(displayMessage(msg), 2600);
 }
 
@@ -3702,20 +3826,32 @@ function renderTable() {
     t.stage.style.setProperty("--hand-h", `${handH.toFixed(1)}px`);
     t.stage.style.setProperty("--actions-bottom", `${actionsBottom.toFixed(1)}px`);
     const rowTop = t.layout.h - actionsBottom - ACTION_ROW_H;
-    t.stage.style.setProperty("--pill-w", `${actionPillWidth(v, rowTop)}px`);
-    // toasts sit over the felt centre, or just above the action row while it is up
-    t.rot.style.setProperty("--toast-y", `${v.canAct ? Math.max(150, Math.min(266, rowTop - 46)) : 266}px`);
     t.stage.classList.toggle("is-acting", v.canAct);
 
     renderTableChrome();
     setRegion("watermark", `<b>${L("PICASSO Guandan", "PICASSO 掼蛋")}</b><span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span>`);
     const flights = playFlightSources(v, !freshMount);
     const bursts = [];
+    const sideKeys = { 1: t.keys.slot1, 3: t.keys.slot3 };
     [0, 1, 2, 3].forEach(i => {
         renderSeat(i, v);
         renderSlot(i, v, !freshMount, flights, bursts);
     });
     renderHand(columns, handMode === "row" && mine >= 0 ? orderedHandForDisplay(handCards, game.currentLevelRank, mine) : [], geo, dealPhase);
+    // the action row and the toast make room around the plays just rendered
+    const fit = actionRowFit(v, rowTop);
+    t.stage.style.setProperty("--pill-w", `${fit.pill}px`);
+    t.stage.style.setProperty("--row-gap", `${fit.gap}px`);
+    [1, 3].forEach(pos => {
+        const slot = t.regions[`slot${pos}`];
+        const side = fit.sides[pos];
+        slot.style.setProperty("--fit-k", side ? side.k.toFixed(3) : "1");
+        slot.style.setProperty("--fit-y", `${side ? side.y.toFixed(1) : 0}px`);
+        // a play that just landed takes its fit at once, so its flight and burst aim where it is
+        // drawn; the ease is for a fit that changes under a play already there
+        if (t.keys[`slot${pos}`] !== sideKeys[pos]) slot.getAnimations().forEach(a => a.finish());
+    });
+    t.rot.style.setProperty("--toast-y", `${stageToastY(v, rowTop).toFixed(1)}px`);
     setRegion("tools", toolsHTML(v));
     setRegion("spectate", mine < 0 ? `<span>${L("Spectating", "观战中")}</span>` : "");
     setRegion("actions", `${v.canAct}:${v.lead}:${v.noBeat}:${v.passHint}:${uiLang}`, () => actionsHTML(v));
@@ -3733,7 +3869,7 @@ function renderTable() {
     setRegion("result", resultId ? `${resultId}:${uiLang}:${isHost()}:${t.result.peek}` : "", resultId ? () => resultHTML(v) : "");
     refreshSelectionUI();
     updateTurnClockDOM();
-    runPlayFlights(flights, v);
+    runPlayFlights(flights, v, fit.sides);
     runBursts(bursts);
     maybeToastTableMessage();
 }
