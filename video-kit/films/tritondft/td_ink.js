@@ -49,21 +49,6 @@ export function inkOverlay(W, ctx, brush) {
   const headW = wp(W, hoot.head, [0, 0.35, 0.1]), hu = pxu(W, ctx, headW), hp = prj(W, ctx, headW);
   // zzz over the sleeping owl (start and end of the loop)
   if ((F < K.bubble[0] + 2 || F >= K.flop[0] + 4) && hp.front) zzz(brush, hp.x + 0.2 * hu, hp.y - 0.05 * hu, hu * 0.16, F, r);
-  // the idea bubble: a lattice doodle + '?'
-  if (win(F, K.bubble[0], K.bubble[1])) {
-    const k = ob((F - K.bubble[0]) / 6) * (1 - sm((F - K.bubble[1] + 4) / 4));
-    const c = prj(W, ctx, wp(W, hoot.head, [0.5, 0.62, 0])), s = 0.3 * hu * k;
-    if (s > 3) {
-      brush.noStroke(); brush.fill(PAL.cream, 255); brush.fillBleed(0.01); brush.fillTexture(0.1, 0.1);
-      const pts = []; for (let q = 0; q < 14; q++) { const a = q / 14 * TAU, rr = s * (1 + 0.12 * Math.sin(q * 3.7)); pts.push([c.x + Math.cos(a) * rr * 1.3, c.y + Math.sin(a) * rr]); }
-      brush.polygon(pts); brush.polygon(pts); brush.noFill();
-      brush.set('bigink', ink, 1.2); brush.beginShape(0.5); pts.forEach(([a, b]) => brush.vertex(a, b)); brush.endShape(true);
-      for (const [dx, dy, rr] of [[-0.9, 1.25, 0.18], [-1.25, 1.7, 0.1]]) { brush.noStroke(); brush.fill(PAL.cream, 255); brush.circle(c.x + dx * s, c.y + dy * s, rr * s, 0.1); brush.noFill(); brush.set('inkpen', ink, 1.1); brush.circle(c.x + dx * s, c.y + dy * s, rr * s, 0.1); }
-      const q = s * 0.35, x0 = c.x - s * 0.75, y0 = c.y - s * 0.1;
-      brush.set('inkpen', ink, 1.2); brush.rect(x0, y0 - q * 0.2, q, q); brush.rect(x0 + q * 0.4, y0 - q * 0.6, q, q);
-      brush.set('bigink', PAL.pop, 1.6); brush.spline([[c.x + s * 0.35, c.y - s * 0.35], [c.x + s * 0.6, c.y - s * 0.55], [c.x + s * 0.8, c.y - s * 0.3], [c.x + s * 0.58, c.y - s * 0.02], [c.x + s * 0.57, c.y + s * 0.2]], 0.4); brush.line(c.x + s * 0.57, c.y + s * 0.38, c.x + s * 0.58, c.y + s * 0.45);
-    }
-  }
   // scribbling the card
   if (win(F, K.write[0], K.write[1]) && F % 4 < 2) { const c = prj(W, ctx, [L.desk.x + 0.05, 0.03, L.desk.z - 0.2]); brush.set('inkpen', ink, 1.0); brush.line(c.x - 10, c.y - 30 - (F % 8), c.x + 14, c.y - 34 - (F % 6)); }
   // the tube: gulp puff at the mouth; motion lines on the travelling bulge (both ways)
@@ -262,5 +247,29 @@ export function lettering(W, ctx, g) {
     g.fillStyle = 'rgba(11,53,88,0.13)'; for (const [dx, dy, r] of lobes.slice(0, 3)) { g.beginPath(); g.arc(c.x + dx * s + r * s * 0.26, c.y + dy * s + r * s * 0.28, r * s * 0.26, 0, TAU); g.fill(); }
     g.restore();
   });
+  // the idea: an opaque cream thought bubble (normal blend) right of Hoot's head, below the TRITONDFT plate, holding a
+  // silicon cube doodle, two band bars and a vermilion '?'
+  if (win(F, K.bubble[0], K.bubble[1])) {
+    const k = ob((F - K.bubble[0]) / 6) * (1 - sm((F - K.bubble[1] + 4) / 4));
+    const c0 = prj(W, ctx, wp(W, hoot.head, [0.62, 0.12, 0])), s = 0.26 * hu * k, c = { x: c0.x, y: Math.max(c0.y, 330 + s) };
+    if (s > 4 && c0.front) {
+      g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
+      const blob = () => { g.beginPath(); for (let q = 0; q <= 14; q++) { const a = q / 14 * TAU, rr = s * (1 + 0.1 * Math.sin(q * 3.7)); const x = c.x + Math.cos(a) * rr * 1.35, y = c.y + Math.sin(a) * rr; q ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
+      g.fillStyle = PAL.ink; g.save(); g.translate(s * 0.06, s * 0.07); blob(); g.fill(); g.restore();
+      g.lineWidth = Math.max(3, s * 0.07); g.strokeStyle = PAL.ink; blob(); g.stroke(); g.fillStyle = PAL.cream; blob(); g.fill();
+      for (const [dx, dy, rr] of [[-1.05, 0.95, 0.2], [-1.4, 1.35, 0.11]]) { g.beginPath(); g.arc(c.x + dx * s, c.y + dy * s, rr * s, 0, TAU); g.fillStyle = PAL.cream; g.fill(); g.lineWidth = Math.max(2, s * 0.05); g.stroke(); }
+      const q = s * 0.42, x0 = c.x - s * 0.95, y0 = c.y - s * 0.05;
+      g.strokeStyle = PAL.ink; g.lineWidth = Math.max(2, s * 0.045);
+      g.strokeRect(x0, y0 - q * 0.2, q, q); g.strokeRect(x0 + q * 0.4, y0 - q * 0.6, q, q);
+      for (const [a0, b0] of [[0, 0], [q, 0], [0, q], [q, q]]) { g.beginPath(); g.moveTo(x0 + a0, y0 - q * 0.2 + b0); g.lineTo(x0 + a0 + q * 0.4, y0 - q * 0.6 + b0); g.stroke(); }
+      g.lineWidth = Math.max(3, s * 0.08);
+      g.strokeStyle = PAL.pop; g.beginPath(); g.moveTo(c.x - s * 0.05, c.y - s * 0.32); g.lineTo(c.x + s * 0.3, c.y - s * 0.32); g.stroke();
+      g.strokeStyle = PAL.sky; g.beginPath(); g.moveTo(c.x - s * 0.05, c.y + s * 0.3); g.lineTo(c.x + s * 0.3, c.y + s * 0.3); g.stroke();
+      g.strokeStyle = PAL.pop; g.lineWidth = Math.max(4, s * 0.11);
+      g.beginPath(); g.moveTo(c.x + s * 0.55, c.y - s * 0.3); g.quadraticCurveTo(c.x + s * 0.8, c.y - s * 0.62, c.x + s * 1.0, c.y - s * 0.3); g.quadraticCurveTo(c.x + s * 1.05, c.y - s * 0.05, c.x + s * 0.8, c.y + s * 0.05); g.lineTo(c.x + s * 0.8, c.y + s * 0.18); g.stroke();
+      g.fillStyle = PAL.pop; g.beginPath(); g.arc(c.x + s * 0.8, c.y + s * 0.4, s * 0.07, 0, TAU); g.fill();
+      g.restore();
+    }
+  }
   iris(W, ctx, g, F, jr);
 }
