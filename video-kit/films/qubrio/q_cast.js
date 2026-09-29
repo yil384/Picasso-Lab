@@ -203,7 +203,7 @@ export function buildLoco(add, scene, { scale = 1 } = {}) {
   add(new THREE.BoxGeometry(0.58, 0.64, 0.72), { ...teal, hatchMode: 'planar', hatchDir: [0, 1, 0] }, { outline: 1.1 }, [-0.5, 0.64, 0], [0, 0, 0], B);
   // cab windows (cream insets) + nameplate board on the cab side (lettered in 2D)
   for (const z of [-0.365, 0.365]) add(new THREE.BoxGeometry(0.3, 0.22, 0.01), { color: 0xfff3dc, flat: 0.4, hatch: 0 }, { outline: 0.5, cast: false }, [-0.5, 0.78, z], [0, 0, 0], B);
-  L.names = [0.366, -0.366].map((zz) => add(new THREE.BoxGeometry(0.5, 0.2, 0.012), { color: 0xe6ad42, hatch: 0.2, toneBias: 0.2, spec: 0 }, { outline: 0.55, cast: false }, [-0.5, 0.44, zz], [0, 0, 0], B));
+  L.names = [0.37, -0.37].map((zz) => add(new THREE.BoxGeometry(0.68, 0.27, 0.014), { color: 0xf2c14a, hatch: 0, flat: 0.6, toneBias: 0.3, spec: 0 }, { outline: 0.8, cast: false }, [-0.5, 0.46, zz], [0, 0, 0], B));   // big ochre plates: the film's only title
   add(new THREE.BoxGeometry(0.78, 0.09, 0.88), { color: 0xf2a922, hatchDir: [1, 0, 0] }, { outline: 1 }, [-0.5, 1.0, 0], [0, 0, 0], B);
   add(cyl(0.045, 0.045, 0.16, 14), brass, { outline: 0.6 }, [-0.3, 1.12, 0], [0, 0, 0], B);
   L.whistleTip = new THREE.Object3D(); L.whistleTip.position.set(-0.3, 1.22, 0); B.add(L.whistleTip);
@@ -221,7 +221,10 @@ export function buildLoco(add, scene, { scale = 1 } = {}) {
   // steam puffs: a small pool of three-ball clouds
   L.puffs = [];
   // one merged three-ball cloud; all puffs share one matte surface (round, clean, no crack-like hatching)
-  const puffGeo = mergeGeometries([[0, 0, 1], [0.75, -0.2, 0.7], [-0.7, -0.25, 0.62]].map(([dx, dy, s0]) => new THREE.SphereGeometry(s0, 20, 14).translate(dx, dy, 0)));
+  const puffGeo = new THREE.SphereGeometry(1, 36, 20);   // one smooth 3-lobe cloud (no sphere seams for the ink to crease on)
+  { const pp = puffGeo.attributes.position; for (let i = 0; i < pp.count; i++) { const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i), a = Math.atan2(y, x);
+      const r = 1 + 0.16 * Math.cos(3 * a + 0.5) * (1 - Math.abs(z)); pp.setXYZ(i, x * r * 1.35, y * r * 0.85 - 0.08 * (y < 0 ? 1 : 0), z * r * 0.8); }
+    puffGeo.computeVertexNormals(); }
   let puffMat = null;
   for (let k = 0; k < 8; k++) {
     const g = new THREE.Group(); g.visible = false; scene.add(g);
@@ -310,7 +313,7 @@ export function buildGauge(add, npr, scene, { hPM = 1.0, x = 0, z = 0, yaw = 0 }
   const brass = { color: 0xe6ad42, hatchMode: 'u', spec: 0.2, rim: 0.8 };
   add(new THREE.BoxGeometry(1.2, 0.16, 0.62), brass, { outline: 1.0 }, [0, 0.08, 0], [0, 0, 0], G.group);
   const colGeo = cyl(0.15, 0.15, 1, 24); colGeo.translate(0, 0.5, 0);
-  const wallGeo = cyl(0.23, 0.23, 1.55, 32, true); wallGeo.translate(0, 0.775, 0);
+  const wallGeo = cyl(0.23, 0.23, 1.75, 32, true); wallGeo.translate(0, 0.775 - 0.2, 0);   // the glass reaches down into the bulb
   let wallMat = null;
   const tube = (dx, col, shade) => {
     add(new THREE.SphereGeometry(0.24, 28, 18), { color: col, rim: 1, spec: 0, shadeColor: shade, shadeMix: 0.3 }, { outline: 1.0 }, [dx, 0.36, 0], [0, 0, 0], G.group);

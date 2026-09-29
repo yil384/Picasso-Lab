@@ -423,7 +423,8 @@ void main() {
   vec4 P;
   if (dot(uSmear, uSmear) > .25) {
     P = vec4(0.);
-    for (int i = 0; i < 25; i++) P += textureLod(tPaint, uvP + uSmear * px * (float(i) / 24. - .5), 0.);
+    float jit = fract(sin(dot(fc, vec2(12.9898, 78.233))) * 43758.5453) - .5;   // per-pixel tap jitter: no comb ribbing
+    for (int i = 0; i < 25; i++) P += textureLod(tPaint, uvP + uSmear * px * ((float(i) + jit) / 24. - .5), 0.);
     P /= 25.;
   } else {
     P = paintAt(uvP, coc * L_dofMax * uS);
@@ -497,7 +498,7 @@ void main() {
   float ink = edge * (1. - dry) * focusK * L_inkA;
   float hatch = max(A0.r, A0.g) * focusK * L_hatchA * (1. - dry * .6) * (1. - L_hatchFar * farK);
   // in a whip the lines smear away with the paint (crisp lines over a smeared fill read as a double exposure)
-  float whipK = 1. - .9 * clamp((length(uSmear) - 6. * uS) / (30. * uS), 0., 1.);
+  float whipK = 1. - clamp((length(uSmear) - 6. * uS) / (22. * uS), 0., 1.);
   ink *= whipK; hatch *= whipK;
   vec3 inkCol = mix(L_ink, P.rgb * P.rgb * .55, L_selfInk * P.a);
   vec3 hatchCol = mix(L_hatchInk, P.rgb * .5, L_selfInk * P.a);

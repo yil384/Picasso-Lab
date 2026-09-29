@@ -129,13 +129,41 @@ export async function build(ctx, { renderer }, Q) {
   W.tick = buildWatch(add, scene, { R: 0.66 });
   W.pennant = buildPennant(add, W.tick);
   W.slate = buildSlate(add, W.tick);
+  // the payoff hit: a comic sunburst (flat ochre ray fan) behind Tick's dial, springs out with the 4.7x flag
+  {
+    const pts = []; const N = 18, R0 = 0.9, R1 = 2.6;
+    for (let i = 0; i < N * 2; i++) { const a = i / (N * 2) * TAU, r = i % 2 ? R0 : R1 * (0.85 + 0.15 * ((i * 7) % 5) / 4); pts.push(new THREE.Vector2(Math.cos(a) * r, Math.sin(a) * r)); }
+    const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));
+    W.burst = add(geo, { color: 0xf5b73a, flat: 0.85, hatch: 0, halftone: 0.6, spec: 0, rim: 0, receive: false }, { outline: 1.1, cast: false }, [0, 0, -0.35], [0, 0, 0], W.tick.body);
+    W.burst.visible = false;
+  }
   W.gauge = buildGauge(add, npr, scene, { hPM: 1.0, x: T.GAUGE.x, z: T.GAUGE.z, yaw: T.GAUGE.yaw });
   W.rook = buildLoco(add, scene, { scale: 0.9 });
   W.pencil = buildPencil(add, scene);
   W.loupe = buildLoupe(add, npr, scene, { scale: 1.0 });
   W.slo = buildSnail(add, scene, { scale: 1.35, atomGeo, atomMat: () => W.pmMat });
+  // PowerMove's sign: a 3D paper flag on a pole stuck in Slo's shell (lit, inked, halftoned, depth-tested). The cloth
+  // hangs from a pivot that turns to face the camera (a sign held up for us), so the word never goes edge-on.
+  {
+    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 220;
+    const cg = cv.getContext('2d'); cg.fillStyle = '#ffffff'; cg.fillRect(0, 0, 1024, 220);
+    brushWord(cg, 'POWERMOVE', 512, 118, 118, { fill: '#6b5a8e', key: 0.06, shadow: [0, 0], weight: 0.24, gap: 0.08, fan: 0, jiggle: 0.06, bounce: 0.04, rot: -0.02, chisel: true, skew: -0.12, sizeVar: 0.04 });
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.NoColorSpace;
+    W.pmSign = { pivot: new THREE.Group(), pole: null, cloth: null };
+    scene.add(W.pmSign.pivot);
+    const poleGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.8, 8); poleGeo.translate(0, 0.4, 0);
+    W.pmSign.pole = add(poleGeo, { color: 0x6b5a8e, hatchMode: 'u' }, { outline: 0.6, cast: false }, [0, 0, 0], [0, 0, 0], W.slo.shellG);
+    W.pmSign.pole.position.set(-0.05, 0.1, 0);
+    const clothGeo = new THREE.PlaneGeometry(0.9, 0.2, 14, 3); clothGeo.translate(-0.45, -0.1, 0);
+    W.pmSign.base = clothGeo.attributes.position.array.slice();
+    // the cloth hangs to the LEFT of the pole (x < 0): flip u so the word reads left-to-right from the tip
+    const uv = clothGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i));
+    W.pmSign.uv0 = uv.array.slice();
+    W.pmSign.cloth = add(clothGeo, { color: 0xeee6f4, map: tex, flat: 0.45, hatch: 0.25, halftone: 0.5, rim: 0.3, side: THREE.DoubleSide, spec: 0 }, { outline: 1.0, cast: false }, [0, 0, 0], [0, 0, 0], W.pmSign.pivot);
+    W.pmSign.cloth.frustumCulled = false;
+  }
 
-  const occ = new Set(W.atoms);
+  const occ = new Set(W.atoms); occ.add(W.pmSign.cloth);
   for (const g of [W.pip.group, W.pip.legN, W.pip.legP, W.tick.group, W.slo.group, W.rook.group, W.loupe.group, W.gauge.group, W.pennant.group]) g.traverse((o) => { if (o.isMesh && !o.name.endsWith(':hull')) occ.add(o); });
   W.occluders = [...occ];
   console.log("npr surface ids used:", npr.idsUsed());
@@ -207,7 +235,7 @@ export function update(ctx, W, st, Q) {
   const pl = T.planState(F);
   W.plan1.forEach((ar, i) => { const k = T.routeK(i, F, 1); reveal(ar.body, k); ar.barbs.forEach((b) => reveal(b, k >= 0.98 ? 1 : 0)); });
   W.plan2.forEach((ar, i) => { if (!ar) return; const k = T.routeK(i, F, 2); reveal(ar.body, k); ar.barbs.forEach((b) => reveal(b, k >= 0.98 ? 1 : 0)); });
-  reveal(W.inkRing, pl && pl.flag >= 6 ? sg(pl.flag, 6, 12) * (1 - sg(F, K.erase[1], K.erase[1] + 4)) : 0);
+  reveal(W.inkRing, pl && pl.flag >= 6 && F < K.plan2[1] + 2 ? sg(pl.flag, 6, 12) : 0);
   // ghosts
   const gs = T.ghostState(F);
   st.ghosts = gs;
@@ -241,6 +269,8 @@ export function update(ctx, W, st, Q) {
   poseWatch(W.tick, { x: T.TICK.x, z: T.TICK.z, y: ts.y, yaw: ts.yaw, sq: ts.sq, rock: ts.rock, armL: ts.armL, armR: ts.armR, hand: ts.hand, ghost: ts.ghost, crown: ts.crown, bow: ts.bow });
   const pk = F >= K.flagUp && F < T.CUT ? backOut(clamp((F - K.flagUp) / 5)) : 0;   // CLICK at the lap, a beat, then the flag snaps up
   posePennant(W.pennant, pk, sm((F - K.flagUp) / 4), F * 0.35);
+  { const a = F - K.flagUp + 1, bk = F >= K.flagUp - 1 && F < T.CUT ? backOut(clamp(a / 4)) * (0.5 + 0.55 * Math.exp(-Math.max(0, a - 3) / 7)) : 0;   // pops big, settles to a halo
+    W.burst.visible = bk > 0.02; W.burst.scale.setScalar(Math.max(0.01, bk)); W.burst.rotation.z = a * 0.01; }
   poseGauge(W.gauge, ts.fid);
   st.slate = T.slateState(F);
   W.slate.group.visible = !!st.slate && st.slate.vis > 0.02;
@@ -248,7 +278,27 @@ export function update(ctx, W, st, Q) {
   { const gk = F >= K.tickWake + 4 && F < T.CUT ? ob((F - K.tickWake - 4) / 8) : 0; W.gauge.group.visible = gk > 0.01; W.gauge.group.scale.setScalar(Math.max(0.01, gk)); }
   const ss = T.sloState(F);
   poseSnail(W.slo, { x: ss.x, z: ss.z, yaw: ss.yaw, lean: ss.lean, st: ss.st, sq: ss.sq, sway: ss.sway, stalk: ss.stalk });
-  const sloOn = F >= K.whipG[0] && F < T.CUT;   // PowerMove's crew only shows up for the race (no clutter in S1-S4)
+  const sloOn = F >= K.aodOn[0] && F < T.CUT;   // PowerMove's crew only shows up for the race (no clutter in S1-S4)
+  {   // PowerMove's sign: springs up on Tick's CLICK, faces the camera, droops (still legible) when the lap closes
+    const S = W.pmSign, up = F < T.CUT ? backOut(clamp((F - K.click + 1) / 6)) : 0, droop = F < T.CUT ? sm(clamp((F - K.lap - 1) / 8)) : 0;
+    const inPulse = F >= K.whip2[0] + 5 && F < K.whip3[0] + 6;   // not in the pulse shot (cut under the whips)
+    S.pole.visible = sloOn && up > 0.02 && !inPulse; S.pole.scale.set(1, Math.max(0.01, up) * (1 - 0.12 * droop), 1); S.pole.rotation.z = 0.3 * droop;
+    W.slo.group.updateMatrixWorld(true);
+    const tip = S.pole.localToWorld(V3(0, 0.8, 0));
+    S.pivot.visible = S.pole.visible; S.pivot.position.copy(tip);
+    const cp = W.camera.position, sx = (cp.x - tip.x), sz = (cp.z - tip.z);
+    const onRight = (ss.x - T.SLO.xA) / (T.SLO.xB - T.SLO.xA) < 0.5 ? -1 : 1;   // fly toward frame centre
+    S.pivot.rotation.set(0, Math.atan2(sx, sz), 0);
+    S.cloth.scale.set(onRight, 1, 1); S.cloth.material.side = THREE.DoubleSide;   // (the baked word stays readable: see the uv flip below)
+    S.cloth.geometry.attributes.uv.array.forEach((v, i, arr) => { if (i % 2 === 0) arr[i] = onRight > 0 ? S.uv0[i] : 1 - S.uv0[i]; }); S.cloth.geometry.attributes.uv.needsUpdate = true;
+    const k = Math.max(0.01, clamp(up * 1.1)), pos = S.cloth.geometry.attributes.position, bs = S.base;
+    for (let i = 0; i < pos.count; i++) {
+      const x = bs[i * 3], y = bs[i * 3 + 1], u = -x / 0.9;
+      const wave = Math.sin(u * 6 - F * 0.3) * 0.04 * u * (1 - droop);
+      pos.setXYZ(i, x * k * (1 - 0.08 * droop), y * k - droop * u * 0.16 - droop * u * u * 0.06, wave);
+    }
+    pos.needsUpdate = true; S.cloth.geometry.computeVertexNormals();
+  }
   W.slo.group.visible = sloOn;
   W.slo.cargo.forEach((m) => { m.visible = sloOn && ss.loaded; });
   const pileLeft = ss.leg < 0 ? 4 : Math.max(0, 4 - 2 * Math.floor((ss.leg + 1) / 2));
@@ -313,15 +363,14 @@ export function drawNPR(ctx, W, st, Q) {
   npr.focusOn(camera, V3(...st.rig.tg), 3.4);
   const ahead = (p) => st.v.ahead(p, 1.0);
   const ak = T.aodK(F);
-  if (ak > 0.02) { const s = st.atomS[P.MOVERS[1].i]; npr.pointLight(V3(s.x, 0.6, s.z), { color: 0xffb020, radius: 2.6, i: 0.45 * ak }); }
   const zc = V3((P.ZONE.x0 + P.ZONE.x1) / 2, 0.45, (P.ZONE.z0 + P.ZONE.z1) / 2);
   npr.pointLight(zc, { color: 0x9a6ae0, radius: 3.4, i: 0.14 });
   // the global Rydberg pulse: ONE hard-edged flood of the whole zone rectangle from the objective; storage stays dark
   const tip = W.set.OBJ_TIP, za = F - K.zap;
   if (za >= 0 && za < 30) {
-    const k = za < 6 ? 1 : Math.exp(-(za - 6) / 8);
+    const k = za < 10 ? 1 : Math.exp(-(za - 10) / 10);   // the flood holds, then ebbs
     const rect = [P.ZONE.x0, P.ZONE.x1, P.ZONE.z0, P.ZONE.z1];
-    npr.volume({ apex: [tip[0], tip[1] - 0.05, tip[2]], rect, Ty: 0, color: FLOOD, i: 0.75 * k, density: 0.6, shadowed: true, seed: 2 });
+    npr.volume({ apex: [tip[0], tip[1] - 0.05, tip[2]], rect, Ty: 0, color: FLOOD, i: 0.85 * k, density: 0.75, shadowed: true, seed: 2 });
     npr.setProjector({ apex: [tip[0], tip[1], tip[2]], rect, Ty: 0, soft: 0.05, amount: 0.85 * k, point: 0.75, tint: [1.3, 1.55, 1.3], tintAmt: k });   // lighter violet toward lilac (never pink)   // the zone is the brightest thing on screen
     npr.pointLight(zc, { color: FLOOD, radius: 3.6, i: 0.9 * k });
     if (za < 22) { const c = ctx.project(zc, camera); npr.focusLines({ x: c.x, y: c.y, r0: 420, amount: 0.9 * (1 - za / 22), count: 120, width: 1.3, seed: 3 }); }
@@ -333,7 +382,7 @@ export function drawNPR(ctx, W, st, Q) {
   if (cz >= 0 && cz < 7) { const c = ctx.project(V3(T.CROSS_AT[0], 0.5, T.CROSS_AT[1]), camera); npr.focusLines({ x: c.x, y: c.y, r0: 260, amount: 0.9 * Math.sin(Math.PI * (cz + 1) / 8), count: 120, width: 1.6, seed: 12 }); }
   const wa = F - K.whistle;
   if (wa >= 0 && wa < 14) { const c = ctx.project(V3(T.CROSS_AT[0], 0, T.CROSS_AT[1]), camera); npr.focusLines({ x: c.x, y: c.y, r0: 300, amount: 0.8 * (1 - wa / 14), count: 100, width: 1.2, seed: 9 }); }
-  for (const c0 of [K.click, K.pulseClick, K.lap]) if (F >= c0 && F < c0 + 3) { const w = W.tick.crown.getWorldPosition(V3(0, 0, 0)); if (ahead(w)) npr.glowAt(ctx, camera, w, { radius: 0.16, i: 1, color: 0xffe066, rays: 1, rayLen: 0.42, rayCount: 10, seed: 8 }); }
+  for (const c0 of [K.click, K.pulseClick, K.lap]) if (F >= c0 && F < c0 + 3) { const w = W.tick.crown.getWorldPosition(V3(0, 0, 0)); if (ahead(w)) npr.glowAt(ctx, camera, w, { radius: 0.1, i: 1, color: 0xf2a922, rays: 1, rayLen: 0.75, rayCount: 16, seed: 8 }); }
   if (F >= K.lap && F < T.CUT) {
     npr.pointLight(V3(T.TICK.x - 0.4, 2.4, T.TICK.z + 1.2), { color: 0xffc23d, radius: 2.8, i: 0.5 * sm((F - K.lap) / 8) });
     const fa = F - K.flagUp;
@@ -376,8 +425,9 @@ function postInk(g, st, F) {
   g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
   if (imp) { g.filter = za === 0 ? 'grayscale(1) contrast(40) brightness(0.3)' : 'grayscale(1) contrast(40) invert(1)'; g.drawImage(_tmp, 0, 0); g.filter = 'none'; }
   else {
-    // many faint copies (a blur, not a strobe), and the lines fade with the pan speed like the 3D ink does
-    const S = cv.width / 1920, N = 17, fade = 1 - 0.85 * clamp((sm - 6) / 30);
+    // many faint copies (a blur, not a strobe); the 2D ink is gone at peak pan speed (no double exposure of two shots)
+    const S = cv.width / 1920, N = 17, fade = 1 - clamp((sm - 6) / 22);
+    if (fade < 0.02) { g.restore(); return; }
     const tg2 = _tmp.getContext('2d'); tg2.globalCompositeOperation = 'destination-in'; tg2.fillStyle = `rgba(0,0,0,${fade})`; tg2.fillRect(0, 0, cv.width, cv.height); tg2.globalCompositeOperation = 'source-over';
     for (let i = 0; i < N; i++) { const t = i / (N - 1) - 0.5; g.globalAlpha = 1 / (i + 1); g.drawImage(_tmp, sx * S * t, sy * S * t); }
   }
@@ -450,13 +500,15 @@ export function inkLayer(ctx, g, W, st, Q) {
     }
   }
   // at the flag: the two AOD columns of the bad plan drawn scissoring into an X at the exact point (columns may not cross)
-  if (F >= K.whistle + 2 && F < K.erase[0] + 2 && F < T.CUT) {
-    const k = sm((F - K.whistle - 2) / 5) * (1 - sm((F - K.erase[0] + 2) / 4)), pb = T.CROSS_AT[2];
+  if (F >= K.whistle + 2 && F < K.erase[1] && F < T.CUT) {
+    const k = sm((F - K.whistle - 2) / 3), pb = T.CROSS_AT[2];
+    const rubbed = clamp((F - K.erase[0]) / (K.erase[1] - K.erase[0] - 2));   // the eraser eats them from the ends in
     P.MOVERS.forEach((m, i) => {
       if (!T.WRONG[i]) return;
       const q0 = T.planPath(m, Math.max(0, pb - 0.12), true), q1 = T.planPath(m, Math.min(1, pb + 0.12), true);
       const dx = q1[0] - q0[0], dz = q1[1] - q0[1], d = Math.hypot(dx, dz) || 1, L = 0.95;
-      const A3 = V3(T.CROSS_AT[0] - dx / d * L, 0.03, T.CROSS_AT[1] - dz / d * L), B3 = V3(T.CROSS_AT[0] + dx / d * L, 0.03, T.CROSS_AT[1] + dz / d * L);
+      const Lr = L * (1 - rubbed); if (Lr < 0.05) return;
+      const A3 = V3(T.CROSS_AT[0] - dx / d * Lr, 0.03, T.CROSS_AT[1] - dz / d * Lr), B3 = V3(T.CROSS_AT[0] + dx / d * Lr, 0.03, T.CROSS_AT[1] + dz / d * Lr);
       if (!v.ahead(A3) || !v.ahead(B3)) return;
       const a2 = P2(A3), b2 = P2(B3), w = Math.max(5, v.pxu(A3) * 0.09);
       g.save(); g.globalAlpha = k; g.setLineDash([w * 2.2, w * 1.4]); g.lineCap = 'butt';
@@ -466,7 +518,7 @@ export function inkLayer(ctx, g, W, st, Q) {
     });
   }
   // eraser crumbs flicking off the rubbed-out routes
-  if (st.pen && st.pen.erase) {
+  if (st.pen && st.pen.erase && st.pen.rub >= 0) {
     const c = P2(V3(...st.pen.tip)), u = v.pxu(V3(...st.pen.tip));
     for (let k = 0; k < 7; k++) {
       const age = ((st.pen.rub + k * 1.7) % 6) / 6, ang = -2.4 + k * 0.55 + Math.sin(k * 7.1) * 0.3;
@@ -504,8 +556,15 @@ export function inkLayer(ctx, g, W, st, Q) {
       const u = clamp(ss.fling / 7), k = u * u, tgt = { x: 560, y: 700 };
       const c2 = { x: lerp(s0.x, tgt.x, k), y: lerp(s0.y, tgt.y, k) - 140 * Math.sin(Math.PI * u) * 0.6 }, rp = lerp(su * P.R * 1.15, 190, k);
       if (u < 1) for (let q = -2; q <= 2; q++) { const bk = { x: lerp(s0.x, tgt.x, Math.max(0, k - 0.3)), y: lerp(s0.y, tgt.y, Math.max(0, k - 0.3)) }, nx = -(c2.y - bk.y), ny = c2.x - bk.x, nl = Math.hypot(nx, ny) || 1, o = q * rp * 0.35 / nl; stroke(g, [[bk.x + nx * o, bk.y + ny * o], [c2.x + nx * o * 0.9, c2.y + ny * o * 0.9]], 5 + 2 * (2 - Math.abs(q)), INK); }   // speed lines
-      if (ss.fling >= 7) { const a2 = (ss.fling - 7) / 5; g.save(); g.globalAlpha = 1 - a2; burstMarks({ x: tgt.x, y: tgt.y }, ss.fling - 7, 9, 0, TAU, 150, 260); g.restore(); c2.y += 120 * a2 * a2; }
-      pencilGhost(g, c2, rp, ss.fling < 7 ? 1 : 1 - (ss.fling - 7) / 5, 'x', ss.fling * 0.5, sgr, 0.95, true);
+      if (ss.fling >= 7) {   // SPLAT on the lens: squashed flat for 2 frames with ink droplets, then it slides off
+        const a2 = (ss.fling - 7) / 5;
+        g.save(); g.globalAlpha = 1 - a2 * 0.6;
+        for (let k = 0; k < 9; k++) { const an = k / 9 * TAU + 0.4, rr = rp * (1.25 + 0.35 * ((k * 37) % 5) / 5) * (1 + a2 * 0.4); g.beginPath(); g.arc(tgt.x + Math.cos(an) * rr, tgt.y + Math.sin(an) * rr * 0.6, 6 + (k % 3) * 5, 0, TAU); g.fillStyle = INK; g.fill(); }
+        burstMarks({ x: tgt.x, y: tgt.y }, ss.fling - 7, 9, 0, TAU, 150, 260); g.restore();
+        c2.y += 90 * a2 * a2;
+        g.save(); g.translate(c2.x, c2.y); g.scale(ss.fling < 9 ? 1.35 : 1.1, ss.fling < 9 ? 0.6 : 0.85); g.translate(-c2.x, -c2.y);
+        pencilGhost(g, c2, rp, 1 - a2 * 0.8, 'x', 0, sgr, 0.95, true); g.restore();
+      } else pencilGhost(g, c2, rp, 1, 'x', ss.fling * 0.5, sgr, 0.95, true);
     }
   }
   for (const f of st.faces) drawFace(g, f, fr);
@@ -520,8 +579,8 @@ export function inkLayer(ctx, g, W, st, Q) {
     const gh = clamp(st.ts.ghost);
     if (F >= K.glide[0] && F < T.CUT && gh > lap + 0.004) {
       g.save(); g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 0.98, -Math.PI / 2 + TAU * lap, -Math.PI / 2 + TAU * gh); g.closePath();
-      g.fillStyle = 'rgba(141,134,163,0.32)'; g.fill(); g.clip();
-      for (let k = -8; k <= 8; k++) stroke(g, [[k * 0.13 - 1, -1], [k * 0.13 + 1, 1]], 0.018, 'rgba(90,82,120,0.45)');
+      g.fillStyle = 'rgba(141,134,163,0.55)'; g.fill(); g.clip();
+      for (let k = -10; k <= 10; k++) stroke(g, [[k * 0.1 - 1, -1], [k * 0.1 + 1, 1]], 0.035, 'rgba(70,62,100,0.7)');   // bold pencil cross-hatch: PowerMove's full lap
       g.restore();
     }
     g.lineWidth = 0.06; g.strokeStyle = '#9a86c8'; g.setLineDash([0.12, 0.09]);
@@ -552,30 +611,8 @@ export function inkLayer(ctx, g, W, st, Q) {
     const o = P2(base), px = P2(base.clone().addScaledVector(ex, 0.2 * (plate.position.z > 0 ? 1 : -1))), py = P2(base.clone().addScaledVector(ey, 0.2));
     g.save(); g.globalAlpha = clamp((facing - 0.25) / 0.2);
     g.transform((px.x - o.x) / 100, (px.y - o.y) / 100, -(py.x - o.x) / 100, -(py.y - o.y) / 100, o.x, o.y);
-    scriptWord(g, 'Qubrio', 0, 6, 62, '#2a1450', { weight: 0.2 });
+    scriptWord(g, 'Qubrio', 0, 8, 84, '#1a1530', { weight: 0.24 });
     g.restore();
-  }
-  // "POWERMOVE" on a paper flag stuck in Slo's shell
-  {
-    const sh = W.slo.shellG.getWorldPosition(V3(0, 0, 0)), top = sh.clone().add(V3(0, 0.64, 0));
-    const ownS = []; W.slo.group.traverse((o) => { if (o.isMesh) ownS.push(o); });
-    // the flag springs up at GO (Slo is just a sleeping snail until then); it flies LEFT of the pole (away from Tick's dial)
-    // and droops - still legible - when the lap closes; a flag cut by the frame edge fades out
-    const s6 = F >= K.whip2[0] && F < K.whip3[1] ? 0 : 1;   // not in the pulse shot (it would sit on the card's bottom edge)
-    const up = F < T.CUT ? s6 * ob(clamp((F - K.whipG[1] + 2) / 6)) : 0, droop = F < T.CUT ? sm(clamp((F - K.lap - 1) / 8)) : 0;
-    const bt = P2(top), ut = v.pxu(top), edge = clamp(Math.min(bt.x - 20 - ut * 1.5, 1900 - bt.x, bt.y - 30, 1060 - bt.y - ut * 0.34) / 50);
-    if (up > 0.02 && edge > 0.02 && v.ahead(sh) && v.clear(top, ownS) && v.clear(sh.clone().add(V3(0, 0.45, 0)), ownS)) {
-      const a = P2(sh.clone().add(V3(0, 0.1, 0))), u = v.pxu(top), b0 = P2(top), b = { x: lerp(a.x, b0.x, up), y: lerp(a.y, b0.y, up) + droop * u * 0.12 };
-      g.save(); g.globalAlpha = edge;
-      stroke(g, [[a.x, a.y], [lerp(a.x, b.x, 0.6) - droop * u * 0.05, lerp(a.y, b.y, 0.6)], [b.x, b.y]], Math.max(2.5, u * 0.02), INK);
-      g.translate(b.x, b.y); g.rotate(-0.55 * droop);
-      const w = u * 1.5 * clamp(up), h = u * 0.3 * clamp(up), wave = Math.sin(F * 0.3) * h * 0.08 * (1 - droop);
-      const fl = [[0, 0], [-w * 0.5, wave + droop * h * 0.15], [-w, -wave + droop * h * 0.3], [-w, h - wave + droop * h * 0.3], [-w * 0.5, h + wave + droop * h * 0.15], [0, h]];
-      fillPoly(g, fl, '#e8e0ee'); g.lineWidth = Math.max(2, u * 0.012); g.strokeStyle = INK; g.lineJoin = 'round';
-      g.beginPath(); fl.forEach((p, i) => (i ? g.lineTo(...p) : g.moveTo(...p))); g.closePath(); g.stroke();
-      if (u > 55 && up > 0.85) brushWord(g, 'POWERMOVE', -w / 2, h / 2 + droop * h * 0.22, h * 0.46, { fill: '#6b5a8e', key: 0.05, shadow: [0, 0], weight: 0.22, gap: 0.1, fan: 0, jiggle: 0.1, bounce: 0.06, rot: -0.02, chisel: true, skew: -0.12 });
-      g.restore();
-    }
   }
   postInk(g, st, F);
 }
@@ -595,7 +632,7 @@ export function fxLayer(ctx, g, W, st, Q) {
   }
   const zp = sfxState(F - K.zap, 26);
   if (zp) {
-    const c = safe(P2(V3(-0.2, 1.1, (P.STORE.z0 + P.STORE.z1) / 2)), 420, 1300, 345, 430);   // over the dark storage, clear of the pairs; burst top >= row 225 (card-safe)
+    const c = safe(P2(V3(-2.2, 1.4, -1.25)), 330, 1300, 330, 470);   // over the dark left edge (Rook's track side), clear of every pair; burst top >= row ~220 (card-safe)
     burst(g, c.x, c.y, 235 * zp.pop, 112 * zp.pop, { fill: '#f2a922', alpha: zp.alpha, seed: 9, spikes: 15 });
     brushWord(g, 'ZAP!', c.x, c.y + 6, 148 * zp.pop, { fill: '#b48cff', shade: '#5b21b6', chisel: true, skew: -0.2, ramp: 0.25, rot: -0.1 + zp.wob, alpha: zp.alpha, arc: 10, jitter: r, weight: 0.3 });
   }
@@ -625,11 +662,12 @@ export function fxLayer(ctx, g, W, st, Q) {
     g.restore();
   }
   // CLICK! at GO (Tick starts both hands) and as PowerMove's hand closes the lap (the cause of the 4.7x)
-  const ck = sfxState(F - K.lap, 8) || sfxState(F - K.click, 12);
+  const ck = sfxState(F - K.lap, 9) || sfxState(F - K.click, Math.min(12, K.whipG[0] - K.click));
   if (ck) {
     const cp = W.tick.crown.getWorldPosition(V3(0, 0, 0)), c0 = P2(cp), cu = v.pxu(cp);
     const c = safe({ x: c0.x + cu * 0.85, y: c0.y - cu * 0.2 }, 300, 1500, 280, 700);
-    brushWord(g, 'CLICK!', c.x, c.y, 78 * ck.pop, { fill: '#fff6e0', shade: '#c9bde9', chisel: true, skew: -0.18, ramp: 0.2, rot: -0.14 + ck.wob, alpha: ck.alpha, arc: 6, jitter: r, weight: 0.3 });
+    burst(g, c.x, c.y, 150 * ck.pop, 64 * ck.pop, { fill: '#f2a922', seed: 13, spikes: 12 });
+    brushWord(g, 'CLICK!', c.x, c.y + 3, 70 * ck.pop, { fill: '#fff6e0', shade: '#c9bde9', chisel: true, skew: -0.18, ramp: 0.2, rot: -0.14 + ck.wob, alpha: ck.alpha, arc: 6, jitter: r, weight: 0.3, gap: 0.08 });
   }
   postInk(g, st, F);
   const wp = sg(F, K.wipe[0], K.wipe[1], (x) => x);

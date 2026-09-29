@@ -151,10 +151,11 @@ export function brushWord(g, word, x, y, size, o = {}) {
 /** P(doom) SFX timing: pop (backOut 0.2 s), decaying wobble, fade over the last 0.25 s. age/life in frames. */
 export function sfxState(age, life, fps = 24) {
   if (age < 0 || age >= life) return null;
-  const pop = backOut(age / (0.2 * fps));
+  // pop in (backOut), decaying wobble, then a comic exit: a 1-frame swell and a 2-frame snap-shrink (no alpha fade)
+  const out = age - (life - 3);
+  const pop = out < 0 ? backOut(age / (0.2 * fps)) : out < 1 ? 1.08 : out < 2 ? 0.55 : 0.18;
   const wob = Math.sin(age / fps * 20) * 0.03 * (1 - age / life);
-  const alpha = 1 - clamp((age - (life - 0.25 * fps)) / (0.25 * fps));
-  return { pop, wob, alpha };
+  return { pop, wob, alpha: 1 };
 }
 
 // ---- hand-authored script for the "Qubrio" nameplate (stroke skeletons, cap height 1, y down; after the comic film)

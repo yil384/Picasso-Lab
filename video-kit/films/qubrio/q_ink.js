@@ -247,9 +247,9 @@ export function brushWipe(g, p, { c1 = '#4b2a9e', c2 = '#7c3aed', bristle = '#f4
   for (let i = 0; i < nS; i++) {
     const y0 = -250 + i * (Hd + 460) / nS, d = [0, 0.14, 0.06, 0.18, 0.1][i] * 0.8;
     let x0, x1;
-    if (p < inEnd) { const q = eo((p / inEnd - d) / (1 - d)); x0 = -320; x1 = lerp(-320, Wd + 420, q); }
+    if (p < inEnd) { const q = clamp((p / inEnd - d) / (1 - d)); x0 = -320; x1 = lerp(-320, Wd + 420, q * q * (1.4 - 0.4 * q)); }   // accelerate in: full cover only at the very end
     else if (p < outStart) { x0 = -320; x1 = Wd + 420; }
-    else { const q = eio(((p - outStart) / (1 - outStart) - d) / (1 - d)); x0 = lerp(-320, Wd + 420, q); x1 = Wd + 420; }
+    else { const q = eo(((p - outStart) / (1 - outStart) - d * 0.3) / (1 - d * 0.3)); x0 = lerp(-320, Wd + 420, q); x1 = Wd + 420; }   // leave fast: S1 shows through at once
     if (x1 - x0 < 30) continue;
     const pts = [], rag = (k) => 40 + 55 * h(i * 31 + k);
     for (let k = 0; k <= 10; k++) pts.push([lerp(x0, x1, k / 10), y0 + Math.sin(k * 0.9 + i) * 16]);
