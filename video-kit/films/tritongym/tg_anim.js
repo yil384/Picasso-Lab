@@ -226,12 +226,12 @@ export function kernState(F) {
   // ---- B7: race 2 (the nose win) and B8 payoff parked past the line
   {
     const th = kernTh(F);
-    S.pos = lanePos(th, R.ours - 0.95 * sg(F, K.cross + 2, K.cross + 16, sm), 0); S.yaw = headingAt(th) - 0.8 * sg(F, K.check - 8, K.check + 2, sm);
+    S.pos = lanePos(th, R.ours - 1.4 * sg(F, K.cross + 2, K.cross + 16, sm), 0); S.yaw = headingAt(th) - 0.8 * sg(F, K.check - 8, K.check + 2, sm);
     S.wheelAng = (th - L2 - thS) * R.ours / 0.16;   // (it rolls up-stage after the line and turns its face 3/4 to us; the plate side stays in view)
     S.face = F < K.go2 ? 'determined' : F < K.cross - 12 ? 'squint' : F < K.cross + 1 ? 'strain' : F < K.check ? 'wide' : 'star';
     S.stretch = F >= K.cross - 4 && F < K.cross + 2 ? 0.25 : 0;
     if (F >= K.check && F < K.check + 18) { const h = hop(F, K.check, K.check + 10, 0.35); S.pos[1] += h.y; S.sq = h.sq; }
-    if (F >= K.away[0] + 16) S.vis = false;              // gone once the whip smear covers the frame
+    if (F >= K.away[0] + 10) S.vis = false;              // gone on the heaviest smear frame of the whip away
     S.showCheck = F >= K.check;
     return S;
   }
@@ -242,7 +242,7 @@ export function kernState(F) {
 // ------------------------------------------------------------------------------------------------
 export function oroState(F) {
   F = held(F);
-  const S = { vis: F >= K.cut - 20 && F < K.away[0] + 16, face: 'smug', wheelAng: 0, keySpin: 0, sq: 0, stretch: 0, laurelSlip: 0, wrench: 0, buff: 0, pitch: 0 };
+  const S = { vis: F >= K.cut - 20 && F < K.away[0] + 10, face: 'smug', wheelAng: 0, keySpin: 0, sq: 0, stretch: 0, laurelSlip: 0, wrench: 0, buff: 0, pitch: 0 };
   const lane = (th) => polar(th, R.oro, 0);
   const thS = A.start, thF = A.finish;
   if (F < K.go1) {

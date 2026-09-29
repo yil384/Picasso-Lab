@@ -270,7 +270,7 @@ function placeFlying(g, fromW, slot, u, n) {
 }
 
 // ---- the operator card: off the stack, shown to the lens, laid on the bench, then Kern's racing number plate
-const PLATE = { pos: [-0.04, 0.0, 0.305], s: 0.8 };
+const PLATE = { pos: [-0.14, 0.08, 0.305], s: 0.8 };   // rearward and up: clear of the front wheel
 function updateOpCard(F) {
   const C = T.opCard.root, kb = T.kern.body, Sk = st.kern;
   const onKern = F >= K.plate[1] && Sk.vis;
@@ -438,7 +438,7 @@ function updateStations(F) {
 }
 
 function updateLetters(F) {
-  const on = F >= K.slam - 12 && F < K.away[0] + 16;
+  const on = F >= K.slam - 12 && F < K.away[0] + 10;   // the payoff set leaves on the heaviest smear frame
   T.letters.visible = on;
   const a = F - K.slam;
   const th = A.words;
@@ -586,7 +586,7 @@ export function drawMarks(ctx, g) {
   const tk = st.tok;
   const bangAt = (f0, p, s, rot, col = PAL.coral) => { const a = F - f0; if (a < 0 || a > 16) return; const q = prj(ctx, p); if (!q.front) return; const u = pxu(ctx, p); bang(g, q.x, q.y, u * s * ob(a / 4) * (1 - sm((a - 12) / 4)), rot, col, r); };
   { const sx = [Math.cos(tk.yaw), 0, -Math.sin(tk.yaw)]; bangAt(K.idea, [tk.pos[0] + sx[0] * 0.95, tk.pos[1] + 1.35, tk.pos[2] + sx[2] * 0.95], 0.42, 0.1, PAL.emerald); }   // beside the head, inside the card crop
-  if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 1.05, st.oro.pos[2]], 0.62, 0.12);   // as big as Tok's
+  if (st.oro.pos) bangAt(K.dtake, [st.oro.pos[0], 0.85, st.oro.pos[2]], 0.62, 0.12);   // as big as Tok's, inside the card band
   if (F >= K.check && F < K.away[0]) for (let q = 0; q < 6; q++) {
     const ph = ((F - K.check) / 18 + q * 0.23) % 1; if (ph > 0.75) continue;
     const kp = st.kern.pos || [0, 0, 0], an = q / 6 * TAU + 0.4;

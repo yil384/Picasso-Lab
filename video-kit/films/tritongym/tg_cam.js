@@ -124,7 +124,7 @@ function shotWatch(F) {          // the insert after the photo finish: the stopw
 }
 function shotPayoff(F) {         // B8: low hero lens at the finish, a real push (~12%) with a ~16 deg orbit
   const k = sg(F, K.watch[1], K.away[0], io);
-  return rig([L2 + A.finish + 0.61 + 0.05 * k, 13.0 - 1.2 * k, 1.7 + 0.1 * k], [L2 + A.finish + 0.62 + 0.02 * k, 3.0, 1.15 - 0.03 * k], lerp(40, 34, k), 0.0);   // push = dolly + zoom
+  return rig([L2 + A.finish + 0.61 + 0.05 * k, 13.0 - 1.2 * k, 1.7 + 0.1 * k], [L2 + A.finish + 0.62 + 0.02 * k, 3.0, 1.12 - 0.05 * k], lerp(40, 36, k), 0.0);   // push = dolly + zoom
 }
 
 // ------------------------------------------------------------------------------------------------
