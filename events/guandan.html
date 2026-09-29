@@ -2247,7 +2247,8 @@ function openLabDeck() {
     const PL = labPlayers();
     const html = `<div class="gd-labdeck">${labMemberKeys().map((k, i) => {
         const p = PL[k];
-        return `<div class="labdeck-item">${cardHTML(signatureCard(p.card, `ld${i}`))}<b>${encodeHTML(firstNameOf(p.name))}</b>${isZH() && p.style ? `<small>${encodeHTML(p.style)}</small>` : ""}</div>`;
+        const style = isZH() ? p.style : window.GuandanRecords?.styleText?.(k, "en");
+        return `<div class="labdeck-item">${cardHTML(signatureCard(p.card, `ld${i}`))}<b>${encodeHTML(firstNameOf(p.name))}</b>${style ? `<small>${encodeHTML(style)}</small>` : ""}</div>`;
     }).join("")}</div>`;
     openPopup({ title: L("Lab Deck", "实验室牌组"), html, wide: true });
 }
