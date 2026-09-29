@@ -3645,6 +3645,7 @@ function tributeHTML(v) {
 // deal's last flights. Decided once per deal (room + dealStartedAt): a client that arrives late, a
 // reload (the key is remembered) or a re-render never replays it. A tap skips it.
 const INTRO_STORE = "picasso.guandan.intro";
+const INTRO_HOLD_MS = 1720;                 // gd-intro holds the poster to 86% of its 2 s, then fades it
 // The 巅峰对决 crown (as on the records poster): over the intro's VS and a match result's title.
 function crownHTML(cls = "") {
     return `<svg class="${`gd-crown ${cls}`.trim()}" viewBox="0 0 40 28" aria-hidden="true"><path d="M5 25 2.5 7l10 7.5L20 2.5l7.5 12 10-7.5L35 25Z"/></svg>`;
@@ -3740,7 +3741,10 @@ function renderTable() {
     setRegion("deal", dealPhase === "dealing" ? `deal:${dealKey()}:${Math.round(t.layout.w)}` : "", () => dealHTML(v));
     const intro = introKey(v);
     setRegion("intro", intro, intro ? () => introHTML(v) : "");
-    t.stage.classList.toggle("has-intro", !!intro);
+    // 记牌/规则 and the hand tools step aside until the poster starts to fade
+    const introHold = intro ? INTRO_HOLD_MS - (Date.now() - Number(game.dealStartedAt || 0)) : 0;
+    t.stage.classList.toggle("has-intro", introHold > 0);
+    if (introHold > 0 && !t.intro.timer) t.intro.timer = setTimeout(() => tableView.stage?.classList.remove("has-intro"), introHold);
     const firstKey = firstLeadKey(v);
     setRegion("firstLead", firstKey, firstKey ? () => firstLeadHTML(v) : "");
     const tributeMoment = tributeKey(v);

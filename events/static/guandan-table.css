@@ -849,7 +849,7 @@ body[data-screen="table"] .topbar { display: none; }
    Every part runs on the deal clock: --since is minus the time since dealStartedAt. In 0-600 ms the
    poster opens, the team frames slide in, the title drops and VS stamps; it holds, fades out by 2 s
    and is then hidden, so it never catches a tap meant for the table. The HUD's right-hand buttons
-   and the hand tools step aside meanwhile (.has-intro). */
+   and the hand tools step aside until it starts to fade (.has-intro, INTRO_HOLD_MS). */
 .gd-intro-host { position: absolute; inset: 0; z-index: 56; pointer-events: none; }
 .gd-intro-host:empty { display: none; }
 .gd-stage.has-intro :is(.gd-hud-right, .gd-tools) { opacity: 0; pointer-events: none; }
