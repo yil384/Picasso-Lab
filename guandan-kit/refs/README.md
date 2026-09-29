@@ -12,8 +12,10 @@ Folder: `guandan-kit/refs/img/` (created by fetch_refs.sh)
 - tg_gp1..4.jpg — the full promo images the crops come from.
 
 ## 大掼蛋 2026 (Tencent, official site + App Store iPad shots)
-- dagd_store_5.jpg — in-game with the 2026 action row: 不出 · purple hexagon timer · 提示 · 出牌, 记牌器 strip, 首 tag (tilted promo).
-- dagd_store_6.jpg — 2026 lobby (tilted). dagd_store_2/3/4 — 复盘 chart, 比赛 cards, 双人组队 room list.
+- dagd_store_4.jpg — in-game with the 2026 action row: 不出 · purple crowned heart-gem timer · 提示 · 出牌, 记牌器 strip, 首 tag (tilted promo).
+  dagd_store_10.jpg — the same set on a phone: in-game 炸弹 effect over the played cards.
+- dagd_store_5.jpg — 2026 lobby (tilted). dagd_store_1/2/3/6 — 复盘 chart, 比赛 cards, 双人组队 room list, 福利 popup
+  (7-11 are the phone-size versions of the same set).
 - tx_p3_img1.jpg (lobby 2025), tx_p3_img3.jpg (room list + 我的队伍), tx_p3_img4.jpg (比赛 tall tinted cards),
   tx_p3_img5.jpg (in-game, 炸弹, 级 tag, level tiles), tx_p3_img6.jpg (复盘 score-curve chart panel).
 - yxrb_lobby.jpeg — 大掼蛋 2026 lobby: top bar, left rail, tall 经典 tile + 6 tiles, bottom nav, gold 快速开始 bar. **Primary lobby reference.**

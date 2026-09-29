@@ -11,6 +11,8 @@ export const meta = {
 const R = args.round
 const REVIEW = args.review
 const MAX_ITER = args.maxIter || 3
+const SESSION = args.session
+const BASE = args.base || 'guandan-cloud'
 
 const COMMON = `
 You are working on the Picasso Lab Guandan (掼蛋) redesign, fix round ${R}. Goal of the whole redesign: a 1:1 replica of Tencent's professional
@@ -37,12 +39,11 @@ RULES (hard):
 - Commit early and often on your branch with clear messages in the repo's style, e.g. "fix(guandan): 提示 answers on the first press" /
   "style(guandan): ...". End every commit message with these two trailer lines exactly:
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-  Claude-Session: https://claude.ai/code/session_01F2RNf54up8RhhTvkaNEfdk
+  Claude-Session: ${SESSION}
   Never put a model name anywhere else in commits or code.
 
 TOOLS: references (copyrighted, reference only) in /home/user/Picasso-Lab/guandan-kit/refs/img/ (full res) and downscaled copies in
-/tmp/claude-0/-home-user-Picasso-Lab/7a6c480f-dd91-54ff-b4ee-d4a33dbcf32f/scratchpad/refs/ — dagd_store_4.jpg is the 2026 in-game action row
-(README's "dagd_store_5" label is off by one). Baseline shots of the pre-fix build: /home/user/Picasso-Lab/guandan-kit/harness/shots/<vp>-<scene>.jpg.
+/home/user/Picasso-Lab/guandan-kit/scratch/refs-small/ — dagd_store_4.jpg is the 2026 in-game action row. Baseline shots of the pre-fix build: /home/user/Picasso-Lab/guandan-kit/harness/shots/<vp>-<scene>.jpg.
 The harness is in your worktree: <worktree>/guandan-kit/harness (gdh.py docstring; scenes.py = staged scenes, run e.g.
 "python3 scenes.py phone portrait --only=table,result"; play.py <vp> 2 = two full rounds; sheet.py = contact sheets). Run it from your
 worktree's harness dir so it serves YOUR worktree's files. The machine has 4 CPUs and another agent may be running a browser: one browser at
@@ -94,7 +95,7 @@ commit; your own scripts/shots go to ${t.worktree}/guandan-kit/scratch/check/. T
 ${JSON.stringify(fix, null, 1)}
 Verify, don't trust: for every assigned finding (${t.ids.join(', ')}) re-shoot the scene at the affected viewports from the worktree, compare
 with the baseline shot and the Tencent reference, and decide fixed / partial / not-fixed / regressed (a wontfix is acceptable only if the
-reason is sound, e.g. it would need a game-logic change). Review the diff (git -C ${t.worktree} diff guandan-cloud...HEAD) for SPEC §3
+reason is sound, e.g. it would need a game-logic change). Review the diff (git -C ${t.worktree} diff ${BASE}...HEAD) for SPEC §3
 violations, logic/Firebase/engine changes, dead code, stacked overrides, relative URLs, and regressions on screens the fix touched indirectly
 (run scenes.py for the other groups at phone and desk and look). Run play.py phone 2 and check console errors. ok = true only when every
 high/medium finding is fixed and nothing regressed. If not ok, write a precise todo for the fixer.`

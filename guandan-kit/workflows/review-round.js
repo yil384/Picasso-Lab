@@ -10,6 +10,8 @@ export const meta = {
 
 const ROUND = (args && args.round) || 1
 const PREV = (args && args.prevReview) || ''
+const REFS = (args && args.refs) || 'guandan-kit/scratch/refs-small/'
+const R0 = (args && args.preShots) || ''
 
 const CONTEXT = `
 You are one reviewer in review round ${ROUND} of the Picasso Lab Guandan (掼蛋) redesign. The goal of the redesign: a 1:1 replica of
@@ -26,10 +28,10 @@ board UI), guandan-transition.css. The AI engine (guandan-engine.js, guandan-ai-
 for changes — report UI/UX problems, and gameplay bugs only if they are UI-side.
 
 Tencent reference screenshots (copyrighted, reference only — never commit): guandan-kit/refs/img/ (full resolution). Downscaled copies:
-/tmp/claude-0/-home-user-Picasso-Lab/7a6c480f-dd91-54ff-b4ee-d4a33dbcf32f/scratchpad/refs/. Key refs: tg_ingame_classic.png (table, hand columns,
+${REFS}. Key refs: tg_ingame_classic.png (table, hand columns,
 level tiles, bottom bar), tg_ingame_wild_timer_report.png (逢人配, alarm-clock timer, 剩10张), tg_ingame_bomb.png, tg_ingame_tianwangzha_lowres.png,
-dagd_store_4.jpg (NOTE: this is the 2026 in-game action row 不出·hexagon timer·提示·出牌 — README calls it dagd_store_5 but the App Store order
-shifted; dagd_store_5.jpg is the tilted 2026 lobby), tx_p3_img5.jpg (in-game), qqg_result.jpg (result), qqg_ribbons.jpg, qqg_shouchu.jpg (首出),
+dagd_store_4.jpg (the 2026 in-game action row 不出·crowned gem timer·提示·出牌; dagd_store_5.jpg is the tilted 2026 lobby,
+dagd_store_10.jpg a phone 炸弹), tx_p3_img5.jpg (in-game), qqg_result.jpg (result), qqg_ribbons.jpg, qqg_shouchu.jpg (首出),
 yxrb_lobby.jpeg (PRIMARY lobby), tx_p3_img1.jpg, yxrb_room.png (PRIMARY room), tx_p3_img3.jpg, yxrb_vs.jpeg (VS popup), yxrb_matchlist.jpeg,
 tx_p3_img4.jpg, tx_p3_img6.jpg, yxrb_popup.png (popup with gold oblique title).
 
@@ -43,7 +45,7 @@ t-menu, t-tracker, t-tracker-log, t-rules, t-rowmode, t-tribute(-return), t-trib
 r-afail, r-gameover, r-guest, spectator. Screenshots are large (dpr 2-3): downscale/crop with PIL (python3) before viewing them, and build
 side-by-side comparisons with the matching reference. LOOK at the images; don't guess from code.
 
-Harness (to reproduce or measure anything the baseline doesn't show): run from /home/user/Picasso-Lab/guandan-kit/harness.
+${R0 ? `Shots of an EARLIER build (for before/after comparison and regression hunting): ${R0}/<vp>-<scene>.jpg (same scene names).\n\n` : ''}Harness (to reproduce or measure anything the baseline doesn't show): run from /home/user/Picasso-Lab/guandan-kit/harness.
 gdh.py: "async with session(vp, tag) as s" -> s.goto(query, lang=, store=, local=), s.press(sel) (real touch on phones), s.shot(name),
 s.state(), s.get_game()/put_game()/set_game(fn), s.stage(js, arg) (stage.js helpers __gd.make/give/trim/sameRank/play/pass/turn/put/get/high),
 s.create_room(), s.fill_ai(), s.start(), s.quick_start(), s.wait_deal_done(), s.until_deal(ms), s.act(), s.play_round(), s.next_round(),
@@ -101,6 +103,26 @@ const ISSUE_SCHEMA = {
         required: ['index', 'area', 'status', 'evidence'],
       },
     },
+  },
+  required: ['items'],
+}
+
+const PREV_SCHEMA = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          status: { type: 'string', enum: ['fixed', 'partially-fixed', 'open', 'regressed'] },
+          evidence: { type: 'string' }, remaining: { type: 'string' },
+        },
+        required: ['id', 'status', 'evidence'],
+      },
+    },
+    findings: { type: 'array', items: FINDING },
   },
   required: ['items'],
 }
@@ -174,7 +196,13 @@ YOUR LENS: MUST-KEEP (SPEC §1). Verify every item still works, with evidence, a
   (git diff origin/main -- events/events.html) — it should be unchanged except where the shared records board requires.
 - Lab copy: 蓝队/红队, 南家 AI/西家 AI/北家 AI/东家 AI, small Picasso Lab branding; English toggle and L(en, zh) strings.
 Score optional (use screen "eggs" for the easter eggs overall).` },
-  { key: 'open-issues', label: 'review:open-issues', schema: ISSUE_SCHEMA, prompt: `${CONTEXT}
+  ROUND > 1 ? { key: 'prev-verify', label: 'review:prev-verify', schema: PREV_SCHEMA, prompt: `${CONTEXT}
+YOUR JOB: verify every finding of review round ${ROUND - 1} (the "Round ${ROUND - 1}" section of guandan-kit/REVIEW.md: findings R${ROUND - 1}-NN
+and the "Round ${ROUND - 1} fixes" table) against the CURRENT merged build. The fixes were checked on separate track branches and then merged,
+so a fix can have been lost or broken by the merge or by another track. For each finding: reproduce the exact scenario at the named
+viewports (baseline shots when they show it, else the harness), measure, and report status fixed / partially-fixed / open / regressed with
+concrete evidence (and what remains). Work through ALL of them, high and medium first; for lows a baseline shot is usually enough. Also
+report any NEW defect you notice on the way as a finding.` } : { key: 'open-issues', label: 'review:open-issues', schema: ISSUE_SCHEMA, prompt: `${CONTEXT}
 YOUR JOB: verify each of the 19 items in guandan-kit/open-issues.json (index 0-18) against the CURRENT build. They were found BEFORE the
 gd3/table and gd3/lobby commits that were merged since; many may be fixed. For each item: reproduce the exact scenario at the named viewport
 (use the baseline shots when they show it, else run the harness), measure (e.g. element rects, overlaps, tap target sizes, legibility of the
@@ -190,7 +218,7 @@ if (missing.length) log(`reviewers with no result: ${missing.join(', ')}`)
 
 phase('Synthesize')
 const synth = await agent(`${CONTEXT}
-YOU ARE THE SYNTHESIZER for review round ${ROUND}. Below are the raw results of six reviewers (JSON). Your job:
+YOU ARE THE SYNTHESIZER for review round ${ROUND}. Below are the raw results of the reviewers (JSON). Your job:
 1. Merge duplicates across lenses into single findings (keep the strongest evidence, note which lenses reported it). Re-check any
    finding that looks doubtful by opening its evidence screenshot (downscaled) or the code; drop findings that are wrong, and say which you dropped.
 2. Calibrate severity consistently (high / medium / low per the definitions) and give each finding an id R${ROUND}-NN ordered by severity.
@@ -199,9 +227,10 @@ YOU ARE THE SYNTHESIZER for review round ${ROUND}. Below are the raw results of 
    guandan-records.js — data must not change), transition (return transition, type hint, guandan-transition.css), shared (tokens / cross-cutting).
 4. Per-screen scores: for each screen (lobby, room, popups, table, table-actions, table-moments, results, vs-intro, records, portrait, english,
    eggs) give the score (take the fidelity reviewers' scores; if several, the lower; if none, estimate from the evidence and say so).
-5. Open issues: pass through the open-issues verifier's statuses (index, area, status, one-line evidence).
-6. Write the round's review as Markdown into /home/user/Picasso-Lab/guandan-kit/scratch/review-r${ROUND}.md: a scores table, the open-issue
-   status table, then all findings grouped by severity (id, title, screen, viewports, track, lenses, problem, evidence path(s), fix). This
+5. ${ROUND > 1 ? `Previous findings: pass through the prev-verify reviewer's statuses for every R${ROUND - 1}-NN (id, status, one-line evidence); a
+   previous finding that is open / partially-fixed / regressed ALSO becomes a new R${ROUND}-NN finding (say "was R${ROUND - 1}-NN").` : "Open issues: pass through the open-issues verifier's statuses (index, area, status, one-line evidence)."}
+6. Write the round's review as Markdown into /home/user/Picasso-Lab/guandan-kit/scratch/review-r${ROUND}.md: a scores table, the previous-finding /
+   open-issue status table, then all findings grouped by severity (id, title, screen, viewports, track, lenses, problem, evidence path(s), fix). This
    file is what the fix agents will work from, so make each fix instruction precise.
 Return the structured result as well.
 
@@ -211,7 +240,7 @@ ${JSON.stringify(byKey, null, 1)}`, {
     type: 'object',
     properties: {
       scores: { type: 'array', items: SCORE },
-      open_issues: { type: 'array', items: { type: 'object', properties: { index: { type: 'number' }, area: { type: 'string' }, status: { type: 'string' }, evidence: { type: 'string' } }, required: ['index', 'status'] } },
+      open_issues: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, area: { type: 'string' }, status: { type: 'string' }, evidence: { type: 'string' } }, required: ['id', 'status'] } },
       findings: { type: 'array', items: { type: 'object', properties: Object.assign({ id: { type: 'string' }, lenses: { type: 'array', items: { type: 'string' } } }, FINDING.properties), required: ['id', 'title', 'severity', 'track', 'problem', 'fix'] } },
       dropped: { type: 'array', items: { type: 'string' } },
       markdown_path: { type: 'string' },

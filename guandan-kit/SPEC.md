@@ -30,10 +30,10 @@ open the reference screenshot and copy what it does. A screen that still reads l
 ## 2. References (look at them — they are the spec)
 Images: K/refs/img/ (download with K/refs/fetch_refs.sh — copyrighted, never commit them) — catalogue in K/refs/README.md.
 Measured spec (tokens, layout %, cards, action row, tribute/result, effects, lobby/room/competitive): K/refs/research-tencent.md.
-- In-game: tg_ingame_classic.png, tg_ingame_wild_timer_report.png, tg_ingame_bomb.png, tg_ingame_tianwangzha_lowres.png, dagd_store_5.jpg
+- In-game: tg_ingame_classic.png, tg_ingame_wild_timer_report.png, tg_ingame_bomb.png, tg_ingame_tianwangzha_lowres.png, dagd_store_4.jpg
   (2026 action row: 不出 · hexagon timer · 提示 · 出牌), tx_p3_img5.jpg.
 - Result / finish: qqg_result.jpg, qqg_ribbons.jpg, qqg_shouchu.jpg.
-- Lobby: yxrb_lobby.jpeg (primary), tx_p3_img1.jpg, dagd_store_6.jpg. Room: yxrb_room.png (primary), tx_p3_img3.jpg.
+- Lobby: yxrb_lobby.jpeg (primary), tx_p3_img1.jpg, dagd_store_5.jpg. Room: yxrb_room.png (primary), tx_p3_img3.jpg.
 - Competitive / VS / records: yxrb_vs.jpeg, yxrb_matchlist.jpeg, tx_p3_img4.jpg, tx_p3_img6.jpg.
 - Copyright: never ship Tencent images/logos/mascots/characters. Copy layout/colour/type/motion with original assets only. Do not copy
   platform chrome (WeChat "···  ◎" capsule, phone status bar, beans/diamond currencies, 加倍/倍 multipliers, 聊天 — we have none).
@@ -68,7 +68,7 @@ Measured spec (tokens, layout %, cards, action row, tribute/result, effects, lob
   copyLinkBtn handler, 新桌 = newRoomBtn, language = langToggleBtn, 返回 = startReturnToEvents.
 
 ## 5. Screens (targets)
-### 5.1 In-game table — copy tg_ingame_* + dagd_store_5
+### 5.1 In-game table — copy tg_ingame_* + dagd_store_4
 Teal felt exactly like tg_ingame_classic; seats (partner top-centre; opponents left/right ~28% H; self bottom-left) with avatar ≈11.5% H,
 name plate, 剩N张 report badge at ≤10; level tiles 我方/对方 under a ☰ menu (邀请好友, 规则, 记牌, 语言, 音乐, 新桌, 返回活动); top-right
 记牌/规则 buttons (记牌器 strip computed from unplayed cards not in my hand); centre watermark "PICASSO 掼蛋 / 经典 · 打X" only.
