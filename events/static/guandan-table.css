@@ -1053,6 +1053,7 @@ body[data-screen="table"] .topbar { display: none; }
     .gd-stage .gd-first-lead { animation: gd-still var(--first-ms) linear both !important; }
     .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation-name: gd-still !important; animation-duration: 640ms !important; }
     .gd-stage .gd-ribbon, .gd-stage .gd-ribbon .gd-word { animation: none !important; }
+    .gd-stage .gd-deck .gd-back { animation-name: gd-still !important; }
 }
 @keyframes gd-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
