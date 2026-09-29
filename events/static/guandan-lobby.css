@@ -897,6 +897,7 @@ html[lang="en"] .room-k { text-align-last: auto; }
 .room-step-v.t1 { color: var(--card-red); }
 /* 解散房间: a small red pill at the panel's foot; the button box keeps the --tap target */
 .room-admin { display: flex; justify-content: center; margin-top: auto; padding: calc(10 * var(--ru)) calc(16 * var(--ru)) calc(12 * var(--ru)); }
+.room-admin:empty { display: none; }   /* a guest's panel ends after its last row */
 .room-dissolve {
     --h: calc(40 * var(--ru));
     display: grid;
