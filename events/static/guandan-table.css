@@ -181,6 +181,8 @@ body[data-screen="table"] .topbar { display: none; }
     white-space: nowrap;
 }
 .gd-lvl.is-them b { background: #7d8187; }
+.gd-lvl.is-t0 b { background: var(--mate-d); }
+.gd-lvl.is-t1 b { background: var(--opp-d); }
 .gd-lvl em {
     min-width: 46px;
     padding: 0 6px;
@@ -450,7 +452,7 @@ body[data-screen="table"] .topbar { display: none; }
     font: 700 21px/26px var(--font-num);
     text-align: center;
 }
-.gd-seat.is-p1 .gd-av-count, .gd-seat.is-p2 .gd-av-count { left: -14px; }
+.gd-seat.is-p0 .gd-av-count, .gd-seat.is-p1 .gd-av-count, .gd-seat.is-p2 .gd-av-count { left: -14px; }
 .gd-seat.is-p3 .gd-av-count { right: -14px; }
 .gd-first {
     position: absolute;
@@ -691,6 +693,7 @@ body[data-screen="table"] .topbar { display: none; }
     font: 700 24px/1.2 var(--font-ui);
     letter-spacing: .2em;
 }
+.gd-spectate span:lang(en) { letter-spacing: .02em; }
 
 /* ---------- action row: [不出] [timer] [提示] [出牌] (dagd_store_4); --pill-w / --row-gap narrow it
    between long side plays (actionRowFit) ---------- */

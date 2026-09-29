@@ -3411,8 +3411,12 @@ function hudHTML(view) {
         const fails = level === "A" ? Number(game.aceFailures?.[team] || 0) : 0;
         return `<div class="gd-lvl ${cls}"><b>${label}</b><em>${rankGlyphHTML(level)}${fails ? `<small>${fails}/${ACE_FAIL_LIMIT}</small>` : ""}</em></div>`;
     };
+    // a spectator is on neither side: the tiles name the teams
+    const tiles = mySeat() < 0
+        ? tile(0, "is-t0", teamShortName(0)) + tile(1, "is-t1", teamShortName(1))
+        : tile(view % 2, "is-us", L("Us", "我方")) + tile(1 - view % 2, "is-them", L("Them", "对方"));
     return `<button class="gd-menu-btn" type="button" data-act="menu" aria-label="${L("Menu", "菜单")}" aria-expanded="${tableView.menuOpen}"><i></i><i></i><i></i></button>
-        <div class="gd-lvls">${tile(view % 2, "is-us", L("Us", "我方"))}${tile(1 - view % 2, "is-them", L("Them", "对方"))}</div>`;
+        <div class="gd-lvls">${tiles}</div>`;
 }
 
 function hudRightHTML() {
@@ -3471,17 +3475,18 @@ function renderSeat(i, v) {
     const count = (game.hands[i] || []).length;
     const place = finishedList(game).indexOf(i) + 1;
     const bottom = pos === 0;
-    const turn = v.liveTurn === i && !(bottom && v.mine >= 0);
+    const other = !bottom || v.mine < 0;    // a spectator's bottom seat is someone else's too
+    const turn = v.liveTurn === i && other;
     const el = tableView.seats[pos];
     el.className = `gd-seat is-p${pos} is-${relation.key}${turn ? " is-turn" : ""}${place ? " is-done" : ""}`;
     tableView.avatars[pos].className = `gd-av${relation.key === "opponent" ? " is-opp" : ""}`;
     setRegion(`face${pos}`, seatFaceHTML(i, name));
     // a finished seat's place is the ribbon at its play slot (renderSlot)
     let tag = "";
-    if (!place && !bottom && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
-    else if (!bottom) tag = `<span class="gd-av-tag">${relation.label}</span>`;
+    if (!place && other && count > 0 && count <= 10) tag = `<span class="gd-av-tag is-report">${isZH() ? `剩<b>${count}</b>张` : `<b>${count}</b> left`}</span>`;
+    else if (other) tag = `<span class="gd-av-tag">${v.mine < 0 ? teamShortName(i % 2) : relation.label}</span>`;
     // Tencent shows nothing above 10 cards; the exact count is a 记牌器 extra.
-    const chip = jipaiOpen && !bottom && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
+    const chip = jipaiOpen && other && !place && count > 10 ? `<span class="gd-av-count">${count}</span>` : "";
     const first = v.leader === i ? `<span class="gd-first">${L("Lead", "首")}</span>` : "";
     setRegion(`deco${pos}`, tag + chip + first);
     const stat = seat?.type === "human" ? seatMemberStat(name) : "";
@@ -3602,17 +3607,22 @@ function displayCardsForCombo(cards = [], combo = null) {
     return engineDisplayCardsForCombo(cards, combo, game?.currentLevelRank || "2");
 }
 
-// The seat that led the round's first trick (the 首 tag). Remembered from the opening lead; a
-// mid-round rejoin falls back to the first history entry while the history is not yet capped.
+// The seat that led the round's first trick (the 首 tag): the opening lead's seat, or on a
+// mid-round rejoin the first history entry while the capped history still reaches it, else what
+// this browser remembered for the deal (so a reload late in the round keeps the tag).
+const LEADER_STORE = "picasso.guandan.leader";
 function roundLeaderSeat() {
     const key = dealKey();
-    if (isOpeningLead(game)) {
-        tableView.leader = { key, seat: game.currentTurn };
-        return game.currentTurn;
-    }
-    if (tableView.leader.key === key) return tableView.leader.seat;
+    const known = tableView.leader;
+    if (known.key === key && !isOpeningLead(game)) return known.seat;
     const hist = valuesFromFirebase(game.history);
-    return hist.length && hist.length < 16 ? hist[0].player : -1;
+    const [storedKey, storedSeat] = (storageGet(LEADER_STORE) || "").split("|");
+    const seat = isOpeningLead(game) ? game.currentTurn
+        : hist.length && hist.length < 16 ? hist[0].player
+        : key && storedKey === key ? Number(storedSeat) : -1;
+    tableView.leader = { key, seat };
+    if (key && seat >= 0 && storedKey !== key) storageSet(LEADER_STORE, `${key}|${seat}`);
+    return seat;
 }
 
 function obviousPassNow(mine) {
