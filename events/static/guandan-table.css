@@ -1294,7 +1294,8 @@ body[data-screen="table"] .topbar { display: none; }
     margin-bottom: -10px;
     rotate: -8deg;
     animation: gd-res-title 420ms var(--ease-back) calc(var(--in) + 60ms) both;
-}@keyframes gd-res-title { from { opacity: 0; transform: translateY(-46px) scale(1.25); } }
+}
+@keyframes gd-res-title { from { opacity: 0; transform: translateY(-46px) scale(1.25); } }
 .gd-res-meta {
     margin: 6px 0 0;
     padding: 6px 70px;
