@@ -131,3 +131,35 @@ export function sfxState(age, life, fps = 24) {
   const alpha = 1 - clamp((age - (life - 0.25 * fps)) / (0.25 * fps));
   return { pop, wob, alpha };
 }
+
+// ---- hand-authored script for the "Qubrio" nameplate (stroke skeletons, cap height 1, y down; after the comic film)
+const ell = (x, y, rx, ry, n = 16) => Array.from({ length: n + 1 }, (_, i) => { const a = i / n * TAU - Math.PI / 2; return [x + Math.cos(a) * rx, y + Math.sin(a) * ry]; });
+const SCRIPT = {
+  Q: { w: 0.86, s: [ell(0.4, 0.5, 0.38, 0.47, 20), [[0.42, 0.72], [0.62, 0.98], [0.92, 1.04]]] },
+  u: { w: 0.42, s: [[[0.0, 0.5], [0.0, 0.86], [0.1, 1.0], [0.25, 0.97], [0.34, 0.82]], [[0.34, 0.5], [0.35, 1.0]]] },
+  b: { w: 0.42, s: [[[0.0, -0.02], [0.0, 1.0]], [[0.0, 0.66], [0.14, 0.5], [0.34, 0.56], [0.38, 0.8], [0.22, 1.0], [0.0, 0.96]]] },
+  r: { w: 0.32, s: [[[0.0, 0.5], [0.0, 1.0]], [[0.0, 0.68], [0.12, 0.52], [0.32, 0.5]]] },
+  i: { w: 0.08, s: [[[0.0, 0.52], [0.0, 1.0]]], dots: [[0.0, 0.3]] },
+  o: { w: 0.44, s: [ell(0.22, 0.75, 0.22, 0.25, 14)] },
+};
+/** scriptWord(g, word, x, y, size, col, o): centred at (x, y) (in the current transform), cap height `size`. */
+export function scriptWord(g, word, x, y, size, col, o = {}) {
+  const lw = size * (o.weight ?? 0.17);
+  let total = 0; for (const ch of word) total += (SCRIPT[ch].w + 0.18) * size; total -= 0.18 * size;
+  g.save(); g.translate(x - total / 2, y - size / 2);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const pass = (c, w, dx, dy) => {
+    g.strokeStyle = c; g.fillStyle = c; g.lineWidth = w;
+    let cx = 0;
+    for (const ch of word) {
+      const G = SCRIPT[ch];
+      for (const s of G.s) { const P = s.length > 2 ? through(s, 4) : s; g.beginPath(); P.forEach(([u, v], i) => (i ? g.lineTo(cx + u * size + dx, v * size + dy) : g.moveTo(cx + u * size + dx, v * size + dy))); g.stroke(); }
+      for (const [u, v] of G.dots || []) { g.beginPath(); g.arc(cx + u * size + dx, v * size + dy, w * 0.6, 0, TAU); g.fill(); }
+      cx += (G.w + 0.18) * size;
+    }
+  };
+  if (o.shadow) pass(o.shadow, lw * 1.25, size * 0.05, size * 0.06);
+  if (o.key) pass(o.key, lw * 1.7, 0, 0);
+  pass(col, lw, 0, 0);
+  g.restore();
+}

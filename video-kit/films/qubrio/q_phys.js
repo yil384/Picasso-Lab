@@ -19,7 +19,8 @@ export const PROW = [0.35, 1.75];                   // partner rows (z), back ->
 export const MCOL = [0, 1, 2], MROW = [1, 2];         // movers: storage columns 0-2 in rows 1-2
 export const ZONE = { x0: -2.55, x1: 3.35, z0: -0.35, z1: 2.45 };
 export const STORE = { x0: -1.65, x1: 1.65, z0: -4.05, z1: -0.95 };
-export const PLATE = { x0: -3.4, x1: 4.2, z0: -4.6, z1: 3.1, h: 0.3 };
+export const PLATE = { x0: -4.5, x1: 5.0, z0: -4.6, z1: 3.8, h: 0.3 };
+export const TRACK_X = -3.55;                      // Rook's side track (along z)
 export const BUFFER = [2.0, -2.5];                   // spare trap used as a buffer position
 
 export const ATOMS = [];   // { kind: 'store'|'mover'|'partner', c, r, k(index within kind) }
