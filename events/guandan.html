@@ -2457,6 +2457,7 @@ const tableView = {
     lastMessage: null,
     leader: { key: "", seat: -1 },
     result: { id: "", peek: false, shown: false, fresh: false },
+    intro: { key: "", show: false },
     roundLevels: { key: "", levels: null }
 };
 let handMode = storageGet("picasso.guandan.handMode") === "row" ? "row" : "col";
@@ -3010,6 +3011,10 @@ function onTablePointerDown(event) {
 }
 
 function onTableClick(event) {
+    if (event.target.closest(".gd-intro")) {
+        tableView.intro.show = false;
+        return renderTable();
+    }
     if (event.target.closest(".gd-scrim")) {
         tableView.menuOpen = false;
         return renderTableChrome();
@@ -3462,6 +3467,38 @@ function tributeHTML(v) {
     }).join("");
 }
 
+// 巅峰对决 match intro (yxrb_vs): once per match, over the first deal. 红队 left, 蓝队 right on a
+// diagonal split, each pair of players, a gold VS; it leaves before the deal's last flights.
+// Decided once per deal (room + dealStartedAt): a client that arrives late, a reload (the key is
+// remembered) or a re-render never replays it. A tap skips it.
+const INTRO_STORE = "picasso.guandan.intro";
+function introKey(v) {
+    if (game.roundNo !== 1 || v.dealPhase !== "dealing") return "";
+    const key = `${roomCode}:${game.dealStartedAt}`;
+    if (tableView.intro.key !== key) {
+        const show = Date.now() - Number(game.dealStartedAt || 0) < 1200 && storageGet(INTRO_STORE) !== key;
+        tableView.intro = { key, show };
+        if (show) storageSet(INTRO_STORE, key);
+    }
+    return tableView.intro.show ? `${key}:${uiLang}` : "";
+}
+function introHTML(v) {
+    const since = Math.max(0, Date.now() - Number(game.dealStartedAt || 0));
+    const player = i => {
+        const name = displaySeatName(game.seats[i], L(`Seat ${i + 1}`, `${i + 1} 号位`));
+        return `<div class="gd-vs-p"><span class="gd-vs-av"><span class="gd-av-face">${seatFaceHTML(i, name)}</span>${i === v.mine ? `<span class="gd-res-tag">${L("You", "自己")}</span>` : ""}</span><b>${encodeHTML(name)}</b></div>`;
+    };
+    const side = (team, cls) => `<div class="gd-vs-side ${cls}"><em>${encodeHTML(teamName(team))}</em><div class="gd-vs-list">${player(team)}${player(team + 2)}</div></div>`;
+    return `<div class="gd-intro" style="--since:${-since}ms">
+        <div class="gd-vs">
+            ${side(1, "is-red")}${side(0, "is-blue")}
+            <div class="gd-vs-title">${wordHTML(L("Peak Showdown", "巅峰对决"))}<span>${L(`Classic · Level ${game.currentLevelRank}`, `经典 · 打${game.currentLevelRank}`)}</span></div>
+            <div class="gd-vs-mark">${wordHTML("VS")}</div>
+        </div>
+        <button class="gd-vs-skip" type="button">${L("Skip", "跳过")}</button>
+    </div>`;
+}
+
 // Round/system messages become short toasts (plays and passes are already visible at the seats).
 function maybeToastTableMessage() {
     const msg = game.message || "";
@@ -3523,6 +3560,8 @@ function renderTable() {
     setRegion("spectate", mine < 0 ? `<span>${L("Spectating", "观战中")}</span>` : "");
     setRegion("actions", `${v.canAct}:${v.lead}:${v.noBeat}:${v.passHint}:${uiLang}`, () => actionsHTML(v));
     setRegion("deal", dealPhase === "dealing" ? `deal:${dealKey()}:${Math.round(t.layout.w)}` : "", () => dealHTML(v));
+    const intro = introKey(v);
+    setRegion("intro", intro, intro ? () => introHTML(v) : "");
     const firstKey = firstLeadKey(v);
     setRegion("firstLead", firstKey, firstKey ? () => firstLeadHTML(v) : "");
     const tributeMoment = tributeKey(v);

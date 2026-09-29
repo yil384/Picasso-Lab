@@ -836,6 +836,145 @@ body[data-screen="table"] .topbar { display: none; }
     100% { opacity: 0; }
 }
 
+/* ---------- 巅峰对决 match intro (yxrb_vs), over the first deal ----------
+   Every part runs on the deal clock: --since is minus the time since dealStartedAt. In 0-600 ms
+   the halves slide in, the title drops and VS stamps; it holds, fades out by 2 s and is then hidden,
+   so it never catches a tap meant for the table. */
+.gd-intro-host { position: absolute; inset: 0; z-index: 56; pointer-events: none; }
+.gd-intro-host:empty { display: none; }
+.gd-intro {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(8, 14, 44, .74);
+    pointer-events: auto;
+    animation: gd-intro 2000ms linear var(--since) both;
+}
+@keyframes gd-intro {
+    0% { opacity: 0; }
+    8%, 86% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: scale(1.04); visibility: hidden; }
+}
+@keyframes gd-intro-still { 0%, 86% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+.gd-vs { position: relative; width: 1080px; height: 540px; }
+.gd-vs-side {
+    position: absolute;
+    top: 120px; bottom: 0;
+    width: 57%;
+    display: flex;
+    align-items: center;
+}
+.gd-vs-side.is-red {
+    left: 0;
+    justify-content: flex-end;
+    padding-right: 150px;
+    border-radius: 14px 0 0 14px;
+    background: linear-gradient(160deg, #e0587a, #c8304e 45%, #8a2240);
+    clip-path: polygon(0 0, 100% 0, 75% 100%, 0 100%);
+    animation: gd-vs-in-l 320ms var(--ease-out) var(--since) both;
+}
+.gd-vs-side.is-blue {
+    right: 0;
+    padding-left: 150px;
+    border-radius: 0 14px 14px 0;
+    background: linear-gradient(200deg, #5f93ff, #2c5ce4 45%, #1a3a9e);
+    clip-path: polygon(25% 0, 100% 0, 100% 100%, 0 100%);
+    animation: gd-vs-in-r 320ms var(--ease-out) var(--since) both;
+}
+@keyframes gd-vs-in-l { from { opacity: 0; transform: translateX(-120px); } }
+@keyframes gd-vs-in-r { from { opacity: 0; transform: translateX(120px); } }
+/* the team name, big and faint, stands at the outer edge */
+.gd-vs-side em {
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    color: rgba(255, 255, 255, .2);
+    font: 400 104px/1 var(--font-display);
+    font-style: normal;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: -.04em;
+}
+.gd-vs-side em:lang(en) { writing-mode: horizontal-tb; font-size: 56px; rotate: -90deg; }
+.gd-vs-side.is-red em { left: 34px; }
+.gd-vs-side.is-blue em { right: 34px; }
+.gd-vs-list { display: flex; flex-direction: column; gap: 26px; }
+.gd-vs-p {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    animation: gd-vs-p 280ms var(--ease-back) calc(var(--since) + 260ms) both;
+}
+.gd-vs-p + .gd-vs-p { animation-delay: calc(var(--since) + 340ms); }
+@keyframes gd-vs-p { from { opacity: 0; transform: scale(.7); } }
+.is-red .gd-vs-p { flex-direction: row-reverse; }
+.gd-vs-av {
+    position: relative;
+    flex: none;
+    width: 104px; height: 104px;
+    border: 4px solid #fff;
+    border-radius: 50%;
+    background: #dfe6ee;
+}
+.gd-vs-p b {
+    max-width: 190px;
+    overflow: hidden;
+    color: #fff;
+    font: 900 26px/1.2 var(--font-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-text-stroke: 5px rgba(40, 10, 40, .35);
+    paint-order: stroke fill;
+}
+.gd-vs-title {
+    position: absolute;
+    left: 50%; top: 0;
+    translate: -50% 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 72px;
+    animation: gd-vs-title 360ms var(--ease-back) calc(var(--since) + 80ms) both;
+}
+.gd-vs-title:lang(en) { font-size: 60px; }
+.gd-vs-title span { color: #fff; font: 700 22px/1 var(--font-ui); letter-spacing: .2em; white-space: nowrap; }
+.gd-vs-title span:lang(en) { letter-spacing: .02em; }
+@keyframes gd-vs-title { from { opacity: 0; transform: translateY(-40px); } }
+.gd-vs-mark {
+    position: absolute;
+    left: 50%; top: calc(120px + 210px);
+    translate: -50% -50%;
+    font-size: 170px;
+    font-style: italic;
+    animation: gd-vs-mark 380ms var(--ease-back) calc(var(--since) + 200ms) both;
+}
+@keyframes gd-vs-mark { from { opacity: 0; transform: scale(2.4) rotate(-8deg); } }
+.gd-vs-skip {
+    position: absolute;
+    right: 28px; top: 22px;
+    height: 44px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+    font: 700 21px/44px var(--font-ui);
+}
+.gd-vs-skip::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: max(100%, calc(44px / var(--gd-s, 1)));
+    height: max(100%, calc(44px / var(--gd-s, 1)));
+    translate: -50% -50%;
+}
+@media (prefers-reduced-motion: reduce) {
+    .gd-intro { animation: gd-intro-still 2000ms linear var(--since) both !important; }
+    .gd-intro * { animation: none !important; }
+}
+
 /* reduced motion: the transient labels still show, as a still frame that fades */
 @media (prefers-reduced-motion: reduce) {
     .gd-stage .gd-combo-label { animation: gd-still 820ms linear 150ms both !important; }
