@@ -351,6 +351,9 @@ function placeReturnTypeHint() {
 
 function showReturnTypeHint() {
     if (!returnTypeHint) return;
+    // not over a popup, the 巅峰对决 board or a result screen (typing picasso still works there)
+    if (document.querySelector(".gd-popup-layer") || document.body.classList.contains("gdr-modal-open")
+        || (document.body.dataset.screen === "table" && tableView.regions.result?.childElementCount)) return;
     returnTypeHint.firstChild.nodeValue = L("try typing ", "试试输入 ");
     placeReturnTypeHint();
     returnTypeHint.classList.add("show");
@@ -1930,7 +1933,8 @@ function bindLobby(el) {
         if (target.id === "join-room") return joinFromLobby(el);
         const action = target.dataset.lobby;
         if (action === "practice") return runLobbyAction(quickPractice, target, L("Dealing…", "正在开局…"));
-        if (action === "friends") return runLobbyAction(createAndInvite, target, creating);
+        // the nav's 邀请 waits on the 好友房 tile, which shows the caption
+        if (action === "friends") return runLobbyAction(createAndInvite, target.closest(".lobby-nav") ? el.querySelector(".lobby-tile.is-friends") : target, creating);
         if (action === "lab") return openLabDeck();
         if (action === "rules") return openRules();
         if (action === "settings") return openSettings();
@@ -1970,6 +1974,10 @@ async function runLobbyAction(fn, source, label) {
         source.dataset.loading = label;
         source.classList.add("is-loading");
     }
+    // a tile scrolled out of view (portrait) is backed by a toast with the same caption
+    const r = source?.getBoundingClientRect();
+    const seen = !!r && r.top >= 0 && r.bottom <= innerHeight;
+    if (!seen) showToast(label, 8000);
     try {
         await fn();
         // a room was attached: stay pressed until its first snapshot replaces the lobby
@@ -1978,6 +1986,7 @@ async function runLobbyAction(fn, source, label) {
         lobbyActionBusy = false;
         root.querySelector(".lobby")?.classList.remove("is-busy");
         source?.classList.remove("is-loading");
+        if (!seen && toastEl.textContent === label) toastEl.classList.remove("show");
     }
 }
 
