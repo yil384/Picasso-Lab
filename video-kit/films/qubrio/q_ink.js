@@ -230,3 +230,47 @@ export function drawEmote(g, E, r) {
   }
   g.restore();
 }
+
+// ---- brush wipe (P(doom) recipe after ClaudeAnimationBase brushWipe, MIT): five fat strokes tilted -0.1 rad sweep in
+// with staggered starts, full cover is held a few frames (the cut hides under it), then they drag off with ragged
+// ends. Each stroke: a watercolour body (two glazes, wet edge), dry-brush bristle streaks in cream, ink-free.
+// p in [0,1] over the whole wipe; `cover` = fraction of p where full cover holds (centre of the wipe).
+export function brushWipe(g, p, { c1 = '#4b2a9e', c2 = '#7c3aed', bristle = '#f4e6c8', seed = 3, cover = 0.3 } = {}) {
+  if (p <= 0 || p >= 1) return;
+  const Wd = 1920, Hd = 1080, nS = 5, bh = (Hd + 460) / nS + 46;
+  const rot = -0.1, rc = Math.cos(rot), rs = Math.sin(rot);
+  const R = ([px, py]) => [Wd / 2 + (px - Wd / 2) * rc - (py - Hd / 2) * rs, Hd / 2 + (px - Wd / 2) * rs + (py - Hd / 2) * rc];
+  const h = (i) => { const v = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453; return v - Math.floor(v); };
+  const inEnd = (1 - cover) / 2, outStart = inEnd + cover;
+  const eo = (x) => 1 - Math.pow(1 - clamp(x), 3), eio = (x) => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+  for (let i = 0; i < nS; i++) {
+    const y0 = -250 + i * (Hd + 460) / nS, d = [0, 0.14, 0.06, 0.18, 0.1][i] * 0.8;
+    let x0, x1;
+    if (p < inEnd) { const q = eo((p / inEnd - d) / (1 - d)); x0 = -320; x1 = lerp(-320, Wd + 420, q); }
+    else if (p < outStart) { x0 = -320; x1 = Wd + 420; }
+    else { const q = eio(((p - outStart) / (1 - outStart) - d) / (1 - d)); x0 = lerp(-320, Wd + 420, q); x1 = Wd + 420; }
+    if (x1 - x0 < 30) continue;
+    const pts = [], rag = (k) => 40 + 55 * h(i * 31 + k);
+    for (let k = 0; k <= 10; k++) pts.push([lerp(x0, x1, k / 10), y0 + Math.sin(k * 0.9 + i) * 16]);
+    for (let k = 1; k < 9; k++) pts.push([x1 + rag(k) - 40, y0 + bh * k / 9]);
+    for (let k = 10; k >= 0; k--) pts.push([lerp(x0, x1, k / 10), y0 + bh + Math.sin(k * 0.8 + i * 2) * 16]);
+    if (p >= outStart) for (let k = 8; k > 0; k--) pts.push([x0 - rag(k + 20) + 40, y0 + bh * k / 9]);
+    const RP = pts.map(R);
+    const body = i % 2 ? c1 : c2, glaze = i % 2 ? c2 : c1;
+    g.save();
+    fillPoly(g, RP, body);
+    g.clip();   // everything below stays inside the stroke
+    // second glaze, offset (wet edge / uneven pigment)
+    g.globalAlpha = 0.35; g.translate(0, 10); fillPoly(g, RP, glaze); g.translate(0, -10); g.globalAlpha = 1;
+    // dry-brush bristle streaks along the stroke
+    g.strokeStyle = bristle; g.lineCap = 'round';
+    for (let k = 0; k < 16; k++) {
+      const yy = y0 + bh * (0.08 + 0.84 * h(i * 17 + k)), len = 0.25 + 0.6 * h(i * 5 + k * 3), xs = lerp(x0, x1, h(i * 7 + k * 11) * (1 - len));
+      g.globalAlpha = 0.25 + 0.35 * h(k + i);
+      g.lineWidth = 2 + 5 * h(i + k * 13);
+      const A = R([xs, yy]), B = R([xs + (x1 - x0) * len, yy + 6 * Math.sin(k)]);
+      g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke();
+    }
+    g.restore();
+  }
+}

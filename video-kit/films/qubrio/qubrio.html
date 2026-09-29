@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Qubrio: The Convoy (3D comic)</title>
+<!-- Qubrio project-card film, 3D comic series. One real three.js lab set rendered through runtime/npr (a local copy
+     in ./npr with the film-comic projector / volume-light additions): cel ramp, burin hatching, Ben-Day halftone,
+     off-register plates, boiling ink. Faces, emotes, marks and all lettering are hand-built 2D ink tracked to the 3D
+     world (q_ink.js, q_letters.js). Story, timing and camera: q_story.js; set: q_set.js; cast: q_cast.js.
+     See STORYBOARD.md.   Debug: ?debug=1..5 (npr G-buffer views)  ?cam=az,el,r,tx,ty,tz (fixed camera)  ?nofx=1 -->
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import * as S from './q_story.js';
+
+const Q = new URLSearchParams(location.search);
+let W = null;
+const st = {};
+
+defineScene({
+  meta: {
+    title: 'Qubrio - The Convoy', durationFrames: S.NF, fps: S.FPS, width: 1920, height: 1080, seed: 11,
+    design: [1920, 1080], background: S.PAPER, fonts: [],
+    boil: { every: 2, variants: 3 },            // ink boils at 12 drawings/s (N/2 % 3 == 0)
+    poster: S.POSTER,
+  },
+  update(ctx) { S.update(ctx, W, st, Q); },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(S.paperCanvas(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, three) { W = await S.build(ctx, three, Q); return { scene: W.scene, camera: W.camera }; },
+      draw(ctx) { S.drawNPR(ctx, W, st, Q); return false; } },
+    { name: 'ink', type: '2d', draw(ctx, g) { S.inkLayer(ctx, g, W, st, Q); } },
+    { name: 'fx', type: '2d', draw(ctx, g) { if (!Q.get('nofx')) S.fxLayer(ctx, g, W, st, Q); } },
+  ],
+});
+</script></body></html>

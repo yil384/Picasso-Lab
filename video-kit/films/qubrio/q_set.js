@@ -11,8 +11,8 @@ export const COL = {
   paper: '#f4ebd6', ink: '#1a1530',
   violet: 0x7c3aed, violetDeep: 0x4b2a9e, violetPale: 0xb9a3f0, amber: 0xf2a922, amberDeep: 0xd9861a,
   cream: 0xfff3dc, atom: 0xfff1cf, brass: 0xe6ad42, steel: 0xb8c0d8, dark: 0x2b2447, teal: 0x2f9d97,
-  table: 0x3d3a78, tableSide: 0x2a2757, plate: 0xf6ecd4, plateSide: 0x5b3fb0, red: 0xe5463b, pink: 0xff3d7f,
-  wall: 0x6b4fc9, wallDark: 0x3f2c86, trim: 0xf4e6c8, wood: 0xc98a52,
+  table: 0x564a9e, tableSide: 0x33296e, plate: 0xf6ecd4, plateSide: 0x5b3fb0, red: 0xe5463b, pink: 0xff3d7f,
+  wall: 0xc4b3f0, wallDark: 0x6b4fc9, trim: 0xf4e6c8, wood: 0xc98a52,
 };
 
 function canvasTex(w, h, paint) {
