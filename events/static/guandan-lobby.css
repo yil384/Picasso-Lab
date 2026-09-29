@@ -1253,7 +1253,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     body[data-screen="lobby"] .topbar { padding-left: calc(12 * var(--lu) + var(--sl)); }
     .lobby { display: block; min-height: 0; padding: 0 calc(12 * var(--lu) + var(--sr)) 0 calc(12 * var(--lu) + var(--sl)); }
     .lobby-rail { height: auto; translate: none; flex-direction: row; justify-content: space-between; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
-    .rail-item { width: calc(66 * var(--lu)); }
+    .rail-item { width: auto; min-width: calc(62 * var(--lu)); }   /* as wide as its label, so long English labels never touch */
     .rail-disc { width: calc(54 * var(--lu)); height: calc(54 * var(--lu)); }
     .is-mvp .rail-disc img { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
     .is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(38 * var(--lu)); }
