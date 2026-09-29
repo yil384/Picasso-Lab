@@ -682,7 +682,7 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-tool .gd-ico { width: 24px; height: 24px; }
 .gd-tool#clear-btn { padding: 0 16px; }
-.gd-tool.is-idle { opacity: .55; }
+.gd-tool[hidden] { display: none; }
 
 .gd-spectate { position: absolute; left: 50%; bottom: 90px; translate: -50% 0; z-index: 12; }
 .gd-spectate span {

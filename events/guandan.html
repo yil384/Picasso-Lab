@@ -3105,7 +3105,7 @@ function refreshSelectionUI() {
         playBtn.setAttribute("aria-disabled", String(off));
     }
     const clearBtn = document.getElementById("clear-btn");
-    if (clearBtn) clearBtn.classList.toggle("is-idle", !selected.size);
+    if (clearBtn) clearBtn.hidden = !selected.size;
 }
 
 function handInteractive() {
@@ -3646,10 +3646,12 @@ function actionsHTML(v) {
     return `${pass}${clockHTML("gem")}${hint}<button class="btn play${spaced} is-disabled" id="play-btn" aria-disabled="true" type="button">${hit}${L("Play", "出牌")}</button>`;
 }
 
+// Bottom-right pills (tg_ingame_classic): 理牌 and 横排, with 重选 in front of them only while cards
+// are selected (refreshSelectionUI); none once my hand is gone.
 function toolsHTML(v) {
-    if (v.mine < 0 || game.phase !== "playing") return "";
-    return `<button class="gd-tool is-idle" id="clear-btn" type="button">${L("Reset", "重选")}</button>
-        <button class="gd-tool" type="button" data-act="lipai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="m16 4 13 6.5-13 6.5L3 10.5Zm-9.2 11 9.2 4.6 9.2-4.6 3.8 1.9-13 6.5-13-6.5Zm0 6 9.2 4.6 9.2-4.6 3.8 1.9L16 29.4 3 22.9Z"/></svg>${L("Group", "理牌")}</button>
+    if (v.mine < 0 || game.phase !== "playing" || !(game.hands[v.mine] || []).length) return "";
+    return `<button class="gd-tool" id="clear-btn" type="button" hidden>${L("Clear", "重选")}</button>
+        <button class="gd-tool" type="button" data-act="lipai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="m16 4 13 6.5-13 6.5L3 10.5Zm-9.2 11 9.2 4.6 9.2-4.6 3.8 1.9-13 6.5-13-6.5Zm0 6 9.2 4.6 9.2-4.6 3.8 1.9L16 29.4 3 22.9Z"/></svg>${L("Sort", "理牌")}</button>
         <button class="gd-tool" type="button" data-act="hengpai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="${handMode === "row" ? "M4 5h24v6H4Zm0 8h24v6H4Zm0 8h24v6H4Z" : "M5 4h6v24H5Zm8 0h6v24h-6Zm8 0h6v24h-6Z"}"/></svg>${handMode === "row" ? L("Columns", "竖排") : L("Row", "横排")}</button>`;
 }
 
