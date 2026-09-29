@@ -57,6 +57,26 @@ Fixes made for round 2:
 - SFX re-lettered condensed and slanted (big first letter, jostling capitals); Loupe's eye drawn from either side of the lens;
   Hoot's pillow moved beside its head so the sleeping face reads at f0.
 
+## Round 2 — full 960×540 pass after the round-1 fixes (`snaps/full2`, all 720 frames)
+
+Independent reviewer agents per lens, each looking at the pack (1 fps sheet, every-4th-frame shot sheets, real-size card
+emulation, seam strip, key stills) and stepping through individual frames. The DFT and WEB lenses were lost in a container
+restart and re-run on the same frames (scores added below when they came back).
+
+| lens | score | verdict |
+|---|---|---|
+| CD | **7.2** | Clearly better than round 1: a cohesive 3D comic world, Hoot acts well at both ends, the fail → adjust → lap → DING loop reads without words. Not yet delightful in the middle: agents hide their faces in their own beats (Tri f116–141, Clack f204–240, Loupe S4), the Pareto gag happens behind the cell, the 68× hourglass race is too small to see, the payoff is a static row nobody visibly earns, a 3-frame camera snap at f507–510, an iris "match cut" that plays as a hard cut (f383→384), DING! reads "DWG!". |
+| TA | **7.6** | Strong NPR base (toon ramp, halftone, boiling ink on twos, real smeared whips, a crash pull-back on impact frames, clean seam). Defects: the giant hourglass cap slices through Hoot's face at f0 and f704–719; the f504–510 brake is an unsmeared jump; Loupe's 2D eye draws over the lampshade (f612–615); SFX alpha-fade into the next shot; two airbrushed glows (Big Iron's porthole halo, the DING sunburst hiding the bead); DING! illegible; scorecard doodles cross-fade away at the seam (f711–714). |
+
+Must-fix (merged, with evidence frames): faces in their own beats (CD-M1; Tri f108–150, Clack f200–240, Loupe f328–364);
+the S5 Pareto gag (CD-M2, f396–454); the 68× race and Hoot's manual work (CD-M3; f63–70, f290–312, f584–600, f622–683);
+the lap→gauge brake (CD-M4/TA-2, f504–510); the payoff staging (CD-M5, f622–683); DING! lettering (CD-M6/TA-6, f530–555);
+the lens→knob iris (CD-M7/TA-10, f376–384); hourglass through Hoot's head (TA-1, f0–20, f62–64, f704–719); Loupe's eye over
+nearer geometry (TA-3, f612–615); SFX alpha fades (TA-4); soft glows (TA-5, f222–245, f530–540); the scorecard cross-fade
+(TA-7, f711–714); plus the director's own list: the lens-eye wedge at f246–249 (not a clip: Loupe's 2D eye blew up when the lens
+sat just off screen; a ray-cast near-plane check over all 720 frames found no real geometry clips), Loupe seen from behind in S4,
+Tri's card over its face (f114–128), dead wall frames at the funnel (f566–576), grey translucent dot eyes on the whole cast.
+
 ## Handoff status
 - Done: storyboard (4 angles judged), full 720-frame scene in `films/tritondft/`, review round 0 (storyboard) and round 1 (first cut: CD 6.4 / TA 6.7 / DFT 6.8 / WEB 7.0).
 - Round-1 fixes are committed and were spot-checked on single frames at 960×540 (whip instead of the smoke cover, S5 re-block + CLANK!, S8a/S8b payoff framing on the card, cream/sky grade, plate clear of the LIVE pill, SFX lettering, pillow pose, held result).
