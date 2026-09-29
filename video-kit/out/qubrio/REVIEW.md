@@ -333,3 +333,262 @@ Disputed or downgraded by the consolidator:
 - Director: '✓ is up only f326-f338 (~13 f)'. It is 14 full frames (f326-f339, gone at f340). A small numeric slip, folded into the S4 item.
 - Not scored, known and fixed after this render: Loupe's lens orientation and TWEET! placement in f190-f262, including the LIVE pill on TWEET!'s '!' (card f214) and TWEET!'s top being cut in the 515 crop, and the opening crane starting too far out (S1 f0-f40 'dead opening').
 
+
+### Fixes applied after round 2 (visible in round 3's preview p7)
+
+- **Physics:**
+  - The convoy glides down buffer lanes midway between the partner columns. Every mover stays at least 0.95 (more than r = 0.65) from every non-partner; `check_phys` verifies this. All three columns then contract onto the docks together.
+  - The zone row pitch is now 1.7, so the r-circles keep a 0.4 gap.
+  - Full-length amber column rails show the grid stretching in both axes.
+  - PowerMove's cargo is grey-lilac, and Slo appears only for the race.
+- **Readouts:**
+  - The fidelity columns start from the bulb tops, so the visible heights compare 1 : 1.3.
+  - PowerMove's run is a grey hatched sweep on the dial.
+  - The tag is tied to Qubrio's column with a thick string and a knot.
+- **Story:**
+  - S3 holds the crash zoom, with radial speed lines, through the fix. A big pencil erases the two bad routes and redraws them in ochre.
+  - S3→S4 is a push into Loupe's beaming lens that match-cuts on the circle to Tick's dial.
+  - In S4 the ✗ lands after the bold flung ghost, and the ✓ holds.
+  - GO is on screen: the hands spin to 12 and CLICK!.
+  - The lap closes at f544 in an already-settled payoff band: CLICK!, a dial jolt, PowerMove's flag droops but stays legible, then the 4.7× flag.
+- **Craft:**
+  - The table's hole grid is painted at true density, so the "black holes" are gone.
+  - 25-tap smear, and the ink fades in whips.
+  - ZAP! and TWEET! sit in the card band.
+
+## Round 3 — preview p7 (672 f at 960×540)
+
+Evidence: `films/qubrio/work/ev/r3/`; committed copies `out/qubrio/review/r3_overview.jpg`, `out/qubrio/review/r3_card.jpg`. Seam diff 671→0 = 6.86 (median 8.37).
+
+| lens | round 1 | round 2 | round 3 |
+|---|---|---|---|
+| Creative director | 5.5 | 7.0 | **7.5** |
+| Tech-art lead | 6.5 | 7.4 | **7.8** |
+| Domain expert (neutral-atom compilation) | 6.5 | 7.6 | **8** |
+| Web designer (Projects page) | 6.4 | 7.5 | **8** |
+
+### Creative director — 7.5
+
+Round 3 is clearly better told than round 2, and it now has real comic transitions. The foul reads instantly: the two ghosts bump with x eyes, TWEET!, the flag lands and the amber rails scissor into an X (f206-f220, and it holds on card f214). The lens-to-dial match cut is a transition that belongs to the story (f262-f268). GO is on screen: the hands spin back to 12, the dial squashes, CLICK! (f346-f358). The climax now plays in the right order: crown hit f544, CLICK! f545-f547, the POWERMOVE sign droops and stays legible f548+, the flag springs out of the crown f552, 4.7x at f555. The poster (f600) finally carries its baseline: POWERMOVE is in shot, Loupe cheers and is not hidden, and 1.3x is knotted to the violet tube. Tick acts with its face in S4 (squint f292, worried f300, beaming f330).
+
+It is still not P(doom)-level, for five reasons:
+1. The fix beat is still broken. It is the heart of Qubrio (verifier localises, agent repairs). The pencil blinks on for about 2 frames at a time in five unrelated places and is invisible in between, so no erase is ever seen.
+2. The loop wipe is unchanged at 6 full-cover frames of flat violet slab. It is the one frame that looks like motion-graphics, and every card visitor hits it about 1.4 s after the poster.
+3. ZAP! now sits on top of one of the six bonded pairs, in the shot whose point is 'every pair'.
+4. The payoff is legible but not a big comic moment. 4.7x is about 22% of the frame width, the left third is still a tangle, and PowerMove's 'full grey lap' is hairline hatch that disappears at 400 px.
+5. The S4 verdicts still hold only 14-17 f, and the ghost fades out instead of splatting on the lens.
+
+Smaller problems:
+- The POWERMOVE flag blinks in and out mid-race.
+- Slo is not in the GO shot.
+- The opening beat is tiny.
+
+Nothing except the wipe could be mistaken for a web page. The ink, halftone and lettering are hand-made and consistent.
+
+### Tech-art lead — 7.8
+
+Round 3 is a clear step up from round 2 (7.4), but it does not reach 8.5. The foundation is right: a lit three.js lab with real depth and parallax, cel shading plus Ben-Day halftone, hatched cast shadows, boiling hull ink and paper grain. Nothing is glossy or looks like default three.js, and the black-hole blob shadows are gone. The lettering is the best in the series (TWEET! f214, ZAP! f452-f470). The Loupe-lens → Tick-dial match cut (f267→f268) is a real story transition. The fling now plays cause before effect (bold ghost f291-f292, ✗ f294-f295). The whips are eased moves with smear. The loop seam is clean (671→0 = 6.86 against a median of 8.37). Several pipeline tells still make stretches look assembled rather than drawn. (1) In both cross-shot whips the ink layer is not smeared: crisp grey wireframes of both shots sit over the colour smear, which reads as a double exposure. At f361 the S4 CLICK! is still visible over the convoy plate; at f433-f434 Tick's dial and Loupe's lens outlines sit over the pairs. The 25-tap smear also ribs the halftone. (2) POWERMOVE is still a 2D UI name tag: a white rectangle with a thin border and monoline text. It pops on at f494, fades f495-f496, is missing f497-f518 while Slo is fully visible, and fades back f519-f521. Its "droop" is a rigid rotation of a card that floats with no pole (f556-f630). (3) The 4.7× flag springs out as a blank ochre slab for f552-f554, and the digits pop in at f555. (4) ZAP! still hides the back-middle bonded pair for about 20 frames (f452-f468). (5) The convoy uses soft radial glows that go muddy brown on the violet zone, plus hairline speed lines that cut through the movers' faces (f366-f394). (6) Several elements leave by opacity fade instead of a comic exit: TWEET! f222-f226, CLICK! f548-f551, the flung ghost fading over the ✗ f293-f296. (7) The loop wipe still holds 5-6 full-cover frames of flat violet (my measurement: 0.80 cover f648-f651). (8) Rook's pencil blinks out f232-f234 and pops back flipped. All of these are fixable in post and animation. The look itself is shippable.
+
+### Domain expert (neutral-atom compilation) — 8
+
+Round 3 fixes most of my round-2 physics list. I checked it against the frames, a re-run of check_phys, and my own measurements on prev/p7.mp4 (crops in the scratchpad: zapbr2.jpg, race.jpg, storage.jpg, s3bump.jpg, convoy.jpg, gauge600.jpg, dialgrid.jpg).
+
+**What is now right:**
+- **Convoy.** It is a real single AOD move. The six movers glide down buffer lanes midway between the partner columns: at f380 each mover is about 0.975 from both neighbouring partners, so none looks docked to the wrong one. Then all three columns shift onto the docks together (f390-f396). Full-length column rails and row rails stretch in both axes and never cross (f366-f396).
+- **Pairs.** Docks sit 0.52 inside r = 0.65. The next-nearest atom is 1.38-1.70 away (2.65-3.27x). The r-circles keep a visible gap (f146).
+- **Pulse.** One hard-edged flood covers the whole zone rectangle and the storage stays dark (f452).
+- **Numbers.** Everything I could measure is exact or within measurement error:
+  - Convoy 40 f vs PowerMove 188 f = 4.7x.
+  - Dial slice about 74° after tick correction (1/4.7 = 76.6°).
+  - Gauge ratio about 1.33 above the shared bulb baseline.
+  - The unoptimised wedge is 1.7/4.7, from the site.
+- **Optimiser.** The accept rule plays in causal order: time and fidelity both fall → ✗ after the flung ghost (atom loss). Time falls and fidelity rises → ✓.
+- **Race start.** GO is on screen before the convoy moves.
+- **Payoff.** The poster now keeps its PowerMove reference.
+
+**Why it is not 8.5 yet.** At the three frames that carry the physics (the verifier foul, the gate and the poster), the picture still says something wrong:
+1. **The foul.** It is drawn as two tilted amber AOD rails forming an X. AOD columns are lines of constant x, as the film itself draws them in S5. The plan-1 swap also only moves the front row, so both of those AOD columns would need two x positions at once (a 0.36 split at the bump step). That is a second, unflagged violation.
+2. **Slo's cargo on the pairs.** Its grey-lilac cargo sits touching Qubrio's pairs inside the Rydberg flood (f452-f455) and on top of a bonded pair during the race (f508-f520).
+3. **Heaped baseline.** PowerMove's delivered atoms end as a touching heap in the poster, which misrepresents the baseline's output.
+4. **Hidden pair.** ZAP! hides one of the six CZ pairs and its bond through the whole gate beat.
+5. **Storage chains.** The S1/S2 camera still collapses the storage into chains of touching atoms, during the shot that teaches that only pairs are close.
+
+All five are staging or geometry fixes, not concept problems.
+
+### Web designer (Projects page) — 8
+
+Round 3 is clearly better than round 2 (7.5) as a muted Projects-page card, but it is not at 8.5 yet. I checked each beat at real card size (515×195 and 400×195, with LIVE pill and bottom fade), using card.jpg plus my own crops of about 90 frames pulled from prev/p7.mp4.
+
+What now reads at 400 px:
+- Pip's r-circles (f110–f146).
+- The big pencil drawing, erasing and redrawing routes in ochre (f168–f248).
+- TWEET!, the flag and the scissored X (f206–f220).
+- The push into Loupe's lens and the match cut to Tick's dial (f264–f272), the best card moment.
+- The flung inked ghost, then ✗ (f292→f294), then ✓ (f326–f344).
+- GO with CLICK! (f354–f358).
+- The amber convoy grid (f372–f404).
+- ZAP! and the ∞ pairs, now fully inside the band (f452–f484).
+- A climax in the right order: CLICK! at f546, a legible drooped flag, 4.7× at f555, 1.3× at f568.
+
+The payoff is card-safe: the 4.7× top is at master row ≈270, and the 1.3× tag (x 1430–1745, y 375–520) is clear of the LIVE pill. The loop seam is clean: 671→0 diff is 6.86 against a median of 8.37.
+
+What still stops it shipping:
+- **Loop wipe.** It still holds about 6 frames of near-full violet (f647–f652). At card size it looks like a flat slab, and every visitor hits it about 1.4 s after the poster.
+- **POWERMOVE in the race.** The label is sliced by the 515 card's bottom edge and fade in S5 (f406–f420). It is missing entirely f492–f519, then fades in as a ghost at f520.
+- **Poster.** The POWERMOVE lettering sits in the fade corner, away from the grey column. A knot of sticks and a grey atom heap still sits at the dial's lower-left. PowerMove's grey lap reads only as a pale dial face at 400 px.
+- **Edges.** Pip's S1 '!' is above the 515 band. Loupe sits under the LIVE pill in S1 and at the start of S3.
+- **File sizes.** The card needs CRF ≥31: CRF 30 gives 4.10 MB. The master size is still unmeasured.
+
+### Consolidated must-fix (verified against the frames, ranked)
+
+1. **[blocker] S3 fix beat (the verifier-then-repair idea at the heart of Qubrio) cannot be read. Rook's pencil teleports between unrelated spots and vanishes in between. No erase is ever performed, the eraser end never touches the plate, and the camera leaves the crash zoom before the redraw.** (director, techart (web's claim that this beat reads at 400 px is disputed))  
+   Evidence: VERIFIED on my per-frame sheet of p7 f226-f261 (scratchpad s3fix.jpg) and on strips_196-238 / strips_238-280:
+- f230-231: pencil at lower right.
+- f232-235: gone.
+- f236-237: upright at centre.
+- f238-239: far left.
+- f240-241: gone.
+- f242-243: beside Loupe.
+- f244-249: gone.
+- f250-251: in the zone.
+- f252-253: huge at top-left.
+The pencil is tip-down in every appearance. The ring and flag degrade to a stray 'P' mark at f238, then vanish by f240. Ochre routes pop in over f240-f248 with no pencil on them. The camera pulls out to show Rook's track from f241-f244, so the builder note 'held through the fix' is false. Card f232 (both widths) shows no pencil at all.
+Note: commit a91d225 describes a 'continuous pencil erase', but it is not in this render.  
+   Fix: Stage one continuous, never-hidden pencil action with the camera locked on the flag and ring framing until the ghosts re-run (about f250):
+1. The pencil leaves Rook's cab and arcs to the flag with smear (6-8 f).
+2. Anticipation, then an on-screen 4-6 f flip so the eraser is down.
+3. Scrub the two bad routes and the X for 10-12 f, with wobble, lilac crumbs, and the lines breaking up under the eraser.
+4. Flip back and redraw each route in ochre with the tip on the growing line end (about 8 f each).
+5. Tap the dock and zip back to Rook.
+Verify on a per-frame sheet and at 400x195.
+2. **[blocker] The loop brush wipe is unchanged from round 2: about 6 frames of near-full, flat digital violet with evenly spaced white hairlines. It is the one web-page and motion-graphics frame in the film, and card visitors hit it about 1.4 s after the poster.** (director, techart, web)  
+   Evidence: VERIFIED. My cover measurement on p7 (distance to the f649 median violet < 40):
+- f646: 0.31
+- f647: 0.70
+- f648-f651: 0.81-0.82
+- f652: 0.80
+- f653: 0.26
+That is 6 frames at ≥ 0.70 against the storyboard's ≤ 4. Full-size f650 is a flat violet field with a faint dot screen and parallel white streaks: no bristle breakup, paper gaps or ink edge. The card crop of f648 reads as a solid slab. The builder's 'wipe shortened' is not supported.  
+   Fix: Cap full cover at 2-3 f (for example f648-f650) and stagger the trailing strokes so S1 shows through from f651. Give the strokes split dry-brush ends, paper-white dropouts at least 6 master px wide (20-30% paper) and a dark ink edge on one side, so the texture survives at 400 px. Better: make the wipe a story object crossing the lens, such as Rook's steam cloud or the 4.7x flag swinging over the camera. Re-run the same cover metric and record it in REVIEW.md.
+3. **[major] The payoff and poster are legible but not a big comic moment, and are cluttered:
+- 4.7x is small.
+- The lower-left is a knot of shapes.
+- PowerMove's 'full grey lap' is invisible at card size.
+- The flag springs out as a blank slab with no burst, and its digits pop in late.
+- The 4.7x flag covers Loupe's lens rim.** (director, techart, web (physicist on the heap, see the cargo item))  
+   Evidence: VERIFIED on stills/f0600 and my per-frame sheet f542-f565.
+- 4.7x spans about x 320-750 of 1920 (about 22%). The top about 25% is empty wall and shelves.
+- The lower-left tangle at about (400-800, 620-910) holds Tick's horizontal arm rod and knob, Slo's stalks and shell, a heap of 4-5 touching grey atoms, and the tilted POWERMOVE card floating with no pole. The card's 'PO' sits in the 515 card's bottom fade.
+- The dial's PowerMove lap is hairline diagonal hatch on cream. In my 400x195 crop of f600 the face is plain cream.
+- f552-f554: a blank ochre slab; the digits appear all at once at f555. There is no starburst, and the camera drifts f550-f566.
+- f600/f630: the flag's lower-left corner and the '4' overlap the top of Loupe's rim at about (330-420, 420-470).
+The tighter push is coded but not rendered.  
+   Fix: 1. Render the tighter push, so flag, dial and gauge fill about 75-80% of the width and 4.7x is at least 30%.
+2. Parent the digits to the field from its first frame and scale them together (0 → 1.15 → 0.95 → 1 over about 6 f). Add crown squash anticipation, a 2-3 f ochre ink starburst behind the flag and a small shake, then lock the camera.
+3. Fill PowerMove's lap with a bold mid grey-lilac (at least 30% darker than the face) under the hatch.
+4. Swing Tick's left arm up into a cheer.
+5. Hang the drooped POWERMOVE flag beside the grey column, at least 60 master px above row 836.
+6. Nudge the 4.7x flag about 60-80 px up and right, or step Loupe left, so the lens is clear.
+4. **[major] PowerMove's identity during the race is unreliable:
+- Slo is not in the GO shot.
+- Slo enters S5 under the card's bottom fade with its flag sliced.
+- The POWERMOVE flag blinks out, alpha-fades and ghosts through most of S7.
+- The flag itself is a flat 2D UI label (white rectangle, thin border, monoline text), not a paper flag on a pole.** (director, techart, web)  
+   Evidence: VERIFIED.
+- GO (f348-f358, still f0352): only grey atoms and an antenna tip at the extreme left edge. Card f352 shows no Slo.
+- S5 (my s5 sheet): Slo first appears at f404, bottom right. The flag is at about master rows 930-1005 at f408 (outside the 515 band), 870-950 at f412-f416 (sliced by the edge and fade; my card crop f414), and about 780-855 at f420.
+- The flag is gone f428-f493 while Slo is visible (f429-f430 and the S6 frames).
+- My flag crop sheet: pops on at f494, about 50% alpha f495-f496, absent f497-f518, ghosted f519-f520, opaque from f521. Card f496/f520 shows a washed-out label.
+Commit a91d225 lists a 3D billboarded sign and 'GO with Slo in frame', but neither is in this render.  
+   Fix: Build the sign as a lettered 3D cloth plane (CanvasTexture) on a visible pole from Slo's shell, lettered with the SFX brush. Billboard or clamp its yaw so it is never edge-on, and never alpha-fade or hide it while Slo is on screen. Frame Slo and its flag in the GO shot inside the band, with the flag springing up on the CLICK! frame and a start hop. In S5, raise Slo's lane or tilt the camera so Slo and the flag sit at master rows ≤ 800 from f364. Re-check f348-f430 and f488-f544 in both card crops.
+5. **[major] The verifier's foul teaches AOD rules with an impossible picture:
+- The 'two amber AOD column rails scissoring into an X' are drawn tilted about ±35-55°. AOD columns are lines of constant x, as S5 itself draws them.
+- The rendered plan 1 swaps only the front-row movers, so each of those two columns would need two x positions at once. That is a second, unflagged violation.
+- The visible bump happens about 150 px above the ring and flag that claim to mark it.** (physicist)  
+   Evidence: VERIFIED.
+- stills/f0214: dashed amber rails from about (410,860) to (910,640) and from (530,630) to (840,850), whereas f0380/f0396 draw axis-aligned rails.
+- The code at the render commit (422d78b q_phys.planXZ: 'if (... m.pr !== 1 ...) return [x, z]', and q_time WRONG = front row only) confirms that only front-row movers change lane, so the middle-row atoms in the same columns go straight.
+- f0214: the x-eyed ghosts sit at about (510-760, 440-580), overlapping sleeping storage atoms; the ring is centred about (650,750).
+Note: the uncommitted working tree already switches to a whole-column swap (SWAP 'both rows'), but that is not rendered.  
+   Fix: Render the whole-column swap: both rows of columns 2 and 3 are sent to each other's lanes. Draw the two column rails as straight, full-length constant-x lines in the S5 style, sliding toward each other until they coincide, with a bonk on the meeting line. Land Loupe's flag and ring exactly on that line. Move the bump into the open gap between storage and zone (p about 0.35-0.45), or drop a pencil leader from the bumping ghosts to the ring. Extend check_phys to assert column rigidity: every mover sharing a column has the same x at every p of every plan.
+6. **[major] ZAP! hides the back-middle bonded pair and its ∞ bond through the gate beat. The shot that proves one global pulse gates every pair shows only 5 of 6 CZs.** (director, techart, physicist)  
+   Evidence: VERIFIED.
+- stills/f0452: the pair sits under 'A/P' at about (950-1080, 440-520).
+- stills/f0470: only its star eyes peek out under the 'A' at about (900-1060, 420-500), and the bond is fully hidden.
+- My ZAP sheet f446-f484 shows the overlap from f452 until ZAP! fades out at about f474.
+- The storyboard places ZAP! 'over the dark storage'.  
+   Fix: Move ZAP! about 120-150 master px up, onto the storage block (rows about 200-400 at 1080, still inside both card crops), and scale it to about 0.8 if needed. Acceptance: all six pairs, bonds and star eyes are fully visible on every frame f452-f484 in the full frame and in the 515/400 crops.
+7. **[major] PowerMove's atoms break the film's 'distance = interaction' grammar:
+- The delivered cargo ends as a touching heap in the poster.
+- The pick-up tray is a 2x2 touching clump.
+- Slo's grey cargo and its two-circle 'oo' huff project onto or into Qubrio's pairs inside the Rydberg flood and during the race.** (physicist, techart, web)  
+   Evidence: VERIFIED.
+- f0600: 4-5 touching grey atoms at about (580-760, 780-900), and the same at f0546 and on card f600/f630.
+- f0380: a 2x2 touching clump at about (760-930, 900-1030).
+- f0452: two grey atoms touching the front-right gated pair at the flood edge, about (1270-1390, 960-1090), with an 'oo' sprite at about (1170,1035).
+- My flag crop sheet f510-f519: Slo's grey cargo sits on top of the front-left bonded pair.
+- The 'oo' huff at f510, f518 and f519 reads as a miniature atom pair.  
+   Fix: Give the drop tray three pair slots (2 atoms at PAIR = 0.52, slots at least 1.4 apart). Slo delivers each trip as one separated pair, so its end state is three clean pairs, only later. Give the pick-up tray slots at storage pitch 1.0. Re-block the S6/S7 cameras, or move Slo's lane forward or lower, so no PowerMove object projects onto a Qubrio pair on any frame f440-f544. Hide Slo during the gate if needed. Redraw the huff as one lumpy inked cloud, never two equal circles, and never inside the zone.
+8. **[major] Both cross-shot whips double-expose the ink layer: the colour is smeared but crisp grey outlines of both shots sit on top. The 25-tap smear also ribs the halftone into comb stripes.** (techart)  
+   Evidence: VERIFIED on my sheets f357-f365 and f429-f437.
+- f359-f361: the CLICK! lettering and Tick's dial ring stay as sharp outlines over the smeared convoy plate.
+- f362: dozens of thin grey circles float over the smear.
+- f433-f434: sharp outlines of the pair circles, Tick's dial and ticks, and Loupe's lens all sit together over the smear, with vertical comb ribbing in the smeared halftone at f434.
+- The same-set whips (f150-f154, f486-f490) are clean.
+Commit a91d225 lists 'ink off at peak whip speed, jittered smear', but that is not in this render.  
+   Fix: Smear the ink canvas with the same velocity-aligned taps, or take ink opacity to 0 for the 2-3 peak-speed frames. Swap shots on one full-cover smear frame, and draw only the incoming shot's ink after it. Clear SFX (CLICK!) before the swap frame. Jitter the tap offsets, or pre-blur the halftone plate, to remove the ribbing. Re-pull f358-f365 and f430-f437.
+9. **[major] S4 optimiser verdicts are short and the reject gag has no impact:
+- The ✗ holds 14 f and the ✓ about 17 f, against the storyboard's ~20 f.
+- The flung ghost alpha-fades over the freshly stamped ✗ instead of splatting on the lens.
+- There is no shake and Tick does not duck.
+- The set-down/re-pick hiccup that motivates the reject is not visible.** (director, techart)  
+   Evidence: VERIFIED on my per-frame sheets f280-f357.
+- The ghost is flung f289-f292, then is translucent and fading f293-f296, lying over the ✗.
+- Tick's pose is essentially unchanged f288-f296.
+- The ✗ is fully visible f295-f308 and gone at f309 (14 f).
+- The ✓ is visible f326-f342 and translucent at f343-f344 (about 17 f).
+- Nothing on the slate reads as a set-down/re-pick during f280-f287.
+The stamp action is not in this render.  
+   Fix: Hold the ✗ and the ✓ at least 20 f each, shifting try 2 by 6-8 f. The ghost hits the lens as a 2 f flat splat with ink droplets and a 3-4 f camera shake, then cuts off before the ✗ lands. Tick ducks with at least 20% squash, then pops back. Render the stamp with arm anticipation, a slam with slate squash and dust ticks. Show the hiccup as one slate dot dropping into a ring with a small 'clunk' at about f282-f285.
+10. **[minor] Ink and SFX elements leave by opacity cross-fade (web-animation grammar) instead of a comic snap, squash-off or cut.** (techart)  
+   Evidence: VERIFIED:
+- TWEET! turns translucent brown at f222-f226 (strips_196-238).
+- The amber X rails fade at f226 and are gone by f228.
+- ZAP! goes translucent at f472-f474 (my ZAP sheet).
+- CLICK! is a grey ghost at f548-f551 (my payoff sheet).
+- The flung ghost fades at f293-f296 (covered in the S4 item).  
+   Fix: Ban alpha fades on ink and SFX layers. Each SFX exits with a 2-3 f snap-shrink or squash-off, or is cut under a camera move. The X rails are rubbed out by the eraser as part of the S3 fix, not faded.
+11. **[minor] The convoy uses generic soft radial glow sprites that go muddy brown on the violet zone. Thin uniform hairline speed lines run straight through movers' faces and read as tethers between atoms.** (techart, physicist)  
+   Evidence: VERIFIED on stills/f0380:
+- Brown-orange soft blotches at about (850-1000, 580-690), and one following the back-middle mover at f0396 (about 1040,580).
+- A single black line from the back-right mover's mouth to the front-right mover at about (1370-1400, 620-770).
+- Double lines between the middle movers at about (900-1030, 520-680).  
+   Fix: Delete the gradient glow sprites; the amber pedestal and tint already mark AOD grip. If a marker is wanted, use a flat hard-edged ochre halftone disc on all six. Redraw motion marks as 2-3 short tapered brush lines trailing each mover, depth-tested, each lasting 2-3 f, and never touching another atom.
+12. **[minor] In S1/S2 the 3x3 storage projects into columns of three touching or overlapping atoms, during the placement shot that teaches 'only pairs are close'.** (physicist)  
+   Evidence: VERIFIED on stills/f0040 (x about 900-1420, y 350-620) and stills/f0110 (x about 620-1150, y 180-420): each storage column reads as a stack of three touching spheres. The grid separates only once the camera rises (about f172).  
+   Fix: Raise the S1/S2 camera elevation until storage neighbours show a cream gap on screen, or lower the atom hover. Alternatively raise the storage z-pitch to about 1.4 and re-run check_phys. Verify f0-f146 per frame.
+13. **[minor] Edge safety: Pip's wake '!' is cut by the top of the 515 card. Loupe sits under the LIVE pill in S1, and half off the right edge and under the pill at the start of S3.** (web)  
+   Evidence: VERIFIED.
+- stills/f0040: the '!' spans about y 75-200 at 1080, while the 515 band starts at about row 177.
+- Card f0: Loupe's lens top sits under the pill (it overlaps the pill in the 400 crop).
+- stills/f0172: the lens is at about x 1740-1932, y 210-430, cut by the right frame edge.  
+   Fix: Tilt the S1 camera up about 80 master px, or start the '!' at or below row 220. Frame S1 and f150-f200 so Loupe sits at x ≤ 1550 and y ≥ 300. Re-check card crops at f40, f172 and f484.
+14. **[minor] File budget is not secured: the card needs CRF ≥ 31 and the default CRF search will fail. The master size is still unmeasured after three rounds.** (web)  
+   Evidence: VERIFIED approximately. My re-encode of p7 through the card chain (crop, lanczos 960x528, hqdn3d, veryslow, without the script's -g 48, which adds bits) gives:
+- CRF 30: 3.90 MiB = 4.09 MB
+- CRF 32: 2.95 MiB
+encode_segs.py divides by 1e6 and its default --crf-start 22 with 8 tries stops at CRF 29, so it would report 'did not fit'.  
+   Fix: Run the card with --crf-start 31 --max-mb 3.8. Before the final, render a 1080 chunk of the busiest stretch (about f432-f560), encode it at CRF 18 slow and extrapolate against the ~70 MB cap. If it is over, use CRF 19-20 or a light hqdn3d on the master.
+
+Disputed or downgraded by the consolidator:
+
+- Web: 'the big pencil drawing, erasing and redrawing routes in ochre (f168-f248)' reads at 400 px. Contradicted by the per-frame evidence: the pencil is absent f232-235, f240-241 and f244-249; no erase is ever performed; the routes pop in; and card f232 shows no pencil. Replaced by the S3 blocker.
+- Techart: the pencil 'reappears eraser-up at the flag at f236 with no visible flip' / 'pops back flipped'. In every appearance (f230, f236, f238, f242, f250, f252) the pencil is tip-down with the lilac eraser up. The real defect is that it never flips to the eraser at all (folded into the S3 item).
+- Builder note 'wipe shortened': not supported. Cover is ≥ 0.70 for 6 frames (f647-f652), the same as round 2.
+- Builder note 'S3 holds the crash zoom through the fix': not supported. The camera pulls out to show Rook's track at f241-f244, before the redraw.
+- Builder note 'the kept check holds ~20 f': about 17 f as rendered (f326-f342, fading f343-f344). The ✗ holds only 14 f (f295-f308).
+- Builder note that the grey hatched sweep makes the poster read 'one violet slice against a full grey lap': not true at card size. In my 400x195 crop of f600 the face reads plain cream.
+- Builder note '1.3x tag tied with a thick string and knot': in f0600 the string is still a thin line about 3 px at 1080 with no legible knot. Kept as polish (nice-to-have), not a must-fix.
+- Physicist numeric detail 'ghosts sit 0.17-0.40 from sleeping movers, hover 0.55 up': not independently measured. What is visible (ghosts overlapping storage atoms and sitting about 150 px above the ring at f0214) supports the must-fix, so the item stands without relying on those numbers.
+- Scope note, not a dispute: commit a91d225 and the uncommitted working tree (source modified 10:19-10:22, after p7 was rendered at 09:41) claim fixes for several items: continuous pencil, 3D PowerMove sign, payoff sunburst, stamp and lens splat, SFX exits, ink off at peak whip, ZAP clear of pairs, GO with Slo, whole-column swap. None is in this render, so all were judged as seen and must be re-verified on the next render.
+

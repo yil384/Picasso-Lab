@@ -74,8 +74,10 @@ export function moverXZ(m, p) { const A = aodAt(p); return [A.colX[m.pc], A.rowZ
  * listed front-row movers to each other's docks: their AOD columns would have to cross (the verifier's catch).
  */
 export function planXZ(m, p, swap = null) {
-  const [x, z] = moverXZ(m, p);
-  if (!swap || m.pr !== 1 || !(m.pc in swap)) return [x, z];
-  const c = swap[m.pc];
-  return [lerp(SCOL[MCOL[m.pc]], PCOL[c] - LANE, stretchAt(p)) + (LANE - PAIR) * dockAt(p), z];
+  if (!swap) return moverXZ(m, p);
+  // the bad plan (plan 1): forward first, spread later, and two whole AOD columns sent to each other's lanes - the
+  // column rails must pass through each other (the verifier's catch). Every column stays a straight line of constant x.
+  const A = aodAt(p), s = stretchLate(p), c = m.pc in swap ? swap[m.pc] : m.pc;
+  return [lerp(SCOL[MCOL[m.pc]], PCOL[c] - LANE, s) + (LANE - PAIR) * dockAt(p), A.rowZ[m.pr]];
 }
+export const stretchLate = (p) => mjx((clamp(p) - 0.2) / 0.36);

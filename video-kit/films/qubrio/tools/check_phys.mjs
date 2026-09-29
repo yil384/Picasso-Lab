@@ -23,24 +23,22 @@ for (const m of P.MOVERS) {
   console.log('mover', m.k, 'nearest', ds[0][0].toFixed(2), 'partner?', P.ATOMS[ds[0][1]] === P.partnerOf(m), 'second', ds[1][0].toFixed(2), 'ratio', (ds[1][0] / P.PAIR).toFixed(2));
 }
 
-// plan 1 (the verifier's catch): swap the front row's middle and right columns. At the bump exactly two ghosts touch, no third
-// ghost or route is near the bump point, and the swap is plan 1's only violation (no ghost ever meets a real atom).
+// plan 1 (the verifier's catch): whole AOD columns 1 and 2 sent to each other's lanes (forward first, spread later):
+// their rails must pass through each other. At the bump, the two swapped ghosts of each row touch; the bump point is
+// clear of every other ghost and route; no ghost comes near a non-mover atom before the bump; columns stay straight.
 {
-  const SWAP = { 1: 2, 2: 1 }, WRONG = P.MOVERS.map((m) => m.pr === 1 && m.pc in SWAP);
-  const path = (m, p) => P.planXZ(m, p, SWAP);
-  const [a, b] = P.MOVERS.filter((_, i) => WRONG[i]);
+  const SWAP = { 1: 2, 2: 1 }, path = (m, p) => P.planXZ(m, p, SWAP);
+  const [a, b] = P.MOVERS.filter((m) => m.pr === 1 && m.pc in SWAP);
   let pb = -1, X = null;
   for (let k = 0; k <= 2000 && pb < 0; k++) { const p = k / 2000, A = path(a, p), B = path(b, p); if (Math.hypot(A[0] - B[0], A[1] - B[1]) <= 2 * P.R + 0.01) { pb = p; X = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]; } }
-  const g = P.MOVERS.map((m) => path(m, pb));
-  const near = g.map((q) => Math.hypot(q[0] - X[0], q[1] - X[1]));
-  let routeNear = 9;
-  P.MOVERS.forEach((m, i) => { if (WRONG[i]) return; for (let k = 0; k <= 400; k++) { const q = path(m, k / 400); routeNear = Math.min(routeNear, Math.hypot(q[0] - X[0], q[1] - X[1])); } });
-  let ghostAtom = 9;
-  for (let k = 0; k <= pb * 400; k++) {
+  const near = P.MOVERS.map((m) => { const q = path(m, pb); return Math.hypot(q[0] - X[0], q[1] - X[1]); });
+  let ghostAtom = 9, straight = 0;
+  for (let k = 0; k <= Math.round(pb * 400); k++) {
     const p = k / 400, mv = P.MOVERS.map((m) => path(m, p));
     for (const at of P.ATOMS) if (at.kind !== 'mover') { const h = P.homeXZ(at); for (const q of mv) ghostAtom = Math.min(ghostAtom, Math.hypot(q[0] - h[0], q[1] - h[1])); }
+    for (let c = 0; c < 3; c++) { const col = P.MOVERS.filter((m) => m.pc === c).map((m) => path(m, p)[0]); straight = Math.max(straight, Math.abs(col[0] - col[1])); }
   }
-  console.log('plan1 bump at p', pb.toFixed(3), 'point', X.map((v) => v.toFixed(3)).join(','), 'ghost dists to it', near.map((d) => d.toFixed(2)).join(' '),
-    '| nearest other route', routeNear.toFixed(2), '| nearest ghost-to-atom before the bump', ghostAtom.toFixed(2));
+  console.log('plan1 (whole columns) bump at p', pb.toFixed(3), 'front-row point', X.map((v) => v.toFixed(2)).join(','), '| ghost dists to it', near.map((d) => d.toFixed(2)).join(' '),
+    '| nearest ghost-to-atom before the bump', ghostAtom.toFixed(2), '| max column bend', straight.toFixed(3));
   console.log('r (Pip circle)', P.RINT, 'dock inside r:', P.PAIR < P.RINT, '| circles on the row pitch touch?', 2 * P.RINT >= P.PROW[1] - P.PROW[0], '| lane clearance', P.LANE);
 }

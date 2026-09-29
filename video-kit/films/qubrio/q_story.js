@@ -78,17 +78,19 @@ export async function build(ctx, { renderer }, Q) {
   // Slo's lane along the plate's front: pencil-ruled edges, a pick-up tray (left) and a drop tray (right)
   const L = T.SLO;
   for (const dz of [-0.32, 0.32]) add(stripGeo([[L.xA - 0.75, L.z + dz], [L.xB + 0.75, L.z + dz]], 0.014), decal(0x3a2f66), { cast: false });
-  const tray = (x) => { add(new THREE.BoxGeometry(0.7, 0.08, 0.9), { color: 0xc98a52, hatchDir: [0, 1, 0] }, { outline: 0.7, cast: false }, [x, 0.04, L.z]); };
-  tray(L.xA - 0.66); tray(L.xB + 0.66);
+  // trays long along z (across the lane): the pick-up holds singles at a gap, the drop tray three separated pairs
+  const tray = (x) => { add(new THREE.BoxGeometry(0.5, 0.08, 1.35), { color: 0xc98a52, hatchDir: [0, 1, 0] }, { outline: 0.7, cast: false }, [x, 0.04, L.z]); };
+  tray(L.xA - 0.5); tray(L.xB + 0.52);
   // its small atoms: the pile waiting at the pick-up end, and the ones delivered at the drop end (two per trip)
   const smallGeo = new THREE.SphereGeometry(P.R * 0.62, 28, 18);
   W.atomMat = (seed) => ({ color: COL.atom, hatch: 0.7, spec: 0.5, receive: false, toneBias: 0.14, rim: 1, seed, hatchMode: 'planar', hatchDir: [1, -1, 0.3], hatchDir2: [0.2, 1, 1] });
-  const slot = (i) => [(i < 3 ? -0.13 : 0.13), 0.2, (i % 3 - 1) * 0.26];
+  const slotPick = (i) => [0, 0.2, (i - 1.5) * 0.36];                                  // singles, never touching
+  const slotDrop = (i) => [(i % 2 ? 0.16 : -0.16), 0.2, (Math.floor(i / 2) - 1) * 0.46];   // three pairs, pair gap < pair spacing
   // PowerMove's cargo in its own grey-lilac (not chip qubits); all of it shares one surface
   const pmMat = npr.surface({ ...W.atomMat(60), color: 0xb3abc8, toneBias: 0.05 });
   W.pmMat = pmMat;
-  W.pile = [0, 1, 2, 3].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slot(i); m.position.set(L.xA - 0.66 + s[0], s[1], L.z + s[2]); return m; });
-  W.tray = [0, 1, 2, 3, 4, 5].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slot(i); m.position.set(L.xB + 0.66 + s[0], s[1], L.z + s[2]); return m; });
+  W.pile = [0, 1, 2, 3].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slotPick(i); m.position.set(L.xA - 0.5 + s[0], s[1], L.z + s[2]); return m; });
+  W.tray = [0, 1, 2, 3, 4, 5].map((i) => { const m = add(smallGeo, pmMat, { outline: 0.7 }); const s = slotDrop(i); m.position.set(L.xB + 0.52 + s[0], s[1], L.z + s[2]); return m; });
 
   // atoms + pedestals
   const atomGeo = new THREE.SphereGeometry(P.R, 44, 30);
@@ -147,7 +149,7 @@ export async function build(ctx, { renderer }, Q) {
   {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 220;
     const cg = cv.getContext('2d'); cg.fillStyle = '#ffffff'; cg.fillRect(0, 0, 1024, 220);
-    brushWord(cg, 'POWERMOVE', 512, 118, 118, { fill: '#6b5a8e', key: 0.06, shadow: [0, 0], weight: 0.24, gap: 0.08, fan: 0, jiggle: 0.06, bounce: 0.04, rot: -0.02, chisel: true, skew: -0.12, sizeVar: 0.04 });
+    brushWord(cg, 'POWERMOVE', 512, 116, 92, { fill: '#6b5a8e', key: 0.06, shadow: [0, 0], weight: 0.24, gap: 0.08, fan: 0, jiggle: 0.06, bounce: 0.04, rot: -0.02, chisel: true, skew: -0.12, sizeVar: 0.04 });
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.NoColorSpace;
     W.pmSign = { pivot: new THREE.Group(), pole: null, cloth: null };
     scene.add(W.pmSign.pivot);
@@ -278,16 +280,17 @@ export function update(ctx, W, st, Q) {
   { const gk = F >= K.tickWake + 4 && F < T.CUT ? ob((F - K.tickWake - 4) / 8) : 0; W.gauge.group.visible = gk > 0.01; W.gauge.group.scale.setScalar(Math.max(0.01, gk)); }
   const ss = T.sloState(F);
   poseSnail(W.slo, { x: ss.x, z: ss.z, yaw: ss.yaw, lean: ss.lean, st: ss.st, sq: ss.sq, sway: ss.sway, stalk: ss.stalk });
-  const sloOn = F >= K.aodOn[0] && F < T.CUT;   // PowerMove's crew only shows up for the race (no clutter in S1-S4)
+  const sloOn = F >= K.aodOn[0] && F < T.CUT && !(F >= K.whip2[0] + 5 && F < K.whip3[0] + 6);   // only for the race; never in the pulse shot
   {   // PowerMove's sign: springs up on Tick's CLICK, faces the camera, droops (still legible) when the lap closes
     const S = W.pmSign, up = F < T.CUT ? backOut(clamp((F - K.click + 1) / 6)) : 0, droop = F < T.CUT ? sm(clamp((F - K.lap - 1) / 8)) : 0;
-    const inPulse = F >= K.whip2[0] + 5 && F < K.whip3[0] + 6;   // not in the pulse shot (cut under the whips)
+    // shown for GO (in the Tick shot) and for the race; furled in the convoy and pulse shots (it would sit on the card's bottom edge)
+    const inPulse = (F >= K.whipG[0] + 5 && F < K.whip3[0] + 6);
     S.pole.visible = sloOn && up > 0.02 && !inPulse; S.pole.scale.set(1, Math.max(0.01, up) * (1 - 0.12 * droop), 1); S.pole.rotation.z = 0.3 * droop;
     W.slo.group.updateMatrixWorld(true);
     const tip = S.pole.localToWorld(V3(0, 0.8, 0));
     S.pivot.visible = S.pole.visible; S.pivot.position.copy(tip);
     const cp = W.camera.position, sx = (cp.x - tip.x), sz = (cp.z - tip.z);
-    const onRight = (ss.x - T.SLO.xA) / (T.SLO.xB - T.SLO.xA) < 0.5 ? -1 : 1;   // fly toward frame centre
+    const onRight = F >= K.lap - 40 ? -1 : (ss.x - T.SLO.xA) / (T.SLO.xB - T.SLO.xA) < 0.5 ? -1 : 1;   // fly toward frame centre; in the payoff, right toward the grey column
     S.pivot.rotation.set(0, Math.atan2(sx, sz), 0);
     S.cloth.scale.set(onRight, 1, 1); S.cloth.material.side = THREE.DoubleSide;   // (the baked word stays readable: see the uv flip below)
     S.cloth.geometry.attributes.uv.array.forEach((v, i, arr) => { if (i % 2 === 0) arr[i] = onRight > 0 ? S.uv0[i] : 1 - S.uv0[i]; }); S.cloth.geometry.attributes.uv.needsUpdate = true;
@@ -303,7 +306,7 @@ export function update(ctx, W, st, Q) {
   W.slo.cargo.forEach((m) => { m.visible = sloOn && ss.loaded; });
   const pileLeft = ss.leg < 0 ? 4 : Math.max(0, 4 - 2 * Math.floor((ss.leg + 1) / 2));
   W.pile.forEach((m, i) => { m.visible = sloOn && i < pileLeft; });
-  W.tray.forEach((m, i) => { m.visible = i < ss.delivered; });
+  W.tray.forEach((m, i) => { m.visible = sloOn && i < ss.delivered; });
   W.scene.updateMatrixWorld(true);
   st.ts = ts; st.ps = ps; st.rs = rs; st.ls = ls; st.ss = ss; st.fs = fs;
 
@@ -499,19 +502,20 @@ export function inkLayer(ctx, g, W, st, Q) {
       }
     }
   }
-  // at the flag: the two AOD columns of the bad plan drawn scissoring into an X at the exact point (columns may not cross)
+  // at the flag: the bad plan's two AOD column rails (straight lines of constant x, like the real rails in S5) shown where
+  // they have run into each other - each would have to pass through the other. The eraser eats them with the routes.
   if (F >= K.whistle + 2 && F < K.erase[1] && F < T.CUT) {
     const k = sm((F - K.whistle - 2) / 3), pb = T.CROSS_AT[2];
-    const rubbed = clamp((F - K.erase[0]) / (K.erase[1] - K.erase[0] - 2));   // the eraser eats them from the ends in
-    P.MOVERS.forEach((m, i) => {
-      if (!T.WRONG[i]) return;
-      const q0 = T.planPath(m, Math.max(0, pb - 0.12), true), q1 = T.planPath(m, Math.min(1, pb + 0.12), true);
-      const dx = q1[0] - q0[0], dz = q1[1] - q0[1], d = Math.hypot(dx, dz) || 1, L = 0.95;
-      const Lr = L * (1 - rubbed); if (Lr < 0.05) return;
-      const A3 = V3(T.CROSS_AT[0] - dx / d * Lr, 0.03, T.CROSS_AT[1] - dz / d * Lr), B3 = V3(T.CROSS_AT[0] + dx / d * Lr, 0.03, T.CROSS_AT[1] + dz / d * Lr);
+    const rubbed = clamp((F - K.erase[0]) / (K.erase[1] - K.erase[0] - 2));
+    const fr = P.MOVERS.filter((m) => m.pr === 1 && m.pc in T.SWAP), bk = P.MOVERS.filter((m) => m.pr === 0 && m.pc in T.SWAP);
+    const zF = T.planPath(fr[0], pb, true)[1], zB = T.planPath(bk[0], pb, true)[1];
+    fr.forEach((m) => {
+      const x = T.planPath(m, pb, true)[0], z0 = zB - 0.3, z1 = zF + 0.3, zc = (z0 + z1) / 2, hl = (z1 - z0) / 2 * (1 - rubbed);
+      if (hl < 0.05) return;
+      const A3 = V3(x, 0.03, zc - hl), B3 = V3(x, 0.03, zc + hl);
       if (!v.ahead(A3) || !v.ahead(B3)) return;
-      const a2 = P2(A3), b2 = P2(B3), w = Math.max(5, v.pxu(A3) * 0.09);
-      g.save(); g.globalAlpha = k; g.setLineDash([w * 2.2, w * 1.4]); g.lineCap = 'butt';
+      const a2 = P2(A3), b2 = P2(B3), w = Math.max(4, v.pxu(B3) * 0.06);
+      g.save(); g.globalAlpha = k; g.setLineDash([w * 3, w * 1.2]); g.lineCap = 'butt';
       g.lineWidth = w * 1.5; g.strokeStyle = INK; g.beginPath(); g.moveTo(a2.x, a2.y); g.lineTo(b2.x, b2.y); g.stroke();
       g.lineWidth = w; g.strokeStyle = '#ffb020'; g.beginPath(); g.moveTo(a2.x, a2.y); g.lineTo(b2.x, b2.y); g.stroke();
       g.restore();

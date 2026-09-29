@@ -16,7 +16,7 @@ export const K = {
   whip1: [146, 158], toot: 162, plan1: [166, 184], peel: [184, 190], steps1: [194, 200],
   loupeIn: [180, 196], whistle: 204, flag: [206, 214], erase: [226, 236], plan2: [236, 246], steps2: [248, 252, 256, 260], ok: 262,
   // S4 optimise on the simulator (262-344): try (too fast: a ghost flies off, fidelity drops) -> rejected; try -> accepted
-  matchT: 268, tickWake: 271, tries: [[276, 315, false], [317, 352, true]],   // S3->S4: push into Loupe's lens, match cut on the circle to Tick's dial
+  matchT: 268, tickWake: 271, tries: [[274, 318, false], [320, 352, true]],   // S3->S4: push into Loupe's lens, match cut on the circle to Tick's dial
   // S5 GO: the real run - one convoy (344-434)
   whipG: [362, 372], aodOn: [346, 358], click: 358, toot2: 360, crouch: [356, 362], glide: [362, 402], dock: 402,
   // S6 one global pulse (434-484)
@@ -44,11 +44,11 @@ export const aodK = (F) => (F >= CUT ? 0 : sg(F, K.aodOn[0], K.aodOn[1]) * (1 - 
 // routing plans (pencil) and the ghost dry run. Plan 2 IS the executed convoy (the same AOD path, sampled); plan 1 swaps
 // the front row's two left columns, so those two AOD columns would have to cross: their ghosts meet (exactly two of them)
 // at one point on the way, and that is where the verifier's flag lands.
-export const SWAP = { 1: 2, 2: 1 };   // the front row's middle and right movers sent to each other's docks
-export const WRONG = P.MOVERS.map((m) => m.pr === 1 && m.pc in SWAP);
+export const SWAP = { 1: 2, 2: 1 };   // whole AOD columns 1 and 2 sent to each other's lanes (both rows)
+export const WRONG = P.MOVERS.map((m) => m.pc in SWAP);   // whole columns: both rows
 export const planPath = (m, p, bad) => P.planXZ(m, p, bad ? SWAP : null);
 export const CROSS_AT = (() => {   // [x, z, p]: the first progress at which the two swapped ghosts touch (centres 2R apart)
-  const [a, b] = P.MOVERS.filter((_, i) => WRONG[i]);
+  const [a, b] = P.MOVERS.filter((m, i) => WRONG[i] && m.pr === 1);   // the front row's pair (the flag marks it)
   for (let k = 0; k <= 2000; k++) {
     const p = k / 2000, A = planPath(a, p, true), B = planPath(b, p, true);
     if (Math.hypot(A[0] - B[0], A[1] - B[1]) <= 2 * P.R + 0.01) return [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, p];
@@ -95,7 +95,7 @@ export function ghostState(F) {
 const P0 = P.MOVERS.map((m) => { const h = P.homeXZ(m); for (let k = 0; k <= 48; k++) { const q = P.planXZ(m, k / 48); if (Math.hypot(q[0] - h[0], q[1] - h[1]) > P.R + 0.08) return k / 48; } return 0; });
 const WI = P.MOVERS.map((_, i) => i).filter((i) => WRONG[i]);
 const DRAW1 = (i) => [K.plan1[0] + 3 * i, K.plan1[0] + 3 * i + 3];
-const DRAW2 = (j) => [K.plan2[0] + 1 + 4.5 * j, K.plan2[0] + 1 + 4.5 * j + 4.5];
+const DRAW2 = (j) => [K.plan2[0] + 1 + 2.5 * j, K.plan2[0] + 1 + 2.5 * j + 2.5];
 const RUB = (j) => [K.erase[0] + 5 * j, K.erase[0] + 5 * j + 5];
 /** revealed fraction of plan 1 / plan 2 route i at frame F (0..1) */
 export function routeK(i, F, which) {
@@ -107,7 +107,7 @@ export function routeK(i, F, which) {
     return fade > 0.02 ? k : 0;
   }
   const j = WI.indexOf(i); if (j < 0) return 0;
-  return fade > 0.02 ? clamp((F - DRAW2(j)[0]) / 4.5) : 0;
+  return fade > 0.02 ? clamp((F - DRAW2(j)[0]) / 2.5) : 0;
 }
 const tipAt = (i, k, bad) => { const p = P0[i] + (1 - P0[i]) * clamp(k); const [x, z] = planPath(P.MOVERS[i], p, bad); return [x, 0.03, z]; };
 export function pencilState(F, cab) {
@@ -128,14 +128,14 @@ export function pencilState(F, cab) {
     const t = Fc - K.erase[0], w = Math.sin(t * 1.6);
     tip = [X[0] + 0.34 * w, X[1], X[2] + 0.12 + 0.14 * Math.cos(t * 1.1)]; erase = true;
   } else if (Fc < K.plan2[0] + 1) tip = arc(X, tipAt(WI[0], 0, false), io((Fc - K.erase[1]) / (K.plan2[0] + 1 - K.erase[1])), 0.3);
-  else if (Fc < K.plan2[1]) { const j = Math.min(1, Math.floor((Fc - K.plan2[0] - 1) / 4.5)); tip = tipAt(WI[j], (Fc - DRAW2(j)[0]) / 4.5, false); }
-  else tip = arc(tipAt(WI[1], 1, false), cab, io((Fc - K.plan2[1]) / 12), 0.8);
+  else if (Fc < K.plan2[1]) { const j = Math.min(WI.length - 1, Math.floor((Fc - K.plan2[0] - 1) / 2.5)); tip = tipAt(WI[j], (Fc - DRAW2(j)[0]) / 2.5, false); }
+  else tip = arc(tipAt(WI[WI.length - 1], 1, false), cab, io((Fc - K.plan2[1]) / 12), 0.8);
   return { tip: [tip[0], tip[1] + bob + jolt, tip[2]], erase, drawing: (Fc >= K.plan1[0] && Fc < K.plan1[1]) || (Fc >= K.plan2[0] + 1 && Fc < K.plan2[1]), rub: erase && Fc >= K.erase[0] ? Fc - K.erase[0] : -1 };
 }
 // Tick's slate (the simulator): the plan replays as a pencil diagram on the board Tick holds up. Try 1 (faster) rushes;
 // one ghost is flung off the board at the lens and fidelity drops -> thrown away. Try 2 drops the set-down/re-pick
 // hiccup: the block glides in one go, time shrinks, fidelity rises -> kept. The real chip stays asleep meanwhile.
-export const tryVerdictAt = (a, ok) => a + (ok ? 14 : 21);   // the rejected try's stamp lands after the flung ghost thunks
+export const tryVerdictAt = (a, ok) => a + (ok ? 12 : 21);   // X held 23 f, check held 20 f (to GO)   // the rejected try's stamp lands after the flung ghost thunks
 export function slateState(F) {
   if (F >= CUT) return null;
   const vis = sg(F, K.tickWake + 2, K.tickWake + 8) * (1 - sg(F, K.click - 7, K.click - 2));
@@ -144,7 +144,7 @@ export function slateState(F) {
   for (const [a, b, ok] of K.tries) {
     if (F < a) break;
     const g0 = a + 4;
-    if (ok) p = mj((F - g0) / 11);                           // one smooth glide
+    if (ok) p = mj((F - g0) / 7);                            // one smooth glide (lands before the check)
     else {                                                  // rushed, with the old set-down/re-pick hiccup mid-way
       const u = clamp((F - g0) / 6);
       p = u < 0.4 ? mj(u / 0.4) * 0.45 : u < 0.6 ? 0.45 : 0.45 + 0.55 * mj((u - 0.6) / 0.4);
@@ -181,7 +181,7 @@ export function flagState(F, hand) {
 // ---------------------------------------------------------------------------------------------------------------
 // PowerMove (Slo): the same job with scalar routing: 2 atoms per trip (~1.7 per move on the site), legs at the SAME
 // speed limit as the convoy, so it needs 3 loaded + 2 empty legs = 5 legs; TP = 4.7 x TQ.
-export const SLO = { z: 3.15, xA: 0.7, xB: 0.7 + (P.PROW[1] - P.SROW[2]) };   // a front lane beside Tick, as long as the convoy's travel
+export const SLO = { z: 3.15, xA: 0.1, xB: 0.1 + (P.PROW[1] - P.SROW[2]) };   // a front lane beside Tick, as long as the convoy's travel
 export const LEG = TP / 5;                                      // 45.2 f per leg (the convoy's one move takes 48 f)
 export function sloTrip(F) {
   if (F >= CUT || F < K.glide[0]) return { leg: -1, u: 0, x: SLO.xA, dir: 1, loaded: true, delivered: 0 };
@@ -341,9 +341,9 @@ export function rookState(F) {
 // ---------------------------------------------------------------------------------------------------------------
 // Loupe (verifier): hops over to watch the dry run, blows the whistle at the exact step the two routes collide and
 // throws its penalty flag onto that spot; beams at the in-order re-run; then watches from the right.
-export const LOUPE_HOME = [2.9, -2.9];
+export const LOUPE_HOME = [2.35, -3.05];   // inside the card band, clear of the LIVE pill
 export const LOUPE_WATCH = [2.3, -1.0];
-export const LOUPE_RACE = [1.15, 2.2];   // beside Slo's lane for the race and the payoff
+export const LOUPE_RACE = [3.25, 1.15];   // behind Slo's lane, between the pairs and Tick   // beside Slo's lane for the race and the payoff
 export const INSPECT = [2.6, CROSS_AT[1] - 0.1];   // level with the crossing, right of the whole block (never in front of it)
 export function loupeState(F) {
   const Fc = twos(F);
@@ -475,14 +475,14 @@ export function tickState(F) {
 export const WHIPS = [K.whip1, K.whipG, K.whip2, K.whip3];
 const R_A = (F) => {   // establishing: slow crane down towards the sleeping lattice, pushing in on Pip for its wake-up take
   const k = sm((F + 22) / 100), pk = sm((F - 10) / 30) * (1 - sm((F - 50) / 10));
-  const base = { tg: [lerp(-0.4, -1.2, k), lerp(0.3, 0.5, k), lerp(-0.9, -1.6, k)], az: lerp(0.38, 0.2, k), el: lerp(0.58, 0.42, k), r: lerp(12.2, 9.2, k), fov: 30, roll: lerp(0, -0.03, k) };
-  const pip = { tg: [PIP_REST[0] + 0.9, 1.1, PIP_REST[1] + 0.8], az: 0.3, el: 0.34, r: 6.4, fov: 30, roll: -0.03 };
+  const base = { tg: [lerp(-0.4, -1.2, k), lerp(0.3, 0.5, k), lerp(-0.9, -1.6, k)], az: lerp(0.38, 0.2, k), el: lerp(0.68, 0.6, k), r: lerp(12.2, 9.4, k), fov: 30, roll: lerp(0, -0.03, k) };   // high enough that the storage grid never stacks
+  const pip = { tg: [PIP_REST[0] + 0.9, 1.35, PIP_REST[1] + 0.8], az: 0.3, el: 0.5, r: 6.6, fov: 30, roll: -0.03 };   // the '!' stays below card row ~220
   return mixRig(base, pip, 0.75 * pk);
 };
 const R_B = (F) => {   // placement: follow Pip across the partners, then rise to see all six circles
   const k = sm((F - 54) / 90);
   const up = sm((F - K.rise[0]) / (K.rise[1] - K.rise[0]));
-  return { tg: [lerp(-1.2, 1.2, k), lerp(0.8, 0.3, up), lerp(0.9, 1.0, k)], az: lerp(-0.2, 0.1, k), el: lerp(0.48, 0.8, up), r: lerp(7.2, 8.2, up), fov: 30, roll: lerp(0.04, 0, up) };
+  return { tg: [lerp(-1.2, 1.2, k), lerp(0.8, 0.3, up), lerp(0.9, 1.0, k)], az: lerp(-0.2, 0.1, k), el: lerp(0.6, 0.8, up), r: lerp(7.4, 8.2, up), fov: 30, roll: lerp(0.04, 0, up) };
 };
 const R_C = (F) => {   // plan + dry run from high front-right; crash zoom onto the collision and the flag
   const cz = sm((F - K.steps1[1] + 2) / 6) * (1 - 0.45 * sm((F - K.erase[1] - 2) / 10));   // stays in through the fix, eases half out for the re-run
