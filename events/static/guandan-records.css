@@ -131,7 +131,7 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-note {
     position: absolute; left: 0; top: calc(100% + 4px); z-index: 3;
     max-width: 100%; padding: 8px 12px; border-radius: 6px;
-    background: rgba(10, 18, 60, .94); box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
+    background: rgba(10, 18, 60, .94);
     font: 500 12px/1.5 var(--gdr-font-ui); color: rgba(255, 255, 255, .92);
 }
 
