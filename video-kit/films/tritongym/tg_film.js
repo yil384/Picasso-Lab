@@ -318,8 +318,9 @@ function updateOro(F) {
   setMap(O.bodyM, (O.faces[S.face] || O.faces.smug)[vb(F)]);
   O.wheels.forEach((w) => { w.rotation.z = -S.wheelAng; });
   O.key.rotation.y = S.keySpin || 0;
-  O.laurel.position.set(-0.2 + 0.45 * (S.laurelSlip || 0), 0.2 - 0.05 * (S.laurelSlip || 0), 0);
-  O.laurel.rotation.z = -0.9 * (S.laurelSlip || 0);
+  const ls = S.laurelSlip || 0;                                    // the laurel slides forward and tilts down across one eye
+  O.laurel.position.set(-0.2 + 0.72 * ls, 0.2 - 0.06 * ls, 0.08 * ls);
+  O.laurel.rotation.set(0.35 * ls, 0, -0.75 * ls);
 }
 
 // ---- Dash
@@ -366,7 +367,8 @@ function updateStations(F) {
   w.beam.rotation.z = W.tilt;
   w.pans.forEach((P) => { const bx = P.side * w.span; P.g.position.set(bx * Math.cos(W.tilt), 1.08 + bx * Math.sin(W.tilt), 0); });
   w.needle.rotation.z = W.needle;
-  w.flag.visible = W.flag > 0.01;
+  w.flag.visible = false;                                          // (the PASS pennant is Torchy's now)
+  const pn = T.torch.pennant; pn.visible = W.flag > 0.01; pn.rotation.z = 2.3 * (1 - W.flag); pn.children[1].rotation.y = 0.35 + 0.15 * Math.sin(F * 0.8);
   w.flag.scale.set(Math.max(0.01, W.flag), Math.max(0.01, W.flag), 1);
   w.flood.visible = W.flood > 0.02; w.flood.scale.setScalar(Math.max(0.02, W.flood));
   w.flagCloth.rotation.y = 0.12 * Math.sin(F * 0.5);

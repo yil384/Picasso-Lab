@@ -302,6 +302,13 @@ export function buildTorch(THREE, add, parent) {
   add(flg, { key: 'flame', color: 0xff7a2e, glow: 0.2, rim: 0.5 }, { outline: 0.85 }, [0, 0, 0], [0, 0, 0], B.flame);
   const fl2 = new THREE.Shape(); fl2.moveTo(-0.12, 0); fl2.bezierCurveTo(-0.14, 0.16, 0.0, 0.2, 0.03, 0.44); fl2.bezierCurveTo(0.08, 0.24, 0.18, 0.14, 0.12, 0.0); fl2.closePath();
   add(new THREE.ExtrudeGeometry(fl2, { depth: 0.2, bevelEnabled: false }).translate(0, 0, -0.1), { key: 'flamecore', color: 0xffd84a, glow: 0.3 }, { outline: 0.4 }, [0.01, 0.03, 0.02], [0, 0, 0], B.flame);
+  // the referee's PASS pennant: a stick and a triangular emerald cloth with a kink, snapped up from Torchy's side
+  B.pennant = new THREE.Group(); B.pennant.position.set(0.3, 0.95, 0.08); B.root.add(B.pennant);
+  add(new THREE.CylinderGeometry(0.022, 0.022, 0.8, 8).translate(0, 0.4, 0), { key: 'torchwood', color: 0xc07a3a }, { outline: 0.5 }, [0, 0, 0], [0, 0, 0], B.pennant);
+  const tri = new THREE.Shape(); tri.moveTo(0, 0.8); tri.quadraticCurveTo(0.26, 0.74, 0.52, 0.66); tri.quadraticCurveTo(0.24, 0.6, 0, 0.5); tri.closePath();
+  const cloth = new THREE.Group(); B.pennant.add(cloth);
+  add(new THREE.ShapeGeometry(tri), { key: 'pennant', color: 0x10b981, side: THREE.DoubleSide, rim: 0.4, spec: 0, hatchDir: [1, 0, 0] }, { outline: 0.9, cast: false }, [0, 0, 0], [0, 0, 0], cloth);
+  B.pennant.visible = false;
   return B;
 }
 

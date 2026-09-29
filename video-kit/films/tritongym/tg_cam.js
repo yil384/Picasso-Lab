@@ -69,7 +69,9 @@ function shotWatchToStart(F) {   // B4 open: from the stopwatch face (match cut)
 function shotStart(F, lap = 0) { // B4 / B7: low 3/4-front two-shot at the start line (the racers face the lens)
   const drift = sm((F - (lap ? K.side2[0] : K.cut + 18)) / 40);
   // 3/4 front, well ahead of the line: the two lanes separate side by side and both faces point at the lens
-  return rig([lap + A.start + 0.5 - 0.03 * drift, 8.9 - 0.2 * drift, 2.2], [lap + A.start + 0.02, 6.0, 0.35], 32, -0.02);
+  // race 1: a push onto Oro for its smug side-eye, released for GO
+  const po = lap ? 0 : sg(F, K.side[0] - 4, K.side[0] + 8, io) * (1 - sg(F, K.go1 - 3, K.go1 + 3, sm));
+  return rig([lap + A.start + 0.5 - 0.03 * drift - 0.02 * po, 8.9 - 0.2 * drift - 0.6 * po, 2.2 - 0.4 * po], [lap + A.start + 0.02 + 0.01 * po, 6.0 - 0.4 * po, 0.35 + 0.1 * po], 32, -0.02);
 }
 function shotRace1(F) {          // B4: fast low tracking, loses Oro, settles on the lumbering Kern, pans on to the finish
   const kth = kernTh(F), oth = oroTh(F);          // unwrapped ring angles (atan2 would wrap past pi mid-straight)

@@ -32,7 +32,7 @@ export const K = {
   // B7 race 2: Kern takes 33 frames (Perf@1 ~ 1.09), the photo finish holds 12 frames, then the stopwatch insert
   side2: [488, 496], dtake: 497, go2: 515, run2: [515, 551], cross: 548, freeze: [548, 550], hold: [548, 560], watch: [560, 580],
   // B8 payoff
-  slam: 590, check: 606, jaw: 614, laurel: 618, nod: [622, 630], leap: [610, 628],
+  slam: 590, check: 604, jaw: 612, laurel: 616, nod: [622, 632], leap: [617, 635],
   // B9 next
   away: [640, 660],
 };
@@ -97,7 +97,7 @@ export function kernTh(F) {   // ring angle of Kern in the races (lap offset inc
 export function oroTh(F) {
   if (F < K.lap2[0]) return sprint(F, K.go1, K.go1 + ORO_RUN, A.start, LINE.o, 1.1, 16, P1.oEnd + A.finish - LINE.o);   // blasts off
   // race 2: the same run (36 f, same launch), but brakes hard at the line in shock
-  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 10, 0.3 + A.finish - LINE.o);
+  return L2 + sprint(raceF(F), K.go2, K.go2 + ORO_RUN, A.start, LINE.o, 1.1, 12, 0.42 + A.finish - LINE.o);
 }
 
 /**
@@ -230,7 +230,7 @@ export function kernState(F) {
     S.wheelAng = (th - L2 - thS) * R.ours / 0.16;   // (it rolls up-stage after the line and turns its face 3/4 to us; the plate side stays in view)
     S.face = F < K.go2 ? 'determined' : F < K.cross - 12 ? 'squint' : F < K.cross + 1 ? 'strain' : F < K.check ? 'wide' : 'star';
     S.stretch = F >= K.cross - 4 && F < K.cross + 2 ? 0.25 : 0;
-    if (F >= K.check && F < K.check + 18) { const h = hop(F, K.check, K.check + 10, 0.35); S.pos[1] += h.y; S.sq = h.sq; }
+    if (F >= K.check - 3 && F < K.check + 20) { const h = hop(F, K.check, K.check + 11, 0.62); S.pos[1] += h.y; S.sq = h.sq * 1.4; S.pitch = -0.35 * Math.sin(Math.PI * sg(F, K.check, K.check + 11)); }   // the winner's hop: a wheelie in the air, a squash on landing
     if (F >= K.away[0] + 10) S.vis = false;              // gone on the heaviest smear frame of the whip away
     S.showCheck = F >= K.check;
     return S;
@@ -246,7 +246,7 @@ export function oroState(F) {
   const lane = (th) => polar(th, R.oro, 0);
   const thS = A.start, thF = A.finish;
   if (F < K.go1) {
-    S.pos = lane(thS); S.yaw = headingAt(thS) - 0.45 * sg(F, K.side[0] - 4, K.side[0] + 2, sm) * (1 - sg(F, K.go1 - 6, K.go1 - 2, sm));   // turns its face to the lens for the side-eye
+    S.pos = lane(thS); S.yaw = headingAt(thS) - 0.45 * sg(F, K.side[0] - 4, K.side[0] + 2, sm) * (1 - sg(F, K.go1 - 6, K.go1 - 2, sm));   // turns its face (front-outer quarter) to the lens for the side-eye
     S.wrench = F >= K.tune[0] && F < K.tune[1] ? Math.sin(Math.PI * sg(F, K.tune[0], K.tune[1])) : 0;
     S.face = F >= K.side[0] ? 'smug' : 'shut';
     S.lookAt = F >= K.side[0] ? 1 : 0;
@@ -260,6 +260,7 @@ export function oroState(F) {
     S.keySpin = (F - K.go1) * 0.9;
     S.face = F < K.oroRun1[1] ? 'determined' : 'smug';
     S.buff = F >= K.buff[0] && F < K.snapOn[1] ? 1 : 0;
+    S.yaw -= 1.0 * sg(F, K.oroRun1[1] + 2, K.oroRun1[1] + 10, sm);                          // parked, it turns its smug face to us
     if (F >= K.idea) S.face = F < K.idea + 20 ? 'smug' : 'smug';
     return S;
   }

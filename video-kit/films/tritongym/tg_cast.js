@@ -204,9 +204,9 @@ export function buildOro(THREE, add, parent, { seed = 11 } = {}) {
   const O = { root: new THREE.Group() }; parent.add(O.root);
   O.body = new THREE.Group(); O.body.position.y = 0.3; O.root.add(O.body);
   O.faces = faceSet(THREE, {
-    smug: { eyes: 'smug', mouth: 'smile' }, wide: { eyes: 'wide', mouth: 'o' }, determined: { eyes: 'determined', mouth: 'teeth' },
+    smug: { eyes: 'smug', mouth: 'grin', es: 1.7 }, wide: { eyes: 'wide', mouth: 'o' }, determined: { eyes: 'determined', mouth: 'teeth' },
     sweat: { eyes: 'worried', mouth: 'wobble', sweat: true }, shut: { eyes: 'shut', mouth: 'teeth' }, nod: { eyes: 'happy', mouth: 'smile' },
-  }, { w: 1024, h: 512, base: '#ef4b5f', cx: 150, cy: 236, s: 2.3, seed, spacing: 0.85, mouthY: 50 });   // a big face on the front-outer quarter (where the lenses see it): the rival's comedy reads
+  }, { w: 1024, h: 512, base: '#ef4b5f', cx: 256, cy: 176, s: 2.1, seed, spacing: 0.8, mouthY: 48 });   // a big face straight ahead, above the cone (every front-ish lens sees it): the rival's comedy reads
   const bodyGeo = new THREE.CapsuleGeometry(0.22, 0.9, 8, 24); bodyGeo.rotateZ(-Math.PI / 2);
   // face texture on the front hemisphere: sphere-like uv around +x
   { const p = bodyGeo.attributes.position, uv = bodyGeo.attributes.uv; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (x > 0.25) { const lon = Math.atan2(-z, x - 0.25), lat = Math.atan2(y, Math.hypot(x - 0.25, z)); uv.setXY(i, 0.25 + lon / (2 * Math.PI), 0.5 + lat / Math.PI); } else uv.setXY(i, 0.75, 0.5); } }
