@@ -605,25 +605,20 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-ribbon::after { top: auto; bottom: 0; background: linear-gradient(90deg, transparent 4%, rgba(150, 60, 0, .45) 30% 70%, transparent 96%); }
 .gd-ribbon.is-cool::after { background: linear-gradient(90deg, transparent 4%, rgba(20, 50, 150, .45) 30% 70%, transparent 96%); }
-.gd-ribbon b {
-    color: #fff6cf;
-    font: 900 34px/1 var(--font-ui);
-    letter-spacing: .12em;
-    text-indent: .12em;
-    -webkit-text-stroke: 6px #9a4200;
-    paint-order: stroke fill;
-    white-space: nowrap;
-}
+/* the place in qqg_ribbons' display lettering: pale cream on the warm band, pale blue on the cool,
+   a thin outline and no drop edge */
+.gd-ribbon .gd-word { font-size: 42px; letter-spacing: .06em; -webkit-text-stroke-width: 5px; text-shadow: none; }
+.gd-ribbon .gd-word::after { background-image: linear-gradient(180deg, #fffdf2 12%, #fff1bf 48%, #ffd073 92%); }
+.gd-ribbon .gd-word.is-cool::after { background-image: linear-gradient(180deg, #fff 12%, #eaf2ff 48%, #b9d3ff 92%); }
+.gd-ribbon .gd-word:lang(en) { font-size: 36px; letter-spacing: 0; }
 .gd-ribbon.is-cool { background: linear-gradient(90deg, rgba(70, 130, 240, 0), #3f7fe8 22%, #6fb2ff 50%, #3f7fe8 78%, rgba(70, 130, 240, 0)); }
-.gd-ribbon.is-cool b { color: #fff; -webkit-text-stroke-color: #1f449e; }
-.gd-ribbon b:lang(en) { letter-spacing: .02em; text-indent: 0; font-size: 30px; }
 /* alone at a side slot (no play left on the table): it sits where the cards were */
 .gd-slot.is-p1 .gd-ribbon:only-child { left: 0; translate: 0 0; top: 30px; }
 .gd-slot.is-p3 .gd-ribbon:only-child { left: auto; right: 0; translate: 0 0; top: 30px; }
 .gd-slot.is-p2 .gd-ribbon:only-child { top: 30px; }
 .gd-slot.is-p0 .gd-ribbon:only-child { top: 76px; }
 .gd-ribbon.is-enter { animation: gd-ribbon-in 320ms var(--ease-back) both; }
-.gd-ribbon.is-enter b { animation: gd-ribbon-word 360ms var(--ease-back) 120ms both; }
+.gd-ribbon.is-enter .gd-word { animation: gd-ribbon-word 360ms var(--ease-back) 120ms both; }
 @keyframes gd-ribbon-in { from { opacity: 0; transform: scaleX(.2); } }
 @keyframes gd-ribbon-word { from { opacity: 0; transform: scale(1.5); } }
 
@@ -1046,7 +1041,7 @@ body[data-screen="table"] .topbar { display: none; }
     .gd-stage .gd-combo-label { animation: gd-still 820ms linear 150ms both !important; }
     .gd-stage .gd-first-lead { animation: gd-still var(--first-ms) linear both !important; }
     .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation-name: gd-still !important; animation-duration: 640ms !important; }
-    .gd-stage .gd-ribbon, .gd-stage .gd-ribbon b { animation: none !important; }
+    .gd-stage .gd-ribbon, .gd-stage .gd-ribbon .gd-word { animation: none !important; }
 }
 @keyframes gd-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 

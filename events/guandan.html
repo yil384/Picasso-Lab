@@ -3434,7 +3434,7 @@ function renderSlot(i, v, animate, flights, bursts) {
             const key = `rb:${game.roomCode}:${game.roundNo}:${i}:${place}`;
             const enter = animate && !tableView.seenPlays.has(key) ? " is-enter" : "";
             tableView.seenPlays.add(key);
-            html += `<span class="gd-ribbon ${place <= 2 ? "is-warm" : "is-cool"}${enter}"><b>${PLACE_LABELS[uiLang][place - 1]}</b></span>`;
+            html += `<span class="gd-ribbon ${place <= 2 ? "is-warm" : "is-cool"}${enter}">${wordHTML(PLACE_LABELS[uiLang][place - 1], place > 2 ? "is-cool" : "")}</span>`;
         }
         return html;
     });
