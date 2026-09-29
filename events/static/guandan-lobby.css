@@ -1198,6 +1198,7 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     box-shadow: inset 0 calc(1 * var(--ru)) 0 rgba(255, 255, 255, .5), 0 calc(2 * var(--ru)) 0 var(--ok-edge);
 }
 .roster-invite:active { translate: 0 calc(2 * var(--ru)); }
+html[lang="en"] .roster-invite { padding: 0 calc(7 * var(--ru)); }   /* "Invite" is wider than 邀请; names keep the room */
 .roster-in { flex: none; color: var(--ink-3); font: 700 max(var(--fs-min) * 1.1, calc(16 * var(--ru)))/1 var(--font-ui); }
 .room-roster-foot { flex: none; display: flex; justify-content: center; padding: calc(10 * var(--ru)) calc(8 * var(--ru)) calc(14 * var(--ru)); }
 .room-roster-foot .btn { --btn-h: max(var(--tap), calc(54 * var(--ru))); --btn-fs: calc(22 * var(--ru)); --btn-px: calc(26 * var(--ru)); --btn-minw: calc(176 * var(--ru)); }
