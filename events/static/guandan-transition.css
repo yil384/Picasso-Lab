@@ -47,22 +47,25 @@
     /* the old page's primary font (Nunito) put the baseline .107em higher than Noto Sans SC does */
     margin-top: -.107em;
     color: var(--rvx-gold-2);
-    filter: drop-shadow(0 0 14px rgba(232, 189, 99, .4));
+    -webkit-text-stroke: 4px var(--rvx-gold-ink); /* 2px outside the glyph (paint-order) */
+    paint-order: stroke fill;
     opacity: 0;
     animation: rvxTitleIn .6s cubic-bezier(.2, .86, .22, 1) .46s forwards;
 }
 .rvx-title small {
     display: block; margin-top: calc(10px + .25em);
-    font-size: .3em; font-weight: 800; font-style: normal; letter-spacing: .46em; text-indent: .46em;
+    font-size: .3em; font-weight: 800; font-style: normal; letter-spacing: .2em; text-indent: .2em;
+    -webkit-text-stroke: 0;
     color: var(--rvx-gold-1);
 }
+.rvx-title small:lang(en) { letter-spacing: 0; text-indent: 0; }
 
 .rvx-ring {
     position: absolute; left: 50%; top: 50%;
     width: min(360px, 52cqw); aspect-ratio: 1;
     transform: translate(-50%, -50%) scale(.3);
-    border: 2px solid rgba(232, 189, 99, .85); border-radius: 50%;
-    box-shadow: 0 0 24px rgba(232, 189, 99, .4);
+    border: 2px solid var(--rvx-gold-2); border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--rvx-gold-ink);
     opacity: 0;
     animation: rvxRing .9s cubic-bezier(.16, .86, .24, 1) .16s forwards;
 }
@@ -73,7 +76,6 @@
     transform: translateX(-50%) scaleY(0); transform-origin: top;
     border-radius: 0 0 999px 999px;
     background: rgba(232, 189, 99, .55);
-    filter: blur(1px);
     opacity: 0;
     animation: rvxBeam .6s cubic-bezier(.2, .8, .2, 1) forwards;
 }
@@ -113,8 +115,8 @@
     transform: rotateY(180deg);
     border: 2px solid rgba(255, 255, 255, .6);
     background: var(--rvx-card-face);
-    font-family: Georgia, "Times New Roman", serif; font-size: clamp(28px, 5cqw, 44px); font-weight: 900;
 }
+.rvx-pip { width: 48%; aspect-ratio: 1; fill: currentColor; }
 .rvx-face.front.red { color: var(--rvx-card-red); }
 .rvx-face.front.black { color: var(--rvx-card-black); }
 .rvx-emblem {
@@ -158,7 +160,7 @@
     position: absolute; left: 50%; top: 46%;
     width: 14px; height: 14px; border-radius: 50%;
     background: var(--rvx-gold-2);
-    box-shadow: 0 0 8px rgba(232, 189, 99, .5);
+    box-shadow: inset 0 1px 0 var(--rvx-gold-1), inset 0 -2px 0 rgba(120, 72, 8, .55);
     opacity: 0;
     animation: rvxCoinBurst .78s cubic-bezier(.14, .84, .18, 1) var(--delay) forwards;
 }

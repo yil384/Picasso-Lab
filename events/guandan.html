@@ -439,15 +439,16 @@ function returnShardsHTML() {
 
 function returnCardsHTML() {
     // A small fanned hand of cards: starts stacked face-down (gold "P" emblem back),
-    // fans open on its own tilt, flips to reveal a suit face, then scatters off-screen.
+    // fans open on its own tilt, flips to reveal a suit face (the cards' own suit art), then
+    // scatters off-screen.
     const cards = [
-        { suit: "♠", color: "black", fan: -30, sx: -46, sy: -14, fly: -58, dx: -220, dy: -110, delay: 0.30 },
-        { suit: "♥", color: "red",   fan: -14, sx: -24, sy: -30, fly: -28, dx: -104, dy: -186, delay: 0.35 },
-        { suit: "♦", color: "red",   fan: 0,   sx: 0,   sy: -36, fly: 0,   dx: 0,    dy: -218, delay: 0.40 },
-        { suit: "♣", color: "black", fan: 14,  sx: 24,  sy: -30, fly: 28,  dx: 104,  dy: -186, delay: 0.45 },
-        { suit: "♠", color: "black", fan: 30,  sx: 46,  sy: -14, fly: 58,  dx: 220,  dy: -110, delay: 0.50 }
+        { suit: "S", color: "black", fan: -30, sx: -46, sy: -14, fly: -58, dx: -220, dy: -110, delay: 0.30 },
+        { suit: "H", color: "red",   fan: -14, sx: -24, sy: -30, fly: -28, dx: -104, dy: -186, delay: 0.35 },
+        { suit: "D", color: "red",   fan: 0,   sx: 0,   sy: -36, fly: 0,   dx: 0,    dy: -218, delay: 0.40 },
+        { suit: "C", color: "black", fan: 14,  sx: 24,  sy: -30, fly: 28,  dx: 104,  dy: -186, delay: 0.45 },
+        { suit: "S", color: "black", fan: 30,  sx: 46,  sy: -14, fly: 58,  dx: 220,  dy: -110, delay: 0.50 }
     ];
-    return cards.map(c => `<span class="rvx-card" style="--fan-rot:${c.fan}deg;--spread-x:${c.sx}px;--spread-y:${c.sy}px;--fly-rot:${c.fly}deg;--dx:${c.dx}px;--dy:${c.dy}px;--delay:${c.delay}s"><span class="rvx-card-inner"><span class="rvx-face back"><span class="rvx-emblem">P</span></span><span class="rvx-face front ${c.color}">${c.suit}</span></span></span>`).join("");
+    return cards.map(c => `<span class="rvx-card" style="--fan-rot:${c.fan}deg;--spread-x:${c.sx}px;--spread-y:${c.sy}px;--fly-rot:${c.fly}deg;--dx:${c.dx}px;--dy:${c.dy}px;--delay:${c.delay}s"><span class="rvx-card-inner"><span class="rvx-face back"><span class="rvx-emblem">P</span></span><span class="rvx-face front ${c.color}"><svg class="rvx-pip" viewBox="0 0 100 100"><use href="#gd-suit-${c.suit.toLowerCase()}"/></svg></span></span></span>`).join("");
 }
 
 function returnCoinsHTML() {
@@ -475,7 +476,7 @@ function startReturnToEvents() {
     }
     returnTransition.innerHTML = `
         <div class="rvx-stage" aria-hidden="true">
-            <div class="rvx-title">${L("TABLE CLEARED", "牌局结束")}<small>&middot; ${L("VICTORY", "完胜")} &middot;</small></div>
+            <div class="rvx-title">${L("Table cleared", "牌局结束")}<small>&middot; ${L("Victory", "完胜")} &middot;</small></div>
             <div class="rvx-ring"></div>
             <div class="rvx-beam"></div>
             <div class="rvx-burst">
