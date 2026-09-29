@@ -486,7 +486,7 @@ export const WHIPS = [K.whip1, K.whipG, K.whip2, K.whip3];
 const R_A = (F) => {   // establishing: slow crane down towards the sleeping lattice, pushing in on Pip for its wake-up take
   const k = sm((F + 22) / 100), pk = sm((F - 10) / 30) * (1 - sm((F - 50) / 10));
   const base = { tg: [lerp(-0.4, -1.2, k), lerp(0.3, 0.5, k), lerp(-0.9, -1.6, k)], az: lerp(0.38, 0.2, k), el: lerp(0.68, 0.6, k), r: lerp(12.2, 9.4, k), fov: 30, roll: lerp(0, -0.03, k) };   // high enough that the storage grid never stacks
-  const pip = { tg: [PIP_REST[0] + 0.9, 1.35, PIP_REST[1] + 0.8], az: 0.3, el: 0.5, r: 6.6, fov: 30, roll: -0.03 };   // the '!' stays below card row ~220
+  const pip = { tg: [PIP_REST[0] + 0.9, 1.75, PIP_REST[1] + 0.8], az: 0.3, el: 0.5, r: 7.0, fov: 30, roll: -0.03 };   // the '!' stays below card row ~200
   return mixRig(base, pip, 0.75 * pk);
 };
 const R_B = (F) => {   // placement: follow Pip across the partners, then rise to see all six circles
@@ -496,7 +496,7 @@ const R_B = (F) => {   // placement: follow Pip across the partners, then rise t
 };
 const R_C = (F) => {   // plan + dry run from high front-right; crash zoom onto the collision and the flag
   const cz = sm((F - K.steps1[1] + 2) / 6) * (1 - 0.45 * sm((F - K.erase[1] - 2) / 10));   // stays in through the fix, eases half out for the re-run
-  const base = { tg: [-0.4, 0.3, -1.0], az: 0.42, el: 0.7, r: 8.4, fov: 32, roll: 0.0 };
+  const base = { tg: [0.05, 0.3, -1.15], az: 0.42, el: 0.68, r: 8.6, fov: 32, roll: 0.0 };   // Loupe (right) clear of the LIVE pill
   const zoom = { tg: [CROSS_AT[0] + 1.05, 0.95, CROSS_AT[1] + 0.1], az: 0.12, el: 0.58, r: 5.8, fov: 32, roll: -0.06 };
   return mixRig(base, zoom, cz);
 };

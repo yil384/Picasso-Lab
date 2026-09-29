@@ -5,7 +5,7 @@ pipeline/encode.py only reads PNG frames; render.py --store segments leaves bit-
 
     python3 encode_segs.py OUT master  NAME [--crf 18 --preset slow]
     python3 encode_segs.py OUT cardsrc NAME                      # once: 960x528 lossless intermediate
-    python3 encode_segs.py OUT card    NAME [--max-mb 2.5 --crf-start 30]
+    python3 encode_segs.py OUT card    NAME [--max-mb 3.8 --crf-start 30 --start POSTER]
     python3 encode_segs.py OUT poster  NAME --frame 300
     python3 encode_segs.py OUT sheet   NAME [--grid 4 --thumb 480]
     python3 encode_segs.py OUT still   NAME --frame K [--jpg path]
@@ -211,7 +211,7 @@ def main():
     ap.add_argument("--preset", default="slow")
     ap.add_argument("--max-mb", type=float, default=4.0)
     ap.add_argument("--start", type=int, default=0, help="card: rotate the loop to start at this frame")
-    ap.add_argument("--crf-start", type=int, default=22)
+    ap.add_argument("--crf-start", type=int, default=30)   # a boiling-ink comic needs ~CRF 31-33 to fit 4 MB at 960x528
     ap.add_argument("--frame", type=int, default=0)
     ap.add_argument("--grid", type=int, default=4)
     ap.add_argument("--thumb", type=int, default=480)

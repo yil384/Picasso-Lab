@@ -158,7 +158,7 @@ export async function build(ctx, { renderer }, Q) {
     const poleGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.8, 8); poleGeo.translate(0, 0.4, 0);
     W.pmSign.pole = add(poleGeo, { color: 0x6b5a8e, hatchMode: 'u' }, { outline: 0.6, cast: false }, [0, 0, 0], [0, 0, 0], W.slo.shellG);
     W.pmSign.pole.position.set(-0.05, 0.1, 0);
-    const clothGeo = new THREE.PlaneGeometry(0.9, 0.2, 14, 3); clothGeo.translate(-0.45, -0.1, 0);
+    const clothGeo = new THREE.PlaneGeometry(1.15, 0.26, 14, 3); clothGeo.translate(-0.575, -0.13, 0);
     W.pmSign.base = clothGeo.attributes.position.array.slice();
     // the cloth hangs to the LEFT of the pole (x < 0): flip u so the word reads left-to-right from the tip
     const uv = clothGeo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i));
@@ -292,13 +292,18 @@ export function update(ctx, W, st, Q) {
     const tip = S.pole.localToWorld(V3(0, 0.8, 0));
     S.pivot.visible = S.pole.visible; S.pivot.position.copy(tip);
     const cp = W.camera.position, sx = (cp.x - tip.x), sz = (cp.z - tip.z);
-    const onRight = F >= K.lap - 40 ? -1 : (ss.x - T.SLO.xA) / (T.SLO.xB - T.SLO.xA) < 0.5 ? -1 : 1;   // fly toward frame centre; in the payoff, right toward the grey column
+    // the sign flies to the side Slo is heading (so it leads toward the grey column at the end); it swings round the
+    // pole over 6 frames each time Slo turns at a tray
+    const tr = T.sloTrip(F), sideOf = (d) => (d > 0 ? -1 : 1);
+    let onRight = sideOf(tr.leg >= 0 ? tr.dir : 1);
+    if (tr.leg >= 1 && tr.leg < 5) { const tb = K.glide[0] + tr.leg * T.LEG, prev = sideOf(tr.leg % 2 ? 1 : -1); if (F - tb < 6) onRight = lerp(prev, onRight, sm((F - tb) / 6)); }
+    if (Math.abs(onRight) < 0.08) onRight = 0.08 * Math.sign(onRight || 1);
     S.pivot.rotation.set(0, Math.atan2(sx, sz), 0);
     S.cloth.scale.set(onRight, 1, 1); S.cloth.material.side = THREE.DoubleSide;   // (the baked word stays readable: see the uv flip below)
-    S.cloth.geometry.attributes.uv.array.forEach((v, i, arr) => { if (i % 2 === 0) arr[i] = onRight > 0 ? S.uv0[i] : 1 - S.uv0[i]; }); S.cloth.geometry.attributes.uv.needsUpdate = true;
+    S.cloth.geometry.attributes.uv.array.forEach((v, i, arr) => { if (i % 2 === 0) arr[i] = onRight > 0 ? S.uv0[i] : 1 - S.uv0[i]; }); S.cloth.geometry.attributes.uv.needsUpdate = true;   // (the word always reads left to right)
     const k = Math.max(0.01, clamp(up * 1.1)), pos = S.cloth.geometry.attributes.position, bs = S.base;
     for (let i = 0; i < pos.count; i++) {
-      const x = bs[i * 3], y = bs[i * 3 + 1], u = -x / 0.9;
+      const x = bs[i * 3], y = bs[i * 3 + 1], u = -x / 1.15;
       const wave = Math.sin(u * 6 - F * 0.3) * 0.04 * u * (1 - droop);
       pos.setXYZ(i, x * k * (1 - 0.08 * droop), y * k - droop * u * 0.16 - droop * u * u * 0.06, wave);
     }
@@ -670,7 +675,7 @@ export function fxLayer(ctx, g, W, st, Q) {
     g.restore();
   }
   // CLICK! at GO (Tick starts both hands) and as PowerMove's hand closes the lap (the cause of the 4.7x)
-  const ck = sfxState(F - K.lap, 9) || sfxState(F - K.click, Math.min(12, K.whipG[0] - K.click));
+  const ck = sfxState(F - K.lap, 12) || sfxState(F - (K.click - 6), 12);   // GO: pops as the hands reach 12, shrinks under the whip
   if (ck) {
     const cp = W.tick.crown.getWorldPosition(V3(0, 0, 0)), c0 = P2(cp), cu = v.pxu(cp);
     const c = safe({ x: c0.x + cu * 0.85, y: c0.y - cu * 0.2 }, 300, 1500, 280, 700);
