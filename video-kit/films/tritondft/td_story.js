@@ -185,8 +185,10 @@ async function buildProps(W) {
       k++;
     }
   });
-  W.score = add(new THREE.PlaneGeometry(0.52, 0.37), { color: COL.cream, map: scTex, rim: 0.2, toneBias: 0.1, hatch: 0.4, side: THREE.DoubleSide }, { outline: 0.6 }, [SCORE[0], 0.13, SCORE[2]], [-Math.PI / 2 + 0.75, 0.15, 0]);   // propped up, tilted to camera
-  add(new THREE.BoxGeometry(0.4, 0.2, 0.04), { color: 0x8a5a33, hatchMode: 'u' }, { outline: 0.5 }, [SCORE[0], 0.1, SCORE[2] - 0.13], [-0.3, 0.15, 0]);
+  // Loupe brings the scorecard out of the tube for the payoff and takes it back in S9 (it is not on the desk before the run)
+  W.scoreG = new THREE.Group(); W.scoreG.position.set(SCORE[0], 0, SCORE[2]); scene.add(W.scoreG);
+  W.score = add(new THREE.PlaneGeometry(0.52, 0.37), { color: COL.cream, map: scTex, rim: 0.2, toneBias: 0.1, hatch: 0.4, side: THREE.DoubleSide }, { outline: 0.6 }, [0, 0.13, 0], [-Math.PI / 2 + 0.75, 0.15, 0], W.scoreG);   // propped up, tilted to camera
+  add(new THREE.BoxGeometry(0.4, 0.2, 0.04), { color: 0x8a5a33, hatchMode: 'u' }, { outline: 0.5 }, [0, 0.1, -0.13], [-0.3, 0.15, 0], W.scoreG);
   W.stamp = new THREE.Group(); scene.add(W.stamp);
   add(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 8), { color: 0xc08a4c, hatchMode: 'u' }, { outline: 0.5 }, [0, 0.12, 0], [0, 0, 0], W.stamp);
   add(new THREE.SphereGeometry(0.04, 12, 8), { color: COL.pop }, { outline: 0.5 }, [0, 0.21, 0], [0, 0, 0], W.stamp);
@@ -419,7 +421,9 @@ function updateTube(F) {
 
 // ---- the agents in S8/S9: out of the desk mouth onto the desk; S9 dive back in ----------------------
 // k: 0 Tri, 1 Clack (late: rides the 68x down), 2 Loupe, 3 Tilt
-const OUT_SPOT = [deskP(1.32, 0, -0.5), deskP(1.02, 0, -0.08), deskP(-1.5, 0, 0.1), deskP(1.6, 0, 0.18)];   // nobody in front of the giant hourglass
+// nobody in front of the giant hourglass: Tri behind its right post, Clack photobombs from the paper tower, Loupe peeks over
+// its scorecard (clear of the lamp), Tilt behind the $0.04 it tips its pennies into
+const OUT_SPOT = [deskP(0.98, 0, -0.62), deskP(1.25, 0.5, -0.4), deskP(-1.05, 0, -0.1), deskP(1.5, 0, 0.1)];
 const OUT_T = [K.outs[0], K.clack68[0], K.outs[1], K.outs[2]];
 function outState(k, F) {
   const t0 = OUT_T[k];
@@ -433,7 +437,7 @@ function outState(k, F) {
   let sq = a < 12 ? -0.12 * Math.sin(Math.PI * k1) : ringv(a - 12, 0.16, 1.0, 0.25), expr = a < 12 ? 'surprised' : 'happy', arm = -0.5;
   const yaw = faceYaw(pos, [spot[0] * 0.8 + L.desk.x * 0.2, 0, spot[2] + 3]);
   if (k === 1) {                                     // Clack rides the 68x down out of the mouth, tumbles off, grins
-    const n = W.num.n68.group.position, top = [n.x + 0.18, n.y + 0.46 * 0.85 + 0.02, n.z];
+    const n = n68Pos(F), top = [n[0] + 0.18, n[1] + 0.46 * 0.85 + 0.02, n[2]];   // (numerals update after the cast)
     if (F < K.slam[1]) { pos = [top[0], top[1], top[2]]; sq = -0.12; expr = 'surprised'; arm = -2.6; }
     else { const b = clamp((F - K.slam[1]) / 10); pos = [lerp(top[0], spot[0], b), lerp(top[1], 0, b) + 0.3 * Math.sin(Math.PI * b), lerp(top[2], spot[2], b)]; sq = b < 1 ? -0.1 : ringv(F - K.slam[1] - 10, 0.18, 1.0, 0.25); expr = b < 1 ? 'strain' : 'grin'; }
   }
@@ -723,6 +727,10 @@ function updateProps(F) {
     S.rotation.set(0, lerp(W.clack.root.rotation.y, -Math.PI / 2, k), 0.3 * Math.sin(Math.PI * k)); S.scale.set(1, 1 - 0.8 * sm((F - K.feed[1] + 4) / 4), 1);
   }
   updateTape(F);
+  { // the scorecard: pops up on the desk as Loupe lands, folds away as Loupe dives back into the tube
+    const on = F >= K.outs[1] + 10 && F < K.dive[2] + 4, k = on ? ob((F - K.outs[1] - 10) / 6) * (1 - sm((F - K.dive[2] + 2) / 6)) : 0;
+    W.scoreG.visible = k > 0.02; W.scoreG.scale.set(Math.max(0.02, k), Math.max(0.02, k), Math.max(0.02, k));
+  }
   const pk = F >= K.planks[0] && F < NF - 8 ? ob((F - K.planks[0]) / 10) : 0;
   W.planks.visible = pk > 0.01;
   W.planks.scale.set(1, Math.max(0.01, pk), 1);
@@ -756,7 +764,14 @@ function updateTape(F) {
 
 // ---- the numerals: one row along the desk's front edge; 98% rises from the stamped scorecard, 68x drops out of the
 // tube mouth with Clack riding it, $0.04 springs from Tilt's cost pan
-const NUM_SPOT = { n98: deskP(-1.25, 0.0, 0.52), n68: deskP(0.05, 0.0, 0.5), n04: deskP(1.3, 0.0, 0.52) };
+const NUM_SPOT = { n98: deskP(-1.06, 0.0, 0.55), n68: deskP(0.04, 0.0, 0.53), n04: deskP(1.26, 0.0, 0.55) };   // a tight row with clear gaps (never '68x$0.04')
+/** 68x's group position at F: drops out of the desk mouth from clack68[0], lands on its spot at slam[1] */
+function n68Pos(F) {
+  const s = NUM_SPOT.n68, mouth = W.tube.curve.getPointAt(0);
+  if (F >= K.slam[1]) return [...s];
+  const k = clamp((F - K.clack68[0]) / (K.slam[1] - K.clack68[0]));
+  return [lerp(mouth.x, s[0], k), lerp(mouth.y - 0.2, s[1], ic(k)) + 0.4 * Math.sin(Math.PI * k), lerp(mouth.z, s[2], k)];
+}
 function updateNumbers(F) {
   const t = { n98: K.slam[0], n68: K.slam[1], n04: K.slam[2] };
   const mouth = W.tube.curve.getPointAt(0);
@@ -766,10 +781,7 @@ function updateNumbers(F) {
     q.group.visible = vis;
     if (!vis) continue;
     q.group.position.set(s[0], s[1], s[2]);
-    if (key === 'n68' && a < 0) {
-      const k = clamp((F - K.clack68[0]) / (K.slam[1] - K.clack68[0]));
-      q.group.position.set(lerp(mouth.x, s[0], k), lerp(mouth.y - 0.2, s[1], ic(k)) + 0.4 * Math.sin(Math.PI * k), lerp(mouth.z, s[2], k));
-    }
+    if (key === 'n68') q.group.position.set(...n68Pos(F));
     q.group.rotation.set(0, key === 'n68' ? 0.04 : key === 'n98' ? 0.16 : -0.18, key === 'n68' && a < 0 ? 0.25 * Math.sin(F * 0.4) : 0);
     q.glyphs.forEach((gl, i) => {
       const ai = a - i * 1.5;
@@ -855,9 +867,9 @@ const rigS8a = (F) => {       // medium on Hoot and both hourglasses: the answer
   const k = sm((F - K.S8a - 8) / 30);
   return { tg: [L.desk.x + lerp(0.05, 0.1, k), 0.5, L.desk.z - 0.25], az: lerp(0.1, 0.02, k), el: 0.12, r: lerp(2.7, 2.35, k), fov: 38, roll: lerp(0.03, 0, k) };
 };
-const rigS8 = (F) => {        // the desk-top wide (payoff framing); slow arc during the hold
+const rigS8 = (F) => {        // the desk-top payoff framing (desk edge near the bottom, faces above the numerals); slow arc
   const a = sm((F - K.S8b) / 60);
-  return { tg: [L.desk.x + 0.02, 0.36, L.desk.z + 0.1], az: lerp(0.06, -0.03, a), el: 0.12, r: lerp(3.6, 3.4, a), fov: 40, roll: 0 };
+  return { tg: [L.desk.x + 0.1, 0.46, L.desk.z + 0.15], az: lerp(0.06, -0.04, a), el: 0.1, r: lerp(3.2, 3.02, a), fov: 41, roll: 0 };
 };
 const WHIPS = [[80, 100], [274, 288], [312, 328], [452, 466], [496, 512], [564, 588]];
 export function camRig(F) {

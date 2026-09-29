@@ -112,7 +112,7 @@ export function inkOverlay(W, ctx, brush) {
   [K.outs[0], K.outs[1], K.outs[2]].forEach((f0, j) => { const a = F - f0 - 12; if (a < 0 || a >= 8) return; const s = [W.tri, W.loupe, W.tilt][j].root.position, c = prj(W, ctx, [s.x, 0.02, s.z]), u = pxu(W, ctx, s); puff(brush, c.x, c.y, 0.1 * u * (1 + a * 0.12), ink, 1 - a / 8); });
   if (win(F, K.slam[1] + 10, K.slam[1] + 18)) { const s = W.clack.root.position, a = F - K.slam[1] - 10, c = prj(W, ctx, [s.x, 0.02, s.z]), u = pxu(W, ctx, s); puff(brush, c.x, c.y, 0.1 * u * (1 + a * 0.12), ink, 1 - a / 8); }
   // payoff: the stamp's ink star on the scorecard; plink ticks at the pan; the owl's feather burst
-  if (win(F, K.slam[0], K.slam[0] + 8)) { const n = W.score.position, c = prj(W, ctx, n), u = pxu(W, ctx, n); ticks(brush, c.x, c.y, 0.14 * u, 0.3 * u, 9, 0, TAU * 8 / 9, PAL.sky, 2.0); }
+  if (win(F, K.slam[0], K.slam[0] + 8)) { const n = W.score.getWorldPosition(V(W, 0, 0, 0)), c = prj(W, ctx, n), u = pxu(W, ctx, n); ticks(brush, c.x, c.y, 0.14 * u, 0.3 * u, 9, 0, TAU * 8 / 9, PAL.sky, 2.0); }
   if (win(F, K.slam[2] - 4, K.slam[2] + 6)) { const pan = W.tilt.pans[1].g.position, c = prj(W, ctx, pan), u = pxu(W, ctx, pan); ticks(brush, c.x, c.y - 0.25 * u, 0.1 * u, 0.2 * u, 5, -2.6, -0.5, ink, 1.2); }
   if (win(F, K.take, K.take + 16)) {
     const a = (F - K.take) / 16;
