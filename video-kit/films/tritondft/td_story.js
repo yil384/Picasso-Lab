@@ -419,7 +419,7 @@ function updateTube(F) {
 
 // ---- the agents in S8/S9: out of the desk mouth onto the desk; S9 dive back in ----------------------
 // k: 0 Tri, 1 Clack (late: rides the 68x down), 2 Loupe, 3 Tilt
-const OUT_SPOT = [deskP(1.0, 0, -0.2), deskP(0.62, 0, 0.1), deskP(-1.5, 0, 0.1), deskP(1.55, 0, 0.15)];
+const OUT_SPOT = [deskP(1.32, 0, -0.5), deskP(1.02, 0, -0.08), deskP(-1.5, 0, 0.1), deskP(1.6, 0, 0.18)];   // nobody in front of the giant hourglass
 const OUT_T = [K.outs[0], K.clack68[0], K.outs[1], K.outs[2]];
 function outState(k, F) {
   const t0 = OUT_T[k];
