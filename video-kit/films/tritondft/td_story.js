@@ -140,7 +140,7 @@ async function buildProps(W) {
   add(new THREE.BoxGeometry(0.05, 0.19, 0.14), { color: COL.navy, hatchMode: 'u', rim: 0.5 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], W.mbook);
   add(new THREE.BoxGeometry(0.056, 0.035, 0.146), { color: COL.pop, rim: 0.5 }, { outline: 0.4 }, [0, 0.04, 0], [0, 0, 0], W.mbook);
   add(new THREE.BoxGeometry(0.04, 0.18, 0.02), { color: COL.cream, hatch: 0.3 }, { outline: 0.3 }, [0, 0, 0.065], [0, 0, 0], W.mbook);
-  W.tickets = texs.map((tx) => add(new THREE.PlaneGeometry(0.28, 0.2), { color: COL.cream, map: tx, side: THREE.DoubleSide, rim: 0.3, toneBias: 0.12, hatch: 0.4 }, { outline: 0.45 }, [0, 0, 0]));
+  W.tickets = texs.map((tx) => add(new THREE.PlaneGeometry(0.4, 0.28),   // big enough to read the icons { color: COL.cream, map: tx, side: THREE.DoubleSide, rim: 0.3, toneBias: 0.12, hatch: 0.4 }, { outline: 0.45 }, [0, 0, 0]));
   // the Quantum ESPRESSO input sheet (a namelist-like scribble texture) torn from Clack and fed to Big Iron
   const sheetTex = await bake(THREE, { width: 256, height: 320, seed: 71, key: 'sheet-v1', background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill('#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
@@ -610,7 +610,7 @@ function updateLoupe(F) {
   if (win(F, K.hop4[0], K.hop4[1])) { const k = arc(F, K.hop4[0], K.hop4[1]); hop = 0.18 * k; sq = -0.1 * k; }
   if (win(F, K.read4[0], K.rush[0])) {
     lean = 0.4 * sm((F - K.read4[0]) / 6); headTilt = -0.45 * sm((F - K.read4[0]) / 6); eye = 'big';
-    yaw = faceYaw(home, [home[0] + 0.45, 0, home[2] - 0.55]);
+    yaw = faceYaw(home, [home[0] + 0.6, 0, home[2] + 0.35]);        // reads the output tape at its front-right
     if (F >= K.read4[0] + 12) { yaw = faceYaw(home, gp); headTilt = -0.1; lean = 0.2; }
     if (F >= K.fail) { eye = 'spiral'; shakeNo = Math.sin((F - K.fail) * 1.3) * 0.35 * Math.exp(-(F - K.fail) / 10); lean *= 0.5; }
   }
@@ -781,7 +781,7 @@ function updateTape(F) {
   const T = W.tape, E = W.engine;
   const sp = E.spout.getWorldPosition(V3(0, 0, 0));
   const anlz = station(ST.anlz);
-  const end = [anlz[0] + 0.12, 0.012, anlz[2] - 0.34];
+  const end = [anlz[0] + 0.25, 0.012, anlz[2] + 0.1];           // the tape ends at Loupe's front-right, where it reads it
   let grow = 0;
   if (F >= K.tape[0] && F < K.S6 + 6) grow = clamp((F - K.tape[0]) / (K.tape[1] - K.tape[0]));
   if (F >= K.huff && F < K.S8a) grow = clamp((F - K.huff) / 18);      // lap 2: a fresh tape
