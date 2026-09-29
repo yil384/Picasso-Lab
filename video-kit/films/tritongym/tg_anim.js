@@ -354,7 +354,7 @@ export function tokState(F) {
   }
   // ---- B6..B7: rides the infield in the lap, watches race 2 from the kerb near the finish
   if (F < K.cross) {
-    S.pos = polar(A.finish + 0.62, 2.95, 0); S.yaw = faceOut(A.finish + 0.62) - 0.9;
+    S.pos = polar(A.finish + 0.85, 3.3, 0); S.yaw = faceOut(A.finish + 0.85) - 0.9;
     S.face = F < K.go2 ? 'determined' : 'worried';
     if (F >= K.go2) { S.armL = 1.4 + 0.5 * Math.sin(F * 0.9); S.armR = -1.4 - 0.5 * Math.sin(F * 0.9 + 1); S.sq = 0.05 * Math.sin(F * 1.8); }
     S.hands = [S.pos[0], 0.9, S.pos[2]];
@@ -363,7 +363,7 @@ export function tokState(F) {
   // ---- B8: star-eyed leap at the left of the letters; B9: zips back to the bench
   {
     const base = polar(A.finish + 1.22, 5.3, 0);
-    const hopIn = pogo(F, K.cross + 4, K.leap[0] - 2, polar(A.finish + 0.62, 2.95, 0), base, 3, 0.45);
+    const hopIn = pogo(F, K.cross + 4, K.leap[0] - 2, polar(A.finish + 0.85, 3.3, 0), base, 3, 0.45);
     S.pos = F < K.leap[0] - 2 ? hopIn.pos : base.slice(); S.sq = F < K.leap[0] - 2 ? hopIn.sq : 0; S.yaw = faceOut(A.finish + 1.22) - 0.55;
     S.face = F < K.leap[0] ? 'wide' : 'star';
     if (F >= K.leap[0] && F < K.leap[1]) { const h = hop(F, K.leap[0] + 3, K.leap[1] - 4, 0.9); S.pos[1] += h.y; S.sq = h.sq; S.armL = 2.7; S.armR = -2.7; }

@@ -227,7 +227,7 @@ export function buildWeighIn(THREE, add, parent, { span = 0.95, h = 1.75 } = {})
   const dialTex = (() => {
     const c = document.createElement('canvas'); c.width = 512; c.height = 512; const g = c.getContext('2d');
     g.fillStyle = '#fff6e0'; g.fillRect(0, 0, 512, 512);
-    g.translate(256, 256);
+    g.translate(256, 256); g.rotate(-Math.PI / 2);   // the cylinder cap maps the canvas top to the dial's right
     g.fillStyle = 'rgba(239,75,95,0.28)'; for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 222, -Math.PI / 2 + sd * 0.62 - 0.5, -Math.PI / 2 + sd * 0.62 + 0.5); g.closePath(); g.fill(); }
     for (let k = -9; k <= 9; k++) { const a = -Math.PI / 2 + k * 0.12; g.strokeStyle = INK; g.lineWidth = k % 3 ? 5 : 11; g.beginPath(); g.moveTo(Math.cos(a) * 222, Math.sin(a) * 222); g.lineTo(Math.cos(a) * (k % 3 ? 196 : 176), Math.sin(a) * (k % 3 ? 196 : 176)); g.stroke(); }
     // the hairline tolerance notch (max abs error <= 0.01): a thin emerald wedge
@@ -271,20 +271,25 @@ export function buildBlock(THREE, add, parent, { ref = false, s = 0.34 } = {}) {
   return B;
 }
 
-/** Torchy: the PyTorch reference as a stout torch (handle, cup, teardrop flame, dot eyes on the cup). Faces +z. */
+/** Torchy: the PyTorch reference as a stout torch: a turned wooden handle, a brass cup with a face, a big two-tone flame
+ *  (a pun, not the PyTorch logo). Faces +z. */
 export function buildTorch(THREE, add, parent) {
   const B = { root: new THREE.Group() }; parent.add(B.root);
-  B.faces = faceSet(THREE, { calm: { eyes: 'dot', mouth: null }, squint: { eyes: 'squint', mouth: null }, happy: { eyes: 'happy', mouth: 'smile' }, wide: { eyes: 'wide', mouth: 'o' } },
-    { w: 1024, h: 256, base: '#ffffff', cx: 256, cy: 118, s: 0.55, seed: 44, spacing: 0.75, mouthY: 42 });
-  add(new THREE.CylinderGeometry(0.1, 0.13, 0.9, 16), { key: 'torchhandle', color: 0x9b5a2c, hatchMode: 'u', rim: 0.5 }, { outline: 0.8 }, [0, 0.45, 0], [0, 0, 0], B.root);
-  const cupG = new THREE.CylinderGeometry(0.3, 0.18, 0.34, 32, 1, false);
-  B.cup = add(cupG, [{ color: 0xffffff, map: B.faces.calm[0], rim: 0.6, hatchMode: 'u' }, { key: 'cuptop', color: 0x3b3558 }, { key: 'cuptop', color: 0x3b3558 }], { outline: 1 }, [0, 1.06, 0], [0, 0, 0], B.root);
-  const fl = new THREE.Shape(); fl.moveTo(-0.2, 0); fl.bezierCurveTo(-0.24, 0.2, -0.02, 0.3, 0.04, 0.62); fl.bezierCurveTo(0.1, 0.36, 0.3, 0.26, 0.2, 0.0); fl.closePath();
-  const flg = new THREE.ExtrudeGeometry(fl, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 2 }); flg.translate(0, 0, -0.06);
+  B.faces = faceSet(THREE, { calm: { eyes: 'dot', mouth: 'smile' }, squint: { eyes: 'squint', mouth: 'flat' }, happy: { eyes: 'happy', mouth: 'open' }, wide: { eyes: 'wide', mouth: 'o' } },
+    { w: 1024, h: 512, base: '#ffffff', cx: 256, cy: 250, s: 0.95, seed: 44, spacing: 0.8, mouthY: 52 });
+  const wood = { key: 'torchwood', color: 0xc07a3a, hatchMode: 'u', rim: 0.5 };
+  add(new THREE.CylinderGeometry(0.075, 0.1, 0.8, 16), wood, { outline: 0.8 }, [0, 0.4, 0], [0, 0, 0], B.root);
+  for (const y of [0.18, 0.62]) add(new THREE.TorusGeometry(0.095, 0.03, 8, 20), { key: 'brassring', color: 0xf2b134, rim: 0.6 }, { outline: 0.5 }, [0, y, 0], [Math.PI / 2, 0, 0], B.root);
+  const cupG = new THREE.CylinderGeometry(0.34, 0.2, 0.42, 36, 1, false);
+  // face on the front of the cup: planar map from the front
+  { const p = cupG.attributes.position, uv = cupG.attributes.uv, nr = cupG.attributes.normal; for (let i = 0; i < p.count; i++) { if (nr.getZ(i) > 0.05 && Math.abs(nr.getY(i)) < 0.9) uv.setXY(i, 0.25 + p.getX(i) / 1.4, 0.5 + p.getY(i) / 0.9); else uv.setXY(i, 0.75, 0.9); } }
+  B.cup = add(cupG, [{ color: 0xffd36b, map: B.faces.calm[0], rim: 0.7, hatchMode: 'u' }, { key: 'cuptop', color: 0x3b3558 }, { key: 'cuptop', color: 0x3b3558 }], { outline: 1.05 }, [0, 1.0, 0], [0, 0, 0], B.root);
+  const fl = new THREE.Shape(); fl.moveTo(-0.26, 0); fl.bezierCurveTo(-0.32, 0.26, -0.06, 0.34, 0.02, 0.8); fl.bezierCurveTo(0.12, 0.44, 0.36, 0.32, 0.26, 0.0); fl.closePath();
+  const flg = new THREE.ExtrudeGeometry(fl, { depth: 0.14, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 2 }); flg.translate(0, 0, -0.07);
   B.flame = new THREE.Group(); B.flame.position.set(0, 1.2, 0); B.root.add(B.flame);
-  add(flg, { key: 'flame', color: 0xffb02e, glow: 0.25, rim: 0.5 }, { outline: 0.8 }, [0, 0, 0], [0, 0, 0], B.flame);
-  const fl2 = new THREE.Shape(); fl2.moveTo(-0.09, 0); fl2.bezierCurveTo(-0.1, 0.12, 0.0, 0.16, 0.02, 0.32); fl2.bezierCurveTo(0.06, 0.18, 0.14, 0.12, 0.09, 0.0); fl2.closePath();
-  add(new THREE.ExtrudeGeometry(fl2, { depth: 0.14, bevelEnabled: false }).translate(0, 0, -0.07), { key: 'flamecore', color: 0xfff1b8, glow: 0.3 }, { outline: 0.4 }, [0.01, 0.04, 0], [0, 0, 0], B.flame);
+  add(flg, { key: 'flame', color: 0xff7a2e, glow: 0.2, rim: 0.5 }, { outline: 0.85 }, [0, 0, 0], [0, 0, 0], B.flame);
+  const fl2 = new THREE.Shape(); fl2.moveTo(-0.12, 0); fl2.bezierCurveTo(-0.14, 0.16, 0.0, 0.2, 0.03, 0.44); fl2.bezierCurveTo(0.08, 0.24, 0.18, 0.14, 0.12, 0.0); fl2.closePath();
+  add(new THREE.ExtrudeGeometry(fl2, { depth: 0.2, bevelEnabled: false }).translate(0, 0, -0.1), { key: 'flamecore', color: 0xffd84a, glow: 0.3 }, { outline: 0.4 }, [0.01, 0.03, 0.02], [0, 0, 0], B.flame);
   return B;
 }
 

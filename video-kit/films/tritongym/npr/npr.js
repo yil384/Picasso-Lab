@@ -476,10 +476,12 @@ void main() {
       vec4 nn = textureLod(tNormal, uvw + o, 0.);
       ns[k] = nn.xyz * 2. - 1.; ids[k] = nn.a * 255.;
     }
-    float gx = (zs[2] + 2. * zs[5] + zs[8]) - (zs[0] + 2. * zs[3] + zs[6]);
-    float gy = (zs[6] + 2. * zs[7] + zs[8]) - (zs[0] + 2. * zs[1] + zs[2]);
-    float zmin = min(min(zs[4], min(zs[1], zs[7])), min(zs[3], zs[5]));
-    float gz = length(vec2(gx, gy)) / max(zmin, 1e-3);
+    // depth edges: Laplacian of inverse depth (1/z is linear in screen space on any plane, so a floor seen at a
+    // grazing angle stays clean; only real depth steps and folds ink) (film-tritongym change)
+    float w[9]; for (int k = 0; k < 9; k++) w[k] = 1. / max(zs[k], 1e-3);
+    float lw4 = abs(w[1] + w[3] + w[5] + w[7] - 4. * w[4]);
+    float lwx = abs(w[0] + w[2] + w[6] + w[8] - 4. * w[4]) * .5;
+    float gz = 4. * max(lw4, lwx) / max(w[4], 1e-6);
     // creases: Laplacian of the normals (zero for smooth curvature, large across a hard edge)
     vec3 l4 = ns[1] + ns[3] + ns[5] + ns[7] - 4. * ns[4];
     vec3 lx = ns[0] + ns[2] + ns[6] + ns[8] - 4. * ns[4];

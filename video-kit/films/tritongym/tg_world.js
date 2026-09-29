@@ -16,11 +16,11 @@ export function canvasTex(THREE, w, h, paint, { wrap = false, repeat = null } = 
 }
 
 /** Watercolour-ish mottling: soft blobs of lighter / darker tone (multiplied later by the albedo). */
-export function mottle(g, w, h, r, n = 60, a = 0.08) {
+export function mottle(g, w, h, r, n = 60, a = 0.08, darkShare = 0.5) {
   for (let k = 0; k < n; k++) {
     const x = r() * w, y = r() * h, rr = r.range(0.04, 0.16) * w;
     const grd = g.createRadialGradient(x, y, 0, x, y, rr);
-    const dark = r() < 0.5;
+    const dark = r() < darkShare;
     grd.addColorStop(0, dark ? `rgba(40,30,60,${a})` : `rgba(255,255,255,${a * 1.2})`);
     grd.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = grd; g.fillRect(x - rr, y - rr, rr * 2, rr * 2);
@@ -31,7 +31,7 @@ export function mottle(g, w, h, r, n = 60, a = 0.08) {
 export function paintPCB(g, w, h, seed = 1) {
   const r = mkRng('pcb', seed);
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
-  mottle(g, w, h, r, 70, 0.07);
+  mottle(g, w, h, r, 50, 0.05, 0.3);
   const gold = '#f7d27a', edge = 'rgba(20,40,30,0.55)';
   // traces: 45-degree routed buses
   for (let b = 0; b < 16; b++) {
@@ -97,7 +97,7 @@ export function paintFloor(g, w, h, { startA, finishA, seed = 3 } = {}) {
   g.beginPath(); g.arc(X(0), Y(0), ARENA.RO * px, 0, TAU); g.arc(X(0), Y(0), ARENA.RI * px, 0, TAU, true);
   g.fillStyle = 'rgba(8,40,30,0.42)'; g.fill('evenodd');
   g.clip('evenodd');
-  mottle(g, w, h, r, 40, 0.1);
+  mottle(g, w, h, r, 24, 0.05, 0.3);
   g.restore();
   // edge traces (gold with ink edge) and the dashed lane divider
   const ring = (rad, wid, col, dash = null) => { g.save(); g.strokeStyle = col; g.lineWidth = wid * px; if (dash) g.setLineDash(dash.map((d) => d * px)); g.beginPath(); g.arc(X(0), Y(0), rad * px, 0, TAU); g.stroke(); g.restore(); };

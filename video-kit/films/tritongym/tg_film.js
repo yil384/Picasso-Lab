@@ -25,7 +25,7 @@ export const LOOK = {
   lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
   bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.12,
   rule: 0.17, rulePx: 10, ruleTop: 0.3, ruleBot: 0.04, bgDots: [0.95, 0.6, 0.42, 0.28],
-  dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16,
+  dofMax: 3.0, dofRange: 3.5, grain: 0.018, vignette: 0.16, shadowNoise: 0.05, shadowSoft: 0.02,
   atmos: 0.2, atmosStart: 14, atmosEnd: 34, atmosCol: [0.96, 0.92, 0.84], inkFar: 0.7, hatchFar: 0.5, htFar: 0.5,
   ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
 };
@@ -150,6 +150,7 @@ function updateCamera(ctx, F) {
   const sh = [hit(K.clang, 0.02), hit(K.slam, 0.022, 5), hit(K.cross, 0.008)].reduce((a, b) => a.map((v, i) => v + b[i]), [0, 0, 0]);
   hand.rot = hand.rot.map((v, i) => v + sh[i]);
   applyRig(cam, { pos: w.pos, target: w.target, fov: w.fov, roll: w.roll }, { hand });
+  st.camTarget = w.target;
   const yawAt = (f) => { const q = camWorld(f); return Math.atan2(q.target[0] - q.pos[0], q.target[2] - q.pos[2]); };
   let dy = yawAt(F + 0.5) - yawAt(F - 0.5);
   if (dy > Math.PI) dy -= TAU; if (dy < -Math.PI) dy += TAU;
@@ -374,6 +375,14 @@ export function drawNPR(ctx) {
   const { npr, camera } = T, F = ctx.iw;
   npr.frame(ctx);
   npr.setSmear(st.smear || 0, 0);
+  // key light per shot, like a comic panel: from the upper left of the lens, a little from the front
+  {
+    const cp = camera.position, tg = st.camTarget;
+    const back = V(cp.x - tg[0], 0, cp.z - tg[2]).normalize();
+    const right = V(back.z, 0, -back.x);
+    const d = V(0, 0, 0).addScaledVector(right, -0.62).addScaledVector(V(0, 1, 0), 0.9).addScaledVector(back, 0.42);
+    npr.setLight({ dir: [d.x, d.y, d.z], target: [tg[0], 0.5, tg[2]], size: 9, dist: 26, shadows: !Q.get('noshadow') });
+  }
   const fp = st.kern.vis && st.kern.pos ? st.kern.pos : st.tok.pos;
   npr.focusOn(camera, V(...fp), 4);
   // impact frames: the CLANG and the photo finish (2 frames each, posterised; never a white frame)
