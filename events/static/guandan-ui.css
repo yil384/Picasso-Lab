@@ -579,13 +579,16 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
     position: fixed;
     left: 50%; top: 44%;
     z-index: var(--z-toast);
-    max-width: min(80vw, 420px);
+    /* sized to its text (not to the half screen right of left: 50%); a long one wraps evenly */
+    width: max-content;
+    max-width: min(92vw, 520px);
     padding: 9px 20px;
     border-radius: var(--r-pill);
     background: rgba(6, 24, 28, .8);
     color: #fff;
     font: 700 var(--fs-15)/1.35 var(--font-ui);
     text-align: center;
+    text-wrap: balance;
     translate: -50% -50%;
     scale: .92;
     opacity: 0;
@@ -621,7 +624,7 @@ html.gd-stage-live .felt::before, html.gd-stage-live .felt::after { display: non
     content: "";
     position: absolute;
     inset: 0;
-    background: rgba(10, 16, 48, .58);
+    background: rgba(6, 10, 30, .72);
     opacity: 0;
     transition: opacity 150ms ease;
 }
@@ -768,16 +771,28 @@ html[lang="en"] .gd-rules-row > b { text-align-last: auto; }
     .gd-popup-layer:not(.in-stage) .gd-rules-row .gd-rules-cards { grid-column: 2; }
 }
 
-/* 实验室牌组 */
+/* 实验室牌组: one pale cell per member (card, name, style line); every cell keeps room for two
+   style lines, so the rows line up whether or not a member has one */
 .gd-labdeck {
-    --card-w: calc(84 * var(--pu));
+    --card-w: calc(108 * var(--pu));
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(calc(150 * var(--pu)), 1fr));
-    gap: calc(18 * var(--pu)) calc(12 * var(--pu));
+    grid-template-columns: repeat(auto-fill, minmax(calc(156 * var(--pu)), 1fr));
+    gap: calc(12 * var(--pu));
 }
-.labdeck-item { display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--pu)); text-align: center; }
-.labdeck-item > b { font: 900 calc(18 * var(--pu))/1.2 var(--font-ui); color: var(--ink); }
-.labdeck-item > small { font: 500 calc(13 * var(--pu))/1.35 var(--font-ui); color: var(--ink-3); }
+.labdeck-item {
+    display: grid;
+    grid-template-rows: auto auto minmax(calc(40 * var(--pu)), auto);
+    justify-items: center;
+    align-content: start;
+    gap: calc(6 * var(--pu));
+    padding: calc(12 * var(--pu)) calc(8 * var(--pu)) calc(6 * var(--pu));
+    border-radius: calc(8 * var(--pu));
+    background: #eef3fd;
+    text-align: center;
+}
+.labdeck-item > b { font: 900 calc(19 * var(--pu))/1.2 var(--font-ui); color: var(--ink); }
+/* a two-line style breaks at its " · ", never inside a word */
+.labdeck-item > small { font: 500 max(11px, calc(14 * var(--pu)))/1.35 var(--font-ui); color: var(--ink-3); word-break: keep-all; text-wrap: balance; }
 
 /* 设置: Tencent rows (justified label, gold radios) */
 .gd-setrow {
@@ -789,7 +804,8 @@ html[lang="en"] .gd-rules-row > b { text-align-last: auto; }
 }
 .gd-setrow:last-child { border-bottom: 0; }
 .gd-setrow-k { flex: none; width: calc(80 * var(--pu)); font: 900 calc(20 * var(--pu))/1 var(--font-ui); text-align-last: justify; }
-.gd-radio { display: inline-flex; align-items: center; gap: calc(10 * var(--pu)); font: 700 calc(20 * var(--pu))/1 var(--font-ui); cursor: pointer; }
+/* the label is the tap target: at least --tap square on touch screens */
+.gd-radio { display: inline-flex; align-items: center; gap: calc(10 * var(--pu)); min-width: var(--tap, 0px); min-height: var(--tap, 0px); font: 700 calc(20 * var(--pu))/1 var(--font-ui); cursor: pointer; }
 .gd-radio input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
 .gd-radio i {
     width: calc(24 * var(--pu));

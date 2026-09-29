@@ -44,6 +44,7 @@
         <symbol id="gd-g-history" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4 3h13l3 3v15H4V3Zm3 5v2h10V8H7Zm0 4v2h10v-2H7Zm0 4v2h6v-2H7Z"/></symbol>
         <symbol id="gd-g-close" viewBox="0 0 24 24"><path d="M5.6 3.4 12 9.8l6.4-6.4 2.2 2.2-6.4 6.4 6.4 6.4-2.2 2.2-6.4-6.4-6.4 6.4-2.2-2.2 6.4-6.4-6.4-6.4 2.2-2.2Z"/></symbol>
         <symbol id="gd-g-note" viewBox="0 0 24 24"><path d="M9 4.6 20.5 2v13.6a3.4 3.4 0 1 1-2.2-3.2V7.1L11.2 8.7v9.4A3.4 3.4 0 1 1 9 14.9V4.6Z"/></symbol>
+        <symbol id="gd-g-star" viewBox="0 0 24 24"><path d="M12 1.8 15.1 8.2l7 .9-5.1 4.9 1.3 7L12 17.6 5.7 21l1.3-7L1.9 9.1l7-.9L12 1.8Z"/></symbol>
         <symbol id="gd-g-cards" viewBox="0 0 24 24"><path d="M3.2 6.3 10.6 4.3c.7-.2 1.4.2 1.6.9l3.5 13c.2.7-.2 1.4-.9 1.6l-7.4 2c-.7.2-1.4-.2-1.6-.9l-3.5-13c-.2-.7.2-1.4.9-1.6Z"/><path d="M13.3 3.4 20 5.2c.7.2 1.1.9.9 1.6l-3.2 12.1-4.3-15.5Z" opacity=".75"/></symbol>
     </svg>
     <!-- Tencent-style top bar for the lobby and room (the table screen hides it and reuses these handlers). -->
@@ -266,7 +267,7 @@ function setStaticLabels() {
     setHudButton(hudRulesBtn, L("Rules", "规则"), L("Game rules", "玩法规则"));
     setHudButton(hudRecordsBtn, L("Records", "战绩"), L("Peak Showdown records", "巅峰对决战绩"));
     setHudButton(langToggleBtn, isZH() ? "EN" : "中文", isZH() ? "Switch to English" : "切换到中文");
-    setHudButton(backEventsBtn, L("Exit", "返回"), L("Back to Events", "返回活动"));
+    setHudButton(backEventsBtn, L("Exit", "返回"), L("Back to events", "返回活动"));
 }
 
 // Left side of the top bar: the player card on the lobby, the 好友同玩 title on the room screen.
@@ -1760,11 +1761,12 @@ function lobbyProfileHTML() {
         ? `<img src="${encodeHTML(p.avatar)}" alt="">`
         : `<span class="gd-avatar-initials">${encodeHTML(initials(nickname, "P"))}</span>`;
     const tier = st ? L(`Rank ${st.rank}`, `第 ${st.rank} 名`) : p ? L("Lab member", "实验室") : L("Rookie", "新手");
+    // coin discs marked 分 / 胜 / 场; in English a star, a trophy and cards, the word in the title
     const stats = st ? [
-        [L("R", "分"), st.pts, L("Rating", "评分")],
-        [L("W", "胜"), `${st.wr}%`, L("Win rate", "胜率")],
-        [L("G", "场"), st.p, L("Matches", "场次")]
-    ].map(([mark, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${mark}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("") : "";
+        ["分", "star", st.pts, L("Rating", "评分")],
+        ["胜", "trophy", `${st.wr}%`, L("Win rate", "胜率")],
+        ["场", "cards", st.p, L("Matches", "场次")]
+    ].map(([mark, glyph, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${isZH() ? mark : glyphHTML(glyph)}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("") : "";
     return `<div class="hud-profile">
         <span class="hud-avatar">${face}</span>
         <div class="hud-id">
@@ -1821,23 +1823,19 @@ function previewCardsHTML() {
     return (aces.length ? aces : ["A♠", "A♥", "A♦", "A♣"]).slice(0, 4).map((card, i) => cardHTML(signatureCard(card, `pv${i}`))).join("");
 }
 
-// Left rail: 赛季MVP · 巅峰对决 · 实验室 · 分享 · 音乐, free-standing objects with the label over
-// their bottom edge.
+// Left rail: 赛季MVP · 分享 · 音乐, free-standing objects with the label over their bottom edge.
+// Every entry point appears once: 巅峰对决, 实验室 and 玩法规则 are tiles.
 function lobbyRailHTML() {
     const standings = labStandings();
-    const PL = labPlayers();
-    const mvp = standings?.mvp ? PL[standings.mvp.key] : null;
-    const labKey = labMemberKeys().find(k => !PL[k].card.startsWith("A")) || labMemberKeys()[0];
+    const mvp = standings?.mvp ? labPlayers()[standings.mvp.key] : null;
     const musicOn = window.GuandanMusic?.isOn?.() !== false;
     const item = (cls, attrs, disc, label, extra = "") => `<button class="rail-item ${cls}" type="button" ${attrs}>
             <span class="rail-disc">${disc}</span>${extra}<span class="rail-lb">${label}</span></button>`;
     return [
         mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, L("Season MVP", "赛季MVP"), `<span class="rail-badge">MVP</span>`) : "",
-        item("is-peak", `data-open-records="latest"`, `<span class="rail-vs"><b>VS</b></span>`, L("Showdown", "巅峰对决")),
-        labKey ? item("is-lab", `data-lobby="lab"`, cardHTML(signatureCard(PL[labKey].card, "rl0")), L("Lab", "实验室")) : "",
         item("is-share", `data-lobby="share"`, `${cardHTML({ back: true })}<span class="rail-share">${glyphHTML("share")}</span>`, L("Share", "分享")),
         item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-pressed="${musicOn}"`, `<span class="rail-vinyl"></span>${glyphHTML("note", "rail-note")}`, L("Music", "音乐"),
-            musicOn ? "" : `<span class="rail-badge is-off">${L("OFF", "关")}</span>`)
+            musicOn ? "" : `<span class="rail-badge is-off">${L("Off", "关")}</span>`)
     ].join("");
 }
 
@@ -1924,8 +1922,6 @@ function renderLobby() {
     statusText = "";
     const nav = [
         ["invite", `data-lobby="friends"`, L("Invite", "邀请")],
-        ["cards", `data-lobby="lab"`, L("Lab", "实验室")],
-        ["book", `data-lobby="rules"`, L("Rules", "规则")],
         ["history", `data-open-records="history"`, L("History", "历史对阵")],
         ["podium", `data-open-records="board"`, L("Ranking", "排行榜")],
         ["gear", `data-lobby="settings"`, L("Settings", "设置")]
@@ -1955,7 +1951,7 @@ function bindLobby(el) {
     el.addEventListener("click", event => {
         const target = event.target.closest("button, .lobby-tile");
         if (!target || target.disabled) return;
-        const creating = L("Creating room…", "正在创建房间…");
+        const creating = L("Creating…", "正在创建…");
         if (target.id === "create-room") return runLobbyAction(createRoom, target, creating);
         if (target.id === "join-room") return joinFromLobby(el);
         const action = target.dataset.lobby;
@@ -1984,22 +1980,23 @@ function bindLobby(el) {
     });
 }
 
-// 加入: the code tile shows 正在进入房间… while the room is looked up and loaded.
+// 加入: the code tile shows 正在加入… while the room is looked up and loaded.
 function joinFromLobby(lobby) {
     const code = lobby.querySelector("#room-input")?.value.trim();
     if (!code) return joinRoom();
-    return runLobbyAction(joinRoom, lobby.querySelector(".lobby-tile.is-join"), L("Joining…", "正在进入房间…"));
+    return runLobbyAction(joinRoom, lobby.querySelector(".lobby-tile.is-join"), L("Joining…", "正在加入…"));
 }
 
 // One lobby action at a time: a double tap must not create two rooms. The tapped tile stays
-// pressed under a "正在开局…" veil until the next screen arrives (Firebase can take a second or two).
+// pressed under a dark "正在开局…" plate with a turning ring until the next screen arrives
+// (Firebase can take a second or two).
 async function runLobbyAction(fn, source, label) {
     if (lobbyActionBusy) return;
     lobbyActionBusy = true;
     root.querySelector(".lobby")?.classList.add("is-busy");
     if (source) {
-        source.dataset.loading = label;
         source.classList.add("is-loading");
+        source.insertAdjacentHTML("beforeend", `<span class="lobby-busy" role="status"><i></i>${encodeHTML(label)}</span>`);
     }
     // a tile scrolled out of view (portrait) is backed by a toast with the same caption
     const r = source?.getBoundingClientRect();
@@ -2013,6 +2010,7 @@ async function runLobbyAction(fn, source, label) {
         lobbyActionBusy = false;
         root.querySelector(".lobby")?.classList.remove("is-busy");
         source?.classList.remove("is-loading");
+        source?.querySelector(".lobby-busy")?.remove();
         if (!seen && toastEl.textContent === label) toastEl.classList.remove("show");
     }
 }
@@ -2175,7 +2173,7 @@ function rulesBodyHTML() {
             row(L("Cards", "牌数"), L("Two decks, 108 cards including four jokers; everyone gets 27.", "两副牌共 108 张（含四张王），每人 27 张。")),
             row(L("Lead", "先出"), L("Round 1: a random card is turned up and its holder leads. Later rounds: the tribute payer or last round's first place leads.", "首局随机翻一张起始牌，拿到它的人先出；之后由进贡方或上局头游先出。")),
             row(L("Turns", "出牌"), L("Lead any legal combo; the others follow with a bigger same combo or a bomb, or pass.", "领出任意合法牌型；其他人只能出更大的同牌型或炸弹，也可以不出。")),
-            row(L("Trick", "收牌"), L("When everyone else passes, the last player to play takes the trick and leads again. If that player has gone out, their partner leads (catch-wind).", "其他人都不出时，最后出牌的人收牌再出；他已出完时由对家「接风」。")),
+            row(L("Trick", "收牌"), L("When everyone else passes, the last player to play takes the trick and leads again. If that player has gone out, their partner leads instead (Jiefeng).", "其他人都不出时，最后出牌的人收牌再出；他已出完时由对家「接风」。")),
             row(L("Time", "限时"), L("3 minutes a turn (a round's opening lead has no limit); on timeout you pass, or play your smallest single when leading.", "每手 3 分钟（每局第一手不限时）；超时自动不出，领出时自动出最小的单张。"))
         ]],
         [L("Level card", "级牌"), [
@@ -2190,14 +2188,14 @@ function rulesBodyHTML() {
             row(L("Triple", "三张"), L("Three of a rank", "三张同点数"), ["5♠", "5♥", "5♦"]),
             row(L("Full House", "三带二"), L("A triple plus a pair; the triple decides", "三张加一对，比三张的大小"), ["8♠", "8♥", "8♣", "4♦", "4♣"]),
             row(L("Straight", "顺子"), L("Five in a row, 2-6 up to 10-A", "五张连续，23456 到 10JQKA"), ["10♦", "J♣", "Q♠", "K♥", "A♠"]),
-            row(L("Pairs run", "三连对"), L("Three consecutive pairs, 223344 to QQKKAA", "三个连续的对子，223344 到 QQKKAA"), ["3♠", "3♦", "4♥", "4♣", "5♠", "5♥"]),
-            row(L("Triple run", "钢板"), L("Two consecutive triples, 222333 to KKKAAA", "两个连续的三张，222333 到 KKKAAA"), ["J♠", "J♥", "J♣", "Q♦", "Q♠", "Q♥"])
+            row(L("Pair Run", "三连对"), L("Three consecutive pairs, 223344 to QQKKAA", "三个连续的对子，223344 到 QQKKAA"), ["3♠", "3♦", "4♥", "4♣", "5♠", "5♥"]),
+            row(L("Triple Run", "钢板"), L("Two consecutive triples, 222333 to KKKAAA", "两个连续的三张，222333 到 KKKAAA"), ["J♠", "J♥", "J♣", "Q♦", "Q♠", "Q♥"])
         ]],
         [L("Bombs", "炸弹"), [
             `<p class="gd-rules-note">${L("A bomb beats any non-bomb. 4 of a kind < 5 of a kind < Straight Flush < 6 < 7 < 8 … < Joker Bomb; the same size compares by rank.", "炸弹能压任何非炸弹牌型。四炸 < 五炸 < 同花顺 < 六炸 < 七炸 < 八炸 … < 天王炸；张数相同比点数。")}</p>`,
             row(L("Bomb", "炸弹"), L("Four or more of a rank", "四张及以上同点数"), ["6♠", "6♥", "6♦", "6♣"]),
-            row(L("Flush run", "同花顺"), L("A five-card straight in one suit", "同一花色的五张顺子"), ["8♠", "9♠", "10♠", "J♠", "Q♠"]),
-            row(L("Jokers", "天王炸"), L("All four jokers, the biggest play", "四张王，最大的牌"), ["RJ", "RJ", "BJ", "BJ"])
+            row(L("Straight Flush", "同花顺"), L("A five-card straight in one suit", "同一花色的五张顺子"), ["8♠", "9♠", "10♠", "J♠", "Q♠"]),
+            row(L("Joker Bomb", "天王炸"), L("All four jokers, the biggest play", "四张王，最大的牌"), ["RJ", "RJ", "BJ", "BJ"])
         ]],
         [L("Level up", "升级"), [
             row(L("Places", "名次"), L("Finishing order: 1st, 2nd, 3rd, last.", "出完的顺序为头游、二游、三游、末游。")),
@@ -2354,22 +2352,22 @@ function stepStartLevel(team, dir) {
     return next ? updateStartLevel(team, next) : undefined;
 }
 
-// The settings rows state what this game plays (read-only); 发牌 and 旁观 drop on short phones.
+// The settings panel: the host's start-level steppers, then what this game plays as plain values
+// (the rules are fixed, so nothing here looks like a control). The notes drop on short phones.
 function roomShellHTML() {
-    const checks = [L("Wild", "逢人配"), L("Catch-wind", "接风")];
+    const row = (key, value, note = "") => `<div class="room-row"><span class="room-k">${key}</span><span class="room-v">${value}${note ? `<small>${note}</small>` : ""}</span></div>`;
+    const tags = [L("Wild", "逢人配"), L("Jiefeng", "接风")].map(t => `<span class="room-tag">${t}</span>`).join("");
     return `
     <section class="room">
         <aside class="room-panel room-settings">
-            <h3 class="room-panel-head">${L("Table", "对局设置")}</h3>
+            <h3 class="room-panel-head">${L("Match settings", "对局设置")}</h3>
             <div class="room-panel-body">
                 <div class="room-levels-setup" data-region="levels"></div>
-                <div class="room-row"><span class="room-k">${L("Goal", "目标")}</span><span class="room-v">${L("Pass A", "过 A")}<small>${L("3 misses → 2", "（3 把不过回 2）")}</small></span></div>
-                <div class="room-row"><span class="room-k">${L("Tribute", "进贡")}</span><span class="room-v">${L("Tribute", "进贡")}<small>${L("two Red Jokers block it", "（双大王抗贡）")}</small></span></div>
-                <div class="room-row"><span class="room-k">${L("Level", "升级")}</span><span class="room-v">${L("1-2 finish +3", "双上升 3 级")}</span></div>
-                <div class="room-row"><span class="room-k">${L("Turn", "出牌时间")}</span><span class="room-v">${L("3 min", "3 分钟")}</span></div>
-                <div class="room-row is-extra"><span class="room-k">${L("Deal", "发牌")}</span><span class="room-v">${L("Shuffled", "随机发牌")}</span></div>
-                <div class="room-row"><span class="room-k">${L("Rules", "规则")}</span><span class="room-checks">${checks.map(c => `<span class="room-chk">${c}</span>`).join("")}</span></div>
-                <div class="room-row is-extra"><span class="room-k">${L("Watch", "旁观")}</span><span class="room-v">${L("Allowed", "允许旁观")}</span></div>
+                ${row(L("Goal", "目标"), L("Pass A", "过 A"), L("back to 2 after 3 misses", "（3 把不过回 2）"))}
+                ${row(L("Tribute", "进贡"), L("On", "开启"), L("two Red Jokers block it", "（双大王抗贡）"))}
+                ${row(L("Level", "升级"), L("1-2 finish +3", "双上升 3 级"))}
+                ${row(L("Turn", "出牌时间"), L("3 min", "3 分钟"))}
+                <div class="room-row"><span class="room-k">${L("Rules", "规则")}</span><span class="room-tags">${tags}</span></div>
                 <div class="room-admin" data-region="admin"></div>
             </div>
         </aside>
@@ -2413,7 +2411,7 @@ function renderLobbyRoom() {
         bindRoom(el);
     }
     patchRegion(el, "levels", levelSetupHTML());
-    patchRegion(el, "admin", host ? `<button class="room-dissolve" id="delete-room" type="button"${actionBusy ? " disabled" : ""}>${L("Dissolve room", "解散房间")}</button>` : "");
+    patchRegion(el, "admin", host ? `<button class="room-dissolve" id="delete-room" type="button"${actionBusy ? " disabled" : ""}><span class="btn danger">${L("Dissolve room", "解散房间")}</span></button>` : "");
     patchRegion(el, "table", roomTableHTML(mine));
     patchRegion(el, "actions", roomActionsHTML());
     patchRegion(el, "roster", rosterHTML());
@@ -2523,7 +2521,8 @@ function rosterHTML() {
     return labMemberKeys().map(k => {
         const p = PL[k];
         const red = /[♥♦]/.test(p.card);
-        const sub = [`<i class="${red ? "is-red" : ""}">${encodeHTML(p.card)}</i>`, isZH() && p.style ? encodeHTML(p.style) : ""].filter(Boolean).join(" · ");
+        // the signature card and the first half of the style ("记牌反击"), which fits the row
+        const sub = [`<i class="${red ? "is-red" : ""}">${encodeHTML(p.card)}</i>`, isZH() && p.style ? encodeHTML(p.style.split(" · ")[0]) : ""].filter(Boolean).join(" · ");
         return `<div class="roster-row">
             <span class="gd-avatar is-plain roster-av"><img src="${encodeHTML(p.avatar)}" alt="" loading="lazy"></span>
             <span class="roster-name"><b>${encodeHTML(firstNameOf(p.name))}</b><small>${sub}</small></span>

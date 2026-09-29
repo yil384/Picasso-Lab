@@ -24,16 +24,12 @@ html[data-gd-boot="lobby"] body:not([data-screen]) {
     --sr: env(safe-area-inset-right, 0px);
     --tap: 0px;
     --fs-min: 10px;
-    /* navy-periwinkle room: window light and a mullioned window top-left, tall glass panes on
-       the right, a lilac wash under the ceiling, a large soft room light, the lit horizon band
-       and a darker floor */
+    /* navy-periwinkle room, soft light only: window light top-left, a large room light behind
+       the grid, a lilac wash under the ceiling, the lit horizon band and a darker floor */
     background:
         radial-gradient(48% 42% at 8% 14%, rgba(150, 200, 255, .34), rgba(150, 200, 255, 0) 70%),
         radial-gradient(42% 46% at 56% 40%, rgba(176, 196, 255, .2), rgba(176, 196, 255, 0) 72%),
         radial-gradient(60% 55% at 88% 0%, rgba(132, 146, 236, .5), rgba(132, 146, 236, 0) 70%),
-        linear-gradient(90deg, transparent 2%, rgba(190, 215, 255, .08) 2% 7.5%, transparent 7.5% 8.2%, rgba(190, 215, 255, .08) 8.2% 13.7%, transparent 13.7%) 0 12% / 100% 38% no-repeat,
-        linear-gradient(180deg, transparent 49%, rgba(190, 215, 255, .12) 49% 51%, transparent 51%) 0 12% / 14% 38% no-repeat,
-        linear-gradient(90deg, transparent 74%, rgba(180, 205, 255, .07) 74% 81%, transparent 81% 82.5%, rgba(180, 205, 255, .07) 82.5% 89.5%, transparent 89.5% 91%, rgba(180, 205, 255, .05) 91% 98%, transparent 98%) 0 0 / 100% 58% no-repeat,
         linear-gradient(180deg, rgba(210, 222, 255, .1), rgba(210, 222, 255, 0)) 0 0 / 100% 4% no-repeat,
         linear-gradient(104deg, rgba(255, 255, 255, 0) 30%, rgba(190, 210, 255, .07) 42%, rgba(255, 255, 255, 0) 54%),
         linear-gradient(180deg, transparent 50%, rgba(170, 196, 255, .1) 56%, rgba(190, 212, 255, .22) 58.2%, rgba(160, 190, 255, .06) 59%, rgba(20, 30, 80, .1) 63%, rgba(10, 16, 50, .34) 100%),
@@ -98,15 +94,11 @@ body:not([data-screen]) .topbar { visibility: hidden; }
     filter: drop-shadow(0 calc(2 * var(--lu)) 0 rgba(28, 40, 110, .55));
 }
 
-/* lobby: player card left; 战绩 规则 语言 返回 right */
-body[data-screen="lobby"] #new-room-btn,
-body[data-screen="lobby"] #copy-link-btn,
-body:not([data-screen]) #new-room-btn,
-body:not([data-screen]) #copy-link-btn { display: none; }
-body[data-screen="lobby"] #hud-records-btn { order: 2; margin-left: auto; }
-body[data-screen="lobby"] #hud-rules-btn { order: 3; }
-body[data-screen="lobby"] #lang-toggle { order: 4; }
-body[data-screen="lobby"] #back-events-btn { order: 5; }
+/* lobby: player card left; 语言 返回 right (战绩 and 规则 are lobby tiles; the chips are the room's) */
+body[data-screen="lobby"] :is(#new-room-btn, #copy-link-btn, #hud-records-btn, #hud-rules-btn),
+body:not([data-screen]) :is(#new-room-btn, #copy-link-btn) { display: none; }
+body[data-screen="lobby"] #lang-toggle { order: 2; margin-left: auto; }
+body[data-screen="lobby"] #back-events-btn { order: 3; }
 
 .hud-profile { display: flex; align-items: center; gap: calc(12 * var(--lu)); min-width: 0; }
 /* profile photo: a rounded square in a gold frame (Tencent's framed head portrait) */
@@ -135,7 +127,8 @@ body[data-screen="lobby"] #back-events-btn { order: 5; }
     font-size: calc(24 * var(--lu));
 }
 .hud-id { display: flex; flex-direction: column; align-items: flex-start; gap: calc(5 * var(--lu)); min-width: 0; }
-.hud-name { position: relative; display: flex; align-items: center; cursor: text; }
+/* above the 段位 pill, so the field's --tap box is not cut by it */
+.hud-name { position: relative; z-index: 1; display: flex; align-items: center; cursor: text; }
 .hud-name input {
     width: calc(190 * var(--lu));
     /* a --tap high touch target; the negative margin keeps the row height */
@@ -218,12 +211,25 @@ body[data-screen="lobby"] #back-events-btn { order: 5; }
     font: 900 max(var(--fs-min), calc(19 * var(--lu)))/1 var(--font-ui);
     font-style: normal;
 }
+.hud-stat i .gd-glyph { width: 56%; height: 56%; }
 .hud-stat.s1 i { background: radial-gradient(circle at 36% 30%, #d8ffe6 0%, #5fe08e 48%, #22a458 100%); box-shadow: inset 0 calc(-3 * var(--lu)) 0 rgba(0, 90, 40, .35); color: #0d5a2a; }
 .hud-stat.s2 i { background: radial-gradient(circle at 36% 30%, #e0f2ff 0%, #6fb8ff 48%, #3a72e0 100%); box-shadow: inset 0 calc(-3 * var(--lu)) 0 rgba(20, 40, 140, .35); color: #10307a; }
 
-/* room: ↩ 好友同玩 房间号 · dark chips 邀请 规则 战绩 · 语言 right (↩ is the only exit, as in 好友同玩) */
+/* room: a dark header strip with ↩ 好友同玩 房间号 · dark chips 邀请 规则 战绩 · 语言 right (↩ is the
+   only exit, as in 好友同玩); the ↩ is a chunky light-blue arrow outlined in navy */
+body[data-screen="room"] .topbar { background: linear-gradient(180deg, rgba(14, 22, 66, .75), rgba(14, 22, 66, .5) 80%, rgba(14, 22, 66, 0)); }
 body[data-screen="room"] #new-room-btn { order: 0; min-width: max(var(--tap), calc(46 * var(--lu))); height: max(var(--tap), calc(56 * var(--lu))); }
-body[data-screen="room"] #new-room-btn .hud-ic { width: calc(46 * var(--lu)); height: calc(46 * var(--lu)); filter: drop-shadow(0 calc(3 * var(--lu)) 0 rgba(40, 60, 170, .8)); }
+body[data-screen="room"] #new-room-btn .hud-ic {
+    width: calc(46 * var(--lu));
+    height: calc(46 * var(--lu));
+    fill: #e2eeff;
+    stroke: #1c2f66;
+    stroke-width: 2.6px;
+    stroke-linejoin: round;
+    paint-order: stroke fill;
+    overflow: visible;
+    filter: drop-shadow(0 calc(3 * var(--lu)) 0 rgba(40, 60, 170, .8));
+}
 body[data-screen="room"] #new-room-btn .hud-lb { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 body[data-screen="room"] #copy-link-btn { order: 2; }
 body[data-screen="room"] #hud-rules-btn { order: 3; }
@@ -267,9 +273,11 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 /* ---------- lobby ---------- */
 /* Laid out on a centred 1280-wide design (大掼蛋 2026 lobby proportions): the rail at 6-12% of
    the width, the tile grid from 20% to 90%, the bottom row with the nav under the grid and the
-   快速开始 bar reaching past the grid's right edge. */
+   快速开始 bar reaching past the grid's right edge. The grid grows by 40% of the height a phone
+   has over 600 design px and by all of the height a 16:10 screen (desk, the Google Sites
+   iframe) has over 16:9, so it never floats between empty bands (about 61% of the height). */
 .lobby {
-    --tiles-h: clamp(calc(365 * var(--lu)), calc(365 * var(--lu) + (var(--vh) - 600 * var(--lu)) * .4), calc(420 * var(--lu)));
+    --tiles-h: clamp(calc(365 * var(--lu)), calc(365 * var(--lu) + (var(--vh) - 600 * var(--lu)) * .4 + max(0px, var(--vh) - 720 * var(--lu))), calc(520 * var(--lu)));
     position: relative;
     display: grid;
     grid-template-columns: calc(var(--fx) + 79 * var(--lu) + var(--sl)) calc(72 * var(--lu)) calc(104 * var(--lu)) calc(900 * var(--lu)) minmax(0, 1fr);
@@ -283,33 +291,60 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu) + var(--sl)); }
 .lobby.is-busy { cursor: progress; }
 .lobby.is-busy .lobby-tile, .lobby.is-busy .lobby-quick { pointer-events: none; }
-/* the tapped tile stays pressed under a caption until the next screen arrives */
+/* the tapped tile stays pressed under a dim veil and a dark plate (a turning ring, 正在开局…)
+   until the next screen arrives; the ring stands still under reduced motion. The plate is sized
+   in the tile's unit and keeps 6px clear of the tile's sides: on a narrow tile the caption wraps. */
 .lobby-tile.is-loading, .lobby-quick.is-loading { scale: .97; }
-.lobby-tile.is-loading::after, .lobby-quick.is-loading::after {
-    content: attr(data-loading);
+.lobby-tile.is-loading::after {
+    content: "";
     position: absolute;
     inset: 0;
     z-index: 2;
-    display: grid;
-    place-items: center;
     border-radius: inherit;
-    background: rgba(24, 34, 86, .62);
-    color: #fff;
-    font: 900 max(var(--fs-min) * 1.2, calc(22 * var(--lu)))/1.2 var(--font-ui);
-    text-shadow: 0 calc(2 * var(--lu)) 0 rgba(10, 16, 50, .6);
+    background: rgba(24, 34, 86, .3);
 }
-/* on the gold bar the caption replaces the label */
-.lobby-quick.is-loading > * { visibility: hidden; }
-.lobby-quick.is-loading::after { background: none; color: #a3240c; font-size: calc(28 * var(--lu)); text-shadow: none; }
+.lobby-busy {
+    position: absolute;
+    left: 6px; right: 6px; top: 50%;
+    z-index: 3;
+    translate: 0 -50%;
+    width: fit-content;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: .5em;
+    padding: .5em 1em .5em .7em;
+    border-radius: 1.3em;
+    background: rgba(10, 18, 60, .78);
+    color: #fff;
+    font: 800 max(var(--fs-min) * 1.2, calc(20 * var(--t)))/1.2 var(--font-ui);
+    text-align: center;
+    text-wrap: balance;
+}
+.lobby-busy i {
+    flex: none;
+    width: 1.1em;
+    height: 1.1em;
+    box-sizing: border-box;
+    border: .15em solid rgba(255, 255, 255, .28);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: gd-busy-turn 800ms linear infinite;
+}
+@keyframes gd-busy-turn { to { rotate: 1turn; } }
+/* on the gold bar the ring and caption replace the label, 26 design px in the bar's dark red */
+.lobby-quick.is-loading > :not(.lobby-busy) { visibility: hidden; }
+.lobby-quick .lobby-busy { --t: calc(1.3 * var(--lu)); padding: 0; background: none; color: #a3240c; }
+.lobby-quick .lobby-busy i { border-color: rgba(163, 36, 12, .25); border-top-color: #a3240c; }
 
-/* left rail: free-standing objects (MVP portrait, VS disc, a labmate's card, the shared card
-   back, a record), each with its label over the bottom edge */
+/* left rail: three free-standing objects (the MVP's portrait, the shared card back, a record),
+   each with its label over the bottom edge, spread over the grid's height. --r is the rail's
+   unit: the objects are drawn a little larger than a 5-entry Tencent rail's. */
 .lobby-rail {
+    --r: calc(var(--lu) * 1.15);
     grid-area: 1 / 2;
     align-self: center;
-    /* from just under the top bar to the grid's bottom edge */
-    height: calc(var(--tiles-h) + 20 * var(--lu));
-    translate: 0 calc(-10 * var(--lu));
+    height: var(--tiles-h);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -320,7 +355,7 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: calc(80 * var(--lu));
+    width: calc(80 * var(--r));
     padding: 0;
     border: 0;
     background: none;
@@ -332,95 +367,81 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
     position: relative;
     display: grid;
     place-items: center;
-    width: calc(60 * var(--lu));
-    height: calc(60 * var(--lu));
+    width: calc(60 * var(--r));
+    height: calc(60 * var(--r));
 }
 .rail-lb {
     position: relative;
-    margin-top: calc(-10 * var(--lu));
-    font: 900 max(var(--fs-min), calc(17 * var(--lu)))/1.1 var(--font-ui);
+    margin-top: calc(-10 * var(--r));
+    font: 900 max(var(--fs-min), calc(17 * var(--r)))/1.1 var(--font-ui);
     white-space: nowrap;
-    -webkit-text-stroke: calc(4 * var(--lu)) #243268;
+    -webkit-text-stroke: calc(4 * var(--r)) #243268;
     paint-order: stroke fill;
 }
+/* the MVP plate over the portrait's lower edge, above the label */
 .rail-badge {
     position: absolute;
-    top: calc(41 * var(--lu));
+    top: calc(41 * var(--r));
     left: 50%;
     translate: -50% 0;
-    padding: 0 calc(7 * var(--lu));
-    border-radius: calc(4 * var(--lu));
+    padding: 0 calc(7 * var(--r));
+    border-radius: calc(4 * var(--r));
     background: linear-gradient(180deg, #fff1a8, #f4b03a);
     color: #7a2a00;
-    font: 800 max(var(--fs-min), calc(13 * var(--lu)))/1.4 var(--font-num);
+    font: 800 max(var(--fs-min), calc(13 * var(--r)))/1.4 var(--font-num);
     letter-spacing: .04em;
 }
-/* 音乐 off: a red corner chip at the record's top-left, clear of the label */
-.rail-badge.is-off { top: calc(2 * var(--lu)); left: calc(4 * var(--lu)); translate: none; background: linear-gradient(180deg, #ff9a8a, #d8433c); color: #fff; font-family: var(--font-ui); }
 /* 赛季MVP: the MVP's photo in a gold ring */
 .is-mvp .rail-disc { border-radius: 50%; background: linear-gradient(180deg, #ffe9a0, #d99a2a); }
 .is-mvp .rail-disc img {
-    width: calc(53 * var(--lu));
-    height: calc(53 * var(--lu));
+    width: calc(53 * var(--r));
+    height: calc(53 * var(--r));
     border-radius: 50%;
     object-fit: cover;
 }
-.is-mvp .rail-lb { margin-top: calc(-2 * var(--lu)); }
-/* 巅峰对决: a red / blue split disc with a gold VS */
-.is-peak .rail-disc {
-    border-radius: 50%;
-    background: linear-gradient(115deg, #e0546e 0%, #c8304e 49.5%, #2c5ce4 50.5%, #5a86ff 100%);
-    box-shadow: inset 0 0 0 calc(3 * var(--lu)) rgba(255, 255, 255, .85), 0 calc(3 * var(--lu)) 0 rgba(20, 30, 90, .45);
-}
-.rail-vs b {
-    display: block;
-    font: 400 calc(30 * var(--lu))/1 var(--font-display);
-    background: linear-gradient(180deg, #fffbe8 0%, #ffe39a 40%, #f6b33a 70%, #b8660c 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 calc(2 * var(--lu)) 0 #5a1c00);
-}
-/* 实验室: a labmate's signature card; 分享: the card back with a green share badge */
-.is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(42 * var(--lu)); }
-.is-lab .rail-disc .card { rotate: 10deg; }
-.is-share .rail-disc .card { rotate: -12deg; translate: calc(-4 * var(--lu)) 0; }
+.is-mvp .rail-lb { margin-top: calc(-2 * var(--r)); }
+/* 分享: the PICASSO card back, a green share badge off its lower right corner (the emblem stays
+   whole) */
+.is-share .rail-disc { --card-w: calc(42 * var(--r)); }
+.is-share .rail-disc .card { rotate: -12deg; translate: calc(-6 * var(--r)) 0; }
 .rail-share {
     position: absolute;
-    right: calc(2 * var(--lu));
-    bottom: calc(10 * var(--lu));
+    right: calc(-2 * var(--r));
+    bottom: calc(6 * var(--r));
     display: grid;
     place-items: center;
-    width: calc(30 * var(--lu));
-    height: calc(30 * var(--lu));
-    border: calc(2 * var(--lu)) solid #fff;
+    width: calc(25 * var(--r));
+    height: calc(25 * var(--r));
+    border: calc(2 * var(--r)) solid #fff;
     border-radius: 50%;
     background: linear-gradient(180deg, #7ff0a8, #2fb865);
     color: #fff;
 }
-.rail-share .gd-glyph { width: calc(17 * var(--lu)); height: calc(17 * var(--lu)); }
-/* 音乐: a record (grooves, sheen, red label) with a gold note */
+.rail-share .gd-glyph { width: calc(14 * var(--r)); height: calc(14 * var(--r)); }
+/* 音乐: a record (white rim, grooves, sheen, a big red label) with a gold note; dimmed when off */
 .rail-vinyl {
-    width: calc(52 * var(--lu));
-    height: calc(52 * var(--lu));
+    width: calc(52 * var(--r));
+    height: calc(52 * var(--r));
     border-radius: 50%;
     background:
-        radial-gradient(circle closest-side, #fff 0 5%, #e0546e 6% 30%, #fff3 31% 32%, transparent 33%),
-        linear-gradient(135deg, transparent 28%, rgba(255, 255, 255, .16) 42%, transparent 54%),
-        repeating-radial-gradient(circle closest-side, #1c2030 0 4%, #2d3350 4.5% 6%),
-        #1c2030;
-    box-shadow: 0 calc(3 * var(--lu)) 0 rgba(20, 30, 90, .45);
+        radial-gradient(circle closest-side, #fff 0 6%, #e0546e 7% 40%, #fff3 41% 42%, transparent 43%),
+        linear-gradient(135deg, transparent 28%, rgba(255, 255, 255, .2) 42%, transparent 54%),
+        repeating-radial-gradient(circle closest-side, #252b4d 0 4%, #363e6a 4.5% 6%),
+        #252b4d;
+    box-shadow: inset 0 0 0 calc(2 * var(--r)) rgba(255, 255, 255, .7), 0 calc(3 * var(--r)) 0 rgba(20, 30, 90, .45);
 }
 .rail-note {
     position: absolute;
-    top: calc(-2 * var(--lu));
-    right: calc(-4 * var(--lu));
-    width: calc(28 * var(--lu));
-    height: calc(28 * var(--lu));
+    top: calc(-2 * var(--r));
+    right: calc(-4 * var(--r));
+    width: calc(28 * var(--r));
+    height: calc(28 * var(--r));
     fill: #ffd766;
-    filter: drop-shadow(0 calc(2 * var(--lu)) 0 #7a3a00);
+    filter: drop-shadow(0 calc(2 * var(--r)) 0 #7a3a00);
 }
-.is-music.is-off .rail-vinyl, .is-music.is-off .rail-note { opacity: .45; }
+.is-music.is-off .rail-vinyl, .is-music.is-off .rail-note { opacity: .6; }
+/* off: a grey 关 plate on the record's centre */
+.rail-badge.is-off { top: calc(30 * var(--r)); translate: -50% -50%; background: #7c86a6; color: #fff; font-family: var(--font-ui); letter-spacing: 0; }
 
 .lobby-main { display: contents; }
 
@@ -647,7 +668,7 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     60% { translate: calc(-4 * var(--t)) 0; }
     80% { translate: calc(2 * var(--t)) 0; }
 }
-.join-go { display: grid; place-items: center; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; background: none; }
+.join-go { position: relative; z-index: 1; display: grid; place-items: center; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; background: none; }
 .join-go .btn { --btn-h: calc(54 * var(--t)); --btn-fs: calc(21 * var(--t)); --btn-px: calc(12 * var(--t)); --btn-minw: calc(58 * var(--t)); }
 
 /* 好友房: peach, a mini room table */
@@ -699,8 +720,8 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
 .rules-art .card:nth-child(4) { rotate: 7deg; }
 .rules-art .card:nth-child(5) { rotate: 14deg; }
 
-/* bottom row: the white glyph nav from under the rail's edge, the gold 快速开始 bar reaching
-   69 design px past the grid */
+/* bottom row: the white glyph nav (邀请 历史对阵 排行榜 设置) spread under the grid from the rail's
+   edge, the gold 快速开始 bar reaching 69 design px past the grid */
 .lobby-dock {
     grid-area: 2 / 2 / 3 / 5;
     display: flex;
@@ -709,7 +730,7 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     margin: 0 calc(-69 * var(--lu)) 0 calc(101 * var(--lu));
     padding-bottom: calc(14 * var(--lu) + env(safe-area-inset-bottom, 0px));
 }
-.lobby-nav { flex: none; display: flex; justify-content: space-between; width: calc(660 * var(--lu)); }
+.lobby-nav { flex: none; display: flex; justify-content: space-around; width: calc(660 * var(--lu)); }
 .lobby-nav-item {
     display: flex;
     flex-direction: column;
@@ -790,8 +811,10 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     text-shadow: 0 calc(2 * var(--ru)) 0 rgba(40, 50, 160, .35);
 }
 .room-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: calc(4 * var(--ru)) 0; }
-/* Tencent settings rows: justified heavy label, gold radios / checks */
+/* Tencent settings rows: justified heavy label, the value in plain ink; rows keep their height
+   and the panel body scrolls */
 .room-row {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: calc(14 * var(--ru));
@@ -799,14 +822,10 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     padding: calc(6 * var(--ru)) calc(18 * var(--ru));
     border-bottom: 1px solid var(--panel-line);
 }
-/* wider than 16:10 the panel is one screen high only without 发牌 / 旁观, so 解散房间 stays in view */
-@media (min-aspect-ratio: 81/50) {
-    .room-row.is-extra { display: none; }
-}
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
-    /* the panel fits without scrolling: rows tighten, the notes (also in 玩法规则) and the extra rows drop */
+    /* the panel fits without scrolling: rows tighten and the notes (also in 玩法规则) drop */
     .room-row { min-height: calc(50 * var(--ru)); padding-top: calc(4 * var(--ru)); padding-bottom: calc(4 * var(--ru)); }
-    .room-v small, .room-row.is-extra { display: none; }
+    .room-v small { display: none; }
     .room-felt-mark { display: none; }
     .room { padding-bottom: calc(8 * var(--lu)); }
     .room-panel-head { height: calc(44 * var(--ru)); line-height: calc(44 * var(--ru)); }
@@ -820,29 +839,17 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     text-align-last: justify;
 }
 html[lang="en"] .room-k { text-align-last: auto; }
-.room-v { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 calc(8 * var(--ru)); color: var(--ink); font: 700 calc(22 * var(--ru))/1.3 var(--font-ui); }
-.room-v small { flex-basis: 100%; padding-left: calc(30 * var(--ru)); color: var(--ink-3); font: 700 max(var(--fs-min), calc(16 * var(--ru)))/1.2 var(--font-ui); }
-/* a fixed setting reads as a selected gold radio */
-.room-v::before {
-    content: "";
-    width: calc(22 * var(--ru));
-    height: calc(22 * var(--ru));
-    border-radius: 50%;
-    background: radial-gradient(circle closest-side, #ffe27a 0 56%, #f6b92a 60% 86%, #d99a0c 90%);
-}
-.room-checks { display: grid; grid-template-columns: repeat(2, auto); justify-content: start; gap: calc(8 * var(--ru)) calc(18 * var(--ru)); }
-.room-chk { display: inline-flex; align-items: center; gap: calc(8 * var(--ru)); color: var(--ink); font: 700 calc(21 * var(--ru))/1.2 var(--font-ui); white-space: nowrap; }
-html[lang="en"] .room-checks { grid-template-columns: auto; }
-.room-chk::before {
-    content: "";
-    width: calc(20 * var(--ru));
-    height: calc(20 * var(--ru));
+.room-v { display: flex; flex-direction: column; color: var(--ink); font: 700 calc(22 * var(--ru))/1.3 var(--font-ui); }
+.room-v small { color: var(--ink-3); font: 700 max(var(--fs-min), calc(16 * var(--ru)))/1.2 var(--font-ui); }
+/* 逢人配 · 接风: small periwinkle tags, one line */
+.room-tags { display: flex; flex-wrap: wrap; gap: calc(6 * var(--ru)) calc(10 * var(--ru)); }
+.room-tag {
+    padding: 0 calc(10 * var(--ru));
     border-radius: calc(4 * var(--ru));
-    background:
-        linear-gradient(45deg, transparent 44%, #8a4a00 44% 56%, transparent 56%) 30% 62% / 40% 40% no-repeat,
-        linear-gradient(-45deg, transparent 44%, #8a4a00 44% 56%, transparent 56%) 72% 45% / 62% 62% no-repeat,
-        linear-gradient(180deg, #ffe27a, #f6b92a);
-    box-shadow: inset 0 0 0 1px #d99a0c;
+    background: #e3eafb;
+    color: var(--ink);
+    font: 700 calc(20 * var(--ru))/1.6 var(--font-ui);
+    white-space: nowrap;
 }
 .room-row.is-level { min-height: max(var(--tap), calc(64 * var(--ru))); }
 .room-row.is-level .room-k { width: auto; white-space: nowrap; }
@@ -892,15 +899,21 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     font-stretch: 62.5%;
 }
 .room-step-v.t1 { color: var(--card-red); }
-.room-admin { display: flex; justify-content: flex-end; margin-top: auto; padding: calc(4 * var(--ru)) calc(16 * var(--ru)); }
+/* 解散房间: a small red pill at the panel's foot; the button box keeps the --tap target */
+.room-admin { display: flex; justify-content: center; margin-top: auto; padding: calc(10 * var(--ru)) calc(16 * var(--ru)) calc(12 * var(--ru)); }
+.room-admin:empty { display: none; }   /* a guest's panel ends after its last row */
 .room-dissolve {
-    min-height: max(var(--tap), calc(36 * var(--ru)));
-    padding: calc(6 * var(--ru)) calc(4 * var(--ru));
+    --h: calc(40 * var(--ru));
+    display: grid;
+    place-items: center;
+    min-width: var(--tap);
+    height: max(var(--tap), var(--h));
+    margin: calc((var(--h) - max(var(--tap), var(--h))) / 2) 0;
+    padding: 0;
     border: 0;
     background: none;
-    color: #d8433c;
-    font: 700 max(var(--fs-min) * 1.2, calc(18 * var(--ru)))/1.2 var(--font-ui);
 }
+.room-dissolve .btn { --btn-h: var(--h); --btn-fs: calc(19 * var(--ru)); --btn-px: calc(20 * var(--ru)); --btn-minw: calc(140 * var(--ru)); }
 .room-dissolve:disabled { opacity: .5; }
 
 /* centre: the room table, a wide landscape felt (1.7:1) with the seats around its edge and the
@@ -1125,6 +1138,7 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 .room-badge:active:not(:disabled) { translate: 0 calc(2 * var(--lu)); }
 .room-seat-sit:disabled, .room-badge:disabled { opacity: .55; }
 
+/* the row's empty ends pass taps through (my name field's tap box reaches under it) */
 .room-actions {
     position: absolute;
     left: 0; right: 0;
@@ -1134,7 +1148,9 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     justify-content: center;
     gap: calc(24 * var(--lu));
     height: var(--act-h);
+    pointer-events: none;
 }
+.room-actions > * { pointer-events: auto; }
 .room-actions .btn { --btn-h: max(var(--tap), calc(56 * var(--lu))); --btn-fs: calc(23 * var(--lu)); --btn-px: calc(28 * var(--lu)); --btn-minw: calc(168 * var(--lu)); }
 .room-actions .btn.lg { --btn-h: max(var(--tap), calc(64 * var(--lu))); --btn-fs: calc(28 * var(--lu)); --btn-px: calc(40 * var(--lu)); --btn-minw: calc(236 * var(--lu)); }
 /* a guest's waiting caption (the disabled #start-game) */
@@ -1157,8 +1173,8 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
     flex: none;
     display: flex;
     align-items: center;
-    gap: calc(8 * var(--ru));
-    padding: calc(8 * var(--ru)) calc(8 * var(--ru));
+    gap: calc(6 * var(--ru));
+    padding: calc(8 * var(--ru)) calc(6 * var(--ru));
     border-radius: calc(5 * var(--ru));
     background: rgba(255, 255, 255, .92);
 }
@@ -1254,7 +1270,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .hud-profile { gap: calc(8 * var(--lu)); }
     .hud-avatar { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); border-radius: calc(11 * var(--lu)); }
     .hud-avatar > img, .hud-avatar > .gd-avatar-initials { border-radius: calc(8 * var(--lu)); }
-    .hud-name input { width: calc(128 * var(--lu)); height: max(var(--tap), calc(26 * var(--lu))); margin: min(0px, calc((26 * var(--lu) - var(--tap)) / 2)) 0; font-size: calc(19 * var(--lu)); }
+    .hud-name input { max-width: calc(128 * var(--lu)); height: max(var(--tap), calc(26 * var(--lu))); margin: min(0px, calc((26 * var(--lu) - var(--tap)) / 2)) 0; font-size: calc(19 * var(--lu)); }
     .hud-tier > span { font-size: max(var(--fs-min), calc(12 * var(--lu))); line-height: max(calc(var(--fs-min) * 1.6), calc(20 * var(--lu))); padding: 0 calc(14 * var(--lu)); }
     .hud-stats { order: 10; gap: calc(10 * var(--lu)); margin: 0 0 0 calc(4 * var(--lu)); }
     .hud-stats:empty { height: calc(30 * var(--lu)); }   /* the same rhythm without stats; the type hint's slot */
@@ -1274,19 +1290,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
 
     body[data-screen="lobby"] .topbar { padding-left: calc(12 * var(--lu) + var(--sl)); }
     .lobby { display: block; min-height: 0; padding: 0 calc(12 * var(--lu) + var(--sr)) 0 calc(12 * var(--lu) + var(--sl)); }
-    .lobby-rail { height: auto; translate: none; flex-direction: row; justify-content: space-between; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
-    .rail-item { width: auto; min-width: calc(62 * var(--lu)); }   /* as wide as its label, so long English labels never touch */
-    .rail-disc { width: calc(54 * var(--lu)); height: calc(54 * var(--lu)); }
-    .is-mvp .rail-disc img { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
-    .is-lab .rail-disc, .is-share .rail-disc { --card-w: calc(38 * var(--lu)); }
-    .rail-share { width: calc(26 * var(--lu)); height: calc(26 * var(--lu)); right: calc(2 * var(--lu)); bottom: calc(8 * var(--lu)); }
-    .rail-share .gd-glyph { width: calc(15 * var(--lu)); height: calc(15 * var(--lu)); }
-    .rail-vinyl { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); }
-    .rail-note { width: calc(24 * var(--lu)); height: calc(24 * var(--lu)); }
-    .rail-vs b { font-size: calc(26 * var(--lu)); }
-    .rail-badge { top: calc(36 * var(--lu)); }
-    .rail-lb { font-size: max(var(--fs-min) * 1.1, calc(14 * var(--lu))); margin-top: calc(-8 * var(--lu)); }
-    html[lang="en"] .rail-lb { font-size: max(var(--fs-min), calc(12 * var(--lu))); }
+    .lobby-rail { --r: calc(var(--lu) * .9); height: auto; flex-direction: row; justify-content: space-around; padding: calc(4 * var(--lu)) calc(4 * var(--lu)) calc(14 * var(--lu)); }
     .lobby-tiles {
         --t: calc(var(--lu) * .7);
         height: auto;
@@ -1304,10 +1308,13 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .is-classic .tile-title { font-size: calc(58 * var(--t)); }
     .joker-art { --card-w: calc(74 * var(--t)); }
     .peak-poster { scale: .9; }
+    .mini-table { scale: .86; }   /* the top seat stays inside the shorter tile, the + seat above the title */
     .join-art { flex-direction: column; gap: calc(6 * var(--lu)); bottom: calc(64 * var(--t)); }
     .join-cells i { width: calc(40 * var(--t)); height: calc(50 * var(--t)); }
     .join-go .btn { --btn-h: calc(44 * var(--t)); --btn-minw: calc(120 * var(--t)); }
-    /* the dock stays on screen: 快速开始 full width over an opaque nav row, a 12px fade above */
+    /* the dock stays on screen: 快速开始 full width over the nav row, on an opaque navy sheet (no
+       tile row shows through it); tiles scrolling under it fade out over one grid gap above its
+       edge, which at rest is the gap under the third row */
     .lobby-dock {
         position: sticky;
         bottom: 0;
@@ -1318,7 +1325,15 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
         height: auto;
         margin: 0 calc(-12 * var(--lu) - var(--sr)) 0 calc(-12 * var(--lu) - var(--sl));
         padding: 12px calc(12 * var(--lu) + var(--sr)) calc(6 * var(--lu) + env(safe-area-inset-bottom, 0px)) calc(12 * var(--lu) + var(--sl));
-        background: linear-gradient(180deg, rgba(34, 48, 102, 0), #223066 12px);
+        background: #223066;
+    }
+    .lobby-dock::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0; bottom: 100%;
+        height: calc(8 * var(--lu));
+        background: linear-gradient(180deg, rgba(34, 48, 102, 0), #223066);
+        pointer-events: none;
     }
     .lobby-quick { min-width: 0; height: calc(58 * var(--lu)); margin-left: 0; }
     .lobby-quick b { font-size: calc(28 * var(--lu)); }
