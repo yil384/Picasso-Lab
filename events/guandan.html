@@ -2375,6 +2375,9 @@ function renderLobbyRoom() {
     patchRegion(el, "table", roomTableHTML(mine));
     patchRegion(el, "actions", roomActionsHTML());
     patchRegion(el, "roster", rosterHTML());
+    // the control whose write is in flight stays pressed until Firebase answers
+    el.querySelectorAll(".is-pending").forEach(n => n.classList.remove("is-pending"));
+    if (roomPending) el.querySelector(`#${roomPending}`)?.classList.add("is-pending");
 }
 
 function bindRoom(el) {
@@ -2400,8 +2403,15 @@ function bindRoom(el) {
         const id = btn.id;
         queueRoomAction(async () => {
             roomPending = id;
-            if (id === "start-game") render();
-            try { await action(); } finally { roomPending = ""; }
+            render();
+            try {
+                await action();
+                // a started game keeps 正在开局… until the dealt table replaces the room
+                if (id === "start-game") await waitFor(() => game?.phase !== "lobby", 1500);
+            } finally {
+                roomPending = "";
+                render();
+            }
         }, () => {
             const now = document.getElementById(id);
             return !!now && !now.disabled;

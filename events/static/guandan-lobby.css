@@ -1184,6 +1184,8 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 .room-roster-foot { flex: none; display: flex; justify-content: center; padding: calc(10 * var(--ru)) calc(8 * var(--ru)) calc(14 * var(--ru)); }
 .room-roster-foot .btn { --btn-h: max(var(--tap), calc(54 * var(--ru))); --btn-fs: calc(22 * var(--ru)); --btn-px: calc(26 * var(--ru)); --btn-minw: calc(176 * var(--ru)); }
 
+/* a seat, badge or stepper tap waiting for Firebase stays pressed and dimmed */
+.room :is(.room-seat-sit, .room-badge, .room-step-btn, #fill-ai).is-pending { opacity: .6; translate: 0 calc(2 * var(--lu)); }
 /* 正在开局…: the start button keeps its orange while it waits (disabled against a second tap) */
 .room-actions .btn.is-loading:disabled { --btn-bg: var(--pri); --btn-edge: var(--pri-edge); --btn-stroke: var(--pri-stroke); --btn-inset: var(--pri-inset); translate: 0 2px; }
 
@@ -1206,6 +1208,7 @@ html[lang="en"] .room-checks { grid-template-columns: auto; }
 .gd-confirm-row { display: flex; justify-content: center; gap: calc(30 * var(--pu)); padding-bottom: calc(4 * var(--pu)); }
 .gd-confirm-row .btn { --btn-h: max(var(--tap, 0px), calc(56 * var(--pu))); --btn-fs: calc(23 * var(--pu)); --btn-px: calc(26 * var(--pu)); --btn-minw: calc(170 * var(--pu)); }
 html[lang="en"] .gd-confirm-row .btn { --btn-ls: 0em; }
+html[lang="en"] .gd-popup-title { letter-spacing: 0; text-indent: 0; }
 
 /* English: no letter-spaced labels */
 html[lang="en"] :is(.hud-title b, .room-panel-head, .room-felt-mark, .roster-invite, .lobby-quick b) { letter-spacing: 0; }
