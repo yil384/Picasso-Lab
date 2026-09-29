@@ -42,8 +42,8 @@ function shotDrive(F) {          // B2 approach: knee-height tracking alongside 
 function shotGate(F) {           // B2 at the gate: 3/4 on the gate, punch-in on the CLANG, pan to Tok and Kern for the slip
   const punch = F >= K.clang && F < K.clang + 10 ? 0.06 * Math.exp(-(F - K.clang) / 5) : 0;
   const pan = sm((F - K.clang - 2) / 12) * (1 - sm((F - K.lift[0] + 2) / 6));
-  const up = sg(F, K.closeup[1] + 3, K.lift[0] + 6, sm);  // tilt up for the lamp and the nod
-  return rig([A.gate - 0.33 - 0.06 * pan, 11.9 * (1 - punch) - 0.6 * pan, 1.35], [A.gate - 0.12 - 0.16 * pan + 0.08 * up, 6.3, 1.4 - 0.3 * pan + 0.45 * up], 33, 0.02);   // the lamp is in frame before the slam
+  const up = sg(F, K.closeup[1] + 4, K.lift[0] + 4, sm);  // tilt up for the lamp and the nod
+  return rig([A.gate - 0.33 - 0.06 * pan, 12.8 * (1 - punch) - 0.6 * pan, 1.5], [A.gate - 0.12 - 0.16 * pan + 0.06 * up, 6.3, 1.45 - 0.3 * pan + 0.35 * up], 36, 0.02);   // the lamp is in frame before the slam
 }
 function shotPress(F) {          // B2 insert: close on the crooked token; a mitt comes down and presses it flat
   const k = sg(F, K.closeup[0], K.closeup[1], io), th = B2.thStop - 0.17, r = R.ours + 0.3;
@@ -56,34 +56,34 @@ function shotThrough(F) {        // B2 end: from ahead of the gate, low, looking
 function shotScale(F) {          // B3: medium on the weigh-in, then a push onto the dial
   const push = sg(F, K.dialPush[0], K.dialPush[1], (x) => x * x * (3 - 2 * x));
   const k = sg(F, K.toScale[1], K.dialPush[0], io);        // slow push while the needle swings
-  const a = rig([A.scale + 0.03, 14.1 - 0.6 * k, 1.6], [A.scale - 0.05, 7.9, 1.32], 32, 0.0);
+  const a = rig([A.scale + 0.05, 14.1 - 0.6 * k, 1.6], [A.scale - 0.02, 7.9, 1.32], 32, 0.0);
   const b = rig([A.scale, 9.85, 1.02], [A.scale, 8.2, 1.02], 30, 0.0);
   return mix(a, b, push);
 }
 function shotWatchToStart(F) {   // B4 open: from the stopwatch face (match cut) pull back and pan to the start line
-  const k = sg(F, K.cut, K.cut + 22, ioc);
+  const k = sg(F, K.cut + 2, K.cut + 18, ioc);
   const a = watchRig(3.2, A.start);
-  const b = shotStart(K.cut + 22);
+  const b = shotStart(K.cut + 18);
   return mix(a, b, k);
 }
 function shotStart(F, lap = 0) { // B4 / B7: low 3/4-front two-shot at the start line (the racers face the lens)
-  const drift = sm((F - (lap ? K.side2[0] : K.cut + 22)) / 40);
-  return rig([lap + A.start + 0.26 - 0.03 * drift, 10.0 - 0.3 * drift, 2.5], [lap + A.start + 0.03, 5.9, 0.25], 32, -0.02);   // raised: the far lane (Oro) reads above Kern
+  const drift = sm((F - (lap ? K.side2[0] : K.cut + 18)) / 40);
+  return rig([lap + A.start + 0.24 - 0.03 * drift, 10.1 - 0.3 * drift, 3.5], [lap + A.start + 0.03, 5.85, 0.2], 32, -0.02);   // raised: the far lane (Oro) reads above Kern
 }
 function shotRace1(F) {          // B4: fast low tracking, loses Oro, settles on the lumbering Kern, pans on to the finish
   const kth = kernTh(F), oth = oroTh(F);          // unwrapped ring angles (atan2 would wrap past pi mid-straight)
   const lead = lerp(oth, kth, sm((F - K.go1 - 4) / 10));
-  const track = rig([lead + 0.03, 10.5, 2.6], [lead + 0.05, 5.9, 0.3], 33, -0.03);   // raised like race 2: both lanes separate
-  const fin = rig([A.finish + 0.02, 12.8, 1.75], [A.finish + 0.06, 5.0, 1.62], 36, 0.0);   // wide enough for the stopwatch face (upper left)
+  const track = rig([lead + 0.03, 10.4, 3.7], [lead + 0.05, 5.85, 0.25], 33, -0.03);   // raised like race 2: both lanes separate
+  const fin = rig([A.finish + 0.02, 13.4, 1.9], [A.finish + 0.06, 5.0, 1.2], 38, 0.0);   // wide enough for the stopwatch face (upper left)
   return mix(track, fin, sg(F, K.kernRun1[1] - 20, K.kernRun1[1] - 4, sm));
 }
 function shotCrash(F) {          // B4 -> B5: crash zoom onto the square wheel, then the refine two-shot with a slow orbit
   const th = A.finish + 0.16;
   const z = sg(F, K.crash[0], K.crash[1], (x) => x * x);
-  const fin = rig([A.finish + 0.02, 12.8, 1.75], [A.finish + 0.06, 5.0, 1.62], 36, 0.0);   // wide enough for the stopwatch face (upper left)
+  const fin = rig([A.finish + 0.02, 13.4, 1.9], [A.finish + 0.06, 5.0, 1.2], 38, 0.0);
   const wheel = rig([th + 0.02, 8.7, 0.42], [th - 0.01, 6.9, 0.16], 30, 0.04);
   const orb = sg(F, K.tokIn[1], K.rev[1], io);
-  const two = rig([th + 0.0 + 0.3 * orb, 11.7 - 0.4 * orb, 1.4], [th + 0.07, 6.1, 0.85], 33, 0.02 - 0.05 * orb);
+  const two = rig([th + 0.0 + 0.3 * orb, 12.2 - 0.4 * orb, 1.5], [th + 0.07, 6.1, 1.05], 34, 0.02 - 0.05 * orb);
   if (F < K.crash[1]) return mix(fin, wheel, z);
   return mix(wheel, two, sg(F, K.crash[1] + 2, K.crash[1] + 16, ioc));   // pull out (zoom lines)
 }
@@ -98,7 +98,7 @@ function shotLap2(F) {           // B6: three quick panels linked by whips, rhym
 function shotRace2(F) {          // B7: start two-shot (rhymes with B4), dolly-zoom on Oro's double-take, raised side tracking
   const st = shotStart(F, L2);
   // vertigo on Oro: keep Oro's size while the fov opens
-  const vk = sg(F, K.dtake - 1, K.dtake + 9, ease.inCubic) * (1 - sg(F, K.go2 - 4, K.go2 + 2, sm));
+  const vk = sg(F, K.dtake - 1, K.dtake + 11, io) * (1 - sg(F, K.go2 - 4, K.go2 + 2, sm));
   const fov = lerp(32, 58, vk);
   const d0 = st.c[1] - 5.45, d1 = d0 * Math.tan((32 / 2) * Math.PI / 180) / Math.tan((fov / 2) * Math.PI / 180);
   st.c[1] = 5.45 + d1; st.fov = fov; st.t = [st.t[0], lerp(st.t[1], 5.6, vk), st.t[2]];
@@ -106,12 +106,12 @@ function shotRace2(F) {          // B7: start two-shot (rhymes with B4), dolly-z
   // track the pack from a raised lens (both lanes in separate screen bands)
   const rf = raceF(F), pack = (kernTh(rf) + oroTh(rf)) / 2;
   if (F < K.hold[0]) {
-    const trk = rig([pack + 0.03, 10.4, 3.0], [pack + 0.05, 5.9, 0.3], 33, lerp(-0.02, -0.09, sg(F, K.go2, K.cross)));
+    const trk = rig([pack + 0.03, 10.4, 4.0], [pack + 0.05, 5.85, 0.25], 33, lerp(-0.02, -0.09, sg(F, K.go2, K.cross)));
     return mix(st, trk, sg(F, K.go2, K.go2 + 8, sm));
   }
   // the photo finish: cut (under the impact frame) to a raised 3/4-front panel on the line, both noses towards the lens
   const push = sg(F, K.hold[0], K.hold[1], io);
-  return rig([L2 + A.finish + 0.2 - 0.015 * push, 9.2 - 0.6 * push, 2.4 - 0.15 * push], [L2 + A.finish - 0.05, 5.9, 0.2], 34, 0.03);
+  return rig([L2 + A.finish + 0.22 - 0.015 * push, 9.6 - 0.6 * push, 3.1 - 0.15 * push], [L2 + A.finish - 0.07, 5.75, 0.25], 36, 0.03);
 }
 function shotWatch(F) {          // the insert after the photo finish: the stopwatch face, square on, slow push
   const k = sg(F, K.watch[0], K.watch[1], io);
@@ -119,29 +119,31 @@ function shotWatch(F) {          // the insert after the photo finish: the stopw
 }
 function shotPayoff(F) {         // B8: low hero lens at the finish, a real push (~12%) with a ~16 deg orbit
   const k = sg(F, K.watch[1], K.away[0], io);
-  return rig([L2 + A.finish + 0.61 + 0.05 * k, 13.0 - 1.3 * k, 1.05 + 0.1 * k], [L2 + A.finish + 0.62 + 0.02 * k, 3.0, 1.48 - 0.06 * k], lerp(40, 37, k), 0.0);   // push = dolly + a little zoom
+  return rig([L2 + A.finish + 0.61 + 0.05 * k, 13.0 - 1.2 * k, 1.7 + 0.1 * k], [L2 + A.finish + 0.62 + 0.02 * k, 3.0, 1.3 - 0.05 * k], lerp(40, 37, k), 0.0);   // push = dolly + a little zoom
 }
 
 // ------------------------------------------------------------------------------------------------
 // the edit: shots joined by continuous moves and whips
 // ------------------------------------------------------------------------------------------------
-export const WHIPS = [[K.hopOff[0] + 2, K.drive1[0] + 6], [K.gate2 + 7, K.gate2 + 13], [K.lap2[1] - 10, K.side2[0]], [K.closeup[1] - 2, K.closeup[1] + 5], [K.lift[1] - 4, K.through[0] + 4], [K.cut + 4, K.cut + 20], [K.go1 + 3, K.go1 + 13], [K.hold[1] - 2, K.watch[0] + 5], [K.toScale[0] + 2, K.toScale[0] + 14], [K.rev[1] - 2, K.lap2[0] + 13], [K.watch[1], K.watch[1] + 8], [K.away[0], NF], [0, 6]];
+export const WHIPS = [[K.hopOff[0] + 2, K.drive1[0] + 6], [K.closeup[1] - 1, K.closeup[1] + 4], [K.through[0], K.through[0] + 6],
+  [K.toScale[0] + 2, K.toScale[0] + 10], [K.cut + 4, K.cut + 18], [K.go1 + 3, K.go1 + 13], [K.rev[1] - 2, K.lap2[0] + 13],
+  [K.gate2 + 7, K.gate2 + 13], [K.lap2[1] - 10, K.side2[0]], [K.hold[1] - 2, K.watch[0] + 5], [K.watch[1], K.watch[1] + 8], [K.away[0], NF], [0, 6]];
 
 export function camRig(F) {
   if (F < K.hopOff[0] + 2) return shotBench(F);
   if (F < K.drive1[0] + 6) return mix(shotBench(F), shotDrive(F), sg(F, K.hopOff[0] + 2, K.drive1[0] + 6, ease.inOutQuint));   // whip right after Kern
   if (F < K.clang - 10) return shotDrive(F);
   if (F < K.clang - 2) return mix(shotDrive(F), shotGate(F), sg(F, K.clang - 10, K.clang - 2, sm));
-  if (F < K.closeup[0] - 4) return shotGate(F);
-  if (F < K.closeup[0] + 3) return mix(shotGate(F), shotPress(F), sg(F, K.closeup[0] - 4, K.closeup[0] + 3, ease.inOutCubic));   // push down onto the token
-  if (F < K.closeup[1] - 2) return shotPress(F);
-  if (F < K.closeup[1] + 5) return mix(shotPress(F), shotGate(F), sg(F, K.closeup[1] - 2, K.closeup[1] + 5, ease.inOutQuint));   // whip back out
-  if (F < K.lift[1] - 4) return shotGate(F);                        // the lamp goes emerald, the gate nods and lifts
-  if (F < K.through[0] + 4) return mix(shotGate(F), shotThrough(F), sg(F, K.lift[1] - 4, K.through[0] + 4, ease.inOutQuint));   // whip ahead
+  if (F < K.closeup[0] - 3) return shotGate(F);
+  if (F < K.closeup[0] + 3) return mix(shotGate(F), shotPress(F), sg(F, K.closeup[0] - 3, K.closeup[0] + 3, ease.inOutCubic));   // push down onto the token
+  if (F < K.closeup[1] - 1) return shotPress(F);
+  if (F < K.closeup[1] + 4) return mix(shotPress(F), shotGate(F), sg(F, K.closeup[1] - 1, K.closeup[1] + 4, ease.inOutQuint));   // whip back out
+  if (F < K.through[0]) return shotGate(F);                         // held: the lamp goes emerald, the gate nods and lifts
+  if (F < K.through[0] + 6) return mix(shotGate(F), shotThrough(F), sg(F, K.through[0], K.through[0] + 6, ease.inOutQuint));   // whip ahead
   if (F < K.toScale[0] + 2) return shotThrough(F);
-  if (F < K.toScale[0] + 14) return mix(shotThrough(F), shotScale(F), sg(F, K.toScale[0] + 2, K.toScale[0] + 14, ease.inOutQuint));   // whip to the weigh-in
+  if (F < K.toScale[0] + 10) return mix(shotThrough(F), shotScale(F), sg(F, K.toScale[0] + 2, K.toScale[0] + 10, ease.inOutQuint));   // whip to the weigh-in
   if (F < K.cut) return shotScale(F);
-  if (F < K.cut + 22) return shotWatchToStart(F);                  // match cut: dial -> stopwatch face, then a whip-pull to the start
+  if (F < K.cut + 18) return shotWatchToStart(F);                  // match cut: dial -> stopwatch face, then a whip-pull to the start
   if (F < K.go1 + 2) return shotStart(F);
   if (F < K.crash[0]) return mix(shotStart(F), shotRace1(F), sg(F, K.go1 + 2, K.go1 + 14, ioc));
   if (F < K.rev[1] - 2) return shotCrash(F);

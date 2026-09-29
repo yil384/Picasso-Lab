@@ -170,7 +170,7 @@ export function buildTower(THREE, add, parent, { y = 3.3 } = {}) {
   C.hands = [0xef4b5f, 0x10b981].map((col, k) => {
     const g = new THREE.Group(); g.position.z = 0.15 + k * 0.03; C.head.add(g);
     // coral (the oracle): long and thin; emerald (ours): short and broad, so both read when they overlap at 12
-    add(new THREE.BoxGeometry(k ? 0.09 : 0.055, k ? 0.52 : 0.72, 0.03), { color: col, rim: 0.4, flat: 0.6, spec: 0 }, { outline: 0.5, cast: false }, [0, k ? 0.2 : 0.3, 0], [0, 0, 0], g);
+    add(new THREE.BoxGeometry(0.1, k ? 0.52 : 0.72, 0.03), { color: col, rim: 0.2, flat: 0.9, spec: 0, receive: false, hatch: 0, halftone: 0 }, { outline: 0.28, cast: false }, [0, k ? 0.2 : 0.3, 0], [0, 0, 0], g);
     return g;
   });
   add(new THREE.CylinderGeometry(0.08, 0.08, 0.1, 14).rotateX(Math.PI / 2), { key: 'brass', color: 0xf2b134 }, { outline: 0.4 }, [0, 0, 0.22], [0, 0, 0], C.head);
@@ -190,7 +190,7 @@ export function buildBench(THREE, add, parent) {
     const c = document.createElement('canvas'); c.width = 512; c.height = 1024; const g = c.getContext('2d');
     g.fillStyle = col; g.fillRect(0, 0, 512, 1024);
     for (let k = 0; k < lines; k++) { const y = (k + 0.5) / lines * 1024; g.strokeStyle = 'rgba(40,30,50,0.33)'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, y); for (let x = 0; x <= 512; x += 16) g.lineTo(x, y + (crinkle ? Math.sin(x * 0.3 + k) * 4 : 0)); g.stroke(); }
-    if (label) comicWord(g, '164', 256, 470, 250, { fill: '#ef4b5f', shade: '#b8283f', rot: -0.06, track: 0.1, fan: 0.05 });
+    if (label) comicWord(g, '164', 256, 470, 250, { fill: '#2b2447', keyline: '#10b981', rot: -0.06, track: 0.1, fan: 0.05 });
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; return t;
   };
   B.stack = new THREE.Group(); B.stack.position.set(-1.75, 0, 0.05); B.root.add(B.stack);
@@ -207,7 +207,7 @@ export function buildBench(THREE, add, parent) {
   });
   B.stackH = y;
   // the tag: a hanging card with "164"
-  const tagTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 300; const g = c.getContext('2d'); g.fillStyle = '#fff8ea'; g.fillRect(0, 0, 512, 300); comicWord(g, '164', 256, 158, 190, { fill: '#ef4b5f', shade: '#b8283f', rot: -0.05, track: 0.12, fan: 0.04 }); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; return t; })();
+  const tagTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 300; const g = c.getContext('2d'); g.fillStyle = '#fff8ea'; g.fillRect(0, 0, 512, 300); comicWord(g, '164', 256, 158, 190, { fill: '#2b2447', keyline: '#10b981', rot: -0.05, track: 0.12, fan: 0.04 }); /* ink, emerald keyline: coral means the oracle or an error */ const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.needsUpdate = true; return t; })();
   B.tag = add(new THREE.BoxGeometry(0.62, 0.36, 0.02), [{ key: 'cardedge', color: 0xfff8ea }, { key: 'cardedge', color: 0xfff8ea }, { key: 'cardedge', color: 0xfff8ea }, { key: 'cardedge', color: 0xfff8ea }, { color: 0xffffff, map: tagTex, rim: 0.3, hatch: 0.4 }, { key: 'cardedge', color: 0xfff8ea }],
     { outline: 0.6 }, [0.0, 0.95, 0.33], [-0.05, 0, 0.06], B.stack);
   return B;
@@ -256,8 +256,8 @@ export function buildWeighIn(THREE, add, parent, { span = 0.95, h = 1.75 } = {})
   });
   // the flag on a spring from the top
   S.flag = new THREE.Group(); S.flag.position.set(0, h + 0.12, -0.02); S.root.add(S.flag);
-  add(new THREE.CylinderGeometry(0.025, 0.025, 0.75, 6), { key: 'rod', color: 0x3b3558 }, { outline: 0.4 }, [0, 0.37, 0], [0, 0, 0], S.flag);
-  const fg = new THREE.PlaneGeometry(0.62, 0.42, 6, 2); fg.translate(0.32, 0.53, 0);
+  add(new THREE.CylinderGeometry(0.025, 0.025, 0.42, 6), { key: 'rod', color: 0x3b3558 }, { outline: 0.4 }, [0, 0.21, 0], [0, 0, 0], S.flag);
+  const fg = new THREE.PlaneGeometry(0.62, 0.42, 6, 2); fg.translate(0.32, 0.22, 0);   // a short pole: the check stays inside the card band
   const flagTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 176; const g = c.getContext('2d');
     g.fillStyle = '#10b981'; g.fillRect(0, 0, 256, 176); g.strokeStyle = '#1a1530'; g.lineWidth = 10; g.strokeRect(5, 5, 246, 166);
     g.strokeStyle = '#fff6e0'; g.lineWidth = 26; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(70, 92); g.lineTo(110, 128); g.lineTo(186, 52); g.stroke();

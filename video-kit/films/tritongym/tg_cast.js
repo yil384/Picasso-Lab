@@ -38,7 +38,7 @@ export function buildLLM(THREE, add, parent, { col = 0xfff4dc, accent = 0x059669
   // planar UV on the front face: map x,y in [-0.75,0.75] to the face canvas
   const uv = geo.attributes.uv, pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) uv.setXY(i, 0.5 + pos.getX(i) / 1.5, 0.5 + (pos.getY(i) - 0.02) / 1.5);
-  R.bodyM = add(geo, { color: col, map: R.faces.calm[0], rim: 0.8, spec: 0, toneBias: 0.3, seed }, { outline: 1.1 }, [0, 0, 0], [0, 0, 0], R.body);
+  R.bodyM = add(geo, { color: col, map: R.faces.calm[0], rim: 0.8, spec: 0, toneBias: 0.38, receive: false, seed }, { outline: 1.1 }, [0, 0, 0], [0, 0, 0], R.body);
   // emerald sweatband round the top of the balloon (a tube hugging its outline, visible from every side)
   { const yb = 0.4, hw = 0.62 * Math.sqrt(1 - Math.pow((yb - 0.05) / 0.5, 2)) + 0.115, hd = 0.2;
     const pts = []; for (let k = 0; k < 48; k++) { const a = k / 48 * TAU; pts.push(new THREE.Vector3(Math.cos(a) * hw, yb, Math.sin(a) * hd)); }
@@ -47,15 +47,15 @@ export function buildLLM(THREE, add, parent, { col = 0xfff4dc, accent = 0x059669
   const armGeo = new THREE.CapsuleGeometry(0.06, 0.34, 4, 10); armGeo.translate(0, -0.2, 0);
   R.arms = [-1, 1].map((s) => {
     const g = new THREE.Group(); g.position.set(0.6 * s, 0.02, 0.02); R.body.add(g);
-    add(armGeo, { key: 'tok-skin', color: col, rim: 0.6, spec: 0 }, { outline: 0.8 }, [0, 0, 0], [0, 0, 0], g);
-    const hand = add(new THREE.SphereGeometry(0.1, 16, 12), { key: 'tok-skin', color: col, rim: 0.6, spec: 0 }, { outline: 0.8 }, [0, -0.42, 0], [0, 0, 0], g);
+    add(armGeo, { key: 'tok-skin', color: col, rim: 0.6, spec: 0, toneBias: 0.3, receive: false }, { outline: 0.8 }, [0, 0, 0], [0, 0, 0], g);
+    const hand = add(new THREE.SphereGeometry(0.1, 16, 12), { key: 'tok-skin', color: col, rim: 0.6, spec: 0, toneBias: 0.3, receive: false }, { outline: 0.8 }, [0, -0.42, 0], [0, 0, 0], g);
     return { g, hand };
   });
   // legs + sneakers
   const legGeo = new THREE.CapsuleGeometry(0.065, 0.26, 4, 10); legGeo.translate(0, -0.17, 0);
   R.legs = [-1, 1].map((s) => {
     const g = new THREE.Group(); g.position.set(0.19 * s, 0.44, 0); R.hips.add(g);
-    add(legGeo, { key: 'tok-skin', color: col, rim: 0.6, spec: 0 }, { outline: 0.8 }, [0, 0, 0], [0, 0, 0], g);
+    add(legGeo, { key: 'tok-skin', color: col, rim: 0.6, spec: 0, toneBias: 0.3, receive: false }, { outline: 0.8 }, [0, 0, 0], [0, 0, 0], g);
     const shoe = add(new THREE.SphereGeometry(0.13, 18, 12), { key: 'tok-shoe', color: accent, rim: 0.7, spec: 0 }, { outline: 0.8 }, [0, -0.37, 0.06], [0, 0, 0], g);
     shoe.scale.set(1.0, 0.62, 1.55);
     return { g, shoe };
@@ -153,18 +153,21 @@ export function buildKern(THREE, add, parent, { seed = 7, scale = 1.0 } = {}) {
   // nose block with the face (headlight eyes)
   K.faces = faceSet(THREE, {
     calm: { eyes: 'dot', mouth: 'smile' }, wide: { eyes: 'wide', mouth: 'o' }, dizzy: { eyes: 'spiral', mouth: 'wobble' }, determined: { eyes: 'determined', mouth: 'teeth' },
-    happy: { eyes: 'happy', mouth: 'open' }, nervous: { eyes: 'worried', mouth: 'wobble', sweat: true }, star: { eyes: 'star', mouth: 'grin' }, squint: { eyes: 'squint', mouth: 'teeth' }, shut: { eyes: 'shut', mouth: 'flat' },
+    happy: { eyes: 'happy', mouth: 'open' }, nervous: { eyes: 'worried', mouth: 'wobble', sweat: true }, star: { eyes: 'star', mouth: 'grin', es: 1.35 }, squint: { eyes: 'squint', mouth: 'teeth' }, shut: { eyes: 'shut', mouth: 'flat' },
     strain: { eyes: 'squint', mouth: 'teeth', sweat: true },
-  }, { w: 512, h: 512, base: '#ffffff', cx: 256, cy: 150, s: 2.2, seed, spacing: 1.0, mouthY: 44 });   // big eyes, high on the block (the refined nose sits under them)
+  }, { w: 512, h: 512, base: '#ffffff', cx: 256, cy: 160, s: 2.5, seed, spacing: 0.95, mouthY: 42 });   // big eyes, high on the block (the refined nose sits under them)
   const noseGeo = new THREE.BoxGeometry(0.22, 0.4, 0.46, 2, 3, 3);
   { const p = noseGeo.attributes.position, uv = noseGeo.attributes.uv, nr = noseGeo.attributes.normal; for (let i = 0; i < p.count; i++) { const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i)); if (nr.getX(i) > 0.5) uv.setXY(i, 0.5 - p.getZ(i) / 0.46, 0.5 + p.getY(i) / 0.4); else uv.setXY(i, 0.03, 0.97); const sp = v.clone().normalize().multiplyScalar(0.26); v.lerp(sp, 0.18); p.setXYZ(i, v.x, v.y, v.z); } noseGeo.computeVertexNormals(); }
   K.noseG = new THREE.Group(); K.noseG.position.set(...KERN_SLOTS[7]); K.body.add(K.noseG);
+  K.noseS = 1.3;                                                   // the face block, 1.3x: the hero's face must read in the wides
   K.nose = add(noseGeo, { color: 0xfff4dc, map: K.faces.calm[0], rim: 0.6, spec: 0, toneBias: 0.2, seed: seed + 20 }, { outline: 0.75 }, [0, 0, 0], [0, 0, 0], K.noseG);
+  // a dark-emerald chassis tray under the tiles: the tokens read as one car body
+  K.chassis = add(new THREE.BoxGeometry(0.98, 0.07, 0.66), { key: 'chassis', color: 0x0b5e46, rim: 0.5, spec: 0, hatchDir: [1, 0, 0] }, { outline: 0.7 }, [0.02, -0.15, 0], [0, 0, 0], K.body);
   // the crooked cowlick token (compile bug)
   K.cowlick = new THREE.Group(); K.cowlick.position.set(0.1, 0.25, 0.02); K.body.add(K.cowlick);
-  K.cowM = add(tokenGeo(THREE, 0.2), { color: 0xffffff, map: tokenTexture(THREE, 8, { base: '#ffe3d6' }), rim: 0.6 }, { outline: 0.6 }, [0, 0.09, 0], [0, 0, 0], K.cowlick);
+  K.cowM = add(tokenGeo(THREE, 0.2), { color: 0xffffff, map: tokenTexture(THREE, 8), rim: 0.6, spec: 0 }, { outline: 0.6 }, [0, 0.09, 0], [0, 0, 0], K.cowlick);
   // pointed nose cone token (added by the refinement)
-  K.cone = new THREE.Group(); K.cone.position.set(0.74, -0.12, 0); K.body.add(K.cone);     // under the eyes, like a snout
+  K.cone = new THREE.Group(); K.cone.position.set(0.8, -0.14, 0); K.body.add(K.cone);     // under the eyes, like a snout
   K.coneM = add(new THREE.ConeGeometry(0.12, 0.32, 4, 1), { color: 0xfff4dc, rim: 0.6, spec: 0 }, { outline: 0.65 }, [0, 0, 0], [Math.PI / 4, 0, -Math.PI / 2], K.cone);
   // wind-up key on the back
   K.key = new THREE.Group(); K.key.position.set(-0.44, 0.27, 0); K.body.add(K.key);
@@ -202,7 +205,7 @@ export function buildOro(THREE, add, parent, { seed = 11 } = {}) {
   O.faces = faceSet(THREE, {
     smug: { eyes: 'smug', mouth: 'smile' }, wide: { eyes: 'wide', mouth: 'o' }, determined: { eyes: 'determined', mouth: 'teeth' },
     sweat: { eyes: 'worried', mouth: 'wobble', sweat: true }, shut: { eyes: 'shut', mouth: 'teeth' }, nod: { eyes: 'happy', mouth: 'smile' },
-  }, { w: 1024, h: 512, base: '#ef4b5f', s: 1.25, seed, spacing: 0.95, mouthY: 60 });
+  }, { w: 1024, h: 512, base: '#ef4b5f', s: 1.7, seed, spacing: 0.9, mouthY: 52 });   // big eyes: the rival's comedy reads
   const bodyGeo = new THREE.CapsuleGeometry(0.22, 0.9, 8, 24); bodyGeo.rotateZ(-Math.PI / 2);
   // face texture on the front hemisphere: sphere-like uv around +x
   { const p = bodyGeo.attributes.position, uv = bodyGeo.attributes.uv; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (x > 0.25) { const lon = Math.atan2(-z, x - 0.25), lat = Math.atan2(y, Math.hypot(x - 0.25, z)); uv.setXY(i, 0.25 + lon / (2 * Math.PI), 0.5 + lat / Math.PI); } else uv.setXY(i, 0.75, 0.5); } }

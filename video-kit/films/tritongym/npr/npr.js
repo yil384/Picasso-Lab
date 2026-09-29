@@ -422,9 +422,13 @@ void main() {
   vec2 uvP = uv + L_misreg * uS * px;
   vec4 P;
   if (dot(uSmear, uSmear) > .25) {
-    P = vec4(0.);
-    for (int i = 0; i < 9; i++) P += textureLod(tPaint, uvP + uSmear * px * (float(i) / 8. - .5), 0.);
-    P /= 9.;
+    // 28 taps, dithered per pixel, tent weights: a continuous streak instead of stacked copies (film-tritongym change)
+    P = vec4(0.); float wsum = 0.; float jit = h21(fc + uFrameSeed * 3.1);
+    for (int i = 0; i < 28; i++) {
+      float t = (float(i) + jit) / 28. - .5, w = 1. - abs(t) * 1.6;
+      P += w * textureLod(tPaint, uvP + uSmear * px * t, 0.); wsum += w;
+    }
+    P /= wsum;
   } else {
     P = paintAt(uvP, coc * L_dofMax * uS);
   }
@@ -739,9 +743,11 @@ void main() {
       isSet = max(isSet, step(abs(sid - ${BACKDROP_ID}.), .5));
       dark = max(dark, isSet);
       lite = paper * uImpactPlate;
+      vec3 setInk = mix(L_ink, vec3(.03, .27, .2), .55);   // the set goes deep emerald ink, not near-black (film-tritongym change)
+      col = mix(col, mix(lite, paper * setInk, dark), uImpact.x);
+      dark = -1.;
     }
-    vec3 two = uImpact.z > .5 ? mix(L_ink, lite, dark) : mix(lite, paper * L_ink, dark);
-    col = mix(col, two, uImpact.x);
+    if (dark >= 0.) { vec3 two = uImpact.z > .5 ? mix(L_ink, lite, dark) : mix(lite, paper * L_ink, dark); col = mix(col, two, uImpact.x); }
   }
 
   vec2 q = uv - .5;

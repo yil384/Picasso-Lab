@@ -95,3 +95,32 @@ Round-1 items the reviewers confirmed fixed on frames: the camera strobe (#18), 
 19. *Marks/lamp outside the desktop crop* (WD 5, DE n3, CD n2): the gate shot is framed higher so the coral lamp is in frame before the slam and the nod.
 
 Nice-to-haves taken: the PASS flag carries an inked check (CD n6), the flood stays full through the match cut (CD n1), the slip's caret is separated so it can't read as ♀ (CD n3, DE n2, TA n6), a mitten for the press (TA n5), a thicker sweatband (TA n3), the OOD band recoloured tan (DE n6), a warmer, calmer cyclorama (TA n2), the pink tongue gone from every mouth. Declined: screen-space halftone swim (TA n7, a look-wide change for the whole series), a PyTorch-like flame (DE n5, avoids a brand mark).
+
+## Round 3 — pass r3 (960×540, commit eba4279)
+
+| lens | r1 | r2 | **r3** | verdict in one line |
+|---|---|---|---|---|
+| Creative director | 6.0 | 7.0 | **7.5** | the story now reads in order with no gaps and Tok is a P(doom)-grade performer; but Kern still reads as a heap of dice in the wides, the payoff lands softly (check over the "R", Oro's reactions invisible), whip-smear is overused and ghosty, the photo finish has no tension |
+| Tech-art lead | 6.0 | 7.0 | **7.5** | lit 3D world, object impact frames, hand lettering, transitions everywhere, no hard cuts; but the 9-tap smear prints stacked ghost copies, the compile-pass beat flashes by between two whips (f173–174), Tok's lean snaps it across the cel line, racers still overlap, the slam has no visible contact |
+| Domain expert | 6.0 | 7.6 | **8.2** | emerald headline, plate, grey Dash, recompile/re-verify, fixed oracle time and a 3-frame (1.09) win all correct; but the coral (oracle) hand never reads as coral, the check covers the "R" of the metric, "164" is painted in the error colour |
+| Web designer | 6.3 | 7.4 | **7.8** | B1, CLANG!, the dial, the refine, the letters and the seam read at card size; card 3.65 MB at CRF 32; but Kern (the winner) sits in the desktop bottom fade in the poster, the whip out of the poster pops (letters vanish at f642), the flag's check and the coral lamp fall above the desktop band |
+
+Confirmed fixed on r3 frames (by the lens that raised them): the headline colour, Kern's compiled head and plate (DE), grey Dash (DE), the lap-2 recompile and re-verify (DE, CD, WD), the watch insert framing (WD, CD), the race-1 emotion (CD), the hard cuts (TA), CLANG! pop-off (TA), the inked wedge (TA), tokens leaving the mouth and the visible build (CD), the lamp change in frame (CD).
+
+### Must-fix list (merged) and what r4 does about each
+1. *Coral hand reads as ink* (DE 1, WD, CD): both hands are now flat bars of equal width (0.1) with a thin outline and no hatch/halftone/received shadow; the time-saved wedge is a light see-through tint with a rim line only, so the two solid hands bound it.
+2. *Check covers the "R"* (DE 2, CD 2): the check pops at f606 (after the letters settle) low on Kern's flank by its face, below the letters' band.
+3. *"164" in the error colour* (DE 3): painted ink with an emerald keyline.
+4. *Whip smear ghosts / overuse* (TA 1, CD 3): the smear is now 28 dithered taps with tent weights (a continuous streak, no copies), its amount follows a bell over each whip and is capped at 120 design px, so each whip has ~2 heavy frames; the watch→start pull is 16 f.
+5. *Compile-pass beat squeezed between two whips* (TA 2): B2 retimed — insert f149–161, whip out f160–165, the gate held sharp f165–180 (lamp emerald, nod, lift inside it), whip ahead f180–186; B3 starts at f198.
+6. *Tok flips cream↔grey on lean snaps; grey across shots* (TA 3): Tok's pose fields are eased (tent over ±2 f); Tok's body and limbs no longer receive cast shadows and have a higher tone floor.
+7. *Racers overlap* (TA 4, CD, WD n1): the start two-shot and both race tracking lenses are raised to ≈40° down-look (y 3.5–4.0) so Oro's wheel line sits above Kern's roof.
+8. *Kern reads as dice; no face in the wides* (CD 1): a dark-emerald chassis tray unifies the tokens; the face block is 1.3× with bigger eyes (face scale 2.5); Kern faces ¾ to the lens on the bench, hops off the bench's right end onto the board in view (no longer sinking behind the table), turns to us sweating after the race-1 loss and grins while revving in the refine; star eyes 1.35×.
+9. *Payoff lands softly; Kern in the bottom fade; Oro/Tok at the edges* (CD 2, TA 5, WD 1): the squash holds 3 frames, camera shake doubled, heavier focus lines, cream-filled inked dust puffs; the lens is higher (card top visible) and aimed lower; Kern rolls one car-width up-stage after the line; Oro coasts further into the frame and turns ¾; Tok moved inward; staggered reactions check f606 → jaw f614 → laurel f618 → nod f622–630, Tok's leap f610–628.
+10. *Whip out of the poster pops* (WD 2): the letters, Kern and Oro stay until f648 (inside the smear peak) instead of vanishing at f642.
+11. *Photo finish has no tension / Oro cut* (CD 4): Kern's race-2 curve is steeper (pw 1.8) so Oro leads on screen until ≈f544; the photo-finish panel is re-framed (higher, wider) so both noses sit in the central band.
+12. *Tok cluttered behind the portcullis and Dash in the "compiled!" shot* (CD 6): Tok hops out to the apron during the lift and waits there until the arch shot is over.
+13. *Oro's personality invisible* (CD 5): Oro's face painted larger (eyes ≈1.4×).
+14. *PASS flag check and lamp outside the desktop band* (WD 3, DE n4): the flag pole is shorter; the gate shot is framed wider and higher so the lamp sits inside the band before the slam and after the nod.
+
+Nice-to-haves taken: Tok's idea "!" in emerald (DE n1), click bursts as radial spikes (CD n6, TA n7), the crooked token on a cream tile (CD n5), start blocks removed (TA n8), the double-take vertigo eased (TA n1), the B5 board no longer cropped (TA n6), the weigh-in framed away from the LIVE pill (WD n2), impact-frame set plate deep emerald instead of near-black (WD n3), `--master-max-mb 70` and `--nframes 660` as encode defaults (WD n6). Deferred: marks depth test (TA 6 — the one case, Kern behind the bench leg, is removed by the new bench exit), Torchy's face, a painted start line with aligned noses.
