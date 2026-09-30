@@ -234,6 +234,8 @@ export default {
     padFit.add(body, dpad, stickL, stickR, capL, capR, ...buttons, home, homeRing);
     padFit.scale.set(0.95, 0.74, 0.95);
     const P_U = 232, P_V = 358, P_Z = 8;
+    const clipAll = (obj) => obj.traverse(o => (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []).forEach(m => k.clip(m)));
+    clipAll(pad);                           // it floats in across the rim
     const padHome = k.at(P_U, P_V, P_Z);
     root.add(pad);
     // his real hands over the grips
@@ -445,7 +447,7 @@ export default {
         const sl = env(t, 0.98, 1.08);
         if (sl > 0) {
           const out = exitF(e, 0);
-          const sc = sl < 1 ? lerp(1.32, 1, ease.in(sl)) : 1 + Math.sin(clamp((t - 1.08) / 0.25) * Math.PI * 2) * 0.05 * (1 - env(t, 1.08, 1.33));
+          const sc = sl < 1 ? lerp(1.18, 1, ease.in(sl)) : 1 + Math.sin(clamp((t - 1.08) / 0.25) * Math.PI * 2) * 0.05 * (1 - env(t, 1.08, 1.33));
           const shake = t > 1.08 && t < 1.25 ? Math.sin(t * 90) * 1.6 * (1 - env(t, 1.08, 1.25)) : 0;
           const shine = ph >= 0 ? env(ph, PB + 0.25, PB + 0.7) : 0;
           // impact lines

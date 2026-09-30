@@ -7,7 +7,7 @@
    orchid leaf sways; the swallow flaps once.
    Photo landmarks (512 px): head top v 40 · eyes v 208 · chin v 350 · hair edges u 138 / 376
    (v 150-360) · shoulders from v 400 (u < 119 / > 405) · paper left u < 130, right u > 390. */
-import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
+import { THREE, env, ease, clamp, lerp, rng } from './kit.js';
 
 const BEAT = 3.2, T0 = 1.45;            // calm loop starts after the entrance
 const ZP = -33;                          // paper depth (just in front of the plate)

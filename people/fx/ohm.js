@@ -190,6 +190,8 @@ export default {
     heat.renderOrder = 30;
     dieFit.add(pkg, lid, heat);
     const D_Z = 12;
+    const clipAll = (obj) => obj.traverse(o => (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []).forEach(m => k.clip(m)));
+    clipAll(die);                           // it rises in from below the rim
     const dieHome = k.at(DIE[0], DIE[1], D_Z);
     root.add(die);
 
