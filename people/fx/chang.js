@@ -249,7 +249,7 @@ export default {
       g.fillText('满分', 0, 0.5 * s);
       g.restore();
     }, { res: 3, alphaTest: 0.02, depthWrite: false });
-    stamp.position.set(4.5, -11.5, 0.4);
+    stamp.position.set(4.5, -9, 0.4);             // high enough that the plaque never hides its lower edge
     stamp.renderOrder = 2;
     paperF.card.add(stamp);
 

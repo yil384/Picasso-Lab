@@ -282,8 +282,10 @@ export default {
         heat.material.opacity = 0.75 * hp * exitF(e, 0);
         heat.visible = heat.material.opacity > 0.003;
 
-        // packets: fade in once the traces are etched
-        const pk = presence(t, e, 0.62, 0.3, ease.out, 0) ;
+        // packets: fade in once the traces are etched (a packet under ~30 % is only its ink outline,
+        // a black dot on the gold: it pops in and out at that size instead)
+        const pk0 = presence(t, e, 0.62, 0.3, ease.out, 0);
+        const pk = pk0 < 0.3 ? 0 : pk0;
         const tt = Math.max(0, t - 0.62);
         ringPk.forEach((p, i) => {
           const [r, w, p0] = RINGP[i];
