@@ -1,0 +1,162 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Tiga: the light (guandan -> events)</title>
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script src="/scene/vendor/q5.min.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+// Guandan -> Events: the Guandan cards pour their light into Tiga's statue, the stone shell bursts, Tiga rises,
+// fires a beam made of Guandan cards through Melba, Golza burrows away, and Tiga flies off into the dawn.
+import { makeFilm, EASE, env, prog, rng, PORTRAIT } from './engine.js';
+import * as fx from './fxlib.js';
+
+const S = (id, img, t0, t1, land, port, extra = {}) => ({ id, img, t0, t1, cam: { land, port }, ...extra });
+const face = fx.makeCracks('face', [[800, 350, 11], [720, 440, 8], [900, 450, 8], [816, 690, 10], [600, 860, 7], [1010, 850, 7]]);
+const jetC = (t) => { const u = (t - 5.6) / 0.7; return [-150 + 1800 * u, 800 - 470 * u, -14]; };
+
+// the beam of cards: origin -> target, fired at tf; front speed and card flow in art px / s
+function cardBeam(api, t, { tf, x0, y0, x1, y1, n = 64, width = 64, seed = 'beam', size = 46, fade = 99 }) {
+  if (t < tf) return;
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+  const front = Math.min(L, (t - tf) * 3600), a = 1 - prog(t, fade, fade + 0.15);
+  api.beam(x0, y0, x0 + ux * front, y0 + uy * front, width * (0.9 + 0.12 * Math.sin(t * 57)), a);
+  const R = rng(seed);
+  for (let i = 0; i < n; i++) {
+    const off = R() * L, sp = 2300 + R() * 900, cf = i % 8;
+    const pos = (off + (t - tf) * sp) % L;
+    if (pos > front) continue;
+    const ph = pos / 70 + i * 1.7, r = width * (0.45 + 0.35 * R());
+    const px = x0 + ux * pos + nx * Math.sin(ph) * r, py = y0 + uy * pos + ny * Math.sin(ph) * r, pz = Math.cos(ph) * r * 1.6 + 60;
+    const s = size * (0.8 + 0.4 * R()) * a;
+    api.card(cf, px, py, pz, ph * 0.7, ph * 0.5 + R() * 3, ph + R() * 6, s);
+    api.glow(px, py, pz - 2, s * 2.3, 0xffc860, 0.55 * a);
+  }
+  for (let k = 0; k < 24; k++) {               // hot sparks around the front
+    const R2 = rng(seed, 'sp', k), u = R2();
+    api.glow(x0 + ux * front * (0.2 + 0.8 * u) + nx * R2.gauss() * width * 0.7, y0 + uy * front * (0.2 + 0.8 * u) + ny * R2.gauss() * width * 0.7, 80, 14 + R2() * 20, 0xfff0c0, a);
+  }
+  api.glow(x0, y0, 90, width * 5, 0xfff2cc, a);
+}
+
+makeFilm({
+  title: 'tiga-light', seconds: 6.3, fps: 30, poster: 110,
+  art: { face: 'art/a6_tiga_face.png', awaken: 'art/b1_awaken.png', tiga: 'art/b2_tiga.png', pose: 'art/b3_beam_pose.png',
+    hit: 'art/b4_melba_hit.png', boom: 'art/fx_boom.png', flee: 'art/b5_golza_flee.png', fly: 'art/b6_flyaway.png', jet: 'art/jet.png' },
+  shots: [
+    S('r1', 'face', 0, 1.1, [[0, 792, 400, 1.36], [1, 800, 520, 1.12]], [[0, 805, 390, 1.3], [1, 805, 560, 1.05]], {
+      grade: (t) => `brightness(${0.82 + 0.3 * prog(t, 0.2, 1.1)}) saturate(${0.8 + 0.3 * prog(t, 0.3, 1.1)})`,
+    }),
+    S('r2', 'awaken', 1.1, 2.05, [[0, 797, 470, 1.3], [1, 797, 450, 1.08]], [[0, 797, 480, 1.2], [1, 797, 450, 1.0]], { light: { key: 0xfff0d0, ki: 2.4, rim: 0xffd070, ri: 3 } }),
+    S('r3', 'tiga', 2.05, 2.95, [[0, 680, 800, 1.5, -2], [0.45, 690, 320, 1.2, 0, 'outQ'], [1, 700, 300, 1.26, 0]],
+      [[0, 660, 780, 1.7, -2], [0.45, 690, 300, 1.45, 0, 'outQ'], [1, 690, 290, 1.5, 0]], { light: { key: 0xf0dcc4, ki: 2.2 } }),
+    S('r4', 'pose', 2.95, 3.95, [[0, 640, 420, 1.2], [0.25, 640, 420, 1.2], [1, 900, 380, 1.05, 0, 'io']],
+      [[0, 520, 300, 1.35], [0.25, 520, 300, 1.35], [1, 1150, 330, 1.2, 0, 'io']]),
+    S('r5', 'hit', 3.95, 4.95, [[0, 820, 470, 1.18, 3], [1, 840, 470, 1.04, -2]], [[0, 853, 450, 1.25], [1, 853, 450, 1.08]],
+      { light: { key: 0xd8c8c0, ki: 2.0, rim: 0xff7a2a, ri: 3 } }),
+    S('r6', 'flee', 4.95, 5.55, [[0, 700, 460, 1.2], [1, 620, 480, 1.34]], [[0, 560, 450, 1.35], [1, 470, 470, 1.45]], { light: { key: 0xf0dcc4, ki: 2.2 } }),
+    S('r7', 'fly', 5.55, 6.3, [[0, 790, 560, 1.18], [1, 820, 420, 1.03]], [[0, 820, 400, 1.25], [1, 880, 300, 1.1]], {
+      art: (g, t, v, IMG) => fx.jet(g, t, IMG, { t0: 5.6, t1: 6.3, path: jetC, width: 230, trailLen: 0.3 }),
+    }),
+  ],
+  shakes: [
+    { t0: 0.5, t1: 1.1, amp: 4, att: 0.4 }, { t0: 1.1, t1: 1.75, amp: 16 }, { t0: 2.05, t1: 2.4, amp: 10 },
+    { t0: 3.15, t1: 3.95, amp: 8 }, { t0: 4.0, t1: 4.9, amp: 26 }, { t0: 4.95, t1: 5.5, amp: 12 },
+  ],
+  impacts: [{ t: 1.1, frames: 2, style: 'bw' }, { t: 3.15, frames: 2, style: 'bw' }, { t: 4.03, frames: 4, style: 'mix' }],
+  flashes: [
+    { t0: 0, t1: 0.26, color: '#fffaf0', att: 0.001, rel: 0.26 }, { t0: 1.02, t1: 1.16, color: '#fff6dc' },
+    { t0: 4.16, t1: 4.26, color: '#fff4dc', a: 0.55 }, { t0: 5.5, t1: 5.62, color: '#fff', a: 0.7 },
+    { t0: 5.95, t1: 6.32, color: '#fffaf0', att: 0.33, rel: 0.001 },
+  ],
+  debris: [
+    { shot: 'r2', t: 1.1, x: 797, y: 470, count: 60, dir: -90, spread: 150, speed: 1300, g: 260, s0: 5, s1: 20, z1: 600, rx: 160, ry: 200, life: 1.0, color: 0xd6cbba },
+    { shot: 'r5', t: 4.03, x: 853, y: 440, count: 55, dir: -60, spread: 140, speed: 1300, g: 600, s0: 5, s1: 18, z1: 500, rx: 60, ry: 60, life: 1.0, color: 0x8a3c2a },
+    { shot: 'r6', t: 4.96, x: 470, y: 520, count: 30, dir: -100, spread: 35, speed: 1300, g: 1500, s0: 4, s1: 14, z1: 300, rx: 140, life: 0.9, color: 0xb08a62 },
+  ],
+  three(api, t, shot) {
+    if (shot.id === 'r1') {                        // cards pour into the colour timer
+      for (let i = 0; i < 46; i++) {
+        const R = rng('in', i), b = 0.06 + i * 0.02, u = (t - b) / 0.72;
+        if (u < 0 || u > 1) continue;
+        const e = EASE.io(u), a0 = R() * Math.PI * 2, R0 = 900 + R() * 350, z0 = 250 + R() * 500;
+        const r = R0 * Math.pow(1 - e, 1.15), ang = a0 + 2.6 * e, s = 120 * (1 - 0.7 * e) * (u > 0.9 ? (1 - u) / 0.1 : 1);
+        const x = 816 + Math.cos(ang) * r, y = 773 + Math.sin(ang) * r * 0.8, z = z0 * (1 - e);
+        api.card(i % 8, x, y, z, 0.9 * (1 - e) * Math.sin(i), 1.3 * (1 - e) * Math.cos(i * 1.7), a0 * 2 + 7 * e, s);
+        api.glow(x, y, z - 3, s * 2.6, 0xffc860, 0.85);
+      }
+      const g = prog(t, 0.3, 1.1);
+      api.glow(816, 773, 30, 160 + 200 * g, 0x9fd8ff, 0.4 + 0.6 * g);
+    }
+    if (shot.id === 'r2') {
+      for (let k = 0; k < 70; k++) {                // light sparks bursting out of the shell
+        const R = rng('burst', k), u = t - 1.1 - R() * 0.2;
+        if (u < 0 || u > 0.9) continue;
+        const ang = R() * Math.PI * 2, d = (300 + R() * 700) * EASE.out(Math.min(1, u / 0.7));
+        api.glow(797 + Math.cos(ang) * d, 470 + Math.sin(ang) * d, 100, 12 + R() * 22, 0xfff0b0, 1 - u / 0.9);
+      }
+      api.glow(817, 487, 40, 120 + 30 * Math.sin(t * 30), 0x9fd8ff, 0.9);
+    }
+    if (shot.id === 'r4') {
+      const c = prog(t, 2.95, 3.15);
+      for (let k = 0; k < 30; k++) {                // charging: light streaks converge on the arms
+        const R = rng('charge', k), u = (t - 2.95 - R() * 0.12) / 0.22;
+        if (u < 0 || u > 1) continue;
+        const ang = R() * Math.PI * 2, d = 420 * (1 - EASE.in(u));
+        api.glow(505 + Math.cos(ang) * d, 205 + Math.sin(ang) * d, 60, 18, 0xffe6a0, 1);
+      }
+      api.glow(505, 205, 80, 60 + 140 * c, 0xfff0c0, c);
+      cardBeam(api, t, { tf: 3.15, x0: 520, y0: 212, x1: 1900, y1: 250, width: 66 });
+    }
+    if (shot.id === 'r5') {
+      cardBeam(api, t, { tf: 3.9, x0: -250, y0: 470, x1: 853, y1: 440, width: 72, seed: 'beam2', fade: 4.25 });
+    }
+    if (shot.id === 'r7') {
+      for (let k = 0; k < 44; k++) {                // twinkles along Tiga's trail of light
+        const R = rng('trail', k), u = R();
+        const x = 560 - 430 * u + R.gauss() * 30, y = 440 + 290 * u + R.gauss() * 26;
+        api.glow(x, y, 20, 10 + 16 * R(), 0xfff4c8, 0.5 + 0.5 * Math.sin(t * 14 + k * 2.3));
+      }
+    }
+  },
+  fx(q, c, t, shot, v, H) {
+    const P = PORTRAIT;
+    if (shot.id === 'r1') {
+      face(c, H, v, 1, { width: 3.4, glowCol: `rgba(255,205,90,${0.35 + 0.65 * prog(t, 0.25, 1.05)})` });
+      const eye = prog(t, 0.15, 1.0, EASE.in);
+      fx.glow(c, H, v, 713, 275, 90, [255, 250, 225], eye); fx.glow(c, H, v, 900, 280, 90, [255, 250, 225], eye);
+      fx.rays(c, H, v, t, { x: 816, y: 773, a: prog(t, 0.45, 1.1), n: 16, len: 1400, color: [255, 222, 140], seed: 'r1' });
+      fx.sfx(c, H, t, { text: 'キィィン', t0: 0.35, t1: 1.05, x: P ? 0.5 : 0.24, y: P ? 0.2 : 0.2, size: 0.075, rot: -6, fill: ['#ffffff', '#ffd46b'], seed: 'ki' });
+    }
+    if (shot.id === 'r2') {
+      fx.rays(c, H, v, t, { x: 797, y: 227, a: 1 - prog(t, 1.7, 2.05) * 0.5, n: 20, len: 1700, color: [255, 226, 150], spin: 0.6, seed: 'r2' });
+      fx.sfx(c, H, t, { text: 'カッ!', t0: 1.12, t1: 1.9, x: P ? 0.5 : 0.8, y: P ? 0.82 : 0.24, size: 0.16, rot: 8, fill: ['#ffffff', '#ffc83d'], seed: 'ka' });
+    }
+    if (shot.id === 'r3') {
+      fx.rays(c, H, v, t, { x: 713, y: 227, a: 0.7, n: 14, len: 1500, color: [255, 230, 170], spin: 0.3, seed: 'r3' });
+      fx.glow(c, H, v, 673, 107, 60, [255, 255, 240], 0.8);
+      fx.dust(c, H, v, t, { t0: 2.05, t1: 2.5, x0: 200, x1: 1100, y: 960, n: 18, rise: 150, spread: 180, size: [60, 150], color: [176, 140, 112], seed: 'r3d' });
+      fx.focusLines(q, H, t, { x: 0.5, y: P ? 0.35 : 0.4, t0: 2.25, t1: 2.95, n: 90, color: [255, 250, 235], alpha: 150, inner: 0.34, seed: 'r3f' });
+      fx.sfx(c, H, t, { text: 'デュワッ!', t0: 2.3, t1: 2.93, x: P ? 0.5 : 0.76, y: P ? 0.8 : 0.62, size: 0.13, rot: -8, fill: ['#ffffff', '#6fc8ff'], seed: 'du' });
+    }
+    if (shot.id === 'r4') {
+      fx.speedLines(q, H, t, { t0: 3.15, t1: 3.95, angle: 1.5, n: 70, color: [255, 236, 190], alpha: 150, band: [0.25, 0.75], seed: 'r4s' });
+      fx.sfx(c, H, t, { text: 'ビィィィィッ', t0: 3.2, t1: 3.93, x: P ? 0.5 : 0.66, y: P ? 0.72 : 0.72, size: 0.1, rot: -4, fill: ['#fffbe0', '#ffb52e'], seed: 'bi' });
+    }
+    if (shot.id === 'r5') {
+      fx.explosion(c, H, v, t, { t0: 4.03, x: 853, y: 440, r: 330 });
+      fx.embers(q, c, H, v, t, { t0: 4.05, t1: 4.95, box: [500, 150, 1300, 900], n: 60, vy: 260, color: [255, 150, 60], seed: 'r5e' });
+      fx.sfx(c, H, t, { text: 'ドガァァァン', t0: 4.07, t1: 4.93, x: 0.5, y: P ? 0.16 : 0.18, size: 0.15, rot: -6, fill: ['#fff36b', '#ff3b1f'], seed: 'dg' });
+    }
+    if (shot.id === 'r6') {
+      fx.dust(c, H, v, t, { t0: 4.95, t1: 5.4, x0: 200, x1: 1300, y: 760, n: 28, rise: 260, spread: 200, size: [80, 200], color: [170, 136, 100], seed: 'r6d' });
+      fx.speedLines(q, H, t, { t0: 4.95, t1: 5.55, angle: 180, n: 50, color: [40, 24, 12], alpha: 120, seed: 'r6s' });
+      fx.sfx(c, H, t, { text: 'ズザザザッ', t0: 5.0, t1: 5.53, x: P ? 0.5 : 0.72, y: P ? 0.18 : 0.2, size: 0.1, rot: 6, seed: 'zz' });
+    }
+    if (shot.id === 'r7') {
+      fx.rays(c, H, v, t, { x: 353, y: 440, a: 0.55, n: 12, len: 1800, color: [255, 214, 140], spin: 0.1, seed: 'r7' });
+      fx.glow(c, H, v, 840, 220, 70, [170, 225, 255], 0.9);
+    }
+  },
+});
+</script></body></html>

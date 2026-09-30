@@ -1,0 +1,103 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Tiga: the attack (events -> guandan)</title>
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script src="/scene/vendor/q5.min.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+// Events -> Guandan: Golza and Melba attack the pyramid, two of the three giants fall, Tiga's statue cracks,
+// its eyes catch a spark of light, and the frame burns out to white (the Guandan table fades in from there).
+import { makeFilm, EASE, env, prog, PORTRAIT } from './engine.js';
+import * as fx from './fxlib.js';
+
+const S = (id, img, t0, t1, land, port, extra = {}) => ({ id, img, t0, t1, cam: { land, port }, ...extra });
+const face = fx.makeCracks('face', [[800, 350, 11], [720, 440, 8], [900, 450, 8], [816, 690, 10], [600, 860, 7], [1010, 850, 7]]);
+
+// jet paths (art coords -> [x, y, angle])
+const jetA = (t) => { const u = (t - 0.02) / 1.25; return [-160 + 1900 * u, 230 - 110 * u - 30 * Math.sin(u * 3), -5]; };
+const jetB = (t) => { const u = (t - 2.72) / 0.42; return [1600 - 1900 * u, 820 - 700 * u, 200 - 12 * u]; };
+
+makeFilm({
+  title: 'tiga-attack', seconds: 6.6, fps: 30, poster: 150,
+  art: { a1: 'art/a1_clean.png', golza: 'art/t_golza.png', melba: 'art/a3_melba.png', hall: 'art/a4_statues.png',
+    ruin: 'art/a5_destroyed.png', face: 'art/a6_tiga_face.png', jet: 'art/jet.png' },
+  shots: [
+    S('s1', 'a1', 0, 1.3, [[0, 820, 470, 1.02], [1, 920, 450, 1.13]], [[0, 640, 470, 1.0], [1, 1010, 440, 1.1]], {
+      art: (g, t, v, IMG) => fx.jet(g, t, IMG, { t0: 0.02, t1: 1.27, path: jetA, width: 170 }),
+    }),
+    S('s2', 'golza', 1.3, 2.5, [[0, 700, 760, 1.35, -3], [0.33, 770, 330, 1.25, 2, 'outQ'], [1, 790, 300, 1.34, 0]],
+      [[0, 720, 780, 1.6, -3], [0.33, 790, 320, 1.45, 2, 'outQ'], [1, 800, 300, 1.52, 0]],
+      { light: { key: 0xf0dcc4, ki: 2.2 } }),
+    S('s3', 'melba', 2.5, 3.5, [[0, 768, 520, 1.0, 4], [1, 915, 380, 1.5, -3, 'in']], [[0, 820, 520, 1.0, 4], [1, 925, 380, 1.55, -3, 'in']], {
+      art: (g, t, v, IMG) => fx.jet(g, t, IMG, { t0: 2.72, t1: 3.14, path: jetB, width: 360, trailLen: 0.2 }),
+    }),
+    S('s4', 'hall', 3.5, 3.88, [[0, 768, 470, 1.0], [1, 768, 450, 1.05]], [[0, 763, 450, 1.0], [1, 763, 430, 1.04]]),
+    S('s5', 'ruin', 3.88, 5.05, [[0, 768, 500, 1.0, -2], [1, 765, 330, 1.35, 0]],
+      [[0, 420, 480, 1.0], [0.45, 1110, 460, 1.02], [1, 765, 330, 1.25]], { light: { key: 0xd8d4d0, ki: 2.0, rim: 0xff7a2a, ri: 3.0 } }),
+    S('s6', 'face', 5.05, 6.6, [[0, 800, 520, 1.0], [0.8, 792, 420, 1.3], [1, 792, 400, 1.36]], [[0, 805, 520, 1.0], [1, 805, 390, 1.3]], {
+      light: { key: 0xffa060, ki: 2.4 },
+      grade: (t) => `brightness(${1 - 0.18 * prog(t, 5.1, 5.9) + 0.25 * prog(t, 6.1, 6.5)})`,
+      art: (g, t, v) => {},
+    }),
+  ],
+  shakes: [
+    { t0: 0.7, t1: 1.3, amp: 6, att: 0.4 }, { t0: 1.3, t1: 2.3, amp: 24 }, { t0: 2.5, t1: 3.5, amp: 5, att: 0.3 },
+    { t0: 3.78, t1: 3.9, amp: 14 }, { t0: 3.88, t1: 4.95, amp: 20 }, { t0: 5.3, t1: 5.5, amp: 5 }, { t0: 5.8, t1: 6.0, amp: 7 },
+  ],
+  impacts: [{ t: 1.3, frames: 2, style: 'bw' }, { t: 1.63, frames: 2, style: 'red' }, { t: 3.8, frames: 3, style: 'mix' }],
+  flashes: [
+    { t0: 1.26, t1: 1.36, color: '#fff' }, { t0: 3.46, t1: 3.56, color: '#fff', a: 0.9 }, { t0: 3.86, t1: 4.02, color: '#ffe2b0' },
+    { t0: 6.28, t1: 6.62, color: '#fffaf0', att: 0.3, rel: 0.001 },
+  ],
+  debris: [
+    { shot: 's2', t: 1.31, x: 640, y: 940, count: 55, dir: -88, spread: 30, speed: 1700, g: 1500, s0: 4, s1: 16, z1: 520, rx: 300, life: 1.3, color: 0xb08a62 },
+    { shot: 's2', t: 1.42, x: 300, y: 990, count: 18, dir: -72, spread: 22, speed: 1400, g: 1500, s0: 4, s1: 13, z1: 300, life: 1.1, color: 0xa3825e },
+    { shot: 's2', t: 1.46, x: 1100, y: 990, count: 18, dir: -108, spread: 22, speed: 1400, g: 1500, s0: 4, s1: 13, z1: 300, life: 1.1, color: 0xa3825e },
+    { shot: 's5', t: 3.88, x: 310, y: 330, count: 22, dir: 70, spread: 70, speed: 560, g: 1000, s0: 7, s1: 24, z1: 380, rx: 110, ry: 110, life: 1.2, color: 0xd8ccbc },
+    { shot: 's5', t: 3.9, x: 1235, y: 330, count: 22, dir: 110, spread: 70, speed: 560, g: 1000, s0: 7, s1: 24, z1: 380, rx: 110, ry: 110, life: 1.2, color: 0xd8ccbc },
+    { shot: 's5', t: 3.9, x: 770, y: 380, count: 30, dir: -90, spread: 110, speed: 1500, g: 800, s0: 3, s1: 9, z1: 700, life: 1.0, color: 0xe6d6bf },
+    { shot: 's6', t: 5.32, x: 800, y: 370, count: 10, dir: 200, spread: 50, speed: 420, g: 1300, s0: 3, s1: 8, z1: 200, rx: 60, ry: 40, life: 0.9, color: 0xcfc3b1 },
+    { shot: 's6', t: 5.82, x: 880, y: 460, count: 12, dir: -20, spread: 50, speed: 460, g: 1300, s0: 3, s1: 8, z1: 200, rx: 60, ry: 40, life: 0.9, color: 0xcfc3b1 },
+  ],
+  fx(q, c, t, shot, v, H) {
+    const P = PORTRAIT;
+    if (shot.id === 's1') {
+      fx.dust(c, H, v, t, { t0: 0.8, t1: 1.3, x0: 760, x1: 1320, y: 700, n: 16, rise: 70, size: [30, 70], alpha: 0.7, color: [176, 150, 150], seed: 'd1' });
+      fx.sfx(c, H, t, { text: 'ゴゴゴ', t0: 0.82, t1: 1.3, x: P ? 0.5 : 0.78, y: P ? 0.8 : 0.72, size: 0.085, rot: -6, fill: ['#e9d8ff', '#9d7bff'], seed: 'go' });
+    }
+    if (shot.id === 's2') {
+      fx.dust(c, H, v, t, { t0: 1.3, t1: 2.2, x0: 0, x1: 1536, y: 1000, n: 34, rise: 330, spread: 160, size: [70, 190], color: [170, 138, 104], seed: 'd2' });
+      fx.focusLines(q, H, t, { x: 0.52, y: P ? 0.3 : 0.26, t0: 1.55, t1: 2.5, n: 110, color: [20, 10, 6], alpha: 230, inner: 0.3, seed: 'gz' });
+      fx.glow(c, H, v, 813, 58, 70 + 25 * Math.sin(t * 40), [255, 150, 40], env(t, 1.95, 2.5, 0.15, 0.1));
+      fx.sfx(c, H, t, { text: 'ドドドド', t0: 1.34, t1: 1.9, x: P ? 0.5 : 0.24, y: P ? 0.84 : 0.8, size: 0.09, rot: 8, seed: 'dd' });
+      fx.sfx(c, H, t, { text: 'グオオオッ', t0: 1.64, t1: 2.48, x: P ? 0.5 : 0.35, y: P ? 0.62 : 0.5, size: 0.14, rot: -10, fill: ['#ffffff', '#ff4a2e'], seed: 'roar' });
+    }
+    if (shot.id === 's3') {
+      fx.focusLines(q, H, t, { x: 0.52, y: 0.42, t0: 2.5, t1: 3.5, n: 130, color: [255, 245, 230], alpha: 170, inner: 0.22 + 0.1 * prog(t, 2.5, 3.5), seed: 'mb', hold: 1 });
+      fx.sfx(c, H, t, { text: 'キシャアアッ', t0: 2.66, t1: 3.42, x: P ? 0.5 : 0.3, y: P ? 0.78 : 0.24, size: 0.11, rot: -12, fill: ['#fff7b0', '#ff5a1f'], seed: 'ks' });
+    }
+    if (shot.id === 's4') {
+      fx.ray2d(c, H, v, t, { t0: 3.66, t1: 3.9, x0: 1560, y0: -40, x1: 1200, y1: 330, width: 46, color: [255, 120, 40] });
+      fx.ray2d(c, H, v, t, { t0: 3.72, t1: 3.9, x0: -40, y0: 40, x1: 355, y1: 330, width: 40, color: [255, 200, 70] });
+      fx.embers(q, c, H, v, t, { t0: 3.5, t1: 3.9, n: 30, color: [255, 180, 90] });
+    }
+    if (shot.id === 's5') {
+      fx.embers(q, c, H, v, t, { t0: 3.88, t1: 5.1, n: 110, vy: -180, color: [255, 150, 50], size: [2, 6] });
+      fx.dust(c, H, v, t, { t0: 3.9, t1: 4.6, x0: 150, x1: 1400, y: 860, n: 22, rise: 200, spread: 140, size: [70, 170], alpha: 0.75, color: [128, 102, 88], seed: 'd5' });
+      fx.glow(c, H, v, 960, 130, 130, [255, 160, 60], 0.5 + 0.3 * Math.sin(t * 25));
+      fx.sfx(c, H, t, { text: 'ズガァァン', t0: 3.9, t1: 4.7, x: P ? 0.5 : 0.5, y: P ? 0.2 : 0.2, size: 0.14, rot: -5, fill: ['#fff36b', '#ff3b1f'], seed: 'zg' });
+    }
+    if (shot.id === 's6') {
+      fx.embers(q, c, H, v, t, { t0: 5.05, t1: 6.6, n: 60, vy: -110, color: [255, 150, 60] });
+      face(c, H, v, prog(t, 5.15, 6.15, EASE.out), { width: 3.4 });
+      // the eyes catch light, then everything burns out to white
+      const eye = prog(t, 6.02, 6.4, EASE.in);
+      fx.glow(c, H, v, 713, 275, 90, [255, 250, 225], eye);
+      fx.glow(c, H, v, 900, 280, 90, [255, 250, 225], eye);
+      fx.rays(c, H, v, t, { x: 805, y: 300, a: prog(t, 6.15, 6.5), n: 18, len: 1600, color: [255, 232, 170] });
+      fx.sfx(c, H, t, { text: 'ピキ…ピキピキ', t0: 5.3, t1: 6.0, x: P ? 0.5 : 0.72, y: P ? 0.86 : 0.8, size: 0.06, rot: 4, fill: ['#ffffff', '#d8d0c4'], seed: 'pk' });
+    }
+  },
+});
+</script></body></html>

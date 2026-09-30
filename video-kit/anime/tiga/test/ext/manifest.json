@@ -1,0 +1,1 @@
+{"manifest_version": 3, "name": "uiback", "version": "1", "background": {"service_worker": "sw.js"}, "permissions": ["tabs"]}

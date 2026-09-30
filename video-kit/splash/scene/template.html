@@ -1,0 +1,253 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>events splash</title>
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+// Events-page splash: a Q-version comic panel slams in, comic 3D props burst out of it, a paper caption
+// pops up with the event title and a comic SFX lands. 2.5 s, plays once; every frame is f(i).
+import { defineScene, seg, clamp, lerp, rng } from '/pv/runtime/pv.js';
+import { letter, burst } from '/pv/runtime/npr/brush.js';
+import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
+
+const C = /*CONFIG*/{}/*END*/;
+const INK = '#1d1a2e';
+const DW = 1200, DH = 900;
+const PANEL = { cx: 600, cy: 392, w: 880, h: 660 };      // the chibi art is 4:3
+const T_SLAM = 0.42;                                    // the panel lands
+const backOut = (x, s = 1.7) => { x = clamp(x); return 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2); };
+const outCubic = x => 1 - Math.pow(1 - clamp(x), 3);
+
+let ART = null, T = null;
+
+// panel transform at time sec: scale, rotation, shake offset (design units)
+function panelPose(sec) {
+  const s = seg(sec, 0.06, T_SLAM);
+  const k = lerp(1.42, 1, backOut(s, 1.2));
+  const rot = lerp(-0.09, -0.018, outCubic(s));
+  const hit = sec - T_SLAM, amp = hit > 0 && hit < 0.26 ? 11 * (1 - hit / 0.26) : 0;
+  const r = rng(7, 'shake', Math.floor(sec * 24));
+  return { k, rot, dx: amp * (r() * 2 - 1), dy: amp * (r() * 2 - 1), alpha: seg(sec, 0.04, 0.14) };
+}
+function panelCorners(p) {
+  const hw = PANEL.w / 2 * p.k, hh = PANEL.h / 2 * p.k, c = Math.cos(p.rot), s = Math.sin(p.rot);
+  return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([x, y]) =>
+    [PANEL.cx + p.dx + x * c - y * s, PANEL.cy + p.dy + x * s + y * c]);
+}
+
+// ---------- comic 3D props ----------
+function toonMat(THREE, color) {
+  const g = new Uint8Array([90, 170, 255]);
+  const tex = new THREE.DataTexture(g, 3, 1, THREE.RedFormat); tex.needsUpdate = true;
+  tex.minFilter = tex.magFilter = THREE.NearestFilter;
+  return new THREE.MeshToonMaterial({ color, gradientMap: tex });
+}
+function withInk(THREE, geo, mat, w = 0.045) {
+  const grp = new THREE.Group();
+  grp.add(new THREE.Mesh(geo, mat));
+  const hullGeo = BGU.mergeVertices(geo.clone().deleteAttribute('normal').deleteAttribute('uv'));
+  hullGeo.computeVertexNormals();
+  const ink = new THREE.ShaderMaterial({
+    side: THREE.BackSide, uniforms: { w: { value: w } },
+    vertexShader: 'uniform float w; void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position + normal * w, 1.0); }',
+    fragmentShader: 'void main(){ gl_FragColor = vec4(0.114, 0.102, 0.18, 1.0); }',
+  });
+  grp.add(new THREE.Mesh(hullGeo, ink));
+  return grp;
+}
+function starGeo(THREE, r = 0.34, depth = 0.12) {
+  const sh = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.46 : r;
+    i ? sh.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : sh.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 1 });
+  g.center(); return g;
+}
+function makeProp(THREE, kind, color, r) {
+  const M = c => toonMat(THREE, c);
+  switch (kind) {
+    case 'star': return withInk(THREE, starGeo(THREE, 0.3 + r() * 0.12), M(color));
+    case 'confetti': return withInk(THREE, new THREE.BoxGeometry(0.34, 0.2, 0.035), M(color), 0.03);
+    case 'cap': {                                        // mortarboard: board + skull cap + tassel
+      const g = new THREE.Group();
+      g.add(withInk(THREE, new THREE.BoxGeometry(0.9, 0.06, 0.9), M(0x23222e)));
+      const cap = withInk(THREE, new THREE.CylinderGeometry(0.3, 0.34, 0.26, 16), M(0x2d2c3a)); cap.position.y = -0.15; g.add(cap);
+      const tas = withInk(THREE, new THREE.BoxGeometry(0.05, 0.36, 0.05), M(0xffcf33), 0.02); tas.position.set(0.36, -0.18, 0.36); g.add(tas);
+      return g;
+    }
+    case 'envelope': {                                   // red envelope with a gold seal
+      const g = new THREE.Group();
+      g.add(withInk(THREE, new THREE.BoxGeometry(0.5, 0.72, 0.05), M(0xd62828)));
+      const seal = withInk(THREE, new THREE.CylinderGeometry(0.11, 0.11, 0.07, 20), M(0xffc933), 0.02);
+      seal.rotation.x = Math.PI / 2; seal.position.set(0, 0.08, 0.04); g.add(seal);
+      return g;
+    }
+    case 'coin': {
+      const coin = withInk(THREE, new THREE.CylinderGeometry(0.28, 0.28, 0.07, 28), M(0xffc933));
+      coin.rotation.x = Math.PI / 2; const g = new THREE.Group(); g.add(coin); return g;
+    }
+    case 'leaf': {
+      const sh = new THREE.Shape(); sh.moveTo(0, -0.42);
+      sh.quadraticCurveTo(0.3, -0.1, 0, 0.42); sh.quadraticCurveTo(-0.3, -0.1, 0, -0.42);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 0.04, bevelEnabled: false }); g.center();
+      return withInk(THREE, g, M(color), 0.03);
+    }
+    case 'paw': {
+      const g = new THREE.Group(), m = M(0x7a4a2a);
+      const pad = withInk(THREE, new THREE.CylinderGeometry(0.2, 0.22, 0.06, 20), m, 0.025); pad.rotation.x = Math.PI / 2; g.add(pad);
+      [[-0.2, 0.22], [-0.07, 0.3], [0.07, 0.3], [0.2, 0.22]].forEach(([x, y]) => {
+        const t = withInk(THREE, new THREE.CylinderGeometry(0.075, 0.075, 0.06, 14), m, 0.02); t.rotation.x = Math.PI / 2; t.position.set(x, y, 0); g.add(t);
+      });
+      return g;
+    }
+    case 'flame': {
+      const pts = []; for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push(new THREE.Vector2(Math.sin(t * Math.PI) * 0.26 * (1 - t * 0.55), t * 0.8 - 0.4)); }
+      const g = new THREE.Group();
+      g.add(withInk(THREE, new THREE.LatheGeometry(pts, 14), M(color)));
+      return g;
+    }
+    case 'puff': return withInk(THREE, new THREE.IcosahedronGeometry(0.3 + r() * 0.16, 1), M(0xfdfbf5));
+    case 'heart': {
+      const sh = new THREE.Shape(); sh.moveTo(0, -0.28);
+      sh.bezierCurveTo(-0.5, 0.05, -0.2, 0.42, 0, 0.18); sh.bezierCurveTo(0.2, 0.42, 0.5, 0.05, 0, -0.28);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 0.1, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 1 }); g.center();
+      return withInk(THREE, g, M(color));
+    }
+  }
+}
+
+defineScene({
+  meta: {
+    title: 'splash ' + C.id, durationFrames: 54, fps: 24, width: 1200, height: 900, seed: C.seed || 3,
+    design: [DW, DH], background: C.matte, fonts: ['Permanent Marker', 'Inter', 'Caveat'],
+    boil: { every: 3, variants: 3 }, brushScale: 2.2, poster: 53,
+  },
+  async setup(ctx) {
+    ART = new Image(); ART.src = '/scene/' + C.art; await ART.decode();
+  },
+  update(ctx) {
+    if (!T) return;
+    const sec = ctx.sec;
+    T.props.forEach(pp => {
+      const tau = sec - T_SLAM + 0.06 - pp.delay;
+      if (tau <= 0) { pp.obj.visible = false; return; }
+      pp.obj.visible = true;
+      const k = outCubic(tau / pp.dur);                // explode, then settle
+      const pop = backOut(Math.min(1, tau / 0.14), 2.2);
+      pp.obj.position.set(
+        lerp(pp.p0[0], pp.p1[0], k), lerp(pp.p0[1], pp.p1[1], k) + Math.sin(sec * 2.4 + pp.ph) * 0.06 * k,
+        lerp(pp.p0[2], pp.p1[2], k));
+      pp.obj.rotation.set(pp.r0[0] + pp.w[0] * (1 - k * 0.8) * tau, pp.r0[1] + pp.w[1] * tau, pp.r0[2] + pp.w[2] * (1 - k * 0.8) * tau);
+      pp.obj.scale.setScalar(pp.s * pop);
+    });
+  },
+  layers: [
+    // flat matte (black or white): the film is rendered on both and difference-matted to RGBA; the page draws
+    // the sunburst and halftone itself, full-screen
+    { name: 'bg', type: '2d', draw(ctx, g) { g.fillStyle = C.matte; g.fillRect(0, 0, DW, DH); } },
+    // focus lines rushing in before the slam, then a burst of impact lines
+    { name: 'speed', type: 'brush', draw(ctx, p, brush) {
+      const sec = ctx.sec, r = ctx.boilRng('speed');
+      const inA = 1 - seg(sec, 0.3, 0.55), hit = sec - T_SLAM;
+      if (inA > 0) {
+        brush.noFill();
+        for (let i = 0; i < 34; i++) {
+          const a = (i / 34) * Math.PI * 2 + r.gauss(0, 0.04), R0 = 700 + r() * 200, R1 = lerp(R0, 360 + r() * 90, seg(sec, 0, 0.3));
+          brush.set('marker', INK, 1.2 + r() * 1.6);
+          brush.line(PANEL.cx + Math.cos(a) * R0, PANEL.cy + Math.sin(a) * R0 * 0.8, PANEL.cx + Math.cos(a) * R1, PANEL.cy + Math.sin(a) * R1 * 0.8);
+        }
+      }
+      if (hit > 0 && hit < 0.3) {
+        const k = hit / 0.3;
+        for (let i = 0; i < 22; i++) {
+          const a = (i / 22) * Math.PI * 2 + 0.07, R0 = 470 + 120 * k, R1 = R0 + 90 * (1 - k) + 20;
+          brush.set('pen', INK, 2.4 * (1 - k) + 0.6);
+          brush.line(PANEL.cx + Math.cos(a) * R0, PANEL.cy + Math.sin(a) * R0 * 0.78, PANEL.cx + Math.cos(a) * R1, PANEL.cy + Math.sin(a) * R1 * 0.78);
+        }
+      }
+    } },
+    // the comic panel: white gutter + the Q-version art (slow push-in)
+    { name: 'panel', type: '2d', draw(ctx, g) {
+      const P = panelPose(ctx.sec); if (P.alpha <= 0) return;
+      g.save(); g.globalAlpha = P.alpha;
+      g.translate(PANEL.cx + P.dx, PANEL.cy + P.dy); g.rotate(P.rot); g.scale(P.k, P.k);
+      g.fillStyle = 'rgba(29,26,46,.28)'; g.fillRect(-PANEL.w / 2 + 14, -PANEL.h / 2 + 18, PANEL.w + 28, PANEL.h + 28);   // offset print shadow
+      g.fillStyle = '#fffdf7'; g.fillRect(-PANEL.w / 2 - 16, -PANEL.h / 2 - 16, PANEL.w + 32, PANEL.h + 32);
+      g.beginPath(); g.rect(-PANEL.w / 2, -PANEL.h / 2, PANEL.w, PANEL.h); g.clip();
+      const z = 1.0 + 0.04 * seg(ctx.sec, T_SLAM, 2.25);
+      g.drawImage(ART, -PANEL.w / 2 * z, -PANEL.h / 2 * z, PANEL.w * z, PANEL.h * z);
+      g.restore();
+    } },
+    // boiling ink around the panel
+    { name: 'panelInk', type: 'brush', draw(ctx, p, brush) {
+      const P = panelPose(ctx.sec); if (P.alpha <= 0.3) return;
+      const r = ctx.boilRng('frame'), c = panelCorners(P);
+      brush.noFill(); brush.set('pen', INK, 5.2);
+      for (let i = 0; i < 4; i++) {
+        const [x0, y0] = c[i], [x1, y1] = c[(i + 1) % 4];
+        brush.line(x0 + r.gauss(0, 1.2), y0 + r.gauss(0, 1.2), x1 + r.gauss(0, 1.2), y1 + r.gauss(0, 1.2));
+      }
+    } },
+    // comic 3D props
+    { name: 'fx3d', type: 'three', init(ctx, { THREE }) {
+      const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, ctx.W / ctx.H, 0.1, 100);
+      camera.position.set(0, 0, 12); camera.lookAt(0, 0, 0);
+      scene.add(new THREE.AmbientLight(0xffffff, 1.25));
+      const key = new THREE.DirectionalLight(0xffffff, 2.1); key.position.set(-3, 4, 6); scene.add(key);
+      const r = rng(C.seed || 3, 'props'), props = [];
+      const kinds = C.props, n = C.count || 24;
+      for (let i = 0; i < n; i++) {
+        const kind = kinds[i % kinds.length], color = C.colors[i % C.colors.length];
+        const obj = makeProp(THREE, kind, color, r); scene.add(obj);
+        // every prop bursts from the panel's rim toward and past the camera, out of frame by ~1.6 s
+        const a = (i / n) * Math.PI * 2 + r() * 0.3;
+        const ex = Math.cos(a), ey = Math.sin(a) * 0.8;
+        const p0 = [ex * 1.1, ey * 0.9 - 0.1, 0.6];
+        const far = 1 + r() * 0.5;
+        const p1 = [ex * 6.2 * far, ey * 5.0 * far, 2.5 + r() * 3.5];
+        props.push({ obj, p0, p1, delay: r() * 0.16, dur: 1.3 + r() * 0.4, s: (kind === 'confetti' ? 0.75 : 0.62) * (0.8 + r() * 0.4),
+          r0: [r() * 6, r() * 6, r() * 6], w: [(r() - 0.5) * 9, (r() - 0.5) * 7, (r() - 0.5) * 9], ph: r() * 6 });
+      }
+      T = { THREE, scene, camera, props };
+      return { scene, camera };
+    }, draw() {} },
+    // caption paper: fill (2d) then ink (brush) then letters (2d)
+    { name: 'bannerFill', type: '2d', draw(ctx, g) {
+      const s = seg(ctx.sec, 0.55, 0.9); if (s <= 0) return;
+      const y = lerp(1040, 770, backOut(s, 1.4));
+      g.save(); g.translate(600, y); g.rotate(-0.022);
+      g.fillStyle = 'rgba(29,26,46,.3)'; g.fillRect(-418 + 10, -66 + 12, 836, 132);
+      g.fillStyle = '#fffaf0'; g.fillRect(-418, -66, 836, 132);
+      g.restore();
+    } },
+    { name: 'top', type: 'brush', draw(ctx, p, brush) {
+      const sec = ctx.sec, r = ctx.boilRng('top');
+      const s = seg(sec, 0.55, 0.9);
+      if (s > 0) {
+        const y = lerp(1040, 770, backOut(s, 1.4)), a = -0.022, c = Math.cos(a), sn = Math.sin(a);
+        const pts = [[-418, -66], [418, -66], [418, 66], [-418, 66]].map(([x, yy]) => [600 + x * c - yy * sn, y + x * sn + yy * c]);
+        brush.noFill(); brush.set('pen', INK, 4.4);
+        for (let i = 0; i < 4; i++) brush.line(pts[i][0] + r.gauss(0, 1), pts[i][1] + r.gauss(0, 1), pts[(i + 1) % 4][0] + r.gauss(0, 1), pts[(i + 1) % 4][1] + r.gauss(0, 1));
+      }
+      const b = seg(sec, 0.9, 1.08);
+      if (b > 0) { const k = backOut(b, 2); burst(brush, ctx, C.sfxAt[0], C.sfxAt[1], 190 * k, 112 * k, { fill: C.sfxFill, spikes: 13, key: 1, rot: 0.2 }); }
+    } },
+    { name: 'text', type: '2d', draw(ctx, g) {
+      const sec = ctx.sec, jitter = ctx.boilRng('letters');
+      const s = seg(sec, 0.62, 0.95);
+      if (s > 0) {
+        const y = lerp(1040, 770, backOut(seg(sec, 0.55, 0.9), 1.4));
+        letter(g, ctx, C.title, 600, y - 14, C.titleSize || 58, C.titleColor, { pop: s, rot: -0.022, stroke: '#fffaf0', jitter });
+        g.save(); g.globalAlpha = seg(sec, 0.85, 1.05); g.translate(600, y + 40); g.rotate(-0.022);
+        g.font = ctx.font('Inter', 22, 700); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#4a4560';
+        g.fillText(C.kicker, 0, 0); g.restore();
+      }
+      const b = seg(sec, 0.96, 1.2);
+      if (b > 0) letter(g, ctx, C.sfx, C.sfxAt[0], C.sfxAt[1], C.sfxSize || 50, C.sfxColor, { pop: b, rot: 0.14, stroke: INK, jitter });
+    } },
+  ],
+});
+</script></body></html>
