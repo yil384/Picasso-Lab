@@ -8,8 +8,13 @@
    burst pop in.
    Loop (3.2 s bar = 4 beats): spots sweep once a bar, glow sticks sway, a music note floats off
    the mic every beat, a heart rises from the crowd every other beat, both bursts hop on the
-   downbeat, the LIVE dot blinks.
+   downbeat, the LIVE dot blinks. The mic itself stays put in his fist once it has unfolded.
+   The kiss (t = 2.5 s, then every other bar): a pair of glossy comic lips flies in over the left
+   rim on a little arc over his hair, dropping small hearts, smacks onto his cheek at 3.0 s
+   (squash, impact dashes, a hand-lettered MUAH! over his hair) and lifts off, leaving a
+   lipstick print and a soft blush on the cheek; they stay ~2.7 s and fade before the next kiss.
    Photo landmarks (512 px): lips 338,192 · chin 322,222 · ear 207,163 · collar 232,262 ·
+   eye 302,133 · mouth corner 313,193 · sideburn edge 244,164 · cheek (print centre) 281,180 ·
    popsicle 319-447 x 197-395 (stick into the fist at 385-413) · fist top edge 366,402 -> 424,381 ·
    mic grip 400,390 -> grille centre 347,220 (17 deg from vertical, along the popsicle). */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
