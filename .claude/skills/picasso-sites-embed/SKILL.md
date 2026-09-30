@@ -33,8 +33,13 @@ standalone pages such as `events/guandan.html` and `blogs/nvidia-ising/`.
 - **Back/forward for in-page views = the nav-frame pattern.** Keep the view state in the fragment of a tiny hidden
   iframe (`https://yil384.github.io/Picasso-Lab/nav-frame.html`, it posts `{picassoNav: hash}` to its parent);
   opening a view navigates that frame (one entry), Back moves only that frame. Copy the `createNavHistory` helper
-  verbatim from `blogs/blogs.html` (also in `projects/projects.html`, `events/events.html`): `push`, `replace`,
-  `pop` (goes back one step only when the entry behind is ours), and an `onTraverse(view)` callback.
+  verbatim from `blogs/blogs.html`: `push`, `replace`, `pop(view, steps = 1)` and an `onTraverse(view)` callback.
+  It keeps a stack of its own entries: `pop` goes back `steps` entries (`history.go(-steps)`) only when they are all
+  ours, otherwise it replaces the current entry with `view`. The frame's report of the entry a pop lands on is
+  swallowed even when it comes late (up to 3000 ms; echoes arrive ~1 s late while a film is running), so it can
+  never undo what the visitor did since; any other report is the visitor traversing and goes to `onTraverse`.
+  `projects/projects.html` and `events/events.html` still carry the older one-step version (`depth` counter, the
+  pop landing reaches `onTraverse`), which is enough for their single-level views; use the blogs one for new work.
 - The embed and everything inside it are **sandboxed without allow-top-navigation**: a frame may only move history
   for frames in its own subtree, so `history.back()` from a child iframe is silently ignored when the step would also
   move a sibling. Call it from the embed document.
@@ -49,17 +54,31 @@ standalone pages such as `events/guandan.html` and `blogs/nvidia-ising/`.
 - Google runs **`localStorage.clear()` on every load** and the origin is random per load: browser storage never
   persists in an embed. Persist through a GitHub-Pages iframe (storage partitioned under the Sites top level) if needed.
 - `position: fixed; inset: 0` covers the embed box (the visible embed area), not the whole Sites page.
+- The embed document has no doctype of its own, so it runs in **quirks mode** (`document.compatMode ===
+  'BackCompat'`): `documentElement.clientHeight` is the whole document, so read the viewport size from
+  `document.body` there (`innerWidth`/`innerHeight` as the fallback). `overflow` on `body` makes body the scroll
+  box and breaks `position: sticky`.
+- Google's own (i) button sits over every embed, 12-60 px from the left and 12-64 px from the bottom: keep inputs
+  and buttons out of that corner.
 
 ## Testing inside the real Sites page
 - Load the live Sites page and **swap the embed for your local file**: route the Sites page request, `fetch()` it, and
   replace the `data-code="…"` attribute with `html.escape(local_html, quote=True)`. Route
   `https://yil384.github.io/Picasso-Lab/**` to your checkout so assets come from your working tree.
+  `.claude/skills/picasso-avatar-fx/test/harness.js` does all of this: `open({ width, height, swaps: { '<text only
+  in the live embed>': '<local file>' } })`, then `gotoSites(page, 'https://yufeiding.ucsd.edu/<page>')`, then find
+  the `about:blank` frame holding your element.
 - Real Back-button behaviour needs Chrome's own path: load a tiny MV3 extension whose service worker calls
   `chrome.tabs.goBack(tabId)` (Playwright `launch_persistent_context(channel='chromium')` with `--load-extension`).
   `history.back()` from script and CDP `navigateToHistoryEntry` do NOT reproduce the blank-page bug.
   A ready-made harness: `video-kit/anime/tiga/test/harness.py` + `test/ext/` on branch `video-kit`.
 - Google Sites is slow and flaky under routing: wait for `domcontentloaded` with retries, then poll for your embed's
   element; `networkidle` never arrives (analytics pings).
+- In a cloud container (outbound traffic through a proxy) route every request through Playwright's
+  `route.fetch()` with retries and cache the responses on disk: Chromium's own network stack gives up with
+  `ERR_TOO_MANY_RETRIES`. Chrome's device emulation does not reach the cross-origin embed unless you launch with
+  `--disable-site-isolation-trials --disable-features=IsolateOrigins,site-per-process`, and a host test page needs
+  a viewport meta or phone layouts come out zoomed.
 - **Never write to production Firebase / Supabase in tests.** Stub `https://www.gstatic.com/firebasejs/**` with the
   stubs in `guandan-kit/harness/` (branch `guandan-cloud`: `fb-stub-app.js`, `mustkeep.DB_STUB`) and abort
   `*firebaseio.com*` / `*supabase.co*`.

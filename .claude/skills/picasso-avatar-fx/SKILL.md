@@ -53,6 +53,17 @@ in front, so a prop between z = 0 and that z sits in the hand. `k.toon`, `k.ink(
 `k.glowSprite`, `presence(t, e, t0, dur, ease, order)`, `env`, `ease`, `rng`. `k.q` / `draw2d(q, …)` = q5.js
 (p5 API) in screen space (logical px; don't reset its transform); system fonts only.
 
+## Gotchas (learned the hard way)
+- Versions: three.js 0.160 from jsdelivr through the import map in each snippet; q5.js 4.8.3 for the 2D layer.
+  `new Q5('graphics')` draws into an OffscreenCanvas (`createCanvas(W, H, {alpha: true})`, `pixelDensity(dpr)`);
+  the kit copies it onto a visible canvas every frame.
+- Phones are detected with `Math.min(screen.width, screen.height) < 600` (class `pfx-phone`).
+- Photo layers: no mipmaps (they blurred busy photos the moment the effect switched on).
+- GLSL: `flat` is a reserved word; don't name a variable that.
+- `make_layers.py` runs one process per image: the BiRefNet matte (rembg `birefnet-portrait`) crashes after the
+  first image in a process. Plates are OpenCV TELEA inpaints, blurry where the person was: never leave a big
+  plate area uncovered while the person layer moves away.
+
 ## Rules the user cares about
 Default = plain photo; t = 0 identical to the photo; entrance ≤ ~1.3 s, staged; then a calm loop (3–4 s beat,
 busy ≤ 25 %); exit ≤ 0.5 s back to the exact photo. Stay inside the circle (≤ ~8 logical px overflow; desktop puts
@@ -61,8 +72,16 @@ bold props placed exactly on the real
 photo (hands, head, chest) — "3D comic": toon + ink, no generic glow haze, no emoji, no clutter.
 
 ## Test (trust frames, not code)
-The session that built this kept a Playwright harness in its scratchpad (`pfx_test.js` + `harness.js`): it
-document.write()s the snippet into a 266 x 284 (desktop) or 257 x 274 (phone) iframe, routes
+The harness is in `test/` next to this file (`harness.js`, `pfx_test.js`, `pfx_ana.py`, `sheet.py`; run it from a
+scratch directory, frames land in `./shots`):
+```bash
+export NODE_PATH=/opt/node22/lib/node_modules DSF=2          # wherever playwright is installed
+node $SKILL/test/pfx_test.js zhuo_gold_medal zhuo_d 0,0.3,0.9,1.5,3.3 0.3,0.6,1 0 266 284
+python3 $SKILL/test/pfx_ana.py zhuo_d 266 284 0 2            # t0 / exit / off vs photo, overflow, tile edge
+python3 $SKILL/test/sheet.py sheet.jpg shots hov,t000,t090,t150,tilt,x100,zoff zhuo_d   # then look at it
+```
+`OVERRIDE=zhuo.js=/path/old.js` serves another copy of a scene (a control run). `pfx_test.js`
+document.write()s the snippet into a 266 x 284 (desktop) or 257 x 274 (phone) iframe (or `TW TH`), routes
 `https://yil384.github.io/Picasso-Lab/**` to the working tree **with `Access-Control-Allow-Origin: *`** (the
 kit is an ES module loaded cross-origin, like on GitHub Pages), hovers, clicks, holds the effect clock at chosen
 times through `window.__pfxClock = () => t` (and `window.__pfxExit = () => e` for the exit), screenshots each
