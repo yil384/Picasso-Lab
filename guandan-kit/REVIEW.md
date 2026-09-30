@@ -413,6 +413,35 @@ the real pages against the in-memory Firebase stub (a widened database stub for 
 - **MK-1** [eggs · low · portrait, room] The "试试输入 picasso" pill lands over the blank right half of the settings panel's 目标 row (`.room-panel`, 140×30 px at 233,667). It hides no text or control, so this is what remains of R1-14/R1-20 there.
   - _Fix:_ in the portrait room, place the hint in the header band beside 好友同玩, or above the panel title (top ≈ 96 CSS px).
 
+### AI-tell lens — finished on the merged build (5c33f71)
+Method: a static sweep of `guandan.html` and the five stylesheets against SPEC §3, all 258 `L(en, zh)` strings read, then the
+scene set looked at on phone (9 sheets), portrait, desk and a 16-frame capture of the deal + VS intro, plus behaviour probes
+(text selection, dragging, focus, scrollbars). Evidence in the git-ignored `scratch/sheets/` and `scratch/shots-r2/`.
+
+Clean: no `backdrop-filter`, `conic-gradient`, CSS mask, `border-image`, blur filter or glow in any Guandan stylesheet; no emoji in
+`guandan.html` or `guandan-records.js` (only the card suits and the ☰ glyph); the three infinite animations are the timer pulse, the
+报牌 pulse and the loading spinner (all purposeful); the lobby's `drop-shadow`s are hard, un-blurred offsets; the copy is short,
+Chinese-first and free of advisor sentences; the deal, VS intro and 首出 read as one designed sequence (VS held about 2.5 s,
+cross-faded into the flying backs, the hand fans in, 首出 shows). The overlap with round 2's fidelity findings is large
+(bomb/word-art effects R2-02/03/10, stroked titles R2-17/21, initials/letter discs R2-12, stripe R2-14, EN strings R2-23), so only
+what those did not cover is listed. 1 medium, 6 low.
+
+- **AT-1** [shared · all · medium] Lobby, room, popups, results and records are ordinary selectable web text: `user-select` is `auto` on `body`, `.lobby`, the tiles and the nav; only the table stage sets `none`. Ctrl+A in the room paints browser-blue selection over 491 characters (titles, seat plates, chips, steppers; `scratch/shots-r2/sel-room-ctrlA.jpg`), a double-click or drag does the same, and on phones a long press selects and offers the callout. Most lobby images can also be dragged out as a ghost (only the seat photo has `draggable="false"`). Tencent's UI never selects.
+  - _Fix:_ guandan-ui.css: `body { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none }`, `img { -webkit-user-drag: none }`, `button, [role=button] { touch-action: manipulation }`; then `user-select: text` on `input, textarea` only (nickname, room code).
+- **AT-2** [lobby · room · low · all] An empty seat is a dashed-outline circle with "+ 入座" and a separate blue "AI" chip. That is the generic web empty-state placeholder. Tencent's invite slot (tx_p3_img3, 我的队伍) is a solid gold tile with a "+".
+  - _Fix:_ solid gold disc (`#ffe08a→#f2b43c`) with a white "+" and the 入座 plate under it; keep the AI chip as a small cap.
+- **AT-3** [lobby · rail · low · all] The 赛季MVP rail item says the same thing twice: an "MVP" ribbon on the avatar and the label 赛季MVP, with the stroked label overlapping the avatar's lower edge.
+  - _Fix:_ keep the ribbon and set the label to 赛季冠军 / "Season MVP" without the repeat, or drop the ribbon text for a crown glyph; leave a gap under the avatar.
+- **AT-4** [table · low · phone, desk] A toast outlives its screen: 房间已创建 (2.6 s) is still on screen over the 巅峰对决 poster in the first 1.1 s of the intro when the host presses 开始游戏 within its lifetime (frames at 625, 873 and 1123 ms in `scratch/sheets/deal-seq.jpg`).
+  - _Fix:_ clear the toast when `body.dataset.screen` changes or when the intro starts.
+- **AT-5** [english · room · low] More literal strings: the room row 出牌时间 is "Turn 3 min" (reads as a seat turn), and the rules tabs pair 出牌/"Turns" with 出牌记录/"Plays".
+  - _Fix:_ "Time limit 3 min"; "Turn" (rules tab) and "Play log". Fold into R2-23.
+- **AT-6** [shared · low · all] Scroll panes (`.gd-rules-pane`, `.room-roster-list`, the lab-deck grid, popup bodies) use the classic browser scrollbar on desktop; only the records board styles its own (`scrollbar-width: thin`). Not visible in headless captures (overlay scrollbars), so this is from the CSS.
+  - _Fix:_ `scrollbar-width: thin; scrollbar-color: rgba(28,47,102,.35) transparent` on those panes.
+- **AT-7** [shared · low · all] The single-colour white glyph family (menu rows, room header chips, tool pills, the lobby nav 邀请/历史对阵/排行榜/设置) is generic; yxrb_lobby's nav uses two-tone illustrated icons (crown, mail, gear, podium). They are filled with hard shadows, so they do not read as thin-stroke Lucide icons, which keeps this low.
+  - _Fix (optional):_ give the four lobby nav glyphs a second tone (gold or periwinkle accent).
+  - _Also:_ the tab title is "Picasso Lab Guandan Arena", the only English marketing name in the product (no `theme-color` either). Suggest "掼蛋 · Picasso Lab".
+
 ## Handoff status
 - **Done (previous sessions):**
   - gd3/table and gd3/lobby merged.
@@ -428,16 +457,16 @@ the real pages against the in-memory Firebase stub (a widened database stub for 
 - **Review round 2: partial.** The fidelity-table, fidelity-meta and gameplay-QA lenses finished: 32 findings (7 medium, 25 low, no high) and scores for 11 of the 12 screens (see Round 2 above).
   - Below 8: lobby 7, popups 7.5, table-moments 6.5, portrait 7.5, english 7.5.
 - **Done (session 3, 2026-09-30):** harness re-set up (proxy CA in Chromium's NSS store, references downloaded, phone/portrait/desk baselines re-captured into `scratch/shots-r2`, zero console errors); **must-keep lens finished** (see above: all pass, MK-1 low), `harness/mustkeep.py` added.
+  **AI-tell lens finished** too (1 medium, 6 low; see above).
 - **Missing from round 2:**
-  - **AI-tell hunter** (must-keep is done, see above): it started and stopped writing at 14:21:32 UTC on 2026-09-29; the workflow then hung for about 11 h until the user stopped it.
-  - **Round-1 re-check (prev-verify):** never started. The workflow runs min(16, CPUs − 2) = 2 agents at a time on this 4-CPU container, so it was still queued.
-  - **Synthesizer:** never ran. The 32 findings are not deduplicated or calibrated, and eggs is unscored.
-  - As a result, the must-keep items (events.html egg/mvp flows, picasso transition, BGM, portraits), the AI-tell sweep, and every round-1 fix not confirmed in passing are **unverified** on the merged build.
-- **Fix round 2:** not started (the user asked to stop here).
-- **Next:**
-  1. Run only the three missing lenses (AI-tell, must-keep, round-1 re-check). One or two at a time, with a wall-clock cap per reviewer, so a killed browser cannot hang the round. review-round.js has no lens filter yet: add one, e.g. `args.only`.
-  2. Synthesize round 2: these 32 findings plus the new ones. Dedupe, calibrate, and score eggs.
-  3. Fix round 2 by track (table-core, table-moments, lobby, eggs/records), each checked by an independent verifier, then re-shoot every scene.
-  4. Round 3, and more rounds, until every screen scores ≥ 8 with no high or medium finding.
+  - **Round-1 re-check (prev-verify):** not run yet. Do it next, inline: verify each round-1 fix that round 2 did not confirm in passing (the "unverified" list above), on screenshots and DOM probes.
+  - **Synthesizer:** not run yet. The 32 + 1 + 7 findings are not deduplicated or calibrated, and eggs is unscored (must-keep and AI-tell now give it enough evidence to score).
+- **Fix round 2:** not started.
+- **Next (no multi-agent workflow; one lens or one fix group at a time, push after each):**
+  1. Round-1 re-check, appended to Round 2 above.
+  2. Synthesize round 2: dedupe R2-01..32, MK-1, AT-1..7; calibrate; score every screen incl. eggs.
+  3. Fix round 2: medium first (R2-01..07, AT-1), then the cheap lows, in small groups, each verified on screenshots at the SPEC viewports and pushed.
+  4. Round 3 lens by lens, fix, and repeat until every screen scores ≥ 8 with no high or medium finding.
   5. Merge origin/main (keep main's non-Guandan files), replay a full round, and push guandan-cloud.
   6. Final report per HANDOFF §6.
+- **Environment notes (session 3):** Chromium trusts the proxy CA via `~/.pki/nssdb` (HANDOFF §5, redo after a container reset); `refs/fetch_refs.sh` sometimes times out on news.yxrb.net (rerun it or curl the two files again); the phone `events.html` has an award intro ("TAP TO CONTINUE") over the page until tapped. Harness: `GD_SHOTS=<dir> python3 scenes.py phone portrait desk` (about 2 min per viewport), `python3 mustkeep.py all desk phone portrait` (about 6 min).
