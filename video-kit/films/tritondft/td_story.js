@@ -5,7 +5,7 @@ import { L, station, ST, buildRoom, buildBench, buildSilicon, buildEngine, build
 import { buildTri, buildClack, buildLoupe, buildTilt, buildConsole, buildHoot } from './td_cast.js';
 import { buildWord3D } from './td_glyph3d.js';
 import { paintWord } from './td_letters.js';
-import { mixRig, applyCamera } from './td_cam.js';
+import { mixRig, applyCamera, rigPos } from './td_cam.js';
 
 export const NF = 720;               // 30 s @ 24 fps
 export const POSTER = 664;
@@ -41,7 +41,8 @@ export const K = {
   read7: 510, ding: 530, planks: [534, 546], toFunnel: [548, 561], suck: [561, 568],
   land: 590, take: 590, outs: [598, 604, 610], clack68: [622, 636],
   slam: [628, 636, 644],
-  puffs: 686, handBack: [680, 686], dive: [686, 689, 692, 695], yawn: [686, 700], lay: [698, 712], flop: [710, 718],
+  // the dives: all four agents are inside the bell by f702, before the tipping giant reaches it
+  puffs: 686, handBack: [678, 684], dive: [684, 687, 690, 693], yawn: [686, 700], lay: [698, 712], flop: [710, 718],
 };
 
 // the job on the turntable ring: world theta (plan 135, exec 45, anlz -45 deg; the Refiner's stop is at -100, short of
@@ -498,10 +499,13 @@ function outState(k, F) {
   // that, diving back it springs up under the mouth, stretches and is sucked in from below (never through the pipe wall)
   let shrink = a < 4 ? lerp(0.22, 1, oc(a / 4)) : 1;
   if (F >= K.dive[k]) {
-    const b = clamp((F - K.dive[k]) / 9), under = [mouth.x, mouth.y - 0.55, mouth.z];
-    pos = b < 0.6 ? [lerp(pos[0], under[0], sm(b / 0.6)), lerp(pos[1], under[1], sm(b / 0.6)) + 0.25 * Math.sin(Math.PI * b / 0.6), lerp(pos[2], under[2], sm(b / 0.6))]
-      : [mouth.x, lerp(under[1], mouth.y - 0.16, ic((b - 0.6) / 0.4)), mouth.z];
-    shrink = b < 0.5 ? 1 : lerp(1, 0.18, sm((b - 0.5) / 0.5)); sq = -0.2 - 0.25 * sm((b - 0.4) / 0.6); expr = 'grin';
+    // fly to a point on the bell's axis below the mouth, squeeze there to well under the mouth's width, then rise into the
+    // bell (whose front wall hides it): nothing ever crosses the rim wider than the opening
+    const b = clamp((F - K.dive[k]) / 9), under = [mouth.x, mouth.y - 0.95, mouth.z];   // low enough that a full-size agent is below the rim
+    pos = b < 0.5 ? [lerp(pos[0], under[0], sm(b / 0.5)), lerp(pos[1], under[1], sm(b / 0.5)) + 0.25 * Math.sin(Math.PI * b / 0.5), lerp(pos[2], under[2], sm(b / 0.5))]
+      : b < 0.72 ? [...under] : [mouth.x, lerp(under[1], mouth.y - 0.2, ic((b - 0.72) / 0.28)), mouth.z];
+    shrink = b < 0.5 ? 1 : b < 0.72 ? lerp(1, 0.28, sm((b - 0.5) / 0.22)) : lerp(0.28, 0.14, (b - 0.72) / 0.28);
+    sq = -0.2 - 0.2 * sm((b - 0.5) / 0.3); expr = 'grin';
   }
   return { pos, yaw, sq, expr, arm, a, shrink };
 }
@@ -532,7 +536,7 @@ function updateTri(F) {
   }
   if (F >= K.deal[2] + 6 && F < K.S3 + 20) { expr = 'happy'; armR = -0.6; }
   if (win(F, K.ding + 4, K.suck[0])) { const c = arc(F, K.ding + 4, K.ding + 16); expr = 'grin'; armR = -2.6 * Math.max(c, 0.6); hop = 0.1 * c; }   // the team cheers the DING
-  if (win(F, K.salute - 8, K.salute + 10)) { armR = -2.8 * arc(F, K.salute - 8, K.salute + 10); expr = 'grin'; yaw = faceYaw(home, jobPos(F)); }
+  if (win(F, K.salute - 8, K.salute + 10)) { armR = -2.8 * arc(F, K.salute - 8, K.salute + 10); expr = 'grin'; yaw = faceYaw(home, rigPos(camRig(F))); }   // salutes the orbiting camera (never edge-on)
   const out = outState(0, F);
   if (out) { pos = out.pos; yaw = out.yaw; sq = out.sq; expr = out.expr; armR = out.arm; armL = -out.arm * 0.8; if (F >= K.handBack[0] && F < K.dive[0] + 10) armR = -1.4; }
   R.root.visible = !out || !out.hidden;

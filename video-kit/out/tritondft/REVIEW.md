@@ -165,7 +165,7 @@ the fixes below came after it, so the final must be re-rendered from the branch 
 | lens | score | verdict |
 |---|---|---|
 | CD | **8.2** | Loupe fully visible in the payoff and the ink fading on peak whips fixed. Two regressions from the round-5 tweaks: the iris reopened ~165 px off-centre (f383→384), and the delivered result sank into Hoot's notebook and hid behind the 68 (f598–683). |
-| TA | *(see below)* | |
+| TA | **8.1** | Best NPR base yet; TA5-1 resolved (one continuous smear, characters keep their fills, no rain on slow moves) and TA5-2 mostly resolved (Loupe, the returned result and the tipping giant clean). Must-fix: agents still wider than the brass bell as they enter (f688–698); Clack's photobomb arc through the lampshade (f644–648); the iris lost its shape match (f383→384). Should: whips under-smeared since the cap, Tri edge-on in the lap (f476–479), 2D marks over nearer objects, Big Iron's brass sheen, CRF 23 softening the paper grain slightly (halftone and ink intact, no banding). |
 | DFT | **8.7** | No must-fix; physics, order and all numbers honest (both clocks f70, TINK f589/590, the giant's one-load pile visible, 39/40 ticks on the benchmark card only, four pennies). Should: the result hidden behind 68× in the poster; the new scf ticket read as a bent triatomic; a PW.X sheet back in Clack's carriage after it was fed to Big Iron. |
 | WEB | **8.8** | No must-fix; every beat in the band; value on series (6.5% of pixels under luma 0.15 at 400×195 vs ChipMate 6.6%); hue 197–198°; master and card within spec (faststart, bt709, 720 f, 30.000 s; poster = loop frame 0 = f664); clean seam. Should: Clack hidden behind Loupe in the poster, Tri landing under the LIVE pill (f609–621), the CRF-32 card smudging the halftone on HiDPI, the warm desk vs ChipMate's amber poster. |
 
@@ -175,14 +175,19 @@ Fixes made after the round-6 cut (spot-checked frame by frame at 960×540; all c
 - Clack photobombs from the top of the tall paper tower (its grin back in the poster, above Loupe on its 98%).
 - A painted pale-blue desk with a cream blotter: the poster's warm share 50% → 31% (sky + cream + the two numeral pops).
 - scf ticket = one straight Si–Si bond with a density lozenge; Clack's carriage stays empty after the PW.X input is fed.
+- TA must-fixes: every agent now flies to a point on the bell's axis well below the mouth, squeezes there to well under
+  the opening's width, then rises into the bell (its front wall hides it), and all four are inside by f700, before the
+  tipping giant reaches the mouth (dives f684–693); Clack's new tower landing keeps its arc above the lampshade; the iris
+  fix above. Should: Tri salutes the orbiting camera (never edge-on); Big Iron's brass is matte.
 - Card encode: `encode_segs.py card2` (2-pass ABR to 3.9 MB, tune animation, spatial-only denoise): 3.85 MB, SSIM-Y
   0.887 vs 0.878 for CRF 32; `posterloop` makes the poster from the loop's decoded frame 0 (poster == first frame).
 
 ## Handoff status
 
 **State (branch `video/tritondft`):** scene final; review rounds 0–6 done. Last complete four-lens scores: CD 8.5 /
-TA 7.8 / DFT 8.8 / WEB 8.7 (round 5), then round 6 on the 1080p cut CD 8.2 / DFT 8.7 / WEB 8.8 (+ TA below), whose
-must-fixes are fixed in the code on the branch. No deliverables are committed yet: the 1080p final must be re-rendered
+TA 7.8 / DFT 8.8 / WEB 8.7 (round 5), then round 6 on the 1080p cut CD 8.2 / TA 8.1 / DFT 8.7 / WEB 8.8, whose
+must-fixes (CD, TA) are fixed in the code on the branch and spot-checked frame by frame at 960×540; purity and the
+loop (f720 == f0) re-verified after the last change. No deliverables are committed yet: the 1080p final must be re-rendered
 from this branch (the desk colour, the payoff staging and the iris changed after the cloud render).
 
 **Render the final (from the repo root; every step resumes if interrupted):**

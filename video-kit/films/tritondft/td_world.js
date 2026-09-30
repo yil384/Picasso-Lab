@@ -210,7 +210,7 @@ export function buildEngine(W) {
   const body = new THREE.Group(); g.add(body);
   const navy = { color: COL.navy, hatchMode: 'planar', hatchDir: [0, 1, 0], rim: 0.6, shadeColor: 0x06182b, shadeMix: 0.3 };
   const sky = { color: COL.sky, hatchMode: 'planar', hatchDir: [0, 1, 0], rim: 0.6, shadeColor: COL.navy, shadeMix: 0.35 };
-  const brass = { color: COL.gold, hatchMode: 'u', rim: 0.8, shadeColor: 0x9a5a2a, shadeMix: 0.35 };
+  const brass = { color: COL.gold, hatchMode: 'u', rim: 0.8, shadeColor: 0x9a5a2a, shadeMix: 0.35, spec: 0 };   // matte: no plastic sheen
   add(new THREE.BoxGeometry(E.w, E.h, E.d), sky, { outline: 1.2 }, [0, E.h / 2, 0], [0, 0, 0], body);
   add(new THREE.BoxGeometry(E.w + 0.12, 0.16, E.d + 0.12), navy, { outline: 0.9 }, [0, 0.08, 0], [0, 0, 0], body);
   add(new THREE.BoxGeometry(E.w + 0.1, 0.12, E.d + 0.1), navy, { outline: 0.9 }, [0, E.h - 0.02, 0], [0, 0, 0], body);
