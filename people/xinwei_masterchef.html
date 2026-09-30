@@ -16,8 +16,10 @@
     ④ 厨师帽     — 高筒褶皱厨师帽落在头顶, 落地只轻轻一压, 帽檐不会压到眼镜.
     ⑤ 围裙+领巾  — 白色参赛围裙, 黑金胸徽 (金色厨师帽), 红色领巾系在真实领口.
     ⑥ 主厨刀     — 握在他真实的左手 (观者右侧) 里, 刀尖搭在砧板上; 真手的拳头同样叠在刀柄上.
-    ⑦ Flambé     — 每 3.2 s 一团大火 (只占节拍的 ~20%) + 火星 + 锅轻颠 + 刀光一闪;
-                   间隙里锅上只留小火苗, 冒两缕蒸汽.
+    ⑦ 颠锅 Flambé — 每 3.2 s 颠一次锅 (只占节拍的 ~28%): 锅先往回一收一沉 (预备), 再往前一送一挑,
+                   锅里的菜 (西兰花, 虾, 红椒, 香菇, 荷兰豆, 豆腐) 翻着跟头飞起, 大火同时蹿起 +
+                   火星 + 刀光一闪; 菜落回锅里时锅一沉接住, 冒一小团热气. 间隙里锅上只留小火苗,
+                   锅铲在锅里来回翻炒两下, 冒两缕蒸汽.
     ⑧ 金奖杯     — 冠军奖杯立在右上调料架上, 在吊灯光束里, 每拍中段闪一下.
     ⑨ YES, CHEF! — 从他嘴边冒出的漫画对白气泡, 每次开启只喊一次, 然后退场.
 
@@ -198,7 +200,8 @@
              fill="#ffffff" stroke="#15151a" stroke-width=".9" stroke-linejoin="round"/>
       </g>
 
-      <!-- ① pan in his real right hand (viewer-left); fire rises out of it (pan back → fire → front lip) -->
+      <!-- ① pan in his real right hand (viewer-left): the wok toss. Back of the pan -> turner -> fire ->
+           food -> front lip, so the food sits IN the pan and flies up in front of the flames -->
       <g class="xc-pan" filter="url(#xcShadow)">
         <g class="xc-flick">
           <g stroke="#15151a" stroke-linejoin="round">
@@ -210,6 +213,12 @@
               <ellipse rx="14" ry="5" fill="#d3d9df" stroke-width="2"/>
               <ellipse rx="11.2" ry="3.4" cy=".3" fill="#5d646c" stroke="none"/>
             </g>
+          </g>
+          <!-- wooden turner left in the pan: stirs between the tosses -->
+          <g class="xc-turner" stroke="#15151a" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M38.4 146.4L51.4 127.4" stroke-width="3.6"/>
+            <path d="M38.4 146.4L51.4 127.4" stroke="#c98a4b" stroke-width="1.8"/>
+            <path d="M33.4 149.2L39.8 145.6L41.4 148.4L35 152Z" fill="#c98a4b" stroke-width="1.2"/>
           </g>
           <g class="xc-fire">
             <path d="M44.6 156A12.4 4.2 28 0 1 22.6 144.4C18.2 136.6 20 128.4 25.4 122C25 128.4 27.4 132 30.2 133.2C27.4 121.6 31.6 109.4 40.4 101C38.8 110.6 42 118.4 45.2 122.2C47.4 117.6 47.4 113 46.2 108.8C53.6 117 55.6 131.4 51.6 142.4C49.8 148 47.6 152.6 44.6 156Z"
@@ -225,10 +234,42 @@
               <circle class="xc-ember xc-e4" cx="34" cy="112" r="1.4"/>
             </g>
           </g>
+          <!-- the stir-fry: each piece sits in the pan, is thrown on the flick, tumbles and lands back -->
+          <g stroke="#15151a" stroke-width=".9" stroke-linejoin="round">
+            <g transform="translate(27.2 145.2) scale(1.15)"><g class="xc-food xc-f1">
+              <path d="M-.9 .5L-.6 2.9H.9L1.1 .5Z" fill="#9ccf6e"/>
+              <path d="M-3 .7A1.8 1.8 0 0 1 -1.7 -2.3A2 2 0 0 1 1.9 -2.1A1.8 1.8 0 0 1 3 .7Z" fill="#4fa83d"/>
+            </g></g>
+            <g transform="translate(31.4 146.8) scale(1.15)"><g class="xc-food xc-f2">
+              <path d="M2.8 -1.2C2.3 -3.3 -.9 -3.5 -2.6 -1.5C-3.8 .1 -2.9 2.8 -.4 3L0 1.4C-1.4 1.2 -1.9 .1 -1.3 -.6C-.5 -1.5 1 -1.4 1.3 -.7Z" fill="#ffd9c8"/>
+              <path d="M1.3 -.7L2.8 -1.2L3.4 .6Z" fill="#ff6a3d"/>
+              <path d="M-2.2 -1.2L-1 -.2M-.8 -2.2L0 -1" fill="none" stroke="#ff7a4d" stroke-width=".7"/>
+            </g></g>
+            <g transform="translate(35.4 148.8) scale(1.15)"><g class="xc-food xc-f3">
+              <path d="M-3.2 -.8Q0 -2.2 3.2 -.8L2.9 1.1Q0 -.1 -2.9 1.1Z" fill="#c9261f"/>
+            </g></g>
+            <g transform="translate(39.2 150.6) scale(1.15)"><g class="xc-food xc-f4">
+              <path d="M-2.7 .5A2.7 2.5 0 0 1 2.7 .5Z" fill="#7a4a2a"/>
+              <path d="M-.8 .5V2.5H.8V.5Z" fill="#ead7bf"/>
+            </g></g>
+            <g transform="translate(42.4 152.8) scale(1.15)"><g class="xc-food xc-f5">
+              <path d="M-3.2 .5Q0 -2.6 3.2 .2Q0 1.9 -3.2 .5Z" fill="#9ed36a"/>
+            </g></g>
+            <g transform="translate(33 146.2) scale(1.15)"><g class="xc-food xc-f6">
+              <rect x="-1.9" y="-1.9" width="3.8" height="3.8" rx=".5" fill="#fff4dc"/>
+            </g></g>
+          </g>
           <path transform="translate(33.6 150.2) rotate(28)" d="M-14 0A14 5 0 0 0 14 0L11.2 .3A11.2 3.4 0 0 1 -11.2 .3Z"
                 fill="#d3d9df" stroke="#15151a" stroke-width="2" stroke-linejoin="round"/>
         </g>
-        <!-- steam: rises while the fire is low, between bursts -->
+        <!-- whoosh: two speed arcs off the far lip as the pan flicks -->
+        <g class="xc-whoosh" fill="none" stroke="#f4f1ea" stroke-width="1.5" stroke-linecap="round">
+          <path d="M20.4 128.6Q15.2 136.4 17.6 145.4"/>
+          <path d="M25.4 124.4Q19.6 131.6 21.2 139.6"/>
+        </g>
+        <!-- steam: a puff as the food lands, then two wisps while the fire is low -->
+        <path class="xc-puff" d="M28.6 139.4A2.6 2.6 0 0 1 30.4 135A3.2 3.2 0 0 1 36.4 134A2.6 2.6 0 0 1 39.6 138.8Z"
+              fill="#f4f1ea" stroke="#15151a" stroke-width=".9" stroke-linejoin="round"/>
         <g fill="none" stroke="#f4f1ea" stroke-width="1.8" stroke-linecap="round">
           <path class="xc-wisp xc-w1" d="M30 140C27 135 33 131 30 126C27 121 32 118 30 114"/>
           <path class="xc-wisp xc-w2" d="M40 138C37 133 43 129 40 124C37 119 42 116 40 112"/>
@@ -479,8 +520,10 @@ body {
   transition: opacity .12s ease 1.3s, transform .3s cubic-bezier(.3, 1.5, .5, 1) 1.3s;
 }
 
-/* ⑦ one 3.2 s "service" beat: flambé burst (~20 % of the beat) + embers + wrist flick + knife glint;
-   then steam; the trophy glints mid-beat. Between bursts only a small still flame stays in the pan. */
+/* ⑦ one 3.2 s "service" beat, the wok toss (~28 % of the beat): the pan pulls back and dips
+   (anticipation, 0-4 %), pushes forward and flicks up (4-8 %: the food leaves, the flame flares, embers,
+   whoosh, knife glint), waits under the food, dips as it catches it (21 %) and settles (29 %); a puff of
+   steam. The rest of the beat is calm: a small flame, the turner stirs twice, two wisps of steam. */
 .xc-fire {
   transform-origin: 33.6px 151px;
   transform: scale(.4);
@@ -488,18 +531,134 @@ body {
 .xc-wrap.xc-on .xc-fire { animation: xc-flambe 3.2s ease-out .3s infinite both; }
 @keyframes xc-flambe {
   0%   { transform: scale(.4); }
-  5%   { transform: scale(1.1, 1.16); }
-  10%  { transform: scale(.96, 1); }
-  15%  { transform: scale(.72); }
-  20%  { transform: scale(.42); }
+  4%   { transform: scale(.34, .3); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  8.5% { transform: scale(1.1, 1.18); }
+  12%  { transform: scale(.98, 1.03); }
+  17%  { transform: scale(.72); }
+  23%  { transform: scale(.44); }
   100% { transform: scale(.4); }
 }
 .xc-flick { transform-origin: 64px 167px; }
-.xc-wrap.xc-on .xc-flick { animation: xc-flick 3.2s ease-out .3s infinite; }
+.xc-wrap.xc-on .xc-flick { animation: xc-flick 3.2s .3s infinite; }
 @keyframes xc-flick {
-  0%, 16%, 100% { transform: rotate(0deg); }
-  4%            { transform: rotate(-5deg); }
-  10%           { transform: rotate(1deg); }
+  0%       { transform: none; animation-timing-function: cubic-bezier(.4, 0, .6, 1); }
+  4%       { transform: translate(2.6px, 1.4px) rotate(-6deg); animation-timing-function: cubic-bezier(.3, .9, .4, 1); }
+  8%       { transform: translate(-2.4px, -1.6px) rotate(9deg); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  13%      { transform: translate(-.4px, 0) rotate(1deg); animation-timing-function: ease-in-out; }
+  19%      { transform: none; animation-timing-function: cubic-bezier(.3, .8, .4, 1); }
+  21.5%    { transform: translate(.5px, 1.4px) rotate(-3.2deg); animation-timing-function: ease-in-out; }
+  25.5%    { transform: rotate(.9deg); animation-timing-function: ease-in-out; }
+  29%, 100% { transform: none; }
+}
+/* the food: thrown just before the flick peaks, a full turn in the air, lands as the pan dips, bounces;
+   then nudged by the turner's strokes (each piece in its own box, so it turns about its own centre) */
+.xc-fx .xc-food { transform-box: fill-box; transform-origin: 50% 50%; }
+.xc-wrap.xc-on .xc-food { animation: 3.2s .3s infinite; }
+.xc-wrap.xc-on .xc-f1 { animation-name: xc-food1; }
+.xc-wrap.xc-on .xc-f2 { animation-name: xc-food2; }
+.xc-wrap.xc-on .xc-f3 { animation-name: xc-food3; }
+.xc-wrap.xc-on .xc-f4 { animation-name: xc-food4; }
+.xc-wrap.xc-on .xc-f5 { animation-name: xc-food5; }
+.xc-wrap.xc-on .xc-f6 { animation-name: xc-food6; }
+@keyframes xc-food1 {
+  0%, 6.5% { transform: none; animation-timing-function: cubic-bezier(.3, .6, .6, 1); }
+  9.5% { transform: translate(-1.6px, -31.68px) rotate(-108deg); animation-timing-function: cubic-bezier(.2, .6, .5, 1); }
+  13% { transform: translate(-4px, -44px) rotate(-180deg); animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  16.5% { transform: translate(-0.34px, -30.8px) rotate(-270deg); animation-timing-function: cubic-bezier(.4, 0, .9, .5); }
+  19.5% { transform: translate(2.65px, 1.41px) rotate(-360deg); animation-timing-function: ease-out; }
+  21.5% { transform: translate(2.65px, 0.11px) rotate(-360deg); animation-timing-function: ease-in; }
+  23.5%, 38% { transform: translate(2.65px, 1.41px) rotate(-360deg); }
+  44% { transform: translate(0.4px, 0.21px) rotate(-352deg); }
+  52% { transform: translate(1.41px, 0.75px) rotate(-366deg); }
+  60%, 100% { transform: rotate(-360deg); }
+}
+@keyframes xc-food2 {
+  0%, 7% { transform: none; animation-timing-function: cubic-bezier(.3, .6, .6, 1); }
+  10% { transform: translate(0.4px, -33.12px) rotate(108deg); animation-timing-function: cubic-bezier(.2, .6, .5, 1); }
+  13.5% { transform: translate(1px, -46px) rotate(180deg); animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  17% { transform: translate(1.42px, -32.2px) rotate(270deg); animation-timing-function: cubic-bezier(.4, 0, .9, .5); }
+  20% { transform: translate(1.77px, 0.94px) rotate(360deg); animation-timing-function: ease-out; }
+  22% { transform: translate(1.77px, -0.36px) rotate(360deg); animation-timing-function: ease-in; }
+  24%, 38% { transform: translate(1.77px, 0.94px) rotate(360deg); }
+  44% { transform: translate(-0.09px, -0.05px) rotate(352deg); }
+  52% { transform: translate(1.24px, 0.66px) rotate(366deg); }
+  60%, 100% { transform: rotate(360deg); }
+}
+@keyframes xc-food3 {
+  0%, 7.5% { transform: none; animation-timing-function: cubic-bezier(.3, .6, .6, 1); }
+  10.5% { transform: translate(2px, -33.84px) rotate(-108deg); animation-timing-function: cubic-bezier(.2, .6, .5, 1); }
+  14% { transform: translate(5px, -47px) rotate(-180deg); animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  17.5% { transform: translate(1.28px, -32.9px) rotate(-270deg); animation-timing-function: cubic-bezier(.4, 0, .9, .5); }
+  20.5% { transform: translate(-1.77px, -0.94px) rotate(-360deg); animation-timing-function: ease-out; }
+  22.5% { transform: translate(-1.77px, -2.24px) rotate(-360deg); animation-timing-function: ease-in; }
+  24.5%, 38% { transform: translate(-1.77px, -0.94px) rotate(-360deg); }
+  44% { transform: translate(-2.03px, -1.08px) rotate(-352deg); }
+  52% { transform: translate(0.53px, 0.28px) rotate(-366deg); }
+  60%, 100% { transform: rotate(-360deg); }
+}
+@keyframes xc-food4 {
+  0%, 7% { transform: none; animation-timing-function: cubic-bezier(.3, .6, .6, 1); }
+  10% { transform: translate(3.2px, -28.8px) rotate(108deg); animation-timing-function: cubic-bezier(.2, .6, .5, 1); }
+  13.5% { transform: translate(8px, -40px) rotate(180deg); animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  17% { transform: translate(2.14px, -28px) rotate(270deg); animation-timing-function: cubic-bezier(.4, 0, .9, .5); }
+  20% { transform: translate(-2.65px, -1.41px) rotate(360deg); animation-timing-function: ease-out; }
+  22% { transform: translate(-2.65px, -2.71px) rotate(360deg); animation-timing-function: ease-in; }
+  24%, 38% { transform: translate(-2.65px, -1.41px) rotate(360deg); }
+  44% { transform: translate(-2.52px, -1.34px) rotate(352deg); }
+  52% { transform: translate(0.35px, 0.19px) rotate(366deg); }
+  60%, 100% { transform: rotate(360deg); }
+}
+@keyframes xc-food5 {
+  0%, 7.5% { transform: none; animation-timing-function: cubic-bezier(.3, .6, .6, 1); }
+  10.5% { transform: translate(4px, -24.48px) rotate(-108deg); animation-timing-function: cubic-bezier(.2, .6, .5, 1); }
+  14% { transform: translate(10px, -34px) rotate(-180deg); animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  17.5% { transform: translate(2.8px, -23.8px) rotate(-270deg); animation-timing-function: cubic-bezier(.4, 0, .9, .5); }
+  20.5% { transform: translate(-3.09px, -1.64px) rotate(-360deg); animation-timing-function: ease-out; }
+  22.5% { transform: translate(-3.09px, -2.94px) rotate(-360deg); animation-timing-function: ease-in; }
+  24.5%, 38% { transform: translate(-3.09px, -1.64px) rotate(-360deg); }
+  44% { transform: translate(-2.76px, -1.47px) rotate(-352deg); }
+  52% { transform: translate(0.26px, 0.14px) rotate(-366deg); }
+  60%, 100% { transform: rotate(-360deg); }
+}
+@keyframes xc-food6 {
+  0%, 6.5% { transform: none; animation-timing-function: cubic-bezier(.3, .6, .6, 1); }
+  9.5% { transform: translate(-2.8px, -35.28px) rotate(108deg); animation-timing-function: cubic-bezier(.2, .6, .5, 1); }
+  13% { transform: translate(-7px, -49px) rotate(180deg); animation-timing-function: cubic-bezier(.5, 0, .8, .4); }
+  16.5% { transform: translate(-1.21px, -34.3px) rotate(270deg); animation-timing-function: cubic-bezier(.4, 0, .9, .5); }
+  19.5% { transform: translate(3.53px, 1.88px) rotate(360deg); animation-timing-function: ease-out; }
+  21.5% { transform: translate(3.53px, 0.58px) rotate(360deg); animation-timing-function: ease-in; }
+  23.5%, 38% { transform: translate(3.53px, 1.88px) rotate(360deg); }
+  44% { transform: translate(0.88px, 0.47px) rotate(352deg); }
+  52% { transform: translate(1.59px, 0.84px) rotate(366deg); }
+  60%, 100% { transform: rotate(360deg); }
+}
+/* the turner: jostled by the flick, then two stir strokes along the pan */
+.xc-turner { transform-origin: 37.4px 148.6px; }
+.xc-wrap.xc-on .xc-turner { animation: xc-stir 3.2s .3s ease-in-out infinite; }
+@keyframes xc-stir {
+  0%, 4%   { transform: none; }
+  8%       { transform: translate(0, -1.4px) rotate(7deg); }
+  15%, 36% { transform: none; }
+  44%      { transform: translate(-2.6px, -1.4px) rotate(-8deg); }
+  52%      { transform: translate(2.2px, 1.2px) rotate(6deg); }
+  60%      { transform: translate(-1.8px, -1px) rotate(-5deg); }
+  68%, 100% { transform: none; }
+}
+.xc-whoosh { opacity: 0; }
+.xc-wrap.xc-on .xc-whoosh { animation: xc-whoosh 3.2s .3s ease-out infinite; }
+@keyframes xc-whoosh {
+  0%, 5%  { opacity: 0; transform: translate(3px, 3px); }
+  8%      { opacity: 1; transform: none; }
+  13%     { opacity: 0; transform: translate(-2px, -3px); }
+  100%    { opacity: 0; transform: translate(-2px, -3px); }
+}
+.xc-puff { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; }
+.xc-wrap.xc-on .xc-puff { animation: xc-puff 3.2s .3s ease-out infinite; }
+@keyframes xc-puff {
+  0%, 20% { opacity: 0; transform: translateY(4px) scale(.3); }
+  23%     { opacity: 1; transform: translateY(0) scale(1); }
+  31%     { opacity: 0; transform: translateY(-7px) scale(1.25); }
+  100%    { opacity: 0; transform: translateY(-7px) scale(1.25); }
 }
 .xc-ember { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
 .xc-wrap.xc-on .xc-ember    { animation: xc-ember 3.2s .3s ease-out infinite; }
@@ -507,9 +666,9 @@ body {
 .xc-wrap.xc-on .xc-ember.xc-e3 { animation-delay: .33s; }
 .xc-wrap.xc-on .xc-ember.xc-e4 { animation-delay: .39s; }
 @keyframes xc-ember {
-  0%, 3% { opacity: 0; transform: translateY(14px) scale(.4); }
-  7%     { opacity: 1; transform: translateY(0) scale(1); }
-  19%    { opacity: 0; transform: translateY(-16px) scale(.6) rotate(90deg); }
+  0%, 6% { opacity: 0; transform: translateY(14px) scale(.4); }
+  10%    { opacity: 1; transform: translateY(0) scale(1); }
+  22%    { opacity: 0; transform: translateY(-16px) scale(.6) rotate(90deg); }
   100%   { opacity: 0; transform: translateY(-16px) scale(.6); }
 }
 
@@ -517,8 +676,8 @@ body {
 .xc-wrap.xc-on .xc-wisp    { animation: xc-steam 3.2s .3s ease-in-out infinite; }
 .xc-wrap.xc-on .xc-wisp.xc-w2 { animation-delay: .55s; }
 @keyframes xc-steam {
-  0%, 30% { opacity: 0; transform: translateY(6px) scaleY(.7); }
-  46%     { opacity: .8; }
+  0%, 32% { opacity: 0; transform: translateY(6px) scaleY(.7); }
+  48%     { opacity: .8; }
   78%     { opacity: 0; transform: translateY(-8px) scaleY(1.05); }
   100%    { opacity: 0; transform: translateY(-8px) scaleY(1.05); }
 }
@@ -527,7 +686,7 @@ body {
 .xc-wrap.xc-on .xc-kglint { animation: xc-kglint 3.2s .4s ease-out infinite; }
 .xc-wrap.xc-on .xc-tglint { animation: xc-tglint 3.2s .3s ease-out infinite; }
 @keyframes xc-kglint {
-  0%, 3% { opacity: 0; transform: translate(148.8px, 169.6px) scale(.2) rotate(0deg); }
+  0%, 4% { opacity: 0; transform: translate(148.8px, 169.6px) scale(.2) rotate(0deg); }
   8%     { opacity: 1; transform: translate(148.8px, 169.6px) scale(1.15) rotate(45deg); }
   16%    { opacity: 0; transform: translate(148.8px, 169.6px) scale(.3) rotate(90deg); }
   100%   { opacity: 0; transform: translate(148.8px, 169.6px) scale(.3) rotate(90deg); }
@@ -565,6 +724,10 @@ body {
   .xc-wrap.xc-on .xc-flick,
   .xc-wrap.xc-on .xc-ember,
   .xc-wrap.xc-on .xc-wisp,
+  .xc-wrap.xc-on .xc-food,
+  .xc-wrap.xc-on .xc-turner,
+  .xc-wrap.xc-on .xc-whoosh,
+  .xc-wrap.xc-on .xc-puff,
   .xc-wrap.xc-on .xc-glint { animation: none; }
   .xc-wrap.xc-on .xc-yes { animation: none; opacity: 1; transform: none; }
   .xc-wrap.xc-on .xc-fire { animation: none; transform: scale(.72); }
