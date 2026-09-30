@@ -291,6 +291,42 @@
             color: rgba(255,255,255,0.6);
             font-size: 1rem;
         }
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+        .hero-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            min-height: 42px;
+            padding: 0.65rem 1rem;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.95);
+            color: #004d7a;
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+            transition: box-shadow 0.2s ease;
+        }
+        .hero-action:hover {
+            box-shadow: 0 10px 28px rgba(0,0,0,0.2);
+            text-decoration: none;
+        }
+        .hero-action svg {
+            width: 17px;
+            height: 17px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
 
         /* ===== Animated Metrics Bar (B) ===== */
         .metrics-bar {
@@ -861,7 +897,7 @@
             .nav-right { display: none; }
             main { margin-left: 0; padding: 76px 1rem 2rem; }
             .hero-wrapper { margin: 0 -1rem; border-radius: 16px; }
-            .hero-overlay { padding: 3rem 1rem 2.5rem; }
+            .hero-overlay { padding: 3rem 1rem 3.5rem; }   /* the metric cards overlap the hero's foot by 2rem */
             .hero-overlay h1 { font-size: 1.8rem; }
             .metrics-bar { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
             .metric-number { font-size: 1.6rem; }
@@ -952,6 +988,12 @@
                     <h1>CSE 291P: <span class="grad">LLM System Optimization</span></h1>
                     <p class="subtitle">Systems optimization for large language models: training parallelism, inference efficiency, and systems bottlenecks</p>
                     <p class="instructor">Instructor: Yufei Ding (UC San Diego) &bull; Winter 2026</p>
+                    <div class="hero-actions">
+                        <a class="hero-action" href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">
+                            <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
+                            Course Drive
+                        </a>
+                    </div>
                 </div>
             </div>
 
