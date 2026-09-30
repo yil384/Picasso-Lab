@@ -1,18 +1,24 @@
 /* Haotian — 叶神 = 雷神 Thor
    Click: the museum turns into a thunderstorm (layered cloud banks with lumpy tops, dark halftone
    undersides and edges that light up with every flash, a storm eye swirling over his head, a rock
-   ledge); a red cape unfurls behind his shoulders and billows, pinned by two gold
-   clasps; a winged helmet drops onto his head and its wings flare; Mjolnir rises into his lower
-   hand (a chunky bevelled steel head with gold bands; his real fingers re-layered over the leather
-   handle); a bold forked comic bolt (ink outline, cyan body, white core) strikes the hammer with a
-   thunder flash (< 0.1 s) and a starburst, the big runes on the hammer glow electric blue, his eyes
-   spark, and a round Norse rune seal reading 「叶神」 flips in beside him.
+   ledge) and the green cap in his lower hand fades away with it (an edited copy of the cut layer:
+   his lap and knee in black trousers behind it); a red cape unfurls behind his shoulders and
+   billows, pinned by two gold clasps; a winged helmet drops onto his head (worn: the band on his
+   hairline) and its wings flare; Mjolnir rises into his empty lower hand (a chunky bevelled steel
+   head with gold bands; his real fingers re-layered over the leather handle); a bold forked comic
+   bolt (ink outline, cyan body, white core) strikes the hammer with a thunder flash (< 0.1 s) and a
+   starburst, the big runes on the hammer glow electric blue, his eyes spark, and a round Norse rune
+   seal reading 「叶神」 flips in beside him.
    Loop (3.4 s): the cape billows, the storm eye turns, arcs crackle round the hammer head (his eyes
    flicker with them; every other beat a thinner bolt strikes it again), a distant bolt forks through
    the clouds, the runes pulse (flaring with each crackle), the seal's rune ring turns.
-   Photo landmarks (512 px): hair u 184-296, top v 72, fringe v 128 · lenses 230,143 / 273,141 ·
-   collar 192-290 v 195-225 · shoulders 132,238 / 305,215 · V sign tips 343,240 / 383,245 ·
-   lower hand (holding the cap) 244-313 x 418-485, grip centre 292,452 · cap 270-380 x 370-480. */
+   Exit: everything leaves, the cap comes back with the museum.
+   Photo landmarks (512 px): hair u 182-297 (widest v 100-125), top v 76, fringe / hairline v 124-128,
+   glasses top v 131, bridge u 252 (face turned a little to our right: nose 252, skull centre ~244) ·
+   lenses 230,143 / 273,141 · collar 192-290 v 195-225 · shoulders 132,238 / 305,215 · V sign tips
+   343,240 / 383,245 · lower hand 241-317 x 416-481 (index finger 248-306 v 417-442, the others
+   v 452-480, the gap between them where the cap's crown sat 276-313 x 440-460), grip centre 292,452 ·
+   cap 256-383 x 373-479 (behind it: his lap, left knee 337-381 x 415-488). */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
@@ -192,14 +198,17 @@ export default {
        NOCAP box with the cap painted out (his lap and left knee in black trousers behind it, the part of
        the cap above his thigh cleared); the person layer and the fist patch blend to it by uCapMix, fading
        to the untouched cut layer over the last px of the box. uCapMix is 0 at t = 0 and after the exit. */
-    const noCap = await k.loadTexture(`${k.STATIC}fx/haotian-nocap.webp`);
-    noCap.generateMipmaps = false;                // sampled exactly like the cut layer (no seam at the box)
-    noCap.minFilter = THREE.LinearFilter;
+    const noCap = await k.loadTexture(`${k.STATIC}fx/haotian-nocap.webp`).catch(() => null);   // missing: the cap stays
+    if (noCap) {
+      noCap.generateMipmaps = false;              // sampled exactly like the cut layer (no seam at the box)
+      noCap.minFilter = THREE.LinearFilter;
+    }
     const capU = {
       uNoCap: { value: noCap }, uCapMix: { value: 0 },
       uCapBox: { value: new THREE.Vector4(NOCAP[0] / 512, 1 - NOCAP[3] / 512, (NOCAP[2] - NOCAP[0]) / 512, (NOCAP[3] - NOCAP[1]) / 512) },
     };
     const hideCap = (mat) => {
+      if (!noCap) return;
       mat.onBeforeCompile = (sh) => {
         Object.assign(sh.uniforms, capU);
         sh.fragmentShader = 'uniform sampler2D uNoCap; uniform float uCapMix; uniform vec4 uCapBox;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
@@ -418,7 +427,7 @@ export default {
     // hairline just above the glasses (v ~126), the crest over the bridge of his glasses (his face is
     // turned a little to our right, so the helmet yaws with it); seen a little from above like his head
     const HELM_Z = 24;
-    const helmHome = k.at(243.5, 113.5, HELM_Z);
+    const helmHome = k.at(243.5, 116, HELM_Z);
     helm.position.copy(helmHome);
     helm.rotation.set(0.2, 0.16, 0.02);
     clipAll(helm);                               // it drops in across the rim
