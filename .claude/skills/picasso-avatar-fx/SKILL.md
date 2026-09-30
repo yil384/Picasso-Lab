@@ -11,7 +11,7 @@ Every avatar on https://yufeiding.ucsd.edu/people/team is its own Google Sites e
 ## Pieces
 - `people/<file>.html` — the **pasted snippet** (one per person): the photo, an import map for three.js,
   and a tiny loader. All snippets are identical except the header comment, `data-fx`, `aria-label`, `<img src>`.
-  Copy `people/alon_iron_man.html`. Changing a snippet needs a re-paste; changing a scene does not.
+  Copy `people/zhuo_gold_medal.html`. Changing a snippet needs a re-paste; changing a scene does not.
 - `people/fx/kit.js` — shared runtime (header comment = the contract). Loads on the first hover/touch,
   builds a three.js stage on click, releases the WebGL context after the effect switches off (15 embeds on
   one page would exceed a phone's context limit), tilts the stage toward the pointer, phones sway.
@@ -20,8 +20,10 @@ Every avatar on https://yufeiding.ucsd.edu/people/team is its own Google Sites e
 - `people/static/fx/<name>-cut.webp` / `-plate.webp` — the person cut out / the photo with the person
   inpainted out. Make them with `python3 people/fx/tools/make_layers.py <name> --grid` (BiRefNet portrait
   matte via rembg; the `--grid` image is how you read landmarks — red lines every 128 photo px, labels every 64).
-- Not on the kit: `people/xinwei_masterchef.html` (SVG/CSS, the approved quality bar), and the user's own
-  `people/haotian_shen.html`, `people/yufei_cats.html` (never touch these two).
+- Not on the kit: `people/xinwei_masterchef.html` (SVG/CSS, the approved quality bar), the user's own
+  `people/haotian_shen.html`, `people/yufei_cats.html` (never touch these two), and the alumni Alon, Chenyang
+  and Hezi (`alon_iron_man.html`, `chenyang_captain_america.html`, `hezi_scholar.html`): alumni have no avatar
+  on the Team page, so the user asked to leave them as they are.
 
 ## Scene toolkit (k)
 World units = CSS px, origin = avatar centre, y up, z toward the viewer; the avatar is 200 px (k.R = 100).
