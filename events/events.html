@@ -1199,331 +1199,47 @@
         }
     }
 
-    :root {
-        --ease-out-soft: cubic-bezier(0.16, 0.84, 0.20, 1);
-        --ease-in-soft: cubic-bezier(0.40, 0.00, 0.20, 1);
+    /* ===== Guandan portal: the Tiga films in and out of the table (see the portal script) =====
+       The frame loads under the film at opacity 0 (not hidden: a hidden frame would not paint or report
+       ready); the film ends on white, the white holds until the table is ready and then fades to it. */
+    #gd-portal { position: fixed; inset: 0; z-index: 2147483000; display: none; background: #000; }
+    #gd-portal.open { display: block; }
+    #gd-portal.fading { background: transparent; }
+    #gd-portal iframe {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        border: 0; opacity: 0; pointer-events: none; background: #0b1440;
     }
+    #gd-portal.table iframe { opacity: 1; pointer-events: auto; }
+    #gd-portal video {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        display: none; object-fit: cover; background: #000; cursor: pointer;
+    }
+    #gd-portal.film video { display: block; }
+    /* over the table turned for a portrait phone the film turns with it (as guandan.html's stage does) */
+    #gd-portal.film.turned video {
+        inset: auto; left: 0; top: 0;
+        width: 100vh; width: 100dvh; height: 100vw;
+        transform-origin: 0 0; transform: translate(100vw, 0) rotate(90deg);
+    }
+    #gd-portal .gdp-white {
+        position: absolute; inset: 0; background: #fffaf0;
+        opacity: 0; pointer-events: none; transition: opacity .45s ease;
+    }
+    #gd-portal .gdp-white.on { opacity: 1; }
+    #gd-portal .gdp-skip {
+        display: none; position: absolute;
+        right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));
+        padding: 8px 15px; border: 1px solid rgba(255, 255, 255, .4); border-radius: 999px;
+        background: rgba(10, 8, 20, .42); color: #fff;
+        font: 600 13px/1 Inter, system-ui, sans-serif; letter-spacing: .02em;
+        cursor: pointer; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    #gd-portal.film .gdp-skip { display: block; }
+    #gd-portal.film.turned .gdp-skip { right: auto; left: 16px; bottom: 16px; transform: rotate(90deg); transform-origin: 0 100%; }
+    body.gd-portal-open { overflow: hidden; }
+    /* the page under the table is not painted while the table is up */
+    body.gd-table-open > :not(#gd-portal):not(#picasso-nav-frame) { visibility: hidden; }
 
-    .guandan-launch-transition {
-        position: fixed;
-        inset: 0;
-        z-index: 200000;
-        display: none;
-        overflow: hidden;
-        background:
-            radial-gradient(circle at 50% 45%, rgba(238, 194, 80, 0.22), transparent 24%),
-            linear-gradient(145deg, rgba(2, 14, 14, 0.98), rgba(7, 42, 36, 0.98));
-    }
-    .guandan-launch-transition.active {
-        display: grid;
-        place-items: center;
-        animation: gltOverlayCycle 1620ms var(--ease-out-soft) both;
-    }
-
-    /* ===== Guandan entry: Scientific Signal Lock =====
-       Adapted from the restrained beam/grid language used by mature UI kits,
-       rebuilt here in dependency-free CSS + inline SVG for Google Sites. */
-    .guandan-launch-transition {
-        box-sizing: border-box;
-        min-height: 100vh;
-        min-height: 100dvh;
-        padding:
-            max(18px, env(safe-area-inset-top))
-            max(18px, env(safe-area-inset-right))
-            max(18px, env(safe-area-inset-bottom))
-            max(18px, env(safe-area-inset-left));
-        isolation: isolate;
-        cursor: pointer;
-        background:
-            radial-gradient(58% 50% at 50% 14%, rgba(0, 98, 155, 0.23), transparent 72%),
-            radial-gradient(42% 46% at 84% 92%, rgba(255, 205, 0, 0.1), transparent 74%),
-            linear-gradient(155deg, #07111d 0%, #03070d 64%, #07110f 100%);
-    }
-    .guandan-launch-transition::before {
-        content: "";
-        position: absolute;
-        inset: -20%;
-        z-index: -2;
-        opacity: 0.28;
-        background-image:
-            linear-gradient(rgba(112, 184, 213, 0.12) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(112, 184, 213, 0.12) 1px, transparent 1px);
-        background-size: 42px 42px;
-        transform: perspective(720px) rotateX(57deg) translateY(8%);
-        transform-origin: 50% 50%;
-        -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 68%);
-        mask-image: radial-gradient(ellipse at center, #000 0%, transparent 68%);
-        pointer-events: none;
-        will-change: opacity, transform;
-        animation: gltGridIn 640ms var(--ease-out-soft) both;
-    }
-    .guandan-launch-transition::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background: radial-gradient(circle at 50% 45%, transparent 0 26%, rgba(1, 4, 8, 0.42) 74%);
-    }
-    .glt-stage {
-        position: relative;
-        width: min(540px, 100%);
-        max-height: 100%;
-        box-sizing: border-box;
-        display: grid;
-        justify-items: center;
-        gap: clamp(8px, 1.8vh, 16px);
-        gap: clamp(8px, 1.8dvh, 16px);
-        color: #edf8fb;
-        text-align: center;
-        z-index: 2;
-        will-change: opacity, transform;
-    }
-    .guandan-launch-transition.active .glt-stage {
-        animation: gltStageCycle 1620ms var(--ease-out-soft) both;
-    }
-    .glt-kicker {
-        display: inline-flex;
-        align-items: center;
-        gap: 9px;
-        min-height: 26px;
-        padding: 0 11px;
-        border: 1px solid rgba(125, 201, 221, 0.18);
-        border-radius: 999px;
-        background: rgba(7, 28, 40, 0.56);
-        color: rgba(203, 236, 244, 0.78);
-        font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-    }
-    .glt-kicker-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #ffcd00;
-        box-shadow: 0 0 0 4px rgba(255, 205, 0, 0.1);
-        animation: gltDotPulse 1.1s ease-in-out 0.25s 1 both;
-    }
-    .glt-network {
-        width: min(100%, 470px);
-        height: clamp(138px, 34vh, 230px);
-        height: clamp(138px, 34dvh, 230px);
-        display: block;
-        overflow: hidden;
-        filter: drop-shadow(0 22px 42px rgba(0, 0, 0, 0.34));
-    }
-    .glt-route-base {
-        fill: none;
-        stroke: rgba(120, 199, 219, 0.17);
-        stroke-width: 1.1;
-        vector-effect: non-scaling-stroke;
-    }
-    .glt-route-signal {
-        fill: none;
-        stroke: url(#gltSignalGradient);
-        stroke-width: 2.2;
-        stroke-linecap: round;
-        stroke-dasharray: 0.16 0.84;
-        stroke-dashoffset: 1;
-        vector-effect: non-scaling-stroke;
-        opacity: 0;
-        animation: gltSignal 0.92s cubic-bezier(0.18, 0.72, 0.18, 1) var(--delay) both;
-    }
-    .glt-node {
-        transform-box: fill-box;
-        transform-origin: center;
-        opacity: 0;
-        will-change: opacity, transform;
-        animation: gltNodeIn 0.36s cubic-bezier(0.2, 0.84, 0.2, 1) var(--delay) both;
-    }
-    .glt-node-ring {
-        fill: rgba(7, 30, 42, 0.88);
-        stroke: rgba(137, 214, 232, 0.3);
-        stroke-width: 1.2;
-        vector-effect: non-scaling-stroke;
-    }
-    .glt-node text {
-        fill: rgba(226, 246, 250, 0.82);
-        font: 700 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        text-anchor: middle;
-        dominant-baseline: central;
-    }
-    .glt-node.warm text { fill: #ffda5c; }
-    .glt-core {
-        transform-box: fill-box;
-        transform-origin: center;
-        opacity: 0;
-        will-change: opacity, transform;
-        animation: gltCoreIn 480ms var(--ease-out-soft) 260ms both;
-    }
-    .glt-core-halo {
-        fill: rgba(0, 98, 155, 0.1);
-        stroke: rgba(129, 215, 235, 0.2);
-        stroke-width: 1;
-        vector-effect: non-scaling-stroke;
-    }
-    .glt-card-back {
-        fill: #0a2635;
-        stroke: rgba(130, 213, 232, 0.34);
-        stroke-width: 1.2;
-        vector-effect: non-scaling-stroke;
-    }
-    .glt-card-main {
-        fill: url(#gltCardGradient);
-        stroke: rgba(255, 220, 105, 0.72);
-        stroke-width: 1.3;
-        vector-effect: non-scaling-stroke;
-    }
-    .glt-card-inset {
-        fill: none;
-        stroke: rgba(255, 238, 180, 0.24);
-        stroke-width: 1;
-        vector-effect: non-scaling-stroke;
-    }
-    .glt-p {
-        fill: #ffdf70;
-        font: 800 34px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        text-anchor: middle;
-        dominant-baseline: central;
-    }
-    .glt-title {
-        margin: 0;
-        color: #f5fbfd;
-        font: 760 clamp(30px, 7vw, 48px)/1.04 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        letter-spacing: -0.035em;
-        text-wrap: balance;
-    }
-    .glt-subtitle {
-        margin: -3px 0 0;
-        color: rgba(205, 230, 236, 0.68);
-        font: 500 clamp(12px, 2.5vw, 14px)/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        letter-spacing: 0.02em;
-    }
-    .glt-progress {
-        position: relative;
-        width: min(300px, 72vw);
-        height: 2px;
-        margin-top: 3px;
-        overflow: hidden;
-        border-radius: 999px;
-        background: rgba(136, 206, 223, 0.13);
-    }
-    .glt-progress::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        transform: translateX(-100%);
-        background: linear-gradient(90deg, #0876a8, #73d0df 58%, #ffcd00);
-        box-shadow: 0 0 14px rgba(115, 208, 223, 0.38);
-        will-change: opacity, transform;
-        animation: gltProgress 1000ms var(--ease-out-soft) 100ms both;
-    }
-    .glt-skip {
-        min-height: 36px;
-        padding: 0 13px;
-        border: 0;
-        border-radius: 999px;
-        background: transparent;
-        color: rgba(211, 235, 240, 0.56);
-        font: 650 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        letter-spacing: 0.08em;
-        cursor: pointer;
-        touch-action: manipulation;
-        transition: color 0.2s ease, background 0.2s ease;
-    }
-    .guandan-launch-transition:hover .glt-skip,
-    .guandan-launch-transition:focus-visible .glt-skip {
-        color: #fff;
-        background: rgba(119, 197, 216, 0.09);
-        outline: 2px solid #8adcec;
-        outline-offset: 2px;
-    }
-    .glt-sr-only {
-        position: absolute !important;
-        width: 1px !important;
-        height: 1px !important;
-        padding: 0 !important;
-        margin: -1px !important;
-        overflow: hidden !important;
-        clip: rect(0, 0, 0, 0) !important;
-        white-space: nowrap !important;
-        border: 0 !important;
-    }
-    .guandan-launch-transition.active.skipping {
-        animation: gltSkipOut 180ms var(--ease-in-soft) both;
-    }
-    .guandan-launch-transition.active.skipping .glt-stage {
-        animation: gltStageSkipOut 180ms var(--ease-in-soft) both;
-    }
-    @keyframes gltOverlayCycle {
-        0%   { opacity: 0; }
-        16%  { opacity: 1; }
-        84%  { opacity: 1; }
-        100% { opacity: 0; }
-    }
-    @keyframes gltGridIn {
-        from { opacity: 0; transform: perspective(720px) rotateX(57deg) translateY(14%); }
-        to { opacity: 0.28; transform: perspective(720px) rotateX(57deg) translateY(8%); }
-    }
-    @keyframes gltStageCycle {
-        0%   { opacity: 0; transform: translateY(10px) scale(0.985); }
-        26%  { opacity: 1; transform: translateY(0) scale(1); }
-        84%  { opacity: 1; transform: scale(1); }
-        100% { opacity: 0.92; transform: scale(1.02); }
-    }
-    @keyframes gltSkipOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-    }
-    @keyframes gltStageSkipOut {
-        from { opacity: 1; transform: scale(1); }
-        to { opacity: 0; transform: scale(0.99); }
-    }
-    @keyframes gltDotPulse {
-        0% { opacity: 0.45; box-shadow: 0 0 0 0 rgba(255, 205, 0, 0.2); }
-        50% { opacity: 1; box-shadow: 0 0 0 7px rgba(255, 205, 0, 0); }
-        100% { opacity: 1; box-shadow: 0 0 0 4px rgba(255, 205, 0, 0.1); }
-    }
-    @keyframes gltSignal {
-        0% { opacity: 0; stroke-dashoffset: 1; }
-        18% { opacity: 1; }
-        100% { opacity: 0.86; stroke-dashoffset: 0; }
-    }
-    @keyframes gltNodeIn {
-        from { opacity: 0; transform: scale(0.72); }
-        to { opacity: 1; transform: scale(1); }
-    }
-    @keyframes gltCoreIn {
-        from { opacity: 0; transform: scale(0.76) rotate(-5deg); }
-        to { opacity: 1; transform: scale(1) rotate(0); }
-    }
-    @keyframes gltProgress {
-        from { transform: translateX(-100%); }
-        to { transform: translateX(0); }
-    }
-    @media (max-height: 460px) {
-        .glt-stage { gap: 7px; }
-        .glt-network { height: 122px; }
-        .glt-title { font-size: clamp(26px, 8dvh, 34px); }
-        .glt-subtitle { font-size: 11px; }
-        .glt-skip { min-height: 30px; }
-    }
-    @media (max-width: 420px) {
-        .glt-network { width: 100%; }
-        .glt-title { font-size: clamp(28px, 10vw, 40px); }
-    }
-    @media (max-height: 320px) {
-        .glt-stage { gap: 6px; }
-        .glt-kicker,
-        .glt-subtitle { display: none; }
-        .glt-network { height: min(42vh, 112px); }
-        .glt-network { height: min(42dvh, 112px); }
-        .glt-title { font-size: clamp(24px, 10vh, 30px); }
-        .glt-title { font-size: clamp(24px, 10dvh, 30px); }
-        .glt-skip { min-height: 28px; }
-    }
     @keyframes fromGuandanFade { from { opacity: 0; } to { opacity: 1; } }
     body.from-guandan { animation: fromGuandanFade 0.45s ease both; }
 
@@ -2211,55 +1927,6 @@
         <div class="guandan-float-card float-sw" style="--tx:-27vw;--ty:26vh;--rot:13deg;--delay:0.09s;">A</div>
         <div class="guandan-float-card red float-ne" style="--tx:35vw;--ty:-23vh;--rot:19deg;--delay:0.14s;">K</div>
         <div class="guandan-float-card float-se" style="--tx:31vw;--ty:25vh;--rot:-11deg;--delay:0.2s;">Q</div>
-    </div>
-</div>
-
-<span class="glt-sr-only" id="guandan-launch-status" aria-live="polite" aria-atomic="true"></span>
-<div class="guandan-launch-transition" id="guandan-launch-transition" role="button" tabindex="-1" aria-label="Enter the Picasso Lab Guandan table now" aria-hidden="true">
-    <div class="glt-stage">
-        <div class="glt-kicker"><span class="glt-kicker-dot"></span>Picasso Lab · Guandan</div>
-        <svg class="glt-network" viewBox="42 28 356 184" aria-hidden="true">
-            <defs>
-                <linearGradient id="gltSignalGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0" stop-color="#2b9bc5" stop-opacity="0"/>
-                    <stop offset=".56" stop-color="#7ed8e5"/>
-                    <stop offset="1" stop-color="#ffcd00"/>
-                </linearGradient>
-                <linearGradient id="gltCardGradient" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stop-color="#0d4861"/>
-                    <stop offset=".62" stop-color="#082a3a"/>
-                    <stop offset="1" stop-color="#071923"/>
-                </linearGradient>
-            </defs>
-
-            <path class="glt-route-base" d="M78 54 C142 54 154 112 220 120"/>
-            <path class="glt-route-base" d="M362 54 C298 54 286 112 220 120"/>
-            <path class="glt-route-base" d="M78 186 C142 186 154 128 220 120"/>
-            <path class="glt-route-base" d="M362 186 C298 186 286 128 220 120"/>
-            <path class="glt-route-signal" pathLength="1" style="--delay:.08s" d="M78 54 C142 54 154 112 220 120"/>
-            <path class="glt-route-signal" pathLength="1" style="--delay:.18s" d="M362 54 C298 54 286 112 220 120"/>
-            <path class="glt-route-signal" pathLength="1" style="--delay:.28s" d="M78 186 C142 186 154 128 220 120"/>
-            <path class="glt-route-signal" pathLength="1" style="--delay:.38s" d="M362 186 C298 186 286 128 220 120"/>
-
-            <g class="glt-node" style="--delay:.04s"><circle class="glt-node-ring" cx="78" cy="54" r="22"/><text x="78" y="54">♠︎</text></g>
-            <g class="glt-node warm" style="--delay:.14s"><circle class="glt-node-ring" cx="362" cy="54" r="22"/><text x="362" y="54">♥︎</text></g>
-            <g class="glt-node" style="--delay:.24s"><circle class="glt-node-ring" cx="78" cy="186" r="22"/><text x="78" y="186">♣︎</text></g>
-            <g class="glt-node warm" style="--delay:.34s"><circle class="glt-node-ring" cx="362" cy="186" r="22"/><text x="362" y="186">♦︎</text></g>
-
-            <g class="glt-core">
-                <circle class="glt-core-halo" cx="220" cy="120" r="70"/>
-                <rect class="glt-card-back" x="184" y="76" width="64" height="92" rx="9" transform="rotate(-12 216 122)"/>
-                <rect class="glt-card-back" x="192" y="76" width="64" height="92" rx="9" transform="rotate(12 224 122)"/>
-                <rect class="glt-card-main" x="188" y="67" width="64" height="106" rx="10"/>
-                <rect class="glt-card-inset" x="196" y="75" width="48" height="90" rx="6"/>
-                <text class="glt-p" x="220" y="120">P</text>
-                <circle cx="220" cy="148" r="2.5" fill="#ffcd00"/>
-            </g>
-        </svg>
-        <h2 class="glt-title">Guandan Table</h2>
-        <p class="glt-subtitle">Preparing four seats…</p>
-        <div class="glt-progress" aria-hidden="true"></div>
-        <span class="glt-skip" aria-hidden="true">Enter now&nbsp; →</span>
     </div>
 </div>
 
@@ -3137,6 +2804,7 @@
     const HINT_SPARK = '<svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-sparkle"/></svg>';
     function showGuandanTypeHint(code) {
         if (!guandanTypeHint) return;
+        if ((code || 'picasso') === 'picasso') gdPrefetch();
         const letters = (code || 'picasso').split('').map(c => '<kbd>' + c + '</kbd>').join('');
         guandanTypeHint.innerHTML = 'try typing ' + letters + ' ' + HINT_SPARK;
         guandanTypeHint.classList.add('show');
@@ -3145,6 +2813,7 @@
     }
 
     function showGuandanTapHint(remaining) {
+        gdPrefetch();
         if (!guandanTypeHint) return;
         guandanTypeHint.innerHTML = (remaining === 1
             ? 'One more tap to open the Picasso table '
@@ -3204,80 +2873,263 @@
         if (e.target === guandanOverlay) closeGuandanEgg();
     });
 
-    const guandanLaunchTransition = document.getElementById('guandan-launch-transition');
-    const guandanLaunchStatus = document.getElementById('guandan-launch-status');
+    /* Back/forward (the back button, Chrome's two-finger swipe). Google Sites writes
+       this page into an about:blank frame with document.write, and Chrome restores any
+       history entry made in that frame as a fresh about:blank: swiping back from an
+       open article or demo left the page blank. So this document never touches history
+       itself. The open view lives in the fragment of a tiny hidden frame on GitHub
+       Pages: opening a view navigates that frame (one entry), back/forward moves only
+       that frame, and it posts back the fragment it lands on. Until it loads, views add
+       no history. */
+    const NAV_FRAME_URL = 'https://yil384.github.io/Picasso-Lab/nav-frame.html';
+
+    function createNavHistory(onTraverse) {
+      const frame = document.createElement('iframe');
+      frame.id = 'picasso-nav-frame';
+      frame.src = NAV_FRAME_URL;
+      frame.title = 'Navigation history';
+      frame.tabIndex = -1;
+      frame.setAttribute('aria-hidden', 'true');
+      frame.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
+      document.body.appendChild(frame);
+
+      const run = Math.random().toString(36).slice(2, 7);
+      const pending = new Set();   // fragments we navigated to that have not reported back yet
+      let ready = false;
+      let seq = 0;
+      let depth = 0;               // our own entries stacked above one we can go back to
+      let popping = false;
+      let popTimer = null;
+
+      window.addEventListener('message', (event) => {
+        if (event.source !== frame.contentWindow || typeof event.data?.picassoNav !== 'string') return;
+        const hash = event.data.picassoNav;
+        const first = !ready;
+        ready = true;
+        if (pending.delete(hash) || (first && !hash)) return;
+        if (popping) popping = false;
+        else depth = 0;            // the visitor moved through history: we no longer know what is behind
+        const view = Object.fromEntries(new URLSearchParams(hash));
+        delete view.n;
+        onTraverse(view);
+      });
+
+      function go(view, push) {
+        if (!ready) return;
+        const params = new URLSearchParams();
+        Object.entries(view).forEach(([key, value]) => { if (value != null) params.set(key, value); });
+        params.set('n', run + (++seq));
+        const hash = params.toString();
+        pending.add(hash);
+        try {
+          if (push) frame.contentWindow.location.href = `${NAV_FRAME_URL}#${hash}`;
+          else frame.contentWindow.location.replace(`${NAV_FRAME_URL}#${hash}`);
+          if (push) depth += 1;
+        } catch (_) {
+          pending.delete(hash);
+        }
+      }
+
+      return {
+        push: view => go(view, true),
+        replace: view => go(view, false),
+        /* Leave a view the way the back button would when the entry behind it is ours,
+           so a later swipe back leaves the page instead of landing on a duplicate. Called
+           from this document, not the nav frame: the host sandboxes the embed, and a
+           sandboxed frame may only move history for frames inside its own subtree. */
+        pop(view) {
+          if (!ready || depth === 0) return go(view, false);
+          depth -= 1;
+          popping = true;
+          clearTimeout(popTimer);
+          popTimer = setTimeout(() => { popping = false; }, 1500);   // a back() that moved nothing
+          try { history.back(); } catch (_) {}
+        }
+      };
+    }
+
+    // -----------------------------------------------------------------
+    // 🃏 Guandan portal: the Tiga films in and out of the table
+    // -----------------------------------------------------------------
+    // Typing "picasso" plays the attack film (Golza and Melba strike the pyramid, two giants fall, Tiga's
+    // statue cracks) while guandan.html loads behind it in a frame named "gd-portal"; the film burns out
+    // to white and the table fades in from there. Leaving (guandan posts "exit") plays the return film
+    // (Tiga wins with a beam of Guandan cards) over the table and fades back to this page, which never
+    // unloads. The films are static/tiga/{attack,light}_{land,port}.mp4, made in ~/claude-work/picasso/tiga.
+    const GD_FILMS = 'https://yil384.github.io/Picasso-Lab/events/static/tiga/';
     const guandanReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let guandanTransitionRunning = false;
-    let guandanDepartTimer = 0;
-
-    function resetGuandanLaunchTransition() {
-        clearTimeout(guandanDepartTimer);
-        guandanTransitionRunning = false;
-        guandanLaunchTransition?.classList.remove('active', 'skipping');
-        guandanLaunchTransition?.setAttribute('aria-hidden', 'true');
-        if (document.activeElement === guandanLaunchTransition) guandanLaunchTransition.blur();
-        if (guandanLaunchStatus) guandanLaunchStatus.textContent = '';
-    }
-
-    function navigateToGuandan() {
-        if (!guandanTransitionRunning) return;
-        guandanTransitionRunning = false;
-        clearTimeout(guandanDepartTimer);
-        guandanLaunchTransition.classList.add('skipping');
-        const go = () => window.location.assign(guandanGameUrl);
-        guandanLaunchTransition.addEventListener('animationend', go, { once: true });
-        setTimeout(go, 220); // fallback, 40ms past the 180ms CSS duration
-    }
-
-    function startGuandanGameTransition() {
-        if (guandanTransitionRunning) return;
-        if (!guandanLaunchTransition || guandanReduceMotion.matches) {
-            window.location.assign(guandanGameUrl);
-            return;
-        }
-        guandanTransitionRunning = true;
-        hideGuandanTypeHint();
-        guandanLaunchTransition.classList.remove('skipping');
-        guandanLaunchTransition.classList.add('active');
-        guandanLaunchTransition.setAttribute('aria-hidden', 'false');
-        if (guandanLaunchStatus) guandanLaunchStatus.textContent = '';
-
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            if (!guandanTransitionRunning) return;
-            closeGuandanEgg();
-            if (guandanLaunchStatus) guandanLaunchStatus.textContent = 'Opening the Picasso Lab Guandan table.';
-            guandanLaunchTransition.focus({ preventScroll: true });
-        }));
-
-        const go = () => {
-            if (!guandanTransitionRunning) return;
-            guandanTransitionRunning = false;
-            window.location.assign(guandanGameUrl);
-        };
-        function onEnd(e) {
-            if (e.target !== guandanLaunchTransition || e.animationName !== 'gltOverlayCycle') return;
-            guandanLaunchTransition.removeEventListener('animationend', onEnd);
-            go();
-        }
-        guandanLaunchTransition.addEventListener('animationend', onEnd);
-        guandanDepartTimer = window.setTimeout(go, 1660); // fallback = 1620ms cycle + 40ms slack
-    }
-
-    guandanLaunchTransition?.addEventListener('click', function () {
-        if (guandanTransitionRunning) navigateToGuandan();
+    const gd = { el: null, video: null, white: null, frame: null, state: 'closed', ready: false, filmDone: false, turned: false, left: false, timers: [] };
+    const gdWide = (turned) => turned || window.innerWidth >= window.innerHeight;
+    const gdFilm = (name, turned) => `${GD_FILMS}${name}_${gdWide(turned) ? 'land' : 'port'}.mp4`;
+    const gdNav = createNavHistory((view) => {
+        if (view.g === '1') startGuandanGameTransition(true);
+        else if (gd.state === 'in' || gd.state === 'table') gdLeave(true);
     });
-    guandanLaunchTransition?.addEventListener('keydown', function (event) {
-        if (!guandanTransitionRunning || (event.key !== 'Enter' && event.key !== ' ')) return;
-        event.preventDefault();
-        event.stopPropagation();
-        navigateToGuandan();
+    let gdView = false;   // whether the current history entry holds the open table
+
+    function gdTimer(fn, ms) { gd.timers.push(setTimeout(fn, ms)); }
+    function gdClearTimers() { gd.timers.forEach(clearTimeout); gd.timers = []; }
+    function gdWhite(on, instant) {
+        if (instant) { gd.white.style.transition = 'none'; void gd.white.offsetWidth; }
+        gd.white.classList.toggle('on', on);
+        if (instant) { void gd.white.offsetWidth; gd.white.style.transition = ''; }
+    }
+
+    function ensureGdPortal() {
+        if (gd.el) return;
+        const el = document.createElement('div');
+        el.id = 'gd-portal';
+        el.setAttribute('role', 'dialog');
+        el.setAttribute('aria-label', 'Picasso Lab Guandan');
+        el.innerHTML = '<video playsinline muted preload="auto" disablepictureinpicture></video><div class="gdp-white"></div><button class="gdp-skip" type="button">Skip &rsaquo;</button>';
+        document.body.appendChild(el);
+        gd.el = el;
+        gd.video = el.querySelector('video');
+        gd.white = el.querySelector('.gdp-white');
+        el.querySelector('.gdp-skip').addEventListener('click', gdSkip);
+        gd.video.addEventListener('click', gdSkip);
+    }
+
+    // The first letters of "picasso" (or the first tap on the news strip) start buffering the film.
+    function gdPrefetch() {
+        if (gd.state !== 'closed' || guandanReduceMotion.matches) return;
+        ensureGdPortal();
+        const src = gdFilm('attack', false);
+        if (gd.video.dataset.src === src) return;
+        gd.video.dataset.src = src;
+        gd.video.poster = src.replace('.mp4', '.jpg');
+        gd.video.src = src;
+        gd.video.load();
+    }
+
+    function gdPlay(name, turned, onEnd, onFirstFrame) {
+        const v = gd.video, src = gdFilm(name, turned);
+        let ended = false;
+        const end = () => { if (!ended) { ended = true; onEnd(); } };
+        if (onFirstFrame) {                      // once the film's first frame is on screen
+            if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => onFirstFrame());
+            else v.addEventListener('playing', onFirstFrame, { once: true });
+        }
+        gd.el.classList.toggle('turned', !!turned && window.innerWidth < window.innerHeight);
+        v.onended = end;
+        v.onerror = end;
+        if (v.dataset.src !== src) {
+            v.dataset.src = src;
+            v.poster = name === 'attack' ? src.replace('.mp4', '.jpg') : '';
+            v.src = src;
+        } else {
+            v.currentTime = 0;
+        }
+        gd.el.classList.add('film');
+        const played = v.play();
+        if (played && played.catch) played.catch(end);
+        gdTimer(end, 14000);            // a stalled film never traps the visitor
+    }
+
+    function startGuandanGameTransition(fromHistory = false) {
+        if (gd.state !== 'closed') return;
+        hideGuandanTypeHint();
+        closeGuandanEgg();
+        ensureGdPortal();
+        gdClearTimers();
+        Object.assign(gd, { state: 'in', ready: false, filmDone: false, turned: false, left: false });
+        gd.el.className = 'open';
+        gdWhite(false, true);
+        document.body.classList.add('gd-portal-open');
+        // a fresh frame: its first load replaces the blank frame, so it adds no history entry
+        const frame = document.createElement('iframe');
+        frame.name = 'gd-portal';
+        frame.title = 'Picasso Lab Guandan';
+        frame.allow = 'autoplay; fullscreen; clipboard-write';
+        frame.src = guandanGameUrl;
+        gd.el.insertBefore(frame, gd.el.firstChild);
+        gd.frame = frame;
+        if (!fromHistory && !gdView) { gdView = true; gdNav.push({ g: '1' }); }
+        if (guandanReduceMotion.matches) { gdFilmDone(); return; }
+        gdPlay('attack', false, gdFilmDone);
+    }
+
+    // The attack film ends on white: hold it until the table has painted, then fade to the table.
+    function gdFilmDone() {
+        if (gd.state !== 'in' || gd.filmDone) return;
+        gd.filmDone = true;
+        gdClearTimers();
+        gdWhite(true, true);
+        gd.el.classList.remove('film');
+        gd.video.pause();
+        gdReveal();
+        gdTimer(() => { gd.ready = true; gdReveal(); }, 8000);   // a table that never reports still opens
+    }
+    // While the table is up the return film is fetched at low priority, so leaving starts at once.
+    const gdWarmed = new Set();
+    function gdWarmReturn() {
+        const src = gdFilm('light', gd.turned);
+        if (gdWarmed.has(src) || guandanReduceMotion.matches) return;
+        gdWarmed.add(src);
+        fetch(src, { priority: 'low' }).then((r) => r.blob()).catch(() => gdWarmed.delete(src));
+    }
+
+    function gdReveal() {
+        if (gd.state !== 'in' || !gd.filmDone || !gd.ready) return;
+        gdClearTimers();
+        gdWarmReturn();
+        gd.state = 'table';
+        gd.el.classList.add('table');
+        document.body.classList.add('gd-table-open');
+        requestAnimationFrame(() => gdWhite(false));
+        try { gd.frame.focus(); } catch (_) {}
+    }
+
+    // Leaving: white over the table, then the return film (it opens on white), then fade to this page.
+    function gdLeave(fromHistory = false) {
+        if (gd.state !== 'in' && gd.state !== 'table') return;
+        gd.state = 'out';
+        gdClearTimers();
+        if (!fromHistory && gdView) { gdView = false; gdNav.pop({}); }
+        gdWhite(true);
+        document.body.classList.remove('gd-table-open');
+        if (guandanReduceMotion.matches) { gdTimer(gdLeaveDone, 200); return; }
+        // the return film opens on white, so the white lifts as soon as its first frame shows
+        gdTimer(() => gdPlay('light', gd.turned, gdLeaveDone, () => { if (gd.state === 'out') gdWhite(false, true); }), 170);
+    }
+    function gdLeaveDone() {
+        if (gd.state !== 'out') return;
+        gd.state = 'closing';
+        gdClearTimers();
+        gdWhite(true, true);
+        gd.video.pause();
+        gd.el.classList.remove('film', 'table', 'turned');
+        gd.el.classList.add('fading');
+        // the table gives its seat back before it goes ("left"); a skipped film waits for that briefly
+        const frame = gd.frame;
+        gd.frame = null;
+        if (gd.left) frame?.remove(); else setTimeout(() => frame?.remove(), 2500);
+        requestAnimationFrame(() => gdWhite(false));
+        setTimeout(() => {
+            gd.el.className = '';
+            document.body.classList.remove('gd-portal-open');
+            gd.state = 'closed';
+            primeGuandanKeyboardCapture();
+        }, 480);
+    }
+    function gdSkip() {
+        if (gd.state === 'in' && !gd.filmDone) gdFilmDone();
+        else if (gd.state === 'out') gdLeaveDone();
+    }
+
+    window.addEventListener('message', (event) => {
+        if (!gd.frame || event.source !== gd.frame.contentWindow) return;
+        const msg = event.data?.picassoGuandan;
+        if (typeof msg !== 'string') return;
+        gd.turned = !!event.data.turned;
+        if (msg === 'ready') { gd.ready = true; gdReveal(); }
+        else if (msg === 'exit') gdLeave();
+        else if (msg === 'left') gd.left = true;
+        else if (msg === 'layout' && gd.state === 'table') gdWarmReturn();
     });
 
     window.addEventListener('load', () => setTimeout(primeGuandanKeyboardCapture, 0), { once: true });
-    window.addEventListener('pageshow', () => {
-        resetGuandanLaunchTransition();
-        setTimeout(primeGuandanKeyboardCapture, 0);
-    });
+    window.addEventListener('pageshow', () => setTimeout(primeGuandanKeyboardCapture, 0));
     window.addEventListener('focus', primeGuandanKeyboardCapture);
     document.addEventListener('pointerenter', primeGuandanKeyboardCapture);
     document.addEventListener('mousemove', () => {
@@ -3376,6 +3228,10 @@
     installPicassoTripleTap(document.querySelector('.news-banner'), startGuandanGameTransition);
 
     document.addEventListener('keydown', (e) => {
+        if (gd.state === 'in' || gd.state === 'out' || gd.state === 'closing') {
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); gdSkip(); }
+            return;
+        }
         if (gdrOverlay?.classList.contains('active')) {
             if (e.key === 'Escape') { closeGdr(); return; }
             if (gdrPager && e.key === 'ArrowRight') { gdrPager.next(); return; }
