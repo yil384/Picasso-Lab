@@ -341,7 +341,7 @@ export default {
     });
     bowlG.position.x = 20 + WR - 3;
     wokFit.add(grip, rod, bowlG);
-    const WOK_TILT = 0.74, WOK_ANG = 0.42;          // the opening toward the viewer; the handle up and to the right
+    const WOK_TILT = 0.74, WOK_ANG = 0.26;          // the opening toward the viewer; the handle up and to the right
     bowlG.rotation.x = WOK_TILT;
     const GRIP = [257, 433], WOK_Z = 20;
     const wokHome = k.at(GRIP[0], GRIP[1], WOK_Z);
@@ -531,52 +531,113 @@ export default {
           c.restore();
         }
 
-        // splashes where the rain lands on the pond, while it lands
-        if (ph > 0 && e < 1) {
-          const [gx0, gy] = k.screenAt(RBOX[0], RBOX[3] - 2, -7), [gx1] = k.screenAt(RBOX[2], RBOX[3] - 2, -7);
-          const land0 = RS + RH / SPD, land1 = RE + RH / SPD;
-          const on = env(ph, land0, land0 + 0.05) * (1 - env(ph, land1 - 0.05, land1 + 0.1)) * fade;
-          if (on > 0.02) {
-            for (let i = 0; i < 6; i++) {
-              const p = ((ph - land0) / 0.3 + i * 0.37) % 1;
-              const x = gx0 + (gx1 - gx0) * ((i + 0.5) / 6 + 0.05 * Math.sin(i * 7.3 + Math.floor((ph - land0) / 0.3 + i * 0.37) * 2.1)), y = gy + (i % 2) * 2.5;
-              const s = Math.sin(p * Math.PI) * on;
-              if (s < 0.05) continue;
-              q.noFill();
-              q.stroke(22, 21, 26, 200 * s); q.strokeWeight(1.1);
-              q.ellipse(x, y + 1, 9 * (0.4 + p), 2.6 * (0.4 + p));
-              for (let pass = 0; pass < 2; pass++) {
-                if (pass === 0) { q.stroke(22, 21, 26, 230 * s); q.strokeWeight(2.4); } else { q.stroke(225, 242, 255, 255 * s); q.strokeWeight(1.1); }
-                [-2.3, -1.57, -0.85].forEach((an) => {
-                  const r0 = 1.5 + 2.5 * p, r1 = r0 + 3.2 * s;
-                  q.line(x + Math.cos(an) * r0, y + Math.sin(an) * r0, x + Math.cos(an) * r1, y + Math.sin(an) * r1);
-                });
-              }
-            }
+        // splash crowns where the rain lands, while it lands: on his arm and sleeve, and on the pond (with ripples)
+        const splash = (x, y, p, s, sz, ripple) => {
+          if (ripple) {
+            q.noFill(); q.stroke(22, 21, 26, 190 * s); q.strokeWeight(1.1);
+            q.ellipse(x, y + 1.2, sz * (1.2 + 2.2 * p), sz * (0.32 + 0.6 * p));
+            q.stroke(225, 242, 255, 200 * s); q.strokeWeight(0.7);
+            q.ellipse(x, y + 1.2, sz * (0.6 + 1.4 * p), sz * (0.16 + 0.36 * p));
           }
+          for (let pass = 0; pass < 2; pass++) {
+            if (pass === 0) { q.stroke(22, 21, 26, 235 * s); q.strokeWeight(2.5); } else { q.stroke(225, 242, 255, 255 * s); q.strokeWeight(1.15); }
+            [-2.55, -2.05, -1.57, -1.09, -0.59].forEach((an, j) => {
+              const r0 = 1.2 + 1.6 * p, r1 = r0 + sz * (0.45 + 0.35 * (j % 2)) * s;
+              q.line(x + Math.cos(an) * r0, y + Math.sin(an) * r0 * 0.9, x + Math.cos(an) * r1, y + Math.sin(an) * r1 * 0.9);
+            });
+          }
+          // two droplets thrown off the crown
+          q.stroke(22, 21, 26, 220 * s); q.strokeWeight(0.9); q.fill(225, 242, 255, 255 * s);
+          [-1, 1].forEach((sx) => q.circle(x + sx * (2 + sz * 0.7 * p), y - sz * (0.5 + 0.9 * Math.sin(p * Math.PI)), 1.5 + 0.4 * sz / 5));
+        };
+        if (ph > 0 && e < 1) {
+          const sites = [
+            ...[92, 116, 138, 160, 181].map((u, i) => ({ u, v: [184, 182, 189, 199, 211][i] - 1, z: 0, sz: 3.6, ripple: false })),
+            ...[0, 1, 2, 3, 4, 5].map((i) => ({ u: RBOX[0] + 8 + (RBOX[2] - RBOX[0] - 16) * (i / 5), v: RBOX[3] - 2 + (i % 2) * 5, z: -7, sz: 5.2, ripple: true })),
+          ];
+          sites.forEach(({ u, v, z, sz, ripple }, i) => {
+            const land0 = RS + (v - RBOX[1]) * PX / SPD, land1 = RE + (v - RBOX[1]) * PX / SPD;
+            const on = env(ph, land0, land0 + 0.04) * (1 - env(ph, land1 - 0.02, land1 + 0.1)) * fade;
+            if (on < 0.02) return;
+            const cyc = (ph - land0) / 0.27 + i * 0.41;
+            const p = cyc % 1, n = Math.floor(cyc);
+            const s = Math.sin(p * Math.PI) * on;
+            if (s < 0.05) return;
+            const jx = (Math.sin(n * 12.9 + i * 7.1) * 0.5) * (ripple ? 12 : 6);
+            const [x, y] = k.screenAt(u + jx, v, z);
+            splash(x, y, p, s, sz, ripple);
+          });
         }
 
-        // steam off the wok: two slow wisps (white core, grey edge), a puff after the toss
+        // steam off the wok: three wisps (white core, grey edge), a big puff after the toss
         const ws = presence(t, e, 0.95, 0.5, ease.out, 0.3);
+        const kick = t > 1.5 ? hump(ph, TOSS + 0.35, TOSS + 0.6, TOSS + 1.4) : 0;
+        let steamTop = null;
         if (ws > 0.01) {
-          bowlG.localToWorld(tmp.set(0, 6, 0)); root.worldToLocal(tmp);
+          bowlG.localToWorld(tmp.set(0, 10, 0)); root.worldToLocal(tmp);
           const [bx, by] = k.toScreen(tmp);
-          const kick = t > 1.5 ? hump(ph, TOSS + 0.2, TOSS + 0.45, TOSS + 1.2) : 0;
           for (let pass = 0; pass < 2; pass++) {
-            for (let w = 0; w < 2; w++) {
-              const H = (16 + w * 5) * (1 + 0.5 * kick);
-              let px = bx - 4 + w * 8, py = by - 2;
-              for (let j = 1; j <= 12; j++) {
-                const s = j / 12;
-                const x = bx - 4 + w * 8 + Math.sin(s * 5 + w * 2.4 - t * 1.6) * (0.8 + 3 * s);
-                const y = by - 2 - s * H;
-                const a = Math.pow(1 - s, 0.9) * ws;
-                const wt = (3 - 1.6 * s) * (0.55 + 0.45 * Math.min(1, s * 4));
-                if (pass === 0) { q.stroke(110, 104, 100, 90 * a); q.strokeWeight(wt + 1.8); } else { q.stroke(255, 253, 248, 235 * a); q.strokeWeight(wt); }
+            for (let w = 0; w < 3; w++) {
+              const H = (22 + w * 6) * (1 + 0.55 * kick);
+              const x0 = bx - 9 + w * 9;
+              let px = x0, py = by - 2;
+              for (let j = 1; j <= 14; j++) {
+                const sN = j / 14;
+                const x = x0 + Math.sin(sN * 5 + w * 2.4 - t * 1.6) * (1 + 3.5 * sN);
+                const y = by - 2 - sN * H;
+                const a = Math.pow(1 - sN, 0.9) * ws;
+                const wt = (3.6 - 1.9 * sN) * (0.55 + 0.45 * Math.min(1, sN * 4));
+                if (pass === 0) { q.stroke(110, 104, 100, 95 * a); q.strokeWeight(wt + 2); } else { q.stroke(255, 253, 248, 240 * a); q.strokeWeight(wt); }
                 q.line(px, py, x, y);
                 px = x; py = y;
               }
             }
+          }
+          if (kick > 0.02) {                      // the puff off the toss
+            q.noStroke();
+            [[-6, -14, 6], [4, -20, 7.5], [11, -12, 5]].forEach(([dx, dy, r]) => {
+              q.fill(120, 114, 110, 90 * kick * ws); q.circle(bx + dx, by + dy * (0.6 + 0.6 * kick), (r + 1.6) * 2 * (0.6 + 0.5 * kick));
+              q.fill(255, 253, 248, 230 * kick * ws); q.circle(bx + dx, by + dy * (0.6 + 0.6 * kick), r * 2 * (0.6 + 0.5 * kick));
+            });
+          }
+          steamTop = [bx, by];
+        }
+
+        // 「辣椒炒肉」 in the steam: pops when the wok lands, and again after each toss
+        if (steamTop) {
+          let la = ease.outBack(env(t, 1.05, 1.32), 2) * (1 - env(t, 2.3, 2.6));
+          if (t > 2.6) { const lp = env(ph, TOSS + 0.4, TOSS + 0.62); la = Math.max(la, ease.outBack(lp, 2) * (1 - env(ph, TOSS + 1.6, TOSS + 1.9))); }
+          la *= fade;
+          if (la > 0.01) {
+            const [lx, ly] = k.screenAt(398, 334, WOK_Z);
+            const rise = (1 - Math.min(1, la)) * 5;
+            q.push();
+            q.translate(lx, ly + rise);
+            q.rotate(-0.1);
+            q.textFont('"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Zen Hei", sans-serif');
+            q.textStyle(q.BOLD);
+            q.textSize(12.5);
+            q.textAlign(q.CENTER, q.CENTER);
+            const chars = ['辣', '椒', '炒', '肉'];
+            chars.forEach((ch, i) => {
+              const a = clamp(la * 1.6 - i * 0.15, 0, 1);
+              if (a <= 0) return;
+              q.push();
+              q.translate((i - 1.5) * 12.6, (i % 2 ? -1.2 : 1.2));
+              q.rotate((i % 2 ? 0.07 : -0.06));
+              q.scale(ease.outBack(a, 2.2));
+              const al = 255 * Math.min(1, la);
+              q.fill(22, 21, 26, al); q.stroke(22, 21, 26, al); q.strokeWeight(4.6);
+              q.text(ch, 1.2, 1.4);
+              q.fill(227, 38, 28, al); q.stroke(22, 21, 26, al); q.strokeWeight(2.6);
+              q.text(ch, 0, 0);
+              q.noStroke(); q.fill(255, 214, 90, al);
+              q.text(ch, -0.5, -0.6);
+              q.fill(227, 38, 28, al);
+              q.text(ch, 0, 0);
+              q.pop();
+            });
+            q.pop();
           }
         }
 

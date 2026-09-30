@@ -66,9 +66,14 @@ function drawStorm(g, lit) {
   let gr = g.createLinearGradient(0, 0, 0, 512);
   gr.addColorStop(0, lit ? '#2a3a7c' : '#0c1230'); gr.addColorStop(0.5, lit ? '#3c4f9c' : '#1a2556'); gr.addColorStop(1, lit ? '#2c3a78' : '#141a40');
   g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
-  const bumps = (r, x0, x1, rmin, rmax) => {
+  // lumps along a cloud edge: mostly small, some medium, a few big heaps that rise higher
+  const lumps = (r, x0, x1, scale = 1) => {
     const out = []; let x = x0;
-    while (x < x1) { const rad = rmin + r() * (rmax - rmin); out.push([x + rad, rad, r()]); x += rad * (1.25 + r() * 0.7); }
+    while (x < x1) {
+      const k = r(), rad = (k < 0.55 ? 8 + r() * 9 : k < 0.87 ? 18 + r() * 10 : 30 + r() * 14) * scale;
+      out.push([x + rad * 0.8, rad, r()]);
+      x += rad * (0.9 + r() * 0.8);
+    }
     return out;
   };
   const halftone = (y0, y1, a, rmax) => {
@@ -77,59 +82,53 @@ function drawStorm(g, lit) {
       g.beginPath(); g.arc(x, y, rmax * clamp(0.25 + (y - y0) / (y1 - y0)), 0, TAU); g.fill();
     }
   };
-  // one bank: a lumpy top (varied bumps), a ragged underside; body, dark underside, halftone, rim
-  const bank = (top, depth, body, under, rim, rimA, seed, rmin = 9, rmax = 26) => {
+  // one bank segment x0..x1: a lumpy top whose big heaps tower, a ragged underside, rounded ends;
+  // body, dark lumpy underside with halftone, rims (faint on a few heaps, bright when lit)
+  const bank = (x0, x1, top, depth, body, under, rim, rimA, seed) => {
     const r = rng(seed);
-    const tops = bumps(r, -30, 545, rmin, rmax).map(([x, rad, j]) => [x, top + (j - 0.5) * 18, rad]);
-    const bots = bumps(r, -30, 545, 6, 14).map(([x, rad, j]) => [x, top + depth + (j - 0.5) * 10, rad]);
+    const tops = lumps(r, x0, x1).map(([x, rad, j]) => {
+      const end = Math.min(1, Math.min(x - x0, x1 - x) / 40);                // lumps sink toward the ends
+      return [x, top - rad * 0.45 * end + (j - 0.5) * 12 + (1 - end) * depth * 0.35, rad];
+    });
+    const bots = lumps(r, x0, x1, 0.5).map(([x, rad, j]) => [x, top + depth + (j - 0.5) * 12, rad]);
     const outline = () => {
-      g.beginPath(); g.moveTo(-30, top + depth);
+      g.beginPath(); g.moveTo(x0, top + depth);
       tops.forEach(([x, y, rad]) => g.arc(x, y, rad, Math.PI, 0, false));
-      g.lineTo(545, top + depth);
+      g.lineTo(x1, top + depth);
       bots.slice().reverse().forEach(([x, y, rad]) => g.arc(x, y, rad, 0, Math.PI, false));
       g.closePath();
     };
+    // rim: the silhouette filled up-left of the body, so only the outer edge shows (bright when lit)
+    g.save(); g.translate(-1.6, -2.6); g.globalAlpha = lit ? 1 : rimA; outline(); g.fillStyle = rim; g.fill(); g.restore();
     outline(); g.fillStyle = body; g.fill();
     g.save(); outline(); g.clip();
-    // dark underside with its own lumpy boundary
     const r2 = rng(seed + 7);
-    const ub = bumps(r2, -30, 545, 12, 30).map(([x, rad, j]) => [x, top + depth * 0.52 + (j - 0.5) * 12, rad]);
-    g.beginPath(); g.moveTo(-30, top + depth + 30);
-    g.lineTo(-30, top + depth * 0.52);
+    const ub = lumps(r2, x0 - 20, x1 + 20, 1.1).map(([x, rad, j]) => [x, top + depth * 0.5 + (j - 0.5) * 16, rad]);
+    g.beginPath(); g.moveTo(x0 - 30, top + depth + 40); g.lineTo(x0 - 30, top + depth * 0.5);
     ub.forEach(([x, y, rad]) => g.arc(x, y, rad, Math.PI, 0, false));
-    g.lineTo(545, top + depth + 30); g.closePath();
+    g.lineTo(x1 + 30, top + depth + 40); g.closePath();
     g.fillStyle = under; g.fill();
-    halftone(top + depth * 0.35, top + depth + 14, lit ? 0.3 : 0.5, 1.9);
+    halftone(top + depth * 0.3, top + depth + 16, lit ? 0.3 : 0.5, 1.9);
     g.restore();
-    // rim along the tops: faint on a few bumps normally, bright all along when lit
-    g.strokeStyle = rim; g.lineCap = 'round';
-    tops.forEach(([x, y, rad], i) => {
-      if (!lit && i % 3) return;
-      g.globalAlpha = lit ? 1 : rimA;
-      g.lineWidth = lit ? 2.6 : 1.8;
-      g.beginPath(); g.arc(x, y, rad - 1, Math.PI * 1.08, Math.PI * 1.7); g.stroke();
-    });
-    g.globalAlpha = 1;
   };
   // the ceiling: hangs from the top with a lumpy lower edge
   const rc = rng(2);
-  const ceil = bumps(rc, -30, 545, 14, 34).map(([x, rad, j]) => [x, 44 + (j - 0.5) * 22, rad]);
+  const ceil = lumps(rc, -30, 545).map(([x, rad, j]) => [x, 40 + (j - 0.5) * 26 - rad * 0.2, rad]);
   g.beginPath(); g.moveTo(-30, -10);
   ceil.forEach(([x, y, rad]) => g.arc(x, y, rad, Math.PI, 0, true));
   g.lineTo(545, -10); g.closePath();
   g.fillStyle = lit ? '#2f3d82' : '#141b45'; g.fill();
-  if (lit) {
-    g.strokeStyle = '#b9c8ff'; g.lineWidth = 2.4;
-    ceil.forEach(([x, y, rad]) => { g.beginPath(); g.arc(x, y, rad - 1, 0.25, Math.PI - 0.25); g.stroke(); });
-  }
-  bank(112, 74, lit ? '#5063b4' : '#2a3672', lit ? '#2c3a7e' : '#18204c', '#c6d2ff', 0.45, 11, 10, 28);
-  bank(196, 86, lit ? '#4658a8' : '#222e66', lit ? '#26336f' : '#131a42', '#c6d2ff', 0.4, 23, 12, 30);
-  // wisps of scud across the banks
+  // back banks (lighter), then the middle ones, staggered with sky between
+  bank(-40, 236, 124, 64, lit ? '#5366b8' : '#2b3874', lit ? '#2c3a7e' : '#18204c', '#c6d2ff', 0.18, 11);
+  bank(282, 552, 104, 70, lit ? '#5366b8' : '#2b3874', lit ? '#2c3a7e' : '#18204c', '#c6d2ff', 0.18, 5);
+  bank(-40, 196, 222, 78, lit ? '#4658a8' : '#222e66', lit ? '#26336f' : '#131a42', '#c6d2ff', 0.14, 23);
+  bank(250, 552, 206, 84, lit ? '#4658a8' : '#222e66', lit ? '#26336f' : '#131a42', '#c6d2ff', 0.14, 31);
+  // wisps of scud
   g.strokeStyle = lit ? '#23306a' : '#0f153a'; g.lineCap = 'round';
-  [[20, 168, 150, 6], [330, 176, 490, 7], [60, 262, 200, 5], [360, 254, 500, 6]].forEach(([x0, y, x1, w]) => {
+  [[30, 186, 150, 6], [340, 176, 480, 7], [80, 280, 190, 5], [330, 278, 470, 6]].forEach(([x0, y, x1, w]) => {
     g.lineWidth = w; g.beginPath(); g.moveTo(x0, y); g.quadraticCurveTo((x0 + x1) / 2, y - 5, x1, y + 2); g.stroke();
   });
-  bank(290, 120, lit ? '#34448e' : '#1a2352', lit ? '#1e2a60' : '#0f1538', '#aebdff', 0.35, 37, 12, 32);
+  bank(-40, 552, 304, 110, lit ? '#34448e' : '#1a2352', lit ? '#1e2a60' : '#0f1538', '#aebdff', 0.12, 37);
   // rock ledge he crouches on
   const ledge = [[-4, 430], [60, 418], [150, 426], [240, 410], [322, 398], [384, 388], [430, 400], [470, 392], [516, 404], [516, 516], [-4, 516]];
   g.beginPath(); ledge.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath();
@@ -645,81 +644,88 @@ export default {
         const c = q.drawingContext;
         q.strokeJoin(q.ROUND); q.strokeCap(q.ROUND);
         const line = (pts) => { q.beginShape(); pts.forEach(([x, y]) => q.vertex(x, y)); q.endShape(); };
-        const boltDraw = (pts, a, w = 1) => {
-          q.noFill();
-          q.stroke(10, 15, 36, 255 * a); q.strokeWeight(5.2 * w); line(pts);
-          q.stroke(103, 232, 249, 255 * a); q.strokeWeight(3.1 * w); line(pts);
-          q.stroke(246, 252, 255, 255 * a); q.strokeWeight(1.3 * w); line(pts);
+        const polyA = (a) => (P, layer) => {
+          const col = BOLT_RGB[layer];
+          q.noStroke(); q.fill(col[0], col[1], col[2], 255 * a);
+          q.beginShape(); P.forEach(([x, y]) => q.vertex(x, y)); q.endShape(q.CLOSE);
         };
         const S = (u, v, z = 0) => k.screenAt(u, v, z);
         const [cx, cy] = S(256, 256);
-        const fl = flashAt(t) * fade;
-
-        // thunder flash over the whole disc
-        if (fl > 0.01) {
+        const headTop = () => { hamSpin.localToWorld(tmp.set(0, HY + HH / 2, HD * 0.3)); root.worldToLocal(tmp); return k.toScreen(tmp); };
+        // a bolt along the photo-px path, its last point pinned to the hammer head, revealed top-down
+        const strikeBolt = (reveal, a, sc) => {
+          const pts = strike.map(([u, v]) => S(u, v, 8));
+          pts[pts.length - 1] = headTop();
+          const n = Math.max(2, Math.ceil(reveal * (pts.length - 1)) + 1);
           c.save(); c.beginPath(); c.arc(cx, cy, k.R + 0.5, 0, TAU); c.clip();
-          q.noStroke(); q.fill(236, 248, 255, 130 * fl * (t < T_STRIKE + 0.4 ? 1 : 0.5));
+          if (reveal >= 1) strikeForks.forEach((f, i) => { if (sc > 0.8 || i === 1) boltLayers(polyA(a), f.map(([u, v]) => S(u, v, 8)), 5.6 * sc, 0.6, 3); });
+          boltLayers(polyA(a), pts.slice(0, n), 10 * sc, 6.5 * sc, 3.4);
+          c.restore();
+        };
+
+        // thunder flash over the whole disc: one short white hit (< 0.1 s)
+        const ff = faceFlashAt(t) * fade;
+        if (ff > 0.01) {
+          c.save(); c.beginPath(); c.arc(cx, cy, k.R + 0.5, 0, TAU); c.clip();
+          q.noStroke(); q.fill(236, 248, 255, 150 * ff);
           q.rect(cx - k.R - 2, cy - k.R - 2, k.R * 2 + 4, k.R * 2 + 4);
           c.restore();
         }
 
-        c.save(); c.beginPath(); c.arc(cx, cy, k.R + 0.5, 0, TAU); c.clip();
-        // the strike: the bolt races down onto the hammer, flickers twice, fades
-        const sa = (hump(t, T_STRIKE - 0.03, T_STRIKE, T_STRIKE + 0.22) > 0 ? 1 : 0) * (t < T_STRIKE + 0.1 ? 1 : t < T_STRIKE + 0.14 ? 0.25 : 1 - env(t, T_STRIKE + 0.14, T_STRIKE + 0.24)) * fade;
-        if (sa > 0.01 && t < T_STRIKE + 0.24) {
-          const reveal = env(t, T_STRIKE - 0.03, T_STRIKE);
-          const n = Math.max(2, Math.ceil(reveal * strike.length));
-          const pts = strike.slice(0, n).map(([u, v]) => S(u, v, 8));
-          boltDraw(pts, sa, 1);
-          if (reveal >= 1) strikeForks.forEach(f => boltDraw(f.map(([u, v]) => S(u, v, 8)), sa, 0.7));
+        // the entrance strike: races down onto the hammer, flickers, fades by +0.3 s
+        if (t > T_STRIKE - 0.035 && t < T_STRIKE + 0.3) {
+          const reveal = env(t, T_STRIKE - 0.035, T_STRIKE);
+          const a = (t < T_STRIKE + 0.12 ? 1 : t < T_STRIKE + 0.155 ? 0.3 : 1 - env(t, T_STRIKE + 0.2, T_STRIKE + 0.3)) * fade;
+          if (a > 0.01) strikeBolt(reveal, a, 1);
         }
-        c.restore();
         // on alternate beats a thinner bolt strikes the hammer again
         const bn = beatN(t), ph = beatPh(t);
-        if (ph >= 0 && bn % 2 === 1 && ph < 0.2) {
-          const reveal = env(ph, 0, 0.03), a = (ph < 0.1 ? 1 : ph < 0.12 ? 0.3 : 1 - env(ph, 0.12, 0.2)) * fade;
-          c.save(); c.beginPath(); c.arc(cx, cy, k.R + 0.5, 0, TAU); c.clip();
-          const n = Math.max(2, Math.ceil(reveal * strike.length));
-          boltDraw(strike.slice(0, n).map(([u, v]) => S(u, v, 8)), a, 0.7);
-          if (reveal >= 1) boltDraw(strikeForks[0].map(([u, v]) => S(u, v, 8)), a, 0.5);
-          c.restore();
+        if (ph >= 0 && bn % 2 === 1 && ph < 0.22) {
+          const a = (ph < 0.1 ? 1 : ph < 0.13 ? 0.3 : 1 - env(ph, 0.13, 0.22)) * fade;
+          if (a > 0.01) strikeBolt(env(ph, 0, 0.03), a, 0.62);
         }
-        // impact starburst on the hammer head
-        const hb = hump(t, T_STRIKE, T_STRIKE + 0.04, T_STRIKE + 0.22) * fade;
+        // impact starburst on the hammer head, with speed lines
+        const hb = hump(t, T_STRIKE, T_STRIKE + 0.04, T_STRIKE + 0.26) * fade;
         if (hb > 0.01) {
-          hamSpin.localToWorld(tmp.set(0, HY + HH / 2, HD / 2)); root.worldToLocal(tmp);
-          const [bx, by] = k.toScreen(tmp);
-          q.stroke(10, 15, 36, 255 * hb); q.strokeWeight(1.6); q.fill(255, 250, 205, 255 * hb);
+          const [bx, by] = headTop();
+          q.stroke(10, 15, 36, 255 * hb); q.strokeWeight(2); q.fill(255, 250, 205, 255 * hb);
           q.beginShape();
-          for (let i = 0; i < 20; i++) { const a = (i / 20) * TAU, r = (i % 2 ? 7 : 17 + (i % 4) * 3) * (0.6 + 0.4 * hb); q.vertex(bx + Math.cos(a) * r, by + Math.sin(a) * r * 0.8); }
+          for (let i = 0; i < 22; i++) { const a = (i / 22) * TAU, r = (i % 2 ? 8 : 20 + (i % 4) * 4) * (0.6 + 0.4 * hb); q.vertex(bx + Math.cos(a) * r, by + Math.sin(a) * r * 0.8); }
           q.endShape(q.CLOSE);
-          q.stroke(10, 15, 36, 200 * hb); q.strokeWeight(1.3);
-          for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU + 0.2, r0 = 22 + (1 - hb) * 10; q.line(bx + Math.cos(a) * r0, by + Math.sin(a) * r0 * 0.8, bx + Math.cos(a) * (r0 + 6), by + Math.sin(a) * (r0 + 6) * 0.8); }
+          q.noStroke(); q.fill(120, 225, 255, 255 * hb);
+          q.beginShape();
+          for (let i = 0; i < 22; i++) { const a = (i / 22) * TAU, r = (i % 2 ? 4 : 10 + (i % 4) * 2) * (0.6 + 0.4 * hb); q.vertex(bx + Math.cos(a) * r, by + Math.sin(a) * r * 0.8); }
+          q.endShape(q.CLOSE);
+          q.stroke(10, 15, 36, 220 * hb); q.strokeWeight(1.6);
+          for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU + 0.2, r0 = 27 + (1 - hb) * 12; q.line(bx + Math.cos(a) * r0, by + Math.sin(a) * r0 * 0.8, bx + Math.cos(a) * (r0 + 7), by + Math.sin(a) * (r0 + 7) * 0.8); }
         }
 
-        // crackling arcs round the hammer head (re-rolled every 60 ms)
+        // crackling arcs round the hammer head: short bold forked bolts, re-rolled every 60 ms
         const cr = crackleAt(t) * (1 - clamp(e * 3)) * (ham.visible ? 1 : 0);    // gone before the hammer drops out
         if (cr > 0.02) {
-          const frame = Math.floor(t / 0.06);
-          const R = rng(1000 + frame);
-          q.noFill();
-          HEAD_EDGE.forEach(([x, y], i) => {
-            if (R() > 0.35 + 0.5 * cr) return;
-            hamSpin.localToWorld(tmp.set(x, y, HD / 2 * 0.6)); root.worldToLocal(tmp);
-            hamSpin.localToWorld(tmp2.set(x * 1.5 + (R() - 0.5) * 10, HY + (y - HY) * 1.9 + (R() - 0.5) * 8, HD / 2)); root.worldToLocal(tmp2);
+          const R = rng(1000 + Math.floor(t / 0.06));
+          const P = polyA(Math.min(1, cr * 1.6));
+          HEAD_EDGE.forEach(([x, y]) => {
+            if (R() > 0.3 + 0.6 * cr) return;
+            hamSpin.localToWorld(tmp.set(x, y, HD / 2 * 0.7)); root.worldToLocal(tmp);
+            const out = 1.45 + R() * 0.35;
+            hamSpin.localToWorld(tmp2.set(x * out + (R() - 0.5) * 8, HY + (y - HY) * (1.8 + R() * 0.6) + (R() - 0.5) * 8, HD / 2)); root.worldToLocal(tmp2);
             const [ax, ay] = k.toScreen(tmp), [bx, by] = k.toScreen(tmp2);
-            const pts = [[ax, ay]];
             const nx = -(by - ay), ny = bx - ax, l = Math.hypot(nx, ny) || 1;
-            for (let j = 1; j < 4; j++) { const f = j / 4, o = (j % 2 ? 1 : -1) * (1.5 + R() * 2.5); pts.push([lerp(ax, bx, f) + nx / l * o, lerp(ay, by, f) + ny / l * o]); }
+            const pts = [[ax, ay]];
+            for (let j = 1; j < 4; j++) { const f = j / 4, o = (j % 2 ? 1 : -1) * (2 + R() * 2.5); pts.push([lerp(ax, bx, f) + nx / l * o, lerp(ay, by, f) + ny / l * o]); }
             pts.push([bx, by]);
-            q.stroke(10, 15, 36, 220 * cr); q.strokeWeight(3.2); line(pts);
-            q.stroke(150, 245, 255, 255 * cr); q.strokeWeight(1.5); line(pts);
+            boltLayers(P, pts, 3.6, 0.6, 2.4);
+            if (R() < 0.5) {                      // a little fork
+              const [fx, fy] = pts[2];
+              boltLayers(P, [[fx, fy], [fx + (bx - ax) * 0.3 + ny / l * 3, fy + (by - ay) * 0.3 - nx / l * 3], [fx + (bx - ax) * 0.45 + ny / l * 6, fy + (by - ay) * 0.45 - nx / l * 6]], 2.2, 0.4, 2);
+            }
           });
         }
 
         // electric eyes: a cyan glint in each lens, sparks when the lightning flashes
         const eg = (t > T_STRIKE ? 0.18 : 0) * fade;
-        const spark = Math.max(fl, crackleAt(t) * 0.8) * fade;
+        const spark = Math.max(ff, crackleAt(t) * 0.8) * fade;
         if (eg + spark > 0.02) {
           [[230, 144, -1], [273, 142, 1]].forEach(([u, v, sx]) => {
             const [x, y] = S(u, v, 0);
