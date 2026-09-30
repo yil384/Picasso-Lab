@@ -29,7 +29,7 @@
 
 <div class="xc-wrap" role="button" tabindex="0" aria-pressed="false"
      aria-label="Xinwei — 厨神 MasterChef effect" style="
-    --avatar-size: 200px;
+    --avatar-size: min(200px, calc(100vw - 16px), calc(100vh - 16px));
     --hat-x: 0px;
     --hat-y: -1px;
     --hat-rot: 0deg;
@@ -330,6 +330,9 @@ body {
   box-sizing: border-box;
   padding: 8px;
 }
+/* the Team page tiles shrink with the window (--avatar-size above follows the tile); on phones Sites
+   stacks the photo above the name, so the photo sits at the bottom of the tile like the other avatars */
+.xc-wrap.xc-phone { position: absolute; left: 50%; bottom: 10px; margin-left: calc(var(--avatar-size) / -2); }
 
 .xc-wrap {
   display: inline-block;
@@ -740,6 +743,7 @@ body {
   document.querySelectorAll('.xc-wrap').forEach(function (wrap) {
     if (wrap.dataset.xcReady === '1') return;
     wrap.dataset.xcReady = '1';
+    if (Math.min(screen.width, screen.height) < 600) wrap.classList.add('xc-phone');
     var last = 0;
     function toggle() {
       // a double-click counts once, so a half-played entrance never gets restarted mid-way
