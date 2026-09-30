@@ -290,9 +290,12 @@ export function buildHourglass(W, h, pos, key) {
 export async function buildDesk(W) {
   const { THREE, scene, add, ctx } = W;
   const D = L.desk, g = new THREE.Group(); g.position.set(D.x, 0, D.z); scene.add(g);
-  const wood = { color: 0xc98b4a, hatchDir: [1, 0, 0.1], rim: 0.5, shadeColor: 0x6b3f22, shadeMix: 0.4, seed: 81 };
+  // a painted pale-blue desk with a cream blotter: keeps the lower third of the payoff cool (sky + cream, the series look),
+  // so the vermilion 68x and the gold $0.04 are the only warm pops
+  const wood = { color: 0x9fbdd0, hatchDir: [1, 0, 0.1], rim: 0.5, shadeColor: 0x4a6a86, shadeMix: 0.4, seed: 81 };
   add(new THREE.BoxGeometry(D.w, 0.12, D.d), wood, { outline: 0.75 }, [0, -0.06, 0], [0, 0, 0], g);
-  add(new THREE.BoxGeometry(D.w - 0.2, 0.22, D.d - 0.1), { ...wood, color: 0xb57a3f }, { outline: 0.9 }, [0, -0.23, -0.02], [0, 0, 0], g);
+  add(new THREE.BoxGeometry(D.w - 0.2, 0.22, D.d - 0.1), { ...wood, color: 0x86a9c1 }, { outline: 0.9 }, [0, -0.23, -0.02], [0, 0, 0], g);
+  add(new THREE.BoxGeometry(D.w - 0.36, 0.01, D.d - 0.22), { color: 0xf3e8cc, hatchDir: [1, 0, 0.2], rim: 0.2, toneBias: 0.05, seed: 82 }, { outline: 0.5, cast: false }, [0, 0.005, 0.0], [0, 0, 0], g);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.BoxGeometry(0.1, -L.floorY - 0.12, 0.1), wood, { outline: 0.8 }, [sx * (D.w / 2 - 0.12), (L.floorY - 0.12) / 2, sz * (D.d / 2 - 0.1)], [0, 0, 0], g);
   // gooseneck lamp (back-left of the desk), shade aimed at the book
   const lamp = new THREE.Group(); lamp.position.set(-1.3, 0, 0.28); lamp.rotation.y = 0.55; g.add(lamp);
