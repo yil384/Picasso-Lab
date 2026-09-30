@@ -641,6 +641,7 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-hand {
     position: absolute;
     left: 0; right: 0; bottom: var(--hand-bottom, 55px);
+    padding-left: calc(2 * var(--hand-shift, 0px));   /* moves the centred hand clear of my avatar plate */
     z-index: 10;
     display: flex;
     justify-content: center;

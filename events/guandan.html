@@ -2616,6 +2616,9 @@ const HAND_BOTTOM = 55;                     // hand bottom edge, 7.6% of 720 (se
 const HAND_STEP = .35;                      // same-rank stack step: the whole rank + suit index shows
 const HAND_MIN_PITCH = .93;                 // columns never cover more than 7% of a card (Tencent: ~1px gap)
 const HAND_MIN_SCALE = .5;                  // tall columns shrink the cards, never the step, down to this
+const HAND_ROW_MIN_PITCH = .34;             // 横排: each card keeps its rank + suit index in view
+const HAND_EDGE = 32;                       // the hand's margin from the stage's left and right edges
+const MY_PLATE_CLEAR = 122;                 // my avatar plate: left 26 + the 88 px avatar + an 8 px gap
 const PLAYED_H = 80.6 / .74;                // a played (small) card: 79% of the hand card
 const PARTNER_PLAY_TOP = 112;               // .gd-slot.is-p2
 const SIDE_PLAY_TOP = 190;                  // .gd-slot.is-p1 / .is-p3, inboard of the side seats
@@ -2937,16 +2940,18 @@ function handBottom() {
 // keep their size. `steps` holds each column's step.
 function handGeometry(columns) {
     const { w, h } = tableView.layout;
-    const avail = w - 64;
+    const avail = w - 2 * HAND_EDGE;
     if (handMode === "row") {
         const n = columns.reduce((sum, col) => sum + col.cards.length, 0);
         const pitch = n > 1 ? Math.min(HAND_CARD_W * .52, (avail - HAND_CARD_W) / (n - 1)) : HAND_CARD_W;
-        return { cardW: HAND_CARD_W, pitch, step: 0, steps: [], height: HAND_CARD_H * 1.18 };
+        return { cardW: HAND_CARD_W, step: 0, steps: [], height: HAND_CARD_H * 1.18,
+            ...clearOfMyPlate(w, n, HAND_CARD_W, pitch, HAND_CARD_W * HAND_ROW_MIN_PITCH) };
     }
     const n = columns.length;
     const tallest = Math.max(1, ...columns.filter(col => !col.group).map(col => col.cards.length));
     const room = h - handBottom() - ACTION_ROW_GAP - ACTION_ROW_H - ROW_MIN_TOP;
-    const fitW = n > 1 ? avail / (HAND_CARD_W * (HAND_MIN_PITCH * (n - 1) + 1)) : 1;
+    // the width test leaves room for my avatar plate on the left, so a full hand clears it too
+    const fitW = n > 1 ? (w - HAND_EDGE - MY_PLATE_CLEAR) / (HAND_CARD_W * (HAND_MIN_PITCH * (n - 1) + 1)) : 1;
     const fitH = room / (HAND_CARD_H * (1 + HAND_STEP * (tallest - 1)));
     const k = Math.max(HAND_MIN_SCALE, Math.min(1, fitW, fitH));
     const cardW = HAND_CARD_W * k;
@@ -2955,7 +2960,20 @@ function handGeometry(columns) {
     const stepFor = len => len > 1 ? Math.min(cardH * HAND_STEP, Math.max(0, room - cardH) / (len - 1)) : cardH * HAND_STEP;
     const steps = columns.map(col => stepFor(col.group ? col.cards.length : tallest));
     const height = Math.max(cardH, ...columns.map((col, i) => cardH + (col.cards.length - 1) * steps[i]));
-    return { cardW, pitch, step: stepFor(tallest), steps, height };
+    return { cardW, step: stepFor(tallest), steps, height, ...clearOfMyPlate(w, n, cardW, pitch, cardW * HAND_MIN_PITCH) };
+}
+
+// My avatar plate (.gd-seat.is-p0) sits at the bottom-left, over the hand's lower band. A centred
+// hand that would run under it moves right into the free room on the right; if that is not
+// enough, the pitch tightens down to minPitch (handGeometry already sized the columns so that
+// this always suffices; a 横排 row of 27 may still graze it). Returns the pitch and the shift.
+function clearOfMyPlate(w, n, cardW, pitch, minPitch) {
+    const width = p => cardW + Math.max(0, n - 1) * p;
+    const room = w - HAND_EDGE - MY_PLATE_CLEAR;               // between the plate and the right margin
+    if (n > 1 && width(pitch) > room) pitch = Math.max(Math.min(pitch, minPitch), (room - cardW) / (n - 1));
+    const left = (w - width(pitch)) / 2;                       // the centred hand's left edge
+    const shift = Math.max(0, Math.min(MY_PLATE_CLEAR - left, left - HAND_EDGE));
+    return { pitch, shift };
 }
 
 // How far a side slot's content reaches in from the stage edge (design px, 0 when empty): its
@@ -3875,6 +3893,7 @@ function renderTable() {
     const actionsBottom = bottom + handH + ACTION_ROW_GAP;
     t.stage.style.setProperty("--hand-bottom", `${bottom.toFixed(1)}px`);
     t.stage.style.setProperty("--hand-h", `${handH.toFixed(1)}px`);
+    t.regions.hand.style.setProperty("--hand-shift", `${mine >= 0 ? geo.shift.toFixed(1) : 0}px`);
     t.stage.style.setProperty("--actions-bottom", `${actionsBottom.toFixed(1)}px`);
     const rowTop = t.layout.h - actionsBottom - ACTION_ROW_H;
     t.stage.classList.toggle("is-acting", v.canAct);
