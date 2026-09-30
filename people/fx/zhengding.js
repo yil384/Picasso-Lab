@@ -2,18 +2,24 @@
    Click: the sky over the Golden Gate warms and god-rays sweep in from a sun at the
    upper left; a peaked officer's cap drops onto his head, aviator sunglasses slide
    down onto his eyes, a corncob pipe swings into the corner of his mouth (smoke curls
-   up), and ribbon bars + star medals pin onto his jacket one by one. Then the hero
-   moment: a comic sun-burst flash and "SUNSHINE!" lettering (once per activation).
-   Loop (3.6 s): the rays breathe, the smoke curls, a glint crosses the sunglasses,
-   one medal twinkles.
+   up), ribbon bars + star medals pin onto his jacket one by one, while a fat toon bomb
+   drops in from the top right. The climax (~1.0 s): it lands behind him on the right, a
+   white flash fills the sky behind him (he stays cool in front, the glint flares across
+   his sunglasses), a shockwave ring runs out along the ground, rocks fly, the sun bursts
+   and "SUNSHINE!" pops; the fireball rises on a stem into a cel-shaded, halftoned toon
+   mushroom cloud (ink outlines, a collar ring, a dust skirt) behind him.
+   Loop (3.6 s): the cloud billows calmly, the rays breathe, the smoke curls, a glint
+   crosses the sunglasses, one medal twinkles.
    Photo landmarks (512 px): head top 234,166 · hair u 179..289 · hairline v 197 ·
-   brows v 224 · eyes 211,243 / 258,243 · mouth corner 214,287 · left chest 345,395. */
+   brows v 224 · eyes 211,243 / 258,243 · mouth corner 214,287 · left chest 345,395 ·
+   ground zero 432,300 (the bushes right of his shoulder) · cloud cap centre ~407,155. */
 import { THREE, presence, env, ease, clamp } from './kit.js';
 
 const INK = 0x16151a;
 const GOLD = 0xf0b93a, KHAKI = 0xa38f5a, BAND = 0x3b2f1f, VISOR = 0x221d19;
-const BEAT = 3.6, LOOP0 = 1.4;
+const BEAT = 3.6, LOOP0 = 1.9;
 const TAU = Math.PI * 2;
+const BOOM = 0.98;                          // the bomb lands: flash, fireball, shockwave
 
 /* rays: [angle (rad, world, from +x, y up), far width, strength, depth at the far end] */
 const RAYS = [
@@ -344,7 +350,7 @@ export default {
       holder.add(m);
       holder.position.set((c - 1) * (BW + 0.35) + r * 1.2, -r * (BH + 0.4), 0);
       rack.add(holder);
-      pins.push({ obj: holder, t0: 0.84 + r * 0.1 + c * 0.03 });
+      pins.push({ obj: holder, t0: 0.58 + r * 0.07 + c * 0.025 });
     });
     const drapeShape = new THREE.Shape();
     drapeShape.moveTo(-3, 0); drapeShape.lineTo(3, 0); drapeShape.lineTo(3, -5.2); drapeShape.lineTo(0, -6.6); drapeShape.lineTo(-3, -5.2); drapeShape.closePath();
@@ -364,13 +370,207 @@ export default {
       holder.add(drapeInk, drape, star);
       holder.position.set((i - 1) * (BW + 0.35) + 1.2, -2 * (BH + 0.4) + 0.2, 0.6);
       rack.add(holder);
-      pins.push({ obj: holder, t0: 1.06 + i * 0.075 });
+      pins.push({ obj: holder, t0: 0.74 + i * 0.06 });
       medalStars.push(star);
     });
     rack.position.copy(k.at(344, 390, 6));
     rack.rotation.set(-0.12, 0.18, 0.06);
     rack.scale.setScalar(1.12);
     root.add(rack);
+
+    /* ⑥ the bomb, the flash and the mushroom cloud: behind him on the right (between the
+       plate and the cut-out), so his shoulder hides the foot of the stem */
+    const GZ = [432, 300], ZC = -18, NS = 1.1;     // ground zero (photo px), depth, cloud size
+    const gz = k.at(GZ[0], GZ[1], ZC);
+    const dsC = k.depthScale(ZC);
+    const rgb = (h) => new THREE.Vector3(((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255);
+    // cel shading in three bands lit from the sun (upper left) + a screen-space halftone in the shade;
+    // colours blend from "hot" (fireball) to the settled cloud with uHeat
+    const cel = (cool, hot) => {
+      const m = k.clip(new THREE.ShaderMaterial({
+        uniforms: {
+          uHi: { value: rgb(cool[0]) }, uMid: { value: rgb(cool[1]) }, uLo: { value: rgb(cool[2]) },
+          uHiH: { value: rgb(hot[0]) }, uMidH: { value: rgb(hot[1]) }, uLoH: { value: rgb(hot[2]) },
+          uHeat: { value: 1 }, uCell: { value: 3.1 * k.dpr },
+        },
+        vertexShader: `varying vec3 vN;
+          void main() { vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+        fragmentShader: `uniform vec3 uHi, uMid, uLo, uHiH, uMidH, uLoH; uniform float uHeat, uCell; varying vec3 vN;
+          void main() {
+            float d = dot(normalize(vN), normalize(vec3(-0.5, 0.72, 0.5)));
+            vec3 hi = mix(uHi, uHiH, uHeat), mid = mix(uMid, uMidH, uHeat), lo = mix(uLo, uLoH, uHeat);
+            vec3 c = d > 0.48 ? hi : d > -0.08 ? mid : lo;
+            vec2 g = gl_FragCoord.xy / uCell;
+            g = vec2(g.x + g.y, g.y - g.x) * 0.7071;
+            float r = length(fract(g) - 0.5);
+            float amt = clamp((0.48 - d) / 1.2, 0.0, 1.0);
+            if (r < 0.46 * amt) c *= d > -0.08 ? 0.82 : 0.7;
+            gl_FragColor = vec4(c, 1.0);
+          }`,
+      }));
+      own.push(m);
+      return m;
+    };
+    const capMat = cel([0xffedc2, 0xf59a4c, 0xb9452c], [0xfff4a0, 0xffae2a, 0xee4a1a]);
+    const stemMat = cel([0xffd79a, 0xe8843e, 0xa13c28], [0xfff08a, 0xff9a22, 0xd8401a]);
+    const dustMat = cel([0xeedfc0, 0xc6a77e, 0x8c6c50], [0xfff0c8, 0xf0b46a, 0xb86a3a]);
+    const nuke = new THREE.Group();           // at ground zero; children in logical px (y up from the ground)
+    nuke.position.copy(gz);
+    nuke.scale.setScalar(dsC * NS);
+    root.add(nuke);
+    const puff = (mat, x, y, z, r, sy = 0.82, sz = 0.55, ink = 1.25) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), mat);
+      m.position.set(x, y, z);
+      m.scale.set(1, sy, sz);
+      m.renderOrder = -12;
+      k.ink(m, ink);
+      m.userData = { x, y, z, sy, sz, ph: x * 0.31 + y * 0.7 };
+      return m;
+    };
+    // the cap: a squashed dome of puffs over a rolling underside
+    const STEM_H = 44;
+    const mCap = new THREE.Group();
+    const capPuffs = [
+      [0, 7, 0, 13], [-12, 4, 2, 11], [12, 4, 2, 11], [-22, 0, 0, 9], [22, 0, 0, 9], [-6, 13, -2, 9], [7, 13.5, -1, 9],
+      [-15, -6, 4, 7.5], [0, -6.5, 6, 8.5], [15, -6, 4, 7.5], [-27, -4, -2, 6], [27, -4, -2, 6],
+    ].map(([x, y, z, r]) => puff(capMat, x, y, z, r));
+    mCap.add(...capPuffs);
+    nuke.add(mCap);
+    // the stem: a lathe column, narrow waist, flaring into the cap
+    const stemProf = [[9.5, 0], [7.2, 3], [5.4, 8], [4.6, 14], [4.2, 20], [4.5, 27], [5.2, 33], [6.6, 38.5], [8.6, 42.5], [10, 44.5], [0.01, 45]]
+      .map(([r, y]) => new THREE.Vector2(r, y));
+    const stemGeo = new THREE.LatheGeometry(stemProf, 28);
+    stemGeo.scale(1, 1, 0.6);
+    {                                              // lumpy: the column is smoke, not a pipe
+      const p = stemGeo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), y = p.getY(i), z = p.getZ(i), a = Math.atan2(z, x);
+        const f = 1 + 0.07 * Math.sin(y * 0.55 + a * 3) + 0.05 * Math.sin(y * 0.23 - a * 2);
+        p.setX(i, x * f); p.setZ(i, z * f);
+      }
+      stemGeo.computeVertexNormals();
+    }
+    const mStem = new THREE.Mesh(stemGeo, stemMat);
+    mStem.renderOrder = -12;
+    k.ink(mStem, 1.2);
+    nuke.add(mStem);
+    // the condensation collar round the stem
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(8.4, 2.3, 10, 32), capMat);
+    collar.rotation.x = Math.PI / 2 - 0.25;
+    collar.scale.set(1, 1, 0.9);
+    collar.position.y = STEM_H * 0.6;
+    collar.renderOrder = -12;
+    k.ink(collar, 1.1);
+    nuke.add(collar);
+    // the dust skirt along the ground
+    const skirt = new THREE.Group();
+    const skirtPuffs = [[-22, 1.5, 0, 6], [-11, 3, 2, 8.5], [0, 4.5, 3, 10], [11, 3.5, 2, 8.5], [22, 2, 0, 6.5], [-31, 1, -2, 4.5], [31, 1, -2, 4.8], [-5, 9, -3, 6.5], [6, 9.5, -3, 6.5]]
+      .map(([x, y, z, r]) => puff(dustMat, x, y, z, r, 0.62, 0.5, 1.1));
+    skirt.add(...skirtPuffs);
+    nuke.add(skirt);
+
+    // the bomb: a fat olive egg (the "Fat Man" shape), a dark belt and nose, a box tail with cross fins
+    const bomb = new THREE.Group();
+    const bombFit = new THREE.Group();          // the nose points along the fall (local -y)
+    bomb.add(bombFit);
+    const OLIVE = 0x8c8a4e, OLIVE_D = 0x4d4b2c;
+    const bBody = new THREE.Mesh(new THREE.SphereGeometry(8, 24, 16), k.clip(k.toon(OLIVE)));
+    bBody.scale.set(1, 1.2, 1);
+    k.ink(bBody, 1.4);
+    const bBelt = new THREE.Mesh(new THREE.CylinderGeometry(8.15, 8.15, 2, 24, 1, true), k.clip(k.toon(OLIVE_D, { side: THREE.DoubleSide })));
+    bBelt.position.y = 1.2;
+    const bNose = new THREE.Mesh(new THREE.SphereGeometry(3.4, 16, 10), k.clip(k.toon(0x3f3e2a)));
+    bNose.position.y = -8.6;
+    bNose.scale.set(1, 0.6, 1);
+    k.ink(bNose, 1.0);
+    const bTail = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 4.6, 5, 14), k.clip(k.toon(0x6e6c40)));
+    bTail.position.y = 10.4;
+    k.ink(bTail, 1.0);
+    const finMat = k.clip(k.toon(0x76744a, { side: THREE.DoubleSide }));
+    const box = new THREE.Group();               // the square fin box: four plates round two cross fins
+    [[0, 6.2, 12.4, 0.8], [0, -6.2, 12.4, 0.8], [6.2, 0, 0.8, 12.4], [-6.2, 0, 0.8, 12.4]].forEach(([x, z, w, d]) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, 4.4, d), finMat);
+      m.position.set(x, 0, z);
+      k.ink(m, 1.0);
+      box.add(m);
+    });
+    [[12.4, 0.7], [0.7, 12.4]].forEach(([w, d]) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, 5.6, d), finMat);
+      m.position.y = -0.8;
+      box.add(m);
+    });
+    box.position.y = 14.4;
+    bombFit.add(bBody, bBelt, bNose, bTail, box);
+    bombFit.traverse(m => { if (m.isMesh) m.renderOrder = -11; });
+    root.add(bomb);
+    const B0 = k.at(392, 6, -10), B1 = k.at(GZ[0], GZ[1] - 8, -10);
+    const bombAt = (t) => {                      // position along the fall (0.40 -> BOOM), gentle then fast
+      const p = env(t, 0.4, BOOM), f = 0.35 * p + 0.65 * p * p;
+      return [B0.x + (B1.x - B0.x) * f, B0.y + (B1.y - B0.y) * f];
+    };
+
+    // the white flash: the whole sky behind him goes white for a moment (he stays in front, cool) ...
+    const flashMat = k.clip(new THREE.MeshBasicMaterial({ color: 0xfffdf4, transparent: true, depthWrite: false, opacity: 0 }));
+    const flashCard = new THREE.Mesh(new THREE.CircleGeometry(k.R + 1, 96), flashMat);
+    flashCard.position.z = -31;
+    flashCard.scale.setScalar(k.depthScale(-31));
+    flashCard.renderOrder = -14;
+    root.add(flashCard);
+    // ... and a comic explosion star at ground zero, behind the fireball
+    const boomStar = k.card(96, 96, (g, w, h) => {
+      const n = 13, cx = w / 2, cy = h / 2;
+      const pts = [];
+      for (let i = 0; i < n * 2; i++) {
+        const a = (i / (n * 2)) * TAU + 0.1, r = (i % 2 ? 0.52 : i % 4 === 0 ? 0.97 : 0.8) * w / 2;
+        pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+      }
+      const path = (sc) => { g.beginPath(); pts.forEach(([x, y], i) => { const X = cx + (x - cx) * sc, Y = cy + (y - cy) * sc; if (i) g.lineTo(X, Y); else g.moveTo(X, Y); }); g.closePath(); };
+      g.lineJoin = 'round';
+      path(0.95); g.fillStyle = '#fff4b0'; g.fill(); g.lineWidth = w * 0.028; g.strokeStyle = '#16151a'; g.stroke();
+      path(0.62); g.fillStyle = '#ffc23a'; g.fill();
+      path(0.36); g.fillStyle = '#fffbe6'; g.fill();
+    }, { depthWrite: false });
+    k.clip(boomStar.material);
+    boomStar.position.copy(k.at(GZ[0], GZ[1] - 14, -27));
+    boomStar.renderOrder = -13;
+    root.add(boomStar);
+
+    // the shockwave: an ellipse ring running out along the ground (constant line width), with a thin dust sheet inside
+    const shockMat = k.clip(new THREE.ShaderMaterial({
+      uniforms: { uR: { value: 1 }, uK: { value: 0.22 }, uOp: { value: 0 } },
+      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `uniform float uR, uK, uOp; varying vec2 vUv;
+        void main() {
+          vec2 p = (vUv - 0.5) * 2.0;                       // unit ellipse
+          float rho = max(length(p), 1e-4);
+          vec2 gr = p / vec2(uR, uR * uK) / rho;            // gradient of rho per logical px
+          float dpx = (1.0 - rho) / max(length(gr), 1e-5);  // logical px inside the rim
+          vec4 c = vec4(0.0);
+          if (dpx > 0.0 && dpx < 3.4) c = (dpx > 0.9 && dpx < 2.5) ? vec4(1.0, 0.97, 0.86, 1.0) : vec4(0.086, 0.082, 0.1, 1.0);
+          else if (dpx >= 3.4) c = vec4(1.0, 0.95, 0.8, 0.12 * clamp(1.0 - (dpx - 3.4) / 6.0, 0.0, 1.0));
+          gl_FragColor = vec4(c.rgb, c.a * uOp);
+        }`,
+      transparent: true, depthWrite: false,
+    }));
+    own.push(shockMat);
+    const shock = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shockMat);
+    shock.position.copy(k.at(GZ[0], GZ[1] + 6, -12));
+    shock.renderOrder = -9;
+    root.add(shock);
+
+    // debris: rocks thrown out in arcs
+    const rockMat = k.clip(k.toon(0x5d4631));
+    const rocks = [];
+    for (let i = 0; i < 9; i++) {
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7 + (i % 3) * 0.7, 0), rockMat);
+      m.renderOrder = -11;
+      k.ink(m, 0.8);
+      const a = Math.PI * (0.12 + 0.76 * (i / 8)) + (i % 2 ? 0.08 : -0.06);
+      const v = 82 + (i * 37) % 50;
+      m.userData = { vx: Math.cos(a) * v, vy: Math.sin(a) * v * 1.1, spin: 6 + i };
+      root.add(m);
+      rocks.push(m);
+    }
 
     const tint = new THREE.Color();
     const glintX = (t) => {                     // one glint pass per beat, 0.5 s long
@@ -381,23 +581,24 @@ export default {
 
     return {
       update(t, e) {
-        // sky warms (plate tint + additive wash round the sun)
+        // sky warms (plate tint + additive wash round the sun); the fireball warms him for a moment
         k.layers.photo.material.opacity = 1;   // the plate fades in over an opaque photo (no see-through mid-fade)
-        const sky = presence(t, e, 0, 0.5, ease.out, 0);
+        const sky = presence(t, e, 0, 0.45, ease.out, 0);
+        const glow = hump(t, BOOM, BOOM + 0.12, BOOM + 1.0) * (1 - e);
         k.layers.plate.material.color.copy(tint.setRGB(1, 1 - 0.12 * sky, 1 - 0.36 * sky));
-        k.layers.person.material.color.copy(tint.setRGB(1, 1 - 0.03 * sky, 1 - 0.1 * sky));
-        const flash = hump(t, 1.0, 1.1, 1.7) * (1 - e);
+        k.layers.person.material.color.copy(tint.setRGB(1, 1 - 0.03 * sky - 0.06 * glow, 1 - 0.1 * sky - 0.18 * glow));
+        const flash = hump(t, BOOM + 0.04, BOOM + 0.16, BOOM + 0.72) * (1 - e);     // the sun flares with the blast
         wash.material.opacity = sky * (0.4 + 0.05 * Math.sin((t * TAU) / BEAT) + 0.4 * flash);
 
         // sun
-        const sp = presence(t, e, 0.02, 0.45, ease.outBack, 0.2);
+        const sp = presence(t, e, 0.02, 0.4, ease.outBack, 0.2);
         k.show(sun, sp, 1 + 0.25 * flash + 0.03 * Math.sin((t * TAU) / BEAT));
         halo.material.opacity = Math.min(1, sp) * (0.45 + 0.4 * flash);
         halo.scale.setScalar(56 + 30 * flash);
         corona.rotation.z = -t * 0.12;
 
         // god-rays sweep in (fan swings down from above), then breathe
-        const rp = presence(t, e, 0.12, 0.7, ease.out, 0.1);
+        const rp = presence(t, e, 0.1, 0.6, ease.out, 0.1);
         rays.rotation.z = (1 - rp) * 0.7 + 0.025 * Math.sin((t * TAU) / (BEAT * 2));
         rays.visible = rp > 0.004;
         for (const m of rayList) {
@@ -409,35 +610,114 @@ export default {
         }
 
         // cap drops onto his head, squashes a little, settles
-        const cp = presence(t, e, 0.28, 0.42, ease.out, 0.5);
+        const cp = presence(t, e, 0.16, 0.36, ease.out, 0.5);
         k.show(cap, Math.min(1, cp * 1.6));
-        const land = env(t, 0.62, 0.95);
+        const land = env(t, 0.46, 0.76);
         const squash = Math.sin(land * Math.PI) * (1 - land) * 0.16;
         capFit.scale.set(1 + squash * 0.6, 1 - squash, 1 + squash * 0.6);
         const lift = ease.in(clamp(e * 1.6 - 0.3));
         cap.position.set(capHome.x - lift * 10, capHome.y + (1 - cp) * 26 + lift * 34, capHome.z);
         cap.rotation.z = 0.035 + (1 - cp) * 0.25 - lift * 0.4;
 
-        // sunglasses slide down from under the visor onto his eyes
-        const gp = presence(t, e, 0.56, 0.36, ease.outBack, 0.35);
+        // sunglasses slide down from under the visor onto his eyes; the blast flares across them
+        const gp = presence(t, e, 0.38, 0.32, ease.outBack, 0.35);
         k.show(glasses, Math.min(1, gp * 2.2));
         glasses.position.set(glassesHome.x, glassesHome.y + (1 - gp) * 11, glassesHome.z);
-        lensMat.uniforms.uGlint.value = glintX(t) + (t < 1.0 ? -80 : 0);
+        const fg = env(t, BOOM + 0.03, BOOM + 0.36);
+        lensMat.uniforms.uGlint.value = fg > 0 && fg < 1 ? -34 + fg * 52 : glintX(t);
 
         // pipe swings into the corner of his mouth
-        const pp = presence(t, e, 0.72, 0.38, ease.outBack, 0.25);
+        const pp = presence(t, e, 0.5, 0.32, ease.outBack, 0.25);
         k.show(pipe, Math.min(1, pp * 2));
         pipeTilt.rotation.z = (1 - pp) * -0.9 + 0.03 * Math.sin((t * TAU) / BEAT + 0.8);
         lips.visible = pp > 0.004;
-        ember.material.opacity = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2.2));
+        ember.material.opacity = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2.2)) + 0.3 * glow;
 
         // ribbon bars and medals pin on one by one (a small stamp toward his chest)
         pins.forEach(({ obj, t0 }, i) => {
-          const a = presence(t, e, t0, 0.24, ease.outBack, 0.1 + i * 0.05);
-          k.show(obj, Math.min(1.2, a * (1 + 0.5 * (1 - env(t, t0, t0 + 0.24)))));
+          const a = presence(t, e, t0, 0.22, ease.outBack, 0.1 + i * 0.05);
+          k.show(obj, Math.min(1.2, a * (1 + 0.5 * (1 - env(t, t0, t0 + 0.22)))));
           obj.position.z = (1 - Math.min(1, a)) * 10 + (i >= 6 ? 0.6 : 0);
         });
         medalStars.forEach((s, i) => { s.rotation.y = 0.18 * Math.sin((t * TAU) / BEAT + i * 1.3); });
+
+        // the bomb falls in from the top right, nose first, wobbling
+        const bv = env(t, 0.4, 0.46) * (t < BOOM ? 1 : 0) * (1 - e);
+        k.show(bomb, bv, 1.2);
+        if (bomb.visible) {
+          const [x, y] = bombAt(t);
+          bomb.position.set(x, y, -10);
+          const p = env(t, 0.4, BOOM);
+          bomb.rotation.z = Math.atan2(B1.x - B0.x, -(B1.y - B0.y)) + (1 - p) * 0.5 + 0.08 * Math.sin(t * 17) * (1 - p);
+          bombFit.rotation.set(0.5, 0.7 + t * 2.2, 0);
+        }
+
+        // the blast: flash, a small shake, shockwave, rocks
+        const u = t - BOOM;
+        const flOp = env(u, -0.01, 0.02) * (1 - ease.out(env(u, 0.05, 0.34))) * (1 - e);
+        flashCard.visible = flOp > 0.004;
+        flashMat.opacity = 0.96 * flOp;
+        const bs = ease.outBack(env(u, 0, 0.1), 2) * (1 - ease.in(env(u, 0.2, 0.46))) * (1 - e);
+        k.show(boomStar, bs, 1 + 0.25 * env(u, 0, 0.46));
+        boomStar.rotation.z = 0.4 * u;
+        const amp = u > 0 ? 1.7 * (1 - env(u, 0, 0.36)) * (1 - e) : 0;
+        root.position.set(amp * Math.sin(t * 97), amp * Math.cos(t * 131), 0);
+        const sr = ease.out(env(u, 0.02, 0.62));
+        const R = 5 + 96 * sr;
+        shockMat.uniforms.uR.value = R;
+        shockMat.uniforms.uOp.value = (u > 0.02 ? 1 : 0) * (1 - env(u, 0.26, 0.55)) * (1 - e);
+        shock.visible = shockMat.uniforms.uOp.value > 0.004;
+        shock.scale.set(R, R * 0.22, 1);
+        const r0 = k.at(GZ[0], GZ[1] - 6, -14);
+        rocks.forEach((m) => {
+          const { vx, vy, spin } = m.userData;
+          const s = (u > 0.02 ? 1 : 0) * (1 - env(u, 0.55, 0.8)) * (1 - e);
+          k.show(m, s);
+          if (!m.visible) return;
+          m.position.set(r0.x + vx * u, r0.y + vy * u - 115 * u * u, -14);
+          m.rotation.set(spin * u, spin * 0.7 * u, 0);
+        });
+
+        // fireball -> rising cap on a stem -> the cloud stays and billows
+        const out = 1 - ease.in(clamp(e * 1.6 - 0.15));
+        const grow = ease.outBack(env(u, 0, 0.16), 1.6);
+        const rise = ease.out(env(u, 0.08, 0.9));
+        const heat = 1 - ease.inOut(env(u, 0.25, 1.35));
+        capMat.uniforms.uHeat.value = heat;
+        stemMat.uniforms.uHeat.value = heat * 0.9;
+        dustMat.uniforms.uHeat.value = heat * 0.6;
+        nuke.visible = u > 0.02 && out > 0.004;
+        nuke.scale.setScalar(dsC * NS * Math.max(0.004, out));      // the exit shrinks it into ground zero
+        const LEAN = 0.17, CAP_Y = 51.5;
+        const capY = 5 + (CAP_Y - 5) * rise;
+        const calm = env(u, 0.9, 1.6);
+        k.show(mCap, (0.62 + 0.38 * rise) * grow);
+        mCap.position.set(-Math.sin(LEAN) * capY, capY + 0.8 * Math.sin((t * TAU) / BEAT) * calm, 0);
+        const spread = 0.55 + 0.45 * rise;
+        capPuffs.forEach((m) => {
+          const d = m.userData;
+          const b = Math.sin(t * 1.75 + d.ph) * (0.3 + 0.7 * calm);
+          m.position.set(d.x * spread + 0.5 * Math.sin(t * 1.1 + d.ph), d.y * (0.7 + 0.3 * rise) + 0.6 * b, d.z);
+          const sc = 1 + 0.055 * b;
+          m.scale.set(sc, d.sy * sc, d.sz);
+        });
+        const sh = Math.max(0, capY - 11);
+        mStem.visible = nuke.visible && sh > 0.5;
+        const sw = 0.55 + 0.45 * rise;
+        mStem.scale.set(sw, Math.max(0.01, sh / 45), sw);
+        mStem.rotation.z = LEAN + 0.02 * Math.sin((t * TAU) / BEAT + 1) * calm;
+        const cl = ease.outBack(env(u, 0.45, 0.8));
+        k.show(collar, cl);
+        collar.position.set(-Math.sin(LEAN) * sh * 0.6, sh * 0.6, 0);
+        collar.rotation.z = LEAN;
+        const sk = ease.out(env(u, 0.1, 0.55));
+        skirt.visible = nuke.visible && sk > 0.004;
+        skirt.scale.set(0.25 + 0.75 * sk, 0.4 + 0.6 * sk, 1);
+        skirtPuffs.forEach((m) => {
+          const d = m.userData;
+          const b = Math.sin(t * 1.4 + d.ph) * calm;
+          m.scale.set(1 + 0.04 * b, d.sy * (1 + 0.06 * b), d.sz);
+        });
       },
 
       draw2d(q, t, e) {
@@ -447,8 +727,8 @@ export default {
         const [sx, sy] = k.toScreen(sunPos);
 
         // hero moment: a comic sun-burst from the sun + a lens-flare streak, clipped to the avatar
-        const hb = env(t, 0.98, 1.16), hout = 1 - env(t, 1.3, 1.85);
-        const burst = ease.outBack(hb) * hout * fade;
+        const hb = env(t, BOOM + 0.08, BOOM + 0.22), hout = 1 - env(t, BOOM + 0.4, BOOM + 0.76);
+        const burst = ease.outBack(hb) * hout * fade * 0.74;
         if (burst > 0.01) {
           c.save();
           c.beginPath(); c.arc(cx, cy, k.R + 1, 0, TAU); c.clip();
@@ -482,9 +762,9 @@ export default {
         }
 
         // "SUNSHINE!" lettering: pops once with the flash, then leaves
-        const lp = ease.outBack(env(t, 1.04, 1.3), 2.2) * (1 - ease.in(env(t, 2.95, 3.25))) * fade;
+        const lp = ease.outBack(env(t, BOOM + 0.06, BOOM + 0.3), 2.2) * (1 - ease.in(env(t, 3.3, 3.6))) * fade;
         if (lp > 0.01) {
-          const [lx, ly] = k.screenAt(300, 92, 0);
+          const [lx, ly] = k.screenAt(288, 84, 0);
           q.push();
           q.translate(lx, ly);
           q.rotate(-0.16);
@@ -508,12 +788,12 @@ export default {
         }
 
         // pipe smoke: three slow curling wisps + a puff now and then (comic: white core, grey edge)
-        const sm = presence(t, e, 0.95, 0.5, ease.out, 0.25);
+        const sm = presence(t, e, 0.8, 0.5, ease.out, 0.25);
         if (sm > 0.01) {
           bowl.localToWorld(tmp.copy(bowlTop));
           root.worldToLocal(tmp);
           const [bx, by] = k.toScreen(tmp);
-          const rise = Math.min(1, env(t, 0.95, 1.6) * 1.2 + e * 0);
+          const rise = Math.min(1, env(t, 0.8, 1.45) * 1.2);
           for (let pass = 0; pass < 2; pass++) {
             for (let w = 0; w < 3; w++) {
               const H = (30 + w * 8) * (0.3 + 0.7 * rise);
@@ -542,7 +822,7 @@ export default {
           // soft puffs drifting off
           q.noStroke();
           for (let i = 0; i < 2; i++) {
-            const p = ((t - 0.95) / 2.6 + i * 0.5) % 1;
+            const p = ((t - 0.8) / 2.6 + i * 0.5) % 1;
             if (p < 0) continue;
             const x = bx - 5 - 12 * p + Math.sin(p * 6 + i) * 2.5, y = by - 16 - 34 * p;
             const r = 2 + 3.2 * p, a = Math.sin(p * Math.PI) * sm;
@@ -569,6 +849,27 @@ export default {
             star4(mx + 3.5, my - 3.5, 5.5 * m, m);
           }
         }
+        // the bomb's fall: speed lines trailing up behind it (inside the circle)
+        if (bomb.visible) {
+          const [bx, by] = k.toScreen(bomb.position);
+          const ang = bomb.rotation.z;               // nose along (sin, -cos) in world = (sin, cos) on screen
+          const dx = -Math.sin(ang), dy = -Math.cos(ang);    // screen direction back up the trail
+          const nx = -dy, ny = dx;
+          c.save();
+          c.beginPath(); c.arc(cx, cy, k.R, 0, TAU); c.clip();
+          const a = env(t, 0.42, 0.55);
+          const grow = env(t, 0.4, BOOM);
+          [[-9, 4, 12], [9, 2, 10], [-4.5, 22, 7], [5, 19, 8]].forEach(([o, L0, L]) => {
+            const l = L * (0.6 + 0.8 * grow);
+            q.stroke(22, 21, 26, 170 * a); q.strokeWeight(1.3);
+            q.line(bx + dx * L0 + nx * o, by + dy * L0 + ny * o, bx + dx * (L0 + l) + nx * o, by + dy * (L0 + l) + ny * o);
+          });
+          c.restore();
+        }
+        // the flash glances off his sunglasses: one big "ting"
+        const tg = hump(t, BOOM + 0.2, BOOM + 0.3, BOOM + 0.55) * fade;
+        if (tg > 0.01) { const [gx, gy] = k.screenAt(272, 236, 14); star4(gx, gy, 9 * tg, tg); }
+
         // tiny pin "tick" marks as each medal lands
         q.strokeWeight(1.2);
         pins.forEach(({ obj, t0 }) => {
@@ -588,6 +889,7 @@ export default {
         own.forEach(o => o.dispose?.());
         k.layers.plate.material.color.setRGB(1, 1, 1);
         k.layers.person.material.color.setRGB(1, 1, 1);
+        root.position.set(0, 0, 0);
       },
     };
   },
