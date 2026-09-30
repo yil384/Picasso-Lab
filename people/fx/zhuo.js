@@ -2,14 +2,16 @@
    翻手为云，覆手为雨: click and a gold CPhO medal on a red ribbon drops around his neck and
    swings to rest; his pointing hand turns over (palm up) and a toon storm cloud rises out of
    it to hang over his arm; the hand turns back down and the rain comes straight down from the
-   cloud (comic streaks behind his arm, splashes on the pond). His other hand swings in a wok
-   of 辣椒炒肉 (Hunan chili pork: green and red chilies, pork slices, steam); an atom spins up
-   beside his head (three electron orbits, a Bloch-sphere flicker).
+   cloud (comic teardrops of mixed size, heavier near the cloud, splash crowns on his arm and
+   ripples on the pond). His other fist swings up a big wok of 辣椒炒肉 (Hunan chili pork: glossy
+   green and red chili strips, pork slices with a little char, steam) and a 「辣椒炒肉」 tag pops in
+   the steam; an atom spins up beside his head (three electron orbits, a Bloch-sphere flicker).
    Loop (3.6 s): hand over -> the cloud swells and darkens -> hand down, a crack of lightning,
-   one burst of rain; the medal glints; he tosses the wok once (颠勺); the atom flickers.
+   one burst of rain; the medal glints; he tosses the wok once (颠勺: the pieces flip up and fall
+   back, a puff of steam, the tag again); the atom flickers.
    Photo landmarks (512 px): fingertip 52,179 · pointing hand u 50..106, v 178..203 (wrist
    104,190) · shoulder 195,215 · head top 263,145 · neck 269,214 (collar v 227) · lower hand
-   258,433 (fingers 238..270, 421..449) · pond under the cloud v ~392. */
+   258,433 (fingers 238..270, 421..449; the wok's grip 257,433) · pond under the cloud v ~392. */
 import { THREE, presence, env, ease, clamp } from './kit.js';
 
 const GOLD = 0xf0b93a, GOLD_D = 0xcf8f25, RED = 0xc8302a;
@@ -217,9 +219,9 @@ export default {
           if (band < 0.5) discard;
           float side = smoothstep(0.0, 4.0, p.x) * (1.0 - smoothstep(uSize.x - 4.0, uSize.x, p.x));
           float nearCloud = 1.0 - smoothstep(0.08 * uSize.y, 0.42 * uSize.y, p.y);
-          vec2 a = layer(p, 7.2, 30.0, 1.0, 7.0, 19.0, 1.5, 0.4, 0.62, 0.85);
+          vec2 a = layer(p, 7.2, 30.0, 1.0, 7.0, 19.0, 1.5, 0.4, 0.72, 0.85);
           vec2 b = layer(p + vec2(3.1, 0.0), 5.4, 23.0, 7.0, 4.0, 11.0, 1.05, 0.3, 0.42, 0.7) * 0.85;
-          vec2 c = layer(p + vec2(1.3, 0.0), 14.0, 52.0, 13.0, 4.0, 8.0, 2.5, 0.7, 0.3, 1.0);
+          vec2 c = layer(p + vec2(1.3, 0.0), 14.0, 52.0, 13.0, 4.0, 8.0, 2.5, 0.7, 0.38, 1.0);
           vec2 d = layer(p + vec2(5.2, 0.0), 6.3, 20.0, 19.0, 6.0, 15.0, 1.25, 0.35, 0.6 * nearCloud, 0.8);
           float ink = max(max(a.y, b.y), max(c.y, d.y)), fill = max(max(a.x, b.x), max(c.x, d.x));
           vec3 col = mix(vec3(0.086, 0.082, 0.1), vec3(0.8, 0.92, 1.0), clamp(fill / max(ink, 1e-3), 0.0, 1.0));
@@ -335,7 +337,7 @@ export default {
       const y0 = FY + 2.6 * (1 - r * r) + 1.2;
       holder.position.set(x, y0, z);
       holder.rotation.y = i * 1.1;
-      holder.userData = { x, z, y0, ry: i * 1.1, h: 15 + (i % 3) * 5, flip: (i % 2 ? 1 : -1) * (1 + (i % 3 === 0 ? 1 : 0)), lag: (i % 4) * 0.035 };
+      holder.userData = { x, z, y0, ry: i * 1.1, h: 24 + (i % 3) * 6, flip: (i % 2 ? 1 : -1) * (1 + (i % 3 === 0 ? 1 : 0)), lag: (i % 4) * 0.035 };
       bowlG.add(holder);
       bits.push(holder);
     });
@@ -463,7 +465,8 @@ export default {
           const { x, z, y0, ry, h, flip, lag } = b.userData;
           const q = clamp((tp - 0.1 - lag) / 0.68);
           const up = Math.sin(q * Math.PI);
-          b.position.set(x - 7 * up, y0 + h * up, z + 3 * up);
+          // straight up on screen is (0, cos, -sin) of the tilt in the wok's frame; they drift back toward him
+          b.position.set(x - 4 * up, y0 + h * up * Math.cos(WOK_TILT), z - h * up * Math.sin(WOK_TILT));
           b.rotation.set(flip * q * TAU, ry + q * 1.5, flip * q * Math.PI * 0.5);
         });
 
