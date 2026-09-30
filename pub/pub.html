@@ -89,29 +89,74 @@
       touch-action: manipulation;
     }
 
-    /* Paper 列表 */
+    /* Paper 列表
+       左右各向外"出血" 12px (负 margin + 同等 padding): 文字位置和以前完全一样,
+       但悬停/分类高亮的色块两侧有了呼吸空间, 不再贴着圆角.
+       上下仍是 2px + <p> 自带的 1em, 纵向节奏不变. */
     .paper {
-      padding: 2px;
-      border-radius: 12px;
-      margin-bottom: 1px;
-      transition: background-color 0.3s ease;
+      --paper-bleed: 12px;
+      margin: 0 calc(-1 * var(--paper-bleed)) 1px;
+      padding: 2px calc(var(--paper-bleed) + 2px);
+      border-radius: 10px;
+      transition: background-color 0.3s ease; /* 只给 ML / QC 分类切换用 */
       position: relative; /* 必须加，保证卡片绝对定位 */
     }
 
-    /* 添加悬停效果 */
-    .paper:hover {
-      background-color: #f5f5f5 !important; /* 浅灰色背景 */
-      border-radius: 12px; /* 圆角效果 */
+    /* 悬停高亮: 用 ::before 叠一层半透明冷灰, 而不是直接换 background.
+       - 选了 ML / QC 后行内 background 是青/黄色, 叠加层只让它略深一点,
+         不会再被 #f5f5f5 !important 盖成灰色 (以前一悬停分类色就"消失")
+       - 只动 opacity (合成层): 进场 90ms 几乎即时, 离场 150ms,
+         快速扫过列表不会再拖出一串慢慢褪掉的灰块
+       - 1px 内描边给色块一个清楚的边, 不像一团糊的"阴影" */
+    .paper::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: rgba(15, 23, 42, 0.04);
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease-out;
+    }
+
+    .paper > p {
+      position: relative; /* 文字压在叠加层上面 */
+    }
+
+    /* 只在真有鼠标的设备上响应 hover: 手机/iPad 点一下不会留下一块"粘住"的灰 */
+    @media (hover: hover) {
+      .paper:hover::before {
+        opacity: 1;
+        transition-duration: 0.09s;
+      }
+    }
+
+    /* 键盘 Tab 到某篇的链接时, 整行也亮起来 (鼠标点击不会触发 :focus-visible) */
+    .paper:has(:focus-visible)::before {
+      opacity: 1;
     }
 
     .paper a {
       color: #FF8C00; /* 链接橙黄色 */
-      text-decoration: none;
       font-weight: 600;
+      /* 下划线常驻但透明, 悬停时淡入 — 比瞬间蹦出一条贴字的线柔和 */
+      text-decoration: underline;
+      text-decoration-color: transparent;
+      text-decoration-thickness: 0.08em;
+      text-underline-offset: 0.2em;
+      border-radius: 3px;
+      transition: color 0.12s ease-out, text-decoration-color 0.12s ease-out;
     }
 
     .paper a:hover {
-      text-decoration: underline;
+      color: #E67700;
+      text-decoration-color: currentColor;
+    }
+
+    .paper a:focus-visible {
+      outline: 2px solid #CC6D00; /* 深一档的橙, 对白底对比度 > 3:1 */
+      outline-offset: 2px;
     }
 
     .gold-candidate {
@@ -157,33 +202,65 @@
       }
     }
 
-    /* Preview Card — 整页布局下贴着 .paper 容器走, 不再用 94vw */
+    /* Preview Card (可选) — 想给某篇加预览, 就在它的 .paper 里 <p> 后面放:
+         <div class="preview-card">
+           <div class="preview-images"><img src="https://yil384.github.io/Picasso-Lab/..."></div>
+           <div class="preview-info"><p><b>Abstract:</b> ...</p></div>
+         </div>
+       何时出现 / 放在哪一侧由页尾的小脚本决定 (hover intent, 见 initPreviewCards).
+       卡片只看不点 (pointer-events:none), 所以永远不会挡住鼠标去下一篇;
+       要点的链接请放在正文 [paper] 里. */
     .preview-card {
       position: absolute;
       left: 0;
-      right: 0;
-      top: 94%;
-      width: 100%;
-      max-width: 100%;
+      top: calc(100% + 8px);
+      width: min(100%, 760px);
       background: #fff;
-      border: 1px solid #ddd;
+      border: 1px solid rgba(15, 23, 42, 0.09);
       border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      /* 贴地的一道细阴影 + 很散很淡的环境阴影, 比一坨 0 6px 20px .15 轻得多 */
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.05),
+        0 4px 10px -2px rgba(15, 23, 42, 0.05),
+        0 18px 40px -12px rgba(15, 23, 42, 0.18);
       padding: 16px;
       display: flex;
       gap: 16px;
       opacity: 0;
-      transform: translateY(10px);
+      visibility: hidden;
+      transform: translateY(-4px) scale(0.98);
+      transform-origin: 24px top;   /* 从所属那一行"长"出来 */
       pointer-events: none;
-      transition: opacity 0.3s ease, transform 0.3s ease;
+      /* 离场: 110ms 加速淡出 */
+      transition: opacity 0.11s ease-in, transform 0.11s ease-in, visibility 0s linear 0.11s;
       z-index: 999;
     }
 
-    .paper:hover .preview-card {
+    /* 放在行的上方 (鼠标从上往下扫时, 不挡住要去的下一篇) */
+    .preview-card.is-above {
+      top: auto;
+      bottom: calc(100% + 8px);
+      transform: translateY(4px) scale(0.98);
+      transform-origin: 24px bottom;
+    }
+
+    /* 进场: 180ms 减速, 只动 opacity / transform */
+    .paper.is-previewing .preview-card {
       opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-      transition-delay: 0.3s;
+      visibility: visible;
+      transform: none;
+      transition: opacity 0.18s cubic-bezier(0.2, 0.7, 0.3, 1),
+                  transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1),
+                  visibility 0s;
+    }
+
+    /* "热"状态下在相邻论文间切换: 不再做位移/缩放, 直接快速交叉淡入 */
+    .pv-warm .preview-card,
+    .pv-warm .preview-card.is-above {
+      transform: none;
+    }
+    .pv-warm .paper.is-previewing .preview-card {
+      transition-duration: 0.09s;
     }
 
     .preview-images {
@@ -244,11 +321,7 @@
       min-height: 40px;
       padding: 0 20px;
       text-align: center;
-      transition: background-color 0.2s ease;
-    }
-
-    .button-18:hover {
-      background-color: #16437E;
+      transition: background-color 0.15s ease-out, transform 0.12s ease-out;
     }
 
     .button-16 {
@@ -267,12 +340,23 @@
       min-height: 40px;
       padding: 0 20px;
       text-align: center;
-      transition: background-color 0.2s ease;
+      transition: background-color 0.15s ease-out, transform 0.12s ease-out;
     }
 
-    .button-16:hover {
-      background-color: #EE9A4D;
+    /* 悬停 = 同色相深一档 (以前金色会变成一块发灰的橙粉 #EE9A4D, 蓝色直接跳到藏青);
+       只在有鼠标时生效, 免得手机点完按钮一直"按着" */
+    @media (hover: hover) {
+      .button-18:hover { background-color: #0856A6; }
+      .button-16:hover { background-color: #EDA600; }
     }
+
+    .button-18:active,
+    .button-16:active {
+      transform: scale(0.97);
+    }
+
+    .button-18:focus-visible { outline: 2px solid #0A66C2; outline-offset: 2px; }
+    .button-16:focus-visible { outline: 2px solid #C98A00; outline-offset: 2px; }
 
     /* 按钮文字双标签: 默认显示全名, 手机断点切到缩写 */
     .label-short { display: none; }
@@ -345,6 +429,11 @@
       .paper p {
         font-size: 15px;
       }
+
+      /* 窄屏两侧只有 20px 留白, 高亮块少出血一点, 别贴到屏幕边 */
+      .paper {
+        --paper-bleed: 8px;
+      }
     }
 
     /* ── 平板 (iPad 竖屏 768px ↔ 横屏 1024px) ── */
@@ -390,11 +479,22 @@
     }
 
     /* ── 触屏设备一律去掉 hover-only 的 preview-card 弹出
-         (避免 iPad 上一点就卡住一个浮窗) ── */
+         (避免 iPad 上一点就卡住一个浮窗; 脚本在这类设备上也不会挂监听) ── */
     @media (hover: none) {
-      .paper:hover .preview-card {
-        opacity: 0;
-        pointer-events: none;
+      .preview-card {
+        display: none;
+      }
+    }
+
+    /* ── 减少动态效果: 卡片不做位移/缩放, 只保留很短的淡入淡出 ── */
+    @media (prefers-reduced-motion: reduce) {
+      .preview-card,
+      .preview-card.is-above {
+        transform: none;
+      }
+      .button-18:active,
+      .button-16:active {
+        transform: none;
       }
     }
   </style>
@@ -866,6 +966,97 @@
         qc[i].style.backgroundColor='#FFFACD';
       }
     }
+
+    /* 悬停预览 (hover intent) — 只管放了 .preview-card 的论文, 一篇都没有就直接退出.
+       - 第一次要停留 260ms 才弹出: 鼠标只是路过, 不会闪出一串卡片
+       - 已经有卡片开着 (或刚收起 < 400ms) 时, 移到下一篇 70ms 就切换, 不用重新等 (像系统 tooltip)
+       - 卡片放在鼠标"来的方向"那一侧: 从上往下扫就放在行的上方, 不挡住要去的下一篇;
+         那一侧放不下 (贴着视口顶/底) 就翻到另一侧
+       - 移出 100ms 后收起; 滚动 / Esc / 切走窗口 立即收起, 滚动后要真正动一下鼠标才会再弹 */
+    (function initPreviewCards(){
+      var papers = [].filter.call(document.getElementsByClassName('paper'), function (p) {
+        return p.querySelector('.preview-card');
+      });
+      if (!papers.length || !window.matchMedia('(hover: hover)').matches) return;
+
+      var DWELL = 260, WARM_DWELL = 70, WARM_WINDOW = 400, LEAVE_GRACE = 100, GAP = 8;
+      var root = document.documentElement;
+      var open = null, armed = null, showTimer = 0, hideTimer = 0, lastClosed = -Infinity;
+
+      function isWarm(){ return !!open || Date.now() - lastClosed < WARM_WINDOW; }
+
+      function place(paper, fromAbove){
+        var card = paper.querySelector('.preview-card');
+        var r = paper.getBoundingClientRect(), need = card.offsetHeight + GAP;
+        var roomUp = r.top, roomDown = window.innerHeight - r.bottom;
+        var up = fromAbove ? (roomUp >= need || roomUp > roomDown)
+                           : !(roomDown >= need || roomDown >= roomUp);
+        card.classList.toggle('is-above', up);
+      }
+
+      function show(paper, fromAbove){
+        clearTimeout(hideTimer);
+        if (open === paper) return;
+        root.classList.toggle('pv-warm', isWarm());
+        if (open) open.classList.remove('is-previewing');
+        place(paper, fromAbove);
+        paper.classList.add('is-previewing');
+        open = paper;
+      }
+
+      function hide(){
+        clearTimeout(hideTimer);
+        if (!open) return;
+        open.classList.remove('is-previewing');
+        open = null;
+        lastClosed = Date.now();
+      }
+
+      function reset(){            /* 被滚动等打断: 收起并回到"冷"状态 */
+        clearTimeout(showTimer);
+        armed = null;
+        hide();
+        lastClosed = -Infinity;
+      }
+
+      function arm(paper, fromAbove){
+        armed = paper;
+        clearTimeout(showTimer);
+        showTimer = setTimeout(function(){ show(paper, fromAbove); }, isWarm() ? WARM_DWELL : DWELL);
+      }
+
+      papers.forEach(function (paper){
+        /* 用 pointermove 而不是 pointerenter: 滚动后内容从静止的鼠标下滑过不算"悬停" */
+        paper.addEventListener('pointermove', function (e){
+          if (armed === paper || e.pointerType === 'touch') return;
+          var r = paper.getBoundingClientRect();
+          arm(paper, e.clientY < r.top + r.height / 2);
+        });
+        paper.addEventListener('pointerleave', function (){
+          if (armed !== paper) return;
+          armed = null;
+          clearTimeout(showTimer);
+          if (open === paper){
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(hide, LEAVE_GRACE);
+          }
+        });
+        /* 键盘 Tab 到这一篇的链接时也给预览, 放在下方 */
+        paper.addEventListener('focusin', function (e){
+          if (e.target.matches && e.target.matches(':focus-visible')) arm(paper, false);
+        });
+        paper.addEventListener('focusout', function (e){
+          if (paper.contains(e.relatedTarget)) return;
+          if (armed === paper){ armed = null; clearTimeout(showTimer); }
+          if (open === paper) hide();
+        });
+      });
+
+      window.addEventListener('scroll', reset, { passive: true });
+      window.addEventListener('resize', reset);
+      window.addEventListener('blur', reset);
+      document.addEventListener('keydown', function (e){ if (e.key === 'Escape') reset(); });
+    })();
   </script>
 
 </div><!-- /.page-wrap -->
