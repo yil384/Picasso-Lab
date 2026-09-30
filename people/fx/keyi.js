@@ -443,11 +443,12 @@ export default {
         const ga = Math.max(t > 0.82 && t < 1.06 ? land : 0, mid) * exitF(e, 0);
         sparkle(q, gx, gy, 7 * ga, ga, t * 2);
 
-        // VICTORY slams in under him
+        // VICTORY slams in under him (it is drawn past the circle clip: a small overshoot keeps its
+        // ribbon tails within ~7 px of the rim)
         const sl = env(t, 0.98, 1.08);
         if (sl > 0) {
           const out = exitF(e, 0);
-          const sc = sl < 1 ? lerp(1.18, 1, ease.in(sl)) : 1 + Math.sin(clamp((t - 1.08) / 0.25) * Math.PI * 2) * 0.05 * (1 - env(t, 1.08, 1.33));
+          const sc = sl < 1 ? lerp(1.08, 1, ease.in(sl)) : 1 + Math.sin(clamp((t - 1.08) / 0.25) * Math.PI * 2) * 0.05 * (1 - env(t, 1.08, 1.33));
           const shake = t > 1.08 && t < 1.25 ? Math.sin(t * 90) * 1.6 * (1 - env(t, 1.08, 1.25)) : 0;
           const shine = ph >= 0 ? env(ph, PB + 0.25, PB + 0.7) : 0;
           // impact lines

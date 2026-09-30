@@ -293,8 +293,9 @@ export default {
           k.show(p, pk);
         });
         // bus packets: stack -> die on the left, die -> stack on the right, once a beat each
+        // (the first runs finish by T0, where the loop windows take over)
         busPk.forEach((p, i) => {
-          const f = ph >= 0 ? env(ph, 0.1 + i * 1.5, 0.95 + i * 1.5) : (t > 0.7 ? env(t, 0.7 + i * 0.25, 1.3 + i * 0.25) : 0);
+          const f = ph >= 0 ? env(ph, 0.1 + i * 1.5, 0.95 + i * 1.5) : (t > 0.7 ? env(t, 0.7 + i * 0.15, 1.15 + i * 0.15) : 0);
           const P = i === 0 ? BUNDLE_L : BUNDLE_R;
           const s = i === 0 ? (1 - f) * LEN_L : f * LEN_L;    // left: from the stack into the die; right: out of the die
           along(P, s, tmp);

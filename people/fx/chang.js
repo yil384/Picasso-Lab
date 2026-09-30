@@ -2,7 +2,7 @@
    Click: a gold Infinity Gauntlet swings up out of her grip on the cup (her real index
    finger is re-layered over its cuff); the six stones light one by one (space, mind,
    reality, power, time, soul); SNAP — comic lettering and a ring shockwave, the hand ends
-   on "No. 1"; two exam papers (数学 150, 理综 300) fly out of the snap and flip in with big
+   on "No. 1"; two exam papers (数学 150, 理综) fly out of the snap and flip in with big
    red checks and a 满分 stamp; the gold 「温州市 · 高考状元」 plaque settles at the bottom.
    Loop (3.2 s): the stones shimmer in sequence, one small sparkle at the raised finger.
    Photo landmarks (512 px): eyes y 213 (x 65 / 190) · mouth 55-190 x 345 · cup 225-420 x 115-440 ·
@@ -150,17 +150,20 @@ export default {
     });
 
     /* ② her real index and middle fingers (and the back of her hand) re-layered over the cuff */
-    k.patch([
-      // index finger: tip and top edge, then the back of her hand to the rim
+    const fingerPatch = k.patch([
+      // index finger: tip and top edge, then the back of her hand along the inside of the rim
+      // (the cut layer has opaque pixels past the photo's circle there: every vertex stays at r <= 255)
       [319, 197], [322, 188], [329, 181], [339, 176], [352, 173], [370, 166], [385, 164], [400, 164],
-      [415, 166], [430, 168], [446, 174], [456, 184], [464, 196], [478, 207], [496, 214], [512, 214],
+      [415, 166], [430, 168], [446, 174], [456, 184], [464, 196], [478, 207], [496, 214], [507, 214],
+      [511, 256],
       // down the hand, then back along the lower edge of the middle finger (the cuff passes behind both)
-      [512, 300], [470, 262], [450, 236], [424, 231], [408, 234], [390, 239], [376, 243], [360, 247],
+      [506, 300], [470, 262], [450, 236], [424, 231], [408, 234], [390, 239], [376, 243], [360, 247],
       [344, 251], [328, 259], [312, 267], [296, 271], [284, 267], [278, 256], [281, 246], [288, 237],
       [300, 226], [312, 215], [320, 207],
     ], 22);
+    k.clip(fingerPatch.material);                    // and it never parts past the circle when the stage tilts
 
-    /* ③ exam papers: 数学 150 behind, 理综 300 in front (big red check, 满分 stamp) --------- */
+    /* ③ exam papers: 数学 150 behind, 理综 in front (big red check, 满分 stamp) ------------- */
     function roundRect(g, x, y, w, h, r) {
       g.beginPath();
       g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
@@ -229,9 +232,10 @@ export default {
     }
     const paperB = makePaper('数学', '150');
     const paperF = makePaper('理综', '');
+    // far enough apart that the front paper's edge clears the back one's score (right-aligned, bottom right)
     const papers = [
-      { p: paperB, home: k.at(281, 354, 6), rz: 0.16, t0: T_SNAP + 0.04, chkT: T_SNAP + 0.26 },
-      { p: paperF, home: k.at(356, 360, 9), rz: -0.12, t0: T_SNAP + 0.1, chkT: T_SNAP + 0.32 },
+      { p: paperB, home: k.at(272, 354, 6), rz: 0.16, t0: T_SNAP + 0.04, chkT: T_SNAP + 0.26 },
+      { p: paperF, home: k.at(362, 360, 9), rz: -0.12, t0: T_SNAP + 0.1, chkT: T_SNAP + 0.32 },
     ];
     // 满分 stamp, pressed onto the front paper
     const stamp = k.card(23, 13, (g, W, H) => {

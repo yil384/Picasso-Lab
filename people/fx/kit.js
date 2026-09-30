@@ -28,10 +28,10 @@
    Coordinates: world units are the CSS px of a 200 px avatar ("logical px"), origin
    at the avatar centre, y up, z toward the viewer. k.at(u, v, z) converts a pixel of
    the 512 x 512 photo to world. The Team page tiles shrink with the window, and the
-   snippet sizes the photo to its tile: the kit shows the stage at k.s = photo size /
-   200 (the camera sits k.s times closer), so k.D = 200 and k.R = 100 always, and
+   snippet sizes the photo to its tile: the kit shows the whole stage scaled by k.s =
+   photo size / 200 (through the camera), so k.D = 200 and k.R = 100 always, and
    k.W / k.H, k.toScreen() and the q5 layer (scaled by k.s around draw2d) are in
-   logical px too. k.dpr = device px per logical px (for shadowBlur, shader sizes).
+   logical px too. k.dpr = canvas px per logical px (for shadowBlur, shader sizes).
    Ink outlines keep their width in real screen px. A stage is built for one tile
    size: a resize or rotation switches the effect off.
    ════════════════════════════════════════════════════════════════════════ */
@@ -278,12 +278,6 @@ class Avatar {
       loadTexture(`${STATIC}fx/${this.name}-cut.webp`),
       loadQ5(),
     ]);
-    // the 512 px photo is drawn at ~400 device px: plain linear sampling keeps it as crisp as the <img>
-    // (mipmaps soften busy detail like foliage, which read as a blur when the effect switched on)
-    for (const t of [photoTex, plateTex, cutTex]) {
-      t.generateMipmaps = false;
-      t.minFilter = THREE.LinearFilter;
-    }
     // W, H and the photo box are real CSS px: they place the canvas and the camera. The scene is
     // modelled for a 200 px avatar (D, R and everything in k are logical px) and shown at s.
     const box = this.box = this.measure();
@@ -291,7 +285,18 @@ class Avatar {
     if (!(box.D > 0 && W > 0 && H > 0)) throw new Error('the avatar is not laid out');
     const s = box.D / 200;
     const D = 200, R = 100;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // canvas px per CSS px: the screen's, 2 at most. When the photo would cover fewer than ~350 of them (a
+    // small tile, a pixel ratio of 1) linear sampling aliases next to the browser's own downscale of the
+    // <img>: render at twice that and let the browser halve it (a 2 x 2 box filter)
+    const dev = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = box.D * dev < 350 ? dev * 2 : dev;
+    // the 512 px photo is drawn at 350 - 700 canvas px: plain linear sampling keeps it as crisp as the <img>
+    // (mipmaps soften busy detail like foliage, which read as a blur when the effect switched on; they
+    // also match the <img> worse than the 2x render on small tiles)
+    for (const t of [photoTex, plateTex, cutTex]) {
+      t.generateMipmaps = false;
+      t.minFilter = THREE.LinearFilter;
+    }
 
     const canvas = document.createElement('canvas');
     canvas.className = 'pfx-gl';
@@ -310,8 +315,8 @@ class Avatar {
     // The camera sits right above the avatar centre (on its axis) and an off-axis view offset slides
     // the frame so the avatar lands where the <img> was (in real px). On-axis, a layer at any depth z
     // scaled by depthScale(z) covers exactly the photo pixels under it; a centred camera would shift it
-    // sideways. The camera stands s times closer than it would for a 200 px photo, so one logical px
-    // covers s real px: the stage looks scaled by s, and view-space depth stays logical for shaders.
+    // sideways. The camera distance is in logical px (the real-px distance / s), so one logical px covers
+    // s real px: the stage looks scaled by s, and view-space depth stays logical for scene shaders.
     const ax = ox + box.D / 2, ay = oy + box.D / 2;                  // avatar centre in canvas px
     const FW = 2 * Math.max(ax, W - ax), FH = 2 * Math.max(ay, H - ay);
     const fov = 24;

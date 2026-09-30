@@ -285,8 +285,8 @@ export default {
         tape.material = f === 1 ? flatLight : f === 2 ? flatDark : tapeMat;
         fist.visible = f === 0;
         banks.forEach(bk => { bk.glow.visible = f === 0; bk.cone.visible = f === 0; });
-        // a short shake on contact
-        const sh = (s >= 0.33 && s < 0.55) ? (1 - (s - 0.33) / 0.22) * (replay ? 0.6 : 1.6) : 0;
+        // a short shake on contact (it fades with the exit, so e = 1 is the photo in place)
+        const sh = (s >= 0.33 && s < 0.55) ? (1 - (s - 0.33) / 0.22) * (replay ? 0.6 : 1.6) * out : 0;
         root.position.set(Math.sin(t * 97) * sh, Math.cos(t * 83) * sh * 0.7, 0);
       },
 
@@ -298,7 +298,7 @@ export default {
         const c = q.ctx || q.drawingContext;
         const [cx, cy] = k.screenAt(256, 256, 0);
         const [hx, hy] = k.toScreen(contact);
-        const f = impactOf(s, replay);
+        const f = impactOf(s, replay) * (e > 0 ? 0 : 1);         // no impact frame once the exit runs (as in update)
         c.save();
         c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.clip();
 
@@ -332,7 +332,7 @@ export default {
         }
         // focus lines
         if (s >= 0.33 && s < (replay ? 0.5 : 0.52)) {
-          const al = (f ? 1 : replay ? 0.5 * (1 - (s - 0.33) / 0.17) : 0.8 * (1 - (s - 0.41) / 0.11)) * fade;
+          const al = (f ? 1 : replay ? 0.5 * (1 - (s - 0.33) / 0.17) : 0.8 * Math.min(1, 1 - (s - 0.41) / 0.11)) * fade;
           if (f === 1) q.fill(255, 247, 222, 255); else q.fill(22, 21, 26, 235 * al);
           q.noStroke();
           const RR = R * 2.4;
