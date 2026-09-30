@@ -500,6 +500,40 @@ Below 8: lobby, popups, table-actions, table-moments, results, portrait, english
 - **E. Table static:** R2-04, R2-08, R2-09, R2-24.
 - **F. Eggs:** MK-1, AT-4.
 
+## Round 3 — the fixed build (after fix round 2 groups A–F; reviewed inline, lens by lens)
+The same four lenses on the build after fix round 2, plus a regression of every automated suite. **No high, no medium.** One new
+low (fixed) and two carried lows.
+
+**Lenses**
+- **Tencent fidelity:** side-by-side sheets (post-fix phone shot vs reference) for lobby (yxrb_lobby), room (yxrb_room), table (tg_ingame_classic), bomb (tg_ingame_bomb), result (qqg_result), VS (yxrb_vs) and 首出 (qqg_shouchu), plus desk, hd, ifr and portrait states. The 16:10 lobby now keeps its tile shape, the felt edges darken like the reference, and the bomb bursts are warm with the label under the play. What still differs: the reference's photographic lobby scene and 3D tile art (we have none: original assets only), coin balances against our 胜率, and 天王炸, which is a stylised cartoon blast rather than a photographic fire column.
+- **Gameplay QA:** full rounds into round 2 through the tribute on phone, portrait and desk, 0 console errors (one 125–144 ms long task at load); rejoin by reload mid-round on all three (`verify_rejoin.py`: hand, 首 tag and slots consistent, round finishes); an expired turn timer (auto 不出 with its toast, the trick collected and the winner leads, no stale words); the nickname, room-code and room-nickname fields still edit under `user-select: none`; `verify_b.py` / `verify_b2.py` (stale words, partner ribbon vs row, verdict wording, pending states) pass.
+- **AI-tell:** the rules, settings, dissolve and records popups (plain white titles, balanced lines), the EN lobby, room, table, result and bomb frames, the portrait table and result. New visuals (gold + seat discs, robot seat faces, bomb-size tags) read as game parts, not web parts. One English defect found (R3-01).
+- **Must-keep and round-1 re-check:** `mustkeep.py` (60 checks, desk / phone / portrait) and `recheck.py` (hd / desk / phone) re-run on the fixed build: all pass (the earlier MK-1 flag was the probe counting the settings panel as an obstacle, corrected in the probe; the behaviour is by design).
+
+**Findings**
+- **R3-01** [table-moments · english · low · fixed] The English 天王炸 label was one crushed word ("JokerBomb") at 88 px: the vertical Chinese word's `letter-spacing: -.08em` carried over. It is 60 px with normal spacing now.
+- **R3-02** [table-moments · low · carried] 天王炸 is stylised: the puffs now have irregular lobes, a 2 px light outline on the smoke only and a quicker fade, but it is still no photographic fire column (R2-10). Accepted.
+- **AT-7** [lobby · low · carried] The four lobby nav glyphs are still single-colour white (the reference's are two-tone). Accepted, optional.
+
+**Scores** (0–10, worst viewport; ≥ 8 = a Tencent player would take it for the real product)
+
+| Screen | R1 | R2 | R3 | Worst vp | Notes |
+|---|---|---|---|---|---|
+| lobby | 7 | 7 | 8 | desk / ifr | Tiles ≈ 1.05:1 at 16:10, packed rail, no stripe. No 3D scene art |
+| room | 8 | 8 | 8.5 | phone | Panels share a bottom edge; robot / head faces; gold + seats; steppers and 解散 show pending |
+| popups | 7 | 7.5 | 8 | phone | Plain white titles, balanced lines, stacked deck styles, thin scrollbars, nothing selects |
+| table | 7.5 | 8 | 8 | desk / phone | Bomb-size tags, darker felt edges, larger pills; the phone bar height stays accepted (R1-07) |
+| table-actions | 7 | 7.5 | 8 | phone | No stale 不出; the partner ribbon clears the row; no toast over my hand; verdict wording; cleaner clock digits |
+| table-moments | 5 | 6.5 | 8 | phone | Warm bursts, thin-outline words under the play, large 首出; 天王炸 stylised (R3-02) |
+| results | 6 | 7.5 | 8 | ifr / desk | 继续游戏 pending; 已出完 notes; cream-gold titles |
+| vs-intro | 6 | 8 | 8.5 | desk | Pale-gold title; no leftover toast |
+| records | 8 | 8.5 | 8.5 | phone | VS in the intro's language; the ? reaches 44 px |
+| portrait | 6.5 | 7.5 | 8 | portrait | As phone; the rotated table carries the same fixes |
+| english | 6.5 | 7.5 | 8 | phone | Missed A, Double win +3, Level N, Timer, Wild / Relay, Joker Bomb; the room fits at 844×390 |
+| eggs | 7 | 8.5 | 8.5 | portrait | Must-keep passes in full; MK-1 by design |
+
+Every screen scores ≥ 8 and no high or medium finding is open.
+
 ## Handoff status
 - **Done (previous sessions):**
   - gd3/table and gd3/lobby merged.
@@ -519,7 +553,7 @@ Below 8: lobby, popups, table-actions, table-moments, results, portrait, english
 - **Missing from round 2:**
   - ~~Round-1 re-check~~: done (see above; `harness/recheck.py`).
   - ~~Synthesizer~~: done (see "Round 2 synthesis").
-- **Fix round 2 (groups A–F all done, session 3; regression run and round 3 next):** verified on screenshots and probes, one commit + push per group.
+- **Fix round 2 (groups A–F all done, session 3) and round 3 (done, see above):** verified on screenshots and probes, one commit + push per group.
   - **A shared behaviour and copy — done:** AT-1 (no selection/drag/callout), AT-6, R2-15/16, R2-23/AT-5, tab title. Verified by `ctrl+A` selecting 0 characters in room and table; phone EN room fits again.
   - **B table play flow — done:** R2-05, 06, 07, 20, 27, 28, 29, 30. `harness/verify_b.py` and `verify_b2.py` pass on phone and desk.
   - **C lobby and room — done:** R2-01 (tiles ≈1.05:1 at 16:10, top bar and dock take the slack), R2-12/AT-2 (robot and head faces, solid gold empty seat), R2-13, R2-14, R2-18, R2-19 (panels share a bottom edge), R2-31/32, AT-3 (the MVP label is the member's first name).
@@ -530,7 +564,7 @@ Below 8: lobby, popups, table-actions, table-moments, results, portrait, english
   1. ~~Round-1 re-check~~ (done, see above).
   2. ~~Synthesize round 2~~ (done above; 8 medium, 32 low, no high).
   3. Fix round 2 by the groups in the synthesis (A shared, B play flow, C lobby/room, D effects/words, E table static, F eggs), each verified on screenshots at the SPEC viewports and pushed.
-  4. Round 3 lens by lens, fix, and repeat until every screen scores ≥ 8 with no high or medium finding.
+  4. ~~Round 3~~ (done: every screen ≥ 8, no high or medium). A round 4 is only needed if the merge with main changes something.
   5. Merge origin/main (keep main's non-Guandan files), replay a full round, and push guandan-cloud.
   6. Final report per HANDOFF §6.
 - **Environment notes (session 3):** Chromium trusts the proxy CA via `~/.pki/nssdb` (HANDOFF §5, redo after a container reset); `refs/fetch_refs.sh` sometimes times out on news.yxrb.net (rerun it or curl the two files again); the phone `events.html` has an award intro ("TAP TO CONTINUE") over the page until tapped. Harness: `GD_SHOTS=<dir> python3 scenes.py phone portrait desk` (about 2 min per viewport), `python3 mustkeep.py all desk phone portrait` (about 6 min).

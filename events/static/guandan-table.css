@@ -1263,7 +1263,7 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-word.is-vertical { writing-mode: vertical-rl; text-orientation: upright; }
 .gd-word.is-vertical:lang(en) { writing-mode: horizontal-tb; }
-.gd-fx.is-joker > .gd-word:lang(en) { font-size: 88px; }
+.gd-fx.is-joker > .gd-word:lang(en) { font-size: 60px; letter-spacing: 0; }
 @media (prefers-reduced-motion: reduce) {
     .gd-fx > :not(.gd-word) { display: none; }
     .gd-fx > .gd-word { animation: gd-still var(--fx-ms) linear both !important; }

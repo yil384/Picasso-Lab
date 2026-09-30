@@ -244,7 +244,7 @@ async def screens(p, vp):
         await s.pg.wait_for_timeout(2800)
         await s.create_room()
         await s.fill_ai()
-        await screen_check(s, vp, 'room', ['.room button', '.room-seat', '.room input', '.room-panel', '#start-game'])
+        await screen_check(s, vp, 'room', ['.room button', '.room-seat', '.room input', '#start-game'])
         await s.pg.wait_for_timeout(2800)
         await s.start()
         await s.wait_deal_done()

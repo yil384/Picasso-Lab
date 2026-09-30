@@ -3949,7 +3949,7 @@ const FX_CRACKS = "M0 0 L-30 6 L-52 2 L-80 12 L-106 8 M-52 2 L-66 -12 L-84 -16 M
 // A cartoon puff: brown smoke under a fire body and a white-hot core, each the union of a few round
 // lobes (one path; the CSS paints its stroke under the fill, so only the silhouette is outlined).
 const fxLobes = lobes => lobes.map(([x, y, r]) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`).join("");
-const FX_PUFF = `<svg viewBox="-100 -100 200 200"><path class="gd-fx-smoke" d="${fxLobes([[0, -34, 50], [-46, 2, 40], [46, 0, 42], [-22, 38, 40], [26, 40, 40]])}"/><path class="gd-fx-fire" d="${fxLobes([[0, -30, 44], [-38, -2, 36], [38, -4, 38], [-18, 30, 34], [22, 30, 36]])}"/><path class="gd-fx-hot" d="${fxLobes([[-6, -12, 22], [14, 2, 18], [-16, 12, 16]])}"/></svg>`;
+const FX_PUFF = `<svg viewBox="-100 -100 200 200"><path class="gd-fx-smoke" d="${fxLobes([[0, -38, 44], [-30, -28, 30], [30, -30, 32], [-52, 4, 32], [54, 2, 34], [-40, 34, 32], [42, 36, 32], [0, 44, 36], [-10, 0, 44]])}"/><path class="gd-fx-fire" d="${fxLobes([[0, -32, 38], [-30, -20, 26], [30, -22, 28], [-42, 4, 28], [44, 2, 30], [-26, 32, 28], [28, 32, 30], [0, 6, 38]])}"/><path class="gd-fx-hot" d="${fxLobes([[-6, -12, 22], [14, 2, 18], [-16, 12, 16]])}"/></svg>`;
 
 function burstTier(combo) {
     if (combo.type === "jokerBomb") return "joker";
