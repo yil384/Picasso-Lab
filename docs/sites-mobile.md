@@ -15,8 +15,7 @@
 
 | 文件 | Sites 页面 / 位置 | 改了什么 |
 |---|---|---|
-| `home/address.html` | 页脚中间那格（每页都有） | 地址不再两端对齐；手机上在框里居中、标题不折行；如果框是宽的（见下面第 4 步），自动变成 [校徽 \| 地址] 并排 |
-| `home/ucsd.html` | 页脚左边的校徽格 | 手机上校徽在框里居中，和下面的地址卡对齐 |
+| `home/address.html` | 页脚中间那格（每页都有） | 和原来一样（左上起排、地址两端对齐占满整行）；格子变窄时（平板）整张卡片按比例缩小，PICASSO LAB 始终一行，地址不再被截掉 |
 | `sponsors/sponsors.html` | Sponsors 页（新，整页嵌入） | 替换原来的标题 + 9 张 logo 图：手机两列、桌面三列的 logo 墙，分“政府与国家实验室 / 企业”两组 |
 | `events/events.html` | Events 页 | 手机上弹幕输入栏右移，让开 Sites 左下角的 (i) 按钮（之前 (i) 正好盖住“添加图片”按钮，点不到） |
 | `people/*.html`（在职成员；xinwei / haotian / yufei 和 alumni 不动） | Team 页每个人的头像格 | 头像按框的实际大小排版；手机上头像贴框底居中，把空白让到上一个人和这个人之间，而不是头像和名字之间 |
@@ -28,7 +27,7 @@
 1. **正文改左对齐**：Home 的三段、Prof 页的 Bio 和 Openings、Team 页每个人的简介。点进文字框 → `Ctrl+A`（Mac `⌘A`）→ `Ctrl+Shift+L`（Mac `⌘⇧L`）左对齐。桌面上看几乎没区别，手机上“河流”就没了。
 2. **删掉多余空行**：Sponsors 页标题那种把一句话拆成三行、行距很大的，Home 页 logo 和引言之间的空段落。空段落在手机上每个都会变成一整行空白。
 3. **Sponsors 换成整页嵌入**：和 Blogs / Projects 的做法一样（整页嵌入），粘贴 `sponsors/sponsors.html`；原来的标题文字框和 9 张 logo 图删掉。
-4. **（推荐）页脚合并两格**：删掉左边的校徽格，把地址格拖宽到原来两格的宽度，再粘贴新的 `home/address.html`。手机上页脚从三段变两段，桌面上是 [校徽 | PICASSO LAB 地址] 并排，一样好看。如果不想动页脚结构，只重新粘贴 `home/ucsd.html` 和 `home/address.html` 也行。
+4. **页脚地址格**：重新粘贴新的 `home/address.html` 即可，页脚结构不用动。
 5. **Team 页头像格**：重新粘贴新的 `people/*.html` 即可，框的大小不用动。
 
 ## 验证
