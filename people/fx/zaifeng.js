@@ -1,16 +1,18 @@
 /* Zaifeng — 院士 Academician
    Click: a mortarboard (a fitted black skull cap with a gold 「院士」 band, a bevelled board, a gold
    button, cord and tassel on a little pendulum) drops onto his head and squashes; confetti and stars
-   burst. He raises a paper in each V-sign hand: the sheet covers the V and its bottom edge sits in
-   his fist (his curled fingers are re-layered in front of it). Then the paper mill starts: a volley
-   of ten papers shoots out of the two hands in 0.5 s, each with its own "+1", and the counter races
-   (its paper pile grows by a sheet per volley).
+   burst. Then a thick stack of papers slams into each V-sign hand (from bigger and nearer, left then
+   right): seven bundles of sheets with their layered edges showing at the bottom and on the left, two
+   loose sheets fanned under an accepted top sheet (venue tag, title, ACCEPTED stamp, text, a figure) and
+   a black binder clip on top. The stacks sit IN FRONT of his hands and hide them completely (fingers,
+   fist and wrist) from the first frame each is shown. Then the paper mill starts: a volley of ten
+   papers shoots out of the tops of the two stacks in 0.5 s, each with its own "+1", and the counter
+   races (its paper pile grows by a sheet per volley).
    Loop (4 s beat): one volley per beat (busy ~1.2 s with the sheets' flight), otherwise calm — the
-   tassel sways, the papers breathe.
+   tassel sways, the stacks breathe and jolt with their shots. Exit: the stacks swell and pop.
    Photo landmarks (512 px): hair top 345,80 · head 283-415 x at y 140 · glasses y 180-207 ·
-   left V: index tip 215,212, middle tip 231,211, V base / curled fingers y 262, fist 190-262 x 262-318 ·
-   right V: index tip 441,284, middle tip 458,299, crotch 427,321, V base y ~322, curled fingers
-   380-447 x 327-352, palm 372-420 x 320-390. */
+   left hand (skin): V tips 215,212 / 231,211, fist 197-253 x 256-320, wrist 198-240 x 320-362 ·
+   right hand (skin): V tips 441,284 / 458,299, palm 370-450 x 318-365, wrist 375-420 x 365-405. */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -253,8 +255,8 @@ export default {
     const CREAM = [0xfaf6ea, 0xf3eee1, 0xfffdf6, 0xe9e3d3, 0xfaf6ea, 0xefe9da, 0xfffcf2];
     const clipMat = k.toon(0x2a2930), wireMat = k.toon(0xd9dce3);
     const papers = [
-      { venue: 'ICML', accent: '#c8322f', c: [219, 280], rz: 0.05, t0: T_PAPER[0], from: 1.35 },
-      { venue: 'NeurIPS', accent: '#2f6fc8', c: [410, 343], rz: -0.3, t0: T_PAPER[1], from: 1.15 },
+      { venue: 'ICML', accent: '#c8322f', c: [219, 280], rz: 0.05, t0: T_PAPER[0], from: 1.35, pull: 0 },
+      { venue: 'NeurIPS', accent: '#2f6fc8', c: [410, 343], rz: -0.3, t0: T_PAPER[1], from: 1.2, pull: 7 },   // near the rim: it slams in from the centre side
     ].map((p, i) => {
       const g = new THREE.Group(), body = new THREE.Group();
       const home = k.at(p.c[0], p.c[1], Z_STACK);
@@ -388,7 +390,8 @@ export default {
           const breathe = Math.sin(t * Math.PI * 2 / BEAT + i * 1.9) * 0.018 + Math.sin(t * 2.3 + i) * 0.006;
           p.g.scale.set(sc * (1 + sq), sc * (1 - sq), sc);
           p.g.rotation.set(0, 0, p.rz + breathe + rest * (i ? -0.22 : 0.22) + jolt * (i ? 0.035 : -0.035));
-          p.g.position.set(p.home.x, p.home.y + jolt * 1.8, p.home.z + rest * 30);
+          const pull = rest * p.pull / Math.hypot(p.home.x, p.home.y);
+          p.g.position.set(p.home.x * (1 - pull), p.home.y * (1 - pull) + jolt * 1.8, p.home.z + rest * 30);
         });
 
         // the flying sheets
