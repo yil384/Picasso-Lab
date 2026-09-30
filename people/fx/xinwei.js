@@ -138,8 +138,12 @@ export default {
       uv.needsUpdate = true;
       return geo;
     };
-    const cyl = (r, h, mat, seg = 20) => { const g = new THREE.CylinderGeometry(r, r, h, seg); g.rotateX(Math.PI / 2); return new THREE.Mesh(g, mat); };   // facing the viewer
+    const cylGeo = (r, h, seg = 20) => { const g = new THREE.CylinderGeometry(r, r, h, seg); g.rotateX(Math.PI / 2); return g; };   // a disc facing the viewer
     const tmp = new THREE.Vector3();
+    // the kit's lights make a face turned to the key light ~1.27 x its colour, which blows whites out:
+    // light materials get their colour scaled so the lit tone is the drawing's colour and the toon
+    // steps (right side, folds) still show
+    const lit = (hex, opts = {}) => { const m = k.toon(0xffffff, opts); m.color.setHex(hex).multiplyScalar(0.79); return m; };
 
     // the photo and plate sit deeper than the stencil disc: clip them, or a sliver of the old backdrop
     // shows at the rim next to the new set
@@ -150,11 +154,6 @@ export default {
     const WC = [34, 138];                                   // wipe centre = the pan (stage px)
     const WIPE = bez(0.3, 0, 0.3, 1);
     const wipeR = (t) => 232 * WIPE(env(t, 0.3, 1.0));
-    const revealT = (x, y) => {
-      const d = Math.hypot(x - WC[0], y - WC[1]) + 8;
-      for (let s = 0; s <= 1; s += 0.005) if (232 * WIPE(s) >= d) return 0.3 + 0.7 * s;
-      return 1;
-    };
     const wallTex = k.canvasTexture(1024, 1024, (g) => {
       g.scale(1024 / 200, 1024 / 200);
       g.fillStyle = '#26232a'; g.fillRect(0, 0, 200, 200);
@@ -240,21 +239,36 @@ export default {
         }`,
       transparent: true, depthWrite: false,
     });
+    k.clip(silMat);
     const sil = new THREE.Mesh(new THREE.CircleGeometry(k.R, 128), silMat);
     sil.position.z = -0.4;
     sil.scale.setScalar(k.depthScale(-0.4));
     sil.renderOrder = 9;
     root.add(sil);
 
-    // set pieces (3D, in front of the wall): each pops in as the fire front reaches it
+    // set pieces (3D, in front of the wall): the fire front burns them in too — their materials discard
+    // what lies outside the wipe circle (measured in the stage's own frame, depth-compensated like k.at)
+    const wipeU = { uR: setU.uR, uC: setU.uC, uRootInv: { value: new THREE.Matrix4() }, uDist: { value: k.dist } };
+    const wipePatch = (sh) => {
+      Object.assign(sh.uniforms, wipeU);
+      sh.vertexShader = 'uniform mat4 uRootInv;\nvarying vec3 vWp;\n' + sh.vertexShader.replace('void main() {', 'void main() {\n  vWp = (uRootInv * modelMatrix * vec4(position, 1.0)).xyz;');
+      sh.fragmentShader = 'uniform float uR, uDist;\nuniform vec2 uC;\nvarying vec3 vWp;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n  if (length(vWp.xy * uDist / (uDist - vWp.z) - uC) > uR) discard;');
+    };
+    const wipeAll = (obj) => obj.traverse(o => (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []).forEach((m) => {
+      if (m.userData.wiped) return;
+      m.userData.wiped = true;
+      m.onBeforeCompile = wipePatch;
+      m.customProgramCacheKey = () => 'xinwei-wipe';
+    }));
     const setPieces = [];
-    const setPiece = (obj, x, y, order = 0) => { setPieces.push({ obj, at: revealT(x, y), order }); clipAll(obj); root.add(obj); return obj; };
+    const setPiece = (obj) => { setPieces.push(obj); clipAll(obj); wipeAll(obj); root.add(obj); return obj; };
     const gold = k.toon(GOLD), steel = k.toon(0xb9c0c8);
+    const setGold = k.toon(GOLD);
 
     // the gold rail as a ledge across the wall, produce on it (viewer right)
     const ledge = new THREE.Group();
     ledge.position.copy(P(100, 109.7, -31));
-    ledge.add(inked(new THREE.BoxGeometry(206, 3.4, 5), gold, 1));
+    ledge.add(inked(new THREE.BoxGeometry(206, 3.4, 5), setGold, 1));
     const tomato = k.toon(0xe5412c), leaf = k.toon(0x3f8a2e);
     const produce = [];
     const addProduce = (mesh, x, y, z = 1.5) => { mesh.position.set(x - 100, 109.7 - y, z); ledge.add(mesh); produce.push(mesh); return mesh; };
@@ -267,7 +281,7 @@ export default {
     });
     { const m = inked(new THREE.SphereGeometry(1, 18, 12), k.toon(0xffd43b), 1); m.scale.set(4.8, 3.7, 3.4); addProduce(m, 157.5, 104.4); }
     { const m = inked(new THREE.CapsuleGeometry(1.5, 9, 4, 10), k.toon(0x4f9a3a), 1); m.rotation.z = -0.12; addProduce(m, 179, 101.4); }
-    setPiece(ledge, 100, 110);
+    setPiece(ledge);
 
     // pot rail (viewer left): steel bar, copper pan, ladle, whisk
     const potRail = new THREE.Group();
@@ -277,7 +291,7 @@ export default {
     {
       const g = new THREE.Group(); g.position.set(22 - 34, 0, 0);            // copper pan, handle up
       const h = inked(new THREE.BoxGeometry(2.2, 12, 1.4), k.toon(0x6b4a2c), 0.9); h.position.y = -6;
-      const pan = inked(cyl(8.4, 2.4, k.toon(0xc9773f), 32), k.toon(0xc9773f), 1.2); pan.position.y = -19.5;
+      const pan = inked(cylGeo(8.4, 2.4, 32), k.toon(0xc9773f), 1.2); pan.position.y = -19.5;
       const inner = new THREE.Mesh(new THREE.CircleGeometry(5.8, 32), k.toon(0xa95f2e)); inner.position.set(0, -19.5, 1.25);
       const hole = new THREE.Mesh(new THREE.CircleGeometry(0.7, 12), new THREE.MeshBasicMaterial({ color: 0x15151a })); hole.position.set(0, -1.8, 0.75);
       g.add(h, pan, inner, hole); potRail.add(g); hang.push(g);
@@ -299,20 +313,20 @@ export default {
       });
       g.add(s); potRail.add(g); hang.push(g);
     }
-    setPiece(potRail, 34, 70);
+    setPiece(potRail);
 
     // pantry shelf (viewer right) with a bottle; the trophy stands on it (⑧)
     const shelf = new THREE.Group();
     shelf.position.copy(P(168, 78.5, -25));
-    shelf.add(inked(new THREE.BoxGeometry(72, 3, 9), gold, 1));
+    shelf.add(inked(new THREE.BoxGeometry(72, 3, 9), setGold, 1));
     {
       const prof = [[0.01, 0], [3.5, 0], [3.5, 9.6], [3.1, 11.2], [1.9, 13.6], [1.5, 14.6], [1.5, 19], [0.01, 19]].map(([r, y]) => new THREE.Vector2(r, y));
       const b = inked(new THREE.LatheGeometry(prof, 20), k.toon(0x4f8f45), 1);
-      const capM = inked(new THREE.CylinderGeometry(2.3, 2.3, 2.4, 14), gold, 0.8); capM.position.y = 20;
+      const capM = inked(new THREE.CylinderGeometry(2.3, 2.3, 2.4, 14), setGold, 0.8); capM.position.y = 20;
       const bottle = new THREE.Group(); bottle.add(b, capM); bottle.position.set(180.5 - 168, 1.5, 0);
       shelf.add(bottle);
     }
-    setPiece(shelf, 160, 78);
+    setPiece(shelf);
 
     // two gold pendant lamps with halftone light cones: they drop in once the fire front has passed
     const coneTex = k.canvasTexture(224, 300, (g, w, h) => {
@@ -342,8 +356,7 @@ export default {
       g.add(cord, shade, top, bulb, cone);
       g.userData.home = P(x, 0, -24);
       g.position.copy(g.userData.home);
-      clipAll(g);
-      root.add(g);
+      setPiece(g);
       return g;
     });
 
@@ -368,9 +381,9 @@ export default {
         return h;
       });
       const starShape = new THREE.Shape();
-      for (let i = 0; i < 10; i++) { const r = i % 2 ? 1.6 : 3.8, a = Math.PI / 2 + (i * Math.PI) / 5; if (i) starShape.lineTo(Math.cos(a) * r, Math.sin(a) * r); else starShape.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+      for (let i = 0; i < 10; i++) { const r = i % 2 ? 2.1 : 4.5, a = Math.PI / 2 + (i * Math.PI) / 5; if (i) starShape.lineTo(Math.cos(a) * r, Math.sin(a) * r); else starShape.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
       const star = new THREE.Mesh(new THREE.ShapeGeometry(starShape), new THREE.MeshBasicMaterial({ color: 0x15151a }));
-      star.position.set(0, 19.6, 8.95);
+      star.position.set(0, 19.2, 9.0);
       tSpin.add(plinth, plaque, stem, knot, cup, rimM, inside, ...handles, star);
     }
     const trophyHome = P(157, 77, -22);
@@ -386,22 +399,41 @@ export default {
     ctop.rotation.x = 0.5;
     counter.add(ctop);
     {
-      const sTop = k.toon(0xe8ebee), sFront = k.toon(0xaab1b9);
+      // brushed steel on top, halftone shading down the front
+      const topTex = k.canvasTexture(512, 32, (g, w, h) => {
+        g.fillStyle = '#e8ebee'; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#d3d8dd'; g.fillRect(0, 0, w, h * 0.3);
+        g.fillStyle = '#ffffff'; g.fillRect(0, h - 5, w, 2);
+        g.strokeStyle = 'rgba(160,168,178,0.45)'; g.lineWidth = 1;
+        for (let i = 0; i < 26; i++) { const y = 3 + ((i * 7.3) % (h - 9)), x = (i * 97) % w; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 40 + (i % 5) * 18, y); g.stroke(); }
+      });
+      const frontTex = k.canvasTexture(512, 74, (g, w, h) => {
+        g.fillStyle = '#aab1b9'; g.fillRect(0, 0, w, h);
+        g.fillStyle = '#8e969f';
+        for (let y = 4; y < h; y += 5) for (let x = (y / 5) % 2 ? 2.5 : 0; x < w; x += 5) {
+          const r = 0.2 + 1.5 * clamp((y - 20) / 50);
+          if (r > 0.25) { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+        }
+      });
+      const sTop = lit(0xffffff, { map: topTex }), sFront = lit(0xffffff, { map: frontTex });
       const body = new THREE.Mesh(new THREE.BoxGeometry(236, 34, 16), [sFront, sFront, sTop, sFront, sFront, sFront]);
       body.position.set(0, -17, -8);
       k.ink(body, 1.4);
-      const lip = inked(new THREE.CylinderGeometry(1.2, 1.2, 236, 10), k.toon(0xf6f8fa), 0.9); lip.rotation.z = Math.PI / 2; lip.position.set(0, -0.4, 0.2);
+      const lip = inked(new THREE.CylinderGeometry(1.2, 1.2, 236, 10), lit(0xf6f8fa), 0.9); lip.rotation.z = Math.PI / 2; lip.position.set(0, -0.4, 0.2);
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(236, 2.3, 0.6), gold); stripe.position.set(0, -3.9, 0.3);
+      const inkM = new THREE.MeshBasicMaterial({ color: 0x15151a });
+      const backEdge = new THREE.Mesh(new THREE.BoxGeometry(236, 1.3, 1.3), inkM); backEdge.position.set(0, 0, -15.6);   // the top's far edge, inked
+      const stripeInk = new THREE.Mesh(new THREE.BoxGeometry(236, 3.4, 0.4), inkM); stripeInk.position.set(0, -3.9, 0.05);
       const knobs = [-24, 24].map((x) => {
-        const g = new THREE.Group(); g.position.set(x, -12.4, 0);
-        const kb = inked(cyl(3.4, 2.6, k.toon(0x1c1a1f), 24), k.toon(0x1c1a1f), 0.9); kb.position.z = 1.3;
+        const g = new THREE.Group(); g.position.set(x, -12.4, 0); g.rotation.x = -0.5;    // facing the camera
+        const kb = inked(cylGeo(3.4, 2.6, 24), k.toon(0x1c1a1f), 0.9); kb.position.z = 1.3;
         const dot = new THREE.Mesh(new THREE.CircleGeometry(1.3, 16), new THREE.MeshBasicMaterial({ color: GOLD })); dot.position.z = 2.65;
         g.add(kb, dot); return g;
       });
-      const board = inked(new THREE.BoxGeometry(42, 2.6, 11), k.toon(0xc98a4b), 1); board.position.set(46.3, 1.3, -6.5);
+      const board = inked(new THREE.BoxGeometry(42, 2.6, 11), lit(0xc98a4b), 1); board.position.set(46.3, 1.3, -6.5);
       const carrot = k.toon(0xff8a2a);
       const coins = [[61, -4.5], [65.4, -2.6]].map(([x, z]) => { const c = inked(new THREE.CylinderGeometry(2, 2, 1, 16), carrot, 0.7); c.position.set(x, 3.1, z); return c; });
-      ctop.add(body, lip, stripe, ...knobs, board, ...coins);
+      ctop.add(body, lip, stripe, backEdge, stripeInk, ...knobs, board, ...coins);
     }
     // the 厨神 seal on the station front (the only calligraphy — a small accent)
     const seal = k.card(21.2, 11, (g, w, h) => {
@@ -437,13 +469,13 @@ export default {
         g.strokeStyle = '#e3a822'; g.lineWidth = 1.4; g.stroke(new Path2D('M89.8 141H110.8'));
       });
       const geo = remapUV(extrude(shapesOf(SVG.apron, 101, 84), 0.8), 82.6 - 101, 84 - 182, 34.8, 88.6);
-      apron.add(inked(geo, k.toon(0xffffff, { map: apronTex }), 1.5));
-      const strapMat = k.toon(WHITE);
+      apron.add(inked(geo, lit(0xffffff, { map: apronTex }), 1.5));
+      const strapMat = lit(WHITE);
       [SVG.strapL, SVG.strapR].forEach((d) => { const m = inked(extrude(shapesOf(d, 101, 84), 0.6), strapMat, 1.2); m.position.z = 0.2; apron.add(m); });
       // badge: gold rim, black field, gold toque
       const badge = new THREE.Group();
       badge.position.set(100.8 - 101, 84 - 107, 1.4);
-      const rimB = inked(cyl(7.4, 1.4, gold, 32), gold, 1); rimB.position.z = 0.3;
+      const rimB = inked(cylGeo(7.4, 1.4, 32), gold, 1); rimB.position.z = 0.3;
       const faceTex = k.canvasTexture(128, 128, (g, w) => {
         g.scale(w / 14.8, w / 14.8); g.translate(-(100.8 - 7.4), -(107 - 7.4));
         g.fillStyle = '#15151a'; g.beginPath(); g.arc(100.8, 107, 6.3, 0, TAU); g.fill();
@@ -458,6 +490,10 @@ export default {
       const tri = inked(extrude(shapesOf(SVG.kerTri, 101, 84), 0.8), red, 1.1); tri.position.z = 1.3;
       const knotK = inked(extrude(shapesOf(SVG.kerKnot, 101, 84), 1.4), k.toon(0xe0453a), 1); knotK.position.z = 1.9;
       apron.add(band, tri, knotK);
+      // its drop shadow on his jacket
+      const shade = new THREE.Mesh(new THREE.ShapeGeometry(shapesOf(SVG.apron, 101, 84)), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false }));
+      shade.position.set(0.6, -2, -2.6); shade.renderOrder = 11;
+      apron.add(shade);
     }
 
     /* ── ④ pleated toque (pivot = the band's bottom centre, stage 101, 55) ── */
@@ -465,23 +501,29 @@ export default {
     hat.position.copy(P(101, 55, 3));
     hat.add(hatFit); hatFit.add(hatBody);
     hatBody.scale.set(1, 1, 0.55);
-    hatBody.rotation.x = -0.2;
+    hatBody.rotation.x = 0.18;               // seen a touch from above, like the drawing (the band sags in front)
     root.add(hat);
     {
-      const hw = k.toon(WHITE);
+      const hw = lit(WHITE);
       const bandH = inked(new THREE.CylinderGeometry(14.6, 14.3, 8.8, 48), hw, 1.3); bandH.position.y = 4.4;
       const stripeH = new THREE.Mesh(new THREE.TorusGeometry(14.62, 0.55, 6, 48), gold); stripeH.rotation.x = Math.PI / 2; stripeH.position.y = 4.6;
-      const prof = [[12.6, 0], [13.2, 4], [14.8, 11.4], [17.1, 18], [19, 22.8], [19.5, 26.2], [18.7, 29.2], [16.2, 31.4], [12, 32.6], [6, 33.2], [0.01, 33.4]].map(([r, y]) => new THREE.Vector2(r, y));
-      const crownGeo = new THREE.LatheGeometry(prof, 72);
-      const pos = crownGeo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {        // pleats: the crown's rim is scalloped, eight folds round it
-        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-        const th = Math.atan2(z, x), f = 1 + 0.06 * (0.5 + 0.5 * Math.cos(th * 8)) * clamp(y / 8);
-        pos.setXYZ(i, x * f, y, z * f);
-      }
-      crownGeo.computeVertexNormals();
-      const crown = inked(crownGeo, hw, 1.3); crown.position.y = 7.8;
-      hatBody.add(crown, bandH, stripeH);
+      // the crown: widening, with the three pleat lines of the drawing down its front
+      const pleatTex = k.canvasTexture(512, 64, (g, w, h) => {
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+        g.strokeStyle = '#cbc3b3'; g.lineWidth = 7;
+        [0, 0.085, -0.085].forEach((u) => { const x = ((u + 1) % 1) * w; g.beginPath(); g.moveTo(x, h); g.lineTo(x, h * 0.1); g.stroke(); if (x < 8) { g.beginPath(); g.moveTo(x + w, h); g.lineTo(x + w, h * 0.1); g.stroke(); } });
+      });
+      const prof = [[12.6, 0], [13.3, 4], [14.9, 10], [16.9, 16], [18.6, 21], [19.3, 24], [17.8, 26], [12, 27], [0.01, 27.4]].map(([r, y]) => new THREE.Vector2(r, y));
+      const crown = inked(new THREE.LatheGeometry(prof, 64), lit(WHITE, { map: pleatTex }), 1.3); crown.position.y = 7.8;
+      // three puffs on top (the drawing's bumpy crown), inked where they overlap
+      const puffs = [[-10.8, 32.4, 7.9, -1], [10.8, 32.4, 7.9, -1], [0, 34.2, 8.7, 0.6]].map(([x, y, r, z]) => {
+        const m = inked(new THREE.SphereGeometry(r, 24, 16), hw, 1.2); m.position.set(x, y, z); return m;
+      });
+      hatBody.add(crown, bandH, stripeH, ...puffs);
+      // the band's shadow on his hair
+      const hs = new THREE.Mesh(new THREE.PlaneGeometry(27, 3.2), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
+      hs.position.set(0.4, -1.3, -2.8); hs.renderOrder = 11;
+      hatFit.add(hs);
     }
 
     /* ── ① the pan, held by the handle in his real right hand (viewer left) ── */
@@ -502,13 +544,13 @@ export default {
     panBody.add(bowlG);
     {
       const prof = [[0.01, 0], [10.4, 0], [11.7, 0.4], [13.2, 2.3], [14.1, 4.4], [PR, PH]].map(([r, y]) => new THREE.Vector2(r, y));
-      const outer = inked(new THREE.LatheGeometry(prof, 48), k.toon(0x98a0a9), 1.4);
+      const outer = inked(new THREE.LatheGeometry(prof, 48), lit(0x9aa2ab), 1.4);
       const inner = new THREE.Mesh(new THREE.LatheGeometry(prof, 48), k.toon(0x5d646c, { side: THREE.BackSide }));
       const floor = new THREE.Mesh(new THREE.CircleGeometry(10.4, 40), k.toon(0x5d646c)); floor.rotation.x = -Math.PI / 2; floor.position.y = 0.05;
-      const rimP = inked(new THREE.TorusGeometry(PR, 0.85, 8, 56), k.toon(0xdfe4e9), 0.8); rimP.rotation.x = Math.PI / 2; rimP.position.y = PH;
+      const rimP = inked(new THREE.TorusGeometry(PR, 0.85, 8, 56), lit(0xdfe4e9), 0.8); rimP.rotation.x = Math.PI / 2; rimP.position.y = PH;
       bowlG.add(outer, inner, floor, rimP);
       // stainless handle, from the pan's side into his fist
-      const hand = inked(new THREE.BoxGeometry(29, 4.3, 1.6), k.toon(0xb7bec6), 1.2);
+      const hand = inked(new THREE.BoxGeometry(29, 4.3, 1.6), lit(0xc3c9d0), 1.2);
       hand.position.set(-8.2, 0.6, 0.5); hand.rotation.z = -0.1;
       const hl = new THREE.Mesh(new THREE.PlaneGeometry(26, 0.9), new THREE.MeshBasicMaterial({ color: 0xeef1f4 }));
       hl.position.set(-8.4, 1.3, 1.35); hl.rotation.z = -0.1;
@@ -575,7 +617,7 @@ export default {
         const m = inked(new THREE.SphereGeometry(1, 14, 8), k.toon(0x9ed36a), 0.8); m.scale.set(3.3, 1.15, 1.4); m.rotation.z = 0.15;
         piece.add(m);
       } else {
-        const m = inked(new THREE.BoxGeometry(3.8, 3.8, 3.8), k.toon(0xfff1d6), 0.8); m.rotation.set(0.3, 0.5, 0.1);
+        const m = inked(new THREE.BoxGeometry(3.8, 3.8, 3.8), lit(0xfff1d6), 0.8); m.rotation.set(0.3, 0.5, 0.1);
         piece.add(m);
       }
       piece.scale.setScalar(S);
@@ -604,7 +646,7 @@ export default {
         g.strokeStyle = '#ffffff'; g.lineWidth = 0.8; g.stroke(new Path2D('M1 -3.3H21'));
       });
       const geo = remapUV(extrude(shapesOf(SVG.blade, 0, 0), 0.7), 0, -4.4, 29.6, 8.8);
-      const blade = inked(geo, k.toon(0xffffff, { map: bladeTex }), 1.2);
+      const blade = inked(geo, lit(0xffffff, { map: bladeTex }), 1.2);
       const bolster = inked(new THREE.BoxGeometry(4.2, 10, 2.2), k.toon(0x8f99a4), 1); bolster.position.set(-1.5, 0, 0.3);
       const handleK = inked(new THREE.BoxGeometry(6, 6.8, 2.8), k.toon(0x2c2420), 1); handleK.position.set(-6.6, 0, 0.3);
       kFit.add(blade, bolster, handleK);
@@ -614,28 +656,24 @@ export default {
     // anchors for the 2D layer
     const head = new THREE.Group(); head.position.copy(P(93, 70, 0)); root.add(head);        // the balloon's tail tip (his cheek)
 
-    const tint = new THREE.Color();
-    let lastT = 0;
+    const LAMP = bez(0.2, 1.5, 0.4, 1);
 
     return {
       update(t, e) {
-        lastT = t;
         const ph = pct(t);
 
         // ② the set: fire front out of the pan, the kitchen behind it
-        const R = wipeR(t);
+        // on the exit the kitchen collapses back into the pan (the fire front runs home)
+        const R = wipeR(t) * (1 - ease.inOut(clamp(e * 1.15)));
         setU.uR.value = R; setU.uT.value = t;
-        setU.uOp.value = clamp(t / 0.15) * (1 - ease.inOut(e));
-        wall.visible = sil.visible = R > 0.5 && e < 1;
-        k.layers.plate.material.color.copy(tint.setRGB(1, 1, 1));
-        setPieces.forEach(({ obj, at: ta, order }) => k.show(obj, ease.outBack(env(t, ta, ta + 0.3), 2) * exitF(e, 0.4 + order)));
-        const sway = Math.sin(((t - T0) * TAU) / BEAT);
+        setU.uOp.value = clamp(t / 0.15) * (1 - ease.in(e));
+        wipeU.uRootInv.value.copy(root.matrixWorld).invert();
+        const setOn = R > 0.5 && e < 1;
+        wall.visible = sil.visible = setOn;
+        setPieces.forEach((o) => { o.visible = setOn; });
         hang.forEach((h, i) => { h.rotation.z = 0.05 * Math.sin(((t - 0.6) * TAU) / BEAT + i * 1.3) * env(t, 0.6, 1.2); });
         lamps.forEach((g, i) => {
-          const ta = revealT(i ? 140 : 60, 26);
-          const shown = env(t, ta, ta + 0.12) * exitF(e, 0.5);
-          const drop = bez(0.2, 1.5, 0.4, 1)(env(t, 0.7, 1.3));
-          k.show(g, shown);
+          const drop = LAMP(env(t, 0.7, 1.3));
           g.position.set(g.userData.home.x, g.userData.home.y + 16 * (1 - drop), g.userData.home.z);
           g.rotation.z = 0.025 * Math.sin(((t - 1.3) * TAU) / (BEAT * 1.5) + i * 2) * env(t, 1.3, 2);
         });
@@ -654,17 +692,17 @@ export default {
 
         // ⑤ apron unrolls from the collar
         const ap = bez(0.2, 1.3, 0.4, 1)(env(t, 0.5, 1.0));
-        k.show(apron, Math.min(1, env(t, 0.5, 0.62)) * exitF(e, 0.4));
+        k.show(apron, Math.min(1, env(t, 0.5, 0.62)) * exitF(e, 0));
         apron.scale.y *= lerp(0.25, 1, ap);
 
         // ④ toque drops onto his head, a small squash on landing
         const [hy, hsx, hsy, hr] = HAT(env(t, 0.6, 1.3) * 100);
-        k.show(hat, Math.min(1, env(t, 0.6, 0.72)) * exitF(e, 0.5));
+        k.show(hat, Math.min(1, env(t, 0.6, 0.72)) * exitF(e, 0.05));
         hatFit.position.y = -hy; hatFit.scale.set(hsx, hsy, 1); hatFit.rotation.z = -hr * DEG;
 
         // ① pan swings into his hand; the toss (flick, fire, food, turner) once per beat
         const pp = bez(0.2, 1.4, 0.4, 1)(env(t, 0, 0.4));
-        k.show(pan, Math.min(1, env(t, 0, 0.12)) * (0.4 + 0.6 * pp) * exitF(e, 0.1));
+        k.show(pan, Math.min(1, env(t, 0, 0.12)) * (0.4 + 0.6 * pp) * exitF(e, 0.75));
         pan.rotation.z = 38 * DEG * (1 - pp);
         panHand.visible = pan.visible;
         const [fx, fy, fr] = FLICK(ph);
@@ -690,7 +728,6 @@ export default {
         k.show(knife, Math.min(1, env(t, 0.55, 0.7)) * (0.4 + 0.6 * kp) * exitF(e, 0.2));
         knife.rotation.z = -28 * DEG * (1 - kp);
         fist.visible = knife.visible;
-        void sway;
       },
 
       draw2d(q, t, e) {
@@ -716,7 +753,7 @@ export default {
           EMB.forEach(([p2d, ex, ey, dl]) => {
             const [op, ty, s, rot] = EMBER(pct(t, T0 + dl));
             if (op * fade < 0.01) return;
-            c.save(); c.setTransform(c.getTransform().multiply(new DOMMatrix(fr)));
+            c.save(); c.transform(...fr);
             c.translate(ex, ey + ty); c.rotate(rot * DEG); c.scale(s, s); c.translate(-ex, -ey);
             c.globalAlpha = op * fade;
             c.fillStyle = '#ffd43b'; c.strokeStyle = INK; c.lineWidth = 0.9;
@@ -724,10 +761,10 @@ export default {
             c.restore();
           });
           // whoosh, puff, wisps: in the pan's frame (not the flick)
-          const pf = new DOMMatrix(frame(pan, GRIP[0], GRIP[1], 0));
+          const pf = frame(pan, GRIP[0], GRIP[1], 0);
           const [wo, wx, wy] = WHOOSH(ph);
           if (wo * fade > 0.01) {
-            c.save(); c.setTransform(c.getTransform().multiply(pf)); c.translate(wx, wy);
+            c.save(); c.transform(...pf); c.translate(wx, wy);
             c.globalAlpha = wo * fade;
             c.strokeStyle = INK; c.lineWidth = 3.1; c.stroke(SVG_WH);
             c.strokeStyle = '#f4f1ea'; c.lineWidth = 1.5; c.stroke(SVG_WH);
@@ -735,7 +772,7 @@ export default {
           }
           const [po, pty, ps] = PUFF(ph);
           if (po * fade > 0.01) {
-            c.save(); c.setTransform(c.getTransform().multiply(pf));
+            c.save(); c.transform(...pf);
             c.translate(34.1, 139.4 + pty); c.scale(ps, ps); c.translate(-34.1, -139.4);
             c.globalAlpha = po * fade;
             c.fillStyle = '#f4f1ea'; c.strokeStyle = INK; c.lineWidth = 0.9; c.fill(SVG_PUFF); c.stroke(SVG_PUFF);
@@ -744,7 +781,7 @@ export default {
           [[SVG_W1, 30, 140, 0], [SVG_W2, 40, 138, 0.25]].forEach(([p2d, ox, oy, dl]) => {
             const [wa] = WISP_A(pct(t, T0 + dl)), [wty, wsy] = WISP_T(pct(t, T0 + dl));
             if (wa * fade < 0.01) return;
-            c.save(); c.setTransform(c.getTransform().multiply(pf));
+            c.save(); c.transform(...pf);
             c.translate(ox, oy + wty); c.scale(1, wsy); c.translate(-ox, -oy);
             c.globalAlpha = wa * fade;
             c.strokeStyle = 'rgba(21,21,26,0.35)'; c.lineWidth = 3; c.stroke(p2d);
@@ -756,21 +793,21 @@ export default {
         // glints: the knife's blade on the flick, the trophy mid-beat
         const glint = (m, x, y, [op, s, rot]) => {
           if (op * fade < 0.01) return;
-          c.save(); c.setTransform(c.getTransform().multiply(m));
+          c.save(); c.transform(...m);
           c.translate(x, y); c.rotate(rot * DEG); c.scale(s, s);
           c.globalAlpha = op * fade;
           c.fillStyle = '#ffffff'; c.strokeStyle = INK; c.lineWidth = 0.9; c.fill(SVG_STAR); c.stroke(SVG_STAR);
           c.restore();
         };
-        if (knife.visible) glint(new DOMMatrix(frame(knife, KP[0], KP[1], 1.5)), 148.8, 169.6, KGLINT(pct(t, T0 + 0.1)));
-        if (trophy.visible && t > 1.4) glint(new DOMMatrix(frame(trophy, 157, 77, 10)), 150.4, 51, TGLINT(ph));
+        if (knife.visible) glint(frame(knife, KP[0], KP[1], 1.5), 148.8, 169.6, KGLINT(pct(t, T0 + 0.1)));
+        if (trophy.visible && t > 1.4) glint(frame(trophy, 157, 77, 10), 150.4, 51, TGLINT(ph));
 
         // ⑨ YES, CHEF! — pops once from his mouth, then leaves
         const yp = (t - 0.95) / 2.6 * 100;
         if (yp > 0 && yp < 100) {
           const [yo, ys, yr] = YES(yp);
           if (yo * fade > 0.01) {
-            c.save(); c.setTransform(c.getTransform().multiply(new DOMMatrix(frame(head, 93, 70, 0))));
+            c.save(); c.transform(...frame(head, 93, 70, 0));
             c.translate(93, 70); c.rotate(yr * DEG); c.scale(ys * (0.5 + 0.5 * fade), ys * (0.5 + 0.5 * fade)); c.translate(-93, -70);
             c.globalAlpha = yo * fade;
             c.translate(55, 40); c.rotate(-6 * DEG); c.translate(-55, -40);
@@ -787,7 +824,6 @@ export default {
           }
         }
         c.restore();
-        void lastT;
       },
 
       dispose() {},

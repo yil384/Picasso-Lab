@@ -29,7 +29,7 @@ const INK = '#0a0f24';
 const FONT_KAI = "'Kaiti SC', STKaiti, KaiTi, 'Songti SC', STSong, SimSun, serif";
 const GRIP = [292, 452], TILT = 0.34;          // hammer grip (photo px) and lean of the handle (rad, head up-left)
 const SEAL = [405, 138];
-const NOCAP = [232, 360, 400, 496];            // photo-px box of haotian-nocap.webp (u0, v0, u1, v1)
+const NOCAP = [50, 360, 400, 512];             // photo-px box of haotian-nocap.webp (u0, v0, u1, v1)
 
 /* a comic zigzag between two points (deterministic), photo px */
 function zig(x0, y0, x1, y1, n, jag, seed) {
@@ -185,7 +185,6 @@ export default {
   still: 2.4,
   async build(k) {
     const { root } = k;
-    const own = [];
     const PX = k.D / 512;
     const hump = (t, a, b, c) => (t < a || t > c ? 0 : t < b ? (t - a) / (b - a) : 1 - (t - b) / (c - b));
     const exitF = (e, order) => 1 - ease.in(clamp(e * 1.6 - order * 0.6));
@@ -196,13 +195,16 @@ export default {
 
     /* the green cap in his lower hand goes while the effect is on: haotian-nocap.webp is the cut layer's
        NOCAP box with the cap painted out (his lap and left knee in black trousers behind it, the part of
-       the cap above his thigh cleared); the person layer and the fist patch blend to it by uCapMix, fading
-       to the untouched cut layer over the last px of the box. uCapMix is 0 at t = 0 and after the exit. */
+       the cap above his thigh cleared) and the blocky matte at the lower left (a fragment of his backpack,
+       a staircase along his thigh) cut back to a smooth edge over the cape. The person layer and the fist
+       patch blend to it by uCapMix, fading to the untouched cut layer over the last px of the box.
+       uCapMix is 0 at t = 0 and after the exit. */
     const noCap = await k.loadTexture(`${k.STATIC}fx/haotian-nocap.webp`).catch(() => null);   // missing: the cap stays
     if (noCap) {
       noCap.generateMipmaps = false;              // sampled exactly like the cut layer (no seam at the box)
       noCap.minFilter = THREE.LinearFilter;
     }
+    const own = noCap ? [noCap] : [];             // disposed with the stage (the cached image uploads again next time)
     const capU = {
       uNoCap: { value: noCap }, uCapMix: { value: 0 },
       uCapBox: { value: new THREE.Vector4(NOCAP[0] / 512, 1 - NOCAP[3] / 512, (NOCAP[2] - NOCAP[0]) / 512, (NOCAP[3] - NOCAP[1]) / 512) },
