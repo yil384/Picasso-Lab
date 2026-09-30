@@ -1,18 +1,24 @@
 /* Haotian — 叶神 = 雷神 Thor
    Click: the museum turns into a thunderstorm (layered cloud banks with lumpy tops, dark halftone
    undersides and edges that light up with every flash, a storm eye swirling over his head, a rock
-   ledge); a red cape unfurls behind his shoulders and billows, pinned by two gold
-   clasps; a winged helmet drops onto his head and its wings flare; Mjolnir rises into his lower
-   hand (a chunky bevelled steel head with gold bands; his real fingers re-layered over the leather
-   handle); a bold forked comic bolt (ink outline, cyan body, white core) strikes the hammer with a
-   thunder flash (< 0.1 s) and a starburst, the big runes on the hammer glow electric blue, his eyes
-   spark, and a round Norse rune seal reading 「叶神」 flips in beside him.
+   ledge) and the green cap in his lower hand fades away with it (an edited copy of the cut layer:
+   his lap and knee in black trousers behind it); a red cape unfurls behind his shoulders and
+   billows, pinned by two gold clasps; a winged helmet drops onto his head (worn: the band on his
+   hairline) and its wings flare; Mjolnir rises into his empty lower hand (a chunky bevelled steel
+   head with gold bands; his real fingers re-layered over the leather handle); a bold forked comic
+   bolt (ink outline, cyan body, white core) strikes the hammer with a thunder flash (< 0.1 s) and a
+   starburst, the big runes on the hammer glow electric blue, his eyes spark, and a round Norse rune
+   seal reading 「叶神」 flips in beside him.
    Loop (3.4 s): the cape billows, the storm eye turns, arcs crackle round the hammer head (his eyes
    flicker with them; every other beat a thinner bolt strikes it again), a distant bolt forks through
    the clouds, the runes pulse (flaring with each crackle), the seal's rune ring turns.
-   Photo landmarks (512 px): hair u 184-296, top v 72, fringe v 128 · lenses 230,143 / 273,141 ·
-   collar 192-290 v 195-225 · shoulders 132,238 / 305,215 · V sign tips 343,240 / 383,245 ·
-   lower hand (holding the cap) 244-313 x 418-485, grip centre 292,452 · cap 270-380 x 370-480. */
+   Exit: everything leaves, the cap comes back with the museum.
+   Photo landmarks (512 px): hair u 182-297 (widest v 100-125), top v 76, fringe / hairline v 124-128,
+   glasses top v 131, bridge u 252 (face turned a little to our right: nose 252, skull centre ~244) ·
+   lenses 230,143 / 273,141 · collar 192-290 v 195-225 · shoulders 132,238 / 305,215 · V sign tips
+   343,240 / 383,245 · lower hand 241-317 x 416-481 (index finger 248-306 v 417-442, the others
+   v 452-480, the gap between them where the cap's crown sat 276-313 x 440-460), grip centre 292,452 ·
+   cap 256-383 x 373-479 (behind it: his lap, left knee 337-381 x 415-488). */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
@@ -23,6 +29,7 @@ const INK = '#0a0f24';
 const FONT_KAI = "'Kaiti SC', STKaiti, KaiTi, 'Songti SC', STSong, SimSun, serif";
 const GRIP = [292, 452], TILT = 0.34;          // hammer grip (photo px) and lean of the handle (rad, head up-left)
 const SEAL = [405, 138];
+const NOCAP = [50, 360, 400, 512];             // photo-px box of haotian-nocap.webp (u0, v0, u1, v1)
 
 /* a comic zigzag between two points (deterministic), photo px */
 function zig(x0, y0, x1, y1, n, jag, seed) {
@@ -178,7 +185,6 @@ export default {
   still: 2.4,
   async build(k) {
     const { root } = k;
-    const own = [];
     const PX = k.D / 512;
     const hump = (t, a, b, c) => (t < a || t > c ? 0 : t < b ? (t - a) / (b - a) : 1 - (t - b) / (c - b));
     const exitF = (e, order) => 1 - ease.in(clamp(e * 1.6 - order * 0.6));
@@ -186,6 +192,43 @@ export default {
     const beatN = (t) => (t < LOOP0 ? -1 : Math.floor((t - LOOP0) / BEAT));
     const plate = k.layers.plate.material, person = k.layers.person.material;
     k.clip(plate); k.clip(k.layers.photo.material);
+
+    /* the green cap in his lower hand goes while the effect is on: haotian-nocap.webp is the cut layer's
+       NOCAP box with the cap painted out (his lap and left knee in black trousers behind it, the part of
+       the cap above his thigh cleared) and the blocky matte at the lower left (a fragment of his backpack,
+       a staircase along his thigh) cut back to a smooth edge over the cape. The person layer and the fist
+       patch blend to it by uCapMix, fading to the untouched cut layer over the last px of the box.
+       uCapMix is 0 at t = 0 and after the exit. */
+    const noCap = await k.loadTexture(`${k.STATIC}fx/haotian-nocap.webp`).catch(() => null);   // missing: the cap stays
+    if (noCap) {
+      noCap.generateMipmaps = false;              // sampled exactly like the cut layer (no seam at the box)
+      noCap.minFilter = THREE.LinearFilter;
+    }
+    const own = noCap ? [noCap] : [];             // disposed with the stage (the cached image uploads again next time)
+    const capU = {
+      uNoCap: { value: noCap }, uCapMix: { value: 0 },
+      uCapBox: { value: new THREE.Vector4(NOCAP[0] / 512, 1 - NOCAP[3] / 512, (NOCAP[2] - NOCAP[0]) / 512, (NOCAP[3] - NOCAP[1]) / 512) },
+    };
+    const hideCap = (mat) => {
+      if (!noCap) return;
+      mat.onBeforeCompile = (sh) => {
+        Object.assign(sh.uniforms, capU);
+        sh.fragmentShader = 'uniform sampler2D uNoCap; uniform float uCapMix; uniform vec4 uCapBox;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
+          #ifdef USE_MAP
+          vec4 sampledDiffuseColor = texture2D(map, vMapUv);
+          if (uCapMix > 0.0) {
+            vec2 q = (vMapUv - uCapBox.xy) / uCapBox.zw;
+            vec2 edge = min(q, 1.0 - q) * uCapBox.zw * 512.0;
+            float w = uCapMix * clamp((min(edge.x, edge.y) - 1.0) / 5.0, 0.0, 1.0);
+            if (w > 0.0) sampledDiffuseColor = mix(sampledDiffuseColor, texture2D(uNoCap, q), w);
+          }
+          diffuseColor *= sampledDiffuseColor;
+          #endif`);
+      };
+      mat.customProgramCacheKey = () => 'haotian-nocap';
+      mat.needsUpdate = true;
+    };
+    hideCap(person);
     const clipAll = (obj) => obj.traverse(o => (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []).forEach(m => k.clip(m)));
     const backdropDisc = () => {
       const pad = 2, geo = new THREE.CircleGeometry(k.R + pad, 128), uv = geo.attributes.uv, f = (k.R + pad) / k.R;
@@ -338,10 +381,10 @@ export default {
     /* ③ the winged helmet: steel dome, gold band with rivets and a crest, white feathered wings */
     const helm = new THREE.Group(), helmSq = new THREE.Group();
     helm.add(helmSq);
-    const HR = 23;
+    const HR = 20.5;                             // band ~55 photo px round: his skull plus the squashed hair
     const steel = k.toon(0x94a0b6), gold = k.toon(GOLD);
     const dome = new THREE.Mesh(new THREE.SphereGeometry(HR, 36, 18, 0, TAU, 0, Math.PI / 2), steel);
-    dome.scale.set(1, 0.8, 0.92);
+    dome.scale.set(1, 0.84, 0.92);
     k.ink(dome, 1.4);
     const band = new THREE.Mesh(new THREE.CylinderGeometry(HR * 1.02, HR * 1.05, 5, 48, 1, true), gold);
     band.position.y = 1.6;
@@ -349,7 +392,7 @@ export default {
     k.ink(band, 1.3);
     const crest = new THREE.Mesh(new THREE.TorusGeometry(HR * 0.99, 1.1, 8, 40, Math.PI), gold);
     crest.rotation.y = Math.PI / 2;
-    crest.scale.set(1, 0.8, 0.92);
+    crest.scale.set(1, 0.84, 0.92);
     const rivets = [-0.9, -0.45, 0, 0.45, 0.9].map(a => {
       const r = new THREE.Mesh(new THREE.SphereGeometry(0.95, 10, 8), k.toon(0xfff0b0));
       r.position.set(Math.sin(a) * HR * 1.05, 1.6, Math.cos(a) * HR * 1.05 * 0.92);
@@ -382,10 +425,13 @@ export default {
       return wing;
     });
     helmSq.add(dome, band, crest, ...rivets);
-    const HELM_Z = 26;
-    const helmHome = k.at(242, 116, HELM_Z);
+    // worn, not perched: the dome base sits on his skull (centre u 243), the band's front edge on his
+    // hairline just above the glasses (v ~126), the crest over the bridge of his glasses (his face is
+    // turned a little to our right, so the helmet yaws with it); seen a little from above like his head
+    const HELM_Z = 24;
+    const helmHome = k.at(243.5, 116, HELM_Z);
     helm.position.copy(helmHome);
-    helm.rotation.set(0.24, 0, -0.03);
+    helm.rotation.set(0.2, 0.16, 0.02);
     clipAll(helm);                               // it drops in across the rim
     root.add(helm);
 
@@ -484,7 +530,12 @@ export default {
     ham.position.copy(hamHome);
     root.add(ham);
     // his real fingers and knuckles over the handle
-    const fist = k.patch([[244, 420], [262, 419], [282, 423], [298, 426], [306, 429], [307, 437], [302, 442], [309, 447], [313, 458], [311, 470], [305, 479], [292, 485], [274, 484], [258, 478], [247, 468], [243, 445]], 14);
+    // his real fingers over the handle: traced round the skin only (the gap where the cap's crown sat
+    // between his index finger and the others stays open, so the handle shows through it)
+    const fist = k.patch([[247.5, 419.1], [254.8, 416.3], [266.9, 417.1], [280.4, 421.4], [293.7, 426.4], [300.6, 429], [305.3, 433.6], [306.2, 438.6], [302.2, 442.8],
+      [293.2, 442.9], [283, 441.2], [277.1, 439.4], [275.4, 442], [276.1, 446.2], [280.7, 452.3], [293.6, 457.1], [306.6, 458.8], [312, 457.1], [316.1, 461.2],
+      [317, 467], [312.4, 472.7], [300.4, 477.8], [288.5, 480.4], [271.6, 481.2], [262.9, 478.6], [254.4, 474.3], [245.8, 467.5], [240.5, 457], [240.5, 443.2], [243.9, 426.3]], 14);
+    hideCap(fist.material);
     fist.visible = false;
 
     /* ⑤ the rune seal 「叶神」: gold coin, navy face, a turning ring of runes */
@@ -615,6 +666,10 @@ export default {
           w.scale.setScalar(Math.max(0.01, wf));
           w.rotation.z = (1 - wf) * -0.8 + 0.05 * Math.sin((t * TAU) / BEAT + i * 0.9) * env(t, 1.2, 1.8);
         });
+
+        // the cap in his hand dissolves with the museum as the storm rolls in (his hand is open for the
+        // hammer), and comes back with the museum on the way out
+        capU.uCapMix.value = ease.inOut(env(t, 0.08, 0.34)) * (1 - ease.inOut(env(e, 0.4, 0.8)));
 
         // Mjolnir rises into his grip with a twirl, lands with a thunk
         const hp = presence(t, e, 0.42, T_HAM - 0.42, (x) => ease.outBack(x, 1.5), 0.5);

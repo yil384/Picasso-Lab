@@ -8,8 +8,13 @@
    burst pop in.
    Loop (3.2 s bar = 4 beats): spots sweep once a bar, glow sticks sway, a music note floats off
    the mic every beat, a heart rises from the crowd every other beat, both bursts hop on the
-   downbeat, the LIVE dot blinks.
+   downbeat, the LIVE dot blinks. The mic itself stays put in his fist once it has unfolded.
+   The kiss (t = 2.5 s, then every other bar): a pair of glossy comic lips flies in over the left
+   rim on a little arc over his hair, dropping small hearts, smacks onto his cheek at 3.0 s
+   (squash, impact dashes, a hand-lettered MUAH! over his hair) and lifts off, leaving a
+   lipstick print and a soft blush on the cheek; they stay ~2.7 s and fade before the next kiss.
    Photo landmarks (512 px): lips 338,192 · chin 322,222 · ear 207,163 · collar 232,262 ·
+   eye 302,133 · mouth corner 313,193 · sideburn edge 244,164 · cheek (print centre) 281,180 ·
    popsicle 319-447 x 197-395 (stick into the fist at 385-413) · fist top edge 366,402 -> 424,381 ·
    mic grip 400,390 -> grille centre 347,220 (17 deg from vertical, along the popsicle). */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
@@ -18,6 +23,12 @@ const BAR = 3.2, BEAT = BAR / 4, T0 = 1.3;
 const NC = [[98, 233, 255], [255, 95, 210], [255, 228, 92]];   // note colours
 const TAU = Math.PI * 2;
 const FONT = "'Arial Black', 'Helvetica Neue', Impact, sans-serif";
+const INKC = 'rgb(22,21,26)';
+// the kiss: lips fly in for FLY s and smack onto his cheek at KISS, then again every other bar
+const KISS = 3.0, FLY = 0.5, KP = BAR * 2;
+const CHEEK = [281, 180], KROT = -0.3;                         // print centre (photo px) and its tilt
+const KFROM = [-34, 150], KVIA = [128, 40];                    // flight: from past the left rim, over his hair
+const MUAH_AT = [206, 102];                                    // the lettering, over his hair above the ear
 
 // the popsicle (melon + sticks), cut out of his layer when it turns into the mic
 const MELON = [[318, 224], [330, 219], [341, 215], [347, 211], [354, 205], [371, 199.5], [390, 196.5], [406, 199.5], [419, 205],
@@ -499,10 +510,9 @@ export default {
         const un = unfoldOf(t, e);
         mic.visible = un > 0.004;
         micIn.scale.set(Math.max(un, 0.004), lerp(0.72, 1, clamp(un)) + (un > 1 ? (un - 1) * 0.4 : 0), Math.max(un, 0.004));
-        micIn.rotation.y = -0.35 + (1 - clamp(un)) * 1.4 + 0.06 * Math.sin(TAU * t / BAR);
-        // it bobs a touch with the beat (he is singing)
-        const bob = hop(t, T0);
-        mic.position.set(G.x - bob * 0.5, G.y + bob * 0.9, G.z);
+        // once it has unfolded it stays exactly where it is in his fist: no bob, no idle turn
+        micIn.rotation.y = -0.35 + (1 - clamp(un)) * 1.4;
+        mic.position.copy(G);
 
         // in-ear monitor pops into the ear, then the coil runs down
         const ie = presence(t, e, 0.6, 0.32, ease.outBack, 0.2);
@@ -536,6 +546,9 @@ export default {
         q.strokeJoin(q.ROUND);
         const fade = 1 - clamp(e * 2.2);
         const [hx, hy] = k.toScreen(v3.copy(H));
+        // the kiss (u = time into this kiss cycle): the print and blush go under everything else
+        const ku = t >= KISS - FLY ? (t - (KISS - FLY)) % KP : -1;
+        if (ku >= 0 && fade > 0) kissMark(q, ku, fade);
         // POOF: a cloud bursts over the popsicle as it turns edge-on, the mic unfolds behind it,
         // then the cloud breaks up; two sparkles on the grille as it lands
         if (t > 0.34 && t < 0.72 && fade > 0) {
@@ -583,8 +596,199 @@ export default {
           const [xx, xy] = k.screenAt(196, 440, 26);
           burst(q, xx, xy - 2.5 * downbeat(t - BEAT * 2), px * (1 + 0.05 * downbeat(t - BEAT * 2)), 0.09, 18, [255, 79, 184], 'XIANG!', [124, 58, 237], 12);
         }
+        // ...and the flying lips, the smack and MUAH! on top
+        if (ku >= 0 && ku < FLY + 1.5 && fade > 0) kissFly(q, ku, fade);
       },
     };
+
+    /* the kiss, drawn in the comic layer and clipped to the avatar circle (the lips enter over the rim) */
+    function circleClip(c) {
+      const [ox, oy] = k.screenAt(256, 256, 0);
+      c.beginPath(); c.arc(ox, oy, R + 0.5, 0, TAU); c.clip();
+    }
+    // the lipstick print and a soft blush on his cheek: stamped at the smack, stay, fade before the next kiss
+    function kissMark(q, u, a) {
+      if (u < FLY) return;
+      const on = 1 - ease.inOut(env(u, 3.2, 3.9));
+      if (on <= 0) return;
+      const c = q.ctx || q.drawingContext;
+      const [cx, cy] = k.screenAt(CHEEK[0], CHEEK[1], 0);
+      c.save();
+      circleClip(c);
+      blush(c, cx - 2.5, cy + 3.2, ease.out(env(u, FLY + 0.03, FLY + 0.45)) * on * a);
+      printLips(c, cx, cy, 8.2, 5.2, KROT, on * a);
+      c.restore();
+    }
+    // flight on a little arc from past the left rim (small hearts trail it), smack, squash, lift off; MUAH!
+    function kissFly(q, u, a) {
+      const c = q.ctx || q.drawingContext;
+      const [cx, cy] = k.screenAt(CHEEK[0], CHEEK[1], 0);
+      const [sx, sy] = k.screenAt(KFROM[0], KFROM[1], 0), [vx, vy] = k.screenAt(KVIA[0], KVIA[1], 0);
+      const path = (tt) => {
+        const p = clamp(tt / FLY), s = p * (0.55 + 0.45 * p);        // speeds up into the smack
+        const b = (a0, a1, a2) => (1 - s) * (1 - s) * a0 + 2 * s * (1 - s) * a1 + s * s * a2;
+        return [b(sx, vx, cx), b(sy, vy, cy), p];
+      };
+      c.save();
+      circleClip(c);
+      // trailing hearts, dropped along the arc
+      [0.08, 0.17, 0.26, 0.34, 0.42].forEach((ts, i) => {
+        const pp = (u - ts) / 0.45;
+        if (pp < 0 || pp > 1) return;
+        const [x, y] = path(ts);
+        heart(q, x - 3 + 2 * Math.sin(pp * 5 + i), y + 5 - 7 * ease.out(pp), (4.4 + 0.6 * (i % 2)) * (1 - 0.3 * pp), a * (1 - pp * pp), i % 2 ? [255, 95, 170] : [255, 52, 92]);
+      });
+      const v = u - FLY;                                               // time since the smack
+      // impact dashes (left and up of the cheek only: his mouth and the mic are to the right)
+      if (v > 0 && v < 0.24) {
+        const g = v / 0.24;
+        c.strokeStyle = INKC; c.lineCap = 'round'; c.globalAlpha = a * (1 - g * g);
+        [-2.75, -2.2, -1.72, 2.85, 2.35].forEach((ang, i) => {
+          const r0 = 12.5 + 7 * ease.out(g) + (i % 2) * 1.5, r1 = r0 + 5.5 * (1 - g) + 1;
+          c.lineWidth = 1.7 * (1 - 0.5 * g);
+          c.beginPath(); c.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0 * 0.8);
+          c.lineTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1 * 0.8); c.stroke();
+        });
+        c.globalAlpha = 1;
+      }
+      // the lips
+      if (v < 0.3) {
+        let [x, y, p] = path(u), scx = 1, scy = 1;
+        const rot = lerp(-0.75, KROT, ease.out(p));
+        if (v < 0) {                                                   // puckering on the way
+          const pk = Math.abs(Math.sin(u * 21));
+          scx = 1 - 0.13 * pk; scy = 1 + 0.07 * pk;
+        } else {                                                       // squash on the cheek, then off
+          const sq = v < 0.1 ? Math.sin(Math.PI * v / 0.1) : 0;
+          scx = 1 + 0.16 * sq; scy = 1 - 0.22 * sq;
+          const off = ease.inOut(env(v, 0.1, 0.3));
+          scx *= 1 - off; scy *= 1 - off;
+          x -= 4 * off; y -= 6 * off;
+        }
+        if (scx > 0.03) lips(c, x, y, 9.6, 6.1, rot, scx, scy, a);
+      }
+      // two small hearts float off the cheek
+      [[0.05, -9, -4, -24, -13], [0.12, -5, -8, -15, -21]].forEach(([t0, dx0, dy0, dx1, dy1], i) => {
+        const pp = (v - t0) / 0.8;
+        if (pp < 0 || pp > 1) return;
+        const e1 = ease.out(pp);
+        heart(q, cx + lerp(dx0, dx1, e1), cy + lerp(dy0, dy1, e1), (3.4 + 1.2 * Math.sin(Math.PI * Math.min(1, pp * 1.6))) , a * (1 - env(pp, 0.6, 1)), i ? [255, 95, 170] : [255, 52, 92]);
+      });
+      c.restore();
+      if (v > 0) {
+        const [mx, my] = k.screenAt(MUAH_AT[0], MUAH_AT[1], 0);
+        muah(c, mx, my, v, a);
+      }
+    }
+    // outline of both lips as one shape, mouth line at y = 0 (w = 2W, cupid's bow on top, full lower lip)
+    function topEdge(c, W, H) {
+      c.bezierCurveTo(-W * 0.75, -H * 0.35, -W * 0.55, -H, -W * 0.3, -H);
+      c.bezierCurveTo(-W * 0.16, -H, -W * 0.06, -H * 0.66, 0, -H * 0.62);
+      c.bezierCurveTo(W * 0.06, -H * 0.66, W * 0.16, -H, W * 0.3, -H);
+      c.bezierCurveTo(W * 0.55, -H, W * 0.75, -H * 0.35, W, 0);
+    }
+    function lipPath(c, W, H) {
+      c.beginPath(); c.moveTo(-W, 0); topEdge(c, W, H);
+      c.bezierCurveTo(W * 0.8, H * 0.72, W * 0.42, H * 1.12, 0, H * 1.12);
+      c.bezierCurveTo(-W * 0.42, H * 1.12, -W * 0.8, H * 0.72, -W, 0);
+      c.closePath();
+    }
+    function upperPath(c, W, H, g) {
+      c.beginPath(); c.moveTo(-W, 0); topEdge(c, W, H);
+      c.bezierCurveTo(W * 0.55, H * 0.2 - g, W * 0.2, -H * 0.04 - g, 0, H * 0.1 - g);
+      c.bezierCurveTo(-W * 0.2, -H * 0.04 - g, -W * 0.55, H * 0.2 - g, -W, 0);
+      c.closePath();
+    }
+    function lowerPath(c, W, H, g) {
+      c.beginPath(); c.moveTo(-W, 0);
+      c.bezierCurveTo(-W * 0.55, H * 0.2 + g, -W * 0.2, -H * 0.04 + g, 0, H * 0.1 + g);
+      c.bezierCurveTo(W * 0.2, -H * 0.04 + g, W * 0.55, H * 0.2 + g, W, 0);
+      c.bezierCurveTo(W * 0.8, H * 0.72, W * 0.42, H * 1.12, 0, H * 1.12);
+      c.bezierCurveTo(-W * 0.42, H * 1.12, -W * 0.8, H * 0.72, -W, 0);
+      c.closePath();
+    }
+    function seamPath(c, W, H) {
+      c.beginPath(); c.moveTo(-W * 0.97, 0);
+      c.bezierCurveTo(-W * 0.55, H * 0.2, -W * 0.2, -H * 0.04, 0, H * 0.1);
+      c.bezierCurveTo(W * 0.2, -H * 0.04, W * 0.55, H * 0.2, W * 0.97, 0);
+    }
+    // bold glossy comic lips: hard ink shadow, 3 tones, ink outline and mouth line, white gloss
+    function lips(c, x, y, W, H, rot, sx, sy, a) {
+      c.save(); c.translate(x, y); c.rotate(rot); c.scale(sx, sy); c.globalAlpha = a;
+      c.lineJoin = 'round'; c.lineCap = 'round';
+      c.save(); c.translate(1.3, 1.6); lipPath(c, W, H); c.fillStyle = INKC; c.fill(); c.restore();
+      lipPath(c, W, H); c.fillStyle = '#ff2d55'; c.fill();
+      c.save(); lipPath(c, W, H); c.clip();
+      upperPath(c, W, H, 0); c.fillStyle = '#dc1442'; c.fill();
+      c.beginPath(); c.ellipse(0, H * 1.3, W * 0.95, H * 0.55, 0, 0, TAU); c.fillStyle = '#b20d35'; c.fill();
+      c.restore();
+      lipPath(c, W, H); c.strokeStyle = INKC; c.lineWidth = 1.6; c.stroke();
+      seamPath(c, W, H); c.lineWidth = 1.3; c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.95)';
+      c.beginPath(); c.ellipse(W * 0.2, H * 0.5, W * 0.21, H * 0.14, -0.12, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(-W * 0.18, H * 0.64, W * 0.06, H * 0.07, 0, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(-W * 0.44, -H * 0.5, W * 0.11, H * 0.09, -0.5, 0, TAU); c.fill();
+      c.restore();
+    }
+    // the lipstick print: two lips with the mouth line left open and fine creases, no outline
+    function printLips(c, x, y, W, H, rot, a) {
+      if (a <= 0.01) return;
+      c.save(); c.translate(x, y); c.rotate(rot); c.globalAlpha = a;
+      const g = H * 0.1;
+      for (const [pathFn, col, sgn] of [[upperPath, 'rgba(196,12,50,0.92)', -1], [lowerPath, 'rgba(222,22,60,0.92)', 1]]) {
+        pathFn(c, W, H, g); c.fillStyle = col; c.fill();
+        c.save(); pathFn(c, W, H, g); c.clip();
+        c.strokeStyle = 'rgba(255,150,172,0.42)'; c.lineWidth = 0.42;
+        for (let i = -4; i <= 4; i++) {
+          const xx = i * W * 0.21;
+          c.beginPath(); c.moveTo(xx * 0.9, sgn * H * 0.12); c.lineTo(xx * 1.08, sgn * H * 1.2); c.stroke();
+        }
+        c.restore();
+      }
+      c.restore();
+    }
+    // a soft round blush (gradient) with three little comic hatch strokes
+    function blush(c, x, y, a) {
+      if (a <= 0.01) return;
+      c.save(); c.translate(x, y); c.scale(1, 0.58);
+      const gr = c.createRadialGradient(0, 0, 0, 0, 0, 13);
+      gr.addColorStop(0, `rgba(255,62,104,${0.5 * a})`); gr.addColorStop(0.55, `rgba(255,76,118,${0.3 * a})`); gr.addColorStop(1, 'rgba(255,90,130,0)');
+      c.fillStyle = gr; c.beginPath(); c.arc(0, 0, 13, 0, TAU); c.fill();
+      c.restore();
+      c.save(); c.strokeStyle = `rgba(214,28,74,${0.85 * a})`; c.lineWidth = 1.05; c.lineCap = 'round';
+      for (let i = 0; i < 3; i++) {
+        const bx = x - 9.5 + i * 3.3, by = y + 3.6;
+        c.beginPath(); c.moveTo(bx, by + 2.1); c.lineTo(bx + 2.1, by - 2.1); c.stroke();
+      }
+      c.restore();
+    }
+    // MUAH!, hand-lettered: each letter its own size and tilt, popping in one after another; ink outline + shadow
+    function muah(c, x, y, v, a) {
+      const out = 1 - ease.in(env(v, 1.12, 1.38));
+      if (out <= 0) return;
+      const L = ['M', 'U', 'A', 'H', '!'], SZ = [13.5, 12, 12.5, 13, 13.5];
+      const ROT = [-0.2, -0.07, 0.03, 0.12, 0.22], DY = [1.6, -0.6, -1.7, -0.9, 0.7];
+      c.save(); c.translate(x, y); c.rotate(-0.14); c.globalAlpha = a;
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+      const ws = L.map((ch, i) => { c.font = `900 ${SZ[i]}px ${FONT}`; return c.measureText(ch).width; });
+      let px = -(ws.reduce((s, w) => s + w, 0) + 1.2 * (L.length - 1)) / 2;
+      L.forEach((ch, i) => {
+        const pop = ease.outBack(env(v, i * 0.035, i * 0.035 + 0.2), 2.6) * out;
+        const w = ws[i];
+        if (pop > 0.01) {
+          c.save(); c.translate(px + w / 2, DY[i] - 1.2 * Math.sin(Math.PI * env(v, 0.25 + i * 0.05, 0.45 + i * 0.05)));
+          c.rotate(ROT[i]); c.scale(pop, pop);
+          c.font = `900 ${SZ[i]}px ${FONT}`;
+          c.fillStyle = INKC; c.strokeStyle = INKC; c.lineWidth = 3.4;
+          c.strokeText(ch, 1.3, 1.6); c.fillText(ch, 1.3, 1.6);
+          c.strokeText(ch, 0, 0);
+          c.fillStyle = i % 2 ? '#ff5c9a' : '#ff3d7f'; c.fillText(ch, 0, 0);
+          c.restore();
+        }
+        px += w + 1.2;
+      });
+      c.restore();
+    }
 
     // a music note: an ink pass (thick) under a colour pass, so stems read on the dark stage
     function note(q, x, y, s, beamed, c, a, rot) {

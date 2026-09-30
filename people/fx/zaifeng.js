@@ -1,16 +1,18 @@
 /* Zaifeng — 院士 Academician
    Click: a mortarboard (a fitted black skull cap with a gold 「院士」 band, a bevelled board, a gold
    button, cord and tassel on a little pendulum) drops onto his head and squashes; confetti and stars
-   burst. He raises a paper in each V-sign hand: the sheet covers the V and its bottom edge sits in
-   his fist (his curled fingers are re-layered in front of it). Then the paper mill starts: a volley
-   of ten papers shoots out of the two hands in 0.5 s, each with its own "+1", and the counter races
-   (its paper pile grows by a sheet per volley).
+   burst. Then a thick stack of papers slams into each V-sign hand (from bigger and nearer, left then
+   right): seven bundles of sheets with their layered edges showing at the bottom and on the left, two
+   loose sheets fanned under an accepted top sheet (venue tag, title, ACCEPTED stamp, text, a figure) and
+   a black binder clip on top. The stacks sit IN FRONT of his hands and hide them completely (fingers,
+   fist and wrist) from the first frame each is shown. Then the paper mill starts: a volley of ten
+   papers shoots out of the tops of the two stacks in 0.5 s, each with its own "+1", and the counter
+   races (its paper pile grows by a sheet per volley).
    Loop (4 s beat): one volley per beat (busy ~1.2 s with the sheets' flight), otherwise calm — the
-   tassel sways, the papers breathe.
+   tassel sways, the stacks breathe and jolt with their shots. Exit: the stacks swell and pop.
    Photo landmarks (512 px): hair top 345,80 · head 283-415 x at y 140 · glasses y 180-207 ·
-   left V: index tip 215,212, middle tip 231,211, V base / curled fingers y 262, fist 190-262 x 262-318 ·
-   right V: index tip 441,284, middle tip 458,299, crotch 427,321, V base y ~322, curled fingers
-   380-447 x 327-352, palm 372-420 x 320-390. */
+   left hand (skin): V tips 215,212 / 231,211, fist 197-253 x 256-320, wrist 198-240 x 320-362 ·
+   right hand (skin): V tips 441,284 / 458,299, palm 370-450 x 318-365, wrist 375-420 x 365-405. */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -25,6 +27,12 @@ const LIFE = 0.7;                           // a flying sheet's flight
 const FONT_ZH = "'Songti SC', STSong, 'Noto Serif CJK SC', 'Source Han Serif SC', 'Microsoft YaHei', 'PingFang SC', 'WenQuanYi Zen Hei', serif";
 const FONT_PLUS = "900 {px}px 'Arial Black', 'Helvetica Neue', Impact, sans-serif";
 const VENUES = ['#c8322f', '#2f6fc8', '#2a9d5c', '#7b4bc4', '#e07a1f'];
+// the two held stacks: in front of his hands (nothing of the hands is re-layered over them)
+const SW = 40, SH = 58;                     // a stack's top sheet, world px
+const NB = 7, BT = 2.2;                     // bundles of sheets behind the top one, each BT thick
+const Z_STACK = 26;                         // the stacks' front, in front of everything of his hands
+const RX = -0.36, RY = 0.34;                // they lean back and turn a little: bottom and left edges show
+const T_SLAM = 0.22;                        // a stack slams in (from bigger, toward the viewer) this fast
 
 /** the shots fired up to t (the counter), and the volley under way */
 function volley(t) {
@@ -41,87 +49,51 @@ function rand(b, j) {
   return [r(), r(), r(), r(), r(), r()];
 }
 
-/** the real hand, re-layered in front: only skin-coloured pixels of the cut-out inside `poly` */
-function skinPatch(k, poly, z) {
-  const us = poly.map(p => p[0]), vs = poly.map(p => p[1]);
-  const u0 = Math.floor(Math.min(...us)), v0 = Math.floor(Math.min(...vs));
-  const u1 = Math.ceil(Math.max(...us)), v1 = Math.ceil(Math.max(...vs));
-  const S = 2;                                   // canvas px per photo px
-  const w = (u1 - u0) * S, h = (v1 - v0) * S;
-  const img = k.layers.person.material.map.image;
-  const src = document.createElement('canvas');
-  src.width = w; src.height = h;
-  const sg = src.getContext('2d', { willReadFrequently: true });
-  sg.beginPath();
-  poly.forEach(([u, v], i) => (i ? sg.lineTo : sg.moveTo).call(sg, (u - u0) * S, (v - v0) * S));
-  sg.closePath(); sg.clip();
-  sg.drawImage(img, u0 * img.width / 512, v0 * img.height / 512, (u1 - u0) * img.width / 512, (v1 - v0) * img.height / 512, 0, 0, w, h);
-  const d = sg.getImageData(0, 0, w, h);
-  const p = d.data, keep = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    const r = p[i * 4], g = p[i * 4 + 1], b = p[i * 4 + 2], a = p[i * 4 + 3];
-    keep[i] = a > 20 && r > 95 && g > 60 && b > 45 && r >= g && r > b && g > 0.6 * r && (r - Math.min(g, b)) > 8 ? 1 : 0;
-  }
-  // grow the mask by two canvas px: the darker edge of the fingers comes along and reads as an outline
-  for (let pass = 0; pass < 2; pass++) {
-    const src2 = keep.slice();
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      if (src2[i] || p[i * 4 + 3] < 20) continue;
-      if ((x > 0 && src2[i - 1]) || (x < w - 1 && src2[i + 1]) || (y > 0 && src2[i - w]) || (y < h - 1 && src2[i + w])) keep[i] = 1;
-    }
-  }
-  for (let i = 0; i < w * h; i++) if (!keep[i]) p[i * 4 + 3] = 0;
-  sg.putImageData(d, 0, 0);
-  const tex = new THREE.CanvasTexture(src);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const D = k.D;
-  const geo = new THREE.PlaneGeometry((u1 - u0) * D / 512, (v1 - v0) * D / 512);
-  geo.translate(((u0 + u1) / 2 / 512 - 0.5) * D, (0.5 - (v0 + v1) / 2 / 512) * D, 0);
-  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
-  m.position.z = z;
-  m.scale.setScalar(k.depthScale(z));
-  m.renderOrder = 20;
-  k.root.add(m);
-  return m;
-}
-
-/** the held paper (canvas px = 8 per world px). The bottom third sits in his fist, so the venue tag,
-    the title and the red ACCEPTED stamp are in the top two thirds */
-function drawPaper(venue, accent, seed) {
+/** the top sheet of a held stack (SW x SH world px; its top edge is under the binder clip's jaw): the
+    venue tag, a bold title, the red ACCEPTED stamp, two columns of text and a figure */
+function drawTop(venue, accent, seed) {
   return (g, w, h) => {
-    const s = w / 32, r = rng(seed);
+    const s = w / SW, r = rng(seed);
+    const box = (x, y, ww, hh, rad) => { g.beginPath(); g.roundRect ? g.roundRect(x * s, y * s, ww * s, hh * s, rad * s) : g.rect(x * s, y * s, ww * s, hh * s); };
     g.fillStyle = '#fffdf6'; g.fillRect(0, 0, w, h);
     // venue tag
-    g.fillStyle = accent;
-    g.beginPath(); g.roundRect ? g.roundRect(2.6 * s, 2.4 * s, 15.5 * s, 5.6 * s, 1 * s) : g.rect(2.6 * s, 2.4 * s, 15.5 * s, 5.6 * s); g.fill();
+    g.fillStyle = accent; box(3, 9.5, 19, 6.4, 1.2); g.fill();
     g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = `900 ${4.3 * s}px 'Helvetica Neue', Arial, sans-serif`;
-    g.fillText(venue, 10.35 * s, 5.35 * s, 14 * s);
-    // title, authors
+    g.font = `900 ${4.9 * s}px 'Helvetica Neue', Arial, sans-serif`;
+    g.fillText(venue, 12.5 * s, 12.85 * s, 17 * s);
+    // the title (two bold bars) and the authors
     g.fillStyle = '#1f2433';
-    g.fillRect(2.6 * s, 10.2 * s, 26.5 * s, 2 * s); g.fillRect(2.6 * s, 13.3 * s, 18.5 * s, 2 * s);
-    g.fillStyle = '#8a8f9c'; g.fillRect(2.6 * s, 16.7 * s, 22 * s, 0.8 * s);
-    // two columns of text and a figure (ours wins)
+    g.fillRect(3 * s, 18.6 * s, 34 * s, 2.8 * s); g.fillRect(3 * s, 22.8 * s, 23 * s, 2.8 * s);
+    g.fillStyle = '#8a8f9c'; g.fillRect(3 * s, 27.4 * s, 27 * s, 1 * s);
+    // two columns of text, a figure (ours wins) at the top of the right one
     g.fillStyle = '#b9bdc7';
-    for (let i = 0; i < 9; i++) g.fillRect(2.6 * s, (27 + i * 1.9) * s, (11.5 + r() * 2) * s, 0.75 * s);
-    for (let i = 0; i < 5; i++) g.fillRect(17.6 * s, (35 + i * 1.9) * s, (11 + r() * 2) * s, 0.75 * s);
-    g.strokeStyle = '#5a5f6e'; g.lineWidth = 0.4 * s; g.strokeRect(17.6 * s, 27 * s, 12 * s, 6.8 * s);
-    [2.4, 3.6, 3, 5.6].forEach((hh, i) => { g.fillStyle = i === 3 ? accent : '#9aa0ad'; g.fillRect((18.8 + i * 2.7) * s, (33.2 - hh) * s, 1.8 * s, hh * s); });
+    for (let i = 0; i < 9; i++) g.fillRect(3 * s, (39 + i * 2.05) * s, (14.5 + r() * 2) * s, 0.85 * s);
+    for (let i = 0; i < 4; i++) g.fillRect(21.5 * s, (49.25 + i * 2.05) * s, (13.5 + r() * 2) * s, 0.85 * s);
+    g.strokeStyle = '#5a5f6e'; g.lineWidth = 0.45 * s; g.strokeRect(21.5 * s, 39 * s, 15.5 * s, 8 * s);
+    [2.6, 4, 3.3, 6.4].forEach((hh, i) => { g.fillStyle = i === 3 ? accent : '#9aa0ad'; g.fillRect((23 + i * 3.4) * s, (46.4 - hh) * s, 2.3 * s, hh * s); });
     // the stamp
     g.save();
-    g.translate(16 * s, 22 * s); g.rotate(-0.16);
+    g.translate(20 * s, 33 * s); g.rotate(-0.14);
     g.strokeStyle = '#d3262b'; g.fillStyle = '#d3262b';
-    g.lineWidth = 1.1 * s;
-    g.beginPath(); g.roundRect ? g.roundRect(-13.6 * s, -4.3 * s, 27.2 * s, 8.6 * s, 1.4 * s) : g.rect(-13.6 * s, -4.3 * s, 27.2 * s, 8.6 * s); g.stroke();
-    g.font = `bold ${7.6 * s}px Impact, Haettenschweiler, 'Arial Narrow', 'Arial Black', sans-serif`;
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('ACCEPTED', 0, 0.35 * s, 24 * s);
+    g.lineWidth = 1.2 * s;
+    box(-15.5, -4.4, 31, 8.8, 1.5); g.stroke();
+    g.font = `bold ${7.8 * s}px Impact, Haettenschweiler, 'Arial Narrow', 'Arial Black', sans-serif`;
+    g.fillText('ACCEPTED', 0, 0.35 * s, 28 * s);
     g.globalCompositeOperation = 'destination-out';
-    for (let i = 0; i < 18; i++) { g.beginPath(); g.arc((r() - 0.5) * 27 * s, (r() - 0.5) * 8.6 * s, (0.1 + r() * 0.18) * s, 0, 6.283); g.fill(); }
+    for (let i = 0; i < 20; i++) { g.beginPath(); g.arc((r() - 0.5) * 31 * s, (r() - 0.5) * 8.8 * s, (0.1 + r() * 0.2) * s, 0, 6.283); g.fill(); }
     g.restore();
     g.globalCompositeOperation = 'source-over';
     g.strokeStyle = '#a9adb8'; g.lineWidth = 0.4 * s; g.strokeRect(0.2 * s, 0.2 * s, w - 0.4 * s, h - 0.4 * s);
+  };
+}
+/** the edge of a bundle of sheets: cream with the thin lines between its sheets (along u or along v) */
+function drawEdge(alongU) {
+  return (g, w, h) => {
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#b3ad9f';
+    for (const f of [0.34, 0.67]) {
+      if (alongU) g.fillRect(0, Math.round(f * h) - 1, w, 2); else g.fillRect(Math.round(f * w) - 1, 0, 2, h);
+    }
   };
 }
 /** a sheet under the top one, and the flying sheets: a coloured tag, a title, lines */
@@ -274,37 +246,77 @@ export default {
     const anchorLocal = new THREE.Vector3(corner.x + 1.4, TOPY - 0.6, corner.z + 1.4);
     const anchor = new THREE.Vector3();
 
-    // ② the papers, held up: each pivots at its grip (bottom centre, in the fist), a stack of three
-    const PW = 32, PH = 44;
+    // ② two thick stacks of papers, held up in front of his hands (the hands are hidden behind them).
+    //    A stack: NB bundles of sheets, each a little off (their layered edges show at the bottom and on
+    //    the outer side), two loose sheets fanned under the top sheet, and a black binder clip on top.
+    //    g (placement, jolt, slam) -> body (the lean: bottom edge and outer side toward the viewer).
+    const edgeX = k.canvasTexture(16, 64, drawEdge(false));       // the ±x faces: u runs along the depth
+    const edgeY = k.canvasTexture(64, 16, drawEdge(true));        // the ±y faces: v runs along the depth
+    const CREAM = [0xfaf6ea, 0xf3eee1, 0xfffdf6, 0xe9e3d3, 0xfaf6ea, 0xefe9da, 0xfffcf2];
+    const clipMat = k.toon(0x2a2930), wireMat = k.toon(0xd9dce3);
     const papers = [
-      { venue: 'ICML', accent: '#c8322f', grip: [224, 302], rz: 0.08, t0: T_PAPER[0], fist: [[186, 266], [200, 261], [214, 265], [230, 266], [246, 262], [262, 264], [266, 330], [184, 330]] },
-      { venue: 'NeurIPS', accent: '#2f6fc8', grip: [413, 361], rz: -0.26, t0: T_PAPER[1], fist: [[366, 322], [392, 320], [410, 322], [428, 325], [440, 328], [454, 332], [456, 400], [366, 400]] },
+      { venue: 'ICML', accent: '#c8322f', c: [219, 280], rz: 0.05, t0: T_PAPER[0], from: 1.35, pull: 0 },
+      { venue: 'NeurIPS', accent: '#2f6fc8', c: [410, 343], rz: -0.3, t0: T_PAPER[1], from: 1.2, pull: 7 },   // near the rim: it slams in from the centre side
     ].map((p, i) => {
-      const g = new THREE.Group();
-      const home = k.at(p.grip[0], p.grip[1], 6);
+      const g = new THREE.Group(), body = new THREE.Group();
+      const home = k.at(p.c[0], p.c[1], Z_STACK);
       g.position.copy(home);
-      const side = k.toon(0xf2efe6);
-      const mk = (w, h, tex, dz, dx, dy, rz) => {
-        const geo = new THREE.BoxGeometry(w, h, 0.7);
-        geo.translate(0, h / 2, 0);
-        const m = new THREE.Mesh(geo, [side, side, side, side, k.toon(0xffffff, { map: tex }), side]);
-        m.position.set(dx, dy, dz);
-        m.rotation.z = rz;
-        k.ink(m, 1.2);
-        g.add(m);
+      g.rotation.z = p.rz;
+      body.rotation.set(RX, RY, 0);
+      g.add(body);
+      const out = -1;                            // the left side (it faces the viewer)
+      const r = rng(90 + i * 7);
+      for (let b = 0; b < NB; b++) {
+        const back = NB - 1 - b;                 // 0 = the front bundle
+        const m = new THREE.Mesh(new THREE.BoxGeometry(SW, SH, BT), [
+          k.toon(CREAM[b], { map: edgeX }), k.toon(CREAM[b], { map: edgeX }),
+          k.toon(CREAM[b], { map: edgeY }), k.toon(CREAM[b], { map: edgeY }),
+          k.toon(CREAM[b]), k.toon(CREAM[b]),
+        ]);
+        m.position.set(out * back * 0.35 + (r() - 0.5) * 1.4, -back * 0.3 + (r() - 0.5) * 1.2, -BT / 2 - back * BT);
+        m.rotation.z = (r() - 0.5) * 0.07;
+        k.ink(m, 1.15);
+        body.add(m);
+      }
+      // two loose sheets fanned under the top one, then the top sheet
+      const sheet = (dz, dx, dy, rz, mat) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(SW, SH, 0.45), mat);
+        m.position.set(dx, dy, dz); m.rotation.z = rz;
+        k.ink(m, 1.1);
+        body.add(m);
         return m;
       };
-      mk(PW, PH, k.canvasTexture(128, 176, drawSheet('#9aa0ad', 40 + i, false)), -2.2, i ? 3.4 : -3.4, 1.6, i ? -0.07 : 0.07);
-      mk(PW, PH, k.canvasTexture(128, 176, drawSheet(VENUES[2 + i], 50 + i, false)), -1.1, i ? 1.7 : -1.7, 0.8, i ? -0.035 : 0.035);
-      const front = mk(PW, PH, k.canvasTexture(256, 352, drawPaper(p.venue, p.accent, 3 + i * 5)), 0, 0, 0, 0);
+      const side = k.toon(0xf2efe6);
+      sheet(0.3, -out * 0.8, 0.4, -out * 0.06, side);
+      sheet(0.8, out * 0.6, -0.5, out * 0.045, k.toon(0xfaf7ee));
+      const topTex = k.canvasTexture(256, Math.round(256 * SH / SW), drawTop(p.venue, p.accent, 3 + i * 5));
+      const front = sheet(1.3, 0, 0, out * 0.012, [side, side, side, side, k.toon(0xffffff, { map: topTex }), side]);
+      // the binder clip on the top edge: the jaw over the front, the spine over the top, two wire handles up
+      const jaw = new THREE.Mesh(new RoundedBoxGeometry(14, 7.5, 1.5, 2, 0.5), clipMat);
+      jaw.position.set(0, SH / 2 - 3.1, 2.2);
+      smoothInk(jaw, 1.2);
+      const spine = new THREE.Mesh(new THREE.BoxGeometry(14, 1.6, NB * BT + 3.6), clipMat);
+      spine.position.set(0, SH / 2 + 0.55, 1.5 - (NB * BT + 3.6) / 2 + 0.6);
+      k.ink(spine, 1.2);
+      const handle = (z0, z1, hgt) => {
+        const path = new THREE.CurvePath();
+        const P = [[-4.8, SH / 2 - 1.4, z0], [-3.6, SH / 2 + hgt, z1], [3.6, SH / 2 + hgt, z1], [4.8, SH / 2 - 1.4, z0]].map(v => new THREE.Vector3(...v));
+        for (let j = 0; j < 3; j++) path.add(new THREE.LineCurve3(P[j], P[j + 1]));
+        const m = new THREE.Mesh(new THREE.TubeGeometry(path, 36, 0.62, 6), wireMat);
+        k.ink(m, 0.9);
+        return m;
+      };
+      body.add(jaw, spine, handle(3.0, 4.6, 8), handle(-NB * BT - 1.2, -NB * BT - 4.2, 6.5));
+      // the top of the top sheet, just under the clip: where the volley comes out
+      const mouthB = new THREE.Vector3(0, SH / 2 - 1, 2);
       root.add(g);
-      // the top of the sheet in the group's space: where the volley comes out
-      return { ...p, g, front, home, mouth: new THREE.Vector3(0, PH * 0.92, 1.5) };
+      return { ...p, g, body, front, home, mouthB, mouth: new THREE.Vector3() };
     });
-    // his curled fingers in front of the papers' lower edge
-    for (const p of papers) {
-      try { skinPatch(k, p.fist, 12); } catch (_) { k.patch(p.fist, 12); }
-    }
+    /** the mouth of stack p in root space for its current pose */
+    const mouthOf = (p, v) => {
+      p.g.updateMatrix(); p.body.updateMatrix();
+      return v.copy(p.mouthB).applyMatrix4(p.body.matrix).applyMatrix4(p.g.matrix);
+    };
 
     // ③ the volley: a pool of flying sheets, one per shot (a volley never overlaps the next)
     const flyers = SHOTS.map((_, j) => {
@@ -317,11 +329,7 @@ export default {
       root.add(m);
       return m;
     });
-    const mouthW = papers.map(p => {
-      const g = new THREE.Group();
-      g.position.copy(p.home); g.rotation.z = p.rz; g.updateMatrix();
-      return p.mouth.clone().applyMatrix4(g.matrix);
-    });
+    const mouthW = papers.map(p => mouthOf(p, new THREE.Vector3()));
 
     // q5: confetti and stars on landing (fixed random streams)
     const rc = rng(21);
@@ -367,16 +375,23 @@ export default {
         const sway = Math.sin(t * Math.PI * 2 / BEAT) * 0.1 + Math.sin(t * 1.3) * 0.035;
         tassel.rotation.set(sway * 0.8 + (ts > 0 ? Math.exp(-ts * 3) * Math.sin(ts * 8) * 0.3 : 0), 0, 0.08 + kick + sway + vk);
 
-        // papers come up out of the fists; each shot jolts its sheet
+        // the stacks slam into his hands (from bigger and nearer, so a hand never shows beside one), sit
+        // there breathing a little, jolt with each of their shots, and swell and pop on the exit
         papers.forEach((p, i) => {
-          const a = presence(t, e, p.t0, 0.42, (x) => ease.outBack(x, 2.2), 0.3 + i * 0.2);
-          k.show(p.g, a);
+          const popE = 0.3 + i * 0.08;
+          if (t < p.t0 || e >= popE) { p.g.visible = false; return; }
+          p.g.visible = true;
+          const slam = ease.out(env(t, p.t0, p.t0 + T_SLAM)), rest = 1 - slam;
+          const land = t - p.t0 - T_SLAM;
+          const sq = land > 0 ? Math.exp(-land * 12) * Math.sin(land * 32) * 0.03 : 0;
+          const sc = lerp(p.from, 1, slam) * (1 + (i ? 0.05 : 0.1) * ease.out(e / popE));
           let jolt = 0;
           if (V.lt >= 0) SHOTS.forEach((s, j) => { if (j % 2 === i && V.lt >= s) jolt = Math.max(jolt, Math.exp(-(V.lt - s) * 18)); });
-          const breathe = Math.sin(t * Math.PI * 2 / BEAT + i * 1.9) * 0.03 + Math.sin(t * 2.3 + i) * 0.01;
-          const rise = 1 - Math.min(1, a);
-          p.g.rotation.set(0, 0, p.rz + breathe + rise * (i ? -0.5 : 0.5) + jolt * (i ? 0.05 : -0.05));
-          p.g.position.set(p.home.x, p.home.y - rise * 16 + jolt * 2.2, p.home.z);
+          const breathe = Math.sin(t * Math.PI * 2 / BEAT + i * 1.9) * 0.018 + Math.sin(t * 2.3 + i) * 0.006;
+          p.g.scale.set(sc * (1 + sq), sc * (1 - sq), sc);
+          p.g.rotation.set(0, 0, p.rz + breathe + rest * (i ? -0.22 : 0.22) + jolt * (i ? 0.035 : -0.035));
+          const pull = rest * p.pull / Math.hypot(p.home.x, p.home.y);
+          p.g.position.set(p.home.x * (1 - pull), p.home.y * (1 - pull) + jolt * 1.8, p.home.z + rest * 30);
         });
 
         // the flying sheets
@@ -393,7 +408,7 @@ export default {
           m.position.set(
             o.x + Math.sin(th) * sp * tx * ex + Math.sin(age * 9 + r2 * 6) * 3 * age,
             o.y + (Math.cos(th) * sp + vt) * ty * ey - vt * age,
-            o.z + 2 + age * 6);
+            o.z + 8 + age * 6);            // in front of the stack and its clip
           m.rotation.set(age * lerp(5, 9, r3) * (r4 > 0.5 ? 1 : -1), Math.sin(age * 8 + r5 * 5) * 0.7, papers[h].rz + age * lerp(-6, 6, r2));
           const grow = ease.out(env(age, 0, 0.12)) * (1 - ease.in(env(age, LIFE - 0.2, LIFE)));
           k.show(m, grow * vis, 1);
@@ -445,7 +460,7 @@ export default {
             const h = j % 2, p = papers[h];
             if (!p.g.visible) return;
             const [r0, r1, r2, r3] = rand(V.b, j + 40);
-            tmp.copy(p.mouth).applyMatrix4(p.g.matrix);
+            mouthOf(p, tmp);
             const [x0, y0] = k.toScreen(tmp);
             // pop lines
             if (s < 0.14) {
@@ -482,7 +497,9 @@ export default {
           const bump = 1 + 0.32 * Math.exp(-since * 14) + (V.lt >= SHOTS[SHOTS.length - 1] ? 0.25 * Math.exp(-(V.lt - SHOTS[SHOTS.length - 1]) * 6) * Math.cos((V.lt - SHOTS[SHOTS.length - 1]) * 14) : 0);
           const [bx, by] = k.screenAt(110, 362, 0);
           c.save();
-          c.translate(bx, by); c.rotate(-0.1); c.scale(inn * bump, inn * bump);
+          // (the bump grows from the pile's left edge, so it swells into the circle, not out of it)
+          const PL = 26;
+          c.translate(bx, by); c.rotate(-0.1); c.translate(-PL, 0); c.scale(inn * bump, inn * bump); c.translate(PL, 0);
           c.globalAlpha = fade;
           // the paper pile: one more sheet with every volley (up to five)
           const pile = Math.min(5, 1 + V.b);
