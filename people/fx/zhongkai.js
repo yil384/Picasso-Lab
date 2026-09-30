@@ -2,10 +2,12 @@
    Click: the night sky warms into a banded sunset; two cliff faces rise behind him on either side
    and a light sweep reveals the gold characters 「权」「威」 carved into them (layered bevel);
    a mortarboard with a gold 「院士」 band drops onto his head (tassel on a little pendulum); a gold
-   ISCA'26 medal on a red-blue ribbon swings onto his chest.
+   ISCA'26 medal on a red-blue ribbon (round the back of his neck, down over the collar) swings onto
+   the middle of his chest.
    Loop (3.6 s beat): tassel and medal sway, a glint travels across the characters.
    Photo landmarks (512 px): hair top 260,146 · head 215-303 x · eyes y 203 · chin 242 ·
-   collar sides 240,258 / 284,258 · collar V 261,303 · chest 262,340 · skyline y ~235 ·
+   neck 236-290 x v 236-280 · collar sides 240,258 / 284,258 · collar V 261,303 · chest 262,340 ·
+   shirt buttons u ~258 below v 306 · medal centre 262,392 · skyline y ~235 ·
    real rock peaks 20,158 / 68,168 (covered by the left cliff). */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
 
@@ -249,30 +251,48 @@ export default {
     const anchorLocal = new THREE.Vector3(BW / 2 + 0.3, capH + BT + 0.3, 0);
     const anchor = new THREE.Vector3();
 
-    // ④ the medal on a red-blue ribbon, pivoting at the neck
+    // ④ the medal on a red-blue ribbon, pivoting at the neck. The ribbon comes from behind his neck
+    //    (his real neck is re-layered in front of its top ends), runs down over the collar on both sides
+    //    and meets in a V at the medal, which hangs on the middle of his chest (on the shirt buttons).
     const pivot = new THREE.Group();
-    const pivotHome = k.at(262, 252, 6);
+    const pivotHome = k.at(262, 256, 6);
     pivot.position.copy(pivotHome);
     root.add(pivot);
     const s = D / 512;                                // photo px -> world px
-    const P = (u, v) => [(u - 262) * s, -(v - 252) * s];
-    const ribTex = k.canvasTexture(64, 256, (g, w, h) => {
-      g.fillStyle = '#c8262e'; g.fillRect(0, 0, w / 2, h);
-      g.fillStyle = '#1f4fb0'; g.fillRect(w / 2, 0, w / 2, h);
-      g.fillStyle = '#f2c14e'; g.fillRect(w / 2 - 2, 0, 4, h);
+    const P = (u, v) => [(u - 262) * s, -(v - 256) * s];
+    const RB = [222, 236, 302, 352];                  // the ribbon card's photo-px box
+    const RS = 5;                                     // canvas px per photo px
+    const bands = [[[247, 256], [234, 283], [258, 347]], [[277, 256], [290, 283], [266, 347]]];   // tops hidden behind the neck
+    const ribbonTex = k.canvasTexture((RB[2] - RB[0]) * RS, (RB[3] - RB[1]) * RS, (g) => {
+      const X = u => (u - RB[0]) * RS, Y = v => (v - RB[1]) * RS, W = 15.5 * RS;
+      g.lineJoin = 'round'; g.lineCap = 'butt';
+      const line = (pts, off, width, col) => {
+        // the band's polyline shifted sideways by `off` (canvas px, + = to the band's right)
+        g.beginPath();
+        pts.forEach(([u, v], i) => {
+          const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+          const dx = X(b[0]) - X(a[0]), dy = Y(b[1]) - Y(a[1]), l = Math.hypot(dx, dy);
+          const x = X(u) - dy / l * off, y = Y(v) + dx / l * off;
+          if (i) g.lineTo(x, y); else g.moveTo(x, y);
+        });
+        g.strokeStyle = col; g.lineWidth = width; g.stroke();
+      };
+      bands.forEach((pts, i) => {
+        const side = i ? 1 : -1;                      // red on the outer half, blue on the inner half
+        line(pts, 0, W + 3.4 * RS, '#16151a');
+        line(pts, side * W / 4, W / 2, '#c8262e');
+        line(pts, -side * W / 4, W / 2, '#1f4fb0');
+        line(pts, 0, 1.6 * RS, '#f2c14e');
+        line(pts, side * W * 0.42, 0.9 * RS, 'rgba(255,255,255,0.35)');
+      });
     });
-    const ribMat = k.toon(0xffffff, { map: ribTex });
-    const strap = (top, bot, flip) => {
-      const [x0, y0] = P(...top), [x1, y1] = P(...bot);
-      const len = Math.hypot(x1 - x0, y1 - y0);
-      const m = new THREE.Mesh(new THREE.BoxGeometry(6.2, len, 0.5), ribMat);
-      m.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0);
-      m.rotation.z = Math.atan2(x1 - x0, -(y1 - y0)) + Math.PI;
-      if (flip) m.scale.x = -1;
-      k.ink(m, 1.0);
-      return m;
-    };
-    pivot.add(strap([241, 256], [258, 311], false), strap([283, 256], [266, 311], true));
+    const ribbon = new THREE.Mesh(new THREE.PlaneGeometry((RB[2] - RB[0]) * s, (RB[3] - RB[1]) * s),
+      new THREE.MeshBasicMaterial({ map: ribbonTex, transparent: true, alphaTest: 0.02, depthWrite: false }));
+    ribbon.position.set(...P((RB[0] + RB[2]) / 2, (RB[1] + RB[3]) / 2), 0);
+    ribbon.renderOrder = 11;                          // over his shirt (the person layer is 10), under his neck
+    pivot.add(ribbon);
+    // his neck, in front of the ribbon's top ends (so it goes round the back of his neck)
+    k.patch([[236, 236], [289, 236], [290, 256], [289, 270], [284, 278], [268, 282], [256, 282], [241, 278], [236, 270], [235, 256]], 12);
     const medal = new THREE.Group();
     const MR = 15.5;
     const disc = new THREE.Mesh(new THREE.CylinderGeometry(MR, MR, 2.6, 48), k.toon(GOLD));
@@ -286,7 +306,7 @@ export default {
     loop.position.y = MR + 1.6;
     k.ink(loop, 0.9);
     medal.add(disc, ring, face, loop);
-    const [mx, my] = P(262, 350);
+    const [mx, my] = P(262, 392);
     medal.position.set(mx, my, 1.8);
     pivot.add(medal);
 
