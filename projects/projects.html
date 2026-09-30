@@ -8,10 +8,20 @@
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+    :root {
+      --ink: #0e1120;
+      --text: #1a1d2e;
+      --muted: #5c6280;
+      --faint: #9399b0;
+      --line: rgba(14,17,32,.08);
+      --paper: #efe4cc;          /* the films' cream paper: shown until the poster decodes */
+      --ucsd: #00629B;
+    }
+
     body {
       font-family: 'Inter', -apple-system, sans-serif;
       background: transparent;
-      color: #1a1d2e;
+      color: var(--text);
       -webkit-font-smoothing: antialiased;
     }
 
@@ -43,181 +53,109 @@
     }
     .hero-label svg { width: 14px; height: 14px; stroke: #FFCD00; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .hero h1 { font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -.03em; margin-bottom: 8px; }
-    .hero p { font-size: .92rem; color: rgba(255,255,255,.7); max-width: 500px; }
+    .hero p { font-size: .92rem; color: rgba(255,255,255,.72); max-width: 540px; line-height: 1.6; }
 
     /* ── Grid ── */
     .wrapper { max-width: 1100px; margin: 0 auto; padding: 36px 24px 56px; }
-
     .project-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 22px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
     }
 
-    /* ── Card ── */
+    /* ── Card: the whole card is a link to the demo (opened in the in-page viewer) ── */
     .project-card {
+      display: flex; flex-direction: column;
       background: #fff;
-      border-radius: 18px;
-      border: 1px solid rgba(0,0,0,.07);
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      border: 1px solid var(--line);
+      border-radius: 16px;
       overflow: hidden;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      transition: transform .25s cubic-bezier(.34,1.26,.64,1), box-shadow .25s ease, border-color .2s;
-      position: relative;
+      color: inherit; text-decoration: none;
+      box-shadow: 0 1px 2px rgba(14,17,32,.04), 0 4px 14px rgba(14,17,32,.04);
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      -webkit-tap-highlight-color: transparent;
     }
     .project-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 16px 48px rgba(0,0,0,.12);
-      border-color: rgba(0,0,0,.11);
+      transform: translateY(-3px);
+      border-color: rgba(14,17,32,.14);
+      box-shadow: 0 2px 4px rgba(14,17,32,.05), 0 14px 36px rgba(14,17,32,.10);
+    }
+    .project-card:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
     }
 
-    /* Colored top accent bar */
-    .card-accent-bar {
-      height: 3px;
-      width: 100%;
-      flex-shrink: 0;
-    }
-
-    /* Thumbnail */
-    .card-thumb {
-      width: 100%;
-      height: 195px;
+    /* Film: the loops are 960×528, so the frame keeps that shape and nothing is cropped */
+    .card-media {
       position: relative;
+      aspect-ratio: 960 / 528;
+      background: var(--paper);
       overflow: hidden;
-      flex-shrink: 0;
     }
-    .card-thumb svg.art { width: 100%; height: 100%; display: block; }
-
-    /* Real image or video */
-    .card-thumb .thumb-img {
+    .card-media video,
+    .card-media img {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
-      object-fit: var(--thumb-fit, cover);
-      object-position: center;
+      object-fit: cover;
       display: block;
-      transform: scale(var(--thumb-scale, 1));
-      transform-origin: center center;
-      transition: transform .5s ease;
     }
-    .project-card:hover .thumb-img { transform: scale(calc(var(--thumb-scale, 1) + 0.04)); }
-
-    /* Top mask — kills bad gradients at image top edge */
-    .thumb-top-mask {
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 44px;
-      pointer-events: none; z-index: 2;
+    .card-media img { z-index: 0; }
+    .card-media video { z-index: 1; }
+    .card-media::after {             /* hairline between film and text */
+      content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+      background: var(--line); z-index: 2;
     }
 
-    /* Bottom fade — blends thumbnail into white card body */
-    .card-thumb::after {
-      content: '';
-      position: absolute; bottom: 0; left: 0; right: 0; height: 18px;
-      background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,.6) 60%, rgba(255,255,255,.97) 100%);
-      pointer-events: none; z-index: 2;
-    }
-
-    /* Decorative corner-bracket overlay (viewfinder aesthetic) */
-    .thumb-deco {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      pointer-events: none; z-index: 3;
-      opacity: .55;
-      transition: opacity .3s;
-    }
-    .project-card:hover .thumb-deco { opacity: .85; }
-
-    /* Scanline that sweeps on hover */
-    .thumb-scan {
-      position: absolute; top: -2px; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.55) 40%, rgba(255,255,255,.55) 60%, transparent);
-      pointer-events: none; z-index: 4;
-      opacity: 0;
-      transition: none;
-    }
-    .project-card:hover .thumb-scan {
-      animation: scan-sweep .65s ease-in-out forwards;
-    }
-    @keyframes scan-sweep {
-      0%   { top: -2px;  opacity: 0; }
-      8%   { opacity: 1; }
-      92%  { opacity: .6; }
-      100% { top: calc(100% + 2px); opacity: 0; }
-    }
-
-    /* Live badge */
-    .live-pill {
-      position: absolute; top: 12px; right: 12px; z-index: 3;
-      display: inline-flex; align-items: center; gap: 5px;
-      background: rgba(10,12,24,.55);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,.12);
-      color: #fff; font-size: .65rem; font-weight: 700;
-      letter-spacing: .06em; text-transform: uppercase;
-      padding: 4px 10px; border-radius: 20px;
-    }
-    .live-dot {
-      width: 6px; height: 6px; border-radius: 50%; background: #22d46b;
-      animation: blink 2.2s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
-
-    /* Card body */
     .card-body {
+      flex: 1;
+      display: flex; flex-direction: column;
       padding: 18px 22px 20px;
-      flex: 1; display: flex; flex-direction: column;
     }
-
-    .card-head {
-      display: flex; align-items: center; justify-content: space-between;
+    .card-meta {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
       margin-bottom: 10px;
     }
     .card-category {
-      font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
-      padding: 3px 10px; border-radius: 20px;
+      font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--accent);
+      padding: 3px 9px; border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      white-space: nowrap;
     }
     .card-domain {
-      font-size: .72rem; color: #9399b0;
-      display: flex; align-items: center; gap: 3px;
+      font-size: .74rem; color: var(--faint);
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .card-domain svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
     .card-name {
-      font-size: 1.25rem; font-weight: 800; color: #0e1120;
+      font-size: 1.3rem; font-weight: 800; color: var(--ink);
       letter-spacing: -.02em; line-height: 1.2;
       margin-bottom: 8px;
-      transition: color .15s;
     }
-    .project-card:hover .card-name { color: var(--accent); }
-
     .card-desc {
-      font-size: .875rem; color: #5c6280; line-height: 1.7;
+      font-size: .875rem; color: var(--muted); line-height: 1.65;
       flex: 1; margin-bottom: 16px;
     }
-
     .card-footer {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 10px;
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
     }
     .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
     .tag {
-      font-size: .63rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      font-size: .66rem; font-weight: 600; letter-spacing: .02em;
       padding: 3px 8px; border-radius: 5px;
-      background: #f0f2f9; color: #6470a0;
+      background: #f1f3f8; color: #5d6892;
     }
     .card-launch {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: .8rem; font-weight: 700;
-      white-space: nowrap; flex-shrink: 0;
-      padding: 7px 14px; border-radius: 8px;
-      color: #fff;
-      transition: opacity .15s, transform .15s;
+      display: inline-flex; align-items: center; gap: 6px;
+      flex-shrink: 0; white-space: nowrap;
+      font-size: .8rem; font-weight: 700; color: var(--accent);
     }
-    .card-launch svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
-    .project-card:hover .card-launch { opacity: .88; }
-    .project-card:hover .card-launch svg { transform: translateX(3px); }
+    .card-launch svg {
+      width: 14px; height: 14px; stroke: currentColor; fill: none;
+      stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+      transition: transform .2s ease;
+    }
+    .project-card:hover .card-launch svg,
+    .project-card:focus-visible .card-launch svg { transform: translateX(3px); }
 
     /* ── iframe viewer ── */
     #iframe-view {
@@ -235,7 +173,6 @@
       border-bottom: 1px solid #e6e8f0;
       display: flex; align-items: center; gap: 10px;
       padding: 0 14px;
-      box-shadow: 0 1px 8px rgba(0,0,0,.06);
     }
     .bar-back {
       display: inline-flex; align-items: center; gap: 4px;
@@ -245,28 +182,24 @@
       transition: background .15s, color .15s;
       white-space: nowrap; flex-shrink: 0;
     }
-    .bar-back:hover { background: #f0f2f9; color: #00629B; }
+    .bar-back:hover { background: #f0f2f9; color: var(--ucsd); }
     .bar-back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
     .bar-sep { width: 1px; height: 22px; background: #e0e2ec; flex-shrink: 0; }
-
     .bar-url {
       flex: 1;
       background: #f4f6fb; border: 1px solid #e0e2ec;
       border-radius: 8px; padding: 6px 12px;
-      font-size: .8rem; color: #5c6280; font-family: inherit;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: .8rem; color: var(--muted);
       display: flex; align-items: center; gap: 6px;
       min-width: 0;
     }
-    .bar-url-lock { color: #22c55e; flex-shrink: 0; }
+    .bar-url-lock { color: #22c55e; flex-shrink: 0; display: inline-flex; }
     .bar-url-lock svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
     .bar-url-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
     .bar-ext {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: .78rem; font-weight: 600; color: #fff;
-      background: #00629B; border: none; cursor: pointer; font-family: inherit;
+      background: var(--ucsd);
       padding: 7px 14px; border-radius: 8px;
       text-decoration: none; transition: background .15s;
       white-space: nowrap; flex-shrink: 0;
@@ -276,40 +209,41 @@
 
     .iframe-body { flex: 1; position: relative; background: #fff; }
     #project-iframe { width: 100%; height: 100%; border: none; display: block; }
-
     .iframe-overlay {
       position: absolute; inset: 0;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
       background: #fff;
       transition: opacity .25s;
     }
     .iframe-overlay.hide { opacity: 0; pointer-events: none; }
+    .loading { display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .spin-ring {
-      width: 38px; height: 38px;
-      border: 3px solid #e0e2ec; border-top-color: #00629B;
+      width: 34px; height: 34px;
+      border: 3px solid #e0e2ec; border-top-color: var(--ucsd);
       border-radius: 50%; animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .overlay-text { font-size: .88rem; color: #8690a8; font-weight: 500; }
-
     .iframe-blocked-msg {
       display: none; flex-direction: column; align-items: center; justify-content: center;
-      gap: 14px; text-align: center; padding: 32px;
+      gap: 12px; text-align: center; padding: 32px;
     }
     .iframe-blocked-msg.show { display: flex; }
-    .blocked-icon { font-size: 2.8rem; line-height: 1; }
-    .blocked-title { font-size: 1.05rem; font-weight: 700; color: #1a1d2e; }
-    .blocked-desc { font-size: .85rem; color: #8690a8; max-width: 300px; line-height: 1.6; }
+    .blocked-title { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .blocked-desc { font-size: .85rem; color: #8690a8; max-width: 320px; line-height: 1.6; }
     .blocked-cta {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 4px;
       font-size: .85rem; font-weight: 700; color: #fff;
-      background: #00629B; text-decoration: none;
+      background: var(--ucsd); text-decoration: none;
       padding: 10px 22px; border-radius: 10px;
       transition: background .15s;
     }
     .blocked-cta:hover { background: #005082; }
     .blocked-cta svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
+    @media (max-width: 760px) {
+      .project-grid { grid-template-columns: 1fr; gap: 18px; }
+    }
     @media (max-width: 640px) {
       .hero {
         padding:
@@ -326,17 +260,7 @@
           calc(40px + env(safe-area-inset-bottom))
           max(14px, calc(env(safe-area-inset-left) + 8px));
       }
-      .project-grid { grid-template-columns: 1fr; gap: 16px; }
-      .card-thumb { height: 165px; }
-      .card-head { align-items: flex-start; gap: 8px; }
-      .card-domain {
-        min-width: 0;
-        max-width: 48%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .card-footer { align-items: flex-end; }
+      .card-body { padding: 16px 18px 18px; }
       .bar-url { display: none; }
       .iframe-bar {
         height: auto;
@@ -352,7 +276,6 @@
       .bar-ext { min-height: 44px; }
       .bar-ext { padding-inline: 10px; }
     }
-
     @media (max-height: 600px) and (pointer: coarse) {
       .hero {
         padding:
@@ -376,6 +299,10 @@
       .bar-ext { min-height: 44px; }
       .bar-url { display: none; }
     }
+    @media (prefers-reduced-motion: reduce) {
+      .project-card, .card-launch svg { transition: none; }
+      .project-card:hover { transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -387,18 +314,18 @@
       Picasso Lab
     </div>
     <h1>Projects &amp; Demos</h1>
-    <p>Live research tools and interactive demos from our work on compilers, ML systems, and quantum computing.</p>
+    <p>Live tools and demos from our research on quantum compilation, GPU kernels, AI for science and chip design.</p>
   </div>
 </div>
 
-<div class="wrapper" id="project-list">
+<main class="wrapper" id="project-list">
   <div class="project-grid" id="project-grid"></div>
-</div>
+</main>
 
 <!-- iframe viewer -->
-<div id="iframe-view">
+<div id="iframe-view" role="dialog" aria-modal="true" aria-label="Project preview">
   <div class="iframe-bar">
-    <button class="bar-back" onclick="closeProject()">
+    <button class="bar-back" type="button" onclick="closeProject()">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       Projects
     </button>
@@ -415,19 +342,16 @@
   <div class="iframe-body">
     <div class="iframe-overlay" id="iframe-overlay">
       <div class="iframe-blocked-msg" id="iframe-blocked">
-        <div class="blocked-icon">🔒</div>
-        <div class="blocked-title">Can't embed this site</div>
-        <div class="blocked-desc">This site's security policy prevents inline preview. Open it directly instead.</div>
+        <div class="blocked-title">This site can’t be shown here</div>
+        <div class="blocked-desc">Its security settings block embedding. Open it in a new tab instead.</div>
         <a class="blocked-cta" id="blocked-link" href="#" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           Open in new tab
         </a>
       </div>
-      <div id="loading-inner">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
-          <div class="spin-ring"></div>
-          <div class="overlay-text">Loading…</div>
-        </div>
+      <div class="loading" id="loading-inner">
+        <div class="spin-ring"></div>
+        <div class="overlay-text">Loading…</div>
       </div>
     </div>
     <iframe id="project-iframe" title="Project preview"
@@ -437,133 +361,88 @@
 </div>
 
 <script>
+/* This page is pasted into Google Sites as embed code, so it runs on a
+   googleusercontent.com origin: every asset must be an absolute URL. */
+const MEDIA = 'https://yil384.github.io/Picasso-Lab/projects/';
 
 const PROJECTS = [
   {
     id: 'qubrio',
-    name: "Qubrio",
-    url: "https://qubrio.picasso-lab.com/",
-    category: "Quantum Computing",
-    accent: "#7c3aed",
-    accentBg: "rgba(124,58,237,.10)",
-    desc: "A multi-agent LLM compiler for neutral atom quantum computers. Specialized agents handle qubit placement, atom routing, and schedule optimization — achieving 4.7× hardware runtime reduction over state-of-the-art baselines.",
-    tags: ["Quantum Compilation", "Multi-Agent", "LLM"],
-    img: "qubrio/qubrio.webp",
-    video: "https://yil384.github.io/Picasso-Lab/projects/qubrio/qubrio_loop.mp4",
-    thumbBg: "radial-gradient(ellipse at 42% 52%, #1e0b4a 0%, #08001a 100%)",
-    thumbFit: "cover",
-    thumbScale: "1.0",
-    thumbTopMask: null,
-    bracketColor: "rgba(167,139,250,.7)",
+    name: 'Qubrio',
+    url: 'https://qubrio.picasso-lab.com/',
+    category: 'Quantum Computing',
+    accent: '#7c3aed',
+    desc: 'A multi-agent LLM compiler for neutral-atom quantum computers. Placement, routing and optimization agents, checked by deterministic verifiers, move atoms in convoys: 4.7× lower hardware runtime and 1.3× higher fidelity than PowerMove, the state of the art.',
+    tags: ['Quantum Compilation', 'Multi-Agent', 'LLM'],
   },
   {
     id: 'tritongym',
-    name: "TritonGym",
-    url: "https://tritongym.picasso-lab.com",
-    category: "LLM Benchmark",
-    accent: "#059669",
-    accentBg: "rgba(5,150,105,.10)",
-    desc: "An ICML 2026 benchmark evaluating LLMs on generating optimized Triton GPU kernels via agentic workflows. 164 operators, four agent strategies, and a live leaderboard ranking models by correctness and kernel performance.",
-    tags: ["Triton", "LLM", "Benchmark", "ICML 2026"],
-    img: "tritongym/tritongym.webp",
-    video: "https://yil384.github.io/Picasso-Lab/projects/tritongym/tritongym_loop.mp4",
-    thumbBg: "#010c06",
-    thumbFit: "cover",
-    thumbScale: "1.0",
-    thumbTopMask: null,
-    bracketColor: "rgba(52,211,153,.7)",
+    name: 'TritonGym',
+    url: 'https://tritongym.picasso-lab.com',
+    category: 'LLM Benchmark',
+    accent: '#059669',
+    desc: 'An ICML 2026 benchmark for LLMs that write Triton GPU kernels inside agentic workflows. 164 operators, four agent strategies and a live leaderboard that ranks models on correctness and on speed against hand-tuned kernels.',
+    tags: ['Triton', 'LLM', 'Benchmark', 'ICML 2026'],
   },
   {
     id: 'tritondft',
-    name: "TritonDFT",
-    url: "https://tritondft.com/",
-    category: "AI for Science",
-    accent: "#0284c7",
-    accentBg: "rgba(2,132,199,.10)",
-    desc: "A multi-agent AI system that automates Density Functional Theory (DFT) calculations in materials science. Four specialized agents — Planner, Executor, Analyzer, Refiner — reduce per-step time from hours to seconds.",
-    tags: ["DFT", "Materials Science", "Multi-Agent"],
-    img: "tritondft/tritondft.webp",
-    video: "https://yil384.github.io/Picasso-Lab/projects/tritondft/tritondft_loop.mp4",
-    thumbBg: "linear-gradient(155deg, #021828 0%, #030d1c 100%)",
-    thumbFit: "cover",
-    thumbScale: "1.0",
-    thumbTopMask: null,
-    bracketColor: "rgba(56,189,248,.7)",
+    name: 'TritonDFT',
+    url: 'https://tritondft.com/',
+    category: 'AI for Science',
+    accent: '#0284c7',
+    desc: 'A multi-agent system that runs Density Functional Theory end to end, from a plain-language question to a converged result. Planner, Executor, Analyzer and Refiner agents pass 98% of DFTBench, 68× faster than by hand, at an average $0.04 per material.',
+    tags: ['DFT', 'Materials Science', 'Multi-Agent'],
   },
   {
     id: 'chipmate',
-    name: "ChipMate",
-    url: "https://chipmate.picasso-lab.com",
-    category: "Chip Design",
-    accent: "#d97706",
-    accentBg: "rgba(217,119,6,.10)",
-    desc: "A self-trained multi-agent framework for RTL (Verilog) code generation. Two agents cross-verify outputs via waveform comparison — outperforming DeepSeek V3 despite being 20–180× smaller.",
-    tags: ["RTL", "Verilog", "Multi-Agent", "EDA"],
-    img: "chipmate/chipmate.webp",
-    video: "https://yil384.github.io/Picasso-Lab/projects/chipmate/chipmate_loop.mp4",
-    thumbBg: "linear-gradient(135deg, #0d0800 0%, #08080f 60%, #001a1a 100%)",
-    thumbFit: "cover",
-    thumbScale: "1.0",
-    thumbTopMask: null,
-    bracketColor: "rgba(251,191,36,.7)",
+    name: 'ChipMATE',
+    url: 'https://chipmate.picasso-lab.com',
+    category: 'Chip Design',
+    accent: '#d97706',
+    desc: 'A self-trained multi-agent framework for Verilog generation. A Verilog agent and a Python reference-model agent check each other cycle by cycle on random inputs, with no golden testbench. The 9B model scores 80.1% on VerilogEval v2, ahead of DeepSeek V4, a model about 200× larger.',
+    tags: ['RTL', 'Verilog', 'Multi-Agent', 'EDA'],
   },
 ];
 
+const domainOf = url => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
 function renderCards() {
   document.getElementById('project-grid').innerHTML = PROJECTS.map((p, i) => `
-    <div class="project-card" style="--accent:${p.accent};--thumb-fit:${p.thumbFit};--thumb-scale:${p.thumbScale}" onclick="openProject(${i})">
-      <div class="card-accent-bar" style="background:${p.accent}"></div>
-      <div class="card-thumb" style="background:${p.thumbBg}">
-        ${p.video
-          ? `<video class="thumb-img" data-src="${p.video}" poster="${p.img}"
-               preload="none" muted loop playsinline aria-label="${p.name} preview"></video>
-             <img class="thumb-img" src="${p.img}" alt="${p.name}" decoding="async"
-               style="display:none"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
-          : `<img class="thumb-img" src="${p.img}" alt="${p.name}" loading="lazy" decoding="async"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
-        }
-        <svg class="art" style="display:none" viewBox="0 0 480 195" xmlns="http://www.w3.org/2000/svg">
-          <rect width="480" height="195" fill="rgba(255,255,255,.04)"/>
-          <text x="240" y="105" text-anchor="middle" font-family="Inter,sans-serif"
-                font-size="13" fill="rgba(255,255,255,.3)">${p.name}</text>
-        </svg>
-        ${p.thumbTopMask ? `<div class="thumb-top-mask" style="background:${p.thumbTopMask}"></div>` : ''}
-        <!-- Corner bracket decoration -->
-        <svg class="thumb-deco" viewBox="0 0 480 195" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          <g stroke="${p.bracketColor}" stroke-width="1.5" fill="none" stroke-linecap="round">
-            <path d="M14 30 L14 13 L30 13"/>
-            <path d="M450 13 L466 13 L466 30"/>
-            <path d="M14 165 L14 182 L30 182"/>
-            <path d="M450 182 L466 182 L466 165"/>
-          </g>
-          <rect x="13" y="12" width="454" height="171" rx="1"
-                stroke="${p.bracketColor}" stroke-width=".4" fill="none" stroke-dasharray="3 6"/>
-        </svg>
-        <div class="thumb-scan"></div>
-        <div class="live-pill"><div class="live-dot"></div>Live</div>
+    <a class="project-card" href="${p.url}" data-idx="${i}" style="--accent:${p.accent}"
+       aria-label="${p.name}: open the live demo">
+      <div class="card-media">
+        <img src="${MEDIA}${p.id}/${p.id}.webp" alt="" decoding="async" loading="lazy">
+        <video data-src="${MEDIA}${p.id}/${p.id}_loop.mp4" poster="${MEDIA}${p.id}/${p.id}.webp"
+               preload="none" muted loop playsinline disablepictureinpicture aria-hidden="true"></video>
       </div>
       <div class="card-body">
-        <div class="card-head">
-          <span class="card-category" style="color:${p.accent};background:${p.accentBg}">${p.category}</span>
-          <span class="card-domain">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
-            ${p.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-          </span>
+        <div class="card-meta">
+          <span class="card-category">${p.category}</span>
+          <span class="card-domain">${domainOf(p.url)}</span>
         </div>
-        <div class="card-name">${p.name}</div>
-        <div class="card-desc">${p.desc}</div>
+        <h2 class="card-name">${p.name}</h2>
+        <p class="card-desc">${p.desc}</p>
         <div class="card-footer">
           <div class="card-tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
-          <div class="card-launch" style="background:${p.accent}">
-            Launch
-            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </div>
+          <span class="card-launch">Open demo
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </span>
         </div>
       </div>
-    </div>
+    </a>
   `).join('');
 }
+
+/* A plain click opens the in-page viewer; modified clicks keep the browser's
+   own link behaviour (new tab, new window). */
+document.addEventListener('click', event => {
+  const card = event.target.closest('.project-card');
+  if (!card || event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  openProject(Number(card.dataset.idx));
+});
 
 let projectLoadTimer = null;
 
@@ -585,16 +464,18 @@ function clearPicassoHistoryState(patch) {
   } catch (_) {}
 }
 
+let lastCard = null;
+
 function openProject(idx, fromHistory = false) {
   const p = PROJECTS[idx];
   if (!p) return;
-  const view     = document.getElementById('iframe-view');
-  const iframe   = document.getElementById('project-iframe');
-  const overlay  = document.getElementById('iframe-overlay');
-  const blocked  = document.getElementById('iframe-blocked');
+  const view      = document.getElementById('iframe-view');
+  const iframe    = document.getElementById('project-iframe');
+  const overlay   = document.getElementById('iframe-overlay');
+  const blocked   = document.getElementById('iframe-blocked');
   const loadInner = document.getElementById('loading-inner');
 
-  document.getElementById('bar-url-text').textContent = p.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  document.getElementById('bar-url-text').textContent = domainOf(p.url);
   document.getElementById('external-link').href = p.url;
   document.getElementById('blocked-link').href  = p.url;
 
@@ -603,13 +484,16 @@ function openProject(idx, fromHistory = false) {
   loadInner.style.display = '';
   iframe.src = '';
 
+  lastCard = document.querySelector(`.project-card[data-idx="${idx}"]`);
   view.classList.add('active');
   document.getElementById('hero-section').style.display = 'none';
   document.getElementById('project-list').style.display = 'none';
   document.body.style.overflow = 'hidden';
+  pauseAllCardVideos();
   if (!fromHistory && history.state?.picassoProjectPreview !== idx) {
     pushPicassoHistoryState({ picassoProjectPreview: idx });
   }
+  view.querySelector('.bar-back').focus({ preventScroll: true });
 
   let done = false;
   clearTimeout(projectLoadTimer);
@@ -638,7 +522,15 @@ function closeProject(fromHistory = false) {
   document.getElementById('hero-section').style.display = '';
   document.getElementById('project-list').style.display = '';
   document.body.style.overflow = '';
+  resumeVisibleCardVideos();
+  lastCard?.focus({ preventScroll: true });
 }
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('iframe-view').classList.contains('active')) {
+    closeProject();
+  }
+});
 
 function syncProjectPreviewState(state) {
   const view = document.getElementById('iframe-view');
@@ -650,19 +542,21 @@ function syncProjectPreviewState(state) {
   }
 }
 
-window.addEventListener('popstate', (event) => {
+window.addEventListener('popstate', event => {
   syncProjectPreviewState(event.state);
 });
 
 renderCards();
-syncProjectPreviewState(history.state);
+
+/* ── Card films: fetched only near the viewport, played only while visible.
+   With reduced motion they stay on the poster and play on hover or focus. ── */
+const cardVideos = [...document.querySelectorAll('.card-media video[data-src]')];
 
 function loadCardVideo(video) {
-  if (video.dataset.loaded === 'true' || !video.dataset.src) return;
+  if (video.dataset.loaded === 'true') return;
   video.dataset.loaded = 'true';
-  video.preload = 'metadata';
+  video.preload = 'auto';
   video.src = video.dataset.src;
-  video.load();
 }
 
 function playCardVideo(video) {
@@ -671,23 +565,14 @@ function playCardVideo(video) {
   video.play().catch(() => {});
 }
 
-function showCardVideoFallback(video) {
-  video.pause();
-  video.style.display = 'none';
-  const fallback = video.nextElementSibling;
-  if (!fallback) return;
-  if (fallback.complete && fallback.naturalWidth === 0) {
-    fallback.style.display = 'none';
-    fallback.nextElementSibling?.style.setProperty('display', 'block');
-  } else {
-    fallback.style.display = 'block';
-  }
+function shouldAutoplay(video) {
+  return video.dataset.visible === 'true' && !reduceMotion.matches && !document.hidden &&
+    !document.getElementById('iframe-view').classList.contains('active');
 }
 
-const cardVideos = document.querySelectorAll('.card-thumb video[data-src]');
+function pauseAllCardVideos() { cardVideos.forEach(v => v.pause()); }
+function resumeVisibleCardVideos() { cardVideos.forEach(v => { if (shouldAutoplay(v)) playCardVideo(v); }); }
 
-// Assign the source only when a card is close to the viewport. This prevents the
-// four loop videos from downloading while the Projects section is still offscreen.
 const videoLoadObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
     if (!entry.isIntersecting) return;
@@ -696,24 +581,40 @@ const videoLoadObserver = new IntersectionObserver(entries => {
   });
 }, { rootMargin: '320px 0px', threshold: 0 });
 
-// Play only while visible (and retry once enough data arrives for stricter browsers).
 const videoPlaybackObserver = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    e.target.dataset.visible = e.isIntersecting ? 'true' : 'false';
-    if (e.isIntersecting) playCardVideo(e.target);
-    else e.target.pause();
+  entries.forEach(entry => {
+    entry.target.dataset.visible = entry.isIntersecting ? 'true' : 'false';
+    if (shouldAutoplay(entry.target)) playCardVideo(entry.target);
+    else entry.target.pause();
   });
-}, { threshold: 0.1 });
+}, { threshold: 0.15 });
 
 cardVideos.forEach(video => {
-  video.addEventListener('canplay', () => {
-    if (video.dataset.visible === 'true') playCardVideo(video);
-  });
-  video.addEventListener('error', () => showCardVideoFallback(video), { once: true });
+  video.addEventListener('canplay', () => { if (shouldAutoplay(video)) playCardVideo(video); });
+  video.addEventListener('error', () => { video.remove(); }, { once: true });   // the poster <img> stays
+  const card = video.closest('.project-card');
+  const hoverPlay = () => { if (reduceMotion.matches) playCardVideo(video); };
+  const hoverStop = () => { if (reduceMotion.matches) video.pause(); };
+  card.addEventListener('pointerenter', hoverPlay);
+  card.addEventListener('pointerleave', hoverStop);
+  card.addEventListener('focus', hoverPlay);
+  card.addEventListener('blur', hoverStop);
   videoLoadObserver.observe(video);
   videoPlaybackObserver.observe(video);
 });
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseAllCardVideos();
+  else resumeVisibleCardVideos();
+});
+reduceMotion.addEventListener?.('change', () => {
+  if (reduceMotion.matches) pauseAllCardVideos();
+  else resumeVisibleCardVideos();
+});
+
+syncProjectPreviewState(history.state);
 </script>
+
 
 <!-- ── Picasso Easter Egg: type "picasso" or triple-tap hero to flip ── -->
 <style>
