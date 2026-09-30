@@ -535,36 +535,10 @@ low (fixed) and two carried lows.
 Every screen scores ≥ 8 and no high or medium finding is open.
 
 ## Handoff status
-- **Done (previous sessions):**
-  - gd3/table and gd3/lobby merged.
-  - Harness built: gdh.py, stage.js, scenes.py, play.py, sheet.py.
-  - Review round 1 (55 findings) and fix round 1 (46 commits on four track branches gd4/r1-*, each passed an independent checker) merged into guandan-cloud.
-- **Done (this session, up to build 9602148):**
-  - Harness environment: Chromium now trusts the proxy CA (HANDOFF §5). The first captures had silently lost the web fonts to ERR_CERT_AUTHORITY_INVALID.
-  - Fresh baselines: `scenes.py` at all five viewports (59 scenes each, zero console errors).
-  - Pre-fix comparison shots of de0134d at phone, desk and portrait (`scratch/shots-r0`).
-  - Full rounds: `play.py desk|portrait|phone 2` gave two rounds each through the tribute, zero console errors.
-  - Merge with main: a trial merge of origin/main is clean. Outside the Guandan files only events/events.html differs from main, by the intended shared-records-board change.
-  - Workflow scripts now take the refs, pre-shot and session paths as args.
-- **Review round 2: partial.** The fidelity-table, fidelity-meta and gameplay-QA lenses finished: 32 findings (7 medium, 25 low, no high) and scores for 11 of the 12 screens (see Round 2 above).
-  - Below 8: lobby 7, popups 7.5, table-moments 6.5, portrait 7.5, english 7.5.
-- **Done (session 3, 2026-09-30):** harness re-set up (proxy CA in Chromium's NSS store, references downloaded, phone/portrait/desk baselines re-captured into `scratch/shots-r2`, zero console errors); **must-keep lens finished** (see above: all pass, MK-1 low), `harness/mustkeep.py` added.
-  **AI-tell lens finished** too (1 medium, 6 low; see above).
-- **Missing from round 2:**
-  - ~~Round-1 re-check~~: done (see above; `harness/recheck.py`).
-  - ~~Synthesizer~~: done (see "Round 2 synthesis").
-- **Fix round 2 (groups A–F all done, session 3) and round 3 (done, see above):** verified on screenshots and probes, one commit + push per group.
-  - **A shared behaviour and copy — done:** AT-1 (no selection/drag/callout), AT-6, R2-15/16, R2-23/AT-5, tab title. Verified by `ctrl+A` selecting 0 characters in room and table; phone EN room fits again.
-  - **B table play flow — done:** R2-05, 06, 07, 20, 27, 28, 29, 30. `harness/verify_b.py` and `verify_b2.py` pass on phone and desk.
-  - **C lobby and room — done:** R2-01 (tiles ≈1.05:1 at 16:10, top bar and dock take the slack), R2-12/AT-2 (robot and head faces, solid gold empty seat), R2-13, R2-14, R2-18, R2-19 (panels share a bottom edge), R2-31/32, AT-3 (the MVP label is the member's first name).
-  - **D effects and display words — done (R2-10 partly):** R2-02 (warm burst: hot core, orange rim and flame-coloured rays, wider flat ring, no full-screen flash), R2-03/21 (one thin-outline cream-to-gold `.gd-word`; bomb and combo labels sit under the played cards at 72 px), R2-17 (popup titles plain white), R2-11 (lighter 不出 stroke, grey in the log), R2-22 (records VS and the lobby poster share the intro's gradient, no extrusion, no hard seam), R2-25 (bigger, cleaner timer digits; hands still show above 99 s), R2-26 (首出 card at 44% of the stage height, red display word, 第一个出牌 plate). R2-10: 天王炸's smoke has a 2 px light outline, the fire none, a lighter smoke ramp and a shorter fade, but the column is still a cartoon puff (kept as low).
-  - **E table static — done:** R2-04 (a bomb-size tag, 四炸/五炸/…, on the front card of every same-rank column of four or more; EN "4×"), R2-08 (the 级 corner is shifted by the columns' overlap), R2-09 (the felt's radial ellipse is 64% × 92% at 50% 58%, so the edges reach the reference's darker teal), R2-24 (tool pills 24 px labels and 28 px icons, a ↺ on 重选).
-  - **F eggs — done:** AT-4 (the table mount clears a lingering toast; the intro frames are clean). MK-1 is accepted as designed: `placeReturnTypeHint` treats every line of text and control as an obstacle and only ever lands on blank surface (here the settings panel's empty right half).
-- **Next (no multi-agent workflow; one lens or one fix group at a time, push after each):**
-  1. ~~Round-1 re-check~~ (done, see above).
-  2. ~~Synthesize round 2~~ (done above; 8 medium, 32 low, no high).
-  3. Fix round 2 by the groups in the synthesis (A shared, B play flow, C lobby/room, D effects/words, E table static, F eggs), each verified on screenshots at the SPEC viewports and pushed.
-  4. ~~Round 3~~ (done: every screen ≥ 8, no high or medium). A round 4 is only needed if the merge with main changes something.
-  5. Merge origin/main (keep main's non-Guandan files), replay a full round, and push guandan-cloud.
-  6. Final report per HANDOFF §6.
-- **Environment notes (session 3):** Chromium trusts the proxy CA via `~/.pki/nssdb` (HANDOFF §5, redo after a container reset); `refs/fetch_refs.sh` sometimes times out on news.yxrb.net (rerun it or curl the two files again); the phone `events.html` has an award intro ("TAP TO CONTINUE") over the page until tapped. Harness: `GD_SHOTS=<dir> python3 scenes.py phone portrait desk` (about 2 min per viewport), `python3 mustkeep.py all desk phone portrait` (about 6 min).
+**State: finished (HANDOFF steps 1–5 done; step 6 is the report to the user).** Branch `guandan-cloud` holds everything; nothing was pushed to `main`.
+- **Rounds:** review round 1 (55 findings) + fix round 1 (46 commits), review round 2 (all six lenses: 40 findings, 8 medium after calibration, no high) + fix round 2 (groups A–F: 39 fixed, 1 partial R2-10, 1 accepted MK-1), review round 3 (no high, no medium; 1 low fixed, 2 lows carried: R3-02 天王炸 stylised, AT-7 nav glyph second tone). Every screen scores ≥ 8 (see Round 3).
+- **Merge with main:** `origin/main` (19 commits since the base: welcome card, people pages, events cards) is merged into `guandan-cloud` without conflicts. Outside the Guandan set only `events/events.html` differs from main, by the shared records-board change (7 lines added, 55 removed); the merge itself changed no Guandan file. After the merge: the events.html flows (222aak, mvp, picasso, tap-three-times, return landing) pass on desk and phone with 0 console errors, and two full rounds through the tribute play on phone, desk and portrait with 0 console errors.
+- **Accepted (not fixed):** R1-07 (phone bottom bar height for the 40 px tap rule), R1-26 (one tall column shrinks the hand, as SPEC §5.1), MK-1 (the type hint lands on blank panel surface only), R3-02 and AT-7 (lows). R2-25 keeps clock hands above 99 s by design.
+- **Harness** (`guandan-kit/harness/`, all against the in-memory Firebase stub): `scenes.py` (59 scenes per viewport), `play.py` (full rounds), `mustkeep.py` (SPEC §1), `recheck.py` (round-1 probes), `verify_b.py` / `verify_b2.py` (play flow and pending states), `verify_rejoin.py`, `parsecheck.py`, `sheet.py`. Environment notes: Chromium trusts the proxy CA via `~/.pki/nssdb` (HANDOFF §5, redo after a container reset); `refs/fetch_refs.sh` can time out on news.yxrb.net (re-run it); on phones `events.html` shows an award intro ("TAP TO CONTINUE") over the page until tapped.
+- **If someone continues:** run `python3 harness/parsecheck.py`, `scenes.py` on the five viewports and `play.py <vp> 2`, look at the shots, and only then change anything; new findings go into a "Round 4" section above this one.
+
