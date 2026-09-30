@@ -149,11 +149,15 @@ export default {
       return { g, gem, hi, glow, mat, base, dim: base.clone().multiplyScalar(0.3), r: d.r };
     });
 
-    /* ② her real index finger (and the back of her hand) re-layered over the cuff --------- */
+    /* ② her real index and middle fingers (and the back of her hand) re-layered over the cuff */
     k.patch([
+      // index finger: tip and top edge, then the back of her hand to the rim
       [319, 197], [322, 188], [329, 181], [339, 176], [352, 173], [370, 166], [385, 164], [400, 164],
       [415, 166], [430, 168], [446, 174], [456, 184], [464, 196], [478, 207], [496, 214], [512, 214],
-      [512, 300], [470, 252], [442, 214], [422, 196], [406, 190], [388, 193], [364, 200], [340, 207], [325, 204],
+      // down the hand, then back along the lower edge of the middle finger (the cuff passes behind both)
+      [512, 300], [470, 262], [450, 236], [424, 231], [408, 234], [390, 239], [376, 243], [360, 247],
+      [344, 251], [328, 259], [312, 267], [296, 271], [284, 267], [278, 256], [281, 246], [288, 237],
+      [300, 226], [312, 215], [320, 207],
     ], 22);
 
     /* ③ exam papers: 数学 150 behind, 理综 300 in front (big red check, 满分 stamp) --------- */
@@ -247,7 +251,7 @@ export default {
 
     /* ④ the plaque 「温州市 · 高考状元」: gold frame, red lacquer panel, gold letters ------- */
     const plaque = new THREE.Group();
-    const PLW = 78, PLH = 28;
+    const PLW = 80, PLH = 31;
     const slab = new THREE.Mesh(new RoundedBoxGeometry(PLW, PLH, 5, 3, 2.2), gold);
     k.ink(slab, 1.4);
     const panel = k.card(PLW - 7, PLH - 7, (g, W, H) => {
@@ -260,13 +264,13 @@ export default {
       roundRect(g, 2 * s, 2 * s, W - 4 * s, H - 4 * s, 0.8 * s); g.stroke();
       g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillStyle = '#ffe7a0';
-      g.font = `900 ${6.2 * s}px ${KAI}`;
-      g.fillText('温 州 市', W / 2, 6.2 * s);
-      g.font = `900 ${11.6 * s}px ${KAI}`;
+      g.font = `900 ${8 * s}px ${KAI}`;
+      g.fillText('温 州 市', W / 2, 7 * s);
+      g.font = `900 ${12 * s}px ${KAI}`;
       g.lineWidth = 1.2 * s; g.strokeStyle = '#5a0d0a'; g.lineJoin = 'round';
-      g.strokeText('高考状元', W / 2, 14.4 * s);
+      g.strokeText('高考状元', W / 2, 17 * s);
       g.fillStyle = '#ffd766';
-      g.fillText('高考状元', W / 2, 14.4 * s);
+      g.fillText('高考状元', W / 2, 17 * s);
     }, { res: 2 });
     panel.position.z = 2.6;
     const studGeo = new THREE.SphereGeometry(1.3, 12, 8);
@@ -276,7 +280,7 @@ export default {
       plaque.add(st);
     });
     plaque.add(slab, panel);
-    const PLAQUE_HOME = k.at(280, 444, 16);
+    const PLAQUE_HOME = k.at(280, 441, 16);
     plaque.position.copy(PLAQUE_HOME);
     root.add(plaque);
 
@@ -302,12 +306,12 @@ export default {
       return out;
     }
     const loopT = t => (t < T_LOOP ? -1 : (t - T_LOOP) % BEAT);
+    const lit = { on: 0, extra: 0 };
     function stoneLit(i, t) {
-      const on = env(t, T_STONE + i * D_STONE, T_STONE + i * D_STONE + 0.09);
-      const flare = 0.9 * bump(t - T_SNAP, 0.4);
+      lit.on = env(t, T_STONE + i * D_STONE, T_STONE + i * D_STONE + 0.09);
       const lt = loopT(t);
-      const shimmer = lt < 0 ? 0 : 0.85 * bump(lt - i * 0.11, 0.3);
-      return { on, extra: flare + shimmer };
+      lit.extra = 0.9 * bump(t - T_SNAP, 0.4) + (lt < 0 ? 0 : 0.85 * bump(lt - i * 0.11, 0.3));
+      return lit;
     }
 
     return {

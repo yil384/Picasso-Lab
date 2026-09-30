@@ -11,7 +11,7 @@
    hands 178,365 / 283,375 · T-shirt hem v 318 · he sits on the rail at v ~335 (hip u 300-345). */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
 
-const BEAT = 3.2, T0 = 1.35;
+const BEAT = 3.2, T0 = 1.35, PB = 1.3;     // the busy moment of each beat starts PB s in (the first one after the burst has settled)
 const INK = '#0b0a14';
 const VS = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
@@ -38,8 +38,10 @@ export default {
       for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * f + 0.5, (uv.getY(i) - 0.5) * f + 0.5);
       return geo;
     };
-    // the plate sits deeper than the stencil disc, so off-axis perspective shifts it ~2 px: clip it too
+    // the photo and plate sit deeper than the stencil disc, so off-axis perspective shifts them ~2 px:
+    // clip them too, or a sliver of the old background shows at the rim next to the new set
     k.clip(k.layers.plate.material);
+    k.clip(k.layers.photo.material);
 
     // ① LED wall (behind everything): 8 x 8 panels of halftone dots, a lighting truss, the prize board
     const wallTex = k.canvasTexture(512, 512, (g) => {
@@ -58,17 +60,18 @@ export default {
         }
       }
       // prize board on the left panels
-      g.fillStyle = '#07060f'; g.fillRect(20, 150, 180, 86);
-      g.strokeStyle = '#ffc53d'; g.lineWidth = 2; g.strokeRect(24, 154, 172, 78);
+      g.fillStyle = INK; g.fillRect(18, 148, 184, 90);
+      g.fillStyle = '#05040c'; g.fillRect(23, 153, 174, 80);
       g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillStyle = '#ffffff'; g.font = "900 20px 'Arial Black', Impact, sans-serif";
+      g.fillStyle = '#43e8ff'; g.font = "900 20px 'Arial Black', Impact, sans-serif";
       g.fillText('PRIZE', 110, 172);
-      g.save(); g.translate(110, 206); g.scale(0.78, 1);
-      g.fillStyle = '#ffc53d'; g.font = "900 31px 'Arial Black', Impact, sans-serif";
+      g.save(); g.translate(110, 207); g.scale(0.78, 1);
+      g.fillStyle = '#ffc53d'; g.font = "900 32px 'Arial Black', Impact, sans-serif";
       g.fillText('$1,000,000', 0, 0);
       g.restore();
-      g.fillStyle = 'rgba(7,6,15,0.55)';
-      for (let y = 154; y < 232; y += 3) g.fillRect(24, y, 172, 1);
+      g.fillStyle = 'rgba(5,4,12,0.6)';                      // LED dot mask
+      for (let y = 153; y < 233; y += 3) g.fillRect(23, y, 174, 1);
+      for (let x = 23; x < 197; x += 3) g.fillRect(x, 153, 1, 80);
       // lighting truss across the top, fixtures at both ends
       g.strokeStyle = '#3a3752'; g.lineWidth = 4;
       g.beginPath(); g.moveTo(0, 8); g.lineTo(512, 8); g.moveTo(0, 26); g.lineTo(512, 26); g.stroke();
@@ -397,7 +400,7 @@ export default {
           lerp(padHome.y - 46, padHome.y, pin) + (1 - land) * 3 * (t > 0.72 ? 1 : 0) - ease.in(clamp(e * 1.6 - 0.2)) * 40,
           padHome.z);
         pad.rotation.set(-0.45 - (1 - pin) * 0.6, (1 - pin) * 0.7, 0.05 + (1 - pin) * 1.8);
-        const press = ph >= 0 ? Math.sin(clamp((ph - 1.7) / 0.22) * Math.PI) : 0;
+        const press = ph >= 0 ? Math.sin(clamp((ph - PB - 0.05) / 0.22) * Math.PI) : 0;
         buttons[3].position.z = FZ + 0.5 - press * 0.9;
         home.material.color.setHex(press > 0.5 ? 0xffffff : 0x5ce8ff);
 
@@ -411,7 +414,6 @@ export default {
         letters.forEach((L, i) => {
           const tl = t - (0.72 + i * 0.1);
           let on = tl < 0 ? 0 : tl < 0.035 ? 1 : tl < 0.07 ? 0.15 : tl < 0.1 ? 1 : 1;
-          if (i === 1 && ph >= 2.1 && ph < 2.2) on = ph < 2.13 ? 0.2 : ph < 2.16 ? 1 : 0.35;
           L.material.opacity = on * exitF(e, 0.2);
         });
       },
@@ -426,16 +428,16 @@ export default {
         // confetti: one burst behind VICTORY, then one small puff over the trophy per beat
         const [bx, by] = scr(256, 432, 0, B);
         confetti(q, burst, bx, by - 4, t - 1.06, exitF(e, 0));
-        if (ph >= 1.3 && e < 1) {
+        if (ph >= PB && e < 1) {
           const [px, py] = scr(T_U, T_V - 112, T_Z, B);
-          confetti(q, puff, px, py, ph - 1.3, exitF(e, 0) * (1 - env(ph - 1.3, 1.1, 1.5)));
+          confetti(q, puff, px, py, ph - PB, exitF(e, 0) * (1 - env(ph - PB, 1.0, 1.4)));
         }
         c.restore();
 
         // trophy glint: on landing, then mid-beat
         const [gx, gy] = scr(T_U - 30, T_V - 96, T_Z + 10, B);
         const land = 1 - Math.abs(clamp((t - 0.82) / 0.24) * 2 - 1);
-        const mid = ph >= 0 ? 1 - Math.abs(clamp((ph - 0.5) / 0.3) * 2 - 1) : 0;
+        const mid = ph >= 0 ? 1 - Math.abs(clamp((ph - PB - 0.12) / 0.3) * 2 - 1) : 0;
         const ga = Math.max(t > 0.82 && t < 1.06 ? land : 0, mid) * exitF(e, 0);
         sparkle(q, gx, gy, 7 * ga, ga, t * 2);
 
@@ -445,7 +447,7 @@ export default {
           const out = exitF(e, 0);
           const sc = sl < 1 ? lerp(1.32, 1, ease.in(sl)) : 1 + Math.sin(clamp((t - 1.08) / 0.25) * Math.PI * 2) * 0.05 * (1 - env(t, 1.08, 1.33));
           const shake = t > 1.08 && t < 1.25 ? Math.sin(t * 90) * 1.6 * (1 - env(t, 1.08, 1.25)) : 0;
-          const shine = ph >= 0 ? env(ph, 0.9, 1.35) : 0;
+          const shine = ph >= 0 ? env(ph, PB + 0.25, PB + 0.7) : 0;
           // impact lines
           const il = env(t, 1.08, 1.3);
           if (il > 0 && il < 1 && out > 0.004) {

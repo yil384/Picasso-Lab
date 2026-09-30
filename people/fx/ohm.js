@@ -37,8 +37,10 @@ export default {
       for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * f + 0.5, (uv.getY(i) - 0.5) * f + 0.5);
       return geo;
     };
-    // the plate sits deeper than the stencil disc, so off-axis perspective shifts it ~2 px: clip it too
+    // the photo and plate sit deeper than the stencil disc, so off-axis perspective shifts them ~2 px:
+    // clip them too, or a sliver of the old background shows at the rim next to the new set
     k.clip(k.layers.plate.material);
+    k.clip(k.layers.photo.material);
 
     // ── ① the interposer: silicon base + gold traces, revealed from the die outward ──────────
     const siTex = k.canvasTexture(512, 512, (g) => {
@@ -261,7 +263,7 @@ export default {
           const out = exitF(e, 0.3 + si * 0.05);
           const any = presence(t, e, S.t0, 0.2, ease.outBack, 0.3);
           S.g.visible = any > 0.004;
-          S.g.scale.setScalar(Math.max(0.004, lerp(0.6, 1, Math.min(1, any)) * out));
+          S.g.scale.setScalar(Math.max(0.004, lerp(0.6, 1, Math.min(1, any)) * out * 1.12));
           S.layers.forEach((L, li) => {
             const a = env(t, S.t0 + li * 0.07, S.t0 + li * 0.07 + 0.16);
             k.show(L, a > 0 ? 1 : 0);
@@ -274,7 +276,7 @@ export default {
         const di = presence(t, e, 0.18, 0.4, ease.outBack, 0.2);
         k.show(die, di);
         die.position.set(dieHome.x, dieHome.y - (1 - ease.out(env(t, 0.18, 0.5))) * 30 - ease.in(clamp(e * 1.6 - 0.1)) * 30, dieHome.z);
-        const hp = ph >= 0 ? Math.sin(clamp(ph / 0.9) * Math.PI) : 0;
+        const hp = ph >= 0 ? Math.sin(clamp(ph / 0.8) * Math.PI) : 0;
         heat.material.opacity = 0.75 * hp * exitF(e, 0);
         heat.visible = heat.material.opacity > 0.003;
 
@@ -303,7 +305,7 @@ export default {
         const bs = env(t, 0.98, 1.24);
         const bo = exitF(e, 0.1);
         let sx = 1, sy = 1, z = B_Z;
-        if (bs < 0.45) { const f = ease.in(bs / 0.45); sx = sy = lerp(2.3, 1, f); z = lerp(B_Z + 60, B_Z, f); }
+        if (bs < 0.45) { const f = ease.in(bs / 0.45); sx = sy = lerp(1.9, 1, f); z = lerp(B_Z + 50, B_Z, f); }
         else { const f = (bs - 0.45) / 0.55, d = Math.sin(f * Math.PI * 2.2) * Math.pow(1 - f, 2) * 0.22; sx = 1 + d; sy = 1 - d; }
         badge.visible = bs > 0 && bo > 0.004;
         badge.scale.set(sx * bo, sy * bo, bo);
@@ -326,9 +328,9 @@ export default {
           }
         }
         // heat shimmer over the die (loop)
-        if (ph >= 0 && ph < 1.2 && e < 0.6) {
+        if (ph >= 0 && ph < 0.9 && e < 0.6) {
           toScr(die.position, B);
-          const a = Math.sin(clamp(ph / 1.2) * Math.PI) * (1 - e / 0.6);
+          const a = Math.sin(clamp(ph / 0.9) * Math.PI) * (1 - e / 0.6);
           if (a > 0.01) {
             q.noFill(); q.strokeWeight(1.5);
             for (const s of shimmer) {

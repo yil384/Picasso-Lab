@@ -81,8 +81,10 @@ export default {
       for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * f + 0.5, (uv.getY(i) - 0.5) * f + 0.5);
       return geo;
     };
-    // the plate sits deeper than the stencil disc, so off-axis perspective shifts it ~2 px: clip it too
+    // the photo and plate sit deeper than the stencil disc, so off-axis perspective shifts them ~2 px:
+    // clip them too, or a sliver of the old background shows at the rim next to the new set
     k.clip(k.layers.plate.material);
+    k.clip(k.layers.photo.material);
 
     // ① xuan paper: a warm round-fan painting that soaks in from behind her
     const paperTex = k.canvasTexture(512, 512, (g) => {
@@ -334,10 +336,12 @@ export default {
       }
       return P;
     }
+    // wet-ink bleed colours, precomputed per tone (no string building per frame)
+    const BLEED = TONE.map(T => Array.from({ length: 17 }, (_, i) => `rgba(${T[0]},${T[1]},${T[2]},${(0.25 + 0.4 * i / 16).toFixed(3)})`));
     const inkStroke = (q, c, p, prog, wfn, W, tone, wet, alpha) => {
-      if (prog <= 0.003) return;
+      if (prog <= 0.003 || alpha < 0.004) return;
       const T = TONE[tone];
-      c.shadowColor = `rgba(${T[0]},${T[1]},${T[2]},${(0.25 + 0.4 * wet).toFixed(3)})`;
+      c.shadowColor = BLEED[tone][Math.round(clamp(wet) * 16)];
       c.shadowBlur = (1.1 + 2.2 * wet) * k.dpr;
       q.fill(T[0], T[1], T[2], T[3] * alpha);
       shape(q, p, prog, wfn, W);
@@ -477,7 +481,7 @@ export default {
           const fade = 1 - ease.inOut(env(ph, 1.6, 3.1));
           const wet = 1 - env(ph, 0.8, 2.0);
           const T = TONE[0], L = TONE[3];
-          c.shadowColor = `rgba(${T[0]},${T[1]},${T[2]},${(0.25 + 0.35 * wet).toFixed(3)})`;
+          c.shadowColor = BLEED[0][Math.round(clamp(wet) * 14)];
           c.shadowBlur = (2 + 3 * wet) * k.dpr;
           q.fill(L[0], L[1], L[2], 150 * fade * paintA);
           q.circle(REST_U, DROP_V, 30 * g);
