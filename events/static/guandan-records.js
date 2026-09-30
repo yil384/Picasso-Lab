@@ -612,8 +612,26 @@
         return lng === "en" ? (style && EN[style]) || "" : style;
     }
 
+    // Legacy embeds: the events page on Google Sites is pasted embed code, and a copy from before
+    // the shared board still calls buildHTML() into "#gdr-overlay .gdr-scroll". Mount the board
+    // there instead, hide that copy's old x (the board has its own back arrow) and close through
+    // the x so the old page's own close logic runs.
+    var legacyBoard = null;
+    function buildHTML() {
+        var host = document.querySelector("#gdr-overlay .gdr-scroll");
+        if (!host) return "";
+        var oldClose = document.querySelector("#gdr-overlay > .gdr-close");
+        if (oldClose) oldClose.style.display = "none";
+        setTimeout(function () {
+            if (legacyBoard) legacyBoard.destroy();
+            legacyBoard = mount(host, { splash: true, onClose: function () { if (oldClose) oldClose.click(); } });
+        }, 0);
+        return "";
+    }
+
     global.GuandanRecords = {
         mount: mount,
+        buildHTML: buildHTML,
         styleText: styleText,
         stats: function () { var d = buildStats(); return { matches: d.matches, board: d.board, mvp: d.mvp }; },
         PAGE_KEYS: PAGE_KEYS,
