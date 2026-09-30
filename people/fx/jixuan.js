@@ -74,6 +74,14 @@ export default {
     };
     const exitF = (e, order) => 1 - ease.in(clamp(e * 1.6 - order * 0.6));
 
+    // a backdrop disc 2 px wider than the photo (the stencil trims it to the circle, so no plate
+    // pixels leak at the anti-aliased rim); uvs still map 0..1 onto the photo's 512 px
+    const backdropDisc = () => {
+      const pad = 2, geo = new THREE.CircleGeometry(k.R + pad, 128), uv = geo.attributes.uv, f = (k.R + pad) / k.R;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * f + 0.5, (uv.getY(i) - 0.5) * f + 0.5);
+      return geo;
+    };
+
     // ① xuan paper: a warm round-fan painting that soaks in from behind her
     const paperTex = k.canvasTexture(512, 512, (g) => {
       const R = rng(11);
@@ -134,7 +142,7 @@ export default {
         }`,
       transparent: true, depthWrite: false,
     }));
-    const paper = new THREE.Mesh(new THREE.CircleGeometry(k.R, 128), paperMat);
+    const paper = new THREE.Mesh(backdropDisc(), paperMat);
     paper.position.z = ZP - 1;
     paper.scale.setScalar(k.depthScale(ZP - 1));
     paper.renderOrder = -18;

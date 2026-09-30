@@ -31,6 +31,14 @@ export default {
     const exitF = (e, order) => 1 - ease.in(clamp(e * 1.6 - order * 0.6));
     const beatPh = t => (t < T0 ? -1 : (t - T0) % BEAT);
 
+    // a backdrop disc 2 px wider than the photo (the stencil trims it to the circle, so no plate
+    // pixels leak at the anti-aliased rim); uvs still map 0..1 onto the photo's 512 px
+    const backdropDisc = () => {
+      const pad = 2, geo = new THREE.CircleGeometry(k.R + pad, 128), uv = geo.attributes.uv, f = (k.R + pad) / k.R;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * f + 0.5, (uv.getY(i) - 0.5) * f + 0.5);
+      return geo;
+    };
+
     // ① LED wall (behind everything): 8 x 8 panels of halftone dots, a lighting truss, the prize board
     const wallTex = k.canvasTexture(512, 512, (g) => {
       g.fillStyle = '#0d0b20'; g.fillRect(0, 0, 512, 512);
@@ -89,7 +97,7 @@ export default {
         }`,
       transparent: true, depthWrite: false,
     }));
-    const wall = new THREE.Mesh(new THREE.CircleGeometry(k.R, 128), wallMat);
+    const wall = new THREE.Mesh(backdropDisc(), wallMat);
     wall.position.z = k.Z_BACK + 1;
     wall.scale.setScalar(k.depthScale(k.Z_BACK + 1));
     wall.renderOrder = -18;
@@ -284,19 +292,21 @@ export default {
     // ── q5 helpers: VICTORY banner, confetti, glints ─────────────────────────
     const R = rng(21);
     const CONF_COL = [[255, 210, 63], [255, 79, 216], [67, 232, 255], [255, 255, 255], [124, 255, 107]];
-    const burst = Array.from({ length: 44 }, () => ({
-      vx: (R() - 0.5) * 260, vy: -110 - R() * 190, spin: 6 + R() * 12, ph: R() * 6, w: 2.4 + R() * 1.6, h: 4 + R() * 2.5, c: CONF_COL[Math.floor(R() * 5)], ox: (R() - 0.5) * 70,
-    }));
+    // two cannons at the banner ends shoot up and outward (so his face stays clear)
+    const burst = Array.from({ length: 46 }, (_, i) => {
+      const side = i % 2 ? 1 : -1;
+      return { vx: side * (40 + R() * 190), vy: -230 - R() * 200, spin: 6 + R() * 12, ph: R() * 6, w: 2.4 + R() * 1.6, h: 4 + R() * 2.5, c: CONF_COL[Math.floor(R() * 5)], ox: side * (40 + R() * 8) };
+    });
     const puff = Array.from({ length: 11 }, () => ({
-      vx: (R() - 0.5) * 120, vy: -60 - R() * 80, spin: 5 + R() * 9, ph: R() * 6, w: 2.2 + R() * 1.4, h: 3.6 + R() * 2, c: CONF_COL[Math.floor(R() * 5)], ox: (R() - 0.5) * 10,
+      vx: (R() - 0.5) * 150, vy: -170 - R() * 150, spin: 5 + R() * 9, ph: R() * 6, w: 2.2 + R() * 1.4, h: 3.6 + R() * 2, c: CONF_COL[Math.floor(R() * 5)], ox: (R() - 0.5) * 10,
     }));
-    const KD = 2.2, G = 260;
+    const KD = 2.6, G = 420;
     function confetti(q, list, x0, y0, tau, alpha) {
       if (tau < 0 || alpha < 0.004) return;
       const f = (1 - Math.exp(-KD * tau)) / KD;
       for (const p of list) {
         const x = x0 + p.ox + p.vx * f;
-        const y = y0 + (p.vy + G / KD) * f - G * tau / KD;
+        const y = y0 + G * tau / KD + (p.vy - G / KD) * f;
         const a = alpha * (1 - env(tau, 1.1, 1.6));
         if (a < 0.004) continue;
         q.push();
@@ -316,7 +326,7 @@ export default {
       q.endShape(q.CLOSE ?? true);
       q.pop();
     }
-    const BAN = { w: 102, h: 21 };
+    const BAN = { w: 96, h: 21 };
     function banner(q, cx, cy, sc, alpha, shine) {
       if (alpha < 0.004) return;
       q.push();
@@ -376,15 +386,15 @@ export default {
         trophy.rotation.x = 0.16;
 
         // controller floats up into his hands, settles; a button press each beat
-        const pi = presence(t, e, 0.45, 0.42, ease.out, 0.15);
+        const pi = presence(t, e, 0.45, 0.2, ease.outBack, 0.15);
         const pin = ease.out(env(t, 0.45, 0.88));
-        k.show(pad, pi);
+        k.show(pad, pi * (0.6 + 0.4 * pin));
         const land = ease.outBack(env(t, 0.72, 0.95), 2.2);
         pad.position.set(
           lerp(padHome.x - 30, padHome.x, pin),
           lerp(padHome.y - 46, padHome.y, pin) + (1 - land) * 3 * (t > 0.72 ? 1 : 0) - ease.in(clamp(e * 1.6 - 0.2)) * 40,
           padHome.z);
-        pad.rotation.set(-0.45 - (1 - pin) * 0.8, (1 - pin) * 2.2, 0.05 + (1 - pin) * 0.5);
+        pad.rotation.set(-0.45 - (1 - pin) * 0.6, (1 - pin) * 0.7, 0.05 + (1 - pin) * 1.8);
         const press = ph >= 0 ? Math.sin(clamp((ph - 1.7) / 0.22) * Math.PI) : 0;
         buttons[3].position.z = FZ + 0.5 - press * 0.9;
         home.material.color.setHex(press > 0.5 ? 0xffffff : 0x5ce8ff);
@@ -412,11 +422,11 @@ export default {
         c.beginPath(); c.arc(cx, cy, k.R + 1, 0, Math.PI * 2); c.clip();
         q.noStroke();
         // confetti: one burst behind VICTORY, then one small puff over the trophy per beat
-        const [bx, by] = scr(256, 424, 0, B);
+        const [bx, by] = scr(256, 432, 0, B);
         confetti(q, burst, bx, by - 4, t - 1.06, exitF(e, 0));
-        if (ph >= 0 && e < 1) {
-          const [px, py] = scr(T_U, T_V - 118, T_Z, B);
-          confetti(q, puff, px, py, ph, exitF(e, 0) * (1 - env(ph, 1.2, 1.6)));
+        if (ph >= 1.3 && e < 1) {
+          const [px, py] = scr(T_U, T_V - 112, T_Z, B);
+          confetti(q, puff, px, py, ph - 1.3, exitF(e, 0) * (1 - env(ph - 1.3, 1.1, 1.5)));
         }
         c.restore();
 
@@ -428,10 +438,10 @@ export default {
         sparkle(q, gx, gy, 7 * ga, ga, t * 2);
 
         // VICTORY slams in under him
-        const sl = env(t, 0.96, 1.08);
+        const sl = env(t, 0.98, 1.08);
         if (sl > 0) {
           const out = exitF(e, 0);
-          const sc = sl < 1 ? lerp(2.4, 1, ease.in(sl)) : 1 + Math.sin(clamp((t - 1.08) / 0.25) * Math.PI * 2) * 0.05 * (1 - env(t, 1.08, 1.33));
+          const sc = sl < 1 ? lerp(1.32, 1, ease.in(sl)) : 1 + Math.sin(clamp((t - 1.08) / 0.25) * Math.PI * 2) * 0.05 * (1 - env(t, 1.08, 1.33));
           const shake = t > 1.08 && t < 1.25 ? Math.sin(t * 90) * 1.6 * (1 - env(t, 1.08, 1.25)) : 0;
           const shine = ph >= 0 ? env(ph, 0.9, 1.35) : 0;
           // impact lines

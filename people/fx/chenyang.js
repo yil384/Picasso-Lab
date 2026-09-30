@@ -127,7 +127,7 @@ export default {
     shield.add(dish, star, glint);
     root.add(shield);
     const SH_R = 30;
-    const P0 = k.at(-150, 20, 34), P1 = k.at(404, 156, 34), P2 = k.at(372, 386, 26);
+    const P0 = k.at(-150, 60, 34), P1 = k.at(404, 156, 34), P2 = k.at(372, 386, 26);
     const pos = new THREE.Vector3();
 
     /* ④ helmet wings: three white feathers each, behind the sides of his head ------------- */
@@ -186,9 +186,11 @@ export default {
 
     function shieldAt(t, out) {
       if (t < T_RICO) {
+        // in from the left, behind his head (z < 0, so his cut-out covers it), then forward
         const u = env(t, 0.06, T_RICO);
         out.lerpVectors(P0, P1, u);
-        out.y += Math.sin(Math.PI * u) * 18;
+        out.y += Math.sin(Math.PI * u) * 10;
+        out.z = lerp(-14, P1.z, ease.inOut(env(u, 0.55, 0.95)));
       } else {
         const u = ease.out(env(t, T_RICO, T_LAND));
         out.lerpVectors(P1, P2, u);
@@ -220,7 +222,7 @@ export default {
         shield.position.copy(pos);
         const spin = t < T_LAND ? -t * 26 : -T_LAND * 26 - (1 - Math.pow(1 - clamp((t - T_LAND) / 0.3), 2)) * 1.2;
         const settle = ease.out(env(t, T_RICO, T_LAND));
-        shield.rotation.set(lerp(0.55, 0.16, settle) + 0.18 * wob, lerp(0.35, -0.42, settle) + 0.12 * wob, spin);
+        shield.rotation.set(lerp(0.35, 0.16, settle) + 0.18 * wob, lerp(0.35, -0.42, settle) + 0.12 * wob, spin);
 
         // loop glint: sweeps across during the first ~0.6 s of each beat
         const lt = loopT(t);
@@ -254,7 +256,7 @@ export default {
         const [cx, cy] = k.screenAt(256, 256, 0);
 
         // speed lines trailing the shield in flight
-        if (t < T_LAND + 0.04) {
+        if (t < T_LAND + 0.04 && shield.position.z > 2) {         // only once it is out in front of him
           const [sx, sy] = toScr(shield.position);
           shieldAt(Math.max(0.06, t - 0.07), trail[0]);
           const [tx, ty] = toScr(trail[0]);
