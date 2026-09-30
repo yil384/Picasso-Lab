@@ -5,12 +5,20 @@
    DEALS: five cards flick off the deck one by one, spinning and turning over in an arc to the
    Michelin man, and land in a fanned royal flush (10 J Q K A of spades) floating in front of
    his belly; the Michelin man gets a gold monocle to inspect it.
-   Loop (3.2 s bar): one more card is dealt each bar (spin + flip, gold flick at his fingertip)
-   and lands on top of the fan as the next ace (the fan ruffles), the hat tips once, a glint
-   runs over the monocle; the fan floats gently.
+   Loop (3.2 s bars, the two moves take turns):
+   - trick bar (藏牌 / 转牌): his hand glows gold (a comic burst behind his real fingers), a card
+     pops out of nowhere at his index fingertip, back out, and twirls (spins round its own long
+     axis and once round, then settles face out: K♥, Q♦, J♥, A♦ in turn); it is palmed away in a
+     puff of smoke and turns up with a second puff gripped in the Michelin man's thumbs-up fist
+     (his real thumb and fist re-layered over it), where he inspects it (monocle glint); it stays
+     there until the next trick bar, when it vanishes again as his hand lights up;
+   - deal bar: one more card is dealt (spin + flip, gold flick at his fingertip) and lands on top
+     of the fan as the next ace (the fan ruffles).
+   Every bar the hat tips once; the fan floats gently.
    Photo landmarks (512 px): head top 346,67 · head width 314-376 at v 90 · fringe / hairline
    v 88-96 · eyebrows v 100 · index fingertip 322,205 · thumb tip 362,170 · card crook 348,181 ·
-   Michelin eye 233,125 · Michelin belly 110-240 x 260-340. */
+   Michelin eye 233,125 · Michelin thumb tip 212,149 · his fist 186-229 x 172-224 ·
+   Michelin belly 110-240 x 260-340. */
 import { THREE, presence, env, ease, clamp, lerp } from './kit.js';
 
 const TAU = Math.PI * 2;
@@ -126,10 +134,29 @@ function drawValance(g, w, h) {
   g.stroke();
 }
 
+function drawBurst(g, w, h) {
+  // a comic gold flare: spiky two-tone burst, inked
+  const cx = w / 2, cy = h / 2, n = 14;
+  const path = (ro, ri) => {
+    g.beginPath();
+    for (let i = 0; i < n * 2; i++) {
+      const a = i / (n * 2) * TAU - Math.PI / 2;
+      const r = i % 2 ? ri : ro * (i % 4 === 0 ? 1 : 0.84);
+      (i ? g.lineTo : g.moveTo).call(g, cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    g.closePath();
+  };
+  g.lineJoin = 'round';
+  path(w * 0.47, w * 0.31); g.fillStyle = '#ffc62e'; g.fill();
+  g.strokeStyle = INK; g.lineWidth = w * 0.028; g.stroke();
+  path(w * 0.33, w * 0.23); g.fillStyle = '#ffe680'; g.fill();
+  g.fillStyle = '#fff8d6'; g.beginPath(); g.arc(cx, cy, w * 0.14, 0, TAU); g.fill();
+}
+
 export default {
   title: 'Card Master',
   exit: 0.45,
-  still: 2.2,
+  still: 3.9,
   async build(k) {
     const { root } = k;
     const cToon = (c, o) => k.clip(k.toon(c, o));
@@ -288,10 +315,53 @@ export default {
     mono.rotation.set(0, 0.25, 0.1);
     root.add(mono);
 
+    /* ⑥ the trick (藏牌 / 转牌), every other bar: his hand glows gold, a card appears at his
+       index fingertip (its lower corner under his real fingertip), twirls, is palmed away in a
+       puff and turns up gripped in the Michelin man's thumbs-up fist */
+    const TRICK = [['K', 'H'], ['Q', 'D'], ['J', 'H'], ['A', 'D']];
+    const TCW = 19;                               // trick card width
+    const TCH = TCW * TH / TW;
+    const trick = makeCard(TRICK[0]);
+    trick.rotation.order = 'ZYX';                 // flips round its own long axis, then leans
+    const tipPin = k.at(325, 204, 7);             // his fingertip, over the card's lower right corner
+    const T_ROT = 0.26;
+    const palm = k.at(352, 196, 7);               // where it is palmed away to
+    const cornerTo = (pin, rot, w, h, lx, ly, out) => out.set(
+      pin.x - (lx * w * Math.cos(rot) - ly * h * Math.sin(rot)),
+      pin.y - (lx * w * Math.sin(rot) + ly * h * Math.cos(rot)), pin.z);
+    const trickHome = cornerTo(tipPin, T_ROT, TCW, TCH, 0.38, -0.4, new THREE.Vector3());
+    // the Michelin man's card: bottom tucked into his fist, behind his thumb, leaning out to his side
+    const MCW = 17, MCH = MCW * TH / TW;
+    const mcard = makeCard(TRICK[0]);
+    mcard.rotation.order = 'ZYX';
+    const mPin = k.at(203, 181, 6);
+    const M_ROT = 0.3;
+    const mHome = cornerTo(mPin, M_ROT, MCW, MCH, 0, -0.42, new THREE.Vector3());
+    k.patch([
+      [200, 175], [201.5, 163], [204, 155], [208.5, 149.5], [213.5, 149], [217.5, 153.5], [220, 162],
+      [221.5, 172], [227, 178], [230, 192], [228.5, 210], [221, 223], [204, 225], [190, 216],
+      [180, 205], [177, 192], [181, 182], [190, 177],
+    ], 10);
+    // the gold flare behind his finger-gun hand (his fingers stay in front: the hand patch)
+    const burst = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), k.clip(new THREE.MeshBasicMaterial({
+      map: k.canvasTexture(256, 256, drawBurst), transparent: true, depthWrite: false })));
+    burst.renderOrder = 12;
+    const burstHome = k.at(356, 202, 3);
+    burst.position.copy(burstHome);
+    root.add(burst);
+    // the trick bar's clock (seconds into the bar)
+    const A0 = 0.14, A1 = 0.36;                   // the card appears
+    const W0 = 0.4, W1 = 0.86;                    // twirl
+    const V0 = 1.0, V1 = 1.12;                    // palmed away
+    const R0 = 1.14, R1 = 1.4;                    // turns up at the Michelin man
+    const MO = 0.16;                              // his card leaves at the start of the next trick bar
+
     const tint = new THREE.Color();
     const v3 = new THREE.Vector3();
     const loopN = (t) => (t < T0 ? -1 : Math.floor((t - T0) / BAR));
     const loopP = (t) => (t < T0 ? -1 : ((t - T0) % BAR) / BAR * BAR);   // seconds into the bar
+    const isDeal = (n) => n >= 0 && n % 2 === 1;
+    const isTrick = (n) => n >= 0 && n % 2 === 0;
     const exitK = (e, order) => 1 - ease.in(clamp(e * 1.6 - order * 0.6));
 
     return {
@@ -324,17 +394,17 @@ export default {
         // deck pops into his hand
         const dk = presence(t, e, 0.3, 0.25, ease.outBack, 0.2);
         k.show(deck, dk);
+        const lastN = loopN(t);
+        const dealBar = isDeal(lastN), trickBar = isTrick(lastN);
         // a flick of the wrist on every deal
         let kick = 0;
         for (let i = 0; i < 5; i++) kick = Math.max(kick, Math.sin(Math.PI * env(t, DEAL0 + i * DGAP - 0.04, DEAL0 + i * DGAP + 0.1)));
-        const lpk = loopP(t);
-        if (lpk >= 0) kick = Math.max(kick, Math.sin(Math.PI * env(lpk, 0, 0.16)));
+        if (dealBar) kick = Math.max(kick, Math.sin(Math.PI * env(lp, 0, 0.16)));
         deck.position.y = deckHome.y + (1 - clamp(dk)) * 3 + kick * 1.2;
         deck.rotation.z = DECK_ROT + kick * 0.22;
 
-        // the deal: five cards off the deck into the fan, then one more per bar onto the top slot
+        // the deal: five cards off the deck into the fan, then one more every deal bar onto the top slot
         const fanOut = exitK(e, 0.5);
-        const lastN = loopN(t);
         const bob = Math.sin(TAU * t / BAR) * 1.2 * env(t, 1.3, 2.0);
         fan.forEach((c, i) => {
           const t0 = DEAL0 + i * DGAP;
@@ -345,7 +415,7 @@ export default {
           else {
             // ruffle: a small hop from right to left after each loop landing
             let hop = 0;
-            if (lastN >= 0 && lp > LFLY) hop = Math.sin(Math.PI * clamp((lp - LFLY - (4 - i) * 0.05) / 0.22));
+            if (dealBar && lp > LFLY) hop = Math.sin(Math.PI * clamp((lp - LFLY - (4 - i) * 0.05) / 0.22));
             c.position.copy(slots[i].pos);
             c.position.y += bob + hop * 1.8;
             c.rotation.set(0, 0, slots[i].a + hop * 0.04);
@@ -353,17 +423,64 @@ export default {
           }
           if (fanOut < 1) c.scale.setScalar(Math.max(0.004, c.scale.x * fanOut));
         });
-        // the top card shows the ace dealt last
-        const landed = lastN < 0 ? 0 : lastN + (lp >= LFLY ? 1 : 0);
-        setFace(fan[4], ACES[landed % 4]);
-        // this bar's card in flight
-        if (lastN >= 0 && lp < LFLY && fanOut > 0.004) {
+        // the top card shows the ace dealt last (deal bars are the odd ones)
+        const dealsDone = lastN < 0 ? 0 : Math.floor((lastN + 1) / 2) - (dealBar && lp < LFLY ? 1 : 0);
+        setFace(fan[4], ACES[dealsDone % 4]);
+        // this deal bar's card in flight
+        if (dealBar && lp < LFLY && fanOut > 0.004) {
           flyer.visible = true;
-          setFace(flyer, ACES[(lastN + 1) % 4]);
+          setFace(flyer, ACES[(dealsDone + 1) % 4]);
           s4.a = slots[4].a; s4.pos.copy(slots[4].pos).setY(slots[4].pos.y + bob);
           flight(flyer, lp / LFLY, s4, 1.25);
           flyer.scale.multiplyScalar(fanOut);
         } else flyer.visible = false;
+
+        // the trick: gold flare, the card appears, twirls, is palmed away, turns up in the other fist
+        const tOut = exitK(e, 0.4);
+        const tricksBegun = lastN < 0 ? 0 : Math.floor(lastN / 2) + 1;      // trick bars started so far
+        const tb = trickBar ? lp : -1;
+        // flare: blooms, breathes, folds away as the card is shown
+        const bl = tb < 0 ? 0 : ease.outBack(env(tb, 0, 0.2)) * (1 - ease.in(env(tb, 0.82, 1.0)));
+        k.show(burst, bl * tOut, 38 * (1 + 0.05 * Math.sin(TAU * tb / 0.3)));
+        burst.rotation.z = tb * 0.9;
+        // the card at his fingertip
+        const ap = tb < 0 ? 0 : ease.outBack(env(tb, A0, A1), 2.2);
+        const gone = tb >= V1 || tb < 0;
+        if (gone || ap <= 0.004 || tOut <= 0.004) trick.visible = false;
+        else {
+          trick.visible = true;
+          setFace(trick, TRICK[(tricksBegun - 1) % 4]);
+          const tw = ease.inOut(env(tb, W0, W1));
+          const lift = Math.sin(Math.PI * env(tb, W0 - 0.06, W1 + 0.06)) * 5;
+          const vp = env(tb, V0, V1);                          // palmed: edge-on, shrinking into his palm
+          const vq = ease.in(vp);
+          trick.position.lerpVectors(tipPin, trickHome, clamp(ap));          // grows out of his fingertip
+          trick.position.x -= lift * 0.35; trick.position.y += lift; trick.position.z += lift * 0.6;
+          trick.position.lerp(palm, vq * 0.8);
+          // ta-da: a little lean once it is face out
+          const tada = Math.sin(Math.PI * env(tb, W1, V0)) * 0.12;
+          trick.rotation.set(0, Math.PI + 5 * Math.PI * tw + vq * Math.PI * 0.5, T_ROT + TAU * tw + tada + (1 - ap) * 0.6);
+          trick.scale.setScalar(TCW * Math.max(0.004, ap * (1 - 0.8 * vq) * tOut));
+        }
+        // the Michelin man's card: pops up in his fist (turning to face us), sways, leaves at the next trick
+        const mIdx = trickBar && tb < R0 ? tricksBegun - 2 : tricksBegun - 1;   // the trick it came from
+        let mp = 0;
+        if (mIdx >= 0) {
+          const inBar = trickBar && tb >= R0 && lastN === mIdx * 2;
+          const since = inBar ? tb - R0 : (lp + (lastN - mIdx * 2) * BAR - R0);
+          mp = ease.outBack(clamp(since / (R1 - R0)), 2);
+          if (trickBar && lastN > mIdx * 2) mp *= 1 - ease.in(env(tb, 0, MO));  // the next trick takes it back
+        }
+        if (mp * tOut <= 0.004) mcard.visible = false;
+        else {
+          mcard.visible = true;
+          setFace(mcard, TRICK[mIdx % 4]);
+          const sw = Math.sin(TAU * t / 2.6);
+          mcard.position.lerpVectors(mPin, mHome, clamp(mp * tOut));          // rises out of his fist
+          mcard.position.y += sw * 0.5;
+          mcard.rotation.set(0, (1 - clamp(mp)) * Math.PI * 0.5, M_ROT + sw * 0.03);
+          mcard.scale.setScalar(MCW * mp * tOut);
+        }
 
         // monocle
         const mv = presence(t, e, 1.0, 0.35, ease.outBack, 0.5);
@@ -378,16 +495,50 @@ export default {
         if (fade <= 0) return;
         const [fx, fy] = k.screenAt(320, 204, 8);
         const lp = loopP(t), lastN = loopN(t);
-        // deal starts: the five of the entrance, then one per bar
+        const dealBar = isDeal(lastN), tb = isTrick(lastN) ? lp : -1;
+        // deal starts: the five of the entrance, then one per deal bar
         const starts = [0, 1, 2, 3, 4].map(i => DEAL0 + i * DGAP);
-        if (lastN >= 0) starts.push(T0 + lastN * BAR);
+        if (dealBar) starts.push(T0 + lastN * BAR);
         for (const s0 of starts) {
           const f = env(t, s0, s0 + 0.22);
           if (f > 0 && f < 1) star(q, fx - 3, fy - 1, 7 * Math.sin(Math.PI * f), fade, GOLD);
         }
-        // his fingertip keeps a small pulsing gold spark once the deck is out
-        const sp = env(t, 0.45, 0.7);
+        // his fingertip keeps a small pulsing gold spark once the deck is out (not while he holds the trick card)
+        const sp = env(t, 0.45, 0.7) * (tb < 0 ? 1 : 1 - Math.sin(Math.PI * env(tb, A0 - 0.06, V1 + 0.1)));
         if (sp > 0) star(q, fx - 2, fy, (3.2 + 1.3 * Math.sin(TAU * t / 0.8)) * sp, fade, GOLD);
+        // the trick: sparkles orbit his glowing hand, a flash where the card appears, spin lines
+        // round the twirl, a puff where it is palmed away and one where it turns up
+        if (tb >= 0) {
+          const [hx, hy] = k.toScreen(v3.copy(burstHome));
+          const orb = Math.sin(Math.PI * env(tb, 0.02, 0.95));
+          if (orb > 0.05) {
+            for (let i = 0; i < 3; i++) {
+              const a = TAU * (tb * 0.9 + i / 3);
+              star(q, hx + Math.cos(a) * 19, hy + Math.sin(a) * 12, 5 * orb, fade, [GOLD, [255, 247, 214], [240, 70, 70]][i]);
+            }
+          }
+          const [px, py] = k.toScreen(v3.copy(tipPin));
+          const fl = env(tb, A0 - 0.02, A0 + 0.2);
+          if (fl > 0 && fl < 1) star(q, px - 2, py - 2, 10 * Math.sin(Math.PI * fl), fade, WHITE);
+          const tw = env(tb, W0, W1);
+          if (tw > 0.04 && tw < 0.96) {
+            const [cx, cy] = k.toScreen(trick.position);
+            const a0 = -TAU * ease.inOut(tw) - T_ROT;
+            const al = Math.sin(Math.PI * tw);
+            for (const [w, c] of [[3.2, [22, 21, 26]], [1.5, [255, 255, 255]]]) {
+              q.stroke(c[0], c[1], c[2], 235 * al * fade); q.strokeWeight(w); q.noFill();
+              for (const o of [0, Math.PI]) q.arc(cx, cy, 44, 44, a0 + o - 1.1, a0 + o);
+            }
+          }
+          const [cx, cy] = k.toScreen(v3.copy(trickHome));
+          smoke(q, cx + 2, cy + 6, env(tb, V0 - 0.02, V0 + 0.42), 13, fade, 2);
+          const [mx, my] = k.toScreen(v3.copy(mHome));
+          smoke(q, mx, my + 2, env(tb, R0 - 0.06, R0 + 0.4), 13, fade, 5);
+          const rp = env(tb, R0 + 0.02, R0 + 0.5);
+          if (rp > 0 && rp < 1) puff(q, mx, my, rp, 7, 20, fade, 11);
+          // the card it takes back as the next one appears
+          if (lastN >= 2) smoke(q, mx, my + 2, env(tb, 0, 0.36), 10, fade, 8);
+        }
         // a whoosh arc behind every card in flight (the last stretch of its path)
         const trail = (p, slot) => {
           if (p < 0.06 || p > 0.9) return;
@@ -407,19 +558,20 @@ export default {
           }
         };
         fan.forEach((c, i) => trail((t - DEAL0 - i * DGAP) / DFLY, slots[i]));
-        if (lastN >= 0 && lp < LFLY) trail(lp / LFLY, s4);
+        if (dealBar && lp < LFLY) trail(lp / LFLY, s4);
         // landing puffs: the last card of the deal, and each loop card
         const [lx, ly] = k.toScreen(v3.copy(slots[4].pos));
         const pp = env(t, DEAL0 + 4 * DGAP + DFLY - 0.02, DEAL0 + 4 * DGAP + DFLY + 0.5);
         if (pp > 0 && pp < 1) puff(q, lx, ly, pp, 9, 24, fade, 3);
-        if (lastN >= 0) {
+        if (dealBar) {
           const q2 = (lp - LFLY + 0.02) / 0.45;
           if (q2 > 0 && q2 < 1) puff(q, lx, ly, q2, 6, 18, fade, lastN + 7);
         }
-        // monocle glint once it lands and once a bar; a star on the hat as it lands
+        // monocle glint once it lands and once a bar (in a trick bar as he inspects the card that
+        // turned up in his fist); a star on the hat as it lands
         const [mx, my] = k.toScreen(v3.copy(monoHome));
         const g1 = env(t, 1.15, 1.45);
-        const g2 = lastN >= 0 ? env(lp, 2.4, 2.75) : 0;
+        const g2 = dealBar ? env(lp, 2.4, 2.75) : tb >= 0 ? env(tb, R1 + 0.1, R1 + 0.45) : 0;
         const gg = Math.max(g1 > 0 && g1 < 1 ? Math.sin(Math.PI * g1) : 0, g2 > 0 && g2 < 1 ? Math.sin(Math.PI * g2) : 0);
         if (gg > 0) star(q, mx - 4, my - 4, 7 * gg, fade, WHITE);
         const hp = env(t, 0.55, 0.85);
@@ -441,6 +593,29 @@ export default {
       }
       q.endShape(q.CLOSE);
       q.pop();
+    }
+    // a comic smoke puff (poof!): a ring of balls that billow out, rise a little and shrink away;
+    // inked as one cloud (ink pass under a white pass), with a grey underside for volume
+    function smoke(q, x, y, p, r, a, seed) {
+      if (p <= 0 || p >= 1) return;
+      const out = ease.out(p), grow = Math.min(1, p / 0.18), life = Math.pow(1 - p, 0.7);
+      const balls = [];
+      for (let i = 0; i < 7; i++) {
+        const ang = i / 7 * TAU + seed * 1.3;
+        const j = ((i * 53 + seed * 17) % 10) / 10;
+        const d = r * (0.2 + 0.7 * out) * (0.8 + 0.4 * j);
+        const rr = r * 0.46 * (0.75 + 0.5 * ((i * 31 + seed * 7) % 10) / 10) * grow * life;
+        if (rr > 0.9) balls.push([x + Math.cos(ang) * d, y + Math.sin(ang) * d * 0.8 - out * r * 0.35, rr]);
+      }
+      const core = r * 0.55 * grow * Math.pow(1 - p, 1.4);
+      if (core > 0.9) balls.push([x, y - out * r * 0.3, core]);
+      q.noStroke();
+      q.fill(22, 21, 26, 255 * a);
+      for (const [bx, by, rr] of balls) q.circle(bx, by, rr * 2 + 2.6);
+      q.fill(214, 214, 224, 255 * a);
+      for (const [bx, by, rr] of balls) q.circle(bx, by, rr * 2);
+      q.fill(255, 255, 255, 255 * a);
+      for (const [bx, by, rr] of balls) q.circle(bx - rr * 0.18, by - rr * 0.22, rr * 1.55);
     }
     function puff(q, x, y, p, n, dist, a, seed) {
       const out = ease.out(p);

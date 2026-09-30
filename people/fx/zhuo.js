@@ -387,6 +387,158 @@ export default {
     atom.position.copy(atomHome);
     root.add(atom);
 
+    /* ⑥ the CPhO trophy, standing on the rock ledge left of him (under his pointing arm, clear of the
+       rain curtain's middle): a toon-gold cup with two handles on a knob stem and a foot, a dark wood
+       plinth with an engraved gold plate; a glint band sweeps across the gold */
+    const trophyGlint = { value: -99 };
+    const glintGold = (color) => {
+      const m = k.toon(color);
+      m.onBeforeCompile = (sh) => {
+        sh.uniforms.uTG = trophyGlint;
+        sh.vertexShader = 'varying vec3 vTGw;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vTGw = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        sh.fragmentShader = 'uniform float uTG; varying vec3 vTGw;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
+          { float d = vTGw.x + 0.75 * vTGw.y - uTG;
+            gl_FragColor.rgb += vec3(1.0, 0.97, 0.86) * (smoothstep(2.6, 0.0, abs(d)) * 0.85 + smoothstep(0.9, 0.0, abs(d - 4.2)) * 0.6); }`);
+      };
+      own.push(m);
+      return m;
+    };
+    const tGold = glintGold(0xf4b52e), tGoldD = glintGold(0xd08a1c);
+    const trophy = new THREE.Group();              // origin = the middle of the plinth's bottom (on the ledge)
+    const trophyTilt = new THREE.Group();           // leans the top toward us so the cup's mouth shows
+    const trophySpin = new THREE.Group();           // spins in, then sways a little
+    trophy.add(trophyTilt);
+    trophyTilt.add(trophySpin);
+    trophyTilt.rotation.x = 0.3;
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(18, 6.4, 9), k.toon(0x4b2a18));
+    plinth.position.y = 3.2;
+    k.ink(plinth, 1.3);
+    const plateTex = k.canvasTexture(192, 64, (g) => {
+      g.fillStyle = '#6a3c0a'; g.fillRect(0, 0, 192, 64);
+      g.fillStyle = '#f6cd5c'; g.fillRect(5, 5, 182, 54);
+      g.fillStyle = '#fde9a0'; g.fillRect(5, 5, 182, 10);
+      g.strokeStyle = '#8a5410'; g.lineWidth = 3; g.strokeRect(13, 12, 166, 40);
+      g.font = '900 34px "Arial Black", Impact, sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = '#fff6cc'; g.fillText('CPhO', 97, 35);
+      g.fillStyle = '#5a320a'; g.fillText('CPhO', 96, 33);
+    });
+    const tPlate = new THREE.Mesh(new THREE.PlaneGeometry(13, 4.3), new THREE.MeshBasicMaterial({ map: plateTex }));
+    tPlate.position.set(0, 3.3, 4.56);
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 6.4, 2.4, 28), tGoldD);
+    foot.position.y = 6.4 + 1.2;
+    k.ink(foot, 1.1);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.7, 5, 14), tGoldD);
+    stem.position.y = 8.8 + 2.4;
+    k.ink(stem, 0.9);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(2.7, 18, 12), tGold);
+    knob.scale.set(1, 0.72, 1);
+    knob.position.y = 12.4;
+    k.ink(knob, 1.0);
+    const cupProf = [[0.01, 13.6], [2.4, 14.2], [4.9, 15.8], [7.0, 18.4], [8.5, 21.8], [9.4, 25.6], [9.8, 29.2], [9.9, 31]].map(([r, y]) => new THREE.Vector2(r, y));
+    const cup = new THREE.Mesh(new THREE.LatheGeometry(cupProf, 40), tGold);
+    k.ink(cup, 1.5);
+    const mouth = new THREE.Mesh(new THREE.CircleGeometry(9.2, 40), k.toon(0x8a5410));
+    mouth.rotation.x = -Math.PI / 2;
+    mouth.position.y = 30.4;
+    const lipT = new THREE.Mesh(new THREE.TorusGeometry(9.9, 0.95, 8, 44), tGold);
+    lipT.rotation.x = Math.PI / 2;
+    lipT.position.y = 31;
+    k.ink(lipT, 1.0);
+    const handles = [1, -1].map((sx) => {
+      const arc = Math.PI * 1.12;
+      const hm = new THREE.Mesh(new THREE.TorusGeometry(5.1, 1.2, 8, 22, arc), tGold);
+      hm.rotation.z = sx > 0 ? -arc / 2 : Math.PI - arc / 2;
+      hm.position.set(sx * 8.7, 23.6, 0);
+      k.ink(hm, 1.1);
+      return hm;
+    });
+    const starTex = k.canvasTexture(64, 64, (g) => {
+      g.fillStyle = '#e39a22'; g.beginPath(); g.arc(32, 32, 31, 0, TAU); g.fill();
+      g.fillStyle = '#ffe07a'; g.beginPath(); g.arc(32, 32, 26, 0, TAU); g.fill();
+      const st = (x, y, r, col) => { g.fillStyle = col; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.42 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); };
+      st(33.5, 34.5, 19, '#7a4608'); st(32, 33, 19, '#b8700f');
+    });
+    const emblem = new THREE.Mesh(new THREE.CircleGeometry(3.9, 28), new THREE.MeshBasicMaterial({ map: starTex, transparent: true }));
+    emblem.position.set(0, 23.2, 9.05);
+    emblem.rotation.x = -0.12;
+    trophySpin.add(plinth, tPlate, foot, stem, knob, cup, mouth, lipT, ...handles, emblem);
+    // a fixed white highlight streak down the cup's lit side (it stays put while the cup sways)
+    const streak = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 8.5), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.92, depthWrite: false }));
+    streak.position.set(-5.3, 24, 9.6);
+    streak.rotation.z = 0.12;
+    streak.renderOrder = 3;
+    const streak2 = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 3.4), streak.material);
+    streak2.position.set(-3.3, 19.6, 9.9);
+    streak2.rotation.z = 0.3;
+    streak2.renderOrder = 3;
+    trophyTilt.add(streak, streak2);
+    const shadowT = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshBasicMaterial({ color: 0x0c0a08, transparent: true, opacity: 0.4, depthWrite: false }));
+    shadowT.scale.set(13, 2.6, 1);
+    shadowT.position.set(1.5, 0.2, -3);
+    trophy.add(shadowT);
+    const TROPHY_UV = [66, 373], TROPHY_Z = -12;
+    const trophyHome = k.at(TROPHY_UV[0], TROPHY_UV[1], TROPHY_Z);
+    trophy.position.copy(trophyHome);
+    root.add(trophy);
+
+    /* ⑦ quantum tunnelling: once per beat he flickers out (the whole cut-out person, and everything he
+       wears or holds) and back. The person layer is swapped for this copy of it while it happens: glitch
+       frames (sideways-shifted scanline slices, an RGB split), then a faint probability cloud where he
+       was (a cyan outline of his silhouette over halftone dots), then he pops back */
+    const ghostMat = new THREE.ShaderMaterial({
+      uniforms: { uMap: { value: k.layers.person.material.map }, uBody: { value: 1 }, uGlitch: { value: 0 }, uGhost: { value: 0 }, uSeed: { value: 1 }, uT: { value: 0 } },
+      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `uniform sampler2D uMap; uniform float uBody, uGlitch, uGhost, uSeed, uT; varying vec2 vUv;
+        float h(float n) { return fract(sin(n * 91.7 + uSeed * 17.3) * 43758.5453); }
+        void main() {
+          vec2 uv = vUv;
+          vec4 c0 = texture2D(uMap, uv);
+          if (uBody > 0.0) {
+            // slices of ~5 photo px, a third of them shifted sideways; an RGB split; scan lines
+            float band = floor(uv.y * 96.0);
+            float sh = (h(band) - 0.5) * 2.0 * step(0.62, h(band + 3.1)) * uGlitch * 0.055;
+            vec2 q = vec2(uv.x + sh, uv.y);
+            float ca = uGlitch * 0.011;
+            vec4 c = texture2D(uMap, q), cr = texture2D(uMap, q + vec2(ca, 0.0)), cb = texture2D(uMap, q - vec2(ca, 0.0));
+            vec3 col = vec3(cr.r, c.g, cb.b);
+            float a = max(c.a, max(cr.a, cb.a) * uGlitch);
+            float sl = step(0.5, fract(uv.y * 128.0));
+            col = mix(col, col * vec3(0.55, 1.05, 1.2) + vec3(0.0, 0.04, 0.06), uGlitch * sl * 0.6);
+            gl_FragColor = vec4(col, a * uBody);
+          } else {
+            // the probability cloud: his outline in cyan (ink round it) over halftone dots
+            float mx = 0.0, mn = 1.0, mo = 0.0;
+            for (int i = 0; i < 8; i++) {
+              float an = float(i) * 0.785398;
+              vec2 dv = vec2(cos(an), sin(an));
+              float s = texture2D(uMap, uv + dv * 0.0075).a;
+              mx = max(mx, s); mn = min(mn, s);
+              mo = max(mo, texture2D(uMap, uv + dv * 0.016).a);
+            }
+            float edge = smoothstep(0.2, 0.55, mx - mn);
+            float halo = smoothstep(0.1, 0.5, mo) * (1.0 - smoothstep(0.3, 0.7, c0.a));
+            vec2 g = mat2(0.7071, -0.7071, 0.7071, 0.7071) * (uv * 200.0);
+            vec2 id = floor(g / 4.2);
+            vec2 cell = fract(g / 4.2) - 0.5;
+            float r = 0.34 * c0.a * (0.55 + 0.45 * h(id.x * 3.7 + id.y * 11.3 + floor(uT * 24.0)));
+            float dots = 1.0 - smoothstep(r - 0.07, r + 0.07, length(cell));
+            float wave = 0.5 + 0.5 * sin(uv.y * 90.0 - uT * 30.0);
+            vec3 cyan = vec3(0.3, 0.9, 1.0);
+            float ca = max(edge, dots * 0.55 * (0.6 + 0.4 * wave) * c0.a);
+            vec3 col = mix(vec3(0.0086, 0.0080, 0.011), cyan, ca / max(ca + halo * 0.5 * (1.0 - edge), 1e-3));
+            gl_FragColor = vec4(col, uGhost * max(ca, halo * 0.5));
+          }
+          #include <colorspace_fragment>
+        }`,
+      transparent: true, depthWrite: false,
+    });
+    own.push(ghostMat);
+    const ghost = new THREE.Mesh(k.layers.person.geometry, ghostMat);
+    ghost.renderOrder = 10;
+    ghost.visible = false;
+    root.add(ghost);
+
     const tint = new THREE.Color();
     const tmp = new THREE.Vector3();
     const T0 = 0.28;                                     // the first turn of the hand = beat 0
@@ -403,6 +555,24 @@ export default {
       if (p < 0.72) return Math.PI * (1 + ease.inOut((p - 0.5) / 0.22));
       return 0;
     };
+    // quantum tunnelling, once per beat after the rain (BLINK .. BLINK + 0.56 s): glitch frame, gone,
+    // glitch frame, gone (the probability cloud) for 0.22 s, glitch frame, back with a ripple. Never
+    // during the exit (he is simply there again), so e = 1 is the photo.
+    const BLINK = 1.5;
+    const blinkAt = (t, e) => {
+      const ph = beatPh(t);
+      if (ph < 0 || e > 0) return null;
+      const b = ph - BLINK;
+      if (b < 0 || b >= 0.56) return null;
+      if (b < 0.05) return { b, body: 1, glitch: 1, seed: 1, jx: 1.8, props: true };
+      if (b < 0.09) return { b, body: 0, ghost: 0.5, seed: 1, jx: 0, props: false };
+      if (b < 0.14) return { b, body: 0.75, glitch: 1.2, seed: 2, jx: -2.4, props: true };
+      if (b < 0.36) return { b, body: 0, ghost: Math.min(1, 0.55 + (b - 0.14) * 8) * (1 - 0.45 * env(b, 0.3, 0.36)), seed: 3, jx: 0, props: false };
+      if (b < 0.41) return { b, body: 1, glitch: 0.8, seed: 4, jx: 1.4, props: true };
+      return { b, body: 1, glitch: 0, seed: 5, jx: 0, props: true, back: (b - 0.41) / 0.15 };
+    };
+    // the trophy pops up on the ledge early in the entrance; the shades drop onto his eyes last
+    const TR0 = 0.2, SH0 = 1.08;
 
     return {
       update(t, e) {
@@ -484,6 +654,32 @@ export default {
         nucleus.rotation.set(t * 0.7, t * 0.9, 0);
         const bl = t > 1.5 ? hump(ph, BLOCH, BLOCH + 0.15, BLOCH + 0.75) : 0;
         nucleus.scale.setScalar(1 + 0.25 * bl);
+
+        // the trophy pops up out of the ledge with a spin, lands with a glint; a slow sway, a glint per beat
+        const tp0 = presence(t, e, TR0, 0.34, ease.outBack, 0.35);
+        k.show(trophy, tp0);
+        trophySpin.rotation.y = -(1 - ease.out(env(t, TR0, TR0 + 0.46))) * TAU * 0.75 + 0.22 * Math.sin((t * TAU) / (BEAT * 2) + 0.6) * env(t, 0.7, 1.4);
+        trophy.getWorldPosition(tmp);
+        const tg0 = tmp.x + 0.75 * tmp.y;
+        const tgA = env(t, TR0 + 0.4, TR0 + 0.72), tgB = t > 2 ? env(ph, 3.15, 3.5) : 0;
+        trophyGlint.value = tgA > 0 && tgA < 1 ? tg0 - 14 + 48 * tgA : tgB > 0 && tgB < 1 ? tg0 - 14 + 48 * tgB : -999;
+
+        // quantum tunnelling: he (and all he wears or holds) blinks out and back
+        const bk = blinkAt(t, e);
+        k.layers.person.visible = !bk;
+        ghost.visible = !!bk;
+        if (bk) {
+          ghostMat.uniforms.uBody.value = bk.body;
+          ghostMat.uniforms.uGlitch.value = bk.glitch || 0;
+          ghostMat.uniforms.uGhost.value = bk.ghost || 0;
+          ghostMat.uniforms.uSeed.value = bk.seed;
+          ghostMat.uniforms.uT.value = t;
+          // the patches of him go (they would float), the props leave with him or jitter with the glitch
+          neck.visible = false; fingers.visible = false; hand.visible = false;
+          if (bk.back !== undefined) { k.layers.person.visible = true; ghost.visible = false; neck.visible = medal.visible; fingers.visible = wok.visible; hand.visible = true; }
+          if (!bk.props) { medal.visible = false; wok.visible = false; }
+          medal.position.x += bk.jx; wok.position.x += bk.jx;
+        } else hand.visible = true;
       },
 
       draw2d(q, t, e) {
@@ -572,8 +768,13 @@ export default {
           });
         }
 
+        // while he tunnels, what he holds goes with him (and jitters with the glitch frames)
+        const bk = blinkAt(t, e);
+        const held = !bk || bk.props;
+        const jx = bk ? bk.jx : 0;
+
         // steam off the wok: three wisps (white core, grey edge), a big puff after the toss
-        const ws = presence(t, e, 0.95, 0.5, ease.out, 0.3);
+        const ws = presence(t, e, 0.95, 0.5, ease.out, 0.3) * (held ? 1 : 0);
         const kick = t > 1.5 ? hump(ph, TOSS + 0.35, TOSS + 0.6, TOSS + 1.4) : 0;
         let steamTop = null;
         if (ws > 0.01) {
@@ -615,7 +816,7 @@ export default {
             const [lx, ly] = k.screenAt(398, 334, WOK_Z);
             const rise = (1 - Math.min(1, la)) * 5;
             q.push();
-            q.translate(lx, ly + rise);
+            q.translate(lx + jx, ly + rise);
             q.rotate(-0.1);
             q.textFont('"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Zen Hei", sans-serif');
             q.textStyle(q.BOLD);
@@ -702,6 +903,119 @@ export default {
           // medal twinkle as the glint leaves the disc
           const mt = hump(ph, 2.2, 2.3, 2.55) * fade;
           if (mt > 0.01) { discG.localToWorld(tmp.set(7, 7, 2)); root.worldToLocal(tmp); const [dx, dy] = k.toScreen(tmp); star4(dx, dy, 5.5 * mt, mt); }
+        }
+
+        // the trophy: pop lines where it lands on the ledge, a twinkle on the rim after each glint
+        if (trophy.visible) {
+          const land = hump(t, TR0 + 0.2, TR0 + 0.27, TR0 + 0.5) * fade;
+          const tw = Math.max(hump(t, TR0 + 0.6, TR0 + 0.7, TR0 + 0.92), t > 2 ? hump(ph, 3.4, 3.48, 3.6) : 0) * fade;
+          if (land > 0.02) {
+            trophy.getWorldPosition(tmp); root.worldToLocal(tmp);
+            const [tx, ty] = k.toScreen(tmp);
+            q.stroke(22, 21, 26, 240 * land); q.strokeWeight(1.7);
+            [-1, 1].forEach((sd) => [[10, 5], [35, 6.5], [60, 4.5]].forEach(([deg, len]) => {
+              const a = sd < 0 ? Math.PI + (deg * Math.PI) / 180 : -(deg * Math.PI) / 180;
+              const r0 = 12 + 3 * (1 - land), r1 = r0 + len * land;
+              q.line(tx + Math.cos(a) * r0, ty - 3 + Math.sin(a) * r0 * 0.8, tx + Math.cos(a) * r1, ty - 3 + Math.sin(a) * r1 * 0.8);
+            }));
+          }
+          if (tw > 0.02) {
+            trophyTilt.localToWorld(tmp.set(8.8, 31.4, 1)); root.worldToLocal(tmp);
+            const [gx, gy] = k.toScreen(tmp);
+            star4(gx, gy, 6 * tw, tw);
+          }
+        }
+
+        // the shades: comic black wayfarers dropped onto his real glasses (the lenses over his eyes
+        // u 239..268, v 167..178; the temple to his ear at 288,179), a white streak on each lens,
+        // a glint on landing and again when he comes back from tunnelling
+        const shIn = env(t, SH0, SH0 + 0.26);
+        const shOut = 1 - ease.in(clamp(e * 1.6 - 0.05));
+        if (shIn > 0 && shOut > 0.01 && held) {
+          const SC = [254, 172], SZ = 3;
+          const [sx, sy] = k.screenAt(SC[0], SC[1], SZ);
+          const [ux, uy] = k.screenAt(SC[0] + 20, SC[1], SZ), [wx, wy] = k.screenAt(SC[0], SC[1] + 20, SZ);
+          const eu = [(ux - sx) / 20, (uy - sy) / 20], ev = [(wx - sx) / 20, (wy - sy) / 20];
+          const drop = (1 - ease.outBounce(shIn)) * 46 + (1 - shOut) * 10;
+          const rot = (1 - ease.out(shIn)) * -0.5 - 0.03;
+          const cr = Math.cos(rot), sr = Math.sin(rot);
+          const M = (du, dv) => { const x = du * cr - dv * sr, y = du * sr + dv * cr; return [sx + x * eu[0] + y * ev[0] + jx, sy + x * eu[1] + y * ev[1] - drop]; };
+          const lensPts = (cx, cy, w, hT, hB) => {
+            const pts = [[cx - w / 2, cy - hT], [cx + w / 2, cy - hT]];
+            for (let i = 0; i <= 12; i++) { const a = (i / 12) * Math.PI; pts.push([cx + (w / 2) * (0.96 - 0.1 * Math.sin(a)) * Math.cos(a), cy + hB * Math.pow(Math.sin(a), 0.8)]); }
+            return pts;
+          };
+          const LF = lensPts(-10.2, 0, 16.6, 6.2, 7.4), LN = lensPts(10.6, -0.4, 17.6, 6.2, 8.0);
+          const addPath = (pts) => pts.forEach(([u, v], i) => { const [x, y] = M(u, v); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+          const lens = () => { c.beginPath(); addPath(LF); c.closePath(); addPath(LN); c.closePath(); };
+          const seg = (pts, w, col) => { c.beginPath(); addPath(pts); c.lineWidth = w; c.strokeStyle = col; c.stroke(); };
+          const al = shOut * Math.min(1, shIn * 8);
+          c.save();
+          c.globalAlpha = al;
+          c.lineJoin = 'round'; c.lineCap = 'round';
+          // the temple arm back to his ear, behind the lenses
+          seg([[19, -5], [27, 0.5], [34, 6]], 2.9, '#16151a');
+          seg([[19, -5], [27, 0.5], [34, 6]], 1.3, '#2a2c38');
+          // lenses: black with a cel-shaded blue sheen low down, ink rim
+          lens(); c.fillStyle = '#121319'; c.fill();
+          c.save(); lens(); c.clip();
+          c.beginPath(); addPath([[-24, 3.5], [24, -2.5], [24, 12], [-24, 12]]); c.closePath();
+          c.fillStyle = '#35405f'; c.fill();
+          c.beginPath(); addPath([[-24, 6.5], [24, 0.5], [24, 12], [-24, 12]]); c.closePath();
+          c.fillStyle = '#4b5b86'; c.fill();
+          // white highlight streaks (upper left of each lens)
+          [[-10.2, 0], [10.6, -0.4]].forEach(([lx0, ly0]) => {
+            c.beginPath(); addPath([[lx0 - 6.5, ly0 - 7], [lx0 - 3.2, ly0 - 7], [lx0 - 7.6, ly0 + 5], [lx0 - 10.9, ly0 + 5]]); c.closePath();
+            c.fillStyle = 'rgba(255,255,255,0.92)'; c.fill();
+            c.beginPath(); addPath([[lx0 - 1.6, ly0 - 7], [lx0 - 0.2, ly0 - 7], [lx0 - 4.4, ly0 + 5], [lx0 - 5.8, ly0 + 5]]); c.closePath();
+            c.fillStyle = 'rgba(255,255,255,0.75)'; c.fill();
+          });
+          // the glint: a bright band sweeping across both lenses
+          const gA = env(t, SH0 + 0.24, SH0 + 0.46), gB = bk && bk.back !== undefined ? bk.back : 0;
+          const g = gA > 0 && gA < 1 ? gA : gB > 0 && gB < 1 ? gB : -1;
+          if (g >= 0) {
+            const gx = -30 + 62 * ease.inOut(g);
+            c.beginPath(); addPath([[gx - 2.5, -9], [gx + 4.5, -9], [gx - 0.5, 10], [gx - 7.5, 10]]); c.closePath();
+            c.fillStyle = 'rgba(255,255,250,0.95)'; c.fill();
+          }
+          c.restore();
+          lens(); c.lineWidth = 1.35; c.strokeStyle = '#16151a'; c.stroke();
+          // the thick brow bar and the bridge
+          seg([[-19.5, -6.6], [-1.5, -6.4], [1.5, -6.6], [20.2, -7.2]], 2.6, '#16151a');
+          seg([[-18.4, -7.3], [-2, -7.1]], 0.7, 'rgba(150,158,182,0.9)');
+          seg([[2.2, -7.3], [19, -7.9]], 0.7, 'rgba(150,158,182,0.9)');
+          seg([[-2, -3.8], [0.1, -4.8], [2.2, -4]], 1.6, '#16151a');
+          c.restore();
+          const tw = hump(t, SH0 + 0.38, SH0 + 0.46, SH0 + 0.66) + (gB > 0 ? hump(gB, 0.5, 0.7, 1) : 0);
+          if (tw > 0.02) { const [x, y] = M(19.5, -8.5); star4(x, y, 6.5 * tw * al, tw * al); }
+        }
+
+        // tunnelling: a faint ψ in the probability cloud where he was; rings when he pops back
+        if (bk && !bk.props && bk.ghost > 0.6) {
+          const [px, py] = k.screenAt(328, 292, 0);
+          const a = (bk.ghost - 0.6) / 0.4 * (0.85 + 0.15 * Math.sin(t * 70));
+          q.push();
+          q.translate(px, py);
+          q.textFont('Georgia, "Times New Roman", serif');
+          q.textStyle(q.BOLDITALIC ?? 'italic bold');
+          q.textSize(34);
+          q.textAlign(q.CENTER, q.CENTER);
+          q.fill(22, 21, 26, 150 * a); q.stroke(22, 21, 26, 150 * a); q.strokeWeight(4);
+          q.text('ψ', 0, 0);
+          q.noStroke(); q.fill(150, 238, 255, 215 * a);
+          q.text('ψ', 0, 0);
+          q.pop();
+        }
+        if (bk && bk.back !== undefined) {
+          const [px, py] = k.screenAt(322, 300, 0);
+          [0, 0.3].forEach((lag) => {
+            const p = clamp((bk.back - lag) / (1 - lag));
+            if (p <= 0 || p >= 1) return;
+            const r = 12 + 26 * ease.out(p), a = 1 - p;
+            q.noFill();
+            q.stroke(22, 21, 26, 200 * a); q.strokeWeight(2.8); q.ellipse(px, py, r * 2, r * 2.5);
+            q.stroke(150, 238, 255, 255 * a); q.strokeWeight(1.3); q.ellipse(px, py, r * 2, r * 2.5);
+          });
         }
       },
 
