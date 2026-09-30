@@ -37,6 +37,8 @@ export default {
       for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * f + 0.5, (uv.getY(i) - 0.5) * f + 0.5);
       return geo;
     };
+    // the plate sits deeper than the stencil disc, so off-axis perspective shifts it ~2 px: clip it too
+    k.clip(k.layers.plate.material);
 
     // ── ① the interposer: silicon base + gold traces, revealed from the die outward ──────────
     const siTex = k.canvasTexture(512, 512, (g) => {
