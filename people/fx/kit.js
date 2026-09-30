@@ -220,6 +220,12 @@ class Avatar {
       loadTexture(`${STATIC}fx/${this.name}-cut.webp`),
       loadQ5(),
     ]);
+    // the 512 px photo is drawn at ~400 device px: plain linear sampling keeps it as crisp as the <img>
+    // (mipmaps soften busy detail like foliage, which read as a blur when the effect switched on)
+    for (const t of [photoTex, plateTex, cutTex]) {
+      t.generateMipmaps = false;
+      t.minFilter = THREE.LinearFilter;
+    }
     const W = document.documentElement.clientWidth || innerWidth;
     const H = document.documentElement.clientHeight || innerHeight;
     const ox = this.wrap.offsetLeft, oy = this.wrap.offsetTop;      // layout box, not the hover transform
