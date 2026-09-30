@@ -1,0 +1,738 @@
+/* ==========================================================================
+   Picasso Lab Guandan: design-system foundation.
+   Tokens, fonts, base, app shell, buttons, avatar, card component, toast,
+   popup, z-index scale, reduced motion.
+   The lobby/room top bar (.topbar) is styled in guandan-lobby.css.
+   Screen layouts live in guandan-lobby.css / guandan-table.css (loaded after
+   this file); they override the defaults here through the documented vars.
+   Screen contract: body[data-screen="lobby"|"room"|"table"] is set by render().
+   ========================================================================== */
+
+:root {
+    /* felt (腾讯掼蛋 / 大掼蛋 2026 in-game, sampled) */
+    --felt-c: #069a8a; --felt-1: #049484; --felt-2: #048c7c; --felt-3: #047c74; --felt-4: #046c64; --felt-5: #045454;
+    --felt-rim: #14948c; --floor: #5a4034; --floor-2: #3e2b22;
+    /* chrome (lobby / room) */
+    --navy-0: #1b2750; --navy-1: #243464; --navy-2: #34447c; --navy-3: #4c5c9c;
+    --panel: #f7f9fd; --panel-2: #ecf2fc; --panel-line: #d6e0f0;
+    --ink: #1c2f66; --ink-2: #44507a; --ink-3: #8290b4;
+    --tab-sel: #c4dcfc; --radio-on: #fcd45c; --radio-off: #b4c4dc;
+    /* actions */
+    --pri: linear-gradient(180deg, #fce541 0%, #fec93b 38%, #fcaf2f 72%, #fa9f29 100%);
+    --pri-edge: #c9700f; --pri-stroke: #b85f07; --pri-inset: rgba(170, 80, 0, .35);
+    --sec: linear-gradient(180deg, #8aebfe 0%, #72bfff 30%, #739cfb 70%, #7385f9 100%);
+    --sec-edge: #4a5bc9; --sec-stroke: #3b53b8; --sec-inset: rgba(40, 50, 160, .3);
+    --util: #6484f4; --util-bg: linear-gradient(180deg, #8aa2ff 0%, #6f8cf6 55%, #6484f4 100%);
+    --util-edge: #4a5bc9;
+    --chat: #18c474; --ok: linear-gradient(180deg, #7ff0a8 0%, #5fe08e 40%, #2fb865 100%);
+    --ok-edge: #1f8c49; --ok-stroke: #17703a;
+    --danger: linear-gradient(180deg, #ffa39a 0%, #f06a5e 42%, #d8433c 100%);
+    --danger-edge: #9e2a24; --danger-stroke: #8a221d;
+    --off: linear-gradient(180deg, #d5d9e2 0%, #c0c6d2 45%, #9aa3b3 100%);
+    --off-edge: #6b7384; --off-stroke: #6b7384;
+    /* identity */
+    --opp: #e05454; --opp-d: #b43c3c; --mate: #1cb4e4; --mate-d: #1587b8;
+    --warm-plate: linear-gradient(180deg, #ffcf5a, #f49a1c); --cool-plate: linear-gradient(180deg, #8fd0ff, #4c86f0);
+    --gold-1: #fff6c8; --gold-2: #ffd66b; --gold-3: #f4a92a; --gold-4: #b8660c;
+    --lvl-us: #e47424; --lvl-them: #8d949c;
+    --report-bg: linear-gradient(180deg, #fff3a0, #fcd444); --report-ink: #7a2a00; --report-num: #e0201a;
+    --pass-fill: #fff4c8; --pass-stroke: #7a4a1c;
+    /* cards */
+    --card-face: linear-gradient(180deg, #fff 0%, #f6f6f6 55%, #e7e7e7 100%);
+    --card-edge: #b8b8b8; --card-red: #c01c1c; --card-black: #141414;
+    --card-back: #3f63b5; --card-back-2: #34529a;
+    --ji: #4fbf63; --wild: #e8772a; --wild-heart: #ffc21a; --wild-heart-edge: #e07b00;
+    --card-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 1px 1px rgba(0, 0, 0, .18), 0 2px 5px rgba(0, 0, 0, .18);
+
+    /* fonts: Nunito and Georgia are intentionally gone */
+    --font-ui: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --font-display: "Smiley Sans Oblique", "ZCOOL QingKe HuangYou", "Noto Sans SC", "PingFang SC", sans-serif;
+    --font-rank: "Noto Serif Display", "Noto Serif", serif;
+    --font-num: "Barlow Condensed", "DIN Alternate", "Arial Narrow", sans-serif;
+
+    /* type scale: px at 844x390, growing ~30% by 1440x900 */
+    --fs-10: clamp(10px, 2.564vmin, 13px);
+    --fs-11: clamp(11px, 2.821vmin, 14px);
+    --fs-13: clamp(13px, 3.333vmin, 16px);
+    --fs-15: clamp(15px, 3.846vmin, 19px);
+    --fs-17: clamp(17px, 4.359vmin, 22px);
+    --fs-22: clamp(22px, 5.641vmin, 28px);
+    --fs-28: clamp(28px, 7.179vmin, 36px);
+    --fs-40: clamp(40px, 10.26vmin, 52px);
+    --fs-52: clamp(52px, 13.33vmin, 68px);
+
+    /* radii (card radius = 7.5% of its width, see .card) */
+    --r-tile: 4px; --r-panel: 8px; --r-pill: 999px;
+
+    /* page z-layers. #stage-mount sits at --z-stage, everything in .app-shell at --z-table;
+       the in-shell layers below only compete inside .app-shell's stacking context. */
+    --z-stage: 0; --z-table: 10; --z-hand: 20; --z-actions: 30; --z-topbar: 35; --z-fx: 40;
+    --z-result: 50; --z-modal: 60; --z-toast: 70; --z-transition: 80;
+
+    /* motion */
+    --ease-out: cubic-bezier(.2, .8, .2, 1);
+    --ease-back: cubic-bezier(.34, 1.4, .64, 1);
+    --dur-fast: 120ms; --dur-ui: 220ms; --dur-slow: 350ms;
+}
+
+/* ---------- base / reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    background: var(--felt-1);
+}
+body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--felt-1);
+    color: #fff;
+    font: 500 var(--fs-13)/1.45 var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    /* a game, not a page: nothing selects, drags out or offers the long-press callout (only the text fields below) */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overflow-x: hidden;
+    /* Opacity only: a transform here would make <body> the containing block of every
+       position:fixed overlay (toast, modal, transition) and mis-center them. */
+    animation: gd-body-in 280ms var(--ease-out) both;
+}
+@keyframes gd-body-in { from { opacity: 0; } }
+body:focus { outline: none; }
+button, input, select, textarea { font: inherit; }
+input, textarea { user-select: text; -webkit-user-select: text; }
+button { color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button:disabled { cursor: not-allowed; }
+img { max-width: 100%; -webkit-user-drag: none; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 2px; }
+.sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---------- app shell ---------- */
+#stage-mount {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-stage);
+    pointer-events: none;
+}
+#stage-mount:empty { display: none; }
+.gd-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.app-shell {
+    position: relative;
+    z-index: var(--z-table);
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+#root { position: relative; min-height: 100vh; min-height: 100dvh; }
+/* ---------- buttons ----------
+   .btn = primary orange (出牌). Variants: .secondary/.pass (blue), .ok (green),
+   .danger, .ghost. Size through --btn-h / --btn-fs / --btn-px / --btn-ls
+   or the .sm / .lg presets; 2-char action labels want .spaced (letter-spacing .35em). */
+.btn {
+    --btn-h: 40px; --btn-fs: 17px; --btn-px: 18px; --btn-minw: 96px; --btn-ls: .12em;
+    --btn-bg: var(--pri); --btn-edge: var(--pri-edge); --btn-stroke: var(--pri-stroke); --btn-inset: var(--pri-inset);
+    position: relative;
+    display: inline-flex; align-items: center; justify-content: center; gap: .3em;
+    height: var(--btn-h);
+    min-width: var(--btn-minw);
+    padding: 0 var(--btn-px) 0 calc(var(--btn-px) + var(--btn-ls));
+    border: 0;
+    border-radius: calc(var(--btn-h) / 2);
+    background: var(--btn-bg);
+    color: #fff;
+    font: 900 var(--btn-fs)/1 var(--font-ui);
+    letter-spacing: var(--btn-ls);
+    white-space: nowrap;
+    -webkit-text-stroke: calc(var(--btn-fs) * .18) var(--btn-stroke);
+    paint-order: stroke fill;
+    box-shadow:
+        0 2px 0 rgba(255, 255, 255, .6) inset,
+        0 -3px 0 var(--btn-inset) inset,
+        0 3px 0 var(--btn-edge),
+        0 5px 8px rgba(0, 0, 0, .3);
+    user-select: none;
+    -webkit-user-select: none;
+    translate: 0 0;
+    transition: translate var(--dur-fast) var(--ease-out);
+}
+.btn::after { /* gloss band across the top 38% */
+    content: "";
+    position: absolute;
+    left: 14%; right: 14%; top: 3px;
+    height: 38%;
+    border-radius: var(--r-pill);
+    background: linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, 0));
+    pointer-events: none;
+}
+.btn::before { /* hover/press sheen, opacity-only */
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: rgba(255, 255, 255, .14);
+    opacity: 0;
+    transition: opacity var(--dur-fast) ease;
+    pointer-events: none;
+}
+.btn > * { position: relative; z-index: 1; }
+.btn:active:not(:disabled) {
+    translate: 0 2px;
+    box-shadow:
+        0 2px 0 rgba(255, 255, 255, .6) inset,
+        0 -3px 0 var(--btn-inset) inset,
+        0 1px 0 var(--btn-edge),
+        0 2px 4px rgba(0, 0, 0, .3);
+}
+.btn:active:not(:disabled)::before { opacity: 1; background: rgba(0, 0, 0, .06); }
+.btn.primary, .btn.play { --btn-bg: var(--pri); --btn-edge: var(--pri-edge); --btn-stroke: var(--pri-stroke); --btn-inset: var(--pri-inset); }
+.btn.secondary, .btn.pass { --btn-bg: var(--sec); --btn-edge: var(--sec-edge); --btn-stroke: var(--sec-stroke); --btn-inset: var(--sec-inset); }
+.btn.ok { --btn-bg: var(--ok); --btn-edge: var(--ok-edge); --btn-stroke: var(--ok-stroke); --btn-inset: rgba(0, 90, 40, .28); }
+.btn.danger { --btn-bg: var(--danger); --btn-edge: var(--danger-edge); --btn-stroke: var(--danger-stroke); --btn-inset: rgba(120, 10, 10, .28); }
+.btn.ghost {
+    --btn-bg: rgba(0, 0, 0, .28);
+    -webkit-text-stroke: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22);
+}
+.btn.ghost::after { display: none; }
+.btn:disabled, .btn.is-disabled {
+    --btn-bg: var(--off); --btn-edge: var(--off-edge); --btn-stroke: var(--off-stroke); --btn-inset: rgba(60, 66, 80, .25);
+    color: #f4f6fa;
+}
+.btn.ghost:disabled { --btn-bg: rgba(0, 0, 0, .18); color: rgba(255, 255, 255, .45); }
+.btn.sm { --btn-h: 28px; --btn-fs: 13px; --btn-px: 12px; --btn-minw: 0px; }
+.btn.lg { --btn-h: 48px; --btn-fs: 20px; --btn-px: 28px; --btn-minw: 140px; }
+.btn.spaced { --btn-ls: .35em; }
+@media (hover: hover) {
+    .btn:hover:not(:disabled)::before { opacity: 1; }
+}
+
+/* ---------- avatar ----------
+   Circular photo, 2px identity ring, pill label overlapping the bottom edge.
+   Nothing is ever drawn outside the circle except that label (standing rule). */
+.gd-avatar {
+    --av-size: 46px; --ring: var(--mate); --ring-d: var(--mate-d);
+    position: relative;
+    flex: none;
+    width: var(--av-size); height: var(--av-size);
+    border: 2px solid var(--ring);
+    border-radius: 50%;
+    background: #e9eef5;
+}
+.gd-avatar.is-opp { --ring: var(--opp); --ring-d: var(--opp-d); }
+.gd-avatar.is-plain { --ring: #fff; --ring-d: var(--ink-2); }
+.gd-avatar > img {
+    display: block;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.gd-avatar-tag {
+    position: absolute;
+    left: 50%; bottom: -7px;
+    translate: -50% 0;
+    height: 14px;
+    padding: 0 6px;
+    border-radius: 7px;
+    background: var(--ring-d);
+    color: #fff;
+    font: 700 10px/14px var(--font-ui);
+    white-space: nowrap;
+}
+/* Default faces (defaultFaceHTML) fill the circle: a guest's silhouette on periwinkle, an AI's
+   robot on navy with its seat (南/西/北/东) in gold on the screen. */
+.gd-face { display: block; width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(180deg, #b7c5f3, #7086d4); fill: #fff; }
+.gd-face.is-bot { background: linear-gradient(180deg, #5367b8, #28346f); }
+.gd-face-screen { fill: #28346f; }
+.gd-face text { fill: var(--gold-2); font: 900 27px var(--font-ui); }
+
+/* ---------- card component ----------
+   Markup (cardHTML): div.card[.red|.black][.small][.back][.wild][.level-card][.has-portrait]
+   [.joker-card.red-joker|.black-joker][.selected] containing .gd-ix (b.gd-rank + svg.gd-suit),
+   svg.gd-pip, optional .gd-portrait / .gd-ji / .gd-wild-tag / .gd-joker-*.
+   Contexts size cards from their container, never by restyling .card:
+     --card-w            normal cards (default 64px); height = width / .74
+     --card-w-small      .small cards (played/tribute/preview; default 79% of --card-w)
+   Index layout: suit beside the rank by default (hand columns); suit under the rank on
+   .small cards and on every card inside a .card-ix-v container (e.g. a 横排 overlapped row).
+     --card-sel-lift     translate-y of .selected (default 0; row-mode hands set ~ -18% h)
+     --card-sel-tint / --card-sel-ring   selected overlay (column mode blue tint + 2px ring)
+     --card-hover-lift   pointer-hover lift, only under (hover:hover) */
+.card {
+    --cw: var(--card-w, 64px);
+    --cc: var(--card-black);
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    flex: none;
+    width: var(--cw);
+    height: calc(var(--cw) / .74);
+    border: 1px solid var(--card-edge);
+    border-radius: calc(var(--cw) * .075);
+    background: var(--card-face);
+    box-shadow: var(--card-shadow);
+    color: var(--cc);
+    font-family: var(--font-ui);
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    translate: 0 0;
+    transition: translate var(--dur-fast) var(--ease-out);
+}
+.card.small { --cw: var(--card-w-small, calc(var(--card-w, 64px) * .79)); }
+.card.red { --cc: var(--card-red); }
+.card[data-card-id] { cursor: pointer; }
+.card svg { display: block; fill: currentColor; overflow: visible; }
+
+/* The row index hugs the top edge (cap line at ~5% of the card height, as Tencent's) so a stacked
+   column's 35% strips show the whole glyph, Q's tail included. */
+.gd-ix {
+    position: absolute;
+    left: 6.5%; top: calc(var(--cw) * -.012);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: calc(var(--cw) * .015);
+    pointer-events: none;
+}
+.gd-rank {
+    display: block;
+    font: 900 calc(var(--cw) * .44)/1 var(--font-rank);
+    font-stretch: 62.5%;
+    letter-spacing: -.04em;
+}
+.gd-rank.is-10 { letter-spacing: -.1em; margin-left: -.03em; }
+/* The condensed serif "J" hooks ~.24em below the baseline, where the next card of a stacked
+   column covers it; squash it from the cap line so the hook sits on the baseline (as Tencent's). */
+.gd-rank.is-j, .rank-j { scale: 1 .77; transform-origin: 50% 15%; }
+.rank-j { display: inline-block; line-height: 1; font-style: normal; }
+.gd-suit { width: calc(var(--cw) * .25); height: calc(var(--cw) * .25); margin-top: calc(var(--cw) * .02); }
+.card.small .gd-ix, .card-ix-v .card .gd-ix {
+    left: 4%; top: 4%;
+    width: calc(var(--cw) * .32);
+    flex-direction: column;
+    gap: calc(var(--cw) * .025);
+}
+.card.small .gd-suit, .card-ix-v .card .gd-suit { width: calc(var(--cw) * .26); height: calc(var(--cw) * .26); margin-top: 0; }
+.gd-pip {
+    position: absolute;
+    right: 7%; bottom: 5%;
+    width: calc(var(--cw) * .42);
+    height: calc(var(--cw) * .42);
+    pointer-events: none;
+}
+
+/* 级牌: green corner triangle, white 级 */
+.gd-ji {
+    position: absolute;
+    top: -1px; right: -1px;
+    width: calc(var(--cw) * .4); height: calc(var(--cw) * .4);
+    border-top-right-radius: calc(var(--cw) * .075);
+    background: linear-gradient(225deg, var(--ji) 50%, transparent 50.5%);
+    color: #fff;
+    font: 900 calc(var(--cw) * .17)/1 var(--font-ui);
+    text-align: right;
+    padding: calc(var(--cw) * .035) calc(var(--cw) * .04) 0 0;
+    pointer-events: none;
+}
+/* 逢人配: gold heart in the index + orange vertical tag */
+.card.wild .gd-ix .gd-suit { fill: var(--wild-heart); stroke: var(--wild-heart-edge); stroke-width: 6px; paint-order: stroke fill; }
+.gd-wild-tag {
+    position: absolute;
+    left: 6.5%; bottom: 5%;
+    width: calc(var(--cw) * .2);
+    padding: calc(var(--cw) * .025) 0;
+    border-radius: calc(var(--cw) * .03);
+    background: var(--wild);
+    color: #fff;
+    font: 800 calc(var(--cw) * .135)/1.08 var(--font-ui);
+    text-align: center;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: .02em;
+    pointer-events: none;
+}
+.card.small .gd-wild-tag, .card-ix-v .card .gd-wild-tag { bottom: auto; top: calc(var(--cw) * .8); left: calc(var(--cw) * .1); }
+
+/* J/Q/K/A labmate portrait: lower-left body, thin suit-colored frame. Its top edge stays below
+   the index row including the long descender of the condensed serif "J". */
+.gd-portrait {
+    position: absolute;
+    left: 7%; bottom: 5.5%;
+    width: 55%;
+    height: calc(var(--cw) * .62);
+    overflow: hidden;
+    border: max(1px, calc(var(--cw) * .018)) solid currentColor;
+    border-radius: calc(var(--cw) * .05);
+    background: #eef1f6;
+    pointer-events: none;
+}
+.gd-portrait img { /* sources are circle crops: zoom until the frame sits inside the circle */
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 178%; max-width: none; height: auto;
+    translate: -50% -47%;
+}
+.gd-portrait-initials {
+    position: absolute; inset: 0;
+    display: none; place-items: center;
+    font: 900 calc(var(--cw) * .2)/1 var(--font-ui);
+    font-style: normal;
+}
+.gd-portrait.art-failed img { display: none; }
+.gd-portrait.art-failed .gd-portrait-initials { display: grid; }
+.card.has-portrait .gd-pip { width: calc(var(--cw) * .3); height: calc(var(--cw) * .3); right: 6.5%; }
+.card.has-portrait.wild .gd-portrait { left: 30%; width: 38%; }
+.card.small.has-portrait .gd-portrait { left: auto; right: 6%; bottom: 5.5%; width: 46%; height: calc(var(--cw) * .66); }
+/* overlapped rows only show each card's left strip: keep the portrait under the index there */
+.card-ix-v .card.has-portrait .gd-portrait { left: 6%; bottom: 5%; width: 38%; height: calc(var(--cw) * .5); }
+.card-ix-v .card.has-portrait.wild .gd-portrait { display: none; }
+.card.small.has-portrait .gd-pip, .card-ix-v .card.has-portrait .gd-pip { display: none; }
+
+/* Jokers: vertical JOKER + the joker figure; red = 大王, black = 小王 */
+.card.joker-card { --cc: var(--card-black); }
+.card.joker-card.red-joker { --cc: var(--card-red); }
+.gd-joker-word {
+    position: absolute;
+    left: 6%; top: 4%;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font: 800 calc(var(--cw) * .24)/1 var(--font-num);
+    letter-spacing: -.14em;
+    pointer-events: none;
+}
+.gd-joker-art {
+    position: absolute;
+    right: 4%; bottom: 5%;
+    width: 74%; height: 78%;
+    pointer-events: none;
+}
+.gd-joker-art .joker-svg { width: 100%; height: 100%; }
+.joker-svg .joker-cape, .joker-svg .joker-hat { fill: currentColor; }
+.joker-svg .joker-dot, .joker-svg .joker-star { fill: var(--gold-3); }
+.joker-svg-black .joker-dot, .joker-svg-black .joker-star { fill: #9aa0a8; }
+.joker-svg .joker-face { fill: #fff8e8; stroke: currentColor; stroke-width: 5; }
+.joker-svg .joker-smile, .joker-svg .joker-eye { fill: none; stroke: currentColor; stroke-width: 6; stroke-linecap: round; }
+.card.small .gd-joker-word { font-size: calc(var(--cw) * .22); }
+.card.small .gd-joker-art, .card-ix-v .card .gd-joker-art { width: 50%; height: 62%; }
+
+/* Back: blue field inside a white border, lattice, original "P" emblem.
+   .gd-back gives any element (deal flights, previews) the same look; set --cw on it. */
+.card.back, .gd-back {
+    --cw: var(--card-w, 64px);
+    background: #fff;
+    overflow: hidden;
+}
+.gd-back { position: relative; border-radius: calc(var(--cw) * .075); box-shadow: var(--card-shadow); }
+.card.back.small { --cw: var(--card-w-small, calc(var(--card-w, 64px) * .79)); }
+.card.back::before, .gd-back::before {
+    content: "";
+    position: absolute;
+    inset: calc(var(--cw) * .06);
+    border-radius: calc(var(--cw) * .045);
+    background:
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, .13) 0 1px, transparent 1px calc(var(--cw) * .09)),
+        repeating-linear-gradient(-45deg, rgba(255, 255, 255, .13) 0 1px, transparent 1px calc(var(--cw) * .09)),
+        radial-gradient(120% 90% at 50% 40%, #5a7fd2 0%, var(--card-back) 55%, var(--card-back-2) 100%);
+    box-shadow: inset 0 0 0 max(1px, calc(var(--cw) * .018)) rgba(255, 255, 255, .5);
+}
+.gd-back-emblem {
+    position: absolute;
+    left: 50%; top: 50%;
+    translate: -50% -50%;
+    width: calc(var(--cw) * .44); height: calc(var(--cw) * .44);
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--card-back);
+    font: 800 calc(var(--cw) * .31)/1 var(--font-num);
+    box-shadow: inset 0 0 0 calc(var(--cw) * .03) var(--card-back), inset 0 0 0 calc(var(--cw) * .05) #fff;
+}
+
+/* selection / interaction */
+.card.selected { translate: 0 var(--card-sel-lift, 0px); }
+.card.selected::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: var(--card-sel-tint, rgba(70, 110, 230, .32));
+    box-shadow: inset 0 0 0 2px var(--card-sel-ring, #5b8cff);
+    pointer-events: none;
+}
+.card.drag-source { opacity: .45; }
+.card.drop-before::before, .card.drop-after::before {
+    content: "";
+    position: absolute;
+    top: 6%; bottom: 6%;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--gold-2);
+    pointer-events: none;
+}
+.card.drop-before::before { left: -3px; }
+.card.drop-after::before { right: -3px; }
+@media (hover: hover) {
+    .card[data-card-id]:not(.selected):hover { translate: 0 var(--card-hover-lift, calc(var(--cw) * -.06)); }
+}
+
+/* ---------- toast ---------- */
+.toast {
+    position: fixed;
+    left: 50%; top: 44%;
+    z-index: var(--z-toast);
+    /* sized to its text (not to the half screen right of left: 50%); a long one wraps evenly */
+    width: max-content;
+    max-width: min(92vw, 520px);
+    padding: 9px 20px;
+    border-radius: var(--r-pill);
+    background: rgba(6, 24, 28, .8);
+    color: #fff;
+    font: 700 var(--fs-15)/1.35 var(--font-ui);
+    text-align: center;
+    text-wrap: balance;
+    translate: -50% -50%;
+    scale: .92;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease, scale var(--dur-ui) var(--ease-back);
+}
+.toast.show { opacity: 1; scale: 1; }
+
+/* #return-transition and #return-type-hint are styled in guandan-transition.css. */
+
+/* ---------- popup (window.GuandanUI.openPopup / openRules) ----------
+   .gd-popup-layer > .gd-popup > .gd-popup-head/.gd-popup-close/.gd-popup-body. Sized in --pu:
+   one design px of a 1280x720 screen. On <body> that is the viewport; mounted in another
+   container (.in-stage, e.g. the table's rotated UI layer) it is that container's box. */
+.gd-popup-layer {
+    --pu: clamp(.7px, min(calc(100vw / 1280), calc(100vh / 720)), 1.25px);
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    place-items: center;
+    padding: 12px;
+}
+@media (max-aspect-ratio: 1/1) {
+    .gd-popup-layer { --pu: min(calc(100vw / 520), 1.25px); }
+    .gd-popup-layer:not(.in-stage) .gd-popup { max-height: 88%; }
+}
+.gd-popup-layer.in-stage { position: absolute; container-type: size; }
+.gd-popup-layer.in-stage .gd-popup { --pu: clamp(.7px, min(calc(100cqw / 1280), calc(100cqh / 720)), 1.25px); }
+@media (pointer: coarse) { .gd-popup-layer { --tap: 40px; } }
+.gd-popup-layer::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(6, 10, 30, .72);
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+.gd-popup-layer.is-open::before { opacity: 1; }
+.gd-popup {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(calc(640 * var(--pu)), 94%);
+    max-height: min(calc(660 * var(--pu)), 92%);
+    border-radius: calc(12 * var(--pu));
+    background: linear-gradient(180deg, #fdfeff 0%, var(--panel-2) 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), 0 calc(10 * var(--pu)) calc(28 * var(--pu)) rgba(0, 0, 30, .45);
+    color: var(--ink);
+    opacity: 0;
+    scale: .9;
+    transition: opacity 150ms ease, scale 150ms ease;
+}
+.gd-popup.is-wide { width: min(calc(920 * var(--pu)), 94%); }
+.gd-popup:focus { outline: none; }
+.gd-popup-layer.is-open .gd-popup {
+    opacity: 1;
+    scale: 1;
+    transition: opacity 150ms ease, scale 220ms var(--ease-back);
+}
+.gd-popup-head {
+    flex: none;
+    display: grid;
+    place-items: center;
+    height: calc(60 * var(--pu));
+    border-radius: calc(12 * var(--pu)) calc(12 * var(--pu)) 0 0;
+    background: linear-gradient(180deg, #8ea4ff 0%, #6c84ec 100%);
+    box-shadow: inset 0 calc(-2 * var(--pu)) 0 rgba(40, 50, 160, .25);
+}
+.gd-popup-title {
+    margin: 0;
+    color: #fff;
+    font: 900 calc(28 * var(--pu))/1 var(--font-ui);
+    letter-spacing: .04em;
+    text-indent: .04em;
+    text-shadow: 0 calc(2 * var(--pu)) 0 rgba(40, 50, 160, .35);    /* plain white on the bar, as yxrb_room's header */
+}
+.gd-popup-close {
+    position: absolute;
+    top: calc(-14 * var(--pu));
+    right: calc(-14 * var(--pu));
+    width: max(var(--tap, 0px), calc(48 * var(--pu)));
+    height: max(var(--tap, 0px), calc(48 * var(--pu)));
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: inset 0 0 0 calc(3 * var(--pu)) #6c84ec, 0 calc(2 * var(--pu)) calc(4 * var(--pu)) rgba(0, 0, 30, .35);
+}
+.gd-popup-close::before, .gd-popup-close::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: calc(22 * var(--pu));
+    height: calc(4 * var(--pu));
+    border-radius: calc(2 * var(--pu));
+    background: var(--ink);
+    translate: -50% -50%;
+    rotate: 45deg;
+}
+.gd-popup-close::after { rotate: -45deg; }
+.gd-popup-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(28, 47, 102, .35) transparent;
+    padding: calc(20 * var(--pu)) calc(30 * var(--pu)) calc(28 * var(--pu));
+    font: 500 calc(19 * var(--pu))/1.6 var(--font-ui);
+}
+
+/* 玩法规则: left tabs (like the 好友同玩 tab column) and a short pane of labelled rows */
+.gd-popup-body.has-tabs { flex: 0 1 auto; display: flex; height: calc(560 * var(--pu)); padding: 0; overflow: hidden; }
+.gd-rules { flex: 1; min-width: 0; display: flex; }
+.gd-rules-tabs {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: calc(4 * var(--pu));
+    width: calc(172 * var(--pu));
+    padding: calc(14 * var(--pu)) 0;
+    border-bottom-left-radius: calc(12 * var(--pu));
+    background: linear-gradient(180deg, #e3e9fa 0%, #d8e1f7 100%);
+}
+.gd-rules-tab {
+    position: relative;
+    flex: none;
+    height: max(var(--tap, 0px), calc(58 * var(--pu)));
+    padding: 0 calc(18 * var(--pu)) 0 calc(28 * var(--pu));
+    border: 0;
+    background: none;
+    color: #5d6a94;
+    font: 900 calc(21 * var(--pu))/1 var(--font-ui);
+    text-align: left;
+    white-space: nowrap;
+}
+.gd-rules-tab[aria-selected="true"] {
+    background: linear-gradient(90deg, #fff 55%, #f4f7fe);
+    color: var(--ink);
+    clip-path: polygon(0 0, calc(100% - 14 * var(--pu)) 0, 100% 50%, calc(100% - 14 * var(--pu)) 100%, 0 100%);
+}
+.gd-rules-tab[aria-selected="true"]::before {
+    content: "";
+    position: absolute;
+    left: 0; top: calc(15 * var(--pu)); bottom: calc(15 * var(--pu));
+    width: calc(6 * var(--pu));
+    border-radius: 0 calc(3 * var(--pu)) calc(3 * var(--pu)) 0;
+    background: linear-gradient(180deg, #ffe27a, #f6b92a);
+}
+.gd-rules-tab:focus-visible { outline: 2px solid var(--util); outline-offset: -3px; }
+.gd-rules-panes { flex: 1; min-width: 0; display: flex; }
+.gd-rules-pane { flex: 1; min-width: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(28, 47, 102, .35) transparent; padding: calc(8 * var(--pu)) calc(28 * var(--pu)) calc(20 * var(--pu)); }
+.gd-rules-pane[hidden] { display: none; }
+.gd-rules-row {
+    display: grid;
+    grid-template-columns: calc(90 * var(--pu)) minmax(0, 1fr);
+    align-items: center;
+    gap: calc(4 * var(--pu)) calc(18 * var(--pu));
+    min-height: calc(66 * var(--pu));
+    padding: calc(10 * var(--pu)) 0;
+    border-bottom: 1px solid var(--panel-line);
+}
+.gd-rules-row.has-cards { grid-template-columns: calc(90 * var(--pu)) minmax(0, 1fr) auto; }
+.gd-rules-row:last-child { border-bottom: 0; }
+.gd-rules-row > b { color: var(--ink); font: 900 calc(21 * var(--pu))/1.3 var(--font-ui); text-align-last: justify; }
+html[lang="en"] .gd-rules-row > b { text-align-last: auto; }
+.gd-rules-row > span { color: var(--ink-2); font-size: calc(18 * var(--pu)); line-height: 1.5; text-wrap: balance; }
+.gd-rules-note { margin: calc(10 * var(--pu)) 0 calc(4 * var(--pu)); padding: calc(10 * var(--pu)) calc(14 * var(--pu)); border-radius: calc(6 * var(--pu)); background: #eaf0fc; color: var(--ink-2); font-size: calc(17 * var(--pu)); line-height: 1.5; text-wrap: balance; }
+.gd-rules-cards { --card-w-small: calc(46 * var(--pu)); display: flex; padding-right: calc(4 * var(--pu)); }
+.gd-rules-cards .card + .card { margin-left: calc(-20 * var(--pu)); }
+@media (max-aspect-ratio: 1/1) { /* portrait page: tabs across the top (a rotated in-game stage stays landscape) */
+    .gd-popup-layer:not(.in-stage) .gd-rules { flex-direction: column; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-tabs { flex-direction: row; width: auto; gap: 0; overflow-x: auto; padding: calc(8 * var(--pu)) calc(8 * var(--pu)) 0; border-radius: 0; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-tab { height: max(var(--tap, 0px), calc(54 * var(--pu))); padding: 0 calc(15 * var(--pu)); font-size: calc(20 * var(--pu)); }
+    .gd-popup-layer:not(.in-stage) .gd-rules-tab[aria-selected="true"] { clip-path: none; border-radius: calc(8 * var(--pu)) calc(8 * var(--pu)) 0 0; background: #fff; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-tab[aria-selected="true"]::before { left: calc(14 * var(--pu)); right: calc(14 * var(--pu)); top: auto; bottom: 0; width: auto; height: calc(5 * var(--pu)); border-radius: calc(3 * var(--pu)) calc(3 * var(--pu)) 0 0; }
+    .gd-popup-layer:not(.in-stage) .gd-rules-pane { padding: calc(4 * var(--pu)) calc(20 * var(--pu)) calc(16 * var(--pu)); }
+    .gd-popup-layer:not(.in-stage) .gd-rules-row { grid-template-columns: calc(80 * var(--pu)) minmax(0, 1fr); }
+    .gd-popup-layer:not(.in-stage) .gd-rules-row .gd-rules-cards { grid-column: 2; }
+}
+
+/* 实验室牌组: one pale cell per member (card, name, style line); every cell keeps room for two
+   style lines, so the rows line up whether or not a member has one */
+.gd-labdeck {
+    --card-w: calc(108 * var(--pu));
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(calc(156 * var(--pu)), 1fr));
+    gap: calc(12 * var(--pu));
+}
+.labdeck-item {
+    display: grid;
+    grid-template-rows: auto auto minmax(calc(40 * var(--pu)), auto);
+    justify-items: center;
+    align-content: start;
+    gap: calc(6 * var(--pu));
+    padding: calc(12 * var(--pu)) calc(8 * var(--pu)) calc(6 * var(--pu));
+    border-radius: calc(8 * var(--pu));
+    background: #eef3fd;
+    text-align: center;
+}
+.labdeck-item > b { font: 900 calc(19 * var(--pu))/1.2 var(--font-ui); color: var(--ink); }
+/* a two-part style stacks its parts (the " · " is dropped), never breaking inside one */
+.labdeck-item > small { font: 500 max(11px, calc(14 * var(--pu)))/1.35 var(--font-ui); color: var(--ink-3); word-break: keep-all; text-wrap: balance; }
+.labdeck-item > small > span { display: block; }
+
+/* 设置: Tencent rows (justified label, gold radios) */
+.gd-setrow {
+    display: flex;
+    align-items: center;
+    gap: calc(34 * var(--pu));
+    min-height: calc(62 * var(--pu));
+    border-bottom: 1px solid var(--panel-line);
+}
+.gd-setrow:last-child { border-bottom: 0; }
+.gd-setrow-k { flex: none; width: calc(80 * var(--pu)); font: 900 calc(20 * var(--pu))/1 var(--font-ui); text-align-last: justify; }
+/* the label is the tap target: at least --tap square on touch screens */
+.gd-radio { display: inline-flex; align-items: center; gap: calc(10 * var(--pu)); min-width: var(--tap, 0px); min-height: var(--tap, 0px); font: 700 calc(20 * var(--pu))/1 var(--font-ui); cursor: pointer; }
+.gd-radio input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.gd-radio i {
+    width: calc(24 * var(--pu));
+    height: calc(24 * var(--pu));
+    border-radius: 50%;
+    background: var(--radio-off);
+    box-shadow: inset 0 calc(1 * var(--pu)) calc(2 * var(--pu)) rgba(0, 0, 40, .25);
+}
+.gd-radio input:checked + i { background: radial-gradient(circle closest-side, #ffe27a 0 56%, #f6b92a 60% 86%, #d99a0c 90%); box-shadow: none; }
+.gd-radio input:focus-visible + i { outline: 2px solid var(--util); outline-offset: 2px; }
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+}

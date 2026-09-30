@@ -1,0 +1,1485 @@
+/* ==========================================================================
+   Picasso Lab Guandan: in-game table (renderTable), a replica of 腾讯掼蛋's in-game screen.
+   Everything inside .gd-stage is in design px: the stage is 720 high and >= 1280 wide and
+   layoutStage() scales it (and rotates it on portrait phones) with one transform, so every
+   proportion below holds on every screen. Anchors: top/bottom of the stage, its centre line,
+   --hand-bottom / --hand-h (the hand's bottom edge and tallest column), --actions-bottom and
+   --pill-w (action row), all set by renderTable.
+   ========================================================================== */
+
+body[data-screen="table"] { overflow: hidden; overscroll-behavior: none; }
+body[data-screen="table"] .topbar { display: none; }
+
+.gd-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--floor-2);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+.gd-safe-probe {
+    position: fixed;
+    left: 0; top: 0;
+    width: 0; height: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Felt: bright teal, darker toward the top corners, fine twill, a double groove parallel to the
+   rim, the rim edge, and the wooden floor showing only in the bottom corners (tg_table5/6). */
+.gd-rot {
+    position: absolute;
+    left: 0; top: 0;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: radial-gradient(64% 92% at 50% 58%, var(--felt-c) 0%, var(--felt-1) 30%, var(--felt-2) 52%, var(--felt-3) 72%, var(--felt-4) 90%, var(--felt-5) 100%);
+}
+.gd-rot::before, .gd-rot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.gd-rot::before {
+    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .026) 0 1px, transparent 1px 2px);
+}
+.gd-rot::after {
+    background:
+        radial-gradient(68% 110% at 50% -4%,
+            transparent 0 94.2%,
+            rgba(0, 70, 64, .3) 94.4% 94.8%, transparent 95% 95.6%, rgba(0, 70, 64, .3) 95.8% 96.2%,
+            transparent 96.4% 99.5%,
+            rgba(0, 0, 0, .3) 99.7% 100%,
+            #7c5b40 100.1%, #5a4034 104%, #3e2b22 112%, #2a2226 125%);
+}
+
+.gd-stage {
+    position: absolute;
+    left: 0; top: 0;
+    z-index: 1;
+    transform-origin: 0 0;
+    color: #fff;
+    font: 500 20px/1.3 var(--font-ui);
+    --card-w: 102px;
+    --card-w-small: 80.6px;
+}
+.gd-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.gd-ico { display: block; flex: none; width: 28px; height: 28px; }
+/* Invisible hit slop: on small scales (--gd-s ~ .54 on phones) the small controls still take a
+   >= 44 CSS px tap without growing visually. The bottom pills' slop runs from the stage bottom
+   up to just under the hand, >= 40 CSS px (handBottom() raises the hand that far). */
+.gd-menu-btn, .gd-round-btn, .gd-tool, .gd-jp-tabs button { position: relative; }
+.gd-jp-tabs button { z-index: 1; }
+.gd-menu-btn::after, .gd-round-btn::after, .gd-tool::after, .gd-jp-tabs button::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: max(100%, calc(44px / var(--gd-s, 1)));
+    height: max(100%, calc(44px / var(--gd-s, 1)));
+    translate: -50% -50%;
+}
+.gd-jp-tabs button::after { top: 0; height: max(100%, calc(42px / var(--gd-s, 1))); translate: -50% 0; }
+.gd-tool::after {
+    top: auto; bottom: calc((38px - var(--hand-bottom, 55px)) / 2);
+    width: max(100% + 16px, calc(44px / var(--gd-s, 1)));
+    height: calc(var(--hand-bottom, 55px) - 1px);
+    translate: -50% 0;
+}
+
+.gd-ui-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.gd-ui-layer > :not(.toast) { pointer-events: auto; }
+/* Toasts: a compact solid plate at --toast-y (stageToastY: off the partner's play and the pills).
+   The layer is in CSS px, so the design-px anchor goes through --gd-s. */
+.gd-stage-toast {
+    top: calc(var(--gd-s, 1) * var(--toast-y, 266px));
+    max-width: 72%;
+    padding: 7px 28px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .72);
+}
+
+/* under the hand: a soft ramp down to the floor with no top edge; the tool pills sit in it */
+.gd-bottombar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: calc(var(--hand-bottom, 55px) + 12px);
+    background: linear-gradient(rgba(4, 18, 22, 0), rgba(4, 18, 22, .3) 45%, rgba(4, 18, 22, .46));
+    pointer-events: none;
+}
+
+/* centre watermark: the only text on the felt */
+.gd-watermark {
+    position: absolute;
+    left: 50%; top: 37%;
+    translate: -50% -50%;
+    z-index: 1;
+    color: rgba(0, 40, 36, .28);
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.gd-watermark b { display: block; font: 400 54px/1 var(--font-display); letter-spacing: .03em; }
+.gd-watermark span { display: block; margin-top: 10px; font: 700 22px/1 var(--font-ui); letter-spacing: .04em; }
+.gd-stage.is-acting .gd-watermark span { opacity: 0; }
+
+/* ---------- HUD: ☰ + level tiles (top-left), 记牌 / 规则 (top-right) ---------- */
+.gd-hud {
+    position: absolute;
+    left: 26px; top: 14px;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+}
+.gd-menu-btn {
+    width: 56px; height: 46px;
+    padding: 8px 6px;
+    border: 0;
+    background: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.gd-menu-btn i {
+    position: relative;
+    height: 7px;
+    margin-left: 14px;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+}
+.gd-menu-btn i::before {
+    content: "";
+    position: absolute;
+    left: -14px; top: 0;
+    width: 8px; height: 7px;
+    border-radius: 4px;
+    background: #fff;
+}
+.gd-lvls {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 7px;
+    background: rgba(0, 30, 28, .32);
+}
+.gd-lvl { display: flex; height: 38px; border-radius: 5px; overflow: hidden; }
+.gd-lvl b {
+    flex: 1;
+    min-width: 64px;
+    padding: 0 9px;
+    text-align: center;
+    background: var(--lvl-us);
+    color: #fff;
+    font: 700 22px/38px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-lvl.is-them b { background: #7d8187; }
+.gd-lvl.is-t0 b { background: var(--mate-d); }
+.gd-lvl.is-t1 b { background: var(--opp-d); }
+.gd-lvl em {
+    min-width: 46px;
+    padding: 0 6px;
+    background: #fff6e8;
+    color: #b8401c;
+    font: 900 32px/38px var(--font-rank);
+    font-stretch: 62.5%;
+    font-style: normal;
+    text-align: center;
+}
+.gd-lvl.is-them em { background: #ededed; color: #3c3c3c; }
+.gd-lvl em small { margin-left: 3px; font: 700 16px/1 var(--font-num); color: #b8401c; }
+
+.gd-hud-right {
+    position: absolute;
+    right: 26px; top: 14px;
+    z-index: 25;
+    display: flex;
+    gap: 16px;
+}
+.gd-round-btn {
+    width: 66px; height: 66px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 34, 32, .34);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #fff;
+    font: 700 15px/1 var(--font-ui);
+    white-space: nowrap;
+}
+.gd-round-btn .gd-ico { width: 30px; height: 30px; }
+.gd-round-btn.is-on { background: rgba(0, 34, 32, .55); box-shadow: inset 0 0 0 3px var(--gold-2); }
+
+/* ☰ menu sheet over a light scrim (tapping the scrim closes it) */
+.gd-menu-host { position: absolute; inset: 0; z-index: 60; }
+.gd-menu-host:empty { display: none; }
+.gd-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .18); animation: gd-fade-in 160ms ease both; }
+.gd-menu {
+    position: absolute;
+    left: 20px; top: 68px;
+    width: max(250px, calc(180px / var(--gd-s, 1)));
+    padding: 8px 0;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 12px;
+    background: #0b3b3f;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .38);
+    animation: gd-menu-in 160ms var(--ease-out) both;
+    transform-origin: 20px 0;
+}
+@keyframes gd-menu-in { from { opacity: 0; scale: .94; } }
+.gd-menu button {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    height: max(54px, calc(44px / var(--gd-s, 1)));
+    padding: 0 20px;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: 700 max(21px, calc(15px / var(--gd-s, 1)))/1 var(--font-ui);
+    text-align: left;
+    white-space: nowrap;
+}
+.gd-menu button + button { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .09); }
+.gd-menu .gd-ico { width: max(28px, calc(20px / var(--gd-s, 1))); height: max(28px, calc(20px / var(--gd-s, 1))); }
+.gd-menu button:active { background: rgba(255, 255, 255, .08); }
+
+/* ---------- 记牌器 (大掼蛋 strip: 2 x 8 cells) and 出牌记录 ---------- */
+.gd-jipai-host { position: absolute; left: 164px; top: 12px; z-index: 24; }
+.gd-jipai {
+    width: 392px;
+    padding: 4px;
+    border-radius: 8px;
+    background: #f4f4f2;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .3);
+    color: #222;
+    animation: gd-menu-in 160ms var(--ease-out) both;
+}
+.gd-jp-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
+.gd-jp-tabs button {
+    flex: 1;
+    height: 30px;
+    border: 0;
+    border-radius: 5px;
+    background: #e2e4e6;
+    color: #6a6f76;
+    font: 700 17px/1 var(--font-ui);
+}
+.gd-jp-tabs button.is-on { background: #fff; color: var(--felt-4); box-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
+.gd-jp-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 1px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: #d9d9d6;
+}
+.gd-jp-cell { display: flex; flex-direction: column; background: #fff; }
+.gd-jp-cell:nth-child(n + 9) { margin-top: 3px; }
+.gd-jp-head {
+    position: relative;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    background: #f7f7f5;
+    color: #1d1d1d;
+    overflow: hidden;
+}
+.gd-jp-head.is-red { color: var(--card-red); }
+.gd-jp-rank { font: 900 27px/1 var(--font-rank); font-stretch: 62.5%; letter-spacing: -.04em; }
+.gd-jp-joker { display: block; width: 26px; height: 30px; }
+.gd-jp-joker .joker-svg { width: 100%; height: 100%; display: block; fill: currentColor; }
+.gd-jp-head:not(.is-red) .joker-svg { color: #2a2a2a; }
+.gd-jp-wild { width: 24px; height: 24px; fill: var(--wild-heart); stroke: var(--wild-heart-edge); stroke-width: 6px; paint-order: stroke fill; }
+.gd-jp-ji {
+    position: absolute;
+    top: 0; right: 0;
+    width: 22px; height: 22px;
+    background: linear-gradient(225deg, var(--ji) 50%, transparent 51%);
+    color: #fff;
+    font: 900 10px/1 var(--font-ui);
+    text-align: right;
+    padding: 2px 2px 0 0;
+}
+.gd-jp-num { height: 34px; font: 700 28px/34px var(--font-num); text-align: center; }
+.gd-jp-num.is-hot { color: #d9241c; }
+.gd-jp-num.is-some { color: #de8a1a; }
+.gd-jp-num.is-none { color: #bdbdbd; }
+.gd-jp-log {
+    list-style: none;
+    margin: 0;
+    padding: 0 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(28, 47, 102, .35) transparent;
+    touch-action: pan-y;
+    font: 500 17px/1.3 var(--font-ui);
+}
+.gd-jp-log li {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 2px 0;
+    border-bottom: 1px solid #e3e3e0;
+}
+.gd-jp-log li:last-child { border-bottom: 0; }
+.gd-jp-log li.is-empty { display: block; padding: 10px 0; color: #8a8f96; text-align: center; }
+.gd-jp-log li > b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* played cards as rank + suit glyphs (the card index in miniature), 不出 as the stroked word */
+.gd-jp-play { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; }
+.gd-jp-play i {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    color: var(--card-black);
+    font: 900 24px/1 var(--font-rank);
+    font-stretch: 62.5%;
+    font-style: normal;
+    letter-spacing: -.04em;
+}
+.gd-jp-play i.is-red { color: var(--card-red); }
+.gd-jp-play i svg { width: 15px; height: 15px; fill: currentColor; }
+.gd-jp-play i .joker-svg { width: 22px; height: 24px; }
+.gd-jp-play .is-pass { color: #7a808a; font: 900 19px/1 var(--font-ui); letter-spacing: .06em; }
+.gd-jp-play small { color: #7a808a; font: 700 14px/1 var(--font-ui); }
+
+/* ---------- seats ---------- */
+.gd-seat { position: absolute; z-index: 6; }
+.gd-seat.is-p1, .gd-seat.is-p3 {
+    top: 184px;
+    width: 140px;
+    padding: 10px 6px 8px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .14);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.gd-seat.is-p1 { left: 20px; }
+.gd-seat.is-p3 { right: 20px; }
+.gd-seat.is-p2 {
+    left: calc(50% - 52px); top: 6px;
+    padding: 8px 12px 8px 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .14);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.gd-seat.is-p0 {
+    left: 26px; bottom: 6px;
+    z-index: 12;
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    pointer-events: none;
+}
+
+.gd-av {
+    --ring: var(--mate); --ring-d: var(--mate-d);
+    position: relative;
+    flex: none;
+    width: 84px; height: 84px;
+    border: 4px solid var(--ring);
+    border-radius: 50%;
+    background: #dfe6ee;
+}
+.gd-av.is-opp { --ring: var(--opp); --ring-d: var(--opp-d); }
+.gd-seat.is-p0 .gd-av { width: 80px; height: 80px; }
+.gd-av-face, .gd-av-face > * { position: absolute; inset: 0; border-radius: 50%; }
+.gd-av-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gd-av-glyph {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(#fbfcfe, #d6dfeb);
+    color: var(--ink);
+    font: 900 30px/1 var(--font-ui);
+}
+.gd-av-glyph.is-ai { background: linear-gradient(#6d82c9, #3a4c8c); color: #fff; font-size: 38px; }
+.gd-av-glyph.is-empty { background: rgba(255, 255, 255, .25); color: rgba(255, 255, 255, .8); font-size: 24px; }
+.gd-seat.is-done .gd-av-face { opacity: .78; }
+
+.gd-av-tag {
+    position: absolute;
+    left: 50%; bottom: -13px;
+    translate: -50% 0;
+    height: 26px;
+    padding: 0 11px;
+    border-radius: 13px;
+    background: var(--ring-d);
+    color: #fff;
+    font: 700 18px/26px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-av-tag.is-report {
+    padding: 0 7px;
+    border-radius: 5px;
+    background: var(--report-bg);
+    color: var(--report-ink);
+    font-weight: 800;
+    animation: gd-report-pulse 1s ease-in-out infinite;
+}
+.gd-av-tag.is-report b { margin: 0 2px; color: var(--report-num); font: 800 25px/26px var(--font-num); }
+@keyframes gd-report-pulse { 50% { scale: 1.1; } }
+.gd-seat.is-p0 .gd-av-tag { bottom: auto; top: -13px; }
+.gd-av-count {
+    position: absolute;
+    top: -6px;
+    min-width: 32px; height: 26px;
+    padding: 0 7px;
+    border-radius: 13px;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    font: 700 21px/26px var(--font-num);
+    text-align: center;
+}
+.gd-seat.is-p0 .gd-av-count, .gd-seat.is-p1 .gd-av-count, .gd-seat.is-p2 .gd-av-count { left: -14px; }
+.gd-seat.is-p3 .gd-av-count { right: -14px; }
+.gd-first {
+    position: absolute;
+    top: -6px;
+    width: 30px; height: 30px;
+    border-radius: 5px;
+    background: linear-gradient(#ffe9a6, #ffbd45);
+    color: #7a3500;
+    font: 900 20px/30px var(--font-ui);
+    text-align: center;
+}
+.gd-first:lang(en) { width: auto; padding: 0 5px; font-size: 15px; }
+.gd-seat.is-p1 .gd-first, .gd-seat.is-p2 .gd-first { right: -16px; }
+.gd-seat.is-p0 .gd-first { left: -12px; }
+.gd-seat.is-p3 .gd-first { left: -16px; }
+
+.gd-name { min-width: 0; max-width: 128px; text-align: center; }
+.gd-seat.is-p1 .gd-name, .gd-seat.is-p3 .gd-name { margin-top: 16px; }
+.gd-seat.is-p2 .gd-name { text-align: left; max-width: 170px; }
+.gd-seat.is-p0 .gd-name { display: flex; align-items: baseline; gap: 12px; max-width: 320px; margin-bottom: 8px; text-align: left; }
+.gd-name .nm {
+    display: block;
+    overflow: hidden;
+    color: #fff;
+    font: 700 21px/1.25 var(--font-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gd-name .st { display: block; color: #ffe9a6; font: 600 19px/1.25 var(--font-num); white-space: nowrap; }
+
+.gd-seat-extra { display: contents; }
+/* Red Jokers revealed by 抗贡: legible cards overlapping like a play, after the name on the top and
+   bottom seats. A side seat shows them atop its inboard column, clear above its clock and plays:
+   below those a tall edge column of the hand can reach the seat */
+.gd-public-jokers { display: flex; --card-w-small: 50px; }
+.gd-public-jokers .card + .card { margin-left: calc(var(--card-w-small) * -.52); }
+.gd-seat.is-p1 .gd-public-jokers, .gd-seat.is-p3 .gd-public-jokers { position: absolute; bottom: calc(100% + 8px); }
+.gd-seat.is-p1 .gd-public-jokers { left: calc(100% + 16px); }
+.gd-seat.is-p3 .gd-public-jokers { right: calc(100% + 16px); }
+
+/* other seats' turn: gold alarm clock on the inboard side (tg_table6) */
+.gd-clock {
+    position: absolute;
+    top: 18px;
+    width: 84px; height: 89px;
+    pointer-events: none;
+}
+.gd-seat.is-p1 .gd-clock { left: calc(100% + 12px); }
+.gd-seat.is-p3 .gd-clock { right: calc(100% + 12px); }
+.gd-seat.is-p2 .gd-clock { right: calc(100% + 12px); top: 4px; }
+.gd-seat.is-p0 .gd-clock { position: relative; top: auto; margin-bottom: 4px; }
+.gd-clock svg, .gd-gem svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.gd-clock b, .gd-gem b {
+    position: absolute;
+    left: 0; right: 0;
+    color: #fff;
+    text-align: center;
+    paint-order: stroke fill;
+}
+.gd-clock b { top: 31px; font: 900 44px/1 var(--font-ui); letter-spacing: .02em; -webkit-text-stroke: 2px #b8660c; }
+.gd-clock.is-free, .gd-gem.is-free { --hands: 1; }
+
+/* ---------- played cards / 不出 at each seat's slot ---------- */
+.gd-slot {
+    position: absolute;
+    z-index: 5;
+    min-height: 109px;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+}
+.gd-slot.is-p2 { left: 0; right: 0; top: 112px; justify-content: center; }
+.gd-slot.is-p1 { left: 176px; top: 190px; transform-origin: left center; }
+.gd-slot.is-p3 { right: 176px; top: 190px; justify-content: flex-end; transform-origin: right center; }
+/* a side play my action row cannot pass is drawn smaller about its seat side, and lifted if even
+   that is too long (actionRowFit) */
+.gd-slot.is-p1, .gd-slot.is-p3 {
+    scale: var(--fit-k, 1);
+    translate: 0 var(--fit-y, 0px);
+    transition: scale 160ms var(--ease-out), translate 160ms var(--ease-out);
+}
+/* own plays sit at 32% like Tencent, rising only if a tall hand would reach them */
+.gd-slot.is-p0 { left: 0; right: 0; top: min(32%, calc(100% - var(--hand-bottom, 55px) - var(--hand-h) - 8px - 109px)); justify-content: center; }
+/* my play lifts out over the hand while it flies (runPlayFlights) */
+.gd-slot.is-p0.is-flying { z-index: 11; }
+.gd-played { display: flex; }
+.gd-played .card + .card { margin-left: calc(var(--card-w-small) * -.52); }
+.gd-played.is-enter { animation: gd-play-in 200ms var(--ease-out) both; }
+@keyframes gd-play-in { from { opacity: 0; scale: 1.12; } }
+/* Display words (combo labels, bomb names, 抗贡, 胜利): Smiley Sans, a thin brown outline under a
+   cream-to-pale-gold copy (::after), no drop edge (qqg_result, yxrb_vs). No filter, so they animate as
+   plain layers. */
+.gd-word {
+    position: relative;
+    display: inline-block;
+    font: 400 1em/1 var(--font-display);
+    color: #7a3a10;
+    -webkit-text-stroke: .07em #7a3a10;
+    paint-order: stroke fill;
+    white-space: nowrap;
+}
+.gd-word::after {
+    content: attr(data-t);
+    position: absolute;
+    left: 0; top: 0;
+    background: linear-gradient(180deg, #fffdf0 8%, #fff0b0 40%, #ffd45a 72%, #f2a020 96%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-stroke: 0;
+    text-shadow: none;
+}
+.gd-word.is-cool { color: #1d2f63; -webkit-text-stroke-color: #1d2f63; }
+/* 首出: a red word with a white edge on the card's foot */
+.gd-word.is-red { color: #fff; -webkit-text-stroke: .1em #fff; }
+.gd-word.is-red::after { background-image: linear-gradient(180deg, #ff8f70 6%, #f0432a 50%, #c81e14 96%); }
+.gd-word.is-cool::after { background-image: linear-gradient(180deg, #ffffff 8%, #dfe8fb 42%, #9fb3dc 74%, #7187bb 96%); }
+
+/* combo label over a fresh play: 1.4 -> 1 in 120 ms, hold 500, fade 200 */
+.gd-combo-label {
+    position: absolute;
+    left: 50%; top: calc(100% + 26px);
+    z-index: 1;
+    translate: -50% -50%;
+    font-size: 60px;
+    opacity: 0;
+    animation: gd-combo-label 820ms linear 150ms both;
+}
+.gd-combo-label:lang(en) { font-size: 52px; }
+@keyframes gd-combo-label {
+    0% { opacity: 0; scale: 1.4; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    15% { opacity: 1; scale: 1; }
+    76% { opacity: 1; }
+    100% { opacity: 0; scale: 1; }
+}
+.gd-pass-word {
+    color: var(--pass-fill);
+    font: 900 46px/1 var(--font-ui);
+    letter-spacing: .06em;
+    -webkit-text-stroke: 6px var(--pass-stroke);
+    paint-order: stroke fill;
+    text-shadow: 0 3px 0 rgba(0, 0, 0, .14);
+    white-space: nowrap;
+}
+.gd-pass-word.is-enter { animation: gd-pass-in 220ms var(--ease-back) both; }
+@keyframes gd-pass-in { from { opacity: 0; scale: 1.5; } }
+
+/* finish ribbons (qqg_ribbons): a band under the seat's last play, feathered at both ends, warm for
+   头游/二游 and cool for 三游/末游; it unrolls once when the seat goes out */
+.gd-ribbon {
+    position: absolute;
+    left: 50%; top: calc(50% + 34px);
+    z-index: 2;
+    translate: -50% 0;
+    width: 230px; height: 50px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(90deg, rgba(244, 138, 20, 0), #f28c12 22%, #ffb437 50%, #f28c12 78%, rgba(244, 138, 20, 0));
+}
+/* edge highlight and shade, feathered with the band */
+.gd-ribbon::before, .gd-ribbon::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 4%, rgba(255, 246, 214, .75) 30% 70%, transparent 96%);
+}
+.gd-ribbon::after { top: auto; bottom: 0; background: linear-gradient(90deg, transparent 4%, rgba(150, 60, 0, .45) 30% 70%, transparent 96%); }
+.gd-ribbon.is-cool::after { background: linear-gradient(90deg, transparent 4%, rgba(20, 50, 150, .45) 30% 70%, transparent 96%); }
+/* the place in qqg_ribbons' display lettering: pale cream on the warm band, pale blue on the cool,
+   a thin outline and no drop edge */
+.gd-ribbon .gd-word { font-size: 42px; letter-spacing: .06em; -webkit-text-stroke-width: 5px; text-shadow: none; }
+.gd-ribbon .gd-word::after { background-image: linear-gradient(180deg, #fffdf2 12%, #fff1bf 48%, #ffd073 92%); }
+.gd-ribbon .gd-word.is-cool::after { background-image: linear-gradient(180deg, #fff 12%, #eaf2ff 48%, #b9d3ff 92%); }
+.gd-ribbon .gd-word:lang(en) { font-size: 36px; letter-spacing: 0; }
+.gd-ribbon.is-cool { background: linear-gradient(90deg, rgba(70, 130, 240, 0), #3f7fe8 22%, #6fb2ff 50%, #3f7fe8 78%, rgba(70, 130, 240, 0)); }
+/* alone at a side slot (no play left on the table): it sits where the cards were */
+.gd-slot.is-p1 .gd-ribbon:only-child { left: 0; translate: 0 0; top: 30px; }
+.gd-slot.is-p3 .gd-ribbon:only-child { left: auto; right: 0; translate: 0 0; top: 30px; }
+.gd-slot.is-p2 .gd-ribbon:only-child { top: 30px; }
+.gd-slot.is-p0 .gd-ribbon:only-child { top: 76px; }
+/* the partner's band lies over the lower half of its cards, clear of my action row and its crown (which may rise to just under them) */
+.gd-slot.is-p2 .gd-ribbon:not(:only-child) { top: calc(100% - 76px); }
+.gd-ribbon.is-enter { animation: gd-ribbon-in 320ms var(--ease-back) both; }
+.gd-ribbon.is-enter .gd-word { animation: gd-ribbon-word 360ms var(--ease-back) 120ms both; }
+@keyframes gd-ribbon-in { from { opacity: 0; transform: scaleX(.2); } }
+@keyframes gd-ribbon-word { from { opacity: 0; transform: scale(1.5); } }
+
+/* ---------- hand: 竖排 rank columns (default) or 横排 row ---------- */
+.gd-hand {
+    position: absolute;
+    left: 0; right: 0; bottom: var(--hand-bottom, 55px);
+    padding-left: calc(2 * var(--hand-shift, 0px));   /* moves the centred hand clear of my avatar plate */
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+.gd-hand > * { pointer-events: auto; touch-action: none; }
+.gd-cols { display: flex; align-items: flex-end; --card-hover-lift: 0px; }
+.gd-col { position: relative; display: flex; flex-direction: column; flex: none; }
+/* 四炸 / 五炸 …: a small white tag with a blue edge on the front card, in the free band between its index
+   and its pip (the geometry of the 逢人配 tag, whose corner it must not take) */
+.gd-bomb-tag {
+    position: absolute;
+    right: calc(var(--card-w) * .07);
+    bottom: calc(var(--card-w) / .74 * .32);
+    z-index: 3;
+    padding: calc(var(--card-w) * .025) calc(var(--card-w) * .02);
+    border: calc(var(--card-w) * .014) solid #3f6fe0;
+    border-radius: calc(var(--card-w) * .03);
+    background: #fff;
+    color: #3f6fe0;
+    font: 800 calc(var(--card-w) * .16)/1.08 var(--font-ui);
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    pointer-events: none;
+}
+.gd-bomb-tag:lang(en) { writing-mode: horizontal-tb; padding: calc(var(--card-w) * .02) calc(var(--card-w) * .04); }
+.gd-col .gd-ji { right: calc(-1px + var(--ov, 0px)); }
+.gd-col + .gd-col { margin-left: calc(var(--pitch) - var(--card-w)); }
+.gd-col .card + .card { margin-top: calc(var(--step) - var(--card-w) / .74); }
+.gd-row { display: flex; align-items: flex-end; --card-sel-lift: calc(var(--card-w) / .74 * -.18); }
+.gd-row .card + .card { margin-left: calc(var(--pitch) - var(--card-w)); }
+.gd-row .card.selected::after { background: rgba(70, 110, 230, .16); }
+/* the selection on its way to the table (sendingUI): its tint deepens */
+.gd-hand.is-sending .card.selected::after { background: rgba(28, 44, 100, .5); }
+.gd-cols.is-sorting .gd-col { animation: gd-col-in 300ms var(--ease-back) both; animation-delay: calc(var(--ci) * 42ms); }
+.gd-row.is-sorting .card { animation: gd-col-in 260ms var(--ease-back) both; animation-delay: calc(var(--ci) * 22ms); }
+@keyframes gd-col-in { from { opacity: 0; translate: 0 70px; } }
+
+/* bottom-right pills: 重选 · 理牌 · 横排, centred in the bar under the hand */
+.gd-tools {
+    position: absolute;
+    right: 22px; bottom: calc((var(--hand-bottom, 55px) - 38px) / 2);
+    z-index: 12;
+    display: flex;
+    gap: 12px;
+}
+.gd-tool {
+    height: 38px;
+    padding: 0 20px 0 14px;
+    border: 0;
+    border-radius: 19px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(#8ea5ff, #6484f4);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .38), inset 0 -3px 0 rgba(30, 40, 150, .22), 0 2px 3px rgba(0, 0, 0, .3);
+    color: #fff;
+    font: 700 24px/1 var(--font-ui);
+    white-space: nowrap;
+}
+.gd-tool .gd-ico { width: 28px; height: 28px; }
+.gd-tool[hidden] { display: none; }
+
+.gd-spectate { position: absolute; left: 50%; bottom: 90px; translate: -50% 0; z-index: 12; }
+.gd-spectate span {
+    display: block;
+    padding: 8px 24px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .34);
+    font: 700 24px/1.2 var(--font-ui);
+    letter-spacing: .2em;
+}
+.gd-spectate span:lang(en) { letter-spacing: .02em; }
+
+/* ---------- action row: [不出] [timer] [提示] [出牌] (dagd_store_4); --pill-w / --row-gap narrow it
+   between long side plays (actionRowFit) ---------- */
+.gd-actions {
+    position: absolute;
+    left: 0; right: 0; bottom: var(--actions-bottom);
+    z-index: 20;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--row-gap, 22px);
+    pointer-events: none;
+}
+.gd-actions > * { pointer-events: auto; }
+.gd-actions .btn {
+    --btn-h: 74px; --btn-fs: 40px; --btn-px: 12px; --btn-minw: 0px;
+    width: var(--pill-w, 200px);
+    -webkit-text-stroke: 2.5px var(--btn-stroke);
+    text-shadow: 0 2px 0 var(--btn-stroke);
+    box-shadow:
+        0 3px 0 rgba(255, 255, 255, .6) inset,
+        0 -5px 0 var(--btn-inset) inset,
+        0 6px 0 var(--btn-edge),
+        0 10px 14px rgba(0, 0, 0, .28);
+}
+.gd-actions .btn::after { top: 5px; opacity: .75; }
+/* 40+ CSS px tap height even on the smallest phones, without a bigger pill */
+.gd-actions .btn > .gd-hit, .gd-result .btn > .gd-hit { position: absolute; left: 0; right: 0; top: 50%; height: max(100%, calc(42px / var(--gd-s, 1))); translate: 0 -50%; z-index: 0; }
+/* pressed, and held down while its action waits on Firebase or the engine (is-pending, sendingUI) */
+.gd-actions .btn:active:not(.is-disabled), .gd-actions .btn.is-pending, .gd-res-actions .btn.is-pending {
+    translate: 0 4px;
+    box-shadow:
+        0 3px 0 rgba(255, 255, 255, .6) inset,
+        0 -5px 0 var(--btn-inset) inset,
+        0 2px 0 var(--btn-edge),
+        0 4px 8px rgba(0, 0, 0, .28);
+}
+.gd-actions .btn.is-pending::before, .gd-res-actions .btn.is-pending::before { opacity: 1; background: rgba(0, 0, 0, .16); }
+.gd-actions .btn:not(.spaced) { --btn-ls: .02em; }
+.gd-actions .btn.is-disabled { cursor: default; }
+/* 提示 advised a pass: 不出 turns primary with one pop (the region is keyed, so it never replays) */
+.gd-actions .btn.is-advised { animation: gd-advised 380ms var(--ease-back) both; }
+@keyframes gd-advised { 0% { scale: 1; } 40% { scale: 1.12; } 100% { scale: 1; } }
+#root.action-busy :is(.gd-actions, .gd-tools, .gd-res-actions) { pointer-events: none; }
+/* my timer: the heart gem in its crown, spikes over the pills' top; a thin white number with a
+   light purple edge, centred in the heart (dagd_store_4) */
+.gd-gem { position: relative; flex: none; width: 108px; height: 100px; margin: -22px 0 -4px; }
+.gd-gem b { top: 36px; font: 700 40px/1 var(--font-ui); letter-spacing: .02em; -webkit-text-stroke: 2px #5a1a9a; }
+.gd-clock.is-danger b, .gd-gem.is-danger b { color: #ffd9d4; -webkit-text-stroke-color: #b3140a; }
+.gd-clock.is-danger, .gd-gem.is-danger { animation: gd-timer-pulse .8s ease-in-out infinite; }
+@keyframes gd-timer-pulse { 50% { scale: 1.1; } }
+
+/* ---------- deal ---------- */
+.gd-deal-host { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+.gd-deal { position: absolute; inset: 0; }
+.gd-deck, .gd-deal-card { position: absolute; left: calc(50% - 32px); top: calc(36% - 43px); width: 64px; height: 86px; }
+.gd-deck .gd-back, .gd-deal-card .gd-back { position: absolute; inset: 0; --cw: 64px; }
+/* the deck: six offset backs, the top one taken each time a sixth of the flights has left */
+.gd-deck .gd-back { translate: calc(var(--k) * -1.5px) calc(var(--k) * 1.5px); animation: gd-deck-take 140ms ease-in both; }
+@keyframes gd-deck-take { to { opacity: 0; transform: translateY(-10px) scale(.92); } }
+/* each flight: the outer box travels (ease-out), the back arcs up, tilts, then shrinks and fades
+   into the seat's inboard edge over the last 30%; mine settle face down, level, at hand size */
+.gd-deal-card { animation: gd-deal-go 380ms cubic-bezier(.25, .7, .35, 1) both; }
+.gd-deal-card .gd-back { animation: gd-deal-arc 380ms linear both; animation-delay: inherit; }
+.gd-deal-card.is-mine .gd-back { animation-name: gd-deal-land; }
+@keyframes gd-deal-go { to { translate: var(--tx) var(--ty); } }
+@keyframes gd-deal-arc {
+    0% { opacity: 0; transform: none; }
+    10% { opacity: 1; }
+    40% { transform: translateY(-24px) rotate(calc(var(--r) * .6)); }
+    70% { opacity: 1; transform: translateY(-8px) rotate(var(--r)) scale(.9); }
+    100% { opacity: 0; transform: rotate(var(--r)) scale(.55); }
+}
+@keyframes gd-deal-land {
+    0% { opacity: 0; transform: none; }
+    10% { opacity: 1; }
+    45% { transform: translateY(-28px) rotate(calc(var(--r) * .6)) scale(1.1); }
+    100% { opacity: 1; transform: scale(1.35); }
+}
+
+/* ---------- 首出: the starting card pops up, then shrinks into the leading seat ---------- */
+.gd-first-host { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
+.gd-first-lead {
+    position: absolute;
+    left: 50%; top: 40%;
+    --card-w: 232px;                       /* about 44% of the stage height (qqg_shouchu) */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    translate: -50% -50%;
+    animation: gd-first-lead var(--first-ms) linear both;
+}
+.gd-first-lead .card { box-shadow: 0 10px 24px rgba(0, 30, 26, .45); }
+@keyframes gd-first-lead {
+    0% { opacity: 0; transform: scale(.8); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
+    16% { opacity: 1; transform: none; }
+    70% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.35); }
+}
+.gd-first-ribbon {
+    position: absolute;
+    left: 0; right: 0; bottom: 26px;
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.gd-first-ribbon .gd-word { font-size: 92px; }
+.gd-first-ribbon .gd-word:lang(en) { font-size: 60px; }
+.gd-first-ribbon small { padding: 3px 12px; border-radius: 4px; background: rgba(255, 255, 255, .92); color: #5a6070; font: 700 20px/1 var(--font-ui); }
+
+/* ---------- 进贡 / 还贡: the card flies seat to seat under its plate; 抗贡: centre word ---------- */
+.gd-tribute-host { position: absolute; inset: 0; z-index: 31; pointer-events: none; }
+.gd-tribute {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    translate: -50% -50%;
+    animation: gd-tribute 640ms linear both;
+}
+.gd-tribute .card { box-shadow: 0 6px 14px rgba(0, 30, 26, .4); }
+.gd-tribute-tag {
+    padding: 3px 12px;
+    border-radius: 5px;
+    background: var(--warm-plate);
+    color: #fff;
+    font: 900 24px/1.2 var(--font-ui);
+    letter-spacing: .12em;
+    -webkit-text-stroke: 4px rgba(120, 50, 0, .8);
+    paint-order: stroke fill;
+    white-space: nowrap;
+}
+.gd-tribute-tag:lang(en) { letter-spacing: .02em; }
+.gd-tribute.is-back .gd-tribute-tag { background: var(--cool-plate); -webkit-text-stroke-color: rgba(20, 50, 140, .8); }
+@keyframes gd-tribute { /* pop 90 ms, hold, 340 ms flight, fade 140 ms */
+    0% { opacity: 0; transform: scale(.7); animation-timing-function: cubic-bezier(.34, 1.4, .64, 1); }
+    14% { opacity: 1; transform: none; }
+    25% { transform: none; animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+    78% { opacity: 1; transform: translate(var(--tx), var(--ty)); }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.8); }
+}
+.gd-kanggong {
+    position: absolute;
+    left: 50%; top: 40%;
+    translate: -50% -50%;
+    font-size: 110px;
+    animation: gd-kanggong 1100ms linear both;
+}
+.gd-kanggong:lang(en) { font-size: 80px; }
+@keyframes gd-kanggong {
+    0% { opacity: 0; scale: 1.4; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    14% { opacity: 1; scale: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ---------- 巅峰对决 match intro (yxrb_vs), over the first deal ----------
+   Every part runs on the deal clock: --since is minus the time since dealStartedAt. In 0-600 ms the
+   poster opens, the team frames slide in, the title drops and VS stamps; it holds, fades out by 2 s
+   and is then hidden, so it never catches a tap meant for the table. The HUD's right-hand buttons
+   and the hand tools step aside until it starts to fade (.has-intro, INTRO_HOLD_MS). */
+.gd-intro-host { position: absolute; inset: 0; z-index: 56; pointer-events: none; }
+.gd-intro-host:empty { display: none; }
+.gd-stage.has-intro :is(.gd-hud-right, .gd-tools) { opacity: 0; pointer-events: none; }
+.gd-intro {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(8, 14, 44, .85);
+    pointer-events: auto;
+    animation: gd-intro 2000ms linear var(--since) both;
+}
+@keyframes gd-intro {
+    0% { opacity: 0; }
+    8%, 86% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: scale(1.04); visibility: hidden; }
+}
+@keyframes gd-intro-still { 0%, 86% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+/* the records poster's field (.gdr-poster): red -> violet -> blue, lit behind the title and the VS */
+.gd-vs {
+    position: relative;
+    width: 1040px; height: 490px;
+    overflow: hidden;
+    border-radius: 10px;
+    background:
+        radial-gradient(32% 30% at 50% 0%, rgba(196, 206, 255, .5), transparent),
+        radial-gradient(24% 34% at 50% 56%, rgba(120, 132, 255, .42), transparent),
+        linear-gradient(100deg, #b11f42 0%, #d23a5c 17%, #b23c7c 33%, #5a3db0 50%, #3552d4 66%, #2c5ce4 82%, #1d3caa 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22);
+    animation: gd-vs-open 260ms var(--ease-out) var(--since) both;
+}
+.gd-vs::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .045) 0 2px, transparent 2px 14px);
+}
+@keyframes gd-vs-open { from { opacity: 0; transform: scale(.92); } }
+.gd-vs-title {
+    position: absolute;
+    left: 0; right: 0; top: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 64px;
+    animation: gd-vs-title 360ms var(--ease-back) calc(var(--since) + 80ms) both;
+}
+.gd-vs-title:lang(en) { font-size: 54px; }
+.gd-vs-title span { color: #fff; font: 900 26px/1 var(--font-ui); letter-spacing: .04em; white-space: nowrap; }
+@keyframes gd-vs-title { from { opacity: 0; transform: translateY(-30px); } }
+/* a team: the big faint name at the outer edge, its pair in a frame with a bracket to the centre */
+.gd-vs-side {
+    position: absolute;
+    top: 136px; bottom: 22px;
+    width: 50%;
+    display: flex;
+    align-items: center;
+}
+.gd-vs-side.is-red { left: 0; padding-left: 96px; animation: gd-vs-in-l 320ms var(--ease-out) calc(var(--since) + 60ms) both; }
+.gd-vs-side.is-blue { right: 0; flex-direction: row-reverse; padding-right: 96px; animation: gd-vs-in-r 320ms var(--ease-out) calc(var(--since) + 60ms) both; }
+@keyframes gd-vs-in-l { from { opacity: 0; transform: translateX(-90px); } }
+@keyframes gd-vs-in-r { from { opacity: 0; transform: translateX(90px); } }
+.gd-vs-side em {
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    font: 400 72px/1 var(--font-display);
+    font-style: normal;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: .04em;
+}
+.gd-vs-side em:lang(en) { text-orientation: mixed; font-size: 40px; letter-spacing: .02em; }
+.gd-vs-side.is-red em { left: 22px; color: rgba(255, 150, 172, .6); }
+.gd-vs-side.is-blue em { right: 22px; color: rgba(150, 196, 255, .6); }
+.gd-vs-team {
+    --line: rgba(255, 176, 194, .9);
+    position: relative;
+    width: 330px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+    border: 2px solid #ff9db0;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(236, 72, 104, .72), rgba(214, 58, 96, .42));
+}
+.is-blue .gd-vs-team {
+    --line: rgba(166, 200, 255, .9);
+    border-color: #8fb4ff;
+    background: linear-gradient(270deg, rgba(64, 118, 246, .72), rgba(52, 96, 222, .42));
+}
+/* bracket: from both seat chips out past the frame, joined, then one line toward the VS */
+.gd-vs-team::before, .gd-vs-team::after { content: ""; position: absolute; }
+.gd-vs-team::before {
+    left: calc(100% - 35px); top: 62px; bottom: 62px;
+    width: 55px;
+    border: 2px solid var(--line);
+    border-left: 0;
+}
+.gd-vs-team::after { left: calc(100% + 20px); top: 50%; width: 16px; height: 2px; background: var(--line); }
+.is-blue .gd-vs-team::before { left: auto; right: calc(100% - 35px); border-left: 2px solid var(--line); border-right: 0; }
+.is-blue .gd-vs-team::after { left: auto; right: calc(100% + 20px); }
+.gd-vs-p {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 96px;
+    animation: gd-vs-p 280ms var(--ease-back) calc(var(--since) + 260ms) both;
+}
+.gd-vs-p + .gd-vs-p { animation-delay: calc(var(--since) + 340ms); }
+@keyframes gd-vs-p { from { opacity: 0; transform: scale(.7); } }
+.is-blue .gd-vs-p { flex-direction: row-reverse; }
+.gd-vs-av {
+    position: relative;
+    flex: none;
+    width: 96px; height: 96px;
+    border: 4px solid #e0546e;
+    border-radius: 8px;
+    background: #dfe6ee;
+}
+.is-blue .gd-vs-av { border-color: #5a86ff; }
+/* the lab photos are round cut-outs: enlarged, the circle covers the whole square */
+.gd-vs-av .gd-av-face, .gd-vs-av .gd-av-face > * { border-radius: 4px; }
+.gd-vs-av .gd-av-face { overflow: hidden; }
+.gd-vs-av .gd-av-face img { scale: 1.42; }
+.gd-vs-p b {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: #fff;
+    font: 900 24px/1.2 var(--font-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-text-stroke: 5px rgba(40, 10, 40, .35);
+    paint-order: stroke fill;
+}
+.is-blue .gd-vs-p b { text-align: right; }
+.gd-vs-seat {
+    flex: none;
+    width: 42px; height: 42px;
+    border: 2px solid #ffd0da;
+    border-radius: 50%;
+    background: linear-gradient(#f2677f, #d63a58);
+    color: #fff;
+    font: 900 21px/38px var(--font-ui);
+    font-style: normal;
+    text-align: center;
+}
+.is-blue .gd-vs-seat { border-color: #cfe0ff; background: linear-gradient(#6e97ff, #3a66e6); }
+/* light-gold VS under the records crown (#fcecac -> #b8660c, thin outline, no drop edge) */
+.gd-vs-mark {
+    position: absolute;
+    left: 50%; top: calc(50% + (136px - 22px) / 2); /* level with the team frames */
+    translate: -50% -50%;
+    animation: gd-vs-mark 380ms var(--ease-back) calc(var(--since) + 200ms) both;
+}
+@keyframes gd-vs-mark { from { opacity: 0; transform: scale(2.2) rotate(-8deg); } }
+.gd-word.is-vs {
+    font: 800 140px/.86 var(--font-num);
+    color: #8a4a0c;
+    -webkit-text-stroke: 4px #8a4a0c;
+    text-shadow: none;
+    transform: skewX(-12deg);
+}
+.gd-word.is-vs::after { background-image: linear-gradient(180deg, #fffdf0 10%, #fcecac 38%, #f0c666 66%, #b8660c 100%); }
+.gd-crown { overflow: visible; fill: #ffd766; stroke: #6a2c02; stroke-width: 2.5px; stroke-linejoin: round; paint-order: stroke fill; }
+.gd-crown.is-cool { fill: #dfe8fb; stroke: #1d2f63; }
+.gd-vs-mark .gd-crown { position: absolute; left: 6px; top: -30px; width: 56px; height: 39px; rotate: -16deg; }
+/* 跳过 in the poster's top-right corner, where yxrb_vs has its close button */
+.gd-vs-skip {
+    position: absolute;
+    right: 16px; top: 16px;
+    z-index: 2;
+    height: 44px;
+    padding: 0 22px;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 22px;
+    background: rgba(10, 16, 48, .9);
+    color: #fff;
+    font: 700 21px/42px var(--font-ui);
+}
+.gd-vs-skip::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: max(100%, calc(44px / var(--gd-s, 1)));
+    height: max(100%, calc(44px / var(--gd-s, 1)));
+    translate: -50% -50%;
+}
+@media (prefers-reduced-motion: reduce) {
+    .gd-intro { animation: gd-intro-still 2000ms linear var(--since) both !important; }
+    .gd-intro * { animation: none !important; }
+}
+
+/* reduced motion: the transient labels still show, as a still frame that fades */
+@media (prefers-reduced-motion: reduce) {
+    .gd-stage .gd-combo-label { animation: gd-still 820ms linear 150ms both !important; }
+    .gd-stage .gd-first-lead { animation: gd-still var(--first-ms) linear both !important; }
+    .gd-stage .gd-kanggong, .gd-stage .gd-tribute { animation-name: gd-still !important; animation-duration: 640ms !important; }
+    .gd-stage .gd-ribbon, .gd-stage .gd-ribbon .gd-word { animation: none !important; }
+    .gd-stage .gd-deck .gd-back { animation-name: gd-still !important; }
+}
+@keyframes gd-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------- bomb tiers (tg_ingame_bomb / tg_ingame_tianwangzha): one-shot FX over the play ----------
+   .gd-fx is a zero-size anchor at the played cards' centre (the table centre for 天王炸); every
+   part is centred on it and animates transform/opacity only, inside the tier's --fx-ms. */
+.gd-fx-host { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
+.gd-fx-set { position: absolute; inset: 0; }
+.gd-fx { position: absolute; width: 0; height: 0; --fx-ms: 1000ms; --k: 1; }
+.gd-fx.is-big { --fx-ms: 1300ms; --k: 1.3; }
+.gd-fx.is-flush { --fx-ms: 1150ms; --k: 1.12; }
+.gd-fx.is-joker { --fx-ms: 1900ms; }
+.gd-fx > * { position: absolute; left: 0; top: 0; }
+.gd-fx-core {
+    width: 240px; height: 240px;
+    margin: -120px 0 0 -120px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, #fff 0 22%, #fff3a6 36%, #ffb92e 58%, rgba(247, 119, 28, .6) 80%, rgba(210, 56, 26, 0) 100%);
+    animation: gd-fx-core 620ms cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes gd-fx-core {
+    0% { opacity: 1; transform: scale(.45); }
+    50% { opacity: 1; }
+    100% { opacity: 0; transform: scale(calc(1.35 * var(--k))); }
+}
+.gd-fx-rays {
+    width: 380px; height: 380px;
+    margin: -190px 0 0 -190px;
+    fill: url(#gd-g-fire);
+    opacity: 0;
+    animation: gd-fx-rays 700ms ease-out both;
+}
+.gd-fx.is-flush .gd-fx-rays { fill: #ffe27a; }
+@keyframes gd-fx-rays {
+    0% { opacity: 0; transform: scale(.3) rotate(0deg); }
+    15% { opacity: .95; }
+    100% { opacity: 0; transform: scale(calc(1.2 * var(--k))) rotate(28deg); }
+}
+/* the shock ring runs flat on the felt, under the burst */
+.gd-fx-ring {
+    width: 700px; height: 170px;
+    margin: -55px 0 0 -350px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 214, 140, 0) 62%, rgba(255, 214, 140, .85) 84%, rgba(255, 214, 140, 0) 100%);
+    animation: gd-fx-ring 720ms cubic-bezier(.2, .8, .2, 1) both;
+}
+.gd-fx-ring.is-2 { animation-delay: 140ms; }
+@keyframes gd-fx-ring {
+    0% { opacity: 1; transform: scale(.15); }
+    100% { opacity: 0; transform: scale(var(--k)); }
+}
+/* the blast dome (tg_ingame_bomb): a clear bubble with a bright rim that swells and bursts */
+.gd-fx-dome {
+    width: 300px; height: 300px;
+    margin: -170px 0 0 -150px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 236, 190, .08) 0 60%, rgba(255, 214, 140, .36) 82%, rgba(255, 176, 80, .9) 94%, rgba(255, 120, 30, 0) 100%);
+    animation: gd-fx-dome 640ms cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes gd-fx-dome {
+    0% { opacity: 0; transform: scale(.25); }
+    18% { opacity: 1; }
+    60% { opacity: .85; transform: scale(var(--k)); }
+    100% { opacity: 0; transform: scale(calc(1.12 * var(--k))); }
+}
+.gd-fx-cracks {
+    width: 300px; height: 150px;
+    margin: -45px 0 0 -150px;
+    fill: none;
+    stroke: #8a1d12;
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    animation: gd-fx-cracks var(--fx-ms) linear both;
+}
+@keyframes gd-fx-cracks {
+    0%, 6% { opacity: 0; transform: scale(.5); }
+    14% { opacity: .85; transform: scale(var(--k)); }
+    78% { opacity: .7; transform: scale(var(--k)); }
+    100% { opacity: 0; transform: scale(var(--k)); }
+}
+/* 同花顺: a gold ring sweeps round the play */
+.gd-fx-sweep {
+    width: 300px; height: 300px;
+    margin: -150px 0 0 -150px;
+    fill: none;
+    stroke: #ffd24a;
+    stroke-width: 9;
+    stroke-linecap: round;
+    stroke-dasharray: 400 178;
+    opacity: 0;
+    animation: gd-fx-sweep 820ms cubic-bezier(.3, .7, .3, 1) both;
+}
+@keyframes gd-fx-sweep {
+    0% { opacity: 0; transform: rotate(-90deg) scale(.55); }
+    15% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; transform: rotate(250deg) scale(1.15); }
+}
+.gd-fx-spark {
+    width: 14px; height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 3px;
+    background: linear-gradient(135deg, #fffbe0, #ffc53a 55%, #f07a10);
+    transform: rotate(var(--a));
+    animation: gd-fx-spark 640ms cubic-bezier(.15, .7, .3, 1) 40ms both;
+}
+.gd-fx-spark:nth-child(odd) { width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; }
+@keyframes gd-fx-spark {
+    0% { opacity: 1; transform: rotate(var(--a)) translateY(-20px) rotate(45deg); }
+    100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1 * var(--k))) rotate(45deg) scale(.4); }
+}
+/* the word lands under the played cards (qqg: it never hides the play): 1.7 -> 1 in ~120 ms, holds,
+   fades with the tier */
+.gd-fx > .gd-word {
+    top: 62px;
+    translate: -50% 0;
+    font-size: calc(72px * var(--k));
+    animation: gd-fx-word var(--fx-ms) linear both;
+}
+.gd-fx > .gd-word:lang(en) { font-size: calc(54px * var(--k)); }
+@keyframes gd-fx-word {
+    0% { opacity: 0; scale: 1.7; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    12% { opacity: 1; scale: 1; }
+    80% { opacity: 1; scale: 1; }
+    100% { opacity: 0; scale: 1.04; }
+}
+/* 天王炸 (tg_ingame_tianwangzha): one fire-and-smoke column rising behind the vertical word: a blast
+   on the ground ring with debris, two puffs up the stem and the mushroom head over 天. Each puff
+   (FX_PUFF) swells in, its core and fire shrink away into the brown smoke, and the smoke rises and
+   drops out in the last 150 ms, so no half-transparent orange ever sits on the felt. */
+.gd-fx.is-joker .gd-fx-ring { top: 138px; }
+.gd-fx.is-joker .gd-fx-spark { top: 112px; background: linear-gradient(135deg, #a07c64, #3a2418); }
+.gd-fx-boom { width: 0; height: 0; }
+.gd-fx-boom:nth-of-type(1) { top: 112px; --sx: .78; --sy: .52; --d: 0ms; --rot: 0deg; }
+.gd-fx-boom:nth-of-type(2) { left: -14px; top: 46px; --sx: .58; --sy: .6; --d: 70ms; --rot: 70deg; }
+.gd-fx-boom:nth-of-type(3) { left: 12px; top: -20px; --sx: .62; --sy: .64; --d: 140ms; --rot: 140deg; }
+.gd-fx-boom:nth-of-type(4) { top: -92px; --sx: 1.18; --sy: .86; --d: 200ms; --rot: 200deg; }
+.gd-fx-boom svg {
+    position: absolute;
+    left: -100px; top: -100px;
+    width: 200px; height: 200px;
+    overflow: visible;
+    animation: gd-fx-blast 1500ms cubic-bezier(.2, .8, .3, 1) var(--d) both;
+}
+.gd-fx-boom path { transform-box: fill-box; transform-origin: 50% 50%; stroke-linejoin: round; paint-order: stroke fill; }
+.gd-fx-smoke { fill: url(#gd-g-smoke); stroke: rgba(42, 24, 12, .45); stroke-width: 2; animation: gd-fx-smoke 1500ms ease-out var(--d) both; }
+.gd-fx-fire { fill: url(#gd-g-fire); stroke: none; animation: gd-fx-fire 1500ms linear var(--d) both; }
+.gd-fx-hot { fill: #fff8d8; animation: gd-fx-hot 1500ms linear var(--d) both; }
+@keyframes gd-fx-blast {
+    0% { opacity: 0; transform: translateY(0) scale(calc(.2 * var(--sx)), calc(.2 * var(--sy))) rotate(var(--rot)); }
+    6% { opacity: 1; }
+    20% { transform: translateY(0) scale(calc(1.06 * var(--sx)), calc(1.06 * var(--sy))) rotate(var(--rot)); }
+    32% { transform: translateY(-4px) scale(var(--sx), var(--sy)) rotate(var(--rot)); }
+    88% { opacity: 1; transform: translateY(calc(-58px * var(--sy))) scale(calc(1.1 * var(--sx)), calc(1.1 * var(--sy))) rotate(var(--rot)); }
+    94%, 100% { opacity: 0; transform: translateY(calc(-66px * var(--sy))) scale(calc(1.16 * var(--sx)), calc(1.16 * var(--sy))) rotate(var(--rot)); }
+}
+@keyframes gd-fx-smoke {
+    0% { transform: scale(.85); }
+    40% { transform: scale(1); }
+    100% { transform: scale(1.12); }
+}
+@keyframes gd-fx-fire {
+    0%, 55% { transform: scale(1); animation-timing-function: cubic-bezier(.5, 0, .8, .6); }
+    92%, 100% { transform: scale(0); }
+}
+@keyframes gd-fx-hot {
+    0%, 22% { transform: scale(1.1); animation-timing-function: ease-in; }
+    52%, 100% { transform: scale(0); }
+}
+/* the vertical word outlasts the column, then drops out as fast as the smoke */
+.gd-fx.is-joker > .gd-word { top: 0; translate: -50% -50%; font-size: 80px; letter-spacing: -.08em; animation: gd-fx-word-tall calc(var(--fx-ms) - 120ms) linear 120ms both; }
+@keyframes gd-fx-word-tall {
+    0% { opacity: 0; scale: 1.7; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    7% { opacity: 1; scale: 1; }
+    91% { opacity: 1; scale: 1; }
+    100% { opacity: 0; scale: 1.06; }
+}
+.gd-word.is-vertical { writing-mode: vertical-rl; text-orientation: upright; }
+.gd-word.is-vertical:lang(en) { writing-mode: horizontal-tb; }
+.gd-fx.is-joker > .gd-word:lang(en) { font-size: 60px; letter-spacing: 0; }
+@media (prefers-reduced-motion: reduce) {
+    .gd-fx > :not(.gd-word) { display: none; }
+    .gd-fx > .gd-word { animation: gd-still var(--fx-ms) linear both !important; }
+}
+
+/* ---------- round / match result (qqg_result) ----------
+   Over the dimmed table: the title word, a meta band, the warm | cool finishing band with a faint VS
+   on its slanted seam, the level tiles and the two buttons. --in delays the whole entrance while the
+   last play lands; .is-still (coming back from 查看牌桌) shows it without replaying. The table's own
+   parts fade out as the panel lands (--result-in on the stage) and come back with 查看牌桌; the HUD
+   stays under the scrim. */
+.gd-stage.has-result :is(.gd-seat, .gd-slot, .gd-hand, .gd-tools, .gd-actions, .gd-spectate, .gd-jipai-host) {
+    opacity: 0;
+    transition: opacity 200ms ease var(--result-in, 0ms);
+}
+.gd-result-host { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
+.gd-result-host > * { pointer-events: auto; }
+@keyframes gd-fade-in { from { opacity: 0; } }
+.gd-result {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 30px;
+    color: #fff;
+}
+.gd-result::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(0, 22, 20, .8), rgba(0, 22, 20, .66) 45%, rgba(0, 22, 20, .84));
+    animation: gd-fade-in 220ms ease var(--in) both;
+}
+.gd-result > * { position: relative; }
+.gd-res-head { display: flex; flex-direction: column; align-items: center; }
+/* qqg_result's title: ~12% of the height, a thin outline and no drop edge */
+.gd-res-title {
+    margin: 0;
+    font-size: 84px;
+    line-height: 1.02;
+    animation: gd-res-title 420ms var(--ease-back) var(--in) both;
+}
+.gd-res-title:lang(en) { font-size: 72px; }
+.gd-res-title .gd-word { -webkit-text-stroke-width: 6px; text-shadow: none; }
+/* the match end: the records crown over 比赛胜利 / 比赛失败 */
+.gd-res-crown {
+    width: 64px; height: 45px;
+    margin-bottom: -10px;
+    rotate: -8deg;
+    animation: gd-res-title 420ms var(--ease-back) calc(var(--in) + 60ms) both;
+}
+@keyframes gd-res-title { from { opacity: 0; transform: translateY(-46px) scale(1.25); } }
+.gd-res-meta {
+    margin: 6px 0 0;
+    padding: 6px 70px;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .5) 22% 78%, transparent);
+    font: 700 22px/1.3 var(--font-ui);
+    white-space: nowrap;
+    animation: gd-fade-in 240ms ease calc(var(--in) + 160ms) both;
+}
+.gd-res-meta i { margin: 0 12px; font-style: normal; opacity: .6; }
+.gd-res-band {
+    display: flex;
+    width: min(1160px, calc(100% - 100px));
+    height: 300px;
+    margin-top: 16px;
+    animation: gd-res-band 320ms var(--ease-out) calc(var(--in) + 120ms) both;
+}
+@keyframes gd-res-band { from { opacity: 0; transform: scaleX(.72); } }
+.gd-res-half {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+}
+/* solid halves; only the outer 28 px soften into the scrim, as in qqg_result */
+.gd-res-half.is-warm {
+    padding-left: 44px;
+    background: linear-gradient(90deg, rgba(255, 244, 214, 0), #fff4d6 28px, #ffefc4 58%, #ffe39c);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 40px) 100%, 0 100%);
+}
+.gd-res-half.is-cool {
+    margin-left: -40px;
+    padding-right: 44px;
+    padding-left: 40px;
+    background: linear-gradient(90deg, #c9dcff, #d9e7ff 42%, #e3efff calc(100% - 28px), rgba(227, 239, 255, 0));
+    clip-path: polygon(40px 0, 100% 0, 100% 100%, 0 100%);
+}
+.gd-res-vs {
+    position: absolute;
+    left: 50%; top: 50%;
+    translate: -50% -52%;
+    display: flex;
+    font: 400 180px/1 var(--font-display);
+    opacity: .2;
+    pointer-events: none;
+}
+.gd-res-vs i { font-style: normal; color: #e8820e; }
+.gd-res-vs i + i { margin-left: -.12em; color: #3f78e6; }
+.gd-res-p {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    animation: gd-res-p 300ms var(--ease-out) calc(var(--in) + 220ms + var(--k) * 70ms) both;
+}
+@keyframes gd-res-p { from { opacity: 0; transform: translateY(18px); } }
+.gd-res-place { color: #d6301a; font: 900 36px/1 var(--font-ui); letter-spacing: .08em; text-indent: .08em; }
+.gd-res-place:lang(en) { letter-spacing: 0; text-indent: 0; }
+.is-cool > .gd-res-p .gd-res-place { color: #2a5fd6; }
+.gd-res-av {
+    position: relative;
+    width: 108px; height: 108px;
+    margin-top: 14px;
+    border: 4px solid #fff;
+    border-radius: 50%;
+    background: #dfe6ee;
+}
+.gd-res-tag {
+    position: absolute;
+    left: 50%; bottom: -12px;
+    translate: -50% 0;
+    height: 26px;
+    padding: 0 11px;
+    border-radius: 13px;
+    background: var(--mate-d);
+    color: #fff;
+    font: 700 18px/26px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-res-tag.is-opponent { background: var(--opp-d); }
+.gd-res-tag.is-t0 { background: #2c5ce4; }
+.gd-res-tag.is-t1 { background: #c8304e; }
+.gd-res-name {
+    max-width: 210px;
+    margin-top: 20px;
+    overflow: hidden;
+    color: #3a3f4c;
+    font: 700 22px/1.25 var(--font-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gd-res-p.is-me .gd-res-name { color: #10152a; font-weight: 900; }
+/* +N 级 / 冲A n/3 / 过A for the first team, 剩N张 for a hand still held; the height stays when empty */
+.gd-res-note {
+    height: 34px;
+    margin-top: 8px;
+    color: #5a6688;
+    font: 700 21px/34px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-res-note b { margin: 0 3px; font: 700 31px/34px var(--font-num); }
+.gd-res-note.is-up { color: #d6301a; }
+.is-cool > .gd-res-p .gd-res-note.is-up { color: #2a5fd6; }
+.gd-res-levels {
+    display: flex;
+    gap: 28px;
+    margin-top: 20px;
+    animation: gd-res-p 280ms var(--ease-out) calc(var(--in) + 380ms) both;
+}
+.gd-res-lvl {
+    display: flex;
+    align-items: center;
+    height: 50px;
+    padding-right: 4px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #ededed;
+}
+.gd-res-lvl.is-us { background: #fff6e8; }
+.gd-res-lvl b {
+    align-self: stretch;
+    padding: 0 14px;
+    background: #7d8187;
+    color: #fff;
+    font: 700 24px/50px var(--font-ui);
+    white-space: nowrap;
+}
+.gd-res-lvl.is-us b { background: var(--lvl-us); }
+.gd-res-lvl em {
+    min-width: 50px;
+    padding: 0 6px;
+    color: #3c3c3c;
+    font: 900 36px/50px var(--font-rank);
+    font-stretch: 62.5%;
+    font-style: normal;
+    text-align: center;
+    white-space: nowrap;
+}
+.gd-res-lvl.is-us em { color: #b8401c; }
+.gd-res-lvl em small { margin-left: 3px; font: 700 18px/1 var(--font-num); }
+.gd-res-lvl em.is-new { color: #d3240e; animation: gd-res-new 380ms var(--ease-back) calc(var(--in) + 720ms) both; }
+.gd-res-lvl .gd-res-win { font: 900 26px/50px var(--font-ui); }
+@keyframes gd-res-new { from { opacity: 0; transform: scale(1.9); } }
+.gd-res-arrow {
+    width: 0; height: 0;
+    margin: 0 2px 0 4px;
+    border-left: 15px solid #f39a1e;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+}
+.gd-res-actions {
+    display: flex;
+    gap: 64px;
+    margin-top: 26px;
+    animation: gd-res-p 280ms var(--ease-out) calc(var(--in) + 460ms) both;
+}
+.gd-res-actions .btn, .gd-result.is-peek .btn { --btn-h: 70px; --btn-fs: 30px; --btn-px: 26px; --btn-minw: 250px; }
+.gd-result .btn:lang(en) { --btn-ls: .02em; }
+.gd-result.is-peek { inset: auto; right: 22px; bottom: 16px; padding: 0; }
+.gd-result.is-peek::before { display: none; }
+.gd-result.is-peek .btn { --btn-h: 58px; --btn-fs: 25px; --btn-minw: 210px; }
+.gd-result.is-still::before, .gd-result.is-still * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+    .gd-result::before, .gd-result > * { animation: gd-fade-in 200ms linear var(--in) both !important; }
+    .gd-result > * * { animation: none !important; }
+}
