@@ -1,19 +1,37 @@
 /* Xiang — 演唱会 Concert
-   Click: the seaside dims into a concert stage (truss, halftone back-light), two spotlight
-   cones snap on and sweep, a laser fan opens behind him; a stage mic on a leaning stand
-   rises to his lips (the watermelon popsicle stays in his hand); an in-ear monitor pops
-   into his visible ear and its coiled cable runs down to the collar; the LIVE tally
-   lights; a crowd with glow sticks rises along the bottom edge and holds up a XIANG
-   board, a WOW! sign pops next to the popsicle.
-   Loop (3.2 s bar = 4 beats): spots sweep once per bar, glow sticks sway every 2 beats,
-   boards hop on each beat, a note drifts off the mic every other beat, LIVE dot blinks.
-   Photo landmarks (512 px): lips 330,192 · chin 318,230 · ear (concha) 207,163 ·
-   collar 232,262 · popsicle 320-443 x 200-370 · fist 340-445 x 380-470. */
+   Click: the seaside dims into a concert stage (truss, halftone back-light, two spotlights that
+   snap on and sweep, a laser fan behind him). The watermelon popsicle in his hand turns edge-on
+   and POOF — it unfolds into a big handheld mic in the same fist, its grille right at his lips
+   (the popsicle is gone: it is cut out of his layer and his shirt is filled in behind it; his
+   real fingers are re-layered over the handle). An in-ear monitor pops into his ear, the crowd
+   rises along the bottom with glow sticks, the LIVE box lights, then a WOW! burst and a XIANG!
+   burst pop in.
+   Loop (3.2 s bar = 4 beats): spots sweep once a bar, glow sticks sway, a music note floats off
+   the mic every beat, a heart rises from the crowd every other beat, both bursts hop on the
+   downbeat, the LIVE dot blinks.
+   Photo landmarks (512 px): lips 338,192 · chin 322,222 · ear 207,163 · collar 232,262 ·
+   popsicle 319-447 x 197-395 (stick into the fist at 385-413) · fist top edge 366,402 -> 424,381 ·
+   mic grip 400,390 -> grille centre 347,220 (17 deg from vertical, along the popsicle). */
 import { THREE, presence, env, ease, clamp, lerp, rng } from './kit.js';
 
-const BAR = 3.2, BEAT = BAR / 4;
+const BAR = 3.2, BEAT = BAR / 4, T0 = 1.3;
 const NC = [[98, 233, 255], [255, 95, 210], [255, 228, 92]];   // note colours
 const TAU = Math.PI * 2;
+const FONT = "'Arial Black', 'Helvetica Neue', Impact, sans-serif";
+
+// the popsicle (melon + sticks), cut out of his layer when it turns into the mic
+const MELON = [[318, 224], [330, 219], [341, 215], [347, 211], [354, 205], [371, 199.5], [390, 196.5], [406, 199.5], [419, 205],
+  [423, 220], [425, 237], [428, 250], [431, 261], [434, 274], [437, 286], [440, 298], [443, 309], [447, 320], [448, 334],
+  [446, 344], [440, 352], [434, 360], [427, 368], [419, 375], [417, 382], [415, 386], [408, 388.5], [402, 391], [397, 395.5],
+  [388, 397.5], [383, 398], [381, 386], [379, 378], [364, 375], [352, 371.5], [342, 366], [336, 359], [334, 348], [332, 338],
+  [330, 326], [328, 314], [326.5, 302], [325, 290], [323.5, 278], [322, 266], [320.5, 254], [319.5, 244], [318.5, 234]];
+// his shirt behind the melon's lower-left edge (painted in when the melon is cut out)
+const SHIRT = [[316, 259], [324, 259], [333, 272], [342, 294], [349, 318], [355, 342], [360, 360], [363, 368], [364.5, 377],
+  [355, 374.5], [345, 369], [337, 363], [331.5, 350], [328.5, 336], [326, 320], [323.5, 302], [321, 284], [318.5, 270]];
+// the fist, re-layered over the mic handle (top edge = the top of his fingers)
+const FIST = [[356, 410], [364, 403.5], [372, 399], [380, 396], [388, 394], [396, 392], [401, 388], [407, 384.5], [414, 382.5],
+  [423, 381.5], [428.5, 383.5], [432, 389], [436, 400], [440.5, 414], [444, 428], [442, 440], [430, 451], [412, 465],
+  [395, 478], [372, 490], [350, 490], [343, 466], [345, 440], [350, 422]];
 
 const BEAM_VS = `
   uniform float uH;
@@ -93,16 +111,20 @@ export default {
   still: 2.4,
   async build(k) {
     const { root } = k;
-    const P = k.D / 512;                             // photo px -> world px
     const R = k.R;
     const cToon = (c, o) => k.clip(k.toon(c, o));
+    const toWorld2 = (u, v) => new THREE.Vector2((u / 512 - 0.5) * k.D, (0.5 - v / 512) * k.D);
+    const person = k.layers.person;
+    const cutMap = person.material.map;
+    // the photo and plate sit deeper than the stencil disc: clip them, or a sliver of the sea shows at the rim
+    k.clip(k.layers.plate.material);
+    k.clip(k.layers.photo.material);
 
     /* ① the stage behind him: indigo backdrop, a halftone back-light, a truss across the top */
     const stageTex = k.canvasTexture(512, 512, (g) => {
       const gr = g.createLinearGradient(0, 0, 0, 512);
       gr.addColorStop(0, '#1d1446'); gr.addColorStop(0.55, '#170d36'); gr.addColorStop(1, '#07050f');
       g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
-      // halftone back-light: dots swell toward a hot spot behind his head
       for (let y = 6; y < 512; y += 11) {
         for (let x = ((y / 11) % 2) * 5.5; x < 512; x += 11) {
           const d = Math.hypot(x - 250, y - 190) / 300;
@@ -112,11 +134,9 @@ export default {
           g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
         }
       }
-      // stage floor edge
       g.fillStyle = '#05030a'; g.fillRect(0, 430, 512, 82);
       g.strokeStyle = 'rgba(95,242,255,0.55)'; g.lineWidth = 2;
       g.beginPath(); g.moveTo(0, 430); g.lineTo(512, 430); g.stroke();
-      // truss: two chords and a zigzag, inked
       const truss = (col, lw) => {
         g.strokeStyle = col; g.lineWidth = lw; g.lineJoin = 'round';
         g.beginPath(); g.moveTo(0, 46); g.lineTo(512, 46); g.moveTo(0, 64); g.lineTo(512, 64); g.stroke();
@@ -126,7 +146,10 @@ export default {
       };
       truss('#0b0814', 6); truss('#6c6788', 2.6);
     });
-    const stage = new THREE.Mesh(new THREE.CircleGeometry(R, 128), k.clip(new THREE.MeshBasicMaterial({ map: stageTex, transparent: true, opacity: 0, depthWrite: false })));
+    // 2 px wider than the photo (the stencil trims it), uvs still 0..1 over the photo
+    const pad = 2, discGeo = new THREE.CircleGeometry(R + pad, 128), duv = discGeo.attributes.uv, pf = (R + pad) / R;
+    for (let i = 0; i < duv.count; i++) duv.setXY(i, (duv.getX(i) - 0.5) * pf + 0.5, (duv.getY(i) - 0.5) * pf + 0.5);
+    const stage = new THREE.Mesh(discGeo, k.clip(new THREE.MeshBasicMaterial({ map: stageTex, transparent: true, opacity: 0, depthWrite: false })));
     stage.position.z = k.Z_BACK + 1;
     stage.scale.setScalar(k.depthScale(k.Z_BACK + 1));
     stage.renderOrder = -18;
@@ -134,8 +157,8 @@ export default {
 
     /* ② two spot fixtures on the truss, each with a sweeping halftone cone */
     const spots = [
-      { u: 118, v: 72, color: '#ff4fd2', base: 0.42, amp: 0.3, ph: 0 },
-      { u: 396, v: 70, color: '#62e9ff', base: -0.38, amp: 0.3, ph: Math.PI },
+      { u: 128, v: 72, color: '#ff4fd2', base: 0.42, amp: 0.3, ph: 0 },
+      { u: 378, v: 68, color: '#62e9ff', base: -0.36, amp: 0.3, ph: Math.PI },
     ].map((s) => {
       const g = new THREE.Group();
       const can = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.4, 8, 20), cToon(0x2b2838));
@@ -143,7 +166,6 @@ export default {
       const lens = new THREE.Mesh(new THREE.CircleGeometry(4.4, 20), k.clip(new THREE.MeshBasicMaterial({ color: 0xfff6fb })));
       lens.rotation.x = Math.PI / 2; lens.position.y = -4.05;
       const yoke = new THREE.Mesh(new THREE.TorusGeometry(6, 0.9, 6, 20, Math.PI), cToon(0x4a4660));
-      yoke.position.y = 0;
       const len = 175;
       const mat = k.clip(new THREE.ShaderMaterial({
         uniforms: { uColor: { value: new THREE.Color(s.color) }, uOpacity: { value: 0 }, uH: { value: len }, uCell: { value: 4.2 * k.dpr } },
@@ -181,58 +203,119 @@ export default {
     });
     root.add(lasers);
 
-    /* ④ stage mic on a leaning stand: grille at his chin, pointing at his lips */
+    /* ④ popsicle -> mic. His layer without the popsicle: the melon and sticks cut out, his shirt
+       painted in behind the melon's lower-left edge. Swapped in the frame the popsicle starts to
+       turn (the turning piece covers exactly the cut-out pixels, so the swap is invisible). */
+    const noMelon = k.canvasTexture(512, 512, (g) => {
+      g.drawImage(cutMap.image, 0, 0, 512, 512);
+      const path = (pts) => { g.beginPath(); pts.forEach(([u, v], i) => (i ? g.lineTo(u, v) : g.moveTo(u, v))); g.closePath(); };
+      g.globalCompositeOperation = 'destination-out';
+      path(MELON); g.fill();
+      g.globalCompositeOperation = 'source-over';
+      const sg = g.createLinearGradient(0, 259, 0, 377);
+      sg.addColorStop(0, 'rgb(12,88,130)'); sg.addColorStop(0.35, 'rgb(10,74,113)'); sg.addColorStop(0.7, 'rgb(8,62,96)'); sg.addColorStop(1, 'rgb(5,52,80)');
+      path(SHIRT); g.fillStyle = sg; g.fill();
+      // the chest turns away from the light toward its front edge
+      const sh = g.createLinearGradient(322, 0, 364, 0);
+      sh.addColorStop(0, 'rgba(0,10,20,0)'); sh.addColorStop(1, 'rgba(0,10,20,0.35)');
+      g.fillStyle = sh; g.fill();
+    });
+    noMelon.generateMipmaps = false;
+    noMelon.minFilter = THREE.LinearFilter;
+    noMelon.flipY = cutMap.flipY;
+
+    // the turning popsicle: the real pixels on a flat piece that spins about the popsicle's own axis
+    const melonAxis = { u: 384, v: 298, tilt: 0.14 };             // centre + lean (top to the left)
+    const mGeo = new THREE.ShapeGeometry(new THREE.Shape(MELON.map(([u, v]) => toWorld2(u, v))));
+    {
+      const pos = mGeo.attributes.position, uv = new Float32Array(pos.count * 2);
+      for (let i = 0; i < pos.count; i++) { uv[i * 2] = pos.getX(i) / k.D + 0.5; uv[i * 2 + 1] = pos.getY(i) / k.D + 0.5; }
+      mGeo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    }
+    const mc = toWorld2(melonAxis.u, melonAxis.v);
+    mGeo.translate(-mc.x, -mc.y, 0);
+    mGeo.rotateZ(-melonAxis.tilt);
+    const melonMat = new THREE.MeshBasicMaterial({ map: cutMap, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    const melon = new THREE.Mesh(mGeo, melonMat);
+    melon.renderOrder = 11;
+    const melonSpin = new THREE.Group(); melonSpin.add(melon);
+    const melonTilt = new THREE.Group(); melonTilt.add(melonSpin);
+    melonTilt.position.set(mc.x, mc.y, 0);
+    melonTilt.rotation.z = melonAxis.tilt;
+    const melonG = new THREE.Group(); melonG.add(melonTilt);
+    const MZ = 0.5;
+    melonG.position.z = MZ; melonG.scale.setScalar(k.depthScale(MZ));
+    melonG.visible = false;
+    root.add(melonG);
+
+    // the mic: origin at the grip (top of his fist), +y up the handle to the grille at his lips
+    const G = k.at(400, 390, 13), H = k.at(347, 220, 9);
+    const LEN = H.distanceTo(G);
+    const RH = 11.4;                                             // grille radius
     const grilleTex = k.canvasTexture(256, 128, (g, w, h) => {
-      g.fillStyle = '#c8cdd7'; g.fillRect(0, 0, w, h);
-      g.strokeStyle = '#2a2e38'; g.lineWidth = 2.4;
-      for (let i = -h; i < w + h; i += 13) {
+      g.fillStyle = '#d4d9e2'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#3a3f4c'; g.lineWidth = 3;
+      for (let i = -h; i < w + h; i += 16) {
         g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke();
         g.beginPath(); g.moveTo(i, h); g.lineTo(i + h, 0); g.stroke();
       }
     });
     grilleTex.wrapS = grilleTex.wrapT = THREE.RepeatWrapping;
     grilleTex.repeat.set(2, 1);
-    const mic = new THREE.Group();                  // origin = grille centre, +y = mic axis
-    const grille = new THREE.Mesh(new THREE.SphereGeometry(8, 30, 22), cToon(0xffffff, { map: grilleTex }));
-    grille.scale.y = 1.08;
-    k.ink(grille, 1.3);
-    const collar = new THREE.Mesh(new THREE.CylinderGeometry(6.4, 5.6, 3.4, 24), cToon(0xdde1e8));
-    collar.position.y = -8.4;
-    k.ink(collar, 1.1);
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(5.1, 3.5, 30, 24), cToon(0x1f2029));
-    body.position.y = -25.1;
-    k.ink(body, 1.2);
-    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(4.95, 4.75, 2.2, 24), cToon(0xff3fb4));
-    stripe.position.y = -16;
-    const tail = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.3, 3, 20), cToon(0xdde1e8));
-    tail.position.y = -41.5;
-    k.ink(tail, 1);
-    const clipM = new THREE.Mesh(new THREE.BoxGeometry(8.5, 7, 7.5), cToon(0x34333f));
-    clipM.position.y = -33;
-    k.ink(clipM, 1.1);
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(2.8, 14, 10), cToon(0x34333f));
-    knob.position.set(0, -45, 0);
-    k.ink(knob, 1);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.9, 160, 12), cToon(0xcfd4dd));
-    pole.position.y = -45 - 80;
-    k.ink(pole, 1.1);
-    mic.add(grille, collar, body, stripe, tail, clipM, knob, pole);
-    const MIC_TILT = -0.27;
-    mic.rotation.set(0.1, 0.35, MIC_TILT);
-    const micHome = k.at(329, 211, 12);
-    const micAxis = new THREE.Vector3(-Math.sin(MIC_TILT), Math.cos(MIC_TILT), 0);
+    const HANDLE_TOP = LEN - RH * 0.93 - 2.2, HANDLE_BOT = -22;
+    const HL = HANDLE_TOP - HANDLE_BOT;
+    const handleTex = k.canvasTexture(256, 512, (g, w, h) => {
+      g.fillStyle = '#1f1d27'; g.fillRect(0, 0, w, h);
+      // pink ring under the collar, the name printed up the front
+      g.fillStyle = '#ff3fb4'; g.fillRect(0, 10, w, 16);
+      g.save(); g.translate(w / 2, h * 0.45); g.rotate(-Math.PI / 2);
+      g.font = `900 46px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 7; g.strokeStyle = '#0b0a10'; g.strokeText('XIANG', 0, 2);
+      g.fillStyle = '#ff5fcf'; g.fillText('XIANG', 0, 2);
+      g.restore();
+    });
+    const mic = new THREE.Group();
+    const micIn = new THREE.Group();                             // unfolds (scale) and turns (label)
+    mic.add(micIn);
+    const grille = new THREE.Mesh(new THREE.SphereGeometry(RH, 32, 24), cToon(0xffffff, { map: grilleTex }));
+    grille.scale.y = 1.04;
+    grille.position.y = LEN;
+    k.ink(grille, 1.4);
+    const seam = new THREE.Mesh(new THREE.TorusGeometry(RH * 0.995, 0.7, 6, 40), cToon(0x5a5f6c));
+    seam.rotation.x = Math.PI / 2; seam.position.y = LEN - RH * 0.12;
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(RH * 0.78, RH * 0.7, 4, 28), cToon(0xe9ecf2));
+    collar.position.y = LEN - RH * 0.93;
+    k.ink(collar, 1.2);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(RH * 0.64, RH * 0.46, HL, 28, 1, false, Math.PI, TAU), cToon(0xffffff, { map: handleTex }));
+    handle.position.y = HANDLE_BOT + HL / 2;
+    k.ink(handle, 1.3);
+    const swb = new THREE.Mesh(new THREE.BoxGeometry(2.6, 5.5, 1.6), cToon(0xcfd4dd));
+    swb.position.set(0, LEN - RH - 16, RH * 0.6);
+    k.ink(swb, 0.9);
+    const shine = new THREE.Mesh(new THREE.CircleGeometry(1, 16), k.clip(new THREE.MeshBasicMaterial({ color: 0xffffff })));
+    shine.scale.set(2.6, 1.5, 1);
+    shine.rotation.z = 0.6;
+    shine.position.set(-RH * 0.42, LEN + RH * 0.46, RH * 0.8);
+    micIn.add(grille, seam, collar, handle, swb, shine);
+    mic.position.copy(G);
+    mic.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), H.clone().sub(G).normalize());
+    micIn.rotation.y = -0.35;
     root.add(mic);
+    // his fingers over the handle
+    const fist = k.patch(FIST, 16);
+    k.clip(fist.material);
+    fist.material.depthTest = false;                             // over the handle's near side too
 
     /* ⑤ in-ear monitor in the visible ear, coiled cable down to the collar */
     const iem = new THREE.Group();
-    const shell = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 16), k.toon(0xff4fb8));
-    shell.scale.set(4.6, 3.8, 2.6);
-    k.ink(shell, 1.1);
+    const shellM = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 16), k.toon(0xff4fb8));
+    shellM.scale.set(4.6, 3.8, 2.6);
+    k.ink(shellM, 1.1);
     const plateM = new THREE.Mesh(new THREE.CircleGeometry(2.5, 22), k.toon(0x5fe9ff));
     plateM.position.set(-0.4, 0.2, 2.62);
     const ledM = new THREE.Mesh(new THREE.CircleGeometry(0.75, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
     ledM.position.set(0.5, 0.8, 2.7);
-    iem.add(shell, plateM, ledM);
+    iem.add(shellM, plateM, ledM);
     iem.position.copy(k.at(208, 166, 6));
     iem.rotation.set(0, -0.35, -0.25);
     root.add(iem);
@@ -254,41 +337,42 @@ export default {
     coilGeo.setDrawRange(0, 0);
     root.add(coil);
 
-    /* ⑥ LIVE tally: a small inked box with a lit red face, left of him over the sea */
+    /* ⑥ LIVE box: an inked box with a lit red face, top right under the truss */
     const tally = new THREE.Group();
-    const box = new THREE.Mesh(new THREE.BoxGeometry(36, 14, 6), k.toon(0x24222e));
-    k.ink(box, 1.2);
-    const faceCard = k.card(33, 11, (g, w, h) => {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(38, 15, 6), k.toon(0x24222e));
+    k.ink(box, 1.3);
+    const faceCard = k.card(35, 12, (g, w, h) => {
       g.fillStyle = '#ff2e55';
       g.beginPath(); g.roundRect(0, 0, w, h, h * 0.22); g.fill();
       g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(w * 0.04, h * 0.1, w * 0.92, h * 0.16);
       g.fillStyle = '#fff';
-      g.font = `900 ${Math.round(h * 0.66)}px 'Arial Black', Impact, sans-serif`;
+      g.font = `900 ${Math.round(h * 0.7)}px ${FONT}`;
       g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText('LIVE', w * 0.6, h * 0.55);
     }, { res: 2 });
     faceCard.position.z = 3.05;
-    const recDot = new THREE.Mesh(new THREE.CircleGeometry(1.9, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }));
-    recDot.position.set(-11.4, 0, 3.2);
-    const tallyGlow = k.glowSprite('rgba(255,46,85,0.9)', 46, 0);
+    const recDot = new THREE.Mesh(new THREE.CircleGeometry(2, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }));
+    recDot.position.set(-12, 0, 3.2);
+    const tallyGlow = k.glowSprite('rgba(255,46,85,0.9)', 42, 0);
     tallyGlow.position.z = -2;
     tally.add(tallyGlow, box, faceCard, recDot);
-    const tallyHome = k.at(74, 204, 20);
-    tally.position.copy(tallyHome);
-    tally.rotation.set(0, 0.28, 0.06);
+    tally.position.copy(k.at(412, 118, 20));
+    tally.rotation.set(0.05, -0.3, -0.07);
     root.add(tally);
 
     /* ⑦ the crowd along the bottom edge: two rows of heads, glow sticks held up */
     const arcY = (x) => -Math.sqrt(Math.max(0, R * R - x * x));
     const crowdRow = (seed, z, fill, rim, lift, rMin, rMax, step, order) => {
-      const Wc = 204, Hc = 78;                       // plane spans y -R-8 .. -R+70
+      const Wc = 204, Hc = 78;
       const rnd = rng(seed);
       const tex = k.canvasTexture(512, 176, (g, w, h) => {
         const sx = w / Wc, sy = h / Hc;
-        const toC = (x, y) => [(x + Wc / 2) * sx, (70 - R - y) * sy];     // world (x, y) -> canvas
+        const toC = (x, y) => [(x + Wc / 2) * sx, (70 - R - y) * sy];
         const heads = [];
         for (let x = -Wc / 2 + 4; x <= Wc / 2; x += step * (0.85 + rnd() * 0.3)) {
-          heads.push([x, arcY(x) + lift + rnd() * 3, rMin + rnd() * (rMax - rMin)]);
+          // keep his fist clear (it holds the mic)
+          const dip = x > 30 && x < 78 ? 14 : 0;
+          heads.push([x, arcY(x) + lift + rnd() * 3 - dip, rMin + rnd() * (rMax - rMin)]);
         }
         g.fillStyle = fill;
         for (const [x, y, r] of heads) {
@@ -314,17 +398,18 @@ export default {
       root.add(g);
       return g;
     };
-    const backRow = crowdRow(7, 18, '#1c1233', 'rgba(255,95,210,0.85)', 15, 4.2, 5.4, 10, 12);
-    const frontRow = crowdRow(3, 26, '#08060e', 'rgba(98,233,255,0.9)', 5, 5.6, 7.2, 13, 14);
+    const backRow = crowdRow(7, 3, '#1c1233', 'rgba(255,95,210,0.85)', 15, 4.2, 5.4, 10, 12);
+    const frontRow = crowdRow(3, 5, '#08060e', 'rgba(98,233,255,0.9)', 5, 5.6, 7.2, 13, 14);
 
     const rs = rng(11);
     const sticks = [];
     for (let x = -86; x <= 86; x += 7.6 + rs() * 2.4) {
-      if (x > 34 && x < 70 && rs() < 0.6) continue;           // fewer over his fist
+      if (x > 26 && x < 80) { rs(); rs(); rs(); rs(); continue; }   // none over his fist
       sticks.push([x + rs() * 2, arcY(x) + 16 + rs() * 7, 10.5 + rs() * 4, -x / R * 0.35 + (rs() - 0.5) * 0.25, rs() * 0.9]);
     }
     const SC = ['#62e9ff', '#62e9ff', '#62e9ff', '#ff5fd2', '#ffe45c'];
-    const sPos = new Float32Array(sticks.length * 3), sPh = new Float32Array(sticks.length), sLen = new Float32Array(sticks.length), sA0 = new Float32Array(sticks.length), sCol = new Float32Array(sticks.length * 3);
+    const n = sticks.length;
+    const sPos = new Float32Array(n * 3), sPh = new Float32Array(n), sLen = new Float32Array(n), sA0 = new Float32Array(n), sCol = new Float32Array(n * 3);
     const tmpC = new THREE.Color();
     sticks.forEach(([x, y, len, a0, ph], i) => {
       sPos.set([x, y, 0], i * 3); sPh[i] = ph; sLen[i] = len; sA0[i] = a0;
@@ -346,8 +431,8 @@ export default {
     stickPts.frustumCulled = false;
     const stickGroup = new THREE.Group();
     stickGroup.add(stickPts);
-    stickGroup.position.z = 22;
-    stickGroup.scale.setScalar(k.depthScale(22));
+    stickGroup.position.z = 4;
+    stickGroup.scale.setScalar(k.depthScale(4));
     root.add(stickGroup);
 
     const tint = new THREE.Color();
@@ -357,6 +442,14 @@ export default {
       const p = ((t - t0) % BEAT) / BEAT;
       return p < 0.22 ? Math.sin(Math.PI * p / 0.22) : 0;
     };
+    const downbeat = (t) => {                         // a hop on the first beat of each bar
+      if (t < T0) return 0;
+      const p = ((t - T0) % BAR) / BAR;
+      return p < 0.07 ? Math.sin(Math.PI * p / 0.07) : 0;
+    };
+    // popsicle turn (0 = flat, 1 = edge-on) and mic unfold, as functions of (t, e)
+    const turnOf = (t, e) => ease.in(env(t, 0.26, 0.44)) * (1 - ease.out(env(e, 0.3, 0.7)));
+    const unfoldOf = (t, e) => ease.outBack(env(t, 0.42, 0.74), 2.2) * (1 - ease.in(clamp(e * 2.6)));
 
     return {
       update(t, e) {
@@ -364,14 +457,17 @@ export default {
         const b = presence(t, e, 0.0, 0.45, ease.out, 0);
         stage.material.opacity = b;
         k.layers.plate.material.color.copy(tint.setRGB(1 - 0.75 * b, 1 - 0.78 * b, 1 - 0.6 * b));
-        k.layers.person.material.color.copy(tint.setRGB(1 - 0.05 * b, 1 - 0.1 * b, 1));
+        tint.setRGB(1 - 0.05 * b, 1 - 0.1 * b, 1);
+        person.material.color.copy(tint);
+        melonMat.color.copy(tint);
+        fist.material.color.copy(tint);
 
         // spots: fixtures pop in, cones snap on, then sweep once per bar
         spots.forEach((s, i) => {
-          const a = presence(t, e, 0.12 + i * 0.12, 0.35, ease.outBack, 0.1 + i * 0.1);
+          const a = presence(t, e, 0.1 + i * 0.1, 0.35, ease.outBack, 0.1 + i * 0.1);
           k.show(s.g, a);
-          const on = presence(t, e, 0.3 + i * 0.12, 0.25, ease.out, 0.1 + i * 0.1);
-          const flash = 1 + 0.35 * hop(t, 1.2) * (i === 0 ? 1 : 0.6);
+          const on = presence(t, e, 0.28 + i * 0.1, 0.25, ease.out, 0.1 + i * 0.1);
+          const flash = 1 + 0.35 * downbeat(t);
           s.mat.uniforms.uOpacity.value = on * 0.85 * flash;
           s.beam.scale.set(1, lerp(0.2, 1, on), 1);
           const sw = s.base + s.amp * Math.sin(TAU * t / BAR + s.ph) * env(t, 0.3, 0.9);
@@ -380,42 +476,54 @@ export default {
         });
 
         // lasers: fan opens, breathes with the bar, brightens on the downbeat
-        const lz = presence(t, e, 0.75, 0.35, ease.out, 0.2);
-        const bar = ((t - 1.2) % BAR + BAR) % BAR / BAR;
-        const down = t > 1.2 ? Math.max(0, 1 - bar / 0.18) : 0;
+        const lz = presence(t, e, 0.8, 0.35, ease.out, 0.2);
+        const bar = ((t - T0) % BAR + BAR) % BAR / BAR;
+        const down = t > T0 ? Math.max(0, 1 - bar / 0.18) : 0;
         laserMeshes.forEach((m, i) => {
           const spread = lerp(0.1, 1, lz) * (0.9 + 0.1 * Math.sin(TAU * t / BAR + i));
           m.rotation.z = -laserAngles[i] * spread;
-          m.material.uniforms.uOpacity.value = lz * (0.55 + 0.45 * down);
+          m.material.uniforms.uOpacity.value = lz * (0.5 + 0.4 * down);
           m.visible = lz > 0.004;
         });
 
-        // mic + stand rise along the stand axis up to his lips
-        const mr = presence(t, e, 0.3, 0.5, ease.outBack, 0.3);
-        mic.visible = mr > 0.004;
-        mic.position.copy(micHome).addScaledVector(micAxis, -(1 - mr) * 135);
+        // the popsicle turns edge-on; his layer loses it in the same frame
+        const cut = t >= 0.26 && e < 0.72;
+        const turn = cut ? turnOf(t, e) : 0;
+        melonG.visible = cut && turn < 0.995;
+        melonSpin.rotation.y = turn * Math.PI / 2;
+        melonSpin.position.y = turn * 3;
+        const want = cut ? noMelon : cutMap;
+        if (person.material.map !== want) person.material.map = want;
+
+        // ...and the mic unfolds out of that edge, grille up to his lips
+        const un = unfoldOf(t, e);
+        mic.visible = un > 0.004;
+        micIn.scale.set(Math.max(un, 0.004), lerp(0.72, 1, clamp(un)) + (un > 1 ? (un - 1) * 0.4 : 0), Math.max(un, 0.004));
+        micIn.rotation.y = -0.35 + (1 - clamp(un)) * 1.4 + 0.06 * Math.sin(TAU * t / BAR);
+        // it bobs a touch with the beat (he is singing)
+        const bob = hop(t, T0);
+        mic.position.set(G.x - bob * 0.5, G.y + bob * 0.9, G.z);
 
         // in-ear monitor pops into the ear, then the coil runs down
-        const ie = presence(t, e, 0.5, 0.32, ease.outBack, 0.2);
+        const ie = presence(t, e, 0.6, 0.32, ease.outBack, 0.2);
         k.show(iem, ie);
-        const cl = presence(t, e, 0.62, 0.4, ease.inOut, 0.1);
-        const segs = Math.floor(cl * 440) * 5 * 6;
-        coilGeo.setDrawRange(0, Math.min(coilTotal, segs));
+        const cl = presence(t, e, 0.7, 0.4, ease.inOut, 0.1);
+        coilGeo.setDrawRange(0, Math.min(coilTotal, Math.floor(cl * 440) * 5 * 6));
         coil.visible = cl > 0.004;
 
-        // LIVE tally
-        const tl = presence(t, e, 0.7, 0.35, ease.outBack, 0.4);
+        // LIVE box
+        const tl = presence(t, e, 0.78, 0.35, ease.outBack, 0.4);
         k.show(tally, tl);
-        const blink = t > 1.05 ? (((t - 1.05) % BEAT) / BEAT < 0.55 ? 1 : 0.25) : 0;
+        const blink = t > 1.1 ? (((t - 1.1) % BEAT) / BEAT < 0.55 ? 1 : 0.25) : 0;
         recDot.material.opacity = blink;
         tallyGlow.material.opacity = tl * (0.25 + 0.2 * blink);
 
         // crowd rises from the bottom edge, bobs on the beat
-        const cr = presence(t, e, 0.4, 0.45, ease.out, 0.5);
+        const cr = presence(t, e, 0.45, 0.45, ease.out, 0.5);
         backRow.visible = frontRow.visible = cr > 0.004;
-        backRow.position.y = -(1 - cr) * 34 + 1.2 * hop(t, 1.2 + BEAT / 2);
-        frontRow.position.y = -(1 - cr) * 40 + 1.6 * hop(t, 1.2);
-        const st = presence(t, e, 0.55, 0.45, ease.outBack, 0.5);
+        backRow.position.y = -(1 - cr) * 34 + 1.2 * hop(t, T0 + BEAT / 2);
+        frontRow.position.y = -(1 - cr) * 40 + 1.6 * hop(t, T0);
+        const st = presence(t, e, 0.58, 0.45, ease.outBack, 0.5);
         stickPts.visible = st > 0.004;
         sMat.uniforms.uOpacity.value = clamp(st * 1.4) * (1 - clamp(e * 1.8));
         sMat.uniforms.uLift.value = -(1 - st) * 34;
@@ -423,83 +531,158 @@ export default {
         sMat.uniforms.uAmp.value = 0.3 * env(t, 0.6, 1.3);
       },
 
-      // comic layer: cheer boards held up from the crowd, notes drifting off the mic
+      // comic layer: the POOF, notes off the mic, hearts from the crowd, WOW! and XIANG!
       draw2d(q, t, e) {
         q.strokeJoin(q.ROUND);
-        // music notes: one per beat from the grille, drifting up and to the right
-        const [mx, my] = k.toScreen(v3.copy(micHome).addScaledVector(micAxis, 6));
-        const life = 2.4;
-        const n1 = Math.floor((t - 1.0) / (BEAT * 2));
-        for (let n = Math.max(0, n1 - 2); n <= n1; n++) {
-          const p = (t - (1.0 + n * BEAT * 2)) / life;
+        const fade = 1 - clamp(e * 2.2);
+        const [hx, hy] = k.toScreen(v3.copy(H));
+        // POOF: a cloud bursts over the popsicle as it turns edge-on, the mic unfolds behind it,
+        // then the cloud breaks up; two sparkles on the grille as it lands
+        if (t > 0.34 && t < 0.72 && fade > 0) {
+          const [cx, cy] = k.screenAt(384, 292, 4);
+          const g = ease.outBack(env(t, 0.34, 0.46), 2);
+          cloud(q, cx, cy, g, t, fade);
+        }
+        const pk = env(t, 0.58, 0.9);
+        if (pk > 0 && pk < 1 && fade > 0) {
+          const a = Math.sin(Math.PI * pk) * fade;
+          sparkle(q, hx + 13, hy - 11, 7.5 * a, a);
+          sparkle(q, hx - 3, hy - 17, 4.5 * Math.sin(Math.PI * clamp(pk * 1.3 - 0.2)), a);
+        }
+        // music notes: one per beat from the grille, drifting right into the stage
+        const life = 2.3;
+        const n1 = Math.floor((t - 1.0) / BEAT);
+        for (let m = Math.max(0, n1 - 3); m <= n1; m++) {
+          const p = (t - (1.0 + m * BEAT)) / life;
           if (p < 0 || p > 1) continue;
-          const a = Math.min(1, p / 0.12) * (1 - env(p, 0.65, 1)) * (1 - clamp(e * 2.2));
+          const a = Math.min(1, p / 0.12) * (1 - env(p, 0.65, 1)) * fade;
           if (a <= 0) continue;
-          const x = mx + 9 + 40 * p;
-          const y = my - 13 - 16 * p - 3.5 * Math.sin(p * 7 + n * 2);
-          const c = NC[n % 3];
-          note(q, x, y, 11.5 + (n % 2) * 1.5, (n % 3 === 1), c, a, -0.2 + 0.3 * Math.sin(p * 5 + n));
+          const lane = m % 2;
+          const x = hx + 16 + 30 * p;
+          const y = hy + (lane ? 20 : 2) - (lane ? 10 : 16) * p + 3 * Math.sin(p * 7 + m * 2);
+          note(q, x, y, 13.5 + lane, m % 3 === 1, NC[m % 3], a, -0.2 + 0.3 * Math.sin(p * 5 + m));
         }
-        // boards
-        const pb = presence(t, e, 0.95, 0.4, ease.outBack, 0.6);
-        if (pb > 0.004) {
-          const [bx, by] = k.screenAt(222, 455, 26);
-          board(q, bx, by + (1 - pb) * 26 - 3 * hop(t, 1.2), pb, -0.08 + 0.05 * Math.sin(TAU * t / (BEAT * 2)));
+        // hearts: one every other beat from the crowd, left and right in turn
+        const h1 = Math.floor((t - 1.2) / (BEAT * 2));
+        for (let m = Math.max(0, h1 - 1); m <= h1; m++) {
+          const p = (t - (1.2 + m * BEAT * 2)) / 2.2;
+          if (p < 0 || p > 1) continue;
+          const a = Math.min(1, p / 0.15) * (1 - env(p, 0.6, 1)) * fade;
+          if (a <= 0) continue;
+          const [bx, by] = m % 2 ? k.screenAt(462, 372, 6) : k.screenAt(74, 350, 6);
+          heart(q, bx + 4 * Math.sin(p * 6 + m), by - 34 * ease.out(p), 8.5 + 1.5 * Math.sin(Math.PI * p), a, m % 2 ? [255, 95, 210] : [255, 64, 110]);
         }
-        const pw = presence(t, e, 1.1, 0.35, ease.outBack, 0.7);
+        // WOW! (left, over the sea side) and XIANG! (the crowd's sign, bottom left)
+        const pw = presence(t, e, 0.95, 0.35, ease.outBack, 0.7);
         if (pw > 0.004) {
-          const [wx, wy] = k.screenAt(452, 318, 20);
-          wow(q, wx, wy - 2.5 * hop(t, 1.2 + BEAT / 2), pw, 0.12 + 0.05 * Math.sin(TAU * t / (BEAT * 2) + 1));
+          const [wx, wy] = k.screenAt(104, 244, 20);
+          burst(q, wx, wy - 2.5 * downbeat(t), pw * (1 + 0.05 * downbeat(t)), -0.16, 16, [255, 214, 64], 'WOW!', [232, 36, 84], 12);
+        }
+        const px = presence(t, e, 1.1, 0.35, ease.outBack, 0.8);
+        if (px > 0.004) {
+          const [xx, xy] = k.screenAt(196, 440, 26);
+          burst(q, xx, xy - 2.5 * downbeat(t - BEAT * 2), px * (1 + 0.05 * downbeat(t - BEAT * 2)), 0.09, 18, [255, 79, 184], 'XIANG!', [124, 58, 237], 12);
         }
       },
     };
 
+    // a music note: an ink pass (thick) under a colour pass, so stems read on the dark stage
     function note(q, x, y, s, beamed, c, a, rot) {
       q.push(); q.translate(x, y); q.rotate(rot);
-      q.stroke(22, 21, 26, 255 * a); q.strokeWeight(1.4);
-      q.fill(c[0], c[1], c[2], 255 * a);
-      if (beamed) {
-        q.beginShape(); q.vertex(-s * 0.28, -s * 1.05); q.vertex(s * 0.72, -s * 1.3); q.vertex(s * 0.72, -s * 1.02); q.vertex(-s * 0.28, -s * 0.77); q.endShape(q.CLOSE);
-        q.line(-s * 0.28, -s * 0.9, -s * 0.28, 0); q.line(s * 0.72, -s * 1.15, s * 0.72, -s * 0.25);
-        q.ellipse(-s * 0.55, 0, s * 0.62, s * 0.46);
-        q.ellipse(s * 0.45, -s * 0.25, s * 0.62, s * 0.46);
-      } else {
-        q.line(s * 0.26, 0, s * 0.26, -s * 1.15);
-        q.beginShape(); q.vertex(s * 0.26, -s * 1.15); q.bezierVertex(s * 0.6, -s * 0.95, s * 0.85, -s * 0.75, s * 0.62, -s * 0.38); q.bezierVertex(s * 0.62, -s * 0.62, s * 0.45, -s * 0.8, s * 0.26, -s * 0.82); q.endShape(q.CLOSE);
-        q.ellipse(0, 0, s * 0.66, s * 0.5);
-      }
+      const shape = (ink) => {
+        if (ink) { q.stroke(22, 21, 26, 255 * a); q.strokeWeight(4.4); q.fill(22, 21, 26, 255 * a); }
+        else { q.stroke(c[0], c[1], c[2], 255 * a); q.strokeWeight(1.9); q.fill(c[0], c[1], c[2], 255 * a); }
+        if (beamed) {
+          q.line(-s * 0.28, -s * 0.95, -s * 0.28, 0); q.line(s * 0.72, -s * 1.2, s * 0.72, -s * 0.25);
+          q.beginShape(); q.vertex(-s * 0.28, -s * 1.08); q.vertex(s * 0.72, -s * 1.33); q.vertex(s * 0.72, -s * 1.05); q.vertex(-s * 0.28, -s * 0.8); q.endShape(q.CLOSE);
+          if (!ink) q.noStroke();
+          q.ellipse(-s * 0.55, 0, s * 0.66, s * 0.5);
+          q.ellipse(s * 0.45, -s * 0.25, s * 0.66, s * 0.5);
+        } else {
+          q.line(s * 0.26, 0, s * 0.26, -s * 1.15);
+          q.beginShape(); q.vertex(s * 0.26, -s * 1.15); q.bezierVertex(s * 0.6, -s * 0.95, s * 0.85, -s * 0.75, s * 0.62, -s * 0.38); q.bezierVertex(s * 0.62, -s * 0.62, s * 0.45, -s * 0.8, s * 0.26, -s * 0.82); q.endShape(q.CLOSE);
+          if (!ink) q.noStroke();
+          q.ellipse(0, 0, s * 0.7, s * 0.52);
+        }
+      };
+      shape(true); shape(false);
+      q.noStroke(); q.fill(255, 255, 255, 190 * a);
+      if (beamed) { q.ellipse(-s * 0.66, -s * 0.07, s * 0.2, s * 0.13); q.ellipse(s * 0.34, -s * 0.32, s * 0.2, s * 0.13); }
+      else q.ellipse(-s * 0.12, -s * 0.08, s * 0.22, s * 0.14);
       q.pop();
     }
-    function board(q, x, y, s, rot) {
-      q.push(); q.translate(x, y); q.rotate(rot); q.scale(s);
-      q.stroke(22, 21, 26); q.strokeWeight(2);
-      q.fill(60, 52, 70); q.rect(-1.6, 6, 3.2, 14, 1);                 // stick
-      q.fill(22, 21, 26); q.noStroke(); q.rect(-25, -7.5, 54, 19, 4);   // hard shadow
-      q.stroke(22, 21, 26); q.strokeWeight(2);
-      q.fill(255, 250, 240); q.rect(-27, -10, 54, 19, 4);
-      q.noStroke(); q.fill(255, 95, 210);
-      q.textFont("'Arial Black', Impact, sans-serif"); q.textStyle(q.BOLD ?? 'bold');
-      q.textAlign(q.CENTER, q.CENTER); q.textSize(12.5);
-      q.stroke(22, 21, 26); q.strokeWeight(2.2); q.text('XIANG', 0, -0.2);
-      q.pop();
-    }
-    function wow(q, x, y, s, rot) {
-      q.push(); q.translate(x, y); q.rotate(rot); q.scale(s);
-      q.stroke(22, 21, 26); q.strokeWeight(2);
-      q.fill(60, 52, 70); q.rect(-1.4, 8, 2.8, 12, 1);
-      const burst = (dx, dy) => {
+    function heart(q, x, y, s, a, c) {
+      q.push(); q.translate(x, y);
+      const shape = () => {
         q.beginShape();
-        for (let i = 0; i < 20; i++) {
-          const a = i / 20 * TAU - Math.PI / 2;
-          const r = i % 2 ? 9.5 : 16;
-          q.vertex(dx + Math.cos(a) * r * 1.12, dy + Math.sin(a) * r * 0.86);
+        q.vertex(0, s * 0.62);
+        q.bezierVertex(-s * 1.25, -s * 0.2, -s * 0.55, -s * 1.05, 0, -s * 0.38);
+        q.bezierVertex(s * 0.55, -s * 1.05, s * 1.25, -s * 0.2, 0, s * 0.62);
+        q.endShape(q.CLOSE);
+      };
+      q.noStroke(); q.fill(22, 21, 26, 255 * a); q.push(); q.translate(1.2, 1.4); shape(); q.pop();
+      q.stroke(22, 21, 26, 255 * a); q.strokeWeight(1.5); q.fill(c[0], c[1], c[2], 255 * a); shape();
+      q.noStroke(); q.fill(255, 255, 255, 200 * a); q.ellipse(-s * 0.38, -s * 0.4, s * 0.34, s * 0.22);
+      q.pop();
+    }
+    // a spiky comic burst behind a white pill with the word on it (sized to the word); hard ink shadow
+    function burst(q, x, y, s, rot, spikes, col, word, tc, ts) {
+      q.push(); q.translate(x, y); q.rotate(rot); q.scale(s);
+      q.textFont(FONT); q.textSize(ts);
+      q.textStyle?.(q.BOLD ?? 'bold');
+      const tw = q.textWidth(word);
+      const pw = tw + 9, ph = ts + 5;
+      const rx = pw * 0.7, ry = ph * 1.28;
+      const star = (dx, dy) => {
+        q.beginShape();
+        for (let i = 0; i < spikes * 2; i++) {
+          const a = i / (spikes * 2) * TAU - Math.PI / 2;
+          const r = i % 2 ? 0.7 : (i % 4 === 0 ? 1.08 : 0.94);
+          q.vertex(dx + Math.cos(a) * rx * r, dy + Math.sin(a) * ry * r);
         }
         q.endShape(q.CLOSE);
       };
-      q.noStroke(); q.fill(22, 21, 26); burst(2, 2.5);
-      q.stroke(22, 21, 26); q.strokeWeight(2); q.fill(255, 214, 64); burst(0, 0);
-      q.textFont("'Arial Black', Impact, sans-serif"); q.textAlign(q.CENTER, q.CENTER); q.textSize(9.5);
-      q.fill(232, 36, 84); q.strokeWeight(1.8); q.text('WOW!', 0.5, 0.3);
+      q.noStroke(); q.fill(22, 21, 26); star(2.4, 2.8);
+      q.stroke(22, 21, 26); q.strokeWeight(2); q.fill(col[0], col[1], col[2]); star(0, 0);
+      q.noStroke(); q.fill(22, 21, 26); q.rect(-pw / 2 + 1.6, -ph / 2 + 1.8, pw, ph, ph / 2);
+      q.stroke(22, 21, 26); q.strokeWeight(1.8); q.fill(255, 252, 244); q.rect(-pw / 2, -ph / 2, pw, ph, ph / 2);
+      q.textAlign(q.CENTER, q.CENTER);
+      q.stroke(22, 21, 26); q.strokeWeight(2.2); q.fill(tc[0], tc[1], tc[2]); q.text(word, 0, 0.8);
+      q.pop();
+    }
+    // a white comic cloud (one ink outline round the whole silhouette, two ink curls) that breaks
+    // up into puffs flying apart
+    function cloud(q, x, y, g, t, a) {
+      const P = [[0, -2, 14], [-12, -12, 10], [9, -15, 11], [-14, 7, 10.5], [13, 8, 11], [0, -26, 8.5], [-2, 21, 10.5], [18, -4, 8.5], [-18, -4, 8.5], [8, 22, 7.5]];
+      const br = env(t, 0.5, 0.62);
+      const puffs = P.map(([dx, dy, r], i) => {
+        const d = ease.out(clamp(br * 1.5 - (i % 4) * 0.1));
+        return [dx * (1 + 0.9 * d), dy * (1 + 0.9 * d) - 5 * d, r * g * (1 - d)];
+      }).filter(p => p[2] > 0.4);
+      const al = a * (1 - br * br);
+      if (al <= 0.01) return;
+      q.push(); q.translate(x, y);
+      q.noStroke(); q.fill(22, 21, 26, 255 * al);
+      for (const [dx, dy, r] of puffs) q.circle(dx, dy, 2 * r + 5);
+      q.fill(255, 255, 255, 255 * al);
+      for (const [dx, dy, r] of puffs) q.circle(dx, dy, 2 * r);
+      if (br < 0.25) {
+        q.noFill(); q.stroke(22, 21, 26, 255 * al); q.strokeWeight(1.6);
+        q.arc(-6 * g, 4 * g, 12 * g, 10 * g, 0.3, 2.4);
+        q.arc(8 * g, -8 * g, 10 * g, 9 * g, -0.4, 1.6);
+      }
+      q.pop();
+    }
+    function sparkle(q, x, y, s, a) {
+      if (s < 1.5) return;
+      q.push(); q.translate(x, y);
+      q.stroke(22, 21, 26, 255 * a); q.strokeWeight(1.4); q.fill(255, 232, 92, 255 * a);
+      q.beginShape();
+      for (let i = 0; i < 8; i++) {
+        const ang = i / 8 * TAU - Math.PI / 2, r = i % 2 ? s * 0.26 : s;
+        q.vertex(Math.cos(ang) * r, Math.sin(ang) * r);
+      }
+      q.endShape(q.CLOSE);
       q.pop();
     }
   },

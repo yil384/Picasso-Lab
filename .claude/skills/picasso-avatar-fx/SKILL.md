@@ -31,10 +31,13 @@ Every avatar on https://yufeiding.ucsd.edu/people/team is its own Google Sites e
 - `people/static/fx/<name>-cut.webp` / `-plate.webp` — the person cut out / the photo with the person
   inpainted out. Make them with `python3 people/fx/tools/make_layers.py <name> --grid` (BiRefNet portrait
   matte via rembg; the `--grid` image is how you read landmarks — red lines every 128 photo px, labels every 64).
-- Not on the kit: `people/xinwei_masterchef.html` (SVG/CSS, the approved quality bar), the user's own
-  `people/haotian_shen.html`, `people/yufei_cats.html` (never touch these two), and the alumni Alon, Chenyang
-  and Hezi (`alon_iron_man.html`, `chenyang_captain_america.html`, `hezi_scholar.html`): alumni have no avatar
-  on the Team page, so the user asked to leave them as they are.
+- Not on the kit: `people/xinwei_masterchef.html` (SVG/CSS, the approved quality bar; it sizes itself to the
+  tile through `--avatar-size` and sits bottom-centre on phones like the kit snippets), and the alumni Alon,
+  Chenyang and Hezi (`alon_iron_man.html`, `chenyang_captain_america.html`, `hezi_scholar.html`): alumni have
+  no avatar on the Team page, so the user asked to leave them as they are. Everyone else, Yufei
+  (`yufei_cats.html`) and Haotian (`haotian_shen.html`) included, is on the kit.
+- The user compares every rebuild with the old version (what is live): keep all of its ideas and elements, put
+  props exactly where the old one had them on the photo, and make it more exaggerated and richer, not sparser.
 
 ## Scene toolkit (k)
 Scenes are written for a 200 px avatar and never see the real size. World units = **logical px** (the CSS

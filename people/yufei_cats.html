@@ -1,429 +1,78 @@
-<div class="yf-wrap" style="--avatar-size:200px">
-  <div class="yf-stage">
-    <div class="yf-avatar-frame">
-      <img src="https://yil384.github.io/Picasso-Lab/people/static/yufei.webp"
-           class="avatar yf-avatar" alt="avatar"/>
-    </div>
-    <div class="yf-tree" aria-hidden="true">
-      <img class="yf-tree-img" src="https://yil384.github.io/Picasso-Lab/people/static/sd_palm_tree.svg" alt=""/>
-    </div>
-    <div class="yf-cat-layer" aria-hidden="true">
-      <div class="yf-cat-actor">
-        <div class="yf-cat-sprite yf-cat-walk-cycle"></div>
-        <div class="yf-cat-sprite yf-cat-sleep"></div>
-        <div class="yf-cat-sprite yf-cat-climb-cycle"></div>
-        <div class="yf-cat-sprite yf-cat-perch"></div>
-      </div>
-    </div>
+<!--
+  yufei_cats.html — San Diego sunset, a palm tree and her white cat (Google Sites embed for the Team page)
+  ──────────────────────────────────────────────────────────────────────────
+  Default: the plain photo. Click (or Enter / Space): the garden behind her turns into a San Diego
+  sunset over the Pacific (the sun sets on the horizon, Point Loma in the distance), a palm tree
+  grows up behind her and opens its fronds, and her white cat peeks over her shoulder, hops up
+  into the palm and sits there. Calm loop: the fronds sway, the cat flicks its tail and gives a
+  slow blink, two gulls glide, the sea sparkles under the sun. Click again to switch it off.
+
+  The effect itself lives on GitHub Pages, so it can be changed without re-pasting this:
+    people/fx/yufei.js  the scene (three.js props + q5 comic layer)
+    people/fx/kit.js    shared runtime for every avatar (layers, tilt, loading, cleanup)
+  Nothing heavy loads until the visitor hovers or touches the photo.
+-->
+<div class="pfx" id="pfx" data-fx="yufei" role="button" tabindex="0" aria-pressed="false"
+     aria-label="Yufei — San Diego sunset with her cat: click to play">
+  <div class="pfx-stage">
+    <div class="pfx-shadow"></div>
+    <img class="avatar pfx-photo" src="https://yil384.github.io/Picasso-Lab/people/static/yufei.webp" alt="avatar">
   </div>
 </div>
 
 <style>
-.yf-wrap {
-  display: inline-block;
-  cursor: pointer;
-  overflow: visible;
-  -webkit-tap-highlight-color: transparent;
-  --yf-cat-cycle: 34s;
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+/* the Team page tiles shrink with the window (to about 150 px wide at 768): the photo is 200 px or
+   whatever fits the tile, and the kit scales the effect with it */
+.pfx {
+  --d: min(200px, calc(100vw - 16px), calc(100vh - 16px));
+  position: absolute; left: 8px; top: 8px; width: var(--d); height: var(--d);
+  border-radius: 50%; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;
 }
-
-.yf-wrap *,
-.yf-wrap *::before,
-.yf-wrap *::after {
-  box-sizing: border-box;
+/* phones: Sites stacks the photo above the name, so sit at the bottom of the tile (next to the name) */
+.pfx.pfx-phone { left: 50%; top: auto; bottom: 10px; margin-left: calc(var(--d) / -2); }
+.pfx-stage { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .4s cubic-bezier(.32, 1.3, .4, 1); }
+.pfx:hover .pfx-stage, .pfx:focus-visible .pfx-stage { transform: translateY(-2px) scale(1.05); }
+.pfx.pfx-on .pfx-stage { transform: scale(1.03); }
+.pfx.pfx-on:hover .pfx-stage { transform: translateY(-2px) scale(1.05); }
+.pfx-shadow { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, .18); }
+/* keyboard focus: a ring on the photo's edge, drawn over the effect canvas too (so it shows on and off) */
+.pfx-stage::after {
+  content: ''; position: absolute; inset: -1px; border: 3px solid #00629b; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .85); opacity: 0; pointer-events: none;
 }
-
-.yf-stage {
-  position: relative;
-  width: var(--avatar-size, 200px);
-  height: var(--avatar-size, 200px);
-  overflow: visible;
-}
-
-.yf-avatar-frame {
-  position: relative;
-  z-index: 3;
-  width: var(--avatar-size, 200px);
-  height: var(--avatar-size, 200px);
-  border: 0;
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow: none;
-  transition: transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
-}
-
-.yf-avatar {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-  transition: filter 0.32s ease;
-}
-
-.yf-wrap:hover .yf-avatar-frame {
-  transform: scale(1.08);
-}
-
-.yf-wrap:hover .yf-avatar {
-  filter: brightness(1.08) saturate(1.04);
-}
-
-.yf-cat-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 6;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.yf-tree {
-  position: absolute;
-  left: 96px;
-  top: -4px;
-  z-index: 2;
-  width: 224px;
-  height: 268px;
-  opacity: 0;
-  pointer-events: none;
-  transform: rotate(-3deg);
-  transform-origin: 42% 92%;
-  transition: opacity 0.18s ease;
-  will-change: transform, opacity;
-}
-
-.yf-tree-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 5px 4px rgba(15,23,42,0.14));
-}
-
-.yf-cat-actor {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 101px;
-  height: 97px;
-  opacity: 0;
-  transform: translate(218px, 116px);
-  transform-origin: 50% 82%;
-  will-change: transform, opacity;
-  filter: drop-shadow(0 5px 5px rgba(15,23,42,0.16));
-}
-
-.yf-cat-actor::after {
-  content: "";
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: -1px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(15,23,42,0.16);
-  filter: blur(3px);
-  transform: translateY(4px) scale(0.95, 1);
-  z-index: -1;
-}
-
-.yf-wrap.yf-on .yf-cat-actor::after {
-  animation: yf-cat-shadow var(--yf-cat-cycle) steps(1, end) infinite;
-}
-
-.yf-cat-sprite {
-  position: absolute;
-  display: block;
-  opacity: 0;
-  background-repeat: no-repeat;
-  background-position: 0 0;
-  pointer-events: none;
-  transform-origin: 50% 72%;
-  will-change: opacity, transform, background-position;
-}
-
-.yf-cat-walk-cycle {
-  left: 0;
-  bottom: 4px;
-  width: 97px;
-  height: 68px;
-  background-image: url("https://yil384.github.io/Picasso-Lab/people/static/yufei_cartoon_walk_sheet.png");
-  background-size: 388px 68px;
-  opacity: 1;
-}
-
-.yf-cat-sleep {
-  left: 6px;
-  bottom: 5px;
-  width: 90px;
-  height: 58px;
-  background-image: url("https://yil384.github.io/Picasso-Lab/people/static/yufei_cartoon_sleep.png");
-  background-size: 90px 58px;
-}
-
-.yf-cat-climb-cycle {
-  left: 15px;
-  bottom: -4px;
-  width: 70px;
-  height: 97px;
-  background-image: url("https://yil384.github.io/Picasso-Lab/people/static/yufei_cartoon_climb_sheet.png");
-  background-size: 280px 97px;
-}
-
-.yf-cat-perch {
-  left: 19px;
-  bottom: 4px;
-  width: 68px;
-  height: 85px;
-  background-image: url("https://yil384.github.io/Picasso-Lab/people/static/yufei_cartoon_perch.png");
-  background-size: 68px 85px;
-}
-
-.yf-wrap.yf-on .yf-tree {
-  opacity: 0.98;
-  animation: yf-tree-sway 5.6s ease-in-out infinite;
-}
-
-.yf-wrap.yf-on .yf-cat-layer {
-  animation: yf-cat-depth var(--yf-cat-cycle) steps(1, end) infinite;
-}
-
-.yf-wrap.yf-on .yf-cat-actor {
-  animation: yf-cat-route var(--yf-cat-cycle) linear infinite;
-}
-
-.yf-wrap.yf-on .yf-cat-walk-cycle {
-  animation:
-    yf-cat-walk-pose var(--yf-cat-cycle) steps(1, end) infinite,
-    yf-walk-cycle 0.72s steps(4, end) infinite,
-    yf-walk-facing var(--yf-cat-cycle) steps(1, end) infinite;
-}
-
-.yf-wrap.yf-on .yf-cat-sleep {
-  animation:
-    yf-cat-sleep-pose var(--yf-cat-cycle) steps(1, end) infinite,
-    yf-cat-breathe 1.65s ease-in-out infinite;
-}
-
-.yf-wrap.yf-on .yf-cat-climb-cycle {
-  animation:
-    yf-cat-climb-pose var(--yf-cat-cycle) steps(1, end) infinite,
-    yf-climb-cycle 0.64s steps(4, end) infinite;
-}
-
-.yf-wrap.yf-on .yf-cat-perch {
-  animation:
-    yf-cat-perch-pose var(--yf-cat-cycle) steps(1, end) infinite,
-    yf-cat-look 1.45s ease-in-out infinite;
-}
-
-@keyframes yf-tree-sway {
-  0%, 100% {
-    transform: rotate(-3deg);
-  }
-  50% {
-    transform: rotate(-0.8deg);
-  }
-}
-
-@keyframes yf-cat-depth {
-  0%, 100% {
-    z-index: 6;
-  }
-}
-
-/*
- * 已经把所有 keyframe 整体提前 ~8.8%, 让猫第一次出现从 ~4s 提前到 ~1s.
- * 走路 / 睡觉 / 爬树 / 在树顶 / 下树 / 走出去 — 这些动作各自的持续时间都保持原值,
- * 只是整段顺时针前移. 末尾 90.55%–100% 是收尾的小停顿 (loop 衔接).
- */
-@keyframes yf-cat-route {
-  0%, 3% {
-    opacity: 0;
-    transform: translate(-136px, 128px) rotate(0deg);
-  }
-  3.01% {
-    opacity: 1;
-    transform: translate(-136px, 128px) rotate(0deg) scale(0.98);
-  }
-  6% {
-    opacity: 1;
-    transform: translate(-98px, 128px) rotate(0deg) scale(1);
-  }
-  12% {
-    opacity: 1;
-    transform: translate(-18px, 128px) rotate(0deg);
-  }
-  18% {                                    /* 到树脚 (原 27%) */
-    opacity: 1;
-    transform: translate(86px, 128px) rotate(0deg);
-  }
-  34% {                                    /* 睡完 (原 43%) */
-    opacity: 1;
-    transform: translate(86px, 128px) rotate(0deg);
-  }
-  36% {
-    opacity: 1;
-    transform: translate(102px, 127px) rotate(0deg);
-  }
-  38% {                                    /* 开始爬 (原 47%) */
-    opacity: 1;
-    transform: translate(116px, 120px) rotate(-3deg);
-  }
-  41% {
-    opacity: 1;
-    transform: translate(122px, 101px) rotate(-6deg);
-  }
-  45% {
-    opacity: 1;
-    transform: translate(131px, 76px) rotate(-6deg);
-  }
-  50% {                                    /* 到树顶 (原 59%) */
-    opacity: 1;
-    transform: translate(140px, 42px) rotate(-2deg);
-  }
-  68% {                                    /* 树顶坐够了 (原 77%) */
-    opacity: 1;
-    transform: translate(140px, 42px) rotate(0deg);
-  }
-  71% {
-    opacity: 1;
-    transform: translate(135px, 62px) rotate(-5deg);
-  }
-  75% {
-    opacity: 1;
-    transform: translate(126px, 90px) rotate(-6deg);
-  }
-  79% {                                    /* 回到树脚 (原 88%) */
-    opacity: 1;
-    transform: translate(116px, 120px) rotate(-2deg);
-  }
-  79.01% {
-    opacity: 1;
-    transform: translate(86px, 128px) rotate(0deg);
-  }
-  83% {
-    opacity: 1;
-    transform: translate(18px, 128px) rotate(0deg);
-  }
-  90.55% {                                 /* 走到画外 (原 99.55%) */
-    opacity: 1;
-    transform: translate(-136px, 128px) rotate(0deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-136px, 128px) rotate(0deg);
-  }
-}
-
-@keyframes yf-walk-facing {
-  0%, 2.99%, 38.01%, 79%, 100% {
-    transform: scaleX(-1);
-  }
-  3%, 38% {
-    transform: scaleX(1);
-  }
-  79.01%, 90.55% {
-    transform: scaleX(-1);
-  }
-}
-
-@keyframes yf-walk-cycle {
-  to {
-    background-position-x: -388px;
-  }
-}
-
-@keyframes yf-climb-cycle {
-  to {
-    background-position-x: -280px;
-  }
-}
-
-@keyframes yf-cat-breathe {
-  0%, 100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(1px) scale(1.025, 0.985);
-  }
-}
-
-@keyframes yf-cat-look {
-  0%, 100% {
-    transform: rotate(-2deg);
-  }
-  50% {
-    transform: rotate(3deg) translateY(-1px);
-  }
-}
-
-@keyframes yf-cat-walk-pose {
-  0%, 2.99%, 18.01%, 34%, 38.01%, 79%, 100% {
-    opacity: 0;
-  }
-  3%, 18%, 34.01%, 38%, 79.01%, 90.55% {
-    opacity: 1;
-  }
-}
-
-@keyframes yf-cat-sleep-pose {
-  0%, 18%, 34.01%, 100% {
-    opacity: 0;
-  }
-  18.01%, 34% {
-    opacity: 1;
-  }
-}
-
-@keyframes yf-cat-climb-pose {
-  0%, 37.99%, 50.01%, 67.99%, 79.01%, 100% {
-    opacity: 0;
-  }
-  38%, 50%, 68%, 79% {
-    opacity: 1;
-  }
-}
-
-@keyframes yf-cat-perch-pose {
-  0%, 49.99%, 68.01%, 100% {
-    opacity: 0;
-  }
-  50%, 68% {
-    opacity: 1;
-  }
-}
-
-@keyframes yf-cat-shadow {
-  0%, 2.99%, 38%, 79%, 100% {
-    opacity: 0;
-  }
-  3%, 37.99%, 79.01%, 90.55% {
-    opacity: 0.9;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .yf-wrap.yf-on .yf-tree,
-  .yf-wrap.yf-on .yf-cat-layer,
-  .yf-wrap.yf-on .yf-cat-actor,
-  .yf-wrap.yf-on .yf-cat-actor::after,
-  .yf-wrap.yf-on .yf-cat-sprite {
-    animation-duration: 0.01ms;
-    animation-iteration-count: 1;
-  }
- }
+.pfx:focus-visible .pfx-stage::after { opacity: 1; }
+.pfx-photo { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.pfx-loading .pfx-shadow { animation: pfx-wait 1s ease-in-out infinite; }
+@keyframes pfx-wait { 50% { box-shadow: 0 4px 10px rgba(0, 0, 0, .18), 0 0 0 4px rgba(0, 98, 155, .28); } }
+@media (prefers-reduced-motion: reduce) { .pfx-stage { transition: none; } .pfx-loading .pfx-shadow { animation: none; } }
 </style>
 
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <script>
 (function () {
-  document.querySelectorAll('.yf-wrap').forEach((wrap) => {
-    if (wrap.dataset.yfReady === '1') return;
-    wrap.dataset.yfReady = '1';
-
-    wrap.addEventListener('click', () => {
-      wrap.classList.toggle('yf-on');
-    });
+  var wrap = document.getElementById('pfx');
+  if (!wrap || wrap.dataset.ready) return;
+  wrap.dataset.ready = '1';
+  if (Math.min(screen.width, screen.height) < 600) wrap.classList.add('pfx-phone');
+  var KIT = 'https://yil384.github.io/Picasso-Lab/people/fx/kit.js';
+  var ctl = null;
+  function load() {
+    if (!ctl) ctl = import(KIT).then(function (m) { return m.attach(wrap); });
+    return ctl;
+  }
+  ['pointerenter', 'touchstart', 'focus'].forEach(function (ev) {
+    wrap.addEventListener(ev, function () { load().catch(function () {}); }, { once: true, passive: true });
+  });
+  function toggle() { load().then(function (c) { c.toggle(); }).catch(function () {}); }
+  wrap.addEventListener('click', toggle);
+  wrap.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); toggle(); }
   });
 })();
 </script>

@@ -87,5 +87,4 @@ standalone pages such as `events/guandan.html` and `blogs/nvidia-ising/`.
 ## House rules that apply everywhere
 - No emoji in the pages; use the professional SVG icon sprite (IconPark / Simple Icons) already in `events/events.html`.
 - `guandan-kit/` (Tencent reference images) must never reach `main` — GitHub Pages would publish it.
-- Never touch the user's uncommitted local files `people/haotian_shen.html` and `people/yufei_cats.html`.
 - Commit messages end with the co-author line given in the session.
