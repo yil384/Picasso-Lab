@@ -1220,7 +1220,7 @@ html[lang="en"] .roster-invite { padding: 0 calc(7 * var(--ru)); }   /* "Invite"
 .room-roster-foot .btn { --btn-h: max(var(--tap), calc(54 * var(--ru))); --btn-fs: calc(22 * var(--ru)); --btn-px: calc(26 * var(--ru)); --btn-minw: calc(176 * var(--ru)); }
 
 /* a seat, badge or stepper tap waiting for Firebase stays pressed and dimmed */
-.room :is(.room-seat-sit, .room-badge, .room-step-btn, #fill-ai).is-pending { opacity: .6; translate: 0 calc(2 * var(--lu)); }
+.room :is(.room-seat-sit, .room-badge, .room-step-btn, #fill-ai, #delete-room).is-pending { opacity: .6; translate: 0 calc(2 * var(--lu)); }
 /* 正在开局…: the start button keeps its orange while it waits (disabled against a second tap) */
 .room-actions .btn.is-loading:disabled { --btn-bg: var(--pri); --btn-edge: var(--pri-edge); --btn-stroke: var(--pri-stroke); --btn-inset: var(--pri-inset); translate: 0 2px; }
 

@@ -1554,10 +1554,13 @@ function advanceLevel(level, steps) {
 
 async function nextRound() {
     if (!isHost()) return showToast(L("Only the host can start the next round", "只有房主能进入下一局"));
+    if (actionBusy) return;     // the write is already running: a second tap is not a refusal
+    sendingUI("next-round", true);
     const updated = await withAction(() => mutateGame(g => {
         if (g.phase !== "roundOver" || !g.roundResult || !clientIsHost(g)) return false;
         startRound(g, g.roundResult);
     }));
+    sendingUI("next-round", false);
     if (!updated) showToast(L("Next round is not ready yet.", "下一局还没准备好。"));
 }
 
@@ -1642,7 +1645,9 @@ async function hintMove() {
     // Like Tencent's 提示, a press selects cards whenever the engine has a press to offer: its
     // options cycle presses first. Its pass advice (partner owns the trick, or pressing costs too
     // much) comes after them, or alone: the selection drops and 不出 turns primary with a pop.
-    const options = [...packet.options.filter(o => o.move?.cards?.length), ...packet.options.filter(o => !o.move?.cards?.length)];
+    // presses that keep the wild card in hand come first (the engine's order otherwise)
+    const wildUsed = o => o.move.cards.filter(c => isWild(c, game.currentLevelRank)).length;
+    const options = [...packet.options.filter(o => o.move?.cards?.length).sort((a, b) => wildUsed(a) - wildUsed(b)), ...packet.options.filter(o => !o.move?.cards?.length)];
     const nextIndex = previousHint && previousHint.signature === packet.signature && options.length > 1
         ? (previousHint.index + 1) % options.length
         : 0;
@@ -2433,21 +2438,19 @@ function bindRoom(el) {
         const btn = event.target.closest("button");
         if (!btn || btn.disabled) return;
         if (btn.dataset.room === "invite") return copyLinkBtn.click();
-        if (btn.dataset.step) {
-            const team = Number(btn.dataset.team);
-            const dir = Number(btn.dataset.step);
-            return queueRoomAction(() => stepStartLevel(team, dir), () => isHost());
-        }
+        if (roomPending === "delete-room") return;     // the room is being dissolved
         if (btn.id === "delete-room") return dissolveRoom();
         const run = { "start-game": startGame, "fill-ai": fillAISeats }[btn.id];
         const seatAction = /^(seat|ai|leave)-(\d)$/.exec(btn.id);
-        const action = run || (seatAction && (() => {
+        const step = btn.dataset.step ? { team: Number(btn.dataset.team), dir: Number(btn.dataset.step) } : null;
+        const action = step ? () => stepStartLevel(step.team, step.dir) : run || (seatAction && (() => {
             const i = Number(seatAction[2]);
             return seatAction[1] === "seat" ? takeSeat(i) : seatAction[1] === "ai" ? addAI(i) : leaveSeat(i);
         }));
         if (!action) return;
         // When its turn comes the control must still be there and enabled (a double tap on
-        // 入座 or 开始游戏 finds it gone and does nothing).
+        // 入座 or 开始游戏 finds it gone and does nothing). The level arrows stay enabled between
+        // taps, so quick taps add up.
         const id = btn.id;
         queueRoomAction(async () => {
             roomPending = id;
@@ -2461,6 +2464,7 @@ function bindRoom(el) {
                 render();
             }
         }, () => {
+            if (step) return isHost();
             const now = document.getElementById(id);
             return !!now && !now.disabled;
         });
@@ -2483,6 +2487,9 @@ async function dissolveRoom() {
     await queueRoomAction(async () => {
         if (!isHost() || game?.phase !== "lobby") return;
         closingOwnRoom = true;
+        roomPending = "delete-room";
+        render();
+        showToast(L("Dissolving the room…", "正在解散房间…"), 4000);
         await remove(roomRef());
         location.href = GUANDAN_URL;
     });
@@ -3094,8 +3101,10 @@ function selectionVerdict(mine) {
     const cards = (game.hands[mine] || []).filter(c => selected.has(c.id));
     if (!cards.length) return { ok: false, reason: L("Select cards first", "请先选牌") };
     if (choosePlayable(cards, game.lastPlay?.combo || null, game.currentLevelRank)) return { ok: true, reason: "" };
-    const legal = evaluateCombos(cards, game.currentLevelRank).length > 0;
-    return { ok: false, reason: legal && game.lastPlay ? L("Can't beat that", "管不上") : L("Not a valid combo", "牌型不符") };
+    // 管不上 only when the cards could stand against the table (a bomb, or its type and size); anything else is the wrong shape
+    const last = game.lastPlay?.combo;
+    const comparable = !!last && evaluateCombos(cards, game.currentLevelRank).some(c => c.isBomb || (c.type === last.type && c.len === last.len));
+    return { ok: false, reason: comparable ? L("Can't beat that", "管不上") : L("Not a valid combo", "牌型不符") };
 }
 
 // Selection changes never rebuild the hand: classes and the 出牌 state are patched in place.
@@ -3523,7 +3532,8 @@ const COMBO_LABELS = {
 function renderSlot(i, v, animate, flights, bursts) {
     const pos = visualSeatPos(i, v.mine);
     const place = v.dealPhase === "done" ? seatPlace(i) : 0;
-    const entry = v.dealPhase === "done" && v.liveTurn !== i ? game.trickPlays?.[i] : null;
+    // a collected trick (no lastPlay: its winner leads again) leaves nothing on the felt but ribbons
+    const entry = v.dealPhase === "done" && v.liveTurn !== i && game.lastPlay ? game.trickPlays?.[i] : null;
     if (!entry && !place) {
         setRegion(`slot${pos}`, "");
         return;
@@ -3825,6 +3835,8 @@ function maybeToastTableMessage() {
         return showToast(L(`${who} ${en}`, `${who} ${zh}`), 2600);
     }
     if (/超时|出了 .+。$|不要。$|收牌，继续出。$|入座。$|加入对局。$|^第 \d+ 局(开始| · )/.test(msg)) return;
+    // on my own turn the row is up and a lead is plain to see; a 2.6 s plate would sit over my tallest columns
+    if (mySeat() >= 0 && game.currentTurn === mySeat()) return;
     showToast(displayMessage(msg), 2600);
 }
 
@@ -4030,7 +4042,7 @@ function resultNoteHTML(i) {
         return `<span class="gd-res-note is-up"><b>+${r.advance}</b>${L(r.advance > 1 ? "levels" : "level", "级")}</span>`;
     }
     const left = (game.hands[i] || []).length;
-    return `<span class="gd-res-note">${left ? L(`<b>${left}</b>left`, `剩<b>${left}</b>张`) : ""}</span>`;
+    return `<span class="gd-res-note">${left ? L(`<b>${left}</b>left`, `剩<b>${left}</b>张`) : L("Out", "已出完")}</span>`;
 }
 
 function resultPlayerHTML(i, place, mine) {

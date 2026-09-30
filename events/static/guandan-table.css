@@ -633,6 +633,8 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-slot.is-p3 .gd-ribbon:only-child { left: auto; right: 0; translate: 0 0; top: 30px; }
 .gd-slot.is-p2 .gd-ribbon:only-child { top: 30px; }
 .gd-slot.is-p0 .gd-ribbon:only-child { top: 76px; }
+/* the partner's band lies over the lower half of its cards, clear of my action row and its crown (which may rise to just under them) */
+.gd-slot.is-p2 .gd-ribbon:not(:only-child) { top: calc(100% - 76px); }
 .gd-ribbon.is-enter { animation: gd-ribbon-in 320ms var(--ease-back) both; }
 .gd-ribbon.is-enter .gd-word { animation: gd-ribbon-word 360ms var(--ease-back) 120ms both; }
 @keyframes gd-ribbon-in { from { opacity: 0; transform: scaleX(.2); } }
@@ -726,7 +728,7 @@ body[data-screen="table"] .topbar { display: none; }
 /* 40+ CSS px tap height even on the smallest phones, without a bigger pill */
 .gd-actions .btn > .gd-hit, .gd-result .btn > .gd-hit { position: absolute; left: 0; right: 0; top: 50%; height: max(100%, calc(42px / var(--gd-s, 1))); translate: 0 -50%; z-index: 0; }
 /* pressed, and held down while its action waits on Firebase or the engine (is-pending, sendingUI) */
-.gd-actions .btn:active:not(.is-disabled), .gd-actions .btn.is-pending {
+.gd-actions .btn:active:not(.is-disabled), .gd-actions .btn.is-pending, .gd-res-actions .btn.is-pending {
     translate: 0 4px;
     box-shadow:
         0 3px 0 rgba(255, 255, 255, .6) inset,
@@ -734,13 +736,13 @@ body[data-screen="table"] .topbar { display: none; }
         0 2px 0 var(--btn-edge),
         0 4px 8px rgba(0, 0, 0, .28);
 }
-.gd-actions .btn.is-pending::before { opacity: 1; background: rgba(0, 0, 0, .16); }
+.gd-actions .btn.is-pending::before, .gd-res-actions .btn.is-pending::before { opacity: 1; background: rgba(0, 0, 0, .16); }
 .gd-actions .btn:not(.spaced) { --btn-ls: .02em; }
 .gd-actions .btn.is-disabled { cursor: default; }
 /* 提示 advised a pass: 不出 turns primary with one pop (the region is keyed, so it never replays) */
 .gd-actions .btn.is-advised { animation: gd-advised 380ms var(--ease-back) both; }
 @keyframes gd-advised { 0% { scale: 1; } 40% { scale: 1.12; } 100% { scale: 1; } }
-#root.action-busy .gd-actions, #root.action-busy .gd-tools { pointer-events: none; }
+#root.action-busy :is(.gd-actions, .gd-tools, .gd-res-actions) { pointer-events: none; }
 /* my timer: the heart gem in its crown, spikes over the pills' top; a thin white number with a
    light purple edge, centred in the heart (dagd_store_4) */
 .gd-gem { position: relative; flex: none; width: 108px; height: 100px; margin: -22px 0 -4px; }
