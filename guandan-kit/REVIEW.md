@@ -523,7 +523,8 @@ Below 8: lobby, popups, table-actions, table-moments, results, portrait, english
   - **A shared behaviour and copy — done:** AT-1 (no selection/drag/callout), AT-6, R2-15/16, R2-23/AT-5, tab title. Verified by `ctrl+A` selecting 0 characters in room and table; phone EN room fits again.
   - **B table play flow — done:** R2-05, 06, 07, 20, 27, 28, 29, 30. `harness/verify_b.py` and `verify_b2.py` pass on phone and desk.
   - **C lobby and room — done:** R2-01 (tiles ≈1.05:1 at 16:10, top bar and dock take the slack), R2-12/AT-2 (robot and head faces, solid gold empty seat), R2-13, R2-14, R2-18, R2-19 (panels share a bottom edge), R2-31/32, AT-3 (the MVP label is the member's first name).
-  - **D effects and display words, E table static, F eggs — not started.**
+  - **D effects and display words — done (R2-10 partly):** R2-02 (warm burst: hot core, orange rim and flame-coloured rays, wider flat ring, no full-screen flash), R2-03/21 (one thin-outline cream-to-gold `.gd-word`; bomb and combo labels sit under the played cards at 72 px), R2-17 (popup titles plain white), R2-11 (lighter 不出 stroke, grey in the log), R2-22 (records VS and the lobby poster share the intro's gradient, no extrusion, no hard seam), R2-25 (bigger, cleaner timer digits; hands still show above 99 s), R2-26 (首出 card at 44% of the stage height, red display word, 第一个出牌 plate). R2-10: 天王炸's smoke has a 2 px light outline, the fire none, a lighter smoke ramp and a shorter fade, but the column is still a cartoon puff (kept as low).
+  - **E table static, F eggs — not started.**
 - **Next (no multi-agent workflow; one lens or one fix group at a time, push after each):**
   1. ~~Round-1 re-check~~ (done, see above).
   2. ~~Synthesize round 2~~ (done above; 8 medium, 32 low, no high).

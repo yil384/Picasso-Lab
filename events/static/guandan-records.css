@@ -213,13 +213,13 @@ body.gdr-modal-open { overflow: hidden; }
 .gdr-quote .gdr-ic { margin-top: 3px; font-size: 14px; color: #f4a92a; }
 .gdr-quote.light { color: #fff; }
 .gdr-quote.light .gdr-ic { color: #fff6c4; }
-/* layered gold: dark extrusion, brown outline, light-to-amber face (VS, the MVP reveal title) */
+/* layered gold: a thin brown outline under a light-to-amber face (VS, the MVP reveal title) */
 .gdr-gold { display: inline-grid; line-height: 1; }
 .gdr-gold > i { position: relative; grid-area: 1 / 1; font-style: normal; white-space: nowrap; } /* positioned: paint in DOM order */
-.gdr-gold > i:nth-child(1) { color: #3a1602; -webkit-text-stroke: .09em #3a1602; paint-order: stroke fill; translate: 0 .05em; }
+.gdr-gold > i:nth-child(1) { display: none; }   /* no extrusion: the same thin outline as the intro's VS */
 .gdr-gold > i:nth-child(2) { color: #8a3a06; -webkit-text-stroke: .06em #8a3a06; paint-order: stroke fill; }
 .gdr-gold > i:nth-child(3) {
-    background: linear-gradient(180deg, #fffbe8 0%, #ffe9a0 34%, #ffc23e 60%, #e98d12 100%);
+    background: linear-gradient(180deg, #fffdf0 10%, #fcecac 38%, #f0c666 66%, #b8660c 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 

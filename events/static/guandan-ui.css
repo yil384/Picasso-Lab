@@ -36,7 +36,7 @@
     --gold-1: #fff6c8; --gold-2: #ffd66b; --gold-3: #f4a92a; --gold-4: #b8660c;
     --lvl-us: #e47424; --lvl-them: #8d949c;
     --report-bg: linear-gradient(180deg, #fff3a0, #fcd444); --report-ink: #7a2a00; --report-num: #e0201a;
-    --pass-fill: #fff4c8; --pass-stroke: #5a3310;
+    --pass-fill: #fff4c8; --pass-stroke: #7a4a1c;
     /* cards */
     --card-face: linear-gradient(180deg, #fff 0%, #f6f6f6 55%, #e7e7e7 100%);
     --card-edge: #b8b8b8; --card-red: #c01c1c; --card-black: #141414;
@@ -571,10 +571,9 @@ img { max-width: 100%; -webkit-user-drag: none; }
     margin: 0;
     color: #fff;
     font: 900 calc(28 * var(--pu))/1 var(--font-ui);
-    letter-spacing: .12em;
-    text-indent: .12em;
-    -webkit-text-stroke: calc(5 * var(--pu)) var(--sec-stroke);
-    paint-order: stroke fill;
+    letter-spacing: .04em;
+    text-indent: .04em;
+    text-shadow: 0 calc(2 * var(--pu)) 0 rgba(40, 50, 160, .35);    /* plain white on the bar, as yxrb_room's header */
 }
 .gd-popup-close {
     position: absolute;

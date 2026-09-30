@@ -2688,7 +2688,7 @@ const TABLE_DEFS_HTML = `<svg class="gd-defs" aria-hidden="true" focusable="fals
         <radialGradient id="gd-g-face" cx=".5" cy=".38" r=".62"><stop offset="0" stop-color="#ffd35a"/><stop offset=".65" stop-color="#f7a21c"/><stop offset="1" stop-color="#e27d0b"/></radialGradient>
         <linearGradient id="gd-g-bell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfcfd"/><stop offset="1" stop-color="#a3acb6"/></linearGradient>
         <radialGradient id="gd-g-fire" cx=".5" cy=".58" r=".56"><stop offset="0" stop-color="#fff1a8"/><stop offset=".38" stop-color="#ffc23a"/><stop offset=".72" stop-color="#f7771c"/><stop offset="1" stop-color="#d2381a"/></radialGradient>
-        <radialGradient id="gd-g-smoke" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#8a5634"/><stop offset=".5" stop-color="#6b3a1c"/><stop offset="1" stop-color="#3a2418"/></radialGradient>
+        <radialGradient id="gd-g-smoke" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#b59a86"/><stop offset=".5" stop-color="#7d5a44"/><stop offset="1" stop-color="#3a2418"/></radialGradient>
     </defs>
     <symbol id="gd-sym-gem" viewBox="0 0 112 104">
         <g fill="url(#gd-g-gold)" stroke="#a8650e" stroke-width="1.6" stroke-linejoin="round">
@@ -3735,7 +3735,7 @@ function firstLeadHTML(v) {
     const seat = { 0: [92, h - 50], 1: [90, 240], 2: [w / 2, 58], 3: [w - 90, 240] }[pos];
     const card = { ...game.startingCard, id: "first-lead" };
     const since = Date.now() - Number(game.dealStartedAt || 0) - DEALING_MS;
-    return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;--first-ms:${FIRST_LEAD_MS}ms;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${L("First lead", "首出")}</span></div>`;
+    return `<div class="gd-first-lead" style="--tx:${(seat[0] - w / 2).toFixed(0)}px;--ty:${(seat[1] - h * .4).toFixed(0)}px;--first-ms:${FIRST_LEAD_MS}ms;animation-delay:${-since}ms">${cardHTML(card)}<span class="gd-first-ribbon">${wordHTML(L("First lead", "首出"), "is-red")}<small>${L("Plays first", "第一个出牌")}</small></span></div>`;
 }
 
 // 进贡/还贡/抗贡 (round 2+): as the last deal flights land, each tribute card flies payer -> receiver
@@ -3928,7 +3928,7 @@ function renderTable() {
 // Bomb tiers (tg_ingame_bomb, tg_ingame_tianwangzha): authored one-shot FX over a fresh bomb.
 // renderSlot reports a bomb only the first time its play is shown, so re-renders and reloads never
 // replay it. 4-5 炸弹: burst, floor ring, cracks and the word at the seat, 6 px shake; 6+: bigger,
-// a second ring and a flash; 同花顺: gold ring sweep; 天王炸: one fire-and-smoke column rising
+// a second ring; 同花顺: gold ring sweep; 天王炸: one fire-and-smoke column rising
 // behind the vertical word, above the table centre. Transform/opacity only; reduced motion keeps
 // the still word.
 const FX_MS = { bomb: 1000, big: 1300, flush: 1150, joker: 1900 };
@@ -3959,13 +3959,12 @@ function burstWord(combo, tier) {
 function burstHTML(tier, word, x, y) {
     const n = tier === "bomb" ? 10 : 16;
     const sparks = Array.from({ length: n }, (_, k) => `<i class="gd-fx-spark" style="--a:${Math.round(k * 360 / n + (k % 3) * 9)}deg;--d:${150 + (k * 53) % 90}px"></i>`).join("");
-    const flash = tier === "big" || tier === "joker" ? `<i class="gd-fx-flash"></i>` : "";
     const body = tier === "joker"
         ? `<i class="gd-fx-ring"></i>${`<span class="gd-fx-boom">${FX_PUFF}</span>`.repeat(4)}${sparks}${wordHTML(word, "is-vertical")}`
         : `<i class="gd-fx-ring"></i>${tier === "big" ? `<i class="gd-fx-ring is-2"></i>` : ""}${tier === "flush" ? "" : `<i class="gd-fx-dome"></i>`}`
             + (tier === "flush" ? `<svg class="gd-fx-sweep" viewBox="0 0 200 200"><circle cx="100" cy="100" r="92"/></svg>` : `<svg class="gd-fx-cracks" viewBox="-120 -60 240 120"><path d="${FX_CRACKS}"/></svg>`)
             + `<svg class="gd-fx-rays" viewBox="-100 -100 200 200"><path d="${FX_RAYS}"/></svg><i class="gd-fx-core"></i>${sparks}${wordHTML(word)}`;
-    return `<div class="gd-fx-set">${flash}<div class="gd-fx is-${tier}" style="left:${x.toFixed(0)}px;top:${y.toFixed(0)}px">${body}</div></div>`;
+    return `<div class="gd-fx-set"><div class="gd-fx is-${tier}" style="left:${x.toFixed(0)}px;top:${y.toFixed(0)}px">${body}</div></div>`;
 }
 
 // Starts once the played cards have landed (their flight is ~200 ms).
