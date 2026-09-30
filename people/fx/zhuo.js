@@ -1,17 +1,25 @@
 /* Zhuo — CPhO 金牌 (Chinese Physics Olympiad gold; Tsinghua Yao Class; quantum computing systems)
    翻手为云，覆手为雨: click and a gold CPhO medal on a red ribbon drops around his neck and
-   swings to rest; his pointing hand turns over (palm up) and a toon storm cloud rises out of
-   it to hang over his arm; the hand turns back down and the rain comes straight down from the
-   cloud (comic teardrops of mixed size, heavier near the cloud, splash crowns on his arm and
-   ripples on the pond). His other fist swings up a big wok of 辣椒炒肉 (Hunan chili pork: glossy
-   green and red chili strips, pork slices with a little char, steam) and a 「辣椒炒肉」 tag pops in
-   the steam; an atom spins up beside his head (three electron orbits, a Bloch-sphere flicker).
+   swings to rest; a toon-gold CPhO trophy (two handles, a knob stem, a dark plinth with an
+   engraved plate) spins up on the rock ledge beside him and lands with a glint; his pointing
+   hand turns over (palm up) and a toon storm cloud rises out of it to hang over his arm; the
+   hand turns back down and the rain comes straight down from the cloud (comic teardrops of
+   mixed size, heavier near the cloud, splash crowns on his arm and ripples on the pond). His
+   other fist swings up a big wok of 辣椒炒肉 (Hunan chili pork: glossy green and red chili
+   strips, pork slices with a little char, steam) and a 「辣椒炒肉」 tag pops in the steam; an
+   atom spins up beside his head (three electron orbits, a Bloch-sphere flicker); last, black
+   comic shades drop onto his glasses and glint.
    Loop (3.6 s): hand over -> the cloud swells and darkens -> hand down, a crack of lightning,
-   one burst of rain; the medal glints; he tosses the wok once (颠勺: the pieces flip up and fall
-   back, a puff of steam, the tag again); the atom flickers.
+   one burst of rain; then he tunnels (量子隧穿): glitch frames, gone for 0.22 s (a faint cyan
+   probability cloud of his outline and a ψ where he was; medal, shades, wok and tag go with
+   him, the cloud, rain, atom and trophy stay), back with a ripple and a glint of the shades;
+   the medal glints; he tosses the wok once (颠勺: the pieces flip up and fall back, a puff of
+   steam, the tag again); the atom flickers; the trophy glints.
    Photo landmarks (512 px): fingertip 52,179 · pointing hand u 50..106, v 178..203 (wrist
-   104,190) · shoulder 195,215 · head top 263,145 · neck 269,214 (collar v 227) · lower hand
-   258,433 (fingers 238..270, 421..449; the wok's grip 257,433) · pond under the cloud v ~392. */
+   104,190) · shoulder 195,215 · head top 263,145 · glasses: lenses u 239..252 and 254..268,
+   v 167..178, temple to the ear 288,179 · neck 269,214 (collar v 227) · lower hand 258,433
+   (fingers 238..270, 421..449; the wok's grip 257,433) · pond under the cloud v ~392 · rock
+   ledge left of him (the trophy's plinth) 66,373. */
 import { THREE, presence, env, ease, clamp } from './kit.js';
 
 const GOLD = 0xf0b93a, GOLD_D = 0xcf8f25, RED = 0xc8302a;
