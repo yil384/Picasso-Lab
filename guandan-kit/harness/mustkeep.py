@@ -1,10 +1,10 @@
 """Must-keep checks (SPEC §1) against the in-memory Firebase stub (nothing touches production).
 Usage: python3 mustkeep.py [events|portraits|music|screens|all] [viewport ...]     (default: all desk phone portrait)
-  events    events.html: 222aak egg (photo), mvp overlay (splash, pages, Esc), picasso type hint + launch transition,
+  events    events.html: 222aak egg (photo), mvp overlay (splash, pages, Esc), picasso type hint + the Tiga portal,
             triple-tap on the news strip (phones), egg trigger; the return landing (?from=guandan)
   portraits every J/Q/K/A of every suit renders its labmate portrait on the table; seat photos; card back emblem
   music     #guandan-bgm src/toggle, GuandanMusic.isOn/setOn, lobby/menu toggle
-  screens   typing "picasso" on lobby / room / table: the hint shows, clears controls, the return transition runs
+  screens   typing "picasso" on lobby / room / table: the hint shows, clears controls, the Tiga return film plays
             and lands on events.html?from=guandan
 Prints a JSON report; screenshots go to GD_SHOTS (git-ignored) as mk-<vp>-*.jpg."""
 import asyncio, json, os, sys
@@ -38,6 +38,10 @@ async def events_stub(ctx):
 async def shot(pg, vp, name):
     os.makedirs(SHOTS, exist_ok=True)
     await pg.screenshot(path=os.path.join(SHOTS, f'mk-{vp}-{name}.jpg'), type='jpeg', quality=80)
+
+
+PORTAL_JS = """(()=>{const p=document.getElementById('gd-portal');if(!p)return null;const v=p.querySelector('video');const f=p.querySelector('iframe');
+  return {cls:p.className,src:v?(v.currentSrc||v.src||'').split('/').pop():'',frame:f?f.src:'',name:f?f.name:''}})()"""
 
 
 async def events_flows(p, vp):
@@ -104,17 +108,35 @@ async def events_flows(p, vp):
         await pg.wait_for_timeout(500)
         c = await cls('#gdr-overlay')
         rec('events', f'{vp}: Esc closes the board; back arrow {back}', c and c.split('|')[1] == 'none', c)
-        # the launch transition (typing) and the tap-three-times counterpart on phones
+        # the Tiga portal (typing) and the tap-three-times counterpart on phones: the attack film plays over the
+        # page while guandan.html loads behind it in a frame named gd-portal; the page itself never navigates
         await pg.keyboard.type('picasso', delay=60)
-        await pg.wait_for_timeout(500)
-        c = await cls('#guandan-launch-transition')
-        rec('events', f'{vp}: typing "picasso" starts the launch transition', c and 'active' in c, c)
-        await shot(pg, vp, 'ev-launch')
+        await pg.wait_for_timeout(700)
+        st = await pg.evaluate(PORTAL_JS)
+        rec('events', f'{vp}: typing "picasso" opens the portal and plays the attack film', bool(st and 'film' in st['cls'] and st['src'].startswith('attack_') and st['name'] == 'gd-portal' and 'guandan.html' in st['frame']), json.dumps(st)[:220])
+        await shot(pg, vp, 'ev-portal-film')
+        await pg.keyboard.press('Escape')
         try:
-            await pg.wait_for_url('**/events/guandan.html*', timeout=5000)
-            rec('events', f'{vp}: the transition lands on guandan.html', True, pg.url[-40:])
+            await pg.wait_for_function("document.getElementById('gd-portal').classList.contains('table')", timeout=9000)
+            rec('events', f'{vp}: Esc skips the film and the table opens in the portal', True)
         except Exception as e:
-            rec('events', f'{vp}: the transition lands on guandan.html', False, str(e)[:120])
+            rec('events', f'{vp}: Esc skips the film and the table opens in the portal', False, str(e)[:100])
+        await pg.wait_for_timeout(600)
+        await shot(pg, vp, 'ev-portal-table')
+        gf = next((f for f in pg.frames if f.name == 'gd-portal'), None)
+        if gf:
+            await gf.click('#back-events-btn')
+            await pg.wait_for_timeout(700)
+            st = await pg.evaluate(PORTAL_JS)
+            rec('events', f'{vp}: leaving the table plays the return film over it', bool(st and 'film' in st['cls'] and st['src'].startswith('light_')), json.dumps(st)[:220])
+            await shot(pg, vp, 'ev-portal-return')
+            try:
+                await pg.wait_for_function("(()=>{const p=document.getElementById('gd-portal');return p.className===''&&!p.querySelector('iframe')})()", timeout=11000)
+                rec('events', f'{vp}: the return film ends back on this page (portal closed, frame gone)', True, pg.url[-30:])
+            except Exception as e:
+                rec('events', f'{vp}: the return film ends back on this page (portal closed, frame gone)', False, json.dumps(await pg.evaluate(PORTAL_JS))[:160])
+        else:
+            rec('events', f'{vp}: the portal frame exists', False)
         if v['mobile']:
             await pg.goto(EV_URL, wait_until='load')
             await pg.wait_for_timeout(2000)
@@ -126,8 +148,8 @@ async def events_flows(p, vp):
                 await pg.wait_for_timeout(120)
                 if k == 0:
                     hint = await pg.evaluate("document.getElementById('guandan-type-hint').textContent")
-            c = await cls('#guandan-launch-transition')
-            rec('events', f'{vp}: three taps on the news strip start the transition (first tap hint: {hint!r})', c and 'active' in c, c)
+            st = await pg.evaluate(PORTAL_JS)
+            rec('events', f'{vp}: three taps on the news strip open the portal (first tap hint: {hint!r})', bool(st and 'open' in st['cls']), json.dumps(st)[:160])
         # the return landing
         await pg.goto(EV_URL + '?from=guandan', wait_until='load')
         await pg.wait_for_timeout(120)
@@ -252,19 +274,20 @@ async def screens(p, vp):
         await s.stage("const g=__gd.get(); g.currentTurn=g.seats.findIndex(x=>x&&x.clientId==='c_shooter'); g.turnStartedAt=Date.now(); g.lastPlay=null; g.trickPlays=[null,null,null,null]; __gd.put(g);")
         await s.pg.wait_for_timeout(600)
         await screen_check(s, vp, 'table', ['.gd-hand .card', '#play-btn', '#pass-btn', '#hint-btn', '.gd-tool', '.gd-slot .card', '.gd-timer', '.gd-menu-btn', '.gd-level'])
-        # the transition over the table
+        # opened on its own (not in the Events portal) the table plays the Tiga return film itself, turned with
+        # the table on a portrait phone, then goes to Events
         await s.pg.keyboard.type('casso', delay=60)
-        await s.pg.wait_for_timeout(700)
-        tr = await s.pg.evaluate("""(()=>{const t=document.getElementById('return-transition');if(!t)return null;const r=t.getBoundingClientRect();const cs=getComputedStyle(t);
-          return {cls:t.className,rect:[r.x,r.y,r.width,r.height].map(Math.round),op:+cs.opacity,z:cs.zIndex,parts:{shards:t.querySelectorAll('.rvx-shard').length,cards:t.querySelectorAll('.rvx-card').length,coins:t.querySelectorAll('.rvx-coin').length,title:(t.querySelector('.rvx-title')||{}).textContent},
-          shardImg:[...t.querySelectorAll('.rvx-shard')].slice(0,3).map(x=>(getComputedStyle(x).backgroundImage||x.querySelector('img')?.src||'').slice(-40))}})()""")
+        await s.pg.wait_for_timeout(900)
+        tr = await s.pg.evaluate("""(()=>{const t=document.querySelector('.return-film');if(!t)return null;const r=t.getBoundingClientRect();const v=t.querySelector('video');
+          return {cls:t.className,rect:[r.x,r.y,r.width,r.height].map(Math.round),src:v?(v.currentSrc||v.src).split('/').pop():'',t:v?+v.currentTime.toFixed(2):null,
+            rotated:!!document.querySelector('.gd-viewport.is-rotated')}})()""")
         vw, vh = VIEWPORTS[vp]['width'], VIEWPORTS[vp]['height']
-        covers = tr and tr['rect'][2] >= vw - 2 and tr['rect'][3] >= vh - 2 and 'active' in tr['cls']
-        rec('screens', f'{vp}/table: typing "casso" plays the return transition over the whole screen', covers and tr['parts']['shards'] > 0 and tr['parts']['cards'] > 0 and tr['parts']['coins'] > 0, json.dumps(tr, ensure_ascii=False)[:400])
-        await shot(s.pg, vp, 'return-table-700ms')
-        await s.pg.wait_for_timeout(300)
+        covers = tr and tr['rect'][2] >= vw - 2 and tr['rect'][3] >= vh - 2
+        turned_ok = tr and (('is-turned' in tr['cls']) == tr['rotated']) and (tr['src'].endswith('_land.mp4') if (tr['rotated'] or vw >= vh) else tr['src'].endswith('_port.mp4'))
+        rec('screens', f'{vp}/table: typing "casso" plays the Tiga return film over the whole screen', bool(covers and turned_ok and tr['t'] and tr['t'] > 0), json.dumps(tr, ensure_ascii=False)[:300])
+        await shot(s.pg, vp, 'return-table-film')
         try:
-            await s.pg.wait_for_url('**/events/events.html*', timeout=5000)
+            await s.pg.wait_for_url('**/events/events.html*', timeout=11000)
             rec('screens', f'{vp}/table: it lands on events.html (the page then strips ?from=guandan)', True, s.pg.url[-45:])
         except Exception as e:
             rec('screens', f'{vp}/table: it lands on events.html (the page then strips ?from=guandan)', False, f'{s.pg.url[-60:]} {str(e)[:80]}')
@@ -277,10 +300,10 @@ async def screens(p, vp):
         await s.create_room()
         await s.pg.keyboard.type('picasso', delay=60)
         await s.pg.wait_for_timeout(500)
-        active = await s.pg.evaluate("document.getElementById('return-transition').classList.contains('active')")
-        rec('screens', f'{vp}/room: typing "picasso" starts the transition', active)
+        active = await s.pg.evaluate("!!document.querySelector('.return-film video')")
+        rec('screens', f'{vp}/room: typing "picasso" plays the return film', active)
         try:
-            await s.pg.wait_for_url('**/events/events.html*', timeout=5000)
+            await s.pg.wait_for_url('**/events/events.html*', timeout=11000)
             left = await s.pg.evaluate("Object.keys(window.__fbStore||{}).filter(k=>k.startsWith('guandanRooms/'))")
             rec('screens', f'{vp}/room: lands on events; the room seat was given back (rooms left: {left})', True)
         except Exception as e:
@@ -289,10 +312,10 @@ async def screens(p, vp):
         await s.goto()
         await s.pg.keyboard.type('picasso', delay=60)
         await s.pg.wait_for_timeout(500)
-        active = await s.pg.evaluate("document.getElementById('return-transition').classList.contains('active')")
-        rec('screens', f'{vp}/lobby: typing "picasso" starts the transition', active)
+        active = await s.pg.evaluate("!!document.querySelector('.return-film video')")
+        rec('screens', f'{vp}/lobby: typing "picasso" plays the return film', active)
         try:
-            await s.pg.wait_for_url('**/events/events.html*', timeout=5000)
+            await s.pg.wait_for_url('**/events/events.html*', timeout=11000)
             rec('screens', f'{vp}/lobby: lands on events.html?from=guandan', True)
         except Exception as e:
             rec('screens', f'{vp}/lobby: lands on events.html?from=guandan', False, str(e)[:100])
