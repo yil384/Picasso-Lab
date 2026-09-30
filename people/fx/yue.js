@@ -182,8 +182,9 @@ export default {
 
     // ── the swing: bat directions (world, y up, z toward the viewer) ──
     const V = (x, y, z) => new THREE.Vector3(x, y, z).normalize();
-    // D_COCK leans only a little right: the swing to D_HIT passes the rim, and the bat end stays within ~6 px of it
-    const D_REST = V(0.11, 1, 0.03), D_COCK = V(0.22, 0.88, -0.25), D_HIT = V(0.24, 0.34, 0.91);
+    // D_COCK leans back more than right: on the way to D_HIT the bat end passes close to the rim and
+    // stays inside it (<= ~5 logical px past it, ink included, on every tile size)
+    const D_REST = V(0.11, 1, 0.03), D_COCK = V(0.15, 0.88, -0.25), D_HIT = V(0.24, 0.34, 0.91);
     const D_FOLLOW = V(-0.5, 0.55, 0.67), D_FRONT = V(0.05, 0.3, 0.95);
     const UP = new THREE.Vector3(0, 1, 0);
     const contact = gripHome.clone().addScaledVector(D_HIT, SWEET);
@@ -199,10 +200,17 @@ export default {
       return s < 0 ? -1 : s - Math.floor(s / CYCLE) * CYCLE;
     };
     const replayOf = (t) => t - S0 >= CYCLE;
+    /** weight of the idle bob: eased out before each pitch and back in after it, so the bat never snaps */
+    const bobOf = (t) => {
+      const s = t - S0;
+      if (s < 0) return clamp(-s / 0.4);
+      const q = s - Math.floor(s / CYCLE) * CYCLE;
+      return Math.min(clamp((q - 1.2) / 0.4), clamp((CYCLE - q) / 0.4));
+    };
     /** bat direction at sequence time s (+ the idle bob at clock t) */
     const batDir = (s, t, out) => {
       if (s < 0 || s >= 1.2) {
-        const b = Math.sin(t * Math.PI * 2 / BEAT);
+        const b = Math.sin(t * Math.PI * 2 / BEAT) * bobOf(t);
         return out.set(D_REST.x + 0.03 * b, D_REST.y, D_REST.z).normalize();
       }
       if (s < 0.22) return nl(D_REST, D_COCK, ease.inOut(s / 0.22), out);
@@ -211,7 +219,7 @@ export default {
       if (s < 0.40) return nl(D_HIT, D_FOLLOW, ease.out((s - 0.33) / 0.07), out);
       if (s < 0.55) return nl(D_FOLLOW, D_FRONT, 0.1 * (s - 0.4) / 0.15, out);
       if (s < 0.8) { nl(D_FOLLOW, D_FRONT, 0.1, tmpA); return nl(tmpA, D_FRONT, ease.inOut((s - 0.55) / 0.25), out); }
-      return nl(D_FRONT, D_REST, ease.outBack((s - 0.8) / 0.35, 1.4), out);
+      return nl(D_FRONT, D_REST, ease.outBack(Math.min(1, (s - 0.8) / 0.35), 1.4), out);
     };
     /** ball position at sequence time s; returns its scale (0 = hidden) */
     const ballAt = (s, out) => {
@@ -267,7 +275,7 @@ export default {
         batDir(s, t, tmpD);
         if (swingIn !== 0) tmpD.applyAxisAngle(tmpA.set(0, 0, 1), -1.25 * swingIn);
         aim.quaternion.setFromUnitVectors(UP, tmpD);
-        const bob = (s < 0 || s >= 1.2) ? Math.sin(t * Math.PI * 2 / BEAT) * 0.7 : 0;
+        const bob = (s < 0 || s >= 1.2) ? Math.sin(t * Math.PI * 2 / BEAT) * 0.7 * bobOf(t) : 0;
         bat.position.set(gripHome.x + 50 * fly, gripHome.y + 40 * fly + bob, gripHome.z);
 
         // ball
