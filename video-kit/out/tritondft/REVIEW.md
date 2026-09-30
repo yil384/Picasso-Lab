@@ -156,10 +156,73 @@ Fixes made after round 5 (spot-checked frame by frame at 960×540, then rendered
   of the lamp); Clack steps back from the ring for the lap; bolder cell atoms; cloud puffs with grain and halftone;
   CLANK!/DING! clear of the job and the gauge label.
 
+## Round 6 — the 1080p final cut (rendered in the cloud, reviewed at 960×540 from its lossless segments)
+
+This cut was rendered at 1920×1080 (all 720 frames; fresh-browser determinism f10/f305/f426 and the loop f720 == f0
+pixel-identical) and encoded (master CRF 23 = 61.1 MB; card CRF 32 = 3.74 MB; poster f664). It is NOT the shipping cut:
+the fixes below came after it, so the final must be re-rendered from the branch (see Handoff status).
+
+| lens | score | verdict |
+|---|---|---|
+| CD | **8.2** | Loupe fully visible in the payoff and the ink fading on peak whips fixed. Two regressions from the round-5 tweaks: the iris reopened ~165 px off-centre (f383→384), and the delivered result sank into Hoot's notebook and hid behind the 68 (f598–683). |
+| TA | *(see below)* | |
+| DFT | **8.7** | No must-fix; physics, order and all numbers honest (both clocks f70, TINK f589/590, the giant's one-load pile visible, 39/40 ticks on the benchmark card only, four pennies). Should: the result hidden behind 68× in the poster; the new scf ticket read as a bent triatomic; a PW.X sheet back in Clack's carriage after it was fed to Big Iron. |
+| WEB | **8.8** | No must-fix; every beat in the band; value on series (6.5% of pixels under luma 0.15 at 400×195 vs ChipMate 6.6%); hue 197–198°; master and card within spec (faststart, bt709, 720 f, 30.000 s; poster = loop frame 0 = f664); clean seam. Should: Clack hidden behind Loupe in the poster, Tri landing under the LIVE pill (f609–621), the CRF-32 card smudging the halftone on HiDPI, the warm desk vs ChipMate's amber poster. |
+
+Fixes made after the round-6 cut (spot-checked frame by frame at 960×540; all committed):
+- CD regressions: the iris reopens on the k-grid knob at the exact centre it closed on; the result is held in Hoot's left
+  wing at the chest (above the notebook, planks below the beak), visible beside 68× in the payoff and the poster f664.
+- Clack photobombs from the top of the tall paper tower (its grin back in the poster, above Loupe on its 98%).
+- A painted pale-blue desk with a cream blotter: the poster's warm share 50% → 31% (sky + cream + the two numeral pops).
+- scf ticket = one straight Si–Si bond with a density lozenge; Clack's carriage stays empty after the PW.X input is fed.
+- Card encode: `encode_segs.py card2` (2-pass ABR to 3.9 MB, tune animation, spatial-only denoise): 3.85 MB, SSIM-Y
+  0.887 vs 0.878 for CRF 32; `posterloop` makes the poster from the loop's decoded frame 0 (poster == first frame).
+
 ## Handoff status
-- Done: storyboard (4 angles judged), full 720-frame scene in `films/tritondft/`, review round 0 (storyboard) and round 1 (first cut: CD 6.4 / TA 6.7 / DFT 6.8 / WEB 7.0).
-- Round-1 fixes are committed and were spot-checked on single frames at 960×540 (whip instead of the smoke cover, S5 re-block + CLANK!, S8a/S8b payoff framing on the card, cream/sky grade, plate clear of the LIVE pill, SFX lettering, pillow pose, held result).
-- Not yet verified: the full round-2 pass (render stopped at ~f460 of 720 on request). The new lap orbit (S6), the Library book ring + Tri's slot gap, the ghost-cell vc-relax, the lap-1 gauge and the loop seam still need checking frame by frame.
-- Known open items: Hoot's "surprised" eyes paint grey (td_faces dotEyes); STORYBOARD.md not yet updated for the S3→S3b whip and the S8a/S8b split; no deliverables in out/tritondft/ yet.
-- Next: `cd films/tritondft && python3 -u tools/shoot.py tritondft.html stills --every 1 --width 960 --height 540 --out snaps/full2 --prefix f`, then `python3 tools/review_pack.py snaps/full2 f snaps/review_r2` and re-run the four-lens review (round 2, then ≥1 more), fix until every lens ≥ 8.5.
-- Then: render 1920×1080 in chunks, encode master/loop/poster/sheet per README §7, run the purity/loop check (f720 == f0), push, and write the §9 report.
+
+**State (branch `video/tritondft`):** scene final; review rounds 0–6 done. Last complete four-lens scores: CD 8.5 /
+TA 7.8 / DFT 8.8 / WEB 8.7 (round 5), then round 6 on the 1080p cut CD 8.2 / DFT 8.7 / WEB 8.8 (+ TA below), whose
+must-fixes are fixed in the code on the branch. No deliverables are committed yet: the 1080p final must be re-rendered
+from this branch (the desk colour, the payoff staging and the iris changed after the cloud render).
+
+**Render the final (from the repo root; every step resumes if interrupted):**
+```bash
+cd video-kit/films/tritondft
+# 1. paint every p5.brush texture once into work/bake (gitignored; without it every worker paints them live at boot)
+python3 -u tools/shoot.py tritondft.html bake --out work/bake --width 960 --height 540
+# 2. optional sanity: purity + the loop seam at 960 (must print PURITY OK)
+python3 -u tools/shoot.py tritondft.html purity 0 431 17 431 664 0 --loop --width 960 --height 540
+# 3. the 1080p final: 720 frames into bit-exact lossless segments (~62 min with 3 SwiftShader workers on the cloud VM;
+#    GPU/Metal is picked automatically on macOS), then the fresh-browser determinism + loop check (f720 == f0)
+cd ../../pipeline
+python3 -u render.py ../films/tritondft/tritondft.html --out ../out/tritondft/_final --width 1920 --height 1080 --workers 3
+python3 -u render.py ../films/tritondft/tritondft.html --out ../out/tritondft/_final --width 1920 --height 1080 --workers 3 --check-loop --verify 3
+```
+
+**Encode the README §7 deliverables (poster frame = card start frame = f664):**
+```bash
+cd ../films/tritondft
+E="python3 -u tools/encode_segs.py ../../out/tritondft/_final"
+$E master  tritondft --crf 23 --preset slow        # 1920x1080 H.264 High yuv420p bt709 +faststart; ~61 MB (CRF 18 = 132.6 MB, over the ~70 MB budget)
+$E cardsrc tritondft                               # once: 960x528 lossless centre-crop intermediate (1.82:1)
+$E card2   tritondft --max-mb 3.9 --start 664      # card loop: 2-pass ABR ~3.85 MB, rotated to start on the poster frame
+$E posterloop tritondft                            # tritondft_poster.webp = the card loop's decoded frame 0 (= f664)
+$E sheet   tritondft --every 24 --cols 6 --thumb 320   # 1 fps contact sheet (30 thumbs)
+cd ../../out/tritondft && mv _final/tritondft_master.mp4 _final/tritondft_loop.mp4 _final/tritondft_poster.webp _final/tritondft_sheet.jpg .
+ffprobe -v error -show_entries stream=codec_name,profile,width,height,pix_fmt,r_frame_rate,nb_frames -of compact tritondft_master.mp4 tritondft_loop.mp4
+```
+(`card2` and `card` both need `cardsrc` first; the old CRF search `card --max-mb 3.9 --crf-start 30 --start 664` also works.)
+
+**Then:** commit only `out/tritondft/{tritondft_master.mp4, tritondft_loop.mp4, tritondft_poster.webp, tritondft_sheet.jpg}`
+(`_final/`, frames, segments and logs are gitignored intermediates), push `video/tritondft`, and optionally run a round-7
+review on stills from the new segments (from `video-kit/`):
+`ffmpeg -f concat -safe 0 -i out/tritondft/_final/segments/list.txt -vf scale=960:540:flags=lanczos -q:v 3 -start_number 0 films/tritondft/snaps/final/f_%04d.jpg`
+then `python3 tools/review_pack.py snaps/final f snaps/review_r7` (from `films/tritondft`).
+
+**Site integration (not done; outside this branch's scope):** copy the poster to `projects/tritondft/tritondft.webp` and
+the loop to `projects/tritondft/tritondft_loop.mp4`, and set the TritonDFT `thumbBg` in `projects/projects.html` to the
+film's cream paper (e.g. `#efe4cc`) so no dark navy block flashes before the poster decodes.
+
+**Known open (should-fix, not blocking):** nobody visibly reacts to VROOOM; Hoot's wing never touches the hourglasses
+(they flip on their own); the knowledge-base book is never opened; Tri lands under the LIVE pill for ~0.5 s (f609–621);
+a few DFTBench doodles still read as QR-like glyphs.
