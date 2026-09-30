@@ -5,12 +5,13 @@
    red / orange rays with focus lines closing in from the rim, he coils the bat back (it
    trembles), the pitch streaks in from the right with speed lines and a hand-lettered
    「シュバッ!」; a violent level swing with a smear across his chest — CONTACT: hit-stop, an
-   impact frame (inverted, then posterised), a spiky impact star, the whole stage shakes and
+   impact frame (inverted, then posterised), a spiky impact star, the recoil knocks the whole round
+   avatar aside (it rattles through the hit-stop, then rocks back and forth and settles) and
    「カキーン!!」 punches in; the ball rockets off over the stands with a trail while sparks and
    wood chips burst from the bat, it leaves with a star twinkle, he whips the bat up high and
    「ホームラン!!」 pops in a spiky balloon; then he lowers the bat across his arms again.
    Loop (3.6 s beat): the bat rests across his arms and bobs, the floodlights flicker; every other
-   beat the home run is replayed, softer (no rays, no impact frame, a small shake).
+   beat the home run is replayed, softer (no rays, no impact frame, a smaller recoil).
    Photo landmarks (512 px): face 273,110 · glasses: lenses 260,93 / 306,95 · fist 348,388 ·
    right shoulder 345,172 · elbow 440,300 · window x > 200 · deck / field y 190-310 ·
    table edge y ~315 (right) · chair 0-67 x 260-407. */
@@ -425,14 +426,33 @@ export default {
     };
     const tipAt = (s, t, frac, out) => out.copy(gripHome).addScaledVector(batDir(s, t, tmpD), L * frac);
     const impactOf = (s, replay) => (replay || s < HIT || s >= 0.41) ? 0 : (s < 0.37 ? 1 : 2);
-    /** the stage shake after contact (jerky: a new offset 45 times a second) */
-    const shakeOf = (s, replay) => (s < HIT || s >= 0.72) ? 0 : (replay ? 1.6 : 4) * Math.pow(1 - (s - HIT) / (0.72 - HIT), 1.6);
     // how far the stage may move each way before the (hovered, 5 % larger) photo reaches the tile edge
     k.camera.updateMatrixWorld();                   // (the first render has not happened yet)
     root.updateMatrixWorld(true);
     const [acx, acy] = k.screenAt(256, 256, 0), band = 2.5 / k.s + 5;
     const room = { l: Math.max(0, acx - R - band), r: Math.max(0, k.W - acx - R - band), t: Math.max(0, acy - R - band - 2 / k.s), b: Math.max(0, k.H - acy - R - band) };
     const jit = (t, i) => { const x = Math.sin((Math.floor(t * 45) + i * 1013) * 12.9898 + i * 78.233) * 43758.5453; return (x - Math.floor(x)) * 2 - 1; };
+    /** the recoil of contact: the whole round avatar is knocked (right and down, tipped clockwise: the
+        Team page tiles have room on those sides) with a punch in size, rattles through the hit-stop,
+        then rocks back and forth and settles (a damped spring). The replay gets a smaller one. */
+    const recoil = { dx: 0, dy: 0, rz: 0, sc: 1 };
+    const recoilOf = (s, t, e, replay) => {
+      recoil.dx = recoil.dy = recoil.rz = 0; recoil.sc = 1;
+      const u = s - HIT, dur = replay ? 0.5 : 0.8;
+      const off = 1 - clamp(e * 4);                   // gone as soon as the exit starts: e = 1 is the photo in place
+      if (u < 0 || u >= dur || off <= 0) return recoil;
+      const d = Math.exp(-u / (replay ? 0.14 : 0.2)) * (1 - ease.in(u / dur)) * off;
+      const w = Math.PI * 2 * (replay ? 6 : 5.2);
+      const A = replay ? 0.024 : 0.055, KX = replay ? 2 : 3.8, KY = replay ? 1.2 : 2.5;
+      const rattle = replay ? 0 : Math.max(0, 1 - u / (STOP - HIT)) * off;
+      recoil.rz = -A * d * Math.cos(w * u) + jit(t, 3) * 0.012 * rattle;
+      // the punch grows the disc by `grow` px; the move keeps it inside the room (pushed down when the top is tight)
+      const grow = Math.min(R * (replay ? 0.01 : 0.022), (room.l + room.r) / 2, (room.t + room.b) / 2) * Math.exp(-u / 0.07) * off;
+      recoil.sc = 1 + grow / R;
+      recoil.dx = clamp(KX * d * Math.cos(w * u + 0.35) + jit(t, 1) * 0.8 * rattle, grow - room.l, room.r - grow);
+      recoil.dy = clamp(-KY * d * Math.cos(w * u + 0.7) + jit(t, 2) * 0.8 * rattle, grow - room.b, room.t - grow);
+      return recoil;
+    };
 
     // fixed random sets
     const rr = rng(5);
@@ -498,12 +518,11 @@ export default {
         tape.material = f === 1 ? flatLight : f === 2 ? flatDark : tapeMat;
         fist.visible = f === 0;
         banks.forEach(bk => { bk.glow.visible = f === 0; bk.cone.visible = f === 0; });
-        // the stage shakes on contact (it stops as soon as the exit starts: e = 1 is the photo in place)
-        const sh = shakeOf(s, replay) * (1 - clamp(e * 4));
-        const dx = lerp(-Math.min(sh, room.l), Math.min(sh, room.r), (jit(t, 1) + 1) / 2);
-        const dy = lerp(-Math.min(sh, room.b), Math.min(sh, room.t), (jit(t, 2) + 1) / 2) * 0.8;
-        root.position.set(dx, dy, 0);
-        root.rotation.z += jit(t, 3) * sh * 0.009;
+        // the recoil of contact knocks the whole stage back and rocks it (see recoilOf)
+        const rc = recoilOf(s, t, e, replay);
+        root.position.set(rc.dx, rc.dy, 0);
+        root.rotation.z += rc.rz;
+        root.scale.set(rc.sc, rc.sc, 1);                             // in-plane only: depth, and so perspective, unchanged
       },
 
       draw2d(q, t, e) {
@@ -518,7 +537,7 @@ export default {
         const f = impactOf(s, replay) * (e > 0 ? 0 : 1);          // no impact frame once the exit runs (as in update)
         const X = x => cx - 100 + x, Y = y => cy - 100 + y;       // avatar px (0..200) -> screen
         c.save();
-        c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.clip();
+        c.beginPath(); c.arc(cx, cy, R * recoilOf(s, t, e, replay).sc, 0, Math.PI * 2); c.clip();
         c.lineCap = 'round'; c.lineJoin = 'round';
 
         // focus lines closing in from the rim during the wind-up (first home run)
