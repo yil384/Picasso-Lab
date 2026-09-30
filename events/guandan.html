@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Picasso Lab Guandan Arena</title>
+<title>掼蛋 · Picasso Lab</title>
+<meta name="theme-color" content="#1b2750">
 <!-- Critical first paint: navy for the lobby, the table teal when a ?room= link opens a game. -->
 <script>document.documentElement.dataset.gdBoot = /[?&]room=/.test(location.search) ? "room" : "lobby";</script>
 <style>html,body{margin:0;background:#2b3c7c}html[data-gd-boot="room"],html[data-gd-boot="room"] body:not([data-screen]){background:#049484}</style>
@@ -2178,8 +2179,8 @@ function rulesBodyHTML() {
             row(L("Teams", "队伍"), L("Four players in two teams; partners sit opposite: seats 1 + 3 (Blue) against seats 2 + 4 (Red).", "四人两队，对家为队友：1、3 号位（蓝队）对 2、4 号位（红队）。")),
             row(L("Cards", "牌数"), L("Two decks, 108 cards including four jokers; everyone gets 27.", "两副牌共 108 张（含四张王），每人 27 张。")),
             row(L("Lead", "先出"), L("Round 1: a random card is turned up and its holder leads. Later rounds: the tribute payer or last round's first place leads.", "首局随机翻一张起始牌，拿到它的人先出；之后由进贡方或上局头游先出。")),
-            row(L("Turns", "出牌"), L("Lead any legal combo; the others follow with a bigger same combo or a bomb, or pass.", "领出任意合法牌型；其他人只能出更大的同牌型或炸弹，也可以不出。")),
-            row(L("Trick", "收牌"), L("When everyone else passes, the last player to play takes the trick and leads again. If that player has gone out, their partner leads instead (Jiefeng).", "其他人都不出时，最后出牌的人收牌再出；他已出完时由对家「接风」。")),
+            row(L("Play", "出牌"), L("Lead any legal combo; the others follow with a bigger same combo or a bomb, or pass.", "领出任意合法牌型；其他人只能出更大的同牌型或炸弹，也可以不出。")),
+            row(L("Trick", "收牌"), L("When everyone else passes, the last player to play takes the trick and leads again. If that player has gone out, their partner leads instead (a relay lead, or Jiefeng).", "其他人都不出时，最后出牌的人收牌再出；他已出完时由对家「接风」。")),
             row(L("Time", "限时"), L("3 minutes a turn (a round's opening lead has no limit); on timeout you pass, or play your smallest single when leading.", "每手 3 分钟（每局第一手不限时）；超时自动不出，领出时自动出最小的单张。"))
         ]],
         [L("Level card", "级牌"), [
@@ -2261,7 +2262,7 @@ function openLabDeck() {
     const html = `<div class="gd-labdeck">${labMemberKeys().map((k, i) => {
         const p = PL[k];
         const style = isZH() ? p.style : window.GuandanRecords?.styleText?.(k, "en");
-        return `<div class="labdeck-item">${cardHTML(signatureCard(p.card, `ld${i}`))}<b>${encodeHTML(firstNameOf(p.name))}</b>${style ? `<small>${encodeHTML(style)}</small>` : ""}</div>`;
+        return `<div class="labdeck-item">${cardHTML(signatureCard(p.card, `ld${i}`))}<b>${encodeHTML(firstNameOf(p.name))}</b>${style ? `<small>${style.split(" · ").map(part => `<span>${encodeHTML(part)}</span>`).join("")}</small>` : ""}</div>`;
     }).join("")}</div>`;
     openPopup({ title: L("Lab Deck", "实验室牌组"), html, wide: true });
 }
@@ -2363,7 +2364,7 @@ function stepStartLevel(team, dir) {
 // (the rules are fixed, so nothing here looks like a control). The notes drop on short phones.
 function roomShellHTML() {
     const row = (key, value, note = "") => `<div class="room-row"><span class="room-k">${key}</span><span class="room-v">${value}${note ? `<small>${note}</small>` : ""}</span></div>`;
-    const tags = [L("Wild", "逢人配"), L("Jiefeng", "接风")].map(t => `<span class="room-tag">${t}</span>`).join("");
+    const tags = [L("Wild", "逢人配"), L("Relay", "接风")].map(t => `<span class="room-tag">${t}</span>`).join("");
     return `
     <section class="room">
         <aside class="room-panel room-settings">
@@ -2372,8 +2373,8 @@ function roomShellHTML() {
                 <div class="room-levels-setup" data-region="levels"></div>
                 ${row(L("Goal", "目标"), L("Pass A", "过 A"), L("back to 2 after 3 misses", "（3 把不过回 2）"))}
                 ${row(L("Tribute", "进贡"), L("On", "开启"), L("two Red Jokers block it", "（双大王抗贡）"))}
-                ${row(L("Level", "升级"), L("1-2 finish +3", "双上升 3 级"))}
-                ${row(L("Turn", "出牌时间"), L("3 min", "3 分钟"))}
+                ${row(L("Level", "升级"), L("Double win +3", "双上升 3 级"))}
+                ${row(L("Timer", "出牌时间"), L("3 min", "3 分钟"))}
                 <div class="room-row"><span class="room-k">${L("Rules", "规则")}</span><span class="room-tags">${tags}</span></div>
                 <div class="room-admin" data-region="admin"></div>
             </div>
@@ -2506,7 +2507,7 @@ function teamShortName(team) {
 
 function roomTableHTML(mine) {
     return `<div class="room-felt">
-            <div class="room-felt-mark">PICASSO ${L("Guandan", "掼蛋")} · ${L(`level ${game.currentLevelRank}`, `打${game.currentLevelRank}`)}</div>
+            <div class="room-felt-mark">PICASSO ${L("Guandan", "掼蛋")} · ${L(`Level ${game.currentLevelRank}`, `打${game.currentLevelRank}`)}</div>
             <div class="room-lvs">${[0, 1].map(t => `<span class="room-lv t${t}"><i>${teamShortName(t)}</i><b>${encodeHTML(teamLevelDisplay(t))}</b></span>`).join("")}</div>
         </div>
         ${[0, 1, 2, 3].map(i => seatHTML(i, mine)).join("")}`;
@@ -4064,7 +4065,7 @@ function resultHTML(v) {
     let title = over ? L("Match over", "比赛结束") : L("Round over", "本局结束");
     let tone = "";
     if (myTeam >= 0 && aceFail) {
-        if (myTeam === r.firstTeam) [title, tone] = [L("A failed", "冲A失败"), "is-cool"];
+        if (myTeam === r.firstTeam) [title, tone] = [L("Missed A", "冲A失败"), "is-cool"];
     } else if (myTeam >= 0 && myTeam === r.firstTeam) {
         title = over ? L("Champions", "比赛胜利") : L("Victory", "胜利");
     } else if (myTeam >= 0) {

@@ -323,6 +323,8 @@ body[data-screen="table"] .topbar { display: none; }
     padding: 0 4px;
     max-height: 300px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(28, 47, 102, .35) transparent;
     touch-action: pan-y;
     font: 500 17px/1.3 var(--font-ui);
 }

@@ -810,7 +810,7 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     text-align: center;
     text-shadow: 0 calc(2 * var(--ru)) 0 rgba(40, 50, 160, .35);
 }
-.room-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: calc(4 * var(--ru)) 0; }
+.room-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(28, 47, 102, .35) transparent; padding: calc(4 * var(--ru)) 0; }
 /* Tencent settings rows: justified heavy label, the value in plain ink; rows keep their height
    and the panel body scrolls */
 .room-row {
@@ -1168,7 +1168,7 @@ html[lang="en"] .room-k { text-align-last: auto; }
 /* right: 实验室成员 (periwinkle panel, white rows, green 邀请, 邀请好友 at the bottom) */
 .room-roster { background: linear-gradient(180deg, rgba(128, 148, 242, .95), rgba(78, 98, 196, .92)); }
 .room-roster .room-panel-head { background: linear-gradient(90deg, #7b92f3, #6c84ec); box-shadow: inset 0 calc(-2 * var(--ru)) 0 rgba(40, 50, 160, .25); }
-.room-roster-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: calc(6 * var(--ru)); padding: calc(8 * var(--ru)); }
+.room-roster-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(28, 47, 102, .35) transparent; display: flex; flex-direction: column; gap: calc(6 * var(--ru)); padding: calc(8 * var(--ru)); }
 .roster-row {
     flex: none;
     display: flex;
@@ -1239,7 +1239,7 @@ html[lang="en"] .roster-invite { padding: 0 calc(7 * var(--ru)); }   /* "Invite"
 
 /* confirm popup (confirmPopup: 解散房间 …): one centred question, 取消 / 确定 */
 .gd-popup.is-narrow { width: min(calc(540 * var(--pu)), 94%); }
-.gd-confirm-text { margin: calc(14 * var(--pu)) 0 calc(28 * var(--pu)); color: var(--ink); font: 700 calc(22 * var(--pu))/1.55 var(--font-ui); text-align: center; }
+.gd-confirm-text { margin: calc(14 * var(--pu)) 0 calc(28 * var(--pu)); color: var(--ink); font: 700 calc(22 * var(--pu))/1.55 var(--font-ui); text-align: center; text-wrap: balance; }
 .gd-confirm-row { display: flex; justify-content: center; gap: calc(30 * var(--pu)); padding-bottom: calc(4 * var(--pu)); }
 .gd-confirm-row .btn { --btn-h: max(var(--tap, 0px), calc(56 * var(--pu))); --btn-fs: calc(23 * var(--pu)); --btn-px: calc(26 * var(--pu)); --btn-minw: calc(170 * var(--pu)); }
 html[lang="en"] .gd-confirm-row .btn { --btn-ls: 0em; }

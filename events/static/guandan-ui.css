@@ -91,6 +91,10 @@ body {
     font: 500 var(--fs-13)/1.45 var(--font-ui);
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
+    /* a game, not a page: nothing selects, drags out or offers the long-press callout (only the text fields below) */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     overflow-x: hidden;
     /* Opacity only: a transform here would make <body> the containing block of every
        position:fixed overlay (toast, modal, transition) and mis-center them. */
@@ -99,9 +103,10 @@ body {
 @keyframes gd-body-in { from { opacity: 0; } }
 body:focus { outline: none; }
 button, input, select, textarea { font: inherit; }
-button { color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+input, textarea { user-select: text; -webkit-user-select: text; }
+button { color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 button:disabled { cursor: not-allowed; }
-img { max-width: 100%; }
+img { max-width: 100%; -webkit-user-drag: none; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--gold-2); outline-offset: 2px; }
 .sr-only {
@@ -607,6 +612,8 @@ img { max-width: 100%; }
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(28, 47, 102, .35) transparent;
     padding: calc(20 * var(--pu)) calc(30 * var(--pu)) calc(28 * var(--pu));
     font: 500 calc(19 * var(--pu))/1.6 var(--font-ui);
 }
@@ -651,7 +658,7 @@ img { max-width: 100%; }
 }
 .gd-rules-tab:focus-visible { outline: 2px solid var(--util); outline-offset: -3px; }
 .gd-rules-panes { flex: 1; min-width: 0; display: flex; }
-.gd-rules-pane { flex: 1; min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: calc(8 * var(--pu)) calc(28 * var(--pu)) calc(20 * var(--pu)); }
+.gd-rules-pane { flex: 1; min-width: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(28, 47, 102, .35) transparent; padding: calc(8 * var(--pu)) calc(28 * var(--pu)) calc(20 * var(--pu)); }
 .gd-rules-pane[hidden] { display: none; }
 .gd-rules-row {
     display: grid;
@@ -666,8 +673,8 @@ img { max-width: 100%; }
 .gd-rules-row:last-child { border-bottom: 0; }
 .gd-rules-row > b { color: var(--ink); font: 900 calc(21 * var(--pu))/1.3 var(--font-ui); text-align-last: justify; }
 html[lang="en"] .gd-rules-row > b { text-align-last: auto; }
-.gd-rules-row > span { color: var(--ink-2); font-size: calc(18 * var(--pu)); line-height: 1.5; }
-.gd-rules-note { margin: calc(10 * var(--pu)) 0 calc(4 * var(--pu)); padding: calc(10 * var(--pu)) calc(14 * var(--pu)); border-radius: calc(6 * var(--pu)); background: #eaf0fc; color: var(--ink-2); font-size: calc(17 * var(--pu)); line-height: 1.5; }
+.gd-rules-row > span { color: var(--ink-2); font-size: calc(18 * var(--pu)); line-height: 1.5; text-wrap: balance; }
+.gd-rules-note { margin: calc(10 * var(--pu)) 0 calc(4 * var(--pu)); padding: calc(10 * var(--pu)) calc(14 * var(--pu)); border-radius: calc(6 * var(--pu)); background: #eaf0fc; color: var(--ink-2); font-size: calc(17 * var(--pu)); line-height: 1.5; text-wrap: balance; }
 .gd-rules-cards { --card-w-small: calc(46 * var(--pu)); display: flex; padding-right: calc(4 * var(--pu)); }
 .gd-rules-cards .card + .card { margin-left: calc(-20 * var(--pu)); }
 @media (max-aspect-ratio: 1/1) { /* portrait page: tabs across the top (a rotated in-game stage stays landscape) */
@@ -701,8 +708,9 @@ html[lang="en"] .gd-rules-row > b { text-align-last: auto; }
     text-align: center;
 }
 .labdeck-item > b { font: 900 calc(19 * var(--pu))/1.2 var(--font-ui); color: var(--ink); }
-/* a two-line style breaks at its " · ", never inside a word */
+/* a two-part style stacks its parts (the " · " is dropped), never breaking inside one */
 .labdeck-item > small { font: 500 max(11px, calc(14 * var(--pu)))/1.35 var(--font-ui); color: var(--ink-3); word-break: keep-all; text-wrap: balance; }
+.labdeck-item > small > span { display: block; }
 
 /* 设置: Tencent rows (justified label, gold radios) */
 .gd-setrow {
