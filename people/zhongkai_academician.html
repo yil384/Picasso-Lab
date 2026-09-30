@@ -20,17 +20,26 @@
 
 <style>
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+/* the Team page tiles shrink with the window (to about 150 px wide at 768): the photo is 200 px or
+   whatever fits the tile, and the kit scales the effect with it */
 .pfx {
-  position: absolute; left: 8px; top: 8px; width: 200px; height: 200px;
+  --d: min(200px, calc(100vw - 16px), calc(100vh - 16px));
+  position: absolute; left: 8px; top: 8px; width: var(--d); height: var(--d);
   border-radius: 50%; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;
 }
 /* phones: Sites stacks the photo above the name, so sit at the bottom of the tile (next to the name) */
-.pfx.pfx-phone { left: 50%; top: auto; bottom: 10px; margin-left: -100px; }
+.pfx.pfx-phone { left: 50%; top: auto; bottom: 10px; margin-left: calc(var(--d) / -2); }
 .pfx-stage { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .4s cubic-bezier(.32, 1.3, .4, 1); }
 .pfx:hover .pfx-stage, .pfx:focus-visible .pfx-stage { transform: translateY(-2px) scale(1.05); }
 .pfx.pfx-on .pfx-stage { transform: scale(1.03); }
 .pfx.pfx-on:hover .pfx-stage { transform: translateY(-2px) scale(1.05); }
 .pfx-shadow { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, .18); }
+/* keyboard focus: a ring on the photo's edge, drawn over the effect canvas too (so it shows on and off) */
+.pfx-stage::after {
+  content: ''; position: absolute; inset: -1px; border: 3px solid #00629b; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .85); opacity: 0; pointer-events: none;
+}
+.pfx:focus-visible .pfx-stage::after { opacity: 1; }
 .pfx-photo { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .pfx-loading .pfx-shadow { animation: pfx-wait 1s ease-in-out infinite; }
 @keyframes pfx-wait { 50% { box-shadow: 0 4px 10px rgba(0, 0, 0, .18), 0 0 0 4px rgba(0, 98, 155, .28); } }

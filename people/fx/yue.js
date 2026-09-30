@@ -182,7 +182,8 @@ export default {
 
     // ── the swing: bat directions (world, y up, z toward the viewer) ──
     const V = (x, y, z) => new THREE.Vector3(x, y, z).normalize();
-    const D_REST = V(0.11, 1, 0.03), D_COCK = V(0.35, 0.88, -0.25), D_HIT = V(0.24, 0.34, 0.91);
+    // D_COCK leans only a little right: the swing to D_HIT passes the rim, and the bat end stays within ~6 px of it
+    const D_REST = V(0.11, 1, 0.03), D_COCK = V(0.22, 0.88, -0.25), D_HIT = V(0.24, 0.34, 0.91);
     const D_FOLLOW = V(-0.5, 0.55, 0.67), D_FRONT = V(0.05, 0.3, 0.95);
     const UP = new THREE.Vector3(0, 1, 0);
     const contact = gripHome.clone().addScaledVector(D_HIT, SWEET);
