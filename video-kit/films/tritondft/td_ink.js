@@ -179,7 +179,7 @@ function iris(W, ctx, g, F, jr) {
   const a0 = K.rush[1] - 9, a1 = K.rush[1], b1 = K.S5 + 9;
   if (F < a0 || F >= b1) return;
   const closing = F < a1;
-  const c = closing ? prj(W, ctx, wp(W, W.loupe.head, [0, 0, 0])) : prj(W, ctx, wp(W, W.con.knobs[0], [0.1, 0.05, -0.02]));   // opens between the knob and its vermilion pegs
+  const c = closing ? prj(W, ctx, wp(W, W.loupe.head, [0, 0, 0])) : prj(W, ctx, wp(W, W.con.knobs[0], [0, 0.04, 0]));   // reopens on the knob, same place as it closed
   // closes to a dot on the lens (fully shut for ~2 frames), then grows from a dot on the knob over 8 frames
   // never a flat empty frame: it shuts to a pinhole on the lens, the pinhole jumps to the knob, then grows over 8 frames
   // a true iris match: it closes onto the round lens (never smaller than the knob's face), the round knob replaces the lens

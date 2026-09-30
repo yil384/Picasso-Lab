@@ -318,13 +318,13 @@ function updateCart(F) {
   }
   // pops out of the desk mouth and lands in Hoot's wings; handed to Tri at the end
   const m = W.tube.curve.getPointAt(0);
-  const hold = W.hoot.head.localToWorld(V3(0.06, -0.86, 0.74));    // hugged at the belly, right of the scorecard: the planks stay under its beak
+  const hold = W.hoot.head.localToWorld(V3(0.0, -0.6, 0.9));        // at the chest, in front of it; the planks stay below the beak    // hugged at the belly, right of the scorecard: the planks stay under its beak
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k) + 0.45 * Math.sin(Math.PI * k)];   // arcs in front of the giant
   if (F >= K.handBack[0]) { const tp = W.tri.arms[1].hand.getWorldPosition(V3(0, 0, 0)), b = sm((F - K.handBack[0]) / (K.handBack[1] - K.handBack[0])), ts = W.tri.root.scale.x; p = [lerp(p[0], tp.x + 0.3 * ts, b), lerp(p[1], tp.y - 0.1 * ts, b) + 1.0 * Math.sin(Math.PI * b), lerp(p[2], tp.z + 0.18 * ts, b) + 0.5 * Math.sin(Math.PI * b)]; }   // over the giant's cap
   C.position.set(...p); C.rotation.set(0, 0.3 + (F < K.land + 8 ? (1 - k) * 4 : 0), 0);
-  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.56, k) : 0.56 * (F >= K.handBack[0] ? lerp(1, 0.75, sm((F - K.handBack[0]) / 6)) * W.tri.root.scale.x : 1));   // small in Tri's hand, squeezed with Tri
+  C.scale.setScalar(F < K.land + 8 ? lerp(0.35, 0.46, k) : 0.46 * (F >= K.handBack[0] ? lerp(1, 0.75, sm((F - K.handBack[0]) / 6)) * W.tri.root.scale.x : 1));   // small in Tri's hand, squeezed with Tri
 }
 
 // ---- Hoot (the researcher) ----
@@ -478,7 +478,7 @@ function updateTube(F) {
 // k: 0 Tri, 1 Clack (late: rides the 68x down), 2 Loupe, 3 Tilt
 // one owner per number, faces clear: Tri stands on the paper tower, Clack photobombs at the far left of the desk (after
 // 68x has landed on its own), Loupe peeks over its scorecard (clear of the lamp), Tilt behind the $0.04 it tips its pennies into
-const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.72, 0.0, -0.3), deskP(-1.24, 0, 0.64), deskP(1.5, 0, 0.1)];   // Loupe on the 98% spot: it rides its numeral up
+const OUT_SPOT = [deskP(1.25, 0.5, -0.4), deskP(-1.25, 0.95, -0.42), deskP(-1.24, 0, 0.64), deskP(1.5, 0, 0.1)];   // Clack photobombs from the top of the tall paper tower   // Loupe on the 98% spot: it rides its numeral up
 const OUT_T = [K.outs[0], K.slam[1] + 2, K.outs[1], K.outs[2]];
 function outState(k, F) {
   const t0 = OUT_T[k];
