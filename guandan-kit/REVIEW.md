@@ -394,6 +394,25 @@ load. A trace shows Layout/UpdateLayoutTree as the web fonts swap in.
 - **R2-32** [records · records · phone] (gameplay QA) The 评分怎么算 '?' is 22×22 drawn with a 40×37 hit box: the only records control under 40 px.
   - _Fix:_ a transparent `::after` of at least 44×44 on `.gdr-help`.
 
+### Must-keep lens (SPEC §1) — finished on the merged build (5c33f71), desk 1440×900 / phone 844×390 / portrait 390×844
+Run with the new `harness/mustkeep.py` (`python3 mustkeep.py [events|portraits|music|screens|all] [viewport ...]`), which drives
+the real pages against the in-memory Firebase stub (a widened database stub for `events.html`, so nothing touches production).
+**Everything on the must-keep list works; one low finding.** 60 checks, all pass except the one below.
+
+| SPEC §1 item | Result |
+|---|---|
+| Labmate portraits on J/Q/K/A | All 16 J/Q/K/A cards (4 ranks × 4 suits) in one hand render a loaded portrait (naturalWidth > 0), from 16 different labmates, at all three viewports |
+| Seat avatars are the labmate photo | Table seats load `people/static/<name>.webp` (Zhengding, Zhongkai, Zaifeng, Yichen); no initials on the table |
+| 巅峰对决 data and scoring | `PLAYERS` (18) and `MATCHES` (11) serialise identically to the pre-redesign file (ec32e31); `buildStats` is unchanged apart from an additive read-only `byKey`. The board's four pages read the same, character for character, in the guandan modal and in the `events.html` mvp overlay |
+| PICASSO "P" card back | `.gd-back-emblem` "P" (blue, 19.8 px) on the deal's 60 backs, all viewports |
+| "picasso" return transition + hint on every screen | Typing "pi" shows `#return-type-hint` on lobby, room and table at all three viewports and it covers no control, hand or played card, except the portrait room (MK-1). Typing "picasso" runs the transition (16 labmate-avatar shards, 5 cards, 10 coins, title) over the full screen on the lobby, on the room (the seat is given back first: no room is left in the store) and on the table, including the rotated portrait table (frames checked: title and shards turn with the stage, no frame gap over 83 ms). It lands on `events.html`, which strips `?from=guandan` and plays the restore fade |
+| BGM `#guandan-bgm` | Absolute lab URL, `loop`, volume .45; plays after the first tap; `GuandanMusic.setOn(false/true)` pauses/resumes, stores `picasso.guandan.music` and fires `guandan:music` twice; the lobby 音乐 control flips the state |
+| events.html eggs | `222aak` opens the egg overlay and the photo loads (760×570); Esc closes it; the card egg trigger opens it too; "mvp" opens the records board (splash, 4 tabs, 4 pages, ArrowRight pages to the last, Esc closes); typing "pi" shows the events hint; typing "picasso" and, on phones, three taps on the news strip start the launch transition, which lands on `guandan.html`; `?from=guandan` plays the restore fade. Zero console errors on both viewports. (On phones the award intro "TAP TO CONTINUE" sits over the page until it is tapped, as before) |
+| Lab copy | 蓝队/红队 and 南家/西家/北家/东家 AI on the room's mini table and seat plates; the watermark says PICASSO 掼蛋 |
+
+- **MK-1** [eggs · low · portrait, room] The "试试输入 picasso" pill lands over the blank right half of the settings panel's 目标 row (`.room-panel`, 140×30 px at 233,667). It hides no text or control, so this is what remains of R1-14/R1-20 there.
+  - _Fix:_ in the portrait room, place the hint in the header band beside 好友同玩, or above the panel title (top ≈ 96 CSS px).
+
 ## Handoff status
 - **Done (previous sessions):**
   - gd3/table and gd3/lobby merged.
@@ -408,8 +427,9 @@ load. A trace shows Layout/UpdateLayoutTree as the web fonts swap in.
   - Workflow scripts now take the refs, pre-shot and session paths as args.
 - **Review round 2: partial.** The fidelity-table, fidelity-meta and gameplay-QA lenses finished: 32 findings (7 medium, 25 low, no high) and scores for 11 of the 12 screens (see Round 2 above).
   - Below 8: lobby 7, popups 7.5, table-moments 6.5, portrait 7.5, english 7.5.
+- **Done (session 3, 2026-09-30):** harness re-set up (proxy CA in Chromium's NSS store, references downloaded, phone/portrait/desk baselines re-captured into `scratch/shots-r2`, zero console errors); **must-keep lens finished** (see above: all pass, MK-1 low), `harness/mustkeep.py` added.
 - **Missing from round 2:**
-  - **AI-tell hunter** and **must-keep:** both started and stopped writing at 14:21:32 UTC on 2026-09-29; must-keep's last command exited 137 (killed). The workflow then hung for about 11 h until the user stopped it.
+  - **AI-tell hunter** (must-keep is done, see above): it started and stopped writing at 14:21:32 UTC on 2026-09-29; the workflow then hung for about 11 h until the user stopped it.
   - **Round-1 re-check (prev-verify):** never started. The workflow runs min(16, CPUs − 2) = 2 agents at a time on this 4-CPU container, so it was still queued.
   - **Synthesizer:** never ran. The 32 findings are not deduplicated or calibrated, and eggs is unscored.
   - As a result, the must-keep items (events.html egg/mvp flows, picasso transition, BGM, portraits), the AI-tell sweep, and every round-1 fix not confirmed in passing are **unverified** on the merged build.
