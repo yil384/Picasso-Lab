@@ -6,7 +6,9 @@ pipeline/encode.py only reads PNG frames; render.py --store segments leaves bit-
     python3 encode_segs.py OUT master  NAME [--crf 18 --preset slow]
     python3 encode_segs.py OUT cardsrc NAME                      # once: 960x528 lossless intermediate
     python3 encode_segs.py OUT card    NAME [--max-mb 2.5 --crf-start 30 --start POSTER]
+    python3 encode_segs.py OUT card2   NAME --max-mb 3.9 --start POSTER     # 2-pass ABR to a size, tune animation
     python3 encode_segs.py OUT poster  NAME --frame 300
+    python3 encode_segs.py OUT posterloop NAME                          # poster = the loop's decoded frame 0
     python3 encode_segs.py OUT sheet   NAME [--grid 4 --thumb 480 | --every 24 --cols 6]
     python3 encode_segs.py OUT still   NAME --frame K [--jpg path]
 
@@ -134,6 +136,44 @@ def encode_card(out_dir, name, max_mb, crf_start, start=0):
     return None, "card did not fit the size budget"
 
 
+def encode_card_abr(out_dir, name, target_mb, start=0):
+    """Two-pass ABR card encode to a target size (tune animation, spatial-only denoise so the halftone does not smear
+    in motion). start rotates the loop like encode_card. Returns (probe info, None) or (None, err)."""
+    src = os.path.join(out_dir, "card_src_lossless.mkv")
+    if not os.path.exists(src):
+        return None, "run the cardsrc target first"
+    out = os.path.join(out_dir, f"{name}_loop.mp4")
+    kbps = int(target_mb * 8e6 / 30.0 / 1000 * 0.985)          # 30 s loop, ~1.5% container overhead
+    vf = "hqdn3d=1.2:1.2:0:0," + TO_YUV
+    if start:
+        vf = (f"split[a][b];[a]trim=start_frame={start},setpts=PTS-STARTPTS[a1];[b]trim=end_frame={start},setpts=PTS-STARTPTS[b1];"
+              f"[a1][b1]concat=n=2:v=1," + vf)
+    log = os.path.join(out_dir, "card2pass")
+    common = ["-i", src, "-filter_complex" if start else "-vf", vf, "-c:v", "libx264", "-profile:v", "high", "-preset", "veryslow",
+              "-tune", "animation", "-b:v", f"{kbps}k", "-maxrate", f"{int(kbps * 1.6)}k", "-bufsize", f"{kbps * 3}k",
+              "-pix_fmt", "yuv420p", *BT709, "-passlogfile", log]
+    ok, err = ffmpeg(common + ["-pass", "1", "-an", "-f", "null", os.devnull], "card pass1")
+    if err:
+        return None, err
+    ok, err = ffmpeg(common + ["-pass", "2", "-movflags", "+faststart", "-an", out], "card pass2")
+    if err:
+        return None, err
+    info, err = probe(out)
+    if info:
+        info["kbps"] = kbps
+    return info, err
+
+
+def encode_poster_from_loop(out_dir, name):
+    """Poster = the card loop's own first decoded frame (so the <video> poster and frame 0 match pixel for pixel)."""
+    ims, err = frames_png(os.path.join(out_dir, f"{name}_loop.mp4"), [0])
+    if err:
+        return None, err
+    dst = os.path.join(out_dir, f"{name}_poster.webp")
+    ims[0].save(dst, "WEBP", quality=88, method=6)
+    return dst, None
+
+
 def grab(out_dir, frame, vf, dst, extra=()):
     """Extract one frame (exact index) through filter vf into dst. Returns (dst, None) or (None, err)."""
     (lst, n), err = concat_list(out_dir)
@@ -209,7 +249,7 @@ def encode_sheet(out_dir, name, grid, thumb, every=0, cols=6):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out")
-    ap.add_argument("target", choices=["master", "cardsrc", "card", "poster", "sheet", "still"])
+    ap.add_argument("target", choices=["master", "cardsrc", "card", "card2", "poster", "posterloop", "sheet", "still"])
     ap.add_argument("name")
     ap.add_argument("--crf", type=int, default=18)
     ap.add_argument("--preset", default="slow")
@@ -229,6 +269,10 @@ def main():
         res, err = card_source(a.out)
     elif a.target == "card":
         res, err = encode_card(a.out, a.name, a.max_mb, a.crf_start, a.start)
+    elif a.target == "card2":
+        res, err = encode_card_abr(a.out, a.name, a.max_mb, a.start)
+    elif a.target == "posterloop":
+        res, err = encode_poster_from_loop(a.out, a.name)
     elif a.target == "poster":
         res, err = encode_poster(a.out, a.name, a.frame)
     elif a.target == "sheet":
