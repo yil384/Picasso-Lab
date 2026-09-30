@@ -169,8 +169,12 @@ export default {
     ];
     papers.forEach(p => p.g.position.copy(p.home));
     // his real fingers in front of the papers
-    skinPatch(k, [188, 196, 266, 336], 10);
-    skinPatch(k, [364, 272, 478, 404], 10);
+    for (const box of [[188, 196, 266, 336], [364, 272, 478, 404]]) {
+      try { skinPatch(k, box, 10); } catch (_) {            // pixels unreadable: fall back to the box itself
+        const [u0, v0, u1, v1] = box;
+        k.patch([[u0, v0], [u1, v0], [u1, v1], [u0, v1]], 10);
+      }
+    }
 
     // "+1" and confetti (q5) — fixed random streams
     const rc = rng(21);
@@ -181,16 +185,8 @@ export default {
         col: [[242, 193, 78], [228, 87, 46], [43, 179, 163], [58, 123, 213], [255, 255, 255], [242, 193, 78]][i % 6], d: rc() * 0.08 };
     });
     const tipL = new THREE.Vector3(), tipR = new THREE.Vector3();
-    const plusOf = (t, e) => {
-      // [paper index, start time] of the "+1"s that may be showing
-      const list = [[0, 0.95], [1, 1.12]];
-      if (t > 1.8) {
-        const n = Math.floor((t - 1.8) / BEAT);
-        for (let j = Math.max(0, n - 1); j <= n; j++) list.push([j % 2, 1.8 + j * BEAT + 0.35]);
-      }
-      return list;
-    };
-
+    const PLUS_FIRST = [0.95, 1.12];                // the entrance "+1"s (left, right)
+    const PLUS_LOOP = 1.8;                           // then one per beat, alternating
     return {
       update(t, e) {
         // hat: falls, squashes on landing, settles; tassel lags then swings
@@ -251,7 +247,12 @@ export default {
         tipR.set(0, 42, 0).applyMatrix4(papers[1].g.matrix);
         c.save();
         c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
-        for (const [i, s0] of plusOf(t, e)) {
+        const nb = t > PLUS_LOOP ? Math.floor((t - PLUS_LOOP) / BEAT) : -1;
+        for (let slot = 0; slot < 4; slot++) {
+          const j = nb - 1 + (slot - 2);             // slots 2, 3 = the previous and the current beat
+          if (slot >= 2 && j < 0) continue;
+          const i = slot < 2 ? slot : j % 2;
+          const s0 = slot < 2 ? PLUS_FIRST[slot] : PLUS_LOOP + j * BEAT + 0.35;
           const s = t - s0;
           if (s < 0 || s > 0.95) continue;
           const pop = ease.outBack(env(s, 0, 0.2), 2.6);

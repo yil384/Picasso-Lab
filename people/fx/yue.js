@@ -194,11 +194,10 @@ export default {
 
     /* the pitch sequence the clock is in: s = seconds into it (-1 = none), replay = not the first */
     const seqOf = (t) => {
-      let s = t - S0;
-      if (s < 0) return [-1, false];
-      const n = Math.floor(s / CYCLE);
-      return [s - n * CYCLE, n > 0];
+      const s = t - S0;
+      return s < 0 ? -1 : s - Math.floor(s / CYCLE) * CYCLE;
     };
+    const replayOf = (t) => t - S0 >= CYCLE;
     /** bat direction at sequence time s (+ the idle bob at clock t) */
     const batDir = (s, t, out) => {
       if (s < 0 || s >= 1.2) {
@@ -241,7 +240,7 @@ export default {
 
     return {
       update(t, e) {
-        const [s, replay] = seqOf(t);
+        const s = seqOf(t), replay = replayOf(t);
         const out = 1 - ease.in(clamp(e * 1.6));
         // night: park fades in over the window, the room darkens, the banks clunk on
         const b = presence(t, e, 0.05, 0.4, ease.out, 0);
@@ -292,7 +291,7 @@ export default {
       },
 
       draw2d(q, t, e) {
-        const [s, replay] = seqOf(t);
+        const s = seqOf(t), replay = replayOf(t);
         if (s < 0) return;
         const fade = 1 - clamp(e * 2);
         if (fade <= 0) return;
