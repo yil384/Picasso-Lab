@@ -3325,6 +3325,12 @@
     const input = document.getElementById('dm-input');
     const sendBtn = document.getElementById('dm-send-btn');
 
+    // the phone bar is narrow: a short placeholder (same breakpoint as the mobile input CSS)
+    const dmPhone = matchMedia('(max-width: 760px)');
+    const dmPlaceholder = () => { input.placeholder = dmPhone.matches ? 'Say...' : 'Say something...'; };
+    dmPlaceholder();
+    if (dmPhone.addEventListener) dmPhone.addEventListener('change', dmPlaceholder);
+
     // Auto-resize textarea
     input.addEventListener('input', () => {
         input.style.height = 'auto';
