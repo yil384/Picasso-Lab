@@ -3068,6 +3068,7 @@ function renderHand(columns, rowCards, geo, dealPhase) {
     const sorting = dealPhase === "sorting" ? " is-sorting" : "";
     const wrap = document.createElement("div");
     wrap.style.setProperty("--pitch", `${geo.pitch}px`);
+    wrap.style.setProperty("--ov", `${Math.max(0, geo.cardW - geo.pitch).toFixed(2)}px`);   // how far the next column covers a card's right edge
     if (handMode === "row") {
         wrap.className = `gd-row card-ix-v${sorting}`;
         rowCards.forEach((card, i) => {
@@ -3088,11 +3089,17 @@ function renderHand(columns, rowCards, geo, dealPhase) {
                 el.style.removeProperty("--ci");
                 colEl.append(el);
             });
+            // a rank column of four or more is a bomb: its size on the front card, as in 大掼蛋 2026
+            if (!col.group && col.cards.length >= 4) colEl.insertAdjacentHTML("beforeend", `<span class="gd-bomb-tag" aria-hidden="true">${bombTagText(col.cards.length)}</span>`);
             wrap.append(colEl);
         });
     }
     host.replaceChildren(wrap);
     tableView.cardEls = next;
+}
+
+function bombTagText(n) {
+    return isZH() ? `${"四五六七八"[n - 4] || n}炸` : `${n}×`;
 }
 
 function selectionVerdict(mine) {
@@ -3676,7 +3683,7 @@ function actionsHTML(v) {
 // are selected (refreshSelectionUI); none once my hand is gone.
 function toolsHTML(v) {
     if (v.mine < 0 || game.phase !== "playing" || !(game.hands[v.mine] || []).length) return "";
-    return `<button class="gd-tool" id="clear-btn" type="button" hidden>${L("Clear", "重选")}</button>
+    return `<button class="gd-tool" id="clear-btn" type="button" hidden><svg class="gd-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8Z"/></svg>${L("Clear", "重选")}</button>
         <button class="gd-tool" type="button" data-act="lipai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="m16 4 13 6.5-13 6.5L3 10.5Zm-9.2 11 9.2 4.6 9.2-4.6 3.8 1.9-13 6.5-13-6.5Zm0 6 9.2 4.6 9.2-4.6 3.8 1.9L16 29.4 3 22.9Z"/></svg>${L("Sort", "理牌")}</button>
         <button class="gd-tool" type="button" data-act="hengpai"><svg class="gd-ico" viewBox="0 0 32 32" aria-hidden="true"><path fill="#fff" d="${handMode === "row" ? "M4 5h24v6H4Zm0 8h24v6H4Zm0 8h24v6H4Z" : "M5 4h6v24H5Zm8 0h6v24h-6Zm8 0h6v24h-6Z"}"/></svg>${handMode === "row" ? L("Columns", "竖排") : L("Row", "横排")}</button>`;
 }
@@ -3844,6 +3851,7 @@ function renderTable() {
     if (freshMount) {
         tableView.seenPlays = new Set();
         tableView.lastMessage = null;
+        hideToast();    // a room toast (房间已创建) must not outlive its screen
     }
     const t = tableView;
     const mine = mySeat();

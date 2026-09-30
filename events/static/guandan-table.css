@@ -36,7 +36,7 @@ body[data-screen="table"] .topbar { display: none; }
     left: 0; top: 0;
     overflow: hidden;
     transform-origin: 0 0;
-    background: radial-gradient(120% 105% at 50% 62%, var(--felt-c) 0%, var(--felt-1) 30%, var(--felt-2) 52%, var(--felt-3) 72%, var(--felt-4) 90%, var(--felt-5) 100%);
+    background: radial-gradient(64% 92% at 50% 58%, var(--felt-c) 0%, var(--felt-1) 30%, var(--felt-2) 52%, var(--felt-3) 72%, var(--felt-4) 90%, var(--felt-5) 100%);
 }
 .gd-rot::before, .gd-rot::after {
     content: "";
@@ -648,7 +648,26 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-hand > * { pointer-events: auto; touch-action: none; }
 .gd-cols { display: flex; align-items: flex-end; --card-hover-lift: 0px; }
-.gd-col { display: flex; flex-direction: column; flex: none; }
+.gd-col { position: relative; display: flex; flex-direction: column; flex: none; }
+/* 四炸 / 五炸 …: a small white tag with a blue edge on the front card, in the free band between its index
+   and its pip (the geometry of the 逢人配 tag, whose corner it must not take) */
+.gd-bomb-tag {
+    position: absolute;
+    right: calc(var(--card-w) * .07);
+    bottom: calc(var(--card-w) / .74 * .32);
+    z-index: 3;
+    padding: calc(var(--card-w) * .025) calc(var(--card-w) * .02);
+    border: calc(var(--card-w) * .014) solid #3f6fe0;
+    border-radius: calc(var(--card-w) * .03);
+    background: #fff;
+    color: #3f6fe0;
+    font: 800 calc(var(--card-w) * .16)/1.08 var(--font-ui);
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    pointer-events: none;
+}
+.gd-bomb-tag:lang(en) { writing-mode: horizontal-tb; padding: calc(var(--card-w) * .02) calc(var(--card-w) * .04); }
+.gd-col .gd-ji { right: calc(-1px + var(--ov, 0px)); }
 .gd-col + .gd-col { margin-left: calc(var(--pitch) - var(--card-w)); }
 .gd-col .card + .card { margin-top: calc(var(--step) - var(--card-w) / .74); }
 .gd-row { display: flex; align-items: flex-end; --card-sel-lift: calc(var(--card-w) / .74 * -.18); }
@@ -670,7 +689,7 @@ body[data-screen="table"] .topbar { display: none; }
 }
 .gd-tool {
     height: 38px;
-    padding: 0 16px 0 12px;
+    padding: 0 20px 0 14px;
     border: 0;
     border-radius: 19px;
     display: inline-flex;
@@ -679,11 +698,10 @@ body[data-screen="table"] .topbar { display: none; }
     background: linear-gradient(#8ea5ff, #6484f4);
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, .38), inset 0 -3px 0 rgba(30, 40, 150, .22), 0 2px 3px rgba(0, 0, 0, .3);
     color: #fff;
-    font: 700 20px/1 var(--font-ui);
+    font: 700 24px/1 var(--font-ui);
     white-space: nowrap;
 }
-.gd-tool .gd-ico { width: 24px; height: 24px; }
-.gd-tool#clear-btn { padding: 0 16px; }
+.gd-tool .gd-ico { width: 28px; height: 28px; }
 .gd-tool[hidden] { display: none; }
 
 .gd-spectate { position: absolute; left: 50%; bottom: 90px; translate: -50% 0; z-index: 12; }
