@@ -383,7 +383,7 @@ export default {
       const starShape = new THREE.Shape();
       for (let i = 0; i < 10; i++) { const r = i % 2 ? 2.1 : 4.5, a = Math.PI / 2 + (i * Math.PI) / 5; if (i) starShape.lineTo(Math.cos(a) * r, Math.sin(a) * r); else starShape.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
       const star = new THREE.Mesh(new THREE.ShapeGeometry(starShape), new THREE.MeshBasicMaterial({ color: 0x15151a }));
-      star.position.set(0, 19.2, 9.0);
+      star.position.set(0, 19.2, 10.3);
       tSpin.add(plinth, plaque, stem, knot, cup, rimM, inside, ...handles, star);
     }
     const trophyHome = P(157, 77, -22);
@@ -576,7 +576,7 @@ export default {
     }
     // the wooden turner left in the pan (pivot stage 37.4, 148.6)
     const turner = new THREE.Group();
-    turner.position.copy(at(37.4, 148.6, 5.2));
+    turner.position.copy(at(37.4, 148.6, 3));      // behind the flame, as in the drawing
     flick.add(turner);
     {
       const wood = k.toon(0xc98a4b);
@@ -610,7 +610,9 @@ export default {
         const m = inked(new THREE.TorusGeometry(4.2, 0.85, 6, 14, 1.35), k.toon(0xd22a20), 0.8); m.rotation.z = Math.PI / 2 - 0.68; m.position.y = -3.6; m.scale.set(1, 1, 0.7);
         piece.add(m);
       } else if (f.kind === 'mushroom') {
-        const cap = inked(new THREE.SphereGeometry(2.7, 14, 8, 0, TAU, 0, Math.PI / 2), k.toon(0x7a4a2a), 0.8); cap.position.y = 0.2;
+        const cap = inked(new THREE.SphereGeometry(2.7, 14, 8, 0, TAU, 0, Math.PI / 2), k.toon(0x8a5530), 0.8); cap.position.y = 0.2;
+        const gills = new THREE.Mesh(new THREE.CircleGeometry(2.7, 14), k.toon(0xead7bf)); gills.rotation.x = Math.PI / 2; gills.position.y = 0.2;   // closes the cap when it tumbles
+        piece.add(gills);
         const st = inked(new THREE.CylinderGeometry(0.8, 0.9, 2.2, 8), k.toon(0xead7bf), 0.7); st.position.y = -0.9;
         piece.add(cap, st);
       } else if (f.kind === 'pea') {
@@ -714,7 +716,7 @@ export default {
         flames[1].scale.set(1 + 0.04 * Math.sin(t * 31 + 1), 1 - 0.04 * Math.sin(t * 27), 1);
         flames[2].scale.set(1 - 0.05 * Math.sin(t * 29 + 2), 1 + 0.06 * Math.sin(t * 25 + 1), 1);
         const [stx, sty, str] = STIR(ph);
-        turner.position.copy(at(37.4 + stx, 148.6 + sty, 5.2)); turner.rotation.z = -str * DEG;
+        turner.position.copy(at(37.4 + stx, 148.6 + sty, 3)); turner.rotation.z = -str * DEG;
         foods.forEach((f) => {
           const [dx, dy, rot] = f.tr(ph);
           const base = at(f.x + dx * 1.15, f.y + dy * 1.15, 6.2 + (f.i % 3) * 0.7);
