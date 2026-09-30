@@ -1,13 +1,15 @@
 /* Haotian — 叶神 = 雷神 Thor
-   Click: the museum turns into a thunderstorm (toon cloud banks, a storm eye swirling over his
-   head, a rock ledge); a red cape unfurls behind his shoulders and billows, pinned by two gold
+   Click: the museum turns into a thunderstorm (layered cloud banks with lumpy tops, dark halftone
+   undersides and edges that light up with every flash, a storm eye swirling over his head, a rock
+   ledge); a red cape unfurls behind his shoulders and billows, pinned by two gold
    clasps; a winged helmet drops onto his head and its wings flare; Mjolnir rises into his lower
-   hand (his real fingers re-layered over the leather-wrapped handle); forked lightning strikes the
-   hammer with a thunder flash and a starburst, the hammer's runes light up, his eyes spark, and a
-   round Norse rune seal reading 「叶神」 flips in beside him.
+   hand (a chunky bevelled steel head with gold bands; his real fingers re-layered over the leather
+   handle); a bold forked comic bolt (ink outline, cyan body, white core) strikes the hammer with a
+   thunder flash (< 0.1 s) and a starburst, the big runes on the hammer glow electric blue, his eyes
+   spark, and a round Norse rune seal reading 「叶神」 flips in beside him.
    Loop (3.4 s): the cape billows, the storm eye turns, arcs crackle round the hammer head (his eyes
    flicker with them; every other beat a thinner bolt strikes it again), a distant bolt forks through
-   the clouds, the runes glow, the seal's rune ring turns.
+   the clouds, the runes pulse (flaring with each crackle), the seal's rune ring turns.
    Photo landmarks (512 px): hair u 184-296, top v 72, fringe v 128 · lenses 230,143 / 273,141 ·
    collar 192-290 v 195-225 · shoulders 132,238 / 305,215 · V sign tips 343,240 / 383,245 ·
    lower hand (holding the cap) 244-313 x 418-485, grip centre 292,452 · cap 270-380 x 370-480. */
@@ -675,17 +677,17 @@ export default {
         // the entrance strike: races down onto the hammer, flickers, fades by +0.3 s
         if (t > T_STRIKE - 0.035 && t < T_STRIKE + 0.3) {
           const reveal = env(t, T_STRIKE - 0.035, T_STRIKE);
-          const a = (t < T_STRIKE + 0.12 ? 1 : t < T_STRIKE + 0.155 ? 0.3 : 1 - env(t, T_STRIKE + 0.2, T_STRIKE + 0.3)) * fade;
+          const a = (t < T_STRIKE + 0.12 ? 1 : t < T_STRIKE + 0.155 ? 0.3 : 1 - env(t, T_STRIKE + 0.2, T_STRIKE + 0.3)) * (1 - clamp(e * 3));
           if (a > 0.01) strikeBolt(reveal, a, 1);
         }
         // on alternate beats a thinner bolt strikes the hammer again
         const bn = beatN(t), ph = beatPh(t);
         if (ph >= 0 && bn % 2 === 1 && ph < 0.22) {
-          const a = (ph < 0.1 ? 1 : ph < 0.13 ? 0.3 : 1 - env(ph, 0.13, 0.22)) * fade;
+          const a = (ph < 0.1 ? 1 : ph < 0.13 ? 0.3 : 1 - env(ph, 0.13, 0.22)) * (1 - clamp(e * 3));   // gone before the hammer drops
           if (a > 0.01) strikeBolt(env(ph, 0, 0.03), a, 0.62);
         }
         // impact starburst on the hammer head, with speed lines
-        const hb = hump(t, T_STRIKE, T_STRIKE + 0.04, T_STRIKE + 0.26) * fade;
+        const hb = hump(t, T_STRIKE, T_STRIKE + 0.04, T_STRIKE + 0.26) * (1 - clamp(e * 3));
         if (hb > 0.01) {
           const [bx, by] = headTop();
           q.stroke(10, 15, 36, 255 * hb); q.strokeWeight(2); q.fill(255, 250, 205, 255 * hb);
