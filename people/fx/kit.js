@@ -394,11 +394,11 @@ class Avatar {
     }
     const maxTilt = 0.075;                     // radians
     root.rotation.set(tl.y * maxTilt, tl.x * maxTilt, 0);
-    // photo -> plate behind the person once the effect is under way (needed for the parallax)
+    // photo -> plate behind the person once the effect is under way (needed for the parallax); the photo
+    // stays opaque underneath, so the page never shows through the crossfade
     if (this.mod.plate !== false) {
-      const s = clamp(this.t / 0.35) * (1 - this.e);
-      k.layers.plate.material.opacity = s;
-      k.layers.photo.material.opacity = 1 - s * 0.999;
+      k.layers.plate.material.opacity = clamp(this.t / 0.35) * (1 - this.e);
+      k.layers.photo.material.opacity = 1;
     }
     k.t = this.t; k.e = this.e;
     root.updateMatrixWorld(true);
