@@ -581,16 +581,20 @@
       }
       body.true-blogs #blog-list .blog-card .egg-art { grid-row: 1 / span 6; margin: 0; }
     }
+    /* below ~1000px the centred title reaches the stamp's corner: the stamp joins the back button */
+    @media (max-width: 1000px) {
+      body.true-blogs .egg-stamp { position: static; display: inline-block; margin: 14px 0 0 14px; vertical-align: middle; transform: rotate(-6deg); }
+      body.true-blogs .egg-back { vertical-align: middle; }
+    }
     @media (max-width: 600px) {
       body.true-blogs .blog-hero { padding: calc(18px + env(safe-area-inset-top)) 16px 0; }
       body.true-blogs .egg-topline span:nth-child(2) { display: none; }
-      body.true-blogs .egg-stamp { position: static; display: inline-block; margin: 14px 0 0 12px; vertical-align: middle; font-size: .74rem; padding: 4px 8px 3px; border-width: 2.5px; transform: rotate(-6deg); }
-      body.true-blogs .egg-back { vertical-align: middle; }
+      body.true-blogs .egg-stamp { margin-left: 12px; font-size: .74rem; padding: 4px 8px 3px; border-width: 2.5px; }
       body.true-blogs .blog-hero p { font-size: .9rem; }
       body.true-blogs #blog-list { gap: 18px; }
       body.true-blogs #blog-list .blog-card,
       body.true-blogs #blog-list .blog-card:first-child { display: flex; padding: 12px 12px 14px; }
-      body.true-blogs #blog-list .blog-card .egg-art { margin: 0 0 12px; }
+      body.true-blogs #blog-list .blog-card .egg-art { align-self: stretch; margin: 0 0 12px; }   /* full card width, not the SVG's 300px */
       body.true-blogs .blog-card { box-shadow: 4px 4px 0 var(--egg-ink); }
     }
 
@@ -935,10 +939,11 @@ function createNavHistory(onTraverse) {
 
   const run = Math.random().toString(36).slice(2, 7);
   const pending = new Set();   // fragments we navigated to that have not reported back yet
+  const stack = [];            // fragments of our own entries, stacked above one we can go back to
+  let base = '';               // the fragment of that entry
+  let landings = [];           // fragments our pop()s will land on, in order, until the frame reports them
   let ready = false;
   let seq = 0;
-  let depth = 0;               // our own entries stacked above one we can go back to
-  let popping = false;
   let popTimer = null;
 
   window.addEventListener('message', (event) => {
@@ -946,9 +951,16 @@ function createNavHistory(onTraverse) {
     const hash = event.data.picassoNav;
     const first = !ready;
     ready = true;
+    if (first) base = hash;
+    // a pop() landing where we sent it: the caller already shows that view. The echo can come late
+    // (the frame reports after a film has started), and must not undo what the visitor did since
+    const landed = landings.indexOf(hash);
+    if (landed >= 0) { landings = landings.slice(landed + 1); return; }
     if (pending.delete(hash) || (first && !hash)) return;
-    if (popping) popping = false;
-    else depth = 0;            // the visitor moved through history: we no longer know what is behind
+    // the visitor moved through history: we no longer know what is behind
+    stack.length = 0;
+    base = hash;
+    landings = [];
     const view = Object.fromEntries(new URLSearchParams(hash));
     delete view.n;
     onTraverse(view);
@@ -964,7 +976,9 @@ function createNavHistory(onTraverse) {
     try {
       if (push) frame.contentWindow.location.href = `${NAV_FRAME_URL}#${hash}`;
       else frame.contentWindow.location.replace(`${NAV_FRAME_URL}#${hash}`);
-      if (push) depth += 1;
+      if (push) stack.push(hash);
+      else if (stack.length) stack[stack.length - 1] = hash;
+      else base = hash;
     } catch (_) {
       pending.delete(hash);
     }
@@ -973,17 +987,19 @@ function createNavHistory(onTraverse) {
   return {
     push: view => go(view, true),
     replace: view => go(view, false),
-    /* Leave a view the way the back button would when the entry behind it is ours,
-       so a later swipe back leaves the page instead of landing on a duplicate. Called
-       from this document, not the nav frame: the host sandboxes the embed, and a
-       sandboxed frame may only move history for frames inside its own subtree. */
-    pop(view) {
-      if (!ready || depth === 0) return go(view, false);
-      depth -= 1;
-      popping = true;
+    /* Leave `steps` views the way the back button would when the entries behind them
+       are ours, so a later swipe back leaves the page instead of landing on a duplicate;
+       otherwise replace the current entry with `view`. Called from this document, not
+       the nav frame: the host sandboxes the embed, and a sandboxed frame may only move
+       history for frames inside its own subtree. The caller shows `view` itself; the
+       frame's report of the entry it lands on is swallowed like the echo of a push. */
+    pop(view, steps = 1) {
+      if (!ready || stack.length < steps) return go(view, false);
+      stack.length -= steps;
+      landings.push(stack.length ? stack[stack.length - 1] : base);
       clearTimeout(popTimer);
-      popTimer = setTimeout(() => { popping = false; }, 1500);   // a back() that moved nothing
-      try { history.back(); } catch (_) {}
+      popTimer = setTimeout(() => { landings = []; }, 3000);   // a go() that moved nothing
+      try { history.go(-steps); } catch (_) {}
     }
   };
 }
@@ -991,14 +1007,14 @@ function createNavHistory(onTraverse) {
 const blogNav = createNavHistory(view => syncBlogFromHistory(view, true));
 let blogView = { trueBlogs: false, article: null };   // the view the current history entry holds
 
-function recordBlogView(patch, how) {
+function recordBlogView(patch, how, steps) {
   blogView = { ...blogView, ...patch };
   const article = blogView.article;
   blogNav[how]({
     t: blogView.trueBlogs ? '1' : null,
     a: article?.kind === 'official' ? article.url : null,
     f: article?.kind === 'fake' ? String(article.index) : null
-  });
+  }, steps);
 }
 
 const fakeBlogs = [
@@ -1332,8 +1348,12 @@ function eggWebGL() {
     return !!(c.getContext('webgl2') || c.getContext('webgl'));
   } catch (_) { return false; }
 }
+/* The size of the fixed .egg-fx layer. Google Sites writes its <base> before this page, so the
+   doctype is dropped and the embed runs in quirks mode: there the root element's box is the whole
+   document, and the body reports the viewport instead. */
 function eggViewport() {
-  return { W: document.documentElement.clientWidth || innerWidth, H: document.documentElement.clientHeight || innerHeight };
+  const vp = document.compatMode === 'BackCompat' ? document.body : document.documentElement;
+  return { W: vp.clientWidth || innerWidth, H: vp.clientHeight || innerHeight };
 }
 
 /* ── snapshot: paint what is on screen into a canvas ─────────────────────── */
@@ -1562,10 +1582,37 @@ async function eggSnapshot() {
     if (cs.position === 'fixed') return;                 // overlays, hints, the article viewer
     const opacity = parseFloat(cs.opacity);
     if (opacity < 0.02) return;
+    if (!cs.transform || cs.transform === 'none') return paintElement(el, cs, opacity, null);
+    // a transformed element (the tilted stamp, a lifted card): measure its subtree untransformed,
+    // and paint it through the same matrix about its transform-origin. The inline override is
+    // undone before this returns, so the screen never shows it
+    const [ox, oy] = cs.transformOrigin.split(' ').map(parseFloat);
+    const tf = { m: new DOMMatrix(cs.transform), ox: ox || 0, oy: oy || 0 };
+    const inline = [el.style.transform, el.style.transition];
+    el.style.transition = 'none';
+    el.style.transform = 'none';
+    try {
+      paintElement(el, cs, opacity, tf);
+    } finally {
+      el.style.transform = inline[0];
+      void getComputedStyle(el).transform;             // settled while transitions are off: nothing animates back
+      el.style.transition = inline[1];
+    }
+  }
+
+  function paintElement(el, cs, opacity, tf) {
     const r = el.getBoundingClientRect();
     const clips = cs.overflowX !== 'visible' || cs.overflowY !== 'visible';
     if ((r.bottom < -60 || r.top > H + 60) && clips) return;
-    ops.push(() => { g.save(); g.globalAlpha *= opacity; });
+    ops.push(() => {
+      g.save(); g.globalAlpha *= opacity;
+      if (tf) {
+        const x = r.left + tf.ox, y = r.top + tf.oy;
+        g.translate(x, y);
+        g.transform(tf.m.a, tf.m.b, tf.m.c, tf.m.d, tf.m.e, tf.m.f);
+        g.translate(-x, -y);
+      }
+    });
     paintBox(cs, r);
     if (clips) {
       const radius = parseFloat(cs.borderTopLeftRadius) || 0;
@@ -1753,8 +1800,9 @@ const EGG_SHARD_VERT = `
     vFlip = e;
     vLift = lift;
   #ifdef SHADOW
-    // a hard comic shadow on the page, offset down-right by the height
-    wp = vec3(wp.xy + vec2(0.16, -0.2) * wp.z, -1.0);
+    // a hard comic shadow just above the page, offset down-right by the height; depth-tested,
+    // so it lands on the flat shards and the gaps and never on a shard lifted above it
+    wp = vec3(wp.xy + vec2(0.16, -0.2) * wp.z, 0.5);
   #endif
     gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
   }`;
@@ -1903,8 +1951,9 @@ async function eggShatter(THREE, front, back, layer, live) {
   });
   const shards = new THREE.Mesh(geo, mat);
   shards.frustumCulled = false;
-  shards.renderOrder = 1;
   scene.add(shards);
+  // three.js draws every opaque object before the transparent ones, whatever their renderOrder:
+  // the shadows come after the shards and are depth-tested against them
   const shadowMat = new THREE.ShaderMaterial({
     vertexShader: EGG_SHARD_VERT,
     fragmentShader: EGG_SHARD_FRAG,
@@ -1912,12 +1961,11 @@ async function eggShatter(THREE, front, back, layer, live) {
     side: THREE.DoubleSide,
     transparent: true,
     depthWrite: false,
-    depthTest: false,
+    depthTest: true,
     uniforms: mat.uniforms
   });
   const shadows = new THREE.Mesh(geo, shadowMat);
   shadows.frustumCulled = false;
-  shadows.renderOrder = 0;
   scene.add(shadows);
 
   const stampMesh = new THREE.Mesh(new THREE.PlaneGeometry(stampW, stampH),
@@ -2135,9 +2183,11 @@ async function eggWipe(toTrue, live) {
     if (toTrue) renderTrueBlogs(); else renderOfficialBlogs();
     window.scrollTo(0, 0);
   }
-  wipe.style.transition = 'opacity .3s ease';
-  wipe.style.opacity = '0';
-  await new Promise(resolve => setTimeout(resolve, 320));
+  if (!eggArticleOpen()) {                    // an article opened under the wipe: uncover it at once
+    wipe.style.transition = 'opacity .3s ease';
+    wipe.style.opacity = '0';
+    await new Promise(resolve => setTimeout(resolve, 320));
+  }
   wipe.remove();
 }
 
@@ -2159,8 +2209,8 @@ function renderBlogMode(toTrue) {
 }
 
 function reconcileBlogMode(animate = true) {
-  // leaving the Real Blogs pops our history entry, and the nav frame then reports the entry it
-  // landed on: that echo asks for the state we are already animating to, so let the film play on
+  // a request for the state a running film is already heading to (picasso typed again while
+  // three.js loads, a history step between two views of the same blog) lets the film play on
   if (blogTransitionTarget === desiredTrueBlogs) return;
   const token = ++blogTransitionToken;
   blogTransitionTarget = null;
@@ -2170,37 +2220,44 @@ function reconcileBlogMode(animate = true) {
     document.body.classList.remove('blog-transitioning', 'egg-hold-fonts');
     return;
   }
-  const articleOpen = document.getElementById('article-view').classList.contains('active');
-  if (!animate || blogMotionQuery.matches || articleOpen) {
+  hideBlogTypeHint();                         // the pill asks for what just happened, films or not
+  if (!animate || blogMotionQuery.matches || eggArticleOpen()) {
     document.body.classList.remove('blog-transitioning', 'egg-hold-fonts');
     renderBlogMode(desiredTrueBlogs);
     return;
   }
-  hideBlogTypeHint();
   runEggTransition(desiredTrueBlogs, token);
+}
+
+function eggArticleOpen() {
+  return document.getElementById('article-view').classList.contains('active');
 }
 
 async function runEggTransition(toTrue, token) {
   const live = () => token === blogTransitionToken;
+  // the page stays clickable under the film (and while three.js loads): an article opened meanwhile
+  // gets no film over it, the page just switches underneath
+  const filming = () => live() && !eggArticleOpen();
   blogTransitionTarget = toTrue;
   document.body.classList.add('blog-transitioning');
   try {
     eggPreload();
     const THREE = await eggWithin(eggThree(), 1500);
-    await eggWithin(eggFonts(), 600);
+    const fontsIn = await eggWithin(eggFonts().then(() => true), 600);
     if (!live()) return;
-    const fontsIn = document.fonts.check('900 40px "Playfair Display"') && document.fonts.check('600 12px "IBM Plex Mono"');
-    if (!fontsIn) document.body.classList.add('egg-hold-fonts');
+    if (!filming()) { renderBlogMode(toTrue); return; }
+    if (fontsIn !== true) document.body.classList.add('egg-hold-fonts');
     if (!THREE || !eggWebGL()) { await eggWipe(toTrue, live); return; }
     const front = await eggSnapshot();
     if (!live()) return;
+    if (!filming()) { renderBlogMode(toTrue); return; }
     const layer = eggLayer(front);            // covers the page with its own picture
     renderBlogMode(toTrue);                   // the DOM changes underneath
     await eggFrame();
     const back = toTrue ? await eggSnapshot() : null;
-    if (!live()) { layer.remove(); return; }
-    if (toTrue) await eggShatter(THREE, front, back, layer, live);
-    else await eggCrumple(THREE, front, layer, live);
+    if (!filming()) { layer.remove(); return; }
+    if (toTrue) await eggShatter(THREE, front, back, layer, filming);
+    else await eggCrumple(THREE, front, layer, filming);
   } catch (err) {
     console.warn('Real Blogs transition skipped:', err);
     document.querySelectorAll('.egg-fx, .egg-wipe').forEach(el => el.remove());
@@ -2228,7 +2285,11 @@ function startBlogReturnTransition() {
 
 function requestBlogReturn() {
   if (blogView.trueBlogs) {
-    recordBlogView({ trueBlogs: false, article: null }, 'pop');
+    // a leak still open over the Real Blogs is one more entry of ours: close it without
+    // recording, and leave both at once so the official blog is what the visitor lands on
+    const steps = blogView.article ? 2 : 1;
+    if (blogView.article) closeArticle(true);
+    recordBlogView({ trueBlogs: false, article: null }, 'pop', steps);
   }
   desiredTrueBlogs = false;
   reconcileBlogMode(true);

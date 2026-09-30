@@ -25,8 +25,15 @@
      plate: true,               // swap the photo for the plate behind the person (needed for parallax)
      async build(k) { ...; return { update(t, e, dt) {}, draw2d(q, t, e) {} } }
    }
-   Coordinates: world units are CSS px, origin at the avatar centre, y up, z toward
-   the viewer. k.at(u, v, z) converts a pixel of the 512 x 512 photo to world.
+   Coordinates: world units are the CSS px of a 200 px avatar ("logical px"), origin
+   at the avatar centre, y up, z toward the viewer. k.at(u, v, z) converts a pixel of
+   the 512 x 512 photo to world. The Team page tiles shrink with the window, and the
+   snippet sizes the photo to its tile: the kit shows the stage at k.s = photo size /
+   200 (the camera sits k.s times closer), so k.D = 200 and k.R = 100 always, and
+   k.W / k.H, k.toScreen() and the q5 layer (scaled by k.s around draw2d) are in
+   logical px too. k.dpr = device px per logical px (for shadowBlur, shader sizes).
+   Ink outlines keep their width in real screen px. A stage is built for one tile
+   size: a resize or rotation switches the effect off.
    ════════════════════════════════════════════════════════════════════════ */
 import * as THREE from 'three';
 
@@ -88,7 +95,7 @@ export function loadTexture(url, srgb = true) {
         if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = 4;
         resolve(tex);
-      }, undefined, reject);
+      }, undefined, (err) => { texCache.delete(url); reject(err); });   // a failed fetch is tried again next time
     }));
   }
   return texCache.get(url);
@@ -138,6 +145,28 @@ export function glowSprite(color = '#ffffff', size = 60, strength = 1) {
 const INK = 0x16151a;
 const Z_BACK = -36;           // depth of the background plate
 
+/** free a stage: meshes, materials, every texture (the cached photo layers too: they keep their
+    image and upload again into the next renderer, but must drop this renderer's listeners) and the
+    WebGL context, then remove its canvases */
+function release({ renderer, scene, canvas, flat, fx }) {
+  try {
+    fx?.dispose?.();
+    scene.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      ms.forEach(m => {
+        const uniforms = m.uniforms ? Object.values(m.uniforms).map(u => u && u.value) : [];
+        for (const v of [...Object.values(m), ...uniforms]) if (v && v.isTexture) v.dispose();
+        m.dispose();
+      });
+    });
+    renderer.dispose();
+    if (!renderer.getContext().isContextLost()) renderer.forceContextLoss();
+  } catch (_) {}
+  canvas.remove();
+  flat?.remove();
+}
+
 class Avatar {
   constructor(wrap, mod) {
     this.wrap = wrap;
@@ -149,6 +178,8 @@ class Avatar {
     this.e = 1;                // exit progress: 0 = fully on, 1 = gone
     this.t = 0;
     this.gl = null;
+    this.building = null;      // the build under way: one at a time
+    this.box = null;           // the viewport and photo box the stage was built for
     this.lastToggle = 0;
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.tilt = { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0 };
@@ -163,6 +194,32 @@ class Avatar {
     document.addEventListener('pointermove', this.onMove);
     document.addEventListener('pointerleave', this.onLeave);
     wrap.addEventListener('pointerleave', this.onLeave);
+    // the stage fits one tile size: a rotation or a window resize switches the effect off
+    this.onResize = () => { if (this.gl && this.resized()) this.stop(); };
+    window.addEventListener('resize', this.onResize);
+  }
+
+  /** the viewport and the photo's layout box, in CSS px. The pasted embed has no doctype, so it runs in
+      quirks mode, where the viewport size is on <body>; the hover transform is on the stage, not here.
+      The offset is whole px: the canvases then sit on the same sub-pixel phase as the <img> (the phone
+      layout centres it at x.5) and snap to device pixels the same way. */
+  measure() {
+    const vp = document.compatMode === 'BackCompat' ? document.body : document.documentElement;
+    const r = this.wrap.getBoundingClientRect();
+    return { W: vp.clientWidth || innerWidth, H: vp.clientHeight || innerHeight, ox: Math.round(r.left), oy: Math.round(r.top), D: r.width };
+  }
+
+  resized() {
+    const a = this.box, b = this.measure();
+    return !a || ['W', 'H', 'ox', 'oy', 'D'].some(p => Math.abs(a[p] - b[p]) > 0.5);
+  }
+
+  /** straight back to the photo, button state included (context lost, tile resized, build failed) */
+  stop() {
+    this.on = false;
+    this.wrap.classList.remove('pfx-on', 'pfx-loading');
+    this.wrap.setAttribute('aria-pressed', 'false');
+    this.teardown();
   }
 
   toggle() {
@@ -177,21 +234,22 @@ class Avatar {
     this.wrap.classList.add('pfx-on');
     this.wrap.setAttribute('aria-pressed', 'true');
     if (!this.gl) {
-      const slow = setTimeout(() => this.wrap.classList.add('pfx-loading'), 150);
+      // a click while a build is loading (on, off, on) only flips this.on: that build reads it when it lands
+      if (this.building) { this.wrap.classList.add('pfx-loading'); return; }
+      const slow = setTimeout(() => { if (this.on) this.wrap.classList.add('pfx-loading'); }, 150);
       try {
-        await this.build();
+        this.building = this.build();
+        await this.building;
       } catch (err) {
         console.warn('avatar effect unavailable:', err);
-        this.teardown();
-        this.on = false;
-        this.wrap.classList.remove('pfx-on');
-        this.wrap.setAttribute('aria-pressed', 'false');
+        this.stop();
         return;
       } finally {
+        this.building = null;
         clearTimeout(slow);
         this.wrap.classList.remove('pfx-loading');
       }
-      if (!this.on) { this.teardown(); return; }   // switched off while loading
+      if (!this.on || this.resized()) { this.stop(); return; }   // switched off, or the tile changed, while loading
       this.t = 0;
       this.e = 0;
     }
@@ -206,7 +264,7 @@ class Avatar {
 
   turnOff() {
     this.on = false;
-    this.wrap.classList.remove('pfx-on');
+    this.wrap.classList.remove('pfx-on', 'pfx-loading');
     this.wrap.setAttribute('aria-pressed', 'false');
     if (!this.gl) return;
     if (this.reduced) { this.teardown(); return; }
@@ -226,10 +284,13 @@ class Avatar {
       t.generateMipmaps = false;
       t.minFilter = THREE.LinearFilter;
     }
-    const W = document.documentElement.clientWidth || innerWidth;
-    const H = document.documentElement.clientHeight || innerHeight;
-    const ox = this.wrap.offsetLeft, oy = this.wrap.offsetTop;      // layout box, not the hover transform
-    const D = this.wrap.offsetWidth, R = D / 2;
+    // W, H and the photo box are real CSS px: they place the canvas and the camera. The scene is
+    // modelled for a 200 px avatar (D, R and everything in k are logical px) and shown at s.
+    const box = this.box = this.measure();
+    const { W, H, ox, oy } = box;
+    if (!(box.D > 0 && W > 0 && H > 0)) throw new Error('the avatar is not laid out');
+    const s = box.D / 200;
+    const D = 200, R = 100;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const canvas = document.createElement('canvas');
@@ -242,15 +303,19 @@ class Avatar {
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, false);
     renderer.setClearColor(0x000000, 0);
-    canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); this.on = false; this.teardown(); }, { once: true });
+    // the browser dropped the context (too many on the page, GPU reset): back to the photo. A stage
+    // already released, or one still loading, fires this too and is left alone.
+    canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); if (this.gl?.canvas === canvas) this.stop(); }, { once: true });
 
     // The camera sits right above the avatar centre (on its axis) and an off-axis view offset slides
-    // the frame so the avatar lands where the <img> was. On-axis, a layer at any depth z scaled by
-    // depthScale(z) covers exactly the photo pixels under it; a centred camera would shift it sideways.
-    const ax = ox + R, ay = oy + R;                                  // avatar centre in canvas px
+    // the frame so the avatar lands where the <img> was (in real px). On-axis, a layer at any depth z
+    // scaled by depthScale(z) covers exactly the photo pixels under it; a centred camera would shift it
+    // sideways. The camera stands s times closer than it would for a 200 px photo, so one logical px
+    // covers s real px: the stage looks scaled by s, and view-space depth stays logical for shaders.
+    const ax = ox + box.D / 2, ay = oy + box.D / 2;                  // avatar centre in canvas px
     const FW = 2 * Math.max(ax, W - ax), FH = 2 * Math.max(ay, H - ay);
     const fov = 24;
-    const dist = (FH / 2) / Math.tan(fov * Math.PI / 360);
+    const dist = (FH / 2) / Math.tan(fov * Math.PI / 360) / s;      // logical px
     const camera = new THREE.PerspectiveCamera(fov, FW / FH, 1, dist * 4);
     camera.position.set(0, 0, dist);
     camera.setViewOffset(FW, FH, FW / 2 - ax, FH / 2 - ay, W, H);
@@ -300,21 +365,22 @@ class Avatar {
     }
 
     const k = {
-      THREE, renderer, scene, camera, root, dist, W, H, D, R, dpr, INK, Z_BACK,
+      THREE, renderer, scene, camera, root, dist, D, R, INK, Z_BACK,
+      s, W: W / s, H: H / s, dpr: dpr * s,                           // logical px (see the header)
       layers: { photo, plate, person, mask },
       t: 0, e: 0,
       clamp, lerp, env, ease, presence, rng, toon, canvasTexture, glowSprite, loadTexture, STATIC,
       /** photo pixel (0..512) -> world; z toward the viewer */
       at(u, v, z = 0) {
-        const s = depthScale(z);
-        return new THREE.Vector3((u / 512 - 0.5) * D * s, (0.5 - v / 512) * D * s, z);
+        const f = depthScale(z);
+        return new THREE.Vector3((u / 512 - 0.5) * D * f, (0.5 - v / 512) * D * f, z);
       },
-      /** world -> CSS px on the 2D layer (follows the tilt) */
+      /** world -> logical px on the 2D layer (follows the tilt) */
       toScreen(v3) {
         const p = v3.clone().applyMatrix4(root.matrixWorld).project(camera);
-        return [(p.x + 1) / 2 * W, (1 - p.y) / 2 * H];
+        return [(p.x + 1) / 2 * k.W, (1 - p.y) / 2 * k.H];
       },
-      /** photo pixel -> CSS px on the 2D layer */
+      /** photo pixel -> logical px on the 2D layer */
       screenAt(u, v, z = 0) { return k.toScreen(k.at(u, v, z)); },
       depthScale,
       /** show an object at `amount` (0..1) of its size; hidden at 0 (so ink outlines leave no specks) */
@@ -348,7 +414,7 @@ class Avatar {
         material.stencilZPass = THREE.KeepStencilOp;
         return material;
       },
-      /** add an ink outline (inverted hull, constant pixel width) to a mesh */
+      /** add an ink outline (inverted hull, constant width in real screen px at every tile size) to a mesh */
       ink(mesh, px = 1.3, color = INK) {
         const m = new THREE.ShaderMaterial({
           uniforms: { uColor: { value: new THREE.Color(color) }, uPx: { value: px * dpr }, uRes: { value: new THREE.Vector2(W * dpr, H * dpr) } },
@@ -380,8 +446,15 @@ class Avatar {
       q,
     };
     this.k = k;
-    const fx = await this.mod.build(k);
-    this.gl = { renderer, scene, camera, root, canvas, q, flat, fx, k, W, H };
+    let fx;
+    try {
+      fx = await this.mod.build(k);
+      if (renderer.getContext().isContextLost()) throw new Error('WebGL context lost while loading');
+    } catch (err) {
+      release({ renderer, scene, canvas, flat });          // a failed build must not keep its context
+      throw err;
+    }
+    this.gl = { renderer, scene, camera, root, canvas, q, flat, fx, k, s };
     this.stage.appendChild(canvas);
     if (flat) this.stage.appendChild(flat);
     // first frame = the photo, then swap the <img> for the canvas without a flash
@@ -392,19 +465,21 @@ class Avatar {
   }
 
   render(dt) {
-    const { renderer, scene, camera, root, q, flat, fx, k } = this.gl;
-    // tilt toward the pointer (critically damped spring); phones sway a little on their own
+    const { renderer, scene, camera, root, q, flat, fx, k, s } = this.gl;
+    // tilt toward the pointer (critically damped spring); phones sway a little on their own, from flat at t = 0
     const tl = this.tilt;
     const idle = matchMedia('(hover: none)').matches;
-    const tx = idle ? Math.sin(this.t * 0.9) * 0.35 : tl.tx;
-    const ty = idle ? Math.sin(this.t * 0.7 + 1) * 0.25 : tl.ty;
+    const sway = ease.inOut(env(this.t, 0, 1));
+    const tx = idle ? Math.sin(this.t * 0.9) * 0.35 * sway : tl.tx;
+    const ty = idle ? Math.sin(this.t * 0.7 + 1) * 0.25 * sway : tl.ty;
     const w = 9;
     for (const [p, v, target] of [['x', 'vx', tx * (1 - this.e)], ['y', 'vy', ty * (1 - this.e)]]) {
       const a = w * w * (target - tl[p]) - 2 * w * tl[v];
       tl[v] += a * Math.min(dt, 0.05);
       tl[p] += tl[v] * Math.min(dt, 0.05);
     }
-    const maxTilt = 0.075;                     // radians
+    // the spring lags its target, so the applied tilt also fades with the exit: e = 1 is exactly flat
+    const maxTilt = 0.075 * (1 - this.e);      // radians
     root.rotation.set(tl.y * maxTilt, tl.x * maxTilt, 0);
     // photo -> plate behind the person once the effect is under way (needed for the parallax); the photo
     // stays opaque underneath, so the page never shows through the crossfade
@@ -420,6 +495,7 @@ class Avatar {
       q.clear();
       const c = q.ctx || q.drawingContext;
       c.save();
+      c.scale(s, s);                           // the scene draws in logical px
       fx.draw2d?.(q, this.t, this.e);
       c.restore();
       const g = flat.getContext('2d');
@@ -456,22 +532,8 @@ class Avatar {
     this.gl = null;
     this.e = 1;
     this.t = 0;
-    if (!gl) return;
-    try {
-      gl.fx.dispose?.();
-      gl.scene.traverse(o => {
-        if (o.geometry) o.geometry.dispose();
-        const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-        ms.forEach(m => {
-          for (const v of Object.values(m)) if (v && v.isTexture && !texCache.has(v.source?.data?.src)) v.dispose?.();
-          m.dispose();
-        });
-      });
-      gl.renderer.dispose();
-      gl.renderer.forceContextLoss();
-    } catch (_) {}
-    gl.canvas.remove();
-    gl.flat?.remove();
+    Object.assign(this.tilt, { x: 0, y: 0, vx: 0, vy: 0 });      // the next activation starts flat
+    if (gl) release(gl);
   }
 }
 
