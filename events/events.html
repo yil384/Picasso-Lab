@@ -5,7 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Lab Events - Live Danmaku</title>
 <!-- Best Paper splash photo: fetch before the stylesheets and the ~100KB of markup above the splash (remove with the splash block) -->
-<link rel="preload" as="image" href="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-960.webp" imagesrcset="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-480.webp 480w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-720.webp 720w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-960.webp 960w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-1280.webp 1280w" imagesizes="(max-width: 651px) 86vw, 560px" fetchpriority="high">
+<script>
+// Opening splash: one of six, picked per visit (never the same one twice in a row); only its media loads.
+(function () {
+    var ids = ['bestpaper', 'hezi', 'openai', 'cny', 'safari', 'welcome'], last = null;
+    try { last = localStorage.getItem('picasso.eventsSplash'); } catch (e) {}
+    var pool = ids.filter(function (x) { return x !== last; });
+    var pick = pool[Math.floor(Math.random() * pool.length)];
+    try { localStorage.setItem('picasso.eventsSplash', pick); } catch (e) {}
+    window.__evSplash = pick;
+    if (pick !== 'bestpaper') return;                  // a comic film starts streaming as soon as its <video> gets a src
+    var base = 'https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-', l = document.createElement('link');
+    l.rel = 'preload'; l.as = 'image'; l.setAttribute('fetchpriority', 'high');
+    l.href = base + '960.webp';
+    l.setAttribute('imagesrcset', ['480', '720', '960', '1280'].map(function (w) { return base + w + '.webp ' + w + 'w'; }).join(', '));
+    l.setAttribute('imagesizes', '(max-width: 651px) 86vw, 560px');
+    document.head.appendChild(l);
+})();
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 <link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-records.css">
 
@@ -2002,7 +2019,7 @@
     <canvas id="bp-cv"></canvas>
     <div class="bp-card">
         <figure class="bp-photo">
-            <img src="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-960.webp" srcset="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-480.webp 480w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-720.webp 720w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-960.webp 960w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-1280.webp 1280w" sizes="(max-width: 651px) 86vw, 560px" width="1400" height="1050" fetchpriority="high" onerror="this.style.visibility='hidden'" alt="Zhongkai Yu — ISCA 2026 Best Paper Award">
+            <img data-src="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-960.webp" data-srcset="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-480.webp 480w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-720.webp 720w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-960.webp 960w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-1280.webp 1280w" sizes="(max-width: 651px) 86vw, 560px" width="1400" height="1050" fetchpriority="high" onerror="this.style.visibility='hidden'" alt="Zhongkai Yu — ISCA 2026 Best Paper Award">
             <div class="bp-scrim"></div>
             <figcaption class="bp-cap">
                 <div class="bp-kicker">ISCA 2026 · BEST PAPER AWARD</div>
@@ -2022,7 +2039,7 @@
 <style>
     #bp-splash { position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center;
         overflow: hidden; cursor: pointer; background: #05080f; animation: bpIn 0.5s ease both; }
-    #bp-splash.bp-out { animation: bpOut 0.7s ease forwards; }
+    #bp-splash.bp-out { animation: bpOut 0.45s ease forwards; }
     @keyframes bpIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes bpOut { to { opacity: 0; visibility: hidden; } }
     /* flowing aurora backdrop */
@@ -2096,19 +2113,22 @@
 (function () {
     var splash = document.getElementById('bp-splash');
     if (!splash) return;
+    if (window.__evSplash && window.__evSplash !== 'bestpaper') { splash.remove(); return; }   // a comic splash plays instead
+    var bpImg = splash.querySelector('.bp-photo img');
+    if (bpImg && bpImg.dataset.src) { bpImg.srcset = bpImg.dataset.srcset; bpImg.src = bpImg.dataset.src; }
     var myCanvas = document.getElementById('bp-cv');
     var running = true;
 
     function dismiss() { if (!running) return; running = false; splash.classList.add('bp-out');
         window.__bpSplashGone = true;
         document.dispatchEvent(new Event('bp-splash-gone')); // event-card carousels hold autoplay until now
-        setTimeout(function () { splash.remove(); }, 720); }
+        setTimeout(function () { splash.remove(); }, 470); }
     splash.addEventListener('click', dismiss);
-    // Auto-close at 5.4s as before, but if the photo arrives late keep it on screen >= 3.6s (bounded: arm() fires by 3s regardless)
-    var t0 = Date.now(), armed = false, photo = splash.querySelector('.bp-photo img');
-    function arm() { if (armed) return; armed = true; setTimeout(dismiss, Math.max(3600, 5400 - (Date.now() - t0))); }
+    // Auto-close at 2.6s; a photo that arrives late still stays >= 1.8s (arm() fires by 1.5s regardless)
+    var t0 = Date.now(), armed = false, photo = bpImg;
+    function arm() { if (armed) return; armed = true; setTimeout(dismiss, Math.max(1800, 2600 - (Date.now() - t0))); }
     if (!photo || photo.complete) arm();
-    else { photo.addEventListener('load', arm); photo.addEventListener('error', arm); setTimeout(arm, 3000); }
+    else { photo.addEventListener('load', arm); photo.addEventListener('error', arm); setTimeout(arm, 1500); }
 
     function start() {
         if (!window.confetti || !running) return;
@@ -2124,16 +2144,16 @@
         fire(0.1,  { spread: 120, startVelocity: 45 });
         // a burst of gold stars
         myConfetti({ particleCount: 50, spread: 90, startVelocity: 42, scalar: 1.3, ticks: 220, shapes: ['star'], colors: GOLD, origin: { y: 0.55 } });
-        // gold side cannons for ~2.4s
-        var endC = Date.now() + 2400;
+        // gold side cannons for ~1.5s
+        var endC = Date.now() + 1500;
         (function cannons() {
             if (!running) return;
             myConfetti({ particleCount: 4, angle: 60,  spread: 65, startVelocity: 50, origin: { x: 0, y: 0.78 }, colors: GOLD });
             myConfetti({ particleCount: 4, angle: 120, spread: 65, startVelocity: 50, origin: { x: 1, y: 0.78 }, colors: GOLD });
             if (Date.now() < endC) requestAnimationFrame(cannons);
         })();
-        // slow gold rain drifting down for ~3.6s (the "flowing" layer)
-        var endR = Date.now() + 3600;
+        // slow gold rain drifting down for ~2.2s (the "flowing" layer)
+        var endR = Date.now() + 2200;
         (function rain() {
             if (!running) return;
             myConfetti({ particleCount: 2, startVelocity: 0, ticks: 260, gravity: 0.55, scalar: 1.15,
@@ -2146,6 +2166,63 @@
     else { var sc = document.createElement('script');
         sc.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js';
         sc.onload = start; document.head.appendChild(sc); }
+})();
+</script>
+
+<!-- ===== Comic splash: a 2.25 s Q-version comic film of one lab moment (hezi / openai / cny / safari / welcome) ===== -->
+<div id="ev-splash" aria-hidden="true" hidden>
+    <div class="evs-card"><video class="evs-film" muted playsinline preload="auto" disablepictureinpicture></video><img class="evs-still" alt="" hidden></div>
+    <div class="evs-tap">tap to continue</div>
+</div>
+<style>
+    #ev-splash { position: fixed; inset: 0; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 14px; overflow: hidden; cursor: pointer; background: var(--evs-bg, #1f3b8f); transition: opacity .35s ease; }
+    #ev-splash[hidden] { display: none; }
+    #ev-splash.evs-out { opacity: 0; pointer-events: none; }
+    #ev-splash .evs-card { position: relative; width: min(94vw, 760px, calc(82dvh * 4 / 3)); aspect-ratio: 4 / 3; }
+    /* the film's edge is the flat event colour, so it sits seamlessly on this backdrop */
+    #ev-splash video, #ev-splash img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+    #ev-splash [hidden] { display: none; }
+    #ev-splash .evs-tap { position: relative; font: 600 11px/1 ui-monospace, monospace; letter-spacing: .2em; text-transform: uppercase;
+        color: rgba(255, 250, 235, .6); }
+    @media (max-height: 500px) and (orientation: landscape) { #ev-splash { gap: 6px; } #ev-splash .evs-card { width: min(94vw, calc(84dvh * 4 / 3)); } }
+</style>
+<script>
+(function () {
+    var el = document.getElementById('ev-splash'), pick = window.__evSplash;
+    if (!el) return;
+    var BG = { hezi: '#1f3b8f', openai: '#0d6a5a', cny: '#9a1b1b', safari: '#2d6a34', welcome: '#b0420e' };
+    if (!BG[pick]) { el.remove(); return; }
+    var base = 'https://yil384.github.io/Picasso-Lab/events/static/splash/' + pick;
+    var film = el.querySelector('video'), still = el.querySelector('img'), done = false, started = false;
+    el.style.setProperty('--evs-bg', BG[pick]);
+    el.hidden = false;
+    function dismiss() {
+        if (done) return; done = true;
+        el.classList.add('evs-out');
+        window.__bpSplashGone = true;
+        document.dispatchEvent(new Event('bp-splash-gone'));   // event-card carousels hold autoplay until now
+        document.removeEventListener('keydown', onKey);
+        setTimeout(function () { el.remove(); }, 380);
+    }
+    function onKey(e) { if (e.key === 'Escape' || e.key === 'Enter') dismiss(); }
+    function showStill(holdMs) {
+        if (done || !still.hidden) return;
+        film.pause(); film.hidden = true;
+        still.src = base + '.webp'; still.hidden = false;
+        setTimeout(dismiss, holdMs);
+    }
+    el.addEventListener('click', dismiss);
+    document.addEventListener('keydown', onKey);
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { showStill(1800); return; }
+    film.addEventListener('playing', function () { started = true; });
+    film.addEventListener('ended', function () { setTimeout(dismiss, 250); });
+    film.addEventListener('error', function () { showStill(1800); });
+    film.src = base + '.mp4';
+    var p = film.play();
+    if (p && p.catch) p.catch(function () { showStill(1800); });      // autoplay refused (e.g. low-power mode)
+    setTimeout(function () { if (!started) showStill(1800); }, 1400);  // slow network: the last frame instead
+    setTimeout(dismiss, 4200);                                         // hard cap
 })();
 </script>
 
@@ -4719,8 +4796,8 @@
         });
         el._swiper = sw;
 
-        // Don't flip carousels behind the Best Paper splash — the visitor should land on slide 1
-        if (canAdvance && document.getElementById('bp-splash') && !window.__bpSplashGone) {
+        // Don't flip carousels behind the opening splash — the visitor should land on slide 1
+        if (canAdvance && (document.getElementById('bp-splash') || document.getElementById('ev-splash')) && !window.__bpSplashGone) {
             sw.autoplay.stop();
             document.addEventListener('bp-splash-gone', function () {
                 var active = sw.slides[sw.activeIndex];
