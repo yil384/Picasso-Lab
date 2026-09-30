@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Lab Events - Live Danmaku</title>
+<script>try { if (window.top !== window.self) document.documentElement.classList.add('in-frame'); } catch (e) { document.documentElement.classList.add('in-frame'); }</script>
 <!-- Best Paper splash photo: fetch before the stylesheets and the ~100KB of markup above the splash (remove with the splash block) -->
 <script>
 // Opening splash: one of six comic films, picked per visit (never the same one twice in a row); only its media loads.
@@ -1518,6 +1519,13 @@
         .wc-send-btn { padding: 0 14px; }
         .danmaku-input-area { width: calc(100% - 16px); }
         #dm-send-btn { padding: 0 14px; }
+    }
+
+    /* Inside Google Sites on a phone, Sites pins its own (i) button over the bottom-left corner of the
+       embed (12-60 px from the left, 12-64 px from the bottom), right on top of the image button.
+       Start the bar to the right of it. */
+    @media (max-width: 760px) {
+        html.in-frame .danmaku-input-area { left: 66px; right: 8px; width: auto; max-width: none; transform: none; }
     }
 
     /* =========================================
