@@ -51,36 +51,35 @@ function skinPatch(k, box, z) {
   return m;
 }
 
-/** a paper sheet, drawn once: title, authors, two columns, a figure, the red ACCEPTED stamp */
+/** a paper sheet, drawn once (canvas px = 8 per world px): the top stays clear of his fingers, so the
+    title and the red ACCEPTED stamp sit there; columns and a figure fill the rest */
 function drawPaper(accent, seed) {
   return (g, w, h) => {
-    const s = w / 32, r = rng(seed);
+    const s = w / 34, r = rng(seed);
     g.fillStyle = '#fdfcf6'; g.fillRect(0, 0, w, h);
-    g.fillStyle = accent; g.fillRect(3 * s, 2.6 * s, 8 * s, 1.8 * s);
+    g.fillStyle = accent; g.fillRect(3 * s, 2.4 * s, 8 * s, 1.7 * s);
     g.fillStyle = '#20232c';
-    g.fillRect(3 * s, 6.2 * s, 26 * s, 2.2 * s); g.fillRect(3 * s, 9.6 * s, 17 * s, 2.2 * s);
-    g.fillStyle = '#868b98'; g.fillRect(6 * s, 13.4 * s, 20 * s, 0.9 * s);
+    g.fillRect(3 * s, 5.6 * s, 28 * s, 2.1 * s); g.fillRect(3 * s, 8.8 * s, 19 * s, 2.1 * s);
+    g.fillStyle = '#868b98'; g.fillRect(7 * s, 12.2 * s, 20 * s, 0.9 * s);
     g.fillStyle = '#b7bbc5';
-    for (let i = 0; i < 11; i++) g.fillRect(3 * s, (16.4 + i * 2.2) * s, (10 + r() * 2.5) * s, 0.8 * s);
-    for (let i = 0; i < 6; i++) g.fillRect(17 * s, (27.4 + i * 2.2) * s, (10 + r() * 2) * s, 0.8 * s);
+    for (let i = 0; i < 12; i++) g.fillRect(3 * s, (21 + i * 2.1) * s, (11 + r() * 2.5) * s, 0.8 * s);
+    for (let i = 0; i < 6; i++) g.fillRect(18.5 * s, (32 + i * 2.1) * s, (10.5 + r() * 2) * s, 0.8 * s);
     // the figure: a small bar chart, the last bar (ours) wins
     g.strokeStyle = '#5a5f6e'; g.lineWidth = 0.45 * s;
-    g.strokeRect(17 * s, 16.2 * s, 12 * s, 9 * s);
-    const hs = [3.2, 4.6, 3.9, 7.4];
-    hs.forEach((hh, i) => { g.fillStyle = i === 3 ? accent : '#9aa0ad'; g.fillRect((18.2 + i * 2.7) * s, (24.6 - hh) * s, 1.9 * s, hh * s); });
-    // stamp
+    g.strokeRect(18.5 * s, 21 * s, 12.5 * s, 9 * s);
+    [3.2, 4.6, 3.9, 7.4].forEach((hh, i) => { g.fillStyle = i === 3 ? accent : '#9aa0ad'; g.fillRect((19.8 + i * 2.8) * s, (29.4 - hh) * s, 1.9 * s, hh * s); });
+    // the stamp, across the top half
     g.save();
-    g.translate(16 * s, 34.5 * s); g.rotate(-0.25);
+    g.translate(17 * s, 15.6 * s); g.rotate(-0.2);
     g.strokeStyle = '#d3262b'; g.fillStyle = '#d3262b';
-    g.lineWidth = 1.1 * s;
-    g.beginPath(); g.roundRect ? g.roundRect(-14.6 * s, -5.4 * s, 29.2 * s, 10.8 * s, 1.6 * s) : g.rect(-14.6 * s, -5.4 * s, 29.2 * s, 10.8 * s); g.stroke();
-    g.lineWidth = 0.4 * s; g.strokeRect(-13.2 * s, -4.1 * s, 26.4 * s, 8.2 * s);
-    g.font = `${8.6 * s}px Impact, Haettenschweiler, 'Arial Narrow', 'Arial Black', sans-serif`;
+    g.lineWidth = 1.3 * s;
+    g.beginPath(); if (g.roundRect) g.roundRect(-15.2 * s, -5.6 * s, 30.4 * s, 11.2 * s, 1.6 * s); else g.rect(-15.2 * s, -5.6 * s, 30.4 * s, 11.2 * s); g.stroke();
+    g.lineWidth = 0.4 * s; g.strokeRect(-13.8 * s, -4.3 * s, 27.6 * s, 8.6 * s);
+    g.font = `bold ${9.4 * s}px Impact, Haettenschweiler, 'Arial Narrow', 'Arial Black', sans-serif`;
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('ACCEPTED', 0, 0.4 * s, 24.5 * s);
-    // worn ink
+    g.fillText('ACCEPTED', 0, 0.4 * s, 25.5 * s);
     g.globalCompositeOperation = 'destination-out';
-    for (let i = 0; i < 70; i++) { g.beginPath(); g.arc((r() - 0.5) * 30 * s, (r() - 0.5) * 11 * s, (0.15 + r() * 0.35) * s, 0, 6.283); g.fill(); }
+    for (let i = 0; i < 22; i++) { g.beginPath(); g.arc((r() - 0.5) * 31 * s, (r() - 0.5) * 11.5 * s, (0.12 + r() * 0.22) * s, 0, 6.283); g.fill(); }
     g.restore();
     g.globalCompositeOperation = 'source-over';
     g.strokeStyle = '#a9adb8'; g.lineWidth = 0.5 * s; g.strokeRect(0.25 * s, 0.25 * s, w - 0.5 * s, h - 0.5 * s);
@@ -126,7 +125,7 @@ export default {
     cord.rotation.z = Math.PI / 2;
     cord.position.set(BW / 4, capH + BT + 0.7, 0);
     squash.add(cap, board, button, label, cord);
-    const hatHome = k.at(346, 122, 30);
+    const hatHome = k.at(344, 110, 30);
     hat.position.copy(hatHome);
     hat.rotation.set(0.62, -0.22, 0.07);
     root.add(hat);
@@ -151,9 +150,9 @@ export default {
     const anchor = new THREE.Vector3();
 
     // ② the papers, pivoting at the grip (bottom centre, hidden behind the curled fingers)
-    const PW = 32, PH = 44, PB = 6;       // width, height, how far the bottom edge sits below the grip
+    const PW = 34, PH = 46, PB = 6;       // width, height, how far the bottom edge sits below the grip
     const mkPaper = (accent, seed) => {
-      const tex = k.canvasTexture(256, 352, drawPaper(accent, seed));
+      const tex = k.canvasTexture(272, 368, drawPaper(accent, seed));
       const side = k.toon(0xf4f2ea);
       const geo = new THREE.BoxGeometry(PW, PH, 0.8);
       geo.translate(0, PH / 2 - PB, 0);
@@ -195,11 +194,11 @@ export default {
     return {
       update(t, e) {
         // hat: falls, squashes on landing, settles; tassel lags then swings
-        const hin = presence(t, e, 0.08, T_LAND - 0.08, ease.out, 0.2);
-        const fall = 1 - ease.in(env(t, 0.08, T_LAND));
+        const hin = presence(t, e, 0.06, T_LAND - 0.06, ease.out, 0.2);
+        const fall = 1 - ease.in(env(t, 0.06, T_LAND));
         const fly = ease.in(clamp(e * 1.6 - 0.12));
         k.show(hat, Math.min(1, hin * 1.4));
-        hat.position.set(hatHome.x + fly * 30, hatHome.y + fall * 70 + fly * 70, hatHome.z);
+        hat.position.set(hatHome.x + fly * 30, hatHome.y + fall * 42 + fly * 70, hatHome.z);
         const ts = t - T_LAND;
         const sq = ts > 0 ? Math.exp(-ts * 7) * Math.cos(ts * 26) : 0;
         squash.scale.set(1 + 0.14 * sq, 1 - 0.24 * sq, 1 + 0.14 * sq);
@@ -248,8 +247,8 @@ export default {
         }
         c.restore();
         // "+1" over the papers
-        tipL.set(0, 40, 0).applyMatrix4(papers[0].g.matrix);
-        tipR.set(0, 40, 0).applyMatrix4(papers[1].g.matrix);
+        tipL.set(0, 42, 0).applyMatrix4(papers[0].g.matrix);
+        tipR.set(0, 42, 0).applyMatrix4(papers[1].g.matrix);
         c.save();
         c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
         for (const [i, s0] of plusOf(t, e)) {

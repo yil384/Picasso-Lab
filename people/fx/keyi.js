@@ -175,7 +175,7 @@ export default {
     star.position.set(0, 26.8, 10.35);
     star.rotation.x = -0.08;
     tSpin.add(plinth, plate, foot, stem, cup, inside, rimT, ...handles, star);
-    const T_U = 436, T_V = 342, T_Z = -4, T_S = 1.22;
+    const T_U = 438, T_V = 342, T_Z = -4, T_S = 1.3;
     const trophyHome = k.at(T_U, T_V, T_Z);
     trophy.position.copy(trophyHome);
     root.add(trophy);
@@ -203,29 +203,29 @@ export default {
     const dark = k.toon(0x2b2d42);
     const dpad = new THREE.Group();
     dpad.add(new THREE.Mesh(new THREE.BoxGeometry(7.4, 2.5, 1.4), dark), new THREE.Mesh(new THREE.BoxGeometry(2.5, 7.4, 1.4), dark));
-    dpad.position.set(-15.5, 1.2, FZ + 0.5);
+    dpad.position.set(-11, 2, FZ + 0.5);
     const cylZ = (r, h, color, x, y, z) => {
       const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 18), k.toon(color));
       m.rotation.x = Math.PI / 2; m.position.set(x, y, z);
       return m;
     };
-    const stickL = cylZ(3, 1.6, 0x2b2d42, -7.2, -4.2, FZ + 0.6), stickR = cylZ(3, 1.6, 0x2b2d42, 7.2, -4.2, FZ + 0.6);
-    const capL = cylZ(2.2, 0.8, 0x45485f, -7.2, -4.2, FZ + 1.6), capR = cylZ(2.2, 0.8, 0x45485f, 7.2, -4.2, FZ + 1.6);
+    const stickL = cylZ(2.9, 1.6, 0x2b2d42, -4.8, -3.9, FZ + 0.6), stickR = cylZ(2.9, 1.6, 0x2b2d42, 4.8, -3.9, FZ + 0.6);
+    const capL = cylZ(2.1, 0.8, 0x45485f, -4.8, -3.9, FZ + 1.6), capR = cylZ(2.1, 0.8, 0x45485f, 4.8, -3.9, FZ + 1.6);
     [stickL, stickR].forEach(m => k.ink(m, 0.9));
-    const BTN = [[15.5, 5, 0xffd23f], [19.2, 1.3, 0xff4d5e], [11.8, 1.3, 0x3b82f6], [15.5, -2.4, 0x3ecf6e]];
+    const BTN = [[11, 5.6, 0xffd23f], [14.6, 2, 0xff4d5e], [7.4, 2, 0x3b82f6], [11, -1.6, 0x3ecf6e]];
     const buttons = BTN.map(([x, y, c]) => { const b = cylZ(1.75, 1.4, c, x, y, FZ + 0.5); k.ink(b, 0.8); return b; });
     const home = new THREE.Mesh(new THREE.CircleGeometry(2, 20), new THREE.MeshBasicMaterial({ color: 0x5ce8ff }));
-    home.position.set(0, 5.2, FZ + 0.25);
+    home.position.set(0, 6.4, FZ + 0.25);
     const homeRing = new THREE.Mesh(new THREE.RingGeometry(2, 2.7, 20), new THREE.MeshBasicMaterial({ color: 0x2b2d42 }));
-    homeRing.position.set(0, 5.2, FZ + 0.2);
+    homeRing.position.set(0, 6.4, FZ + 0.2);
     padFit.add(body, dpad, stickL, stickR, capL, capR, ...buttons, home, homeRing);
-    padFit.scale.setScalar(0.93);
-    const P_U = 230, P_V = 347, P_Z = 8;
+    padFit.scale.set(0.95, 0.74, 0.95);
+    const P_U = 232, P_V = 358, P_Z = 8;
     const padHome = k.at(P_U, P_V, P_Z);
     root.add(pad);
     // his real hands over the grips
-    k.patch([[184, 330], [197, 330], [195, 345], [191, 356], [186, 366], [182, 375], [178, 381], [174, 379], [172, 374], [170, 382], [168, 393], [164, 397], [161, 390], [161, 376], [164, 362], [171, 349], [179, 338]], 26);
-    k.patch([[288, 334], [307, 334], [304, 352], [302, 372], [301, 390], [297, 402], [291, 407], [284, 405], [279, 399], [274, 399], [270, 390], [269, 381], [265, 379], [260, 376], [261, 366], [269, 357], [279, 349]], 26);
+    k.patch([[190, 322], [206, 322], [197, 335], [194, 343], [195, 351], [193, 356], [187, 364], [185, 375], [183, 379], [180, 380], [179, 379], [180, 364], [177, 363], [173, 368], [172, 392], [166, 391], [165, 376], [168, 362], [182, 344], [185, 335]], 26);
+    k.patch([[292, 322], [311, 322], [304, 344], [301, 354], [303, 375], [300, 390], [292, 403], [289, 403], [287, 406], [285, 406], [283, 403], [278, 404], [278, 400], [274, 398], [274, 392], [278, 382], [279, 370], [277, 367], [272, 367], [269, 370], [266, 378], [263, 378], [262, 376], [263, 368], [271, 357], [282, 350], [288, 339]], 26);
 
     // ⑥ neon MVP sign on cables, dropping in over his head; letters light one by one
     const NEON = '#ff4fd8';
@@ -292,13 +292,13 @@ export default {
     }));
     const KD = 2.2, G = 260;
     function confetti(q, list, x0, y0, tau, alpha) {
-      if (tau < 0 || alpha <= 0) return;
+      if (tau < 0 || alpha < 0.004) return;
       const f = (1 - Math.exp(-KD * tau)) / KD;
       for (const p of list) {
         const x = x0 + p.ox + p.vx * f;
         const y = y0 + (p.vy + G / KD) * f - G * tau / KD;
         const a = alpha * (1 - env(tau, 1.1, 1.6));
-        if (a <= 0) continue;
+        if (a < 0.004) continue;
         q.push();
         q.translate(x, y);
         q.rotate(p.ph + p.spin * tau * 0.6);
@@ -308,9 +308,9 @@ export default {
       }
     }
     function sparkle(q, x, y, r, a, rot) {
-      if (a <= 0) return;
+      if (a < 0.004) return;
       q.push(); q.translate(x, y); q.rotate(rot);
-      q.stroke(11, 10, 20, 255 * a); q.strokeWeight(1); q.fill(255, 255, 255, 255 * a);
+      q.strokeWeight(1); q.stroke(11, 10, 20, 255 * a); q.fill(255, 255, 255, 255 * a);
       q.beginShape();
       for (let i = 0; i < 8; i++) { const rr = i % 2 ? r * 0.28 : r, an = i * Math.PI / 4; q.vertex(Math.cos(an) * rr, Math.sin(an) * rr); }
       q.endShape(q.CLOSE ?? true);
@@ -318,18 +318,19 @@ export default {
     }
     const BAN = { w: 102, h: 21 };
     function banner(q, cx, cy, sc, alpha, shine) {
+      if (alpha < 0.004) return;
       q.push();
       q.translate(cx, cy); q.scale(sc); q.shearX ? q.shearX(-0.2) : null;
       const w = BAN.w, h = BAN.h;
       q.strokeJoin?.(q.ROUND ?? 'round');
       // ribbon tails
-      q.stroke(11, 10, 20, 255 * alpha); q.strokeWeight(2);
+      q.strokeWeight(2); q.stroke(11, 10, 20, 255 * alpha);
       q.fill(190, 40, 150, 255 * alpha);
       q.beginShape(); q.vertex(-w / 2 + 4, -4); q.vertex(-w / 2 - 12, -2); q.vertex(-w / 2 - 6, 5); q.vertex(-w / 2 - 12, 12); q.vertex(-w / 2 + 4, 10); q.endShape(q.CLOSE ?? true);
       q.beginShape(); q.vertex(w / 2 - 4, -4); q.vertex(w / 2 + 12, -2); q.vertex(w / 2 + 6, 5); q.vertex(w / 2 + 12, 12); q.vertex(w / 2 - 4, 10); q.endShape(q.CLOSE ?? true);
       // shadow block, plate
       q.noStroke(); q.fill(11, 10, 20, 200 * alpha); q.rect(-w / 2 + 3, -h / 2 + 3, w, h, 3);
-      q.stroke(11, 10, 20, 255 * alpha); q.strokeWeight(2.2); q.fill(255, 210, 63, 255 * alpha);
+      q.strokeWeight(2.2); q.stroke(11, 10, 20, 255 * alpha); q.fill(255, 210, 63, 255 * alpha);
       q.rect(-w / 2, -h / 2, w, h, 3);
       q.noStroke(); q.fill(255, 238, 160, 255 * alpha); q.rect(-w / 2 + 2, -h / 2 + 2, w - 4, 4, 2);
       // shine sweep
@@ -435,8 +436,8 @@ export default {
           const shine = ph >= 0 ? env(ph, 0.9, 1.35) : 0;
           // impact lines
           const il = env(t, 1.08, 1.3);
-          if (il > 0 && il < 1) {
-            q.stroke(11, 10, 20, 230 * (1 - il) * out); q.strokeWeight(1.6);
+          if (il > 0 && il < 1 && out > 0.004) {
+            q.strokeWeight(1.6); q.stroke(11, 10, 20, 230 * (1 - il) * out);
             for (let i = 0; i < 10; i++) {
               const a = i / 10 * Math.PI * 2 + 0.3, r0 = 40 + il * 18, r1 = r0 + 8 * (1 - il);
               q.line(bx + Math.cos(a) * r0 * 1.25, by + Math.sin(a) * r0 * 0.5, bx + Math.cos(a) * r1 * 1.25, by + Math.sin(a) * r1 * 0.5);

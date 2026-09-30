@@ -88,6 +88,7 @@ export default {
     const prof = [];
     for (let i = 0; i <= 12; i++) { const r = i / 12; prof.push(new THREE.Vector2(r, 0.2 * (1 - r * r))); }
     prof.push(new THREE.Vector2(1.03, -0.02), new THREE.Vector2(1.045, -0.07), new THREE.Vector2(1.01, -0.11), new THREE.Vector2(0.95, -0.1));
+    prof.reverse();                                  // rim -> centre, so the faces and normals point out of the dome
     const dishGeo = new THREE.LatheGeometry(prof, 72);
     {
       const p = dishGeo.attributes.position, uv = dishGeo.attributes.uv;
@@ -112,7 +113,7 @@ export default {
     // comic shine: a white diagonal band that sweeps across the dish
     const glintTex = k.canvasTexture(256, 256, (g) => {
       g.clearRect(0, 0, 256, 256);
-      g.save(); g.translate(128, 128); g.rotate(-0.6);
+      g.save(); g.translate(128, 128); g.rotate(0.5);
       g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(-20, -200, 22, 400);
       g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(10, -200, 7, 400);
       g.restore();
@@ -225,7 +226,7 @@ export default {
         const lt = loopT(t);
         const gs = lt < 0 ? (t > T_LAND ? env(t, T_LAND + 0.05, T_LAND + 0.6) : 0) : env(lt, 0, 0.6);
         glintMat.opacity = gs > 0 && gs < 1 ? 1 - e : 0;
-        glintTex.offset.set(lerp(-0.75, 0.75, gs), 0);
+        glintTex.offset.set(lerp(0.8, -0.8, gs), 0);
 
         /* wings: feathers grow one by one, then flutter once per beat */
         const flutter = lt < 0 ? 0 : bump(lt - 1.5, 0.5);
