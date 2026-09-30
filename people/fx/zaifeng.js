@@ -494,7 +494,9 @@ export default {
           const bump = 1 + 0.32 * Math.exp(-since * 14) + (V.lt >= SHOTS[SHOTS.length - 1] ? 0.25 * Math.exp(-(V.lt - SHOTS[SHOTS.length - 1]) * 6) * Math.cos((V.lt - SHOTS[SHOTS.length - 1]) * 14) : 0);
           const [bx, by] = k.screenAt(110, 362, 0);
           c.save();
-          c.translate(bx, by); c.rotate(-0.1); c.scale(inn * bump, inn * bump);
+          // (the bump grows from the pile's left edge, so it swells into the circle, not out of it)
+          const PL = 26;
+          c.translate(bx, by); c.rotate(-0.1); c.translate(-PL, 0); c.scale(inn * bump, inn * bump); c.translate(PL, 0);
           c.globalAlpha = fade;
           // the paper pile: one more sheet with every volley (up to five)
           const pile = Math.min(5, 1 + V.b);

@@ -477,7 +477,7 @@ export default {
     shadowT.scale.set(13, 2.6, 1);
     shadowT.position.set(1.5, 0.2, -3);
     trophy.add(shadowT);
-    const TROPHY_UV = [66, 373], TROPHY_Z = -12;
+    const TROPHY_UV = [66, 373], TROPHY_Z = -4;       // in front of the rain curtain (z = -7)
     const trophyHome = k.at(TROPHY_UV[0], TROPHY_UV[1], TROPHY_Z);
     trophy.position.copy(trophyHome);
     root.add(trophy);
@@ -487,17 +487,19 @@ export default {
        frames (sideways-shifted scanline slices, an RGB split), then a faint probability cloud where he
        was (a cyan outline of his silhouette over halftone dots), then he pops back */
     const ghostMat = new THREE.ShaderMaterial({
-      uniforms: { uMap: { value: k.layers.person.material.map }, uBody: { value: 1 }, uGlitch: { value: 0 }, uGhost: { value: 0 }, uSeed: { value: 1 }, uT: { value: 0 } },
+      uniforms: { uMap: { value: k.layers.person.material.map }, uBody: { value: 1 }, uGlitch: { value: 0 }, uGhost: { value: 0 }, uEdge: { value: 0 }, uRip: { value: 0 }, uSeed: { value: 1 }, uT: { value: 0 } },
       vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: `uniform sampler2D uMap; uniform float uBody, uGlitch, uGhost, uSeed, uT; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D uMap; uniform float uBody, uGlitch, uGhost, uEdge, uRip, uSeed, uT; varying vec2 vUv;
         float h(float n) { return fract(sin(n * 91.7 + uSeed * 17.3) * 43758.5453); }
         void main() {
           vec2 uv = vUv;
           vec4 c0 = texture2D(uMap, uv);
+          vec4 B = vec4(0.0);
           if (uBody > 0.0) {
             // slices of ~5 photo px, a third of them shifted sideways; an RGB split; scan lines
             float band = floor(uv.y * 96.0);
             float sh = (h(band) - 0.5) * 2.0 * step(0.62, h(band + 3.1)) * uGlitch * 0.055;
+            sh += sin(uv.y * 64.0 - uT * 48.0) * uRip * 0.008;          // the wave-function ripple as he lands back
             vec2 q = vec2(uv.x + sh, uv.y);
             float ca = uGlitch * 0.011;
             vec4 c = texture2D(uMap, q), cr = texture2D(uMap, q + vec2(ca, 0.0)), cb = texture2D(uMap, q - vec2(ca, 0.0));
@@ -505,16 +507,18 @@ export default {
             float a = max(c.a, max(cr.a, cb.a) * uGlitch);
             float sl = step(0.5, fract(uv.y * 128.0));
             col = mix(col, col * vec3(0.55, 1.05, 1.2) + vec3(0.0, 0.04, 0.06), uGlitch * sl * 0.6);
-            gl_FragColor = vec4(col, a * uBody);
-          } else {
+            B = vec4(col, a * uBody);
+          }
+          vec4 G = vec4(0.0);
+          if (uGhost > 0.0 || uEdge > 0.0) {
             // the probability cloud: his outline in cyan (ink round it) over halftone dots
             float mx = 0.0, mn = 1.0, mo = 0.0;
             for (int i = 0; i < 8; i++) {
               float an = float(i) * 0.785398;
               vec2 dv = vec2(cos(an), sin(an));
-              float s = texture2D(uMap, uv + dv * 0.0075).a;
+              float s = texture2D(uMap, uv + dv * 0.0058).a;
               mx = max(mx, s); mn = min(mn, s);
-              mo = max(mo, texture2D(uMap, uv + dv * 0.016).a);
+              mo = max(mo, texture2D(uMap, uv + dv * 0.0115).a);
             }
             float edge = smoothstep(0.2, 0.55, mx - mn);
             float halo = smoothstep(0.1, 0.5, mo) * (1.0 - smoothstep(0.3, 0.7, c0.a));
@@ -525,10 +529,13 @@ export default {
             float dots = 1.0 - smoothstep(r - 0.07, r + 0.07, length(cell));
             float wave = 0.5 + 0.5 * sin(uv.y * 90.0 - uT * 30.0);
             vec3 cyan = vec3(0.3, 0.9, 1.0);
-            float ca = max(edge, dots * 0.55 * (0.6 + 0.4 * wave) * c0.a);
-            vec3 col = mix(vec3(0.0086, 0.0080, 0.011), cyan, ca / max(ca + halo * 0.5 * (1.0 - edge), 1e-3));
-            gl_FragColor = vec4(col, uGhost * max(ca, halo * 0.5));
+            float ca = max(edge * 0.82, dots * 0.42 * (0.6 + 0.4 * wave) * c0.a) * uGhost + edge * 0.9 * uEdge;
+            float ha = halo * 0.42 * max(uGhost, uEdge);
+            vec3 col = mix(vec3(0.0086, 0.0080, 0.011), cyan, ca / max(ca + ha * (1.0 - edge), 1e-3));
+            G = vec4(col, clamp(max(ca, ha), 0.0, 1.0));
           }
+          float oa = G.a + B.a * (1.0 - G.a);
+          gl_FragColor = vec4((G.rgb * G.a + B.rgb * B.a * (1.0 - G.a)) / max(oa, 1e-4), oa);
           #include <colorspace_fragment>
         }`,
       transparent: true, depthWrite: false,
@@ -672,11 +679,13 @@ export default {
           ghostMat.uniforms.uBody.value = bk.body;
           ghostMat.uniforms.uGlitch.value = bk.glitch || 0;
           ghostMat.uniforms.uGhost.value = bk.ghost || 0;
+          ghostMat.uniforms.uRip.value = bk.back !== undefined ? 1 - clamp(bk.back / 0.6) : 0;
+          ghostMat.uniforms.uEdge.value = bk.back !== undefined ? 1 - clamp(bk.back / 0.6) : 0;   // the cloud collapses back onto him
           ghostMat.uniforms.uSeed.value = bk.seed;
           ghostMat.uniforms.uT.value = t;
           // the patches of him go (they would float), the props leave with him or jitter with the glitch
           neck.visible = false; fingers.visible = false; hand.visible = false;
-          if (bk.back !== undefined) { k.layers.person.visible = true; ghost.visible = false; neck.visible = medal.visible; fingers.visible = wok.visible; hand.visible = true; }
+          if (bk.back !== undefined && bk.back >= 0.6) { k.layers.person.visible = true; ghost.visible = false; neck.visible = medal.visible; fingers.visible = wok.visible; hand.visible = true; }
           if (!bk.props) { medal.visible = false; wok.visible = false; }
           medal.position.x += bk.jx; wok.position.x += bk.jx;
         } else hand.visible = true;
@@ -990,7 +999,7 @@ export default {
           if (tw > 0.02) { const [x, y] = M(19.5, -8.5); star4(x, y, 6.5 * tw * al, tw * al); }
         }
 
-        // tunnelling: a faint ψ in the probability cloud where he was; rings when he pops back
+        // tunnelling: a faint ψ in the probability cloud where he was
         if (bk && !bk.props && bk.ghost > 0.6) {
           const [px, py] = k.screenAt(328, 292, 0);
           const a = (bk.ghost - 0.6) / 0.4 * (0.85 + 0.15 * Math.sin(t * 70));
@@ -1005,17 +1014,6 @@ export default {
           q.noStroke(); q.fill(150, 238, 255, 215 * a);
           q.text('ψ', 0, 0);
           q.pop();
-        }
-        if (bk && bk.back !== undefined) {
-          const [px, py] = k.screenAt(322, 300, 0);
-          [0, 0.3].forEach((lag) => {
-            const p = clamp((bk.back - lag) / (1 - lag));
-            if (p <= 0 || p >= 1) return;
-            const r = 12 + 26 * ease.out(p), a = 1 - p;
-            q.noFill();
-            q.stroke(22, 21, 26, 200 * a); q.strokeWeight(2.8); q.ellipse(px, py, r * 2, r * 2.5);
-            q.stroke(150, 238, 255, 255 * a); q.strokeWeight(1.3); q.ellipse(px, py, r * 2, r * 2.5);
-          });
         }
       },
 

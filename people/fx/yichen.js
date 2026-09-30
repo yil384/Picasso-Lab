@@ -156,7 +156,7 @@ function drawBurst(g, w, h) {
 export default {
   title: 'Card Master',
   exit: 0.45,
-  still: 3.9,
+  still: 4.4,
   async build(k) {
     const { root } = k;
     const cToon = (c, o) => k.clip(k.toon(c, o));
@@ -329,7 +329,7 @@ export default {
     const cornerTo = (pin, rot, w, h, lx, ly, out) => out.set(
       pin.x - (lx * w * Math.cos(rot) - ly * h * Math.sin(rot)),
       pin.y - (lx * w * Math.sin(rot) + ly * h * Math.cos(rot)), pin.z);
-    const trickHome = cornerTo(tipPin, T_ROT, TCW, TCH, 0.38, -0.4, new THREE.Vector3());
+    const trickHome = cornerTo(tipPin, T_ROT, TCW, TCH, 0.3, -0.3, new THREE.Vector3());
     // the Michelin man's card: bottom tucked into his fist, behind his thumb, leaning out to his side
     const MCW = 17, MCH = MCW * TH / TW;
     const mcard = makeCard(TRICK[0]);
@@ -350,10 +350,10 @@ export default {
     burst.position.copy(burstHome);
     root.add(burst);
     // the trick bar's clock (seconds into the bar)
-    const A0 = 0.14, A1 = 0.36;                   // the card appears
-    const W0 = 0.4, W1 = 0.86;                    // twirl
-    const V0 = 1.0, V1 = 1.12;                    // palmed away
-    const R0 = 1.14, R1 = 1.4;                    // turns up at the Michelin man
+    const A0 = 0.12, A1 = 0.32;                   // the card appears
+    const W0 = 0.34, W1 = 0.74;                   // twirl
+    const V0 = 0.9, V1 = 1.0;                     // palmed away
+    const R0 = 1.16, R1 = 1.38;                   // turns up at the Michelin man
     const MO = 0.16;                              // his card leaves at the start of the next trick bar
 
     const tint = new THREE.Color();
@@ -440,7 +440,7 @@ export default {
         const tricksBegun = lastN < 0 ? 0 : Math.floor(lastN / 2) + 1;      // trick bars started so far
         const tb = trickBar ? lp : -1;
         // flare: blooms, breathes, folds away as the card is shown
-        const bl = tb < 0 ? 0 : ease.outBack(env(tb, 0, 0.2)) * (1 - ease.in(env(tb, 0.82, 1.0)));
+        const bl = tb < 0 ? 0 : ease.outBack(env(tb, 0, 0.2)) * (1 - ease.in(env(tb, 0.7, 0.88)));
         k.show(burst, bl * tOut, 38 * (1 + 0.05 * Math.sin(TAU * tb / 0.3)));
         burst.rotation.z = tb * 0.9;
         // the card at his fingertip
@@ -459,7 +459,7 @@ export default {
           trick.position.lerp(palm, vq * 0.8);
           // ta-da: a little lean once it is face out
           const tada = Math.sin(Math.PI * env(tb, W1, V0)) * 0.12;
-          trick.rotation.set(0, Math.PI + 5 * Math.PI * tw + vq * Math.PI * 0.5, T_ROT + TAU * tw + tada + (1 - ap) * 0.6);
+          trick.rotation.set(0, 4 * Math.PI * tw + vq * Math.PI * 0.5, T_ROT + TAU * tw + tada + (1 - ap) * 0.6);
           trick.scale.setScalar(TCW * Math.max(0.004, ap * (1 - 0.8 * vq) * tOut));
         }
         // the Michelin man's card: pops up in his fist (turning to face us), sways, leaves at the next trick
@@ -527,13 +527,13 @@ export default {
             const al = Math.sin(Math.PI * tw);
             for (const [w, c] of [[3.2, [22, 21, 26]], [1.5, [255, 255, 255]]]) {
               q.stroke(c[0], c[1], c[2], 235 * al * fade); q.strokeWeight(w); q.noFill();
-              for (const o of [0, Math.PI]) q.arc(cx, cy, 44, 44, a0 + o - 1.1, a0 + o);
+              for (const o of [0, Math.PI]) q.arc(cx, cy, 42, 42, a0 + o - 1.1, a0 + o);
             }
           }
           const [cx, cy] = k.toScreen(v3.copy(trickHome));
-          smoke(q, cx + 2, cy + 6, env(tb, V0 - 0.02, V0 + 0.42), 13, fade, 2);
+          smoke(q, cx + 2, cy + 6, env(tb, V0 - 0.02, V0 + 0.28), 13, fade, 2);
           const [mx, my] = k.toScreen(v3.copy(mHome));
-          smoke(q, mx, my + 2, env(tb, R0 - 0.06, R0 + 0.4), 13, fade, 5);
+          smoke(q, mx, my + 3, env(tb, R0 - 0.12, R0 + 0.22), 11, fade, 5);
           const rp = env(tb, R0 + 0.02, R0 + 0.5);
           if (rp > 0 && rp < 1) puff(q, mx, my, rp, 7, 20, fade, 11);
           // the card it takes back as the next one appears
@@ -598,17 +598,19 @@ export default {
     // inked as one cloud (ink pass under a white pass), with a grey underside for volume
     function smoke(q, x, y, p, r, a, seed) {
       if (p <= 0 || p >= 1) return;
-      const out = ease.out(p), grow = Math.min(1, p / 0.18), life = Math.pow(1 - p, 0.7);
+      r *= a; a = 1;                   // on the exit it shrinks away (a see-through cloud would show its ink)
+      const out = ease.out(p), grow = ease.outBack(Math.min(1, p / 0.2));
+      const life = p < 0.5 ? 1 : 1 - ease.in((p - 0.5) / 0.5);      // billows, holds, then shrinks away whole
       const balls = [];
       for (let i = 0; i < 7; i++) {
         const ang = i / 7 * TAU + seed * 1.3;
         const j = ((i * 53 + seed * 17) % 10) / 10;
-        const d = r * (0.2 + 0.7 * out) * (0.8 + 0.4 * j);
-        const rr = r * 0.46 * (0.75 + 0.5 * ((i * 31 + seed * 7) % 10) / 10) * grow * life;
+        const d = r * (0.25 + 0.4 * out) * (0.8 + 0.4 * j) * (0.45 + 0.55 * life);   // pulls in as it shrinks
+        const rr = r * 0.5 * (0.75 + 0.5 * ((i * 31 + seed * 7) % 10) / 10) * grow * life * (0.85 + 0.25 * out);
         if (rr > 0.9) balls.push([x + Math.cos(ang) * d, y + Math.sin(ang) * d * 0.8 - out * r * 0.35, rr]);
       }
-      const core = r * 0.55 * grow * Math.pow(1 - p, 1.4);
-      if (core > 0.9) balls.push([x, y - out * r * 0.3, core]);
+      const core = r * 0.6 * grow * life;
+      if (core > 0.9) balls.push([x, y - out * r * 0.35, core]);
       q.noStroke();
       q.fill(22, 21, 26, 255 * a);
       for (const [bx, by, rr] of balls) q.circle(bx, by, rr * 2 + 2.6);
