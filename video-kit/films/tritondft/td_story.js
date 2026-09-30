@@ -129,19 +129,19 @@ async function buildProps(W) {
   add(new THREE.CapsuleGeometry(0.07, 0.16, 6, 16), { color: COL.skyP, rim: 0.8, toneBias: 0.1, hatch: 0.4 }, { outline: 0.7 }, [0, 0, 0], [0, 0, Math.PI / 2], W.capsule);
   add(new THREE.TorusGeometry(0.072, 0.018, 8, 20), { color: COL.gold, hatchMode: 'u', rim: 0.6 }, { outline: 0.4 }, [0, 0, 0], [0, Math.PI / 2, 0], W.capsule);
   // the plan: three tickets (vc-relax: a cube squeezed by arrows; scf: a circular arrow; band gap: two bars and a gap)
-  const tick = async (k, paint) => bake(THREE, { width: 256, height: 176, seed: 60 + k, key: `ticket-${k}-v3`, background: '#ffffff' }, (p, brush, w, h) => {
+  const tick = async (k, paint) => bake(THREE, { width: 256, height: 176, seed: 60 + k, key: `ticket-${k}-v4`, background: '#ffffff' }, (p, brush, w, h) => {
     brush.noStroke(); brush.fill(k === 1 ? '#bfe6f7' : '#fff6e0', 255); brush.rect(-4, -4, w + 8, h + 8);
     brush.set('inkpen', '#16162c', 1.2); for (let x = 8; x < w; x += 16) brush.line(x, 6, x + 6, 6);
     paint(brush, w, h);
   });
   const texs = [
     await tick(0, (brush, w, h) => { brush.set('bigink', '#16162c', 1.3); brush.rect(w / 2 - 34, h / 2 - 30, 68, 68); brush.set('bigink', '#ff5a2e', 1.4); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const x0 = w / 2 + dx * 80, y0 = h / 2 + 4 + dy * 62, x1 = w / 2 + dx * 48, y1 = h / 2 + 4 + dy * 42; brush.line(x0, y0, x1, y1); brush.line(x1, y1, x1 - dx * 10 + dy * 9, y1 - dy * 10 + dx * 9); brush.line(x1, y1, x1 - dx * 10 - dy * 9, y1 - dy * 10 - dx * 9); } }),
-    await tick(1, (brush, w, h) => {                // scf: a ball-and-stick bond pair with blue density lozenges on the bonds
-      const P = [[w / 2 - 70, h / 2 + 34], [w / 2, h / 2 - 30], [w / 2 + 70, h / 2 + 34]];
+    await tick(1, (brush, w, h) => {                // scf: one straight Si-Si bond, a sky-blue density lozenge on its midpoint
+      const A = [w / 2 - 78, h / 2 + 6], B = [w / 2 + 78, h / 2 + 6];
       brush.noStroke(); brush.fill('#6cc4ee', 255); brush.fillBleed(0.01);
-      for (const [a, b] of [[0, 1], [1, 2]]) { const mx = (P[a][0] + P[b][0]) / 2, my = (P[a][1] + P[b][1]) / 2, an = Math.atan2(P[b][1] - P[a][1], P[b][0] - P[a][0]); const pts = []; for (let q = 0; q < 16; q++) { const t = q / 16 * TAU, x = Math.cos(t) * 26, y = Math.sin(t) * 11; pts.push([mx + x * Math.cos(an) - y * Math.sin(an), my + x * Math.sin(an) + y * Math.cos(an)]); } brush.polygon(pts); brush.polygon(pts); }
-      brush.noFill(); brush.set('bigink', '#16162c', 1.3); brush.line(...P[0], ...P[1]); brush.line(...P[1], ...P[2]);
-      for (const [x, y] of P) { brush.noStroke(); brush.fill('#fff6e0', 255); brush.circle(x, y, 13, 0.1); brush.noFill(); brush.set('bigink', '#16162c', 1.1); brush.circle(x, y, 13, 0.1); }
+      const pts = []; for (let q = 0; q < 18; q++) { const t = q / 18 * TAU; pts.push([w / 2 + Math.cos(t) * 40, h / 2 + 6 + Math.sin(t) * 17]); } brush.polygon(pts); brush.polygon(pts);
+      brush.noFill(); brush.set('bigink', '#16162c', 1.3); brush.line(...A, ...B);
+      for (const [x, y] of [A, B]) { brush.noStroke(); brush.fill('#fff6e0', 255); brush.circle(x, y, 17, 0.1); brush.circle(x, y, 17, 0.1); brush.noFill(); brush.set('bigink', '#16162c', 1.1); brush.circle(x, y, 17, 0.1); }
     }),
     await tick(2, (brush, w, h) => { brush.set('bigink', '#0284c7', 2.2); brush.line(w / 2 - 70, h / 2 + 40, w / 2 + 70, h / 2 + 40); brush.set('bigink', '#ff5a2e', 2.2); brush.line(w / 2 - 70, h / 2 - 30, w / 2 + 70, h / 2 - 30); brush.set('inkpen', '#16162c', 1.2); brush.line(w / 2, h / 2 - 16, w / 2, h / 2 + 26); }),
   ];
@@ -318,7 +318,7 @@ function updateCart(F) {
   }
   // pops out of the desk mouth and lands in Hoot's wings; handed to Tri at the end
   const m = W.tube.curve.getPointAt(0);
-  const hold = W.hoot.head.localToWorld(V3(0.0, -0.6, 0.9));        // at the chest, in front of it; the planks stay below the beak    // hugged at the belly, right of the scorecard: the planks stay under its beak
+  const hold = W.hoot.head.localToWorld(V3(-0.2, -0.52, 0.92));    // at the chest, towards its left wing (between 98% and 68x); planks below the beak    // hugged at the belly, right of the scorecard: the planks stay under its beak
   let p = [hold.x, hold.y, hold.z];
   const k = clamp((F - K.land) / 8);
   if (F < K.land + 8) p = [lerp(m.x, hold.x, oc(k)), lerp(m.y - 0.15, hold.y, k) + 0.35 * Math.sin(Math.PI * k), lerp(m.z, hold.z, k) + 0.45 * Math.sin(Math.PI * k)];   // arcs in front of the giant
@@ -596,7 +596,7 @@ function updateClack(F) {
   R.keys.forEach((kg, i) => { kg.position.y = (i < 6 ? 0.25 : 0.195) - (i === keyHit || i === (keyHit + 7) % 12 ? 0.018 : 0); });
   R.roller.rotation.x = rollerSpin;
   R.paper.scale.y = paperH;
-  R.paper.visible = !(F >= K.rip && F < K.rip + 40);
+  R.paper.visible = !(F >= K.rip && F < K.S3b);                 // the input went into Big Iron: the carriage stays empty through S3
   R.face.material.uniforms.uMap.value = R.faceTex[expr in R.faceTex ? expr : 'determined'][Math.floor(F / 2) % 2];
 }
 
