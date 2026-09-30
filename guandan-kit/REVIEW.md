@@ -194,9 +194,230 @@ Four track branches (gd4/r1-table-core, gd4/r1-table-moments, gd4/r1-lobby, gd4/
 
 Accepted as not fixed this round: R1-07 (on a 390 px-high phone the 40 CSS px tap rule for 理牌/横排 keeps the hand bottom at 10.4% H instead of Tencent's 7.6%; the band itself is now a soft ramp), R1-26 (one 8-card rank column still shrinks the whole hand, as SPEC §5.1 prescribes; the index stays legible). Partial: R1-22 (landscape-phone lobby name field shows ~35 of its 40 px box), R1-51 (default faces on the table/VS/result; the room and lobby profile still use initials).
 
+## Round 2 (partial: fidelity-table, fidelity-meta, gameplay QA) — the merged build (9602148)
+First independent review of the merged round-1 fixes. Of the six reviewers, three finished: **fidelity-table**,
+**fidelity-meta** (lobby / room / popups / results / VS / records / English) and **gameplay QA**. **Missing**:
+AI-tell hunter and must-keep (both started, then stopped mid-run), the round-1 re-check (never started) and the
+synthesizer (never ran). So the findings below are **not deduplicated or calibrated**: each severity is the reporting
+reviewer's own, and each finding names its lens. The reviewers' scripts, measurements and crops are in the git-ignored
+`guandan-kit/scratch/r2-fidelity-table/`, `r2-fidelity-meta/` and `r2-gameplay/`.
+
+Baseline for the round (run before the reviewers started):
+- **Scenes:** `scenes.py` on all five viewports, 59 scenes each, zero console errors.
+- **Full rounds:** `play.py desk|portrait|phone 2` gave two rounds each through the tribute (a 双贡 on portrait), with zero console errors.
+- **Pre-fix comparison shots** of de0134d at phone, desk and portrait are in `scratch/shots-r0`.
+
+### Scores (0–10; ≥ 8 = a Tencent player would take it for the real product; worst viewport)
+The official score is the fidelity reviewer's, as in round 1; QA's score is listed for context.
+
+| Screen | Score | Worst vp | Other lenses | Round 1 | What still costs points |
+|---|---|---|---|---|---|
+| lobby | 7 | desk / ifr | — | 7 | At 16:10 the tiles stretch into portrait posters (R2-01) and the rail spreads out. There is also a stray horizon stripe, and the 快速开始 plate is heavy. Phone and hd match yxrb_lobby |
+| room | 8 | desk | QA 8.5 | 8 | AI letter discs and initials, unlike the table's faces. Desk panel bottoms are 139 px apart. Steppers and 解散 have no slow-network feedback |
+| popups | 7.5 | phone / portrait | — | 7 | Single-character CJK orphans; the lab deck's dangling '·'; stroked, letter-spaced titles instead of the display title |
+| table | 8 | desk | — | 7.5 | No 四炸/六炸 column tags. The felt vignette is weak. 级 is clipped with 14+ columns at 1280 wide. Heavy 不出 stroke; small tool pills |
+| table-actions | 8 | phone | QA 7.5 | 7 | Stale 不出 words after a trick is collected. The partner's ribbon sits under the row. Clocks show hands, not digits, for the first 81 s. Toasts cover my top indices |
+| table-moments | 6.5 | phone | QA 8 | 5 | The bomb burst is a pale mint bubble. Every display word is heavy WordArt, and the bomb label hides the play. 天王炸 is clip-art puffs. 首出 is under-scaled |
+| results | 8 | ifr / desk | QA 7.5 | 6 | 继续游戏 has no pending state (a double tap gives a false toast). There is a blank note line under some players, and 胜利 is too red and heavy |
+| vs-intro | 8 | desk | — | 6 | The 巅峰对决 title is fiery and heavy rather than pale gold |
+| records | 8.5 | phone | — | 8 | The records VS is extruded, unlike the intro VS. The '?' hit box is 37 px tall |
+| portrait | 7.5 | portrait | QA 8 | 6.5 | Equivalent to phone, so it inherits the table-moments and row/ribbon issues. No portrait-only defect |
+| english | 7.5 | phone | — | 6.5 | No overflow anywhere. Remaining strings: 'A failed', '1-2 finish +3' vs 'Double win', 'level 2', bare 'Jiefeng' |
+| eggs | not scored | — | — | 7 (est.) | The must-keep and AI-tell lenses did not finish |
+
+Below 8: lobby, popups, table-moments, portrait, english (eggs unscored).
+
+### Round-1 fixes confirmed in passing
+There was no systematic round-1 re-check this round. These are what the three lenses reported as holding on the merged build:
+- **Table (fidelity-table):** R1-01, R1-04, R1-05, R1-27, R1-33, R1-35, R1-36, R1-37 and R1-49 (table English fits).
+- **Results, VS, room, records, English (fidelity-meta):**
+  - R1-02 and R1-10: hard-edged result halves, deltas, a distinct 比赛胜利.
+  - R1-11 and R1-12: the blended VS poster, with 跳过 inside it.
+  - R1-16, R1-40 and R1-41: room chrome.
+  - R1-17: English fits at every viewport.
+  - R1-55: records rows.
+- **Gameplay (QA):**
+  - R1-09: pending states on 出牌/不出/room/lobby.
+  - R1-17: the tribute ends at 3760 ms, before the row appears at ≥3800 ms.
+  - R1-19 and R1-21: touch targets are ≥ 40 px, apart from R2-31 and R2-32.
+  - R1-25: 首 survives a reload at the 16-entry cap.
+  - R1-28: 提示 cycles and wraps.
+  - R1-29: 抗贡 jokers are legible.
+  - R1-30 and R1-32: timeouts are toasted; digits and the red pulse from 10 s.
+
+Reported as not holding:
+- **R1-14** is now a regression: see R2-01.
+- **R1-39** has a remnant: see R2-15.
+- **R1-51** has a remainder: see R2-12.
+- **R1-22** has a residual: see R2-31.
+
+The other round-1 fixes are **unverified** on the merged build.
+
+Performance (QA): in play, no long task was over 120 ms (the largest was 83 ms). The only ones over 120 ms (113–184 ms) come at lobby
+load. A trace shows Layout/UpdateLayoutTree as the web fonts swap in.
+
+### Findings (7 medium, 25 low, no high)
+
+**medium**
+- **R2-01** [lobby · lobby · desk, ifr] (fidelity-meta) On 16:10 screens the lobby tiles stretch into portrait posters, and the art floats in empty space. This is a regression introduced by the R1-14 fix: all the 16:10 slack goes into `--tiles-h` while the grid width stays at 900lu.
+  - Desk small tiles are 242×289 (0.84:1) and 经典 is 264×585 (0.45:1); ifr is the same. yxrb_lobby is about 1.22:1 and 0.67:1, phone matches (1.21 / 0.65), and the pre-fix build was about 1.05:1.
+  - The tile art does not scale with tile height: the 经典 fan fills 29% of its tile.
+  - The rail spreads to a 28% H pitch.
+  - 1024×640 is the Google Sites embed size.
+  - _Fix:_ guandan-lobby.css `.lobby`:
+    - Cap `--tiles-h` so small tiles stay ≥ 1.1:1 (about 397lu) and 经典 ≥ 0.6:1.
+    - Give the remaining slack to the chrome: about 40% to `--hud-h` and 60% to the dock row, which keeps the bands at about 8% H.
+    - Scale the tile art with `--tiles-h` (the fan's `--card-w`, and the tiles' `--t`).
+    - Pack the rail from the top (R2-13).
+- **R2-02** [table · table-moments · all] (fidelity-table) The 炸弹/六炸 burst reads as a pale soap bubble, not a hot explosion.
+  - tg_ingame_bomb has a white-hot core, orange flame tongues, a flat shock disc and red cracks; dagd_store_10 is a red-orange fireball with smoke.
+  - Ours: a near-white `.gd-fx-dome` at .1–.38 alpha over the teal, thin pale `.gd-fx-rays`, and a `.gd-fx-core` that starts at scale .15, so it is a faint smudge at 60/150/250 ms.
+  - The full-screen `.gd-fx-flash` turns the whole felt milky mint for 300 ms.
+  - _Fix:_ guandan-table.css bomb block:
+    - A hotter core that starts at scale .45 at full opacity.
+    - Flame tongues on the existing `#gd-g-fire` gradient instead of the pale star.
+    - A warm rim on the dome.
+    - A wider flat ring (about 700×170).
+    - Drop the flash, or confine it to a radial glow around the anchor.
+- **R2-03** [table · table-moments · all] (fidelity-table) Every display word (炸弹, 六炸, 同花顺, 天王炸, 抗贡, 顺子/连对/钢板/三带二) is heavy WordArt.
+  - Style: `.gd-word` has a .15em #6a1a00 stroke (about 7.8 px on the bomb label) and a `0 .07em 0` extruded edge over a yellow-to-red gradient. Tencent's labels are cream to pale gold with a thin outline.
+  - Size: the bomb label is 104 design px (×1.3 for 6+), 0.95–1.25× the played-card height against Tencent's 0.55–0.7×.
+  - Placement: it is centred on the cards, hiding the bomb for about 1 s, and the combo label (top 72%) covers a straight's middle indices.
+  - _Fix:_
+    - `.gd-word`: stroke .07em #7a3a10, no extrusion, cream-to-gold gradient.
+    - `.gd-fx > .gd-word`: 72px×k, anchored under the cards.
+    - `.gd-combo-label`: below the played cards.
+    - Ribbons stay as they are.
+- **R2-04** [table · table · all] (fidelity-table) The hand has no 四炸/五炸/六炸 bomb-count tags. In 大掼蛋 2026 (dagd_store_4, dagd_store_10) and qqg_shouchu, every bomb column's front card carries a small vertical tag in the 逢人配 slot. Ours shows bomb columns (five 7s, six 9s) untagged.
+  - _Fix:_
+    - renderHand: for a same-rank column of 4 or more cards (not a mixed 理牌 group), add `<span class="gd-bomb-tag">` with `L('4×', '四炸')` etc. to the front card, rebuilt on each render.
+    - guandan-ui.css: `.gd-bomb-tag` with the `.gd-wild-tag` geometry, white fill, a blue #3f6fe0 border and blue text.
+    - On J/Q/K/A cards, place it clear of the portrait.
+- **R2-05** [table · table-actions · all] (gameplay QA) After a trick is collected, its 不出 words stay on the felt while the winner leads.
+  - When I lead, three 不出 words sit around the table and the row has no 不出, so it looks like a follow. In the 接风 case the partner's stale last cards stay too.
+  - It is reproduced through the real handleTurnTimeout path.
+  - Cause: doPass and handleTurnTimeout set `lastPlay = null` but keep `trickPlays` until the next playCards, and renderSlot draws `trickPlays[i]` for every seat except the live turn.
+  - _Fix (UI only, the Firebase writes are unchanged):_ in renderSlot, when `!game.lastPlay` and the history is non-empty, draw no entry (only a finish ribbon), and add that flag to the slot key.
+- **R2-06** [table · table-actions · phone, portrait, desk, hd, ifr] (gameplay QA) The partner's 头游/二游 ribbon is cut by my action row.
+  - The ribbon hangs at design y 200.5–250.5, but the row may rise to `ROW_MIN_TOP` 226.9, which only reserves the partner's cards.
+  - 提示 covers the ribbon's lower part. Overlap: 81×10 CSS px (37%) on phone with a 5-card column, and 155×20 on desk with a 7-card column.
+  - This is a common late-round state: following the partner's last play, or leading after 接风.
+  - _Fix:_ lay the partner-slot ribbon over the lower half of its cards (`.gd-slot.is-p2 .gd-ribbon:not(:only-child)`), or include it in the row floor.
+- **R2-07** [table · results · all] (gameplay QA) 继续游戏 has no pending state.
+  - With `__fbDelay` 2000 it looks untouched for the whole write: the className stays `btn play` at 150, 600 and 1200 ms.
+  - A second tap then toasts a false "下一局还没准备好。" over the result band while the round is starting. This is the result-screen counterpart of R1-09.
+  - _Fix:_
+    - nextRound: return quietly while actionBusy.
+    - Toggle `is-pending` on `#next-round` around the write.
+    - Add a pending style, and add `.gd-res-actions` to the `#root.action-busy` pointer-events rule.
+    - Toast only when the transaction ran and was refused.
+
+**low**
+- **R2-08** [table · table · desk, hd, ifr] (fidelity-table) With 14 or more columns on a 1280-wide stage, the 级 corner glyph is clipped by the next column.
+  - Cards are w 92.9 at pitch 86.4, so each column overlaps the previous one by 6.5 px. The `.gd-ji` right edge is at 211.3 against the next column at 204.8. Phone is unaffected.
+  - _Fix:_ pass the overlap as `--ov` from renderHand and pad and shift `.gd-ji` by it.
+- **R2-09** [table · table · all] (fidelity-table) The felt vignette is much weaker than Tencent's.
+  - Side mid-height samples (4,108,104) in the reference against (7,145,130) in ours; upper side (5,119,111) against (8,139,125). The centre matches.
+  - The `.gd-rot` radial ellipse is larger than the stage, so `--felt-4`/`--felt-5` never show.
+  - _Fix:_ shrink the ellipse (about 64% 92% at 50% 58%) and tune it to the reference samples.
+- **R2-10** [table · table-moments · all] (fidelity-table) 天王炸 is still flat clip-art.
+  - The puffs have 6–7 px dark strokes and flat radial fills.
+  - In the late frame the base puff blends with the teal into an olive blob, sampled (40,122,100).
+  - _Fix:_
+    - Smoke stroke 2 px at .45 alpha; no stroke on the fire.
+    - A lighter warm-grey top stop in `#gd-g-smoke`.
+    - End the base puff's blast opacity earlier, or give it an opaque smoke fill.
+- **R2-11** [table · table · all] (fidelity-table) The 不出 word's stroke is too heavy and dark: 46 px with a 9 px #5a3310 stroke plus a drop shadow, so the counters of 出 close up. In the 记牌器 log it is a brown blob.
+  - _Fix:_
+    - `--pass-stroke` #7a4a1c, a 6 px stroke and a lighter shadow.
+    - In the log, plain grey text.
+- **R2-12** [lobby · room · all] (fidelity-meta) R1-51 remainder: the room and the lobby profile still draw initials and letter discs, while the table, VS intro and result draw faces.
+  - AI seats in the room are lavender discs with 北/西/东 plus an 'AI' pill; non-lab humans get 'CH' / '欧阳' initials; the lobby profile shows a 'MO' square.
+  - _Fix:_ use `defaultFaceHTML` in seatHTML and lobbyProfileHTML.
+- **R2-13** [lobby · lobby · phone, hd, desk, ifr] (fidelity-meta) The rail's three items spread over the full grid height: `justify-content: space-between` gives a 24.6% H pitch on phone and 28% on desk, against Tencent's packed 13.4%.
+  - _Fix:_ `justify-content: flex-start` with a fixed gap.
+- **R2-14** [lobby · lobby · phone, hd, desk, ifr] (fidelity-meta) A background band at 50–63% H (peak rgba(190,212,255,.22) at 58.2%) reads as a stray light stripe across the rail, the tile gap and the room's mini table.
+  - _Fix:_ delete it, or soften it to one broad low-alpha gradient (guandan-lobby.css:35).
+- **R2-15** [lobby · popups · all] (fidelity-meta) R1-39 remnant: the lab deck's style line still breaks after the middle dot ('记牌反击 · / 后发制人').
+  - _Fix:_ split the style on ' · ' into nowrap spans, stacked without the dot.
+- **R2-16** [lobby · popups · all] (fidelity-meta) Popup and confirm text leaves single CJK characters on their own line:
+  - '…头游先 / 出。'
+  - '「接 / 风」。'
+  - '每人 27 / 张。'
+  - '红 / 桃 7'
+  - '回 / 到大厅'
+
+  _Fix:_ add `text-wrap: pretty` to the rules rows, notes and popup body, and `word-break: keep-all` to the confirm line. Rephrase any string that still orphans.
+- **R2-17** [lobby · popups · all] (fidelity-meta) Popup titles are letter-spaced (.12em), 5 px-stroked Noto on a flat periwinkle bar. That sits between yxrb_popup's display-gold title and yxrb_room's plain white header.
+  - _Fix:_ pick one: the display word with a thin outline, or plain white with light tracking and no stroke.
+- **R2-18** [lobby · lobby · all] (fidelity-meta) The 快速开始 plate is saturated orange with a 3lu dark frame and two inset rings. yxrb_lobby's is a pale flat metallic gold (#fff6c4→#f0d27a) with a thin light edge.
+  - _Fix:_ a thin light border, a paler gradient and no inset rings.
+- **R2-19** [lobby · room · desk, ifr, hd] (fidelity-meta) At 1440×900 the settings panel ends at 82% H and the roster panel at 97.8% H, 139 px apart. yxrb_room's panels share their bottom edge.
+  - _Fix:_ stretch both panels to the grid row and pin `.room-admin` to the bottom, or cap the roster's height.
+- **R2-20** [table · results · all] (fidelity-meta) Some players have a blank note line on the result: me as 二游 in a loss, 二游 in 冲A失败. The other three columns carry a line.
+  - _Fix:_ resultNoteHTML's final branch returns a neutral note (已出完 / ±0 级) instead of an empty span.
+- **R2-21** [table · vs-intro · all] (fidelity-meta) Display titles (胜利, 巅峰对决) are orange-red with a heavy brown outline: `.gd-word`'s gradient ends in #e4480e, with a 6 px stroke on the result and a .15em stroke plus a drop edge on the VS. qqg_result's 胜利 and yxrb_vs's title are clean yellow and pale gold with a thin outline.
+  - _Fix:_ a title variant for `.gd-res-title` and `.gd-vs-title`: .08em #7a3200 stroke, no shadow, a #fffbe6→#f09a1c gradient.
+  - Coordinate with R2-03.
+- **R2-22** [records · records · all] (fidelity-meta) The VS language is inconsistent across three places:
+  - The records 最新战报 VS (`.gdr-gold`) is extruded and heavy.
+  - The lobby 巅峰对决 tile's mini poster is still a hard red/blue split.
+  - The intro poster has the blended yxrb_vs look.
+
+  _Fix:_
+  - `.gdr-gold`: the intro VS gradient and a thin outline.
+  - `.peak-poster`: the blended field.
+- **R2-23** [shared · english · all] (fidelity-meta) Some English strings are literal or inconsistent:
+  - 'A failed' (result title)
+  - '1-2 finish +3' (room) vs 'Double win' (result)
+  - 'PICASSO Guandan · level 2' (room watermark)
+  - bare 'Jiefeng' tag
+
+  _Fix:_ 'Missed A', 'Double win +3', 'Level N', and 'Catch-up lead' or a glossed title.
+- **R2-24** [table · table · all] (fidelity-table) The bottom tool pills are about 20% smaller than tg_ingame_classic's: 98×38 design px with a 20 px label, against about 122×38 with 24–26 px. 重选 is a text-only pill beside two icon pills.
+  - _Fix:_ `.gd-tool` about 120 px wide with a 24 px label and a 28 px icon, and a ↺ glyph for 重选.
+- **R2-25** [table · table-actions · all] (fidelity-table) Clock digits are condensed, heavily stroked and fill about 40% of the face, and the two digits touch. For a 180 s turn both the clock and the gem show hands, with no number, for the first 81 s. Tencent always shows a big, clean number.
+  - _Fix:_ a wider numeral at about 0.55 of the face, with a 2 px #b8660c stroke.
+  - Decide whether turns over 99 s keep hands.
+- **R2-26** [table · table-moments · all] (fidelity-table) The 首出 reveal is a slightly enlarged card (26% H) with an orange strip. qqg_shouchu's is about 45% H, with 首出 in big red display lettering and 第一个出牌 under it.
+  - _Fix:_ pop the card to about 1.7×, and make the label a red display word over the lower half.
+- **R2-27** [lobby · room · desk, phone, portrait] (gameplay QA) On a slow connection the room's level ‹ › steppers and a confirmed 解散 give no feedback. After 解散 the room stays fully interactive for 2 s.
+  - _Fix:_ route the stepper through the roomPending/render wrapper. After the confirm, set `roomPending = 'delete-room'` and toast 正在解散房间….
+- **R2-28** [table · table-actions · phone, portrait, desk] (gameplay QA) On my turn, 2.6 s table messages (e.g. '…接风给队友 Yichen。') drop under the pills and cover my tallest columns' top indices while I choose. R1-04 accepted this only for the short verdict toasts.
+  - _Fix:_ when I can act, put table-message toasts high on the felt (about design y 70), or show 接风 as a seat word.
+- **R2-29** [table · table-actions · desk, phone, portrait] (gameplay QA) Against a pair of 2s, the first 提示 press offers the wild 7♥ plus 5♣ while natural 33 and 44 are in hand. The cycle holds at most 3 engine options, and when the partner owns the trick every press advises 不出.
+  - _Fix (engine untouched):_ in hintMove, stable-sort the options, natural before wild, then by ascending power.
+- **R2-30** [table · table-actions · desk, phone, portrait] (gameplay QA) A single selected against a pair toasts 管不上 (can't beat) instead of 牌型不符 (wrong type).
+  - _Fix:_ selectionVerdict returns 管不上 only for a bomb or a combo of the table's type and length.
+- **R2-31** [lobby · lobby · phone] (gameplay QA) R1-22 residual: the 844×390 lobby nickname field's tap box is 72×35.
+  - _Fix:_ a coarse-pointer `::after` extender to 40 px.
+- **R2-32** [records · records · phone] (gameplay QA) The 评分怎么算 '?' is 22×22 drawn with a 40×37 hit box: the only records control under 40 px.
+  - _Fix:_ a transparent `::after` of at least 44×44 on `.gdr-help`.
+
 ## Handoff status
-- Done: gd3/table + gd3/lobby merged; harness (gdh.py, stage.js, scenes.py, play.py, sheet.py) built; review round 1 (55 findings) and fix round 1 (46 commits, four track branches gd4/r1-*, each passed an independent checker) merged into guandan-cloud.
-- Verified after the merge: module parse-check OK; scenes.py on all 5 viewports (59 scenes each), zero console errors; `play.py phone 2` = two full rounds through the tribute, zero errors, no long tasks.
-- Not verified yet: no independent review of the merged build (review round 2 was started and stopped before any result); desk/portrait full rounds not re-run after the merge; open lows R1-07, R1-26 (accepted), R1-22, R1-51 (partial).
-- Workflow scripts used for the rounds: guandan-kit/workflows/review-round.js and fix-round.js (paths inside them point at this session's scratchpad; adjust).
-- Next: 1) `cd guandan-kit/harness && python3 scenes.py desk hd ifr phone portrait` (shots are git-ignored); 2) review round 2 with the four lenses against those shots and scratch/shots-r0 (pre-fix), record it here; 3) fix → re-verify, then round 3 until every screen ≥ 8 with no high/medium; 4) merge origin/main (keep main's non-Guandan files), re-run a full round, push guandan-cloud; 5) final report per HANDOFF §6.
+- **Done (previous sessions):**
+  - gd3/table and gd3/lobby merged.
+  - Harness built: gdh.py, stage.js, scenes.py, play.py, sheet.py.
+  - Review round 1 (55 findings) and fix round 1 (46 commits on four track branches gd4/r1-*, each passed an independent checker) merged into guandan-cloud.
+- **Done (this session, up to build 9602148):**
+  - Harness environment: Chromium now trusts the proxy CA (HANDOFF §5). The first captures had silently lost the web fonts to ERR_CERT_AUTHORITY_INVALID.
+  - Fresh baselines: `scenes.py` at all five viewports (59 scenes each, zero console errors).
+  - Pre-fix comparison shots of de0134d at phone, desk and portrait (`scratch/shots-r0`).
+  - Full rounds: `play.py desk|portrait|phone 2` gave two rounds each through the tribute, zero console errors.
+  - Merge with main: a trial merge of origin/main is clean. Outside the Guandan files only events/events.html differs from main, by the intended shared-records-board change.
+  - Workflow scripts now take the refs, pre-shot and session paths as args.
+- **Review round 2: partial.** The fidelity-table, fidelity-meta and gameplay-QA lenses finished: 32 findings (7 medium, 25 low, no high) and scores for 11 of the 12 screens (see Round 2 above).
+  - Below 8: lobby 7, popups 7.5, table-moments 6.5, portrait 7.5, english 7.5.
+- **Missing from round 2:**
+  - **AI-tell hunter** and **must-keep:** both started and stopped writing at 14:21:32 UTC on 2026-09-29; must-keep's last command exited 137 (killed). The workflow then hung for about 11 h until the user stopped it.
+  - **Round-1 re-check (prev-verify):** never started. The workflow runs min(16, CPUs − 2) = 2 agents at a time on this 4-CPU container, so it was still queued.
+  - **Synthesizer:** never ran. The 32 findings are not deduplicated or calibrated, and eggs is unscored.
+  - As a result, the must-keep items (events.html egg/mvp flows, picasso transition, BGM, portraits), the AI-tell sweep, and every round-1 fix not confirmed in passing are **unverified** on the merged build.
+- **Fix round 2:** not started (the user asked to stop here).
+- **Next:**
+  1. Run only the three missing lenses (AI-tell, must-keep, round-1 re-check). One or two at a time, with a wall-clock cap per reviewer, so a killed browser cannot hang the round. review-round.js has no lens filter yet: add one, e.g. `args.only`.
+  2. Synthesize round 2: these 32 findings plus the new ones. Dedupe, calibrate, and score eggs.
+  3. Fix round 2 by track (table-core, table-moments, lobby, eggs/records), each checked by an independent verifier, then re-shoot every scene.
+  4. Round 3, and more rounds, until every screen scores ≥ 8 with no high or medium finding.
+  5. Merge origin/main (keep main's non-Guandan files), replay a full round, and push guandan-cloud.
+  6. Final report per HANDOFF §6.
