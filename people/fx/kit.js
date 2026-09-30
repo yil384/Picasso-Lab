@@ -238,10 +238,16 @@ class Avatar {
     renderer.setClearColor(0x000000, 0);
     canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); this.on = false; this.teardown(); }, { once: true });
 
+    // The camera sits right above the avatar centre (on its axis) and an off-axis view offset slides
+    // the frame so the avatar lands where the <img> was. On-axis, a layer at any depth z scaled by
+    // depthScale(z) covers exactly the photo pixels under it; a centred camera would shift it sideways.
+    const ax = ox + R, ay = oy + R;                                  // avatar centre in canvas px
+    const FW = 2 * Math.max(ax, W - ax), FH = 2 * Math.max(ay, H - ay);
     const fov = 24;
-    const dist = (H / 2) / Math.tan(fov * Math.PI / 360);
-    const camera = new THREE.PerspectiveCamera(fov, W / H, 1, dist * 4);
-    camera.position.set(W / 2 - ox - R, oy + R - H / 2, dist);
+    const dist = (FH / 2) / Math.tan(fov * Math.PI / 360);
+    const camera = new THREE.PerspectiveCamera(fov, FW / FH, 1, dist * 4);
+    camera.position.set(0, 0, dist);
+    camera.setViewOffset(FW, FH, FW / 2 - ax, FH / 2 - ay, W, H);
 
     const scene = new THREE.Scene();
     const root = new THREE.Group();

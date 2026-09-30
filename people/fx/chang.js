@@ -310,7 +310,7 @@ export default {
     function stoneLit(i, t) {
       lit.on = env(t, T_STONE + i * D_STONE, T_STONE + i * D_STONE + 0.09);
       const lt = loopT(t);
-      lit.extra = 0.9 * bump(t - T_SNAP, 0.4) + (lt < 0 ? 0 : 0.85 * bump(lt - i * 0.11, 0.3));
+      lit.extra = 0.9 * bump(t - T_SNAP, 0.4) + (lt < 0 ? 0 : 0.85 * bump(lt - i * 0.07, 0.26));
       return lit;
     }
 
@@ -330,7 +330,7 @@ export default {
         else if (t < T_SNAP) pose(OPEN, PRE, ease.inOut(env(t, T_SNAP - 0.14, T_SNAP - 0.02)), TH_OPEN, TH_PRE);
         else pose(PRE, SNAP, ease.out(env(t, T_SNAP, T_SNAP + 0.06)), TH_PRE, TH_SNAP);
         // once per beat the raised finger gives a tiny flick (the sparkle is drawn in q5)
-        const flick = lt < 0 ? 0 : 0.12 * bump(lt - 0.62, 0.3);
+        const flick = lt < 0 ? 0 : 0.12 * bump(lt - 0.52, 0.26);
         fingers.forEach((f, i) => {
           const c = curl[i] + (i === 3 ? -flick : 0);
           f.segs[0].rotation.x = -c;
@@ -342,11 +342,11 @@ export default {
 
         stones.forEach((s, i) => {
           const { on, extra } = stoneLit(i, t);
-          const lit = on * (1 - e);
+          const lv = on * (1 - e);
           s.mat.color.copy(s.dim).lerp(s.base, on);
-          s.mat.emissive.copy(s.base).multiplyScalar(clamp(0.34 * lit + 0.35 * extra * lit, 0, 0.8));
-          s.hi.visible = lit > 0.5;
-          s.glow.material.opacity = clamp(lit * (0.35 + 0.5 * extra), 0, 1);
+          s.mat.emissive.copy(s.base).multiplyScalar(clamp(0.34 * lv + 0.35 * extra * lv, 0, 0.8));
+          s.hi.visible = lv > 0.5;
+          s.glow.material.opacity = clamp(lv * (0.35 + 0.5 * extra), 0, 1);
           s.glow.scale.setScalar(s.r * (4.4 + 2.6 * extra + 3 * bump(t - (T_STONE + i * D_STONE), 0.25)));
         });
 
@@ -460,7 +460,7 @@ export default {
         // loop: one small sparkle at the raised index finger per beat
         const lt = loopT(t);
         if (lt >= 0) {
-          const sp = env(lt, 0.66, 0.96);
+          const sp = env(lt, 0.54, 0.8);
           if (sp > 0 && sp < 1) {
             toScr(fingers[3].segs[2], 0, 4.4, 0);
             star(scr[0] + 3, scr[1] - 3, 5 * Math.sin(Math.PI * sp), fade, sp * 1.5);
