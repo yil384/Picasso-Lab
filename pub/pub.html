@@ -1179,21 +1179,92 @@
   color:#FFCD00; margin:0 1px;
 }
 
-/* ─── Tooltip (dark on light bg) ─── */
+/* ─── Tooltip: 锚定在节点旁边 (不再每次 mousemove 跟着光标抖),
+       DOM 只建一次, 悬停只换文字 + 用 transform 定位; 放不下就翻到左边 / 往上收 ─── */
 #pt-tip {
-  position:fixed;
-  background:rgba(20,20,24,0.90);
-  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,0.10);
-  color:rgba(255,255,255,0.90);
-  font-family:"Inter",ui-sans-serif,sans-serif;
-  font-size:12px; line-height:1.5;
-  padding:8px 13px; border-radius:10px;
-  max-width:380px; pointer-events:none;
-  opacity:0; z-index:100002;
-  transition:opacity 0.15s;
+  position:fixed; left:0; top:0;
+  z-index:100002;
+  width:max-content; max-width:340px;
+  pointer-events:none;
+  will-change:transform;
 }
-#pt-tip.show { opacity:1; }
+.pt-tip-card {
+  --c:#fff; --c-line:rgba(255,255,255,0.25);
+  background:rgba(17,21,28,0.94);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); /* 卡片静止, 模糊只算一次 */
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:10px;
+  box-shadow:0 10px 28px rgba(0,0,0,0.38);
+  padding:10px 14px 11px;
+  font-family:"Inter",ui-sans-serif,sans-serif;
+  color:rgba(255,255,255,0.92);
+  opacity:0;
+  transform:translate3d(var(--sx,-4px),0,0);   /* 从节点那一侧滑出 3–4px */
+  transition:opacity 0.1s ease-in, transform 0.1s ease-in;
+}
+#pt-tip[data-side="left"] .pt-tip-card { --sx:4px; }
+#pt-tip.show .pt-tip-card {
+  opacity:1; transform:none;
+  transition:opacity 0.14s ease-out, transform 0.14s cubic-bezier(0.2,0.7,0.3,1);
+}
+.pt-tip-meta  { font-size:10.5px; font-weight:700; letter-spacing:0.08em; color:var(--c); }
+.pt-tip-title { font-size:13.5px; font-weight:650; line-height:1.35; margin:3px 0 4px; }
+.pt-tip-auth  { font-size:11.5px; color:rgba(255,255,255,0.5); }
+.pt-tip-desc  { font-size:12px; line-height:1.5; color:rgba(255,255,255,0.64); margin-top:6px; }
+.pt-tip-tags  { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+.pt-tip-tags span {
+  font-size:10.5px; line-height:1.6; padding:0 6px; border-radius:4px;
+  border:1px solid var(--c-line); color:var(--c);
+}
+.pt-tip-auth:empty, .pt-tip-desc:empty, .pt-tip-tags:empty { display:none; }
+
+/* ─── Landscape 悬停: 只切 class, 过渡交给 CSS ───
+   svg 根上 .is-focus = 有焦点论文; 相连的边/节点 .is-hot, 焦点节点 .is-active.
+   其余边降到原透明度的 35%, 其余节点 30% — 还看得见结构, 但焦点一眼可读. */
+#pt-svg .pt-edge {
+  opacity:var(--o);
+  stroke-width:var(--w);
+  transition:opacity 0.16s ease-out, stroke-width 0.16s ease-out;
+  animation:pt-edge-in 0.65s ease backwards;   /* 只在入场时生效, 结束后不锁 opacity */
+  animation-delay:var(--del,0s);
+}
+@keyframes pt-edge-in { from { opacity:0; } }
+#pt-svg.is-focus .pt-edge { opacity:calc(var(--o) * 0.35); }
+#pt-svg.is-focus .pt-edge.is-hot { opacity:0.9; stroke-width:calc(var(--w) + 1px); }
+
+#pt-svg .pt-node { outline:none; }            /* 焦点由下面的白环表示 */
+#pt-svg .pt-node-in { transition:opacity 0.16s ease-out; }
+#pt-svg.is-focus .pt-node:not(.is-hot):not(.is-active) .pt-node-in { opacity:0.3; }
+#pt-svg .pt-dot {
+  transform-box:fill-box; transform-origin:center;
+  transition:transform 0.12s ease-in;
+}
+/* 节点自身的反馈 (白环 + 放大) 用 :hover 即时给; 整图变暗和 tooltip 才走 60ms 意图延迟 */
+#pt-svg .pt-node.is-active .pt-dot {
+  transform:scale(1.18);
+  transition:transform 0.14s cubic-bezier(0.2,0.7,0.3,1);
+}
+#pt-svg .pt-ring {
+  fill:none; stroke:rgba(255,255,255,0.92); stroke-width:1.5;
+  opacity:0;
+  transform-box:fill-box; transform-origin:center; transform:scale(0.7);
+  transition:opacity 0.12s ease-in, transform 0.12s ease-in;
+  pointer-events:none;
+}
+#pt-svg .pt-node.is-active .pt-ring {
+  opacity:1; transform:none;
+  transition:opacity 0.14s ease-out, transform 0.14s cubic-bezier(0.2,0.7,0.3,1);
+}
+@media (hover:hover) and (pointer:fine) {
+  #pt-svg.is-live .pt-node:hover .pt-dot {
+    transform:scale(1.18);
+    transition:transform 0.14s cubic-bezier(0.2,0.7,0.3,1);
+  }
+  #pt-svg.is-live .pt-node:hover .pt-ring {
+    opacity:1; transform:none;
+    transition:opacity 0.14s ease-out, transform 0.14s cubic-bezier(0.2,0.7,0.3,1);
+  }
+}
 
 body.pt-open { overflow:hidden; }
 
@@ -1338,6 +1409,11 @@ body.pt-open { overflow:hidden; }
   #pt-overlay .pt-dash {
     stroke-dashoffset: 0 !important;
   }
+  /* tooltip 在 #pt-overlay 外面: 去掉滑动, 只留很短的淡入淡出 */
+  .pt-tip-card,
+  #pt-tip.show .pt-tip-card {
+    transform: none;
+  }
 }
 
 /* ─── SVG animations ─── */
@@ -1388,6 +1464,9 @@ const typeHint = document.getElementById("pt-type-hint");
 const tip      = document.getElementById("pt-tip");
 const detailPanel = document.getElementById("pt-detail");
 
+/* 第一次真正移动鼠标才启用悬停焦点 (见 makeFocusCtl) */
+svgEl.addEventListener("pointermove", function(e) { if (focusCtl) focusCtl.moved(e); }, { passive:true });
+
 /* Click on chart background (not a dot) dismisses detail panel */
 canvas.addEventListener("click", function() {
   detailPanel.classList.remove("show");
@@ -1396,7 +1475,7 @@ detailPanel.addEventListener("click", function(event) {
   if (event.target.closest(".pt-detail-close")) detailPanel.classList.remove("show");
 });
 
-let active = false, animating = false, keyboardPrimed = false, lineAnims = [];
+let active = false, animating = false, keyboardPrimed = false;
 let previousFocus = null, resizeTimer = null, transitionToken = 0;
 const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -1970,8 +2049,9 @@ papers.forEach(function(p){ p._coreAuth = parseCoreAuthors(p.authors); });
 
 /* Build timeline — dark professional research landscape */
 function buildTimeline() {
+  if (focusCtl) focusCtl.reset();
   svgEl.innerHTML = "";
-  lineAnims.forEach(clearTimeout); lineAnims = [];
+  svgEl.classList.remove("is-focus", "is-live");
 
   /* ═══════════════════════════════════════════════════════════════════════
      DARK THEME — per-year column layout, vertical spreading within bands.
@@ -2109,25 +2189,19 @@ function buildTimeline() {
       const sp    = N <= 1 ? 0 : Math.min(compact ? COMPACT_NODE_STEP : 22, avail / (N - 1));
       /* Sort papers within group by venue for stable ordering */
       ps.sort((a, x) => a.venue.localeCompare(x.venue));
+      /* 命中区: 单个节点 44px; 同列堆叠时每个节点只拿自己那一格 (高 = 间距),
+         以前 22px 半径的圆互相盖住, 鼠标指着 A 亮起来的却是它下面的 B */
+      const hitH = N <= 1 || compact ? 22 : Math.max(NODE_R + 1, Math.min(22, sp / 2));
       ps.forEach(function(p, i) {
         const yo = (i - (N - 1) / 2) * sp;
-        const hitR = 22;
-        paperPos.set(p.title, { x: xc, y: b.yCenter + yo, bi, p, hitR });
+        paperPos.set(p.title, { x: xc, y: b.yCenter + yo, bi, p, hitR: 22, hitH });
       });
     });
   });
 
-  /* ── Defs: shadow + glow filters ── */
-  const defs = el("defs");
-  /* Subtle drop shadow for default state */
-  const sf = el("filter", { id:"pt-shadow", x:"-60%", y:"-60%", width:"220%", height:"220%" });
-  sf.appendChild(el("feDropShadow", { dx:"0", dy:"0", stdDeviation:"3", "flood-color":"#000", "flood-opacity":"0.6" }));
-  defs.appendChild(sf);
-  /* Glow filter for hover state — white halo like Connected Papers */
-  const gf = el("filter", { id:"pt-glow", x:"-80%", y:"-80%", width:"260%", height:"260%" });
-  gf.appendChild(el("feDropShadow", { dx:"0", dy:"0", stdDeviation:"6", "flood-color":"#ffffff", "flood-opacity":"0.55" }));
-  defs.appendChild(gf);
-  svgEl.appendChild(defs);
+  /* (以前每个节点挂一个 feDropShadow 滤镜, 悬停再换成白色 glow 滤镜 —
+     深色背景上是一圈脏黑晕, 每次重绘都要把 124 个滤镜重算一遍.
+     现在节点用一道背景色描边来和相邻节点分开, 悬停用白环, 都不需要滤镜.) */
 
   /* ── Dark background ── */
   svgEl.appendChild(el("rect", { width:svgW, height:svgH, fill:"#0d1117" }));
@@ -2239,9 +2313,19 @@ function buildTimeline() {
      2) Author-collaboration edges: papers sharing ≥2 non-PI co-authors.
         These cross bands and show real research relationships.
      ═══════════════════════════════════════════════════════════════════════ */
-  const allEdges = [];
+  /* 邻接表只建一次: 论文 → 相连的边 + 相连的论文. 悬停时只动这些元素. */
+  const adj = new Map();
+  function link(pe, ta, tb) {
+    [[ta, tb], [tb, ta]].forEach(function(pair) {
+      let a = adj.get(pair[0]);
+      if (!a) adj.set(pair[0], a = { edges:[], nodes:new Set() });
+      a.edges.push(pe); a.nodes.add(pair[1]);
+    });
+  }
 
-  function drawEdge(pos1, pos2, strokeColor, opacity, width, dashed) {
+  /* 边的透明度 / 粗细全部交给 CSS (.pt-edge): 以前用 SMIL <animate fill="freeze">
+     做淡入, 它会永久锁住 opacity, 所以悬停时 setAttribute 变暗其实从来没生效过. */
+  function drawEdge(pos1, pos2, strokeColor, opacity, width, delMs) {
     const x1=pos1.x, y1=pos1.y, x2=pos2.x, y2=pos2.y;
     if (Math.abs(x1-x2) < 1) return null; // skip same-column
     const midX = (x1+x2)/2;
@@ -2249,27 +2333,11 @@ function buildTimeline() {
     const pe = document.createElementNS(NS,"path");
     pe.setAttribute("d",d); pe.setAttribute("fill","none");
     pe.setAttribute("stroke",strokeColor);
-    pe.setAttribute("stroke-width",String(width));
     pe.setAttribute("stroke-linecap","round");
-    pe.setAttribute("opacity","0");
-    if (dashed) pe.setAttribute("stroke-dasharray","3 6");
-    pe.setAttribute("stroke-dasharray-anim","3000");
-    pe.setAttribute("stroke-dashoffset","3000");
+    pe.setAttribute("class","pt-edge");
+    pe.setAttribute("style","--o:"+opacity+";--w:"+width+"px;--del:"+delMs+"ms");
     svgEl.appendChild(pe);
-    /* SMIL draw-in */
-    const aD = document.createElementNS(NS,"animate");
-    aD.setAttribute("attributeName","stroke-dashoffset");
-    aD.setAttribute("from","3000"); aD.setAttribute("to","0");
-    aD.setAttribute("dur","0.65s"); aD.setAttribute("calcMode","spline");
-    aD.setAttribute("keyTimes","0;1"); aD.setAttribute("keySplines","0.16 1 0.3 1");
-    aD.setAttribute("begin","indefinite"); aD.setAttribute("fill","freeze");
-    pe.appendChild(aD);
-    const aO = document.createElementNS(NS,"animate");
-    aO.setAttribute("attributeName","opacity");
-    aO.setAttribute("from","0"); aO.setAttribute("to",String(opacity));
-    aO.setAttribute("dur","0.65s"); aO.setAttribute("begin","indefinite"); aO.setAttribute("fill","freeze");
-    pe.appendChild(aO);
-    return { el:pe, aD, aO };
+    return pe;
   }
 
   /* ─ 1) Timeline spines: connect earliest→latest same-band papers left-to-right ─ */
@@ -2288,15 +2356,9 @@ function buildTimeline() {
         const pos2 = group2.reduce(function(best,c){
           return Math.abs(c.y-pos1.y)<Math.abs(best.y-pos1.y)?c:best;
         }, group2[0]);
-        const edge = drawEdge(pos1, pos2, b.color, 0.18, 0.8, false);
-        if (edge) {
-          const delMs = Math.round(180 + (pos1.x-PAD_X)/(svgW-PAD_X*2)*700 + bi*18);
-          lineAnims.push(setTimeout(function(){
-            try{edge.aD.beginElement();edge.aO.beginElement();}catch(e){}
-          }, delMs));
-          edge.el._pA = pos1.p.title; edge.el._pB = pos2.p.title;
-          allEdges.push(edge.el);
-        }
+        const delMs = Math.round(180 + (pos1.x-PAD_X)/(svgW-PAD_X*2)*700 + bi*18);
+        const pe = drawEdge(pos1, pos2, b.color, 0.18, 0.8, delMs);
+        if (pe) link(pe, pos1.p.title, pos2.p.title);
       });
     }
   });
@@ -2324,17 +2386,11 @@ function buildTimeline() {
     const width   = e.cnt>=3 ? 1.4  : 1.0;
     /* Color: blend the two band colors via a neutral rgba */
     const edgeColor = posA.bi===posB.bi ? BANDS[posA.bi].color : "rgba(255,255,255,0.7)";
-    const edge = drawEdge(posA, posB, edgeColor, opacity, width, false);
-    if (edge) {
-      /* Delay based on left paper's x */
-      const lx = Math.min(posA.x, posB.x);
-      const delMs = Math.round(600 + (lx-PAD_X)/(svgW-PAD_X*2)*500);
-      lineAnims.push(setTimeout(function(){
-        try{edge.aD.beginElement();edge.aO.beginElement();}catch(e){}
-      }, delMs));
-      edge.el._pA = ka; edge.el._pB = kb;
-      allEdges.push(edge.el);
-    }
+    /* Delay based on left paper's x */
+    const lx = Math.min(posA.x, posB.x);
+    const delMs = Math.round(600 + (lx-PAD_X)/(svgW-PAD_X*2)*500);
+    const pe = drawEdge(posA, posB, edgeColor, opacity, width, delMs);
+    if (pe) link(pe, ka, kb);
   });
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -2351,8 +2407,10 @@ function buildTimeline() {
     return title.replace(/^(A|An|The)\s+/i,'').split(/\s+/)[0].replace(/-.*$/,'').slice(0,12);
   }
 
+  const nodeEls = new Map(); // title → { g, p, color, venueShort }
+
   paperPos.forEach(function(pos) {
-    const { x, y, bi, p, hitR } = pos;
+    const { x, y, bi, p, hitR, hitH } = pos;
     const b   = BANDS[bi];
     const cat = CATS.find(c => c.key === p.cat) || CATS[0];
     const venueShort = (p.venue.match(/[A-Za-z]+/) || [''])[0].toUpperCase().slice(0, 7);
@@ -2366,7 +2424,7 @@ function buildTimeline() {
     /* L→R pop-in delay */
     const delay = (0.20 + x / svgW * 1.0).toFixed(2);
     const g = el("g", {
-      class:"pt-pop",
+      class:"pt-pop pt-node",
       style:"--pdel:"+delay+"s;--pdur:0.18s",
       role:"button",
       tabindex:"0",
@@ -2374,32 +2432,46 @@ function buildTimeline() {
     });
     g.style.cursor = "pointer";
 
-    /* Invisible 44px hit target keeps the visible nodes precise but easy to tap. */
-    g.appendChild(el("circle", {
-      cx:String(x), cy:String(y), r:String(hitR),
+    /* Invisible hit target: 44px wide; in stacked columns only as tall as the spacing,
+       so neighbours no longer steal each other's hover. */
+    g.appendChild(el("rect", {
+      x:String(x - hitR), y:String(y - hitH),
+      width:String(hitR * 2), height:String(hitH * 2),
+      rx:String(Math.min(hitR, hitH)),
       fill:"transparent",
       "pointer-events":"all",
     }));
 
-    /* Main circle — filled solid with band color */
-    const circle = el("circle", {
+    /* 外层 g.pt-pop 的入场动画 (forwards) 会锁住它自己的 opacity/transform,
+       所以悬停的变暗 / 放大都做在里面这层上. */
+    const inner = el("g", { class:"pt-node-in" });
+    g.appendChild(inner);
+
+    /* Focus / hover ring (CSS fades + scales it in) */
+    inner.appendChild(el("circle", {
+      class:"pt-ring",
+      cx:String(x), cy:String(y), r:String(NODE_R * 1.18 + 3),
+    }));
+
+    const dot = el("g", { class:"pt-dot", "pointer-events":"none" });
+    /* Main circle — filled solid with band color; a thin background-coloured
+       stroke separates overlapping nodes (replaces the per-node drop-shadow filter) */
+    dot.appendChild(el("circle", {
       cx:String(x), cy:String(y), r:String(NODE_R),
       fill:b.color,
-      filter:"url(#pt-shadow)",
-    });
-    g.appendChild(circle);
-
+      stroke:"#0d1117", "stroke-width":"1.5",
+    }));
     /* Inner highlight: small bright spot at top-left → 3D bubble effect */
-    g.appendChild(el("circle", {
+    dot.appendChild(el("circle", {
       cx:String(x - NODE_R * 0.28), cy:String(y - NODE_R * 0.28),
       r:String(NODE_R * 0.38),
       fill:"rgba(255,255,255,0.22)",
-      "pointer-events":"none",
     }));
+    inner.appendChild(dot);
 
     /* Paper name ABOVE (only for sparse year-bands) */
     if (showName) {
-      g.appendChild(tel("text", {
+      inner.appendChild(tel("text", {
         x:String(x), y:String(y - NODE_R - 6),
         "text-anchor":"middle",
         "font-size":"9", "font-weight":"500",
@@ -2411,7 +2483,7 @@ function buildTimeline() {
 
     /* Venue abbreviation BELOW — only when nodes aren't too close */
     if (showVenue) {
-      g.appendChild(tel("text", {
+      inner.appendChild(tel("text", {
         x:String(x), y:String(y + NODE_R + 12),
         "text-anchor":"middle", "font-size":"7.5",
         fill:b.color,
@@ -2421,42 +2493,19 @@ function buildTimeline() {
       }, venueShort));
     }
 
+    nodeEls.set(p.title, { g, p, color:b.color, venueShort });
+    g.dataset.title = p.title;
+
     /* Desktop-only hover interaction; touch taps go straight to details. */
     if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
-      g.addEventListener("mouseenter", function(ev) {
-        circle.setAttribute("filter", "url(#pt-glow)");
-        circle.setAttribute("r",      String(NODE_R + 2));
-        allEdges.forEach(function(pe) {
-          const conn = (pe._pA === p.title || pe._pB === p.title);
-          pe.setAttribute("opacity",      conn ? "0.85" : "0.03");
-          pe.setAttribute("stroke-width", conn ? "2.4"  : "1");
-        });
-        const db = dbLookup(p.title);
-        const displayTags = db ? db.tags : (p.tags||[]);
-        const authShort = p.authors ? p.authors.split(",").slice(0,3).map(function(a){return a.trim().split(" ").pop();}).join(", ") + (p.authors.split(",").length>3?" et al.":"") : "";
-        const tagHtml = displayTags.map(function(t){ return "<span style='font-size:7.5px;padding:1px 5px;border-radius:3px;border:1px solid "+b.color+"44;color:"+b.color+";opacity:0.85'>"+t+"</span>"; }).join(" ");
-        const descHtml = db ? "<div style='font-size:9px;color:rgba(255,255,255,0.55);margin:5px 0 0;line-height:1.45'>"+db.desc.slice(0,130)+(db.desc.length>130?"…":"")+"</div>" : "";
-        tip.innerHTML =
-          "<span style='color:"+b.color+";font-size:8.5px;font-weight:700;letter-spacing:0.08em'>"+
-          venueShort + "  ·  " + p.year +
-          "</span><br>"+
-          "<strong style='font-size:11px;line-height:1.35;display:block;margin:3px 0 3px'>"+p.title+"</strong>"+
-          "<span style='font-size:8.5px;color:rgba(255,255,255,0.4)'>"+authShort+"</span>"+
-          descHtml+
-          (tagHtml?"<div style='display:inline-flex;gap:4px;margin-top:6px;flex-wrap:wrap'>"+tagHtml+"</div>":"");
-        tip.classList.add("show"); moveTip(ev);
-      });
-      g.addEventListener("mousemove", moveTip);
-      g.addEventListener("mouseleave", function() {
-        circle.setAttribute("filter", "url(#pt-shadow)");
-        circle.setAttribute("r",      String(NODE_R));
-        allEdges.forEach(function(pe) {
-          pe.setAttribute("opacity",      "0.22");
-          pe.setAttribute("stroke-width", "1");
-        });
-        tip.classList.remove("show");
-      });
+      g.addEventListener("mouseenter", function() { focusCtl.enter(p.title); });
+      g.addEventListener("mouseleave", function() { focusCtl.leave(); });
     }
+    /* Keyboard: Tab 到节点 = 同样的高亮 + 锚定 tooltip (鼠标点击不算 :focus-visible) */
+    g.addEventListener("focus", function() {
+      if (g.matches(":focus-visible")) focusCtl.now(p.title);
+    });
+    g.addEventListener("blur", function() { focusCtl.blur(); });
     g.addEventListener("click", function(ev) {
       ev.stopPropagation();
       showDetail(p, { color: b.color, label: cat.label });
@@ -2469,6 +2518,8 @@ function buildTimeline() {
     });
     svgEl.appendChild(g);
   });
+
+  focusCtl = makeFocusCtl(adj, nodeEls);
 
   if (compact) {
     requestAnimationFrame(function() {
@@ -2514,9 +2565,104 @@ function showDetail(p,cat) {
   detail.classList.add("show");
   requestAnimationFrame(function() { detail.scrollTop = 0; });
 }
-function moveTip(e) {
-  tip.style.left = Math.max(12, Math.min(e.clientX+14, window.innerWidth-340))+"px";
-  tip.style.top  = (e.clientY+16)+"px";
+/* ── Tooltip: 结构只建一次, 悬停时只换文字 ── */
+tip.innerHTML =
+  '<div class="pt-tip-card"><div class="pt-tip-meta"></div><div class="pt-tip-title"></div>' +
+  '<div class="pt-tip-auth"></div><div class="pt-tip-desc"></div><div class="pt-tip-tags"></div></div>';
+const tipCard  = tip.firstChild;
+const tipMeta  = tipCard.querySelector(".pt-tip-meta");
+const tipTitle = tipCard.querySelector(".pt-tip-title");
+const tipAuth  = tipCard.querySelector(".pt-tip-auth");
+const tipDesc  = tipCard.querySelector(".pt-tip-desc");
+const tipTags  = tipCard.querySelector(".pt-tip-tags");
+
+function fillTip(n) {
+  const p = n.p, db = dbLookup(p.title);
+  const names = p.authors ? p.authors.split(",") : [];
+  tipCard.style.setProperty("--c", n.color);
+  tipCard.style.setProperty("--c-line", n.color + "55");
+  tipMeta.textContent  = n.venueShort + "  ·  " + p.year;
+  tipTitle.textContent = p.title;
+  tipAuth.textContent  = names.slice(0,3).map(function(a){ return a.trim().split(" ").pop(); }).join(", ") +
+                         (names.length > 3 ? " et al." : "");
+  tipDesc.textContent  = db ? db.desc.slice(0,150) + (db.desc.length > 150 ? "…" : "") : "";
+  tipTags.textContent  = "";
+  (db ? db.tags : (p.tags||[])).forEach(function(t) {
+    const s = document.createElement("span"); s.textContent = t; tipTags.appendChild(s);
+  });
+}
+
+/* 放在节点右侧, 标题大致和节点齐平; 右边放不下就翻到左侧, 上下贴边就往里收 */
+function placeTip(g) {
+  const r  = g.querySelector(".pt-ring").getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const tw = tip.offsetWidth, th = tip.offsetHeight, M = 12, GAP = 22;
+  let side = "right", x = cx + GAP;
+  if (x + tw > window.innerWidth - M) { side = "left"; x = Math.max(M, cx - GAP - tw); }
+  const y = Math.max(M, Math.min(cy - 22, window.innerHeight - th - M));
+  tip.dataset.side = side;
+  tip.style.transform = "translate3d(" + Math.round(x) + "px," + Math.round(y) + "px,0)";
+}
+
+/* ── 悬停焦点控制 (一次只有一篇论文是焦点) ──
+   - 冷启动先等 60ms: 鼠标横扫整张图时不会整图明暗闪烁
+   - 已有焦点时移到另一个节点立即切换, 不再等
+   - 离开 100ms 后才清除 (节点之间的空隙不会闪一下)
+   - 打开时光标刚好停在某个节点上不算悬停: 要真正动一下鼠标才开始 (不打断入场动画)
+   - 每次切换只改 O(度数) 个元素的 class */
+let focusCtl = null;
+function makeFocusCtl(adj, nodeEls) {
+  const ENTER_MS = 60, LEAVE_MS = 100;
+  let cur = null, hot = [], enterT = 0, leaveT = 0, viaKeys = false, live = false;
+  function set(title) {
+    clearTimeout(enterT); clearTimeout(leaveT);
+    if (cur === title) return;
+    hot.forEach(function(e) { e.classList.remove("is-hot", "is-active"); });
+    hot = [];
+    cur = title;
+    if (!title) {
+      svgEl.classList.remove("is-focus");
+      tip.classList.remove("show");
+      return;
+    }
+    const a = adj.get(title), n = nodeEls.get(title);
+    if (a) {
+      a.edges.forEach(function(pe) { pe.classList.add("is-hot"); hot.push(pe); });
+      a.nodes.forEach(function(t) {
+        const m = nodeEls.get(t);
+        if (m) { m.g.classList.add("is-hot"); hot.push(m.g); }
+      });
+    }
+    n.g.classList.add("is-active"); hot.push(n.g);
+    svgEl.classList.add("is-focus");
+    fillTip(n); placeTip(n.g);
+    tip.classList.add("show");
+  }
+  return {
+    enter: function(title) {
+      if (!live) return;
+      viaKeys = false;
+      clearTimeout(leaveT);
+      if (cur) { set(title); return; }
+      clearTimeout(enterT);
+      enterT = setTimeout(function() { set(title); }, ENTER_MS);
+    },
+    leave: function() {
+      clearTimeout(enterT); clearTimeout(leaveT);
+      if (cur) leaveT = setTimeout(function() { set(null); }, LEAVE_MS);
+    },
+    moved: function(e) {
+      if (live || e.pointerType !== "mouse" || (!e.movementX && !e.movementY)) return;
+      live = true;
+      svgEl.classList.add("is-live");
+      const g = e.target.closest && e.target.closest(".pt-node");
+      if (g && g.dataset.title) this.enter(g.dataset.title);
+    },
+    now:   function(title) { viaKeys = true; set(title); },
+    /* 失焦只收起键盘带出来的焦点; 鼠标点过的节点失焦时鼠标可能正停在别的节点上 */
+    blur:  function() { if (viaKeys) this.leave(); },
+    reset: function() { set(null); },
+  };
 }
 
 /* Show / Hide */
@@ -2551,11 +2697,11 @@ function hide() {
   active = false;
   animating = false;
   clearTimeout(resizeTimer);
-  lineAnims.forEach(clearTimeout); lineAnims = [];
   flash.classList.remove("on");
   overlay.classList.remove("active","sweeping");
   overlay.setAttribute("aria-hidden", "true");
   document.body.classList.remove("pt-open");
+  if (focusCtl) focusCtl.reset();
   tip.classList.remove("show");
   const detail=document.getElementById("pt-detail");
   if (detail) detail.classList.remove("show");
