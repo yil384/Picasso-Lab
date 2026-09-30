@@ -194,7 +194,7 @@ export default {
 
     /* ④ the card in his fingers + his index finger (and thumb) re-layered over it */
     const held = makeCard(0);
-    const heldHome = k.at(341, 178, 5);
+    const heldHome = k.at(348, 181, 5);         // leaning right, off his chin
     held.position.copy(heldHome);
     root.add(held);
     k.patch([
@@ -296,7 +296,7 @@ export default {
         if (fm.map !== faceTex[fi]) { fm.map = faceTex[fi]; fm.needsUpdate = true; }
         const ar = ease.out(arrive);
         held.position.set(lerp(hatTop.x, heldHome.x, ar) + Math.sin(Math.PI * ar) * 14, lerp(hatTop.y, heldHome.y, ar), lerp(hatTop.z + 6, heldHome.z, ar));
-        held.rotation.set(0, TAU * 2 * (1 - ar) + spin, 0.12 + (1 - ar) * 0.5);
+        held.rotation.set(0, TAU * 2 * (1 - ar) + spin, -0.24 + (1 - ar) * 0.5);
 
         // monocle
         const mv = presence(t, e, 0.95, 0.35, ease.outBack, 0.5);
