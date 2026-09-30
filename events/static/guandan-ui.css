@@ -232,13 +232,6 @@ img { max-width: 100%; -webkit-user-drag: none; }
     border-radius: 50%;
     object-fit: cover;
 }
-.gd-avatar-initials {
-    position: absolute; inset: 0;
-    display: grid; place-items: center;
-    border-radius: 50%;
-    color: var(--ink);
-    font: 900 calc(var(--av-size) * .34)/1 var(--font-ui);
-}
 .gd-avatar-tag {
     position: absolute;
     left: 50%; bottom: -7px;

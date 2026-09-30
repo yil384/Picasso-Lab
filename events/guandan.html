@@ -1771,7 +1771,7 @@ function lobbyProfileHTML() {
     const st = key ? labStatsFor(key) : null;
     const face = p?.avatar
         ? `<img src="${encodeHTML(p.avatar)}" alt="">`
-        : `<span class="gd-avatar-initials">${encodeHTML(initials(nickname, "P"))}</span>`;
+        : defaultFaceHTML();
     const tier = st ? L(`Rank ${st.rank}`, `第 ${st.rank} 名`) : p ? L("Lab member", "实验室") : L("Rookie", "新手");
     // coin discs marked 分 / 胜 / 场; in English a star, a trophy and cards, the word in the title
     const stats = st ? [
@@ -1844,7 +1844,7 @@ function lobbyRailHTML() {
     const item = (cls, attrs, disc, label, extra = "") => `<button class="rail-item ${cls}" type="button" ${attrs}>
             <span class="rail-disc">${disc}</span>${extra}<span class="rail-lb">${label}</span></button>`;
     return [
-        mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, L("Season MVP", "赛季MVP"), `<span class="rail-badge">MVP</span>`) : "",
+        mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, encodeHTML(firstNameOf(mvp.name)), `<span class="rail-badge">MVP</span>`).replace(`type="button"`, `type="button" aria-label="${L("Season MVP", "赛季MVP")}"`) : "",
         item("is-share", `data-lobby="share"`, `${cardHTML({ back: true })}<span class="rail-share">${glyphHTML("share")}</span>`, L("Share", "分享")),
         item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-pressed="${musicOn}"`, `<span class="rail-vinyl"></span>${glyphHTML("note", "rail-note")}`, L("Music", "音乐"),
             musicOn ? "" : `<span class="rail-badge is-off">${L("Off", "关")}</span>`)
@@ -2573,9 +2573,7 @@ function seatHTML(i, mine) {
     const isAI = s.type === "ai";
     const photo = isAI ? null : seatMemberPhoto(name);
     const relation = isAI ? "AI" : mine < 0 ? "" : me ? L("Me", "我") : opp ? L("Rival", "对手") : L("Partner", "队友");
-    const face = photo
-        ? `<img src="${encodeHTML(photo)}" alt="">`
-        : `<span class="gd-avatar-initials">${encodeHTML(isAI ? name.charAt(0) : initials(name, String(i + 1)))}</span>`;
+    const face = photo ? `<img src="${encodeHTML(photo)}" alt="">` : defaultFaceHTML(isAI ? Array.from(name)[0] || "AI" : "");
     const nameHTML = me
         ? `<label class="room-seat-name"><input id="nick-input" value="${encodeHTML(name)}" maxlength="24" autocomplete="nickname" spellcheck="false" aria-label="${L("Your name", "我的昵称")}"><svg class="room-pen" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17.2V21h3.8L17.9 9.9l-3.8-3.8L3 17.2Zm17.7-10.1c.4-.4.4-1 0-1.4l-2.4-2.4c-.4-.4-1-.4-1.4 0l-1.8 1.8 3.8 3.8 1.8-1.8Z"/></svg></label>`
         : `<b>${encodeHTML(name)}</b>`;

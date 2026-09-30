@@ -519,7 +519,11 @@ Below 8: lobby, popups, table-actions, table-moments, results, portrait, english
 - **Missing from round 2:**
   - ~~Round-1 re-check~~: done (see above; `harness/recheck.py`).
   - ~~Synthesizer~~: done (see "Round 2 synthesis").
-- **Fix round 2:** not started (groups A–F planned).
+- **Fix round 2 (in progress, session 3):** the plan is groups A–F of the synthesis; verified on screenshots and probes, one commit + push per group.
+  - **A shared behaviour and copy — done:** AT-1 (no selection/drag/callout), AT-6, R2-15/16, R2-23/AT-5, tab title. Verified by `ctrl+A` selecting 0 characters in room and table; phone EN room fits again.
+  - **B table play flow — done:** R2-05, 06, 07, 20, 27, 28, 29, 30. `harness/verify_b.py` and `verify_b2.py` pass on phone and desk.
+  - **C lobby and room — done:** R2-01 (tiles ≈1.05:1 at 16:10, top bar and dock take the slack), R2-12/AT-2 (robot and head faces, solid gold empty seat), R2-13, R2-14, R2-18, R2-19 (panels share a bottom edge), R2-31/32, AT-3 (the MVP label is the member's first name).
+  - **D effects and display words, E table static, F eggs — not started.**
 - **Next (no multi-agent workflow; one lens or one fix group at a time, push after each):**
   1. ~~Round-1 re-check~~ (done, see above).
   2. ~~Synthesize round 2~~ (done above; 8 medium, 32 low, no high).

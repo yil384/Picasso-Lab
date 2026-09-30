@@ -25,20 +25,29 @@ html[data-gd-boot="lobby"] body:not([data-screen]) {
     --tap: 0px;
     --fs-min: 10px;
     /* navy-periwinkle room, soft light only: window light top-left, a large room light behind
-       the grid, a lilac wash under the ceiling, the lit horizon band and a darker floor */
+       the grid, a lilac wash under the ceiling and a darker floor */
     background:
         radial-gradient(48% 42% at 8% 14%, rgba(150, 200, 255, .34), rgba(150, 200, 255, 0) 70%),
         radial-gradient(42% 46% at 56% 40%, rgba(176, 196, 255, .2), rgba(176, 196, 255, 0) 72%),
         radial-gradient(60% 55% at 88% 0%, rgba(132, 146, 236, .5), rgba(132, 146, 236, 0) 70%),
         linear-gradient(180deg, rgba(210, 222, 255, .1), rgba(210, 222, 255, 0)) 0 0 / 100% 4% no-repeat,
         linear-gradient(104deg, rgba(255, 255, 255, 0) 30%, rgba(190, 210, 255, .07) 42%, rgba(255, 255, 255, 0) 54%),
-        linear-gradient(180deg, transparent 50%, rgba(170, 196, 255, .1) 56%, rgba(190, 212, 255, .22) 58.2%, rgba(160, 190, 255, .06) 59%, rgba(20, 30, 80, .1) 63%, rgba(10, 16, 50, .34) 100%),
+        linear-gradient(180deg, transparent 52%, rgba(20, 30, 80, .1) 66%, rgba(10, 16, 50, .34) 100%),
         linear-gradient(180deg, #4659aa 0%, #34478f 40%, #2b3c7c 72%, #223066 100%);
 }
 @supports (height: 100dvh) {
     body[data-screen="lobby"],
     body[data-screen="room"],
     html[data-gd-boot="lobby"] body:not([data-screen]) { --lu: min(calc(100vw / 1280), calc(100dvh / 720)); --vh: 100dvh; }
+}
+/* 16:10 screens (desk, the Google Sites iframe) have height over the 16:9 design: the tile grid keeps its
+   shape (see .lobby --tiles-h) and the top bar and the bottom row share the rest, 40 / 60 */
+@media (min-aspect-ratio: 1/1) {
+    body[data-screen="lobby"],
+    html[data-gd-boot="lobby"] body:not([data-screen]) {
+        --slack: max(0px, var(--vh) - 720 * var(--lu));
+        --hud-h: calc(80 * var(--lu) + var(--slack) * .4);
+    }
 }
 /* landscape phones: a 600-high design so text and controls stay readable */
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
@@ -119,21 +128,16 @@ body[data-screen="lobby"] #back-events-btn { order: 3; }
     background: #e9eef5;
     object-fit: cover;
 }
-.hud-avatar > .gd-avatar-initials {
-    inset: calc(3 * var(--lu));
-    border-radius: calc(11 * var(--lu));
-    background: linear-gradient(180deg, #8ea4ff, #5b72d8);
-    color: #fff;
-    font-size: calc(24 * var(--lu));
-}
+.hud-avatar > .gd-face { border-radius: calc(11 * var(--lu)); }
 .hud-id { display: flex; flex-direction: column; align-items: flex-start; gap: calc(5 * var(--lu)); min-width: 0; }
 /* above the 段位 pill, so the field's --tap box is not cut by it */
 .hud-name { position: relative; z-index: 1; display: flex; align-items: center; cursor: text; }
 .hud-name input {
     width: calc(190 * var(--lu));
-    /* a --tap high touch target; the negative margin keeps the row height */
+    /* a --tap high touch target; the negative margins keep the row height. The box grows down over the
+       段位 pill rather than up past the top of the screen (the bar sits about 4px from it) */
     height: max(var(--tap), calc(34 * var(--lu)));
-    margin: min(0px, calc((34 * var(--lu) - var(--tap)) / 2)) 0;
+    margin: min(0px, max(-4px, calc((34 * var(--lu) - var(--tap)) / 2))) 0 min(0px, calc(34 * var(--lu) - var(--tap) - min(0px, max(-4px, calc((34 * var(--lu) - var(--tap)) / 2)))));
     padding: 0 calc(22 * var(--lu)) 0 0;
     border: 0;
     background: none;
@@ -274,14 +278,14 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 /* Laid out on a centred 1280-wide design (大掼蛋 2026 lobby proportions): the rail at 6-12% of
    the width, the tile grid from 20% to 90%, the bottom row with the nav under the grid and the
    快速开始 bar reaching past the grid's right edge. The grid grows by 40% of the height a phone
-   has over 600 design px and by all of the height a 16:10 screen (desk, the Google Sites
-   iframe) has over 16:9, so it never floats between empty bands (about 61% of the height). */
+   has over 600 design px, up to 420: its small tiles stay about 1.05 : 1 and 经典 about 0.56 : 1
+   (yxrb_lobby: 1.2 : 1 and 0.65 : 1) whatever the screen's height. */
 .lobby {
-    --tiles-h: clamp(calc(365 * var(--lu)), calc(365 * var(--lu) + (var(--vh) - 600 * var(--lu)) * .4 + max(0px, var(--vh) - 720 * var(--lu))), calc(520 * var(--lu)));
+    --tiles-h: clamp(calc(365 * var(--lu)), calc(365 * var(--lu) + (var(--vh) - 600 * var(--lu)) * .4), calc(420 * var(--lu)));
     position: relative;
     display: grid;
     grid-template-columns: calc(var(--fx) + 79 * var(--lu) + var(--sl)) calc(72 * var(--lu)) calc(104 * var(--lu)) calc(900 * var(--lu)) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) calc(100 * var(--lu));
+    grid-template-rows: minmax(0, 1fr) calc(100 * var(--lu) + var(--slack, 0px) * .6);
     min-height: 100vh;
     min-height: 100dvh;
     padding-top: var(--hud-h);
@@ -338,7 +342,7 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
 .lobby-quick .lobby-busy i { border-color: rgba(163, 36, 12, .25); border-top-color: #a3240c; }
 
 /* left rail: three free-standing objects (the MVP's portrait, the shared card back, a record),
-   each with its label over the bottom edge, spread over the grid's height. --r is the rail's
+   each with its label over the bottom edge, packed from the top of the grid like Tencent's rail. --r is the rail's
    unit: the objects are drawn a little larger than a 5-entry Tencent rail's. */
 .lobby-rail {
     --r: calc(var(--lu) * 1.15);
@@ -348,7 +352,8 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: calc(18 * var(--lu));
 }
 .rail-item {
     position: relative;
@@ -761,14 +766,12 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     height: max(var(--tap), calc(60 * var(--lu)));
     margin-left: auto;
     padding: 0 calc(22 * var(--lu));
-    border: calc(3 * var(--lu)) solid #b87818;
-    border-radius: calc(5 * var(--lu));
-    background: linear-gradient(180deg, #fff6c4 0%, #ffd766 55%, #f2b43c 100%);
+    border: calc(1.5 * var(--lu)) solid #fff3b8;
+    border-radius: calc(4 * var(--lu));
+    background: linear-gradient(180deg, #fff6c4 0%, #f7dc8a 55%, #f0d27a 100%);
     box-shadow:
-        inset 0 0 0 calc(2 * var(--lu)) #f7c44e,
-        inset 0 0 0 calc(4 * var(--lu)) #fffae0,
-        inset 0 calc(-6 * var(--lu)) 0 rgba(190, 120, 20, .3),
-        0 calc(5 * var(--lu)) calc(12 * var(--lu)) rgba(0, 0, 30, .4);
+        inset 0 calc(-4 * var(--lu)) 0 rgba(190, 130, 30, .22),
+        0 calc(4 * var(--lu)) calc(10 * var(--lu)) rgba(0, 0, 30, .35);
     white-space: nowrap;
     transition: translate var(--dur-fast) var(--ease-out);
 }
@@ -797,8 +800,9 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), 0 calc(6 * var(--ru)) calc(18 * var(--ru)) rgba(0, 0, 30, .35);
     color: var(--ink);
 }
-/* the settings panel ends after its last row */
-.room-settings { align-self: start; max-height: 100%; }
+/* the settings panel reaches the roster's bottom edge; its rows share the spare height (up to 92) and the
+   解散 button sits at the foot */
+.room-settings { align-self: stretch; max-height: 100%; }
 .room-panel-head {
     flex: none;
     margin: 0;
@@ -814,11 +818,12 @@ html[lang="en"] .is-classic .tile-title { font-size: calc(54 * var(--t)); }
 /* Tencent settings rows: justified heavy label, the value in plain ink; rows keep their height
    and the panel body scrolls */
 .room-row {
-    flex-shrink: 0;
+    flex: 1 0 auto;
     display: flex;
     align-items: center;
     gap: calc(14 * var(--ru));
     min-height: calc(64 * var(--ru));
+    max-height: calc(92 * var(--ru));
     padding: calc(6 * var(--ru)) calc(18 * var(--ru));
     border-bottom: 1px solid var(--panel-line);
 }
@@ -1007,7 +1012,6 @@ html[lang="en"] .room-k { text-align-last: auto; }
     border-radius: calc(11 * var(--lu));
     font: 800 max(var(--fs-min), calc(14 * var(--lu)))/max(calc(var(--fs-min) * 1.6), calc(22 * var(--lu))) var(--font-ui);
 }
-.room-seat.is-ai .gd-avatar-initials { background: linear-gradient(180deg, #8aa2ff, #5b72d8); color: #fff; font-size: calc(30 * var(--lu)); }
 .room-seat-host {
     position: absolute;
     top: calc(-8 * var(--lu));
@@ -1075,7 +1079,7 @@ html[lang="en"] .room-k { text-align-last: auto; }
 .room-seat-name:focus-within::after { opacity: 1; }
 .room-pen { position: absolute; right: calc(2 * var(--lu)); width: calc(14 * var(--lu)); height: calc(14 * var(--lu)); fill: rgba(255, 255, 255, .6); pointer-events: none; }
 .room-seat-name input:focus + .room-pen { opacity: 0; }
-/* empty seat: one dashed + disc, ring colour = relation */
+/* empty seat: a solid gold + disc (like 大掼蛋's invite slot), ring colour = relation */
 .room-seat.is-empty { --ring: var(--mate); }
 .room-seat.is-empty.is-opp { --ring: var(--opp); }
 .room-seat-sit {
@@ -1086,13 +1090,14 @@ html[lang="en"] .room-k { text-align-last: auto; }
     width: 100%;
     height: 100%;
     padding: 0;
-    border: calc(3 * var(--lu)) dashed var(--ring);
+    border: calc(3 * var(--lu)) solid var(--ring);
     border-radius: 50%;
-    background: rgba(10, 18, 60, .4);
+    background: linear-gradient(180deg, #ffe58a, #f2b43c);
     color: #fff;
+    text-shadow: 0 calc(2 * var(--lu)) 0 rgba(140, 84, 8, .55);
     transition: scale var(--dur-fast) var(--ease-out);
 }
-.room-seat-sit b { font: 300 calc(40 * var(--lu))/.8 var(--font-ui); }
+.room-seat-sit b { font: 400 calc(44 * var(--lu))/.8 var(--font-ui); }
 .room-seat-sit span { font: 800 max(var(--fs-min), calc(15 * var(--lu)))/1.2 var(--font-ui); }
 .room-seat-sit:active:not(:disabled) { scale: .95; }
 /* small round badges on a seat disc (the host's AI add, × remove / leave): drawn at 40% of the
@@ -1269,8 +1274,8 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     .hud-status { flex: 1; }
     .hud-profile { gap: calc(8 * var(--lu)); }
     .hud-avatar { width: calc(48 * var(--lu)); height: calc(48 * var(--lu)); border-radius: calc(11 * var(--lu)); }
-    .hud-avatar > img, .hud-avatar > .gd-avatar-initials { border-radius: calc(8 * var(--lu)); }
-    .hud-name input { max-width: calc(128 * var(--lu)); height: max(var(--tap), calc(26 * var(--lu))); margin: min(0px, calc((26 * var(--lu) - var(--tap)) / 2)) 0; font-size: calc(19 * var(--lu)); }
+    .hud-avatar > img, .hud-avatar > .gd-face { border-radius: calc(8 * var(--lu)); }
+    .hud-name input { max-width: calc(128 * var(--lu)); height: max(var(--tap), calc(26 * var(--lu))); margin: min(0px, max(-4px, calc((26 * var(--lu) - var(--tap)) / 2))) 0 min(0px, calc(26 * var(--lu) - var(--tap) - min(0px, max(-4px, calc((26 * var(--lu) - var(--tap)) / 2))))); font-size: calc(19 * var(--lu)); }
     .hud-tier > span { font-size: max(var(--fs-min), calc(12 * var(--lu))); line-height: max(calc(var(--fs-min) * 1.6), calc(20 * var(--lu))); padding: 0 calc(14 * var(--lu)); }
     .hud-stats { order: 10; gap: calc(10 * var(--lu)); margin: 0 0 0 calc(4 * var(--lu)); }
     .hud-stats:empty { height: calc(30 * var(--lu)); }   /* the same rhythm without stats; the type hint's slot */
