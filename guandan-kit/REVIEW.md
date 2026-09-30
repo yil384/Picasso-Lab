@@ -442,6 +442,28 @@ what those did not cover is listed. 1 medium, 6 low.
   - _Fix (optional):_ give the four lobby nav glyphs a second tone (gold or periwinkle accent).
   - _Also:_ the tab title is "Picasso Lab Guandan Arena", the only English marketing name in the product (no `theme-color` either). Suggest "掼蛋 · Picasso Lab".
 
+### Round-1 re-check — finished on the merged build (5c33f71)
+Every round-1 finding is now accounted for: confirmed in passing by the round-2 lenses (listed above), by the must-keep and AI-tell
+work this session, or by `harness/recheck.py` (live probes, hd / desk / phone) plus screenshots. Three probe results were
+false alarms of the probe itself (a wrapper element counted as a control, a selector, a threshold) and were fixed in the script.
+
+| Result | Findings |
+|---|---|
+| **Holds** (51) | R1-01, 02, 03, 04, 05, 08, 09, 10, 11, 12, 13, 15, 16, 17, 19, 20, 21, 23, 24, 25, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 52, 53, 54, 55 (and 18 apart from R2-23's strings) |
+| **Remnant, carried as a round-2 finding** | R1-06 → R2-10 (天王炸 still flat), R1-14 → **R2-01 (regression, medium)**, R1-22 → R2-31, R1-38 → R2-21, R1-39 → R2-15/16/17, R1-51 → R2-12, R1-18 → R2-23 |
+| **Accepted, not fixed** | R1-07 (phone bottom bar at 10.4% H for the 40 px tap rule), R1-26 (one tall column shrinks the hand, as SPEC §5.1 says) |
+
+New evidence this session (all on the merged build):
+- **R1-03** (16:9 row over side plays): with a left 5-card straight, a right 6-card 钢板 and my tallest column at 5, no button touches any side play at hd 1280×720, desk or phone (`rc-hd-row-vs-plays.jpg`, `rc-phone-row-vs-plays.jpg`).
+- **R1-08**: 新桌 mid-game opens the 离开牌局 confirm (host and guest wording) and the table stays.
+- **R1-13**: the records board opens from four distinct pages only (mvp, latest, history, board) plus the room's 战绩 chip; the lab deck and rules each have one lobby entry.
+- **R1-24**: the spectator sees 蓝队/红队 tiles and plates, and 观战中.
+- **R1-46**: the loading veil is a dark plate with a spinner on the 经典 tile.
+- **R1-47**: the English lab deck shows each style tag (Card counter, Gap finder, Steady control, Bomb assault, …).
+- **R1-48**: the type hint fades out when a popup opens after it appeared (opacity 0 at hd, desk and phone).
+- **R1-52/53/55**: zero references to the removed icon set, `.gd-pill`/`.gd-badge`/`.gd-plate`, `.felt`; the transition has no text-shadow, drop-shadow, blur, Georgia or .46em tracking; no banner code remains in the Guandan files.
+- **R1-23**: `.toast` uses `text-wrap: balance`. **R1-45**: no tile-row sliver above the portrait dock. **R1-44**: the P on the share card is fully visible.
+
 ## Handoff status
 - **Done (previous sessions):**
   - gd3/table and gd3/lobby merged.
@@ -459,11 +481,11 @@ what those did not cover is listed. 1 medium, 6 low.
 - **Done (session 3, 2026-09-30):** harness re-set up (proxy CA in Chromium's NSS store, references downloaded, phone/portrait/desk baselines re-captured into `scratch/shots-r2`, zero console errors); **must-keep lens finished** (see above: all pass, MK-1 low), `harness/mustkeep.py` added.
   **AI-tell lens finished** too (1 medium, 6 low; see above).
 - **Missing from round 2:**
-  - **Round-1 re-check (prev-verify):** not run yet. Do it next, inline: verify each round-1 fix that round 2 did not confirm in passing (the "unverified" list above), on screenshots and DOM probes.
+  - ~~Round-1 re-check~~: done (see above; `harness/recheck.py`).
   - **Synthesizer:** not run yet. The 32 + 1 + 7 findings are not deduplicated or calibrated, and eggs is unscored (must-keep and AI-tell now give it enough evidence to score).
 - **Fix round 2:** not started.
 - **Next (no multi-agent workflow; one lens or one fix group at a time, push after each):**
-  1. Round-1 re-check, appended to Round 2 above.
+  1. ~~Round-1 re-check~~ (done, see above).
   2. Synthesize round 2: dedupe R2-01..32, MK-1, AT-1..7; calibrate; score every screen incl. eggs.
   3. Fix round 2: medium first (R2-01..07, AT-1), then the cheap lows, in small groups, each verified on screenshots at the SPEC viewports and pushed.
   4. Round 3 lens by lens, fix, and repeat until every screen scores ≥ 8 with no high or medium finding.
