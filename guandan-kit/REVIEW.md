@@ -464,6 +464,42 @@ New evidence this session (all on the merged build):
 - **R1-52/53/55**: zero references to the removed icon set, `.gd-pill`/`.gd-badge`/`.gd-plate`, `.felt`; the transition has no text-shadow, drop-shadow, blur, Georgia or .46em tracking; no banner code remains in the Guandan files.
 - **R1-23**: `.toast` uses `text-wrap: balance`. **R1-45**: no tile-row sliver above the portrait dock. **R1-44**: the P on the share card is fully visible.
 
+### Round 2 synthesis (all six lenses in; build 9602148)
+40 findings from the lenses (R2-01..32, MK-1, AT-1..7). **No high, 8 medium, 32 low** after calibration: AT-1 (text selection) joins
+the seven mediums the reviewers raised; every other severity stands. Duplicates are merged into fix groups rather than renumbered.
+
+**Merges** (same defect or one fix): R2-03 + R2-21 + R2-17 (display-word and title style: one `.gd-word` family) · R2-12 + AT-2
+(room seat placeholders: faces and a solid "+" tile) · R2-02 + R2-10 (bomb and 天王炸 burst art) · R2-15 + R2-16 (CJK line
+breaks) · R2-23 + AT-5 (English strings) · R2-07 + R2-27 (pending states) · R2-31 + R2-32 (sub-40 px hit boxes) · R2-22 with the
+lobby's peak poster (VS gradient).
+
+**Scores** (0–10, worst viewport; the fidelity reviewer's score, lowered where a medium finding is open on that screen):
+
+| Screen | Score | Worst vp | Open (medium first) |
+|---|---|---|---|
+| lobby | 7 | desk, ifr | **R2-01**, R2-13, R2-14, R2-18, AT-3, AT-7 |
+| room | 8 | desk | AT-1 (all screens), R2-12/AT-2, R2-19, R2-27 |
+| popups | 7.5 | phone, portrait | AT-1, R2-15/16, R2-17, AT-6 |
+| table | 8 | desk | **R2-04**, R2-08, R2-09, R2-24, R2-11 |
+| table-actions | 7.5 | phone | **R2-05, R2-06**, R2-25, R2-28, R2-29, R2-30 |
+| table-moments | 6.5 | phone | **R2-02, R2-03**, R2-10, R2-26 |
+| results | 7.5 | ifr, desk | **R2-07**, R2-20, R2-21 |
+| vs-intro | 8 | desk | R2-21, AT-4 |
+| records | 8.5 | phone | R2-22, R2-32 |
+| portrait | 7.5 | portrait | as phone: table-moments and actions; MK-1 |
+| english | 7.5 | phone | R2-23/AT-5 |
+| eggs | 8.5 | portrait | MK-1, AT-4. Must-keep passes in full; the type hint is a product toast and the transition has no halos left |
+
+Below 8: lobby, popups, table-actions, table-moments, results, portrait, english.
+
+**Fix plan** (each group: fix, screenshots at the SPEC viewports, commit, push; the engine files stay untouched):
+- **A. Shared behaviour and copy:** AT-1, AT-6, R2-15/16, R2-23/AT-5, tab title.
+- **B. Table play flow:** R2-05, R2-06, R2-28, R2-29, R2-30, R2-07/27, R2-20.
+- **C. Lobby and room:** R2-01, R2-13, R2-14, R2-18, R2-12/AT-2, AT-3, R2-19, R2-31/32.
+- **D. Effects and display words:** R2-02/10, R2-03/21/17, R2-26, R2-22, R2-11, R2-25.
+- **E. Table static:** R2-04, R2-08, R2-09, R2-24.
+- **F. Eggs:** MK-1, AT-4.
+
 ## Handoff status
 - **Done (previous sessions):**
   - gd3/table and gd3/lobby merged.
@@ -482,12 +518,12 @@ New evidence this session (all on the merged build):
   **AI-tell lens finished** too (1 medium, 6 low; see above).
 - **Missing from round 2:**
   - ~~Round-1 re-check~~: done (see above; `harness/recheck.py`).
-  - **Synthesizer:** not run yet. The 32 + 1 + 7 findings are not deduplicated or calibrated, and eggs is unscored (must-keep and AI-tell now give it enough evidence to score).
-- **Fix round 2:** not started.
+  - ~~Synthesizer~~: done (see "Round 2 synthesis").
+- **Fix round 2:** not started (groups A–F planned).
 - **Next (no multi-agent workflow; one lens or one fix group at a time, push after each):**
   1. ~~Round-1 re-check~~ (done, see above).
-  2. Synthesize round 2: dedupe R2-01..32, MK-1, AT-1..7; calibrate; score every screen incl. eggs.
-  3. Fix round 2: medium first (R2-01..07, AT-1), then the cheap lows, in small groups, each verified on screenshots at the SPEC viewports and pushed.
+  2. ~~Synthesize round 2~~ (done above; 8 medium, 32 low, no high).
+  3. Fix round 2 by the groups in the synthesis (A shared, B play flow, C lobby/room, D effects/words, E table static, F eggs), each verified on screenshots at the SPEC viewports and pushed.
   4. Round 3 lens by lens, fix, and repeat until every screen scores ≥ 8 with no high or medium finding.
   5. Merge origin/main (keep main's non-Guandan files), replay a full round, and push guandan-cloud.
   6. Final report per HANDOFF §6.
