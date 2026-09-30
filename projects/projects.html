@@ -446,22 +446,105 @@ document.addEventListener('click', event => {
 
 let projectLoadTimer = null;
 
-/* This page gets embedded in a host site (Google Sites). Every history call
-   is wrapped because a sandboxed frame can reject them, and a rejected call
-   must never break the UI. */
-function pushPicassoHistoryState(patch) {
-  try {
-    history.pushState({ ...(history.state || {}), ...patch }, '', window.location.href);
-  } catch (_) {}
+/* Back/forward (the back button, Chrome's two-finger swipe). Google Sites writes
+   this page into an about:blank frame with document.write, and Chrome restores any
+   history entry made in that frame as a fresh about:blank: swiping back from an
+   open article or demo left the page blank. So this document never touches history
+   itself. The open view lives in the fragment of a tiny hidden frame on GitHub
+   Pages: opening a view navigates that frame (one entry), back/forward moves only
+   that frame, and it posts back the fragment it lands on. Until it loads, views add
+   no history. */
+const NAV_FRAME_URL = 'https://yil384.github.io/Picasso-Lab/nav-frame.html';
+
+function createNavHistory(onTraverse) {
+  const frame = document.createElement('iframe');
+  frame.id = 'picasso-nav-frame';
+  frame.src = NAV_FRAME_URL;
+  frame.title = 'Navigation history';
+  frame.tabIndex = -1;
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(frame);
+
+  const run = Math.random().toString(36).slice(2, 7);
+  const pending = new Set();   // fragments we navigated to that have not reported back yet
+  let ready = false;
+  let seq = 0;
+  let depth = 0;               // our own entries stacked above one we can go back to
+  let popping = false;
+  let popTimer = null;
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== frame.contentWindow || typeof event.data?.picassoNav !== 'string') return;
+    const hash = event.data.picassoNav;
+    const first = !ready;
+    ready = true;
+    if (pending.delete(hash) || (first && !hash)) return;
+    if (popping) popping = false;
+    else depth = 0;            // the visitor moved through history: we no longer know what is behind
+    const view = Object.fromEntries(new URLSearchParams(hash));
+    delete view.n;
+    onTraverse(view);
+  });
+
+  function go(view, push) {
+    if (!ready) return;
+    const params = new URLSearchParams();
+    Object.entries(view).forEach(([key, value]) => { if (value != null) params.set(key, value); });
+    params.set('n', run + (++seq));
+    const hash = params.toString();
+    pending.add(hash);
+    try {
+      if (push) frame.contentWindow.location.href = `${NAV_FRAME_URL}#${hash}`;
+      else frame.contentWindow.location.replace(`${NAV_FRAME_URL}#${hash}`);
+      if (push) depth += 1;
+    } catch (_) {
+      pending.delete(hash);
+    }
+  }
+
+  return {
+    push: view => go(view, true),
+    replace: view => go(view, false),
+    /* Leave a view the way the back button would when the entry behind it is ours,
+       so a later swipe back leaves the page instead of landing on a duplicate. Called
+       from this document, not the nav frame: the host sandboxes the embed, and a
+       sandboxed frame may only move history for frames inside its own subtree. */
+    pop(view) {
+      if (!ready || depth === 0) return go(view, false);
+      depth -= 1;
+      popping = true;
+      clearTimeout(popTimer);
+      popTimer = setTimeout(() => { popping = false; }, 1500);   // a back() that moved nothing
+      try { history.back(); } catch (_) {}
+    }
+  };
 }
 
-/* Closing never traverses history via back(). Inside a host frame, back()
-   walks the top-level joint history and can land on the host's pre-embed
-   entry, which blanks the whole frame. Clearing the current entry is safe. */
-function clearPicassoHistoryState(patch) {
-  try {
-    history.replaceState({ ...(history.state || {}), ...patch }, '', window.location.href);
-  } catch (_) {}
+const projectNav = createNavHistory((view) => {
+  const idx = Number(view.p);
+  projectView = { preview: view.p != null && PROJECTS[idx] ? idx : null, lab: view.l === '1' };
+  syncProjectPreviewState(projectView);
+  window.dispatchEvent(new CustomEvent('picasso-nav', { detail: projectView }));
+});
+let projectView = { preview: null, lab: false };   // the view the current history entry holds
+
+function recordProjectView(patch, how) {
+  projectView = { ...projectView, ...patch };
+  projectNav[how]({
+    p: Number.isInteger(projectView.preview) ? String(projectView.preview) : null,
+    l: projectView.lab ? '1' : null
+  });
+}
+
+/* A fresh viewer frame per project: its first navigation replaces the blank
+   frame instead of adding a dead step to the visitor's back history. */
+function freshProjectFrame() {
+  const old = document.getElementById('project-iframe');
+  const frame = old.cloneNode(false);
+  frame.removeAttribute('src');
+  old.replaceWith(frame);
+  return frame;
 }
 
 let lastCard = null;
@@ -470,7 +553,6 @@ function openProject(idx, fromHistory = false) {
   const p = PROJECTS[idx];
   if (!p) return;
   const view      = document.getElementById('iframe-view');
-  const iframe    = document.getElementById('project-iframe');
   const overlay   = document.getElementById('iframe-overlay');
   const blocked   = document.getElementById('iframe-blocked');
   const loadInner = document.getElementById('loading-inner');
@@ -482,7 +564,7 @@ function openProject(idx, fromHistory = false) {
   overlay.classList.remove('hide');
   blocked.classList.remove('show');
   loadInner.style.display = '';
-  iframe.src = '';
+  const iframe = freshProjectFrame();
 
   lastCard = document.querySelector(`.project-card[data-idx="${idx}"]`);
   view.classList.add('active');
@@ -490,8 +572,8 @@ function openProject(idx, fromHistory = false) {
   document.getElementById('project-list').style.display = 'none';
   document.body.style.overflow = 'hidden';
   pauseAllCardVideos();
-  if (!fromHistory && history.state?.picassoProjectPreview !== idx) {
-    pushPicassoHistoryState({ picassoProjectPreview: idx });
+  if (!fromHistory && projectView.preview !== idx) {
+    recordProjectView({ preview: idx }, 'push');
   }
   view.querySelector('.bar-back').focus({ preventScroll: true });
 
@@ -513,12 +595,12 @@ function showBlocked() {
 }
 
 function closeProject(fromHistory = false) {
-  if (!fromHistory && Number.isInteger(history.state?.picassoProjectPreview)) {
-    clearPicassoHistoryState({ picassoProjectPreview: null });
+  if (!fromHistory && Number.isInteger(projectView.preview)) {
+    recordProjectView({ preview: null }, 'pop');
   }
   clearTimeout(projectLoadTimer);
   document.getElementById('iframe-view').classList.remove('active');
-  document.getElementById('project-iframe').src = '';
+  freshProjectFrame();
   document.getElementById('hero-section').style.display = '';
   document.getElementById('project-list').style.display = '';
   document.body.style.overflow = '';
@@ -532,19 +614,16 @@ document.addEventListener('keydown', event => {
   }
 });
 
+/* Back/forward landed on another view: show it without recording it again. */
 function syncProjectPreviewState(state) {
   const view = document.getElementById('iframe-view');
-  const idx = state?.picassoLab === true ? null : state?.picassoProjectPreview;
+  const idx = state.lab ? null : state.preview;
   if (Number.isInteger(idx) && PROJECTS[idx] && !view.classList.contains('active')) {
     openProject(idx, true);
   } else if ((!Number.isInteger(idx) || !PROJECTS[idx]) && view.classList.contains('active')) {
     closeProject(true);
   }
 }
-
-window.addEventListener('popstate', event => {
-  syncProjectPreviewState(event.state);
-});
 
 renderCards();
 
@@ -612,7 +691,6 @@ reduceMotion.addEventListener?.('change', () => {
   else resumeVisibleCardVideos();
 });
 
-syncProjectPreviewState(history.state);
 </script>
 
 
@@ -861,7 +939,7 @@ syncProjectPreviewState(history.state);
   let flipped   = false;
   let animating = false;
   let keyboardPrimed = false;
-  let desiredFlipped = history.state?.picassoLab === true;
+  let desiredFlipped = false;
   let previousOverflow = '';
   let previousFocus = null;
   let iframeWaitTimer = null;
@@ -889,13 +967,20 @@ syncProjectPreviewState(history.state);
     .test(window.location.hostname);
   const canEmbedLab = labEmbedParents.has(window.location.origin) || isGoogleSitesEmbed;
 
-  const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint']);
+  const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint', 'picasso-nav-frame']);   // moving an iframe reloads it
+
+  /* Replace, never push: each switch would otherwise be a dead step in the
+     visitor's back history. */
+  function setLabFrame(url) {
+    iframe.dataset.url = url;
+    try { iframe.contentWindow.location.replace(url); } catch (_) { iframe.src = url; }
+  }
 
   iframe.addEventListener('load', () => {
     if (
       !desiredFlipped ||
       !canEmbedLab ||
-      !iframe.getAttribute('src')?.startsWith(LAB_URL)
+      !iframe.dataset.url?.startsWith(LAB_URL)
     ) return;
     clearTimeout(iframeWaitTimer);
     back.classList.add('loaded');
@@ -903,7 +988,7 @@ syncProjectPreviewState(history.state);
 
   function resetLabFrame() {
     clearTimeout(iframeWaitTimer);
-    iframe.src = 'about:blank';
+    setLabFrame('about:blank');
     back.classList.remove('loaded');
     statusText.textContent = canEmbedLab
       ? 'Opening the full Lab experience…'
@@ -1051,22 +1136,22 @@ syncProjectPreviewState(history.state);
 
   function requestFlipForward() {
     desiredFlipped = true;
-    if (history.state?.picassoLab !== true) {
-      pushPicassoHistoryState({ picassoLab: true });
+    if (!projectView.lab) {
+      recordProjectView({ lab: true }, 'push');
     }
     reconcileFlipState();
   }
 
   function requestFlipBack() {
     desiredFlipped = false;
-    if (history.state?.picassoLab === true) {
-      clearPicassoHistoryState({ picassoLab: false });
+    if (projectView.lab) {
+      recordProjectView({ lab: false }, 'pop');
     }
     reconcileFlipState();
   }
 
-  window.addEventListener('popstate', (event) => {
-    desiredFlipped = event.state?.picassoLab === true;
+  window.addEventListener('picasso-nav', (event) => {
+    desiredFlipped = event.detail.lab;
     reconcileFlipState();
   });
 
@@ -1086,7 +1171,7 @@ syncProjectPreviewState(history.state);
     clearTimeout(iframeWaitTimer);
     if (canEmbedLab) {
       statusText.textContent = 'Opening the full Lab experience…';
-      iframe.src = LAB_URL;
+      setLabFrame(LAB_URL);
       iframeWaitTimer = setTimeout(() => {
         if (
           token !== flipTransitionToken ||
@@ -1096,7 +1181,7 @@ syncProjectPreviewState(history.state);
         statusText.textContent = 'Still loading — you can open it directly.';
       }, 7000);
     } else {
-      iframe.src = 'about:blank';
+      setLabFrame('about:blank');
       statusText.textContent = 'Continue to the full Lab experience in a new tab.';
     }
 

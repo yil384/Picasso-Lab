@@ -734,21 +734,94 @@ const officialBlogState = {
   list: document.getElementById('blog-list')?.innerHTML || ''
 };
 
-/* Every history call is wrapped: this page is embedded (Google Sites), where a
-   sandboxed frame can reject them. A rejected call must never break the UI. */
-function pushBlogHistoryState(patch) {
-  try {
-    history.pushState({ ...(history.state || {}), ...patch }, '', window.location.href);
-  } catch (_) {}
+const officialArticleUrls = new Set([...document.querySelectorAll('#blog-list .blog-card')].map(card => card.href));
+
+/* Back/forward (the back button, Chrome's two-finger swipe). Google Sites writes
+   this page into an about:blank frame with document.write, and Chrome restores any
+   history entry made in that frame as a fresh about:blank: swiping back from an
+   open article or demo left the page blank. So this document never touches history
+   itself. The open view lives in the fragment of a tiny hidden frame on GitHub
+   Pages: opening a view navigates that frame (one entry), back/forward moves only
+   that frame, and it posts back the fragment it lands on. Until it loads, views add
+   no history. */
+const NAV_FRAME_URL = 'https://yil384.github.io/Picasso-Lab/nav-frame.html';
+
+function createNavHistory(onTraverse) {
+  const frame = document.createElement('iframe');
+  frame.id = 'picasso-nav-frame';
+  frame.src = NAV_FRAME_URL;
+  frame.title = 'Navigation history';
+  frame.tabIndex = -1;
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(frame);
+
+  const run = Math.random().toString(36).slice(2, 7);
+  const pending = new Set();   // fragments we navigated to that have not reported back yet
+  let ready = false;
+  let seq = 0;
+  let depth = 0;               // our own entries stacked above one we can go back to
+  let popping = false;
+  let popTimer = null;
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== frame.contentWindow || typeof event.data?.picassoNav !== 'string') return;
+    const hash = event.data.picassoNav;
+    const first = !ready;
+    ready = true;
+    if (pending.delete(hash) || (first && !hash)) return;
+    if (popping) popping = false;
+    else depth = 0;            // the visitor moved through history: we no longer know what is behind
+    const view = Object.fromEntries(new URLSearchParams(hash));
+    delete view.n;
+    onTraverse(view);
+  });
+
+  function go(view, push) {
+    if (!ready) return;
+    const params = new URLSearchParams();
+    Object.entries(view).forEach(([key, value]) => { if (value != null) params.set(key, value); });
+    params.set('n', run + (++seq));
+    const hash = params.toString();
+    pending.add(hash);
+    try {
+      if (push) frame.contentWindow.location.href = `${NAV_FRAME_URL}#${hash}`;
+      else frame.contentWindow.location.replace(`${NAV_FRAME_URL}#${hash}`);
+      if (push) depth += 1;
+    } catch (_) {
+      pending.delete(hash);
+    }
+  }
+
+  return {
+    push: view => go(view, true),
+    replace: view => go(view, false),
+    /* Leave a view the way the back button would when the entry behind it is ours,
+       so a later swipe back leaves the page instead of landing on a duplicate. Called
+       from this document, not the nav frame: the host sandboxes the embed, and a
+       sandboxed frame may only move history for frames inside its own subtree. */
+    pop(view) {
+      if (!ready || depth === 0) return go(view, false);
+      depth -= 1;
+      popping = true;
+      clearTimeout(popTimer);
+      popTimer = setTimeout(() => { popping = false; }, 1500);   // a back() that moved nothing
+      try { history.back(); } catch (_) {}
+    }
+  };
 }
 
-/* Closing never traverses history. Inside a host frame, back() walks the
-   top-level joint history and can land on the host's pre-embed entry, which
-   blanks the whole frame. Clearing the current entry is always safe. */
-function clearBlogHistoryState(patch) {
-  try {
-    history.replaceState({ ...(history.state || {}), ...patch }, '', window.location.href);
-  } catch (_) {}
+const blogNav = createNavHistory(view => syncBlogFromHistory(view, true));
+let blogView = { trueBlogs: false, article: null };   // the view the current history entry holds
+
+function recordBlogView(patch, how) {
+  blogView = { ...blogView, ...patch };
+  const article = blogView.article;
+  blogNav[how]({
+    t: blogView.trueBlogs ? '1' : null,
+    a: article?.kind === 'official' ? article.url : null,
+    f: article?.kind === 'fake' ? String(article.index) : null
+  });
 }
 
 const fakeBlogs = [
@@ -816,7 +889,7 @@ function escapeHTML(value) {
 
 function fakeBlogCard(article, index) {
   return `
-    <a class="blog-card" href="#${escapeHTML(article.slug)}" onclick="openFakeArticle(event, ${index})" aria-label="Read ${escapeHTML(article.title)}">
+    <a class="blog-card" href="#${escapeHTML(article.slug)}" data-fake-index="${index}" aria-label="Read ${escapeHTML(article.title)}">
       <div class="card-top">
         <span class="card-date">${BLOG_CAL_ICON}${escapeHTML(article.date)}</span>
         <span class="card-source-pill">${BLOG_EXT_ICON}Picasso Lab Classified</span>
@@ -830,6 +903,16 @@ function fakeBlogCard(article, index) {
       <div class="card-cta">Read article ${BLOG_ARROW_ICON}</div>
     </a>`;
 }
+
+/* Google Sites injects a capture-phase click handler into the embed that swallows
+   every <a href="#…"> click, so the fake cards never opened there. The window's
+   capture phase runs before it. */
+window.addEventListener('click', (event) => {
+  const card = event.target.closest?.('.blog-card[data-fake-index]');
+  if (!card) return;
+  event.stopPropagation();
+  openFakeArticle(event, Number(card.dataset.fakeIndex));
+}, true);
 
 let previousArticleFocus = null;
 
@@ -872,12 +955,8 @@ function openArticle(event, url, fromHistory = false) {
   view.setAttribute('aria-hidden', 'false');
   document.body.classList.add('article-open');
   view.dataset.articleKey = `official:${url}`;
-  const currentArticle = history.state?.picassoBlogArticle;
-  if (!fromHistory && (
-    currentArticle?.kind !== 'official' ||
-    currentArticle?.url !== url
-  )) {
-    pushBlogHistoryState({ picassoBlogArticle: { kind: 'official', url } });
+  if (!fromHistory && (blogView.article?.kind !== 'official' || blogView.article.url !== url)) {
+    recordBlogView({ article: { kind: 'official', url } }, 'push');
   }
 
   const frame = mountArticleFrame();
@@ -906,12 +985,8 @@ function openFakeArticle(event, index, fromHistory = false) {
   view.setAttribute('aria-hidden', 'false');
   document.body.classList.add('article-open');
   view.dataset.articleKey = `fake:${index}`;
-  const currentArticle = history.state?.picassoBlogArticle;
-  if (!fromHistory && (
-    currentArticle?.kind !== 'fake' ||
-    currentArticle?.index !== index
-  )) {
-    pushBlogHistoryState({ picassoBlogArticle: { kind: 'fake', index } });
+  if (!fromHistory && (blogView.article?.kind !== 'fake' || blogView.article.index !== index)) {
+    recordBlogView({ article: { kind: 'fake', index } }, 'push');
   }
 
   const frame = mountArticleFrame();
@@ -975,8 +1050,8 @@ function closeArticle(fromHistory = false) {
     previousArticleFocus.focus({ preventScroll: true });
   }
 
-  if (!fromHistory && history.state?.picassoBlogArticle) {
-    clearBlogHistoryState({ picassoBlogArticle: null });
+  if (!fromHistory && blogView.article) {
+    recordBlogView({ article: null }, 'pop');
   }
 }
 
@@ -1030,7 +1105,7 @@ function stageBlogTransitionCards(overlay, returning = false) {
 }
 
 const blogMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-let desiredTrueBlogs = history.state?.picassoTrueBlogs === true;
+let desiredTrueBlogs = false;
 let blogTransitionToken = 0;
 let blogTransitionTimers = [];
 
@@ -1091,8 +1166,8 @@ function reconcileBlogMode(animate = true) {
 
 function startBlogSecretTransition(fromHistory = false) {
   desiredTrueBlogs = true;
-  if (!fromHistory && history.state?.picassoTrueBlogs !== true) {
-    pushBlogHistoryState({ picassoTrueBlogs: true, picassoBlogArticle: null });
+  if (!fromHistory && !blogView.trueBlogs) {
+    recordBlogView({ trueBlogs: true, article: null }, 'push');
   }
   reconcileBlogMode(true);
 }
@@ -1103,8 +1178,8 @@ function startBlogReturnTransition() {
 }
 
 function requestBlogReturn() {
-  if (history.state?.picassoTrueBlogs === true) {
-    clearBlogHistoryState({ picassoTrueBlogs: false, picassoBlogArticle: null });
+  if (blogView.trueBlogs) {
+    recordBlogView({ trueBlogs: false, article: null }, 'pop');
   }
   desiredTrueBlogs = false;
   reconcileBlogMode(true);
@@ -1192,23 +1267,20 @@ installPicassoTripleTap(document.querySelector('.blog-hero'), () => {
   else startBlogSecretTransition();
 });
 
-function syncBlogFromHistory(state, animate = true) {
+/* Back/forward landed on another view: show it without recording it again. */
+function syncBlogFromHistory(view, animate = true) {
   const articleView = document.getElementById('article-view');
-  let articleState = state?.picassoBlogArticle;
-
-  /* Old sessions only stored a boolean, which cannot reconstruct an article. */
-  if (articleState === true) {
-    const normalizedState = { ...(state || {}), picassoBlogArticle: null };
-    history.replaceState(normalizedState, '', window.location.href);
-    state = normalizedState;
-    articleState = null;
-  }
+  const fakeIndex = Number(view.f);
+  let articleState = null;
+  if (officialArticleUrls.has(view.a)) articleState = { kind: 'official', url: view.a };
+  else if (view.f != null && fakeBlogs[fakeIndex]) articleState = { kind: 'fake', index: fakeIndex };
+  blogView = { trueBlogs: view.t === '1', article: articleState };
 
   if (!articleState && articleView.classList.contains('active')) {
     closeArticle(true);
   }
 
-  desiredTrueBlogs = state?.picassoTrueBlogs === true;
+  desiredTrueBlogs = blogView.trueBlogs;
   reconcileBlogMode(animate);
 
   if (articleState?.kind === 'official' && articleState.url) {
@@ -1227,12 +1299,6 @@ function syncBlogFromHistory(state, animate = true) {
     }
   }
 }
-
-window.addEventListener('popstate', (event) => {
-  syncBlogFromHistory(event.state, true);
-});
-
-syncBlogFromHistory(history.state, false);
 
 function primeBlogKeyboardCapture() {
   if (!document.body) return;
