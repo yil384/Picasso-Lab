@@ -6,7 +6,7 @@
 <title>Lab Events - Live Danmaku</title>
 <!-- Best Paper splash photo: fetch before the stylesheets and the ~100KB of markup above the splash (remove with the splash block) -->
 <script>
-// Opening splash: one of six, picked per visit (never the same one twice in a row); only its media loads.
+// Opening splash: one of six comic films, picked per visit (never the same one twice in a row); only its media loads.
 (function () {
     var ids = ['bestpaper', 'hezi', 'openai', 'cny', 'safari', 'welcome'], last = null;
     try { last = localStorage.getItem('picasso.eventsSplash'); } catch (e) {}
@@ -14,13 +14,6 @@
     var pick = pool[Math.floor(Math.random() * pool.length)];
     try { localStorage.setItem('picasso.eventsSplash', pick); } catch (e) {}
     window.__evSplash = pick;
-    if (pick !== 'bestpaper') return;                  // a comic film starts streaming as soon as its <video> gets a src
-    var base = 'https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-', l = document.createElement('link');
-    l.rel = 'preload'; l.as = 'image'; l.setAttribute('fetchpriority', 'high');
-    l.href = base + '960.webp';
-    l.setAttribute('imagesrcset', ['480', '720', '960', '1280'].map(function (w) { return base + w + '.webp ' + w + 'w'; }).join(', '));
-    l.setAttribute('imagesizes', '(max-width: 651px) 86vw, 560px');
-    document.head.appendChild(l);
 })();
 </script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -2010,167 +2003,18 @@
         font-size: 11px;
     }
 </style>
+<style>
+    /* professional icons (IconPark two-tone, recoloured; brand marks from Simple Icons) in place of emoji */
+    .ic { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.2em; margin-right: 0.35em; flex: none; overflow: visible; }
+    .event-text .ic, .read-more .ic { width: 1.05em; height: 1.05em; vertical-align: -0.17em; margin-right: 0.3em; }
+    #guandan-type-hint .ic { width: 1.1em; height: 1.1em; margin: 0 0 0 0.2em; vertical-align: -0.2em; }
+</style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="ic-abstract" viewBox="0 0 48 48"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path fill="#cfe0ff" stroke="#2b2640" d="M39 4H11C9.89543 4 9 4.89543 9 6V42C9 43.1046 9.89543 44 11 44H39C40.1046 44 41 43.1046 41 42V6C41 4.89543 40.1046 4 39 4Z"/><path stroke="#fff" d="M17 30L31 30"/><path stroke="#fff" d="M17 36H24"/><rect width="14" height="10" x="17" y="12" fill="#cfe0ff" stroke="#fff"/></g></symbol><symbol id="ic-announce" viewBox="0 0 48 48"><g fill="none" stroke-linejoin="round" stroke-width="4"><rect width="40" height="26" x="4" y="15" fill="#ffb020" stroke="#2b2640" rx="2"/><path fill="#ffb020" stroke="#2b2640" stroke-linecap="round" d="M24 7L16 15H32L24 7Z"/><path stroke="#fff" stroke-linecap="round" d="M12 24H30"/><path stroke="#fff" stroke-linecap="round" d="M12 32H20"/></g></symbol><symbol id="ic-box" viewBox="0 0 48 48"><g fill="none" stroke-linejoin="round" stroke-width="4"><rect width="36" height="30" x="6" y="12" fill="#d9a066" stroke="#2b2640" rx="2"/><path stroke="#fff" stroke-linecap="round" d="M17.9497 24.0083L29.9497 24.0083"/><path stroke="#2b2640" stroke-linecap="round" d="M6 13L13 5H35L42 13"/></g></symbol><symbol id="ic-bridge" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-width="4"><path d="M8 13C8 13 14 23 24 23C34 23 40 13 40 13"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 10V38"/><path stroke-linecap="round" stroke-linejoin="round" d="M40 10V38"/><path stroke-linecap="round" d="M4 30.5C4 30.5 16.1877 29.9026 24 30C31.8196 30.0975 44 31 44 31"/><path stroke-linecap="round" d="M16 21V30"/><path stroke-linecap="round" d="M24 23L24 30"/><path stroke-linecap="round" d="M32 21L32 30"/><path stroke-linecap="round" d="M8 13L4 18"/><path stroke-linecap="round" d="M44 18L40 13"/></g></symbol><symbol id="ic-bulb" viewBox="0 0 48 48"><path fill="#ffd23f" stroke="#2b2640" stroke-linejoin="round" stroke-width="4" d="M24 4C16.3 4 10 10 10 17.6c0 4.6 2.2 8.2 5.4 10.6 1.6 1.2 2.6 3.1 2.6 5.1V36h12v-2.7c0-2 1-3.9 2.6-5.1C35.8 25.8 38 22.2 38 17.6 38 10 31.7 4 24 4Z"/><path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19.5 20.5l4.5 4 4.5-4M24 24.5V35"/><path fill="none" stroke="#2b2640" stroke-linecap="round" stroke-width="4" d="M18 42h12"/></symbol><symbol id="ic-cake" viewBox="0 0 48 48"><g fill="none"><path fill="#ff8fb1" d="M8 40H40V24H8V40Z"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M40 40H8M40 40H4H8M40 40H44M40 40V24H8V40"/><path stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M40 34L36 32L32 34L28 32L24 34L20 32L16 34L12 32L8 34"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M32 24V15"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M24 24V15"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M16 24V15"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M32 10V8"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M24 10V8"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M16 10V8"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M8 24V40"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M40 24V40"/></g></symbol><symbol id="ic-chart" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M6 6V42H42"/><path d="M14 30V34"/><path d="M22 22V34"/><path d="M30 6V34"/><path d="M38 14V34"/></g></symbol><symbol id="ic-crab" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M5 16.9998C5 11.9998 6 1.99979 17.0008 5.99977C17.9464 9.78224 15 16.9998 5 16.9998Z"/><path d="M43 16.9998C43.0006 11.9998 42 1.99979 31 5.99978C30.0544 9.78224 32.9994 16.9998 43 16.9998Z"/><rect width="32" height="20" x="8" y="22" fill="#e4572e" rx="10"/><path d="M27 22V18"/><path d="M21 22V18"/><path d="M43 17C44 20 44 26 40 29"/><path d="M5 17C4 20 5 25 8 29"/><path d="M30 42H44L40 33"/><path d="M18 42H4L8 33"/></g></symbol><symbol id="ic-crown" viewBox="0 0 48 48"><g fill="none" stroke-linejoin="round" stroke-width="4"><path fill="#ffc233" stroke="#2b2640" d="M9 40L4 17L14 22L24 8L34 22L44 17L39 40H9Z"/><path fill="#43CCF8" stroke="#fff" d="M24 33C26.2091 33 28 31.2091 28 29C28 26.7909 26.2091 25 24 25C21.7909 25 20 26.7909 20 29C20 31.2091 21.7909 33 24 33Z"/></g></symbol><symbol id="ic-doc" viewBox="0 0 48 48"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path fill="#cfe0ff" stroke="#2b2640" d="M10 44H38C39.1046 44 40 43.1046 40 42V14H30V4H10C8.89543 4 8 4.89543 8 6V42C8 43.1046 8.89543 44 10 44Z"/><path stroke="#2b2640" d="M30 4L40 14"/><path stroke="#fff" d="M24 22V36"/><path stroke="#fff" d="M18 22H24L30 22"/></g></symbol><symbol id="ic-earth" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" clip-rule="evenodd"/><path d="M4 24H44"/><path d="M24 44C28.4183 44 32 35.0457 32 24C32 12.9543 28.4183 4 24 4C19.5817 4 16 12.9543 16 24C16 35.0457 19.5817 44 24 44Z" clip-rule="evenodd"/><path d="M9.85791 10.1421C13.4772 13.7614 18.4772 16 24 16C29.5229 16 34.5229 13.7614 38.1422 10.1421"/><path d="M38.1422 37.8579C34.5229 34.2386 29.5229 32 24 32C18.4772 32 13.4772 34.2386 9.85791 37.8579"/></g></symbol><symbol id="ic-gift" viewBox="0 0 48 48"><g fill="none" stroke-linejoin="round" stroke-width="4"><path fill="#ff8fb1" stroke="#2b2640" stroke-linecap="round" d="M41 44V20H7V44H41Z"/><path stroke="#fff" stroke-linecap="round" d="M24 44V20"/><path stroke="#2b2640" stroke-linecap="round" d="M41 44H7"/><rect width="40" height="8" x="4" y="12" fill="#ff8fb1" stroke="#2b2640"/><path stroke="#2b2640" stroke-linecap="round" d="M16 4L24 12L32 4"/></g></symbol><symbol id="ic-gradcap" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M4 13L24 8L44 13L24 18L4 13Z"/><path d="M13 16V25.9706C13 25.9706 18 29 24 29C30 29 35 25.9706 35 25.9706V16"/><path d="M7 14V36"/><rect width="6" height="6" x="4" y="34" fill="#5b6ee1"/></g></symbol><symbol id="ic-home" viewBox="0 0 48 48"><g fill="none" stroke-width="4"><path fill="#8fb7ff" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" d="M9 18V42H39V18L24 6L9 18Z"/><path fill="#43CCF8" stroke="#fff" stroke-linejoin="round" d="M19 29V42H29V29H19Z"/><path stroke="#2b2640" stroke-linecap="round" d="M9 42H39"/></g></symbol><symbol id="ic-hotpot" viewBox="0 0 48 48"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path stroke="#2b2640" d="M24 11V4"/><path stroke="#2b2640" d="M32 11L32 7"/><path stroke="#2b2640" d="M16 11L16 7"/><path fill="#f06a3c" stroke="#2b2640" d="M44 17H4C4 22.5856 7.57778 27.5028 13 30.3648C16.1558 32.0305 19.9364 33 24 33C28.0636 33 31.8442 32.0305 35 30.3648C40.4222 27.5028 44 22.5856 44 17Z"/><path stroke="#2b2640" d="M10.4668 39H37.5332"/><path stroke="#2b2640" d="M13 30.3647L9 44"/><path stroke="#2b2640" d="M35 30.3647L39 44"/><path stroke="#fff" d="M20 25H28"/></g></symbol><symbol id="ic-linkedin" viewBox="0 0 24 24"><path fill="#0a66c2" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037c-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85c3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.06 2.06 0 0 1-2.063-2.065a2.064 2.064 0 1 1 2.063 2.065m1.782 13.019H3.555V9h3.564zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0z"/></symbol><symbol id="ic-lion" viewBox="0 0 48 48"><g fill="none"><path stroke="#2b2640" stroke-linecap="round" stroke-width="4" d="M42 26C42 34.8366 33.9411 42 24 42C14.0589 42 6 34.8366 6 26M15 12.1405C17.6476 10.7792 20.7214 10 24 10C27.2786 10 30.3524 10.7792 33 12.1405"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M6 26V8.48814C6 6.757 8.05005 5.84346 9.33729 7.00098L15 12.093"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M42 26V8.48814C42 6.757 39.9499 5.84346 38.6627 7.00098L33 12.093"/><circle cx="30" cy="22" r="2" fill="#2b2640"/><circle cx="18" cy="22" r="2" fill="#2b2640"/><circle cx="24" cy="28" r="2" fill="#2b2640"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M16 30L4 31"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 35L7 41"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M32 30L44 31"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M29 35L41 41"/></g></symbol><symbol id="ic-meat" viewBox="0 0 48 48"><g fill="none"><path fill="#c8773e" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M33.3748 33.8744C37.6175 29.6318 34.7891 15.4897 28.4251 9.12572C25.5966 6.29723 17.465 0.286877 8.62606 9.12565C-0.212837 17.9644 5.7977 26.0963 8.62606 28.9246C14.9901 35.2887 29.1322 38.1171 33.3748 33.8744Z"/><path stroke="#2b2640" stroke-width="4" d="M41 41C40.2533 40.2533 36.0222 36.0222 33.9999 33.9999"/><circle cx="42.193" cy="40.071" r="2.5" fill="#2b2640" transform="rotate(135 42.193 40.071)"/><circle cx="40.072" cy="42.192" r="2.5" fill="#2b2640" transform="rotate(135 40.072 42.192)"/><circle cx="17" cy="18" r="2" fill="#fff"/><circle cx="12" cy="21" r="2" fill="#fff"/><circle cx="17" cy="24" r="2" fill="#fff"/></g></symbol><symbol id="ic-music" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linejoin="round" stroke-width="4"><path stroke-linecap="round" d="M24 6V35"/><path fill="#9b5de5" d="M10 36.04C10 33.2565 12.2565 31 15.04 31H24V36.96C24 39.7435 21.7435 42 18.96 42H15.04C12.2565 42 10 39.7435 10 36.96V36.04Z"/><path stroke-linecap="round" d="M24 14.0664L36.8834 17.1215V9.01341L24 6.00002V14.0664Z" clip-rule="evenodd"/></g></symbol><symbol id="ic-pan" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M34 28L44 24"/><path fill="#ffcc4d" d="M4 28H34L33.5613 31.8024C33.1537 35.3345 30.163 38 26.6074 38H11.3926C7.83703 38 4.84629 35.3345 4.43873 31.8024L4 28Z"/><path d="M19 10V20"/><path d="M11 12V18"/><path d="M27 12V18"/></g></symbol><symbol id="ic-party" viewBox="0 0 48 48"><g fill="none"><path fill="#ffb020" stroke="#2b2640" stroke-linejoin="round" stroke-width="4" d="M6 41.9999L14.6741 17.2639L31 34.0384L6 41.9999Z"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M23 19L28 14C30.6667 11.3333 31 9 29 7"/><path stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M29 25L34 20C37.3333 16.6667 40.6667 16.6667 44 20"/><path fill="#2b2640" d="M20 7C21.1046 7 22 6.10457 22 5C22 3.89543 21.1046 3 20 3C18.8954 3 18 3.89543 18 5C18 6.10457 18.8954 7 20 7Z"/><path fill="#2b2640" d="M42 6C43.1046 6 44 5.10457 44 4C44 2.89543 43.1046 2 42 2C40.8954 2 40 2.89543 40 4C40 5.10457 40.8954 6 42 6Z"/><path fill="#2b2640" d="M42 29C43.1046 29 44 28.1046 44 27C44 25.8954 43.1046 25 42 25C40.8954 25 40 25.8954 40 27C40 28.1046 40.8954 29 42 29Z"/><path fill="#2b2640" d="M39 38C40.1046 38 41 37.1046 41 36C41 34.8954 40.1046 34 39 34C37.8954 34 37 34.8954 37 36C37 37.1046 37.8954 38 39 38Z"/></g></symbol><symbol id="ic-photos" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M39 6H9C7.34315 6 6 7.34315 6 9V39C6 40.6569 7.34315 42 9 42H39C40.6569 42 42 40.6569 42 39V9C42 7.34315 40.6569 6 39 6Z"/><path fill="#7cc4a6" d="M18 23C20.7614 23 23 20.7614 23 18C23 15.2386 20.7614 13 18 13C15.2386 13 13 15.2386 13 18C13 20.7614 15.2386 23 18 23Z"/><path d="M27.7901 26.2194C28.6064 25.1269 30.2528 25.1538 31.0329 26.2725L39.8077 38.8561C40.7322 40.182 39.7835 42.0001 38.1671 42.0001H16L27.7901 26.2194Z"/></g></symbol><symbol id="ic-pin" viewBox="0 0 48 48"><g fill="none" stroke-linejoin="round" stroke-width="4"><path stroke="#2b2640" stroke-linecap="round" d="M9.85786 32.7574C6.23858 33.8432 4 35.3432 4 37C4 40.3137 12.9543 43 24 43C35.0457 43 44 40.3137 44 37C44 35.3432 41.7614 33.8432 38.1421 32.7574"/><path fill="#e63946" stroke="#2b2640" d="M24 35C24 35 37 26.504 37 16.6818C37 9.67784 31.1797 4 24 4C16.8203 4 11 9.67784 11 16.6818C11 26.504 24 35 24 35Z"/><path fill="#43CCF8" stroke="#fff" d="M24 22C26.7614 22 29 19.7614 29 17C29 14.2386 26.7614 12 24 12C21.2386 12 19 14.2386 19 17C19 19.7614 21.2386 22 24 22Z"/></g></symbol><symbol id="ic-pita" viewBox="0 0 48 48"><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path stroke="#2b2640" d="M17.7988 40.1421C17.7988 40.1421 21.9583 44.3015 26.4505 43.1369C30.9427 41.9722 42.2564 30.6585 43.4211 26.1663C44.5857 21.6741 40.4262 17.5147 40.4262 17.5147"/><path stroke="#2b2640" d="M7.89941 30.2427C7.89941 30.2427 3.73996 26.0832 4.90461 21.591C6.06926 17.0988 17.383 5.7851 21.8752 4.62045C26.3674 3.4558 30.5268 7.61526 30.5268 7.61526"/><rect width="40" height="14" x="5.071" y="33.071" fill="#e8b061" stroke="#2b2640" rx="7" transform="rotate(-45 5.071 33.071)"/><path stroke="#fff" d="M15.6779 33.7785L16.2406 32.0902C16.7822 30.4655 17.9928 29.1498 19.567 28.4752L19.9866 28.2953C21.2939 27.7351 22.2992 26.6425 22.749 25.2932V25.2932C23.1987 23.9439 24.204 22.8513 25.5113 22.291L26.4608 21.8841C27.698 21.3539 28.6493 20.32 29.075 19.0431V19.0431C29.544 17.636 30.6481 16.5319 32.0552 16.0629L34.0627 15.3937"/></g></symbol><symbol id="ic-pot2" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linejoin="round" stroke-width="4"><path stroke-linecap="round" d="M10 44H38V20.9474C38 14.9013 31.732 10 24 10C16.268 10 10 14.9013 10 20.9474V44Z" clip-rule="evenodd"/><path fill="#f06a3c" d="M38 22.0437C38 21.8001 38 21.4346 38 20.9474C38 14.9013 31.732 10 24 10C16.268 10 10 14.9013 10 20.9474C10 21.4332 10 21.7975 10 22.0404L38 22.0437Z"/><path stroke-linecap="round" d="M4 22H44"/><path stroke-linecap="round" d="M21 4H27"/></g></symbol><symbol id="ic-redenv" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path fill="#e63946" d="M39 4H9V10L24 14L39 10V4Z"/><path d="M39 17V44H9V17"/><path d="M19 19L24 25L29 19"/><path d="M18 31H30"/><path d="M18 25H30"/><path d="M24 25V37"/></g></symbol><symbol id="ic-rednote" viewBox="0 0 24 24"><path fill="#ff2442" d="M22.405 9.879c.002.016.01.02.07.019h.725a.797.797 0 0 0 .78-.972a.794.794 0 0 0-.884-.618a.795.795 0 0 0-.692.794c0 .101-.002.666.001.777m-11.509 4.808c-.203.001-1.353.004-1.685.003a2.5 2.5 0 0 1-.766-.126a.025.025 0 0 0-.03.014L7.7 16.127a.025.025 0 0 0 .01.032c.111.06.336.124.495.124c.66.01 1.32.002 1.981 0q.017 0 .023-.015l.712-1.545a.025.025 0 0 0-.024-.036zM.477 9.91c-.071 0-.076.002-.076.01l-.01.08c-.027.397-.038.495-.234 3.06c-.012.24-.034.389-.135.607c-.026.057-.033.042.003.112c.046.092.681 1.523.787 1.74c.008.015.011.02.017.02c.008 0 .033-.026.047-.044q.219-.282.371-.606c.306-.635.44-1.325.486-1.706c.014-.11.021-.22.03-.33l.204-2.616l.022-.293c.003-.029 0-.033-.03-.034zm7.203 3.757a1.4 1.4 0 0 1-.135-.607c-.004-.084-.031-.39-.235-3.06a.4.4 0 0 0-.01-.082c-.004-.011-.052-.008-.076-.008h-1.48c-.03.001-.034.005-.03.034l.021.293q.114 1.473.233 2.946c.05.4.186 1.085.487 1.706c.103.215.223.419.37.606c.015.018.037.051.048.049c.02-.003.742-1.642.804-1.765c.036-.07.03-.055.003-.112m3.861-.913h-.872a.126.126 0 0 1-.116-.178l1.178-2.625a.025.025 0 0 0-.023-.035l-1.318-.003a.148.148 0 0 1-.135-.21l.876-1.954a.025.025 0 0 0-.023-.035h-1.56q-.017 0-.024.015l-.926 2.068c-.085.169-.314.634-.399.938a.5.5 0 0 0-.02.191a.46.46 0 0 0 .23.378a1 1 0 0 0 .46.119h.59c.041 0-.688 1.482-.834 1.972a.5.5 0 0 0-.023.172a.47.47 0 0 0 .23.398c.15.092.342.12.475.12l1.66-.001q.017 0 .023-.015l.575-1.28a.025.025 0 0 0-.024-.035m-6.93-4.937H3.1a.032.032 0 0 0-.034.033c0 1.048-.01 2.795-.01 6.829c0 .288-.269.262-.28.262h-.74c-.04.001-.044.004-.04.047c.001.037.465 1.064.555 1.263c.01.02.03.033.051.033c.157.003.767.009.938-.014c.153-.02.3-.06.438-.132c.3-.156.49-.419.595-.765c.052-.172.075-.353.075-.533q.003-3.495-.007-6.991a.03.03 0 0 0-.032-.032zm11.784 6.896q-.002-.02-.024-.022h-1.465c-.048-.001-.049-.002-.05-.049v-4.66c0-.072-.005-.07.07-.07h.863c.08 0 .075.004.075-.074V8.393c0-.082.006-.076-.08-.076h-3.5c-.064 0-.075-.006-.075.073v1.445c0 .083-.006.077.08.077h.854c.075 0 .07-.004.07.07v4.624c0 .095.008.084-.085.084c-.37 0-1.11-.002-1.304 0c-.048.001-.06.03-.06.03l-.697 1.519s-.014.025-.008.036s.013.008.058.008q2.622.003 5.243.002c.03-.001.034-.006.035-.033zm4.177-3.43q0 .021-.02.024c-.346.006-.692.004-1.037.004q-.021-.003-.022-.024q-.006-.651-.01-1.303c0-.072-.006-.071.07-.07l.733-.003c.041 0 .081.002.12.015c.093.025.16.107.165.204c.006.431.002 1.153.001 1.153m2.67.244a1.95 1.95 0 0 0-.883-.222h-.18c-.04-.001-.04-.003-.042-.04V10.21q.001-.198-.025-.394a1.8 1.8 0 0 0-.153-.53a1.53 1.53 0 0 0-.677-.71a2.2 2.2 0 0 0-1-.258c-.153-.003-.567 0-.72 0c-.07 0-.068.004-.068-.065V7.76c0-.031-.01-.041-.046-.039H17.93s-.016 0-.023.007q-.008.008-.008.023v.546c-.008.036-.057.015-.082.022h-.95c-.022.002-.028.008-.03.032v1.481c0 .09-.004.082.082.082h.913c.082 0 .072.128.072.128v1.148s.003.117-.06.117h-1.482c-.068 0-.06.082-.06.082v1.445s-.01.068.064.068h1.457c.082 0 .076-.006.076.079v3.225c0 .088-.007.081.082.081h1.43c.09 0 .082.007.082-.08v-3.27c0-.029.006-.035.033-.035l2.323-.003a.7.7 0 0 1 .28.061a.46.46 0 0 1 .274.407c.008.395.003.79.003 1.185c0 .259-.107.367-.33.367h-1.218c-.023.002-.029.008-.028.033q.276.655.57 1.303a.05.05 0 0 0 .04.026c.17.005.34.002.51.003c.15-.002.517.004.666-.01a2 2 0 0 0 .408-.075c.59-.18.975-.698.976-1.313v-1.981q.001-.191-.034-.38c0 .078-.029-.641-.724-.998"/></symbol><symbol id="ic-rocket" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linejoin="round" stroke-width="4"><path fill="#ff7a59" d="M18.705 7.89449L24 4L29.295 7.89449C32.8819 10.5327 35 14.7198 35 19.1725V37H13V19.1725C13 14.7198 15.1181 10.5327 18.705 7.89449Z"/><path stroke-linecap="round" d="M13 17L7 23V31L13 28V17Z" clip-rule="evenodd"/><path stroke-linecap="round" d="M35 17L41 23V31L35 28V17Z" clip-rule="evenodd"/><path stroke-linecap="round" d="M18 39V42"/><path stroke-linecap="round" d="M24 39V44"/><path stroke-linecap="round" d="M30 39V42"/></g></symbol><symbol id="ic-rooster" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M31 31C30 26.5 31.4 17.6 41 14"/><path d="M11 4L15 10"/><path d="M38 31C38 33.8889 34.24 38.5556 28 40L26 44"/><path d="M21 10.2738C15.1845 9.2518 3.86133 10.5366 5.09285 23.8519C5.09286 28.2319 7.37935 37.1968 16 40L18 44"/><path d="M19 18C19.6957 21.8333 22.5 31 31 31H38C37.3043 28.6667 37.1565 23.4 43 21"/></g></symbol><symbol id="ic-sparkle" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M20.1005 8.1005L24.3431 12.3431M30 4V10V4ZM39.8995 8.1005L35.6569 12.3431L39.8995 8.1005ZM44 18H38H44ZM39.8995 27.8995L35.6569 23.6569L39.8995 27.8995ZM30 32V26V32ZM20.1005 27.8995L24.3431 23.6569L20.1005 27.8995ZM16 18H22H16Z"/><path d="M29.5856 18.4143L5.54395 42.4559"/></g></symbol><symbol id="ic-sun" viewBox="0 0 48 48"><g fill="none"><path fill="#ffc233" stroke="#2b2640" stroke-linejoin="round" stroke-width="4" d="M24 37C31.1797 37 37 31.1797 37 24C37 16.8203 31.1797 11 24 11C16.8203 11 11 16.8203 11 24C11 31.1797 16.8203 37 24 37Z"/><path fill="#2b2640" d="M24 6C25.3807 6 26.5 4.88071 26.5 3.5C26.5 2.11929 25.3807 1 24 1C22.6193 1 21.5 2.11929 21.5 3.5C21.5 4.88071 22.6193 6 24 6Z"/><path fill="#2b2640" d="M38.5 12C39.8807 12 41 10.8807 41 9.5C41 8.11929 39.8807 7 38.5 7C37.1193 7 36 8.11929 36 9.5C36 10.8807 37.1193 12 38.5 12Z"/><path fill="#2b2640" d="M44.5 26.5C45.8807 26.5 47 25.3807 47 24C47 22.6193 45.8807 21.5 44.5 21.5C43.1193 21.5 42 22.6193 42 24C42 25.3807 43.1193 26.5 44.5 26.5Z"/><path fill="#2b2640" d="M38.5 41C39.8807 41 41 39.8807 41 38.5C41 37.1193 39.8807 36 38.5 36C37.1193 36 36 37.1193 36 38.5C36 39.8807 37.1193 41 38.5 41Z"/><path fill="#2b2640" d="M24 47C25.3807 47 26.5 45.8807 26.5 44.5C26.5 43.1193 25.3807 42 24 42C22.6193 42 21.5 43.1193 21.5 44.5C21.5 45.8807 22.6193 47 24 47Z"/><path fill="#2b2640" d="M9.5 41C10.8807 41 12 39.8807 12 38.5C12 37.1193 10.8807 36 9.5 36C8.11929 36 7 37.1193 7 38.5C7 39.8807 8.11929 41 9.5 41Z"/><path fill="#2b2640" d="M3.5 26.5C4.88071 26.5 6 25.3807 6 24C6 22.6193 4.88071 21.5 3.5 21.5C2.11929 21.5 1 22.6193 1 24C1 25.3807 2.11929 26.5 3.5 26.5Z"/><path fill="#2b2640" d="M9.5 12C10.8807 12 12 10.8807 12 9.5C12 8.11929 10.8807 7 9.5 7C8.11929 7 7 8.11929 7 9.5C7 10.8807 8.11929 12 9.5 12Z"/></g></symbol><symbol id="ic-trophy" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linejoin="round" stroke-width="4"><path fill="#ffc233" d="M24 30C30.6274 30 36 24.4694 36 17.6471V4H12V17.6471C12 24.4694 17.3726 30 24 30Z"/><path stroke-linecap="round" d="M12 21V11H4C4 17.6667 8 21 12 21Z" clip-rule="evenodd"/><path stroke-linecap="round" d="M36 21V11H44C44 17.6667 40 21 36 21Z" clip-rule="evenodd"/><path stroke-linecap="round" d="M24 32V36"/><path fill="#ffc233" d="M15 42L18.69 36H29.0425L33 42H15Z"/></g></symbol><symbol id="ic-xmas" viewBox="0 0 48 48"><g fill="none" stroke="#2b2640" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path fill="#3fa34d" d="M20 14L16 12L24 4L32 12L28 14L36 22L30 24L39 34H9L17 24L12 22L20 14Z"/><path d="M31 44H17"/><path d="M21 34L20 44"/><path d="M27 34L28 44"/></g></symbol><symbol id="ic-youtube" viewBox="0 0 24 24"><path fill="#ff0000" d="M23.498 6.186a3.02 3.02 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.02 3.02 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.02 3.02 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.02 3.02 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814M9.545 15.568V8.432L15.818 12z"/></symbol><symbol id="ic-fire" viewBox="0 0 48 48"><path fill="#ff7a1a" stroke="#2b2640" stroke-linejoin="round" stroke-width="4" d="M24 44C32.2347 44 38.9998 37.4742 38.9998 29.0981C38.9998 27.0418 38.8953 24.8375 37.7555 21.4116C36.6157 17.9858 36.3861 17.5436 35.1809 15.4279C34.666 19.7454 31.911 21.5448 31.2111 22.0826C31.2111 21.5231 29.5445 15.3359 27.0176 11.6339C24.537 8 21.1634 5.61592 19.1853 4C19.1853 7.06977 18.3219 11.6339 17.0854 13.9594C15.8489 16.2849 15.6167 16.3696 14.0722 18.1002C12.5278 19.8308 11.8189 20.3653 10.5274 22.4651C9.23596 24.565 9 27.3618 9 29.4181C9 37.7942 15.7653 44 24 44Z"/></symbol></defs></svg>
 
-<!-- ===== Best Paper celebration splash (plays on page open; remove this whole block + its <script> + the image preload in <head> when the news gets old) ===== -->
-<div id="bp-splash" aria-hidden="true">
-    <div class="bp-aurora"></div>
-    <div class="bp-vignette"></div>
-    <canvas id="bp-cv"></canvas>
-    <div class="bp-card">
-        <figure class="bp-photo">
-            <img data-src="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-960.webp" data-srcset="https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-480.webp 480w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-720.webp 720w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-960.webp 960w, https://yil384.github.io/Picasso-Lab/events/static/zhongkai_isca26_bestpaper/1-1280.webp 1280w" sizes="(max-width: 651px) 86vw, 560px" width="1400" height="1050" fetchpriority="high" onerror="this.style.visibility='hidden'" alt="Zhongkai Yu — ISCA 2026 Best Paper Award">
-            <div class="bp-scrim"></div>
-            <figcaption class="bp-cap">
-                <div class="bp-kicker">ISCA 2026 · BEST PAPER AWARD</div>
-                <div class="bp-name">Zhongkai Yu</div>
-                <div class="bp-sub">“Patterns behind Chaos” &middot; Picasso Lab</div>
-            </figcaption>
-        </figure>
-        <div class="bp-tap">tap to continue</div>
-    </div>
-    <i class="bp-spark" style="top:17%;left:23%;animation-delay:0s"></i>
-    <i class="bp-spark" style="top:25%;left:75%;animation-delay:.4s"></i>
-    <i class="bp-spark" style="top:63%;left:15%;animation-delay:.8s"></i>
-    <i class="bp-spark" style="top:71%;left:83%;animation-delay:.2s"></i>
-    <i class="bp-spark" style="top:13%;left:55%;animation-delay:.6s"></i>
-    <i class="bp-spark" style="top:82%;left:45%;animation-delay:1s"></i>
-</div>
-<style>
-    #bp-splash { position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center;
-        overflow: hidden; cursor: pointer; background: #05080f; animation: bpIn 0.5s ease both; }
-    #bp-splash.bp-out { animation: bpOut 0.45s ease forwards; }
-    @keyframes bpIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes bpOut { to { opacity: 0; visibility: hidden; } }
-    /* flowing aurora backdrop */
-    #bp-splash .bp-aurora { position: absolute; inset: -35%; z-index: 0; filter: blur(90px) saturate(150%); opacity: 0.6;
-        background:
-            radial-gradient(38% 48% at 28% 30%, #ffce5e, transparent 62%),
-            radial-gradient(42% 52% at 72% 32%, #36e0ff, transparent 62%),
-            radial-gradient(50% 50% at 48% 76%, #5a8bff, transparent 62%),
-            radial-gradient(38% 40% at 82% 70%, #ff6b9d, transparent 62%);
-        animation: bpAurora 13s ease-in-out infinite alternate; }
-    @keyframes bpAurora { 0% { transform: translate(-4%, -3%) rotate(0deg) scale(1.05); } 100% { transform: translate(4%, 3%) rotate(10deg) scale(1.18); } }
-    #bp-splash .bp-vignette { position: absolute; inset: 0; z-index: 1; pointer-events: none;
-        background: radial-gradient(120% 95% at 50% 42%, transparent 28%, rgba(3,6,12,0.55) 78%, rgba(3,6,12,0.82) 100%); }
-    #bp-cv { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
-    #bp-splash .bp-card { position: relative; z-index: 2; text-align: center; padding: 0 22px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        transform: translateY(16px) scale(0.92); opacity: 0; animation: bpPop 0.9s cubic-bezier(0.16,1,0.3,1) 0.16s forwards; }
-    @keyframes bpPop { to { transform: translateY(0) scale(1); opacity: 1; } }
-    /* inline 230-byte blurred preview paints instantly while the real photo streams in */
-    #bp-splash .bp-photo { position: relative; margin: 0; width: min(560px, 86vw); border-radius: 18px; overflow: hidden;
-        background: #1b2230 url("data:image/webp;base64,UklGRt4AAABXRUJQVlA4INIAAABQBgCdASogABgAPu1mpU4ppaMiMBgMATAdiWwAnTOTQphBpsv9Y73feY/+IPLT7qeqsvAuI5IDOYnYAAD+vj2ZvqESsMGm00qdU7I0kYY861jCbg98vCdenwSnP2ujwgtPuTtxt7wi8cirNbmndLiqHqd6/nJZDwyFaTNkFgE/ZX74aY6gxAhH/NL7QnVIHHq22VQMxWaK/jKcB4yhF7UT7EYnJrcLAyFImBbPqKGc293eH/7CzxI9oev4he6eK4Xxhv6xHxm5RczN0SnQLfB1AAA=") center / cover no-repeat;
-        border: 2px solid rgba(255,216,120,0.75); animation: bpFloat 5s ease-in-out infinite, bpGlow 3.2s ease-in-out infinite;
-        box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.6), 0 0 50px rgba(255,206,94,0.28); }
-    #bp-splash .bp-photo img { display: block; width: 100%; height: auto; }
-    @keyframes bpFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-    @keyframes bpGlow { 0%,100% { box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(255,206,94,0.22); }
-        50% { box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 30px 80px rgba(0,0,0,0.6), 0 0 72px rgba(255,206,94,0.5); } }
-    #bp-splash .bp-photo::after { content: ''; position: absolute; top: 0; left: -70%; width: 55%; height: 100%; z-index: 3;
-        transform: skewX(-20deg); pointer-events: none;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent); animation: bpSweep 3.6s ease-in-out 0.8s infinite; }
-    @keyframes bpSweep { 0% { left: -70%; } 55%,100% { left: 140%; } }
-    #bp-splash .bp-scrim { position: absolute; inset: 0; z-index: 1;
-        background: linear-gradient(180deg, rgba(4,8,16,0.05) 30%, rgba(4,8,16,0.55) 66%, rgba(4,8,16,0.92) 100%); }
-    #bp-splash .bp-cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 16px 18px 18px; text-align: center; color: #fff; }
-    #bp-splash .bp-kicker { font: 800 clamp(11px,3vw,15px)/1.2 ui-monospace, Menlo, monospace; letter-spacing: 0.22em;
-        background: linear-gradient(100deg, #b9831f 0%, #ffe9a8 22%, #ffffff 38%, #ffd76a 52%, #ffe9a8 70%, #b9831f 100%);
-        background-size: 220% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
-        animation: bpShine 3.4s linear infinite; }
-    @keyframes bpShine { from { background-position: 0% center; } to { background-position: -220% center; } }
-    #bp-splash .bp-name { margin-top: 4px; font-weight: 900; font-size: clamp(28px, 7.5vw, 50px); letter-spacing: -0.01em;
-        text-shadow: 0 2px 20px rgba(0,0,0,0.6), 0 0 26px rgba(54,224,255,0.35); }
-    #bp-splash .bp-sub { margin-top: 6px; font-size: clamp(12px,3.2vw,16px); color: rgba(230,240,255,0.85); font-style: italic; text-shadow: 0 1px 8px rgba(0,0,0,0.7); }
-    #bp-splash .bp-tap { margin-top: 22px; font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.2em; text-transform: uppercase;
-        color: rgba(222,236,255,0.5); animation: bpBlink 1.6s ease-in-out infinite; }
-    @keyframes bpBlink { 0%,100% { opacity: 0.3; } 50% { opacity: 0.78; } }
-    #bp-splash .bp-spark { position: absolute; z-index: 3; width: 14px; height: 14px; pointer-events: none; opacity: 0;
-        background: radial-gradient(circle, #fff 0%, #ffe9a8 40%, transparent 70%); border-radius: 50%;
-        box-shadow: 0 0 10px rgba(255,231,168,0.9); animation: bpTwinkle 2.2s ease-in-out infinite; }
-    @keyframes bpTwinkle { 0%,100% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1); } }
-    @media (max-height: 500px) and (orientation: landscape) {
-        #bp-splash .bp-card {
-            padding:
-                0 max(12px, env(safe-area-inset-right))
-                0 max(12px, env(safe-area-inset-left));
-        }
-        #bp-splash .bp-photo {
-            width: min(60vw, calc((100dvh - 48px) * 4 / 3));
-            max-height: calc(100dvh - 48px);
-        }
-        #bp-splash .bp-cap { padding: 8px 12px 10px; }
-        #bp-splash .bp-name { font-size: clamp(22px, 8dvh, 34px); }
-        #bp-splash .bp-sub { margin-top: 3px; }
-        #bp-splash .bp-tap { margin-top: 8px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-        #bp-splash * { animation: none !important; }
-        #bp-splash .bp-card { opacity: 1; transform: none; } /* bpPop never runs, so show the end state */
-    }
-</style>
-<script>
-(function () {
-    var splash = document.getElementById('bp-splash');
-    if (!splash) return;
-    if (window.__evSplash && window.__evSplash !== 'bestpaper') { splash.remove(); return; }   // a comic splash plays instead
-    var bpImg = splash.querySelector('.bp-photo img');
-    if (bpImg && bpImg.dataset.src) { bpImg.srcset = bpImg.dataset.srcset; bpImg.src = bpImg.dataset.src; }
-    var myCanvas = document.getElementById('bp-cv');
-    var running = true;
 
-    function dismiss() { if (!running) return; running = false; splash.classList.add('bp-out');
-        window.__bpSplashGone = true;
-        document.dispatchEvent(new Event('bp-splash-gone')); // event-card carousels hold autoplay until now
-        setTimeout(function () { splash.remove(); }, 470); }
-    splash.addEventListener('click', dismiss);
-    // Auto-close at 2.6s; a photo that arrives late still stays >= 1.8s (arm() fires by 1.5s regardless)
-    var t0 = Date.now(), armed = false, photo = bpImg;
-    function arm() { if (armed) return; armed = true; setTimeout(dismiss, Math.max(1800, 2600 - (Date.now() - t0))); }
-    if (!photo || photo.complete) arm();
-    else { photo.addEventListener('load', arm); photo.addEventListener('error', arm); setTimeout(arm, 1500); }
-
-    function start() {
-        if (!window.confetti || !running) return;
-        var myConfetti = confetti.create(myCanvas, { resize: true, useWorker: false });
-        var GOLD = ['#ffd76a', '#ffe9a8', '#f0a93b', '#fff3c8'];
-        var MIX = ['#ffd76a', '#ffe9a8', '#36e0ff', '#5a8bff', '#ffffff', '#ff6b9d'];
-        // realistic multi-burst from lower-centre (canvas-confetti's recommended recipe)
-        function fire(ratio, opts) { myConfetti(Object.assign({ origin: { y: 0.6 }, colors: MIX }, opts, { particleCount: Math.floor(240 * ratio) })); }
-        fire(0.25, { spread: 26, startVelocity: 55 });
-        fire(0.2,  { spread: 60 });
-        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.95 });
-        fire(0.1,  { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.25 });
-        fire(0.1,  { spread: 120, startVelocity: 45 });
-        // a burst of gold stars
-        myConfetti({ particleCount: 50, spread: 90, startVelocity: 42, scalar: 1.3, ticks: 220, shapes: ['star'], colors: GOLD, origin: { y: 0.55 } });
-        // gold side cannons for ~1.5s
-        var endC = Date.now() + 1500;
-        (function cannons() {
-            if (!running) return;
-            myConfetti({ particleCount: 4, angle: 60,  spread: 65, startVelocity: 50, origin: { x: 0, y: 0.78 }, colors: GOLD });
-            myConfetti({ particleCount: 4, angle: 120, spread: 65, startVelocity: 50, origin: { x: 1, y: 0.78 }, colors: GOLD });
-            if (Date.now() < endC) requestAnimationFrame(cannons);
-        })();
-        // slow gold rain drifting down for ~2.2s (the "flowing" layer)
-        var endR = Date.now() + 2200;
-        (function rain() {
-            if (!running) return;
-            myConfetti({ particleCount: 2, startVelocity: 0, ticks: 260, gravity: 0.55, scalar: 1.15,
-                drift: (Math.random() - 0.5) * 1.4, origin: { x: Math.random(), y: -0.1 }, colors: GOLD });
-            if (Date.now() < endR) setTimeout(rain, 140);
-        })();
-    }
-
-    if (window.confetti) start();
-    else { var sc = document.createElement('script');
-        sc.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js';
-        sc.onload = start; document.head.appendChild(sc); }
-})();
-</script>
-
-<!-- ===== Comic splash: a 2.25 s Q-version comic film of one lab moment (hezi / openai / cny / safari / welcome) ===== -->
+<!-- ===== Comic splash: a 2.25 s Q-version comic film of one lab moment (bestpaper / hezi / openai / cny / safari / welcome) ===== -->
 <div id="ev-splash" aria-hidden="true" hidden>
     <div class="evs-card"><video class="evs-film" muted playsinline preload="auto" disablepictureinpicture></video><img class="evs-still" alt="" hidden></div>
     <div class="evs-tap">tap to continue</div>
@@ -2192,7 +2036,7 @@
 (function () {
     var el = document.getElementById('ev-splash'), pick = window.__evSplash;
     if (!el) return;
-    var BG = { hezi: '#1f3b8f', openai: '#0d6a5a', cny: '#9a1b1b', safari: '#2d6a34', welcome: '#b0420e' };
+    var BG = { bestpaper: '#1a2354', hezi: '#1f3b8f', openai: '#0d6a5a', cny: '#9a1b1b', safari: '#2d6a34', welcome: '#b0420e' };
     if (!BG[pick]) { el.remove(); return; }
     var base = 'https://yil384.github.io/Picasso-Lab/events/static/splash/' + pick;
     var film = el.querySelector('video'), still = el.querySelector('img'), done = false, started = false;
@@ -2231,7 +2075,7 @@
     <source src="https://yil384.github.io/Picasso-Lab/events/static/%E5%A4%9A%E6%A2%A6%E7%97%87.mp3" type="audio/mpeg">
 </audio>
 <div id="song-title-toast" class="song-title-toast"></div>
-<div id="guandan-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
+<div id="guandan-type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-sparkle"/></svg></div>
 <div id="music-btn" class="music-btn" title="Click: Play/Pause · Double-click: Flip record · Right-click 多梦症: Concert mode">
         <svg class="vinyl-icon" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -2377,24 +2221,24 @@
 <div class="news-banner">
     <div class="ticker-track">
         <div class="ticker-content">
-            <div class="ticker-item"><span class="ticker-tag">🏆 Best Paper:</span> Zhongkai Yu wins the ISCA 2026 Best Paper Award — congratulations!</div>
-            <div class="ticker-item"><span class="ticker-tag">🚀 Next Stop:</span> Prof. Ding joins OpenAI’s LLM Inference team — congrats!</div>
-            <div class="ticker-item"><span class="ticker-tag">🥙 Farewell:</span> Farewell dinner for Alon at PITA 22 — best wishes in the Bay Area!</div>
-            <div class="ticker-item"><span class="ticker-tag">📊 NeurIPS:</span> NeurIPS 2026 submission just ended!</div>
-            <div class="ticker-item"><span class="ticker-tag">🎂 Birthday:</span> Happy Birthday Zhongkai — ISCA Best Paper Candidate!</div>
-            <div class="ticker-item"><span class="ticker-tag">🍖 Welcome:</span> Chang Chen joins the lab — dinner at Fire Spot!</div>
-            <div class="ticker-item"><span class="ticker-tag">🎵 Media:</span> Xiang Fang's song on Hunan TV.</div>
-            <div class="ticker-item"><span class="ticker-tag">🎉 Congrats:</span> Zheng Wang defended his PhD Thesis!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-trophy"/></svg>Best Paper:</span> Zhongkai Yu wins the ISCA 2026 Best Paper Award — congratulations!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-rocket"/></svg>Next Stop:</span> Prof. Ding joins OpenAI’s LLM Inference team — congrats!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pita"/></svg>Farewell:</span> Farewell dinner for Alon at PITA 22 — best wishes in the Bay Area!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-chart"/></svg>NeurIPS:</span> NeurIPS 2026 submission just ended!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-cake"/></svg>Birthday:</span> Happy Birthday Zhongkai — ISCA Best Paper Candidate!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-meat"/></svg>Welcome:</span> Chang Chen joins the lab — dinner at Fire Spot!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-music"/></svg>Media:</span> Xiang Fang's song on Hunan TV.</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-party"/></svg>Congrats:</span> Zheng Wang defended his PhD Thesis!</div>
         </div>
         <div class="ticker-content" aria-hidden="true">
-            <div class="ticker-item"><span class="ticker-tag">🏆 Best Paper:</span> Zhongkai Yu wins the ISCA 2026 Best Paper Award — congratulations!</div>
-            <div class="ticker-item"><span class="ticker-tag">🚀 Next Stop:</span> Prof. Ding joins OpenAI’s LLM Inference team — congrats!</div>
-            <div class="ticker-item"><span class="ticker-tag">🥙 Farewell:</span> Farewell dinner for Alon at PITA 22 — best wishes in the Bay Area!</div>
-            <div class="ticker-item"><span class="ticker-tag">📊 NeurIPS:</span> NeurIPS 2026 submission just ended!</div>
-            <div class="ticker-item"><span class="ticker-tag">🎂 Birthday:</span> Happy Birthday Zhongkai — ISCA Best Paper Candidate!</div>
-            <div class="ticker-item"><span class="ticker-tag">🍖 Welcome:</span> Chang Chen joins the lab — dinner at Fire Spot!</div>
-            <div class="ticker-item"><span class="ticker-tag">🎵 Media:</span> Xiang Fang's song on Hunan TV.</div>
-            <div class="ticker-item"><span class="ticker-tag">🎉 Congrats:</span> Zheng Wang defended his PhD Thesis!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-trophy"/></svg>Best Paper:</span> Zhongkai Yu wins the ISCA 2026 Best Paper Award — congratulations!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-rocket"/></svg>Next Stop:</span> Prof. Ding joins OpenAI’s LLM Inference team — congrats!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pita"/></svg>Farewell:</span> Farewell dinner for Alon at PITA 22 — best wishes in the Bay Area!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-chart"/></svg>NeurIPS:</span> NeurIPS 2026 submission just ended!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-cake"/></svg>Birthday:</span> Happy Birthday Zhongkai — ISCA Best Paper Candidate!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-meat"/></svg>Welcome:</span> Chang Chen joins the lab — dinner at Fire Spot!</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-music"/></svg>Media:</span> Xiang Fang's song on Hunan TV.</div>
+            <div class="ticker-item"><span class="ticker-tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-party"/></svg>Congrats:</span> Zheng Wang defended his PhD Thesis!</div>
         </div>
     </div>
 </div>
@@ -2410,11 +2254,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">September 29, 2026</div>
-        <h3 class="event-title">💡 Xiang Fang Wins a Unitary Foundation Grant for LightStim!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-bulb"/></svg>Xiang Fang Wins a Unitary Foundation Grant for LightStim!</h3>
         <p class="event-text">
             <strong>Xiang Fang</strong> received a <strong>Unitary Foundation</strong> grant to keep building <strong>LightStim</strong>, his open-source framework for constructing and benchmarking quantum error correction protocols, with detectors and logical observables built automatically.
         </p>
-        <a href="https://lnkd.in/p/dnV_V-gV" class="read-more">Read the announcement on LinkedIn &rarr;</a>
+        <a href="https://lnkd.in/p/dnV_V-gV" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-linkedin"/></svg>Read the announcement on LinkedIn &rarr;</a>
     </div>
 </div>
 
@@ -2437,7 +2281,7 @@
         <p class="event-text">
             Welcome <strong>Xinwei</strong>, who has officially begun a PhD journey in San Diego, and all our new <strong>interns</strong> and <strong>master’s students</strong>! <strong>Prof. Ding</strong> hosted a big lab lunch at <strong>Fire Spot</strong>, and <strong>Zaifeng</strong> treated his interns too.
         </p>
-        <a href="https://maps.app.goo.gl/a55UvcCsvAAiXWpY9" class="read-more" target="_blank" rel="noopener">📍 Fire Spot on Google Maps &rarr;</a>
+        <a href="https://maps.app.goo.gl/a55UvcCsvAAiXWpY9" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>Fire Spot on Google Maps &rarr;</a>
     </div>
 </div>
 
@@ -2452,12 +2296,12 @@
     </div>
     <div class="event-content">
         <div class="event-date">July 25, 2026</div>
-        <h3 class="event-title">🎉 Picasso Party at Ping’s Bistro</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-party"/></svg>Picasso Party at Ping’s Bistro</h3>
         <p class="event-text">
             <strong>Guyue</strong>, <strong>Boyuan</strong>, <strong><a href="https://www.linkedin.com/in/zhengyang-wang-040575295/" target="_blank" rel="noopener">Zhengyang</a></strong>, <strong>Zheng</strong>, <strong>Zhongkai</strong>, <strong>Zaifeng</strong>, and <strong>Yichen</strong> shared a lively Picasso Lab dinner at <strong>留湘 Ping’s Bistro</strong>.
             <span class="event-quote">“Work when work feels right; live when life feels right. When either doesn’t, turn to the other—that is the true meaning of work–life balance.” <cite>— Guyue</cite></span>
         </p>
-        <a href="https://www.google.com/maps/search/?api=1&amp;query=Ping%27s+Bistro%2C+10700+S+De+Anza+Blvd%2C+Cupertino%2C+CA+95014" class="read-more" target="_blank" rel="noopener">📍 留湘 Ping’s Bistro on Google Maps &rarr;</a>
+        <a href="https://www.google.com/maps/search/?api=1&amp;query=Ping%27s+Bistro%2C+10700+S+De+Anza+Blvd%2C+Cupertino%2C+CA+95014" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>留湘 Ping’s Bistro on Google Maps &rarr;</a>
     </div>
 </div>
 
@@ -2473,13 +2317,13 @@
     </div>
     <div class="event-content">
         <div class="event-date">July 15, 2026</div>
-        <h3 class="event-title">🥙 Send-Off Dinner &amp; AMMA Celebration</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pita"/></svg>Send-Off Dinner &amp; AMMA Celebration</h3>
         <p class="event-text">
             Before <strong>Alon</strong> and his girlfriend set off on their travels, <strong>Alon</strong>, <strong>Zhongkai</strong>, <strong>Zaifeng</strong>, <strong>Ohm</strong>, and <strong>Yichen</strong> met at <strong>Oren's Hummus</strong> for Mediterranean food. Zhongkai treated everyone to milk tea to celebrate his new paper, <strong><em>AMMA</em></strong>, being accepted to <strong>MICRO 2026</strong> — a warm send-off and a toast to great news!
         </p>
         <div class="event-links">
-            <a href="https://www.google.com/maps/search/?api=1&amp;query=19419+Stevens+Creek+Blvd%2C+Cupertino%2C+CA+95014" class="read-more" target="_blank" rel="noopener">📍 Oren's Hummus on Google Maps &rarr;</a>
-            <a href="https://arxiv.org/abs/2604.26103" class="read-more" target="_blank" rel="noopener">📄 Read AMMA on arXiv &rarr;</a>
+            <a href="https://www.google.com/maps/search/?api=1&amp;query=19419+Stevens+Creek+Blvd%2C+Cupertino%2C+CA+95014" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>Oren's Hummus on Google Maps &rarr;</a>
+            <a href="https://arxiv.org/abs/2604.26103" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-doc"/></svg>Read AMMA on arXiv &rarr;</a>
         </div>
     </div>
 </div>
@@ -2497,11 +2341,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 30, 2026</div>
-        <h3 class="event-title">🏆 Zhongkai Yu Wins the ISCA 2026 Best Paper Award!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-trophy"/></svg>Zhongkai Yu Wins the ISCA 2026 Best Paper Award!</h3>
         <p class="event-text">
-            🎉 WE DID IT! <strong>Leader Yu</strong> just won the <strong>Best Paper Award at ISCA 2026</strong> — the crown jewel of computer architecture! His paper <strong><em>"Patterns behind Chaos"</em></strong> tames large-scale MoE LLM inference into blazing-fast data movement. Congratulations Zhongkai! 🚀🔥
+            <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-party"/></svg>WE DID IT! <strong>Leader Yu</strong> just won the <strong>Best Paper Award at ISCA 2026</strong> — the crown jewel of computer architecture! His paper <strong><em>"Patterns behind Chaos"</em></strong> tames large-scale MoE LLM inference into blazing-fast data movement. Congratulations Zhongkai! <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-rocket"/></svg><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-fire"/></svg>
         </p>
-        <a href="https://arxiv.org/abs/2510.05497" class="read-more" target="_blank" rel="noopener">📄 Read the paper on arXiv &rarr;</a>
+        <a href="https://arxiv.org/abs/2510.05497" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-doc"/></svg>Read the paper on arXiv &rarr;</a>
     </div>
 </div>
 
@@ -2526,11 +2370,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 27, 2026</div>
-        <h3 class="event-title">🌉 A Saturday Adventure in San Francisco</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-bridge"/></svg>A Saturday Adventure in San Francisco</h3>
         <p class="event-text">
             <strong>Zaifeng</strong>, <strong>Haotian</strong>, <strong><a href="https://albedowang.github.io/" target="_blank" rel="noopener">Kaijian</a></strong>, and <strong>Yichen</strong> spent a Saturday in San Francisco — roast duck for lunch, iconic sights, and a Waymo ride. That evening, <strong><a href="https://tarzanzhao.github.io/" target="_blank" rel="noopener">Hexu</a></strong> joined them for hot pot in Chinatown. Huge thanks to Haotian(<strong>叶神</strong>), interning in SF, for the warm hospitality!
         </p>
-        <a href="https://www.google.com/maps/search/?api=1&amp;query=Nan+Hot+Pot+SF%2C+501+Broadway%2C+San+Francisco%2C+CA+94133" class="read-more" target="_blank" rel="noopener">📍 Nan Hot Pot SF on Google Maps &rarr;</a>
+        <a href="https://www.google.com/maps/search/?api=1&amp;query=Nan+Hot+Pot+SF%2C+501+Broadway%2C+San+Francisco%2C+CA+94133" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>Nan Hot Pot SF on Google Maps &rarr;</a>
     </div>
 </div>
 
@@ -2547,11 +2391,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 20, 2026</div>
-        <h3 class="event-title">🍲 Hot Pot Lunch at Haidilao</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-hotpot"/></svg>Hot Pot Lunch at Haidilao</h3>
         <p class="event-text">
             At <strong>Dr. Hezi Zhang</strong>'s invitation, <strong>Hezi</strong>, <strong>Chang</strong>, <strong>Xiang</strong>, <strong>Yuehan</strong> (Xiang's intern), <strong>Zhuo</strong>, and <strong>Yichen</strong> met for hot pot at <strong>Haidilao</strong> — with a surprise Sichuan face-changing show, Dragon Boat zongzi, and the World Cup on screen. Wishing Xiang a great internship, and Dr. Hezi back in San Diego soon!
         </p>
-        <a href="https://maps.app.goo.gl/22Vax3ny61scYNkC9" class="read-more" target="_blank" rel="noopener">📍 Haidilao (UTC) on Google Maps &rarr;</a>
+        <a href="https://maps.app.goo.gl/22Vax3ny61scYNkC9" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>Haidilao (UTC) on Google Maps &rarr;</a>
     </div>
 </div>
 
@@ -2568,11 +2412,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 10, 2026</div>
-        <h3 class="event-title">🦀 King Crab Lunch, Costco Run &amp; UTC Ice Cream!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-crab"/></svg>King Crab Lunch, Costco Run &amp; UTC Ice Cream!</h3>
         <p class="event-text">
-            <strong>Chang</strong>, <strong>Zhongkai</strong>, <strong>Zaifeng</strong>, <strong>Chuxi</strong> (Zaifeng's intern), <strong>Zhuo</strong>, and <strong>Yichen</strong> met up for a crab feast at <strong>King Crab</strong>, followed by a Costco shopping run and ice cream at UTC. Chang will really miss Zaifeng — and awarded him the <strong>"Big Rooster" title</strong>: struts like an alpha, herds the interns like a mother hen. 🐓
+            <strong>Chang</strong>, <strong>Zhongkai</strong>, <strong>Zaifeng</strong>, <strong>Chuxi</strong> (Zaifeng's intern), <strong>Zhuo</strong>, and <strong>Yichen</strong> met up for a crab feast at <strong>King Crab</strong>, followed by a Costco shopping run and ice cream at UTC. Chang will really miss Zaifeng — and awarded him the <strong>"Big Rooster" title</strong>: struts like an alpha, herds the interns like a mother hen. <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-rooster"/></svg>
         </p>
-        <a href="https://maps.app.goo.gl/qGqJgaVcBnEoX9iG6?g_st=ic" class="read-more" target="_blank" rel="noopener">📍 King Crab on Google Maps &rarr;</a>
+        <a href="https://maps.app.goo.gl/qGqJgaVcBnEoX9iG6?g_st=ic" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>King Crab on Google Maps &rarr;</a>
     </div>
 </div>
 
@@ -2591,11 +2435,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 9, 2026</div>
-        <h3 class="event-title">📦 Moving Day — Bon Voyage, Zaifeng & Zhongkai!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-box"/></svg>Moving Day — Bon Voyage, Zaifeng & Zhongkai!</h3>
         <p class="event-text">
             On the eve of <strong>Zaifeng</strong> and <strong>Zhongkai</strong>'s Bay Area internships, the whole crew showed up to help! <strong>Yichen</strong> and <strong>Zhuo</strong> opened their home to store boxes, and all four tackled the lab haul together. Big thanks to everyone who hauled, carried, and sweated — you made the send-off smooth. Hard work all around!
         </p>
-        <div class="event-notice">📢 Free furniture &amp; more at <a href="https://maps.app.goo.gl/ozpgbgs2v2HaVYfn8?g_st=ic" target="_blank" rel="noopener" style="color:#7a5c00;font-weight:700;text-decoration:underline;">9130 Regents Rd →</a></div>
+        <div class="event-notice"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-announce"/></svg>Free furniture &amp; more at <a href="https://maps.app.goo.gl/ozpgbgs2v2HaVYfn8?g_st=ic" target="_blank" rel="noopener" style="color:#7a5c00;font-weight:700;text-decoration:underline;">9130 Regents Rd →</a></div>
     </div>
 </div>
 
@@ -2610,11 +2454,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 7, 2026</div>
-        <h3 class="event-title">🍲 Hot Pot Buffet at Mongolian Hot Pot!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-hotpot"/></svg>Hot Pot Buffet at Mongolian Hot Pot!</h3>
         <p class="event-text">
             We joined friends from the neighboring lab for an all-you-can-eat hot pot feast at <strong>Mongolian Hot Pot</strong>! Big thanks to <strong><a href="https://yanbozyb.github.io/" target="_blank" rel="noopener">Yanbo</a></strong> for sharing tons of valuable experience and insights. Wishing everyone a smooth and successful summer internship in the Bay Area!
         </p>
-        <a href="https://maps.app.goo.gl/mB3rGjykJAkctdP4A" class="read-more" target="_blank" rel="noopener">📍 Mongolian Hot Pot on Google Maps &rarr;</a>
+        <a href="https://maps.app.goo.gl/mB3rGjykJAkctdP4A" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>Mongolian Hot Pot on Google Maps &rarr;</a>
     </div>
 </div>
 
@@ -2631,11 +2475,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 5, 2026</div>
-        <h3 class="event-title">🥙 Farewell Dinner for Alon at PITA 22!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pita"/></svg>Farewell Dinner for Alon at PITA 22!</h3>
         <p class="event-text">
             Our lab gathered at <strong>PITA 22</strong> for a farewell dinner as <strong><a href="https://www.linkedin.com/in/alon/" target="_blank" rel="noopener">Alon</a></strong> graduates and heads to the Bay Area. We'll truly miss him — wishing Alon all the best in his next chapter! Huge thanks to the wonderful PITA 22 staff for the warm hospitality and generous discount.
         </p>
-        <a href="https://maps.app.goo.gl/382jyFd4zQKeugSy6?g_st=ic" class="read-more" target="_blank" rel="noopener">📍 PITA 22 on Google Maps &rarr;</a>
+        <a href="https://maps.app.goo.gl/382jyFd4zQKeugSy6?g_st=ic" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>PITA 22 on Google Maps &rarr;</a>
     </div>
 </div>
 
@@ -2653,11 +2497,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 5, 2026</div>
-        <h3 class="event-title">🎓 Congratulations Dr. Hezi Zhang — PhD Defense Passed!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-gradcap"/></svg>Congratulations Dr. Hezi Zhang — PhD Defense Passed!</h3>
         <p class="event-text">
             Congrats to <strong>Dr. Hezi Zhang</strong> for passing her dissertation defense! Hezi welcomed a baby during her PhD while publishing top papers — true work-life balance. She joins <strong>UW-Madison ECE</strong> as <strong>Assistant Professor</strong> in Fall 2026 and is recruiting students!
         </p>
-        <a href="https://www.hezizhang.com" class="read-more" target="_blank" rel="noopener">Visit Hezi's Homepage &rarr;</a>
+        <a href="https://www.hezizhang.com" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-home"/></svg>Visit Hezi's Homepage &rarr;</a>
     </div>
 </div>
 
@@ -2671,11 +2515,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">June 1, 2026</div>
-        <h3 class="event-title">🚀 Prof. Ding's Next Station — OpenAI LLM Inference Team!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-rocket"/></svg>Prof. Ding's Next Station — OpenAI LLM Inference Team!</h3>
         <p class="event-text">
-            Big news: <strong>Prof. Ding</strong> is briefly stepping away from the UCSD campus for her next station. On <strong>unpaid leave</strong>, she joins <strong>OpenAI</strong>'s <strong>LLM Inference</strong> team full-time — leading Picasso Lab's research and pushing the industry frontier at the very same time, both hands full. Congratulations, Prof. Ding! 🎉
+            Big news: <strong>Prof. Ding</strong> is briefly stepping away from the UCSD campus for her next station. On <strong>unpaid leave</strong>, she joins <strong>OpenAI</strong>'s <strong>LLM Inference</strong> team full-time — leading Picasso Lab's research and pushing the industry frontier at the very same time, both hands full. Congratulations, Prof. Ding! <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-party"/></svg>
         </p>
-        <a href="http://xhslink.com/o/4be6J5i9fKK" class="read-more" target="_blank" rel="noopener">📕 Prof. Ding's post on RedNote (小红书) &rarr;</a>
+        <a href="http://xhslink.com/o/4be6J5i9fKK" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-rednote"/></svg>Prof. Ding's post on RedNote (小红书) &rarr;</a>
     </div>
 </div>
 -->
@@ -2697,11 +2541,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">April 29, 2026</div>
-        <h3 class="event-title">🎂 Happy Birthday to Zhongkai Yu — ISCA Best Paper Candidate! <video class="event-inline-video" data-src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/emoji-optimized.mp4" poster="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/emoji-poster.webp" preload="none" loop muted playsinline aria-hidden="true" style="display:inline-block;width:1.2em;height:1.2em;object-fit:cover;vertical-align:-0.15em;"></video></h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-cake"/></svg>Happy Birthday to Zhongkai Yu — ISCA Best Paper Candidate! <video class="event-inline-video" data-src="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/emoji-optimized.mp4" poster="https://yil384.github.io/Picasso-Lab/events/static/birthday-zhongkai-2026/emoji-poster.webp" preload="none" loop muted playsinline aria-hidden="true" style="display:inline-block;width:1.2em;height:1.2em;object-fit:cover;vertical-align:-0.15em;"></video></h3>
         <p class="event-text">
             We celebrated <strong>Leader Yu</strong>'s birthday right here in the lab! On top of the cake and candles, we also toasted his <strong>ISCA 2026 Best Paper Candidate</strong> nomination — what a way to celebrate. Happy birthday, Leader Yu!
         </p>
-        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/birthday-zhongkai-2026" class="read-more">View Party Photos &rarr;</a>
+        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/birthday-zhongkai-2026" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-photos"/></svg>View Party Photos &rarr;</a>
     </div>
 </div>
 
@@ -2768,11 +2612,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">April 1, 2026</div>
-        <h3 class="event-title">🍖 Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note" tabindex="0" role="button" aria-describedby="chang-zhuangyuan-tip" aria-label="Show Chang Chen Gaokao note"><img loading="lazy" decoding="async" src="https://yil384.github.io/Picasso-Lab/events/static/firespot4.1/zhuangyuan.webp" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip" id="chang-zhuangyuan-tip"><span class="tip-header">👑 Did you know?</span>Chang was the <strong>#1 Gaokao scorer</strong> (状元) in <strong>Wenzhou, Zhejiang</strong>! ✨</span></span></h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-meat"/></svg>Welcome Dinner for Chang Chen at Fire Spot! <span class="secret-note" tabindex="0" role="button" aria-describedby="chang-zhuangyuan-tip" aria-label="Show Chang Chen Gaokao note"><img loading="lazy" decoding="async" src="https://yil384.github.io/Picasso-Lab/events/static/firespot4.1/zhuangyuan.webp" alt="状元" style="display:inline-block;height:1.2em;width:auto;object-fit:contain;vertical-align:-0.15em;margin-left:3px;"><span class="secret-tip" id="chang-zhuangyuan-tip"><span class="tip-header"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-crown"/></svg>Did you know?</span>Chang was the <strong>#1 Gaokao scorer</strong> (状元) in <strong>Wenzhou, Zhejiang</strong>! <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-sparkle"/></svg></span></span></h3>
         <p class="event-text">
             Our lab celebrated <strong>Dr. Chang Chen</strong> joining Picasso Lab with a fantastic Korean BBQ dinner at <strong>Fire Spot</strong>! Chang is also the first author of <strong><em>Centauri</em></strong>, which won the <strong>ASPLOS 2024 Best Paper Award</strong>. Welcome aboard, Chang!
         </p>
-        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/firespot4.1" class="read-more">View Dinner Photos &rarr;</a>
+        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/firespot4.1" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-photos"/></svg>View Dinner Photos &rarr;</a>
     </div>
 </div>
 
@@ -2788,11 +2632,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">March 15, 2026</div>
-        <h3 class="event-title">🍳 Dorm Team-Building Dinner at Zhuo's Magic Kitchen <button class="guandan-egg-trigger" type="button" aria-label="Open hidden table replay" title="Table replay"><span class="guandan-mini-card red">2</span><span class="guandan-mini-card">A</span><span class="guandan-mini-card red">K</span></button></h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pan"/></svg>Dorm Team-Building Dinner at Zhuo's Magic Kitchen <button class="guandan-egg-trigger" type="button" aria-label="Open hidden table replay" title="Table replay"><span class="guandan-mini-card red">2</span><span class="guandan-mini-card">A</span><span class="guandan-mini-card red">K</span></button></h3>
         <p class="event-text">
             <strong>Zhuo Chen & Yichen Lin</strong> and <strong>Zhongkai Yu & Zaifeng Pan</strong> got together for a cozy dorm team-building dinner at <strong>Zhuo Chen's Magic Kitchen</strong>. The chef served up amazing braised chicken drumsticks, pan-seared steak with tomatoes, and roasted carrots — a homemade feast to remember!
         </p>
-        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/zhuo_magic_kitchen" class="read-more">View Dinner Photos &rarr;</a>
+        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/zhuo_magic_kitchen" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-photos"/></svg>View Dinner Photos &rarr;</a>
     </div>
 </div>
 
@@ -2807,11 +2651,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">February 16, 2026</div> 
-        <h3 class="event-title">🧧 Chinese New Year's Eve Dinner at Star Anise Thai Cuisine</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-redenv"/></svg>Chinese New Year's Eve Dinner at Star Anise Thai Cuisine</h3>
         <p class="event-text">
             To welcome the Year of the Horse, our lab gathered on <strong>Chinese New Year's Eve</strong> for a wonderful dinner at <strong>Star Anise Thai Cuisine</strong>. A huge thank you to <strong>Prof. Yufei Ding</strong> for treating us to such a delicious meal and bringing the team together for the celebration!
         </p>
-        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/cny-2026" class="read-more">View Dinner Photos &rarr;</a>
+        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/cny-2026" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-photos"/></svg>View Dinner Photos &rarr;</a>
     </div>
 </div>
 
@@ -2825,12 +2669,12 @@
     </div>
     <div class="event-content">
         <div class="event-date">February 6, 2026</div> 
-        <h3 class="event-title">🎂 Happy Birthday to Zaifeng Pan!</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-cake"/></svg>Happy Birthday to Zaifeng Pan!</h3>
         <p class="event-text">
             Today we celebrate the birthday of our amazing team member, <strong>Zaifeng Pan</strong>! 
             Wishing you a year full of groundbreaking research and endless joy!
         </p>
-        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/zaifeng-birth" class="read-more">Send Birthday Wishes &rarr;</a>
+        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/zaifeng-birth" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-gift"/></svg>Send Birthday Wishes &rarr;</a>
     </div>
 </div>
 
@@ -2845,11 +2689,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">December 13, 2025</div> 
-        <h3 class="event-title">🎄 Christmas Team Celebration at Fire Spot</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-xmas"/></svg>Christmas Team Celebration at Fire Spot</h3>
     <p class="event-text">
         To celebrate the holiday season, our lab enjoyed a fantastic Christmas lunch at <strong>Fire Spot</strong>. It was a great time to relax, enjoy some Korean BBQ, and celebrate our achievements this year!
     </p>
-        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/chrismas" class="read-more">View Group Photos &rarr;</a>
+        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static/chrismas" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-photos"/></svg>View Group Photos &rarr;</a>
     </div>
 </div>
 
@@ -2869,11 +2713,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">December 11, 2025</div>
-        <h3 class="event-title">🦁 Safari Zoo Adventure at San Diego Zoo Safari Park</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-lion"/></svg>Safari Zoo Adventure at San Diego Zoo Safari Park</h3>
     <p class="event-text">
         A wonderful day out at the <strong>San Diego Zoo Safari Park</strong> with <strong>Zhongkai Yu</strong>, <strong>Zaifeng Pan</strong>, and <strong><a href="https://junsungkim97.github.io/" target="_blank">Junsung Kim</a></strong>. They had an amazing half year with Junsung — he's incredibly talented in his research field and always treated the lab to delicious food. They all really enjoyed having him around!
     </p>
-        <a href="https://sdzsafaripark.org/" class="read-more" target="_blank" rel="noopener">Visit Safari Park &rarr;</a>
+        <a href="https://sdzsafaripark.org/" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-earth"/></svg>Visit Safari Park &rarr;</a>
     </div>
 </div>
 
@@ -2888,11 +2732,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">December 10, 2025</div> 
-    <h3 class="event-title">🎉 Congratulations to Zheng Wang on Successfully Defending His PhD Thesis!</h3>
+    <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-party"/></svg>Congratulations to Zheng Wang on Successfully Defending His PhD Thesis!</h3>
     <p class="event-text">
         We are thrilled to announce that our group member, <strong>Zheng Wang</strong>, has successfully passed the final defense. Dr. Wang has made significant contributions to high-performance system design for Deep Learning.
     </p>
-        <a href="https://www.usenix.org/conference/osdi25/presentation/wang-zheng" class="read-more">Read Thesis Abstract &rarr;</a>
+        <a href="https://www.usenix.org/conference/osdi25/presentation/wang-zheng" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-abstract"/></svg>Read Thesis Abstract &rarr;</a>
     </div>
 </div>
 
@@ -2905,11 +2749,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">November 27, 2025</div> 
-        <h3 class="event-title">🥘 Thanksgiving Team Lunch at Haidilao</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pot2"/></svg>Thanksgiving Team Lunch at Haidilao</h3>
         <p class="event-text">
             Our lab group gathered for a wonderful Thanksgiving celebration at Haidilao Hot Pot in UTC, San Diego. A special thank you to Prof. Yufei Ding for hosting!
         </p>
-        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static" class="read-more">View Event Photos &rarr;</a>
+        <a href="https://github.com/yil384/Picasso-Lab/tree/main/events/static" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-photos"/></svg>View Event Photos &rarr;</a>
     </div>
 </div>
 
@@ -2924,11 +2768,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">November 24, 2025</div> 
-        <h3 class="event-title">→ 🎵 Xiang Fang's Composition Performed on Hunan TV!</h3>
+        <h3 class="event-title">→ <svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-music"/></svg>Xiang Fang's Composition Performed on Hunan TV!</h3>
         <p class="event-text">
             "<strong>再遗忘</strong>", an original song by <strong>Xiang Fang</strong> (2nd-year PhD student in QEC), was performed on <em>"Infinity and Beyond: Chinese Wave"</em>.
         </p>
-        <a href="https://www.youtube.com/watch?v=94rhgou5Uy0" class="read-more">Watch Performance &rarr;</a>
+        <a href="https://www.youtube.com/watch?v=94rhgou5Uy0" class="read-more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-youtube"/></svg>Watch Performance &rarr;</a>
     </div>
 </div>
 
@@ -2942,11 +2786,11 @@
     </div>
     <div class="event-content">
         <div class="event-date">July 23, 2024</div>
-        <h3 class="event-title">☀️ Welcome Dinner for the 2024 Summer Interns</h3>
+        <h3 class="event-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-sun"/></svg>Welcome Dinner for the 2024 Summer Interns</h3>
         <p class="event-text">
             <strong>Prof. Ding</strong> and <strong>Keyi</strong> welcomed the 2024 summer interns — <strong>Yiran</strong>, <strong><a href="https://cs-pikachuu.github.io/" target="_blank" rel="noopener">Haotian</a></strong>, <strong><a href="https://www.linkedin.com/in/yikai-li-a01453363/?locale=zh-cn" target="_blank" rel="noopener">Yikai</a></strong>, <strong><a href="https://yil384.github.io/" target="_blank" rel="noopener">Yichen</a></strong>, <strong><a href="https://scholar.google.com/citations?user=2PN6QHgAAAAJ&amp;hl=zh-CN" target="_blank" rel="noopener">Yitong</a></strong>, <strong><a href="https://albedowang.github.io/" target="_blank" rel="noopener">Kaijian</a></strong>, and <strong><a href="https://scholar.google.com/citations?user=zmMJ1hcAAAAJ&amp;hl=zh-TW" target="_blank" rel="noopener">Yufeng</a></strong> — with dinner at <strong>Taste of Hunan (湘村人家)</strong>. Their generous hospitality made for a warm and memorable start to the summer!
         </p>
-        <a href="https://maps.app.goo.gl/2AXS11o2e2DBEa548" class="read-more" target="_blank" rel="noopener">📍 Taste of Hunan on Google Maps &rarr;</a>
+        <a href="https://maps.app.goo.gl/2AXS11o2e2DBEa548" class="read-more" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-pin"/></svg>Taste of Hunan on Google Maps &rarr;</a>
     </div>
 </div>
 
@@ -3241,10 +3085,11 @@
         }
         return 'picasso';
     }
+    const HINT_SPARK = '<svg class="ic" aria-hidden="true" focusable="false"><use href="#ic-sparkle"/></svg>';
     function showGuandanTypeHint(code) {
         if (!guandanTypeHint) return;
         const letters = (code || 'picasso').split('').map(c => '<kbd>' + c + '</kbd>').join('');
-        guandanTypeHint.innerHTML = 'try typing ' + letters + ' ✨';
+        guandanTypeHint.innerHTML = 'try typing ' + letters + ' ' + HINT_SPARK;
         guandanTypeHint.classList.add('show');
         clearTimeout(guandanHintTimer);
         guandanHintTimer = setTimeout(() => guandanTypeHint.classList.remove('show'), 2600);
@@ -3252,9 +3097,9 @@
 
     function showGuandanTapHint(remaining) {
         if (!guandanTypeHint) return;
-        guandanTypeHint.textContent = remaining === 1
-            ? 'One more tap to open the Picasso table ✨'
-            : 'Tap the news strip twice more ✨';
+        guandanTypeHint.innerHTML = (remaining === 1
+            ? 'One more tap to open the Picasso table '
+            : 'Tap the news strip twice more ') + HINT_SPARK;
         guandanTypeHint.classList.add('show');
         clearTimeout(guandanHintTimer);
         guandanHintTimer = setTimeout(() => guandanTypeHint.classList.remove('show'), 1100);
@@ -4817,7 +4662,7 @@
         el._swiper = sw;
 
         // Don't flip carousels behind the opening splash — the visitor should land on slide 1
-        if (canAdvance && (document.getElementById('bp-splash') || document.getElementById('ev-splash')) && !window.__bpSplashGone) {
+        if (canAdvance && document.getElementById('ev-splash') && !window.__bpSplashGone) {
             sw.autoplay.stop();
             document.addEventListener('bp-splash-gone', function () {
                 var active = sw.slides[sw.activeIndex];
