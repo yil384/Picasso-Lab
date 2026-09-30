@@ -1,562 +1,76 @@
 <!--
-  院士头饰模板 — 配置说明
-  ┌──────────────────────────────────────────────────────────┐
-  │  --hat-y       帽子 brim（下沿）在头像中的位置（从顶部 %）   │
-  │                = 头顶在圆里的高度，通常 20%~45%             │
-  │  --hat-size    帽子本身的高度（占头像高度的 %）              │
-  │                通常 15%~40%，越大帽子越高                   │
-  │  --hat-x       水平中心，默认 50%                           │
-  │  --hat-rotate  帽子旋转角度（deg）                          │
-  │                负数 → 向左倾，正数 → 向右倾                 │
-  └──────────────────────────────────────────────────────────┘
+  zaifeng_academician.html — 院士 Academician (Google Sites embed for the Team page)
+  ──────────────────────────────────────────────────────────────────────────
+  Default: the plain photo. Click (or Enter / Space): a mortarboard with a gold 「院士」 drops onto
+  Zaifeng's head, confetti bursts, two accepted papers pop up between his V-sign fingers and
+  "+1"s pop over them. Click again to switch it off.
+
+  The effect itself lives on GitHub Pages, so it can be changed without re-pasting this:
+    people/fx/zaifeng.js  the scene (three.js props + q5 comic layer)
+    people/fx/kit.js      shared runtime for every avatar (layers, tilt, loading, cleanup)
+  Nothing heavy loads until the visitor hovers or touches the photo.
 -->
-
-<!--
-  ⚠ 如果两张 A4 论文位置还是没对上手, 直接调下面四个 CSS 变量
-  (单位是 200×200 头像里的像素). 不需要碰其它代码.
-
-    --paper-l-x : 左手 V 指根 x 坐标   (默认 74,  往中间 +, 往外 -)
-    --paper-l-y : 左手 V 指根 y 坐标   (默认 124, 往下 +, 往上 -)
-    --paper-r-x : 右手 V 指根 x 坐标   (默认 150)
-    --paper-r-y : 右手 V 指根 y 坐标   (默认 118)
--->
-<div class="ys-wrap" style="
-  --hat-y: 26%; --hat-size: 28%; --hat-x: 67%; --hat-rotate: -6deg;
-  --paper-l-x: 86px; --paper-l-y: 119px;
-  --paper-r-x: 159px; --paper-r-y: 138px;
-">
-  <div class="ys-stage">
-
-    <img src="https://yil384.github.io/Picasso-Lab/people/static/zaifeng.webp"
-         class="avatar" alt="avatar"/>
-
-    <!-- 院士帽（学术四方帽 mortarboard）-->
-    <div class="ys-hat">
-      <div class="ys-hat-inner">
-        <svg viewBox="0 0 220 100" preserveAspectRatio="none"
-             xmlns="http://www.w3.org/2000/svg" overflow="visible">
-          <defs>
-            <!-- Board top face: lit from upper-left -->
-            <linearGradient id="bt" x1="0.1" y1="0" x2="0.9" y2="1">
-              <stop offset="0%"   stop-color="#3c3c3c"/>
-              <stop offset="40%"  stop-color="#222"/>
-              <stop offset="100%" stop-color="#111"/>
-            </linearGradient>
-            <!-- Cap cylindrical shading (horizontal) -->
-            <linearGradient id="cp" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stop-color="#0e0e0e"/>
-              <stop offset="25%"  stop-color="#222"/>
-              <stop offset="50%"  stop-color="#2e2e2e"/>
-              <stop offset="75%"  stop-color="#1a1a1a"/>
-              <stop offset="100%" stop-color="#0a0a0a"/>
-            </linearGradient>
-            <!-- Shadow blur -->
-            <filter id="sb" x="-80%" y="-80%" width="260%" height="400%">
-              <feGaussianBlur stdDeviation="3.5"/>
-            </filter>
-          </defs>
-
-          <!-- Cast shadow on face below brim -->
-          <ellipse cx="110" cy="97" rx="52" ry="5.5"
-                   fill="rgba(0,0,0,0.28)" filter="url(#sb)"/>
-
-          <!-- ① CAP (fabric dome under board) -->
-          <path d="M 74 51 C 72 66 72 80 78 88 Q 94 96 110 96
-                   Q 126 96 142 88 C 148 80 148 66 146 51 Z"
-                fill="url(#cp)"/>
-          <!-- Cap top ellipse (gap between cap and board underside) -->
-          <ellipse cx="110" cy="51" rx="36" ry="5.5" fill="#1a1a1a"/>
-          <!-- Cap left highlight -->
-          <path d="M 74 51 C 72 63 73 77 77 86 L 80 55 Z"
-                fill="rgba(255,255,255,0.06)"/>
-          <!-- Cap right shadow -->
-          <path d="M 146 51 C 148 63 147 77 143 86 L 140 55 Z"
-                fill="rgba(0,0,0,0.22)"/>
-
-          <!-- ② BOARD (mortarboard square top, perspective view) -->
-          <!-- Board left end face -->
-          <polygon points="20,44 20,52 32,14" fill="#090909"/>
-          <!-- Board right end face -->
-          <polygon points="200,44 200,52 188,14" fill="#090909"/>
-          <!-- Board front face (3D thickness facing viewer) -->
-          <rect x="20" y="44" width="180" height="8" fill="#111"/>
-          <!-- Board front face top catch-light -->
-          <rect x="20" y="44" width="180" height="2" fill="rgba(255,255,255,0.05)"/>
-          <!-- Board top face (main surface) -->
-          <polygon points="20,44 200,44 188,14 32,14" fill="url(#bt)"/>
-          <!-- Board top highlight strip -->
-          <polygon points="34,15 186,15 184,21 36,21"
-                   fill="rgba(255,255,255,0.09)"/>
-          <!-- Board upper-left specular sheen -->
-          <polygon points="34,15 90,15 86,22 36,22"
-                   fill="rgba(255,255,255,0.05)"/>
-
-          <!-- ③ BUTTON at board centre -->
-          <circle cx="110" cy="25" r="5"   fill="#3a3a3a"/>
-          <circle cx="110" cy="25" r="3.2" fill="#666"/>
-          <circle cx="110" cy="24.5" r="1.6" fill="#aaa"/>
-
-          <!-- ④ TASSEL (hangs to the right) -->
-          <!-- Cord from button, drapes right -->
-          <path d="M 113 25 C 158 24 178 38 182 60"
-                stroke="#c8a400" stroke-width="2.2" fill="none"
-                stroke-linecap="round"/>
-          <!-- Tassel wrap band -->
-          <rect x="177" y="60" width="13" height="8" rx="2" fill="#b89400"/>
-          <rect x="178" y="61" width="11" height="5" rx="1.5" fill="#f0d000"/>
-          <!-- Tassel strands -->
-          <line x1="177" y1="68" x2="171" y2="90" stroke="#9a7800" stroke-width="1.8"/>
-          <line x1="179" y1="68" x2="174" y2="92" stroke="#c8a400" stroke-width="1.8"/>
-          <line x1="181" y1="68" x2="178" y2="93" stroke="#9a7800" stroke-width="1.8"/>
-          <line x1="183" y1="68" x2="182" y2="92" stroke="#c8a400" stroke-width="1.8"/>
-          <line x1="185" y1="68" x2="186" y2="91" stroke="#9a7800" stroke-width="1.8"/>
-          <line x1="187" y1="68" x2="190" y2="90" stroke="#c8a400" stroke-width="1.8"/>
-          <!-- Tassel end bar -->
-          <rect x="169" y="90" width="23" height="2.5" rx="1.2" fill="#b89400"/>
-        </svg>
-      </div><!-- .ys-hat-inner -->
-    </div><!-- .ys-hat -->
-
-    <!-- 院士 label: separate element so it's never stretched/distorted -->
-    <div class="ys-label" aria-hidden="true">&#38498;&#22763;</div>
-
-    <!--
-      再丰双手 ✌️. 用网格量出来的真实位置 (200×200 stage):
-        · 左手 V (viewer's left)  ≈ (74, 122)   [比之前往中间 32px]
-        · 右手 V (viewer's right) ≈ (152, 116)
-      每只手"夹"一张明显独立的 A4 论文 (1:1.41 比例),
-      会议名 (ICML / NeurIPS) 用大字号确保看得清.
-      左纸略偏暖色 (preprint 感), 右纸略偏冷色 (会议感) — 视觉上不会糊在一起.
-    -->
-
-    <!-- ▣ 左手 A4 论文 (锚点 = 左 V 指根 (74, 122), 大字号 ICML 标) -->
-    <svg class="ys-stack ys-stack-l" viewBox="0 0 36 50" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="zfA4L" x1="0" y1="0" x2="0.8" y2="1">
-          <stop offset="0"    stop-color="#ffffff"/>
-          <stop offset="0.55" stop-color="#fdf9ed"/>
-          <stop offset="1"    stop-color="#e8dfba"/>
-        </linearGradient>
-        <filter id="zfShadowL" x="-25%" y="-25%" width="150%" height="160%">
-          <feDropShadow dx="-1" dy="2.5" stdDeviation="1.6" flood-color="#13203a" flood-opacity="0.46"/>
-        </filter>
-      </defs>
-      <g filter="url(#zfShadowL)">
-        <!-- A4 主纸 (竖版): 32×46 ≈ 1:1.44, 近 A4 -->
-        <rect x="2" y="2" width="32" height="46" rx="0.8" fill="url(#zfA4L)"
-              stroke="#5a6a8a" stroke-width="1.2"/>
-
-        <!-- 顶部红色 ICML 大角标 (现在能看清了) -->
-        <g>
-          <rect x="11" y="3" width="20" height="6" rx="1" fill="#b91c1c"/>
-          <text x="21" y="7.6" text-anchor="middle"
-                font-family="'Helvetica Neue', Arial, sans-serif"
-                font-size="4.2" font-weight="900"
-                fill="#ffffff" letter-spacing="0.3">ICML</text>
-        </g>
-
-        <!-- 论文标题 (粗 3 行) -->
-        <g stroke="#1f2a44" stroke-linecap="round">
-          <line x1="4.5" y1="14" x2="28" y2="14" stroke-width="1.8"/>
-          <line x1="4.5" y1="17.5" x2="24" y2="17.5" stroke-width="1.8"/>
-          <line x1="4.5" y1="21" x2="20" y2="21" stroke-width="1.8"/>
-        </g>
-        <!-- 作者行 -->
-        <line x1="4.5" y1="25" x2="26" y2="25" stroke="#7a8aaa" stroke-width="0.65"/>
-        <line x1="4.5" y1="27" x2="22" y2="27" stroke="#7a8aaa" stroke-width="0.65"/>
-        <!-- 摘要 -->
-        <g stroke="#8a9ab6" stroke-linecap="round" stroke-width="0.55">
-          <line x1="4.5" y1="31" x2="31" y2="31"/>
-          <line x1="4.5" y1="33.5" x2="30" y2="33.5"/>
-          <line x1="4.5" y1="36" x2="31" y2="36"/>
-          <line x1="4.5" y1="38.5" x2="28" y2="38.5"/>
-          <line x1="4.5" y1="41" x2="30" y2="41"/>
-          <line x1="4.5" y1="43.5" x2="26" y2="43.5"/>
-          <line x1="4.5" y1="46" x2="29" y2="46"/>
-        </g>
-      </g>
-    </svg>
-
-    <!-- ▣ 右手 A4 论文 (锚点 = 右 V 指根 (152, 116), 大字号 NeurIPS 标) -->
-    <svg class="ys-stack ys-stack-r" viewBox="0 0 36 50" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="zfA4R" x1="0" y1="0" x2="0.8" y2="1">
-          <stop offset="0"    stop-color="#ffffff"/>
-          <stop offset="0.55" stop-color="#eef4fc"/>
-          <stop offset="1"    stop-color="#cdd9ec"/>
-        </linearGradient>
-        <filter id="zfShadowR" x="-25%" y="-25%" width="150%" height="160%">
-          <feDropShadow dx="1" dy="2.5" stdDeviation="1.6" flood-color="#13203a" flood-opacity="0.46"/>
-        </filter>
-      </defs>
-      <g filter="url(#zfShadowR)">
-        <rect x="2" y="2" width="32" height="46" rx="0.8" fill="url(#zfA4R)"
-              stroke="#5a6a8a" stroke-width="1.2"/>
-
-        <!-- 顶部蓝色 NeurIPS 大角标 -->
-        <g>
-          <rect x="8" y="3" width="26" height="6" rx="1" fill="#0a66c2"/>
-          <text x="21" y="7.6" text-anchor="middle"
-                font-family="'Helvetica Neue', Arial, sans-serif"
-                font-size="4.2" font-weight="900"
-                fill="#ffffff" letter-spacing="0.2">NeurIPS</text>
-        </g>
-
-        <g stroke="#1f2a44" stroke-linecap="round">
-          <line x1="4.5" y1="14" x2="28" y2="14" stroke-width="1.8"/>
-          <line x1="4.5" y1="17.5" x2="26" y2="17.5" stroke-width="1.8"/>
-          <line x1="4.5" y1="21" x2="22" y2="21" stroke-width="1.8"/>
-        </g>
-        <line x1="4.5" y1="25" x2="26" y2="25" stroke="#7a8aaa" stroke-width="0.65"/>
-        <line x1="4.5" y1="27" x2="24" y2="27" stroke="#7a8aaa" stroke-width="0.65"/>
-        <g stroke="#8a9ab6" stroke-linecap="round" stroke-width="0.55">
-          <line x1="4.5" y1="31" x2="31" y2="31"/>
-          <line x1="4.5" y1="33.5" x2="30" y2="33.5"/>
-          <line x1="4.5" y1="36" x2="29" y2="36"/>
-          <line x1="4.5" y1="38.5" x2="30" y2="38.5"/>
-          <line x1="4.5" y1="41" x2="28" y2="41"/>
-          <line x1="4.5" y1="43.5" x2="30" y2="43.5"/>
-          <line x1="4.5" y1="46" x2="26" y2="46"/>
-        </g>
-      </g>
-    </svg>
-
-    <!-- ▣ 左手那把上方的 +1 浮起 -->
-    <div class="ys-pub-floaters ys-pub-l" aria-hidden="true">
-      <span class="ys-pub-plus pL1">+1</span>
-      <span class="ys-pub-plus pL2">+1</span>
-      <span class="ys-pub-plus pL3">+1</span>
-    </div>
-    <!-- ▣ 右手那把上方的 +1 浮起 -->
-    <div class="ys-pub-floaters ys-pub-r" aria-hidden="true">
-      <span class="ys-pub-plus pR1">+1</span>
-      <span class="ys-pub-plus pR2">+1</span>
-      <span class="ys-pub-plus pR3">+1</span>
-    </div>
-
-    <div class="ys-sparks" aria-hidden="true"></div>
-
-  </div><!-- .ys-stage -->
-</div><!-- .ys-wrap -->
-
+<div class="pfx" id="pfx" data-fx="zaifeng" role="button" tabindex="0" aria-pressed="false"
+     aria-label="Zaifeng — academician: click for the cap and the papers">
+  <div class="pfx-stage">
+    <div class="pfx-shadow"></div>
+    <img class="avatar pfx-photo" src="https://yil384.github.io/Picasso-Lab/people/static/zaifeng.webp" alt="avatar">
+  </div>
+</div>
 
 <style>
-/* ── Wrapper ── */
-.ys-wrap {
-  display: inline-block;
-  cursor: pointer;
-  overflow: visible;
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+/* the Team page tiles shrink with the window (to about 150 px wide at 768): the photo is 200 px or
+   whatever fits the tile, and the kit scales the effect with it */
+.pfx {
+  --d: min(200px, calc(100vw - 16px), calc(100vh - 16px));
+  position: absolute; left: 8px; top: 8px; width: var(--d); height: var(--d);
+  border-radius: 50%; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;
 }
-
-/* ── Stage ── */
-.ys-stage {
-  position: relative;
-  width: 200px;
-  height: 200px;
+/* phones: Sites stacks the photo above the name, so sit at the bottom of the tile (next to the name) */
+.pfx.pfx-phone { left: 50%; top: auto; bottom: 10px; margin-left: calc(var(--d) / -2); }
+.pfx-stage { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .4s cubic-bezier(.32, 1.3, .4, 1); }
+.pfx:hover .pfx-stage, .pfx:focus-visible .pfx-stage { transform: translateY(-2px) scale(1.05); }
+.pfx.pfx-on .pfx-stage { transform: scale(1.03); }
+.pfx.pfx-on:hover .pfx-stage { transform: translateY(-2px) scale(1.05); }
+.pfx-shadow { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, .18); }
+/* keyboard focus: a ring on the photo's edge, drawn over the effect canvas too (so it shows on and off) */
+.pfx-stage::after {
+  content: ''; position: absolute; inset: -1px; border: 3px solid #00629b; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .85); opacity: 0; pointer-events: none;
 }
-
-/* ── Avatar ── */
-.avatar {
-  display: block;
-  width: 200px; height: 200px;
-  object-fit: cover;
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-  position: relative;
-  z-index: 1;
-  transition: transform 0.35s cubic-bezier(0.34,1.3,0.64,1),
-              filter 0.35s ease, box-shadow 0.35s ease;
-}
-.ys-wrap:hover .avatar { transform: scale(1.07); filter: brightness(1.08); }
-.ys-wrap.hat-on .avatar {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-}
-
-/* ── Hat outer: handles position + rotation + reveal ── */
-.ys-hat {
-  position: absolute;
-  /*
-   * --hat-size controls HEIGHT (% of 200px avatar).
-   * aspect-ratio:2.2/1 makes width auto-scale with height → uniform resize.
-   * Brim (bottom edge) sits at --hat-y from stage top.
-   * left = hat-x  minus  half the computed width (= hat-size * 2.2/2 = * 1.1)
-   */
-  height: var(--hat-size, 20%);
-  aspect-ratio: 2.2 / 1;
-  top:  calc(var(--hat-y, 35%) - var(--hat-size, 20%));
-  left: calc(var(--hat-x, 50%) - var(--hat-size, 20%) * 1.1);
-  /* Rotate from brim centre (bottom) to match head tilt */
-  transform-origin: 50% 100%;
-  z-index: 20;
-  pointer-events: none;
-  overflow: visible;
-
-  /* Hidden: clip wipes from bottom up within local (rotated) frame */
-  clip-path: inset(0 0 100% 0);
-  transform: rotate(var(--hat-rotate, 0deg)) translateY(-4px);
-  opacity: 0;
-
-  transition:
-    clip-path 0.68s cubic-bezier(0.22, 1.48, 0.36, 1),
-    transform  0.68s cubic-bezier(0.22, 1.48, 0.36, 1),
-    opacity    0.22s ease;
-}
-.ys-hat svg {
-  width: 100%; height: 100%; display: block; overflow: visible;
-}
-
-/* Hat on → wipe down, rotate to final angle */
-.ys-wrap.hat-on .ys-hat {
-  clip-path: inset(0 0 0% 0);
-  transform: rotate(var(--hat-rotate, 0deg)) translateY(0);
-  opacity: 1;
-}
-
-/* ── Hat inner: wobble settle only (keeps rotation independent) ── */
-.ys-hat-inner { width: 100%; height: 100%; }
-@keyframes hat-wobble {
-  0%,100%{ transform:rotate(0deg) }
-  20%    { transform:rotate(-2.4deg) }
-  44%    { transform:rotate(1.7deg)  }
-  66%    { transform:rotate(-0.9deg) }
-  82%    { transform:rotate(0.4deg)  }
-}
-.ys-hat-inner.wobble {
-  animation: hat-wobble 0.55s cubic-bezier(0.36,0.07,0.19,0.97) both;
-}
-
-/* ── 院士 label: undistorted, rotates with hat ── */
-.ys-label {
-  position: absolute;
-  /* Sit at ~60% down from hat top = hat-y - 40% of hat-size */
-  top: calc(var(--hat-y, 35%) - var(--hat-size, 28%) * 0.40);
-  left: var(--hat-x, 50%);
-  transform-origin: center center;
-  transform: translateX(-50%) rotate(var(--hat-rotate, 0deg));
-  font-family: 'STKaiti','KaiTi','FangSong','SimSun',serif;
-  font-size: 13px;
-  font-weight: bold;
-  letter-spacing: 0.15em;
-  color: #ffd060;
-  text-shadow:
-    0 0 5px rgba(255,195,0,0.90),
-    0 0 12px rgba(255,140,0,0.45),
-    0 1px 2px rgba(0,0,0,0.8);
-  z-index: 22;
-  pointer-events: none;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.30s ease 0.50s;
-}
-.ys-wrap.hat-on .ys-label { opacity: 1; }
-
-/*
- * 两张 A4 论文 — 位置完全由 --paper-l-x / --paper-l-y / --paper-r-x / --paper-r-y 决定.
- * SVG 36×50, 论文底中点 = SVG (18, 50). 用 calc() 把它平移到指定坐标:
- *   left = (--paper-l-x) - 18,  top = (--paper-l-y) - 50
- * 这样手位置不对的时候直接调那 4 个变量就行, 不用碰这里的代码.
- */
-.ys-stack {
-  position: absolute;
-  width:  36px;
-  height: 50px;
-  z-index: 30;
-  pointer-events: none;
-  opacity: 0;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.22));
-  transition:
-    opacity 0.22s ease,
-    transform 0.55s cubic-bezier(0.18,1.4,0.32,1);
-}
-
-.ys-stack-l {
-  left: calc(var(--paper-l-x, 74px)  - 18px);
-  top:  calc(var(--paper-l-y, 124px) - 50px);
-  transform: translateY(14px) scale(0.55) rotate(-22deg);
-  transform-origin: 18px 50px;
-}
-.ys-stack-r {
-  left: calc(var(--paper-r-x, 150px) - 18px);
-  top:  calc(var(--paper-r-y, 118px) - 50px);
-  transform: translateY(14px) scale(0.55) rotate(22deg);
-  transform-origin: 18px 50px;
-}
-
-.ys-wrap.hat-on .ys-stack-l {
-  opacity: 1;
-  transform: translateY(0) scale(1) rotate(-12deg);
-  animation: paper-sway-l 3.2s 0.7s ease-in-out infinite alternate;
-}
-.ys-wrap.hat-on .ys-stack-r {
-  opacity: 1;
-  transform: translateY(0) scale(1) rotate(12deg);
-  animation: paper-sway-r 3.2s 0.95s ease-in-out infinite alternate;
-}
-
-/* 纸张以底端 (被夹住处) 为支点轻轻摇摆 */
-@keyframes paper-sway-l {
-  from { transform: translateY(0)    scale(1)     rotate(-12deg); }
-  to   { transform: translateY(-1px) scale(1.012) rotate(-8deg);  }
-}
-@keyframes paper-sway-r {
-  from { transform: translateY(0)    scale(1)     rotate(12deg); }
-  to   { transform: translateY(-1px) scale(1.012) rotate(8deg);  }
-}
-
-/* ── "+1" 浮动: 每只手各一组, 从对应那张 paper 顶部冒上来 ── */
-.ys-pub-floaters {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 35;
-  overflow: visible;
-}
-.ys-pub-plus {
-  position: absolute;
-  font-family: 'Inter', -apple-system, "Segoe UI", "PingFang SC", sans-serif;
-  font-weight: 900;
-  font-size: 14px;
-  color: #16a34a;
-  letter-spacing: -0.02em;
-  text-shadow:
-    0 1px 0 #ffffff,
-    0 0 6px rgba(22,163,74,0.55),
-    0 0 12px rgba(132,255,180,0.35);
-  opacity: 0;
-  transform: translateY(0) scale(0.6);
-  pointer-events: none;
-  white-space: nowrap;
-}
-
-/*
- * +1 直接跟着 --paper-l-* / --paper-r-* 变量走, 浮在每张纸的"纸面 + 上方一点"
- * (从纸张中部冒出来, 飘到纸顶上方 20–58 px).
- *
- * 纸张顶端 y = --paper-l-y - 50  (因为论文高 50)
- * 我们让 +1 起始 y 在 纸张中部 (--paper-l-y - 25 左右), animation 把它往上推 40+ px.
- */
-
-/* 左纸 +1 — 沿纸面中部散开 */
-.ys-pub-plus.pL1 {
-  left: calc(var(--paper-l-x, 74px) - 8px);
-  top:  calc(var(--paper-l-y, 124px) - 30px);
-}
-.ys-pub-plus.pL2 {
-  left: calc(var(--paper-l-x, 74px) + 6px);
-  top:  calc(var(--paper-l-y, 124px) - 26px);
-  font-size: 16px; color: #d97706;
-}
-.ys-pub-plus.pL3 {
-  left: calc(var(--paper-l-x, 74px) - 18px);
-  top:  calc(var(--paper-l-y, 124px) - 22px);
-  font-size: 12px; color: #ea580c;
-}
-
-/* 右纸 +1 */
-.ys-pub-plus.pR1 {
-  left: calc(var(--paper-r-x, 150px) - 8px);
-  top:  calc(var(--paper-r-y, 118px) - 30px);
-}
-.ys-pub-plus.pR2 {
-  left: calc(var(--paper-r-x, 150px) + 8px);
-  top:  calc(var(--paper-r-y, 118px) - 26px);
-  font-size: 16px; color: #d97706;
-}
-.ys-pub-plus.pR3 {
-  left: calc(var(--paper-r-x, 150px) - 18px);
-  top:  calc(var(--paper-r-y, 118px) - 22px);
-  font-size: 12px; color: #ea580c;
-}
-
-.ys-wrap.hat-on .ys-pub-plus {
-  animation: pub-plus-rise 2.4s 0.9s ease-out infinite;
-}
-/* 左右两组 +1 错开节奏, 让两只手轮流"+1", 不会齐刷刷 */
-.ys-wrap.hat-on .ys-pub-plus.pL2 { animation-delay: 1.6s; }
-.ys-wrap.hat-on .ys-pub-plus.pL3 { animation-delay: 2.4s; }
-.ys-wrap.hat-on .ys-pub-plus.pR1 { animation-delay: 1.2s; }
-.ys-wrap.hat-on .ys-pub-plus.pR2 { animation-delay: 2.0s; }
-.ys-wrap.hat-on .ys-pub-plus.pR3 { animation-delay: 2.8s; }
-
-@keyframes pub-plus-rise {
-  0%   { opacity: 0; transform: translateY(4px)   scale(0.55); }
-  18%  { opacity: 1; transform: translateY(-8px)  scale(1.05); }
-  60%  { opacity: 0.85; transform: translateY(-32px) scale(1); }
-  100% { opacity: 0;  transform: translateY(-58px) scale(0.85); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ys-wrap.hat-on .ys-stack-l,
-  .ys-wrap.hat-on .ys-stack-r,
-  .ys-wrap.hat-on .ys-pub-plus {
-    animation: none;
-  }
-  .ys-wrap.hat-on .ys-pub-plus { opacity: 0; }
-}
-
-/* ── Sparkles ── */
-.ys-sparks {
-  position: absolute; inset: 0;
-  pointer-events: none; z-index: 25; overflow: visible;
-}
-.ys-spark {
-  position: absolute; opacity: 0;
-  transform: translate(-50%,-50%);
-  line-height: 1; user-select: none;
-}
-@keyframes spark-fly {
-  0%   { opacity:1; transform:translate(-50%,-50%) scale(1.3); }
-  40%  { opacity:0.9; }
-  100% { opacity:0; transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0.1); }
-}
-.ys-spark.go { animation: spark-fly 0.72s ease-out forwards; }
+.pfx:focus-visible .pfx-stage::after { opacity: 1; }
+.pfx-photo { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.pfx-loading .pfx-shadow { animation: pfx-wait 1s ease-in-out infinite; }
+@keyframes pfx-wait { 50% { box-shadow: 0 4px 10px rgba(0, 0, 0, .18), 0 0 0 4px rgba(0, 98, 155, .28); } }
+@media (prefers-reduced-motion: reduce) { .pfx-stage { transition: none; } .pfx-loading .pfx-shadow { animation: none; } }
 </style>
 
-
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <script>
 (function () {
-  const wrap   = document.querySelector('.ys-wrap');
-  const inner  = wrap.querySelector('.ys-hat-inner');
-  const sparks = wrap.querySelector('.ys-sparks');
-
-  wrap.addEventListener('click', () => {
-    const on = wrap.classList.toggle('hat-on');
-    if (on) {
-      setTimeout(() => {
-        inner.classList.remove('wobble');
-        void inner.offsetWidth;           // force reflow
-        inner.classList.add('wobble');
-        inner.addEventListener('animationend',
-          () => inner.classList.remove('wobble'), { once: true });
-        burst();
-      }, 620);
-    }
-  });
-
-  function burst() {
-    sparks.innerHTML = '';
-    const GLYPHS = ['★','✦','✧','◆','❋','•','✿'];
-    const COLORS = ['#ffd700','#ffc107','#ff6f9c','#a78bfa','#34d399','#38bdf8','#fb923c'];
-    const N = 12;
-    for (let i = 0; i < N; i++) {
-      const sp = document.createElement('span');
-      sp.className = 'ys-spark';
-      const angle = (Math.PI * 2 / N) * i + (Math.random() - .5) * .4;
-      const dist  = 32 + Math.random() * 44;
-      sp.style.cssText = [
-        `--dx:${(Math.cos(angle)*dist).toFixed(1)}px`,
-        `--dy:${(Math.sin(angle)*dist).toFixed(1)}px`,
-        `color:${COLORS[i % COLORS.length]}`,
-        `font-size:${8 + Math.random()*10}px`,
-        `top:${4 + Math.random()*36}%`,
-        `left:${22 + Math.random()*56}%`,
-        `animation-delay:${(Math.random()*.13).toFixed(3)}s`,
-      ].join(';');
-      sp.textContent = GLYPHS[i % GLYPHS.length];
-      sparks.appendChild(sp);
-      requestAnimationFrame(() => requestAnimationFrame(() => sp.classList.add('go')));
-    }
-    setTimeout(() => { sparks.innerHTML = ''; }, 1050);
+  var wrap = document.getElementById('pfx');
+  if (!wrap || wrap.dataset.ready) return;
+  wrap.dataset.ready = '1';
+  if (Math.min(screen.width, screen.height) < 600) wrap.classList.add('pfx-phone');
+  var KIT = 'https://yil384.github.io/Picasso-Lab/people/fx/kit.js';
+  var ctl = null;
+  function load() {
+    if (!ctl) ctl = import(KIT).then(function (m) { return m.attach(wrap); });
+    return ctl;
   }
+  ['pointerenter', 'touchstart', 'focus'].forEach(function (ev) {
+    wrap.addEventListener(ev, function () { load().catch(function () {}); }, { once: true, passive: true });
+  });
+  function toggle() { load().then(function (c) { c.toggle(); }).catch(function () {}); }
+  wrap.addEventListener('click', toggle);
+  wrap.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); toggle(); }
+  });
 })();
 </script>
