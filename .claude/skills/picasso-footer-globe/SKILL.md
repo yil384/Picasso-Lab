@@ -61,7 +61,10 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   outside (`sp = p - dir * R * 1.69 / r`, faded beyond 2-4.5 R); inside, the far sky is squeezed toward the rim
   (`fp = dir * r / sqrt(1 - 0.6 r^2)`): violet nebula, a blue-white sun at `(-0.6, -0.55)`, Cybertron's horizon
   (sphere at `(0.9, 1.3)`, radius 1.1) lit by that sun. No glowing ring (a neon rim looked fake); the edge is a thin
-  Einstein-ring line. The hover blip position `WB` in JS is the inverse of that mapping: move the planet, recompute it.
+  Einstein-ring line.
+  Around it, what an EHT image of a wormhole would show (Wielgus et al. 2020): a blurred orange accretion ring at
+  1.3 throats, brighter on the lower side (Doppler beaming, as in the M87* image) with slowly orbiting hot spots, and a
+  faint second ring just inside the throat (light from the other side - the thing a black hole cannot have). The hover blip position `WB` in JS is the inverse of that mapping: move the planet, recompute it.
 - **M78** (`uM78` = centre + size): a real image, not noise - `nebula.jpg` (25 KB, 512x512) is the Hubble 2006
   mosaic of the Orion Nebula (NASA/ESA, public domain, from Wikimedia Commons), cropped, saturation x1.45, edges faded
   to black in the file itself; the shader screens it over the sky (dimming the stars behind its dust) with a very slow
