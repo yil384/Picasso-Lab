@@ -1,6 +1,6 @@
 ---
 name: picasso-sites-embed
-description: How the Picasso Lab website (yufeiding.ucsd.edu, Google Sites) runs the pages in this repo as pasted "embed code", and the rules that follow — absolute asset URLs, re-paste to deploy, no history entries in the embed (the nav-frame pattern), sandbox limits, swallowed # links, wiped storage, and how to test inside the real Sites page. Use before changing or adding anything that runs on a Sites page (events, projects, blogs, pub, teaching, people, home), or when something works on GitHub Pages but breaks on the live site.
+description: How the Picasso Lab website (yufeiding.ucsd.edu, Google Sites) runs the pages in this repo as pasted "embed code", and the rules that follow — absolute asset URLs, re-paste to deploy, no history entries in the embed (the nav-frame pattern), sandbox limits, swallowed # links, wiped storage, why search engines cannot see embed content, and how to test inside the real Sites page. Use before changing or adding anything that runs on a Sites page (events, projects, blogs, pub, teaching, people, home), or when something works on GitHub Pages but breaks on the live site.
 ---
 
 # Picasso Lab pages inside Google Sites
@@ -22,7 +22,8 @@ standalone pages such as `events/guandan.html` and `blogs/nvidia-ising/`.
   (`html.unescape` it and compare after normalising line endings).
 - Every URL inside a pasted file must be **absolute** (`https://yil384.github.io/Picasso-Lab/...`); relative paths
   resolve against Google's sandbox origin and silently 404.
-- In a cloud session: push your own branch only, never `main`; the user (or a local session) merges and deploys.
+- Standing instruction from the user: after each finished change, merge your branch into `main` (`--no-ff`) and push
+  both, without asking. Then tell them which files to re-paste.
 
 ## What the embed runtime does (verified by reading Google's `inner-frame-minified.html`)
 - The pasted code is **written with `document.write` into an `about:blank` iframe** (`#userHtmlFrame`) inside a **sandboxed**
@@ -83,6 +84,23 @@ standalone pages such as `events/guandan.html` and `blogs/nvidia-ising/`.
   stubs in `guandan-kit/harness/` (branch `guandan-cloud`: `fb-stub-app.js`, `mustkeep.DB_STUB`) and abort
   `*firebaseio.com*` / `*supabase.co*`.
 - Screenshots as JPEG (quality ≤ 80), one browser at a time, close it in `finally` — the Mac's disk is nearly full.
+
+## Search engines do not see embed content
+- Checked in Search Console (URL Inspection -> View crawled page, `/blogs`, Sept 2026): the crawled HTML holds the
+  pasted page only as the escaped `data-code="..."` attribute of a div; the rendered embed lives in a
+  `googleusercontent.com` sandbox frame. So a page can be "indexed" while none of the embed's text matches a search.
+  Same for every section page.
+- Fix that keeps the look: native Sites text next to the embed. For the blog: one Sites subpage per post
+  (`/blogs/<slug>`, hidden from navigation) with Insert -> Embed -> By URL of the standalone article
+  (`https://yil384.github.io/Picasso-Lab/blogs/<slug>/`) plus a native text box (title, authors, date, abstract; full
+  text in a Collapsible text group), and a short native list under the `/blogs` embed. `python3 blogs/sites_copy.py`
+  builds `blogs/sites-copy.html` (noindex; copy buttons that keep headings and links). A mirrored post whose canonical
+  is the author's own site gets only a summary and a link, never the full text. Never hide text (white on white etc.).
+- The standalone pages on GitHub Pages (`blogs/`, `blogs/<slug>/`, listed in `sitemap.xml`) are crawlable on their own
+  (property `https://yil384.github.io/Picasso-Lab/`, verification file `googleff133c80611a3756.html`), but they rank
+  under github.io, not ucsd.edu.
+- The live embed can lag the repo (the user re-pastes by hand): compare `data-code` with the repo file before
+  assuming a change is live.
 
 ## House rules that apply everywhere
 - No emoji in the pages; use the professional SVG icon sprite (IconPark / Simple Icons) already in `events/events.html`.
