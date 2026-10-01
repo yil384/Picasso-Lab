@@ -237,8 +237,8 @@
 
     /* ════════ the visitor globe: the real Earth (NASA Blue Marble by day, Black Marble city lights by night, a soft
        terminator, ocean glint, blue atmosphere), the real Moon on its orbit, and - very far away behind them - the
-       M78 Nebula (a blue reflection nebula round the silver glow of the Land of Light) and Cybertron (a machined metal
-       planet seamed with blue energy). One WebGL fragment shader paints the card (no library); a 2D layer on top draws
+       M78 Nebula (a blue reflection nebula round the prismatic glare of the Land of Light) and Cybertron, too far
+       for any sky, glimpsed only through a wormhole that bends the starlight round it. One WebGL fragment shader paints the card (no library); a 2D layer on top draws
        the visitors, the off-world blips and the signals crawling in from the far ones. Drag to turn the Earth (the far
        objects barely move: parallax); hover a dot for the place; a click that is not a drag opens the analytics. The
        off-world visits are decoration only: nothing is ever recorded for them. Textures (158 KB) load only once the
@@ -251,7 +251,7 @@
     var OFFWORLD = {
         moon: { code: 'LUNA', where: 'Mare Tranquillitatis, the Moon', n: 1, note: '384,400 km away &middot; first footprints July 1969' },
         m78: { code: 'M78', where: 'Land of Light, M78 Nebula', n: 3, note: '3,000,000 light-years away &middot; arrived at the speed of light' },
-        cyb: { code: 'CYB', where: 'Iacon, Cybertron', n: 2, note: 'distance unknown &middot; signal decoded, more than meets the eye' }
+        cyb: { code: 'CYB', where: 'Iacon, Cybertron', n: 2, note: 'distance unknown &middot; only seen through a wormhole &middot; more than meets the eye' }
     };
     /* ---------- WebGL ---------- */
     var gl = null, prog = null, U = {}, TEX = {}, texReady = 0, texAsked = false;
@@ -276,8 +276,11 @@
         '  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);',
         '  float S = uRes.y, t = uT;',
         // deep space + three star layers (the farther, the less they move with the drag)
+        // wl: this pixel in the wormhole's frame (tilted, foreshortened); sp: where the star layers are read - bent outward round the rift
+        '  vec2 wd = p - uCyb.xy, wl = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5)) * wd; wl.y /= 0.86; float wr = length(wl) / uCyb.z;',
+        '  vec2 sp = p - wd * (1.3 / max(wr * wr, 1.0)) * smoothstep(0.98, 1.06, wr);',
         '  vec3 col = mix(vec3(0.012, 0.025, 0.06), vec3(0.03, 0.06, 0.13), smoothstep(1.2, 0.0, length((p - uRes * vec2(0.5, 0.4)) / S)));',
-        '  for (int L = 0; L < 3; L++) { float fl = float(L), cell = (5.0 + fl * 4.0) * S / 160.0; vec2 q = (p + uPar * (0.04 + fl * 0.05)) / cell, id = floor(q);',
+        '  for (int L = 0; L < 3; L++) { float fl = float(L), cell = (5.0 + fl * 4.0) * S / 160.0; vec2 q = (sp + uPar * (0.04 + fl * 0.05)) / cell, id = floor(q);',
         '    float hh = h21(id + fl * 17.0); if (hh > 0.93 - fl * 0.02) { vec2 c = fract(q) - vec2(h21(id + 3.1), h21(id + 5.7)); float tw = 0.55 + 0.45 * sin(t * (0.7 + hh * 2.0) + hh * 40.0);',
         '      col += vec3(0.75, 0.82, 1.0) * smoothstep(0.09 + fl * 0.02, 0.0, length(c)) * tw * (0.35 + 0.35 * fl); } }',
         // a faint band of the Milky Way across the back
@@ -292,21 +295,27 @@
         '      float an = atan(d.y, d.x) + 0.26, ray = pow(abs(cos(an * 3.0)), 60.0), core = exp(-r * r * 160.0);',
         '      vec3 prism = vec3(exp(-r * 9.0), exp(-r * 11.0), exp(-r * 13.5));',
         '      col += vec3(1.0, 0.97, 0.94) * core * 2.2 + prism * ray * (0.75 + 0.25 * sin(t * 1.1)) * 1.1 + vec3(0.8, 0.88, 1.0) * exp(-r * r * 22.0) * 0.35; } }',
-        // Cybertron: a dark machined planet, its surface a lattice of circuitry glowing energon-blue, the cities on its night side burning orange,
-        // a cold rim of reflected starlight; far away: small and slightly hazed
-        '  { vec2 c = uCyb.xy, d = p - c; float r = uCyb.z, q = length(d);',
-        '    col += vec3(0.25, 0.6, 1.0) * 0.16 * exp(-max(0.0, q - r) / (r * 0.30));',
-        '    if (q < r + 1.0) { vec3 n = sph(d * vec2(1.0, -1.0), r); float sp = t * 0.06; vec3 e = vec3(n.x * cos(sp) + n.z * sin(sp), n.y, -n.x * sin(sp) + n.z * cos(sp));',
-        '      vec2 uv = vec2(atan(e.x, e.z) * 5.0, asin(e.y) * 5.0); vec2 id = floor(uv), f = fract(uv); float h = h21(id), h2 = h21(id + 4.7);',
-        '      float lat = asin(e.y) * 9.0, trench = smoothstep(0.07, 0.0, abs(fract(lat) - 0.5)) * step(0.6, h21(vec2(floor(lat), 3.0))) * smoothstep(0.35, 0.6, vn(vec2(atan(e.x, e.z) * 3.0, floor(lat))));',
-        '      float trV = smoothstep(0.08, 0.0, abs(f.x - (0.2 + 0.6 * h2))) * step(0.55, h) * smoothstep(0.75, 0.2, abs(f.y - 0.5));',
-        '      float circ = max(trench, trV * 0.8) * (0.6 + 0.4 * vn(uv * 2.0 + t * 0.6));',
-'      float lam = dot(n, SUN), spec = pow(max(0.0, dot(reflect(-SUN, n), vec3(0, 0, 1))), 18.0);',
-        '      vec3 metal = mix(vec3(0.08, 0.085, 0.10), vec3(0.20, 0.21, 0.25), h * 0.6 + 0.4 * vn(uv * 3.0)) * (0.15 + 1.1 * max(0.0, lam)) + vec3(0.75, 0.8, 0.9) * spec * 0.5;',
-        '      vec3 cc = metal + vec3(0.2, 0.78, 1.0) * circ * 1.1;',
-        '      cc += vec3(1.0, 0.55, 0.15) * step(0.84, h21(floor(uv * 3.0) + 2.0)) * smoothstep(0.25, -0.15, lam) * 1.1;',
-        '      cc += vec3(0.35, 0.65, 1.0) * pow(1.0 - n.z, 3.0) * 0.6; cc = mix(cc, vec3(0.06, 0.1, 0.2), 0.18);',
-        '      col = mix(col, cc, smoothstep(r + 0.8, r - 0.8, q)); } }',
+        // the wormhole to Cybertron: a tilted space-time rift. Round it the starlight is bent (lensed, see the star layers); its throat
+        // burns with a swirling violet-cyan photon ring; through it - not in our sky at all - the far side: a violet sky and part of
+        // Cybertron, a dark machined world laced with energon-blue circuitry, its night side lit by orange cities
+        '  { vec2 lp = wl / uCyb.z; float rho = length(lp), a = atan(lp.y, lp.x);',
+        '    if (rho < 1.02) { vec2 vp = wd / uCyb.z; vec2 fp = vp * (1.0 + 0.3 * dot(vp, vp)); fp = mat2(cos(t * 0.03), -sin(t * 0.03), sin(t * 0.03), cos(t * 0.03)) * fp;',
+        '      float neb = fbm(fp * 2.2 + 5.0); vec3 ins = vec3(0.025, 0.02, 0.07) + vec3(0.35, 0.12, 0.45) * smoothstep(0.45, 0.85, neb) * 0.5 + vec3(0.85, 0.8, 1.0) * step(0.93, h21(floor(fp * 9.0))) * smoothstep(0.12, 0.0, length(fract(fp * 9.0) - 0.5)) * 0.9;',
+        '      vec2 d = fp - vec2(0.75, 1.0); float q = length(d), r = 1.45;',
+        '      if (q < r) { vec3 n = sph(d * vec2(1.0, -1.0), r); vec3 L = normalize(vec3(-0.5, 0.55, 0.65)); float sp = t * 0.05; vec3 e = vec3(n.x * cos(sp) + n.z * sin(sp), n.y, -n.x * sin(sp) + n.z * cos(sp));',
+        '        vec2 uv = vec2(atan(e.x, e.z) * 9.0, asin(e.y) * 9.0); vec2 id = floor(uv), f = fract(uv); float h = h21(id), h2 = h21(id + 4.7);',
+        '        float lat = asin(e.y) * 13.0, trench = smoothstep(0.08, 0.0, abs(fract(lat) - 0.5)) * step(0.55, h21(vec2(floor(lat), 3.0))) * smoothstep(0.35, 0.6, vn(vec2(atan(e.x, e.z) * 4.0, floor(lat))));',
+        '        float trV = smoothstep(0.08, 0.0, abs(f.x - (0.2 + 0.6 * h2))) * step(0.5, h) * smoothstep(0.75, 0.2, abs(f.y - 0.5));',
+        '        float plate = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)), circ = max(trench, trV * 0.85) * (0.6 + 0.4 * vn(uv * 2.0 + t * 0.6));',
+        '        float lam = dot(n, L), spec = pow(max(0.0, dot(reflect(-L, n), vec3(0, 0, 1))), 18.0);',
+        '        vec3 cc = mix(vec3(0.09, 0.09, 0.11), vec3(0.24, 0.24, 0.28), h * 0.6 + 0.4 * vn(uv * 3.0)) * (0.12 + 1.1 * max(0.0, lam)) * (0.75 + 0.25 * smoothstep(0.0, 0.05, plate)) + vec3(0.8, 0.8, 0.9) * spec * 0.45;',
+        '        cc += vec3(0.2, 0.8, 1.0) * circ * 1.2 + vec3(1.0, 0.55, 0.15) * step(0.8, h21(floor(uv * 3.0) + 2.0)) * smoothstep(0.2, -0.2, lam) * 1.2;',
+        '        cc += vec3(0.6, 0.45, 1.0) * pow(1.0 - n.z, 3.0) * 0.5; ins = mix(ins, cc, smoothstep(r, r - 0.02, q)); }',
+        '      ins = mix(ins, vec3(0.30, 0.22, 0.65), smoothstep(0.7, 1.0, rho) * 0.4);',
+        '      col = mix(col, ins, smoothstep(1.0, 0.96, rho)); }',
+        '    float ring = exp(-pow((rho - 1.0) / 0.045, 2.0)), sw = pow(0.5 + 0.5 * sin(a * 5.0 - log(max(rho, 0.05)) * 16.0 + t * 1.8), 3.0) * exp(-abs(rho - 1.0) * 6.0);',
+        '    vec3 rc = mix(vec3(0.62, 0.38, 1.0), vec3(0.35, 0.92, 1.0), 0.5 + 0.5 * sin(a * 2.0 - t * 0.9));',
+        '    col += rc * (ring * (1.2 + 0.3 * sin(t * 3.0 + a * 3.0)) + sw * 0.5 * step(0.98, rho)) + vec3(0.45, 0.35, 1.0) * exp(-max(0.0, rho - 1.0) * 3.0) * 0.10; }',
         // the Moon behind the Earth (z < 0)
         '  vec3 moonCol = vec3(0.0); float moonA = 0.0;',
         '  { vec2 d = p - uMoon.xy; float q = length(d); if (q < uMoon.z + 1.0) { vec3 n = sph(d * vec2(1.0, -1.0), uMoon.z);',
@@ -379,7 +388,7 @@
         var th = s * 0.15 + 0.5, ma = GR * 1.62, mz = Math.sin(th);
         BODY.moon = { x: GX + Math.cos(th) * ma + PAR.x * 0.35, y: GY - mz * GR * 0.95 + Math.cos(th) * GR * 0.08 + PAR.y * 0.35, r: GR * 0.18 * (1 + 0.12 * mz), z: mz };
         BODY.m78 = { x: CW * 0.14 + PAR.x * 0.06, y: CH * 0.33 + PAR.y * 0.06, r: CH * 0.30 };
-        BODY.cyb = { x: CW * 0.875 + PAR.x * 0.1, y: CH * 0.30 + PAR.y * 0.1, r: CH * 0.08 };
+        BODY.cyb = { x: CW * 0.86 + PAR.x * 0.1, y: CH * 0.30 + PAR.y * 0.1, r: CH * 0.135 };
         if (gl) {
             gl.viewport(0, 0, CV.width, CV.height);
             var d = DPR; gl.uniform2f(U.uRes, CV.width, CV.height); gl.uniform1f(U.uT, s); gl.uniform1f(U.uReady, texReady >= 4 ? 1 : 0);
@@ -405,15 +414,12 @@
         // the off-world visits: a blip on each, and a signal crawling in from each far one (slower the farther)
         EXTRA = [];
         var M = BODY.moon, moonVis = M.z >= 0 || Math.hypot(M.x - GX, M.y - GY) > GR + M.r * 0.5;
+        // a point on the part of Cybertron seen through the rift (the wormhole frame mapped back: unsquash, untilt)
+        var W0 = BODY.cyb, wx = 0.35 * W0.r, wy = 0.45 * W0.r * 0.86, WB = [W0.x + Math.cos(0.5) * wx - Math.sin(0.5) * wy, W0.y + Math.sin(0.5) * wx + Math.cos(0.5) * wy];
         var spots = [
             { id: 'm78', x: BODY.m78.x, y: BODY.m78.y, hr: CH * 0.12, period: 14, color: '255,150,140', name: 'M78 NEBULA', dist: '3,000,000 LY', ly: BODY.m78.y + CH * 0.15 },
-            { id: 'cyb', x: BODY.cyb.x - BODY.cyb.r * 0.25, y: BODY.cyb.y - BODY.cyb.r * 0.2, hr: BODY.cyb.r * 1.3, period: 9, color: '120,220,255', name: 'CYBERTRON', dist: '?? LY', ly: BODY.cyb.y + BODY.cyb.r + CH * 0.08 },
+            { id: 'cyb', x: WB[0], y: WB[1], hr: BODY.cyb.r * 1.2, period: 9, color: '150,200,255', name: 'CYBERTRON', dist: 'VIA WORMHOLE', ly: BODY.cyb.y + BODY.cyb.r * 1.15 + CH * 0.05, from: 0.95 },
             { id: 'moon', x: M.x - M.r * 0.25, y: M.y - M.r * 0.15, hr: M.r * 1.3, color: '255,214,120', hidden: !moonVis } ];
-        // Cybertron's two small moons on tilted orbits (hidden while they pass behind it)
-        for (var cm = 0; cm < 2; cm++) { var C = BODY.cyb, ph2 = s * (0.5 - cm * 0.18) + cm * 2.4, cz = Math.sin(ph2), cx = C.x + Math.cos(ph2) * C.r * (1.6 + cm * 0.5), cy = C.y + cz * C.r * (0.35 + cm * 0.15) - Math.cos(ph2) * C.r * 0.18;
-            if (cz < 0 && Math.hypot(cx - C.x, cy - C.y) < C.r + 1) continue;
-            var mr = Math.max(1, C.r * (0.19 - cm * 0.05)), mg = g.createRadialGradient(cx - mr * 0.4, cy - mr * 0.4, 0, cx, cy, mr);
-            mg.addColorStop(0, 'rgba(200,205,215,' + (cz < 0 ? 0.55 : 0.95) + ')'); mg.addColorStop(1, 'rgba(70,75,90,' + (cz < 0 ? 0.4 : 0.8) + ')'); g.fillStyle = mg; g.beginPath(); g.arc(cx, cy, mr, 0, 6.2832); g.fill(); }
         var showLab = CH >= 110, fs = Math.max(7, 7.4 * K);
         for (var k = 0; k < spots.length; k++) { var o = spots[k]; if (o.hidden) continue; EXTRA.push({ o: OFFWORLD[o.id], x: o.x, y: o.y, r: o.hr });
             var bp = ((s + k * 0.7) % 3) / 3; g.strokeStyle = 'rgba(255,205,110,' + (0.5 * (1 - bp)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(o.x, o.y, 1.4 * K + bp * 5 * K, 0, 6.2832); g.stroke();
@@ -425,6 +431,7 @@
                 g.font = '500 ' + (fs * 0.92).toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace'; g.fillStyle = 'rgba(' + o.color + ',0.75)'; g.fillText(o.dist, lx, o.ly + fs * 1.25); }
             // the signal comes out of the depth: a path of dots that start tiny and faint (far) and grow toward the Earth (near),
             // a packet of light with a tail crawling along it (slower the farther), a ripple where it lands on the atmosphere
+            if (o.from) { var C0 = BODY.cyb, aw = Math.atan2(GY - C0.y, GX - C0.x); o = { x: C0.x + Math.cos(aw) * C0.r * 0.85, y: C0.y + Math.sin(aw) * C0.r * 0.85, color: o.color, period: o.period }; }
             var ang = Math.atan2(o.y - GY, o.x - GX), ex = GX + Math.cos(ang) * GR * 1.03, ey = GY + Math.sin(ang) * GR * 1.03, mx = (o.x + ex) / 2, my = Math.min(o.y, ey) - CH * 0.14;
             var bz = function (tt) { var u1 = 1 - tt; return [u1 * u1 * o.x + 2 * u1 * tt * mx + tt * tt * ex, u1 * u1 * o.y + 2 * u1 * tt * my + tt * tt * ey]; };
             for (var j = 1; j < 26; j++) { var tj = Math.pow(j / 26, 0.75), P = bz(tj); g.fillStyle = 'rgba(' + o.color + ',' + (0.05 + 0.3 * tj * tj).toFixed(3) + ')';
