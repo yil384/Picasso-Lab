@@ -46,8 +46,13 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   atmosphere halo) -> Moon in front -> film grade (`1 - exp(-1.3c)`, cool shadows, vignette, grain).
 - JS draws the overlay on `#vmap-fx`: visitor pings (latest three pulse amber; pings hidden under a Moon in front),
   blips on the off-world objects, survey labels (`M78 NEBULA / 3,000,000 LY`, `CYBERTRON / VIA WORMHOLE`, hidden when
-  the card is under 110 px tall), and the signals: a dotted path whose dots grow from far to near, a light packet with
-  a tail (M78 slowest), a ripple on the Earth's limb.
+  the card is under 110 px tall), and the signals: a dotted path whose dots grow from far to near, a tiny traveller with a
+  light trail flying along it - Ultraman Tiga (Multi Type) from M78, an Autobot warship in Optimus Prime's red and blue
+  out of the wormhole (vector drawings in `craft()`, nose along +x, growing from far to near; M78 slowest) - and a
+  ripple on the Earth's limb.
+- **Moon**: tidally locked - `uMoonRot = atan2(-cos th, -sin th)` turns the texture so the near side always faces the
+  Earth (in front of the Earth it shows us its far side). Its visitor blip sits in Mare Tranquillitatis and is only
+  drawn while that spot faces us.
 - **Wormhole** (`uCyb` = centre + throat radius): a point lens with Einstein radius 1.3 throats bends the star layers
   outside (`sp = p - dir * R * 1.69 / r`, faded beyond 2-4.5 R); inside, the far sky is squeezed toward the rim
   (`fp = dir * r / sqrt(1 - 0.6 r^2)`): violet nebula, a blue-white sun at `(-0.6, -0.55)`, Cybertron's horizon
