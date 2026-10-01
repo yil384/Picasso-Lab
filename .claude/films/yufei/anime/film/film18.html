@@ -1,0 +1,377 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Yufei - 3D short</title>
+<!-- Team-page avatar short for Prof. Yufei Ding (16 s, 384 f @ 24 fps, square, NOT a loop). Plays inside her round
+     avatar on double-click, starting and ending exactly on her photo. A three.js world: a lab desk in front of a
+     sunset window with a real 3D quantum chip (gold die, glowing qubit pearls, couplers), props, a warm key light
+     with soft shadows, dust motes, a 3D gold paint ribbon and paint droplets; the heroine, her cat and the noise
+     gremlins are painted cut-outs (assets/*.png) standing in the world as billboards that cast shadows; the camera
+     orbits, dollies, whips and crash-zooms. 2D on top: hand-built comic lettering, speed lines, the photo ink ring
+     at the start and the gold paint wipe at the end. -->
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene, ease, clamp, lerp } from '/pv/runtime/pv.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { TAU, PAL, st, sm, ob, ic, oc, ioc, twos, ringv, bumpv, hsh, ellipse, taper, sparkle, puff, zap, handWord, burstBalloon, splatBlob } from '/scene/lib2d.js';
+
+const FPS = 24, NF = 432, DES = 960;
+const K = { ring: [3, 10], wipe: [414, 426] };
+const IMG = {}, T = {};
+const SPR = ['y_pop', 'y_spin', 'y_land', 'y_peek', 'y_surprise', 'y_think', 'y_glasses', 'y_draw', 'y_brush', 'y_leap', 'y_swing', 'y_follow', 'y_paint_air', 'y_proud', 'y_wave',
+  'cat_scared', 'cat_pot', 'cat_jump', 'cat_cheer', ...[0, 1, 2].flatMap((i) => [`gremlins_${i}`, `grem_burst_${i}`, `grem_dizzy_${i}`])];
+const io = (x) => ease.inOutSine(clamp(x));
+
+// ---------------- shots (24 fps, 432 frames = 18 s) ----------------
+// pop 12-40 + spin 40-62 (sunset) | whip 62-70 | land 70-96, peek 96-122, gremlins burst 122, surprise 126-170, think 170-202 |
+// crash zoom 202-208 | bust 208-252 (SHING) | whip 252-258 | draw 258-288 (cat brings the paint) | wind-up 288-302 | leap 302-318 |
+// swing 318-332 (hits 320/323/326) | follow-through 332-352 | paint PICASSO LAB in the air 352-390 | proud 390-410 | wave 410- | wipe 414-426
+const SH = { pop: [12, 62], whip1: [62, 70], lab1: [70, 202], zoom: [202, 208], bust: [208, 252], whip2: [252, 258], lab2: [258, 432] };
+const shotAt = (F) => (F < SH.whip1[1] ? 'pop' : F < SH.zoom[1] ? 'lab1' : F < SH.whip2[0] ? 'bust' : 'lab2');
+const HITS = [320, 323, 326];
+
+// chip frame: centre, yaw; qubit (row, col) -> world
+const CHIP = { x: 0.95, z: -0.2, yaw: 0.32, y: 0.21 };
+function chipLocal(u, v, y = 0) { const c = Math.cos(CHIP.yaw), s = Math.sin(CHIP.yaw); return [CHIP.x + u * c + v * s, y, CHIP.z - u * s + v * c]; }
+const QP = []; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) QP.push(chipLocal((c - 1) * 0.68, (r - 1) * 0.68, CHIP.y + 0.17));
+const GREM = [{ q: 0, t: 122 }, { q: 4, t: 123 }, { q: 2, t: 124 }];
+const HERO = [-1.05, 0, 1.0], CAT = [1.75, 0, 1.55];
+
+// ---------------- textures ----------------
+async function loadImg(u) { return new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = u; }); }
+function tex(THREE, src, srgb = true) { const t = new THREE.Texture(src); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.needsUpdate = true; return t; }
+function blurred(im, px) { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.filter = `blur(${px}px)`; g.drawImage(im, 0, 0); return c; }
+function canvas(w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); return c; }
+
+function buildWorld(ctx, { THREE, renderer }) {
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
+  scene.fog = new THREE.Fog(0xf3a77a, 22, 60);
+  T.THREE = THREE; T.scene = scene; T.camera = camera;
+  // a soft studio environment so the gold and the glass read as metal and glass
+  const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.7;
+  // the sunset beyond the window (soft: depth of field), and a sharper copy for the opening pop
+  const skyT = tex(THREE, blurred(IMG.bg_sunset, 5)), skyS = tex(THREE, IMG.bg_sunset);
+  T.sky = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshBasicMaterial({ map: skyT, fog: false, toneMapped: false }));
+  T.sky.position.set(0, 6, -22); scene.add(T.sky); T.skyT = skyT; T.skyS = skyS;
+  // window frame (dark wood) for parallax
+  const wood = new THREE.MeshStandardMaterial({ color: 0x4a2c25, roughness: 0.6 });
+  for (const x of [-7.2, -0.2, 6.8]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.35, 9, 0.35), wood); m.position.set(x, 4.2, -5.2); scene.add(m); }
+  const sill = new THREE.Mesh(new THREE.BoxGeometry(16, 0.4, 0.8), wood); sill.position.set(0, 0.0, -5.0); scene.add(sill);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(16, 0.4, 0.5), wood); head.position.set(0, 8.6, -5.2); scene.add(head);
+  // the desk: warm wood with grain
+  const grain = tex(THREE, canvas(1024, 512, (g, w, h) => { g.fillStyle = '#8a5434'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 160; i++) { const y = hsh(i) * h; g.strokeStyle = `rgba(${hsh(i, 2) > 0.5 ? '60,30,18' : '170,110,70'},${0.15 + 0.2 * hsh(i, 3)})`; g.lineWidth = 1 + 4 * hsh(i, 4);
+      g.beginPath(); g.moveTo(0, y); for (let x = 0; x <= w; x += 32) g.lineTo(x, y + Math.sin(x * 0.01 + i) * 6); g.stroke(); } }));
+  grain.wrapS = grain.wrapT = THREE.RepeatWrapping; grain.repeat.set(2, 1);
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(16, 0.3, 9), new THREE.MeshStandardMaterial({ map: grain, roughness: 0.45, metalness: 0.0 }));
+  desk.position.set(0, -0.15, -0.5); desk.receiveShadow = true; scene.add(desk);
+  // circuit board + gold die + couplers + qubit pearls
+  const pcbT = tex(THREE, canvas(512, 512, (g, w, h) => { g.fillStyle = '#152452'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d6a23f'; g.lineWidth = 3;
+    for (let i = 0; i < 70; i++) { const x = hsh(i, 1) * w, y = hsh(i, 2) * h, L = 40 + 120 * hsh(i, 3); g.beginPath(); g.moveTo(x, y); g.lineTo(x + (hsh(i, 4) > 0.5 ? L : 0), y + (hsh(i, 4) > 0.5 ? 0 : L)); g.stroke(); ellipse(g, x, y, 4, 4); g.fillStyle = '#e8b54a'; g.fill(); } }));
+  const pcb = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.06, 3.4), [0, 0, 0, 0, 0, 0].map((_, i) => new THREE.MeshStandardMaterial(i === 2 ? { map: pcbT, roughness: 0.5 } : { color: 0x0e1840, roughness: 0.6 })));
+  pcb.position.set(CHIP.x, 0.03, CHIP.z); pcb.rotation.y = CHIP.yaw; pcb.receiveShadow = true; pcb.castShadow = true; scene.add(pcb);
+  const gold = new THREE.MeshStandardMaterial({ color: 0xf2c35a, metalness: 0.9, roughness: 0.25 });
+  const die = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.14, 2.45), gold); die.position.set(CHIP.x, 0.13, CHIP.z); die.rotation.y = CHIP.yaw; die.castShadow = die.receiveShadow = true; scene.add(die);
+  const bronze = new THREE.MeshStandardMaterial({ color: 0xa8682c, metalness: 0.8, roughness: 0.35 });
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    const a = QP[r * 3 + c];
+    if (c < 2) { const b = QP[r * 3 + c + 1]; const m = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.68, 10), bronze); m.position.set((a[0] + b[0]) / 2, CHIP.y + 0.06, (a[2] + b[2]) / 2); m.rotation.set(0, CHIP.yaw, Math.PI / 2); m.castShadow = true; scene.add(m); }
+    if (r < 2) { const b = QP[(r + 1) * 3 + c]; const m = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.68, 10), bronze); m.position.set((a[0] + b[0]) / 2, CHIP.y + 0.06, (a[2] + b[2]) / 2); m.rotation.set(Math.PI / 2, 0, -CHIP.yaw); m.rotation.order = 'YXZ'; m.rotation.set(Math.PI / 2, CHIP.yaw, 0); m.castShadow = true; scene.add(m); }
+  }
+  const glowT = tex(THREE, canvas(128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }));
+  T.glowT = glowT;
+  T.qubits = QP.map((p, i) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 32, 20), new THREE.MeshStandardMaterial({ color: 0x18c4ff, emissive: 0x0088cc, emissiveIntensity: 0.8, roughness: 0.12, metalness: 0.0 }));
+    m.position.set(...p); m.castShadow = true; scene.add(m);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 10, 32), gold); ring.position.set(p[0], CHIP.y + 0.05, p[2]); ring.rotation.x = Math.PI / 2; scene.add(ring);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT, color: 0x53d8f2, transparent: true, opacity: 0.65, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    halo.scale.set(0.9, 0.9, 1); halo.position.set(...p); scene.add(halo);
+    return { m, halo };
+  });
+  // props: paint pot with gold, a mug, a stack of books
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.38, 0.6, 40), new THREE.MeshStandardMaterial({ color: 0xece7dc, metalness: 0.3, roughness: 0.4 })); pot.position.set(-3.6, 0.3, -1.6); pot.castShadow = true; scene.add(pot);
+  const paint = new THREE.Mesh(new THREE.CylinderGeometry(0.39, 0.39, 0.02, 40), gold); paint.position.set(-3.6, 0.6, -1.6); scene.add(paint);
+  const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.3, 0.7, 36), new THREE.MeshStandardMaterial({ color: 0xf6f1e7, roughness: 0.35 })); mug.position.set(-2.4, 0.35, -2.6); mug.castShadow = true; scene.add(mug);
+  const hdl = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.05, 10, 24), mug.material); hdl.position.set(-2.06, 0.38, -2.6); scene.add(hdl);
+  [[0x2e3d75, 1.3], [0x7a2e3a, 1.1], [0x28524a, 1.25]].forEach(([c, w], i) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.22, 0.9), new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 })); b.position.set(3.9, 0.11 + i * 0.22, -2.2); b.rotation.y = 0.15 * (i - 1); b.castShadow = b.receiveShadow = true; scene.add(b); });
+  // light: the low sun through the window (warm, soft shadows), sky fill, a cyan bounce from the chip
+  const sun = new THREE.DirectionalLight(0xffb37a, 2.6); sun.position.set(-5, 7, -9); sun.target.position.set(0, 0, 0); sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 30 }); sun.shadow.bias = -0.0008; sun.shadow.radius = 4;
+  scene.add(sun, sun.target);
+  const key = new THREE.DirectionalLight(0xfff0e0, 1.1); key.position.set(4, 6, 8); scene.add(key);
+  scene.add(new THREE.HemisphereLight(0xffd6b0, 0x4a3050, 0.9));
+  T.chipLight = new THREE.PointLight(0x53d8f2, 2.0, 5, 2); T.chipLight.position.set(CHIP.x, 0.9, CHIP.z); scene.add(T.chipLight);
+  T.redLight = new THREE.PointLight(0xff3040, 0, 5, 2); T.redLight.position.set(CHIP.x, 0.9, CHIP.z); scene.add(T.redLight);
+  // painted cut-outs as shadow-casting billboards (feet at the origin)
+  T.bb = {};
+  for (const n of SPR) {
+    if (!IMG[n]) continue;
+    const t = tex(THREE, IMG[n]), asp = IMG[n].width / IMG[n].height;
+    const geo = new THREE.PlaneGeometry(asp, 1); geo.translate(0, 0.5, 0);
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: t, alphaTest: 0.45, side: THREE.DoubleSide, color: 0xfff4ea }));
+    m.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: t, alphaTest: 0.45 });
+    m.castShadow = true; m.visible = false; scene.add(m); T.bb[n] = m;
+  }
+  // the gold ribbon (grown along its curve) and paint droplets
+  const curve = new THREE.CatmullRomCurve3([[-1.2, 1.7, 0.9], [-0.35, 0.95, 0.5], ...[0, 4, 2].map((q) => [QP[q][0], QP[q][1] + 0.3, QP[q][2]]), [3.8, 1.4, -0.6]]
+    .sort((a, b) => a[0] - b[0]).map((p) => new THREE.Vector3(...p)), false, 'centripetal');
+  T.curve = curve;
+  T.ribbonGeo = new THREE.TubeGeometry(curve, 260, 0.13, 16, false);
+  const goldPaint = new THREE.MeshStandardMaterial({ color: 0xffc83d, metalness: 0.55, roughness: 0.22, emissive: 0x8a5200, emissiveIntensity: 0.55 });
+  T.ribbon = new THREE.Mesh(T.ribbonGeo, goldPaint); T.ribbon.castShadow = true; scene.add(T.ribbon);
+  const ND = 90; T.drops = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 10), goldPaint, ND); T.drops.castShadow = true; T.drops.frustumCulled = false; scene.add(T.drops);
+  T.dropSeeds = Array.from({ length: ND }, (_, i) => ({ g: i % 3, vx: (hsh(i, 1) - 0.5) * 3, vy: 1.6 + 2.2 * hsh(i, 2), vz: (hsh(i, 3) - 0.5) * 2.4, r: 0.03 + 0.07 * hsh(i, 4) }));
+  // dust motes in the sun
+  const NM = 220, mp = new Float32Array(NM * 3); T.motes = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ map: glowT, color: 0xffd9a0, size: 0.09, transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  T.motes.geometry.setAttribute('position', new THREE.BufferAttribute(mp, 3)); scene.add(T.motes);
+  // sparkles (pop, glints, payoff)
+  T.spark = Array.from({ length: 24 }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT, color: 0xfff1b8, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); s.visible = false; scene.add(s); return s; });
+  return { scene, camera };
+}
+
+// ---------------- per-frame state ----------------
+function show(n, pos, h, o = {}) {
+  const m = T.bb[n]; if (!m) return;
+  m.visible = true; m.position.set(pos[0], pos[1], pos[2]);
+  const sq = o.sq || 0; m.scale.set(h * (1 + sq * 0.6) * (o.flip ? -1 : 1), h * (1 - sq), 1);
+  // face the camera around the vertical axis (a cut-out standing in the world)
+  const c = T.camera.position; m.rotation.set(0, Math.atan2(c.x - pos[0], c.z - pos[2]), o.rot || 0);
+}
+function camRig(F) {
+  const ph = (a, b) => clamp((F - a) / (b - a));
+  let pos, tgt, fov = 32;
+  if (F < SH.whip1[0]) {             // the opening: she pops out against the sunset, then twirls down
+    const k = sm(ph(12, 62)); pos = [0.8 * k, 3.0 - 0.3 * k, 8.5 + 0.6 * k]; tgt = [0.3 * k, 2.9 - 0.4 * k, 0];
+  } else if (F < SH.whip1[1]) {      // whip down to the desk
+    const k = ic(ph(SH.whip1[0], SH.whip1[1])); pos = [lerp(0.8, -0.6, k), lerp(2.7, 2.5, k), lerp(9.1, 8.0, k)]; tgt = [lerp(0.3, 0.1, k), lerp(2.5, 0.75, k), 0];
+  } else if (F < SH.zoom[1]) {       // lab: orbit; dolly in while she peeks; back out for the burst; ease to her for the idea
+    const k = sm(ph(70, 202)), az = lerp(-0.42, -0.2, k);
+    let r = lerp(8.4, 7.6, k);
+    r -= 1.4 * sm(ph(96, 118)) * (1 - sm(ph(120, 128)));
+    pos = [-0.1 + Math.sin(az) * r, 2.5 - 0.3 * k - 0.4 * sm(ph(96, 118)) * (1 - sm(ph(120, 128))), Math.cos(az) * r]; tgt = [-0.15, 0.85, 0.2];
+    if (F >= 172 && F < SH.zoom[0]) { const kk = sm(ph(172, 196)) * 0.35; pos = pos.map((v, i) => lerp(v, [HERO[0], 1.6, HERO[2] + 3.2][i], kk)); tgt = tgt.map((v, i) => lerp(v, [HERO[0], 1.4, HERO[2]][i], kk)); }
+    if (F >= SH.zoom[0]) { const z = ic(ph(SH.zoom[0], SH.zoom[1])); pos = pos.map((v, i) => lerp(v, [HERO[0], 2.1, HERO[2] + 0.9][i], z)); tgt = tgt.map((v, i) => lerp(v, [HERO[0], 2.1, HERO[2]][i], z)); }
+  } else if (F < SH.whip2[0]) {      // the bust: a slow push in
+    const k = sm(ph(SH.bust[0], SH.bust[1])); pos = [0.05 * Math.sin(F * 0.03), 1.78, lerp(3.6, 3.15, k)]; tgt = [0, 1.72, -1];
+  } else {                           // lab from the other side, low; tilt up with the leap; settle wide for the payoff
+    const k = sm(ph(258, 410)), az = lerp(0.36, 0.1, k), r = lerp(8.0, 7.4, sm(ph(330, 410)));
+    pos = [Math.sin(az) * r, lerp(1.9, 2.2, k), Math.cos(az) * r]; tgt = [0.0, 0.9, 0.2];
+    const up = sm(ph(300, 312)) * (1 - sm(ph(318, 326))); pos[1] += 0.6 * up; tgt[1] += 1.1 * up;
+    if (F < SH.whip2[1]) { const w = 1 - oc(ph(SH.whip2[0], SH.whip2[1])); pos[0] += 6 * w; tgt[0] += 6 * w; }
+  }
+  const sh = (f0, a, d = 5) => { const x = F - f0; return x >= 0 && x < 18 ? a * Math.exp(-x / d) : 0; };
+  const amp = sh(80, 0.06) + sh(122, 0.07) + (F > 126 && F < 170 ? 0.012 : 0) + sh(HITS[0], 0.05) + sh(HITS[1], 0.08) + sh(HITS[2], 0.05) + sh(334, 0.05);
+  pos = pos.map((v, i) => v + (hsh(twos(F), i, 7) - 0.5) * amp);
+  return { pos, tgt, fov };
+}
+function updateWorld(ctx) {
+  const F = ctx.iw, THREE = T.THREE, shot = shotAt(F);
+  const R = camRig(F); T.camera.position.set(...R.pos); T.camera.lookAt(...R.tgt); T.camera.fov = R.fov; T.camera.updateProjectionMatrix();
+  for (const n in T.bb) T.bb[n].visible = false;
+  T.sky.material.map = shot === 'pop' ? T.skyS : T.skyT;
+  // the heroine
+  if (shot === 'pop') {
+    if (F < 40) { const a = F - 12, k = ob(a / 9); show('y_pop', [0, lerp(1.6, 1.25, k) + bumpv(a - 9, 0.12, 0.8, 0.2), lerp(-6, 1.2, oc(a / 12))], 3.6, { rot: ringv(a - 3, 0.18, 0.9, 0.25) }); }
+    else { const a = (F - 40) / 22; show('y_spin', [lerp(0.2, 0.9, a), lerp(1.25, 0.3, ic(a)), 1.2], 3.4, { flip: Math.floor((F - 40) / 4) % 2 === 1, rot: 0.15 * Math.sin(a * 6) }); }
+  } else if (shot === 'lab1') {
+    if (F < 96) { const p = (F - 70) / 10, y = p < 1 ? lerp(2.8, 0, ic(p)) : 0; show('y_land', [HERO[0], y, HERO[2]], 2.5, { sq: p < 1 ? -0.16 : ringv(F - 80, 0.2, 0.9, 0.25) }); }
+    else if (F < 124) show('y_peek', [HERO[0] + 0.15, 0, HERO[2]], 1.9, { sq: ringv(F - 96, 0.08, 0.9, 0.3) + 0.01 * Math.sin((F - 96) * 0.4) });
+    else if (F < 170) show('y_surprise', [HERO[0] - 0.1 * oc((F - 124) / 4), 0.3 * bumpv(F - 124, 1, 0.9, 0.3), HERO[2]], 2.6, { sq: -ringv(F - 124, 0.1, 1.0, 0.3) });
+    else show('y_think', [HERO[0], 0, HERO[2]], 2.6, { sq: ringv(F - 170, 0.06, 0.9, 0.3) + 0.008 * Math.sin((F - 170) * 0.3), rot: 0.02 * Math.sin((F - 170) * 0.2) });
+    if (F >= 132) { const a = (F - 132) / 6; show('cat_scared', [lerp(4.2, CAT[0] + 0.3, oc(Math.min(a, 1))), 0, CAT[2]], 1.0, { sq: 0.04 * Math.sin((F - 132) * 1.7) }); }   // the cat runs in and hides, trembling
+  } else if (shot === 'bust') {
+    show('y_glasses', [0, 0.2, -1], 3.3, {});
+  } else {
+    if (F < 288) show('y_draw', [HERO[0], 0, HERO[2]], 2.65, { rot: 0.04 * (1 - oc((F - 258) / 8)), sq: ringv(F - 258, 0.08, 1, 0.3) });
+    else if (F < 302) show('y_brush', [HERO[0], 0, HERO[2]], 2.65, { rot: -0.06 * sm((F - 288) / 10), sq: 0.07 * sm((F - 290) / 10) });
+    else if (F < 318) { const a = (F - 302) / 16; show('y_leap', [lerp(HERO[0], -0.3, a), 2.6 * Math.sin(Math.PI * Math.min(1, a * 1.1)) , HERO[2] - 0.2 * a], 2.7, { sq: -0.1 * Math.sin(Math.PI * a), rot: -0.1 * a }); }
+    else if (F < 332) show('y_swing', [-0.2 + 0.1 * oc((F - 318) / 6), 0.6 * (1 - oc((F - 318) / 12)), HERO[2] - 0.2], 2.65, { sq: -ringv(F - 318, 0.08, 1, 0.3) });
+    else if (F < 352) show('y_follow', [-0.25, 0, HERO[2] - 0.1], 2.0, { sq: ringv(F - 332, 0.16, 1, 0.3) });
+    else if (F < 390) show('y_paint_air', [HERO[0] + 0.2, 0, HERO[2]], 2.6, { rot: 0.03 * Math.sin((F - 352) * 0.25), sq: ringv(F - 352, 0.06, 1, 0.3) });
+    else if (F < 410) show('y_proud', [HERO[0], 0, HERO[2]], 2.65, { sq: ringv(F - 390, 0.12, 1.0, 0.28) });
+    else show('y_wave', [HERO[0], 0, HERO[2]], 2.7, { rot: 0.04 * Math.sin((F - 410) * 0.45), sq: ringv(F - 410, 0.08, 1, 0.3) });
+    // the cat: still hiding, then brings the pot of gold paint, then cheers
+    if (F < 262) show('cat_scared', [CAT[0] + 0.3, 0, CAT[2]], 1.0, { sq: 0.04 * Math.sin(F * 1.7) });
+    else if (F < 300) { const a = (F - 262) / 26; show('cat_pot', [lerp(CAT[0] + 0.3, HERO[0] + 1.2, sm(a)), 0.08 * Math.abs(Math.sin((F - 262) * 0.6)), CAT[2] + 0.2], 1.05, { flip: true }); }
+    else if (F < 334) { const a = (F - 300) / 9; show('cat_jump', [lerp(HERO[0] + 1.2, CAT[0], oc(Math.min(a, 1))), a < 1 ? 1.4 * Math.sin(Math.PI * a) : 0, CAT[2]], 1.05, { sq: a < 1 ? -0.12 : ringv(F - 309, 0.15, 1, 0.3) }); }
+    else show('cat_cheer', [CAT[0], 0.12 * Math.abs(Math.sin((F - 334) * 0.4)), CAT[2]], 1.05, { sq: ringv(F - 334, 0.1, 1, 0.3) });
+  }
+  // gremlins: burst out of their qubits, rattle, get flattened by the stroke, then sink away dizzy
+  let noisy = 0;
+  GREM.forEach((G, i) => {
+    const p = QP[G.q], a = F - G.t, hit = HITS[i];
+    if (shot === 'pop' || shot === 'bust' || a < 0) return;
+    if (F >= hit) { const d = F - hit; if (d < 30) show('grem_dizzy_' + i, [p[0], p[1] - 0.12 - 0.25 * sm((d - 18) / 12), p[2] + 0.05], 0.55 * (1 - sm((d - 18) / 12)) + 0.01, { rot: 0.1 * Math.sin(d * 0.8) }); return; }
+    if (a < 8) { show('grem_burst_' + i, [p[0], p[1] - 0.05 + 0.4 * oc(a / 6), p[2] + 0.05], 0.95 * ob(a / 4), { rot: (hsh(a, i) - 0.5) * 0.3 }); noisy++; return; }
+    const jit = (hsh(twos(F), i) - 0.5) * 0.05;
+    show('gremlins_' + i, [p[0] + jit, p[1] - 0.05 + 0.12 * Math.abs(Math.sin((F + i * 4) * 0.45)), p[2] + 0.05], 0.85, { rot: (hsh(twos(F), i, 4) - 0.5) * 0.15 });
+    noisy++;
+  });
+  // qubits: red and flickering under a gremlin, a cyan flash when freed
+  T.qubits.forEach((Q, i) => {
+    const gi = GREM.findIndex((G) => G.q === i), under = gi >= 0 && F >= GREM[gi].t + 2 && F < HITS[gi];
+    const freed = gi >= 0 && F >= HITS[gi] ? F - HITS[gi] : -1;
+    const red = under && hsh(twos(F), i) > 0.35;
+    Q.m.material.color.setHex(red ? 0xff5060 : 0x18c4ff); Q.m.material.emissive.setHex(red ? 0xd0102a : 0x0088cc);
+    Q.m.material.emissiveIntensity = freed >= 0 && freed < 12 ? 0.8 + 3 * Math.exp(-freed / 3) : 0.8;
+    Q.halo.material.color.setHex(red ? 0xff3a4a : 0x53d8f2); Q.halo.scale.setScalar(freed >= 0 && freed < 12 ? 0.9 + 1.4 * Math.exp(-freed / 3) : under ? 1.1 : 0.9);
+  });
+  T.redLight.intensity = noisy ? 2.5 * (0.6 + 0.4 * hsh(twos(F), 9)) : 0;
+  // the gold ribbon: grows with the swing, then soaks into the chip
+  const rp = sm((F - 318) / 10), soak = sm((F - 336) / 16);
+  T.ribbon.visible = shot === 'lab2' && F >= 318 && soak < 0.99;
+  if (T.ribbon.visible) { const segs = T.ribbonGeo.index.count; T.ribbonGeo.setDrawRange(0, Math.max(6, Math.floor(rp * segs / 6) * 6)); T.ribbon.scale.set(1, 1 - 0.8 * soak, 1); T.ribbon.position.y = -0.4 * soak; }
+  // paint droplets burst from each hit gremlin
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), ps = new THREE.Vector3();
+  T.dropSeeds.forEach((d, i) => {
+    const t = (F - HITS[d.g]) / FPS, P = QP[GREM[d.g].q];
+    if (shot !== 'lab2' || t < 0 || t > 1.3) { M.makeScale(0, 0, 0); T.drops.setMatrixAt(i, M); return; }
+    let y = P[1] + 0.35 + d.vy * t - 4.9 * t * t; const ground = CHIP.y + 0.05; if (y < ground) y = ground;
+    ps.set(P[0] + d.vx * t * (y > ground ? 1 : 0.7), y, P[2] + d.vz * t * (y > ground ? 1 : 0.7)); const s = d.r * (y > ground ? 1 : 1.4) * (1 - sm((t - 0.9) / 0.4));
+    sc.set(s, y > ground ? s : s * 0.35, s); M.compose(ps, q, sc); T.drops.setMatrixAt(i, M);
+  });
+  T.drops.instanceMatrix.needsUpdate = true;
+  // dust motes drifting in the sun
+  const mp = T.motes.geometry.attributes.position.array, tt = F / FPS;
+  for (let i = 0; i < mp.length / 3; i++) { mp[i * 3] = -6 + 12 * hsh(i, 1) + 0.25 * Math.sin(tt * 0.6 + i); mp[i * 3 + 1] = (0.2 + 5 * hsh(i, 2) + tt * 0.12 * (0.5 + hsh(i, 5))) % 5.4; mp[i * 3 + 2] = -4 + 7 * hsh(i, 3) + 0.2 * Math.cos(tt * 0.5 + i); }
+  T.motes.geometry.attributes.position.needsUpdate = true;
+  // sparkles: around the pop, on the lenses in the bust, rising gold in the payoff
+  T.spark.forEach((s, i) => { s.visible = false; });
+  const spark = (i, x, y, z, sz, col = 0xfff1b8) => { const s = T.spark[i]; s.visible = true; s.position.set(x, y, z); s.scale.set(sz, sz, 1); s.material.color.setHex(col); };
+  if (shot === 'pop') for (let i = 0; i < 10; i++) { const t = ((F - 14 + i * 3) % 24) / 24; spark(i, Math.cos(i * 2.1) * (1.6 + 1.4 * t), 3 + Math.sin(i * 2.1) * (1.5 + 1.2 * t), 1.2, 0.5 * Math.sin(Math.PI * t)); }
+  if (shot === 'lab2' && F >= 340) for (let i = 0; i < 16; i++) { const t = ((F - 340 + i * 5) % 40) / 40; spark(i, CHIP.x + (hsh(i, 1) - 0.5) * 3, 0.4 + 2.6 * t, CHIP.z + (hsh(i, 2) - 0.5) * 2, 0.35 * Math.sin(Math.PI * t), 0xffd36a); }
+  st.shot = shot;
+}
+
+// ---------------- 2D on top: lettering, speed lines, impact ----------------
+function proj(v) { const p = new T.THREE.Vector3(...v).project(T.camera); return [(p.x + 1) / 2 * DES, (1 - p.y) / 2 * DES]; }
+function fx2d(ctx, g) {
+  const F = ctx.iw, shot = shotAt(F);
+  // whips: horizontal / vertical speed lines
+  const lines = (vert, seed, amt) => { for (let i = 0; i < 30; i++) { const a = hsh(seed, i) * DES, b = hsh(seed, i, 2) * DES * 1.4 - 200, l = 200 + 400 * hsh(seed, i, 3), w = (3 + 7 * hsh(seed, i, 4)) * amt;
+    taper(g, vert ? [[a, b], [a, b + l]] : [[b, a], [b + l, a]], 0.5, w, 'rgba(255,255,255,0.85)'); } };
+  if (F >= SH.whip1[0] && F < SH.whip1[1]) lines(true, twos(F), 1);
+  if (F >= SH.whip2[0] && F < SH.whip2[1]) lines(false, twos(F) + 3, 1);
+  if (F >= SH.zoom[0] && F < SH.zoom[1] + 2) for (let i = 0; i < 70; i++) { const a = i / 70 * TAU + hsh(i) * 0.1, r1 = 180 + hsh(i, 2) * 120; taper(g, [[480 + Math.cos(a) * (r1 + 600), 480 + Math.sin(a) * (r1 + 600)], [480 + Math.cos(a) * r1, 480 + Math.sin(a) * r1]], 9, 0.5, PAL.ink); }
+  // landing dust
+  const la = F - 80; if (la >= 0 && la < 9) { const p = proj([HERO[0], 0.05, HERO[2]]); for (const sd of [-1, 1]) puff(g, p[0] + sd * (90 + la * 9), p[1] - 6, 34, 1 - la / 9); }
+  // BZZT! over the chip
+  const ba = F - 128; if (shot === 'lab1' && ba >= 0 && ba < 40) { const k = ob(ba / 4) * (1 - sm((ba - 36) / 4)), x = 600, y = 175;
+    let s0 = 7 + twos(F); const rr = () => ((s0 = (s0 * 1664525 + 1013904223) >>> 0) / 4294967296);
+    burstBalloon(g, x, y, 215, 100, k, rr, '#fff3b0', '#ff5a3c'); handWord(g, 'BZZT!', x, y, 100 * k, { fill: PAL.yellow, ink: PAL.ink, stroke2: '#ef3b32', sheen: '#ffffff', arc: 8, rot: -0.07, weight: 0.27, pops: (i) => ob((ba - i) / 3) }); }
+  // SHING! + lens glints in the bust
+  const sa = F - 216; if (shot === 'bust' && sa >= 0) {
+    handWord(g, 'SHING!', 600, 120, 64, { fill: '#e9fbff', ink: PAL.ink, stroke2: '#53c8f2', sheen: '#ffffff', arc: 8, rot: 0.12, weight: 0.25, skew: -0.15, alpha: 1 - sm((sa - 30) / 8), pops: (i) => ob((sa - i * 0.7) / 3) });
+    const k = sa < 2 ? ob(sa / 2) : 1 - sm((sa - 8) / 8); if (k > 0.02) { const m = T.bb.y_glasses, im = IMG.y_glasses, h = 3.3, w = h * im.width / im.height;
+      const P = (u, v) => proj([-w / 2 + u / im.width * w, 0.2 + h - v / im.height * h, -1]); const a1 = P(360, 442), a2 = P(771, 380);
+      void a1; void a2;   /* the 3D frame paints its own lens glint */ } }
+  // SPLAT! on the middle hit + impact frame
+  const pa = F - HITS[1]; if (shot === 'lab2' && pa >= 0 && pa < 22) { const k = ob(pa / 3) * (1 - sm((pa - 18) / 4)); splatBlob(g, 560, 230, 130, k, 3);
+    handWord(g, 'SPLAT!', 580, 226, 92 * k, { fill: '#ff5a3c', ink: PAL.ink, stroke2: PAL.cream, sheen: '#ffd0c0', arc: 12, rot: -0.08, weight: 0.25, gap: 0.14, pops: (i) => ob((pa - i * 0.6) / 3) }); }
+  // PICASSO LAB written in gold
+  if (shot === 'lab2' && F >= 356) { const r1 = sm((F - 356) / 22), r2 = sm((F - 372) / 16);
+    handWord(g, 'PICASSO', 560, 168, 70, { fill: PAL.gold, ink: PAL.ink, stroke2: PAL.cream, sheen: PAL.goldL, arc: 10, rot: -0.05, weight: 0.26, reveal: r1 });
+    if (r2 > 0) handWord(g, 'LAB', 610, 280, 88, { fill: PAL.gold, ink: PAL.ink, stroke2: PAL.cream, sheen: PAL.goldL, arc: 6, rot: -0.03, weight: 0.27, reveal: r2 }); }
+}
+
+function drawPhoto(g) { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(T.photo, 0, 0, DES, DES); }
+function photoLayer(ctx, g) {
+  const F = ctx.iw;
+  if (F < K.ring[0] || F >= K.wipe[1]) { drawPhoto(g); return; }
+  if (F < K.ring[1]) {
+    // ink burst ring closes in from the rim: the photo inside, the comic panel outside
+    const p = (F - K.ring[0]) / (K.ring[1] - K.ring[0]);
+    const R = lerp(540, -40, ease.inCubic(p) * 0.5 + p * 0.5);
+    const n = 30, rr = ctx.boilRng('ring');
+    const cx = lerp(480, 492, sm(p)), cy = lerp(480, 300, sm(p));      // the iris closes onto her face
+    const pts = [];
+    for (let i = 0; i < n * 2; i++) { const a = (i / (n * 2)) * TAU + F * 0.05, rad = i % 2 ? R + 6 : R + 70 + 50 * rr(); pts.push([cx + Math.cos(a) * Math.max(0, rad), cy + Math.sin(a) * Math.max(0, rad)]); }
+    if (R > 4) {
+      g.save(); g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.clip(); drawPhoto(g); g.restore();
+    }
+    // the burst ring itself: ink spikes with a yellow keyline on the inside
+    if (R > -30) {
+      g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.closePath();
+      g.arc(cx, cy, Math.max(0, R - 14), 0, TAU, true);
+      g.fillStyle = PAL.ink; g.fill('evenodd');
+      if (R > 12) { g.beginPath(); g.arc(cx, cy, R - 6, 0, TAU); g.lineWidth = 14; g.strokeStyle = PAL.yellow; g.stroke(); }
+      // speed ticks converging behind the ring
+      for (let i = 0; i < 26; i++) { const a = (i / 26) * TAU + 0.4 + rr() * 0.1, r0 = R + 70 + rr() * 50, r1 = r0 + 90 + rr() * 80; taper(g, [[cx + Math.cos(a) * r1, cy + Math.sin(a) * r1], [cx + Math.cos(a) * r0, cy + Math.sin(a) * r0]], 1, 8, PAL.ink); }
+    }
+    return;
+  }
+  if (F >= K.wipe[0]) {
+    // gold paint wipe: three fat brush strokes (L->R, R->L, L->R) uncover the plain photo behind their heads
+    const strokes = [{ y: 200, f0: 173, f1: 178.5, dir: 1, tilt: -0.06 }, { y: 480, f0: 175, f1: 180.5, dir: -1, tilt: 0.05 }, { y: 760, f0: 177, f1: 182.5, dir: 1, tilt: -0.05 }];
+    const W2 = 450, headL = 250;
+    const yAt = (s, x, side, k) => s.y + (x - 480) * s.tilt + side * (W2 / 2 + 9 * Math.sin(x * 0.05 + k * (side + 2)) + 5 * Math.sin(x * 0.17 + k));
+    const band = (s, k, xa, xb) => {
+      if (xa > xb) [xa, xb] = [xb, xa];          // one winding for every band: overlaps add up under the nonzero clip
+      const path = new Path2D(), N2 = 28;
+      for (let i = 0; i <= N2; i++) { const x = lerp(xa, xb, i / N2), y = yAt(s, x, -1, k); i ? path.lineTo(x, y) : path.moveTo(x, y); }
+      for (let i = N2; i >= 0; i--) { const x = lerp(xa, xb, i / N2); path.lineTo(x, yAt(s, x, 1, k)); }
+      path.closePath(); return path;
+    };
+    const mask = new Path2D(), heads = [];
+    strokes.forEach((s, k) => {
+      const p = clamp((F - s.f0) / (s.f1 - s.f0));
+      if (p <= 0) return;
+      const x0 = s.dir > 0 ? -260 : 1220, x1 = s.dir > 0 ? 1220 + headL + 100 : -260 - headL - 100;
+      const hx = lerp(x0, x1, ease.inOutSine(p));
+      const tail = hx - s.dir * headL;
+      if ((tail - x0) * s.dir > 1) mask.addPath(band(s, k, x0, tail));
+      heads.push({ s, k, hx, tail, p, x0 });
+    });
+    g.save(); g.clip(mask); drawPhoto(g); g.restore();
+    for (const { s, k, hx, tail, p, x0 } of heads) {
+      // ragged gold edges along the band behind the head (dry bristles), fading as the stroke finishes
+      const fade = 1 - sm((F - s.f1) / 2);
+      if (fade > 0.02 && (tail - x0) * s.dir > 1) {
+        g.globalAlpha = fade;
+        for (const side of [-1, 1]) for (let j = 0; j < 3; j++) {
+          g.beginPath(); const N3 = 20;
+          for (let i = 0; i <= N3; i++) { const x = lerp(x0, tail, i / N3), y = yAt(s, x, side, k) - side * (4 + j * 9); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+          g.lineWidth = j ? 4 : 11; g.strokeStyle = j ? PAL.goldD : PAL.gold; g.stroke();
+        }
+        g.globalAlpha = 1;
+      }
+      if (p >= 1) continue;
+      // the wet head: band from tail to hx with a rounded front, bristle streaks, ink edge
+      const b = band(s, k, tail, hx);
+      const cy = s.y + (hx - 480) * s.tilt;
+      b.ellipse(hx, cy, 150, W2 / 2 + 6, 0, -Math.PI / 2, Math.PI / 2, s.dir < 0);
+      g.save(); g.translate(s.dir * 9, 11); g.fillStyle = PAL.ink; g.fill(b); g.restore();   // drop shadow ahead + below, never behind the head
+      g.fillStyle = PAL.gold; g.fill(b);
+      g.save(); g.clip(b);
+      for (let i = 0; i < 18; i++) { const yy = s.y - W2 / 2 + (i + 0.5) * W2 / 18, w = 3 + 6 * hsh(k, i, 4), x2 = hx + s.dir * (40 + 50 * hsh(k, i, 6)); g.strokeStyle = i % 3 ? PAL.goldD : PAL.goldL; g.lineWidth = w; g.beginPath(); g.moveTo(tail - s.dir * 20, yy + (tail - 480) * s.tilt); g.lineTo(x2, yy + (x2 - 480) * s.tilt); g.stroke(); }
+      ellipse(g, hx + s.dir * 30, cy - W2 * 0.24, 46, 18, s.tilt - s.dir * 0.35); g.fillStyle = '#fff6c8'; g.fill();
+      g.restore();
+      // ink outline on the top edge, the round front and the bottom edge; the back stays open (wet bristles)
+      const ol = new Path2D(), N4 = 20;
+      for (let i = 0; i <= N4; i++) { const x = lerp(tail, hx, i / N4); i ? ol.lineTo(x, yAt(s, x, -1, k)) : ol.moveTo(x, yAt(s, x, -1, k)); }
+      ol.ellipse(hx, cy, 150, W2 / 2 + 6, 0, -Math.PI / 2, Math.PI / 2, s.dir < 0);
+      for (let i = N4; i >= 0; i--) ol.lineTo(lerp(tail, hx, i / N4), yAt(s, lerp(tail, hx, i / N4), 1, k));
+      g.lineWidth = 9; g.strokeStyle = PAL.ink; g.stroke(ol);
+    }
+  }
+}
+
+
+defineScene({
+  meta: { title: 'Yufei - 3D short', durationFrames: NF, fps: FPS, width: DES, height: DES, seed: 41, design: [DES, DES], background: '#000000', fonts: [], boil: { every: 2, variants: 3 }, poster: 380 },
+  update(ctx) { st.S = ctx.S; },
+  post(ctx, g) { if (ctx.iw === HITS[1]) { g.globalCompositeOperation = 'difference'; g.fillStyle = '#ffffff'; g.fillRect(0, 0, DES, DES); g.globalCompositeOperation = 'source-over'; } },
+  layers: [
+    { name: 'world', type: 'three', antialias: true,
+      async init(ctx, three) {
+        for (const n of [...SPR, 'bg_sunset']) IMG[n] = await loadImg(`/scene/assets3d/${n}.png`);
+        T.photo = await loadImg('/scene/assets3d/photo_full.png');
+        return buildWorld(ctx, three);
+      },
+      draw(ctx) { const F = ctx.iw; if (F < K.ring[0] || F >= K.wipe[1]) return false; updateWorld(ctx); } },
+    { name: 'fx', type: '2d', draw(ctx, g) { const F = ctx.iw; if (F >= K.ring[0] && F < K.wipe[1]) fx2d(ctx, g); } },
+    { name: 'photo', type: '2d', draw(ctx, g) { photoLayer(ctx, g); } },
+  ],
+});
+</script></body></html>
