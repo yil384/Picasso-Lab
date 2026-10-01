@@ -65,6 +65,9 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   (`fp = dir * r / sqrt(1 - 0.6 r^2)`): violet nebula, a blue-white sun at `(-0.6, -0.55)`, Cybertron's horizon
   (sphere at `(0.9, 1.3)`, radius 1.1) lit by that sun. No glowing ring (a neon rim looked fake); the edge is a thin
   Einstein-ring line.
+  The throat is a Kerr-like D, not a circle: flattened (to 0.86) on the lower side - the side rotating toward us, where
+  the crescent is brightest - with rounded corners, and shifted 0.04 throats up; `wr` is measured against that outline
+  so the lensing, the far side and the rings all follow it.
   Around it, what an EHT image of a wormhole would show (Wielgus et al. 2020): a blurred orange accretion crescent
   (~1.2-1.3 throats) - strongly brighter, wider and larger on the lower side (Doppler beaming, as in the M87* image),
   faint and thin on the far side, centre shifted toward the bright side, turbulent knots orbiting - a thin photon ring at
