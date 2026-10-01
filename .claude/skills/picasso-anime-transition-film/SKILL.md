@@ -25,7 +25,7 @@ splashes short ("开屏动画时间都别太长"), the result must feel seamless
   (a white layer) while the destination is still loading.
 - Write the shot list with times, image, camera per aspect, and effects per beat before generating art.
 
-## 2. Key frames with Codex (Mac only — needs the logged-in `codex` CLI)
+## 2. Key frames with Codex (needs a logged-in `codex` CLI - on the Mac, or in a cloud session, see below)
 - `./gen.sh NAME "scene…" [ref.png …]` → `art/NAME.png` 1536×1024; `style.txt` is appended to every prompt (keep one
   style paragraph for the whole film). The prompt must go in on stdin (`codex exec -i` swallows a positional prompt).
 - Naming the characters explicitly worked (Ultraman Tiga, Golza, Melba — plus a physical description). Pass earlier
@@ -38,7 +38,11 @@ splashes short ("开屏动画时间都别太长"), the result must feel seamless
   inpainted so the jet could fly as a sprite).
 - Draw a labelled coordinate grid (every 128 art px) on small previews of each frame and read effect anchor points
   (eyes, colour timer, hands, impact points) from them — don't guess coordinates.
-- In a cloud session without Codex: reuse `art/`, or give the user the exact `gen.sh` commands to run on the Mac.
+- In a cloud session: `npm i -g @openai/codex`, run `codex login --device-auth` in the background, give the user the URL
+  (https://auth.openai.com/codex/device) and the one-time code it prints; they sign in to ChatGPT and enter it within
+  15 minutes (verified Oct 2026: login and image generation both work from the cloud container, ~1 min per image;
+  `codex login status` shows the result). The token lives in the throwaway container; remind them they can revoke it.
+  Without a login: reuse `art/`, or give the user the prompts to generate in ChatGPT.
 - The characters are someone's IP: fine for a lab easter egg the user asked for; say so once, don't lecture.
 
 ## 3. The scene (`engine.js`, `fxlib.js`, one timeline HTML per film)

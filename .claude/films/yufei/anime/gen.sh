@@ -1,5 +1,5 @@
 #!/bin/bash
-# One square image with Codex's image tool (needs the logged-in `codex` CLI; run on the Mac, not in a cloud VM).
+# One square image with Codex's image tool (needs a logged-in `codex` CLI: on the Mac, or in a cloud session after `codex login --device-auth`).
 # usage: ./gen.sh NAME "description" [ref.png ...]   -> art/NAME.png (1024x1024)
 # The prompt goes in on stdin: `codex exec -i` swallows a positional prompt.
 cd "$(dirname "$0")"; mkdir -p art logs
