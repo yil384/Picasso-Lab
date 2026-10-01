@@ -169,6 +169,7 @@ function frondShape(L, W, droop, n) {
 
 export default {
   title: 'San Diego sunset with her cat',
+  film: 'film/yufei',               // double click: the 8 s comic short (the white cat paints the noise off a quantum chip)
   exit: 0.45,
   still: 2.6,
   async build(k) {

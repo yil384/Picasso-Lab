@@ -23,6 +23,9 @@
      exit: 0.45,                // seconds the exit takes (props leave as k.e goes 0 -> 1)
      still: 2.4,                // time shown when the visitor prefers reduced motion
      plate: true,               // swap the photo for the plate behind the person (needed for parallax)
+     film: 'film/<name>',       // optional: a short square film under people/static/ (<name>.mp4 + <name>.webm)
+                                //   that starts and ends on the photo; a double click / double tap plays it in
+                                //   the circle (a click or Esc ends it)
      async build(k) { ...; return { update(t, e, dt) {}, draw2d(q, t, e) {} } }
    }
    Coordinates: world units are the CSS px of a 200 px avatar ("logical px"), origin
@@ -197,6 +200,60 @@ class Avatar {
     // the stage fits one tile size: a rotation or a window resize switches the effect off
     this.onResize = () => { if (this.gl && this.resized()) this.stop(); };
     window.addEventListener('resize', this.onResize);
+    // a short film (scene `film`: a square video under people/static/ that starts and ends on the photo):
+    // a double click / double tap plays it in the avatar circle; a click or Esc ends it
+    this.film = null;
+    this.filmOn = false;
+    this.pending = null;       // a first click, waiting to see whether a second one follows
+    if (mod.film && !this.reduced) this.makeFilm(mod.film);
+  }
+
+  makeFilm(src) {
+    const v = this.film = document.createElement('video');
+    v.className = 'pfx-film';
+    v.muted = v.defaultMuted = true;
+    v.playsInline = true;
+    for (const a of ['muted', 'playsinline', 'disablepictureinpicture']) v.setAttribute(a, '');
+    v.setAttribute('aria-hidden', 'true');
+    v.preload = 'auto';
+    v.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;border-radius:50%;'
+      + 'z-index:3;opacity:0;pointer-events:none;transition:opacity .16s';
+    // H.264 for Safari and most browsers, VP9 for the builds without H.264 (open-source Chromium, some Linux)
+    for (const [ext, type] of [['mp4', 'video/mp4'], ['webm', 'video/webm']]) {
+      const so = document.createElement('source');
+      so.src = new URL(`${src}.${ext}`, STATIC).href;
+      so.type = type;
+      v.appendChild(so);
+    }
+    // shown once it plays: until then (and after it) the photo underneath is the same picture
+    v.addEventListener('playing', () => { if (this.filmOn) { v.style.transition = 'none'; v.style.opacity = '1'; } });
+    v.addEventListener('ended', () => this.endFilm(false));
+    v.lastElementChild.addEventListener('error', () => this.endFilm(false));     // no source played
+    this.stage.appendChild(v);
+    this.wrap.style.touchAction = 'manipulation';       // a double tap is ours, not the browser's zoom
+    this.onKey = (ev) => { if (this.filmOn && ev.key === 'Escape') this.endFilm(true); };
+    document.addEventListener('keydown', this.onKey);
+  }
+
+  playFilm() {
+    const v = this.film;
+    if (this.on || this.gl || this.building) this.stop();     // straight back to the photo: the film starts on it
+    this.filmOn = true;
+    this.wrap.classList.add('pfx-film-on');
+    try { v.currentTime = 0; } catch (_) {}
+    const p = v.play();
+    if (p && p.catch) p.catch(() => this.endFilm(false));
+  }
+
+  /** back to the photo: at the natural end at once (the last frame is the photo), on a skip with a short fade */
+  endFilm(fade) {
+    const v = this.film;
+    if (!v || !this.filmOn) return;
+    this.filmOn = false;
+    this.wrap.classList.remove('pfx-film-on');
+    v.style.transition = fade ? 'opacity .16s' : 'none';
+    v.style.opacity = '0';
+    v.pause();
   }
 
   /** the viewport and the photo's layout box, in CSS px. The pasted embed has no doctype, so it runs in
@@ -223,6 +280,17 @@ class Avatar {
   }
 
   toggle() {
+    if (this.film) {
+      // with a film, a click waits a moment: a second one makes it a double click, which plays the film
+      if (this.filmOn) { this.endFilm(true); return; }
+      if (this.pending) { clearTimeout(this.pending); this.pending = null; this.playFilm(); return; }
+      this.pending = setTimeout(() => { this.pending = null; this.flip(); }, 280);
+      return;
+    }
+    this.flip();
+  }
+
+  flip() {
     const now = performance.now();
     if (now - this.lastToggle < 380) return;      // a double click counts once
     this.lastToggle = now;
