@@ -1,0 +1,330 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Yufei - anime short</title>
+<!-- Team-page avatar short for Prof. Yufei Ding, anime version (8 s, 192 f @ 24 fps, square, NOT a loop).
+     Plays inside her round avatar on double-click: starts and ends exactly on her photo.
+     She is the heroine: chibi anime sprites (painted with ChatGPT image generation from the approved character
+     design, keyed off green: assets/y_*.png) animated in Canvas2D: squash and stretch, camera moves, whips,
+     crash zoom, speed lines, hand-built comic lettering (lib2d.js, shared with films/yufei), gold paint. -->
+</head><body>
+<script type="module">
+import { defineScene, ease, clamp, lerp } from '/pv/runtime/pv.js';
+import { TAU, PAL, st, sm, io, ob, ic, oc, ioc, twos, ringv, bumpv, hsh, ellipse, star4Path, taper, sparkle, drop, puff, zap, smoothPts, handWord, burstBalloon, splatBlob } from '/scene/lib2d.js';
+
+const FPS = 24, NF = 192, DES = 960;
+const K = { ring: [3, 10], wipe: [173, 184] };
+const IMG = {};
+const T = {};
+const SPR = ['y_pop', 'y_land', 'y_surprise', 'y_glasses', 'y_brush', 'y_swing', 'y_proud', 'y_wave'];
+
+// ---------------- helpers ----------------
+function sprite(g, n, x, y, h, o = {}) {
+  // draw sprite n with its feet (anchor 'bottom') or its centre at (x, y), h design px tall, squash sq (>0 = squashed)
+  const im = IMG[n]; if (!im) return;
+  const w = h * im.width / im.height, sq = o.sq || 0, sx = (1 + sq * 0.6) * (o.flip ? -1 : 1), sy = 1 - sq;
+  g.save(); g.translate(x, y); g.rotate(o.rot || 0); g.scale(sx * (o.s || 1), sy * (o.s || 1));
+  g.globalAlpha = o.alpha ?? 1;
+  const ay = o.anchor === 'center' ? -h / 2 : -h;
+  // soft ink shadow under full figures
+  g.drawImage(im, -w / 2, ay, w, h);
+  g.restore();
+}
+function speedLinesRadial(g, cx, cy, r0, n, amt, seed, col = PAL.ink) {
+  if (amt <= 0.01) return;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU + hsh(seed, i) * 0.2, r1 = r0 + 40 + hsh(seed, i, 2) * 120, len = 300 + hsh(seed, i, 3) * 500;
+    taper(g, [[cx + Math.cos(a) * (r1 + len), cy + Math.sin(a) * (r1 + len)], [cx + Math.cos(a) * r1, cy + Math.sin(a) * r1]], 10 * amt, 0.5, col);
+  }
+}
+function speedLinesH(g, seed, amt, col = 'rgba(255,255,255,0.85)') {
+  if (amt <= 0.01) return;
+  for (let i = 0; i < 26; i++) { const y = hsh(seed, i) * DES, x = hsh(seed, i, 2) * DES * 1.4 - 200, l = 200 + 400 * hsh(seed, i, 3);
+    taper(g, [[x, y], [x + l, y]], 0.5, (3 + 7 * hsh(seed, i, 4)) * amt, col); }
+}
+function drawPhoto(g) { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(T.photo, 0, 0, DES, DES); }
+
+// ---------------- backgrounds (placeholders until bg_sunset / bg_lab arrive) ----------------
+function cover(g, im) { const s = Math.min(im.width, im.height); g.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, DES, DES); }
+function bgSunset(g, F) {
+  if (IMG.bg_sunset) { cover(g, IMG.bg_sunset); return; }
+  g.drawImage(IMG.comic_sky, 0, 0, DES, DES);
+  g.drawImage(IMG.comic_palm, -20, 0, DES, DES);
+}
+const CHIP = { x: 640, y: 655, w: 300 };   // the chip's centre on the bench (lab shots)
+const QPOS = [[425, 545], [537, 555], [655, 570], [372, 590], [493, 605], [625, 620], [298, 648], [433, 668], [580, 688]];
+function qubitPos(i) { if (IMG.bg_lab) return QPOS[i]; const r = Math.floor(i / 3), c = i % 3; const u = (c - 1) * 0.6, v = (r - 1) * 0.6;
+  return [CHIP.x + (u - v) * CHIP.w * 0.42, CHIP.y + (u + v) * CHIP.w * 0.2]; }
+function bgLab(g, F, q) {
+  if (IMG.bg_lab) { cover(g, IMG.bg_lab); }
+  else {
+    // wall + window with the dusk sky + the bench
+    const gr = g.createLinearGradient(0, 0, 0, DES); gr.addColorStop(0, '#f3c99c'); gr.addColorStop(1, '#d98d6a');
+    g.fillStyle = gr; g.fillRect(0, 0, DES, DES);
+    g.save(); g.beginPath(); g.rect(120, 60, 720, 380); g.clip(); g.drawImage(IMG.comic_sky, 0, -280, DES * 1.2, DES * 1.2); g.restore();
+    g.lineWidth = 16; g.strokeStyle = '#5b3a52'; g.strokeRect(120, 60, 720, 380); g.lineWidth = 10; g.beginPath(); g.moveTo(480, 60); g.lineTo(480, 440); g.stroke();
+    g.fillStyle = '#3d4a99'; g.beginPath(); g.moveTo(-20, 500); g.lineTo(980, 500); g.lineTo(980, 980); g.lineTo(-20, 980); g.fill();
+    g.fillStyle = '#2b3576'; g.fillRect(-20, 490, 1000, 22); g.lineWidth = 6; g.strokeStyle = PAL.ink; g.beginPath(); g.moveTo(-20, 500); g.lineTo(980, 500); g.stroke();
+    // chip: an isometric gold tile on a navy board
+    const d = (cx, cy, s, fill, edge) => { g.beginPath(); g.moveTo(cx, cy - s * 0.48); g.lineTo(cx + s, cy); g.lineTo(cx, cy + s * 0.48); g.lineTo(cx - s, cy); g.closePath(); g.fillStyle = fill; g.fill(); g.lineWidth = 6; g.strokeStyle = edge; g.stroke(); };
+    d(CHIP.x, CHIP.y + 14, CHIP.w * 0.62, '#1e2558', PAL.ink);
+    d(CHIP.x, CHIP.y, CHIP.w * 0.5, '#f0b437', PAL.ink);
+    g.strokeStyle = '#a8701f'; g.lineWidth = 7;
+    for (let i = 0; i < 9; i++) { const [x, y] = qubitPos(i); if (i % 3 < 2) { const [x2, y2] = qubitPos(i + 1); g.beginPath(); g.moveTo(x, y); g.lineTo(x2, y2); g.stroke(); } if (i < 6) { const [x2, y2] = qubitPos(i + 3); g.beginPath(); g.moveTo(x, y); g.lineTo(x2, y2); g.stroke(); } }
+  }
+  // qubits: cyan pearls (red while a gremlin sits on them)
+  for (let i = 0; i < 9; i++) {
+    const [x, y] = qubitPos(i), bad = q && q[i] > 0, R = 19;
+    if (!IMG.bg_lab || bad) {
+      ellipse(g, x, y, R * 1.9, R * 1.9); g.fillStyle = bad ? 'rgba(255,60,60,0.25)' : 'rgba(83,216,242,0.22)'; g.fill();
+      ellipse(g, x, y, R, R); g.fillStyle = bad ? (hsh(twos(F), i) > 0.5 ? '#ff3b4a' : '#7a1430') : '#53d8f2'; g.fill(); g.lineWidth = 5; g.strokeStyle = PAL.ink; g.stroke();
+      ellipse(g, x - R * 0.35, y - R * 0.4, R * 0.3, R * 0.22); g.fillStyle = '#ffffff'; g.fill();
+    }
+  }
+}
+
+// ---------------- the noise gremlins (code-drawn until gremlins.png arrives) ----------------
+const GREM = [{ q: 0, t: 36 }, { q: 4, t: 39 }, { q: 2, t: 42 }];
+function gremlin(g, x, y, s, F, i, mood) {
+  if (s <= 0.02) return;
+  if (IMG['grem' + i]) { sprite(g, 'grem' + i, x, y + 16, 150, { s, rot: (hsh(twos(F), i, 4) - 0.5) * 0.12, sq: mood === 'shock' ? -0.08 : 0 }); return; }
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const R = 34, n = 11;
+  g.beginPath();
+  for (let k = 0; k < n * 2; k++) { const a = (k / (n * 2)) * TAU, r = k % 2 ? R : R * (1.38 + 0.08 * hsh(i, k)); g.lineTo(Math.cos(a) * r, Math.sin(a) * r - R); }
+  g.closePath(); g.fillStyle = '#e6402f'; g.fill(); g.lineWidth = 5; g.strokeStyle = PAL.ink; g.stroke();
+  ellipse(g, -R * 0.2, -R * 1.3, R * 0.5, R * 0.3); g.fillStyle = 'rgba(255,150,120,0.6)'; g.fill();
+  for (const sx of [-1, 1]) { ellipse(g, sx * 12, -R - 4, 9, mood === 'shock' ? 11 : 8); g.fillStyle = '#fff8e6'; g.fill(); g.lineWidth = 3; g.stroke(); ellipse(g, sx * 12 + 2, -R - 2, 4, 4); g.fillStyle = PAL.ink; g.fill();
+    if (mood !== 'shock') { g.beginPath(); g.moveTo(sx * 22, -R - 18); g.lineTo(sx * 4, -R - 10); g.lineWidth = 5; g.stroke(); } }
+  if (mood === 'shock') { ellipse(g, 0, -R + 14, 8, 10); g.fillStyle = '#4a0d1c'; g.fill(); }
+  else { g.beginPath(); g.moveTo(-14, -R + 10); g.lineTo(14, -R + 10); g.lineTo(0, -R + 20); g.closePath(); g.fillStyle = '#fff8e6'; g.fill(); g.lineWidth = 3; g.stroke(); }
+  g.restore();
+}
+
+// ---------------- the shots ----------------
+const SHOT = (F) => (F < 30 ? 'pop' : F < 74 ? 'lab1' : F < 100 ? 'glasses' : 'lab2');
+
+function scenePop(g, F) {
+  bgSunset(g, F);
+  const a = F - 10, k = ob(a / 8);
+  speedLinesRadial(g, 480, 470, 250, 46, (1 - sm((a - 6) / 10)) * (a >= 0 ? 1 : 0), twos(F), 'rgba(255,248,220,0.9)');
+  if (a >= 0) {
+    const s = lerp(0.12, 1, k), rot = ringv(a - 2, 0.12, 0.9, 0.25);
+    sprite(g, 'y_pop', 480, 500 + bumpv(a - 8, 20, 0.8, 0.2), 780, { anchor: 'center', s, rot });
+    for (let i = 0; i < 6; i++) { const t = (a - 4 - i) / 10; if (t > 0 && t < 1) sparkle(g, 480 + Math.cos(i * 1.1) * (260 + 140 * t), 470 + Math.sin(i * 1.1) * (260 + 140 * t), 26 * (1 - t), i, '#fff4b8'); }
+  }
+}
+function gremState(i, F) {
+  const G = GREM[i], [qx, qy] = qubitPos(G.q);
+  const pop = ob((F - G.t) / 5), hit = st.hits ? st.hits[i] : 1e9;
+  if (F >= hit) { const h = (F - hit) / 8; return { x: qx, y: qy - 6, s: (1 - ic(h)) * 1.1, splat: h, mood: 'shock' }; }
+  const jit = F > G.t + 5 ? (hsh(twos(F), i) - 0.5) * 6 : 0;
+  return { x: qx + jit, y: qy - 6 - 30 * (1 - pop) + Math.abs(Math.sin((F + i * 3) * 0.5)) * -10, s: pop * 1.1, mood: F > 100 && F < hit ? 'shock' : 'angry' };
+}
+function sceneLab(g, F) {
+  const z = 1 + 0.035 * sm(((F < 100 ? F - 30 : F - 100)) / 70); g.save(); g.translate(480, 640); g.scale(z, z); g.translate(-480, -640);
+  const q = new Array(9).fill(0);
+  const gs = GREM.map((G, i) => gremState(i, F));
+  gs.forEach((s, i) => { if (s.s > 0.3 && !(s.splat >= 0)) q[GREM[i].q] = 1; });
+  bgLab(g, F, q);
+  // gremlins + their sparks
+  gs.forEach((s, i) => {
+    if (s.splat >= 0) { if (s.splat < 1) splatBlob(g, s.x, s.y - 20, 70 * (0.6 + s.splat), 1 - s.splat * 0.8, i + 3); return; }
+    gremlin(g, s.x, s.y, s.s, F, i, s.mood);
+    if (s.s > 0.5) { const rr = (k) => hsh(twos(F), i, k); for (let j = 0; j < 2; j++) zap(g, [s.x + (rr(j) - 0.5) * 40, s.y - 40], [s.x + (rr(j + 3) - 0.5) * 140, s.y - 40 - rr(j + 5) * 90], () => rr(j + 7), 5, j ? PAL.yellow : '#ff5a3c'); }
+  });
+  // the heroine
+  const shot = SHOT(F);
+  if (shot === 'lab1') {
+    if (F < 50) {      // falls in from above, lands with a squash
+      const p = (F - 30) / 9, x = 255;
+      const y = p < 1 ? lerp(500, 880, ic(p)) : 880;
+      const sq = p < 1 ? -0.18 : ringv(F - 39, 0.22, 0.9, 0.25);
+      sprite(g, 'y_land', x, y, 520, { sq });
+      if (F >= 39 && F < 47) for (const sd of [-1, 1]) puff(g, x + sd * (110 + (F - 39) * 9), 872, 34, 1 - (F - 39) / 8);
+    } else {           // startled by the gremlins
+      const a = F - 50;
+      sprite(g, 'y_surprise', 245 - 10 * oc(a / 4), 880 - 30 * bumpv(a, 1, 0.9, 0.3), 540, { sq: -ringv(a, 0.1, 1.0, 0.3), rot: -0.04 * oc(a / 4) });
+    }
+  } else if (shot === 'lab2') {
+    if (F < 114) {     // wind-up: brush raised, leaning back
+      const a = F - 100;
+      sprite(g, 'y_brush', 245, 882, 560, { rot: -0.06 * sm(a / 10), sq: 0.05 * sm(a / 12) });
+    } else if (F < 134) {   // the swing
+      const a = F - 114;
+      sprite(g, 'y_swing', 255 + 20 * oc(a / 6), 882, 545, { rot: 0.05 * (1 - oc(a / 8)), sq: -ringv(a - 2, 0.08, 1, 0.3) });
+    } else if (F < 166) {   // proud wink
+      const a = F - 134;
+      sprite(g, 'y_proud', 255, 882, 560, { sq: ringv(a, 0.12, 1.0, 0.28) + 0.015 * Math.sin(a * 0.4) });
+    } else {               // goodbye wave
+      const a = F - 166;
+      sprite(g, 'y_wave', 255, 882, 550, { rot: 0.04 * Math.sin(a * 0.45), sq: ringv(a, 0.08, 1, 0.3) });
+    }
+    if (IMG.cat_jump && F >= 102 && F < 134) {          // leaps in from the right onto the desk corner
+      const a = (F - 102) / 8, x = lerp(1060, 760, oc(Math.min(a, 1))), y = a < 1 ? lerp(800, 735, a) - 240 * Math.sin(Math.PI * a) : 735;
+      sprite(g, 'cat_jump', x, y, 215, { sq: a < 1 ? -0.12 : ringv(F - 110, 0.15, 1, 0.3), rot: a < 1 ? -0.2 * (1 - a) : 0 });
+    }
+    if (IMG.cat_cheer && F >= 134) { const a = F - 134; sprite(g, 'cat_cheer', 760, 735 - 18 * Math.abs(Math.sin(a * 0.42)), 215, { sq: ringv(a, 0.1, 1, 0.3) }); }
+  }
+  g.restore();
+}
+function sceneGlasses(g, F) {
+  bgSunset(g, F);
+  const a = F - 74, s = 1 + 0.06 * sm(a / 24);
+  speedLinesRadial(g, 480, 470, 380, 60, 1 - sm((a - 2) / 10), twos(F), 'rgba(255,255,255,0.85)');
+  sprite(g, 'y_glasses', 480, 990, 1150 * s, { s: 1 });
+  // extra glints on the painted ones (lens outer corners): sprite px -> design px
+  const h = 1150 * s, im = IMG.y_glasses, w = h * im.width / im.height, X = (u) => 480 - w / 2 + u * w / im.width, Y = (v) => 990 - h + v * h / im.height;
+  const ga = F - 80;
+  if (ga >= 0 && ga < 14) {
+    const k = ga < 2 ? ob(ga / 2) : 1 - sm((ga - 8) / 6);
+    sparkle(g, X(360), Y(442), 70 * k, 0.2 + ga * 0.05, '#ffffff'); sparkle(g, X(771), Y(380), 90 * k, 0.5 + ga * 0.05, '#ffffff');
+  }
+}
+function lettering(g, F, shot) {
+  const jr = null;
+  const ba = F - 44;
+  if (shot === 'lab1' && ba >= 0 && ba < 26) {
+    const k = ob(ba / 4) * (1 - sm((ba - 22) / 4)), x = 560 + 5 * Math.sin(ba * 2.3), y = 175 + 4 * Math.cos(ba * 3.1);
+    burstBalloon(g, x, y, 215, 100, k, (() => { let s = 7 + twos(F); return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })(), '#fff3b0', '#ff5a3c');
+    handWord(g, 'BZZT!', x, y, 100 * k, { fill: PAL.yellow, ink: PAL.ink, stroke2: '#ef3b32', sheen: '#ffffff', arc: 8, rot: -0.07, weight: 0.27, pops: (i) => ob((ba - i) / 3) });
+  }
+  const sa = F - 81;
+  if (shot === 'glasses' && sa >= 0 && sa < 19) handWord(g, 'SHING!', 600, 118, 64, { fill: '#e9fbff', ink: PAL.ink, stroke2: '#53c8f2', sheen: '#ffffff', arc: 8, rot: 0.12, weight: 0.25, skew: -0.15,
+    alpha: 1 - sm((sa - 15) / 4), pops: (i) => ob((sa - i * 0.7) / 3) });
+  const pa = F - 120;
+  if (shot === 'lab2' && pa >= 0 && pa < 18) { const k = ob(pa / 3) * (1 - sm((pa - 14) / 4)); splatBlob(g, 560, 240, 130, k, 3);
+    handWord(g, 'SPLAT!', 580, 236, 92 * k, { fill: '#ff5a3c', ink: PAL.ink, stroke2: PAL.cream, sheen: '#ffd0c0', arc: 12, rot: -0.08, weight: 0.25, gap: 0.14, pops: (i) => ob((pa - i * 0.6) / 3) }); }
+  if (shot === 'lab2' && F >= 140) {
+    const r1 = sm((F - 140) / 16), r2 = sm((F - 152) / 12);
+    handWord(g, 'PICASSO', 562, 160, 70, { fill: PAL.gold, ink: PAL.ink, stroke2: PAL.cream, sheen: PAL.goldL, arc: 10, rot: -0.05, weight: 0.26, reveal: r1 });
+    if (r2 > 0) handWord(g, 'LAB', 610, 272, 88, { fill: PAL.gold, ink: PAL.ink, stroke2: PAL.cream, sheen: PAL.goldL, arc: 6, rot: -0.03, weight: 0.27, reveal: r2 });
+    for (let i = 0; i < 7; i++) { const t = ((F - 144 + i * 4) % 18) / 18; if (F > 144) sparkle(g, 430 + hsh(i, 1) * 380, 100 + hsh(i, 2) * 240, 22 * Math.sin(Math.PI * t), i + F * 0.05); }
+  }
+}
+// the gold stroke of the swing: a fat tapered ribbon sweeping over the gremlins (f115-123), then soaking away
+function goldStroke(g, F) {
+  const p = sm((F - 115) / 8); if (F < 115 || F > 140) return;
+  const fade = 1 - sm((F - 128) / 10);
+  const pts = []; const ctl = [[330, 610], [425, 548], [493, 585], [655, 548], [980, 470]];   // one slash left to right through the gremlins on q0, q4, q2
+  const cr = (P, t) => { const n = P.length - 1, x = Math.min(n - 1e-6, t * n), i = Math.floor(x), u = x - i, p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(n, i + 2)];
+    return [0, 1].map((k) => 0.5 * ((2 * p1[k]) + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u * u + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u * u * u)); };
+  for (let i = 0; i <= 48; i++) pts.push(cr(ctl, i / 48 * p));
+  g.globalAlpha = fade;
+  if (pts.length > 2) { taper(g, pts.map(([x, y]) => [x + 8, y + 10]), 30, 70, PAL.ink); taper(g, pts, 26, 62, PAL.gold); taper(g, pts.map(([x, y]) => [x, y - 14]), 6, 14, PAL.goldL); }
+  g.globalAlpha = 1;
+}
+
+function drawFilm(ctx, g) {
+  const F = ctx.iw, shot = SHOT(F);
+  st.hits = [117, 119, 121];
+  // camera: whips are a sideways slide of both shots with speed lines
+  const whip = (f0, f1) => clamp((F - f0) / (f1 - f0));
+  const draw = (sh) => { if (sh === 'pop') scenePop(g, F); else if (sh === 'glasses') sceneGlasses(g, F); else sceneLab(g, F); if (sh === 'lab2') goldStroke(g, F); lettering(g, F, sh); };
+  const shake = (F >= 39 && F < 46) || (F >= 118 && F < 126) ? (hsh(twos(F), 9) - 0.5) * 18 : 0;
+  g.save(); g.translate(shake, shake * 0.6);
+  // whip windows: pop->lab (26-32), lab->glasses crash zoom (70-74), glasses->lab (98-102)
+  if (F >= 26 && F < 32) { const p = ic(whip(26, 32)), from = 'pop', to = 'lab1';
+    g.save(); g.translate(-p * DES, 0); scenePop(g, F); g.restore(); g.save(); g.translate(DES - p * DES, 0); sceneLab(g, F); g.restore(); speedLinesH(g, twos(F), 1); }
+  else if (F >= 70 && F < 74) { const p = ic(whip(70, 74)); g.save(); g.translate(480, 450); g.scale(1 + p * 2.5, 1 + p * 2.5); g.translate(-480, -450); sceneLab(g, F); lettering(g, F, 'lab1'); g.restore(); speedLinesRadial(g, 480, 450, 160, 70, p, twos(F)); }
+  else if (F >= 98 && F < 102) { const p = ic(whip(98, 102)); g.save(); g.translate(-p * DES, 0); sceneGlasses(g, F); g.restore(); g.save(); g.translate(DES - p * DES, 0); sceneLab(g, F); g.restore(); speedLinesH(g, twos(F) + 5, 1); }
+  else draw(shot);
+  // impact frame on the swing's hit
+  if (F === 119) { g.globalCompositeOperation = 'difference'; g.fillStyle = '#ffffff'; g.fillRect(-40, -40, DES + 80, DES + 80); g.globalCompositeOperation = 'source-over'; }
+  g.restore();
+}
+
+function photoLayer(ctx, g) {
+  const F = ctx.iw;
+  if (F < K.ring[0] || F >= K.wipe[1]) { drawPhoto(g); return; }
+  if (F < K.ring[1]) {
+    // ink burst ring closes in from the rim: the photo inside, the comic panel outside
+    const p = (F - K.ring[0]) / (K.ring[1] - K.ring[0]);
+    const R = lerp(540, -40, ease.inCubic(p) * 0.5 + p * 0.5);
+    const n = 30, rr = ctx.boilRng('ring');
+    const cx = lerp(480, 492, sm(p)), cy = lerp(480, 300, sm(p));      // the iris closes onto her face
+    const pts = [];
+    for (let i = 0; i < n * 2; i++) { const a = (i / (n * 2)) * TAU + F * 0.05, rad = i % 2 ? R + 6 : R + 70 + 50 * rr(); pts.push([cx + Math.cos(a) * Math.max(0, rad), cy + Math.sin(a) * Math.max(0, rad)]); }
+    if (R > 4) {
+      g.save(); g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.clip(); drawPhoto(g); g.restore();
+    }
+    // the burst ring itself: ink spikes with a yellow keyline on the inside
+    if (R > -30) {
+      g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.closePath();
+      g.arc(cx, cy, Math.max(0, R - 14), 0, TAU, true);
+      g.fillStyle = PAL.ink; g.fill('evenodd');
+      if (R > 12) { g.beginPath(); g.arc(cx, cy, R - 6, 0, TAU); g.lineWidth = 14; g.strokeStyle = PAL.yellow; g.stroke(); }
+      // speed ticks converging behind the ring
+      for (let i = 0; i < 26; i++) { const a = (i / 26) * TAU + 0.4 + rr() * 0.1, r0 = R + 70 + rr() * 50, r1 = r0 + 90 + rr() * 80; taper(g, [[cx + Math.cos(a) * r1, cy + Math.sin(a) * r1], [cx + Math.cos(a) * r0, cy + Math.sin(a) * r0]], 1, 8, PAL.ink); }
+    }
+    return;
+  }
+  if (F >= K.wipe[0]) {
+    // gold paint wipe: three fat brush strokes (L->R, R->L, L->R) uncover the plain photo behind their heads
+    const strokes = [{ y: 200, f0: 173, f1: 178.5, dir: 1, tilt: -0.06 }, { y: 480, f0: 175, f1: 180.5, dir: -1, tilt: 0.05 }, { y: 760, f0: 177, f1: 182.5, dir: 1, tilt: -0.05 }];
+    const W2 = 450, headL = 250;
+    const yAt = (s, x, side, k) => s.y + (x - 480) * s.tilt + side * (W2 / 2 + 9 * Math.sin(x * 0.05 + k * (side + 2)) + 5 * Math.sin(x * 0.17 + k));
+    const band = (s, k, xa, xb) => {
+      if (xa > xb) [xa, xb] = [xb, xa];          // one winding for every band: overlaps add up under the nonzero clip
+      const path = new Path2D(), N2 = 28;
+      for (let i = 0; i <= N2; i++) { const x = lerp(xa, xb, i / N2), y = yAt(s, x, -1, k); i ? path.lineTo(x, y) : path.moveTo(x, y); }
+      for (let i = N2; i >= 0; i--) { const x = lerp(xa, xb, i / N2); path.lineTo(x, yAt(s, x, 1, k)); }
+      path.closePath(); return path;
+    };
+    const mask = new Path2D(), heads = [];
+    strokes.forEach((s, k) => {
+      const p = clamp((F - s.f0) / (s.f1 - s.f0));
+      if (p <= 0) return;
+      const x0 = s.dir > 0 ? -260 : 1220, x1 = s.dir > 0 ? 1220 + headL + 100 : -260 - headL - 100;
+      const hx = lerp(x0, x1, ease.inOutSine(p));
+      const tail = hx - s.dir * headL;
+      if ((tail - x0) * s.dir > 1) mask.addPath(band(s, k, x0, tail));
+      heads.push({ s, k, hx, tail, p, x0 });
+    });
+    g.save(); g.clip(mask); drawPhoto(g); g.restore();
+    for (const { s, k, hx, tail, p, x0 } of heads) {
+      // ragged gold edges along the band behind the head (dry bristles), fading as the stroke finishes
+      const fade = 1 - sm((F - s.f1) / 2);
+      if (fade > 0.02 && (tail - x0) * s.dir > 1) {
+        g.globalAlpha = fade;
+        for (const side of [-1, 1]) for (let j = 0; j < 3; j++) {
+          g.beginPath(); const N3 = 20;
+          for (let i = 0; i <= N3; i++) { const x = lerp(x0, tail, i / N3), y = yAt(s, x, side, k) - side * (4 + j * 9); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+          g.lineWidth = j ? 4 : 11; g.strokeStyle = j ? PAL.goldD : PAL.gold; g.stroke();
+        }
+        g.globalAlpha = 1;
+      }
+      if (p >= 1) continue;
+      // the wet head: band from tail to hx with a rounded front, bristle streaks, ink edge
+      const b = band(s, k, tail, hx);
+      const cy = s.y + (hx - 480) * s.tilt;
+      b.ellipse(hx, cy, 150, W2 / 2 + 6, 0, -Math.PI / 2, Math.PI / 2, s.dir < 0);
+      g.save(); g.translate(s.dir * 9, 11); g.fillStyle = PAL.ink; g.fill(b); g.restore();   // drop shadow ahead + below, never behind the head
+      g.fillStyle = PAL.gold; g.fill(b);
+      g.save(); g.clip(b);
+      for (let i = 0; i < 18; i++) { const yy = s.y - W2 / 2 + (i + 0.5) * W2 / 18, w = 3 + 6 * hsh(k, i, 4), x2 = hx + s.dir * (40 + 50 * hsh(k, i, 6)); g.strokeStyle = i % 3 ? PAL.goldD : PAL.goldL; g.lineWidth = w; g.beginPath(); g.moveTo(tail - s.dir * 20, yy + (tail - 480) * s.tilt); g.lineTo(x2, yy + (x2 - 480) * s.tilt); g.stroke(); }
+      ellipse(g, hx + s.dir * 30, cy - W2 * 0.24, 46, 18, s.tilt - s.dir * 0.35); g.fillStyle = '#fff6c8'; g.fill();
+      g.restore();
+      // ink outline on the top edge, the round front and the bottom edge; the back stays open (wet bristles)
+      const ol = new Path2D(), N4 = 20;
+      for (let i = 0; i <= N4; i++) { const x = lerp(tail, hx, i / N4); i ? ol.lineTo(x, yAt(s, x, -1, k)) : ol.moveTo(x, yAt(s, x, -1, k)); }
+      ol.ellipse(hx, cy, 150, W2 / 2 + 6, 0, -Math.PI / 2, Math.PI / 2, s.dir < 0);
+      for (let i = N4; i >= 0; i--) ol.lineTo(lerp(tail, hx, i / N4), yAt(s, lerp(tail, hx, i / N4), 1, k));
+      g.lineWidth = 9; g.strokeStyle = PAL.ink; g.stroke(ol);
+    }
+  }
+}
+
+
+defineScene({
+  meta: { title: 'Yufei - anime short', durationFrames: NF, fps: FPS, width: DES, height: DES, seed: 31, design: [DES, DES], background: '#000000', fonts: [], boil: { every: 2, variants: 3 }, poster: 150 },
+  async setup(ctx) {
+    const load = (u) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = u; });
+    for (const n of [...SPR, 'comic_sky', 'comic_palm', 'bg_lab', 'bg_sunset', 'grem0', 'grem1', 'grem2', 'cat_jump', 'cat_cheer']) IMG[n] = await load(`/scene/assets/${n}.png`);
+    T.photo = await load('/scene/assets/photo_full.png');
+  },
+  update(ctx) { st.S = ctx.S; },
+  layers: [
+    { name: 'film', type: '2d', draw(ctx, g) { const F = ctx.iw; if (F >= K.ring[0] && F < K.wipe[1]) drawFilm(ctx, g); } },
+    { name: 'photo', type: '2d', draw(ctx, g) { photoLayer(ctx, g); } },
+  ],
+});
+</script></body></html>
