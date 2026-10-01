@@ -13,9 +13,9 @@ Read `picasso-sites-embed` first: the footer is pasted embed code (re-paste to d
   from `home/visitor-map.html`: the Supabase constants, the land mask + projection constants, the country table, the
   "data + capture" block (geo-IP, insert, select, aggregation). It asserts on those lines; if visitor-map.html moves
   them, the assertion says which to update. Never hand-edit `home/footer.html`.
-- `home/static/globe/` - textures, loaded only when the card scrolls on screen (IntersectionObserver), ~158 KB total:
+- `home/static/globe/` - textures, loaded only when the card scrolls on screen (IntersectionObserver), ~183 KB total:
   `earth_day.jpg` (NASA land/ocean/ice 1024x512, 69 KB), `earth_night.jpg` (city lights, grayscale, 28 KB),
-  `clouds.jpg` (512x256 grayscale, 21 KB), `moon.jpg` (512x256, 40 KB). Sources: the three.js example textures
+  `clouds.jpg` (512x256 grayscale, 21 KB), `moon.jpg` (512x256, 40 KB), `nebula.jpg` (512x512, 25 KB, see M78 below). Earth/Moon sources: the three.js example textures
   (`examples/textures/planets/` in mrdoob/three.js). GitHub Pages sends `Access-Control-Allow-Origin: *`, which
   WebGL needs (`img.crossOrigin = 'anonymous'`).
 - `home/footer-src/test/` - `ft.js` (screenshots), `ft_globe.js` (hover each object, a city, drag), `gen_rows.js`
@@ -53,11 +53,13 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   (`fp = dir * r / sqrt(1 - 0.6 r^2)`): violet nebula, a blue-white sun at `(-0.6, -0.55)`, Cybertron's horizon
   (sphere at `(0.9, 1.3)`, radius 1.1) lit by that sun. No glowing ring (a neon rim looked fake); the edge is a thin
   Einstein-ring line. The hover blip position `WB` in JS is the inverse of that mapping: move the planet, recompute it.
-- **M78** (`uM78` = apex + size): modelled on the real NGC 2068 - a fan of blue reflection nebula opening from the
-  apex (domain-warped fbm in a rotated frame), soft dust lanes that only show against the nebula (they also dim the
-  stars behind), a faint red emission arc further out; at the apex the "Land of Light": 8 twinkling crystalline points,
-  a second lighting star, the Plasma Spark (core + thin six-rayed spikes with chromatic fringes) and a faint anamorphic
-  streak. Hard black lanes looked like ink smudges; filament "veins" looked like cracks.
+- **M78** (`uM78` = centre + size): a real image, not noise - `nebula.jpg` (25 KB, 512x512) is the Hubble 2006
+  mosaic of the Orion Nebula (NASA/ESA, public domain, from Wikimedia Commons), cropped, saturation x1.45, edges faded
+  to black in the file itself; the shader screens it over the sky (dimming the stars behind its dust) with a very slow
+  zoom drift, at 2.7 throats per texture unit. On top: the "Land of Light" cluster (8 twinkling points), a second star,
+  the Plasma Spark (core + thin six-rayed chromatic spikes) and a faint anamorphic streak. Procedural versions (fbm
+  fans, dust lanes, filaments) never looked like a nebula to the user ("没有星云那种感觉"); keep it a real image, and
+  keep it small enough that it reads far away and the label stays readable (labels have a dark text shadow).
 - Off-world visits are decoration only (`OFFWORLD`), never recorded. Tooltips: the Moon "384,400 km away", M78
   "3,000,000 light-years away, arrived at the speed of light", Cybertron "distance unknown, only seen through a wormhole".
 - Interaction: auto-rotate 4 deg/s, drag with inertia (`touch-action: pan-y` keeps page scroll on phones), a click that
