@@ -44,9 +44,11 @@
     /* ---- footer only: the card is placed and sized by the layout script; the pill scales with the card ---- */
     .pf .vmap { width: auto; aspect-ratio: auto; min-height: 0; max-height: none; margin: 0; border-radius: var(--vr, 14px); }
     .pf .vmap-stats { left: var(--vx, 12px); bottom: var(--vy, 11px); max-width: calc(100% - 2 * var(--vx, 12px)); gap: var(--vg, 7px);
-        padding: var(--vpy, 6px) var(--vpx, 11px); border-radius: var(--vpr, 9px); font-size: var(--vf, 10.5px); white-space: nowrap; }
+        padding: var(--vpy, 6px) var(--vpx, 11px); border-radius: var(--vpr, 9px); font-size: var(--vf, 10.5px); white-space: nowrap; overflow: hidden; }
     .pf #vmap-latest { font-size: var(--vf2, 9px); }
     .pf .vmap-live { width: var(--vd, 7px); height: var(--vd, 7px); }
+    .pf .vmap-lt, .pf .vmap-reg { display: flex; align-items: center; gap: var(--vg, 7px); min-width: 0; }
+    .pf .vmap-lt { flex: 0 1 auto; overflow: hidden; } .pf #vmap-latest { min-width: 0; flex: 0 1 auto; }
     .pf .vmap-stats.no-lt .vmap-lt, .pf .vmap-stats.no-reg .vmap-reg { display: none; }
 </style>
 
@@ -57,7 +59,7 @@
     </a>
     <a class="pf-addr" id="pf-addr" href="https://yil384.github.io/Picasso-Lab/home/address.html" target="_blank" rel="noopener" aria-label="Picasso Lab, step inside the lab in 3D">
         <div class="pf-title" id="pf-title"><span>PICASSO LAB</span></div>
-        <div class="pf-text" id="pf-text">Computer Science and Engineering Building, 3235 Voigt Dr, La Jolla, CA 92093</div>
+        <div class="pf-text" id="pf-text">Computer Science and Engineering Building, 3235 Voigt Dr, La&nbsp;Jolla, CA&nbsp;92093</div>
     </a>
     <div id="vmap" class="vmap" role="link" tabindex="0" aria-label="Visitor map: open the visitor analytics">
         <canvas id="vmap-c" class="vmap-c"></canvas>
@@ -80,14 +82,19 @@
     /* typeset the title + address at the given sizes; the column is the title's width (or minEm address-ems, if wider) */
     function typeset(T, A, lh, gap, minEm, align) {
         TTL.style.fontSize = T + 'px'; TTL.style.marginTop = (-0.11 * T) + 'px';
-        TXT.style.fontSize = A + 'px'; TXT.style.lineHeight = lh; TXT.style.marginTop = gap + 'px';
-        var tw = TSP.getBoundingClientRect().width, C = Math.ceil(Math.max(tw, A * minEm) + 0.5);
-        ADDR.style.width = C + 'px';
-        /* justify (fills the column, like the old footer) only when the column is wide; narrow columns get word gaps */
-        TXT.style.textAlign = align === 'center' ? 'center' : (align === 'justify' && C >= 170 ? 'justify' : 'left');
+        TXT.style.lineHeight = lh; TXT.style.marginTop = gap + 'px';
+        var tw = TSP.getBoundingClientRect().width, C, just = align === 'justify';
+        function lines() { return Math.round(TXT.offsetHeight / (parseFloat(TXT.style.fontSize) * lh)); }
+        /* justified (fills the title's width, like the old footer): sized so it breaks into the same three lines as on
+           desktop; if it can't, or the column is narrow, it is left-aligned instead (narrow justified lines get word gaps) */
+        if (just) { C = Math.ceil(tw + 0.5); var a = Math.min(A, C / 12.45); ADDR.style.width = C + 'px'; TXT.style.textAlign = 'justify';
+            for (var i = 0; i < 5; i++) { TXT.style.fontSize = a + 'px'; if (lines() <= 3) break; a *= 0.96; }
+            if (lines() > 3 || C < 150) just = false; else A = a; }
+        if (!just) { TXT.style.fontSize = A + 'px'; C = Math.ceil(Math.max(tw, A * minEm) + 0.5); ADDR.style.width = C + 'px';
+            TXT.style.textAlign = align === 'center' ? 'center' : 'left'; }
         var h = ADDR.offsetHeight, lead = A * (lh - 1) / 2;
         /* visual box: from the title's cap top (the negative margin crops the leading above it) to the last baseline + descender */
-        return { C: C, tw: tw, h: h, vis: Math.max(1, h - lead - A * 0.08) };
+        return { C: C, tw: tw, A: A, h: h, vis: Math.max(1, h - lead - A * 0.08) };
     }
     function put(el, x, y, w, h) { el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
         if (w != null) el.style.width = Math.round(w) + 'px'; if (h != null) el.style.height = Math.round(h) + 'px'; }
@@ -102,7 +109,7 @@
             var T = We * L(0.0469, 0.0376) * z, A = T * L(0.65, 0.528), lh = L(1.32, 1.5), gap = T * 0.28;
             var S = We * L(0.125, 0.167) * z, g1 = We * L(0.03, 0.094) * z, g2 = We * L(0.034, 0.058) * z;
             var px = Math.max(8, We * L(0.028, 0.02)), py = Math.max(6, H * 0.06);
-            var t = typeset(T, A, lh, gap, L(11.5, 11), 'justify');
+            var t = typeset(T, A, lh, gap, L(11.5, 11), f >= 0.5 ? 'justify' : 'left');
             var availW = Math.min(W, We) - 2 * px, availH = H - 2 * py;
             var Mmax = We * L(0.44, 0.366) * z, Mmin = We * L(0.36, 0.3) * z;
             var M = Math.min(Mmax, availW - S - g1 - t.C - g2), cardH = M / 2;
@@ -110,7 +117,7 @@
             if (M < Mmin) { zz = Math.min(zz, availW / (S + g1 + t.C + g2 + Mmin)); M = Mmin; cardH = M / 2; }
             var needH = Math.max(S, t.vis, cardH);
             if (needH > availH) zz = Math.min(zz, availH / needH);
-            o = { mode: 'row', f: +f.toFixed(2), T: T, A: A, S: S, g1: g1, g2: g2, t: t, M: M, cardH: cardH };
+            o = { mode: 'row', f: +f.toFixed(2), T: T, A: t.A, S: S, g1: g1, g2: g2, t: t, M: M, cardH: cardH };
             if (zz >= 0.995) break;
             z *= zz * 0.995;
         }
@@ -141,7 +148,7 @@
         if (stacked) { put(SEAL, cx - S / 2, y0, S, S); put(ADDR, cx - t.C / 2, y0 + S + gS); }
         else { var x0 = cx - rowW / 2; put(SEAL, x0, y0 + (rowH - S) / 2, S, S); put(ADDR, x0 + S + gS, y0 + (rowH - t.vis) / 2); }
         put(CARD, cx - M / 2, y0 + rowH + gT, M, cardH);
-        o.T = T * u; o.A = A * u; o.S = S; o.M = M; o.cardH = cardH; o.t = t;
+        o.T = T * u; o.A = t.A; o.S = S; o.M = M; o.cardH = cardH; o.t = t;
         return o;
     }
 
@@ -154,10 +161,12 @@
         st.setProperty('--vf', fs.toFixed(2) + 'px'); st.setProperty('--vf2', Math.max(7, 9 * k).toFixed(2) + 'px');
         st.setProperty('--vpy', (fs * 0.57).toFixed(1) + 'px'); st.setProperty('--vpx', (fs * 1.05).toFixed(1) + 'px');
         st.setProperty('--vpr', (fs * 0.86).toFixed(1) + 'px'); st.setProperty('--vg', (fs * 0.67).toFixed(1) + 'px'); st.setProperty('--vd', (fs * 0.67).toFixed(1) + 'px');
-        STATS.classList.remove('no-lt', 'no-reg');
         var room = CARD.clientWidth - 2 * Math.max(6, 12 * k);
-        if (STATS.scrollWidth > room + 0.5) STATS.classList.add('no-lt');
+        STATS.classList.remove('no-reg'); STATS.classList.add('no-lt');
         if (STATS.scrollWidth > room + 0.5) STATS.classList.add('no-reg');
+        else { var base = STATS.scrollWidth, LT = document.getElementById('vmap-latest'); STATS.classList.remove('no-lt');
+            /* a latest place that only fits as a stub ("SAN DIEGO, UNI...") is left out */
+            if (LT.scrollWidth > LT.clientWidth + 1 && room - base < fs * 14) STATS.classList.add('no-lt'); }
     }
 
     var LAST = null;
