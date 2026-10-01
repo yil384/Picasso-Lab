@@ -104,12 +104,6 @@ def block(id_, label, how, inner):
 def main():
     posts = [load(p) for p in POSTS]
     S = []
-    # 1. the /blogs list page: a short text section under the embed
-    li = ''.join(f'<h3><a href="{SITE}/{p["slug"]}">{E(p["title"])}</a></h3>'
-                 f'<p><em>{E(p["authors"])} &middot; {E(p["date"])}</em></p><p>{E(p["summary"] or p["desc"])}</p>' for p in posts)
-    S.append(block('list', '/blogs 列表页', '放在 embed 下面的一个文本框里（Normal 文字即可，标题会自动带上 Heading 样式）',
-                   '<h2>Research Blog</h2><p>Deep dives from Picasso Lab at UC San Diego (Prof. Yufei Ding) on ML systems, GPU kernels, '
-                   'compilers, and quantum error correction.</p>' + li))
     for p in posts:
         k = p['slug']
         head = (f'<h1>{E(p["title"])}</h1><p><em>{E(p["authors"])} &middot; Picasso Lab, UC San Diego &middot; {E(p["date"])}</em></p>'
@@ -125,7 +119,8 @@ def main():
             S.append(block(k + '-top', f'/blogs/{k} 子页面', '这篇是转载（原文在作者博客），只放摘要和目录，不放全文',
                            head + f'<p><strong>In this post:</strong></p><ul>{secs}</ul>'
                            f'<p>Originally published on the author\'s blog: <a href="{p["canonical"]}">{E(p["canonical"])}</a></p>'))
-    steps = ''.join(f'<li><code>{SITE}/{p["slug"]}</code>：Embed &rarr; By URL &rarr; <code>{GH}{p["slug"]}/</code></li>' for p in posts)
+    steps = ''.join(f'<li>页面名：<b>{E(p["title"])}</b><br>自定义路径：<code>{p["slug"]}</code> &rarr; <code>{SITE}/{p["slug"]}</code><br>'
+                    f'Embed &rarr; By URL：<code>{GH}{p["slug"]}/</code></li>' for p in posts)
     page = f'''<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow"><title>Blog Text for Sites</title>
 <style>
@@ -144,11 +139,13 @@ button {{ flex:none; border:0; border-radius:8px; background:var(--acc); color:#
 .paste h1 {{ font-size:22px; }} .paste h2 {{ font-size:19px; }} .paste h3 {{ font-size:16px; }}
 </style></head><body><main>
 <h1 class="t">Blog 文字（复制进 Google Sites）</h1>
-<p class="lead">每块右上角点「复制」，到 Sites 的文本框里粘贴（会带着标题样式和链接）。这页设置了 noindex，只给你复制用。新增或修改文章后运行 <code>python3 blogs/sites_copy.py</code> 重新生成。</p>
+<p class="lead">按下面的步骤给每篇文章建一个子页面；需要文字时，每块右上角点「复制」，到 Sites 的文本框里粘贴（会带着标题样式和链接）。这页设置了 noindex，只给你复制用。新增或修改文章后运行 <code>python3 blogs/sites_copy.py</code> 重新生成。</p>
 <ol class="steps">
-<li>在 Blogs 页面下新建子页面（页面名就是网址），右键 &rarr; Hide from navigation，导航栏不会变乱。</li>
+<li>/blogs 本身是整页 embed，不用动。在 Blogs 下面为每篇新建一个子页面，页面名用文章的完整标题（它会成为网页标题，Google 首先看这个），
+在页面设置 &rarr; Advanced 里把路径改成短的 slug，右键 &rarr; Hide from navigation。</li>
 {steps}
-<li>embed 的高度拉到够读完全文；embed 上方或下方放这里复制的文字。</li>
+<li>子页面的内容就是一个 Embed &rarr; By URL（选整页显示也可以），看起来和现在点开文章完全一样。</li>
+<li>可选，效果更好：在 embed 下方加一个文本框，粘贴下面对应的「页首」文字；原创文章再加一个 Collapsible text group 放全文。</li>
 <li>Publish 后在 Search Console 顶部输入子页面网址 &rarr; Request indexing；/blogs 也重新请求一次。</li>
 </ol>
 {"".join(S)}
