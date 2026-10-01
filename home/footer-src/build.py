@@ -5,9 +5,8 @@
 
 What is copied verbatim from visitor-map.html (so the footer records visits exactly like the analytics page's
 own embed did): the Supabase constants, the land mask + projection constants, the country-code table, and the
-whole "data + capture" block (geo-IP, the insert, the select, the aggregation). The map renderer, the stats and
-the tooltip are the footer's own (in the template). Country borders are copied without the US states and
-simplified for a card a few hundred pixels wide. If visitor-map.html moves these lines, the assertions below
+whole "data + capture" block (geo-IP, the insert, the select, the aggregation). The globe renderer, the stats and
+the tooltip are the footer's own (in the template). If visitor-map.html moves these lines, the assertions below
 say which one to update.
 """
 import json
