@@ -259,7 +259,7 @@
     var FS = [
         '#ifdef GL_OES_standard_derivatives', '#extension GL_OES_standard_derivatives : enable', '#endif',
         'precision highp float;',
-        'uniform vec2 uRes; uniform float uT, uReady; uniform vec3 uEarth; uniform mat3 uE; uniform vec4 uMoon; uniform vec3 uM78, uCyb; uniform vec2 uPar;',
+        'uniform vec2 uRes; uniform float uT, uReady; uniform vec3 uEarth; uniform mat3 uE; uniform vec4 uMoon; uniform float uMoonRot; uniform vec3 uM78, uCyb; uniform vec2 uPar;',
         'uniform sampler2D uDay, uNight, uMoonT, uCloud, uNeb; uniform float uNebR;',
         'const vec3 SUN = vec3(-0.62, 0.36, 0.70);',
         'float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
@@ -327,7 +327,7 @@
         // the Moon behind the Earth (z < 0)
         '  vec3 moonCol = vec3(0.0); float moonA = 0.0;',
         '  { vec2 d = p - uMoon.xy; float q = length(d); if (q < uMoon.z + 1.0) { vec3 n = sph(d * vec2(1.0, -1.0), uMoon.z);',
-        '      float a = texture2D(uMoonT, llUV(vec3(n.x, n.y, n.z))).r; float lam = max(0.0, dot(n, SUN));',
+        '      float a = texture2D(uMoonT, llUV(vec3(n.x * cos(uMoonRot) - n.z * sin(uMoonRot), n.y, n.x * sin(uMoonRot) + n.z * cos(uMoonRot)))).r; float lam = max(0.0, dot(n, SUN));',
         '      moonCol = vec3(0.95, 0.93, 0.88) * a * (0.04 + 1.1 * smoothstep(-0.05, 0.4, lam) * lam + 0.15 * lam); moonA = smoothstep(uMoon.z + 0.8, uMoon.z - 0.8, q); } }',
         '  if (uMoon.w < 0.0) col = mix(col, moonCol, moonA);',
         // the Earth: day map lit by the sun, city lights on the night side, ocean glint, atmosphere
@@ -364,7 +364,7 @@
         prog = gl.createProgram(); gl.attachShader(prog, v); gl.attachShader(prog, f); gl.linkProgram(prog); gl.useProgram(prog);
         var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
         var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-        ['uRes', 'uT', 'uReady', 'uEarth', 'uE', 'uMoon', 'uM78', 'uCyb', 'uPar', 'uDay', 'uNight', 'uMoonT', 'uCloud', 'uNeb', 'uNebR'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        ['uRes', 'uT', 'uReady', 'uEarth', 'uE', 'uMoon', 'uMoonRot', 'uM78', 'uCyb', 'uPar', 'uDay', 'uNight', 'uMoonT', 'uCloud', 'uNeb', 'uNebR'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
         gl.uniform1i(U.uDay, 0); gl.uniform1i(U.uNight, 1); gl.uniform1i(U.uMoonT, 2); gl.uniform1i(U.uCloud, 3); gl.uniform1i(U.uNeb, 4);
         ['day', 'night', 'moon', 'cloud', 'neb'].forEach(function (n, i) { var t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([10, 25, 50, 255])); TEX[n] = t; });
@@ -399,7 +399,8 @@
         rotMats();
         // bodies (css px): the Moon on a tilted orbit (behind the Earth on the far half), the far ones in the background
         var th = s * 0.15 + 0.5, ma = GR * 1.62, mz = Math.sin(th);
-        BODY.moon = { x: GX + Math.cos(th) * ma + PAR.x * 0.35, y: GY - mz * GR * 0.95 + Math.cos(th) * GR * 0.08 + PAR.y * 0.35, r: GR * 0.18 * (1 + 0.12 * mz), z: mz };
+        BODY.moon = { x: GX + Math.cos(th) * ma + PAR.x * 0.35, y: GY - mz * GR * 0.95 + Math.cos(th) * GR * 0.08 + PAR.y * 0.35, r: GR * 0.18 * (1 + 0.12 * mz), z: mz,
+            rot: Math.atan2(-Math.cos(th), -Math.sin(th)) };   // tidally locked: the near side always turns to the Earth
         BODY.m78 = { x: CW * 0.14 + PAR.x * 0.06, y: CH * 0.33 + PAR.y * 0.06, r: CH * 0.30 };
         BODY.cyb = { x: CW * 0.86 + PAR.x * 0.1, y: CH * 0.30 + PAR.y * 0.1, r: CH * 0.135 };
         if (gl) {
@@ -407,12 +408,47 @@
             var d = DPR; gl.uniform2f(U.uRes, CV.width, CV.height); gl.uniform1f(U.uT, s); gl.uniform1f(U.uReady, texOK.day && texOK.night && texOK.moon && texOK.cloud ? 1 : 0); gl.uniform1f(U.uNebR, texOK.neb ? 1 : 0);
             gl.uniform3f(U.uEarth, GX * d, GY * d, GR * d);
             gl.uniformMatrix3fv(U.uE, false, new Float32Array(VM));   // column-major read of V's rows = V^T (view -> earth)
-            gl.uniform4f(U.uMoon, BODY.moon.x * d, BODY.moon.y * d, BODY.moon.r * d, BODY.moon.z);
+            gl.uniform4f(U.uMoon, BODY.moon.x * d, BODY.moon.y * d, BODY.moon.r * d, BODY.moon.z); gl.uniform1f(U.uMoonRot, BODY.moon.rot);
             gl.uniform3f(U.uM78, BODY.m78.x * d, BODY.m78.y * d, BODY.m78.r * d); gl.uniform3f(U.uCyb, BODY.cyb.x * d, BODY.cyb.y * d, BODY.cyb.r * d);
             gl.uniform2f(U.uPar, 0, 0);
             gl.drawArrays(gl.TRIANGLES, 0, 3);
         }
         overlay(s);
+    }
+    /* the travellers, drawn small in vector form, nose along +x (1 unit ~ 1 css px at full size):
+       'tiga' - Ultraman Tiga (Multi Type) in flight from M78: arms ahead, red and purple over silver, the blue colour timer,
+       'ark'  - an Autobot warship out of the wormhole: red upper hull and blue keel in Optimus Prime's colours, swept
+                silver wings, twin energon-blue engines */
+    function craft(g, kind, x, y, ang, sc, alpha, s) {
+        g.save(); g.translate(x, y); g.rotate(ang); g.scale(sc, sc); g.globalAlpha = alpha;
+        var flick = 0.8 + 0.2 * Math.sin(s * 40);
+        if (kind === 'tiga') {
+            var au = g.createRadialGradient(1, 0, 0, 1, 0, 9); au.addColorStop(0, 'rgba(255,240,200,0.45)'); au.addColorStop(1, 'rgba(255,200,150,0)');
+            g.fillStyle = au; g.beginPath(); g.ellipse(0, 0, 10, 5, 0, 0, 6.2832); g.fill();
+            g.lineCap = 'round';
+            g.strokeStyle = '#c9ced8'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(-3.6, 0.5); g.lineTo(-9, 1.3); g.moveTo(-3.6, -0.3); g.lineTo(-9, -0.6); g.stroke();   // legs
+            g.strokeStyle = '#b8323a'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-5, 0.6); g.lineTo(-8.2, 1.1); g.stroke();
+            g.strokeStyle = '#6a3fa6'; g.beginPath(); g.moveTo(-5, -0.3); g.lineTo(-8.2, -0.5); g.stroke();
+            g.fillStyle = '#d7dbe4'; g.beginPath(); g.ellipse(0, 0, 4.4, 1.55, 0, 0, 6.2832); g.fill();                                          // body
+            g.fillStyle = '#c8303a'; g.beginPath(); g.ellipse(-0.6, -0.55, 3.6, 0.85, 0, 0, 6.2832); g.fill();                                   // red
+            g.fillStyle = '#6b40a8'; g.beginPath(); g.ellipse(-0.6, 0.6, 3.6, 0.8, 0, 0, 6.2832); g.fill();                                      // purple
+            g.strokeStyle = '#e6e9f0'; g.lineWidth = 0.9; g.beginPath(); g.moveTo(2.4, -0.4); g.lineTo(8.6, -0.7); g.moveTo(2.4, 0.3); g.lineTo(8.6, 0.1); g.stroke();  // arms ahead
+            g.fillStyle = '#d7dbe4'; g.beginPath(); g.arc(5.2, -0.15, 1.35, 0, 6.2832); g.fill();                                                 // head
+            g.fillStyle = '#9aa1ad'; g.beginPath(); g.moveTo(3.9, -1.3); g.lineTo(6.6, -0.7); g.lineTo(4.4, -0.2); g.fill();                     // crest
+            g.fillStyle = '#fff6c4'; g.beginPath(); g.ellipse(5.9, -0.1, 0.55, 0.32, 0.3, 0, 6.2832); g.fill();                                  // eye
+            var ct = g.createRadialGradient(2.2, -0.05, 0, 2.2, -0.05, 1.4); ct.addColorStop(0, 'rgba(160,235,255,1)'); ct.addColorStop(1, 'rgba(80,180,255,0)');
+            g.fillStyle = ct; g.beginPath(); g.arc(2.2, -0.05, 1.4, 0, 6.2832); g.fill();                                                          // colour timer
+        } else {
+            for (var e = -1; e <= 1; e += 2) { var fl = g.createRadialGradient(-7, e * 0.9, 0, -7, e * 0.9, 4.5 * flick); fl.addColorStop(0, 'rgba(210,250,255,0.95)'); fl.addColorStop(0.35, 'rgba(90,200,255,0.6)'); fl.addColorStop(1, 'rgba(60,140,255,0)');
+                g.fillStyle = fl; g.beginPath(); g.ellipse(-8.5, e * 0.9, 4.5 * flick, 1.1, 0, 0, 6.2832); g.fill(); }
+            g.fillStyle = '#9ea6b4'; g.beginPath(); g.moveTo(0, -1.4); g.lineTo(-5.2, -5.2); g.lineTo(-6.2, -4.6); g.lineTo(-4.6, -1.6); g.closePath(); g.fill();   // wings
+            g.beginPath(); g.moveTo(0, 1.4); g.lineTo(-5.2, 5.2); g.lineTo(-6.2, 4.6); g.lineTo(-4.6, 1.6); g.closePath(); g.fill();
+            g.fillStyle = '#c62b31'; g.beginPath(); g.moveTo(8, 0); g.lineTo(3, -1.6); g.lineTo(-5, -2.1); g.lineTo(-7, -1.2); g.lineTo(-7, 1.2); g.lineTo(-5, 2.1); g.lineTo(3, 1.6); g.closePath(); g.fill();   // hull
+            g.fillStyle = '#2f5ed0'; g.beginPath(); g.moveTo(4.5, 0); g.lineTo(2, -0.7); g.lineTo(-6.6, -0.7); g.lineTo(-6.6, 0.7); g.lineTo(2, 0.7); g.closePath(); g.fill();   // blue keel
+            g.fillStyle = '#e3e8f0'; g.beginPath(); g.moveTo(6.6, 0); g.lineTo(4.6, -0.55); g.lineTo(4.6, 0.55); g.closePath(); g.fill();            // silver nose
+            g.fillStyle = 'rgba(150,230,255,0.95)'; g.beginPath(); g.ellipse(3.3, 0, 0.9, 0.45, 0, 0, 6.2832); g.fill();                          // canopy
+        }
+        g.restore();
     }
     function overlay(s) {
         var g = O2; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, OV.width, OV.height); g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -429,13 +465,18 @@
         var M = BODY.moon, moonVis = M.z >= 0 || Math.hypot(M.x - GX, M.y - GY) > GR + M.r * 0.5;
         // a point on the part of Cybertron seen through the wormhole (the shader's lens mapping, inverted)
         var W0 = BODY.cyb, WB = [W0.x + 0.446 * W0.r, W0.y + 0.609 * W0.r];
+        // the Moon's visitor sits in Mare Tranquillitatis (8.5 N, 31.4 E): on the near side, so we only see the blip while
+        // the near side is turned our way (the Moon in front of the Earth shows us its far side)
+        var mla = 8.5 * RAD, mlo = 31.4 * RAD, mex = Math.cos(mla) * Math.sin(mlo), mey = Math.sin(mla), mez = Math.cos(mla) * Math.cos(mlo);
+        var mnx = mex * Math.cos(M.rot) + mez * Math.sin(M.rot), mnz = -mex * Math.sin(M.rot) + mez * Math.cos(M.rot);
+        var MT = { x: M.x + mnx * M.r, y: M.y - mey * M.r, vis: mnz > 0.2 };
         var spots = [
             { id: 'm78', x: BODY.m78.x, y: BODY.m78.y, hr: CH * 0.12, period: 14, color: '255,150,140', name: 'M78 NEBULA', dist: '3,000,000 LY', ly: BODY.m78.y + CH * 0.15 },
             { id: 'cyb', x: WB[0], y: WB[1], hr: BODY.cyb.r * 1.2, period: 9, color: '150,200,255', name: 'CYBERTRON', dist: 'VIA WORMHOLE', ly: BODY.cyb.y + BODY.cyb.r * 1.15 + CH * 0.05, from: 0.95 },
-            { id: 'moon', x: M.x - M.r * 0.25, y: M.y - M.r * 0.15, hr: M.r * 1.3, color: '255,214,120', hidden: !moonVis } ];
+            { id: 'moon', x: MT.vis ? MT.x : M.x, y: MT.vis ? MT.y : M.y, hr: M.r * 1.3, color: '255,214,120', hidden: !moonVis, noBlip: !MT.vis } ];
         var showLab = CH >= 110, fs = Math.max(7, 7.4 * K);
         for (var k = 0; k < spots.length; k++) { var o = spots[k]; if (o.hidden) continue; EXTRA.push({ o: OFFWORLD[o.id], x: o.x, y: o.y, r: o.hr });
-            var bp = ((s + k * 0.7) % 3) / 3; g.strokeStyle = 'rgba(255,205,110,' + (0.5 * (1 - bp)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(o.x, o.y, 1.4 * K + bp * 5 * K, 0, 6.2832); g.stroke();
+            if (o.noBlip) continue; var bp = ((s + k * 0.7) % 3) / 3; g.strokeStyle = 'rgba(255,205,110,' + (0.5 * (1 - bp)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(o.x, o.y, 1.4 * K + bp * 5 * K, 0, 6.2832); g.stroke();
             g.fillStyle = '#ffd877'; g.beginPath(); g.arc(o.x, o.y, 1.1 * K, 0, 6.2832); g.fill();
             if (o.id === 'moon') continue;
             // a tiny survey label under each far object: what it is and how far (the joke is in the units)
@@ -443,17 +484,18 @@
                 g.shadowColor = 'rgba(0,0,0,0.85)'; g.shadowBlur = 4 * K; g.fillStyle = 'rgba(225,235,248,0.72)'; var lx = clamp(o.x, g.measureText(o.name).width / 2 + 6, CW - g.measureText(o.name).width / 2 - 6); g.fillText(o.name, lx, o.ly);
                 g.font = '500 ' + (fs * 0.92).toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace'; g.fillStyle = 'rgba(' + o.color + ',0.75)'; g.fillText(o.dist, lx, o.ly + fs * 1.25); g.shadowBlur = 0; g.shadowColor = 'transparent'; }
             // the signal comes out of the depth: a path of dots that start tiny and faint (far) and grow toward the Earth (near),
-            // a packet of light with a tail crawling along it (slower the farther), a ripple where it lands on the atmosphere
-            if (o.from) { var C0 = BODY.cyb, aw = Math.atan2(GY - C0.y, GX - C0.x); o = { x: C0.x + Math.cos(aw) * C0.r * 0.85, y: C0.y + Math.sin(aw) * C0.r * 0.85, color: o.color, period: o.period }; }
+            // a traveller with a light trail flying along it (Tiga from M78, an Autobot warship out of the wormhole; slower the farther), a ripple where it lands
+            if (o.from) { var C0 = BODY.cyb, aw = Math.atan2(GY - C0.y, GX - C0.x); o = { x: C0.x + Math.cos(aw) * C0.r * 0.85, y: C0.y + Math.sin(aw) * C0.r * 0.85, color: o.color, period: o.period, craft: 'ark' }; } else o.craft = 'tiga';
             var ang = Math.atan2(o.y - GY, o.x - GX), ex = GX + Math.cos(ang) * GR * 1.03, ey = GY + Math.sin(ang) * GR * 1.03, mx = (o.x + ex) / 2, my = Math.min(o.y, ey) - CH * 0.14;
             var bz = function (tt) { var u1 = 1 - tt; return [u1 * u1 * o.x + 2 * u1 * tt * mx + tt * tt * ex, u1 * u1 * o.y + 2 * u1 * tt * my + tt * tt * ey]; };
             for (var j = 1; j < 26; j++) { var tj = Math.pow(j / 26, 0.75), P = bz(tj); g.fillStyle = 'rgba(' + o.color + ',' + (0.05 + 0.3 * tj * tj).toFixed(3) + ')';
                 g.beginPath(); g.arc(P[0], P[1], (0.25 + 0.75 * tj) * K, 0, 6.2832); g.fill(); }
             var u = ((s + k * 3.1) % o.period) / o.period;
-            if (u < 0.9) { var tt = Math.pow(u / 0.9, 2.2);
-                for (var m = 5; m >= 0; m--) { var tm = Math.max(0, tt - m * 0.018 * (0.3 + tt)), Q = bz(tm), rr = (1.2 + 3.2 * tm) * K * (1 - m * 0.13), al = (1 - m / 6) * (0.25 + 0.75 * tm);
-                    var gr = g.createRadialGradient(Q[0], Q[1], 0, Q[0], Q[1], rr); gr.addColorStop(0, 'rgba(255,255,255,' + (0.95 * al).toFixed(3) + ')'); gr.addColorStop(0.4, 'rgba(' + o.color + ',' + (0.6 * al).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(' + o.color + ',0)');
-                    g.fillStyle = gr; g.beginPath(); g.arc(Q[0], Q[1], rr, 0, 6.2832); g.fill(); } }
+            if (u < 0.9) { var tt = Math.pow(u / 0.9, 2.2), Q = bz(tt), Q2 = bz(Math.min(1, tt + 0.01)), heading = Math.atan2(Q2[1] - Q[1], Q2[0] - Q[0]);
+                // a faint light trail behind, then the traveller itself, growing as it comes out of the depth
+                for (var m = 6; m >= 1; m--) { var tm = Math.max(0, tt - m * 0.02 * (0.3 + tt)), R2 = bz(tm), al = (1 - m / 7) * (0.15 + 0.5 * tt);
+                    g.fillStyle = 'rgba(' + o.color + ',' + al.toFixed(3) + ')'; g.beginPath(); g.arc(R2[0], R2[1], (0.4 + 1.2 * tm) * K * (1 - m * 0.1), 0, 6.2832); g.fill(); }
+                craft(g, o.craft, Q[0], Q[1], heading, Math.max(0.62, K) * (0.42 + 0.58 * tt), Math.min(1, u * 12), s); }
             else { var w = (u - 0.9) / 0.1; g.strokeStyle = 'rgba(' + o.color + ',' + (0.75 * (1 - w)).toFixed(3) + ')'; g.lineWidth = 1.2; g.beginPath(); g.arc(ex, ey, 2 + w * 10 * K, 0, 6.2832); g.stroke(); } }
     }
     /* ~30 fps, only while the card is on screen and the tab is visible; textures load the first time it shows */
