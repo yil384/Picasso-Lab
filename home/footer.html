@@ -33,7 +33,7 @@
     .pf-title span { display: inline-block; }
     .pf-text { font-weight: 400; text-justify: inter-word; }
 
-    /* ---- the visitor map card: the map fills it (the card has the map's own proportions) ---- */
+    /* ---- the visitor map card (2 : 1, as in the old footer) ---- */
     .vmap { overflow: hidden; cursor: pointer; border-radius: var(--vr, 12px); outline: none;
         background: radial-gradient(120% 140% at 50% 0%, #0a2c47 0%, #061a2c 55%, #04111d 100%); }
     .vmap canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
@@ -41,17 +41,20 @@
     .vmap::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
         box-shadow: inset 0 0 0 1px rgba(130, 200, 255, .16); transition: box-shadow .25s ease; }
     .vmap:hover::after, .vmap:focus-visible::after { box-shadow: inset 0 0 0 1px rgba(150, 215, 255, .42); }
-    /* the numbers sit in the empty South Pacific (bottom left), clear of South America */
-    .vm-stats { position: absolute; left: var(--vx, 12px); bottom: var(--vy, 10px); pointer-events: none;
-        font: 400 var(--vf, 12px)/1.28 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: rgba(196, 226, 250, .66); white-space: nowrap;
-        text-shadow: 0 0 3px #04111d, 0 0 6px #04111d; }
-    .vm-stats b { font-weight: 700; color: #f2fbff; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
-    .vm-stats div { display: flex; align-items: center; gap: .32em; }
-    .vm-live { width: .5em; height: .5em; border-radius: 50%; background: #ffc94d; flex: none; margin-right: .08em;
-        box-shadow: 0 0 0 0 rgba(255, 201, 77, .5); animation: vmlive 2.4s ease-out infinite; }
-    .vm-stats .vm-l2 { padding-left: .9em; }
-    @keyframes vmlive { 0% { box-shadow: 0 0 0 0 rgba(255, 201, 77, .55); } 70%, 100% { box-shadow: 0 0 0 .55em rgba(255, 201, 77, 0); } }
-    #vmap-latest { display: none; }
+    /* the stats pill: the same as the old footer (copied from home/visitor-map.html), scaled with the card */
+    .vmap-stats { position: absolute; left: 12px; bottom: 11px; display: flex; align-items: center; gap: 7px; pointer-events: none; max-width: calc(100% - 24px); padding: 6px 11px; border-radius: 9px; font: 600 10.5px/1 ui-monospace, Menlo, monospace; letter-spacing: .05em; text-transform: uppercase; color: #a9def7; background: rgba(6,22,38,.12); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(120,200,255,.1); }
+    .vmap-stats b { color: #fff; font-variant-numeric: tabular-nums; } .vmap-dim { opacity: .55; } .vmap-sep { opacity: .3; }
+    #vmap-latest { font-size: 9px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; opacity: .9; }
+    .vmap-live { width: 7px; height: 7px; margin-top: -2px; border-radius: 50%; background: #ffc94d; box-shadow: 0 0 9px #ffc94d; animation: vmpulse 2.4s ease-in-out infinite; flex: none; }
+    @keyframes vmpulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.65); } }
+    .pf .vmap { width: auto; aspect-ratio: auto; min-height: 0; max-height: none; margin: 0; border-radius: var(--vr, 14px); }
+    .pf .vmap-stats { left: var(--vx, 12px); bottom: var(--vy, 11px); max-width: calc(100% - 2 * var(--vx, 12px)); gap: var(--vg, 7px);
+        padding: var(--vpy, 6px) var(--vpx, 11px); border-radius: var(--vpr, 9px); font-size: var(--vf, 10.5px); white-space: nowrap; overflow: hidden; }
+    .pf #vmap-latest { font-size: var(--vf2, 9px); }
+    .pf .vmap-live { width: var(--vd, 7px); height: var(--vd, 7px); }
+    .pf .vmap-lt, .pf .vmap-reg { display: flex; align-items: center; gap: var(--vg, 7px); min-width: 0; }
+    .pf .vmap-lt { flex: 0 1 auto; overflow: hidden; } .pf #vmap-latest { min-width: 0; flex: 0 1 auto; }
+    .pf .vmap-stats.no-lt .vmap-lt, .pf .vmap-stats.no-reg .vmap-reg { display: none; }
     /* "Open analytics" on hover; a small arrow badge stays on touch screens */
     .vm-open { position: absolute; right: var(--vo, 8px); top: var(--vo, 8px); height: var(--vh, 22px); display: flex; align-items: center; gap: .4em;
         padding: 0 calc(var(--vh, 22px) * .32) 0 calc(var(--vh, 22px) * .5); border-radius: 999px; pointer-events: none;
@@ -86,11 +89,8 @@
     <div id="vmap" class="vmap" role="link" tabindex="0" aria-label="Visitor map: open the visitor analytics">
         <canvas id="vmap-c"></canvas>
         <canvas id="vmap-fx"></canvas>
-        <div class="vm-stats" aria-hidden="true">
-            <div class="vm-l1"><span class="vm-live"></span><b id="vmap-total">0</b><span>visits</span></div>
-            <div class="vm-l2"><b id="vmap-countries">0</b><span id="vm-reg">regions</span></div>
-            <span id="vmap-latest"></span>
-        </div>
+        <div class="vmap-stats" aria-hidden="true"><span class="vmap-live"></span><span><b id="vmap-total">0</b>&nbsp;<span class="vmap-dim">visits</span></span><span class="vmap-reg"> <span class="vmap-sep">/</span>
+            <span><b id="vmap-countries">0</b>&nbsp;<span class="vmap-dim">reg.</span></span></span><span class="vmap-lt"> <span class="vmap-sep">/</span> <span id="vmap-latest">—</span></span></div>
         <div class="vm-open" aria-hidden="true"><span>Open analytics</span><svg viewBox="0 0 12 12"><path d="M3.6 8.4 8.4 3.6M4.6 3.6h3.8v3.8"/></svg></div>
     </div>
 </div>
@@ -146,7 +146,7 @@
         ROWS.forEach(function (r) { if (r.country) countries[r.country] = 1; var t = Date.parse(r.created_at); if (isNaN(t)) t = 0;
             if (t > latestT) { latestT = t; latest = r; } if (r.vid) { if (!(r.vid in vidFirst) || t < vidFirst[r.vid]) vidFirst[r.vid] = t; } });
         pings = pingsFrom(ROWS); var cc = Object.keys(countries).length;
-        if (!barAnimated) { barAnimated = true; countUp('vmap-total', ROWS.length, fmtFull); countUp('vmap-countries', cc); } else { setText('vmap-total', fmtFull(ROWS.length)); setText('vmap-countries', cc); }
+        if (!barAnimated) { barAnimated = true; countUp('vmap-total', ROWS.length, fmtNum); countUp('vmap-countries', cc); } else { setText('vmap-total', fmtNum(ROWS.length)); setText('vmap-countries', cc); }
         setText('vmap-latest', latest ? ((latest.city ? latest.city + ', ' : '') + (latest.country || '')) : '—');
         if (IS_TOP) renderDash(); onData(cc); }
     function sbSelectAll() { return fetch(SUPABASE_URL + '/rest/v1/visits?select=lat,lon,city,country,created_at,browser,os,device,lang,source,tz,vid&limit=50000', { headers: sbHeaders() }).then(function (r) { return r.json(); }); }
@@ -166,7 +166,7 @@
     /* ════════ layout: everything is placed from the box's own size ════════ */
     var PF = document.getElementById('pf'), SEAL = document.getElementById('pf-seal'), ADDR = document.getElementById('pf-addr'),
         TTL = document.getElementById('pf-title'), TSP = TTL.firstChild, TXT = document.getElementById('pf-text'),
-        CARD = document.getElementById('vmap'), STATS = CARD.querySelector('.vm-stats');
+        CARD = document.getElementById('vmap'), STATS = CARD.querySelector('.vmap-stats');
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
     /* quirks mode (no doctype in the Sites embed): read the box from the fixed root / body, not documentElement */
     function boxSize() { var b = document.body;
@@ -191,38 +191,34 @@
     function put(el, x, y, w, h) { el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
         if (w != null) el.style.width = Math.round(w) + 'px'; if (h != null) el.style.height = Math.round(h) + 'px'; }
 
-    /* one row: seal | text | map, filling the box (Sites already frames it, so only a hairline margin).
-       Two keyframes: desktop (957 x 290 box) and phone (the same box shrunk to 352 x 107); f runs 0 -> 1 between
-       them with the box's effective size, so the text gets relatively larger as the box shrinks. The map card
-       takes the width that is left; if that would make it taller than the box, the spare width goes to the gaps. */
+    /* one row, laid out like the old three-embed footer: seal | address | map, the address (nearly) centred on
+       the page (up to 5% left of centre, as the old boxes were), and the three of the SAME height: the seal is as
+       tall as the map card, the title + address block nearly so. f runs 0 (phone row, 352 x 107) -> 1 (957 x 290). */
     function rowLayout(W, H) {
-        var s = Math.min(W / 957, H / 290, 1.3), f = clamp((s - 0.368) / 0.632, 0, 1), We = 957 * s;
+        var s = Math.min(W / 957, H / 290, 1.3), f = clamp((s - 0.368) / 0.632, 0, 1);
         function L(a, b) { return a + (b - a) * f; }
-        var px = clamp(W * 0.012, 3, 14), py = clamp(H * 0.035, 3, 12), availW = W - 2 * px, availH = H - 2 * py;
-        var z = 1, o;
-        for (var it = 0; it < 8; it++) {
-            var T = We * L(0.0469, 0.046) * z, A = T * L(0.65, 0.5), lh = L(1.5, 1.34), gap = T * 0.28;
-            var S = We * L(0.125, 0.2) * z, g1 = We * L(0.03, 0.04) * z, g2 = We * L(0.032, 0.04) * z;
-            var t = typeset(T, A, lh, gap, L(11, 11.5), f >= 0.5 ? 'justify' : 'left');
-            var fixedW = S + g1 + t.C + g2, Mmin = We * L(0.42, 0.34) * z;
-            var M = Math.min(availW - fixedW, availH * MAP_ASPECT), zz = 1;
-            if (M < Mmin) zz = Math.min(zz, availW / (fixedW + Mmin));
-            var needH = Math.max(S, t.vis);
-            if (needH > availH) zz = Math.min(zz, availH / needH);
-            o = { mode: 'row', f: +f.toFixed(2), T: T, A: t.A, S: S, g1: g1, g2: g2, t: t, M: Math.max(M, 40), cardH: 0 };
-            if (zz >= 0.995) break;
-            z *= zz * 0.995;
+        var px = clamp(W * 0.012, 3, 14), py = clamp(H * L(0.04, 0.08), 3, 24), availH = H - 2 * py;
+        var g = W * L(0.03, 0.035), off = W * 0.05, lh = L(1.5, 1.34), ar = L(0.65, 0.5), minEm = L(11, 11.5), kH = L(0.98, 0.9);
+        var align = f >= 0.5 ? 'justify' : 'left', Hc = availH, t, T, X, ok = false;
+        for (var it = 0; it < 60; it++) {
+            /* the text block is kH x the card height: size the title for that (its visual height scales with T) */
+            T = Hc * 0.3; t = typeset(T, T * ar, lh, T * 0.28, minEm, align);
+            T *= kH * Hc / t.vis;
+            if (T * ar < 10) T = 10 / ar;                       /* the address never below 10 px (phones) */
+            t = typeset(T, T * ar, lh, T * 0.28, minEm, align);
+            if (t.vis > availH) { Hc *= 0.97; continue; }
+            var S = Hc * (f < 0.4 ? 0.8 : 1), M = 2 * Hc, lo = px + S + g + t.C / 2, hi = W - px - M - g - t.C / 2;
+            X = clamp(W / 2, lo, hi);
+            if (lo <= hi && X >= W / 2 - off) { ok = true; break; }
+            Hc *= 0.97;
         }
-        o.cardH = o.M / MAP_ASPECT;
-        var G = o.S + o.g1 + o.t.C + o.g2 + o.M, spare = Math.max(0, availW - G);
-        /* spare width (a box taller than the map allows): half into the two gaps, half around the group */
-        o.g1 += spare * 0.25; o.g2 += spare * 0.25; G += spare * 0.5;
-        var x0 = (W - G) / 2, cy = H / 2, ty = cy - o.t.vis / 2;
-        put(ADDR, x0 + o.S + o.g1, ty);
+        var o = { mode: 'row', f: +f.toFixed(2), T: T, A: t.A, S: Hc * (f < 0.4 ? 0.8 : 1), t: t, M: 2 * Hc, cardH: Hc };
+        var cy = H / 2, ty = cy - t.vis / 2, ax = X - t.C / 2;
+        put(ADDR, ax, ty);
         /* phone-sized rows: the seal sits level with the title, which leaves the bottom-left corner (Google's (i) button) free */
-        put(SEAL, x0, f < 0.4 ? ty + 1 : cy - o.S / 2, o.S, o.S);
-        put(CARD, x0 + o.S + o.g1 + o.t.C + o.g2, cy - o.cardH / 2, o.M, o.cardH);
-        o.x0 = x0; o.G = G;
+        put(SEAL, ax - g - o.S, f < 0.4 ? ty : cy - o.S / 2, o.S, o.S);
+        put(CARD, ax + t.C + g, cy - o.cardH / 2, o.M, o.cardH);
+        o.x0 = ax - g - o.S; o.G = o.S + g + t.C + g + o.M; o.textCx = Math.round(X - W / 2);
         return o;
     }
 
@@ -232,7 +228,7 @@
         var T = 34, A = 18, lh = 1.45, gap = 9.5, S = stacked ? 100 : 120, gS = stacked ? 14 : 20, gT = stacked ? 16 : 18;
         var t = typeset(T, A, lh, gap, 11, stacked ? 'center' : 'justify');
         var rowW = stacked ? Math.max(S, t.C) : S + gS + t.C, rowH = stacked ? S + gS + t.vis : Math.max(S, t.vis);
-        var M = Math.max(rowW, 300) * (stacked ? 1.1 : 1), cardH = M / MAP_ASPECT;
+        var M = Math.max(rowW, 300) * (stacked ? 1.1 : 1), cardH = M / 2;
         var u = Math.min((W - 2 * px) / Math.max(rowW, M), (H - 2 * py) / (rowH + gT + cardH), 1.8);
         if (dry) return u;
         var o = { mode: stacked ? 'stack' : 'tier', u: +u.toFixed(3) };
@@ -247,14 +243,22 @@
         return o;
     }
 
-    /* the card's type and corners scale with it (designed on a 360 px card) */
+    /* the stats pill keeps its look and scales with the card (365 px wide in the old footer); it drops the latest
+       place, then the region count, when the card is too narrow for them */
     function fitCard(M) {
-        var k = clamp(M / 360, 0.42, 1.5), st = CARD.style;
-        st.setProperty('--vr', clamp(12 * k, 6, 16).toFixed(1) + 'px');
-        st.setProperty('--vf', clamp(12.5 * k, 8, 16).toFixed(2) + 'px');
-        st.setProperty('--vx', clamp(M * 0.034, 6, 18).toFixed(1) + 'px'); st.setProperty('--vy', clamp(M * 0.03, 5, 16).toFixed(1) + 'px');
-        st.setProperty('--vh', clamp(22 * k, 15, 28).toFixed(1) + 'px'); st.setProperty('--vf2', clamp(11 * k, 9, 13).toFixed(2) + 'px');
-        st.setProperty('--vo', clamp(8 * k, 5, 11).toFixed(1) + 'px');
+        var k = clamp(M / 365, 0.3, 1.4), fs = Math.max(7.5, 10.5 * k), st = CARD.style;
+        st.setProperty('--vr', Math.max(8, 14 * k).toFixed(1) + 'px');
+        st.setProperty('--vx', Math.max(6, 12 * k).toFixed(1) + 'px'); st.setProperty('--vy', Math.max(5, 11 * k).toFixed(1) + 'px');
+        st.setProperty('--vf', fs.toFixed(2) + 'px'); st.setProperty('--vf2', Math.max(7, 9 * k).toFixed(2) + 'px');
+        st.setProperty('--vpy', (fs * 0.57).toFixed(1) + 'px'); st.setProperty('--vpx', (fs * 1.05).toFixed(1) + 'px');
+        st.setProperty('--vpr', (fs * 0.86).toFixed(1) + 'px'); st.setProperty('--vg', (fs * 0.67).toFixed(1) + 'px'); st.setProperty('--vd', (fs * 0.67).toFixed(1) + 'px');
+        st.setProperty('--vh', clamp(22 * k, 15, 28).toFixed(1) + 'px'); st.setProperty('--vo', clamp(8 * k, 5, 11).toFixed(1) + 'px');
+        var room = CARD.clientWidth - 2 * Math.max(6, 12 * k);
+        STATS.classList.remove('no-reg'); STATS.classList.add('no-lt');
+        if (STATS.scrollWidth > room + 0.5) STATS.classList.add('no-reg');
+        else { var base = STATS.scrollWidth, LT = document.getElementById('vmap-latest'); STATS.classList.remove('no-lt');
+            /* a latest place that only fits as a stub ("SAN DIEGO, UNI...") is left out */
+            if (LT.scrollWidth > LT.clientWidth + 1 && room - base < fs * 14) STATS.classList.add('no-lt'); }
     }
 
     var LAST = null;
@@ -269,13 +273,13 @@
     }
     window.__pf = function () { return LAST && { mode: LAST.mode, f: LAST.f, u: LAST.u, W: LAST.W, H: LAST.H, title: +LAST.T.toFixed(2), addr: +LAST.A.toFixed(2),
         seal: Math.round(LAST.S), col: LAST.t.C, card: [Math.round(LAST.M), Math.round(LAST.cardH)], align: TXT.style.textAlign,
-        lines: Math.round((TXT.offsetHeight) / (LAST.A * parseFloat(TXT.style.lineHeight))), x0: Math.round(LAST.x0 || 0), G: Math.round(LAST.G || 0) }; };
+        lines: Math.round((TXT.offsetHeight) / (LAST.A * parseFloat(TXT.style.lineHeight))), textCx: LAST.textCx, vis: Math.round(LAST.t.vis) }; };
 
     /* ════════ the map: a static base (land dots, borders, every visitor) + a light live layer ════════ */
     var BASE = document.getElementById('vmap-c'), FX = document.getElementById('vmap-fx'), bctx = BASE.getContext('2d'), fctx = FX.getContext('2d');
-    var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1)), MW = 0, MH = 0, K = 1;
+    var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1)), MW = 0, MH = 0, OX = 0, OY = 0, K = 1;
     var MY0 = mercY(LAT_MAX), MY1 = mercY(LAT_MIN);
-    function project(lon, lat) { return [(lon - LON_MIN) / (LON_MAX - LON_MIN) * MW, (MY0 - mercY(lat)) / (MY0 - MY1) * MH]; }
+    function project(lon, lat) { return [OX + (lon - LON_MIN) / (LON_MAX - LON_MIN) * MW, OY + (MY0 - mercY(lat)) / (MY0 - MY1) * MH]; }
     function latAt(y) { var my = MY0 - y / MH * (MY0 - MY1); return (2 * Math.atan(Math.exp(my)) - Math.PI / 2) * 180 / Math.PI; }
     function landAt(lon, lat) { if (lat > LAT_MAX || lat < LAT_MIN) return 0;
         var c = Math.floor((lon - LON_MIN) / (LON_MAX - LON_MIN) * GW), r = Math.floor((LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * GH);
@@ -291,11 +295,11 @@
         var o = bctx; o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, BASE.width, BASE.height); o.setTransform(DPR, 0, 0, DPR, 0, 0);
         /* land: a uniform dot grid in screen space (even rows from the equator to the Arctic), sampled from the land mask */
         var pitch = clamp(MW / 112, 2.1, 4.4), rad = pitch * 0.33, cols = Math.floor(MW / pitch), rows = Math.floor(MH / pitch);
-        var ox = (MW - (cols - 1) * pitch) / 2, oy = (MH - (rows - 1) * pitch) / 2;
+        var ox = OX + (MW - (cols - 1) * pitch) / 2, oy = OY + (MH - (rows - 1) * pitch) / 2;
         o.fillStyle = '#1f5079';
-        for (var r = 0; r < rows; r++) { var y = oy + r * pitch, lat = latAt(y);
+        for (var r = 0; r < rows; r++) { var y = oy + r * pitch, lat = latAt(y - OY);
             o.beginPath();
-            for (var c = 0; c < cols; c++) { var x = ox + c * pitch, lon = LON_MIN + x / MW * (LON_MAX - LON_MIN);
+            for (var c = 0; c < cols; c++) { var x = ox + c * pitch, lon = LON_MIN + (x - OX) / MW * (LON_MAX - LON_MIN);
                 if (landAt(lon, lat)) { o.moveTo(x + rad, y); o.arc(x, y, rad, 0, 6.2832); } }
             o.fill(); }
         /* country borders: faint, and only where the card is big enough for them to read as lines */
@@ -321,8 +325,8 @@
             o.beginPath(); o.arc(xy[0], xy[1], d * 0.42, 0, 6.2832); o.fillStyle = '#fff6dd'; o.fill(); }
     }
     function resize() { var w = CARD.clientWidth, h = CARD.clientHeight; if (!w || !h) return;
-        MW = w; MH = h; K = clamp(w / 360, 0.6, 1.5);
-        BASE.width = FX.width = Math.round(w * DPR); BASE.height = FX.height = Math.round(h * DPR);
+        MH = h; MW = h * MAP_ASPECT; if (MW > w) { MW = w; MH = w / MAP_ASPECT; } OX = (w - MW) / 2; OY = (h - MH) / 2; K = clamp(w / 360, 0.6, 1.5);
+        BASE.width = FX.width = Math.round(w * DPR); BASE.height = FX.height = Math.round(h * DPR); MW = MW;
         drawBase(); drawLive(performance.now()); }
     /* ~30 fps, only while the card is on screen and the tab is visible */
     var onScreen = true, lastT = 0;
@@ -335,7 +339,7 @@
     document.addEventListener('visibilitychange', kick);
 
     function fmtFull(n) { return Math.round(n).toLocaleString('en-US'); }
-    function onData(cc) { document.getElementById('vm-reg').textContent = cc === 1 ? 'region' : 'regions'; if (MW) drawBase(); kick(); }
+    function onData(cc) { if (MW) drawBase(); kick(); if (LAST) fitCard(LAST.M); }
     var VA = null; function renderDash() {}
 
     /* ---------- tooltip: the nearest visited place (two-letter country code instead of a flag) ---------- */

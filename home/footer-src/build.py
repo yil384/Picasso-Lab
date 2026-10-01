@@ -75,9 +75,6 @@ def sub(src, old, new):
     return src.replace(old, new)
 
 
-# the footer prints the full numbers ("2,768 visits"), not "2.8K"
-data = sub(data, "countUp('vmap-total', ROWS.length, fmtNum);", "countUp('vmap-total', ROWS.length, fmtFull);")
-data = sub(data, "setText('vmap-total', fmtNum(ROWS.length));", "setText('vmap-total', fmtFull(ROWS.length));")
 # ... and redraws the map's visitor dots when the data arrives
 data = sub(data, "if (IS_TOP) renderDash(); }", "if (IS_TOP) renderDash(); onData(cc); }")
 
