@@ -78,7 +78,7 @@ def sub(src, old, new):
 # ... and redraws the map's visitor dots when the data arrives
 data = sub(data, "if (IS_TOP) renderDash(); }", "if (IS_TOP) renderDash(); onData(cc); }")
 
-js = '\n'.join([consts, mask, '    ' + borders, proj, iso, land, state, '', data, '', helpers])
+js = '\n'.join([consts, mask, proj, iso, land, state, '', data, '', helpers])   # (no borders: the globe draws none)
 tpl = open(os.path.join(HERE, 'footer.tpl.html'), encoding='utf-8').read()
 assert tpl.count('//@@VM_JS@@') == 1
 out_html = tpl.replace('//@@VM_JS@@', js)
