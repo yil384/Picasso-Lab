@@ -53,6 +53,11 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   (`fp = dir * r / sqrt(1 - 0.6 r^2)`): violet nebula, a blue-white sun at `(-0.6, -0.55)`, Cybertron's horizon
   (sphere at `(0.9, 1.3)`, radius 1.1) lit by that sun. No glowing ring (a neon rim looked fake); the edge is a thin
   Einstein-ring line. The hover blip position `WB` in JS is the inverse of that mapping: move the planet, recompute it.
+- **M78** (`uM78` = apex + size): modelled on the real NGC 2068 - a fan of blue reflection nebula opening from the
+  apex (domain-warped fbm in a rotated frame), soft dust lanes that only show against the nebula (they also dim the
+  stars behind), a faint red emission arc further out; at the apex the "Land of Light": 8 twinkling crystalline points,
+  a second lighting star, the Plasma Spark (core + thin six-rayed spikes with chromatic fringes) and a faint anamorphic
+  streak. Hard black lanes looked like ink smudges; filament "veins" looked like cracks.
 - Off-world visits are decoration only (`OFFWORLD`), never recorded. Tooltips: the Moon "384,400 km away", M78
   "3,000,000 light-years away, arrived at the speed of light", Cybertron "distance unknown, only seen through a wormhole".
 - Interaction: auto-rotate 4 deg/s, drag with inertia (`touch-action: pan-y` keeps page scroll on phones), a click that
