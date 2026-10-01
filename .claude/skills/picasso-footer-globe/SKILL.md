@@ -56,14 +56,19 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   ripple on the Earth's limb.
 - **Moon**: tidally locked - `uMoonRot = atan2(-cos th, -sin th)` turns the texture so the near side always faces the
   Earth (in front of the Earth it shows us its far side). Its visitor blip sits in Mare Tranquillitatis and is only
-  drawn while that spot faces us.
+  drawn while that spot faces us. Shading is lunar, not Lambert: the Lommel-Seeliger law `2 mu0 / (mu0 + mu)` (an evenly
+  bright full disc, sharp terminator), earthshine on the night side facing the Earth, and a copper-red lunar eclipse
+  (`uMoonEcl`) when the Moon's 3D position falls in the Earth's shadow cone (once per ~42 s orbit). Distances are not
+  to scale (the real Moon is ~30 Earth diameters away).
 - **Wormhole** (`uCyb` = centre + throat radius): a point lens with Einstein radius 1.3 throats bends the star layers
   outside (`sp = p - dir * R * 1.69 / r`, faded beyond 2-4.5 R); inside, the far sky is squeezed toward the rim
   (`fp = dir * r / sqrt(1 - 0.6 r^2)`): violet nebula, a blue-white sun at `(-0.6, -0.55)`, Cybertron's horizon
   (sphere at `(0.9, 1.3)`, radius 1.1) lit by that sun. No glowing ring (a neon rim looked fake); the edge is a thin
   Einstein-ring line.
-  Around it, what an EHT image of a wormhole would show (Wielgus et al. 2020): a blurred orange accretion ring at
-  1.3 throats, brighter on the lower side (Doppler beaming, as in the M87* image) with slowly orbiting hot spots, and a
+  Around it, what an EHT image of a wormhole would show (Wielgus et al. 2020): a blurred orange accretion crescent
+  (~1.2-1.3 throats) - strongly brighter, wider and larger on the lower side (Doppler beaming, as in the M87* image),
+  faint and thin on the far side, centre shifted toward the bright side, turbulent knots orbiting - a thin photon ring at
+  1.07, and a
   faint second ring just inside the throat (light from the other side - the thing a black hole cannot have). The hover blip position `WB` in JS is the inverse of that mapping: move the planet, recompute it.
 - **M78** (`uM78` = centre + size): a real image, not noise - `nebula.jpg` (25 KB, 512x512) is the Hubble 2006
   mosaic of the Orion Nebula (NASA/ESA, public domain, from Wikimedia Commons), cropped, saturation x1.45, edges faded
