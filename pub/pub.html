@@ -1077,7 +1077,8 @@
 #pt-overlay.sweeping {
   clip-path: polygon(0 0,102% -2%,101% 12%,102% 32%,101% 58%,102% 80%,100% 102%,0 100%);
 }
-#pt-mobile-toolbar {
+#pt-mobile-toolbar,
+#pt-corner, #pt-axis, #pt-rail {
   display: none;
 }
 /* Chart canvas fills the ENTIRE overlay (detail panel floats on top) */
@@ -1309,12 +1310,23 @@ body.pt-open { overflow:hidden; }
     -webkit-overflow-scrolling:touch;
     touch-action:pan-x pan-y pinch-zoom;
   }
+  /* The map pans inside #pt-plane (sized by buildTimeline). The era/year header,
+     the band rail and their corner are pinned (sticky), so every node keeps its
+     year and research track in view while panning. */
+  #pt-plane { position:relative; }
   #pt-svg {
-    position:relative;
-    inset:auto;
+    inset:0 auto auto 0;
     max-width:none;
     max-height:none;
   }
+  #pt-corner, #pt-axis, #pt-rail { display:block; position:sticky; }
+  #pt-corner {
+    top:0; left:0; z-index:4;
+    background:#0d1117;
+    box-shadow:inset 0 -1px rgba(255,255,255,.08);
+  }
+  #pt-axis { top:0; z-index:3; }
+  #pt-rail { left:0; z-index:2; }
   #pt-close {
     top:calc(env(safe-area-inset-top) + 9px);
     right:max(10px, calc(env(safe-area-inset-right) + 6px));
@@ -1338,10 +1350,14 @@ body.pt-open { overflow:hidden; }
     pointer-events:none;
   }
   #pt-detail.show { pointer-events:auto; }
-  #pt-detail > div { overflow:visible !important; }
+  /* One column: text, tags, then Read at the bottom right, clear of the
+     Google (i) button that sits over the embed's bottom-left corner. */
+  #pt-detail > div { overflow:visible !important; display:flex; flex-direction:column; }
+  #pt-detail .pt-detail-row { display:contents !important; }
+  #pt-detail:not(:has(.pt-detail-read)) { padding-bottom:56px; }
   .pt-detail-close {
     position: sticky;
-    top: 5px;
+    top: -39px;            /* sticky offsets count from the content box, below the 44px padding */
     float: right;
     margin: -39px -9px -5px 8px;
     width: 44px;
@@ -1369,6 +1385,9 @@ body.pt-open { overflow:hidden; }
     font-size: 10.5px !important;
   }
   #pt-detail .pt-detail-read {
+    order: 1;
+    align-self: flex-end;
+    margin-top: 12px;
     min-width: 44px;
     min-height: 44px;
     justify-content: center;
@@ -1390,6 +1409,31 @@ body.pt-open { overflow:hidden; }
     -webkit-user-select:none;
     user-select:none;
   }
+}
+
+/* Landscape phone: a one-line toolbar, and paper details as a side panel on the
+   right instead of a bottom sheet that would cover most of the short map. */
+@media (max-height:600px) and (pointer:coarse) and (orientation:landscape) {
+  #pt-mobile-toolbar {
+    min-height: calc(50px + env(safe-area-inset-top));
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding-top: calc(env(safe-area-inset-top) + 3px);
+    padding-bottom: 3px;
+  }
+  #pt-canvas { top: calc(50px + env(safe-area-inset-top)); }
+  #pt-close { top: calc(env(safe-area-inset-top) + 3px); }
+  #pt-detail {
+    top: calc(58px + env(safe-area-inset-top));
+    left: auto;
+    width: min(400px, 48vw);
+    max-height: none;
+  }
+  /* away from the (i) corner, so Read can sit in the header row beside the close button */
+  #pt-detail .pt-detail-read { position: absolute; top: 5px; right: 54px; margin-top: 0; }
+  #pt-detail:not(:has(.pt-detail-read)) { padding-bottom: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1438,11 +1482,16 @@ body.pt-open { overflow:hidden; }
 
 <div id="pt-overlay" role="dialog" aria-modal="true" aria-label="Picasso Lab Research Landscape" aria-hidden="true">
   <div id="pt-mobile-toolbar" aria-hidden="true">
-    <strong>Research Landscape</strong>
-    <span>Swipe the timeline · tap a node for details</span>
+    <strong>Picasso Lab · Research Landscape</strong>
+    <span id="pt-mobile-hint">Swipe the timeline · tap a node for details</span>
   </div>
   <div id="pt-canvas">
-    <svg id="pt-svg"></svg>
+    <div id="pt-plane">
+      <svg id="pt-svg"></svg>
+      <div id="pt-corner" aria-hidden="true"></div>
+      <svg id="pt-axis" aria-hidden="true"></svg>
+      <svg id="pt-rail" aria-hidden="true"></svg>
+    </div>
   </div>
   <div id="pt-detail"></div>
   <button id="pt-close" type="button" aria-label="Close research landscape">&#x2715;</button>
@@ -1463,6 +1512,12 @@ const flash    = document.getElementById("pt-flash");
 const typeHint = document.getElementById("pt-type-hint");
 const tip      = document.getElementById("pt-tip");
 const detailPanel = document.getElementById("pt-detail");
+/* phone only: pinned era/year header, band rail and their corner (see buildTimeline) */
+const plane    = document.getElementById("pt-plane");
+const axisEl   = document.getElementById("pt-axis");
+const railEl   = document.getElementById("pt-rail");
+const cornerEl = document.getElementById("pt-corner");
+const mobileHint = document.getElementById("pt-mobile-hint");
 
 /* 第一次真正移动鼠标才启用悬停焦点 (见 makeFocusCtl) */
 svgEl.addEventListener("pointermove", function(e) { if (focusCtl) focusCtl.moved(e); }, { passive:true });
@@ -2051,6 +2106,8 @@ papers.forEach(function(p){ p._coreAuth = parseCoreAuthors(p.authors); });
 function buildTimeline() {
   if (focusCtl) focusCtl.reset();
   svgEl.innerHTML = "";
+  axisEl.innerHTML = "";
+  railEl.innerHTML = "";
   svgEl.classList.remove("is-focus", "is-live");
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -2067,24 +2124,31 @@ function buildTimeline() {
 
   const compact = window.matchMedia("(max-width: 860px), (max-height: 600px) and (pointer: coarse)").matches;
   const PAD_X   = compact ? 96 : 120; // room for track labels
-  const PAD_TOP = compact ? 72 : 84;  // title + era labels
-  const PAD_BOT = compact ? 48 : 60;  // year labels at bottom
+  const PAD_R   = compact ? 16 : PAD_X; // phone: no empty strip after the newest year
+  const AXIS_H  = compact ? 38 : 0;   // phone: pinned era + year header
+  const PAD_TOP = compact ? AXIS_H + 14 : 84;  // title + era labels (phone: the header; the title is in the toolbar)
+  const PAD_BOT = compact ? 48 : 60;  // year labels at bottom (phone: room above the Google (i) button)
   const NODE_R  = 10;                 // visible node radius
   const COMPACT_NODE_STEP = 44;       // non-overlapping 44px touch targets
+  /* stacks of 2-3 also carry a name above and a venue below each node */
+  const compactStep = function(n) { return n <= 3 ? 52 : COMPACT_NODE_STEP; };
 
   /* Mobile keeps readable year columns inside a pannable canvas. */
   const viewportW = canvas.clientWidth  || window.innerWidth;
   const viewportH = canvas.clientHeight || window.innerHeight;
-  const svgW = compact ? Math.max(viewportW, PAD_X * 2 + nYears * 70) : viewportW;
+  const svgW = compact ? Math.max(viewportW, PAD_X + PAD_R + nYears * 70) : viewportW;
   let svgH = compact ? Math.max(viewportH, 760) : viewportH;
   const YEAR_STEP = compact ? 70 : (svgW - PAD_X * 2) / Math.max(1, nYears);
 
   if (compact) {
     svgEl.style.width = svgW + "px";
     svgEl.style.height = svgH + "px";
+    mobileHint.textContent = papers.length + " publications · swipe the timeline · tap a node for details";
   } else {
     svgEl.style.removeProperty("width");
     svgEl.style.removeProperty("height");
+    plane.style.removeProperty("width");
+    plane.style.removeProperty("height");
   }
 
   /* ── 8 research bands — heights scale to fill canvas height ── */
@@ -2152,16 +2216,18 @@ function buildTimeline() {
    */
   if (compact) {
     BANDS.forEach(function(b, bi) {
-      const maxGroup = Math.max(1, ...Object.values(byYB[bi]).map(function(group) {
-        return group.length;
+      const need = Math.max(0, ...Object.values(byYB[bi]).map(function(group) {
+        return (group.length - 1) * compactStep(group.length);
       }));
-      b.h = Math.max(b.h, NODE_R * 2 + (maxGroup - 1) * COMPACT_NODE_STEP);
+      b.h = Math.max(b.h, NODE_R * 2 + need);
     });
     const requiredH = PAD_TOP + PAD_BOT +
       BANDS.reduce(function(sum, b) { return sum + b.h; }, 0) +
       BAND_GAP * (BANDS.length - 1);
     svgH = Math.max(svgH, requiredH);
     svgEl.style.height = svgH + "px";
+    plane.style.width = svgW + "px";
+    plane.style.height = svgH + "px";
 
     cy = PAD_TOP;
     BANDS.forEach(function(b) {
@@ -2186,7 +2252,7 @@ function buildTimeline() {
       const N     = ps.length;
       /* Vertical spacing: fit within band, min 13px, max 22px */
       const avail = b.h - NODE_R * 2;
-      const sp    = N <= 1 ? 0 : Math.min(compact ? COMPACT_NODE_STEP : 22, avail / (N - 1));
+      const sp    = N <= 1 ? 0 : Math.min(compact ? compactStep(N) : 22, avail / (N - 1));
       /* Sort papers within group by venue for stable ordering */
       ps.sort((a, x) => a.venue.localeCompare(x.venue));
       /* 命中区: 单个节点 44px; 同列堆叠时每个节点只拿自己那一格 (高 = 间距),
@@ -2206,6 +2272,25 @@ function buildTimeline() {
   /* ── Dark background ── */
   svgEl.appendChild(el("rect", { width:svgW, height:svgH, fill:"#0d1117" }));
 
+  /* ── Phone: era + year header pinned to the top, band rail pinned to the left
+        (sticky, see CSS); the corner covers where they cross ── */
+  if (compact) {
+    axisEl.setAttribute("viewBox", "0 0 "+svgW+" "+AXIS_H);
+    axisEl.style.width = svgW + "px";
+    axisEl.style.height = AXIS_H + "px";
+    axisEl.style.marginBottom = -AXIS_H + "px";
+    railEl.setAttribute("viewBox", "0 0 "+PAD_X+" "+svgH);
+    railEl.style.width = PAD_X + "px";
+    railEl.style.height = svgH + "px";
+    cornerEl.style.width = PAD_X + "px";
+    cornerEl.style.height = AXIS_H + "px";
+    cornerEl.style.marginBottom = -AXIS_H + "px";
+    axisEl.appendChild(el("rect", { width:svgW, height:AXIS_H, fill:"#0d1117" }));
+    railEl.appendChild(el("rect", { width:PAD_X, height:svgH, fill:"#0d1117" }));
+    railEl.appendChild(el("line", { x1:PAD_X - 0.5, y1:0, x2:PAD_X - 0.5, y2:svgH,
+      stroke:"rgba(255,255,255,0.06)", "stroke-width":"1" }));
+  }
+
   /* ── Era bands (dark-theme: very subtle vertical tints) ── */
   const ERA_DEFS = [
     { label:"EARLY SYSTEMS",  sub:"2013 – 2016", years:[2013,2016], color:"#4f9cf0", bg:"rgba(79,156,240,0.055)" },
@@ -2223,37 +2308,44 @@ function buildTimeline() {
     /* Left boundary accent */
     svgEl.appendChild(el("line", { x1:x1, y1:0, x2:x1, y2:svgH,
       stroke:era.color, "stroke-width":"1", opacity:"0.2" }));
-    /* Era label — top left of each zone */
-    svgEl.appendChild(tel("text", {
-      x:String(x1+7), y:"19", "text-anchor":"start",
+    if (compact) {
+      axisEl.appendChild(el("rect", { x:x1, y:0, width:x2-x1, height:AXIS_H, fill:era.bg }));
+      axisEl.appendChild(el("line", { x1:x1, y1:0, x2:x1, y2:AXIS_H,
+        stroke:era.color, "stroke-width":"1", opacity:"0.2" }));
+    }
+    /* Era label — top left of each zone (phone: in the header, above the years
+       that replace its "2013 – 2016" line) */
+    (compact ? axisEl : svgEl).appendChild(tel("text", {
+      x:String(x1+7), y:compact ? "14" : "19", "text-anchor":"start",
       "font-size":"8", "font-weight":"700", fill:era.color, opacity:"0.55",
       "font-family":"'Inter',ui-monospace,monospace", "letter-spacing":"1.8",
     }, era.label));
-    svgEl.appendChild(tel("text", {
+    if (!compact) svgEl.appendChild(tel("text", {
       x:String(x1+7), y:"30", "text-anchor":"start",
       "font-size":"7.5", fill:era.color, opacity:"0.3",
       "font-family":"'Inter',ui-monospace,monospace",
     }, era.sub));
   });
 
-  /* ── Title ── */
-  svgEl.appendChild(tel("text", {
-    x:String(PAD_X), y:"54",
-    fill:"rgba(255,255,255,0.88)",
-    "font-family":"'Inter',ui-sans-serif,sans-serif",
-    "font-size":"14", "font-weight":"700", "letter-spacing":"0.05em",
-    class:"pt-fade", style:"--fdel:0.1s;--fdur:0.4s",
-  }, "PICASSO LAB  ·  Research Landscape"));
-  svgEl.appendChild(tel("text", {
-    x:String(PAD_X), y:"68",
-    fill:"rgba(255,255,255,0.28)",
-    "font-family":"'Inter',ui-sans-serif,sans-serif", "font-size":"9",
-    class:"pt-fade", style:"--fdel:0.15s;--fdur:0.4s",
-  }, compact
-      ? papers.length + " publications  ·  swipe to explore  ·  tap a node for details"
-      : papers.length + " publications  ·  hover to preview  ·  click to view details  ·  Esc to close"));
+  /* ── Title (phone: in the toolbar above the map) ── */
+  if (!compact) {
+    svgEl.appendChild(tel("text", {
+      x:String(PAD_X), y:"54",
+      fill:"rgba(255,255,255,0.88)",
+      "font-family":"'Inter',ui-sans-serif,sans-serif",
+      "font-size":"14", "font-weight":"700", "letter-spacing":"0.05em",
+      class:"pt-fade", style:"--fdel:0.1s;--fdur:0.4s",
+    }, "PICASSO LAB  ·  Research Landscape"));
+    svgEl.appendChild(tel("text", {
+      x:String(PAD_X), y:"68",
+      fill:"rgba(255,255,255,0.28)",
+      "font-family":"'Inter',ui-sans-serif,sans-serif", "font-size":"9",
+      class:"pt-fade", style:"--fdel:0.15s;--fdur:0.4s",
+    }, papers.length + " publications  ·  hover to preview  ·  click to view details  ·  Esc to close"));
+  }
 
-  /* ── Band backgrounds + separators + left labels ── */
+  /* ── Band backgrounds + separators + left labels (phone: labels in the rail) ── */
+  const railLayer = compact ? railEl : svgEl;
   BANDS.forEach(function(b, bi) {
     /* Very subtle band fill — alternating gives visual rhythm */
     if (bi % 2 === 0) {
@@ -2262,25 +2354,39 @@ function buildTimeline() {
         width:String(svgW), height:String(b.h),
         fill:"rgba(255,255,255,0.018)",
       }));
+      if (compact) railEl.appendChild(el("rect", {
+        x:"0", y:String(b.top),
+        width:String(PAD_X), height:String(b.h),
+        fill:"rgba(255,255,255,0.018)",
+      }));
     }
     /* Top separator: colored dash matching band color */
     svgEl.appendChild(el("line", {
       x1:String(PAD_X - 8), y1:String(b.top),
-      x2:String(svgW - PAD_X + 8), y2:String(b.top),
+      x2:String(svgW - PAD_R + 8), y2:String(b.top),
       stroke:b.color, "stroke-width":"0.5", opacity:"0.20",
       "stroke-dasharray":"4 10",
       class:"pt-fade", style:"--fdel:"+(0.2+bi*0.03)+"s;--fdur:0.4s",
     }));
-    /* Band label — right-aligned in left margin, bold, colored */
-    svgEl.appendChild(tel("text", {
+    /* Band label — right-aligned in left margin, bold, colored.
+       Phone: long ones ("OS & DISTRIBUTED") break onto two lines to fit the rail. */
+    const label = tel("text", {
       x:String(PAD_X - 10), y:String(b.yCenter + 4),
       "text-anchor":"end", "font-size":"8", "font-weight":"700",
       fill:b.color, opacity:"0.75", "letter-spacing":"1.4",
       "font-family":"'Inter',ui-monospace,monospace",
       class:"pt-fade", style:"--fdel:"+(0.18+bi*0.02)+"s;--fdur:0.35s",
-    }, b.label));
+    }, b.label);
+    const lines = compact && b.label.match(/^(.+? [&\/]) (.+)$/);
+    if (lines) {
+      label.textContent = "";
+      [lines[1], lines[2]].forEach(function(line, k) {
+        label.appendChild(tel("tspan", { x:String(PAD_X - 10), dy:k ? "11" : "-5.5" }, line));
+      });
+    }
+    railLayer.appendChild(label);
     /* Small colored left accent bar */
-    svgEl.appendChild(el("rect", {
+    railLayer.appendChild(el("rect", {
       x:String(PAD_X - 8), y:String(b.top + 2),
       width:"2", height:String(b.h - 4),
       rx:"1", fill:b.color, opacity:"0.35",
@@ -2297,11 +2403,11 @@ function buildTimeline() {
       x2:String(x), y2:String(contentH + 8),
       stroke:"rgba(255,255,255,0.06)", "stroke-width":"1",
     }));
-    /* Year label */
-    svgEl.appendChild(tel("text", {
-      x:String(x + YEAR_STEP / 2), y:String(yYearLabel),
+    /* Year label (phone: in the pinned header) */
+    (compact ? axisEl : svgEl).appendChild(tel("text", {
+      x:String(x + YEAR_STEP / 2), y:String(compact ? 31 : yYearLabel),
       "text-anchor":"middle", "font-size":"11", "font-weight":"500",
-      fill:"rgba(255,255,255,0.3)",
+      fill:compact ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.3)",
       "font-family":"'Inter',ui-monospace,monospace",
       class:"pt-fade", style:"--fdel:"+(0.28+i*0.02)+"s;--fdur:0.3s",
     }, String(yr)));
@@ -2356,7 +2462,7 @@ function buildTimeline() {
         const pos2 = group2.reduce(function(best,c){
           return Math.abs(c.y-pos1.y)<Math.abs(best.y-pos1.y)?c:best;
         }, group2[0]);
-        const delMs = Math.round(180 + (pos1.x-PAD_X)/(svgW-PAD_X*2)*700 + bi*18);
+        const delMs = Math.round(180 + (pos1.x-PAD_X)/(svgW-PAD_X-PAD_R)*700 + bi*18);
         const pe = drawEdge(pos1, pos2, b.color, 0.18, 0.8, delMs);
         if (pe) link(pe, pos1.p.title, pos2.p.title);
       });
@@ -2388,7 +2494,7 @@ function buildTimeline() {
     const edgeColor = posA.bi===posB.bi ? BANDS[posA.bi].color : "rgba(255,255,255,0.7)";
     /* Delay based on left paper's x */
     const lx = Math.min(posA.x, posB.x);
-    const delMs = Math.round(600 + (lx-PAD_X)/(svgW-PAD_X*2)*500);
+    const delMs = Math.round(600 + (lx-PAD_X)/(svgW-PAD_X-PAD_R)*500);
     const pe = drawEdge(posA, posB, edgeColor, opacity, width, delMs);
     if (pe) link(pe, ka, kb);
   });
@@ -2547,7 +2653,7 @@ function showDetail(p,cat) {
   detail.innerHTML=
     '<button class="pt-detail-close" type="button" aria-label="Close paper details">&#x2715;</button>'+
     '<div class="pt-detail-content" style="flex:1;min-width:0;overflow:hidden">'+
-      '<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
+      '<div class="pt-detail-row" style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">'+
         '<div style="min-width:0;flex:1">'+
           '<div class="pt-detail-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">'+
             '<span style="font-size:8.5px;font-weight:700;letter-spacing:0.10em;color:'+cat.color+'">'+p.venue+'</span>'+

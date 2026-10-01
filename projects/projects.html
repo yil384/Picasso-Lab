@@ -727,6 +727,14 @@ reduceMotion.addEventListener?.('change', () => {
 }
 #flip-front { overflow-y: scroll; background: #fff; }
 #flip-back  { transform: rotateY(180deg); background: #fff; }
+/* WebKit (Safari, every iPhone browser) ignores backface-visibility for the
+   faces' scrolled content, videos and iframes, so the mirrored page showed
+   through the Lab. The face turning away also fades out at the edge-on
+   midpoint of the flip (delay = half the flip duration). */
+#flip-front, #flip-back { transition: opacity 0s linear .575s; }
+#flip-back,
+#flip-card.flipped #flip-front { opacity: 0; }
+#flip-card.flipped #flip-back { opacity: 1; }
 #flip-back iframe { width: 100%; height: 100%; height: 100dvh; border: none; display: block; }
 
 #flip-status {
@@ -867,6 +875,7 @@ reduceMotion.addEventListener?.('change', () => {
   #flip-card {
     transition-duration: .78s;
   }
+  #flip-front, #flip-back { transition-delay: .39s; }
   #flip-back {
     --flip-toolbar-h: 58px;
     display: flex;
@@ -896,6 +905,8 @@ reduceMotion.addEventListener?.('change', () => {
 
 @media (prefers-reduced-motion: reduce) {
   #flip-card,
+  #flip-front,
+  #flip-back,
   #flip-shade,
   #lab-flash,
   #lab-flash span,
