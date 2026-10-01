@@ -49,11 +49,13 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   the card is under 110 px tall), and the signals: a dotted path whose dots grow from far to near, a tiny traveller with a
   light trail flying along it - Ultraman Tiga (Multi Type) from M78, an Autobot warship in Optimus Prime's red and blue
   out of the wormhole (painted sprites `tiga.png` / `ark.png`, ~14-20 KB each, keyed from the user's ChatGPT art
-  `home/footer-src/{tiga,ark}.png` by `python3 home/footer-src/sprites.py`, nose along +x, ~22 px long at full size,
+  `home/footer-src/{tiga,ark}.png` by `python3 home/footer-src/sprites.py`, nose along +x, small on purpose (Tiga ~12 px, the warship ~10 px at full size: the user wants them unobtrusive),
   flipped when heading left, growing from far to near; M78 slowest; small additive effects in `craft()`: Tiga's aura,
   speed streaks and sparks; the warship's flickering engine plumes and, near the Earth, a re-entry plasma shell, bow
   shock and embers). Code-drawn vector versions were rejected as too crude - and a
-  ripple on the Earth's limb.
+  touchdown: the path ends on the visible disc at 0.72 R toward the source, the traveller grows
+  until 75% of the way, then sinks (shrinks and fades) into the atmosphere, then a tiny flash and a foreshortened ripple
+  lying on the globe.
 - **Moon**: tidally locked - `uMoonRot = atan2(-cos th, -sin th)` turns the texture so the near side always faces the
   Earth (in front of the Earth it shows us its far side). Its visitor blip sits in Mare Tranquillitatis and is only
   drawn while that spot faces us. Shading is lunar, not Lambert: the Lommel-Seeliger law `2 mu0 / (mu0 + mu)` (an evenly
@@ -65,14 +67,15 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   (`fp = dir * r / sqrt(1 - 0.6 r^2)`): violet nebula, a blue-white sun at `(-0.6, -0.55)`, Cybertron's horizon
   (sphere at `(0.9, 1.3)`, radius 1.1) lit by that sun. No glowing ring (a neon rim looked fake); the edge is a thin
   Einstein-ring line.
-  The throat is a Kerr-like D, not a circle: flattened (to 0.86) on the lower side - the side rotating toward us, where
-  the crescent is brightest - with rounded corners, and shifted 0.04 throats up; `wr` is measured against that outline
-  so the lensing, the far side and the rings all follow it.
-  Around it, what an EHT image of a wormhole would show (Wielgus et al. 2020): a blurred orange accretion crescent
-  (~1.2-1.3 throats) - strongly brighter, wider and larger on the lower side (Doppler beaming, as in the M87* image),
-  faint and thin on the far side, centre shifted toward the bright side, turbulent knots orbiting - a thin photon ring at
-  1.07, and a
-  faint second ring just inside the throat (light from the other side - the thing a black hole cannot have). The hover blip position `WB` in JS is the inverse of that mapping: move the planet, recompute it.
+  The throat is a mild Kerr-like D (flattened to 0.95 on the left, the side whose disc gas comes toward us, rounded
+  corners, shifted 0.05 throats right); `wr` is measured against that outline so everything follows it.
+  Around it the accretion disc as computed for Gargantua in Interstellar (James, von Tunzelmann, Franklin & Thorne 2015):
+  a thin disc seen nearly edge-on (inclination factor 0.16, tilted 0.12 rad, radii 1.4-3.0 throats), its near half
+  painted after the throat (crossing in front of it), its far half only outside the throat, and the far half's lensed
+  image as a broad arc over the top hugging the throat (sharp inner edge, soft outer) and a thin one underneath; the left
+  side brighter and whiter (beaming), orbit streaks, a thin photon ring. Earlier versions (a neon rim, an EHT-style
+  round crescent) read as fake or as a plain circle. The wormhole is r = 0.1 CH at x = 0.835 W so the disc fits the card.
+  The hover blip position `WB` in JS is the inverse of the interior mapping: move the planet, recompute it.
 - **M78** (`uM78` = centre + size): a real image, not noise - `nebula.jpg` (25 KB, 512x512) is the Hubble 2006
   mosaic of the Orion Nebula (NASA/ESA, public domain, from Wikimedia Commons), cropped, saturation x1.45, edges faded
   to black in the file itself; the shader screens it over the sky (dimming the stars behind its dust) with a very slow

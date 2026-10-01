@@ -279,11 +279,11 @@
         // gravitational lensing round the wormhole (a point-lens, Einstein radius 1.3 throats): sp is where our sky is read for this pixel.
         // Just outside the throat the deflection flips the sky over (a mirrored copy of what lies behind), at 1.3 it smears it into the
         // Einstein ring of tangential arcs; farther out it fades to nothing
-        // The throat is not a perfect circle: like a spinning (Kerr) black hole's shadow it is flattened into a D on the side
-        // rotating toward us (the lower side, where the accretion crescent is brightest) and shifted slightly the other way.
-        // wr = distance in throats measured against that D outline, so the lensing, the far side and the rings all follow it
-        '  vec2 wd = p - uCyb.xy - vec2(0.0, -0.04 * uCyb.z); float wsn = wd.y / max(length(wd), 1e-3);',
-        '  float wfl = 0.86 / max(wsn, 1e-3), wre = wsn > 0.0 ? min(1.0, wfl) - pow(max(0.32 - abs(1.0 - wfl), 0.0) / 0.32, 2.0) * 0.08 : 1.0;',
+        // The throat is not a perfect circle: like a spinning (Kerr) black hole's shadow (Gargantua in Interstellar) it is
+        // flattened a little on the side whose disc gas comes toward us (the left) and shifted slightly the other way.
+        // wr = distance in throats measured against that outline, so the lensing, the far side and the disc all follow it
+        '  vec2 wd = p - uCyb.xy - vec2(0.05 * uCyb.z, 0.0); float wsn = -wd.x / max(length(wd), 1e-3);',
+        '  float wfl = 0.95 / max(wsn, 1e-3), wre = wsn > 0.0 ? min(1.0, wfl) - pow(max(0.4 - abs(1.0 - wfl), 0.0) / 0.4, 2.0) * 0.1 : 1.0;',
         '  float wr = length(wd) / (uCyb.z * wre); vec2 wdir = wd / max(length(wd), 1e-3);',
         '  vec2 sp = p - wdir * uCyb.z * (1.69 / max(wr, 1.0)) * smoothstep(4.5, 2.0, wr) * step(1.0, wr);',
         '  vec3 col = mix(vec3(0.012, 0.025, 0.06), vec3(0.03, 0.06, 0.13), smoothstep(1.2, 0.0, length((p - uRes * vec2(0.5, 0.4)) / S)));',
@@ -311,6 +311,22 @@
         // our bent starlight (above) meets the far side. Inside, the whole sky of the other end is squeezed in by the lens, more and
         // more toward the edge: a violet nebula, a blue-white sun and, close by, part of Cybertron - a dark machined world laced with
         // energon-blue circuitry, the cities on its night side burning orange
+        // the accretion disc, as Kip Thorne's team computed it for Gargantua (James et al. 2015): a thin hot disc seen almost
+        // edge-on, its near half crossing in front of the throat, its far half hidden behind it - and lensed: the far half's
+        // light bends over the top of the throat into a broad arc and under it into a thin one. The side coming toward us is
+        // brighter and whiter (relativistic beaming), the gas streaks along its orbits. Back parts first; the near half of the
+        // disc is painted after the throat
+        '  vec2 dq = mat2(cos(0.12), -sin(0.12), sin(0.12), cos(0.12)) * (wd / uCyb.z); vec2 dk = vec2(dq.x, dq.y / 0.16); float drd = length(dk);',
+        '  float dbeam = pow(clamp(1.0 - 0.62 * dq.x / max(drd, 0.6), 0.25, 1.7), 3.0) * 0.45, dang = atan(dk.y, dk.x);',
+        '  float dstr = 0.5 + 0.75 * fbm(vec2(cos(dang - t * 0.5 / max(drd, 1.0)), sin(dang - t * 0.5 / max(drd, 1.0))) * drd * 2.4 + drd * 5.0);',
+        '  float demis = smoothstep(1.4, 1.75, drd) * smoothstep(3.0, 2.15, drd) * pow(1.6 / max(drd, 1.0), 1.4) * dstr * dbeam;',
+        '  vec3 dcol = mix(vec3(1.0, 0.42, 0.1), vec3(1.0, 0.88, 0.7), smoothstep(0.2, 1.1, demis)); dcol = mix(dcol, vec3(0.85, 0.9, 1.0), clamp(-dq.x * 0.12, 0.0, 0.3));',
+        '  if (dq.y < 0.0 && wr > 1.0) col += dcol * demis * 1.25;',
+        '  { float ph = atan(wd.y, wd.x), top = max(0.0, -sin(ph)), hb = pow(clamp(1.0 - 0.6 * cos(ph), 0.3, 1.6), 2.5) * 0.5;',
+        '    float hs = 0.5 + 0.7 * fbm(vec2(cos(ph - t * 0.4), sin(ph - t * 0.4)) * 3.0 + wr * 6.0);',
+        '    float halo = smoothstep(1.0, 1.05, wr) * exp(-max(0.0, wr - 1.05) / (0.05 + 0.32 * top)) * (0.35 + 0.95 * top) * hs * hb;',
+        '    col += mix(vec3(1.0, 0.45, 0.12), vec3(1.0, 0.86, 0.66), smoothstep(0.2, 0.9, halo)) * halo * 1.1;',
+        '    col += vec3(1.0, 0.8, 0.55) * exp(-pow((wr - 1.03) / 0.015, 2.0)) * 0.35 * hb; }   // the thin photon ring',
         '  if (wr < 1.0) { vec2 fp = wdir * wr / sqrt(max(1e-3, 1.0 - 0.6 * wr * wr));',
         '    vec2 sun = vec2(-0.6, -0.55); float ds = length(fp - sun);',
         '    vec3 ins = vec3(0.02, 0.018, 0.05) + vec3(0.32, 0.10, 0.42) * smoothstep(0.45, 0.85, fbm(fp * 1.6 + 5.0)) * 0.55 + vec3(0.10, 0.35, 0.45) * smoothstep(0.55, 0.9, fbm(fp * 2.3 - 3.0)) * 0.35;',
@@ -328,17 +344,8 @@
         '      cc += vec3(0.45, 0.55, 1.0) * pow(1.0 - n.z, 4.0) * max(0.0, lam + 0.3) * 0.9; ins = mix(ins, cc, smoothstep(r, r - 0.015, q)); }',
         '    ins *= 0.55 + 0.45 * smoothstep(1.0, 0.82, wr); ins.b += 0.03 * smoothstep(0.85, 1.0, wr);',
         '    col = mix(col, ins, smoothstep(1.0, 0.985, wr)); }',
-        // what an EHT image of a wormhole would show (Wielgus et al. 2020, reflection-asymmetric wormholes): hot gas falling
-        // into the mouth glows in a blurred orange ring, brighter where it streams toward us (Doppler beaming, the lower side,
-        // as in the M87* image), with slowly orbiting hot spots; and - unlike a black hole - a second, faint ring inside the
-        // throat: light from the other side of the wormhole
-        '  { float wa = atan(wd.y, wd.x), br = pow(0.5 + 0.5 * sin(wa + 0.3), 2.2);',
-        '    vec2 cw = wd / uCyb.z - vec2(-0.02, 0.07); float wr2 = length(cw), n1 = fbm(vec2(cos(wa - t * 0.3), sin(wa - t * 0.3)) * 2.2 + 3.0), n2 = fbm(vec2(cos(wa + t * 0.17), sin(wa + t * 0.17)) * 4.5 + wr * 3.0);',
-        '    float r0 = 1.2 + 0.12 * br + 0.1 * (n1 - 0.5), w = 0.1 + 0.17 * br;',
-        '    float ring = exp(-pow((wr2 - r0) / w, 2.0)) * (0.14 + 0.86 * br) * (0.45 + 0.75 * n1 + 0.45 * n2) * smoothstep(1.0, 1.07, wr);',
-        '    col += mix(vec3(0.75, 0.12, 0.01), vec3(1.0, 0.56, 0.14), smoothstep(0.2, 1.0, ring)) * ring * 0.95;',
-        '    col += vec3(1.0, 0.72, 0.4) * exp(-pow((wr - 1.07) / 0.018, 2.0)) * (0.08 + 0.4 * br);   // the thin photon ring',
-        '    col += vec3(0.55, 0.6, 1.0) * exp(-pow((wr - 0.86) / 0.035, 2.0)) * step(wr, 1.0) * (0.14 + 0.05 * sin(wa * 2.0 + t * 0.8)); }',
+        // the near half of the disc, in front of the throat
+        '  if (dq.y >= 0.0) col += dcol * demis * 1.25;',
         // the Moon behind the Earth (z < 0)
         '  vec3 moonCol = vec3(0.0); float moonA = 0.0;',
         '  { vec2 d = p - uMoon.xy; float q = length(d); if (q < uMoon.z + 1.0) { vec3 n = sph(d * vec2(1.0, -1.0), uMoon.z);',
@@ -429,7 +436,7 @@
         BODY.moon.ex = -mpx / mpl; BODY.moon.ey = -mpy / mpl; BODY.moon.ez = -mpz / mpl;
         BODY.moon.ecl = along > 0 ? Math.max(0, Math.min(1, (1.1 - perp) / 0.4)) : 0;   // tidally locked: the near side always turns to the Earth
         BODY.m78 = { x: CW * 0.14 + PAR.x * 0.06, y: CH * 0.33 + PAR.y * 0.06, r: CH * 0.30 };
-        BODY.cyb = { x: CW * 0.86 + PAR.x * 0.1, y: CH * 0.30 + PAR.y * 0.1, r: CH * 0.135 };
+        BODY.cyb = { x: CW * 0.835 + PAR.x * 0.1, y: CH * 0.31 + PAR.y * 0.1, r: CH * 0.1 };
         if (gl) {
             gl.viewport(0, 0, CV.width, CV.height);
             var d = DPR; gl.uniform2f(U.uRes, CV.width, CV.height); gl.uniform1f(U.uT, s); gl.uniform1f(U.uReady, texOK.day && texOK.night && texOK.moon && texOK.cloud ? 1 : 0); gl.uniform1f(U.uNebR, texOK.neb ? 1 : 0);
@@ -450,7 +457,7 @@
     function loadSprites() { ['tiga', 'ark'].forEach(function (n) { var im = new Image(); im.onload = function () { SPRITE[n] = im; }; im.src = GL_URL + n + '.png'; }); }
     function craft(g, kind, x, y, ang, sc, alpha, t, tt) {
         var im = SPRITE[kind]; if (!im) return;
-        var L = 22 * sc, H = L * im.height / im.width, i, f, gr;
+        var L = (kind === 'ark' ? 10 : 12) * sc, H = L * im.height / im.width, i, f, gr;
         g.save(); g.translate(x, y); g.rotate(ang); if (Math.cos(ang) < 0) g.scale(1, -1); g.globalAlpha = alpha;
         g.globalCompositeOperation = 'lighter';
         if (kind === 'tiga') {
@@ -506,7 +513,7 @@
         var MT = { x: M.x + mnx * M.r, y: M.y - mey * M.r, vis: mnz > 0.2 };
         var spots = [
             { id: 'm78', x: BODY.m78.x, y: BODY.m78.y, hr: CH * 0.12, period: 14, color: '255,150,140', name: 'M78 NEBULA', dist: '3,000,000 LY', ly: BODY.m78.y + CH * 0.15 },
-            { id: 'cyb', x: WB[0], y: WB[1], hr: BODY.cyb.r * 1.2, period: 9, color: '150,200,255', name: 'CYBERTRON', dist: 'VIA WORMHOLE', ly: BODY.cyb.y + BODY.cyb.r * 1.62 + CH * 0.035, from: 0.95 },
+            { id: 'cyb', x: WB[0], y: WB[1], hr: BODY.cyb.r * 1.2, period: 9, color: '150,200,255', name: 'CYBERTRON', dist: 'VIA WORMHOLE', ly: BODY.cyb.y + BODY.cyb.r * 1.5 + CH * 0.05, from: 0.95 },
             { id: 'moon', x: MT.vis ? MT.x : M.x, y: MT.vis ? MT.y : M.y, hr: M.r * 1.3, color: '255,214,120', hidden: !moonVis, noBlip: !MT.vis } ];
         var showLab = CH >= 110, fs = Math.max(7, 7.4 * K);
         for (var k = 0; k < spots.length; k++) { var o = spots[k]; if (o.hidden) continue; EXTRA.push({ o: OFFWORLD[o.id], x: o.x, y: o.y, r: o.hr });
@@ -520,7 +527,7 @@
             // the signal comes out of the depth: a path of dots that start tiny and faint (far) and grow toward the Earth (near),
             // a traveller with a light trail flying along it (Tiga from M78, an Autobot warship out of the wormhole; slower the farther), a ripple where it lands
             if (o.from) { var C0 = BODY.cyb, aw = Math.atan2(GY - C0.y, GX - C0.x); o = { x: C0.x + Math.cos(aw) * C0.r * 0.85, y: C0.y + Math.sin(aw) * C0.r * 0.85, color: o.color, period: o.period, craft: 'ark' }; } else o.craft = 'tiga';
-            var ang = Math.atan2(o.y - GY, o.x - GX), ex = GX + Math.cos(ang) * GR * 1.03, ey = GY + Math.sin(ang) * GR * 1.03, mx = (o.x + ex) / 2, my = Math.min(o.y, ey) - CH * 0.14;
+            var ang = Math.atan2(o.y - GY, o.x - GX), ex = GX + Math.cos(ang) * GR * 0.72, ey = GY + Math.sin(ang) * GR * 0.72, mx = (o.x + ex) / 2, my = Math.min(o.y, ey) - CH * 0.16;
             var bz = function (tt) { var u1 = 1 - tt; return [u1 * u1 * o.x + 2 * u1 * tt * mx + tt * tt * ex, u1 * u1 * o.y + 2 * u1 * tt * my + tt * tt * ey]; };
             for (var j = 1; j < 26; j++) { var tj = Math.pow(j / 26, 0.75), P = bz(tj); g.fillStyle = 'rgba(' + o.color + ',' + (0.05 + 0.3 * tj * tj).toFixed(3) + ')';
                 g.beginPath(); g.arc(P[0], P[1], (0.25 + 0.75 * tj) * K, 0, 6.2832); g.fill(); }
@@ -529,8 +536,11 @@
                 // a faint light trail behind, then the traveller itself, growing as it comes out of the depth
                 for (var m = 6; m >= 1; m--) { var tm = Math.max(0, tt - m * 0.02 * (0.3 + tt)), R2 = bz(tm), al = (1 - m / 7) * (0.15 + 0.5 * tt);
                     g.fillStyle = 'rgba(' + o.color + ',' + al.toFixed(3) + ')'; g.beginPath(); g.arc(R2[0], R2[1], (0.4 + 1.2 * tm) * K * (1 - m * 0.1), 0, 6.2832); g.fill(); }
-                craft(g, o.craft, Q[0], Q[1], heading, Math.max(0.62, K) * (0.4 + 0.6 * tt), Math.min(1, u * 12), s, tt); }
-            else { var w = (u - 0.9) / 0.1; g.strokeStyle = 'rgba(' + o.color + ',' + (0.75 * (1 - w)).toFixed(3) + ')'; g.lineWidth = 1.2; g.beginPath(); g.arc(ex, ey, 2 + w * 10 * K, 0, 6.2832); g.stroke(); } }
+                var grow = Math.min(1, tt / 0.75), sink = tt > 0.75 ? 1 - 0.7 * (tt - 0.75) / 0.25 : 1;   // closer, then down into the atmosphere
+                craft(g, o.craft, Q[0], Q[1], heading, Math.max(0.62, K) * (0.4 + 0.6 * grow) * sink, Math.min(1, u * 12) * (1 - 0.6 * Math.max(0, (tt - 0.85) / 0.15)), s, tt); }
+            else { var w = (u - 0.9) / 0.1, fr = (1.2 + 2.5 * w) * K, fg = g.createRadialGradient(ex, ey, 0, ex, ey, fr);   // touchdown: a small flash and a ripple lying on the globe
+                fg.addColorStop(0, 'rgba(255,245,220,' + (0.9 * (1 - w)).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(' + o.color + ',0)'); g.fillStyle = fg; g.beginPath(); g.arc(ex, ey, fr, 0, 6.2832); g.fill();
+                g.strokeStyle = 'rgba(' + o.color + ',' + (0.6 * (1 - w)).toFixed(3) + ')'; g.lineWidth = 0.8; g.beginPath(); g.ellipse(ex, ey, (1 + 4 * w) * K * 0.69, (1 + 4 * w) * K, ang, 0, 6.2832); g.stroke(); } }
     }
     /* ~30 fps, only while the card is on screen and the tab is visible; textures load the first time it shows */
     var onScreen = false, lastF = 0, ticking = false;
