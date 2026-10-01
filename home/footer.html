@@ -195,34 +195,49 @@
        the page (up to 5% left of centre, as the old boxes were), and the three of the SAME height: the seal is as
        tall as the map card, the title + address block nearly so. f runs 0 (phone row, 352 x 107) -> 1 (957 x 290). */
     function rowLayout(W, H) {
+        if (W < 560) return stripLayout(W, H);
         var s = Math.min(W / 957, 1.3), f = clamp((s - 0.368) / 0.632, 0, 1);
         function L(a, b) { return a + (b - a) * f; }
         var px = clamp(W * 0.012, 3, 14), py = clamp(H * 0.02, 3, 8), availH = H - 2 * py;
-        var g = W * L(0.03, 0.045), off = W * 0.05, lh = L(1.5, 1.34), ar = L(0.65, 0.5), minEm = L(11, 11.5), kH = L(0.98, 0.62);
-        var align = f >= 0.5 ? 'justify' : 'left', Hc = availH, t, T, X, ok = false;
-        for (var it = 0; it < 60; it++) {
-            /* the text block is kH x the card height: size the title for that (its visual height scales with T) */
-            T = Hc * 0.3; t = typeset(T, T * ar, lh, T * 0.28, minEm, align);
-            T *= kH * Hc / t.vis;
-            if (T * ar < 10) T = 10 / ar;                       /* the address never below 10 px (phones) */
-            t = typeset(T, T * ar, lh, T * 0.28, minEm, align);
-            if (t.vis > availH) { Hc *= 0.97; continue; }
-            var S = Hc * (f < 0.4 ? 0.8 : 1), M = 2 * Hc, lo = px + S + g + t.C / 2, hi = W - px - M - g - t.C / 2;
+        var g = W * L(0.035, 0.045), off = W * 0.05, lh = L(1.4, 1.34), ar = L(0.56, 0.5), minEm = 11.5, kH = L(0.7, 0.62);
+        var Hc = availH, t, T, X;
+        function fit(Hc) {   /* the text block is kH x the card height; true when the row fits the width with the address near the centre */
+            T = Hc * 0.3; t = typeset(T, T * ar, lh, T * 0.28, minEm, 'justify');
+            T *= kH * Hc / t.vis; t = typeset(T, T * ar, lh, T * 0.28, minEm, 'justify');
+            var lo = px + Hc + g + t.C / 2, hi = W - px - 2 * Hc - g - t.C / 2;
             X = clamp(W / 2, lo, hi);
-            if (lo <= hi && X >= W / 2 - off) { ok = true; break; }
-            Hc *= 0.97;
+            return lo <= hi && X >= W / 2 - off;
         }
-        var o = { mode: 'row', f: +f.toFixed(2), T: T, A: t.A, S: Hc * (f < 0.4 ? 0.8 : 1), t: t, M: 2 * Hc, cardH: Hc };
-        /* spare width goes into the two gaps (the parts spread out like the old three boxes), the address stays centred */
-        var g2 = Math.min((W - 2 * px - o.S - t.C - o.M) / 2, W * 0.085, W - px - o.M - t.C / 2 - (W / 2 - off) - 1);
+        for (var it = 0; it < 60 && !fit(Hc); it++) Hc *= 0.97;
+        /* a touch smaller than the most that fits: the height saved goes into the gaps (the old footer breathed more) */
+        Hc *= 0.92; fit(Hc);
+        var o = { mode: 'row', f: +f.toFixed(2), T: T, A: t.A, S: Hc, t: t, M: 2 * Hc, cardH: Hc };
+        /* spare width spreads the three parts apart (gaps up to 10% of the box), the address stays near the centre */
+        var g2 = Math.min((W - 2 * px - o.S - t.C - o.M) / 2, W * 0.1, W - px - o.M - t.C / 2 - (W / 2 - off) - 1);
         if (g2 > g) { g = g2; X = clamp(W / 2, px + o.S + g + t.C / 2, W - px - o.M - g - t.C / 2); }
-        var cy = H / 2, ty = cy - t.vis / 2, ax = X - t.C / 2;
-        put(ADDR, ax, ty);
-        /* phone-sized rows: the seal sits level with the title, which leaves the bottom-left corner (Google's (i) button) free */
-        put(SEAL, ax - g - o.S, f < 0.4 ? ty : cy - o.S / 2, o.S, o.S);
+        var cy = H / 2, ax = X - t.C / 2;
+        put(ADDR, ax, cy - t.vis / 2);
+        put(SEAL, ax - g - o.S, cy - o.S / 2, o.S, o.S);
         put(CARD, ax + t.C + g, cy - o.cardH / 2, o.M, o.cardH);
         o.x0 = ax - g - o.S; o.G = o.S + g + t.C + g + o.M; o.textCx = Math.round(X - W / 2);
         return o;
+    }
+
+    /* phones: the wide footer box shrinks to a thin strip (957 x 200 -> 352 x 73, 957 x 290 -> 352 x 107). The address
+       gets the largest size (9-11 px) whose block fits the strip's height, wrapping to more lines if it must; seal and
+       map card share what is left; the seal sits level with the title so the bottom-left corner (Google's (i)) stays free. */
+    function stripLayout(W, H) {
+        var px = clamp(W * 0.03, 6, 14), py = clamp(H * 0.07, 3, 9), availW = W - 2 * px, availH = H - 2 * py, lh = 1.28;
+        var A, T, t, me = 11;
+        for (A = 11; A >= 9; A -= 0.25) { T = A * 1.45; t = typeset(T, A, lh, T * 0.2, me, 'left'); if (t.vis <= availH) break; }
+        while (t.vis > availH && me < 22) { me += 1; t = typeset(T, A, lh, T * 0.2, me, 'left'); }
+        var g = Math.max(8, W * 0.035), ks = 0.86, Hc = Math.min(availH, (availW - t.C - 2 * g) / (ks + 2));
+        var S = Math.min(Hc * ks, availH), M = 2 * Hc, spare = availW - (S + t.C + M + 2 * g);
+        g += spare / 4; var x0 = px + spare / 4, cy = H / 2, ty = cy - t.vis / 2;
+        put(SEAL, x0, Math.max(py, ty), S, S);
+        put(ADDR, x0 + S + g, ty);
+        put(CARD, x0 + S + g + t.C + g, cy - Hc / 2, M, Hc);
+        return { mode: 'strip', f: 0, T: T, A: A, S: S, t: t, M: M, cardH: Hc, x0: x0, G: S + t.C + M + 2 * g, textCx: Math.round(x0 + S + g + t.C / 2 - W / 2) };
     }
 
     /* two tiers (seal + text on top, map below) or stacked (seal, text, map): designed at u = 1, then scaled to fit */
