@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Projects – Picasso Lab</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -726,7 +726,7 @@ reduceMotion.addEventListener?.('change', () => {
   overflow: hidden;
 }
 #flip-front { overflow-y: scroll; background: #fff; }
-#flip-back  { transform: rotateY(180deg); background: #fff; }
+#flip-back  { transform: rotateY(180deg); background: #f7f6f2; }
 /* WebKit (Safari, every iPhone browser) ignores backface-visibility for the
    faces' scrolled content, videos and iframes, so the mirrored page showed
    through the Lab. The face turning away also fades out at the edge-on
@@ -737,59 +737,85 @@ reduceMotion.addEventListener?.('change', () => {
 #flip-card.flipped #flip-back { opacity: 1; }
 #flip-back iframe { width: 100%; height: 100%; height: 100dvh; border: none; display: block; }
 
+/* The loader on the Lab side of the card, shown until picasso-lab.com has loaded: the Lab's own paper
+   and its three fields (computer science, physics, math) as rings that draw themselves, with members
+   orbiting on them and the lab where all three meet. No button: it simply turns into the Lab. */
 #flip-status {
   position: absolute;
   inset: 0;
   z-index: 2;
   display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
+  place-items: center;
   padding: 28px;
-  background: #fff;
-  color: #5c6280;
+  background: #f7f6f2;
+  color: #6f6c63;
   text-align: center;
-  font: 600 .86rem/1.5 'Inter', sans-serif;
-  transition: opacity .25s ease;
+  transition: opacity .5s ease .15s;
 }
 #flip-back.loaded #flip-status {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity .25s ease, visibility 0s linear .25s;
+  transition: opacity .5s ease .15s, visibility 0s linear .65s;
 }
-.flip-launch-mark {
-  width: 54px;
-  height: 54px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #00629B, #003355);
-  color: #FFCD00;
-  box-shadow: 0 16px 40px rgba(0,98,155,.22);
-  font-size: 1.55rem;
-  font-weight: 900;
+.lab-loader { display: grid; justify-items: center; gap: 0; transform: translateY(-2vh); }
+.lab-rings { width: clamp(156px, 27vmin, 264px); height: auto; overflow: visible; display: block; }
+#flip-back.loaded .lab-rings { transform: scale(1.06); transition: transform .65s cubic-bezier(.2,.7,.2,1); }
+.lab-rings .ring-track { fill: none; stroke: #e7e4db; stroke-width: 1.4; }
+.lab-rings .ring-draw {
+  fill: none; stroke-width: 2.4; stroke-linecap: round;
+  stroke-dasharray: 365; stroke-dashoffset: 365;
 }
-.flip-status-title {
-  color: #172033;
-  font-size: 1.08rem;
-  font-weight: 800;
+.lab-rings .r-cs   { stroke: #5b833d; }
+.lab-rings .r-phys { stroke: #4974a4; }
+.lab-rings .r-math { stroke: #b74c4c; }
+.lab-rings .orbit { transform-box: view-box; opacity: 0; }
+.lab-rings .orbit circle { stroke: #fbfaf7; stroke-width: 2; }
+.lab-rings .o-cs   { transform-origin: 120px 64px; }
+.lab-rings .o-phys { transform-origin: 82px 129px; }
+.lab-rings .o-math { transform-origin: 158px 129px; }
+.lab-rings .o-cs circle   { fill: #5b833d; }
+.lab-rings .o-phys circle { fill: #4974a4; }
+.lab-rings .o-math circle { fill: #b74c4c; }
+.lab-rings .core { fill: #1c1b18; transform-box: view-box; transform-origin: 120px 107px; transform: scale(0); }
+.lab-rings .core-wave { fill: none; stroke: #1c1b18; stroke-width: 1; opacity: 0; transform-box: view-box; transform-origin: 120px 107px; }
+.lab-word {
+  margin-top: clamp(14px, 2.6vmin, 22px);
+  font: 400 clamp(1.6rem, 3.9vmin, 2.35rem)/1 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  letter-spacing: .015em; color: #1c1b18;
+  opacity: 0; transform: translateY(6px);
 }
+.lab-word em { font-style: italic; }
+.lab-line { position: relative; width: 132px; height: 2px; margin-top: 16px; border-radius: 2px; background: #e7e4db; overflow: hidden; opacity: 0; }
+.lab-line i { position: absolute; top: 0; bottom: 0; left: 0; width: 44px; border-radius: 2px;
+  background: linear-gradient(90deg, #5b833d, #4974a4 55%, #b74c4c); transform: translateX(-48px); }
 #flip-status-text {
-  max-width: 330px;
-  font-weight: 500;
+  margin-top: 12px; min-height: 1.4em;
+  font: 500 .84rem/1.4 'Inter', -apple-system, sans-serif; letter-spacing: .02em; color: #77746b;
+  opacity: 0;
 }
-#flip-status a {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 16px;
-  border-radius: 999px;
-  background: #00629B;
-  color: #fff;
-  text-decoration: none;
-  font-size: .8rem;
-}
+#flip-status-text a { color: #1c1b18; text-decoration: underline; text-decoration-color: rgba(28,27,24,.3); text-underline-offset: 3px; }
+#flip-scene { --ld: .5s; }   /* the back face turns into view half-way through the flip */
+#flip-scene.active .ring-draw { animation: ring-draw .95s cubic-bezier(.55,.05,.25,1) var(--ld) forwards; }
+#flip-scene.active .ring-draw.r-phys { animation-delay: calc(var(--ld) + .16s); }
+#flip-scene.active .ring-draw.r-math { animation-delay: calc(var(--ld) + .32s); }
+#flip-scene.active .orbit { animation: orbit-in .4s ease-out forwards, orbit 11s linear infinite; animation-delay: calc(var(--ld) + .75s), calc(var(--ld) + .75s); }
+#flip-scene.active .o-phys { animation-duration: .4s, 14s; animation-delay: calc(var(--ld) + .9s), calc(var(--ld) + .9s); animation-direction: normal, reverse; }
+#flip-scene.active .o-math { animation-duration: .4s, 12.5s; animation-delay: calc(var(--ld) + 1.05s), calc(var(--ld) + 1.05s); }
+#flip-scene.active .core { animation: core-pop .5s cubic-bezier(.3,1.6,.5,1) calc(var(--ld) + 1.05s) forwards; }
+#flip-scene.active .core-wave { animation: core-wave 2.4s ease-out calc(var(--ld) + 1.4s) infinite; }
+#flip-scene.active .lab-word { animation: rise .6s ease-out calc(var(--ld) + .55s) forwards; }
+#flip-scene.active .lab-line { animation: fade-in .4s ease-out calc(var(--ld) + .8s) forwards; }
+#flip-scene.active .lab-line i { animation: line-run 1.5s cubic-bezier(.45,0,.25,1) calc(var(--ld) + .8s) infinite; }
+#flip-scene.active #flip-status-text { animation: fade-in .5s ease-out calc(var(--ld) + .9s) forwards; }
+@keyframes ring-draw { to { stroke-dashoffset: 0; } }
+@keyframes orbit-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes core-pop { to { transform: scale(1); } }
+@keyframes core-wave { 0% { opacity: .55; transform: scale(1); stroke-width: 1.2; } 100% { opacity: 0; transform: scale(5.5); stroke-width: .2; } }
+@keyframes rise { to { opacity: 1; transform: none; } }
+@keyframes fade-in { to { opacity: 1; } }
+@keyframes line-run { 0% { transform: translateX(-48px); } 100% { transform: translateX(136px); } }
 
 /*
  * Shade: sits inside #flip-scene but OUTSIDE the card,
@@ -856,6 +882,8 @@ reduceMotion.addEventListener?.('change', () => {
               opacity    0.22s ease .07s;
 }
 #lab-flash.on span { transform: scale(1); opacity: 1; }
+#lab-flash span { display: inline-flex; align-items: center; gap: .45em; }
+#lab-flash svg { width: 1.15em; height: 1.15em; overflow: visible; fill: none; stroke: currentColor; stroke-width: 14; }
 
 @media (hover: none), (pointer: coarse) {
   .hero {
@@ -876,20 +904,21 @@ reduceMotion.addEventListener?.('change', () => {
     transition-duration: .78s;
   }
   #flip-front, #flip-back { transition-delay: .39s; }
+  #flip-scene { --ld: .32s; }
   #flip-back {
     --flip-toolbar-h: 58px;
     display: flex;
     flex-direction: column;
     padding-top: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
-    background: #07131f;
+    background: #f7f6f2;
   }
   #flip-back::before {
     content: "";
     position: absolute;
     inset: 0 0 auto;
     height: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
-    border-bottom: 1px solid rgba(255,255,255,.12);
-    background: rgba(4,18,30,.96);
+    border-bottom: 1px solid rgba(28,27,24,.08);
+    background: #f7f6f2;
   }
   #flip-back iframe {
     position: relative;
@@ -899,7 +928,7 @@ reduceMotion.addEventListener?.('change', () => {
     height: auto;
   }
   #flip-status {
-    top: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
+    top: 0;
   }
 }
 
@@ -910,10 +939,13 @@ reduceMotion.addEventListener?.('change', () => {
   #flip-shade,
   #lab-flash,
   #lab-flash span,
-  #flip-status {
+  #flip-status,
+  #flip-status * {
     transition-duration: .01ms !important;
     transition-delay: 0s !important;
     animation-duration: .01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
   }
 }
 
@@ -923,19 +955,33 @@ reduceMotion.addEventListener?.('change', () => {
   <div id="flip-card">
     <div id="flip-front" aria-hidden="false"><!-- page content moved here on flip --></div>
     <div id="flip-back" aria-hidden="true" tabindex="-1">
-      <div id="flip-status" role="status">
-        <span class="flip-launch-mark" aria-hidden="true">P</span>
-        <strong class="flip-status-title">Picasso Lab</strong>
-        <span id="flip-status-text">Continue to the full Lab experience in a new tab.</span>
-        <a href="https://picasso-lab.com" target="_blank" rel="noopener">Open Picasso Lab</a>
+      <div id="flip-status" role="status" aria-live="polite">
+        <div class="lab-loader">
+          <svg class="lab-rings" viewBox="16 0 208 200" aria-hidden="true">
+            <circle class="ring-track" cx="120" cy="64" r="58"/>
+            <circle class="ring-track" cx="82" cy="129" r="58"/>
+            <circle class="ring-track" cx="158" cy="129" r="58"/>
+            <circle class="ring-draw r-cs" cx="120" cy="64" r="58" transform="rotate(-90 120 64)"/>
+            <circle class="ring-draw r-phys" cx="82" cy="129" r="58" transform="rotate(150 82 129)"/>
+            <circle class="ring-draw r-math" cx="158" cy="129" r="58" transform="rotate(30 158 129)"/>
+            <g class="orbit o-cs"><circle cx="120" cy="6" r="4.6"/><circle cx="170.2" cy="93" r="3.6"/><circle cx="69.8" cy="93" r="4"/></g>
+            <g class="orbit o-phys"><circle cx="24" cy="129" r="4.4"/><circle cx="111" cy="78.8" r="3.6"/><circle cx="111" cy="179.2" r="4"/></g>
+            <g class="orbit o-math"><circle cx="216" cy="129" r="4.4"/><circle cx="129" cy="179.2" r="3.8"/><circle cx="129" cy="78.8" r="3.6"/></g>
+            <circle class="core-wave" cx="120" cy="107" r="5"/>
+            <circle class="core" cx="120" cy="107" r="5"/>
+          </svg>
+          <div class="lab-word">PICASSO <em>LAB</em></div>
+          <div class="lab-line" aria-hidden="true"><i></i></div>
+          <p id="flip-status-text">Stepping into the lab</p>
+        </div>
       </div>
       <iframe id="lab-iframe" src="" title="Picasso Lab" allow="clipboard-read *; clipboard-write *; fullscreen *"></iframe>
     </div>
   </div>
   <div id="flip-shade"></div>
 </div>
-<div id="lab-flash"><span>✨ Picasso Lab</span></div>
-<div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
+<div id="lab-flash"><span><svg viewBox="16 0 208 200" aria-hidden="true"><circle cx="120" cy="64" r="58"/><circle cx="82" cy="129" r="58"/><circle cx="158" cy="129" r="58"/></svg>Picasso Lab</span></div>
+<div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd></div>
 
 <script>
 (function () {
@@ -947,6 +993,13 @@ reduceMotion.addEventListener?.('change', () => {
   const iframe = document.getElementById('lab-iframe');
   const flash  = document.getElementById('lab-flash');
   const statusText = document.getElementById('flip-status-text');
+  function setStatus(kind) {
+    if (kind === 'away') {
+      statusText.innerHTML = '<a href="https://picasso-lab.com" target="_blank" rel="noopener">Continue at picasso-lab.com</a>';
+    } else {
+      statusText.textContent = kind === 'slow' ? 'Almost there' : 'Stepping into the lab';
+    }
+  }
   let flipped   = false;
   let animating = false;
   let keyboardPrimed = false;
@@ -1001,9 +1054,7 @@ reduceMotion.addEventListener?.('change', () => {
     clearTimeout(iframeWaitTimer);
     setLabFrame('about:blank');
     back.classList.remove('loaded');
-    statusText.textContent = canEmbedLab
-      ? 'Opening the full Lab experience…'
-      : 'Continue to the full Lab experience in a new tab.';
+    setStatus(canEmbedLab ? 'loading' : 'away');
   }
 
   /* ── Typing hint ── */
@@ -1019,8 +1070,8 @@ reduceMotion.addEventListener?.('change', () => {
   function hideHint() { clearTimeout(hintTimer); typeHint.classList.remove('show'); }
   function showTapHint(remaining) {
     typeHint.textContent = remaining === 1
-      ? 'One more tap to open Picasso Lab ✨'
-      : 'Tap the header twice more ✨';
+      ? 'One more tap to open Picasso Lab'
+      : 'Tap the header twice more';
     typeHint.classList.add('show');
     clearTimeout(hintTimer);
     hintTimer = setTimeout(() => typeHint.classList.remove('show'), 1100);
@@ -1181,7 +1232,7 @@ reduceMotion.addEventListener?.('change', () => {
     back.classList.remove('loaded');
     clearTimeout(iframeWaitTimer);
     if (canEmbedLab) {
-      statusText.textContent = 'Opening the full Lab experience…';
+      setStatus('loading');
       setLabFrame(LAB_URL);
       iframeWaitTimer = setTimeout(() => {
         if (
@@ -1189,11 +1240,11 @@ reduceMotion.addEventListener?.('change', () => {
           !scene.classList.contains('active') ||
           back.classList.contains('loaded')
         ) return;
-        statusText.textContent = 'Still loading — you can open it directly.';
+        setStatus('slow');
       }, 7000);
     } else {
       setLabFrame('about:blank');
-      statusText.textContent = 'Continue to the full Lab experience in a new tab.';
+      setStatus('away');
     }
 
     // Show activation flash
