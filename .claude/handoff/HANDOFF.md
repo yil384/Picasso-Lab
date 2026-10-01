@@ -42,7 +42,14 @@
 ### TODO 3 — Yufei 的双击短片（暂停到新会话）
 用户原话：「我想针对每个人的人设做一个AI漫画或者AI漫剧，就是双击某人的照片就可以播放，时长就5～10s就行，先做一下yufei的，我看看效果。」用户选择：**全部在这里用代码画**（不用 Codex 画图）；**在头像格子里播放**（不要画中画、不要新窗口）。Google Sites 嵌入框里全屏被禁用（实测 `document.fullscreenEnabled === false`）。
 - 分镜/规格：`.claude/handoff/film-yufei/STORYBOARD.md`（8 s，24 fps，192 帧，方形 960 设计 → 输出 480×480；第 0 帧和最后几帧必须正好是照片 `people/static/yufei.webp`；只在内切圆里放重要内容；135–200 px 下要看得清）。故事「Picatso」：照片变漫画格 → 量子芯片上红色噪声小怪捣乱（BZZT!）→ 她眼镜一闪，戴贝雷帽的白猫叼画笔跳上肩 → 一笔金色颜料扫过芯片，小怪 SPLAT!，量子比特恢复 → 颜料写出 PICASSO LAB → 颜料一扫回到照片。
-- 做到哪了：`.claude/handoff/film-yufei/PROGRESS.md`（上个会话的子任务写的：已做的、问题、命令、下一步）。源码 `yufei.html` 是 video-kit pipeline 场景（要在 video-kit worktree 里跑，见第 0 节第 4 步）。
+- 做到哪了：`.claude/handoff/film-yufei/PROGRESS.md`（上个会话的子任务写的：已做的、问题、命令、下一步）。源码 `yufei.html` 是 video-kit pipeline 场景（要在 video-kit worktree 里跑，见第 0 节第 4 步）。当前进度图：`.claude/handoff/film-yufei/work/progress_sheet.jpg`。
+- **用户看了进度图后的反馈（最优先改）：「这个ai漫剧人脸做的太丑了太假了」。** 问题出在 `tools/comic_photo.py` 生成的 `assets/comic_person.png`：脸被重画了（两色平涂肤色、强制提亮、XDoG 线条、重画的红色半框眼镜、矢量画的笑嘴带牙、腮红、手画的头发高光），看起来像假脸。要求：
+  - **不要重画她的五官**（不要画嘴、牙、腮红、眼睛、重画眼镜）。脸必须是她照片里真实的脸，保持神态和相貌，端庄好看。
+  - 漫画感放在脸以外的地方：衣服/头发可以适度色阶化 + 网点、整个人物外轮廓一圈墨线、背景换成漫画天空；脸上最多是很轻的印刷网点/纸纹，绝不能改变五官。也可以整个人用真实照片（cut-out 图层），只在边缘加墨线、整体加轻微的印刷质感，让她像「漫画格里贴的真人照片」那种风格（真人 + 漫画世界的拼贴感，比假卡通脸好）。
+  - 眼镜闪光只在她真实的眼镜上加光斑和星形闪光（现在的光斑做法可以保留），不要重画眼镜框。
+  - 怼脸特写（crash zoom）不要放太大，免得照片发糊；用 512 原图时最多放大到约 1.6 倍，或者改成推到胸像构图。
+  - 改完先截几张她的镜头（第 9、12、64、80 帧左右，按圆形裁切，200 px 和 135 px 都看）发给用户确认脸，用户认可了再渲染整片。
+  - 其他镜头（芯片、小怪、白猫、颜料、PICASSO LAB、回到照片）用户没有提意见，按 PROGRESS.md 的「下一步」继续打磨。
 - 交付：`people/static/film/yufei.mp4`（H.264 main/high，yuv420p，+faststart，无音轨，≤ ~1.2 MB）+ `people/static/film/yufei.webm`（VP9，给没有 H.264 的浏览器；测试用的 Chromium 就没有 H.264）。然后在 `people/fx/yufei.js` 加回 `film: 'film/yufei',`。
 - 验证：`node /tmp/picasso-tools/film_test.js yufei_cats FT_d 0`（桌面）和 `... FT_p 1`（手机）：双击播放、播完回到照片、中途单击跳过、单击仍开关特效；看 `shots/FT_*` 截图。再把关键帧裁成圆、按 135/200 px 看清不清楚。先给用户发预览（GIF/截图），用户说好再合并。
 - 之后（用户看了 Yufei 的再说）：给其他每个人按人设做短片。

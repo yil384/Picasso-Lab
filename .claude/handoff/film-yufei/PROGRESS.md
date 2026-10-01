@@ -1,5 +1,15 @@
 # Yufei "Picatso" - progress handoff (paused 2026-10-01)
 
+> **USER FEEDBACK AFTER SEEING `work/progress_sheet.jpg` (fix this first):** "这个ai漫剧人脸做的太丑了太假了" —
+> her face looks ugly and fake. The redrawn face in `assets/comic_person.png` (2-tone flat skin, forced-lit face, XDoG
+> feature lines, redrawn red glasses, vector smile with teeth, blush, painted hair shine) must go. Keep her REAL face
+> from the photo: do not redraw eyes, mouth, teeth, blush or glasses. Put the comic look around her instead (a bold ink
+> silhouette line, a light print/halftone texture, stylised clothes/hair at most, the comic sky behind) — a real photo
+> cut-out pasted into a comic world reads far better than a fake cartoon face. Glints go on her real glasses. Keep the
+> crash zoom moderate (<= ~1.6x of the 512 photo, or end on a bust framing) so the photo stays sharp. Show the user
+> stills of her shots (around f9, f12, f64, f80, circle-cropped at 200 and 135 px) and get an OK before the full render.
+> See `.claude/handoff/HANDOFF.md` TODO 3.
+
 Brief: `STORYBOARD.md` (this folder). Status: **a complete, watchable draft of all 6 beats exists as a scene and has been
 reviewed from rendered stills (about 2.5 review -> fix rounds)**. No final mp4 has been encoded yet: the first full
 960 render was stopped at frame 35 on request and its frames were deleted. Current state: `work/progress_sheet.jpg`
