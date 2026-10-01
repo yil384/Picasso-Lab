@@ -21,8 +21,11 @@ Film sources and notes live in `.claude/films/` (Yufei's avatar short: `.claude/
 - End each round with the list of files the user must re-paste into Google Sites (pasted HTML only changes on re-paste).
 - The user is picky about craft: if something looks rough, generic or "AI-ish", rethink it rather than tweak it.
   Prefer real assets (photos, textures, painted art) over procedural approximations, but keep pages light to load.
-- When art is needed that code cannot make well, hand the user ready-to-use image prompts (they generate with
-  ChatGPT and push the images to the repo) instead of building generator scripts.
+- When art is needed that code cannot make well, never draw it with code primitives (rejected every time). Generate it
+  with Codex's image tool: in a cloud session install `@openai/codex`, start `codex login --device-auth` in the
+  background and give the user the URL + one-time code (they enter it within 15 min); then `codex exec` as in
+  `.claude/films/yufei/anime/gen.sh` (green #00FF00 background for sprites, then key them). If no login is possible,
+  hand the user ready-to-use prompts for ChatGPT and they push the images to the repo.
 
 ## House rules
 - No emoji in pages; embed URLs absolute; no `history.pushState` in an embed (use the nav-frame pattern).
