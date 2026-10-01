@@ -45,7 +45,7 @@ async function run() {
         if (/commons\.wikimedia\.org/.test(url)) return route.fulfill({ status: 200, contentType: 'image/png', body: SEAL });
         if (url.startsWith('https://yil384.github.io/Picasso-Lab/')) {
           const f = path.join(REPO, decodeURIComponent(url.slice(37).split(/[?#]/)[0]));
-          if (fs.existsSync(f) && fs.statSync(f).isFile()) return route.fulfill({ path: f });
+          if (fs.existsSync(f) && fs.statSync(f).isFile()) return route.fulfill({ path: f, headers: { 'Access-Control-Allow-Origin': '*' } });
           return route.fulfill({ status: 404, body: '' });
         }
         if (/^data:|^blob:/.test(url)) return route.continue();
