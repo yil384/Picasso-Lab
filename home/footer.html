@@ -296,117 +296,211 @@
         seal: Math.round(LAST.S), col: LAST.t.C, card: [Math.round(LAST.M), Math.round(LAST.cardH)], align: TXT.style.textAlign,
         lines: Math.round((TXT.offsetHeight) / (LAST.A * parseFloat(TXT.style.lineHeight))), textCx: LAST.textCx, vis: Math.round(LAST.t.vis) }; };
 
-    /* ════════ the visitor globe: a turning radar globe (orthographic: no Mercator stretch) with a sweep, the Moon on
-       its orbit and two far-away "regions" for fun (the M78 Nebula, Cybertron). Drag to turn it (with inertia); hover a
-       dot for the place; a click that is not a drag opens the analytics. The off-world visits are decoration only:
-       nothing is ever recorded for them. ════════ */
-    var CV = document.getElementById('vmap-c'), C2 = CV.getContext('2d');
-    document.getElementById('vmap-fx').style.display = 'none';
+    /* ════════ the visitor globe: the real Earth (NASA Blue Marble by day, Black Marble city lights by night, a soft
+       terminator, ocean glint, blue atmosphere), the real Moon on its orbit, and - very far away behind them - the
+       M78 Nebula (a blue reflection nebula round the silver glow of the Land of Light) and Cybertron (a machined metal
+       planet seamed with blue energy). One WebGL fragment shader paints the card (no library); a 2D layer on top draws
+       the visitors, the off-world blips and the signals crawling in from the far ones. Drag to turn the Earth (the far
+       objects barely move: parallax); hover a dot for the place; a click that is not a drag opens the analytics. The
+       off-world visits are decoration only: nothing is ever recorded for them. Textures (158 KB) load only once the
+       card is on screen. ════════ */
+    var GL_URL = 'https://yil384.github.io/Picasso-Lab/home/static/globe/';
+    var CV = document.getElementById('vmap-c'), OV = document.getElementById('vmap-fx'), O2 = OV.getContext('2d');
     var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1)), CW = 0, CH = 0, GX = 0, GY = 0, GR = 0, K = 1;
-    var ROT = { lon: -100, lat: 22, vlon: 0, vlat: 0, auto: 1 }, LIGHT = [-0.55, 0.45, 0.70], RAD = Math.PI / 180;
-    var LAND = [], SCR = [], EXTRA = [], STARS = [], SPR = {};
-    var OFFWORLD = [
-        { id: 'moon', code: 'LUNA', where: 'Mare Tranquillitatis, the Moon', n: 1, note: 'July 1969' },
-        { id: 'm78', code: 'M78', where: 'Land of Light, M78 Nebula', n: 3, note: '300,000 light-years away' },
-        { id: 'cyb', code: 'CYB', where: 'Iacon, Cybertron', n: 2, note: 'more than meets the eye' }
-    ];
-    function landAt(lat, lon) { if (lat > LAT_MAX || lat < LAT_MIN) return 0;
-        var c = Math.floor((lon - LON_MIN) / (LON_MAX - LON_MIN) * GW), r = Math.floor((LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * GH);
-        return isLand(clamp(c, 0, GW - 1), clamp(r, 0, GH - 1)); }
-    /* land: a Fibonacci sphere (even spacing everywhere) kept where the mask says land */
-    function buildLand() { LAND = []; var N = Math.round(clamp(GR * GR * 4.2, 6000, 26000)), ga = Math.PI * (3 - Math.sqrt(5));
-        for (var i = 0; i < N; i++) { var y = 1 - (i + 0.5) / N * 2, lat = Math.asin(y) / RAD, lon = ((i * ga / RAD) % 360 + 540) % 360 - 180;
-            if (landAt(lat, lon)) LAND.push([Math.sin(lat * RAD), Math.cos(lat * RAD), lon * RAD]); } }
-    /* orthographic view of (lat, lon): [x, y, z] with z towards the viewer (> 0 = the visible side) */
-    var sl0 = 0, cl0 = 1;
-    function view(sp, cp, lam) { var a = lam - ROT.lon * RAD, x = cp * Math.sin(a), y1 = sp, z1 = cp * Math.cos(a);
-        return [x, y1 * cl0 - z1 * sl0, y1 * sl0 + z1 * cl0]; }
-    function sprites() {
-        var mk = function (s, fn) { var c = document.createElement('canvas'); c.width = c.height = Math.max(2, Math.round(s)); fn(c.getContext('2d'), c.width); return c; };
-        var mr = GR * 0.14 * DPR;
-        SPR.moon = mk(mr * 2, function (g, s) { var r = s / 2, gr = g.createRadialGradient(r * 0.7, r * 0.65, r * 0.1, r, r, r);
-            gr.addColorStop(0, '#e9e6df'); gr.addColorStop(0.6, '#b9b5ad'); gr.addColorStop(1, '#5e5b57'); g.fillStyle = gr; g.beginPath(); g.arc(r, r, r, 0, 6.2832); g.fill();
-            var cr = [[0.62, 0.42, 0.16], [0.4, 0.7, 0.12], [0.75, 0.72, 0.09], [0.3, 0.35, 0.08], [0.55, 0.85, 0.07]];
-            for (var i = 0; i < cr.length; i++) { g.beginPath(); g.arc(cr[i][0] * s, cr[i][1] * s, cr[i][2] * s, 0, 6.2832); g.fillStyle = 'rgba(70,66,62,0.35)'; g.fill(); }
-            var sh = g.createLinearGradient(0, 0, s, s * 0.4); sh.addColorStop(0.45, 'rgba(0,0,10,0)'); sh.addColorStop(1, 'rgba(0,0,12,0.75)'); g.fillStyle = sh; g.beginPath(); g.arc(r, r, r, 0, 6.2832); g.fill(); });
-        var nr = GR * 0.62 * DPR;
-        SPR.m78 = mk(nr * 2, function (g, s) { var blobs = [[0.5, 0.5, 0.5, '255,110,180', 0.55], [0.38, 0.6, 0.36, '140,92,255', 0.5], [0.64, 0.4, 0.32, '80,178,255', 0.45], [0.52, 0.48, 0.14, '255,236,250', 0.9]];
-            for (var i = 0; i < blobs.length; i++) { var b = blobs[i], gr = g.createRadialGradient(b[0] * s, b[1] * s, 0, b[0] * s, b[1] * s, b[2] * s);
-                gr.addColorStop(0, 'rgba(' + b[3] + ',' + b[4] + ')'); gr.addColorStop(1, 'rgba(' + b[3] + ',0)'); g.fillStyle = gr; g.fillRect(0, 0, s, s); }
-            for (var k = 0; k < 18; k++) { var a = k * 2.4, d = (0.12 + 0.3 * ((k * 37) % 11) / 11) * s; g.fillStyle = 'rgba(255,240,255,' + (0.5 + 0.5 * ((k * 13) % 7) / 7) + ')'; g.fillRect(s / 2 + Math.cos(a) * d, s / 2 + Math.sin(a) * d * 0.7, 1.2 * DPR, 1.2 * DPR); } });
-        var cyr = GR * 0.17 * DPR;
-        SPR.cyb = mk(cyr * 2, function (g, s) { var r = s / 2, gr = g.createRadialGradient(r * 0.7, r * 0.6, r * 0.05, r, r, r);
-            gr.addColorStop(0, '#dfe4ec'); gr.addColorStop(0.5, '#8a93a3'); gr.addColorStop(1, '#2c3240'); g.fillStyle = gr; g.beginPath(); g.arc(r, r, r, 0, 6.2832); g.fill();
-            g.save(); g.beginPath(); g.arc(r, r, r, 0, 6.2832); g.clip(); g.strokeStyle = 'rgba(30,34,46,0.7)'; g.lineWidth = Math.max(1, s / 40);
-            for (var i = -3; i <= 3; i++) { g.beginPath(); g.ellipse(r, r + i * r * 0.27, r, r * 0.08, 0, 0, 6.2832); g.stroke(); }
-            for (var j = 0; j < 7; j++) { g.beginPath(); g.moveTo(r * (0.35 + j * 0.2), 0); g.lineTo(r * (0.2 + j * 0.24), s); g.stroke(); }
-            for (var k = 0; k < 14; k++) { g.fillStyle = k % 3 ? 'rgba(120,230,255,0.9)' : 'rgba(190,120,255,0.9)'; g.fillRect(r * (0.4 + 1.2 * ((k * 29) % 13) / 13), r * (0.3 + 1.4 * ((k * 17) % 11) / 11), s / 24, s / 24); }
-            var sh = g.createLinearGradient(0, 0, s, s * 0.4); sh.addColorStop(0.5, 'rgba(0,0,10,0)'); sh.addColorStop(1, 'rgba(0,0,12,0.7)'); g.fillStyle = sh; g.fillRect(0, 0, s, s); g.restore(); });
-        STARS = []; for (var i = 0; i < 70; i++) STARS.push([((i * 73) % 97) / 97 * CW, ((i * 41) % 89) / 89 * CH, 0.4 + ((i * 7) % 5) / 6, i * 1.7]);
+    var ROT = { lon: -100, lat: 20, vlon: 0, vlat: 0, auto: 1 }, PAR = { x: 0, y: 0 }, RAD = Math.PI / 180;
+    var SCR = [], EXTRA = [], BODY = {};
+    var OFFWORLD = {
+        moon: { code: 'LUNA', where: 'Mare Tranquillitatis, the Moon', n: 1, note: '384,400 km away &middot; first footprints July 1969' },
+        m78: { code: 'M78', where: 'Land of Light, M78 Nebula', n: 3, note: '3,000,000 light-years away &middot; arrived at the speed of light' },
+        cyb: { code: 'CYB', where: 'Iacon, Cybertron', n: 2, note: 'distance unknown &middot; signal decoded, more than meets the eye' }
+    };
+    /* ---------- WebGL ---------- */
+    var gl = null, prog = null, U = {}, TEX = {}, texReady = 0, texAsked = false;
+    var VS = 'attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }';
+    var FS = [
+        '#ifdef GL_OES_standard_derivatives', '#extension GL_OES_standard_derivatives : enable', '#endif',
+        'precision highp float;',
+        'uniform vec2 uRes; uniform float uT, uReady; uniform vec3 uEarth; uniform mat3 uE; uniform vec4 uMoon; uniform vec3 uM78, uCyb; uniform vec2 uPar;',
+        'uniform sampler2D uDay, uNight, uMoonT, uCloud;',
+        'const vec3 SUN = vec3(-0.62, 0.36, 0.70);',
+        'float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+        'float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }',
+        'float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * vn(p); p = p * 2.03 + 7.1; a *= 0.5; } return s; }',
+        'vec3 sph(vec2 d, float r) { float q = dot(d, d) / (r * r); return vec3(d / r, sqrt(max(0.0, 1.0 - q))); }',
+        'vec2 llUV(vec3 e) { float lon = atan(e.x, e.z), lat = asin(clamp(e.y, -1.0, 1.0)); return vec2(lon / 6.2831853 + 0.5, 0.5 - lat / 3.1415927); }',
+        'vec4 tex(sampler2D t, vec2 uv) {',
+        '#ifdef GL_OES_standard_derivatives',
+        '  vec2 uv2 = vec2(fract(uv.x + 0.5) - 0.5, uv.y); if (fwidth(uv2.x) < fwidth(uv.x) - 0.001) return texture2D(t, uv2);',
+        '#endif',
+        '  return texture2D(t, uv); }',
+        'void main() {',
+        '  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);',
+        '  float S = uRes.y, t = uT;',
+        // deep space + three star layers (the farther, the less they move with the drag)
+        '  vec3 col = mix(vec3(0.012, 0.025, 0.06), vec3(0.03, 0.06, 0.13), smoothstep(1.2, 0.0, length((p - uRes * vec2(0.5, 0.4)) / S)));',
+        '  for (int L = 0; L < 3; L++) { float fl = float(L), cell = (5.0 + fl * 4.0) * S / 160.0; vec2 q = (p + uPar * (0.04 + fl * 0.05)) / cell, id = floor(q);',
+        '    float hh = h21(id + fl * 17.0); if (hh > 0.93 - fl * 0.02) { vec2 c = fract(q) - vec2(h21(id + 3.1), h21(id + 5.7)); float tw = 0.55 + 0.45 * sin(t * (0.7 + hh * 2.0) + hh * 40.0);',
+        '      col += vec3(0.75, 0.82, 1.0) * smoothstep(0.09 + fl * 0.02, 0.0, length(c)) * tw * (0.35 + 0.35 * fl); } }',
+        // a faint band of the Milky Way across the back
+        '  { float band = exp(-pow((p.y - uRes.y * 0.95 + p.x * 0.42) / (S * 0.32), 2.0)); col += vec3(0.10, 0.12, 0.20) * band * smoothstep(0.35, 0.8, fbm(p / S * 3.0 + 4.0)) * 0.9; }',
+        // M78, very far: a small reflection nebula (blue, wispy, domain-warped) laced with red-silver filaments, and at its heart
+        // the Land of Light - the prismatic six-rayed glare of the Plasma Spark; everything a little soft, as things are at 3 Mly
+        '  { vec2 c = uM78.xy, d = (p - c) / uM78.z; float r = length(d);',
+        '    if (r < 2.0) { vec2 w = d * 2.2 + vec2(fbm(d * 3.0 + t * 0.015), fbm(d * 3.0 + 9.0)) * 1.4;',
+        '      float n = fbm(w + 3.0), fil = pow(1.0 - abs(fbm(w * 1.7 - 5.0) * 2.0 - 1.0), 3.0), dust = smoothstep(0.5, 0.78, fbm(d * 4.0 - 11.0));',
+        '      float body = exp(-r * r * 1.6) * smoothstep(0.2, 0.9, n);',
+        '      col += (mix(vec3(0.16, 0.34, 0.95), vec3(0.55, 0.80, 1.0), n) * body * 0.75 + vec3(1.0, 0.30, 0.34) * fil * fil * exp(-r * r * 2.6) * 0.16 + vec3(0.85, 0.88, 0.95) * fil * exp(-r * r * 6.0) * 0.08) * (1.0 - 0.7 * dust);',
+        '      float an = atan(d.y, d.x) + 0.26, ray = pow(abs(cos(an * 3.0)), 60.0), core = exp(-r * r * 160.0);',
+        '      vec3 prism = vec3(exp(-r * 9.0), exp(-r * 11.0), exp(-r * 13.5));',
+        '      col += vec3(1.0, 0.97, 0.94) * core * 2.2 + prism * ray * (0.75 + 0.25 * sin(t * 1.1)) * 1.1 + vec3(0.8, 0.88, 1.0) * exp(-r * r * 22.0) * 0.35; } }',
+        // Cybertron: a dark machined planet, its surface a lattice of circuitry glowing energon-blue, the cities on its night side burning orange,
+        // a cold rim of reflected starlight; far away: small and slightly hazed
+        '  { vec2 c = uCyb.xy, d = p - c; float r = uCyb.z, q = length(d);',
+        '    col += vec3(0.25, 0.6, 1.0) * 0.16 * exp(-max(0.0, q - r) / (r * 0.30));',
+        '    if (q < r + 1.0) { vec3 n = sph(d * vec2(1.0, -1.0), r); float sp = t * 0.06; vec3 e = vec3(n.x * cos(sp) + n.z * sin(sp), n.y, -n.x * sin(sp) + n.z * cos(sp));',
+        '      vec2 uv = vec2(atan(e.x, e.z) * 5.0, asin(e.y) * 5.0); vec2 id = floor(uv), f = fract(uv); float h = h21(id), h2 = h21(id + 4.7);',
+        '      float lat = asin(e.y) * 9.0, trench = smoothstep(0.07, 0.0, abs(fract(lat) - 0.5)) * step(0.6, h21(vec2(floor(lat), 3.0))) * smoothstep(0.35, 0.6, vn(vec2(atan(e.x, e.z) * 3.0, floor(lat))));',
+        '      float trV = smoothstep(0.08, 0.0, abs(f.x - (0.2 + 0.6 * h2))) * step(0.55, h) * smoothstep(0.75, 0.2, abs(f.y - 0.5));',
+        '      float circ = max(trench, trV * 0.8) * (0.6 + 0.4 * vn(uv * 2.0 + t * 0.6));',
+'      float lam = dot(n, SUN), spec = pow(max(0.0, dot(reflect(-SUN, n), vec3(0, 0, 1))), 18.0);',
+        '      vec3 metal = mix(vec3(0.08, 0.085, 0.10), vec3(0.20, 0.21, 0.25), h * 0.6 + 0.4 * vn(uv * 3.0)) * (0.15 + 1.1 * max(0.0, lam)) + vec3(0.75, 0.8, 0.9) * spec * 0.5;',
+        '      vec3 cc = metal + vec3(0.2, 0.78, 1.0) * circ * 1.1;',
+        '      cc += vec3(1.0, 0.55, 0.15) * step(0.84, h21(floor(uv * 3.0) + 2.0)) * smoothstep(0.25, -0.15, lam) * 1.1;',
+        '      cc += vec3(0.35, 0.65, 1.0) * pow(1.0 - n.z, 3.0) * 0.6; cc = mix(cc, vec3(0.06, 0.1, 0.2), 0.18);',
+        '      col = mix(col, cc, smoothstep(r + 0.8, r - 0.8, q)); } }',
+        // the Moon behind the Earth (z < 0)
+        '  vec3 moonCol = vec3(0.0); float moonA = 0.0;',
+        '  { vec2 d = p - uMoon.xy; float q = length(d); if (q < uMoon.z + 1.0) { vec3 n = sph(d * vec2(1.0, -1.0), uMoon.z);',
+        '      float a = texture2D(uMoonT, llUV(vec3(n.x, n.y, n.z))).r; float lam = max(0.0, dot(n, SUN));',
+        '      moonCol = vec3(0.95, 0.93, 0.88) * a * (0.04 + 1.1 * smoothstep(-0.05, 0.4, lam) * lam + 0.15 * lam); moonA = smoothstep(uMoon.z + 0.8, uMoon.z - 0.8, q); } }',
+        '  if (uMoon.w < 0.0) col = mix(col, moonCol, moonA);',
+        // the Earth: day map lit by the sun, city lights on the night side, ocean glint, atmosphere
+        '  { vec2 d = p - uEarth.xy; float R = uEarth.z, q = length(d);',
+        '    float halo = exp(-max(0.0, q - R) / (R * 0.07)) * step(R - 1.0, q);',
+        '    vec3 nn = sph(d * vec2(1.0, -1.0), R); float lightSide = max(0.0, dot(normalize(vec3(d.x, -d.y, 0.0) + 1e-4), SUN) * 0.8 + 0.2);',
+        '    col += vec3(0.30, 0.58, 1.0) * halo * 0.55 * lightSide;',
+        '    if (q < R + 1.0) { vec3 e = uE * nn; vec2 uv = llUV(e);',
+        '      vec3 day = uReady > 0.5 ? tex(uDay, uv).rgb : vec3(0.05, 0.12, 0.25); float city = uReady > 0.5 ? tex(uNight, uv).r : 0.0;',
+        '      float cl = uReady > 0.5 ? tex(uCloud, uv + vec2(t * 0.0015, 0.0)).r : 0.0; cl = smoothstep(0.08, 0.9, cl);',
+        '      float ocean = smoothstep(0.02, 0.12, day.b - max(day.r, day.g) * 0.95);',
+        '      day = mix(day, day * vec3(0.92, 1.04, 1.1) + vec3(0.0, 0.02, 0.035), ocean);',
+        '      float lam = dot(nn, SUN), dayK = smoothstep(-0.10, 0.22, lam), li = 0.04 + 1.12 * max(0.0, lam);',
+        '      vec3 lit = day * li + vec3(0.85, 0.92, 1.0) * pow(max(0.0, dot(reflect(-SUN, nn), vec3(0, 0, 1))), 70.0) * ocean * (1.0 - cl) * 0.35;',
+        '      lit = mix(lit, vec3(0.95, 0.97, 1.0) * li, cl * 0.72);',
+        '      vec3 night = vec3(1.0, 0.72, 0.38) * pow(city, 1.6) * 1.5 * (1.0 - 0.75 * cl) + day * 0.02 + cl * 0.015;',
+        '      vec3 ec = mix(night, lit, dayK) + vec3(1.0, 0.5, 0.25) * 0.05 * exp(-lam * lam * 160.0) * (0.4 + cl);',
+        '      float fres = pow(1.0 - nn.z, 2.5); ec = mix(ec, vec3(0.45, 0.70, 1.0) * (0.2 + 0.95 * max(0.0, lam + 0.2)), fres * 0.6);',
+        '      col = mix(col, ec, smoothstep(R + 0.8, R - 0.8, q)); } }',
+        '  if (uMoon.w >= 0.0) col = mix(col, moonCol, moonA);',
+        '  gl_FragColor = vec4(pow(col, vec3(0.92)), 1.0);',
+        '}'].join('\n');
+    function initGL() {
+        try { gl = CV.getContext('webgl', { antialias: false, premultipliedAlpha: false }) || CV.getContext('experimental-webgl'); } catch (e) { gl = null; }
+        if (!gl) return false;
+        gl.getExtension('OES_standard_derivatives');
+        function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; } return s; }
+        var v = sh(gl.VERTEX_SHADER, VS), f = sh(gl.FRAGMENT_SHADER, FS); if (!v || !f) { gl = null; return false; }
+        prog = gl.createProgram(); gl.attachShader(prog, v); gl.attachShader(prog, f); gl.linkProgram(prog); gl.useProgram(prog);
+        var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        ['uRes', 'uT', 'uReady', 'uEarth', 'uE', 'uMoon', 'uM78', 'uCyb', 'uPar', 'uDay', 'uNight', 'uMoonT', 'uCloud'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        gl.uniform1i(U.uDay, 0); gl.uniform1i(U.uNight, 1); gl.uniform1i(U.uMoonT, 2); gl.uniform1i(U.uCloud, 3);
+        ['day', 'night', 'moon', 'cloud'].forEach(function (n, i) { var t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([10, 25, 50, 255])); TEX[n] = t; });
+        return true;
     }
+    function loadTextures() { if (texAsked || !gl) return; texAsked = true;
+        [['day', 'earth_day.jpg'], ['night', 'earth_night.jpg'], ['moon', 'moon.jpg'], ['cloud', 'clouds.jpg']].forEach(function (d, i) { var im = new Image(); im.crossOrigin = 'anonymous';
+            im.onload = function () { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, TEX[d[0]]); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im); gl.generateMipmap(gl.TEXTURE_2D);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                texReady++; kick(); };
+            im.src = GL_URL + d[1]; }); }
+    /* earth -> view rotation (and its transpose, view -> earth, for the shader) */
+    var VM = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    function rotMats() { var a = -ROT.lon * RAD, b = ROT.lat * RAD, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+        /* V = Rx(b) * Ry(a): rows */
+        VM = [ca, 0, sa, sb * sa, cb, -sb * ca, -cb * sa, sb, cb * ca]; }
+    function toView(lat, lon) { var cl = Math.cos(lat * RAD), e = [cl * Math.sin(lon * RAD), Math.sin(lat * RAD), cl * Math.cos(lon * RAD)];
+        return [VM[0] * e[0] + VM[1] * e[1] + VM[2] * e[2], VM[3] * e[0] + VM[4] * e[1] + VM[5] * e[2], VM[6] * e[0] + VM[7] * e[1] + VM[8] * e[2]]; }
     function resize() { var w = CARD.clientWidth, h = CARD.clientHeight; if (!w || !h) return;
-        CW = w; CH = h; K = clamp(h / 160, 0.4, 1.6);
-        CV.width = Math.round(w * DPR); CV.height = Math.round(h * DPR);
-        GR = h * 0.37; GX = w * 0.5; GY = h * 0.43;
-        buildLand(); sprites(); draw(performance.now()); }
+        CW = w; CH = h; K = clamp(h / 160, 0.45, 1.6);
+        CV.width = OV.width = Math.round(w * DPR); CV.height = OV.height = Math.round(h * DPR);
+        GR = h * 0.36; GX = w * 0.5; GY = h * 0.45; draw(performance.now()); }
 
     /* ---------- one frame ---------- */
-    var lastT = 0, sweep = 0;
-    function draw(t) {
-        var dt = Math.min(0.1, (t - (lastT || t)) / 1000); lastT = t;
-        if (!drag) { ROT.lon -= (ROT.vlon + 4.5 * ROT.auto) * dt; ROT.lat = clamp(ROT.lat + ROT.vlat * dt, -55, 60); ROT.vlon *= Math.pow(0.12, dt); ROT.vlat *= Math.pow(0.12, dt);
-            ROT.auto = Math.min(1, ROT.auto + dt * 0.5); ROT.lat += (22 - ROT.lat) * Math.min(1, dt * 0.15); }
-        sl0 = Math.sin(ROT.lat * RAD); cl0 = Math.cos(ROT.lat * RAD); sweep = (t / 1000 * 1.1) % 6.2832;
-        var g = C2, d = DPR, s = t / 1000; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, CV.width, CV.height); g.setTransform(d, 0, 0, d, 0, 0);
-        // stars, then the far-away visitors
-        for (var i = 0; i < STARS.length; i++) { var st = STARS[i]; g.fillStyle = 'rgba(220,235,255,' + (0.25 + 0.3 * Math.sin(s * 1.3 + st[3]) ** 2) + ')'; g.fillRect(st[0], st[1], st[2], st[2]); }
-        EXTRA = [];
-        var nx = CW * 0.13, ny = CH * 0.3, ns = SPR.m78.width / d; g.globalAlpha = 0.8; g.drawImage(SPR.m78, nx - ns / 2, ny - ns / 2, ns, ns); g.globalAlpha = 1; EXTRA.push({ o: OFFWORLD[1], x: nx, y: ny, r: ns * 0.3 });
-        var bx = CW * 0.87, by = CH * 0.26 + Math.sin(s * 0.4) * 2, bs = SPR.cyb.width / d; g.drawImage(SPR.cyb, bx - bs / 2, by - bs / 2, bs, bs); EXTRA.push({ o: OFFWORLD[2], x: bx, y: by, r: bs * 0.6 });
-        // the Moon: behind the globe on the far half of its orbit
-        var th = s * 0.16 + 3.6, ma = GR * 1.62, mx = GX + Math.cos(th) * ma, mz = Math.sin(th), my = GY - mz * GR * 0.32 + Math.cos(th) * GR * 0.12, msc = 1 + 0.15 * mz, ms = SPR.moon.width / d * msc;
-        function moon() { g.drawImage(SPR.moon, mx - ms / 2, my - ms / 2, ms, ms); EXTRA.push({ o: OFFWORLD[0], x: mx, y: my, r: ms * 0.6, pin: [mx - ms * 0.08, my - ms * 0.1] }); }
-        if (mz < 0) moon();
-        // orbit trace (behind / in front halves)
-        g.strokeStyle = 'rgba(150,200,255,0.08)'; g.lineWidth = 1; g.beginPath(); g.ellipse(GX, GY + 0, ma, GR * 0.34, -0.13, 0, 6.2832); g.stroke();
-        // the globe: atmosphere, ocean, graticule, land dots shaded by the light, the sweep
-        var at = g.createRadialGradient(GX, GY, GR * 0.92, GX, GY, GR * 1.18); at.addColorStop(0, 'rgba(90,170,255,0.22)'); at.addColorStop(1, 'rgba(90,170,255,0)');
-        g.fillStyle = at; g.beginPath(); g.arc(GX, GY, GR * 1.18, 0, 6.2832); g.fill();
-        var oc = g.createRadialGradient(GX - GR * 0.35, GY - GR * 0.35, GR * 0.1, GX, GY, GR); oc.addColorStop(0, '#0d3556'); oc.addColorStop(1, '#04121f');
-        g.fillStyle = oc; g.beginPath(); g.arc(GX, GY, GR, 0, 6.2832); g.fill();
-        g.lineWidth = 0.6; g.strokeStyle = 'rgba(120,190,255,0.07)';
-        for (var lat = -60; lat <= 60; lat += 30) { g.beginPath(); var on = false; for (var lo = -180; lo <= 180; lo += 6) { var p = view(Math.sin(lat * RAD), Math.cos(lat * RAD), lo * RAD); if (p[2] > 0) { var X = GX + p[0] * GR, Y = GY - p[1] * GR; on ? g.lineTo(X, Y) : g.moveTo(X, Y); on = true; } else on = false; } g.stroke(); }
-        for (var lo2 = -180; lo2 < 180; lo2 += 30) { g.beginPath(); var on2 = false; for (var la = -84; la <= 84; la += 6) { var q = view(Math.sin(la * RAD), Math.cos(la * RAD), lo2 * RAD); if (q[2] > 0) { var X2 = GX + q[0] * GR, Y2 = GY - q[1] * GR; on2 ? g.lineTo(X2, Y2) : g.moveTo(X2, Y2); on2 = true; } else on2 = false; } g.stroke(); }
-        var ds = Math.max(1.1, GR / 48), buckets = [[], [], [], []];
-        for (var k = 0; k < LAND.length; k++) { var P = LAND[k], v = view(P[0], P[1], P[2]); if (v[2] <= 0.02) continue;
-            var lit = 0.3 + 0.7 * Math.max(0, v[0] * LIGHT[0] + v[1] * LIGHT[1] + v[2] * LIGHT[2]), b = Math.min(3, Math.floor(lit * v[2] ** 0.35 * 4));
-            buckets[b].push(GX + v[0] * GR - ds / 2, GY - v[1] * GR - ds / 2); }
-        var cols = ['rgba(52,112,160,0.45)', 'rgba(62,138,192,0.65)', 'rgba(78,162,215,0.85)', 'rgba(110,192,238,0.95)'];
-        for (var bb = 0; bb < 4; bb++) { g.fillStyle = cols[bb]; var arr = buckets[bb]; for (var j = 0; j < arr.length; j += 2) g.fillRect(arr[j], arr[j + 1], ds, ds); }
-        // radar sweep (a soft wedge turning round the globe) + the rim
-        g.save(); g.beginPath(); g.arc(GX, GY, GR, 0, 6.2832); g.clip();
-        if (g.createConicGradient) { var cg = g.createConicGradient(sweep, GX, GY); cg.addColorStop(0, 'rgba(110,230,255,0.20)'); cg.addColorStop(0.12, 'rgba(110,230,255,0)'); cg.addColorStop(1, 'rgba(110,230,255,0)'); g.fillStyle = cg; g.fillRect(GX - GR, GY - GR, GR * 2, GR * 2); }
-        g.strokeStyle = 'rgba(140,235,255,0.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(GX, GY); g.lineTo(GX + Math.cos(sweep) * GR, GY + Math.sin(sweep) * GR); g.stroke();
-        g.restore();
-        g.strokeStyle = 'rgba(140,200,255,0.28)'; g.lineWidth = 1; g.beginPath(); g.arc(GX, GY, GR, 0, 6.2832); g.stroke();
-        // visitors: small and calm; they brighten as the sweep passes; the latest three pulse amber
-        SCR = [];
-        for (var pi = 0; pi < pings.length; pi++) { var pp = pings[pi], w = view(Math.sin(pp.lat * RAD), Math.cos(pp.lat * RAD), pp.lon * RAD); if (w[2] <= 0.05) continue;
-            var sx = GX + w[0] * GR, sy = GY - w[1] * GR; SCR.push([sx, sy, pp]);
-            var ang = Math.atan2(sy - GY, sx - GX), dA = ((sweep - ang) % 6.2832 + 6.2832) % 6.2832, hot = Math.exp(-dA * 2.2), r = K * (0.75 + Math.min(1.1, Math.sqrt(pp.n) * 0.08)) * (0.6 + 0.4 * w[2]);
-            if (pp.live) { var ph = ((s * 1000 + pi * 800) % 2400) / 2400; g.strokeStyle = 'rgba(255,201,77,' + (0.5 * (1 - ph)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(sx, sy, r * 1.6 + ph * 7 * K, 0, 6.2832); g.stroke();
-                g.fillStyle = '#ffc94d'; g.beginPath(); g.arc(sx, sy, Math.max(r * 1.4, 1.6 * K), 0, 6.2832); g.fill(); continue; }
-            if (hot > 0.05) { g.fillStyle = 'rgba(120,230,255,' + (0.25 * hot).toFixed(3) + ')'; g.beginPath(); g.arc(sx, sy, r * 3.2, 0, 6.2832); g.fill(); }
-            g.fillStyle = 'rgba(130,225,255,' + (0.55 + 0.4 * hot).toFixed(3) + ')'; g.beginPath(); g.arc(sx, sy, r, 0, 6.2832); g.fill(); }
-        if (mz >= 0) moon();
-        // the off-world "visits": a slow amber blip on each
-        for (var e = 0; e < EXTRA.length; e++) { var E = EXTRA[e], pin = E.pin || [E.x, E.y], ph2 = ((s * 1000 + e * 900) % 3000) / 3000;
-            g.strokeStyle = 'rgba(255,201,77,' + (0.55 * (1 - ph2)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(pin[0], pin[1], 1.4 * K + ph2 * 6 * K, 0, 6.2832); g.stroke();
-            g.fillStyle = '#ffd877'; g.beginPath(); g.arc(pin[0], pin[1], 1.3 * K, 0, 6.2832); g.fill(); }
+    var lastT = 0, t0 = performance.now();
+    function draw(tNow) {
+        var dt = Math.min(0.1, (tNow - (lastT || tNow)) / 1000); lastT = tNow; var s = (tNow - t0) / 1000;
+        if (!drag) { ROT.lon -= (ROT.vlon + 4 * ROT.auto) * dt; ROT.lat = clamp(ROT.lat + ROT.vlat * dt, -50, 55); ROT.vlon *= Math.pow(0.12, dt); ROT.vlat *= Math.pow(0.12, dt);
+            ROT.auto = Math.min(1, ROT.auto + dt * 0.5); ROT.lat += (20 - ROT.lat) * Math.min(1, dt * 0.15); PAR.x *= Math.pow(0.08, dt); PAR.y *= Math.pow(0.08, dt); }
+        rotMats();
+        // bodies (css px): the Moon on a tilted orbit (behind the Earth on the far half), the far ones in the background
+        var th = s * 0.15 + 0.5, ma = GR * 1.62, mz = Math.sin(th);
+        BODY.moon = { x: GX + Math.cos(th) * ma + PAR.x * 0.35, y: GY - mz * GR * 0.95 + Math.cos(th) * GR * 0.08 + PAR.y * 0.35, r: GR * 0.18 * (1 + 0.12 * mz), z: mz };
+        BODY.m78 = { x: CW * 0.14 + PAR.x * 0.06, y: CH * 0.33 + PAR.y * 0.06, r: CH * 0.30 };
+        BODY.cyb = { x: CW * 0.875 + PAR.x * 0.1, y: CH * 0.30 + PAR.y * 0.1, r: CH * 0.08 };
+        if (gl) {
+            gl.viewport(0, 0, CV.width, CV.height);
+            var d = DPR; gl.uniform2f(U.uRes, CV.width, CV.height); gl.uniform1f(U.uT, s); gl.uniform1f(U.uReady, texReady >= 4 ? 1 : 0);
+            gl.uniform3f(U.uEarth, GX * d, GY * d, GR * d);
+            gl.uniformMatrix3fv(U.uE, false, new Float32Array(VM));   // column-major read of V's rows = V^T (view -> earth)
+            gl.uniform4f(U.uMoon, BODY.moon.x * d, BODY.moon.y * d, BODY.moon.r * d, BODY.moon.z);
+            gl.uniform3f(U.uM78, BODY.m78.x * d, BODY.m78.y * d, BODY.m78.r * d); gl.uniform3f(U.uCyb, BODY.cyb.x * d, BODY.cyb.y * d, BODY.cyb.r * d);
+            gl.uniform2f(U.uPar, 0, 0);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+        }
+        overlay(s);
     }
-    /* ~30 fps, only while the card is on screen and the tab is visible */
-    var onScreen = true, lastF = 0, ticking = false;
-    if (window.IntersectionObserver) new IntersectionObserver(function (es) { onScreen = es[es.length - 1].isIntersecting; if (onScreen) kick(); }).observe(CARD);
+    function overlay(s) {
+        var g = O2; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, OV.width, OV.height); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        // visitors on the visible side: small and calm, the latest three pulse amber
+        SCR = []; var MF = BODY.moon.z >= 0 ? BODY.moon : null;
+        for (var i = 0; i < pings.length; i++) { var p = pings[i], v = toView(p.lat, p.lon); if (v[2] <= 0.08) continue;
+            var x = GX + v[0] * GR, y = GY - v[1] * GR, a = Math.min(1, (v[2] - 0.08) * 4); if (MF && Math.hypot(x - MF.x, y - MF.y) < MF.r + 1) continue; SCR.push([x, y, p]);
+            var r = K * (0.65 + Math.min(1.0, Math.sqrt(p.n) * 0.07)) * (0.6 + 0.4 * v[2]);
+            if (p.live) { var ph = ((s * 1000 + i * 800) % 2400) / 2400; g.strokeStyle = 'rgba(255,201,77,' + (0.55 * (1 - ph) * a).toFixed(3) + ')'; g.lineWidth = 1;
+                g.beginPath(); g.arc(x, y, r * 1.5 + ph * 6 * K, 0, 6.2832); g.stroke(); g.fillStyle = 'rgba(255,205,90,' + a.toFixed(3) + ')'; g.beginPath(); g.arc(x, y, Math.max(r * 1.3, 1.4 * K), 0, 6.2832); g.fill(); continue; }
+            g.fillStyle = 'rgba(150,230,255,' + (0.75 * a).toFixed(3) + ')'; g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill(); }
+        // the off-world visits: a blip on each, and a signal crawling in from each far one (slower the farther)
+        EXTRA = [];
+        var M = BODY.moon, moonVis = M.z >= 0 || Math.hypot(M.x - GX, M.y - GY) > GR + M.r * 0.5;
+        var spots = [
+            { id: 'm78', x: BODY.m78.x, y: BODY.m78.y, hr: CH * 0.12, period: 14, color: '255,150,140', name: 'M78 NEBULA', dist: '3,000,000 LY', ly: BODY.m78.y + CH * 0.15 },
+            { id: 'cyb', x: BODY.cyb.x - BODY.cyb.r * 0.25, y: BODY.cyb.y - BODY.cyb.r * 0.2, hr: BODY.cyb.r * 1.3, period: 9, color: '120,220,255', name: 'CYBERTRON', dist: '?? LY', ly: BODY.cyb.y + BODY.cyb.r + CH * 0.08 },
+            { id: 'moon', x: M.x - M.r * 0.25, y: M.y - M.r * 0.15, hr: M.r * 1.3, color: '255,214,120', hidden: !moonVis } ];
+        // Cybertron's two small moons on tilted orbits (hidden while they pass behind it)
+        for (var cm = 0; cm < 2; cm++) { var C = BODY.cyb, ph2 = s * (0.5 - cm * 0.18) + cm * 2.4, cz = Math.sin(ph2), cx = C.x + Math.cos(ph2) * C.r * (1.6 + cm * 0.5), cy = C.y + cz * C.r * (0.35 + cm * 0.15) - Math.cos(ph2) * C.r * 0.18;
+            if (cz < 0 && Math.hypot(cx - C.x, cy - C.y) < C.r + 1) continue;
+            var mr = Math.max(1, C.r * (0.19 - cm * 0.05)), mg = g.createRadialGradient(cx - mr * 0.4, cy - mr * 0.4, 0, cx, cy, mr);
+            mg.addColorStop(0, 'rgba(200,205,215,' + (cz < 0 ? 0.55 : 0.95) + ')'); mg.addColorStop(1, 'rgba(70,75,90,' + (cz < 0 ? 0.4 : 0.8) + ')'); g.fillStyle = mg; g.beginPath(); g.arc(cx, cy, mr, 0, 6.2832); g.fill(); }
+        var showLab = CH >= 110, fs = Math.max(7, 7.4 * K);
+        for (var k = 0; k < spots.length; k++) { var o = spots[k]; if (o.hidden) continue; EXTRA.push({ o: OFFWORLD[o.id], x: o.x, y: o.y, r: o.hr });
+            var bp = ((s + k * 0.7) % 3) / 3; g.strokeStyle = 'rgba(255,205,110,' + (0.5 * (1 - bp)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(o.x, o.y, 1.4 * K + bp * 5 * K, 0, 6.2832); g.stroke();
+            g.fillStyle = '#ffd877'; g.beginPath(); g.arc(o.x, o.y, 1.1 * K, 0, 6.2832); g.fill();
+            if (o.id === 'moon') continue;
+            // a tiny survey label under each far object: what it is and how far (the joke is in the units)
+            if (showLab) { g.textAlign = 'center'; g.textBaseline = 'top'; try { g.letterSpacing = (fs * 0.12).toFixed(1) + 'px'; } catch (e) {} g.font = '600 ' + fs.toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace';
+                g.fillStyle = 'rgba(215,228,245,0.62)'; var lx = clamp(o.x, g.measureText(o.name).width / 2 + 6, CW - g.measureText(o.name).width / 2 - 6); g.fillText(o.name, lx, o.ly);
+                g.font = '500 ' + (fs * 0.92).toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace'; g.fillStyle = 'rgba(' + o.color + ',0.75)'; g.fillText(o.dist, lx, o.ly + fs * 1.25); }
+            // the signal comes out of the depth: a path of dots that start tiny and faint (far) and grow toward the Earth (near),
+            // a packet of light with a tail crawling along it (slower the farther), a ripple where it lands on the atmosphere
+            var ang = Math.atan2(o.y - GY, o.x - GX), ex = GX + Math.cos(ang) * GR * 1.03, ey = GY + Math.sin(ang) * GR * 1.03, mx = (o.x + ex) / 2, my = Math.min(o.y, ey) - CH * 0.14;
+            var bz = function (tt) { var u1 = 1 - tt; return [u1 * u1 * o.x + 2 * u1 * tt * mx + tt * tt * ex, u1 * u1 * o.y + 2 * u1 * tt * my + tt * tt * ey]; };
+            for (var j = 1; j < 26; j++) { var tj = Math.pow(j / 26, 0.75), P = bz(tj); g.fillStyle = 'rgba(' + o.color + ',' + (0.05 + 0.3 * tj * tj).toFixed(3) + ')';
+                g.beginPath(); g.arc(P[0], P[1], (0.25 + 0.75 * tj) * K, 0, 6.2832); g.fill(); }
+            var u = ((s + k * 3.1) % o.period) / o.period;
+            if (u < 0.9) { var tt = Math.pow(u / 0.9, 2.2);
+                for (var m = 5; m >= 0; m--) { var tm = Math.max(0, tt - m * 0.018 * (0.3 + tt)), Q = bz(tm), rr = (1.2 + 3.2 * tm) * K * (1 - m * 0.13), al = (1 - m / 6) * (0.25 + 0.75 * tm);
+                    var gr = g.createRadialGradient(Q[0], Q[1], 0, Q[0], Q[1], rr); gr.addColorStop(0, 'rgba(255,255,255,' + (0.95 * al).toFixed(3) + ')'); gr.addColorStop(0.4, 'rgba(' + o.color + ',' + (0.6 * al).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(' + o.color + ',0)');
+                    g.fillStyle = gr; g.beginPath(); g.arc(Q[0], Q[1], rr, 0, 6.2832); g.fill(); } }
+            else { var w = (u - 0.9) / 0.1; g.strokeStyle = 'rgba(' + o.color + ',' + (0.75 * (1 - w)).toFixed(3) + ')'; g.lineWidth = 1.2; g.beginPath(); g.arc(ex, ey, 2 + w * 10 * K, 0, 6.2832); g.stroke(); } }
+    }
+    /* ~30 fps, only while the card is on screen and the tab is visible; textures load the first time it shows */
+    var onScreen = false, lastF = 0, ticking = false;
+    if (window.IntersectionObserver) new IntersectionObserver(function (es) { onScreen = es[es.length - 1].isIntersecting; if (onScreen) { loadTextures(); kick(); } }).observe(CARD);
+    else { onScreen = true; }
     function kick() { if (!ticking) { ticking = true; requestAnimationFrame(tick); } }
     function tick(t) { ticking = false; if (!onScreen || document.hidden) { lastT = 0; return; } if (t - lastF >= 32) { lastF = t; draw(t); } kick(); }
     document.addEventListener('visibilitychange', kick);
@@ -423,7 +517,7 @@
         return best; }
     function showTip(h, clientX, clientY) {
         if (h.p) { var p = h.p, cc = ISO[p.country]; tip.innerHTML = '<b>' + (cc ? '<i>' + cc + '</i>' : '') + esc(p.where) + '</b><span>' + fmtFull(p.n) + ' visit' + (p.n > 1 ? 's' : '') + (p.t ? ' &middot; ' + fmtAgo(p.t) + ' ago' : '') + '</span>'; }
-        else { var o = h.o; tip.innerHTML = '<b><i>' + o.code + '</i>' + esc(o.where) + '</b><span>' + o.n + ' visit' + (o.n > 1 ? 's' : '') + ' &middot; ' + esc(o.note) + '</span>'; }
+        else { var o = h.o; tip.innerHTML = '<b><i>' + o.code + '</i>' + esc(o.where) + '</b><span>' + o.n + ' visit' + (o.n > 1 ? 's' : '') + ' &middot; ' + o.note + '</span>'; }
         tip.classList.add('show'); var tw = tip.offsetWidth, th = tip.offsetHeight, vw = window.innerWidth || document.body.clientWidth, vh = window.innerHeight || document.body.clientHeight;
         var tx = clientX + 14, ty = clientY + 14; if (tx + tw > vw - 4) tx = Math.max(4, clientX - 14 - tw); if (ty + th > vh - 4) ty = Math.max(4, clientY - 14 - th);
         tip.style.left = tx + 'px'; tip.style.top = ty + 'px'; }
@@ -433,12 +527,12 @@
         if (!drag) { if (e.pointerType === 'mouse') hoverMove(e); return; }
         var dx = e.clientX - drag.lx, dy = e.clientY - drag.ly, now = performance.now(), dtt = Math.max(1, now - drag.t) / 1000;
         if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 4) { drag.moved = true; tip.classList.remove('show'); }
-        if (drag.moved) { var dg = 57.3 / GR; ROT.lon -= dx * dg; ROT.lat = clamp(ROT.lat + dy * dg, -55, 60); ROT.vlon = -dx * dg / dtt * 0.6; ROT.vlat = dy * dg / dtt * 0.6; ROT.auto = 0; kick(); }
+        if (drag.moved) { var dg = 57.3 / GR; ROT.lon -= dx * dg; ROT.lat = clamp(ROT.lat + dy * dg, -50, 55); ROT.vlon = -dx * dg / dtt * 0.6; ROT.vlat = dy * dg / dtt * 0.6; ROT.auto = 0;
+            PAR.x = clamp(PAR.x + dx, -GR, GR); PAR.y = clamp(PAR.y + dy, -GR * 0.5, GR * 0.5); kick(); }
         drag.lx = e.clientX; drag.ly = e.clientY; drag.t = now; });
     function endDrag(e, cancel) { if (!drag) return; var d0 = drag; drag = null; if (cancel || d0.moved) return;
         var h = hitAt(e.clientX, e.clientY);
-        if (h && h.o) { showTip(h, e.clientX, e.clientY); tipHold = performance.now() + 2500; setTimeout(function () { if (performance.now() >= tipHold) tip.classList.remove('show'); }, 2600); return; }
-        if (h && h.p && e.pointerType !== 'mouse') { showTip(h, e.clientX, e.clientY); tipHold = performance.now() + 2500; setTimeout(function () { if (performance.now() >= tipHold) tip.classList.remove('show'); }, 2600); return; }
+        if (h && (h.o || e.pointerType !== 'mouse')) { showTip(h, e.clientX, e.clientY); tipHold = performance.now() + 2800; setTimeout(function () { if (performance.now() >= tipHold) tip.classList.remove('show'); }, 2900); return; }
         openAnalytics(); }
     CARD.addEventListener('pointerup', function (e) { endDrag(e, false); });
     CARD.addEventListener('pointercancel', function (e) { endDrag(e, true); });
@@ -450,13 +544,14 @@
         try { var a = document.createElement('a'); a.href = ANALYTICS_URL; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {} }
 
     /* ---------- boot ---------- */
-    layout(); resize(); kick();
+    initGL(); layout(); resize();
+    if (!window.IntersectionObserver) { loadTextures(); kick(); }
     CARD.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAnalytics(); } });
     var rq = 0; function relayout() { if (rq) return; rq = requestAnimationFrame(function () { rq = 0; layout(); resize(); }); }
     window.addEventListener('resize', relayout); setTimeout(relayout, 250);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
     window.__pfPing = function (city) { var r = CARD.getBoundingClientRect(); for (var i = 0; i < SCR.length; i++) if (SCR[i][2].city === city) return { x: r.left + SCR[i][0], y: r.top + SCR[i][1] }; return null; };
-    window.__pfGlobe = function () { return { lon: ROT.lon, lat: ROT.lat, land: LAND.length, onGlobe: SCR.length, extra: EXTRA.map(function (e) { return { id: e.o.id, x: Math.round(e.x), y: Math.round(e.y) }; }) }; };
+    window.__pfGlobe = function () { return { lon: ROT.lon, lat: ROT.lat, gl: !!gl, tex: texReady, onGlobe: SCR.length, extra: EXTRA.map(function (e) { return { id: e.o.code, x: Math.round(e.x), y: Math.round(e.y) }; }) }; };
     loadData();
 })();
 </script>
