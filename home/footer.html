@@ -298,11 +298,11 @@
 
     /* ════════ the visitor globe: the real Earth (NASA Blue Marble by day, Black Marble city lights by night, a soft
        terminator, ocean glint, blue atmosphere), the real Moon on its orbit, and - very far away behind them - the
-       M78 Nebula (a blue reflection nebula round the prismatic glare of the Land of Light) and Cybertron, too far
+       M78 Nebula (a real Hubble nebula round the prismatic glare of the Land of Light) and Cybertron, too far
        for any sky, glimpsed only through a wormhole that bends the starlight round it. One WebGL fragment shader paints the card (no library); a 2D layer on top draws
        the visitors, the off-world blips and the signals crawling in from the far ones. Drag to turn the Earth (the far
        objects barely move: parallax); hover a dot for the place; a click that is not a drag opens the analytics. The
-       off-world visits are decoration only: nothing is ever recorded for them. Textures (158 KB) load only once the
+       off-world visits are decoration only: nothing is ever recorded for them. Textures (183 KB) load only once the
        card is on screen. ════════ */
     var GL_URL = 'https://yil384.github.io/Picasso-Lab/home/static/globe/';
     var CV = document.getElementById('vmap-c'), OV = document.getElementById('vmap-fx'), O2 = OV.getContext('2d');
@@ -315,13 +315,13 @@
         cyb: { code: 'CYB', where: 'Iacon, Cybertron', n: 2, note: 'distance unknown &middot; only seen through a wormhole &middot; more than meets the eye' }
     };
     /* ---------- WebGL ---------- */
-    var gl = null, prog = null, U = {}, TEX = {}, texReady = 0, texAsked = false;
+    var gl = null, prog = null, U = {}, TEX = {}, texReady = 0, texOK = {}, texAsked = false;
     var VS = 'attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }';
     var FS = [
         '#ifdef GL_OES_standard_derivatives', '#extension GL_OES_standard_derivatives : enable', '#endif',
         'precision highp float;',
         'uniform vec2 uRes; uniform float uT, uReady; uniform vec3 uEarth; uniform mat3 uE; uniform vec4 uMoon; uniform vec3 uM78, uCyb; uniform vec2 uPar;',
-        'uniform sampler2D uDay, uNight, uMoonT, uCloud;',
+        'uniform sampler2D uDay, uNight, uMoonT, uCloud, uNeb; uniform float uNebR;',
         'const vec3 SUN = vec3(-0.62, 0.36, 0.70);',
         'float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
         'float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }',
@@ -348,19 +348,14 @@
         '      col += vec3(0.75, 0.82, 1.0) * smoothstep(0.09 + fl * 0.02, 0.0, length(c)) * tw * (0.35 + 0.35 * fl); } }',
         // a faint band of the Milky Way across the back
         '  { float band = exp(-pow((p.y - uRes.y * 0.95 + p.x * 0.42) / (S * 0.32), 2.0)); col += vec3(0.10, 0.12, 0.20) * band * smoothstep(0.35, 0.8, fbm(p / S * 3.0 + 4.0)) * 0.9; }',
-        // M78 (NGC 2068), very far: a fan of blue reflection nebula lit from its apex, cut by sharp dark dust lanes that also
-        // hide the stars behind them, a faint red emission arc further out; at the apex the Land of Light - a tight cluster
-        // of crystalline points round the Plasma Spark (thin six-rayed diffraction spikes with chromatic fringes), and a
-        // second star that helps light the cloud. A long, faint anamorphic streak through the spark
+        // M78: a real nebula, not noise - the Hubble mosaic of the Orion Nebula (NASA/ESA, public domain; M78 itself sits in the
+        // same Orion cloud complex), edges faded to black in the texture and screened over the sky, so its dust also hides the
+        // stars behind it. A very slow drift keeps it alive. At its heart the Land of Light: a tight cluster of crystalline
+        // points round the Plasma Spark (thin six-rayed spikes with chromatic fringes), a second star, an anamorphic streak
         '  { vec2 c = uM78.xy, d = (p - c) / uM78.z; float r = length(d);',
-        '    if (r < 2.4) { vec2 q = mat2(cos(0.6), -sin(0.6), sin(0.6), cos(0.6)) * d; float ang = atan(q.y, q.x);',
-        '      vec2 w = q * 2.4 + vec2(fbm(q * 2.0 + t * 0.01), fbm(q * 2.0 + 7.0)) * 0.9; float n = fbm(w * 1.3 + 3.0), n2 = fbm(w * 3.1 - 2.0);',
-        '      float fan = exp(-pow(ang / 0.85, 2.0)), glow = exp(-r * 2.0) * (0.25 + 0.75 * fan) + exp(-r * r * 9.0) * 0.5;',
-        '      float neb = glow * smoothstep(0.18, 0.75, n * 0.65 + n2 * 0.35);',
-        '      float lane = smoothstep(0.5, 0.64, fbm(vec2(q.x * 1.6, q.y * 4.2) + 11.0)) * smoothstep(1.2, 0.3, r) * smoothstep(0.08, 0.3, r) * smoothstep(0.03, 0.15, glow);',
-        '      col *= 1.0 - 0.5 * lane;',
-        '      vec3 refl = mix(vec3(0.10, 0.24, 0.85), vec3(0.62, 0.84, 1.0), exp(-r * 3.0));',
-        '      col += refl * neb * 1.9 * (1.0 - 0.6 * lane) + vec3(0.9, 0.25, 0.3) * smoothstep(0.5, 0.8, n2) * exp(-pow((r - 1.35) / 0.3, 2.0)) * 0.10 * (1.0 - lane);',
+        '    if (r < 1.7) { float z = 1.0 + 0.015 * sin(t * 0.07); vec2 uv = mat2(cos(-0.3), -sin(-0.3), sin(-0.3), cos(-0.3)) * d / (2.7 * z) + vec2(0.45, 0.45);',
+        '      vec3 nb = uNebR > 0.5 ? texture2D(uNeb, clamp(uv, 0.0, 1.0)).rgb : vec3(0.0); nb = pow(nb, vec3(1.2)) * 0.95;',
+        '      col = col * (1.0 - 0.45 * smoothstep(0.02, 0.3, dot(nb, vec3(0.333)))); col = 1.0 - (1.0 - col) * (1.0 - nb);',
         '      for (int i = 0; i < 8; i++) { float fi = float(i); vec2 o = (vec2(h21(vec2(fi, 1.3)), h21(vec2(fi, 7.1))) - 0.5) * 0.24; float ds = length(d - o);',
         '        col += mix(vec3(0.7, 0.85, 1.0), vec3(1.0, 0.92, 0.85), h21(vec2(fi, 3.3))) * exp(-ds * ds * 4000.0) * (0.6 + 0.4 * sin(t * (1.5 + fi * 0.37) + fi * 2.0)) * 1.1; }',
         '      { float ds = length(d - vec2(0.16, 0.12)); col += vec3(0.8, 0.9, 1.0) * (exp(-ds * ds * 2500.0) * 1.3 + exp(-ds * ds * 60.0) * 0.10); }',
@@ -430,19 +425,19 @@
         prog = gl.createProgram(); gl.attachShader(prog, v); gl.attachShader(prog, f); gl.linkProgram(prog); gl.useProgram(prog);
         var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
         var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-        ['uRes', 'uT', 'uReady', 'uEarth', 'uE', 'uMoon', 'uM78', 'uCyb', 'uPar', 'uDay', 'uNight', 'uMoonT', 'uCloud'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
-        gl.uniform1i(U.uDay, 0); gl.uniform1i(U.uNight, 1); gl.uniform1i(U.uMoonT, 2); gl.uniform1i(U.uCloud, 3);
-        ['day', 'night', 'moon', 'cloud'].forEach(function (n, i) { var t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t);
+        ['uRes', 'uT', 'uReady', 'uEarth', 'uE', 'uMoon', 'uM78', 'uCyb', 'uPar', 'uDay', 'uNight', 'uMoonT', 'uCloud', 'uNeb', 'uNebR'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        gl.uniform1i(U.uDay, 0); gl.uniform1i(U.uNight, 1); gl.uniform1i(U.uMoonT, 2); gl.uniform1i(U.uCloud, 3); gl.uniform1i(U.uNeb, 4);
+        ['day', 'night', 'moon', 'cloud', 'neb'].forEach(function (n, i) { var t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([10, 25, 50, 255])); TEX[n] = t; });
         return true;
     }
     function loadTextures() { if (texAsked || !gl) return; texAsked = true;
-        [['day', 'earth_day.jpg'], ['night', 'earth_night.jpg'], ['moon', 'moon.jpg'], ['cloud', 'clouds.jpg']].forEach(function (d, i) { var im = new Image(); im.crossOrigin = 'anonymous';
+        [['day', 'earth_day.jpg'], ['night', 'earth_night.jpg'], ['moon', 'moon.jpg'], ['cloud', 'clouds.jpg'], ['neb', 'nebula.jpg']].forEach(function (d, i) { var im = new Image(); im.crossOrigin = 'anonymous';
             im.onload = function () { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, TEX[d[0]]); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im); gl.generateMipmap(gl.TEXTURE_2D);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                texReady++; kick(); };
+                texReady++; texOK[d[0]] = 1; kick(); };
             im.src = GL_URL + d[1]; }); }
     /* earth -> view rotation (and its transpose, view -> earth, for the shader) */
     var VM = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -470,7 +465,7 @@
         BODY.cyb = { x: CW * 0.86 + PAR.x * 0.1, y: CH * 0.30 + PAR.y * 0.1, r: CH * 0.135 };
         if (gl) {
             gl.viewport(0, 0, CV.width, CV.height);
-            var d = DPR; gl.uniform2f(U.uRes, CV.width, CV.height); gl.uniform1f(U.uT, s); gl.uniform1f(U.uReady, texReady >= 4 ? 1 : 0);
+            var d = DPR; gl.uniform2f(U.uRes, CV.width, CV.height); gl.uniform1f(U.uT, s); gl.uniform1f(U.uReady, texOK.day && texOK.night && texOK.moon && texOK.cloud ? 1 : 0); gl.uniform1f(U.uNebR, texOK.neb ? 1 : 0);
             gl.uniform3f(U.uEarth, GX * d, GY * d, GR * d);
             gl.uniformMatrix3fv(U.uE, false, new Float32Array(VM));   // column-major read of V's rows = V^T (view -> earth)
             gl.uniform4f(U.uMoon, BODY.moon.x * d, BODY.moon.y * d, BODY.moon.r * d, BODY.moon.z);
@@ -506,8 +501,8 @@
             if (o.id === 'moon') continue;
             // a tiny survey label under each far object: what it is and how far (the joke is in the units)
             if (showLab) { g.textAlign = 'center'; g.textBaseline = 'top'; try { g.letterSpacing = (fs * 0.12).toFixed(1) + 'px'; } catch (e) {} g.font = '600 ' + fs.toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace';
-                g.fillStyle = 'rgba(215,228,245,0.62)'; var lx = clamp(o.x, g.measureText(o.name).width / 2 + 6, CW - g.measureText(o.name).width / 2 - 6); g.fillText(o.name, lx, o.ly);
-                g.font = '500 ' + (fs * 0.92).toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace'; g.fillStyle = 'rgba(' + o.color + ',0.75)'; g.fillText(o.dist, lx, o.ly + fs * 1.25); }
+                g.shadowColor = 'rgba(0,0,0,0.85)'; g.shadowBlur = 4 * K; g.fillStyle = 'rgba(225,235,248,0.72)'; var lx = clamp(o.x, g.measureText(o.name).width / 2 + 6, CW - g.measureText(o.name).width / 2 - 6); g.fillText(o.name, lx, o.ly);
+                g.font = '500 ' + (fs * 0.92).toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace'; g.fillStyle = 'rgba(' + o.color + ',0.75)'; g.fillText(o.dist, lx, o.ly + fs * 1.25); g.shadowBlur = 0; g.shadowColor = 'transparent'; }
             // the signal comes out of the depth: a path of dots that start tiny and faint (far) and grow toward the Earth (near),
             // a packet of light with a tail crawling along it (slower the farther), a ripple where it lands on the atmosphere
             if (o.from) { var C0 = BODY.cyb, aw = Math.atan2(GY - C0.y, GX - C0.x); o = { x: C0.x + Math.cos(aw) * C0.r * 0.85, y: C0.y + Math.sin(aw) * C0.r * 0.85, color: o.color, period: o.period }; }
