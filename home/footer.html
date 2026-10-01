@@ -348,17 +348,26 @@
         '      col += vec3(0.75, 0.82, 1.0) * smoothstep(0.09 + fl * 0.02, 0.0, length(c)) * tw * (0.35 + 0.35 * fl); } }',
         // a faint band of the Milky Way across the back
         '  { float band = exp(-pow((p.y - uRes.y * 0.95 + p.x * 0.42) / (S * 0.32), 2.0)); col += vec3(0.10, 0.12, 0.20) * band * smoothstep(0.35, 0.8, fbm(p / S * 3.0 + 4.0)) * 0.9; }',
-        // M78, very far: a small reflection nebula (blue, wispy, domain-warped) laced with red-silver filaments, and at its heart
-        // the Land of Light - the prismatic six-rayed glare of the Plasma Spark; everything a little soft, as things are at 3 Mly
+        // M78 (NGC 2068), very far: a fan of blue reflection nebula lit from its apex, cut by sharp dark dust lanes that also
+        // hide the stars behind them, a faint red emission arc further out; at the apex the Land of Light - a tight cluster
+        // of crystalline points round the Plasma Spark (thin six-rayed diffraction spikes with chromatic fringes), and a
+        // second star that helps light the cloud. A long, faint anamorphic streak through the spark
         '  { vec2 c = uM78.xy, d = (p - c) / uM78.z; float r = length(d);',
-        '    if (r < 2.0) { vec2 w = d * 2.2 + vec2(fbm(d * 3.0 + t * 0.015), fbm(d * 3.0 + 9.0)) * 1.4;',
-        '      float n = fbm(w + 3.0), fil = pow(1.0 - abs(fbm(w * 1.7 - 5.0) * 2.0 - 1.0), 3.0), dust = smoothstep(0.5, 0.78, fbm(d * 4.0 - 11.0));',
-        '      float body = exp(-r * r * 1.6) * smoothstep(0.2, 0.9, n);',
-        '      col += (mix(vec3(0.16, 0.34, 0.95), vec3(0.55, 0.80, 1.0), n) * body * 0.75 + vec3(1.0, 0.30, 0.34) * fil * fil * exp(-r * r * 2.6) * 0.16 + vec3(0.85, 0.88, 0.95) * fil * exp(-r * r * 6.0) * 0.08) * (1.0 - 0.7 * dust);',
-        '      float an = atan(d.y, d.x) + 0.26, ray = pow(abs(cos(an * 3.0)), 60.0), core = exp(-r * r * 160.0);',
-        '      vec3 prism = vec3(exp(-r * 9.0), exp(-r * 11.0), exp(-r * 13.5));',
-        '      col += vec3(1.0, 0.97, 0.94) * core * 2.2 + prism * ray * (0.75 + 0.25 * sin(t * 1.1)) * 1.1 + vec3(0.8, 0.88, 1.0) * exp(-r * r * 22.0) * 0.35; } }',
-        '  col += vec3(0.35, 0.55, 1.0) * exp(-abs(p.y - uM78.y) / (S * 0.005)) * exp(-abs(p.x - uM78.x) / (S * 0.45)) * 0.22;',   // anamorphic lens streak
+        '    if (r < 2.4) { vec2 q = mat2(cos(0.6), -sin(0.6), sin(0.6), cos(0.6)) * d; float ang = atan(q.y, q.x);',
+        '      vec2 w = q * 2.4 + vec2(fbm(q * 2.0 + t * 0.01), fbm(q * 2.0 + 7.0)) * 0.9; float n = fbm(w * 1.3 + 3.0), n2 = fbm(w * 3.1 - 2.0);',
+        '      float fan = exp(-pow(ang / 0.85, 2.0)), glow = exp(-r * 2.0) * (0.25 + 0.75 * fan) + exp(-r * r * 9.0) * 0.5;',
+        '      float neb = glow * smoothstep(0.18, 0.75, n * 0.65 + n2 * 0.35);',
+        '      float lane = smoothstep(0.5, 0.64, fbm(vec2(q.x * 1.6, q.y * 4.2) + 11.0)) * smoothstep(1.2, 0.3, r) * smoothstep(0.08, 0.3, r) * smoothstep(0.03, 0.15, glow);',
+        '      col *= 1.0 - 0.5 * lane;',
+        '      vec3 refl = mix(vec3(0.10, 0.24, 0.85), vec3(0.62, 0.84, 1.0), exp(-r * 3.0));',
+        '      col += refl * neb * 1.9 * (1.0 - 0.6 * lane) + vec3(0.9, 0.25, 0.3) * smoothstep(0.5, 0.8, n2) * exp(-pow((r - 1.35) / 0.3, 2.0)) * 0.10 * (1.0 - lane);',
+        '      for (int i = 0; i < 8; i++) { float fi = float(i); vec2 o = (vec2(h21(vec2(fi, 1.3)), h21(vec2(fi, 7.1))) - 0.5) * 0.24; float ds = length(d - o);',
+        '        col += mix(vec3(0.7, 0.85, 1.0), vec3(1.0, 0.92, 0.85), h21(vec2(fi, 3.3))) * exp(-ds * ds * 4000.0) * (0.6 + 0.4 * sin(t * (1.5 + fi * 0.37) + fi * 2.0)) * 1.1; }',
+        '      { float ds = length(d - vec2(0.16, 0.12)); col += vec3(0.8, 0.9, 1.0) * (exp(-ds * ds * 2500.0) * 1.3 + exp(-ds * ds * 60.0) * 0.10); }',
+        '      float an = atan(d.y, d.x) + 0.26, ray = pow(abs(cos(an * 3.0)), 260.0), core = exp(-r * r * 420.0);',
+        '      vec3 prism = vec3(exp(-r * 8.0), exp(-r * 9.5), exp(-r * 11.5));',
+        '      col += vec3(1.0, 0.98, 0.95) * core * 2.8 + prism * ray * (0.85 + 0.15 * sin(t * 1.1)) + vec3(0.7, 0.85, 1.0) * exp(-r * r * 30.0) * 0.4; } }',
+        '  col += vec3(0.35, 0.55, 1.0) * exp(-abs(p.y - uM78.y) / (S * 0.004)) * exp(-abs(p.x - uM78.x) / (S * 0.45)) * 0.16;',
         // the wormhole to Cybertron: a sphere-shaped hole in space, like a crystal ball. There is no glowing rim: its edge is just where
         // our bent starlight (above) meets the far side. Inside, the whole sky of the other end is squeezed in by the lens, more and
         // more toward the edge: a violet nebula, a blue-white sun and, close by, part of Cybertron - a dark machined world laced with
