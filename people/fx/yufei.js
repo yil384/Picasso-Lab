@@ -171,6 +171,7 @@ export default {
   title: 'San Diego sunset with her cat',
   exit: 0.45,
   still: 2.6,
+  film: 'film/yufei',            // double click: the 8 s "Picatso" short (people/static/film/yufei.mp4 + .webm)
   async build(k) {
     const { root } = k;
     const own = [];
