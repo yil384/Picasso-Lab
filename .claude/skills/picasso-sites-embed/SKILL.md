@@ -90,10 +90,11 @@ standalone pages such as `events/guandan.html` and `blogs/nvidia-ising/`.
   pasted page only as the escaped `data-code="..."` attribute of a div; the rendered embed lives in a
   `googleusercontent.com` sandbox frame. So a page can be "indexed" while none of the embed's text matches a search.
   Same for every section page.
-- Fix that keeps the look: native Sites text next to the embed. For the blog: one Sites subpage per post
-  (`/blogs/<slug>`, hidden from navigation) with Insert -> Embed -> By URL of the standalone article
-  (`https://yil384.github.io/Picasso-Lab/blogs/<slug>/`) plus a native text box (title, authors, date, abstract; full
-  text in a Collapsible text group), and a short native list under the `/blogs` embed. `python3 blogs/sites_copy.py`
+- What Google does read on a Sites page: the page name (it becomes `<title>` "PICASSO LAB - <name>" and og:title)
+  and native text boxes. `/blogs` is a whole-page embed (no room for text boxes), so the fix is one Sites subpage per
+  post: page name = the full article title, custom path = the slug (`/blogs/<slug>`), hidden from navigation, content =
+  Insert -> Embed -> By URL of the standalone article (`https://yil384.github.io/Picasso-Lab/blogs/<slug>/`).
+  Optionally a native text box under it (title, authors, date, abstract; full text in a Collapsible text group). `python3 blogs/sites_copy.py`
   builds `blogs/sites-copy.html` (noindex; copy buttons that keep headings and links). A mirrored post whose canonical
   is the author's own site gets only a summary and a link, never the full text. Never hide text (white on white etc.).
 - The standalone pages on GitHub Pages (`blogs/`, `blogs/<slug>/`, listed in `sitemap.xml`) are crawlable on their own
