@@ -34,10 +34,20 @@
 - 关键限制（已经告诉用户）：Sites 嵌入框宽高比固定，手机上只等比缩小（桌面约 957×290 的整行框 → 390 手机上约 352×107），不会变高。所以页面按自己框的形状换排版：宽框一行（和现在一样）、手机紧凑一行（字号保底、左下角给 Google 的 (i) 按钮让位）、中等两层、方/竖框堆叠。
 - 访客地图要和原来**完全一样地记录访问**（同一个 Supabase 表、字段、每会话一次），点击打开 `home/visitor-map.html`（它继续当分析页）。
 - 现在页脚三个框的实测尺寸：1440 宽 266×226 / 266×237 / 365×227（x 241..1198）；1024：209×177 / 209×186 / 286×178；768：151×128 / 151×134 / 207×129；390：竖排 257×218 / 257×228 / 352×218。截图：`tools/foot/`（脚本 `foot_test2.js`、`foot/measure.js`）。
-- 交接时状态：（见本节末尾，交接前更新）
+- **交接时状态：已完成并合并到 main**（用户说「home/footer.html除了小地图UI之外都做好了就提交到main」）。用户要在 Sites 页脚删掉原来三个嵌入框，插入一个放 footer.html 的嵌入框：宽度拉满原来三格的范围（1440 下约 957 px），高度约 280–300 px（宽高比约 0.30）。**原来的 visitor-map 嵌入框必须删掉**，否则每次访问会记两次。
+- 构建方式：`footer.html` 由 `tools/foot/footer.tpl.html` + `tools/foot/build.py` 生成，build.py 把 `home/visitor-map.html` 第 145–291 行（Supabase 常量、陆地掩码、边界、渲染、记录访问、提示框）和第 1269–1277 行（小地图 CSS）原样拷进去，只改两处（总是紧凑点尺寸、提示框不出框）。**改小地图代码时：改模板或 visitor-map.html 后重新跑 `python3 /tmp/picasso-tools/foot/build.py`**；如果 visitor-map.html 的行号变了，要同步改 build.py 里的行号/断言。两份文件里的 Supabase 记录逻辑要保持一致。
+- 测试：`node /tmp/picasso-tools/foot/ft.js /home/user/Picasso-Lab/home/footer.html <前缀> 957x290 742x225 543x165 352x107@phone 352x120@phone 600x400 400x400`（Supabase 和 geo-IP 都是 mock：`foot/rows.json` 由 `gen_rows.js` 生成；`HOVER=1` 截悬停）；`sites_ft.js` 在真实 Sites 页脚里把一格换成 footer.html。
 
 ### TODO 2 — 小地图 UI 优化（用户要求，暂停到新会话）
-用户原话：「visitor-map.html的小地图UI也可以优化一下。」现在的小地图：深蓝圆角卡片 + 点阵世界地图 + 发光访客点 + 左下角等宽字体小药丸 "• N VISITS / N REG. / 最新"。方向：卡片边缘更干净、点阵更清晰、访客点更好看、统计改成 "1,234 visits · 56 regions" 这种正常格式、悬停提示「打开分析」、小尺寸下也清楚；保持它的风格和轻量（持续动画）。改在 `home/footer.html` 的地图部分（若 footer 里是拷贝的代码，visitor-map.html 的 iframe 小地图模式也可同步改）。测试时 mock Supabase 的数据。
+用户原话：「visitor-map.html的小地图UI也可以优化一下。」现在的小地图：深蓝圆角卡片 + 点阵世界地图 + 发光访客点 + 左下角等宽字体小药丸 "• N VISITS / N REG. / 最新"。方向：卡片边缘更干净、点阵更清晰、访客点更好看、统计改成 "1,234 visits · 56 regions" 这种正常格式、悬停提示「打开分析」、小尺寸下也清楚；保持它的风格和轻量（持续动画）。改在 `home/footer.html` 的地图部分（footer 里是用 build.py 从 visitor-map.html 拷来的代码，见 TODO 1；visitor-map.html 的 iframe 小地图模式也可同步改）。测试时 mock Supabase 的数据（`tools/foot/ft.js`，先 `node tools/foot/gen_rows.js` 生成 rows.json）。
+上个会话做页脚时记下的具体想法（还没做）：
+  - 陆地点阵按屏幕像素对齐的均匀网格画（现在高纬度几行像条纹，小尺寸像网格）；
+  - 国界线更淡，小卡片上不画美国州界；
+  - 统计改成 "2,768 visits · 57 regions" 这种完整格式（现在是 "2.8K VISITS / 57 REG."），并移到卡片底部一条，不盖住南美；
+  - 悬停显示「Open analytics ↗」类提示（箭头用 SVG 画，不用 emoji），触屏上常驻一个小箭头；
+  - 卡片 1 px 边框画在地图画布上面（现在被点盖住）；
+  - 性能：静止的访客点画进底图，只有实时点做动画，用预渲染光晕代替 blur，约 30 fps，卡片不在屏幕内时停；
+  - 提示框里的国旗 emoji 换成小国旗图片或两字母国家码（页面规则：不要 emoji）。
 
 ### TODO 3 — Yufei 的双击短片（暂停到新会话）
 用户原话：「我想针对每个人的人设做一个AI漫画或者AI漫剧，就是双击某人的照片就可以播放，时长就5～10s就行，先做一下yufei的，我看看效果。」用户选择：**全部在这里用代码画**（不用 Codex 画图）；**在头像格子里播放**（不要画中画、不要新窗口）。Google Sites 嵌入框里全屏被禁用（实测 `document.fullscreenEnabled === false`）。
