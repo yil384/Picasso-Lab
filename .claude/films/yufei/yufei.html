@@ -1,0 +1,1446 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Yufei - Picatso</title>
+<!-- Team-page avatar short for Prof. Yufei Ding: "Picatso" (8 s, 192 f @ 24 fps, square, NOT a loop).
+     Plays inside her round avatar on double-click: starts and ends exactly on her photo.
+     One three.js world rendered through the film's copy of runtime/npr (comic look: cel ramp, hull + Sobel
+     ink with boil, Ben-Day dots, off-register plates, paper). Her photo becomes a 2.5D comic panel (three
+     cut-out planes: dusk sky, palm, her), the lab bench with a superconducting chip sits elsewhere in the
+     same scene. Every texture is painted with Canvas2D at boot; all ink overlays and the hand-built lettering
+     are Canvas2D stroke skeletons (no web font). Lettering pop / burst ideas follow ClaudeAnimationBase
+     src/core.js (MIT, (c) JohnHeibel) via reference/style-comic.
+     Authoring: ?debug=1..5 npr G-buffer views. -->
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene, ease, clamp, lerp } from '/pv/runtime/pv.js';
+import { createNPR } from '/scene/npr/npr.js';
+import { handheld } from '/scene/npr/camera.js';
+
+const Q = new URLSearchParams(location.search);
+const FPS = 24, NF = 192, TAU = Math.PI * 2, DES = 960;
+
+// =====================================================================================================
+// palette (paint space)
+// =====================================================================================================
+const PAL = {
+  paper: '#f4ebd6', ink: '#14122a', gold: '#f6c445', goldD: '#c98a1e', goldL: '#fff0a8', red: '#e5463b',
+  cyan: '#53d8f2', cream: '#fff6e0', yellow: '#ffe14d', pink: '#ff5a8a', white: '#ffffff',
+};
+const COL = {
+  gold: 0xf0b437, goldChip: 0xffffff, cyan: 0x58dcf4, red: 0xff2a5a, noiseAlt: 0x6e1238, bronze: 0x9a6230,
+  coupLit: 0xffd23f, bench: 0x7b86c9, benchSide: 0x4f5aa0, pcb: 0x252b64, fur: 0xfbf8f2, pink: 0xf4a3b3,
+  beret: 0xe0383a, wood: 0xa8683a, ferrule: 0xe6ad42, bristle: 0xf3dcae, paintGold: 0xffc93a,
+};
+
+// =====================================================================================================
+// timeline helpers (pure functions of the frame)
+// =====================================================================================================
+const sm = (x) => ease.smooth(clamp(x));
+const io = (x) => ease.inOutSine(clamp(x));
+const ob = (x) => ease.outBack(clamp(x));
+const ic = (x) => ease.inCubic(clamp(x));
+const oc = (x) => ease.outCubic(clamp(x));
+const ioc = (x) => ease.inOutCubic(clamp(x));
+const twos = (F) => F - (F % 2);
+const ringv = (a, amp, w = 1.1, k = 0.2) => (a < 0 ? 0 : amp * Math.exp(-k * a) * Math.cos(w * a));
+const bumpv = (a, amp, w = 0.9, k = 0.16) => (a < 0 ? 0 : amp * Math.exp(-k * a) * Math.sin(w * a));
+const hsh = (...n) => { let x = Math.sin(n.reduce((s, v, i) => s + v * (12.9898 + i * 78.233), 0.5)) * 43758.5453; return x - Math.floor(x); };
+const arcP = (p) => Math.sin(Math.PI * clamp(p));
+
+// key frames of the story (24 fps)
+const K = {
+  ring: [3, 10],                 // photo -> comic panel (ink burst ring closes in)
+  whip1: [12, 18, 23],           // whip pan right: start, cut, settled
+  pop: [20, 22, 24],             // gremlins pop up over the chip's far edge (staggered)
+  edge: [24, 26, 28],            // ... land on the chip edge
+  hop: [[26, 31], [28, 35], [30, 36]],   // ... hop onto their qubits (take-off, landing)
+  bzzt: 31,
+  whip2: [55, 59, 63],           // whip pan left back to her
+  zoom: [59, 64], shing: 62,     // crash zoom to her face, glasses flash
+  back: [66, 74],                // camera eases back to catch the shoulder
+  catUp: [68, 75],               // the cat leaps up from below and lands on her shoulder
+  catOff: [84, 86],              // crouch, leap off (up)
+  whip3: [86, 89, 94],           // whip: tilt up with the cat, cut, tilt down onto the chip
+  fall: [89, 97], stroke: [97, 122],
+  exit: [122, 131], land: 140, puff: [143, 152],
+  write1: [147, 163], write2: [158, 168],
+  wipe: [173, 184],
+};
+
+// =====================================================================================================
+// world layout
+// =====================================================================================================
+// her comic panel: three cut-out planes facing +z, far from the bench (z = 60). Photo px (u, v) -> plane
+// coords: x = (u/512 - .5) * 10, y = (.5 - v/512) * 10. The home camera sits D in front: the planes fill it.
+const PNL = { z: 60, D: 5 / Math.tan(15 * Math.PI / 180) };
+const PZ = { person: 0, palm: -6, sky: -14 };
+const pp = (u, v, dz = 0) => [(u / 512 - 0.5) * 10, (0.5 - v / 512) * 10, PNL.z + dz];
+const LENS = [pp(232.5, 144), pp(291.5, 144.2)];
+const SHOULDER = pp(168, 262, 0.95);        // where the cat lands (in front of her left-in-image shoulder)
+
+// bench: table top y = 0, navy PCB, gold chip, 3 x 3 qubits
+const CHIP = { w: 3.4, h: 0.22, y0: 0.06 };
+const CHIP_TOP = CHIP.y0 + CHIP.h;
+const QP = 0.95, QR = 0.2, QY = CHIP_TOP + 0.17;
+const QX = (c) => (c - 1) * QP, QZ = (r) => (r - 1) * QP;
+const QUBITS = [];
+for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) QUBITS.push({ r, c, k: r * 3 + c, x: QX(c), z: QZ(r) });
+const COUPLERS = [];
+for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) COUPLERS.push({ a: r * 3 + c, b: r * 3 + c + 1, x: (QX(c) + QX(c + 1)) / 2, z: QZ(r), rot: 0 });
+for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) COUPLERS.push({ a: r * 3 + c, b: (r + 1) * 3 + c, x: QX(c), z: (QZ(r) + QZ(r + 1)) / 2, rot: Math.PI / 2 });
+// three noise gremlins: where they pop up (far edge) and the qubit each one sits on
+const GREM = [
+  { q: 0, popX: -1.0 },   // far-left qubit
+  { q: 4, popX: 0.05 },   // centre
+  { q: 2, popX: 1.0 },    // far-right
+];
+const G_BODY = 0.42, G_SIT = QY + QR - 0.03;
+
+// the one stroke: a gold ribbon swooping through the three gremlins (far-left -> centre -> far-right)
+const STROKE_PTS = [[-2.45, 1.75, 0.45], [-1.75, 1.2, -0.55], [-0.98, 1.02, -0.95], [-0.5, 1.0, -0.42], [0.0, 1.02, 0.02],
+  [0.5, 1.0, -0.42], [0.98, 1.02, -0.95], [1.8, 1.25, -0.55], [2.8, 1.95, 0.45]];
+
+// =====================================================================================================
+// scene state
+// =====================================================================================================
+let T = null;
+const st = {};
+const V = (x, y, z) => new T.THREE.Vector3(x, y, z);
+
+const LOOK = {
+  extends: 'comic',
+  // lengths are design px of this film's 960 x 960 design (ink >= 6 px so it reads at 135-200 CSS px)
+  lineW: 3.0, lineWShadow: 4.3, hullW: 6.0, hullShadowW: 1.35, wobA: 1.5, wobF: 0.02, depthT: 0.13,
+  htAmt: 0.9, htPx: 13, htT: 0.38, htRange: 0.5,
+  hatchPx: 7, hatchW: 1.5, hatchCut: 0.62, crossT: 0.86,
+  misreg: [2.4, -1.8],
+  sat: 1.1, edgeDark: 0.1, gran: 0.05,
+  bgDots: [0.92, 0.62, 0.5, 0.42],
+  grain: 0.012, vignette: 0.06,
+  shadowRadius: 2.0,
+  burstW: 5.0,
+  ...(Q.get('lk') ? JSON.parse(Q.get('lk')) : {}),
+};
+
+defineScene({
+  meta: {
+    title: 'Yufei - Picatso', durationFrames: NF, fps: FPS, width: DES, height: DES, seed: 23,
+    design: [DES, DES], background: PAL.paper, fonts: [],
+    boil: { every: 2, variants: 3 },            // ink boils at 12 drawings/s
+    poster: 150,
+  },
+  update(ctx) {
+    const F = ctx.iw;
+    st.F = F;
+    st.skip = F < K.ring[0] || F >= K.wipe[1];   // the exact photo covers these frames
+    if (st.skip) return;
+    updateCamera(ctx, F);
+    updateStroke(F);
+    updateCat(F);
+    updateGremlins(F);
+    updateChip(F);
+  },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(paperCanvas(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, three) { return buildWorld(ctx, three); },
+      draw(ctx) { if (!st.skip) drawNPR(ctx); return false; } },
+    { name: 'ink', type: '2d', draw(ctx, g) { if (!st.skip) inkOverlay(ctx, g); } },
+    { name: 'letters', type: '2d', draw(ctx, g) { if (!st.skip) lettering(ctx, g); } },
+    { name: 'photo', type: '2d', draw(ctx, g) { photoLayer(ctx, g); } },
+  ],
+});
+
+let _flatPaper = null;
+function paperCanvas(ctx) {
+  if (Q.get('nopaper')) { if (!_flatPaper) { _flatPaper = mkCanvas(ctx.W, ctx.H); const g = _flatPaper.getContext('2d'); g.fillStyle = PAL.paper; g.fillRect(0, 0, ctx.W, ctx.H); } return _flatPaper; }
+  return ctx.paper({ tone: PAL.paper, grain: 0.02, fibres: 0.02, blotch: 0.012, seed: 4 });
+}
+
+// =====================================================================================================
+// assets + Canvas2D painted textures
+// =====================================================================================================
+async function loadImage(url) { const im = new Image(); im.src = url; await im.decode(); return im; }
+function canvasTex(THREE, c, { wrap = false, repeat = null } = {}) {
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.NoColorSpace; t.anisotropy = 8;
+  if (wrap) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  if (repeat) t.repeat.set(...repeat);
+  t.needsUpdate = true;
+  return t;
+}
+function imgTex(THREE, im) {
+  const t = new THREE.Texture(im);
+  t.colorSpace = THREE.NoColorSpace; t.anisotropy = 8; t.generateMipmaps = true;
+  t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  return t;
+}
+function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+const rnd = (seed) => { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); };
+function ellipse(g, x, y, rx, ry, rot = 0) { g.beginPath(); g.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot, 0, TAU); }
+function star4Path(g, x, y, r, rot = 0, k = 0.28) {
+  g.beginPath();
+  for (let i = 0; i < 8; i++) { const a = rot + i * Math.PI / 4 - Math.PI / 2, rr = i % 2 ? r * k : r; const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr; i ? g.lineTo(px, py) : g.moveTo(px, py); }
+  g.closePath();
+}
+
+// ---- cat face (equirect sphere map: face centre at u = .25, the equator) ----
+function paintCatFace(expr) {
+  const W = 1024, H = 512, c = mkCanvas(W, H), g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+  const cx = 256, ey = 238, ex = 74, ink = PAL.ink;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const openEye = (x, y, s = 1, look = 0) => {
+    ellipse(g, x, y, 31 * s, 41 * s); g.fillStyle = '#78c6f4'; g.fill(); g.lineWidth = 8; g.strokeStyle = ink; g.stroke();
+    ellipse(g, x + look * 8, y + 4, 14 * s, 29 * s); g.fillStyle = ink; g.fill();
+    ellipse(g, x + 9 * s + look * 6, y - 15 * s, 9 * s, 10 * s); g.fillStyle = '#ffffff'; g.fill();
+    ellipse(g, x - 10 * s, y + 18 * s, 4 * s, 4 * s); g.fill();
+  };
+  const happyEye = (x, y) => { g.beginPath(); g.moveTo(x - 30, y + 10); g.quadraticCurveTo(x, y - 30, x + 30, y + 10); g.lineWidth = 11; g.strokeStyle = ink; g.stroke(); };
+  const smugEye = (x, y) => { g.beginPath(); g.moveTo(x - 32, y - 2); g.quadraticCurveTo(x, y + 22, x + 32, y - 2); g.lineWidth = 11; g.strokeStyle = ink; g.stroke();
+    g.beginPath(); g.moveTo(x + (x < cx ? -32 : 32), y - 2); g.lineTo(x + (x < cx ? -44 : 44), y - 12); g.lineWidth = 7; g.stroke(); };
+  const brows = (dir) => { for (const s of [-1, 1]) { g.beginPath(); g.moveTo(cx + s * (ex + 34), ey - 52 - dir * 6); g.lineTo(cx + s * (ex - 26), ey - 46 + dir * 12); g.lineWidth = 12; g.strokeStyle = ink; g.stroke(); } };
+  // nose + mouth
+  const ny = 288;
+  const nose = () => { g.beginPath(); g.moveTo(cx - 15, ny - 9); g.quadraticCurveTo(cx, ny - 14, cx + 15, ny - 9); g.quadraticCurveTo(cx + 6, ny + 7, cx, ny + 9); g.quadraticCurveTo(cx - 6, ny + 7, cx - 15, ny - 9); g.fillStyle = '#f2899b'; g.fill(); g.lineWidth = 5; g.strokeStyle = ink; g.stroke(); };
+  const wMouth = () => { g.beginPath(); g.moveTo(cx, ny + 9); g.lineTo(cx, ny + 18); g.moveTo(cx - 28, ny + 18); g.quadraticCurveTo(cx - 14, ny + 34, cx, ny + 18); g.quadraticCurveTo(cx + 14, ny + 34, cx + 28, ny + 18); g.lineWidth = 6; g.strokeStyle = ink; g.stroke(); };
+  const openMouth = () => { g.beginPath(); g.moveTo(cx - 26, ny + 16); g.quadraticCurveTo(cx, ny + 22, cx + 26, ny + 16); g.quadraticCurveTo(cx + 18, ny + 52, cx, ny + 54); g.quadraticCurveTo(cx - 18, ny + 52, cx - 26, ny + 16); g.fillStyle = '#5a1f33'; g.fill();
+    ellipse(g, cx, ny + 44, 13, 8); g.fillStyle = '#f07c8e'; g.fill(); g.beginPath(); g.moveTo(cx - 26, ny + 16); g.quadraticCurveTo(cx, ny + 22, cx + 26, ny + 16); g.quadraticCurveTo(cx + 18, ny + 52, cx, ny + 54); g.quadraticCurveTo(cx - 18, ny + 52, cx - 26, ny + 16); g.lineWidth = 6; g.strokeStyle = ink; g.stroke(); };
+  const whiskers = () => { g.lineWidth = 4.5; g.strokeStyle = ink; for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(cx + s * 58, ny + 4 + k * 11); g.quadraticCurveTo(cx + s * 110, ny - 4 + k * 13, cx + s * 160, ny - 10 + k * 22); g.stroke(); } };
+  const blush = () => { for (const s of [-1, 1]) { ellipse(g, cx + s * 98, ny + 4, 24, 12); g.fillStyle = 'rgba(245,140,160,0.55)'; g.fill(); } };
+  switch (expr) {
+    case 'open': openEye(cx - ex, ey); openEye(cx + ex, ey); nose(); wMouth(); break;
+    case 'look': openEye(cx - ex, ey, 1, 1); openEye(cx + ex, ey, 1, 1); nose(); wMouth(); break;
+    case 'happy': happyEye(cx - ex, ey); happyEye(cx + ex, ey); nose(); openMouth(); blush(); break;
+    case 'determined': openEye(cx - ex, ey, 0.95); openEye(cx + ex, ey, 0.95);
+      g.fillStyle = '#ffffff'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(cx + s * (ex + 44), ey - 52); g.lineTo(cx + s * (ex - 40), ey - 52); g.lineTo(cx + s * (ex - 40), ey - 22); g.lineTo(cx + s * (ex + 44), ey - 40); g.closePath(); g.fill(); }
+      brows(1); nose(); wMouth(); break;
+    case 'proud': smugEye(cx - ex, ey); smugEye(cx + ex, ey); nose(); wMouth(); blush(); break;
+    case 'wink': openEye(cx - ex, ey); happyEye(cx + ex, ey); nose(); openMouth(); blush(); break;
+    case 'surprised': openEye(cx - ex, ey, 1.12); openEye(cx + ex, ey, 1.12); nose(); ellipse(g, cx, ny + 30, 11, 14); g.fillStyle = '#5a1f33'; g.fill(); g.lineWidth = 5; g.strokeStyle = ink; g.stroke(); break;
+    default: openEye(cx - ex, ey); openEye(cx + ex, ey); nose(); wMouth();
+  }
+  whiskers();
+  return c;
+}
+
+// ---- gremlin face (the body colour is in the map: albedo white) ----
+function paintGremFace(expr, v) {
+  const W = 1024, H = 512, c = mkCanvas(W, H), g = c.getContext('2d');
+  g.fillStyle = '#f0503a'; g.fillRect(0, 0, W, H);
+  // a darker belly band + speckles (texture for the cel ramp)
+  g.fillStyle = '#d23a35'; for (let i = 0; i < 40; i++) { const r = rnd(i * 7 + 3 + v); ellipse(g, r() * W, 300 + r() * 200, 6 + r() * 10, 4 + r() * 6); g.fill(); }
+  const cx = 256, ey = 236, ink = PAL.ink, j = (k) => (hsh(v, k) - 0.5) * 4;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const eye = (x, y, rx, ry, px, py, pr) => { ellipse(g, x, y, rx, ry); g.fillStyle = '#fff8e6'; g.fill(); g.lineWidth = 7; g.strokeStyle = ink; g.stroke(); ellipse(g, x + px, y + py, pr, pr * 1.1); g.fillStyle = ink; g.fill(); };
+  const brows = () => { for (const s of [-1, 1]) { g.beginPath(); g.moveTo(cx + s * 98 + j(s), ey - 58); g.lineTo(cx + s * 12, ey - 26 + j(s + 2)); g.lineTo(cx + s * 18, ey - 10); g.lineTo(cx + s * 98, ey - 38); g.closePath(); g.fillStyle = ink; g.fill(); } };
+  const teeth = (y0, w, h, open) => {
+    g.beginPath(); g.moveTo(cx - w, y0); g.quadraticCurveTo(cx, y0 + 12, cx + w, y0); g.quadraticCurveTo(cx + w * 0.7, y0 + h, cx, y0 + h + 6); g.quadraticCurveTo(cx - w * 0.7, y0 + h, cx - w, y0); g.closePath();
+    g.fillStyle = '#4a0d1c'; g.fill();
+    g.save(); g.clip(); g.fillStyle = '#fff8e6';
+    const n = 6;
+    for (let k = 0; k < n; k++) { const x0 = cx - w + (2 * w) * k / n, x1 = x0 + 2 * w / n; g.beginPath(); g.moveTo(x0, y0 - 4); g.lineTo(x1, y0 - 4); g.lineTo((x0 + x1) / 2, y0 + 20 + open); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(x0 + w / n, y0 + h + 10); g.lineTo(x1 + w / n, y0 + h + 10); g.lineTo((x0 + x1) / 2 + w / n, y0 + h - 12 - open * 0.5); g.closePath(); g.fill(); }
+    g.restore();
+    g.beginPath(); g.moveTo(cx - w, y0); g.quadraticCurveTo(cx, y0 + 12, cx + w, y0); g.quadraticCurveTo(cx + w * 0.7, y0 + h, cx, y0 + h + 6); g.quadraticCurveTo(cx - w * 0.7, y0 + h, cx - w, y0); g.closePath();
+    g.lineWidth = 7; g.strokeStyle = ink; g.stroke();
+  };
+  if (expr === 'angry') { eye(cx - 54, ey, 34, 30, 10, 6, 14); eye(cx + 54, ey, 34, 30, -10, 6, 14); brows(); teeth(292, 64, 34, 4); }
+  else if (expr === 'grin') { eye(cx - 54, ey + 6, 32, 22, 6, 4, 12); eye(cx + 54, ey + 6, 32, 22, -6, 4, 12); brows(); teeth(284, 82, 46, 10); }
+  else if (expr === 'tongue') { eye(cx - 54, ey, 32, 28, 0, 2, 13); g.beginPath(); g.moveTo(cx + 24, ey + 4); g.quadraticCurveTo(cx + 54, ey - 26, cx + 86, ey + 4); g.lineWidth = 10; g.strokeStyle = ink; g.stroke(); brows();
+    teeth(286, 70, 36, 6); g.beginPath(); g.moveTo(cx - 22, 318); g.quadraticCurveTo(cx - 24, 372, cx + 4, 374); g.quadraticCurveTo(cx + 30, 372, cx + 26, 318); g.closePath(); g.fillStyle = '#f07c8e'; g.fill(); g.lineWidth = 6; g.strokeStyle = ink; g.stroke(); }
+  else { // shock
+    eye(cx - 56, ey - 6, 40, 44, 0, 0, 8); eye(cx + 56, ey - 6, 40, 44, 0, 0, 8);
+    ellipse(g, cx, 316, 26, 32); g.fillStyle = '#4a0d1c'; g.fill(); g.lineWidth = 7; g.strokeStyle = ink; g.stroke();
+  }
+  return c;
+}
+
+// ---- chip top: gold die with xmon crosses, coupler traces, readout meanders and bond pads ----
+function paintChip() {
+  const W = 1024, c = mkCanvas(W, W), g = c.getContext('2d');
+  const u = W / CHIP.w, X = (x) => W / 2 + x * u, Z = (z) => W / 2 + z * u;
+  g.fillStyle = '#f1bd4c'; g.fillRect(0, 0, W, W);
+  // brushed bands
+  for (let i = 0; i < 26; i++) { g.fillStyle = i % 2 ? 'rgba(255,236,170,0.22)' : 'rgba(200,130,30,0.10)'; g.fillRect(0, i * W / 26, W, W / 52); }
+  // border frame + bond pads
+  g.strokeStyle = '#b57718'; g.lineWidth = 12; g.strokeRect(26, 26, W - 52, W - 52);
+  g.fillStyle = '#ffe28a';
+  for (let k = 0; k < 9; k++) {
+    const t = 120 + k * (W - 240) / 8;
+    for (const [x, y, w, h] of [[t - 16, 44, 32, 30], [t - 16, W - 74, 32, 30], [44, t - 16, 30, 32], [W - 74, t - 16, 30, 32]]) { g.fillRect(x, y, w, h); g.strokeStyle = '#8a5212'; g.lineWidth = 4; g.strokeRect(x, y, w, h); }
+  }
+  // readout meanders from each edge qubit to the border (hand-ruled)
+  g.strokeStyle = '#9a5f14'; g.lineWidth = 7; g.lineJoin = 'round';
+  for (const q of QUBITS) {
+    const dirs = [];
+    if (q.r === 0) dirs.push([0, -1]); if (q.r === 2) dirs.push([0, 1]); if (q.c === 0) dirs.push([-1, 0]); if (q.c === 2) dirs.push([1, 0]);
+    for (const [dx, dz] of dirs) {
+      g.beginPath();
+      const x0 = X(q.x) + dx * 70, y0 = Z(q.z) + dz * 70, L = (dx ? (dx > 0 ? W - 80 - x0 : x0 - 80) : (dz > 0 ? W - 80 - y0 : y0 - 80));
+      const n = 6;
+      for (let k = 0; k <= n * 4; k++) {
+        const s = k / (n * 4), a = s * L, w = (k % 4 === 1 || k % 4 === 2) ? 18 : -18;
+        const px = x0 + dx * a + (dz ? w : 0), py = y0 + dz * a + (dx ? w : 0);
+        k ? g.lineTo(px, py) : g.moveTo(px, py);
+      }
+      g.stroke();
+    }
+  }
+  // coupler traces (thin) between neighbours
+  g.strokeStyle = '#a66a18'; g.lineWidth = 10;
+  for (const cp of COUPLERS) { const a = QUBITS[cp.a], b = QUBITS[cp.b]; g.beginPath(); g.moveTo(X(a.x), Z(a.z)); g.lineTo(X(b.x), Z(b.z)); g.stroke(); }
+  // xmon crosses under each qubit
+  for (const q of QUBITS) {
+    const x = X(q.x), y = Z(q.z), L = 92, w = 22;
+    g.fillStyle = '#c98a26';
+    g.beginPath(); g.rect(x - L, y - w, 2 * L, 2 * w); g.rect(x - w, y - L, 2 * w, 2 * L); g.fill();
+    g.strokeStyle = '#7a4a10'; g.lineWidth = 6;
+    g.beginPath();
+    const P = [[-w, -L], [w, -L], [w, -w], [L, -w], [L, w], [w, w], [w, L], [-w, L], [-w, w], [-L, w], [-L, -w], [-w, -w]];
+    P.forEach(([a, b], i) => (i ? g.lineTo(x + a, y + b) : g.moveTo(x + a, y + b))); g.closePath(); g.stroke();
+  }
+  return c;
+}
+function paintPCB() {
+  const W = 512, c = mkCanvas(W, W), g = c.getContext('2d');
+  g.fillStyle = '#2b3170'; g.fillRect(0, 0, W, W);
+  g.strokeStyle = '#d9a440'; g.lineWidth = 6;
+  for (let k = 0; k < 9; k++) {
+    const t = 112 + k * 36;
+    for (const [x0, y0, x1, y1] of [[t, 8, t, 70], [t, W - 8, t, W - 70], [8, t, 70, t], [W - 8, t, W - 70, t]]) { g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }
+  }
+  g.fillStyle = '#d9a440'; for (const [x, y] of [[30, 30], [W - 30, 30], [30, W - 30], [W - 30, W - 30]]) { ellipse(g, x, y, 14, 14); g.fill(); }
+  return c;
+}
+function paintBench() {
+  const W = 512, c = mkCanvas(W, W), g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, W);
+  const r = rnd(11);
+  for (let k = 0; k < 6; k++) { ellipse(g, r() * W, r() * W, 60 + r() * 90, 40 + r() * 60); g.fillStyle = 'rgba(255,255,255,0.18)'; g.fill(); }
+  g.strokeStyle = '#2c2750'; g.lineWidth = 4;
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { ellipse(g, 64 + i * 128, 64 + j * 128, 13, 13); g.fillStyle = '#d6dbf4'; g.fill(); g.stroke(); }
+  return c;
+}
+// dusk sky cyclorama: banded sunset, sunburst rays, the sun on the horizon, far palms (Canvas2D)
+function paintBackdrop() {
+  const W = 2048, H = 1152, c = mkCanvas(W, H), g = c.getContext('2d');
+  const bands = ['#2f2470', '#3d2a7c', '#4b2f86', '#6f3a92', '#9a4392', '#c44f88', '#e5627a', '#f47f68', '#f9a05a', '#fcc161', '#fedd86'];
+  const hz = H * 0.81;
+  bands.forEach((b, i) => { g.fillStyle = b; g.fillRect(0, (hz / bands.length) * i, W, hz / bands.length + 1); });
+  const sx = W * 0.47, sy = hz;
+  // sunburst rays (alternating warm wedges)
+  for (let k = 0; k < 40; k++) {
+    const a0 = Math.PI + (k / 40) * Math.PI, a1 = a0 + Math.PI / 80;
+    g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(a0) * 2400, sy + Math.sin(a0) * 2400); g.lineTo(sx + Math.cos(a1) * 2400, sy + Math.sin(a1) * 2400); g.closePath();
+    g.fillStyle = 'rgba(255,214,140,0.16)'; g.fill();
+  }
+  // halftone seams between bands
+  for (let i = 1; i < bands.length; i++) {
+    const y0 = (hz / bands.length) * i; g.fillStyle = bands[i - 1];
+    for (let row = 0; row < 3; row++) for (let x = (row % 2) * 7; x < W; x += 14) { ellipse(g, x, y0 + row * 9 + 4, 4.6 - row * 1.3, 4.6 - row * 1.3); g.fill(); }
+  }
+  // the sun
+  for (const [r, col] of [[120, '#ff9f45'], [100, '#ffc65a'], [74, '#ffe7a0']]) { g.beginPath(); g.arc(sx, sy, r, Math.PI, TAU); g.fillStyle = col; g.fill(); }
+  // sea
+  const gr = g.createLinearGradient(0, hz, 0, H); gr.addColorStop(0, '#6c6cb8'); gr.addColorStop(1, '#2a2e70');
+  g.fillStyle = gr; g.fillRect(0, hz, W, H - hz);
+  g.fillStyle = '#ffd890'; const r = rnd(5);
+  for (let k = 0; k < 40; k++) { const y = hz + 6 + r() * 120, w = 20 + (y - hz) * 0.8; g.fillRect(sx + (r() - 0.5) * (60 + (y - hz) * 1.2) - w / 2, y, w, 5); }
+  g.fillStyle = '#ffe6ad'; g.fillRect(0, hz - 2, W, 4);
+  // far palms (silhouettes)
+  const palmS = (x, h, s) => {
+    g.strokeStyle = '#2b1d4c'; g.lineWidth = 9 * s; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x, hz + 4); g.quadraticCurveTo(x - 18 * s, hz - h * 0.5, x + 10 * s, hz - h); g.stroke();
+    g.fillStyle = '#2b1d4c';
+    for (let k = 0; k < 7; k++) { const a = -Math.PI * (0.05 + 0.9 * k / 6); const L = 70 * s; g.beginPath(); g.moveTo(x + 10 * s, hz - h);
+      g.quadraticCurveTo(x + 10 * s + Math.cos(a) * L * 0.6, hz - h + Math.sin(a) * L * 0.6 - 10 * s, x + 10 * s + Math.cos(a) * L, hz - h + Math.sin(a) * L * 0.3 + 26 * s);
+      g.quadraticCurveTo(x + 10 * s + Math.cos(a) * L * 0.5, hz - h + Math.sin(a) * L * 0.4 + 4 * s, x + 10 * s, hz - h); g.fill(); }
+  };
+  palmS(W * 0.2, 230, 1.2); palmS(W * 0.27, 170, 0.9); palmS(W * 0.76, 250, 1.3); palmS(W * 0.83, 160, 0.8);
+  return c;
+}
+function paintRibbon() {
+  // gold paint along the stroke: bristle streaks run along u (the stroke length)
+  const W = 1024, H = 128, c = mkCanvas(W, H), g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+  const r = rnd(9);
+  for (let k = 0; k < 26; k++) {
+    const y = r() * H, w = 1.5 + r() * 4;
+    g.strokeStyle = r() < 0.5 ? 'rgba(190,120,20,0.45)' : 'rgba(255,250,210,0.8)'; g.lineWidth = w;
+    g.beginPath(); g.moveTo(r() * 60, y); for (let x = 0; x <= W; x += 64) g.lineTo(x, y + (r() - 0.5) * 3); g.stroke();
+  }
+  return c;
+}
+
+// =====================================================================================================
+// build
+// =====================================================================================================
+async function buildWorld(ctx, { THREE, renderer }) {
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 160);
+  const npr = createNPR(renderer, ctx, { look: LOOK, paper: paperCanvas(ctx), samples: 4, shadowSize: 2048 });
+  npr.setUnder(window.__pv.canvas);
+  npr.debug = Number(Q.get('debug') || 0);
+  T = { THREE, scene, camera, npr };
+  const add = (geo, mo, ao = {}, pos = [0, 0, 0], rot = [0, 0, 0], parent = scene) => {
+    const m = npr.add(new THREE.Mesh(geo, Array.isArray(mo) ? mo.map((o) => npr.surface(o)) : npr.surface(mo)), ao);
+    m.position.set(...pos); m.rotation.set(...rot); parent.add(m); return m;
+  };
+  T.add = add;
+
+  // ---------------- her comic panel (three cut-out planes) ----------------
+  const [imPerson, imPalm, imSky, imPhoto] = await Promise.all(['comic_person', 'comic_palm', 'comic_sky', 'photo_full'].map((n) => loadImage(`/scene/assets/${n}.png`)));
+  T.photo = imPhoto;
+  const plane = (im, dz, cut, big = 1, flat = 1) => {
+    const s = 10 * (PNL.D - dz) / PNL.D;                 // fills the home frustum exactly
+    const geo = new THREE.PlaneGeometry(s * big, s * big);
+    if (big !== 1) { const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) - 0.5) * big + 0.5, (uv.getY(i) - 0.5) * big + 0.5); }
+    const tex = imgTex(THREE, im);
+    const m = add(geo, { color: 0xffffff, map: tex, cut, flat, hatch: 0, spec: 0, rim: 0, halftone: flat < 1 ? 0.6 : 0, spill: 0, receive: flat < 1 },
+      { cast: false }, [0, 0, PNL.z + dz]);
+    return m;
+  };
+  T.sky = plane(imSky, PZ.sky, 0, 9.0);
+  T.palm = plane(imPalm, PZ.palm, 0.5);
+  T.person = plane(imPerson, PZ.person, 0.5, 1, 1.0);   // unlit: her real photo, never relit
+
+  // ---------------- the lab bench at dusk ----------------
+  T.backdrop = npr.backdrop(canvasTex(THREE, paintBackdrop()), { radius: 17, height: 24, y: -3.2, center: [0, 0, 0], arc: [Math.PI - 1.7, 4.2] });
+  scene.add(T.backdrop);
+  const benchTex = canvasTex(THREE, paintBench(), { wrap: true, repeat: [9, 6] });
+  const bSide = { color: COL.benchSide, hatchDir: [0, 1, 0] };
+  add(new THREE.BoxGeometry(22, 0.5, 14), [bSide, bSide, { color: COL.bench, map: benchTex, hatchDir: [1, 0, 0.3], noiseScale: 0.5, spec: 0 }, bSide, bSide, bSide],
+    { outline: 1.0, cast: false }, [0, -0.25, 0]);
+  const pcbTex = canvasTex(THREE, paintPCB());
+  const pSide = { color: 0x1b2050 };
+  add(new THREE.BoxGeometry(4.7, CHIP.y0, 4.7), [pSide, pSide, { color: 0xffffff, map: pcbTex, spec: 0 }, pSide, pSide, pSide], { outline: 0.8 }, [0, CHIP.y0 / 2, 0]);
+  const chipTex = canvasTex(THREE, paintChip());
+  const cSide = { color: 0xc98a26, hatchDir: [0, 1, 0], shadeColor: 0x7a4a18, shadeMix: 0.3 };
+  T.chip = add(new THREE.BoxGeometry(CHIP.w, CHIP.h, CHIP.w), [cSide, cSide, { color: 0xffffff, map: chipTex, spec: 0.15, toneBias: 0.06, hatchDir: [1, 0, 0.2] }, cSide, cSide, cSide],
+    { outline: 1.0 }, [0, CHIP.y0 + CHIP.h / 2, 0]);
+  // props for depth: an open pot of gold paint and a mug
+  add(new THREE.CylinderGeometry(0.42, 0.38, 0.62, 40), { color: 0x3b4a9a, hatchMode: 'u' }, { outline: 1 }, [-3.5, 0.31, -1.4]);
+  add(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 40), { color: COL.paintGold, toneBias: 0.15, spec: 1 }, { outline: 0.6 }, [-3.5, 0.6, -1.4]);
+  add(new THREE.CylinderGeometry(0.36, 0.3, 0.7, 36), { color: 0xf5efe2, hatchMode: 'u' }, { outline: 1 }, [3.3, 0.35, -1.9]);
+  add(new THREE.TorusGeometry(0.17, 0.05, 10, 24), { color: 0xf5efe2 }, { outline: 0.8 }, [3.68, 0.38, -1.9], [0, 0, 0]);
+
+  // ---------------- qubits + couplers ----------------
+  const qGeo = new THREE.SphereGeometry(QR, 36, 24);
+  T.qubits = QUBITS.map((q) => add(qGeo, { color: COL.cyan, glow: 0.25, rim: 0.9, spec: 1, toneBias: 0.1, receive: false, halftone: 0.6, spill: 0, seed: 5 + q.k },
+    { outline: 0.75 }, [q.x, QY, q.z]));
+  const cpGeo = new THREE.BoxGeometry(QP - 2 * QR - 0.06, 0.07, 0.13);
+  T.couplers = COUPLERS.map((cp, i) => add(cpGeo, { color: COL.bronze, rim: 0.6, spec: 0.5, seed: 40 + i }, { outline: 0.55, cast: false },
+    [cp.x, CHIP_TOP + 0.035, cp.z], [0, cp.rot, 0]));
+
+  // ---------------- faces ----------------
+  const catExpr = ['open', 'look', 'happy', 'determined', 'proud', 'wink', 'surprised'];
+  T.catFace = Object.fromEntries(catExpr.map((e) => [e, canvasTex(THREE, paintCatFace(e))]));
+  const gExpr = ['angry', 'grin', 'tongue', 'shock'];
+  T.gremFace = Object.fromEntries(gExpr.map((e) => [e, [0, 1].map((v) => canvasTex(THREE, paintGremFace(e, v)))]));
+
+  buildGremlins(THREE, add);
+  buildCat(THREE, add);
+  buildRibbon(THREE, add);
+  return { scene, camera };
+}
+
+function buildGremlins(THREE, add) {
+  const bodyGeo = new THREE.SphereGeometry(G_BODY, 36, 24);
+  const spikeGeo = new THREE.ConeGeometry(0.075, 0.24, 10); spikeGeo.translate(0, 0.12, 0);
+  const footGeo = new THREE.SphereGeometry(0.085, 14, 10);
+  const armGeo = new THREE.CapsuleGeometry(0.045, 0.14, 4, 8); armGeo.translate(0, -0.1, 0);
+  // spike directions: a crown over the upper hemisphere, none on the face
+  const dirs = [];
+  for (let k = 0; k < 11; k++) {
+    const a = (k / 11) * TAU + 0.3, elv = k % 2 ? 0.35 : 0.85;
+    const d = [Math.cos(a) * Math.cos(elv), Math.sin(elv), Math.sin(a) * Math.cos(elv)];
+    if (d[2] > 0.55 && elv < 0.5) continue;    // keep the face clear
+    dirs.push(d);
+  }
+  dirs.push([0, 1, 0]);
+  T.grems = GREM.map((G, i) => {
+    const root = new THREE.Group(); T.scene.add(root);
+    const squash = new THREE.Group(); root.add(squash);
+    const body = add(bodyGeo, { color: 0xffffff, map: T.gremFace.angry[0], rim: 0.9, spec: 0.4, seed: 60 + i, hatchMode: 'v' }, { outline: 1.0 }, [0, G_BODY, 0], [0, 0, 0], squash);
+    const spikes = dirs.map((d, k) => {
+      const s = add(spikeGeo, { color: k % 3 ? 0xd8332f : 0xff8a3a, rim: 0.8, seed: 70 + i * 20 + k }, { outline: 0.8 }, [d[0] * G_BODY * 0.86, G_BODY + d[1] * G_BODY * 0.86, d[2] * G_BODY * 0.86], [0, 0, 0], squash);
+      s.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...d));
+      s.userData.base = s.quaternion.clone(); s.userData.d = d;
+      return s;
+    });
+    const feet = [-1, 1].map((sx) => { const f = add(footGeo, { color: 0x9e2228, rim: 0.5 }, { outline: 0.7 }, [sx * 0.13, 0.04, 0.08], [0, 0, 0], root); f.scale.set(1.2, 0.7, 1.4); return f; });
+    const arms = [-1, 1].map((sx) => {
+      const pv = new THREE.Group(); pv.position.set(sx * 0.27, G_BODY * 0.95, 0.04); squash.add(pv);
+      add(armGeo, { color: 0xd8332f, rim: 0.6 }, { outline: 0.7 }, [0, 0, 0], [0, 0, 0], pv);
+      add(new THREE.SphereGeometry(0.06, 12, 8), { color: 0x9e2228 }, { outline: 0.6 }, [0, -0.22, 0], [0, 0, 0], pv);
+      return pv;
+    });
+    return { root, squash, body, spikes, feet, arms };
+  });
+}
+
+function buildCat(THREE, add) {
+  const C = {};
+  const fur = { color: COL.fur, rim: 0.9, spec: 0.2, toneBias: 0.12, hatchMode: 'v', shadeColor: 0x9aa6e0, shadeMix: 0.25 };
+  C.root = new THREE.Group(); T.scene.add(C.root);
+  C.pose = new THREE.Group(); C.root.add(C.pose);            // squash / stretch / lean about the feet
+  C.body = add(new THREE.SphereGeometry(0.62, 40, 28), { ...fur, seed: 91 }, { outline: 1.05 }, [0, 0.62, 0], [0, 0, 0], C.pose);
+  C.body.scale.set(1.0, 0.98, 0.9);
+  C.chest = add(new THREE.SphereGeometry(0.36, 28, 20), { ...fur, seed: 92 }, { outline: 0.8 }, [0, 0.82, 0.38], [0, 0, 0], C.pose);
+  C.haunch = [-1, 1].map((s) => add(new THREE.SphereGeometry(0.3, 24, 16), { ...fur, seed: 93 + s }, { outline: 0.9 }, [s * 0.44, 0.27, 0.05], [0, 0, 0], C.pose));
+  C.feet = [-1, 1].map((s) => { const f = add(new THREE.SphereGeometry(0.16, 18, 12), { ...fur, seed: 95 + s }, { outline: 0.8 }, [s * 0.24, 0.1, 0.52], [0, 0, 0], C.pose); f.scale.set(1, 0.75, 1.25); return f; });
+  // head
+  C.head = new THREE.Group(); C.head.position.set(0, 1.5, 0.08); C.pose.add(C.head);
+  C.skull = add(new THREE.SphereGeometry(0.58, 44, 30), { ...fur, map: T.catFace.open, seed: 97 }, { outline: 1.05 }, [0, 0, 0], [0, 0, 0], C.head);
+  C.skull.scale.set(1.14, 0.94, 1.0);
+  C.cheeks = [-1, 1].map((s) => add(new THREE.SphereGeometry(0.25, 20, 14), { ...fur, seed: 98 + s }, { outline: 0.0 }, [s * 0.44, -0.18, 0.18], [0, 0, 0], C.head));
+  C.ears = [-1, 1].map((s) => {
+    const e = new THREE.Group(); e.position.set(s * 0.36, 0.4, -0.02); e.rotation.z = -s * 0.32; C.head.add(e);
+    const outer = add(new THREE.ConeGeometry(0.24, 0.46, 16), { ...fur, seed: 101 + s }, { outline: 0.9 }, [0, 0.2, 0], [0, 0, 0], e); outer.scale.z = 0.6;
+    const inner = add(new THREE.ConeGeometry(0.15, 0.32, 12), { color: COL.pink, rim: 0.3, toneBias: 0.1 }, { outline: 0 }, [0, 0.16, 0.07], [0, 0, 0], e); inner.scale.z = 0.4;
+    return e;
+  });
+  // red beret: a soft disc tilted over one ear, with a stalk
+  C.beret = new THREE.Group(); C.beret.position.set(0.08, 0.5, -0.04); C.beret.rotation.set(-0.15, 0, -0.38); C.head.add(C.beret);
+  const bt = add(new THREE.SphereGeometry(0.5, 36, 18), { color: COL.beret, rim: 0.8, spec: 0.3, shadeColor: 0x7a1830, shadeMix: 0.4, seed: 110 }, { outline: 1.0 }, [0, 0, 0], [0, 0, 0], C.beret);
+  bt.scale.set(1.0, 0.42, 0.95);
+  add(new THREE.CylinderGeometry(0.05, 0.07, 0.2, 10), { color: COL.beret }, { outline: 0.7 }, [0.02, 0.26, 0], [0, 0, 0.3], C.beret);
+  add(new THREE.TorusGeometry(0.42, 0.05, 10, 40), { color: 0xb02030, rim: 0.4 }, { outline: 0.5 }, [0, -0.07, 0], [Math.PI / 2, 0, 0], C.beret);
+  // tail: two segments on pivots (base sway + tip flick)
+  const tailGeo = new THREE.CapsuleGeometry(0.11, 0.62, 6, 12); tailGeo.translate(0, 0.31, 0);
+  C.tail0 = new THREE.Group(); C.tail0.position.set(0.1, 0.35, -0.5); C.pose.add(C.tail0);
+  add(tailGeo, { ...fur, seed: 112 }, { outline: 0.85 }, [0, 0, 0], [0, 0, 0], C.tail0);
+  C.tail1 = new THREE.Group(); C.tail1.position.set(0, 0.66, 0); C.tail0.add(C.tail1);
+  add(tailGeo, { ...fur, seed: 113 }, { outline: 0.85 }, [0, 0, 0], [0, 0, 0], C.tail1);
+  // the big paintbrush (local +y = bristle end); grip at the origin
+  C.brush = new THREE.Group(); C.pose.add(C.brush);
+  add(new THREE.CylinderGeometry(0.055, 0.075, 1.15, 16), { color: COL.wood, hatchMode: 'u', rim: 0.6, seed: 120 }, { outline: 0.8 }, [0, 0.0, 0], [0, 0, 0], C.brush);
+  add(new THREE.CylinderGeometry(0.095, 0.08, 0.26, 18), { color: COL.ferrule, spec: 1, rim: 0.7, seed: 121 }, { outline: 0.75 }, [0, 0.68, 0], [0, 0, 0], C.brush);
+  const brGeo = new THREE.SphereGeometry(0.13, 20, 14); brGeo.scale(1, 2.0, 1); brGeo.translate(0, 0.95, 0);
+  add(brGeo, { color: COL.bristle, rim: 0.6, seed: 122 }, { outline: 0.75 }, [0, 0, 0], [0, 0, 0], C.brush);
+  const tipGeo = new THREE.ConeGeometry(0.115, 0.3, 16); tipGeo.rotateX(0); tipGeo.translate(0, 1.18, 0);
+  add(tipGeo, { color: COL.paintGold, toneBias: 0.15, spec: 1, rim: 0.6, glow: 0.15, seed: 123 }, { outline: 0.75 }, [0, 0, 0], [0, 0, 0], C.brush);
+  C.tip = new THREE.Object3D(); C.tip.position.set(0, 1.33, 0); C.brush.add(C.tip);
+  C.paw = add(new THREE.SphereGeometry(0.15, 16, 12), { ...fur, seed: 124 }, { outline: 0.8 }, [0, -0.05, 0.08], [0, 0, 0], C.brush);
+  C.paw.scale.setScalar(1 / 1.5);
+  C.brush.scale.setScalar(1.5);           // a BIG brush: as long as the cat is tall
+  T.cat = C;
+}
+
+// ---- the gold stroke: a flat ribbon of paint along STROKE_PTS, grown with drawRange ----
+const RIB_N = 180, RIB_SEG = 10;
+function ribbonWidth(s) { return 0.36 * (0.25 + 0.75 * Math.pow(Math.sin(Math.PI * clamp(s * 0.94 + 0.03)), 0.55)) * (1 + 0.08 * Math.sin(s * 37)); }
+function buildRibbon(THREE, add) {
+  const curve = new THREE.CatmullRomCurve3(STROKE_PTS.map((p) => new THREE.Vector3(...p)), false, 'centripetal');
+  T.curve = curve;
+  const pos = new Float32Array(RIB_N * RIB_SEG * 3), uv = new Float32Array(RIB_N * RIB_SEG * 2);
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < RIB_N; i++) {
+    const s = i / (RIB_N - 1);
+    const p = curve.getPointAt(s), tg = curve.getTangentAt(s);
+    let w = new THREE.Vector3().crossVectors(tg, up).normalize();
+    const tw = 0.55 * Math.sin(TAU * s * 0.9 + 0.4);              // the ribbon twists as the brush turns
+    w.applyAxisAngle(tg, tw);
+    const n = new THREE.Vector3().crossVectors(w, tg).normalize();
+    const hw = ribbonWidth(s), ht = 0.07;
+    for (let j = 0; j < RIB_SEG; j++) {
+      const a = (j / RIB_SEG) * TAU;
+      const q = p.clone().addScaledVector(w, Math.cos(a) * hw).addScaledVector(n, Math.sin(a) * ht);
+      const k = i * RIB_SEG + j;
+      pos[k * 3] = q.x; pos[k * 3 + 1] = q.y; pos[k * 3 + 2] = q.z;
+      uv[k * 2] = s; uv[k * 2 + 1] = j / RIB_SEG;
+    }
+  }
+  const idx = [];
+  for (let i = 0; i < RIB_N - 1; i++) for (let j = 0; j < RIB_SEG; j++) {
+    const a = i * RIB_SEG + j, b = i * RIB_SEG + (j + 1) % RIB_SEG, c = a + RIB_SEG, d = b + RIB_SEG;
+    idx.push(a, c, b, b, c, d);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const tex = canvasTex(THREE, paintRibbon());
+  T.ribbon = add(geo, { color: COL.paintGold, map: tex, mapMix: 0.8, toneBias: 0.18, rim: 0.7, spec: 1, glow: 0.12, halftone: 0.7, seed: 130 }, { outline: 0.9, cast: true });
+  T.ribbon.frustumCulled = false;
+  T.ribbon.children.forEach((h) => (h.frustumCulled = false));
+  T.ribbonGeo = geo;
+  // where along the stroke each gremlin is hit (closest approach), and the frame it happens
+  T.hitS = GREM.map((G) => {
+    const q = QUBITS[G.q], tgt = new THREE.Vector3(q.x, G_SIT + G_BODY, q.z);
+    let best = 0, bd = 1e9;
+    for (let k = 0; k <= 400; k++) { const s = k / 400, d = curve.getPointAt(s).distanceTo(tgt); if (d < bd) { bd = d; best = s; } }
+    return best;
+  });
+  K.hits = T.hitS.map((s) => { for (let F = K.stroke[0]; F <= K.stroke[1]; F += 0.25) if (strokeP(F) >= s) return F; return K.stroke[1]; });
+}
+// brush progress along the stroke (0..1)
+function strokeP(F) { return ease.inOutSine(clamp((F - K.stroke[0]) / (K.stroke[1] - K.stroke[0]))); }
+
+// =====================================================================================================
+// camera: shot rigs (closed form), whips = pans/tilts through a cut under the smear
+// =====================================================================================================
+function orbitPos(tg, r, az, el) { const ce = Math.cos(el); return [tg[0] + r * ce * Math.sin(az), tg[1] + r * Math.sin(el), tg[2] + r * ce * Math.cos(az)]; }
+function rigP1(F) {
+  const push = ob((F - 8) / 4) * 0.6;
+  const w = clamp((F - K.whip1[0]) / (K.whip1[1] - K.whip1[0]));
+  return { pos: [0, 0, PNL.z + PNL.D - push], target: [0, 0, PNL.z], roll: 0, fov: 30, yaw: -0.9 * w * w * w * w, pitch: 0 };
+}
+function rigB2(F) {
+  const k = sm((F - 18) / 40);
+  const tg = [0, lerp(0.95, 0.85, k), lerp(-0.35, -0.2, k)];
+  const settle = F > K.whip1[1] ? 0.9 * (1 - oc((F - K.whip1[1]) / 5)) - bumpv(F - K.whip1[1] - 5, 0.05, 0.8, 0.25) : 0.9;
+  return { pos: orbitPos(tg, lerp(10.4, 8.6, k), lerp(0.62, 0.46, k), lerp(0.36, 0.33, k)), target: tg, roll: lerp(0.14, 0.09, k), fov: 30,
+    yaw: settle + 0.9 * ic((F - K.whip2[0]) / (K.whip2[1] - K.whip2[0])), pitch: 0 };
+}
+function rigP3(F) {
+  const z = ob((F - K.zoom[0]) / (K.zoom[1] - K.zoom[0]));
+  let d = lerp(PNL.D, 12.2, z), tx = lerp(0, 0.1, z), ty = lerp(0, 1.55, z);     // <= ~1.6x of the photo: stays sharp
+  const b = ioc((F - K.back[0]) / (K.back[1] - K.back[0]));
+  d = lerp(d, 12.4, b); tx = lerp(tx, -0.75, b); ty = lerp(ty, 1.05, b);
+  d -= 0.7 * sm((F - 74) / 14);
+  const roll = lerp(0, -0.06, b);
+  const yaw = F < K.whip2[1] ? -0.9 : -0.9 * (1 - oc((F - K.whip2[1]) / 4));
+  const pitch = 0.85 * ic((F - K.whip3[0]) / (K.whip3[1] - K.whip3[0]));
+  return { pos: [tx, ty, PNL.z + d], target: [tx, ty, PNL.z], roll, fov: 30, yaw, pitch };
+}
+function rigB4(F) {
+  const p = strokeP(F);
+  const c = T.curve.getPointAt(clamp(p)), cp = [c.x, c.y, c.z];
+  // follow the brush (the camera swings round with it); before the stroke, look at where it starts
+  const fk = sm((F - K.fall[0]) / 8);
+  const ft = [lerp(-1.6, cp[0] * 0.62, fk), lerp(2.1, 1.25 + 0.35 * cp[1], fk), lerp(0.1, -0.1, fk)];
+  const follow = { tg: ft, r: lerp(9.0, 8.4, sm((F - 95) / 20)), az: lerp(-0.16, 0.24, p), el: lerp(0.36, 0.3, p), roll: lerp(-0.08, 0.08, p) };
+  const hero = { tg: [0, 1.95, 0.35], r: lerp(11.4, 10.6, sm((F - 140) / 33)), az: 0.3, el: 0.28, roll: lerp(0.03, -0.02, sm((F - 140) / 30)) };
+  const m = ioc((F - 122) / 18);
+  const tg = follow.tg.map((v, i) => lerp(v, hero.tg[i], m));
+  const r = lerp(follow.r, hero.r, m), az = lerp(follow.az, hero.az, m), el = lerp(follow.el, hero.el, m), roll = lerp(follow.roll, hero.roll, m);
+  const pitch = F < K.whip3[1] ? 0.85 : 0.85 * (1 - oc((F - K.whip3[1]) / 5)) - bumpv(F - K.whip3[1] - 5, 0.04, 0.8, 0.25);
+  return { pos: orbitPos(tg, r, az, el), target: tg, roll, fov: 30, yaw: 0, pitch };
+}
+function shotOf(F) { return F < K.whip1[1] ? 'P1' : F < K.whip2[1] ? 'B2' : F < K.whip3[1] ? 'P3' : 'B4'; }
+function rigAt(shot, F) { return shot === 'P1' ? rigP1(F) : shot === 'B2' ? rigB2(F) : shot === 'P3' ? rigP3(F) : rigB4(F); }
+function viewDir(R) {
+  const THREE = T.THREE;
+  const p = new THREE.Vector3(...R.pos), d = new THREE.Vector3(...R.target).sub(p);
+  if (R.yaw) d.applyAxisAngle(new THREE.Vector3(0, 1, 0), R.yaw);
+  if (R.pitch) { const right = d.clone().cross(new THREE.Vector3(0, 1, 0)).normalize(); d.applyAxisAngle(right, R.pitch); }
+  return { p, d: d.normalize() };
+}
+function applyCam(cam, R, hand) {
+  const { p, d } = viewDir(R);
+  if (hand) p.add(V(...hand.pos));
+  cam.position.copy(p); cam.up.set(0, 1, 0); cam.lookAt(p.clone().add(d));
+  if (hand) { cam.rotateX(hand.rot[0]); cam.rotateY(hand.rot[1]); }
+  cam.rotateZ((R.roll || 0) + (hand ? hand.rot[2] : 0));
+  cam.fov = R.fov; cam.aspect = 1; cam.updateProjectionMatrix(); cam.updateMatrixWorld(true);
+}
+function camShake(F) {
+  let s = [0, 0, 0];
+  const hit = (f0, amp, dec = 5) => {
+    const a = F - f0; if (a < 0 || a > 24) return;
+    const k = amp * Math.exp(-a / dec), Fb = twos(F);
+    s[0] += (hsh(Fb, 1.3, f0) * 2 - 1) * k; s[1] += (hsh(Fb, 2.7, f0) * 2 - 1) * k; s[2] += (hsh(Fb, 5.1, f0) * 2 - 1) * k * 0.6;
+  };
+  K.hop.forEach(([, l]) => hit(l, 0.012, 4));
+  hit(K.bzzt, 0.02, 6);
+  if (F > 36 && F < 56) { const Fb = twos(F); s[0] += (hsh(Fb, 7.1) - 0.5) * 0.008; s[1] += (hsh(Fb, 8.3) - 0.5) * 0.008; }   // the noise rattles the bench
+  hit(K.catUp[1], 0.012, 4);
+  (K.hits || []).forEach((h, i) => hit(Math.ceil(h), i === 1 ? 0.028 : 0.014, 5));
+  hit(K.land, 0.014, 4);
+  return s;
+}
+function updateCamera(ctx, F) {
+  const cam = T.camera, shot = shotOf(F);
+  const R = rigAt(shot, F);
+  const amp = shot[0] === 'B' ? 0.035 : 0.02;
+  const hand = handheld(ctx.t, { amp, rot: 0.003, speed: 4, seed: 5 });
+  const sh = camShake(F);
+  hand.rot = [hand.rot[0] + sh[0], hand.rot[1] + sh[1], hand.rot[2] + sh[2]];
+  applyCam(cam, R, hand);
+  ctx.camera = cam;
+  st.shot = shot;
+  // smear: screen motion of the view direction over one frame (same shot rig, no cut inside)
+  const a = viewDir(rigAt(shot, F - 0.5)), b = viewDir(rigAt(shot, F + 0.5));
+  const tmp = cam.clone(); tmp.position.copy(a.p); tmp.up.set(0, 1, 0); tmp.lookAt(a.p.clone().add(a.d)); tmp.rotateZ(R.roll || 0); tmp.updateMatrixWorld(true);
+  const q = ctx.project(a.p.clone().addScaledVector(b.d, 50), tmp);
+  let sx = -(q.x - DES / 2), sy = -(q.y - DES / 2);
+  const mag = Math.hypot(sx, sy), cap = 110;
+  if (mag > cap) { sx *= cap / mag; sy *= cap / mag; }
+  const inWhip = [K.whip1, K.whip2, K.whip3].some((w) => F > w[0] && F < w[2]);
+  st.smear = inWhip && mag > 20 ? [sx, sy] : [0, 0];
+  if (!inWhip) st.smearMag = 0;
+  st.smearMag = Math.min(mag, 400);
+  // the panel planes only exist for the panel shots (keeps the bench shots' depth buffer clean)
+  const onPanel = shot[0] === 'P';
+  T.sky.visible = T.palm.visible = T.person.visible = onPanel;
+}
+
+// =====================================================================================================
+// characters
+// =====================================================================================================
+// ---- the stroke ----
+function updateStroke(F) {
+  const p = strokeP(F);
+  const on = F >= K.stroke[0] && F < 140 && st.shot === 'B4';
+  T.ribbon.visible = on && p > 0.003;
+  st.strokeP = p;
+  if (!T.ribbon.visible) return;
+  const n = Math.max(2, Math.min(RIB_N, Math.round(p * (RIB_N - 1)) + 1));
+  T.ribbonGeo.setDrawRange(0, (n - 1) * RIB_SEG * 6);
+  // after the stroke the paint soaks into the chip: the ribbon thins and sinks (126-138)
+  const soak = sm((F - 126) / 12);
+  T.ribbon.scale.set(1, 1 - 0.85 * soak, 1);
+  T.ribbon.position.set(0, -0.35 * soak, 0);
+  T.ribbon.visible = soak < 0.97;
+}
+
+// ---- cat ----
+const CAT_PANEL_S = 1.0, CAT_CHIP_S = 0.72;
+function brushPose(name) {
+  // grip position (cat local) + Euler of the brush axis
+  return {
+    shoulder: { p: [-0.6, 0.74, 0.34], r: [0.22, 0, 0.5] },        // bristles up, out past its right ear
+    paint: { p: [-0.36, 0.66, 0.6], r: [1.72, 0, 0.12] },          // bristles forward, a little down
+    raised: { p: [-0.62, 1.2, 0.3], r: [-0.1, 0, 0.16] },          // held high like a flag
+    ready: { p: [-0.56, 0.72, 0.5], r: [1.15, 0, 0.45] },
+  }[name];
+}
+function mixPose(a, b, k) { return { p: a.p.map((v, i) => lerp(v, b.p[i], k)), r: a.r.map((v, i) => lerp(v, b.r[i], k)) }; }
+
+function catState(F) {
+  const s = { vis: false, where: 'chip', pos: [0, 0, 0], scale: 1, yaw: 0, lean: 0, sq: 0, chest: 1, expr: 'open', bp: brushPose('shoulder'),
+    tail: 0.2 * Math.sin(TAU * F / 30), tailTip: 0.35 * Math.sin(TAU * F / 30 - 1.2), headTilt: 0, headYaw: 0, earT: 0 };
+  const Fc = twos(F);
+  if (F >= K.catUp[0] && F < K.whip3[1]) {               // ---- on her panel ----
+    s.vis = true; s.where = 'panel'; s.scale = CAT_PANEL_S;
+    const foot = SHOULDER;
+    if (F < K.catUp[1]) {   // leap up from below the frame
+      const p = (F - K.catUp[0]) / (K.catUp[1] - K.catUp[0]);
+      const y = p < 0.72 ? lerp(foot[1] - 5.6, foot[1] + 0.95, oc(p / 0.72)) : lerp(foot[1] + 0.95, foot[1], ic((p - 0.72) / 0.28));
+      s.pos = [lerp(foot[0] + 0.5, foot[0], sm(p)), y, foot[2]];
+      s.sq = p < 0.72 ? -0.22 * arcP(p / 0.72) : 0.05;      // stretched in flight
+      s.expr = 'determined'; s.bp = brushPose('shoulder'); s.lean = -0.1 * arcP(p);
+      s.tail = 0.9 * arcP(p);
+    } else {
+      s.pos = [...foot];
+      const a = Fc - K.catUp[1];
+      s.sq = ringv(a, 0.26, 0.85, 0.22);                    // squash on landing, wobble
+      s.expr = a < 2 ? 'determined' : a < 7 ? 'happy' : 'open';
+      s.headYaw = a >= 3 && a < 8 ? 0.45 : 0;                 // a glance up at her
+      s.headTilt = a >= 3 && a < 8 ? -0.22 : 0.06 * Math.sin(TAU * F / 24);
+      if (Fc >= 80 && Fc < 84) { s.expr = 'wink'; s.headTilt = 0.18; }
+      if (F >= K.catOff[0]) {
+        const c = sm((F - K.catOff[0]) / 2);
+        s.sq = 0.2 * c; s.expr = 'determined'; s.bp = mixPose(brushPose('shoulder'), brushPose('ready'), c);
+        if (F >= K.catOff[1]) {   // leap off, up out of the frame (the camera tilts up with it)
+          const p = (F - K.catOff[1]) / 3;
+          s.pos = [foot[0] + 0.6 * p, foot[1] + 5.2 * ic(p) + 1.2 * p, foot[2]];
+          s.sq = -0.25; s.bp = brushPose('ready');
+        }
+      }
+    }
+    return s;
+  }
+  if (F >= K.whip3[1]) {                                   // ---- on the bench ----
+    s.vis = true; s.where = 'chip'; s.scale = CAT_CHIP_S;
+    const P = (q) => { const v = T.curve.getPointAt(clamp(q)); return [v.x, v.y, v.z]; };
+    const tan = (q) => { const v = T.curve.getTangentAt(clamp(q)); return [v.x, v.y, v.z]; };
+    if (F < K.stroke[0]) {                                  // fall in from above to the start of the stroke
+      const p = (F - K.fall[0]) / (K.fall[1] - K.fall[0]);
+      const st0 = P(0);
+      s.tipTarget = [st0[0] - 0.5 * (1 - p), st0[1] + 2.6 * (1 - oc(p)), st0[2]];
+      s.bp = mixPose(brushPose('ready'), brushPose('paint'), sm(p * 1.4)); s.expr = 'determined'; s.sq = -0.18 * (1 - p);
+      s.yaw = Math.atan2(tan(0)[0], tan(0)[2]) - 0.6; s.lean = 0.25;
+      s.tail = 1.1;
+    } else if (F < K.stroke[1]) {                           // paint the stroke
+      const q = strokeP(F), t = tan(q);
+      s.tipTarget = P(q);
+      s.bp = brushPose('paint');
+      s.yaw = Math.atan2(t[0], t[2]) - 0.55;               // body turned three-quarters to camera
+      s.lean = 0.35 + 0.2 * Math.sin(F * 0.5);
+      s.sq = -0.08;
+      s.expr = 'determined';
+      (K.hits || []).forEach((h) => { if (F >= h && F < h + 4) { s.expr = 'happy'; s.sq = 0.12; } });
+      s.tail = 1.2 + 0.3 * Math.sin(F * 0.7); s.tailTip = 0.6 * Math.sin(F * 0.9);
+    } else if (F < K.land) {                                // flourish out, swing round, drop onto the chip
+      const p = (F - K.stroke[1]) / (K.land - K.stroke[1]);
+      s.scale = lerp(CAT_CHIP_S, 0.95, sm((p - 0.4) / 0.2));
+      const end = P(1), landP = [0.05, CHIP_TOP, 1.38];
+      const a = oc(p / 0.45), b = ic((p - 0.45) / 0.55);
+      const up = [lerp(end[0], 1.2, a), end[1] + 1.1 * a, end[2] + 0.4 * a];
+      const apex = [0.5, 3.0, 1.1];
+      s.pos = p < 0.45 ? up : [lerp(lerp(up[0], apex[0], sm((p - 0.45) / 0.25)), landP[0], b), lerp(lerp(up[1], apex[1], sm((p - 0.45) / 0.25)), landP[1], b), lerp(lerp(up[2], apex[2], sm((p - 0.45) / 0.25)), landP[2], b)];
+      s.spin = p < 0.6 ? TAU * ioc(p / 0.6) : 0;           // a flip in the air
+      s.bp = mixPose(brushPose('paint'), brushPose('shoulder'), sm(p * 2));
+      s.sq = p > 0.85 ? -0.15 : -0.1; s.expr = p < 0.5 ? 'happy' : 'determined'; s.yaw = 0.3;
+      s.tail = 1.0;
+    } else {                                                // proud pose on the chip
+      const a = Fc - K.land;
+      s.scale = 0.95;
+      s.pos = [0.05, CHIP_TOP, 1.38];
+      s.yaw = 0.3;
+      s.sq = ringv(a, 0.28, 0.85, 0.22);
+      const puff = sm((F - K.puff[0]) / 6) * (1 - 0.25 * sm((F - 168) / 5));
+      s.chest = 1 + 0.55 * puff + 0.04 * Math.sin(F * 0.6) * puff;
+      s.lean = -0.16 * puff;
+      s.headTilt = -0.12 * puff;
+      s.expr = a < 3 ? 'determined' : F < K.puff[0] ? 'happy' : 'proud';
+      if (Fc >= 164 && Fc < 170) s.expr = 'wink';
+      s.bp = mixPose(brushPose('shoulder'), brushPose('raised'), ob((F - K.puff[0] - 1) / 6));
+      s.tail = 0.35 * Math.sin(TAU * F / 18); s.tailTip = 0.5 * Math.sin(TAU * F / 18 - 1);
+      s.earT = Fc >= 156 && Fc < 160 ? 1 : 0;
+    }
+  }
+  return s;
+}
+function updateCat(F) {
+  const s = catState(F), C = T.cat;
+  st.cat = s;
+  C.root.visible = s.vis;
+  if (!s.vis) return;
+  C.root.scale.setScalar(s.scale);
+  C.root.rotation.set(0, s.yaw, 0);
+  C.pose.scale.set(1 + s.sq * 0.6, 1 - s.sq, 1 + s.sq * 0.6);
+  C.pose.rotation.set(s.lean, s.spin || 0, 0);
+  C.chest.scale.setScalar(s.chest); C.chest.position.set(0, 0.82 + 0.06 * (s.chest - 1), 0.38 + 0.12 * (s.chest - 1));
+  C.head.rotation.set(s.headTilt * 0.5, s.headYaw, s.headTilt);
+  C.ears.forEach((e, i) => { e.rotation.z = -(i ? 1 : -1) * 0.32 + (i && s.earT ? -0.35 : 0); });
+  C.tail0.rotation.set(-0.5 - 0.3 * s.tail, 0, 0.25 + s.tail * 0.5); C.tail1.rotation.set(0.2, 0, 0.6 + s.tailTip);
+  C.brush.position.set(...s.bp.p); C.brush.rotation.set(...s.bp.r);
+  C.skull.material.uniforms.uMap.value = T.catFace[s.expr] || T.catFace.open;
+  // place: either the feet at pos, or (while painting) the brush tip on the stroke
+  if (s.tipTarget) {
+    C.root.position.set(0, 0, 0); C.root.updateMatrixWorld(true);
+    const tip = C.tip.getWorldPosition(new T.THREE.Vector3());
+    C.root.position.set(s.tipTarget[0] - tip.x, s.tipTarget[1] - tip.y, s.tipTarget[2] - tip.z);
+  } else C.root.position.set(...s.pos);
+  // face the camera on the panel
+  if (s.where === 'panel') C.root.rotation.y = 0.12;
+  C.root.updateMatrixWorld(true);
+  st.catTip = C.tip.getWorldPosition(new T.THREE.Vector3());
+  st.catHead = C.skull.getWorldPosition(new T.THREE.Vector3());
+}
+
+// ---- gremlins ----
+function gremState(i, F) {
+  const G = GREM[i], q = QUBITS[G.q], Fc = twos(F);
+  const s = { vis: false, pos: [0, 0, 0], sq: 0, yaw: 0, expr: 'angry', splat: 0, gone: false, arm: 0.3, jit: 0 };
+  const pop = K.pop[i], edge = K.edge[i], [h0, h1] = K.hop[i];
+  if (F < pop - 3 || st.shot !== 'B2' && st.shot !== 'B4') return s;
+  s.vis = true;
+  const edgeP = [G.popX, CHIP_TOP, -CHIP.w / 2 + 0.32], qP = [q.x, G_SIT, q.z];
+  if (F < pop) {                                  // peek: rise out of the gap behind the chip
+    const k = (F - pop + 3) / 3;
+    s.pos = [G.popX, lerp(-0.7, -0.25, sm(k)), -CHIP.w / 2 - 0.25]; s.expr = 'angry'; s.sq = 0.15;
+  } else if (F < edge) {                          // jump up over the edge (stretch), land on the rim
+    const p = (F - pop) / (edge - pop);
+    s.pos = [G.popX, lerp(-0.25, edgeP[1], sm(p)) + 0.9 * arcP(p), lerp(-CHIP.w / 2 - 0.25, edgeP[2], sm(p))];
+    s.sq = -0.28 * arcP(p * 1.3); s.expr = 'grin'; s.arm = 2.4 * arcP(p);
+  } else if (F < h0) {
+    s.pos = edgeP; s.sq = ringv(F - edge, 0.3, 1.0, 0.25); s.expr = 'angry'; s.arm = 0.5;
+  } else if (F < h1) {                            // hop onto its qubit
+    const p = (F - h0) / (h1 - h0);
+    s.pos = [lerp(edgeP[0], qP[0], sm(p)), lerp(edgeP[1], qP[1], sm(p)) + 0.75 * arcP(p), lerp(edgeP[2], qP[2], sm(p))];
+    s.sq = p < 0.15 ? 0.2 : -0.22 * arcP(p); s.expr = 'grin'; s.arm = 2.2 * arcP(p);
+  } else {                                        // bounce on the qubit, rattling it
+    const a = F - h1, per = 7 + i;
+    const ph = ((a + i * 3) % per) / per;
+    s.pos = [qP[0], qP[1] + 0.16 * arcP(ph / 0.6) * (ph < 0.6 ? 1 : 0), qP[2]];
+    s.sq = a < 6 ? ringv(a, 0.28, 1.0, 0.25) : (ph < 0.6 ? -0.12 * arcP(ph / 0.6) : 0.16 * arcP((ph - 0.6) / 0.4));
+    s.expr = ((twos(a) >> 3) + i) % 2 ? 'grin' : 'angry';
+    s.arm = 1.4 + 0.8 * Math.sin(F * 0.9 + i);
+    if (i === 1 && Fc >= 42 && Fc < 52) { s.expr = 'tongue'; s.arm = 2.6; }
+    s.jit = 1;
+  }
+  // the cat arrives: everyone looks up in shock
+  if (F >= K.fall[0] + 3 && st.shot === 'B4') { s.expr = 'shock'; s.sq = 0.08 * Math.sin(F * 1.3); s.arm = 2.8; }
+  const hit = K.hits ? K.hits[i] : 999;
+  if (F >= hit) {                                  // SPLAT: squash into a paint blob, then vanish
+    const a = F - hit;
+    s.splat = clamp(a / 2);
+    s.shrink = sm((a - 4) / 6);
+    s.gone = a >= 10;
+    s.expr = 'shock';
+  }
+  // face the camera
+  const cam = T.camera.position;
+  s.yaw = Math.atan2(cam.x - s.pos[0], cam.z - s.pos[2]) * 0.85;
+  return s;
+}
+function updateGremlins(F) {
+  st.grems = T.grems.map((g, i) => {
+    const s = gremState(i, F);
+    g.root.visible = s.vis && !s.gone;
+    if (!g.root.visible) return s;
+    g.root.position.set(...s.pos);
+    g.root.rotation.set(0, s.yaw, 0);
+    let sy = 1 - s.sq, sxz = 1 + s.sq * 0.6;
+    if (s.splat > 0) { sy = lerp(sy, 0.16, s.splat); sxz = lerp(sxz, 1.9, s.splat); const k = 1 - s.shrink; sy *= k; sxz *= Math.max(0.001, k); }
+    g.squash.scale.set(sxz, Math.max(0.001, sy), sxz);
+    g.feet.forEach((f) => (f.visible = s.splat === 0));
+    g.arms.forEach((a, k) => { a.rotation.set(0, 0, (k ? 1 : -1) * (0.4 + s.arm)); a.visible = s.splat === 0; });
+    const vb = Math.floor(F / 2) % 2;
+    g.body.material.uniforms.uMap.value = T.gremFace[s.expr][vb];
+    // painted over: the red paint turns gold as it is splatted
+    g.body.material.uniforms.uMapMix.value = 1 - s.splat;
+    g.body.material.uniforms.uAlbedo.value.set(...(s.splat > 0 ? [1.0, 0.8, 0.25] : [1, 1, 1]));
+    const bs = ((Math.floor(F / 2) % 3) + i * 7);
+    g.spikes.forEach((sp, k) => {
+      const j = s.jit ? 0.35 * (hsh(bs, k, 3) - 0.5) : 0;
+      sp.quaternion.copy(sp.userData.base);
+      sp.rotateZ(j); sp.rotateX(s.jit ? 0.3 * (hsh(bs, k, 5) - 0.5) : 0);
+      const sc = (s.splat > 0 ? 1 - s.splat : 1) * (1 + (s.jit ? 0.25 * (hsh(bs, k, 9) - 0.5) : 0));
+      sp.scale.setScalar(Math.max(0.001, sc));
+    });
+    g.root.updateMatrixWorld(true);
+    return s;
+  });
+}
+
+// ---- chip: qubit noise, snap back, couplers lighting ----
+function qubitState(k, F) {
+  const s = { noise: 0, snap: -1, clean: false };
+  GREM.forEach((G, i) => {
+    if (G.q !== k) return;
+    const on = K.hop[i][1], hit = K.hits ? K.hits[i] : 999;
+    if (F >= on && F < hit + 2) s.noise = clamp((F - on) / 2);
+    if (F >= hit + 2) { s.snap = F - hit - 2; s.clean = true; }
+  });
+  return s;
+}
+function couplerLit(ci) {   // frame at which coupler ci lights gold: a wave from each hit along the lattice
+  const cp = COUPLERS[ci];
+  let best = 999;
+  GREM.forEach((G, i) => {
+    const q = QUBITS[G.q], h = K.hits ? K.hits[i] : 999;
+    const d = Math.min(...[cp.a, cp.b].map((qq) => Math.abs(QUBITS[qq].r - q.r) + Math.abs(QUBITS[qq].c - q.c)));
+    best = Math.min(best, h + 2 + 3 * d);
+  });
+  return best;
+}
+function updateChip(F) {
+  const THREE = T.THREE;
+  st.q = QUBITS.map((q, k) => {
+    const s = qubitState(k, F), m = T.qubits[k], U = m.material.uniforms;
+    const bs = Math.floor(F / 2);
+    let col = new THREE.Color(COL.cyan), glow = 0.25, sc = 1, off = [0, 0, 0];
+    if (s.noise > 0) {
+      const fl = hsh(bs, k, 1);
+      col = new THREE.Color(fl > 0.3 ? COL.red : COL.noiseAlt).lerp(new THREE.Color(COL.cyan), 1 - s.noise);
+      glow = 0.25 + 0.3 * fl * s.noise;
+      off = [(hsh(bs, k, 2) - 0.5) * 0.07 * s.noise, (hsh(bs, k, 3) - 0.5) * 0.05 * s.noise, (hsh(bs, k, 4) - 0.5) * 0.07 * s.noise];
+      sc = 1 + 0.12 * (hsh(bs, k, 5) - 0.5) * s.noise;
+    }
+    if (s.snap >= 0) { sc = 1 + 0.35 * Math.exp(-s.snap / 3) * Math.cos(s.snap * 0.9); glow = 0.25 + 0.6 * Math.exp(-s.snap / 4); }
+    if (F >= K.land - 6) glow = 0.32 + 0.08 * Math.sin(F * 0.5 + k * 1.7);
+    U.uAlbedo.value.set(col.r, col.g, col.b); U.uGlow.value = glow;
+    m.position.set(QUBITS[k].x + off[0], QY + off[1], QUBITS[k].z + off[2]);
+    m.scale.setScalar(sc);
+    return { ...s, col, sc };
+  });
+  st.coup = COUPLERS.map((cp, i) => {
+    const m = T.couplers[i], U = m.material.uniforms;
+    const lit = couplerLit(i), a = F - lit;
+    const noisy = st.q[cp.a].noise > 0 || st.q[cp.b].noise > 0;
+    let col = new THREE.Color(COL.bronze), glow = 0, sc = 1;
+    if (noisy && hsh(Math.floor(F / 2), i) > 0.5) { col = new THREE.Color(0xc0302c); glow = 0.2; }
+    if (a >= 0) { col = new THREE.Color(COL.coupLit); glow = 0.35 + 0.4 * Math.exp(-a / 4); sc = 1 + 0.5 * Math.exp(-a / 3) * Math.cos(a * 0.8); }
+    U.uAlbedo.value.set(col.r, col.g, col.b); U.uGlow.value = glow;
+    m.scale.set(1, sc, sc);
+    return { lit, a };
+  });
+}
+
+// =====================================================================================================
+// npr per frame
+// =====================================================================================================
+function drawNPR(ctx) {
+  const { npr, camera } = T, F = ctx.iw, shot = st.shot;
+  npr.frame(ctx);
+  npr.setLook(LOOK);
+  npr.setSmear(st.smear[0], st.smear[1]);
+  if (shot[0] === 'P') {
+    // panel: key from the upper left (the dusk sun is behind her, so a warm rim on the cat)
+    const c = T.cat.root.visible ? T.cat.root.position : V(0, 0, PNL.z);
+    npr.setLight({ dir: [-0.45, 0.75, 0.6], target: [c.x, c.y + 1, PNL.z + 0.5], size: 3.2, dist: 14 });
+    npr.focusOn(camera, V(0, 1, PNL.z), 30);
+    // crash zoom: concentration lines on her face
+    const za = F - K.zoom[0];
+    if (shot === 'P3' && za >= 0 && za < 9) {
+      const c2 = ctx.project(V(0.12, 2.0, PNL.z), camera);
+      npr.focusLines({ x: c2.x, y: c2.y, r0: 300, amount: 0.85 * (1 - za / 9), count: 110, width: 1.6, seed: 2 });
+    }
+  } else {
+    npr.setLight({ dir: [-0.5, 0.82, 0.62], target: [0, 0.4, 0.2], size: 4.4, dist: 18 });
+    npr.focusOn(camera, V(0, 0.5, 0), 40);
+    // qubits glow: cyan halos (comic dots), red while noisy, a burst when they snap back clean
+    st.q.forEach((s, k) => {
+      const m = T.qubits[k];
+      const c = s.noise > 0 ? s.col.getHex() : COL.cyan;
+      const burst = s.snap >= 0 && s.snap < 8 ? 1 - s.snap / 8 : 0;
+      npr.glowAt(ctx, camera, m.position.clone(), { radius: 0.34 * (1 + 0.4 * burst), i: s.noise > 0 ? 0.55 : 0.42 + 0.4 * burst, color: c, behind: true, rays: burst, rayLen: 0.6, rayCount: 10, seed: k });
+    });
+    // painted spill: red from the noisy qubits, gold from the stroke
+    let pl = 0;
+    st.q.forEach((s, k) => { if (s.noise > 0 && pl < 3) { npr.pointLight(T.qubits[k].position.clone().setY(QY + 0.25), { color: 0xff4a3a, radius: 0.9, i: 0.6 * s.noise }); pl++; } });
+    if (T.ribbon.visible && st.strokeP > 0.02) npr.pointLight(st.catTip.clone(), { color: 0xffc93a, radius: 1.3, i: 0.55 });
+    else if (F >= 128) npr.pointLight(V(0, 0.9, 0.2), { color: 0xffd96a, radius: 2.4, i: 0.45 });
+    // brush tip glow while painting
+    if (T.ribbon.visible && F < K.stroke[1]) npr.glowAt(ctx, camera, st.catTip.clone(), { radius: 0.22, i: 0.8, color: 0xffd23f, behind: false, seed: 30 });
+    // SPLAT: concentration lines + one impact frame on the middle hit
+    if (K.hits) {
+      const h = Math.ceil(K.hits[1]), a = F - h;
+      if (a >= 0 && a < 12) {
+        const q = QUBITS[GREM[1].q], c = ctx.project(V(q.x, G_SIT + 0.2, q.z), camera);
+        npr.focusLines({ x: c.x, y: c.y, r0: 250, amount: 0.9 * (1 - a / 12), count: 100, width: 1.6, seed: 9 });
+        if (a === 0) npr.impact(0.85, { threshold: 0.5 });
+      }
+    }
+    // the cat lands on the chip: lines + sparkle
+    const la = F - K.land;
+    if (la >= 0 && la < 8) { const c = ctx.project(V(0.05, CHIP_TOP + 0.5, 1.38), camera); npr.focusLines({ x: c.x, y: c.y, r0: 260, amount: 0.6 * (1 - la / 8), count: 90, width: 1.4, seed: 4 }); }
+  }
+  npr.render(T.scene, camera);
+}
+
+// =====================================================================================================
+// 2D ink overlay (Canvas2D, design px): speed lines, sparks, glints, splatter, sparkles, puffs
+// =====================================================================================================
+function P2(ctx, v) { const vv = Array.isArray(v) ? V(...v) : v; const s = ctx.project(vv, T.camera); const vc = vv.clone().applyMatrix4(T.camera.matrixWorldInverse); return { x: s.x, y: s.y, front: vc.z < 0, d: -vc.z }; }
+function pxu(ctx, v) { const p = P2(ctx, v); return p.front ? (DES / 2) / (Math.tan(T.camera.fov * Math.PI / 360) * p.d) : 0; }
+function taper(g, pts, w0, w1, col) {
+  // filled tapered stroke through pts (design px)
+  if (pts.length < 2) return;
+  const L = [], R = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    const t = i / (pts.length - 1), w = lerp(w0, w1, t) / 2;
+    L.push([pts[i][0] - dy * w, pts[i][1] + dx * w]); R.push([pts[i][0] + dy * w, pts[i][1] - dx * w]);
+  }
+  g.beginPath(); L.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); for (let i = R.length - 1; i >= 0; i--) g.lineTo(R[i][0], R[i][1]); g.closePath();
+  g.fillStyle = col; g.fill();
+}
+function sparkle(g, x, y, r, rot, fill = PAL.goldL) {
+  if (r < 2) return;
+  star4Path(g, x + r * 0.08, y + r * 0.1, r, rot); g.fillStyle = PAL.ink; g.fill();
+  star4Path(g, x, y, r, rot); g.lineWidth = Math.max(3, r * 0.16); g.strokeStyle = PAL.ink; g.lineJoin = 'round'; g.stroke(); g.fillStyle = fill; g.fill();
+}
+function drop(g, x, y, r, col, dx = 0, dy = 0) {
+  // a paint drop with a motion tail, ink edge
+  g.lineCap = 'round';
+  if (Math.hypot(dx, dy) > 2) { g.beginPath(); g.moveTo(x - dx, y - dy); g.lineTo(x, y); g.lineWidth = r * 1.1 + 6; g.strokeStyle = PAL.ink; g.stroke(); g.lineWidth = r * 1.1; g.strokeStyle = col; g.stroke(); }
+  ellipse(g, x, y, r + 3.2, r + 3.2); g.fillStyle = PAL.ink; g.fill();
+  ellipse(g, x, y, r, r); g.fillStyle = col; g.fill();
+  ellipse(g, x - r * 0.3, y - r * 0.35, r * 0.28, r * 0.22); g.fillStyle = '#ffffffcc'; g.fill();
+}
+function puff(g, x, y, s, a) {
+  if (a <= 0 || s < 3) return;
+  g.globalAlpha = a; g.lineWidth = 5; g.strokeStyle = PAL.ink; g.fillStyle = PAL.cream;
+  for (let q = 0; q < 3; q++) { const cx = x + (q - 1) * s * 0.8, cy = y - (q === 1 ? s * 0.4 : 0); g.beginPath(); g.arc(cx, cy, s * 0.6, Math.PI, TAU); g.fill(); g.stroke(); }
+  g.globalAlpha = 1;
+}
+function zap(g, a, b, r, w, col) {
+  // jagged electric spark from a to b
+  const n = 6, pts = [];
+  for (let k = 0; k <= n; k++) { const t = k / n, j = k === 0 || k === n ? 0 : (r() - 0.5) * 34; const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; pts.push([a[0] + dx * t - dy / l * j, a[1] + dy * t + dx / l * j]); }
+  g.lineJoin = 'miter'; g.lineCap = 'round';
+  g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.lineWidth = w + 7; g.strokeStyle = PAL.ink; g.stroke();
+  g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.lineWidth = w; g.strokeStyle = col; g.stroke();
+}
+
+function inkOverlay(ctx, g) {
+  const F = ctx.iw, shot = st.shot, Fb = Math.floor(F / 2) % 3;
+  const r = ctx.boilRng('ink');
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  // ---- whip speed lines (ink + cream) across the frame, along the smear ----
+  const sm2 = st.smearMag;
+  if (sm2 > 40) {
+    const [sx, sy] = st.smear, l = Math.hypot(sx, sy) || 1, dx = sx / l, dy = sy / l, nx = -dy, ny = dx;
+    const k = clamp((sm2 - 40) / 160), rr = ctx.boilRng('whip');
+    for (let i = 0; i < 22; i++) {
+      const o = (rr() - 0.5) * 1100, along = (rr() - 0.5) * 900, len = (220 + rr() * 520) * k;
+      const cx = DES / 2 + nx * o + dx * along, cy = DES / 2 + ny * o + dy * along;
+      const w = 4 + rr() * 9;
+      taper(g, [[cx - dx * len / 2, cy - dy * len / 2], [cx, cy], [cx + dx * len / 2, cy + dy * len / 2]], 0.5, w, i % 3 ? PAL.ink : PAL.cream);
+    }
+  }
+  if (shot === 'P1' && F >= K.ring[1] && F < K.whip1[0] + 1) {}
+  // ---- bench: gremlin pops, sparks on noisy qubits ----
+  if (shot === 'B2' || shot === 'B4') {
+    st.grems.forEach((s, i) => {
+      if (!s.vis || s.gone) return;
+      const pa = F - K.pop[i];
+      if (pa >= 0 && pa < 6) { const p = P2(ctx, [GREM[i].popX, CHIP_TOP, -CHIP.w / 2 - 0.1]), u = pxu(ctx, [GREM[i].popX, CHIP_TOP, -CHIP.w / 2]); puff(g, p.x, p.y, 0.25 * u * (1 + pa * 0.15), 1 - pa / 6); }
+      const la = F - K.hop[i][1];
+      if (la >= 0 && la < 5) {   // impact ticks under the landing
+        const q = QUBITS[GREM[i].q], p = P2(ctx, [q.x, QY + QR, q.z]), u = pxu(ctx, [q.x, QY, q.z]);
+        for (let k = 0; k < 7; k++) { const an = -Math.PI * (0.05 + 0.9 * k / 6), r0 = 0.32 * u * (1 + la * 0.2), r1 = 0.55 * u * (1 + la * 0.12); taper(g, [[p.x + Math.cos(an) * r0, p.y + Math.sin(an) * r0], [p.x + Math.cos(an) * r1, p.y + Math.sin(an) * r1]], 7, 2, PAL.ink); }
+      }
+    });
+    // sparks: red/yellow zigzags jumping off noisy qubits (redrawn on twos)
+    st.q.forEach((s, k) => {
+      if (s.noise <= 0) return;
+      const q = QUBITS[k], c = P2(ctx, [q.x, QY, q.z]), u = pxu(ctx, [q.x, QY, q.z]);
+      const rr = ctx.boilRng('spark', k, Math.floor(F / 2));
+      for (let j = 0; j < 3; j++) {
+        const an = rr() * TAU, r0 = 0.3 * u, r1 = (0.6 + 0.4 * rr()) * u;
+        zap(g, [c.x + Math.cos(an) * r0, c.y + Math.sin(an) * r0 * 0.7], [c.x + Math.cos(an) * r1, c.y + Math.sin(an) * r1 * 0.7], rr, 6, j % 2 ? PAL.yellow : '#ff5a3c');
+      }
+    });
+  }
+  // ---- panel: glasses flash (two 4-point glints + a shine sweep across each lens) ----
+  if (shot === 'P3') {
+    const a = F - K.shing;
+    if (a >= -1 && a < 9) {
+      LENS.forEach((L, i) => {
+        const c = P2(ctx, [L[0], L[1], L[2] + 0.02]), u = pxu(ctx, [L[0], L[1], L[2]]);
+        const hw = 0.42 * u, hh = 0.2 * u;
+        // the sweep: a white diagonal band crossing the lens (clipped to the lens)
+        g.save(); ellipse(g, c.x, c.y, hw, hh); g.clip();
+        const sx = c.x + lerp(-hw * 1.6, hw * 1.6, clamp((a + 1) / 5));
+        g.beginPath(); g.moveTo(sx - hw * 0.25, c.y - hh * 1.2); g.lineTo(sx + hw * 0.15, c.y - hh * 1.2); g.lineTo(sx - hw * 0.15, c.y + hh * 1.2); g.lineTo(sx - hw * 0.55, c.y + hh * 1.2); g.closePath();
+        g.fillStyle = '#ffffffee'; g.fill(); g.restore();
+        const k = a < 1 ? ob((a + 1) / 2) : a < 4 ? 1 + 0.08 * Math.sin(a * 2) : 1 - sm((a - 4) / 3);
+        if (k > 0.02) sparkle(g, c.x + (i ? 0.36 : -0.33) * u, c.y - 0.2 * u, (i ? 0.36 : 0.3) * u * k, 0.15 + a * 0.06, '#ffffff');
+      });
+    }
+    // the cat's leap: motion lines under it, landing puffs
+    if (st.cat && st.cat.vis) {
+      const cr = T.cat.root.position, u = pxu(ctx, cr);
+      if (F >= K.catUp[0] && F < K.catUp[1] - 1) {
+        const p = P2(ctx, cr);
+        for (let k = 0; k < 4; k++) { const x = p.x + (k - 1.5) * 0.35 * u, len = 0.9 * u; taper(g, [[x, p.y + 0.15 * u], [x, p.y + 0.15 * u + len]], 7, 1, PAL.ink); }
+      }
+      const la = F - K.catUp[1];
+      if (la >= 0 && la < 8) { const p = P2(ctx, [SHOULDER[0], SHOULDER[1], SHOULDER[2]]); for (const sd of [-1, 1]) puff(g, p.x + sd * (0.7 + la * 0.06) * u, p.y + 0.05 * u - la * 1.5, 0.28 * u, 1 - la / 8); }
+      if (F >= K.catOff[1] && F < K.whip3[1]) { const p = P2(ctx, cr); for (let k = 0; k < 4; k++) { const x = p.x + (k - 1.5) * 0.35 * u; taper(g, [[x, p.y + 0.2 * u], [x, p.y + 1.4 * u]], 8, 1, PAL.ink); } }
+    }
+  }
+  // ---- the stroke: speed lines behind the cat, gold splatter, splat bursts, snaps ----
+  if (shot === 'B4') {
+    if (F >= K.stroke[0] && F < K.stroke[1] + 2 && st.catTip) {
+      const p = st.strokeP, back = T.curve.getPointAt(clamp(p - 0.08)), tip = P2(ctx, st.catTip), bp = P2(ctx, back);
+      const dx = tip.x - bp.x, dy = tip.y - bp.y, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
+      const rr = ctx.boilRng('trail');
+      for (let k = 0; k < 5; k++) {
+        const o = (k - 2) * 26 + (rr() - 0.5) * 10, len = 140 + rr() * 120;
+        const x0 = tip.x - dx / l * 70 + nx * o, y0 = tip.y - dy / l * 70 + ny * o - 40;
+        taper(g, [[x0 - dx / l * len, y0 - dy / l * len], [x0, y0]], 1, 7, PAL.ink);
+      }
+      // splatter drops flung off the brush (deterministic per frame from the path)
+      for (let k = 0; k < 6; k++) {
+        const born = K.stroke[0] + k * 4 + 1, age = F - born;
+        if (age < 0 || age > 6) continue;
+        const s0 = strokeP(born), o = T.curve.getPointAt(clamp(s0)), ou = P2(ctx, o);
+        const an = -Math.PI / 2 + (hsh(k, 3) - 0.5) * 2.6, sp = 26 + hsh(k, 4) * 26;
+        const x = ou.x + Math.cos(an) * sp * age, y = ou.y + Math.sin(an) * sp * age + 3.5 * age * age;
+        drop(g, x, y, 12 + hsh(k, 5) * 10, PAL.gold, Math.cos(an) * sp * 0.35, (Math.sin(an) * sp + 7 * age) * 0.35);
+      }
+    }
+    (K.hits || []).forEach((h, i) => {
+      const a = F - h;
+      if (a < 0 || a > 12) return;
+      const q = QUBITS[GREM[i].q], c = P2(ctx, [q.x, G_SIT + 0.1, q.z]), u = pxu(ctx, [q.x, G_SIT, q.z]);
+      // splat: paint drops radiate (gold and the gremlin's red)
+      for (let k = 0; k < 6; k++) {
+        const an = (k / 6) * TAU + i + 0.3, sp = (0.2 + 0.1 * hsh(i, k)) * u;
+        const x = c.x + Math.cos(an) * sp * (a + 1), y = c.y + Math.sin(an) * sp * (a + 1) * 0.6 + 2.2 * a * a;
+        if (a < 8) drop(g, x, y, (0.09 + 0.05 * hsh(k, i, 2)) * u * (1 - a / 11), k % 2 ? PAL.gold : '#f0503a', Math.cos(an) * sp * 0.3, Math.sin(an) * sp * 0.2);
+      }
+    });
+    // qubits snapping back: little sparkles
+    st.q.forEach((s, k) => {
+      if (s.snap < 0 || s.snap > 10) return;
+      const q = QUBITS[k], c = P2(ctx, [q.x, QY + 0.3, q.z]), u = pxu(ctx, [q.x, QY, q.z]);
+      const kk = s.snap < 2 ? ob(s.snap / 2) : 1 - sm((s.snap - 6) / 4);
+      sparkle(g, c.x + 0.3 * u, c.y - 0.25 * u, 0.32 * u * kk, s.snap * 0.1, '#e8fcff');
+    });
+    // the chip shines clean: a glint band sweeps across its top (clipped to the projected die)
+    const sw = (F - 125) / 11;
+    if (sw > 0 && sw < 1) {
+      const h = CHIP.w / 2, y = CHIP_TOP + 0.002, cs = [[-h, y, -h], [h, y, -h], [h, y, h], [-h, y, h]].map((v) => P2(ctx, v));
+      g.save(); g.beginPath(); cs.forEach((c, i) => (i ? g.lineTo(c.x, c.y) : g.moveTo(c.x, c.y))); g.closePath(); g.clip();
+      const xs = cs.map((c) => c.x), x0 = Math.min(...xs) - 200, x1 = Math.max(...xs) + 200, bx = lerp(x0, x1, ioc(sw));
+      g.beginPath(); g.moveTo(bx - 60, 0); g.lineTo(bx + 20, 0); g.lineTo(bx - 180, DES); g.lineTo(bx - 260, DES); g.closePath(); g.fillStyle = '#fffbe2dd'; g.fill();
+      g.beginPath(); g.moveTo(bx + 50, 0); g.lineTo(bx + 75, 0); g.lineTo(bx - 125, DES); g.lineTo(bx - 150, DES); g.closePath(); g.fill();
+      g.restore();
+    }
+    // the proud chest puff: little ink 'pride' marks either side of the chest
+    const pa = F - K.puff[0];
+    if (pa >= 2 && pa < 14 && T.cat.root.visible) {
+      const ch = T.cat.chest.getWorldPosition(new T.THREE.Vector3()), c = P2(ctx, ch), u = pxu(ctx, ch);
+      const k = ob((pa - 2) / 3) * (1 - sm((pa - 10) / 4));
+      for (const sd of [-1, 1]) for (let j = 0; j < 3; j++) { const an = (sd > 0 ? 0 : Math.PI) + sd * (-0.5 + j * 0.5), r0 = 0.62 * u, r1 = r0 + 0.32 * u * k;
+        taper(g, [[c.x + Math.cos(an) * r0, c.y + Math.sin(an) * r0], [c.x + Math.cos(an) * r1, c.y + Math.sin(an) * r1]], 8, 2, PAL.ink); }
+    }
+    // landing puffs on the chip
+    const la = F - K.land;
+    if (la >= 0 && la < 9) { const p = P2(ctx, [0.05, CHIP_TOP, 1.4]), u = pxu(ctx, [0.05, CHIP_TOP, 1.4]); for (const sd of [-1, 1]) puff(g, p.x + sd * (0.5 + la * 0.05) * u, p.y - la, 0.2 * u, 1 - la / 9); }
+    // payoff sparkles round the lettering and the chip
+    if (F >= 150) {
+      for (let k = 0; k < 9; k++) {
+        const ph = ((F - 150) / 14 + hsh(k, 1)) % 1; if (ph > 0.65) continue;
+        const x = 150 + hsh(k, 2) * 660, y = 120 + hsh(k, 3) * 420 + (k % 3) * 40;
+        if (Math.hypot(x - 480, y - 480) > 400) continue;
+        sparkle(g, x, y, 26 * Math.sin(Math.PI * ph / 0.65), k, k % 2 ? PAL.goldL : '#ffffff');
+      }
+    }
+  }
+}
+
+// =====================================================================================================
+// hand-built comic lettering (Canvas2D stroke skeletons; reference/style-comic, extended)
+// =====================================================================================================
+function ellPts(x, y, rx, ry, n = 20) { const out = []; for (let i = 0; i <= n; i++) { const a = i / n * TAU; out.push([x + Math.cos(a) * rx, y + Math.sin(a) * ry]); } return out; }
+const GLYPH = {
+  B: { w: 0.6, s: [[[0, 0], [0, 1]], [[0, 0.02], [0.36, 0.0], [0.53, 0.1], [0.54, 0.3], [0.38, 0.47], [0.02, 0.48]], [[0.02, 0.48], [0.42, 0.48], [0.6, 0.62], [0.6, 0.86], [0.4, 1.0], [0, 1.0]]], smooth: true },
+  Z: { w: 0.66, s: [[[0.02, 0.02], [0.66, 0.0], [0.0, 1.0], [0.68, 0.98]]] },
+  T: { w: 0.66, s: [[[0, 0.02], [0.66, 0.0]], [[0.33, 0.0], [0.34, 1.0]]] },
+  S: { w: 0.62, s: [[[0.6, 0.12], [0.36, 0.0], [0.08, 0.1], [0.06, 0.32], [0.3, 0.47], [0.56, 0.6], [0.62, 0.84], [0.38, 1.0], [0.02, 0.9]]], smooth: true },
+  H: { w: 0.62, s: [[[0, 0], [0, 1]], [[0.62, 0], [0.62, 1]], [[0, 0.52], [0.62, 0.5]]] },
+  I: { w: 0.0, s: [[[0, 0], [0, 1]]] },
+  N: { w: 0.64, s: [[[0, 1], [0, 0], [0.64, 1], [0.64, 0]]] },
+  G: { w: 0.7, s: [[[0.66, 0.14], [0.46, 0.0], [0.2, 0.04], [0.03, 0.26], [0.0, 0.52], [0.08, 0.82], [0.3, 1.0], [0.54, 0.98], [0.7, 0.84], [0.7, 0.58], [0.42, 0.58]]], smooth: true },
+  P: { w: 0.6, s: [[[0, 1], [0, 0], [0.38, 0], [0.6, 0.14], [0.6, 0.36], [0.38, 0.5], [0, 0.5]]], smooth: true },
+  L: { w: 0.52, s: [[[0, 0], [0, 1], [0.54, 0.99]]] },
+  A: { w: 0.74, s: [[[0, 1], [0.37, 0], [0.74, 1]], [[0.16, 0.66], [0.58, 0.66]]] },
+  C: { w: 0.68, s: [[[0.66, 0.15], [0.46, 0.0], [0.2, 0.04], [0.03, 0.26], [0.0, 0.52], [0.08, 0.82], [0.3, 1.0], [0.52, 0.98], [0.68, 0.84]]], smooth: true },
+  O: { w: 0.78, s: [ellPts(0.39, 0.5, 0.39, 0.5, 22)] },
+  '!': { w: 0.0, s: [[[0, 0], [0, 0.62]]], dots: [[0, 0.93]] },
+};
+function smoothPts(pts, n = 5) {
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    for (let k = 0; k < n; k++) { const t = k / n, t2 = t * t, t3 = t2 * t;
+      out.push([0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+        0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]); }
+  }
+  out.push(pts[pts.length - 1]); return out;
+}
+function plen(pts) { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return s; }
+function cutPts(pts, L) { // first L units of a polyline
+  const out = [pts[0]]; let s = 0;
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (s + d >= L) { const t = (L - s) / (d || 1); out.push([lerp(pts[i - 1][0], pts[i][0], t), lerp(pts[i - 1][1], pts[i][1], t)]); return out; } s += d; out.push(pts[i]); }
+  return out;
+}
+/** word at centre (x, y), cap height `size`. o: fill, ink, stroke2 (keyline), sheen, rot, arc, fan, pops(i), jitter rng,
+ *  alpha, skew, weight, reveal (0..1: stroke-by-stroke write-on), head (callback with the write head) */
+function handWord(g, word, x, y, size, o) {
+  const lw = size * (o.weight ?? 0.24), gap = size * (o.gap ?? 0.2);
+  const L = [...word].map((ch) => GLYPH[ch]);
+  const widths = L.map((G) => G.w * size + lw);
+  const total = widths.reduce((s, w) => s + w, 0) + gap * (L.length - 1);
+  const r = o.jitter;
+  const letters = [];
+  let cx = -total / 2;
+  L.forEach((G, i) => {
+    const w = widths[i], lx = cx + w / 2, t = L.length > 1 ? i / (L.length - 1) - 0.5 : 0;
+    const k = o.pops ? o.pops(i) : 1;
+    const ly = -(o.arc || 0) * (1 - 4 * t * t) + (hsh(i, word.length, 3) - 0.5) * size * 0.1;
+    const rot = (hsh(i, word.length, 5) - 0.5) * 0.2 + t * (o.fan ?? 0.2);
+    const strokes = G.s.map((s) => (G.smooth ? smoothPts(s) : s).map(([u, v]) => [(u - G.w / 2) * size + (r ? r.gauss(0, size * 0.005) : 0), (v - 0.5) * size + (r ? r.gauss(0, size * 0.005) : 0)]));
+    letters.push({ lx, ly, rot, k, strokes, dots: (G.dots || []).map(([u, v]) => [(u - G.w / 2) * size, (v - 0.5) * size]) });
+    cx += w + gap;
+  });
+  // write-on: reveal a fraction of the total stroke length, letter by letter
+  let budget = Infinity;
+  if (o.reveal != null) { const tot = letters.reduce((s, Lt) => s + Lt.strokes.reduce((a, st2) => a + plen(st2), 0) + Lt.dots.length * size * 0.2, 0); budget = o.reveal * tot; }
+  const vis = [];
+  let headPt = null;
+  for (const Lt of letters) {
+    const ss = [];
+    for (const s of Lt.strokes) { if (budget <= 0) break; const l = plen(s); if (budget >= l) { ss.push(s); budget -= l; } else { const c = cutPts(s, budget); ss.push(c); headPt = [Lt, c[c.length - 1]]; budget = 0; } }
+    const dots = budget > 0 ? Lt.dots : [];
+    if (budget > 0) budget -= Lt.dots.length * size * 0.2;
+    vis.push({ ...Lt, strokes: ss, dots });
+  }
+  g.save();
+  g.translate(x, y); g.rotate(o.rot || 0);
+  if (o.skew) g.transform(1, 0, o.skew, 1, 0, 0);
+  g.globalAlpha = o.alpha ?? 1;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const pass = (col, w, dx, dy) => {
+    g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w;
+    for (const Lt of vis) {
+      if (Lt.k <= 0.01) continue;
+      g.save(); g.translate(Lt.lx + dx, Lt.ly + dy); g.rotate(Lt.rot); g.scale(Lt.k, Lt.k);
+      for (const s of Lt.strokes) { if (s.length < 2) continue; g.beginPath(); s.forEach(([px, py], j) => (j ? g.lineTo(px, py) : g.moveTo(px, py))); g.stroke(); }
+      for (const [px, py] of Lt.dots) { g.beginPath(); g.arc(px, py, w * 0.55, 0, TAU); g.fill(); }
+      g.restore();
+    }
+  };
+  pass(o.ink, lw + size * 0.14, size * 0.07, size * 0.085);   // ink drop shadow
+  pass(o.ink, lw + size * 0.14, 0, 0);                          // ink outline
+  if (o.stroke2) pass(o.stroke2, lw + size * 0.065, 0, 0);       // keyline
+  pass(o.fill, lw, 0, 0);
+  if (o.sheen) { g.globalAlpha = (o.alpha ?? 1) * 0.6; pass(o.sheen, lw * 0.26, -lw * 0.16, -lw * 0.2); }
+  if (headPt && o.head) { const [Lt, p] = headPt; const ca = Math.cos(Lt.rot), sa = Math.sin(Lt.rot); const hx = Lt.lx + (p[0] * ca - p[1] * sa) * Lt.k, hy = Lt.ly + (p[0] * sa + p[1] * ca) * Lt.k;
+    const M = g.getTransform(), q = M.transformPoint(new DOMPoint(hx, hy)), S0 = st.S || 1; st.writeHead = [q.x / S0, q.y / S0]; o.head(hx, hy, g); }
+  g.restore();
+}
+// jagged electric balloon (BZZT)
+function burstBalloon(g, x, y, rx, ry, k, rr, fill, edge) {
+  if (k <= 0.02) return;
+  const n = 18, pts = [];
+  for (let i = 0; i < n * 2; i++) { const a = (i / (n * 2)) * TAU, rad = i % 2 ? 0.74 + 0.08 * rr() : 1.0 + 0.16 * rr(); pts.push([x + Math.cos(a) * rx * rad * k, y + Math.sin(a) * ry * rad * k]); }
+  const path = () => { g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.closePath(); };
+  g.save(); g.translate(10, 12); path(); g.fillStyle = PAL.ink; g.fill(); g.restore();
+  path(); g.fillStyle = fill; g.fill(); g.lineJoin = 'miter'; g.lineWidth = 9; g.strokeStyle = PAL.ink; g.stroke();
+  g.save(); path(); g.clip(); g.lineWidth = 14; g.strokeStyle = edge; g.stroke(); g.restore();
+}
+// paint splat blob (SPLAT)
+function splatBlob(g, x, y, R, k, seed) {
+  if (k <= 0.02) return;
+  const n = 26, pts = [];
+  for (let i = 0; i < n; i++) { const a = (i / n) * TAU, rad = (i % 3 === 0 ? 1.18 + 0.2 * hsh(seed, i) : 0.86 + 0.1 * hsh(seed, i, 2)); pts.push([x + Math.cos(a) * R * rad * k, y + Math.sin(a) * R * rad * 0.72 * k]); }
+  const path = () => { g.beginPath(); const sp = smoothPts([...pts, pts[0], pts[1]], 4); sp.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.closePath(); };
+  g.save(); g.translate(10, 12); path(); g.fillStyle = PAL.ink; g.fill(); g.restore();
+  path(); g.fillStyle = PAL.gold; g.fill(); g.lineWidth = 9; g.strokeStyle = PAL.ink; g.stroke();
+  for (let i = 0; i < 5; i++) { const a = hsh(seed, i, 7) * TAU, d = R * (1.35 + 0.3 * hsh(seed, i, 8)) * k, rr = R * 0.09 * k * (1 + hsh(seed, i, 9));
+    ellipse(g, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.72, rr + 4, rr + 4); g.fillStyle = PAL.ink; g.fill(); ellipse(g, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.72, rr, rr); g.fillStyle = PAL.gold; g.fill(); }
+}
+
+function lettering(ctx, g) {
+  const F = ctx.iw, jr = ctx.boilRng('letters');
+  // BZZT! (noise): red keyline, yellow fill, on a jagged electric balloon
+  const ba = F - K.bzzt;
+  if (ba >= 0 && ba < 22 && st.shot === 'B2') {
+    const k = ob(ba / 4) * (1 - sm((ba - 18) / 4));
+    const x = 480 + 6 * Math.sin(ba * 2.3), y = 255 + 5 * Math.cos(ba * 3.1);
+    burstBalloon(g, x, y, 300, 135, k, ctx.boilRng('bzb'), '#fff3b0', '#ff5a3c');
+    handWord(g, 'BZZT!', x, y, 145 * k, { fill: PAL.yellow, ink: PAL.ink, stroke2: '#ef3b32', sheen: '#ffffff', arc: 10, rot: -0.07, weight: 0.27,
+      pops: (i) => ob((ba - i) / 3) * (1 + 0.05 * Math.sin(ba * 2 + i)), jitter: jr });
+  }
+  // SHING! (glasses flash): small, crisp, by her head
+  const sa = F - K.shing;
+  if (sa >= 0 && sa < 10 && st.shot === 'P3') {
+    handWord(g, 'SHING!', 590, 238, 112, { fill: '#e9fbff', ink: PAL.ink, stroke2: '#53c8f2', sheen: '#ffffff', arc: 8, rot: 0.12, weight: 0.25, skew: -0.15,
+      alpha: 1 - sm((sa - 7) / 3), pops: (i) => ob((sa - i * 0.7) / 3), jitter: jr });
+  }
+  // SPLAT! (the middle hit)
+  if (K.hits && st.shot === 'B4') {
+    const h = Math.ceil(K.hits[1]), a = F - h;
+    if (a >= 0 && a < 16) {
+      const k = ob(a / 3) * (1 - sm((a - 12) / 4));
+      // up in the dusk sky, so the gold stroke and the hit qubits stay in view
+      splatBlob(g, 350, 300, 165, k, 3);
+      handWord(g, 'SPLAT!', 380, 296, 114 * k, { fill: '#ff5a3c', ink: PAL.ink, stroke2: PAL.cream, sheen: '#ffd0c0', arc: 14, rot: -0.08, weight: 0.25, gap: 0.14,
+        pops: (i) => ob((a - i * 0.6) / 3), jitter: jr });
+    }
+  }
+  // PICASSO / LAB: gold brush lettering written on above the chip (a paint stream runs from the raised brush to the head)
+  st.writeHead = null; st.S = ctx.S;
+  if (st.shot === 'B4' && F >= K.write1[0]) {
+    const fadeOut = 1;
+    const head = (hx, hy, gg) => { sparkle(gg, hx, hy, 30, F * 0.3, '#ffffff'); };
+    const r1 = sm((F - K.write1[0]) / (K.write1[1] - K.write1[0]));
+    handWord(g, 'PICASSO', 480, 262, 110, { fill: PAL.gold, ink: PAL.ink, stroke2: PAL.cream, sheen: PAL.goldL, arc: 20, fan: 0.14, rot: -0.04, weight: 0.23, gap: 0.13,
+      reveal: r1, head: r1 < 1 ? head : null, jitter: jr, alpha: fadeOut });
+    if (F >= K.write2[0]) {
+      const r2 = sm((F - K.write2[0]) / (K.write2[1] - K.write2[0]));
+      handWord(g, 'LAB', 480, 402, 118, { fill: PAL.gold, ink: PAL.ink, stroke2: PAL.cream, sheen: PAL.goldL, arc: -6, fan: 0.1, rot: 0.03, weight: 0.24, gap: 0.2,
+        reveal: r2, head: r2 < 1 ? head : null, jitter: jr, alpha: fadeOut });
+    }
+    if (st.writeHead && st.catTip) {
+      const t0 = P2(ctx, st.catTip), [hx, hy] = st.writeHead;
+      const pts = [];
+      for (let k = 0; k <= 16; k++) { const t = k / 16, w = Math.sin(TAU * (t * 1.5 - F * 0.08)) * 26 * Math.sin(Math.PI * t);
+        const x = lerp(t0.x, hx, t), y = lerp(t0.y, hy, t) - 90 * Math.sin(Math.PI * t), dx = hx - t0.x, dy = hy - t0.y, l = Math.hypot(dx, dy) || 1; pts.push([x - dy / l * w, y + dx / l * w]); }
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      const stroke = (col, w) => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.lineWidth = w; g.strokeStyle = col; g.stroke(); };
+      stroke(PAL.ink, 22); stroke(PAL.gold, 12); stroke(PAL.goldL, 4);
+    }
+  }
+}
+
+// =====================================================================================================
+// the photo: exact at the start and the end; the ink burst ring (f3-12) and the gold paint wipe (f173-184)
+// =====================================================================================================
+function drawPhoto(g) { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(T.photo, 0, 0, DES, DES); }
+function photoLayer(ctx, g) {
+  const F = ctx.iw;
+  if (F < K.ring[0] || F >= K.wipe[1]) { drawPhoto(g); return; }
+  if (F < K.ring[1]) {
+    // ink burst ring closes in from the rim: the photo inside, the comic panel outside
+    const p = (F - K.ring[0]) / (K.ring[1] - K.ring[0]);
+    const R = lerp(540, -40, ease.inCubic(p) * 0.5 + p * 0.5);
+    const n = 30, rr = ctx.boilRng('ring');
+    const cx = lerp(480, 492, sm(p)), cy = lerp(480, 300, sm(p));      // the iris closes onto her face
+    const pts = [];
+    for (let i = 0; i < n * 2; i++) { const a = (i / (n * 2)) * TAU + F * 0.05, rad = i % 2 ? R + 6 : R + 70 + 50 * rr(); pts.push([cx + Math.cos(a) * Math.max(0, rad), cy + Math.sin(a) * Math.max(0, rad)]); }
+    if (R > 4) {
+      g.save(); g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.clip(); drawPhoto(g); g.restore();
+    }
+    // the burst ring itself: ink spikes with a yellow keyline on the inside
+    if (R > -30) {
+      g.beginPath(); pts.forEach(([a, b], i) => (i ? g.lineTo(a, b) : g.moveTo(a, b))); g.closePath();
+      g.arc(cx, cy, Math.max(0, R - 14), 0, TAU, true);
+      g.fillStyle = PAL.ink; g.fill('evenodd');
+      if (R > 12) { g.beginPath(); g.arc(cx, cy, R - 6, 0, TAU); g.lineWidth = 14; g.strokeStyle = PAL.yellow; g.stroke(); }
+      // speed ticks converging behind the ring
+      for (let i = 0; i < 26; i++) { const a = (i / 26) * TAU + 0.4 + rr() * 0.1, r0 = R + 70 + rr() * 50, r1 = r0 + 90 + rr() * 80; taper(g, [[cx + Math.cos(a) * r1, cy + Math.sin(a) * r1], [cx + Math.cos(a) * r0, cy + Math.sin(a) * r0]], 1, 8, PAL.ink); }
+    }
+    return;
+  }
+  if (F >= K.wipe[0]) {
+    // gold paint wipe: three fat brush strokes (L->R, R->L, L->R) uncover the plain photo behind their heads
+    const strokes = [{ y: 200, f0: 173, f1: 178.5, dir: 1, tilt: -0.06 }, { y: 480, f0: 175, f1: 180.5, dir: -1, tilt: 0.05 }, { y: 760, f0: 177, f1: 182.5, dir: 1, tilt: -0.05 }];
+    const W2 = 450, headL = 250;
+    const yAt = (s, x, side, k) => s.y + (x - 480) * s.tilt + side * (W2 / 2 + 9 * Math.sin(x * 0.05 + k * (side + 2)) + 5 * Math.sin(x * 0.17 + k));
+    const band = (s, k, xa, xb) => {
+      if (xa > xb) [xa, xb] = [xb, xa];          // one winding for every band: overlaps add up under the nonzero clip
+      const path = new Path2D(), N2 = 28;
+      for (let i = 0; i <= N2; i++) { const x = lerp(xa, xb, i / N2), y = yAt(s, x, -1, k); i ? path.lineTo(x, y) : path.moveTo(x, y); }
+      for (let i = N2; i >= 0; i--) { const x = lerp(xa, xb, i / N2); path.lineTo(x, yAt(s, x, 1, k)); }
+      path.closePath(); return path;
+    };
+    const mask = new Path2D(), heads = [];
+    strokes.forEach((s, k) => {
+      const p = clamp((F - s.f0) / (s.f1 - s.f0));
+      if (p <= 0) return;
+      const x0 = s.dir > 0 ? -260 : 1220, x1 = s.dir > 0 ? 1220 + headL + 100 : -260 - headL - 100;
+      const hx = lerp(x0, x1, ease.inOutSine(p));
+      const tail = hx - s.dir * headL;
+      if ((tail - x0) * s.dir > 1) mask.addPath(band(s, k, x0, tail));
+      heads.push({ s, k, hx, tail, p, x0 });
+    });
+    g.save(); g.clip(mask); drawPhoto(g); g.restore();
+    for (const { s, k, hx, tail, p, x0 } of heads) {
+      // ragged gold edges along the band behind the head (dry bristles), fading as the stroke finishes
+      const fade = 1 - sm((F - s.f1) / 2);
+      if (fade > 0.02 && (tail - x0) * s.dir > 1) {
+        g.globalAlpha = fade;
+        for (const side of [-1, 1]) for (let j = 0; j < 3; j++) {
+          g.beginPath(); const N3 = 20;
+          for (let i = 0; i <= N3; i++) { const x = lerp(x0, tail, i / N3), y = yAt(s, x, side, k) - side * (4 + j * 9); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+          g.lineWidth = j ? 4 : 11; g.strokeStyle = j ? PAL.goldD : PAL.gold; g.stroke();
+        }
+        g.globalAlpha = 1;
+      }
+      if (p >= 1) continue;
+      // the wet head: band from tail to hx with a rounded front, bristle streaks, ink edge
+      const b = band(s, k, tail, hx);
+      const cy = s.y + (hx - 480) * s.tilt;
+      b.ellipse(hx, cy, 150, W2 / 2 + 6, 0, -Math.PI / 2, Math.PI / 2, s.dir < 0);
+      g.save(); g.translate(s.dir * 9, 11); g.fillStyle = PAL.ink; g.fill(b); g.restore();   // drop shadow ahead + below, never behind the head
+      g.fillStyle = PAL.gold; g.fill(b);
+      g.save(); g.clip(b);
+      for (let i = 0; i < 18; i++) { const yy = s.y - W2 / 2 + (i + 0.5) * W2 / 18, w = 3 + 6 * hsh(k, i, 4), x2 = hx + s.dir * (40 + 50 * hsh(k, i, 6)); g.strokeStyle = i % 3 ? PAL.goldD : PAL.goldL; g.lineWidth = w; g.beginPath(); g.moveTo(tail - s.dir * 20, yy + (tail - 480) * s.tilt); g.lineTo(x2, yy + (x2 - 480) * s.tilt); g.stroke(); }
+      ellipse(g, hx + s.dir * 30, cy - W2 * 0.24, 46, 18, s.tilt - s.dir * 0.35); g.fillStyle = '#fff6c8'; g.fill();
+      g.restore();
+      // ink outline on the top edge, the round front and the bottom edge; the back stays open (wet bristles)
+      const ol = new Path2D(), N4 = 20;
+      for (let i = 0; i <= N4; i++) { const x = lerp(tail, hx, i / N4); i ? ol.lineTo(x, yAt(s, x, -1, k)) : ol.moveTo(x, yAt(s, x, -1, k)); }
+      ol.ellipse(hx, cy, 150, W2 / 2 + 6, 0, -Math.PI / 2, Math.PI / 2, s.dir < 0);
+      for (let i = N4; i >= 0; i--) ol.lineTo(lerp(tail, hx, i / N4), yAt(s, lerp(tail, hx, i / N4), 1, k));
+      g.lineWidth = 9; g.strokeStyle = PAL.ink; g.stroke(ol);
+    }
+  }
+}
+</script></body></html>
