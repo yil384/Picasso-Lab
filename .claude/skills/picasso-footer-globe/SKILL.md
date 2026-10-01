@@ -48,7 +48,11 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   blips on the off-world objects, survey labels (`M78 NEBULA / 3,000,000 LY`, `CYBERTRON / VIA WORMHOLE`, hidden when
   the card is under 110 px tall), and the signals: a dotted path whose dots grow from far to near, a tiny traveller with a
   light trail flying along it - Ultraman Tiga (Multi Type) from M78, an Autobot warship in Optimus Prime's red and blue
-  out of the wormhole (vector drawings in `craft()`, nose along +x, growing from far to near; M78 slowest) - and a
+  out of the wormhole (painted sprites `tiga.png` / `ark.png`, ~14-20 KB each, keyed from the user's ChatGPT art
+  `home/footer-src/{tiga,ark}.png` by `python3 home/footer-src/sprites.py`, nose along +x, ~22 px long at full size,
+  flipped when heading left, growing from far to near; M78 slowest; small additive effects in `craft()`: Tiga's aura,
+  speed streaks and sparks; the warship's flickering engine plumes and, near the Earth, a re-entry plasma shell, bow
+  shock and embers). Code-drawn vector versions were rejected as too crude - and a
   ripple on the Earth's limb.
 - **Moon**: tidally locked - `uMoonRot = atan2(-cos th, -sin th)` turns the texture so the near side always faces the
   Earth (in front of the Earth it shows us its far side). Its visitor blip sits in Mare Tranquillitatis and is only
