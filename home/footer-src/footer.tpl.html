@@ -35,8 +35,9 @@
 
     /* ---- the visitor map card (2 : 1, as in the old footer) ---- */
     .vmap { overflow: hidden; cursor: pointer; border-radius: var(--vr, 12px); outline: none;
-        background: radial-gradient(120% 140% at 50% 0%, #0a2c47 0%, #061a2c 55%, #04111d 100%); }
+        background: radial-gradient(120% 140% at 50% 30%, #081a30 0%, #050d1c 60%, #02060f 100%); }
     .vmap canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+    .vmap { touch-action: pan-y; cursor: grab; } .vmap:active { cursor: grabbing; }
     /* the hairline edge sits over the map (the dots never cover it) and lights up on hover / focus */
     .vmap::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
         box-shadow: inset 0 0 0 1px rgba(130, 200, 255, .16); transition: box-shadow .25s ease; }
@@ -209,6 +210,9 @@
         st.setProperty('--vpy', (fs * 0.57).toFixed(1) + 'px'); st.setProperty('--vpx', (fs * 1.05).toFixed(1) + 'px');
         st.setProperty('--vpr', (fs * 0.86).toFixed(1) + 'px'); st.setProperty('--vg', (fs * 0.67).toFixed(1) + 'px'); st.setProperty('--vd', (fs * 0.67).toFixed(1) + 'px');
         st.setProperty('--vh', clamp(22 * k, 15, 28).toFixed(1) + 'px'); st.setProperty('--vo', clamp(8 * k, 5, 11).toFixed(1) + 'px');
+        /* tiny cards (phone strips): the globe alone, no pill, no badge */
+        var tiny = M / 2 < 90; STATS.style.display = tiny ? 'none' : ''; CARD.querySelector('.vm-open').style.display = tiny ? 'none' : '';
+        if (tiny) return;
         var room = CARD.clientWidth - 2 * Math.max(6, 12 * k);
         STATS.classList.remove('no-reg'); STATS.classList.add('no-lt');
         if (STATS.scrollWidth > room + 0.5) STATS.classList.add('no-reg');
@@ -231,84 +235,153 @@
         seal: Math.round(LAST.S), col: LAST.t.C, card: [Math.round(LAST.M), Math.round(LAST.cardH)], align: TXT.style.textAlign,
         lines: Math.round((TXT.offsetHeight) / (LAST.A * parseFloat(TXT.style.lineHeight))), textCx: LAST.textCx, vis: Math.round(LAST.t.vis) }; };
 
-    /* ════════ the map: a static base (land dots, borders, every visitor) + a light live layer ════════ */
-    var BASE = document.getElementById('vmap-c'), FX = document.getElementById('vmap-fx'), bctx = BASE.getContext('2d'), fctx = FX.getContext('2d');
-    var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1)), MW = 0, MH = 0, OX = 0, OY = 0, K = 1;
-    var MY0 = mercY(LAT_MAX), MY1 = mercY(LAT_MIN);
-    function project(lon, lat) { return [OX + (lon - LON_MIN) / (LON_MAX - LON_MIN) * MW, OY + (MY0 - mercY(lat)) / (MY0 - MY1) * MH]; }
-    function latAt(y) { var my = MY0 - y / MH * (MY0 - MY1); return (2 * Math.atan(Math.exp(my)) - Math.PI / 2) * 180 / Math.PI; }
-    function landAt(lon, lat) { if (lat > LAT_MAX || lat < LAT_MIN) return 0;
+    /* ════════ the visitor globe: a turning radar globe (orthographic: no Mercator stretch) with a sweep, the Moon on
+       its orbit and two far-away "regions" for fun (the M78 Nebula, Cybertron). Drag to turn it (with inertia); hover a
+       dot for the place; a click that is not a drag opens the analytics. The off-world visits are decoration only:
+       nothing is ever recorded for them. ════════ */
+    var CV = document.getElementById('vmap-c'), C2 = CV.getContext('2d');
+    document.getElementById('vmap-fx').style.display = 'none';
+    var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1)), CW = 0, CH = 0, GX = 0, GY = 0, GR = 0, K = 1;
+    var ROT = { lon: -100, lat: 22, vlon: 0, vlat: 0, auto: 1 }, LIGHT = [-0.55, 0.45, 0.70], RAD = Math.PI / 180;
+    var LAND = [], SCR = [], EXTRA = [], STARS = [], SPR = {};
+    var OFFWORLD = [
+        { id: 'moon', code: 'LUNA', where: 'Mare Tranquillitatis, the Moon', n: 1, note: 'July 1969' },
+        { id: 'm78', code: 'M78', where: 'Land of Light, M78 Nebula', n: 3, note: '300,000 light-years away' },
+        { id: 'cyb', code: 'CYB', where: 'Iacon, Cybertron', n: 2, note: 'more than meets the eye' }
+    ];
+    function landAt(lat, lon) { if (lat > LAT_MAX || lat < LAT_MIN) return 0;
         var c = Math.floor((lon - LON_MIN) / (LON_MAX - LON_MIN) * GW), r = Math.floor((LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * GH);
         return isLand(clamp(c, 0, GW - 1), clamp(r, 0, GH - 1)); }
-    /* soft round halos, drawn once (no shadowBlur per dot per frame) */
-    function halo(rgb) { var c = document.createElement('canvas'); c.width = c.height = 64; var g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-        gr.addColorStop(0, 'rgba(' + rgb + ',.55)'); gr.addColorStop(0.35, 'rgba(' + rgb + ',.22)'); gr.addColorStop(1, 'rgba(' + rgb + ',0)');
-        g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; }
-    var HALO_C = halo('84,226,255'), HALO_L = halo('255,201,77');
-    function dotR(p) { return K * (0.8 + Math.min(1.5, Math.sqrt(p.n) * 0.11)); }
-    function liveR(p) { return Math.max(dotR(p) * 1.3, 2.3 * K); }
-    function drawBase() {
-        var o = bctx; o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, BASE.width, BASE.height); o.setTransform(DPR, 0, 0, DPR, 0, 0);
-        /* land: a uniform dot grid in screen space (even rows from the equator to the Arctic), sampled from the land mask */
-        var pitch = clamp(MW / 112, 2.1, 4.4), rad = pitch * 0.33, cols = Math.floor(MW / pitch), rows = Math.floor(MH / pitch);
-        var ox = OX + (MW - (cols - 1) * pitch) / 2, oy = OY + (MH - (rows - 1) * pitch) / 2;
-        o.fillStyle = '#1f5079';
-        for (var r = 0; r < rows; r++) { var y = oy + r * pitch, lat = latAt(y - OY);
-            o.beginPath();
-            for (var c = 0; c < cols; c++) { var x = ox + c * pitch, lon = LON_MIN + (x - OX) / MW * (LON_MAX - LON_MIN);
-                if (landAt(lon, lat)) { o.moveTo(x + rad, y); o.arc(x, y, rad, 0, 6.2832); } }
-            o.fill(); }
-        /* country borders: faint, and only where the card is big enough for them to read as lines */
-        if (MW >= 190 && BORDERS && BORDERS.countries) { o.strokeStyle = 'rgba(140,208,252,' + (MW >= 300 ? 0.15 : 0.11) + ')'; o.lineWidth = 0.55; o.lineJoin = 'round';
-            o.beginPath();
-            for (var i = 0; i < BORDERS.countries.length; i++) { var poly = BORDERS.countries[i];
-                for (var j = 0; j < poly.length; j++) { var q = project(poly[j][0], poly[j][1]); if (j) o.lineTo(q[0], q[1]); else o.moveTo(q[0], q[1]); } }
-            o.stroke(); }
-        /* every visited place (the latest few are drawn live on top): halo + core + a bright centre, small to big */
-        var ps = pings.filter(function (p) { return !p.live; }).sort(function (a, b) { return a.n - b.n; });
-        for (var k = 0; k < ps.length; k++) { var p = ps[k], xy = project(p.lon, p.lat), d = dotR(p);
-            o.globalAlpha = 0.9; o.drawImage(HALO_C, xy[0] - d * 3.2, xy[1] - d * 3.2, d * 6.4, d * 6.4); o.globalAlpha = 1;
-            o.beginPath(); o.arc(xy[0], xy[1], d, 0, 6.2832); o.fillStyle = '#56e2ff'; o.fill();
-            o.beginPath(); o.arc(xy[0], xy[1], d * 0.42, 0, 6.2832); o.fillStyle = '#e9fdff'; o.fill(); }
-    }
-    function drawLive(t) {
-        var o = fctx; o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, FX.width, FX.height); o.setTransform(DPR, 0, 0, DPR, 0, 0);
-        for (var i = 0; i < pings.length; i++) { var p = pings[i]; if (!p.live) continue;
-            var xy = project(p.lon, p.lat), d = liveR(p), ph = ((t + i * 800) % 2400) / 2400;
-            o.beginPath(); o.arc(xy[0], xy[1], d + ph * 7.5 * K, 0, 6.2832); o.strokeStyle = 'rgba(255,201,77,' + (0.6 * (1 - ph)).toFixed(3) + ')'; o.lineWidth = 1.1 * Math.max(0.8, K); o.stroke();
-            o.drawImage(HALO_L, xy[0] - d * 3.6, xy[1] - d * 3.6, d * 7.2, d * 7.2);
-            o.beginPath(); o.arc(xy[0], xy[1], d, 0, 6.2832); o.fillStyle = '#ffc94d'; o.fill();
-            o.beginPath(); o.arc(xy[0], xy[1], d * 0.42, 0, 6.2832); o.fillStyle = '#fff6dd'; o.fill(); }
+    /* land: a Fibonacci sphere (even spacing everywhere) kept where the mask says land */
+    function buildLand() { LAND = []; var N = Math.round(clamp(GR * GR * 4.2, 6000, 26000)), ga = Math.PI * (3 - Math.sqrt(5));
+        for (var i = 0; i < N; i++) { var y = 1 - (i + 0.5) / N * 2, lat = Math.asin(y) / RAD, lon = ((i * ga / RAD) % 360 + 540) % 360 - 180;
+            if (landAt(lat, lon)) LAND.push([Math.sin(lat * RAD), Math.cos(lat * RAD), lon * RAD]); } }
+    /* orthographic view of (lat, lon): [x, y, z] with z towards the viewer (> 0 = the visible side) */
+    var sl0 = 0, cl0 = 1;
+    function view(sp, cp, lam) { var a = lam - ROT.lon * RAD, x = cp * Math.sin(a), y1 = sp, z1 = cp * Math.cos(a);
+        return [x, y1 * cl0 - z1 * sl0, y1 * sl0 + z1 * cl0]; }
+    function sprites() {
+        var mk = function (s, fn) { var c = document.createElement('canvas'); c.width = c.height = Math.max(2, Math.round(s)); fn(c.getContext('2d'), c.width); return c; };
+        var mr = GR * 0.14 * DPR;
+        SPR.moon = mk(mr * 2, function (g, s) { var r = s / 2, gr = g.createRadialGradient(r * 0.7, r * 0.65, r * 0.1, r, r, r);
+            gr.addColorStop(0, '#e9e6df'); gr.addColorStop(0.6, '#b9b5ad'); gr.addColorStop(1, '#5e5b57'); g.fillStyle = gr; g.beginPath(); g.arc(r, r, r, 0, 6.2832); g.fill();
+            var cr = [[0.62, 0.42, 0.16], [0.4, 0.7, 0.12], [0.75, 0.72, 0.09], [0.3, 0.35, 0.08], [0.55, 0.85, 0.07]];
+            for (var i = 0; i < cr.length; i++) { g.beginPath(); g.arc(cr[i][0] * s, cr[i][1] * s, cr[i][2] * s, 0, 6.2832); g.fillStyle = 'rgba(70,66,62,0.35)'; g.fill(); }
+            var sh = g.createLinearGradient(0, 0, s, s * 0.4); sh.addColorStop(0.45, 'rgba(0,0,10,0)'); sh.addColorStop(1, 'rgba(0,0,12,0.75)'); g.fillStyle = sh; g.beginPath(); g.arc(r, r, r, 0, 6.2832); g.fill(); });
+        var nr = GR * 0.62 * DPR;
+        SPR.m78 = mk(nr * 2, function (g, s) { var blobs = [[0.5, 0.5, 0.5, '255,110,180', 0.55], [0.38, 0.6, 0.36, '140,92,255', 0.5], [0.64, 0.4, 0.32, '80,178,255', 0.45], [0.52, 0.48, 0.14, '255,236,250', 0.9]];
+            for (var i = 0; i < blobs.length; i++) { var b = blobs[i], gr = g.createRadialGradient(b[0] * s, b[1] * s, 0, b[0] * s, b[1] * s, b[2] * s);
+                gr.addColorStop(0, 'rgba(' + b[3] + ',' + b[4] + ')'); gr.addColorStop(1, 'rgba(' + b[3] + ',0)'); g.fillStyle = gr; g.fillRect(0, 0, s, s); }
+            for (var k = 0; k < 18; k++) { var a = k * 2.4, d = (0.12 + 0.3 * ((k * 37) % 11) / 11) * s; g.fillStyle = 'rgba(255,240,255,' + (0.5 + 0.5 * ((k * 13) % 7) / 7) + ')'; g.fillRect(s / 2 + Math.cos(a) * d, s / 2 + Math.sin(a) * d * 0.7, 1.2 * DPR, 1.2 * DPR); } });
+        var cyr = GR * 0.17 * DPR;
+        SPR.cyb = mk(cyr * 2, function (g, s) { var r = s / 2, gr = g.createRadialGradient(r * 0.7, r * 0.6, r * 0.05, r, r, r);
+            gr.addColorStop(0, '#dfe4ec'); gr.addColorStop(0.5, '#8a93a3'); gr.addColorStop(1, '#2c3240'); g.fillStyle = gr; g.beginPath(); g.arc(r, r, r, 0, 6.2832); g.fill();
+            g.save(); g.beginPath(); g.arc(r, r, r, 0, 6.2832); g.clip(); g.strokeStyle = 'rgba(30,34,46,0.7)'; g.lineWidth = Math.max(1, s / 40);
+            for (var i = -3; i <= 3; i++) { g.beginPath(); g.ellipse(r, r + i * r * 0.27, r, r * 0.08, 0, 0, 6.2832); g.stroke(); }
+            for (var j = 0; j < 7; j++) { g.beginPath(); g.moveTo(r * (0.35 + j * 0.2), 0); g.lineTo(r * (0.2 + j * 0.24), s); g.stroke(); }
+            for (var k = 0; k < 14; k++) { g.fillStyle = k % 3 ? 'rgba(120,230,255,0.9)' : 'rgba(190,120,255,0.9)'; g.fillRect(r * (0.4 + 1.2 * ((k * 29) % 13) / 13), r * (0.3 + 1.4 * ((k * 17) % 11) / 11), s / 24, s / 24); }
+            var sh = g.createLinearGradient(0, 0, s, s * 0.4); sh.addColorStop(0.5, 'rgba(0,0,10,0)'); sh.addColorStop(1, 'rgba(0,0,12,0.7)'); g.fillStyle = sh; g.fillRect(0, 0, s, s); g.restore(); });
+        STARS = []; for (var i = 0; i < 70; i++) STARS.push([((i * 73) % 97) / 97 * CW, ((i * 41) % 89) / 89 * CH, 0.4 + ((i * 7) % 5) / 6, i * 1.7]);
     }
     function resize() { var w = CARD.clientWidth, h = CARD.clientHeight; if (!w || !h) return;
-        MH = h; MW = h * MAP_ASPECT; if (MW > w) { MW = w; MH = w / MAP_ASPECT; } OX = (w - MW) / 2; OY = (h - MH) / 2; K = clamp(w / 360, 0.6, 1.5);
-        BASE.width = FX.width = Math.round(w * DPR); BASE.height = FX.height = Math.round(h * DPR); MW = MW;
-        drawBase(); drawLive(performance.now()); }
+        CW = w; CH = h; K = clamp(h / 160, 0.4, 1.6);
+        CV.width = Math.round(w * DPR); CV.height = Math.round(h * DPR);
+        GR = h * 0.37; GX = w * 0.5; GY = h * 0.43;
+        buildLand(); sprites(); draw(performance.now()); }
+
+    /* ---------- one frame ---------- */
+    var lastT = 0, sweep = 0;
+    function draw(t) {
+        var dt = Math.min(0.1, (t - (lastT || t)) / 1000); lastT = t;
+        if (!drag) { ROT.lon -= (ROT.vlon + 4.5 * ROT.auto) * dt; ROT.lat = clamp(ROT.lat + ROT.vlat * dt, -55, 60); ROT.vlon *= Math.pow(0.12, dt); ROT.vlat *= Math.pow(0.12, dt);
+            ROT.auto = Math.min(1, ROT.auto + dt * 0.5); ROT.lat += (22 - ROT.lat) * Math.min(1, dt * 0.15); }
+        sl0 = Math.sin(ROT.lat * RAD); cl0 = Math.cos(ROT.lat * RAD); sweep = (t / 1000 * 1.1) % 6.2832;
+        var g = C2, d = DPR, s = t / 1000; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, CV.width, CV.height); g.setTransform(d, 0, 0, d, 0, 0);
+        // stars, then the far-away visitors
+        for (var i = 0; i < STARS.length; i++) { var st = STARS[i]; g.fillStyle = 'rgba(220,235,255,' + (0.25 + 0.3 * Math.sin(s * 1.3 + st[3]) ** 2) + ')'; g.fillRect(st[0], st[1], st[2], st[2]); }
+        EXTRA = [];
+        var nx = CW * 0.13, ny = CH * 0.3, ns = SPR.m78.width / d; g.globalAlpha = 0.8; g.drawImage(SPR.m78, nx - ns / 2, ny - ns / 2, ns, ns); g.globalAlpha = 1; EXTRA.push({ o: OFFWORLD[1], x: nx, y: ny, r: ns * 0.3 });
+        var bx = CW * 0.87, by = CH * 0.26 + Math.sin(s * 0.4) * 2, bs = SPR.cyb.width / d; g.drawImage(SPR.cyb, bx - bs / 2, by - bs / 2, bs, bs); EXTRA.push({ o: OFFWORLD[2], x: bx, y: by, r: bs * 0.6 });
+        // the Moon: behind the globe on the far half of its orbit
+        var th = s * 0.16 + 3.6, ma = GR * 1.62, mx = GX + Math.cos(th) * ma, mz = Math.sin(th), my = GY - mz * GR * 0.32 + Math.cos(th) * GR * 0.12, msc = 1 + 0.15 * mz, ms = SPR.moon.width / d * msc;
+        function moon() { g.drawImage(SPR.moon, mx - ms / 2, my - ms / 2, ms, ms); EXTRA.push({ o: OFFWORLD[0], x: mx, y: my, r: ms * 0.6, pin: [mx - ms * 0.08, my - ms * 0.1] }); }
+        if (mz < 0) moon();
+        // orbit trace (behind / in front halves)
+        g.strokeStyle = 'rgba(150,200,255,0.08)'; g.lineWidth = 1; g.beginPath(); g.ellipse(GX, GY + 0, ma, GR * 0.34, -0.13, 0, 6.2832); g.stroke();
+        // the globe: atmosphere, ocean, graticule, land dots shaded by the light, the sweep
+        var at = g.createRadialGradient(GX, GY, GR * 0.92, GX, GY, GR * 1.18); at.addColorStop(0, 'rgba(90,170,255,0.22)'); at.addColorStop(1, 'rgba(90,170,255,0)');
+        g.fillStyle = at; g.beginPath(); g.arc(GX, GY, GR * 1.18, 0, 6.2832); g.fill();
+        var oc = g.createRadialGradient(GX - GR * 0.35, GY - GR * 0.35, GR * 0.1, GX, GY, GR); oc.addColorStop(0, '#0d3556'); oc.addColorStop(1, '#04121f');
+        g.fillStyle = oc; g.beginPath(); g.arc(GX, GY, GR, 0, 6.2832); g.fill();
+        g.lineWidth = 0.6; g.strokeStyle = 'rgba(120,190,255,0.07)';
+        for (var lat = -60; lat <= 60; lat += 30) { g.beginPath(); var on = false; for (var lo = -180; lo <= 180; lo += 6) { var p = view(Math.sin(lat * RAD), Math.cos(lat * RAD), lo * RAD); if (p[2] > 0) { var X = GX + p[0] * GR, Y = GY - p[1] * GR; on ? g.lineTo(X, Y) : g.moveTo(X, Y); on = true; } else on = false; } g.stroke(); }
+        for (var lo2 = -180; lo2 < 180; lo2 += 30) { g.beginPath(); var on2 = false; for (var la = -84; la <= 84; la += 6) { var q = view(Math.sin(la * RAD), Math.cos(la * RAD), lo2 * RAD); if (q[2] > 0) { var X2 = GX + q[0] * GR, Y2 = GY - q[1] * GR; on2 ? g.lineTo(X2, Y2) : g.moveTo(X2, Y2); on2 = true; } else on2 = false; } g.stroke(); }
+        var ds = Math.max(1.1, GR / 48), buckets = [[], [], [], []];
+        for (var k = 0; k < LAND.length; k++) { var P = LAND[k], v = view(P[0], P[1], P[2]); if (v[2] <= 0.02) continue;
+            var lit = 0.3 + 0.7 * Math.max(0, v[0] * LIGHT[0] + v[1] * LIGHT[1] + v[2] * LIGHT[2]), b = Math.min(3, Math.floor(lit * v[2] ** 0.35 * 4));
+            buckets[b].push(GX + v[0] * GR - ds / 2, GY - v[1] * GR - ds / 2); }
+        var cols = ['rgba(52,112,160,0.45)', 'rgba(62,138,192,0.65)', 'rgba(78,162,215,0.85)', 'rgba(110,192,238,0.95)'];
+        for (var bb = 0; bb < 4; bb++) { g.fillStyle = cols[bb]; var arr = buckets[bb]; for (var j = 0; j < arr.length; j += 2) g.fillRect(arr[j], arr[j + 1], ds, ds); }
+        // radar sweep (a soft wedge turning round the globe) + the rim
+        g.save(); g.beginPath(); g.arc(GX, GY, GR, 0, 6.2832); g.clip();
+        if (g.createConicGradient) { var cg = g.createConicGradient(sweep, GX, GY); cg.addColorStop(0, 'rgba(110,230,255,0.20)'); cg.addColorStop(0.12, 'rgba(110,230,255,0)'); cg.addColorStop(1, 'rgba(110,230,255,0)'); g.fillStyle = cg; g.fillRect(GX - GR, GY - GR, GR * 2, GR * 2); }
+        g.strokeStyle = 'rgba(140,235,255,0.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(GX, GY); g.lineTo(GX + Math.cos(sweep) * GR, GY + Math.sin(sweep) * GR); g.stroke();
+        g.restore();
+        g.strokeStyle = 'rgba(140,200,255,0.28)'; g.lineWidth = 1; g.beginPath(); g.arc(GX, GY, GR, 0, 6.2832); g.stroke();
+        // visitors: small and calm; they brighten as the sweep passes; the latest three pulse amber
+        SCR = [];
+        for (var pi = 0; pi < pings.length; pi++) { var pp = pings[pi], w = view(Math.sin(pp.lat * RAD), Math.cos(pp.lat * RAD), pp.lon * RAD); if (w[2] <= 0.05) continue;
+            var sx = GX + w[0] * GR, sy = GY - w[1] * GR; SCR.push([sx, sy, pp]);
+            var ang = Math.atan2(sy - GY, sx - GX), dA = ((sweep - ang) % 6.2832 + 6.2832) % 6.2832, hot = Math.exp(-dA * 2.2), r = K * (0.75 + Math.min(1.1, Math.sqrt(pp.n) * 0.08)) * (0.6 + 0.4 * w[2]);
+            if (pp.live) { var ph = ((s * 1000 + pi * 800) % 2400) / 2400; g.strokeStyle = 'rgba(255,201,77,' + (0.5 * (1 - ph)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(sx, sy, r * 1.6 + ph * 7 * K, 0, 6.2832); g.stroke();
+                g.fillStyle = '#ffc94d'; g.beginPath(); g.arc(sx, sy, Math.max(r * 1.4, 1.6 * K), 0, 6.2832); g.fill(); continue; }
+            if (hot > 0.05) { g.fillStyle = 'rgba(120,230,255,' + (0.25 * hot).toFixed(3) + ')'; g.beginPath(); g.arc(sx, sy, r * 3.2, 0, 6.2832); g.fill(); }
+            g.fillStyle = 'rgba(130,225,255,' + (0.55 + 0.4 * hot).toFixed(3) + ')'; g.beginPath(); g.arc(sx, sy, r, 0, 6.2832); g.fill(); }
+        if (mz >= 0) moon();
+        // the off-world "visits": a slow amber blip on each
+        for (var e = 0; e < EXTRA.length; e++) { var E = EXTRA[e], pin = E.pin || [E.x, E.y], ph2 = ((s * 1000 + e * 900) % 3000) / 3000;
+            g.strokeStyle = 'rgba(255,201,77,' + (0.55 * (1 - ph2)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(pin[0], pin[1], 1.4 * K + ph2 * 6 * K, 0, 6.2832); g.stroke();
+            g.fillStyle = '#ffd877'; g.beginPath(); g.arc(pin[0], pin[1], 1.3 * K, 0, 6.2832); g.fill(); }
+    }
     /* ~30 fps, only while the card is on screen and the tab is visible */
-    var onScreen = true, lastT = 0;
+    var onScreen = true, lastF = 0, ticking = false;
     if (window.IntersectionObserver) new IntersectionObserver(function (es) { onScreen = es[es.length - 1].isIntersecting; if (onScreen) kick(); }).observe(CARD);
-    var ticking = false;
     function kick() { if (!ticking) { ticking = true; requestAnimationFrame(tick); } }
-    function tick(t) { ticking = false; if (!onScreen || document.hidden) return;
-        if (t - lastT >= 32) { lastT = t; drawLive(t); }
-        if (pings.some(function (p) { return p.live; })) kick(); }
+    function tick(t) { ticking = false; if (!onScreen || document.hidden) { lastT = 0; return; } if (t - lastF >= 32) { lastF = t; draw(t); } kick(); }
     document.addEventListener('visibilitychange', kick);
 
     function fmtFull(n) { return Math.round(n).toLocaleString('en-US'); }
-    function onData(cc) { if (MW) drawBase(); kick(); if (LAST) fitCard(LAST.M); }
+    function onData(cc) { kick(); if (LAST) fitCard(LAST.M); }
     var VA = null; function renderDash() {}
 
-    /* ---------- tooltip: the nearest visited place (two-letter country code instead of a flag) ---------- */
-    var tip = document.getElementById('vmtip');
-    function nearestPing(clientX, clientY) { var rect = CARD.getBoundingClientRect(), cx = clientX - rect.left, cy = clientY - rect.top, hit = null, hd = 14 * Math.max(0.8, K);
-        for (var i = 0; i < pings.length; i++) { var xy = project(pings[i].lon, pings[i].lat), d = Math.hypot(xy[0] - cx, xy[1] - cy); if (d < hd) { hd = d; hit = pings[i]; } } return hit; }
-    function hoverMove(e) { var p = nearestPing(e.clientX, e.clientY);
-        if (!p) { tip.classList.remove('show'); return; }
-        var cc = ISO[p.country];
-        tip.innerHTML = '<b>' + (cc ? '<i>' + cc + '</i>' : '') + esc(p.where) + '</b><span>' + fmtFull(p.n) + ' visit' + (p.n > 1 ? 's' : '') + (p.t ? ' &middot; ' + fmtAgo(p.t) + ' ago' : '') + '</span>';
+    /* ---------- hover / drag / click ---------- */
+    var tip = document.getElementById('vmtip'), drag = null, tipHold = 0;
+    function hitAt(clientX, clientY) { var rect = CARD.getBoundingClientRect(), x = clientX - rect.left, y = clientY - rect.top, best = null, bd = 12 * Math.max(0.8, K);
+        for (var i = 0; i < SCR.length; i++) { var dd = Math.hypot(SCR[i][0] - x, SCR[i][1] - y); if (dd < bd) { bd = dd; best = { p: SCR[i][2] }; } }
+        if (!best) for (var j = 0; j < EXTRA.length; j++) { if (Math.hypot(EXTRA[j].x - x, EXTRA[j].y - y) < Math.max(EXTRA[j].r, 9)) best = { o: EXTRA[j].o }; }
+        return best; }
+    function showTip(h, clientX, clientY) {
+        if (h.p) { var p = h.p, cc = ISO[p.country]; tip.innerHTML = '<b>' + (cc ? '<i>' + cc + '</i>' : '') + esc(p.where) + '</b><span>' + fmtFull(p.n) + ' visit' + (p.n > 1 ? 's' : '') + (p.t ? ' &middot; ' + fmtAgo(p.t) + ' ago' : '') + '</span>'; }
+        else { var o = h.o; tip.innerHTML = '<b><i>' + o.code + '</i>' + esc(o.where) + '</b><span>' + o.n + ' visit' + (o.n > 1 ? 's' : '') + ' &middot; ' + esc(o.note) + '</span>'; }
         tip.classList.add('show'); var tw = tip.offsetWidth, th = tip.offsetHeight, vw = window.innerWidth || document.body.clientWidth, vh = window.innerHeight || document.body.clientHeight;
-        var tx = e.clientX + 14, ty = e.clientY + 14; if (tx + tw > vw - 4) tx = Math.max(4, e.clientX - 14 - tw); if (ty + th > vh - 4) ty = Math.max(4, e.clientY - 14 - th);
+        var tx = clientX + 14, ty = clientY + 14; if (tx + tw > vw - 4) tx = Math.max(4, clientX - 14 - tw); if (ty + th > vh - 4) ty = Math.max(4, clientY - 14 - th);
         tip.style.left = tx + 'px'; tip.style.top = ty + 'px'; }
+    function hoverMove(e) { if (drag || performance.now() < tipHold) return; var h = hitAt(e.clientX, e.clientY); if (h) showTip(h, e.clientX, e.clientY); else tip.classList.remove('show'); }
+    CARD.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: false }; ROT.vlon = ROT.vlat = 0; try { CARD.setPointerCapture(e.pointerId); } catch (_) {} });
+    CARD.addEventListener('pointermove', function (e) {
+        if (!drag) { if (e.pointerType === 'mouse') hoverMove(e); return; }
+        var dx = e.clientX - drag.lx, dy = e.clientY - drag.ly, now = performance.now(), dtt = Math.max(1, now - drag.t) / 1000;
+        if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 4) { drag.moved = true; tip.classList.remove('show'); }
+        if (drag.moved) { var dg = 57.3 / GR; ROT.lon -= dx * dg; ROT.lat = clamp(ROT.lat + dy * dg, -55, 60); ROT.vlon = -dx * dg / dtt * 0.6; ROT.vlat = dy * dg / dtt * 0.6; ROT.auto = 0; kick(); }
+        drag.lx = e.clientX; drag.ly = e.clientY; drag.t = now; });
+    function endDrag(e, cancel) { if (!drag) return; var d0 = drag; drag = null; if (cancel || d0.moved) return;
+        var h = hitAt(e.clientX, e.clientY);
+        if (h && h.o) { showTip(h, e.clientX, e.clientY); tipHold = performance.now() + 2500; setTimeout(function () { if (performance.now() >= tipHold) tip.classList.remove('show'); }, 2600); return; }
+        if (h && h.p && e.pointerType !== 'mouse') { showTip(h, e.clientX, e.clientY); tipHold = performance.now() + 2500; setTimeout(function () { if (performance.now() >= tipHold) tip.classList.remove('show'); }, 2600); return; }
+        openAnalytics(); }
+    CARD.addEventListener('pointerup', function (e) { endDrag(e, false); });
+    CARD.addEventListener('pointercancel', function (e) { endDrag(e, true); });
+    CARD.addEventListener('mouseleave', function () { if (!drag) tip.classList.remove('show'); });
 
     /* one click = one tab: open without the "noopener" feature (with it, window.open returns null by spec), cut the
        opener by hand, and fall back to a plain link only if open() throws or returns null */
@@ -316,14 +389,13 @@
         try { var a = document.createElement('a'); a.href = ANALYTICS_URL; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {} }
 
     /* ---------- boot ---------- */
-    layout(); resize();
-    CARD.addEventListener('mousemove', hoverMove); CARD.addEventListener('mouseleave', function () { tip.classList.remove('show'); });
-    CARD.addEventListener('click', function () { openAnalytics(); });
+    layout(); resize(); kick();
     CARD.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAnalytics(); } });
     var rq = 0; function relayout() { if (rq) return; rq = requestAnimationFrame(function () { rq = 0; layout(); resize(); }); }
     window.addEventListener('resize', relayout); setTimeout(relayout, 250);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
-    window.__pfPing = function (city) { var r = CARD.getBoundingClientRect(); for (var i = 0; i < pings.length; i++) if (pings[i].city === city) { var xy = project(pings[i].lon, pings[i].lat); return { x: r.left + xy[0], y: r.top + xy[1] }; } return null; };
+    window.__pfPing = function (city) { var r = CARD.getBoundingClientRect(); for (var i = 0; i < SCR.length; i++) if (SCR[i][2].city === city) return { x: r.left + SCR[i][0], y: r.top + SCR[i][1] }; return null; };
+    window.__pfGlobe = function () { return { lon: ROT.lon, lat: ROT.lat, land: LAND.length, onGlobe: SCR.length, extra: EXTRA.map(function (e) { return { id: e.o.id, x: Math.round(e.x), y: Math.round(e.y) }; }) }; };
     loadData();
 })();
 </script>
