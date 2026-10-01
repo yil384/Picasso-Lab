@@ -340,7 +340,12 @@
         // gravitational lensing round the wormhole (a point-lens, Einstein radius 1.3 throats): sp is where our sky is read for this pixel.
         // Just outside the throat the deflection flips the sky over (a mirrored copy of what lies behind), at 1.3 it smears it into the
         // Einstein ring of tangential arcs; farther out it fades to nothing
-        '  vec2 wd = p - uCyb.xy; float wr = length(wd) / uCyb.z; vec2 wdir = wd / max(length(wd), 1e-3);',
+        // The throat is not a perfect circle: like a spinning (Kerr) black hole's shadow it is flattened into a D on the side
+        // rotating toward us (the lower side, where the accretion crescent is brightest) and shifted slightly the other way.
+        // wr = distance in throats measured against that D outline, so the lensing, the far side and the rings all follow it
+        '  vec2 wd = p - uCyb.xy - vec2(0.0, -0.04 * uCyb.z); float wsn = wd.y / max(length(wd), 1e-3);',
+        '  float wfl = 0.86 / max(wsn, 1e-3), wre = wsn > 0.0 ? min(1.0, wfl) - pow(max(0.32 - abs(1.0 - wfl), 0.0) / 0.32, 2.0) * 0.08 : 1.0;',
+        '  float wr = length(wd) / (uCyb.z * wre); vec2 wdir = wd / max(length(wd), 1e-3);',
         '  vec2 sp = p - wdir * uCyb.z * (1.69 / max(wr, 1.0)) * smoothstep(4.5, 2.0, wr) * step(1.0, wr);',
         '  vec3 col = mix(vec3(0.012, 0.025, 0.06), vec3(0.03, 0.06, 0.13), smoothstep(1.2, 0.0, length((p - uRes * vec2(0.5, 0.4)) / S)));',
         '  for (int L = 0; L < 3; L++) { float fl = float(L), cell = (5.0 + fl * 4.0) * S / 160.0; vec2 q = (sp + uPar * (0.04 + fl * 0.05)) / cell, id = floor(q);',
