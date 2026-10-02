@@ -1,0 +1,211 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Picasso Lab - style frames</title>
+<!-- Style frames for the launch film (frame 0, 1, 2 = shot 1, 2, 3), rendered at final quality before any animation:
+     0  hero: the first paper, a real curved sheet in a dark studio, soft area light, glossy floor, shallow focus
+     1  the gallery: all 136 papers standing in a receding S-curve, newest in front, 2013 at the vanishing point
+     2  end card: three glass rings (the logo) over an arc of papers, the type
+     Data + page textures: social/x/paperwall.py --export. -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const TAU = Math.PI * 2, ASP = 0.773, FLOOR = -0.62;
+const hsh = (...n) => { let x = Math.sin(n.reduce((s, v, i) => s + v * (12.9898 + i * 78.233), 0.5)) * 43758.5453; return x - Math.floor(x); };
+const loadImg = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
+let D, T; const st = {};
+
+defineScene({
+  meta: { title: 'style frames', durationFrames: 3, fps: 30, width: 1080, height: 1350, seed: 3,
+    design: [1080, 1350], background: '#0b0b0e', fonts: ['Inter'], boil: { every: 1, variants: 3 }, poster: 0 },
+  update(ctx) { shot(ctx, ctx.iw); },
+  layers: [
+    { name: '3d', type: 'three', async init(ctx, three) { return build(ctx, three); }, draw() { T.composer.render(); return false; } },
+    { name: 'type', type: '2d', draw(ctx, g) { type(ctx, g, ctx.iw); } },
+  ],
+});
+
+// ---------------------------------------------------------------------------------------------------------
+// materials
+// ---------------------------------------------------------------------------------------------------------
+function fiberTexture(THREE) {
+  // paper tooth: fine grain + short fibres, used as a bump map so grazing light shows the sheet is paper
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  const im = g.createImageData(512, 512);
+  for (let i = 0; i < 512 * 512; i++) { const v = 128 + (hsh(i, 1) - 0.5) * 34; im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = v; im.data[i * 4 + 3] = 255; }
+  g.putImageData(im, 0, 0);
+  g.lineCap = 'round';
+  for (let i = 0; i < 2600; i++) {
+    const x = hsh(i, 2) * 512, y = hsh(i, 3) * 512, a = hsh(i, 4) * TAU, L = 3 + hsh(i, 5) * 10;
+    g.strokeStyle = `rgba(${hsh(i, 6) > 0.5 ? 255 : 0},${hsh(i, 6) > 0.5 ? 255 : 0},${hsh(i, 6) > 0.5 ? 255 : 0},0.10)`; g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke();
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 4); t.colorSpace = THREE.NoColorSpace;
+  return t;
+}
+function sheetGeometry(THREE, curl, sag, lift, seed) {
+  // a sheet that is not a plane: a gentle cylindrical curl across, a sag along, one corner lifting
+  const g = new THREE.PlaneGeometry(ASP, 1, 24, 30), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i) / (ASP / 2), y = p.getY(i) * 2;          // -1..1
+    let z = curl * 0.05 * x * x + sag * 0.025 * (1 - y * y);
+    z += lift * 0.07 * Math.max(0, x - 0.35) * Math.max(0, y - 0.35);
+    z += 0.003 * Math.sin(x * 3 + seed) * Math.cos(y * 2 + seed);
+    p.setZ(i, z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+async function build(ctx, { THREE, renderer }) {
+  D = await (await fetch('/scene/data.json')).json();
+  RectAreaLightUniformsLib.init();
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0b0e);
+  scene.fog = new THREE.Fog(0x0b0b0e, 7, 22);
+  const camera = new THREE.PerspectiveCamera(30, ctx.W / ctx.H, 0.05, 60);
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.9;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.12;
+
+  // lights: a big soft box above-front, a cool rim from behind-left, a warm kicker; a soft shadow caster
+  const key = new THREE.RectAreaLight(0xfff7ee, 1.3, 5, 3); key.position.set(1.2, 3.2, 3.2); key.lookAt(0, 0.2, 0); scene.add(key);
+  const rim = new THREE.RectAreaLight(0x9cc2ff, 2.2, 2.5, 4); rim.position.set(-3.0, 3.0, -3.6); rim.lookAt(0, 0.6, 0); scene.add(rim);
+  const kick = new THREE.RectAreaLight(0xffd2a8, 0.8, 1.5, 3); kick.position.set(3.4, 0.8, -1.2); kick.lookAt(0, 0.4, 0); scene.add(kick);
+  const sh = new THREE.DirectionalLight(0xffffff, 0.35); sh.position.set(1.0, 6, 2.2); sh.castShadow = true;
+  sh.shadow.mapSize.set(2048, 2048); sh.shadow.camera.left = -6; sh.shadow.camera.right = 6; sh.shadow.camera.top = 6; sh.shadow.camera.bottom = -6;
+  sh.shadow.radius = 9; sh.shadow.blurSamples = 24; sh.shadow.bias = -0.0005; scene.add(sh);
+
+  // studio: a glossy floor (a mirror under a tinted, slightly rough coat) and a curved backdrop
+  const mirror = new Reflector(new THREE.PlaneGeometry(40, 40), { textureWidth: ctx.W, textureHeight: ctx.H, color: 0x8a8a90, clipBias: 0.003 });
+  mirror.rotation.x = -Math.PI / 2; mirror.position.y = FLOOR; scene.add(mirror);
+  const coat = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0e0e12, roughness: 0.55, metalness: 0.0, transparent: true, opacity: 0.86 }));
+  coat.rotation.x = -Math.PI / 2; coat.position.y = FLOOR + 0.001; coat.receiveShadow = true; scene.add(coat);
+  const cyc = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 16, 96, 1, true, Math.PI * 0.55, Math.PI * 0.9),
+    new THREE.MeshStandardMaterial({ color: 0x131318, roughness: 0.95, side: THREE.BackSide }));
+  cyc.position.set(0, FLOOR + 8, 2); scene.add(cyc);
+
+  // papers
+  const bump = fiberTexture(THREE);
+  const backMat = new THREE.MeshPhysicalMaterial({ color: 0xebe8e1, roughness: 0.8, bumpMap: bump, bumpScale: 0.6, sheen: 0.4, sheenRoughness: 0.8, side: THREE.BackSide });
+  st.make = async (k, seed) => {
+    const img = await loadImg(`/scene/pages/${String(k).padStart(3, '0')}.jpg`);
+    const tex = new THREE.Texture(img); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16; tex.needsUpdate = true;
+    const geo = sheetGeometry(THREE, 0.6 + hsh(seed, 1) * 0.8, hsh(seed, 2) - 0.3, hsh(seed, 3), seed);
+    const front = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.74, bumpMap: bump, bumpScale: 0.5, sheen: 0.35, sheenRoughness: 0.85, sheenColor: 0xffffff }));
+    const back = new THREE.Mesh(geo, backMat);
+    front.castShadow = back.castShadow = true; front.receiveShadow = true;
+    const g = new THREE.Group(); g.add(front, back); scene.add(g); g.visible = false;
+    return g;
+  };
+  st.papers = {};
+  for (const p of D.pubs) st.papers[p.k] = await st.make(p.k, p.k);
+
+  // three glass rings: the logo's Physics / Computer Science / Math, as objects
+  st.rings = [0x3f8cff, 0x63d36f, 0xff4d4d].map((c, i) => {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.022, 48, 160), new THREE.MeshPhysicalMaterial({
+      color: c, emissive: c, emissiveIntensity: 0.18, roughness: 0.18, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 }));
+    scene.add(m); m.visible = false; return m;
+  });
+
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bokeh = new BokehPass(scene, camera, { focus: 3, aperture: 0.0006, maxblur: 0.006 });
+  composer.addPass(bokeh);
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(ctx.W, ctx.H), 0.14, 0.6, 0.96));
+  composer.addPass(new OutputPass());
+  T = { THREE, scene, camera, composer, bokeh, key, rim, kick, sh };
+  return { scene, camera };
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// the three shots
+// ---------------------------------------------------------------------------------------------------------
+function place(k, pos, rot, size, dim = 1) { const g = st.papers[k]; g.visible = true; g.children[0].material.color.setScalar(dim); g.position.set(...pos); g.rotation.set(...rot, 'YXZ'); g.scale.setScalar(size); }
+function look(pos, tgt, fov, aperture) {
+  const { camera, bokeh, THREE } = T;
+  camera.position.set(...pos); camera.fov = fov; camera.lookAt(...tgt); camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
+  bokeh.uniforms.focus.value = camera.position.distanceTo(new THREE.Vector3(...tgt)); bokeh.uniforms.aperture.value = aperture;
+}
+function shot(ctx, i) {
+  Object.values(st.papers).forEach((g) => { g.visible = false; }); st.rings.forEach((r) => { r.visible = false; });
+  const first = D.order[0];
+  if (i === 0) {
+    place(first, [0, 0.55, 0], [-0.08, -0.5, 0.04], 1.25);
+    // a few far papers, out of focus, so the dark has depth
+    D.order.slice(1, 11).forEach((k, j) => place(k, [-5 + (j % 5) * 2.4 + hsh(j, 1), 0.4 + hsh(j, 2) * 2.2, -8 - hsh(j, 3) * 4], [hsh(j, 4) * 0.4, -0.3 + hsh(j, 5) * 0.6, hsh(j, 6) * 0.3], 0.9, 0.35));
+    look([0.9, 0.62, 3.9], [0.05, 0.28, 0], 30, 0.0006);
+    T.key.position.set(2.6, 2.6, 1.6); T.key.lookAt(0, 0.5, 0); T.key.intensity = 1.6; T.rim.intensity = 3.2;
+  } else if (i === 1) {
+    // newest at the front, 2013 at the vanishing point; an S-curve gallery standing on the floor
+    const order = [...D.order].reverse();
+    order.forEach((k, j) => {
+      const row = Math.floor(j / 4), col = j % 4, z = 2.2 - row * 0.78;
+      const x = (col - 1.5) * 0.74 + Math.sin(row * 0.21) * 1.2;
+      const s = 0.78;
+      place(k, [x, FLOOR + s / 2 + 0.012, z], [0, -0.18 + (col - 1.5) * 0.05 + Math.cos(row * 0.21) * 0.12, (hsh(k, 7) - 0.5) * 0.02], s);
+    });
+    look([2.6, 1.55, 7.4], [-0.2, -0.45, -1.4], 34, 0.0004);
+    T.key.position.set(0.5, 3.4, 4.2); T.key.lookAt(0, -0.2, 0);
+  } else {
+    // the end card: an arc of papers behind, three glass rings in front
+    D.order.forEach((k, j) => {
+      if (j % 2) return;
+      const a = -1.3 + hsh(k, 1) * 2.6, R = 9 + hsh(k, 2) * 5;
+      place(k, [Math.sin(a) * R, -0.3 + hsh(k, 3) * 3.6, -Math.cos(a) * R + 1.0], [(hsh(k, 4) - 0.5) * 0.3, -a + (hsh(k, 5) - 0.5) * 0.5, (hsh(k, 6) - 0.5) * 0.3], 0.7, 0.3);
+    });
+    const C = [[-0.27, 1.62, 0.6], [0, 1.92, 0.45], [0.27, 1.62, 0.6]];
+    st.rings.forEach((r, j) => { r.visible = true; r.position.set(...C[j]); r.rotation.set(0.12 * (j - 1), 0.25 * (j - 1), 0); });
+    look([0, 1.05, 5.6], [0, 1.05, 0.5], 32, 0.0022);
+    T.key.position.set(0, 3.2, 3.4); T.key.lookAt(0, 1, 0.5);
+  }
+  ctx.camera = T.camera;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// type: one family (Inter), a strict scale, left-aligned editorial layout with a 72 px margin
+// ---------------------------------------------------------------------------------------------------------
+function txt(g, s, x, y, size, weight, color, o = {}) {
+  g.save(); g.font = `${weight} ${size}px "Inter"`; g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  try { g.letterSpacing = `${(o.track ?? -0.02) * size}px`; } catch (e) { /* */ }
+  if (o.grad) { const gr = g.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, o.grad[0]); gr.addColorStop(1, o.grad[1]); g.fillStyle = gr; }
+  else g.fillStyle = color;
+  g.fillText(s, x, y); g.restore();
+}
+function scrim(g, y0, y1, a) { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, 'rgba(11,11,14,0)'); gr.addColorStop(1, `rgba(11,11,14,${a})`); g.fillStyle = gr; g.fillRect(0, Math.min(y0, y1), 1080, Math.abs(y1 - y0)); }
+function type(ctx, g, i) {
+  const M = 72;
+  txt(g, 'PICASSO LAB', M, 96, 20, 600, '#8e8e93', { track: 0.32 });
+  if (i === 0) {
+    scrim(g, 900, 1350, 0.75);
+    txt(g, '2013', M - 6, 1188, 168, 200, null, { grad: ['#ffffff', '#9c9ca6'], track: -0.035 });
+    txt(g, 'It started with one paper.', M, 1252, 40, 500, '#c7c7cc');
+  } else if (i === 1) {
+    scrim(g, 360, 0, 0.8);
+    txt(g, '136', M - 8, 300, 200, 700, null, { grad: ['#ffffff', '#a1a1aa'], track: -0.05 });
+    txt(g, 'papers.', M + 360, 300, 64, 500, '#c7c7cc');
+    txt(g, '2013 – 2026', M, 362, 32, 500, '#8e8e93');
+    // a small time axis to anchor the gallery: front is now
+    txt(g, 'NOW', 990, 1290, 18, 700, '#8e8e93', { align: 'right', track: 0.3 });
+  } else {
+    scrim(g, 640, 1350, 0.85);
+    txt(g, 'Picasso Lab', 540, 900, 104, 700, null, { align: 'center', grad: ['#ffffff', '#a1a1aa'], track: -0.035 });
+    txt(g, 'UC San Diego  ·  Prof. Yufei Ding', 540, 962, 32, 500, '#a1a1a6', { align: 'center' });
+    txt(g, 'We are recruiting PhD students.', 540, 1082, 40, 600, '#f5f5f7', { align: 'center' });
+    txt(g, '@PicassoLabUCSD', 540, 1176, 46, 700, null, { align: 'center', grad: ['#a8d0ff', '#5aa2ff'] });
+    txt(g, 'yufeiding.ucsd.edu', 540, 1222, 24, 500, '#8e8e93', { align: 'center' });
+  }
+}
+</script></body></html>
