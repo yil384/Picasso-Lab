@@ -27,5 +27,12 @@ The user generated the cast sheet and the six first frames in ChatGPT (`cast.png
 2. `Animate this image. Kai, the curly-haired student in the orange jacket, glances left and right, then quietly tips the small jar of red chili oil from his hand into the pot and whispers with a guilty grin: "One more scoop should be fine." Comedic timing, subtle camera push-in. Keep the characters exactly as in the image.`
 3. `Animate this image. The three hands take turns: each one quickly drops its spoon of red chili into the hotpot, one after another, sneaky and fast. With every spoon the broth bubbles redder. Overhead camera, quick comedic rhythm. Keep everything exactly as in the image.`
 4. `Animate this image. The red hotpot boils violently, bubbles of chili oil burst and a column of steam blasts up; the four students recoil in shock and amazement; on the monitor behind them the red curve shoots straight up. Dramatic slow camera rise. Keep the characters exactly as in the image.`
-5. `Animate this image. All four chew their first bite; their faces flush bright red, little puffs of steam pop from their ears, Mia breathes out a tiny flame, Zoe gulps her bubble tea, Leo's glasses fog up. Exaggerated cartoon reaction, comedic. Keep the characters exactly as in the image.`
-6. `Animate this image. The professor in the doorway leans in and asks: "So... did the model converge?" The four students, red-faced with tears from the spice, raise their thumbs together and answer in a choked voice: "To fire." Hold on their faces, comedic beat. Keep the characters exactly as in the image.`
+5. `Animate this image. All four take their first bite of the hotpot. Their cheeks turn rosy pink, they fan their mouths with their hands, little cartoon puffs of steam float up above their heads, Zoe quickly sips her bubble tea, and Leo's glasses fog up. Funny, exaggerated cartoon reaction, cozy and lighthearted. Keep the characters exactly as in the image.`
+6. `Animate this image. The smiling professor at the open door raises her mug and asks cheerfully: "So... did the model converge?" The four students, cheeks pink, give a big thumbs up together and answer proudly: "To fire!" Warm, lighthearted comedy. Keep the characters exactly as in the image.` (first frame `s6_new.png`)
+
+## Safety-filter notes (Vids refused these)
+- s5: "breathes out a tiny flame", "faces flush bright red" -> refused; "cheeks turn rosy pink, fan their mouths, cartoon
+  puffs of steam" passed.
+- s6: the first frame itself was refused (a faceless dark silhouette leaning in at the door reads as a lurker), with any
+  prompt. A clearly visible, smiling professor in warm light (`s6_new.png`) fixed it. Avoid tears, choking, fire on
+  people, and shadowy figures in first frames.
