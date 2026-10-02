@@ -23,7 +23,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 ap = argparse.ArgumentParser(); ap.add_argument('--fonts', required=True); ap.add_argument('--pages', default=os.path.join(HERE, 'pages'))
-ap.add_argument('--only'); A = ap.parse_args()
+ap.add_argument('--only'); ap.add_argument('--export'); A = ap.parse_args()
 W, H, FPS = 1080, 1350, 24
 BG, INK, MUTE = (246, 242, 233), (22, 21, 28), (112, 106, 98)
 BLUE, GREEN, RED, GOLD = (31, 111, 186), (84, 163, 58), (200, 40, 40), (196, 146, 40)
@@ -495,7 +495,21 @@ def frame(f):
         text(img, 'yufeiding.ucsd.edu', W / 2, 1094, SANS(32, 500), MUTE, alpha=k3, rise=12)
     return img.convert('RGB')
 
+def export(dst):
+    """page textures + data for the 3D keynote film (video-kit/films/xkeynote)"""
+    os.makedirs(os.path.join(dst, 'pages'), exist_ok=True)
+    for k in range(N): page(k, 512).save(os.path.join(dst, 'pages', f'{k:03d}.jpg'), quality=86)
+    team().resize((1200, 900), Image.LANCZOS).save(os.path.join(dst, 'team.jpg'), quality=88)
+    LOGO.save(os.path.join(dst, 'logo.png'))
+    data = {'order': ORDER, 'pubs': [{'k': p['k'], 'tag': p['tag'], 'venue': p['venue'], 'yr': p['yr'], 'short': p['short'], 'ring': p['ring'],
+                                      'award': AWARD.get(p['k'], '').replace('Award: ', '')} for p in PUBS],
+            'topv': TOPV, 'vcount': VCOUNT, 'years': YEARS, 'ycount': YCOUNT, 'reps': REPS, 'awards': AW_LIST,
+            'rings': [{'name': r[2], 'sub': r[3], 'n': len(RMEM[i])} for i, r in enumerate(RINGS)]}
+    json.dump(data, open(os.path.join(dst, 'data.json'), 'w'), indent=0)
+    print('exported', N)
+
 def main():
+    if A.export: return export(A.export)
     os.makedirs(os.path.join(HERE, 'out'), exist_ok=True)
     if A.only:
         for f in map(int, A.only.split(',')): frame(f).save(os.path.join(HERE, 'out', f'pw_{f:04d}.jpg'), quality=86)
