@@ -97,6 +97,13 @@ standalone pages such as `events/guandan.html` and `blogs/nvidia-ising/`.
   Optionally a native text box under it (title, authors, date, abstract; full text in a Collapsible text group). `python3 blogs/sites_copy.py`
   builds `blogs/sites-copy.html` (noindex; copy buttons that keep headings and links). A mirrored post whose canonical
   is the author's own site gets only a summary and a link, never the full text. Never hide text (white on white etc.).
+- Same problem on every whole-page embed (checked Oct 2026: Publications, Projects, Events, Teaching and Blogs carry no
+  native text; Home, Team, Prof. Yufei Ding have plenty). `NODE_PATH=$(npm root -g) node seo/sites_text.js` renders
+  pub/projects/events/teaching from the checkout (no network), extracts papers / project cards / news / courses, and
+  writes `seo/sites-text.html` (noindex, one copy button per page) for hidden native "text version" subpages
+  (`/publications/list`, `/projects/overview`, `/events/news`, `/teaching/courses`) plus a one-line link row for Home's
+  native text so Google finds them. `seo/sites-text.json` fingerprints each block with the date it last changed; a
+  block whose content changed since the previous run is flagged for re-paste. Re-run it after editing those pages.
 - The standalone pages on GitHub Pages (`blogs/`, `blogs/<slug>/`, listed in `sitemap.xml`) are crawlable on their own
   (property `https://yil384.github.io/Picasso-Lab/`, verification file `googleff133c80611a3756.html`), but they rank
   under github.io, not ucsd.edu.
