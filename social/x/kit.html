@@ -1,0 +1,73 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>X Post Kit</title>
+<style>
+:root{--bg:#f6f3ef;--card:#fff;--ink:#1d1a18;--mute:#6f6760;--line:#e4ddd5;--acc:#c2541c;--pre:#faf8f5}
+@media (prefers-color-scheme:dark){:root{--bg:#141110;--card:#1e1a18;--ink:#efe9e3;--mute:#a69c93;--line:#342d29;--acc:#f0a060;--pre:#181513}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,"Segoe UI",Roboto,"PingFang SC","Noto Sans SC",sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 80px}h1{font-size:26px;margin:0 0 4px}h2{font-size:18px;margin:34px 0 10px}
+.sub{color:var(--mute);margin:0 0 18px}.guide{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 20px}
+.guide li{margin:6px 0}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0}
+.ch{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:10px}.ch span{color:var(--acc);font-size:13px;font-weight:600}
+.tw{border:1px solid var(--line);border-radius:10px;margin:8px 0;overflow:hidden}.th{display:flex;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line);font-size:13px;color:var(--mute)}
+.th .n{margin-left:auto}button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:2px 10px;cursor:pointer}
+button.ok{border-color:var(--acc);color:var(--acc)}pre{margin:0;padding:10px 12px;white-space:pre-wrap;word-wrap:break-word;font:inherit;background:var(--pre)}
+.ims{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.ims a{position:relative;display:block}
+.ims img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block}.ims span{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;border-radius:4px;padding:0 6px}
+.vid{display:inline-block;margin-top:10px;color:var(--acc);font-weight:600}.note{color:var(--mute);font-size:13.5px;margin:10px 0 0}
+.top{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.top img,.top video{width:100%;border-radius:10px;display:block;border:1px solid var(--line)}
+@media (max-width:600px){.ims{grid-template-columns:repeat(2,1fr)}.top{grid-template-columns:1fr}}
+</style></head><body><main>
+<h1>@PicassoLabUCSD 发帖工具包</h1><p class="sub">英文帖子文案可直接复制；图片点击即下载，按编号顺序上传。字数按 X 规则计算（链接算 23）。</p>
+<div class="top"><div><b>首帖视频（4:5，29 秒）</b><video src="out/launch_reel.mp4" controls muted playsinline poster="media/reel_poster.jpg"></video><a class="vid" href="out/launch_reel.mp4" download>下载 launch_reel.mp4</a></div>
+<div><b>主页头图（1500x500）</b><img src="media/banner.jpg" alt=""><a class="vid" href="media/banner.jpg" download>下载 banner.jpg</a>
+<p class="note">Edit profile → Header 上传。头像建议用 lab logo；Bio 建议：<br>Picasso Lab @UCSanDiego, led by Prof. Yufei Ding. Systems for quantum computing, AI and computer architecture. Lab life: lots of hot pot.<br>Website 填 yufeiding.ucsd.edu</p></div></div>
+<h2>第一条帖子怎么发才有流量</h2><ol class="guide">
+<li><b>先把主页装修好再发</b>：头图、头像、Bio、网址。新访客会先看主页，没装修好的主页很少有人关注。</li>
+<li><b>首帖 = 视频 + thread</b>：原生上传的视频会自动播放，曝光比纯文字、外链高很多。视频是静音自动播放的，所以画面里的大字已经把故事讲清楚了。</li>
+<li><b>发的时间</b>：美国太平洋时间周二到周四早上 8-10 点（北京时间当晚 23 点到次日 1 点），美国和欧洲的学术圈都在线。</li>
+<li><b>第一个小时最关键</b>：发之前在组里群里通知好，发出后 30 分钟内请 Yufei 老师和组员用个人号<b>引用转发（Quote）并写一句话</b>，再加上点赞和回复。X 的推荐算法很看重早期互动，回复和引用比点赞的权重高。</li>
+<li><b>@ 合适的账号</b>：正文里的 @UCSanDiego，加上作者本人、合作方、会议和基金会，他们转发就能带来第一批精准关注。一条帖子 @ 不超过 2-3 个。</li>
+<li><b>外链放回复里</b>：正文带外链会被降低推荐，所以论文和网站链接都放在第一条回复里。</li>
+<li><b>节奏</b>：前两周每 2 天发一条（按下面的顺序），之后每周 2-3 条。成果帖和生活帖穿插着发，火锅短剧这类轻松内容放在周末。</li>
+<li><b>平时多互动</b>：关注并回复领域里的大号（会议、同行实验室、相关研究者），在别人的热帖下面做有内容的回复，这是新账号涨粉最快的方法。</li>
+<li><b>图片的 Alt text</b>：上传图片后点 "+Alt"，写一句描述，有利于无障碍访问和搜索。</li>
+</ol>
+<h2>帖子（按发布顺序）</h2>
+<section class="card"><div class="ch"><b>Launch post + reel</b><span>Day 1 · 发完置顶 (Pin)</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">274/280</span><button data-c>复制</button></div><pre>Hello, X. We are Picasso Lab at @UCSanDiego, led by Prof. Yufei Ding. We build systems for quantum computing, AI, and computer architecture.
+
+The last few months: an ISCA 2026 Best Paper, a grant for open-source QEC, two new doctors, and far too much hot pot.
+
+Follow along.</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">215/280</span><button data-c>复制</button></div><pre>Who we are: PhD students, postdocs and interns working on quantum compilers and error correction, systems for LLM training and inference, and AI for hardware design.
+
+Papers, people and news: https://yufeiding.ucsd.edu</pre></div><div class="tw"><div class="th"><span>回复 2（回复在自己上一条下面）</span><span class="n">170/280</span><button data-c>复制</button></div><pre>Over the next weeks we will post the stories behind the reel, starting with the ISCA Best Paper tomorrow.
+
+Questions about our work, or about joining the lab? Reply here.</pre></div><a class="vid" href="out/launch_reel.mp4" download>下载视频：launch_reel.mp4</a><p class="note">视频直接上传（不要贴 YouTube 链接）。发完立刻 Pin to profile。</p></section>
+<section class="card"><div class="ch"><b>ISCA 2026 Best Paper</b><span>Day 2</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">247/280</span><button data-c>复制</button></div><pre>Our paper &quot;Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference&quot; won the Best Paper Award at #ISCA2026.
+
+Congrats to lead author Zhongkai Yu and our coauthors at IU Bloomington, Columbia, Samsung and NVIDIA.</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">30/280</span><button data-c>复制</button></div><pre>Paper: https://arxiv.org/abs/2510.05497</pre></div><div class="ims"><a href="media/01_isca/1.jpg" download><img src="media/01_isca/1.jpg" alt="" loading="lazy"><span>1</span></a><a href="media/01_isca/2.jpg" download><img src="media/01_isca/2.jpg" alt="" loading="lazy"><span>2</span></a><a href="media/01_isca/3.jpg" download><img src="media/01_isca/3.jpg" alt="" loading="lazy"><span>3</span></a><a href="media/01_isca/4.jpg" download><img src="media/01_isca/4.jpg" alt="" loading="lazy"><span>4</span></a></div><p class="note">链接放在回复里（X 会压低正文带外链的帖子）。最好请 Zhongkai 本人用自己账号 quote 这条，再写 3-4 条讲 idea 的 thread，配论文里最好看的一张图 - 学术圈最吃这种&quot;一图讲懂&quot;的帖子。</p></section>
+<section class="card"><div class="ch"><b>LightStim grant</b><span>Day 4</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">247/280</span><button data-c>复制</button></div><pre>Xiang Fang received a @unitaryfund grant to keep building LightStim, an open-source framework for constructing and benchmarking quantum error correction protocols, with detectors and logical observables built automatically.
+
+#QuantumComputing #QEC</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">29/280</span><button data-c>复制</button></div><pre>Code: https://github.com/QuTone/LightStim</pre></div><div class="ims"><a href="media/02_lightstim/1.jpg" download><img src="media/02_lightstim/1.jpg" alt="" loading="lazy"><span>1</span></a><a href="media/02_lightstim/2.jpg" download><img src="media/02_lightstim/2.jpg" alt="" loading="lazy"><span>2</span></a><a href="media/02_lightstim/3.jpg" download><img src="media/02_lightstim/3.jpg" alt="" loading="lazy"><span>3</span></a></div><p class="note">发之前确认 Unitary Foundation 的 X 账号（目前是 @unitaryfund）。</p></section>
+<section class="card"><div class="ch"><b>AI comedy short, Ep.1</b><span>Day 6 (周末)</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">189/280</span><button data-c>复制</button></div><pre>Every lab dinner starts the same way: &quot;Mild. Everyone agrees, just mild.&quot;
+
+We made a short AI comedy about it. Episode 1: Neural Hotpot Temperature Scaling, or why &quot;mild&quot; converges to fire.</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">98/280</span><button data-c>复制</button></div><pre>Made by the lab with AI image and video tools. More episodes if this one gets enough sesame sauce.</pre></div><a class="vid" href="out/hotpot_ep1.mp4" download>下载视频：hotpot_ep1.mp4</a><p class="note">周末发轻松内容。用 1080p 版本直接上传。</p></section>
+<section class="card"><div class="ch"><b>Dr. Hezi Zhang</b><span>Day 8</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">240/280</span><button data-c>复制</button></div><pre>Congratulations to Dr. Hezi Zhang on her PhD! Hezi joins UW-Madison ECE as an Assistant Professor this fall, and she is recruiting students.
+
+She also welcomed a baby during her PhD while publishing top papers. We are so proud of you, Hezi.</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">40/280</span><button data-c>复制</button></div><pre>Hezi&#x27;s homepage: https://www.hezizhang.com</pre></div><div class="ims"><a href="media/04_hezi/1.jpg" download><img src="media/04_hezi/1.jpg" alt="" loading="lazy"><span>1</span></a><a href="media/04_hezi/2.jpg" download><img src="media/04_hezi/2.jpg" alt="" loading="lazy"><span>2</span></a><a href="media/04_hezi/3.jpg" download><img src="media/04_hezi/3.jpg" alt="" loading="lazy"><span>3</span></a></div><p class="note">如果 Hezi 有 X 账号，把名字换成 @她的账号；也可 @UWMadison / 她所在系的账号。</p></section>
+<section class="card"><div class="ch"><b>Welcome new members</b><span>Day 10</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">185/280</span><button data-c>复制</button></div><pre>Welcome to Xinwei, who just started a PhD with us, and to all our new interns and master&#x27;s students!
+
+Prof. Ding hosted a big welcome lunch to kick off the year. Here is to a great one.</pre></div><div class="ims"><a href="media/05_welcome/1.jpg" download><img src="media/05_welcome/1.jpg" alt="" loading="lazy"><span>1</span></a><a href="media/05_welcome/2.jpg" download><img src="media/05_welcome/2.jpg" alt="" loading="lazy"><span>2</span></a><a href="media/05_welcome/3.jpg" download><img src="media/05_welcome/3.jpg" alt="" loading="lazy"><span>3</span></a></div><p class="note">新同学有 X 账号的话直接 @，他们转发会带来第一批关注。</p></section>
+<section class="card"><div class="ch"><b>AMMA at MICRO 2026</b><span>Day 12</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">155/280</span><button data-c>复制</button></div><pre>AMMA, by Zhongkai Yu, has been accepted to #MICRO2026. Zhongkai celebrated the only way he knows: buying everyone milk tea.
+
+Paper: https://arxiv.org/abs/2604.26103</pre></div><div class="ims"><a href="media/06_amma/1.jpg" download><img src="media/06_amma/1.jpg" alt="" loading="lazy"><span>1</span></a></div><p class="note">可以请 Zhongkai 补一句论文核心贡献，替换第二句。</p></section>
+<section class="card"><div class="ch"><b>Lab life, summer 2026</b><span>Day 14</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">190/280</span><button data-c>复制</button></div><pre>Lab life, summer 2026: a Saturday in San Francisco, hot pot with a face-changing show, a king crab feast, and a dinner in Cupertino with the Bay Area interns.
+
+Good research needs good food.</pre></div><div class="ims"><a href="media/07_life/1.jpg" download><img src="media/07_life/1.jpg" alt="" loading="lazy"><span>1</span></a><a href="media/07_life/2.jpg" download><img src="media/07_life/2.jpg" alt="" loading="lazy"><span>2</span></a><a href="media/07_life/3.jpg" download><img src="media/07_life/3.jpg" alt="" loading="lazy"><span>3</span></a><a href="media/07_life/4.jpg" download><img src="media/07_life/4.jpg" alt="" loading="lazy"><span>4</span></a></div></section>
+<section class="card"><div class="ch"><b>Dr. Chang Chen</b><span>之后（Throwback）</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">208/280</span><button data-c>复制</button></div><pre>Throwback: this spring we welcomed Dr. Chang Chen to Picasso Lab. Chang is the first author of Centauri, winner of the ASPLOS 2024 Best Paper Award.
+
+Fun fact: Chang was also the top Gaokao scorer in Wenzhou.</pre></div><div class="ims"><a href="media/08_chang/1.jpg" download><img src="media/08_chang/1.jpg" alt="" loading="lazy"><span>1</span></a></div></section>
+<section class="card"><div class="ch"><b>Dr. Zheng Wang</b><span>之后（Throwback）</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">178/280</span><button data-c>复制</button></div><pre>Throwback: congratulations again to Dr. Zheng Wang, who defended his thesis &quot;Overcoming Input Irregularity: Balanced and Efficient System Designs for Large Scale Model Training.&quot;</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">60/280</span><button data-c>复制</button></div><pre>One of Zheng&#x27;s papers, at OSDI 2025: https://www.usenix.org/conference/osdi25/presentation/wang-zheng</pre></div><div class="ims"><a href="media/09_zheng/1.jpg" download><img src="media/09_zheng/1.jpg" alt="" loading="lazy"><span>1</span></a><a href="media/09_zheng/2.jpg" download><img src="media/09_zheng/2.jpg" alt="" loading="lazy"><span>2</span></a></div></section>
+</main><script>
+document.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>{const t=b.closest('.tw').querySelector('pre').innerText;
+navigator.clipboard.writeText(t).then(()=>{b.textContent='已复制';b.classList.add('ok');setTimeout(()=>{b.textContent='复制';b.classList.remove('ok')},1500)})});
+</script></body></html>
