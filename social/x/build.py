@@ -14,24 +14,16 @@ ap = argparse.ArgumentParser(); ap.add_argument('--fonts', default=os.path.join(
 
 # (id, when, title, [post, reply, ...], images (events/static paths) or a video, note)
 POSTS = [
-    ('00_launch', 'Day 1 · 发完置顶 (Pin)', 'Launch post + reel', [
-        'Hello, X. We are Picasso Lab at @UCSanDiego, led by Prof. Yufei Ding. We build systems for quantum computing, '
-        'AI, and computer architecture.\n\nThe last few months: an ISCA 2026 Best Paper, a grant for open-source QEC, '
-        'two new doctors, and far too much hot pot.\n\nFollow along.',
-        'Who we are: PhD students, postdocs and interns working on quantum compilers and error correction, systems for '
-        'LLM training and inference, and AI for hardware design.\n\nPapers, people and news: https://yufeiding.ucsd.edu',
-        'Over the next weeks we will post the stories behind the reel, starting with the ISCA Best Paper tomorrow.\n\n'
-        'Questions about our work, or about joining the lab? Reply here.'],
-     'out/launch_reel.mp4', '视频直接上传（不要贴 YouTube 链接）。发完立刻 Pin to profile。'),
-    ('01_isca', 'Day 2', 'ISCA 2026 Best Paper', [
-        'Our paper "Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference" won '
-        'the Best Paper Award at #ISCA2026.\n\nCongrats to lead author Zhongkai Yu and our coauthors at IU Bloomington, '
-        'Columbia, Samsung and NVIDIA.',
-        'Paper: https://arxiv.org/abs/2510.05497'],
-     ['zhongkai_isca26_bestpaper/5.jpg', 'zhongkai_isca26_bestpaper/4.jpg', 'zhongkai_isca26_bestpaper/2.jpg',
-      'zhongkai_isca26_bestpaper/1.jpg'],
-     '链接放在回复里（X 会压低正文带外链的帖子）。最好请 Zhongkai 本人用自己账号 quote 这条，再写 3-4 条讲 idea 的 thread，'
-     '配论文里最好看的一张图 - 学术圈最吃这种"一图讲懂"的帖子。'),
+    ('00_launch', '近期唯一一条 · 发完置顶 (Pin)', 'Launch post: the ISCA Best Paper comic', [
+        'Hello, X! We are Picasso Lab at @UCSanDiego, led by Prof. Yufei Ding.\n\nTo say hi, a 16-second comic of our '
+        '#ISCA2026 Best Paper: in MoE LLMs, expert choices look random and data movement becomes the bottleneck. We found '
+        'the patterns behind the chaos.',
+        '"Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference"\n\n'
+        'Profiled 4 MoE models (200B-1000B) over 24,000+ requests. Guided by the insights: 6.6x average speedup on '
+        'wafer-scale GPUs, up to 1.25x on today\'s GPUs.\n\nhttps://arxiv.org/abs/2510.05497',
+        'Congrats to lead author Zhongkai Yu and our coauthors at IU Bloomington, Columbia, Samsung and NVIDIA.\n\n'
+        'More from the lab: https://yufeiding.ucsd.edu'],
+     'out/patterns_comic.mp4', '视频直接上传（4:5 竖版，16 秒，静音也能看懂）。主帖不放链接，论文和网站链接放在回复里。发完立刻 Pin to profile。'),
     ('02_lightstim', 'Day 4', 'LightStim grant', [
         'Xiang Fang received a @unitaryfund grant to keep building LightStim, an open-source framework for constructing '
         'and benchmarking quantum error correction protocols, with detectors and logical observables built '
@@ -39,11 +31,6 @@ POSTS = [
         'Code: https://github.com/QuTone/LightStim'],
      ['lightstim_grant_0929/1-960.webp', 'lightstim_grant_0929/2-1280.webp', 'lightstim_grant_0929/3-960.webp'],
      '发之前确认 Unitary Foundation 的 X 账号（目前是 @unitaryfund）。'),
-    ('03_hotpot', 'Day 6 (周末)', 'AI comedy short, Ep.1', [
-        'Every lab dinner starts the same way: "Mild. Everyone agrees, just mild."\n\nWe made a short AI comedy about it. '
-        'Episode 1: Neural Hotpot Temperature Scaling, or why "mild" converges to fire.',
-        'Made by the lab with AI image and video tools. More episodes if this one gets enough sesame sauce.'],
-     'out/hotpot_ep1.mp4', '周末发轻松内容。用 1080p 版本直接上传。'),
     ('04_hezi', 'Day 8', 'Dr. Hezi Zhang', [
         'Congratulations to Dr. Hezi Zhang on her PhD! Hezi joins UW-Madison ECE as an Assistant Professor this fall, '
         'and she is recruiting students.\n\nShe also welcomed a baby during her PhD while publishing top papers. '
@@ -155,7 +142,7 @@ button.ok{border-color:var(--acc);color:var(--acc)}pre{margin:0;padding:10px 12p
 @media (max-width:600px){.ims{grid-template-columns:repeat(2,1fr)}.top{grid-template-columns:1fr}}
 </style></head><body><main>
 <h1>@PicassoLabUCSD 发帖工具包</h1><p class="sub">英文帖子文案可直接复制；图片点击即下载，按编号顺序上传。字数按 X 规则计算（链接算 23）。</p>
-<div class="top"><div><b>首帖视频（4:5，29 秒）</b><video src="out/launch_reel.mp4" controls muted playsinline poster="media/reel_poster.jpg"></video><a class="vid" href="out/launch_reel.mp4" download>下载 launch_reel.mp4</a></div>
+<div class="top"><div><b>首帖视频（3D 漫画，4:5，16 秒）</b><video src="out/patterns_comic.mp4" controls muted playsinline poster="media/comic_poster.jpg"></video><a class="vid" href="out/patterns_comic.mp4" download>下载 patterns_comic.mp4</a></div>
 <div><b>主页头图（1500x500）</b><img src="media/banner.jpg" alt=""><a class="vid" href="media/banner.jpg" download>下载 banner.jpg</a>
 <p class="note">Edit profile → Header 上传。头像建议用 lab logo；Bio 建议：<br>Picasso Lab @UCSanDiego, led by Prof. Yufei Ding. Systems for quantum computing, AI and computer architecture. Lab life: lots of hot pot.<br>Website 填 yufeiding.ucsd.edu</p></div></div>
 <h2>第一条帖子怎么发才有流量</h2><ol class="guide">
@@ -169,7 +156,7 @@ button.ok{border-color:var(--acc);color:var(--acc)}pre{margin:0;padding:10px 12p
 <li><b>平时多互动</b>：关注并回复领域里的大号（会议、同行实验室、相关研究者），在别人的热帖下面做有内容的回复，这是新账号涨粉最快的方法。</li>
 <li><b>图片的 Alt text</b>：上传图片后点 "+Alt"，写一句描述，有利于无障碍访问和搜索。</li>
 </ol>
-<h2>帖子（按发布顺序）</h2>
+<h2>帖子</h2><p class="sub">第一条是近期唯一要发的；后面几条留作以后的素材。</p>
 {{CARDS}}
 </main><script>
 document.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>{const t=b.closest('.tw').querySelector('pre').innerText;
