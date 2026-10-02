@@ -48,7 +48,7 @@ def main():
         page.on("console", lambda m: print(f"console.{m.type}:", m.text[:400]) if m.type in ("error", "warning", "log") else None)
         t0 = time.time()
         page.goto(url)
-        page.wait_for_function("() => window.__pv && (window.__pv.ready || window.__pv.error)", timeout=240000, polling=100)
+        page.wait_for_function("() => window.__pv && (window.__pv.ready || window.__pv.error)", timeout=int(__import__("os").environ.get("PV_READY_MS", "240000")), polling=100)
         e = page.evaluate("() => window.__pv.error")
         if e:
             print("SCENE ERROR:", e)

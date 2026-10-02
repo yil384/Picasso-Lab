@@ -1,0 +1,834 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Patterns behind Chaos</title>
+<!-- Picasso Lab's first X post: a 16 s 3D comic (384 f @ 24 fps, 4:5 portrait) on the ISCA 2026 Best Paper
+     "Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference".
+     Cast as concepts: tokens (cream balls) are routed by a roulette spinner (random expert selection) to experts
+     (coloured boxes) spread over the dies of a wafer-scale GPU; every trip squeezes through the die-to-die link
+     (data movement = the bottleneck). The Profiler (a magnifying glass) studies the traces, the pattern shows (two hot
+     experts take most of the traffic), the hot experts move next to the tokens, the traffic flows, 6.6x.
+     Same NPR stack, ink, lettering and palette as the Projects comic films (reference/style-comic). -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene, ease, clamp, lerp } from '/pv/runtime/pv.js';
+import { createNPR } from '/scene/npr/npr.js';
+import { bakeBrushTexture, burst } from '/scene/npr/brush.js';
+import { orbit, handheld, applyRig, yawSmear } from '/scene/npr/camera.js';
+
+const Q = new URLSearchParams(location.search);
+const FPS = 24, NF = 384, TAU = Math.PI * 2;
+const PAL = { paper: '#f4ebd6', ink: '#1a1530', ochre: '#f2b134', red: '#e5463b', pink: '#ff3d7f', violet: '#6f52c8',
+  teal: '#2f9d97', cream: '#fff6e0', blush: '#ff7a8e', sky: '#5b8fd8' };
+const COL = { tok: 0xfff1cf, brass: 0xe6ad42, red: 0xe5463b, teal: 0x39a6a0, ochre: 0xf2b134, violet: 0x7a5bd6, sky: 0x6a9be0,
+  dark: 0x2b2447, cream: 0xf8eed6, table: 0x7b86c9, wafer: 0xd9dbe8, letter: 0xe5463b, letterSide: 0xf6b93b };
+
+const mj = (x) => { x = clamp(x); return x * x * x * (10 + x * (-15 + 6 * x)); };
+const sm = (x) => ease.smooth(clamp(x));
+const io = (x) => ease.inOutSine(clamp(x));
+const ob = (x) => ease.outBack(clamp(x));
+const twos = (F) => F - (F % 2);
+const ringv = (a, amp, w = 1.1, k = 0.2) => (a < 0 ? 0 : amp * Math.exp(-k * a) * Math.cos(w * a));
+const hsh = (...n) => { let x = Math.sin(n.reduce((s, v, i) => s + v * (12.9898 + i * 78.233), 0.5)) * 43758.5453; return x - Math.floor(x); };
+
+// =====================================================================================================
+// world: a wafer of 3 x 3 dies; die (i, j) centre, x right, z towards the camera
+// =====================================================================================================
+const PITCH = 1.9, DIE = 1.62, WR = 3.75;
+const D = (i, j) => [(i - 1) * PITCH, (j - 1) * PITCH];
+const SPIN = [-1.9, 0];                 // the router's roulette on the source die
+const LINK = [-0.95, 0];                 // the die-to-die link every early trip squeezes through
+const TOKY = 0.24, R = 0.21;
+
+// experts: name, colour, chaos home, new home after the placement (only the two hot ones move)
+const EXP = [
+  { c: COL.red, home: D(2, 0), hot: true, to: [-1.32, -0.62] },
+  { c: COL.teal, home: D(2, 2), hot: true, to: [-1.32, 0.62] },
+  { c: COL.ochre, home: D(1, 0) },
+  { c: COL.violet, home: D(1, 2) },
+  { c: COL.sky, home: D(2, 1) },
+];
+// key frames
+const K = {
+  dep: [24, 31, 38, 45, 52],          // chaos departures from the roulette
+  prof: [116, 132],                   // the Profiler hops in
+  look: 146, aha: 172,                // studies the traces; the pattern lights up
+  move: [[192, 206, 220], [198, 212, 226]],   // hot experts hop to the source die (two hops each)
+  dep2: [236, 243, 250, 257, 264],    // after: tokens hop straight into the hot experts
+  slam: [292, 296, 300, 304],         // 6 . 6 x
+  ban: [306, 326],                    // the award banner unfurls
+};
+const CHAOS_T = [0, 1, 3, 0, 1];     // targets of the chaos trips (4/5 of them go to the two hot experts)
+const FLOW_T = [0, 1, 0, 1, 0];
+
+// ---- chaos routes: spinner -> link -> streets -> the expert (pure, computed once) ----
+function routeTo(e) {
+  const [ex, ez] = EXP[e].home;
+  const pts = [[SPIN[0] + 0.3, 0], [LINK[0], 0]];
+  if (Math.abs(ez) < 0.1) pts.push([ex - 0.45, 0]);
+  else {
+    const zs = Math.sign(ez) * PITCH / 2;
+    pts.push([LINK[0], zs]);
+    if (ex > 0.5) pts.push([PITCH / 2, zs], [PITCH / 2, ez]);
+    else pts.push([LINK[0], ez]);
+    pts.push([ex - 0.45, ez]);
+  }
+  return pts;
+}
+function polyLen(p) { let s = 0; for (let i = 1; i < p.length; i++) s += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); return s; }
+function polyAt(p, d) {
+  for (let i = 1; i < p.length; i++) {
+    const L = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+    if (d <= L || i === p.length - 1) { const k = clamp(d / (L || 1)); return [lerp(p[i - 1][0], p[i][0], k), lerp(p[i - 1][1], p[i][1], k), Math.atan2(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])]; }
+    d -= L;
+  }
+  return [...p[p.length - 1], 0];
+}
+const SPEED = 0.085, LINK_GAP = 13, REACH = 7;     // world units / frame; frames between link passes; frames to the link
+const TRIPS = CHAOS_T.map((e, k) => ({ e, dep: K.dep[k], route: routeTo(e) }));
+{ // the link passes one token at a time: the rest queue up behind it
+  let free = 0;
+  TRIPS.forEach((t, k) => {
+    t.arrive = t.dep + REACH;
+    t.pass = Math.max(t.arrive, free); free = t.pass + LINK_GAP;
+    t.qi = 0;                                         // queue slot while waiting
+    TRIPS.slice(0, k).forEach((o) => { if (o.pass > t.arrive) t.qi++; });
+    t.len = polyLen(t.route.slice(1));
+    t.end = t.pass + Math.round(t.len / SPEED);
+    t.gulp = t.end + 9;
+  });
+}
+
+// =====================================================================================================
+// state: everything a pure function of the frame
+// =====================================================================================================
+function expertPos(e, F) {
+  const E = EXP[e];
+  if (!E.hot) return { x: E.home[0], z: E.home[1], y: 0, sq: 0 };
+  const [f0, f1, f2] = K.move[e];
+  const mid = [(E.home[0] + E.to[0]) / 2 + 0.2, (E.home[1] + E.to[1]) / 2];
+  const hop = (a, b, p, h) => ({ x: lerp(a[0], b[0], mj(p)), z: lerp(a[1], b[1], mj(p)), y: h * Math.sin(Math.PI * clamp(p)) });
+  let s;
+  if (F < f0) s = { x: E.home[0], z: E.home[1], y: 0 };
+  else if (F < f1) s = hop(E.home, mid, (F - f0) / (f1 - f0), 1.1);
+  else if (F < f2) s = hop(mid, E.to, (F - f1) / (f2 - f1), 0.9);
+  else s = { x: E.to[0], z: E.to[1], y: 0 };
+  s.sq = F >= f0 - 4 && F < f0 ? 0.16 * sm((F - f0 + 4) / 4) : (F >= f2 ? ringv(F - f2, 0.22, 0.9, 0.2) : 0) + (F >= f1 && F < f1 + 10 ? ringv(F - f1, 0.18, 0.9, 0.25) : 0);
+  return s;
+}
+function expertExpr(e, F) {
+  const gulps = [...TRIPS.filter((t) => t.e === e).map((t) => t.gulp), ...FLOWS.filter((t) => t.e === e).map((t) => t.gulp)];
+  for (const g of gulps) if (F >= g - 2 && F < g + 8) return F < g + 2 ? 'surprised' : 'happy';
+  if (F >= K.slam[0]) return 'happy';
+  if (EXP[e].hot && F >= K.move[e][0] - 6 && F < K.move[e][2] + 4) return 'surprised';
+  if (EXP[e].hot && F < K.move[e][0] && F > 70) return 'strain';      // swamped: all the traffic, from far away
+  return 'calm';
+}
+function gulpSq(e, F) {
+  let s = 0;
+  for (const t of [...TRIPS, ...FLOWS]) if (t.e === e) s += F >= t.gulp - 3 && F < t.gulp ? -0.1 : ringv(F - t.gulp, 0.24, 0.9, 0.22);
+  return s;
+}
+
+const FLOWS = FLOW_T.map((e, k) => ({ e, dep: K.dep2[k], gulp: K.dep2[k] + 9 }));
+
+// a token: queue -> roulette -> (chaos) link + streets, or (after) one hop into the neighbouring expert
+function tokState(k, F) {
+  const chaos = k < 5, t = chaos ? TRIPS[k] : FLOWS[k - 5];
+  const dep = t.dep, slot = chaos ? k : k - 5;
+  const qBase = chaos ? 0 : 200;
+  // waiting in line on the wafer margin, shuffling forward as the line moves
+  const ahead = (chaos ? K.dep : K.dep2).filter((d) => d <= F).length;
+  const qx = (n) => SPIN[0] - 0.55 - 0.44 * n;
+  if (F < dep - 6) {
+    const n = Math.max(0, slot - ahead);
+    const prev = Math.max(0, slot - Math.max(0, ahead - 1));
+    const lastDep = (chaos ? K.dep : K.dep2)[Math.max(0, ahead - 1)];
+    const x = ahead > 0 ? lerp(qx(prev), qx(n), sm((F - lastDep) / 6)) : qx(n);
+    const shuffle = ahead > 0 && F - lastDep < 6 ? 0.1 * Math.sin(Math.PI * (F - lastDep) / 6) : 0;
+    const vis = chaos ? F < 200 : F >= 150;
+    return { vis, x, z: 0, y: TOKY + shuffle, e: chaos && F > 60 ? 'squint' : 'awake', sq: 0.03 * Math.sin(TAU * (F + slot * 7) / 30), yaw: Math.PI / 2 };
+  }
+  if (F < dep) {   // hop onto the roulette
+    const p = (F - dep + 6) / 6;
+    return { vis: true, x: lerp(qx(0), SPIN[0], mj(p)), z: 0, y: TOKY + 0.35 + 0.35 * Math.sin(Math.PI * p), e: 'awake', sq: -0.1 * Math.sin(Math.PI * p), yaw: Math.PI / 2 };
+  }
+  if (!chaos) {   // after: wait one beat on the roulette, then one short hop into the expert
+    const ex = expertPos(t.e, F);
+    if (F < dep + 3) return { vis: true, x: SPIN[0], z: 0, y: TOKY + 0.35, e: 'happy', sq: ringv(F - dep, 0.2), yaw: 0 };
+    const p = (F - dep - 3) / 6;
+    if (p >= 1) return { vis: false };
+    return { vis: true, x: lerp(SPIN[0], ex.x, mj(p)), z: lerp(0, ex.z, mj(p)), y: lerp(TOKY + 0.35, 0.75, p) + 0.5 * Math.sin(Math.PI * p), e: 'whee', sq: -0.15, sx: 1.15, yaw: Math.atan2(ex.x - SPIN[0], ex.z) };
+  }
+  // chaos: roll off the roulette to the link, queue, squeeze through, then the long trip
+  const r = t.route;
+  if (F < t.pass) {
+    const a = F - dep, goal = LINK[0] - 0.12 - 0.46 * t.qi;
+    const x = lerp(SPIN[0] + 0.3, goal, mj(a / REACH)), wait = F >= t.arrive;
+    const bump = wait ? ringv(F - t.arrive, 0.18, 1.0, 0.25) : 0;
+    return { vis: true, x, z: 0, y: TOKY + (wait ? 0 : 0.06 * Math.abs(Math.sin(a * 0.9))), e: wait ? (F - t.arrive < 3 ? 'surprised' : 'strain') : 'awake', sq: bump, yaw: Math.PI / 2, wait, jam: wait && t.qi > 0 };
+  }
+  const d = (F - t.pass) * SPEED;
+  const tail = r.slice(1);
+  if (F < t.end) {
+    const [x, z, yaw] = polyAt(tail, d);
+    const step = Math.abs(Math.sin(d * 4.2));
+    return { vis: true, x, z, y: TOKY + 0.07 * step, e: F - t.pass < 6 ? 'squint' : 'awake', sq: 0.05 * (1 - step), yaw, moving: true };
+  }
+  const ex = expertPos(t.e, F), last = r[r.length - 1];
+  const p = (F - t.end) / 9;
+  if (p >= 1) return { vis: false };
+  return { vis: true, x: lerp(last[0], ex.x, mj(p)), z: lerp(last[1], ex.z, mj(p)), y: lerp(TOKY, 0.8, p) + 0.55 * Math.sin(Math.PI * p), e: 'whee', sq: -0.12, yaw: Math.PI / 2 };
+}
+
+// the roulette arrow: spins before each departure and stops on the chosen expert's direction
+function spinAngle(F) {
+  const deps = [...K.dep.map((d, k) => [d, CHAOS_T[k], 2.6]), ...K.dep2.map((d, k) => [d, FLOW_T[k], 1.0])];
+  let ang = Math.PI / 2, base = Math.PI / 2;
+  for (const [d, e, turns] of deps) {
+    const ex = e < 2 && d > 200 ? EXP[e].to : EXP[e].home;
+    const tgt = Math.atan2(ex[0] - SPIN[0], ex[1] - SPIN[1]);
+    const t0 = d - 6;
+    let end = tgt + TAU * Math.ceil(turns); while (end < base) end += TAU;
+    if (F < t0) return ang;
+    ang = F < d ? lerp(base, end, ease.outCubic((F - t0) / 6)) : end;
+    base = end;
+  }
+  return ang;
+}
+
+// ---- the Profiler (a magnifying glass with one big eye) ----
+function profState(F) {
+  const Fc = twos(F);
+  let x = 2.95, z = 2.75, y = 0, tilt = 0, yaw = -0.5, sq = 0, expr = 'eye', vis = Fc >= K.prof[0] - 8, spin = 0;
+  if (Fc < K.prof[1]) {   // two hops in from off-screen right
+    const H = [[K.prof[0] - 8, 6.2, 3.4], [K.prof[0] + 6, 4.4, 3.1], [K.prof[1], 2.95, 2.75]];
+    const h = Fc < H[1][0] ? 0 : 1, a = H[h], b = H[h + 1], p = (Fc - a[0]) / (b[0] - a[0]);
+    const air = clamp((p - 0.2) / 0.75);
+    x = lerp(a[1], b[1], sm(air)); z = lerp(a[2], b[2], sm(air)); y = 0.7 * Math.sin(Math.PI * air);
+    sq = p < 0.2 ? 0.18 * sm(p / 0.2) : -0.15 * Math.sin(Math.PI * air);
+    yaw = -0.9;
+  } else {
+    sq = ringv(Fc - K.prof[1], 0.2, 0.9, 0.22);
+    yaw = lerp(-0.9, -0.55, sm((Fc - K.prof[1]) / 6));
+    // lean the lens down over the wafer to study it
+    tilt = 0.55 * sm((Fc - K.look + 8) / 10) * (1 - sm((Fc - K.move[0][0] + 6) / 8));
+    if (Fc >= K.aha && Fc < K.aha + 12) { expr = 'wide'; sq += ringv(Fc - K.aha, -0.22, 0.9, 0.2); }
+    // point at the hot experts as they move
+    if (Fc >= K.move[0][0] - 6 && Fc < K.move[1][2] + 6) { tilt = -0.35; yaw = lerp(-0.55, -1.2, sm((Fc - K.move[0][0]) / 20)); expr = 'eye'; }
+    if (Fc >= K.slam[0]) { expr = 'happy'; y = 0.25 * Math.abs(Math.sin(TAU * (Fc - K.slam[0]) / 20)); spin = Fc >= K.slam[3] && Fc < K.slam[3] + 16 ? TAU * sm((Fc - K.slam[3]) / 16) : 0; yaw = -0.35; }
+  }
+  return { vis, x, y, z, tilt, yaw, sq, expr, spin };
+}
+
+// ---- 6.6x letters + banner ----
+const LET = { z: 4.25, h: 1.25, y: -0.16 };
+const GL_LAYOUT = [{ ch: '6', dx: -1.75, rz: 0.06, ry: 0.12 }, { ch: '.', dx: -0.86, rz: 0, ry: 0 }, { ch: '6', dx: -0.48, rz: -0.05, ry: -0.04 }, { ch: 'x', dx: 0.5, rz: 0.08, ry: -0.12 }];
+function letterState(i, F) {
+  const f = K.slam[i], a = F - f;
+  if (a < -8) return { vis: false };
+  if (a < 0) { const p = (a + 8) / 8; return { vis: true, y: lerp(5.5, 0, ease.inCubic(p)), sy: 1.12, sxz: 0.92, rz: 0 }; }
+  const sq = ringv(a, 0.3, 0.8, 0.18);
+  return { vis: true, y: 0, sy: 1 - sq, sxz: 1 + sq * 0.6, rz: 0.04 * Math.sin(a * 0.5) * Math.exp(-a / 10) };
+}
+
+// =====================================================================================================
+// camera: shot rigs + whips
+// =====================================================================================================
+function mixRig(a, b, k) {
+  return { tg: a.tg.map((v, i) => lerp(v, b.tg[i], k)), az: lerp(a.az, b.az, k), el: lerp(a.el, b.el, k), r: lerp(a.r, b.r, k), fov: lerp(a.fov, b.fov, k), roll: lerp(a.roll, b.roll, k) };
+}
+function rigWide(F) {    // establishing, then lean in on the jam at the link
+  const k = sm((F - 50) / 40);
+  return { tg: [lerp(0.15, -0.8, k), lerp(0.0, 0.2, k), lerp(0.35, 0.15, k)], az: lerp(-0.36, -0.28, k), el: lerp(0.86, 0.6, k), r: lerp(12.2, 7.6, k) - 0.5 * sm(F / 40), fov: 34, roll: lerp(0.0, -0.06, k) };
+}
+function rigProf(F) {    // crash zoom on the Profiler as it lands
+  const p = profState(F);
+  return { tg: [p.x - 0.25, 1.45, p.z], az: 0.36, el: 0.14, r: lerp(4.6, 4.0, sm((F - 126) / 14)), fov: 32, roll: 0.07 };
+}
+function rigLens(F) {    // over the Profiler's shoulder, down on the wafer through the lens
+  const k = sm((F - 146) / 40);
+  return { tg: [lerp(1.4, 1.2, k), 0.6, lerp(1.4, 1.2, k)], az: 0.05, el: lerp(0.48, 0.54, k), r: lerp(10.8, 9.9, k), fov: 34, roll: 0.03 };
+}
+function rigMove(F) {    // wide, following the hot experts' hops home
+  const k = sm((F - 192) / 36);
+  return { tg: [lerp(0.4, -0.5, k), 0.2, 0.2], az: lerp(-0.12, -0.28, k), el: lerp(0.8, 0.7, k), r: lerp(10.6, 9.4, k), fov: 34, roll: -0.03 };
+}
+function rigFlow(F) {    // low and close on the source die: hop, hop, hop
+  const k = sm((F - 232) / 50);
+  return { tg: [lerp(-1.5, -1.7, k), 0.35, 0.05], az: lerp(-0.62, -0.5, k), el: lerp(0.32, 0.27, k), r: lerp(5.4, 4.9, k), fov: 32, roll: -0.05 };
+}
+function rigWin(F) {     // hero: the 6.6x in front of the wafer, the banner above
+  const k = sm((F - 290) / 90);
+  return { tg: [-0.3, lerp(1.25, 1.35, k), lerp(1.4, 1.6, k)], az: lerp(0.08, -0.05, k), el: lerp(0.34, 0.3, k), r: lerp(12.4, 11.2, k), fov: 36, roll: lerp(0.02, -0.015, k) };
+}
+const WHIPS = [[112, 124], [140, 150], [186, 196], [228, 238], [280, 292]];
+function camRig(F) {
+  if (F < 112) return rigWide(F);
+  if (F < 124) return mixRig(rigWide(F), rigProf(F), ease.inOutQuint((F - 112) / 12));
+  if (F < 140) return rigProf(F);
+  if (F < 150) return mixRig(rigProf(F), rigLens(F), ease.inOutQuint((F - 140) / 10));
+  if (F < 186) return rigLens(F);
+  if (F < 196) return mixRig(rigLens(F), rigMove(F), ease.inOutQuint((F - 186) / 10));
+  if (F < 228) return rigMove(F);
+  if (F < 238) return mixRig(rigMove(F), rigFlow(F), ease.inOutQuint((F - 228) / 10));
+  if (F < 280) return rigFlow(F);
+  if (F < 292) return mixRig(rigFlow(F), rigWin(F), ease.inOutQuint((F - 280) / 12));
+  return rigWin(F);
+}
+function camShake(F) {
+  let s = [0, 0, 0];
+  const hit = (f0, amp, dec = 5) => { const a = F - f0; if (a < 0 || a > 30) return; const k = amp * Math.exp(-a / dec);
+    s[0] += (hsh(F, 1.3, f0) * 2 - 1) * k; s[1] += (hsh(F, 2.7, f0) * 2 - 1) * k; s[2] += (hsh(F, 5.1, f0) * 2 - 1) * k * 0.6; };
+  TRIPS.forEach((t) => { if (t.qi > 0) hit(t.arrive, 0.004, 3); });
+  hit(K.prof[1], 0.01, 4); hit(K.aha, 0.008, 4); hit(K.move[0][2], 0.006, 3); hit(K.move[1][2], 0.006, 3);
+  K.slam.forEach((f, i) => hit(f, i === 2 ? 0.02 : 0.011, 4));
+  return s;
+}
+
+// =====================================================================================================
+// scene
+// =====================================================================================================
+let T = null;
+const st = {};
+const LOOK = {
+  extends: 'comic',
+  hatchCut: 0.22, crossT: 0.62, crossW: 1.0, hatchPx: 7.5, hatchW: 1.5, hatchWobble: 0.08, hatchSwell: 0.35,
+  htAmt: 0.55, htPx: 14, htT: 0.3, htRange: 0.5, misreg: [2.6, -2.0],
+  lineW: 2.0, lineWShadow: 3.2, hullW: 3.1, hullShadowW: 1.5,
+  bleed: 1.6, edgeDark: 0.45, gran: 0.3, flocc: 0.06, dryEdge: 0.2, sat: 1.12,
+  rule: 0.17, rulePx: 10, ruleTop: 0.3, ruleBot: 0.04,
+  bgDots: [0.95, 0.6, 0.42, 0.28],
+  dofMax: 3.5, dofRange: 3.0,
+  grain: 0.018, vignette: 0.16,
+};
+
+defineScene({
+  meta: { title: 'Patterns behind Chaos', durationFrames: NF, fps: FPS, width: 1080, height: 1350, seed: 23,
+    design: [1080, 1350], background: PAL.paper, fonts: ['Permanent Marker'], boil: { every: 2, variants: 3 }, poster: 330 },
+  update(ctx) {
+    const F = ctx.iw;
+    updateCamera(ctx, F);
+    updateCast(F);
+    updateBackdrop(F);
+  },
+  layers: [
+    { name: 'paper', type: '2d', cache: () => 'static', draw(ctx, g) { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(paperCanvas(ctx), 0, 0); } },
+    { name: 'npr', type: 'three', underlay: true, antialias: false,
+      async init(ctx, three) { return buildWorld(ctx, three); }, draw(ctx) { drawNPR(ctx); return false; } },
+    { name: 'ink', type: 'brush', blend: 'multiply', draw(ctx, p, brush) { inkOverlay(ctx, brush); } },
+    { name: 'letters', type: '2d', draw(ctx, g) { lettering(ctx, g); } },
+  ],
+});
+function paperCanvas(ctx) { return ctx.paper({ tone: PAL.paper, grain: 0.04, fibres: 0.05, blotch: 0.06, seed: 4 }); }
+
+let brushesAdded = false;
+function addBrushes() {
+  if (brushesAdded) return; brushesAdded = true;
+  brush.add('inkpen', { type: 'default', weight: 3.2, scatter: 0.12, sharpness: 0.85, grain: 30, opacity: 235, spacing: 0.2, pressure: [1.15, 0.75], rotate: 'natural', noise: 0.1 });
+  brush.add('bigink', { type: 'default', weight: 6, scatter: 0.2, sharpness: 0.8, grain: 30, opacity: 235, spacing: 0.2, pressure: [1.2, 0.7], rotate: 'natural', noise: 0.15 });
+  brush.add('fatink', { type: 'default', weight: 11, scatter: 0.18, sharpness: 0.75, grain: 24, opacity: 240, spacing: 0.18, pressure: [1.25, 0.6], rotate: 'natural', noise: 0.12 });
+}
+const V = (x, y, z) => new T.THREE.Vector3(x, y, z);
+
+async function buildWorld(ctx, { THREE, renderer }) {
+  addBrushes();
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(34, ctx.W / ctx.H, 0.5, 80);
+  const npr = createNPR(renderer, ctx, { look: LOOK, paper: paperCanvas(ctx), samples: 4 });
+  npr.setUnder(window.__pv.canvas);
+  npr.setLight({ dir: [-0.5, 0.85, 0.55], target: [0, 0, 0.6], size: 9, dist: 22 });
+  T = { THREE, scene, camera, npr };
+  const add = (geo, mo, ao = {}, pos = [0, 0, 0], rot = [0, 0, 0], parent = scene) => {
+    const m = npr.add(new THREE.Mesh(geo, Array.isArray(mo) ? mo.map((o) => npr.surface(o)) : npr.surface(mo)), ao);
+    m.position.set(...pos); m.rotation.set(...rot); parent.add(m); return m;
+  };
+  T.faces = await bakeFaces(THREE);
+
+  // painted sunburst cyclorama (tinted per beat)
+  const bdTex = await bakeBrushTexture(THREE, { width: 2048, height: 768, seed: 21, key: 'backdrop', background: '#ffffff' }, (p, brush, w, h) => paintBackdrop(ctx, brush, w, h));
+  T.backdrop = npr.backdrop(bdTex, { radius: 20, height: 26, y: -7, center: [0, 0, 0.5], arc: [Math.PI - 2.5, 5.0] });
+  scene.add(T.backdrop);
+
+  // the lab bench
+  const tSide = { color: 0x5a63a8, hatchDir: [0, 1, 0] };
+  add(new THREE.BoxGeometry(40, 0.4, 26), [tSide, tSide, { color: COL.table, hatchDir: [1, 0, 0.3], noiseScale: 0.5, spec: 0.2 }, tSide, tSide, tSide], { outline: 1.0, cast: false }, [0, -0.36, 1.5]);
+
+  // the wafer (a thin disc) and its 3 x 3 dies, painted traces + the die-to-die link
+  const wTex = await bakeBrushTexture(THREE, { width: 1024, height: 1024, seed: 9, key: 'wafer', background: '#ffffff' }, (p, brush, w, h) => paintWafer(ctx, brush, w, h));
+  const wSide = { color: 0x9aa0bf, hatchMode: 'u' };
+  // CylinderGeometry caps map u,v over the disc: top cap gets the painted texture
+  add(new THREE.CylinderGeometry(WR, WR, 0.16, 96), [wSide, { color: COL.wafer, map: wTex, hatchDir: [1, 0, 0.2], spec: 0.6, toneBias: 0.08, noiseScale: 0.5 }, wSide], { outline: 1.1 }, [0, -0.08, 0]);
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const [x, z] = D(i, j), src = i === 0 && j === 1;
+    add(new THREE.BoxGeometry(DIE, 0.07, DIE), { color: src ? 0xf3e2b8 : 0xe9e4f2, hatchDir: [0.2, 0, 1], spec: 0.4, toneBias: 0.1, seed: 300 + i * 3 + j }, { outline: 0.7, cast: false }, [x, 0.035, z]);
+  }
+  // the link bridge between the source die and the centre column (the narrow pipe)
+  add(new THREE.BoxGeometry(0.42, 0.1, 0.5), { color: COL.ochre, hatchMode: 'u', rim: 0.6 }, { outline: 0.8, cast: false }, [LINK[0], 0.05, 0]);
+
+  // the roulette (random expert selection)
+  T.spinBase = add(new THREE.CylinderGeometry(0.42, 0.48, 0.12, 48), { color: COL.cream, hatchMode: 'u', rim: 0.5 }, { outline: 0.9 }, [SPIN[0], 0.13, 0]);
+  T.spinTop = add(new THREE.CylinderGeometry(0.36, 0.36, 0.03, 48), { color: 0xffffff, map: await bakeBrushTexture(THREE, { width: 512, height: 512, seed: 3, key: 'wheel', background: '#ffffff' }, (p, brush, w, h) => paintWheel(brush, w, h)), hatch: 0.4 }, { outline: 0.4, cast: false }, [SPIN[0], 0.2, 0]);
+  T.arrow = new THREE.Group(); T.arrow.position.set(SPIN[0], 0.26, 0); scene.add(T.arrow);
+  const arShape = new THREE.Shape([[-0.06, -0.12], [0.06, -0.12], [0.05, 0.22], [0.13, 0.22], [0, 0.4], [-0.13, 0.22], [-0.05, 0.22]].map((q) => new THREE.Vector2(...q)));
+  const arGeo = new THREE.ExtrudeGeometry(arShape, { depth: 0.05, bevelEnabled: false }); arGeo.rotateX(-Math.PI / 2);
+  add(arGeo, { color: COL.red, rim: 0.6 }, { outline: 0.6 }, [0, 0, 0], [0, 0, 0], T.arrow);
+  add(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 16), { color: COL.dark }, { outline: 0.5 }, [0, 0.04, 0], [0, 0, 0], T.arrow);
+
+  // experts: boxes with a painted face on the front
+  T.exps = EXP.map((E, e) => {
+    const g = new THREE.Group(); scene.add(g);
+    const body = new THREE.Group(); g.add(body);
+    add(new THREE.BoxGeometry(0.66, 0.6, 0.6), { color: E.c, hatchDir: [0, 1, 0.3], rim: 0.8, shadeColor: 0x2b2447, shadeMix: 0.3, seed: 40 + e }, { outline: 1.0 }, [0, 0.36, 0], [0, 0, 0], body);
+    add(new THREE.BoxGeometry(0.72, 0.08, 0.66), { color: 0xfff6e0, hatchMode: 'u', rim: 0.5 }, { outline: 0.8 }, [0, 0.69, 0], [0, 0, 0], body);    // lid: tokens drop in here
+    const face = add(new THREE.PlaneGeometry(0.5, 0.44), { color: 0xffffff, map: T.faces.box.calm, hatch: 0.3, toneBias: 0.25, rim: 0.2, seed: 60 + e }, { outline: 0.0, cast: false }, [0, 0.36, 0.305], [0, 0, 0], body);
+    const feet = [-1, 1].map((s) => { const f = add(new THREE.SphereGeometry(0.09, 16, 10), { color: COL.dark }, { outline: 0.6 }, [0.18 * s, 0.04, 0.12], [0, 0, 0], g); f.scale.set(1.2, 0.55, 1.5); return f; });
+    return { g, body, face, feet };
+  });
+
+  // tokens
+  const tokGeo = new THREE.SphereGeometry(R, 36, 24);
+  T.toks = Array.from({ length: 10 }, (_, k) => add(tokGeo, { color: COL.tok, map: T.faces.tok.awake, hatchMode: 'screen', hatchDir: [1, -1, 0], toneBias: 0.15, rim: 0.7, spec: 1, seed: 80 + k }, { outline: 0.62 }, [0, TOKY, 0]));
+
+  // the Profiler
+  const P = {}; P.root = new THREE.Group(); scene.add(P.root);
+  P.body = new THREE.Group(); P.root.add(P.body);
+  P.tilt = new THREE.Group(); P.tilt.position.set(0, 0.95, 0); P.body.add(P.tilt);
+  const brass = { color: COL.brass, hatchMode: 'u', spec: 1, rim: 0.9, shadeColor: 0x9a5a2a, shadeMix: 0.3 };
+  add(new THREE.TorusGeometry(0.46, 0.075, 16, 56), brass, { outline: 1.1 }, [0, 0.55, 0], [0, 0, 0], P.tilt);
+  P.glass = add(new THREE.CircleGeometry(0.43, 48), { color: 0xe8f4ff, map: T.faces.lens.eye, hatch: 0.35, toneBias: 0.2, rim: 0.6, spec: 1, seed: 90 }, { outline: 0.0 }, [0, 0.55, 0.01], [0, 0, 0], P.tilt);
+  add(new THREE.CylinderGeometry(0.07, 0.07, 0.16, 16), brass, { outline: 0.7 }, [0, 0.03, 0], [0, 0, 0], P.tilt);
+  const hg = new THREE.CapsuleGeometry(0.1, 0.62, 6, 16);
+  add(hg, { color: COL.red, hatchMode: 'v', rim: 0.7, shadeColor: 0x7a2340, shadeMix: 0.4 }, { outline: 1.0 }, [0, 0.55, 0], [0, 0, 0], P.body);
+  P.feet = [-1, 1].map((s) => { const f = add(new THREE.SphereGeometry(0.11, 16, 10), { color: COL.dark }, { outline: 0.7 }, [0.13 * s, 0.05, 0.05], [0, 0, 0], P.root); f.scale.set(1.2, 0.55, 1.6); return f; });
+  T.prof = P;
+
+  buildLetters(THREE, add);
+  T.banner = await buildBanner(ctx, THREE, add);
+  return { scene, camera };
+}
+
+// ---- 6.6x as extruded comic block letters ----
+function glyphShape(THREE, ch, seed) {
+  const six = () => {
+    const c = [0.36, 0.32], r = 0.32;
+    const outer = [[0.66, 0.97], [0.46, 1.01], [0.26, 0.94], [0.1, 0.76], [0.03, 0.52]];
+    for (let k = 0; k <= 20; k++) { const a = Math.PI + k / 20 * (Math.PI * 1.55); outer.push([c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r]); }
+    outer.push([0.25, 0.71], [0.36, 0.83], [0.5, 0.86], [0.64, 0.83]);
+    const hole = Array.from({ length: 14 }, (_, k) => [c[0] + Math.cos(k / 14 * TAU) * 0.15, c[1] + Math.sin(k / 14 * TAU) * 0.15]);
+    return [outer, hole];
+  };
+  const P = {
+    '6': six(),
+    '.': [Array.from({ length: 12 }, (_, i) => [0.11 + 0.11 * Math.cos(i / 12 * TAU), 0.11 + 0.11 * Math.sin(i / 12 * TAU)])],
+    'x': [(() => { const c = [0.3, 0.36], w = 0.08, L = 0.3, a = Math.PI / 4, ca = Math.cos(a), sa = Math.sin(a);
+      const plus = [[w, L], [w, w], [L, w], [L, -w], [w, -w], [w, -L], [-w, -L], [-w, -w], [-L, -w], [-L, w], [-w, w], [-w, L]];
+      return plus.map(([px, py]) => [c[0] + px * ca - py * sa, c[1] + px * sa + py * ca]).reverse(); })()],
+  }[ch];
+  const wob = (poly, k) => { const out = [];
+    for (let i = 0; i < poly.length; i++) { const a = poly[i], b = poly[(i + 1) % poly.length], n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.12));
+      for (let j = 0; j < n; j++) { const t = j / n; out.push([a[0] + (b[0] - a[0]) * t + (hsh(seed, k, i, j, 1) - 0.5) * 0.016, a[1] + (b[1] - a[1]) * t + (hsh(seed, k, i, j, 2) - 0.5) * 0.016]); } }
+    return out; };
+  const shape = new THREE.Shape(wob(P[0], 0).map((q) => new THREE.Vector2(q[0], q[1])));
+  for (let h = 1; h < P.length; h++) shape.holes.push(new THREE.Path(wob(P[h], h).map((q) => new THREE.Vector2(q[0], q[1]))));
+  return shape;
+}
+function buildLetters(THREE, add) {
+  T.letters = GL_LAYOUT.map((L, i) => {
+    const geo = new THREE.ExtrudeGeometry(glyphShape(THREE, L.ch, i + 1), { depth: 0.32, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.03, bevelSegments: 2, curveSegments: 4 });
+    geo.scale(LET.h, LET.h, 1); geo.translate(0, 0, -0.16);
+    const g = new THREE.Group(); T.scene.add(g);
+    add(geo, [{ color: COL.letter, hatchDir: [0.3, 1, 0], rim: 0.9, shadeColor: 0x7a1f3a, shadeMix: 0.35, seed: 50 + i },
+      { color: COL.letterSide, hatchDir: [0, 1, 0], rim: 0.5, shadeColor: 0xb0521e, shadeMix: 0.4, seed: 60 + i }], { outline: 1.25 }, [0, 0, 0], [0, 0, 0], g);
+    return { g };
+  });
+}
+// ---- the award banner: a cream ribbon lettered by hand (marker), unrolling between two poles ----
+async function buildBanner(ctx, THREE, add) {
+  await document.fonts.load('170px "Permanent Marker"');
+  const c = document.createElement('canvas'); c.width = 2048; c.height = 400;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff3d6'; g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = '#e5463b'; g.lineWidth = 14; g.strokeRect(26, 26, c.width - 52, c.height - 52);
+  g.fillStyle = '#1a1530'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '150px "Permanent Marker"'; g.fillText('ISCA 2026  BEST PAPER', c.width / 2, 182);
+  g.font = '70px "Permanent Marker"'; g.fillStyle = '#c23a2f'; g.fillText('PICASSO LAB  ·  UC SAN DIEGO', c.width / 2, 312);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.NoColorSpace; tex.anisotropy = 8;
+  const geo = new THREE.PlaneGeometry(6.6, 1.3, 60, 4);
+  const B = { root: new THREE.Group() }; T.scene.add(B.root);
+  B.base = geo.attributes.position.array.slice();
+  B.m = add(geo, { color: 0xffffff, map: tex, side: THREE.DoubleSide, hatch: 0.35, toneBias: 0.2, rim: 0.3, spec: 0.3, seed: 120 }, { outline: 0.9, cast: true }, [0, 0, 0], [0, 0, 0], B.root);
+  B.m.frustumCulled = false; B.geo = geo;
+  B.poles = [-1, 1].map((s) => add(new THREE.CylinderGeometry(0.07, 0.07, 3.2, 16), { color: COL.brass, hatchMode: 'u', spec: 1 }, { outline: 0.8 }, [s * 3.45, -1.0, 0], [0, 0, 0], B.root));
+  B.root.position.set(0, 2.55, -2.2);
+  return B;
+}
+
+// =====================================================================================================
+// painted textures
+// =====================================================================================================
+function ell(x, y, rx, ry, rot = 0, n = 22) { const pts = []; for (let i = 0; i < n; i++) { const a = i / n * TAU, px = Math.cos(a) * rx, py = Math.sin(a) * ry; pts.push([x + px * Math.cos(rot) - py * Math.sin(rot), y + px * Math.sin(rot) + py * Math.cos(rot)]); } return pts; }
+function fillP(brush, pts, col, op = 255, bleed = 0.015, tex = 0.12) { brush.noStroke(); brush.noHatch(); brush.fill(col, op); brush.fillBleed(bleed); brush.fillTexture(tex, 0.2); brush.polygon(pts); brush.noFill(); }
+function star4(x, y, r, rot = 0) { const pts = []; for (let i = 0; i < 8; i++) { const a = rot + i * Math.PI / 4, rr = i % 2 ? r * 0.3 : r; pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]); } return pts; }
+function blob(brush, r, cx, cy, rx, ry, n, jit) { brush.beginShape(0.4); for (let k = 0; k < n; k++) { const a = (k / n) * TAU, q = 1 + r.gauss(0, jit); brush.vertex(cx + Math.cos(a) * rx * q, cy + Math.sin(a) * ry * q); } brush.endShape(true); }
+
+// faces: tok (sphere, face at u = 0.25), box (planar), lens (planar, one big eye)
+function paintFace(brush, who, expr, W, Hh) {
+  const sphere = who === 'tok';
+  const cx = sphere ? W * 0.25 : W / 2, cy = sphere ? Hh * 0.5 : Hh * 0.47;
+  const s = sphere ? W / 1024 * 1.6 : W / 512 * 2.1;
+  const ink = PAL.ink;
+  if (who === 'lens') {
+    const ex = W / 2, ey = Hh / 2;
+    if (expr === 'happy') { brush.set('fatink', ink, 2.2 * s); brush.spline([[ex - 90 * s, ey + 20 * s], [ex, ey - 60 * s], [ex + 90 * s, ey + 20 * s]], 0.7); return; }
+    const rr = expr === 'wide' ? 130 : 105;
+    fillP(brush, ell(ex, ey, rr * s, rr * 0.92 * s), '#ffffff'); fillP(brush, ell(ex, ey, rr * s, rr * 0.92 * s), '#ffffff');
+    brush.set('fatink', ink, 1.6 * s); brush.beginShape(0.4); ell(ex, ey, rr * s, rr * 0.92 * s).forEach(([x, y]) => brush.vertex(x, y)); brush.endShape(true);
+    const pr = expr === 'wide' ? 34 : 52;
+    for (let q = 0; q < 3; q++) fillP(brush, ell(ex + 18 * s, ey + 14 * s, pr * s, pr * s), '#4a3a8a');
+    for (let q = 0; q < 3; q++) fillP(brush, ell(ex + 18 * s, ey + 14 * s, pr * 0.55 * s, pr * 0.55 * s), ink);
+    fillP(brush, ell(ex - 6 * s, ey - 12 * s, 14 * s, 11 * s), '#ffffff');
+    brush.set('fatink', ink, 1.3 * s); brush.line(ex - 110 * s, ey - (expr === 'wide' ? 170 : 140) * s, ex + 90 * s, ey - (expr === 'wide' ? 175 : 125) * s);
+    return;
+  }
+  const ex = (sphere ? 52 : 70) * s, ey = -26 * s, my = cy + (sphere ? 40 : 62) * s;
+  const eyes = [[cx - ex, cy + ey], [cx + ex, cy + ey]];
+  const dot = (rx, ry) => eyes.forEach(([x, y]) => { const E = ell(x, y, rx * s, ry * s); fillP(brush, E, ink); fillP(brush, E, ink); fillP(brush, ell(x - rx * 0.3 * s, y - ry * 0.45 * s, rx * 0.32 * s, ry * 0.22 * s), '#fffaf0'); });
+  const arcs = (dir) => eyes.forEach(([x, y]) => { brush.set('fatink', ink, 0.9 * s); brush.spline([[x - 20 * s, y + dir * 4 * s], [x, y - dir * 14 * s], [x + 20 * s, y + dir * 4 * s]], 0.7); });
+  const mouth = (k) => {
+    if (k === 'smile') { brush.set('bigink', ink, 1.1 * s); brush.spline([[cx - 22 * s, my - 4 * s], [cx, my + 10 * s], [cx + 22 * s, my - 4 * s]], 0.7); }
+    if (k === 'o') { for (let q = 0; q < 3; q++) fillP(brush, ell(cx, my + 4 * s, 11 * s, 14 * s), ink); }
+    if (k === 'open') { const pts = [[cx - 30 * s, my - 8 * s], [cx + 30 * s, my - 8 * s], [cx + 22 * s, my + 14 * s], [cx, my + 24 * s], [cx - 22 * s, my + 14 * s]]; for (let q = 0; q < 3; q++) fillP(brush, pts, ink); fillP(brush, ell(cx, my + 14 * s, 14 * s, 8 * s), '#e8546a'); }
+    if (k === 'teeth') { const pts = [[cx - 34 * s, my - 10 * s], [cx + 34 * s, my - 10 * s], [cx + 34 * s, my + 12 * s], [cx - 34 * s, my + 12 * s]]; fillP(brush, pts, '#fffaf0'); brush.set('bigink', ink, 1.0 * s); brush.polygon(pts); brush.line(cx - 34 * s, my + 1 * s, cx + 34 * s, my + 1 * s); for (let q = -2; q <= 2; q++) brush.line(cx + q * 12 * s, my - 10 * s, cx + q * 12 * s, my + 12 * s); }
+    if (k === 'tiny') { brush.set('bigink', ink, 0.8 * s); brush.spline([[cx - 8 * s, my], [cx, my + 5 * s], [cx + 8 * s, my]], 0.6); }
+  };
+  const blush = () => [[cx - ex * 1.5, cy + 18 * s], [cx + ex * 1.5, cy + 18 * s]].forEach(([x, y]) => fillP(brush, ell(x, y, 22 * s, 12 * s), PAL.blush, 150, 0.08, 0.3));
+  switch (expr) {
+    case 'awake': dot(12, 22); mouth('tiny'); break;
+    case 'calm': dot(11, 18); mouth('smile'); break;
+    case 'surprised': dot(16, 29); mouth('o'); break;
+    case 'whee': eyes.forEach(([x, y], i) => { const sg = i ? -1 : 1; brush.set('fatink', ink, 0.9 * s); brush.spline([[x - 16 * sg * s, y - 16 * s], [x + 14 * sg * s, y], [x - 16 * sg * s, y + 16 * s]], 0.2); }); mouth('open'); break;
+    case 'squint': eyes.forEach(([x, y], i) => { const sg = i ? -1 : 1; brush.set('fatink', ink, 0.9 * s); brush.line(x - 18 * s, y - sg * 3 * s, x + 18 * s, y + sg * 3 * s); }); mouth('tiny'); break;
+    case 'strain': eyes.forEach(([x, y], i) => { const sg = i ? -1 : 1; brush.set('fatink', ink, 0.9 * s); brush.spline([[x - 16 * sg * s, y - 14 * s], [x + 12 * sg * s, y], [x - 16 * sg * s, y + 14 * s]], 0.2); }); mouth('teeth'); break;
+    case 'happy': arcs(1); mouth('open'); blush(); break;
+    default: dot(12, 22);
+  }
+}
+async function bakeFaces(THREE) {
+  const sets = { tok: ['awake', 'surprised', 'whee', 'squint', 'strain', 'happy'], box: ['calm', 'surprised', 'strain', 'happy'], lens: ['eye', 'wide', 'happy'] };
+  const out = {};
+  for (const who of Object.keys(sets)) {
+    out[who] = {};
+    for (const e of sets[who]) {
+      const W = who === 'tok' ? 1024 : 512, Hh = 512;
+      out[who][e] = await bakeBrushTexture(THREE, { width: W, height: Hh, seed: 100, key: `face-${who}-${e}`, background: who === 'lens' ? '#eef6ff' : '#ffffff' }, (p, brush) => paintFace(brush, who, e, W, Hh));
+    }
+  }
+  return out;
+}
+function paintBackdrop(ctx, brush, w, h) {
+  const r = ctx.rng('backdrop'), cx = w * 0.5, cy = h * 0.62, n = 40;
+  brush.noStroke();
+  for (let k = 0; k < n; k++) { const a0 = (k / n) * TAU, a1 = a0 + TAU / n * 0.5;
+    brush.fill('#b9b9b9', 215); brush.fillBleed(0.03); brush.fillTexture(0.35, 0.3);
+    brush.polygon([[cx, cy], [cx + Math.cos(a0) * 2400, cy + Math.sin(a0) * 1100], [cx + Math.cos(a1) * 2400, cy + Math.sin(a1) * 1100]]); }
+  brush.fill('#ffffff', 190); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.5, 0.4); blob(brush, r, cx, cy, 300, 150, 24, 0.1);
+  for (let k = 0; k < 6; k++) { brush.fill('#a9a9a9', 60); brush.fillBleed(0.3, 'out'); brush.fillTexture(0.6, 0.5); blob(brush, r, r.range(160, w - 160), r.range(70, h * 0.45), r.range(130, 260), r.range(40, 80), 20, 0.14); }
+}
+// wafer top: the cap's uv is the disc mapped to the unit square (x -> u, z -> v)
+function paintWafer(ctx, brush, w, h) {
+  const r = ctx.rng('wafer');
+  const U = (x) => (x / WR * 0.5 + 0.5) * w, Vv = (z) => (z / WR * 0.5 + 0.5) * h;
+  // street grid + wafer notch + faint circuit traces on each die
+  brush.set('inkpen', '#5a5f86', 1.2);
+  for (const s of [-1, 1]) { const q = s * PITCH / 2; brush.line(U(q), Vv(-WR), U(q), Vv(WR)); brush.line(U(-WR), Vv(q), U(WR), Vv(q)); }
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const [x, z] = D(i, j);
+    brush.set('inkpen', '#8a8fb5', 0.9);
+    for (let k = 0; k < 6; k++) { const y0 = z - 0.6 + k * 0.24; brush.line(U(x - 0.6), Vv(y0), U(x - 0.6 + r.range(0.3, 1.1)), Vv(y0)); }
+  }
+  // edge-exclusion ring
+  brush.set('inkpen', '#5a5f86', 1.0); brush.circle(w / 2, h / 2, w * 0.47, 0.4);
+}
+function paintWheel(brush, w, h) {
+  const cx = w / 2, cy = h / 2, n = 10, cols = ['#e5463b', '#39a6a0', '#f2b134', '#7a5bd6', '#6a9be0'];
+  for (let k = 0; k < n; k++) { const a0 = k / n * TAU, a1 = (k + 1) / n * TAU; fillP(brush, [[cx, cy], [cx + Math.cos(a0) * w * 0.5, cy + Math.sin(a0) * h * 0.5], [cx + Math.cos((a0 + a1) / 2) * w * 0.52, cy + Math.sin((a0 + a1) / 2) * h * 0.52], [cx + Math.cos(a1) * w * 0.5, cy + Math.sin(a1) * h * 0.5]], cols[k % 5], 255, 0.01, 0.15); }
+  brush.set('bigink', PAL.ink, 1.4); for (let k = 0; k < n; k++) { const a = k / n * TAU; brush.line(cx, cy, cx + Math.cos(a) * w * 0.48, cy + Math.sin(a) * h * 0.48); }
+}
+
+// =====================================================================================================
+// per-frame updates
+// =====================================================================================================
+function updateCamera(ctx, F) {
+  const cam = T.camera, rg = camRig(F), sh = camShake(F);
+  const hand = handheld(ctx.t, { amp: 0.035, rot: 0.004, speed: 4, seed: 5 });
+  hand.rot = [hand.rot[0] + sh[0], hand.rot[1] + sh[1], hand.rot[2] + sh[2]];
+  applyRig(cam, orbit({ target: rg.tg, radius: rg.r, az: rg.az, el: rg.el, fov: rg.fov, roll: rg.roll }), { hand });
+  const yawAt = (f) => { const q = camRig(f), o = orbit({ target: q.tg, radius: q.r, az: q.az, el: q.el }); return Math.atan2(q.tg[0] - o.pos[0], q.tg[2] - o.pos[2]); };
+  let dy = yawAt(F + 0.5) - yawAt(F - 0.5); if (dy > Math.PI) dy -= TAU; if (dy < -Math.PI) dy += TAU;
+  const speed = dy * FPS, inWhip = WHIPS.some(([a, b]) => F > a && F < b);
+  st.smear = inWhip && Math.abs(speed) > 0.5 ? yawSmear(cam, speed, FPS) * 0.9 : 0;
+  ctx.camera = cam;
+}
+function faceCam(m, x, z) { const c = T.camera.position; return Math.atan2(c.x - x, c.z - z); }
+
+function updateCast(F) {
+  const Fc = twos(F);
+  T.arrow.rotation.y = spinAngle(F);
+  // experts
+  st.exps = EXP.map((E, e) => {
+    const s = expertPos(e, F), ex = T.exps[e];
+    ex.g.position.set(s.x, s.y, s.z);
+    ex.g.rotation.y = 0.85 * faceCam(ex.g, s.x, s.z) * 0.5;
+    const cheer = F >= K.slam[0] ? 0.22 * Math.abs(Math.sin(TAU * (Fc - K.slam[0] + e * 3) / 18)) : 0;
+    ex.g.position.y += cheer;
+    const sq = s.sq + gulpSq(e, Fc);
+    ex.body.scale.set(1 + sq * 0.6, 1 - sq, 1 + sq * 0.6);
+    ex.face.material.uniforms.uMap.value = T.faces.box[expertExpr(e, Fc)];
+    return { ...s, y: ex.g.position.y };
+  });
+  // tokens
+  st.toks = T.toks.map((m, k) => {
+    const s = tokState(k, F);
+    m.visible = !!s.vis;
+    if (!s.vis) return s;
+    m.position.set(s.x, s.y, s.z);
+    m.rotation.set(0, faceCam(m, s.x, s.z), 0);
+    const sq = s.sq || 0, sx = s.sx || 1;
+    m.scale.set((1 + sq * 0.6) * sx, 1 - sq, (1 + sq * 0.6));
+    const ex = F >= K.slam[0] && k >= 5 ? 'happy' : s.e;
+    m.material.uniforms.uMap.value = T.faces.tok[ex] || T.faces.tok.awake;
+    return s;
+  });
+  // flow tokens reappear to cheer at the end, popping out of the experts' lids
+  if (F >= K.slam[0]) T.toks.forEach((m, k) => {
+    if (k < 5) return;
+    const e = FLOW_T[k - 5], ex = st.exps[e], a = F - K.slam[0] - (k - 5) * 3;
+    if (a < 0) return;
+    m.visible = true;
+    const off = [(k - 7) * 0.22, 0];
+    m.position.set(ex.x + off[0], ex.y + 0.95 + 0.3 * Math.abs(Math.sin(TAU * a / 16)), ex.z + 0.1);
+    m.scale.set(1, 1, 1); m.rotation.set(0, faceCam(m, ex.x, ex.z), 0);
+    m.material.uniforms.uMap.value = T.faces.tok.happy;
+  });
+  // the Profiler
+  const p = profState(F), P = T.prof;
+  P.root.visible = p.vis;
+  P.root.position.set(p.x, p.y, p.z);
+  P.root.rotation.y = p.yaw + p.spin;
+  P.body.scale.set(1 + p.sq * 0.5, 1 - p.sq, 1 + p.sq * 0.5);
+  P.tilt.rotation.x = p.tilt;
+  P.glass.material.uniforms.uMap.value = T.faces.lens[p.expr];
+  st.prof = p;
+  // letters
+  T.letters.forEach((L, i) => {
+    const s = letterState(i, F), lay = GL_LAYOUT[i];
+    L.g.visible = s.vis; if (!s.vis) return;
+    L.g.position.set(lay.dx, LET.y + s.y, LET.z);
+    L.g.rotation.set(0, lay.ry, lay.rz + s.rz);
+    L.g.scale.set(s.sxz, s.sy, s.sxz);
+  });
+  // banner: poles rise, then the ribbon unrolls from the centre and waves
+  const B = T.banner, bu = sm((F - K.ban[0]) / (K.ban[1] - K.ban[0]));
+  B.root.visible = F >= K.ban[0] - 4;
+  B.poles.forEach((pl) => { pl.scale.y = Math.max(0.01, ob((F - K.ban[0] + 4) / 8)); });
+  const pos = B.geo.attributes.position.array;
+  for (let i = 0; i < pos.length; i += 3) {
+    const x0 = B.base[i], y0 = B.base[i + 1], u = x0 / 3.3;
+    const open = clamp((bu * 1.15 - Math.abs(u)) / 0.15);
+    pos[i] = x0 * lerp(0.02, 1, bu);
+    pos[i + 1] = y0 * lerp(0.05, 1, open) + 0.12 * Math.sin(u * 2.4 + F * 0.12) * bu - 0.18 * (1 - u * u) * bu;
+    pos[i + 2] = 0.16 * Math.sin(u * 3.1 - F * 0.1) * bu;
+  }
+  B.geo.attributes.position.needsUpdate = true; B.geo.computeVertexNormals();
+  B.root.position.y = 2.55 + 0.05 * Math.sin(F * 0.08);
+}
+function updateBackdrop(F) {
+  const cool = [0.62, 0.66, 1.0], jam = [0.82, 0.6, 0.86], dark = [0.48, 0.44, 0.78], warm = [1.0, 0.8, 0.4], gold = [1.0, 0.76, 0.3];
+  const keys = [[0, cool], [50, cool], [90, jam], [140, jam], [150, dark], [182, dark], [194, warm], [282, warm], [292, gold], [384, gold]];
+  let c = keys[0][1];
+  for (let i = 1; i < keys.length; i++) if (F < keys[i][0]) { const [a, ca] = keys[i - 1], [b, cb] = keys[i]; const k = io((F - a) / (b - a)); c = ca.map((v, j) => lerp(v, cb[j], k)); break; }
+  if (F >= keys[keys.length - 1][0]) c = gold;
+  T.backdrop.material.uniforms.uAlbedo.value.set(...c);
+}
+
+// =====================================================================================================
+// npr per-frame
+// =====================================================================================================
+const lensDim = (F) => (F >= 150 && F < 190 ? sm((F - 150) / 8) * (1 - sm((F - 182) / 8)) : 0);
+function drawNPR(ctx) {
+  const { npr, camera } = T, F = ctx.iw;
+  npr.frame(ctx);
+  const dk = lensDim(F);
+  npr.setLook(dk > 0 ? { ...LOOK, value: 1 + 0.25 * dk, vignette: 0.16 + 0.35 * dk } : LOOK);
+  npr.setSmear(st.smear || 0, 0);
+  npr.setLight({ dir: [-0.5, 0.85, 0.55], target: [0, 0, 0.6], size: 9, dist: 22 });
+  const focusPts = [[0, [-0.5, 0.3, 0]], [112, [2.9, 1.2, 2.7]], [146, [0.3, 0.2, 0]], [190, [0, 0.3, 0]], [232, [-1.7, 0.3, 0]], [284, [-0.4, 0.6, 4.0]]];
+  let fp = focusPts[0][1]; for (const [f, p] of focusPts) if (F >= f) fp = p;
+  npr.focusOn(camera, V(...fp), 4.0);
+  // hot link glows while the jam lasts; the roulette lights up as it spins
+  if (F >= 30 && F < 140) npr.pointLight(V(LINK[0], 0.5, 0), { color: 0xff6a3d, radius: 1.3, i: 0.5 + 0.2 * Math.sin(F * 0.6) });
+  // hot experts glow once the pattern is seen
+  if (F >= K.aha) [0, 1].forEach((e) => { const s = st.exps[e]; npr.glowAt(ctx, camera, V(s.x, s.y + 0.4, s.z), { radius: 0.55, i: 0.45 + 0.15 * Math.sin(F * 0.3 + e), color: 0xffd98a, behind: true, seed: 5 + e }); });
+  if (F >= K.aha && F < K.aha + 18) { const a = F - K.aha, c = ctx.project(V(st.prof.x, 1.5, st.prof.z), camera); npr.focusLines({ x: c.x, y: c.y, r0: 300, amount: 1 - a / 18, count: 100, width: 1.3, seed: 3 }); }
+  if (F >= 284) npr.pointLight(V(-0.6, 1.4, 4.6), { color: 0xffc23d, radius: 3.0, i: 0.6 * sm((F - 290) / 8) });
+  const sa = F - K.slam[2];
+  if (sa >= 0 && sa < 14) { const c = ctx.project(V(-0.4, 0.5, LET.z), camera); npr.focusLines({ x: c.x, y: c.y, r0: 380, amount: 0.9 * (1 - sa / 14), count: 100, width: 1.2, seed: 9 }); if (sa === 0) npr.impact(0.8, { threshold: 0.55 }); }
+  npr.render(T.scene, camera);
+}
+
+// =====================================================================================================
+// ink overlay
+// =====================================================================================================
+function prj(ctx, x, y, z) { const v = new T.THREE.Vector3(x, y, z); const s = ctx.project(v, T.camera); const vc = v.clone().applyMatrix4(T.camera.matrixWorldInverse); return { x: s.x, y: s.y, front: vc.z < 0, d: -vc.z }; }
+function pxu(ctx, x, y, z) { const p = prj(ctx, x, y, z); return p.front ? (ctx.DH / 2) / (Math.tan(T.camera.fov * Math.PI / 360) * p.d) : 0; }
+function trailPts(ctx, t, upto) {   // the route walked so far, as screen points (dashed ink)
+  const pts = [], tail = t.route.slice(1), L = Math.min(upto, t.len);
+  const first = [[SPIN[0] + 0.3, 0], [LINK[0], 0]];
+  for (let d = 0; d <= 1; d += 0.25) pts.push(prj(ctx, lerp(first[0][0], first[1][0], d), 0.09, 0));
+  for (let d = 0; d <= L; d += 0.12) { const [x, z] = polyAt(tail, d); pts.push(prj(ctx, x, 0.09, z)); }
+  return pts;
+}
+function inkOverlay(ctx, brush) {
+  const F = ctx.iw, r = ctx.boilRng('ink'), ink = PAL.ink;
+  brush.noHatch();
+  // traces: every chaos trip leaves an ink trail on the wafer; through the lens the two hot routes go ochre and fat
+  const hl = F >= K.aha ? sm((F - K.aha) / 6) : 0, fadeOut = 1 - sm((F - 196) / 20);
+  // trails are 2D ink: keep them off the tokens and boxes that stand on them (screen-space discs)
+  const occ = [];
+  st.toks.forEach((s) => { if (s.vis) { const p = prj(ctx, s.x, s.y, s.z); if (p.front) occ.push({ x: p.x, y: p.y, r: 1.35 * R * pxu(ctx, s.x, s.y, s.z) }); } });
+  st.exps.forEach((s) => { const p = prj(ctx, s.x, s.y + 0.35, s.z); if (p.front) occ.push({ x: p.x, y: p.y, r: 0.55 * pxu(ctx, s.x, s.y, s.z) }); });
+  const clear = (a, b) => !occ.some((o) => Math.hypot((a.x + b.x) / 2 - o.x, (a.y + b.y) / 2 - o.y) < o.r || Math.hypot(a.x - o.x, a.y - o.y) < o.r || Math.hypot(b.x - o.x, b.y - o.y) < o.r);
+  if (F >= 30 && fadeOut > 0.02) TRIPS.forEach((t, k) => {
+    if (F < t.pass) return;
+    const pts = trailPts(ctx, t, (F - t.pass) * SPEED);
+    const hot = EXP[t.e].hot;
+    const col = hl > 0 ? (hot ? PAL.ochre : '#9a96b4') : ink;
+    const wgt = (hl > 0 && hot ? 1.0 + 1.2 * hl : 0.9) * fadeOut;
+    brush.set(hl > 0 && hot ? 'fatink' : 'bigink', col, Math.max(0.3, wgt * (hl > 0 && hot ? 0.5 : 0.8)));
+    for (let i = 0; i + 1 < pts.length; i += 2) { const a = pts[i], b = pts[i + 1]; if (a.front && b.front && clear(a, b)) brush.line(a.x + r.gauss(0, 0.6), a.y + r.gauss(0, 0.6), b.x, b.y); }
+  });
+  // jam at the link: sweat drops and a red "!" over the squeezed tokens
+  st.toks.forEach((s, k) => {
+    if (!s.vis) return;
+    if (s.jam) {
+      const a = prj(ctx, s.x, s.y + 0.28, s.z), u = pxu(ctx, s.x, s.y, s.z);
+      brush.noStroke(); brush.fill('#7fc4ff', 230); brush.fillBleed(0.02);
+      const ph = ((F + k * 5) % 14) / 14;
+      brush.polygon(ell(a.x + 0.22 * u, a.y + ph * 0.25 * u, 0.04 * u, 0.06 * u)); brush.noFill();
+    }
+    if (s.moving && (F >> 1) % 3 === k % 3) { // little dust kicks
+      const a = prj(ctx, s.x, 0.12, s.z), u = pxu(ctx, s.x, 0, s.z);
+      puff(brush, a.x, a.y, 0.08 * u, ink, r, 0.6);
+    }
+  });
+  // landing puffs: Profiler, hot experts
+  const land = [[K.prof[0] + 6, () => [4.4, 3.1]], [K.prof[1], () => [st.prof.x, st.prof.z]], [K.move[0][1], () => [st.exps[0].x, st.exps[0].z]], [K.move[0][2], () => [st.exps[0].x, st.exps[0].z]], [K.move[1][1], () => [st.exps[1].x, st.exps[1].z]], [K.move[1][2], () => [st.exps[1].x, st.exps[1].z]]];
+  land.forEach(([f, at]) => { const a0 = F - f; if (a0 < 0 || a0 >= 9) return; const [x, z] = at(); for (const sd of [-1, 1]) { const a = prj(ctx, x + sd * 0.42, 0.06, z + 0.1), u = pxu(ctx, x, 0, z); if (a.front) puff(brush, a.x + sd * a0 * 3, a.y - a0, 0.12 * u * (1 + a0 * 0.1), ink, r, 1 - a0 / 9); } });
+  // after: speed lines on the short hops
+  st.toks.forEach((s, k) => { if (k < 5 || !s.vis || s.e !== 'whee') return; const a = prj(ctx, s.x, s.y, s.z), b = prj(ctx, SPIN[0], s.y, 0); brush.set('bigink', ink, 1.1); for (let q = -1; q <= 1; q++) brush.line(lerp(a.x, b.x, 0.35), lerp(a.y, b.y, 0.35) + q * 9, lerp(a.x, b.x, 0.85), lerp(a.y, b.y, 0.85) + q * 9); });
+  // slam dust + sparkles
+  K.slam.forEach((f, i) => { const a0 = F - f; if (a0 < 0 || a0 >= 12) return; const x = GL_LAYOUT[i].dx + 0.35;
+    for (const s of [-1, 1]) { const a = prj(ctx, x + s * 0.5 * (1 + a0 * 0.05), LET.y + 0.08, LET.z + 0.2), u = pxu(ctx, x, LET.y, LET.z); puff(brush, a.x + s * a0 * 3, a.y - a0 * 1.5, 0.14 * u * (1 + a0 * 0.08), ink, r, 1 - a0 / 12); } });
+  if (F >= 300) for (let q = 0; q < 6; q++) { const ph = ((F - 300) / 16 + q * 0.37) % 1; if (ph > 0.7) continue;
+    const a = prj(ctx, -2.2 + q * 0.8, 1.6 + 0.4 * hsh(q, 9), LET.z - 0.4); brush.noStroke(); brush.fill(q % 2 ? PAL.ochre : '#ffffff', 255); brush.fillBleed(0.02); brush.polygon(star4(a.x, a.y, 16 * Math.sin(Math.PI * ph / 0.7), 0.2 * q)); brush.noFill(); }
+  // the AHA burst balloon
+  const ab = ahaBox(ctx, F); if (ab) burst(brush, ctx, ab.x, ab.y, 250 * ab.k, 150 * ab.k, { fill: '#ffe14d', ink, weight: 2.6, spikes: 14, key: 'aha', brush: 'bigink' });
+}
+function puff(brush, x, y, s, col, r, a) {
+  if (a <= 0 || s < 2) return;
+  brush.set('inkpen', col, 1.0 * a + 0.2);
+  for (let q = 0; q < 3; q++) { const cx = x + (q - 1) * s * 0.8, cy = y - (q === 1 ? s * 0.4 : 0); const pts = []; for (let k = 0; k <= 8; k++) { const an = Math.PI + k / 8 * Math.PI; pts.push([cx + Math.cos(an) * s * 0.6, cy + Math.sin(an) * s * 0.6]); } brush.spline(pts, 0.5); }
+}
+
+// =====================================================================================================
+// hand-built comic lettering
+// =====================================================================================================
+const GLYPH = {
+  W: { w: 1.0, s: [[[0, 0], [0.22, 1], [0.5, 0.34], [0.78, 1], [1.0, 0]]] },
+  H: { w: 0.62, s: [[[0, 0], [0, 1]], [[0.62, 0], [0.62, 1]], [[0, 0.52], [0.62, 0.5]]] },
+  O: { w: 0.8, s: [[...ell(0.4, 0.5, 0.4, 0.5, 0, 20), ell(0.4, 0.5, 0.4, 0.5, 0, 20)[0]]] },
+  S: { w: 0.64, s: [[[0.62, 0.12], [0.36, 0.0], [0.08, 0.1], [0.06, 0.32], [0.3, 0.47], [0.56, 0.6], [0.62, 0.84], [0.38, 1.0], [0.02, 0.9]]], smooth: true },
+  A: { w: 0.78, s: [[[0, 1], [0.39, 0], [0.78, 1]], [[0.17, 0.64], [0.61, 0.64]]] },
+  N: { w: 0.66, s: [[[0, 1], [0, 0], [0.66, 1], [0.66, 0]]] },
+  M: { w: 0.86, s: [[[0, 1], [0.04, 0], [0.43, 0.62], [0.82, 0], [0.86, 1]]] },
+  J: { w: 0.5, s: [[[0.5, 0], [0.5, 0.72], [0.36, 0.98], [0.12, 0.96], [0.0, 0.78]]], smooth: true },
+  E: { w: 0.56, s: [[[0.56, 0], [0, 0], [0, 1], [0.56, 1]], [[0, 0.5], [0.44, 0.5]]] },
+  '!': { w: 0.0, s: [[[0, 0], [0, 0.62]]], dots: [[0, 0.93]] },
+};
+function smoothPts(pts, n = 5) {
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    for (let k = 0; k < n; k++) { const t = k / n, t2 = t * t, t3 = t2 * t;
+      out.push([0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+        0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]); } }
+  out.push(pts[pts.length - 1]); return out;
+}
+function handWord(g, word, x, y, size, o) {
+  const lw = size * (o.weight ?? 0.24), gap = size * 0.2;
+  const L = [...word].map((ch) => GLYPH[ch]);
+  const widths = L.map((G) => G.w * size + lw);
+  const total = widths.reduce((s, w) => s + w, 0) + gap * (L.length - 1);
+  const r = o.jitter, letters = [];
+  let cx = -total / 2;
+  L.forEach((G, i) => {
+    const w = widths[i], lx = cx + w / 2, t = L.length > 1 ? i / (L.length - 1) - 0.5 : 0, k = o.pops ? o.pops(i) : 1;
+    const ly = -o.arc * (1 - 4 * t * t) + (hsh(i, word.length, 3) - 0.5) * size * 0.12;
+    const rot = (hsh(i, word.length, 5) - 0.5) * 0.22 + t * (o.fan ?? 0.25);
+    const strokes = G.s.map((s) => (G.smooth ? smoothPts(s) : s).map(([u, v]) => [(u - G.w / 2) * size + (r ? r.gauss(0, size * 0.006) : 0), (v - 0.5) * size + (r ? r.gauss(0, size * 0.006) : 0)]));
+    letters.push({ lx, ly, rot, k, strokes, dots: (G.dots || []).map(([u, v]) => [(u - G.w / 2) * size, (v - 0.5) * size]) });
+    cx += w + gap;
+  });
+  g.save(); g.translate(x, y); g.rotate(o.rot || 0); if (o.skew) g.transform(1, 0, o.skew, 1, 0, 0);
+  g.globalAlpha = o.alpha ?? 1; g.lineCap = 'round'; g.lineJoin = 'round';
+  const pass = (col, w, dx, dy) => { g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w;
+    for (const Lt of letters) { if (Lt.k <= 0.01) continue; g.save(); g.translate(Lt.lx + dx, Lt.ly + dy); g.rotate(Lt.rot); g.scale(Lt.k, Lt.k);
+      for (const s of Lt.strokes) { g.beginPath(); s.forEach(([px, py], j) => (j ? g.lineTo(px, py) : g.moveTo(px, py))); g.stroke(); }
+      for (const [px, py] of Lt.dots) { g.beginPath(); g.arc(px, py, w * 0.55, 0, TAU); g.fill(); } g.restore(); } };
+  pass(o.ink, lw + size * 0.13, size * 0.07, size * 0.085); pass(o.ink, lw + size * 0.13, 0, 0);
+  if (o.stroke2) pass(o.stroke2, lw + size * 0.06, 0, 0);
+  pass(o.fill, lw, 0, 0);
+  if (o.sheen) { g.globalAlpha = (o.alpha ?? 1) * 0.55; pass(o.sheen, lw * 0.28, -lw * 0.16, -lw * 0.2); }
+  g.restore();
+}
+function bang(g, x, y, s, rot, r) {
+  if (s < 3) return;
+  const j = () => (r ? r.gauss(0, s * 0.012) : 0);
+  const bar = [[-0.21, -1.0], [0.21, -1.03], [0.075, -0.3], [-0.075, -0.29]].map(([u, v]) => [u * s + j(), v * s + j()]);
+  const shape = (dx, dy) => { g.beginPath(); bar.forEach(([u, v], q) => (q ? g.lineTo(u + dx, v + dy) : g.moveTo(u + dx, v + dy))); g.closePath(); g.moveTo(0.14 * s + dx, dy); g.arc(dx, dy, 0.14 * s, 0, TAU); };
+  g.save(); g.translate(x, y); g.rotate(rot); g.lineJoin = 'round'; g.lineCap = 'round';
+  g.fillStyle = PAL.ink; g.strokeStyle = PAL.ink; g.lineWidth = s * 0.13;
+  shape(s * 0.06, s * 0.07); g.fill(); g.stroke(); shape(0, 0); g.stroke();
+  g.fillStyle = PAL.red; shape(0, 0); g.fill();
+  g.strokeStyle = '#ffd9c8'; g.lineWidth = s * 0.045; g.beginPath(); g.moveTo(-0.1 * s, -0.9 * s); g.lineTo(-0.035 * s, -0.45 * s); g.stroke();
+  g.restore();
+}
+function ahaBox(ctx, F) {
+  const a = F - K.aha; if (a < 0 || a >= 24) return null;
+  const c = prj(ctx, st.prof.x - 0.6, 2.2, st.prof.z);
+  return { x: clamp(c.x, 260, 820), y: clamp(c.y, 200, 520), k: ob(a / 5) * (1 - sm((a - 20) / 4)) };
+}
+function lettering(ctx, g) {
+  const F = ctx.iw, jr = ctx.boilRng('letters');
+  // "!" when a token rams into the queue at the link
+  st.toks.forEach((s, k) => {
+    if (k >= 5 || !s.vis || !s.jam) return;
+    const t = TRIPS[k], age = F - t.arrive; if (age < 0 || age > 16) return;
+    const a = prj(ctx, s.x, s.y + 0.3, s.z), u = pxu(ctx, s.x, s.y, s.z);
+    bang(g, a.x + 0.12 * u, a.y, 0.42 * u * ob(age / 4) * (1 - sm((age - 12) / 4)), (hsh(k, 4) - 0.5) * 0.5 + 0.12, jr);
+  });
+  // JAM! over the link
+  const ja = F - TRIPS[2].arrive;
+  if (ja >= 0 && ja < 40) { const c = prj(ctx, LINK[0] - 0.4, 1.3, 0);
+    handWord(g, 'JAM!', clamp(c.x, 200, 880), clamp(c.y, 160, 900), 120, { fill: PAL.red, ink: PAL.ink, sheen: '#ffd9c8', stroke2: PAL.cream, arc: 12, rot: -0.12, alpha: 1 - sm((ja - 34) / 6), pops: (i) => ob((ja - i * 2) / 4) * (1 + 0.05 * Math.sin(ja * 1.4)), jitter: jr }); }
+  // AHA!
+  const ab = ahaBox(ctx, F);
+  if (ab) handWord(g, 'AHA!', ab.x, ab.y, 130, { fill: PAL.ochre, ink: PAL.ink, sheen: '#fff6c8', stroke2: PAL.cream, arc: 14, rot: -0.1, weight: 0.27, pops: (i) => ob((F - K.aha - i) / 4), jitter: jr });
+  // WHOOSH across the after-traffic
+  const wa = F - K.dep2[1];
+  if (wa >= 0 && wa < 30) { const c = prj(ctx, -1.6, 1.25, 0);
+    handWord(g, 'WHOOSH', clamp(c.x, 400, 680), clamp(c.y, 160, 900), 82, { fill: PAL.sky, ink: PAL.ink, sheen: '#ffffff', stroke2: PAL.cream, arc: 20, rot: -0.1, skew: -0.25, alpha: 1 - sm((wa - 24) / 6), pops: (i) => ob((wa - i * 1.5) / 4), jitter: jr }); }
+}
+</script></body></html>
