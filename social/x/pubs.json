@@ -1,0 +1,1359 @@
+[
+ {
+  "title": "Qubrio: High-Performance Quantum Compilation via Multi-Agent LLM Collaboration",
+  "tags": [
+   "NeurIPS'26"
+  ],
+  "authors": "Jixuan Ruan, Zhuo Cui, Zhengding Hu, Zhongkai Yu, Xiang Fang, Yue Guan, Jason Ludmir, Phillip Weinberg, XiuZhe Luo, Shengtao Wang, Sonia Lopez Alarcon, Hezi Zhang, Yufei Ding",
+  "links": [
+   "https://qubrio.picasso-lab.com/"
+  ]
+ },
+ {
+  "title": "FlashEvolve: Accelerating Agent Self-Evolution with Asynchronous Stage Orchestration",
+  "tags": [
+   "NeurIPS'26"
+  ],
+  "authors": "Zhengding Hu, Mingge Lu, Zhen Wang, Jixuan Ruan, Chang Chen, Zaifeng Pan, Yue Guan, Ruiyi Wang, Zhongkai Yu, Chao Zhang, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2605.08520",
+   "https://flashevolve.picasso-lab.com/"
+  ]
+ },
+ {
+  "title": "AsymHP: Load-Balanced Sparse Attention for Video Diffusion Transformers",
+  "tags": [
+   "NeurIPS'26"
+  ],
+  "authors": "Xinwei Qiang*, Yue Guan*, Ruihan Zhu, Mihir Jagtap, Zaifeng Pan, Zhongkai Yu, Chang Chen, Zhengding Hu, Yufei Ding, Adnan Aziz",
+  "links": []
+ },
+ {
+  "title": "AMMA: A Multi-Chiplet Memory-Centric Architecture for Low-Latency 1M Context Attention Serving",
+  "tags": [
+   "MICRO'26"
+  ],
+  "authors": "Zhongkai Yu, Haotian Ye, Chenyang Zhou, Ohm Rishabh Venkatachalam, Zaifeng Pan, Zhengding Hu, Junsung Kim, Won Woo Ro, Po-An Tsai, Shuyi Pei, Yangwook Kang, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2604.26103"
+  ]
+ },
+ {
+  "title": "Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference",
+  "tags": [
+   "ISCA'26",
+   "Award: Best Paper"
+  ],
+  "authors": "Zhongkai Yu, Yue Guan, Zihao Yu, Chenyang Zhou, Zhengding Hu, Shuyi Pei, Yangwook Kang, Yufei Ding, Po-An Tsai",
+  "links": [
+   "https://arxiv.org/abs/2510.05497"
+  ]
+ },
+ {
+  "title": "Reducing Page Faults via Invalidation-based Mapping Propagation in Multi-GPU Systems",
+  "tags": [
+   "ISCA'26"
+  ],
+  "authors": "Junsung Kim, Dongho Ha, Sungwoo Kim, Wonho Cho, Sungbin Kim, Yufei Ding, Won Woo Ro",
+  "links": []
+ },
+ {
+  "title": "Transpiler-Architecture Co-Design to Curb Clifford Costs in Fault-Tolerant Quantum Computing",
+  "tags": [
+   "ISCA'26"
+  ],
+  "authors": "Meng Wang, Chenxu Liu, Samuel Stein, Yufei Ding, Poulami Das, Prashant Nair, Ang Li",
+  "links": [
+   "https://arxiv.org/abs/2412.15434"
+  ]
+ },
+ {
+  "title": "Syncopate: Efficient Multi-GPU AI Kernels via Automatic Chunk-Centric Compute-Communication Overlap",
+  "tags": [
+   "OSDI'26"
+  ],
+  "authors": "Xinwei Qiang*, Yue Guan*, Zhengding Hu, Yufei Ding, Adnan Aziz",
+  "links": [
+   "https://arxiv.org/abs/2601.20595"
+  ]
+ },
+ {
+  "title": "ScaleSim: Serving Large-Scale Multi-Agent Simulation with Invocation Distance-Based Memory Management",
+  "tags": [
+   "ICML'26"
+  ],
+  "authors": "Zaifeng Pan, Yipeng Shen, Zhengding Hu, Zhuang Wang, Aninda Manocha, Zheng Wang, Zhongkai Yu, Yue Guan, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2601.21473"
+  ]
+ },
+ {
+  "title": "TritonGym: A Benchmark for Agentic LLM Workflows in Triton GPU Code Generation",
+  "tags": [
+   "ICML'26"
+  ],
+  "authors": "Yue Guan, Yichen Lin, Xu Zhao, Jianzhu Yao, Xinwei Qiang, Zhongkai Yu, Pramod Viswanath, Yufei Ding, Adnan Aziz",
+  "links": [
+   "https://tritongym.picasso-lab.com/"
+  ]
+ },
+ {
+  "title": "iSwitch: QEC on Demand via In-Situ Encoding of Bare Qubits for Ion Trap Architectures",
+  "tags": [
+   "ASPLOS'26"
+  ],
+  "authors": "Keyi Yin, Xiang Fang, Zhuo Chen, David Hayes, Eneet Kaur, Reza Nejabati, Hartmut Haeffner, Wes Campbell, Eric Hudson, Jens Palsberg, Travis Humble, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3779212.3790177"
+  ]
+ },
+ {
+  "title": "SFD: Towards Segment Fusion Dataflowfor Spatial Accelerators",
+  "tags": [
+   "HPCA'26"
+  ],
+  "authors": "Fuyu Wang, Minghua Shen, Yufei Ding, Nong Xiao, Yutong Lu",
+  "links": [
+   "https://ieeexplore.ieee.org/document/11408456"
+  ]
+ },
+ {
+  "title": "Proton: Towards Multi-level, Adaptive Profiling for Triton",
+  "tags": [
+   "CGO'26"
+  ],
+  "authors": "Keren Zhou, Tianle Zhong, Hao Wu, Jihyeong Lee, Yue Guan, Yufei Ding, Robeck Corbin, Yuanwei Fang, Jeff Niu, Philippe Tillet",
+  "links": [
+   "https://ieeexplore.ieee.org/abstract/document/11395207"
+  ]
+ },
+ {
+  "title": "ChipMATE: Multi-Agent Training via Reinforcement Learning for Enhanced RTL Generation",
+  "tags": [
+   "arXiv"
+  ],
+  "authors": "Zhongkai Yu*, Yichen Lin*, Chenyang Zhou, Yuwei Zhang, Kun Zhou, Junxia Cui, Haotian Ye, Zhengding Hu, Zaifeng Pan, Ruiyi Wang, Yujie Zhao, Hejia Zhang, Jingbo Shang, Jishen Zhao, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2605.12857",
+   "https://chipmate.picasso-lab.com/"
+  ]
+ },
+ {
+  "title": "TLX: Hardware-Native, Evolvable MIMW GPU Compiler for Large-scale Production Environments",
+  "tags": [
+   "arXiv"
+  ],
+  "authors": "Yue Guan, Hongtao Yu, Peng Chen, Daohang Shi, Karthik Manivannan, Nicholas J Riasanovsky, Manman Ren, Lei Wang, Shane Nay, Partha Kanuparthy, Zaifeng Pan, Zhengding Hu, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2605.10905"
+  ]
+ },
+ {
+  "title": "JigsawRL: Assembling RL Pipelines for Efficient LLM Post-Training",
+  "tags": [
+   "arXiv"
+  ],
+  "authors": "Zhengding Hu, Hehua Ouyang, Chang Chen, Zaifeng Pan, Yue Guan, Zhongkai Yu, Zhen Wang, Steven Swanson, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2604.23838"
+  ]
+ },
+ {
+  "title": "TritonDFT: Automating DFT with a Multi-Agent Framework",
+  "tags": [
+   "arXiv"
+  ],
+  "authors": "Zhengding Hu, Kuntal Talit, Zhen Wang, Haseeb Ahmad, Yichen Lin, Prabhleen Kaur, Christopher Lane, Elizabeth A. Peterson, Zhiting Hu, Elizabeth A. Nowadnick, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2603.03372",
+   "https://tritondft.com/"
+  ]
+ },
+ {
+  "title": "Pancake: Hierarchical Memory System for Multi-Agent LLM Serving",
+  "tags": [
+   "arXiv"
+  ],
+  "authors": "Zhengding Hu, Zaifeng Pan, Prabhleen Kaur, Vibha Murthy, Zhongkai Yu, Yue Guan, Zhen Wang, Steven Swanson, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2602.21477"
+  ]
+ },
+ {
+  "title": "ChipBench: A Next-Step Benchmark for Evaluating LLM Performance in AI-Aided Chip Design",
+  "tags": [
+   "arXiv"
+  ],
+  "authors": "Zhongkai Yu, Chenyang Zhou, Yichen Lin, Hejia Zhang, Haotian Ye, Junxia Cui, Zaifeng Pan, Jishen Zhao, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2601.21448"
+  ]
+ },
+ {
+  "title": "Lookahead Context Engineering: Hiding Context Transformation Overhead for Efficient Long-Horizon Agent Serving",
+  "tags": [
+   "preprint"
+  ],
+  "authors": "Zaifeng Pan, Qianxu Wang, Zhengding Hu, Chang Chen, Yue Guan, Steven Swanson, Yufei Ding",
+  "links": [
+   "https://www.researchgate.net/publication/404781391_Lookahead_Context_Engineering_Hiding_Context_Transformation_Overhead_for_Efficient_Long-Horizon_Agent_Serving"
+  ]
+ },
+ {
+  "title": "KVFlow: Efficient Prefix Caching for Accelerating LLM-based Multi-Agent Workflows",
+  "tags": [
+   "NeurIPS'25"
+  ],
+  "authors": "Zaifeng Pan, Ajjkumar Patel, Yipeng Shen, Zhengding Hu, Yue Guan, Wan-Lu Li, Lianhui Qin, Yida Wang, Yufei Ding",
+  "links": [
+   "https://openreview.net/pdf?id=5Iw1nDtYmT"
+  ]
+ },
+ {
+  "title": "Yggdrasil: Bridging Dynamic Speculation and Static Runtime for Latency-Optimal Tree-Based LLM Decoding",
+  "tags": [
+   "NeurIPS'25"
+  ],
+  "authors": "Yue Guan, Changming Yu, Shihan Fang, Weiming Hu, Zaifeng Pan, Zheng Wang, Zihan Liu, Yangjie Zhou, Yufei Ding, Minyi Guo, Jingwen Leng",
+  "links": [
+   "https://arxiv.org/abs/2512.23858"
+  ]
+ },
+ {
+  "title": "OneAdapt: Resource-adaptive Compilation of Photonic One-way Quantum Computing",
+  "tags": [
+   "MICRO'25"
+  ],
+  "authors": "Hezi Zhang, Jixuan Ruan, Dean Tullsen, Yufei Ding, Ang Li, Travis Humble",
+  "links": [
+   "https://dl.acm.org/doi/full/10.1145/3725843.3756100"
+  ]
+ },
+ {
+  "title": "HedraRAG: Co-Optimizing Generation and Retrieval for Heterogeneous Retrieval-Augmented Generation Workflows",
+  "tags": [
+   "SOSP'25"
+  ],
+  "authors": "Zhengding Hu, Vibha Murthy, Zaifeng Pan, Wanlu Li, Xiaoyi Fang, Yufei Ding, Yuke Wang",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3731569.3764806"
+  ]
+ },
+ {
+  "title": "Mercury: Unlocking Multi-GPU Operator Optimization for Large Language Models via Remote Memory Scheduling",
+  "tags": [
+   "SOSP'25"
+  ],
+  "authors": "Yue Guan, Xinwei Qiang, Zaifeng Pan, Daniels Johnson, Yuanwei Fang, Keren Zhou, Yuke Wang, Wanlu Li, Yufei Ding, Adnan Aziz",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3731569.3764798"
+  ]
+ },
+ {
+  "title": "PowerMove: Optimizing Compilation for Neutral Atom Quantum Computers with Zoned Architecture",
+  "tags": [
+   "ASPLOS'25"
+  ],
+  "authors": "Jixuan Ruan*, Xiang Fang*, Hezi Zhang, Ang Li, Travis Humble, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3676642.3736128"
+  ]
+ },
+ {
+  "title": "GMI-DRL: Empowering Multi-GPU Deep Reinforcement Learning with Adaptive-Grained Parallelism",
+  "tags": [
+   "USENIX ATC'25"
+  ],
+  "authors": "Yuke Wang, Boyuan Feng, Zheng Wang, Guyue Huang, Tong Geng, Ang Li, Yufei Ding",
+  "links": [
+   "https://www.usenix.org/conference/atc25/presentation/wang-yuke"
+  ]
+ },
+ {
+  "title": "WLB-LLM: Workload-Balanced 4D Parallelism for Large Language Model Training",
+  "tags": [
+   "OSDI'25"
+  ],
+  "authors": "Zheng Wang, Anna Cai, Xinfeng Xie, Zaifeng Pan, Yue Guan, Weiwei Chu, Jie Wang, Shikai Li, Jianyu Huang, Chris Cai, Yuchen Hao, Yufei Ding",
+  "links": [
+   "https://www.usenix.org/conference/osdi25/presentation/wang-zheng"
+  ]
+ },
+ {
+  "title": "KPerfIR: Towards a Open and Compiler-centric Ecosystem for GPU Kernel Performance Tooling on Modern AI Workloads",
+  "tags": [
+   "OSDI'25"
+  ],
+  "authors": "Yue Guan, Yuanwei Fang, Keren Zhou, Corbin Robeck, Manman Ren, Zhongkai Yu, Yufei Ding, Adnan Aziz",
+  "links": [
+   "https://arxiv.org/abs/2505.21661"
+  ]
+ },
+ {
+  "title": "SwitchQNet: Optimizing Distributed Quantum Computing for Quantum Data Centers with Switch Networks",
+  "tags": [
+   "ISCA'25"
+  ],
+  "authors": "Hezi Zhang, Yiran Xu, Haotian Hu, Keyi Yin, Hassan Shapourian, Jiapeng Zhao, Ramana Rao Kompella, Reza Nejabati, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3695053.3731046"
+  ]
+ },
+ {
+  "title": "TRACI: Network Acceleration of Input-Dynamic Communication for Large-Scale Deep Learning Recommendation Model",
+  "tags": [
+   "ISCA'25"
+  ],
+  "authors": "Guyue Huang, Hao Li, Le Qin, Jiayi Huang, Yangwook Kang, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3695053.3731105"
+  ]
+ },
+ {
+  "title": "CaliQEC: In-situ Qubit Calibration for Surface Code Quantum Error Correction",
+  "tags": [
+   "ISCA'25"
+  ],
+  "authors": "Xiang Fang, Keyi Yin, Yuchen Zhu, Jixuan Ruan, Dean Tullsen, Zhiding Liang, Andrew Sornborger, Ang Li, Travis Humble, Yufei Ding, Yunong Shi",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3695053.3731042"
+  ]
+ },
+ {
+  "title": "Hardware-aware Calibration Protocol for Quantum Computers",
+  "tags": [
+   "ISCA'25"
+  ],
+  "authors": "Yuchen Zhu, Jinglei Cheng, Boxi Li, Kecheng Liu, Yidong Zhou, Hanrui Wang, Yufei Ding, Zhiding Liang",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3695053.3731036"
+  ]
+ },
+ {
+  "title": "FastTree: Optimizing Attention Kernel and Runtime for Tree-Structured Large Language Model Inference",
+  "tags": [
+   "MLSys'25"
+  ],
+  "authors": "Zaifeng Pan, Yitong Ding, Yue Guan, Zheng Wang, Zhongkai Yu, Xulong Tang, Yida Wang, Yufei Ding",
+  "links": [
+   "https://openreview.net/pdf?id=BwvHcHZ3kJ"
+  ]
+ },
+ {
+  "title": "Push Multicast: A Speculative and Coherent Interconnect for Mitigating Manycore CPU Communication Bottleneck",
+  "tags": [
+   "HPCA'25"
+  ],
+  "authors": "Jiayi Huang, Yanhua Chen, Zhe Wang, Christopher J. Hughes, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/10946822"
+  ]
+ },
+ {
+  "title": "Mutual Effort for Efficiency: A Similarity-based Token Pruning for Vision Transformers in Self-Supervised Learning",
+  "tags": [
+   "ICLR'25"
+  ],
+  "authors": "Sheng Li, Qitao Tan, Yue Dai, Zhenglun Kong, Tianyu Wang, Jun Liu, Ao Li, Ninghao Liu, Yufei Ding, Xulong Tang, Geng Yuan",
+  "links": [
+   "https://iclr.cc/virtual/2025/poster/30276"
+  ]
+ },
+ {
+  "title": "HetEC: Architectures for Heterogeneous Quantum Error Correction Codes",
+  "tags": [
+   "ASPLOS'25"
+  ],
+  "authors": "Samuel Stein, Shifan Xu, Andrew W. Cross, Ted Yoder, Ali Javadi-Abhari, Chenxu Liu, Kun Liu, Victor Zhou, Charlie Guinn, Yufei Ding, Yongshan Ding, Ang Li",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3676641.3716001"
+  ]
+ },
+ {
+  "title": "QECC-Synth: A Layout Synthesizer for Quantum Error Correction Codes on Sparse Architectures",
+  "tags": [
+   "ASPLOS'25"
+  ],
+  "authors": "Keyi Yin, Hezi Zhang, Xiang Fang, Yunong Shi, Travis Humble, Ang Li, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3669940.3707236"
+  ]
+ },
+ {
+  "title": "Surf-Deformer: Mitigating Dynamic Defects on Surface Code via Adaptive Deformation",
+  "tags": [
+   "MICRO'24"
+  ],
+  "authors": "Keyi Yin, Xiang Fang, Travis Humble, Ang Li, Yunong Shi, Yufei Ding",
+  "links": [
+   "https://www.computer.org/csdl/proceedings-article/micro/2024/505700a750/22nitjkWGBi"
+  ]
+ },
+ {
+  "title": "RecFlex: Enabling Feature Heterogeneity-Aware Optimization for Deep Recommendation Models with Flexible Schedules",
+  "tags": [
+   "SC'24"
+  ],
+  "authors": "Zaifeng Pan, Zhen Zheng, Feng Zhang,Bing Xie, Ruofan Wu, Shaden Smith, Chuanjie Liu, Olatunji Ruwase, Xiaoyong Du, Yufei Ding",
+  "links": [
+   "https://www.computer.org/csdl/proceedings-article/sc/2024/529100a643/21HUVzP70li"
+  ]
+ },
+ {
+  "title": "OPER: Optimality-Guided Embedding Table Parallelization for Large-scale Recommendation Model",
+  "tags": [
+   "USENIX ATC'24"
+  ],
+  "authors": "Zheng Wang, Yuke Wang, Boyuan Feng, Guyue Huang, Dheevatsa Mudigere, Bharath Muthiah, Ang Li, Yufei Ding",
+  "links": [
+   "https://www.usenix.org/conference/atc24/presentation/wang"
+  ]
+ },
+ {
+  "title": "Soter: Analytical Tensor-Architecture Modeling and Automatic Tensor Program Tuning for Spatial Accelerators",
+  "tags": [
+   "ISCA'24"
+  ],
+  "authors": "Fuyu Wang, Minghua Shen, Yufei Ding, Nong Xiao",
+  "links": [
+   "https://www.computer.org/csdl/proceedings-article/isca/2024/265800a991/1Z3pARIsu3e"
+  ]
+ },
+ {
+  "title": "OnePerc: A Randomness-aware Compiler for Photonic Quantum Computing",
+  "tags": [
+   "ASPLOS'24",
+   "Distinguished Artifact Award"
+  ],
+  "authors": "Hezi Zhang, Jixuan Ruan, Hassan Shapourian, Ramana Rao Kompella, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3620666.3651372"
+  ]
+ },
+ {
+  "title": "EVT: Accelerating Deep Learning Training with Epilogue Visitor Tree",
+  "tags": [
+   "ASPLOS'24",
+   "Distinguished Artifact Award"
+  ],
+  "authors": "Zhaodong Chen, Andrew Kerr, Richard Cai, Jack Kosaian, Haicheng Wu, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3620666.3651369"
+  ]
+ },
+ {
+  "title": "MECH: Multi-Entry Communication Highway for Superconducting Quantum Chiplets",
+  "tags": [
+   "ASPLOS'24"
+  ],
+  "authors": "Hezi Zhang, Keyi Yin, Anbang Wu, Hassan Shapourian, Alireza Shabani, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3620665.3640377"
+  ]
+ },
+ {
+  "title": "RAP: Resource-aware Automated GPU Sharing for Multi-GPU Recommendation Model Training and Input Preprocessing",
+  "tags": [
+   "ASPLOS'24"
+  ],
+  "authors": "Zheng Wang, Yuke Wang, Jiaqi Deng, Da Zheng, Ang Li, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3620665.3640406"
+  ]
+ },
+ {
+  "title": "ZENO: A Type-based Optimization Framework for Zero Knowledge Neural Network Inference",
+  "tags": [
+   "ASPLOS'24"
+  ],
+  "authors": "Boyuan Feng, Zheng Wang, Yuke Wang, Shu Yang, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3617232.3624852"
+  ]
+ },
+ {
+  "title": "QuComm: Optimizing Collective Communication for Distributed Quantum Computing",
+  "tags": [
+   "MICRO'23"
+  ],
+  "authors": "Anbang Wu, Yufei Ding, Ang Li",
+  "links": [
+   "https://dl.acm.org/doi/pdf/10.1145/3613424.3614253"
+  ]
+ },
+ {
+  "title": "RM-STC: Row-Merge Dataflow Inspired GPU Sparse Tensor Core for Energy-Efficient Sparse Acceleration",
+  "tags": [
+   "MICRO'23"
+  ],
+  "authors": "Guyue Huang, Zhengyang Wang, Po-An Tsai, Chen Zhang, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/fullHtml/10.1145/3613424.3623775"
+  ]
+ },
+ {
+  "title": "TC-GNN: Bridging Sparse GNN Computation and Dense Tensor Cores on GPUs",
+  "tags": [
+   "USENIX ATC'23"
+  ],
+  "authors": "Yuke Wang, Boyuan Feng, Zheng Wang, Guyue Huang, Yufei Ding",
+  "links": [
+   "https://www.usenix.org/system/files/atc23-wang-yuke.pdf"
+  ]
+ },
+ {
+  "title": "MGG: Accelerating Graph Neural Networks with Fine-grained intra-kernel Communication-Computation Pipelining on Multi-GPU Platforms",
+  "tags": [
+   "OSDI'23"
+  ],
+  "authors": "Yuke Wang, Boyuan Feng, Zheng Wang, Tong Geng, Ang Li, Kevin Barker, Yufei Ding",
+  "links": [
+   "https://www.usenix.org/system/files/osdi23-wang-yuke.pdf"
+  ]
+ },
+ {
+  "title": "OneQ: A Compilation Framework for Photonic One-Way Quantum Computation",
+  "tags": [
+   "ISCA'23"
+  ],
+  "authors": "Hezi Zhang, Anbang Wu, Yuke Wang, Gushu Li, Hassan Shapourian, Alireza Shabani, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3579371.3589047"
+  ]
+ },
+ {
+  "title": "Q-BEEP: Quantum Bayesian Error Mitigation Employing Poisson Modeling over the Hamming Spectrum",
+  "tags": [
+   "ISCA'23"
+  ],
+  "authors": "Samuel Stein, Nathan Wiebe, Yufei Ding, James Ang, Ang Li",
+  "links": [
+   "https://dl.acm.org/doi/pdf/10.1145/3579371.3589043"
+  ]
+ },
+ {
+  "title": "ECSSD: Hardware/Data Layout Co-Designed In-Storage-Computing Architecture for Extreme Classification",
+  "tags": [
+   "ISCA'23"
+  ],
+  "authors": "Siqi Li, Fengbin Tu, Liu Liu, Jilan Lin, Zheng Wang, Yangwook Kang, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/pdf/10.1145/3579371.3589093"
+  ]
+ },
+ {
+  "title": "ALCOP: Automatic Load-Compute Pipelining in Deep Learning Compiler for AI-GPUs",
+  "tags": [
+   "MLSys'23"
+  ],
+  "authors": "Guyue Huang, Yang Bai, Liu Liu, Yuke Wang, Bei Yu, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://proceedings.mlsys.org/paper_files/paper/2023/file/12a304a31e42dfefa21c82431e849124-Paper-mlsys2023.pdf"
+  ]
+ },
+ {
+  "title": "SPG: Structure-Private Graph Database via SqueezePIR",
+  "tags": [
+   "VLDB'23"
+  ],
+  "authors": "Ling Liang, Jilan Lin, Zheng Qu, Ishtiyaque Ahmad, Liu Liu, Fengbin Tu, Trinabh Gupta, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://www.vldb.org/pvldb/vol16/p1615-liang.pdf"
+  ]
+ },
+ {
+  "title": "Dynamic N:M Fine-grained Structured Sparse Attention Mechanism",
+  "tags": [
+   "PPoPP'23"
+  ],
+  "authors": "Zhaodong Chen, Zheng Qu, Yuying Quan, Liu Liu, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3572848.3577500"
+  ]
+ },
+ {
+  "title": "Biologically Inspired Dynamic Thresholds for Spiking Neural Networks",
+  "tags": [
+   "NeurIPS'22"
+  ],
+  "authors": "Jianchuan Ding, Bo Dong, Felix Heide, Yufei Ding, Yunduo Zhou, Baocai Yin, Xin Yang",
+  "links": [
+   "https://arxiv.org/abs/2206.04426#:~:text=Biologically%20Inspired%20Dynamic%20Thresholds%20for%20Spiking%20Neural%20Networks,-Jianchuan%20Ding%2C%20Bo&amp;text=The%20dynamic%20membrane%20potential%20threshold,firing%20rate%20of%20a%20neuron."
+  ]
+ },
+ {
+  "title": "AutoComm: A Framework for Enabling Efficient Communication in Distributed Quantum Program",
+  "tags": [
+   "MICRO'22"
+  ],
+  "authors": "Anbang Wu, Hezi Zhang, Gushu Li , Alireza Shabani, Yuan Xie, and Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2207.11674#:~:text=AutoComm%3A%20A%20Framework%20for%20Enabling%20Efficient%20Communication%20in%20Distributed%20Quantum%20Programs,-Anbang%20Wu%2C%20Hezi&amp;text=Distributed%20quantum%20computing%20(DQC)%20is,of%20near%2Dterm%20quantum%20devices."
+  ]
+ },
+ {
+  "title": "EL-Rec: Efficient Large-scale Recommendation Model Training via Tensor-train Embedding",
+  "tags": [
+   "SC'22"
+  ],
+  "authors": "Zheng Wang, Yuke Wang, Boyuan Feng, Dheevatsa Mudigere, Bharath Muthiah, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.5555/3571885.3571978"
+  ]
+ },
+ {
+  "title": "LightSeq2: Accelerated Training for Transformer-Based Models on GPUs",
+  "tags": [
+   "SC'22"
+  ],
+  "authors": "Xiaohui Wang, Yang Wei, Ying Xiong, Guyue Huang, Xian Qian, Yufei Ding, Mingxuan Wang, Lei Li",
+  "links": [
+   "https://arxiv.org/abs/2110.05722"
+  ]
+ },
+ {
+  "title": "Faith: An Efficient Framework for Transformer Verification on GPUs",
+  "tags": [
+   "USENIX ATC'22"
+  ],
+  "authors": "Boyuan Feng, Tianqi Tang, Yuke Wang, Zhaodong Chen, Zheng Wang, Shu Yang, Yuan Xie, Yufei Ding",
+  "links": [
+   "https://www.usenix.org/system/files/atc22-feng.pdf"
+  ]
+ },
+ {
+  "title": "A Synthesis Framework for Stitching Surface Code with Superconducting Quantum Devices",
+  "tags": [
+   "ISCA'22"
+  ],
+  "authors": "Anbang Wu, Gushu LI, Hezi Zhang, Gian Giacomo Guerreschi, Yufei Ding, and Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3470496.3527381"
+  ]
+ },
+ {
+  "title": "EQC : Ensembled Quantum Computing for Variational Quantum Algorithms",
+  "tags": [
+   "ISCA'22",
+   "Best Paper Nominee"
+  ],
+  "authors": "Samuel Stein, Nathan Wiebe, Yufei Ding, Peng Bo, Karol Kowalski, Nathan Baker, James Ang, and Ang Li",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3470496.3527434"
+  ]
+ },
+ {
+  "title": "INSPIRE: In-Storage Private Information Retrieval via Protocol and Architecture Co-design",
+  "tags": [
+   "ISCA'22"
+  ],
+  "authors": "Jilan Lin, Ling Liang, Zheng Qu, Ishtiyaque Ahmad, Liu Liu, Fengbin Tu, Trinabh Gupta, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3470496.3527433"
+  ]
+ },
+ {
+  "title": "Shfl-BW: Accelerating Deep Neural Network Inference with Tensor-Core Aware Weight Pruning",
+  "tags": [
+   "DAC'22"
+  ],
+  "authors": "Guyue Huang, Haoran Li, Minghai Qin, Fei Sun, Yufei Ding and Yuan Xie",
+  "links": [
+   "https://arxiv.org/abs/2203.05016",
+   "https://github.com/hgyhungry/ShflBW_Sparse_NN"
+  ]
+ },
+ {
+  "title": "Heuristic Adaptability to Input Dynamics for SpMM on GPUs",
+  "tags": [
+   "DAC'22",
+   "Best Paper Nominee"
+  ],
+  "authors": "Guohao Dai, Guyue Huang, Shang Yang, Zhongming Yu, Hengrui Zhang, Yufei Ding, Yuan Xie, Huazhong Yang, Yu Wang",
+  "links": [
+   "https://arxiv.org/abs/2202.08556",
+   "https://github.com/hgyhungry/dgSPARSE-Library/tree/main/example"
+  ]
+ },
+ {
+  "title": "Understanding GNN Computational Graph: A Coordinated Computation, IO, and Memory Perspective",
+  "tags": [
+   "MLSys'22"
+  ],
+  "authors": "Hengrui Zhang, Zhongming Yu, Guohao Dai, Guyue Huang, Yufei Ding, Yuan Xie, Yu Wang",
+  "links": [
+   "https://arxiv.org/abs/2110.09524",
+   "https://github.com/dgSPARSE/dgNN"
+  ]
+ },
+ {
+  "title": "QGTC: Accelerating Quantized GNN via GPU Tensor Core GPUs",
+  "tags": [
+   "PPoPP'22"
+  ],
+  "authors": "Yuke Wang*, Boyuan Feng*, Yufei Ding. (* co-primary authors)",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3503221.3508408"
+  ]
+ },
+ {
+  "title": "Paulihedral: A Generalized Block-Wise Compiler Optimization Framework For Quantum Simulation Kernels",
+  "tags": [
+   "ASPLOS'22"
+  ],
+  "authors": "Gushu Li, Anbang Wu, Yunong Shii, Ali Javadi-Abhari, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3503222.3507715"
+  ]
+ },
+ {
+  "title": "DOTA: Detect and Omit Weak Attentions for Scalable Transformer Acceleration",
+  "tags": [
+   "ASPLOS'22"
+  ],
+  "authors": "Zheng Qu, Liu Liu, Fengbin Tu, Zhaodong Chen, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3503222.3507738"
+  ]
+ },
+ {
+  "title": "A 28nm 15.59\u03bcJ/Token Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes",
+  "tags": [
+   "ISSCC'22"
+  ],
+  "authors": "Fengbin Tu, Zihan Wu, Yiqi Wang, Ling Liang, Liu Liu, Yufei Ding, Leibo Liu , Shaojun Wei, Yuan Xie, Shouyi Yin",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9731645"
+  ]
+ },
+ {
+  "title": "An Efficient Quantitative Approach for Optimizing Convolutional Neural Networks",
+  "tags": [
+   "CIKM'21",
+   "Spotlight"
+  ],
+  "authors": "Yuke Wang, Boyuan Feng, Xueqiao Peng, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/2009.05236"
+  ]
+ },
+ {
+  "title": "On the Co-Design of Quantum Software and Hardware",
+  "tags": [
+   "NanoCom'21"
+  ],
+  "authors": "Gushu Li, Anbang Wu, Yunong Shii, Ali Javadi-Abhari, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3477206.3477464"
+  ]
+ },
+ {
+  "title": "APNN-TC: Accelerating Arbitrary-Precision Neural Networks on Tensor Cores",
+  "tags": [
+   "SC'21"
+  ],
+  "authors": "Boyuan Feng*, Yuke Wang*, Tong Geng, Ang Li, Yufei Ding (* co-primary authors)",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3458817.3476157"
+  ]
+ },
+ {
+  "title": "Efficient Tensor Core-based GPU Kernels for Structured Sparsity under Reduced Precision",
+  "tags": [
+   "SC'21"
+  ],
+  "authors": "Zhaodong Chen*, Zheng Qu*, Liu Liu, Yufei Ding, Yuan Xie (* co-primary authors)",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3458817.3476182"
+  ]
+ },
+ {
+  "title": "Palleon: A Runtime System for Efficient Video Processing toward Dynamic Class Skew",
+  "tags": [
+   "USENIX ATC'21"
+  ],
+  "authors": "Boyuan Feng, Yuke Wang, Gushu Li, Yuan Xie, Yufei Ding",
+  "links": [
+   "https://www.usenix.org/system/files/atc21-feng-boyuan.pdf"
+  ]
+ },
+ {
+  "title": "TiAcc: Triangle-inequality based Hardware Accelerator for K-means on FPGAs",
+  "tags": [
+   "CCGrid'21"
+  ],
+  "authors": "Yuke Wang, Boyuan Feng, Gushu Li, Georgios Tzimpragos, Lei Deng, Yuan Xie, Yufei Ding",
+  "links": [
+   "https://ieeexplore.ieee.org/abstract/document/9499568"
+  ]
+ },
+ {
+  "title": "GNNAdvisor: An Adaptive and Efficient Runtime System for GNN Acceleration on GPUs",
+  "tags": [
+   "OSDI '21"
+  ],
+  "authors": "Yuke Wang, Boyuan Feng, Gushu Li, Shuangchen Li, Lei Deng, Yuan Xie, Yufei Ding",
+  "links": [
+   "https://www.usenix.org/system/files/osdi21-wang-yuke.pdf"
+  ]
+ },
+ {
+  "title": "DSXplore: Optimizing Convolutional Neural Networks via Sliding-Channel Convolution",
+  "tags": [
+   "IPDPS'21"
+  ],
+  "authors": "Yuke Wang, Boyuan Feng, Yufei Ding",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9460557"
+  ]
+ },
+ {
+  "title": "EGEMM-TC: Accelerating Scientific Computing on Tensor Cores with Extended Precision",
+  "tags": [
+   "PPoPP'21"
+  ],
+  "authors": "Boyuan Feng, Yuke Wang, Guoyang Chen, Weifeng Zhang, Yuan Xie, Yufei Ding",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3437801.3441599"
+  ]
+ },
+ {
+  "title": "UAG: Uncertainty-aware Attention Graph Neural Network for Defending Adversarial Attacks",
+  "tags": [
+   "AAAI'21"
+  ],
+  "authors": "Boyuan Feng, Yuke Wang, Yufei Ding",
+  "links": [
+   "https://ojs.aaai.org/index.php/AAAI/article/view/16908/16715"
+  ]
+ },
+ {
+  "title": "SAGA: Sparse Adversarial Attack on EEG-based Brain Computer Interface",
+  "tags": [
+   "ICASSP'21"
+  ],
+  "authors": "Boyuan Feng, Yuke Wang, Yufei Ding",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9413507"
+  ]
+ },
+ {
+  "title": "ENMC: Extreme Near-Memory Classification via Approximate Screening",
+  "tags": [
+   "MICRO'21"
+  ],
+  "authors": "Liu Liu*, Jilan Lin*, Zheng Qu, Yufei Ding, Yuan Xie (* co-primary authors)",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3466752.3480090"
+  ]
+ },
+ {
+  "title": "Improving Streaming Graph Processing Performance Using Input Knowledge",
+  "tags": [
+   "MICRO'21"
+  ],
+  "authors": "Abanti Basak, Zheng Qu, Jilan Lin, Alaa R. Alameldeen, Zeshan Chishti, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3466752.3480096"
+  ]
+ },
+ {
+  "title": "Overcoming the Memory Hierarchy Inefficiencies in Graph Processing Applications",
+  "tags": [
+   "ICCAD'21"
+  ],
+  "authors": "Jilan Lin, Shuangchen Li, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9643434"
+  ]
+ },
+ {
+  "title": "Weighted-Sampling Audio Adversarial Example Attack",
+  "tags": [
+   "AAAI '20"
+  ],
+  "authors": "Xiaolei Liu, Kun Wan, Yufei Ding, Xiaosong Zhang, Qingxin Zhu",
+  "links": [
+   "https://ojs.aaai.org/index.php/AAAI/article/view/5928/5784"
+  ]
+ },
+ {
+  "title": "SGQuant: Squeezing the Last Bit on Graph Neural Networks with Specialized Quantization",
+  "tags": [
+   "ICTAI'20"
+  ],
+  "authors": "Boyuan Feng*, Yuke Wang*, Xu Li, Shu Yang, Xueqiao Peng, Yufei Ding (* co-primary authors)",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9288186"
+  ]
+ },
+ {
+  "title": "A Close Look at Multi-Tenant Parallel CNN Inference for Autonomous Driving",
+  "tags": [
+   "NPC'20"
+  ],
+  "authors": "Yitong Huang, Yu Zhang, Boyuan Feng, Xing Guo, Yanyong Zhang, Yufei Ding",
+  "links": [
+   "https://link.springer.com/chapter/10.1007/978-3-030-79478-1_8"
+  ]
+ },
+ {
+  "title": "Projection-based Runtime Assertions for Testing and Debugging Quantum Programs",
+  "tags": [
+   "OOPSLA'20",
+   "Distinguished Paper Award"
+  ],
+  "authors": "Gushu Li, Li Zhou, Nengkun Yu, Yufei Ding, Mingsheng Ying, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3428218"
+  ]
+ },
+ {
+  "title": "DUET: Boosting Deep Neural Network Efficiency on Dual-Module Architecture",
+  "tags": [
+   "MICRO'20"
+  ],
+  "authors": "Liu Liu, Zheng Qu, Lei Deng, Fengbin Tu, Shuangchen Li, Xing Hu, Zhenyu Gu, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9251991"
+  ]
+ },
+ {
+  "title": "Boosting Deep Neural Network Efficiency with Dual-Module Inference",
+  "tags": [
+   "ICML'20"
+  ],
+  "authors": "Liu Liu, Lei Deng, Zhaodong Chen, Yuke Wang, Shuangchen Li, Jingwei Zhang, Yihua Yang, Zhenyu Gu, Xing Hu, Yufei Ding, Yuan Xie",
+  "links": [
+   "http://proceedings.mlr.press/v119/liu20c/liu20c.pdf"
+  ]
+ },
+ {
+  "title": "Eliminating Redundant Computation in Noisy Quantum Computing Simulation",
+  "tags": [
+   "DAC'20"
+  ],
+  "authors": "Gushu Li, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9218666"
+  ]
+ },
+ {
+  "title": "iPIM: Programmable In-Memory Image Processing Accelerator Using Near-Bank Architecture",
+  "tags": [
+   "ISCA'20"
+  ],
+  "authors": "Peng Gu, Xinfeng Xie, Yufei Ding, Guoyang Chen, Weifeng Zhang, Dimin Niu, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9138985"
+  ]
+ },
+ {
+  "title": "Towards Efficient Superconducting Quantum Processor Architecture Design",
+  "tags": [
+   "ASPLOS'20"
+  ],
+  "authors": "Gushu Li, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3373376.3378500"
+  ]
+ },
+ {
+  "title": "DeepSniffer: a DNN Model Extraction Framework based on Learning Architectural Hints",
+  "tags": [
+   "ASPLOS'20"
+  ],
+  "authors": "Xing Hu, Ling Liang, Lei Deng, Shuangchen Li, Xinfeng Xie, Yu Ji, Yufei Ding, Chang Liu, Timothy Sherwood, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3373376.3378460"
+  ]
+ },
+ {
+  "title": "Reconciling Feature-Reuse and Overfitting in DenseNet with Specialized Dropout",
+  "tags": [
+   "ICTAI'19"
+  ],
+  "authors": "Kun Wan, Shu Yang, Boyuan Feng, Lingwei Xie, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/1810.00091"
+  ]
+ },
+ {
+  "title": "KPynq: A Work-Efficient Triangle-Inequality based K-means on FPGA",
+  "tags": [
+   "FCCM'19"
+  ],
+  "authors": "Yuke Wang, Zhaorui Zeng, Boyuan Feng, Lei Deng, Yufei Ding",
+  "links": [
+   "https://ieeexplore.ieee.org/document/8735545"
+  ]
+ },
+ {
+  "title": "Tackling the Qubit Mapping Problem for NISQ-Era Quantum Devices",
+  "tags": [
+   "ASPLOS'19"
+  ],
+  "authors": "Gushu Li, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3297858.3304023"
+  ]
+ },
+ {
+  "title": "Dynamic Sparse Graph for Efficient Deep Learning",
+  "tags": [
+   "ICLR'19"
+  ],
+  "authors": "Liu Liu, Lei Deng, Xing Hu, Maohua Zhu, Guoqi Li, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://openreview.net/pdf?id=H1goBoR9F7"
+  ]
+ },
+ {
+  "title": "Inter-Disciplinary Research Challenges in Computer Systems for the 2020s",
+  "tags": [
+   "NSF'18"
+  ],
+  "authors": "Albert Cohen, Xipeng Shen, Josep Torrellas, James Tuck, Yuanyuan Zhou, et al. Technical Report, National Science Foundation, USA, December, 2018",
+  "links": [
+   "https://picassolab.squarespace.com/publications"
+  ]
+ },
+ {
+  "title": "TOP: A Compiler-Based Framework for Optimizing Machine Learning Algorithms through Generalized Triangle Inequality",
+  "tags": [
+   "SysML'18"
+  ],
+  "authors": "Yufei Ding, Lin Ning, Hui Guan, Xipeng Shen, Madanlal Musuvathi, Todd Mytkowicz",
+  "links": [
+   "https://mlsys.org/Conferences/doc/2018/152.pdf"
+  ]
+ },
+ {
+  "title": "Reuse-Centric K-Means Configuration",
+  "tags": [
+   "ICDE'18"
+  ],
+  "authors": "Hui Guan, Yufei Ding, Xipeng Shen, Hamid Krim",
+  "links": [
+   "https://ieeexplore.ieee.org/document/8509337"
+  ]
+ },
+ {
+  "title": "GLORE: Generalized Loop Redundancy Elimination upon LER-Notation",
+  "tags": [
+   "OOPSLA'17"
+  ],
+  "authors": "Yufei Ding, Xipeng Shen",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3133898"
+  ]
+ },
+ {
+  "title": "Generalizations of the Theory and Deployment of Triangular Inequality for Compiler-Based Strength Reduction",
+  "tags": [
+   "PLDI'17"
+  ],
+  "authors": "Yufei Ding, Lin Ning, Hui Guan, Xipeng Shen",
+  "links": [
+   "https://dl.acm.org/doi/abs/10.1145/3062341.3062377"
+  ]
+ },
+ {
+  "title": "Sweet KNN: An Efficient KNN on GPU through Reconciliation of Redundancy and Regularity",
+  "tags": [
+   "ICDE '17"
+  ],
+  "authors": "Guoyang Chen, Yufei Ding, Xipeng Shen",
+  "links": [
+   "https://ieeexplore.ieee.org/document/7930012"
+  ]
+ },
+ {
+  "title": "Autotuning algorithmic choice for input sensitivity",
+  "tags": [
+   "PLDI'15"
+  ],
+  "authors": "Yufei Ding, Jason Ansel, Kalyan Veeramachaneni, Xipeng Shen, Una-May O'Reilly, Saman Amarasinghe",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/2737924.2737969"
+  ]
+ },
+ {
+  "title": "Yinyang K-Means: A Drop-In Replacement of the Classic K-Means with Consistent Speedup",
+  "tags": [
+   "ICML'15"
+  ],
+  "authors": "Yufei Ding, Yue Zhao, Xipeng Shen, Madan Musuvathi, Todd Mytkowicz",
+  "links": [
+   "http://proceedings.mlr.press/v37/ding15.pdf"
+  ]
+ },
+ {
+  "title": "TOP: A Framework for Enabling Algorithmic Optimizations for Distance-Related Problems",
+  "tags": [
+   "VLDB'15"
+  ],
+  "authors": "Yufei Ding, Xipeng Shen, Madan Musuvathi, Todd Mytkowicz",
+  "links": [
+   "https://dl.acm.org/doi/10.14778/2794367.2794374"
+  ]
+ },
+ {
+  "title": "Finding the Limit: Examining the Potential and Complexity of Compilation Scheduling for JIT-Based Runtime System",
+  "tags": [
+   "ASPLOS'14"
+  ],
+  "authors": "Yufei Ding, Mingzhou Zhou, Zhijia Zhao, Sarah Eisenstat, Xipeng Shen",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/2654822.2541945"
+  ]
+ },
+ {
+  "title": "Call Sequence Prediction through Probabilistic Calling Automata",
+  "tags": [
+   "OOPSLA'14"
+  ],
+  "authors": "Zhijia Zhao, Bo Wu, Mingzhou Zhou, Yufei Ding, Jianhua Sun, Xipeng Shen, Youfeng Wu",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/2660193.2660221"
+  ]
+ },
+ {
+  "title": "ProfMig: A Framework for Flexible Migration of Program Profiles Across Software Versions",
+  "tags": [
+   "CGO'13"
+  ],
+  "authors": "Mingzhou Zhou, Bo Wu, Yufei Ding, and Xipeng Shen",
+  "links": [
+   "https://ieeexplore.ieee.org/document/6494984"
+  ]
+ },
+ {
+  "title": "RecDM: Efficient Training System for Large-Scale Recommendation Models on Disaggregated Memory",
+  "tags": [
+   "TACO'26"
+  ],
+  "authors": "Zheng Wang, Zhongkai Yu, Kaijian Wang, Yichen Lin, Yikai Li, Liu Liu, Xulong Tang, Yuke Wang, Yangwook Kang, Yufei Ding",
+  "links": []
+ },
+ {
+  "title": "STQS: A Unified System Architecture for Spatial Temporal Quantum Sensing",
+  "tags": [
+   "TQC'26"
+  ],
+  "authors": "Anastashia Jebraeilli, Chenxu Liu, Keyi Yin, Erik W Lentz, Yufei Ding, Ang Li",
+  "links": [
+   "https://arxiv.org/abs/2502.17778"
+  ]
+ },
+ {
+  "title": "S-QGPU: Shared Quantum Gate Processing Unit for Distributed Quantum Computing",
+  "tags": [
+   "AVS Quantum Science'25"
+  ],
+  "authors": "Shengwang Du, Yufei Ding, Chunming Qiao",
+  "links": [
+   "https://arxiv.org/abs/2309.08736"
+  ]
+ },
+ {
+  "title": "MPU: Memory-Centric SIMT Processor via In-DRAM Near-Bank Computing",
+  "tags": [
+   "TACO'23"
+  ],
+  "authors": "Xinfeng Xie, Peng Gu, Yufei Ding, Dimin Niu, Hongzhong Zheng, Yuan Xie",
+  "links": [
+   "https://dl.acm.org/doi/10.1145/3603113"
+  ]
+ },
+ {
+  "title": "TranCIM: Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes",
+  "tags": [
+   "JSSC'23"
+  ],
+  "authors": "Fengbin Tu, Zihan Wu, Yiqi Wang, Ling Liang, Liu Liu, Yufei Ding, Leibo Liu, Shaojun Wei, Yuan Xie, Shouyi Yin",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9931922"
+  ]
+ },
+ {
+  "title": "SDP: Co-Designing Algorithm, Dataflow, and Architecture for in-SRAM Sparse NN Acceleration",
+  "tags": [
+   "TCAD'22"
+  ],
+  "authors": "Fengbin Tu, Yiqi Wang, Ling Liang, Yufei Ding, Leibo Liu, Shaojun Wei, Shouyi Yin, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9768124"
+  ]
+ },
+ {
+  "title": "Dynamic Sparse Attention for Scalable Transformer Acceleration",
+  "tags": [
+   "TC'22"
+  ],
+  "authors": "Liu Liu, Zheng Qu, Zhaodong Chen, Fengbin Tu, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9896137"
+  ]
+ },
+ {
+  "title": "A Systematic View of Model Leakage Risks in Deep Neural Network Systems",
+  "tags": [
+   "TC'22"
+  ],
+  "authors": "Xing Hu, Ling Liang, Xiaobing Chen, Lei Deng, Yu Ji, Yufei Ding, Zidong Du, Qi Guo, Timothy Sherwood, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9705069"
+  ]
+ },
+ {
+  "title": "STPAcc: Structural TI-based Pruning for Accelerating Distance-related Algorithms on CPU-FPGA Platforms",
+  "tags": [
+   "TCAD'21"
+  ],
+  "authors": "Yuke Wang, Boyuan Feng, Gushu Li, Lei Deng, Yuan Xie, Yufei Ding",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9467295"
+  ]
+ },
+ {
+  "title": "Exploring Adversarial Attack in Spiking Neural Networks with Spike-Compatible Gradient",
+  "tags": [
+   "TNNLS'21"
+  ],
+  "authors": "Ling Liang, Xing Hu, Lei Deng, Yujie Wu, Guoqi Li, Yufei Ding, Peng Li, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9527394"
+  ]
+ },
+ {
+  "title": "Reuse-centric K-means Configuration",
+  "tags": [
+   "Information Systems'21"
+  ],
+  "authors": "Lijun Zhang, Hui Guan, Yufei Ding, Xipeng Shen, Hamid Krim",
+  "links": [
+   "https://www.sciencedirect.com/science/article/abs/pii/S0306437921000430"
+  ]
+ },
+ {
+  "title": "Rubik: A Hierarchical Architecture for Efficient Graph Neural Network Training",
+  "tags": [
+   "TCAD'21"
+  ],
+  "authors": "Xiaobing Chen, Yuke Wang, Xinfeng Xie, Xing Hu, Abanti Basak, Ling Liang, Mingyu Yan, Lei Deng, Yufei Ding, Zidong Du, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9428002"
+  ]
+ },
+ {
+  "title": "Domain-Adversarial Multi-Task Framework for Novel Therapeutic Property Prediction of Compounds",
+  "tags": [
+   "BIOINF'20"
+  ],
+  "authors": "Lingwei Xie, Song He, Zhongnan Zhang, Kunhui Lin, Xiaochen Bo, Shu Yang, Boyuan Feng, Kun Wan, Kang Yang, Jie Yang, Yufei Ding",
+  "links": [
+   "https://arxiv.org/abs/1810.00867"
+  ]
+ },
+ {
+  "title": "Chatter detection in high-speed milling processes based on ON-LSTM and PBT",
+  "tags": [
+   "JAMT'20"
+  ],
+  "authors": "Fei Shi, Hongrui Cao, Yuke Wang, Boyuan Feng, Yufei Ding",
+  "links": [
+   "https://link.springer.com/article/10.1007/s00170-020-06292-9"
+  ]
+ },
+ {
+  "title": "Comprehensive SNN Compression Using ADMM Optimization and Activity Regularization",
+  "tags": [
+   "TNNLS'20"
+  ],
+  "authors": "Lei Deng, Yujie Wu, Yifan Hu, Ling Liang, Guoqi Li, Xing Hu, Yufei Ding, Peng Li, Yuan Xie",
+  "links": [
+   "https://arxiv.org/abs/1911.00822"
+  ]
+ },
+ {
+  "title": "Effective and Ef\ufb01cient Batch Normalization Using Few Uncorrelated Data for Statistics Estimation",
+  "tags": [
+   "TNNLS'20"
+  ],
+  "authors": "Zhaodong Chen, Lei Deng, Guoqi Li, Jiawei Sun, Ling Liang, Xing Hu, Yufei Ding, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/9046854"
+  ]
+ },
+ {
+  "title": "Tianjic: A Unified and Scalable Chip Bridging Neuroscience and Deep Learning",
+  "tags": [
+   "JSSC'20"
+  ],
+  "authors": "Li Deng, Guanrui Wang, Guoqi Li, Shuangchen Li, Ling Liang, Maohua Zhu, Yujie Wu, Jing Pei, Zhenzhi Wu, Xing Hu, Yufei Ding, Wei He, Yuan Xie, Luping Shi",
+  "links": [
+   "https://ieeexplore.ieee.org/abstract/document/8998338"
+  ]
+ },
+ {
+  "title": "Rethinking the Performance Comparison between SNNs and ANNs",
+  "tags": [
+   "Neural Networks'19"
+  ],
+  "authors": "Lei Deng, Yujie Wu, Xing Hu, Ling Liang, Yufei Ding, Guoqi Li, Guangshe Zhao, Peng Li, Yuan Xie",
+  "links": [
+   "https://www.sciencedirect.com/science/article/pii/S0893608019302667"
+  ]
+ },
+ {
+  "title": "DASM: DAta-Streaming Based Computing in Non-Volatile Memory Architecture for Embedded System",
+  "tags": [
+   "TVLSI'19"
+  ],
+  "authors": "Liang Chang, Xin Ma, Zhaohao Wang, Youguang Zhang, Yufei Ding, Weisheng Zhao, Yuan Xie",
+  "links": [
+   "https://ieeexplore.ieee.org/document/8710263"
+  ]
+ },
+ {
+  "title": "Machine learning through parallelized stochastic gradient descent",
+  "tags": [
+   "US Patent"
+  ],
+  "authors": "Madanlal S. Musuvathi, Todd D. Mytkowicz, Yufei Ding",
+  "links": []
+ },
+ {
+  "title": "Determining a course of action based on aggregated data",
+  "tags": [
+   "US Patent"
+  ],
+  "authors": "Madanlal S. Musuvathi, Todd D. Mytkowicz, Saeed Maleki, Yufei Ding",
+  "links": []
+ },
+ {
+  "title": "Implementing network security measures in response to a detected cyber attack",
+  "tags": [
+   "US Patent"
+  ],
+  "authors": "Madanlal S. Musuvathi, Todd D. Mytkowicz, Saeed Maleki, Yufei Ding",
+  "links": []
+ },
+ {
+  "title": "Determining a likelihood of a resource experiencing a problem based on telemetry data",
+  "tags": [
+   "US Patent"
+  ],
+  "authors": "Madanlal S. Musuvathi, Todd D. Mytkowicz, Saeed Maleki, Yufei Ding",
+  "links": []
+ },
+ {
+  "title": "Determining a likelihood of a user interaction with a content element",
+  "tags": [
+   "US Patent"
+  ],
+  "authors": "Madanlal S. Musuvathi, Todd D. Mytkowicz, Saeed Maleki, Yufei Ding",
+  "links": []
+ }
+]
