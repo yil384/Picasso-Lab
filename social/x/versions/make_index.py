@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""Version log of the @PicassoLabUCSD launch video: every cut we made, what it was, the user's verdict and the lesson.
+Writes VERSIONS.md and index.html (served at https://yil384.github.io/Picasso-Lab/social/x/versions/).
+Add a version: put vN_name.mp4 (+ a .jpg poster) here, add an entry to V, run  python3 make_index.py"""
+import html, os, subprocess
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+V = [
+    dict(n=1, file='v1_photo_reel.mp4', date='2026-10-02', title='Photo reel', title_zh='照片拼接视频',
+         how='Python + PIL：活动照片缓推加编辑式字幕，插入 ISCA 漫画开场和火锅短剧片段。脚本 social/x/reel.py（已删除，见 git 404e05a）。',
+         what='29 秒近况集锦：ISCA 最佳论文、LightStim 资助、两位新博士、新成员、组里生活、火锅短剧、片尾卡。',
+         feedback='“这个AI短剧做的有很多瑕疵……现在你所谓的这个4:5视频做的太垃圾了，还不如用three.js+q5.js逐帧做出来的漫画视频”',
+         lesson='照片加字幕的幻灯片显得平庸；AI 短剧瑕疵明显；而 lab 自己已有更强的风格（代码逐帧渲染的 3D 漫画）。'),
+    dict(n=2, file='v2_isca_comic.mp4', date='2026-10-02', title='ISCA Best Paper 3D comic', title_zh='ISCA 最佳论文 3D 漫画',
+         how='three.js + NPR 漫画管线（video-kit），分支 video/x-launch，video-kit/films/xlaunch/xlaunch.html。',
+         what='16 秒漫画：token 堵在 die 间链路（随机选专家），放大镜侦探找到规律，热门专家搬家，流量畅通，6.6× 加 ISCA 2026 最佳论文横幅。',
+         feedback='“？我要的是介绍Picassolab的首支post，不是介绍best paper”',
+         lesson='理解错了需求：首帖要介绍 lab，而不是一篇论文。（这版留作以后单独发最佳论文。）'),
+    dict(n=3, file='v3_comic_page_intro.mp4', date='2026-10-02', title='Comic-page lab intro', title_zh='漫画分格 lab 介绍',
+         how='Python + PIL 把四部项目漫画片、最佳论文片和合照排成漫画分格，配手写字。脚本 social/x/intro.py（已删除，见 git 069cead）。',
+         what='24 秒：HELLO X! / we are PICASSO LAB，五个分格（Qubrio、TritonGym、TritonDFT、ChipMATE、最佳论文），合照，@PicassoLabUCSD。',
+         feedback='“感觉还是太粗糙了……不够独特不够惊艳不够新奇也不够幽默诙谐，很平庸啊” / “做的不像是一个Lab的东西，和学术毫无关系啊”',
+         lesson='产品目录加转场就是幻灯片；卡通把学术内容藏起来了。应该用 lab 真实的学术产出来展示。'),
+    dict(n=4, file='v4_paper_wall_25s.mp4', date='2026-10-02', title='Paper wall', title_zh='论文墙（25 秒）',
+         how='Python + PIL：136 篇论文首页（51 篇 arXiv 真实首页，其余按论文版式排版）。脚本 social/x/paperwall.py（git ee6c771）。',
+         what='论文落下计数到 136，拼成 PICASSO，按会议叠成柱状图，落进 logo 三环，获奖论文盖奖章，合照，logo 加招生。',
+         feedback='“做的有些粗糙……动画不够美观，整体太短了太干巴，不过大体方向是很好的，按照这个继续往下走吧”',
+         lesson='方向被认可：用 lab 的真实论文做主角。需要更长、更顺滑、细节更细。'),
+    dict(n=5, file='v5_paper_wall_43s.mp4', date='2026-10-02', title='Paper wall, longer', title_zh='论文墙（43 秒）',
+         how='同一脚本重写：加镜头推拉、飞行时的抬升阴影、错落飞行（git 81ba130）。',
+         what='新增 2013–2026 按年份的成长曲线、三个研究方向各三篇代表作、最佳论文特写、资助方墙。',
+         feedback='“还是有点粗糙……我想要那种手机发布会的概念机视频转场的那种惊奇感和酷感和丝滑感……参考‘何同学’”',
+         lesson='2D 合成做不出发布会那种景深、光影和匹配剪辑转场，需要真正的 3D 场景。'),
+    dict(n=6, file='v6_keynote_3d.mp4', date='2026-10-02', title='Keynote-style 3D', title_zh='3D 发布会风格',
+         how='three.js（395 行）：深色影棚、聚光灯、阴影、景深和辉光、一镜到底；CPU 渲染 864×1080 再放大。分支 video/x-launch，video-kit/films/xkeynote/xkeynote.html。',
+         what='聚光灯下的第一篇论文 → 时间螺旋到 136 → 成长曲线 → 地面上按会议的纸堆 → 三条原子轨道 → 获奖 → 合照 → logo。',
+         feedback='“做的还是太粗糙了，真的用了three.js了吗？一看就设计代码量不够啊”',
+         lesson='零厚度纸片看起来像灰色方块；空间空荡；每个转场都是同一种插值；文字像幻灯片；CPU 渲染放大发软。下一步：先做成片质量的样张，再设计匹配剪辑转场，加运动模糊，原生分辨率渲染。'),
+]
+
+def dur(f):
+    try: return float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', os.path.join(HERE, f)], capture_output=True, text=True).stdout)
+    except Exception: return 0
+
+def main():
+    md = ['# @PicassoLabUCSD launch video: version log', '',
+          'Every cut of the first X post, newest last. Watch them side by side: https://yil384.github.io/Picasso-Lab/social/x/versions/', '']
+    cards = []
+    for v in V:
+        d = dur(v['file']); v['dur'] = f'{d:.0f} s'
+        md += [f"## v{v['n']} - {v['title']} ({v['title_zh']}) - {v['date']}, {v['dur']}", '',
+               f"- File: `{v['file']}`", f"- How: {v['how']}", f"- What: {v['what']}", f"- Feedback: {v['feedback']}", f"- Lesson: {v['lesson']}", '']
+        e = {k: html.escape(str(x)) for k, x in v.items()}
+        cards.append(f'''<article><div class="vid"><video src="{e['file']}" poster="{e['file'][:-4]}.jpg" controls muted playsinline preload="none"></video></div>
+<div class="meta"><h2><span>v{e['n']}</span>{e['title_zh']}<small>{e['title']} · {e['dur']} · {e['date']}</small></h2>
+<dl><dt>内容</dt><dd>{e['what']}</dd><dt>做法</dt><dd>{e['how']}</dd><dt>反馈</dt><dd class="fb">{e['feedback']}</dd><dt>教训</dt><dd>{e['lesson']}</dd></dl>
+<a href="{e['file']}" download>下载 {e['file']}</a></div></article>''')
+    open(os.path.join(HERE, 'VERSIONS.md'), 'w', encoding='utf-8').write('\n'.join(md))
+    page = f'''<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Launch Video Versions</title><style>
+:root{{--bg:#f6f3ef;--card:#fff;--ink:#1d1a18;--mute:#6f6760;--line:#e4ddd5;--acc:#c2541c}}
+@media (prefers-color-scheme:dark){{:root{{--bg:#141110;--card:#1e1a18;--ink:#efe9e3;--mute:#a69c93;--line:#342d29;--acc:#f0a060}}}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,"Segoe UI",Roboto,"PingFang SC","Noto Sans SC",sans-serif}}
+main{{max-width:980px;margin:0 auto;padding:28px 16px 80px}}h1{{font-size:26px;margin:0 0 4px}}.sub{{color:var(--mute);margin:0 0 22px}}
+article{{display:grid;grid-template-columns:300px 1fr;gap:20px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0}}
+video{{width:100%;aspect-ratio:4/5;background:#000;border-radius:8px;display:block}}
+h2{{font-size:19px;margin:0 0 8px}}h2 span{{display:inline-block;background:var(--acc);color:#fff;border-radius:6px;padding:0 8px;margin-right:8px;font-size:15px}}
+h2 small{{display:block;color:var(--mute);font-size:13px;font-weight:400;margin-top:2px}}
+dl{{margin:0;display:grid;grid-template-columns:44px 1fr;gap:6px 10px}}dt{{color:var(--mute);font-size:13px}}dd{{margin:0}}.fb{{color:var(--acc)}}
+a{{color:var(--acc);display:inline-block;margin-top:10px;font-size:14px}}
+@media (max-width:700px){{article{{grid-template-columns:1fr}}video{{max-width:360px;margin:0 auto}}}}
+</style></head><body><main><h1>首帖视频 · 版本记录</h1><p class="sub">@PicassoLabUCSD 的每一版首帖视频，按时间顺序；每版附内容、做法、你的反馈和教训。</p>
+{''.join(cards)}</main></body></html>'''
+    open(os.path.join(HERE, 'index.html'), 'w', encoding='utf-8').write(page)
+    print('versions:', len(V))
+
+if __name__ == '__main__':
+    main()
