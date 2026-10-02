@@ -49,3 +49,11 @@ Every cut of the first X post, newest last. Watch them side by side: https://yil
 - What: 聚光灯下的第一篇论文 → 时间螺旋到 136 → 成长曲线 → 地面上按会议的纸堆 → 三条原子轨道 → 获奖 → 合照 → logo。
 - Feedback: “做的还是太粗糙了，真的用了three.js了吗？一看就设计代码量不够啊”
 - Lesson: 零厚度纸片看起来像灰色方块；空间空荡；每个转场都是同一种插值；文字像幻灯片；CPU 渲染放大发软。下一步：先做成片质量的样张，再设计匹配剪辑转场，加运动模糊，原生分辨率渲染。
+
+## v7 - Style frames (stills) (样张（静帧）) - 2026-10-02, 3 张静帧
+
+- File: `v7_style_frame.jpg`
+- How: three.js 新场景（分支 video/x-launch，video-kit/films/xstyle/xstyle.html）：带弯曲和纸纤维凹凸的纸面、面光源加轮廓光、带倒影的亮面地板、弧形影棚、2 倍超采样；排版补全页改为仿真正文。
+- What: 三张成片质量的静帧：1 聚光灯下的第一篇论文（2013）；2 136 篇论文立成的长廊，最新在前、2013 在远处；3 结尾：三个玻璃圆环（logo）、文字、虚化的论文。
+- Feedback: （待反馈）
+- Lesson: 先定质感再做动画：这三张通过后，才设计转场和镜头运动。

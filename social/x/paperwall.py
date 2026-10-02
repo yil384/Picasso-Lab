@@ -72,30 +72,39 @@ AWARD = {k: t for k, p in enumerate(PUBS) for t in p['tags'][1:] if re.search(r'
 ORDER = sorted(range(N), key=lambda k: (PUBS[k]['year'], -k))          # oldest first
 RANK = {k: i for i, k in enumerate(ORDER)}
 
-def typeset_page(p):
-    """a first page in the usual two-column proceedings layout, for papers with no PDF online"""
-    w, h = 612, 792; im = Image.new('RGB', (w, h), (255, 255, 255)); d = ImageDraw.Draw(im)
-    f = F('InstrumentSerif.ttf', 31); lines, cur = [], ''
+def typeset_page(p, S=2):
+    """a first page in the usual two-column proceedings layout, for papers with no PDF online (S x 612 x 792)"""
+    w, h = 612 * S, 792 * S; im = Image.new('RGB', (w, h), (255, 255, 255)); d = ImageDraw.Draw(im)
+    f = F('InstrumentSerif.ttf', 31 * S); lines, cur = [], ''
     for wd in p['title'].split():
-        if d.textlength(cur + ' ' + wd, font=f) > 500 and cur: lines.append(cur); cur = wd
+        if d.textlength(cur + ' ' + wd, font=f) > 500 * S and cur: lines.append(cur); cur = wd
         else: cur = (cur + ' ' + wd).strip()
-    lines.append(cur); y = 64
-    for ln in lines[:4]: d.text(((w - d.textlength(ln, font=f)) / 2, y), ln, font=f, fill=(0, 0, 0)); y += 36
+    lines.append(cur); y = 64 * S
+    for ln in lines[:4]: d.text(((w - d.textlength(ln, font=f)) / 2, y), ln, font=f, fill=(0, 0, 0)); y += 36 * S
     au = p['authors'][:100] + ('...' if len(p['authors']) > 100 else '')
-    d.text(((w - d.textlength(au, font=SANS(11, 500))) / 2, y + 12), au, font=SANS(11, 500), fill=(50, 50, 50))
-    y += 56; rng = np.random.default_rng(p['k'])
-    fig = rng.random() < 0.55; figcol = int(rng.integers(0, 2))
+    fa = SANS(11 * S, 500); d.text(((w - d.textlength(au, font=fa)) / 2, y + 12 * S), au, font=fa, fill=(50, 50, 50))
+    y += 56 * S; rng = np.random.default_rng(p['k'])
+    fig = rng.random() < 0.55; figcol = int(rng.integers(0, 2)); par = [False]
     for col in (0, 1):
-        x0 = 54 + col * 262; yy = y + 8
-        d.text((x0, yy), 'Abstract' if col == 0 else '1  Introduction', font=SANS(11, 700), fill=(0, 0, 0)); yy += 20
-        while yy < h - 58:
-            if fig and col == figcol and abs(yy - (y + 200)) < 6:
-                d.rectangle((x0, yy, x0 + 236, yy + 120), fill=(236, 236, 240)); d.rectangle((x0 + 20, yy + 20, x0 + 110, yy + 100), fill=(196, 206, 226))
-                d.rectangle((x0 + 126, yy + 50, x0 + 216, yy + 100), fill=(226, 200, 190)); yy += 138; continue
-            L = 236 if rng.random() > 0.12 else rng.integers(60, 200)
-            d.rectangle((x0, yy, x0 + L, yy + 3), fill=(140, 140, 140)); yy += 10
-            if rng.random() < 0.06: yy += 12
-    d.text((54, h - 34), p['tag'], font=SANS(10, 500), fill=(90, 90, 90))
+        x0 = (54 + col * 262) * S; yy = y + 8 * S
+        d.text((x0, yy), 'Abstract' if col == 0 else '1  Introduction', font=SANS(11 * S, 700), fill=(0, 0, 0)); yy += 20 * S
+        while yy < h - 58 * S:
+            if fig and col == figcol and abs(yy - (y + 200 * S)) < 6 * S:
+                d.rectangle((x0, yy, x0 + 236 * S, yy + 120 * S), fill=(236, 236, 240))
+                d.rectangle((x0 + 20 * S, yy + 20 * S, x0 + 110 * S, yy + 100 * S), fill=(196, 206, 226))
+                d.rectangle((x0 + 126 * S, yy + 50 * S, x0 + 216 * S, yy + 100 * S), fill=(226, 200, 190)); yy += 138 * S; continue
+            # greeked text: words of varying length on an x-height band, justified lines, ragged last line of a paragraph
+            last = rng.random() < 0.13; L = 236 if not last else int(rng.integers(60, 200))
+            x = x0 + (10 * S if par[0] else 0); par[0] = False
+            while x < x0 + L * S - 6 * S:
+                wl = int(rng.integers(3, 16)) * 1.6 * S
+                wl = min(wl, x0 + L * S - x)
+                d.rectangle((x, yy + 1 * S, x + wl, yy + 3.6 * S), fill=(118, 118, 122))
+                if rng.random() < 0.18: d.rectangle((x + wl * 0.2, yy, x + wl * 0.2 + 1.2 * S, yy + 1 * S), fill=(118, 118, 122))   # ascender
+                x += wl + 2.6 * S
+            yy += 9 * S
+            if last: yy += 5 * S; par[0] = True
+    d.text((54 * S, h - 34 * S), p['tag'], font=SANS(10 * S, 500), fill=(90, 90, 90))
     return im
 
 _PG = {}
@@ -498,7 +507,10 @@ def frame(f):
 def export(dst):
     """page textures + data for the 3D keynote film (video-kit/films/xkeynote)"""
     os.makedirs(os.path.join(dst, 'pages'), exist_ok=True)
-    for k in range(N): page(k, 512).save(os.path.join(dst, 'pages', f'{k:03d}.jpg'), quality=86)
+    for k in range(N):
+        f = os.path.join(A.pages, f'{k:03d}.jpg')
+        src = Image.open(f).convert('RGB') if os.path.exists(f) else typeset_page(PUBS[k])
+        src.resize((1024, int(1024 * src.height / src.width)), Image.LANCZOS).save(os.path.join(dst, 'pages', f'{k:03d}.jpg'), quality=88)
     team().resize((1200, 900), Image.LANCZOS).save(os.path.join(dst, 'team.jpg'), quality=88)
     LOGO.save(os.path.join(dst, 'logo.png'))
     data = {'order': ORDER, 'pubs': [{'k': p['k'], 'tag': p['tag'], 'venue': p['venue'], 'yr': p['yr'], 'short': p['short'], 'ring': p['ring'],

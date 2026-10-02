@@ -36,6 +36,11 @@ V = [
          what='聚光灯下的第一篇论文 → 时间螺旋到 136 → 成长曲线 → 地面上按会议的纸堆 → 三条原子轨道 → 获奖 → 合照 → logo。',
          feedback='“做的还是太粗糙了，真的用了three.js了吗？一看就设计代码量不够啊”',
          lesson='零厚度纸片看起来像灰色方块；空间空荡；每个转场都是同一种插值；文字像幻灯片；CPU 渲染放大发软。下一步：先做成片质量的样张，再设计匹配剪辑转场，加运动模糊，原生分辨率渲染。'),
+    dict(n=7, file='v7_style_frame.jpg', date='2026-10-02', title='Style frames (stills)', title_zh='样张（静帧）',
+         how='three.js 新场景（分支 video/x-launch，video-kit/films/xstyle/xstyle.html）：带弯曲和纸纤维凹凸的纸面、面光源加轮廓光、带倒影的亮面地板、弧形影棚、2 倍超采样；排版补全页改为仿真正文。',
+         what='三张成片质量的静帧：1 聚光灯下的第一篇论文（2013）；2 136 篇论文立成的长廊，最新在前、2013 在远处；3 结尾：三个玻璃圆环（logo）、文字、虚化的论文。',
+         feedback='（待反馈）',
+         lesson='先定质感再做动画：这三张通过后，才设计转场和镜头运动。'),
 ]
 
 def dur(f):
@@ -47,11 +52,13 @@ def main():
           'Every cut of the first X post, newest last. Watch them side by side: https://yil384.github.io/Picasso-Lab/social/x/versions/', '']
     cards = []
     for v in V:
-        d = dur(v['file']); v['dur'] = f'{d:.0f} s'
+        d = dur(v['file']); v['dur'] = f'{d:.0f} s' if v['file'].endswith('.mp4') else '3 张静帧'
         md += [f"## v{v['n']} - {v['title']} ({v['title_zh']}) - {v['date']}, {v['dur']}", '',
                f"- File: `{v['file']}`", f"- How: {v['how']}", f"- What: {v['what']}", f"- Feedback: {v['feedback']}", f"- Lesson: {v['lesson']}", '']
         e = {k: html.escape(str(x)) for k, x in v.items()}
-        cards.append(f'''<article><div class="vid"><video src="{e['file']}" poster="{e['file'][:-4]}.jpg" controls muted playsinline preload="none"></video></div>
+        media = (f'<video src="{e["file"]}" poster="{e["file"][:-4]}.jpg" controls muted playsinline preload="none"></video>' if v['file'].endswith('.mp4')
+                 else ''.join(f'<a href="{e["file"][:-4]}_{j}.jpg"><img src="{e["file"][:-4]}_{j}.jpg" alt="" style="width:100%;border-radius:8px;margin-bottom:6px"></a>' for j in (1, 2, 3)))
+        cards.append(f'''<article><div class="vid">{media}</div>
 <div class="meta"><h2><span>v{e['n']}</span>{e['title_zh']}<small>{e['title']} · {e['dur']} · {e['date']}</small></h2>
 <dl><dt>内容</dt><dd>{e['what']}</dd><dt>做法</dt><dd>{e['how']}</dd><dt>反馈</dt><dd class="fb">{e['feedback']}</dd><dt>教训</dt><dd>{e['lesson']}</dd></dl>
 <a href="{e['file']}" download>下载 {e['file']}</a></div></article>''')
