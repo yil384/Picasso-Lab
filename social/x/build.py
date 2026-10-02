@@ -22,7 +22,7 @@ POSTS = [
         'Distinguished Paper, and two ASPLOS 2024 Distinguished Artifacts.\n\nAll papers: https://yufeiding.ucsd.edu/publications',
         'Projects and live demos: https://yufeiding.ucsd.edu/projects\n\nInterested in a PhD with us? Reply or reach out '
         'via the website.'],
-     'out/picasso_paperwall.mp4', '视频直接上传（4:5 竖版，25 秒）。主帖不放链接，链接放在回复里。发完立刻 Pin to profile。'),
+     'out/picasso_paperwall.mp4', '视频直接上传（4:5 竖版，43 秒）。主帖不放链接，链接放在回复里。发完立刻 Pin to profile。'),
     ('01_isca', '以后', 'ISCA 2026 Best Paper (with its own comic)', [
         'Our paper "Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference" won '
         'the Best Paper Award at #ISCA2026. A 16-second comic of the idea: expert choices look random, data movement '
@@ -149,7 +149,7 @@ button.ok{border-color:var(--acc);color:var(--acc)}pre{margin:0;padding:10px 12p
 @media (max-width:600px){.ims{grid-template-columns:repeat(2,1fr)}.top{grid-template-columns:1fr}}
 </style></head><body><main>
 <h1>@PicassoLabUCSD 发帖工具包</h1><p class="sub">英文帖子文案可直接复制；图片点击即下载，按编号顺序上传。字数按 X 规则计算（链接算 23）。</p>
-<div class="top"><div><b>首帖视频（论文墙，4:5，25 秒）</b><video src="out/picasso_paperwall.mp4" controls muted playsinline poster="media/paperwall_poster.jpg"></video><a class="vid" href="out/picasso_paperwall.mp4" download>下载 picasso_paperwall.mp4</a></div>
+<div class="top"><div><b>首帖视频（论文墙，4:5，43 秒）</b><video src="out/picasso_paperwall.mp4" controls muted playsinline poster="media/paperwall_poster.jpg"></video><a class="vid" href="out/picasso_paperwall.mp4" download>下载 picasso_paperwall.mp4</a></div>
 <div><b>主页头图（1500x500）</b><img src="media/banner.jpg" alt=""><a class="vid" href="media/banner.jpg" download>下载 banner.jpg</a>
 <p class="note">Edit profile → Header 上传。头像建议用 lab logo；Bio 建议：<br>Picasso Lab @UCSanDiego, led by Prof. Yufei Ding. Systems for quantum computing, AI and computer architecture. Lab life: lots of hot pot.<br>Website 填 yufeiding.ucsd.edu</p></div></div>
 <h2>第一条帖子怎么发才有流量</h2><ol class="guide">
