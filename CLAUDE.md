@@ -12,6 +12,9 @@ Read the matching skill in `.claude/skills/` before touching an area:
 | page-to-page anime transition films, comic splashes | `picasso-anime-transition-film` |
 | the Projects card films | `picasso-comic-demo-film` |
 
+The X account kit is `social/x/` (`kit.html`); every cut of the launch video is archived in `social/x/versions/` with
+its feedback and lesson (add the mp4 + poster, add an entry to `make_index.py`, run it).
+
 Film sources and notes live in `.claude/films/` (Yufei's avatar short: `.claude/films/yufei/anime/README.md`).
 
 ## Working with the user
