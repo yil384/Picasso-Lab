@@ -18,7 +18,7 @@ button.ok{border-color:var(--acc);color:var(--acc)}pre{margin:0;padding:10px 12p
 @media (max-width:600px){.ims{grid-template-columns:repeat(2,1fr)}.top{grid-template-columns:1fr}}
 </style></head><body><main>
 <h1>@PicassoLabUCSD 发帖工具包</h1><p class="sub">英文帖子文案可直接复制；图片点击即下载，按编号顺序上传。字数按 X 规则计算（链接算 23）。</p>
-<div class="top"><div><b>首帖视频（3D 漫画，4:5，16 秒）</b><video src="out/patterns_comic.mp4" controls muted playsinline poster="media/comic_poster.jpg"></video><a class="vid" href="out/patterns_comic.mp4" download>下载 patterns_comic.mp4</a></div>
+<div class="top"><div><b>首帖视频（漫画分格，4:5，24 秒）</b><video src="out/picasso_intro.mp4" controls muted playsinline poster="media/intro_poster.jpg"></video><a class="vid" href="out/picasso_intro.mp4" download>下载 picasso_intro.mp4</a></div>
 <div><b>主页头图（1500x500）</b><img src="media/banner.jpg" alt=""><a class="vid" href="media/banner.jpg" download>下载 banner.jpg</a>
 <p class="note">Edit profile → Header 上传。头像建议用 lab logo；Bio 建议：<br>Picasso Lab @UCSanDiego, led by Prof. Yufei Ding. Systems for quantum computing, AI and computer architecture. Lab life: lots of hot pot.<br>Website 填 yufeiding.ucsd.edu</p></div></div>
 <h2>第一条帖子怎么发才有流量</h2><ol class="guide">
@@ -33,15 +33,19 @@ button.ok{border-color:var(--acc);color:var(--acc)}pre{margin:0;padding:10px 12p
 <li><b>图片的 Alt text</b>：上传图片后点 "+Alt"，写一句描述，有利于无障碍访问和搜索。</li>
 </ol>
 <h2>帖子</h2><p class="sub">第一条是近期唯一要发的；后面几条留作以后的素材。</p>
-<section class="card"><div class="ch"><b>Launch post: the ISCA Best Paper comic</b><span>近期唯一一条 · 发完置顶 (Pin)</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">250/280</span><button data-c>复制</button></div><pre>Hello, X! We are Picasso Lab at @UCSanDiego, led by Prof. Yufei Ding.
+<section class="card"><div class="ch"><b>Launch post: meet Picasso Lab</b><span>近期唯一一条 · 发完置顶 (Pin)</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">245/280</span><button data-c>复制</button></div><pre>Hello, X! We are Picasso Lab at @UCSanDiego, led by Prof. Yufei Ding. We build systems for quantum computing, AI and chips, and lately a lot of LLM agents.
 
-To say hi, a 16-second comic of our #ISCA2026 Best Paper: in MoE LLMs, expert choices look random and data movement becomes the bottleneck. We found the patterns behind the chaos.</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">273/280</span><button data-c>复制</button></div><pre>&quot;Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference&quot;
+Here is a 24-second tour of what we make, drawn as comics by our own code. Follow along!</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">277/280</span><button data-c>复制</button></div><pre>In the video:
+- Qubrio: LLM agents that compile for neutral-atom quantum computers
+- TritonGym: an ICML 2026 benchmark for LLM-written GPU kernels
+- TritonDFT: agents that run DFT end to end
+- ChipMATE: a 9B model that writes Verilog
+- Our ISCA 2026 Best Paper on MoE inference</pre></div><div class="tw"><div class="th"><span>回复 2（回复在自己上一条下面）</span><span class="n">113/280</span><button data-c>复制</button></div><pre>Projects and live demos: https://yufeiding.ucsd.edu/projects
 
-Profiled 4 MoE models (200B-1000B) over 24,000+ requests. Guided by the insights: 6.6x average speedup on wafer-scale GPUs, up to 1.25x on today&#x27;s GPUs.
+Questions about our work, or about joining the lab? Reply here.</pre></div><a class="vid" href="out/picasso_intro.mp4" download>下载视频：picasso_intro.mp4</a><p class="note">视频直接上传（4:5 竖版，24 秒，静音也能看懂）。主帖不放链接，链接放在回复里。发完立刻 Pin to profile。</p></section>
+<section class="card"><div class="ch"><b>ISCA 2026 Best Paper (with its own comic)</b><span>以后</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">277/280</span><button data-c>复制</button></div><pre>Our paper &quot;Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference&quot; won the Best Paper Award at #ISCA2026. A 16-second comic of the idea: expert choices look random, data movement chokes the system, and the patterns behind the chaos fix it.</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">263/280</span><button data-c>复制</button></div><pre>4 MoE models (200B-1000B), 24,000+ requests. Guided by the insights: 6.6x average speedup on wafer-scale GPUs, up to 1.25x on today&#x27;s GPUs. Congrats to lead author Zhongkai Yu and coauthors at IU Bloomington, Columbia, Samsung and NVIDIA.
 
-https://arxiv.org/abs/2510.05497</pre></div><div class="tw"><div class="th"><span>回复 2（回复在自己上一条下面）</span><span class="n">146/280</span><button data-c>复制</button></div><pre>Congrats to lead author Zhongkai Yu and our coauthors at IU Bloomington, Columbia, Samsung and NVIDIA.
-
-More from the lab: https://yufeiding.ucsd.edu</pre></div><a class="vid" href="out/patterns_comic.mp4" download>下载视频：patterns_comic.mp4</a><p class="note">视频直接上传（4:5 竖版，16 秒，静音也能看懂）。主帖不放链接，论文和网站链接放在回复里。发完立刻 Pin to profile。</p></section>
+https://arxiv.org/abs/2510.05497</pre></div><a class="vid" href="out/patterns_comic.mp4" download>下载视频：patterns_comic.mp4</a><p class="note">链接放在回复里。最好请 Zhongkai 本人用自己账号 quote。</p></section>
 <section class="card"><div class="ch"><b>LightStim grant</b><span>Day 4</span></div><div class="tw"><div class="th"><span>主帖</span><span class="n">247/280</span><button data-c>复制</button></div><pre>Xiang Fang received a @unitaryfund grant to keep building LightStim, an open-source framework for constructing and benchmarking quantum error correction protocols, with detectors and logical observables built automatically.
 
 #QuantumComputing #QEC</pre></div><div class="tw"><div class="th"><span>回复 1（回复在自己上一条下面）</span><span class="n">29/280</span><button data-c>复制</button></div><pre>Code: https://github.com/QuTone/LightStim</pre></div><div class="ims"><a href="media/02_lightstim/1.jpg" download><img src="media/02_lightstim/1.jpg" alt="" loading="lazy"><span>1</span></a><a href="media/02_lightstim/2.jpg" download><img src="media/02_lightstim/2.jpg" alt="" loading="lazy"><span>2</span></a><a href="media/02_lightstim/3.jpg" download><img src="media/02_lightstim/3.jpg" alt="" loading="lazy"><span>3</span></a></div><p class="note">发之前确认 Unitary Foundation 的 X 账号（目前是 @unitaryfund）。</p></section>

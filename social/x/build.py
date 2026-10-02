@@ -14,16 +14,24 @@ ap = argparse.ArgumentParser(); ap.add_argument('--fonts', default=os.path.join(
 
 # (id, when, title, [post, reply, ...], images (events/static paths) or a video, note)
 POSTS = [
-    ('00_launch', '近期唯一一条 · 发完置顶 (Pin)', 'Launch post: the ISCA Best Paper comic', [
-        'Hello, X! We are Picasso Lab at @UCSanDiego, led by Prof. Yufei Ding.\n\nTo say hi, a 16-second comic of our '
-        '#ISCA2026 Best Paper: in MoE LLMs, expert choices look random and data movement becomes the bottleneck. We found '
-        'the patterns behind the chaos.',
-        '"Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference"\n\n'
-        'Profiled 4 MoE models (200B-1000B) over 24,000+ requests. Guided by the insights: 6.6x average speedup on '
-        'wafer-scale GPUs, up to 1.25x on today\'s GPUs.\n\nhttps://arxiv.org/abs/2510.05497',
-        'Congrats to lead author Zhongkai Yu and our coauthors at IU Bloomington, Columbia, Samsung and NVIDIA.\n\n'
-        'More from the lab: https://yufeiding.ucsd.edu'],
-     'out/patterns_comic.mp4', '视频直接上传（4:5 竖版，16 秒，静音也能看懂）。主帖不放链接，论文和网站链接放在回复里。发完立刻 Pin to profile。'),
+    ('00_launch', '近期唯一一条 · 发完置顶 (Pin)', 'Launch post: meet Picasso Lab', [
+        'Hello, X! We are Picasso Lab at @UCSanDiego, led by Prof. Yufei Ding. We build systems for quantum computing, '
+        'AI and chips, and lately a lot of LLM agents.\n\nHere is a 24-second tour of what we make, drawn as comics by '
+        'our own code. Follow along!',
+        'In the video:\n- Qubrio: LLM agents that compile for neutral-atom quantum computers\n- TritonGym: an ICML 2026 '
+        'benchmark for LLM-written GPU kernels\n- TritonDFT: agents that run DFT end to end\n- ChipMATE: a 9B model that '
+        'writes Verilog\n- Our ISCA 2026 Best Paper on MoE inference',
+        'Projects and live demos: https://yufeiding.ucsd.edu/projects\n\nQuestions about our work, or about joining the '
+        'lab? Reply here.'],
+     'out/picasso_intro.mp4', '视频直接上传（4:5 竖版，24 秒，静音也能看懂）。主帖不放链接，链接放在回复里。发完立刻 Pin to profile。'),
+    ('01_isca', '以后', 'ISCA 2026 Best Paper (with its own comic)', [
+        'Our paper "Patterns behind Chaos: Forecasting Data Movement for Efficient Large-Scale MoE LLM Inference" won '
+        'the Best Paper Award at #ISCA2026. A 16-second comic of the idea: expert choices look random, data movement '
+        'chokes the system, and the patterns behind the chaos fix it.',
+        '4 MoE models (200B-1000B), 24,000+ requests. Guided by the insights: 6.6x average speedup on wafer-scale GPUs, '
+        'up to 1.25x on today\'s GPUs. Congrats to lead author Zhongkai Yu and coauthors at IU Bloomington, Columbia, '
+        'Samsung and NVIDIA.\n\nhttps://arxiv.org/abs/2510.05497'],
+     'out/patterns_comic.mp4', '链接放在回复里。最好请 Zhongkai 本人用自己账号 quote。'),
     ('02_lightstim', 'Day 4', 'LightStim grant', [
         'Xiang Fang received a @unitaryfund grant to keep building LightStim, an open-source framework for constructing '
         'and benchmarking quantum error correction protocols, with detectors and logical observables built '
@@ -142,7 +150,7 @@ button.ok{border-color:var(--acc);color:var(--acc)}pre{margin:0;padding:10px 12p
 @media (max-width:600px){.ims{grid-template-columns:repeat(2,1fr)}.top{grid-template-columns:1fr}}
 </style></head><body><main>
 <h1>@PicassoLabUCSD 发帖工具包</h1><p class="sub">英文帖子文案可直接复制；图片点击即下载，按编号顺序上传。字数按 X 规则计算（链接算 23）。</p>
-<div class="top"><div><b>首帖视频（3D 漫画，4:5，16 秒）</b><video src="out/patterns_comic.mp4" controls muted playsinline poster="media/comic_poster.jpg"></video><a class="vid" href="out/patterns_comic.mp4" download>下载 patterns_comic.mp4</a></div>
+<div class="top"><div><b>首帖视频（漫画分格，4:5，24 秒）</b><video src="out/picasso_intro.mp4" controls muted playsinline poster="media/intro_poster.jpg"></video><a class="vid" href="out/picasso_intro.mp4" download>下载 picasso_intro.mp4</a></div>
 <div><b>主页头图（1500x500）</b><img src="media/banner.jpg" alt=""><a class="vid" href="media/banner.jpg" download>下载 banner.jpg</a>
 <p class="note">Edit profile → Header 上传。头像建议用 lab logo；Bio 建议：<br>Picasso Lab @UCSanDiego, led by Prof. Yufei Ding. Systems for quantum computing, AI and computer architecture. Lab life: lots of hot pot.<br>Website 填 yufeiding.ucsd.edu</p></div></div>
 <h2>第一条帖子怎么发才有流量</h2><ol class="guide">
