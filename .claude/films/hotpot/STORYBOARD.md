@@ -16,11 +16,16 @@ Cast: four original PhD students (LEO, MIA, KAI, ZOE, see `characters.txt`) - no
 
 End card (added in the edit): NEURAL HOTPOT TEMPERATURE SCALING - accepted, with sesame sauce.
 
-## Veo prompts (paste into Vids "AI Video" together with the shot's first frame)
+## Key frames
+The user generated the cast sheet and the six first frames in ChatGPT (`cast.png`, `s1.png` ... `s6.png`, 1536x1024).
+`vids/sN_16x9.jpg` are the 16:9 crops (kept slightly high so no hair is cut) to upload to Google Vids, whose clips are
+16:9. Finished clips go to `vids/clips/sN.mp4`.
 
-1. `Animate this scene. Leo, the tall student with round glasses, raises his chopsticks and says calmly: "Okay team. Mild. Everyone agrees: just mild." The other three nod in unison. Gentle steam rises from the hotpot. Slow push-in. Warm cozy lab at night, 3D animated film style.`
-2. `Animate this scene. Kai, the curly-haired student in an orange jacket, glances left and right, then sneaks one spoon of red chili oil into the pot and whispers with a guilty grin: "One more scoop should be fine." Close-up, comedic timing.`
-3. `Animate this scene. Three hands take turns: each one quickly drops a spoon of chili into the hotpot while the others look away. With every spoon the broth turns redder. Quick comedic rhythm, overhead camera.`
-4. `Animate this scene. The deep red hotpot boils violently, big bubbles of chili oil burst, a column of steam blasts upward, and on the monitor behind the curve shoots straight up. Dramatic slow camera rise, heat shimmer.`
-5. `Animate this scene. All four take a bite at the same time. Their faces turn bright red, steam puffs from their ears, Mia breathes out a tiny flame, Zoe gulps her bubble tea, Leo's glasses fog up completely. Exaggerated cartoon reaction, comedic.`
-6. `Animate this scene. A professor leans in through the lab door and asks: "So... did the model converge?" The four students turn around, tears streaming from the spice, give a thumbs up together and answer: "To fire." Comedic beat, hold on their faces.`
+## Veo prompts (Google Vids -> "AI Video": upload the shot's `vids/sN_16x9.jpg`, paste the prompt, 8 s)
+
+1. `Animate this image. Leo, the tall student with round glasses in the grey hoodie, lifts his chopsticks and says calmly, like a team lead: "Okay team. Mild. Everyone agrees: just mild." The other three nod in unison. Steam drifts from the hotpot. Slow gentle push-in. Keep the characters exactly as in the image.`
+2. `Animate this image. Kai, the curly-haired student in the orange jacket, glances left and right, then quietly tips the small jar of red chili oil from his hand into the pot and whispers with a guilty grin: "One more scoop should be fine." Comedic timing, subtle camera push-in. Keep the characters exactly as in the image.`
+3. `Animate this image. The three hands take turns: each one quickly drops its spoon of red chili into the hotpot, one after another, sneaky and fast. With every spoon the broth bubbles redder. Overhead camera, quick comedic rhythm. Keep everything exactly as in the image.`
+4. `Animate this image. The red hotpot boils violently, bubbles of chili oil burst and a column of steam blasts up; the four students recoil in shock and amazement; on the monitor behind them the red curve shoots straight up. Dramatic slow camera rise. Keep the characters exactly as in the image.`
+5. `Animate this image. All four chew their first bite; their faces flush bright red, little puffs of steam pop from their ears, Mia breathes out a tiny flame, Zoe gulps her bubble tea, Leo's glasses fog up. Exaggerated cartoon reaction, comedic. Keep the characters exactly as in the image.`
+6. `Animate this image. The professor in the doorway leans in and asks: "So... did the model converge?" The four students, red-faced with tears from the spice, raise their thumbs together and answer in a choked voice: "To fire." Hold on their faces, comedic beat. Keep the characters exactly as in the image.`
