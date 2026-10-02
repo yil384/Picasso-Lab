@@ -36,3 +36,9 @@ The user generated the cast sheet and the six first frames in ChatGPT (`cast.png
 - s6: the first frame itself was refused (a faceless dark silhouette leaning in at the door reads as a lurker), with any
   prompt. A clearly visible, smiling professor in warm light (`s6_new.png`) fixed it. Avoid tears, choking, fire on
   people, and shadowy figures in first frames.
+
+## Edit (`edit.py`)
+`python3 edit.py --fonts DIR` (Noto Sans SC Bold / Medium static instances) cuts `vids/clips/raw.mp4` (the Vids export,
+six 10 s scenes) to 45 s: the best seconds of each shot, bilingual burned-in captions (EN over ZH), the s2 whisper
+caption, instrument tags on s4 / s5 (`spice_level: DIVERGING`, `loss = NaN`), a show tag, and a 3.2 s end card.
+Output `out/hotpot_ep1_720p.mp4` (committed) and `out/hotpot_ep1.mp4` (1080p, not committed - regenerate).
