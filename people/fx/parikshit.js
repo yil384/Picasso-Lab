@@ -1,44 +1,50 @@
-/* Parikshit (Prince Modi) — 登顶 Himalayan summit, the persona from his homepage (princemodi.me): LLM
-   inference systems at Picasso Lab (prefill / decode), Flotilla (federated learning), Arch + NeoVim, F1,
-   3D printing, tennis and pickleball. The photo: a trek in the Himalaya, pine ridges and haze.
-   Click: an F1 start gantry drops in over the ridge and its five red lights come on one by one — LIGHTS
-   OUT (a burst of speed ticks, the gantry is hauled away) and everything starts: a real snow peak (Ama
-   Dablam) climbs up out of the haze in the V between the two near ridges and flushes with alpenglow (it
-   stays behind the ridges: a mask in photo space hides it below their skyline); a string of prayer flags
-   runs out across the sky behind his head, and the flags inside the circle spell PREFILL·DECODE; an
-   Indian highway milestone (white stone, yellow dome) pops up out of the slope at his side, 「UCSD
-   12,600 km」; a little 3D-printer head (carriage, fan, heater block, brass nozzle, Bowden tube) flies in
-   and prints a red knit beanie onto his head layer by layer, a hot orange bead on the fresh layer, the
-   pompom last — a tennis ball; a terminal-window speech balloon types out "btw, I use Arch".
-   Loop (3.6 s beat): a gust from the left — the flags lift, stream and ripple, comic wind lines cross the
-   slopes either side of him, spindrift blows off the summit, the tennis ball leans over; the terminal
-   backspaces and types the next line ("$ sudo climb", ":wq  # summit"); a flotilla of birds in a V
-   glides past the peak.
-   The peak layer (people/static/fx/parikshit-peak.webp) is Ama Dablam, photo by Lerian, public
-   domain (Wikimedia Commons, File:Ama_Dablam.jpg): sky keyed out, hazed toward the valley haze;
-   rebuilt by people/fx/tools/parikshit_peak.py.
-   Photo landmarks (512 px): hair top 255,176 · hair u 194-312 (v 210-235) · fringe v 222 ·
-   brows v 240 · eyes 230,257 / 278,257 · ears 197-210 / 306-316 x v 255-300 · mouth 258,300 ·
-   chin 263,318 · hood 300-345 x v 285-330 · shoulders 160,385 / 395,385 · the left mountain's
-   sunlit edge 240,0 -> 304,96 · the right ridge 322,103 -> 520,30 (the haze V between them,
-   bottom 316,105) · near slope with pines lower left (the milestone 106,448). */
-import { THREE, presence, env, ease, clamp, rng } from './kit.js';
+/* Prince Modi — 3 AM Summit Push (凌晨三点冲顶)
+   His own words carry it: the blog post "Federated Learning Looks Different at 3am When Your Nodes Are
+   Dropping", Flotilla's server-failure recovery in under 820 ms (the part of his work he is proudest of),
+   "Dead Nodes Tell No Tales", and his line "making distributed systems not fall apart when things go wrong".
+   The photo is his Himalayan trek; the effect moves the clock to 3 a.m. on summit day.
+   Click: night wipes down over the sunny ridge (baked moonlit layers; he cools evenly); moonlit Chaukhamba
+   climbs up out of the haze V between the near ridges; stars come out above it; a trekking headlamp drops
+   onto his fringe (a painted lamp housing on a steel-blue strap with a reflective stripe that wraps round
+   behind his hair, the crown of his hair above it) and CLICKS on; then his team's headlamps come online up
+   the switchbacks of the right-hand ridge - four at once (prefill), then one by one (decode); a "3 AM"
+   caption box drops in.
+   Loop (3.6 s beat): a heartbeat - the lamp's status light blinks green and an acknowledgement ripples up
+   the trail. Every other beat a lamp drops out (it flickers off, a dashed ring marks the gap); his lamp
+   flashes twice, a ping runs from his lamp up the trail to the gap, and the lamp relights: BACK UP!
+   Exit: the trail lamps go out top-down, the headlamp pops off, the night lifts bottom-up to the photo.
+   Assets: people/static/fx/parikshit-headlamp.webp (painted with Codex on green, keyed);
+   parikshit-night / -plate-night / -cut-night.webp (people/fx/tools/parikshit_night.py: the day layers
+   baked to moonlight; a night reference photo lends colour statistics only); parikshit-peak.webp
+   (people/fx/tools/parikshit_peak.py: Chaukhamba, keyed and graded to moonlight; source and licence there).
+   Photo landmarks (512 px): hair top 255,176 · hair u 194-312 (v 210-235) · fringe v 222 · brows v 240 ·
+   eyes 230,257 / 278,257 · ears 197-210 / 306-316 x v 255-300 · mouth 258,300 · chin 263,318 · hood
+   300-345 x v 285-330 · shoulders 160,385 / 395,385 · the left mountain's edge 240,0 -> 304,96 · the right
+   ridge 322,103 -> 520,30 (the haze V between them, bottom 316,105) · the right-hand slope (the trail)
+   u 360-470 x v 80-280. */
+import { THREE, presence, env, ease, clamp } from './kit.js';
 
 const BEAT = 3.6;
-const T0 = 1.35;                             // the first gust = beat 0
+const T0 = 1.35;                              // the loop starts
 const TAU = Math.PI * 2;
-const PX = 200 / 512;                        // photo px -> logical px
-const INK_RGB = [22, 21, 26];
-const BLACKFONT = '"Arial Black", "Helvetica Neue", Arial, sans-serif';
+const PX = 200 / 512;                         // photo px -> logical px
+const INK = '#16151a';
+const BLUE = '#3776AD';                       // his site's colour
+const FONT = '"Arial Black", Impact, "Helvetica Neue", Arial, sans-serif';
 
-// the far haze between the near ridges (photo px): the peak shows only here
+// the far haze between the near ridges (photo px): the peak and the stars show only here
 const HAZE = [[226, -40], [560, -40], [560, 24], [520, 30], [480, 40], [448, 50], [416, 64], [384, 78], [352, 92],
   [322, 103], [314, 104], [304, 96], [292, 80], [282, 64], [272, 48], [262, 32], [250, 16], [240, 0], [232, -20]];
-// the peak layer's box (photo px) and its summit
-const PB = [230.2, 10.1, 434.8, 125.6];
-const APEX = [316, 20];
+// the peak layer's box (photo px, printed by tools/parikshit_peak.py) and its main summit
+const PB = [254.3, 33.2, 437.9, 111.4];
+const SUMMIT = [322, 40];
+// the headlamp sprite: aspect, and the lens and status-light centres (fractions of the sprite, y down)
+const LAMP_ASPECT = 630 / 995, LENS = [0.4975, 0.5214], LED = [0.732, 0.299];
+// his team on the switchbacks of the right-hand ridge, low to high (photo px)
+const TRAIL = [[372, 272], [440, 238], [392, 206], [452, 176], [404, 140], [438, 114], [418, 84]];
+const DROPS = [4, 2, 5];                      // which lamp drops out, in turn (L5, L3, L6)
+const STARS = [[272, 26, 0], [340, 22, 0], [298, 14, 1], [362, 32, 1]];   // u, v, big
 
-/** the haze mask (photo space, low res: bilinear sampling feathers the ridge line like the photo's blur) */
 function drawHazeMask(g, w) {
   const s = w / 512;
   g.fillStyle = '#000'; g.fillRect(0, 0, w, w);
@@ -46,69 +52,70 @@ function drawHazeMask(g, w) {
   g.beginPath(); HAZE.forEach(([u, v], i) => (i ? g.lineTo(u * s, v * s) : g.moveTo(u * s, v * s))); g.closePath(); g.fill();
 }
 
-const FLAGS = [['#2c69c2', '#163f80', true], ['#f7f4ec', '#b9b2a2', false], ['#d6342b', '#86190f', true], ['#2c9a49', '#15622c', true], ['#f3c22c', '#a87a12', false]];
-// the flags inside the circle (5 .. 18) spell his research instead of a mantra: disaggregated LLM serving
-const WORD = 'PREFILL·DECODE', WORD0 = 5;
-function drawFlag([col, dark, light], ch) {
-  return (g, w, h) => {
-    g.fillStyle = col; g.fillRect(0, 0, w, h);
-    g.fillStyle = dark; g.fillRect(0, 0, w, h * 0.1);                   // the hem round the string
-    g.globalAlpha = 0.5;
-    // the print: lines of prayer text, and a wind-horse medallion where there is no letter
-    g.strokeStyle = dark; g.fillStyle = dark; g.lineWidth = w * 0.035;
-    [0.2, 0.27, 0.88, 0.94].forEach((y) => {
-      for (let x = w * 0.14; x < w * 0.86; x += w * 0.12) { g.beginPath(); g.moveTo(x, h * y); g.lineTo(x + w * 0.08, h * y); g.stroke(); }
-    });
-    if (!ch) {
-      g.lineWidth = w * 0.045;
-      g.beginPath(); g.arc(w / 2, h * 0.56, w * 0.2, 0, TAU); g.stroke();
-      g.beginPath(); g.arc(w / 2, h * 0.56, w * 0.08, 0, TAU); g.fill();
-    }
-    g.globalAlpha = 1;
-    if (ch) {
-      g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.font = `900 ${Math.round(h * 0.52)}px "Arial Black", "Helvetica Neue", Arial, sans-serif`;
-      g.lineJoin = 'round';
-      g.lineWidth = w * 0.12; g.strokeStyle = light ? '#16151a' : col; g.strokeText(ch, w / 2, h * 0.58);
-      g.fillStyle = light ? '#fffaf0' : '#16151a'; g.fillText(ch, w / 2, h * 0.58);
-    }
-    g.strokeStyle = '#16151a'; g.lineWidth = w * 0.07; g.strokeRect(w * 0.035, w * 0.035, w - w * 0.07, h - w * 0.07);
-  };
-}
-
 export default {
-  title: 'Himalayan summit',
+  title: '3 AM summit push',
   exit: 0.45,
-  still: 2.4,
+  still: 3.75,
   async build(k) {
     const { root } = k;
     const own = [];
     const tmp = new THREE.Vector3();
     const hump = (t, a, b, c) => (t < a || t > c ? 0 : t < b ? (t - a) / (b - a) : 1 - (t - b) / (c - b));
-    const beatPh = (t) => (t < T0 ? -1 : (t - T0) % BEAT);
-    /** the gust: in over 0.25 s, holds, out by 0.95 s of the beat */
-    const gustAt = (t) => { const ph = beatPh(t); return ph < 0 ? 0 : ease.inOut(env(ph, 0, 0.25)) * (1 - ease.inOut(env(ph, 0.45, 0.95))); };
+    const beat = (t) => (t < T0 ? { n: -1, p: -1 } : { n: Math.floor((t - T0) / BEAT), p: (t - T0) % BEAT });
 
-    /* ① the snow peak, behind the near ridges: the photo layer on a card at the back, masked to the haze V */
+    /* ① the night: the three photo layers crossfade to their baked moonlit twins. The background (photo and
+       plate) wipes in top-down and lifts bottom-up on the exit; he cools evenly (no edge across his face) */
+    const tex = async (name) => {
+      const t = await k.loadTexture(`${k.STATIC}fx/${name}`).catch(() => null);
+      if (t) { t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; own.push(t); }
+      return t;
+    };
+    const [nightPhoto, nightPlate, nightCut, lampTex, peakTex] = await Promise.all([
+      tex('parikshit-night.webp'), tex('parikshit-plate-night.webp'), tex('parikshit-cut-night.webp'),
+      k.loadTexture(`${k.STATIC}fx/parikshit-headlamp.webp`), k.loadTexture(`${k.STATIC}fx/parikshit-peak.webp`),
+    ]);
+    const night = { uK: { value: 0 }, uP: { value: 0 } };
+    const toNight = (mat, map, wipe, key) => {
+      if (!map) return;
+      mat.onBeforeCompile = (sh) => {
+        sh.uniforms.uNight = { value: map };
+        sh.uniforms.uK = night.uK; sh.uniforms.uP = night.uP;
+        sh.fragmentShader = 'uniform sampler2D uNight; uniform float uK, uP;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
+          #ifdef USE_MAP
+          vec4 sampledDiffuseColor = texture2D(map, vMapUv);
+          float w = ${wipe ? 'clamp((uK * 1.25 - (1.0 - vMapUv.y)) / 0.25, 0.0, 1.0)' : 'uP'};
+          if (w > 0.0) sampledDiffuseColor = mix(sampledDiffuseColor, texture2D(uNight, vMapUv), w);
+          diffuseColor *= sampledDiffuseColor;
+          #endif`);
+      };
+      mat.customProgramCacheKey = () => key;
+      mat.needsUpdate = true;
+    };
+    toNight(k.layers.photo.material, nightPhoto, true, 'pm-night-photo');
+    toNight(k.layers.plate.material, nightPlate, true, 'pm-night-plate');
+    toNight(k.layers.person.material, nightCut, false, 'pm-night-cut');
+    // moonlight on the 3D strap: the key light swings to the upper right and goes cool
+    const keyLight = k.scene.children.find((o) => o.isDirectionalLight);
+    const hemi = k.scene.children.find((o) => o.isHemisphereLight);
+    const day = { kp: keyLight.position.clone(), kc: keyLight.color.clone(), ki: keyLight.intensity, hs: hemi.color.clone(), hg: hemi.groundColor.clone(), hi: hemi.intensity };
+    const MOON = { kp: new THREE.Vector3(1.1, 0.9, 1.4), kc: new THREE.Color(0xc8d6ff), ki: 1.7, hs: new THREE.Color(0x9fb4ff), hg: new THREE.Color(0x1a2238), hi: 1.0 };
+
+    /* ② moonlit Chaukhamba on a card at the back, masked to the haze V so it stays behind the near ridges
+       and climbs up from behind them */
     const PZ = -32, PF = k.depthScale(PZ);
-    const peakTex = await k.loadTexture(`${k.STATIC}fx/parikshit-peak.webp`);
     const maskTex = k.canvasTexture(128, 128, drawHazeMask, false);
     const peak = new THREE.Mesh(new THREE.PlaneGeometry((PB[2] - PB[0]) * PX, (PB[3] - PB[1]) * PX));
     const peakMat = k.clip(new THREE.ShaderMaterial({
-      uniforms: { map: { value: peakTex }, uMask: { value: maskTex }, uM: { value: peak.matrix }, uF: { value: k.D * PF }, uOp: { value: 1 }, uGlow: { value: 0 } },
+      uniforms: { map: { value: peakTex }, uMask: { value: maskTex }, uM: { value: peak.matrix }, uF: { value: k.D * PF }, uOp: { value: 1 } },
       vertexShader: `uniform mat4 uM; uniform float uF; varying vec2 vUv, vP;
         void main() { vUv = uv; vec4 r = uM * vec4(position, 1.0); vP = r.xy / uF + 0.5;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: `uniform sampler2D map, uMask; uniform float uOp, uGlow; varying vec2 vUv, vP;
+      fragmentShader: `uniform sampler2D map, uMask; uniform float uOp; varying vec2 vUv, vP;
         void main() {
           vec4 c = texture2D(map, vUv);
-          float m = smoothstep(0.15, 0.85, texture2D(uMask, vP).r);
-          float a = c.a * m * uOp;
+          float a = c.a * smoothstep(0.15, 0.85, texture2D(uMask, vP).r) * uOp;
           if (a < 0.004) discard;
-          // alpenglow: the sunlit snow near the top flushes warm
-          float snow = smoothstep(0.35, 0.8, dot(c.rgb, vec3(0.3, 0.5, 0.2)));
-          vec3 col = mix(c.rgb, c.rgb * vec3(1.18, 0.86, 0.68) + vec3(0.1, 0.03, 0.0), uGlow * snow * smoothstep(0.1, 0.8, vUv.y));
-          gl_FragColor = vec4(col, a);
+          gl_FragColor = vec4(c.rgb, a);
           #include <colorspace_fragment>
         }`,
       transparent: true, depthWrite: false,
@@ -121,612 +128,307 @@ export default {
     peak.scale.setScalar(PF);
     root.add(peak);
 
-    /* ② prayer flags on a sagging string behind his head: sewn along their top edge, they ripple,
-       lift toward us and stream to the right in the gust */
-    const FZ = -14, FW = 9.2, FH = 11, GAP = 1.5;
-    const SA = k.at(-30, -4, FZ), SB = k.at(545, 165, FZ);
-    const SC = (sag) => k.at(257, 104 + sag, FZ);
-    const bez = (C, s, out) => out.set(
-      (1 - s) * (1 - s) * SA.x + 2 * (1 - s) * s * C.x + s * s * SB.x,
-      (1 - s) * (1 - s) * SA.y + 2 * (1 - s) * s * C.y + s * s * SB.y, FZ);
-    const NS = 96;
-    const arc = new Float32Array(NS + 1);
-    const pts = Array.from({ length: NS + 1 }, () => new THREE.Vector3());
-    const layoutString = (C) => {
-      for (let i = 0; i <= NS; i++) bez(C, i / NS, pts[i]);
-      arc[0] = 0;
-      for (let i = 1; i <= NS; i++) arc[i] = arc[i - 1] + pts[i].distanceTo(pts[i - 1]);
-    };
-    /** the point and the tangent angle at arc length L */
-    const atLen = (L, out) => {
-      let i = 1;
-      while (i < NS && arc[i] < L) i++;
-      const f = clamp((L - arc[i - 1]) / Math.max(1e-6, arc[i] - arc[i - 1]));
-      out.lerpVectors(pts[i - 1], pts[i], f);
-      return Math.atan2(pts[i].y - pts[i - 1].y, pts[i].x - pts[i - 1].x);
-    };
-    layoutString(SC(0));
-    const total = arc[NS];
-    const NF = Math.floor(total / (FW + GAP));
-    const L0 = (total - NF * (FW + GAP)) / 2 + (FW + GAP) / 2;
-    const plainMats = FLAGS.map((c) => k.clip(k.toon(0xffffff, { map: k.canvasTexture(64, 80, drawFlag(c)), side: THREE.DoubleSide })));
-    const flagMat = (i) => {
-      const ch = WORD[i - WORD0];
-      if (!ch || ch === ' ') return plainMats[i % 5];
-      return k.clip(k.toon(0xffffff, { map: k.canvasTexture(64, 80, drawFlag(FLAGS[i % 5], ch)), side: THREE.DoubleSide }));
-    };
-    const flags = [];
-    for (let i = 0; i < NF; i++) {
-      const geo = new THREE.PlaneGeometry(FW, FH, 5, 5);
-      geo.translate(0, -FH / 2, 0);
-      const base = Float32Array.from(geo.attributes.position.array);
-      const m = new THREE.Mesh(geo, flagMat(i));
-      const holder = new THREE.Group();
-      holder.add(m);
-      root.add(holder);
-      flags.push({ m, holder, base, ph: i * 0.83, w: 7.5 + (i % 3) * 0.9 });
-    }
-    // the string: a dark cord (a ribbon rebuilt along the curve every frame, drawn up to how far it has run out)
-    const cordGeo = new THREE.BufferGeometry();
-    const cordPos = new Float32Array((NS + 1) * 6);
-    cordGeo.setAttribute('position', new THREE.BufferAttribute(cordPos, 3));
-    const cIdx = [];
-    for (let i = 0; i < NS; i++) cIdx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
-    cordGeo.setIndex(cIdx);
-    const cord = new THREE.Mesh(cordGeo, k.clip(new THREE.MeshBasicMaterial({ color: 0x2b2420, side: THREE.DoubleSide })));
-    cord.frustumCulled = false;
-    root.add(cord);
-    // where the string enters the circle: it runs out from there, left to right
-    let enter = 0;
-    for (let i = 0; i <= NS; i++) { if (Math.hypot(pts[i].x, pts[i].y) < k.R * k.depthScale(FZ) + 4) { enter = arc[i]; break; } }
-    const runAt = (L) => 0.48 + Math.max(0, L - enter) / Math.max(1, total - 2 * enter) * 0.5;     // the time a point of the string runs out
-
-    /* ③ an Indian highway milestone at his side: white stone, yellow dome, 「UCSD 12,600 km」 */
-    const MW = 25, MB = 16, MD = 6.5;
-    const ms = new THREE.Group(), msSquash = new THREE.Group();
-    ms.add(msSquash);
-    const bodyShape = new THREE.Shape();
-    bodyShape.moveTo(-MW / 2, 0); bodyShape.lineTo(MW / 2, 0); bodyShape.lineTo(MW / 2, MB); bodyShape.lineTo(-MW / 2, MB); bodyShape.closePath();
-    const capShape = new THREE.Shape();
-    capShape.moveTo(MW / 2, MB); capShape.absarc(0, MB, MW / 2, 0, Math.PI, false); capShape.closePath();
-    const ext = { depth: MD, bevelEnabled: true, bevelThickness: 0.7, bevelSize: 0.7, bevelSegments: 2, curveSegments: 24 };
-    const body = new THREE.Mesh(new THREE.ExtrudeGeometry(bodyShape, ext), k.clip(k.toon(0xf1eee4)));
-    const capM = new THREE.Mesh(new THREE.ExtrudeGeometry(capShape, ext), k.clip(k.toon(0xf2c02c)));
-    [body, capM].forEach((m) => { m.geometry.translate(0, 0, -MD / 2); k.ink(m, 1.3); msSquash.add(m); });
-    // the painted face, a decal just off the front (polygon offset: no z-fighting with the stone's face)
-    const faceShape = new THREE.Shape();
-    faceShape.moveTo(-MW / 2, 0); faceShape.lineTo(MW / 2, 0); faceShape.lineTo(MW / 2, MB); faceShape.absarc(0, MB, MW / 2, 0, Math.PI, false); faceShape.closePath();
-    const faceGeo = new THREE.ShapeGeometry(faceShape, 24);
-    const MH = MB + MW / 2;
-    {
-      const p = faceGeo.attributes.position, uv = faceGeo.attributes.uv;
-      for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / MW + 0.5, p.getY(i) / MH);
-    }
-    const faceTex = k.canvasTexture(MW * 12, MH * 12, (g, w, h) => {
-      const yC = h - MB * (h / MH);                         // canvas y of the dome's base line
-      g.fillStyle = '#f4f1e6'; g.fillRect(0, 0, w, h);
-      g.fillStyle = '#f3c12c'; g.fillRect(0, 0, w, yC);
-      g.fillStyle = '#16151a'; g.fillRect(0, yC - 3, w, 6);
-      g.fillStyle = 'rgba(0,0,0,0.08)'; g.fillRect(0, h - 26, w, 26);   // the foot, weathered
-      g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#16151a';
-      const fit = (txt, size, y, maxW) => { g.font = `900 ${size}px ${BLACKFONT}`; const tw = g.measureText(txt).width; g.save(); g.translate(w / 2, y); g.scale(Math.min(1, maxW / tw), 1); g.fillText(txt, 0, 0); g.restore(); };
-      fit('UCSD', 62, yC - 50, w * 0.7);
-      fit('12,600', 66, yC + 52, w * 0.86);
-      fit('km', 50, yC + 112, w * 0.5);
+    /* ③ the headlamp. The housing is a painted card on his fringe; the strap is a toon band round an ellipse
+       about his head: its front runs across his hair in front of the person layer, its sides go behind the
+       layer (z < 0) and vanish into his hair, as if round the back of his head */
+    const LZ = 9, LW = 48 * PX, LH = LW * LAMP_ASPECT;
+    const lamp = new THREE.Group(), lampSquash = new THREE.Group();
+    lamp.add(lampSquash);
+    const housing = new THREE.Mesh(new THREE.PlaneGeometry(LW, LH), new THREE.MeshBasicMaterial({ map: lampTex, transparent: true, depthWrite: false, color: 0xd9dee8 }));
+    housing.renderOrder = 12;
+    lampSquash.add(housing);
+    const lampHome = k.at(255, 222, LZ);
+    lamp.position.copy(lampHome);
+    root.add(lamp);
+    const SZ = -12, SRX = 53 * PX, SRZ = 20, SH = 3.5, SEG = 64;
+    const strapTex = k.canvasTexture(256, 32, (g, w, h) => {
+      g.fillStyle = '#34618f'; g.fillRect(0, 0, w, h);
+      g.fillStyle = 'rgba(255,255,255,0.10)'; for (let x = 0; x < w; x += 6) g.fillRect(x, 0, 2, h);   // the weave
+      g.fillStyle = '#d5dde8'; g.fillRect(0, h * 0.42, w, h * 0.17);                                  // the reflective stripe
+      g.fillStyle = INK; g.fillRect(0, 0, w, 3); g.fillRect(0, h - 3, w, 3);                           // the inked edges
     });
-    const face = new THREE.Mesh(faceGeo, k.clip(k.toon(0xffffff, { map: faceTex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 })));
-    face.position.z = MD / 2 + 0.9;
-    msSquash.add(face);
-    ms.rotation.y = 0.32;                         // turned a little toward him, so its side shows
-    const MS_UV = [106, 448], MS_Z = -6;
-    const msHome = k.at(MS_UV[0], MS_UV[1], MS_Z);
-    ms.position.copy(msHome);
-    root.add(ms);
-
-    /* ④ the beanie: a red knit lathe (ribbed cuff, a cream band) worn low on his forehead, tipped a little
-       toward us; a red-and-cream pompom on top */
-    const R0 = 24.6, CH = 8.6, BH = 26;
-    const prof = [[R0 + 0.3, 0], [R0 + 1.0, 0.9], [R0 + 1.3, 4.2], [R0 + 1.1, CH - 1.1], [R0 + 0.5, CH]];
-    for (let i = 0; i <= 14; i++) {
-      const f = i / 14, y = CH + 0.6 + (BH - CH - 0.6) * f;
-      const r = R0 * Math.pow(1 - Math.pow(f, 2.2), 1 / 2.2) * (1 - 0.05 * f);
-      prof.push([Math.max(0.01, r), y]);
-    }
-    const lathe = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 64, Math.PI, TAU);
-    {
-      const p = lathe.attributes.position, uv = lathe.attributes.uv;
-      for (let i = 0; i < p.count; i++) uv.setY(i, p.getY(i) / BH);
-    }
-    const knitTex = k.canvasTexture(512, 256, (g, w, h) => {
-      const Yc = (y) => h - (y / BH) * h;                  // beanie height -> canvas y
-      g.fillStyle = '#c8342a'; g.fillRect(0, 0, w, h);
-      // knit stitches: rows of little Vs, a shade darker
-      g.strokeStyle = 'rgba(110,20,14,0.35)'; g.lineWidth = 2;
-      for (let y = Yc(BH); y < Yc(CH + 0.6); y += 9) for (let x = 0; x < w; x += 8) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + 4, y + 5); g.lineTo(x + 8, y); g.stroke(); }
-      // the cream band with a red zigzag
-      const b0 = Yc(CH + 7), b1 = Yc(CH + 2.2);
-      g.fillStyle = '#f3e6cb'; g.fillRect(0, b0, w, b1 - b0);
-      g.strokeStyle = '#c8342a'; g.lineWidth = 4; g.lineJoin = 'round';
-      g.beginPath(); for (let x = 0; x <= w; x += 16) g.lineTo(x, (x / 16) % 2 ? b0 + 4 : b1 - 4); g.stroke();
-      // the ribbed cuff
-      g.fillStyle = '#b52c23'; g.fillRect(0, Yc(CH), w, h - Yc(CH));
-      for (let x = 0; x < w; x += 8) { g.fillStyle = '#d24236'; g.fillRect(x, Yc(CH), 4, h - Yc(CH)); }
-      g.fillStyle = 'rgba(80,12,8,0.5)'; g.fillRect(0, Yc(CH) - 2, w, 3);
+    const strapGeo = new THREE.CylinderGeometry(1, 1, SH, SEG, 1, true, -Math.PI, TAU);
+    strapGeo.scale(SRX, 1, SRZ);
+    const strap = new THREE.Mesh(strapGeo, k.toon(0xffffff, { map: strapTex }));
+    strap.renderOrder = 5;
+    const strapG = new THREE.Group();
+    strapG.add(strap);
+    strapG.rotation.x = -0.2;                      // the back rides higher, so the sides dip a little
+    strapG.position.copy(k.at(253, 224, SZ));
+    strapG.scale.setScalar(k.depthScale(SZ));
+    root.add(strapG);
+    // a soft contact shadow under the strap and the housing (the card spans photo px u 196..316, v 196..256)
+    const shadowTex = k.canvasTexture(256, 128, (g, w, h) => {
+      const X = (u) => (u - 196) / 120 * w - 1000, Y = (v) => (v - 196) / 60 * h;
+      g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = 7; g.shadowOffsetX = 1000;   // a blur every browser does
+      g.fillStyle = '#000';
+      g.beginPath(); g.ellipse(X(252), Y(237), 26 / 120 * w, 5 / 60 * h, 0, 0, TAU); g.fill();
+      g.lineWidth = 3 / 60 * h; g.strokeStyle = '#000';
+      g.beginPath(); g.moveTo(X(206), Y(232)); g.quadraticCurveTo(X(253), Y(233), X(300), Y(232)); g.stroke();
     });
-    const beanie = new THREE.Group(), bTilt = new THREE.Group(), bSquash = new THREE.Group();
-    beanie.add(bTilt); bTilt.add(bSquash);
-    bTilt.rotation.x = 0.1;
-    // it is 3D printed onto his head (one of his hobbies): a clipping plane rises through it, outlines included
-    k.renderer.localClippingEnabled = true;
-    const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e4);
-    const printable = (mesh, px) => {
-      mesh.material.clippingPlanes = [cutPlane];
-      const m = k.ink(mesh, px).material;
-      m.clipping = true;
-      m.clippingPlanes = [cutPlane];
-      m.vertexShader = m.vertexShader.replace('void main() {', '#include <clipping_planes_pars_vertex>\nvoid main() {\n  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);\n  #include <clipping_planes_vertex>\n');
-      m.fragmentShader = '#include <clipping_planes_pars_fragment>\n' + m.fragmentShader.replace('void main() {', 'void main() {\n  #include <clipping_planes_fragment>\n');
-    };
-    const shell = new THREE.Mesh(lathe, k.toon(0xffffff, { map: knitTex, side: THREE.DoubleSide }));
-    printable(shell, 1.3);
-    const fold = new THREE.Mesh(new THREE.TorusGeometry(R0 + 0.9, 0.85, 8, 72), k.toon(0xb52c23));
-    fold.rotation.x = Math.PI / 2;
-    fold.position.y = CH;
-    printable(fold, 0.8);
-    bSquash.add(shell, fold);
-    // the pompom is a tennis ball (tennis and pickleball): optic yellow felt, the white seam, a fuzzy edge
-    const pomGeo = new THREE.SphereGeometry(6.6, 40, 24);
-    {
-      const p = pomGeo.attributes.position, r = rng(11);
-      for (let i = 0; i < p.count; i++) {
-        const f = 1 + (r() - 0.5) * 0.035;
-        p.setXYZ(i, p.getX(i) * f, p.getY(i) * f, p.getZ(i) * f);
-      }
-      pomGeo.computeVertexNormals();
-    }
-    const ballTex = k.canvasTexture(512, 256, (g, w, h) => {
-      g.fillStyle = '#cfe12f'; g.fillRect(0, 0, w, h);
-      const r = rng(5);
-      for (let i = 0; i < 2600; i++) { g.fillStyle = r() < 0.5 ? 'rgba(255,255,170,0.35)' : 'rgba(120,140,20,0.22)'; g.fillRect(r() * w, r() * h, 2, 2); }
-      // the seam: a closed wave round the ball (two lobes)
-      const seam = (lw, col) => {
-        g.strokeStyle = col; g.lineWidth = lw; g.lineJoin = 'round';
-        g.beginPath();
-        for (let x = 0; x <= w; x += 4) { const y = h / 2 - Math.sin((x / w) * Math.PI * 4) * h * 0.26; x ? g.lineTo(x, y) : g.moveTo(x, y); }
-        g.stroke();
-      };
-      seam(15, 'rgba(150,160,120,0.6)'); seam(10, '#f7f8ef');
-    });
-    const pomPivot = new THREE.Group();
-    pomPivot.position.y = BH - 1.2;
-    const pom = new THREE.Mesh(pomGeo, k.toon(0xffffff, { map: ballTex }));
-    pom.position.y = 5.6;
-    pom.rotation.set(0.5, 0.9, 0.3);
-    printable(pom, 1.1);
-    pomPivot.add(pom);
-    bSquash.add(pomPivot);
-    const HEAD_UV = [255, 226], HEAD_Z = 30;
-    const headHome = k.at(HEAD_UV[0], HEAD_UV[1], HEAD_Z);
-    const HS = k.depthScale(HEAD_Z);
-    beanie.position.copy(headHome);
-    root.add(beanie);
-    const POM_Y = BH - 1.2 + 5.6, POM_R = 6.8, TOP = POM_Y + POM_R + 0.6;
-    /** the beanie's radius at height y (its profile, then the pompom) */
-    const radiusAt = (y) => {
-      if (y > BH - 0.5) return Math.sqrt(Math.max(0, POM_R * POM_R - (y - POM_Y) * (y - POM_Y)));
-      for (let i = 1; i < prof.length; i++) {
-        if (prof[i][1] >= y) { const [r0, y0] = prof[i - 1], [r1, y1] = prof[i]; return r0 + (r1 - r0) * clamp((y - y0) / Math.max(1e-6, y1 - y0)); }
-      }
-      return 0.01;
-    };
-    // the fresh layer: a hot orange bead round the beanie at the cut
-    const bead = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 6, 64), new THREE.MeshBasicMaterial({ color: 0xff8a2e }));
-    bead.rotation.x = Math.PI / 2;
-    bSquash.add(bead);
-
-    /* ⑤ the print head: a dark carriage with a cooling fan, an aluminium heater block, a brass nozzle, a white
-       Bowden tube up out of the frame. It flies in, runs round the front of each layer as the beanie grows
-       from the cuff to the pompom, and flies off */
-    const printer = new THREE.Group();                    // origin = the nozzle tip
-    const pBody = new THREE.Group();
-    printer.add(pBody);
-    pBody.rotation.y = -0.35;
-    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 0.4, 2.6, 14), k.clip(k.toon(0xe0a83e)));
-    nozzle.position.y = 1.3;
-    k.ink(nozzle, 0.9);
-    const block = new THREE.Mesh(new THREE.BoxGeometry(5.2, 3.2, 4.6), k.clip(k.toon(0xc5cad3)));
-    block.position.y = 4.2;
-    k.ink(block, 1);
-    const carriage = new THREE.Mesh(new THREE.BoxGeometry(13.5, 7.6, 7.2), k.clip(k.toon(0x3d424c)));
-    carriage.position.y = 9.6;
-    k.ink(carriage, 1.2);
-    const fanTex = k.canvasTexture(64, 64, (g) => {
-      g.fillStyle = '#20232a'; g.beginPath(); g.arc(32, 32, 31, 0, TAU); g.fill();
-      g.fillStyle = '#8d939e';
-      for (let i = 0; i < 5; i++) { g.save(); g.translate(32, 32); g.rotate(i * TAU / 5); g.beginPath(); g.ellipse(13, 0, 13, 5.5, 0.5, 0, TAU); g.fill(); g.restore(); }
-      g.fillStyle = '#c5cad3'; g.beginPath(); g.arc(32, 32, 7, 0, TAU); g.fill();
-    });
-    const fan = new THREE.Mesh(new THREE.CircleGeometry(2.9, 28), k.clip(new THREE.MeshBasicMaterial({ map: fanTex })));
-    fan.position.set(-2.4, 9.6, 3.65);
-    const fanRim = new THREE.Mesh(new THREE.TorusGeometry(3, 0.35, 6, 28), k.clip(k.toon(0x2a2e35)));
-    fanRim.position.copy(fan.position);
-    const led = new THREE.Mesh(new THREE.CircleGeometry(0.75, 12), k.clip(new THREE.MeshBasicMaterial({ color: 0x5dff8a })));
-    led.position.set(4.3, 11.4, 3.65);
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-      new THREE.Vector3(2.5, 13.2, 0), new THREE.Vector3(3.5, 22, -1), new THREE.Vector3(9, 36, -3), new THREE.Vector3(20, 56, -5), new THREE.Vector3(34, 80, -6)]), 32, 1.0, 8),
-    k.clip(k.toon(0xf1f3f6)));
-    k.ink(tube, 0.9);
-    pBody.add(nozzle, block, carriage, fan, fanRim, led, tube);
-    printer.visible = false;
-    root.add(printer);
-    const parkA = k.at(470, -30, HEAD_Z + 30), parkB = k.at(500, -40, HEAD_Z + 30);
-
-    /* ⑥ Formula 1: the start gantry drops in over the ridge, five red lights come on one by one, and when
-       they all go out the race is on (everything else starts at LIGHTS OUT); the gantry is hauled away */
-    const gantry = new THREE.Group();
-    const gBlack = k.clip(k.toon(0x1c1e24)), podMat = k.clip(k.toon(0x111216));
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(60, 4.2, 4.4), gBlack);
-    beam.position.y = 2.1;
-    k.ink(beam, 1.2);
-    gantry.add(beam);
-    [-22, 22].forEach((x) => {
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 40, 10), gBlack);
-      pole.position.set(x, 24, -1);
-      k.ink(pole, 0.9);
-      gantry.add(pole);
-    });
-    const lampOff = new THREE.Color(0x3c1210), lampOn = new THREE.Color(0xff2b1c);
-    const lamps = [];
-    for (let i = 0; i < 5; i++) {
-      const x = (i - 2) * 11.2;
-      const pod = new THREE.Mesh(new THREE.BoxGeometry(9, 17, 4.6), podMat);
-      pod.position.set(x, -8.5, 0);
-      k.ink(pod, 1.1);
-      gantry.add(pod);
-      const col = [];
-      [-3.6, -12.6].forEach((y) => {
-        const m = new THREE.Mesh(new THREE.CircleGeometry(2.9, 24), k.clip(new THREE.MeshBasicMaterial({ color: lampOff.clone() })));
-        m.position.set(x, y + 0.3, 2.35);
-        const hot = new THREE.Mesh(new THREE.CircleGeometry(0.95, 12), k.clip(new THREE.MeshBasicMaterial({ color: 0xfff2d8 })));
-        hot.position.set(x - 0.8, y + 1.1, 2.4);
-        hot.visible = false;
-        gantry.add(m, hot);
-        col.push({ m, hot });
-      });
-      lamps.push(col);
-    }
-    const GANTRY = k.at(256, 40, 14);
-    gantry.position.copy(GANTRY);
-    gantry.visible = false;
-    root.add(gantry);
+    const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, opacity: 0, color: 0x000000 });
+    const shadowCard = new THREE.Mesh(new THREE.PlaneGeometry(120 * PX, 60 * PX), shadowMat);
+    shadowCard.position.copy(k.at(256, 226, 0.5));
+    shadowCard.scale.setScalar(k.depthScale(0.5));
+    shadowCard.renderOrder = 11;
+    root.add(shadowCard);
+    const lensAt = (out) => { housing.localToWorld(out.set((LENS[0] - 0.5) * LW, (0.5 - LENS[1]) * LH, 0.1)); return root.worldToLocal(out); };
+    const ledAt = (out) => { housing.localToWorld(out.set((LED[0] - 0.5) * LW, (0.5 - LED[1]) * LH, 0.1)); return root.worldToLocal(out); };
 
     // the beats of the entrance
-    const LIGHTS = [0.08, 0.14, 0.2, 0.26, 0.32], OUT = 0.42;      // the start lights; LIGHTS OUT
-    const PK0 = OUT, MS0 = 0.66, PR0 = 0.55, PR1 = 1.15, BUB0 = 0.84;  // PR0 .. PR1: the print; the terminal
-    const tipAt = (t, out) => {                         // the nozzle on the front of the layer being printed
-      const h = TOP * env(t, PR0, PR1);
-      const ph = 1.1 * Math.sin((t - PR0) * 31);
-      const r = radiusAt(h) + 0.5;
-      return bSquash.localToWorld(out.set(r * Math.sin(ph), h + 0.3, r * Math.cos(ph)));
+    const LAMP0 = 0.38, CLICK = 0.62, ON = [0.70, 0.70, 0.70, 0.70, 0.82, 0.90, 0.98];
+
+    /** each trail lamp at (t, e): how lit, its pop, the gap ring, the relight */
+    const lampState = (i, t, e) => {
+      let lit = t >= ON[i] ? 1 : 0;
+      let pop = t >= ON[i] ? hump(t, ON[i], ON[i] + 0.05, ON[i] + 0.14) * 0.35 : 0;
+      const { n, p } = beat(t);
+      let ring = 0, back = 0;
+      if (n >= 0) {
+        pop = Math.max(pop, 0.25 * hump(p, 0.1 + i * 0.07, 0.16 + i * 0.07, 0.22 + i * 0.07));   // the ack wave
+        if (n % 2 === 0 && DROPS[(n / 2) % 3] === i) {
+          if (p >= 1.2 && p < 2.1) {
+            lit = p < 1.4 ? [1, 0, 1, 0.6, 0][Math.min(4, Math.floor((p - 1.2) / 0.04))] : 0;
+            ring = p >= 1.4 ? ease.outBack(env(p, 1.4, 1.5)) : 0;
+          } else if (p >= 2.1) {
+            back = env(p, 2.1, 2.35);
+            ring = 1 - env(p, 2.1, 2.18);
+            pop = Math.max(pop, 0.7 * (1 - ease.out(env(p, 2.1, 2.35))));
+          }
+        }
+      }
+      const out = e > 0 ? clamp(1 - (e - (6 - i) * 0.089) / 0.12) : 1;   // top-down, L7 first, 40 ms apart
+      return { lit: lit * out, pop, ring: ring * out, back };
     };
-    const nW = new THREE.Vector3(), qW = new THREE.Quaternion(), tip = new THREE.Vector3();
-    const tint = new THREE.Color();
 
     return {
       update(t, e) {
         k.layers.photo.material.opacity = 1;
-        const mood = presence(t, e, 0, 0.5, ease.out, 0);
-        k.layers.plate.material.color.copy(tint.setRGB(1 - 0.02 * mood, 1 - 0.05 * mood, 1 - 0.1 * mood));
-        const gust = gustAt(t);
+        const out = 1 - ease.inOut(env(e, 0.1, 1));
+        night.uK.value = ease.inOut(env(t, 0, 0.45)) * out;
+        night.uP.value = ease.inOut(env(t, 0.1, 0.5)) * out;
+        const nk = Math.min(1, night.uK.value * 1.25);
+        keyLight.position.lerpVectors(day.kp, MOON.kp, nk);
+        keyLight.color.lerpColors(day.kc, MOON.kc, nk);
+        keyLight.intensity = day.ki + (MOON.ki - day.ki) * nk;
+        hemi.color.lerpColors(day.hs, MOON.hs, nk);
+        hemi.groundColor.lerpColors(day.hg, MOON.hg, nk);
+        hemi.intensity = day.hi + (MOON.hi - day.hi) * nk;
 
-        // the start gantry: drops in, lights 1..5, lights out, hauled up and away
-        const gIn = env(t, 0, 0.1), gUp = ease.in(env(t, OUT + 0.04, OUT + 0.3));
-        gantry.visible = t < OUT + 0.3 && e < 0.5;
-        if (gantry.visible) {
-          k.show(gantry, Math.min(1, gIn * 4) * (1 - clamp(e * 2)), k.depthScale(14));
-          gantry.position.set(GANTRY.x, GANTRY.y + (1 - ease.outBack(gIn, 1.2)) * 40 + gUp * 75, GANTRY.z);
-          gantry.rotation.z = gUp * -0.12;
-          lamps.forEach((col, i) => col.forEach(({ m, hot }) => {
-            const on = t >= LIGHTS[i] && t < OUT;
-            m.material.color.copy(on ? lampOn : lampOff);
-            hot.visible = on;
-          }));
-        }
-
-        // the peak climbs up from behind the ridges, a flush of alpenglow as it tops out (then a warm glow stays)
-        const pp = presence(t, e, PK0, 0.7, ease.out, 0.5);
+        // the peak climbs up from behind the ridges; it sinks and fades on the exit
+        const pp = presence(t, e, 0.12, 0.63, ease.out, 0.12);
         peak.visible = pp > 0.002;
-        peak.position.set(peakHome.x, peakHome.y - (1 - pp) * 46, PZ);
-        peakMat.uniforms.uOp.value = clamp(pp * 3);
-        peakMat.uniforms.uGlow.value = 0.45 + 0.55 * hump(t, PK0 + 0.45, PK0 + 0.75, PK0 + 1.6);
+        peak.position.set(peakHome.x, peakHome.y - (1 - pp) * 44, PZ);
+        peakMat.uniforms.uOp.value = clamp(pp / 0.35) * (1 - env(e, 0.67, 1));
         peak.updateMatrix();
 
-        // the string sags and lifts a little; in the gust it bows
-        const sag = 2.5 * Math.sin(t * 1.3) * env(t, 1, 1.6) - gust * 7;
-        layoutString(SC(sag));
-        const inkA = 0.46;
-        let run = 0;                         // how far the string has run out (arc length)
-        for (let i = 0; i <= NS; i++) if (t >= runAt(arc[i])) run = arc[i];
-        const cut = run * (1 - ease.in(clamp(e * 1.6)));
-        let seg = 0;
-        for (let i = 0; i <= NS; i++) {
-          const a = pts[Math.min(NS, i + 1)], b = pts[Math.max(0, i - 1)];
-          const tx = a.x - b.x, ty = a.y - b.y, l = Math.hypot(tx, ty) || 1;
-          const nx = -ty / l * inkA, ny = tx / l * inkA;
-          cordPos.set([pts[i].x - nx, pts[i].y - ny, FZ - 0.2, pts[i].x + nx, pts[i].y + ny, FZ - 0.2], i * 6);
-          if (arc[i] <= cut) seg = i;
-        }
-        cordGeo.attributes.position.needsUpdate = true;
-        cordGeo.setDrawRange(0, seg * 6);
-        cord.visible = seg > 0;
-
-        flags.forEach((f, i) => {
-          const L = L0 + i * (FW + GAP);
-          const ti = runAt(L);
-          const p = presence(t, e, ti, 0.32, ease.outBack, i / NF);
-          f.holder.visible = p > 0.004 && L <= cut + FW;
-          if (!f.holder.visible) return;
-          f.holder.rotation.z = atLen(L, f.holder.position);
-          f.holder.scale.setScalar(Math.max(0.004, p));
-          // flip in about the string, then flutter: lift toward us, stream right, ripple
-          const flip = (1 - ease.out(env(t, ti, ti + 0.5))) * 1.6;
-          const lift = 0.22 + 0.08 * Math.sin(t * 2.1 + f.ph) + gust * (0.5 + 0.12 * Math.sin(i * 1.3)) + flip;
-          const stream = 0.06 + 0.04 * Math.sin(t * 1.7 + f.ph) + gust * (0.8 + 0.12 * Math.sin(i * 2.1));
-          const amp = 0.7 + 1.8 * gust;
-          const w = f.w * (1 + 0.6 * gust);
-          const pos = f.m.geometry.attributes.position, b = f.base;
-          for (let j = 0; j < pos.count; j++) {
-            const x0 = b[j * 3], y0 = b[j * 3 + 1];
-            const d = -y0 / FH;
-            const wave = Math.sin(x0 * 0.62 + y0 * 0.3 - t * w + f.ph) * amp * d;
-            pos.setXYZ(j, x0 + (-y0) * stream + wave * 0.18, y0 * Math.cos(lift) + wave * 0.12, -y0 * Math.sin(lift) + wave);
-          }
-          pos.needsUpdate = true;
-          f.m.geometry.computeVertexNormals();
-        });
-
-        // the milestone springs up out of the slope, squashes and settles
-        const mp = presence(t, e, MS0, 0.3, ease.outBack, 0.25);
-        k.show(ms, Math.min(1, mp * 1.4));
-        ms.position.set(msHome.x, msHome.y - (1 - Math.min(1, mp)) * 22, MS_Z);
-        const ml = t - (MS0 + 0.26);
-        const msq = ml > 0 ? 0.1 * Math.exp(-6 * ml) * Math.cos(16 * ml) : 0;
-        msSquash.scale.set(1 + msq, 1 - msq, 1);
-
-        // the beanie is printed onto his head, cuff to pompom; it settles as it cools; the pompom wobbles,
-        // and leans over in the gust
-        const bOut = 1 - ease.in(clamp(e * 1.6 - 0.05));
-        k.show(beanie, (t >= PR0 ? 1 : 0) * bOut, HS);
-        beanie.position.set(headHome.x, headHome.y + (1 - bOut) * 12, HEAD_Z);
-        const bl = t - PR1;
-        const bsq = bl > 0 ? 0.07 * Math.exp(-7 * bl) * Math.cos(18 * bl) : 0;
-        bSquash.scale.set(1 + bsq * 0.6, 1 - bsq, 1 + bsq * 0.6);
-        const wob = bl > 0 ? 0.3 * Math.exp(-4.5 * bl) * Math.sin(13 * bl) : 0;
-        pomPivot.rotation.z = -0.42 * gust + wob + 0.04 * Math.sin(t * 2.3) * env(t, 1.4, 2);
-        beanie.updateMatrixWorld(true);
-        const printing = t >= PR0 && t < PR1;
-        const h = printing ? TOP * env(t, PR0, PR1) : 1e3;
-        bSquash.getWorldQuaternion(qW);
-        cutPlane.setFromNormalAndCoplanarPoint(nW.set(0, -1, 0).applyQuaternion(qW), bSquash.localToWorld(tmp.set(0, h, 0)));
-        const br = printing ? radiusAt(h) : 0;
-        bead.visible = printing && br > 0.6;
-        bead.position.y = h - 0.15;
-        bead.scale.set(br + 0.25, br + 0.25, 12);
-
-        // the print head: in from the top right, round and round the layers, off again
-        const fin = env(t, PR0 - 0.2, PR0), fout = env(t, PR1, PR1 + 0.3);
-        printer.visible = fin > 0 && fout < 1 && e < 0.6;
-        if (printer.visible) {
-          if (t < PR0) { tipAt(PR0, tip); root.worldToLocal(tip); printer.position.lerpVectors(parkA, tip, ease.out(fin)); }
-          else if (t < PR1) { tipAt(t, tip); root.worldToLocal(tip); printer.position.copy(tip); }
-          else { tipAt(PR1, tip); root.worldToLocal(tip); printer.position.lerpVectors(tip, parkB, ease.in(fout)); }
-          k.show(printer, (1 - ease.in(clamp(e * 2))) * Math.min(1, fin * 3) * (1 - ease.in(fout) * 0.3), k.depthScale(HEAD_Z + 24) * 1.3);
-          fan.rotation.z = -t * 40;
-        }
-        pomPivot.rotation.x = 0.1 * Math.sin(t * 1.7) * env(t, 1.4, 2);
+        // the headlamp drops onto his fringe and squashes; it pops off up and away on the exit
+        const li = env(t, LAMP0, LAMP0 + 0.14);
+        const lo = ease.in(env(e, 0.55, 1));
+        const la = li > 0 ? ease.outBack(li, 1.4) * (1 - lo) : 0;
+        k.show(lamp, Math.max(0, la * (0.3 + 0.7 * Math.min(1, li * 1.4))), k.depthScale(LZ));
+        lamp.position.set(lampHome.x, lampHome.y + (1 - ease.out(li)) * 26 + lo * 30, LZ);
+        lamp.rotation.z = (1 - ease.out(li)) * 0.24;
+        const sl = t - (LAMP0 + 0.14);
+        const sq = sl > 0 ? 0.12 * Math.exp(-14 * sl) * Math.cos(26 * sl) : 0;
+        lampSquash.scale.set(1 + sq, 1 - sq, 1);
+        // the strap snaps open from behind the housing round to the back of his head; retracts on the exit
+        const so = env(t, LAMP0 + 0.14, LAMP0 + 0.22) * (1 - env(e, 0.33, 0.67));
+        const ang = (10 + 80 * ease.outBack(so, 1.6)) / 180 * Math.PI;             // half-angle shown, from the front
+        const segs = Math.max(0, Math.min(SEG / 2, Math.round(ang / Math.PI * (SEG / 2))));
+        strap.visible = so > 0 && segs > 0 && la > 0.05;
+        strap.geometry.setDrawRange((SEG / 2 - segs) * 6, segs * 12);
+        shadowMat.opacity = 0.42 * Math.min(1, la) * so;
       },
 
       draw2d(q, t, e) {
         const fade = 1 - e;
         if (fade <= 0.001) return;
         const c = q.drawingContext;
-        const ph = beatPh(t);
-        const gust = gustAt(t);
+        const { n, p } = beat(t);
         const [cx0, cy0] = k.screenAt(256, 256, 0);
-        const inkS = (a) => q.stroke(INK_RGB[0], INK_RGB[1], INK_RGB[2], 255 * a);
-        const star4 = (x, y, r, a) => {
-          inkS(0.9 * a); q.strokeWeight(1.1); q.fill(255, 255, 255, 255 * a);
-          q.beginShape();
-          for (let i = 0; i < 8; i++) { const rr = i % 2 ? r * 0.3 : r; const an = (i / 8) * TAU - Math.PI / 2; q.vertex(x + Math.cos(an) * rr, y + Math.sin(an) * rr); }
-          q.endShape(q.CLOSE);
+        const star4 = (x, y, rx, ry, a, fill = '#fffdf3', w = 0.8, inkA = 0.8) => {
+          c.beginPath();
+          [[0, -ry], [w, -w], [rx, 0], [w, w], [0, ry], [-w, w], [-rx, 0], [-w, -w]].forEach(([dx, dy], i) => (i ? c.lineTo(x + dx, y + dy) : c.moveTo(x + dx, y + dy)));
+          c.closePath();
+          c.globalAlpha = a; c.fillStyle = fill; c.fill();
+          c.globalAlpha = a * inkA; c.lineWidth = 0.8; c.strokeStyle = INK; c.stroke();
+          c.globalAlpha = 1;
         };
         c.save();
         c.beginPath(); c.arc(cx0, cy0, k.R + 0.5, 0, TAU); c.clip();
-        q.strokeCap(q.ROUND); q.strokeJoin(q.ROUND);
+        c.lineJoin = 'round'; c.lineCap = 'round';
 
-        // spindrift off the summit, blown to the right: soft white streams, longer in the gust
-        const pk = presence(t, e, PK0 + 0.5, 0.5, ease.out, 0.4);
-        if (pk > 0.01 && peak.visible) {
-          peak.localToWorld(tmp.set((APEX[0] - (PB[0] + PB[2]) / 2) * PX, -(APEX[1] - (PB[1] + PB[3]) / 2) * PX, 0));
-          root.worldToLocal(tmp);
-          const [ax, ay] = k.toScreen(tmp);
-          const len = (9 + 17 * gust) * pk;
-          for (let s = 0; s < 4; s++) {
-            let px = ax + 0.5, py = ay + 0.6 + s * 1.1;
-            for (let j = 1; j <= 12; j++) {
-              const f = j / 12;
-              const x = ax + 0.5 + f * len * (1 - s * 0.14);
-              const y = ay + 0.6 + s * 1.1 + f * (2 + s * 1.6) + Math.sin(f * 6 - t * 5 + s * 2) * 0.9 * f;
-              const a = Math.pow(1 - f, 1.3) * pk * (0.45 + 0.4 * gust);
-              q.stroke(255, 255, 255, 255 * a); q.strokeWeight((1.9 - 1.1 * f) * (1 - s * 0.15));
-              q.line(px, py, x, y);
-              px = x; py = y;
+        // stars over the massif, coming out one by one, twinkling
+        STARS.forEach(([u, v, big], i) => {
+          const a = env(t, 0.3 + i * 0.07, 0.42 + i * 0.07) * (1 - env(e, 0, 0.67));
+          if (a <= 0.01) return;
+          const [x, y] = k.screenAt(u, v, -34);
+          const tw = 1 + 0.18 * Math.sin(t * (2.1 + i * 0.7) + i * 1.9);
+          if (big) star4(x, y, 2.8 * tw, 2.8 * tw, a, '#f4f7ff', 0.55, 0.6);
+          else { c.globalAlpha = a; c.fillStyle = '#eef3ff'; c.beginPath(); c.arc(x, y, 0.75 * tw, 0, TAU); c.fill(); c.globalAlpha = 1; }
+        });
+        // a glint on the summit as it tops out
+        const sg = hump(t, 0.74, 0.84, 0.98) * fade;
+        if (sg > 0.02) { const [x, y] = k.screenAt(SUMMIT[0], SUMMIT[1] - 2, -32); star4(x, y, 6.5 * sg, 6.5 * sg, sg, '#ffffff', 1.2, 0.9); }
+
+        // his team: headlamps up the switchbacks (warm four-point lights, a white core); the gap and the relight
+        const P = TRAIL.map(([u, v]) => k.screenAt(u, v, -20));
+        TRAIL.forEach((_, i) => {
+          const st = lampState(i, t, e);
+          const [x, y] = P[i];
+          const s = 1 - 0.3 * i / 6;
+          if (st.ring > 0.01) {
+            c.save();
+            c.translate(x, y); c.rotate(t * 0.7);
+            c.globalAlpha = Math.min(1, st.ring); c.strokeStyle = '#a9c6ff'; c.lineWidth = 1.2;
+            c.setLineDash([2.6, 2.6]);
+            c.beginPath(); c.arc(0, 0, Math.max(0, 5 * Math.min(1.2, st.ring)), 0, TAU); c.stroke();
+            c.restore();
+          }
+          if (st.lit <= 0.01) return;
+          // a short beam up the trail, toward the next lamp (it is what makes them read as people, not stars)
+          const [nx, ny] = P[Math.min(6, i + 1)], [px0, py0] = P[Math.max(0, i - 1)];
+          const dx = i < 6 ? nx - x : x - px0, dy = i < 6 ? ny - y : y - py0, dl = Math.hypot(dx, dy) || 1;
+          const bl = 10 * s, ux = dx / dl, uy = dy / dl, sp = 0.36;
+          const bg = c.createLinearGradient(x, y, x + ux * bl, y + uy * bl);
+          bg.addColorStop(0, 'rgba(255,244,214,0.5)'); bg.addColorStop(1, 'rgba(255,244,214,0)');
+          c.globalAlpha = st.lit; c.fillStyle = bg;
+          c.beginPath(); c.moveTo(x, y);
+          c.lineTo(x + (ux * Math.cos(sp) - uy * Math.sin(sp)) * bl, y + (uy * Math.cos(sp) + ux * Math.sin(sp)) * bl);
+          c.lineTo(x + (ux * Math.cos(-sp) - uy * Math.sin(-sp)) * bl, y + (uy * Math.cos(-sp) + ux * Math.sin(-sp)) * bl);
+          c.closePath(); c.fill(); c.globalAlpha = 1;
+          const tw = 1 + 0.08 * Math.sin(t * TAU / (1.1 + (i * 0.37) % 0.6) + i);
+          const g = (1 + st.pop) * tw;
+          star4(x, y, 5.5 * s * g, 5.5 * s * g, st.lit, '#fff1cf', 0.9 * s, 0.75);
+          c.globalAlpha = st.lit; c.fillStyle = '#ffffff';
+          c.beginPath(); c.arc(x, y, 1.0 * s * (1 + st.pop * 0.5), 0, TAU); c.fill();
+          c.globalAlpha = 1;
+          if (st.back > 0 && st.back < 1) {
+            const r0 = 4 + 2 * st.back, r1 = r0 + 7 * Math.sin(st.back * Math.PI);
+            for (let j = 0; j < 8; j++) {
+              const a = j / 8 * TAU + 0.2;
+              c.beginPath(); c.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); c.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+              c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
+              c.strokeStyle = '#ffffff'; c.lineWidth = 0.9; c.stroke();
             }
           }
-          // a twinkle on the summit as it tops out
-          const tw = hump(t, PK0 + 0.62, PK0 + 0.72, PK0 + 0.98) * fade;
-          if (tw > 0.02) star4(ax - 0.5, ay - 1.5, 6.5 * tw, tw);
-        }
-
-        // the gust: comic wind lines drawn on and off across the slopes either side of him (never over his
-        // head or hood): thin at both ends, some with a loop; the left side first, then the right
-        if (ph >= 0 && ph < 1.3) {
-          const lanes = [[20, 184, 152, 0, 0.6], [-10, 150, 318, 0.1, 0], [334, 526, 202, 0.17, 0.45], [350, 524, 284, 0.27, 0]];
-          const N = 72;
-          lanes.forEach(([u0, u1, v0, d, loop], i) => {
-            const p = env(ph, 0.04 + d, 0.7 + d);
-            if (p <= 0 || p >= 1) return;
-            const sH = ease.out(clamp(p * 1.6)), sT = ease.in(clamp(p * 1.6 - 0.6));
-            if (sH - sT < 0.01) return;
-            const pt = (s) => {
-              let u = u0 + (u1 - u0) * s, v = v0 + Math.sin(s * 5.5 + i * 1.7) * 4;
-              if (loop && Math.abs(s - loop) < 0.1) {
-                const th = ((s - loop + 0.1) / 0.2) * TAU;
-                u += 15 * Math.sin(th); v -= 13 * (1 - Math.cos(th));
-              }
-              return k.screenAt(u, v, -10);
-            };
-            const P = [];
-            for (let j = 0; j <= N; j++) P.push(pt(sT + (sH - sT) * (j / N)));
-            for (let pass = 0; pass < 2; pass++) {
-              for (let j = 1; j <= N; j++) {
-                const w = Math.pow(Math.sin(Math.PI * (j - 0.5) / N), 0.7);
-                if (pass === 0) { inkS(0.85 * fade); q.strokeWeight(0.6 + 2.1 * w); } else { q.stroke(255, 255, 255, 250 * fade); q.strokeWeight(0.2 + 1.1 * w); }
-                q.line(P[j - 1][0], P[j - 1][1], P[j][0], P[j][1]);
-              }
-            }
-          });
-        }
-
-        // a flotilla of birds in a V (his federated-learning framework is Flotilla) glides past the peak, far away
-        if (ph >= 0) {
-          const bp = env(ph, 1.5, 3.4);
-          if (bp > 0 && bp < 1) {
-            const ba = Math.min(env(bp, 0, 0.1), 1 - env(bp, 0.88, 1)) * fade;
-            const V = [[0, 0], [-9, -5.5], [-9, 5.5], [-18, -11], [-18, 11], [-27, -16.5], [-27, 16.5]];
-            V.forEach(([du, dv], j) => {
-              const u = 190 + 230 * bp + du, v = 42 - 16 * bp + dv * 0.8 + Math.sin(bp * 6 + j * 0.7) * 1.5;
-              const [x, y] = k.screenAt(u, v, -30);
-              const sz = j ? 0.72 : 0.85;
-              const flap = Math.sin(ph * 10 + j * 0.9);
-              const W = 4.4 * sz, H = (1.5 + 1.4 * flap) * sz;
-              inkS(0.95 * ba); q.strokeWeight(1.15); q.noFill();
-              q.beginShape(); q.vertex(x - W, y - H); q.quadraticVertex(x - W * 0.4, y - H - 1.2 * sz, x, y + 0.4); q.endShape();
-              q.beginShape(); q.vertex(x, y + 0.4); q.quadraticVertex(x + W * 0.4, y - H - 1.2 * sz, x + W, y - H); q.endShape();
-            });
-          }
-        }
+        });
         c.restore();
 
-        // the start lights: a red bloom round each lit lamp; at LIGHTS OUT a burst of speed ticks off the gantry
-        if (gantry.visible) {
-          lamps.forEach((col, i) => {
-            if (t < LIGHTS[i] || t >= OUT) return;
-            const pop = 1 + 0.35 * (1 - env(t, LIGHTS[i], LIGHTS[i] + 0.08));
-            col.forEach(({ m }) => {
-              m.getWorldPosition(tmp); root.worldToLocal(tmp);
-              const [lx, ly] = k.toScreen(tmp);
-              q.noStroke();
-              q.fill(255, 60, 30, 70 * fade); q.circle(lx, ly, 10 * pop);
-              q.fill(255, 90, 50, 90 * fade); q.circle(lx, ly, 7 * pop);
+        // the lens: off until CLICK, then a white disc and a crisp horizontal flare; a burst on the click, a
+        // pulse on every heartbeat, two quick flashes when it retries a dropped node; the ping up the trail
+        if (t >= CLICK && e < 0.22) {
+          const [lx, ly] = k.toScreen(lensAt(tmp));
+          const offA = 1 - env(e, 0.18, 0.22);
+          let g = 1 + 0.05 * Math.sin(t * TAU / 2.4);
+          if (n >= 0) g += 0.15 * hump(p, 0, 0.05, 0.15);
+          if (n >= 0 && n % 2 === 0) g += 0.45 * (hump(p, 1.75, 1.79, 1.83) + hump(p, 1.87, 1.91, 1.95));
+          const burst = env(t, CLICK, CLICK + 0.23);
+          if (burst < 1) {
+            const R = 1 - Math.abs(burst - 0.35) / 0.65;
+            [[0, 30], [-30, 22], [-60, 22], [-90, 18], [-120, 22], [-150, 22], [180, 30]].forEach(([deg, len]) => {
+              const a = deg / 180 * Math.PI, r0 = 6, r1 = r0 + len * Math.max(0, R);
+              c.beginPath(); c.moveTo(lx + Math.cos(a) * r0, ly + Math.sin(a) * r0); c.lineTo(lx + Math.cos(a) * r1, ly + Math.sin(a) * r1);
+              c.strokeStyle = INK; c.lineWidth = 2.2; c.stroke();
+              c.strokeStyle = '#fffdf3'; c.lineWidth = 1; c.stroke();
             });
-          });
-        }
-        const lo = hump(t, OUT, OUT + 0.05, OUT + 0.3) * fade;
-        if (lo > 0.02) {
-          const [gx, gy] = k.screenAt(256, 56, 14);
-          inkS(0.95 * lo); q.strokeWeight(1.6);
-          for (let i = 0; i < 12; i++) {
-            const a = (i / 12) * TAU + 0.13, r0 = 36 + 10 * (1 - lo), r1 = r0 + 7 * lo;
-            q.line(gx + Math.cos(a) * r0, gy + Math.sin(a) * r0 * 0.45, gx + Math.cos(a) * r1, gy + Math.sin(a) * r1 * 0.45);
+          }
+          const grow = Math.max(0, ease.outBack(env(t, CLICK, CLICK + 0.12)));
+          star4(lx, ly, 13 * g * grow, 3.5 * g * grow, offA, '#fffdf3', 1.3, 0.8);
+          c.globalAlpha = offA; c.fillStyle = '#fffbea'; c.strokeStyle = INK; c.lineWidth = 0.8;
+          c.beginPath(); c.arc(lx, ly, 3.4 * grow, 0, TAU); c.fill(); c.stroke(); c.globalAlpha = 1;
+          const hb = Math.max(hump(t, CLICK, CLICK + 0.03, CLICK + 0.15), n >= 0 ? hump(p, 0, 0.03, 0.15) : 0) * offA;
+          if (hb > 0.02) {
+            const [gx, gy] = k.toScreen(ledAt(tmp));
+            c.globalAlpha = hb; c.fillStyle = '#38e07a'; c.strokeStyle = INK; c.lineWidth = 0.6;
+            c.beginPath(); c.arc(gx, gy, 0.9, 0, TAU); c.fill(); c.stroke(); c.globalAlpha = 1;
+          }
+          if (n >= 0 && n % 2 === 0 && p >= 1.85 && p < 2.1) {
+            const d = DROPS[(n / 2) % 3];
+            const path = [[lx, ly], ...P.slice(0, d + 1)];
+            const segL = path.slice(1).map((b, i) => Math.hypot(b[0] - path[i][0], b[1] - path[i][1]));
+            const total = segL.reduce((a, b) => a + b, 0);
+            const at = (s) => {
+              let L = s * total;
+              for (let i = 0; i < segL.length; i++) {
+                if (L <= segL[i] || i === segL.length - 1) { const f = Math.min(1, L / segL[i]); return [path[i][0] + (path[i + 1][0] - path[i][0]) * f, path[i][1] + (path[i + 1][1] - path[i][1]) * f]; }
+                L -= segL[i];
+              }
+              return path[path.length - 1];
+            };
+            const s = ease.inOut(env(p, 1.85, 2.1));
+            for (let j = 6; j >= 0; j--) {
+              const [x, y] = at(Math.max(0, s - j * 0.03));
+              c.globalAlpha = (1 - j / 7) * 0.9; c.fillStyle = '#ffffff';
+              c.beginPath(); c.arc(x, y, 1.6 * (1 - j / 9), 0, TAU); c.fill();
+            }
+            const [x, y] = at(s);
+            c.globalAlpha = 1; c.strokeStyle = INK; c.lineWidth = 0.6; c.beginPath(); c.arc(x, y, 1.6, 0, TAU); c.stroke();
           }
         }
 
-        // the terminal: a comic speech balloon that is a terminal window (title bar, three dots), typing out
-        // what he says; a new line once per beat
-        const bub = presence(t, e, BUB0, 0.3, ease.outBack, 0.15);
-        if (bub > 0.01) {
-          const LINES = ['btw, I use Arch', '$ sudo climb', ':wq  # summit'];
-          let idx = 0, typed = 1, back = 0;
-          const tCh = BUB0 + 0.12;
-          if (t < T0 + 1.9) typed = env(t, tCh, tCh + 0.5);
-          else {
-            const n = Math.floor((t - T0 - 1.9) / BEAT), lt = (t - T0 - 1.9) - n * BEAT;
-            idx = (n + 1) % LINES.length;
-            back = 1 - env(lt, 0, 0.16);                                   // the old line backspaces away
-            typed = env(lt, 0.2, 0.62);
-            if (back > 0) { idx = n % LINES.length; typed = back; }
-          }
-          const line = LINES[idx], shown = line.slice(0, Math.round(line.length * typed));
-          const [bx0, by0] = k.screenAt(14, 184, 6), [bx1, by1] = k.screenAt(194, 256, 6);
-          const [tx, ty] = k.screenAt(208, 286, 6);
-          const W = bx1 - bx0, H = by1 - by0, TB = 6.4;
-          q.push();
-          q.translate(tx, ty); q.scale(bub); q.translate(-tx, -ty);
-          const rr = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
-          const tail = () => { c.beginPath(); c.moveTo(bx1 - 30, by1 - 1); c.lineTo(tx, ty); c.lineTo(bx1 - 16, by1 - 1); c.closePath(); };
+        // lettering, never more than two on screen: CLICK! on the click, the 3 AM caption, BACK UP! on a relight
+        const word = (txt, x, y, size, rot, a, s, o) => {
+          if (a <= 0.01) return;
           c.save();
-          c.globalAlpha = Math.min(1, bub);
+          c.translate(x, y); c.rotate(rot); c.scale(s * 0.9, s);
+          c.globalAlpha = a;
+          c.font = `900 ${size}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
           c.lineJoin = 'round';
-          // white halo, ink outline, body
-          c.lineWidth = 4.4; c.strokeStyle = 'rgba(255,255,255,0.9)'; rr(bx0, by0, W, H, 4); c.stroke(); tail(); c.stroke();
-          c.lineWidth = 2.2; c.strokeStyle = '#16151a'; rr(bx0, by0, W, H, 4); c.stroke(); tail(); c.stroke();
-          c.fillStyle = '#1d2129'; tail(); c.fill(); rr(bx0, by0, W, H, 4); c.fill();
-          c.save(); rr(bx0, by0, W, H, 4); c.clip();
-          c.fillStyle = '#323844'; c.fillRect(bx0, by0, W, TB);
-          c.fillStyle = 'rgba(255,255,255,0.06)'; c.fillRect(bx0, by0 + TB, W, 1);
+          c.strokeStyle = BLUE; c.fillStyle = BLUE; c.lineWidth = o.ink; c.strokeText(txt, 1.4, 1.4); c.fillText(txt, 1.4, 1.4);
+          c.strokeStyle = INK; c.lineWidth = o.ink; c.strokeText(txt, 0, 0);
+          c.fillStyle = o.fill; c.fillText(txt, 0, 0);
           c.restore();
-          ['#ff5f57', '#febc2e', '#28c840'].forEach((col, i) => { c.fillStyle = col; c.beginPath(); c.arc(bx0 + 4.4 + i * 4.4, by0 + TB / 2, 1.35, 0, TAU); c.fill(); });
-          c.fillStyle = 'rgba(220,226,240,0.55)'; c.font = '600 3.6px Menlo, Consolas, "DejaVu Sans Mono", monospace'; c.textBaseline = 'middle';
-          c.fillText('prince@summit: ~', bx0 + 18, by0 + TB / 2 + 0.2);
-          // the line, and a block cursor (solid while typing, blinking after)
-          c.font = '700 6.6px Menlo, Consolas, "DejaVu Sans Mono", monospace';
-          const ly = by0 + TB + (H - TB) / 2 + 0.4;
-          let x = bx0 + 4;
-          if (shown.startsWith('$')) { c.fillStyle = '#7fb4ff'; c.fillText('$', x, ly); x += c.measureText('$').width; c.fillStyle = '#8af5a6'; c.fillText(shown.slice(1), x, ly); x += c.measureText(shown.slice(1)).width; }
-          else { c.fillStyle = shown.startsWith(':') ? '#ffd479' : '#8af5a6'; c.fillText(shown, x, ly); x += c.measureText(shown).width; }
-          const busy = typed < 1 || back > 0;
-          if (busy || Math.floor(t * 2.4) % 2 === 0) { c.fillStyle = '#8af5a6'; c.fillRect(x + 0.6, ly - 3.4, 3.4, 6.6); }
+        };
+        const ck = (t < CLICK ? 0 : ease.outBack(env(t, CLICK, CLICK + 0.1), 2)) * (1 - env(t, 0.88, 1.0));
+        if (ck > 0.01) {
+          const [x, y] = k.screenAt(176, 166, 10);
+          word('CLICK!', x, y, 10, -0.21, Math.min(1, ck), ck, { fill: '#ffffff', ink: 2 });
+          const [lx, ly] = k.toScreen(lensAt(tmp));
+          c.strokeStyle = INK; c.lineWidth = 1.2; c.globalAlpha = Math.min(1, ck);
+          [-0.5, 0, 0.5].forEach((o) => {
+            const ax = lx - 12, ay = ly - 3 + o * 7, bx = x + 16, by = y - 2 + o * 5;
+            c.beginPath(); c.moveTo(ax + (bx - ax) * 0.25, ay + (by - ay) * 0.25); c.lineTo(ax + (bx - ax) * 0.6, ay + (by - ay) * 0.6); c.stroke();
+          });
+          c.globalAlpha = 1;
+        }
+        const cap = presence(t, e, 1.0, 0.25, ease.outBack, 0);
+        if (cap > 0.01) {
+          const [x, y] = k.screenAt(170, 84, 6);
+          c.save();
+          c.translate(x, y - (1 - Math.min(1, cap)) * 18); c.rotate(-0.052); c.scale(Math.min(1.05, cap), Math.min(1.05, cap));
+          c.globalAlpha = Math.min(1, cap * 1.5);
+          c.fillStyle = '#0e1426'; c.fillRect(-23.5 + 2, -9 + 2, 47, 18);
+          c.fillStyle = '#f3ead6'; c.fillRect(-23.5, -9, 47, 18);
+          c.strokeStyle = INK; c.lineWidth = 1.5; c.strokeRect(-23.5, -9, 47, 18);
+          c.font = `900 14px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+          c.fillStyle = INK; c.scale(0.9, 1); c.fillText('3 AM', 0, 1);
           c.restore();
-          q.pop();
         }
-
-        // the milestone lands: pop lines out of the slope
-        const ml = hump(t, MS0 + 0.22, MS0 + 0.28, MS0 + 0.55) * fade;
-        if (ml > 0.02 && ms.visible) {
-          ms.getWorldPosition(tmp); root.worldToLocal(tmp);
-          const [mx, my] = k.toScreen(tmp);
-          inkS(0.95 * ml); q.strokeWeight(1.7);
-          [-1, 1].forEach((sd) => [[12, 5], [40, 6.5], [66, 4.5]].forEach(([deg, len]) => {
-            const a = sd < 0 ? Math.PI + (deg * Math.PI) / 180 : -(deg * Math.PI) / 180;
-            const r0 = 15 + 3 * (1 - ml), r1 = r0 + len * ml;
-            q.line(mx + Math.cos(a) * r0, my - 12 + Math.sin(a) * r0 * 0.8, mx + Math.cos(a) * r1, my - 12 + Math.sin(a) * r1 * 0.8);
-          }));
-        }
-
-        // the print: the hot nozzle tip glows, a fleck of hot plastic now and then; a twinkle on the pompom when done
-        if (printer.visible && t >= PR0 && t < PR1) {
-          printer.getWorldPosition(tmp); root.worldToLocal(tmp);
-          const [nx, ny] = k.toScreen(tmp);
-          const fl = 0.8 + 0.2 * Math.sin(t * 90);
-          q.noStroke();
-          q.fill(255, 140, 46, 120 * fade * fl); q.circle(nx, ny + 0.4, 5.2);
-          q.fill(255, 236, 170, 255 * fade); q.circle(nx, ny + 0.3, 2.1);
-          const sp = (t * 7) % 1;
-          q.stroke(255, 170, 60, 220 * (1 - sp) * fade); q.strokeWeight(0.9);
-          q.line(nx + 1.5 + sp * 3, ny - sp * 4, nx + 2 + sp * 4.5, ny - sp * 5.5);
-        }
-        const done = hump(t, PR1 + 0.04, PR1 + 0.14, PR1 + 0.4) * fade;
-        if (done > 0.02) {
-          pom.getWorldPosition(tmp); root.worldToLocal(tmp);
-          const [px, py] = k.toScreen(tmp);
-          star4(px + 7, py - 7, 6.5 * done, done);
+        if (n >= 0 && n % 2 === 0) {
+          const wa = (s0) => ease.outBack(env(p, s0, s0 + 0.22), 1.8) * (1 - env(p, 3.0, 3.3)) * (1 - env(e, 0, 0.6));
+          const a1 = wa(2.12), a2 = wa(2.18);
+          const line = (txt, u, v, a) => {
+            if (a <= 0.01) return;
+            const [x, y] = k.screenAt(u, v, 6);
+            c.save(); c.translate(x, y); c.rotate(-0.105 + (1 - Math.min(1, a)) * -0.14);
+            c.font = `900 20px ${FONT}`;
+            const ws = [...txt].map((ch) => c.measureText(ch).width * 0.9);
+            let xx = -ws.reduce((sum, w) => sum + w, 0) / 2;
+            [...txt].forEach((ch, i) => {
+              word(ch, xx + ws[i] / 2, 0, 20, (i % 2 ? 1 : -1) * 0.05, Math.min(1, a), 0.6 + 0.4 * Math.min(1.1, a), { fill: '#eef5ff', ink: 2.6 });
+              xx += ws[i];
+            });
+            c.restore();
+          };
+          line('BACK', 105, 230, a1);
+          line('UP!', 113, 280, a2);
         }
       },
 
       dispose() {
         own.forEach((o) => o.dispose?.());
-        k.layers.plate.material.color.setRGB(1, 1, 1);
       },
     };
   },

@@ -31,11 +31,15 @@ Every avatar on https://yufeiding.ucsd.edu/people/team is its own Google Sites e
 - `people/static/fx/<name>-cut.webp` / `-plate.webp` — the person cut out / the photo with the person
   inpainted out. Make them with `python3 people/fx/tools/make_layers.py <name> --grid` (BiRefNet portrait
   matte via rembg; the `--grid` image is how you read landmarks — red lines every 128 photo px, labels every 64).
-- Real-photo set pieces beat code-painted ones (a painted toon snow peak read as a little house). Parikshit's
-  peak is a public-domain photo (sky flood-filled away, hazed to the photo, `people/fx/tools/parikshit_peak.py`)
+- Real-photo set pieces beat code-painted ones (a painted toon snow peak read as a little house). Prince Modi's
+  (`parikshit`) peak is moonlit Chaukhamba from a CC BY 2.0 photo (sky flood-filled away, edge colour
+  decontaminated, graded to moonlight: `people/fx/tools/parikshit_peak.py`; the credit is the snippet's `title`)
   on a card whose shader samples a low-res photo-space mask, so it stays behind the photo's own near ridges and
-  can climb up from behind them. Download from Commons via `Special:FilePath/<file>?width=N` (the API rate-limits
-  the proxy) and check the file page's licence first.
+  can climb up from behind them. A whole-scene change of light (his day -> 3 a.m.) is baked offline
+  (`parikshit_night.py`: night twins of the photo, plate and cut layers, a night photo lending colour statistics
+  only) and crossfaded per layer in an `onBeforeCompile` on the kit's layer materials (as Haotian's cap removal).
+  Download from Commons via `Special:FilePath/<file>?width=N` (the API rate-limits the proxy) and check the file
+  page's licence first. Painted props (his headlamp) come from Codex on #00FF00, keyed.
 - Not on the kit: the alumni Alon, Chenyang and Hezi (`alon_iron_man.html`, `chenyang_captain_america.html`,
   `hezi_scholar.html`): alumni have no avatar on the Team page, so the user asked to leave them as they are.
   Everyone else, Yufei (`yufei_cats.html`), Haotian (`haotian_shen.html`) and Xinwei (`xinwei_masterchef.html`,
