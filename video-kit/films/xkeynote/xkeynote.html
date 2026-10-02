@@ -1,0 +1,395 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Picasso Lab - 136 papers</title>
+<!-- Picasso Lab's first X post: a keynote-style 3D film (4:5, 30 fps) made of the lab's 136 real publications.
+     One continuous camera through one dark studio: the first paper in a spotlight -> a time spiral climbing to 2026
+     -> a growth chart by year -> paper piles by venue on the floor -> three atomic orbits (the three research
+     directions) -> the award papers -> the team -> the logo. Data and page textures: social/x/paperwall.py --export. -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const Q = new URLSearchParams(location.search);
+const FPS = 30, NF = 1330, TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const sm = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+const eio = (x) => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const eio5 = (x) => { x = clamp(x); return x < 0.5 ? 16 * x ** 5 : 1 - Math.pow(-2 * x + 2, 5) / 2; };   // keynote ease: long, soft
+const eout = (x) => { x = clamp(x); return 1 - Math.pow(1 - x, 3); };
+const hsh = (...n) => { let x = Math.sin(n.reduce((s, v, i) => s + v * (12.9898 + i * 78.233), 0.5)) * 43758.5453; return x - Math.floor(x); };
+const win = (f, a, b, fa = 12, fb = fa) => sm((f - a) / fa) * (1 - sm((f - b + fb) / fb));
+
+let D, T;
+const loadImg = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });                 // data, three handles
+const st = {};
+const ASP = 0.773;        // page aspect (letter)
+
+// ---------------------------------------------------------------------------------------------------------
+// timeline (frames @ 30 fps)
+// ---------------------------------------------------------------------------------------------------------
+const S = {
+  first: [0, 120],                // the first paper, alone in a spotlight
+  spiral: [110, 350],             // the time spiral; papers appear as the year passes
+  years: [350, 470],              // growth chart
+  piles: [470, 600],              // piles by venue on the floor
+  orbit: [600, 850],              // three orbits; focus visits at FOC
+  awards: [850, 1060],
+  team: [1060, 1180],
+  end: [1180, NF],
+};
+const FOC = [[668, 722], [728, 782], [788, 842]];
+const APPEAR = (rank) => S.spiral[0] + 6 + 214 * Math.pow(rank / 135, 0.85);
+
+// ---------------------------------------------------------------------------------------------------------
+// layouts: per paper {p:[x,y,z], r:[rx,ry,rz], s:size(height), dim:0..1}
+// ---------------------------------------------------------------------------------------------------------
+const RANK = {};
+function layFirst(k) {
+  if (RANK[k] === 0) return { p: [0, 0.15, 0], r: [0, -0.32, 0], s: 1.25, dim: 0 };
+  return { p: [0, -1, -14], r: [0, 0, 0], s: 0.001, dim: 1 };
+}
+function laySpiral(k) {
+  const i = RANK[k], th = i * 0.4;
+  return { p: [3.1 * Math.sin(th), -2.2 + i * 0.05, 3.1 * Math.cos(th)], r: [0, th, 0], s: 0.62, dim: 0 };
+}
+function layYears(k) {
+  const p = D.pubs[k];
+  if (p.yr == null) { const j = D.order.filter((q) => D.pubs[q].yr == null).indexOf(k); return { p: [6 + j * 0.2, -1.5, -4], r: [0, 0, 0], s: 0.001, dim: 1 }; }
+  const same = D.order.filter((q) => D.pubs[q].yr === p.yr), j = same.indexOf(k);
+  return { p: [(p.yr - 2019.5) * 0.47, -1.85 + j * 0.24, -j * 0.012], r: [0, 0, (hsh(k, 6) - 0.5) * 0.04], s: 0.5, dim: 0 };
+}
+const FLOOR = -2.4;
+const PILEX = (c) => (c - 3.5) * 1.12;
+function layPiles(k) {
+  const v = D.pubs[k].venue, c = D.topv.indexOf(v);
+  if (c < 0) return { p: [(hsh(k, 8) - 0.5) * 16, FLOOR + 0.01, -7 - hsh(k, 9) * 5], r: [-Math.PI / 2, 0, hsh(k, 7) * TAU], s: 0.7, dim: 0.85 };
+  const same = D.order.filter((q) => D.pubs[q].venue === v), j = same.indexOf(k);
+  return { p: [PILEX(c) + (hsh(k, 3) - 0.5) * 0.05, FLOOR + 0.02 + j * 0.085, (hsh(k, 4) - 0.5) * 0.05], r: [-Math.PI / 2, 0, (hsh(k, 5) - 0.5) * 0.25], s: 0.78, dim: 0 };
+}
+const CORES = [[-2.25, -0.2, 0], [0, 2.0, -0.6], [2.25, -0.2, 0]];
+const CORE_COL = [0x3a8dff, 0x5fd06a, 0xff5050];
+const orbitSpin = (f) => (f - S.orbit[0]) * 0.006;
+function layOrbit(k, f = S.orbit[0]) {
+  const r = D.pubs[k].ring, mem = D.order.filter((q) => D.pubs[q].ring === r), j = mem.indexOf(k), n = mem.length;
+  const [cx, cy, cz] = CORES[r];
+  const band = j % 3, a = (j / n) * TAU + orbitSpin(f) * (band === 1 ? -1 : 1) * (1 + 0.2 * band);
+  const R = 1.0 + 0.2 * band, tilt = [0.45, -0.5, 0.0][band] + r * 0.3;
+  // a tilted circle: x/z plane rotated about x by tilt
+  const x = R * Math.cos(a), z0 = R * Math.sin(a);
+  return { p: [cx + x, cy + z0 * Math.sin(tilt) * 0.6, cz + z0 * Math.cos(tilt)], r: [0, a + Math.PI / 2, 0], s: 0.3, dim: 0 };
+}
+const AWX = (i) => [(i % 3 - 1) * 1.22, i < 3 ? 1.05 : -0.55, 0.6];
+function layAwards(k) {
+  const i = D.awards.indexOf(k);
+  if (i >= 0) { const [x, y, z] = AWX(i); return { p: [x, y, z], r: [0, -x * 0.06, 0], s: 1.08, dim: 0 }; }
+  return { p: [(hsh(k, 12) - 0.5) * 14, (hsh(k, 13) - 0.5) * 8, -9 - hsh(k, 14) * 6], r: [hsh(k, 15) * 3, hsh(k, 16) * 3, 0], s: 0.5, dim: 1 };
+}
+function layTeam(k, f = S.team[0]) {
+  const i = RANK[k], a = i * 2.39996 + (f - S.team[0]) * 0.004, R = 3.4 + (i % 5) * 0.35;
+  return { p: [R * Math.cos(a), 0.3 + (hsh(k, 21) - 0.5) * 5.4, -2.6 + R * Math.sin(a) * 0.5 - 1.2], r: [0, -a, (hsh(k, 22) - 0.5) * 0.5], s: 0.45, dim: 0.55 };
+}
+const layEnd = (k, f) => { const L = layTeam(k, f); return { ...L, p: [L.p[0] * 1.2, L.p[1], L.p[2] - 2.5], dim: 0.85 }; };
+const LAYS = [['first', layFirst], ['spiral', laySpiral], ['years', layYears], ['piles', layPiles], ['orbit', layOrbit], ['awards', layAwards], ['team', layTeam], ['end', layEnd]];
+const TSTART = { spiral: 0, years: S.years[0] - 30, piles: S.piles[0] - 30, orbit: S.orbit[0] - 30, awards: S.awards[0] - 34, team: S.team[0] - 30, end: S.end[0] };
+const TDUR = 52;
+
+function paperState(k, f) {
+  // spiral: each paper appears when its year comes round
+  if (f < TSTART.years) {
+    const ap = APPEAR(RANK[k]);
+    if (RANK[k] === 0) {
+      const a = layFirst(k), b = laySpiral(k), t = eio5((f - (S.spiral[0] + 10)) / 80);
+      return mixS(a, b, t, 0);
+    }
+    if (f < ap - 24) return null;
+    const b = laySpiral(k), t = eout((f - ap + 24) / 24);
+    const from = { p: [b.p[0] * 2.4, b.p[1] - 1.2, b.p[2] * 2.4], r: [0.8, b.r[1] + 1.4, 0.3], s: b.s * 0.6, dim: 1 };
+    return mixS(from, b, t, 0);
+  }
+  let i = 2; for (let j = 2; j < LAYS.length; j++) if (f >= TSTART[LAYS[j][0]]) i = j;
+  const [name, fn] = LAYS[i], [pname, pfn] = LAYS[i - 1];
+  const d = hsh(k, i, 5) * 22 + (name === 'piles' ? D.topv.indexOf(D.pubs[k].venue) * 2 : 0);
+  const t = eio((f - TSTART[name] - d) / TDUR);
+  const pf = pname === 'orbit' ? f : undefined;
+  const a = pname === 'orbit' ? layOrbit(k, f) : pname === 'team' ? layTeam(k, f) : pfn(k);
+  const b = name === 'orbit' ? layOrbit(k, f) : name === 'team' ? layTeam(k, f) : name === 'end' ? layEnd(k, f) : fn(k);
+  const flip = (name === 'years' || name === 'awards') ? TAU : 0;   // a full turn in flight: the keynote flourish
+  return mixS(a, b, t, flip * (hsh(k, 7) > 0.5 ? 1 : -1), Math.sin(Math.PI * t) * (0.4 + 0.5 * hsh(k, i)));
+}
+function mixS(a, b, t, spin = 0, lift = 0) {
+  return { p: [lerp(a.p[0], b.p[0], t), lerp(a.p[1], b.p[1], t) + lift, lerp(a.p[2], b.p[2], t)],
+    r: [lerp(a.r[0], b.r[0], t), lerp(a.r[1], b.r[1], t) + spin * eio(t), lerp(a.r[2], b.r[2], t)], s: lerp(a.s, b.s, t), dim: lerp(a.dim, b.dim, t) };
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// camera: keyframed position / target / fov with long soft eases
+// ---------------------------------------------------------------------------------------------------------
+const CAM = [
+  [0, [0.35, 0.4, 2.15], [0, 0.32, 0], 34],
+  [100, [-0.3, 0.35, 2.7], [0, 0.3, 0], 34],
+  [190, [5.5, 0.4, 7.5], [0, 0.2, 0], 38],
+  [300, [-6.5, 4.6, 6.0], [0, 2.4, 0], 40],
+  [350, [-2.0, 6.2, 9.0], [0, 2.6, 0], 40],
+  [430, [0, 0.5, 11.6], [0, 0.4, 0], 38],
+  [470, [0.5, 0.3, 11.2], [0, 0.3, 0], 38],
+  [530, [-5.2, -1.2, 5.6], [-0.6, -1.9, 0], 36],
+  [600, [4.8, -1.0, 5.0], [0.6, -1.9, 0], 36],
+  [652, [0, 0.9, 9.8], [0, 0.8, -0.2], 38],
+  [668, [-1.0, 0.4, 4.6], [-2.25, -0.2, 0], 36], [722, [-1.4, 0.2, 4.2], [-2.25, -0.2, 0], 36],
+  [736, [0.6, 2.6, 4.2], [0, 2.0, -0.6], 36], [782, [0.9, 2.4, 3.9], [0, 2.0, -0.6], 36],
+  [796, [1.0, 0.3, 4.6], [2.25, -0.2, 0], 36], [842, [1.4, 0.2, 4.2], [2.25, -0.2, 0], 36],
+  [870, [0, 0.6, 9.2], [0, 0.6, 0], 38],
+  [905, [-1.0, 1.15, 3.55], [-1.22, 1.05, 0.6], 32], [950, [-1.15, 1.1, 3.35], [-1.22, 1.05, 0.6], 32],
+  [988, [0, 0.3, 7.4], [0, 0.25, 0.4], 36], [1050, [0, 0.3, 7.9], [0, 0.25, 0.3], 36],
+  [1100, [0, 0.4, 7.6], [0, 0.3, -1], 36], [1180, [0.4, 0.4, 7.2], [0, 0.3, -1], 36],
+  [1230, [0, 0.6, 9.5], [0, 0.6, -1], 36], [NF, [0, 0.6, 9.0], [0, 0.6, -1], 36],
+];
+function camAt(f) {
+  if (f <= CAM[0][0]) return CAM[0];
+  for (let i = 1; i < CAM.length; i++) if (f < CAM[i][0]) {
+    const [a, pa, ta, fa] = CAM[i - 1], [b, pb, tb, fb] = CAM[i], t = eio5((f - a) / (b - a));
+    return [f, pa.map((v, j) => lerp(v, pb[j], t)), ta.map((v, j) => lerp(v, tb[j], t)), lerp(fa, fb, t)];
+  }
+  return CAM[CAM.length - 1];
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// scene
+// ---------------------------------------------------------------------------------------------------------
+defineScene({
+  meta: { title: 'Picasso Lab - 136 papers', durationFrames: NF, fps: FPS, width: 1080, height: 1350, seed: 7,
+    design: [1080, 1350], background: '#08080b', fonts: ['Inter', 'Instrument Serif'], boil: { every: 3, variants: 2 }, poster: 410 },
+  update(ctx) { update(ctx, ctx.iw); },
+  layers: [
+    { name: '3d', type: 'three', async init(ctx, three) { return build(ctx, three); }, draw(ctx) { T.composer.render(); return false; } },
+    { name: 'type', type: '2d', draw(ctx, g) { typeLayer(ctx, g, ctx.iw); } },
+  ],
+});
+
+async function build(ctx, { THREE, renderer }) {
+  D = await (await fetch('/scene/data.json')).json();
+  D.order.forEach((k, i) => { RANK[k] = i; });
+  st.team = await loadImg('/scene/team.jpg');
+  st.logo = await loadImg('/scene/logo.png');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x08080b);
+  scene.fog = new THREE.Fog(0x08080b, 9, 26);
+  const camera = new THREE.PerspectiveCamera(36, ctx.W / ctx.H, 0.1, 80);
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.82;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.22;
+
+  const key = new THREE.SpotLight(0xffffff, 120, 30, 0.55, 0.65, 1.6);
+  key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0004; key.shadow.radius = 4;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(0x9fb8ff, 0.6); rim.position.set(-6, 4, -6); scene.add(rim);
+  const fill = new THREE.AmbientLight(0xffffff, 0.06); scene.add(fill);
+
+  // floor: dark, slightly glossy, catches the shadows of the piles
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x0d0d11, roughness: 0.42, metalness: 0.25 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR; floor.receiveShadow = true; scene.add(floor);
+
+  // papers: front (the first page) + a plain back, one group each
+  const geo = new THREE.PlaneGeometry(ASP, 1);
+  const backMat = new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 0.7 });
+  const papers = [];
+  for (const p of D.pubs) {
+    const img = await loadImg(`/scene/pages/${String(p.k).padStart(3, '0')}.jpg`);
+    const tex = new THREE.Texture(img); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.needsUpdate = true;
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.62, metalness: 0, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.0 });
+    const g = new THREE.Group();
+    const front = new THREE.Mesh(geo, mat); front.castShadow = true; front.receiveShadow = true;
+    const back = new THREE.Mesh(geo, backMat); back.rotation.y = Math.PI; back.castShadow = true;
+    g.add(front, back); scene.add(g);
+    papers[p.k] = { g, mat };
+  }
+  // three glowing cores for the orbits
+  const cores = CORES.map((c, i) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.16, 48, 32), new THREE.MeshStandardMaterial({ color: CORE_COL[i], emissive: CORE_COL[i], emissiveIntensity: 1.1, roughness: 0.3 }));
+    m.position.set(...c); scene.add(m);
+    const l = new THREE.PointLight(CORE_COL[i], 0, 5, 1.6); l.position.set(...c); scene.add(l);
+    return { m, l };
+  });
+  // the team photo: a print floating in the light
+  const teamTex = new THREE.Texture(st.team); teamTex.colorSpace = THREE.SRGBColorSpace; teamTex.needsUpdate = true;
+  const team = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 3.15), new THREE.MeshStandardMaterial({ map: teamTex, roughness: 0.5, emissive: 0xffffff, emissiveMap: teamTex, emissiveIntensity: 0.22 }));
+  team.castShadow = true; scene.add(team);
+
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bokeh = new BokehPass(scene, camera, { focus: 5, aperture: 0.0016, maxblur: 0.008 });
+  composer.addPass(bokeh);
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(ctx.W, ctx.H), 0.2, 0.5, 0.94));
+  composer.addPass(new OutputPass());
+  T = { THREE, scene, camera, key, rim, fill, floor, papers, cores, team, composer, bokeh };
+  return { scene, camera };
+}
+
+function update(ctx, f) {
+  const { THREE, camera, key, papers, cores, team, bokeh } = T;
+  const [, cp, ct, fov] = camAt(f);
+  // a breath of handheld drift, so it never feels frozen
+  const dx = 0.03 * Math.sin(f * 0.021) + 0.015 * Math.sin(f * 0.053), dy = 0.02 * Math.sin(f * 0.017 + 1);
+  camera.position.set(cp[0] + dx, cp[1] + dy, cp[2]); camera.fov = fov; camera.lookAt(ct[0], ct[1], ct[2]);
+  camera.updateProjectionMatrix(); camera.updateMatrixWorld(true); ctx.camera = camera;
+  // focus pulls to the target
+  bokeh.uniforms.focus.value = camera.position.distanceTo(new THREE.Vector3(...ct));
+  bokeh.uniforms.aperture.value = f < S.spiral[0] + 40 || (f > S.awards[0] + 40 && f < S.awards[0] + 110) ? 0.004 : 0.0018;
+  // the key light follows the story: a tight spot on the first paper, then a broad top light
+  const spot = 1 - sm((f - 90) / 60);
+  key.position.set(lerp(4, 1.2, spot), lerp(9, 4.5, spot), lerp(6, 3.2, spot));
+  key.target.position.set(...ct); key.target.updateMatrixWorld();
+  key.angle = lerp(0.85, 0.36, spot); key.intensity = lerp(95, 26, spot) * sm((f - 4) / 26) * (1 - 0.45 * win(f, S.awards[0] + 30, S.awards[0] + 120, 20, 20));
+  // papers
+  const awardsDim = sm((f - S.awards[0] + 20) / 30) * (1 - sm((f - S.team[0] + 10) / 30));
+  for (const p of D.pubs) {
+    const s = paperState(p.k, f), P = papers[p.k];
+    if (!s || s.s < 0.002) { P.g.visible = false; continue; }
+    P.g.visible = true;
+    P.g.position.set(...s.p); P.g.rotation.set(s.r[0], s.r[1], s.r[2], 'YXZ'); P.g.scale.setScalar(s.s);
+    const isAw = D.awards.includes(p.k);
+    const lit = (isAw ? 0.05 * awardsDim : 0) + (focusLit(p.k, f) * 0.12);
+    P.mat.emissiveIntensity = lit;
+    P.mat.color.setScalar(0.9 * (1 - 0.8 * s.dim));
+  }
+  // cores
+  const ok = win(f, S.orbit[0] - 10, S.awards[0] + 10, 30, 30);
+  cores.forEach((c, i) => {
+    const pulse = 1 + 0.06 * Math.sin(f * 0.08 + i * 2);
+    c.m.scale.setScalar(Math.max(0.001, ok * pulse)); c.m.visible = ok > 0.01;
+    c.l.intensity = 6 * ok * (FOC.some(([a, b], j) => j === i && f >= a && f < b) ? 1.6 : 1);
+  });
+  // team print rises out of the dark
+  const tk = win(f, S.team[0] - 10, S.end[0] + 30, 40, 30);
+  team.visible = tk > 0.01; team.position.set(0, lerp(-3.5, 0.75, eio5(tk)), -0.6); team.rotation.set(lerp(-0.5, 0, eio5(tk)), 0, 0);
+  team.material.opacity = tk; team.material.transparent = tk < 1;
+  // the floor only where it belongs (piles)
+  T.floor.visible = f > S.years[0] && f < S.orbit[0] + 60;
+}
+function focusLit(k, f) {
+  for (let r = 0; r < 3; r++) if (D.reps[r].includes(k)) { const [a, b] = FOC[r]; return win(f, a, b, 10, 10); }
+  return 0;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// type: big clean sans, reveals with a rising mask and a focus pull
+// ---------------------------------------------------------------------------------------------------------
+function reveal(g, text, x, y, size, k, o = {}) {
+  if (k <= 0.005) return;
+  const weight = o.weight ?? 700, fam = o.family ?? 'Inter';
+  g.save();
+  g.font = `${o.italic ? 'italic ' : ''}${weight} ${size}px "${fam}"`;
+  g.textAlign = o.align ?? 'center'; g.textBaseline = 'alphabetic';
+  try { g.letterSpacing = `${(o.track ?? -0.02) * size + (1 - k) * size * 0.08}px`; } catch (e) { /* older canvas */ }
+  const e = eout(k);
+  g.globalAlpha = (o.alpha ?? 1) * clamp(k * 1.4);
+  const blur = (1 - e) * size * 0.08; if (blur > 0.3) g.filter = `blur(${blur.toFixed(1)}px)`;
+  if (o.grad) { const gr = g.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, o.grad[0]); gr.addColorStop(1, o.grad[1]); g.fillStyle = gr; }
+  else g.fillStyle = o.color ?? '#f5f5f7';
+  g.fillText(text, x, y + (1 - e) * size * 0.35);
+  g.restore();
+}
+const PR = (ctx, x, y, z) => ctx.project(new T.THREE.Vector3(x, y, z));
+const GRAD = ['#ffffff', '#a8a8b3'];
+function scrim(g, top, k, h = 420) {
+  if (k <= 0.01) return;
+  const y0 = top ? 0 : 1350 - h, gr = g.createLinearGradient(0, top ? 0 : 1350, 0, top ? h : 1350 - h);
+  gr.addColorStop(0, `rgba(8,8,11,${0.82 * k})`); gr.addColorStop(1, 'rgba(8,8,11,0)');
+  g.fillStyle = gr; g.fillRect(0, y0, 1080, h);
+}
+function typeLayer(ctx, g, f) {
+  const W = 1080;
+  scrim(g, true, 1, 330);
+  scrim(g, false, Math.max(win(f, 40, 116, 14, 12), win(f, 660, 846, 10, 10), win(f, S.team[0] + 30, S.end[0] + 16, 16, 14), sm((f - S.end[0]) / 30), win(f, 150, 352, 18, 16), win(f, S.awards[0] + 50, S.awards[0] + 112, 14, 12)), 520);
+  // 1 the first paper
+  reveal(g, '2013', W / 2, 1130, 150, win(f, 26, 112, 22, 14), { weight: 200, grad: GRAD, track: -0.03 });
+  reveal(g, 'It started with one paper.', W / 2, 1210, 40, win(f, 44, 112, 18, 14), { weight: 500, color: '#c7c7cc' });
+  // 2 the spiral: counter + year
+  const shown = D.order.filter((k, i) => APPEAR(i) + 10 <= f).length;
+  const yrNow = (() => { let y = 2013; D.order.forEach((k, i) => { if (APPEAR(i) <= f && D.pubs[k].yr) y = D.pubs[k].yr; }); return y; })();
+  const kc = win(f, 150, 352, 18, 16);
+  reveal(g, String(Math.max(1, shown)), W / 2, 270, 190, kc, { weight: 700, grad: GRAD, track: -0.04 });
+  reveal(g, 'papers', W / 2, 340, 46, kc, { weight: 500, color: '#a1a1a6' });
+  reveal(g, String(yrNow), W / 2, 1210, 64, kc, { weight: 300, color: '#f5f5f7', track: 0.02 });
+  // 3 growth by year
+  const ky = win(f, S.years[0] + 20, S.years[1] + 10, 16, 14);
+  reveal(g, 'A decade of research.', W / 2, 190, 74, ky, { weight: 700, grad: GRAD });
+  if (ky > 0.01) D.years.forEach((y, i) => {
+    const q = PR(ctx, (y - 2019.5) * 0.47, -2.35, 0);
+    reveal(g, `'${String(y % 100).padStart(2, '0')}`, q.x, q.y, 24, ky * sm((f - S.years[0] - 26 - i) / 10), { weight: 600, color: '#8e8e93' });
+    if (D.ycount[y]) { const t = PR(ctx, (y - 2019.5) * 0.47, -1.85 + (D.ycount[y] - 1) * 0.24 + 0.42, 0);
+      reveal(g, String(D.ycount[y]), t.x, t.y, 30, ky * sm((f - S.years[0] - 34 - i) / 10), { weight: 700, color: '#f5f5f7' }); }
+  });
+  // 4 piles by venue
+  const kp = win(f, S.piles[0] + 34, S.piles[1] + 20, 16, 14);
+  reveal(g, 'Where they were published.', W / 2, 190, 64, kp, { weight: 700, grad: GRAD });
+  if (kp > 0.01) D.topv.forEach((v, c) => {
+    const n = D.vcount[v], top = PR(ctx, PILEX(c), FLOOR + n * 0.085 + 0.35, 0), base = PR(ctx, PILEX(c), FLOOR - 0.05, 0.6);
+    const kk = kp * sm((f - S.piles[0] - 40 - c * 3) / 10);
+    reveal(g, String(n), top.x, top.y, 44, kk, { weight: 700, color: '#f5f5f7' });
+    reveal(g, v, base.x, base.y + 34, v.length > 7 ? 18 : 22, kk, { weight: 600, color: '#8e8e93' });
+  });
+  // 5 orbits
+  const ko = win(f, S.orbit[0] + 30, 664, 16, 12) + win(f, 844, S.orbit[1] + 16, 10, 14);
+  reveal(g, 'Three directions.', W / 2, 190, 74, ko, { weight: 700, grad: GRAD });
+  const COLS = ['#5aa2ff', '#7fe08a', '#ff7474'];
+  if (ko > 0.01) D.rings.forEach((r, i) => {
+    const q = PR(ctx, CORES[i][0], CORES[i][1] + (i === 1 ? 1.25 : -1.25), CORES[i][2]);
+    reveal(g, r.name, q.x, q.y + (i === 1 ? -10 : 30), 26, ko, { weight: 700, color: COLS[i] });
+    reveal(g, `${r.n} papers`, q.x, q.y + (i === 1 ? 22 : 62), 20, ko, { weight: 500, color: '#8e8e93' });
+  });
+  FOC.forEach(([a, b], i) => {
+    const kf = win(f, a + 4, b, 12, 10); if (kf <= 0.01) return;
+    const r = D.rings[i];
+    reveal(g, r.name, W / 2, 1000, 50, kf, { weight: 700, color: COLS[i] });
+    reveal(g, r.sub, W / 2, 1048, 26, kf, { weight: 500, color: '#a1a1a6' });
+    D.reps[i].forEach((k, j) => {
+      const p = D.pubs[k], kk = win(f, a + 12 + j * 6, b, 10, 10);
+      reveal(g, p.short, W / 2, 1120 + j * 58, 34, kk, { weight: 600, color: '#f5f5f7' });
+      reveal(g, p.tag + (p.award ? '  ·  ' + p.award.replace(' Award', '') : ''), W / 2, 1146 + j * 58, 18, kk, { weight: 500, color: '#8e8e93' });
+    });
+  });
+  // 6 awards
+  const ka = win(f, S.awards[0] + 50, S.awards[0] + 112, 14, 12);
+  reveal(g, 'Best Paper Award', W / 2, 170, 74, ka, { weight: 700, grad: ['#ffe6a8', '#c9962e'] });
+  reveal(g, 'ISCA 2026', W / 2, 228, 34, ka, { weight: 500, color: '#c7c7cc' });
+  reveal(g, D.pubs[D.awards[0]].short, W / 2, 1230, 40, ka, { weight: 600, color: '#f5f5f7' });
+  const kr = win(f, S.awards[0] + 118, S.awards[1] + 10, 14, 14);
+  reveal(g, 'Recognized.', W / 2, 190, 74, kr, { weight: 700, grad: GRAD });
+  if (kr > 0.01) D.awards.forEach((k, i) => {
+    const L = layAwards(k), q = PR(ctx, L.p[0], L.p[1] - L.s * 0.58, L.p[2]); const p = D.pubs[k];
+    const kk = kr * sm((f - S.awards[0] - 124 - i * 4) / 10);
+    reveal(g, p.award.replace(' Award', ''), q.x, q.y, 19, kk, { weight: 700, color: '#ffd77a' });
+    reveal(g, p.tag, q.x, q.y + 24, 17, kk, { weight: 500, color: '#a1a1a6' });
+  });
+  // 7 team
+  const kt = win(f, S.team[0] + 30, S.end[0] + 16, 16, 14);
+  reveal(g, 'The people behind them.', W / 2, 190, 64, kt, { weight: 700, grad: GRAD });
+  reveal(g, 'PhD students, postdocs and visiting interns.', W / 2, 1150, 32, win(f, S.team[0] + 44, S.end[0] + 16, 14, 14), { weight: 500, color: '#d1d1d6' });
+  reveal(g, 'Alumna Dr. Hezi Zhang is now an Assistant Professor at UW–Madison.', W / 2, 1198, 22, win(f, S.team[0] + 56, S.end[0] + 16, 14, 14), { weight: 500, color: '#8e8e93' });
+  // 8 end
+  const ke = sm((f - S.end[0] - 20) / 30);
+  if (ke > 0.01) {
+    g.save(); g.globalAlpha = ke; g.filter = `blur(${((1 - eout(ke)) * 6).toFixed(1)}px)`;
+    const lw = 520, sx = 0, sy = 0, sw = st.logo.width, sh = st.logo.height * 0.7;   // the three rings, without the black word
+    g.drawImage(st.logo, sx, sy, sw, sh, W / 2 - lw / 2, 230 + (1 - eout(ke)) * 30, lw, lw * sh / sw); g.restore();
+  }
+  reveal(g, 'Picasso Lab', W / 2, 700, 96, sm((f - S.end[0] - 34) / 26), { weight: 700, grad: GRAD });
+  reveal(g, 'UC San Diego  ·  Prof. Yufei Ding', W / 2, 760, 30, sm((f - S.end[0] - 44) / 22), { weight: 500, color: '#a1a1a6' });
+  reveal(g, 'We are recruiting PhD students.', W / 2, 900, 46, sm((f - S.end[0] - 64) / 24), { weight: 600, color: '#ffffff' });
+  reveal(g, '@PicassoLabUCSD', W / 2, 1040, 52, sm((f - S.end[0] - 80) / 22), { weight: 700, grad: ['#8fc1ff', '#5aa2ff'] });
+  reveal(g, 'yufeiding.ucsd.edu', W / 2, 1092, 26, sm((f - S.end[0] - 86) / 22), { weight: 500, color: '#8e8e93' });
+}
+</script></body></html>
