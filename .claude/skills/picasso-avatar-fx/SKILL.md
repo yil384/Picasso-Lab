@@ -31,6 +31,11 @@ Every avatar on https://yufeiding.ucsd.edu/people/team is its own Google Sites e
 - `people/static/fx/<name>-cut.webp` / `-plate.webp` — the person cut out / the photo with the person
   inpainted out. Make them with `python3 people/fx/tools/make_layers.py <name> --grid` (BiRefNet portrait
   matte via rembg; the `--grid` image is how you read landmarks — red lines every 128 photo px, labels every 64).
+- Real-photo set pieces beat code-painted ones (a painted toon snow peak read as a little house). Parikshit's
+  peak is a public-domain photo (sky flood-filled away, hazed to the photo, `people/fx/tools/parikshit_peak.py`)
+  on a card whose shader samples a low-res photo-space mask, so it stays behind the photo's own near ridges and
+  can climb up from behind them. Download from Commons via `Special:FilePath/<file>?width=N` (the API rate-limits
+  the proxy) and check the file page's licence first.
 - Not on the kit: the alumni Alon, Chenyang and Hezi (`alon_iron_man.html`, `chenyang_captain_america.html`,
   `hezi_scholar.html`): alumni have no avatar on the Team page, so the user asked to leave them as they are.
   Everyone else, Yufei (`yufei_cats.html`), Haotian (`haotian_shen.html`) and Xinwei (`xinwei_masterchef.html`,
