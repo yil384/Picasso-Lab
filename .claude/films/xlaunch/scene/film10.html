@@ -970,6 +970,12 @@ const PRN = [0.98, FLOOR, -0.9];                       // the printer (a painted
 const CUP = [-0.9, -0.72], PEN = [0.78, 0.86, 0.35];
 const NOTE_AT = [[0.86, 1.04, 0.12], [0.88, 1.0, -0.1], [0.88, 1.04, 0.08]];     // page u, v, spin of each sticky note
 const DESK_X0 = -1.8;
+// the roll call follows yufeiding.ucsd.edu/people/team; members without art are left out (castFrom)
+const ROLL_GROUPS = [['PI', ['Y']], ['POSTDOCS', ['yue', 'zhengding', 'chang', 'yanju']], ['PH.D. STUDENTS', ['keyi', 'xiang', 'jixuan', 'zaifeng', 'zhongkai', 'zhuo', 'yichen', 'xinwei']],
+  ['MASTER’S & UNDERGRADS', ['haotian', 'parikshit', 'rishabh', 'ohm']]];
+let ROLLCALL = null;
+const rollcall = () => ROLLCALL || (ROLLCALL = ROLL_GROUPS.flatMap(([gname, ms]) => ms.filter((m) => m === 'Y' || MEMBERS.includes(m)).map((m) => ({ m, gname }))));
+const rollT0 = (i) => 1498 + i * 6;                     // when the truck reaches person i
 // the group photos around the team print (name, x, y, width): two above, one either side, two below
 const PHOTOS = [['chrismas', -0.52, 1.7, 0.95], ['party0725', 0.52, 1.7, 0.95], ['cny2026', -1.15, 0.62, 0.5], ['hezi_defense', 1.15, 0.62, 0.5],
   ['firespot41', -0.52, -0.2, 0.95], ['thanksgiving', 0.52, -0.2, 0.86]];                                  // the desk's left edge (b3 goes over it)
@@ -993,6 +999,13 @@ async function build10() {
   P9.page = K.titlePage({ w: 1.3 });
   P9.noteY = K.note(['first author', 'wanted.'], { w: 0.28, seed: 5, size: 80 });
   P9.logo = await K.logo3D();
+  {
+    const c = document.createElement('canvas'); c.width = c.height = 256; const g2 = c.getContext('2d'), gr = g2.createRadialGradient(128, 128, 0, 128, 128, 128);
+    gr.addColorStop(0, 'rgba(255,255,255,0.55)'); gr.addColorStop(0.45, 'rgba(255,255,255,0.18)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g2.fillStyle = gr; g2.fillRect(0, 0, 256, 256);
+    const t = new THREE.CanvasTexture(c);
+    P9.halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    P9.halo.visible = false; scene.add(P9.halo);
+  }
   P9.photos = [];
   for (const [n, x, y, w] of PHOTOS) {
     const img = await T.loadImg(`/scene/photos/${n}.jpg`), c = document.createElement('canvas'), B = 30;
@@ -1036,7 +1049,7 @@ async function build10() {
 function hide10() {
   if (!P9.clips) return;
   BIG_DY = 0; P9.circle.mat.depthTest = true; P9.circle.mesh.renderOrder = 3; P9.clips.forEach((c) => { c.g.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
-  P9.page.g.visible = false; P9.noteY.g.visible = false; P9.circleY.set(0, 0); P9.logo.g.visible = false; P9.photos.forEach((p) => { p.m.visible = false; });
+  P9.page.g.visible = false; P9.noteY.g.visible = false; P9.circleY.set(0, 0); P9.logo.g.visible = false; P9.photos.forEach((p) => { p.m.visible = false; }); P9.halo.visible = false;
   P9.bill.mesh.visible = false; P9.big.mesh.visible = false; P9.big.mat.color.setScalar(1);
   [P9.circle, P9.stain, P9.strike, P9.circleB, P9.working, P9.under, ...P9.seals, ...Object.values(P9.st)].forEach((d) => d.set(0, 0));
   P9.wall.visible = false; P9.sky.visible = false; P9.spot.intensity = 0;
@@ -1108,8 +1121,8 @@ const CAMS10 = {
   f4: camPath([[1380, [0.1, 0.62, 3.0], [0.0, 0.4, BIG_Z], 34], [1439, [0.06, 0.5, 2.7], [0.0, 0.3, BIG_Z], 34]], lin),
   f5: camPath([[1440, [0.05, 0.12, 3.25], [0, -0.06, 0.2], 32], [1499, [0.04, 0.1, 3.0], [0, -0.06, 0.2], 32]], lin),
   // the roll call: one steady truck along the line, flowing into the pull-back for Yufei and the cat
-  g1: camPath([[1500, [ROLL(0, 14)[0] + 0.25, 0.22, 3.2], [ROLL(0, 14)[0] + 0.25, -0.12, 0.3], 34], [1590, [ROLL(13, 14)[0] - 0.4, 0.22, 3.2], [ROLL(13, 14)[0] - 0.4, -0.12, 0.3], 34],
-    [1649, [0, 0.62, 6.6], [0, -0.05, 0.3], 34]], cruise),
+  g1: (f) => (CAM_G1 || (CAM_G1 = (() => { const n = rollcall().length, a = ROLL(0, n)[0] + 0.25, b = ROLL(n - 1, n)[0] - 0.4;
+    return camPath([[1500, [a, 0.22, 3.2], [a, -0.12, 0.3], 34], [1590, [b, 0.22, 3.2], [b, -0.12, 0.3], 34], [1649, [b * 0.45, 0.5, 5.8], [b * 0.45, -0.05, 0.3], 34]], cruise); })()))(f),
   h1: camPath([[1710, ...ORB(0.14, 0.06, 3.9, 56, 0), 30], [1769, ...ORB(0.13, 0.04, 3.6, 56, 0), 30]], lin),
   h2: (f) => camH2(f),
   // the logo: a slow orbit in, so the rings turn against the light
@@ -1152,6 +1165,7 @@ const CAMS_OVER = {
 // b3: a beat on the cat leaping off the edge after the bill, then the dive into the dark
 const B3_START = [[DESK_X0 + 1.3, FLOOR + 1.15, 2.1], [DESK_X0 + 0.05, FLOOR - 0.05, 0.85], 34];
 const CAM_B3 = camPath([[379, ...B3_START], [402, [DESK_X0 + 0.15, FLOOR + 0.3, 1.6], [DESK_X0 - 0.12, FLOOR - 2.3, 0.85], 38], [438, [DESK_X0 + 0.05, FLOOR - 1.1, 1.6], [DESK_X0 - 0.1, FLOOR - 4.8, 0.85], 40]], sine);
+let CAM_G1 = null;
 const CAM_G2 = camPath([[1655, [0, 0.55, 3.9], [0, 0.55, 0], 30], [1709, [0, 0.4, 7.9], [0, 0.36, 0], 30]], sine);
 function camX(f) { return (CAMS10[shotX(f)] || CAMS10.f3)(f); }
 function apX(f) { const k = shotX(f); return k[0] === 'a' ? 0.0007 : k[0] === 'b' ? 0.0011 : 0.0007; }
@@ -1168,7 +1182,7 @@ function frameNew(ctx, f) {
   const yaw = Math.atan2(db.x, db.z) - Math.atan2(da.x, da.z), pitch = Math.asin(db.y) - Math.asin(da.y);
   const vf = c.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * 0.8);
   const sx = -yaw / hf, sy = pitch / vf, mag = Math.hypot(sx, sy);
-  T.blur.uniforms.uK.value = shotX(f) === shotX(Math.max(0, f - 1)) ? clamp((mag - 0.006) * 0.7, 0, 0.026) : 0;
+  T.blur.uniforms.uK.value = shotX(f) === shotX(Math.max(0, f - 1)) ? clamp((mag - 0.008) * 0.4, 0, 0.01) : 0;
   T.blur.uniforms.uDir.value = mag > 1e-6 ? [sx / mag, sy / mag] : [0, 0];
   T.grade.uniforms.uFrame.value = f;
   ctx.camera = T.camera;
@@ -1303,6 +1317,25 @@ function stormPapers(f, f0) {
   T.blur.uniforms.uK.value = f < f0 + 30 ? 0.016 : 0;
 }
 
+// ---- the three answers: each featured member stands in their ring once introduced; a warm pool of light on the ring
+// in focus (the backdrop bill falls off into shadow around it), or on the whole board for the pull-back --------------
+const RING_WHO = () => [[C.m.xiang, 'xiang_chip'], [C.m.zaifeng, 'zaifeng_gpu'], [C.m.zhongkai, 'zhongkai_wafer']];
+function ringMember(j) {
+  const [ch, pose] = RING_WHO()[j]; if (!ch) return;
+  const [cx, cy, cz] = L.RING_C[j], plat = cy - 0.3;
+  put(ch, pose, cx, cz - 0.04, { y: plat, h: 0.5, contact: false, rimCol: RIMC.ring[j], rim: 1.5 });
+  const k = D.byRing[j].find((q) => !D.reps[j].includes(q));
+  setPaper(T, k, { p: [cx, plat - 0.004, cz - 0.04], r: [-Math.PI / 2 + 0.45, 0, 0.2], s: 0.3, dim: 0 });
+}
+function ringLight(j, wide = 0) {
+  const sp = P9.spot, c = j >= 0 ? L.RING_C[j] : [0, 1.0, 0];
+  sp.color.setHex(0xfff0dc); sp.angle = lerp(0.42, 0.9, j >= 0 ? 0 : wide); sp.penumbra = 0.85; sp.distance = 14; sp.decay = 1.0;
+  sp.position.set(c[0] + 0.3, c[1] + 1.6, 3.2); sp.target.position.set(c[0], c[1] - 0.1, BIG_Z); sp.intensity = 13;
+  T.key.intensity = lerp(0.4, 0.8, j >= 0 ? 0 : wide); T.kick.intensity = 0.3; T.rim.intensity = 1.4;
+}
+// a soft warm glow far behind a dark set (depth for the roll call and the logo card)
+function halo3(x, y, z, w, h, k, col) { const m = P9.halo; m.visible = true; m.position.set(x, y, z); m.scale.set(w, h, 1); m.material.color.setRGB(col[0] * k, col[1] * k, col[2] * k); }
+
 // ---- the ending -------------------------------------------------------------------------------------------
 const PAGE = [0.12, 0.08, -0.04];
 function pageOnDesk() { const pg = P9.page; pg.g.visible = true; pg.g.position.set(PAGE[0], FLOOR + 0.008, PAGE[1]); pg.g.rotation.set(-Math.PI / 2, 0, PAGE[2], 'XYZ'); return true; }
@@ -1317,6 +1350,7 @@ function endDesk(f) {
 function logoCard(f) {
   const u = f - 1830, L3 = P9.logo, pr = L3.parts; L3.g.visible = true;
   T.mirror.visible = false; T.coat.visible = false; T.cyc.visible = false;
+  halo3(0, FLOOR + 1.0, -2.6, 6.0, 4.6, 0.1 * sm(u / 20), [1.0, 0.9, 0.78]);
   L3.g.position.set(0, FLOOR + 1.06, 0);
   L3.g.rotation.set(0.04 * Math.sin(u / 50), lerp(0.42, 0.05, eout(clamp(u / 70))) + 0.025 * Math.sin(u / 37), 0);
   const FROM = [[-2.8, 0.25, 1.2], [0.1, 2.2, 0.9], [2.8, 0.2, 1.2]];
@@ -1363,6 +1397,7 @@ const SHOTX = {
   b1(f) {
     deskOn(); for (let j = 0; j < 3; j++) { clipOnDesk(j); noteOn(j, 99); }
     const Lp = billLenAt(f), path = (s) => headPath(Lp - s); P9.bill.shape(path, 0, Lp);
+    halo3(PRN[0] - 0.3, FLOOR + 0.55, PRN[2] - 2.8, 5.5, 2.6, 0.2, [1.0, 0.82, 0.62]);           // lamp spill on the dark beyond the desk
     const u = f - 240, cj = landing(f, 284, 0.1, 8), o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
     if (u < 40) putH(C.cat, 'cat_sit', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.7, o);
     else putH(C.cat, 'cat_bat', PRN[0] - 0.46, PRN[2] + 0.4, 0.8, { ...o, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
@@ -1398,7 +1433,7 @@ const SHOTX = {
     T.grade.uniforms.uFade.value = 1 - sm(u / 6);
     T.key.intensity = 0.18; T.key.position.set(0.6, 4.5, 1.2); T.key.lookAt(0, FLOOR, 0); T.rim.intensity = 0.7; T.kick.intensity = 0.25;
     T.prac.position.set(-0.27, FLOOR + 0.83, 0.16); T.prac.intensity = 1.8; T.prac.distance = 4.0; T.prac.color.setHex(0xffc98a);
-    const sp = P9.spot; sp.intensity = 14; sp.position.set(0.15, FLOOR + 7.5, 0.0); sp.target.position.set(0.15, FLOOR, -0.1);
+    const sp = P9.spot; sp.color.setHex(0xdfe8ff); sp.angle = 0.22; sp.penumbra = 0.6; sp.distance = 10; sp.decay = 1.0; sp.intensity = 14; sp.position.set(0.15, FLOOR + 7.5, 0.0); sp.target.position.set(0.15, FLOOR, -0.1);
     put(C.desk, 'desk_empty', 0, 0, { light: 0.95, rim: 0.6, relief: 0, relight: 0 });
     const top = FLOOR + 8.6, fall = clamp(u / 18), Ld = (top - DESK_TOP) * eout(fall);
     P9.bill.shape((s) => { const d = Ld - s; return { p: [-0.08 + 0.03 * Math.sin(s * 3), DESK_TOP + 0.03 + Math.max(0, d), -0.25], side: [1, 0, 0] }; }, Math.max(0, Ld - 9), Ld);
@@ -1418,11 +1453,11 @@ const SHOTX = {
     }
   },
   e0(f) { const u = f - 900; if (u < 20) put(C.cat, 'cat_tug', lerp(-2.0, -1.0, eout(u / 20)), 1.1, { h: 0.36 }); const hoist = 1 - eio5(clamp((u - 10) / 18)); if (u >= 6) showBig(hoist * 3.2); },
-  e1(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); if (f >= 942) { const lm = landing(f, 944, 0.25, 5); put(C.m.rishabh, 'm_rishabh', 0.42, 0.18, { y: L.RING_C[1][1] - 0.5, h: 0.48, contact: false, lift: lm ? lm.lift : 0, sx: lm?.sx, sy: lm?.sy, rimCol: RIMC.ring[1], rim: 1.5 }); } },
-  e2(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); },
-  e3(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); },
+  e1(f) { ringLight(1); showBig(); P9.big.mat.color.setScalar(0.44); bigMarks(f); if (f >= 942) { const lm = landing(f, 944, 0.25, 5); put(C.m.rishabh, 'm_rishabh', 0.42, 0.18, { y: L.RING_C[1][1] - 0.5, h: 0.48, contact: false, lift: lm ? lm.lift : 0, sx: lm?.sx, sy: lm?.sy, rimCol: RIMC.ring[1], rim: 1.5 }); } },
+  e2(f) { ringLight(2); ringMember(1); showBig(); P9.big.mat.color.setScalar(0.44); bigMarks(f); },
+  e3(f) { ringLight(0); ringMember(1); ringMember(2); showBig(); P9.big.mat.color.setScalar(0.44); bigMarks(f); },
   e4(f) {
-    showBig(); P9.big.mat.color.setScalar(0.62 + 0.38 * sm((f - 1110) / 20)); bigMarks(f);
+    ringLight(-1, sm((f - 1110) / 30)); ringMember(0); ringMember(1); ringMember(2); showBig(); P9.big.mat.color.setScalar(0.44 + 0.3 * sm((f - 1110) / 30)); bigMarks(f);
     const t = sine(clamp((f - 1110) / 40)), c0 = CAMS_OVER.e3(1109);
     look(T, mix3(c0.p, [0.0, 1.35, 6.3], t), mix3(c0.t, [0.0, 1.3, BIG_Z], t), lerp(c0.fov, 34, t), 0.0005);
   },
@@ -1457,20 +1492,25 @@ const SHOTX = {
     put(C.y2, 'y_receipt', -0.34, 0.05, { h: 0.9, rimCol: RIMC.gold, light: 0.95 });
     if (u >= 14) { const d = P9.working, q = bigAt(BR.total, 0.66, 0, 0.014); d.mesh.position.copy(q); d.mesh.rotation.set(0, 0, 0.04); d.mesh.scale.setScalar(1); d.set(clamp((u - 14) / 18), 1); }
     P9.seals.forEach((d, i) => { const t0 = 30 + i * 5; if (u < t0 + 2) return; const q = bigAt(BR.total, 0.14 + i * 0.18, 0, 0.012); q.y -= 0.24; d.mesh.position.copy(q); d.mesh.rotation.set(0, 0, i * 0.7); d.set(1, 1); });
-    T.key.intensity = 1.2; T.key.position.set(1.0, 2.6, 2.4); T.key.lookAt(0, 0.4, BIG_Z);
+    T.key.intensity = 0.75; T.key.position.set(1.0, 2.6, 2.4); T.key.lookAt(0, 0.4, BIG_Z);
+    { const sp = P9.spot; sp.color.setHex(0xfff0dc); sp.angle = 0.5; sp.penumbra = 0.85; sp.distance = 14; sp.decay = 1.0; sp.position.set(0.4, 1.8, 2.6); sp.target.position.set(0.05, 0.42, BIG_Z); sp.intensity = 4.5; }
+    P9.big.mat.color.setScalar(0.62);
   },
   f5(f) {
     put(C.y, 'y_toast', -0.36, 0.25, { h: 0.82 }); put(C.m.zhongkai, 'zhongkai_offer', 0.36, 0.32, { h: 0.84 * MH('zhongkai') });
     const cj = landing(f, 1452, 0.3, 8); put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_cheer', -0.02, 0.75, { h: 0.42, lift: cj ? cj.lift : 0 });
     confetti(f, 1436); T.prac.intensity = 0.8; T.prac.position.set(0, 0.8, 1.0);
+    halo3(0, 0.25, -2.8, 6.5, 3.0, 0.2, [1.0, 0.86, 0.7]);
   },
   g1(f) {
-    const n = MEMBERS.length;
-    MEMBERS.forEach((m, i) => {
-      const [x, z] = ROLL(i, n), t0 = 1498 + Math.min(i, n - 2) * 6, s2 = eout(clamp((f - t0) / 6)), back = 1 - sm((f - 1612) / 24);
-      put(C.m[m], `m_${m}`, x, z + 0.16 * s2 * back, { h: 0.66 * MH(m), lift: f >= t0 && f < t0 + 6 ? Math.sin(Math.PI * (f - t0) / 6) * 0.03 : 0 });
+    const R = rollcall(), n = R.length;
+    R.forEach(({ m }, i) => {
+      const [x, z] = ROLL(i, n), t0 = rollT0(i), s2 = eout(clamp((f - t0) / 6)), back = 1 - sm((f - 1590) / 24), zz = z + 0.16 * s2 * back;
+      const lift = f >= t0 && f < t0 + 6 ? Math.sin(Math.PI * (f - t0) / 6) * 0.03 : 0;
+      if (m === 'Y') { put(C.y, 'y_toast', x, zz, { h: 0.62, lift }); putH(C.cat, 'cat_sit', x + 0.2, zz + 0.12, 0.3, { rim: 1.2 }); }
+      else put(C.m[m], `m_${m}`, x, zz, { h: 0.66 * MH(m), lift });
     });
-    if (f >= 1612) put(C.y, 'y_hold_cat', 0, 0.95, { h: 0.74, fade: sm((f - 1612) / 10) });
+    halo3(T.camera.position.x, 0.05, -3.4, 8.5, 2.6, 0.22, [1.0, 0.86, 0.7]);
   },
   g2(f) {
     const u = f - 1650;
@@ -1510,9 +1550,9 @@ function typeLayer10(ctx, g, f) {
   const big = (s, y, size, o = {}) => { halo(g, 0, y - size - 50, 1080, y + 40, 0.6 * (o.k ?? 1)); serif(g, s, o.x ?? MX, y, size, o); };
   if (sh <= 'a3' && sh[0] === 'a') txt(g, 'Quotes as published. No affiliation.', MX, 1290, 21, 500, 'rgba(236,230,216,0.6)', { mono: true, track: 0, noblur: true, mask: false });
   if (sh === 'a4') {
-    big('The future, as predicted.*', 262, 92, { k: sm(u / 8), italic: false });
-    hand(g, '*compute not included', MX + 250, 352, 70, { k: sm((u - 16) / 12), rot: -0.04 });
-    ink(g, IMG.pen_squiggle_b, MX + 500, 380, 440, { k: sm((u - 24) / 10), rot: -0.04 });
+    big('The future, as predicted.*', 262, 92, { k: sm((u - 24) / 8), italic: false });
+    hand(g, '*compute not included', MX + 250, 352, 70, { k: sm((u - 32) / 12), rot: -0.04 });
+    ink(g, IMG.pen_squiggle_b, MX + 500, 380, 440, { k: sm((u - 40) / 10), rot: -0.04 });
   }
   if (sh === 'b1') { big('Imagining it: free.', 250, 84, { k: sm((u - 6) / 8), italic: true }); big('Running it: see receipt.', 340, 84, { k: sm((u - 40) / 8) }); }
   if (sh === 'b2') {
@@ -1594,17 +1634,26 @@ function typeLayer10(ctx, g, f) {
   if (sh === 'f4') { stampSlam(ctx, g, 'stamp_bestpaper', STAMP_T.best, f, bigAt(BR.data, 0.84)); txt(g, '+ 5 more honours', 1080 - MX, CAPX, 30, 500, SOFT, { align: 'right', mono: true, track: 0, k: sm((u - 32) / 8) }); }
   if (sh === 'f5') { big('Best Paper:', 262, 88, { k: sm(u / 6) }); hand(g, 'still one milk tea.', MX + 6, 350, 76, { k: sm((u - 8) / 10) }); }
   if (sh === 'g1') {
-    const n = MEMBERS.length, back = 1 - sm((f - 1612) / 12);
-    sticky(g, ['staff: ' + (n + 1) + ' humans,', '1 cat (awake)'], 1080 - MX - 330, 170, 330, { k: sm(u / 6) * (1 - sm((u - 110) / 8)), rot: 0.04, size: 44 });
-    MEMBERS.forEach((m, i) => {
-      const [x, z] = ROLL(i, n), t0 = 1498 + Math.min(i, n - 2) * 6; if (f < t0 + 1) return;
-      const q = P(x, FLOOR - 0.02, z + 0.16), a = back * sm((q.x - MX - 130) / 50) * sm((1080 - MX - 130 - q.x) / 50); if (a < 0.01) return;
-      g.save(); g.globalAlpha = a; hand(g, m[0].toUpperCase() + m.slice(1), q.x, q.y + 64 + (i % 2) * 52, 56, { k: sm((f - t0 - 1) / 6), align: 'center', color: PENCIL, rot: (i % 2 ? 0.03 : -0.03) }); g.restore();
+    const R = rollcall(), n = R.length, back = 1 - sm((f - 1585) / 12);
+    sticky(g, ['staff: ' + n + ' humans,', '1 cat (awake)'], 1080 - MX - 330, 170, 330, { k: sm(u / 6) * (1 - sm((u - 110) / 8)), rot: 0.04, size: 44 });
+    const edge = (x) => sm((x - MX - 130) / 50) * sm((1080 - MX - 130 - x) / 50);
+    R.forEach(({ m }, i) => {
+      const [x, z] = ROLL(i, n), t0 = rollT0(i); if (f < t0 + 1) return;
+      const q = P(x, FLOOR - 0.02, z + 0.16), a = back * edge(q.x); if (a < 0.01) return;
+      g.save(); g.globalAlpha = a;
+      if (m === 'Y') { serif(g, 'Yufei', q.x, q.y + 70, 60, { k: sm((f - t0 - 1) / 6), align: 'center' }); hand(g, 'PI, cat handler', q.x, q.y + 120, 46, { k: sm((f - t0 - 4) / 8), align: 'center', color: PENCIL }); }
+      else hand(g, m[0].toUpperCase() + m.slice(1), q.x, q.y + 64 + (i % 2) * 52, 56, { k: sm((f - t0 - 1) / 6), align: 'center', color: PENCIL, rot: (i % 2 ? 0.03 : -0.03) });
+      g.restore();
     });
-    const iz = MEMBERS.indexOf('zhongkai'), iu = MEMBERS.indexOf('zhuo');
-    if (iz >= 0 && iu >= 0) { const a = P(ROLL(iz, n)[0], FLOOR - 0.02, 0.46), b = P(ROLL(iu, n)[0], FLOOR - 0.02, 0.46), kb = sm((f - 1600) / 8), cx = clamp((a.x + b.x) / 2, MX + 170, 1080 - MX - 170);
+    // the group names ride above their heads as the camera passes
+    ROLL_GROUPS.forEach(([gname]) => {
+      const idx = R.map((r, i) => (r.gname === gname ? i : -1)).filter((i) => i >= 0); if (!idx.length || gname === 'PI') return;
+      const xs = idx.map((i) => ROLL(i, n)[0]), q = P((Math.min(...xs) + Math.max(...xs)) / 2, FLOOR + 0.82, 0.3), a = back * sm((f - rollT0(idx[0])) / 8) * edge(q.x);
+      if (a > 0.01) { g.save(); g.globalAlpha = a; txt(g, gname, q.x, q.y, 26, 600, '#d8d2c6', { align: 'center', mono: true, track: 0.14, noblur: true, mask: false }); g.restore(); }
+    });
+    const iz = R.findIndex((r) => r.m === 'zhongkai'), iu = R.findIndex((r) => r.m === 'zhuo');
+    if (iz >= 0 && iu >= 0) { const a = P(ROLL(iz, n)[0], FLOOR - 0.02, 0.46), b = P(ROLL(iu, n)[0], FLOOR - 0.02, 0.46), kb = sm((f - rollT0(iu) - 4) / 8), cx = clamp((a.x + b.x) / 2, MX + 170, 1080 - MX - 170);
       g.save(); g.globalAlpha = back; ink(g, IMG.pen_bracket_b, cx, Math.max(a.y, b.y) + 180, 60, { k: kb, rot: Math.PI / 2 }); hand(g, 'tied for gold', cx, Math.max(a.y, b.y) + 240, 54, { k: kb, align: 'center', color: '#ffd27a' }); g.restore(); }
-    const ky = sm((f - 1622) / 10); if (ky > 0.01) { const q = P(0, FLOOR - 0.02, 0.95); serif(g, 'Yufei', q.x, q.y + 70, 64, { k: ky, align: 'center' }); hand(g, 'PI, cat handler', q.x, q.y + 122, 50, { k: ky, align: 'center', color: PENCIL }); }
   }
   if (sh === 'g2') { big('Pictured: Picasso Lab.', CAPX - 76, 72, { k: sm((u - 6) / 8) }); hand(g, 'not pictured: you.', MX, CAPX + 10, 70, { k: sm((u - 14) / 10) }); }
   if (sh === 'h2') { const k = sm((u - 26) / 8); if (k > 0.01) { halo(g, 0, CAPX - 120, 1080, CAPX + 50, 0.7 * k); serif(g, 'The next one has your name on it.', MX, CAPX, 62, { k, italic: true }); } }
@@ -1612,7 +1661,7 @@ function typeLayer10(ctx, g, f) {
     const k1 = sm((u - 38) / 12), k2 = sm((u - 48) / 12), k3 = sm((u - 58) / 12), k4 = sm((u - 70) / 12) * (1 - sm((f - 1936) / 12));
     txt(g, 'LAB  ·  UC SAN DIEGO  ·  PROF. YUFEI DING', 540, 822, 26, 500, '#bdb8ae', { align: 'center', mono: true, track: 0.12, k: k1 });
     serif(g, 'We’re hiring.', 540, 968, 78, { align: 'center', k: k2, italic: true });
-    txt(g, 'interns   ·   PhD students   ·   postdocs', 540, 1030, 30, 500, '#e8e2d6', { align: 'center', mono: true, track: 0.02, k: sm((u - 52) / 12) });
+    txt(g, 'postdocs   ·   PhD students   ·   interns', 540, 1030, 30, 500, '#e8e2d6', { align: 'center', mono: true, track: 0.02, k: sm((u - 52) / 12) });
     txt(g, '@PicassoLabUCSD   ·   yufeiding.ucsd.edu', 540, 1098, 30, 500, '#9fc8ff', { align: 'center', mono: true, track: 0, k: k3 });
     hand(g, '*milk tea included', 540, 1182, 60, { align: 'center', k: k4, rot: -0.03 });
   }
