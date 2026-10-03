@@ -1,0 +1,717 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Picasso Lab - launch film v8</title>
+<!-- Picasso Lab's first X post, v8: the v7 studio (curved papers, area lights, glossy floor), the v6 story of the
+     lab's 136 real papers, and a character line: Prof. Yufei Ding writes the first paper in 2013, students arrive as
+     the papers multiply, they live through every beat (by year, by venue, three directions, the honours, milk tea),
+     a camera flash turns the cartoon crew into the real team photo, and the first desk waits empty for the viewer.
+     Painted characters stand in the 3D world as billboards (sprite.js). 4:5, 30 fps, every cut on a 2 s bar grid.
+     Shot list: .claude/films/xlaunch/STORYBOARD.md -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { buildStudio, setPaper, look, blankPage, sheetGeometry } from '/scene/studio.js';
+import * as L from '/scene/layouts.js';
+import { spriteKit } from '/scene/sprite.js';
+import { clamp, lerp, mix3, sm, eio, eio5, eout, eout5, ein, eback, hsh, win, seg, camRig, TAU } from '/scene/lib.js';
+import * as TY from '/scene/type.js';
+
+const FPS = 30, NF = 1770, FLOOR = L.FLOOR;
+// shots (frames). A bar is 60 frames (2 s at 120 bpm); every shot starts on a bar.
+const S = {
+  open: [0, 180], grow: [180, 420], gallery: [420, 540], years: [540, 720], venues: [720, 900],
+  dirs: [900, 1140], award: [1140, 1320], photo: [1320, 1440], seat: [1440, 1620], end: [1620, NF],
+};
+const CHAPTER = (f) => f < S.grow[0] ? ['01', 'ORIGIN'] : f < S.dirs[0] ? ['02', 'GROWTH'] : f < S.award[0] ? ['03', 'DIRECTIONS']
+  : f < S.photo[0] ? ['04', 'RECOGNITION'] : f < S.end[0] ? ['05', 'PEOPLE'] : null;
+
+let D, T, SK; const st = {}, C = {};
+
+defineScene({
+  meta: { title: 'Picasso Lab - launch film v8', durationFrames: NF, fps: FPS, width: 1080, height: 1350, seed: 8,
+    design: [1080, 1350], background: '#0b0b0e', fonts: ['Inter', 'Instrument Serif', 'JetBrains Mono'], boil: { every: 1, variants: 1770 }, poster: 470 },
+  update(ctx) { frame(ctx, ctx.iw); },
+  layers: [
+    { name: '3d', type: 'three', async init(ctx, three) { return build(ctx, three); }, draw() { T.composer.render(); return false; } },
+    { name: 'type', type: '2d', draw(ctx, g) { typeLayer(ctx, g, ctx.iw); } },
+  ],
+});
+
+// ---------------------------------------------------------------------------------------------------------
+// build
+// ---------------------------------------------------------------------------------------------------------
+// height of each pose in world units (a standing Yufei is 1.0); seated/kneeling/flying poses are shorter
+const POSE_H = {
+  y_write: 1.02, desk_empty: 1.02, y_hold_up: 1.16, y_think: 1.0, y_surprise: 1.0, y_proud: 1.12, y_swing: 1.08, y_paint_air: 1.05,
+  y_award: 1.0, y_toast: 1.12, y_invite: 1.0, y_wave: 1.04,
+  leo_catch: 1.3, leo_gpu: 1.12, leo_toast: 1.18,
+  mia_land: 0.52, mia_qubit: 0.8, mia_toast: 0.86,
+  kai_flop: 0.7, kai_chip: 0.96, kai_toast: 1.0,
+  zoe_sip: 0.9, zoe_tray: 0.92, zoe_toast: 0.92,
+  cat_sleep: 0.2, cat_sit: 0.34, cat_jump: 0.38, cat_cheer: 0.36,
+};
+async function build(ctx, three) {
+  D = L.index(await (await fetch('/scene/data.json')).json());
+  T = await buildStudio(ctx, three, D);
+  const { THREE, scene } = T;
+  SK = spriteKit(THREE, scene);
+  const mk = async (names, h) => SK.make(Object.fromEntries(names.map((n) => [n, `/scene/cut/${n}.png`])), { height: h });
+  C.y = await mk(['y_write', 'y_hold_up', 'y_think', 'y_surprise', 'y_proud', 'y_swing', 'y_paint_air', 'y_award', 'y_toast', 'y_invite', 'y_wave'], 1);
+  C.desk = await mk(['desk_empty'], 1);
+  C.leo = await mk(['leo_catch', 'leo_gpu', 'leo_toast'], 1);
+  C.mia = await mk(['mia_land', 'mia_qubit', 'mia_toast'], 1);
+  C.kai = await mk(['kai_flop', 'kai_chip', 'kai_toast'], 1);
+  C.zoe = await mk(['zoe_sip', 'zoe_tray', 'zoe_toast'], 1);
+  C.cat = await mk(['cat_sleep', 'cat_sit', 'cat_jump', 'cat_cheer'], 1);
+
+  // Paper #137: same sheet, a blank body and a cursor
+  const tex = blankPage(THREE, 'Paper #137', 'You et al.', { subtitle: 'Your idea, here.', tag: 'Picasso Lab' });
+  const geo = sheetGeometry(THREE, 1.0, 0.1, 0.3, 137), backMat = T.papers[D.first].g.children[1].material;
+  st.p137 = new THREE.Group();
+  st.p137mat = new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.74, bumpMap: T.bump, bumpScale: 0.5, sheen: 0.35, sheenRoughness: 0.85, transparent: true });
+  const f137 = new THREE.Mesh(geo, st.p137mat), b137 = new THREE.Mesh(geo, backMat); f137.castShadow = b137.castShadow = true;
+  st.p137.add(f137, b137); scene.add(st.p137); st.p137.visible = false;
+
+  // the real team photo on photo paper with a white border
+  const img = await T.loadImg('/scene/team.jpg');
+  const c = document.createElement('canvas'), B = 36; c.width = img.width + 2 * B; c.height = img.height + 2 * B + 60;
+  const g = c.getContext('2d'); g.fillStyle = '#f4f2ee'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, B, B);
+  const pt = new THREE.CanvasTexture(c); pt.colorSpace = THREE.SRGBColorSpace; pt.anisotropy = 16;
+  st.printAsp = c.width / c.height;
+  const pg = sheetGeometry(THREE, 0.5, 0.2, 0.0, 9, st.printAsp);
+  st.print = new THREE.Group();
+  st.printMat = new THREE.MeshPhysicalMaterial({ map: pt, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.25, transparent: true });
+  const pf = new THREE.Mesh(pg, st.printMat), pb = new THREE.Mesh(pg, backMat); pf.castShadow = pb.castShadow = true;
+  st.print.add(pf, pb); scene.add(st.print); st.print.visible = false;
+
+  // the gold paint ribbon (Yufei's brush): a tube along a path that paints itself, then cools into the three rings
+  st.ribbonCurve = ribbonCurve(THREE);
+  const rg = new THREE.TubeGeometry(st.ribbonCurve, 900, 0.022, 14, false);
+  st.ribbon = new THREE.Mesh(rg, new THREE.MeshPhysicalMaterial({ color: 0xffc547, metalness: 1, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, emissive: 0x7a4a00, emissiveIntensity: 0.35, transparent: true }));
+  st.ribbon.castShadow = true; scene.add(st.ribbon); st.ribbon.visible = false;
+  st.ribbonIdx = rg.index.count;
+
+  // confetti: small paper chips (instanced), for the toast
+  const cg = new THREE.PlaneGeometry(0.028, 0.018);
+  st.confetti = new THREE.InstancedMesh(cg, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, side: THREE.DoubleSide }), 220);
+  const cols = [0xf5f5f7, 0xffd27a, 0x5aa2ff, 0x7fe08a, 0xff7474];
+  for (let i = 0; i < 220; i++) st.confetti.setColorAt(i, new THREE.Color(cols[i % 5]));
+  scene.add(st.confetti); st.confetti.visible = false;
+  st.dummy = new THREE.Object3D();
+  return { scene, camera: T.camera };
+}
+
+function ribbonCurve(THREE) {
+  // from the brush tip low on the right, a rising swoop, then once around each ring of the triangle
+  const P = [];
+  const tip = [0.95, -0.05, 0.9];
+  P.push(new THREE.Vector3(...tip), new THREE.Vector3(1.2, 0.4, 0.7), new THREE.Vector3(0.6, 1.1, 0.5), new THREE.Vector3(-0.3, 0.95, 0.3));
+  const loop = (c, r, a0, n) => { for (let i = 0; i <= n; i++) { const a = a0 + (i / n) * TAU; P.push(new THREE.Vector3(c[0] + r * Math.cos(a), c[1] + r * Math.sin(a), c[2] + 0.02 * Math.sin(a * 3))); } };
+  loop(L.RING_C[0], L.RING_R, Math.PI * 0.25, 14);
+  loop(L.RING_C[1], L.RING_R, -Math.PI * 0.6, 14);
+  loop(L.RING_C[2], L.RING_R, Math.PI * 0.9, 14);
+  return new THREE.CatmullRomCurve3(P, false, 'catmullrom', 0.35);
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// papers: one state per paper per frame, through every beat
+// ---------------------------------------------------------------------------------------------------------
+const YEAR_T0 = S.grow[0] + 26, YEAR_DT = 13.5;            // the time spiral of growth: 2013 at 206 ... 2026 at 382
+function appearAt(k) {
+  if (k === D.first) return S.grow[0];
+  const p = D.pubs[k], und = p.yr == null;
+  const same = und ? D.order.filter((q) => D.pubs[q].yr == null) : D.byYear[p.yr];
+  const j = same.indexOf(k), n = same.length;
+  const yr = und ? 2025.2 : p.yr;
+  return YEAR_T0 + (yr - 2013) * YEAR_DT + (j / Math.max(1, n)) * YEAR_DT * (und ? 1.6 : 0.95);
+}
+const SWARM_C = [0, 1.25, -0.4];
+const FIRST_GO = YEAR_T0 + 7 * YEAR_DT - 10;              // with the 2020 surge the first paper joins the vortex
+function farPoint(k) { const a = hsh(k, 51) * TAU, R = 6 + hsh(k, 52) * 4; return { p: [Math.cos(a) * R, 0.5 + hsh(k, 53) * 4, -2 - Math.abs(Math.sin(a)) * R], r: [hsh(k, 54) * 3, hsh(k, 55) * 3, hsh(k, 56) * 3], s: 0.3, dim: 1 }; }
+
+// the first paper's own path in the opening: out of her hands, up into the light, to the hero pose
+const HAND = [0.38, -0.02, 0.72];                         // where y_hold_up holds the sheet (world)
+const RELEASE = 96;
+function firstOpen(f) {
+  if (f < RELEASE) return null;
+  const t = eio((f - RELEASE) / 64);
+  const a = { p: HAND, r: [-0.5, -0.2, 0.1], s: 0.2, dim: 0 };
+  const s = L.mixL(a, L.HERO, t, { lift: Math.sin(Math.PI * t) * 0.25, ry: Math.sin(Math.PI * t) * 0.9 });
+  // a gentle breathing float once it hangs in the light
+  s.p[1] += 0.015 * Math.sin((f - RELEASE) * 0.05) * sm((f - RELEASE - 50) / 30);
+  return s;
+}
+
+// gallery order: newest in front; row index for the domino
+const GROW = (k) => Math.floor((D.order.length - 1 - D.RANK[k]) / 4);
+function galleryArrive(k) { return S.gallery[0] - 34 + (D.order.length - 1 - D.RANK[k]) * 0.42; }
+const DOMINO0 = S.years[0] + 26;
+const SUMMIT = L.FLOOR + L.YS / 2 + 0.01 + 18 * L.YSTEP + L.YS / 2;
+function toppleAt(k) { return DOMINO0 + GROW(k) * 1.9; }
+function toppled(g, th, k) {
+  const sy = Math.sin(g.r[1]), cy = Math.cos(g.r[1]), d = g.s / 2;
+  return { p: [g.p[0] - Math.sin(th) * d * sy, FLOOR + 0.012 + d * Math.cos(th) + 0.0016 * GROW(k), g.p[2] - Math.sin(th) * d * cy], r: [-th, g.r[1], g.r[2]], s: g.s, dim: g.dim };
+}
+function yearFly(k) { const p = D.pubs[k]; const y = p.yr ?? 2027; const j = p.yr != null ? D.byYear[p.yr].indexOf(k) : 0; return Math.max(toppleAt(k) + 16, S.years[0] + 70 + (y - 2013) * 3.2 + j * 0.9); }
+function venueBurst(k) { const c = D.topv.indexOf(D.pubs[k].venue); return S.venues[0] + 4 + (c < 0 ? 10 : c * 2) + hsh(k, 61) * 12; }
+function ringFly(k) { const r = D.pubs[k].ring, j = D.byRing[r].indexOf(k); return S.dirs[0] + 34 + r * 8 + (j / D.byRing[r].length) * 30; }
+function awardFly(k) { const i = D.awards.indexOf(k); return i >= 0 ? S.award[0] + 34 + i * 5 : S.award[0] + 8 + hsh(k, 71) * 26; }
+
+function paperAt(k, f) {
+  // 1 opening: only the first paper
+  if (f < S.grow[0] + 40 || (k === D.first && f < FIRST_GO)) {
+    if (k !== D.first) {
+      if (f < S.grow[0]) return null;
+    } else {
+      if (f < S.grow[0]) return firstOpen(f);
+      return L.HERO;
+    }
+  }
+  // 2 growth: each paper flies in from the dark when its year comes round, and joins the swarm
+  const tg = galleryArrive(k);
+  if (f < tg) {
+    const ap = appearAt(k); if (f < ap) return null;
+    const b = L.swarm(D, k, f, SWARM_C);
+    if (k === D.first) return f < FIRST_GO ? L.HERO : L.mixL(L.HERO, b, eio5((f - FIRST_GO) / 44), { ry: TAU * eio5((f - FIRST_GO) / 44) * 0.5 });
+    const yr = D.pubs[k].yr;
+    if (yr != null && yr < 2020) {
+      // peeled off the face of the first paper: it lifts towards the lens, turns, and sails to its place
+      const t = eio((f - ap) / 34), src = paperAt(D.first, ap);
+      const from = { p: [src.p[0], src.p[1], src.p[2] + 0.02], r: src.r, s: src.s, dim: 0 };
+      return L.mixL(from, b, t, { lift: Math.sin(Math.PI * t) * 0.35, rz: Math.sin(Math.PI * t) * 0.6 });
+    }
+    const t = eout((f - ap) / 26);
+    return L.mixL(farPoint(k), b, t, { ry: (1 - t) * 2.2 });
+  }
+  // 3 gallery: from the swarm into the S-curve, front first, with a flip
+  const g = L.gallery(D, k);
+  const t0 = toppleAt(k);
+  if (f < t0) {
+    const t = eio((f - tg) / 34);
+    if (t >= 1) return g;
+    return L.mixL(L.swarm(D, k, tg, SWARM_C), g, t, { lift: Math.sin(Math.PI * t) * 0.5, ry: (hsh(k, 7) > 0.5 ? 1 : -1) * TAU * eio(t) * 0.5 });
+  }
+  // 4 by year: the domino topples the gallery (front to back), then each paper flies to its year column
+  const ty = yearFly(k);
+  if (f < ty) { const th = ein(clamp((f - t0) / 13)) * (Math.PI / 2 - 0.02); return toppled(g, th, k); }
+  const yv = L.years(D, k), flat = toppled(g, Math.PI / 2 - 0.02, k);
+  const tb = venueBurst(k);
+  if (f < tb) { const t = eio((f - ty) / 30); return L.mixL(flat, yv, t, { lift: Math.sin(Math.PI * t) * (0.6 + 0.4 * hsh(k, 8)) }); }
+  // 5 by venue: the columns burst up like a shuffled deck and rain down into eight towers
+  const vv = L.venues(D, k);
+  const tr = ringFly(k);
+  if (f < tr) {
+    const up = clamp((f - tb) / 16), dn = clamp((f - tb - 16) / 26);
+    const peak = { p: [yv.p[0] * 0.6 + (hsh(k, 62) - 0.5) * 1.6, 1.6 + hsh(k, 63) * 1.6, -0.5 + (hsh(k, 64) - 0.5) * 1.2], r: [hsh(k, 65) * TAU, hsh(k, 66) * TAU, 0], s: 0.42, dim: 0 };
+    if (dn <= 0) return L.mixL(yv, peak, eout(up));
+    return L.mixL(peak, vv, ein(dn) * 0.85 + eout5(dn) * 0.15);
+  }
+  // 6 three directions: up out of the towers in a spiral into the wreath around its ring
+  const ov = L.orbit(D, k, f);
+  const ta = awardFly(k);
+  if (f < ta) {
+    const t = eio((f - tr) / 46);
+    if (t >= 1) return repState(k, f, ov);
+    const s = L.mixL(vv, ov, t);
+    const [cx, cy] = L.RING_C[D.pubs[k].ring], sw = (1 - t) * Math.PI * 1.2;
+    const dx = s.p[0] - cx, dy = s.p[1] - cy;
+    s.p[0] = cx + dx * Math.cos(sw) - dy * Math.sin(sw); s.p[1] = cy + dx * Math.sin(sw) + dy * Math.cos(sw);
+    s.p[2] += Math.sin(Math.PI * t) * 0.4; s.r[2] += sw;
+    return s;
+  }
+  // 7 the honours: six papers to the row, the rest drift back into a dim cloud
+  const aw = L.awardsRow(D, k), cloud = L.farCloud(D, k, f);
+  const te = S.end[0] - 30 + hsh(k, 81) * 30;
+  if (f < S.photo[0] - 10 || (!aw && f < te)) {
+    const t = eio((f - ta) / 40);
+    const from = repState(k, ta, L.orbit(D, k, ta));
+    if (aw) return L.mixL(from, aw, t, { lift: Math.sin(Math.PI * t) * 0.3, ry: TAU * eio(t) });
+    return L.mixL(from, cloud, t);
+  }
+  // 8 people: the honoured papers join the cloud too
+  if (f < te) { const t = eio((f - S.photo[0] + 10) / 40); return L.mixL(aw, cloud, t); }
+  // 9 end: the cloud opens into the arc behind the rings
+  const t = eio((f - te) / 50);
+  return L.mixL(L.farCloud(D, k, f), L.endArc(D, k), t);
+}
+// the three representative papers of each ring come out of the wreath during that ring's visit
+const VISIT = [[S.dirs[0] + 86, S.dirs[0] + 132], [S.dirs[0] + 136, S.dirs[0] + 182], [S.dirs[0] + 186, S.dirs[0] + 216]];
+function repState(k, f, ov) {
+  for (let r = 0; r < 3; r++) {
+    const j = D.reps[r].indexOf(k); if (j < 0) continue;
+    const [a, b] = VISIT[r], u = win(f, a + j * 4, b + 6, 14, 12);
+    if (u > 0) return L.mixL(ov, L.orbitRep(r, j), eio(u));
+  }
+  return ov;
+}
+function paperGlow(k, f) {
+  const i = D.awards.indexOf(k);
+  if (i < 0) return 0;
+  return 0.06 * win(f, S.award[0] + 50 + i * 6, S.photo[0], 16, 20) * (i === 0 ? 1.6 : 1);
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// camera: per-shot rigs; cuts between shots where the story jumps, continuous moves inside
+// ---------------------------------------------------------------------------------------------------------
+const CAMS = {
+  open: camRig([
+    [0, [1.25, 0.05, 2.35], [0.62, -0.18, 0.55], 30],
+    [80, [1.1, 0.02, 2.15], [0.62, -0.2, 0.55], 30],
+    [81, [1.6, 0.3, 3.7], [0.3, 0.0, 0.4], 32, (x) => x, 'linear'],          // cut on action: she stands
+    [RELEASE, [1.5, 0.28, 3.65], [0.3, 0.05, 0.4], 32],
+    [150, [0.9, 0.62, 3.9], [0.05, 0.28, 0], 30, eio5],
+    [180, [0.86, 0.64, 3.82], [0.05, 0.29, 0], 30],
+  ]),
+  grow: camRig([
+    [180, [0.86, 0.64, 3.82], [0.05, 0.29, 0], 30],
+    [230, [0.7, 0.75, 4.4], [0.0, 0.6, -0.2], 31, eio],
+    [300, [0.3, 0.9, 5.6], [0.0, 0.75, -0.3], 33, eio],
+    [420, [-0.6, 1.0, 7.4], [0.0, 0.85, -0.4], 36, eio5],
+  ]),
+  gallery: camRig([
+    [420, [-0.6, 1.0, 7.4], [0.0, 0.85, -0.4], 36],
+    [470, [2.0, 1.25, 7.6], [-0.15, -0.3, -1.2], 34, eio5],
+    [540, [2.6, 1.55, 7.4], [-0.2, -0.45, -1.4], 34],
+  ]),
+  years: camRig([
+    [540, [2.6, 1.55, 7.4], [-0.2, -0.45, -1.4], 34],
+    [566, [1.9, 0.25, 5.6], [0.2, -0.3, 1.2], 34, eio],
+    [606, [2.4, 1.1, 7.0], [-0.3, -0.3, -0.8], 34, eio5],
+    [650, [0.75, 0.8, 7.6], [0.3, 0.32, -0.9], 34, eio5],
+    [720, [0.7, 0.8, 7.35], [0.3, 0.34, -0.9], 34],
+  ]),
+  venues: camRig([
+    [720, [0.7, 0.8, 7.35], [0.3, 0.34, -0.9], 34],
+    [744, [0.2, 6.2, 1.0], [0.0, 0.2, -0.3], 36, eio],
+    [790, [0.0, 5.6, 0.2], [0.0, -0.5, -0.5], 36, eio5],
+    [840, [0.4, 0.75, 4.6], [0.0, -0.25, -0.5], 32, eio5],
+    [900, [0.55, 0.85, 4.2], [0.0, -0.2, -0.5], 32],
+  ]),
+  dirs: camRig([
+    [900, [0.55, 0.85, 4.2], [0.0, -0.2, -0.5], 32],
+    [960, [0.6, 0.6, 5.2], [0.2, 0.7, 0.2], 34, eio5],
+    [VISIT[0][0] - 6, [0, 0.95, 5.6], [0, 0.95, 0], 34, eio5],
+    [VISIT[0][0] + 10, [-0.62, 0.3, 3.7], [-0.74, 0.08, 0], 30, eio5],
+    [VISIT[0][1], [-0.68, 0.28, 3.45], [-0.74, 0.08, 0], 30],
+    [VISIT[1][0] + 10, [0.06, 1.42, 3.5], [0, 1.32, -0.2], 30, eio5],
+    [VISIT[1][1], [0.12, 1.44, 3.3], [0, 1.32, -0.2], 30],
+    [VISIT[2][0] + 10, [0.62, 0.3, 3.7], [0.74, 0.08, 0], 30, eio5],
+    [S.dirs[1] - 10, [0.72, 0.4, 1.6], [0.74, 0.45, 0], 30],
+    [S.dirs[1], [0.74, 0.5, 0.75], [0.74, 0.5, -0.5], 32, ein],            // into the red ring
+  ]),
+  award: camRig([
+    [S.award[0], [0.35, 0.75, 7.2], [0.0, 0.45, 0.0], 36],
+    [S.award[0] + 50, [0.15, 0.2, 5.4], [0, -0.05, 0], 32, eio5],
+    [S.award[0] + 96, [0, 0.0, 4.2], [0, 0.0, 0.3], 30, eio5],
+    [S.award[0] + 124, [0, -0.1, 4.6], [0, -0.05, 0.2], 32, eio5],
+    [S.award[1], [0, -0.05, 5.0], [0, -0.05, 0.2], 32],
+  ]),
+  photo: camRig([
+    [S.photo[0], [0, -0.12, 4.6], [0, -0.12, 0.6], 32],
+    [S.photo[0] + 70, [0, -0.12, 4.5], [0, -0.12, 0.6], 32],
+    [S.photo[0] + 71, [0, 0.55, 3.9], [0, 0.55, 0], 30, (x) => x, 'linear'],    // the flash
+    [S.photo[1], [0, 0.55, 3.7], [0, 0.55, 0], 30],
+  ]),
+  seat: camRig([
+    [S.seat[0], [0, 0.55, 3.7], [0, 0.55, 0], 30],
+    [S.seat[0] + 30, [0.1, 0.55, 3.75], [0, 0.52, 0], 30, eio],
+    [S.seat[0] + 80, [0.9, 0.3, 3.9], [0.35, 0.05, 0.3], 30, eio5],
+    [S.seat[1], [0.95, 0.35, 3.75], [0.35, 0.1, 0.3], 30],
+  ]),
+  end: camRig([
+    [S.end[0], [0.95, 0.35, 3.75], [0.35, 0.1, 0.3], 30],
+    [S.end[0] + 70, [0, 1.05, 5.6], [0, 1.05, 0.5], 32, eio5],
+    [NF, [0, 1.05, 5.85], [0, 1.05, 0.5], 32],
+  ]),
+};
+function shotOf(f) { for (const k of Object.keys(S)) if (f >= S[k][0] && f < S[k][1]) return k; return 'end'; }
+function camAt(f) { const c = CAMS[shotOf(f)](f); return c; }
+
+// ---------------------------------------------------------------------------------------------------------
+// per frame
+// ---------------------------------------------------------------------------------------------------------
+const AP = (f) => (f < S.grow[0] ? 0.0005 : (f >= S.venues[0] && f < S.venues[0] + 110) || (f >= S.dirs[0] && f < S.dirs[0] + 70) ? 0.00018 : 0.0006);
+function frame(ctx, f) {
+  const { THREE, camera, bokeh } = T;
+  const shot = shotOf(f);
+  const c = camAt(f);
+  // a breath of handheld drift
+  const dx = 0.012 * Math.sin(f * 0.021) + 0.006 * Math.sin(f * 0.053), dy = 0.008 * Math.sin(f * 0.017 + 1);
+  look(T, [c.p[0] + dx, c.p[1] + dy, c.p[2]], c.t, c.fov, AP(f));
+  // whip blur from the camera's own angular speed
+  const a = camAt(Math.max(0, f - 0.5)), b = camAt(Math.min(NF - 1, f + 0.5));
+  const dir = (q) => { const v = new THREE.Vector3(q.t[0] - q.p[0], q.t[1] - q.p[1], q.t[2] - q.p[2]).normalize(); return v; };
+  const da = dir(a), db = dir(b);
+  const yaw = Math.atan2(db.x, db.z) - Math.atan2(da.x, da.z), pitch = Math.asin(db.y) - Math.asin(da.y);
+  const vf = c.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * 0.8);
+  const sx = -yaw / hf, sy = pitch / vf, mag = Math.hypot(sx, sy);
+  T.blur.uniforms.uK.value = shotOf(a === b ? f : f) === shotOf(Math.max(0, f - 1)) ? clamp((mag - 0.008) * 0.6, 0, 0.018) : 0;
+  T.blur.uniforms.uDir.value = mag > 1e-6 ? [sx / mag, sy / mag] : [0, 0];
+  T.grade.uniforms.uFrame.value = f;
+  ctx.camera = camera;
+
+  // defaults
+  Object.values(C).forEach((ch) => ch.hide());
+  T.rings.forEach((r) => { r.visible = false; });
+  st.p137.visible = false; st.print.visible = false; st.ribbon.visible = false; st.confetti.visible = false;
+  T.prac.intensity = 0;
+  T.key.intensity = 1.3; T.key.position.set(1.2, 3.2, 3.2); T.key.lookAt(0, 0.2, 0);
+  T.rim.intensity = 2.2; T.kick.intensity = 0.8; T.grade.uniforms.uFlash.value = 0; T.grade.uniforms.uFlashCol.value = [1, 1, 1]; T.grade.uniforms.uFade.value = 0;
+  T.bloom.strength = 0.14;
+
+  for (const p of D.pubs) setPaper(T, p.k, paperAt(p.k, f), paperGlow(p.k, f));
+
+  SHOTFN[shot](f, ctx);
+}
+
+// sprite helper: place a character with the house grade (key from the right, cool rim from the left)
+function put(ch, pose, x, z, o = {}) {
+  ch.set(pose, { height: (o.h ?? 1) * (POSE_H[pose] ?? 1), flip: o.flip, sx: o.sx, sy: o.sy });
+  ch.place(x, (o.y ?? FLOOR), z, T.camera, { floorY: FLOOR, light: o.light ?? 0.86, rim: o.rim ?? 0.9, rimDir: [-1, 0.3], side: 0.16, lift: o.lift ?? 0,
+    fade: o.fade ?? 1, contact: o.contact, contactK: o.contactK, yaw: o.yaw, roll: o.roll });
+  return ch;
+}
+// squash/stretch landing: returns {sx, sy, lift} for a drop from height h ending at frame f0 (lands) over 'dur'
+function landing(f, f0, h = 1.2, dur = 12) {
+  if (f < f0 - dur) return null;
+  if (f < f0) { const t = (f - f0 + dur) / dur; return { lift: h * (1 - t * t), sx: 0.92, sy: 1.1 }; }
+  const u = (f - f0) / 10; const sq = Math.exp(-u * 2.2) * Math.cos(u * 6);
+  return { lift: 0, sx: 1 + 0.12 * sq, sy: 1 - 0.14 * sq };
+}
+
+const SHOTFN = {
+  // 01 ORIGIN: lamp on, she writes, stands, lets the first paper go; it rises into the light (v7 frame 1)
+  open(f) {
+    const lamp = f < 14 ? 0 : (f < 22 ? (Math.sin(f * 2.1) > 0 ? 1 : 0.2) : 1) * sm((f - 14) / 6);
+    const room = sm((f - 30) / 70);
+    T.key.intensity = 1.6 * room; T.rim.intensity = 3.2 * room; T.kick.intensity = 0.8 * room;
+    T.key.position.set(2.6, 2.6, 1.6); T.key.lookAt(0, 0.5, 0);
+    T.prac.position.set(0.95, 0.25, 0.75); T.prac.intensity = 2.4 * lamp;
+    T.grade.uniforms.uFade.value = 1 - sm(f / 16) * 0.0 - (f < 14 ? 0 : 1) * 1 + (f < 14 ? 0 : 0);
+    if (f < 14) T.grade.uniforms.uFade.value = 1;
+    const lit = 0.25 + 0.75 * Math.max(lamp * 0.9, room);
+    if (f <= 80) {
+      put(C.y, 'y_write', 0.62, 0.5, { light: lit, rim: 0.6 * room });
+      put(C.cat, 'cat_sleep', 0.15, 0.78, { light: lit * 0.9 });
+    } else {
+      put(C.desk, 'desk_empty', 0.78, 0.32, { light: lit * 0.92, rim: 0.6 * room });
+      put(C.cat, 'cat_sleep', 0.15, 0.78, { light: lit * 0.9 });
+      const pose = f < RELEASE ? 'y_hold_up' : 'y_think';
+      const sq = f >= RELEASE && f < RELEASE + 10 ? Math.exp(-(f - RELEASE) / 3) : 0;
+      put(C.y, pose, 0.38, 0.72, { light: lit, sx: 1 + 0.05 * sq, sy: 1 - 0.06 * sq });
+    }
+  },
+  // 02 GROWTH: the papers arrive year by year; at the 2020 surge the students arrive
+  grow(f) {
+    const ys = f < 282 ? 'y_think' : 'y_surprise';
+    put(C.y, ys, 0.05, 0.55);
+    put(C.desk, 'desk_empty', 0.78, 0.32, { fade: 1 - sm((f - 200) / 30) });
+    put(C.cat, f < 330 ? 'cat_sleep' : 'cat_cheer', 0.3, 0.95, {});
+    // LEO catches a paper (from the left), MIA lands (right), KAI flops through, ZOE peeks
+    if (f >= 292) put(C.leo, 'leo_catch', -0.85, 0.35, { fade: sm((f - 292) / 6), lift: 0 });
+    const lm = landing(f, 322, 1.6, 10); if (lm) put(C.mia, 'mia_land', 0.82, 0.62, { sx: lm.sx, sy: lm.sy, lift: lm.lift });
+    if (f >= 340 && f < 372) { const t = (f - 340) / 32; put(C.kai, 'kai_flop', lerp(-1.6, 1.8, t), 0.1, { lift: 1.9 - 2.6 * t + 1.2 * t * t, roll: -0.25 + t * 0.5 }); }
+    if (f >= 372) put(C.zoe, 'zoe_sip', 1.25, -0.05, { fade: sm((f - 372) / 8) });
+  },
+  // 136: the swarm lands in the gallery (v7 frame 2), the crew small at the front
+  gallery(f) {
+    const k = sm((f - 440) / 20);
+    put(C.y, 'y_proud', 0.55, 3.55, { fade: k, h: 0.62 });
+    put(C.leo, 'leo_catch', 0.0, 3.75, { fade: k, h: 0.62 });
+    put(C.mia, 'mia_qubit', 0.95, 3.85, { fade: k, h: 0.62 });
+    put(C.zoe, 'zoe_sip', 1.3, 3.6, { fade: k, h: 0.62 });
+    put(C.cat, 'cat_sit', 0.3, 3.95, { fade: k, h: 0.62 });
+  },
+  // year by year: KAI flops onto the front paper and starts the domino; the cat naps in 2016 (0 papers)
+  years(f) {
+    const kf = DOMINO0 - 2;
+    if (f < kf + 4) { const t = clamp((f - (kf - 22)) / 22); put(C.kai, 'kai_flop', lerp(3.2, 1.1, t), lerp(4.6, 2.6, t), { h: 0.62, lift: 0.9 * Math.sin(Math.PI * t * 0.9) + 0.25 }); }
+    const k = 1 - sm((f - S.years[0] - 10) / 16);
+    if (k > 0.01) { put(C.y, 'y_proud', 0.55, 3.55, { fade: k, h: 0.62 }); put(C.leo, 'leo_catch', 0.0, 3.75, { fade: k, h: 0.62 }); }
+    const kc = sm((f - S.years[0] - 110) / 16);
+    if (kc > 0.01) put(C.cat, 'cat_sleep', L.YX(2016), L.YZ(2016) + 0.08, { fade: kc, h: 1.3 });
+    const km = sm((f - S.years[0] - 128) / 12);
+    if (km > 0.01) put(C.mia, 'mia_toast', L.YX(2025), L.YZ(2025) - 0.02, { y: SUMMIT, fade: km, h: 0.62, contact: false });
+  },
+  venues(f) {
+    // MIA hops once on the summit; when she lands, the chart bursts (venueBurst starts at S.venues[0] + 4)
+    if (f < S.venues[0] + 20) {
+      const u = f - S.venues[0] + 12, hop = u < 0 ? 0 : u < 14 ? Math.sin(Math.PI * u / 14) * 0.22 : 0;
+      const sq = u >= 14 && u < 24 ? Math.exp(-(u - 14) / 3) : 0;
+      put(C.mia, 'mia_toast', L.YX(2025), L.YZ(2025) - 0.02, { y: SUMMIT - (u > 16 ? (u - 16) * 0.03 : 0), lift: hop, h: 0.62, contact: false, sx: 1 + 0.1 * sq, sy: 1 - 0.12 * sq, fade: 1 - sm((f - S.venues[0] - 10) / 8) });
+    }
+    const k = sm((f - S.venues[0] - 120) / 14);
+    if (k > 0.01) put(C.y, 'y_think', (L.VX(0) + L.VX(1)) / 2, 0.42, { fade: k, h: 0.7 });
+  },
+  // 03 DIRECTIONS: the gold stroke paints three loops that cool into the glass rings; one student per ring
+  dirs(f) {
+    const u = f - S.dirs[0];
+    // Yufei swings the brush
+    const ky = 1 - sm((u - 70) / 14);
+    if (ky > 0.01) put(C.y, u < 18 ? 'y_swing' : 'y_paint_air', 1.05, 0.95, { fade: ky });
+    const draw = eio(clamp((u - 14) / 52));
+    if (u >= 14 && u < 96) {
+      st.ribbon.visible = true; st.ribbon.geometry.setDrawRange(0, Math.floor(st.ribbonIdx * draw / 6) * 6);
+      st.ribbon.material.opacity = 1 - sm((u - 70) / 22);
+    }
+    const kr = sm((u - 58) / 20);
+    T.rings.forEach((r, j) => {
+      r.visible = kr > 0.01; r.position.set(...L.RING_C[j]); r.scale.setScalar((L.RING_R / 0.26) * lerp(0.94, 1, eout(kr)));
+      r.rotation.set(0.05 * (j - 1), 0.12 * (j - 1), 0); r.material.opacity = kr;
+      const vis = VISIT[j], fv = win(f, vis[0], vis[1], 10, 10);
+      r.material.emissiveIntensity = 0.18 + 0.5 * (1 - kr) + 0.25 * fv;
+    });
+    T.bloom.strength = 0.14 + 0.12 * win(u, 56, 100, 10, 20);
+    // the students stand in front of their own ring during its visit
+    const vk = (j) => win(f, VISIT[j][0] - 4, VISIT[j][1] + 8, 8, 8);
+    const who = [[C.mia, 'mia_qubit'], [C.leo, 'leo_gpu'], [C.kai, 'kai_chip']];
+    for (let j = 0; j < 3; j++) {
+      const v = vk(j); if (v < 0.01) continue;
+      const [cx, cy, cz] = L.RING_C[j], plat = cy - 0.3 + (1 - eout(v)) * -0.25;
+      put(who[j][0], who[j][1], cx, cz - 0.04, { y: plat, fade: v, h: 0.5, contact: false });
+      // the platform: one of the ring's own papers, lying flat under the feet
+      const k = D.byRing[j].find((q) => !D.reps[j].includes(q));
+      setPaper(T, k, { p: [cx, plat - 0.004, cz - 0.04], r: [-Math.PI / 2, 0, 0.3], s: 0.3, dim: 0 });
+    }
+    if (f > S.dirs[1] - 30) { const r = T.rings[2]; r.visible = true; r.material.opacity = 1; }
+    if (f > S.dirs[1] - 4) { T.grade.uniforms.uFlash.value = 0.5 * sm((f - S.dirs[1] + 4) / 4); T.grade.uniforms.uFlashCol.value = [1.0, 0.62, 0.55]; }
+  },
+  // 04 RECOGNITION: through the red ring into the honours row; best paper rises; the milk tea toast
+  award(f) {
+    const u = f - S.award[0];
+    T.key.intensity = 1.3 * (1 - 0.35 * win(u, 40, 120, 16, 16));
+    T.kick.intensity = 0.8 + 1.4 * win(u, 40, 180, 20, 20);
+    const kr = 1 - sm((u - 10) / 36);
+    if (kr > 0.01) T.rings.forEach((r, j) => { r.visible = true; r.position.set(...L.RING_C[j]); r.scale.setScalar(L.RING_R / 0.26); r.rotation.set(0.05 * (j - 1), 0.12 * (j - 1), 0); r.material.opacity = kr; r.material.emissiveIntensity = 0.18; });
+    T.grade.uniforms.uFlash.value = u < 8 ? 0.5 * Math.exp(-u / 2.2) : 0; T.grade.uniforms.uFlashCol.value = [1.0, 0.62, 0.55];
+    const ka = win(u, 52, 128, 10, 8);
+    if (ka > 0.01) put(C.y, 'y_award', -0.62, 1.05, { fade: ka, h: 0.82 });
+    // toast
+    if (u >= 120) {
+      const kz = clamp((u - 120) / 20);
+      put(C.zoe, kz < 1 ? 'zoe_tray' : 'zoe_toast', lerp(1.9, 0.98, eout(kz)), 1.2, { h: 0.82 });
+      const pop = (d) => { const t = u - 140 - d; return t < 0 ? 0 : 1 - Math.exp(-t / 3) * Math.cos(t * 0.6); };
+      put(C.y, 'y_toast', -0.2, 1.35, { h: 0.82, fade: sm((u - 128) / 6), sy: 1 + 0.04 * (1 - pop(0)) });
+      put(C.leo, 'leo_toast', -0.98, 1.1, { h: 0.82, fade: sm((u - 132) / 6) });
+      put(C.mia, 'mia_toast', 0.42, 1.45, { h: 0.82, fade: sm((u - 134) / 6) });
+      put(C.kai, 'kai_toast', -0.55, 1.6, { h: 0.82, fade: sm((u - 136) / 6) });
+      const cj = landing(f, S.award[0] + 158, 0.35, 8);
+      put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_cheer', 0.22, 1.85, { h: 0.82, fade: sm((u - 140) / 6), lift: cj ? cj.lift : 0 });
+      confetti(f, S.award[0] + 146);
+    }
+  },
+  // 05 PEOPLE: the line-up, the cat jumps in, the flash: the real team photo
+  photo(f) {
+    const u = f - S.photo[0];
+    if (u < 71) {
+      put(C.leo, 'leo_toast', -0.95, 0.85, { h: 0.82 });
+      put(C.kai, 'kai_toast', -0.45, 0.95, { h: 0.82 });
+      put(C.y, 'y_toast', 0.0, 1.05, { h: 0.82 });
+      put(C.mia, 'mia_toast', 0.45, 0.95, { h: 0.82 });
+      put(C.zoe, 'zoe_toast', 0.92, 0.85, { h: 0.82 });
+      const cj = landing(f, S.photo[0] + 58, 0.5, 10);
+      if (cj) put(C.cat, 'cat_jump', 0.12, 1.55, { h: 0.82, lift: cj.lift + 0.12, sx: cj.sx, sy: cj.sy });
+    }
+    T.grade.uniforms.uFlash.value = u >= 66 && u < 84 ? Math.exp(-(u - 66) / 5) : 0;
+    if (u >= 71) {
+      const k = sm((u - 71) / 8);
+      st.print.visible = true; st.print.position.set(0, 0.55, 0); st.print.rotation.set(-0.03, -0.08, 0, 'YXZ'); st.print.scale.setScalar(1.45);
+      st.printMat.opacity = 1; st.printMat.emissive = st.printMat.emissive || null;
+      T.key.intensity = 1.5;
+    }
+  },
+  // the first desk, empty, under its lamp; Paper #137 hangs where the first paper hung; the cat takes the seat
+  seat(f) {
+    const u = f - S.seat[0];
+    // the flip: print turns edge-on, the sheet behind it turns on from edge-on to the hero pose
+    const t1 = ein(clamp((u - 6) / 16)), t2 = eout5(clamp((u - 22) / 34));
+    if (u < 22) {
+      st.print.visible = true; st.print.position.set(0, 0.55, 0); st.print.rotation.set(-0.03, -0.08 + t1 * (Math.PI / 2 + 0.08), 0, 'YXZ'); st.print.scale.setScalar(1.45); st.printMat.opacity = 1;
+    } else {
+      st.p137.visible = true; st.p137mat.opacity = 1;
+      st.p137.position.set(0, 0.55, lerp(0, -0.05, t2)); st.p137.rotation.set(lerp(-0.03, -0.08, t2), lerp(-Math.PI / 2, -0.5, t2), lerp(0, 0.04, t2), 'YXZ');
+      st.p137.scale.setScalar(lerp(1.45 * 0.62, 1.18, t2));
+    }
+    const kd = sm((u - 40) / 24);
+    T.prac.position.set(0.95, 0.25, 0.55); T.prac.intensity = 2.4 * kd;
+    if (kd > 0.01) put(C.desk, 'desk_empty', 0.62, 0.42, { fade: kd });
+    if (u > 70) { const cj = landing(f, S.seat[0] + 86, 0.4, 10); put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_sit', 0.5, 0.52, { y: FLOOR + 0.3, lift: cj ? cj.lift : 0, contact: false, h: 0.95 }); }
+    const ki = sm((u - 118) / 12);
+    if (ki > 0.01) put(C.y, 'y_invite', -0.12, 0.85, { fade: ki });
+  },
+  end(f) {
+    const u = f - S.end[0];
+    const k = sm((u - 10) / 40);
+    put(C.desk, 'desk_empty', 0.62, 0.42, { fade: 1 - k });
+    put(C.cat, 'cat_sit', 0.5, 0.52, { y: FLOOR + 0.3, contact: false, h: 0.95, fade: 1 - k });
+    put(C.y, 'y_invite', -0.12, 0.85, { fade: 1 - k });
+    st.p137.visible = k < 0.99; st.p137.position.set(0, 0.55, -0.05); st.p137.rotation.set(-0.08, -0.5, 0.04, 'YXZ'); st.p137.scale.setScalar(1.18); st.p137mat.opacity = 1 - k;
+    const C3 = [[-0.27, 1.62, 0.6], [0, 1.92, 0.45], [0.27, 1.62, 0.6]];
+    const kr = eio5(clamp((u - 20) / 70));
+    const bat = u - 82, wob = bat < 0 ? 0 : Math.exp(-bat / 9) * Math.sin(bat * 0.55) * 0.22;
+    T.rings.forEach((r, j) => { r.visible = kr > 0.01; r.scale.setScalar(1); r.material.opacity = clamp(kr * 1.4); r.position.set(C3[j][0], C3[j][1] + (1 - kr) * 1.6, C3[j][2]); r.rotation.set(0.12 * (j - 1) + (1 - kr) * 1.2, 0.25 * (j - 1), (j === 2 ? wob : 0)); r.material.emissiveIntensity = 0.18 + (j === 2 ? Math.abs(wob) * 1.2 : 0); });
+    // the cat springs up from below the frame and bats the red ring, then drops away
+    if (u > 70 && u < 100) { const t = (u - 70) / 30, y = -0.15 + Math.sin(Math.PI * t) * 1.55; put(C.cat, 'cat_jump', 0.5, 0.95, { y, contact: false, h: 0.8, roll: -0.15 }); }
+    T.key.position.set(0, 3.2, 3.4); T.key.lookAt(0, 1, 0.5);
+    T.bokeh.uniforms.aperture.value = 0.0022;
+  },
+};
+
+function confetti(f, f0) {
+  const u = f - f0; if (u < 0) return;
+  st.confetti.visible = true;
+  const d = st.dummy;
+  for (let i = 0; i < 220; i++) {
+    const t = u - hsh(i, 9) * 18; const x0 = (hsh(i, 1) - 0.5) * 3.2, z0 = 0.6 + hsh(i, 2) * 1.6;
+    const y = 2.3 - Math.max(0, t) * (0.018 + 0.01 * hsh(i, 3));
+    d.position.set(x0 + 0.05 * Math.sin(t * 0.12 + i), Math.max(FLOOR + 0.003, y), z0 + 0.04 * Math.cos(t * 0.1 + i));
+    d.rotation.set(t * 0.21 * (hsh(i, 4) + 0.3), t * 0.17 + i, t * 0.13 * hsh(i, 5));
+    d.scale.setScalar(t < 0 ? 0.0001 : 1); d.updateMatrix(); st.confetti.setMatrixAt(i, d.matrix);
+  }
+  st.confetti.instanceMatrix.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// type
+// ---------------------------------------------------------------------------------------------------------
+const PR = (ctx, x, y, z) => { const q = ctx.project(new T.THREE.Vector3(x, y, z)); return q; };
+function typeLayer(ctx, g, f) {
+  const { txt, scrim, header, leader, odometer, M, GRAD, MUTE, SOFT, INK } = TY;
+  const ch = CHAPTER(f);
+  header(g, ch, sm((f - 20) / 20) * (1 - sm((f - S.end[0] - 10) / 20)) + sm((f - S.end[0] - 10) / 20), ch ? 1 : 0);
+
+  // 01
+  if (f < S.grow[0] + 10) {
+    const k1 = win(f, 128, S.grow[0] + 6, 16, 12), k2 = win(f, 138, S.grow[0] + 6, 16, 12);
+    scrim(g, 860, 1350, 0.8 * Math.max(k1, 0));
+    txt(g, '2013', M - 6, 1188, 168, 200, null, { grad: ['#ffffff', '#9c9ca6'], track: -0.035, k: k1 });
+    txt(g, 'It started with one paper.', M, 1252, 40, 500, SOFT, { k: k2 });
+    txt(g, 'Yufei Ding, PhD student', M, 1296, 22, 500, MUTE, { k: win(f, 148, S.grow[0] + 6, 12, 12), mono: true, track: 0.04 });
+    if (f > 132) {
+      const a = PR(ctx, 0.36, 0.95, 0.0), b = { x: 820, y: 330 };
+      leader(g, a, b, win(f, 136, S.grow[0] + 4, 18, 10), ['ProfMig', "CGO 2013 · Zhou, Wu, Ding, Shen"], { size: 24, tail: 30 });
+    }
+  }
+  // 02 growth: the count and the year roll
+  if (f >= S.grow[0] && f < S.gallery[0] + 30) {
+    let n = 0, yr = 2013;
+    for (const p of D.pubs) { const ap = appearAt(p.k) + 18; if (ap <= f) { n++; if (p.yr && p.yr > yr) yr = p.yr; } }
+    const yrs = clamp((f - 18 - YEAR_T0) / (YEAR_DT * 13), 0, 1) * 13 + 2013;
+    const kc = win(f, S.grow[0] + 18, S.gallery[0] + 8, 14, 12);
+    scrim(g, 420, 0, 0.8 * kc); scrim(g, 980, 1350, 0.7 * kc);
+    odometer(g, n, M - 8, 300, 200, 700, { k: kc, grad: GRAD });
+    txt(g, n === 1 ? 'paper' : 'papers', M + (n >= 100 ? 360 : n >= 10 ? 240 : 120), 300, 56, 500, SOFT, { k: kc, mask: false, noblur: true });
+    odometer(g, Math.min(2026, yrs), M, 1200, 72, 300, { k: kc, color: INK, track: 0.0 });
+    txt(g, 'Then a few more.', M, 1270, 40, 500, SOFT, { k: win(f, 240, 330, 14, 10) });
+    txt(g, 'Then a team.', M, 1270, 40, 500, SOFT, { k: win(f, 336, S.gallery[0] - 4, 12, 10) });
+  }
+  // 136 gallery (v7 frame 2)
+  if (f >= S.gallery[0] && f < S.years[0] + 20) {
+    const k = win(f, S.gallery[0] + 40, S.years[0] + 16, 18, 14);
+    scrim(g, 380, 0, 0.8 * k);
+    txt(g, '136', M - 8, 300, 200, 700, null, { grad: GRAD, track: -0.05, k });
+    txt(g, 'papers.', M + 360, 300, 64, 500, SOFT, { k: k * sm((f - S.gallery[0] - 48) / 14) });
+    txt(g, '2013 – 2026', M, 362, 32, 500, MUTE, { k: k * sm((f - S.gallery[0] - 54) / 14) });
+    txt(g, 'NOW', 1080 - M, 1290, 18, 700, MUTE, { align: 'right', track: 0.3, k, noblur: true });
+  }
+  // year by year
+  if (f >= S.years[0] + 60 && f < S.venues[0] + 24) {
+    const k = win(f, S.years[0] + 96, S.venues[0] + 20, 16, 14);
+    scrim(g, 300, 0, 0.75 * k);
+    txt(g, 'Year by year.', M, 230, 72, 700, null, { grad: GRAD, k });
+    D.years.forEach((y, i) => {
+      const kk = k * sm((f - S.years[0] - 104 - i * 1.5) / 10); if (kk < 0.01) return;
+      const q = PR(ctx, L.YX(y) + 0.06, FLOOR - 0.04, L.YZ(y) + 0.22);
+      txt(g, `'${String(y % 100).padStart(2, '0')}`, q.x, q.y + 26, 22, 600, MUTE, { align: 'center', k: kk, mono: true });
+      const n = D.ycount[y]; const t = PR(ctx, L.YX(y), FLOOR + L.YS + Math.max(0, n - 1) * L.YSTEP + 0.08, L.YZ(y) - Math.max(0, n - 1) * 0.01);
+      txt(g, String(n), t.x, t.y, 28, 700, n ? INK : MUTE, { align: 'center', k: kk });
+    });
+    const kz = k * sm((f - S.years[0] - 124) / 12);
+    const zq = PR(ctx, L.YX(2016), FLOOR + 0.12, L.YZ(2016) + 0.08);
+    leader(g, zq, { x: zq.x - 30, y: zq.y + 120 }, kz, ['0 papers', '1 cat nap'], { size: 22, align: 'right', tail: -20 });
+    const pq = PR(ctx, L.YX(2025), FLOOR + L.YS + 18 * L.YSTEP + 0.62, L.YZ(2025) - 0.18);
+    leader(g, pq, { x: pq.x - 170, y: pq.y + 70 }, k * sm((f - S.years[0] - 132) / 12), ['19 in 2025', 'the peak'], { size: 22, align: 'right', tail: -20 });
+  }
+  // by venue
+  if (f >= S.venues[0] + 20 && f < S.dirs[0] + 20) {
+    const k = win(f, S.venues[0] + 64, S.dirs[0] + 14, 16, 14);
+    scrim(g, 300, 0, 0.75 * k);
+    txt(g, 'Where they were published.', M, 230, 60, 700, null, { grad: GRAD, k });
+    D.topv.forEach((v, c) => {
+      const n = D.vcount[v], kk = k * sm((f - S.venues[0] - 70 - c * 3) / 10); if (kk < 0.01) return;
+      const top = PR(ctx, L.VX(c), FLOOR + n * L.VSTEP + 0.14, L.VZ(c)), base = PR(ctx, L.VX(c), FLOOR - 0.02, L.VZ(c) + 0.34);
+      txt(g, String(n), top.x, top.y, 40, 700, INK, { align: 'center', k: kk });
+      txt(g, v, base.x, base.y + 30, v.length > 7 ? 16 : 20, 600, MUTE, { align: 'center', k: kk, mono: true });
+    });
+    txt(g, 'ASPLOS 15 = ISCA 15', M, 1200, 44, 700, INK, { k: k * sm((f - S.venues[0] - 112) / 12) });
+    txt(g, 'A tie. She refuses to pick.', M, 1256, 32, 500, SOFT, { k: k * sm((f - S.venues[0] - 124) / 12) });
+  }
+  // 03 three directions
+  if (f >= S.dirs[0] + 40 && f < S.award[0]) {
+    const k = win(f, S.dirs[0] + 64, VISIT[0][0] + 2, 14, 10);
+    scrim(g, 300, 0, 0.75 * k);
+    txt(g, 'Three directions.', M, 230, 72, 700, null, { grad: GRAD, k });
+    const COLS = ['#5aa2ff', '#7fe08a', '#ff7474'];
+    VISIT.forEach(([a, b], r) => {
+      const kv = win(f, a + 6, b + 4, 10, 8); if (kv < 0.01) return;
+      const R = D.rings[r];
+      scrim(g, 360, 0, 0.8 * kv);
+      txt(g, R.name, M, 220, 56, 700, COLS[r], { k: kv });
+      txt(g, `${R.n} papers  ·  ${R.sub}`, M, 268, 26, 500, SOFT, { k: kv });
+      D.reps[r].forEach((kk, j) => {
+        const p = D.pubs[kk], kj = win(f, a + 16 + j * 5, b + 4, 10, 8); if (kj < 0.01) return;
+        const rs = repState(kk, f, L.orbit(D, kk, f));
+        const from = PR(ctx, rs.p[0], rs.p[1] - rs.s * 0.42, rs.p[2]);
+        const to = { x: 150 + j * 300, y: 1170 + (j === 1 ? 50 : 0) };
+        leader(g, from, to, kj, [p.short.length > 22 ? p.short.slice(0, 20) + '...' : p.short, p.tag + (p.award ? ' · ' + p.award.replace(' Award', '') : '')], { size: 26, tail: 0, align: 'left' });
+      });
+    });
+  }
+  // 04 recognition
+  if (f >= S.award[0] && f < S.photo[0] + 10) {
+    const u = f - S.award[0];
+    const ka = win(u, 54, 126, 14, 10);
+    scrim(g, 300, 0, 0.8 * Math.max(ka, win(u, 128, 182, 10, 10)));
+    txt(g, 'Best Paper Award', M, 200, 74, 700, null, { grad: ['#ffe6a8', '#c9962e'], k: ka });
+    txt(g, 'ISCA 2026  ·  Patterns behind Chaos', M, 252, 30, 500, SOFT, { k: ka * sm((u - 60) / 12) });
+    const ko = win(u, 70, 126, 12, 10);
+    scrim(g, 1000, 1350, 0.75 * ko);
+    ['ISCA 2022 · Best Paper Nominee', 'DAC 2022 · Best Paper Nominee', 'OOPSLA 2020 · Distinguished Paper', 'ASPLOS 2024 · 2 Distinguished Artifacts'].forEach((s, i) =>
+      txt(g, s, M, 1130 + i * 40, 22, 500, i ? MUTE : SOFT, { k: ko * sm((u - 74 - i * 4) / 10), mono: true }));
+    const kt = win(u, 140, 186, 10, 8);
+    txt(g, 'Every acceptance:', M, 200, 60, 700, null, { grad: GRAD, k: kt });
+    txt(g, 'milk tea.', M, 270, 60, 700, null, { grad: ['#f3d9b6', '#c49a6c'], k: kt * sm((u - 146) / 10) });
+  }
+  // 05 people
+  if (f >= S.photo[0] && f < S.seat[0] + 40) {
+    const u = f - S.photo[0];
+    txt(g, 'Say \u201chot pot\u201d!', M, 200, 56, 700, SOFT, { k: win(u, 14, 64, 10, 4) });
+    const kt = win(u, 84, 128, 12, 8);
+    scrim(g, 980, 1350, 0.8 * kt);
+    txt(g, 'The people behind the papers.', M, 1170, 52, 700, null, { grad: GRAD, k: kt });
+    txt(g, 'Lab life: lots of hot pot.', M, 1222, 30, 500, SOFT, { k: kt * sm((u - 92) / 10) });
+  }
+  if (f >= S.seat[0] + 40 && f < S.end[0] + 20) {
+    const u = f - S.seat[0];
+    const kc = win(u, 96, 140, 8, 8);
+    const cq = PR(ctx, 0.5, FLOOR + 0.62, 0.52);
+    leader(g, cq, { x: cq.x + 60, y: cq.y - 70 }, kc, ['(not you)'], { size: 22, tail: 24, mono: true });
+    const ks = win(u, 128, S.end[0] - S.seat[0] + 16, 14, 14);
+    scrim(g, 960, 1350, 0.8 * ks);
+    txt(g, 'The next one is yours.', M, 1222, 60, 700, null, { grad: GRAD, k: ks });
+  }
+  // end card (v7 frame 3)
+  if (f >= S.end[0] + 30) {
+    const u = f - S.end[0];
+    scrim(g, 640, 1350, 0.85 * sm((u - 30) / 30));
+    txt(g, 'Picasso Lab', 540, 900, 104, 700, null, { align: 'center', grad: GRAD, track: -0.035, k: sm((u - 40) / 22) });
+    txt(g, 'UC San Diego  ·  Prof. Yufei Ding', 540, 962, 32, 500, '#a1a1a6', { align: 'center', k: sm((u - 50) / 20) });
+    txt(g, 'We are recruiting PhD students.', 540, 1082, 40, 600, INK, { align: 'center', k: sm((u - 64) / 20) });
+    txt(g, '@PicassoLabUCSD', 540, 1176, 46, 700, null, { align: 'center', grad: ['#a8d0ff', '#5aa2ff'], k: sm((u - 76) / 18) });
+    txt(g, 'yufeiding.ucsd.edu', 540, 1222, 24, 500, MUTE, { align: 'center', k: sm((u - 82) / 18) });
+  }
+}
+</script></body></html>
