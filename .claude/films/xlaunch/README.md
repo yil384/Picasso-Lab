@@ -28,7 +28,7 @@ Archive of every cut and its verdict: `social/x/versions/` (`make_index.py`).
 ```sh
 # in a worktree of video/x-launch:  git worktree add ../vk origin/video/x-launch
 cp -r .claude/films/xlaunch/scene ../vk/video-kit/films/xfilm
-cp ../vk/video-kit/films/xkeynote/{data.json,team.jpg,logo.png} ../vk/video-kit/films/xfilm/ && cp -r ../vk/video-kit/films/xkeynote/pages ../vk/video-kit/films/xfilm/
+python3 .claude/films/xlaunch/tools/export_pages.py --fonts FONTS --out ../vk/video-kit/films/xfilm --hero-dir HERO   # pages, data.json, team.jpg, logo.png (heroes at 1600 px)
 SRC=.claude/films/xlaunch/art OUT=../vk/video-kit/films/xfilm/cut python3 .claude/films/xlaunch/tools/key.py
 cd ../vk/video-kit/pipeline
 python3 snap.py ../films/xfilm/film.html 150 470 700 1200 --width 540 --height 675 --out /tmp/snaps   # stills first

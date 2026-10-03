@@ -63,7 +63,7 @@ export async function buildStudio(ctx, { THREE, renderer }, D, o = {}) {
 
   const mirror = new Reflector(new THREE.PlaneGeometry(40, 40), { textureWidth: ctx.W, textureHeight: ctx.H, color: 0x8a8a90, clipBias: 0.003 });
   mirror.rotation.x = -Math.PI / 2; mirror.position.y = FLOOR; scene.add(mirror);
-  const coat = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0e0e12, roughness: 0.55, metalness: 0.0, transparent: true, opacity: 0.86 }));
+  const coat = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0e0e12, roughness: 0.55, metalness: 0.0, transparent: true, opacity: 0.9 }));
   coat.rotation.x = -Math.PI / 2; coat.position.y = FLOOR + 0.001; coat.receiveShadow = true; scene.add(coat);
   const cyc = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 16, 96, 1, true, Math.PI * 0.55, Math.PI * 0.9),
     new THREE.MeshStandardMaterial({ color: 0x131318, roughness: 0.95, side: THREE.BackSide }));
@@ -72,6 +72,13 @@ export async function buildStudio(ctx, { THREE, renderer }, D, o = {}) {
   // papers: a front with the real first page and a plain back, each its own curl
   const bump = fiberTexture(THREE);
   const backMat = new THREE.MeshPhysicalMaterial({ color: 0xebe8e1, roughness: 0.8, bumpMap: bump, bumpScale: 0.6, sheen: 0.4, sheenRoughness: 0.8, side: THREE.BackSide });
+  // the back of a printed sheet: warm paper with the front page showing through, mirrored, at a few percent
+  const showThrough = (img) => {
+    const w = 256, h = Math.round(256 * img.height / img.width), c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.fillStyle = '#ece8e0'; g.fillRect(0, 0, w, h);
+    g.globalAlpha = 0.09; g.drawImage(img, 0, 0, w, h);   // BackSide already mirrors the UVs
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  };
   const papers = {};
   for (const p of D.pubs) {
     const img = await loadImg(`/scene/pages/${String(p.k).padStart(3, '0')}.jpg`);
@@ -79,10 +86,11 @@ export async function buildStudio(ctx, { THREE, renderer }, D, o = {}) {
     const k = p.k, geo = sheetGeometry(THREE, 0.6 + hsh(k, 1) * 0.8, hsh(k, 2) - 0.3, hsh(k, 3), k);
     const mat = new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.74, bumpMap: bump, bumpScale: 0.5, sheen: 0.35, sheenRoughness: 0.85, sheenColor: 0xffffff,
       emissive: 0xffd27a, emissiveIntensity: 0 });
-    const front = new THREE.Mesh(geo, mat), back = new THREE.Mesh(geo, backMat);
+    const bmat = new THREE.MeshPhysicalMaterial({ map: showThrough(img), roughness: 0.8, bumpMap: bump, bumpScale: 0.6, sheen: 0.4, sheenRoughness: 0.8, side: THREE.BackSide });
+    const front = new THREE.Mesh(geo, mat), back = new THREE.Mesh(geo, bmat);
     front.castShadow = back.castShadow = true; front.receiveShadow = true;
     const g = new THREE.Group(); g.add(front, back); scene.add(g); g.visible = false;
-    papers[k] = { g, mat };
+    papers[k] = { g, mat, bmat, img };
   }
   // the three glass rings of the logo
   const rings = [0x3f8cff, 0x63d36f, 0xff4d4d].map((c) => {
@@ -91,7 +99,8 @@ export async function buildStudio(ctx, { THREE, renderer }, D, o = {}) {
     scene.add(m); m.visible = false; return m;
   });
 
-  const composer = new EffectComposer(renderer);
+  const rt = new THREE.WebGLRenderTarget(ctx.W, ctx.H, { samples: 4, type: THREE.HalfFloatType });
+  const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
   const bokeh = new BokehPass(scene, camera, { focus: 3, aperture: 0.0006, maxblur: 0.006 });
   composer.addPass(bokeh);
@@ -100,7 +109,7 @@ export async function buildStudio(ctx, { THREE, renderer }, D, o = {}) {
   const blur = new ShaderPass(MotionBlurShader); composer.addPass(blur);
   composer.addPass(new OutputPass());
   const grade = new ShaderPass(GradeShader); composer.addPass(grade);
-  return { THREE, scene, camera, composer, bokeh, bloom, blur, grade, key, rim, kick, sh, prac, mirror, coat, cyc, papers, rings, bump, loadImg };
+  return { THREE, scene, camera, composer, bokeh, bloom, blur, grade, key, rim, kick, sh, prac, mirror, coat, cyc, papers, rings, bump, loadImg, backMat };
 }
 
 // a first page in the same proceedings layout as the typeset pages (612 x 792 pt at 2x), drawn in the browser:
@@ -109,11 +118,11 @@ export function blankPage(THREE, title, authors, o = {}) {
   const S = 2, w = 612 * S, h = 792 * S, c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
   g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
-  g.font = `${44 * S}px "Instrument Serif"`; g.fillText(title, w / 2, 96 * S);
-  if (o.subtitle) { g.font = `italic ${22 * S}px "Instrument Serif"`; g.fillStyle = '#333'; g.fillText(o.subtitle, w / 2, 128 * S); }
-  g.font = `500 ${12 * S}px "Inter"`; g.fillStyle = '#323232'; g.fillText(authors, w / 2, (o.subtitle ? 158 : 132) * S);
+  g.font = `${66 * S}px "Instrument Serif"`; g.fillText(title, w / 2, 112 * S);
+  if (o.subtitle) { g.font = `italic ${30 * S}px "Instrument Serif"`; g.fillStyle = '#333'; g.fillText(o.subtitle, w / 2, 156 * S); }
+  g.font = `700 ${24 * S}px "Inter"`; g.fillStyle = '#1d1d1f'; g.fillText(authors, w / 2, (o.subtitle ? 200 : 160) * S);
   g.textAlign = 'left';
-  const y0 = (o.subtitle ? 190 : 168) * S;
+  const y0 = (o.subtitle ? 236 : 196) * S;
   for (let col = 0; col < 2; col++) {
     const x0 = (54 + col * 262) * S;
     g.font = `700 ${11 * S}px "Inter"`; g.fillStyle = '#000'; g.fillText(col === 0 ? 'Abstract' : '1  Introduction', x0, y0 + 10 * S);
@@ -122,7 +131,7 @@ export function blankPage(THREE, title, authors, o = {}) {
     for (let yy = y0 + 30 * S; yy < h - 60 * S; yy += 9 * S) { g.beginPath(); g.moveTo(x0, yy + 3 * S); g.lineTo(x0 + 236 * S, yy + 3 * S); g.stroke(); }
   }
   // a text cursor at the start of the abstract
-  if (o.cursor !== false) { g.fillStyle = '#1d1d1f'; g.fillRect(54 * S, y0 + 24 * S, 1.6 * S, 11 * S); }
+  if (o.cursor !== false) { g.fillStyle = '#1d1d1f'; g.fillRect(54 * S, y0 + 22 * S, 3 * S, 22 * S); }
   g.font = `500 ${10 * S}px "Inter"`; g.fillStyle = '#5a5a5a'; g.fillText(o.tag || '', 54 * S, h - 34 * S);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
   return t;
@@ -134,7 +143,7 @@ export function setPaper(T, k, s, glow = 0) {
   if (!s || s.s < 0.002) { P.g.visible = false; return; }
   P.g.visible = true;
   P.g.position.set(s.p[0], s.p[1], s.p[2]); P.g.rotation.set(s.r[0], s.r[1], s.r[2], 'YXZ'); P.g.scale.setScalar(s.s);
-  P.mat.color.setScalar(1 - 0.8 * s.dim); P.mat.emissiveIntensity = glow;
+  P.mat.color.setScalar(1 - 0.8 * s.dim); P.bmat.color.setScalar((1 - 0.8 * s.dim) * 0.92); P.mat.emissiveIntensity = glow;
 }
 
 export function look(T, pos, tgt, fov, aperture, focusDist) {
