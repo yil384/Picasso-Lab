@@ -34,6 +34,10 @@ const S = {
 };
 // v10: 65 s, fast cut (STORYBOARD_v10.md). Shots that v10 shares with v8 replay v8 through REMAP.
 const NF10 = 1950;
+// round 8: the datacenter fly-through is spliced in after Amodei's note (film frames PORT0..PORT0+PORTN); it cuts
+// straight to the third prediction, so the old timeline resumes at old frame 98 and everything after runs PSHIFT later
+const PORT0 = 86, PORTN = 72, PSHIFT = PORTN - 12, NFALL = NF10 + PSHIFT;
+const oldF = (f) => (f < PORT0 ? f : f < PORT0 + PORTN ? null : f - PSHIFT);
 const S10 = {
   a1: [0, 54], a2: [54, 98], a3: [98, 142], a4: [142, 196], a5: [196, 240], b1: [240, 330], b2: [330, 368], b3: [368, 480],
   c1: [480, 570], c2: [570, 630], c3: [630, 690], d1: [690, 780], d2: [780, 840], d3: [840, 900],
@@ -74,12 +78,12 @@ function slot(name, cx, cz, sp, dz = 0.3) {
 const MH = (m) => 0.95 + 0.1 * hsh(MEMBERS.indexOf(m) + 3, 11);            // a little height variety
 
 defineScene({
-  meta: { title: 'Picasso Lab - launch film v10', durationFrames: NF10, fps: FPS, width: 1080, height: 1350, seed: 9,
-    design: [1080, 1350], background: '#0b0b0e', fonts: ['Inter', 'Instrument Serif', 'JetBrains Mono', 'Fraunces', 'Caveat'], boil: { every: 1, variants: NF10 }, poster: 0 },
-  update(ctx) { frame10(ctx, ctx.iw); },
+  meta: { title: 'Picasso Lab - launch film v10', durationFrames: NFALL, fps: FPS, width: 1080, height: 1350, seed: 9,
+    design: [1080, 1350], background: '#0b0b0e', fonts: ['Inter', 'Instrument Serif', 'JetBrains Mono', 'Fraunces', 'Caveat'], boil: { every: 1, variants: NFALL }, poster: 0 },
+  update(ctx) { frameAt(ctx, ctx.iw); },
   layers: [
     { name: '3d', type: 'three', async init(ctx, three) { return build(ctx, three); }, draw() { T.composer.render(); return false; } },
-    { name: 'type', type: '2d', draw(ctx, g) { typeLayer10(ctx, g, ctx.iw); } },
+    { name: 'type', type: '2d', draw(ctx, g) { typeAt(ctx, g, ctx.iw); } },
   ],
 });
 
@@ -984,7 +988,7 @@ const CLIP_W = [0.78, 0.78, 0.78, 0.86];
 const PILE = [-1.18, 0.08], NGPU = 10, GPU_T0 = 150;
 const CAT0 = [0.4, -0.58];
 const PRN = [0.98, FLOOR, -0.9];                       // the printer (a painted sprite) on the desk
-const CUP = [-0.86, -0.62], PEN = [1.15, 0.3, 0.9];
+const CUP = [-0.72, -1.42], PEN = [1.15, 0.3, 0.9];      // the cup sits back, clear of the push into the rack
 // the painted desk props along the back edge: x, z, height (the lamp stands where the desk light is)
 const DECOR = { lamp: [-1.58, -1.5, 1.75], rack: [-1.3, -1.0, 0.75], calendar: [-0.32, -1.08, 0.5], plant: [0.5, -1.32, 0.42], books: [1.5, -1.38, 0.42] };      // nothing overlaps on the desk: no sheet can pass through another
 const NOTE_AT = [[1.12, 0.55, -0.12], [0.7, 1.02, -0.1], [0.88, 1.04, 0.08], [0.16, 0.13, -0.08]];     // page u, v, spin of each sticky note
@@ -1015,7 +1019,10 @@ async function build10() {
   const K = P9.kit = await propKit(T);
   const press = {}; for (const q of QUOTES) press[q.photo] = await T.loadImg(`/scene/photos/press_${q.photo}.png`);
   P9.clips = QUOTES.map((q, i) => K.pressClip({ ...q, photo: press[q.photo] }, { seed: 3 + i * 7, w: CLIP_W[i], cw: 1200 }));
-  P9.gear = await gearKit(T); P9.gpus = Array.from({ length: NGPU }, () => P9.gear.card());
+  P9.gear = await gearKit(T); P9.gpus = Array.from({ length: NGPU }, () => P9.gear.card()); P9.hall = P9.gear.hall(HALL_X);
+  { const wn2 = K.creaseNormal.clone(); wn2.needsUpdate = true; wn2.wrapS = wn2.wrapT = THREE.RepeatWrapping; wn2.repeat.set(4, 2);      // the wall behind the desk
+    P9.deskWall = new THREE.Mesh(new THREE.PlaneGeometry(9, 4.5), new THREE.MeshStandardMaterial({ color: 0x3a2e26, roughness: 0.96, normalMap: wn2, normalScale: new THREE.Vector2(0.7, 0.7) }));
+    P9.deskWall.receiveShadow = true; P9.deskWall.visible = false; scene.add(P9.deskWall); }
   P9.notes = QUOTES.map((q, i) => K.note(q.note, { w: 0.34, seed: i, size: i === 0 ? 66 : 76 }));
   P9.page = K.titlePage({ w: 1.3 });
   P9.noteY = K.note(['first author', 'wanted.'], { w: 0.28, seed: 5, size: 80 });
@@ -1069,7 +1076,7 @@ async function build10() {
 }
 function hide10() {
   if (!P9.clips) return;
-  BIG_DY = 0; DESK_TILT = 0; P9.circle.mat.depthTest = true; P9.circle.mesh.renderOrder = 3; P9.clips.forEach((c) => { c.g.visible = false; }); P9.gpus.forEach((m) => { m.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
+  BIG_DY = 0; DESK_TILT = 0; P9.circle.mat.depthTest = true; P9.circle.mesh.renderOrder = 3; P9.clips.forEach((c) => { c.g.visible = false; }); P9.gpus.forEach((m) => { m.visible = false; }); P9.hall.set(0, false); P9.deskWall.visible = false; P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
   P9.page.g.visible = false; P9.noteY.g.visible = false; P9.circleY.set(0, 0); P9.logo.g.visible = false; P9.photos.forEach((p) => { p.m.visible = false; }); P9.halo.visible = false;
   P9.bill.mesh.visible = false; P9.big.mesh.visible = false; P9.big.mat.color.setScalar(1);
   [P9.circle, P9.stain, P9.strike, P9.circleB, P9.working, P9.under, ...P9.seals, ...Object.values(P9.st)].forEach((d) => d.set(0, 0));
@@ -1087,7 +1094,7 @@ function reset10() {
   T.key.intensity = 1.3; T.key.position.set(1.2, 3.2, 3.2); T.key.lookAt(0, 0.2, 0);
   T.rim.intensity = 2.2; T.kick.intensity = 0.8; T.kick.position.set(3.4, 0.8, -1.2); T.kick.lookAt(0, 0.4, 0);
   T.grade.uniforms.uFlash.value = 0; T.grade.uniforms.uFlashCol.value = [1, 1, 1]; T.grade.uniforms.uFade.value = 0;
-  T.bloom.strength = 0.14; T.scene.fog.near = 7; T.scene.fog.far = 22;
+  T.bloom.strength = 0.14; T.scene.fog.near = 7; T.scene.fog.far = 22; T.scene.fog.color.setHex(0x0b0b0e);
   for (const p of D.pubs) setPaper(T, p.k, null);
 }
 
@@ -1269,7 +1276,7 @@ function deskOn(lampK = 1) {
   T.key.intensity = 0.42; T.key.position.set(-2.2, 3.0, 1.0); T.key.lookAt(0, FLOOR, 0);
   T.rim.intensity = 0.8; T.kick.intensity = 0.3; T.kick.position.set(2.6, FLOOR + 0.8, -2.0); T.kick.lookAt(0, FLOOR, 0); T.bloom.strength = 0.16;
   T.scene.fog.near = 5; T.scene.fog.far = 13;
-  halo3(-0.4, FLOOR + 0.9, -3.0, 7.5, 3.2, 0.3, [1.0, 0.8, 0.58]);        // the lamp's spill on the dark beyond the desk
+  P9.deskWall.visible = true; P9.deskWall.position.set(0, FLOOR + 1.9, -2.25);          // the wall behind the desk, lit by the lamp
   // the things already on the desk
   P9.pen.visible = true; P9.pen.position.set(PEN[0], FLOOR + 0.012, PEN[1]); P9.pen.rotation.set(-Math.PI / 2, 0, PEN[2]);
   putH(C.tea, 'prop_tea', CUP[0], CUP[1], 0.8, { light: 1.0, rim: 0.5, rimCol: [1, 0.85, 0.6], relief: 0.15, face: 1 });
@@ -1389,7 +1396,7 @@ const PAGE = [0.12, 0.08, -0.04];
 function pageOnDesk() { const pg = P9.page; pg.g.visible = true; pg.g.position.set(PAGE[0], FLOOR + 0.008, PAGE[1]); pg.g.rotation.set(-Math.PI / 2, 0, PAGE[2], 'XYZ'); return true; }
 function endDesk(f) {
   deskOn(0.9); [[-1.12, -0.42, 0.24], [-1.16, 0.56, -0.14], [1.34, 0.5, 0.18], [1.3, -0.42, -0.12]].forEach((at, j) => clipOnDesk(j, at));   // tidied to the sides
-  pageOnDesk(); const u = f - 1710;
+  C.calendar.hide(); pageOnDesk(); const u = f - 1710;
   if (u < 4) { P9.page.g.position.y += (1 - u / 4) * 0.16; P9.page.g.rotation.x += (1 - u / 4) * 0.08; }
   P9.kit.dustRing([PAGE[0], FLOOR, PAGE[1]], P9.page.w, P9.page.h, FLOOR + 0.012, u - 3);
   const cj = landing(f, 1716, 0.12, 6);
@@ -1410,6 +1417,51 @@ function logoCard(f) {
   T.key.intensity = 1.1; T.rim.intensity = 2.6; T.bloom.strength = 0.22;
   if (f >= 1936) T.grade.uniforms.uFade.value = sm((f - 1936) / 13);
 }
+
+// ---- round 8: into the rack ------------------------------------------------------------------------------
+// the camera pushes into the mini rack on the desk, a flash, and it is flying down the aisle of a full-size datacenter
+// (gear.js hall, built at HALL_X); the quote rides the aisle; it flies up into the light and the flash cuts to a3
+const HALL_X = 200;
+let PCAM_IN = null;
+const PCAM_HALL = camPath([[24, [HALL_X, 1.6, 8], [HALL_X, 1.35, -20], 40], [50, [HALL_X + 0.25, 1.35, -12], [HALL_X + 0.15, 1.25, -40], 36], [68, [HALL_X + 0.4, 2.4, -23], [HALL_X + 0.5, 4.8, -31], 44]], lin);
+function framePortal(ctx, u) {
+  const f = PORT0 + u; hide10(); DRIFT = 0; NOWF = f; reset10();
+  if (!PCAM_IN) { const c0 = CAMS10.a2(PORT0 - 1), r = [DECOR.rack[0] - 0.08, FLOOR + 0.36, DECOR.rack[1] - 0.12], d = new T.THREE.Vector3(c0.p[0] - r[0], c0.p[1] - r[1], c0.p[2] - r[2]).normalize();
+    PCAM_IN = { c0, end: { p: [r[0] + d.x * 0.55, r[1] + d.y * 0.55, r[2] + d.z * 0.55], t: r, fov: 24 } }; }
+  let c;
+  if (u < 24) {
+    quoteShot(PORT0 - 1, 1);                            // the desk as the push begins
+    const t = Math.pow(u / 24, 2.1), tl = sm(u / 9), A = PCAM_IN.c0, B = PCAM_IN.end; c = { p: mix3(A.p, B.p, t), t: mix3(A.t, B.t, tl), fov: lerp(A.fov, B.fov, t) };     // turn to the rack, then rush it
+    T.bloom.strength = lerp(0.16, 0.5, t);
+  } else {
+    T.mirror.visible = false; T.coat.visible = false; T.cyc.visible = false;
+    T.key.intensity = 0; T.rim.intensity = 0.6; T.kick.intensity = 0; T.prac.intensity = 0;
+    T.scene.fog.color.setHex(0x070a10); T.scene.fog.near = 5; T.scene.fog.far = 46; T.bloom.strength = 0.42;
+    P9.hall.set(f, true); c = PCAM_HALL(u);
+  }
+  look(T, c.p, c.t, c.fov, 0.0005);
+  const fl = u < 24 ? sm((u - 15) / 9) : u < 32 ? 1 - sm((u - 24) / 8) : sm((u - 60) / 11);
+  T.grade.uniforms.uFlash.value = fl; T.grade.uniforms.uFlashCol.value = [0.86, 0.94, 1.0]; T.blur.uniforms.uK.value = 0;
+  T.grade.uniforms.uFrame.value = f; ctx.camera = T.camera;
+}
+function frameAt(ctx, f) {
+  const fo = oldF(f);
+  if (fo == null) { framePortal(ctx, f - PORT0); return; }
+  frame10(ctx, fo);
+  if (fo >= 98 && fo < 105) { T.grade.uniforms.uFlash.value = 1 - sm((fo - 98) / 7); T.grade.uniforms.uFlashCol.value = [0.86, 0.94, 1.0]; }   // out of the flash
+}
+function typePortal(ctx, g, u) {
+  if (u < 24) return;
+  const f = PORT0 + u, v = ctx.project(new T.THREE.Vector3(HALL_X + 0.15, 1.3, -60)), k = sm((u - 24) / 4) * (1 - sm((u - 62) / 6));
+  g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#cfe6ff'; g.lineCap = 'round';      // the rush of the aisle
+  for (let i = 0; i < 46; i++) { const a = hsh(i, 41) * TAU, sp = 18 + 30 * hsh(i, 42), r = (hsh(i, 43) * 900 + u * sp) % 900 + 60, len = 30 + r * 0.35;
+    g.globalAlpha = k * (0.08 + 0.18 * hsh(i, 44)) * (r / 960); g.lineWidth = 1 + 2 * hsh(i, 45);
+    g.beginPath(); g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); g.lineTo(v.x + Math.cos(a) * (r + len), v.y + Math.sin(a) * (r + len)); g.stroke(); }
+  g.restore();
+  const kt = sm((u - 30) / 6) * (1 - sm((u - 58) / 6));
+  if (kt > 0.01) { TY.halo(g, 0, 150, 1080, 380, 0.5 * kt); misreg(g, '“country of geniuses', MX, 250, 96, { k: kt, italic: true }, u - 31); misreg(g, 'in a datacenter”', MX + 60, 345, 96, { k: kt, italic: true }, u - 33); }
+}
+function typeAt(ctx, g, f) { const fo = oldF(f); if (fo == null) typePortal(ctx, g, f - PORT0); else typeLayer10(ctx, g, fo); }
 
 // ---- the new shots -------------------------------------------------------------------------------------
 function quoteShot(f, i) {
@@ -1673,15 +1725,15 @@ function misreg(g, s, x, y, size, o, uh) {
 // dust motes turning in a beam of light (centre x, top y, bottom y, width at the bottom)
 function motes(g, f, cx, y0, y1, w, k, seed = 1) {
   if (k < 0.01) return; g.save(); g.fillStyle = '#fff3dc';
-  for (let i = 0; i < 70; i++) { const t = ((hsh(seed, i, 1) + f * (0.002 + 0.003 * hsh(seed, i, 2))) % 1), y = lerp(y0, y1, t), half = lerp(w * 0.25, w * 0.5, t);
-    const x = cx + (hsh(seed, i, 3) - 0.5) * 2 * half + Math.sin(f * 0.05 + i) * 6, r = 1 + 2.2 * hsh(seed, i, 4);
-    g.globalAlpha = k * (0.25 + 0.5 * hsh(seed, i, 5)) * Math.sin(Math.PI * t) * (0.6 + 0.4 * Math.sin(f * 0.2 + i * 1.7)); g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+  for (let i = 0; i < 110; i++) { const t = ((hsh(seed, i, 1) + f * (0.002 + 0.003 * hsh(seed, i, 2))) % 1), y = lerp(y0, y1, t), half = lerp(w * 0.25, w * 0.5, t);
+    const x = cx + (hsh(seed, i, 3) - 0.5) * 2 * half + Math.sin(f * 0.05 + i) * 6, r = 1.4 + 3 * hsh(seed, i, 4);
+    g.globalAlpha = k * (0.4 + 0.6 * hsh(seed, i, 5)) * Math.sin(Math.PI * t) * (0.6 + 0.4 * Math.sin(f * 0.2 + i * 1.7)); g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
   g.restore();
 }
 // four-point glints that twinkle on gold
 function glints(g, f, pts, k) {
   if (k < 0.01) return; g.save(); g.fillStyle = '#fff6d8'; g.shadowColor = 'rgba(255,214,120,0.9)'; g.shadowBlur = 12;
-  pts.forEach(([x, y], i) => { const tw = Math.max(0, Math.sin(f * 0.21 + i * 2.3)) ** 3, r = 6 + 16 * tw; if (tw < 0.05) return;
+  pts.forEach(([x, y], i) => { const tw = Math.max(0, Math.sin(f * 0.3 + i * 2.3)) ** 2, r = 10 + 26 * tw; if (tw < 0.05) return;
     g.globalAlpha = k * tw; g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill(); });
   g.restore();
 }
@@ -1708,7 +1760,7 @@ function flare(g, x, y, t) {
   if (t <= 0 || t >= 1) return; g.save(); g.globalCompositeOperation = 'lighter';
   const w = 1400 * eout(t), a = 0.7 * (1 - t), gr = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
   gr.addColorStop(0, 'rgba(120,170,255,0)'); gr.addColorStop(0.5, `rgba(255,236,200,${a})`); gr.addColorStop(1, 'rgba(120,170,255,0)');
-  g.fillStyle = gr; g.fillRect(x - w / 2, y - 3, w, 6); g.globalAlpha = a * 0.5; g.fillRect(x - w / 3, y - 14, w / 1.5, 28);
+  g.fillStyle = gr; g.fillRect(x - w / 2, y - 5, w, 10); g.globalAlpha = a * 0.5; g.fillRect(x - w / 3, y - 22, w / 1.5, 44);
   const rg = g.createRadialGradient(x, y, 0, x, y, 90); rg.addColorStop(0, `rgba(255,240,210,${a})`); rg.addColorStop(1, 'rgba(255,240,210,0)'); g.globalAlpha = 1; g.fillStyle = rg; g.fillRect(x - 90, y - 90, 180, 180);
   g.restore();
 }
@@ -1809,7 +1861,7 @@ function typeLayer10(ctx, g, f) {
   if (sh === 'd3') {
     const g8f = g8(f), k = sm((g8f - 790) / 10);
     for (let c = 0; c < 2; c++) { const q = P(L.VX(c), FLOOR, L.VZ(c) + 0.36); plate(g, { x: clamp(q.x, M + 58, 1080 - M - 58), y: q.y + 10 }, D.vcount[D.topv[c]], D.topv[c], k); }
-    big('ASPLOS 15 = ISCA 15', 262, 84, { k });
+    big(`${D.vcount[D.topv[0]]} at ${D.topv[0]}, ${D.vcount[D.topv[1]]} at ${D.topv[1]}.`, 262, 84, { k });
     hand(g, 'she refuses to pick.', MX, CAPX, 70, { k: sm((g8f - 830) / 12), color: PENCIL });
   }
   if (sh === 'e0') big('Three answers to the bill.', 262, 80, { k: sm(u / 6), italic: true });
@@ -1819,6 +1871,11 @@ function typeLayer10(ctx, g, f) {
     halo(g, 0, 140, 900, 400, 0.75 * k);
     serif(g, R.name, MX, 250, 70, { k, color: COLS[r] });
     txt(g, `${R.n} publications  ·  ${R.sub}`, MX, 300, 26, 500, SOFT, { mono: true, track: 0, k });
+    { const c = P(...L.RING_C[r]), e = P(L.RING_C[r][0] + L.RING_R, L.RING_C[r][1], L.RING_C[r][2]), rad = Math.abs(e.x - c.x) * 1.16 + 10, share = R.n / D.pubs.length, ka = sm((u - 6) / 18);
+      g.save(); g.lineCap = 'round'; g.globalAlpha = 0.18 * k; g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.beginPath(); g.arc(c.x, c.y, rad, 0, TAU); g.stroke();
+      g.globalAlpha = k; g.strokeStyle = COLS[r]; g.lineWidth = 7; g.shadowColor = COLS[r]; g.shadowBlur = 14; const a1 = -Math.PI / 2 + TAU * share * ka;
+      g.beginPath(); g.arc(c.x, c.y, rad, -Math.PI / 2, a1); g.stroke(); g.restore();
+      if (ka > 0.05) txt(g, `${Math.round(R.n * ka)} / ${D.pubs.length}`, c.x + Math.cos(a1) * (rad + 46), c.y + Math.sin(a1) * (rad + 46) + 9, 26, 700, COLS[r], { align: 'center', mono: true, track: 0, noblur: true, mask: false }); }
     if (sh === 'e1') { stampSlam(ctx, g, 'stamp_faster', STAMP_T.faster, f, bigAt(BR.gpu, 0.8)); const rq = P(0.42, L.RING_C[1][1] - 0.56, 0.18), kr = sm((f - 950) / 10); halo(g, rq.x - 230, rq.y + 10, rq.x + 230, rq.y + 90, 0.5 * kr); hand(g, 'timed by Rishabh', clamp(rq.x, MX + 200, 1080 - MX - 200), rq.y + 64, 52, { k: kr, color: PENCIL, align: 'center' }); }
     if (sh === 'e2') stampSlam(ctx, g, 'stamp_cheaper', STAMP_T.cheaper, f, bigAt(BR.mem, 0.66));
     if (sh === 'e3') stampSlam(ctx, g, 'stamp_progress', STAMP_T.progress, f, bigAt(BR.next, 0.72));
