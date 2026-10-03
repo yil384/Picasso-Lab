@@ -401,7 +401,9 @@ function aperture(f) {
   if (f >= S.end[0] + 60) return 0.003;
   return 0.0006;
 }
+let NOWF = 0;                                       // the frame being drawn (for idle motion in put)
 function frame(ctx, f) {
+  NOWF = f;
   const { THREE, camera } = T;
   const shot = shotOf(f), c = camAt(f);
   const dx = 0.012 * Math.sin(f * 0.021) + 0.006 * Math.sin(f * 0.053), dy = 0.008 * Math.sin(f * 0.017 + 1);
@@ -470,11 +472,18 @@ function keepOut(f) {
 }
 
 // sprite helper: place a character with the house grade (key from the right, rim from the left in the shot's colour)
+// idle life: a standing figure breathes (a slow ~3.4 s rise of about half a percent) and shifts its weight a
+// little; each character on its own phase. Off with idle: 0 (or while squashing / flying, where sx / sy / lift
+// already carry the motion).
+const IDLE_PH = new Map();
 function put(ch, pose, x, z, o = {}) {
   if (!ch) return null;
-  ch.set(pose, { height: (o.h ?? 1) * (POSE_H[pose] ?? 1), flip: o.flip, sx: o.sx, sy: o.sy });
+  if (!IDLE_PH.has(ch)) IDLE_PH.set(ch, IDLE_PH.size * 2.399);
+  const ph = IDLE_PH.get(ch), k = (o.idle ?? 1) * (o.sx == null && o.sy == null && !o.lift ? 1 : 0), t = NOWF / 30;
+  const br = 1 + k * 0.006 * Math.sin(TAU * t / 3.4 + ph), sway = k * 0.012 * Math.sin(TAU * t / 5.1 + ph * 1.7);
+  ch.set(pose, { height: (o.h ?? 1) * (POSE_H[pose] ?? 1), flip: o.flip, sx: (o.sx ?? 1) * (2 - br), sy: (o.sy ?? 1) * br, relief: o.relief });
   ch.place(x, (o.y ?? FLOOR), z, T.camera, { floorY: FLOOR, light: o.light ?? 0.8, rim: o.rim ?? 1.2, rimDir: [-1, 0.3], side: 0.16, foot: 0.66, lift: o.lift ?? 0,
-    fade: o.fade ?? 1, contact: o.contact, contactK: o.contactK ?? 0.6, yaw: o.yaw, roll: o.roll, rimCol: o.rimCol });
+    fade: o.fade ?? 1, contact: o.contact, contactK: o.contactK ?? 0.6, yaw: o.yaw, roll: (o.roll ?? 0) + sway, rimCol: o.rimCol, face: o.face });
   return ch;
 }
 function landing(f, f0, h = 1.2, dur = 12) {
