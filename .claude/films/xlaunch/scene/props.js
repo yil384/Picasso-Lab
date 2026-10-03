@@ -114,6 +114,7 @@ export async function propKit(T) {
     let y = 70;                                      // texture px: 30 mono characters fill the width
     const ink = 'rgba(28,28,32,0.88)';
     rows.forEach((r, i) => {
+      if (r.gap) { rowY.push(y); y += r.gap; return; }               // blank paper between rows (the backdrop)
       g.fillStyle = ink;
       if (r.head) { g.font = '700 36px "JetBrains Mono"'; g.textAlign = 'center'; g.fillText(r.text, RPX / 2, y); g.textAlign = 'left';
         g.fillRect(RPX * 0.08, y + 14, RPX * 0.84, 2); rowY.push(y); y += 66; return; }
