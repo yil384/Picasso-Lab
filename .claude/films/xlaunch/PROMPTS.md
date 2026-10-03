@@ -61,6 +61,136 @@ member's photo - and use the STYLE below, which names the reference and forbids 
 > #00FF00 background: no floor, no shadow, no gradient. No text, letters, numbers, logos or watermark. Portrait
 > 1024x1536.
 
+Then one message per image. Attach `art/y_toast.png` FIRST and the member's photo SECOND, and paste the
+whole block (the first sentence about the two images is the same every time; it stops ChatGPT drawing Yufei's
+face or blazer onto the member). Save the result under the file name given.
+
+1. `m_chang.png` - photos: y_toast.png, then chang.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A small cup of coffee in the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+2. `m_haotian.png` - photos: y_toast.png, then haotian.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A baseball cap in the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+3. `m_jixuan.png` - photos: y_toast.png, then jixuan.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A Chinese calligraphy brush in the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+4. `m_keyi.png` - photos: y_toast.png, then keyi.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A game controller in the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+5. `m_parikshit.png` - photos: y_toast.png, then parikshit.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A hiking headlamp on the forehead. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+6. `m_rishabh.png` - photos: y_toast.png, then rishabh.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A small silver stopwatch in the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+7. `m_xiang.png` - photos: y_toast.png, then xiang.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A handheld microphone in the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+8. `m_xinwei.png` - photos: y_toast.png, then xinwei.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A small steel frying pan in the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+9. `m_yichen.png` - photos: y_toast.png, then yichen.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A fanned hand of playing cards in the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+10. `m_yue.png` - photos: y_toast.png, then yue.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A wooden baseball bat resting on the shoulder, held by the other hand. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+11. `m_zaifeng.png` - photos: y_toast.png, then zaifeng.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A thick stack of papers under the other arm. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+12. `m_zhengding.png` - photos: y_toast.png, then zhengding.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. Aviator sunglasses. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+13. `m_zhongkai.png` - photos: y_toast.png, then zhongkai.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A gold award medal on a ribbon around the neck. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+14. `m_zhuo.png` - photos: y_toast.png, then zhuo.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A gold medal on a red ribbon around the neck. Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca pearls, a wide straw) in a toast with one hand.
+   ```
+
+15. `xiang_land.png` - photos: y_toast.png, then xiang.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. A superhero landing: one knee and one fist on the ground, the other arm out behind, looking up with a determined grin.
+   ```
+
+16. `xiang_chip.png` - photos: y_toast.png, then xiang.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. Standing, proudly holding up in both hands at chest height a small square quantum chip that glows soft blue.
+   ```
+
+17. `zaifeng_flop.png` - photos: y_toast.png, then zaifeng.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. Mid-air in a comic belly-flop dive, arms and legs spread wide like a starfish, cheeks puffed, eyes squeezed shut; seen from the front, slightly from below.
+   ```
+
+18. `zaifeng_gpu.png` - photos: y_toast.png, then zaifeng.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. Standing, hugging a large graphics card (a GPU board with fans) against the chest like a beloved pet, a soft green glow on it, content smile.
+   ```
+
+19. `zhongkai_tray.png` - photos: y_toast.png, then zhongkai.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. Walking carefully, three-quarter view, carrying a small round tray with six cups of bubble milk tea, concentrating, tongue slightly out.
+   ```
+
+20. `zhongkai_wafer.png` - photos: y_toast.png, then zhongkai.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. Standing, holding up a round silicon wafer that shines with a rainbow sheen, presenting it with a big proud grin.
+   ```
+
+21. `zhongkai_offer.png` - photos: y_toast.png, then zhongkai.webp
+
+   ```
+   Image 1 is ONLY the style reference: match its art style, rendering, lighting and cartoon proportions exactly, but do not copy her face, hair, glasses or clothes. Image 2 is the person to draw: keep their face, hairstyle, glasses, skin tone, build and the clothes from the photo. Full body from the top of the head to both shoes, flat pure green #00FF00 background. Holding one cup of bubble milk tea straight out towards the viewer with both hands, a warm smile, front view.
+   ```
+
 Round 1 (kept for the record):
 
 The students are the real Picasso Lab members (all agreed). Photos: `people/static/<name>.webp` in this repo
