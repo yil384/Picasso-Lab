@@ -77,8 +77,8 @@ STYLE for this conversation (paste once, first message, with cast.png attached):
     beloved pet, a soft glow of green light on it, content smile.
 13. `kai_chip` - KAI holding up a round silicon wafer that shines with a rainbow sheen, presenting it to the viewer
     with a big proud grin, three-quarter view.
-14. `zoe_tray` - ZOE walking carefully, three-quarter view, carrying a small round tray with five cups of bubble milk
-    tea, concentrating hard, tongue slightly out.
+14. `zoe_tray` - ZOE walking carefully, three-quarter view, carrying a small round tray with six cups of bubble milk
+    tea, concentrating hard, tongue slightly out. (Six cups for a crew of five: the spare one is for the viewer.)
 15. `leo_toast` - LEO raising a cup of bubble milk tea in a toast, smiling warmly, three-quarter view.
 16. `mia_toast` - MIA raising a cup of bubble milk tea in a toast, a rare big smile, standing on tiptoe.
 17. `kai_toast` - KAI raising a cup of bubble milk tea in a toast with one hand and giving a thumbs-up with the other,
@@ -91,3 +91,14 @@ STYLE for this conversation (paste once, first message, with cast.png attached):
     loaf, tail around its paws, a peaceful smile, beret slightly askew. Square 1024x1024.
 20. `cat_sit` - The same cat sitting upright and smug, chest puffed, eyes half-closed, as if it owns the place, seen
     from the front. Square 1024x1024.
+
+## Batch 3 - optional extras (the storyboard panel's best beats)
+
+21. `y_hold_cat` (Yufei conversation) - Yufei holds the white cat with the red beret out at arm's length under its
+    front legs, the cat dangling happily, Yufei with one eyebrow raised and a patient half-smile, three-quarter view.
+22. `y_reach_up` (Yufei conversation) - Yufei stands on tiptoe reaching straight up with her right hand, open palm,
+    looking up hopefully, three-quarter view.
+23. `leo_reach_down` (students conversation) - LEO kneels on one knee and reaches straight down with his right hand,
+    open palm, looking down with a calm encouraging smile, three-quarter view.
+24. `zoe_offer` (students conversation) - ZOE holds one cup of bubble milk tea straight out towards the viewer with
+    both hands, a shy warm smile, front view.
