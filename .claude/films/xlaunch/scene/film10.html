@@ -1035,7 +1035,7 @@ async function build10() {
 }
 function hide10() {
   if (!P9.clips) return;
-  BIG_DY = 0; P9.clips.forEach((c) => { c.g.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
+  BIG_DY = 0; P9.circle.mat.depthTest = true; P9.circle.mesh.renderOrder = 3; P9.clips.forEach((c) => { c.g.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
   P9.page.g.visible = false; P9.noteY.g.visible = false; P9.circleY.set(0, 0); P9.logo.g.visible = false; P9.photos.forEach((p) => { p.m.visible = false; });
   P9.bill.mesh.visible = false; P9.big.mesh.visible = false; P9.big.mat.color.setScalar(1);
   [P9.circle, P9.stain, P9.strike, P9.circleB, P9.working, P9.under, ...P9.seals, ...Object.values(P9.st)].forEach((d) => d.set(0, 0));
@@ -1447,8 +1447,10 @@ const SHOTX = {
     const kf = 1 - sm((f - 1322) / 14);
     BIG_DY = -0.6; showBig(); bigMarks(f); P9.big.mat.color.setScalar(0.35 * kf); if (kf < 0.01) P9.big.mesh.visible = false;
     [...Object.values(P9.st), P9.strike, P9.circleB].forEach((d) => { d.mat.opacity *= kf; if (kf < 0.01) d.mesh.visible = false; });
-    if (f >= 1320) { const g = T.papers[bp].g, m = P9.circle.mesh, u0 = 0.69, u1 = 0.952, v = 0.071; g.add(m); m.quaternion.identity();
-      m.position.set(((u0 + u1) / 2 - 0.5) * ASP, 0.5 - v, sheetZ(bp, (u0 + u1) / 2, v) + 0.006); m.scale.set(((u1 - u0) * ASP * 1.16) / P9.circle.w, 1.3, 1); P9.circle.set(1, 1); }
+    P9.st.faster.set(0, 0);                              // its row is above the frame here; no half stamp at the top edge
+    if (f >= 1298) { const g = T.papers[bp].g, m = P9.circle.mesh, u0 = 0.672, u1 = 0.948, v = 0.071; g.add(m); m.quaternion.identity();
+      m.position.set(((u0 + u1) / 2 - 0.5) * ASP, 0.5 - v, sheetZ(bp, (u0 + u1) / 2, v) + 0.03); m.scale.set(((u1 - u0) * ASP * 1.16) / P9.circle.w, 1.3, 1);
+      P9.circle.mat.depthTest = false; m.renderOrder = 10; P9.circle.set(clamp((f - 1298) / 10), 1); }
   },
   f4(f) {
     const u = f - 1380; showBig(); bigMarks(f);
@@ -1583,9 +1585,6 @@ function typeLayer10(ctx, g, f) {
     const kf = sm((u - 45) / 4); if (kf > 0.01) { halo(g, 0, CAPX - 170, 1080, CAPX + 30, 0.85 * kf); serif(g, 'Forecasting.', MX - 6, CAPX - 10, 150, { k: kf, grad: ['#ffe6a8', '#c9962e'], italic: true }); }
   }
   if (sh === 'f3') {
-    if (f >= 1300 && f < 1320) { const a = bigAt(BR.data, 0.3), qa = P(a.x, a.y, a.z), bp = T.papers[D.awards[0]].g; bp.updateMatrixWorld(true);
-      const tq = ctx.project(new T.THREE.Vector3((0.82 - 0.5) * ASP, 0.5 - 0.071, 0.05).applyMatrix4(bp.matrixWorld)), t = eio(clamp((f - 1300) / 20));
-      ink(g, IMG.pen_circle_b, lerp(qa.x, tq.x, t), lerp(qa.y, tq.y, t) - Math.sin(Math.PI * t) * 220, 300, { rot: -0.05 + t * 0.4 }); }
     halo(g, 0, 150, 1000, 540, 0.8);
     serif(g, 'Big predictions:', MX, 250, 64, { k: sm(u / 8), color: SOFT, italic: true });
     serif(g, 'where AI goes next.', MX, 326, 64, { k: sm((u - 4) / 8) });
@@ -1612,9 +1611,10 @@ function typeLayer10(ctx, g, f) {
   if (sh === 'h3') {
     const k1 = sm((u - 38) / 12), k2 = sm((u - 48) / 12), k3 = sm((u - 58) / 12), k4 = sm((u - 70) / 12) * (1 - sm((f - 1936) / 12));
     txt(g, 'LAB  ·  UC SAN DIEGO  ·  PROF. YUFEI DING', 540, 822, 26, 500, '#bdb8ae', { align: 'center', mono: true, track: 0.12, k: k1 });
-    serif(g, 'We are recruiting PhD students.', 540, 1000, 70, { align: 'center', k: k2, italic: true });
-    txt(g, '@PicassoLabUCSD   ·   yufeiding.ucsd.edu', 540, 1078, 30, 500, '#9fc8ff', { align: 'center', mono: true, track: 0, k: k3 });
-    hand(g, '*milk tea included', 540, 1168, 60, { align: 'center', k: k4, rot: -0.03 });
+    serif(g, 'We’re hiring.', 540, 968, 78, { align: 'center', k: k2, italic: true });
+    txt(g, 'interns   ·   PhD students   ·   postdocs', 540, 1030, 30, 500, '#e8e2d6', { align: 'center', mono: true, track: 0.02, k: sm((u - 52) / 12) });
+    txt(g, '@PicassoLabUCSD   ·   yufeiding.ucsd.edu', 540, 1098, 30, 500, '#9fc8ff', { align: 'center', mono: true, track: 0, k: k3 });
+    hand(g, '*milk tea included', 540, 1182, 60, { align: 'center', k: k4, rot: -0.03 });
   }
   header10(g, f);
 }
