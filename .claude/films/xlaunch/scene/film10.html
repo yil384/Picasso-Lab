@@ -1152,10 +1152,10 @@ const CAMS10 = {
   h3: camPath([[1830, [-0.5, FLOOR + 0.94, 4.9], [0, FLOOR + 0.68, 0], 30], [1949, [0.0, FLOOR + 0.92, 4.55], [0, FLOOR + 0.68, 0], 30]], lin),
 };
 // b2 looks straight down at the circled row of the bill on the desk, then pans left after the end the cat runs off with
-const pullAt = (f) => 0.45 * ein(clamp((f - 360) / 8));
+const pullAt = (f) => 1.4 * ein(clamp((f - 360) / 8));
 let B2T = null;
 function camB2(f) {
-  if (!B2T) B2T = headPath(billLenAt(345) - P9.bill.rowS(3)).p;
+  if (!B2T) B2T = headPath(billLenAt(338) - P9.bill.rowS(4)).p;      // the circled row, centred
   const t = [B2T[0] + 0.05, FLOOR, B2T[2] - 0.02];
   const el = 54 * Math.PI / 180, d = lerp(1.6, 1.42, eio(clamp((f - 330) / 30))), hz = d * Math.cos(el);
   return { p: [t[0] - 0.88 * hz, t[1] + d * Math.sin(el), t[2] + 0.47 * hz], t, fov: 30 };
@@ -1470,22 +1470,18 @@ const SHOTX = {
     deskOn(); deskSet();
     const Lp = billLenAt(f), path = (s) => headPath(Lp - s); P9.bill.shape(path, 0, Lp);
     halo3(PRN[0] - 0.3, FLOOR + 0.55, PRN[2] - 2.8, 5.5, 2.6, 0.2, [1.0, 0.82, 0.62]);           // lamp spill on the dark beyond the desk
-    const u = f - 240, cj = landing(f, 284, 0.1, 8), o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
-    if (u < 40) putH(C.cat, 'cat_sit', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.7, o);
-    else putH(C.cat, 'cat_bat', PRN[0] - 0.46, PRN[2] + 0.4, 0.8, { ...o, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
+    const u = f - 240, o = { light: 0.84, rim: 0.6, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
+    if (u < 64) putH(C.cat, 'cat_sit', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.7, o);
+    else { const t = clamp((u - 64) / 14), x = lerp(CAT0[0] + 0.04, PRN[0] - 0.36, eio(t)), z = lerp(CAT0[1] - 0.02, PRN[2] + 0.42, eio(t));       // the pounce
+      putH(C.cat, 'cat_jump', x, z, 0.62, { ...o, lift: 0.32 * Math.sin(Math.PI * Math.min(1, t * 1.1)), contact: t > 0.9 }); }
   },
   // it will not stop; the red pen circles DATA MOVEMENT; the cat bites the end and runs off with it
   b2(f) {
     deskOn(); deskSet();
-    const Lp = billLenAt(f), pull = pullAt(f), path = (s) => headPath(Lp - s + pull);
+    const Lp = billLenAt(Math.min(f, 338)), pull = pullAt(f), path = (s) => headPath(Lp - s + pull);
     P9.bill.shape(path, 0, Lp); circleOnBill(f, path, 342);
     const u = f - 330, run = ein(clamp((f - 364) / 24)), o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
-    // the cat jumps in from the right, paws the bill, bites it and runs at the lens with it (its fur wipes the frame)
-    if (u >= 16) {
-      const q = path(P9.bill.rowS(1)).p, R = [0.47, 0.88], j = clamp((u - 16) / 6), cj = landing(f, 352, 0.2, 6), run = ein(clamp((u - 30) / 8));
-      const off = 0.3 + 0.6 * (1 - j) - 1.3 * run, cx = q[0] + R[0] * off, cz = q[2] + R[1] * off;
-      putH(C.cat, u < 30 ? 'cat_bat' : 'cat_tug', cx, cz, u < 30 ? 0.72 : 0.6, { ...o, light: 0.88, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy, flip: false });
-    }
+    // the cat has it: the bill is yanked out of frame from off-screen (b3 shows who)
   },
   // over the edge into the dark; the words land on the beats
   b3(f) {
@@ -1689,6 +1685,40 @@ function glints(g, f, pts, k) {
     g.globalAlpha = k * tw; g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill(); });
   g.restore();
 }
+// wind through the storm: long faint streaks racing across the frame
+function streaks(g, f, k, seed = 3) {
+  if (k < 0.01) return; g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#fff'; g.lineCap = 'round';
+  for (let i = 0; i < 30; i++) { const sp = 40 + 70 * hsh(seed, i, 1), y = hsh(seed, i, 2) * 1450 - 50, x = ((hsh(seed, i, 3) * 1700 + f * sp) % 1900) - 400, len = 160 + 360 * hsh(seed, i, 4);
+    g.globalAlpha = k * (0.05 + 0.13 * hsh(seed, i, 5)); g.lineWidth = 1 + 2.5 * hsh(seed, i, 6);
+    g.beginPath(); g.moveTo(x, y - 0.18 * x * 0.2); g.lineTo(x - len, y - 0.18 * (x - len) * 0.2); g.stroke(); }
+  g.restore();
+}
+// light breaking out from behind a sheet: warm rays from its centre, kept off the sheet itself (quad = its corners on screen)
+function godRays(g, f, cx, cy, quad, k) {
+  if (k < 0.01) return; g.save();
+  g.beginPath(); g.rect(0, 0, 1080, 1350); quad.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y))); g.closePath(); g.clip('evenodd');
+  g.globalCompositeOperation = 'lighter'; g.translate(cx, cy); g.rotate(f * 0.004);
+  for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + hsh(i, 7) * 0.25, w = 0.05 + 0.09 * hsh(i, 8), Lr = 900 + 500 * hsh(i, 9);
+    const gr = g.createRadialGradient(0, 0, 60, 0, 0, Lr); gr.addColorStop(0, `rgba(255,206,130,${0.2 * k})`); gr.addColorStop(1, 'rgba(255,206,130,0)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, Lr, a - w / 2, a + w / 2); g.closePath(); g.fill(); }
+  g.restore();
+}
+// an anamorphic flare: a thin horizontal line of light through a point, widening and fading
+function flare(g, x, y, t) {
+  if (t <= 0 || t >= 1) return; g.save(); g.globalCompositeOperation = 'lighter';
+  const w = 1400 * eout(t), a = 0.7 * (1 - t), gr = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+  gr.addColorStop(0, 'rgba(120,170,255,0)'); gr.addColorStop(0.5, `rgba(255,236,200,${a})`); gr.addColorStop(1, 'rgba(120,170,255,0)');
+  g.fillStyle = gr; g.fillRect(x - w / 2, y - 3, w, 6); g.globalAlpha = a * 0.5; g.fillRect(x - w / 3, y - 14, w / 1.5, 28);
+  const rg = g.createRadialGradient(x, y, 0, x, y, 90); rg.addColorStop(0, `rgba(255,240,210,${a})`); rg.addColorStop(1, 'rgba(255,240,210,0)'); g.globalAlpha = 1; g.fillStyle = rg; g.fillRect(x - 90, y - 90, 180, 180);
+  g.restore();
+}
+// gold dust rising round a point
+function goldDust(g, f, cx, cy, wR, k) {
+  if (k < 0.01) return; g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = '#ffd27a';
+  for (let i = 0; i < 60; i++) { const t = (hsh(i, 21) + f * (0.006 + 0.008 * hsh(i, 22))) % 1, x = cx + (hsh(i, 23) - 0.5) * 2 * wR + Math.sin(f * 0.04 + i) * 12, y = cy + 420 - t * 900, r = 1.2 + 2.6 * hsh(i, 24);
+    g.globalAlpha = k * Math.sin(Math.PI * t) * (0.4 + 0.6 * Math.max(0, Math.sin(f * 0.25 + i))); g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+  g.restore();
+}
 // the end card: a slow ripple of warm halftone dots round the logo
 function dotField(g, u) {
   const cx = 540, cy = 430, P = 24, k = sm(u / 24); if (k < 0.01) return;
@@ -1729,9 +1759,9 @@ function typeLayer10(ctx, g, f) {
   }
   if (sh === 'b1') { big('Imagining it: free.', 250, 84, { k: sm((u - 6) / 8), italic: true }); big('Running it: see receipt.', 340, 84, { k: sm((u - 40) / 8) }); }
   if (sh === 'b2') {
-    const q = onPath((s) => headPath(billLenAt(f) - s + pullAt(f)), P9.bill.rowS(4)).p, pq = ctx.project(q.clone());
-    const hx = clamp(pq.x - 420, MX, 1080 - MX - 300), hy = clamp(pq.y - 60, 300, 1150);
-    if (f < 364) { hand(g, 'this one.', hx, hy, 64, { k: sm((u - 16) / 8), rot: -0.06 }); ink(g, IMG.pen_arrow_b, hx + 250, hy + 40, 130, { k: sm((u - 14) / 6), rot: 0.35 }); }
+    const q = onPath((s) => headPath(billLenAt(Math.min(f, 338)) - s + pullAt(f)), P9.bill.rowS(4)).p, pq = ctx.project(q.clone());
+    const hx = clamp(pq.x - 130, MX, 1080 - MX - 300), hy = clamp(pq.y + 175, 300, 1180);
+    if (f < 361) { hand(g, 'this one.', hx, hy, 64, { k: sm((u - 13) / 8), rot: -0.06 }); ink(g, IMG.pen_arrow_b, hx + 120, hy - 82, 120, { k: sm((u - 12) / 6), rot: -1.3 }); }
   }
   if (sh === 'b3') {
     halo(g, 0, 300, 1080, 900, 0.6 * sm((u - 16) / 8));
@@ -1806,6 +1836,13 @@ function typeLayer10(ctx, g, f) {
     const dq = P(...bigAt(BR.data, 0.3).toArray());
     hand(g, '...and this one?', Math.min(dq.x + 60, 1080 - MX - 360), dq.y - 120, 70, { k: sm((u - 14) / 10) });
     { const kd = sm((u - 30) / 10); edgeFade(g, 1350, CAPX - 200, 0.85 * kd); txt(g, 'data movement: often costs more than the math', MX, CAPX, 30, 500, '#d8d4cc', { mono: true, track: 0, k: kd }); }
+  }
+  if (sh === 'f1' || sh === 'f2') streaks(g, f, sh === 'f1' ? 1 : 1 - sm((u - 20) / 14));
+  if (sh === 'f2') {
+    const pg = T.papers[D.awards[0]].g, kk = sm((u - 22) / 12);
+    if (pg.visible && kk > 0.01) { const S2 = pg.scale.x, hw = ASP * 0.5 * S2, hh = 0.5 * S2, corner = (x, y) => P(...new T.THREE.Vector3(x, y, 0.02).applyMatrix4(pg.matrixWorld).toArray());
+      pg.updateMatrixWorld(true); const quad = [corner(-ASP / 2, 0.5), corner(ASP / 2, 0.5), corner(ASP / 2, -0.5), corner(-ASP / 2, -0.5)], c = corner(0, 0.1);
+      godRays(g, f, c.x, c.y, quad, kk); goldDust(g, f, c.x, c.y, 380, kk); flare(g, (quad[0].x + quad[1].x) / 2, (quad[0].y + quad[1].y) / 2, (u - 34) / 16); }
   }
   if (sh === 'f1') { halo(g, 0, 380, 1080, 760, 0.8); serif(g, 'Plot twist:', MX, 500, 72, { italic: true, color: SOFT, mask: false }); misreg(g, 'one prediction.', MX - 6, 650, 140, { grad: ['#ffffff', '#c9c3b8'], mask: false }, u); }
   if (sh === 'f2') {
