@@ -36,59 +36,79 @@ export async function propKit(T) {
     g.globalAlpha = 0.93; g.drawImage(t, 0, 0); g.globalAlpha = 1;
     return c;
   }
-  // a torn edge: the outline wanders (two octaves), with a short fibrous fringe that lets the light through
-  function deckleAlpha(w, h, seed, inset = 0.035) {
+  // a scissor cut: four straight-ish edges between slightly uneven corners, a hair of chatter where the blades re-bit
+  function cutAlpha(w, h, seed) {
     const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
     g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
-    const m = Math.min(w, h) * inset, pts = [], N = 260;
-    const edge = (i, n, a, b) => a + (b - a) * (i / n);
-    const jit = (i, side) => (Math.sin(i * 0.11 + seed + side) * 0.55 + Math.sin(i * 0.43 + seed * 2 + side) * 0.3 + (hsh(i, seed, side) - 0.5) * 0.35) * m * 0.5;
-    for (let i = 0; i < N; i++) pts.push([edge(i, N, m, w - m), m + jit(i, 1)]);
-    for (let i = 0; i < N; i++) pts.push([w - m + jit(i, 2), edge(i, N, m, h - m)]);
-    for (let i = 0; i < N; i++) pts.push([edge(i, N, w - m, m), h - m + jit(i, 3)]);
-    for (let i = 0; i < N; i++) pts.push([m + jit(i, 4), edge(i, N, h - m, m)]);
-    const path = (dx) => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x + dx, y) : g.moveTo(x + dx, y))); g.closePath(); };
-    g.filter = 'blur(0.8px)'; g.fillStyle = '#fff'; path(0); g.fill(); g.filter = 'none';
+    const m = Math.min(w, h) * 0.03, J = (k) => (hsh(seed, k) - 0.5) * m * 0.9;
+    const C = [[m + J(1), m + J(2)], [w - m + J(3), m + J(4)], [w - m + J(5), h - m + J(6)], [m + J(7), h - m + J(8)]];
+    const pts = [];
+    for (let e = 0; e < 4; e++) {
+      const [x0, y0] = C[e], [x1, y1] = C[(e + 1) % 4], n = 80, bow = (hsh(seed, 20 + e) - 0.5) * m * 0.5;
+      const nx = -(y1 - y0), ny = x1 - x0, nl = Math.hypot(nx, ny);
+      for (let i = 0; i < n; i++) {
+        const t = i / n, bite = Math.floor(t * 7 + hsh(seed, 30 + e) * 3), ch = (hsh(bite, seed, e) - 0.5) * 0.9 + (hsh(i, seed, e + 40) - 0.5) * 0.3;
+        const d = bow * Math.sin(Math.PI * t) + ch;
+        pts.push([x0 + (x1 - x0) * t + nx / nl * d, y0 + (y1 - y0) * t + ny / nl * d]);
+      }
+    }
+    g.filter = 'blur(0.5px)'; g.fillStyle = '#fff'; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fill(); g.filter = 'none';
     const t = new THREE.CanvasTexture(c); t.anisotropy = 8; t.userData = { pts, w, h }; return t;
   }
 
-  // a clipping lying on the floor: quote set in Fraunces between red-ink quote marks
+  // a clipping cut out of the morning paper: the opinion page's pull quote, set in a news serif between rules; the
+  // next story's headline sliced off by the bottom cut; the back page's type faintly showing through
+  const NEWS = '"Newsreader"';
   function clipping(q, o = {}) {
-    const W = 1600, mg = document.createElement('canvas').getContext('2d');
-    const nLines = (s, font) => { if (!s) return 0; mg.font = font; let n = 1, line = ''; for (const wd of s.split(' ')) { const tt = line ? line + ' ' + wd : wd; if (mg.measureText(tt).width > W - 300 && line) { n++; line = wd; } else line = tt; } return n; };
-    const fsz = q.size || 138, lsz = q.leadSize || 74;
-    const need = 350 + nLines(q.lead, `italic 500 ${lsz}px "Fraunces"`) * lsz * 1.3 + (q.lead ? 20 : 0) + nLines(q.main, `800 ${fsz}px "Fraunces"`) * fsz * 1.08 + 170;
+    const W = o.cw ?? 1600, x0 = Math.round(W * 0.09), wMax = W - 2 * x0, mg = document.createElement('canvas').getContext('2d');
+    const wrapW = (s, font) => { if (!s) return []; mg.font = font; const out = []; let line = '';
+      for (const wd of s.split(' ')) { const tt = line ? line + ' ' + wd : wd; if (mg.measureText(tt).width > wMax && line) { out.push(line); line = wd; } else line = tt; }
+      if (line) out.push(line); return out; };
+    const fsz = q.size || 128, lsz = q.leadSize || 66;
+    const fL = `italic 400 ${lsz}px ${NEWS}`, fM = `italic 500 ${fsz}px ${NEWS}`;
+    const LL = wrapW(q.lead, fL), ML = wrapW(q.main, fM);
+    const head = q.who ? 340 : 120;
+    const need = head + 90 + LL.length * lsz * 1.28 + (LL.length ? 18 : 0) + ML.length * fsz * 1.06 + 110 + (q.who ? 150 : 60);
     const asp = o.asp ?? need / W, H = Math.round(W * asp);
     const cv_meta = {};
-    const alpha = deckleAlpha(512, Math.round(512 * asp), o.seed ?? 3);
+    const alpha = cutAlpha(512, Math.round(512 * asp), o.seed ?? 3);
     const cv = newsprintCanvas(W, H, (g) => {
-      const x0 = 150, wMax = W - 300;
-      let y = 230;
-      const wrap = (s, font, size) => { g.font = font; const words = s.split(' '), lines = []; let line = '';
-        for (const wd of words) { const tt = line ? line + ' ' + wd : wd; if (g.measureText(tt).width > wMax && line) { lines.push(line); line = wd; } else line = tt; }
-        if (line) lines.push(line); return lines; };
-      // opening quote mark in red ink
-      g.fillStyle = '#b3261e'; g.font = '800 300px "Fraunces"'; g.fillText('“', x0 - 40, y + 120);
-      y += 120;
+      const track = (px) => { try { g.letterSpacing = px + 'px'; } catch (e) { /* */ } };
       g.fillStyle = '#1d1a16';
-      if (q.lead) { const f = `italic 500 ${q.leadSize || 74}px "Fraunces"`; for (const l of wrap(q.lead, f, q.leadSize || 74)) { g.font = f; g.fillText(l, x0, y); y += (q.leadSize || 74) * 1.3; } y += 20; }
-      const fs = q.size || 138, f2 = `800 ${fs}px "Fraunces"`; const lines = wrap(q.main, f2, fs);
+      let y = 96;
+      if (q.who) {                                      // the newspaper furniture: rules, kicker, speaker, source
+        g.fillRect(0, y, W, 7); g.fillRect(0, y + 14, W, 2);
+        g.font = `600 40px ${NEWS}`; track(9); g.fillText(q.section || 'THE FUTURE', x0, y + 84);
+        g.font = `italic 400 40px ${NEWS}`; track(1); g.textAlign = 'right'; g.fillText(q.page || 'Opinion', W - x0, y + 84); g.textAlign = 'left';
+        g.font = `700 92px ${NEWS}`; track(2); g.fillText(q.who, x0, y + 196); track(0);
+        g.font = `italic 400 52px ${NEWS}`; g.fillStyle = '#4a4239'; g.fillText(q.src, x0, y + 262);
+        g.fillStyle = '#1d1a16'; g.fillRect(x0, y + 300, wMax, 2);
+        y += head;
+      }
+      y += 50;
+      if (LL.length) { g.font = fL; g.fillStyle = '#2b2620'; for (const l of LL) { g.fillText(l, x0, y + lsz * 0.8); y += lsz * 1.28; } y += 18; }
+      g.font = fM; g.fillStyle = '#16130f';
       const boxes = [];
-      for (const l of lines) { g.font = f2; g.fillText(l, x0, y + fs * 0.78); boxes.push([x0, y, g.measureText(l).width, fs]); y += fs * 1.08; }
-      // closing quote mark
-      // closing mark: its top level with the cap height of the last line, just after its last word
-      g.fillStyle = '#b3261e'; g.font = '800 300px "Fraunces"'; const last = boxes[boxes.length - 1];
-      g.fillText('”', Math.min(W - 200, last[0] + last[2] + 22), last[1] + fs * 0.06 + 300 * 0.74);
+      for (const l of ML) { g.fillText(l, x0, y + fsz * 0.8); boxes.push([x0, y, g.measureText(l).width, fsz]); y += fsz * 1.06; }
       cv_meta.lines = boxes; cv_meta.H = H; cv_meta.W = W;
-      // the torn edge shows the paper's white core: a thin fibrous rim just inside the outline
-      const { pts, w: aw, h: ah } = alpha.userData, sx = W / aw, sy = H / ah;
-      g.save(); g.strokeStyle = 'rgba(255,252,245,0.85)'; g.lineWidth = 7; g.filter = 'blur(1.5px)';
-      g.beginPath(); pts.forEach(([x, yy], i) => (i ? g.lineTo(x * sx, yy * sy) : g.moveTo(x * sx, yy * sy))); g.closePath(); g.stroke(); g.restore();
+      y += 50; g.fillRect(x0, y, wMax, 2);
+      if (q.who) {                                      // the next story, cut through by the scissors
+        g.font = `700 150px ${NEWS}`; g.fillStyle = '#1d1a16'; g.fillText(q.next || 'Local bakery wins prize for', x0 - 10, H - 18 + 150 * 0.42);
+      }
     });
+    // the back page shows through the thin stock: mirrored, soft, faint
+    {
+      const g = cv.getContext('2d'), b = document.createElement('canvas'); b.width = W; b.height = H; const bg = b.getContext('2d');
+      bg.fillStyle = '#000'; bg.font = `400 44px ${NEWS}`;
+      const words = 'the of and city council said on that it was for budget new plan year market rain week school more than will team'.split(' ');
+      for (let r = 0; r < H / 58; r++) { let x = 60 + (r % 3) * 6; for (let i = 0; x < W - 60; i++) { const wd = words[Math.floor(hsh(r, i, 7) * words.length)]; bg.fillText(wd, x, 70 + r * 58); x += bg.measureText(wd + ' ').width; } }
+      bg.fillStyle = 'rgba(0,0,0,0.9)'; for (let yy = 0; yy < H * 0.45; yy += 9) for (let xx = W * 0.52; xx < W - 80; xx += 9) { const rr = 3.4 * (0.5 + 0.5 * Math.sin(xx * 0.011 + yy * 0.017) * Math.cos(yy * 0.006)); bg.beginPath(); bg.arc(xx, yy + 40, Math.max(0.2, rr), 0, 6.283); bg.fill(); }
+      g.save(); g.globalAlpha = 0.055; g.filter = 'blur(1.6px)'; g.translate(W, 0); g.scale(-1, 1); g.drawImage(b, 0, 0); g.restore();
+    }
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16;
     const w = o.w ?? 1.0, h = w * asp;
     const geo = new THREE.PlaneGeometry(w, h, 40, Math.round(40 * asp)); const p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) { const x = p.getX(i) / w, y = p.getY(i) / h; p.setZ(i, 0.006 * (1 + Math.sin(x * 3.1 + (o.seed ?? 3)) * Math.cos(y * 2.3)) + 0.022 * (x * x) + 0.008 * (y + 0.5) * (y + 0.5)); }
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i) / w, y = p.getY(i) / h; p.setZ(i, 0.0018 * (1 + Math.sin(x * 3.1 + (o.seed ?? 3)) * Math.cos(y * 2.3)) + 0.012 * (x * x) + 0.003 * (y + 0.5) * (y + 0.5)); }
     geo.computeVertexNormals();
     const mat = new THREE.MeshPhysicalMaterial({ map: tex, alphaMap: alpha, transparent: false, alphaTest: 0.5, roughness: 0.86, sheen: 0.3, sheenRoughness: 0.9,
       normalMap: creaseNormal, normalScale: new THREE.Vector2(0.22, 0.22), side: THREE.DoubleSide });
@@ -122,6 +142,13 @@ export async function propKit(T) {
       const s = r.label + ' ' + '.'.repeat(Math.max(2, 30 - r.label.length - r.price.length - 2)) + ' ' + r.price;
       g.fillText(s, RPX * 0.07, y); rowY.push(y); y += 42;
     });
+    // flip: the printed block turned end for end, so the text reads upright to someone facing the printer (the strip
+    // hangs down its front and runs off along the desk); the tear stays at the free end
+    if (o.flip) {
+      const yEnd = y + 20, t = document.createElement('canvas'); t.width = RPX; t.height = yEnd; t.getContext('2d').drawImage(c, 0, 0);
+      g.save(); g.translate(0, yEnd); g.scale(1, -1); g.drawImage(t, 0, 0); g.restore();
+      for (let i = 0; i < rowY.length; i++) rowY[i] = yEnd - rowY[i] + 10;
+    }
     // the tear edge at the top: teeth in the alpha
     const a = document.createElement('canvas'); a.width = 64; a.height = Math.round(64 * Hpx / RPX); const ag = a.getContext('2d');
     ag.fillStyle = '#fff'; ag.fillRect(0, 0, a.width, a.height); ag.fillStyle = '#000';
@@ -213,5 +240,137 @@ export async function propKit(T) {
     slitLight.lookAt(x, y + 5, z);
   }
 
-  return { clipping, receipt, decal, dustRing, setSlit, RW: RW0, ROW: ROW0, fineNormal, creaseNormal };
+  // the lab desk: a walnut top (ambientCG Wood026, CC0), varnished
+  const [wc, wn, wr] = await Promise.all(['Color', 'NormalGL', 'Roughness'].map((m) => loadImg(`/scene/tex/Wood026/Wood026_2K-JPG_${m}.jpg`)));
+  const wt = (img, srgb) => { const t = texOf(img, srgb, 1.2); return t; };
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.3, 3.6), new THREE.MeshPhysicalMaterial({ map: wt(wc, true), normalMap: wt(wn, false), roughnessMap: wt(wr, false),
+    roughness: 0.62, clearcoat: 0.35, clearcoatRoughness: 0.35, normalScale: new THREE.Vector2(0.6, 0.6) }));
+  desk.receiveShadow = true; desk.castShadow = true; desk.visible = false; scene.add(desk);
+  // a small thermal receipt printer: warm grey plastic, a dark paper slot, one green light
+  const { RoundedBoxGeometry } = await import('three/addons/geometries/RoundedBoxGeometry.js');
+  const printer = new THREE.Group();
+  const shell = new THREE.Mesh(new RoundedBoxGeometry(0.46, 0.2, 0.36, 5, 0.05), new THREE.MeshPhysicalMaterial({ color: 0xd8d3c8, roughness: 0.45, clearcoat: 0.4, clearcoatRoughness: 0.5 }));
+  shell.position.y = 0.1; shell.castShadow = shell.receiveShadow = true;
+  const slot = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.012, 0.03), new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.8 }));
+  slot.position.set(0, 0.2, -0.04);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.009, 12, 8), new THREE.MeshBasicMaterial({ color: 0x5dff8a, toneMapped: false }));
+  led.position.set(0.17, 0.155, 0.181);
+  const lid = new THREE.Mesh(new RoundedBoxGeometry(0.44, 0.03, 0.2, 3, 0.012), new THREE.MeshPhysicalMaterial({ color: 0x2a2a2e, roughness: 0.35, clearcoat: 0.6 }));
+  lid.position.set(0, 0.205, 0.07);
+  printer.add(shell, slot, led, lid); printer.visible = false; scene.add(printer);
+  // a sticky note (the paper scan, tinted yellow, a darker glue band), written on in pen; set(k) writes it on line by
+  // line. Its lower half lifts off the page a little, the way a used note does.
+  function note(lines, o = {}) {
+    const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16;
+    const size = o.size ?? 74, ink = o.ink ?? '#a8231c', col = o.color ?? '#f7dc6a';
+    let last = -1;
+    function draw(k) {
+      g.globalCompositeOperation = 'source-over'; g.drawImage(pCol, (o.seed ?? 0) * 37 % 300, 40, 700, 700, 0, 0, S, S);
+      g.globalCompositeOperation = 'multiply'; g.fillStyle = col; g.fillRect(0, 0, S, S);
+      const band = g.createLinearGradient(0, 0, 0, S * 0.2); band.addColorStop(0, 'rgba(196,160,60,0.35)'); band.addColorStop(1, 'rgba(196,160,60,0)');
+      g.fillStyle = band; g.fillRect(0, 0, S, S * 0.2);
+      const sh = g.createLinearGradient(0, S * 0.5, 0, S); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(210,170,70,0.25)');
+      g.fillStyle = sh; g.fillRect(0, S * 0.5, S, S * 0.5);
+      g.globalCompositeOperation = 'source-over';
+      g.font = `600 ${size}px "Caveat"`; g.fillStyle = ink; g.textBaseline = 'alphabetic';
+      const lh = size * 1.02, y0 = S / 2 - (lines.length - 1) * lh / 2 + size * 0.3 + (o.dy ?? 0);
+      const widths = lines.map((l) => g.measureText(l).width), total = widths.reduce((x, y) => x + y, 0);
+      let budget = k * total;
+      lines.forEach((l, i) => {
+        const w = widths[i], x = (o.align === 'left' ? 54 : (S - w) / 2) + (i % 2 ? 8 : -4), y = y0 + i * lh, show = Math.max(0, Math.min(w, budget)); budget -= w;
+        if (show <= 0) return;
+        g.save(); g.translate(x, y); g.rotate(-0.035 + (i % 2) * 0.02); g.beginPath(); g.rect(-10, -size, show + 20, size * 1.5); g.clip();
+        g.fillText(l, 0, 0); g.globalAlpha = 0.25; g.fillText(l, 0.8, 0.5); g.restore();
+      });
+      tex.needsUpdate = true;
+    }
+    const w = o.w ?? 0.3, geo = new THREE.PlaneGeometry(w, w, 16, 16), p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i) / w, x = p.getX(i) / w; p.setZ(i, 0.06 * w * Math.max(0, 0.1 - y) ** 2 * 4 + 0.01 * w * x * x); }
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.82, normalMap: fineNormal, normalScale: new THREE.Vector2(0.12, 0.12), side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true;
+    const grp = new THREE.Group(); grp.add(mesh); grp.visible = false; scene.add(grp);
+    draw(0);
+    return { g: grp, mesh, w, set(k) { const q = Math.round(Math.max(0, Math.min(1, k)) * 60) / 60; if (q !== last) { last = q; draw(q); } } };
+  }
+
+  // Paper #137: a printed title page (bright stock from the paper scan, laser-black type), the byline already set
+  function titlePage(o = {}) {
+    const W = 1275, H = 1650, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+    g.drawImage(pCol, 0, 0, W, H); g.globalCompositeOperation = 'multiply'; g.fillStyle = '#fbf9f4'; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'screen'; g.fillStyle = 'rgba(255,255,255,0.45)'; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over';
+    const ink = '#17161a', soft = '#4a4850', mx = 120, cw = W - 2 * mx;
+    const track = (px) => { try { g.letterSpacing = px + 'px'; } catch (e) { /* */ } };
+    const center = (t, y, font, col = ink) => { g.font = font; g.fillStyle = col; g.textAlign = 'center'; g.fillText(t, W / 2, y); g.textAlign = 'left'; };
+    g.font = `500 22px "JetBrains Mono"`; g.fillStyle = soft; track(3); g.fillText('PICASSO LAB  ·  PAPER #137', mx, 96); g.textAlign = 'right'; g.fillText('2026', W - mx, 96); g.textAlign = 'left'; track(0);
+    g.fillStyle = ink; g.fillRect(mx, 116, cw, 2);
+    center('Fast, Cheap, and Possible:', 236, `600 66px ${NEWS}`);
+    center('The Next Few Thousand Days', 318, `600 66px ${NEWS}`);
+    // the byline: "You" is measured so the red pen can find it
+    g.font = `400 44px ${NEWS}`; const A = 'You', B = 'Yufei Ding', sup = '1', gap = 90;
+    const wa = g.measureText(A).width, wb = g.measureText(B).width; g.font = `400 26px ${NEWS}`; const ws = g.measureText(sup).width;
+    const tot = wa + ws + gap + wb + ws, x0 = (W - tot) / 2, yb = 420;
+    g.fillStyle = ink; g.font = `400 44px ${NEWS}`; g.fillText(A, x0, yb); g.fillText(B, x0 + wa + ws + gap, yb);
+    g.font = `400 26px ${NEWS}`; g.fillText(sup, x0 + wa + 2, yb - 20); g.fillText(sup, x0 + wa + ws + gap + wb + 2, yb - 20);
+    const you = [x0, yb - 40, wa, 52];
+    center('¹ Picasso Lab, UC San Diego', 474, `italic 400 30px ${NEWS}`, soft);
+    // abstract, justified
+    const para = (txt, x, y, w, size, lh, font) => { g.font = font; g.fillStyle = ink; const words = txt.split(' '); let line = [];
+      const flush = (last) => { const t = line.join(' '); if (last || line.length < 2) { g.fillText(t, x, y); } else { const sw = line.reduce((q, wd) => q + g.measureText(wd).width, 0), sp = (w - sw) / (line.length - 1); let xx = x; for (const wd of line) { g.fillText(wd, xx, y); xx += g.measureText(wd).width + sp; } } y += lh; line = []; };
+      for (const wd of words) { const t = [...line, wd].join(' '); if (g.measureText(t).width > w && line.length) flush(false); line.push(wd); }
+      if (line.length) flush(true); return y; };
+    center('Abstract', 560, `600 32px ${NEWS}`);
+    let y = para('Everyone is predicting what AI will do next. Somebody has to make it fast, cheap and possible. Over some 4,700 days and 136 papers, our lab has worked on the compilers, systems and chips underneath it all, with one cat consulted throughout. This paper has not been written yet. Its first author is still deciding. We propose that it is you.',
+      mx + 70, 610, cw - 140, 28, 40, `italic 400 28px ${NEWS}`);
+    // two columns of body text
+    const colW = (cw - 50) / 2; y += 40;
+    g.font = `600 28px ${NEWS}`; g.fillText('1   Introduction', mx, y); g.fillText('2   What you would work on', mx + colW + 50, y); y += 46;
+    const body = 'The bill always arrives. Every prediction in this field assumes a machine that can run it, and somebody has to build that machine: the compiler that maps a model onto a chip, the runtime that keeps a thousand GPUs busy, the hardware that has not been designed yet, and the data that has to move between all of them, which often costs more than the arithmetic. We have spent a decade on these questions and found that they never get smaller, only more interesting. ';
+    para(body + body.slice(0, 260), mx, y, colW, 22, 33, `400 22px ${NEWS}`);
+    para('Quantum compilers and architectures. Systems for large language model serving and training. GPU kernels and the people who time them. Accelerators for workloads that do not exist yet. Milk tea, in moderation. Our group meeting is Friday; the snacks are real and so are the deadlines. ' + body.slice(0, 380), mx + colW + 50, y, colW, 22, 33, `400 22px ${NEWS}`);
+    g.font = `400 20px ${NEWS}`; g.fillStyle = soft; g.textAlign = 'center'; g.fillText('1', W / 2, H - 70); g.textAlign = 'left';
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16;
+    const w = o.w ?? 1.3, h = w * H / W, geo = new THREE.PlaneGeometry(w, h, 32, 40), pp = geo.attributes.position;
+    for (let i = 0; i < pp.count; i++) { const x = pp.getX(i) / w, yy = pp.getY(i) / h; pp.setZ(i, 0.004 + 0.016 * x * x + 0.01 * Math.max(0, yy - 0.3) ** 2); }
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.8, sheen: 0.25, sheenRoughness: 0.9, normalMap: fineNormal, normalScale: new THREE.Vector2(0.1, 0.1), side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true;
+    const grp = new THREE.Group(); grp.add(mesh); grp.visible = false; scene.add(grp);
+    const at = (u, v) => { grp.updateMatrixWorld(true); return new THREE.Vector3((u - 0.5) * w, (0.5 - v) * h, 0.01).applyMatrix4(mesh.matrixWorld); };
+    return { g: grp, mesh, w, h, at, meta: { you, W, H } };
+  }
+
+  // the lab's logo in 3D: the three glass rings (physics, computer science, maths) with their own artwork inside,
+  // embossed, the two grey links, the PICASSO wordmark. Positions are measured from home/static/PicassoLab-Logo.png
+  // (1168 x 815 px); s = world units per logo pixel.
+  async function logo3D(o = {}) {
+    const s = o.s ?? 1.9 / 1168, C0 = [584, 407], P = (x, y) => [(x - C0[0]) * s, (C0[1] - y) * s];
+    const tex = async (n, srgb = true) => { const im = await loadImg(`/scene/cut/${n}.png`); const t = new THREE.Texture(im); t.needsUpdate = true; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+    const grp = new THREE.Group(); grp.visible = false; scene.add(grp);
+    const parts = { rings: [], discs: [], links: [] };
+    const RINGS = [{ n: 'logo_phys', c: [203, 433], col: 0x2f8ee6 }, { n: 'logo_cs', c: [573.5, 208], col: 0x8bd04e }, { n: 'logo_math', c: [962, 422], col: 0xe8262c }];
+    for (const r of RINGS) {
+      const [x, y] = P(...r.c), R = 186 * s;
+      const m = new THREE.Mesh(new THREE.TorusGeometry(R, 13.5 * s, 48, 180), new THREE.MeshPhysicalMaterial({ color: r.col, emissive: r.col, emissiveIntensity: 0.22, roughness: 0.12, metalness: 0.05,
+        clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 2.4 }));
+      m.castShadow = true; m.position.set(x, y, 0); grp.add(m); parts.rings.push({ m, home: [x, y, 0] });
+      const map = await tex(r.n), bump = await tex(r.n + '_h', false);
+      const d = new THREE.Mesh(new THREE.PlaneGeometry(340 * s, 340 * s), new THREE.MeshStandardMaterial({ map, bumpMap: bump, bumpScale: 2.2, roughness: 0.55, metalness: 0.1, transparent: true, alphaTest: 0.02 }));
+      d.position.set(x, y, -0.004); grp.add(d); parts.discs.push({ m: d, home: [x, y, -0.004] });
+    }
+    const linkMat = new THREE.MeshPhysicalMaterial({ color: 0x8d8f96, roughness: 0.3, metalness: 0.75, clearcoat: 0.6 });
+    for (const [a, b] of [[0, 1], [1, 2]]) {
+      const A = RINGS[a].c, B = RINGS[b].c, [ax, ay] = P(...A), [bx, by] = P(...B), ang = Math.atan2(by - ay, bx - ax), dist = Math.hypot(bx - ax, by - ay);
+      const len = dist - 2 * 186 * s + 0.03, mx = (ax + bx) / 2, my = (ay + by) / 2;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(9 * s, 9 * s, len, 24), linkMat); m.rotation.z = ang - Math.PI / 2; m.position.set(mx, my, -0.006);
+      m.castShadow = true; grp.add(m); parts.links.push({ m, len });
+    }
+    const wm = await tex('logo_word_iv'), wb = await tex('logo_word_h', false), [wx, wy] = P(600, 656);
+    const word = new THREE.Mesh(new THREE.PlaneGeometry(540 * s, 112 * s), new THREE.MeshStandardMaterial({ map: wm, bumpMap: wb, bumpScale: 3, roughness: 0.4, metalness: 0.2, transparent: true, alphaTest: 0.02 }));
+    word.position.set(wx, wy, 0); grp.add(word); parts.word = { m: word, home: [wx, wy, 0] };
+    return { g: grp, parts, s };
+  }
+
+  return { note, titlePage, logo3D, clipping, receipt, decal, dustRing, setSlit, desk, printer, RW: RW0, ROW: ROW0, fineNormal, creaseNormal };
 }

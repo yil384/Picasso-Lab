@@ -103,3 +103,59 @@ export function odometer(g, value, x, y, size, weight, o = {}) {
   }
   g.restore();
 }
+
+// ---- v10: the "warm nerds" voice ------------------------------------------------------------------------------
+// big lines in Instrument Serif (roman for statements, italic for the aside), data in JetBrains Mono, the lab's own
+// remarks handwritten (Caveat) in red pen with real ink marks, short notes on sticky notes made from a paper scan
+export const PEN = '#c8352b', PENCIL = '#e8e2d6', NOTE = '#f6dc6e';
+let PAPER_IMG = null;
+export function setPaper(img) { PAPER_IMG = img; }
+export function serif(g, s, x, y, size, o = {}) {
+  const k = o.k ?? 1; if (k <= 0.004) return;
+  g.save(); g.font = `${o.italic ? 'italic ' : ''}400 ${size}px "Instrument Serif"`; g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  try { g.letterSpacing = `${(o.track ?? -0.01) * size}px`; } catch (e) { /* */ }
+  const ee = eout5(k); g.globalAlpha = clamp(k * 1.6) * (o.alpha ?? 1);
+  if (o.shadow !== false) { g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = size * 0.18; g.shadowOffsetY = size * 0.03; }
+  if (o.grad) { const gr = g.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, o.grad[0]); gr.addColorStop(1, o.grad[1]); g.fillStyle = gr; } else g.fillStyle = o.color || INK;
+  if (o.mask !== false) { g.beginPath(); g.rect(-50, y - size * 1.2, W + 100, size * 1.48); g.clip(); }
+  g.fillText(s, x, y + (1 - ee) * size * 0.5);
+  g.restore();
+}
+// handwriting that writes itself on, left to right, slightly rotated, a little wobble per line
+export function hand(g, s, x, y, size, o = {}) {
+  const k = o.k ?? 1; if (k <= 0.004) return;
+  g.save(); g.translate(x, y); g.rotate(o.rot ?? -0.03);
+  g.font = `${o.weight ?? 600} ${size}px "Caveat"`; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  const w = g.measureText(s).width, x0 = o.align === 'right' ? -w : o.align === 'center' ? -w / 2 : 0;
+  g.beginPath(); g.rect(x0 - 10, -size * 1.3, (w + 20) * clamp(k * 1.15), size * 1.8); g.clip();
+  if (o.halo !== false) { g.shadowColor = o.haloCol || 'rgba(0,0,0,0.6)'; g.shadowBlur = size * 0.22; }
+  g.fillStyle = o.color || PEN; g.fillText(s, x0, 0);
+  g.restore();
+  return w;
+}
+// a real ink mark (an Image of ink on transparent), revealed left to right (or around, for a circle), at (x, y) centre
+export function ink(g, img, x, y, w, o = {}) {
+  const k = o.k ?? 1; if (!img || k <= 0.004) return;
+  const h = w * img.height / img.width;
+  g.save(); g.translate(x, y); g.rotate(o.rot ?? 0); if (o.flip) g.scale(-1, 1);
+  if (o.alpha != null) g.globalAlpha = o.alpha;
+  g.beginPath(); g.rect(-w / 2 - 4, -h / 2 - 4, (w + 8) * clamp(k * 1.1), h + 8); g.clip();
+  if (o.tint) { g.filter = o.tint; }
+  g.drawImage(img, -w / 2, -h / 2, w, h); g.restore();
+}
+// a sticky note slapped on the frame: paper-scan yellow, a soft curl shadow, handwriting
+export function sticky(g, lines, x, y, w, o = {}) {
+  const k = o.k ?? 1; if (k <= 0.004) return;
+  const size = o.size ?? 44, h = o.h ?? (size * 1.15 * lines.length + size * 1.1);
+  const s = 1 + (1 - eout5(clamp(k * 1.4))) * 0.35;
+  g.save(); g.translate(x + w / 2, y + h / 2); g.rotate(o.rot ?? -0.04); g.scale(s, s); g.globalAlpha = clamp(k * 2);
+  g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 22; g.shadowOffsetY = 10;
+  g.fillStyle = o.color || NOTE; g.fillRect(-w / 2, -h / 2, w, h);
+  g.shadowColor = 'transparent';
+  if (PAPER_IMG) { g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.5 * clamp(k * 2); g.drawImage(PAPER_IMG, 0, 0, 500, 500, -w / 2, -h / 2, w, h); g.globalCompositeOperation = 'source-over'; g.globalAlpha = clamp(k * 2); }
+  const cg = g.createLinearGradient(0, -h / 2, 0, h / 2); cg.addColorStop(0, 'rgba(0,0,0,0.10)'); cg.addColorStop(0.18, 'rgba(0,0,0,0)'); cg.addColorStop(0.85, 'rgba(0,0,0,0)'); cg.addColorStop(1, 'rgba(0,0,0,0.12)');
+  g.fillStyle = cg; g.fillRect(-w / 2, -h / 2, w, h);
+  g.font = `600 ${size}px "Caveat"`; g.fillStyle = o.ink || '#2a2622'; g.textBaseline = 'alphabetic';
+  lines.forEach((l, i) => g.fillText(l, -w / 2 + size * 0.45, -h / 2 + size * 1.1 + i * size * 1.12));
+  g.restore();
+}
