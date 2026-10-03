@@ -1121,7 +1121,7 @@ const ORB = (x, z, d, el, az = 0) => { const t = [x, FLOOR, z - 0.08], e = el * 
 const VCa = (j, dz, dx) => { const [cx, cy] = L.RING_C[j]; return [[cx + 0.1 + dx, cy - 0.05, 4.1 + dz], [cx, cy - 0.2, 0]]; };
 const CAMS10 = {
   // the cat asleep on the desk, then the first prediction lands beside it; a steady push throughout
-  a1: camPath([[0, ...ORB(0.04, -0.18, 3.75, 56, 0), 30], [53, ...ORB(-0.07, -0.05, 3.52, 56, 0), 30]], lin),
+  a1: camPath([[0, ...ORB(-0.2, -0.55, 4.6, 47, 0), 30], [53, ...ORB(-0.1, -0.12, 3.62, 54, 0), 30]], outQ),
   // each further slam is a cut to a new angle (never the same angle shifted), still pushing
   a2: camPath([[54, ...ORB(0.04, 0.3, 4.0, 50, 10), 30], [97, ...ORB(0.06, 0.3, 3.82, 52, 5), 30]], lin),
   a3: camPath([[98, ...ORB(0.14, -0.26, 3.4, 58, -10), 30], [141, ...ORB(0.15, -0.26, 3.22, 57, -6), 30]], lin),
@@ -1269,6 +1269,7 @@ function deskOn(lampK = 1) {
   T.key.intensity = 0.42; T.key.position.set(-2.2, 3.0, 1.0); T.key.lookAt(0, FLOOR, 0);
   T.rim.intensity = 0.8; T.kick.intensity = 0.3; T.kick.position.set(2.6, FLOOR + 0.8, -2.0); T.kick.lookAt(0, FLOOR, 0); T.bloom.strength = 0.16;
   T.scene.fog.near = 5; T.scene.fog.far = 13;
+  halo3(-0.4, FLOOR + 0.9, -3.0, 7.5, 3.2, 0.3, [1.0, 0.8, 0.58]);        // the lamp's spill on the dark beyond the desk
   // the things already on the desk
   P9.pen.visible = true; P9.pen.position.set(PEN[0], FLOOR + 0.012, PEN[1]); P9.pen.rotation.set(-Math.PI / 2, 0, PEN[2]);
   putH(C.tea, 'prop_tea', CUP[0], CUP[1], 0.8, { light: 1.0, rim: 0.5, rimCol: [1, 0.85, 0.6], relief: 0.15, face: 1 });
