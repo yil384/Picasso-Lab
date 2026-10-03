@@ -86,6 +86,13 @@ export async function buildStudio(ctx, { THREE, renderer }, D, o = {}) {
     const k = p.k, geo = sheetGeometry(THREE, 0.6 + hsh(k, 1) * 0.8, hsh(k, 2) - 0.3, hsh(k, 3), k);
     const mat = new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.74, bumpMap: bump, bumpScale: 0.5, sheen: 0.35, sheenRoughness: 0.85, sheenColor: 0xffffff,
       emissive: 0xffd27a, emissiveIntensity: 0 });
+    mat.userData.uSat = { value: 1 };
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uSat = mat.userData.uSat;
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uSat;')
+        .replace('#include <map_fragment>', '#include <map_fragment>\n{ float l = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)); diffuseColor.rgb = mix(vec3(l), diffuseColor.rgb, uSat); }');
+    };
+    mat.customProgramCacheKey = () => 'pvpaper';
     const bmat = new THREE.MeshPhysicalMaterial({ map: showThrough(img), roughness: 0.8, bumpMap: bump, bumpScale: 0.6, sheen: 0.4, sheenRoughness: 0.8, side: THREE.BackSide });
     const front = new THREE.Mesh(geo, mat), back = new THREE.Mesh(geo, bmat);
     front.castShadow = back.castShadow = true; front.receiveShadow = true;
@@ -95,7 +102,7 @@ export async function buildStudio(ctx, { THREE, renderer }, D, o = {}) {
   // the three glass rings of the logo
   const rings = [0x3f8cff, 0x63d36f, 0xff4d4d].map((c) => {
     const m = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.022, 48, 160), new THREE.MeshPhysicalMaterial({
-      color: c, emissive: c, emissiveIntensity: 0.18, roughness: 0.18, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1, transparent: true }));
+      color: c, emissive: c, emissiveIntensity: 0.18, roughness: 0.1, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 2.2, transparent: true }));
     scene.add(m); m.visible = false; return m;
   });
 
@@ -118,22 +125,27 @@ export function blankPage(THREE, title, authors, o = {}) {
   const S = 2, w = 612 * S, h = 792 * S, c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
   g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
-  g.font = `${66 * S}px "Instrument Serif"`; g.fillText(title, w / 2, 112 * S);
-  if (o.subtitle) { g.font = `italic ${30 * S}px "Instrument Serif"`; g.fillStyle = '#333'; g.fillText(o.subtitle, w / 2, 156 * S); }
-  g.font = `700 ${24 * S}px "Inter"`; g.fillStyle = '#1d1d1f'; g.fillText(authors, w / 2, (o.subtitle ? 200 : 160) * S);
+  g.font = `700 ${30 * S}px "Fraunces"`; g.fillText(title, w / 2, 96 * S);
+  g.font = `400 ${17 * S}px "Fraunces"`; g.fillStyle = '#1d1d1f'; g.fillText(authors, w / 2, 140 * S);
+  if (o.affil) { g.font = `400 ${12 * S}px "Fraunces"`; g.fillStyle = '#333'; g.fillText(o.affil, w / 2, 160 * S); }
   g.textAlign = 'left';
-  const y0 = (o.subtitle ? 236 : 196) * S;
+  const y0 = 196 * S, rnd = (i) => { const x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); };
   for (let col = 0; col < 2; col++) {
     const x0 = (54 + col * 262) * S;
-    g.font = `700 ${11 * S}px "Inter"`; g.fillStyle = '#000'; g.fillText(col === 0 ? 'Abstract' : '1  Introduction', x0, y0 + 10 * S);
-    // ruled guide lines, very faint: the page is waiting to be written
-    g.strokeStyle = 'rgba(120,120,128,0.10)'; g.lineWidth = 1 * S;
-    for (let yy = y0 + 30 * S; yy < h - 60 * S; yy += 9 * S) { g.beginPath(); g.moveTo(x0, yy + 3 * S); g.lineTo(x0 + 236 * S, yy + 3 * S); g.stroke(); }
+    g.font = `700 ${12 * S}px "Fraunces"`; g.fillStyle = '#000'; g.fillText(col === 0 ? 'Abstract' : '1  Introduction', x0, y0 + 10 * S);
+    // a template body in light grey: the words are not written yet
+    g.fillStyle = 'rgba(40,40,46,0.16)';
+    let i = col * 1000;
+    for (let yy = y0 + 30 * S; yy < h - 70 * S; yy += 9 * S) {
+      const last = rnd(i++) < 0.12, L = last ? 60 + rnd(i++) * 140 : 236;
+      for (let x = x0; x < x0 + L * S - 6 * S;) { const wl = Math.min((3 + rnd(i++) * 12) * 1.6 * S, x0 + L * S - x); g.fillRect(x, yy + 1 * S, wl, 2.6 * S); x += wl + 2.6 * S; }
+      if (last) yy += 5 * S;
+    }
   }
-  // a text cursor at the start of the abstract
-  if (o.cursor !== false) { g.fillStyle = '#1d1d1f'; g.fillRect(54 * S, y0 + 22 * S, 3 * S, 22 * S); }
-  g.font = `500 ${10 * S}px "Inter"`; g.fillStyle = '#5a5a5a'; g.fillText(o.tag || '', 54 * S, h - 34 * S);
+  g.font = `400 ${10 * S}px "Fraunces"`; g.fillStyle = '#5a5a5a'; g.fillText(o.tag || '', 54 * S, h - 34 * S);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
+  // where the cursor goes (page coordinates): after the Abstract heading
+  t.userData = { cursor: [ (54 + 64) / 612, (196 + 4) / 792 ] };
   return t;
 }
 
@@ -144,6 +156,7 @@ export function setPaper(T, k, s, glow = 0) {
   P.g.visible = true;
   P.g.position.set(s.p[0], s.p[1], s.p[2]); P.g.rotation.set(s.r[0], s.r[1], s.r[2], 'YXZ'); P.g.scale.setScalar(s.s);
   P.mat.color.setScalar(1 - 0.8 * s.dim); P.bmat.color.setScalar((1 - 0.8 * s.dim) * 0.92); P.mat.emissiveIntensity = glow;
+  P.mat.userData.uSat.value = s.sat ?? 1;
 }
 
 export function look(T, pos, tgt, fov, aperture, focusDist) {
