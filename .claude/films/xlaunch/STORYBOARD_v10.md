@@ -58,6 +58,18 @@ cat)", three plain rings for the logo).
 - End card: "We're hiring." with "interns · PhD students · postdocs" (the lab hires broadly), then the handle and
   site, then "*milk tea included".
 
+## Round 5
+- **The three answers accumulate**: whoever has been introduced stays in their ring (Zaifeng from e1 on, Zhongkai
+  from e2), so the pull-back e4 shows all three (before, only the last one visited was left, a v8 leftover).
+- **Roll call in the Team page's order** (yufeiding.ucsd.edu/people/team): Yufei first with her milk tea and the
+  cat, then the postdocs, the Ph.D. students, the master's and undergrads, with the group names riding above as the
+  camera passes; names fade before the pull-back instead of piling up.
+- **End card**: the openings listed by seniority, "postdocs · PhD students · interns".
+- **Light**: a warm pool of light on the ring in focus with the backdrop bill falling off into shadow (it was a flat
+  grey wall); a softer pool on the bill rows in f4 so they keep their contrast; a breath of warm glow far behind the
+  dark sets (the printer, the toast, the roll call, the logo card) for depth; gentler motion blur on camera moves;
+  the a4 title waits for the reveal so it never sits on the cat.
+
 ## Shots
 | shot | frames | what happens |
 | --- | --- | --- |
@@ -70,6 +82,6 @@ cat)", three plain rings for the logo).
 | d1-d3 | 690-900 | the lab, briefly: 136 publications, by year, by venue |
 | e0-e4 | 900-1170 | three answers to the bill: the stamps FASTER / CHEAPER / IN PROGRESS, "...and this one?" |
 | f1-f5 | 1170-1500 | plot twist: the Best Paper is a forecast (of where data moves next); "still one milk tea." |
-| g1-g2 | 1500-1710 | the roll call; the flash turns the crew into the real team photo; "not pictured: you." |
+| g1-g2 | 1500-1710 | the roll call in the Team page's order (PI, postdocs, Ph.D., master's and undergrads); the flash turns the crew into the real team photo; "not pictured: you." |
 | h1-h2 | 1710-1830 | Paper #137 on the desk, byline, "first author wanted." / "The next one has your name on it." |
-| h3 | 1830-1950 | the 3D logo; LAB · UC SAN DIEGO · PROF. YUFEI DING; "We're hiring." interns · PhD students · postdocs; handle and site; "*milk tea included" |
+| h3 | 1830-1950 | the 3D logo; LAB · UC SAN DIEGO · PROF. YUFEI DING; "We're hiring." postdocs · PhD students · interns; handle and site; "*milk tea included" |
