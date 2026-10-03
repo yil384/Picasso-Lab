@@ -1407,7 +1407,7 @@ Object.assign(SHOT9, {
   s21(f) {
     const u = f - 2400;
     showBig(); P9.big.mat.color.setScalar(1); bigMarks(f);
-    put(C.y2, 'y_receipt', -0.6, 0.35, { h: 0.95, rimCol: RIMC.gold });
+    put(C.y2, 'y_receipt', -0.52, 0.05, { h: 0.9, rimCol: RIMC.gold, light: 0.95 });
     if (u >= 30) { const d = P9.working, q = bigAt(BR.total, 0.66, 0, 0.014); d.mesh.position.copy(q); d.mesh.rotation.set(0, 0, 0.04); d.mesh.scale.setScalar(1); d.set(clamp((u - 30) / 30), 1); }
     P9.seals.forEach((d, i) => { const t0 = 60 + i * 10; if (u < t0 + 4) return; const q = bigAt(BR.total, 0.14 + i * 0.18, 0, 0.012); q.y -= 0.24; d.mesh.position.copy(q); d.mesh.rotation.set(0, 0, i * 0.7); d.set(1, 1); });
     T.key.intensity = 1.2; T.key.position.set(1.0, 2.6, 2.4); T.key.lookAt(0, 0.4, BIG_Z);
@@ -1440,7 +1440,7 @@ Object.assign(SHOT9, {
     const cj = landing(f, 3015, 0.4, 12); put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_sit', 0.68, 0.36, { y: FLOOR + 0.3, lift: cj ? cj.lift : 0, contact: false, h: 0.95, sx: cj?.sx, sy: cj?.sy });
     if (u >= 60) {
       put(C.y, 'y_invite', 0.3, 0.78, { fade: sm((u - 60) / 10) });
-      put(C.chair, 'chair_spare', lerp(1.5, 0.58, eout(clamp((u - 60) / 15))), 1.02, { h: 0.6 });
+      put(C.chair, 'chair_spare', lerp(1.2, 0.5, eout(clamp((u - 60) / 15))), 1.35, { h: 0.55 });
     }
   },
   s27(f) { if (f >= 3285) T.grade.uniforms.uFade.value = sm((f - 3285) / 14); },
@@ -1540,7 +1540,7 @@ function typeMore9(ctx, g, f) {
   }
   if (sh === 's21') {
     stampSlam(ctx, g, 'stamp_bestpaper', STAMP_T.best, f, bigAt(BR.data, 0.8));
-    txt(g, '+ 5 more honours', M, CAP9, 36, 500, SOFT, { mono: true, track: 0, k: sm((u - 64) / 12) });
+    txt(g, '+ 5 more honours', 1080 - M, CAP9, 36, 500, SOFT, { align: 'right', mono: true, track: 0, k: sm((u - 64) / 12) }); if (0) txt(g, '', M, CAP9, 36, 500, SOFT, { mono: true, track: 0, k: sm((u - 64) / 12) });
   }
   if (sh === 's22') { head('Best Paper:', sm(u / 8), 64); txt(g, 'still one milk tea.', M, 340, 64, 800, null, { grad: ['#f3d9b6', '#c49a6c'], k: sm((u - 6) / 8) }); }
   if (sh === 's23') {
