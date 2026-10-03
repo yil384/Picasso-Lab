@@ -932,7 +932,7 @@ const REMAP = {
   s09: [[1080, 1106, 0, 14], [1106, 1200, 14, 80]],
   s10: [[1200, 1320, 81, 180]],
   s11: [[1320, 1440, 180, 420]],
-  s12: [[1440, 1560, 540, 720]],
+  s12: [[1440, 1560, 600, 720]],
   s13: [[1560, 1680, 720, 900]],
   s14: [[1680, 1740, 900, 990]],
   s15: [[1740, 1860, 1050, 1110]],      // green first (v8 visit 1)
@@ -970,6 +970,7 @@ async function build9() {
   P9.clips = QUOTES.map((q, i) => K.clipping(q, { seed: 3 + i * 7, w: 1.0 }));
   P9.bill = K.receipt(BILL, { scale: 2, len: 9 });
   P9.circle = await K.decal('pen_circle_b', 0.19, { mode: 1, a0: 2.4 });
+  await build9b();
   P9.under = await K.decal('pen_strike', 0.86, { mode: 2 });
   scene.add(P9.circle.mesh, P9.under.mesh);
   // the print head: a dark machined block with a lit slot
@@ -1000,6 +1001,7 @@ function hide9() {
   P9.head.visible = false; P9.wall.visible = false; P9.sky.visible = false;
   P9.cones.forEach((m) => { m.visible = false; }); P9.spots.forEach((l) => { l.intensity = 0; });
   P9.kit.dustRing(null, 0, 0, 0, -1); P9.kit.setSlit(0, FLOOR, 0, 0.5, 0);
+  hide9b(); if (P9.big) P9.big.mat.color.setScalar(1);
 }
 // the defaults of every frame (as in v8's frame), for the new shots
 function reset9(f) {
@@ -1280,6 +1282,299 @@ function typeLayer9(ctx, g, f) {
     txt(g, 'Ours:', M, 420, 56, 800, '#ffd27a', { k: sm((u - 60) / 12) });
     txt(g, 'where its data moves next.', M, 490, 56, 700, INK, { k: sm((u - 66) / 12) });
   }
+  typeMore9(ctx, g, f);
   header9(g, f);
+}
+
+// ---- v9, part 2: the shared middle (overlays on the remapped v8 shots), the twist, the roll call, the end -----
+// the backdrop: the same bill, huge, hung behind the three rings; blank paper between rows so each line sits where
+// its ring can reach it
+const BIG = [{ head: true, text: 'THE BILL' }, { gap: 89 }, { label: 'GPU TIME', price: 'a lot' }, { gap: 318 }, { label: 'MEMORY + CHIPS', price: 'a lot' },
+  { label: 'THE NEXT COMPUTER', price: 'TBD' }, { label: 'DATA MOVEMENT', price: 'even more' }, { label: 'TOTAL', price: '' }];
+const BR = { gpu: 2, mem: 4, next: 5, data: 6, total: 7 };
+const BIG_TOP = 2.65, BIG_Z = -1.6;
+const ROLL = (i, n) => [(i - (n - 1) / 2) * 0.36, 0.3];          // roll-call line-up: x, z
+const STAMP_T = { faster: 1770, cheaper: 1890, progress: 2010, best: 2415 };
+
+async function build9b() {
+  const { THREE, scene } = T, K = P9.kit;
+  P9.big = K.receipt(BIG, { scale: 8, len: 3.4 });
+  const mk = async (name, w, o) => { const d = await K.decal(name, w, o); scene.add(d.mesh); return d; };
+  P9.st = { faster: await mk('stamp_faster', 0.5), cheaper: await mk('stamp_cheaper', 0.55), progress: await mk('stamp_progress', 0.55), best: await mk('stamp_bestpaper', 0.6, { metal: true }) };
+  P9.strike = await mk('pen_strike', 0.3, { mode: 2 });
+  P9.circleB = await mk('pen_circle_b', 0.9, { mode: 1, a0: 2.4 });
+  P9.working = await mk('pen_working', 0.62, { mode: 2 });
+  P9.seals = []; for (let i = 0; i < 5; i++) P9.seals.push(await mk('seal_gold', 0.2, { metal: true }));
+  P9.under2 = await mk('pen_strike', 0.5, { mode: 2 });
+  P9.markets = K.clipping({ main: 'PHD STUDENT FINISHES FIRST PAPER. MARKETS UNMOVED.', size: 120 }, { seed: 31, w: 0.42 });
+  // the stamp and seal images for the 2D slam (the stamp fills the frame, then shrinks onto its row)
+  const load = (u) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.src = u; });
+  P9.img = {};
+  for (const n of ['stamp_faster', 'stamp_cheaper', 'stamp_progress', 'stamp_bestpaper']) P9.img[n] = await load(`/scene/cut/ink_${n}.png`);
+}
+function hide9b() {
+  if (!P9.big) return;
+  P9.big.mesh.visible = false; Object.values(P9.st).forEach((d) => d.set(0, 0));
+  [P9.strike, P9.circleB, P9.working, P9.under2, ...P9.seals].forEach((d) => d.set(0, 0)); P9.markets.g.visible = false;
+}
+// the backdrop strip: straight down from BIG_TOP at x = 0; dy lowers it (the hoist)
+const bigPath = (dy = 0) => (s) => ({ p: [0, BIG_TOP - s - dy, BIG_Z], side: [1, 0, 0] });
+function showBig(dy = 0) { P9.big.shape(bigPath(dy), 0, Math.min(P9.big.len, BIG_TOP - dy - FLOOR + 0.6)); }
+// a world point on a backdrop row: u from the left edge (0) to the right (1)
+function bigAt(row, u, dy = 0, lift = 0.01) { const s = P9.big.rowS(row) - 0.012; return new T.THREE.Vector3((u - 0.5) * P9.big.RW, BIG_TOP - s - dy, BIG_Z + lift); }
+function stampOn(d, row, u, f0, f, rot = 0, sc = 1) {
+  if (f < f0 + 8) return;
+  d.mesh.position.copy(bigAt(row, u)); d.mesh.rotation.set(0, 0, rot); d.mesh.scale.setScalar(sc); d.set(1, 1);
+}
+// the stamps on the backdrop, as of frame f
+function bigMarks(f) {
+  stampOn(P9.st.faster, BR.gpu, 0.8, STAMP_T.faster, f, -0.08, 0.8);
+  stampOn(P9.st.cheaper, BR.mem, 0.8, STAMP_T.cheaper, f, 0.06, 0.75);
+  if (f >= 1995) { const d = P9.strike, q = bigAt(BR.next, 0.865); d.mesh.position.copy(q); d.mesh.scale.set(0.5, 1.6, 1); d.mesh.rotation.set(0, 0, 0.04); d.set(clamp((f - 1995) / 8), 1); }
+  stampOn(P9.st.progress, BR.next, 0.83, STAMP_T.progress, f, -0.05, 0.68);
+  // DATA MOVEMENT: circled in red until the twist, stamped gold after it
+  const c = P9.circleB; c.mesh.position.copy(bigAt(BR.data, 0.3, 0, 0.012)); c.mesh.scale.set(1, 1.15, 1); c.mesh.rotation.set(0, 0, 0); c.set(1, f < 2310 ? 1 : 0);
+  stampOn(P9.st.best, BR.data, 0.8, STAMP_T.best, f, 0.05, 0.72);
+}
+// the 2D slam of a stamp: frame-filling, then onto its anchor (the last 2 frames hand over to the 3D decal)
+function stampSlam(ctx, g, name, f0, f, anchor) {
+  const u = f - f0; if (u < 0 || u > 9) return;
+  const im = P9.img[name], t = eout(clamp(u / 8)), q = ctx.project(anchor.clone());
+  const x = lerp(540, q.x, t), y = lerp(640, q.y, t), w = lerp(1300, 300, t), h = w * im.height / im.width;
+  g.save(); g.globalAlpha = 1 - sm((u - 7) / 2); g.translate(x, y); g.rotate(lerp(-0.25, -0.06, t)); g.drawImage(im, -w / 2, -h / 2, w, h); g.restore();
+}
+
+Object.assign(CAMS9, {
+  s18: camRig([[2100, [0.0, 0.9, 3.4], [0, 0.9, 0], 34], [2159, [0.25, 0.95, 3.0], [0, 0.9, 0], 36, eio]]),
+  s19: camRig([[2160, [0.0, 0.92, 5.2], [0, 0.82, 0], 32], [2220, [0.02, 0.98, 4.4], [0, 0.95, 0], 30, eio], [2279, [0.04, 1.2, 3.4], [0, 1.18, 0], 30, eio]]),
+  s21: camRig([[2400, [0.1, 0.62, 3.0], [0.0, 0.42, BIG_Z], 32], [2519, [0.06, 0.5, 2.7], [0.0, 0.32, BIG_Z], 32, eio]]),
+  s22: camRig([[2520, [0.05, 0.12, 3.25], [0, -0.06, 0.2], 32], [2579, [0.04, 0.1, 3.05], [0, -0.06, 0.2], 32]]),
+  s23: camRig([[2580, [ROLL(0, 14)[0] + 0.25, 0.22, 3.2], [ROLL(0, 14)[0] + 0.25, -0.12, 0.3], 34], [2700, [ROLL(13, 14)[0] - 0.4, 0.22, 3.2], [ROLL(13, 14)[0] - 0.4, -0.12, 0.3], 34, (x) => x],
+    [2760, [ROLL(13, 14)[0] - 0.3, 0.24, 3.25], [ROLL(13, 14)[0] - 0.3, -0.12, 0.3], 34], [2819, [0, 0.62, 6.6], [0, -0.05, 0.3], 34, eio5]]),
+  s26: camRig([[3000, OPEN_END[0], OPEN_END[1], OPEN_END[2]], [3119, [0.8, 0.62, 3.6], [0.1, 0.28, 0], 30]]),
+});
+Object.assign(SHOT9, {
+  // 2013 at the first desk: no cat yet
+  s09(f) { C.cat.hide(); },
+  s10(f) {
+    C.cat.hide();
+    const u = f - 1200;
+    if (u >= 50) {                                                   // the 2013 clipping drifts across the lens
+      const c = P9.markets, t = (u - 50) / 70, cam = T.camera;
+      c.g.visible = true; const fwd = new T.THREE.Vector3(); cam.getWorldDirection(fwd);
+      const right = new T.THREE.Vector3().crossVectors(fwd, cam.up).normalize(), up = new T.THREE.Vector3().crossVectors(right, fwd).normalize();
+      const p = cam.position.clone().addScaledVector(fwd, 1.3).addScaledVector(right, lerp(0.42, 0.2, eout(t))).addScaledVector(up, -0.34 + 0.02 * Math.sin(t * 3));
+      c.g.position.copy(p); c.g.quaternion.copy(cam.quaternion); c.g.rotateZ(0.08 - 0.05 * t); c.g.rotateY(0.18);
+    }
+  },
+  s14(f) {
+    const u = f - 1680;
+    if (u < 34) put(C.cat, 'cat_tug', lerp(-2.0, -1.0, eout(u / 34)), 1.1, { h: 0.36 });
+    const hoist = 1 - eio5(clamp((u - 30) / 28)); if (u >= 24) showBig(hoist * 3.2);
+  },
+  s15(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); if (f >= 1770) { const lm = landing(f, 1772, 0.25, 6); put(C.m.rishabh, 'm_rishabh', 0.42, 0.18, { y: L.RING_C[1][1] - 0.5, h: 0.48, contact: false, lift: lm ? lm.lift : 0, sx: lm?.sx, sy: lm?.sy, rimCol: RIMC.ring[1], rim: 1.5 }); } },
+  s16(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); },
+  s17(f, ctx) {
+    showBig(); P9.big.mat.color.setScalar(0.62 + 0.38 * sm((f - 2040) / 30)); bigMarks(f);
+    if (f >= 2040) {                                                  // pull back to the whole bill, three stamps and one red circle
+      const t = eio5(clamp((f - 2040) / 40)), c0 = camAt(g8(2039));
+      look(T, mix3(c0.p, [0.0, 1.35, 6.3], t), mix3(c0.t, [0.0, 1.3, BIG_Z], t), lerp(c0.fov, 34, t), 0.0005);
+    }
+  },
+  // the storm: every page blasts round the camera; it freezes; it snaps into the arc
+  s18(f) { stormPapers(f); T.rings.forEach((r, j) => { r.visible = true; r.position.set(...L.RING_C[j]); r.scale.setScalar(L.RING_R / 0.26); r.material.emissiveIntensity = 0.06; r.material.opacity = 0.5; }); T.key.intensity = 0.8; },
+  s19(f) {
+    stormPapers(f);
+    const u = f - 2160, bp = D.awards[0], t = eout5(clamp((u - 30) / 40));
+    setPaper(T, bp, { p: [0, lerp(-0.7, 0.55, t), lerp(0.4, 0, t)], r: [0, lerp(-1.25, 0, t), 0], s: 1.4, dim: 0 }, 0.04 + 0.05 * t);
+    st.gold.intensity = 1.8 * t; st.gold.position.set(1.3, 1.5, 1.3); st.gold.lookAt(0, 0.9, 0);
+    T.key.intensity = 0.7; T.rim.intensity = 2.4; T.bloom.strength = 0.2;
+    if (u >= 60) { const d = P9.under2, gp = T.papers[bp].g; gp.add(d.mesh); const u0 = 0.462, u1 = 0.65, v = 0.1;
+      d.mesh.position.set(((u0 + u1) / 2 - 0.5) * ASP, 0.5 - v, sheetZ(bp, (u0 + u1) / 2, v) + 0.006); d.mesh.rotation.set(0, 0, 0); d.mesh.quaternion.identity();
+      d.mesh.scale.set((u1 - u0) * ASP * 1.05 / P9.under2.w, 2.2, 1); d.mat.userData.u.uRecol.value.set(1.0, 0.8, 0.38, 1); d.set(eout(clamp((u - 60) / 14)), 1); }
+    if (u >= 30) put(C.y, 'y_award', -1.18, 0.7, { h: 0.95, fade: sm((u - 30) / 12), rimCol: RIMC.gold });
+  },
+  s20(f) {
+    const bp = D.awards[0], s = { p: [0, 0.55, 0], r: [0, 0, 0], s: 1.4, dim: 0 };
+    for (const p of D.pubs) if (p.k !== bp) { const a = L.endArc(D, p.k); setPaper(T, p.k, { ...a, dim: Math.max(a.dim || 0, 0.55) }); }
+    setPaper(T, bp, s, 0.05);
+    st.gold.intensity = 1.5; st.gold.position.set(1.2, 1.6, 1.4); st.gold.lookAt(0, 1.0, 0);
+    T.key.intensity = 0.9; T.rim.intensity = 2.0;
+    showBig(); bigMarks(f); P9.big.mat.color.setScalar(0.35);
+    titleCircle(f, bp, 2310, 2340);
+  },
+  // the bill's last line: DATA MOVEMENT gets the gold stamp, she writes the total, five gold seals
+  s21(f) {
+    const u = f - 2400;
+    showBig(); P9.big.mat.color.setScalar(1); bigMarks(f);
+    put(C.y2, 'y_receipt', -0.6, 0.35, { h: 0.95, rimCol: RIMC.gold });
+    if (u >= 30) { const d = P9.working, q = bigAt(BR.total, 0.66, 0, 0.014); d.mesh.position.copy(q); d.mesh.rotation.set(0, 0, 0.04); d.mesh.scale.setScalar(1); d.set(clamp((u - 30) / 30), 1); }
+    P9.seals.forEach((d, i) => { const t0 = 60 + i * 10; if (u < t0 + 4) return; const q = bigAt(BR.total, 0.14 + i * 0.18, 0, 0.012); q.y -= 0.24; d.mesh.position.copy(q); d.mesh.rotation.set(0, 0, i * 0.7); d.set(1, 1); });
+    T.key.intensity = 1.2; T.key.position.set(1.0, 2.6, 2.4); T.key.lookAt(0, 0.4, BIG_Z);
+  },
+  // toast: lab rules beat awards
+  s22(f) {
+    put(C.y, 'y_toast', -0.48, 0.25, { h: 0.82 }); put(C.m.zhongkai, 'zhongkai_offer', 0.42, 0.32, { h: 0.84 * MH('zhongkai') });
+    const cj = landing(f, 2534, 0.3, 8); put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_cheer', -0.02, 0.75, { h: 0.42, lift: cj ? cj.lift : 0 });
+    confetti(f, 2516); T.prac.intensity = 0.8; T.prac.position.set(0, 0.8, 1.0);
+  },
+  // the roll call: one row, alphabetical; each steps forward with a milk tea as the camera passes
+  s23(f) {
+    const n = MEMBERS.length;
+    MEMBERS.forEach((m, i) => {
+      const [x, z] = ROLL(i, n), t0 = 2580 + Math.min(i, n - 2) * 10, st2 = eout(clamp((f - t0) / 8)), back = 1 - sm((f - 2760) / 30);
+      put(C.m[m], `m_${m}`, x, z + 0.16 * st2 * back, { h: 0.66 * MH(m), lift: f >= t0 && f < t0 + 8 ? Math.sin(Math.PI * (f - t0) / 8) * 0.03 : 0 });
+    });
+    if (f >= 2760) put(C.y, 'y_hold_cat', 0, 0.95, { h: 0.74, fade: sm((f - 2760) / 12) });
+  },
+  s24(f) { },
+  s25(f) { C.cat.hide(); C.y.hide(); },
+  // the seat: the cat takes it; she brings a second chair for you
+  s26(f) {
+    const u = f - 3000, H = L.HERO;
+    st.p137.visible = true; st.p137.position.set(H.p[0], H.p[1], H.p[2]); st.p137.rotation.set(H.r[0], H.r[1], H.r[2], 'YXZ'); st.p137.scale.setScalar(H.s);
+    st.cursor.visible = Math.floor(u / 15) % 2 === 0;
+    T.key.position.set(2.6, 2.6, 1.6); T.key.lookAt(0, 0.5, 0); T.key.intensity = 1.6; T.rim.intensity = 3.2;
+    T.prac.position.set(0.95, 0.12, 0.42); T.prac.intensity = 1.4;
+    put(C.desk, 'desk_empty', 0.78, 0.32);
+    const cj = landing(f, 3015, 0.4, 12); put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_sit', 0.68, 0.36, { y: FLOOR + 0.3, lift: cj ? cj.lift : 0, contact: false, h: 0.95, sx: cj?.sx, sy: cj?.sy });
+    if (u >= 60) {
+      put(C.y, 'y_invite', 0.3, 0.78, { fade: sm((u - 60) / 10) });
+      put(C.chair, 'chair_spare', lerp(1.5, 0.58, eout(clamp((u - 60) / 15))), 1.02, { h: 0.6 });
+    }
+  },
+  s27(f) { if (f >= 3285) T.grade.uniforms.uFade.value = sm((f - 3285) / 14); },
+});
+// the storm and the freeze (pages round the camera), then the snap into the end arc
+function stormPapers(f) {
+  const tf = Math.min(f, 2160), u = tf - 2100, snap = eio5(clamp((f - 2175) / 18)), bp = D.awards[0];
+  for (const p of D.pubs) {
+    if (p.k === bp && f >= 2160) continue;
+    const k = p.k, a = hsh(k, 91) * TAU + u * (0.05 + 0.04 * hsh(k, 92)), R = 0.9 + hsh(k, 93) * 2.6, y = 0.9 + (hsh(k, 94) - 0.5) * 3.2;
+    const s = { p: [Math.cos(a) * R, y + Math.sin(u * 0.07 + k) * 0.1, Math.sin(a) * R - 0.6], r: [u * 0.11 * hsh(k, 95), -a + u * 0.07, u * 0.09 * hsh(k, 96)], s: 0.42, dim: 0.15 };
+    setPaper(T, k, snap > 0 ? L.mixL(s, L.endArc(D, k), snap) : s);
+  }
+  T.blur.uniforms.uK.value = f < 2160 ? 0.012 : 0;
+}
+
+// ---- type for the shared middle, the twist, the people and the end -----------------------------------------
+function typeMore9(ctx, g, f) {
+  const { txt, halo, leader, odometer, M, INK, SOFT, GRAD } = TY;
+  const sh = shot9(f), u = f - S9[sh][0];
+  const P = (x, y, z) => ctx.project(new T.THREE.Vector3(x, y, z));
+  const head = (s, k, size = 64, color = INK, y = 262) => { if (k <= 0.01) return; halo(g, 0, y - size - 60, 1000, y + 40, 0.75 * k); txt(g, s, M, y, size, 800, color, { k }); };
+  const cap = (s, k, size = 56, color = INK, y = CAP9) => { if (k <= 0.01) return; halo(g, 0, y - size - 50, 1000, y + 36, 0.75 * k); txt(g, s, M, y, size, 700, color, { k }); };
+  if (sh === 's09') {
+    const t = eio(clamp(u / 28)), big = 1 - sm((u - 30) / 8);
+    if (big > 0.01) { halo(g, 140, 560, 940, 820, 0.6 * big); odometer(g, lerp(2026, 2013, t), 540, 760, 220, 700, { k: big, align: 'center', grad: GRAD }); }
+    txt(g, '2013', M, 228, 40, 600, SOFT, { mono: true, k: sm((u - 32) / 8), track: 0.02 });
+    cap('One PhD student.', sm((u - 30) / 12), 64);
+    const lq = P(0.95, 0.2, 0.62);
+    leader(g, lq, { x: Math.min(lq.x + 70, 1080 - M - 300), y: lq.y - 160 }, sm((u - 60) / 14), ['compute budget: 1 lamp'], { size: 36, mono: true });
+  }
+  if (sh === 's10') {
+    const pg = T.papers[D.first].g, q = P(pg.position.x, pg.position.y - 0.25 * pg.scale.x, pg.position.z);
+    if (pg.visible) leader(g, q, { x: Math.max(M + 470, q.x - 60), y: q.y + 150 }, win(u, 15, 112, 10, 10), ['Paper #1: ProfMig, CGO 2013'], { size: 40, align: 'right' });
+  }
+  if (sh === 's11') {
+    const n = 136 * eio(clamp((u - 4) / 86)), k = sm(u / 10);
+    halo(g, 0, 130, 900, 420, 0.75 * k);
+    txt(g, 'PUBLICATIONS', M, 214, 28, 600, SOFT, { mono: true, track: 0.12, k });
+    odometer(g, Math.min(136, n), M - 6, 352, 140, 700, { k, grad: GRAD });
+    txt(g, '124 papers + 12 preprints & patents', M, 410, 32, 500, SOFT, { mono: true, track: 0, k: sm((u - 60) / 12) });
+  }
+  if (sh === 's12') {
+    const g8f = g8(f), ka = sm((g8f - 690) / 12);
+    D.years.forEach((y) => {
+      const q = P(L.YX(y), FLOOR - 0.03, L.YZ(y)); txt(g, `’${String(y % 100).padStart(2, '0')}`, q.x, q.y + 42, 28, 600, SOFT, { align: 'center', k: ka, mask: false });
+      const nn = D.ycount[y]; if (!nn) return; const tq = P(L.YX(y), L.YTOP(nn) + (y === 2025 ? SUMMIT_H * POSE_H.m_xiang + 0.05 : 0.03), L.YZ(y));
+      txt(g, String(nn), tq.x, tq.y - 8, 30, 700, INK, { align: 'center', k: ka, mask: false });
+    });
+    const zq = P(L.YX(2016) - 0.03, FLOOR + 0.07, L.YZ(2016));
+    leader(g, zq, { x: zq.x + 40, y: zq.y + 190 }, sm((g8f - 650) / 12), ['2016: 0 papers.', '1 cat nap.'], { size: 40, tail: 24 });
+    head('2025: 19 papers.', sm((u - 80) / 12), 64); txt(g, 'Record (so far).', M, 330, 44, 600, SOFT, { k: sm((u - 86) / 12) });
+  }
+  if (sh === 's13') {
+    const g8f = g8(f), k = sm((g8f - 790) / 12);
+    for (let c = 0; c < 2; c++) { const q = P(L.VX(c), FLOOR, L.VZ(c) + 0.36); plate(g, { x: clamp(q.x, M + 58, 1080 - M - 58), y: q.y + 10 }, D.vcount[D.topv[c]], D.topv[c], k); }
+    head('ASPLOS 15 · ISCA 15', k, 72);
+    cap('She refuses to pick.', sm((g8f - 830) / 12));
+    txt(g, 'two top computer-architecture conferences', M, CAP9 + 52, 30, 500, SOFT, { mono: true, track: 0, k: sm((g8f - 836) / 12) });
+  }
+  if (sh === 's14') head('Three answers to the bill.', sm(u / 10), 60);
+  const RING = { s15: 1, s16: 2, s17: 0 }, COLS = ['#5aa2ff', '#7fe08a', '#ff7474'];
+  if (sh in RING) {
+    const r = RING[sh], R = D.rings[r], k = sm(u / 10) * (sh === 's17' ? 1 - sm((u - 58) / 8) : 1);
+    halo(g, 0, 140, 900, 400, 0.8 * k);
+    txt(g, R.name, M, 248, 52, 800, COLS[r], { k });
+    txt(g, R.sub, M, 300, 32, 500, SOFT, { mono: true, track: 0, k });
+    odometer(g, R.n * eio(clamp(u / 30)), M - 4, 376, 56, 700, { k, color: INK });
+    txt(g, 'publications', M + 90, 376, 34, 500, SOFT, { k, mask: false });
+    if (sh === 's15') { stampSlam(ctx, g, 'stamp_faster', STAMP_T.faster, f, bigAt(BR.gpu, 0.8));
+      const rq = P(0.42, L.RING_C[1][1] - 0.02, 0.18); leader(g, rq, { x: Math.min(rq.x + 60, 1080 - M - 290), y: rq.y + 170 }, sm((f - 1778) / 12), ['timed by Rishabh'], { size: 36, mono: true }); }
+    if (sh === 's16') stampSlam(ctx, g, 'stamp_cheaper', STAMP_T.cheaper, f, bigAt(BR.mem, 0.8));
+    if (sh === 's17') {
+      stampSlam(ctx, g, 'stamp_progress', STAMP_T.progress, f, bigAt(BR.next, 0.83));
+      const dq = P(...bigAt(BR.data, 0.3).toArray());
+      leader(g, dq, { x: Math.min(dq.x + 40, 1080 - M - 420), y: dq.y + 230 }, sm((u - 66) / 14), ['data movement:', 'often costs more than the math'], { size: 36, mono: true });
+    }
+  }
+  if (sh === 's18') {
+    halo(g, 0, 380, 1080, 760, 0.8);
+    txt(g, 'Plot twist:', M, 500, 64, 700, SOFT, { k: 1, mask: false, noblur: true });
+    txt(g, 'one prediction.', M - 6, 640, 112, 800, null, { grad: GRAD, track: -0.04, k: 1, mask: false, noblur: true });
+  }
+  if (sh === 's19') {
+    const bp = T.papers[D.awards[0]].g;
+    if (u >= 30 && bp.visible) { const q = P(bp.position.x - 0.32, bp.position.y + 0.72, bp.position.z); txt(g, 'OUR FORECAST  ·  ISCA 2026', q.x, q.y - 12, 32, 600, '#ffd27a', { mono: true, track: 0.06, k: sm((u - 30) / 10) }); }
+    head('Best Paper Award', sm((u - 45) / 12), 72, '#ffd27a');
+    const kf = sm((u - 60) / 5);
+    if (kf > 0.01) { halo(g, 0, CAP9 - 170, 1080, CAP9 + 30, 0.85 * kf); txt(g, 'FORECASTING', M - 6, CAP9 - 10, 112, 800, null, { grad: ['#ffe6a8', '#c9962e'], track: -0.03, k: kf, rise: 0.2 }); }
+  }
+  if (sh === 's20' && f >= 2310 && f < 2340) {                    // the circle peels off the bill and flies to the title
+    const im = null, a = bigAt(BR.data, 0.3), qa = P(a.x, a.y, a.z), bp = T.papers[D.awards[0]].g;
+    bp.updateMatrixWorld(true);
+    const tq = ctx.project(new T.THREE.Vector3((0.82 - 0.5) * ASP, 0.5 - 0.071, 0.05).applyMatrix4(bp.matrixWorld));
+    const t = eio(clamp((f - 2310) / 30)), x = lerp(qa.x, tq.x, t), y = lerp(qa.y, tq.y, t) - Math.sin(Math.PI * t) * 220;
+    g.save(); g.strokeStyle = 'rgba(200,30,36,0.92)'; g.lineWidth = 6; g.beginPath(); g.ellipse(x, y, lerp(150, 140, t), lerp(48, 44, t), -0.05 + t * 0.4, 0, TAU); g.stroke(); g.restore();
+  }
+  if (sh === 's21') {
+    stampSlam(ctx, g, 'stamp_bestpaper', STAMP_T.best, f, bigAt(BR.data, 0.8));
+    txt(g, '+ 5 more honours', M, CAP9, 36, 500, SOFT, { mono: true, track: 0, k: sm((u - 64) / 12) });
+  }
+  if (sh === 's22') { head('Best Paper:', sm(u / 8), 64); txt(g, 'still one milk tea.', M, 340, 64, 800, null, { grad: ['#f3d9b6', '#c49a6c'], k: sm((u - 6) / 8) }); }
+  if (sh === 's23') {
+    head(`Staff: ${MEMBERS.length + 1} humans, 1 cat (awake).`, sm(u / 10) * (1 - sm((u - 170) / 10)), 48);
+    const n = MEMBERS.length, back = 1 - sm((f - 2760) / 16);
+    MEMBERS.forEach((m, i) => {
+      const [x, z] = ROLL(i, n), t0 = 2580 + Math.min(i, n - 2) * 10, kk = sm((f - t0 - 2) / 8) * back; if (kk < 0.01) return;
+      const q = P(x, FLOOR - 0.02, z + 0.16), name = m[0].toUpperCase() + m.slice(1);
+      txt(g, name, q.x, q.y + 54 + (i % 2) * 52, 44, 700, INK, { align: 'center', k: kk, mask: false });
+    });
+    const iz = MEMBERS.indexOf('zhongkai'), iu = MEMBERS.indexOf('zhuo');
+    if (iz >= 0 && iu >= 0) { const a = P(ROLL(iz, n)[0], FLOOR - 0.02, 0.46), b = P(ROLL(iu, n)[0], FLOOR - 0.02, 0.46), kb = sm((f - 2706) / 10) * back;
+      if (kb > 0.01) { g.save(); g.globalAlpha = kb; g.strokeStyle = '#ffd27a'; g.lineWidth = 3; const yb = Math.max(a.y, b.y) + 150; g.beginPath(); g.moveTo(a.x, yb - 14); g.lineTo(a.x, yb); g.lineTo(b.x, yb); g.lineTo(b.x, yb - 14); g.stroke(); g.restore();
+        txt(g, 'tied for gold', (a.x + b.x) / 2, Math.max(a.y, b.y) + 196, 34, 600, '#ffd27a', { mono: true, align: 'center', k: kb, mask: false }); } }
+    const ky = sm((f - 2772) / 12);
+    if (ky > 0.01) { const q = P(0, FLOOR - 0.02, 0.95); halo(g, q.x - 300, q.y + 10, q.x + 300, q.y + 130, 0.7 * ky);
+      txt(g, 'Yufei', q.x, q.y + 66, 48, 800, INK, { align: 'center', k: ky, mask: false }); txt(g, 'PI, cat handler', q.x, q.y + 108, 34, 500, SOFT, { mono: true, align: 'center', k: ky, mask: false }); }
+  }
+  if (sh === 's24') { const k = sm((u - 8) / 10); cap('Pictured: Picasso Lab.', k, 56, INK, CAP9 - 72); txt(g, 'Not pictured: you.', M, CAP9, 56, 700, SOFT, { k: sm((u - 14) / 10) }); }
+  if (sh === 's25') cap('Your next few thousand days?', sm((u - 60) / 12), 56);
+  if (sh === 's26') {
+    head('Seat open.', sm(u / 10) * (1 - sm((u - 56) / 8)), 60);
+    const cq = P(0.68, FLOOR + 0.62, 0.36);
+    leader(g, cq, { x: Math.min(cq.x + 50, 1080 - M - 300), y: cq.y - 90 }, win(u, 15, 120, 10, 6), ['(not you, cat)'], { size: 38, mono: true, tail: 24 });
+    cap('You. Pull up a chair.', sm((u - 60) / 12), 72);
+  }
+  if (sh === 's27') {
+    const ks = sm(u / 30); TY.scrim(g, 700, 1000, 0.95 * ks); if (ks > 0.01) { g.fillStyle = `rgba(11,11,14,${0.95 * ks})`; g.fillRect(0, 1000, 1080, 350); }
+    txt(g, 'Picasso Lab', 540, 880, 96, 800, null, { align: 'center', grad: GRAD, track: -0.035, k: sm(u / 15) });
+    txt(g, 'UC San Diego  ·  Prof. Yufei Ding', 540, 944, 40, 500, '#a1a1a6', { align: 'center', k: sm(u / 15) });
+    txt(g, 'We are recruiting', 540, 1036, 64, 700, INK, { align: 'center', k: sm((u - 30) / 15) });
+    txt(g, 'PhD students.', 540, 1106, 64, 700, INK, { align: 'center', k: sm((u - 34) / 15) });
+    txt(g, '@PicassoLabUCSD  ·  yufeiding.ucsd.edu', 540, 1162, 34, 500, '#9fc8ff', { align: 'center', mono: true, track: 0, k: sm((u - 45) / 15) });
+    txt(g, '*Milk tea included.', 540, 1206, 30, 500, SOFT, { align: 'center', mono: true, track: 0, k: sm((u - 60) / 15) * (1 - sm((f - 3285) / 14)) });
+  }
 }
 </script></body></html>
