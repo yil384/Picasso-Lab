@@ -46,6 +46,23 @@ References (download from GitHub, attach to the first message):
 
 ## Batch 2b - the real lab members (a NEW conversation; attach each member's Team-page photo with their line)
 
+Round 1 came back photorealistic (and five were cropped above the knees), which clashes with the Pixar-style
+Yufei. Round 2: attach TWO images with every message - `art/y_toast.png` as the style reference first, then the
+member's photo - and use the STYLE below, which names the reference and forbids photorealism and cropping.
+
+> I am making an animated short about our research lab. With every message I attach two images: image 1 is our
+> heroine, already drawn in the film's art style; image 2 is a photo of a real lab member. Draw the person from
+> image 2 as a character in exactly the art style of image 1: a stylized 3D animated feature film character (Pixar
+> style), big expressive eyes, smooth stylized skin, simplified shapes, a slightly larger head, soft cartoon
+> proportions, the same soft lighting and rendering as image 1. Not photorealistic, not a photo. Keep them
+> clearly recognisable (face shape, hairstyle, glasses if they wear them, skin tone, build, the style of their
+> clothes), kind and flattering, never a caricature. Always the FULL body from the top of the head to both shoes,
+> nothing cropped, centred with a margin, the figure about 85% of the image height. One perfectly flat pure green
+> #00FF00 background: no floor, no shadow, no gradient. No text, letters, numbers, logos or watermark. Portrait
+> 1024x1536.
+
+Round 1 (kept for the record):
+
 The students are the real Picasso Lab members (all agreed). Photos: `people/static/<name>.webp` in this repo
 (open on GitHub, download). If ChatGPT will not take a .webp, take a screenshot of it.
 
