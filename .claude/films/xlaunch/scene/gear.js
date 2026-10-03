@@ -60,5 +60,75 @@ export async function gearKit(T) {
     g.visible = false; scene.add(g);
     return g;
   }
-  return { card, H: yTop + 0.012, L, W };
+  // ---------------------------------------------------------------------------------------------------------------
+  // the datacenter hall behind the mini rack's door (the opening's fly-through), built far from the desk at X0:
+  // two rows of racks along an aisle (instanced; LED fronts that blink per instance), a glossy floor that reflects
+  // them, light strips, fibre trays with data packets racing along them, sheets of haze. hall.set(f) animates.
+  const { Reflector } = await import('three/addons/objects/Reflector.js');
+  function hall(X0 = 200, ctxW = 1080, ctxH = 1350) {
+    const g = new THREE.Group(); g.position.set(X0, 0, 0); g.visible = false; scene.add(g);
+    const N = 220, PITCH = 0.64, RX = 1.55, uTime = { value: 0 };
+    // the rack front: a perforated black door, 42 units, LED clusters (emissive map = the LEDs alone)
+    const front = cnv(256, 1024, (q, w, h) => { q.fillStyle = '#121418'; q.fillRect(0, 0, w, h); q.fillStyle = '#1c1f25';
+      for (let y = 6; y < h; y += 6) for (let x = (y / 6) % 2 ? 4 : 1; x < w; x += 6) q.fillRect(x, y, 2.4, 2.4);
+      q.fillStyle = '#2a2e36'; for (let u = 0; u < 42; u++) q.fillRect(10, 20 + u * 23.5, w - 20, 1.5); q.fillRect(0, 0, 12, h); q.fillRect(w - 12, 0, 12, h); });
+    const leds = cnv(256, 1024, (q, w, h) => { q.fillStyle = '#000'; q.fillRect(0, 0, w, h);
+      for (let u = 0; u < 42; u++) { if (hsh(u, 3) < 0.25) continue; const y = 31 + u * 23.5, n = 2 + Math.floor(hsh(u, 4) * 5);
+        for (let i = 0; i < n; i++) { const c = hsh(u, i, 5); q.fillStyle = c < 0.55 ? '#3aa0ff' : c < 0.85 ? '#43f08a' : '#ffb347'; q.fillRect(30 + i * 16 + hsh(u, 6) * 40, y - 3, 7, 5); } } });
+    const frontMat = new THREE.MeshStandardMaterial({ map: tex(front, true), emissiveMap: tex(leds, true), emissive: 0xffffff, emissiveIntensity: 3.2, roughness: 0.5, metalness: 0.4 });
+    frontMat.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = uTime;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aPhase;\nvarying float vPhase;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvPhase = aPhase;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying float vPhase;')
+        .replace('#include <emissivemap_fragment>', `#ifdef USE_EMISSIVEMAP
+          vec4 emissiveColor = texture2D( emissiveMap, vEmissiveMapUv );
+          vec2 cell = floor( vEmissiveMapUv * vec2( 16.0, 42.0 ) );
+          float h = fract( sin( dot( cell, vec2( 12.9898, 78.233 ) ) + vPhase * 17.0 ) * 43758.5453 );
+          float blink = step( 0.3, fract( h * 7.0 + uTime * ( 0.6 + h * 3.0 ) ) );
+          totalEmissiveRadiance *= emissiveColor.rgb * ( 0.2 + 0.8 * blink );
+        #endif`);
+    };
+    frontMat.customProgramCacheKey = () => 'rackfront';
+    const sideMat = new THREE.MeshStandardMaterial({ color: 0x0c0d10, roughness: 0.6, metalness: 0.5 });
+    const rows = [];
+    for (const side of [-1, 1]) {                       // left row faces +x, right row faces -x
+      const geo = new THREE.BoxGeometry(1.0, 2.2, 0.62), ph = new Float32Array(N);
+      for (let i = 0; i < N; i++) ph[i] = hsh(i, side + 9);
+      geo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(ph, 1));
+      const mats = [sideMat, sideMat, sideMat, sideMat, sideMat, sideMat]; mats[side < 0 ? 0 : 1] = frontMat;
+      const m = new THREE.InstancedMesh(geo, mats, N), M4 = new THREE.Matrix4();
+      for (let i = 0; i < N; i++) { M4.makeTranslation(side * (RX + 0.5), 1.1, 2 - i * PITCH); m.setMatrixAt(i, M4); }
+      m.frustumCulled = false; g.add(m); rows.push(m);
+    }
+    // floor: a reflector under semi-gloss perforated tiles
+    const refl = new Reflector(new THREE.PlaneGeometry(2 * RX + 0.2, N * PITCH + 20), { textureWidth: ctxW / 2, textureHeight: ctxH / 2, color: 0x6a7480, clipBias: 0.003 });
+    refl.rotation.x = -Math.PI / 2; refl.position.set(0, 0.0, 2 - N * PITCH / 2); g.add(refl);
+    const tile = cnv(256, 256, (q, w, h) => { q.fillStyle = '#20252c'; q.fillRect(0, 0, w, h); q.fillStyle = '#2b313a'; for (let y = 16; y < h; y += 16) for (let x = 16; x < w; x += 16) q.fillRect(x - 3, y - 3, 6, 6);
+      q.fillStyle = '#0b0d10'; q.fillRect(0, 0, w, 4); q.fillRect(0, 0, 4, h); });
+    const tt = tex(tile, true); tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.repeat.set(5, N * PITCH / 0.62);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(2 * RX + 0.2, N * PITCH + 20), new THREE.MeshStandardMaterial({ map: tt, transparent: true, opacity: 0.72, roughness: 0.4, metalness: 0.3 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0.004, 2 - N * PITCH / 2); g.add(floor);
+    // light strips and fibre trays overhead
+    const glow = (col) => new THREE.MeshBasicMaterial({ color: col, toneMapped: false });
+    for (const [x, y, w] of [[0, 4.0, 0.16], [-RX - 0.5, 3.4, 0.1], [RX + 0.5, 3.4, 0.1]]) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, N * PITCH), glow(new THREE.Color(2.2, 2.4, 2.6))); m.position.set(x, y, 2 - N * PITCH / 2); g.add(m); }
+    const trayMat = new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.5, metalness: 0.2 });
+    for (const x of [-RX - 0.2, RX + 0.2]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, N * PITCH), trayMat); m.position.set(x, 2.55, 2 - N * PITCH / 2); g.add(m); }
+    const NP = 90, pk = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, 0.035, 0.7), glow(new THREE.Color(0.6, 2.2, 3.0)), NP); pk.frustumCulled = false; g.add(pk);
+    // sheets of haze across the aisle (additive, a soft vertical falloff)
+    const hz = cnv(64, 256, (q, w, h) => { const gr = q.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(160,200,255,0.55)'); gr.addColorStop(1, 'rgba(160,200,255,0)'); q.fillStyle = gr; q.fillRect(0, 0, w, h); });
+    const hzMat = new THREE.MeshBasicMaterial({ map: tex(hz, true), transparent: true, opacity: 0.09, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    for (let i = 0; i < 18; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(2 * RX, 4.0), hzMat); m.position.set(0, 2.0, -2 - i * 7); g.add(m); }
+    const hemi = new THREE.HemisphereLight(0x9fc4ff, 0x080a0e, 0); const dir = new THREE.DirectionalLight(0xcfe2ff, 0); dir.position.set(X0, 8, 4); dir.target.position.set(X0, 0, -20);
+    scene.add(hemi, dir, dir.target);
+    const M4 = new THREE.Matrix4();
+    function set(f, on) {
+      g.visible = on; hemi.intensity = on ? 0.9 : 0; dir.intensity = on ? 0.6 : 0; if (!on) return;
+      uTime.value = f / 30;
+      for (let i = 0; i < NP; i++) { const lane = i % 3, x = lane === 0 ? 0.0 : (lane === 1 ? -RX - 0.2 : RX + 0.2), y = lane === 0 ? 3.75 : 2.62, sp = 0.5 + 0.5 * hsh(i, 31);
+        const z = 4 - ((hsh(i, 32) * 140 + f * sp) % 140); M4.makeTranslation(x, y, z); pk.setMatrixAt(i, M4); }
+      pk.instanceMatrix.needsUpdate = true;
+    }
+    return { g, set, X0 };
+  }
+  return { card, hall, H: yTop + 0.012, L, W };
 }

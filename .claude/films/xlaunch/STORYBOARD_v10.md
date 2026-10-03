@@ -108,6 +108,18 @@ cat)", three plain rings for the logo).
   for the notes; the overlap check is clean on every desk frame); dust turns in the engine-room beam; glints on the
   gold seals.
 
+## Round 8
+- **Into the rack** (the fly-through, 2.4 s spliced in after Amodei's note; the film is now 67 s, 2010 frames): the
+  camera turns to the mini rack by the lamp and rushes its glass door; a cool flash, and it is flying down the aisle of
+  a full-size datacenter (gear.js `hall`: 440 instanced racks whose LED fronts blink per instance in the shader, a
+  reflecting floor under perforated tiles, light strips, fibre trays with data packets racing along them, sheets of
+  haze, a 2D rush of streaks from the vanishing point); "country of geniuses in a datacenter" rides the aisle with a
+  misprint hit; it flies up into the light and the flash cuts to the third prediction.
+- d3 now reads "15 at ASPLOS, 15 at ISCA." (the old "ASPLOS 15 = ISCA 15" read like an equation).
+- A wall behind the desk (the lamp's warm pool on dark plaster) instead of a black band; the cup moved back; the
+  calendar is left off the night desk (it was cut by the frame); each ring in the three answers gets an arc of its share
+  of the 136 papers; stronger dust motes, glints and flare.
+
 ## Shots
 | shot | frames | what happens |
 | --- | --- | --- |
