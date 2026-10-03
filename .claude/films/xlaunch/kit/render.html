@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Picasso Lab Film Renderer</title>
+<!-- Renders the launch film on this computer's GPU, frame by frame (the scene's own window.renderFrame(i), so every
+     frame is exactly the frame the cloud pipeline makes), and encodes it with the browser's H.264 encoder
+     (WebCodecs) into an mp4 with a silent AAC track. Served by start.command; best in Chrome. -->
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<style>
+  :root { --bg: #0b0b0e; --panel: #15151a; --ink: #f2f2f5; --soft: #a1a1aa; --line: #2a2a31; --accent: #5aa2ff; --gold: #ffd27a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 28px 16px 48px; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
+  .sub { color: var(--soft); margin: 0 0 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  label { display: block; color: var(--soft); font-size: 13px; margin: 14px 0 6px; }
+  select, input { width: 100%; background: #0f0f13; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font: inherit; }
+  .row { display: flex; gap: 10px; } .row > * { flex: 1; }
+  button { margin-top: 18px; width: 100%; padding: 12px; border: 0; border-radius: 10px; font: 600 15px/1 inherit; cursor: pointer; }
+  #go { background: var(--accent); color: #06121f; } #go:disabled { opacity: .45; cursor: default; }
+  #stop { background: #2a2a31; color: var(--ink); display: none; }
+  .bar { height: 8px; background: #0f0f13; border-radius: 99px; overflow: hidden; margin-top: 18px; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--gold)); transition: width .2s; }
+  #status { color: var(--soft); font-variant-numeric: tabular-nums; margin-top: 10px; min-height: 3em; white-space: pre-line; }
+  #dl { display: none; margin-top: 14px; color: var(--gold); font-weight: 600; }
+  .stage { background: #000; border-radius: 14px; border: 1px solid var(--line); aspect-ratio: 4 / 5; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .stage canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .note { color: var(--soft); font-size: 13px; margin-top: 14px; }
+  #scene { position: absolute; left: -10000px; top: 0; width: 16px; height: 16px; border: 0; }
+</style></head>
+<body>
+<main>
+  <div>
+    <h1>Picasso Lab - launch film</h1>
+    <p class="sub">Renders on this Mac's GPU and saves an mp4 when it is done.</p>
+    <div class="stage"><canvas id="out" width="1080" height="1350"></canvas></div>
+  </div>
+  <div class="panel">
+    <label for="film">Film</label>
+    <select id="film"><option value="scene/film9.html">v9 - Compute Not Included (110 s)</option></select>
+    <label for="q">Quality</label>
+    <select id="q">
+      <option value="draft">Draft - 540 x 676, fast check</option>
+      <option value="hd" selected>Final - 1080 x 1350 (X)</option>
+      <option value="ss">Final, supersampled - drawn at 2160 x 2700, saved at 1080 x 1350 (sharpest, slowest)</option>
+    </select>
+    <div class="row">
+      <div><label for="a">From frame</label><input id="a" type="number" value="0" min="0"></div>
+      <div><label for="b">To frame (excl.)</label><input id="b" type="number" value="" placeholder="end"></div>
+    </div>
+    <button id="go">Render</button>
+    <button id="stop">Stop and save what is done</button>
+    <div class="bar"><i id="fill"></i></div>
+    <div id="status">Loading the film...</div>
+    <a id="dl" download>Save the mp4</a>
+    <p class="note">Keep this tab in front while it renders (browsers slow down background tabs). 30 fps, H.264 High, silent audio track, ready for X.</p>
+  </div>
+</main>
+<iframe id="scene" title="scene"></iframe>
+<script>
+const $ = (id) => document.getElementById(id);
+const out = $('out'), octx = out.getContext('2d');
+const iframe = $('scene');
+let stopFlag = false, sceneWin = null, loaded = '';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`; };
+const Q = { draft: { w: 540, h: 675, ow: 540, oh: 676, bps: 5e6 }, hd: { w: 1080, h: 1350, ow: 1080, oh: 1350, bps: 16e6 }, ss: { w: 2160, h: 2700, ow: 1080, oh: 1350, bps: 16e6 } };
+
+async function loadScene(src, w, h) {
+  const url = `${src}?render=1&width=${w}&height=${h}`;
+  if (loaded === url && sceneWin && sceneWin.__pv && sceneWin.__pv.ready) return sceneWin;
+  loaded = url; iframe.src = url;
+  await new Promise((r) => { iframe.onload = r; });
+  sceneWin = iframe.contentWindow;
+  for (let t = 0; ; t++) {
+    const pv = sceneWin.__pv;
+    if (pv && pv.error) throw new Error(pv.error);
+    if (pv && pv.ready) return sceneWin;
+    if (t > 1200) throw new Error('the film did not load in 2 minutes');
+    await sleep(100);
+  }
+}
+function pickCodec(w, h, bps) {
+  const tries = ['avc1.640033', 'avc1.4d0033', 'avc1.42003e'];
+  return (async () => {
+    for (const codec of tries) {
+      const cfg = { codec, width: w, height: h, bitrate: bps, framerate: 30, latencyMode: 'quality', avc: { format: 'avc' } };
+      try { const s = await VideoEncoder.isConfigSupported(cfg); if (s.supported) return cfg; } catch (e) { /* next */ }
+    }
+    throw new Error('this browser cannot encode H.264 (use Chrome)');
+  })();
+}
+
+async function render() {
+  if (!('VideoEncoder' in window)) { $('status').textContent = 'This browser has no WebCodecs video encoder. Please open this page in Chrome.'; return; }
+  const q = Q[$('q').value], film = $('film').value;
+  $('go').disabled = true; $('stop').style.display = 'block'; $('dl').style.display = 'none'; stopFlag = false;
+  try {
+    $('status').textContent = 'Loading the film at ' + q.w + ' x ' + q.h + '...';
+    const win = await loadScene(film, q.w, q.h);
+    const fps = win.__pv.cfg.fps || 30, N = win.__pv.cfg.N;
+    const a = Math.max(0, +$('a').value || 0), b = Math.min(N, +$('b').value || N);
+    out.width = q.ow; out.height = q.oh; octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high';
+    const vcfg = await pickCodec(q.ow, q.oh, q.bps);
+    let audio = null;
+    try { const s = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2, bitrate: 64000 }); if (s.supported) audio = true; } catch (e) { audio = null; }
+    const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), fastStart: 'in-memory', firstTimestampBehavior: 'offset',
+      video: { codec: 'avc', width: q.ow, height: q.oh, frameRate: fps }, ...(audio ? { audio: { codec: 'aac', sampleRate: 48000, numberOfChannels: 2 } } : {}) });
+    let encErr = null;
+    const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => { encErr = e; } });
+    enc.configure(vcfg);
+    const t0 = performance.now(); let done = 0;
+    for (let i = a; i < b; i++) {
+      if (stopFlag) break;
+      if (encErr) throw encErr;
+      await win.renderFrame(i);
+      octx.drawImage(win.__pv.canvas, 0, 0, q.ow, q.oh);
+      const vf = new VideoFrame(out, { timestamp: Math.round((i - a) * 1e6 / fps), duration: Math.round(1e6 / fps) });
+      enc.encode(vf, { keyFrame: (i - a) % (fps * 2) === 0 }); vf.close();
+      while (enc.encodeQueueSize > 6) await sleep(4);
+      done++;
+      const el = (performance.now() - t0) / 1000, per = el / done;
+      $('fill').style.width = `${(100 * done / (b - a)).toFixed(1)}%`;
+      if (done % 3 === 0 || i === b - 1) $('status').textContent = `frame ${i + 1} / ${b}   ${(1 / per).toFixed(1)} frames/s\nelapsed ${fmt(el)}   left about ${fmt(per * (b - a - done))}`;
+    }
+    await enc.flush(); enc.close();
+    if (audio) {                                         // silence for the length of the video (X treats it as a normal video)
+      const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: () => {} });
+      aenc.configure({ codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2, bitrate: 64000 });
+      const total = Math.round(done / fps * 48000), step = 1024, zero = new Float32Array(step * 2);
+      for (let s = 0; s < total; s += step) aenc.encode(new AudioData({ format: 'f32', sampleRate: 48000, numberOfFrames: step, numberOfChannels: 2, timestamp: Math.round(s * 1e6 / 48000), data: zero }));
+      await aenc.flush(); aenc.close();
+    }
+    muxer.finalize();
+    const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+    const name = `picasso_lab_${film.split('/').pop().replace('.html', '')}_${$('q').value}_${a}-${a + done}.mp4`;
+    const dl = $('dl'); dl.href = URL.createObjectURL(blob); dl.download = name; dl.textContent = `Save ${name} (${(blob.size / 1048576).toFixed(1)} MB)`; dl.style.display = 'block';
+    dl.click();
+    $('status').textContent = `Done: ${done} frames in ${fmt((performance.now() - t0) / 1000)}. The mp4 is in your Downloads folder.`;
+  } catch (e) {
+    $('status').textContent = 'Stopped: ' + (e && e.message || e);
+  } finally {
+    $('go').disabled = false; $('stop').style.display = 'none';
+  }
+}
+$('go').onclick = render;
+$('stop').onclick = () => { stopFlag = true; };
+// show the first frame of the film as soon as it loads
+(async () => {
+  try {
+    const win = await loadScene($('film').value, 540, 675);
+    await win.renderFrame(0); out.width = 540; out.height = 675; octx.drawImage(win.__pv.canvas, 0, 0);
+    $('b').placeholder = String(win.__pv.cfg.N);
+    $('status').textContent = `Ready: ${win.__pv.cfg.N} frames at ${win.__pv.cfg.fps} fps. Pick a quality and press Render.`;
+  } catch (e) { $('status').textContent = 'Could not load the film: ' + (e && e.message || e); }
+})();
+</script>
+</body></html>
