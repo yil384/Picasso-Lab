@@ -1616,6 +1616,56 @@ function edgeFade(g, from, to, a) {
   const gr = g.createLinearGradient(0, from, 0, to); gr.addColorStop(0, `rgba(11,11,14,${a})`); gr.addColorStop(0.55, `rgba(11,11,14,${a * 0.45})`); gr.addColorStop(1, 'rgba(11,11,14,0)');
   g.fillStyle = gr; g.fillRect(0, Math.min(from, to), 1080, Math.abs(to - from));
 }
+// ---- 2D motion graphics ------------------------------------------------------------------------------------
+// the quote's key words hit the frame with the slam, then fly down into the clipping's headline (verbatim fragments)
+const PUNCH = [['“smarter than all', 'of humanity”'], ['“country of', 'geniuses”'], ['“a few thousand', 'days (!)”'], ['“100 times', 'more”']];
+function punch(ctx, g, i, uu) {
+  if (uu < -2 || uu > 11) return;
+  const c = P9.clips[i], m = c.meta, Ln = m.lines[Math.floor((m.lines.length - 1) / 2)];
+  const tq = ctx.project(c.at((Ln[0] + Ln[2] / 2) / m.W, (Ln[1] + Ln[3] / 2) / m.H));
+  const fly = eio(clamp((uu - 4) / 7)), x = lerp(540, tq.x, fly), y = lerp(600, tq.y, fly);
+  g.save(); g.font = 'italic 400 172px "Instrument Serif"';
+  const wmax = Math.max(...PUNCH[i].map((l) => g.measureText(l).width)), fit = Math.min(1, 950 / wmax);
+  const s = fit * lerp(1, 0.16, fly) * (uu < 0 ? 1.1 : 1 + 0.06 * Math.exp(-uu));
+  g.translate(x, y); g.scale(s, s); g.globalAlpha = clamp((uu + 2) / 1.5) * (1 - sm((uu - 8) / 3));
+  g.textAlign = 'center'; g.shadowColor = 'rgba(0,0,0,0.7)'; g.shadowBlur = 50; g.fillStyle = '#fffaf0';
+  PUNCH[i].forEach((l, j) => g.fillText(l, 0, (j - 0.5) * 160 + 55));
+  g.restore();
+}
+// ink dots knocked off the desk by a slam, flying out from under the sheet
+function inkBurst(g, q, seed, uu) {
+  if (uu < 0 || uu > 12) return;
+  const t = uu / 12; g.save(); g.fillStyle = '#f3e7cf';
+  for (let k = 0; k < 30; k++) { const a = hsh(seed, k, 1) * TAU, d = (90 + 300 * hsh(seed, k, 2)) * eout(t), r = (2 + 6 * hsh(seed, k, 3)) * (1 - t);
+    g.globalAlpha = 0.75 * (1 - t); g.beginPath(); g.arc(q.x + Math.cos(a) * d, q.y + Math.sin(a) * d * 0.55, r, 0, TAU); g.fill(); }
+  g.restore();
+}
+// a halftone wipe on the big cuts: dots grow across the frame over the last frames of a shot, shrink away over the
+// first frames of the next (the cut is hidden under full cover)
+const WIPES = [[240, '#efe4cc'], [690, '#14120f'], [900, '#efe4cc'], [1500, '#14120f'], [1710, '#efe4cc']];
+function dotWipe(g, f) {
+  for (const [F, col] of WIPES) {
+    const d = f - F; if (d < -4 || d > 3) continue;
+    const k = d < 0 ? (d + 5) / 4 : (4 - d) / 4.5, P = 40;
+    g.save(); g.fillStyle = col;
+    for (let row = 0, y = 0; y < 1350 + P; row++, y += P * 0.866) for (let x = (row % 2) * P / 2; x < 1080 + P; x += P) {
+      const e = d < 0 ? x / 1080 : 1 - x / 1080, r = P * 0.72 * clamp(k * 1.7 - e * 0.7);
+      if (r > 0.5) { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+    }
+    g.restore();
+  }
+}
+// the end card: a slow ripple of warm halftone dots round the logo
+function dotField(g, u) {
+  const cx = 540, cy = 430, P = 24, k = sm(u / 24); if (k < 0.01) return;
+  g.save(); g.fillStyle = 'rgb(255,214,160)';
+  for (let row = 0, y = 0; y < 1350; row++, y += P * 0.866) for (let x = (row % 2) * P / 2; x < 1080; x += P) {
+    const dd = Math.hypot(x - cx, (y - cy) * 1.15); if (dd < 380) continue;
+    const r = P * 0.4 * Math.exp(-(((dd - 380) / 420) ** 2)) * (0.5 + 0.5 * Math.sin(dd * 0.022 - u * 0.16));
+    if (r > 0.4) { g.globalAlpha = 0.12 * k; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+  }
+  g.restore();
+}
 function typeLayer10(ctx, g, f) {
   const { txt, halo, leader, odometer, serif, hand, ink, sticky, M, INK, SOFT, GRAD, PEN, PENCIL } = TY;
   const sh = shotX(f), u = at0(f), P = (x, y, z) => ctx.project(new T.THREE.Vector3(x, y, z));
@@ -1624,6 +1674,8 @@ function typeLayer10(ctx, g, f) {
     const i = +sh[1] - 1, uu = i === 0 ? u - 14 : u;
     if (uu >= 0 && uu < 9) { const q = P(CLP[i][0], FLOOR, CLP[i][1]), t = uu / 9, r = 180 + 520 * eout(t);       // the slam's air, flattened by the desk
       g.save(); g.globalAlpha = 0.5 * (1 - t) ** 1.5; g.strokeStyle = '#fff4e2'; g.lineWidth = 10 * (1 - t) + 1; g.beginPath(); g.ellipse(q.x, q.y, r, r * 0.52, 0, 0, TAU); g.stroke(); g.restore(); }
+    inkBurst(g, P(CLP[i][0], FLOOR, CLP[i][1]), i + 1, uu);
+    punch(ctx, g, i, uu);
     if (sh === 'a4' && f >= GPU_T0 + 6) {                // count the cards as they land; the target is a hundred
       const n = P9.gpus.filter((m, k) => f >= GPU_T0 + k * 2.6 + 7).length, top = P(PILE[0], FLOOR + 0.1 + n * 0.0905, PILE[1]);
       const k = sm((f - GPU_T0 - 6) / 6), x = clamp(top.x + 70, MX, 1080 - MX - 340), y = clamp(top.y - 40, 220, 1100);
@@ -1747,6 +1799,8 @@ function typeLayer10(ctx, g, f) {
   if (sh === 'h3') {
     const k1 = sm((u - 38) / 12), k2 = sm((u - 48) / 12), k3 = sm((u - 58) / 12), k4 = sm((u - 70) / 12);
     g.save(); g.globalAlpha = 1 - sm((f - 1936) / 13);
+    dotField(g, u);
+    ink(g, IMG.pen_squiggle_b, 540, 992, 300, { k: sm((u - 60) / 10), rot: -0.02 });
     txt(g, 'LAB  ·  UC SAN DIEGO  ·  PROF. YUFEI DING', 540, 822, 26, 500, '#bdb8ae', { align: 'center', mono: true, track: 0.12, k: k1 });
     serif(g, 'We’re hiring.', 540, 968, 78, { align: 'center', k: k2, italic: true });
     txt(g, 'postdocs   ·   PhD students   ·   interns', 540, 1030, 30, 500, '#e8e2d6', { align: 'center', mono: true, track: 0.02, k: sm((u - 52) / 12) });
@@ -1755,5 +1809,6 @@ function typeLayer10(ctx, g, f) {
     g.restore();
   }
   header10(g, f);
+  dotWipe(g, f);
 }
 </script></body></html>
