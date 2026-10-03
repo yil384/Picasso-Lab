@@ -110,6 +110,7 @@ async function build(ctx, three) {
   C.chair = await mk(['chair_spare']);
   C.prn = await mk(['prop_printer']);
   C.tea = await mk(['prop_tea']);
+  for (const n of ['rack', 'calendar', 'lamp', 'plant', 'books']) C[n] = await mk([`prop_${n}`]);   // painted desk props (round 6)
   const has = async (n) => (await fetch(`/scene/cut/${n}.png`, { method: 'HEAD' })).ok;
   const ok = await Promise.all(MEMBERS.map((m) => has(`m_${m}`)));
   castFrom(new Set(MEMBERS.filter((m, i) => ok[i])));
@@ -983,7 +984,9 @@ const CLIP_W = [0.78, 0.78, 0.78, 0.86];
 const PILE = [-1.18, 0.08], NGPU = 10, GPU_T0 = 150;
 const CAT0 = [0.4, -0.58];
 const PRN = [0.98, FLOOR, -0.9];                       // the printer (a painted sprite) on the desk
-const CUP = [-0.9, -0.72], PEN = [1.15, 0.3, 0.9];      // nothing overlaps on the desk: no sheet can pass through another
+const CUP = [-0.86, -0.62], PEN = [1.15, 0.3, 0.9];
+// the painted desk props along the back edge: x, z, height (the lamp stands where the desk light is)
+const DECOR = { lamp: [-1.58, -1.5, 1.75], rack: [-1.3, -1.0, 0.75], calendar: [-0.32, -1.08, 0.5], plant: [0.5, -1.32, 0.42], books: [1.5, -1.38, 0.42] };      // nothing overlaps on the desk: no sheet can pass through another
 const NOTE_AT = [[1.12, 0.55, -0.12], [0.7, 1.02, -0.1], [0.88, 1.04, 0.08], [0.16, 0.13, -0.08]];     // page u, v, spin of each sticky note
 const DESK_X0 = -1.8;
 // the roll call follows yufeiding.ucsd.edu/people/team; members without art are left out (castFrom)
@@ -1270,6 +1273,7 @@ function deskOn(lampK = 1) {
   P9.pen.visible = true; P9.pen.position.set(PEN[0], FLOOR + 0.012, PEN[1]); P9.pen.rotation.set(-Math.PI / 2, 0, PEN[2]);
   putH(C.tea, 'prop_tea', CUP[0], CUP[1], 0.8, { light: 1.0, rim: 0.5, rimCol: [1, 0.85, 0.6], relief: 0.15, face: 1 });
   putH(C.prn, 'prop_printer', PRN[0], PRN[2], 0.62, { light: 0.95, rim: 0.5, rimCol: [1, 0.85, 0.6], relief: 0.12, face: 1 });
+  for (const [n, [x, z, h]] of Object.entries(DECOR)) putH(C[n], `prop_${n}`, x, z, h, { light: n === 'lamp' ? 1.0 : 0.95, rim: 0.5, rimCol: [1, 0.85, 0.6], relief: 0.12, face: 1 });
 }
 function clipOnDesk(i, at = CLP[i]) {
   const c = P9.clips[i], [x, z, yaw] = at;
@@ -1419,6 +1423,7 @@ function quoteShot(f, i) {
   P9.kit.dustRing([x, FLOOR, z], c.w, c.h, FLOOR + 0.008, uu - 3);
   noteOn(i, uu - 9);
   if (i === 3) gpuPile(f);
+  if (i === 1 && u >= 8 && u < 14) T.prac.intensity *= 0.5 + 0.5 * hsh(f, 7);
   catNap(f, i, u);
 }
 // the GPU tower: card k falls from above the frame (accelerating, turning square as it drops), lands on the one below,
@@ -1602,13 +1607,17 @@ const SHOTX = {
 
 // ---- type ----------------------------------------------------------------------------------------------
 const CAPX = 1180, MX = TY.M;
+const CH_START = { b: 240, c: 480, d: 690, e: 900, f: 1170, g: 1500, h: 1710 };
 function header10(g, f) {
   if (shotX(f) === 'h3') return;
   const gr = g.createLinearGradient(0, 0, 0, 170); gr.addColorStop(0, 'rgba(11,11,14,0.7)'); gr.addColorStop(1, 'rgba(11,11,14,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 1080, 170);
   const CH = { b: ['01', 'the bill'], c: ['02', 'the engine room'], d: ['03', 'the lab, briefly'], e: ['04', 'three answers'], f: ['05', 'plot twist'], g: ['06', 'staff'], h: ['07', 'the next one'] }[shotX(f)[0]];
   if (shotX(f)[0] !== 'a') TY.serif(g, 'Picasso Lab', MX, 98, 34, { italic: true, color: '#d9d6cf', mask: false, k: 1 });
-  if (CH) { TY.txt(g, CH[0], 1080 - MX - TY.measure(g, CH[1], 24, 500, true, 0.06) - 16, 96, 24, 700, '#f5f5f7', { mono: true, track: 0.04, noblur: true, mask: false, align: 'right' }); TY.txt(g, CH[1], 1080 - MX, 96, 24, 500, '#a1a1a6', { mono: true, track: 0.06, noblur: true, mask: false, align: 'right' }); }
+  if (CH) { const xr = 1080 - MX - TY.measure(g, CH[1], 24, 500, true, 0.06) - 20, c0 = CH_START[shotX(f)[0]], t = c0 == null ? 1 : clamp((f - c0) / 8), prev = String(+CH[0] - 1).padStart(2, '0');
+    [0, 1].forEach((d) => { const x = xr - (1 - d) * 27 - 24, ch = (t < 0.5 ? prev : CH[0])[d], sy = Math.abs(Math.cos(Math.PI * t));       // split-flap tiles
+      g.save(); g.fillStyle = 'rgba(30,30,36,0.9)'; g.beginPath(); g.roundRect(x, 70, 25, 36, 4); g.fill(); g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(x, 87.5, 25, 1.5);
+      g.translate(x + 12.5, 88); g.scale(1, t < 1 ? Math.max(0.05, sy) : 1); TY.txt(g, ch, 0, 9, 24, 700, '#f5f5f7', { mono: true, track: 0, noblur: true, mask: false, align: 'center' }); g.restore(); }); TY.txt(g, CH[1], 1080 - MX, 96, 24, 500, '#a1a1a6', { mono: true, track: 0.06, noblur: true, mask: false, align: 'right' }); }
 }
 // a darkening from the top or bottom edge of the frame, like a grade, behind words on a light set
 function edgeFade(g, from, to, a) {
@@ -1655,6 +1664,15 @@ function dotWipe(g, f) {
     g.restore();
   }
 }
+// print misregistration: the cyan and magenta plates of a big line knocked off register by the hit, settling to a
+// hair; then the line itself on top
+function misreg(g, s, x, y, size, o, uh) {
+  if ((o.k ?? 1) <= 0.004) return;
+  const d = uh < 0 ? 0 : 16 * Math.exp(-uh / 3) + 1.6, dy = uh < 0 ? 0 : 5 * Math.exp(-uh / 3);
+  TY.serif(g, s, x - d, y - dy, size, { ...o, grad: null, color: 'rgba(0,190,255,0.62)', shadow: false });
+  TY.serif(g, s, x + d, y + dy, size, { ...o, grad: null, color: 'rgba(255,40,110,0.62)', shadow: false });
+  TY.serif(g, s, x, y, size, o);
+}
 // the end card: a slow ripple of warm halftone dots round the logo
 function dotField(g, u) {
   const cx = 540, cy = 430, P = 24, k = sm(u / 24); if (k < 0.01) return;
@@ -1689,7 +1707,7 @@ function typeLayer10(ctx, g, f) {
     txt(g, 'Photos: U.S. DoD (PD); TechCrunch, S. Jurvetson, NVIDIA Taiwan (CC BY 2.0), Wikimedia Commons', MX, 1310, 15, 500, 'rgba(236,230,216,0.5)', { mono: true, track: 0, noblur: true, mask: false });
   }
   if (sh === 'a5') {
-    big('The future, as predicted.*', 262, 92, { k: sm((u - 8) / 8), italic: false });
+    halo(g, 0, 262 - 142, 1080, 262 + 40, 0.6 * sm((u - 8) / 8)); misreg(g, 'The future, as predicted.*', MX, 262, 92, { k: sm((u - 8) / 8), italic: false }, u - 9);
     hand(g, '*compute not included', MX + 250, 352, 70, { k: sm((u - 15) / 12), rot: -0.04 });
     ink(g, IMG.pen_squiggle_b, MX + 500, 380, 440, { k: sm((u - 22) / 10), rot: -0.04 });
   }
@@ -1702,7 +1720,7 @@ function typeLayer10(ctx, g, f) {
   if (sh === 'b3') {
     halo(g, 0, 300, 1080, 900, 0.6 * sm((u - 16) / 8));
     serif(g, 'Someone has to make it', MX, 330, 60, { k: sm((u - 18) / 6), italic: true, color: SOFT });
-    ['FAST.', 'CHEAP.', 'POSSIBLE.'].forEach((w, j) => serif(g, w, MX - 6, 500 + j * 160, 176, { k: sm((u - 32 - j * 16) / 4), grad: ['#ffffff', '#c9c3b8'] }));
+    ['FAST.', 'CHEAP.', 'POSSIBLE.'].forEach((w, j) => misreg(g, w, MX - 6, 500 + j * 160, 176, { k: sm((u - 32 - j * 16) / 4), grad: ['#ffffff', '#c9c3b8'] }, u - 33 - j * 16));
   }
   if (sh === 'c1') {
     big('The engine room.', 262, 96, { k: sm(u / 8) });
@@ -1712,7 +1730,14 @@ function typeLayer10(ctx, g, f) {
   }
   if (sh === 'c2') {
     const t = eio(clamp(u / 10)), bk = 1 - sm((u - 12) / 6);
-    if (bk > 0.01) { halo(g, 140, 560, 940, 820, 0.6 * bk); odometer(g, lerp(2026, 2013, t), 540, 760, 220, 700, { k: bk, align: 'center', grad: GRAD }); }
+    if (bk > 0.01) { halo(g, 140, 560, 940, 820, 0.6 * bk); odometer(g, lerp(2026, 2013, t), 540, 760, 220, 700, { k: bk, align: 'center', grad: GRAD });
+      const yr = lerp(2026, 2013, t), sp = 92; g.save();                // a timeline ruler rewinds under the year and brakes on 2013
+      for (let Y = 2004; Y <= 2035; Y++) { const x = 540 + (Y - yr) * sp, a = clamp(1 - Math.abs(x - 540) / 520); if (a <= 0) continue;
+        g.globalAlpha = bk * a; g.fillStyle = '#d8d2c6'; g.fillRect(x - 1.5, 850, 3, Y % 5 ? 26 : 44);
+        for (let q = 1; q < 4; q++) g.fillRect(x + q * sp / 4 - 1, 850, 2, 12);
+        txt(g, String(Y), x, 930, 22, 600, '#bdb8ae', { align: 'center', mono: true, track: 0, noblur: true, mask: false }); }
+      g.globalAlpha = bk; g.fillStyle = '#ff5a4a'; g.beginPath(); g.moveTo(540, 846); g.lineTo(528, 826); g.lineTo(552, 826); g.closePath(); g.fill(); g.fillRect(539, 846, 2, 56);
+      g.restore(); }
     big('One PhD student.', CAPX, 84, { k: sm((u - 14) / 8) });
     const lq = P(0.95, 0.2, 0.62); hand(g, 'compute budget: 1 lamp', Math.min(lq.x + 30, 1080 - MX - 470), lq.y - 170, 56, { k: sm((u - 26) / 12), color: PENCIL });
   }
@@ -1752,11 +1777,20 @@ function typeLayer10(ctx, g, f) {
     if (sh === 'e3') stampSlam(ctx, g, 'stamp_progress', STAMP_T.progress, f, bigAt(BR.next, 0.72));
   }
   if (sh === 'e4') {
+    { const kf = sm((u - 6) / 12), C3 = L.RING_C.map((c) => P(c[0], c[1], c[2] + 0.05)); g.save(); g.lineCap = 'round';     // data moving between the three answers
+      [[0, 1], [1, 2], [2, 0]].forEach(([a, b], j) => {
+        const A = C3[a], B = C3[b], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, cx = mx - (B.y - A.y) * 0.22, cy = my + (B.x - A.x) * 0.22;
+        g.globalAlpha = 0.55 * kf; g.strokeStyle = '#9fd8ff'; g.lineWidth = 3; g.setLineDash([14, 20]); g.lineDashOffset = -f * 5;
+        g.shadowColor = 'rgba(120,200,255,0.9)'; g.shadowBlur = 10; g.beginPath(); g.moveTo(A.x, A.y); g.quadraticCurveTo(cx, cy, B.x, B.y); g.stroke();
+        g.setLineDash([]); g.fillStyle = '#ffffff';
+        for (let k = 0; k < 4; k++) { const t = (f * 0.022 + k / 4 + j * 0.13) % 1, px = (1 - t) * (1 - t) * A.x + 2 * t * (1 - t) * cx + t * t * B.x, py = (1 - t) * (1 - t) * A.y + 2 * t * (1 - t) * cy + t * t * B.y;
+          g.globalAlpha = kf * Math.sin(Math.PI * t); g.beginPath(); g.arc(px, py, 5, 0, TAU); g.fill(); }
+      }); g.restore(); }
     const dq = P(...bigAt(BR.data, 0.3).toArray());
     hand(g, '...and this one?', Math.min(dq.x + 60, 1080 - MX - 360), dq.y - 120, 70, { k: sm((u - 14) / 10) });
     { const kd = sm((u - 30) / 10); edgeFade(g, 1350, CAPX - 200, 0.85 * kd); txt(g, 'data movement: often costs more than the math', MX, CAPX, 30, 500, '#d8d4cc', { mono: true, track: 0, k: kd }); }
   }
-  if (sh === 'f1') { halo(g, 0, 380, 1080, 760, 0.8); serif(g, 'Plot twist:', MX, 500, 72, { italic: true, color: SOFT, mask: false }); serif(g, 'one prediction.', MX - 6, 650, 140, { grad: ['#ffffff', '#c9c3b8'], mask: false }); }
+  if (sh === 'f1') { halo(g, 0, 380, 1080, 760, 0.8); serif(g, 'Plot twist:', MX, 500, 72, { italic: true, color: SOFT, mask: false }); misreg(g, 'one prediction.', MX - 6, 650, 140, { grad: ['#ffffff', '#c9c3b8'], mask: false }, u); }
   if (sh === 'f2') {
     const bp = T.papers[D.awards[0]].g;
     if (u >= 22 && bp.visible) { const q = P(bp.position.x - 0.32, bp.position.y + 0.72, bp.position.z); txt(g, 'OUR FORECAST  ·  ISCA 2026', q.x, q.y - 12, 30, 600, '#ffd27a', { mono: true, track: 0.06, k: sm((u - 22) / 8) }); }

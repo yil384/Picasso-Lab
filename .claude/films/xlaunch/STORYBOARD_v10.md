@@ -85,7 +85,13 @@ cat)", three plain rings for the logo).
   quote's key words (verbatim fragments) hit the frame full size, then fly down into the clipping's headline; halftone
   dot wipes hide the big cuts (desk to printer, engine room to lab, lab to the three answers, toast to roll call, photo
   to Paper #137); a slow ripple of warm halftone dots round the logo on the end card and a red-pen underline under
-  "We're hiring."; edge grades instead of dark boxes behind the words (f2, f3, e4, h2).
+  "We're hiring."; edge grades instead of dark boxes behind the words (f2, f3, e4, h2); print misregistration (the
+  cyan and magenta plates knocked off by the hit, settling to a hair) on "FAST. CHEAP. POSSIBLE.", "one prediction."
+  and the opening title; a timeline ruler that rewinds under 2026 -> 2013 and brakes on 2013; the chapter number on
+  split-flap tiles that flip at each chapter; dashed data streams with packets between the three rings in e4.
+- **Painted desk props** (ChatGPT, keyed with tools/key.py): the brass lamp where the desk light is, a mini server rack
+  (the lamp browns out when the datacenter clipping lands), the DAY 4,700 tear-off calendar (behind the Altman
+  clipping), a succulent, a stack of books.
 - **Fixes**: the cat is no longer flat (sprites on the desk lean back to face the camera, and the relight from the
   shot's lamp now actually reaches them); no clipping passes through another (checked with `__deskCheck`); h2 keeps the
   whole title in frame; "tied for gold" is inside the frame; the h1 cat is inside the frame; the logo rings fly in from
