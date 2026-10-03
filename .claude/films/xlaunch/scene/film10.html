@@ -1278,7 +1278,7 @@ function deskOn(lampK = 1) {
 }
 function clipOnDesk(i, at = CLP[i]) {
   const c = P9.clips[i], [x, z, yaw] = at;
-  c.g.visible = true; c.g.position.set(x, FLOOR + 0.004 + i * 0.012, z); c.g.rotation.set(-Math.PI / 2, 0, yaw, 'XYZ');
+  c.g.visible = true; c.g.position.set(x, FLOOR + 0.004 + i * 0.026, z); c.g.rotation.set(-Math.PI / 2, 0, yaw, 'XYZ');      // a layer per sheet, room for the notes between
 }
 // a page point (u across, v down) of clipping i in its own plane, for things stuck onto it
 const pageXY = (i, u, v) => [(u - 0.5) * P9.clips[i].w, (0.5 - v) * P9.clips[i].h];
@@ -1289,7 +1289,7 @@ function noteOn(i, u) {
   if (u < 0) return;
   c.g.add(n.g); n.g.visible = true;
   const drop = u < 3 ? (1 - u / 3) : 0;
-  n.g.position.set(x, y, 0.014 + drop * 0.25); n.g.rotation.set(drop * 0.3, -drop * 0.2, spin);
+  n.g.position.set(x, y, 0.009 + drop * 0.25); n.g.rotation.set(drop * 0.3, -drop * 0.2, spin);
   n.set(clamp((u - 4) / 20));
   const m = c.meta, L0 = m.lines[m.lines.length - 1], tw = [(L0[0] + L0[2] * 0.62) / m.W, (L0[1] + L0[3] * 0.98) / m.H], [tx, ty] = pageXY(i, tw[0], tw[1]);
   const fx = x + (nu < 0.5 ? 0.07 : -0.08), fy = y + 0.15, dx = tx - fx, dy = ty - fy, len = Math.hypot(dx, dy), a = P9.arrows[i];
@@ -1674,6 +1674,21 @@ function misreg(g, s, x, y, size, o, uh) {
   TY.serif(g, s, x + d, y + dy, size, { ...o, grad: null, color: 'rgba(255,40,110,0.62)', shadow: false });
   TY.serif(g, s, x, y, size, o);
 }
+// dust motes turning in a beam of light (centre x, top y, bottom y, width at the bottom)
+function motes(g, f, cx, y0, y1, w, k, seed = 1) {
+  if (k < 0.01) return; g.save(); g.fillStyle = '#fff3dc';
+  for (let i = 0; i < 70; i++) { const t = ((hsh(seed, i, 1) + f * (0.002 + 0.003 * hsh(seed, i, 2))) % 1), y = lerp(y0, y1, t), half = lerp(w * 0.25, w * 0.5, t);
+    const x = cx + (hsh(seed, i, 3) - 0.5) * 2 * half + Math.sin(f * 0.05 + i) * 6, r = 1 + 2.2 * hsh(seed, i, 4);
+    g.globalAlpha = k * (0.25 + 0.5 * hsh(seed, i, 5)) * Math.sin(Math.PI * t) * (0.6 + 0.4 * Math.sin(f * 0.2 + i * 1.7)); g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+  g.restore();
+}
+// four-point glints that twinkle on gold
+function glints(g, f, pts, k) {
+  if (k < 0.01) return; g.save(); g.fillStyle = '#fff6d8'; g.shadowColor = 'rgba(255,214,120,0.9)'; g.shadowBlur = 12;
+  pts.forEach(([x, y], i) => { const tw = Math.max(0, Math.sin(f * 0.21 + i * 2.3)) ** 3, r = 6 + 16 * tw; if (tw < 0.05) return;
+    g.globalAlpha = k * tw; g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill(); });
+  g.restore();
+}
 // the end card: a slow ripple of warm halftone dots round the logo
 function dotField(g, u) {
   const cx = 540, cy = 430, P = 24, k = sm(u / 24); if (k < 0.01) return;
@@ -1724,6 +1739,7 @@ function typeLayer10(ctx, g, f) {
     ['FAST.', 'CHEAP.', 'POSSIBLE.'].forEach((w, j) => misreg(g, w, MX - 6, 500 + j * 160, 176, { k: sm((u - 32 - j * 16) / 4), grad: ['#ffffff', '#c9c3b8'] }, u - 33 - j * 16));
   }
   if (sh === 'c1') {
+    { const top = P(0.15, FLOOR + 3.2, -0.1), bot = P(0.15, FLOOR + 0.1, -0.1); motes(g, f, bot.x, Math.max(0, top.y), bot.y, 520, sm((u - 10) / 20)); }   // dust in the shaft of light
     big('The engine room.', 262, 96, { k: sm(u / 8) });
     const cq = P(0.08, DESK_TOP + 0.1, 0.24);
     hand(g, 'no predictions down here.', MX, CAPX - 70, 70, { k: sm((u - 44) / 14), color: PENCIL, rot: -0.02 });
@@ -1805,7 +1821,8 @@ function typeLayer10(ctx, g, f) {
     serif(g, 'Ours:', MX, 430, 64, { k: sm((u - 36) / 8), color: '#ffd27a', italic: true });
     serif(g, 'where its data moves next.', MX, 506, 64, { k: sm((u - 40) / 8) });
   }
-  if (sh === 'f4') { stampSlam(ctx, g, 'stamp_bestpaper', STAMP_T.best, f, bigAt(BR.data, 0.84)); txt(g, '+ 5 more honours', 1080 - MX, CAPX, 30, 500, SOFT, { align: 'right', mono: true, track: 0, k: sm((u - 32) / 8) }); }
+  if (sh === 'f4') { glints(g, f, P9.seals.map((d, i) => { const q = P(...bigAt(BR.total, 0.14 + i * 0.18, 0, 0.012).toArray()); return [q.x + 14, q.y - 0.24 * 300 - 10]; }).filter((q, i) => u >= 32 + i * 5), 1);
+    stampSlam(ctx, g, 'stamp_bestpaper', STAMP_T.best, f, bigAt(BR.data, 0.84)); txt(g, '+ 5 more honours', 1080 - MX, CAPX, 30, 500, SOFT, { align: 'right', mono: true, track: 0, k: sm((u - 32) / 8) }); }
   if (sh === 'f5') { big('Best Paper:', 262, 88, { k: sm(u / 6) }); hand(g, 'still one milk tea.', MX + 6, 350, 76, { k: sm((u - 8) / 10) }); }
   if (sh === 'g1') {
     const R = rollcall(), n = R.length, back = 1 - sm((f - 1585) / 12);
