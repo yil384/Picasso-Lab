@@ -24,7 +24,16 @@ export function txt(g, s, x, y, size, weight, color, o = {}) {
   g.fillText(s, x, y + rise);
   g.restore();
 }
-export function measure(g, s, size, weight, mono) { g.save(); g.font = `${weight} ${size}px "${mono ? 'JetBrains Mono' : 'Inter'}"`; const w = g.measureText(s).width; g.restore(); return w; }
+export function measure(g, s, size, weight, mono, track = 0) {
+  g.save(); g.font = `${weight} ${size}px "${mono ? 'JetBrains Mono' : 'Inter'}"`;
+  try { g.letterSpacing = `${track * size}px`; } catch (err) { /* */ }
+  const w = g.measureText(s).width; g.restore(); return w;
+}
+// a soft dark halo behind a block of type (instead of full-width scrims that would fog the characters' feet)
+export function halo(g, x0, y0, x1, y1, a = 0.7) {
+  if (a <= 0.005) return;
+  g.save(); g.filter = 'blur(40px)'; g.fillStyle = `rgba(11,11,14,${a})`; g.fillRect(x0, y0, x1 - x0, y1 - y0); g.restore();
+}
 
 export function scrim(g, y0, y1, a) {
   if (a <= 0.005) return;
@@ -34,11 +43,17 @@ export function scrim(g, y0, y1, a) {
 
 // the running header: PICASSO LAB on the left, the chapter on the right ("01  ORIGIN"), a hairline between
 export function header(g, chapter, k = 1, kc = 1) {
-  txt(g, 'PICASSO LAB', M, 96, 20, 600, MUTE, { track: 0.32, k, noblur: true });
+  // a permanent soft band so the header never sits on a lit sheet, then the type with a dark shadow
+  const gr = g.createLinearGradient(0, 0, 0, 180); gr.addColorStop(0, `rgba(11,11,14,${0.62 * k})`); gr.addColorStop(1, 'rgba(11,11,14,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, 180);
+  g.save(); g.shadowColor = 'rgba(0,0,0,0.85)'; g.shadowBlur = 10;
+  txt(g, 'PICASSO LAB', M, 96, 20, 600, '#a1a1a6', { track: 0.32, k, noblur: true, mask: false });
   if (chapter && kc > 0.01) {
-    txt(g, chapter[0], W - M - measure(g, chapter[1], 18, 500, true) - 22, 96, 18, 700, INK, { mono: true, track: 0.05, k: kc, align: 'right', noblur: true });
-    txt(g, chapter[1], W - M, 96, 18, 500, MUTE, { mono: true, track: 0.12, k: kc, align: 'right', noblur: true });
+    const ww = measure(g, chapter[1], 18, 500, true, 0.12);
+    txt(g, chapter[0], W - M - ww - 14, 96, 18, 700, INK, { mono: true, track: 0.05, k: kc, align: 'right', noblur: true, mask: false });
+    txt(g, chapter[1], W - M, 96, 18, 500, '#a1a1a6', { mono: true, track: 0.12, k: kc, align: 'right', noblur: true, mask: false });
   }
+  g.restore();
 }
 
 // a leader line from a 3D anchor (projected) to a label; the line draws itself, then the label rises
@@ -52,10 +67,10 @@ export function leader(g, from, to, k, label, o = {}) {
   if (o.tail) g.lineTo(mx + o.tail * e, my);
   g.stroke(); g.restore();
   if (label) {
-    const kk = clamp((k - 0.35) / 0.65);
-    const right = o.align !== 'right', x = to.x + (o.tail || 0) + (right ? 10 : -10);
-    txt(g, label[0], x, to.y - 8, o.size || 26, 700, o.labelColor || INK, { k: kk, align: right ? 'left' : 'right', mono: o.mono });
-    if (label[1]) txt(g, label[1], x, to.y + 22, (o.size || 26) * 0.66, 500, MUTE, { k: kk, align: right ? 'left' : 'right', mono: true, track: 0.04 });
+    const kk = clamp((k - 0.35) / 0.65), size = o.size || 34, sub = Math.max(24, size * 0.78);
+    const right = o.align !== 'right', x = to.x + (o.tail || 0) + (right ? 12 : -12);
+    txt(g, label[0], x, to.y + size * 0.35, size, 700, o.labelColor || INK, { k: kk, align: right ? 'left' : 'right', mono: o.mono });
+    if (label[1]) txt(g, label[1], x, to.y + size * 0.35 + sub * 1.3, sub, 500, SOFT, { k: kk, align: right ? 'left' : 'right' });
   }
 }
 

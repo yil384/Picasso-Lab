@@ -93,6 +93,7 @@ export function spriteKit(THREE, scene) {
       u.uLight.value = o.light ?? 1; u.uRimK.value = o.rim ?? 0.0; u.uFade.value = o.fade ?? 1;
       if (o.tint) u.uTint.value.setRGB(...o.tint);
       if (o.rimDir) u.uRimDir.value.set(...o.rimDir);
+      u.uRim.value.setRGB(...(o.rimCol || [0.55, 0.72, 1.0]));
       if (o.side != null) u.uSide.value = o.side;
       if (o.foot != null) u.uFoot.value = o.foot;
       const w = Math.abs(mesh.scale.x);
