@@ -19,6 +19,7 @@ for f in sorted(os.listdir(os.path.join(FILM, 'cut'))):
     stem = f[:-4].replace('_d', '') if f.endswith('_d.png') else f[:-4]
     if stem in used or stem.replace('ink_', '') in used or f.startswith(('ink_', 'logo_', 'prop_')): shutil.copy2(os.path.join(FILM, 'cut', f), os.path.join(A, 'cut', f))
 shutil.copytree(os.path.join(FILM, 'pages'), os.path.join(A, 'pages'))
+shutil.copytree(os.path.join(FILM, 'photos'), os.path.join(A, 'photos'))          # the lab's group photos (events/static)
 for f in ('data.json', 'team.jpg', 'logo.png'): shutil.copy2(os.path.join(FILM, f), os.path.join(A, f))
 rel = lambda p: os.path.relpath(p, REPO)
 lines = [f'{rel(os.path.join(HERE, f))} {f} code' for f in ('render.html', 'start.command')]

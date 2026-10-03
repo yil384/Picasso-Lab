@@ -819,3 +819,9 @@
 .claude/films/xlaunch/kit/assets/pages/133.jpg scene/pages/133.jpg asset
 .claude/films/xlaunch/kit/assets/pages/134.jpg scene/pages/134.jpg asset
 .claude/films/xlaunch/kit/assets/pages/135.jpg scene/pages/135.jpg asset
+.claude/films/xlaunch/kit/assets/photos/chrismas.jpg scene/photos/chrismas.jpg asset
+.claude/films/xlaunch/kit/assets/photos/cny2026.jpg scene/photos/cny2026.jpg asset
+.claude/films/xlaunch/kit/assets/photos/firespot41.jpg scene/photos/firespot41.jpg asset
+.claude/films/xlaunch/kit/assets/photos/hezi_defense.jpg scene/photos/hezi_defense.jpg asset
+.claude/films/xlaunch/kit/assets/photos/party0725.jpg scene/photos/party0725.jpg asset
+.claude/films/xlaunch/kit/assets/photos/thanksgiving.jpg scene/photos/thanksgiving.jpg asset

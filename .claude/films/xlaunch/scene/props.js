@@ -153,7 +153,17 @@ export async function propKit(T) {
     const a = document.createElement('canvas'); a.width = 64; a.height = Math.round(64 * Hpx / RPX); const ag = a.getContext('2d');
     ag.fillStyle = '#fff'; ag.fillRect(0, 0, a.width, a.height); ag.fillStyle = '#000';
     for (let x = 0; x < 64; x += 4) { ag.beginPath(); ag.moveTo(x, 0); ag.lineTo(x + 2, 3.2); ag.lineTo(x + 4, 0); ag.fill(); }
-    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16;
+    // widen: blank paper on both sides of the printed column (the backdrop must cover all three rings); the text keeps
+    // its size and its place in the middle
+    const k = o.widen ?? 1; let tc = c;
+    if (k > 1) {
+      tc = document.createElement('canvas'); tc.width = Math.round(RPX * k); tc.height = Hpx; const g2 = tc.getContext('2d');
+      for (let y = 0; y < Hpx; y += RPX * 1.6) for (let x = 0; x < tc.width; x += RPX) g2.drawImage(pCol, 0, (y / 7 + x) % 400, 600, 900, x, y, RPX, RPX * 1.6);
+      g2.globalCompositeOperation = 'multiply'; g2.fillStyle = '#f1f3f4'; g2.fillRect(0, 0, tc.width, Hpx); g2.globalCompositeOperation = 'source-over';
+      g2.fillStyle = 'rgba(255,255,255,0.35)'; g2.fillRect(0, 0, tc.width, Hpx);
+      g2.drawImage(c, (tc.width - RPX) / 2, 0);
+    }
+    const tex = new THREE.CanvasTexture(tc); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16;
     const atex = new THREE.CanvasTexture(a);
     const N = o.segs ?? 360, pos = new Float32Array((N + 1) * 2 * 3), uv = new Float32Array((N + 1) * 2 * 2), idx = [];
     for (let i = 0; i <= N; i++) { if (i < N) { const b = i * 2; idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3); } }
@@ -169,7 +179,7 @@ export async function propKit(T) {
       mesh.visible = s1 > s0 + 0.001;
       for (let i = 0; i <= N; i++) {
         const s = lerp(s0, s1, i / N), q = path(s);
-        const hw = RW / 2, sx = q.side[0] * hw, sy = q.side[1] * hw, sz = q.side[2] * hw;
+        const hw = RW * k / 2, sx = q.side[0] * hw, sy = q.side[1] * hw, sz = q.side[2] * hw;
         pos.set([q.p[0] - sx, q.p[1] - sy, q.p[2] - sz, q.p[0] + sx, q.p[1] + sy, q.p[2] + sz], i * 6);
         const v = 1 - s / (Hpx / PPU);
         uv.set([0, v, 1, v], i * 4);
@@ -178,7 +188,7 @@ export async function propKit(T) {
     }
     // world point of a row (its centre line on the strip) for leaders and stamps
     const rowS = (i) => rowY[i] / PPU;
-    return { mesh, mat, shape, rowS, len: Hpx / PPU, RW, PPU, v3, tex };
+    return { mesh, mat, shape, rowS, len: Hpx / PPU, RW, RWfull: RW * k, PPU, v3, tex };
   }
 
   // ---------------------------------------------------------------------------------------------------------------
