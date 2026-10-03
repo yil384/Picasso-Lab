@@ -85,6 +85,7 @@ pearls, a wide straw) in a toast with one hand.`
 | 21 | `m_zhongkai.png` | zhongkai.webp | A gold award medal on a ribbon around the neck. |
 | 22 | `m_zhuo.png` | zhuo.webp | A gold medal on a red ribbon around the neck. |
 | 23 | `m_zihan.png` | zihan.webp | (no extra detail) |
+| 34 | `m_rishabh.png` | rishabh.webp | A small silver stopwatch in the other hand. |
 
 
 Three members have two more poses each (same conversation, attach the same photo again):
@@ -93,8 +94,8 @@ Three members have two more poses each (same conversation, attach the same photo
 | --- | --- | --- | --- |
 | 24 | `xiang_land.png` | xiang.webp | A superhero landing: one knee and one fist on the ground, the other arm out behind, looking up with a determined grin. |
 | 25 | `xiang_chip.png` | xiang.webp | Standing, proudly holding up in both hands at chest height a small square quantum chip that glows soft blue. |
-| 26 | `xinwei_flop.png` | xinwei.webp | Mid-air in a comic belly-flop dive, arms and legs spread wide like a starfish, cheeks puffed, eyes squeezed shut; seen from the front, slightly from below. |
-| 27 | `xinwei_gpu.png` | xinwei.webp | Standing, hugging a large graphics card (a GPU board with fans) against the chest like a beloved pet, a soft green glow on it, content smile. |
+| 26 | `zaifeng_flop.png` | zaifeng.webp | Mid-air in a comic belly-flop dive, arms and legs spread wide like a starfish, cheeks puffed, eyes squeezed shut; seen from the front, slightly from below. |
+| 27 | `zaifeng_gpu.png` | zaifeng.webp | Standing, hugging a large graphics card (a GPU board with fans) against the chest like a beloved pet, a soft green glow on it, content smile. |
 | 28 | `zhongkai_tray.png` | zhongkai.webp | Walking carefully, three-quarter view, carrying a small round tray with six cups of bubble milk tea, concentrating, tongue slightly out. |
 | 29 | `zhongkai_wafer.png` | zhongkai.webp | Standing, holding up a round silicon wafer that shines with a rainbow sheen, presenting it with a big proud grin. |
 
