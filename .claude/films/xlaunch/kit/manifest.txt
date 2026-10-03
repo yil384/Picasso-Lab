@@ -15,7 +15,7 @@
 .claude/films/xlaunch/scene/tex/Wood026/Wood026_2K-JPG_Color.jpg scene/tex/Wood026/Wood026_2K-JPG_Color.jpg asset
 .claude/films/xlaunch/scene/tex/Wood026/Wood026_2K-JPG_NormalGL.jpg scene/tex/Wood026/Wood026_2K-JPG_NormalGL.jpg asset
 .claude/films/xlaunch/scene/tex/Wood026/Wood026_2K-JPG_Roughness.jpg scene/tex/Wood026/Wood026_2K-JPG_Roughness.jpg asset
-.claude/films/xlaunch/kit/assets/data.json scene/data.json asset
+.claude/films/xlaunch/kit/assets/data.json scene/data.json code
 .claude/films/xlaunch/kit/assets/logo.png scene/logo.png asset
 .claude/films/xlaunch/kit/assets/team.jpg scene/team.jpg asset
 .claude/films/xlaunch/kit/assets/pv/runtime/pv.js pv/runtime/pv.js code
@@ -27,8 +27,8 @@
 .claude/films/xlaunch/kit/assets/pv/runtime/npr/npr.js pv/runtime/npr/npr.js code
 .claude/films/xlaunch/kit/assets/pv/fonts/caveat-normal-latin-81102a44.woff2 pv/fonts/caveat-normal-latin-81102a44.woff2 asset
 .claude/films/xlaunch/kit/assets/pv/fonts/caveat-normal-latin-ext-e4402a05.woff2 pv/fonts/caveat-normal-latin-ext-e4402a05.woff2 asset
-.claude/films/xlaunch/kit/assets/pv/fonts/fonts.css pv/fonts/fonts.css asset
-.claude/films/xlaunch/kit/assets/pv/fonts/fonts.json pv/fonts/fonts.json asset
+.claude/films/xlaunch/kit/assets/pv/fonts/fonts.css pv/fonts/fonts.css code
+.claude/films/xlaunch/kit/assets/pv/fonts/fonts.json pv/fonts/fonts.json code
 .claude/films/xlaunch/kit/assets/pv/fonts/fraunces-italic-latin-acb6475b.woff2 pv/fonts/fraunces-italic-latin-acb6475b.woff2 asset
 .claude/films/xlaunch/kit/assets/pv/fonts/fraunces-italic-latin-ext-ea6119fa.woff2 pv/fonts/fraunces-italic-latin-ext-ea6119fa.woff2 asset
 .claude/films/xlaunch/kit/assets/pv/fonts/fraunces-normal-latin-9e509503.woff2 pv/fonts/fraunces-normal-latin-9e509503.woff2 asset

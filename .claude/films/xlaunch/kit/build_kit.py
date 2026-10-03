@@ -28,6 +28,6 @@ for root, _, files in os.walk(os.path.join(SC, 'tex')):
 for root, _, files in os.walk(A):
     for f in sorted(files):
         p = os.path.join(root, f); r = os.path.relpath(p, A)
-        lines.append(f'{rel(p)} {r if r.startswith("pv/") else "scene/" + r} {"code" if r.startswith("pv/runtime") else "asset"}')
+        lines.append(f'{rel(p)} {r if r.startswith("pv/") else "scene/" + r} {"code" if r.startswith("pv/runtime") or r.endswith((".css", ".json")) else "asset"}')
 open(os.path.join(HERE, 'manifest.txt'), 'w').write('\n'.join(lines) + '\n')
 print(len(lines), 'files in the manifest')
