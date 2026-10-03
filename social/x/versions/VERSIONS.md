@@ -57,3 +57,11 @@ Every cut of the first X post, newest last. Watch them side by side: https://yil
 - What: 三张成片质量的静帧：1 聚光灯下的第一篇论文（2013）；2 136 篇论文立成的长廊，最新在前、2013 在远处；3 结尾：三个玻璃圆环（logo）、文字、虚化的论文。
 - Feedback: “可以可以，就要这个质感”
 - Lesson: 先定质感再做动画：这三张通过后，才设计转场和镜头运动。
+
+## v9 - Compute Not Included (不含算力（大佬预言 + 账单 + 实验室）) - 2026-10-03, 110 s
+
+- File: `v9_compute_not_included.mp4`
+- How: v7 影棚质感 + v8 的论文叙事（逐帧映射复用）+ 新镜头（分支 video/x-launch，video-kit/films/xfilm/film9.html；仓库 .claude/films/xlaunch/scene）。剧本由三版构思评审、挑刺、修改而来（STORYBOARD_v9.md），大佬原话逐句核对出处（QUOTES_v9.md）。角色为 Codex 生成的皮克斯风 3D（含 21 张成员重画），深度图浮雕 + 呼吸摆动；真实纸张扫描、真实印泥/笔迹素材。1080×1350，110 秒，2 秒一拍。
+- What: 三张旧报纸剪报：马斯克、Amodei、Altman 的原话 → “*Compute not included.” → 账单从地缝吐出、流成小河，猫把它拖进发动机房 → 2013 一个博士生、一盏台灯 → 136 篇论文、年份、会议 → 三个方向给账单盖章（FASTER / CHEAPER / IN PROGRESS），只剩“数据搬运”没人盖 → 反转：最佳论文本身就是一次预测（Forecasting Data Movement）→ 奶茶 → 14 人点名 → Paper #137 和一把给你的椅子 → “*Milk tea included.”
+- Feedback: （待反馈）
+- Lesson: 先做 4 张风格帧再铺满全片；复用旧镜头靠逐帧映射，不重写；云端渲染每帧 3–8 秒、主要耗在 PNG 编码，Mac 本地渲染工具包（.claude/films/xlaunch/kit）可在 GPU 上快得多。
