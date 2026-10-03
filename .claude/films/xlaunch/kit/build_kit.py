@@ -8,7 +8,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); XL = os.path.dirname(HERE); R
 ap = argparse.ArgumentParser(); ap.add_argument('--vk', default=os.path.expanduser('/home/user/vk')); a = ap.parse_args()
 PIPE = os.path.join(a.vk, 'video-kit/pipeline'); FILM = os.path.join(a.vk, 'video-kit/films/xfilm')
 A = os.path.join(HERE, 'assets'); SC = os.path.join(XL, 'scene')
-CODE = ['film10.html', 'film9.html', 'studio.js', 'layouts.js', 'lib.js', 'sprite.js', 'type.js', 'props.js']
+CODE = ['film10.html', 'film9.html', 'studio.js', 'layouts.js', 'lib.js', 'sprite.js', 'type.js', 'props.js', 'gear.js']
 for f in CODE: shutil.copy2(os.path.join(FILM, f), os.path.join(SC, f))
 if os.path.exists(A): shutil.rmtree(A)
 for d in ('runtime', 'vendor', 'fonts'): shutil.copytree(os.path.join(PIPE, d), os.path.join(A, 'pv', d))

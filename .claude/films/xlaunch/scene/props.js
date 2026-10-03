@@ -119,6 +119,95 @@ export async function propKit(T) {
     return { g, mesh, mat, w, h, meta: cv_meta, at };
   }
 
+  // a press clipping with a photo (v10 round 6): the morning paper's furniture (masthead or section bar, date line),
+  // the quote as the headline, a halftone press photo (tools/halftone.py, ink only) with its caption and credit, a
+  // short column of body text. q.kind: 'front' (masthead, bold upright headline, photo beside the column), 'side'
+  // (photo on the left of the headline), 'oped' (a round headshot by the byline, italic headline).
+  function pressClip(q, o = {}) {
+    const W = o.cw ?? 1200, x0 = 72, cw = W - 2 * x0, mg = document.createElement('canvas').getContext('2d');
+    const wrap = (s, font, w) => { if (!s) return []; mg.font = font; const out = []; let line = '';
+      for (const wd of s.split(' ')) { const t = line ? line + ' ' + wd : wd; if (mg.measureText(t).width > w && line) { out.push(line); line = wd; } else line = t; }
+      if (line) out.push(line); return out; };
+    const ink = '#1b1814', soft = '#4a4239', ops = [], meta = { lines: [] };
+    let y = 64;
+    const track = (g, px) => { try { g.letterSpacing = px + 'px'; } catch (e) { /* */ } };
+    const smallCaps = (g, s, x, yy, size, align = 'left', col = ink) => { g.font = `600 ${size}px ${NEWS}`; track(g, size * 0.16); g.fillStyle = col; g.textAlign = align; g.fillText(s, x, yy); g.textAlign = 'left'; track(g, 0); };
+    const rules = (yy, thick = true) => ops.push((g) => { g.fillStyle = ink; g.fillRect(0, yy, W, thick ? 6 : 2); if (thick) g.fillRect(0, yy + 12, W, 2); });
+    const front = q.kind === 'front', italic = q.kind !== 'front';
+    if (front) {                                          // masthead and date line
+      rules(y); y += 30;
+      ops.push(((yy) => (g) => { g.font = `700 ${q.mast ?? 132}px ${NEWS}`; track(g, 2); g.fillStyle = ink; g.textAlign = 'center'; g.fillText(q.paper, W / 2, yy + 112); g.textAlign = 'left'; track(g, 0); })(y)); y += 150;
+      rules(y, false);
+      ops.push(((yy) => (g) => { smallCaps(g, q.date, x0, yy + 40, 26); smallCaps(g, q.edition || '', W - x0, yy + 40, 26, 'right'); })(y)); y += 58; rules(y, false); y += 36;
+    } else {                                              // section bar
+      rules(y); y += 22;
+      ops.push(((yy) => (g) => { smallCaps(g, q.kicker, x0, yy + 40, 30); smallCaps(g, q.date, W - x0, yy + 40, 26, 'right', soft); })(y)); y += 62; rules(y, false); y += 40;
+    }
+    // byline block (essays): a round headshot for the op-ed, else just the name and the piece
+    if (q.who) {
+      const hs = q.kind === 'oped' ? 190 : 0, by = y;
+      if (hs && q.photo) ops.push((g) => { g.save(); g.beginPath(); g.arc(x0 + hs / 2, by + hs / 2, hs / 2, 0, 6.283); g.clip();
+        const im = q.photo, s = Math.max(hs / im.width, hs / im.height); g.drawImage(im, x0 + hs / 2 - im.width * s / 2, by + hs / 2 - im.height * s * 0.42, im.width * s, im.height * s); g.restore();
+        g.strokeStyle = ink; g.lineWidth = 2; g.beginPath(); g.arc(x0 + hs / 2, by + hs / 2, hs / 2, 0, 6.283); g.stroke(); });
+      const bx = x0 + (hs ? hs + 36 : 0);
+      ops.push((g) => { g.font = `700 76px ${NEWS}`; g.fillStyle = ink; g.fillText(q.who, bx, by + (hs ? 92 : 70)); g.font = `italic 400 44px ${NEWS}`; g.fillStyle = soft; g.fillText(q.src, bx, by + (hs ? 150 : 124)); });
+      y += Math.max(hs, 150) + 34;
+    }
+    // the photo beside the headline ('side') or below it ('front')
+    const photoRect = (px, py, pw, ph) => ops.push((g) => { const im = q.photo; if (!im) return; g.save(); g.beginPath(); g.rect(px, py, pw, ph); g.clip();
+      const s = Math.max(pw / im.width, ph / im.height); g.drawImage(im, px + (pw - im.width * s) / 2, py + (ph - im.height * s) * 0.3, im.width * s, im.height * s); g.restore();
+      g.strokeStyle = ink; g.lineWidth = 2; g.strokeRect(px, py, pw, ph); });
+    const caption = (px, py, pw) => { const L = wrap(q.caption, `italic 400 30px ${NEWS}`, pw);
+      ops.push((g) => { g.font = `italic 400 30px ${NEWS}`; g.fillStyle = soft; L.forEach((l, i) => g.fillText(l, px, py + 30 + i * 36)); smallCaps(g, q.credit, px, py + 30 + L.length * 36 + 6, 19, 'left', soft); });
+      return 30 + L.length * 36 + 26; };
+    const fsz = q.size ?? 104, lsz = q.leadSize ?? 50;
+    const fH = `${italic ? 'italic 500' : '700'} ${fsz}px ${NEWS}`, fL = `italic 400 ${lsz}px ${NEWS}`;
+    const headBlock = (hx, hw) => {
+      const LL = wrap(q.lead, fL, hw), HL = wrap(q.main, fH, hw);
+      let yy = y; const start = y;
+      ops.push(((yy0) => (g) => { g.font = fL; g.fillStyle = '#2b2620'; LL.forEach((l, i) => g.fillText(l, hx, yy0 + lsz * 0.82 + i * lsz * 1.24)); })(yy));
+      yy += LL.length * lsz * 1.24 + (LL.length ? 14 : 0);
+      ops.push(((yy0) => (g) => { g.font = fH; g.fillStyle = '#15120e'; track(g, italic ? 0 : -1);
+        HL.forEach((l, i) => { const ly = yy0 + i * fsz * 1.04; g.fillText(l, hx, ly + fsz * 0.8); meta.lines.push([hx, ly, g.measureText(l).width, fsz]); }); track(g, 0); })(yy));
+      yy += HL.length * fsz * 1.04;
+      return yy - start;
+    };
+    const bodyCol = (bx, by, bw, n = 99) => { const L = wrap(q.body, `400 30px ${NEWS}`, bw).slice(0, n);
+      ops.push((g) => { g.font = `400 30px ${NEWS}`; g.fillStyle = '#2a2520'; L.forEach((l, i) => g.fillText(l, bx, by + 30 + i * 39)); }); return 30 + L.length * 39; };
+    if (q.kind === 'side') {
+      const pw = Math.round(cw * 0.4), ph = Math.round(pw * 1.15), hx = x0 + pw + 40, hw = cw - pw - 40, top = y;
+      photoRect(x0, top, pw, ph); const capH = caption(x0, top + ph, pw);
+      const hh = headBlock(hx, hw); y = top + Math.max(ph + capH, hh) + 30;
+      ops.push(((yy) => (g) => { g.fillStyle = ink; g.fillRect(x0, yy, cw, 2); })(y)); y += 16; y += bodyCol(x0, y, cw, 3);
+    } else if (front) {
+      y += headBlock(x0, cw) + 30;
+      const pw = Math.round(cw * 0.58), ph = Math.round(pw * (q.photoAsp ?? 0.86)), top = y;
+      photoRect(x0, top, pw, ph); const capH = caption(x0, top + ph, pw);
+      ops.push((g) => { g.fillStyle = ink; g.fillRect(x0 + pw + 22, top, 2, ph + capH); });
+      bodyCol(x0 + pw + 46, top - 8, cw - pw - 46, Math.floor((ph + capH) / 39));
+      y = top + ph + capH + 20;
+    } else {
+      y += headBlock(x0, cw) + 26;
+      ops.push(((yy) => (g) => { g.fillStyle = ink; g.fillRect(x0, yy, cw, 2); })(y)); y += 16; y += bodyCol(x0, y, cw, 3);
+      if (q.credit) { ops.push(((yy) => (g) => smallCaps(g, q.credit, x0, yy + 26, 19, 'left', soft))(y)); y += 40; }
+    }
+    if (q.next) { const yy = y + 24; ops.push((g) => { g.font = `700 120px ${NEWS}`; g.fillStyle = ink; g.fillText(q.next, x0 - 8, yy + 60); }); y += 64; }   // the next story, cut through
+    const H = Math.round(y + 40), asp = H / W;
+    const alpha = cutAlpha(512, Math.round(512 * asp), o.seed ?? 3);
+    const cv = newsprintCanvas(W, H, (g) => ops.forEach((fn) => fn(g)));
+    meta.W = W; meta.H = H;
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 16;
+    const w = o.w ?? 1.0, h = w * asp;
+    const geo = new THREE.PlaneGeometry(w, h, 40, Math.round(40 * asp)); const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i) / w, yy = p.getY(i) / h; p.setZ(i, 0.0018 * (1 + Math.sin(x * 3.1 + (o.seed ?? 3)) * Math.cos(yy * 2.3)) + 0.012 * (x * x) * w + 0.003 * (yy + 0.5) * (yy + 0.5)); }
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshPhysicalMaterial({ map: tx, alphaMap: alpha, alphaTest: 0.5, roughness: 0.86, sheen: 0.3, sheenRoughness: 0.9, normalMap: creaseNormal, normalScale: new THREE.Vector2(0.22, 0.22), side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true;
+    const g = new THREE.Group(); g.add(mesh); g.visible = false; scene.add(g);
+    const at = (u, v) => { g.updateMatrixWorld(true); return new THREE.Vector3((u - 0.5) * w, (0.5 - v) * h, 0.01).applyMatrix4(mesh.matrixWorld); };
+    return { g, mesh, mat, w, h, meta, at };
+  }
+
   // ---------------------------------------------------------------------------------------------------------------
   // the bill: thermal paper (cool white, a faint sheen), fixed 30-character rows in mono, a toothed tear edge at the
   // top. The strip is a ribbon that follows path(s) -> { p, side, up } for s from 0 (the torn top) to len.
@@ -169,7 +258,8 @@ export async function propKit(T) {
     for (let i = 0; i <= N; i++) { if (i < N) { const b = i * 2; idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3); } }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(idx);
-    const mat = new THREE.MeshPhysicalMaterial({ map: tex, alphaMap: atex, alphaTest: 0.5, roughness: 0.5, sheen: 0.5, sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.4,
+    // thermal paper is bright white: a little self-light keeps it reading as paper on its shadow side
+    const mat = new THREE.MeshPhysicalMaterial({ map: tex, emissiveMap: tex, emissive: new THREE.Color(o.glow ?? 0), alphaMap: atex, alphaTest: 0.5, roughness: 0.5, sheen: 0.5, sheenRoughness: 0.5, clearcoat: 0.15, clearcoatRoughness: 0.4,
       normalMap: fineNormal, normalScale: new THREE.Vector2(0.15, 0.15), side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
     mesh.visible = false; scene.add(mesh);
@@ -382,5 +472,5 @@ export async function propKit(T) {
     return { g: grp, parts, s };
   }
 
-  return { note, titlePage, logo3D, clipping, receipt, decal, dustRing, setSlit, desk, printer, RW: RW0, ROW: ROW0, fineNormal, creaseNormal };
+  return { note, titlePage, logo3D, clipping, pressClip, receipt, decal, dustRing, setSlit, desk, printer, RW: RW0, ROW: ROW0, fineNormal, creaseNormal };
 }

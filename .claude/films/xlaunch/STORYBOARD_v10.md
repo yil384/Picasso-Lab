@@ -70,11 +70,28 @@ cat)", three plain rings for the logo).
   dark sets (the printer, the toast, the roll call, the logo card) for depth; gentler motion blur on camera moves;
   the a4 title waits for the reveal so it never sits on the cat.
 
+## Round 6
+- **Opening redesigned**: four predictions instead of three, Jensen Huang added (GTC 2025 keynote, verbatim from the
+  Rev transcript, QUOTES_v9.md). Each clipping is now a real newspaper page with a halftone press photo
+  (`tools/halftone.py`, `scene/photos/press_*.png`): front pages for Musk and Huang (masthead, date line, headline,
+  photo, caption, credit, a column of body text), essay pages for Amodei (round headshot) and Altman (photo beside the
+  headline). Photo credits are on each clipping and in the small print: Musk, U.S. Department of Defense (public
+  domain); Amodei, TechCrunch (CC BY 2.0); Altman, Steve Jurvetson (CC BY 2.0); Huang, NVIDIA Taiwan (CC BY 2.0); all
+  from Wikimedia Commons.
+- **GPUs in 3D** (`scene/gear.js`, modelled in three.js and lit by the lamp): at the fourth prediction ten datacenter
+  GPU cards rain onto the desk and stack into a tower; a mono counter by the tower counts them ("10 / 100"), the
+  red pen adds "need more desk."; the crash wakes the cat. The tower stays on the desk for the bill shots.
+- **2D**: a shock ring on the desk at every slam; edge grades instead of dark boxes behind the words (f2, f3, e4, h2).
+- **Fixes**: the cat is no longer flat (sprites on the desk lean back to face the camera, and the relight from the
+  shot's lamp now actually reaches them); no clipping passes through another (checked with `__deskCheck`); h2 keeps the
+  whole title in frame; "tied for gold" is inside the frame; the h1 cat is inside the frame; the logo rings fly in from
+  the frame edge (no black second); "*milk tea included" no longer un-writes at the end.
+
 ## Shots
 | shot | frames | what happens |
 | --- | --- | --- |
-| a1-a3 | 0-180 | three verbatim predictions (QUOTES_v9.md) slam onto the desk one by one; each gets a sticky note and an arrow: "collectively = how many GPUs?", "who pays their power bill?", "we're on day 4,700." The cat sleeps through two, the third wakes it |
-| a4 | 180-240 | pull back: "The future, as predicted.*" / "*compute not included" |
+| a1-a4 | 0-196 | four verbatim predictions (QUOTES_v9.md) slam onto the desk as press clippings with photos; sticky notes: "collectively = how many GPUs?", "who pays their power bill?", "we're on day 4,700.", "...and 100x the bill."; at the fourth, ten GPUs rain down into a tower and wake the cat |
+| a5 | 196-240 | pull back: "The future, as predicted.*" / "*compute not included" |
 | b1 | 240-330 | the printer starts by itself: THE BILL, row by row; the cat bats the curl. "Imagining it: free. Running it: see receipt." |
 | b2 | 330-368 | close on the bill: the red pen circles DATA MOVEMENT ("this one."); the cat paws it, bites it, bolts |
 | b3 | 368-480 | the bill slides over the desk edge, the cat dives after it. "Someone has to make it FAST. CHEAP. POSSIBLE." |

@@ -22,6 +22,7 @@ import { buildStudio, setPaper, look, blankPage, sheetGeometry } from '/scene/st
 import * as L from '/scene/layouts.js';
 import { spriteKit } from '/scene/sprite.js';
 import { propKit } from '/scene/props.js';
+import { gearKit } from '/scene/gear.js';
 import { clamp, lerp, mix3, sm, eio, eio5, eout, eout5, ein, hsh, win, camRig, TAU } from '/scene/lib.js';
 import * as TY from '/scene/type.js';
 
@@ -34,7 +35,7 @@ const S = {
 // v10: 65 s, fast cut (STORYBOARD_v10.md). Shots that v10 shares with v8 replay v8 through REMAP.
 const NF10 = 1950;
 const S10 = {
-  a1: [0, 60], a2: [60, 120], a3: [120, 180], a4: [180, 240], b1: [240, 330], b2: [330, 368], b3: [368, 480],
+  a1: [0, 54], a2: [54, 98], a3: [98, 142], a4: [142, 196], a5: [196, 240], b1: [240, 330], b2: [330, 368], b3: [368, 480],
   c1: [480, 570], c2: [570, 630], c3: [630, 690], d1: [690, 780], d2: [780, 840], d3: [840, 900],
   e0: [900, 930], e1: [930, 990], e2: [990, 1050], e3: [1050, 1110], e4: [1110, 1170],
   f1: [1170, 1200], f2: [1200, 1290], f3: [1290, 1380], f4: [1380, 1440], f5: [1440, 1500],
@@ -505,7 +506,8 @@ function put(ch, pose, x, z, o = {}) {
   const br = 1 + k * 0.006 * Math.sin(TAU * t / 3.4 + ph), sway = k * 0.012 * Math.sin(TAU * t / 5.1 + ph * 1.7);
   ch.set(pose, { height: (o.h ?? 1) * (POSE_H[pose] ?? 1), flip: o.flip, sx: (o.sx ?? 1) * (2 - br), sy: (o.sy ?? 1) * br, relief: o.relief });
   ch.place(x, (o.y ?? FLOOR), z, T.camera, { floorY: FLOOR, light: o.light ?? 0.8, rim: o.rim ?? 1.2, rimDir: [-1, 0.3], side: 0.16, foot: 0.66, lift: o.lift ?? 0,
-    fade: o.fade ?? 1, contact: o.contact, contactK: o.contactK ?? 0.6, yaw: o.yaw, roll: (o.roll ?? 0) + sway, rimCol: o.rimCol, face: o.face });
+    fade: o.fade ?? 1, contact: o.contact, contactK: o.contactK ?? 0.6, yaw: o.yaw, roll: (o.roll ?? 0) + sway, rimCol: o.rimCol, face: o.face,
+    relight: o.relight, rim2: o.rim2, keyV: o.keyV, rimV: o.rimV, amb: o.amb, keyCol: o.keyCol, rimCol2: o.rimCol2, tilt: o.tilt });
   return ch;
 }
 function landing(f, f0, h = 1.2, dur = 12) {
@@ -953,22 +955,36 @@ function g8(f) { const r = REMAP[shotX(f)]; if (!r) return null; for (const [a, 
 const at0 = (f) => f - S10[shotX(f)][0];
 
 const P9 = {}, IMG = {};
+// the four predictions as front pages and essay pages, each with a press photo (CC BY / public domain, credited on
+// the clipping and in the small print); the quotes are verbatim (QUOTES_v9.md)
 const QUOTES = [
-  { who: 'ELON MUSK', src: 'WEF Davos, Jan 22, 2026', lead: '…probably by 2030 or 2031, call it five years from now,', main: 'AI will be smarter than all of humanity collectively.', size: 112,
-    note: ['collectively', '= how many GPUs?'], word: 'last' },
-  { who: 'DARIO AMODEI', src: '“Machines of Loving Grace”, Oct 2024', lead: 'We could summarize this as a', main: '“country of geniuses in a datacenter”.', size: 124,
-    note: ['who pays their', 'power bill?'], word: 'last' },
-  { who: 'SAM ALTMAN', src: '“The Intelligence Age”, Sep 23, 2024', lead: 'It is possible that we will have superintelligence in', main: 'a few thousand days (!)…', size: 132,
-    note: ["we're on", 'day 4,700.'], word: 'last' },
+  { kind: 'front', paper: 'The Future', date: 'THURSDAY, JANUARY 22, 2026', edition: 'DAVOS', lead: '…probably by 2030 or 2031, call it five years from now,', main: 'AI will be smarter than all of humanity collectively.', size: 92,
+    photo: 'musk', pw: 0.5, photoAsp: 1.0, caption: 'Elon Musk, 2025.', credit: 'PHOTO: U.S. DEPT. OF DEFENSE, PUBLIC DOMAIN',
+    body: 'DAVOS — In a conversation with Larry Fink at the World Economic Forum, Musk said AI may be smarter than any human by the end of this year, and smarter than all of humanity combined by 2030 or 2031.',
+    note: ['collectively', '= how many GPUs?'] },
+  { kind: 'oped', kicker: 'ESSAY', date: 'OCTOBER 2024', who: 'Dario Amodei', src: '“Machines of Loving Grace”', lead: 'We could summarize this as a', main: '“country of geniuses in a datacenter”.', size: 104,
+    photo: 'amodei', credit: 'PHOTO: TECHCRUNCH, CC BY 2.0',
+    body: 'On what powerful AI could do, Amodei writes that it could come as early as 2026, though there are also ways it could take much longer.',
+    note: ['who pays their', 'power bill?'] },
+  { kind: 'side', kicker: 'ESSAY', date: 'SEPTEMBER 23, 2024', who: 'Sam Altman', src: '“The Intelligence Age”', lead: 'It is possible that we will have superintelligence in', main: 'a few thousand days (!)…', size: 108,
+    photo: 'altman', caption: 'Sam Altman at TED, 2025.', credit: 'PHOTO: STEVE JURVETSON, CC BY 2.0',
+    body: 'It may take longer, he adds, but he is confident we will get there.',
+    note: ["we're on", 'day 4,700.'] },
+  { kind: 'front', paper: 'The Future', date: 'TUESDAY, MARCH 18, 2025', edition: 'SAN JOSE', lead: 'The amount of computation we need at this point as a result of agentic AI as a result of reasoning, is', main: 'easily 100 times more than we thought we needed this time last year', size: 90,
+    photo: 'huang', pw: 0.5, photoAsp: 0.9, caption: 'Jensen Huang at Computex, 2016.', credit: 'PHOTO: NVIDIA TAIWAN, CC BY 2.0',
+    body: 'SAN JOSE — In his GTC keynote, Huang said agentic AI and reasoning have multiplied the computation the industry needs.',
+    note: ['…and 100x', 'the bill.'] },
 ];
 // the desk (1 unit ~ 15 cm): three clippings land where the cat is napping; the milk tea, the pen and the printer
 // are already there. x, z, yaw of each clipping; the third lands right next to the cat.
-const CLP = [[-0.32, 0.16, 0.06], [0.34, 0.42, -0.05], [0.0, -0.2, 0.04]];
-const CLIP_W = 0.78;
+const CLP = [[-0.32, 0.16, 0.06], [0.34, 0.42, -0.05], [0.0, -0.2, 0.04], [-0.36, 0.68, 0.07]];
+const CLIP_W = [0.78, 0.78, 0.78, 0.86];
+// the GPU tower (gear.js): ten cards rain down at the fourth prediction and stack, left of the clippings (out of the printer shots)
+const PILE = [-1.18, 0.08], NGPU = 10, GPU_T0 = 150;
 const CAT0 = [0.4, -0.58];
 const PRN = [0.98, FLOOR, -0.9];                       // the printer (a painted sprite) on the desk
-const CUP = [-0.9, -0.72], PEN = [0.78, 0.86, 0.35];
-const NOTE_AT = [[0.86, 1.04, 0.12], [0.88, 1.0, -0.1], [0.88, 1.04, 0.08]];     // page u, v, spin of each sticky note
+const CUP = [-0.9, -0.72], PEN = [1.15, 0.3, 0.9];      // nothing overlaps on the desk: no sheet can pass through another
+const NOTE_AT = [[1.12, 0.55, -0.12], [0.7, 1.02, -0.1], [0.88, 1.04, 0.08], [0.16, 0.13, -0.08]];     // page u, v, spin of each sticky note
 const DESK_X0 = -1.8;
 // the roll call follows yufeiding.ucsd.edu/people/team; members without art are left out (castFrom)
 const ROLL_GROUPS = [['PI', ['Y']], ['POSTDOCS', ['yue', 'zhengding', 'chang', 'yanju']], ['PH.D. STUDENTS', ['keyi', 'xiang', 'jixuan', 'zaifeng', 'zhongkai', 'zhuo', 'yichen', 'xinwei']],
@@ -994,7 +1010,9 @@ const ROLL = (i, n) => [(i - (n - 1) / 2) * 0.36, 0.3];
 async function build10() {
   const { THREE, scene } = T;
   const K = P9.kit = await propKit(T);
-  P9.clips = QUOTES.map((q, i) => K.clipping(q, { seed: 3 + i * 7, w: CLIP_W, cw: 1200 }));
+  const press = {}; for (const q of QUOTES) press[q.photo] = await T.loadImg(`/scene/photos/press_${q.photo}.png`);
+  P9.clips = QUOTES.map((q, i) => K.pressClip({ ...q, photo: press[q.photo] }, { seed: 3 + i * 7, w: CLIP_W[i], cw: 1200 }));
+  P9.gear = await gearKit(T); P9.gpus = Array.from({ length: NGPU }, () => P9.gear.card());
   P9.notes = QUOTES.map((q, i) => K.note(q.note, { w: 0.34, seed: i, size: i === 0 ? 66 : 76 }));
   P9.page = K.titlePage({ w: 1.3 });
   P9.noteY = K.note(['first author', 'wanted.'], { w: 0.28, seed: 5, size: 80 });
@@ -1014,14 +1032,14 @@ async function build10() {
     const asp = c.width / c.height, m = new THREE.Mesh(new THREE.PlaneGeometry(w, w / asp), new THREE.MeshStandardMaterial({ map: t, roughness: 0.45, toneMapped: false, side: THREE.DoubleSide }));
     m.castShadow = true; m.visible = false; scene.add(m); P9.photos.push({ m, x, y });
   }
-  P9.arrows = []; for (let i = 0; i < 3; i++) { const d = await K.decal('pen_arrow_b', 0.3, { mode: 2 }); P9.arrows.push(d); }
+  P9.arrows = []; for (let i = 0; i < 4; i++) { const d = await K.decal('pen_arrow_b', 0.3, { mode: 2 }); P9.arrows.push(d); }
   {                                                    // the red pen that wrote the notes, lying on the desk
     const im = await new Promise((ok) => { const m = new Image(); m.onload = () => ok(m); m.src = '/scene/cut/prop_pen.png'; });
     const t = new THREE.Texture(im); t.needsUpdate = true; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
     P9.pen = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7 * im.height / im.width), new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, roughness: 0.35, metalness: 0.1 }));
     P9.pen.castShadow = true; P9.pen.visible = false; scene.add(P9.pen);
   }
-  P9.bill = K.receipt(BILL, { scale: 1.3, len: 9, flip: true });
+  P9.bill = K.receipt(BILL, { scale: 1.3, len: 9, flip: true, glow: 0x5a5a5a });
   P9.big = K.receipt(BIG, { scale: 8, len: 3.4, widen: 2.8 });
   const mk = async (name, w, o) => { const d = await K.decal(name, w, o); scene.add(d.mesh); return d; };
   P9.circle = await mk('pen_circle_b', 0.19, { mode: 1, a0: 2.4 });
@@ -1048,7 +1066,7 @@ async function build10() {
 }
 function hide10() {
   if (!P9.clips) return;
-  BIG_DY = 0; P9.circle.mat.depthTest = true; P9.circle.mesh.renderOrder = 3; P9.clips.forEach((c) => { c.g.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
+  BIG_DY = 0; DESK_TILT = 0; P9.circle.mat.depthTest = true; P9.circle.mesh.renderOrder = 3; P9.clips.forEach((c) => { c.g.visible = false; }); P9.gpus.forEach((m) => { m.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
   P9.page.g.visible = false; P9.noteY.g.visible = false; P9.circleY.set(0, 0); P9.logo.g.visible = false; P9.photos.forEach((p) => { p.m.visible = false; }); P9.halo.visible = false;
   P9.bill.mesh.visible = false; P9.big.mesh.visible = false; P9.big.mat.color.setScalar(1);
   [P9.circle, P9.stain, P9.strike, P9.circleB, P9.working, P9.under, ...P9.seals, ...Object.values(P9.st)].forEach((d) => d.set(0, 0));
@@ -1100,12 +1118,14 @@ const ORB = (x, z, d, el, az = 0) => { const t = [x, FLOOR, z - 0.08], e = el * 
 const VCa = (j, dz, dx) => { const [cx, cy] = L.RING_C[j]; return [[cx + 0.1 + dx, cy - 0.05, 4.1 + dz], [cx, cy - 0.2, 0]]; };
 const CAMS10 = {
   // the cat asleep on the desk, then the first prediction lands beside it; a steady push throughout
-  a1: camPath([[0, ...ORB(0.04, -0.18, 3.75, 56, 0), 30], [59, ...ORB(-0.08, -0.04, 3.5, 56, 0), 30]], lin),
+  a1: camPath([[0, ...ORB(0.04, -0.18, 3.75, 56, 0), 30], [53, ...ORB(-0.07, -0.05, 3.52, 56, 0), 30]], lin),
   // each further slam is a cut to a new angle (never the same angle shifted), still pushing
-  a2: camPath([[60, ...ORB(0.32, 0.24, 3.55, 50, 10), 30], [119, ...ORB(0.3, 0.24, 3.35, 52, 4), 30]], lin),
-  a3: camPath([[120, ...ORB(0.14, -0.26, 3.4, 58, -10), 30], [179, ...ORB(0.15, -0.26, 3.2, 57, -5), 30]], lin),
+  a2: camPath([[54, ...ORB(0.04, 0.3, 4.0, 50, 10), 30], [97, ...ORB(0.06, 0.3, 3.82, 52, 5), 30]], lin),
+  a3: camPath([[98, ...ORB(0.14, -0.26, 3.4, 58, -10), 30], [141, ...ORB(0.15, -0.26, 3.22, 57, -6), 30]], lin),
+  // the fourth prediction and the GPU rain: wider, the cat in the back of the frame
+  a4: camPath([[142, ...ORB(-0.72, 0.26, 4.6, 54, 4), 30], [195, ...ORB(-0.72, 0.24, 4.35, 55, 1), 30]], lin),
   // the reveal: up and back, unwinding to square
-  a4: camPath([[180, ...ORB(0.15, -0.26, 3.2, 57, -5), 30], [232, ...ORB(0.04, -0.5, 5.5, 58, 0), 32]], sine),
+  a5: camPath([[196, ...ORB(-0.72, 0.24, 4.35, 55, 1), 30], [236, ...ORB(-0.15, -0.38, 6.4, 58, 0), 32]], sine),
   // the printer: a slow arc in from the right, so the cat and the printer slide against the desk
   b1: camPath([[240, [PRN[0] + 0.4, FLOOR + 0.9, PRN[2] + 2.75], [PRN[0] - 0.3, FLOOR + 0.4, PRN[2] + 0.05], 32], [329, [PRN[0] - 0.18, FLOOR + 0.95, PRN[2] + 2.45], [PRN[0] - 0.28, FLOOR + 0.4, PRN[2] + 0.05], 32]], lin),
   b2: (f) => camB2(f),
@@ -1122,7 +1142,7 @@ const CAMS10 = {
   f5: camPath([[1440, [0.05, 0.12, 3.25], [0, -0.06, 0.2], 32], [1499, [0.04, 0.1, 3.0], [0, -0.06, 0.2], 32]], lin),
   // the roll call: one steady truck along the line, flowing into the pull-back for Yufei and the cat
   g1: (f) => (CAM_G1 || (CAM_G1 = (() => { const n = rollcall().length, a = ROLL(0, n)[0] + 0.25, b = ROLL(n - 1, n)[0] - 0.4;
-    return camPath([[1500, [a, 0.22, 3.2], [a, -0.12, 0.3], 34], [1590, [b, 0.22, 3.2], [b, -0.12, 0.3], 34], [1649, [b * 0.45, 0.5, 5.8], [b * 0.45, -0.05, 0.3], 34]], cruise); })()))(f),
+    return camPath([[1500, [a, 0.02, 3.2], [a, -0.33, 0.3], 34], [1590, [b, 0.02, 3.2], [b, -0.33, 0.3], 34], [1649, [b * 0.45, 0.5, 5.8], [b * 0.45, -0.05, 0.3], 34]], cruise); })()))(f),
   h1: camPath([[1710, ...ORB(0.14, 0.06, 3.9, 56, 0), 30], [1769, ...ORB(0.13, 0.04, 3.6, 56, 0), 30]], lin),
   h2: (f) => camH2(f),
   // the logo: a slow orbit in, so the rings turn against the light
@@ -1139,8 +1159,8 @@ function camB2(f) {
 }
 // h2 pushes in on the byline of Paper #137
 function camH2(f) {
-  const vis = P9.page.g.visible; pageOnDesk(); const a = P9.page.at(0.62, 0.3); P9.page.g.visible = vis;      // no side effects (the blur samples h2 from h3)
-  const t = sine(clamp((f - 1770) / 40)), A = ORB(0.13, 0.04, 3.6, 56, 0), B = ORB(a.x, a.z + 0.04, 2.25, 56, 0);
+  const vis = P9.page.g.visible; pageOnDesk(); const a = P9.page.at(0.5, 0.27); P9.page.g.visible = vis;      // no side effects (the blur samples h2 from h3)
+  const t = sine(clamp((f - 1770) / 40)), A = ORB(0.13, 0.04, 3.6, 56, 0), B = ORB(a.x, a.z + 0.1, 2.85, 56, 0);
   return { p: mix3(A[0], B[0], t), t: mix3(A[1], B[1], t), fov: 30 };
 }
 // cameras for the replayed v8 shots: one move each, no whip in from the previous shot's subject
@@ -1174,7 +1194,7 @@ function frameNew(ctx, f) {
   const { THREE } = T;
   NOWF = f; reset10();
   const c = camX(f), sh = shotX(f), u = at0(f);
-  const land = { a1: 18, a2: 4, a3: 4, h1: 4 }[sh], v = u - (land ?? 0), th = land == null || v < 0 ? 0 : v < 2 ? v / 2 : Math.exp(-(v - 2) / 3);   // each slam: one thud
+  const land = { a1: 18, a2: 4, a3: 4, a4: 4, h1: 4 }[sh], v = u - (land ?? 0), th = land == null || v < 0 ? 0 : v < 2 ? v / 2 : Math.exp(-(v - 2) / 3);   // each slam: one thud
   look(T, [c.p[0], c.p[1] - 0.011 * th, c.p[2]], [c.t[0], c.t[1] - 0.005 * th, c.t[2]], c.fov, apX(f));
   const a = camX(Math.max(0, f - 0.5)), b = camX(f + 0.5);
   const dir = (q) => new THREE.Vector3(q.t[0] - q.p[0], q.t[1] - q.p[1], q.t[2] - q.p[2]).normalize();
@@ -1198,6 +1218,26 @@ function frame10(ctx, f) {
 }
 
 // authoring aid: the camera of every frame without rendering (position, look direction, fov) for motion checks
+// authoring aid: do any two flat things on the desk pass through each other at frame f? (vertical rays over a grid of
+// each sheet's vertices; a pair whose height order flips inside their overlap interpenetrates)
+window.__deskCheck = (f) => {
+  frame10({ project: (v) => v }, f);
+  const named = [], vis = (o) => { let v = o.visible, q = o.parent; while (v && q) { v = q.visible; q = q.parent; } return v; };
+  P9.clips.forEach((c, i) => named.push(['clip' + i, c.mesh])); P9.notes.forEach((n, i) => named.push(['note' + i, n.mesh]));
+  named.push(['pen', P9.pen], ['bill', P9.bill.mesh], ['page', P9.page.mesh]);
+  const S = named.filter(([, m]) => vis(m)), rc = new T.THREE.Raycaster(), out = [];
+  T.scene.updateMatrixWorld(true);
+  for (let i = 0; i < S.length; i++) for (let j = i + 1; j < S.length; j++) {
+    const [na, A] = S[i], [nb, B] = S[j], pa = A.geometry.attributes.position, v = new T.THREE.Vector3(); let up = 0, down = 0;
+    for (let k = 0; k < pa.count; k += 3) {
+      v.fromBufferAttribute(pa, k).applyMatrix4(A.matrixWorld);
+      rc.set(new T.THREE.Vector3(v.x, v.y + 2, v.z), new T.THREE.Vector3(0, -1, 0)); const h = rc.intersectObject(B, false)[0];
+      if (!h) continue; if (h.point.y > v.y + 0.0005) up++; else if (h.point.y < v.y - 0.0005) down++;
+    }
+    if (up && down) out.push(`${na} x ${nb}: ${up}/${down}`);
+  }
+  return out.length ? out : ['clean'];
+};
 window.__camDump = (a, b) => { const out = [], ctx = { project: (v) => v }; for (let f = a; f < b; f++) { frame10(ctx, f); const c = T.camera, d = new T.THREE.Vector3(); c.getWorldDirection(d); out.push([f, ...c.position.toArray().map((x) => +x.toFixed(4)), ...d.toArray().map((x) => +x.toFixed(4)), +c.fov.toFixed(2)]); } return out; };
 // ---- lighting of the painted characters: the scene's key and rim, in view space, for put() ----------------
 function lightFor(x, y, z) {
@@ -1207,16 +1247,19 @@ function lightFor(x, y, z) {
   return { keyV: k, rimV: r };
 }
 const _put = put;
+let DESK_TILT = 0;                                       // on the desk the camera looks down: sprites lean back to face it
 put = function (ch, pose, x, z, o = {}) {
   if (!ch) return null;
   const lv = lightFor(x, o.y ?? FLOOR, z);
-  return _put(ch, pose, x, z, { relight: 0.55, rim2: 0.35, keyV: lv.keyV, rimV: lv.rimV, contactK: 0.85, ...o });
+  return _put(ch, pose, x, z, { relight: 0.55, rim2: 0.35, keyV: lv.keyV, rimV: lv.rimV, contactK: 0.85, tilt: DESK_TILT,
+    keyCol: DESK_TILT ? [1.0, 0.9, 0.76] : [1, 0.97, 0.92], amb: DESK_TILT ? [0.92, 0.9, 0.96] : [1, 1, 1], rimCol2: DESK_TILT ? [1.0, 0.82, 0.6] : [0.6, 0.75, 1], ...o });
 };
 
 // ---- helpers ----------------------------------------------------------------------------------------------
 // put a sprite at a real height (world units), whatever the pose's catalogue height
 const putH = (ch, pose, x, z, H, o = {}) => put(ch, pose, x, z, { ...o, h: H / (POSE_H[pose] ?? 1) });
 function deskOn(lampK = 1) {
+  DESK_TILT = 0.92;
   const K = P9.kit; K.desk.visible = true; K.desk.position.set(0, FLOOR - 0.15 + 0.001, -0.3);
   T.mirror.visible = false; T.coat.visible = false; T.cyc.visible = false;
   T.prac.position.set(-1.5, FLOOR + 1.9, -1.4); T.prac.intensity = 5.5 * lampK; T.prac.distance = 6.5; T.prac.color.setHex(0xffc58a);
@@ -1340,21 +1383,21 @@ function halo3(x, y, z, w, h, k, col) { const m = P9.halo; m.visible = true; m.p
 const PAGE = [0.12, 0.08, -0.04];
 function pageOnDesk() { const pg = P9.page; pg.g.visible = true; pg.g.position.set(PAGE[0], FLOOR + 0.008, PAGE[1]); pg.g.rotation.set(-Math.PI / 2, 0, PAGE[2], 'XYZ'); return true; }
 function endDesk(f) {
-  deskOn(0.9); [[-1.12, -0.42, 0.24], [-1.16, 0.56, -0.14], [1.34, 0.5, 0.18]].forEach((at, j) => clipOnDesk(j, at));   // tidied to the sides
+  deskOn(0.9); [[-1.12, -0.42, 0.24], [-1.16, 0.56, -0.14], [1.34, 0.5, 0.18], [1.3, -0.42, -0.12]].forEach((at, j) => clipOnDesk(j, at));   // tidied to the sides
   pageOnDesk(); const u = f - 1710;
   if (u < 4) { P9.page.g.position.y += (1 - u / 4) * 0.16; P9.page.g.rotation.x += (1 - u / 4) * 0.08; }
   P9.kit.dustRing([PAGE[0], FLOOR, PAGE[1]], P9.page.w, P9.page.h, FLOOR + 0.012, u - 3);
   const cj = landing(f, 1716, 0.12, 6);
-  putH(C.cat, 'cat_sleep', 0.56, 0.74, 0.42, { y: FLOOR + 0.01, light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
+  putH(C.cat, 'cat_sleep', 0.42, 0.6, 0.42, { y: FLOOR + 0.01, light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
 }
 function logoCard(f) {
   const u = f - 1830, L3 = P9.logo, pr = L3.parts; L3.g.visible = true;
   T.mirror.visible = false; T.coat.visible = false; T.cyc.visible = false;
-  halo3(0, FLOOR + 1.0, -2.6, 6.0, 4.6, 0.1 * sm(u / 20), [1.0, 0.9, 0.78]);
+  halo3(0, FLOOR + 1.0, -2.6, 6.0, 4.6, 0.1 * (0.5 + 0.5 * sm(u / 20)), [1.0, 0.9, 0.78]);
   L3.g.position.set(0, FLOOR + 1.06, 0);
   L3.g.rotation.set(0.04 * Math.sin(u / 50), lerp(0.42, 0.05, eout(clamp(u / 70))) + 0.025 * Math.sin(u / 37), 0);
-  const FROM = [[-2.8, 0.25, 1.2], [0.1, 2.2, 0.9], [2.8, 0.2, 1.2]];
-  pr.rings.forEach((r, i) => { const t = eout5(clamp((u - i * 3) / 18)), h = r.home; r.m.position.set(lerp(FROM[i][0], h[0], t), lerp(FROM[i][1], h[1], t), lerp(FROM[i][2], h[2], t)); r.m.rotation.set((1 - t) * 3.2, (1 - t) * (i - 1) * 2.4, 0); });
+  const FROM = [[-1.5, 0.2, 0.9], [0.1, 1.25, 0.8], [1.5, 0.15, 0.9]];
+  pr.rings.forEach((r, i) => { const t = eout5(clamp((u + 4 - i * 3) / 18)), h = r.home; r.m.position.set(lerp(FROM[i][0], h[0], t), lerp(FROM[i][1], h[1], t), lerp(FROM[i][2], h[2], t)); r.m.rotation.set((1 - t) * 3.2, (1 - t) * (i - 1) * 2.4, 0); });
   pr.links.forEach((l, i) => { const k = eout(clamp((u - 17 - i * 2) / 8)); l.m.visible = k > 0.01; l.m.scale.set(1, Math.max(0.001, k), 1); });
   pr.discs.forEach((d, i) => { const k = eout(clamp((u - 15 - i * 2) / 12)); d.m.visible = k > 0.01; d.m.material.opacity = k; d.m.scale.setScalar(0.7 + 0.3 * k); });
   { const k = eout(clamp((u - 24) / 12)), w = pr.word; w.m.visible = k > 0.01; w.m.material.opacity = k; w.m.position.y = w.home[1] - 0.1 * (1 - k); }
@@ -1372,30 +1415,53 @@ function quoteShot(f, i) {
   // the slam: the sheet falls in from above the frame and drops the last few centimetres in 4 frames, then lies flat
   if (uu < -6) c.g.visible = false;
   else if (uu < 0) { const k = -uu / 6; c.g.position.y += 0.14 + 0.9 * k * k; c.g.rotation.x += 0.1 + 0.25 * k; c.g.rotation.z += 0.12 * k; }
-  else if (uu < 4) { c.g.position.y += (1 - uu / 4) * 0.14; c.g.rotation.x += (1 - uu / 4) * 0.1; }
+  else if (uu < 4) { const k = 1 - uu / 4; c.g.position.y += (i === 0 ? 0.14 : 0.5) * k * k; c.g.rotation.x += (i === 0 ? 0.1 : 0.22) * k; }
   P9.kit.dustRing([x, FLOOR, z], c.w, c.h, FLOOR + 0.008, uu - 3);
   noteOn(i, uu - 9);
+  if (i === 3) gpuPile(f);
   catNap(f, i, u);
 }
-// the cat naps through the first two predictions; the third lands right next to it
+// the GPU tower: card k falls from above the frame (accelerating, turning square as it drops), lands on the one below,
+// a 3-frame settle; f past the rain = the finished tower (the later desk shots)
+function gpuPose(k) {
+  const last = k === NGPU - 1;
+  return { x: PILE[0] + (hsh(k, 62) - 0.5) * 0.05, z: PILE[1] + (hsh(k, 63) - 0.5) * 0.06 + (last ? 0.06 : 0), y: FLOOR + k * 0.0905, yaw: Math.PI / 2 + (hsh(k, 61) - 0.5) * 0.24 + (last ? 0.22 : 0) };
+}
+function gpuPile(f = 1e9) {
+  P9.gpus.forEach((m, k) => {
+    const q = gpuPose(k), t0 = GPU_T0 + k * 2.6, s = (f - t0) / 7;
+    if (s < 0) { m.visible = false; return; }
+    m.visible = true;
+    const fall = s < 1 ? 1 - s * s : 0, b = s >= 1 ? (f - t0 - 7) / 3 : 1, bob = b < 1 ? 0.006 * Math.sin(Math.PI * b) : 0;
+    m.position.set(q.x + fall * (hsh(k, 64) - 0.5) * 0.3, q.y + 2.4 * fall + bob, q.z + fall * (hsh(k, 65) - 0.5) * 0.3);
+    m.rotation.set(fall * (hsh(k, 66) - 0.5) * 1.2, q.yaw + fall * (hsh(k, 67) - 0.5) * 2.0, fall * (hsh(k, 68) - 0.5) * 1.0, 'YXZ');
+  });
+  if (f < GPU_T0 + 40) P9.kit.dustRing([PILE[0], FLOOR, PILE[1]], 0.34, 0.9, FLOOR + 0.008, f - GPU_T0 - 7);
+}
+// everything on the desk once the predictions are in (the bill shots)
+function deskSet() { for (let j = 0; j < 4; j++) { clipOnDesk(j); noteOn(j, 99); } gpuPile(); }
+// the cat naps through the first three predictions (a twitch at the second and third); the GPU rain wakes it
 function catNap(f, i, u) {
   const o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
-  if (i < 2 || u < 2) { putH(C.cat, 'cat_sleep', CAT0[0], CAT0[1], 0.42, o); return; }
-  const cj = landing(f, 120 + 10, 0.16, 8);
-  if (u < 30) putH(C.cat, 'cat_scared', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.56, { ...o, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
+  const tw = (i === 1 || i === 2) && u >= 4 && u < 16 ? Math.exp(-(u - 4) / 3) * Math.cos((u - 4) * 1.6) : 0;
+  const wake = GPU_T0 + 7;
+  if (i < 3 || f < wake) { putH(C.cat, 'cat_sleep', CAT0[0], CAT0[1], 0.42, { ...o, sx: 1 + 0.05 * tw, sy: 1 - 0.07 * tw }); return; }
+  const cj = landing(f, wake + 8, 0.16, 8);
+  if (f < wake + 22) putH(C.cat, 'cat_scared', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.56, { ...o, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
   else putH(C.cat, 'cat_sit', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.7, o);
 }
 const SHOTX = {
   a1(f) { quoteShot(f, 0); },
   a2(f) { quoteShot(f, 1); },
   a3(f) { quoteShot(f, 2); },
-  a4(f) {
-    deskOn(); for (let j = 0; j < 3; j++) { clipOnDesk(j); noteOn(j, 99); }
+  a4(f) { quoteShot(f, 3); },
+  a5(f) {
+    deskOn(); deskSet();
     putH(C.cat, 'cat_sit', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.7, { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 });
   },
   // the printer on the desk starts by itself: the bill, row by row; the cat bats at the curl
   b1(f) {
-    deskOn(); for (let j = 0; j < 3; j++) { clipOnDesk(j); noteOn(j, 99); }
+    deskOn(); deskSet();
     const Lp = billLenAt(f), path = (s) => headPath(Lp - s); P9.bill.shape(path, 0, Lp);
     halo3(PRN[0] - 0.3, FLOOR + 0.55, PRN[2] - 2.8, 5.5, 2.6, 0.2, [1.0, 0.82, 0.62]);           // lamp spill on the dark beyond the desk
     const u = f - 240, cj = landing(f, 284, 0.1, 8), o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
@@ -1404,7 +1470,7 @@ const SHOTX = {
   },
   // it will not stop; the red pen circles DATA MOVEMENT; the cat bites the end and runs off with it
   b2(f) {
-    deskOn(); for (let j = 0; j < 3; j++) { clipOnDesk(j); noteOn(j, 99); }
+    deskOn(); deskSet();
     const Lp = billLenAt(f), pull = pullAt(f), path = (s) => headPath(Lp - s + pull);
     P9.bill.shape(path, 0, Lp); circleOnBill(f, path, 342);
     const u = f - 330, run = ein(clamp((f - 364) / 24)), o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
@@ -1544,15 +1610,36 @@ function header10(g, f) {
   if (shotX(f)[0] !== 'a') TY.serif(g, 'Picasso Lab', MX, 98, 34, { italic: true, color: '#d9d6cf', mask: false, k: 1 });
   if (CH) { TY.txt(g, CH[0], 1080 - MX - TY.measure(g, CH[1], 24, 500, true, 0.06) - 16, 96, 24, 700, '#f5f5f7', { mono: true, track: 0.04, noblur: true, mask: false, align: 'right' }); TY.txt(g, CH[1], 1080 - MX, 96, 24, 500, '#a1a1a6', { mono: true, track: 0.06, noblur: true, mask: false, align: 'right' }); }
 }
+// a darkening from the top or bottom edge of the frame, like a grade, behind words on a light set
+function edgeFade(g, from, to, a) {
+  if (a <= 0.005) return;
+  const gr = g.createLinearGradient(0, from, 0, to); gr.addColorStop(0, `rgba(11,11,14,${a})`); gr.addColorStop(0.55, `rgba(11,11,14,${a * 0.45})`); gr.addColorStop(1, 'rgba(11,11,14,0)');
+  g.fillStyle = gr; g.fillRect(0, Math.min(from, to), 1080, Math.abs(to - from));
+}
 function typeLayer10(ctx, g, f) {
   const { txt, halo, leader, odometer, serif, hand, ink, sticky, M, INK, SOFT, GRAD, PEN, PENCIL } = TY;
   const sh = shotX(f), u = at0(f), P = (x, y, z) => ctx.project(new T.THREE.Vector3(x, y, z));
   const big = (s, y, size, o = {}) => { halo(g, 0, y - size - 50, 1080, y + 40, 0.6 * (o.k ?? 1)); serif(g, s, o.x ?? MX, y, size, o); };
-  if (sh <= 'a3' && sh[0] === 'a') txt(g, 'Quotes as published. No affiliation.', MX, 1290, 21, 500, 'rgba(236,230,216,0.6)', { mono: true, track: 0, noblur: true, mask: false });
-  if (sh === 'a4') {
-    big('The future, as predicted.*', 262, 92, { k: sm((u - 24) / 8), italic: false });
-    hand(g, '*compute not included', MX + 250, 352, 70, { k: sm((u - 32) / 12), rot: -0.04 });
-    ink(g, IMG.pen_squiggle_b, MX + 500, 380, 440, { k: sm((u - 40) / 10), rot: -0.04 });
+  if (sh <= 'a4' && sh[0] === 'a') {
+    const i = +sh[1] - 1, uu = i === 0 ? u - 14 : u;
+    if (uu >= 0 && uu < 9) { const q = P(CLP[i][0], FLOOR, CLP[i][1]), t = uu / 9, r = 180 + 520 * eout(t);       // the slam's air, flattened by the desk
+      g.save(); g.globalAlpha = 0.5 * (1 - t) ** 1.5; g.strokeStyle = '#fff4e2'; g.lineWidth = 10 * (1 - t) + 1; g.beginPath(); g.ellipse(q.x, q.y, r, r * 0.52, 0, 0, TAU); g.stroke(); g.restore(); }
+    if (sh === 'a4' && f >= GPU_T0 + 6) {                // count the cards as they land; the target is a hundred
+      const n = P9.gpus.filter((m, k) => f >= GPU_T0 + k * 2.6 + 7).length, top = P(PILE[0], FLOOR + 0.1 + n * 0.0905, PILE[1]);
+      const k = sm((f - GPU_T0 - 6) / 6), x = clamp(top.x + 70, MX, 1080 - MX - 340), y = clamp(top.y - 40, 220, 1100);
+      g.save(); g.globalAlpha = k; g.strokeStyle = 'rgba(245,240,230,0.8)'; g.lineWidth = 2; g.beginPath(); g.moveTo(top.x + 12, top.y - 6); g.lineTo(x - 10, y - 18); g.stroke();
+      txt(g, 'GPUs', x, y - 66, 24, 600, '#e8e2d6', { mono: true, track: 0.12, noblur: true, mask: false });
+      txt(g, String(n).padStart(3, ' ') + ' / 100', x, y, 52, 700, '#fff', { mono: true, track: 0, noblur: true, mask: false });
+      g.restore(); if (f >= GPU_T0 + 34) hand(g, 'need more desk.', x, y + 64, 50, { k: sm((f - GPU_T0 - 34) / 10), rot: -0.04 });
+    }
+    edgeFade(g, 1350, 1200, 0.55);
+    txt(g, 'Quotes as published. No affiliation.', MX, 1282, 20, 500, 'rgba(236,230,216,0.66)', { mono: true, track: 0, noblur: true, mask: false });
+    txt(g, 'Photos: U.S. DoD (PD); TechCrunch, S. Jurvetson, NVIDIA Taiwan (CC BY 2.0), Wikimedia Commons', MX, 1310, 15, 500, 'rgba(236,230,216,0.5)', { mono: true, track: 0, noblur: true, mask: false });
+  }
+  if (sh === 'a5') {
+    big('The future, as predicted.*', 262, 92, { k: sm((u - 8) / 8), italic: false });
+    hand(g, '*compute not included', MX + 250, 352, 70, { k: sm((u - 15) / 12), rot: -0.04 });
+    ink(g, IMG.pen_squiggle_b, MX + 500, 380, 440, { k: sm((u - 22) / 10), rot: -0.04 });
   }
   if (sh === 'b1') { big('Imagining it: free.', 250, 84, { k: sm((u - 6) / 8), italic: true }); big('Running it: see receipt.', 340, 84, { k: sm((u - 40) / 8) }); }
   if (sh === 'b2') {
@@ -1615,17 +1702,17 @@ function typeLayer10(ctx, g, f) {
   if (sh === 'e4') {
     const dq = P(...bigAt(BR.data, 0.3).toArray());
     hand(g, '...and this one?', Math.min(dq.x + 60, 1080 - MX - 360), dq.y - 120, 70, { k: sm((u - 14) / 10) });
-    { const kd = sm((u - 30) / 10); halo(g, 0, CAPX - 50, 1080, CAPX + 24, 0.8 * kd); txt(g, 'data movement: often costs more than the math', MX, CAPX, 30, 500, '#d8d4cc', { mono: true, track: 0, k: kd }); }
+    { const kd = sm((u - 30) / 10); edgeFade(g, 1350, CAPX - 200, 0.85 * kd); txt(g, 'data movement: often costs more than the math', MX, CAPX, 30, 500, '#d8d4cc', { mono: true, track: 0, k: kd }); }
   }
   if (sh === 'f1') { halo(g, 0, 380, 1080, 760, 0.8); serif(g, 'Plot twist:', MX, 500, 72, { italic: true, color: SOFT, mask: false }); serif(g, 'one prediction.', MX - 6, 650, 140, { grad: ['#ffffff', '#c9c3b8'], mask: false }); }
   if (sh === 'f2') {
     const bp = T.papers[D.awards[0]].g;
     if (u >= 22 && bp.visible) { const q = P(bp.position.x - 0.32, bp.position.y + 0.72, bp.position.z); txt(g, 'OUR FORECAST  ·  ISCA 2026', q.x, q.y - 12, 30, 600, '#ffd27a', { mono: true, track: 0.06, k: sm((u - 22) / 8) }); }
     big('Best Paper Award', 262, 92, { k: sm((u - 30) / 8), color: '#ffd27a', italic: true });
-    const kf = sm((u - 45) / 4); if (kf > 0.01) { halo(g, 0, CAPX - 170, 1080, CAPX + 30, 0.85 * kf); serif(g, 'Forecasting.', MX - 6, CAPX - 10, 150, { k: kf, grad: ['#ffe6a8', '#c9962e'], italic: true }); }
+    const kf = sm((u - 45) / 4); if (kf > 0.01) { edgeFade(g, 1350, CAPX - 330, 0.9 * kf); serif(g, 'Forecasting.', MX - 6, CAPX - 10, 150, { k: kf, grad: ['#ffe6a8', '#c9962e'], italic: true }); }
   }
   if (sh === 'f3') {
-    halo(g, 0, 150, 1000, 540, 0.8);
+    edgeFade(g, 0, 680, 0.88);
     serif(g, 'Big predictions:', MX, 250, 64, { k: sm(u / 8), color: SOFT, italic: true });
     serif(g, 'where AI goes next.', MX, 326, 64, { k: sm((u - 4) / 8) });
     serif(g, 'Ours:', MX, 430, 64, { k: sm((u - 36) / 8), color: '#ffd27a', italic: true });
@@ -1656,14 +1743,16 @@ function typeLayer10(ctx, g, f) {
       g.save(); g.globalAlpha = back; ink(g, IMG.pen_bracket_b, cx, Math.max(a.y, b.y) + 180, 60, { k: kb, rot: Math.PI / 2 }); hand(g, 'tied for gold', cx, Math.max(a.y, b.y) + 240, 54, { k: kb, align: 'center', color: '#ffd27a' }); g.restore(); }
   }
   if (sh === 'g2') { big('Pictured: Picasso Lab.', CAPX - 76, 72, { k: sm((u - 6) / 8) }); hand(g, 'not pictured: you.', MX, CAPX + 10, 70, { k: sm((u - 14) / 10) }); }
-  if (sh === 'h2') { const k = sm((u - 26) / 8); if (k > 0.01) { halo(g, 0, CAPX - 120, 1080, CAPX + 50, 0.7 * k); serif(g, 'The next one has your name on it.', MX, CAPX, 62, { k, italic: true }); } }
+  if (sh === 'h2') { const k = sm((u - 26) / 8); if (k > 0.01) { edgeFade(g, 1350, CAPX - 300, 0.9 * k); serif(g, 'The next one has your name on it.', MX, CAPX, 62, { k, italic: true }); } }
   if (sh === 'h3') {
-    const k1 = sm((u - 38) / 12), k2 = sm((u - 48) / 12), k3 = sm((u - 58) / 12), k4 = sm((u - 70) / 12) * (1 - sm((f - 1936) / 12));
+    const k1 = sm((u - 38) / 12), k2 = sm((u - 48) / 12), k3 = sm((u - 58) / 12), k4 = sm((u - 70) / 12);
+    g.save(); g.globalAlpha = 1 - sm((f - 1936) / 13);
     txt(g, 'LAB  ·  UC SAN DIEGO  ·  PROF. YUFEI DING', 540, 822, 26, 500, '#bdb8ae', { align: 'center', mono: true, track: 0.12, k: k1 });
     serif(g, 'We’re hiring.', 540, 968, 78, { align: 'center', k: k2, italic: true });
     txt(g, 'postdocs   ·   PhD students   ·   interns', 540, 1030, 30, 500, '#e8e2d6', { align: 'center', mono: true, track: 0.02, k: sm((u - 52) / 12) });
     txt(g, '@PicassoLabUCSD   ·   yufeiding.ucsd.edu', 540, 1098, 30, 500, '#9fc8ff', { align: 'center', mono: true, track: 0, k: k3 });
     hand(g, '*milk tea included', 540, 1182, 60, { align: 'center', k: k4, rot: -0.03 });
+    g.restore();
   }
   header10(g, f);
 }

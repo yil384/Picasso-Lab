@@ -8,6 +8,7 @@
 .claude/films/xlaunch/scene/sprite.js scene/sprite.js code
 .claude/films/xlaunch/scene/type.js scene/type.js code
 .claude/films/xlaunch/scene/props.js scene/props.js code
+.claude/films/xlaunch/scene/gear.js scene/gear.js code
 .claude/films/xlaunch/scene/tex/LICENSE.txt scene/tex/LICENSE.txt asset
 .claude/films/xlaunch/scene/tex/Paper001/Paper001_2K-JPG_NormalGL.jpg scene/tex/Paper001/Paper001_2K-JPG_NormalGL.jpg asset
 .claude/films/xlaunch/scene/tex/Paper001/Paper001_2K-JPG_Color.jpg scene/tex/Paper001/Paper001_2K-JPG_Color.jpg asset
@@ -824,4 +825,8 @@
 .claude/films/xlaunch/kit/assets/photos/firespot41.jpg scene/photos/firespot41.jpg asset
 .claude/films/xlaunch/kit/assets/photos/hezi_defense.jpg scene/photos/hezi_defense.jpg asset
 .claude/films/xlaunch/kit/assets/photos/party0725.jpg scene/photos/party0725.jpg asset
+.claude/films/xlaunch/kit/assets/photos/press_altman.png scene/photos/press_altman.png asset
+.claude/films/xlaunch/kit/assets/photos/press_amodei.png scene/photos/press_amodei.png asset
+.claude/films/xlaunch/kit/assets/photos/press_huang.png scene/photos/press_huang.png asset
+.claude/films/xlaunch/kit/assets/photos/press_musk.png scene/photos/press_musk.png asset
 .claude/films/xlaunch/kit/assets/photos/thanksgiving.jpg scene/photos/thanksgiving.jpg asset

@@ -118,12 +118,15 @@ export function spriteKit(THREE, scene) {
       mesh.position.y = -p.foot * h * (o.sy ?? 1);
       return ch;
     };
-    // place: feet at (x, y, z); face the camera about the vertical axis (cylindrical billboard), optional extra yaw
+    // place: feet at (x, y, z); face the camera about the vertical axis (cylindrical billboard), optional extra yaw and tilt
     ch.place = (x, y, z, camera, o = {}) => {
       root.visible = ch.visible = o.visible ?? true; contact.visible = root.visible && (o.contact ?? true) && y < (o.floorY ?? -100) + 0.05;
       root.position.set(x, y + (o.lift ?? 0), z);
       const dx = camera.position.x - x, dz = camera.position.z - z;
-      root.rotation.set(0, Math.atan2(dx, dz) * (o.face ?? (mat.userData.u.uRelief.value > 0 ? 0.8 : 1)) + (o.yaw ?? 0), o.roll ?? 0);
+      // tilt: lean back about the feet towards a high camera (0..1 of its elevation), so a figure seen from above keeps
+      // the proportions it was painted with instead of being squashed by the foreshortening of an upright card
+      const tilt = (o.tilt ?? 0) * Math.atan2(camera.position.y - y, Math.hypot(dx, dz));
+      root.rotation.set(-tilt, Math.atan2(dx, dz) * (o.face ?? (mat.userData.u.uRelief.value > 0 ? 0.8 : 1)) + (o.yaw ?? 0), o.roll ?? 0, 'YXZ');
       const u = mat.userData.u;
       u.uLight.value = o.light ?? 1; u.uRimK.value = o.rim ?? 0.0; u.uFade.value = o.fade ?? 1;
       if (o.tint) u.uTint.value.setRGB(...o.tint);

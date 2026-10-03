@@ -12,6 +12,8 @@ YUFEI = ('Prof. Yufei Ding exactly as in the attached images: the same face, nea
          'shoes, the same Pixar-style 3D rendering and lighting.')
 GREEN = ('Full figure, nothing cropped, centred with a small margin. Background: one perfectly flat pure green colour '
          '#00FF00, no floor, no shadow on the background, no gradient. No text, letters, numbers, logos or watermark.')
+DESK = ('Seen from the front and from above at about 50 degrees, as if on a wooden desk. Warm lamp light from the left, '
+        'the same Pixar-style 3D rendering and materials as the attached images. Only the object.')
 PAPER = ('Photographed flat from directly above on plain bright white paper, evenly lit, nothing else on the paper, no '
          'shadows, real ink texture. Square 1024x1024.')
 JOBS = [
@@ -35,6 +37,11 @@ JOBS = [
     ('prop_tea', ['art/desk_empty.png', 'art/y_toast.png'], f'A clear plastic takeaway cup of bubble milk tea, half drunk: creamy beige tea, black tapioca pearls at the bottom, a wide striped straw through a sealed film lid, a few drops of condensation. Seen from above at about 50 degrees, as if standing on a desk. Warm lamp light from the left, the same Pixar-style 3D rendering as the attached images. Only the cup. {GREEN} Square 1024x1024.'),
     ('prop_pen', ['art/desk_empty.png'], f'One red ballpoint pen with its cap off, lying flat, seen from directly above at a slight angle, diagonal across the image. Warm lamp light from the left, the same Pixar-style 3D rendering as the attached image. Only the pen. {GREEN} Square 1024x1024.'),
     ('pen_working', [],f"The handwritten words: working on it.  Written in red ballpoint pen in casual, confident, legible handwriting, all lower case, with the full stop. {PAPER}"),
+    # v10 round 6: the desk props of the opening (one per prediction)
+    ('prop_gpu', ['art/prop_printer.png', 'art/desk_empty.png'], f'One modern datacenter GPU accelerator card lying flat on a desk: a long rectangular dark graphite metal shroud with a fine aluminium fin heatsink showing through a window on top, a row of gold contacts along one long edge, a small brushed-steel bracket at one end; heavy, precise, a little chunky and friendly in the Pixar way. No fans, no logos, no text, no brand marks. {DESK} Its long side runs left to right. {GREEN} Square 1024x1024.'),
+    ('prop_gpu_stack', ['art/prop_gpu.png', 'art/desk_empty.png'], f'A tall, precarious tower of about fifteen of the exact same GPU card as in the first attached image, stacked flat on top of each other, alternate cards slightly turned, the top three askew and one sliding off the top, as if piled up in a hurry. The whole tower is visible, nothing cropped. No logos, no text. {DESK} {GREEN} Portrait 1024x1536.'),
+    ('prop_rack', ['art/prop_printer.png', 'art/desk_empty.png'], f'A miniature server rack about the size of a shoebox standing on a desk: a black steel cabinet with a smoked-glass front door, eight thin servers inside with tiny glowing blue and green status lights, a thick black power cable curling out of the back across the desk and ending in a plug. Realistic materials with a friendly Pixar charm. No logos, no text. {DESK} {GREEN} Portrait 1024x1536.'),
+    ('prop_calendar', ['art/prop_printer.png', 'art/desk_empty.png'], f'A tear-off day calendar standing on a desk: a thick block of cream paper day pages held at the top by a small dark walnut stand, a few ragged stubs of torn-off pages at the binding. The top page shows only the small word DAY in capitals and, below it, the big number 4,700 in bold black condensed numerals (exactly these characters: 4,700). {DESK} {GREEN} Square 1024x1024.'),
 ]
 PROMPT = ('Generate ONE image with your image generation tool and save it as {out} in the current directory (copy the '
           'generated file there; do not write any code to draw it). {refs}{desc} When the file is saved, reply with just its path.')
