@@ -2,11 +2,11 @@
 
 Each image: a new message in the SAME ChatGPT conversation, with the reference image attached, the STYLE paragraph
 once at the top of the conversation, then one line per image. Portrait 1024x1536 unless noted.
-Save as `.claude/films/xlaunch/art/<name>.png` (exact names) and push to `main` (GitHub web upload is fine).
+Save with the exact file names and upload them to `.claude/films/xlaunch/` on `main` (GitHub web: Add file -> Upload files).
 
 References (download from GitHub, attach to the first message):
 - Yufei: `.claude/films/yufei/anime/art/y_ref3d.png`
-- students: `.claude/films/hotpot/cast.png` (LEO, MIA, KAI, ZOE, left to right)
+- members: their Team-page photos, `people/static/<name>.webp`
 
 ## STYLE (paste once, first message)
 
@@ -44,61 +44,70 @@ References (download from GitHub, attach to the first message):
 6. `y_toast` - Yufei laughs and raises a clear plastic cup of bubble milk tea (black tapioca pearls, a wide straw)
    high in a toast with her right hand, her left hand on her hip, three-quarter view.
 
-## Batch 2b - the students (a NEW conversation, attach `cast.png`)
+## Batch 2b - the real lab members (a NEW conversation; attach each member's Team-page photo with their line)
 
-STYLE for this conversation (paste once, first message, with cast.png attached):
+The students are the real Picasso Lab members (all agreed). Photos: `people/static/<name>.webp` in this repo
+(open on GitHub, download). If ChatGPT will not take a .webp, take a screenshot of it.
 
-> I am making an animated short. Please generate images one at a time, all in exactly this style: a polished 3D
-> animated feature film character render (Pixar quality), soft global illumination, a soft warm key light from the
-> upper right and a subtle cool rim light from the left, expressive faces with big readable expressions, slightly
-> exaggerated proportions, rich but tasteful colours. Always ONE character, the full body, the whole figure visible
-> including both shoes, centred with a small margin, the figure filling about 85% of the image height. The
-> background is one perfectly flat pure green colour #00FF00: no floor, no shadow on the background, no gradient, no
-> other objects than the ones I describe. No text, no letters, no numbers, no logos, no watermark. Portrait 1024x1536.
-> The characters are the four PhD students in the attached cast sheet (left to right): LEO - tall, lanky, thin round
-> glasses, messy black hair, grey hoodie, dark trousers, grey sneakers, calm; MIA - short, black bob haircut,
-> oversized cream turtleneck sweater under an open white lab coat, dark trousers, white sneakers, tiny and fierce;
-> KAI - stocky, curly dark hair, orange bomber jacket over a dark t-shirt, olive cargo trousers, sneakers,
-> mischievous grin; ZOE - long high ponytail, round face, pastel blue cardigan over a white top, long dark grey
-> skirt, white sneakers, cautious and sweet. Keep each character's face, hair, clothes and proportions exactly as in
-> the cast sheet in every image.
+STYLE for this conversation (paste once, first message, no photo needed):
 
-7. `leo_catch` - LEO, three-quarter view, calmly catching a single sheet of white paper out of the air with one hand
-   raised above his head, the other hand in his hoodie pocket, a relaxed half-smile.
-8. `mia_land` - MIA in a superhero landing: one knee and one fist on the ground, the other arm out behind her, her
-   lab coat flaring out, looking up at the viewer with a fierce determined grin.
-9. `kai_flop` - KAI mid-air in a comic belly-flop dive, arms and legs spread wide like a starfish, cheeks puffed,
-   eyes squeezed shut, jacket flapping; seen from the front, slightly from below.
-10. `zoe_sip` - ZOE, three-quarter view, sipping her bubble milk tea through the wide straw with both hands around the
-    cup, peeking sideways with big curious eyes.
-11. `mia_qubit` - MIA proudly holding up, in both hands at chest height, a small square quantum chip that glows soft
-    blue, looking at it with fierce pride.
-12. `leo_gpu` - LEO holding a large graphics card (a GPU board with fans) against his chest with both arms like a
-    beloved pet, a soft glow of green light on it, content smile.
-13. `kai_chip` - KAI holding up a round silicon wafer that shines with a rainbow sheen, presenting it to the viewer
-    with a big proud grin, three-quarter view.
-14. `zoe_tray` - ZOE walking carefully, three-quarter view, carrying a small round tray with six cups of bubble milk
-    tea, concentrating hard, tongue slightly out. (Six cups for a crew of five: the spare one is for the viewer.)
-15. `leo_toast` - LEO raising a cup of bubble milk tea in a toast, smiling warmly, three-quarter view.
-16. `mia_toast` - MIA raising a cup of bubble milk tea in a toast, a rare big smile, standing on tiptoe.
-17. `kai_toast` - KAI raising a cup of bubble milk tea in a toast with one hand and giving a thumbs-up with the other,
-    laughing.
-18. `zoe_toast` - ZOE raising her bubble milk tea in a toast with both hands, eyes closed in a happy smile.
+> I am making an animated short about our research lab. Please generate images one at a time, all in exactly this
+> style: a polished 3D animated feature film character render (Pixar quality), soft global illumination, a soft warm
+> key light from the upper right and a subtle cool rim light from the left, expressive but natural faces, slightly
+> stylized proportions, rich but tasteful colours. Each image is ONE person: the person in the photo I attach with
+> that message, turned into this 3D animated character while keeping them clearly recognisable (face shape, hairstyle,
+> glasses if they wear them, skin tone, build, and the style of clothes in the photo). Keep it kind and flattering,
+> never a caricature. Always the full body, the whole figure visible including both shoes, centred with a small
+> margin, the figure filling about 85% of the image height. The background is one perfectly flat pure green colour
+> #00FF00: no floor, no shadow on the background, no gradient. No text, no letters, no numbers, no logos, no
+> watermark. Portrait 1024x1536.
+
+Then one message per member, attach their photo, and send:
+`[member line below] Standing, three-quarter view, smiling, raising a clear cup of bubble milk tea (black tapioca
+pearls, a wide straw) in a toast with one hand.`
+
+| # | file | photo | member line (extra detail) |
+| --- | --- | --- | --- |
+| 7 | `m_chang.png` | chang.webp | A small cup of coffee in the other hand. |
+| 8 | `m_haotian.png` | haotian.webp | A baseball cap in the other hand. |
+| 9 | `m_jixuan.png` | jixuan.webp | A Chinese calligraphy brush in the other hand. |
+| 10 | `m_keyi.png` | keyi.webp | A game controller in the other hand. |
+| 11 | `m_ohm.png` | ohm.webp | A small square computer chip in the other hand. |
+| 12 | `m_parikshit.png` | parikshit.webp | A hiking headlamp on the forehead. |
+| 13 | `m_xiang.png` | xiang.webp | A handheld microphone in the other hand. |
+| 14 | `m_xinwei.png` | xinwei.webp | A small steel frying pan in the other hand. |
+| 15 | `m_yanju.png` | yanju.webp | (no extra detail) |
+| 16 | `m_yichen.png` | yichen.webp | A fanned hand of playing cards in the other hand. |
+| 17 | `m_yilin.png` | yilin.webp | (no extra detail) |
+| 18 | `m_yue.png` | yue.webp | A wooden baseball bat resting on the shoulder, held by the other hand. |
+| 19 | `m_zaifeng.png` | zaifeng.webp | A thick stack of papers under the other arm. |
+| 20 | `m_zhengding.png` | zhengding.webp | Aviator sunglasses. |
+| 21 | `m_zhongkai.png` | zhongkai.webp | A gold award medal on a ribbon around the neck. |
+| 22 | `m_zhuo.png` | zhuo.webp | A gold medal on a red ribbon around the neck. |
+| 23 | `m_zihan.png` | zihan.webp | (no extra detail) |
+
+
+Three members have two more poses each (same conversation, attach the same photo again):
+
+| # | file | photo | pose |
+| --- | --- | --- | --- |
+| 24 | `xiang_land.png` | xiang.webp | A superhero landing: one knee and one fist on the ground, the other arm out behind, looking up with a determined grin. |
+| 25 | `xiang_chip.png` | xiang.webp | Standing, proudly holding up in both hands at chest height a small square quantum chip that glows soft blue. |
+| 26 | `xinwei_flop.png` | xinwei.webp | Mid-air in a comic belly-flop dive, arms and legs spread wide like a starfish, cheeks puffed, eyes squeezed shut; seen from the front, slightly from below. |
+| 27 | `xinwei_gpu.png` | xinwei.webp | Standing, hugging a large graphics card (a GPU board with fans) against the chest like a beloved pet, a soft green glow on it, content smile. |
+| 28 | `zhongkai_tray.png` | zhongkai.webp | Walking carefully, three-quarter view, carrying a small round tray with six cups of bubble milk tea, concentrating, tongue slightly out. |
+| 29 | `zhongkai_wafer.png` | zhongkai.webp | Standing, holding up a round silicon wafer that shines with a rainbow sheen, presenting it with a big proud grin. |
 
 ## Batch 2c - the cat (the Yufei conversation; attach `.claude/films/yufei/anime/art3d/cat_cheer.png` as the reference)
 
-19. `cat_sleep` - The same fluffy white cat with the red beret as in the attached image, curled up asleep in a round
+30. `cat_sleep` - The same fluffy white cat with the red beret as in the attached image, curled up asleep in a round
     loaf, tail around its paws, a peaceful smile, beret slightly askew. Square 1024x1024.
-20. `cat_sit` - The same cat sitting upright and smug, chest puffed, eyes half-closed, as if it owns the place, seen
+31. `cat_sit` - The same cat sitting upright and smug, chest puffed, eyes half-closed, as if it owns the place, seen
     from the front. Square 1024x1024.
 
-## Batch 3 - optional extras (the storyboard panel's best beats)
+## Batch 3 - optional extras
 
-21. `y_hold_cat` (Yufei conversation) - Yufei holds the white cat with the red beret out at arm's length under its
+32. `y_hold_cat` (Yufei conversation) - Yufei holds the white cat with the red beret out at arm's length under its
     front legs, the cat dangling happily, Yufei with one eyebrow raised and a patient half-smile, three-quarter view.
-22. `y_reach_up` (Yufei conversation) - Yufei stands on tiptoe reaching straight up with her right hand, open palm,
-    looking up hopefully, three-quarter view.
-23. `leo_reach_down` (students conversation) - LEO kneels on one knee and reaches straight down with his right hand,
-    open palm, looking down with a calm encouraging smile, three-quarter view.
-24. `zoe_offer` (students conversation) - ZOE holds one cup of bubble milk tea straight out towards the viewer with
-    both hands, a shy warm smile, front view.
+33. `zhongkai_offer` (members conversation, attach zhongkai.webp) - Holding one cup of bubble milk tea straight out
+    towards the viewer with both hands, a warm smile, front view.
