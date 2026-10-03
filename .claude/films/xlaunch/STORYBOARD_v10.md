@@ -120,6 +120,12 @@ cat)", three plain rings for the logo).
   calendar is left off the night desk (it was cut by the frame); each ring in the three answers gets an arc of its share
   of the 136 papers; stronger dust motes, glints and flare.
 
+## Round 9
+- Section d gets its 2D layer: a "+1" pops over the crowd for each paper while the publication counter runs (d1); a
+  beam of gold light on the record 2025 bar and a red-pen circle round its year (d2); a red-pen bracket ties the two
+  15s under "15 at ASPLOS, 15 at ISCA." (d3).
+- How the film is made, and how to resume it in a new session: `.claude/skills/picasso-x-launch-film/SKILL.md`.
+
 ## Shots
 | shot | frames | what happens |
 | --- | --- | --- |
