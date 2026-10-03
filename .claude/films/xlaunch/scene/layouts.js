@@ -31,7 +31,7 @@ export function gallery(D, k) {
 
 // year by year: an isotype chart, one small page per paper stacked into a column, so a column's height is exactly
 // its count. The columns run slightly into depth (2026 nearest) but little enough that a long lens reads them true.
-export const YPOS = (y) => [-1.56 + (y - 2013) * 0.24, -1.0 + (y - 2013) * 0.06];
+export const YPOS = (y) => [-1.51 + (y - 2013) * 0.218, -0.6];   // level: no slope into depth
 export const YX = (y) => YPOS(y)[0];
 export const YZ = (y) => YPOS(y)[1];
 export const YS = 0.112, YSTEP = 0.118;                        // brick height, row pitch
@@ -41,26 +41,28 @@ export function years(D, k) {
   if (p.yr == null) {
     // the twelve papers without a year: a small loose pile beside the axis, labelled as such
     const j = D.order.filter((q) => D.pubs[q].yr == null).indexOf(k);
-    return { p: [YX(2027.2) + (hsh(k, 1) - 0.5) * 0.12, FLOOR + 0.004 + j * 0.006, YZ(2027.2) + (hsh(k, 2) - 0.5) * 0.12], r: [-Math.PI / 2, 0, (hsh(k, 3) - 0.5) * 0.6], s: 0.16, dim: 0.25 };
+    // the twelve without a year (7 preprints, 5 patents): a small fanned stack leaning against nothing, faces out
+    return { p: [YX(2027) + (j - 5.5) * 0.008, FLOOR + 0.006 + YS / 2 + 0.002 * j, YZ(2027) - j * 0.004], r: [-0.22, (j - 5.5) * 0.05, (j - 5.5) * 0.035], s: YS, dim: 0.35 };
   }
   const j = D.byYear[p.yr].indexOf(k), [x, z] = YPOS(p.yr);
   return { p: [x + (hsh(k, 4) - 0.5) * 0.006, FLOOR + 0.006 + YS / 2 + j * YSTEP, z], r: [0, (hsh(k, 5) - 0.5) * 0.08, (hsh(k, 6) - 0.5) * 0.03], s: YS, dim: 0 };
 }
 
-// by venue: eight towers of flat-stacked papers on floor plates, two staggered rows of four; the rest lie flat
-// further back
-export const VPOS = (c) => [((c % 4) - 1.5) * 0.86 + (c >= 4 ? 0.43 : 0), c >= 4 ? -1.1 : 0];
+// by venue: eight stacks of bound papers on a shallow arc, the two 15s side by side in the middle and the rest
+// stepping down outwards (a pyramid), so the tie is the centre of the frame
+export const VSLOT = [3, 4, 2, 5, 1, 6, 0, 7];                 // by index in D.topv (ASPLOS, ISCA, MICRO, NeurIPS, OSDI, SC, ATC, ICML)
+export const VPOS = (c) => { const a = (VSLOT[c] - 3.5) * 0.17; return [3.2 * Math.sin(a), 3.2 * (Math.cos(a) - 1) - 0.1]; };
 export const VX = (c) => VPOS(c)[0];
 export const VZ = (c) => VPOS(c)[1];
-export const VSTEP = 0.04;
+export const VSTEP = 0.04, VS = 0.52;
 export function venues(D, k) {
   const v = D.pubs[k].venue, c = D.topv.indexOf(v);
   if (c < 0) {
     const a = hsh(k, 8) * TAU, R = 2.4 + hsh(k, 9) * 3.0;
     return { p: [Math.cos(a) * R, FLOOR + 0.003 + hsh(k, 10) * 0.004, -2.6 + Math.sin(a) * R * 0.5 - 1.0], r: [-Math.PI / 2, 0, hsh(k, 7) * TAU], s: 0.5, dim: 0.65 };
   }
-  const j = D.byVenue[v].indexOf(k), [x, z] = VPOS(c);
-  return { p: [x + (hsh(k, 3) - 0.5) * 0.02, FLOOR + 0.006 + (j + 1) * VSTEP, z + (hsh(k, 4) - 0.5) * 0.02], r: [-Math.PI / 2, 0, (hsh(k, 5) - 0.5) * 0.06], s: 0.52, dim: 0 };
+  const j = D.byVenue[v].indexOf(k), [x, z] = VPOS(c), a = (VSLOT[c] - 3.5) * 0.17;
+  return { p: [x + (hsh(k, 3) - 0.5) * 0.02, FLOOR + 0.006 + (j + 1) * VSTEP, z + (hsh(k, 4) - 0.5) * 0.02], r: [-Math.PI / 2, 0, -a + (hsh(k, 5) - 0.5) * 0.05], s: VS, dim: 0 };
 }
 
 // three directions: three glass rings in the logo's triangle (blue quantum, green ML systems, red architecture), each
@@ -81,13 +83,15 @@ export function orbitRep(r, j) {
   return { p: [cx + (j - 1) * 0.27, cy - 0.66 + (j === 1 ? 0.03 : 0), cz + 0.42 + (j === 1 ? 0.04 : 0)], r: [0, -(j - 1) * 0.22, -(j - 1) * 0.06], s: 0.3, dim: 0 };
 }
 
-// the honours: six papers standing in one row on the floor; the best paper one step forward and larger
-export const AW_SLOT = [-0.5, -2.5, -1.5, 0.5, 1.5, 2.5];          // by index in D.awards (best paper first)
+// the honours: five slots on a gentle arc, the Best Paper in the middle, one step forward and larger; the two
+// ASPLOS'24 Distinguished Artifacts share the last slot, overlapped
+export const AW_SLOT = { 4: 0, 63: -1, 66: -2, 89: 1, 42: 2, 43: 2 };
 export function awardsRow(D, k) {
-  const i = D.awards.indexOf(k);
-  if (i < 0) return null;
-  const s = i === 0 ? 0.8 : 0.5, x = AW_SLOT[i] * 0.5 + (i === 0 ? 0 : 0);
-  return { p: [x, FLOOR + s / 2 + 0.012, i === 0 ? 0.42 : -0.1 - Math.abs(AW_SLOT[i]) * 0.04], r: [0, -AW_SLOT[i] * 0.06, 0], s, dim: 0 };
+  if (!(k in AW_SLOT)) return null;
+  const sl = AW_SLOT[k], best = sl === 0 && k === D.awards[0], pair = k === 43 ? 1 : 0;
+  const s = best ? 0.78 : 0.48, a = sl * 0.27;
+  const x = Math.sin(a) * 2.4 + pair * 0.07, z = (best ? 0.42 : 0) - (1 - Math.cos(a)) * 2.4 - pair * 0.04;
+  return { p: [x, FLOOR + s / 2 + 0.012 + pair * 0.01, z], r: [0, -a + (best ? 0.16 : 0) + pair * 0.12, pair * 0.03], s, dim: 0 };
 }
 
 // a dim cloud of papers far behind, slowly drifting (bokeh behind the people)
@@ -101,7 +105,8 @@ export function endArc(D, k) {
   if (D.RANK[k] % 2) return farCloud(D, k, 0);
   let a = -1.3 + hsh(k, 1) * 2.6, R = 9 + hsh(k, 2) * 5, y = -0.3 + hsh(k, 3) * 3.6;
   if (Math.abs(a) < 0.55 && y < 1.4) { R += 5; y += 1.2; }           // nothing bright behind the call to action
-  return { p: [Math.sin(a) * R, y, -Math.cos(a) * R + 1.0], r: [(hsh(k, 4) - 0.5) * 0.3, -a + (hsh(k, 5) - 0.5) * 0.25, (hsh(k, 6) - 0.5) * 0.3], s: 0.7, dim: 0.78 };
+  const x = Math.sin(a) * R, z = -Math.cos(a) * R + 1.0, face = Math.atan2(0 - x, 5.6 - z);
+  return { p: [x, y, z], r: [(hsh(k, 4) - 0.5) * 0.25, face + (hsh(k, 5) - 0.5) * 0.3, (hsh(k, 6) - 0.5) * 0.3], s: 0.7, dim: 0.78 };
 }
 
 // a swarm swirling above the people: a slow vortex, rank decides the radius so the newest are innermost

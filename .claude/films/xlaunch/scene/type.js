@@ -44,14 +44,14 @@ export function scrim(g, y0, y1, a) {
 // the running header: PICASSO LAB on the left, the chapter on the right ("01  ORIGIN"), a hairline between
 export function header(g, chapter, k = 1, kc = 1) {
   // a permanent soft band so the header never sits on a lit sheet, then the type with a dark shadow
-  const gr = g.createLinearGradient(0, 0, 0, 180); gr.addColorStop(0, `rgba(11,11,14,${0.62 * k})`); gr.addColorStop(1, 'rgba(11,11,14,0)');
+  const gr = g.createLinearGradient(0, 0, 0, 180); gr.addColorStop(0, `rgba(11,11,14,${0.8 * k})`); gr.addColorStop(1, 'rgba(11,11,14,0)');
   g.fillStyle = gr; g.fillRect(0, 0, W, 180);
   g.save(); g.shadowColor = 'rgba(0,0,0,0.85)'; g.shadowBlur = 10;
   txt(g, 'PICASSO LAB', M, 96, 20, 600, '#a1a1a6', { track: 0.32, k, noblur: true, mask: false });
   if (chapter && kc > 0.01) {
-    const ww = measure(g, chapter[1], 18, 500, true, 0.12);
-    txt(g, chapter[0], W - M - ww - 14, 96, 18, 700, INK, { mono: true, track: 0.05, k: kc, align: 'right', noblur: true, mask: false });
-    txt(g, chapter[1], W - M, 96, 18, 500, '#a1a1a6', { mono: true, track: 0.12, k: kc, align: 'right', noblur: true, mask: false });
+    const ww = measure(g, chapter[1], 22, 500, true, 0.12);
+    txt(g, chapter[0], W - M - ww - 14, 96, 22, 700, INK, { mono: true, track: 0.05, k: kc, align: 'right', noblur: true, mask: false });
+    txt(g, chapter[1], W - M, 96, 22, 500, '#a1a1a6', { mono: true, track: 0.12, k: kc, align: 'right', noblur: true, mask: false });
   }
   g.restore();
 }
@@ -60,15 +60,23 @@ export function header(g, chapter, k = 1, kc = 1) {
 export function leader(g, from, to, k, label, o = {}) {
   if (k <= 0.01 || !from) return;
   const e = eout(clamp(k * 1.6));
-  g.save(); g.strokeStyle = o.color || 'rgba(245,245,247,0.55)'; g.lineWidth = 1.5;
-  g.beginPath(); g.arc(from.x, from.y, 4, 0, Math.PI * 2); g.fillStyle = o.dot || '#f5f5f7'; g.globalAlpha = clamp(k * 3); g.fill();
-  g.beginPath(); g.moveTo(from.x, from.y);
-  const mx = from.x + (to.x - from.x) * e, my = from.y + (to.y - from.y) * e; g.lineTo(mx, my);
-  if (o.tail) g.lineTo(mx + o.tail * e, my);
-  g.stroke(); g.restore();
+  const pts = [from, ...(o.via || []), to];
+  const path = () => { g.beginPath(); g.moveTo(pts[0].x, pts[0].y); let n = (pts.length - 1) * e;
+    for (let i = 1; i < pts.length && n > 0; i++, n--) { const a = pts[i - 1], b = pts[i], t = Math.min(1, n); g.lineTo(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t); }
+    if (o.tail && e >= 1) g.lineTo(to.x + o.tail, to.y); };
+  g.save(); g.globalAlpha = clamp(k * 3); g.lineJoin = 'round'; g.lineCap = 'round';
+  g.strokeStyle = 'rgba(11,11,14,0.5)'; g.lineWidth = 6; path(); g.stroke();
+  g.strokeStyle = o.color || 'rgba(245,245,247,0.9)'; g.lineWidth = 3; path(); g.stroke();
+  if (!o.noDot) { g.beginPath(); g.arc(from.x, from.y, 6, 0, Math.PI * 2); g.fillStyle = o.dot || '#f5f5f7'; g.fill(); g.lineWidth = 2; g.strokeStyle = 'rgba(11,11,14,0.6)'; g.stroke(); }
+  g.restore();
   if (label) {
-    const kk = clamp((k - 0.35) / 0.65), size = o.size || 34, sub = Math.max(24, size * 0.78);
+    const kk = clamp((k - 0.35) / 0.65), size = o.size || 34, sub = Math.max(28, size * 0.8);
     const right = o.align !== 'right', x = to.x + (o.tail || 0) + (right ? 12 : -12);
+    if (o.plate && kk > 0.01) {
+      const w0 = Math.max(measure(g, label[0], size, 700), label[1] ? measure(g, label[1], sub, 500) : 0) + 36;
+      g.save(); g.globalAlpha = clamp(kk * 1.5); g.fillStyle = 'rgba(11,11,14,0.82)'; g.beginPath();
+      g.roundRect(right ? x - 18 : x - w0 + 18, to.y - size * 0.75, w0, size * 1.2 + (label[1] ? sub * 1.35 : 0), 12); g.fill(); g.restore();
+    }
     txt(g, label[0], x, to.y + size * 0.35, size, 700, o.labelColor || INK, { k: kk, align: right ? 'left' : 'right', mono: o.mono });
     if (label[1]) txt(g, label[1], x, to.y + size * 0.35 + sub * 1.3, sub, 500, SOFT, { k: kk, align: right ? 'left' : 'right' });
   }
