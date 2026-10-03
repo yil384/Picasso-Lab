@@ -59,6 +59,7 @@ Read `.claude/films/xlaunch/STORYBOARD_v10.md` first (story, shot table, every r
   not verified.
 
 ## State at the end of round 8 (next steps)
-Done: four press clippings (Musk, Amodei, Altman, Huang), GPU rain, painted desk props, the rack fly-through, the
-printer/bill logic, the paper-storm light, many 2D effects. Not done yet: section d (690-900 old: the lab grows, 2025
-bars, ASPLOS/ISCA tie) has no new effects; frame 0's top is still a dim wall; motes/glints/flare only checked as stills.
+Done (rounds 6-9): four press clippings (Musk, Amodei, Altman, Huang), GPU rain, painted desk props, the rack
+fly-through, the printer/bill logic, the paper-storm light, section d's 2D layer, many 2D effects. Open: frame 0's top
+is still a dim wall; motes/glints/flare were only checked as stills; the roll call (g1) and Paper #137 (h1-h2) have had
+the least new design. Wait for the user's next render and notes before changing more.
