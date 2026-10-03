@@ -97,6 +97,17 @@ cat)", three plain rings for the logo).
   whole title in frame; "tied for gold" is inside the frame; the h1 cat is inside the frame; the logo rings fly in from
   the frame edge (no black second); "*milk tea included" no longer un-writes at the end.
 
+## Round 7
+- **The printer and the bill make sense**: the cat no longer bats a painted streamer that is not the bill; it sits and
+  watches THE BILL print, then pounces. The close-up (b2) shows only the bill, centred on the circled DATA MOVEMENT
+  row with "this one." under it (the bill stops growing so the row stays put), then the bill is yanked out of frame by
+  someone off-screen; b3 shows the cat leaping off the desk after it.
+- **The paper storm**: wind streaks race through it; as the Best Paper rises, warm god rays break out from behind it
+  (kept off the sheet), an anamorphic flare crosses its top edge and gold dust rises round it.
+- **Opening**: Musk's sticky note no longer passes through Amodei's clipping (each sheet has its own layer with room
+  for the notes; the overlap check is clean on every desk frame); dust turns in the engine-room beam; glints on the
+  gold seals.
+
 ## Shots
 | shot | frames | what happens |
 | --- | --- | --- |
