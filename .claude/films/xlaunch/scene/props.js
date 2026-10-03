@@ -386,7 +386,7 @@ export async function propKit(T) {
       tex.needsUpdate = true;
     }
     const w = o.w ?? 0.3, geo = new THREE.PlaneGeometry(w, w, 16, 16), p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) { const y = p.getY(i) / w, x = p.getX(i) / w; p.setZ(i, 0.06 * w * Math.max(0, 0.1 - y) ** 2 * 4 + 0.01 * w * x * x); }
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i) / w, x = p.getX(i) / w; p.setZ(i, 0.014 * w * Math.max(0, 0.1 - y) ** 2 * 4 + 0.004 * w * x * x); }
     geo.computeVertexNormals();
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.82, normalMap: fineNormal, normalScale: new THREE.Vector2(0.12, 0.12), side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true;
