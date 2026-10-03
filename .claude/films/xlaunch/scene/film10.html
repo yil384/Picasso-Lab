@@ -1,0 +1,1529 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Picasso Lab - launch film v10</title>
+<!-- v10: the v9 story cut to 65 s with a desk opening and warm-nerd type (STORYBOARD_v10.md). v9 "Compute Not Included" (.claude/films/xlaunch/STORYBOARD_v9.md): the industry's three biggest predictions as
+     newsprint clippings, the compute bill that will not stop printing, the cat drags it down into the lab's engine
+     room, the lab's history answers the bill line by line, the twist (its Best Paper is a forecast), the roll call,
+     Paper #137. The v8 film below is kept whole and reused through a frame remap (REMAP: a v9 frame -> a v8 frame)
+     for the shots v9 shares with it; the new shots (S01-S08, S18-S23, S26) are their own functions (SHOT9).
+     Picasso Lab's first X post, v8: the v7 studio (curved papers, area lights, glossy floor), the v6 story of the
+     lab's 136 real papers, and a character line: Prof. Yufei Ding writes the first paper in 2013, students arrive as
+     the papers multiply, they live through every beat (by year, by venue, three directions, the honours, milk tea),
+     a camera flash turns the cartoon crew into the real team photo, and the first desk waits empty for the viewer.
+     Painted characters stand in the 3D world as billboards (sprite.js). 4:5, 30 fps, every cut on a 2 s bar
+     (120 bpm), every reveal on a 15-frame beat. Shot list: .claude/films/xlaunch/STORYBOARD.md -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<script src="/pv/vendor/p5/p5.min.js"></script>
+<script src="/pv/vendor/p5.brush/p5.brush.pv.js"></script>
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { buildStudio, setPaper, look, blankPage, sheetGeometry } from '/scene/studio.js';
+import * as L from '/scene/layouts.js';
+import { spriteKit } from '/scene/sprite.js';
+import { propKit } from '/scene/props.js';
+import { clamp, lerp, mix3, sm, eio, eio5, eout, eout5, ein, hsh, win, camRig, TAU } from '/scene/lib.js';
+import * as TY from '/scene/type.js';
+
+const FPS = 30, NF = 1830, FLOOR = L.FLOOR, ASP = L.ASP;
+// shots (frames). A bar is 60 frames (2 s at 120 bpm); every shot starts on a bar.
+const S = {
+  open: [0, 180], grow: [180, 420], gallery: [420, 540], years: [540, 720], venues: [720, 900],
+  dirs: [900, 1200], award: [1200, 1380], photo: [1380, 1500], seat: [1500, 1680], end: [1680, NF],
+};
+// v10: 65 s, fast cut (STORYBOARD_v10.md). Shots that v10 shares with v8 replay v8 through REMAP.
+const NF10 = 1950;
+const S10 = {
+  a1: [0, 60], a2: [60, 120], a3: [120, 180], a4: [180, 240], b1: [240, 330], b2: [330, 368], b3: [368, 480],
+  c1: [480, 570], c2: [570, 630], c3: [630, 690], d1: [690, 780], d2: [780, 840], d3: [840, 900],
+  e0: [900, 930], e1: [930, 990], e2: [990, 1050], e3: [1050, 1110], e4: [1110, 1170],
+  f1: [1170, 1200], f2: [1200, 1290], f3: [1290, 1380], f4: [1380, 1440], f5: [1440, 1500],
+  g1: [1500, 1650], g2: [1650, 1710], h1: [1710, 1770], h2: [1770, 1830], h3: [1830, NF10],
+};
+const CHAPTER = (f) => f < S.grow[0] ? ['01', 'ORIGIN'] : f < S.dirs[0] ? ['02', 'GROWTH'] : f < S.award[0] ? ['03', 'DIRECTIONS']
+  : f < S.photo[0] ? ['04', 'RECOGNITION'] : f < S.seat[0] ? ['05', 'PEOPLE'] : f < S.end[0] ? ['06', 'NEXT'] : null;
+const RING_COL = [0x3f8cff, 0x63d36f, 0xff4d4d], GOLD = 0xffc547;
+
+let D, T, SK; const st = {}, C = {};
+// the real lab: every member as a painted character (from their Team-page photo); three of them carry the
+// research directions (Xiang quantum, Zaifeng systems / compilers, Zhongkai hardware). Only members whose art is
+// in cut/ (m_<name>.png) are in the film: build() drops the rest and re-balances the line-up.
+// Line-up order: front row (Yufei in the middle, the featured three next to her), back row.
+let MEMBERS = ['chang', 'haotian', 'jixuan', 'keyi', 'ohm', 'parikshit', 'rishabh', 'xiang', 'xinwei', 'yanju', 'yichen', 'yilin', 'yue', 'zaifeng', 'zhengding', 'zhongkai', 'zhuo', 'zihan'];
+let FRONT = ['yue', 'keyi', 'xiang', 'zhongkai', 'Y', 'zaifeng', 'chang', 'zhuo', 'yichen'];
+let BACK = ['haotian', 'parikshit', 'jixuan', 'ohm', 'xinwei', 'zhengding', 'yilin', 'yanju', 'zihan', 'rishabh'];
+const FEATURED = ['xiang', 'zaifeng', 'zhongkai'];
+const EXTRA = { xiang: ['xiang_land', 'xiang_chip'], zaifeng: ['zaifeng_flop', 'zaifeng_gpu'], zhongkai: ['zhongkai_tray', 'zhongkai_wafer', 'zhongkai_offer'] };
+// keep the cast to the members that have art; move plain members between the rows until they differ by <= 1
+function castFrom(avail) {
+  MEMBERS = MEMBERS.filter((m) => avail.has(m));
+  FRONT = FRONT.filter((m) => m === 'Y' || avail.has(m)); BACK = BACK.filter((m) => avail.has(m));
+  const plain = (row) => row.filter((m) => m !== 'Y' && !FEATURED.includes(m));
+  while (BACK.length > FRONT.length + 1) { const m = plain(BACK).pop(); BACK.splice(BACK.indexOf(m), 1); FRONT.push(m); }
+  while (FRONT.length > BACK.length + 1 && plain(FRONT).length) { const m = plain(FRONT).pop(); FRONT.splice(FRONT.indexOf(m), 1); BACK.push(m); }
+}
+// slot of a person in the line-up: the front row centred on Yufei at (cx, cz + dz), column spacing sp; the back
+// row centred on cx, on the half steps between the front row's columns
+function slot(name, cx, cz, sp, dz = 0.3) {
+  let i = FRONT.indexOf(name);
+  if (i >= 0) return [cx + (i - FRONT.indexOf('Y')) * sp, cz + dz];
+  i = BACK.indexOf(name);
+  return [cx + (i - (BACK.length - 1) / 2 + (BACK.length % 2 ? 0.5 : 0)) * sp, cz];
+}
+const MH = (m) => 0.95 + 0.1 * hsh(MEMBERS.indexOf(m) + 3, 11);            // a little height variety
+
+defineScene({
+  meta: { title: 'Picasso Lab - launch film v10', durationFrames: NF10, fps: FPS, width: 1080, height: 1350, seed: 9,
+    design: [1080, 1350], background: '#0b0b0e', fonts: ['Inter', 'Instrument Serif', 'JetBrains Mono', 'Fraunces', 'Caveat'], boil: { every: 1, variants: NF10 }, poster: 0 },
+  update(ctx) { frame10(ctx, ctx.iw); },
+  layers: [
+    { name: '3d', type: 'three', async init(ctx, three) { return build(ctx, three); }, draw() { T.composer.render(); return false; } },
+    { name: 'type', type: '2d', draw(ctx, g) { typeLayer10(ctx, g, ctx.iw); } },
+  ],
+});
+
+// ---------------------------------------------------------------------------------------------------------
+// build
+// ---------------------------------------------------------------------------------------------------------
+// height of each pose in world units (a standing Yufei is 1.0); seated/kneeling/flying poses are shorter
+const POSE_H = {
+  y_write: 1.02, desk_empty: 1.02, y_hold_up: 1.16, y_think: 1.0, y_surprise: 1.0, y_proud: 1.12, y_swing: 1.08, y_paint_air: 1.05,
+  y_award: 1.0, y_toast: 1.12, y_invite: 1.0, y_wave: 1.04,
+  leo_catch: 1.3, leo_gpu: 1.12, leo_toast: 1.18,
+  mia_land: 0.52, mia_qubit: 0.8, mia_toast: 0.86,
+  kai_flop: 0.7, kai_chip: 0.96, kai_toast: 1.0,
+  zoe_sip: 0.9, zoe_tray: 0.92, zoe_toast: 0.92,
+  cat_sleep: 0.2, cat_sit: 0.34, cat_jump: 0.38, cat_cheer: 0.36,
+  xiang_land: 0.55, xiang_chip: 1.0, zaifeng_flop: 0.72, zaifeng_gpu: 1.0, zhongkai_tray: 1.0, zhongkai_wafer: 1.0, zhongkai_offer: 1.0, y_hold_cat: 1.05,
+};
+async function build(ctx, three) {
+  D = L.index(await (await fetch('/scene/data.json')).json());
+  T = await buildStudio(ctx, three, D);
+  const { THREE, scene } = T;
+  SK = spriteKit(THREE, scene);
+  const mk = async (names) => SK.make(Object.fromEntries(names.map((n) => [n, `/scene/cut/${n}.png`])), { height: 1 });
+  C.y = await mk(['y_write', 'y_hold_up', 'y_think', 'y_surprise', 'y_proud', 'y_swing', 'y_paint_air', 'y_award', 'y_toast', 'y_invite', 'y_wave', 'y_hold_cat']);
+  C.desk = await mk(['desk_empty']);
+  C.cat = await mk(['cat_sleep', 'cat_sit', 'cat_jump', 'cat_cheer', 'cat_bat', 'cat_tug', 'cat_receipt', 'cat_scared']);
+  C.y2 = await mk(['y_receipt']);
+  C.chair = await mk(['chair_spare']);
+  C.prn = await mk(['prop_printer']);
+  C.tea = await mk(['prop_tea']);
+  const has = async (n) => (await fetch(`/scene/cut/${n}.png`, { method: 'HEAD' })).ok;
+  const ok = await Promise.all(MEMBERS.map((m) => has(`m_${m}`)));
+  castFrom(new Set(MEMBERS.filter((m, i) => ok[i])));
+  C.m = {};
+  for (const m of MEMBERS) C.m[m] = await mk([`m_${m}`, ...(EXTRA[m] || [])]);
+
+  // Paper #137: the layout of the page it rhymes with, a template body, a blinking cursor
+  const tex = blankPage(THREE, 'Your Title Here', 'You et al.', { affil: 'Picasso Lab · UC San Diego', tag: '#137' });
+  const geo = sheetGeometry(THREE, 1.0, 0.1, 0.3, 137), backMat = T.backMat;
+  st.p137 = new THREE.Group();
+  st.p137mat = new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.74, bumpMap: T.bump, bumpScale: 0.5, sheen: 0.35, sheenRoughness: 0.85 });
+  const f137 = new THREE.Mesh(geo, st.p137mat), b137 = new THREE.Mesh(geo, backMat); f137.castShadow = b137.castShadow = true;
+  st.cursor = new THREE.Mesh(new THREE.PlaneGeometry(0.006, 0.03), new THREE.MeshBasicMaterial({ color: 0x111114 }));
+  const [cu, cv] = tex.userData.cursor; st.cursor.position.set((cu - 0.5) * ASP, 0.5 - cv - 0.012, 0.03);
+  st.p137.add(f137, b137, st.cursor); scene.add(st.p137); st.p137.visible = false;
+
+  // the real team photo on photo paper with a white border
+  const img = await T.loadImg('/scene/team.jpg');
+  const c = document.createElement('canvas'), B = 36; c.width = img.width + 2 * B; c.height = img.height + 2 * B;
+  const g = c.getContext('2d'); g.fillStyle = '#f4f2ee'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, B, B);
+  const pt = new THREE.CanvasTexture(c); pt.colorSpace = THREE.SRGBColorSpace; pt.anisotropy = 16;
+  const pg = sheetGeometry(THREE, 0.5, 0.2, 0.0, 9, c.width / c.height);
+  st.print = new THREE.Group();
+  st.printMat = new THREE.MeshStandardMaterial({ map: pt, roughness: 0.4, toneMapped: false });   // the photo keeps its own blacks
+  st.printAsp = c.width / c.height;
+  const pf = new THREE.Mesh(pg, st.printMat), pb = new THREE.Mesh(pg, backMat); pf.castShadow = pb.castShadow = true;
+  st.print.add(pf, pb); scene.add(st.print); st.print.visible = false;
+
+  // three gold brush strokes, one per ring, painted on the ring's centre line; then the paint cools into glass
+  const bristle = (() => {
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 64; const gg = cv.getContext('2d');
+    gg.fillStyle = '#ffffff'; gg.fillRect(0, 0, 512, 64);
+    for (let i = 0; i < 90; i++) { const y = hsh(i, 1) * 64, a = 0.15 + hsh(i, 2) * 0.35; gg.fillStyle = `rgba(120,80,10,${a})`; gg.fillRect(0, y, 512, 0.6 + hsh(i, 3) * 1.6); }
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  st.strokes = L.RING_C.map((cc, j) => {
+    const N = 220, pos = [], uv = [], idx = [], a0 = [Math.PI * 0.75, -Math.PI * 0.35, Math.PI * 0.15][j], lead = 0.7;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, a = a0 - lead + t * (TAU + lead), R = L.RING_R + 0.14 * (1 - sm(t * 4));
+      const w = lerp(0.085, 0.014, Math.pow(t, 0.7)) * Math.min(1, t / 0.03 + 0.15);
+      const cx = cc[0] + R * Math.cos(a), cy = cc[1] + R * Math.sin(a), nx = Math.cos(a), ny = Math.sin(a);
+      pos.push(cx - nx * w / 2, cy - ny * w / 2, cc[2] + 0.035, cx + nx * w / 2, cy + ny * w / 2, cc[2] + 0.035);
+      uv.push(t, 0, t, 1);
+      if (i < N) { const b = i * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
+    }
+    const geo2 = new THREE.BufferGeometry(); geo2.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo2.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo2.setIndex(idx); geo2.computeVertexNormals();
+    const m = new THREE.Mesh(geo2, new THREE.MeshPhysicalMaterial({ color: GOLD, map: bristle, metalness: 0.9, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.12,
+      emissive: 0x8a5600, emissiveIntensity: 0.45, side: THREE.DoubleSide, transparent: true }));
+    m.visible = false; scene.add(m);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.02, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffe2a0 }));
+    tip.visible = false; scene.add(tip);
+    return { m, tip, n: idx.length, a0, lead, N };
+  });
+
+  // the venue stacks: each paper a thin bound copy (its first page on top, paper edges on the sides), countable
+  const edge = document.createElement('canvas'); edge.width = 64; edge.height = 16; const eg = edge.getContext('2d');
+  eg.fillStyle = '#ece8df'; eg.fillRect(0, 0, 64, 16);
+  for (let y = 2; y < 16; y += 3) { eg.fillStyle = 'rgba(150,140,125,0.45)'; eg.fillRect(0, y, 64, 1); }
+  eg.fillStyle = 'rgba(40,36,30,0.75)'; eg.fillRect(0, 15, 64, 1);
+  const edgeTex = new THREE.CanvasTexture(edge); edgeTex.colorSpace = THREE.SRGBColorSpace;
+  const edgeMat = new THREE.MeshStandardMaterial({ map: edgeTex, roughness: 0.9 }), botMat = new THREE.MeshStandardMaterial({ color: 0xe6e2d8, roughness: 0.9 });
+  const boxGeo = new THREE.BoxGeometry(L.VS * ASP, L.VSTEP * 0.8, L.VS);
+  st.boxes = {};
+  for (const v of D.topv) for (const k of D.byVenue[v]) {
+    const top = new THREE.MeshStandardMaterial({ map: T.papers[k].mat.map, roughness: 0.75 });
+    const m = new THREE.Mesh(boxGeo, [edgeMat, edgeMat, top, botMat, edgeMat, edgeMat]);
+    m.castShadow = m.receiveShadow = true; m.visible = false; scene.add(m); st.boxes[k] = m;
+  }
+
+  // confetti: small paper chips (instanced), for the toast
+  const cg = new THREE.PlaneGeometry(0.028, 0.018);
+  st.confetti = new THREE.InstancedMesh(cg, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, side: THREE.DoubleSide }), 220);
+  const cols = [0xf5f5f7, 0xffd27a, 0x5aa2ff, 0x7fe08a, 0xff7474];
+  for (let i = 0; i < 220; i++) st.confetti.setColorAt(i, new THREE.Color(cols[i % 5]));
+  scene.add(st.confetti); st.confetti.visible = false;
+  st.dummy = new THREE.Object3D();
+  st.v3 = new THREE.Vector3();
+  // the warm light that sets the Best Paper apart
+  st.gold = new THREE.RectAreaLight(0xffc98a, 0, 1.2, 1.4); scene.add(st.gold);
+  await build10();
+  return { scene, camera: T.camera };
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// papers: one state per paper per frame, through every beat
+// ---------------------------------------------------------------------------------------------------------
+const YEAR_T0 = S.grow[0] + 26, YEAR_DT = 13.5;            // growth: 2013 at 206 ... 2026 at 382
+function appearAt(k) {
+  if (k === D.first) return S.grow[0];
+  const p = D.pubs[k], und = p.yr == null;
+  const same = und ? D.order.filter((q) => D.pubs[q].yr == null) : D.byYear[p.yr];
+  const j = same.indexOf(k), n = same.length;
+  const yr = und ? 2025.2 : p.yr;
+  return YEAR_T0 + (yr - 2013) * YEAR_DT + (j / Math.max(1, n)) * YEAR_DT * (und ? 1.6 : 0.95);
+}
+const LAND = 18;                                            // frames from appearing to landing in the vortex
+const SWARM_C = [0, 1.25, -0.4];
+const swarmC = (f) => mix3([0, 0.95, -1.15], SWARM_C, sm((f - FIRST_GO) / 70));
+const FIRST_GO = YEAR_T0 + 7 * YEAR_DT - 10;               // with the 2020 surge the first paper joins the vortex
+function farPoint(k) { const a = hsh(k, 51) * TAU, R = 6 + hsh(k, 52) * 4; return { p: [Math.cos(a) * R, 0.5 + hsh(k, 53) * 4, -2 - Math.abs(Math.sin(a)) * R], r: [hsh(k, 54) * 3, hsh(k, 55) * 3, hsh(k, 56) * 3], s: 0.3, dim: 1 }; }
+
+// the first paper's path in the opening: out of her hands, up into the light, to the hero pose
+const HAND = [0.38, -0.02, 0.72];
+const RELEASE = 96;
+function firstOpen(f) {
+  if (f < RELEASE) return null;
+  const t = eio((f - RELEASE) / 64);
+  const a = { p: HAND, r: [-0.5, -0.2, 0.1], s: 0.2, dim: 0 };
+  const s = L.mixL(a, L.HERO, t, { lift: Math.sin(Math.PI * t) * 0.25, ry: Math.sin(Math.PI * t) * 0.9 });
+  s.p[1] += 0.015 * Math.sin((f - RELEASE) * 0.05) * sm((f - RELEASE - 50) / 30);
+  return s;
+}
+
+const GROW = (k) => Math.floor((D.order.length - 1 - D.RANK[k]) / 4);
+function galleryArrive(k) { return S.gallery[0] - 34 + (D.order.length - 1 - D.RANK[k]) * 0.42; }
+const DOMINO0 = S.years[0] + 26;
+function toppleAt(k) { return DOMINO0 + GROW(k) * 1.9; }
+function toppled(g, th, k) {
+  const sy = Math.sin(g.r[1]), cy = Math.cos(g.r[1]), d = g.s / 2;
+  // each sheet leans on the one in front of it: shingled, not a grid of tiles
+  const th2 = th * (1 - 0.18 * sm((th - 1.0) / 0.5));
+  return { p: [g.p[0] - Math.sin(th2) * d * sy, FLOOR + 0.012 + d * Math.cos(th2) + 0.0016 * GROW(k), g.p[2] - Math.sin(th2) * d * cy], r: [-th2, g.r[1], g.r[2]], s: g.s, dim: g.dim };
+}
+function yearFly(k) { const p = D.pubs[k]; const y = p.yr ?? 2027; const j = p.yr != null ? D.byYear[p.yr].indexOf(k) : 0; return Math.max(toppleAt(k) + 16, S.years[0] + 66 + (y - 2013) * 3.4 + j * 0.9); }
+function yearLand(k) { return yearFly(k) + 30; }
+function venueBurst(k) { const c = D.topv.indexOf(D.pubs[k].venue); return S.venues[0] + 4 + (c < 0 ? 10 : c * 2) + hsh(k, 61) * 12; }
+function venueLand(k) { return venueBurst(k) + 42; }
+const STROKE = [[S.dirs[0] + 14, S.dirs[0] + 36], [S.dirs[0] + 36, S.dirs[0] + 58], [S.dirs[0] + 58, S.dirs[0] + 80]];
+function ringFly(k) { const r = D.pubs[k].ring, j = D.byRing[r].indexOf(k); return STROKE[r][1] - 6 + (j / D.byRing[r].length) * 26; }
+function awardFly(k) { const i = D.awards.indexOf(k); return i >= 0 ? S.award[0] + 18 + i * 5 : S.award[0] + 4 + hsh(k, 71) * 14; }
+const VISIT = [[S.dirs[0] + 90, S.dirs[0] + 150], [S.dirs[0] + 150, S.dirs[0] + 210], [S.dirs[0] + 210, S.dirs[0] + 268]];
+
+function paperAt(k, f) {
+  // 1 opening: only the first paper
+  if (f < S.grow[0] + 40 || (k === D.first && f < FIRST_GO)) {
+    if (k !== D.first) { if (f < S.grow[0]) return null; }
+    else { if (f < S.grow[0]) return firstOpen(f); return L.HERO; }
+  }
+  // 2 growth: 2014-2019 peel off the first paper; from 2020 the papers pour in from the dark into a widening vortex
+  const tg = galleryArrive(k);
+  if (f < tg) {
+    const ap = appearAt(k); if (f < ap) return null;
+    const b = L.swarm(D, k, f, swarmC(f));
+    if (k === D.first) return f < FIRST_GO ? L.HERO : L.mixL(L.HERO, b, eio5((f - FIRST_GO) / 44), { ry: TAU * eio5((f - FIRST_GO) / 44) * 0.5 });
+    const yr = D.pubs[k].yr;
+    if (yr != null && yr < 2020) {
+      // a page slides out of the first paper, swings out to one side clear of it, and joins the circle behind
+      const t = eio((f - ap) / 40), src = L.HERO, order = D.RANK[k], side = order % 2 ? 1 : -1;
+      const from = { p: [src.p[0], src.p[1], src.p[2] + 0.06], r: src.r, s: 0.6, dim: 0 };
+      const s2 = L.mixL(from, b, t, { lift: Math.sin(Math.PI * t) * 0.12, rz: Math.sin(Math.PI * t) * 0.25 * side });
+      s2.p[0] += Math.sin(Math.PI * Math.min(1, t * 1.3)) * 0.85 * side; s2.p[2] += Math.sin(Math.PI * t) * 0.15;
+      return s2;
+    }
+    const t = eout((f - ap) / 26);
+    return L.mixL(farPoint(k), b, t, { ry: (1 - t) * 2.2 });
+  }
+  // 3 gallery: from the vortex into the S-curve, front first, with a half flip
+  const g = L.gallery(D, k), t0 = toppleAt(k);
+  if (f < t0) {
+    const t = eio((f - tg) / 34);
+    if (t >= 1) return g;
+    return L.mixL(L.swarm(D, k, tg, swarmC(tg)), g, t, { lift: Math.sin(Math.PI * t) * 0.5, ry: (hsh(k, 7) > 0.5 ? 1 : -1) * TAU * eio(t) * 0.5 });
+  }
+  // 4 by year: the domino topples the gallery front to back, then each paper flies into its year column (isotype)
+  const ty = yearFly(k);
+  if (f < ty) { const th = ein(clamp((f - t0) / 13)) * (Math.PI / 2 - 0.02); return toppled(g, th, k); }
+  const yv = L.years(D, k), flat = toppled(g, Math.PI / 2 - 0.02, k), tb = venueBurst(k);
+  if (f < tb) { const t = eio((f - ty) / 30); return L.mixL(flat, yv, t, { lift: Math.sin(Math.PI * t) * (0.6 + 0.4 * hsh(k, 8)) }); }
+  // 5 by venue: the columns burst up like a shuffled deck and rain down onto eight stacks
+  const vv = L.venues(D, k), tr = ringFly(k);
+  if (f < tr) {
+    const up = clamp((f - tb) / 16), dn = clamp((f - tb - 16) / 26);
+    const peak = { p: [yv.p[0] * 0.6 + (hsh(k, 62) - 0.5) * 1.6, 1.6 + hsh(k, 63) * 1.6, -0.5 + (hsh(k, 64) - 0.5) * 1.2], r: [hsh(k, 65) * TAU, hsh(k, 66) * TAU, 0], s: 0.42, dim: 0 };
+    if (dn <= 0) return L.mixL(yv, peak, eout(up));
+    return L.mixL(peak, vv, ein(dn) * 0.85 + eout5(dn) * 0.15);
+  }
+  // 6 three directions: out of the stacks in a spiral into the wreath around its ring
+  const ov = L.orbit(D, k, f), ta = awardFly(k);
+  if (f < ta) {
+    const t = eio((f - tr) / 40);
+    if (t >= 1) return repState(k, f, ov);
+    const s = L.mixL(vv, ov, t);
+    const [cx, cy] = L.RING_C[D.pubs[k].ring], sw = (1 - t) * Math.PI * 1.2;
+    const dx = s.p[0] - cx, dy = s.p[1] - cy;
+    s.p[0] = cx + dx * Math.cos(sw) - dy * Math.sin(sw); s.p[1] = cy + dx * Math.sin(sw) + dy * Math.cos(sw);
+    s.p[2] += Math.sin(Math.PI * t) * 0.4; s.r[2] += sw;
+    return s;
+  }
+  // 7 the honours: six papers to the row; the rest recede fast into a dim cloud
+  const aw = L.awardsRow(D, k), cloud = L.farCloud(D, k, f);
+  const te = S.end[0] + 6 + hsh(k, 81) * 30;
+  if (f < S.photo[0] - 10 || (!aw && f < te)) {
+    const from = repState(k, ta, L.orbit(D, k, ta));
+    if (aw) { const t = eio((f - ta) / 40); return L.mixL(from, aw, t, { lift: Math.sin(Math.PI * t) * 0.3, ry: TAU * eio(t) }); }
+    return L.mixL(from, cloud, eio((f - ta) / 22));
+  }
+  // 8 people: the honoured papers join the cloud too
+  if (f < te) return L.mixL(aw, cloud, eio((f - S.photo[0] + 10) / 40));
+  // 9 end: the cloud opens into the arc behind the rings
+  return L.mixL(L.farCloud(D, k, f), L.endArc(D, k), eio((f - te) / 50));
+}
+// the three representative papers of each ring come out of the wreath during that ring's visit
+function repState(k, f, ov) {
+  for (let r = 0; r < 3; r++) {
+    const j = D.reps[r].indexOf(k); if (j < 0) continue;
+    const [a, b] = VISIT[r], u = win(f, a + 4 + j * 4, b + 4, 14, 12);
+    if (u > 0) return L.mixL(ov, L.orbitRep(r, j), eio(u));
+  }
+  return ov;
+}
+const CLOSE = [S.award[0] + 50, S.award[0] + 96];          // the close-up on the Best Paper
+function paperGlow(k, f) {
+  const i = D.awards.indexOf(k);
+  if (i < 0) return 0;
+  return i === 0 ? 0.07 * win(f, CLOSE[0] - 20, S.photo[0], 16, 20) : 0.03 * win(f, CLOSE[1], S.photo[0], 16, 20);
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// camera: per-shot rigs; cuts between shots where the story jumps, continuous moves inside
+// ---------------------------------------------------------------------------------------------------------
+const OPEN_END = [[0.86, 0.64, 3.82], [0.05, 0.29, 0], 30];          // the frame-1 composition; the seat shot rhymes it
+const VX01 = (L.VX(0) + L.VX(1)) / 2;
+const VC = (j, dz = 0) => { const [cx, cy] = L.RING_C[j]; return [[cx + 0.1, cy - 0.05, 4.1 + dz], [cx, cy - 0.2, 0]]; };
+const CAMS = {
+  open: camRig([
+    [0, [1.25, 0.05, 2.35], [0.62, -0.18, 0.55], 30],
+    [80, [1.1, 0.02, 2.15], [0.62, -0.2, 0.55], 30],
+    [81, [1.6, 0.3, 3.7], [0.3, 0.0, 0.4], 32, (x) => x, 'linear'],          // cut on action: she stands
+    [RELEASE, [1.5, 0.28, 3.65], [0.3, 0.05, 0.4], 32],
+    [150, OPEN_END[0], OPEN_END[1], OPEN_END[2], eio5],
+    [180, [0.84, 0.65, 3.8], [0.05, 0.29, 0], 30],
+  ]),
+  grow: camRig([
+    [180, [0.84, 0.65, 3.8], [0.05, 0.29, 0], 30],
+    [230, [0.7, 0.75, 4.4], [0.0, 0.6, -0.2], 31, eio],
+    [300, [0.3, 0.9, 5.6], [0.0, 0.75, -0.3], 33, eio],
+    [420, [-0.6, 1.0, 7.4], [0.0, 0.85, -0.4], 36, eio5],
+  ]),
+  gallery: camRig([
+    [420, [-0.6, 1.0, 7.4], [0.0, 0.85, -0.4], 36],
+    [470, [2.0, 1.25, 7.6], [-0.15, -0.3, -1.2], 34, eio5],
+    [540, [2.6, 1.55, 7.4], [-0.2, -0.45, -1.4], 34],
+  ]),
+  years: camRig([
+    [540, [2.6, 1.55, 7.4], [-0.2, -0.45, -1.4], 34],
+    [568, [1.7, -0.3, 5.0], [-0.4, -0.52, -0.6], 28, eio],                    // low along the fallen river
+    [612, [2.2, 0.6, 7.2], [-0.2, -0.1, -0.8], 30, eio5],
+    [662, [1.6, 0.85, 9.6], [0.0, 0.42, -0.6], 22, eio5],
+    [692, [0.06, 0.48, 17.0], [0.06, 0.46, -0.6], 15, eio5],                  // square on, long lens: bars read true
+    [720, [0.06, 0.48, 16.6], [0.06, 0.46, -0.6], 15],
+  ]),
+  venues: camRig([
+    [720, [0.06, 0.48, 16.6], [0.06, 0.46, -0.6], 15],
+    [748, [0, 2.6, 6.6], [0, -0.32, -0.4], 36, eio],                          // the whole pyramid, low enough to compare heights
+    [804, [0, 2.35, 6.2], [0, -0.34, -0.4], 36, eio5],
+    [846, [VX01, 0.12, 3.5], [VX01, -0.28, -0.3], 30, eio5],                  // the tie: ASPLOS | Yufei | ISCA, symmetric
+    [900, [VX01, 0.1, 3.3], [VX01, -0.28, -0.3], 30],
+  ]),
+  dirs: camRig([
+    [900, [VX01, 0.1, 3.3], [VX01, -0.28, -0.3], 30],
+    [950, [0.8, 0.7, 6.1], [0.25, 0.82, 0.1], 34, eio5],
+    [VISIT[0][0] - 8, [0, 0.98, 5.8], [0, 0.98, 0], 34, eio5],
+    [VISIT[0][0] + 12, VC(0)[0], VC(0)[1], 30, eio5],
+    [VISIT[0][1] - 2, VC(0, -0.25)[0], VC(0, -0.25)[1], 30],
+    [VISIT[1][0] + 12, VC(1)[0], VC(1)[1], 30, eio5],
+    [VISIT[1][1] - 2, VC(1, -0.25)[0], VC(1, -0.25)[1], 30],
+    [VISIT[2][0] + 12, VC(2)[0], VC(2)[1], 30, eio5],
+    [S.dirs[1] - 12, [0.76, 0.42, 1.7], [0.74, 0.45, 0], 30, eio],
+    [S.dirs[1], [0.74, 0.5, 0.7], [0.74, 0.5, -0.5], 32, ein],               // into the red ring
+  ]),
+  award: camRig([
+    [S.award[0], [0.35, 0.8, 7.4], [0.0, 0.5, 0.0], 36],
+    [S.award[0] + 40, [0.1, 0.25, 5.8], [-0.1, -0.05, 0.1], 34, eio5],
+    [CLOSE[0], [-0.32, 0.06, 2.35], [0.0, -0.02, 0.42], 30, eio5],
+    [CLOSE[1], [-0.36, 0.05, 2.15], [0.0, -0.02, 0.42], 30],
+    [S.award[0] + 132, [0.0, 0.18, 6.1], [0, -0.2, 0.1], 36, eio5],
+    [S.award[1], [0.0, 0.16, 5.8], [0, -0.2, 0.2], 36],
+  ]),
+  photo: camRig([
+    [S.photo[0], [0, -0.1, 5.5], [0, -0.14, 0.8], 32],
+    [S.photo[0] + 70, [0, -0.1, 5.35], [0, -0.14, 0.8], 32],
+    [S.photo[0] + 71, [0, 0.55, 3.9], [0, 0.55, 0], 30, (x) => x, 'linear'],    // the flash
+    [S.photo[1], [0, 0.55, 3.7], [0, 0.55, 0], 30],
+  ]),
+  seat: camRig([
+    [S.seat[0], [0, 0.55, 3.7], [0, 0.55, 0], 30],
+    [S.seat[0] + 24, [0.2, 0.58, 3.75], [0.02, 0.45, 0], 30, eio],
+    [S.seat[0] + 70, OPEN_END[0], OPEN_END[1], OPEN_END[2], eio5],
+    [S.seat[1], [0.84, 0.65, 3.74], [0.05, 0.29, 0], 30],
+  ]),
+  end: camRig([
+    [S.end[0], [0.84, 0.65, 3.74], [0.05, 0.29, 0], 30],
+    [S.end[0] + 70, [0, 1.05, 5.6], [0, 1.05, 0.5], 32, eio5],
+    [NF, [0, 1.05, 5.85], [0, 1.05, 0.5], 32],
+  ]),
+};
+function shotOf(f) { for (const k of Object.keys(S)) if (f >= S[k][0] && f < S[k][1]) return k; return 'end'; }
+function camAt(f) { return CAMS[shotOf(f)](f); }
+
+// ---------------------------------------------------------------------------------------------------------
+// per frame
+// ---------------------------------------------------------------------------------------------------------
+function aperture(f) {
+  if (f < S.grow[0]) return 0.0005;
+  if (f >= S.years[0] + 140 && f < S.years[1]) return 0.0001;                 // long-lens chart: everything sharp
+  if ((f >= S.venues[0] && f < S.venues[0] + 120) || (f >= S.dirs[0] && f < S.dirs[0] + 80)) return 0.00018;
+  if (f >= S.venues[0] + 120 && f < S.venues[1]) return 0.0011;               // the tie: back row soft
+  if (f >= CLOSE[0] - 10 && f < CLOSE[1] + 10) return 0.0012;
+  if (f >= S.end[0] + 60) return 0.003;
+  return 0.0006;
+}
+let NOWF = 0;                                       // the frame being drawn (for idle motion in put)
+function frame(ctx, f) {
+  NOWF = f;
+  const { THREE, camera } = T;
+  const shot = shotOf(f), c = camAt(f);
+  const dx = 0.012 * Math.sin(f * 0.021) + 0.006 * Math.sin(f * 0.053), dy = 0.008 * Math.sin(f * 0.017 + 1);
+  const still = f >= S.years[0] + 150 && f < S.years[1] ? 0.15 : 1;             // no drift on the long lens
+  look(T, [c.p[0] + dx * still, c.p[1] + dy * still, c.p[2]], c.t, c.fov, aperture(f));
+  // whip blur from the camera's own angular speed (never across a cut)
+  const a = camAt(Math.max(0, f - 0.5)), b = camAt(Math.min(NF - 1, f + 0.5));
+  const dir = (q) => new THREE.Vector3(q.t[0] - q.p[0], q.t[1] - q.p[1], q.t[2] - q.p[2]).normalize();
+  const da = dir(a), db = dir(b);
+  const yaw = Math.atan2(db.x, db.z) - Math.atan2(da.x, da.z), pitch = Math.asin(db.y) - Math.asin(da.y);
+  const vf = c.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * 0.8);
+  const sx = -yaw / hf, sy = pitch / vf, mag = Math.hypot(sx, sy);
+  T.blur.uniforms.uK.value = shotOf(f) === shotOf(Math.max(0, f - 1)) ? clamp((mag - 0.008) * 0.6, 0, 0.018) : 0;
+  T.blur.uniforms.uDir.value = mag > 1e-6 ? [sx / mag, sy / mag] : [0, 0];
+  T.grade.uniforms.uFrame.value = f;
+  ctx.camera = camera;
+  // fog: far enough for the long lens on the chart
+  const far = f >= S.years[0] + 110 && f < S.venues[0] + 26;
+  T.scene.fog.near = far ? 20 : 7; T.scene.fog.far = far ? 48 : 22;
+
+  // defaults
+  Object.values(C).forEach((ch) => (ch.hide ? ch.hide() : Object.values(ch).forEach((c) => c.hide())));
+  T.rings.forEach((r, j) => { r.visible = false; r.material.color.setHex(RING_COL[j]); r.material.emissive.setHex(RING_COL[j]); r.material.emissiveIntensity = 0.18; r.material.opacity = 1; });
+  st.p137.visible = false; st.print.visible = false; st.confetti.visible = false;
+  st.strokes.forEach((s) => { s.m.visible = false; s.tip.visible = false; });
+  Object.values(st.boxes).forEach((m) => { m.visible = false; }); st.cursor.visible = false;
+  T.coat.material.opacity = f >= S.years[0] + 100 && f < S.venues[0] + 10 ? 0.96 : 0.9;
+  T.prac.intensity = 0; st.gold.intensity = 0;
+  T.key.intensity = 1.3; T.key.position.set(1.2, 3.2, 3.2); T.key.lookAt(0, 0.2, 0);
+  T.rim.intensity = 2.2; T.kick.intensity = 0.8; T.kick.position.set(3.4, 0.8, -1.2); T.kick.lookAt(0, 0.4, 0);
+  T.grade.uniforms.uFlash.value = 0; T.grade.uniforms.uFlashCol.value = [1, 1, 1]; T.grade.uniforms.uFade.value = 0;
+  T.bloom.strength = 0.14;
+
+  // isotype bricks read as equal units: colour figures muted while the chart is up
+  const sat = 1 - 0.75 * win(f, S.years[0] + 70, S.venues[0] + 12, 20, 12);
+  const rects = keepOut(f);
+  for (const p of D.pubs) {
+    const s0 = paperAt(p.k, f), s = s0 && { ...s0 };
+    if (s) {
+      if (sat < 1) s.sat = sat;
+      if (rects.length && s.s > 0.002) { const q = ctx.project(st.v3.set(s.p[0], s.p[1], s.p[2]).clone()); for (const r of rects) if (q.x > r[0] && q.x < r[2] && q.y > r[1] && q.y < r[3]) { s.dim = Math.max(s.dim, 0.74); break; } }
+    }
+    setPaper(T, p.k, s, paperGlow(p.k, f));
+  }
+  if (f >= S.venues[0] && f < S.dirs[0] + 120) stacks(f);
+
+  SHOTFN[shot](f, ctx);
+}
+
+// a landed paper on a venue stack becomes a thin bound copy (countable), until it leaves for its ring
+function stacks(f) {
+  for (const v of D.topv) for (const k of D.byVenue[v]) {
+    if (f < venueLand(k) || f >= ringFly(k)) continue;
+    const s = L.venues(D, k), m = st.boxes[k];
+    m.visible = true; m.position.set(s.p[0], s.p[1] - L.VSTEP * 0.42, s.p[2]); m.rotation.set(0, s.r[2], 0);
+    T.papers[k].g.visible = false;
+  }
+}
+// screen rectangles the flying papers dim behind, so type never sits on a lit sheet (design px)
+function keepOut(f) {
+  const r = [[0, 0, 1080, 150]];
+  if (f >= S.grow[0] + 30 && f < S.gallery[0] + 20) r.push([0, 110, 780, 440]);
+  if ((f >= S.years[0] + 80 && f < S.award[0]) || (f >= S.award[0] + 20 && f < S.photo[0])) r.push([0, 130, 840, 340]);
+  if (f >= S.end[0] + 30) r.push([170, 800, 910, 1260]);
+  return r;
+}
+
+// sprite helper: place a character with the house grade (key from the right, rim from the left in the shot's colour)
+// idle life: a standing figure breathes (a slow ~3.4 s rise of about half a percent) and shifts its weight a
+// little; each character on its own phase. Off with idle: 0 (or while squashing / flying, where sx / sy / lift
+// already carry the motion).
+const IDLE_PH = new Map();
+function put(ch, pose, x, z, o = {}) {
+  if (!ch) return null;
+  if (!IDLE_PH.has(ch)) IDLE_PH.set(ch, IDLE_PH.size * 2.399);
+  const ph = IDLE_PH.get(ch), k = (o.idle ?? 1) * (o.sx == null && o.sy == null && !o.lift ? 1 : 0), t = NOWF / 30;
+  const br = 1 + k * 0.006 * Math.sin(TAU * t / 3.4 + ph), sway = k * 0.012 * Math.sin(TAU * t / 5.1 + ph * 1.7);
+  ch.set(pose, { height: (o.h ?? 1) * (POSE_H[pose] ?? 1), flip: o.flip, sx: (o.sx ?? 1) * (2 - br), sy: (o.sy ?? 1) * br, relief: o.relief });
+  ch.place(x, (o.y ?? FLOOR), z, T.camera, { floorY: FLOOR, light: o.light ?? 0.8, rim: o.rim ?? 1.2, rimDir: [-1, 0.3], side: 0.16, foot: 0.66, lift: o.lift ?? 0,
+    fade: o.fade ?? 1, contact: o.contact, contactK: o.contactK ?? 0.6, yaw: o.yaw, roll: (o.roll ?? 0) + sway, rimCol: o.rimCol, face: o.face });
+  return ch;
+}
+function landing(f, f0, h = 1.2, dur = 12) {
+  if (f < f0 - dur) return null;
+  if (f < f0) { const t = (f - f0 + dur) / dur; return { lift: h * (1 - t * t), sx: 0.92, sy: 1.1 }; }
+  const u = (f - f0) / 10; const sq = Math.exp(-u * 2.2) * Math.cos(u * 6);
+  return { lift: 0, sx: 1 + 0.12 * sq, sy: 1 - 0.14 * sq };
+}
+const SUMMIT = L.YTOP(19);
+const RIMC = { ring: [[0.35, 0.58, 1.0], [0.5, 0.9, 0.55], [1.0, 0.45, 0.45]], gold: [1.0, 0.8, 0.45] };
+
+const SHOTFN = {
+  // 01 ORIGIN: lamp on, she writes, stands, lets the first paper go; it rises into the light (v7 frame 1)
+  open(f) {
+    const lamp = f < 14 ? 0 : (f < 22 ? (Math.sin(f * 2.1) > 0 ? 1 : 0.2) : 1) * sm((f - 14) / 6);
+    const room = sm((f - 30) / 70);
+    T.key.intensity = 1.6 * room; T.rim.intensity = 3.2 * room; T.kick.intensity = 0.8 * room;
+    T.key.position.set(2.6, 2.6, 1.6); T.key.lookAt(0, 0.5, 0);
+    T.prac.position.set(0.95, 0.12, 0.62); T.prac.intensity = 1.4 * lamp;
+    if (f < 14) T.grade.uniforms.uFade.value = 1;
+    const lit = 0.25 + 0.7 * Math.max(lamp * 0.9, room);
+    if (f <= 80) {
+      put(C.y, 'y_write', 0.62, 0.5, { light: lit, rim: 0.8 * room });
+      put(C.cat, 'cat_sleep', 0.2, 0.62, { light: lit * 0.85 });
+    } else {
+      put(C.desk, 'desk_empty', 0.78, 0.32, { light: lit * 0.9, rim: 0.8 * room });
+      put(C.cat, 'cat_sleep', 0.2, 0.62, { light: lit * 0.85 });
+      const pose = f < RELEASE ? 'y_hold_up' : 'y_think';
+      const sq = f >= RELEASE && f < RELEASE + 10 ? Math.exp(-(f - RELEASE) / 3) : 0;
+      put(C.y, pose, 0.38, 0.72, { light: lit, sx: 1 + 0.05 * sq, sy: 1 - 0.06 * sq });
+    }
+  },
+  // 02 GROWTH: from 2020 the lab arrives one by one as the papers pour in; Xiang lands, Zaifeng dives through,
+  // Zhongkai walks in last with the milk tea
+  grow(f) {
+    const [yx, yz] = slot('Y', 0.18, 0.3, 0.34);
+    put(C.y, f < 282 ? 'y_think' : 'y_surprise', lerp(0.42, yx, sm((f - 260) / 30)), lerp(0.62, yz, sm((f - 260) / 30)), { h: 0.78 });
+    put(C.desk, 'desk_empty', 0.78, 0.32, { fade: 1 - sm((f - 200) / 30) });
+    put(C.cat, f < 330 ? 'cat_sleep' : 'cat_cheer', -0.15, 0.95, { h: 0.78 });
+    const order = ['yue', 'keyi', 'xiang', 'chang', 'zhuo', 'haotian', 'parikshit', 'jixuan', 'zaifeng', 'ohm', 'yichen', 'xinwei', 'zhengding', 'yilin', 'yanju', 'zihan', 'rishabh', 'zhongkai'].filter((m) => C.m[m]);
+    order.forEach((m, i) => {
+      const t0 = 288 + i * 6, [x, z] = slot(m, 0.18, 0.3, 0.34), h = 0.68 * MH(m);
+      if (m === 'xiang') { const lm = landing(f, t0 + 10, 1.4, 10); if (lm) put(C.m.xiang, f < t0 + 40 ? 'xiang_land' : 'm_xiang', x, z, { h, sx: lm.sx, sy: lm.sy, lift: lm.lift }); return; }
+      if (m === 'zaifeng') {
+        if (f >= t0 - 20 && f < t0 + 10) { const t = (f - t0 + 20) / 30; put(C.m.zaifeng, 'zaifeng_flop', lerp(-1.7, x, t), z, { h, lift: 1.6 * (1 - t) * (1 - t) + 0.25 * Math.sin(Math.PI * t), roll: -0.3 * (1 - t) }); }
+        else if (f >= t0 + 10) { const lm = landing(f, t0 + 10, 0.01, 1); put(C.m.zaifeng, 'm_zaifeng', x, z, { h, sx: lm ? lm.sx : 1, sy: lm ? lm.sy : 1 }); }
+        return;
+      }
+      if (m === 'zhongkai') {
+        if (f >= t0 - 24 && f < t0 + 20) { const t = clamp((f - t0 + 24) / 30); put(C.m.zhongkai, 'zhongkai_tray', lerp(2.0, x, eout(t)), z, { h }); }
+        else if (f >= t0 + 20) put(C.m.zhongkai, 'm_zhongkai', x, z, { h });
+        return;
+      }
+      const lm = landing(f, t0, 0.5, 8); if (lm) put(C.m[m], `m_${m}`, x, z, { h, sx: lm.sx, sy: lm.sy, lift: lm.lift });
+    });
+  },
+  // 136: the vortex lands in the gallery (v7 frame 2); the whole lab small at the feet of the NOW row
+  gallery(f) {
+    const k = sm((f - 450) / 20);
+    const [yx, yz] = slot('Y', 1.02, 2.5, 0.13, 0.12); put(C.y, 'y_proud', yx, yz, { fade: k, h: 0.36 });
+    for (const m of MEMBERS) { const [x, z] = slot(m, 1.02, 2.5, 0.13, 0.12); put(C.m[m], `m_${m}`, x, z, { fade: k, h: 0.33 * MH(m), light: 0.7, rimCol: [0.45, 0.6, 1.0] }); }
+    put(C.cat, 'cat_sit', 1.02, 2.72, { fade: k, h: 0.36 });
+  },
+  // year by year: Zaifeng dives onto the front paper and starts the domino; the cat naps in 2016 (0 papers)
+  years(f) {
+    const kf = DOMINO0 - 2;
+    if (f < kf + 4) { const t = clamp((f - (kf - 22)) / 22); put(C.m.zaifeng, 'zaifeng_flop', lerp(2.6, 1.0, t), lerp(3.8, 2.4, t), { h: 0.42, lift: 0.7 * Math.sin(Math.PI * t * 0.9) + 0.2 }); }
+    const k = 1 - sm((f - S.years[0] - 6) / 14);
+    if (k > 0.01) {
+      const [yx, yz] = slot('Y', 1.02, 2.5, 0.13, 0.12); put(C.y, 'y_proud', yx, yz, { fade: k, h: 0.36 });
+      for (const m of MEMBERS) { if (m === 'zaifeng') continue; const [x, z] = slot(m, 1.02, 2.5, 0.13, 0.12); put(C.m[m], `m_${m}`, x, z, { fade: k, h: 0.33 * MH(m), light: 0.7 }); }
+    }
+    const kc = sm((f - S.years[0] - 105) / 15);
+    if (kc > 0.01) put(C.cat, 'cat_sleep', L.YX(2016), L.YZ(2016) + 0.04, { fade: kc, h: 0.9 });
+    const km = sm((f - S.years[0] - 135) / 12);
+    if (km > 0.01 && f < S.years[1] - 12) put(C.m.xiang, 'm_xiang', L.YX(2025), L.YZ(2025) - 0.02, { y: SUMMIT, fade: km, h: SUMMIT_H, contact: false });
+    if (f >= S.years[1] - 12) summitHop(f);
+  },
+  venues(f) {
+    if (f < S.venues[0] + 20) summitHop(f);
+    const k = sm((f - S.venues[0] - 105) / 15);
+    if (k > 0.01) put(C.y, 'y_think', VX01, 0.25, { fade: k, h: 0.62 });
+  },
+  // 03 DIRECTIONS: three gold strokes become the three glass rings; one member stands inside each ring
+  dirs(f) {
+    const u = f - S.dirs[0];
+    const ky = 1 - sm((u - 78) / 14);
+    if (ky > 0.01) put(C.y, u < 16 ? 'y_swing' : 'y_paint_air', 0.9, 1.0, { fade: ky, h: 0.95, rimCol: RIMC.gold });
+    st.strokes.forEach((sk, j) => {
+      const [a, b] = STROKE[j], t = clamp((f - a) / (b - a)), done = f - b;
+      if (f < a || done > 9) return;
+      sk.m.visible = true; sk.m.geometry.setDrawRange(0, Math.max(6, Math.floor(sk.n * eout(t) / 6) * 6));
+      sk.m.material.opacity = 1 - sm(done / 8);
+      if (t < 1) {
+        const tt = eout(t), ang = sk.a0 - sk.lead + tt * (TAU + sk.lead), R = L.RING_R + 0.14 * (1 - sm(tt * 4)), cc = L.RING_C[j];
+        sk.tip.visible = true; sk.tip.scale.setScalar(0.6); sk.tip.position.set(cc[0] + R * Math.cos(ang), cc[1] + R * Math.sin(ang), cc[2] + 0.05);
+      }
+    });
+    T.rings.forEach((r, j) => {
+      const done = f - STROKE[j][1]; if (done < -2) return;
+      // the glass is its own colour from the first frame; the paint's heat is an emissive glow that cools off
+      const cool = clamp(done / 18), flash = done >= 0 && done < 4 ? 1 - done / 4 : 0;
+      r.visible = true; r.position.set(...L.RING_C[j]); r.scale.setScalar(L.RING_R / 0.26); r.rotation.set(0.05 * (j - 1), 0.12 * (j - 1), 0);
+      r.material.emissive.setHex(cool < 1 ? GOLD : RING_COL[j]);
+      const vis = VISIT[j], fv = win(f, vis[0], vis[1], 10, 10);
+      r.material.emissiveIntensity = cool < 1 ? lerp(0.8, 0.0, cool) + flash * 0.9 : 0.18 + 0.22 * fv;
+    });
+    T.bloom.strength = 0.14 + 0.14 * win(u, 12, 100, 10, 20);
+    const who = [[C.m.xiang, 'xiang_chip'], [C.m.zaifeng, 'zaifeng_gpu'], [C.m.zhongkai, 'zhongkai_wafer']];
+    for (let j = 0; j < 3; j++) {
+      const v = win(f, VISIT[j][0] - 2, VISIT[j][1] + (j === 2 ? -4 : 8), 8, 8); if (v < 0.01) continue;
+      const [cx, cy, cz] = L.RING_C[j], plat = cy - 0.3 - (1 - eout(v)) * 0.25;
+      put(who[j][0], who[j][1], cx, cz - 0.04, { y: plat, fade: v, h: 0.5, contact: false, rimCol: RIMC.ring[j], rim: 1.5 });
+      const k = D.byRing[j].find((q) => !D.reps[j].includes(q));
+      setPaper(T, k, L.mixL(L.orbit(D, k, f), { p: [cx, plat - 0.004, cz - 0.04], r: [-Math.PI / 2 + 0.45, 0, 0.2], s: 0.3, dim: 0 }, eout(v)));
+    }
+    if (f > S.dirs[1] - 4) { T.grade.uniforms.uFlash.value = 0.5 * sm((f - S.dirs[1] + 4) / 4); T.grade.uniforms.uFlashCol.value = [1.0, 0.62, 0.55]; }
+  },
+  // 04 RECOGNITION: through the red ring; the papers rain into the honours row; the Best Paper in raking warm light;
+  // then the whole lab toasts with milk tea
+  award(f) {
+    const u = f - S.award[0];
+    T.grade.uniforms.uFlash.value = u < 8 ? 0.5 * Math.exp(-u / 2.2) : 0; T.grade.uniforms.uFlashCol.value = [1.0, 0.62, 0.55];
+    const kr = 1 - eio(clamp((u - 8) / 30));
+    if (kr > 0.01) T.rings.forEach((r, j) => { r.visible = true; r.position.set(L.RING_C[j][0], L.RING_C[j][1] + (1 - kr) * 0.8, L.RING_C[j][2]); r.scale.setScalar((L.RING_R / 0.26) * kr); r.rotation.set(0.05 * (j - 1), 0.12 * (j - 1), 0); });
+    const kc = win(f, CLOSE[0] - 14, CLOSE[1] + 16, 16, 18);
+    const bp = L.awardsRow(D, D.awards[0]);
+    st.gold.intensity = 1.6 * kc; st.gold.position.set(bp.p[0] + 1.25, bp.p[1] + 0.55, bp.p[2] + 0.75); st.gold.lookAt(bp.p[0], bp.p[1], bp.p[2]);
+    T.key.intensity = 1.3 * (1 - 0.4 * kc); T.rim.intensity = 2.2 * (1 + 0.2 * kc);
+    if (kc > 0.01) for (const k of D.awards.slice(1)) { const s = { ...paperAt(k, f) }; s.dim = Math.max(s.dim, 0.6 * kc); s.p = [s.p[0], s.p[1], s.p[2] - 0.3 * kc]; setPaper(T, k, s, 0); }
+    T.bloom.strength = 0.14 + 0.06 * kc;
+    if (kc > 0.01) put(C.y, 'y_award', -0.95, 0.75, { fade: kc, h: 0.62, rimCol: RIMC.gold });
+    if (u >= 135) {
+      // Zhongkai walks in with the tray; then everyone raises a cup
+      const kz = clamp((u - 135) / 16), [zx, zz] = slot('zhongkai', 0, 1.0, 0.24);
+      put(C.m.zhongkai, kz < 1 ? 'zhongkai_tray' : 'm_zhongkai', lerp(2.0, zx, eout(kz)), zz, { h: 0.5 * MH('zhongkai') });
+      const [yx, yz] = slot('Y', 0, 1.0, 0.24); put(C.y, 'y_toast', yx, yz, { h: 0.55, fade: sm((u - 141) / 5) });
+      MEMBERS.forEach((m, i) => { if (m === 'zhongkai') return; const [x, z] = slot(m, 0, 1.0, 0.24); const t = u - 141 - (i % 6); put(C.m[m], `m_${m}`, x, z, { h: 0.5 * MH(m), fade: sm(t / 5), lift: t > 0 && t < 10 ? Math.sin(Math.PI * t / 10) * 0.04 : 0 }); });
+      const cj = landing(f, S.award[0] + 165, 0.3, 8);
+      put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_cheer', 0.02, 1.62, { h: 0.5, fade: sm((u - 153) / 6), lift: cj ? cj.lift : 0 });
+      confetti(f, S.award[0] + 150);
+    }
+  },
+  // 05 PEOPLE: the whole lab lines up, the cat jumps in at the last moment, the flash: the real team photo
+  photo(f) {
+    const u = f - S.photo[0];
+    if (u < 71) {
+      const [yx, yz] = slot('Y', 0, 0.75, 0.2, 0.28); put(C.y, 'y_toast', yx, yz, { h: 0.58 });
+      for (const m of MEMBERS) { const [x, z] = slot(m, 0, 0.75, 0.2, 0.28); put(C.m[m], `m_${m}`, x, z, { h: 0.54 * MH(m) }); }
+      const cj = landing(f, S.photo[0] + 58, 0.5, 10);
+      if (cj) put(C.cat, 'cat_jump', 0.05, 1.4, { h: 0.6, lift: cj.lift + 0.1, sx: cj.sx, sy: cj.sy });
+    }
+    T.grade.uniforms.uFlash.value = u >= 66 && u < 84 ? Math.exp(-(u - 66) / 5) : 0;
+    if (u >= 71) { printAt(1); T.key.intensity = 1.5; }
+  },
+  // the print turns over: its back is Paper #137, hanging exactly where ProfMig hung; the 2013 desk waits, empty
+  seat(f) {
+    const u = f - S.seat[0];
+    const t1 = ein(clamp((u - 4) / 16)), t2 = eout5(clamp((u - 20) / 40));
+    if (u < 20) printAt(1, t1 * (Math.PI / 2 + 0.04));
+    else {
+      const H = L.HERO;
+      st.p137.visible = true;
+      st.p137.position.set(lerp(0, H.p[0], t2), lerp(0.62, H.p[1], t2), lerp(0, H.p[2], t2));
+      st.p137.rotation.set(lerp(-0.02, H.r[0], t2), lerp(-Math.PI / 2, H.r[1], t2), lerp(0.07, H.r[2], t2), 'YXZ');
+      st.p137.scale.setScalar(lerp(1.1 * 0.8, H.s, t2));
+      st.cursor.visible = u > 60 && Math.floor(u / 15) % 2 === 0;
+    }
+    T.key.position.set(2.6, 2.6, 1.6); T.key.lookAt(0, 0.5, 0); T.key.intensity = 1.6; T.rim.intensity = 3.2;
+    const kd = sm((u - 40) / 20);
+    T.prac.position.set(0.95, 0.12, 0.42); T.prac.intensity = 1.4 * kd;
+    if (kd > 0.01) put(C.desk, 'desk_empty', 0.78, 0.32, { fade: kd });
+    if (u > 72) { const cj = landing(f, S.seat[0] + 90, 0.4, 10); put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_sit', 0.68, 0.36, { y: FLOOR + 0.3, lift: cj ? cj.lift : 0, contact: false, h: 0.95 }); }
+    const ki = sm((u - 120) / 12);
+    if (ki > 0.01) put(C.y, 'y_invite', 0.3, 0.78, { fade: ki });
+  },
+  end(f) {
+    const u = f - S.end[0];
+    const k = sm((u - 10) / 40);
+    put(C.desk, 'desk_empty', 0.78, 0.32, { fade: 1 - k });
+    put(C.cat, 'cat_sit', 0.68, 0.36, { y: FLOOR + 0.3, contact: false, h: 0.95, fade: 1 - k });
+    put(C.y, 'y_invite', 0.3, 0.78, { fade: 1 - k });
+    st.p137.visible = k < 0.99; const H = L.HERO;
+    st.p137.position.set(H.p[0], H.p[1] - k * 0.6, H.p[2] - k * 1.5); st.p137.rotation.set(H.r[0], H.r[1], H.r[2], 'YXZ'); st.p137.scale.setScalar(H.s);
+    const C3 = [[-0.27, 1.62, 0.6], [0, 1.92, 0.45], [0.27, 1.62, 0.6]];
+    const kr = eio5(clamp((u - 20) / 70));
+    const bat = u - 82, wob = bat < 0 ? 0 : Math.exp(-bat / 9) * Math.sin(bat * 0.55) * 0.22;
+    T.rings.forEach((r, j) => { r.visible = kr > 0.01; r.scale.setScalar(1); r.material.opacity = clamp(kr * 1.4); r.position.set(C3[j][0], C3[j][1] + (1 - kr) * 1.6, C3[j][2]); r.rotation.set(0.12 * (j - 1) + (1 - kr) * 1.2, 0.25 * (j - 1), (j === 2 ? wob : 0)); r.material.emissiveIntensity = 0.18 + (j === 2 ? Math.abs(wob) * 1.2 : 0); });
+    if (u > 70 && u < 100) { const t = (u - 70) / 30, y = -0.15 + Math.sin(Math.PI * t) * 1.55; put(C.cat, 'cat_jump', 0.5, 0.95, { y, contact: false, h: 0.8, roll: -0.15 }); }
+    T.key.position.set(0, 3.2, 3.4); T.key.lookAt(0, 1, 0.5);
+  },
+};
+// the team print: the whole photo inside the frame, a slight tilt like a real print
+function printAt(sc, turn = 0) {
+  st.print.visible = true; st.print.position.set(0, 0.62, 0); st.print.rotation.set(-0.02, -0.04 + turn, 0.07, 'YXZ'); st.print.scale.setScalar(1.1 * sc);
+}
+const SUMMIT_H = 0.32;
+function summitHop(f) {
+  const u = f - (S.venues[0] - 12), hop = u < 0 ? 0 : u < 14 ? Math.sin(Math.PI * u / 14) * 0.14 : 0;
+  const sq = u >= 14 && u < 24 ? Math.exp(-(u - 14) / 3) : 0;
+  put(C.m.xiang, 'm_xiang', L.YX(2025), L.YZ(2025) - 0.02, { y: SUMMIT - (u > 16 ? (u - 16) * 0.03 : 0), lift: hop, h: SUMMIT_H, contact: false, sx: 1 + 0.1 * sq, sy: 1 - 0.12 * sq, fade: 1 - sm((f - S.venues[0] - 10) / 8) });
+}
+
+function confetti(f, f0) {
+  const u = f - f0; if (u < 0) return;
+  st.confetti.visible = true;
+  const d = st.dummy;
+  for (let i = 0; i < 220; i++) {
+    const t = u - hsh(i, 9) * 18; const x0 = (hsh(i, 1) - 0.5) * 3.4, z0 = 0.5 + hsh(i, 2) * 1.6;
+    const y = 2.3 - Math.max(0, t) * (0.018 + 0.01 * hsh(i, 3));
+    d.position.set(x0 + 0.05 * Math.sin(t * 0.12 + i), Math.max(FLOOR + 0.003, y), z0 + 0.04 * Math.cos(t * 0.1 + i));
+    d.rotation.set(t * 0.21 * (hsh(i, 4) + 0.3), t * 0.17 + i, t * 0.13 * hsh(i, 5));
+    d.scale.setScalar(t < 0 ? 0.0001 : 1); d.updateMatrix(); st.confetti.setMatrixAt(i, d.matrix);
+  }
+  st.confetti.instanceMatrix.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// type: one headline style (72/700, baseline 232), one caption style (40/500 at 1240), labels >= 24 px,
+// every reveal on a 15-frame beat from its shot's start; the header last, over its own band
+// ---------------------------------------------------------------------------------------------------------
+const PR = (ctx, x, y, z) => ctx.project(new T.THREE.Vector3(x, y, z));
+// a point on a paper's printed face, from page coordinates (u across, v down, 0..1), in screen space
+function onPage(ctx, k, u, v) {
+  const g = T.papers[k].g; g.updateMatrixWorld(true);
+  const p = st.v3.set((u - 0.5) * ASP, 0.5 - v, 0.03).applyMatrix4(g.matrixWorld);
+  return ctx.project(p.clone());
+}
+const HEAD_Y = 232, CAP_Y = 1240;
+function headline(g, s, k, grad = TY.GRAD) { TY.txt(g, s, TY.M, HEAD_Y, 72, 700, null, { grad, k }); }
+function caption(g, s, k, y = CAP_Y, size = 40, color = TY.SOFT, weight = 500) {
+  if (k <= 0.01) return;
+  const w = TY.measure(g, s, size, weight);
+  TY.halo(g, 0, y - size - 50, TY.M + w + 120, y + 40, 0.75 * k);
+  TY.txt(g, s, TY.M, y, size, weight, color, { k });
+}
+function plate(g, q, n, name, k) {
+  if (k <= 0.01 || !q) return;
+  const w = 116, h = 92, x = q.x - w / 2, y = q.y;
+  g.save(); g.globalAlpha = clamp(k * 1.4);
+  g.fillStyle = 'rgba(11,11,14,0.82)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill();
+  g.strokeStyle = 'rgba(245,245,247,0.18)'; g.lineWidth = 1.5; g.stroke();
+  g.restore();
+  TY.txt(g, String(n), q.x, y + 50, 40, 700, TY.INK, { align: 'center', k, mask: false });
+  TY.txt(g, name.replace('USENIX ', ''), q.x, y + 80, name.length > 7 ? 21 : 24, 600, TY.SOFT, { align: 'center', k, mask: false });
+}
+// an annotation that lives on a printed page: a gold underline under the words, then a leader that runs along the
+// white gap under that line to the page edge (never through text), and out to a label in the margin
+function pageNote(ctx, g, obj, asp, u0, u1, v, edgeU, label, k, o = {}) {
+  if (k <= 0.01) return;
+  const on = (u, vv) => { obj.updateMatrixWorld(true); return ctx.project(st.v3.set((u - 0.5) * asp, 0.5 - vv, 0.03).applyMatrix4(obj.matrixWorld).clone()); };
+  const a = on(u0, v), b = on(u1, v), e = on(edgeU, v);
+  const ku = clamp(k * 2);
+  g.save(); g.globalAlpha = ku; g.strokeStyle = 'rgba(255,210,122,0.95)'; g.lineWidth = 4; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(a.x + (b.x - a.x) * eout(ku), a.y + (b.y - a.y) * eout(ku)); g.stroke(); g.restore();
+  const start = o.fromLeft ? a : b;
+  const to = o.to ? o.to(e) : { x: Math.max(e.x + 40, 790), y: e.y };
+  TY.leader(g, start, to, clamp((k - 0.25) / 0.75), label, { size: 34, via: [e], noDot: true, align: o.align, plate: o.plate });
+}
+function typeLayer(ctx, g, f) {
+  const { txt, scrim, header, leader, odometer, measure, halo, M, GRAD, MUTE, SOFT, INK } = TY;
+
+  // 01 2013: the year, the line, and two precise notes on the real page
+  if (f < S.grow[0] + 40) {
+    const k1 = win(f, 120, 210, 15, 14), k2 = win(f, 135, 210, 15, 14);
+    halo(g, 0, 1010, 760, 1300, 0.75 * k1);
+    txt(g, '2013', M - 6, 1168, 168, 200, null, { grad: ['#ffffff', '#9c9ca6'], track: -0.035, k: k1 });
+    txt(g, 'It started with one paper.', M, CAP_Y, 40, 500, SOFT, { k: k2 });
+    if (f > 130) {
+      const G = T.papers[D.first].g;
+      pageNote(ctx, g, G, ASP, 0.207, 0.315, 0.1225, 1.0, ['ProfMig', 'CGO 2013'], win(f, 135, 210, 15, 14));
+      pageNote(ctx, g, G, ASP, 0.484, 0.566, 0.1935, 1.0, ['Yufei Ding', 'then a PhD student'], win(f, 150, 210, 15, 14), { to: (e) => ({ x: Math.max(e.x + 40, 790), y: e.y + 110 }) });
+    }
+  }
+  // 02 growth: count and year come from the papers that have landed; digits roll as the next one lands
+  if (f >= S.grow[0] + 20 && f < S.gallery[0] + 30) {
+    const A = D.pubs.map((p) => appearAt(p.k) + LAND).sort((a, b) => a - b);
+    let n = 0; while (n < A.length && A[n] <= f) n++;
+    const roll = n < A.length ? sm(clamp((f - (A[n] - 5)) / 5)) : 0;
+    let Y = 2013, Yn = 2013;
+    for (const p of D.pubs) if (p.yr) { const a = appearAt(p.k) + LAND; if (a <= f && p.yr > Y) Y = p.yr; if (a <= f + 5 && p.yr > Yn) Yn = p.yr; }
+    const yroll = Yn > Y ? sm(clamp((f + 5 - Math.min(...D.pubs.filter((p) => p.yr === Yn).map((p) => appearAt(p.k) + LAND))) / 5)) : 0;
+    const kc = win(f, S.grow[0] + 30, S.gallery[0] + 15, 15, 12);
+    halo(g, 0, 120, 820, 430, 0.8 * kc);
+    odometer(g, n + roll, M - 8, 300, 200, 700, { k: kc, grad: GRAD });
+    const nw = String(Math.max(1, n)).length * measure(g, '0', 200, 700) * 0.94;
+    txt(g, n === 1 ? 'publication' : 'publications', M - 8 + nw + 24, 300, 56, 500, SOFT, { k: kc, mask: false, noblur: true });
+    odometer(g, Y + yroll, M, 372, 44, 500, { k: kc, color: SOFT, track: 0 });
+    caption(g, 'Then a few more.', win(f, 240, 330, 15, 10));
+    caption(g, 'Then a team.', win(f, 345, S.gallery[0] - 4, 15, 10));
+  }
+  // 136 (v7 frame 2)
+  if (f >= S.gallery[0] && f < S.years[0] + 30) {
+    const k = win(f, S.gallery[0] + 15, S.years[0] + 25, 15, 14);
+    halo(g, 0, 120, 900, 430, 0.8 * k);
+    txt(g, '136', M - 8, 300, 200, 700, null, { grad: GRAD, track: -0.05, k, mask: false, noblur: true });
+    txt(g, 'publications.', M - 8 + measure(g, '136', 200, 700, false, -0.05) + 24, 300, 56, 500, SOFT, { k, mask: false, noblur: true });
+    txt(g, '2013 – 2026', M, 372, 44, 500, SOFT, { k: k * sm((f - S.gallery[0] - 30) / 12) });
+    const nq = PR(ctx, L.gallery(D, D.order[D.order.length - 1]).p[0], FLOOR + 0.05, 2.25);
+    leader(g, nq, { x: Math.min(nq.x + 60, 1080 - M - 90), y: nq.y + 80 }, k * sm((f - S.gallery[0] - 45) / 12), ['NOW'], { size: 28, tail: 20 });
+  }
+  // year by year: one page per paper, so a column is exactly as tall as its count
+  if (f >= S.years[0] + 60 && f < S.venues[0] + 24) {
+    const k = win(f, S.years[0] + 90, S.venues[0] + 20, 15, 14);
+    halo(g, 0, 140, 760, 300, 0.75 * k);
+    headline(g, 'Year by year.', k);
+    const ka = k * sm((f - S.years[0] - 120) / 12);
+    D.years.forEach((y, i) => {
+      const kk = ka * sm((f - S.years[0] - 120 - i * 1.2) / 10); if (kk < 0.01) return;
+      const q = PR(ctx, L.YX(y), FLOOR - 0.03, L.YZ(y));
+      txt(g, `’${String(y % 100).padStart(2, '0')}`, q.x, q.y + 42, 28, 600, SOFT, { align: 'center', k: kk, mask: false });
+      const n = D.ycount[y]; if (!n) return;
+      const top = L.YTOP(n) + (y === 2025 ? SUMMIT_H * POSE_H.m_xiang * 1.0 + 0.05 : 0.03);
+      const t = PR(ctx, L.YX(y), top, L.YZ(y));
+      txt(g, String(n), t.x, t.y - 8, 30, 700, INK, { align: 'center', k: kk, mask: false });
+    });
+    const kz = k * sm((f - S.years[0] - 120) / 12);
+    const zq = PR(ctx, L.YX(2016) - 0.03, FLOOR + 0.07, L.YZ(2016));
+    leader(g, zq, { x: zq.x - 60, y: zq.y + 170 }, kz, ['0 papers', '1 cat nap'], { size: 34, align: 'right', tail: -24 });
+    const uq = PR(ctx, L.YX(2027), L.YTOP(1) + 0.02, L.YZ(2027));
+    leader(g, uq, { x: uq.x - 40, y: uq.y + 190 }, k * sm((f - S.years[0] - 135) / 12), ['+12', 'preprints & patents'], { size: 34, align: 'right', tail: -24 });
+  }
+  // by venue: halos first, then plates; then the tie
+  if (f >= S.venues[0] + 30 && f < S.dirs[0] + 24) {
+    const k = win(f, S.venues[0] + 60, S.dirs[0] + 20, 15, 14);
+    const tie = sm((f - S.venues[0] - 112) / 12);
+    halo(g, 0, 140, 820, 300, 0.75 * k);
+    const kc1 = k * sm((f - S.venues[0] - 135) / 12);
+    halo(g, 0, CAP_Y - 90, 900, CAP_Y + 40, 0.75 * kc1);
+    headline(g, 'Top venues.', k * (1 - tie));
+    headline(g, 'ASPLOS = ISCA', k * tie);
+    D.topv.forEach((v, c) => {
+      const kk = k * (c < 2 ? 1 : 1 - tie) * sm((f - S.venues[0] - 66) / 10); if (kk < 0.01) return;
+      const q = PR(ctx, L.VX(c), FLOOR, L.VZ(c) + 0.36);
+      plate(g, { x: clamp(q.x, M + 58, 1080 - M - 58), y: q.y + 10 + (tie < 0.5 && L.VSLOT[c] % 2 ? 104 : 0) }, D.vcount[v], v, kk);
+    });
+    txt(g, 'A tie. She refuses to pick.', M, CAP_Y, 40, 500, SOFT, { k: kc1 });
+  }
+  // 03 three directions
+  if (f >= S.dirs[0] + 30 && f < S.award[0]) {
+    const k = win(f, S.dirs[0] + 45, VISIT[0][0] + 10, 15, 10);
+    halo(g, 0, 140, 760, 300, 0.75 * k);
+    headline(g, 'Three directions.', k);
+    const COLS = ['#5aa2ff', '#7fe08a', '#ff7474'];
+    VISIT.forEach(([a, b], r) => {
+      const kv = win(f, a + 10, b + (r === 2 ? -6 : 2), 12, 8); if (kv < 0.01) return;
+      const R = D.rings[r];
+      halo(g, 0, 140, 820, 320, 0.8 * kv);
+      txt(g, R.name, M, HEAD_Y, 56, 700, COLS[r], { k: kv });
+      txt(g, `${R.n} publications`, M, HEAD_Y + 52, 34, 500, SOFT, { k: kv });
+      D.reps[r].forEach((kk, j) => {
+        const p = D.pubs[kk], kj = win(f, a + 18 + j * 5, b + (r === 2 ? -6 : 2), 10, 8); if (kj < 0.01) return;
+        const rs = repState(kk, f, L.orbit(D, kk, f));
+        const q = PR(ctx, rs.p[0], rs.p[1] - rs.s * 0.5, rs.p[2]);
+        const name = p.short.length > 22 ? p.short.split(':')[0].slice(0, 22) : p.short;
+        leader(g, { x: q.x, y: q.y + 4 }, { x: q.x, y: q.y + 44 }, kj, null, { noDot: true });
+        txt(g, name, q.x, q.y + 80, 30, 700, INK, { align: 'center', k: kj });
+        txt(g, p.tag.replace("'", ' 20'), q.x, q.y + 114, 28, 500, SOFT, { align: 'center', k: kj });
+      });
+    });
+  }
+  // 04 recognition
+  if (f >= S.award[0] && f < S.photo[0] + 10) {
+    const u = f - S.award[0];
+    const ka = win(u, 30, CLOSE[1] - S.award[0] + 10, 15, 10);
+    halo(g, 0, 140, 900, 320, 0.8 * ka);
+    headline(g, 'Best Paper Award', ka, ['#ffe6a8', '#c9962e']);
+    txt(g, 'ISCA 2026  ·  Patterns behind Chaos', M, HEAD_Y + 52, 34, 500, SOFT, { k: ka * sm((u - 45) / 12) });
+    // the lead author, underlined on the real page
+    const kz = win(f, CLOSE[0] - 4, CLOSE[1] + 8, 12, 10);
+    if (kz > 0.01) pageNote(ctx, g, T.papers[D.awards[0]].g, ASP, 0.116, 0.21, 0.1705, 0.0, ['Zhongkai Yu', 'lead author, PhD student'], kz,
+      { fromLeft: true, align: 'left', plate: true, to: (e) => ({ x: Math.max(M + 4, e.x - 10), y: e.y + 300 }) });
+    // the row: five slots, one honest label each
+    const kr = win(u, 105, 150, 12, 10);
+    halo(g, 0, 140, 760, 300, 0.75 * kr);
+    headline(g, 'Six honours.', kr);
+    const LBL = { 4: ['Best Paper', 'ISCA 2026'], 63: ['Best Paper', 'Nominee', 'ISCA 2022'], 66: ['Best Paper', 'Nominee', 'DAC 2022'],
+      89: ['Distinguished', 'Paper', 'OOPSLA 2020'], 42: ['Distinguished', 'Artifact ×2', 'ASPLOS 2024'] };
+    Object.entries(LBL).forEach(([k, l], i) => {
+      const s = L.awardsRow(D, +k), q = PR(ctx, s.p[0], FLOOR, s.p[2] + 0.2), kk = kr * sm((u - 105 - i * 3) / 10); if (kk < 0.01) return;
+      l.forEach((line, j) => txt(g, line, q.x, q.y + 34 + j * 30, j === l.length - 1 ? 24 : 26, j === l.length - 1 ? 500 : 700, j === l.length - 1 ? SOFT : (+k === 4 ? '#ffd27a' : INK), { align: 'center', k: kk, mask: false }));
+    });
+    const kt = win(u, 150, 186, 12, 8);
+    halo(g, 0, 140, 820, 340, 0.75 * kt);
+    headline(g, 'Every acceptance:', kt);
+    txt(g, 'milk tea.', M, HEAD_Y + 80, 72, 700, null, { grad: ['#f3d9b6', '#c49a6c'], k: kt * sm((u - 156) / 10) });
+  }
+  // 05 people
+  if (f >= S.photo[0] && f < S.seat[0] + 10) {
+    const u = f - S.photo[0];
+    caption(g, 'Say “hot pot”!', win(u, 15, 64, 12, 4), CAP_Y, 56, INK, 700);
+    const kt = win(u, 90, 130, 12, 8);
+    if (kt > 0.01) pageNote(ctx, g, st.print, st.printAsp, 0.555, 0.665, 0.052, 0.665, ['The Fire Spot', 'hot pot, of course'], kt,
+      { to: (e) => ({ x: Math.min(1080 - M - 260, e.x + 40), y: e.y - 70 }) });
+    caption(g, 'The people behind the papers.', kt, 1180, 52, INK, 700);
+    caption(g, 'Lab life: lots of hot pot.', kt * sm((u - 96) / 10));
+  }
+  // 06 the next one: #137 in the slot of 2013, the line in the slot of the first line
+  if (f >= S.seat[0] + 30 && f < S.end[0] + 30) {
+    const u = f - S.seat[0], k = win(u, 45, S.end[0] - S.seat[0] + 25, 15, 14);
+    halo(g, 0, 1010, 820, 1300, 0.75 * k);
+    txt(g, '#137', M - 6, 1168, 168, 200, null, { grad: ['#ffffff', '#9c9ca6'], track: -0.035, k });
+    const kc = win(u, 90, 135, 10, 8);
+    const cq = PR(ctx, 0.68, FLOOR + 0.62, 0.36);
+    leader(g, cq, { x: Math.min(cq.x + 50, 1080 - M - 160), y: cq.y - 80 }, kc, ['(not you)'], { size: 34, tail: 24 });
+    txt(g, 'The next one is yours.', M, CAP_Y, 40, 500, SOFT, { k: win(u, 135, S.end[0] - S.seat[0] + 25, 15, 14) });
+  }
+  // end card (v7 frame 3)
+  if (f >= S.end[0] + 30) {
+    const u = f - S.end[0];
+    const ks = sm((u - 30) / 30);
+    scrim(g, 700, 1000, 0.95 * ks); if (ks > 0.01) { g.fillStyle = `rgba(11,11,14,${0.95 * ks})`; g.fillRect(0, 1000, 1080, 350); }
+    txt(g, 'Picasso Lab', 540, 900, 104, 700, null, { align: 'center', grad: GRAD, track: -0.035, k: sm((u - 45) / 15) });
+    txt(g, 'UC San Diego  ·  Prof. Yufei Ding', 540, 962, 32, 500, '#a1a1a6', { align: 'center', k: sm((u - 60) / 15) });
+    txt(g, 'We are recruiting PhD students.', 540, 1082, 40, 600, INK, { align: 'center', k: sm((u - 75) / 15) });
+    txt(g, '@PicassoLabUCSD', 540, 1176, 46, 700, null, { align: 'center', grad: ['#a8d0ff', '#5aa2ff'], k: sm((u - 90) / 15) });
+    txt(g, 'yufeiding.ucsd.edu', 540, 1228, 30, 500, SOFT, { align: 'center', k: sm((u - 90) / 15) });
+  }
+  // the running header, last, over its own band
+  const ch = CHAPTER(f);
+  header(g, ch, sm((f - 20) / 20), ch ? 1 : 0);
+}
+
+
+// =========================================================================================================
+// v10 "Compute Not Included", fast cut (65 s): the desk, the clippings and the cat; the bill; the engine room;
+// the lab in a rush; the stamps; the twist; the roll call; the chair. Voice: warm nerds - serif statements,
+// handwritten red-pen remarks with real ink, sticky notes, mono data.
+// =========================================================================================================
+const REMAP = {
+  c2: [[570, 580, 0, 14], [580, 630, 14, 80]],
+  c3: [[630, 690, 84, 180]],
+  d1: [[690, 780, 180, 420]],
+  d2: [[780, 840, 630, 720]],
+  d3: [[840, 900, 780, 900]],
+  e0: [[900, 930, 905, 985]],
+  e1: [[930, 990, 1050, 1110]],
+  e2: [[990, 1050, 1110, 1170]],
+  e3: [[1050, 1110, 990, 1050]],
+  e4: [[1110, 1170, 1030, 1050]],
+  g2: [[1650, 1710, 1446, 1506]],
+};
+function shotX(f) { for (const k in S10) if (f >= S10[k][0] && f < S10[k][1]) return k; return 'h3'; }
+function g8(f) { const r = REMAP[shotX(f)]; if (!r) return null; for (const [a, b, c, d] of r) if (f < b) return c + (f - a) * (d - c) / (b - a); return r[r.length - 1][3]; }
+const at0 = (f) => f - S10[shotX(f)][0];
+
+const P9 = {}, IMG = {};
+const QUOTES = [
+  { who: 'ELON MUSK', src: 'WEF Davos, Jan 22, 2026', lead: '…probably by 2030 or 2031, call it five years from now,', main: 'AI will be smarter than all of humanity collectively.', size: 112,
+    note: ['collectively', '= how many GPUs?'], word: 'last' },
+  { who: 'DARIO AMODEI', src: '“Machines of Loving Grace”, Oct 2024', lead: 'We could summarize this as a', main: '“country of geniuses in a datacenter”.', size: 124,
+    note: ['who pays their', 'power bill?'], word: 'last' },
+  { who: 'SAM ALTMAN', src: '“The Intelligence Age”, Sep 23, 2024', lead: 'It is possible that we will have superintelligence in', main: 'a few thousand days (!)…', size: 132,
+    note: ["we're on", 'day 4,700.'], word: 'last' },
+];
+// the desk (1 unit ~ 15 cm): three clippings land where the cat is napping; the milk tea, the pen and the printer
+// are already there. x, z, yaw of each clipping; the third lands right next to the cat.
+const CLP = [[-0.4, 0.18, 0.06], [0.34, 0.42, -0.05], [0.0, -0.2, 0.04]];
+const CLIP_W = 0.78;
+const CAT0 = [0.5, -0.56];
+const PRN = [0.98, FLOOR, -0.9];                       // the printer (a painted sprite) on the desk
+const CUP = [-0.9, -0.72], PEN = [0.78, 0.86, 0.35];
+const NOTE_AT = [[0.86, 1.04, 0.12], [0.88, 1.0, -0.1], [0.12, 1.04, -0.08]];     // page u, v, spin of each sticky note
+const DESK_X0 = -1.8;                                  // the desk's left edge (b3 goes over it)
+const BILL = [{ head: true, text: 'THE BILL' }, { label: 'GPU TIME', price: 'a lot' }, { label: 'MEMORY + CHIPS', price: 'a lot' },
+  { label: 'THE NEXT COMPUTER', price: 'TBD' }, { label: 'DATA MOVEMENT', price: 'even more' }, { label: 'TOTAL', price: '' }];
+const ROW_T = [252, 258, 264, 270, 276, 282];
+const DESK_TOP = FLOOR + 0.5;
+const BIG = [{ head: true, text: 'THE BILL' }, { gap: 89 }, { label: 'GPU TIME', price: 'a lot' }, { gap: 318 }, { label: 'MEMORY + CHIPS', price: 'a lot' },
+  { label: 'THE NEXT COMPUTER', price: 'TBD' }, { label: 'DATA MOVEMENT', price: 'even more' }, { label: 'TOTAL', price: '' }];
+const BR = { gpu: 2, mem: 4, next: 5, data: 6, total: 7 };
+const BIG_TOP = 2.65, BIG_Z = -1.6;
+const STAMP_T = { faster: 942, cheaper: 1002, progress: 1066, best: 1386 };
+const ROLL = (i, n) => [(i - (n - 1) / 2) * 0.36, 0.3];
+
+async function build10() {
+  const { THREE, scene } = T;
+  const K = P9.kit = await propKit(T);
+  P9.clips = QUOTES.map((q, i) => K.clipping(q, { seed: 3 + i * 7, w: CLIP_W, cw: 1200 }));
+  P9.notes = QUOTES.map((q, i) => K.note(q.note, { w: 0.34, seed: i, size: i === 0 ? 66 : 76 }));
+  P9.page = K.titlePage({ w: 1.3 });
+  P9.noteY = K.note(['first author', 'wanted.'], { w: 0.28, seed: 5, size: 80 });
+  P9.logo = await K.logo3D();
+  P9.arrows = []; for (let i = 0; i < 3; i++) { const d = await K.decal('pen_arrow_b', 0.3, { mode: 2 }); P9.arrows.push(d); }
+  {                                                    // the red pen that wrote the notes, lying on the desk
+    const im = await new Promise((ok) => { const m = new Image(); m.onload = () => ok(m); m.src = '/scene/cut/prop_pen.png'; });
+    const t = new THREE.Texture(im); t.needsUpdate = true; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    P9.pen = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7 * im.height / im.width), new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, roughness: 0.35, metalness: 0.1 }));
+    P9.pen.castShadow = true; P9.pen.visible = false; scene.add(P9.pen);
+  }
+  P9.bill = K.receipt(BILL, { scale: 1.3, len: 9, flip: true });
+  P9.big = K.receipt(BIG, { scale: 8, len: 3.4 });
+  const mk = async (name, w, o) => { const d = await K.decal(name, w, o); scene.add(d.mesh); return d; };
+  P9.circle = await mk('pen_circle_b', 0.19, { mode: 1, a0: 2.4 });
+  P9.stain = await mk('stain_ring', 0.42, {});
+  P9.circleY = await mk('pen_circle_b', 0.3, { mode: 1, a0: 2.4 });
+  P9.st = { faster: await mk('stamp_faster', 0.5), cheaper: await mk('stamp_cheaper', 0.55), progress: await mk('stamp_progress', 0.55), best: await mk('stamp_bestpaper', 0.6, { metal: true }) };
+  P9.strike = await mk('pen_strike', 0.3, { mode: 2 });
+  P9.circleB = await mk('pen_circle_b', 0.9, { mode: 1, a0: 2.4 });
+  P9.working = await mk('pen_working', 0.62, { mode: 2 });
+  P9.seals = []; for (let i = 0; i < 5; i++) P9.seals.push(await mk('seal_gold', 0.2, { metal: true }));
+  P9.under = await mk('pen_strike', 0.5, { mode: 2 });
+  P9.markets = K.clipping({ main: 'PHD STUDENT FINISHES FIRST PAPER. MARKETS UNMOVED.', size: 120 }, { seed: 31, w: 0.42 });
+  // the well of the engine room
+  const wn = K.creaseNormal.clone(); wn.needsUpdate = true; wn.repeat.set(7, 5);
+  P9.wall = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 9, 72, 1, true), new THREE.MeshStandardMaterial({ color: 0x2a241e, roughness: 0.96, normalMap: wn, normalScale: new THREE.Vector2(1.4, 1.4), side: THREE.BackSide }));
+  P9.wall.position.set(0, FLOOR + 4.5, 0); P9.wall.visible = false; scene.add(P9.wall);
+  P9.sky = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.06), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
+  P9.sky.rotation.x = Math.PI / 2; P9.sky.position.set(0, FLOOR + 8.9, 0); P9.sky.visible = false; scene.add(P9.sky);
+  P9.spot = new THREE.SpotLight(0xdfe8ff, 0, 10, 0.22, 0.6, 1.0); scene.add(P9.spot, P9.spot.target);
+  const load = (u) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = u; });
+  for (const n of ['pen_arrow_b', 'pen_squiggle_b', 'pen_strike_b', 'pen_bracket_b', 'pen_circle_b', 'stamp_faster', 'stamp_cheaper', 'stamp_progress', 'stamp_bestpaper']) IMG[n] = await load(`/scene/cut/ink_${n}.png`);
+  TY.setPaper(await load('/scene/tex/Paper001/Paper001_2K-JPG_Color.jpg'));
+  await Promise.all(['400 80px "Instrument Serif"', 'italic 400 80px "Instrument Serif"', '600 60px "Caveat"'].map((ff) => document.fonts.load(ff).catch(() => null)));
+}
+function hide10() {
+  if (!P9.clips) return;
+  P9.clips.forEach((c) => { c.g.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
+  P9.page.g.visible = false; P9.noteY.g.visible = false; P9.circleY.set(0, 0); P9.logo.g.visible = false;
+  P9.bill.mesh.visible = false; P9.big.mesh.visible = false; P9.big.mat.color.setScalar(1);
+  [P9.circle, P9.stain, P9.strike, P9.circleB, P9.working, P9.under, ...P9.seals, ...Object.values(P9.st)].forEach((d) => d.set(0, 0));
+  P9.wall.visible = false; P9.sky.visible = false; P9.spot.intensity = 0;
+  P9.kit.desk.visible = false; P9.kit.printer.visible = false; P9.kit.dustRing(null, 0, 0, 0, -1); P9.kit.setSlit(0, FLOOR, 0, 0.5, 0);
+  T.mirror.visible = true; T.coat.visible = true; T.cyc.visible = true;
+}
+function reset10() {
+  Object.values(C).forEach((ch) => (ch.hide ? ch.hide() : Object.values(ch).forEach((c) => c.hide())));
+  T.rings.forEach((r, j) => { r.visible = false; r.material.color.setHex(RING_COL[j]); r.material.emissive.setHex(RING_COL[j]); r.material.emissiveIntensity = 0.18; r.material.opacity = 1; });
+  st.p137.visible = false; st.print.visible = false; st.confetti.visible = false; st.cursor.visible = false;
+  st.strokes.forEach((s) => { s.m.visible = false; s.tip.visible = false; });
+  Object.values(st.boxes).forEach((m) => { m.visible = false; });
+  T.coat.material.opacity = 0.9; T.prac.intensity = 0; T.prac.distance = 3.5; st.gold.intensity = 0;
+  T.key.intensity = 1.3; T.key.position.set(1.2, 3.2, 3.2); T.key.lookAt(0, 0.2, 0);
+  T.rim.intensity = 2.2; T.kick.intensity = 0.8; T.kick.position.set(3.4, 0.8, -1.2); T.kick.lookAt(0, 0.4, 0);
+  T.grade.uniforms.uFlash.value = 0; T.grade.uniforms.uFlashCol.value = [1, 1, 1]; T.grade.uniforms.uFade.value = 0;
+  T.bloom.strength = 0.14; T.scene.fog.near = 7; T.scene.fog.far = 22;
+  for (const p of D.pubs) setPaper(T, p.k, null);
+}
+
+// ---- cameras --------------------------------------------------------------------------------------------
+const DESK_EL = 56 * Math.PI / 180;
+const OVER = (x, z, d, dx = 0) => { const t = [x, FLOOR, z - 0.08]; return [[t[0] + dx, t[1] + d * Math.sin(DESK_EL), t[2] + d * Math.cos(DESK_EL)], t]; };
+const OV = (i, d) => OVER(CLP[i][0], CLP[i][1], d);
+const CAMS10 = {
+  a1: camRig([[0, ...OVER(-0.16, 0.12, 3.1), 30], [59, ...OVER(-0.15, 0.12, 2.95), 30]]),
+  a2: camRig([[60, ...OVER(-0.15, 0.12, 2.95), 30], [66, ...OVER(0.28, 0.3, 3.1), 30, eio], [119, ...OVER(0.29, 0.3, 2.95), 30]]),
+  a3: camRig([[120, ...OVER(0.29, 0.3, 2.95), 30], [126, ...OVER(0.14, -0.26, 3.1), 30, eio], [179, ...OVER(0.14, -0.26, 2.98), 30]]),
+  a4: camRig([[180, ...OVER(0.14, -0.26, 2.98), 30], [204, ...OVER(0.06, -0.3, 4.3, 0.06), 32, eio5], [239, ...OVER(0.06, -0.3, 4.45, 0.08), 32]]),
+  b1: camRig([[240, [PRN[0] - 0.2, FLOOR + 0.95, PRN[2] + 2.5], [PRN[0] - 0.42, FLOOR + 0.42, PRN[2] + 0.1], 32], [329, [PRN[0] - 0.3, FLOOR + 0.85, PRN[2] + 2.25], [PRN[0] - 0.45, FLOOR + 0.42, PRN[2] + 0.1], 32]]),
+  b2: (f) => camB2(f),
+  b3: camRig([[368, [DESK_X0 + 0.9, FLOOR + 1.1, 1.55], [DESK_X0, FLOOR - 0.3, 0.85], 34], [386, [DESK_X0 + 0.1, FLOOR + 0.4, 1.6], [DESK_X0 - 0.15, FLOOR - 2.5, 0.85], 40, ein], [479, [DESK_X0 + 0.05, FLOOR - 1.2, 1.6], [DESK_X0 - 0.1, FLOOR - 5.0, 0.85], 40]]),
+  c1: camRig([[480, [0.32, 0.86, 2.95], [0, -0.12, 0], 30], [569, [0.22, 0.62, 2.4], [0, -0.16, 0], 30, eio]]),
+  f1: camRig([[1170, [0.0, 0.9, 3.4], [0, 0.9, 0], 34], [1199, [0.2, 0.95, 3.1], [0, 0.9, 0], 36]]),
+  f2: camRig([[1200, [0.0, 0.92, 5.2], [0, 0.82, 0], 32], [1250, [0.02, 0.98, 4.4], [0, 0.95, 0], 30, eio], [1289, [0.04, 1.2, 3.4], [0, 1.18, 0], 30, eio]]),
+  f3: camRig([[1290, [0.06, 1.3, 3.0], [0, 1.28, 0], 30], [1379, [0.04, 1.29, 2.8], [0, 1.27, 0], 30]]),
+  f4: camRig([[1380, [0.1, 0.62, 3.0], [0.0, 0.4, BIG_Z], 34], [1439, [0.06, 0.5, 2.7], [0.0, 0.3, BIG_Z], 34, eio]]),
+  f5: camRig([[1440, [0.05, 0.12, 3.25], [0, -0.06, 0.2], 32], [1499, [0.04, 0.1, 3.0], [0, -0.06, 0.2], 32]]),
+  g1: camRig([[1500, [ROLL(0, 14)[0] + 0.25, 0.22, 3.2], [ROLL(0, 14)[0] + 0.25, -0.12, 0.3], 34], [1600, [ROLL(13, 14)[0] - 0.4, 0.22, 3.2], [ROLL(13, 14)[0] - 0.4, -0.12, 0.3], 34, (x) => x],
+    [1612, [ROLL(13, 14)[0] - 0.3, 0.24, 3.25], [ROLL(13, 14)[0] - 0.3, -0.12, 0.3], 34], [1649, [0, 0.62, 6.6], [0, -0.05, 0.3], 34, eio5]]),
+  h1: camRig([[1710, ...OVER(0.14, 0.06, 3.9), 30], [1769, ...OVER(0.13, 0.04, 3.6), 30]]),
+  h2: (f) => camH2(f),
+  h3: camRig([[1830, [0.0, FLOOR + 0.94, 4.9], [0, FLOOR + 0.68, 0], 30], [1949, [0.0, FLOOR + 0.92, 4.6], [0, FLOOR + 0.68, 0], 30]]),
+};
+// b2 looks straight down at the circled row of the bill on the desk, then pans left after the end the cat runs off with
+const pullAt = (f) => 0.45 * ein(clamp((f - 360) / 8));
+let B2T = null;
+function camB2(f) {
+  if (!B2T) B2T = headPath(billLenAt(345) - P9.bill.rowS(3)).p;
+  const t = [B2T[0] + 0.05, FLOOR, B2T[2] - 0.02];
+  const el = 54 * Math.PI / 180, d = lerp(1.6, 1.42, eio(clamp((f - 330) / 30))), hz = d * Math.cos(el);
+  return { p: [t[0] - 0.88 * hz, t[1] + d * Math.sin(el), t[2] + 0.47 * hz], t, fov: 30 };
+}
+// h2 pushes in on the byline of Paper #137
+function camH2(f) {
+  const a = pageOnDesk() && P9.page.at(0.62, 0.3);
+  const t = eio5(clamp((f - 1770) / 26)), A = OVER(0.13, 0.04, 3.6), B = OVER(a.x, a.z + 0.04, 2.25);
+  return { p: mix3(A[0], B[0], t), t: mix3(A[1], B[1], t), fov: 30 };
+}
+function camX(f) { return (CAMS10[shotX(f)] || CAMS10.f3)(f); }
+function apX(f) { const k = shotX(f); return k[0] === 'a' ? 0.0007 : k[0] === 'b' ? 0.0011 : 0.0007; }
+
+function frameNew(ctx, f) {
+  const { THREE } = T;
+  NOWF = f; reset10();
+  const c = camX(f), sh = shotX(f), u = at0(f);
+  const jt = (sh <= 'a3' && sh[0] === 'a' && u < 7) ? Math.exp(-u / 2) : 0;          // each slam jolts the camera
+  look(T, [c.p[0] + 0.012 * jt * Math.sin(u * 2.7), c.p[1] + 0.016 * jt * Math.cos(u * 3.3), c.p[2]], c.t, c.fov, apX(f));
+  const a = camX(Math.max(0, f - 0.5)), b = camX(f + 0.5);
+  const dir = (q) => new THREE.Vector3(q.t[0] - q.p[0], q.t[1] - q.p[1], q.t[2] - q.p[2]).normalize();
+  const da = dir(a), db = dir(b);
+  const yaw = Math.atan2(db.x, db.z) - Math.atan2(da.x, da.z), pitch = Math.asin(db.y) - Math.asin(da.y);
+  const vf = c.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * 0.8);
+  const sx = -yaw / hf, sy = pitch / vf, mag = Math.hypot(sx, sy);
+  T.blur.uniforms.uK.value = shotX(f) === shotX(Math.max(0, f - 1)) ? clamp((mag - 0.006) * 0.7, 0, 0.026) : 0;
+  T.blur.uniforms.uDir.value = mag > 1e-6 ? [sx / mag, sy / mag] : [0, 0];
+  T.grade.uniforms.uFrame.value = f;
+  ctx.camera = T.camera;
+}
+function frame10(ctx, f) {
+  const sh = shotX(f), g = g8(f);
+  hide10();
+  if (g != null) { frame(ctx, g); NOWF = f; } else frameNew(ctx, f);
+  if (SHOTX[sh]) SHOTX[sh](f, ctx, g);
+}
+
+// ---- lighting of the painted characters: the scene's key and rim, in view space, for put() ----------------
+function lightFor(x, y, z) {
+  const cam = T.camera, inv = cam.matrixWorldInverse, P = new T.THREE.Vector3(x, y + 0.4, z);
+  const L = T.prac.intensity > 0.6 ? T.prac.position : T.key.position;
+  const k = L.clone().sub(P).normalize().transformDirection(inv), r = T.rim.position.clone().sub(P).normalize().transformDirection(inv);
+  return { keyV: k, rimV: r };
+}
+const _put = put;
+put = function (ch, pose, x, z, o = {}) {
+  if (!ch) return null;
+  const lv = lightFor(x, o.y ?? FLOOR, z);
+  return _put(ch, pose, x, z, { relight: 0.55, rim2: 0.35, keyV: lv.keyV, rimV: lv.rimV, contactK: 0.85, ...o });
+};
+
+// ---- helpers ----------------------------------------------------------------------------------------------
+// put a sprite at a real height (world units), whatever the pose's catalogue height
+const putH = (ch, pose, x, z, H, o = {}) => put(ch, pose, x, z, { ...o, h: H / (POSE_H[pose] ?? 1) });
+function deskOn(lampK = 1) {
+  const K = P9.kit; K.desk.visible = true; K.desk.position.set(0, FLOOR - 0.15 + 0.001, -0.3);
+  T.mirror.visible = false; T.coat.visible = false; T.cyc.visible = false;
+  T.prac.position.set(-1.5, FLOOR + 1.9, -1.4); T.prac.intensity = 5.5 * lampK; T.prac.distance = 6.5; T.prac.color.setHex(0xffc58a);
+  T.key.intensity = 0.42; T.key.position.set(-2.2, 3.0, 1.0); T.key.lookAt(0, FLOOR, 0);
+  T.rim.intensity = 0.8; T.kick.intensity = 0.3; T.kick.position.set(2.6, FLOOR + 0.8, -2.0); T.kick.lookAt(0, FLOOR, 0); T.bloom.strength = 0.16;
+  T.scene.fog.near = 5; T.scene.fog.far = 13;
+  // the things already on the desk
+  P9.pen.visible = true; P9.pen.position.set(PEN[0], FLOOR + 0.012, PEN[1]); P9.pen.rotation.set(-Math.PI / 2, 0, PEN[2]);
+  putH(C.tea, 'prop_tea', CUP[0], CUP[1], 0.8, { light: 1.0, rim: 0.5, rimCol: [1, 0.85, 0.6], relief: 0.15, face: 1 });
+  putH(C.prn, 'prop_printer', PRN[0], PRN[2], 0.62, { light: 0.95, rim: 0.5, rimCol: [1, 0.85, 0.6], relief: 0.12, face: 1 });
+}
+function clipOnDesk(i, at = CLP[i]) {
+  const c = P9.clips[i], [x, z, yaw] = at;
+  c.g.visible = true; c.g.position.set(x, FLOOR + 0.004 + i * 0.012, z); c.g.rotation.set(-Math.PI / 2, 0, yaw, 'XYZ');
+}
+// a page point (u across, v down) of clipping i in its own plane, for things stuck onto it
+const pageXY = (i, u, v) => [(u - 0.5) * P9.clips[i].w, (0.5 - v) * P9.clips[i].h];
+function onClip(ctx, i, u, v) { const c = P9.clips[i]; return ctx.project(c.at(u, v)); }
+// the sticky note on clipping i: slapped down at f0, written from f0 + 4; the arrow drawn from it to the line it answers
+function noteOn(i, u) {
+  const c = P9.clips[i], n = P9.notes[i], [nu, nv, spin] = NOTE_AT[i], [x, y] = pageXY(i, nu, nv);
+  if (u < 0) return;
+  c.g.add(n.g); n.g.visible = true;
+  const drop = u < 3 ? (1 - u / 3) : 0;
+  n.g.position.set(x, y, 0.014 + drop * 0.25); n.g.rotation.set(drop * 0.3, -drop * 0.2, spin);
+  n.set(clamp((u - 4) / 20));
+  const m = c.meta, L0 = m.lines[m.lines.length - 1], tw = [(L0[0] + L0[2] * 0.62) / m.W, (L0[1] + L0[3] * 0.98) / m.H], [tx, ty] = pageXY(i, tw[0], tw[1]);
+  const fx = x + (nu < 0.5 ? 0.07 : -0.08), fy = y + 0.15, dx = tx - fx, dy = ty - fy, len = Math.hypot(dx, dy), a = P9.arrows[i];
+  if (u >= 12 && len > 0.06) {
+    c.g.add(a.mesh); a.mesh.position.set((fx + tx) / 2, (fy + ty) / 2, 0.016); a.mesh.rotation.set(0, 0, Math.atan2(dy, dx) - 0.47);
+    a.mesh.scale.setScalar(len * 1.05 / (a.w * 0.9)); a.set(clamp((u - 12) / 7), 1);
+  }
+}
+// the printer sprite's paper slot, then the strip: up out of the slot, a loose curl towards the camera, down the
+// front of the printer, and along the desk
+const SLOT = () => [PRN[0] - 0.02, FLOOR + 0.5, PRN[2] - 0.03];
+function headPath(d) {
+  const [hx, hy, hz] = SLOT(), R = 0.15, D0 = 0.2;
+  if (d <= D0) return { p: [hx + 0.004 * Math.sin(d * 9), hy + d, hz], side: [1, 0, 0] };
+  const top = [hx, hy + D0, hz], A = Math.PI, a = Math.min(A, (d - D0) / R);
+  if (a < A) return { p: [top[0], top[1] + R * Math.sin(a), top[2] + R * (1 - Math.cos(a))], side: [1, 0, 0] };
+  const rest = d - D0 - A * R, e = [top[0], top[1], top[2] + 2 * R], drop = e[1] - (FLOOR + 0.004);
+  if (rest < drop) return { p: [e[0], e[1] - rest, e[2] + 0.04 * rest], side: [1, 0, 0] };
+  const r2 = rest - drop;
+  return { p: [e[0] - 0.88 * r2, FLOOR + 0.004 + 0.008 * Math.sin(r2 * 5), e[2] + 0.04 * drop + 0.47 * r2], side: [0.47, 0, 0.88] };
+}
+// how much paper is out at frame f: one row at each ROW_T (the bill prints from its free end), then it keeps going
+const billLenAt = (f) => {
+  const Ls = BILL.map((r, i) => P9.bill.rowS(i)).sort((x, y) => x - y).map((v) => v + 0.05);
+  if (f < ROW_T[0]) return 0.02;
+  for (let i = 0; i < ROW_T.length - 1; i++) if (f < ROW_T[i + 1]) return lerp(i === 0 ? 0.02 : Ls[i - 1], Ls[i], eio(clamp((f - ROW_T[i]) / 5)));
+  return Ls[Ls.length - 1] + Math.max(0, f - ROW_T[ROW_T.length - 1] - 5) * 0.028;
+};
+function onPath(path, s, lift = 0.004) {
+  const q = path(s), q2 = path(s + 0.01);
+  const t = new T.THREE.Vector3(q2.p[0] - q.p[0], q2.p[1] - q.p[1], q2.p[2] - q.p[2]).normalize();
+  const sd = new T.THREE.Vector3(...q.side), n = new T.THREE.Vector3().crossVectors(t, sd).normalize(), p = new T.THREE.Vector3(...q.p);
+  if (n.dot(T.camera.position.clone().sub(p)) < 0) { n.negate(); sd.negate(); }      // the face the camera sees
+  const m = new T.THREE.Matrix4().makeBasis(sd, t.clone().negate(), n);
+  return { p: p.addScaledVector(n, lift), m };
+}
+function circleOnBill(f, path, f0) {
+  const q = onPath(path, P9.bill.rowS(4) - 0.006, 0.003), m = P9.circle.mesh; T.scene.add(m);
+  m.position.copy(q.p); m.quaternion.setFromRotationMatrix(q.m); m.scale.setScalar(1.3);
+  P9.circle.set(f0 < 0 ? 1 : clamp((f - f0) / 9), 1);
+}
+const bigPath = (dy = 0) => (s) => ({ p: [0, BIG_TOP - s - dy, BIG_Z], side: [1, 0, 0] });
+function showBig(dy = 0) { P9.big.shape(bigPath(dy), 0, Math.min(P9.big.len, BIG_TOP - dy - FLOOR + 0.6)); }
+function bigAt(row, u, dy = 0, lift = 0.01) { const s = P9.big.rowS(row) - 0.012; return new T.THREE.Vector3((u - 0.5) * P9.big.RW, BIG_TOP - s - dy, BIG_Z + lift); }
+function stampOn(d, row, u, f0, f, rot = 0, sc = 1) { if (f < f0 + 6) return; d.mesh.position.copy(bigAt(row, u)); d.mesh.rotation.set(0, 0, rot); d.mesh.scale.setScalar(sc); d.set(1, 1); }
+function bigMarks(f) {
+  stampOn(P9.st.faster, BR.gpu, 0.8, STAMP_T.faster, f, -0.08, 0.8);
+  stampOn(P9.st.cheaper, BR.mem, 0.8, STAMP_T.cheaper, f, 0.06, 0.75);
+  if (f >= 1058) { const d = P9.strike, q = bigAt(BR.next, 0.865); d.mesh.position.copy(q); d.mesh.scale.set(0.5, 1.6, 1); d.mesh.rotation.set(0, 0, 0.04); d.set(clamp((f - 1058) / 6), 1); }
+  stampOn(P9.st.progress, BR.next, 0.83, STAMP_T.progress, f, -0.05, 0.68);
+  const c = P9.circleB; c.mesh.position.copy(bigAt(BR.data, 0.3, 0, 0.012)); c.mesh.scale.set(1, 1.15, 1); c.mesh.rotation.set(0, 0, 0); c.set(1, f < 1300 ? 1 : 0);
+  stampOn(P9.st.best, BR.data, 0.8, STAMP_T.best, f, 0.05, 0.72);
+}
+function stampSlam(ctx, g, name, f0, f, anchor) {
+  const u = f - f0; if (u < 0 || u > 7) return;
+  const im = IMG[name]; if (!im) return; const t = eout(clamp(u / 6)), q = ctx.project(anchor.clone());
+  const x = lerp(540, q.x, t), y = lerp(640, q.y, t), w = lerp(1300, 300, t), h = w * im.height / im.width;
+  g.save(); g.globalAlpha = 1 - sm((u - 5) / 2); g.translate(x, y); g.rotate(lerp(-0.25, -0.06, t)); g.drawImage(im, -w / 2, -h / 2, w, h); g.restore();
+}
+function sheetZ(k, u, v) {
+  const curl = 0.6 + hsh(k, 1) * 0.8, sag = hsh(k, 2) - 0.3, lift = hsh(k, 3), x = (u - 0.5) * 2, y = (0.5 - v) * 2;
+  return curl * 0.05 * x * x + sag * 0.025 * (1 - y * y) + lift * 0.07 * Math.max(0, x - 0.35) * Math.max(0, y - 0.35) + 0.003 * Math.sin(x * 3 + k) * Math.cos(y * 2 + k);
+}
+function stormPapers(f, f0) {
+  const tf = Math.min(f, f0 + 30), u = tf - f0, snap = eio5(clamp((f - f0 - 40) / 15)), bp = D.awards[0];
+  for (const p of D.pubs) {
+    if (p.k === bp && f >= f0 + 30) continue;
+    const k = p.k, a = hsh(k, 91) * TAU + u * (0.09 + 0.06 * hsh(k, 92)), R = 0.9 + hsh(k, 93) * 2.6, y = 0.9 + (hsh(k, 94) - 0.5) * 3.2;
+    const s = { p: [Math.cos(a) * R, y + Math.sin(u * 0.1 + k) * 0.1, Math.sin(a) * R - 0.6], r: [u * 0.18 * hsh(k, 95), -a + u * 0.1, u * 0.14 * hsh(k, 96)], s: 0.42, dim: 0.15 };
+    setPaper(T, k, snap > 0 ? L.mixL(s, L.endArc(D, k), snap) : s);
+  }
+  T.blur.uniforms.uK.value = f < f0 + 30 ? 0.016 : 0;
+}
+
+// ---- the ending -------------------------------------------------------------------------------------------
+const PAGE = [0.12, 0.08, -0.04];
+function pageOnDesk() { const pg = P9.page; pg.g.visible = true; pg.g.position.set(PAGE[0], FLOOR + 0.008, PAGE[1]); pg.g.rotation.set(-Math.PI / 2, 0, PAGE[2], 'XYZ'); return true; }
+function endDesk(f) {
+  deskOn(0.9); [[-1.12, -0.42, 0.24], [-1.16, 0.56, -0.14], [1.34, 0.5, 0.18]].forEach((at, j) => clipOnDesk(j, at));   // tidied to the sides
+  pageOnDesk(); const u = f - 1710;
+  if (u < 4) { P9.page.g.position.y += (1 - u / 4) * 0.16; P9.page.g.rotation.x += (1 - u / 4) * 0.08; }
+  P9.kit.dustRing([PAGE[0], FLOOR, PAGE[1]], P9.page.w, P9.page.h, FLOOR + 0.012, u - 3);
+  const cj = landing(f, 1716, 0.12, 6);
+  putH(C.cat, 'cat_sleep', 0.86, 0.36, 0.42, { y: FLOOR + 0.01, light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
+}
+function logoCard(f) {
+  const u = f - 1830, L3 = P9.logo, pr = L3.parts; L3.g.visible = true;
+  L3.g.position.set(0, FLOOR + 1.06, 0);
+  L3.g.rotation.set(0.04 * Math.sin(u / 50), lerp(0.42, 0.05, eout(clamp(u / 70))) + 0.025 * Math.sin(u / 37), 0);
+  const FROM = [[-2.8, 0.25, 1.2], [0.1, 2.2, 0.9], [2.8, 0.2, 1.2]];
+  pr.rings.forEach((r, i) => { const t = eout5(clamp((u - i * 3) / 18)), h = r.home; r.m.position.set(lerp(FROM[i][0], h[0], t), lerp(FROM[i][1], h[1], t), lerp(FROM[i][2], h[2], t)); r.m.rotation.set((1 - t) * 3.2, (1 - t) * (i - 1) * 2.4, 0); });
+  pr.links.forEach((l, i) => { const k = eout(clamp((u - 17 - i * 2) / 8)); l.m.visible = k > 0.01; l.m.scale.set(1, Math.max(0.001, k), 1); });
+  pr.discs.forEach((d, i) => { const k = eout(clamp((u - 15 - i * 2) / 12)); d.m.visible = k > 0.01; d.m.material.opacity = k; d.m.scale.setScalar(0.7 + 0.3 * k); });
+  { const k = eout(clamp((u - 24) / 12)), w = pr.word; w.m.visible = k > 0.01; w.m.material.opacity = k; w.m.position.y = w.home[1] - 0.1 * (1 - k); }
+  T.prac.position.set(lerp(-2.4, 2.4, clamp((u - 26) / 60)), FLOOR + 1.9, 1.4); T.prac.intensity = 2.2; T.prac.distance = 6; T.prac.color.setHex(0xfff0dc);
+  T.key.intensity = 1.1; T.rim.intensity = 2.6; T.bloom.strength = 0.22;
+  if (f >= 1936) T.grade.uniforms.uFade.value = sm((f - 1936) / 13);
+}
+
+// ---- the new shots -------------------------------------------------------------------------------------
+function quoteShot(f, i) {
+  const u = f - S10['a' + (i + 1)][0];
+  deskOn();
+  for (let j = 0; j <= i; j++) { clipOnDesk(j); if (j < i) noteOn(j, 99); }
+  const c = P9.clips[i], [x, z] = CLP[i];
+  // the slam: the sheet drops the last few centimetres in the first 4 frames, then lies flat
+  if (u < 4) { c.g.position.y += (1 - u / 4) * 0.14; c.g.rotation.x += (1 - u / 4) * 0.1; }
+  P9.kit.dustRing([x, FLOOR, z], c.w, c.h, FLOOR + 0.008, u - 3);
+  noteOn(i, u - 9);
+  catNap(f, i, u);
+}
+// the cat naps through the first two predictions; the third lands right next to it
+function catNap(f, i, u) {
+  const o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
+  if (i < 2 || u < 2) { putH(C.cat, 'cat_sleep', CAT0[0], CAT0[1], 0.42, o); return; }
+  const cj = landing(f, 120 + 10, 0.16, 8);
+  if (u < 30) putH(C.cat, 'cat_scared', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.56, { ...o, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
+  else putH(C.cat, 'cat_sit', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.7, o);
+}
+const SHOTX = {
+  a1(f) { quoteShot(f, 0); },
+  a2(f) { quoteShot(f, 1); },
+  a3(f) { quoteShot(f, 2); },
+  a4(f) {
+    deskOn(); for (let j = 0; j < 3; j++) { clipOnDesk(j); noteOn(j, 99); }
+    putH(C.cat, 'cat_sit', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.7, { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 });
+  },
+  // the printer on the desk starts by itself: the bill, row by row; the cat bats at the curl
+  b1(f) {
+    deskOn(); for (let j = 0; j < 3; j++) { clipOnDesk(j); noteOn(j, 99); }
+    const Lp = billLenAt(f), path = (s) => headPath(Lp - s); P9.bill.shape(path, 0, Lp);
+    const u = f - 240, cj = landing(f, 284, 0.1, 8), o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
+    if (u < 40) putH(C.cat, 'cat_sit', CAT0[0] + 0.04, CAT0[1] - 0.02, 0.7, o);
+    else putH(C.cat, 'cat_bat', PRN[0] - 0.46, PRN[2] + 0.4, 0.8, { ...o, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy });
+  },
+  // it will not stop; the red pen circles DATA MOVEMENT; the cat bites the end and runs off with it
+  b2(f) {
+    deskOn(); for (let j = 0; j < 3; j++) { clipOnDesk(j); noteOn(j, 99); }
+    const Lp = billLenAt(f), pull = pullAt(f), path = (s) => headPath(Lp - s + pull);
+    P9.bill.shape(path, 0, Lp); circleOnBill(f, path, 342);
+    const u = f - 330, run = ein(clamp((f - 364) / 24)), o = { light: 1.0, rim: 0.7, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.14 };
+    // the cat jumps in from the right, paws the bill, bites it and runs at the lens with it (its fur wipes the frame)
+    if (u >= 16) {
+      const q = path(P9.bill.rowS(1)).p, R = [0.47, 0.88], j = clamp((u - 16) / 6), cj = landing(f, 352, 0.2, 6), run = ein(clamp((u - 30) / 8));
+      const off = 0.14 + 0.6 * (1 - j) - 1.3 * run, cx = q[0] + R[0] * off, cz = q[2] + R[1] * off;
+      putH(C.cat, u < 30 ? 'cat_bat' : 'cat_tug', cx, cz, u < 30 ? 0.72 : 0.6, { ...o, light: 0.88, lift: cj ? cj.lift : 0, sx: cj?.sx, sy: cj?.sy, flip: false });
+    }
+  },
+  // over the edge into the dark; the words land on the beats
+  b3(f) {
+    const u = f - S10.b3[0];
+    if (u < 14) deskOn();
+    const fall = (s) => { const d = s - u * 0.12; return { p: [DESK_X0 - 0.04 + (d < 0 ? -d * 0.88 : 0.04 * Math.sin(s * 2)), d < 0 ? FLOOR + 0.004 : FLOOR - d, 0.85 + (d < 0 ? -d * 0.47 : 0.02 * Math.cos(s * 3))], side: d < 0 ? [0.47, 0, 0.88] : [Math.cos(s), 0, Math.sin(s)] }; };
+    P9.bill.shape(fall, 0, 6);
+    if (u >= 1 && u < 20) { const t = clamp((u - 1) / 16), y = FLOOR + 0.14 * Math.sin(Math.PI * Math.min(1, t * 1.8)) - 3.2 * Math.max(0, t - 0.5) ** 2;
+      putH(C.cat, 'cat_jump', lerp(DESK_X0 + 0.42, DESK_X0 - 0.3, t), lerp(1.0, 0.9, t), 0.42, { y, contact: false, roll: -0.5 * t, light: 0.9, rim: 1.0, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.12 }); }
+    T.grade.uniforms.uFade.value = 0.35 * sm((u - 10) / 10);
+    T.key.intensity = 0.5; T.prac.intensity = u < 14 ? T.prac.intensity : 0;
+  },
+  // the engine room: the bottom of a well, one brass lamp, the desk; the cat asleep on the bill
+  c1(f) {
+    const u = f - 480;
+    P9.wall.visible = true; P9.sky.visible = true; T.cyc.visible = false;
+    T.grade.uniforms.uFade.value = 1 - sm(u / 6);
+    T.key.intensity = 0.18; T.key.position.set(0.6, 4.5, 1.2); T.key.lookAt(0, FLOOR, 0); T.rim.intensity = 0.7; T.kick.intensity = 0.25;
+    T.prac.position.set(-0.27, FLOOR + 0.83, 0.16); T.prac.intensity = 1.8; T.prac.distance = 4.0; T.prac.color.setHex(0xffc98a);
+    const sp = P9.spot; sp.intensity = 14; sp.position.set(0.15, FLOOR + 7.5, 0.0); sp.target.position.set(0.15, FLOOR, -0.1);
+    put(C.desk, 'desk_empty', 0, 0, { light: 0.95, rim: 0.6, relief: 0, relight: 0 });
+    const top = FLOOR + 8.6, fall = clamp(u / 18), Ld = (top - DESK_TOP) * eout(fall);
+    P9.bill.shape((s) => { const d = Ld - s; return { p: [0.22 + 0.03 * Math.sin(s * 3), DESK_TOP + 0.03 + Math.max(0, d), -0.25], side: [1, 0, 0] }; }, Math.max(0, Ld - 9), Ld);
+    if (u < 16) { const t = clamp(u / 15); put(C.cat, 'cat_jump', 0.08, 0.22, { y: lerp(FLOOR + 3.2, DESK_TOP, ein(t)), h: 0.36, contact: false, roll: 0.2 * (1 - t), relief: 0 }); }
+    else put(C.cat, u < 26 ? 'cat_sleep' : 'cat_receipt', 0.08, 0.24, { y: DESK_TOP - 0.02, h: u < 26 ? 0.2 : 0.3, contact: false, light: 1.0, relief: 0.12 });
+  },
+  c2(f) { C.cat.hide(); },
+  c3(f) {
+    C.cat.hide();
+    const u = f - 630;
+    if (u >= 26) {
+      const c = P9.markets, t = (u - 26) / 34, cam = T.camera; c.g.visible = true;
+      const fwd = new T.THREE.Vector3(); cam.getWorldDirection(fwd);
+      const right = new T.THREE.Vector3().crossVectors(fwd, cam.up).normalize(), up = new T.THREE.Vector3().crossVectors(right, fwd).normalize();
+      c.g.position.copy(cam.position.clone().addScaledVector(fwd, 1.3).addScaledVector(right, lerp(0.42, 0.2, eout(t))).addScaledVector(up, -0.34));
+      c.g.quaternion.copy(cam.quaternion); c.g.rotateZ(0.08 - 0.05 * t); c.g.rotateY(0.18);
+    }
+  },
+  e0(f) { const u = f - 900; if (u < 20) put(C.cat, 'cat_tug', lerp(-2.0, -1.0, eout(u / 20)), 1.1, { h: 0.36 }); const hoist = 1 - eio5(clamp((u - 10) / 18)); if (u >= 6) showBig(hoist * 3.2); },
+  e1(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); if (f >= 942) { const lm = landing(f, 944, 0.25, 5); put(C.m.rishabh, 'm_rishabh', 0.42, 0.18, { y: L.RING_C[1][1] - 0.5, h: 0.48, contact: false, lift: lm ? lm.lift : 0, sx: lm?.sx, sy: lm?.sy, rimCol: RIMC.ring[1], rim: 1.5 }); } },
+  e2(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); },
+  e3(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); },
+  e4(f) {
+    showBig(); P9.big.mat.color.setScalar(0.62 + 0.38 * sm((f - 1110) / 20)); bigMarks(f);
+    const t = eio5(clamp((f - 1110) / 30)), c0 = camAt(1050);
+    look(T, mix3(c0.p, [0.0, 1.35, 6.3], t), mix3(c0.t, [0.0, 1.3, BIG_Z], t), lerp(c0.fov, 34, t), 0.0005);
+  },
+  f1(f) { stormPapers(f, 1170); T.rings.forEach((r, j) => { r.visible = true; r.position.set(...L.RING_C[j]); r.scale.setScalar(L.RING_R / 0.26); r.material.emissiveIntensity = 0.06; r.material.opacity = 0.5; }); T.key.intensity = 0.8; },
+  f2(f) {
+    stormPapers(f, 1170);
+    const u = f - 1200, bp = D.awards[0], t = eout5(clamp((u - 20) / 30));
+    setPaper(T, bp, { p: [0, lerp(-0.7, 0.55, t), lerp(0.4, 0, t)], r: [0, lerp(-1.25, 0, t), 0], s: 1.4, dim: 0 }, 0.04 + 0.05 * t);
+    st.gold.intensity = 1.8 * t; st.gold.position.set(1.3, 1.5, 1.3); st.gold.lookAt(0, 0.9, 0);
+    T.key.intensity = 0.7; T.rim.intensity = 2.4; T.bloom.strength = 0.2;
+    if (u >= 45) { const d = P9.under, gp = T.papers[bp].g; gp.add(d.mesh); const u0 = 0.462, u1 = 0.65, v = 0.1;
+      d.mesh.position.set(((u0 + u1) / 2 - 0.5) * ASP, 0.5 - v, sheetZ(bp, (u0 + u1) / 2, v) + 0.006); d.mesh.quaternion.identity();
+      d.mesh.scale.set((u1 - u0) * ASP * 1.05 / P9.under.w, 2.2, 1); d.mat.userData.u.uRecol.value.set(1.0, 0.8, 0.38, 1); d.set(eout(clamp((u - 45) / 10)), 1); }
+    if (u >= 22) put(C.y, 'y_award', -1.18, 0.7, { h: 0.95, fade: sm((u - 22) / 10), rimCol: RIMC.gold });
+  },
+  f3(f) {
+    const bp = D.awards[0];
+    for (const p of D.pubs) if (p.k !== bp) { const a = L.endArc(D, p.k); setPaper(T, p.k, { ...a, dim: Math.max(a.dim || 0, 0.55) }); }
+    setPaper(T, bp, { p: [0, 0.55, 0], r: [0, 0, 0], s: 1.4, dim: 0 }, 0.05);
+    st.gold.intensity = 1.5; st.gold.position.set(1.2, 1.6, 1.4); st.gold.lookAt(0, 1.0, 0); T.key.intensity = 0.9; T.rim.intensity = 2.0;
+    showBig(); bigMarks(f); P9.big.mat.color.setScalar(0.35);
+    if (f >= 1320) { const g = T.papers[bp].g, m = P9.circle.mesh, u0 = 0.69, u1 = 0.952, v = 0.071; g.add(m); m.quaternion.identity();
+      m.position.set(((u0 + u1) / 2 - 0.5) * ASP, 0.5 - v, sheetZ(bp, (u0 + u1) / 2, v) + 0.006); m.scale.set(((u1 - u0) * ASP * 1.16) / P9.circle.w, 1.3, 1); P9.circle.set(1, 1); }
+  },
+  f4(f) {
+    const u = f - 1380; showBig(); bigMarks(f);
+    put(C.y2, 'y_receipt', -0.52, 0.05, { h: 0.9, rimCol: RIMC.gold, light: 0.95 });
+    if (u >= 14) { const d = P9.working, q = bigAt(BR.total, 0.66, 0, 0.014); d.mesh.position.copy(q); d.mesh.rotation.set(0, 0, 0.04); d.mesh.scale.setScalar(1); d.set(clamp((u - 14) / 18), 1); }
+    P9.seals.forEach((d, i) => { const t0 = 30 + i * 5; if (u < t0 + 2) return; const q = bigAt(BR.total, 0.14 + i * 0.18, 0, 0.012); q.y -= 0.24; d.mesh.position.copy(q); d.mesh.rotation.set(0, 0, i * 0.7); d.set(1, 1); });
+    T.key.intensity = 1.2; T.key.position.set(1.0, 2.6, 2.4); T.key.lookAt(0, 0.4, BIG_Z);
+  },
+  f5(f) {
+    put(C.y, 'y_toast', -0.48, 0.25, { h: 0.82 }); put(C.m.zhongkai, 'zhongkai_offer', 0.42, 0.32, { h: 0.84 * MH('zhongkai') });
+    const cj = landing(f, 1452, 0.3, 8); put(C.cat, cj && cj.lift > 0.02 ? 'cat_jump' : 'cat_cheer', -0.02, 0.75, { h: 0.42, lift: cj ? cj.lift : 0 });
+    confetti(f, 1436); T.prac.intensity = 0.8; T.prac.position.set(0, 0.8, 1.0);
+  },
+  g1(f) {
+    const n = MEMBERS.length;
+    MEMBERS.forEach((m, i) => {
+      const [x, z] = ROLL(i, n), t0 = 1505 + Math.min(i, n - 2) * 7, s2 = eout(clamp((f - t0) / 6)), back = 1 - sm((f - 1612) / 24);
+      put(C.m[m], `m_${m}`, x, z + 0.16 * s2 * back, { h: 0.66 * MH(m), lift: f >= t0 && f < t0 + 6 ? Math.sin(Math.PI * (f - t0) / 6) * 0.03 : 0 });
+    });
+    if (f >= 1612) put(C.y, 'y_hold_cat', 0, 0.95, { h: 0.74, fade: sm((f - 1612) / 10) });
+  },
+  g2(f) { },
+  // back at the desk, at night: Paper #137 lands on the pile like the clippings did; the cat is asleep on it
+  h1(f) { endDesk(f); },
+  // the red pen circles the first author; a note says what it means
+  h2(f) {
+    endDesk(f); const u = f - 1770, pg = P9.page, q = pg.meta, d = P9.circleY;
+    const [x, y] = [((q.you[0] + q.you[2] / 2) / q.W - 0.5) * pg.w, (0.5 - (q.you[1] + q.you[3] / 2) / q.H) * pg.h];
+    pg.g.add(d.mesh); d.mesh.position.set(x, y, 0.012); d.mesh.rotation.set(0, 0, 0.05); d.mesh.scale.set((q.you[2] / q.W) * pg.w * 1.9 / d.w, 1.0, 1); d.set(clamp((u - 8) / 9), 1);
+    const n = P9.noteY; if (u >= 16) { const du = u - 16, drop = du < 3 ? 1 - du / 3 : 0; pg.g.add(n.g); n.g.visible = true;
+      const [nx, ny] = [(1060 / q.W - 0.5) * pg.w, (0.5 - 470 / q.H) * pg.h]; n.g.position.set(nx, ny, 0.014 + 0.25 * drop); n.g.rotation.set(0.3 * drop, 0, 0.07); n.set(clamp((du - 4) / 16)); }
+  },
+  // the end card: the film's three rings fly in and lock into the lab's logo
+  h3(f) { logoCard(f); },
+};
+
+// ---- type ----------------------------------------------------------------------------------------------
+const CAPX = 1180, MX = TY.M;
+function header10(g, f) {
+  if (shotX(f) === 'h3') return;
+  const gr = g.createLinearGradient(0, 0, 0, 170); gr.addColorStop(0, 'rgba(11,11,14,0.7)'); gr.addColorStop(1, 'rgba(11,11,14,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 1080, 170);
+  const CH = { b: ['01', 'the bill'], c: ['02', 'the engine room'], d: ['03', 'the lab, briefly'], e: ['04', 'three answers'], f: ['05', 'plot twist'], g: ['06', 'staff'], h: ['07', 'the next one'] }[shotX(f)[0]];
+  if (shotX(f)[0] !== 'a') TY.serif(g, 'Picasso Lab', MX, 98, 34, { italic: true, color: '#d9d6cf', mask: false, k: 1 });
+  if (CH) { TY.txt(g, CH[0], 1080 - MX - TY.measure(g, CH[1], 24, 500, true, 0.06) - 16, 96, 24, 700, '#f5f5f7', { mono: true, track: 0.04, noblur: true, mask: false, align: 'right' }); TY.txt(g, CH[1], 1080 - MX, 96, 24, 500, '#a1a1a6', { mono: true, track: 0.06, noblur: true, mask: false, align: 'right' }); }
+}
+function typeLayer10(ctx, g, f) {
+  const { txt, halo, leader, odometer, serif, hand, ink, sticky, M, INK, SOFT, GRAD, PEN, PENCIL } = TY;
+  const sh = shotX(f), u = at0(f), P = (x, y, z) => ctx.project(new T.THREE.Vector3(x, y, z));
+  const big = (s, y, size, o = {}) => { halo(g, 0, y - size - 50, 1080, y + 40, 0.6 * (o.k ?? 1)); serif(g, s, o.x ?? MX, y, size, o); };
+  if (sh <= 'a3' && sh[0] === 'a') txt(g, 'Quotes as published. No affiliation.', MX, 1290, 21, 500, 'rgba(236,230,216,0.6)', { mono: true, track: 0, noblur: true, mask: false });
+  if (sh === 'a4') {
+    big('The future, as predicted.*', 262, 92, { k: sm(u / 8), italic: false });
+    hand(g, '*compute not included', MX + 250, 352, 70, { k: sm((u - 16) / 12), rot: -0.04 });
+    ink(g, IMG.pen_squiggle_b, MX + 500, 380, 440, { k: sm((u - 24) / 10), rot: -0.04 });
+  }
+  if (sh === 'b1') { big('Imagining it: free.', 250, 84, { k: sm((u - 6) / 8), italic: true }); big('Running it: see receipt.', 340, 84, { k: sm((u - 40) / 8) }); }
+  if (sh === 'b2') {
+    const q = onPath((s) => headPath(billLenAt(f) - s + pullAt(f)), P9.bill.rowS(4)).p, pq = ctx.project(q.clone());
+    if (f < 364) { ink(g, IMG.pen_arrow_b, pq.x + 200, pq.y - 70, 150, { k: sm((u - 14) / 6), rot: 2.75 }); hand(g, 'this one.', pq.x + 250, pq.y - 120, 64, { k: sm((u - 16) / 8), rot: -0.06 }); }
+  }
+  if (sh === 'b3') {
+    halo(g, 0, 300, 1080, 900, 0.6 * sm((u - 16) / 8));
+    serif(g, 'Someone has to make it', MX, 330, 60, { k: sm((u - 18) / 6), italic: true, color: SOFT });
+    ['FAST.', 'CHEAP.', 'POSSIBLE.'].forEach((w, j) => serif(g, w, MX - 6, 500 + j * 160, 176, { k: sm((u - 32 - j * 16) / 4), grad: ['#ffffff', '#c9c3b8'] }));
+  }
+  if (sh === 'c1') {
+    big('The engine room.', 262, 96, { k: sm(u / 8) });
+    const cq = P(0.08, DESK_TOP + 0.1, 0.24);
+    hand(g, 'no predictions down here.', MX, CAPX - 70, 70, { k: sm((u - 44) / 14), color: PENCIL, rot: -0.02 });
+    hand(g, 'just the bill.', MX, CAPX + 4, 70, { k: sm((u - 58) / 10), color: PENCIL, rot: -0.02 });
+  }
+  if (sh === 'c2') {
+    const t = eio(clamp(u / 10)), bk = 1 - sm((u - 12) / 6);
+    if (bk > 0.01) { halo(g, 140, 560, 940, 820, 0.6 * bk); odometer(g, lerp(2026, 2013, t), 540, 760, 220, 700, { k: bk, align: 'center', grad: GRAD }); }
+    big('One PhD student.', CAPX, 84, { k: sm((u - 14) / 8) });
+    const lq = P(0.95, 0.2, 0.62); hand(g, 'compute budget: 1 lamp', Math.min(lq.x + 30, 1080 - MX - 470), lq.y - 170, 56, { k: sm((u - 26) / 12), color: PENCIL });
+  }
+  if (sh === 'c3') {
+    const pg = T.papers[D.first].g, q = P(pg.position.x, pg.position.y - 0.25 * pg.scale.x, pg.position.z);
+    if (pg.visible) hand(g, 'paper #1: ProfMig, CGO 2013', Math.max(MX, q.x - 420), q.y + 160, 56, { k: win(u, 6, 56, 8, 6), color: PENCIL });
+  }
+  if (sh === 'd1') {
+    const n = 136 * eio(clamp(u / 80)), k = sm(u / 6);
+    halo(g, 0, 130, 900, 420, 0.75 * k);
+    txt(g, 'PUBLICATIONS', M, 214, 28, 600, SOFT, { mono: true, track: 0.12, k });
+    odometer(g, Math.min(136, n), M - 6, 352, 140, 700, { k, grad: GRAD });
+    hand(g, '124 papers + 12 preprints & patents', M, 418, 48, { k: sm((u - 40) / 12), color: PENCIL });
+  }
+  if (sh === 'd2') {
+    const g8f = g8(f), ka = sm((g8f - 690) / 8);
+    D.years.forEach((y) => { const q = P(L.YX(y), FLOOR - 0.03, L.YZ(y)); txt(g, `’${String(y % 100).padStart(2, '0')}`, q.x, q.y + 42, 28, 600, SOFT, { align: 'center', k: ka, mask: false, mono: true }); });
+    const zq = P(L.YX(2016) - 0.03, FLOOR + 0.07, L.YZ(2016));
+    hand(g, '2016: 0 papers, 1 cat nap', clamp(zq.x - 60, MX, 1080 - MX - 520), zq.y + 150, 54, { k: sm((g8f - 660) / 10), color: PENCIL });
+    big('2025: 19 papers.', 262, 84, { k: sm((u - 30) / 8) }); hand(g, 'record (so far)', MX + 10, 340, 56, { k: sm((u - 36) / 10) });
+  }
+  if (sh === 'd3') {
+    const g8f = g8(f), k = sm((g8f - 790) / 10);
+    for (let c = 0; c < 2; c++) { const q = P(L.VX(c), FLOOR, L.VZ(c) + 0.36); plate(g, { x: clamp(q.x, M + 58, 1080 - M - 58), y: q.y + 10 }, D.vcount[D.topv[c]], D.topv[c], k); }
+    big('ASPLOS 15 = ISCA 15', 262, 84, { k });
+    hand(g, 'she refuses to pick.', MX, CAPX, 70, { k: sm((g8f - 830) / 12), color: PENCIL });
+  }
+  if (sh === 'e0') big('Three answers to the bill.', 262, 80, { k: sm(u / 6), italic: true });
+  const RING = { e1: 1, e2: 2, e3: 0 }, COLS = ['#7fb5ff', '#8fe39a', '#ff8a80'];
+  if (sh in RING) {
+    const r = RING[sh], R = D.rings[r], k = sm(u / 6);
+    halo(g, 0, 140, 900, 400, 0.75 * k);
+    serif(g, R.name, MX, 250, 70, { k, color: COLS[r] });
+    txt(g, `${R.n} publications  ·  ${R.sub}`, MX, 300, 26, 500, SOFT, { mono: true, track: 0, k });
+    if (sh === 'e1') { stampSlam(ctx, g, 'stamp_faster', STAMP_T.faster, f, bigAt(BR.gpu, 0.8)); const rq = P(0.42, L.RING_C[1][1] - 0.02, 0.18); hand(g, 'timed by Rishabh', Math.min(rq.x + 30, 1080 - MX - 380), rq.y + 160, 56, { k: sm((f - 950) / 10), color: PENCIL }); }
+    if (sh === 'e2') stampSlam(ctx, g, 'stamp_cheaper', STAMP_T.cheaper, f, bigAt(BR.mem, 0.8));
+    if (sh === 'e3') stampSlam(ctx, g, 'stamp_progress', STAMP_T.progress, f, bigAt(BR.next, 0.83));
+  }
+  if (sh === 'e4') {
+    const dq = P(...bigAt(BR.data, 0.3).toArray());
+    hand(g, '...and this one?', Math.min(dq.x + 60, 1080 - MX - 360), dq.y - 120, 70, { k: sm((u - 14) / 10) });
+    txt(g, 'data movement: often costs more than the math', MX, CAPX, 30, 500, SOFT, { mono: true, track: 0, k: sm((u - 30) / 10) });
+  }
+  if (sh === 'f1') { halo(g, 0, 380, 1080, 760, 0.8); serif(g, 'Plot twist:', MX, 500, 72, { italic: true, color: SOFT, mask: false }); serif(g, 'one prediction.', MX - 6, 650, 140, { grad: ['#ffffff', '#c9c3b8'], mask: false }); }
+  if (sh === 'f2') {
+    const bp = T.papers[D.awards[0]].g;
+    if (u >= 22 && bp.visible) { const q = P(bp.position.x - 0.32, bp.position.y + 0.72, bp.position.z); txt(g, 'OUR FORECAST  ·  ISCA 2026', q.x, q.y - 12, 30, 600, '#ffd27a', { mono: true, track: 0.06, k: sm((u - 22) / 8) }); }
+    big('Best Paper Award', 262, 92, { k: sm((u - 30) / 8), color: '#ffd27a', italic: true });
+    const kf = sm((u - 45) / 4); if (kf > 0.01) { halo(g, 0, CAPX - 170, 1080, CAPX + 30, 0.85 * kf); serif(g, 'Forecasting.', MX - 6, CAPX - 10, 150, { k: kf, grad: ['#ffe6a8', '#c9962e'], italic: true }); }
+  }
+  if (sh === 'f3') {
+    if (f >= 1300 && f < 1320) { const a = bigAt(BR.data, 0.3), qa = P(a.x, a.y, a.z), bp = T.papers[D.awards[0]].g; bp.updateMatrixWorld(true);
+      const tq = ctx.project(new T.THREE.Vector3((0.82 - 0.5) * ASP, 0.5 - 0.071, 0.05).applyMatrix4(bp.matrixWorld)), t = eio(clamp((f - 1300) / 20));
+      ink(g, IMG.pen_circle_b, lerp(qa.x, tq.x, t), lerp(qa.y, tq.y, t) - Math.sin(Math.PI * t) * 220, 300, { rot: -0.05 + t * 0.4 }); }
+    halo(g, 0, 150, 1000, 540, 0.8);
+    serif(g, 'Big predictions:', MX, 250, 64, { k: sm(u / 8), color: SOFT, italic: true });
+    serif(g, 'where AI goes next.', MX, 326, 64, { k: sm((u - 4) / 8) });
+    serif(g, 'Ours:', MX, 430, 64, { k: sm((u - 36) / 8), color: '#ffd27a', italic: true });
+    serif(g, 'where its data moves next.', MX, 506, 64, { k: sm((u - 40) / 8) });
+  }
+  if (sh === 'f4') { stampSlam(ctx, g, 'stamp_bestpaper', STAMP_T.best, f, bigAt(BR.data, 0.8)); txt(g, '+ 5 more honours', 1080 - MX, CAPX, 30, 500, SOFT, { align: 'right', mono: true, track: 0, k: sm((u - 32) / 8) }); }
+  if (sh === 'f5') { big('Best Paper:', 262, 88, { k: sm(u / 6) }); hand(g, 'still one milk tea.', MX + 6, 350, 76, { k: sm((u - 8) / 10) }); }
+  if (sh === 'g1') {
+    const n = MEMBERS.length, back = 1 - sm((f - 1612) / 12);
+    sticky(g, ['staff: ' + (n + 1) + ' humans,', '1 cat (awake)'], 1080 - MX - 330, 170, 330, { k: sm(u / 6) * (1 - sm((u - 110) / 8)), rot: 0.04, size: 44 });
+    MEMBERS.forEach((m, i) => {
+      const [x, z] = ROLL(i, n), t0 = 1505 + Math.min(i, n - 2) * 7, kk = sm((f - t0 - 1) / 6) * back; if (kk < 0.01) return;
+      const q = P(x, FLOOR - 0.02, z + 0.16); hand(g, m[0].toUpperCase() + m.slice(1), q.x, q.y + 64 + (i % 2) * 52, 56, { k: kk, align: 'center', color: PENCIL, rot: (i % 2 ? 0.03 : -0.03) });
+    });
+    const iz = MEMBERS.indexOf('zhongkai'), iu = MEMBERS.indexOf('zhuo');
+    if (iz >= 0 && iu >= 0) { const a = P(ROLL(iz, n)[0], FLOOR - 0.02, 0.46), b = P(ROLL(iu, n)[0], FLOOR - 0.02, 0.46), kb = sm((f - 1600) / 8) * back;
+      ink(g, IMG.pen_bracket_b, (a.x + b.x) / 2, Math.max(a.y, b.y) + 180, 60, { k: kb, rot: Math.PI / 2 }); hand(g, 'tied for gold', (a.x + b.x) / 2, Math.max(a.y, b.y) + 240, 54, { k: kb, align: 'center', color: '#ffd27a' }); }
+    const ky = sm((f - 1622) / 10); if (ky > 0.01) { const q = P(0, FLOOR - 0.02, 0.95); serif(g, 'Yufei', q.x, q.y + 70, 64, { k: ky, align: 'center' }); hand(g, 'PI, cat handler', q.x, q.y + 122, 50, { k: ky, align: 'center', color: PENCIL }); }
+  }
+  if (sh === 'g2') { big('Pictured: Picasso Lab.', CAPX - 76, 72, { k: sm((u - 6) / 8) }); hand(g, 'not pictured: you.', MX, CAPX + 10, 70, { k: sm((u - 14) / 10) }); }
+  if (sh === 'h2') { const k = sm((u - 26) / 8); if (k > 0.01) { halo(g, 0, CAPX - 120, 1080, CAPX + 50, 0.7 * k); serif(g, 'The next one has your name on it.', MX, CAPX, 62, { k, italic: true }); } }
+  if (sh === 'h3') {
+    const k1 = sm((u - 38) / 12), k2 = sm((u - 48) / 12), k3 = sm((u - 58) / 12), k4 = sm((u - 70) / 12) * (1 - sm((f - 1936) / 12));
+    txt(g, 'LAB  ·  UC SAN DIEGO  ·  PROF. YUFEI DING', 540, 822, 26, 500, '#bdb8ae', { align: 'center', mono: true, track: 0.12, k: k1 });
+    serif(g, 'We are recruiting PhD students.', 540, 1000, 70, { align: 'center', k: k2, italic: true });
+    txt(g, '@PicassoLabUCSD   ·   yufeiding.ucsd.edu', 540, 1078, 30, 500, '#9fc8ff', { align: 'center', mono: true, track: 0, k: k3 });
+    hand(g, '*milk tea included', 540, 1168, 60, { align: 'center', k: k4, rot: -0.03 });
+  }
+  header10(g, f);
+}
+</script></body></html>

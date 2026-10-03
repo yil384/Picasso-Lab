@@ -27,7 +27,14 @@ JOBS = [
     ('seal_gold', [], 'A round embossed gold-foil award seal sticker with a scalloped edge and a blank centre (no text, no symbols), realistic foil shine and embossing. Photographed flat from directly above on plain bright white paper, evenly lit, nothing else on the paper. Square 1024x1024.'),
     ('pen_circle', [], f'One loose hand-drawn ellipse in red ballpoint pen, a single quick confident stroke that overlaps itself a little where it ends, wider than tall (about 3:1). {PAPER}'),
     ('pen_strike', [], f'One quick hand-drawn horizontal strike-through line in red ballpoint pen, slightly rising to the right, a little hook at the end. {PAPER}'),
-    ('pen_working', [], f"The handwritten words: working on it.  Written in red ballpoint pen in casual, confident, legible handwriting, all lower case, with the full stop. {PAPER}"),
+    ('pen_arrow', [], f'One quick hand-drawn curved arrow in red ballpoint pen, about a quarter circle long, a small open arrowhead at the end, a confident single stroke. {PAPER}'),
+    ('pen_squiggle', [], f'One quick hand-drawn wavy underline in red ballpoint pen, like a spell-check squiggle but hand-made, five or six waves, long and thin. {PAPER}'),
+    ('pen_bracket', [], f'One hand-drawn curly bracket in red ballpoint pen, drawn vertically, tall and thin. {PAPER}'),
+    ('stain_ring', [], 'A faint ring stain left by the bottom of a cup of milk tea on plain white paper: a thin light-brown ring, slightly uneven, with a soft paler inside and one small drip, photographed flat from directly above, evenly lit, nothing else on the paper. Square 1024x1024.'),
+    ('prop_printer', ['art/desk_empty.png', 'art/cat_sit.png'], f'A small desktop thermal receipt printer, the kind used at a cafe counter: rounded warm off-white plastic body, a dark smoky lid on top, a thin paper slot along the back edge of the lid with nothing coming out, one tiny green LED, a little worn and friendly-looking. Seen from the front-right and from above at about 50 degrees, as if standing on a desk. Warm lamp light from the left, the same Pixar-style 3D rendering and materials as the attached images. Only the printer. {GREEN} Square 1024x1024.'),
+    ('prop_tea', ['art/desk_empty.png', 'art/y_toast.png'], f'A clear plastic takeaway cup of bubble milk tea, half drunk: creamy beige tea, black tapioca pearls at the bottom, a wide striped straw through a sealed film lid, a few drops of condensation. Seen from above at about 50 degrees, as if standing on a desk. Warm lamp light from the left, the same Pixar-style 3D rendering as the attached images. Only the cup. {GREEN} Square 1024x1024.'),
+    ('prop_pen', ['art/desk_empty.png'], f'One red ballpoint pen with its cap off, lying flat, seen from directly above at a slight angle, diagonal across the image. Warm lamp light from the left, the same Pixar-style 3D rendering as the attached image. Only the pen. {GREEN} Square 1024x1024.'),
+    ('pen_working', [],f"The handwritten words: working on it.  Written in red ballpoint pen in casual, confident, legible handwriting, all lower case, with the full stop. {PAPER}"),
 ]
 PROMPT = ('Generate ONE image with your image generation tool and save it as {out} in the current directory (copy the '
           'generated file there; do not write any code to draw it). {refs}{desc} When the file is saved, reply with just its path.')
@@ -35,7 +42,7 @@ PROMPT = ('Generate ONE image with your image generation tool and save it as {ou
 
 def run(job, force):
     name, refs, desc = job
-    out = f'art/ink/{name}.png' if name.split('_')[0] in ('stamp', 'seal', 'pen') else f'art/{name}.png'
+    out = f'art/ink/{name}.png' if name.split('_')[0] in ('stamp', 'seal', 'pen', 'stain') else f'art/{name}.png'
     if os.path.exists(os.path.join(HERE, out)) and not force: return name, 'skip'
     args = ['codex', 'exec', '--skip-git-repo-check', '-s', 'workspace-write', '-C', HERE, '-c', 'model_reasoning_effort="low"']
     for r in refs: args += ['-i', r]

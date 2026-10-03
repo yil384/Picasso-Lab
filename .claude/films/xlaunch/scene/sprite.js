@@ -38,7 +38,10 @@ export function spriteKit(THREE, scene) {
     m.userData.u = { uLight: { value: 1 }, uTint: { value: new THREE.Color(1, 1, 1) }, uRim: { value: new THREE.Color(0.55, 0.72, 1.0) },
       uRimK: { value: 0.0 }, uRimDir: { value: new THREE.Vector2(-1, 0.4) }, uTexel: { value: new THREE.Vector2(1 / 512, 1 / 512) },
       uSat: { value: 0.92 }, uLift: { value: 0.0 }, uFade: { value: 1 }, uSide: { value: 0.12 }, uFoot: { value: 0.72 },
-      uDepth: { value: null }, uRelief: { value: 0 } };
+      uDepth: { value: null }, uRelief: { value: 0 },
+      // relighting from the relief: the painted shading stays, the scene's own key and rim act on the shape
+      uKeyV: { value: new THREE.Vector3(0.5, 0.6, 0.6) }, uRimV: { value: new THREE.Vector3(-0.8, 0.3, -0.5) }, uRelight: { value: 0.0 },
+      uAmb: { value: new THREE.Color(1, 1, 1) }, uKeyCol: { value: new THREE.Color(1, 0.97, 0.92) }, uRimCol2: { value: new THREE.Color(0.6, 0.75, 1) }, uRim2: { value: 0 } };
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, m.userData.u);
       sh.vertexShader = sh.vertexShader
@@ -48,7 +51,8 @@ export function spriteKit(THREE, scene) {
           if (uRelief > 0.0) transformed.z += (texture2D(uDepth, uv).r - 0.5) * uRelief;`);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
-          uniform float uLight, uRimK, uSat, uLift, uFade, uSide, uFoot; uniform vec3 uTint, uRim; uniform vec2 uRimDir, uTexel;`)
+          uniform float uLight, uRimK, uSat, uLift, uFade, uSide, uFoot; uniform vec3 uTint, uRim; uniform vec2 uRimDir, uTexel;
+          uniform sampler2D uDepth; uniform float uRelief, uRelight, uRim2; uniform vec3 uKeyV, uRimV, uAmb, uKeyCol, uRimCol2;`)
         .replace('#include <map_fragment>', `#include <map_fragment>
           {
             vec3 c = diffuseColor.rgb;
@@ -58,6 +62,17 @@ export function spriteKit(THREE, scene) {
             float side = 1.0 + uSide * (vMapUv.x - 0.5) * 2.0;
             float foot = mix(uFoot, 1.0, smoothstep(0.0, 0.45, vMapUv.y));
             c = c * uTint * uLight * side * foot + uLift;
+            if (uRelief > 0.0 && uRelight > 0.0) {
+              // a normal from the relief map (central differences), roughly in view space: the billboard faces the lens
+              vec2 e = uTexel * 3.0;
+              float dx = texture2D(uDepth, vMapUv + vec2(e.x, 0.0)).r - texture2D(uDepth, vMapUv - vec2(e.x, 0.0)).r;
+              float dy = texture2D(uDepth, vMapUv + vec2(0.0, e.y)).r - texture2D(uDepth, vMapUv - vec2(0.0, e.y)).r;
+              vec3 N = normalize(vec3(-dx * 7.0, -dy * 7.0, 1.0));
+              float ndl = max(dot(N, normalize(uKeyV)), 0.0);
+              c *= mix(vec3(1.0), uAmb * (0.5 + 0.7 * ndl * uKeyCol), uRelight);
+              float fres = pow(1.0 - clamp(N.z, 0.0, 1.0), 1.6);
+              c += uRimCol2 * fres * max(dot(normalize(N.xy + 1e-4), normalize(uRimV.xy + 1e-4)), 0.0) * uRim2 * l;
+            }
             // rim: opaque here, transparent a couple of texels towards the rim light; strongest on the upper body
             float a0 = diffuseColor.a;
             float a1 = texture2D(map, vMapUv + uRimDir * uTexel * 2.5).a;
@@ -68,7 +83,7 @@ export function spriteKit(THREE, scene) {
             diffuseColor.a *= uFade;
           }`);
     };
-    m.customProgramCacheKey = () => 'pvsprite2';
+    m.customProgramCacheKey = () => 'pvsprite3';
     return m;
   }
 
@@ -116,6 +131,9 @@ export function spriteKit(THREE, scene) {
       u.uRim.value.setRGB(...(o.rimCol || [0.55, 0.72, 1.0]));
       if (o.side != null) u.uSide.value = o.side;
       if (o.foot != null) u.uFoot.value = o.foot;
+      u.uRelight.value = o.relight ?? 0; u.uRim2.value = o.rim2 ?? 0;
+      if (o.keyV) u.uKeyV.value.copy(o.keyV); if (o.rimV) u.uRimV.value.copy(o.rimV);
+      if (o.amb) u.uAmb.value.setRGB(...o.amb); if (o.keyCol) u.uKeyCol.value.setRGB(...o.keyCol); if (o.rimCol2) u.uRimCol2.value.setRGB(...o.rimCol2);
       const w = Math.abs(mesh.scale.x);
       contact.position.set(x, (o.floorY ?? y) + 0.004, z); contact.scale.set(w * 0.9, w * 0.32, 1);
       contact.material.opacity = (o.contactK ?? 0.7) * (o.fade ?? 1) * Math.max(0, 1 - (o.lift ?? 0) * 2.5);
