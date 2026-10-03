@@ -55,5 +55,5 @@ Every cut of the first X post, newest last. Watch them side by side: https://yil
 - File: `v7_style_frame.jpg`
 - How: three.js 新场景（分支 video/x-launch，video-kit/films/xstyle/xstyle.html）：带弯曲和纸纤维凹凸的纸面、面光源加轮廓光、带倒影的亮面地板、弧形影棚、2 倍超采样；排版补全页改为仿真正文。
 - What: 三张成片质量的静帧：1 聚光灯下的第一篇论文（2013）；2 136 篇论文立成的长廊，最新在前、2013 在远处；3 结尾：三个玻璃圆环（logo）、文字、虚化的论文。
-- Feedback: （待反馈）
+- Feedback: “可以可以，就要这个质感”
 - Lesson: 先定质感再做动画：这三张通过后，才设计转场和镜头运动。
