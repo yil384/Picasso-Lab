@@ -31,17 +31,29 @@ const RING_COL = [0x3f8cff, 0x63d36f, 0xff4d4d], GOLD = 0xffc547;
 
 let D, T, SK; const st = {}, C = {};
 // the real lab: every member as a painted character (from their Team-page photo); three of them carry the
-// research directions. Line-up order: front row (Yufei in the middle), back row.
-const MEMBERS = ['chang', 'haotian', 'jixuan', 'keyi', 'ohm', 'parikshit', 'xiang', 'xinwei', 'yanju', 'yichen', 'yilin', 'yue', 'zaifeng', 'zhengding', 'zhongkai', 'zhuo', 'zihan'];
-const FRONT = ['yue', 'keyi', 'xiang', 'zhongkai', 'Y', 'xinwei', 'chang', 'zhuo', 'yichen'];
-const BACK = ['haotian', 'parikshit', 'jixuan', 'ohm', 'zaifeng', 'zhengding', 'yilin', 'yanju', 'zihan'];
-const EXTRA = { xiang: ['xiang_land', 'xiang_chip'], xinwei: ['xinwei_flop', 'xinwei_gpu'], zhongkai: ['zhongkai_tray', 'zhongkai_wafer', 'zhongkai_offer'] };
-// slot of a person in the line-up, centred on (cx, cz), column spacing sp; the back row sits half a step over
+// research directions (Xiang quantum, Zaifeng systems / compilers, Zhongkai hardware). Only members whose art is
+// in cut/ (m_<name>.png) are in the film: build() drops the rest and re-balances the line-up.
+// Line-up order: front row (Yufei in the middle, the featured three next to her), back row.
+let MEMBERS = ['chang', 'haotian', 'jixuan', 'keyi', 'ohm', 'parikshit', 'rishabh', 'xiang', 'xinwei', 'yanju', 'yichen', 'yilin', 'yue', 'zaifeng', 'zhengding', 'zhongkai', 'zhuo', 'zihan'];
+let FRONT = ['yue', 'keyi', 'xiang', 'zhongkai', 'Y', 'zaifeng', 'chang', 'zhuo', 'yichen'];
+let BACK = ['haotian', 'parikshit', 'jixuan', 'ohm', 'xinwei', 'zhengding', 'yilin', 'yanju', 'zihan', 'rishabh'];
+const FEATURED = ['xiang', 'zaifeng', 'zhongkai'];
+const EXTRA = { xiang: ['xiang_land', 'xiang_chip'], zaifeng: ['zaifeng_flop', 'zaifeng_gpu'], zhongkai: ['zhongkai_tray', 'zhongkai_wafer', 'zhongkai_offer'] };
+// keep the cast to the members that have art; move plain members between the rows until they differ by <= 1
+function castFrom(avail) {
+  MEMBERS = MEMBERS.filter((m) => avail.has(m));
+  FRONT = FRONT.filter((m) => m === 'Y' || avail.has(m)); BACK = BACK.filter((m) => avail.has(m));
+  const plain = (row) => row.filter((m) => m !== 'Y' && !FEATURED.includes(m));
+  while (BACK.length > FRONT.length + 1) { const m = plain(BACK).pop(); BACK.splice(BACK.indexOf(m), 1); FRONT.push(m); }
+  while (FRONT.length > BACK.length + 1 && plain(FRONT).length) { const m = plain(FRONT).pop(); FRONT.splice(FRONT.indexOf(m), 1); BACK.push(m); }
+}
+// slot of a person in the line-up: the front row centred on Yufei at (cx, cz + dz), column spacing sp; the back
+// row centred on cx, on the half steps between the front row's columns
 function slot(name, cx, cz, sp, dz = 0.3) {
   let i = FRONT.indexOf(name);
-  if (i >= 0) return [cx + (i - 4) * sp, cz + dz];
+  if (i >= 0) return [cx + (i - FRONT.indexOf('Y')) * sp, cz + dz];
   i = BACK.indexOf(name);
-  return [cx + (i - 4) * sp + sp * 0.5, cz];
+  return [cx + (i - (BACK.length - 1) / 2 + (BACK.length % 2 ? 0.5 : 0)) * sp, cz];
 }
 const MH = (m) => 0.95 + 0.1 * hsh(MEMBERS.indexOf(m) + 3, 11);            // a little height variety
 
@@ -67,7 +79,7 @@ const POSE_H = {
   kai_flop: 0.7, kai_chip: 0.96, kai_toast: 1.0,
   zoe_sip: 0.9, zoe_tray: 0.92, zoe_toast: 0.92,
   cat_sleep: 0.2, cat_sit: 0.34, cat_jump: 0.38, cat_cheer: 0.36,
-  xiang_land: 0.55, xiang_chip: 1.0, xinwei_flop: 0.72, xinwei_gpu: 1.0, zhongkai_tray: 1.0, zhongkai_wafer: 1.0, zhongkai_offer: 1.0, y_hold_cat: 1.05,
+  xiang_land: 0.55, xiang_chip: 1.0, zaifeng_flop: 0.72, zaifeng_gpu: 1.0, zhongkai_tray: 1.0, zhongkai_wafer: 1.0, zhongkai_offer: 1.0, y_hold_cat: 1.05,
 };
 async function build(ctx, three) {
   D = L.index(await (await fetch('/scene/data.json')).json());
@@ -78,6 +90,9 @@ async function build(ctx, three) {
   C.y = await mk(['y_write', 'y_hold_up', 'y_think', 'y_surprise', 'y_proud', 'y_swing', 'y_paint_air', 'y_award', 'y_toast', 'y_invite', 'y_wave', 'y_hold_cat']);
   C.desk = await mk(['desk_empty']);
   C.cat = await mk(['cat_sleep', 'cat_sit', 'cat_jump', 'cat_cheer']);
+  const has = async (n) => (await fetch(`/scene/cut/${n}.png`, { method: 'HEAD' })).ok;
+  const ok = await Promise.all(MEMBERS.map((m) => has(`m_${m}`)));
+  castFrom(new Set(MEMBERS.filter((m, i) => ok[i])));
   C.m = {};
   for (const m of MEMBERS) C.m[m] = await mk([`m_${m}`, ...(EXTRA[m] || [])]);
 
@@ -456,6 +471,7 @@ function keepOut(f) {
 
 // sprite helper: place a character with the house grade (key from the right, rim from the left in the shot's colour)
 function put(ch, pose, x, z, o = {}) {
+  if (!ch) return null;
   ch.set(pose, { height: (o.h ?? 1) * (POSE_H[pose] ?? 1), flip: o.flip, sx: o.sx, sy: o.sy });
   ch.place(x, (o.y ?? FLOOR), z, T.camera, { floorY: FLOOR, light: o.light ?? 0.8, rim: o.rim ?? 1.2, rimDir: [-1, 0.3], side: 0.16, foot: 0.66, lift: o.lift ?? 0,
     fade: o.fade ?? 1, contact: o.contact, contactK: o.contactK ?? 0.6, yaw: o.yaw, roll: o.roll, rimCol: o.rimCol });
@@ -491,20 +507,20 @@ const SHOTFN = {
       put(C.y, pose, 0.38, 0.72, { light: lit, sx: 1 + 0.05 * sq, sy: 1 - 0.06 * sq });
     }
   },
-  // 02 GROWTH: from 2020 the lab arrives one by one as the papers pour in; Xiang lands, Xinwei dives through,
+  // 02 GROWTH: from 2020 the lab arrives one by one as the papers pour in; Xiang lands, Zaifeng dives through,
   // Zhongkai walks in last with the milk tea
   grow(f) {
     const [yx, yz] = slot('Y', 0.18, 0.3, 0.34);
     put(C.y, f < 282 ? 'y_think' : 'y_surprise', lerp(0.42, yx, sm((f - 260) / 30)), lerp(0.62, yz, sm((f - 260) / 30)), { h: 0.78 });
     put(C.desk, 'desk_empty', 0.78, 0.32, { fade: 1 - sm((f - 200) / 30) });
     put(C.cat, f < 330 ? 'cat_sleep' : 'cat_cheer', -0.15, 0.95, { h: 0.78 });
-    const order = ['yue', 'keyi', 'xiang', 'chang', 'zhuo', 'haotian', 'parikshit', 'jixuan', 'xinwei', 'ohm', 'yichen', 'zaifeng', 'zhengding', 'yilin', 'yanju', 'zihan', 'zhongkai'];
+    const order = ['yue', 'keyi', 'xiang', 'chang', 'zhuo', 'haotian', 'parikshit', 'jixuan', 'zaifeng', 'ohm', 'yichen', 'xinwei', 'zhengding', 'yilin', 'yanju', 'zihan', 'rishabh', 'zhongkai'].filter((m) => C.m[m]);
     order.forEach((m, i) => {
       const t0 = 288 + i * 6, [x, z] = slot(m, 0.18, 0.3, 0.34), h = 0.68 * MH(m);
       if (m === 'xiang') { const lm = landing(f, t0 + 10, 1.4, 10); if (lm) put(C.m.xiang, f < t0 + 40 ? 'xiang_land' : 'm_xiang', x, z, { h, sx: lm.sx, sy: lm.sy, lift: lm.lift }); return; }
-      if (m === 'xinwei') {
-        if (f >= t0 - 20 && f < t0 + 10) { const t = (f - t0 + 20) / 30; put(C.m.xinwei, 'xinwei_flop', lerp(-1.7, x, t), z, { h, lift: 1.6 * (1 - t) * (1 - t) + 0.25 * Math.sin(Math.PI * t), roll: -0.3 * (1 - t) }); }
-        else if (f >= t0 + 10) { const lm = landing(f, t0 + 10, 0.01, 1); put(C.m.xinwei, 'm_xinwei', x, z, { h, sx: lm ? lm.sx : 1, sy: lm ? lm.sy : 1 }); }
+      if (m === 'zaifeng') {
+        if (f >= t0 - 20 && f < t0 + 10) { const t = (f - t0 + 20) / 30; put(C.m.zaifeng, 'zaifeng_flop', lerp(-1.7, x, t), z, { h, lift: 1.6 * (1 - t) * (1 - t) + 0.25 * Math.sin(Math.PI * t), roll: -0.3 * (1 - t) }); }
+        else if (f >= t0 + 10) { const lm = landing(f, t0 + 10, 0.01, 1); put(C.m.zaifeng, 'm_zaifeng', x, z, { h, sx: lm ? lm.sx : 1, sy: lm ? lm.sy : 1 }); }
         return;
       }
       if (m === 'zhongkai') {
@@ -522,14 +538,14 @@ const SHOTFN = {
     for (const m of MEMBERS) { const [x, z] = slot(m, 1.02, 2.5, 0.13, 0.12); put(C.m[m], `m_${m}`, x, z, { fade: k, h: 0.33 * MH(m), light: 0.7, rimCol: [0.45, 0.6, 1.0] }); }
     put(C.cat, 'cat_sit', 1.02, 2.72, { fade: k, h: 0.36 });
   },
-  // year by year: Xinwei dives onto the front paper and starts the domino; the cat naps in 2016 (0 papers)
+  // year by year: Zaifeng dives onto the front paper and starts the domino; the cat naps in 2016 (0 papers)
   years(f) {
     const kf = DOMINO0 - 2;
-    if (f < kf + 4) { const t = clamp((f - (kf - 22)) / 22); put(C.m.xinwei, 'xinwei_flop', lerp(2.6, 1.0, t), lerp(3.8, 2.4, t), { h: 0.42, lift: 0.7 * Math.sin(Math.PI * t * 0.9) + 0.2 }); }
+    if (f < kf + 4) { const t = clamp((f - (kf - 22)) / 22); put(C.m.zaifeng, 'zaifeng_flop', lerp(2.6, 1.0, t), lerp(3.8, 2.4, t), { h: 0.42, lift: 0.7 * Math.sin(Math.PI * t * 0.9) + 0.2 }); }
     const k = 1 - sm((f - S.years[0] - 6) / 14);
     if (k > 0.01) {
       const [yx, yz] = slot('Y', 1.02, 2.5, 0.13, 0.12); put(C.y, 'y_proud', yx, yz, { fade: k, h: 0.36 });
-      for (const m of MEMBERS) { if (m === 'xinwei') continue; const [x, z] = slot(m, 1.02, 2.5, 0.13, 0.12); put(C.m[m], `m_${m}`, x, z, { fade: k, h: 0.33 * MH(m), light: 0.7 }); }
+      for (const m of MEMBERS) { if (m === 'zaifeng') continue; const [x, z] = slot(m, 1.02, 2.5, 0.13, 0.12); put(C.m[m], `m_${m}`, x, z, { fade: k, h: 0.33 * MH(m), light: 0.7 }); }
     }
     const kc = sm((f - S.years[0] - 105) / 15);
     if (kc > 0.01) put(C.cat, 'cat_sleep', L.YX(2016), L.YZ(2016) + 0.04, { fade: kc, h: 0.9 });
@@ -567,7 +583,7 @@ const SHOTFN = {
       r.material.emissiveIntensity = cool < 1 ? lerp(0.8, 0.0, cool) + flash * 0.9 : 0.18 + 0.22 * fv;
     });
     T.bloom.strength = 0.14 + 0.14 * win(u, 12, 100, 10, 20);
-    const who = [[C.m.xiang, 'xiang_chip'], [C.m.xinwei, 'xinwei_gpu'], [C.m.zhongkai, 'zhongkai_wafer']];
+    const who = [[C.m.xiang, 'xiang_chip'], [C.m.zaifeng, 'zaifeng_gpu'], [C.m.zhongkai, 'zhongkai_wafer']];
     for (let j = 0; j < 3; j++) {
       const v = win(f, VISIT[j][0] - 2, VISIT[j][1] + (j === 2 ? -4 : 8), 8, 8); if (v < 0.01) continue;
       const [cx, cy, cz] = L.RING_C[j], plat = cy - 0.3 - (1 - eout(v)) * 0.25;
