@@ -51,6 +51,13 @@ cat)", three plain rings for the logo).
   frame in f3 (and its stamps fade with it), roll-call names fade instead of un-writing, a stray Paper #137 on the
   logo card (a camera function set it visible), no floor reflection under the logo.
 
+## Round 4
+- The red circle on the Best Paper: no flight from behind the page (it started over "Patterns behind Chaos"); the
+  red pen now draws it around "Data Movement" in the title, rhyming with the circle on the bill, lifted off the
+  curved sheet and drawn on top so no half of it sinks into the paper.
+- End card: "We're hiring." with "interns · PhD students · postdocs" (the lab hires broadly), then the handle and
+  site, then "*milk tea included".
+
 ## Shots
 | shot | frames | what happens |
 | --- | --- | --- |
@@ -65,4 +72,4 @@ cat)", three plain rings for the logo).
 | f1-f5 | 1170-1500 | plot twist: the Best Paper is a forecast (of where data moves next); "still one milk tea." |
 | g1-g2 | 1500-1710 | the roll call; the flash turns the crew into the real team photo; "not pictured: you." |
 | h1-h2 | 1710-1830 | Paper #137 on the desk, byline, "first author wanted." / "The next one has your name on it." |
-| h3 | 1830-1950 | the 3D logo; LAB · UC SAN DIEGO · PROF. YUFEI DING; recruiting; handle and site; "*milk tea included" |
+| h3 | 1830-1950 | the 3D logo; LAB · UC SAN DIEGO · PROF. YUFEI DING; "We're hiring." interns · PhD students · postdocs; handle and site; "*milk tea included" |
