@@ -1,6 +1,9 @@
 // Painted characters as billboards in the three.js world: a keyed cut-out (RGBA png) on a plane that turns about its
 // vertical axis to face the camera, graded into the scene light, a cool rim on the edge that faces the rim light,
 // a real cast shadow (alpha-tested depth) and a soft contact shadow; the glossy floor reflects it like everything else.
+// Relief: where a depth map <name>_d.png sits next to the cut-out (tools/depth.py), the plane is a dense grid pushed
+// towards the camera by it, so the figure has volume when the camera moves and its cast shadow is rounded; the
+// billboard then turns only part of the way to the camera (face < 1) so that volume shows.
 export function spriteKit(THREE, scene) {
   const loader = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
   const cache = {};
@@ -14,7 +17,12 @@ export function spriteKit(THREE, scene) {
     c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
     const d = g.getImageData(0, 0, w, h).data; let foot = h - 1;
     outer: for (let y = h - 1; y >= 0; y--) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 128) { foot = y; break outer; }
-    cache[url] = { t, aspect: img.width / img.height, foot: 1 - (foot + 1) / h };
+    let dt = null;
+    try {
+      const di = await loader(url.replace(/\.png$/, '_d.png'));
+      dt = new THREE.Texture(di); dt.needsUpdate = true; dt.generateMipmaps = true; dt.minFilter = THREE.LinearMipmapLinearFilter;
+    } catch (e) { dt = null; }
+    cache[url] = { t, dt, aspect: img.width / img.height, foot: 1 - (foot + 1) / h };
     return cache[url];
   }
   const contactTex = (() => {
@@ -29,9 +37,15 @@ export function spriteKit(THREE, scene) {
     const m = new THREE.MeshBasicMaterial({ map, transparent: true, alphaTest: 0.01, side: THREE.DoubleSide, depthWrite: true });
     m.userData.u = { uLight: { value: 1 }, uTint: { value: new THREE.Color(1, 1, 1) }, uRim: { value: new THREE.Color(0.55, 0.72, 1.0) },
       uRimK: { value: 0.0 }, uRimDir: { value: new THREE.Vector2(-1, 0.4) }, uTexel: { value: new THREE.Vector2(1 / 512, 1 / 512) },
-      uSat: { value: 0.92 }, uLift: { value: 0.0 }, uFade: { value: 1 }, uSide: { value: 0.12 }, uFoot: { value: 0.72 } };
+      uSat: { value: 0.92 }, uLift: { value: 0.0 }, uFade: { value: 1 }, uSide: { value: 0.12 }, uFoot: { value: 0.72 },
+      uDepth: { value: null }, uRelief: { value: 0 } };
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, m.userData.u);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', `#include <common>
+          uniform sampler2D uDepth; uniform float uRelief;`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+          if (uRelief > 0.0) transformed.z += (texture2D(uDepth, uv).r - 0.5) * uRelief;`);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
           uniform float uLight, uRimK, uSat, uLift, uFade, uSide, uFoot; uniform vec3 uTint, uRim; uniform vec2 uRimDir, uTexel;`)
@@ -54,20 +68,21 @@ export function spriteKit(THREE, scene) {
             diffuseColor.a *= uFade;
           }`);
     };
-    m.customProgramCacheKey = () => 'pvsprite';
+    m.customProgramCacheKey = () => 'pvsprite2';
     return m;
   }
 
   // one character: several poses share one plane; set(pose) swaps the texture
-  async function make(poses, { height = 1.0, shadow = true } = {}) {
+  async function make(poses, { height = 1.0, shadow = true, relief = 0.2 } = {}) {
     const P = {};
     for (const [k, url] of Object.entries(poses)) P[k] = await tex(url);
     const first = Object.values(P)[0];
-    const geo = new THREE.PlaneGeometry(1, 1); geo.translate(0, 0.5, 0);   // origin at the bottom edge
+    const geo = new THREE.PlaneGeometry(1, 1, 48, 112); geo.translate(0, 0.5, 0);   // origin at the bottom edge
     const mat = material(first.t);
     const mesh = new THREE.Mesh(geo, mat);
     mesh.castShadow = shadow;
     mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: first.t, alphaTest: 0.5 });
+    const dmat = mesh.customDepthMaterial;
     const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, depthWrite: false, opacity: 0.8 }));
     contact.rotation.x = -Math.PI / 2; contact.renderOrder = 2;
     const root = new THREE.Group(); root.add(mesh); scene.add(root); scene.add(contact);
@@ -78,6 +93,11 @@ export function spriteKit(THREE, scene) {
       mat.map = p.t; mat.userData.u.uTexel.value.set(1 / p.t.image.width, 1 / p.t.image.height);
       mesh.customDepthMaterial.map = p.t;
       const h = (o.height ?? height), w = h * p.aspect;
+      // relief depth in world units, as a fraction of the figure's height (the mesh's z scale stays 1)
+      const r = p.dt ? (o.relief ?? relief) * h * (o.sy ?? 1) : 0;
+      mat.userData.u.uDepth.value = p.dt; mat.userData.u.uRelief.value = r;
+      if (!dmat.displacementMap !== !(r > 0)) dmat.needsUpdate = true;          // recompile only when relief turns on/off
+      dmat.displacementMap = r > 0 ? p.dt : null; dmat.displacementScale = r; dmat.displacementBias = -0.5 * r;
       // feet on the ground: shift down by the margin under the shoes
       mesh.scale.set(w * (o.flip ? -1 : 1) * (o.sx ?? 1), h * (o.sy ?? 1), 1);
       mesh.position.y = -p.foot * h * (o.sy ?? 1);
@@ -88,7 +108,7 @@ export function spriteKit(THREE, scene) {
       root.visible = ch.visible = o.visible ?? true; contact.visible = root.visible && (o.contact ?? true) && y < (o.floorY ?? -100) + 0.05;
       root.position.set(x, y + (o.lift ?? 0), z);
       const dx = camera.position.x - x, dz = camera.position.z - z;
-      root.rotation.set(0, Math.atan2(dx, dz) + (o.yaw ?? 0), o.roll ?? 0);
+      root.rotation.set(0, Math.atan2(dx, dz) * (o.face ?? (mat.userData.u.uRelief.value > 0 ? 0.8 : 1)) + (o.yaw ?? 0), o.roll ?? 0);
       const u = mat.userData.u;
       u.uLight.value = o.light ?? 1; u.uRimK.value = o.rim ?? 0.0; u.uFade.value = o.fade ?? 1;
       if (o.tint) u.uTint.value.setRGB(...o.tint);
