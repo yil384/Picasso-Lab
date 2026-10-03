@@ -81,7 +81,11 @@ cat)", three plain rings for the logo).
 - **GPUs in 3D** (`scene/gear.js`, modelled in three.js and lit by the lamp): at the fourth prediction ten datacenter
   GPU cards rain onto the desk and stack into a tower; a mono counter by the tower counts them ("10 / 100"), the
   red pen adds "need more desk."; the crash wakes the cat. The tower stays on the desk for the bill shots.
-- **2D**: a shock ring on the desk at every slam; edge grades instead of dark boxes behind the words (f2, f3, e4, h2).
+- **2D motion graphics** (the type layer, plain canvas): at every slam a shock ring and a burst of ink dots, and the
+  quote's key words (verbatim fragments) hit the frame full size, then fly down into the clipping's headline; halftone
+  dot wipes hide the big cuts (desk to printer, engine room to lab, lab to the three answers, toast to roll call, photo
+  to Paper #137); a slow ripple of warm halftone dots round the logo on the end card and a red-pen underline under
+  "We're hiring."; edge grades instead of dark boxes behind the words (f2, f3, e4, h2).
 - **Fixes**: the cat is no longer flat (sprites on the desk lean back to face the camera, and the relight from the
   shot's lamp now actually reaches them); no clipping passes through another (checked with `__deskCheck`); h2 keeps the
   whole title in frame; "tied for gold" is inside the frame; the h1 cat is inside the frame; the logo rings fly in from
