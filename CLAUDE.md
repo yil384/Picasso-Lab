@@ -11,6 +11,7 @@ Read the matching skill in `.claude/skills/` before touching an area:
 | Team-page avatar effects (`people/`, `people/fx/`) | `picasso-avatar-fx` |
 | page-to-page anime transition films, comic splashes | `picasso-anime-transition-film` |
 | the Projects card films | `picasso-comic-demo-film` |
+| the X launch film (`.claude/films/xlaunch`), resuming it, or a new film built the same way | `picasso-x-launch-film` |
 
 The X account kit is `social/x/` (`kit.html`); every cut of the launch video is archived in `social/x/versions/` with
 its feedback and lesson (add the mp4 + poster, add an entry to `make_index.py`, run it).
