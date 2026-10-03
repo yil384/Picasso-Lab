@@ -1,0 +1,1460 @@
+{
+"order": [
+111,
+110,
+109,
+108,
+107,
+106,
+105,
+104,
+103,
+102,
+101,
+100,
+130,
+129,
+99,
+98,
+97,
+96,
+128,
+127,
+126,
+125,
+124,
+95,
+94,
+93,
+92,
+91,
+90,
+89,
+88,
+87,
+86,
+123,
+122,
+121,
+120,
+85,
+84,
+83,
+82,
+81,
+80,
+79,
+78,
+77,
+76,
+75,
+74,
+73,
+72,
+119,
+118,
+117,
+71,
+70,
+69,
+68,
+67,
+66,
+65,
+64,
+63,
+62,
+61,
+60,
+59,
+58,
+57,
+116,
+115,
+56,
+55,
+54,
+53,
+52,
+51,
+50,
+49,
+48,
+47,
+46,
+45,
+44,
+43,
+42,
+41,
+40,
+39,
+38,
+114,
+37,
+36,
+35,
+34,
+33,
+32,
+31,
+30,
+29,
+28,
+27,
+26,
+25,
+24,
+23,
+22,
+21,
+20,
+135,
+134,
+133,
+132,
+131,
+113,
+112,
+19,
+18,
+17,
+16,
+15,
+14,
+13,
+12,
+11,
+10,
+9,
+8,
+7,
+6,
+5,
+4,
+3,
+2,
+1,
+0
+],
+"pubs": [
+{
+"k": 0,
+"tag": "NeurIPS'26",
+"venue": "NeurIPS",
+"yr": 2026,
+"short": "Qubrio",
+"ring": 0,
+"award": ""
+},
+{
+"k": 1,
+"tag": "NeurIPS'26",
+"venue": "NeurIPS",
+"yr": 2026,
+"short": "FlashEvolve",
+"ring": 1,
+"award": ""
+},
+{
+"k": 2,
+"tag": "NeurIPS'26",
+"venue": "NeurIPS",
+"yr": 2026,
+"short": "AsymHP",
+"ring": 1,
+"award": ""
+},
+{
+"k": 3,
+"tag": "MICRO'26",
+"venue": "MICRO",
+"yr": 2026,
+"short": "AMMA",
+"ring": 2,
+"award": ""
+},
+{
+"k": 4,
+"tag": "ISCA'26",
+"venue": "ISCA",
+"yr": 2026,
+"short": "Patterns behind Chaos",
+"ring": 2,
+"award": "Best Paper"
+},
+{
+"k": 5,
+"tag": "ISCA'26",
+"venue": "ISCA",
+"yr": 2026,
+"short": "Reducing Page Faults via Invalidation-based Mapping Propagation in Multi-GPU Systems",
+"ring": 2,
+"award": ""
+},
+{
+"k": 6,
+"tag": "ISCA'26",
+"venue": "ISCA",
+"yr": 2026,
+"short": "Transpiler-Architecture Co-Design to Curb Clifford Costs in Fault-Tolerant Quantum Computing",
+"ring": 0,
+"award": ""
+},
+{
+"k": 7,
+"tag": "OSDI'26",
+"venue": "OSDI",
+"yr": 2026,
+"short": "Syncopate",
+"ring": 1,
+"award": ""
+},
+{
+"k": 8,
+"tag": "ICML'26",
+"venue": "ICML",
+"yr": 2026,
+"short": "ScaleSim",
+"ring": 2,
+"award": ""
+},
+{
+"k": 9,
+"tag": "ICML'26",
+"venue": "ICML",
+"yr": 2026,
+"short": "TritonGym",
+"ring": 1,
+"award": ""
+},
+{
+"k": 10,
+"tag": "ASPLOS'26",
+"venue": "ASPLOS",
+"yr": 2026,
+"short": "iSwitch",
+"ring": 0,
+"award": ""
+},
+{
+"k": 11,
+"tag": "HPCA'26",
+"venue": "HPCA",
+"yr": 2026,
+"short": "SFD",
+"ring": 2,
+"award": ""
+},
+{
+"k": 12,
+"tag": "CGO'26",
+"venue": "CGO",
+"yr": 2026,
+"short": "Proton",
+"ring": 2,
+"award": ""
+},
+{
+"k": 13,
+"tag": "arXiv",
+"venue": "arXiv",
+"yr": null,
+"short": "ChipMATE",
+"ring": 2,
+"award": ""
+},
+{
+"k": 14,
+"tag": "arXiv",
+"venue": "arXiv",
+"yr": null,
+"short": "TLX",
+"ring": 2,
+"award": ""
+},
+{
+"k": 15,
+"tag": "arXiv",
+"venue": "arXiv",
+"yr": null,
+"short": "JigsawRL",
+"ring": 1,
+"award": ""
+},
+{
+"k": 16,
+"tag": "arXiv",
+"venue": "arXiv",
+"yr": null,
+"short": "TritonDFT",
+"ring": 1,
+"award": ""
+},
+{
+"k": 17,
+"tag": "arXiv",
+"venue": "arXiv",
+"yr": null,
+"short": "Pancake",
+"ring": 2,
+"award": ""
+},
+{
+"k": 18,
+"tag": "arXiv",
+"venue": "arXiv",
+"yr": null,
+"short": "ChipBench",
+"ring": 2,
+"award": ""
+},
+{
+"k": 19,
+"tag": "preprint",
+"venue": "preprint",
+"yr": null,
+"short": "Lookahead Context Engineering",
+"ring": 1,
+"award": ""
+},
+{
+"k": 20,
+"tag": "NeurIPS'25",
+"venue": "NeurIPS",
+"yr": 2025,
+"short": "KVFlow",
+"ring": 1,
+"award": ""
+},
+{
+"k": 21,
+"tag": "NeurIPS'25",
+"venue": "NeurIPS",
+"yr": 2025,
+"short": "Yggdrasil",
+"ring": 1,
+"award": ""
+},
+{
+"k": 22,
+"tag": "MICRO'25",
+"venue": "MICRO",
+"yr": 2025,
+"short": "OneAdapt",
+"ring": 0,
+"award": ""
+},
+{
+"k": 23,
+"tag": "SOSP'25",
+"venue": "SOSP",
+"yr": 2025,
+"short": "HedraRAG",
+"ring": 1,
+"award": ""
+},
+{
+"k": 24,
+"tag": "SOSP'25",
+"venue": "SOSP",
+"yr": 2025,
+"short": "Mercury",
+"ring": 2,
+"award": ""
+},
+{
+"k": 25,
+"tag": "ASPLOS'25",
+"venue": "ASPLOS",
+"yr": 2025,
+"short": "PowerMove",
+"ring": 0,
+"award": ""
+},
+{
+"k": 26,
+"tag": "USENIX ATC'25",
+"venue": "USENIX ATC",
+"yr": 2025,
+"short": "GMI-DRL",
+"ring": 1,
+"award": ""
+},
+{
+"k": 27,
+"tag": "OSDI'25",
+"venue": "OSDI",
+"yr": 2025,
+"short": "WLB-LLM",
+"ring": 1,
+"award": ""
+},
+{
+"k": 28,
+"tag": "OSDI'25",
+"venue": "OSDI",
+"yr": 2025,
+"short": "KPerfIR",
+"ring": 2,
+"award": ""
+},
+{
+"k": 29,
+"tag": "ISCA'25",
+"venue": "ISCA",
+"yr": 2025,
+"short": "SwitchQNet",
+"ring": 0,
+"award": ""
+},
+{
+"k": 30,
+"tag": "ISCA'25",
+"venue": "ISCA",
+"yr": 2025,
+"short": "TRACI",
+"ring": 2,
+"award": ""
+},
+{
+"k": 31,
+"tag": "ISCA'25",
+"venue": "ISCA",
+"yr": 2025,
+"short": "CaliQEC",
+"ring": 0,
+"award": ""
+},
+{
+"k": 32,
+"tag": "ISCA'25",
+"venue": "ISCA",
+"yr": 2025,
+"short": "Hardware-aware Calibration Protocol for Quantum Computers",
+"ring": 0,
+"award": ""
+},
+{
+"k": 33,
+"tag": "MLSys'25",
+"venue": "MLSys",
+"yr": 2025,
+"short": "FastTree",
+"ring": 1,
+"award": ""
+},
+{
+"k": 34,
+"tag": "HPCA'25",
+"venue": "HPCA",
+"yr": 2025,
+"short": "Push Multicast",
+"ring": 2,
+"award": ""
+},
+{
+"k": 35,
+"tag": "ICLR'25",
+"venue": "ICLR",
+"yr": 2025,
+"short": "Mutual Effort for Efficiency",
+"ring": 1,
+"award": ""
+},
+{
+"k": 36,
+"tag": "ASPLOS'25",
+"venue": "ASPLOS",
+"yr": 2025,
+"short": "HetEC",
+"ring": 0,
+"award": ""
+},
+{
+"k": 37,
+"tag": "ASPLOS'25",
+"venue": "ASPLOS",
+"yr": 2025,
+"short": "QECC-Synth",
+"ring": 0,
+"award": ""
+},
+{
+"k": 38,
+"tag": "MICRO'24",
+"venue": "MICRO",
+"yr": 2024,
+"short": "Surf-Deformer",
+"ring": 0,
+"award": ""
+},
+{
+"k": 39,
+"tag": "SC'24",
+"venue": "SC",
+"yr": 2024,
+"short": "RecFlex",
+"ring": 1,
+"award": ""
+},
+{
+"k": 40,
+"tag": "USENIX ATC'24",
+"venue": "USENIX ATC",
+"yr": 2024,
+"short": "OPER",
+"ring": 1,
+"award": ""
+},
+{
+"k": 41,
+"tag": "ISCA'24",
+"venue": "ISCA",
+"yr": 2024,
+"short": "Soter",
+"ring": 2,
+"award": ""
+},
+{
+"k": 42,
+"tag": "ASPLOS'24",
+"venue": "ASPLOS",
+"yr": 2024,
+"short": "OnePerc",
+"ring": 0,
+"award": "Distinguished Artifact Award"
+},
+{
+"k": 43,
+"tag": "ASPLOS'24",
+"venue": "ASPLOS",
+"yr": 2024,
+"short": "EVT",
+"ring": 1,
+"award": "Distinguished Artifact Award"
+},
+{
+"k": 44,
+"tag": "ASPLOS'24",
+"venue": "ASPLOS",
+"yr": 2024,
+"short": "MECH",
+"ring": 0,
+"award": ""
+},
+{
+"k": 45,
+"tag": "ASPLOS'24",
+"venue": "ASPLOS",
+"yr": 2024,
+"short": "RAP",
+"ring": 1,
+"award": ""
+},
+{
+"k": 46,
+"tag": "ASPLOS'24",
+"venue": "ASPLOS",
+"yr": 2024,
+"short": "ZENO",
+"ring": 1,
+"award": ""
+},
+{
+"k": 47,
+"tag": "MICRO'23",
+"venue": "MICRO",
+"yr": 2023,
+"short": "QuComm",
+"ring": 0,
+"award": ""
+},
+{
+"k": 48,
+"tag": "MICRO'23",
+"venue": "MICRO",
+"yr": 2023,
+"short": "RM-STC",
+"ring": 2,
+"award": ""
+},
+{
+"k": 49,
+"tag": "USENIX ATC'23",
+"venue": "USENIX ATC",
+"yr": 2023,
+"short": "TC-GNN",
+"ring": 1,
+"award": ""
+},
+{
+"k": 50,
+"tag": "OSDI'23",
+"venue": "OSDI",
+"yr": 2023,
+"short": "MGG",
+"ring": 1,
+"award": ""
+},
+{
+"k": 51,
+"tag": "ISCA'23",
+"venue": "ISCA",
+"yr": 2023,
+"short": "OneQ",
+"ring": 0,
+"award": ""
+},
+{
+"k": 52,
+"tag": "ISCA'23",
+"venue": "ISCA",
+"yr": 2023,
+"short": "Q-BEEP",
+"ring": 0,
+"award": ""
+},
+{
+"k": 53,
+"tag": "ISCA'23",
+"venue": "ISCA",
+"yr": 2023,
+"short": "ECSSD",
+"ring": 2,
+"award": ""
+},
+{
+"k": 54,
+"tag": "MLSys'23",
+"venue": "MLSys",
+"yr": 2023,
+"short": "ALCOP",
+"ring": 2,
+"award": ""
+},
+{
+"k": 55,
+"tag": "VLDB'23",
+"venue": "VLDB",
+"yr": 2023,
+"short": "SPG",
+"ring": 1,
+"award": ""
+},
+{
+"k": 56,
+"tag": "PPoPP'23",
+"venue": "PPoPP",
+"yr": 2023,
+"short": "Dynamic N:M Fine-grained Structured Sparse Attention Mechanism",
+"ring": 1,
+"award": ""
+},
+{
+"k": 57,
+"tag": "NeurIPS'22",
+"venue": "NeurIPS",
+"yr": 2022,
+"short": "Biologically Inspired Dynamic Thresholds for Spiking Neural Networks",
+"ring": 1,
+"award": ""
+},
+{
+"k": 58,
+"tag": "MICRO'22",
+"venue": "MICRO",
+"yr": 2022,
+"short": "AutoComm",
+"ring": 0,
+"award": ""
+},
+{
+"k": 59,
+"tag": "SC'22",
+"venue": "SC",
+"yr": 2022,
+"short": "EL-Rec",
+"ring": 1,
+"award": ""
+},
+{
+"k": 60,
+"tag": "SC'22",
+"venue": "SC",
+"yr": 2022,
+"short": "LightSeq2",
+"ring": 1,
+"award": ""
+},
+{
+"k": 61,
+"tag": "USENIX ATC'22",
+"venue": "USENIX ATC",
+"yr": 2022,
+"short": "Faith",
+"ring": 1,
+"award": ""
+},
+{
+"k": 62,
+"tag": "ISCA'22",
+"venue": "ISCA",
+"yr": 2022,
+"short": "A Synthesis Framework for Stitching Surface Code with Superconducting Quantum Devices",
+"ring": 0,
+"award": ""
+},
+{
+"k": 63,
+"tag": "ISCA'22",
+"venue": "ISCA",
+"yr": 2022,
+"short": "EQC",
+"ring": 0,
+"award": "Best Paper Nominee"
+},
+{
+"k": 64,
+"tag": "ISCA'22",
+"venue": "ISCA",
+"yr": 2022,
+"short": "INSPIRE",
+"ring": 2,
+"award": ""
+},
+{
+"k": 65,
+"tag": "DAC'22",
+"venue": "DAC",
+"yr": 2022,
+"short": "Shfl-BW",
+"ring": 2,
+"award": ""
+},
+{
+"k": 66,
+"tag": "DAC'22",
+"venue": "DAC",
+"yr": 2022,
+"short": "Heuristic Adaptability to Input Dynamics for SpMM on GPUs",
+"ring": 2,
+"award": "Best Paper Nominee"
+},
+{
+"k": 67,
+"tag": "MLSys'22",
+"venue": "MLSys",
+"yr": 2022,
+"short": "Understanding GNN Computational Graph",
+"ring": 2,
+"award": ""
+},
+{
+"k": 68,
+"tag": "PPoPP'22",
+"venue": "PPoPP",
+"yr": 2022,
+"short": "QGTC",
+"ring": 1,
+"award": ""
+},
+{
+"k": 69,
+"tag": "ASPLOS'22",
+"venue": "ASPLOS",
+"yr": 2022,
+"short": "Paulihedral",
+"ring": 0,
+"award": ""
+},
+{
+"k": 70,
+"tag": "ASPLOS'22",
+"venue": "ASPLOS",
+"yr": 2022,
+"short": "DOTA",
+"ring": 1,
+"award": ""
+},
+{
+"k": 71,
+"tag": "ISSCC'22",
+"venue": "ISSCC",
+"yr": 2022,
+"short": "A 28nm 15.59\u03bcJ/Token Full-Digital Bitline-Transpose CIM-based Sparse Transformer Accelerator with Pipeline/Parallel Reconfigurable Modes",
+"ring": 2,
+"award": ""
+},
+{
+"k": 72,
+"tag": "CIKM'21",
+"venue": "CIKM",
+"yr": 2021,
+"short": "An Efficient Quantitative Approach for Optimizing Convolutional Neural Networks",
+"ring": 1,
+"award": ""
+},
+{
+"k": 73,
+"tag": "NanoCom'21",
+"venue": "NanoCom",
+"yr": 2021,
+"short": "On the Co-Design of Quantum Software and Hardware",
+"ring": 0,
+"award": ""
+},
+{
+"k": 74,
+"tag": "SC'21",
+"venue": "SC",
+"yr": 2021,
+"short": "APNN-TC",
+"ring": 1,
+"award": ""
+},
+{
+"k": 75,
+"tag": "SC'21",
+"venue": "SC",
+"yr": 2021,
+"short": "Efficient Tensor Core-based GPU Kernels for Structured Sparsity under Reduced Precision",
+"ring": 1,
+"award": ""
+},
+{
+"k": 76,
+"tag": "USENIX ATC'21",
+"venue": "USENIX ATC",
+"yr": 2021,
+"short": "Palleon",
+"ring": 1,
+"award": ""
+},
+{
+"k": 77,
+"tag": "CCGrid'21",
+"venue": "CCGrid",
+"yr": 2021,
+"short": "TiAcc",
+"ring": 2,
+"award": ""
+},
+{
+"k": 78,
+"tag": "OSDI '21",
+"venue": "OSDI",
+"yr": 2021,
+"short": "GNNAdvisor",
+"ring": 1,
+"award": ""
+},
+{
+"k": 79,
+"tag": "IPDPS'21",
+"venue": "IPDPS",
+"yr": 2021,
+"short": "DSXplore",
+"ring": 1,
+"award": ""
+},
+{
+"k": 80,
+"tag": "PPoPP'21",
+"venue": "PPoPP",
+"yr": 2021,
+"short": "EGEMM-TC",
+"ring": 1,
+"award": ""
+},
+{
+"k": 81,
+"tag": "AAAI'21",
+"venue": "AAAI",
+"yr": 2021,
+"short": "UAG",
+"ring": 1,
+"award": ""
+},
+{
+"k": 82,
+"tag": "ICASSP'21",
+"venue": "ICASSP",
+"yr": 2021,
+"short": "SAGA",
+"ring": 1,
+"award": ""
+},
+{
+"k": 83,
+"tag": "MICRO'21",
+"venue": "MICRO",
+"yr": 2021,
+"short": "ENMC",
+"ring": 2,
+"award": ""
+},
+{
+"k": 84,
+"tag": "MICRO'21",
+"venue": "MICRO",
+"yr": 2021,
+"short": "Improving Streaming Graph Processing Performance Using Input Knowledge",
+"ring": 2,
+"award": ""
+},
+{
+"k": 85,
+"tag": "ICCAD'21",
+"venue": "ICCAD",
+"yr": 2021,
+"short": "Overcoming the Memory Hierarchy Inefficiencies in Graph Processing Applications",
+"ring": 2,
+"award": ""
+},
+{
+"k": 86,
+"tag": "AAAI '20",
+"venue": "AAAI",
+"yr": 2020,
+"short": "Weighted-Sampling Audio Adversarial Example Attack",
+"ring": 1,
+"award": ""
+},
+{
+"k": 87,
+"tag": "ICTAI'20",
+"venue": "ICTAI",
+"yr": 2020,
+"short": "SGQuant",
+"ring": 1,
+"award": ""
+},
+{
+"k": 88,
+"tag": "NPC'20",
+"venue": "NPC",
+"yr": 2020,
+"short": "A Close Look at Multi-Tenant Parallel CNN Inference for Autonomous Driving",
+"ring": 1,
+"award": ""
+},
+{
+"k": 89,
+"tag": "OOPSLA'20",
+"venue": "OOPSLA",
+"yr": 2020,
+"short": "Projection-based Runtime Assertions for Testing and Debugging Quantum Programs",
+"ring": 0,
+"award": "Distinguished Paper Award"
+},
+{
+"k": 90,
+"tag": "MICRO'20",
+"venue": "MICRO",
+"yr": 2020,
+"short": "DUET",
+"ring": 2,
+"award": ""
+},
+{
+"k": 91,
+"tag": "ICML'20",
+"venue": "ICML",
+"yr": 2020,
+"short": "Boosting Deep Neural Network Efficiency with Dual-Module Inference",
+"ring": 1,
+"award": ""
+},
+{
+"k": 92,
+"tag": "DAC'20",
+"venue": "DAC",
+"yr": 2020,
+"short": "Eliminating Redundant Computation in Noisy Quantum Computing Simulation",
+"ring": 0,
+"award": ""
+},
+{
+"k": 93,
+"tag": "ISCA'20",
+"venue": "ISCA",
+"yr": 2020,
+"short": "iPIM",
+"ring": 2,
+"award": ""
+},
+{
+"k": 94,
+"tag": "ASPLOS'20",
+"venue": "ASPLOS",
+"yr": 2020,
+"short": "Towards Efficient Superconducting Quantum Processor Architecture Design",
+"ring": 0,
+"award": ""
+},
+{
+"k": 95,
+"tag": "ASPLOS'20",
+"venue": "ASPLOS",
+"yr": 2020,
+"short": "DeepSniffer",
+"ring": 2,
+"award": ""
+},
+{
+"k": 96,
+"tag": "ICTAI'19",
+"venue": "ICTAI",
+"yr": 2019,
+"short": "Reconciling Feature-Reuse and Overfitting in DenseNet with Specialized Dropout",
+"ring": 1,
+"award": ""
+},
+{
+"k": 97,
+"tag": "FCCM'19",
+"venue": "FCCM",
+"yr": 2019,
+"short": "KPynq",
+"ring": 2,
+"award": ""
+},
+{
+"k": 98,
+"tag": "ASPLOS'19",
+"venue": "ASPLOS",
+"yr": 2019,
+"short": "Tackling the Qubit Mapping Problem for NISQ-Era Quantum Devices",
+"ring": 0,
+"award": ""
+},
+{
+"k": 99,
+"tag": "ICLR'19",
+"venue": "ICLR",
+"yr": 2019,
+"short": "Dynamic Sparse Graph for Efficient Deep Learning",
+"ring": 1,
+"award": ""
+},
+{
+"k": 100,
+"tag": "NSF'18",
+"venue": "NSF",
+"yr": 2018,
+"short": "Inter-Disciplinary Research Challenges in Computer Systems for the 2020s",
+"ring": 1,
+"award": ""
+},
+{
+"k": 101,
+"tag": "SysML'18",
+"venue": "SysML",
+"yr": 2018,
+"short": "TOP",
+"ring": 2,
+"award": ""
+},
+{
+"k": 102,
+"tag": "ICDE'18",
+"venue": "ICDE",
+"yr": 2018,
+"short": "Reuse-Centric K-Means Configuration",
+"ring": 1,
+"award": ""
+},
+{
+"k": 103,
+"tag": "OOPSLA'17",
+"venue": "OOPSLA",
+"yr": 2017,
+"short": "GLORE",
+"ring": 2,
+"award": ""
+},
+{
+"k": 104,
+"tag": "PLDI'17",
+"venue": "PLDI",
+"yr": 2017,
+"short": "Generalizations of the Theory and Deployment of Triangular Inequality for Compiler-Based Strength Reduction",
+"ring": 2,
+"award": ""
+},
+{
+"k": 105,
+"tag": "ICDE '17",
+"venue": "ICDE",
+"yr": 2017,
+"short": "Sweet KNN",
+"ring": 1,
+"award": ""
+},
+{
+"k": 106,
+"tag": "PLDI'15",
+"venue": "PLDI",
+"yr": 2015,
+"short": "Autotuning algorithmic choice for input sensitivity",
+"ring": 2,
+"award": ""
+},
+{
+"k": 107,
+"tag": "ICML'15",
+"venue": "ICML",
+"yr": 2015,
+"short": "Yinyang K-Means",
+"ring": 1,
+"award": ""
+},
+{
+"k": 108,
+"tag": "VLDB'15",
+"venue": "VLDB",
+"yr": 2015,
+"short": "TOP",
+"ring": 1,
+"award": ""
+},
+{
+"k": 109,
+"tag": "ASPLOS'14",
+"venue": "ASPLOS",
+"yr": 2014,
+"short": "Finding the Limit",
+"ring": 2,
+"award": ""
+},
+{
+"k": 110,
+"tag": "OOPSLA'14",
+"venue": "OOPSLA",
+"yr": 2014,
+"short": "Call Sequence Prediction through Probabilistic Calling Automata",
+"ring": 2,
+"award": ""
+},
+{
+"k": 111,
+"tag": "CGO'13",
+"venue": "CGO",
+"yr": 2013,
+"short": "ProfMig",
+"ring": 2,
+"award": ""
+},
+{
+"k": 112,
+"tag": "TACO'26",
+"venue": "TACO",
+"yr": 2026,
+"short": "RecDM",
+"ring": 2,
+"award": ""
+},
+{
+"k": 113,
+"tag": "TQC'26",
+"venue": "TQC",
+"yr": 2026,
+"short": "STQS",
+"ring": 0,
+"award": ""
+},
+{
+"k": 114,
+"tag": "AVS Quantum Science'25",
+"venue": "AVS Quantum Science",
+"yr": 2025,
+"short": "S-QGPU",
+"ring": 0,
+"award": ""
+},
+{
+"k": 115,
+"tag": "TACO'23",
+"venue": "TACO",
+"yr": 2023,
+"short": "MPU",
+"ring": 2,
+"award": ""
+},
+{
+"k": 116,
+"tag": "JSSC'23",
+"venue": "JSSC",
+"yr": 2023,
+"short": "TranCIM",
+"ring": 2,
+"award": ""
+},
+{
+"k": 117,
+"tag": "TCAD'22",
+"venue": "TCAD",
+"yr": 2022,
+"short": "SDP",
+"ring": 2,
+"award": ""
+},
+{
+"k": 118,
+"tag": "TC'22",
+"venue": "TC",
+"yr": 2022,
+"short": "Dynamic Sparse Attention for Scalable Transformer Acceleration",
+"ring": 2,
+"award": ""
+},
+{
+"k": 119,
+"tag": "TC'22",
+"venue": "TC",
+"yr": 2022,
+"short": "A Systematic View of Model Leakage Risks in Deep Neural Network Systems",
+"ring": 2,
+"award": ""
+},
+{
+"k": 120,
+"tag": "TCAD'21",
+"venue": "TCAD",
+"yr": 2021,
+"short": "STPAcc",
+"ring": 2,
+"award": ""
+},
+{
+"k": 121,
+"tag": "TNNLS'21",
+"venue": "TNNLS",
+"yr": 2021,
+"short": "Exploring Adversarial Attack in Spiking Neural Networks with Spike-Compatible Gradient",
+"ring": 1,
+"award": ""
+},
+{
+"k": 122,
+"tag": "Information Systems'21",
+"venue": "Information Systems",
+"yr": 2021,
+"short": "Reuse-centric K-means Configuration",
+"ring": 1,
+"award": ""
+},
+{
+"k": 123,
+"tag": "TCAD'21",
+"venue": "TCAD",
+"yr": 2021,
+"short": "Rubik",
+"ring": 2,
+"award": ""
+},
+{
+"k": 124,
+"tag": "BIOINF'20",
+"venue": "BIOINF",
+"yr": 2020,
+"short": "Domain-Adversarial Multi-Task Framework for Novel Therapeutic Property Prediction of Compounds",
+"ring": 1,
+"award": ""
+},
+{
+"k": 125,
+"tag": "JAMT'20",
+"venue": "JAMT",
+"yr": 2020,
+"short": "Chatter detection in high-speed milling processes based on ON-LSTM and PBT",
+"ring": 1,
+"award": ""
+},
+{
+"k": 126,
+"tag": "TNNLS'20",
+"venue": "TNNLS",
+"yr": 2020,
+"short": "Comprehensive SNN Compression Using ADMM Optimization and Activity Regularization",
+"ring": 1,
+"award": ""
+},
+{
+"k": 127,
+"tag": "TNNLS'20",
+"venue": "TNNLS",
+"yr": 2020,
+"short": "Effective and Ef\ufb01cient Batch Normalization Using Few Uncorrelated Data for Statistics Estimation",
+"ring": 1,
+"award": ""
+},
+{
+"k": 128,
+"tag": "JSSC'20",
+"venue": "JSSC",
+"yr": 2020,
+"short": "Tianjic",
+"ring": 2,
+"award": ""
+},
+{
+"k": 129,
+"tag": "Neural Networks'19",
+"venue": "Neural Networks",
+"yr": 2019,
+"short": "Rethinking the Performance Comparison between SNNs and ANNs",
+"ring": 1,
+"award": ""
+},
+{
+"k": 130,
+"tag": "TVLSI'19",
+"venue": "TVLSI",
+"yr": 2019,
+"short": "DASM",
+"ring": 2,
+"award": ""
+},
+{
+"k": 131,
+"tag": "US Patent",
+"venue": "US Patent",
+"yr": null,
+"short": "Machine learning through parallelized stochastic gradient descent",
+"ring": 1,
+"award": ""
+},
+{
+"k": 132,
+"tag": "US Patent",
+"venue": "US Patent",
+"yr": null,
+"short": "Determining a course of action based on aggregated data",
+"ring": 1,
+"award": ""
+},
+{
+"k": 133,
+"tag": "US Patent",
+"venue": "US Patent",
+"yr": null,
+"short": "Implementing network security measures in response to a detected cyber attack",
+"ring": 1,
+"award": ""
+},
+{
+"k": 134,
+"tag": "US Patent",
+"venue": "US Patent",
+"yr": null,
+"short": "Determining a likelihood of a resource experiencing a problem based on telemetry data",
+"ring": 1,
+"award": ""
+},
+{
+"k": 135,
+"tag": "US Patent",
+"venue": "US Patent",
+"yr": null,
+"short": "Determining a likelihood of a user interaction with a content element",
+"ring": 1,
+"award": ""
+}
+],
+"topv": [
+"ASPLOS",
+"ISCA",
+"MICRO",
+"NeurIPS",
+"OSDI",
+"SC",
+"USENIX ATC",
+"ICML"
+],
+"vcount": {
+"ASPLOS": 15,
+"ISCA": 15,
+"MICRO": 9,
+"NeurIPS": 6,
+"OSDI": 5,
+"SC": 5,
+"USENIX ATC": 5,
+"ICML": 4
+},
+"years": [
+2013,
+2014,
+2015,
+2016,
+2017,
+2018,
+2019,
+2020,
+2021,
+2022,
+2023,
+2024,
+2025,
+2026
+],
+"ycount": {
+"2013": 1,
+"2014": 2,
+"2015": 3,
+"2016": 0,
+"2017": 3,
+"2018": 3,
+"2019": 6,
+"2020": 15,
+"2021": 18,
+"2022": 18,
+"2023": 12,
+"2024": 9,
+"2025": 19,
+"2026": 15
+},
+"reps": [
+[
+42,
+63,
+0
+],
+[
+43,
+1,
+2
+],
+[
+4,
+3,
+8
+]
+],
+"awards": [
+4,
+42,
+43,
+63,
+66,
+89
+],
+"rings": [
+{
+"name": "Quantum computing",
+"sub": "compilers, error correction, architecture",
+"n": 27
+},
+{
+"name": "Machine learning systems",
+"sub": "LLM serving & training, GPU kernels",
+"n": 61
+},
+{
+"name": "Architecture & compilers",
+"sub": "accelerators, memory, chip design",
+"n": 48
+}
+]
+}
