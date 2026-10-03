@@ -41,8 +41,8 @@
     <select id="film"><option value="scene/film10.html" selected>v10 - Compute Not Included, fast cut (65 s)</option><option value="scene/film9.html">v9 - Compute Not Included (110 s)</option></select>
     <label for="q">Quality</label>
     <select id="q">
-      <option value="draft">Draft - 540 x 676, fast check</option>
-      <option value="hd" selected>Final - 1080 x 1350 (X)</option>
+      <option value="draft">Draft - 540 x 676, fast check (~25 MB)</option>
+      <option value="hd" selected>Final - 1080 x 1350 (X, ~65 MB)</option>
       <option value="ss">Final, supersampled - drawn at 2160 x 2700, saved at 1080 x 1350 (sharpest, slowest)</option>
     </select>
     <div class="row">
@@ -65,7 +65,8 @@ const iframe = $('scene');
 let stopFlag = false, sceneWin = null, loaded = '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`; };
-const Q = { draft: { w: 540, h: 675, ow: 540, oh: 676, bps: 5e6 }, hd: { w: 1080, h: 1350, ow: 1080, oh: 1350, bps: 16e6 }, ss: { w: 2160, h: 2700, ow: 1080, oh: 1350, bps: 16e6 } };
+// bitrates keep a 65 s film under GitHub's limits (Final ~65 MB < 100 MB per file, Draft ~25 MB for the web uploader)
+const Q = { draft: { w: 540, h: 675, ow: 540, oh: 676, bps: 3e6 }, hd: { w: 1080, h: 1350, ow: 1080, oh: 1350, bps: 8e6 }, ss: { w: 2160, h: 2700, ow: 1080, oh: 1350, bps: 8e6 } };
 
 async function loadScene(src, w, h) {
   const url = `${src}?render=1&width=${w}&height=${h}`;
