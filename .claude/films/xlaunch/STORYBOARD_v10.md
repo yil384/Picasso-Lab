@@ -36,6 +36,21 @@ cat)", three plain rings for the logo).
   (Christmas, CNY 2026, Fire Spot 4.1, Hezi's defense, the 0725 party, Thanksgiving lunch), and the camera pulls
   back to show them all.
 
+## Round 3 (camera and a second full check)
+- **Why it wobbled**: `camRig` eases every segment, so a camera with three or four keys stops at each one. v10's
+  cameras now use `camPath`: the keys are waypoints of one smooth spline travelled by arc length under a single
+  ease, so every shot is one move (start, travel, settle) and never stops mid-way. Checked numerically with
+  `window.__camDump(a, b)` (every frame's camera, no rendering): one motion per shot, no reversals.
+- **Camera language**: the opening holds on the sleeping cat before the first clipping falls in; each further slam
+  is a cut to a new angle (+-10 degrees), never the same angle shifted; the printer and the rings get slow arcs for
+  parallax; the cat leaps off the edge in frame, then the camera dives after the bill, and the engine room opens
+  with a crane down the well (the fall continues across the cut); the roll call is one steady truck flowing into
+  the pull-back; the logo gets a slow orbit.
+- **Second full check, fixed**: the a4 title clear of the cat, the cat's leap in frame, the paper #1 note only once
+  Yufei is clear, "timed by Rishabh" under his feet, CHEAPER clear of the person in the ring, the bill's head out of
+  frame in f3 (and its stamps fade with it), roll-call names fade instead of un-writing, a stray Paper #137 on the
+  logo card (a camera function set it visible), no floor reflection under the logo.
+
 ## Shots
 | shot | frames | what happens |
 | --- | --- | --- |

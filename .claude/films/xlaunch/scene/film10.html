@@ -981,6 +981,7 @@ const BIG = [{ head: true, text: 'THE BILL' }, { gap: 89 }, { label: 'GPU TIME',
   { label: 'THE NEXT COMPUTER', price: 'TBD' }, { label: 'DATA MOVEMENT', price: 'even more' }, { label: 'TOTAL', price: '' }];
 const BR = { gpu: 2, mem: 4, next: 5, data: 6, total: 7 };
 const BIG_TOP = 2.65, BIG_Z = -1.6;
+let BIG_DY = 0;                                         // a shot may lower the hanging bill (f3)
 const STAMP_T = { faster: 942, cheaper: 1002, progress: 1066, best: 1386 };
 const ROLL = (i, n) => [(i - (n - 1) / 2) * 0.36, 0.3];
 
@@ -1034,7 +1035,7 @@ async function build10() {
 }
 function hide10() {
   if (!P9.clips) return;
-  P9.clips.forEach((c) => { c.g.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
+  BIG_DY = 0; P9.clips.forEach((c) => { c.g.visible = false; }); P9.markets.g.visible = false; P9.notes.forEach((n) => { n.g.visible = false; }); P9.arrows.forEach((d) => d.set(0, 0)); P9.pen.visible = false;
   P9.page.g.visible = false; P9.noteY.g.visible = false; P9.circleY.set(0, 0); P9.logo.g.visible = false; P9.photos.forEach((p) => { p.m.visible = false; });
   P9.bill.mesh.visible = false; P9.big.mesh.visible = false; P9.big.mat.color.setScalar(1);
   [P9.circle, P9.stain, P9.strike, P9.circleB, P9.working, P9.under, ...P9.seals, ...Object.values(P9.st)].forEach((d) => d.set(0, 0));
@@ -1060,25 +1061,59 @@ function reset10() {
 const DESK_EL = 56 * Math.PI / 180;
 const OVER = (x, z, d, dx = 0) => { const t = [x, FLOOR, z - 0.08]; return [[t[0] + dx, t[1] + d * Math.sin(DESK_EL), t[2] + d * Math.cos(DESK_EL)], t]; };
 const OV = (i, d) => OVER(CLP[i][0], CLP[i][1], d);
+// One move per shot, the way a promo is shot: the keys are waypoints of a single smooth path (Catmull-Rom, travelled
+// by arc length) with one ease over the whole shot, so the camera never stops at a waypoint (camRig stops at every
+// key, which reads as stop-start wobble). Before the first key it holds, after the last it holds.
+const sine = (t) => 0.5 - 0.5 * Math.cos(Math.PI * t), lin = (t) => t, outQ = (t) => 1 - Math.pow(1 - t, 2.2);
+const cruise = (t) => { const a = 0.14, v = 1 / (1 - a); return t < a ? 0.5 * v * t * t / a : t > 1 - a ? 1 - 0.5 * v * (1 - t) * (1 - t) / a : v * (t - a / 2); };
+function camPath(keys, ease = sine) {
+  const K = keys.length, f0 = keys[0][0], f1 = keys[K - 1][0], N = 240, pts = [], g = (k) => keys[Math.max(0, Math.min(K - 1, k))];
+  const cr = (a, b, c, d, t) => b.map((_, j) => 0.5 * (2 * b[j] + (-a[j] + c[j]) * t + (2 * a[j] - 5 * b[j] + 4 * c[j] - d[j]) * t * t + (-a[j] + 3 * b[j] - 3 * c[j] + d[j]) * t * t * t));
+  for (let s = 0; s <= N; s++) {
+    const x = K > 1 ? s / N * (K - 1) : 0, i = Math.min(Math.max(K - 2, 0), Math.floor(x)), t = x - i;
+    pts.push(K > 1 ? { p: cr(g(i - 1)[1], g(i)[1], g(i + 1)[1], g(i + 2)[1], t), q: cr(g(i - 1)[2], g(i)[2], g(i + 1)[2], g(i + 2)[2], t), fov: lerp(g(i)[3], g(i + 1)[3], t) } : { p: keys[0][1], q: keys[0][2], fov: keys[0][3] });
+  }
+  const L = [0], d3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  for (let s = 1; s <= N; s++) L.push(L[s - 1] + d3(pts[s].p, pts[s - 1].p) + 0.5 * d3(pts[s].q, pts[s - 1].q) + 0.02 * Math.abs(pts[s].fov - pts[s - 1].fov));
+  return (f) => {
+    const want = ease(clamp((f - f0) / Math.max(1, f1 - f0))) * L[N];
+    let lo = 0, hi = N; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (L[m] < want) lo = m; else hi = m; }
+    const t = L[hi] > L[lo] ? clamp((want - L[lo]) / (L[hi] - L[lo])) : 0, A = pts[lo], B = pts[hi];
+    return { p: mix3(A.p, B.p, t), t: mix3(A.q, B.q, t), fov: lerp(A.fov, B.fov, t) };
+  };
+}
+// a camera over a point of the desk: distance d, elevation el and azimuth az in degrees
+const ORB = (x, z, d, el, az = 0) => { const t = [x, FLOOR, z - 0.08], e = el * Math.PI / 180, a = az * Math.PI / 180; return [[t[0] + d * Math.cos(e) * Math.sin(a), t[1] + d * Math.sin(e), t[2] + d * Math.cos(e) * Math.cos(a)], t]; };
+const VCa = (j, dz, dx) => { const [cx, cy] = L.RING_C[j]; return [[cx + 0.1 + dx, cy - 0.05, 4.1 + dz], [cx, cy - 0.2, 0]]; };
 const CAMS10 = {
-  a1: camRig([[0, ...OVER(-0.03, 0.02, 3.6), 30], [59, ...OVER(-0.03, 0.02, 3.42), 30, eio]]),
-  a2: camRig([[60, ...OVER(0.3, 0.18, 3.6), 30], [119, ...OVER(0.3, 0.18, 3.42), 30, eio]]),
-  a3: camRig([[120, ...OVER(0.16, -0.24, 3.3), 30], [179, ...OVER(0.16, -0.24, 3.12), 30, eio]]),
-  a4: camRig([[180, ...OVER(0.16, -0.24, 3.12), 30], [204, ...OVER(0.06, -0.3, 4.3, 0.06), 32, eio5], [239, ...OVER(0.06, -0.3, 4.45, 0.08), 32]]),
-  b1: camRig([[240, [PRN[0] - 0.12, FLOOR + 1.0, PRN[2] + 2.85], [PRN[0] - 0.26, FLOOR + 0.4, PRN[2] + 0.1], 32], [329, [PRN[0] - 0.16, FLOOR + 0.95, PRN[2] + 2.6], [PRN[0] - 0.28, FLOOR + 0.4, PRN[2] + 0.1], 32, eio]]),
+  // the cat asleep on the desk, then the first prediction lands beside it; a steady push throughout
+  a1: camPath([[0, ...ORB(0.04, -0.18, 3.75, 56, 0), 30], [59, ...ORB(-0.08, -0.04, 3.5, 56, 0), 30]], lin),
+  // each further slam is a cut to a new angle (never the same angle shifted), still pushing
+  a2: camPath([[60, ...ORB(0.32, 0.24, 3.55, 50, 10), 30], [119, ...ORB(0.3, 0.24, 3.35, 52, 4), 30]], lin),
+  a3: camPath([[120, ...ORB(0.14, -0.26, 3.4, 58, -10), 30], [179, ...ORB(0.15, -0.26, 3.2, 57, -5), 30]], lin),
+  // the reveal: up and back, unwinding to square
+  a4: camPath([[180, ...ORB(0.15, -0.26, 3.2, 57, -5), 30], [232, ...ORB(0.04, -0.5, 5.5, 58, 0), 32]], sine),
+  // the printer: a slow arc in from the right, so the cat and the printer slide against the desk
+  b1: camPath([[240, [PRN[0] + 0.4, FLOOR + 0.9, PRN[2] + 2.75], [PRN[0] - 0.3, FLOOR + 0.4, PRN[2] + 0.05], 32], [329, [PRN[0] - 0.18, FLOOR + 0.95, PRN[2] + 2.45], [PRN[0] - 0.28, FLOOR + 0.4, PRN[2] + 0.05], 32]], lin),
   b2: (f) => camB2(f),
-  b3: camRig([[368, [DESK_X0 + 0.9, FLOOR + 1.1, 1.55], [DESK_X0, FLOOR - 0.3, 0.85], 34], [386, [DESK_X0 + 0.1, FLOOR + 0.4, 1.6], [DESK_X0 - 0.15, FLOOR - 2.5, 0.85], 40, ein], [479, [DESK_X0 + 0.05, FLOOR - 1.2, 1.6], [DESK_X0 - 0.1, FLOOR - 5.0, 0.85], 40]]),
-  c1: camRig([[480, [0.32, 0.86, 2.95], [0, -0.12, 0], 30], [569, [0.22, 0.62, 2.4], [0, -0.16, 0], 30, eio]]),
-  f1: camRig([[1170, [0.0, 0.9, 3.4], [0, 0.9, 0], 34], [1199, [0.2, 0.95, 3.1], [0, 0.9, 0], 36]]),
-  f2: camRig([[1200, [0.0, 0.92, 5.2], [0, 0.82, 0], 32], [1289, [0.04, 1.2, 3.4], [0, 1.18, 0], 30, eio]]),
-  f3: camRig([[1290, [0.06, 1.3, 3.0], [0, 1.28, 0], 30], [1379, [0.04, 1.29, 2.8], [0, 1.27, 0], 30]]),
-  f4: camRig([[1380, [0.1, 0.62, 3.0], [0.0, 0.4, BIG_Z], 34], [1439, [0.06, 0.5, 2.7], [0.0, 0.3, BIG_Z], 34, eio]]),
-  f5: camRig([[1440, [0.05, 0.12, 3.25], [0, -0.06, 0.2], 32], [1499, [0.04, 0.1, 3.0], [0, -0.06, 0.2], 32]]),
-  g1: camRig([[1500, [ROLL(0, 14)[0] + 0.25, 0.22, 3.2], [ROLL(0, 14)[0] + 0.25, -0.12, 0.3], 34], [1600, [ROLL(13, 14)[0] - 0.4, 0.22, 3.2], [ROLL(13, 14)[0] - 0.4, -0.12, 0.3], 34, (x) => x],
-    [1612, [ROLL(13, 14)[0] - 0.3, 0.24, 3.25], [ROLL(13, 14)[0] - 0.3, -0.12, 0.3], 34], [1649, [0, 0.62, 6.6], [0, -0.05, 0.3], 34, eio5]]),
-  h1: camRig([[1710, ...OVER(0.14, 0.06, 3.9), 30], [1769, ...OVER(0.13, 0.04, 3.6), 30]]),
+  // over the edge after the bill: one dive, then it settles in the dark for the words
+  b3: (f) => CAM_B3(f),
+  // the engine room: the fall continues, the camera comes down the well with the bill and the cat
+  c1: camPath([[480, [0.3, 2.9, 2.0], [0.0, -0.2, 0.0], 34], [569, [0.22, 0.62, 2.4], [0, -0.16, 0], 30]], outQ),
+  f1: camPath([[1170, [0.0, 0.9, 3.4], [0, 0.9, 0], 34], [1199, [0.2, 0.95, 3.1], [0, 0.9, 0], 36]], lin),
+  // the Best Paper rises and the camera rises with it
+  f2: camPath([[1200, [0.0, 0.92, 5.2], [0, 0.82, 0], 32], [1289, [0.04, 1.2, 3.4], [0, 1.18, 0], 30]], sine),
+  // the twist: a slow push on the circled title
+  f3: camPath([[1290, [0.06, 1.3, 3.0], [0, 1.28, 0], 30], [1379, [0.03, 1.27, 2.55], [0, 1.25, 0], 30]], lin),
+  f4: camPath([[1380, [0.1, 0.62, 3.0], [0.0, 0.4, BIG_Z], 34], [1439, [0.06, 0.5, 2.7], [0.0, 0.3, BIG_Z], 34]], lin),
+  f5: camPath([[1440, [0.05, 0.12, 3.25], [0, -0.06, 0.2], 32], [1499, [0.04, 0.1, 3.0], [0, -0.06, 0.2], 32]], lin),
+  // the roll call: one steady truck along the line, flowing into the pull-back for Yufei and the cat
+  g1: camPath([[1500, [ROLL(0, 14)[0] + 0.25, 0.22, 3.2], [ROLL(0, 14)[0] + 0.25, -0.12, 0.3], 34], [1590, [ROLL(13, 14)[0] - 0.4, 0.22, 3.2], [ROLL(13, 14)[0] - 0.4, -0.12, 0.3], 34],
+    [1649, [0, 0.62, 6.6], [0, -0.05, 0.3], 34]], cruise),
+  h1: camPath([[1710, ...ORB(0.14, 0.06, 3.9, 56, 0), 30], [1769, ...ORB(0.13, 0.04, 3.6, 56, 0), 30]], lin),
   h2: (f) => camH2(f),
-  h3: camRig([[1830, [0.0, FLOOR + 0.94, 4.9], [0, FLOOR + 0.68, 0], 30], [1949, [0.0, FLOOR + 0.92, 4.6], [0, FLOOR + 0.68, 0], 30]]),
+  // the logo: a slow orbit in, so the rings turn against the light
+  h3: camPath([[1830, [-0.5, FLOOR + 0.94, 4.9], [0, FLOOR + 0.68, 0], 30], [1949, [0.0, FLOOR + 0.92, 4.55], [0, FLOOR + 0.68, 0], 30]], lin),
 };
 // b2 looks straight down at the circled row of the bill on the desk, then pans left after the end the cat runs off with
 const pullAt = (f) => 0.45 * ein(clamp((f - 360) / 8));
@@ -1091,27 +1126,33 @@ function camB2(f) {
 }
 // h2 pushes in on the byline of Paper #137
 function camH2(f) {
-  const a = pageOnDesk() && P9.page.at(0.62, 0.3);
-  const t = eio5(clamp((f - 1770) / 26)), A = OVER(0.13, 0.04, 3.6), B = OVER(a.x, a.z + 0.04, 2.25);
+  const vis = P9.page.g.visible; pageOnDesk(); const a = P9.page.at(0.62, 0.3); P9.page.g.visible = vis;      // no side effects (the blur samples h2 from h3)
+  const t = sine(clamp((f - 1770) / 40)), A = ORB(0.13, 0.04, 3.6, 56, 0), B = ORB(a.x, a.z + 0.04, 2.25, 56, 0);
   return { p: mix3(A[0], B[0], t), t: mix3(A[1], B[1], t), fov: 30 };
 }
 // cameras for the replayed v8 shots: one move each, no whip in from the previous shot's subject
 const CAMS_OVER = {
+  // paper #1: one move from Yufei's side round to the page
+  c3: camPath([[630, [1.5, 0.28, 3.65], [0.3, 0.05, 0.4], 32], [689, OPEN_END[0], OPEN_END[1], 30]], sine),
   // the lab grows: one long pull-back from paper #1 to the whole crowd
-  d1: camRig([[690, [0.84, 0.65, 3.8], [0.05, 0.29, 0], 30], [779, [-0.5, 1.0, 7.4], [0.0, 0.85, -0.4], 36, eio]]),
+  d1: camPath([[690, [0.84, 0.65, 3.8], [0.05, 0.29, 0], 30], [779, [-0.5, 1.0, 7.4], [0.0, 0.85, -0.4], 36]], sine),
   // the years: square on, long lens, the papers land in their bars
-  d2: camRig([[780, [0.06, 0.5, 17.6], [0.06, 0.46, -0.6], 15], [839, [0.06, 0.48, 16.5], [0.06, 0.46, -0.6], 15, eio]]),
-  // the venues: from the whole pyramid down to the tie, then hold
-  d3: camRig([[840, [0, 2.35, 6.2], [0, -0.34, -0.4], 36], [882, [VX01, 0.12, 3.5], [VX01, -0.28, -0.3], 30, eio], [899, [VX01, 0.1, 3.38], [VX01, -0.28, -0.3], 30]]),
-  // three answers: the whole board, held, while the bill is hoisted behind
-  e0: camRig([[900, [0, 0.98, 6.4], [0, 0.98, 0], 34], [929, [0, 0.98, 6.15], [0, 0.98, 0], 34]]),
-  // each ring: a cut straight to it, then a slow push (no swing over from the last ring)
-  e1: camRig([[930, VC(1)[0], VC(1)[1], 30], [989, VC(1, -0.25)[0], VC(1, -0.25)[1], 30]]),
-  e2: camRig([[990, VC(2)[0], VC(2)[1], 30], [1049, VC(2, -0.25)[0], VC(2, -0.25)[1], 30]]),
-  e3: camRig([[1050, VC(0)[0], VC(0)[1], 30], [1109, VC(0, -0.25)[0], VC(0, -0.25)[1], 30]]),
+  d2: camPath([[780, [0.06, 0.5, 17.6], [0.06, 0.46, -0.6], 15], [839, [0.06, 0.48, 16.5], [0.06, 0.46, -0.6], 15]], lin),
+  // the venues: from the whole pyramid down to the tie, in one move
+  d3: camPath([[840, [0, 2.35, 6.2], [0, -0.34, -0.4], 36], [899, [VX01, 0.1, 3.4], [VX01, -0.28, -0.3], 30]], sine),
+  // three answers: the whole board while the bill is hoisted behind
+  e0: camPath([[900, [0, 0.98, 6.4], [0, 0.98, 0], 34], [929, [0, 0.98, 6.15], [0, 0.98, 0], 34]], lin),
+  // each ring: a cut to it from a new side, then a slow arc in (frontal, from the right, from the left)
+  e1: camPath([[930, ...VCa(1, 0, 0), 30], [989, ...VCa(1, -0.25, 0), 30]], lin),
+  e2: camPath([[990, ...VCa(2, 0, 0.5), 30], [1049, ...VCa(2, -0.25, 0.2), 30]], lin),
+  e3: camPath([[1050, ...VCa(0, 0, -0.5), 30], [1109, ...VCa(0, -0.25, -0.2), 30]], lin),
   // the flash, then pull back: the team photo among the lab's other group photos
-  g2: (f) => f < 1655 ? null : camRig([[1655, [0, 0.55, 3.9], [0, 0.55, 0], 30], [1690, [0, 0.4, 7.8], [0, 0.36, 0], 30, eio], [1709, [0, 0.4, 7.95], [0, 0.36, 0], 30]])(f),
+  g2: (f) => f < 1655 ? null : CAM_G2(f),
 };
+// b3: a beat on the cat leaping off the edge after the bill, then the dive into the dark
+const B3_START = [[DESK_X0 + 1.3, FLOOR + 1.15, 2.1], [DESK_X0 + 0.05, FLOOR - 0.05, 0.85], 34];
+const CAM_B3 = camPath([[379, ...B3_START], [402, [DESK_X0 + 0.15, FLOOR + 0.3, 1.6], [DESK_X0 - 0.12, FLOOR - 2.3, 0.85], 38], [438, [DESK_X0 + 0.05, FLOOR - 1.1, 1.6], [DESK_X0 - 0.1, FLOOR - 4.8, 0.85], 40]], sine);
+const CAM_G2 = camPath([[1655, [0, 0.55, 3.9], [0, 0.55, 0], 30], [1709, [0, 0.4, 7.9], [0, 0.36, 0], 30]], sine);
 function camX(f) { return (CAMS10[shotX(f)] || CAMS10.f3)(f); }
 function apX(f) { const k = shotX(f); return k[0] === 'a' ? 0.0007 : k[0] === 'b' ? 0.0011 : 0.0007; }
 
@@ -1119,8 +1160,8 @@ function frameNew(ctx, f) {
   const { THREE } = T;
   NOWF = f; reset10();
   const c = camX(f), sh = shotX(f), u = at0(f);
-  const slam = (sh[0] === 'a' && sh <= 'a3') || sh === 'h1', th = !slam || u < 4 ? 0 : u < 6 ? (u - 4) / 2 : Math.exp(-(u - 6) / 3);   // each slam: one thud
-  look(T, [c.p[0], c.p[1] - 0.022 * th, c.p[2]], [c.t[0], c.t[1] - 0.01 * th, c.t[2]], c.fov, apX(f));
+  const land = { a1: 18, a2: 4, a3: 4, h1: 4 }[sh], v = u - (land ?? 0), th = land == null || v < 0 ? 0 : v < 2 ? v / 2 : Math.exp(-(v - 2) / 3);   // each slam: one thud
+  look(T, [c.p[0], c.p[1] - 0.011 * th, c.p[2]], [c.t[0], c.t[1] - 0.005 * th, c.t[2]], c.fov, apX(f));
   const a = camX(Math.max(0, f - 0.5)), b = camX(f + 0.5);
   const dir = (q) => new THREE.Vector3(q.t[0] - q.p[0], q.t[1] - q.p[1], q.t[2] - q.p[2]).normalize();
   const da = dir(a), db = dir(b);
@@ -1142,6 +1183,8 @@ function frame10(ctx, f) {
   if (SHOTX[sh]) SHOTX[sh](f, ctx, g);
 }
 
+// authoring aid: the camera of every frame without rendering (position, look direction, fov) for motion checks
+window.__camDump = (a, b) => { const out = [], ctx = { project: (v) => v }; for (let f = a; f < b; f++) { frame10(ctx, f); const c = T.camera, d = new T.THREE.Vector3(); c.getWorldDirection(d); out.push([f, ...c.position.toArray().map((x) => +x.toFixed(4)), ...d.toArray().map((x) => +x.toFixed(4)), +c.fov.toFixed(2)]); } return out; };
 // ---- lighting of the painted characters: the scene's key and rim, in view space, for put() ----------------
 function lightFor(x, y, z) {
   const cam = T.camera, inv = cam.matrixWorldInverse, P = new T.THREE.Vector3(x, y + 0.4, z);
@@ -1228,12 +1271,12 @@ function circleOnBill(f, path, f0) {
   P9.circle.set(f0 < 0 ? 1 : clamp((f - f0) / 9), 1);
 }
 const bigPath = (dy = 0) => (s) => ({ p: [0, BIG_TOP - s - dy, BIG_Z], side: [1, 0, 0] });
-function showBig(dy = 0) { P9.big.shape(bigPath(dy), 0, Math.min(P9.big.len, BIG_TOP - dy - FLOOR + 0.6)); }
-function bigAt(row, u, dy = 0, lift = 0.01) { const s = P9.big.rowS(row) - 0.012; return new T.THREE.Vector3((u - 0.5) * P9.big.RW, BIG_TOP - s - dy, BIG_Z + lift); }
+function showBig(dy = BIG_DY) { P9.big.shape(bigPath(dy), 0, Math.min(P9.big.len, BIG_TOP - dy - FLOOR + 0.6)); }
+function bigAt(row, u, dy = BIG_DY, lift = 0.01) { const s = P9.big.rowS(row) - 0.012; return new T.THREE.Vector3((u - 0.5) * P9.big.RW, BIG_TOP - s - dy, BIG_Z + lift); }
 function stampOn(d, row, u, f0, f, rot = 0, sc = 1) { if (f < f0 + 6) return; d.mesh.position.copy(bigAt(row, u)); d.mesh.rotation.set(0, 0, rot); d.mesh.scale.setScalar(sc); d.set(1, 1); }
 function bigMarks(f) {
   stampOn(P9.st.faster, BR.gpu, 0.8, STAMP_T.faster, f, -0.08, 0.8);
-  stampOn(P9.st.cheaper, BR.mem, 0.86, STAMP_T.cheaper, f, 0.06, 0.58);
+  stampOn(P9.st.cheaper, BR.mem, 0.66, STAMP_T.cheaper, f, 0.06, 0.58);
   if (f >= 1058) { const d = P9.strike, q = bigAt(BR.next, 0.865); d.mesh.position.copy(q); d.mesh.scale.set(0.5, 1.6, 1); d.mesh.rotation.set(0, 0, 0.04); d.set(clamp((f - 1058) / 6), 1); }
   stampOn(P9.st.progress, BR.next, 0.72, STAMP_T.progress, f, -0.04, 0.44);
   const c = P9.circleB; c.mesh.position.copy(bigAt(BR.data, 0.3, 0, 0.012)); c.mesh.scale.set(1, 1.15, 1); c.mesh.rotation.set(0, 0, 0); c.set(1, f < 1300 ? 1 : 0);
@@ -1273,6 +1316,7 @@ function endDesk(f) {
 }
 function logoCard(f) {
   const u = f - 1830, L3 = P9.logo, pr = L3.parts; L3.g.visible = true;
+  T.mirror.visible = false; T.coat.visible = false; T.cyc.visible = false;
   L3.g.position.set(0, FLOOR + 1.06, 0);
   L3.g.rotation.set(0.04 * Math.sin(u / 50), lerp(0.42, 0.05, eout(clamp(u / 70))) + 0.025 * Math.sin(u / 37), 0);
   const FROM = [[-2.8, 0.25, 1.2], [0.1, 2.2, 0.9], [2.8, 0.2, 1.2]];
@@ -1290,11 +1334,13 @@ function quoteShot(f, i) {
   const u = f - S10['a' + (i + 1)][0];
   deskOn();
   for (let j = 0; j <= i; j++) { clipOnDesk(j); if (j < i) noteOn(j, 99); }
-  const c = P9.clips[i], [x, z] = CLP[i];
-  // the slam: the sheet drops the last few centimetres in the first 4 frames, then lies flat
-  if (u < 4) { c.g.position.y += (1 - u / 4) * 0.14; c.g.rotation.x += (1 - u / 4) * 0.1; }
-  P9.kit.dustRing([x, FLOOR, z], c.w, c.h, FLOOR + 0.008, u - 3);
-  noteOn(i, u - 9);
+  const c = P9.clips[i], [x, z] = CLP[i], uu = i === 0 ? u - 14 : u;      // a1 opens on the sleeping cat; the sheet lands at 14
+  // the slam: the sheet falls in from above the frame and drops the last few centimetres in 4 frames, then lies flat
+  if (uu < -6) c.g.visible = false;
+  else if (uu < 0) { const k = -uu / 6; c.g.position.y += 0.14 + 0.9 * k * k; c.g.rotation.x += 0.1 + 0.25 * k; c.g.rotation.z += 0.12 * k; }
+  else if (uu < 4) { c.g.position.y += (1 - uu / 4) * 0.14; c.g.rotation.x += (1 - uu / 4) * 0.1; }
+  P9.kit.dustRing([x, FLOOR, z], c.w, c.h, FLOOR + 0.008, uu - 3);
+  noteOn(i, uu - 9);
   catNap(f, i, u);
 }
 // the cat naps through the first two predictions; the third lands right next to it
@@ -1341,7 +1387,7 @@ const SHOTX = {
     const fall = (s) => { const d = s - u * 0.12; return { p: [DESK_X0 - 0.04 + (d < 0 ? -d * 0.88 : 0.04 * Math.sin(s * 2)), d < 0 ? FLOOR + 0.004 : FLOOR - d, 0.85 + (d < 0 ? -d * 0.47 : 0.02 * Math.cos(s * 3))], side: d < 0 ? [0.47, 0, 0.88] : [Math.cos(s), 0, Math.sin(s)] }; };
     P9.bill.shape(fall, 0, 6);
     if (u >= 1 && u < 20) { const t = clamp((u - 1) / 16), y = FLOOR + 0.14 * Math.sin(Math.PI * Math.min(1, t * 1.8)) - 3.2 * Math.max(0, t - 0.5) ** 2;
-      putH(C.cat, 'cat_jump', lerp(DESK_X0 + 0.42, DESK_X0 - 0.3, t), lerp(1.0, 0.9, t), 0.42, { y, contact: false, roll: -0.5 * t, light: 0.9, rim: 1.0, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.12 }); }
+      putH(C.cat, 'cat_jump', lerp(DESK_X0 + 0.3, DESK_X0 - 0.3, t), lerp(0.78, 0.72, t), 0.42, { y, contact: false, roll: -0.5 * t, light: 0.9, rim: 1.0, rimCol: [1, 0.86, 0.62], face: 1, relief: 0.12 }); }
     T.grade.uniforms.uFade.value = 0.35 * sm((u - 10) / 10);
     T.key.intensity = 0.5; T.prac.intensity = u < 14 ? T.prac.intensity : 0;
   },
@@ -1377,7 +1423,7 @@ const SHOTX = {
   e3(f) { showBig(); P9.big.mat.color.setScalar(0.62); bigMarks(f); },
   e4(f) {
     showBig(); P9.big.mat.color.setScalar(0.62 + 0.38 * sm((f - 1110) / 20)); bigMarks(f);
-    const t = eio5(clamp((f - 1110) / 30)), c0 = CAMS_OVER.e3(1109);
+    const t = sine(clamp((f - 1110) / 40)), c0 = CAMS_OVER.e3(1109);
     look(T, mix3(c0.p, [0.0, 1.35, 6.3], t), mix3(c0.t, [0.0, 1.3, BIG_Z], t), lerp(c0.fov, 34, t), 0.0005);
   },
   f1(f) { stormPapers(f, 1170); T.rings.forEach((r, j) => { r.visible = true; r.position.set(...L.RING_C[j]); r.scale.setScalar(L.RING_R / 0.26); r.material.emissiveIntensity = 0.06; r.material.opacity = 0.5; }); T.key.intensity = 0.8; },
@@ -1397,7 +1443,10 @@ const SHOTX = {
     for (const p of D.pubs) if (p.k !== bp) { const a = L.endArc(D, p.k); setPaper(T, p.k, { ...a, dim: Math.max(a.dim || 0, 0.55) }); }
     setPaper(T, bp, { p: [0, 0.55, 0], r: [0, 0, 0], s: 1.4, dim: 0 }, 0.05);
     st.gold.intensity = 1.5; st.gold.position.set(1.2, 1.6, 1.4); st.gold.lookAt(0, 1.0, 0); T.key.intensity = 0.9; T.rim.intensity = 2.0;
-    showBig(); bigMarks(f); P9.big.mat.color.setScalar(0.35);
+    // the bill hangs higher here (its head above the frame) and fades out with its stamps once the circle has flown
+    const kf = 1 - sm((f - 1322) / 14);
+    BIG_DY = -0.6; showBig(); bigMarks(f); P9.big.mat.color.setScalar(0.35 * kf); if (kf < 0.01) P9.big.mesh.visible = false;
+    [...Object.values(P9.st), P9.strike, P9.circleB].forEach((d) => { d.mat.opacity *= kf; if (kf < 0.01) d.mesh.visible = false; });
     if (f >= 1320) { const g = T.papers[bp].g, m = P9.circle.mesh, u0 = 0.69, u1 = 0.952, v = 0.071; g.add(m); m.quaternion.identity();
       m.position.set(((u0 + u1) / 2 - 0.5) * ASP, 0.5 - v, sheetZ(bp, (u0 + u1) / 2, v) + 0.006); m.scale.set(((u1 - u0) * ASP * 1.16) / P9.circle.w, 1.3, 1); P9.circle.set(1, 1); }
   },
@@ -1416,7 +1465,7 @@ const SHOTX = {
   g1(f) {
     const n = MEMBERS.length;
     MEMBERS.forEach((m, i) => {
-      const [x, z] = ROLL(i, n), t0 = 1505 + Math.min(i, n - 2) * 7, s2 = eout(clamp((f - t0) / 6)), back = 1 - sm((f - 1612) / 24);
+      const [x, z] = ROLL(i, n), t0 = 1498 + Math.min(i, n - 2) * 6, s2 = eout(clamp((f - t0) / 6)), back = 1 - sm((f - 1612) / 24);
       put(C.m[m], `m_${m}`, x, z + 0.16 * s2 * back, { h: 0.66 * MH(m), lift: f >= t0 && f < t0 + 6 ? Math.sin(Math.PI * (f - t0) / 6) * 0.03 : 0 });
     });
     if (f >= 1612) put(C.y, 'y_hold_cat', 0, 0.95, { h: 0.74, fade: sm((f - 1612) / 10) });
@@ -1488,7 +1537,7 @@ function typeLayer10(ctx, g, f) {
   }
   if (sh === 'c3') {
     const pg = T.papers[D.first].g, q = P(pg.position.x, pg.position.y - 0.25 * pg.scale.x, pg.position.z);
-    if (pg.visible) hand(g, 'paper #1: ProfMig, CGO 2013', MX, 820, 48, { k: win(u, 6, 56, 8, 6), color: PENCIL, rot: -0.03 });
+    if (pg.visible) hand(g, 'paper #1: ProfMig, CGO 2013', MX, 820, 48, { k: win(u, 36, 60, 8, 4), color: PENCIL, rot: -0.03 });
   }
   if (sh === 'd1') {
     const n = 136 * eio(clamp(u / 80)), k = sm(u / 6);
@@ -1517,8 +1566,8 @@ function typeLayer10(ctx, g, f) {
     halo(g, 0, 140, 900, 400, 0.75 * k);
     serif(g, R.name, MX, 250, 70, { k, color: COLS[r] });
     txt(g, `${R.n} publications  ·  ${R.sub}`, MX, 300, 26, 500, SOFT, { mono: true, track: 0, k });
-    if (sh === 'e1') { stampSlam(ctx, g, 'stamp_faster', STAMP_T.faster, f, bigAt(BR.gpu, 0.8)); const rq = P(0.42, L.RING_C[1][1] - 0.02, 0.18); hand(g, 'timed by Rishabh', Math.min(rq.x + 30, 1080 - MX - 380), rq.y + 160, 56, { k: sm((f - 950) / 10), color: PENCIL }); }
-    if (sh === 'e2') stampSlam(ctx, g, 'stamp_cheaper', STAMP_T.cheaper, f, bigAt(BR.mem, 0.86));
+    if (sh === 'e1') { stampSlam(ctx, g, 'stamp_faster', STAMP_T.faster, f, bigAt(BR.gpu, 0.8)); const rq = P(0.42, L.RING_C[1][1] - 0.56, 0.18), kr = sm((f - 950) / 10); halo(g, rq.x - 230, rq.y + 10, rq.x + 230, rq.y + 90, 0.5 * kr); hand(g, 'timed by Rishabh', clamp(rq.x, MX + 200, 1080 - MX - 200), rq.y + 64, 52, { k: kr, color: PENCIL, align: 'center' }); }
+    if (sh === 'e2') stampSlam(ctx, g, 'stamp_cheaper', STAMP_T.cheaper, f, bigAt(BR.mem, 0.66));
     if (sh === 'e3') stampSlam(ctx, g, 'stamp_progress', STAMP_T.progress, f, bigAt(BR.next, 0.72));
   }
   if (sh === 'e4') {
@@ -1549,13 +1598,13 @@ function typeLayer10(ctx, g, f) {
     const n = MEMBERS.length, back = 1 - sm((f - 1612) / 12);
     sticky(g, ['staff: ' + (n + 1) + ' humans,', '1 cat (awake)'], 1080 - MX - 330, 170, 330, { k: sm(u / 6) * (1 - sm((u - 110) / 8)), rot: 0.04, size: 44 });
     MEMBERS.forEach((m, i) => {
-      const [x, z] = ROLL(i, n), t0 = 1505 + Math.min(i, n - 2) * 7, kk = sm((f - t0 - 1) / 6) * back; if (kk < 0.01) return;
-      const q = P(x, FLOOR - 0.02, z + 0.16), ke = kk * sm((q.x - MX - 70) / 60) * sm((1080 - MX - 70 - q.x) / 60); if (ke < 0.01) return;
-      hand(g, m[0].toUpperCase() + m.slice(1), q.x, q.y + 64 + (i % 2) * 52, 56, { k: ke, align: 'center', color: PENCIL, rot: (i % 2 ? 0.03 : -0.03) });
+      const [x, z] = ROLL(i, n), t0 = 1498 + Math.min(i, n - 2) * 6; if (f < t0 + 1) return;
+      const q = P(x, FLOOR - 0.02, z + 0.16), a = back * sm((q.x - MX - 130) / 50) * sm((1080 - MX - 130 - q.x) / 50); if (a < 0.01) return;
+      g.save(); g.globalAlpha = a; hand(g, m[0].toUpperCase() + m.slice(1), q.x, q.y + 64 + (i % 2) * 52, 56, { k: sm((f - t0 - 1) / 6), align: 'center', color: PENCIL, rot: (i % 2 ? 0.03 : -0.03) }); g.restore();
     });
     const iz = MEMBERS.indexOf('zhongkai'), iu = MEMBERS.indexOf('zhuo');
-    if (iz >= 0 && iu >= 0) { const a = P(ROLL(iz, n)[0], FLOOR - 0.02, 0.46), b = P(ROLL(iu, n)[0], FLOOR - 0.02, 0.46), kb = sm((f - 1600) / 8) * back;
-      ink(g, IMG.pen_bracket_b, (a.x + b.x) / 2, Math.max(a.y, b.y) + 180, 60, { k: kb, rot: Math.PI / 2 }); hand(g, 'tied for gold', (a.x + b.x) / 2, Math.max(a.y, b.y) + 240, 54, { k: kb, align: 'center', color: '#ffd27a' }); }
+    if (iz >= 0 && iu >= 0) { const a = P(ROLL(iz, n)[0], FLOOR - 0.02, 0.46), b = P(ROLL(iu, n)[0], FLOOR - 0.02, 0.46), kb = sm((f - 1600) / 8), cx = clamp((a.x + b.x) / 2, MX + 170, 1080 - MX - 170);
+      g.save(); g.globalAlpha = back; ink(g, IMG.pen_bracket_b, cx, Math.max(a.y, b.y) + 180, 60, { k: kb, rot: Math.PI / 2 }); hand(g, 'tied for gold', cx, Math.max(a.y, b.y) + 240, 54, { k: kb, align: 'center', color: '#ffd27a' }); g.restore(); }
     const ky = sm((f - 1622) / 10); if (ky > 0.01) { const q = P(0, FLOOR - 0.02, 0.95); serif(g, 'Yufei', q.x, q.y + 70, 64, { k: ky, align: 'center' }); hand(g, 'PI, cat handler', q.x, q.y + 122, 50, { k: ky, align: 'center', color: PENCIL }); }
   }
   if (sh === 'g2') { big('Pictured: Picasso Lab.', CAPX - 76, 72, { k: sm((u - 6) / 8) }); hand(g, 'not pictured: you.', MX, CAPX + 10, 70, { k: sm((u - 14) / 10) }); }
