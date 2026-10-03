@@ -23,6 +23,19 @@ cat)", three plain rings for the logo).
   rings fly in and lock into the lab's real logo in 3D (rings, links, the artwork inside each ring and the PICASSO
   wordmark, all from `home/static/PicassoLab-Logo.png`).
 
+## Round 2 (after the first local render)
+- **Camera**: one motivated move per shot. Each slam is a cut with a slow push (no whip pans, no shake; one small
+  thud when the sheet lands). v8's handheld drift is off. The replayed v8 shots (d1-d3, e0-e3, g2) have their own
+  steady cameras (`CAMS_OVER`): each ring is a straight cut and a push, not a swing over from the previous ring.
+- **Cut-offs and overlaps**: the cat fully in frame on the desk; the bill no longer folds at its corner; "this
+  one." stays inside the frame; the engine-room cat lies on the desk top, clear of the chair; the "markets" clipping
+  and the paper #1 note clear Yufei; the backdrop bill is wide enough to stand behind all three rings; the stamps
+  no longer pile on each other; nobody is half out of the frame in the toast or the receipt shot; roll-call names
+  fade at the frame edges; the cat on Paper #137 is inside the frame.
+- **Everyone pictured**: after the flash the team print is joined by six more group photos from `events/static`
+  (Christmas, CNY 2026, Fire Spot 4.1, Hezi's defense, the 0725 party, Thanksgiving lunch), and the camera pulls
+  back to show them all.
+
 ## Shots
 | shot | frames | what happens |
 | --- | --- | --- |
