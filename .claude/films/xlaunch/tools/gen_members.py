@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Round 2 of the member paintings with Codex's image tool (needs a logged-in `codex` CLI; in a cloud session
 `codex login --device-auth`). Each image gets three references: art/y_toast.png (the film's style, Pixar-like 3D),
-the member's Team-page photo (the face) and their round-1 painting art/m_<name>.png (the outfit, so all of a
+the member's Team-page photo (the face) and their current painting art/m_<name>.png (the outfit, so all of a
 member's images wear the same clothes). Output: art/r2/<file>.png, 1024x1536 on flat #00FF00; logs in logs/.
 With --yufei: the five Yufei poses from her anime short, redrawn in the design of y_toast (pose from the old image).
 usage: python3 tools/gen_members.py [--jobs 3] [--force] [--yufei] [names...]"""
