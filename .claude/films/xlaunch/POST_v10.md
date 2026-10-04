@@ -24,7 +24,7 @@ Here is our one-minute film about the compute bill, made in code by our lab (and
 
 Hiring postdocs, PhD students and interns. Milk tea included.
 
-## First reply (pin it): sources, about 210 characters
+## First reply (post it right away; X cannot pin replies, the first own reply shows first): sources, 210 characters
 
 Sources, exact words, no affiliation:
 Musk, WEF 2026 https://www.rev.com/transcripts/musk-speaks-at-wef
