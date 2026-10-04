@@ -1,0 +1,284 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Picasso Lab explainers - vertical look development</title>
+<!-- Style frames for the vertical explainer series (1080x1920), before any animation (the v7 lesson): the launch film's
+     night desk under the banker's lamp, rebuilt for 9:16, with the pilot's hero miniature (a white-card outpatient
+     tower: 256 rooms = DeepSeek-V3's routed experts, 8 lit per token + the lobby = the shared expert). One frame per
+     shot; ?lang=en|zh switches every word in the picture; ?guides=1 draws the X + Douyin safe zones. -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<link rel="stylesheet" href="/edu/fonts/cjk.css">
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { buildStudio, look } from '/scene/studio.js';
+import { spriteKit } from '/scene/sprite.js';
+import { clamp, lerp, hsh } from '/scene/lib.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { hospitalKit, tileKit, BW, BH } from '/edu/look/hospital.js';
+import { AccumDOFPass } from '/edu/look/accum.js';
+import { cityKit } from '/edu/look/city.js';
+import { gridOf, streetsKit } from '/edu/look/streets.js';
+
+const Q = new URLSearchParams(location.search), LANG = Q.get('lang') || 'en', GUIDES = Q.get('guides') === '1';
+const W = 1080, H = 1920;
+// the words in the picture, per language (the picture is rendered once per language)
+const TXT = {
+  en: { row: 'No.01   MIXTURE OF EXPERTS', t1: '671B parameters.', t2: '37B per token.', sign: 'EXPERT CLINIC',
+        cap: '256 experts per layer.|Each token gets 8.', cap2: 'Plus the shared one in the lobby.', note: 'which door\nis mine?',
+        tile: 'the', ticket: ['TOKEN  "the"', 'ROOMS  017 042 101', '       133 178 199', '       230 251', '+ LOBBY (shared)'] },
+  zh: { row: '第01项   混合专家 MoE', t1: '6710亿参数', t2: '每个token只用370亿', sign: '专家门诊',
+        cap: '每层256个专家|每个token挂8个号', cap2: '再加上大厅里人人都走的共享专家', note: '我该挂\n哪个号？',
+        tile: '的', ticket: ['词元  「的」', '诊室  017 042 101', '      133 178 199', '      230 251', '＋ 大厅（共享专家）'] },
+}[LANG];
+const SERIF = LANG === 'zh' ? '"Noto Serif SC"' : '"Instrument Serif"';
+const SANS = LANG === 'zh' ? '"Noto Sans SC"' : '"Inter"';
+const HAND = LANG === 'zh' ? '"Long Cang"' : '"Caveat"';
+const LIT = [17, 42, 101, 133, 178, 199, 230, 251];      // a token's 8 routed experts (illustrative)
+
+let T, HK, SK, CITY, C320, ST, TR = {}, cat, lamp, tea, prn, tile, note, ticket; const tiles = [];
+const SH = ['cover', 'coverB', 'coverC', 'triage', 'queue', 'macro', 'longexp', 'avenue', 'city', 'trails', 'threads'];
+
+defineScene({
+  meta: { title: 'edu look', durationFrames: SH.length, fps: 30, width: W, height: H, design: [W, H], seed: 3,
+    background: '#0b0b0e', fonts: ['Inter', 'Instrument Serif', 'JetBrains Mono', 'Caveat'], boil: { every: 1, variants: 4 }, poster: 0 },
+  update(ctx) { shot(ctx, SH[ctx.iw]); ctx.camera = T.camera; },
+  layers: [
+    { name: '3d', type: 'three', async init(ctx, three) { return build(ctx, three); }, draw() { T.composer.render(); return false; } },
+    { name: 'type', type: '2d', draw(ctx, g) { typeLayer(ctx, g, SH[ctx.iw]); } },
+  ],
+});
+
+async function build(ctx, three) {
+  const { THREE } = three;
+  if (LANG === 'zh') await Promise.all(['700 100px "Noto Serif SC"', '500 60px "Noto Sans SC"', '700 60px "Noto Sans SC"', '400 60px "Long Cang"']
+    .map((f) => document.fonts.load(f, TXT.t1 + TXT.t2 + TXT.cap + TXT.cap2 + TXT.note + TXT.row + TXT.sign + TXT.ticket.join(''))));
+  T = await buildStudio(ctx, three, { pubs: [] });
+  three.renderer.shadowMap.type = THREE.PCFSoftShadowMap;      // soft lamp shadows; no acne at macro distances
+  const { scene } = T;
+  T.mirror.visible = false; T.coat.visible = false; T.cyc.visible = false;
+  scene.fog.near = 9; scene.fog.far = 26;
+  // real lens depth of field (accumulated camera jitter) with ambient occlusion per sample: a card model lives in its creases
+  const acc = new AccumDOFPass(THREE, three.renderer, scene, T.camera, ctx.W, ctx.H, { samples: Number(Q.get('spp') || 32), freezeShadows: Q.get('fz') !== '0' });
+  const ao = new GTAOPass(scene, T.camera, ctx.W, ctx.H, undefined, { radius: 0.1, distanceExponent: 1.4, thickness: 0.6, scale: 1.0, samples: 12 });
+  ao.blendIntensity = 0.85; if (Q.get('noao') !== '1') acc.addInner(ao);
+  T.composer.removePass(T.composer.passes[0]); T.composer.insertPass(acc, 0); T.bokeh.enabled = false; T.acc = acc;
+
+  // the desk: walnut (ambientCG Wood026, CC0), top at y = 0
+  const [wc, wn, wr] = await Promise.all(['Color', 'NormalGL', 'Roughness'].map((m) => T.loadImg(`/scene/tex/Wood026/Wood026_2K-JPG_${m}.jpg`)));
+  const wt = (im, srgb) => { const t = new THREE.Texture(im); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2.4, 1.6); t.anisotropy = 16; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; return t; };
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(12, 0.3, 7), new THREE.MeshPhysicalMaterial({ map: wt(wc, true), normalMap: wt(wn), roughnessMap: wt(wr), color: 0xb08c70,
+    clearcoat: 0.35, clearcoatRoughness: 0.35, roughness: 0.6 }));
+  desk.position.set(0, -0.15, 0.6); desk.receiveShadow = true; scene.add(desk); T.desk = desk;
+  // the wall behind: dark plaster, creased-paper normal at a large scale so the lamp rakes across it
+  const cn = await T.loadImg('/scene/tex/Paper003/Paper003_2K-JPG_NormalGL.jpg');
+  const ct = new THREE.Texture(cn); ct.wrapS = ct.wrapT = THREE.RepeatWrapping; ct.repeat.set(3, 2); ct.needsUpdate = true;
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(16, 9), new THREE.MeshStandardMaterial({ color: 0x2a2622, roughness: 0.95, normalMap: ct, normalScale: new THREE.Vector2(0.5, 0.5) }));
+  wall.position.set(0, 3.9, -2.9); wall.receiveShadow = true; scene.add(wall);
+
+  HK = await hospitalKit(T, { zh: LANG === 'zh' });
+  HK.setSign(TXT.sign, LANG === 'zh' ? '700 104px "Noto Serif SC"' : '600 92px "Inter"');
+  HK.root.position.set(0.15, 0.035, -0.45); HK.root.scale.setScalar(0.7);      // the foam board sits ON the desk (never coplanar: z-fighting)
+  HK.light(LIT);
+
+  // the other 57 MoE layers: the same tower, small, on a big foam board (illustrative lit rooms: 8 per tower)
+  CITY = cityKit(T, { n: 57, scale: 0.26, place: (i) => [((i % 6) - 2.5) * 0.62 + 0.15, 0.036, -1.3 - Math.floor(i / 6) * 0.78, 0],
+    lit: (i) => { const o = new Set(); let j = 0; while (o.size < 8) o.add(1 + Math.floor(hsh(i, j++, 5) * 256)); return [...o].map((r) => [r, 1]); } });
+  CITY.mesh.visible = false;
+  // the serving city: 320 buildings, one expert each (decode), on a foam board; buses, trails, threads
+  const G = gridOf({ n: 320, cols: 16, pitch: 0.3, cx: 0.1, cz: -1.9, block: [4, 2], gap: 0.2 });   // 40 servers x 8 GPUs
+  C320 = cityKit(T, { n: 320, scale: 0.11, place: (i) => [G.pts[i][0], 0.036, G.pts[i][1], 0],
+    lit: (i) => (hsh(i, 11) > 0.55 ? [[1 + Math.floor(hsh(i, 12) * 256), 1], [1 + Math.floor(hsh(i, 13) * 256), 0.7]] : []) });
+  C320.mesh.visible = false;
+  ST = streetsKit(T, G, { y: 0.036 });
+  TR.random = ST.trails(420, 3, false); TR.buses = ST.buses(150, 4);
+  TR.threads = ST.threads(Array.from({ length: 26 }, (_, i) => { const a = Math.floor(hsh(i, 21) * 40) + 40 * Math.floor(hsh(i, 22) * 8); return [a % 320, (a + 1 + Math.floor(hsh(i, 23) * 3) * 16) % 320]; }), 0.36);
+  ST.group.visible = false;
+  SK = spriteKit(THREE, scene);
+  cat = await SK.make({ sit: '/scene/cut/cat_sit.png', bat: '/scene/cut/cat_bat.png', sleep: '/scene/cut/cat_sleep.png' }, { height: 1.0, relief: 0.18 });
+  lamp = await SK.make({ lamp: '/scene/cut/prop_lamp.png' }, { relief: 0.12 });
+  tea = await SK.make({ tea: '/scene/cut/prop_tea.png' }, { relief: 0.15 });
+  prn = await SK.make({ prn: '/scene/cut/prop_printer.png' }, { relief: 0.12 });
+  tile = tileKit(THREE, scene);
+  note = stickyNote(THREE, scene, TXT.note);
+  ticket = ticketStrip(THREE, scene, TXT.ticket);
+  return {};
+}
+
+// a yellow sticky note lying on the desk with a handwritten line
+function stickyNote(THREE, scene, text) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 512; const g = cv.getContext('2d');
+  g.fillStyle = '#f7d65a'; g.fillRect(0, 0, 512, 512);
+  const gr = g.createLinearGradient(0, 0, 0, 512); gr.addColorStop(0, 'rgba(255,255,255,0.12)'); gr.addColorStop(1, 'rgba(120,80,0,0.14)'); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+  g.fillStyle = '#26303c'; g.font = `400 ${LANG === 'zh' ? 104 : 112}px ${HAND}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const L = text.split('\n'); L.forEach((s, i) => g.fillText(s, 256 + (i ? 10 : -6), 256 + (i - (L.length - 1) / 2) * 120));
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
+  const geo = new THREE.PlaneGeometry(0.42, 0.42, 8, 8); const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y > 0.12) p.setZ(i, (y - 0.12) ** 2 * 0.6); }   // the top edge curls up off the desk
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, roughness: 0.85, side: THREE.DoubleSide })); m.castShadow = m.receiveShadow = true;
+  scene.add(m); return m;
+}
+// the triage ticket: a curl of thermal paper with the token's room numbers
+function ticketStrip(THREE, scene, rows) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 900; const g = cv.getContext('2d');
+  g.fillStyle = '#f5f2ea'; g.fillRect(0, 0, 512, 900);
+  g.fillStyle = '#2a2a30'; g.font = `600 34px ${LANG === 'zh' ? '"Noto Sans SC"' : '"JetBrains Mono"'}`; g.textBaseline = 'top';
+  g.fillText(LANG === 'zh' ? '分诊台 · TRIAGE' : 'TRIAGE  /  ROUTER', 34, 40);
+  g.fillRect(34, 92, 444, 3);
+  g.font = `500 32px "JetBrains Mono", ${LANG === 'zh' ? '"Noto Sans SC"' : 'monospace'}`;
+  rows.forEach((s, i) => g.fillText(s, 34, 130 + i * 56));
+  g.fillRect(34, 430, 444, 2);
+  g.font = '500 28px "JetBrains Mono"'; g.fillText('TOP-8 OF 256', 34, 460);
+  for (let i = 0; i < 40; i++) g.fillRect(34 + i * 11, 520, hsh(i, 3) > 0.5 ? 6 : 3, 70);   // barcode
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
+  const geo = new THREE.PlaneGeometry(0.16, 0.28, 4, 40); const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i); p.setZ(i, 0.05 * Math.sin((0.14 - y) * 9)); }
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, roughness: 0.6, side: THREE.DoubleSide })); m.castShadow = m.receiveShadow = true;
+  scene.add(m); return m;
+}
+
+// camera: position, target, vertical fov, lens radius (world units), focus distance (default: the target)
+function cam(pos, tgt, fov, ap, fd) {
+  look(T, pos, tgt, fov, 0, fd);
+  T.acc.aperture = ap; T.acc.focus = fd ?? Math.hypot(pos[0] - tgt[0], pos[1] - tgt[1], pos[2] - tgt[2]);
+}
+const putS = (ch, pose, x, z, h, o = {}) => { ch.set(pose, { height: h, relief: o.relief }); ch.place(x, o.y ?? 0, z, T.camera, { light: 1, rim: 0.6, rimCol: [1, 0.86, 0.62], face: 1, tilt: o.tilt ?? 0.4, contactK: 0.8, floorY: 0, relight: 0.5, rim2: 0.3, keyCol: [1, 0.9, 0.76], amb: [0.92, 0.9, 0.96], rimCol2: [1, 0.82, 0.6], ...o }); };
+
+function lightsNight() {
+  // the banker's lamp is the key: warm, from high back-left, raking across the model; a faint cool fill; a rim behind
+  T.prac.position.set(-1.9, 2.35, -1.2); T.prac.intensity = 7; T.prac.distance = 10; T.prac.decay = 1.5; T.prac.color.setHex(0xffc58a);
+  T.key.intensity = 0.22; T.key.color.setHex(0xaec4ff); T.key.position.set(3.2, 3.0, 3.0); T.key.lookAt(0, 0.6, 0);
+  T.rim.intensity = 1.1; T.rim.color.setHex(0x9cb8ff); T.rim.position.set(2.4, 2.4, -2.4); T.rim.lookAt(0, 0.8, 0);
+  T.kick.intensity = 0.0; T.sh.intensity = 0.0;
+  T.prac.castShadow = true; T.prac.shadow.mapSize.set(4096, 4096); T.prac.shadow.bias = -0.0004; T.prac.shadow.normalBias = 0.006; T.prac.shadow.camera.near = 0.2;
+  T.scene.environmentIntensity = 0.05;
+  T.bloom.strength = 0.3; T.bloom.threshold = 0.85; T.bloom.radius = 0.55;
+  T.grade.uniforms.uVig.value = 0.5; T.grade.uniforms.uGrain.value = 0.01;
+}
+
+function shot(ctx, s) {
+  lightsNight();
+  CITY.mesh.visible = s === 'avenue';
+  const big = ['city', 'trails', 'threads'].includes(s); C320.mesh.visible = big; ST.group.visible = big; HK.root.visible = !big;
+  TR.random.visible = s === 'trails'; TR.buses.visible = s === 'city'; TR.threads.visible = s === 'threads';
+  HK.root.scale.setScalar(0.7); HK.root.position.set(0.15, 0.035, -0.45);
+  HK.light(LIT);
+  if (Q.get('dbg') === 'noarea') { T.key.intensity = 0; T.rim.intensity = 0; }
+  if (Q.get('dbg') === 'noenv') T.scene.environment = null;
+  if (Q.get('dbg') === 'nobloom') T.bloom.enabled = false;
+  if (Q.get('dbg') === 'nodesk') T.desk.visible = false;
+  for (const t of tiles) t.visible = false;
+  cat.hide(); lamp.hide(); tea.hide(); prn.hide(); note.visible = false; ticket.visible = false;
+  // the desk props: the lamp back-left (its light is T.prac), milk tea, the printer
+  putS(lamp, 'lamp', -2.6, -2.1, 2.5, { tilt: 0, rim: 0.2, light: 0.9 });
+  HK.lobbyLight.intensity = 0.06;
+  HK.root.rotation.y = -0.38;
+  if (s === 'cover') {
+    // A: three-quarter, the cat beside the tower like a giant visitor, the lamp off frame left, the note in front
+    putS(lamp, 'lamp', -3.2, -2.3, 2.6, { tilt: 0, rim: 0.2, light: 0.9 });
+    putS(cat, 'sit', -0.55, 1.05, 1.2, { tilt: 0.1, yaw: 0.3, light: 0.78, rim: 1.0 });
+    note.visible = true; note.position.set(-0.05, 0.004, 1.75); note.rotation.set(-Math.PI / 2, 0, 0.12); note.scale.setScalar(1.25);
+    cam([1.5, 1.45, 7.2], [0.18, 1.28, -0.45], 33, 0.03);
+  } else if (s === 'coverB') {
+    // B: worm's-eye from the plinth, the tower rising into the dark, the sign glowing, a tile at the door
+    putS(lamp, 'lamp', -3.2, -2.3, 2.6, { tilt: 0, rim: 0.2, light: 0.9 });
+    const t0 = tile(TXT.tile, { font: LANG === 'zh' ? '"Noto Serif SC"' : '"Instrument Serif"' }); tiles.push(t0); t0.visible = true; t0.position.set(0.16, 0.06, 0.02); t0.rotation.y = 0.0;
+    putS(cat, 'sit', 1.25, -0.2, 1.15, { tilt: 0.0, yaw: -0.3, light: 0.7, rim: 1.0 });
+    cam([0.45, 0.06, 1.15], [0.12, 0.95, -0.5], 46, 0.006, 1.15);
+  } else if (s === 'coverC') {
+    // C: high, looking down past the cat's ears onto the tower and the desk
+    putS(lamp, 'lamp', -3.2, -2.3, 2.6, { tilt: 0, rim: 0.2, light: 0.9 });
+    putS(cat, 'sit', 1.05, 0.9, 1.15, { tilt: 0.3, yaw: -0.4, light: 0.8, rim: 1.0 });
+    putS(tea, 'tea', -1.15, 0.8, 0.72, { tilt: 0.3, light: 0.9 });
+    note.visible = true; note.position.set(-0.4, 0.004, 1.35); note.rotation.set(-Math.PI / 2, 0, -0.15);
+    cam([0.5, 4.2, 5.2], [0.0, 0.9, -0.3], 34, 0.03);
+  } else if (s === 'triage') {
+    // the token at the kiosk: the ticket with its 8 rooms curls out of the slot (physically from the machine)
+    HK.root.updateMatrixWorld(true);
+    const at = (o, x, y, z, ry = 0, rx = 0) => { o.position.copy(HK.kiosk.localToWorld(new T.THREE.Vector3(x, y, z))); o.rotation.set(rx, HK.root.rotation.y + ry, 0, 'YXZ'); };
+    ticket.visible = true; ticket.scale.setScalar(0.17); at(ticket, 0.0, 0.03, 0.036, 0, -0.25);
+    const t0 = tile(TXT.tile, { font: LANG === 'zh' ? '"Noto Serif SC"' : '"Instrument Serif"' }); tiles.push(t0); t0.visible = true;
+    t0.scale.set(0.024, 0.035, 0.016); at(t0, -0.055, 0.0175 / 0.7 + 0.0, 0.07, 0.35);
+    const k = HK.kiosk.localToWorld(new T.THREE.Vector3(-0.02, 0.05, 0.05));
+    T.kick.intensity = 0.45; T.kick.color.setHex(0xffe2c4); T.kick.position.set(k.x + 0.4, k.y + 0.3, k.z + 0.7); T.kick.lookAt(k.x, k.y, k.z);
+    cam([k.x + 0.2, k.y + 0.04, k.z + 0.36], [k.x - 0.005, k.y + 0.0, k.z], 30, 0.006);
+  } else if (s === 'queue') {
+    putS(cat, 'sleep', 1.25, 0.5, 0.75, { tilt: 0.35, light: 0.85 });
+    cam([-0.9, 1.6, 2.9], [0.25, 0.95, -0.45], 32, 0.02);
+  } else if (s === 'longexp') {
+    // the shutter left open for thousands of requests: a few rooms burnt in, most barely used (illustrative values;
+    // the film uses the lab's real expert-selection trace). The English and Chinese cuts light different rooms (Ob4).
+    const v = []; for (let i = 0; i < 256; i++) { const r = hsh(i, LANG === 'zh' ? 7 : 3); v.push(r > 0.965 ? 0.75 + 0.25 * hsh(i, 9) : r > 0.8 ? 0.12 + 0.2 * hsh(i, 5) : r > 0.45 ? 0.03 + 0.05 * hsh(i, 6) : 0); }
+    HK.heat(v);
+    cam([0.3, 1.25, 4.6], [0.12, 1.0, -0.45], 30, 0.012);
+  } else if (s === 'avenue') {
+    // the reveal: this whole building is one layer; 57 more stand behind it
+    HK.root.scale.setScalar(0.26); HK.root.position.set(0.15, 0.035, -0.45);
+    T.prac.position.set(-2.4, 3.0, -2.4); T.prac.intensity = 12; T.prac.distance = 16;
+    cam([1.6, 1.5, 2.4], [0.0, 0.25, -2.6], 34, 0.012, 2.9);
+  } else if (s === 'city' || s === 'threads') {
+    T.prac.position.set(-2.6, 3.4, -1.4); T.prac.intensity = 13; T.prac.distance = 16;
+    cam([1.6, 4.4, 2.6], [0.1, 0.0, -2.1], 34, 0.025, 5.2);
+  } else if (s === 'trails') {
+    // the lamp is off: only the windows and a long exposure of the traffic
+    T.prac.intensity = 0.25; T.key.intensity = 0.02; T.rim.intensity = 0.15; T.scene.environmentIntensity = 0.01;
+    cam([1.6, 4.4, 2.6], [0.1, 0.0, -2.1], 34, 0.025, 5.2);
+  } else if (s === 'macro') {
+    cam([0.75, 0.88, 0.75], [0.3, 0.72, -0.45], 32, 0.012);
+  }
+}
+
+// ---- type -------------------------------------------------------------------------------------------------------
+function txt(g, s, x, y, size, weight, fam, color, o = {}) {
+  g.save(); g.font = `${o.italic ? 'italic ' : ''}${weight} ${size}px ${fam}`; g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  try { g.letterSpacing = `${(o.track ?? 0) * size}px`; } catch (e) { /* */ }
+  if (o.shadow) { g.shadowColor = 'rgba(0,0,0,0.75)'; g.shadowBlur = o.shadow; }
+  g.fillStyle = color; g.fillText(s, x, y); const w = g.measureText(s).width; g.restore(); return w;
+}
+function edgeGrade(g, y0, y1, a, up = false) {
+  const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(up ? 1 : 0, 'rgba(11,11,14,0)'); gr.addColorStop(up ? 0 : 1, `rgba(11,11,14,${a})`);
+  g.fillStyle = gr; g.fillRect(0, Math.min(y0, y1), W, Math.abs(y1 - y0));
+}
+function caption(g, lines) {
+  // burned-in caption in the caption zone (x 120-880, y 1200-1440): at most two lines, wrapped to 740 px, soft grade
+  edgeGrade(g, 1080, 1440, 0.5); g.fillStyle = 'rgba(11,11,14,0.5)'; g.fillRect(0, 1440, W, H - 1440);
+  const size = LANG === 'zh' ? 56 : 50, lh = size * 1.3, maxW = 740, out = [];
+  g.save(); g.font = `${LANG === 'zh' ? 700 : 600} ${size}px ${SANS}`;
+  for (const line0 of lines) for (const line of line0.split('|')) {   // '|' = the preferred break (script.md convention)
+    const units = LANG === 'zh' ? line.split(/(?<=[，。、])/) : line.split(' ');
+    let cur = '';
+    for (const u of units) { const t = cur ? cur + (LANG === 'zh' ? '' : ' ') + u : u; if (g.measureText(t).width > maxW && cur) { out.push(cur); cur = u; } else cur = t; }
+    if (cur) out.push(cur);
+  }
+  g.restore();
+  const y0 = 1330 - (out.length - 1) * lh / 2;
+  out.slice(0, 2).forEach((s, i) => txt(g, s.replace(/[，。]$/, ''), 500, y0 + i * lh, size, LANG === 'zh' ? 700 : 600, SANS, '#f5f2ec', { align: 'center', shadow: 14 }));
+}
+function typeLayer(ctx, g, s) {
+  if (s.startsWith('cover')) {
+    edgeGrade(g, 0, 640, 0.62, true);
+    // the series' receipt row, then the question in two lines, a red-pen underline under the key word
+    txt(g, TXT.row, 84, 312, 30, 600, '"JetBrains Mono"', '#c9c2b6', { track: 0.08 });
+    g.fillStyle = 'rgba(201,194,182,0.5)'; g.fillRect(84, 330, 520, 2);
+    const big = LANG === 'zh' ? 92 : 118;
+    txt(g, TXT.t1, 80, 440, big, LANG === 'zh' ? 700 : 400, SERIF, '#f6f1e8', { shadow: 18, track: LANG === 'zh' ? 0.02 : -0.01 });
+    const w2 = txt(g, TXT.t2, 80, 440 + big * 1.08, big, LANG === 'zh' ? 700 : 400, SERIF, '#f6f1e8', { shadow: 18, italic: LANG !== 'zh', track: LANG === 'zh' ? 0.02 : -0.01 });
+    // red pen under "8"
+    const y = 440 + big * 1.08 + 18; g.save(); g.strokeStyle = '#d8342c'; g.lineWidth = 7; g.lineCap = 'round'; g.globalAlpha = 0.92;
+    g.beginPath(); g.moveTo(80 + w2 * 0.62, y + 4); g.bezierCurveTo(80 + w2 * 0.75, y - 4, 80 + w2 * 0.9, y + 8, 80 + w2 + 6, y - 2); g.stroke(); g.restore();
+    caption(g, [TXT.cap]);
+  } else if (s === 'triage') {
+    caption(g, [TXT.cap2]);
+  }
+  if (GUIDES) guides(g);
+}
+function guides(g) {
+  g.save(); g.lineWidth = 3; g.font = '600 22px "JetBrains Mono"';
+  const z = (x0, y0, x1, y1, c, l) => { g.strokeStyle = c; g.fillStyle = c; g.setLineDash([12, 8]); g.strokeRect(x0, y0, x1 - x0, y1 - y0); g.setLineDash([]); g.fillText(l, x0 + 8, y0 + 26); };
+  g.fillStyle = 'rgba(255,40,40,0.18)'; g.fillRect(0, 0, W, 260); g.fillRect(0, 1480, W, 440); g.fillRect(880, 700, 200, 780);
+  z(60, 260, 1020, 560, '#5ad1ff', 'TITLE 260-560'); z(60, 560, 880, 1180, '#7dff8a', 'HERO 560-1180'); z(120, 1200, 880, 1440, '#ffd35a', 'CAPTIONS 1200-1440');
+  g.restore();
+}
+</script>
+</body></html>

@@ -1,0 +1,284 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>E01 style frames - 671B on the payroll</title>
+<!-- The pilot's key frames (episodes/e01-moe/SCRIPT.md section 5), round 1: F1 cover, F3 the pop-up book turning the
+     58-tower street into the city, F5a lamp off (the traffic looks random), F5b lamp on (regulars: red threads), F8 the
+     ending (half the forecast rooms already lit). ?lang=en|zh switches every word in the picture; ?guides=1 draws the
+     safe zones. Trace-driven pictures use seeded, illustrative data here and say so; the film uses the lab's trace. -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<link rel="stylesheet" href="/edu/fonts/cjk.css">
+<script type="importmap">{"imports":{"three":"/pv/vendor/three/build/three.module.js","three/addons/":"/pv/vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { buildStudio, look } from '/scene/studio.js';
+import { spriteKit } from '/scene/sprite.js';
+import { hsh } from '/scene/lib.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { hospitalKit, tileKit, BW, BH } from '/edu/look/hospital.js';
+import { AccumDOFPass } from '/edu/look/accum.js';
+import { cityKit } from '/edu/look/city.js';
+import { stickyNote, needleCity, trails, threadMaterial, threadGeo, bookPage } from '/edu/look/e01kit.js';
+
+const Q = new URLSearchParams(location.search), LANG = Q.get('lang') || 'en', GUIDES = Q.get('guides') === '1', ZH = LANG === 'zh';
+const W = 1080, H = 1920;
+const S = {
+  en: { mark: 'Compute Not Included', row: 'No.01  MoE', rowR: '37B / 671B', t1: '671B on payroll.', t2: '37B per token.',
+        src: 'DeepSeek-V3 · arXiv 2412.19437', note0: 'And the\nrest?', sign: 'EXPERT CLINIC', wait: 'Is there\na wait?',
+        tag5: 'English prompts · DeepSeek-R1 trace · illustrative', flag: 'REGULARS',
+        rope: 'rope = one tower → the next · thicker = more often',
+        fore: 'forecast: 1 room in 5, from your last tower', tile: 'sugar', paw: 'One building\nEACH?',
+        cap1: ['671 billion on the payroll.|Per token, 37 billion on the case.'], cap5a: ['Then it shows why it isn\'t.'], cap5b: ['Regulars.'],
+        cap8: ['Not for regulars.'], cap3: ['That tower is one layer.|There are 58.'] },
+  zh: { mark: '算力另计', row: '第01项  MoE', rowR: '671B里用37B', t1: '6710亿 在编', t2: '370亿 接诊', ins: '每个token',
+        src: 'DeepSeek-V3 · arXiv 2412.19437', note0: '剩下的\n呢？', sign: '专家门诊', wait: '要排队\n吗？',
+        tag5: '本版：中文题 · DeepSeek-R1 记录 · 示意', flag: '常客',
+        rope: '绳 = 这一栋 → 下一栋 · 越粗越常走',
+        fore: '预报：按上一栋，五选一', tile: '糖', paw: '一人\n一栋？？',
+        cap1: ['6710亿在编|每个token 370亿接诊'], cap5a: ['然后整篇都在说：不是'], cap5b: ['常客'],
+        cap8: ['常客不用'], cap3: ['这整栋楼，只是一层|一共58层，层层挂号'] },
+}[LANG];
+const SERIF = ZH ? '"Noto Serif SC"' : '"Instrument Serif"', SANS = ZH ? '"Noto Sans SC"' : '"Inter"', HAND = ZH ? '"Long Cang"' : '"Caveat"';
+const SH = ['F1', 'F3', 'F5a', 'F5b', 'F8'];
+
+let T, HK, SK, ROOF, tile, cat, lamp, tea, prn, notes = {}, CITY, STREET, BOOK = {}, TRL, THR, PINS, FLAG;
+
+defineScene({
+  meta: { title: 'E01 frames', durationFrames: SH.length, fps: 30, width: W, height: H, design: [W, H], seed: 5,
+    background: '#0b0b0e', fonts: ['Inter', 'Instrument Serif', 'JetBrains Mono', 'Caveat'], boil: { every: 1, variants: 4 }, poster: 0 },
+  update(ctx) { shot(SH[ctx.iw]); ctx.camera = T.camera; },
+  layers: [
+    { name: '3d', type: 'three', async init(ctx, three) { return build(ctx, three); }, draw() { T.composer.render(); return false; } },
+    { name: 'type', type: '2d', draw(ctx, g) { typeLayer(g, SH[ctx.iw]); } },
+  ],
+});
+
+async function build(ctx, three) {
+  const { THREE } = three;
+  if (ZH) await Promise.all(['700 100px "Noto Serif SC"', '500 60px "Noto Sans SC"', '700 60px "Noto Sans SC"', '400 60px "Long Cang"']
+    .map((f) => document.fonts.load(f, Object.values(S).flat().join(''))));
+  T = await buildStudio(ctx, three, { pubs: [] });
+  three.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const { scene } = T;
+  T.mirror.visible = false; T.coat.visible = false; T.cyc.visible = false;
+  scene.fog.near = 12; scene.fog.far = 30;
+  const acc = new AccumDOFPass(THREE, three.renderer, scene, T.camera, ctx.W, ctx.H, { samples: Number(Q.get('spp') || 32) });
+  const ao = new GTAOPass(scene, T.camera, ctx.W, ctx.H, undefined, { radius: 0.1, distanceExponent: 1.4, thickness: 0.6, scale: 1.0, samples: 12 });
+  ao.blendIntensity = 0.85; acc.addInner(ao);
+  T.composer.removePass(T.composer.passes[0]); T.composer.insertPass(acc, 0); T.bokeh.enabled = false; T.acc = acc;
+
+  // desk and wall (as look.html)
+  const [wc, wn, wr] = await Promise.all(['Color', 'NormalGL', 'Roughness'].map((m) => T.loadImg(`/scene/tex/Wood026/Wood026_2K-JPG_${m}.jpg`)));
+  const wt = (im, srgb) => { const t = new THREE.Texture(im); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2.4, 1.6); t.anisotropy = 16; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; return t; };
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(14, 0.3, 9), new THREE.MeshPhysicalMaterial({ map: wt(wc, true), normalMap: wt(wn), roughnessMap: wt(wr), color: 0xb08c70, clearcoat: 0.35, clearcoatRoughness: 0.35, roughness: 0.6 }));
+  desk.position.set(0, -0.15, -0.4); desk.receiveShadow = true; scene.add(desk);
+  const cn = await T.loadImg('/scene/tex/Paper003/Paper003_2K-JPG_NormalGL.jpg');
+  const ct = new THREE.Texture(cn); ct.wrapS = ct.wrapT = THREE.RepeatWrapping; ct.repeat.set(3, 2); ct.needsUpdate = true;
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(18, 10), new THREE.MeshStandardMaterial({ color: 0x2a2622, roughness: 0.95, normalMap: ct, normalScale: new THREE.Vector2(0.5, 0.5) }));
+  wall.position.set(0, 4.5, -4.9); wall.receiveShadow = true; scene.add(wall);
+
+  // the hospital tower: one MoE layer (256 rooms), the lobby = the shared expert
+  HK = await hospitalKit(T, { zh: ZH });
+  HK.setSign(S.sign, ZH ? '700 104px "Noto Serif SC"' : '600 92px "Inter"');
+  tile = tileKit(THREE, scene);
+  SK = spriteKit(THREE, scene);
+  cat = await SK.make({ sit: '/scene/cut/cat_sit.png', bat: '/scene/cut/cat_bat.png', jump: '/scene/cut/cat_jump.png' }, { height: 1.0, relief: 0.18 });
+  lamp = await SK.make({ lamp: '/scene/cut/prop_lamp.png' }, { relief: 0.12 });
+  tea = await SK.make({ tea: '/scene/cut/prop_tea.png' }, { relief: 0.15 });
+  for (const [k, txt, w] of [['n0', S.note0, 0.24], ['wait', S.wait, 0.2], ['paw', S.paw, 0.34]]) { const n = stickyNote(THREE, txt, `${HAND}`, { w }); scene.add(n); notes[k] = n; }
+
+  // the street of 58 towers on the left page of the foam-board book, the city of 320 on the right page
+  BOOK.A = bookPage(THREE, { w: 2.5, d: 3.2 }); BOOK.B = bookPage(THREE, { w: 2.5, d: 3.2 });
+  scene.add(BOOK.A.pivot, BOOK.B.pivot);
+  STREET = cityKit(T, { n: 22, scale: 0.1, place: (i) => [((i % 2) - 0.5) * 0.9, 0.0, -0.25 - Math.floor(i / 2) * 0.4, (i % 2 ? -1 : 1) * Math.PI / 2],
+    lit: (i) => { const o = new Set(); let j = 0; while (o.size < 8) o.add(1 + Math.floor(hsh(i, j++, 5) * 256)); return [...o].map((r) => [r, 1]); } });
+  CITY = needleCity(T, { cx: 0, cz: -2.1, seed: 3, pitch: 0.12, gap: 0.08, w: 0.055, h: 0.5 });
+  // lamp-off traffic: trails (English / Chinese cuts use different samples), lamp-on regulars: threads between rooftops
+  TRL = new THREE.Mesh(mergeGeometries(trails(T, CITY, { count: 700, seed: ZH ? 7 : 3, y: 0.034 })), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.0, 1.25, 0.65),
+    transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false }));
+  scene.add(TRL);
+  // rooftops glow by how often each building is picked (lamp-off long exposure); EN and ZH use different samples
+  { const g = new THREE.PlaneGeometry(CITY.w * 0.8, CITY.w * 0.8); g.rotateX(-Math.PI / 2);
+    ROOF = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(4.5, 2.8, 1.2) }), 320);
+    ROOF.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(320 * 3), 3); const m = new THREE.Matrix4();
+    for (let i = 0; i < 320; i++) { m.makeTranslation(CITY.pts[i][0], CITY.top + 0.032, CITY.pts[i][1]); ROOF.setMatrixAt(i, m);
+      const r = hsh(i, ZH ? 61 : 60), k = CITY.plainSet.has(i) ? 0 : r > 0.94 ? 1 : r > 0.7 ? 0.25 : r > 0.4 ? 0.08 : 0; ROOF.setColorAt(i, new THREE.Color(k, k, k)); }
+    scene.add(ROOF); }
+  const top = CITY.top + 0.042, pair = [];
+  // the pattern: a few regular routes carry most of the traffic (thick ropes), inside a handful of block pairs;
+  // the rest are thin. Illustrative here; the film draws them from the trace's layer-to-layer transition counts.
+  const hubs = [[5, 9], [22, 26], [13, 30], [33, 37], [2, 18]];                          // pairs of 8-tower blocks
+  const inBlock = (b, j) => { const bc = b % 4, br = Math.floor(b / 4); const c = bc * 4 + (j % 4), r = br * 2 + Math.floor(j / 4) % 2; return r * 16 + c; };
+  hubs.forEach(([b1, b2], h) => { for (let j = 0; j < 5; j++) pair.push([inBlock(b1, Math.floor(hsh(h, j, 1) * 8)), inBlock(b2, Math.floor(hsh(h, j, 2) * 8)), j === 0 ? 3.4 - h * 0.35 : 1.1 + hsh(h, j, 3)]); });
+  for (let i = 0; i < 18; i++) { const a = Math.floor(hsh(i, ZH ? 31 : 21) * 320), b = Math.floor(hsh(i, ZH ? 32 : 22) * 320); if (a !== b) pair.push([a, b, 0.45]); }
+  pair.sort((x, y) => y[2] - x[2]);
+  const V = (i) => new THREE.Vector3(CITY.pts[i][0], top, CITY.pts[i][1]);
+  THR = new THREE.Mesh(mergeGeometries(pair.map(([a, b, k]) => threadGeo(THREE, V(a), V(b), 0.0042 * k, 0.06))), threadMaterial(THREE)); THR.castShadow = true; scene.add(THR);
+  const pinG = new THREE.CylinderGeometry(0.012, 0.012, 0.01, 16), brass = new THREE.MeshStandardMaterial({ color: 0xc9a050, metalness: 0.9, roughness: 0.3 });
+  PINS = new THREE.InstancedMesh(pinG, brass, pair.length * 2); const m4 = new THREE.Matrix4();
+  pair.forEach(([a, b], j) => { m4.makeTranslation(CITY.pts[a][0], top - 0.007, CITY.pts[a][1]); PINS.setMatrixAt(2 * j, m4); m4.makeTranslation(CITY.pts[b][0], top - 0.007, CITY.pts[b][1]); PINS.setMatrixAt(2 * j + 1, m4); });
+  scene.add(PINS);
+  // the pennant on the thickest rope: red pen on a paper flag
+  const [fa, fb] = pair[0]; const mid = V(fa).lerp(V(fb), 0.5); mid.y -= V(fa).distanceTo(V(fb)) * 0.06 - 0.005;
+  { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256; const g = cv.getContext('2d');
+    g.fillStyle = '#f4f1ea'; g.beginPath(); g.moveTo(0, 0); g.lineTo(512, 50); g.lineTo(512, 206); g.lineTo(0, 256); g.fill();
+    g.fillStyle = '#c42d24'; g.font = `400 ${ZH ? 130 : 96}px ${HAND}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(S.flag, 270, 134);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    FLAG = new THREE.Group(); const p = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.12), new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.9 }));
+    p.position.set(0.13, 0.11, 0); const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.2, 6), new THREE.MeshStandardMaterial({ color: 0xd9c9a8, roughness: 0.8 }));
+    stick.position.y = 0.1; FLAG.add(p, stick); FLAG.position.copy(mid); FLAG.rotation.set(-0.5, 0, 0.12); p.castShadow = true; scene.add(FLAG); }
+  return {};
+}
+
+function cam(pos, tgt, fov, ap, fd) { look(T, pos, tgt, fov, 0, fd); T.acc.aperture = ap; T.acc.focus = fd ?? Math.hypot(pos[0] - tgt[0], pos[1] - tgt[1], pos[2] - tgt[2]); }
+const putS = (ch, pose, x, z, h, o = {}) => { ch.set(pose, { height: h, relief: o.relief }); ch.place(x, o.y ?? 0, z, T.camera, { light: 0.85, rim: 0.6, rimCol: [1, 0.86, 0.62], face: 1, tilt: o.tilt ?? 0.4, contactK: 0.8, floorY: o.y ?? 0, relight: 0.5, rim2: 0.3, keyCol: [1, 0.9, 0.76], amb: [0.92, 0.9, 0.96], rimCol2: [1, 0.82, 0.6], ...o }); };
+const atTower = (o, x, y, z, ry = 0) => { HK.root.updateMatrixWorld(true); o.position.copy(HK.root.localToWorld(new T.THREE.Vector3(x, y, z))); o.rotation.set(0, HK.root.rotation.y + ry, 0); };
+
+function lights(on = true) {
+  T.prac.position.set(-2.0, 2.5, -1.6); T.prac.intensity = on ? 8 : 0.0; T.prac.distance = 12; T.prac.decay = 1.5; T.prac.color.setHex(0xffc58a);
+  T.prac.castShadow = true; T.prac.shadow.mapSize.set(4096, 4096); T.prac.shadow.bias = -0.0004; T.prac.shadow.normalBias = 0.006; T.prac.shadow.camera.near = 0.2;
+  T.key.intensity = on ? 0.2 : 0.015; T.key.color.setHex(0xaec4ff); T.key.position.set(3.2, 3.0, 3.0); T.key.lookAt(0, 0.6, 0);
+  T.rim.intensity = on ? 1.0 : 0.08; T.rim.color.setHex(0x9cb8ff); T.rim.position.set(2.4, 2.4, -2.6); T.rim.lookAt(0, 0.8, 0);
+  T.kick.intensity = 0; T.sh.intensity = 0; T.scene.environmentIntensity = on ? 0.05 : 0.004;
+  T.bloom.strength = 0.3; T.bloom.threshold = 0.85; T.bloom.radius = 0.55;
+  T.grade.uniforms.uVig.value = 0.5; T.grade.uniforms.uGrain.value = 0.01;
+}
+
+function shot(s) {
+  lights(s !== 'F5a');
+  cat.hide(); lamp.hide(); tea.hide(); Object.values(notes).forEach((n) => (n.visible = false));
+  HK.root.visible = ['F1', 'F8'].includes(s); HK.root.position.set(0.15, 0.035, -0.45); HK.root.scale.setScalar(0.7); HK.root.rotation.y = -0.38;
+  const book = s === 'F3', city = ['F3', 'F5a', 'F5b'].includes(s);
+  BOOK.A.pivot.visible = book; BOOK.B.pivot.visible = book; STREET.mesh.visible = book;
+  CITY.group.visible = city; TRL.visible = ROOF.visible = s === 'F5a'; THR.visible = PINS.visible = FLAG.visible = s === 'F5b';
+  HK.lobbyLight.intensity = 0.06;
+  putS(lamp, 'lamp', -2.3, -2.3, 2.6, { tilt: 0, rim: 0.2, light: 0.9 });
+
+  if (s === 'F1') {
+    // the cover: a few doors lit (other tokens in the batch), the cat looking up, the note on the lobby glass
+    HK.heat(Array.from({ length: 256 }, (_, i) => (hsh(i, 41) > 0.9 ? 0.55 + 0.45 * hsh(i, 42) : 0)));
+    atTower(notes.n0, -0.2, 0.12, 0.02, 0); notes.n0.visible = true; notes.n0.rotateZ(0.05);
+    putS(cat, 'sit', 0.9, 0.75, 1.15, { tilt: 0.05, yaw: -0.45, light: 0.8, rim: 1.0 });
+    putS(tea, 'tea', 2.0, 1.2, 0.75, { tilt: 0.1, light: 0.75 });
+    putS(lamp, 'lamp', -1.9, -2.6, 2.7, { tilt: 0, rim: 0.2, light: 0.9 });
+    cam([0.55, 1.15, 9.6], [0.25, 2.55, -0.5], 36, 0.04, 9.9);
+  } else if (s === 'F8') {
+    // the ending: low on the second-floor walkway; the forecast rooms already glow (embers), 4 open and lit, 2 lighting late
+    const v = Array(256).fill(0);
+    for (let i = 0; i < 51; i++) v[Math.floor(hsh(i, 51) * 256)] = 0.05;
+    for (const r of [19, 22, 38, 54]) v[r - 1] = 0.6;                   // in the forecast: open, bright
+    for (const r of [26, 44]) v[r - 1] = 0.22;                         // outside it: lighting late (door half open)
+    HK.heat(v);
+    atTower(notes.wait, -0.3, 0.6, 0.095, 0); notes.wait.visible = true; notes.wait.rotateX(-0.1); notes.wait.rotateZ(0.06);
+    const t0 = tile(S.tile, { font: ZH ? '"Noto Serif SC"' : '"Instrument Serif"' }); t0.scale.set(0.024, 0.035, 0.016); atTower(t0, 0.0, 0.025, 0.24, 0.2);
+    T.prac.intensity = 4.5; T.prac.position.set(-2.4, 3.0, -1.0);
+    HK.root.updateMatrixWorld(true);
+    const P = HK.root.localToWorld(new T.THREE.Vector3(-1.5, 0.3, 1.25)), A = HK.root.localToWorld(new T.THREE.Vector3(0.2, 0.62, 0.0));
+    const F = HK.root.localToWorld(new T.THREE.Vector3(-0.62, 0.43, 0.11));
+    cam([P.x, P.y, P.z], [A.x, A.y, A.z], 44, 0.004, P.distanceTo(F) + 0.25);
+  } else if (s === 'F5a' || s === 'F5b') {
+    if (CITY.group.parent !== T.scene) T.scene.add(CITY.group);
+    CITY.group.position.set(CITY.cx, 0.03, CITY.cz); CITY.group.rotation.set(0, 0, 0); popCity(1);
+    // straight down on the city; a tilt-shift band across the middle; the cat's paw from the bottom right
+    putS(cat, 'bat', 1.35, -0.55, 1.1, { tilt: 0.95, yaw: -0.6, light: s === 'F5a' ? 0.08 : 0.8, rim: s === 'F5a' ? 0 : 0.8 });
+    if (s === 'F5b') { T.prac.position.set(-1.6, 4.6, -2.6); T.prac.intensity = 16; T.prac.distance = 14; T.key.intensity = 0.03; T.rim.intensity = 0.2; T.scene.environmentIntensity = 0.02; }
+    cam([0.15, 13.5, -1.35], [0.0, 0.0, -2.15], 17, 0.05, 13.4);
+  } else if (s === 'F3') {
+    // the page turning: page A (the street) lifted ~70 degrees off page B, its towers half folded against it; page B's
+    // thin towers half up. Hinge (the book's spine) runs along z at x = -1.4; both pages lie towards +x when flat.
+    const hx = -1.4, hz = -0.6;
+    BOOK.B.pivot.position.set(hx, 0.0, hz); BOOK.B.pivot.rotation.set(0, -Math.PI / 2, 0);
+    BOOK.A.pivot.position.set(hx, 0.022, hz); BOOK.A.pivot.rotation.set(0, -Math.PI / 2, 0); BOOK.A.pivot.rotateX(1.22);
+    if (STREET.mesh.parent !== BOOK.A.content) BOOK.A.content.add(STREET.mesh);
+    if (CITY.group.parent !== BOOK.B.content) BOOK.B.content.add(CITY.group);
+    CITY.group.position.set(0, 0.0, 0); CITY.group.rotation.set(0, 0, 0);
+    foldStreet(0.5); popCity(0.55);
+    // the cat's paw at the free corner needs new art (cat_paw, Codex on green): not in this round
+    T.prac.position.set(-2.6, 3.4, 1.6); T.prac.intensity = 12; T.prac.distance = 14;   // from the left and in front: the page's face and the city behind it both get light
+    cam([-3.3, 2.7, 4.2], [-0.6, 0.95, -0.7], 40, 0.03, 5.2);
+  }
+}
+
+// page A's towers fold flat towards the page as it turns (k = 1 upright, 0 flat)
+function foldStreet(k) {
+  const { THREE } = T, m4 = new THREE.Matrix4(), s = new THREE.Vector3(0.1, 0.1, 0.1);
+  for (let i = 0; i < 22; i++) {
+    const side = i % 2 ? -1 : 1, q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, side * Math.PI / 2, 0));
+    const lean = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), side * (1 - k) * Math.PI / 2);
+    m4.compose(new THREE.Vector3(side * 0.4, 0, 1.4 - Math.floor(i / 2) * 0.27), lean.multiply(q), s); STREET.mesh.setMatrixAt(i, m4);
+  }
+  STREET.mesh.count = 22; STREET.mesh.instanceMatrix.needsUpdate = true;
+}
+// page B's thin towers rise from flat (k = 0) to upright (k = 1), hinged at their bases
+function popCity(k) {
+  const { THREE } = T, m4 = new THREE.Matrix4(), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -(1 - k) * Math.PI / 2);
+  for (const im of CITY.group.children.filter((c) => c.isInstancedMesh)) {
+    im.userData.list.forEach(([[x, z]], j) => { m4.compose(new THREE.Vector3(x - CITY.cx, 0, z - CITY.cz), q, new THREE.Vector3(1, 1, 1)); im.setMatrixAt(j, m4); });
+    im.instanceMatrix.needsUpdate = true;
+  }
+}
+
+// ---- type -------------------------------------------------------------------------------------------------------------
+function txt(g, s, x, y, size, weight, fam, color, o = {}) {
+  g.save(); g.font = `${o.italic ? 'italic ' : ''}${weight} ${size}px ${fam}`; g.textAlign = o.align || 'left'; g.textBaseline = 'alphabetic';
+  try { g.letterSpacing = `${(o.track ?? 0) * size}px`; } catch (e) { /* */ }
+  if (o.shadow) { g.shadowColor = 'rgba(0,0,0,0.75)'; g.shadowBlur = o.shadow; }
+  g.fillStyle = color; g.fillText(s, x, y); const w = g.measureText(s).width; g.restore(); return w;
+}
+function grade(g, y0, y1, a, up = false) {
+  const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(up ? 1 : 0, 'rgba(11,11,14,0)'); gr.addColorStop(up ? 0 : 1, `rgba(11,11,14,${a})`);
+  g.fillStyle = gr; g.fillRect(0, Math.min(y0, y1), W, Math.abs(y1 - y0));
+}
+function pen(g, pts, w = 7) {   // a red-pen stroke (look-dev stand-in: the film uses a scanned ink stroke)
+  g.save(); g.strokeStyle = '#d8342c'; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.globalAlpha = 0.94;
+  g.beginPath(); g.moveTo(...pts[0]); for (let i = 1; i < pts.length; i += 3) g.bezierCurveTo(...pts[i], ...pts[i + 1], ...pts[i + 2]); g.stroke(); g.restore();
+}
+function caption(g, lines) {
+  grade(g, 1080, 1440, 0.5); g.fillStyle = 'rgba(11,11,14,0.5)'; g.fillRect(0, 1440, W, H - 1440);
+  const size = ZH ? 58 : 52, lh = size * 1.3, out = lines.flatMap((l) => l.split('|'));
+  const y0 = 1330 - (out.length - 1) * lh / 2;
+  out.slice(0, 2).forEach((s, i) => txt(g, s, 500, y0 + i * lh, size, ZH ? 700 : 600, SANS, '#f5f2ec', { align: 'center', shadow: 14 }));
+}
+function typeLayer(g, s) {
+  if (s === 'F1') {
+    grade(g, 0, 1000, 0.66, true);
+    txt(g, S.mark, 84, 312, 40, 400, SERIF, '#c9c2b6', { italic: !ZH });
+    // the receipt row: mono, a green tick, dotted leader
+    const y = 400; g.save(); g.strokeStyle = '#63d36f'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(86, y - 12); g.lineTo(96, y - 2); g.lineTo(114, y - 26); g.stroke(); g.restore();
+    const w0 = txt(g, S.row, 130, y, 34, 500, `"JetBrains Mono", ${SANS}`, '#e9e3d8');
+    const w1 = (() => { g.save(); g.font = `500 34px "JetBrains Mono", ${SANS}`; const m = g.measureText(S.rowR).width; g.restore(); return m; })();
+    let x = 130 + w0 + 18; g.fillStyle = '#8f877c'; while (x < 880 - w1 - 18) { g.fillRect(x, y - 5, 4, 4); x += 14; }
+    txt(g, S.rowR, 880 - w1, y, 34, 500, `"JetBrains Mono", ${SANS}`, '#e9e3d8');
+    // the title, two lines; ZH gets a red-pen insertion mark with 每个token above line two
+    const big = ZH ? 132 : 128, y1 = 700, y2 = y1 + big * 1.12;
+    txt(g, S.t1, 80, y1, big, ZH ? 700 : 400, SERIF, '#f6f1e8', { shadow: 18 });
+    const w2 = txt(g, S.t2, 80, y2, big, ZH ? 700 : 400, SERIF, '#f6f1e8', { shadow: 18, italic: !ZH });
+    if (ZH) {
+      const cx = 80 + 2; pen(g, [[cx + 8, y2 - big * 0.62], [cx + 18, y2 - big * 0.78], [cx + 24, y2 - big * 0.86], [cx + 30, y2 - big * 0.96], [cx + 38, y2 - big * 0.84], [cx + 48, y2 - big * 0.72], [cx + 56, y2 - big * 0.62]], 6);
+      txt(g, S.ins, cx + 64, y2 - big * 0.86, 56, 400, HAND, '#e0453b', { shadow: 6 });
+    } else {
+      const xs = 80 + w2 * 0.33, ye = y2 + 20; pen(g, [[xs, ye + 2], [xs + w2 * 0.2, ye - 6], [xs + w2 * 0.45, ye + 6], [80 + w2 + 4, ye - 3]], 7);
+    }
+    txt(g, S.src, 84, 952, 30, 500, '"JetBrains Mono"', '#9b9387');
+  } else if (s === 'F5a' || s === 'F5b') {
+    if (CITY.group.parent !== T.scene) T.scene.add(CITY.group);
+    CITY.group.position.set(CITY.cx, 0.03, CITY.cz); CITY.group.rotation.set(0, 0, 0); popCity(1);
+    g.save(); g.filter = 'blur(18px)'; g.fillStyle = 'rgba(11,11,14,0.55)'; g.fillRect(100, 588, 800, 64); g.restore();
+    txt(g, s === 'F5a' ? S.tag5 : S.rope, 120, 632, 30, 500, `"JetBrains Mono", ${SANS}`, '#d6cec2', { shadow: 8 });
+    caption(g, s === 'F5a' ? S.cap5a : S.cap5b);
+  } else if (s === 'F8') {
+    g.save(); g.filter = 'blur(18px)'; g.fillStyle = 'rgba(11,11,14,0.55)'; g.fillRect(100, 556, 800, 64); g.restore();
+    txt(g, S.fore, 120, 600, 30, 500, `"JetBrains Mono", ${SANS}`, '#d8d0c3', { shadow: 10 });
+    caption(g, S.cap8);
+  } else if (s === 'F3') {
+    caption(g, S.cap3);
+  }
+  if (GUIDES) {
+    g.save(); g.lineWidth = 3; g.font = '600 22px "JetBrains Mono"';
+    g.fillStyle = 'rgba(255,40,40,0.18)'; g.fillRect(0, 0, W, 260); g.fillRect(0, 1480, W, 440); g.fillRect(880, 700, 200, 780);
+    for (const [x0, y0, x1, y1, c] of [[60, 260, 1020, 560, '#5ad1ff'], [60, 560, 880, 1180, '#7dff8a'], [120, 1200, 880, 1440, '#ffd35a']]) { g.strokeStyle = c; g.setLineDash([12, 8]); g.strokeRect(x0, y0, x1 - x0, y1 - y0); }
+    g.restore();
+  }
+}
+</script>
+</body></html>

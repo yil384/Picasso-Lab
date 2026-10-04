@@ -12,6 +12,7 @@ Read the matching skill in `.claude/skills/` before touching an area:
 | page-to-page anime transition films, comic splashes | `picasso-anime-transition-film` |
 | the Projects card films | `picasso-comic-demo-film` |
 | the X launch film (`.claude/films/xlaunch`), resuming it, or a new film built the same way | `picasso-x-launch-film` |
+| the X / Douyin explainer channel (`.claude/films/edu`): main-line course explainers, side-line iPhone vlogs, any episode | `picasso-edu-series` |
 
 The X account kit is `social/x/` (`kit.html`); every cut of the launch video is archived in `social/x/versions/` with
 its feedback and lesson (add the mp4 + poster, add an entry to `make_index.py`, run it).
