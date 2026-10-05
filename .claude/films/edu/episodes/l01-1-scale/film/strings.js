@@ -35,6 +35,7 @@ export const STR = {
     prog: ['PROGRAMME', 'CSE 291P', 'LLM System Optimization', 'Prof. Yufei Ding · UC San Diego'],
     stamp: '*compute not included',
     dingBy: 'Prof. Yufei Ding · CSE 291P, Lecture 1',
+    end: ['LAB · UC SAN DIEGO · PROF. YUFEI DING', '@PicassoLabUCSD'],
     cap: {
       v01: "One ant can't add", v02: 'It could rehearse forever|Still one ant', v03: 'More ants', v04: 'Zero', v05: 'More',
       v06: 'Still zero', v07: 'More—', v08: '…it adds', v09: 'A physicist put it:/more is different',
@@ -82,6 +83,7 @@ export const STR = {
     prog: ['节目单', 'CSE 291P', '《大模型系统优化》', 'Yufei Ding 教授 · UC San Diego'],
     stamp: '*算力另计',
     dingBy: 'Yufei Ding 教授 · CSE 291P 第 1 讲（原声，中文为译文）',
+    end: ['LAB · UC SAN DIEGO · PROF. YUFEI DING', '《算力另计》第 1 集'],
     cap: {
       v01: '一只蚂蚁 不会算数', v02: '排练一万遍|也还是一只', v03: '多来点', v04: '零', v05: '再多', v06: '还是零', v07: '再多——',
       v08: '……会了！', v09: '物理学家安德森说/多，就不一样',

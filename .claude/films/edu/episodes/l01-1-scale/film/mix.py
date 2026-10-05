@@ -4,6 +4,8 @@ voice + Prof. Ding's lecture clip + synthesized foley into one stereo track.
 
     python3 film/mix.py vo   TTS_DIR DING_WAV            # -> film/vo_en.json, film/vo_zh.json (caption timing)
     python3 film/mix.py mix  TTS_DIR DING_WAV OUT_DIR     # -> OUT_DIR/mix_en.wav, mix_zh.wav (-14 LUFS)
+    TL=timeline2.json SND=DIR python3 film/mix.py mix ...  # another timeline; sounds given as files ("f") and music
+                                                          # are read from SND (Kenney CC0 packs, music/)
 
 TTS_DIR is tools/tts.py's output (<lang>/<id>.mp3 + .json word marks). The scratch voices are temporary and never
 published; the foley is synthesized here (numpy), also temporary until real recordings replace it. No music.
@@ -18,7 +20,7 @@ MAX_TEMPO = 1.2
 
 def load_timeline():
     try:
-        return json.load(open(os.path.join(HERE, 'timeline.json'))), None
+        return json.load(open(os.path.join(HERE, os.environ.get('TL', 'timeline.json')))), None
     except (OSError, ValueError) as e:
         return None, 'timeline.json: %s' % e
 
@@ -205,11 +207,18 @@ def mix(tts_dir, ding_wav, out_dir):
     N = int(tl['dur'] * SR)
     os.makedirs(out_dir, exist_ok=True)
     fol = np.zeros(N, np.float32)
+    snd = os.environ.get('SND', '')
     for e in tl['sfx']:
-        try:
-            x = sfx(e['k'], e.get('d'), seed='%.2f' % e['t']) * e.get('g', 1.0)
-        except ValueError as ex:
-            return None, str(ex)
+        if 'f' in e:
+            x, err = decode(os.path.join(snd, e['f']))
+            if err:
+                return None, err
+            x = x * e.get('g', 1.0)
+        else:
+            try:
+                x = sfx(e['k'], e.get('d'), seed='%.2f' % e['t']) * e.get('g', 1.0)
+            except ValueError as ex:
+                return None, str(ex)
         i = int(e['t'] * SR); x = x[:N - i]; fol[i:i + len(x)] += x
     # duck the foley (and the room) in the script's silences
     for a, b in tl.get('duck', []):
@@ -221,7 +230,10 @@ def mix(tts_dir, ding_wav, out_dir):
         except (OSError, ValueError) as e:
             return None, 'run "vo" first: %s' % e
         voice = np.zeros(N, np.float32)
+        ids = {v['id'] for v in tl['vo']}
         for i, r in vo.items():
+            if i not in ids:
+                continue
             if i == 'd01':
                 a, err = decode(ding_wav)
                 if err:
@@ -234,6 +246,19 @@ def mix(tts_dir, ding_wav, out_dir):
                 a = a[int(r['lead'] / r['tempo'] * SR):]          # drop the synth's leading silence
             s = int(r['t'] * SR); a = a[:N - s]; voice[s:s + len(a)] += a
         mixd = voice * 1.0 + fol * 0.9
+        m = tl.get('music')
+        if m:
+            mu, err = decode(os.path.join(snd, m['f']))
+            if err:
+                return None, err
+            mu = mu[int(m.get('from', 0) * SR):]
+            bed = np.zeros(N, np.float32); s0 = int(m.get('start', 0) * SR); mu = mu[:N - s0]; bed[s0:s0 + len(mu)] = mu
+            # duck under the voice (a smoothed envelope of where the voice is), fade in and out
+            env = np.convolve((np.abs(voice) > 0.02).astype(np.float32), np.ones(int(.25 * SR), np.float32) / int(.25 * SR), 'same')
+            gain = m.get('gain', .3) * (1 - (1 - m.get('duck', .5)) * np.clip(env * 3, 0, 1))
+            fi = np.clip(np.arange(N) / (0.6 * SR), 0, 1); a, b = m.get('fadeOut', [tl['dur'] - 1.5, tl['dur']])
+            fo = np.clip((b * SR - np.arange(N)) / ((b - a) * SR), 0, 1)
+            mixd = mixd + bed * gain * fi * fo
         st = np.stack([mixd, mixd], 1)
         raw = os.path.join(out_dir, 'raw_%s.f32' % lang); st.astype(np.float32).tofile(raw)
         dst = os.path.join(out_dir, 'mix_%s.wav' % lang)
