@@ -3,7 +3,8 @@
      It replaces the three footer embeds home/ucsd.html + home/address.html +
      home/visitor-map.html:
        - the UC San Diego seal (link: ucsd.edu)
-       - PICASSO LAB + the address (link: the 3D lab walk-through, home/address.html)
+       - PICASSO LAB + the address (link: the 3D lab walk-through, home/address.html), and the lab's X
+         account under it (link: x.com/PicassoLabUCSD; on phone strips only the X mark, after the address)
        - the visitor map card: it records the visit into Supabase exactly like
          home/visitor-map.html does, and a click opens the analytics dashboard
          (home/visitor-map.html) in a new tab.
@@ -28,7 +29,15 @@
     .pf.ready .pf-seal, .pf.ready .pf-addr, .pf.ready .vmap { visibility: visible; }
     .pf-seal { display: block; line-height: 0; text-decoration: none; }
     .pf-seal img { display: block; width: 100%; height: 100%; border: 0; object-fit: contain; background: transparent; }
-    .pf-addr { display: block; color: #fff; text-decoration: none; cursor: pointer; }
+    .pf-addr { display: block; color: #fff; }
+    .pf-home { display: block; color: #fff; text-decoration: none; cursor: pointer; }
+    /* the lab's X account: one quiet line under the address (Simple Icons X mark), brighter on hover */
+    .pf-x { display: flex; width: max-content; align-items: center; gap: .45em; color: rgba(255, 255, 255, .62); text-decoration: none;
+        white-space: nowrap; line-height: 1.2; outline: none; transition: color .2s ease; }
+    .pf-x:hover, .pf-x:focus-visible { color: #fff; }
+    .pf-x svg { width: .92em; height: .92em; fill: currentColor; flex: none; }
+    .pf.xinline .pf-x { position: absolute; margin: 0; padding: .55em; }        /* a bigger tap target than the mark itself */
+    .pf.xinline .pf-x span { display: none; }
     .pf-title { font-weight: 800; line-height: 0.98; letter-spacing: -0.025em; white-space: nowrap; }
     .pf-title span { display: inline-block; }
     .pf-text { font-weight: 400; text-justify: inter-word; }
@@ -83,10 +92,15 @@
         <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Seal_of_the_University_of_California,_San_Diego.svg?width=400"
              alt="UC San Diego" width="200" height="200">
     </a>
-    <a class="pf-addr" id="pf-addr" href="https://yil384.github.io/Picasso-Lab/home/address.html" target="_blank" rel="noopener" aria-label="Picasso Lab, step inside the lab in 3D">
-        <div class="pf-title" id="pf-title"><span>PICASSO LAB</span></div>
-        <div class="pf-text" id="pf-text">Computer Science and Engineering Building, 3235 Voigt Dr, La&nbsp;Jolla, CA&nbsp;92093</div>
-    </a>
+    <div class="pf-addr" id="pf-addr">
+        <a class="pf-home" href="https://yil384.github.io/Picasso-Lab/home/address.html" target="_blank" rel="noopener" aria-label="Picasso Lab, step inside the lab in 3D">
+            <div class="pf-title" id="pf-title"><span>PICASSO LAB</span></div>
+            <div class="pf-text" id="pf-text">Computer Science and Engineering Building, 3235 Voigt Dr, La&nbsp;Jolla, CA&nbsp;92093</div>
+        </a>
+        <a class="pf-x" id="pf-x" href="https://x.com/PicassoLabUCSD" target="_blank" rel="noopener" aria-label="Picasso Lab on X: @PicassoLabUCSD">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg><span>@PicassoLabUCSD</span>
+        </a>
+    </div>
     <div id="vmap" class="vmap" role="link" tabindex="0" aria-label="Visitor map: open the visitor analytics">
         <canvas id="vmap-c"></canvas>
         <canvas id="vmap-fx"></canvas>
@@ -165,7 +179,7 @@
 
     /* ════════ layout: everything is placed from the box's own size ════════ */
     var PF = document.getElementById('pf'), SEAL = document.getElementById('pf-seal'), ADDR = document.getElementById('pf-addr'),
-        TTL = document.getElementById('pf-title'), TSP = TTL.firstChild, TXT = document.getElementById('pf-text'),
+        TTL = document.getElementById('pf-title'), TSP = TTL.firstChild, TXT = document.getElementById('pf-text'), PX = document.getElementById('pf-x'),
         CARD = document.getElementById('vmap'), STATS = CARD.querySelector('.vmap-stats');
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
     /* quirks mode (no doctype in the Sites embed): read the box from the fixed root / body, not documentElement */
@@ -184,9 +198,14 @@
             if (lines() > 3 || C < 150) just = false; else A = a; }
         if (!just) { TXT.style.fontSize = A + 'px'; C = Math.ceil(Math.max(tw, A * minEm) + 0.5); ADDR.style.width = C + 'px';
             TXT.style.textAlign = align === 'center' ? 'center' : 'left'; }
-        var h = ADDR.offsetHeight, lead = A * (lh - 1) / 2;
+        /* the X line: the address's size, a little below it; in strip mode (xinline) only the mark, placed by stripLayout */
+        var inl = PF.classList.contains('xinline'), xg = inl ? 0 : A * 0.62;
+        PX.style.fontSize = (inl ? A * 1.05 : A * 0.98) + 'px'; PX.style.marginTop = inl ? '0' : xg + 'px';
+        if (!inl) { PX.style.left = ''; PX.style.top = ''; }
+        var xh = inl ? 0 : PX.offsetHeight + xg;
+        var h = ADDR.offsetHeight - xh, lead = A * (lh - 1) / 2;
         /* visual box: from the title's cap top (the negative margin crops the leading above it) to the last baseline + descender */
-        return { C: C, tw: tw, A: A, h: h, vis: Math.max(1, h - lead - A * 0.08) };
+        return { C: C, tw: tw, A: A, h: h, xh: xh, vis: Math.max(1, h - lead - A * 0.08) };
     }
     function put(el, x, y, w, h) { el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
         if (w != null) el.style.width = Math.round(w) + 'px'; if (h != null) el.style.height = Math.round(h) + 'px'; }
@@ -196,6 +215,7 @@
        tall as the map card, the title + address block nearly so. f runs 0 (phone row, 352 x 107) -> 1 (957 x 290). */
     function rowLayout(W, H) {
         if (W < 560) return stripLayout(W, H);
+        PF.classList.remove('xinline');
         var s = Math.min(W / 957, 1.3), f = clamp((s - 0.368) / 0.632, 0, 1);
         function L(a, b) { return a + (b - a) * f; }
         var px = clamp(W * 0.012, 3, 14), py = clamp(H * 0.02, 3, 8), availH = H - 2 * py;
@@ -216,7 +236,7 @@
         var g2 = Math.min((W - 2 * px - o.S - t.C - o.M) / 2, W * 0.1, W - px - o.M - t.C / 2 - (W / 2 - off) - 1);
         if (g2 > g) { g = g2; X = clamp(W / 2, px + o.S + g + t.C / 2, W - px - o.M - g - t.C / 2); }
         var cy = H / 2, ax = X - t.C / 2;
-        put(ADDR, ax, cy - t.vis / 2);
+        put(ADDR, ax, cy - (t.vis + t.xh) / 2);
         put(SEAL, ax - g - o.S, cy - o.S / 2, o.S, o.S);
         put(CARD, ax + t.C + g, cy - o.cardH / 2, o.M, o.cardH);
         o.x0 = ax - g - o.S; o.G = o.S + g + t.C + g + o.M; o.textCx = Math.round(X - W / 2);
@@ -227,6 +247,7 @@
        gets the largest size (9-11 px) whose block fits the strip's height, wrapping to more lines if it must; seal and
        map card share what is left; the seal sits level with the title so the bottom-left corner (Google's (i)) stays free. */
     function stripLayout(W, H) {
+        PF.classList.add('xinline');
         var px = clamp(W * 0.03, 6, 14), py = clamp(H * 0.07, 3, 9), availW = W - 2 * px, availH = H - 2 * py, lh = 1.28;
         var A, T, t, me = 11;
         for (A = 11; A >= 9; A -= 0.25) { T = A * 1.45; t = typeset(T, A, lh, T * 0.2, me, 'left'); if (t.vis <= availH) break; }
@@ -237,25 +258,37 @@
         put(SEAL, x0, Math.max(py, ty), S, S);
         put(ADDR, x0 + S + g, ty);
         put(CARD, x0 + S + g + t.C + g, cy - Hc / 2, M, Hc);
+        placeMark(t, T);
         return { mode: 'strip', f: 0, T: T, A: A, S: S, t: t, M: M, cardH: Hc, x0: x0, G: S + t.C + M + 2 * g, textCx: Math.round(x0 + S + g + t.C / 2 - W / 2) };
+    }
+
+    /* strip mode: the X mark sits after the address's last line, level with it; if that line leaves no room, after the title */
+    function placeMark(t, T) {
+        var r = document.createRange(); r.selectNodeContents(TXT); var rs = r.getClientRects(), ab = ADDR.getBoundingClientRect();
+        var m = parseFloat(PX.style.fontSize) * 0.92, last = rs[rs.length - 1], x, y;
+        if (last && last.right - ab.left + t.A * 0.55 + m <= t.C) { x = last.right - ab.left + t.A * 0.55; y = last.top - ab.top + (last.height - m) / 2; }
+        else { x = t.tw + T * 0.3; y = T * 0.05; }
+        var pad = parseFloat(PX.style.fontSize) * 0.55;
+        PX.style.left = Math.round(x - pad) + 'px'; PX.style.top = Math.round(y - pad) + 'px';
     }
 
     /* two tiers (seal + text on top, map below) or stacked (seal, text, map): designed at u = 1, then scaled to fit */
     function tierLayout(W, H, stacked, dry) {
+        PF.classList.remove('xinline');
         var px = clamp(W * 0.025, 4, 16), py = clamp(H * 0.025, 4, 14);
         var T = 34, A = 18, lh = 1.45, gap = 9.5, S = stacked ? 100 : 120, gS = stacked ? 14 : 20, gT = stacked ? 16 : 18;
         var t = typeset(T, A, lh, gap, 11, stacked ? 'center' : 'justify');
-        var rowW = stacked ? Math.max(S, t.C) : S + gS + t.C, rowH = stacked ? S + gS + t.vis : Math.max(S, t.vis);
+        var rowW = stacked ? Math.max(S, t.C) : S + gS + t.C, rowH = stacked ? S + gS + (t.vis + t.xh) : Math.max(S, (t.vis + t.xh));
         var M = Math.max(rowW, 300) * (stacked ? 1.1 : 1), cardH = M / 2;
         var u = Math.min((W - 2 * px) / Math.max(rowW, M), (H - 2 * py) / (rowH + gT + cardH), 1.8);
         if (dry) return u;
         var o = { mode: stacked ? 'stack' : 'tier', u: +u.toFixed(3) };
         t = typeset(T * u, A * u, lh, gap * u, 11, stacked ? 'center' : 'justify');
         S *= u; gS *= u; gT *= u; M *= u; cardH *= u;
-        rowW = stacked ? Math.max(S, t.C) : S + gS + t.C; rowH = stacked ? S + gS + t.vis : Math.max(S, t.vis);
+        rowW = stacked ? Math.max(S, t.C) : S + gS + t.C; rowH = stacked ? S + gS + (t.vis + t.xh) : Math.max(S, (t.vis + t.xh));
         var y0 = (H - (rowH + gT + cardH)) / 2, cx = W / 2;
         if (stacked) { put(SEAL, cx - S / 2, y0, S, S); put(ADDR, cx - t.C / 2, y0 + S + gS); }
-        else { var x0 = cx - rowW / 2; put(SEAL, x0, y0 + (rowH - S) / 2, S, S); put(ADDR, x0 + S + gS, y0 + (rowH - t.vis) / 2); }
+        else { var x0 = cx - rowW / 2; put(SEAL, x0, y0 + (rowH - S) / 2, S, S); put(ADDR, x0 + S + gS, y0 + (rowH - (t.vis + t.xh)) / 2); }
         put(CARD, cx - M / 2, y0 + rowH + gT, M, cardH);
         o.T = T * u; o.A = t.A; o.S = S; o.M = M; o.cardH = cardH; o.t = t;
         return o;
