@@ -1,0 +1,6 @@
+[{"id": "h1", "en": "A one-hundred-twenty-five-billion-parameter model, on one gaming GPU?", "zh": "一张游戏显卡，跑一千二百五十亿参数的大模型？"},
+ {"id": "h2", "en": "The trick: most of its experts live in system memory.", "zh": "秘诀是：大部分专家，其实放在内存里。"},
+ {"id": "h3", "en": "Each token uses only a few, copied over just in time.", "zh": "每个词只用到其中几个，用到再搬上显卡。"},
+ {"id": "h4", "en": "If those picks were random, a GPU holding a quarter of them would miss three times out of four.", "zh": "如果专家是随机选的，显卡放下四分之一，四次里有三次要现搬。"},
+ {"id": "h5", "en": "They're not. On our released traces of Qwen3, the same space hits seventy-seven percent.", "zh": "但它们不是随机的。在我们公开的 Qwen3 数据上，同样的空间，命中率百分之七十七。"},
+ {"id": "h6", "en": "Patterns behind chaos. Our ISCA twenty-six best paper.", "zh": "混乱背后有规律。我们的 ISCA 2026 最佳论文。"}]

@@ -1,0 +1,15 @@
+{
+ "_": "Strata x 'Patterns behind Chaos' hot-topic film, 32 s. Picture cues (film.js), voice, sounds (Kenney CC0), music (Kevin MacLeod, CC BY).",
+ "fps": 30, "dur": 32.0,
+ "cue": {"hookUp": 4.3, "board": 4.45, "gpu": 6.3, "tokens": 8.2, "random": 12.0, "real": 17.9, "times": 23.4, "paper": 24.9,
+         "curtain": 29.3, "curtainClosed": 29.75, "logo": 29.65, "end": 32.0},
+ "vo": [{"id": "h1", "t": 0.3}, {"id": "h2", "t": 4.6}, {"id": "h3", "t": 8.2}, {"id": "h4", "t": 12.0}, {"id": "h5", "t": 17.9}, {"id": "h6", "t": 25.0}],
+ "music": {"f": "music/Investigations.mp3", "start": 0.0, "from": 20.0, "gain": 0.3, "duck": 0.45, "fadeOut": [30.6, 32.0]},
+ "sfx": [
+  {"t": 0.0, "f": "rpg/Audio/bookPlace1.ogg", "g": 0.25}, {"t": 4.3, "f": "rpg/Audio/creak1.ogg", "g": 0.3},
+  {"t": 4.45, "f": "rpg/Audio/bookOpen.ogg", "g": 0.4}, {"t": 6.3, "f": "imp/Audio/impactPlank_medium_000.ogg", "g": 0.25},
+  {"t": 12.0, "f": "rpg/Audio/bookFlip1.ogg", "g": 0.4}, {"t": 17.9, "f": "rpg/Audio/bookFlip3.ogg", "g": 0.4},
+  {"t": 23.4, "f": "imp/Audio/impactPlank_medium_004.ogg", "g": 0.5}, {"t": 24.9, "f": "rpg/Audio/bookPlace2.ogg", "g": 0.4},
+  {"t": 29.25, "f": "rpg/Audio/creak2.ogg", "g": 0.3}, {"t": 29.3, "f": "rpg/Audio/cloth1.ogg", "g": 0.45}, {"t": 29.7, "f": "rpg/Audio/bookPlace2.ogg", "g": 0.4}
+ ]
+}

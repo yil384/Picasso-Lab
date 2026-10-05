@@ -4,7 +4,7 @@ voice + Prof. Ding's lecture clip + synthesized foley into one stereo track.
 
     python3 film/mix.py vo   TTS_DIR DING_WAV            # -> film/vo_en.json, film/vo_zh.json (caption timing)
     python3 film/mix.py mix  TTS_DIR DING_WAV OUT_DIR     # -> OUT_DIR/mix_en.wav, mix_zh.wav (-14 LUFS)
-    TL=timeline2.json SND=DIR python3 film/mix.py mix ...  # another timeline; sounds given as files ("f") and music
+    TL=timeline2.json SND=DIR [VODIR=DIR] python3 film/mix.py mix ...  # another timeline; sounds given as files ("f") and music
                                                           # are read from SND (Kenney CC0 packs, music/)
 
 TTS_DIR is tools/tts.py's output (<lang>/<id>.mp3 + .json word marks). The scratch voices are temporary and never
@@ -14,6 +14,7 @@ import os, sys, json, subprocess
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+VODIR = os.environ.get('VODIR', HERE)   # where vo_<lang>.json is written/read (another film's folder)
 SR = 48000
 MAX_TEMPO = 1.2
 
@@ -67,7 +68,7 @@ def fit_vo(tts_dir, ding_wav):
                 tempo = MAX_TEMPO
             words = [[round(t0 + (m['t'] - lead) / tempo, 3), round(m['d'] / tempo, 3), m['w']] for m in marks]
             res[i] = {'t': t0, 'dur': round(speech / tempo, 3), 'tempo': round(tempo, 4), 'lead': lead, 'words': words}
-        json.dump(res, open(os.path.join(HERE, 'vo_%s.json' % lang), 'w'), ensure_ascii=False, indent=0)
+        json.dump(res, open(os.path.join(VODIR, 'vo_%s.json' % lang), 'w'), ensure_ascii=False, indent=0)
         out[lang] = {'squeezed': {i: r['tempo'] for i, r in res.items() if r['tempo'] > 1}, 'over_limit': warn}
     return out, None
 
@@ -226,7 +227,7 @@ def mix(tts_dir, ding_wav, out_dir):
     outs = {}
     for lang in ('en', 'zh'):
         try:
-            vo = json.load(open(os.path.join(HERE, 'vo_%s.json' % lang)))
+            vo = json.load(open(os.path.join(VODIR, 'vo_%s.json' % lang)))
         except (OSError, ValueError) as e:
             return None, 'run "vo" first: %s' % e
         voice = np.zeros(N, np.float32)
