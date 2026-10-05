@@ -10,7 +10,7 @@ import { STR } from './strings.js';
 const Q = new URLSearchParams(location.search);
 const LANG = Q.get('lang') === 'zh' ? 'zh' : 'en', ZH = LANG === 'zh', T = STR[LANG];
 const CAPS = Q.get('cap') !== '0', GUIDES = Q.get('guides') === '1';
-const W = 1080, H = 1920, FPS = 30, DUR = 32.0;
+const W = 1080, H = 1920, FPS = 30, DUR = 64.0;
 const SERIF = ZH ? '"Noto Serif SC", Fraunces' : 'Fraunces', SANS = ZH ? '"Noto Sans SC", Inter' : 'Inter', MONO = '"JetBrains Mono"';
 let TL, C, VO, ST, OPEN, AN;
 const A = {}, P = {};
@@ -35,7 +35,7 @@ function hit2(p, s, X, Y, w, px, fam, key = 'navy') { text(p.plate('pink'), s, X
 
 // ------------------------------------------------------------------ prints
 const GRID = { cols: 16, rows: 8, cell: 50, gap: 4 }; GRID.w = GRID.cols * (GRID.cell + GRID.gap) - GRID.gap; GRID.h = GRID.rows * (GRID.cell + GRID.gap) - GRID.gap;
-const BOARD = { w: 940, h: 880, gx: (940 - GRID.w) / 2, gy: 150 };
+const BOARD = { w: 940, h: 960, gx: (940 - GRID.w) / 2, gy: 150 };
 function bakePrints() {
   P.hook = riso('hook' + LANG, 600, 360, ['yellow', 'pink', 'navy'], (p, w, h) => {
     const N = p.plate('navy'); p.plate('yellow').fillStyle = tone(1); p.plate('yellow').fillRect(0, 0, w, h);
@@ -53,6 +53,11 @@ function bakePrints() {
     N.fillStyle = tone(.45); N.fillRect(BOARD.gx + GRID.w / 2 + 40, ly - 20, 26, 26); text(N, T.legendRam, BOARD.gx + GRID.w / 2 + 78, ly, 600, 24, SANS, { align: 'left' });
     text(N, T.fine, w / 2, h - 26, 500, fitPx(N, T.fine, 500, 19, SANS, w - 60), SANS);
   });
+  // PCIe card and the policy bars: clean paper, a riso title; the content is drawn live (crisp)
+  P.pcie = riso('pcie' + LANG, 760, 820, ['pink', 'navy'], (p, w, h) => { hit2(p, T.pcie.t, w / 2, 80, 900, fitPx(p.plate('navy'), T.pcie.t, 900, 58, SERIF, w - 80), SERIF); });
+  P.bars = riso('bars' + LANG, 800, 880, ['pink', 'navy'], (p, w, h) => {
+    const N = p.plate('navy'); hit2(p, T.bars.t, w / 2, 76, 900, fitPx(N, T.bars.t, 900, 50, SERIF, w - 80), SERIF);
+    text(N, T.bars.fine, w / 2, h - 22, 500, fitPx(N, T.bars.fine, 500, 16, SANS, w - 50), SANS); });
   P.paper = riso('paper' + LANG, 620, 420, ['yellow', 'pink', 'navy'], (p, w, h) => {
     const N = p.plate('navy'); p.plate('yellow').fillStyle = tone(1); p.plate('yellow').fillRect(18, 18, w - 36, h - 36);
     hit2(p, T.paper[0], w / 2, 110, 900, fitPx(N, T.paper[0], 900, 64, SERIF, w - 70), SERIF);
@@ -122,6 +127,7 @@ function boardLive(x, t, w, h) {
     text(x, lab, 0, ly, 800, 30 * s, SANS, { fill: st.mode === 'random' ? '#8a2a20' : '#1d5a3a' });
     text(x, T.hit, -150 * s, ly + 110 * s, 700, 34 * s, SANS, { fill: '#203892' });
     text(x, v + '%', 150 * s, ly + 126 * s, 900, 130 * s, SERIF, { fill: st.mode === 'random' ? '#b8261e' : '#16884a' });
+    if (st.mode === 'random' && t >= C.cost) { x.save(); x.globalAlpha = eo(seg(t, C.cost, C.cost + .5)); text(x, T.cost, 0, ly + 190 * s, 700, fitPx(x, T.cost, 700, 30 * s, SANS, 860 * s), SANS, { fill: '#8a2a20' }); x.restore(); }
     if (t >= C.times) { const k = settle((t - C.times) * 1.6); x.save(); x.translate(392 * s, ly - 18 * s); x.rotate(-.18); x.scale(k, k); x.globalCompositeOperation = 'multiply';
       x.strokeStyle = 'rgba(205,36,30,.9)'; x.lineWidth = 7 * s; x.beginPath(); x.arc(0, 0, 70 * s, 0, TAU); x.stroke(); text(x, T.times, 0, 26 * s, 900, 76 * s, SERIF, { fill: 'rgba(205,36,30,.95)' }); x.restore(); }
   }
@@ -147,10 +153,42 @@ function endDraw(x, t, w, h) {
     x.save(); x.translate(cx, cy); x.scale(k, k); x.drawImage(L, u0, v0, u1 - u0, v1 - v0, -pw / 2, -ph / 2, pw, ph); x.restore(); });
   x.restore();
 }
+// PCIe: RAM above, GPU below, experts (19 MB each) sliding down the link one after another
+function pcieDraw(x, t, w, h) {
+  const s = w / 760, u = (v) => v * s, k = t - C.pcie;
+  const box = (y, bh, fill, lab) => { x.fillStyle = fill; x.fillRect(u(-300), u(y), u(600), u(bh)); x.strokeStyle = 'rgba(32,56,146,.8)'; x.lineWidth = u(3); x.strokeRect(u(-300), u(y), u(600), u(bh));
+    text(x, lab, u(-280), u(y + 46), 900, u(34), SERIF, { fill: '#203892', align: 'left' }); };
+  box(130, 210, 'rgb(214,212,218)', T.pcie.ram); box(560, 160, 'rgb(255,220,90)', T.pcie.gpu);
+  for (let i = 0; i < 20; i++) { const c = i % 10, r = Math.floor(i / 10); x.fillStyle = 'rgba(120,118,135,.55)'; x.fillRect(u(-250 + c * 52), u(200 + r * 52), u(44), u(44)); }
+  // the link
+  x.fillStyle = 'rgba(32,56,146,.15)'; x.fillRect(u(-36), u(340), u(72), u(220)); x.strokeStyle = 'rgba(32,56,146,.7)'; x.lineWidth = u(3); x.strokeRect(u(-36), u(340), u(72), u(220));
+  text(x, T.pcie.link, u(60), u(460), 800, fitPx(x, T.pcie.link, 800, u(30), SANS, u(260)), SANS, { fill: '#203892', align: 'left' });
+  for (let i = 0; i < 6; i++) { const ph = ((k * .55 + i / 6) % 1); if (k < .3) continue; const y = mix(260, 600, sst(ph)); x.fillStyle = '#c3261c'; x.globalAlpha = Math.min(1, ph * 6, (1 - ph) * 6);
+    x.fillRect(u(-22), u(y), u(44), u(44)); x.globalAlpha = 1; }
+  text(x, T.pcie.expert, 0, u(790), 700, fitPx(x, T.pcie.expert, 700, u(30), SANS, u(680)), SANS, { fill: '#203892' });
+}
+// the policy bars: two GPU sizes, four policies, the dataset results (NOTES.md)
+const BARS = [[25, 51, 75, 77], [50, 79, 90, 93]];
+function barsDraw(x, t, w, h) {
+  const s = w / 800, u = (v) => v * s, cols = ['#b8261e', '#8b8aa0', '#203892', '#16884a'];
+  [[C.bars + .2, T.bars.a, 145], [C.barsB + .2, T.bars.b, 465]].forEach(([t0, lab, y0], g) => {
+    if (t < t0 - .2) return; const a = eo(seg(t, t0 - .2, t0 + .2));
+    x.save(); x.globalAlpha = a; text(x, lab, 0, u(y0), 800, fitPx(x, lab, 800, u(32), SANS, u(700)), SANS, { fill: '#203892' });
+    BARS[g].forEach((v, i) => { const y = y0 + 22 + i * 62, grow = eo(seg(t, t0 + i * .15, t0 + i * .15 + .8)), bw = 440 * v / 100 * grow;
+      text(x, T.bars.p[i], u(-190), u(y + 40), 700, u(28), SANS, { fill: '#203892', align: 'right' });
+      x.fillStyle = 'rgba(32,56,146,.08)'; x.fillRect(u(-170), u(y + 10), u(440), u(46)); x.fillStyle = cols[i]; x.fillRect(u(-170), u(y + 10), u(bw), u(46));
+      text(x, Math.round(v * grow) + '%', u(-170 + bw + 12), u(y + 44), 900, u(32), SERIF, { fill: cols[i], align: 'left' }); });
+    x.restore(); });
+  if (t >= C.barsB + 3.5) { x.save(); x.globalAlpha = eo(seg(t, C.barsB + 3.5, C.barsB + 4)); text(x, T.bars.speed, 0, u(790), 800, fitPx(x, T.bars.speed, 800, u(32), SANS, u(720)), SANS, { fill: '#16884a' }); x.restore(); }
+}
 function flown(K, t) {
   if (t < C.hookUp + 1) hangCard(K, 975, P.hook, 540, mix(420, -900, ei(seg(t, C.hookUp, C.hookUp + .8))), 880, t, { rot: swing(t - C.hookUp, .03) });
-  if (t >= C.board && t < C.paper + .6) { const y = t < C.paper ? mix(-1100, 300, settle((t - C.board) * 1.2)) : mix(300, -1300, ei(seg(t, C.paper, C.paper + .55)));
-    hangCard(K, 972, P.board, 540, y, 960, t, { rot: swing(t - C.board, .03), ph: 1, draw: (x, w, h) => boardLive(x, t, w, h) }); }
+  // the board: twice (the idea, then random vs real), the PCIe card between, the bars after
+  const drop = (t0, t1, yRest, h0 = -1100) => (t < t1 ? mix(h0, yRest, settle((t - t0) * 1.2)) : mix(yRest, -1300, ei(seg(t, t1, t1 + .55))));
+  if (t >= C.board && t < C.pcie + .6) hangCard(K, 972, P.board, 540, drop(C.board, C.pcie, 250), 900, t, { rot: swing(t - C.board, .03), ph: 1, draw: (x, w, h) => boardLive(x, t, w, h) });
+  if (t >= C.pcie && t < C.boardBack + .6) hangCard(K, 973, P.pcie, 540, drop(C.pcie, C.boardBack, 250), 800, t, { rot: swing(t - C.pcie, .03), ph: 4, draw: (x, w, h) => pcieDraw(x, t, w, h) });
+  if (t >= C.boardBack && t < C.bars + .6) hangCard(K, 972, P.board, 540, drop(C.boardBack, C.bars, 250), 900, t, { rot: swing(t - C.boardBack, .03), ph: 1, draw: (x, w, h) => boardLive(x, t, w, h) });
+  if (t >= C.bars && t < C.paper + .6) hangCard(K, 973, P.bars, 540, drop(C.bars, C.paper, 250), 840, t, { rot: swing(t - C.bars, .03), ph: 5, draw: (x, w, h) => barsDraw(x, t, w, h) });
   if (t >= C.paper) { const y = t < C.curtain ? mix(-900, 520, settle((t - C.paper) * 1.2)) : mix(520, -1100, ei(seg(t, C.curtain, C.curtain + .5)));
     hangCard(K, 974, P.paper, 540, y, 900, t, { rot: swing(t - C.paper, .04), ph: 2 }); }
   if (t >= C.logo) hangCard(K, 975, P.end, 540, mix(-900, 520, settle((t - C.logo) * 1.3)), 860, t, { rot: swing(t - C.logo, .035), ph: 3, draw: (x, w, h) => endDraw(x, t, w, h) });

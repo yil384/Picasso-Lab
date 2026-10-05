@@ -1,6 +1,11 @@
 [{"id": "h1", "en": "A one-hundred-twenty-five-billion-parameter model, on one gaming GPU?", "zh": "一张游戏显卡，跑一千二百五十亿参数的大模型？"},
  {"id": "h2", "en": "The trick: most of its experts live in system memory.", "zh": "秘诀是：大部分专家，其实放在内存里。"},
  {"id": "h3", "en": "Each token uses only a few, copied over just in time.", "zh": "每个词只用到其中几个，用到再搬上显卡。"},
+ {"id": "p1", "en": "But copying is slow. One Qwen3 expert is about nineteen megabytes, and PCIe moves about twenty-five gigabytes a second.", "zh": "可搬运很慢：Qwen3 一个专家大约十九兆，PCIe 每秒只能搬二十五 G 左右。"},
  {"id": "h4", "en": "If those picks were random, a GPU holding a quarter of them would miss three times out of four.", "zh": "如果专家是随机选的，显卡放下四分之一，四次里有三次要现搬。"},
+ {"id": "p2", "en": "That's over ten gigabytes per token. About two tokens a second.", "zh": "每个词要搬十 G 以上，一秒只能出两个词左右。"},
  {"id": "h5", "en": "They're not. On our released traces of Qwen3, the same space hits seventy-seven percent.", "zh": "但它们不是随机的。在我们公开的 Qwen3 数据上，同样的空间，命中率百分之七十七。"},
- {"id": "h6", "en": "Patterns behind chaos. Our ISCA twenty-six best paper.", "zh": "混乱背后有规律。我们的 ISCA 2026 最佳论文。"}]
+ {"id": "p3", "en": "Plain LRU caching already gets seventy-five. Predicting from recent use does a little better.", "zh": "普通的 LRU 缓存就有百分之七十五，按最近的使用来预测，还能再高一点。"},
+ {"id": "p4", "en": "Give the GPU half the experts, and prediction cuts the copying by a third: from about seventeen to twenty-five tokens a second, at the PCIe limit.", "zh": "显卡放下一半专家时，预测能把搬运量砍掉三分之一：按 PCIe 算，上限从每秒十七个词左右，提到二十五个。"},
+ {"id": "h6", "en": "Patterns behind chaos. Our ISCA twenty-six best paper.", "zh": "混乱背后有规律。我们的 ISCA 2026 最佳论文。"},
+ {"id": "p5", "en": "The traces are open. Links below.", "zh": "数据全部公开，链接在评论区。"}]
