@@ -41,7 +41,7 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   title, card 2:1). `fitCard` hides the stats pill under ~90 px card height.
 - It must look right at every size; phones were "一团糟" once because the desktop rule forced 10 px text into a 73 px strip.
 - The lab's X account (Oct 2026): the middle block is a `div` holding the title + address link (`.pf-home`, the 3D
-  walk-through) and a quiet line under it, the X mark + `@PicassoLabUCSD` (`#pf-x`, x.com/PicassoLabUCSD, the address's
+  walk-through) and a quiet line under it, the X mark + `@PicassoLabUCSD` (`#pf-x`, x.com/PicassoLabUCSD, centred under the address at 0.8x its
   size, 62% white). `typeset` keeps `vis` = title + address only, so the approved sizing is unchanged, and returns the
   extra line's height as `xh`; row and tier layouts centre the block with it. Phone strips (`.xinline`) show only the
   mark, after the address's last line (`placeMark`), with padding as a bigger tap target.
