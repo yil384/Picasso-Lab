@@ -1,0 +1,7 @@
+# @NFT_Chen - usage limits as a hand-drawn character short (zh post)
+URL: https://x.com/NFT_Chen/status/2102725264530903381 · 28,097 views / 57 likes · 30.0 s 1280x720 · classifier: ai_self_meta, flat_vector_cartoon + hand_drawn_sketch
+Evidence: "Opus 5.5 没要一张素材参考图，把额度具象成一部手绘短片！... 每一帧画面、每一个音符，都是 Opus 5.5 代码写出来的". No prompt disclosed. Links to an earlier post of the same account (2102681172367323300).
+Story per the post: 1.1% quota, "421 tokens left, resets in 0:05", the character grits its teeth typing "could you help me with one ti", "+7 TOKENS SAVED" floats up; 100% quota, 1,000,000 tokens, 128 tasks done, "Claude 小人" under the progress bar like a new account; 66 windows running "draft world peace, build a startup, do my taxes, port DOOM to a toaster", the character grows eight arms and still asks "more?".
+Frame viewed (X poster): (session scratchpad)/anim2d/frames2/index-posters/NFT_Chen_2102725264530903381.jpg - light grey paper ground with pencil grass ticks; a brown boxy creature with stubby arms/legs and heavy-lidded annoyed eyes stands beside a laptop showing "new chat"; above, a rounded progress panel: "3.0%  tokens left: 1,204" with an almost empty bar. Hand-drawn wobble lines, muted palette.
+Borrow: an LLM-systems concept (token budget, parallel sessions) told as a character's day with sight gags and numbers as props; deadpan character design that is not a mascot-pointing-at-a-box.
+Avoid: grey flat palette is plain; 720p.
