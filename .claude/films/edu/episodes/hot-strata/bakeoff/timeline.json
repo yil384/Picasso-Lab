@@ -1,0 +1,8 @@
+{
+ "_": "Shared clock of the 3-look bake-off (opening of SCRIPT_v2.md beats 0-2). Every look's scene reads this and vo_<lang>.json.",
+ "fps": 30, "dur": 17.5,
+ "cue": {"forum": 4.2, "explode": 7.1, "kitchen": 9.1, "chefs": 10.4, "ticket": 13.7, "eight": 14.6, "end": 17.5},
+ "vo": [{"id": "b1", "t": 0.3}, {"id": "b2", "t": 7.1}, {"id": "b3", "t": 9.1}, {"id": "b4", "t": 13.7}],
+ "music": {"f": "music/Investigations.mp3", "start": 0.0, "from": 0.0, "gain": 0.3, "duck": 0.45, "fadeOut": [16.6, 17.5]},
+ "sfx": [{"t": 7.1, "f": "rpg/Audio/cloth3.ogg", "g": 0.4}, {"t": 9.1, "f": "rpg/Audio/metalPot1.ogg", "g": 0.35}, {"t": 13.7, "f": "rpg/Audio/bookFlip1.ogg", "g": 0.4}, {"t": 14.6, "f": "imp/Audio/impactPlank_medium_002.ogg", "g": 0.35}]
+}
