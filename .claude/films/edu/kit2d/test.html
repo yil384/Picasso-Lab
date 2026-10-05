@@ -1,0 +1,114 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>kit2d test - paper theatre</title>
+<!-- kit2d test frame (1080x1920): the lab's toy theatre on the night desk, red felt curtains half open, one gel spot
+     with dust, the felt cat on stage looking up at a risograph poster flown in from above ("MORE IS DIFFERENT" with a
+     rising curve). ?lang=en|zh switches the words; ?guides=1 draws the X + Douyin safe zones; ?fly=1 makes frames 0-36
+     a fly-in of the poster (frame 0 is otherwise the finished picture). The curve is illustrative, not data. -->
+<link rel="stylesheet" href="/pv/fonts/fonts.css">
+<link rel="stylesheet" href="/edu/kit2d/fonts/cjk2d.css">
+</head><body>
+<script type="module">
+import { defineScene } from '/pv/runtime/pv.js';
+import { makeStage, makePress, tone, ramp, brushLine, bakeSet, theatre, bakeCard, flyCard, lyingProp, loadImg, openingP, L, bakeCat, feltCat,
+  TAU, cl, eo, spring, densify } from '/edu/kit2d/index.js';
+
+const Q = new URLSearchParams(location.search), LANG = Q.get('lang') || 'en', GUIDES = Q.get('guides') === '1', FLY = Q.get('fly') === '1';
+const W = 1080, H = 1920;
+const TXT = {
+  en: { t1: 'MORE IS', t2: 'DIFFERENT', sub: null, x: 'SCALE →', y: 'ABILITY', foot: 'P. W. ANDERSON · SCIENCE · 1972' },
+  zh: { t1: '多者异也', t2: null, sub: 'MORE IS DIFFERENT', x: '规模 →', y: '能力', foot: 'P. W. ANDERSON · SCIENCE · 1972' },
+}[LANG];
+
+let ST, SP, CAT, CARD, PEN;
+const PW = 320, PH = 400;   // the poster, world units
+
+defineScene({
+  meta: { title: 'kit2d test', durationFrames: 90, fps: 30, width: W, height: H, design: [W, H], seed: 2, background: '#060409',
+    fonts: ['Fraunces', 'Inter', 'JetBrains Mono'], poster: 0 },
+  async setup(ctx) {
+    if (LANG === 'zh') await Promise.all(['900 80px "Noto Serif SC"', '700 20px "Noto Sans SC"'].map((f) => document.fonts.load(f, TXT.t1 + TXT.x + TXT.y)));
+    const wood = await loadImg('/scene/tex/Wood026/Wood026_2K-JPG_Color.jpg').catch(() => null);
+    PEN = await loadImg('/scene/cut/prop_pen.png');      // the lab's red pen (painted cast prop)
+    ST = makeStage({ W: ctx.W, H: ctx.H, S: ctx.S, OX: ctx.cfg.OX, OY: ctx.cfg.OY, DW: ctx.DW, DH: ctx.DH });
+    SP = bakeSet({ wood });
+    CAT = bakeCat();
+    const press = makePress({ W: PW * 2, H: PH * 2, k: 2, unit: 1, seed: 'poster', inks: ['yellow', 'pink', 'navy'] });
+    CARD = bakeCard(poster(press), PW, PH, 'poster');
+  },
+  layers: [{ name: 'stage', type: '2d', draw(ctx, g) { scene(ctx, g); } }],
+  post(ctx, g) { if (GUIDES) guides(g); },
+});
+
+function poster(press) {
+  press.begin();
+  const Y = press.plate('yellow'), P = press.plate('pink'), PS = press.plate('pink', 'screen'), N = press.plate('navy');
+  // a whisper of pink screen over the whole sheet, warmer at the foot
+  PS.fillStyle = ramp(PS, 0, 0, 0, PH, .05, .16); PS.fillRect(0, 0, PW, PH);
+  // the chart panel: flat yellow; the area under the curve a pink screen over it (orange dots on yellow)
+  const x0 = 18, y0 = 140, cw = 284, ch = 210;
+  Y.fillStyle = tone(1); Y.beginPath(); Y.rect(x0, y0, cw, ch); Y.fill();
+  const f = (u) => .07 + .84 / (1 + Math.exp(-(u - .72) * 19));          // illustrative emergence shape, not data
+  const X = (u) => x0 + 34 + u * (cw - 52), V = (v) => y0 + ch - 30 - v * (ch - 54);
+  const pts = []; for (let i = 0; i <= 90; i++) { const u = i / 90; pts.push([X(u), V(f(u))]); }
+  PS.fillStyle = ramp(PS, 0, y0 + 20, 0, y0 + ch, .8, .5); PS.beginPath(); PS.moveTo(X(0), V(0)); pts.forEach((p) => PS.lineTo(p[0], p[1])); PS.lineTo(X(1), V(0)); PS.closePath(); PS.fill();
+  // axes and the curve in navy brush; markers as navy rings knocked out to paper
+  brushLine(N, densify([[X(0) - 10, V(0)], [X(1) + 14, V(0)]], 6, false), 3.4, 'xax', { taper: .06 });
+  brushLine(N, densify([[X(0), V(0) + 10], [X(0), V(1) - 14]], 6, false), 3.4, 'yax', { taper: .06 });
+  N.fillStyle = '#000'; N.beginPath(); N.moveTo(X(1) + 22, V(0)); N.lineTo(X(1) + 8, V(0) - 7); N.lineTo(X(1) + 8, V(0) + 7); N.fill();
+  N.beginPath(); N.moveTo(X(0), V(1) - 22); N.lineTo(X(0) - 7, V(1) - 8); N.lineTo(X(0) + 7, V(1) - 8); N.fill();
+  brushLine(N, pts, 6.5, 'curve', { taper: .04 });
+  const marks = [.04, .17, .3, .43, .56, .66, .74, .82, .91, .99];
+  for (const u of marks) { N.beginPath(); N.arc(X(u), V(f(u)), 6.4, 0, TAU); N.fill(); }
+  press.knockout((g) => { for (const u of marks) { g.beginPath(); g.arc(X(u), V(f(u)), 3, 0, TAU); g.fill(); } });
+  // labels (solid navy: anything finer than the screen must be solid ink)
+  const sans = LANG === 'zh' ? '"Noto Sans SC"' : 'Inter';
+  N.save(); N.fillStyle = '#000'; N.font = `700 13px ${sans}`; N.textBaseline = 'alphabetic'; N.textAlign = 'right'; N.fillText(TXT.x, x0 + cw - 12, y0 + ch - 9);
+  N.translate(x0 + 18, y0 + 18); N.rotate(-Math.PI / 2); N.textAlign = 'right'; N.fillText(TXT.y, 0, 0); N.restore();
+  // the title: navy, with a second hit of pink just off register (the riso's double strike)
+  const title = (g, dx, dy) => { g.save(); g.fillStyle = '#000'; g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+    if (TXT.t2) { const fit = (s, w0) => { g.font = `900 100px Fraunces`; return 100 * w0 / g.measureText(s).width; };
+      const sz = Math.min(fit(TXT.t2, 280), 72); g.font = `900 ${sz}px Fraunces`; g.fillText(TXT.t1, 18 + dx, 66 + dy); g.fillText(TXT.t2, 18 + dx, 66 + sz * .92 + dy); }
+    else { g.font = '900 100px "Noto Serif SC"'; const sz = Math.min(100 * 284 / g.measureText(TXT.t1).width, 78); g.font = `900 ${sz}px "Noto Serif SC"`; g.fillText(TXT.t1, 18 + dx, 86 + dy);
+      g.font = '700 italic 17px Fraunces'; g.fillText(TXT.sub, 19 + dx, 122 + dy); }
+    g.restore(); };
+  title(P, 3.5, 3); title(N, 0, 0);
+  N.save(); N.fillStyle = '#000'; N.font = '600 11px "JetBrains Mono"'; N.textBaseline = 'alphabetic'; N.fillText(TXT.foot, 18, PH - 20); N.restore();
+  return press.print({ key: 'poster-' + LANG });
+}
+
+function scene(ctx, g) {
+  const t = ctx.sec, K = ST.frame(t);
+  K.cam.x = 0; K.cam.y = 0; K.cam.z = 0;
+  K.focus(1110, 14, 22); K.ambient(40, 38, 64); K.vignette(.5); K.grain(.08); K.haze(.06);
+  const open = { z: L.PROSC_Z, path: (x) => { const p = openingP(0); x.moveTo(p[0][0], p[0][1]); for (const q of p) x.lineTo(q[0], q[1]); x.closePath(); } };
+  // the desk lamp, off frame left: the theatre front and the desk; its pool on the wall
+  const IN = { zmin: 1000, zmax: 1300 };
+  K.light({ x: -820, y: -260, z: 980, rx: 1150, c: [255, 176, 110], a: .8, soft: 1, zmax: 999 });
+  K.light({ x: 0, y: -60, z: 950, rx: 520, ry: 700, c: [255, 190, 140], a: .3, soft: 1, zmax: 999 });
+  K.light({ x: -420, y: L.DESK_Y + 20, z: 800, rx: 1000, ry: 330, c: [255, 170, 100], a: .75, soft: 1, zmax: 999 });
+  K.light({ x: -760, y: -900, z: L.WALL_Z, rx: 1500, c: [255, 165, 95], a: .55, soft: 1, zmin: 2000 });
+  // inside the theatre: the gel spot (bastard amber), its pool on the boards, a cool wash on the backdrop only, footlights
+  K.light({ x: 40, y: -60, z: 1110, rx: 330, ry: 560, c: [255, 198, 155], a: 1, soft: .55, ...IN });
+  K.light({ x: 140, y: L.FLOOR_Y, z: 1080, rx: 240, ry: 60, c: [255, 205, 160], a: .5, soft: .6, ...IN });
+  K.light({ x: 0, y: -120, z: L.BACK_Z, rx: 560, ry: 640, c: [70, 100, 210], a: .55, soft: 1, zmin: 1250 });
+  for (let i = -3; i <= 3; i++) K.light({ x: i * 92, y: 292, z: 941, rx: 80, ry: 46, c: [255, 196, 120], a: .38, soft: 1, zmin: 940, zmax: 1300 });
+  K.beam({ src: { x: -230, y: -1300, z: 1110 }, x: 120, y: L.FLOOR_Y, z: 1080, rx: 200, c: [255, 205, 165], a: Number(Q.get('beam') || .35), dust: 80, dustA: 1, dustSize: 1.3, u0: .45, w0: 30, clip: open, occ: 1000, soft: 12, fade: .9 });
+  theatre(K, SP);
+  // the poster flies in from the fly loft (frame 0 shows it hung, unless ?fly=1)
+  const drop = FLY ? spring(t - .15, 9, 8) : 1;     // a flown piece lands with a small bob, not a bounce
+  flyCard(K, CARD, 1150, -36, -405, { drop, top: -560, clip: open });
+  // the red pen lying on the desk in front of the theatre (out of focus: it gives the theatre its size)
+  lyingProp(K, PEN, { x: 250, y: L.DESK_Y, z: 640, w: 300, rot: -.72 });
+  feltCat(K, 1080, CAT, { x: 128, y: L.FLOOR_Y, s: .9, tilt: -.16, look: [-.6, -.9], lid: .02, brows: 1, pupil: 1.05, mouth: .45, id: 7 });
+  ST.render(K, g);
+}
+
+function guides(g) {
+  g.save(); g.lineWidth = 3; g.font = '600 22px Inter';
+  const box = (x, y, w, h, c, label) => { g.strokeStyle = c; g.setLineDash([12, 8]); g.strokeRect(x, y, w, h); g.setLineDash([]); g.fillStyle = c; g.fillText(label, x + 8, y + 26); };
+  box(0, 0, W, 260, '#ff4d6d', 'UI: keep clear'); box(0, 1480, W, 440, '#ff4d6d', 'UI: keep clear'); box(880, 700, 200, 780, '#ff4d6d', 'buttons');
+  box(0, 260, W, 300, '#4dd2ff', 'title'); box(120, 1200, 760, 240, '#ffd24d', 'captions');
+  g.restore();
+}
+</script>
+</body></html>

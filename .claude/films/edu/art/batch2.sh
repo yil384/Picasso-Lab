@@ -1,0 +1,13 @@
+#!/bin/bash
+# L01-1 art, batch 2: the ant poses, with the hero ant as the reference
+cd "$(dirname "$0")"
+export REFNOTE="The attached image is the reference for the character design (a small felt ant puppet with pipe-cleaner legs and antennae and glass-bead eyes): keep exactly the same puppet, the same materials and colours."
+REF=src/felt_ant_card.png
+ANT_MAT="Material: the same small handmade felt ant puppet as the attached image: dark chocolate-brown wool felt body in three rounded segments with tiny pale hand stitches, shiny black glass-bead eyes with a white highlight, brown pipe-cleaner antennae with small felt balls on the tips, six thin brown pipe-cleaner legs, a small embroidered smile. A real handmade object photographed in a studio, soft warm key light from the upper left, shading on the puppet only."
+GREEN="Background: perfectly flat solid pure green #00FF00 filling the whole image, no floor, no cast shadow on the background, no gradient, no vignette. Everything is in frame with a margin on every side, nothing cropped. No text, no letters, no numbers, no logo, no frame."
+./gen.sh felt_ant_climb "A full-body felt ant puppet in side view climbing straight upward on an invisible vertical surface on its right, all six legs gripping, antennae pointing up, determined face. $ANT_MAT $GREEN Portrait 1024x1536." $REF &
+./gen.sh felt_ant_sit "A full-body felt ant puppet sitting on an invisible ledge in three-quarter view, back legs dangling down, front legs resting on its knees, looking at the viewer, relaxed and a little smug. $ANT_MAT $GREEN Portrait 1024x1536." $REF &
+./gen.sh felt_ant_scripts "A full-body felt ant puppet standing upright, front view, hugging a tall stack of blank white paper scripts (about twelve thick bundles held with a black binder clip, no writing) against its chest with its front legs, leaning back slightly under the weight, proud. $ANT_MAT $GREEN Portrait 1024x1536." $REF &
+./gen.sh felt_ant_bow "A full-body felt ant puppet in side three-quarter view bowing deeply like an actor at a curtain call, front legs spread wide, antennae drooping forward. $ANT_MAT $GREEN Portrait 1024x1536." $REF &
+./gen.sh felt_ant_crowd "Four copies of the same small felt ant puppet standing side by side in one row, evenly spaced with wide clear green gaps between them (they must not touch), all the same size: (1) front view holding a blank white square card above its head with both front legs; (2) the same pose in three-quarter view turned to the right; (3) front view holding a single thin blank white sheet of paper in front of its chest; (4) front view clapping its front legs, happy. $ANT_MAT $GREEN Landscape 1536x1024." $REF &
+wait
