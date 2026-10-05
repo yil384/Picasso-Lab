@@ -19,7 +19,8 @@ Read `picasso-sites-embed` first: the footer is pasted embed code (re-paste to d
   (`examples/textures/planets/` in mrdoob/three.js). GitHub Pages sends `Access-Control-Allow-Origin: *`, which
   WebGL needs (`img.crossOrigin = 'anonymous'`).
 - `home/footer-src/test/` - `ft.js` (screenshots), `ft_globe.js` (hover each object, a city, drag), `gen_rows.js`
-  (fake Supabase rows -> `rows.json`). Not committed: `rows.json`, `seal.png` (any copy of the UCSD seal PNG), `shots/`.
+  (fake Supabase rows -> `rows.json`); `ft_mac.py` (screenshots on the Mac, where `ft.js`'s `/opt/pw-browsers` does not
+  exist: `python3 home/footer-src/test/ft_mac.py home/footer.html PREFIX 957x200 352x73@phone ...`). Not committed: `rows.json`, `seal.png` (any copy of the UCSD seal PNG), `shots/`.
 
 ## Testing (always by screenshots, at all sizes)
 ```
@@ -39,6 +40,11 @@ phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot bef
   three parts. `rowLayout(W, H)` for W >= 560, `stripLayout(W, H)` below (phones: address 9-11 px, seal level with the
   title, card 2:1). `fitCard` hides the stats pill under ~90 px card height.
 - It must look right at every size; phones were "一团糟" once because the desktop rule forced 10 px text into a 73 px strip.
+- The lab's X account (Oct 2026): the middle block is a `div` holding the title + address link (`.pf-home`, the 3D
+  walk-through) and a quiet line under it, the X mark + `@PicassoLabUCSD` (`#pf-x`, x.com/PicassoLabUCSD, the address's
+  size, 62% white). `typeset` keeps `vis` = title + address only, so the approved sizing is unchanged, and returns the
+  extra line's height as `xh`; row and tier layouts centre the block with it. Phone strips (`.xinline`) show only the
+  mark, after the address's last line (`placeMark`), with padding as a bigger tap target.
 
 ## The globe (one fragment shader, no library)
 - Painted in order: star layers (lensed round the wormhole) -> Milky Way band -> M78 -> wormhole -> Moon behind ->
