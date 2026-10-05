@@ -31,8 +31,8 @@
     .pf-seal img { display: block; width: 100%; height: 100%; border: 0; object-fit: contain; background: transparent; }
     .pf-addr { display: block; color: #fff; }
     .pf-home { display: block; color: #fff; text-decoration: none; cursor: pointer; }
-    /* the lab's X account: one quiet line under the address (Simple Icons X mark), brighter on hover */
-    .pf-x { display: flex; width: max-content; align-items: center; gap: .45em; color: rgba(255, 255, 255, .62); text-decoration: none;
+    /* the lab's X account: one quiet line centred under the address, smaller than it (Simple Icons X mark), brighter on hover */
+    .pf-x { display: flex; width: max-content; margin-left: auto; margin-right: auto; align-items: center; gap: .45em; color: rgba(255, 255, 255, .62); text-decoration: none;
         white-space: nowrap; line-height: 1.2; outline: none; transition: color .2s ease; }
     .pf-x:hover, .pf-x:focus-visible { color: #fff; }
     .pf-x svg { width: .92em; height: .92em; fill: currentColor; flex: none; }
@@ -138,8 +138,8 @@
         if (!just) { TXT.style.fontSize = A + 'px'; C = Math.ceil(Math.max(tw, A * minEm) + 0.5); ADDR.style.width = C + 'px';
             TXT.style.textAlign = align === 'center' ? 'center' : 'left'; }
         /* the X line: the address's size, a little below it; in strip mode (xinline) only the mark, placed by stripLayout */
-        var inl = PF.classList.contains('xinline'), xg = inl ? 0 : A * 0.62;
-        PX.style.fontSize = (inl ? A * 1.05 : A * 0.98) + 'px'; PX.style.marginTop = inl ? '0' : xg + 'px';
+        var inl = PF.classList.contains('xinline'), xg = inl ? 0 : A * 0.55;
+        PX.style.fontSize = (inl ? A * 0.95 : A * 0.8) + 'px'; PX.style.marginTop = inl ? '0' : xg + 'px';
         if (!inl) { PX.style.left = ''; PX.style.top = ''; }
         var xh = inl ? 0 : PX.offsetHeight + xg;
         var h = ADDR.offsetHeight - xh, lead = A * (lh - 1) / 2;
