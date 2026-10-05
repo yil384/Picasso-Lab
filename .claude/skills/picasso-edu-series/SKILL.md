@@ -8,6 +8,13 @@ description: The @PicassoLabUCSD knowledge channel - vertical 9:16 explainers, E
 Everything lives in `.claude/films/edu/`. Read its `README.md`, then `SERIES.md` (the bible, Chinese; section 13 lists
 the decisions still open), then the episode folder you are working on.
 
+## Direction change (2026-10-04, from the user)
+Pure-3D three.js films were judged weak: the channel is now **2D-first**, with 3D only as an accent or a render
+effect (depth of field and parallax for flat planes, engraved/hatched 3D props, a GPU paint or print pass). The
+white-card hospital look-dev in `look/` predates this; reuse its ideas, not its 3D-first look. Read
+`research/2d-references.md` (two sweeps of Claude-made 2D animation, with what to take and what to avoid) before
+designing frames; the proposed next step is a 2D style bake-off of the pilot's cold open in four looks.
+
 ## Ground rules (from the user and the bible)
 - Vertical 1080x1920, 30 fps. The English cut goes to X (keep it under 2:15 until the account tier is known), the
   Chinese cut to Douyin. The picture is rendered once; every word in the picture (signs, tiles, tickets, notes,
