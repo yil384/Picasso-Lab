@@ -49,8 +49,32 @@ the session scratchpad or an external disk, never in the repo.
 - The white cat blooms out near the lamp: sprite `light` <= 0.85, bloom threshold 0.85.
 - Covers: check with `guides=1`; the tower drifted into Douyin's button rail and a long English caption ran past x 880.
 - Story logic must be physical: the token's ticket comes out of the kiosk's slot, not out of the air.
+- The proscenium opening narrows to x 333-739 near the boards (L01-1 layout): anything behind the front outside it is
+  hidden by the curtains. Paddles, notes and tags must be placed inside it or in front of the front plane.
+- A card stunt reads only if the cards nearly touch and are drawn clean over the puppets' hands (pitch 28 x 24).
+- A stamp needs paper under it; one floating in the air reads as a glitch.
+- Codex sometimes ignores "green background" and returns a real transparent PNG: check the mode before keying.
+
+## The 2D pipeline (built for L01-1, reuse it)
+- `kit2d/`: the stage compositor (planes through a perspective camera, depth of field by plane, a multiply light map
+  per plane, beams with dust) and the risograph press, ported with MIT credit (`kit2d/THIRD_PARTY.md`). Its code cat
+  is for blocking only: every character and set piece on screen is painted with Codex and keyed.
+- `art/gen.sh NAME "prompt" [refs]` (Codex image, green screen; `REFNOTE=` says what the reference is), `art/key.py`
+  (edge unmixing: no green or olive rims on red felt; keeps a real alpha when Codex returns a cutout), `art/split.py`
+  (a sheet of poses -> one sprite each). Sources in `art/src/` are committed; `art/cut/` is regenerated.
+- An episode film = `film.html` + `film.js` (one pv scene; `addD(K, z, fn)` draws in design px on plane z),
+  `strings.js` (every word, EN/ZH), `timeline.json` (the one clock for picture, voice and foley), `mix.py`
+  (scratch voice fitted into the slots, synthesized foley, -14 LUFS). `tools/tts.py` makes the scratch voice with word
+  marks; `tools/film.py` renders in parallel and encodes. A cut of 81 s renders in about 3.5 min on the M2.
+- Template: `episodes/l01-1-scale/film/` (README there has every command).
 
 ## State (2026-10-04)
+L01-1 "One Ant Can't Add" / 《一只蚂蚁不会算数》 (CSE 291P L01 Background, slides 9-11): FACTS.md (incl. section G),
+SCRIPT.md (two scripts, judge, synthesis), v1 film EN + ZH rendered with scratch voices (edge-tts), Prof. Ding's own
+lecture line in B7 (**needs her OK**; fallback line ready), synthesized foley, no music. Waiting on the user: notes on
+v1, the voice plan, Prof. Ding's OK, Douyin naming of companies (SCRIPT.md section 16), music.
+
+Earlier:
 Done: research (7 reports), the bible draft, the pilot (E01, MoE) fact brief, three competing scripts, two judges and
 the merged SCRIPT.md (129.5 s), side-line shooting cards, and round-1 style frames of the pilot (`look/e01.html`:
 F1, F3, F5a, F5b, F8 in EN and ZH; earlier look-dev in `look/look.html`). The plan page for the user is a private

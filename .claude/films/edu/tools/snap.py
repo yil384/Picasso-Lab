@@ -2,6 +2,7 @@
 """Render a few frames of an edu scene to PNG on this Mac's GPU (headless Chromium, ANGLE/Metal).
 
     python3 .claude/films/edu/tools/snap.py look/look.html 0 1 2 --out DIR [--width 1080 --height 1920] [--q lang=zh]
+    python3 .claude/films/edu/tools/snap.py SCENE --range 0:300 --fmt jpg --out DIR      (a range, JPEG; tools/film.py)
 
 URL map (nothing is fetched from the network):
   /pv/*     .claude/films/xlaunch/kit/assets/pv      runtime, vendored three/p5/p5.brush, Latin fonts
@@ -35,7 +36,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-def render(scene, frames, out, width=1080, height=1920, q=()):
+def render(scene, frames, out, width=1080, height=1920, q=(), fmt='png'):
     """Render frames of an edu scene to PNG. Returns (list of files, None) or (None, 'error')."""
     try:
         os.makedirs(out, exist_ok=True)
@@ -64,8 +65,9 @@ def render(scene, frames, out, width=1080, height=1920, q=()):
             tag = '_'.join(x.replace('=', '') for x in q)
             for i in frames:
                 t = time.time()
-                data = page.evaluate("async (i) => { await window.renderFrame(i); return window.__pv.canvas.toDataURL('image/png'); }", i)
-                fn = os.path.join(out, f'f{i:05d}{"_" + tag if tag else ""}.png')
+                mime = 'image/jpeg' if fmt == 'jpg' else 'image/png'
+                data = page.evaluate("async ([i, m]) => { await window.renderFrame(i); return window.__pv.canvas.toDataURL(m, 0.95); }", [i, mime])
+                fn = os.path.join(out, f'f{i:05d}{"_" + tag if tag else ""}.{fmt}')
                 with open(fn, 'wb') as fh:
                     fh.write(base64.b64decode(data.split(',', 1)[1]))
                 print(f'{fn}  {time.time() - t:.2f}s')
@@ -80,12 +82,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('scene')                     # path relative to .claude/films/edu
     ap.add_argument('frames', nargs='*', type=int, default=[0])
+    ap.add_argument('--range', help='A:B renders frames A..B-1 (instead of a list)')
+    ap.add_argument('--fmt', default='png', choices=['png', 'jpg'])
     ap.add_argument('--out', required=True)
     ap.add_argument('--width', type=int, default=1080)
     ap.add_argument('--height', type=int, default=1920)
     ap.add_argument('--q', action='append', default=[])   # extra query params, e.g. lang=zh guides=1
     a = ap.parse_args()
-    _, err = render(a.scene, a.frames, a.out, a.width, a.height, a.q)
+    frames = a.frames
+    if a.range:
+        lo, hi = (int(x) for x in a.range.split(':'))
+        frames = list(range(lo, hi))
+    _, err = render(a.scene, frames, a.out, a.width, a.height, a.q, a.fmt)
     if err:
         sys.exit(err)
 
