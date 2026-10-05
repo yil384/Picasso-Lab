@@ -53,7 +53,7 @@ export function makeStage(o) {
       /** A spotlight shaft from src {x,y,z} to the target ellipse (x,y,z, rx). dust: number of motes. occ: pieces
        *  nearer than this z hide the shaft (a valance, the curtains, the proscenium). */
       beam(b) { st.beams.push(Object.assign({ c: [255, 214, 160], a: .14, dust: 30, w0: 14 }, b)); },
-      vignette(a) { st.vignette = a; }, grain(a) { st.grain = a; }, haze(a) { st.haze = a; },
+      vignette(a) { st.vignette = a; }, grain(a) { st.grain = a; }, haze(a) { st.haze = a; }, flicker(a) { st.flickAmt = a; },
       proj: (x, y, z) => proj(st.cam, x, y, z),
       /** Inside a piece's draw fn at depth z: clip to a path drawn at another plane clip.z (e.g. the proscenium
        *  opening, so a flown piece only shows through it). Call between x.save() and x.restore(). */
@@ -133,7 +133,7 @@ export function makeStage(o) {
 
   function render(K, g) {
     const st = K.S, cam = st.cam, cache = new Map();
-    st.flick = 1 + (hs(step(st.t) * 1.7) - .5) * .03; // a lamp's faint flicker, on twos
+    st.flick = 1 + (hs(step(st.t) * 1.7) - .5) * (st.flickAmt ?? .03); // a lamp's faint flicker, on twos (K.flicker(0) turns it off)
     fx.setTransform(1, 0, 0, 1, 0, 0); fx.globalCompositeOperation = 'source-over'; fx.globalAlpha = 1; fx.filter = 'none';
     fx.fillStyle = st.bg; fx.fillRect(0, 0, W, H);
     lfx.setTransform(1, 0, 0, 1, 0, 0); lfx.globalCompositeOperation = 'source-over'; lfx.drawImage(lightMap(st, [], cache), 0, 0, W, H);
