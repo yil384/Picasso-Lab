@@ -39,18 +39,14 @@ const BOARD = { w: 940, h: 880, gx: (940 - GRID.w) / 2, gy: 150 };
 function bakePrints() {
   P.hook = riso('hook' + LANG, 600, 360, ['yellow', 'pink', 'navy'], (p, w, h) => {
     const N = p.plate('navy'); p.plate('yellow').fillStyle = tone(1); p.plate('yellow').fillRect(0, 0, w, h);
-    const ps = p.plate('pink', 'screen'); ps.fillStyle = ramp(ps, 0, 0, 0, h, .1, .3); ps.fillRect(0, 0, w, h);
     const f1 = fitPx(N, T.hook[0], 900, 120, SERIF, w - 60), f2 = fitPx(N, T.hook[1], 900, 80, SERIF, w - 60);
     hit2(p, T.hook[0], w / 2, 40 + f1 * .9, 900, f1, SERIF); hit2(p, T.hook[1], w / 2, 60 + f1 + f2 * .95, 900, f2, SERIF);
     text(N, T.hookTag, w / 2, h - 30, 600, fitPx(N, T.hookTag, 600, 24, SANS, w - 50), SANS);
   });
   P.board = riso('board' + LANG, BOARD.w, BOARD.h, ['yellow', 'pink', 'navy'], (p, w, h) => {
-    const N = p.plate('navy'), ps = p.plate('pink', 'screen'); ps.fillStyle = tone(.12); ps.fillRect(0, 0, w, h);
-    text(N, T.board, w / 2, 70, 900, fitPx(N, T.board, 900, 48, SERIF, w - 80), SERIF);
-    // the 128 tiles, printed as empty frames with their numbers
-    for (let i = 0; i < 128; i++) { const c = i % GRID.cols, r = Math.floor(i / GRID.cols), x = BOARD.gx + c * (GRID.cell + GRID.gap), y = BOARD.gy + r * (GRID.cell + GRID.gap);
-      N.fillStyle = tone(1); N.fillRect(x, y, GRID.cell, 2); N.fillRect(x, y + GRID.cell - 2, GRID.cell, 2); N.fillRect(x, y, 2, GRID.cell); N.fillRect(x + GRID.cell - 2, y, 2, GRID.cell);
-      text(N, String(i), x + GRID.cell / 2, y + GRID.cell / 2 + 6, 600, 15, MONO); }
+    // clean paper: the title is the only riso hit; the tiles are drawn live and crisp (boardLive)
+    const N = p.plate('navy');
+    hit2(p, T.board, w / 2, 70, 900, fitPx(N, T.board, 900, 48, SERIF, w - 80), SERIF);
     // legend
     const ly = BOARD.gy + GRID.h + 46; p.plate('yellow').fillStyle = tone(1); p.plate('yellow').fillRect(BOARD.gx, ly - 20, 26, 26);
     text(N, T.legendGpu, BOARD.gx + 38, ly, 600, 24, SANS, { align: 'left' });
@@ -106,8 +102,12 @@ function boardLive(x, t, w, h) {
   const cell = (i) => [-w / 2 + (BOARD.gx + (i % GRID.cols) * (GRID.cell + GRID.gap)) * s, (BOARD.gy + Math.floor(i / GRID.cols) * (GRID.cell + GRID.gap)) * s, GRID.cell * s];
   const resident = st ? st.resident : new Set(AN.frames[0].resident);
   x.save(); x.globalCompositeOperation = 'multiply';
-  for (let i = 0; i < 128; i++) { const [cx, cy, cs] = cell(i), on = resident.has(i);
-    x.fillStyle = on ? `rgba(255,214,60,${.95 * showGpu})` : 'rgba(120,118,130,.42)'; x.fillRect(cx + 3, cy + 3, cs - 6, cs - 6); }
+  for (let i = 0; i < 128; i++) { const [cx, cy, cs] = cell(i), on = resident.has(i) && showGpu > 0;
+    x.fillStyle = on ? `rgb(${mix(206, 255, showGpu)},${mix(204, 210, showGpu)},${mix(210, 70, showGpu)})` : 'rgb(206,204,210)'; x.fillRect(cx, cy, cs, cs); }
+  x.restore();
+  x.save(); x.textAlign = 'center'; x.textBaseline = 'middle'; font(x, 600, 19 * s, 'Inter');
+  for (let i = 0; i < 128; i++) { const [cx, cy, cs] = cell(i); x.strokeStyle = 'rgba(32,56,146,.55)'; x.lineWidth = 1.5 * s; x.strokeRect(cx + .75, cy + .75, cs - 1.5, cs - 1.5);
+    x.fillStyle = 'rgba(32,40,90,.8)'; x.fillText(String(i), cx + cs / 2, cy + cs / 2 + 1); }
   x.restore();
   if (!st) return;
   // the 8 picked experts of this token: a pulse, then a green ring (already on the GPU) or a red flash (must be copied)
