@@ -1,0 +1,38 @@
+{
+ "model": "Qwen3-235B-A22B-FP8",
+ "requests": {
+  "train": 79,
+  "test": 71
+ },
+ "decode_tokens_test": 9082,
+ "cache_per_layer": 64,
+ "experts_per_layer": 128,
+ "top25_share": 0.524,
+ "policies": {
+  "random": {
+   "hit": 0.5,
+   "gb_per_token": 7.097,
+   "max_tok_s_pcie": 3.52
+  },
+  "popular": {
+   "hit": 0.7869,
+   "gb_per_token": 3.024,
+   "max_tok_s_pcie": 8.27
+  },
+  "lru": {
+   "hit": 0.8952,
+   "gb_per_token": 1.487,
+   "max_tok_s_pcie": 16.81
+  },
+  "forecast": {
+   "hit": 0.8449,
+   "gb_per_token": 2.201,
+   "max_tok_s_pcie": 11.36
+  },
+  "decay": {
+   "hit": 0.9301,
+   "gb_per_token": 0.992,
+   "max_tok_s_pcie": 25.21
+  }
+ }
+}
