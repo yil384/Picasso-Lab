@@ -74,6 +74,11 @@ SCRIPT.md (two scripts, judge, synthesis), v1 film EN + ZH rendered with scratch
 lecture line in B7 (**needs her OK**; fallback line ready), synthesized foley, no music. Waiting on the user: notes on
 v1, the voice plan, Prof. Ding's OK, Douyin naming of companies (SCRIPT.md section 16), music.
 
+2026-10-05: the user found v1 rough (small subject, corner cat, jitter, synth sfx). Style cut v2 (`film/film2.html`,
+25 s, B0-B2 + logo end card) fixed it and was approved as "much better". Next session: carry v2's way of working
+(frame-filling stage, smooth motion, CC0 sound, logo end card) through the rest of the episode; open: episode length
+(X non-Premium caps at 2:20), voices, Prof. Ding's OK, music credit.
+
 Earlier:
 Done: research (7 reports), the bible draft, the pilot (E01, MoE) fact brief, three competing scripts, two judges and
 the merged SCRIPT.md (129.5 s), side-line shooting cards, and round-1 style frames of the pilot (`look/e01.html`:
