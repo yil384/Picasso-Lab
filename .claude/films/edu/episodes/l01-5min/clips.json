@@ -1,0 +1,51 @@
+[
+ {
+  "id": "C1",
+  "rec_start": 1096.3,
+  "rec_end": 1104.2,
+  "dur": 7.9,
+  "text": "I don't know if you still remember the first time you are playing with ChatGPT, how surprised maybe you are, and how talented they are in answering questions."
+ },
+ {
+  "id": "C2",
+  "rec_start": 1060.95,
+  "rec_end": 1070.5,
+  "dur": 9.55,
+  "text": "And we are doing a lot of system designs, mostly focusing on the pruning, quantization, design new models. But we feel like its job is kind of limited."
+ },
+ {
+  "id": "C3",
+  "rec_start": 1130.2,
+  "rec_end": 1138.95,
+  "dur": 8.75,
+  "text": "If you want to do some experiment at larger scale, that means money. No one will give you the money to do larger results until you get a result. So it's a chicken egg problem."
+ },
+ {
+  "id": "C4",
+  "rec_start": 1214.95,
+  "rec_end": 1217.05,
+  "dur": 2.1,
+  "text": "You do not do the experiments, you will never know."
+ },
+ {
+  "id": "C5",
+  "rec_start": 1362.1,
+  "rec_end": 1375.3,
+  "dur": 13.2,
+  "text": "The training cost is also tremendous. It requires a lot of energy, a lot of compute resources. That also makes academia a little bit embarrassing, because we are not having a lot of GPUs."
+ },
+ {
+  "id": "C6",
+  "rec_start": 1297.95,
+  "rec_end": 1306.6,
+  "dur": 8.65,
+  "text": "If you can make it larger, then the idea is: how can you efficiently make it larger? If you cannot really get better performance, you will try to compress it."
+ },
+ {
+  "id": "C7",
+  "rec_start": 1451.95,
+  "rec_end": 1461.9,
+  "dur": 9.95,
+  "text": "And especially because it's very large, we need to care about its performance. So that's why we want to develop this class, this course, and try to understand these kind of efficiency issues."
+ }
+]
