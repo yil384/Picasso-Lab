@@ -1,0 +1,58 @@
+[
+ {
+  "id": "C1",
+  "lecture": "L01",
+  "rec_start": 1484.55,
+  "rec_end": 1487.97,
+  "dur": 3.42,
+  "text": "So first, why do we want to understand tokenization?"
+ },
+ {
+  "id": "C2b",
+  "lecture": "L01",
+  "rec_start": 1835.3,
+  "rec_end": 1842.17,
+  "dur": 6.87,
+  "text": "And all these kind of model complexities are also calculated based on the number of tokens."
+ },
+ {
+  "id": "C3",
+  "lecture": "L01",
+  "rec_start": 1943.37,
+  "rec_end": 1947.47,
+  "dur": 4.1,
+  "text": "So less is better. But is less always better? No."
+ },
+ {
+  "id": "C9",
+  "lecture": "L01",
+  "rec_start": 2412.51,
+  "rec_end": 2422.08,
+  "dur": 9.57,
+  "text": "Generally speaking, if you are using multi-language instead of just using English, then it's better for you to use a larger vocabulary."
+ },
+ {
+  "id": "C11",
+  "lecture": "L01",
+  "rec_start": 2454.73,
+  "rec_end": 2459.23,
+  "dur": 4.5,
+  "text": "So that's why sometimes you want to have a larger vocabulary. And that's also the trend."
+ },
+ {
+  "id": "C5b",
+  "lecture": "L01",
+  "rec_start": 2032.61,
+  "rec_end": 2034.49,
+  "dur": 1.88,
+  "text": "So you may have some new words,"
+ },
+ {
+  "id": "C12b",
+  "lecture": "L01",
+  "rec_start": 2438.43,
+  "rec_end": 2441.27,
+  "dur": 2.84,
+  "text": "Because it just means the same thing, it's just China,"
+ }
+]
