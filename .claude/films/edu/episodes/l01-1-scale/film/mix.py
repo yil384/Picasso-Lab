@@ -4,7 +4,7 @@ voice + Prof. Ding's lecture clip + synthesized foley into one stereo track.
 
     python3 film/mix.py vo   TTS_DIR DING_WAV            # -> film/vo_en.json, film/vo_zh.json (caption timing)
     python3 film/mix.py mix  TTS_DIR DING_WAV OUT_DIR     # -> OUT_DIR/mix_en.wav, mix_zh.wav (-14 LUFS)
-    TL=timeline2.json SND=DIR [VODIR=DIR] python3 film/mix.py mix ...  # another timeline; sounds given as files ("f") and music
+    TL=timeline2.json SND=DIR [VODIR=DIR] [CLIPDIR=DIR] python3 film/mix.py mix ...  # another timeline; sounds given as files ("f") and music
                                                           # are read from SND (Kenney CC0 packs, music/)
 
 Music ("music" in the timeline: one entry or a list of entries, each its own bed, all ducked under the voice):
@@ -21,6 +21,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 VODIR = os.environ.get('VODIR', HERE)   # where vo_<lang>.json is written/read (another film's folder)
+CLIPDIR = os.environ.get('CLIPDIR', '')  # original-voice clips: a vo id with CLIPDIR/<ID>.wav is played as is (both langs)
 SR = 48000
 MAX_TEMPO = 1.2
 
@@ -42,6 +43,14 @@ def decode(path, tempo=1.0):
     return np.frombuffer(r.stdout, np.float32).copy(), None
 
 
+def clip_path(i, ding_wav):
+    """The audio file of an original-voice clip in the voice track, or None for a scratch-TTS line."""
+    if i == 'd01':
+        return ding_wav
+    p = os.path.join(CLIPDIR, i.upper() + '.wav') if CLIPDIR else ''
+    return p if p and os.path.exists(p) else None
+
+
 def fit_vo(tts_dir, ding_wav):
     """Place every line at its timeline start; squeeze lines that run into the next one (atempo <= MAX_TEMPO).
     Writes film/vo_<lang>.json: {id: {t, dur, tempo, lead, words: [[t, d, w], ...]}}. Returns (summary, None)."""
@@ -55,8 +64,9 @@ def fit_vo(tts_dir, ding_wav):
         for k, row in enumerate(starts):
             i, t0 = row['id'], row['t']
             nxt = starts[k + 1]['t'] if k + 1 < len(starts) else tl['dur']
-            if i == 'd01':
-                a, err = decode(ding_wav)
+            cp = clip_path(i, ding_wav)
+            if cp:
+                a, err = decode(cp)
                 if err:
                     return None, err
                 res[i] = {'t': t0, 'dur': round(len(a) / SR, 3), 'tempo': 1.0, 'lead': 0.0, 'words': []}
@@ -280,8 +290,9 @@ def mix(tts_dir, ding_wav, out_dir):
         for i, r in vo.items():
             if i not in ids:
                 continue
-            if i == 'd01':
-                a, err = decode(ding_wav)
+            cp = clip_path(i, ding_wav)
+            if cp:
+                a, err = decode(cp)
                 if err:
                     return None, err
                 a = a * 0.95
