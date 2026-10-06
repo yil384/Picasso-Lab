@@ -57,7 +57,7 @@ pack() {
   cd "$EDU" || return 1
   # single drawings: name:sweep (y = top first, x = left first, c = centre out), as in the bake-off
   for n in line_building_q:y line_building_h:y line_spike:y line_slip_boxes:x line_heap:y line_press:y \
-           line_geisel:y line_pc_kitchen:y line_paper:y; do
+           line_geisel:y line_pc_kitchen:y line_paper:y line_servers:y line_kitchen:y:0 line_burst:c; do
     if [ -f "art/src/${n%%:*}.png" ]; then python3 "$LINE/ink.py" "$n"; else echo "skip ${n%%:*}: no art/src/${n%%:*}.png"; fi
   done
   # pose sheets -> line_chef_b1-6 (break), line_chef_r1-6 (running), line_manager_1-3; each packed as it is cut
