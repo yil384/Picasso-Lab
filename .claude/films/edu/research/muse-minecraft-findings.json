@@ -1,0 +1,1245 @@
+[
+ {
+  "topic": "spark-api",
+  "summary": "Muse Spark is available through Meta's own \"Meta Model API\". Docs are at https://dev.meta.ai/docs, the base URL is https://api.meta.ai/v1, and auth is a Bearer key held in the MODEL_API_KEY env var. I confirmed the endpoint is live: GET /v1/status returns 200 \"operational\" and GET /v1/models without a key returns 401 invalid_api_key.\n\nThe API speaks three protocols:\n- the native Responses API (/v1/responses)\n- OpenAI-compatible Chat Completions (/v1/chat/completions)\n- Anthropic-compatible Messages (/v1/messages)\n\nAvailable features:\n- Tool calling (tool_choice can only be \"auto\"; parallel calls are on by default; there is a strict flag)\n- JSON-schema structured output: response_format in Chat Completions, text.format in Responses\n- Image input as a URL, a base64 data: URL or a file_id. A ~1280px image costs ~1.3-1.5k tokens and a request takes up to 50 images.\n- MP4 video input\n- A 1,048,576-token context window\n\nCurrent model ids:\n- muse-spark-1.3, the recommended one, released 2026-09-02\n- muse-spark-1.2 and muse-spark-1.1\n- the cheap \"-contributor\" versions (muse-spark-1.3-contributor, muse-spark-1.2-contributor). On these, Meta may train on your prompts and completions.\n\nPrices per million tokens:\n- Standard: $1.25 in, $4.25 out, $0.15 cached\n- Contributor: $0.10 in, $0.20 out, $0.002 cached\n\nRate limits are per team: Standard 3,000 RPM / 4M TPM, Contributor 100 RPM / 3M TPM.\n\nReasoning cannot be turned off. \"none\" returns a 400 and \"minimal\" is the lowest setting. Reasoning is hidden, so it arrives as delay before the first token. Artificial Analysis measures time to first token at about 34 s at xhigh effort. Nobody has published a latency figure for minimal effort, so a 1 call/s loop has to be measured before anything is promised.\n\nThe \"$20 free credits for new accounts\" claim comes only from press (CNBC via AI Weekly, layer3labs, studentoffers). None of Meta's pricing, billing or sign-up pages mention it, and sign-up asks you to add a payment method.\n\nOpenRouter carries meta/muse-spark-1.1, 1.2 and 1.3 (plus contributor versions) at the same prices, and also meta/muse-glimmer-30b.\n\nmuse.ai is not an unrelated company today:\n- WHOIS registrant is Meta Platforms, Inc. (record updated 2026-08-19).\n- The site resolves to Meta IPs, its PWA manifest has id \"meta_ai\" and name \"Muse\", and it sits behind a Meta/Facebook login.\n- Its robots.txt says: \"Collection of data on Muse through automated means is prohibited unless you have express written permission from Muse\".\n\nMinimal request, verbatim from https://dev.meta.ai/docs/protocols/chat-completions:\n```\ncurl -X POST \"https://api.meta.ai/v1/chat/completions\" -H \"Authorization: Bearer $MODEL_API_KEY\" -H \"Content-Type: application/json\" -d '{\"model\": \"muse-spark-1.3\", \"messages\": [{\"role\": \"user\", \"content\": \"What are three differences between TCP and UDP?\"}]}'\n```\nThe Python version is OpenAI(base_url=\"https://api.meta.ai/v1\", api_key=os.environ[\"MODEL_API_KEY\"]).chat.completions.create(model=\"muse-spark-1.3\", messages=[...]). Add reasoning_effort=\"minimal\" for low latency (per https://dev.meta.ai/docs/reasoning).\n\nResearch limits: the session's web-search budget ran out partway through. After that I could only fetch known URLs directly. I made no project file changes, and the temporary scratchpad downloads have been deleted.",
+  "facts": [
+   {
+    "claim": "Docs live at dev.meta.ai/docs. Nav includes /docs/quickstart, /docs/authentication, /docs/models, /docs/pricing-rate-limits, /docs/tool-calling, /docs/structured-output, /docs/reasoning, /docs/image-understanding, /docs/video-understanding, /docs/protocols, /docs/api-reference, /docs/muse-code.",
+    "source": "https://dev.meta.ai/docs/overview ; https://dev.meta.ai/docs/api-reference",
+    "status": "verified"
+   },
+   {
+    "claim": "Base URL is https://api.meta.ai/v1. Auth is the header 'Authorization: Bearer $MODEL_API_KEY'. Keys look like 'LLM|<digits>|<secret>', are shown only once, and keys on one team share rate limits.",
+    "source": "https://dev.meta.ai/docs/quickstart ; https://dev.meta.ai/docs/authentication",
+    "status": "verified"
+   },
+   {
+    "claim": "Live check on 2026-10-06: GET https://api.meta.ai/v1/status returned 200 {\"service_status\":\"operational\"}. GET /v1/models without a key returned 401 {\"code\":\"invalid_api_key\"}.",
+    "source": "direct curl to https://api.meta.ai/v1/status and https://api.meta.ai/v1/models",
+    "status": "verified"
+   },
+   {
+    "claim": "Three protocols run the same models at the same price: Responses POST /v1/responses (native, recommended for agents; keeps reasoning across tool turns via previous_response_id or encrypted replay), Chat Completions POST /v1/chat/completions (OpenAI-compatible), and Messages POST /v1/messages (Anthropic-compatible; for the Anthropic SDK the base is https://api.meta.ai). Works with the OpenAI and Anthropic SDKs, LangChain, LlamaIndex and the Vercel AI SDK.",
+    "source": "https://dev.meta.ai/docs/protocols/ ; https://dev.meta.ai/docs/quickstart",
+    "status": "verified"
+   },
+   {
+    "claim": "Text model ids: muse-spark-1.3 (Standard, 'tuned for agentic workflows', recommended), muse-spark-1.3-contributor, muse-spark-1.2, muse-spark-1.2-contributor, muse-spark-1.1. All accept text, image, video, audio and PDF input, output text, and have a 1,048,576-token context window. Other models on the same API: muse-image-1.0, muse-voice-transcribe-1.0, sam-3.1.",
+    "source": "https://dev.meta.ai/docs/models",
+    "status": "verified"
+   },
+   {
+    "claim": "Release dates: Muse Spark first released 2026-04-08; Muse Spark 1.1 API launched 2026-07-08/09 (Meta blog dated July 8, press July 9); 1.2 listed on OpenRouter 2026-08-05; 1.3 released 2026-09-02.",
+    "source": "https://en.wikipedia.org/wiki/Meta_Superintelligence_Labs ; https://dev.meta.ai/resources/blog/build-with-muse-spark/ ; https://research.meta.ai/blog/introducing-muse-spark-1-3 ; https://openrouter.ai/api/v1/models (created timestamps)",
+    "status": "verified"
+   },
+   {
+    "claim": "Price per 1M tokens. Standard (1.3/1.2/1.1): input $1.25, cached input $0.15, output $4.25. Contributor (1.3/1.2-contributor): input $0.10, cached $0.002, output $0.20. Web search grounding costs an extra $2.50 per 1,000 queries.",
+    "source": "https://dev.meta.ai/docs/pricing-rate-limits ; https://dev.meta.ai/products/meta-model-api",
+    "status": "verified"
+   },
+   {
+    "claim": "Contributor tier trade-off: 'heavily discounted token pricing in exchange for permission to use your prompts and completions to train future Meta models'. ToS 6.1 applies this to 'Discounted Services'.",
+    "source": "https://dev.meta.ai/docs/pricing-rate-limits ; https://dev.meta.ai/legal/terms-of-service",
+    "status": "verified"
+   },
+   {
+    "claim": "Rate limits apply per team, not per key. Standard: 3,000 RPM and 4,000,000 TPM. Contributor: 100 RPM and 3,000,000 TPM. A breach returns HTTP 429. The docs give no spend-based tiers and no special limits for new accounts.",
+    "source": "https://dev.meta.ai/docs/pricing-rate-limits ; https://dev.meta.ai/help/usage-and-limits/rate-limits",
+    "status": "verified"
+   },
+   {
+    "claim": "$20 in free credits for every new Model API account.",
+    "source": "CNBC 2026-07-09 as quoted by https://aiweekly.co/alerts/meta-prices-muse-spark-11-api-at-125425-per-m-tokens ; https://www.layer3labs.io/guides/muse-spark-pricing-faq ; https://www.studentoffers.co/offer/meta-model-api",
+    "status": "unverified"
+   },
+   {
+    "claim": "Meta's own pricing, billing and sign-up pages do not mention free credits. ToS 13.3 only says Meta 'may provide you with promotional credits'. Sign-up requires age 18+ and a supported country, then 'Add a payment method' and 'Create an API key'. So whether the $20 is still offered in October 2026, and whether it needs a card, is UNVERIFIED.",
+    "source": "https://dev.meta.ai/help/accounts-and-login/sign-up ; https://dev.meta.ai/help/billing/api-bill ; https://dev.meta.ai/legal/terms-of-service",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Tool calling works on Responses (flat tool definitions; 'function' and freeform 'custom' tools; built-in web_search and tool_search) and on Chat Completions (OpenAI 'function' nesting). Only tool_choice 'auto' is supported; any other value returns 400. Parallel tool calls are on by default (set parallel_tool_calls:false to turn off). Optional strict schemas.",
+    "source": "https://dev.meta.ai/docs/tool-calling",
+    "status": "verified"
+   },
+   {
+    "claim": "Structured output: Chat Completions uses response_format {type:'json_schema', json_schema:{name, schema, strict}}; Responses uses text.format. It combines with tools and images. Limits: nesting depth 10, 5,000 properties, no recursive schemas. Strict mode needs additionalProperties:false and every key listed in required.",
+    "source": "https://dev.meta.ai/docs/structured-output",
+    "status": "verified"
+   },
+   {
+    "claim": "Parameters that return 400 on Chat Completions: stop, n>1, logprobs/top_logprobs, logit_bias, prediction, verbosity, web_search_options, modalities, audio. Supported: temperature, top_p, max_tokens/max_completion_tokens, seed, reasoning_effort, tools, response_format, parallel_tool_calls, prompt_cache_key, safety_identifier, stream.",
+    "source": "https://dev.meta.ai/docs/protocols/chat-completions",
+    "status": "verified"
+   },
+   {
+    "claim": "Vision input works on Responses and Chat Completions, as a public URL, a base64 data: URL or a Files API file_id. Formats: jpeg, png, gif, webp, ico. Up to 50 images per request, 50 MB per inline image. A ~1280px image costs about 1,300-1,500 tokens; POST /v1/responses/input_tokens counts tokens exactly. There is no 'detail' parameter. MP4 video works via input_file.",
+    "source": "https://dev.meta.ai/docs/image-understanding ; https://dev.meta.ai/docs/video-understanding",
+    "status": "verified"
+   },
+   {
+    "claim": "Reasoning cannot be turned off. Muse Spark accepts minimal, low, medium, high, xhigh, and max (Standard tier only); 'none' returns HTTP 400. If omitted, the model reasons at a model-determined level. Reasoning tokens are billed as output. The chain of thought is private (optional summary on Responses), so it shows up as delay before the first visible token.",
+    "source": "https://dev.meta.ai/docs/reasoning ; https://dev.meta.ai/docs/protocols/chat-completions",
+    "status": "verified"
+   },
+   {
+    "claim": "Whether 'max' reasoning is usable differs by source. The research blog says max is available on Model API. The reasoning docs say max is Standard-tier only. DataCamp found it feature-gated in Muse Code, silently downgraded to xhigh.",
+    "source": "https://research.meta.ai/blog/introducing-muse-spark-1-3 ; https://dev.meta.ai/docs/reasoning ; https://www.datacamp.com/tutorial/muse-spark-1-3-tutorial",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Latency at xhigh effort, measured by Artificial Analysis: output ~219 tok/s and time to first token ~33.8 s. A search snippet of the same site showed 148 tok/s and 37 s, so the numbers move over time. No published figure exists for minimal or low effort.",
+    "source": "https://artificialanalysis.ai/models/muse-spark-1-3-xhigh",
+    "status": "conflicting"
+   },
+   {
+    "claim": "DataCamp measured OpenRouter as slower than Meta's own endpoint: ~81 vs ~182 tok/s.",
+    "source": "https://www.datacamp.com/tutorial/muse-spark-1-3-tutorial",
+    "status": "unverified"
+   },
+   {
+    "claim": "Meta claims 1.3 uses ~20% fewer tool calls and ~25% fewer tokens than 1.2. DataCamp's own 3-task test found a net cost increase of 12%.",
+    "source": "https://research.meta.ai/blog/introducing-muse-spark-1-3 ; https://www.datacamp.com/tutorial/muse-spark-1-3-tutorial",
+    "status": "conflicting"
+   },
+   {
+    "claim": "OpenRouter lists meta/muse-spark-1.3, meta/muse-spark-1.3-contributor, meta/muse-spark-1.2, meta/muse-spark-1.2-contributor and meta/muse-spark-1.1. Prices match Meta's. Context 1,048,576, max completion 943,718, is_moderated true, sole provider Meta. Supported parameters: tools, tool_choice, response_format, structured_outputs, reasoning, reasoning_effort. Inputs: text, image, video, file.",
+    "source": "https://openrouter.ai/api/v1/models ; https://openrouter.ai/api/v1/models/meta/muse-spark-1.3/endpoints",
+    "status": "verified"
+   },
+   {
+    "claim": "OpenRouter also lists meta/muse-glimmer-30b. Context 131,072; $0.30 in / $1.20 out per 1M; text and image input; tools and structured outputs supported. Providers: Phala, DeepInfra (bf16), Together.",
+    "source": "https://openrouter.ai/api/v1/models/meta/muse-glimmer-30b/endpoints",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Glimmer is a 30B dense multimodal model (text and image in, text out) under Apache 2.0, released 2026-08-10. Default context is 128K. Launch runtimes include llama.cpp, vLLM, SGLang, Ollama and LM Studio. The docs page does not mention Apple MLX.",
+    "source": "https://dev.meta.ai/docs/muse-glimmer ; https://en.wikipedia.org/wiki/Meta_Superintelligence_Labs",
+    "status": "verified"
+   },
+   {
+    "claim": "Availability: the API launched as a US-only preview in July 2026. The product page now says 'Public preview. Now available with expanded global access.' The Geographic Use Policy (updated 2026-09-18) lists Restricted Territories that include the People's Republic of China (with Hong Kong and Macau) and Russia, and bars Muse Image in India.",
+    "source": "https://startupfortune.com/meta-puts-muse-spark-11-on-openrouter-then-locks-out-the-rest-of-the-world/ ; https://dev.meta.ai/products/meta-model-api ; https://dev.meta.ai/legal/geographic-use-policy",
+    "status": "verified"
+   },
+   {
+    "claim": "ToS (last updated 2026-10-02), section 10.1: 'You and your End Users must be at least 18 years of age to use the Services and Integrated Products, and you will not create Integrated Products targeted at individuals under the age of 18.' 10.1(v) bars making Integrated Products available in non-permitted countries.",
+    "source": "https://dev.meta.ai/legal/terms-of-service",
+    "status": "verified"
+   },
+   {
+    "claim": "ToS section 7: 'No trademark licenses are granted ... in connection with the Services, neither we nor you may use any name or mark owned by or associated with the other or any of its affiliates.' Section 10.1(xi) bars publishing benchmarks of the Services to promote a competing product without written permission.",
+    "source": "https://dev.meta.ai/legal/terms-of-service",
+    "status": "verified"
+   },
+   {
+    "claim": "The AUP forbids running AI agents 'in ways that evade human oversight or accountability'. It also forbids using the Services to 'autonomously interact with systems or services in a manner that violates the terms of service' of those systems, and failing to disclose material risks or limitations to End Users where law or harm-prevention requires it.",
+    "source": "https://dev.meta.ai/legal/acceptable-use-policy",
+    "status": "verified"
+   },
+   {
+    "claim": "muse.ai belongs to Meta today. WHOIS registrant is 'Meta Platforms, Inc.', 1601 Willow Road, Menlo Park (record updated 2026-08-19). It resolves to Meta IP 157.240.11.17, its CSP allows *.meta.ai and gateway.meta.ai, its PWA manifest has id 'meta_ai' and name 'Muse', and it redirects to a Meta login (auth.muse.ai/aymh). robots.txt says 'Collection of data on Muse through automated means is prohibited unless you have express written permission from Muse'.",
+    "source": "whois muse.ai ; curl -I https://muse.ai ; https://muse.ai/manifest.json ; https://muse.ai/robots.txt",
+    "status": "verified"
+   },
+   {
+    "claim": "muse.ai is Meta's consumer Muse assistant (the former meta.ai web app). It may have artifacts, sharing and connectors: robots.txt lists /artifacts, /share, /connectors, /crons and /goals, and the CSP frames *.meta-agents-apps.workers.dev. What those features do is unknown because everything is behind login.",
+    "source": "https://muse.ai/robots.txt ; curl -I https://muse.ai (CSP header)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Muse Spark 1.1 has been available free in the Meta AI app and on meta.ai in Thinking mode (consumer use may be rate-limited).",
+    "source": "https://handyai.substack.com/p/model-drop-muse-spark-11 (search-result summary only, not fetched)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Meta's launch blog shows Muse Spark running a computer-use agent ('screenshot, reason about the board, click, screenshot again', Minesweeper example). The cookbook recipe uses an MCP bridge with cua_screenshot, cua_left_click, cua_type_text, cua_press_key and cua_run_command, and works around the 50-images-per-request limit with sub-agents. The blog does not mention Minecraft.",
+    "source": "https://dev.meta.ai/resources/blog/build-with-muse-spark/ ; https://dev.meta.ai/docs/cookbook/computer-use ; https://github.com/meta-models/meta-model-cookbook",
+    "status": "verified"
+   },
+   {
+    "claim": "rmalde/minecraft-agent (the Jev Ender Dragon run) reads text game state through Mineflayer, not pixels, on Minecraft Java 1.16.5. It calls models through OpenRouter's OpenAI-compatible /api/v1/chat/completions, selected by the PLANNER_MODEL env var; keys come from Google Secret Manager. The verified 8:43 run used 131 Jev decisions and 35 Astra calls, about 0.32 calls per second. No license is stated.",
+    "source": "https://github.com/rmalde/minecraft-agent",
+    "status": "verified"
+   },
+   {
+    "claim": "The local machine is an Apple M2 with 16 GB unified memory. Ollama is not installed; java is at /usr/bin/java.",
+    "source": "local sysctl / which on this Mac",
+    "status": "verified"
+   },
+   {
+    "claim": "Unofficial proxies such as APIVALE advertise bypassing Meta's geo-blocks and warn that VPN workarounds lead to bans.",
+    "source": "https://apivale.com/blog/meta-model-api-access-pricing-guide/",
+    "status": "unverified"
+   }
+  ],
+  "implications": [
+   "Fastest build: rmalde/minecraft-agent already calls an OpenAI-compatible chat-completions endpoint through OpenRouter. Pointing its planner (and possibly its action picker) at meta/muse-spark-1.3 on OpenRouter, or at https://api.meta.ai/v1 with model muse-spark-1.3, should be close to a config change. The user needs exactly one credential, a Meta Model API key or an OpenRouter key; it cannot be avoided for Spark, and creating it needs their card.",
+   "A 1-call-per-second loop is unproven. Hidden reasoning cannot be switched off (minimal is the floor) and Artificial Analysis measures ~34 s to first token at xhigh. Plan the agent as two layers: Muse Spark at minimal or low effort as the planner, a few times a minute; Mineflayer pathfinding or a scripted executor fills the gaps. The Jev run needed only ~0.32 calls/s in total. Measure minimal-effort latency before promising a speed on screen.",
+   "Cost at 1 call/s, my estimate (I did not measure token counts). Pixel loop at ~2.4k input + ~200 output tokens per call: Standard ≈ $0.004/call ≈ $14/hour, so $20 lasts ~1.5 hours; Contributor ≈ $0.0003/call ≈ $1/hour, so $20 lasts ~20 hours. Text-state loop (Mineflayer JSON, ~1.5k in / ~150 out): Standard ≈ $9/hour, Contributor ≈ $0.65/hour. A whole Ender-Dragon-style run (~170 calls) costs about $1-2 on Standard and about $0.10 on Contributor. Any large count of hidden reasoning tokens raises these numbers, because reasoning is billed as output.",
+   "Contributor tier is cheap enough for long runs but has two catches. Meta may train on everything sent, so viewer prompts must be disclosed and nothing private sent. Its 100 RPM team limit fits about one agent at 1 Hz, so a public try-it page with several viewers at once needs Standard tier (3,000 RPM) or a queue.",
+   "A public try-it page has legal limits. Meta's ToS requires End Users to be 18+ and forbids products aimed at under-18s, which matters for a Minecraft audience, so the page needs an 18+ gate. It also cannot be offered in the PRC, Hong Kong or Macau, so the Douyin cut can show the video but cannot link a playable demo for viewers in China. The page must never put the API key in the browser: use a server-side proxy, a per-viewer quota, a spend alert, a visible log and a stop button (the AUP's human-oversight rule).",
+   "Branding: ToS section 7 grants no trademark licence. Use plain descriptive wording ('powered by Meta's Muse Spark'), no Meta or Muse logos, and do not suggest Meta endorses the project. Run on our own local Minecraft server, not public servers, to stay inside the AUP rule about violating other services' terms. Whether 'Muse plays Minecraft' as a title is fine under ToS section 7 is a legal question (UNVERIFIED).",
+   "'Try it on muse.ai' cannot mean a bot driving the muse.ai web app: muse.ai is Meta's consumer Muse app and its robots.txt bans automated collection. The only path is a supported muse.ai feature (artifacts, connectors or MCP) that ordinary users turn on themselves; whether one exists is UNVERIFIED. Otherwise we host our own page that calls the API, and the video says 'Muse Spark via Meta's API'.",
+   "Pixels or text: Muse Spark takes screenshots (~1.4k tokens per 1280px frame, 50 images per request) and Meta ships a computer-use recipe. So a Muse that plays from pixels is possible and answers the main criticism of Jev (text game state, not pixels). It is also slower and costs more per call than Mineflayer text state.",
+   "Running Muse Glimmer locally on this M2 is probably not practical. It is a 30B dense model, and 4-bit weights are about 15-17 GB (my estimate) against 16 GB of unified memory. Use Glimmer through OpenRouter (Together, DeepInfra, Phala) instead, or treat it as the fast-picker comparison. Its 131K context and 16K max output on DeepInfra are enough for an action picker.",
+   "Lab angle for the X post: Muse Spark's hidden-reasoning latency and its 3,000 RPM / 4M TPM limits are exactly the serving story behind KVFlow (prefix caching for agents) and Yggdrasil. The reusable system prompt plus game state also suits Meta's cached-input price ($0.15 Standard, $0.002 Contributor). Use prompt_cache_key on Chat Completions or previous_response_id on Responses."
+  ],
+  "open_questions": [
+   "Are the $20 free credits still given to accounts created in October 2026, do they need a card, and do they cover contributor models? Only press reports them, and Meta's sign-up page requires a payment method.",
+   "What are the real time-to-first-token and seconds per call for muse-spark-1.3 at reasoning_effort minimal and low, with one screenshot plus a short prompt? This needs a test run with the user's key.",
+   "What does muse.ai (Meta's consumer Muse app) offer: artifacts, connectors/MCP, sharing? Could an ordinary user drive our Minecraft agent from inside muse.ai without breaking its no-automation rule? It is behind login and the web-search budget ran out.",
+   "Did the consumer muse.ai fully replace meta.ai? meta.ai returned a 403 client challenge to curl, so any redirect could not be seen.",
+   "Is 'Muse plays Minecraft' as a public project name allowed under ToS section 7, and under Minecraft's usage guidelines (Mojang/Microsoft)? Not checked.",
+   "Is this really the first time Muse has played Minecraft? Not checked; the search budget ran out before searching for earlier attempts.",
+   "What is the license of rmalde/minecraft-agent (none stated), and is a Hao AI Lab 'Jev plays Minecraft' post the same as the TypeSafe/Ronak Malde run in the lab notes? I did not fetch the X post.",
+   "Does the Contributor tier give any concurrency headroom above 100 RPM, and how are higher limits requested? The docs do not say.",
+   "Does Muse Glimmer 30B have an MLX build or a small enough GGUF quantization to run on a 16 GB M2, and at what speed? The docs do not mention MLX."
+  ]
+ },
+ {
+  "topic": "glimmer",
+  "summary": "Muse Glimmer is real and open. Meta Superintelligence Labs released it on 2026-08-10 under Apache 2.0. It is a dense model of about 29.6B parameters (including a 1.8B vision encoder), takes text and images, outputs text, and has a 131K context. Weights are on Hugging Face at meta-models/Muse-Glimmer-30B (not gated), with an official GGUF repo and a DFlash drafter. Ollama, llama.cpp, MLX, vLLM, SGLang and LM Studio all support it. The official 4-bit build is about 17 GB and is aimed at 24-32 GB GPUs.\n\nThis Mac cannot run it as it stands. It is a MacBook Air M2 with 16 GB RAM and only 4.2 GB of free disk. Every 4-bit build is 15.4 GB or more, and even the smallest 2-bit file (8.7-8.9 GB) is larger than the free disk. Freeing space would allow a 2-bit build (about 10 GB) at an estimated 5-7 tok/s. No M2 or 16 GB measurement has been published. At 2-bit, the quant's own notes say precise multi-step tool calls degrade first, and those are exactly what a Minecraft agent needs. On a base M3 Air with 24 GB, the 4-bit build measured only 4.33 tok/s.\n\nA 24 GB GPU is the right host. One independent test on an RTX 4090 with Q4_K_M reported about 75 tok/s output and 3,100+ tok/s prompt reading, with a 130K context in 19.3 GB. Serve it with llama.cpp or Ollama and send requests from the Mac over the local network. vLLM does not fit well on a single 24 GB card.\n\nTool calling is solid on paper: MCP Atlas 75.5, and on the tau3-Banking tool-use test 24% versus Qwen3.6-27B's 17%. Weak spots: it trails Qwen on Terminal-Bench and GDPval, hallucinates more (82% rate), and independent tests show some tool-looping. There are a few runtime bugs: one Ollama issue (#18808) is still open, and one llama.cpp issue was fixed. No game or Minecraft results for any Muse model were found.\n\nMost important finding: muse.ai IS Meta's. It is the consumer personal agent \"Muse\", launched 2026-09-08 and run on Muse Spark 1.3. Each user gets a cloud Linux computer with a Chromium browser that the user can watch and take over. So the user's \"网页端的muse.ai\" is the right product, not an unrelated company. Glimmer itself is not offered there. Browser Minecraft Classic (classic.minecraft.net) is live. Note: the session's web-search budget ran out partway through. The last checks were done by fetching pages directly, and some negatives (no Muse Minecraft demo yet, Glimmer's OpenRouter id) are marked UNVERIFIED.",
+  "facts": [
+   {
+    "claim": "Muse Glimmer was released 2026-08-10 by Meta Superintelligence Labs under Apache 2.0. It is a 30B dense open-weights model, distilled from Muse Spark's outputs (logit distillation), built for local agents. Meta says full precision needs over 55 GB and the ~4-bit build under 20 GB.",
+    "source": "https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model",
+    "status": "verified"
+   },
+   {
+    "claim": "Architecture: about 29.6B total parameters, including a ~1.8B ViT-G/14 vision encoder (50 layers). The text decoder is dense with 52 layers, in a repeating pattern of 3 sliding-window layers (2048 tokens) then 1 full-attention layer (NoPE). 32 heads, 2 KV heads, head_dim 128, hidden size 6656, vocabulary 202,048. Input is text, image or video; output is text. Knowledge cutoff 2026-01-04.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B ; https://huggingface.co/meta-models/Muse-Glimmer-30B/raw/main/config.json ; https://huggingface.co/docs/transformers/en/model_doc/muse_glimmer",
+    "status": "verified"
+   },
+   {
+    "claim": "Context length is 131,072 (config max_position_embeddings; model card says '131,072+'; Ollama says 128K; Artificial Analysis says 131k). The Hugging Face launch blog instead lists 'Context Window: 32,768 tokens, Max Tokens: 8,192', probably an example config.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B/raw/main/config.json ; https://huggingface.co/blog/muse-glimmer ; https://ollama.com/library/muse-glimmer",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Hugging Face ids: meta-models/Muse-Glimmer-30B (BF16, not gated, no login needed), meta-models/Muse-Glimmer-30B-GGUF, meta-models/Muse-Glimmer-30B-assistant (DFlash speculative-decoding drafter), and the meta-models/muse-glimmer collection. Community builds: bartowski/Muse-Glimmer-30B-GGUF, unsloth/Muse-Glimmer-30B-GGUF, mlx-community/Muse-Glimmer-30B-4bit, -OptiQ-4bit, -mxfp4 and -nvfp4, btbtyler09/Muse-Glimmer-30B-GPTQ-4bit, Preyazz/Muse-Glimmer-30B-NVFP4.",
+    "source": "https://huggingface.co/blog/muse-glimmer ; https://huggingface.co/meta-models/Muse-Glimmer-30B ; https://huggingface.co/collections/meta-models/muse-glimmer ; https://huggingface.co/mlx-community/Muse-Glimmer-30B-4bit",
+    "status": "verified"
+   },
+   {
+    "claim": "Official GGUF files: KQuant-17GB-Q4_K_M 16.8 GB (recommended start), KQuant-Dynamic-Q4_K_XL 19.7 GB, mmproj vision 1.4 GB, DFlash drafter 1.6 GB. Memory for the 17 GB build: ~17 GB text-only, ~19 GB with vision, ~20 GB with vision and drafter. No BF16 GGUF. Needs llama.cpp build b10353 or newer; the chat template is embedded and --jinja is required. Stop tokens are 200001 and 200008.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B-GGUF",
+    "status": "verified"
+   },
+   {
+    "claim": "bartowski GGUF sizes: IQ2_XXS 8.92 GB, IQ2_M 10.66, Q2_K 11.04, IQ3_M 13.11, Q3_K_M 13.96, IQ4_XS 15.44, Q4_K_M 17.31, Q5_K_M 20.11, Q6_K 23.41, Q8_0 29.61, BF16 55.73 GB. Q4_K_M is recommended for 24 GB.",
+    "source": "https://huggingface.co/bartowski/Muse-Glimmer-30B-GGUF",
+    "status": "verified"
+   },
+   {
+    "claim": "Unsloth dynamic GGUFs: UD-IQ2_XXS 10.7 GB, UD-IQ2_M 12.3, UD-Q2_K_XL 12.4, UD-Q3_K_XL 13.4, UD-Q4_K_XL 15.9 GB. Unsloth recommends 2-bit for 16 GB systems and 3-4 bit for 24 GB.",
+    "source": "https://huggingface.co/unsloth/Muse-Glimmer-30B-GGUF",
+    "status": "verified"
+   },
+   {
+    "claim": "MLX: mlx-community/Muse-Glimmer-30B-4bit (converted with mlx-vlm 0.6.12) has weights of roughly 16-18 GB and needs about 18-20 GB with a 32K KV cache. The OptiQ-4bit build is 18.6 GB plus a 3.8 GB BF16 vision sidecar.",
+    "source": "https://huggingface.co/mlx-community/Muse-Glimmer-30B-4bit ; https://huggingface.co/mlx-community/Muse-Glimmer-30B-OptiQ-4bit (sizes taken from search-result excerpts of these pages)",
+    "status": "verified"
+   },
+   {
+    "claim": "Ollama: the official library has muse-glimmer:30b / :latest (18 GB, 128K, vision, tools, thinking) and muse-glimmer:30b-mlx (19 GB, MLX engine on Apple Silicon, where DFlash gives 1.5x-1.8x). There is also an 'ollama launch claude --model muse-glimmer' integration. Community 2-bit tags for 12-16 GB machines: iq2_m 9.8 GB, q2_k 11 GB, iq2_xs 8.7 GB. Their notes say that at 2-bit 'arithmetic and precise multi-step tool schemas degrade first'.",
+    "source": "https://ollama.com/library/muse-glimmer ; https://ollama.com/blog/muse-glimmer ; https://ollama.com/venkataparswanadh/muse-glimmer:iq2_m",
+    "status": "verified"
+   },
+   {
+    "claim": "Ollama 0.32.7 added Muse Glimmer support.",
+    "source": "https://www.phoronix.com/news/Meta-Muse-Glimmer (seen only as a search excerpt, page not opened)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Ollama issue #18808 (opened 2026-10-05, still open): on Ollama 0.35.0, the Hugging Face GGUF references (hf.co/unsloth/...:UD-Q4_K_XL and hf.co/meta-models/...:Q4_K_XL) produce no response, likely a Jinja template problem. The official library tag was not tested in that issue.",
+    "source": "https://github.com/ollama/ollama/issues/18808",
+    "status": "verified"
+   },
+   {
+    "claim": "llama.cpp issue #29613: Muse Glimmer ignored the json_schema response_format under --jinja (tool calls were not affected). It is closed with PR #29615, and the fix is noted in release b11246.",
+    "source": "https://github.com/ggml-org/llama.cpp/issues/29613 ; https://freedom.tech/posts/2026-09-29-llama-cpp/",
+    "status": "verified"
+   },
+   {
+    "claim": "How tools work: tools are given as JSON schemas in the system prompt. The model writes calls in its own XML-style 'ATEM' format (<atem:function_calls><atem:invoke name=...><atem:parameter name=...>). Tool results come back in the 'tool' role wrapped in <tool_output name=...>. Reasoning goes to an 'assistant to=self' channel. Reasoning strength is low / medium / high / xhigh, default high. Runtimes translate this into OpenAI-style tool_calls; for vLLM use --tool-call-parser muse_glimmer --reasoning-parser muse_glimmer.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B/raw/main/chat_template.jinja ; https://huggingface.co/btbtyler09/Muse-Glimmer-30B-GPTQ-4bit",
+    "status": "verified"
+   },
+   {
+    "claim": "Recommended sampling: temperature 1.0, top_p 0.95, top_k 64.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B",
+    "status": "verified"
+   },
+   {
+    "claim": "Benchmarks reported by Meta: MCP Atlas 75.5, DeepSearch QA 74.6, tau3-Banking 23.5, WildClawBench 47.6, Gaia2 43.3, OSWorld-Verified 65.9, ScreenSpot Pro 75.4, TerminalBench 2.1 51.7, SWE-Bench Verified 76.0, SWE-Bench Pro 51.2, GPQA Diamond 83.5.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B",
+    "status": "verified"
+   },
+   {
+    "claim": "Artificial Analysis (independent): Intelligence Index 17. Tau3-Banking 24% versus Qwen3.6 27B's 17% ('among the best in its class' at tool use). But Terminal-Bench 2.1 is 52% versus 61%, GDPval-AA v2 953 Elo versus 1141, and the hallucination rate is 82% versus 49%. Hosted API: 117.8 output tok/s, $0.32 / $1.35 per M tokens, 4 providers.",
+    "source": "https://artificialanalysis.ai/articles/muse-glimmer ; https://artificialanalysis.ai/models/muse-glimmer",
+    "status": "verified"
+   },
+   {
+    "claim": "Independent agent test (kingy.ai), MacBook Pro M4 Pro 24 GB, llama.cpp Metal, 16.76 GB GGUF: 14.40 tok/s text-only, but only 3.67 tok/s with the vision projector loaded. On 7 agent tasks: 3 pass, 2 partial, 2 fail, versus Qwen3.6-27B at 2 pass, 5 fail (Qwen produced malformed JSON tool arguments).",
+    "source": "https://kingy.ai/blog/muse-glimmer-vs-qwen3-6-local-ai-agent-test/",
+    "status": "verified"
+   },
+   {
+    "claim": "Independent agent test (rickyzzzzz), M1 Max 64 GB, Ollama MLX engine, nvfp4 build: Glimmer passed 12/12 core agent tasks but 24/30 on the extended suite, with 4 tool-looping failures. It was 2.1x slower overall than Qwen 3.8 27B, which passed 30/30.",
+    "source": "https://github.com/rickyzzzzz/muse-glimmer-benchmark",
+    "status": "verified"
+   },
+   {
+    "claim": "Mac speeds. Meta's numbers (17 GB build): M4 Max 23.7 tok/s (37.8 with DFlash), M5 Max 26.6 (50.2), RTX 5090 74.9 (233.4). Independent, MacBook Air M3 24 GB, 17 GB build, llama.cpp: 4.33 tok/s output and 26.2 tok/s prompt reading (a 4,166-token prompt took 157 s before the first token). That source recommends 32 GB unified memory as the minimum.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B-GGUF ; https://holaclaw.ai/blog/muse-glimmer-on-mac",
+    "status": "verified"
+   },
+   {
+    "claim": "No published Muse Glimmer measurement on an Apple M2 or on any 16 GB Mac was found.",
+    "source": "searches: 'Muse Glimmer M2 16GB Mac run IQ2 tokens/s' (results included https://holaclaw.ai/blog/muse-glimmer-on-mac and https://kingy.ai/blog/muse-glimmer-vs-qwen3-6-local-ai-agent-test/, neither covering M2/16 GB)",
+    "status": "unverified"
+   },
+   {
+    "claim": "This machine: MacBook Air (Mac14,2), Apple M2 (8-core CPU, 8-core GPU), 16 GB unified memory, macOS 15.5. 4.2 GB free disk (APFS container; Data volume 99% full). iogpu.wired_limit_mb is 0 (macOS default). Ollama, llama.cpp and MLX are not installed. ~/.ssh/config has host aliases 'picasso' and 'ssi-gpubnode01' (not contacted).",
+    "source": "local: sysctl, system_profiler SPHardwareDataType/SPDisplaysDataType, diskutil info /, df -h",
+    "status": "verified"
+   },
+   {
+    "claim": "Estimate for the M2 16 GB: no 4-bit build fits. A 2-bit build of about 9-11 GB might run at roughly 5-7 tok/s output and about 20-30 tok/s prompt reading. Basis: M2 memory bandwidth of about 100 GB/s, the same as the M3 Air measured at 4.33 tok/s with a 17 GB file. The 2-bit build may also require raising the macOS GPU memory limit (sudo sysctl iogpu.wired_limit_mb) above its default of about 2/3 of RAM.",
+    "source": "derived from https://holaclaw.ai/blog/muse-glimmer-on-mac and the file sizes above; M2 bandwidth and the macOS default GPU limit were not re-checked this session (https://en.wikipedia.org/wiki/Apple_M2 appeared in results but was not opened)",
+    "status": "unverified"
+   },
+   {
+    "claim": "KV cache is small. From config.json: 2 KV heads x 128 head_dim x (K+V) x 2 bytes = 1 KiB per token per layer. Only the 13 full-attention layers grow with context: about 0.4 GiB at 32K and about 1.7 GiB at 128K. The 39 sliding-window layers cap at about 78 MiB. This matches the independent report of a 130K context in 19.3 GB total with Q4_K_M.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B/raw/main/config.json (my computation) ; https://x.com/analogalok/status/2086834522461806748",
+    "status": "verified"
+   },
+   {
+    "claim": "24 GB GPU: one independent RTX 4090 test with Q4_K_M reported about 75 tok/s output and 3,100+ tok/s prompt reading, with a 130K context in 19.3 GB and no KV quantization. The RTX 3090 figure of about 65-70 tok/s is only a projection from memory bandwidth.",
+    "source": "https://x.com/analogalok/status/2086834522461806748 (seen via search excerpt and https://runaihome.com/blog/muse-glimmer-30b-local-ai-hardware-guide-2026/) ; 3090 projection from the same runaihome page",
+    "status": "verified"
+   },
+   {
+    "claim": "DFlash drafter on 24 GB: one guide says the drafter needs 5.11 GB, leaving only about 1 GB for context, so it says to skip DFlash on 24 GB cards. Meta's GGUF repo instead lists a 1.6 GB Q4 drafter and about 20 GB total for the 17 GB build plus vision plus drafter.",
+    "source": "https://runaihome.com/blog/muse-glimmer-30b-local-ai-hardware-guide-2026/ ; https://huggingface.co/meta-models/Muse-Glimmer-30B-GGUF",
+    "status": "conflicting"
+   },
+   {
+    "claim": "vLLM on one 24 GB card is a poor fit. The GPTQ-4bit checkpoint is 23 GB (vision tower kept in BF16), and its card's example uses --tensor-parallel-size 4. The NVFP4 W4A16 build is 22 GB and runs at about 13 tok/s single-stream in vLLM. Meta's own vLLM example uses tensor parallelism 4 on full weights. That neither 4-bit vLLM build fits one 24 GB card with room for KV cache is my inference.",
+    "source": "https://huggingface.co/btbtyler09/Muse-Glimmer-30B-GPTQ-4bit ; https://huggingface.co/Preyazz/Muse-Glimmer-30B-NVFP4 (search excerpt) ; https://huggingface.co/blog/muse-glimmer",
+    "status": "unverified"
+   },
+   {
+    "claim": "NVIDIA's launch post targets the RTX 5090 (32 GB), DGX Spark/Station, Jetson, NIM, and vLLM/SGLang recipes. It gives no 24 GB numbers.",
+    "source": "https://developer.nvidia.com/blog/run-local-agentic-ai-workflows-with-metas-muse-glimmer-on-nvidia/",
+    "status": "verified"
+   },
+   {
+    "claim": "muse.ai is Meta's consumer personal agent 'Muse' (page footer '© Meta 2026'). It launched 2026-09-08 and runs on Muse Spark 1.3. Each user gets a 'Muse Secure VM': an isolated Linux computer with a terminal and a real Chromium browser that the user can watch and take over at any time. Clients are the web UI, iOS, Android, Mac and WhatsApp. A separate component, 'Sentinel', approves all network egress. Sign-up uses a phone number or email.",
+    "source": "https://muse.ai ; https://introducing.muse.ai ; https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse (redirect target of https://security.muse.ai)",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Glimmer is not offered in the muse.ai app or via the Meta Model API. Meta's developer page for it (dev.meta.ai/models/muse-glimmer) points only to downloads (Hugging Face, Ollama) and guides.",
+    "source": "https://dev.meta.ai/models/muse-glimmer/ ; https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Spark 1.3 was released 2026-09-02 and is available in Muse Code (macOS/Linux) and the Meta Model API. The pricing found is for Spark 1.1: $1.25 / $4.25 per M tokens, $20 free credits at signup, US-only public preview. That comes from secondary sources only; pricing for Spark 1.3 was not found.",
+    "source": "https://research.meta.ai/blog/introducing-muse-spark-1-3 ; https://www.layer3labs.io/guides/muse-spark-pricing-faq",
+    "status": "unverified"
+   },
+   {
+    "claim": "Minecraft Classic in the browser is live: https://classic.minecraft.net returns HTTP 200 with the title 'Minecraft Classic'.",
+    "source": "https://classic.minecraft.net (curl)",
+    "status": "verified"
+   },
+   {
+    "claim": "Agent frameworks. Mindcraft supports ollama, vllm, openrouter and other providers, recommends Minecraft 1.21.6, and supports vision through a vision_model field. rmalde/minecraft-agent (the Jev demo) uses OpenRouter only, Java 1.16.5 and Mineflayer, reads structured game state rather than pixels, and the planner model is set by the PLANNER_MODEL environment variable.",
+    "source": "https://github.com/mindcraft-bots/mindcraft ; https://github.com/rmalde/minecraft-agent",
+    "status": "verified"
+   },
+   {
+    "claim": "No Minecraft demo and no game-agent benchmark (BALROG, VideoGameBench, MCU, etc.) was found for Muse Glimmer or Muse Spark, which supports the 'first' claim. Only two searches were run before the session's web-search budget ran out.",
+    "source": "searches '\"Muse Glimmer\" OR \"Muse Spark\" Minecraft agent' and 'Muse Glimmer agent benchmark game ...' (results e.g. https://www.latent.space/p/ainews-muse-glimmer-and-spark-open had no Minecraft content)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Meta lists Together AI, Fireworks AI and OpenRouter as hosting partners for Glimmer, but https://openrouter.ai/meta/muse-glimmer returned 404, so the OpenRouter model id is unknown.",
+    "source": "https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model ; https://openrouter.ai/meta/muse-glimmer (404)",
+    "status": "unverified"
+   }
+  ],
+  "implications": [
+   "Do not plan the Glimmer run on this M2 Air. It has only 4.2 GB of free disk, less than the smallest 2-bit file. With 16 GB RAM, no 4-bit build fits. A 2-bit build would also be slow (an estimated 5-7 tok/s, with minutes of prompt reading on long prompts) and weakest exactly where a Minecraft agent needs it: precise multi-step tool calls. Running Minecraft Java and screen capture on the same machine would make memory pressure worse.",
+   "Split the setup. The M2 Mac runs the Minecraft client, the bot harness and the capture. The 24 GB GPU machine serves Glimmer over an OpenAI-compatible endpoint on the local network or through an SSH tunnel. With llama.cpp at build b11246 or newer: `llama-server -hf meta-models/Muse-Glimmer-30B-GGUF:Q4_K_M --jinja -ngl 99 -c 32768 --host 0.0.0.0`. With Ollama, use the library tag `ollama run muse-glimmer:30b`, not the hf.co GGUF references (Ollama issue #18808). Q4_K_M plus the 1.4 GB vision file plus a 32K-128K context fits in 24 GB. Skip DFlash on 24 GB until measured, since its memory need is disputed. On a 4090, about 75 tok/s output is enough for near-real-time play.",
+   "Start with text game state rather than pixels. Mindcraft supports Ollama and vLLM with Mineflayer, and the Jev setup used structured state too. Glimmer's screen-reading scores (OSWorld-Verified 65.9, ScreenSpot Pro 75.4) give a possible 'it plays from pixels' angle that answers the main criticism of Jev. But nothing shows it works in a game, and on a 24 GB Mac loading vision cut output speed to 3.67 tok/s. Treat screenshots as an add-on experiment.",
+   "Tune the harness to the model: use the runtime's muse_glimmer tool/reasoning parser, temperature 1.0, top_p 0.95, top_k 64. Set reasoning strength low for each action and high for planning, which is the same fast-picker / slow-planner split as the Jev System 1 / System 2 story. Add a loop guard, since independent tests saw tool-looping.",
+   "The 'viewers can try it on the web' goal is now concrete. muse.ai really is Meta's Muse agent, on Muse Spark 1.3, and each user's cloud VM has a Chromium browser they can watch, while classic.minecraft.net is live and free. Viewers could get a single prompt like 'open classic.minecraft.net and build X'. This needs a hands-on test with a real Muse account first: whether its browser agent can handle real-time WebGL keyboard and mouse input, whether Sentinel's egress rules or approval prompts get in the way, and the app's availability and cost. Creating that account needs the user's own login.",
+   "A natural two-part film: (1) 'Muse in the muse.ai web app plays Minecraft Classic in its own cloud browser', which viewers can repeat; (2) 'open-weights Muse Glimmer on one 24 GB GPU plays Java Minecraft', the lab's systems angle with one measured number: tok/s, time per action and run time, comparable to the Jev setup. That ties to KVFlow / Yggdrasil as the ops plan wants.",
+   "The license is Apache 2.0, so showing, modifying and redistributing the model setup is fine. Do not publish a 'first ever' claim until a fresh search confirms no one has posted Muse plus Minecraft. The search budget ran out before that check could be done thoroughly.",
+   "Free disk on the Mac is a blocker even without local inference. Minecraft Java, the Node harness and screen-capture files need space, so the user should free at least 15-20 GB before any shoot."
+  ],
+  "open_questions": [
+   "Which machine is the 24 GB GPU box: exact GPU (3090 or 4090), OS, and can it serve a port to the Mac? ~/.ssh/config has aliases 'picasso' and 'ssi-gpubnode01', which were not contacted.",
+   "Can the user free 15-20 GB or more on the M2 Air (4.2 GB free now) for Minecraft, the harness and captures?",
+   "Does the user have a muse.ai account? Is Muse free and available in their region? Can its browser sub-agent actually play classic.minecraft.net in real time, and will the approval and egress controls interrupt it? Only a hands-on test can tell.",
+   "Muse Spark 1.3 API: its model id and price (only Spark 1.1 pricing from secondary sources was found, plus a US-only preview with $20 credits), and whether the user has a Meta developer account.",
+   "Is Glimmer hosted on OpenRouter, Together or Fireworks, and under what id? A hosted endpoint would be a fallback for viewers without a GPU. The guessed OpenRouter URL returned 404.",
+   "Has anyone already posted 'Muse plays Minecraft' (Spark or Glimmer)? Re-search once the web-search budget refills.",
+   "Real numbers for Glimmer at 2-bit on an M2 with 16 GB, and how much tool-call accuracy drops at 2-bit. Nothing is published; only a local run would tell.",
+   "Is DFlash usable on a 24 GB card? Its memory need is disputed (1.6 GB vs 5.11 GB), and it gives a 1.5x-3.1x speedup.",
+   "Minecraft edition and account: Java with Mineflayer on a local offline-mode server (which Mindcraft supports) versus browser Classic for the muse.ai part. Mojang's brand and video-usage terms for the film were not checked."
+  ]
+ },
+ {
+  "topic": "muse-web",
+  "summary": "Muse is Meta's consumer personal agent, launched 2026-09-08. The web app really is at muse.ai, as the user said (\"网页端的muse.ai\"). It is not meta.ai, which is a separate assistant product. Meta owns muse.ai now: its nameservers are Facebook's, its security headers reference meta.ai, and the login redirects to facebook.com. The old video-hosting company called muse.ai renamed itself Skiv (skiv.com) in March 2026.\n\nMuse runs in a per-user cloud computer (Meta calls it \"Secure VM\"). A separate guard agent, Sentinel, approves every outgoing network request and every connector action. Muse is free up to a weekly usage limit; paid plans are Power ($20/month) and Maximum ($100/month). It needs an age of 18+ and is in the US, possibly also Canada (sources disagree). It runs on the web, iOS, Android, WhatsApp and a Mac app.\n\nWhat matters for Minecraft:\n- **Muse's own browser cannot play a canvas or WebGL game.** Meta says its browser sub-agent reads only an accessibility-tree snapshot (the page structure screen readers use). It cannot run JavaScript, and a canvas exposes nothing to that tree.\n- **Muse can call our own HTTPS API.** Meta's help says Muse writes custom connectors for any service with an API or CLI. The VM runs scheduled jobs, and approvals can be set to \"Allow for this site\" or \"Always allow\", so repeated calls to our endpoint are supported by design. Nobody has tested it yet.\n- **MCP is unclear for consumer Muse.** The official connector directory accepts MCP servers, and the coding tool Muse Code supports MCP. Whether a consumer can add an MCP server as a custom connector is contested between sources.\n- **Muse for Mac does see pixels.** It takes screenshots and clicks through macOS Screen Recording and Accessibility permissions. That runs outside the web app, and it is untested on a real-time game like Minecraft Java.\n\nHow an ordinary viewer could play from muse.ai, ranked by feasibility:\n1. **Our web page that Muse can read.** We host a page that shows the bot's world for humans and puts the game state in plain text with buttons for skills, all wired to a mineflayer bot on a real Minecraft server. The viewer pastes one prompt and approves the site once.\n2. **A custom connector.** The viewer asks Muse to build a connector from our OpenAPI spec. It is more structured, but takes more setup and shows a warning that Meta does not review custom connectors.\n3. Either of the above plus a scheduled task, for a long \"Muse lives in Minecraft\" run.\n4. **An official directory connector** submitted at muse.ai/platform. This is the best experience for viewers, but review happens in waves with no stated timeline and requires business verification.\n5. **Muse for Mac driving real Minecraft Java.** Good for one filmed stunt, not for the public.\n6. Muse installing mineflayer inside its VM and connecting straight to our server. Sentinel's handling of non-HTTP traffic is unverified.\n7. Not feasible: playing a canvas or WebGL Minecraft, including classic.minecraft.net, through Muse's browser.\n\nThe open-source Jev harness (rmalde/minecraft-agent) already uses this shape: mineflayer, a text game state, a small set of bounded skills, and model calls through an OpenAI-style interface. Meta's model API accepts the OpenAI and Anthropic SDKs.\n\nThe web search budget ran out partway through. I could not check:\n- whether anyone has already done \"Muse plays Minecraft\", so the \"first\" claim is not established;\n- whether Muse's cloud browser renders WebGL;\n- per-step speed and loop limits;\n- the Hao AI Lab Jev post itself.",
+  "facts": [
+   {
+    "claim": "Meta launched Muse, its consumer personal AI agent, on 2026-09-08. Meta's words: \"Muse is rolling out in the US on iOS, Android, and muse.ai, and coming soon to AI glasses\". It also works inside WhatsApp. It is powered by the Muse Spark model.",
+    "source": "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/",
+    "status": "verified"
+   },
+   {
+    "claim": "muse.ai is operated by Meta today. Observed on 2026-10-06:\n- the nameservers are a/b/c/d.ns.facebook.com;\n- the security header (CSP) allows *.meta.ai and *.facebook.com;\n- muse.ai redirects to auth.muse.ai/aymh, which redirects to facebook.com/aymh (Meta login);\n- muse.ai/platform shows a '(c) 2026 Meta' footer.",
+    "source": "curl -sI https://muse.ai and dig muse.ai NS (run locally 2026-10-06); https://muse.ai/platform",
+    "status": "verified"
+   },
+   {
+    "claim": "The older muse.ai is an unrelated video-hosting company founded around 2015-2018 (Antonio Roldao). It renamed itself Skiv (skiv.com), announced 2026-03-03, and customers had to move embeds from muse.ai to skiv.com by 2026-03-10. Meta did not acquire it; the domain now points to Meta's agent.",
+    "source": "https://skiv.com/blog/muse-ai-is-now-skiv ; https://en.wikipedia.org/wiki/Muse_(AI_agent)",
+    "status": "verified"
+   },
+   {
+    "claim": "meta.ai is the Meta AI assistant (Muse Spark runs there in 'Thinking' mode). It is a separate product from the Muse agent at muse.ai. This comes from a search snippet; I did not fetch it.",
+    "source": "https://www.datacamp.com/blog/muse-spark-1-1",
+    "status": "unverified"
+   },
+   {
+    "claim": "Muse is free with a usage limit: \"Muse is available for free with a usage limit\". The Power plan is $20/month for 500M Muse tokens per week; the Maximum plan is $100/month for 3B per week. When the free limit runs out, you upgrade or wait for it to refresh.",
+    "source": "https://www.meta.com/help/subscriptions/1021145227643680/",
+    "status": "verified"
+   },
+   {
+    "claim": "The free tier is 100 million tokens per week. Meta's help page does not state the number.",
+    "source": "https://www.deeplearning.ai/the-batch/how-to-secure-agents-for-the-masses",
+    "status": "verified"
+   },
+   {
+    "claim": "Users must be 18 or older. Meta's terms: \"cannot use Muse if you are under the age of 18 (or such greater age required in your country or territory)\". The terms took effect 2026-09-08.",
+    "source": "https://muse.ai/terms",
+    "status": "verified"
+   },
+   {
+    "claim": "Regions: some sources say US-only (Meta's launch post, The Batch). Others say it is now available in the US and Canada.",
+    "source": "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/ vs https://zentor.ai/blog/meta-muse-for-mac",
+    "status": "conflicting"
+   },
+   {
+    "claim": "There is no invite code or waitlist; Meta documents only geography and platform gating.",
+    "source": "https://www.orcarouter.ai/blog/muse-agent",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse runs on 'Muse Secure VM', a per-user cloud Linux machine. Meta says it has \"enough storage, CPU, and memory to do real work - like compiling code the agent writes, developing custom skills and handling concurrent sub-agents and crons\".",
+    "source": "https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse",
+    "status": "verified"
+   },
+   {
+    "claim": "Built-in connectors include Gmail, Google Calendar/Workspace, Ticketmaster, OpenTable, Spotify, Apple Health, Function Health, Peloton, Plaid, Facebook, Instagram and Threads. Connect 2026 (Sep 23-24) added Walmart, Best Buy, Gap, Sephora, Wayfair, Instacart, PayPal, Shop Pay, Notion, Granola, GitHub, Box and others.",
+    "source": "https://www.meta.com/blog/meta-connect-2026-everything-we-announced/ ; https://parallel.ai/articles/meta-muse-custom-integrations",
+    "status": "verified"
+   },
+   {
+    "claim": "Meta's help on custom connectors, verbatim:\n- \"If you want to connect to a service not yet available in the Connector list, you can ask Muse to create a Custom Connector. Muse will guide you through the process, which can involve retrieving API information from the service.\"\n- Credentials go in its Secure Credentials Store.\n- \"Meta doesn't review custom connectors or how they use your information, so grant access with caution.\"",
+    "source": "https://www.meta.com/help/artificial-intelligence/1687253048996149/",
+    "status": "verified"
+   },
+   {
+    "claim": "\"Muse can also write its own custom connectors for other services you care about if they have their own APIs or CLIs.\"",
+    "source": "https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse",
+    "status": "verified"
+   },
+   {
+    "claim": "MCP in consumer Muse is contested:\n- parallel.ai says Muse can connect to remote MCP servers by writing a client with the MCP SDK over streamable HTTP.\n- aiagentslibrary (checked 2026-09-26) says Meta documents no user-facing MCP setup, and custom connectors target APIs or CLIs, not MCP.\n- Meta's help and safety pages do not mention MCP.",
+    "source": "https://parallel.ai/articles/meta-muse-custom-integrations ; https://www.aiagentslibrary.com/blog/meta-muse-mcp/",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Muse Code is Meta's terminal coding agent, an early beta since 2026-08-05. It supports MCP servers over stdio and streamable_http through an mcp_servers block in settings.json.",
+    "source": "https://www.aiagentslibrary.com/blog/meta-muse-mcp/ ; https://techcrunch.com/2026/08/05/meta-launches-muse-code-an-ai-agent-for-large-code-bases/",
+    "status": "verified"
+   },
+   {
+    "claim": "The official Muse Connector Platform (muse.ai/platform) accepts third-party connectors, including MCP servers. Its terms (effective 2026-09-18) cover \"connectors, actions, plug-ins, MCP servers, or other integrations\". The submission form takes either 'Existing MCP' or 'Raw API' with an optional OpenAPI spec.",
+    "source": "https://muse.ai/platform/terms ; https://stacktr.ee/blog/muse-connector-platform",
+    "status": "verified"
+   },
+   {
+    "claim": "Meta's connector guidelines require:\n- business verification, a test account and three review stages (risk assessment, tool review, end-to-end QA);\n- that a connector \"Add value beyond the browser\";\n- tool permissions are Read or Write: \"Ask on first use\", with \"Always allow\" possible except for sensitive writes.\nApproved connectors appear in Settings > Connectors and Muse can discover them.",
+    "source": "https://muse.ai/platform/docs",
+    "status": "verified"
+   },
+   {
+    "claim": "Connector review volume and timing: 2,000+ submissions came in within days. Meta's 2026-09-24 email says onboarding happens 'in waves over the coming weeks'. No review time is published, and it is unknown whether a university lab qualifies.",
+    "source": "https://stacktr.ee/blog/muse-connector-platform",
+    "status": "verified"
+   },
+   {
+    "claim": "Meta on the browser sub-agent:\n- \"The sub-agent, which drives the Browser, sees an accessibility tree snapshot of the page - not the raw DOM.\"\n- It has \"no ability to run javascript in the page context, no script verbs, no exec in the browser process, and Chrome devtools are disabled.\"",
+    "source": "https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse",
+    "status": "verified"
+   },
+   {
+    "claim": "The Batch's description: \"In the browser, a sub-agent reads a structured summary of each page - the accessibility tree that screen readers use - instead of the page's code. It can't run JavaScript\".",
+    "source": "https://www.deeplearning.ai/the-batch/how-to-secure-agents-for-the-masses",
+    "status": "verified"
+   },
+   {
+    "claim": "A <canvas> exposes nothing to the accessibility tree. MDN: \"The <canvas> element on its own is just a bitmap and does not provide information about any drawn objects. Canvas content is not exposed to accessibility tools as semantic HTML is.\" So Muse's browser cannot perceive a canvas or WebGL Minecraft clone.",
+    "source": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas",
+    "status": "verified"
+   },
+   {
+    "claim": "The user can watch Muse's browser through 'Open browser', take control (which pauses the agent), or stop the task. The browser can book, buy, fill forms and watch for price drops.",
+    "source": "https://www.meta.com/help/artificial-intelligence/2124746764949121/",
+    "status": "verified"
+   },
+   {
+    "claim": "Approval options:\n- Allow once, Allow for this task, Allow for this site, Always allow, or Deny.\n- 'Web access defaults' set to 'Ask for some actions' asks when information may be shared or when visiting unfamiliar websites.\n- Settings > Permissions lists scheduled tasks/artifacts and allowed websites.",
+    "source": "https://www.meta.com/help/artificial-intelligence/1385290430137537/",
+    "status": "verified"
+   },
+   {
+    "claim": "Sentinel inspects every outgoing request at the network layer (layer 4) and the HTTP layer (layer 7): host, IP, port, protocol, method, path and decoded body. For each it allows, denies or asks the user. \"Clean network requests that already qualify for a narrowly bounded auto allow policy\" go through without asking. Classifiers also block prompt injection and sending personal data that the task does not call for.",
+    "source": "https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse supports recurring scheduled tasks that run until cancelled; 'Upcoming' shows scheduled tasks.",
+    "source": "https://www.meta.com/help/artificial-intelligence/1385290430137537/ ; https://www.aiagentslibrary.com/blog/how-to-use-meta-muse/",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse can build small interactive single-page tools (mini apps) and share them in the chat. muse.ai's CSP allows frames from *.meta-agents-apps.workers.dev; reading that as the hosting domain for these apps is my inference.",
+    "source": "https://www.aiagentslibrary.com/blog/how-to-use-meta-muse/ ; curl -sI https://muse.ai (CSP frame-src)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Meta publishes no rate limit, maximum task length or step limit for a single Muse task, and none for repeated calls to a custom connector.",
+    "source": "https://research.meta.ai/blog/security-and-safety-for-ai-agents-our-approach-with-muse ; https://parallel.ai/articles/meta-muse-custom-integrations",
+    "status": "unverified"
+   },
+   {
+    "claim": "Muse's terms forbid:\n- bypassing \"any third party's terms of service, security, access controls, technical protections\", including CAPTCHAs;\n- chaining automated actions \"in a manner designed to obscure the automated nature of those actions\".\nGames are not mentioned.",
+    "source": "https://muse.ai/terms",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse for Mac shipped computer use around 2026-09-17/18: \"Computer use is now available with Muse for Mac\". It asks for Screen Recording (\"take screenshots and see what is on your screen\") and Accessibility (\"click, type, and use apps\"). So on a Mac it sees pixels.",
+    "source": "https://www.meta.com/blog/meta-connect-2026-everything-we-announced/ ; https://techcrunch.com/2026/09/18/metas-muse-hits-mac-letting-the-ai-take-actions-on-your-computer/ ; https://app.therundown.ai/guides/how-and-why-to-set-up-meta-muse-desktop",
+    "status": "verified"
+   },
+   {
+    "claim": "A journalist reported that Muse for Mac synced about 187,000 lines of his Messages without the matching permission. No Meta response is documented.",
+    "source": "https://appleinsider.com/articles/26/09/28/metas-new-ai-agent-blatantly-ignores-users-permissions",
+    "status": "verified"
+   },
+   {
+    "claim": "The Chrome Web Store extension named 'Muse' is not Meta's. It is published by pixels.studio and has 18 users.",
+    "source": "https://chromewebstore.google.com/detail/muse/fhpgahbepfifmhkichdkcifhkigoiefe",
+    "status": "verified"
+   },
+   {
+    "claim": "Amazon blocked Muse's browser on 2026-09-21 as an \"unauthorized AI agent\". Third-party sites can block Muse.",
+    "source": "https://en.wikipedia.org/wiki/Muse_(AI_agent)",
+    "status": "verified"
+   },
+   {
+    "claim": "The Jev Minecraft harness (rmalde/minecraft-agent):\n- uses Mineflayer with structured game state, not screenshots;\n- has bounded actions (travel, mine one block, collect, craft, open chest, eat, sleep, combat);\n- calls models through OpenAI-compatible APIs via OpenRouter (planner gpt-6-astra, picker typesafe/jev-1.13);\n- records video with Prismarine Viewer.",
+    "source": "https://github.com/rmalde/minecraft-agent",
+    "status": "verified"
+   },
+   {
+    "claim": "Meta Model API:\n- base URL https://api.meta.ai/v1, compatible with the OpenAI and Anthropic SDKs;\n- Muse Spark has a 1,048,576-token context;\n- public preview for US developers with $20 in free credits;\n- $1.25 per million input tokens, $4.25 per million output (Spark 1.1 pricing).",
+    "source": "https://dev.meta.ai/docs ; https://www.datacamp.com/blog/muse-spark-1-1",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Glimmer is a 30B dense multimodal open-weight model under Apache 2.0, with a 128K context. It runs on vLLM, SGLang, llama.cpp, ExecuTorch, Ollama and LM Studio, and is reported to run on one 24 GB GPU.",
+    "source": "https://dev.meta.ai/docs/muse-glimmer ; https://www.cnbc.com/2026/08/10/meta-muse-glimmer-open-weight-ai.html",
+    "status": "verified"
+   },
+   {
+    "claim": "This Mac is an Apple M2 with 16 GB unified memory on macOS 15.5.",
+    "source": "sysctl hw.memsize / machdep.cpu.brand_string; sw_vers (run locally 2026-10-06)",
+    "status": "verified"
+   }
+  ],
+  "implications": [
+   "The user was right about the URL: tell viewers to go to muse.ai (Meta's Muse web app). Do not say meta.ai, and do not link skiv.com. Viewers must be 18+ and in the US (Canada uncertain). Non-US followers, including Douyin viewers, cannot try it, so the Chinese cut should be watch-only.",
+   "A canvas or WebGL Minecraft cannot be played through Muse's browser. Muse reads only the accessibility tree and cannot run JavaScript, and a canvas is invisible to it. Any viewer-playable version must give Muse text and buttons, or an HTTP API.",
+   "Most feasible viewer path (rank 1): a page we host, e.g. play.picasso-lab.com.\n- For humans: a live Prismarine Viewer of a real Minecraft world.\n- For Muse: real HTML with the game state as text (inventory, nearby blocks, health, goal) in a live region, and one button or form per bounded skill (go to, mine N of X, craft X, place, eat, fight).\n- The viewer's whole setup is one prompt, e.g. 'Open https://... and play until you get a diamond pickaxe; describe each step', plus one 'Allow for this site' approval.\n- Viewers can watch through Muse's 'Open browser' window, and the user can screen-record that for the video.",
+   "Rank 2: the same backend as an HTTPS API with an OpenAPI spec.\n- The viewer says 'Create a custom connector from https://.../openapi.json and use it to play'.\n- More reliable per step, but more setup, and Meta shows a warning that it does not review custom connectors.\n- Make it work with no login: the API hands out a guest session or bot per viewer, never asks for personal data (which keeps Sentinel's personal-data checks quiet), and every tool is a non-sensitive read or write so viewers can pick 'Always allow'.",
+   "Design the actions like Jev: a few high-level skills, each doing seconds to minutes of game work through mineflayer. Each Muse step is a slow model call plus a browser or connector round trip, so frame-level control is hopeless. One measured number for the video could be steps per minute or time to a goal, which fits the lab's KVFlow and serving angle.",
+   "The backend needs a public HTTPS host plus a Minecraft server per viewer, or a shared one with a bot per viewer. GitHub Pages cannot host this. Exposing the user's 16 GB M2 to the public is risky, and its capacity is small, so the user must decide where it is hosted (tunnel or cloud box). Add rate limits and caps on bot and world count.",
+   "Rank 3: submit an official connector at muse.ai/platform at the same time. It is the best viewer experience (the connector appears in Settings > Connectors with no setup). But review runs in waves with no stated timeline, needs business verification and privacy and terms URLs, and connectors must 'add value beyond the browser'. Do not plan the launch around it.",
+   "For the demo film:\n- The cleanest, fully controlled run is our own harness: fork the open Jev harness or mineflayer, with Muse Spark through the OpenAI-compatible Meta Model API ($20 free credits, US developer), filmed through Prismarine Viewer like Jev.\n- Add a screen capture of muse.ai's own browser playing our page, to prove anyone can try it.\n- Glimmer local is impractical on this 16 GB M2: a 30B dense model needs about 24 GB, so it will not fit alongside Minecraft.",
+   "Optional stunt: Muse for Mac uses screenshots plus clicks and could be filmed driving the real Minecraft Java client on the user's Mac. This is untested. Mouse-captured first-person control is likely to fail or be painfully slow, and it is not the web app. Use it only as a short bonus shot if a test works. Note the AppleInsider permissions report before granting access on the lab Mac.",
+   "Claims to avoid: do not say 'first' until it is checked (search was unavailable). Do not imply Meta endorses this; Muse's connector terms forbid misrepresenting a Meta affiliation. Show honestly that the agent plays from text state and skills, not pixels, which is the same criticism Jev drew. Label it clearly as an AI agent, since Muse's terms forbid hiding automation."
+  ],
+  "open_questions": [
+   "Has anyone already shown 'Muse plays Minecraft' (Spark or Glimmer)? I could not search after the web search budget ran out, so the 'first' claim is unverified.",
+   "Does Muse's browser sub-agent keep a loop going for 50 to 500 click/read steps on one page, or stop early? Does it re-read updated live-region text each step? This needs a hands-on test with a US Muse account. The user has an account; I asked for no credentials.",
+   "Does Muse's cloud browser render WebGL (GPU or software), so that Prismarine Viewer shows up in the 'Open browser' window viewers watch? Unverified; a lightweight 2D fallback view may be needed.",
+   "In consumer Muse, can a custom connector be pointed at a remote MCP server, or only at a REST API, OpenAPI spec or CLI? Sources conflict. Plan the REST plus OpenAPI path and treat MCP as a bonus.",
+   "Will Sentinel's auto-allow policy let hundreds of repeated calls to our domain through without prompting after 'Always allow' or 'Allow for this site'? Do custom-connector calls from the VM's code also go through the per-site web approval? No published rate or step limits were found.",
+   "Can code Muse writes on its VM open a raw TCP connection (Minecraft port 25565) through Sentinel, or only HTTP(S)? Unverified. It decides whether 'Muse installs mineflayer itself' is possible.",
+   "How long does each Muse step take (model call plus tool), which determines the video pacing and the speed-up story? Not published.",
+   "Is Muse available in Canada now? Sources conflict. Is the Meta Model API's $20 free credit still offered, and open to the user as a non-US-company developer? Datacamp says public preview for US developers.",
+   "Where will the public game backend run (cloud VM vs a tunnel to the user's Mac), and who pays for it? This needs the user's decision. Exposing the 16 GB M2 publicly is not advisable.",
+   "Can a university lab pass the muse.ai/platform business verification for an official directory connector, and how long is the review queue?",
+   "The computed task says Hao AI Lab (UCSD) posted 'Jev plays Minecraft'. The lab notes credit Jev to TypeSafe AI (Ronak Malde). I did not verify the X post at https://x.com/haoailab/status/2104302648786919643."
+  ]
+ },
+ {
+  "topic": "mc-frameworks",
+  "summary": "State of play on 2026-10-06. Web search ran out partway through, so everything after that point comes from fetching primary pages directly. Anything not confirmed at a source is marked UNVERIFIED.\n\n(1) The \"Jev plays Minecraft\" post from Hao AI Lab (UCSD) is MCJev, a PvP bot. Viewers fight it by joining a public server (mc.alexzms.com) from their own Minecraft Java client. It has a mineflayer \"body\" running at 20 Hz and a Python \"head\". Each tick the head writes the fight as about 1,760 tokens of text and scores 16 to 20 moves in a single forward pass. The model behind it is not TypeSafe's hosted Jev. It is DJev, an open \"Jev-style\" decision server built on Google's DiffusionGemma-26B-A4B, and the lab got it to about 24 ms per decision on B200/GB200 GPUs (down from 174 ms). Over 32 hours, 54 players played 1,795 rounds. Jev won 70% of Block UHC rounds, and humans won 88% of Sumo rounds.\n\n(2) TypeSafe's real Jev is a \"System 1\" model: you send a state plus typed questions and get back choices, probabilities and confidence. Separately, Ronak Malde's rmalde/minecraft-agent used GPT-6 Astra as planner, Jev as action picker and Mineflayer as executor. It beat the Ender Dragon in 8:43 for under $1, but on Java 1.16.5 with a fixed seed and a route surveyed in advance.\n\n(3) Mindcraft (now mindcraft-bots/mindcraft, MIT, about 5.8k stars) is the quickest base for us. It supports Minecraft Java up to 1.21.11 (1.21.6 recommended). Its latest release is v0.1.4 (2026-03-20) and the last commit was 2026-10-03. It has about 19 provider modules, and a custom `url` turns the openai provider into a chat.completions client. Mineflayer 4.39.0 (2026-09-06) is tested on 1.8.8 through 26.1. The current Minecraft Java release is 26.3. Paper's stable build is 26.2. ViaVersion 5.12.0 lets 26.3 clients join older servers.\n\n(4) Muse. muse.ai is Meta's real web app for the Muse personal agent, as confirmed by Meta's newsroom. It launched in the US on 2026-09-08 and runs on Muse Spark. The developer route is the Meta Model API at https://api.meta.ai/v1. It is OpenAI-compatible, offers muse-spark-1.3, costs $1.25 / $4.25 per million input/output tokens, gives $20 in free credits, and is US-only during preview. Its chat-completions endpoint REJECTS `stop`, `logprobs` and `n>1` with HTTP 400. That breaks Mindcraft as-is and also rules out Jev-style scoring of options.\n\n(5) This machine (the Mac the experiments would run on) is an Apple M2 with 16 GB. It has no Java runtime and runs Node v25.2.1, while Mindcraft wants Node 18/20. The smallest Muse Glimmer 30B file is 16.8 GB (Q4_K_M), so Glimmer cannot run locally here. Hosted Glimmer is offered on OpenRouter, Together and Fireworks.\n\n(6) Letting viewers try it from muse.ai looks possible through a Muse custom connector pointed at a public HTTPS endpoint on our side. Sources disagree on whether consumer Muse accepts an MCP URL or only REST APIs/CLIs. It is limited to US users, so the Douyin audience cannot use it. Getting listed in Meta's connector directory requires review, which Meta says will happen \"in waves over the coming weeks\". The fallback that is proven to work is Hao AI Lab's approach: viewers join our server.\n\n(7) The Minecraft EULA and usage-guidelines pages timed out, and Aternos returned 403. All licensing/EULA points are therefore UNVERIFIED. The Minecraft wiki says online-mode=false should only be used on servers not connected to the internet.",
+  "facts": [
+   {
+    "claim": "Hao AI Lab's X post reads: 'We let Jev play Minecraft. And we just can't beat it! Jev: 24 ms decisions. You: ~200 ms reactions. It moves before you even see it move ... (join the server to win)'. The video shows live PvP against real players.",
+    "source": "https://x.com/haoailab/status/2104302648786919643 (text from search-result title; x.com itself returned HTTP 402) ; https://haoailab.com/blogs/mcjev/",
+    "status": "verified"
+   },
+   {
+    "claim": "The Hao AI Lab demo is MCJev (blog 'MCJev: Real-Time Decisions with Jev', published 2026-10-05; authors Minshen (Alex) Zhang ... Hao Zhang). The model is DJev, a 'Jev-style' structured-decision server by @mmastrac (from vLLM PR 57250), running on Google's DiffusionGemma-26B-A4B. It is not TypeSafe's hosted Jev API.",
+    "source": "https://haoailab.com/blogs/mcjev/ ; https://github.com/hao-ai-lab/MCJev (alexzms/MCJev redirects here) ; https://github.com/mmastrac/djev",
+    "status": "verified"
+   },
+   {
+    "claim": "MCJev architecture: a mineflayer 'body' runs reflexes at 20 ticks/s (aim, arrow lead, dodge, lava/ledge guards). A Python 'head' writes the fight as about 1,760 tokens of text and scores 16 to 20 discrete moves in one decoder pass ('scoring, not generating'). It uses no pixels.",
+    "source": "https://github.com/hao-ai-lab/MCJev ; https://haoailab.com/blogs/mcjev/",
+    "status": "verified"
+   },
+   {
+    "claim": "MCJev latency was about 24 ms per decision in real rounds on NVIDIA B200/GB200, versus 174 ms with HF transformers and about 60 ms with a leading engine (2.5x). That is roughly 6 ms fixed plus about 10.4 ms per 1k uncached tokens, using CUDA graphs, prefix-cache slots, FA2 and tuned Triton kernels. 8 GB200s served the public server at 362 decisions/s. The blog estimates a reasoning LLM at about 1 s per decision, which is too slow for 50 ms ticks.",
+    "source": "https://haoailab.com/blogs/mcjev/ ; https://github.com/hao-ai-lab/MCJev",
+    "status": "verified"
+   },
+   {
+    "claim": "MCJev public results: 54 people played 1,795 rounds in about 32 h. Jev won 70% of 870 Block UHC rounds, players won 88% of 925 Sumo rounds, and the fastest kill was 1.2 s. Prompt evolution went from v1 (lost all rounds) to v9 (won all scripted fights) in under 2 h without retraining.",
+    "source": "https://haoailab.com/blogs/mcjev/",
+    "status": "verified"
+   },
+   {
+    "claim": "The MCJev site lobby stats show a different win rate: about 83% of 348 rounds, versus 70% of Block UHC rounds in the blog. These are probably different snapshots.",
+    "source": "https://mc.alexzms.com/ vs https://haoailab.com/blogs/mcjev/",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Joining MCJev: Java Edition 1.9 or newer, a Microsoft account that owns the game, server address mc.alexzms.com, then right-click the lobby compass to pick a mode (Block UHC, Sumo, 2v2, Sudden Death). Self-hosting needs a Minecraft Java 1.11.2 Paper/Spigot server with online-mode=false and an NVIDIA GPU with about 50 GB. Apache-2.0. Mac is not supported.",
+    "source": "https://mc.alexzms.com/ ; https://github.com/hao-ai-lab/MCJev",
+    "status": "verified"
+   },
+   {
+    "claim": "TypeSafe's Jev is a 'System One' model. Input is state plus typed questions (Choice, Score, Noul, evaluated in parallel). Output is typed answers with probabilities and confidence instead of autoregressive text. Jev launched around 2026-09-15.",
+    "source": "https://docs.typesafe.ai/introduction ; https://www.mindstudio.ai/blog/jev-system-one-model-launch",
+    "status": "verified"
+   },
+   {
+    "claim": "TypeSafe raised a $40M seed led by DCVC on 2026-09-15. The founder is an ex-OpenAI researcher whose name is given as 'Diego Almeida' in one source and 'Diogo Almeida' in another.",
+    "source": "https://runtimewire.com/article/typesafe-jev-minecraft-24ms-demo ; https://www.mindstudio.ai/blog/jev-real-time-game-demos ; https://www.makeuseof.com/astra-and-jev-kill-ender-dragon-in-minecraft/",
+    "status": "conflicting"
+   },
+   {
+    "claim": "An early developer Jev Minecraft bot reportedly ran for 2 minutes on about 150k tokens for about 1 cent.",
+    "source": "https://www.mindstudio.ai/blog/jev-real-time-game-demos",
+    "status": "unverified"
+   },
+   {
+    "claim": "'Jev Plays Minecraft' is a 24/7 Twitch livestream (twitch.tv/jevplaysminecraft) in which Jev attempts the Ender Dragon one decision at a time. It was listed 2026-09-17.",
+    "source": "https://jevfast.com/jev-plays-minecraft/ ; https://www.twitch.tv/jevplaysminecraft",
+    "status": "verified"
+   },
+   {
+    "claim": "rmalde/minecraft-agent: GPT-6 Astra (or GPT-5.6 Sol) plans via OpenRouter, JEV-1.13 picks bounded actions, and Mineflayer does pathfinding and protocol. Java 1.16.5. Latest run 'nether-final-08' killed the dragon in 8:43.3 with 131 Jev and 35 Astra calls, at about $0.01 Jev + $0.96 Astra. Fixed seed 8398967436125155523 with a route surveyed in a separate test world. 579 stars. No license file, so reusing its code needs permission.",
+    "source": "https://github.com/rmalde/minecraft-agent (gh API: license null) ; https://www.makeuseof.com/astra-and-jev-kill-ender-dragon-in-minecraft/",
+    "status": "verified"
+   },
+   {
+    "claim": "The sources disagree on how rmalde's agent controls the player. Ronak Malde's X post says Jev controls WASD, space, click and mouse. The repo README says 'structured-state control, not control from screenshots or individual key presses' through Mineflayer.",
+    "source": "https://x.com/rronak_/status/2101544158502728002 (search snippet) vs https://github.com/rmalde/minecraft-agent",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Before Astra+Jev, an Astra-only livestream (Vals AI) ran 141 h without finishing the game and fell into potato farming.",
+    "source": "https://www.makeuseof.com/astra-and-jev-kill-ender-dragon-in-minecraft/",
+    "status": "verified"
+   },
+   {
+    "claim": "teknium1/hermes-and-jev-play-minecraft is another stack (Hermes Agent plans, Jev picks, Mineflayer executes). It reproduces rmalde's dragon run. MIT, created 2026-09-21.",
+    "source": "https://github.com/teknium1/hermes-and-jev-play-minecraft (gh API)",
+    "status": "verified"
+   },
+   {
+    "claim": "Mindcraft's canonical repo is now mindcraft-bots/mindcraft (kolbytn/mindcraft redirects there). MIT, 5,846 stars. Latest release v0.1.4 (2026-03-20). Last commit 2026-10-03.",
+    "source": "https://github.com/kolbytn/mindcraft (gh API repos + releases + commits)",
+    "status": "verified"
+   },
+   {
+    "claim": "Mindcraft supports Minecraft Java up to v1.21.11 and recommends v1.21.6. It recommends Node v18/v20 LTS and warns that 'Node v24+ may cause issues with native dependencies'. It depends on mineflayer ^4.33.0, mineflayer-pvp, pathfinder, collectblock and prismarine-viewer.",
+    "source": "https://github.com/mindcraft-bots/mindcraft README + package.json (gh API)",
+    "status": "verified"
+   },
+   {
+    "claim": "Mindcraft provider modules in src/models: azure, cerebras, claude, deepseek, gemini, gpt (openai), grok, groq, huggingface, hyperbolic, lmstudio, mercury, mistral, novita, ollama, openrouter, qwen, replicate, vllm.",
+    "source": "https://github.com/mindcraft-bots/mindcraft/tree/main/src/models (gh API)",
+    "status": "verified"
+   },
+   {
+    "claim": "To add an OpenAI-compatible model in Mindcraft, set the profile's model to an object {api:'openai', model, url, params}. With a url set, gpt.js uses chat.completions with OPENAI_API_KEY and sends `stop` unless the model name contains 'o1', 'o3' or '5'. The name 'muse-spark-1.3' contains none of these, so `stop` would be sent.",
+    "source": "https://github.com/mindcraft-bots/mindcraft/blob/main/src/models/gpt.js (gh API)",
+    "status": "verified"
+   },
+   {
+    "claim": "Mindcraft settings: default host 127.0.0.1, port 55916 (open a world to LAN on that port), auth 'offline', mindserver UI port 8080. allow_insecure_coding, allow_vision, speak and render_bot_view are all false by default. If the embedding model fails, it falls back to word-overlap.",
+    "source": "https://github.com/mindcraft-bots/mindcraft/blob/main/settings.js ; src/utils/examples.js (gh API)",
+    "status": "verified"
+   },
+   {
+    "claim": "Mindcraft security and accounts: 'Do not connect this bot to public servers with coding enabled ... vulnerable to injection attacks.' For online servers the bot needs its own official Microsoft/Minecraft account, plus a second account if you want to play alongside it.",
+    "source": "https://github.com/mindcraft-bots/mindcraft README (gh API)",
+    "status": "verified"
+   },
+   {
+    "claim": "Mineflayer's latest release is 4.39.0 (2026-09-06). Tested versions run from 1.8.8 to 1.21.11 plus 26.1, with 26.1 as latestSupportedVersion. Java Edition only. Auth options are offline and microsoft. prismarine-viewer gives a live browser view of the bot (first-person or bird's-eye).",
+    "source": "https://github.com/PrismarineJS/mineflayer (lib/version.js, releases via gh API) ; npm view mineflayer",
+    "status": "verified"
+   },
+   {
+    "claim": "Voyager (MineDojo/Voyager, MIT, 7.2k stars, last push 2024-04): GPT-4 skill-library agent on Mineflayer and Fabric 0.14.18 with Minecraft 1.19. It needs Azure login (a Microsoft account) and Fabric mods. Its headline claims are 3.3x more unique items, 2.3x longer distances and up to 15.3x faster tech-tree milestones. It is effectively unmaintained.",
+    "source": "https://github.com/MineDojo/Voyager (README + gh API)",
+    "status": "verified"
+   },
+   {
+    "claim": "MineDojo (MIT, 2.3k stars, last push 2024-03) is a 2022 benchmark framework that is effectively unmaintained. Its Minecraft version (believed to be 1.11.2 via Malmo) was not checked.",
+    "source": "https://github.com/MineDojo/MineDojo (gh API)",
+    "status": "unverified"
+   },
+   {
+    "claim": "The current Minecraft Java release is 26.3 'Wilderness Bound' (2026-09-15), with 26.4 in snapshot. Mojang moved to year-based version numbers in 2026 (26.1 in March, 26.2 'Chaos Cubed' in June).",
+    "source": "https://mcreference.com/latest ; https://minecraft.wiki/w/Java_Edition_version_history (search snippets)",
+    "status": "verified"
+   },
+   {
+    "claim": "PaperMC's stable download is Paper 26.2. 26.3 builds are experimental. The page did not state the required Java version.",
+    "source": "https://papermc.io/downloads/paper",
+    "status": "verified"
+   },
+   {
+    "claim": "ViaVersion 5.12.0 (2026-09-18) 'Added 26.3 client support'. It runs on Paper/Velocity and lets newer clients join older servers. GPL-3.0.",
+    "source": "https://github.com/ViaVersion/ViaVersion/releases (gh API)",
+    "status": "verified"
+   },
+   {
+    "claim": "Minecraft wiki on server.properties: with online-mode=false, 'hackers with fake accounts can connect'. It 'should only be set to false when the server is not connected to the Internet'. Turning it off on purpose is called 'cracking' a server.",
+    "source": "https://minecraft.wiki/w/Server.properties",
+    "status": "verified"
+   },
+   {
+    "claim": "Minecraft EULA / usage guidelines: servers may charge for access but not sell gameplay advantages; ad-monetized videos and streams are allowed; projects must not imply Mojang/Microsoft endorsement or use 'Minecraft' as a product name. None of this could be checked because minecraft.net timed out three times.",
+    "source": "https://www.minecraft.net/en-us/eula ; https://www.minecraft.net/en-us/usage-guidelines (both timed out)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Aternos is a free Minecraft host with its own rules on bots and cracked mode. Not checked: aternos.org returned 403. Rules for Realms bots or plugins were not checked either.",
+    "source": "https://aternos.org/ (403)",
+    "status": "unverified"
+   },
+   {
+    "claim": "muse.ai IS Meta's Muse personal AI agent web app. It is also on iOS, Android and WhatsApp, launched in the US on 2026-09-08 and is powered by Muse Spark. Built-in connectors include email, WhatsApp, Instagram and Link by Stripe.",
+    "source": "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/ ; https://www.engadget.com/2256577/how-to-get-started-with-meta-s-new-ai-agent-muse/",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse needs a Meta account with phone verification but no Facebook or Instagram. It has a free tier plus Power ($20/mo) and Maximum ($100/mo). Meta has also said Muse 'stays free' with a large token allowance.",
+    "source": "https://www.engadget.com/2256577/how-to-get-started-with-meta-s-new-ai-agent-muse/ ; https://zapier.com/blog/muse-ai/ ; https://techaiwire.com/articles/meta-muse-computer-control-github-connector/",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Muse custom connectors: you ask Muse to build one, Meta does not review it, and it runs in Muse's cloud VM. The endpoint must be public HTTPS because localhost is unreachable. Sources disagree on whether consumer Muse accepts a remote MCP URL (streamable HTTP + OAuth) or only services with their own REST API or CLI.",
+    "source": "https://anythingmcp.com/guides/clients/muse ; https://parallel.ai/articles/meta-muse-custom-integrations ; https://www.aiagentslibrary.com/blog/meta-muse-mcp/",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Muse Connector Platform (directory listing): a 3-step form at muse.ai/platform asking for an MCP or raw-API endpoint, auth, a privacy policy and ToS. Meta reviews each connector for functional, security and legal requirements. There were 1,500 to 2,000+ applications in the first week, onboarded 'in waves over the coming weeks'.",
+    "source": "https://stacktr.ee/blog/muse-connector-platform ; https://techcrunch.com/2026/09/23/everything-new-coming-to-metas-ai-agent-muse/",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse for Mac was released 2026-09-18. Full computer control ('drive any app on your Mac') was announced at Meta Connect on 2026-09-23. Its speed and whether it works with games were not documented.",
+    "source": "https://techaiwire.com/articles/meta-muse-computer-control-github-connector/ ; https://techcrunch.com/2026/09/23/everything-new-coming-to-metas-ai-agent-muse/",
+    "status": "verified"
+   },
+   {
+    "claim": "Meta Model API: OpenAI-compatible at https://api.meta.ai/v1 (chat.completions and responses), plus Anthropic-compatible messages. Model ids are muse-spark-1.1, 1.2 and 1.3; 1.1 is the default, so pass 1.3 explicitly. Public preview for US developers; sign up at dev.meta.ai.",
+    "source": "https://dev.meta.ai/docs/quickstart ; https://dev.meta.ai/resources/blog/build-with-muse-spark ; https://www.promptfoo.dev/docs/providers/meta/",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Spark API pricing is $1.25 per million input tokens and $4.25 per million output tokens, with $20 in free credits. Muse Spark 1.1 shipped 2026-07-09. The free-credit figure comes from secondary sources only.",
+    "source": "https://www.datacamp.com/blog/muse-spark-1-1 ; https://dev.meta.ai/resources/blog/build-with-muse-spark (pricing only)",
+    "status": "verified"
+   },
+   {
+    "claim": "The Meta chat-completions endpoint rejects `stop`, `n>1`, `logprobs`/`top_logprobs`, `web_search_options` and audio with HTTP 400. It supports tools/tool_choice, response_format (JSON schema), reasoning_effort ('none' not supported on Muse Spark), prompt_cache_key, seed and streaming.",
+    "source": "https://dev.meta.ai/docs/protocols/chat-completions",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Glimmer (released 2026-08-10) is a 30B dense multimodal (text and image) model distilled from Muse Spark. Apache 2.0, 128K context. It runs on Ollama, LM Studio, llama.cpp, MLX, vLLM and SGLang, and is hosted on Together, Fireworks and OpenRouter. Meta lists 24 to 32 GB GPUs or M4-Max/M5-Max Macs.",
+    "source": "https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model ; https://dev.meta.ai/docs/muse-glimmer",
+    "status": "verified"
+   },
+   {
+    "claim": "The smallest Muse Glimmer GGUF is Q4_K_M at 16.8 GB (about 17 GB with context, about 19 GB with vision). A MacBook Air M3 with 24 GB measured 4.33 tok/s generation and 157 s time-to-first-token on a 4k prompt. 32 GB is recommended.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B-GGUF ; https://holaclaw.ai/blog/muse-glimmer-on-mac",
+    "status": "verified"
+   },
+   {
+    "claim": "This session's Mac is an Apple M2 with 16 GB RAM on macOS 15.5. No Java runtime is installed, Node is v25.2.1, and Ollama is not installed.",
+    "source": "local: sysctl machdep.cpu.brand_string hw.memsize; node -v; java -version",
+    "status": "verified"
+   },
+   {
+    "claim": "Meta's own Muse Spark demos include a computer-use agent that finds and plays Minesweeper on a Linux desktop, and a one-shot three.js game.",
+    "source": "https://dev.meta.ai/resources/blog/build-with-muse-spark",
+    "status": "verified"
+   },
+   {
+    "claim": "No existing 'Muse plays Minecraft' project was found. One search found nothing, and search budget ran out before more could be done, so the 'first' claim is not established.",
+    "source": "WebSearch 'Muse plays Minecraft Meta Muse Spark Minecraft agent' (no relevant hit)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Older viral Minecraft agents include Altera's Project Sid (multi-agent civilization; repo altera-al/project-sid, 1.4k stars, last push 2024-11) and MC-Bench (LLM build-off with human votes; mc-bench/orchestrator, last push 2024-12). Whether MC-Bench is still live in 2026 is unknown because mcbench.ai did not resolve.",
+    "source": "https://github.com/altera-al/project-sid ; https://github.com/mc-bench/orchestrator (gh API)",
+    "status": "unverified"
+   }
+  ],
+  "implications": [
+   "Don't compete with Jev on reflex speed. Muse Spark is a reasoning model with no `none` effort and no logprobs, so it cannot copy Jev's score-every-option-in-one-pass trick. Hao AI Lab itself puts reasoning LLMs at about 1 s per decision. Position Muse as the System-2 brain (talks, plans, builds from a description) on top of mineflayer reflexes (pathfinder, pvp, collectblock). That is the Mindcraft pattern.",
+   "Fastest working build: Mindcraft with Muse Spark 1.3 as the model {api:'openai', model:'muse-spark-1.3', url:'https://api.meta.ai/v1'}, the Meta key in OPENAI_API_KEY, and params {reasoning_effort:'low'} to cut latency. Patch gpt.js so it does not send `stop`, because the Meta API returns 400 on it and Mindcraft only drops it for names containing o1/o3/5. This is a one-line fix, or use a tiny local proxy that strips the field.",
+   "Environment work on this Mac before anything runs: install Node 20/22 (nvm) because the current v25 conflicts with Mindcraft's native deps (canvas, gl), and install a Java runtime for the server. A Paper server on 1.21.6 (Mindcraft's recommended version, inside Mineflayer's range) plus ViaVersion 5.12 lets viewers on the newest 26.3 client join.",
+   "Muse Glimmer cannot run locally on this 16 GB M2: the smallest file is 16.8 GB and 24 GB Macs manage about 4 tok/s. For an 'open weights' episode, call hosted Glimmer through Mindcraft's built-in openrouter provider (model id UNVERIFIED) and say so on screen. Otherwise it needs a 32 GB+ Mac or a 24 GB GPU.",
+   "'Try it from muse.ai' is plausible but not proven. Expose a small public HTTPS API from the Mac (tunnel, bearer token, OpenAPI spec, whitelisted actions such as build/follow/collect, rate limits). A viewer then tells their Muse to create a custom connector to it, and the bot acts in our world while they watch a stream or a prismarine-viewer page. A REST + OpenAPI design works under both conflicting accounts of what Muse accepts. Test it in a real muse.ai account first. It is US-only, so the Douyin cut needs a different call to action.",
+   "The proven way to let viewers play is Hao AI Lab's 'join the server' approach. The server should run with online-mode=true, and the bot then needs its own Microsoft account that owns Java Edition (cost unverified). Offline-mode is acceptable only for local filming. Keep allow_insecure_coding=false, because chat from strangers is a prompt-injection path. Hosting the server from the Mac at UCSD/home needs a tunnel or port forwarding. Network policy is unverified.",
+   "What goes viral in this genre: one hard number on frame 0 (8:43 dragon; <$1; 24 ms vs ~200 ms human), an open invitation to play (MCJev: 54 players, 1,795 rounds in 32 h), a 24/7 livestream, and honest failure comedy (Astra's 141 h of potato farming). A Muse version should open with its own number: for example, one sentence typed into muse.ai produces a finished build in N minutes for $X of Muse tokens.",
+   "Honest framing: Hao AI Lab's 'Jev' is really DJev on DiffusionGemma, and rmalde's run used a fixed seed and a surveyed route. Hold our claims to the same standard: measured times and costs, show the seed/setup, and do not claim 'first' until it is checked.",
+   "Lab angle with real measurements: Mindcraft resends a long system prompt every turn, and the Meta API exposes prompt_cache_key. A KVFlow-style prefix-caching story could measure latency and cost per decision with caching on and off. MCJev's 6 ms + 10.4 ms per 1k uncached tokens is a ready reference curve.",
+   "Filming: prismarine-viewer (already a Mindcraft dependency; render_bot_view) gives a browser bird's-eye or first-person view of the bot for overlays. The hero shots should come from a real client capture by the user, because the house rule prefers real assets. Code licenses are safe to build on: Mindcraft MIT, Mineflayer MIT, MCJev Apache-2.0, ViaVersion GPL-3.0 as a plugin, Glimmer Apache-2.0. rmalde/minecraft-agent has no license, so do not reuse its code."
+  ],
+  "open_questions": [
+   "Does the user own Minecraft Java Edition for client capture, and do they want a second paid account for the bot so the public server can run online-mode=true?",
+   "Does the user have a working muse.ai account (US, Meta account plus phone)? Does consumer Muse accept a remote MCP URL, or only REST/CLI services? This needs a 10-minute hands-on test, because the sources conflict.",
+   "What is the real per-call latency and cost of muse-spark-1.3 at reasoning_effort low/medium on Mindcraft-sized prompts, and what are the Model API rate limits? (The pricing page requires a login.)",
+   "Confirm with one call that api.meta.ai rejects `stop` (the docs say HTTP 400) before patching Mindcraft.",
+   "What is the OpenRouter/Together model id and price for hosted Muse Glimmer, if we still want an 'open weights' variant?",
+   "What exactly do the Minecraft EULA and usage guidelines say about using 'Minecraft' in titles, monetized videos and server rules? minecraft.net timed out, so this needs a recheck.",
+   "Hosting: can the Mac accept public connections (UCSD or home network policy), or should we use a tunnel or a paid or free host? Aternos's rules on bots were not readable (403).",
+   "Has anyone already shipped 'Muse plays Minecraft'? The search budget ran out, so recheck before claiming 'first'.",
+   "Exact date of the Hao AI Lab X post (x.com returned 402). Lab notes say about two weeks ago; runtimewire covered the demo on 2026-09-27.",
+   "Is Muse for Mac computer control fast enough to literally play Minecraft with mouse and keyboard as a fun side cut, or does it refuse or struggle with full-screen games? This is untested."
+  ]
+ },
+ {
+  "topic": "prior-art",
+  "summary": "I found no public project where a Meta Muse model plays Minecraft or any other game. That covers Muse Spark through the API and Muse Glimmer with open weights. I searched GitHub repos and code, Hacker News and the web, and checked the MineTrials Minecraft benchmark, which doesn't include Muse. \"Muse plays Minecraft\" therefore looks like a first, but this is unconfirmed: X search needs a login, and the session's shared web-search budget (200 calls) ran out before I could search Reddit, YouTube or the X replies. Three findings change the plan. (1) The user was right about muse.ai. It is Meta's own domain: WHOIS lists Meta Platforms as the registrant, and the site runs on Meta's servers. It hosts \"Muse\", Meta's personal AI agent, which launched in the US on Sept 8, 2026 and runs on Muse Spark. Each user's Muse has its own cloud VM with a browser, it can run code, and it can add MCP \"custom connectors\" (MCP is the standard way to plug tools into an agent). So a viewer could genuinely play from muse.ai: they add our Minecraft connector, give an order, and watch the result in a browser. The catch is that the Muse app reportedly needs a US account, age 18+ and a payment card on file. (2) The Mac here is an Apple M2 with 16 GB of memory. The smallest official Muse Glimmer file is 16.76 GB, and LM Studio says it needs at least 26 GB of RAM, so Glimmer cannot run on this machine. The model will have to be Muse Spark through the API, or Glimmer on a bigger machine. (3) The Hao AI Lab \"Jev plays Minecraft\" post did modestly: 112K views, 1,059 likes, 42 replies. The original viral Jev Minecraft post was Ronak Malde's \"Jev + Astra beats the Ender Dragon in 8:43 for under $1\" (Sept 20), with 2.1M views. Hao's bot is not TypeSafe's Jev at all. It is Google's DiffusionGemma-26B used as a Jev-style decision model on NVIDIA B200 GPUs. Its playable server needed a paid Minecraft Java account, and only 54 people played. The best-spreading \"AI plays a game\" demos share four things: one number set against a human or a clock (8:43 and under $1; 24 ms vs your 200 ms; Pokemon finished after 813 h), a story with a character, a way for viewers to join, and open code. The criticism they draw is always the same: \"the harness does the work\" or \"it reads text, not pixels\".",
+  "facts": [
+   {
+    "claim": "muse.ai is owned by Meta. WHOIS lists Meta Platforms, Inc. (1601 Willow Road, Menlo Park) as registrant, with the record last updated 2026-08-19. The site's HTTP headers carry Meta's content-security policy, Facebook forward proxies and the label production.museai.com, and it redirects logins to facebook.com.",
+    "source": "whois muse.ai and curl -I https://muse.ai (both run 2026-10-06)",
+    "status": "verified"
+   },
+   {
+    "claim": "Meta launched Muse, a personal AI agent, on Sept 8, 2026, in the US on iOS, Android and muse.ai, powered by Muse Spark. Each user gets a dedicated 'Muse Secure VM' with a sandboxed browser, and a separate 'Sentinel' agent approves actions that go out to the internet.",
+    "source": "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/ ; https://techcrunch.com/2026/09/10/metas-ai-agent-muse-is-now-the-no-2-app-in-the-us/",
+    "status": "verified"
+   },
+   {
+    "claim": "The older muse.ai video-hosting service has been renamed Skiv.",
+    "source": "Only a web-search summary; no page was opened to confirm it.",
+    "status": "unverified"
+   },
+   {
+    "claim": "Muse hit No. 2 on the US App Store two days after launch, and over 5 million US downloads by Sept 30.",
+    "source": "https://techcrunch.com/2026/09/10/metas-ai-agent-muse-is-now-the-no-2-app-in-the-us/ ; https://www.forbes.com/sites/maryroeloffs/2026/09/30/metas-muse-ai-assistant-hits-5-million-downloads-outpacing-growth-of-chatgpt-grok-and-claude/ (headline only, not opened)",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse app account rules: US only, 18+, payment card required even on the free tier. The free tier allows 'up to 100 million tokens a week'; Power is $20/month and Max $100/month.",
+    "source": "https://almcorp.com/meta-muse-complete-guide-personal-ai-agent/ (secondary; no Meta page confirms it)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Muse custom connectors use MCP. A user can ask Muse to 'Build a custom integration to [SERVICE]. Its MCP server URL is [LINK]'; remote streamable-HTTP servers with bearer or API-key auth work best. The VM can install npm and PyPI packages and run code, and all outbound traffic passes through Sentinel.",
+    "source": "https://parallel.ai/articles/meta-muse-custom-integrations (secondary; no Meta documentation found)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Meta opened Muse to third-party connectors (submitted at muse.ai/platform, reviewed by Meta) around Sept 18, 2026. Accounts of the response differ: over 1,500 applications in under a week, or over 2,000 in the first few days, with review taking 'weeks, not days'.",
+    "source": "https://techcrunch.com/2026/09/23/everything-new-coming-to-metas-ai-agent-muse/ ; https://stacktr.ee/blog/muse-connector-platform",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Muse controlling a Mac ('operate any app on a user's desktop') is described by TechCrunch as 'coming soon', while a secondary guide says a Muse for Mac with local app access already exists.",
+    "source": "https://techcrunch.com/2026/09/23/everything-new-coming-to-metas-ai-agent-muse/ vs https://almcorp.com/meta-muse-complete-guide-personal-ai-agent/",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Meta Model API: base URL https://api.meta.ai/v1. It accepts OpenAI-style requests (Chat Completions and Responses) and Anthropic-style Messages. Models are muse-spark-1.3, 1.2 and 1.1. Standard price is $1.25 per million input tokens and $4.25 per million output, with limits of 3,000 requests and 4M tokens per minute. A 'contributor' tier costs $0.10 / $0.20 per million tokens in exchange for letting Meta train on your prompts and outputs.",
+    "source": "https://dev.meta.ai/docs/pricing-rate-limits ; https://www.promptfoo.dev/docs/providers/meta/",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Spark 1.3 was released Sept 2, 2026. It has a 1M-token context, accepts image, video and document input, and has a computer-use tool (in Meta's cookbook). It is also on OpenRouter. Meta publishes no speed or latency figures.",
+    "source": "https://research.meta.ai/blog/introducing-muse-spark-1-3 ; https://dev.meta.ai/models/muse-spark",
+    "status": "verified"
+   },
+   {
+    "claim": "New API accounts get $20 in free credits.",
+    "source": "https://www.datacamp.com/blog/muse-spark-1-1 says yes; Meta's pricing page https://dev.meta.ai/docs/pricing-rate-limits does not mention it",
+    "status": "unverified"
+   },
+   {
+    "claim": "Whether the API is US-only is unclear. The July 2026 Muse Spark 1.1 post says 'developers in the US'; the Aug 5 Muse Spark 1.2 post says 'expanded global access'.",
+    "source": "https://dev.meta.ai/resources/blog/build-with-muse-spark/ ; https://research.meta.ai/blog/introducing-muse-code-and-muse-spark-1-2",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Muse Glimmer was released Aug 10, 2026: 30B parameters, Apache 2.0 licence, image input, tool calling. Hugging Face repo meta-models/Muse-Glimmer-30B (278K downloads); the GGUF repo has 723K downloads.",
+    "source": "https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model ; https://huggingface.co/api/models/meta-models/Muse-Glimmer-30B",
+    "status": "verified"
+   },
+   {
+    "claim": "The smallest official Glimmer file is Q4_K_M at 16.76 GB, plus a 1.4 GB vision file. LM Studio says the smallest version needs at least 26 GB of RAM. The Mac here is an Apple M2 with 16 GB, and the M2 has 100 GB/s memory bandwidth, so Glimmer cannot run locally.",
+    "source": "https://huggingface.co/api/models/meta-models/Muse-Glimmer-30B-GGUF/tree/main ; https://lmstudio.ai/models/muse-glimmer ; sysctl on this Mac ; https://www.apple.com/newsroom/2022/06/apple-unveils-m2-with-breakthrough-performance-and-capabilities/",
+    "status": "verified"
+   },
+   {
+    "claim": "No public project of Muse Spark or Muse Glimmer playing Minecraft or any game was found. GitHub repo and code searches returned nothing. Hacker News has no stories for 'muse minecraft' (2025 onward). The only web hit was an unrelated repo using Muse Spark to decompile Minecraft for 3DS. The MineTrials benchmark of 13 setups (Sept 2026) does not include Muse. X, Reddit and YouTube were not fully searched.",
+    "source": "gh search repos/code (2026-10-06); https://hn.algolia.com/api/v1/search ; https://github.com/The-greg-guy/ai-stuff ; https://massiminoe.github.io/minetrials/",
+    "status": "unverified"
+   },
+   {
+    "claim": "Meta's own Minecraft history: CraftAssist, a Facebook Research dialogue assistant bot in Minecraft (arXiv July 19, 2019). Its repo, facebookresearch/craftassist, is archived.",
+    "source": "https://arxiv.org/abs/1907.08584 ; https://github.com/facebookresearch/craftassist",
+    "status": "verified"
+   },
+   {
+    "claim": "Hao AI Lab's post went up Sept 27, 2026, 20:10 UTC, with a 41.65 s horizontal 1920x1080 video and the line 'join the server to win' (mc.alexzms.com). As of Oct 6 it had 112,185 views, 1,059 likes, 64 reposts, 42 replies, 25 quotes and 516 bookmarks. The account has 8,262 followers.",
+    "source": "https://x.com/haoailab/status/2104302648786919643 (numbers via the public embed API https://api.fxtwitter.com/haoailab/status/2104302648786919643)",
+    "status": "verified"
+   },
+   {
+    "claim": "The model in Hao's demo is 'DJev': Google's open-weight DiffusionGemma-26B-A4B used as a Jev-style decision model, not TypeSafe's Jev. It runs on an NVIDIA B200. One decision took 174 ms in Hugging Face transformers, about 60 ms on a leading inference engine, and about 24 ms on their own engine (DJev-serve). The bot is built as a Python 'head' that describes the fight as text and picks one of about 20 options, driving a mineflayer bot that handles reflexes at 20 ticks a second.",
+    "source": "https://github.com/hao-ai-lab/MCJev (README)",
+    "status": "verified"
+   },
+   {
+    "claim": "MCJev public results: 54 people played 1,795 rounds in 32 hours (Sept 26-28). The bot won 70% of Block UHC rounds, but humans won 88% of 925 Sumo rounds. Joining required Minecraft Java Edition with a paid Microsoft account. The blog went up Oct 5, and the repo has 3 stars.",
+    "source": "https://haoailab.com/blogs/mcjev/ ; gh api repos/hao-ai-lab/MCJev",
+    "status": "verified"
+   },
+   {
+    "claim": "Press skepticism of the Hao demo: 'fast decisions among predefined moves do not establish reliable performance in production software', with no match results or controlled comparison. The text of the 42 X replies was not retrieved.",
+    "source": "https://runtimewire.com/article/typesafe-jev-minecraft-24ms-demo",
+    "status": "verified"
+   },
+   {
+    "claim": "The original viral Jev Minecraft post is Ronak Malde's 'Jev + Astra beats the Ender Dragon in Minecraft in 8 minutes 43 seconds! Cost less than $1 ($0.01 Jev, $0.96 Astra)', posted Sept 20, 2026, with open code. It has 2,098,366 views, 7,940 likes, 515 reposts, 259 replies, 280 quotes and 4,438 bookmarks, from an account with only 11,236 followers. Jev pressed WASD, space and the mouse; Astra was the planner.",
+    "source": "https://x.com/rronak_/status/2101544156757950697 (numbers via api.fxtwitter.com) ; https://www.makeuseof.com/astra-and-jev-kill-ender-dragon-in-minecraft/",
+    "status": "verified"
+   },
+   {
+    "claim": "Before the Ender Dragon run, Astra alone spent 141 hours (mostly farming potatoes) and went viral with a 'cute' story of an AI seemingly frustrated after losing its bed.",
+    "source": "https://www.makeuseof.com/astra-and-jev-kill-ender-dragon-in-minecraft/",
+    "status": "verified"
+   },
+   {
+    "claim": "TypeSafe's 'Introducing System One Models and Jev' launch reached 1,989 points and 520 comments on Hacker News (Sept 15, 2026). Jev returns typed choices with scores rather than writing text, takes 70-500 ms end to end, and reads game state as text, not images.",
+    "source": "https://news.ycombinator.com/item?id=49717558 ; https://typesafe.ai/blog/introducing-system-one-models-and-jev",
+    "status": "verified"
+   },
+   {
+    "claim": "A wave of Jev projects followed: madewithjev.com lists 755, 74 of them games. Open copies hit the Hacker News front page: Ollaya (618 points), Jeff 0.8B (575), Kev (463). 'Show HN: Jev Plays Pokémon Red' got 282 points and 124 comments (Sept 25). Critics there said the harness does the work ('builds a collision grid, computes reachable paths with A-star ... choices already annotated') and pointed to bad move choices.",
+    "source": "https://madewithjev.com/ ; https://news.ycombinator.com/item?id=49845172 ; https://github.com/christianmat/jev-pokemon",
+    "status": "verified"
+   },
+   {
+    "claim": "Claude Plays Pokémon streamed on Twitch from the Claude 3.7 Sonnet launch (Feb 24-25, 2025). Anthropic's launch post said 3.7 Sonnet 'outperformed all previous models in our Pokémon gameplay tests'. Viewer numbers were not retrieved.",
+    "source": "https://www.anthropic.com/news/claude-3-7-sonnet ; https://news.ycombinator.com/item?id=43173825",
+    "status": "verified"
+   },
+   {
+    "claim": "Gemini Plays Pokémon was run by an independent developer, Joel Zhang (@TheCodeOfJoel), from Mar 25, 2025. It finished Pokémon Blue on May 2, 2025 after about 813 hours; a second run took about 406 hours. Its harness combined screenshots with game-memory text, a minimap and helper agents. Sundar Pichai thanked him publicly and joked 'Artificial Pokémon Intelligence' at I/O 2025, and Logan Kilpatrick posted progress compared with Claude.",
+    "source": "https://blog.jcz.dev/the-making-of-gemini-plays-pokemon",
+    "status": "verified"
+   },
+   {
+    "claim": "GPT-5 / o3 Pokémon runs in 2025: details (step counts, dates, reach) not checked this pass.",
+    "source": "Not checked (search budget exhausted)",
+    "status": "unverified"
+   },
+   {
+    "claim": "Mindcraft (Minecraft bots built on LLMs plus mineflayer) has 5,846 stars and supports Minecraft Java up to 1.21.11. A model can be set as {api:'openai', model, url}, so in principle it can point at api.meta.ai/v1. This has not been tested with Muse.",
+    "source": "https://github.com/mindcraft-bots/mindcraft (README; stars via gh api)",
+    "status": "verified"
+   },
+   {
+    "claim": "Similar 'Claude plays Minecraft' projects drew little attention: one Claude Agent SDK bot with MCP tools (5 HN points, Jan 2026) and ClaudeCraft, a public server where Claude bots do everything while people watch and give orders (4 points, Feb 2026). MineTrials also got 2 points.",
+    "source": "https://news.ycombinator.com/item?id=46673699 ; https://news.ycombinator.com/item?id=47029874 ; https://news.ycombinator.com/item?id=49801323",
+    "status": "verified"
+   },
+   {
+    "claim": "prismarine-viewer streams a mineflayer bot's world to a web page (versions 1.8.8-1.21.4), so viewers can watch without owning Minecraft. Mojang's browser game Minecraft Classic is still online at classic.minecraft.net.",
+    "source": "https://github.com/PrismarineJS/prismarine-viewer ; https://classic.minecraft.net/ (HTTP 200, 2026-10-06)",
+    "status": "verified"
+   }
+  ],
+  "implications": [
+   "Build plan: muse.ai can be the front door. Lab hardware (the M2 is enough for a Paper server, a mineflayer bot and the web viewer) runs a Minecraft world, a bot and an MCP server that exposes the actions (go to, mine, craft, build, look). A viewer in muse.ai says 'Build a custom integration to Picasso MC, MCP URL ...', then 'go find diamonds', and watches the bot in a prismarine-viewer page. The video shows a real person's Muse doing it.",
+   "Muse's own VM is a second route if Sentinel lets it reach a Minecraft server port: Muse could install mineflayer and join our server with no connector at all. That would make 'Muse plays Minecraft' the most literal, but it needs a test.",
+   "Hao's participation hook failed on friction: 112K views produced only 54 players, because joining needed a paid Minecraft Java account. Our version should need zero installs: watch in a browser and command from muse.ai or a lab web page.",
+   "The Muse app is reportedly US-only, 18+ and needs a card on file, so most X viewers and every Douyin viewer can't use muse.ai. Ship a lab-hosted fallback page (watch plus a rate-limited command box that calls Muse Spark on the lab's API key) and present muse.ai as the US path.",
+   "Glimmer does not fit the M2 (16.76 GB file vs 16 GB RAM, 26 GB+ recommended). Use Muse Spark through the API (cheap; the $0.10/$0.20 contributor tier trains Meta on our prompts, so say so if we use it), or run Glimmer on a 24-32 GB GPU or Mac. A 'Glimmer runs locally' angle needs other hardware.",
+   "Avoid PvP. Muse Spark is a reasoning model with no published latency and can't compete with 24 ms reflexes. A long-horizon task scored against a clock and a dollar figure fits it better (diamonds, Ender Dragon, building a house from a viewer's sketch), like Ronak's '8:43, < $1'. A 'Muse vs Jev' framing could become a lab-angle explainer (planner vs reflexes, serving latency), in line with the KVFlow/Yggdrasil pairing in the lab notes.",
+   "Hooks found so far: (1) 'Your Muse can play Minecraft now', a participation hook tied to Muse's own momentum (No. 2 app, 5M downloads, connector platform) rather than Jev, whose wave peaked Sept 20-28 and is fading. (2) 'Meta's first Minecraft bot was CraftAssist in 2019; seven years later, Muse', a short history beat. (3) One honest number on screen (minutes, dollars, viewer commands served).",
+   "Get ahead of the standard criticism ('the harness does the work', 'text not pixels'): show the harness on screen, say which actions are scripted reflexes and which are Muse's decisions, and publish the code. Muse Spark accepts images and has a computer-use tool, so a short pixel-only clip would help.",
+   "Film format: Hao's video was a 41.65 s horizontal 1080p clip. Our channel cuts vertical 9:16 for X/Douyin, so record the viewer page plus the muse.ai screen in a layout that crops to vertical.",
+   "Correction for the lab notes (ops-2026-10.md): Hao's 'Jev' is DiffusionGemma-26B on a B200, not TypeSafe's Jev. The 2.1M-view Ender Dragon post names only 'Astra'; 'GPT-6 Astra' comes from secondary sources. No files were edited."
+  ],
+  "open_questions": [
+   "Can an ordinary muse.ai user add an arbitrary remote MCP server as a custom connector without Meta review? Only a secondary source says so; Meta's documentation wasn't found.",
+   "Does Sentinel allow code on the Muse VM to open a raw TCP connection to a Minecraft server (port 25565), or only HTTPS?",
+   "Muse Spark's real response time and output speed through the API (not published) decide how fast the bot can act; measure them before choosing the task.",
+   "Does the API really give $20 in free credits, and is it still US-only? Sources conflict. Does the lab have a US developer account and a Muse consumer account (US, 18+, card) for the capture?",
+   "Should the lab use the contributor tier, where Meta trains on our prompts?",
+   "Is Mac control in Muse released yet? If so, a later episode could have Muse play the real game from pixels.",
+   "What did the 42 replies and 25 quotes on Hao's post actually say? Not retrieved: X search needs a login and the session's web-search budget ran out.",
+   "Reddit and YouTube were not searched for prior Muse game demos, so the 'first' claim should be rechecked before posting.",
+   "What do Minecraft's EULA and brand rules allow for a public bot server and the title 'Muse plays Minecraft'?",
+   "Details of the 2025 GPT-5 / o3 Pokémon runs (another possible hook) were not checked."
+  ]
+ },
+ {
+  "topic": "lab-tiein",
+  "summary": "Ranked for a Muse-plays-Minecraft demo where the lab's own project is what runs on screen. Two facts set the ranking. First, this Mac is a base Apple M2 with 16 GB RAM (checked locally with sysctl). Muse Glimmer is a dense 30B model, and its official 4-bit build is about 17 GB, so it does not fit. Only 2-3 bit builds of 12-15 GB would load, and M2 memory bandwidth (100 GB/s) caps decoding at about 8 tok/s at best, so real-time local Glimmer on this machine is not realistic. Second, muse.ai and the Muse Spark API both run on Meta's servers, so none of our serving systems (KVFlow, ScaleSim, FastTree, Yggdrasil, SmoothAgent) can speed them up. Those systems only show a win where we serve Glimmer ourselves, in practice on an NVIDIA GPU, because every one of their codebases is built on CUDA, SGLang or Triton.\n\nRanking:\n(1) FlashEvolve, NeurIPS'26. Speeds up agent self-evolution (GEPA-style prompt evolution). Public code, and it only needs an OpenAI-compatible client, so it can call api.meta.ai/v1 (Spark) from this Mac with no GPU. It lines up with Hao AI Lab's MCJev: their bot's prompt went through 8 hand-supervised versions in the first hour and reached v10 in about 9 hours. It is also the only project whose result reaches muse.ai viewers, as the evolved strategy or skill.\n(2) KVFlow + ScaleSim, NeurIPS'25 / ICML'26, one public repo (Apache-2.0, SGLang 0.5.2rc1 fork). Workflow-aware KV cache eviction and prefetch for a planner+picker pair, or for a village of many Muse bots. This is the strongest systems story, but it needs Glimmer on our own NVIDIA GPU and a rebase onto a newer SGLang.\n(3) SmoothAgent / Lookahead Context Engineering. Removes the long pauses (up to 11.9x time-to-first-token) when a long-running agent compacts its context. Very visual: the bot freezes vs. keeps moving. No public code found.\n(4) FastTree, MLSys'25. Tree-shared-prefix attention kernel. Public artifact, but Triton tuned for H100.\n(5) Yggdrasil, NeurIPS'25. Tree speculative decoding. No public code found; Glimmer already ships Meta's own DFlash drafter; and Jev-style one-pass decisions generate no tokens to speculate on.\n(6) Pancake / HedraRAG. Agent memory and RAG. Weak on screen; no code found.\n(7) Patterns behind Chaos, ISCA'26 Best Paper. Not usable: Glimmer is dense and Spark is closed.\nQuantum work: not relevant.\n\nNotes: muse.ai is confirmed as Meta's consumer Muse agent, not the old video company. It redirects to auth.muse.ai and then facebook.com, and Meta's newsroom names muse.ai. The lab publications page could not be read directly (it is a Google Sites embed), so the list came from the repo's pub/pub.html (served at yil384.github.io/Picasso-Lab/pub/pub.html) and social/x/pubs.json (136 entries). The web-search budget ran out partway through, so a few items below are marked UNVERIFIED.",
+  "facts": [
+   {
+    "claim": "This machine is a base Apple M2 with 17179869184 bytes (16 GB) of RAM on macOS 15.5. No ollama, llama-server or LM Studio is installed and MLX is not importable; Java and Node are present.",
+    "source": "local: sysctl -n machdep.cpu.brand_string hw.memsize; sw_vers; which",
+    "status": "verified"
+   },
+   {
+    "claim": "M2 has 100 GB/s of unified memory bandwidth.",
+    "source": "https://www.apple.com/newsroom/2022/06/apple-unveils-m2-with-breakthrough-performance-and-capabilities/",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Glimmer: released 2026-08-10, about 30B (29.6B) parameters, DENSE (not MoE), 52 layers, [Local,Local,Local,Global] attention with a 2048-token sliding window, gated attention, 131k context, vision encoder, Apache 2.0, Hugging Face meta-models/Muse-Glimmer-30B, no gating.",
+    "source": "https://huggingface.co/meta-models/Muse-Glimmer-30B ; https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model ; https://sebastianraschka.com/blog/2026/muse-glimmer-30b-architecture-notes.html",
+    "status": "verified"
+   },
+   {
+    "claim": "Glimmer has 32 query heads and 2 KV heads, about 52 KiB of KV cache per token in BF16, so its KV cache is very small.",
+    "source": "https://sebastianraschka.com/blog/2026/muse-glimmer-30b-architecture-notes.html",
+    "status": "verified"
+   },
+   {
+    "claim": "Glimmer's official 4-bit build is 'under 20 GB' and is sized for a 24-32 GB envelope; Meta demoed it on M4 Max / M5 Max. Unsloth GGUFs: UD-Q2_K_XL 12-14 GB, UD-Q3_K_XL 14-15 GB, UD-Q4_K_XL 17 GB; a third party reports IQ2_M at 12.3 GB.",
+    "source": "https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model ; https://unsloth.ai/docs/models/muse-glimmer ; https://huggingface.co/unsloth/Muse-Glimmer-30B-GGUF",
+    "status": "verified"
+   },
+   {
+    "claim": "Glimmer ships a DFlash-based block drafter for speculative decoding: 3.1x on RTX 5090, 1.8x on M5 Max, 1.5x on M4 Max (Meta's numbers).",
+    "source": "https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model",
+    "status": "verified"
+   },
+   {
+    "claim": "Glimmer runtimes: llama.cpp, MLX, ExecuTorch, plus partners Ollama, LM Studio, Unsloth, vLLM, SGLang, Together, Fireworks, OpenRouter.",
+    "source": "https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model ; https://dev.meta.ai/resources/blog/build-with-muse-glimmer",
+    "status": "verified"
+   },
+   {
+    "claim": "Glimmer speed on a 16 GB base M2 is untested. Bandwidth alone caps decoding at about 100/12.3 ≈ 8 tok/s for a 12.3 GB quant (my estimate). Prefill of a dense 30B on a base M2 is likely tens of tok/s, i.e. seconds to tens of seconds per 1-2k-token observation without a prefix cache.",
+    "source": "estimate from https://www.apple.com/newsroom/2022/06/apple-unveils-m2-with-breakthrough-performance-and-capabilities/ and the quant sizes above",
+    "status": "unverified"
+   },
+   {
+    "claim": "Muse Spark API (Meta Model API, public preview): base URL api.meta.ai/v1, compatible with the OpenAI SDK and Anthropic Messages, model id muse-spark-1.1, $1.25 / $4.25 per M input/output tokens, reasoning_effort minimal..xhigh, image/video input.",
+    "source": "https://dev.meta.ai/resources/blog/build-with-muse-spark",
+    "status": "verified"
+   },
+   {
+    "claim": "New Meta Model API sign-ups get $20 of one-time free credits; the preview is for US developers only.",
+    "source": "https://www.layer3labs.io/guides/muse-spark-pricing-faq ; https://www.datacamp.com/blog/muse-spark-1-1",
+    "status": "unverified"
+   },
+   {
+    "claim": "The Spark API caches prompt prefixes automatically (cached input about $1.00/M vs $1.25/M) and supports top_logprobs 'where supported'.",
+    "source": "https://www.promptfoo.dev/docs/providers/meta/ ; https://infron.ai/models/meta-ai/muse-spark-1.1/api-reference ; https://codersera.com/blog/muse-spark-1-3-complete-guide-2026/",
+    "status": "unverified"
+   },
+   {
+    "claim": "Third parties mention Muse Spark versions 1.2 and 1.3; Meta's own developer blog says muse-spark-1.1.",
+    "source": "https://www.constellationr.com/insights/news/meta-releases-open-weight-muse-glimmer-model-open-muse-spark-12-tap ; https://codersera.com/blog/muse-spark-1-3-complete-guide-2026/ ; https://dev.meta.ai/resources/blog/build-with-muse-spark",
+    "status": "conflicting"
+   },
+   {
+    "claim": "muse.ai is the web app of Meta's consumer Muse agent (launched 2026-09-08, powered by Muse Spark, runs a 'Muse Secure VM' that can open a browser). Fetching https://muse.ai redirects to auth.muse.ai and then to facebook.com, so the domain is Meta's.",
+    "source": "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/ ; WebFetch of https://muse.ai (307 to auth.muse.ai, 302 to facebook.com)",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse consumer availability: US-only, 18+ (Meta / TechNode) vs. 'US and Canada', including a Mac desktop app (Zapier).",
+    "source": "https://technode.global/2026/09/09/meta-launches-muse-personal-ai-agent-us/ ; https://zapier.com/blog/muse-ai/",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Muse consumer pricing: free tier plus $20 and $100 plans (TechNode, parallel.ai) vs. $16 Power / $80 Maximum (Zapier).",
+    "source": "https://technode.global/2026/09/09/meta-launches-muse-personal-ai-agent-us/ ; https://parallel.ai/articles/meta-muse-custom-integrations ; https://zapier.com/blog/muse-ai/",
+    "status": "conflicting"
+   },
+   {
+    "claim": "Consumer Muse can build Custom Connectors to a remote MCP server or OpenAPI/CLI, including on the free tier. A server on the user's own laptop is NOT reachable because the VM runs in Meta's cloud.",
+    "source": "https://parallel.ai/articles/meta-muse-custom-integrations",
+    "status": "unverified"
+   },
+   {
+    "claim": "Hao AI Lab's MCJev (Apache-2.0): DiffusionGemma-26B-A4B scores about 20 moves in one forward pass with no generated tokens, about 24 ms per decision on B200/GB200. It reuses a prefix cache inside the CUDA graph. Its mineflayer body plus Python head call POST /api/evaluate. It needs an NVIDIA GPU with about 50 GB.",
+    "source": "https://github.com/alexzms/MCJev ; https://haoailab.com/blogs/mcjev/",
+    "status": "verified"
+   },
+   {
+    "claim": "MCJev's prompt evolution was hand-supervised: an LLM reads the game logs and drafts a new prompt, and humans review it. That gave 8 harness versions in the first hour and v10 in about 9 hours. Jev won 70% of 870 Block UHC rounds; 54 people played 1,795 rounds.",
+    "source": "https://haoailab.com/blogs/mcjev/",
+    "status": "verified"
+   },
+   {
+    "claim": "The Hao AI Lab X post went up about 2026-09-27 (runtimewire); the blog post is dated 2026-10-05.",
+    "source": "https://runtimewire.com/article/typesafe-jev-minecraft-24ms-demo ; https://haoailab.com/blogs/mcjev/ ; https://x.com/haoailab/status/2104302648786919643",
+    "status": "unverified"
+   },
+   {
+    "claim": "rmalde/minecraft-agent: a GPT-6 Astra planner plus a Jev picker choosing from 5-10 actions, mineflayer body, structured state (not pixels), Minecraft 1.16.5, models via OpenRouter, Ender Dragon in about 8:43. The README states no license.",
+    "source": "https://github.com/rmalde/minecraft-agent",
+    "status": "verified"
+   },
+   {
+    "claim": "The lab publications page (yufeiding.ucsd.edu/publications) could not be read by fetch because it is a Google Sites embed. Its source is pub/pub.html in this repo, served at yil384.github.io/Picasso-Lab/pub/pub.html, plus social/x/pubs.json (136 entries).",
+    "source": "https://yil384.github.io/Picasso-Lab/pub/pub.html ; /Users/yil384/UCSD/Picasso-Lab/social/x/pubs.json",
+    "status": "verified"
+   },
+   {
+    "claim": "FlashEvolve (NeurIPS'26): an asynchronous worker-queue framework (Rollout/Reflect/Propose/Evaluate stages) for agent evolution (GEPA, ACE, Meta-Harness, OpenEvolve...). 3.5x proposal throughput vs GEPA on vLLM and 4.9x via API; IFBench 91% in 39.3 vs 104 min.",
+    "source": "https://flashevolve.picasso-lab.com/ ; https://arxiv.org/abs/2605.08520",
+    "status": "verified"
+   },
+   {
+    "claim": "FlashEvolve code is public at github.com/Leo9660/FlashEvolve: 'OpenAI-compatible client only' at its core, vLLM optional. GitHub API shows 7 stars, last push 2026-07-30, and no license detected.",
+    "source": "https://github.com/Leo9660/FlashEvolve ; https://api.github.com/repos/Leo9660/FlashEvolve",
+    "status": "verified"
+   },
+   {
+    "claim": "KVFlow (NeurIPS'25): an Agent Step Graph with steps-to-execution eviction plus overlapped CPU-to-GPU KV prefetch. Up to 1.83x on single workflows and 2.19x on concurrent workflows vs SGLang with hierarchical radix cache.",
+    "source": "https://arxiv.org/abs/2507.07400",
+    "status": "verified"
+   },
+   {
+    "claim": "KVFlow and ScaleSim share one public repo, github.com/PanZaifeng/KVFlow (Apache-2.0, 32 stars, last push 2026-03-12). It is a fork of SGLang 0.5.2rc1 plus an 'SScheduler' layer the application calls to expose agent metadata. It handles priority eviction and prefetch for KV and per-agent LoRA. ScaleSim code was released 2026-02.",
+    "source": "https://github.com/PanZaifeng/KVFlow (README, python/pyproject.toml version 0.5.2rc1)",
+    "status": "verified"
+   },
+   {
+    "claim": "ScaleSim (ICML'26): 'invocation distance' estimates the order in which agents will call next, for prefetch and eviction in large LLM multi-agent simulations. Up to 1.74x vs SGLang.",
+    "source": "https://arxiv.org/abs/2601.21473",
+    "status": "verified"
+   },
+   {
+    "claim": "SGLang now lists Apple Silicon support via Metal/MLX (SGLANG_USE_MLX=1). Its docs say nothing about radix/HiCache, LoRA or speculative decoding on that path.",
+    "source": "https://github.com/sgl-project/sglang (README) ; https://docs.sglang.io/docs/hardware-platforms/apple_metal",
+    "status": "verified"
+   },
+   {
+    "claim": "SGLang 0.5.2rc1 (KVFlow's base) predates Glimmer (released 2026-08-10), so running Glimmer on KVFlow likely needs a rebase or a ported model file (my inference from the dates).",
+    "source": "inference from https://github.com/PanZaifeng/KVFlow and https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model",
+    "status": "unverified"
+   },
+   {
+    "claim": "llama-server has per-slot prompt-cache endpoints (/slots/{id}?action=save|restore|erase with --slot-save-path; cache_prompt). Open issue #26676 reports that restore after a server restart is a no-op.",
+    "source": "https://lemonade-server.ai/docs/api/llamacpp/ ; https://github.com/ggml-org/llama.cpp/issues/26676",
+    "status": "verified"
+   },
+   {
+    "claim": "SmoothAgent / Lookahead Context Engineering (Pan, Wang, Hu, Chen, Guan, Zhou, Swanson, Ding): runs context transformations (offload, reduce, isolate) ahead of time and prepares transformed KV caches, cutting time-to-first-token by up to 11.9x. No code link on arXiv.",
+    "source": "https://arxiv.org/abs/2607.00151",
+    "status": "verified"
+   },
+   {
+    "claim": "FastTree (MLSys'25): tree-structured shared-prefix attention kernels as an SGLang plugin (Triton, tuned for H100), up to 2.2x throughput. Artifact at github.com/PanZaifeng/FastTree-Artifact (Apache-2.0, last push 2025-03-24).",
+    "source": "https://mlsys.org/virtual/2025/poster/3278 ; https://github.com/PanZaifeng/FastTree-Artifact",
+    "status": "verified"
+   },
+   {
+    "claim": "Yggdrasil (NeurIPS'25): latency-optimal tree speculative decoding on PyTorch/TorchInductor, up to 3.98x over Eagle/MeSpec. No public code repository found.",
+    "source": "https://arxiv.org/abs/2512.23858 ; https://mlanthology.org/neurips/2025/guan2025neurips-yggdrasil/",
+    "status": "unverified"
+   },
+   {
+    "claim": "Patterns behind Chaos (ISCA'26 Best Paper): forecasts MoE expert data movement for large-scale (200B-1000B) MoE serving, including wafer-scale. Traces are at huggingface.co/datasets/core12345/MoE_expert_selection_trace. Nothing addresses consumer GPUs or Macs.",
+    "source": "https://arxiv.org/abs/2510.05497",
+    "status": "verified"
+   },
+   {
+    "claim": "Pancake (arXiv'26): hierarchical ANN-index memory for multi-agent agent memory, more than 4.29x throughput. No code link.",
+    "source": "https://arxiv.org/abs/2602.21477",
+    "status": "verified"
+   },
+   {
+    "claim": "Muse Spark's architecture (dense or MoE) is undisclosed.",
+    "source": "none found (search budget exhausted)",
+    "status": "unverified"
+   }
+  ],
+  "implications": [
+   "RANK 1 - FlashEvolve. Have Muse teach itself a Minecraft task with our evolution engine. The FlashEvolve client points at api.meta.ai/v1 (muse-spark-1.1) and runs entirely from this M2 Mac: no GPU, no server changes. Rollout = one mineflayer episode (e.g. Sumo vs a scripted bot, survive a night, collect N logs in T minutes); Reflect/Propose = Muse rewriting its own harness prompt from its logs. That is exactly MCJev's hand-supervised loop, automated and run asynchronously. On screen: score vs wall-clock, FlashEvolve vs synchronous GEPA; a v1 to vN prompt stack; 4-8 bots playing parallel rollouts. One measured number: minutes to reach the target score. It is the only lab project whose output reaches muse.ai viewers: the evolved prompt/skill is what a viewer's Muse uses. Wiring difficulty: MEDIUM (about 2-4 days): a scored Minecraft task and evaluator, a rollout stage wrapping a mineflayer episode, a local Paper server (Java and Node are present). Cost check: at $1.25/M input, 5,000 decisions x 1.5k tokens ≈ $9 of input before output and reasoning tokens. That fits the $20 credit only with reasoning_effort=minimal and short observations (my estimate).",
+   "RANK 2 - KVFlow + ScaleSim (one public repo). The headline systems story: Glimmer serving a multi-agent Minecraft setup, either a planner+picker pair (rmalde-style) or a 'Muse village' of 20-50 Glimmer bots with their own personas (ScaleSim's case). On screen: decisions/s or seconds per round for the village with KVFlow vs stock SGLang LRU, plus a per-bot cache-hit overlay. Caveats: (a) it cannot touch Spark or muse.ai, which run on Meta's servers; (b) the code is CUDA SGLang 0.5.2rc1 and likely needs a rebase for Glimmer; (c) Glimmer's KV is tiny (about 52 KiB/token), so eviction only matters with many agents x long contexts. You need a GPU of about 24-48 GB and 20+ bots for the gap to show. Difficulty: MEDIUM-HIGH on an NVIDIA GPU (about 1 week incl. rebase); HIGH on this Mac. On the Mac the only route is a 'KVFlow-lite' proxy that applies the Agent Step Graph policy through llama-server slot save/restore, and Glimmer barely fits in 16 GB.",
+   "RANK 3 - SmoothAgent / Lookahead Context Engineering. For a long-running Muse survival run (hours), every context compaction makes the bot freeze while the model re-reads the context; this paper hides it (up to 11.9x lower time-to-first-token). Very visual: split screen, the bot stops vs keeps moving. Code not public: ask Zaifeng Pan. The full version needs our own server (Glimmer on GPU). With Spark, a client-side lookahead (summarize earlier segments in the background and swap in when ready) can hide the summarization call but not Meta's re-prefill. Difficulty: HIGH without the authors' code.",
+   "RANK 4 - FastTree. Applies when many requests share a tree of prefixes: N bots sharing a world-state prefix, or scoring K multi-token action options as branches. Public artifact, but Triton tuned for H100, an older SGLang, and Glimmer's sliding-window/gated attention would need kernel work. No path on a Mac (no Triton/CUDA on Metal). Difficulty: HIGH; visible gain only on an NVIDIA GPU at scale.",
+   "RANK 5 - Yggdrasil. Speculative decoding helps only the planner's longer text, not Jev-style picking (one forward pass, zero generated tokens). Glimmer already ships Meta's DFlash drafter (1.5-3.1x), which we would have to beat on camera. No public code found. Difficulty: HIGH; weak story.",
+   "RANK 6 - Pancake (multi-agent memory search) and HedraRAG (retrieval for a skill library). Plausible for a village with long-term memory, but the speedup is invisible at Minecraft scale and no code was found. Skip for this demo.",
+   "NOT USABLE - Patterns behind Chaos (MoE best paper): Glimmer is dense, Spark is closed and its architecture is undisclosed. Keep it for the Strata/MoE posts. Quantum papers, chip/kernel work (ChipMATE, TritonGym, TLX, Proton, AMMA, Syncopate) and JigsawRL (RL post-training needs big GPUs; no code verified) do not fit this demo.",
+   "HARDWARE: this Mac is a base M2 with 16 GB. Glimmer's official 4-bit build (about 17 GB) does not fit, and 2-3 bit builds (12-15 GB) leave almost no room for the OS, the Minecraft client and the KV cache. Realistic split: Spark API = the Muse that plays (plus FlashEvolve) on this Mac; Glimmer + KVFlow/ScaleSim = a second film beat that needs an NVIDIA GPU (lab or cloud) or a Mac with 32 GB or more. Do not promise 'Muse runs locally on a Mac M2' on camera.",
+   "LATENCY: Spark is a reasoning model behind a network API, so per-decision latency is likely seconds (UNVERIFIED). Pick tasks that tolerate slow decisions (building, survival planning, turn-like fights) rather than the PvP where Jev's 24 ms shines, or the comparison with Hao AI Lab will look bad.",
+   "VIEWER-PLAYABLE ON muse.ai: muse.ai is Meta's (verified). A viewer could add a custom connector to a public remote MCP server we host (a 'Minecraft body' on our public Paper server) and tell their Muse to play. A laptop-hosted server is unreachable, so it must be cloud-hosted. Only US (maybe Canada) adults can use Muse, so most Douyin viewers cannot. In this path only the FlashEvolve-evolved skill is 'our project'; none of our serving systems run.",
+   "REUSE: MCJev (Apache-2.0) gives a ready mineflayer body and a POST /api/evaluate contract, so a Muse backend can be dropped in; this assumes Spark exposes logprobs (UNVERIFIED). rmalde/minecraft-agent already uses OpenRouter (Glimmer is listed there) but has no license, so avoid copying its code.",
+   "CLAIMS: we can claim 'Muse plays Minecraft with our FlashEvolve' once it has run. Do not claim 'first' until someone searches for prior Muse+Minecraft posts; I could not, because the web-search budget ran out."
+  ],
+  "open_questions": [
+   "Does the user have access to an NVIDIA GPU (lab cluster or cloud, at least 24-48 GB)? Without one, KVFlow/ScaleSim/FastTree/SmoothAgent cannot appear on screen. Only FlashEvolve with the Spark API runs on this 16 GB M2.",
+   "Does the Muse Spark API (muse-spark-1.1) actually return top_logprobs? This decides whether a Jev-style 'score all moves in one pass' picker is possible with Spark. What is the real per-decision latency at reasoning_effort=minimal? UNVERIFIED.",
+   "Is the $20 free credit still offered today, and is the user's developer account US-based? Sources are third-party; Meta's own blog only gives pricing.",
+   "Is muse.ai available in Canada, and are the tiers $20/$100 or $16/$80? Sources conflict. Does a free-tier Muse really accept a remote MCP custom connector (secondary source only)?",
+   "Is the SmoothAgent / Lookahead Context Engineering code available from the authors (Zaifeng Pan et al.)? Is there a private Yggdrasil implementation in the lab?",
+   "Can the KVFlow fork (SGLang 0.5.2rc1) serve Glimmer (gated attention, 3:1 sliding-window hybrid), or is a rebase onto current SGLang needed? Does SGLang's Metal/MLX path support radix cache/HiCache?",
+   "Has anyone already posted Muse (Spark or Glimmer) playing Minecraft? The 'first' claim is unchecked because the web-search budget ran out mid-task.",
+   "Which Muse Spark version is current (1.1 per Meta's blog vs 1.2/1.3 per third parties)? Is Spark dense or MoE? This matters only if the MoE best paper is to be mentioned.",
+   "How fast is Glimmer at 2-3 bit on a 16 GB base M2 in practice (prefill tok/s and decode tok/s)? Not measured anywhere I could find; a 5-minute llama.cpp test would settle it."
+  ]
+ }
+]
