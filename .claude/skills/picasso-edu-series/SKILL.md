@@ -68,6 +68,30 @@ the session scratchpad or an external disk, never in the repo.
   marks; `tools/film.py` renders in parallel and encodes. A cut of 81 s renders in about 3.5 min on the M2.
 - Template: `episodes/l01-1-scale/film/` (README there has every command).
 
+## Daily episodes (from 2026-10-07)
+Every morning at 9:00 a new 4-10 min English explainer of the next part of CSE 291P, in L01-01's line look
+(`episodes/l01-5min`), made unattended on this Mac. Everything is in `daily/` (its `README.md` first):
+- The queue is `daily/syllabus.json` (53 episodes; `SYLLABUS.md` is the readable copy); `daily/state.json` records
+  what was delivered (by morning), failures, the guest policy, speakers' OKs and skips. `daily/next.py` picks the
+  episode and the morning (at most 2 days ahead) and writes the work order; `next.py status` shows the queue.
+- launchd (`com.picassolab.edu-daily`, 02:00) runs `daily/run.sh`: lock, caffeinate, `git pull --ff-only`, new decks,
+  the episode's recording and transcript, then a headless agent session with `daily/PROMPT.md` (the whole per-episode
+  pipeline and the user's rules) killed at 08:45; a notification if no mp4 arrived. `DRY_RUN=1` stops before the
+  session. Install with `daily/install.sh` (not installed until the user says so).
+- Course recordings: `tools/fetch_recordings.py Lnn|--all` (Drive, resumable; no L11 recording, no L15 deck);
+  `tools/transcribe.py Lnn|--all` -> `course/Lnn.words.json`, `Lnn.slides.json` (when each slide is on screen, by
+  thumbnail match), `Lnn.transcript.md`. All git-ignored.
+- Her clips: `daily/clips.py cut|check` (two recognizers must agree with the quote: `exact` or `near`, else re-cut or
+  drop). Drawings: `daily/art.py gen|pack|prompts` (image tool 3 at a time with checks; when it is out of quota,
+  `art-prompts.html` in the delivery folder for the user). The film data follows `kit-lesson/README.md`.
+- Delivery: `~/Downloads/picasso-daily/<morning>_<id>/` (mp4, cover, contact sheet, `x_post.md`, `report.md` in
+  Chinese). Git: `daily/ship_git.sh` commits only the given paths, merges into origin/main in a temporary detached worktree
+  (no branch left checked out). Offline checks: `kit-lesson/lint.py`; a finished mp4: `daily/next.py verify`.
+- Lessons: one 80-min recognizer pass needs over 10 GB and swaps this 16 GB Mac (transcribe in 5-min chunks cut at
+  pauses); a headless session inherits `permissions.defaultMode` from `~/.claude/settings.json` (a bare background
+  Bash job dies when the session ends its turn; use nohup + a done-marker, or a Monitor); the image tool's `gen.sh`
+  exits 0 even when it fails (check the file and the log).
+
 ## State (2026-10-04)
 L01-1 "One Ant Can't Add" / 《一只蚂蚁不会算数》 (CSE 291P L01 Background, slides 9-11): FACTS.md (incl. section G),
 SCRIPT.md (two scripts, judge, synthesis), v1 film EN + ZH rendered with scratch voices (edge-tts), Prof. Ding's own

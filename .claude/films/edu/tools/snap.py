@@ -62,14 +62,15 @@ def render(scene, frames, out, width=1080, height=1920, q=(), fmt='png'):
                 b.close()
                 return None, 'scene error: ' + err
             print(f'boot {time.time() - t0:.1f}s')
-            tag = '_'.join(x.replace('=', '') for x in q)
+            tag = '_'.join(x.replace('=', '').replace('/', '-') for x in q)
             for i in frames:
                 t = time.time()
                 mime = 'image/jpeg' if fmt == 'jpg' else 'image/png'
                 data = page.evaluate("async ([i, m]) => { await window.renderFrame(i); return window.__pv.canvas.toDataURL(m, 0.95); }", [i, mime])
                 fn = os.path.join(out, f'f{i:05d}{"_" + tag if tag else ""}.{fmt}')
-                with open(fn, 'wb') as fh:
+                with open(fn + '.part', 'wb') as fh:          # never a half-written frame under the real name
                     fh.write(base64.b64decode(data.split(',', 1)[1]))
+                os.replace(fn + '.part', fn)
                 print(f'{fn}  {time.time() - t:.2f}s')
                 files.append(fn)
             b.close()

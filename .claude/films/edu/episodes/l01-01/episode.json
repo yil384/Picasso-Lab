@@ -1,0 +1,256 @@
+{
+ "_": "L01-01, the approved L01 'Background' 5-min line cut (../l01-5min/film/film.js) expressed as kit-lesson data: same drawings, slides, timeline and voices. Schema: ../../kit-lesson/README.md. Facts: ../l01-1-scale/FACTS.md.",
+ "id": "l01-01",
+ "title": "L01 Background line film (kit-lesson)",
+ "lecture": "L01",
+ "langs": ["en", "zh"],
+ "facts": "../l01-1-scale/FACTS.md",
+ "voice": {"lines": "../l01-5min/vo_lines.json", "clips": "../l01-5min/clips.json", "clipDir": "~/picasso-assets/l01c/clips", "rate": "+4%", "slotPad": 0.4},
+ "sound": {"dir": "~/picasso-assets/snd"},
+ "assets": {
+  "artDir": "/edu/art/cut",
+  "slideDir": "../l01-5min/slides",
+  "drawings": {
+   "chat": {"src": "line_chat_first", "w": 700},
+   "lab": {"src": "line_lab_2017", "w": 1040},
+   "grow": {"src": "line_grow", "w": 1040},
+   "egg": {"src": "line_chicken_egg", "w": 1040},
+   "wave": {"src": "line_wave", "w": 1040},
+   "receipt": {"src": "line_receipt", "w": 560},
+   "tiny": {"src": "line_tiny_lab", "w": 700},
+   "teams": {"src": "line_two_teams", "w": 1000},
+   "balance": {"src": "line_balance", "w": 900},
+   "map": {"src": "line_course_map", "w": 700, "boost": 0.25},
+   "mic": {"src": "line_mic", "w": 240, "boost": 0.3},
+   "geisel": {"src": "line_geisel", "w": 520, "boost": 0.3}
+  },
+  "stamps": {"bot": {"from": "line_grow", "boost": 0.3, "crop": [50, 600, 135, 195], "size": [100, 144]}},
+  "slides": {"s9": {"src": "p09.png"}, "s10": {"src": "p10.png"}, "s11": {"src": "p11.png"}, "s9a": {"src": "p09_panelA.png"}}
+ },
+ "mic": {"drawing": "mic"},
+ "end": {"at": "endCard"},
+ "panels": [
+  {"id": "p0", "note": "the cover: the first time an AI answered (frame 0 is complete: the post's thumbnail and the loop's landing)", "items": [
+   {"id": "chat", "t": "draw", "d": "chat", "xy": [600, 1040], "w": 690},
+   {"t": "wash", "c": "coral", "xy": ["chat", 0.69, 0.1], "w": 520, "a": 0.8, "rot": 0.2},
+   {"t": "label", "text": "title.0", "xy": [70, 360], "px": {"en": 150, "zh": 132}, "align": "left", "rot": -0.03},
+   {"id": "title2", "t": "label", "text": "title.1", "xy": {"en": [84, 482], "zh": [84, 500]}, "px": {"en": 118, "zh": 128}, "color": "red", "align": "left", "rot": -0.03},
+   {"t": "underline", "of": "title2", "dx": 6, "dy": {"en": 66, "zh": 72}, "rise": {"en": -8, "zh": -6}, "bend": 0.03, "at": "title", "dur": 0.6},
+   {"t": "sans", "text": "strip", "xy": {"en": [86, 616], "zh": [86, 636]}, "px": {"en": 28, "zh": 30}, "a": 0.78, "align": "left"}
+  ]},
+  {"id": "p1", "note": "2017-2020: small nets, scissors and a vice; the winter cloud", "items": [
+   {"t": "label", "text": "years", "xy": [80, 360], "px": {"en": 110, "zh": 100}, "align": "left", "at": "p1+0.9", "dur": 0.7},
+   {"t": "wash", "c": "cobalt", "xy": [250, 368], "w": 380, "at": "p1+1.2", "a": 0.35, "h": 140, "rot": -0.05},
+   {"id": "lab", "t": "draw", "d": "lab", "xy": [540, 860], "w": 1040, "at": "p1+1.1", "dur": 2.6},
+   {"t": "wash", "c": "ultra", "xy": ["lab", 0.56, 0.08], "w": 380, "at": "winter", "a": 0.5},
+   {"t": "label", "text": "winter", "xy": ["lab", 0.3, 0.1], "px": {"en": 66, "zh": 60}, "color": "red", "at": "winter", "patch": 0.4, "rot": -0.05},
+   {"t": "label", "text": "nets.0", "xy": [540, 1236], "px": {"en": 54, "zh": 50}, "color": "red", "at": "nets", "out": "netsOut", "patch": 0.4},
+   {"t": "label", "text": "nets.1", "xy": [200, 1236], "px": {"en": 54, "zh": 50}, "color": "red", "at": "pruning", "patch": 0.4},
+   {"t": "arrow", "from": [200, 1205], "to": ["lab", 0.27, 0.62, 0, 50], "bend": 0.15, "at": "pruning+0.3", "dur": 0.45},
+   {"t": "label", "text": "nets.2", "xy": [860, 1236], "px": {"en": 54, "zh": 50}, "color": "red", "at": "quant", "patch": 0.4, "align": "right"},
+   {"t": "arrow", "from": [780, 1205], "to": ["lab", 0.6, 0.64, 20, 50], "bend": -0.15, "at": "quant+0.3", "dur": 0.45}
+  ]},
+  {"id": "p2", "note": "make it larger", "items": [
+   {"t": "label", "text": "bigger", "xy": [80, 400], "px": {"en": 120, "zh": 130}, "color": "red", "at": "bigger", "align": "left", "rot": -0.03, "dur": 0.6},
+   {"id": "grow", "t": "draw", "d": "grow", "xy": [540, 980], "w": 1040, "at": "bigger+0.2", "dur": 3.4},
+   {"t": "wash", "c": "cobalt", "xy": ["grow", 0.9, 0.55], "w": 520, "at": "bigger+2.4", "a": 0.55, "dur": 1.4},
+   {"t": "wash", "c": "cobalt", "xy": ["grow", 0.62, 0.7], "w": 300, "at": "bigger+1.4", "a": 0.4},
+   {"t": "label", "text": "plus", "xy": [700, 520], "px": {"en": 70, "zh": 64}, "at": "plus", "align": "left", "rows": {"dy": 80, "dt": 0.9}}
+  ]},
+  {"id": "p3", "note": "chicken and egg (her clip C3)", "items": [
+   {"id": "egg", "t": "draw", "d": "egg", "xy": [540, 900], "w": 1040, "at": "p3+1.0", "dur": 2.6},
+   {"t": "wash", "c": "peach", "xy": ["egg", 0.5, 0.55], "w": 420, "at": "p3+2.2", "a": 0.5},
+   {"t": "label", "text": "loop", "xy": [540, 1186], "px": 54, "color": "red", "at": "loop", "patch": 0.3, "rows": {"dy": 64, "dt": 1.0}}
+  ]},
+  {"id": "p4", "note": "her slide 9, taped; panel A clipped out and taped bigger; Illusion -> Mirage", "kind": "slide",
+   "slide": {"src": "s9", "tape": "tape9", "label": "slide9"},
+   "camera": [{"at": "arith-0.1", "xy": [540, 962], "z": 1.01}, {"at": "arith+1.1", "xy": [600, 1010], "z": 1.18},
+              {"at": "mirage9-0.3", "xy": [600, 1012], "z": 1.19}, {"at": "mirage9+0.6", "xy": [540, 960], "z": 1.0}],
+   "items": [
+   {"t": "pen", "pts": [["sl", 0.255, 0.553], ["sl", 0.335, 0.553]], "at": "trace9", "dur": 0.5, "lw": 5},
+   {"t": "pen", "pts": [["sl", 0.40, 0.553], ["sl", 0.46, 0.553]], "at": "trace9+0.3", "dur": 0.5, "lw": 5},
+   {"t": "pen", "pts": [["sl", 0.52, 0.553], ["sl", 0.58, 0.553]], "at": "trace9+0.6", "dur": 0.5, "lw": 5},
+   {"t": "wash", "c": "yellow", "xy": ["sl", 0.345, 0.49], "w": 150, "at": "jump9", "a": 0.7},
+   {"t": "ring", "xy": ["sl", 0.31, 0.49], "r": [84, 76], "seed": 2, "at": "jump9-0.4", "dur": 0.6},
+   {"t": "pen", "pts": [["sl", 0.61, 0.837], ["sl", 0.67, 0.837]], "at": "mirage9", "dur": 0.3, "lw": 5},
+   {"t": "label", "text": "mirage", "xy": ["sl", 0.64, 0.79], "px": 40, "color": "red", "at": "mirage9+0.3", "patch": 0.3, "rot": -0.04, "font": "latin"},
+   {"t": "group", "at": "arith-0.2", "fadeOut": ["mirage9-0.2", "mirage9+0.3"], "items": [
+    {"id": "pa", "t": "clipping", "slide": "s9a", "crop": [0, 0, 0.93, 1], "from": ["sl", 0.31, 0.49], "to": [640, 1010], "w0": 140, "w": 520, "rot0": 0, "rot": 0.03, "at": "arith-0.2", "fly": 0.6,
+     "tapes": [{"i": 2, "dx": -0.4, "dy": -0.52, "w": 180, "rot": -0.35, "at": "arith+0.3"}, {"i": 6, "dx": 0.42, "dy": -0.5, "w": 150, "rot": 0.4, "at": "arith+0.4"}],
+     "items": [
+      {"t": "pen", "pts": [["pa", 0.32, 0.87], ["pa", 0.69, 0.86]], "at": "arith+1.0", "dur": 0.7, "lw": 6},
+      {"t": "label", "text": "flat", "xy": ["pa", 0.5, 0.78], "px": 46, "color": "red", "at": "arith+1.4", "font": "latin", "patch": 0.3},
+      {"t": "pen", "pts": [["pa", 0.69, 0.86], ["pa", 0.715, 0.70], ["pa", 0.82, 0.415]], "at": "g13-0.2", "dur": 0.5, "lw": 6},
+      {"t": "arrow", "from": ["pa", 0.48, 0.5], "to": ["pa", 0.695, 0.68], "bend": 0.2, "at": "g13", "dur": 0.4, "lw": 5},
+      {"t": "label", "text": "b13", "xy": ["pa", 0.38, 0.46], "px": 52, "color": "red", "at": "g13+0.1", "font": "latin", "patch": 0.3},
+      {"t": "label", "text": "jumpNote", "xy": ["pa", 0.84, 0.25], "px": 44, "color": "red", "at": "g13+0.6", "font": "latin", "rot": -0.1}
+     ]}
+   ]}
+  ]},
+  {"id": "p5", "note": "More Is Different: the essay card, the 1967 lecture card, UC San Diego", "items": [
+   {"t": "wash", "c": "yellow", "xy": [560, 640], "w": 760, "at": "essay+0.5", "a": 0.45, "h": 300, "rot": -0.04},
+   {"t": "card", "rect": [160, 470, 920, 860], "at": "essay", "dur": 1.0, "seed": 3},
+   {"t": "label", "text": "essayT", "xy": [540, 590], "px": {"en": 96, "zh": 92}, "at": "essay+0.5", "font": "latin"},
+   {"t": "label", "text": "essayBy", "xy": [540, 700], "px": {"en": 56, "zh": 54}, "at": "essay+1.3"},
+   {"t": "label", "text": "essayIn", "xy": [540, 780], "px": {"en": 48, "zh": 46}, "color": "red", "at": "essay+2.1"},
+   {"t": "group", "at": "lajolla", "xy": [330, 1090], "rot": -0.04, "items": [
+    {"t": "card", "rect": [-230, -120, 230, 120], "at": "lajolla", "dur": 0.8, "seed": 7},
+    {"t": "label", "text": "lecture", "xy": [0, -44], "px": {"en": 48, "zh": 44}, "at": "lajolla+0.4"},
+    {"t": "label", "text": "lecture2", "xy": [0, 36], "px": {"en": 64, "zh": 58}, "color": "red", "at": "lajolla+1.0"}
+   ]},
+   {"id": "geisel", "t": "draw", "d": "geisel", "xy": [790, 1110], "w": 520, "at": "ucsd-0.2", "dur": 1.6},
+   {"t": "wash", "c": "cobalt", "xy": ["geisel", 0.5, 0.55], "w": 380, "at": "ucsd+0.8", "a": 0.35},
+   {"t": "label", "text": "ucsd", "xy": [790, 930], "px": {"en": 52, "zh": 48}, "color": "red", "at": "ucsd+0.9", "patch": 0.3},
+   {"t": "label", "text": "ucsdSub", "xy": [790, 1290], "px": {"en": 40, "zh": 38}, "at": "ucsdSub", "patch": 0.3},
+   {"t": "arrow", "from": [560, 1090], "to": [600, 980], "bend": -0.3, "at": "ucsd+1.3", "dur": 0.4, "lw": 5}
+  ]},
+  {"id": "p6", "note": "one molecule, one wave", "items": [
+   {"t": "label", "text": "physics", "xy": [80, 400], "px": {"en": 76, "zh": 72}, "color": "red", "at": "physics", "align": "left", "rot": -0.03},
+   {"id": "wave", "t": "draw", "d": "wave", "xy": [540, 960], "w": 1040, "at": "wave", "dur": 2.6},
+   {"t": "wash", "c": "ultra", "xy": ["wave", 0.62, 0.45], "w": 640, "at": "wave+1.8", "a": 0.55, "dur": 1.4},
+   {"t": "wash", "c": "cobalt", "xy": ["wave", 0.85, 0.7], "w": 360, "at": "wave+2.2", "a": 0.45},
+   {"t": "label", "text": "one", "xy": {"on": ["wave", 0, 0.55], "x": 40}, "px": {"en": 46, "zh": 44}, "color": "red", "at": "wave+2.6", "patch": 0.3, "align": "left"},
+   {"t": "arrow", "from": ["wave", 0.07, 0.62], "to": ["wave", 0.05, 0.86], "bend": 0.1, "at": "wave+2.9", "dur": 0.4, "lw": 5},
+   {"t": "label", "text": "many", "xy": ["wave", 0.5, 0.1], "px": {"en": 68, "zh": 64}, "color": "red", "at": "wave+3.3", "patch": 0.3}
+  ]},
+  {"id": "p7", "note": "the Mirage paper: five digits at 90% each -> 59%; all-or-nothing vs partial credit; cliff vs slope", "items": [
+   {"t": "group", "fadeOut": ["either-0.2", "either+0.3"], "items": [
+    {"t": "card", "rect": [70, 330, 1010, 590], "at": "paper23", "dur": 0.9, "seed": 11},
+    {"t": "label", "text": "paperT.0", "xy": [540, 400], "px": 50, "at": "paper23+0.3", "font": "latin"},
+    {"t": "label", "text": "paperT.1", "xy": [540, 462], "px": 50, "at": "paper23+0.7", "font": "latin"},
+    {"t": "sans", "text": "paperBy", "xy": [540, 540], "px": {"en": 25, "zh": 24}, "a": 0.8, "at": "paper23+1.0", "dur": 0.4},
+    {"t": "card", "rect": [110, 695, 250, 865], "at": "digits", "dur": 0.5, "seed": 20, "r": 10},
+    {"t": "label", "text": "digits.0", "xy": [180, 784], "px": 110, "at": "digits+0.2", "font": "latin", "dur": 0.3},
+    {"t": "label", "text": "digit", "xy": [180, 910], "px": 48, "color": "red", "at": "digits+0.45", "font": "latin", "dur": 0.3},
+    {"t": "tick", "xy": [232, 710], "s": 38, "at": "partial+0.2", "dur": 0.25},
+    {"t": "card", "rect": [290, 695, 430, 865], "at": "digits+0.35", "dur": 0.5, "seed": 21, "r": 10},
+    {"t": "label", "text": "digits.1", "xy": [360, 784], "px": 110, "at": "digits+0.35+0.2", "font": "latin", "dur": 0.3},
+    {"t": "label", "text": "digit", "xy": [360, 910], "px": 48, "color": "red", "at": "digits+0.35+0.45", "font": "latin", "dur": 0.3},
+    {"t": "tick", "xy": [412, 710], "s": 38, "at": "partial+0.2+0.15", "dur": 0.25},
+    {"t": "card", "rect": [470, 695, 610, 865], "at": "digits+0.7", "dur": 0.5, "seed": 22, "r": 10},
+    {"t": "label", "text": "digits.2", "xy": [540, 784], "px": 110, "at": "digits+0.7+0.2", "font": "latin", "dur": 0.3},
+    {"t": "label", "text": "digit", "xy": [540, 910], "px": 48, "color": "red", "at": "digits+0.7+0.45", "font": "latin", "dur": 0.3},
+    {"t": "tick", "xy": [592, 710], "s": 38, "at": "partial+0.2+0.3", "dur": 0.25},
+    {"t": "card", "rect": [650, 695, 790, 865], "at": "digits+1.05", "dur": 0.5, "seed": 23, "r": 10},
+    {"t": "label", "text": "digits.3", "xy": [720, 784], "px": 110, "at": "digits+1.05+0.2", "font": "latin", "dur": 0.3},
+    {"t": "label", "text": "digit", "xy": [720, 910], "px": 48, "color": "red", "at": "digits+1.05+0.45", "font": "latin", "dur": 0.3},
+    {"t": "pen", "pts": [[680, 735], [760, 825]], "at": "partial+0.2+0.45", "dur": 0.25, "lw": 7},
+    {"t": "pen", "pts": [[760, 735], [680, 825]], "at": "partial+0.7", "dur": 0.2, "lw": 7},
+    {"t": "card", "rect": [830, 695, 970, 865], "at": "digits+1.4", "dur": 0.5, "seed": 24, "r": 10},
+    {"t": "label", "text": "digits.4", "xy": [900, 784], "px": 110, "at": "digits+1.4+0.2", "font": "latin", "dur": 0.3},
+    {"t": "label", "text": "digit", "xy": [900, 910], "px": 48, "color": "red", "at": "digits+1.4+0.45", "font": "latin", "dur": 0.3},
+    {"t": "tick", "xy": [952, 710], "s": 38, "at": "partial+0.2+0.6", "dur": 0.25},
+    {"t": "label", "text": "all", "xy": [380, 1030], "px": {"en": 64, "zh": 60}, "at": "x59-0.3"},
+    {"t": "label", "text": "p59", "xy": [690, 1028], "px": 120, "color": "red", "at": "x59", "font": "latin", "dur": 0.4},
+    {"t": "ring", "xy": [690, 1028], "r": [130, 72], "seed": 5, "at": "x59+0.4", "dur": 0.5},
+    {"t": "wash", "c": "yellow", "xy": [690, 1028], "w": 340, "at": "x59+0.2", "a": 0.55, "h": 200},
+    {"t": "label", "text": "aon", "xy": [300, 1140], "px": {"en": 46, "zh": 44}, "at": "partial+0.1"},
+    {"t": "label", "text": "part", "xy": [780, 1140], "px": {"en": 46, "zh": 44}, "color": "red", "at": "partial+1.0"},
+    {"t": "pen", "pts": [[150, 1176], [150, 1262], [450, 1262]], "at": "slope-0.4", "dur": 0.4, "color": "ink", "lw": 4},
+    {"t": "pen", "pts": [[630, 1176], [630, 1262], [930, 1262]], "at": "slope-0.4", "dur": 0.4, "color": "ink", "lw": 4},
+    {"t": "pen", "pts": [[160, 1256], [330, 1255], [345, 1186], [440, 1182]], "at": "slope", "dur": 0.6, "color": "ink", "lw": 6},
+    {"t": "pen", "curve": [[640, 1256], [920, 1186], -0.12], "at": "slope+0.5", "dur": 0.7, "lw": 6}
+   ]},
+   {"t": "group", "at": "either", "items": [
+    {"t": "wash", "c": "yellow", "xy": [540, 820], "w": 820, "at": "either+0.2", "a": 0.4, "h": 420},
+    {"t": "label", "text": "either.0", "xy": [540, 700], "px": {"en": 100, "zh": 96}, "at": "either+0.2"},
+    {"t": "label", "text": "either.1", "xy": [540, 830], "px": {"en": 100, "zh": 96}, "color": "red", "at": "either+1.0"},
+    {"t": "label", "text": "either.2", "xy": [540, 960], "px": {"en": 100, "zh": 96}, "at": "either+1.8"}
+   ]}
+  ]},
+  {"id": "p8", "note": "her slide 10, whole; a blank sheet taped over the meme on its right (not reused: FACTS section 4), the red corrections written on it", "kind": "slide",
+   "slide": {"src": "s10", "tape": "tape10", "label": "slide10", "rot": -0.012, "tapes": [[1, 90, 486, 220, -0.55, 0], [4, 990, 482, 230, 0.5, 0.15]]},
+   "items": [
+   {"id": "note", "t": "cover", "xy": ["sl:px", 1240, 740], "size": [500, 500], "rot": 0.025, "at": "tape10+0.3", "dur": 0.4, "tape": {"i": 6, "dy": -252, "w": 170, "rot": 0.04, "at": "tape10+0.55"}},
+   {"t": "pen", "pts": [["sl:px", 136, 452], ["sl:px", 812, 448]], "at": "fix1", "dur": 0.5, "lw": 6},
+   {"t": "pen", "pts": [["sl:px", 136, 522], ["sl:px", 812, 518]], "at": "fix1+0.3", "dur": 0.5, "lw": 6},
+   {"t": "label", "text": "fixSize", "xy": ["note", 0.5, 0.5, 0, -170], "px": {"en": 52, "zh": 50}, "color": "red", "at": "fix1+0.6", "rows": {"dy": 56, "dt": 0.4}},
+   {"t": "arrow", "from": ["note", 0.5, 0.5, -150, -150], "to": ["sl:px", 830, 500], "bend": 0.25, "at": "fix1+1.3", "dur": 0.4, "lw": 5},
+   {"t": "ring", "xy": ["sl:px", 720, 695], "r": [58, 28], "seed": 9, "at": "fix2", "dur": 0.5, "lw": 5},
+   {"t": "label", "text": "fixGpu", "xy": ["note", 0.5, 0.5, 0, 10], "px": {"en": 46, "zh": 44}, "fit": 500, "color": "red", "at": "fix2+0.5"},
+   {"t": "arrow", "from": ["note", 0.5, 0.5, -200, 30], "to": ["sl:px", 780, 700], "bend": -0.2, "at": "fix2+0.9", "dur": 0.4, "lw": 5},
+   {"t": "pen", "pts": [["sl:px", 350, 808], ["sl:px", 575, 806]], "at": "fix3", "dur": 0.4, "lw": 5},
+   {"t": "label", "text": "fixPlan", "xy": ["note", 0.5, 0.5, 0, 150], "px": {"en": 46, "zh": 44}, "fit": 500, "color": "red", "at": "fix3+0.3"},
+   {"t": "arrow", "from": ["note", 0.5, 0.5, -200, 160], "to": ["sl:px", 590, 805], "bend": 0.2, "at": "fix3+0.7", "dur": 0.4, "lw": 5}
+  ]},
+  {"id": "p9", "note": "the bill", "items": [
+   {"id": "receipt", "t": "draw", "d": "receipt", "xy": [760, 900], "w": 560, "at": "p9+0.9", "dur": 2.2},
+   {"t": "wash", "c": "peach", "xy": ["receipt", 0.45, 0.4], "w": 380, "at": "p9+1.6", "a": 0.4},
+   {"t": "label", "text": "rTitle", "xy": [80, 380], "px": {"en": 90, "zh": 84}, "at": "r1-0.4", "align": "left", "font": {"en": "latin", "zh": "hand"}},
+   {"t": "label", "text": "r1.0", "xy": [80, 520], "px": {"en": 46, "zh": 42}, "at": "r1", "align": "left"},
+   {"t": "label", "text": "r1.1", "xy": [80, 588], "px": 74, "fit": 470, "color": "red", "at": "r1+0.4", "align": "left", "font": "latin"},
+   {"t": "label", "text": "r1.2", "xy": [80, 644], "px": 36, "at": "r1+0.8", "align": "left", "alpha": 0.8},
+   {"t": "label", "text": "r3.0", "xy": [80, 780], "px": {"en": 46, "zh": 42}, "at": "r2", "align": "left"},
+   {"t": "label", "text": "r3.1", "xy": [80, 848], "px": 74, "fit": 470, "color": "red", "at": "r2+0.4", "align": "left", "font": "latin"},
+   {"t": "label", "text": "r4.0", "xy": [80, 1000], "px": {"en": 46, "zh": 42}, "at": "r3", "align": "left"},
+   {"t": "label", "text": "r4.1", "xy": [80, 1068], "px": 64, "fit": 470, "color": "red", "at": "r3+0.4", "align": "left", "font": "latin"},
+   {"t": "wash", "c": "yellow", "xy": [260, 1060], "w": 400, "at": "r3+0.3", "a": 0.5, "h": 150},
+   {"t": "label", "text": "q", "xy": [280, 1230], "px": 150, "color": "red", "at": "r4+0.4", "font": "latin", "rot": 0.1}
+  ]},
+  {"id": "p10", "note": "a university lab (her clip C5)", "items": [
+   {"id": "tiny", "t": "draw", "d": "tiny", "xy": [520, 880], "w": 700, "at": "p10+0.9", "dur": 2.6},
+   {"t": "wash", "c": "peach", "xy": ["tiny", 0.5, 0.5], "w": 520, "at": "p10+2.0", "a": 0.35},
+   {"t": "label", "text": "uni", "xy": [80, 352], "px": {"en": 72, "zh": 66}, "at": "p10+1.6", "align": "left", "rot": -0.03},
+   {"t": "label", "text": "oneGpu", "xy": [760, 1190], "px": {"en": 58, "zh": 54}, "color": "red", "at": "oneGpu", "patch": 0.3},
+   {"t": "arrow", "from": [740, 1150], "to": ["tiny", 0.72, 0.5, 10, 70], "bend": 0.2, "at": "oneGpu+0.3", "dur": 0.5, "lw": 6}
+  ]},
+  {"id": "p11", "note": "her slide 11: the motto boxed and credited (her clip C6)", "kind": "slide",
+   "slide": {"src": "s11", "tape": "tape11", "label": "slide11", "xy": [520, 830], "w": 940, "rot": 0.01, "tapes": [[3, 110, 478, 230, -0.5, 0], [7, 930, 474, 210, 0.5, 0.15]]},
+   "items": [
+   {"t": "box", "on": "sl:px", "rect": [814, 345, 1534, 590], "at": "box11", "dur": 0.9, "lw": 7},
+   {"t": "wash", "c": "yellow", "xy": ["sl:px", 1170, 468], "w": 560, "at": "box11+0.5", "a": 0.45, "h": 200},
+   {"t": "label", "text": "motto", "xy": [600, 1240], "px": {"en": 44, "zh": 42}, "color": "red", "at": "box11+1.0", "patch": 0.3},
+   {"t": "arrow", "from": [640, 1205], "to": ["sl:px", 1170, 600], "bend": 0.2, "at": "box11+1.3", "dur": 0.4, "lw": 5},
+   {"t": "pen", "pts": [["sl:px", 580, 608], ["sl:px", 770, 606]], "at": "right11", "dur": 0.3, "lw": 6},
+   {"t": "pen", "pts": [["sl:px", 184, 656], ["sl:px", 370, 654]], "at": "right11+0.3", "dur": 0.3, "lw": 6}
+  ]},
+  {"id": "p12", "note": "why times: algorithms x44 and hardware x11 on the balance", "items": [
+   {"id": "acc", "t": "label", "text": "acc", "xy": [540, 380], "px": {"en": 72, "zh": 76}, "fit": 940, "at": "p12+0.9", "font": {"en": "latin", "zh": "hand"}},
+   {"t": "ringChar", "of": "acc", "char": "×", "dy": 4, "rx": 0.42, "ry": 0.5, "seed": 4, "at": "times", "dur": 0.4},
+   {"id": "bal", "t": "draw", "d": "balance", "xy": [540, 960], "w": 900, "at": "p12+1.0", "dur": 2.2},
+   {"t": "wash", "c": "cobalt", "xy": ["bal", 0.12, 0.66, 0, -10], "w": 320, "at": "alg", "a": 0.55, "h": 160},
+   {"t": "wash", "c": "yellow", "xy": ["bal", 0.88, 0.66, 0, -10], "w": 320, "at": "hw", "a": 0.6, "h": 160},
+   {"t": "label", "text": "alg", "xy": ["bal", 0.12, 0.66, 0, -120], "px": {"en": 56, "zh": 54}, "at": "alg", "patch": 0.3},
+   {"t": "label", "text": "algX", "xy": ["bal", 0.12, 0.66, 0, -40], "px": 92, "color": "red", "at": "alg+0.5", "font": "latin"},
+   {"t": "label", "text": "hw", "xy": ["bal", 0.88, 0.66, -40, -120], "px": {"en": 56, "zh": 54}, "at": "hw", "patch": 0.3},
+   {"t": "label", "text": "hwX", "xy": ["bal", 0.88, 0.66, -40, -40], "px": 92, "color": "red", "at": "hw+0.5", "font": "latin"},
+   {"t": "sans", "text": "alg7", "xy": [540, 452], "px": 26, "a": 0.75, "at": "alg+0.8", "dur": 0.5},
+   {"t": "label", "text": "mult", "xy": [540, 530], "px": {"en": 60, "zh": 58}, "color": "red", "at": "times+0.4", "patch": 0.3}
+  ]},
+  {"id": "p13", "note": "DeepMind 2022: 400+ models, then the giant and the small one", "items": [
+   {"t": "label", "text": "dm", "xy": [80, 360], "px": {"en": 70, "zh": 66}, "at": "p13+1.0", "out": "score-0.6", "align": "left"},
+   {"t": "group", "fadeOut": ["teams-0.3", "teams+0.2"], "items": [
+    {"t": "stampGrid", "stamp": "bot", "n": 84, "cols": 12, "xy": [177, 520], "pitch": [66, 64], "stagger": 14, "w": 40, "at": "grid400", "step": 0.025, "jitter": 0.25, "pop": 1.5, "spring": [9, 15]},
+    {"t": "label", "text": "m400", "xy": [540, 960], "px": {"en": 74, "zh": 70}, "color": "red", "at": "grid400+1.4", "patch": 0.3},
+    {"t": "label", "text": "rule.0", "xy": [540, 1080], "px": {"en": 70, "zh": 66}, "at": "rule"},
+    {"t": "label", "text": "rule.1", "xy": [540, 1170], "px": {"en": 70, "zh": 66}, "color": "red", "at": "rule+1.2"}
+   ]},
+   {"id": "teams", "t": "draw", "d": "teams", "xy": [540, 900], "w": 1000, "at": "teams", "dur": 2.0},
+   {"t": "wash", "c": "cobalt", "xy": ["teams", 0.22, 0.5], "w": 420, "at": "teams+1.0", "a": 0.35},
+   {"t": "wash", "c": "coral", "xy": ["teams", 0.86, 0.7], "w": 360, "at": "teams+1.4", "a": 0.35},
+   {"t": "label", "text": "giant", "xy": ["teams", 0.22, -0.06], "px": 74, "at": "teams+1.6", "font": "latin", "patch": 0.3},
+   {"t": "label", "text": "small", "xy": [800, 700], "px": 74, "color": "red", "at": "teams+3.0", "font": "latin", "patch": 0.3},
+   {"t": "label", "text": "data4", "xy": [760, 1000], "px": {"en": 52, "zh": 50}, "color": "red", "at": "books", "patch": 0.3},
+   {"t": "label", "text": "budget", "xy": {"on": ["teams", 0.62, 0.94], "y": 1250}, "px": 46, "at": "books+1.6", "out": "cheap-0.4", "patch": 0.3},
+   {"t": "sans", "text": "exam", "xy": [540, 312], "px": 30, "a": 0.8, "at": "score-0.3", "dur": 0.5},
+   {"t": "label", "text": "s60", "xy": ["teams", 0.22, -0.2], "px": 84, "at": "score", "font": "latin"},
+   {"t": "label", "text": "s68", "xy": [800, 600], "px": 96, "color": "red", "at": "score+0.8", "font": "latin"},
+   {"t": "ring", "xy": [800, 600], "r": [120, 60], "seed": 8, "at": "score+1.2", "dur": 0.5},
+   {"t": "label", "text": "cheaper", "xy": [540, 1250], "px": {"en": 48, "zh": 46}, "color": "red", "at": "cheap", "patch": 0.3}
+  ]},
+  {"id": "p14", "note": "the course: a road with stops (her clip C7), compute not included", "items": [
+   {"id": "map", "t": "draw", "d": "map", "xy": [540, 862], "w": 640, "at": "road", "dur": 3.0},
+   {"t": "wash", "c": "sage", "xy": ["map", 0.3, 0.5], "w": 520, "at": "road+1.4", "a": 0.35},
+   {"t": "wash", "c": "sage", "xy": ["map", 0.75, 0.3], "w": 420, "at": "road+1.8", "a": 0.3},
+   {"t": "label", "text": "course", "xy": ["map", 0.66, -0.03], "px": 52, "color": "red", "at": "road+2.6", "font": "latin", "patch": 0.3},
+   {"t": "label", "text": "stops.0", "xy": ["map", 0.562, 0.855, 70, -2], "px": {"en": 42, "zh": 40}, "color": "red", "at": "stops", "patch": 0.3, "align": "left"},
+   {"t": "label", "text": "stops.1", "xy": ["map", 0.574, 0.675, 70, -2], "px": {"en": 42, "zh": 40}, "color": "red", "at": "stops+0.9", "patch": 0.3, "align": "left"},
+   {"t": "label", "text": "stops.2", "xy": ["map", 0.669, 0.511, 70, -2], "px": {"en": 42, "zh": 40}, "color": "red", "at": "stops+1.8", "patch": 0.3, "align": "left"},
+   {"t": "label", "text": "stops.3", "xy": ["map", 0.329, 0.363, -70, -2], "px": {"en": 42, "zh": 40}, "color": "red", "at": "stops+2.7", "patch": 0.3, "align": "right"},
+   {"t": "label", "text": "stops.4", "xy": ["map", 0.69, 0.265, 70, -2], "px": {"en": 42, "zh": 40}, "color": "red", "at": "stops+3.6", "patch": 0.3, "align": "left"},
+   {"t": "label", "text": "stops.5", "xy": ["map", 0.351, 0.172, -70, -2], "px": {"en": 42, "zh": 40}, "color": "red", "at": "stops+4.5", "patch": 0.3, "align": "right"},
+   {"t": "label", "text": "stops.7", "xy": ["map", 0.531, 0.044, 70, -2], "px": {"en": 42, "zh": 40}, "color": "red", "at": "stops+5.4", "patch": 0.3, "align": "left"},
+   {"t": "label", "text": "notIncl", "xy": [330, 1236], "px": {"en": 60, "zh": 58}, "color": "red", "at": "notIncl", "patch": 0.35, "rot": -0.03}
+  ]}
+ ]
+}

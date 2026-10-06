@@ -1,0 +1,350 @@
+{
+ "_": "Every word in the L01-01 lesson film (kit-lesson; ?lang=en|zh): lettering on the sheet, the mic tag, the end card and the captions. Text and numbers follow ../l01-1-scale/FACTS.md (safe EN / safe ZH columns); her words follow ../l01-5min/clips.json. From ../l01-5min/film/strings.js, with the words that lived in film.js (+ data, + parameters, the five digits, ?, the two rows of sizes never published) moved here. cap: one entry per voice id of timeline.json; | splits a line into parts timed on the voice word marks (her clips: on their length), / breaks a part into two rows.",
+ "en": {
+  "title": [
+   "More",
+   "is different"
+  ],
+  "strip": "CSE 291P · Lecture 1 · UC San Diego",
+  "sub": "LLM System Optimization",
+  "mic": "Prof. Ding · lecture 1",
+  "years": "2017 – 2020",
+  "nets": [
+   "small nets",
+   "pruning",
+   "quantization"
+  ],
+  "winter": "AI winter?",
+  "bigger": "make it LARGER",
+  "sizes": [
+   "small",
+   "",
+   "",
+   "",
+   "huge"
+  ],
+  "money": "$$$",
+  "loop": [
+   "no results, no money",
+   "no money, no results"
+  ],
+  "slide9": "her slide 9",
+  "mirage": "a Mirage?",
+  "arith": "3-digit addition",
+  "b13": "13B",
+  "jumpNote": "jump!",
+  "flat": "≈ 0",
+  "essayT": "More Is Different",
+  "essayBy": "P. W. Anderson",
+  "essayIn": "Science, 1972",
+  "physics": "physics, not AI",
+  "lecture": "first a lecture:",
+  "lecture2": "La Jolla, 1967",
+  "ucsd": "UC San Diego",
+  "ucsdSub": "where this course is taught",
+  "one": "one molecule",
+  "many": "many",
+  "paperT": [
+   "Are Emergent Abilities of Large",
+   "Language Models a Mirage?"
+  ],
+  "paperBy": "Schaeffer, Miranda & Koyejo · NeurIPS 2023",
+  "digit": "90%",
+  "all": "all 5 right:",
+  "p59": "59%",
+  "aon": "all-or-nothing",
+  "part": "partial credit",
+  "partScore": "4 / 5",
+  "cliff": "cliff",
+  "slope": "slope",
+  "either": [
+   "small tests",
+   "can't fully judge",
+   "a big model"
+  ],
+  "slide10": "her slide 10",
+  "fixSize": [
+   "sizes never",
+   "published"
+  ],
+  "fixGpu": "one cluster (xAI Colossus)",
+  "fixPlan": "planned, over 4 years",
+  "rTitle": "THE BILL",
+  "r1": [
+   "one top training run",
+   "> $100,000,000",
+   "(estimate)"
+  ],
+  "r2": [
+   "one cluster",
+   "100,000 GPUs"
+  ],
+  "r3": [
+   "Stargate plan, 4 years",
+   "$500,000,000,000"
+  ],
+  "r4": [
+   "save 1%",
+   "= $1,000,000"
+  ],
+  "uni": "a university lab",
+  "oneGpu": "1 GPU",
+  "slide11": "her slide 11",
+  "motto": "motto: Stanford CS336 (2025)",
+  "wrong": "only size",
+  "right": "methods that scale",
+  "acc": "accuracy = efficiency × resources",
+  "alg": "algorithms",
+  "algX": "× 44",
+  "hw": "hardware",
+  "hwX": "× 11",
+  "alg7": "same image classifier, 2012 → 2019",
+  "mult": "they multiply",
+  "m400": "400+ models",
+  "rule": [
+   "double the model",
+   "double the data"
+  ],
+  "dm": "DeepMind, 2022",
+  "giant": "280B",
+  "small": "70B",
+  "data4": "× 4 data",
+  "budget": "same budget",
+  "exam": "57-subject exam",
+  "s60": "60.0%",
+  "s68": "67.6%",
+  "cheaper": "and cheaper every time it is used",
+  "stops": [
+   "tokens",
+   "compute",
+   "memory",
+   "latency",
+   "training",
+   "serving",
+   "KV cache",
+   "…"
+  ],
+  "course": "CSE 291P",
+  "notIncl": "*compute not included",
+  "end": [
+   "After Prof. Yufei Ding's CSE 291P, Lecture 1",
+   "More is different.",
+   "UC San Diego · Picasso Lab"
+  ],
+  "fine": [
+   "Draws on Stanford CS336 (Liang & Hashimoto). Anderson, Science 1972; Wei et al. 2022; Schaeffer, Miranda & Koyejo,",
+   "NeurIPS 2023; Hernandez & Brown 2020; Hoffmann et al. 2022; Stargate, Jan 2025; xAI / NVIDIA 2024; AI Index 2024."
+  ],
+  "cap": {
+   "n0": "Remember the first time an AI actually answered you?|Our professor does.",
+   "c1": "I don't know if you still remember|the first time you are playing with ChatGPT,|how surprised maybe you are,|and how talented they are in answering questions.",
+   "n1": "Rewind to 2017 to 2020.|Models were small,|and much of the research was about making them even smaller.|Some people wondered if AI was heading into another winter.",
+   "c2": "And we are doing a lot of system designs,|mostly focusing on the pruning, quantization,|design new models.|But we feel like its job is kind of limited.",
+   "n2": "Then came the bet: just make it larger.|More data, more parameters.|Sounds easy. It isn't.",
+   "c3": "If you want to do some experiment at larger scale,|that means money.|No one will give you the money to do larger results|until you get a result.|So it's a chicken egg problem.",
+   "n3a": "This is the chart from her slide.|On many tasks, small models score almost nothing.|Then, past a certain size, the score jumps.",
+   "n3b": "Take arithmetic.|GPT-3 sat near zero,|until thirteen billion parameters.|Then it jumped.",
+   "c4": "You do not do the experiments,|you will never know.",
+   "n3c": "A physicist had a name for this.|In 1972, Philip Anderson published|an essay called \"More Is Different.\"|It started as a lecture he gave in La Jolla in 1967,|at UC San Diego,|the campus where this course is taught.",
+   "n3d": "He was writing about physics, not AI.|One water molecule can't make a wave.",
+   "n3e": "Fair warning: a 2023 paper argues|many of these jumps come from all-or-nothing scoring.|Get each digit right ninety percent of the time,|and a five-digit answer is fully right|only fifty-nine percent of the time.|Give partial credit, and many jumps turn into slopes.",
+   "n3f": "Either way, you can't fully judge a big model|by testing small ones.",
+   "n4a": "Bigger also means pricier.|Her slide lists the bill.|Two corrections in red:|those model sizes were never published,|and the hundred thousand GPUs are one company's cluster.",
+   "n4b": "An estimated hundred million dollars for one top training run.|A five-hundred-billion-dollar plan over four years.|At that price, saving one percent is a million dollars.|And in a university?",
+   "c5": "The training cost is also tremendous.|It requires a lot of energy,|a lot of compute resources.|That also makes academia a little bit embarrassing,|because we are not having a lot of GPUs.",
+   "n5a": "So the slide's punchline, borrowed from a Stanford course:|accuracy equals efficiency times resources.|Scale is not everything;|methods that scale are.",
+   "c6": "If you can make it larger,|then the idea is how can you efficiently make it larger?|If you cannot really get better performance,|you will try to compress it.",
+   "n5b": "Why times, not plus?|Over seven years, better algorithms cut the compute|for the same image classifier forty-four-fold.|Hardware alone gave eleven-fold.|And the two multiply.",
+   "n5c": "In 2022, DeepMind trained over four hundred models|to find the best split.|The rule: double the model, double the data.",
+   "n5d": "Same compute as their own 280-billion-parameter giant:|a 70-billion model, fed about four times the data.|It won on most tests.|On a 57-subject exam: about 68 percent, against 60.|And a smaller model is cheaper every time someone uses it.",
+   "n6": "That's this course:|where training and serving waste compute, memory and time,|and how to win it back.|We can teach you the efficiency.",
+   "c7": "And especially because it's very large,|we need to care about its performance.|So that's why we want to develop this class, this course,|and try to understand these kind of efficiency issues.",
+   "n7": "Compute not included."
+  },
+  "plus": [
+   "+ data",
+   "+ parameters"
+  ],
+  "digits": [
+   "3",
+   "8",
+   "4",
+   "1",
+   "7"
+  ],
+  "q": "?"
+ },
+ "zh": {
+  "title": [
+   "多，",
+   "就不一样"
+  ],
+  "strip": "CSE 291P · 第 1 讲 · 加州大学圣迭戈分校",
+  "sub": "大模型系统优化",
+  "mic": "丁老师 · 第 1 讲原声",
+  "years": "2017 – 2020",
+  "nets": [
+   "小网络",
+   "剪枝",
+   "量化"
+  ],
+  "winter": "AI 寒冬？",
+  "bigger": "做大！",
+  "sizes": [
+   "小",
+   "",
+   "",
+   "",
+   "巨大"
+  ],
+  "money": "$$$",
+  "loop": [
+   "没结果，没钱",
+   "没钱，没结果"
+  ],
+  "slide9": "她的第 9 页",
+  "mirage": "a Mirage?",
+  "arith": "三位数加法",
+  "b13": "130 亿",
+  "jumpNote": "跳！",
+  "flat": "≈ 0",
+  "essayT": "More Is Different",
+  "essayBy": "P. W. 安德森",
+  "essayIn": "《科学》，1972",
+  "physics": "讲的是物理，不是 AI",
+  "lecture": "最早是一场讲座：",
+  "lecture2": "拉霍亚，1967",
+  "ucsd": "加州大学圣迭戈分校",
+  "ucsdSub": "就是开这门课的学校",
+  "one": "一个分子",
+  "many": "很多",
+  "paperT": [
+   "Are Emergent Abilities of Large",
+   "Language Models a Mirage?"
+  ],
+  "paperBy": "Schaeffer、Miranda、Koyejo · NeurIPS 2023",
+  "digit": "90%",
+  "all": "5 位全对：",
+  "p59": "59%",
+  "aon": "全对才给分",
+  "part": "给部分分",
+  "partScore": "4 / 5",
+  "cliff": "悬崖",
+  "slope": "缓坡",
+  "either": [
+   "光测小模型",
+   "看不全",
+   "大模型"
+  ],
+  "slide10": "她的第 10 页",
+  "fixSize": [
+   "参数量从未公开"
+  ],
+  "fixGpu": "一个集群（xAI Colossus）",
+  "fixPlan": "计划，分 4 年",
+  "rTitle": "账单",
+  "r1": [
+   "训一个顶级模型",
+   "> 1 亿美元",
+   "（估计）"
+  ],
+  "r2": [
+   "一个集群",
+   "10 万张 GPU"
+  ],
+  "r3": [
+   "星际之门计划，4 年",
+   "5000 亿美元"
+  ],
+  "r4": [
+   "省 1%",
+   "= 100 万美元"
+  ],
+  "uni": "大学实验室",
+  "oneGpu": "1 张 GPU",
+  "slide11": "她的第 11 页",
+  "motto": "口号出自斯坦福 CS336（2025）",
+  "wrong": "只看规模",
+  "right": "能放大的方法",
+  "acc": "准确率 = 效率 × 资源",
+  "alg": "算法",
+  "algX": "× 44",
+  "hw": "硬件",
+  "hwX": "× 11",
+  "alg7": "同样的图像分类器，2012 → 2019",
+  "mult": "两者相乘",
+  "m400": "400 多个模型",
+  "rule": [
+   "模型翻一倍",
+   "数据也翻一倍"
+  ],
+  "dm": "DeepMind，2022",
+  "giant": "2800 亿",
+  "small": "700 亿",
+  "data4": "数据 × 4",
+  "budget": "同样预算",
+  "exam": "57 科考试",
+  "s60": "60.0%",
+  "s68": "67.6%",
+  "cheaper": "而且每次使用都更省",
+  "stops": [
+   "token",
+   "算力",
+   "显存",
+   "延迟",
+   "训练",
+   "推理",
+   "KV 缓存",
+   "…"
+  ],
+  "course": "CSE 291P",
+  "notIncl": "*算力另计",
+  "end": [
+   "根据丁老师 CSE 291P 第 1 讲改编",
+   "多，就不一样。",
+   "加州大学圣迭戈分校 · Picasso Lab"
+  ],
+  "fine": [
+   "参考斯坦福 CS336（Liang、Hashimoto）。Anderson, Science 1972；Wei 等 2022；Schaeffer、Miranda、Koyejo，",
+   "NeurIPS 2023；Hernandez & Brown 2020；Hoffmann 等 2022；Stargate 2025 年 1 月；xAI / 英伟达 2024；AI Index 2024。"
+  ],
+  "cap": {
+   "n0": "还记得第一次被 AI 认真回答的那一刻吗？|丁老师也记得。",
+   "c1": "（译）不知道你们还记不记得|第一次玩 ChatGPT 的时候，|有多惊讶，|它回答问题有多厉害。",
+   "n1": "倒回 2017 到 2020 年：|模型都不大，|很多研究在想办法把它们做得更小。|甚至有人担心，AI 又要进入寒冬。",
+   "c2": "（译）我们做了很多系统设计，|主要是剪枝、量化，|设计新模型。|但我们觉得，它能做的事有点有限。",
+   "n2": "然后有人押了一个注：做大。|更多数据、更多参数。|听起来简单，其实不然。",
+   "c3": "（译）想在更大规模上做实验，|就意味着要钱。|拿不出结果，|没人会给你钱去做更大的实验。|这就是个先有鸡还是先有蛋的问题。",
+   "n3a": "这是她课件上的图：|很多任务上，小模型几乎是零分；|模型大到某个程度，分数突然跳起来。",
+   "n3b": "比如算术题：|GPT-3 一直几乎零分，|到一百三十亿参数，|突然跳起来。",
+   "c4": "（译）你不去做实验，|就永远不会知道。",
+   "n3c": "物理学家早就给这件事起过名字。|1972 年，菲利普·安德森发表了一篇文章，|题目就叫《More Is Different》，多，就不一样。|它最早是 1967 年在拉霍亚的一场讲座，|地点就是加州大学圣迭戈分校，|也就是开这门课的学校。",
+   "n3d": "他写的是物理，不是 AI。|一个水分子，掀不起浪。",
+   "n3e": "也要说句公道话：|2023 年有篇论文认为，很多跳变来自\"全对才给分\"。|每一位数字有 90% 的把握，|5 位数整题全对也只有 59%。|改成给部分分，|很多\"突然\"就变成了\"渐渐\"。",
+   "n3f": "不管哪种解释，结论都一样：|光测小模型，看不全大模型。",
+   "n4a": "做大，也意味着更贵。|她的课件列了账单。|我们用红笔订正两处：|那几家模型的大小从没公开过；|十万张 GPU 是一家公司一个集群的规模。",
+   "n4b": "训一个顶级模型，估计上亿美元；|一个计划，四年五千亿美元。|这个价位，省 1% 就是一百万美元。|那大学里呢？",
+   "c5": "（译）训练成本也非常惊人，|要消耗大量能源，|大量算力。|这也让学术界有点尴尬，|因为我们没有很多 GPU。",
+   "n5a": "所以这一页的重点，借自斯坦福一门课的口号：|准确率等于效率乘资源。|规模不是一切，|能放大的方法才是。",
+   "c6": "（译）如果能做大，|那问题就是怎么高效地做大？|如果做大也换不来更好的效果，|那你就会去压缩它。",
+   "n5b": "为什么是乘，不是加？|七年里，更好的算法|让同样水平的图像分类器少用了 44 倍算力；|光靠硬件只有 11 倍。|两者还能相乘。",
+   "n5c": "2022 年，DeepMind 训了 400 多个模型，|找最划算的分配。|规律是：模型翻一倍，数据也得翻一倍。",
+   "n5d": "和自家 2800 亿参数的大模型同样的算力，|改训一个 700 亿的，多喂约四倍数据。|结果大多数测试上它赢了：|57 科考试，约 68% 对 60%。|而且模型小了，之后每一次使用都更省。",
+   "n6": "这门课讲的，|就是训练和推理里，算力、显存、时间浪费在哪，|怎么省回来。|效率，课上教。",
+   "c7": "（译）正因为它非常大，|我们必须关心它的性能。|所以我们才要开这门课，|去理解这些效率问题。",
+   "n7": "算力嘛，另计。"
+  },
+  "plus": [
+   "+ 数据",
+   "+ 参数"
+  ],
+  "digits": [
+   "3",
+   "8",
+   "4",
+   "1",
+   "7"
+  ],
+  "q": "?"
+ }
+}
