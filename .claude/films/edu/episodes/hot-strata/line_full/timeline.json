@@ -21,11 +21,11 @@
   "press": 23.6,
   "pressDown": 24.3,
   "stillNo": 25.7,
-  "campus": 27.2,
+  "campus": 29.0,
   "patternSlip": 30.2,
   "labName": 31.4,
   "quote": 36.2,
-  "kitchen": 37.9,
+  "kitchen": 36.9,
   "goIn": 38.8,
   "chefs": 43.0,
   "label128": 44.4,
@@ -221,18 +221,38 @@
    "t": 194.4
   }
  ],
- "music": {
-  "f": "music/Investigations.mp3",
-  "start": 0.0,
-  "from": 0.0,
-  "gain": 0.3,
-  "duck": 0.45,
-  "fadeOut": [
-   92.8,
-   93.5
-  ]
- },
- "_music": "Investigations.mp3 is 93.5 s and ends on its own final hit under b13 ('the slower the answer comes out'); b14's question then lands in silence. mix.py plays one bed, so 95.6-207.0 has no music yet: a second bed (same track from 0.0, start ~100.4, fadeOut [200.5, 202.8]) needs mix.py to take a list.",
+ "music": [
+  {
+   "f": "music/Investigations.mp3",
+   "start": 0.0,
+   "from": 0.0,
+   "gain": 0.3,
+   "duck": 0.45,
+   "fadeOut": [
+    92.8,
+    93.5
+   ]
+  },
+  {
+   "f": "music/Investigations.mp3",
+   "start": 101.7,
+   "from": 0.0,
+   "gain": 0.3,
+   "duck": 0.45,
+   "fadeIn": 0.4,
+   "loop": [
+    22.19,
+    32.3
+   ],
+   "loops": 1,
+   "xfade": 2.0,
+   "fadeOut": [
+    206.0,
+    207.0
+   ]
+  }
+ ],
+ "_music": "Kevin MacLeod, Investigations (CC BY 4.0), 93.5 s, in two passes. Pass 1 (0-93.5) ends on its own final hit under b13 ('the slower the answer comes out'), so b14's question (95.6) lands in silence. Pass 2 starts with b15's scoring (101.7) and plays the track once more with one 4-bar loop (track 32.30 -> 22.19, both on beats, 2 s equal-power crossfade, +10.11 s), so its final hit (track 91.0) lands on the end card at 202.8; the card rings out to 207. mix.py: 'music' is a list, each entry ducked under the voice.",
  "sfx": [
   {
    "t": 0.0,
@@ -265,7 +285,7 @@
    "g": 0.25
   },
   {
-   "t": 37.9,
+   "t": 36.9,
    "f": "rpg/Audio/metalPot1.ogg",
    "g": 0.3
   },

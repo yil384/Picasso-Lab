@@ -7,6 +7,12 @@ voice + Prof. Ding's lecture clip + synthesized foley into one stereo track.
     TL=timeline2.json SND=DIR [VODIR=DIR] python3 film/mix.py mix ...  # another timeline; sounds given as files ("f") and music
                                                           # are read from SND (Kenney CC0 packs, music/)
 
+Music ("music" in the timeline: one entry or a list of entries, each its own bed, all ducked under the voice):
+    {"f": "music/X.mp3", "start": film s, "from": track s, "gain": .3, "duck": .45, "fadeIn": .6, "fadeOut": [t0, t1],
+     "loop": [a, b], "loops": n, "xfade": 2.0}
+"loop" jumps back from track time b to a (both on beats, so the beat runs on) with an equal-power crossfade of "xfade"
+seconds centred on the jump, "loops" times (default: as often as needed to reach the end of the film).
+
 TTS_DIR is tools/tts.py's output (<lang>/<id>.mp3 + .json word marks). The scratch voices are temporary and never
 published; the foley is synthesized here (numpy), also temporary until real recordings replace it. No music.
 """
@@ -201,6 +207,45 @@ def sfx(kind, dur=None, seed=''):
     raise ValueError('unknown sfx ' + kind)
 
 
+def loop_track(mu, a, b, xfade, loops, need):
+    """The track mu (mono, SR) played from its start, jumping back from b to a (seconds) with an equal-power crossfade of
+    xfade seconds centred on each jump, `loops` times (None: until `need` samples are filled). Returns (array, None) or
+    (None, err)."""
+    ai, bi, h = int(a * SR), int(b * SR), int(xfade * SR / 2)
+    if not (h <= ai < bi <= len(mu) - h):
+        return None, 'loop [%.2f, %.2f] with a %.1f s crossfade does not fit a %.1f s track' % (a, b, xfade, len(mu) / SR)
+    k = np.linspace(0, np.pi / 2, 2 * h, dtype=np.float32)
+    parts, pos, done = [mu[:bi - h]], bi - h, 0
+    while (loops is None and pos < need) or (loops is not None and done < loops):
+        parts.append(mu[bi - h:bi + h] * np.cos(k) + mu[ai - h:ai + h] * np.sin(k))   # out of b, into a
+        parts.append(mu[ai + h:bi - h])
+        pos += 2 * h + (bi - ai - 2 * h); done += 1
+    parts[-1] = np.concatenate([parts[-1], mu[bi - h:]])                                  # the last pass plays to the end
+    return np.concatenate(parts).astype(np.float32), None
+
+
+def music_bed(m, N, snd, dur):
+    """One music entry as a bed of N samples (before ducking): the track from m['from'], placed at m['start'], looped
+    if m['loop'] is given, faded in over m['fadeIn'] and out over m['fadeOut'] (film seconds). Returns (array, None) or
+    (None, err)."""
+    mu, err = decode(os.path.join(snd, m['f']))
+    if err:
+        return None, err
+    s0 = int(m.get('start', 0) * SR)
+    if m.get('loop'):
+        a, b = m['loop']
+        mu, err = loop_track(mu, a, b, m.get('xfade', 2.0), m.get('loops'), N - s0 + int(m.get('from', 0) * SR))
+        if err:
+            return None, '%s: %s' % (m['f'], err)
+    mu = mu[int(m.get('from', 0) * SR):][:max(0, N - s0)]
+    bed = np.zeros(N, np.float32); bed[s0:s0 + len(mu)] = mu
+    t = np.arange(N, dtype=np.float32) / SR
+    fi = np.clip((t - m.get('start', 0)) / max(m.get('fadeIn', .6), 1e-3), 0, 1)
+    a, b = m.get('fadeOut', [dur - 1.5, dur])
+    fo = np.clip((b - t) / max(b - a, 1e-3), 0, 1)
+    return bed * fi * fo, None
+
+
 def mix(tts_dir, ding_wav, out_dir):
     tl, err = load_timeline()
     if err:
@@ -247,19 +292,18 @@ def mix(tts_dir, ding_wav, out_dir):
                 a = a[int(r['lead'] / r['tempo'] * SR):]          # drop the synth's leading silence
             s = int(r['t'] * SR); a = a[:N - s]; voice[s:s + len(a)] += a
         mixd = voice * 1.0 + fol * 0.9
-        m = tl.get('music')
-        if m:
-            mu, err = decode(os.path.join(snd, m['f']))
+        ms = tl.get('music') or []
+        if isinstance(ms, dict):
+            ms = [ms]
+        if ms:
+            # duck under the voice (a smoothed envelope of where the voice is)
+            env = np.convolve((np.abs(voice) > 0.02).astype(np.float32), np.ones(int(.25 * SR), np.float32) / int(.25 * SR), 'same')
+        for m in ms:
+            bed, err = music_bed(m, N, snd, tl['dur'])
             if err:
                 return None, err
-            mu = mu[int(m.get('from', 0) * SR):]
-            bed = np.zeros(N, np.float32); s0 = int(m.get('start', 0) * SR); mu = mu[:N - s0]; bed[s0:s0 + len(mu)] = mu
-            # duck under the voice (a smoothed envelope of where the voice is), fade in and out
-            env = np.convolve((np.abs(voice) > 0.02).astype(np.float32), np.ones(int(.25 * SR), np.float32) / int(.25 * SR), 'same')
             gain = m.get('gain', .3) * (1 - (1 - m.get('duck', .5)) * np.clip(env * 3, 0, 1))
-            fi = np.clip(np.arange(N) / (0.6 * SR), 0, 1); a, b = m.get('fadeOut', [tl['dur'] - 1.5, tl['dur']])
-            fo = np.clip((b * SR - np.arange(N)) / ((b - a) * SR), 0, 1)
-            mixd = mixd + bed * gain * fi * fo
+            mixd = mixd + bed * gain
         st = np.stack([mixd, mixd], 1)
         raw = os.path.join(out_dir, 'raw_%s.f32' % lang); st.astype(np.float32).tofile(raw)
         dst = os.path.join(out_dir, 'mix_%s.wav' % lang)
