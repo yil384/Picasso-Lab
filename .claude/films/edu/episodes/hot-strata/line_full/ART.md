@@ -102,3 +102,10 @@ Not drawn by Codex: the logo (real file), every word (Caveat / ZCOOL KuaiLe hand
 `line_servers`, `line_kitchen` and `line_burst` failed on the usage limit (prompts in `../bakeoff/line/art.sh 1`). The
 derived stand-ins `line_d_servers` and `line_d_kitchen` passed the bake-off. Re-run the originals only if a full-size
 frame of B0 or B3 looks rough next to the new Codex drawings.
+
+### 2026-10-05: who draws what
+The user is drawing all 14 in ChatGPT (prompt sheet: ~/Downloads/picasso-line-art/prompts.html, the 11 above plus the
+three optional `line_servers`, `line_kitchen`, `line_burst` with the same style references). `art_batch.sh` runs with
+SKIP_EXISTING=1 after 20:15 and only fills what is still missing (not the optional three). When `line_servers` /
+`line_kitchen` arrive, swap them in for `line_d_servers` / `line_d_kitchen` in film.js; `line_burst` goes behind the
+programmers in B0.
