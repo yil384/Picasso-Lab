@@ -689,7 +689,7 @@ export function createWeb(opts = {}) {
     const lease = leaseWords(web.leaseMs);
     const closed = askClosedReason();
     const prompt = `Open ${base(req)}/ . In "Get a bot", tick "I am 18 or older" and press "Start a ${lease} session". `
-      + 'On the page that opens, read "Game state", then use the action buttons to collect 10 oak logs, craft oak planks and build a hut_3x3 from oak planks. '
+      + 'On the page that opens, read "Game state", then use the action buttons to collect 10 logs of whatever tree is nearby, craft them into planks and build a hut_3x3 from those planks. '
       + 'After each action, press "Check again" until Status says "Ready for the next action", then read "Last result" before you choose the next one. '
       + 'Stop when the hut is built.';
     return shell({
