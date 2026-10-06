@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The daily CSE 291P explainer: run.sh every day at 02:00 in the logged-in user's session (a LaunchAgent, so the
+     browser renderer gets the GPU). install.sh copies this file to ~/Library/LaunchAgents and loads it. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.picassolab.edu-daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/linyichen/UCSD/Picasso-Lab/.claude/films/edu/daily/run.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>2</integer><key>Minute</key><integer>0</integer></dict>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>StandardOutPath</key><string>/Users/linyichen/picasso-work/logs/daily/launchd.out</string>
+  <key>StandardErrorPath</key><string>/Users/linyichen/picasso-work/logs/daily/launchd.err</string>
+</dict>
+</plist>

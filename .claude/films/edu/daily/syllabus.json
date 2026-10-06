@@ -1,0 +1,2722 @@
+[
+ {
+  "id": "L01-01",
+  "seq": 1,
+  "day": 0,
+  "planned_date": "2026-10-06",
+  "status": "shipped",
+  "lecture": "L01",
+  "lecture_title": "Introduction: LLM API Usage + Tokenization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "9-11",
+  "extra_slides": [],
+  "title": "More Is Different (and Expensive)",
+  "core_idea": "Some abilities only appear at scale, and scale costs a fortune, so the real question is how to scale efficiently, which is why the course exists.",
+  "sub_points": [
+   "Emergence: small models score near zero on some tasks, then jump (Wei et al. 2022; Anderson, \"More Is Different\", 1972).",
+   "The honest footnote: part of the jump is how we score it (\"...a Mirage?\", NeurIPS 2023).",
+   "The industrial scale: > $100M per frontier run (est.), 100,000-GPU clusters, $500B over 4 years (planned).",
+   "accuracy = efficiency x resources; Chinchilla: 70B on more data beats 280B on the same compute."
+  ],
+  "target_min": 4.4,
+  "hook": "Her own line: remember the first time you played with a chatbot, how surprised you were.",
+  "prereqs": [],
+  "math": "none",
+  "tape_slides": [
+   9,
+   10,
+   11
+  ],
+  "notes": "Shipped 2026-10-06 (EN, 4:25). Approved look: warm paper, black ink lines that draw themselves, red pen, watercolour washes, her slides taped on, her voice clips with a mic tag and red-bordered captions, logo end card.",
+  "facts_to_check": [],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1gzYhZsAf4IDNTfkfuj4VJKz7e5Og4ZFu/view",
+   "local": "course/L01.mp4",
+   "note": "course/L01.mp4 is local; clips cut in episodes/l01-5min/clips.json"
+  },
+  "episode_dir": "episodes/l01-5min",
+  "deliver_dir": "~/Downloads/picasso-l01-5min",
+  "shipped": {
+   "date": "2026-10-06",
+   "duration_s": 265,
+   "episode_dir": "episodes/l01-5min",
+   "script": "episodes/l01-5min/SCRIPT.md",
+   "film": "episodes/l01-5min/film/",
+   "clips": "episodes/l01-5min/clips.json",
+   "vo_lines": "episodes/l01-5min/vo_lines.json",
+   "slides": "episodes/l01-5min/slides/",
+   "facts": "episodes/l01-1-scale/FACTS.md",
+   "lecture_notes": "episodes/l01-1-scale/notes/ding_on_background.md",
+   "video_en": "~/Downloads/picasso-l01-5min/l01_background_en.mp4",
+   "x_post": "~/Downloads/picasso-l01-5min/x_post.md",
+   "art": "~/Downloads/picasso-l01-art/ (prompts.html, refs/)"
+  }
+ },
+ {
+  "id": "L01-02",
+  "seq": 2,
+  "day": 1,
+  "planned_date": "2026-10-07",
+  "status": "queued",
+  "lecture": "L01",
+  "lecture_title": "Introduction: LLM API Usage + Tokenization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "12-19",
+  "extra_slides": [],
+  "title": "How Text Becomes Numbers",
+  "core_idea": "A model never sees letters or words: a tokenizer turns text into integer IDs from a fixed vocabulary built bottom-up by BPE, and context, compute and price are all counted in those tokens.",
+  "sub_points": [
+   "Why care: context length, compute cost and pricing are all measured in tokens, not characters or words (13).",
+   "A tokenizer maps a string to a list of integers and back; the vocabulary is fixed (14).",
+   "Three granularities: word-level (huge vocabulary, unknown words), character-level (no unknowns, very long sequences), subword (today: BPE bottom-up, Unigram top-down) (15).",
+   "BPE training in four steps: split into characters, count adjacent pairs, merge the most frequent, repeat until the target size (16).",
+   "The worked trace on {low:5, lower:2, newest:6, widest:3}: es (9), est (9), lo (7), 13 symbols (17).",
+   "In practice: tiktoken and Hugging Face tokenizers; the sample sentence is 13 tokens; the same seven Chinese characters are 7 tokens in cl100k_base and 1 in o200k_base (18-19)."
+  ],
+  "target_min": 6,
+  "hook": "Seven Chinese characters: 7 tokens in one tokenizer, 1 token in its successor. Same text, seven times cheaper. What changed?",
+  "prereqs": [
+   "L01-01"
+  ],
+  "math": "light",
+  "tape_slides": [
+   15,
+   17,
+   19
+  ],
+  "notes": "Recording: slide 12 at ~24:30, slide 13 at ~24:43; episodes/l01-1-scale/notes/L01_transcript_35min.txt covers to 35:00 (mid slide 15), transcribe the rest. The BPE trace is the centrepiece: letter tiles merging, the red pen circling the most frequent pair each round. Slide 18 is a screenshot of a vendor web tool: redraw, do not tape. In the lecture she says \"24 alphabets\" (a slip or ASR error; English has 26): do not caption it.",
+  "facts_to_check": [
+   "Run tiktoken: 13 tokens for the slide-19 sample sentence in cl100k_base; the 7 vs 1 token counts for the Chinese phrase in cl100k_base vs o200k_base.",
+   "BPE trace counts: (e,s)=9 ties with (s,t)=9 in round 1 and (l,o)=7 ties with (o,w)=7 in round 3; say which tie-break rule picks e-s and l-o, or avoid implying they were the unique maximum.",
+   "Vocabulary of the trace: 10 characters + 3 merges = 13.",
+   "Sennrich et al. 2015 (BPE for NMT); Kudo 2018 (SentencePiece Unigram); the slide's note on which commercial model family uses Unigram: verify or drop.",
+   "o200k_base has about 200k entries."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1gzYhZsAf4IDNTfkfuj4VJKz7e5Og4ZFu/view",
+   "local": "course/L01.mp4",
+   "note": "course/L01.mp4 is local (80 min); episodes/l01-1-scale/notes/L01_transcript_35min.txt covers 0-35:00 (slide 12 at ~24:30); transcribe the rest"
+  },
+  "episode_dir": "episodes/l01-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-07_L01-02"
+ },
+ {
+  "id": "L01-03",
+  "seq": 3,
+  "day": 2,
+  "planned_date": "2026-10-08",
+  "status": "queued",
+  "lecture": "L01",
+  "lecture_title": "Introduction: LLM API Usage + Tokenization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "20-24",
+  "extra_slides": [
+   {
+    "lecture": "L01",
+    "slides": "37",
+    "why": "the worksheet question"
+   },
+   {
+    "lecture": "L02",
+    "slides": "4-6",
+    "why": "the worksheet answer: naive vs cached vs retrieval cost"
+   }
+  ],
+  "title": "The Size of the Dictionary",
+  "core_idea": "A bigger vocabulary packs more meaning into each token but bloats the embedding and output layers and needs more data; and because every call is billed in tokens, you should count them yourself before you send.",
+  "sub_points": [
+   "Vocabularies grew: 32,000 (Llama 1/2) to 128,000 (Llama 3) to about 200,000 (o200k, 2024) (20).",
+   "\"Smarter\": more meaning per step, shorter sequences so more fits in the context window, whole numbers as one token (22).",
+   "\"Heavier\": the embedding table is vocab x hidden; at hidden 4096, 32k gives ~131M parameters and 200k ~819M; the final softmax scores every entry; rare tokens need much more data (23).",
+   "Count locally: APIs take text but bill tokens; estimate before calling, chunk documents by tokens; 1,000 characters is ~250 tokens of English, 500-750 of code, 700-1,100 of Chinese (24).",
+   "Worked example from the course worksheet: one 10,000-token paper, 5 questions, 300-token answers: $0.1085 naive, $0.0455 with a cached context, $0.034 with retrieval of three 500-token chunks."
+  ],
+  "target_min": 6,
+  "hook": "Grow a model's dictionary from 32,000 entries to 200,000 and you add almost 700 million parameters before it has learned a thing.",
+  "prereqs": [
+   "L01-02"
+  ],
+  "math": "light",
+  "tape_slides": [
+   20,
+   23,
+   24
+  ],
+  "notes": "Slide 21 is a discussion prompt: ask it as the episode's question. The worksheet prices are the slide's list prices for one model at lecture time: show them as \"the prices on the course worksheet\", not today's prices, and keep the model name off screen if possible. L02 slide 5 has a typo in the cached total (\"$0.0175 + $ $0.00175*4\"): recompute. Slide 22's \"a 128k-vocab model can remember a book that would take 3x the space\" is loose: soften or drop. The worksheet answer is at the start of the L02 recording.",
+  "facts_to_check": [
+   "Vocab sizes: Llama 1/2 32,000; Llama 3 128,256 (slide rounds to 128,000); o200k_base ~200k.",
+   "32,000 x 4,096 = 131.1M; 200,000 x 4,096 = 819.2M; difference 688M.",
+   "Character-to-token ratios on slide 24: find a source or present as the course's rule of thumb.",
+   "Worksheet arithmetic with $1.75 / $0.175 cached / $14.00 per million input/cached/output tokens: $0.0217 per question; $0.1085 naive; $0.0455 cached; $0.006825 per question and $0.034125 for five with retrieval."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1gzYhZsAf4IDNTfkfuj4VJKz7e5Og4ZFu/view",
+   "local": "course/L01.mp4",
+   "note": "course/L01.mp4 is local (80 min); episodes/l01-1-scale/notes/L01_transcript_35min.txt covers 0-35:00 (slide 12 at ~24:30); transcribe the rest"
+  },
+  "episode_dir": "episodes/l01-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-08_L01-03"
+ },
+ {
+  "id": "L01-04",
+  "seq": 4,
+  "day": 3,
+  "planned_date": "2026-10-09",
+  "status": "queued",
+  "lecture": "L01",
+  "lecture_title": "Introduction: LLM API Usage + Tokenization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "25-34",
+  "extra_slides": [],
+  "title": "Temperature and Top-p",
+  "core_idea": "A model outputs a score for every token; decoding decides which to pick: greedy and beam search take the likeliest, sampling picks by chance, temperature reshapes the odds, and top-k / top-p cut off the long tail.",
+  "sub_points": [
+   "The API knobs: temperature, top_p, max output tokens, presence and frequency penalties, seed, stream (26).",
+   "Text to tokenizer to token IDs to model to logits: one score per vocabulary entry (27).",
+   "Greedy (always the top token) vs beam search (keep the best few paths) (28).",
+   "Sampling by probability; top-k keeps the k best; top-p keeps the smallest set whose probabilities reach p (29-31).",
+   "Temperature divides the logits before softmax: below 1 sharpens, above 1 flattens; rules of thumb: code 0-0.2, chat ~0.7, creative 0.8-1.2 (32, 34).",
+   "Coda: sample many reasoning paths and take the majority; accuracy keeps rising with test-time compute (33)."
+  ],
+  "target_min": 7,
+  "hook": "Ask the same question twice and get two different answers. That is not a glitch; it is a dial.",
+  "prereqs": [
+   "L01-02"
+  ],
+  "math": "light",
+  "tape_slides": [
+   28,
+   31,
+   32,
+   34
+  ],
+  "notes": "Slides 28-31 reuse figures from Hugging Face blog posts and Holtzman et al.: keep their credit lines visible when taped. Slide 33's plots come from a vendor blog: redraw as a plain rising line or skip. Visual: a bar chart of next-word odds that sharpens and flattens as a temperature knob turns; top-p as a red-pen bracket adding bars until it reaches 0.92. Find the decoding part of the L01 recording with whisper (after ~45:00, estimate).",
+  "facts_to_check": [
+   "Top-k example k=6 (Fan et al. 2018); top-p example p=0.92 (Holtzman et al., ICLR 2020).",
+   "Softmax with temperature formula as on slide 32.",
+   "Slide 34's recommendation table has no source: present as the course's rule of thumb.",
+   "Self-consistency (Wang et al. 2022) if named; the test-time scaling claim without the vendor's numbers."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1gzYhZsAf4IDNTfkfuj4VJKz7e5Og4ZFu/view",
+   "local": "course/L01.mp4",
+   "note": "course/L01.mp4 is local (80 min); episodes/l01-1-scale/notes/L01_transcript_35min.txt covers 0-35:00 (slide 12 at ~24:30); transcribe the rest"
+  },
+  "episode_dir": "episodes/l01-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-09_L01-04"
+ },
+ {
+  "id": "L02-01",
+  "seq": 5,
+  "day": 4,
+  "planned_date": "2026-10-10",
+  "status": "queued",
+  "lecture": "L02",
+  "lecture_title": "Transformer Model Architecture Variants (1)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "7-12",
+  "extra_slides": [],
+  "title": "Why Chatbots Kept Only Half the Transformer",
+  "core_idea": "The 2017 Transformer was an encoder-decoder built for translation; today's large models keep only the decoder, accepting a less exact model because it is simpler, scales better and trains on any text.",
+  "sub_points": [
+   "2017, \"Attention Is All You Need\": the encoder reads, the decoder writes; \"je suis etudiant\" to \"I am a student\" (8).",
+   "Attention lets every position be computed in parallel, the reason it beat recurrent networks (9-10).",
+   "Decoder-only: only causal (masked) self-attention; encoder and cross-attention removed; dominant in frontier models while encoder-decoder survives in niches like translation (11).",
+   "The trade: one-way context is worse on some understanding tasks, but ~1x parameters instead of 1.5-2x and it trains on unpaired text, 10-100x more of it (12).",
+   "\"Accurate modeling vs simple modeling\": the simple design that scales wins (12; callback to L01-01)."
+  ],
+  "target_min": 5,
+  "hook": "The paper that started it all was about translation. Every big chatbot since threw away half of its design.",
+  "prereqs": [
+   "L01-01"
+  ],
+  "math": "none",
+  "tape_slides": [
+   11,
+   12
+  ],
+  "notes": "Slides 8-10 are J. Alammar's illustrations: redraw, do not tape. The L02 recording opens with the L01 worksheet answer (used in L01-03).",
+  "facts_to_check": [
+   "arXiv:1706.03762 (2017).",
+   "Encoder-decoder examples (T5 2019, BART 2019); the 1.5-2x parameter and 10-100x data comparisons are the slide's rough estimates: say so."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1XTY6tvcEH5BI3Laa2fPC6o4C_nw-OjnJ/view",
+   "local": "course/L02.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l02-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-10_L02-01"
+ },
+ {
+  "id": "L02-02",
+  "seq": 6,
+  "day": 5,
+  "planned_date": "2026-10-11",
+  "status": "queued",
+  "lecture": "L02",
+  "lecture_title": "Transformer Model Architecture Variants (1)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "13-21",
+  "extra_slides": [
+   {
+    "lecture": "L03",
+    "slides": "2-4",
+    "why": "worksheet: SwiGLU hidden width 2/3 of 4h"
+   }
+  ],
+  "title": "The Gate: From ReLU to SwiGLU",
+  "core_idea": "The non-linearity inside each feed-forward layer went from ReLU to GELU to SiLU and finally SwiGLU, where a separate gate decides how much content passes, and models shrink the hidden width to 2/3 to pay for the extra matrix.",
+  "sub_points": [
+   "Why non-linearity: universal approximation (Hornik 1991); where it sits: FFN(x) = act(xW1 + b1)W2 + b2 (14-15).",
+   "ReLU: cheap, but dead for negative inputs (zero gradient) (16).",
+   "GELU = x * Phi(x), smooth, used by BERT and GPT-1/2; SiLU / Swish = x * sigmoid(x), cheaper; Swish-beta found by a search at Google Brain (17-19).",
+   "Gated linear units: decouple the gate from the content; SwiGLU = x1 * sigmoid(x2) from two projections, now used by almost all top models (20).",
+   "Scorecard: forward and backward cost, healthy magnitudes, dominance (21).",
+   "The bill: a third matrix; keep parameters and FLOPs equal with d_ff = 2/3 x 4h ~ 2.67h, since 8h^2 = 3 h d_ff (L03 2-4)."
+  ],
+  "target_min": 6,
+  "hook": "Almost every big model today uses the same three-matrix trick, and pays for it by shrinking its layer to two-thirds.",
+  "prereqs": [
+   "L02-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   17,
+   20,
+   21
+  ],
+  "notes": "Slide 14's playground is a third-party tool: redraw. Activation curves are diagrams, fine as ink plots. Analogy: a tap (gate) separate from the water (content). Callback in L03-05 (FFN ratio 8/3).",
+  "facts_to_check": [
+   "Hornik 1991; GELU definition; Ramachandran et al. 2017 (Swish search); Dauphin et al. 2017 (GLU); Shazeer 2020 (SwiGLU in Transformers) if named.",
+   "Slide 20's model list includes closed models: name only open models with published architectures (Llama, Qwen, DeepSeek-V3, Gemma).",
+   "Width arithmetic: 3 h d_ff = 8 h^2 gives d_ff = 8h/3."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1XTY6tvcEH5BI3Laa2fPC6o4C_nw-OjnJ/view",
+   "local": "course/L02.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l02-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-11_L02-02"
+ },
+ {
+  "id": "L02-03",
+  "seq": 7,
+  "day": 6,
+  "planned_date": "2026-10-12",
+  "status": "queued",
+  "lecture": "L02",
+  "lecture_title": "Transformer Model Architecture Variants (1)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "23-31",
+  "extra_slides": [],
+  "title": "Where Am I? Positional Encoding",
+  "core_idea": "Attention alone cannot tell word order, so the original Transformer adds sine and cosine waves at many frequencies to each word; shifting a position rotates those waves, so they carry some relative-distance information, but only partly, because they are added to the word itself.",
+  "sub_points": [
+   "\"The cat chased the dog\" vs \"The dog chased the cat\": without positions attention sees the same bag of words (24).",
+   "Sinusoidal encoding: each pair of dimensions is a clock hand at its own speed, fast hands for local detail, slow hands for global position (25-26).",
+   "Strengths: no extra parameters, values in [-1, 1], a good first guess about distance (26).",
+   "PE(pos + k) = R_k PE(pos), a rotation, so the dot product of two encodings depends only on the offset k (27; proof on 28-30 is self study).",
+   "The catch: queries and keys come from word + position, so the clean relative property is diluted (\"How\" at 1 with \"You\" at 3 differs from 2 with 4) (31), which sets up RoPE."
+  ],
+  "target_min": 6,
+  "hook": "\"The cat chased the dog.\" \"The dog chased the cat.\" To attention without positions, these are the same sentence.",
+  "prereqs": [
+   "L02-01"
+  ],
+  "math": "heavy",
+  "tape_slides": [
+   24,
+   26,
+   27,
+   31
+  ],
+  "notes": "Heavy math: carry it with the clock-hands picture (many hands at different speeds, the red pen marking the angle between two positions); flash at most one proof slide. Haviv et al. 2022 (models without positional encoding still learn positions, slide 24) is an optional honest footnote.",
+  "facts_to_check": [
+   "PE formula with 10000^(2i/d_model); recompute the d_model = 8 table on slide 26 before showing numbers.",
+   "Rotation identity and the inner-product invariance (28-30).",
+   "Haviv et al., EMNLP 2022 (Findings) title."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1XTY6tvcEH5BI3Laa2fPC6o4C_nw-OjnJ/view",
+   "local": "course/L02.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l02-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-12_L02-03"
+ },
+ {
+  "id": "L02-04",
+  "seq": 8,
+  "day": 7,
+  "planned_date": "2026-10-13",
+  "status": "queued",
+  "lecture": "L02",
+  "lecture_title": "Transformer Model Architecture Variants (1)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "32-36",
+  "extra_slides": [
+   {
+    "lecture": "L04",
+    "slides": "2",
+    "why": "recap: RoPE is applied to q and k in every layer"
+   }
+  ],
+  "title": "RoPE: Position as a Rotation",
+  "core_idea": "Rotary position embedding rotates each query and key by an angle proportional to its position, so their dot product depends only on the words and their distance; slowing those rotations down is how models trained on 4k tokens are stretched to 128k and beyond.",
+  "sub_points": [
+   "The family tree: sinusoidal (2017), learned absolute (2018-20), relative (2018-22), RoPE (2021-now) (32).",
+   "RoPE rotates q and k in 2-D pairs; \"we know that\": the angle between \"we\" and \"know\" is the same wherever the phrase sits (33-34).",
+   "Multiplicative, not added: no cross terms between word and position (35).",
+   "Applied to q and k in every layer, not added once at the input (L04 2).",
+   "Stretching context: Position Interpolation (squeeze positions), NTK-aware scaling (slow the low frequencies more), YaRN (finer scaling plus an attention temperature): 4k to 128k to 1M+ (36)."
+  ],
+  "target_min": 6,
+  "hook": "How do you get a model trained on 4,000-token texts to read a million? Slow down its clocks.",
+  "prereqs": [
+   "L02-03"
+  ],
+  "math": "heavy",
+  "tape_slides": [
+   32,
+   33,
+   36
+  ],
+  "notes": "The \"we know\" rotation drawing (slide 33) is a natural ink animation. Slide 34 is from Su et al. (credit). Keep YaRN to one sentence.",
+  "facts_to_check": [
+   "Su et al. 2021 (RoFormer); Chen et al. 2023 (arXiv:2306.15595, PI); bloc97 / emozilla 2023 (NTK-aware, community); Peng et al. 2023 (arXiv:2309.00071, YaRN).",
+   "The \"max context tested\" column on slide 36 is approximate: say so."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1XTY6tvcEH5BI3Laa2fPC6o4C_nw-OjnJ/view",
+   "local": "course/L02.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l02-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-13_L02-04"
+ },
+ {
+  "id": "L03-01",
+  "seq": 9,
+  "day": 8,
+  "planned_date": "2026-10-14",
+  "status": "queued",
+  "lecture": "L03",
+  "lecture_title": "Transformer Model Architecture Variants (2)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "5-10",
+  "extra_slides": [],
+  "title": "Attention: Who Is Listening to Whom",
+  "core_idea": "Self-attention lets every token score how relevant every other token is (query dot key, scaled, softmaxed) and take a weighted mix of their values; several heads do this in parallel, each looking for a different relationship.",
+  "sub_points": [
+   "Encoding \"it\", the model looks back at \"the animal\" (6).",
+   "The recipe: Q, K, V projections; softmax(QK^T / sqrt(d_k)) V; a 2x2 softmax worked out (7).",
+   "Why divide by sqrt(d_k): the dot product's variance grows with d_k; large logits make softmax one-hot and training unstable (8, self study).",
+   "Many heads: one head links \"it\" to \"animal\", another to \"tired\"; separate Q/K/V per head, concatenated (9-10)."
+  ],
+  "target_min": 5,
+  "hook": "\"The animal didn't cross the street because it was too tired.\" What is \"it\" looking at?",
+  "prereqs": [
+   "L02-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   7,
+   8,
+   10
+  ],
+  "notes": "Slides 6, 9, 10 use J. Alammar's illustrations: redraw the \"it\" lines as ink threads between words (a natural line-art beat).",
+  "facts_to_check": [
+   "Recompute the 2x2 softmax [[0.119, 0.881], [0.182, 0.818]] from its inputs if shown.",
+   "Variance argument Var(q.k) ~ d_k under unit-variance initialisation."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1IuTN9xrW6eR-vVISCW6XMHYACZ4p1D3U/view",
+   "local": "course/L03.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l03-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-14_L03-01"
+ },
+ {
+  "id": "L03-02",
+  "seq": 10,
+  "day": 9,
+  "planned_date": "2026-10-15",
+  "status": "queued",
+  "lecture": "L03",
+  "lecture_title": "Transformer Model Architecture Variants (2)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "11-14",
+  "extra_slides": [],
+  "title": "The KV Cache and Its Diet",
+  "core_idea": "When generating, a model reuses the keys and values of all earlier tokens instead of recomputing them; that cache grows with layers x heads x context, so modern models let groups of query heads share key/value heads (MQA, GQA) and shrink it 4-16x.",
+  "sub_points": [
+   "KV cache: compute attention only for the new token, reuse the cached K and V (11).",
+   "Size per token = 2 x layers x KV heads x head dim x 2 bytes (FP16) (12).",
+   "Hypothetical Llama 3 with plain multi-head attention: 8B ~512 KB per token (~2 GB for 4k tokens); 405B ~8 MB per token, terabytes for a 1M-token prompt (12).",
+   "MQA: one shared KV head (32-128x smaller, quality drops); GQA: groups share, e.g. 8 KV heads (4-16x) (13).",
+   "Real configurations: Llama 3 8B / 70B / 405B with 32 / 64 / 128 query heads and 8 KV heads: 4x / 8x / 16x (14)."
+  ],
+  "target_min": 6,
+  "hook": "Give a 405B model plain multi-head attention and a million-token prompt, and it would need terabytes just to remember what it read.",
+  "prereqs": [
+   "L03-01"
+  ],
+  "math": "light",
+  "tape_slides": [
+   11,
+   12,
+   13,
+   14
+  ],
+  "notes": "Visual: a filing cabinet that grows a drawer per token, then drawers shared by groups of readers. Say batch size 1, as the slide does. GQA is mainly an inference saving (13).",
+  "facts_to_check": [
+   "Slide 12 mixes binary and decimal units: 405B with MHA is 2 x 126 x 128 x 128 x 2 = 8,257,536 B per token; x 1,000,000 tokens = 8.26 TB (decimal) = 7.5 TiB; the slide's \"7.69 TB\" is 7,690 GiB. Recompute every cell and use one unit system.",
+   "MQA Shazeer 2019; GQA Ainslie et al. 2023; KV-head counts from the model cards."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1IuTN9xrW6eR-vVISCW6XMHYACZ4p1D3U/view",
+   "local": "course/L03.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l03-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-15_L03-02"
+ },
+ {
+  "id": "L03-03",
+  "seq": 11,
+  "day": 10,
+  "planned_date": "2026-10-16",
+  "status": "queued",
+  "lecture": "L03",
+  "lecture_title": "Transformer Model Architecture Variants (2)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "15-20",
+  "extra_slides": [
+   {
+    "lecture": "L04",
+    "slides": "3-6",
+    "why": "MLA recap, worksheet answers (14x/28x/56x), when absorption hurts"
+   }
+  ],
+  "title": "MLA: Zipping the KV Cache",
+  "core_idea": "DeepSeek's multi-head latent attention caches one small compressed vector per token instead of full keys and values, folds the decompression into the query and output projections, and keeps position in a separate small RoPE key: a cache like GQA with 2.25 groups, with quality that held up or improved.",
+  "sub_points": [
+   "Not head sharing but compression: a learned low-rank latent c_KV per token (15-16).",
+   "Does decompressing cost the savings back? No: W_UK folds into W_Q and W_UV into W_O by associativity (17).",
+   "Why RoPE breaks the folding (a position-dependent rotation sits in between) and the fix: a decoupled, shared RoPE key (18-19).",
+   "Size: (d_c + d_h^R) per layer per token; with d_c = 4 d_h and d_h^R = d_h / 2 it equals GQA with 2.25 groups (20).",
+   "Worksheet: 14x / 28x / 56x smaller than MHA for the three Llama-3-sized configurations; in the paper, perplexity was even better (L04 3-5).",
+   "Not always a win: absorbed MLA adds compute on short contexts, so serving engines turn it off there (L04 6)."
+  ],
+  "target_min": 7,
+  "hook": "DeepSeek shrank its memory of past words to a few percent, and the model got better, not worse.",
+  "prereqs": [
+   "L03-02",
+   "L02-04"
+  ],
+  "math": "heavy",
+  "tape_slides": [
+   15,
+   17,
+   19,
+   20
+  ],
+  "notes": "Visual: a vacuum-packed suitcase that is only unpacked inside the reader's glasses (absorbed into the query). L04 slide 3 lists \"My guess\" reasons for the better perplexity: present them as her guesses (a voice clip is ideal). Do not show the GitHub issue page from L04 slide 6.",
+  "facts_to_check": [
+   "DeepSeek-V2, arXiv:2405.04434: d_c = 4 d_h, d_h^R = d_h / 2, 2.25 groups, and the quality comparison.",
+   "Worksheet: layers x 4.5 d_h x 2 bytes: 32 x 576 x 2 = 36 KiB; 80 x 576 x 2 = 90 KiB; 126 x 576 x 2 = 141.75 KiB per token; savings 14.2x / 28.4x / 56.9x."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1IuTN9xrW6eR-vVISCW6XMHYACZ4p1D3U/view",
+   "local": "course/L03.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l03-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-16_L03-03"
+ },
+ {
+  "id": "L03-04",
+  "seq": 12,
+  "day": 11,
+  "planned_date": "2026-10-17",
+  "status": "queued",
+  "lecture": "L03",
+  "lecture_title": "Transformer Model Architecture Variants (2)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "22-31",
+  "extra_slides": [],
+  "title": "The Residual Highway",
+  "core_idea": "Deep transformers train because each block adds onto a clean skip path and normalizes along the way; where the norm sits (post, pre, both) and how many skip lanes there are (hyper-connections, DeepSeek's mHC) are still being redesigned.",
+  "sub_points": [
+   "LayerNorm, not BatchNorm: sequences vary, so normalize per token instead of per batch (23).",
+   "RMSNorm drops the mean and the bias: cheaper; Llama-family models use it (24).",
+   "Post-LN vs Pre-LN: Pre-LN leaves the identity path untouched so gradients flow; only early models such as BERT used Post-LN (25).",
+   "Peri-LN: normalize before and after the block, outside the residual path (Gemma 2/3, OLMo 2) (26).",
+   "Hyper-connections: n learnable skip lanes instead of one fixed identity (ByteDance 2025); the weights scale the gradients (28-29).",
+   "mHC: keep the lane-mixing matrix doubly stochastic (Birkhoff): closed under multiplication, entries in 0-1, numerically stable (DeepSeek 2026) (30-31)."
+  ],
+  "target_min": 8,
+  "hook": "A skip connection is one express lane past every block. What if you built four, and how do you keep them from blowing up?",
+  "prereqs": [
+   "L03-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   23,
+   25,
+   28,
+   30
+  ],
+  "notes": "Her analogy on slide 31 (attention = listening to others in a meeting; hyper-connections = one person's four clones talking among themselves) is excellent: use it with her voice if the clip is clean. The doubly-stochastic attention references on 31 are self study: skip.",
+  "facts_to_check": [
+   "Xiong et al. 2020 (Pre-LN); Kim et al. 2025 (Peri-LN) and which models adopted it (the slide also lists a closed model: verify or drop).",
+   "Zhu et al. 2025 Hyper-Connections; Xie et al. 2026 mHC and its 28B-model plot.",
+   "Doubly stochastic matrices closed under multiplication."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1IuTN9xrW6eR-vVISCW6XMHYACZ4p1D3U/view",
+   "local": "course/L03.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l03-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-17_L03-04"
+ },
+ {
+  "id": "L03-05",
+  "seq": 13,
+  "day": 12,
+  "planned_date": "2026-10-18",
+  "status": "queued",
+  "lecture": "L03",
+  "lecture_title": "Transformer Model Architecture Variants (2)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "32-36",
+  "extra_slides": [],
+  "title": "The Recipe Card: How Big, How Wide, How Much Data",
+  "core_idea": "Beyond the architecture, a model is a set of proportions (tokens per parameter, width vs depth, FFN width, batch size), and today's models are deliberately trained far past Chinchilla's 20 tokens per parameter because inference is the bill that keeps coming.",
+  "sub_points": [
+   "Tokens per parameter: GPT-3 2, Chinchilla 20, LLaMA 65B 22, Llama 2 70B 29, Mistral 7B 110, Llama 3 70B 215 (33).",
+   "20x is compute-optimal for training; going far past it pays up front for a smaller, cheaper model to serve (33; callback to L01-01).",
+   "Deep or wide: d_model / n_layer of about 100-200 across models; wider is easier to parallelize and lower latency (34).",
+   "FFN width: 4x d_model for plain activations, 8/3 for gated ones (35; callback to L02-02).",
+   "Batch size in tokens: millions (Llama 3 4M-16M+); the critical batch size idea (36)."
+  ],
+  "target_min": 5,
+  "hook": "GPT-3 read 2 tokens for every parameter it had. Llama 3 70B read 215. Why overfeed a model?",
+  "prereqs": [
+   "L01-01",
+   "L02-02"
+  ],
+  "math": "light",
+  "tape_slides": [
+   33,
+   34,
+   35
+  ],
+  "notes": "Slide 37 (optimizers, schedules) is self study: skip. Visual: a recipe card with red-pen ratios.",
+  "facts_to_check": [
+   "Tokens/parameter from the papers: GPT-3 300B/175B = 1.7; Chinchilla 1.4T/70B = 20; Llama 3 70B 15T/70B = 214.",
+   "d_model / n_layer and d_ff / d_model rows (Kaplan et al. 2020 for the depth-width finding).",
+   "Batch sizes (Llama 3 paper; Kaplan et al. critical batch size)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1IuTN9xrW6eR-vVISCW6XMHYACZ4p1D3U/view",
+   "local": "course/L03.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l03-05",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-18_L03-05"
+ },
+ {
+  "id": "L04-01",
+  "seq": 14,
+  "day": 13,
+  "planned_date": "2026-10-19",
+  "status": "queued",
+  "lecture": "L04",
+  "lecture_title": "Distributed LLM Training: Foundations",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "7-14",
+  "extra_slides": [
+   {
+    "lecture": "L05",
+    "slides": "3",
+    "why": "why training is 6 x tokens x parameters (backward = 2x forward)"
+   }
+  ],
+  "title": "584 Years on One GPU",
+  "core_idea": "Training compute is about 6 x parameters x tokens; for Llama 3 405B on 15T tokens that is 3.6 x 10^25 FLOPs: centuries on one GPU, weeks on 16,000, which is why training must be distributed.",
+  "sub_points": [
+   "Scaling laws: bigger models and more data give lower loss, so the pressure only grows (9).",
+   "The scenario: end of 2023, train a 405B model in four months (10).",
+   "FLOPs ~ 6 x 405B x 15T = 3.645 x 10^25; the 6 is forward 2 + backward 4 (input and weight gradients) (11; L05 3).",
+   "One H100 at 1,979 TFLOPS (FP8, peak): ~584 years (12).",
+   "16K GPUs: ~13.5 days at 100%; at ~40% utilisation, with failures, in 16-bit instead of FP8: ~54 days (13)."
+  ],
+  "target_min": 5,
+  "hook": "Your manager wants a 405-billion-parameter model trained in four months. On one GPU it would take 584 years.",
+  "prereqs": [
+   "L01-01"
+  ],
+  "math": "light",
+  "tape_slides": [
+   11,
+   12,
+   13
+  ],
+  "notes": "Opens the training season. Slide 14's elephant cartoon is clip art: do not use. Visual: one GPU with a calendar flipping centuries, then a field of 16,000.",
+  "facts_to_check": [
+   "Llama 3 405B: 15T tokens, 16K H100s, BF16, ~38-43% MFU (The Llama 3 Herd of Models, 2024).",
+   "H100 SXM FP8 dense peak 1,979 TFLOPS (3,958 with sparsity).",
+   "3.645e25 / 1.979e15 = 1.842e10 s = 584 years; / 16,384 = 13.0 days (slide uses 16K = 16,000: 13.5 days)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1CuXKsynwNRnn7bs1zQ77OiuWMBK5Vgz1/view",
+   "local": "course/L04.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l04-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-19_L04-01"
+ },
+ {
+  "id": "L04-02",
+  "seq": 15,
+  "day": 14,
+  "planned_date": "2026-10-20",
+  "status": "queued",
+  "lecture": "L04",
+  "lecture_title": "Distributed LLM Training: Foundations",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "15-21",
+  "extra_slides": [],
+  "title": "From One Chip to a City of GPUs",
+  "core_idea": "A training cluster is a ladder (GPU, 8-GPU node on NVLink, pod, data center), and each step up trades bandwidth for scale (about 900 GB/s inside a node, about 50 GB/s per GPU between nodes), which shapes every parallel strategy that follows.",
+  "sub_points": [
+   "xAI's Colossus: 100k H100s in 2024 and growing (16).",
+   "Chips: H100, B200, Rubin: transistors, FP8 / FP4 throughput, memory capacity and bandwidth, price (17).",
+   "Node: 8 GPUs on NVLink ~900 GB/s (18 links x 50 GB/s); leaving the node over InfiniBand ~50 GB/s per GPU (18).",
+   "Pod: an H100 SuperPOD links 32 nodes x 8 = 256 GPUs in one NVLink domain (19).",
+   "Rack scale: GB200 NVL72 meshes 72 GPUs into one big virtual GPU with ~5,000 copper cables; ~1,300 kg on 0.6 x 1.2 m (20).",
+   "The lesson: the network is a ladder of speeds; keep the heavy talk on the fast rungs."
+  ],
+  "target_min": 6,
+  "hook": "One NVL72 rack weighs about as much as a car, on a footprint smaller than a desk; an ordinary office floor is not built for it.",
+  "prereqs": [
+   "L04-01"
+  ],
+  "math": "none",
+  "tape_slides": [
+   17,
+   18,
+   19
+  ],
+  "notes": "Slides 16, 20, 21 contain third-party photos (an aerial photo of Colossus, product photos, a vendor's data hall): do not tape them; paint a generic rack with art/gen.sh if needed (no logos). Visual: the bandwidth ladder as a staircase.",
+  "facts_to_check": [
+   "Colossus timeline (slide: 100k in 2024, \"555K now\", \"1M in 2026\"): verify or drop the later numbers.",
+   "H100 / B200 specs from datasheets; Rubin numbers on the slide are estimates: drop or label \"announced\".",
+   "NVLink 4 = 18 links x 50 GB/s = 900 GB/s; ConnectX-7 400 Gb/s ~ 50 GB/s; DGX SuperPOD 256 GPUs.",
+   "NVL72 weight (~1.36 t per NVIDIA) and the floor-loading figures on slide 20 (need a source; avoid \"instant collapse\")."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1CuXKsynwNRnn7bs1zQ77OiuWMBK5Vgz1/view",
+   "local": "course/L04.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l04-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-20_L04-02"
+ },
+ {
+  "id": "L04-03",
+  "seq": 16,
+  "day": 15,
+  "planned_date": "2026-10-21",
+  "status": "queued",
+  "lecture": "L04",
+  "lecture_title": "Distributed LLM Training: Foundations",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "22-29",
+  "extra_slides": [],
+  "title": "Four Ways to Cut the Job",
+  "core_idea": "To spread training across thousands of GPUs you split the data by batch (DP) or by sequence (CP), and the model by layers (PP) or inside each layer (TP); real systems combine all four, and every GPU holds one shard of data and one shard of model.",
+  "sub_points": [
+   "One GPU: a batch of sentences flowing through layers 0-3 (23).",
+   "Data parallel: split the batch (24).",
+   "Context parallel: split each sequence along its length (25).",
+   "Pipeline parallel: split the layers (26).",
+   "Tensor parallel: split each layer's matrices (27).",
+   "4D: each GPU is one coordinate (DP, CP, PP, TP), the map for the next eight episodes (28-29)."
+  ],
+  "target_min": 4.5,
+  "hook": "Four knives, one cake: cut a training job by the batch, by the sentence, by the layers, or inside each layer.",
+  "prereqs": [
+   "L04-02"
+  ],
+  "math": "none",
+  "tape_slides": [
+   24,
+   25,
+   26,
+   27,
+   28
+  ],
+  "notes": "The split diagrams are Meta's (\"Scaling Llama 3 Training with Efficient Parallelism Strategies\", 2025): credit when taped, or redraw as our own four cuts. Short on purpose: it is the season map.",
+  "facts_to_check": [
+   "Credit line for the Meta figures."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1CuXKsynwNRnn7bs1zQ77OiuWMBK5Vgz1/view",
+   "local": "course/L04.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l04-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-21_L04-03"
+ },
+ {
+  "id": "L04-04",
+  "seq": 17,
+  "day": 16,
+  "planned_date": "2026-10-22",
+  "status": "queued",
+  "lecture": "L04",
+  "lecture_title": "Distributed LLM Training: Foundations",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "30-44",
+  "extra_slides": [
+   {
+    "lecture": "L05",
+    "slides": "4-5",
+    "why": "hierarchical ring cost; rail-optimized topology"
+   },
+   {
+    "lecture": "L06",
+    "slides": "4",
+    "why": "optional: two-node AllGather worked answer (17T)"
+   }
+  ],
+  "title": "AllReduce: Adding Up a Thousand Homeworks",
+  "core_idea": "In data-parallel training every GPU computes a different gradient and all must end with the sum; ring AllReduce does it in 2(N-1) steps with each GPU sending only 1/N of the data per step, tree AllReduce in 2 log N steps, and real clusters do it hierarchically to keep slow links light.",
+  "sub_points": [
+   "Data parallel: copy the model, shard the data, sum the gradients (31-33).",
+   "AllReduce: everyone ends with the sum (34).",
+   "Ring: reduce-scatter (N-1 steps) then all-gather (N-1 steps), each step moving M/N (35-40).",
+   "Tree: reduce up, broadcast down, 2 log N steps of full M: low latency for small messages (41-43).",
+   "Hierarchy: reduce-scatter inside the node on NVLink, cross-node on quarter-size pieces, all-gather inside (44; L05 4-5)."
+  ],
+  "target_min": 7,
+  "hook": "A thousand GPUs each finish their homework with a different answer. How do they all get the class total without one doing everyone's sums?",
+  "prereqs": [
+   "L04-03"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   35,
+   39,
+   41,
+   43,
+   44
+  ],
+  "notes": "The ring steps (35-39) are the animation: coloured A/B/C chunks passing around a circle of desks. Slide 45 is admin.",
+  "facts_to_check": [
+   "Latency formulas: ring 2(N-1)(M/(NB) + alpha); tree 2 log N (M/B + alpha).",
+   "Hierarchical ring cost terms (L05 4)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1CuXKsynwNRnn7bs1zQ77OiuWMBK5Vgz1/view",
+   "local": "course/L04.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l04-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-22_L04-04"
+ },
+ {
+  "id": "L05-01",
+  "seq": 18,
+  "day": 17,
+  "planned_date": "2026-10-23",
+  "status": "queued",
+  "lecture": "L05",
+  "lecture_title": "Distributed LLM Training: DP (ZeRO-1-2-3)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "6-17",
+  "extra_slides": [],
+  "title": "Talking While Working: NCCL and Overlap",
+  "core_idea": "One line of PyTorch hands communication to NCCL, which maps the hardware and picks ring or tree; and because a layer's gradient AllReduce does not block the backward pass of earlier layers, communication can hide behind computation, up to a point.",
+  "sub_points": [
+   "backend=\"nccl\": topology discovery, algorithm and protocol choice, data streamed over several channels (7-8).",
+   "The NCCL toolbox: collectives (AllReduce, AllGather, ReduceScatter), point-to-point Send/Recv, group calls, and which parallelism uses which (9).",
+   "At 100k-GPU scale even start-up matters: Meta's NCCLX initialises 96k GPUs in ~24 s instead of ~265 s (10).",
+   "Overlap: layer i's gradients are ready before layer i-1's, so their AllReduce runs during the rest of the backward pass (13-15).",
+   "Back of the envelope: overlap holds if bandwidth >= (FLOPS x DP) / (2 x tokens) (16)."
+  ],
+  "target_min": 6,
+  "hook": "One line of Python, backend=\"nccl\", and a library starts surveying your cluster like a mapmaker.",
+  "prereqs": [
+   "L04-04"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   7,
+   9,
+   10,
+   15
+  ],
+  "notes": "Slide 13 is a video placeholder (black) and 14 an NVIDIA docs figure: redraw. Slide 11 (library zoo) optional. Slide 17 (\"any bugs in our analysis?\") makes a cliffhanger into L05-02.",
+  "facts_to_check": [
+   "Hu et al. 2025, \"Demystifying NCCL\".",
+   "NCCLX numbers (Meta, \"Collective Communication for 100k+ GPUs\", 2026): 265 s vs 24 s at 96k, 15 s vs 4 s at 8k.",
+   "Derivation of the bandwidth bound on slide 16."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/121v8Gb2OMGhwBXEMIi3x0CEvKCGk8_UY/view",
+   "local": "course/L05.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l05-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-23_L05-01"
+ },
+ {
+  "id": "L05-02",
+  "seq": 19,
+  "day": 18,
+  "planned_date": "2026-10-24",
+  "status": "queued",
+  "lecture": "L05",
+  "lecture_title": "Distributed LLM Training: DP (ZeRO-1-2-3)",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "18-33",
+  "extra_slides": [
+   {
+    "lecture": "L06",
+    "slides": "2-3",
+    "why": "worksheet: 70B memory, per-GPU memory under ZeRO-1/2/3 on 16 GPUs"
+   }
+  ],
+  "title": "ZeRO: Stop Everyone Packing the Same Suitcase",
+  "core_idea": "Mixed-precision Adam training stores about 16 bytes per parameter, and plain data parallelism copies all of it to every GPU; ZeRO shards the optimizer state, then the gradients, then the weights, cutting memory per GPU for little or no extra communication (1.5x at stage 3).",
+  "sub_points": [
+   "The bill: FP16 weights 2 B + gradients 2 B + FP32 Adam moments and master weights 12 B = 16 B per parameter; a 70B model needs ~1 TB before any activations (18; L06 2).",
+   "ZeRO-1: shard the optimizer state; reduce-scatter + all-gather cost the same as one AllReduce (20-22).",
+   "ZeRO-2: shard gradients too; is it strictly better? (23-24).",
+   "ZeRO-3 (= FSDP): shard the weights, gather each layer just in time, ~1.5x communication hidden by prefetching (25-27).",
+   "70B on 16 GPUs: ~310 GB, ~187 GB, ~65 GB per GPU for ZeRO-1, 2, 3 (L06 3).",
+   "In practice the big pre-training runs mostly use ZeRO-1, which fits pipelines; when DP stops scaling, other parallelism takes over (28-33)."
+  ],
+  "target_min": 8,
+  "hook": "Before a 70-billion-parameter model sees a single word of data, its training state already weighs about a terabyte.",
+  "prereqs": [
+   "L05-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   18,
+   20,
+   27
+  ],
+  "notes": "Visual: 16 hikers each carrying an identical full suitcase, then splitting the contents. L06 slide 3 has a typo (134.4 for 130.4): use our own numbers. Slide 28 shows excerpts of papers: cite, do not tape the paper text.",
+  "facts_to_check": [
+   "16 bytes per parameter with K = 12 (Rajbhandari et al., ZeRO, 2019/2020).",
+   "70B: weights 130.4 GiB, gradients 130.4 GiB, optimizer 782.3 GiB, total 1,043 GiB; ZeRO-1 309.7, ZeRO-2 130.4 + 912.7/16 = 187.4, ZeRO-3 1,043.1/16 = 65.2 GiB.",
+   "Which runs used ZeRO-1 (DeepSeek-V2/V3, Nemotron-4, Llama 3 reports)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/121v8Gb2OMGhwBXEMIi3x0CEvKCGk8_UY/view",
+   "local": "course/L05.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l05-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-24_L05-02"
+ },
+ {
+  "id": "L06-01",
+  "seq": 20,
+  "day": 19,
+  "planned_date": "2026-10-25",
+  "status": "queued",
+  "lecture": "L06",
+  "lecture_title": "Distributed Training: Pipeline Parallelism and Tensor Parallelism",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "5-13",
+  "extra_slides": [
+   {
+    "lecture": "L07",
+    "slides": "2-4",
+    "why": "worksheet: AFAB vs 1F1B timelines and bubble ratios"
+   }
+  ],
+  "title": "The Assembly Line and Its Bubbles",
+  "core_idea": "Pipeline parallelism puts groups of layers on different GPUs and passes activations along like an assembly line; micro-batches and one-forward-one-backward scheduling keep more stations busy and memory bounded, but an idle \"bubble\" of (N-1)/M remains.",
+  "sub_points": [
+   "GPipe: stages of layers; point-to-point activations forward, activation gradients backward (6-7).",
+   "Cheap talk: compute grows with h^2, communication with h: compute/communication ratios of 8-16 on A100s (8).",
+   "A naive pipeline idles; micro-batches fill it (all-forward-all-backward) (9-10).",
+   "1F1B (PipeDream): start backward as early as possible, so in-flight micro-batches peak at O(N) instead of O(M) (11-12).",
+   "Bubble ratio (N-1)/M is the same for both; 1F1B wins on memory, which buys more micro-batches (13).",
+   "Worked example: 3 stages, 3 micro-batches, a heavy first batch: 100% vs 83% bubble (L07 2-4)."
+  ],
+  "target_min": 7,
+  "hook": "Four workers on an assembly line, and for a big part of every shift most of them are standing around.",
+  "prereqs": [
+   "L04-03"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   10,
+   11,
+   13
+  ],
+  "notes": "The timelines are the visual: coloured ink blocks filling in, the red pen shading the bubbles.",
+  "facts_to_check": [
+   "GPipe (NeurIPS 2019); PipeDream (SOSP 2019); bubble ratio formula.",
+   "Slide 8 ratios: 12 x 4096 x 25e9 / 156e12 = 7.9 (forward), 15.8 (backward).",
+   "L07 slide 4 arithmetic (72T vs 66T total, 36T useful)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1SyNSymfwewvLDYiBzd08sU1akmeS8foL/view",
+   "local": "course/L06.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l06-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-25_L06-01"
+ },
+ {
+  "id": "L06-02",
+  "seq": 21,
+  "day": 20,
+  "planned_date": "2026-10-26",
+  "status": "queued",
+  "lecture": "L06",
+  "lecture_title": "Distributed Training: Pipeline Parallelism and Tensor Parallelism",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "14-22",
+  "extra_slides": [],
+  "title": "Squeezing Out the Bubbles",
+  "core_idea": "Newer pipeline schedules shrink the idle time: interleaving gives each GPU several non-adjacent chunks of layers (bubble divided by L, for L times the messages), zero-bubble schedules split backward into an urgent part and a part that can wait, and DeepSeek's DualPipe runs two pipelines in opposite directions.",
+  "sub_points": [
+   "Interleaving / looping (Megatron-LM 2021): each GPU holds 2+ virtual stages; bubble = (N-1)/(M x L) (14-16).",
+   "The cost: L times more communication; layers mixed in time favour ZeRO-1 for the DP part (16-17).",
+   "In practice: Megatron-Core recommends interleaved 1F1B with L = 2-4 (18).",
+   "Zero Bubble (ICLR 2024): backward = input gradient (blocking) + weight gradient (can wait); fill the bubbles with weight gradients (19-20).",
+   "DualPipe (DeepSeek-V3): two pipelines in opposite directions, paid for with two copies of the parameters (21-22)."
+  ],
+  "target_min": 6,
+  "hook": "DeepSeek runs its training pipeline in both directions at once, like two trains on one track that never collide.",
+  "prereqs": [
+   "L06-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   15,
+   19,
+   21
+  ],
+  "notes": "DualPipe's X-shaped diagram (21) is striking: tape it or redraw as two trains crossing. Skip the config code (18).",
+  "facts_to_check": [
+   "Narayanan et al. 2021 (Megatron-LM, SC'21); Qi et al. 2024 (Zero Bubble, Sea AI Lab); DeepSeek-V3 report (DualPipe); Chimera 2021 as a precursor."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1SyNSymfwewvLDYiBzd08sU1akmeS8foL/view",
+   "local": "course/L06.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l06-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-26_L06-02"
+ },
+ {
+  "id": "L06-03",
+  "seq": 22,
+  "day": 21,
+  "planned_date": "2026-10-27",
+  "status": "queued",
+  "lecture": "L06",
+  "lecture_title": "Distributed Training: Pipeline Parallelism and Tensor Parallelism",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "23-33",
+  "extra_slides": [
+   {
+    "lecture": "L07",
+    "slides": "5-6",
+    "why": "recap and the TP back-of-the-envelope (network vs NVLink)"
+   }
+  ],
+  "title": "One Matrix, Many GPUs: Tensor Parallelism",
+  "core_idea": "Tensor parallelism splits each big matrix multiply across GPUs; cutting the first matrix by columns and the second by rows runs a whole MLP or attention block with one AllReduce, and sequence parallelism splits the leftover norms and dropout by token, but the talk sits on the critical path, so it needs NVLink.",
+  "sub_points": [
+   "Most parameters live in linear projections (Q, K, V, O; up, down): GEMMs (24).",
+   "Column split needs an AllGather; row split needs an AllReduce (25).",
+   "Column then row: skip the AllGather, one AllReduce per block, two per layer (26-29).",
+   "What is left (LayerNorm, dropout) is replicated; sequence parallelism splits it by token, and the AllReduce becomes AllGather + ReduceScatter at the same cost (30-33).",
+   "Back of the envelope: over a 25 GB/s network the talk takes 4x the compute; over NVLink the ratio is ~3, so keep TP inside a node (L07 6)."
+  ],
+  "target_min": 7,
+  "hook": "Cut one matrix by columns and the next by rows, and a whole conversation between GPUs disappears.",
+  "prereqs": [
+   "L04-04"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   25,
+   26,
+   31,
+   32,
+   33
+  ],
+  "notes": "Slides 34-37 (2D TP, homework) are self study: skip. Visual: a sheet of paper cut into strips along columns, then rows.",
+  "facts_to_check": [
+   "Shoeybi et al. 2019 (Megatron-LM); Korthikanti et al. 2022 (sequence parallelism).",
+   "L07 slide 6: 3 x 4096 x 25e9 / (156e12 x 8) = 0.25; with 300 GB/s = 2.95."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1SyNSymfwewvLDYiBzd08sU1akmeS8foL/view",
+   "local": "course/L06.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l06-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-27_L06-03"
+ },
+ {
+  "id": "L07-01",
+  "seq": 23,
+  "day": 22,
+  "planned_date": "2026-10-28",
+  "status": "queued",
+  "lecture": "L07",
+  "lecture_title": "Distributed Training: Context Parallelism",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "7-15",
+  "extra_slides": [],
+  "title": "A Million Tokens: Splitting the Sentence",
+  "core_idea": "Long contexts make attention cost grow with the square of the length, so the sequence itself must be split across GPUs; DeepSpeed-Ulysses does it with two all-to-all swaps that turn \"each GPU has some tokens of all heads\" into \"each GPU has all tokens of some heads\".",
+  "sub_points": [
+   "Context windows of hundreds of thousands to millions of tokens; attention compute ~ length^2, activations ~ length (8).",
+   "Why the earlier sequence parallelism is not enough: attention still needs the whole sequence per head (9).",
+   "Projections are per token, so they combine perfectly with TP; the hard part is softmax(QK^T)V (10).",
+   "Ulysses: all-to-all before attention (gather the sequence, scatter the heads) and after; volume 4Sh/P, constant when S and P grow together (12-14).",
+   "Limits: heads must divide CP x TP; GQA's few KV heads force replication; Ulysses overtakes TP near 32K tokens (15)."
+  ],
+  "target_min": 6,
+  "hook": "Double a document's length and attention costs four times as much. At a million tokens, no single GPU can hold it.",
+  "prereqs": [
+   "L06-03",
+   "L03-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   8,
+   12,
+   13,
+   15
+  ],
+  "notes": "Visual: a long scroll cut into strips (tokens), then re-dealt as columns (heads): two card deals. Slide 8 lists commercial models' context sizes: say \"context windows have reached a million tokens or more\" or verify each.",
+  "facts_to_check": [
+   "Jacobs et al. 2023 (DeepSpeed-Ulysses): 4Sh vs 4Sh/P; ~175 TFLOPS; 54% of peak at 1M tokens."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1k4PwhFVOk-DXG-GQHHciMcO5SFLN0d9m/view",
+   "local": "course/L07.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l07-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-28_L07-01"
+ },
+ {
+  "id": "L07-02",
+  "seq": 24,
+  "day": 23,
+  "planned_date": "2026-10-29",
+  "status": "queued",
+  "lecture": "L07",
+  "lecture_title": "Distributed Training: Context Parallelism",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "16-28",
+  "extra_slides": [],
+  "title": "Ring Attention: Pass the Pages Around the Table",
+  "core_idea": "Ring attention keeps each GPU's queries at home and passes key/value blocks around a ring, overlapping each hop with computation; with a causal mask the work is lopsided, so striped and zigzag orderings deal the tokens out evenly.",
+  "sub_points": [
+   "Each CP shard computes attention for its own queries against every K/V block, one block per round, blockwise like FlashAttention (16-17).",
+   "Overlap: asynchronous send and receive with ping-pong buffers (18).",
+   "With TP: one ring per TP lane; with GQA only one KV head per GPU travels (19-22).",
+   "The causal mask leaves some GPUs with far more work (23).",
+   "Striped (permute the tokens) and zigzag (2N chunks folded top-to-bottom): ~1.4x and ~1.7x on 8 GPUs at 8k (24-25).",
+   "Llama 3's CP: all-gather the small GQA keys/values instead of a ring, to support document masks (26-27)."
+  ],
+  "target_min": 7,
+  "hook": "Eight people at a round table, each holding one page of a book, passing pages to the left until everyone has read every page.",
+  "prereqs": [
+   "L07-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   17,
+   23,
+   25,
+   27
+  ],
+  "notes": "The round table is a perfect ink animation; zigzag = folding the causal triangle.",
+  "facts_to_check": [
+   "Liu et al. 2023 (Ring Attention; venue: the slide says NeurIPS'23, check); Brandon et al. 2023 (Striped Attention); zhuzilin/ring-flash-attention zigzag numbers; Chu et al., ISCA 2025 (Llama 3 CP)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1k4PwhFVOk-DXG-GQHHciMcO5SFLN0d9m/view",
+   "local": "course/L07.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l07-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-29_L07-02"
+ },
+ {
+  "id": "L07-03",
+  "seq": 25,
+  "day": 24,
+  "planned_date": "2026-10-30",
+  "status": "queued",
+  "lecture": "L07",
+  "lecture_title": "Distributed Training: Context Parallelism",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "29-42",
+  "extra_slides": [],
+  "title": "How the Giants Set the Dials",
+  "core_idea": "Real training runs pick a point in the 4D space by a simple rule (tensor parallel inside a node, pipeline across nodes, context parallel for long sequences, data parallel for the rest), and the published setups of Nemotron-4, DeepSeek-V3, Llama 3 and MegaScale show the rule and its exceptions.",
+  "sub_points": [
+   "The rule, ranked by how much each parallelism talks (TP most, DP least) (29-30).",
+   "Nemotron-4 340B on 6,144 H100s: TP 8, PP 12 interleaved, DP 16-64 with ZeRO-1, 4k sequences (31).",
+   "DeepSeek-V3 (671B MoE, 37B per token) on 2,048 H800s: PP 16 (DualPipe), EP 64, DP 2, no TP (32).",
+   "Llama 3 405B on 16,384 H100s: pipeline-data co-design; CP for long contexts (33).",
+   "ByteDance MegaScale: 175B on 12,288 GPUs at 55.2% MFU; fused AllGather+GEMM; decoupled send/recv; cluster management (34-37).",
+   "Coda (self study): packing documents makes 4D workloads uneven (WLB-LLM, OSDI 2025) (38-42)."
+  ],
+  "target_min": 7,
+  "hook": "DeepSeek-V3 trained on 2,048 GPUs and used no tensor parallelism at all. Why skip the most famous trick?",
+  "prereqs": [
+   "L06-02",
+   "L06-03",
+   "L07-02",
+   "L05-02"
+  ],
+  "math": "light",
+  "tape_slides": [
+   30
+  ],
+  "notes": "Slides 31-33 are excerpts of papers: cite, redraw as a mixing desk with four knobs per run. The H800's lower NVLink bandwidth (see L14 slide 26) explains the no-TP choice: cross-check. Closes the training season.",
+  "facts_to_check": [
+   "Each configuration from its report (Nemotron-4 340B; DeepSeek-V3; Llama 3; MegaScale NSDI'24: 12,288 GPUs, 55.2% MFU).",
+   "DeepSeek-V3 37B activated per token (use the e01-moe FACTS wording)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1k4PwhFVOk-DXG-GQHHciMcO5SFLN0d9m/view",
+   "local": "course/L07.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l07-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-30_L07-03"
+ },
+ {
+  "id": "L08-01",
+  "seq": 26,
+  "day": 25,
+  "planned_date": "2026-10-31",
+  "status": "queued",
+  "lecture": "L08",
+  "lecture_title": "LLM Serving: Speculative Decoding",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "2-7",
+  "extra_slides": [
+   {
+    "lecture": "L08",
+    "slides": "30",
+    "why": "why verifying is nearly free at small batch"
+   }
+  ],
+  "title": "Guess, Then Check: Speculative Decoding",
+  "core_idea": "Writing one token at a time leaves a big model waiting on memory, not math; so a small model guesses several tokens and the big model checks them all in one pass, with a rejection rule that makes the output exactly what the big model alone would have produced.",
+  "sub_points": [
+   "Why it is nearly free: at small batch, decoding is matrix-vector work and the GPU's compute sits idle (30).",
+   "Roots: blockwise parallel decoding (Google Brain, 2018) (3).",
+   "2022-23: two papers (Google Research; DeepMind): a small draft model plus the large target, inspired by speculative execution in CPUs (4-5).",
+   "Speculative sampling: accept a draft token with probability min(1, target/draft); if rejected, resample from the leftover max(0, target - draft); the \"playing / studying\" example (6).",
+   "Speed-ups depend on the task: predictable code vs free-form summaries (7)."
+  ],
+  "target_min": 7,
+  "hook": "A big model writing one word at a time is mostly waiting. So let a small model guess the next five words and the big one just check.",
+  "prereqs": [
+   "L01-04",
+   "L03-02"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   4,
+   6,
+   7,
+   30
+  ],
+  "notes": "Opens the serving season. Analogy: an intern drafts, the editor approves in one read. Notation on slide 6 (q = target, p = draft) is the reverse of Leviathan et al.: pick one and stay consistent.",
+  "facts_to_check": [
+   "Stern et al. 2018; Leviathan et al. (arXiv Nov 2022); Chen et al. 2023 (DeepMind).",
+   "T5-XXL 11B with T5-small 60M; Chinchilla 70B with a 400M draft.",
+   "The acceptance rule reproduces the target distribution exactly."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uo6JtnkQlvoNXFam6PI7MGhfplT-iv6z/view",
+   "local": "course/L08.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l08-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-10-31_L08-01"
+ },
+ {
+  "id": "L08-02",
+  "seq": 27,
+  "day": 26,
+  "planned_date": "2026-11-01",
+  "status": "queued",
+  "lecture": "L08",
+  "lecture_title": "LLM Serving: Speculative Decoding",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "8-13",
+  "extra_slides": [],
+  "title": "Guess a Tree, Not a Line",
+  "core_idea": "Since drafts are cheap, systems draft many continuations at once as a token tree and verify the whole tree in one pass with a tree-shaped attention mask; Medusa drops the separate draft model and adds extra prediction heads to the big model itself.",
+  "sub_points": [
+   "SpecInfer: a draft tree such as <2,2,1>; accept the longest prefix that matches any branch (8).",
+   "Verify the tree in one kernel: load the weights once, share the KV prefix, mask by tree topology (9).",
+   "Medusa: four extra heads on the big model guess tokens +1, +2, ...: blockwise decoding revived, with tree attention (10).",
+   "Which tree? A static 64-node sparse tree grown greedily on calibration data: broad for 7B, deep and narrow for 33B (11-12).",
+   "Medusa-1 (frozen backbone) vs Medusa-2 (fine-tuned together): checking 64 tokens costs about one step at batch 1 (13)."
+  ],
+  "target_min": 6,
+  "hook": "If guessing is cheap, why guess one sentence? Guess a whole tree of them and check them all at once.",
+  "prereqs": [
+   "L08-01"
+  ],
+  "math": "light",
+  "tape_slides": [
+   8,
+   9,
+   11
+  ],
+  "notes": "Tree in ink with the accepted path in red pen. Do not use Medusa's mascot image (slide 10).",
+  "facts_to_check": [
+   "Miao et al. 2023 (SpecInfer; LLaMA-7B target with a 68M draft).",
+   "Medusa is Cai et al., ICML 2024 (the slide credits \"Dao et al.\"): fix the citation.",
+   "Vicuna 7B/13B/33B; 70K ShareGPT dialogues."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uo6JtnkQlvoNXFam6PI7MGhfplT-iv6z/view",
+   "local": "course/L08.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l08-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-01_L08-02"
+ },
+ {
+  "id": "L08-03",
+  "seq": 28,
+  "day": 27,
+  "planned_date": "2026-11-02",
+  "status": "queued",
+  "lecture": "L08",
+  "lecture_title": "LLM Serving: Speculative Decoding",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "14-25",
+  "extra_slides": [],
+  "title": "EAGLE: Guess the Thought, Not the Word",
+  "core_idea": "EAGLE drafts with one small autoregressive layer that predicts the big model's next hidden feature instead of the next token; EAGLE-2 grows the draft tree where the model is confident; EAGLE-3 trains the drafter on its own mistakes so it scales with data; serving engines now ship it.",
+  "sub_points": [
+   "Three designs: separate small model; Medusa (parallel heads); EAGLE (self-draft, autoregressive head on features) (14).",
+   "Speedup = alpha x T_verify(1) / (M x T_draft + T_verify(M)): a heavier drafter is fine if the acceptance length alpha rises (15).",
+   "EAGLE-1: one decoder layer plus the frozen LM head; regression and classification losses; a static tree (16-17).",
+   "EAGLE-2: a dynamic tree, wide where unsure (\"10+2\"), deep where sure; acceptance mostly 3-5 tokens (18-20).",
+   "EAGLE-3: fuse features from several layers, drop the feature loss, \"training-time test\" (practise on its own drafts); keeps improving from 1B to 50B training tokens (21-23).",
+   "In practice: a flag in vLLM / SGLang; Yggdrasil makes dynamic trees hardware-friendly (24-25)."
+  ],
+  "target_min": 8,
+  "hook": "EAGLE does not guess the model's next word. It guesses what the model is thinking just before it speaks.",
+  "prereqs": [
+   "L08-02"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   14,
+   15,
+   18,
+   23
+  ],
+  "notes": "Visual: a thought bubble (feature) vs the spoken word. Slide 17 credits \"[Dao et al.]\" for EAGLE and slide 21 has \"NuerIPs25\": fix both. Skip the command-line screenshots on 24.",
+  "facts_to_check": [
+   "EAGLE (Li et al., ICML 2024); EAGLE-2 (Li et al., EMNLP 2024; the slide says Zhang et al., check the author order); EAGLE-3 (Li et al., NeurIPS 2025); Yggdrasil (Leng et al., NeurIPS 2025).",
+   "Acceptance length and depth numbers (20)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uo6JtnkQlvoNXFam6PI7MGhfplT-iv6z/view",
+   "local": "course/L08.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l08-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-02_L08-03"
+ },
+ {
+  "id": "L08-04",
+  "seq": 29,
+  "day": 28,
+  "planned_date": "2026-11-03",
+  "status": "queued",
+  "lecture": "L08",
+  "lecture_title": "LLM Serving: Speculative Decoding",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "26-37",
+  "extra_slides": [],
+  "title": "Built-in Guessers, and When Guessing Pays",
+  "core_idea": "Drafts can also come from lookups (past text, n-gram pools) or from extra heads trained into the model from the start (multi-token prediction, as in DeepSeek-V3); either way, speculation pays when latency matters and batches are small, and pays less when the GPU is already busy serving many users.",
+  "sub_points": [
+   "Retrieval drafts: REST looks continuations up in a datastore; lookahead decoding keeps an n-gram pool (26-27).",
+   "Multi-token prediction: extra heads trained with the backbone from scratch, which also improves the model (Meta, ICML 2024) (28).",
+   "DeepSeek-V3's MTP modules: 85-90% acceptance for the second token (29).",
+   "When: small batches (under 4-32) and latency-critical uses: a chat's first token in 200-500 ms, search, code completion (30-35).",
+   "Reasoning models: long outputs, long contexts (so small batches), strong patterns: a good fit (36).",
+   "When throughput rules (cheap tokens, big batches) the compute is already busy (37)."
+  ],
+  "target_min": 7,
+  "hook": "A code completion that arrives after you have typed the line is useless. Here is when guessing ahead is worth it, and when it is not.",
+  "prereqs": [
+   "L08-03"
+  ],
+  "math": "light",
+  "tape_slides": [
+   26,
+   28,
+   29,
+   30
+  ],
+  "notes": "Slides 32-37 contain product screenshots, a pricing page and a third-party poster (\"The 3 response time limits\"): do not tape; use the 0.1 s / 1 s / 10 s thresholds only with a primary source (Nielsen). Avoid naming chat products; say \"a chat app\", \"a code assistant\".",
+  "facts_to_check": [
+   "He et al., NAACL 2024 (REST); lookahead decoding, ICML 2024 (Fu et al.; the slide says Zhang et al., check); Gloeckle et al., ICML 2024 (multi-token prediction); DeepSeek-V3 report (85-90%)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uo6JtnkQlvoNXFam6PI7MGhfplT-iv6z/view",
+   "local": "course/L08.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l08-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-03_L08-04"
+ },
+ {
+  "id": "L09-01",
+  "seq": 30,
+  "day": 29,
+  "planned_date": "2026-11-04",
+  "status": "needs-ok",
+  "lecture": "L09",
+  "lecture_title": "Invited talk: Machine Learning Compilers",
+  "speaker": "Yue Guan (invited)",
+  "guest": true,
+  "slides": "2-12",
+  "extra_slides": [],
+  "title": "How a GPU Runs Your Code",
+  "core_idea": "A GPU is many streaming multiprocessors sharing one big memory; a kernel launches a grid of thread blocks, each block runs on one SM, threads march in warps of 32, and fast code keeps data in the small, fast memories close to the threads.",
+  "sub_points": [
+   "Architecture: many SMs sharing DRAM and L2; each SM with functional units, registers and its own cache (3).",
+   "Kernel, grid, block, thread; blocks scheduled onto SMs (4).",
+   "Warps of 32 threads in lockstep (SIMT): a branch makes half the lanes wait (5).",
+   "The memory ladder: registers, shared memory, global memory (HBM, L2), host memory (6).",
+   "Vector addition end to end: allocate, copy in, launch asynchronously, copy back, free (7-11).",
+   "Then the problem: so many models times so many chips is too many kernels to write by hand (12)."
+  ],
+  "target_min": 6,
+  "hook": "A GPU is thousands of workers who can only march in squads of 32.",
+  "prereqs": [
+   "L04-02"
+  ],
+  "math": "none",
+  "tape_slides": [],
+  "notes": "Guest. Slides 3-6 reuse figures from the CUDA Programming Guide: redraw. Fills a gap the course assumes; useful before L09-04, L11 and L13-05.",
+  "facts_to_check": [
+   "Warp size 32; CUDA API steps; SM/memory hierarchy wording per the CUDA Programming Guide."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Yue Guan): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Yue Guan's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1rY4ayVpOoeq8VtCX2iVlMO4f5gwT8MGM/view",
+   "local": "course/L09.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l09-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-04_L09-01"
+ },
+ {
+  "id": "L09-02",
+  "seq": 31,
+  "day": 30,
+  "planned_date": "2026-11-05",
+  "status": "needs-ok",
+  "lecture": "L09",
+  "lecture_title": "Invited talk: Machine Learning Compilers",
+  "speaker": "Yue Guan (invited)",
+  "guest": true,
+  "slides": "12-31",
+  "extra_slides": [],
+  "title": "What vs How: The Compiler Idea Behind ML",
+  "core_idea": "Halide's insight, to write the algorithm once and describe the schedule (tiling, parallelism, order) separately and let a search tune it, moved from image processing to tensors (Tensor Comprehensions, TVM) and gave one code path to many chips.",
+  "sub_points": [
+   "The kernel explosion: many models x many hardware targets (12-15).",
+   "Halide (PLDI 2013): algorithm vs schedule; the same blur, written naively and expert-fast (16-20).",
+   "Autotuning: generate schedules and search with performance feedback (21-23).",
+   "Tensor Comprehensions (2018): the same idea for tensor programs (24-25).",
+   "TVM (OSDI 2018): graph-level (fusion, layout) and operator-level transformations, template-free tuning (26-31)."
+  ],
+  "target_min": 6,
+  "hook": "The same blur filter, two programs: one a few lines long, one many times faster. Halide's trick: keep \"what\" and \"how\" apart.",
+  "prereqs": [
+   "L09-01"
+  ],
+  "math": "none",
+  "tape_slides": [],
+  "notes": "Guest. Slide 16's images come from the Halide paper: redraw.",
+  "facts_to_check": [
+   "Ragan-Kelley et al., PLDI 2013 (with any speed-up quoted from the paper); Vasilache et al. 2018; Chen et al., OSDI 2018."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Yue Guan): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Yue Guan's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1rY4ayVpOoeq8VtCX2iVlMO4f5gwT8MGM/view",
+   "local": "course/L09.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l09-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-05_L09-02"
+ },
+ {
+  "id": "L09-03",
+  "seq": 32,
+  "day": 31,
+  "planned_date": "2026-11-06",
+  "status": "needs-ok",
+  "lecture": "L09",
+  "lecture_title": "Invited talk: Machine Learning Compilers",
+  "speaker": "Yue Guan (invited)",
+  "guest": true,
+  "slides": "32-48",
+  "extra_slides": [],
+  "title": "Compilers for the Awkward Cases",
+  "core_idea": "The same compile-and-schedule recipe extends to programs that span many GPUs (CoCoNet, Mercury), tensors that are mostly zeros (TACO, Fractal) and shapes that change at run time (DietCode).",
+  "sub_points": [
+   "Distributed: CoCoNet (ASPLOS 2022) puts communication in the language; DP and TP become two schedules of one program (32-34).",
+   "Mercury (SOSP 2025): asynchrony through new primitives such as \"shift\" (35-39).",
+   "Sparse: TACO (formats and loops); Fractal (ASPLOS 2024) groups the zeros into hardware-friendly blocks, with a \"perforate\" primitive (40-45).",
+   "Dynamic shapes: DietCode (MLSys 2022) splits into micro-kernels with joint schedules (46-48)."
+  ],
+  "target_min": 5,
+  "hook": "What if your tensor is mostly zeros, or changes shape with every request?",
+  "prereqs": [
+   "L09-02"
+  ],
+  "math": "light",
+  "tape_slides": [],
+  "notes": "Guest. The most specialised episode in the queue: first to merge or drop if the season needs trimming. Some of these papers may be the speaker's own: check before saying so.",
+  "facts_to_check": [
+   "Venues and years per paper."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Yue Guan): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Yue Guan's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1rY4ayVpOoeq8VtCX2iVlMO4f5gwT8MGM/view",
+   "local": "course/L09.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l09-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-06_L09-03"
+ },
+ {
+  "id": "L09-04",
+  "seq": 33,
+  "day": 32,
+  "planned_date": "2026-11-07",
+  "status": "needs-ok",
+  "lecture": "L09",
+  "lecture_title": "Invited talk: Machine Learning Compilers",
+  "speaker": "Yue Guan (invited)",
+  "guest": true,
+  "slides": "49-68",
+  "extra_slides": [],
+  "title": "Tiles: Why Kernel Languages Are Back",
+  "core_idea": "Fully automatic compilers cannot keep up with each new hardware feature, so a layer of domain-specific languages, Triton first, lets programmers write at the level of tiles while the compiler handles threads, memory and tensor cores; newer DSLs go lower (Gluon, TileLang, TLX) or higher (Helion).",
+  "sub_points": [
+   "The curse of specialization: new hardware features (tensor cores, TMA, warp specialization) outrun automatic compilers (49-53).",
+   "The performance-productivity map: PTX, CUDA, TVM, PyTorch, and the gap DSLs fill (52-54).",
+   "Triton: program the block, not the thread; the compiler pipelines, prefetches and uses TMA (56-64).",
+   "Who specifies what: CUDA vs Triton vs TVM (55, 65).",
+   "Today's landscape: lower than Triton (Gluon, TileLang, TLX), higher (Helion), distributed (Triton-Distributed, ParallelKitten) (66-68)."
+  ],
+  "target_min": 6,
+  "hook": "Why did GPU programmers stop thinking about threads and start thinking about tiles?",
+  "prereqs": [
+   "L09-01"
+  ],
+  "math": "none",
+  "tape_slides": [],
+  "notes": "Guest. L15 (Keren Zhou: Triton, Gluon, tile-based models) continues this story. Slide 69 is an attendance survey: skip.",
+  "facts_to_check": [
+   "Tillet et al. 2019 (Triton, MAPL at PLDI; the slide says PLDI'19); the DSL organisation table (68)."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Yue Guan): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Yue Guan's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1rY4ayVpOoeq8VtCX2iVlMO4f5gwT8MGM/view",
+   "local": "course/L09.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l09-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-07_L09-04"
+ },
+ {
+  "id": "L10-01",
+  "seq": 34,
+  "day": 33,
+  "planned_date": "2026-11-08",
+  "status": "needs-ok",
+  "lecture": "L10",
+  "lecture_title": "Invited talk: LLM-RL Introduction for System Designers",
+  "speaker": "Guyue Huang (invited; NVIDIA)",
+  "guest": true,
+  "slides": "4-14",
+  "extra_slides": [],
+  "title": "Rewards You Can Check: RL for Language Models",
+  "core_idea": "Reinforcement learning trains a model by letting it act and rewarding the outcome; for language models it started with a learned human-preference reward (RLHF) and now increasingly uses rewards a simple program can verify (RLVR), with advantages measured within a group of answers (GRPO).",
+  "sub_points": [
+   "The loop: actor, environment, action, reward and new state, policy update (4-7).",
+   "SFT copies a dataset; RL generates and gets rewarded (8).",
+   "RLHF: train a reward model on human preferences, then PPO (9).",
+   "RLVR: sample G answers to \"12 x 34 = ?\", a checker gives +1 or -1, compare within the group (GRPO) (10).",
+   "Where it works: math, code, agent tasks; RL takes a growing share of compute (11-14)."
+  ],
+  "target_min": 5,
+  "hook": "12 x 34 = ? Let the model answer eight times and reward only the answers a calculator agrees with.",
+  "prereqs": [
+   "L01-04"
+  ],
+  "math": "light",
+  "tape_slides": [],
+  "notes": "Guest; the speaker's personal views, not his employer's (slide 3). Slides 11 and 13 are third-party charts: redraw or skip.",
+  "facts_to_check": [
+   "DeepSeek-R1 paper (GRPO, RLVR framing); RLHF pipeline (InstructGPT)."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Guyue Huang): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Guyue Huang's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1tk4YQ6zyfoIEsH5YrgjqRJ3XzsznZkLp/view",
+   "local": "course/L10.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l10-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-08_L10-01"
+ },
+ {
+  "id": "L10-02",
+  "seq": 35,
+  "day": 34,
+  "planned_date": "2026-11-09",
+  "status": "needs-ok",
+  "lecture": "L10",
+  "lecture_title": "Invited talk: LLM-RL Introduction for System Designers",
+  "speaker": "Guyue Huang (invited; NVIDIA)",
+  "guest": true,
+  "slides": "15-25",
+  "extra_slides": [],
+  "title": "RL's Real Bottleneck: The Model Talking to Itself",
+  "core_idea": "In LLM reinforcement learning most of the time goes to generating rollouts, which is memory-bound and long-tailed, so RL systems borrow inference tricks (low-precision generation, speculative decoding, suffix-tree drafts from past rollouts) and generate asynchronously, a weight version or two behind training.",
+  "sub_points": [
+   "One RLVR step: generate on GPUs, verify on CPUs, train, sync the weights (15).",
+   "Quantized generation: FP8/FP4 rollouts; keep training and generation numerics aligned (Jet-RL) (17-19).",
+   "Speculative decoding in RL: the draft has to keep learning as the policy moves (ReSpec) (20-21).",
+   "History rhymes: earlier rollouts of the same prompt make a suffix-tree draft (RhymeRL) (22).",
+   "Async RL: start the next batch before the weight update; separate generation and training GPUs (23-25)."
+  ],
+  "target_min": 7,
+  "hook": "In RL training for language models, the slow part is not the training. It is waiting for the model to finish its answers.",
+  "prereqs": [
+   "L10-01",
+   "L08-01"
+  ],
+  "math": "light",
+  "tape_slides": [],
+  "notes": "Guest. Links back to L08 (speculation) and forward to L12 (quantization).",
+  "facts_to_check": [
+   "Jet-RL, ReSpec, RhymeRL papers."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Guyue Huang): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Guyue Huang's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1tk4YQ6zyfoIEsH5YrgjqRJ3XzsznZkLp/view",
+   "local": "course/L10.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l10-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-09_L10-02"
+ },
+ {
+  "id": "L10-03",
+  "seq": 36,
+  "day": 35,
+  "planned_date": "2026-11-10",
+  "status": "needs-ok",
+  "lecture": "L10",
+  "lecture_title": "Invited talk: LLM-RL Introduction for System Designers",
+  "speaker": "Guyue Huang (invited; NVIDIA)",
+  "guest": true,
+  "slides": "26-33",
+  "extra_slides": [],
+  "title": "Plumbing an RL System",
+  "core_idea": "Large RL systems are a pipeline of trainers, generators, verifiers and tools; moving 10+ GB of fresh weights between differently parallelised GPU groups, shipping rollouts and waiting on CPU-bound tool calls are now the hard problems.",
+  "sub_points": [
+   "Weight sync: trainers (expert / pipeline parallel) to generators (tensor / data parallel), point to point (27-28).",
+   "Agents: a model plans, calls tools, reads results (the trip-booking example) (29).",
+   "Agentic RL: tools and verifiers run on CPUs and can become the bottleneck (30).",
+   "A full system: rollout manager, data store, checkpoints; 1-100 MB of data per batch vs 10 GB+ of weights (31).",
+   "Single controller vs asynchronous dataflow, and the open problems (32-33)."
+  ],
+  "target_min": 5,
+  "hook": "Every step, gigabytes of fresh weights have to jump from the GPUs that learn to the GPUs that talk.",
+  "prereqs": [
+   "L10-02"
+  ],
+  "math": "none",
+  "tape_slides": [],
+  "notes": "Guest. Merge into L10-02 if the season needs trimming.",
+  "facts_to_check": [
+   "Slide 31 sizes; LlamaRL; the weight-transfer-in-2-seconds post cited on slide 28."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Guyue Huang): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Guyue Huang's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1tk4YQ6zyfoIEsH5YrgjqRJ3XzsznZkLp/view",
+   "local": "course/L10.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l10-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-10_L10-03"
+ },
+ {
+  "id": "L11-01",
+  "seq": 37,
+  "day": 36,
+  "planned_date": "2026-11-11",
+  "status": "needs-ok",
+  "lecture": "L11",
+  "lecture_title": "Invited talk: FlexAttention and CUDAGraph",
+  "speaker": "Boyuan Feng (invited; PyTorch team)",
+  "guest": true,
+  "slides": "1-41",
+  "extra_slides": [],
+  "title": "FlexAttention: Every Attention Variant in a Few Lines",
+  "core_idea": "Attention variants (causal, sliding window, document masks, relative bias, ALiBi, soft-capping) each used to need a hand-written fused kernel; FlexAttention takes a small Python score_mod or mask_mod, compiles it into a FlashAttention-style kernel and skips fully masked blocks, for training and for decoding.",
+  "sub_points": [
+   "FlashAttention made attention fast, but only for the variants it hard-coded (4-8).",
+   "score_mod: change each score in Python (relative position, ALiBi, soft-cap) without materialising the bias (9-15).",
+   "mask_mod and the block mask: skip blocks that are fully masked: causal, sliding window, documents (16-23).",
+   "How: torch.compile turns the functions into a Triton template, forward and backward (24-26).",
+   "Inference: decoding over long KV caches and paged KV via block-mask conversion, at under 5% overhead (27-41)."
+  ],
+  "target_min": 7,
+  "hook": "Every new attention idea used to need its own hand-tuned GPU kernel. Now it is a three-line Python function.",
+  "prereqs": [
+   "L03-01",
+   "L09-04"
+  ],
+  "math": "light",
+  "tape_slides": [],
+  "notes": "Guest; no recording, so narration only. Facts can be checked against the public PyTorch blog posts and the MLSys 2025 paper listed on slide 41. PagedAttention gets its full story in L13-03: one line here.",
+  "facts_to_check": [
+   "Speed-ups (LLaMA3.1-8B 1.22-2.04x; 70B 0.99-1.66x), 76x batch size and <5% overhead from the PyTorch blog / paper."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Boyuan Feng): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Boyuan Feng's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": null,
+   "local": null,
+   "note": "no recording in the Drive folder"
+  },
+  "episode_dir": "episodes/l11-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-11_L11-01"
+ },
+ {
+  "id": "L11-02",
+  "seq": 38,
+  "day": 37,
+  "planned_date": "2026-11-12",
+  "status": "needs-ok",
+  "lecture": "L11",
+  "lecture_title": "Invited talk: FlexAttention and CUDAGraph",
+  "speaker": "Boyuan Feng (invited; PyTorch team)",
+  "guest": true,
+  "slides": "42-52",
+  "extra_slides": [],
+  "title": "CUDA Graphs: When the CPU Is the Slow Part",
+  "core_idea": "For small, fast kernels the GPU finishes before the CPU can launch the next one; CUDA Graphs record the launch sequence once and replay it, torch.compile's \"reduce-overhead\" mode does this automatically, and graph partitioning works around operations that cannot be captured.",
+  "sub_points": [
+   "Profiles: eager mode launches many small kernels with gaps; torch.compile fuses them; reduce-overhead replays a CUDA graph (43-48).",
+   "Graph breaks make several graphs and extra memory; CUDA Graph Trees share memory between them (49).",
+   "Unsafe operations (a CPU sync) break capture; Inductor graph partition splits around them (50-51).",
+   "In vLLM: register the custom op as unsafe and wrap each partition (52)."
+  ],
+  "target_min": 5,
+  "hook": "The GPU finishes its work faster than the CPU can tell it what to do next.",
+  "prereqs": [
+   "L09-01"
+  ],
+  "math": "none",
+  "tape_slides": [],
+  "notes": "Guest; no recording. Visual: a conductor (CPU) who cannot hand out sheet music fast enough, then a player piano roll (the recorded graph).",
+  "facts_to_check": [
+   "PyTorch documentation on CUDA Graph Trees and graph partition."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Boyuan Feng): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Boyuan Feng's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": null,
+   "local": null,
+   "note": "no recording in the Drive folder"
+  },
+  "episode_dir": "episodes/l11-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-12_L11-02"
+ },
+ {
+  "id": "L12-01",
+  "seq": 39,
+  "day": 38,
+  "planned_date": "2026-11-13",
+  "status": "queued",
+  "lecture": "L12",
+  "lecture_title": "LLM Quantization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "2-7",
+  "extra_slides": [],
+  "title": "How a Computer Writes a Number",
+  "core_idea": "Every number in a model is a bit pattern: integers spend all bits on even steps, floating point splits them into exponent (range) and mantissa (precision), and the march from FP32 to BF16, FP8 and FP4 is a series of choices about that split, made fast by new hardware.",
+  "sub_points": [
+   "Integers: unsigned, sign-magnitude (two zeros), two's complement (one zero, and the adder just works) (3).",
+   "IEEE 754 FP32: sign, 8-bit exponent, 23-bit fraction; subnormals near zero (4).",
+   "In 4 bits: INT4 is evenly spaced; FP4 variants trade range for resolution (5).",
+   "Hardware: the mantissa multiplier is the expensive part (6).",
+   "The family: FP32, FP16, TF32, BF16, FP8 E4M3 / E5M2, NVFP4 (E2M1), and the GPU generation that brought each (7)."
+  ],
+  "target_min": 5,
+  "hook": "Same eight bits, two formats: one tops out at 448, the other at 57,344. Which would you train with?",
+  "prereqs": [
+   "L01-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   3,
+   4,
+   7
+  ],
+  "notes": "Opens the quantization season. Visual: bits as ivory tiles; a ruler with even ticks (integers) vs ticks that spread out (floats).",
+  "facts_to_check": [
+   "E4M3 max 448, E5M2 max 57,344; the format/hardware table (7)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uLAAR-BllMtzJ-MhbmouCwJopi3rlRm5/view",
+   "local": "course/L12.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l12-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-13_L12-01"
+ },
+ {
+  "id": "L12-02",
+  "seq": 40,
+  "day": 39,
+  "planned_date": "2026-11-14",
+  "status": "queued",
+  "lecture": "L12",
+  "lecture_title": "LLM Quantization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "8-17",
+  "extra_slides": [],
+  "title": "Rounding a Whole Model",
+  "core_idea": "Quantization maps real numbers onto a few integer levels with a scale (and maybe a zero point); the error depends on granularity (per tensor, per row, per group of 128), and whether it saves time depends on whether the hardware can compute in the low format or must convert back first.",
+  "sub_points": [
+   "Symmetric round-to-nearest: S = max|x| / 7; 0.8 to 2, 1.2 to 3, 2.5 to 7 (9).",
+   "Asymmetric: scale plus zero point for lopsided ranges; today: symmetric with fine-grained groups (11).",
+   "Granularity: per-row beats per-tensor (error 2.08 vs 2.28 in the example) (10).",
+   "Which axis: activations per token (on the fly), weights along input features in groups of 128 (offline) (12).",
+   "Saving compute? Without INT4 math the weights are converted back, and unpacking INT4 into FP16 costs time (13-14).",
+   "Benefits: less memory, less bandwidth (faster small-batch decoding), simpler math; W4A16 vs W8A8 vs W4A4 by GPU generation (16-17)."
+  ],
+  "target_min": 7,
+  "hook": "Squeeze 0, 0.8, 1.2 and 2.5 into 4-bit integers. What comes back out?",
+  "prereqs": [
+   "L12-01"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   9,
+   10,
+   12,
+   17
+  ],
+  "notes": "The worked examples are the visual: red pen rounding numbers onto a ruler of 15 ticks.",
+  "facts_to_check": [
+   "Recompute the slide 9 and slide 10 examples (scales, reconstructed values, errors 2.08 / 2.28)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uLAAR-BllMtzJ-MhbmouCwJopi3rlRm5/view",
+   "local": "course/L12.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l12-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-14_L12-02"
+ },
+ {
+  "id": "L12-03",
+  "seq": 41,
+  "day": 40,
+  "planned_date": "2026-11-15",
+  "status": "queued",
+  "lecture": "L12",
+  "lecture_title": "LLM Quantization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "19-27",
+  "extra_slides": [],
+  "title": "4-Bit Weights Without Losing the Plot: GPTQ and AWQ",
+  "core_idea": "Post-training weight quantization made 4-bit models practical: GPTQ rounds weights a column at a time and nudges the rest to cancel the error using second-order information from a small calibration set; AWQ protects the ~1% of weights that see large activations by scaling them first; fast kernels and llama.cpp brought both to everyday hardware.",
+  "sub_points": [
+   "Retraining a 175B model is impractical, so one-shot post-training quantization; larger models are easier to quantize (19-20).",
+   "GPTQ: quantize a few, update the rest to compensate; a fixed order and one Cholesky factorisation make it hours, not months (21).",
+   "Results: 3-bit OPT-175B at 3-4x lower latency per token at batch 1; small groups rescue 2-bit (22).",
+   "Kernels: AutoGPTQ, ExLlama, Marlin; inside vLLM, SGLang, TensorRT-LLM (23).",
+   "AWQ: scale the salient channels before rounding; INT4 with groups of 128 matches FP16 on the benchmarks (24-25).",
+   "llama.cpp: plain C/C++, CPU and Apple silicon first, GGUF with small blocks, k-quants mixing 2-6 bits (26-27)."
+  ],
+  "target_min": 7,
+  "hook": "GPTQ squeezed a 175-billion-parameter model to 3 or 4 bits in a few hours, and it ran faster on fewer GPUs.",
+  "prereqs": [
+   "L12-02"
+  ],
+  "math": "heavy",
+  "tape_slides": [
+   21,
+   22,
+   24
+  ],
+  "notes": "Keep the Hessian at intuition level: some weights matter more; fix one, adjust its neighbours (a tailor pinning fabric). Possible aside: this Mac runs models through llama.cpp.",
+  "facts_to_check": [
+   "Frantar et al., ICLR 2023 (the 4.53x / 3.24x speed-ups and GPU counts on slide 22).",
+   "Lin et al. 2023 (AWQ) and the MBPP / GSM8K table (25).",
+   "llama.cpp facts (GGUF block sizes, k-quants)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uLAAR-BllMtzJ-MhbmouCwJopi3rlRm5/view",
+   "local": "course/L12.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l12-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-15_L12-03"
+ },
+ {
+  "id": "L12-04",
+  "seq": 42,
+  "day": 41,
+  "planned_date": "2026-11-16",
+  "status": "queued",
+  "lecture": "L12",
+  "lecture_title": "LLM Quantization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "28-35",
+  "extra_slides": [],
+  "title": "Outliers: Quantizing Activations and the KV Cache",
+  "core_idea": "Activations carry a few huge outlier channels that wreck 8-bit rounding: SmoothQuant moves the difficulty into the weights with a per-channel scale, LLM.int8() keeps outliers in 16-bit, KV caches need their own grouping because K and V are read along different axes, and NVFP4 uses two-level block scales in hardware.",
+  "sub_points": [
+   "Activations change with every input and have outlier channels (28).",
+   "SmoothQuant: Y = (X diag(s)^-1)(diag(s) W), so W8A8 keeps its accuracy (29-30).",
+   "LLM.int8(): outliers in FP16, the rest in INT8 (30).",
+   "KV cache quantization: longer contexts and bigger batches; K and V need different grouping axes (31-32).",
+   "NVFP4: E2M1 with micro-block scales; near-original accuracy at 2-3x speed (33-34).",
+   "Vector quantization: replace groups of numbers with codebook entries (k-means), mostly for audio/video tokens (35)."
+  ],
+  "target_min": 7,
+  "hook": "A handful of giant numbers ruin 8-bit math for everyone else. SmoothQuant's fix: hand part of the problem to the weights.",
+  "prereqs": [
+   "L12-02",
+   "L03-02"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   28,
+   29,
+   32,
+   33
+  ],
+  "notes": "Slides 31-32 cite M-ANT (Hu et al. 2025): check whether it is the lab's paper before saying so.",
+  "facts_to_check": [
+   "Xiao et al. 2022 (SmoothQuant) table on 30; Dettmers et al. 2022 (LLM.int8()); NVIDIA's NVFP4 post (accuracy, 2-3x); M-ANT authors and venue."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uLAAR-BllMtzJ-MhbmouCwJopi3rlRm5/view",
+   "local": "course/L12.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l12-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-16_L12-04"
+ },
+ {
+  "id": "L12-05",
+  "seq": 43,
+  "day": 42,
+  "planned_date": "2026-11-17",
+  "status": "queued",
+  "lecture": "L12",
+  "lecture_title": "LLM Quantization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "36-40",
+  "extra_slides": [],
+  "title": "Training Through the Rounding: QAT and QLoRA",
+  "core_idea": "Post-training quantization fixes the weights and calibrates; quantization-aware training learns with rounding in the loop by pretending the rounding step has slope 1 (the straight-through estimator); QLoRA freezes a 4-bit base model in a bell-curve-shaped format (NF4) and trains small low-rank adapters on top.",
+  "sub_points": [
+   "PTQ vs QAT pipelines (36).",
+   "The gradient problem: rounding is flat almost everywhere; STE passes the gradient straight through; clipped STE stops it outside the range (37).",
+   "LoRA: freeze W, train low-rank A and B (38).",
+   "QLoRA: a frozen 4-bit base plus LoRA; NF4 places its 16 levels at normal quantiles because weights are bell-shaped (38-39).",
+   "The quantization tour in one picture (40)."
+  ],
+  "target_min": 5,
+  "hook": "Rounding has no slope, so gradients die on it. The fix is a polite lie: pretend the slope is 1.",
+  "prereqs": [
+   "L12-04"
+  ],
+  "math": "medium",
+  "tape_slides": [
+   37,
+   39
+  ],
+  "notes": "Short; merge into L12-04 if the season needs trimming. Callback to L10-02 (FP8 RL).",
+  "facts_to_check": [
+   "Bengio et al. 2013 (STE); Hu et al. 2021 (LoRA); Dettmers et al. 2023 (QLoRA, NF4 construction)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1uLAAR-BllMtzJ-MhbmouCwJopi3rlRm5/view",
+   "local": "course/L12.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l12-05",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-17_L12-05"
+ },
+ {
+  "id": "L13-01",
+  "seq": 44,
+  "day": 43,
+  "planned_date": "2026-11-18",
+  "status": "queued",
+  "lecture": "L13",
+  "lecture_title": "LLM Serving: Scheduling, KV Cache Management, and Kernel Optimization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "2-9",
+  "extra_slides": [],
+  "title": "Two Clocks: Prefill, Decode and Batching",
+  "core_idea": "Serving has two phases, prefill (reads the whole prompt at once, compute-bound) and decode (one token per step, memory-bound), measured by time to first token and time between tokens; batching helps decode, and continuous batching admits and retires requests every iteration instead of per batch.",
+  "sub_points": [
+   "Prefill vs decode, with the KV cache between them; TTFT and TBT (TPOT) (2).",
+   "Targets by use: chat, search, code, summarisation (3).",
+   "A serving system: request queue, scheduler, KV cache, model executor; SLOs: latency, requests and tokens per second (4).",
+   "Batching raises arithmetic intensity for decode; one long prefill already saturates the GPU (6).",
+   "Static batching: early finishers wait, newcomers wait (7).",
+   "Continuous batching (ORCA, OSDI 2022): schedule every iteration; batch the matmuls, run attention per request (8-9)."
+  ],
+  "target_min": 6,
+  "hook": "Every chatbot races two clocks: how long until the first word, and how long between words.",
+  "prereqs": [
+   "L03-02"
+  ],
+  "math": "light",
+  "tape_slides": [
+   2,
+   3,
+   7,
+   8
+  ],
+  "notes": "Visual: a restaurant: prefill reads the order, decode serves one dish at a time; static batching seats tables together, continuous batching fills seats as people leave.",
+  "facts_to_check": [
+   "Yu et al., OSDI 2022 (ORCA); slide 3 targets are rules of thumb."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1YxWfKfvfIeir0GRXPoS6BOpYodIpEUea/view",
+   "local": "course/L13.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l13-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-18_L13-01"
+ },
+ {
+  "id": "L13-02",
+  "seq": 45,
+  "day": 44,
+  "planned_date": "2026-11-19",
+  "status": "queued",
+  "lecture": "L13",
+  "lecture_title": "LLM Serving: Scheduling, KV Cache Management, and Kernel Optimization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "10-18",
+  "extra_slides": [],
+  "title": "Sprint and Marathon: Chunked Prefill vs Disaggregation",
+  "core_idea": "Long prefills stall everyone's decoding: Sarathi-Serve slices prefills into chunks mixed with decode steps under a token budget, while DistServe and Splitwise put prefill and decode on different GPUs (even different GPU types) and ship the KV cache across; which wins depends on workload, hardware and latency targets.",
+  "sub_points": [
+   "The stall: prefill-first scheduling makes gaps of seconds between tokens (10).",
+   "Chunked prefill: split prompts into chunks and fill each iteration up to a token budget (e.g. 512 on an A100); even iterations, fewer pipeline bubbles (11-13).",
+   "Disaggregation: no interference; separate pools with their own parallelism; used in production (14-15).",
+   "Worked example: TTFT 400 ms and TBT 40 ms: 2 prefill + 1 decode GPU serve 3.3 requests/s per GPU vs 1.6 colocated (16).",
+   "Rate matching: prefill jobs = requests; decode jobs = requests x output length (17).",
+   "Which to use: chunked prefill for small scale; disaggregation for strict SLOs and mixed hardware, if the network can move the KV cache (18)."
+  ],
+  "target_min": 7,
+  "hook": "Prefill is a sprint, decode is a marathon. Why make them share one running track?",
+  "prereqs": [
+   "L13-01"
+  ],
+  "math": "light",
+  "tape_slides": [
+   11,
+   14,
+   16,
+   18
+  ],
+  "notes": "Visual: a running track shared by sprinters and marathoners.",
+  "facts_to_check": [
+   "Agrawal et al., OSDI 2024 (Sarathi-Serve); Zhong et al., OSDI 2024 (DistServe, and its worked example numbers); Patel et al., ISCA 2024 (Splitwise)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1YxWfKfvfIeir0GRXPoS6BOpYodIpEUea/view",
+   "local": "course/L13.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l13-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-19_L13-02"
+ },
+ {
+  "id": "L13-03",
+  "seq": 46,
+  "day": 45,
+  "planned_date": "2026-11-20",
+  "status": "queued",
+  "lecture": "L13",
+  "lecture_title": "LLM Serving: Scheduling, KV Cache Management, and Kernel Optimization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "19-27",
+  "extra_slides": [],
+  "title": "PagedAttention: Virtual Memory for the KV Cache",
+  "core_idea": "Because no one knows how long an answer will be, older servers reserved a contiguous maximum-length slab per request and wasted more than half of KV memory; vLLM's PagedAttention borrows the operating system's page table (small fixed blocks allocated on demand and mapped from logical to physical), which nearly removes the waste and lets requests share prefix blocks.",
+  "sub_points": [
+   "Three kinds of waste: reservation, internal fragmentation, external fragmentation (20-21).",
+   "More than 50% of allocated KV memory wasted, so fewer requests fit at once (22).",
+   "The operating-system idea: pages and a page table (23).",
+   "Blocks of, e.g., 16 tokens on demand; at most one partly used block per sequence; any free block fits (24-25).",
+   "Sharing: parallel samples and system prompts reuse prefix blocks (26-27)."
+  ],
+  "target_min": 6,
+  "hook": "Servers used to waste more than half of their most precious memory. The fix came from operating systems.",
+  "prereqs": [
+   "L13-01"
+  ],
+  "math": "none",
+  "tape_slides": [
+   20,
+   21,
+   22,
+   25
+  ],
+  "notes": "Visual: a car park with reserved rows vs any free bay plus a ticket (the block table).",
+  "facts_to_check": [
+   "Kwon et al., SOSP 2023: the >50% waste chart, block size 16."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1YxWfKfvfIeir0GRXPoS6BOpYodIpEUea/view",
+   "local": "course/L13.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l13-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-20_L13-03"
+ },
+ {
+  "id": "L13-04",
+  "seq": 47,
+  "day": 46,
+  "planned_date": "2026-11-21",
+  "status": "queued",
+  "lecture": "L13",
+  "lecture_title": "LLM Serving: Scheduling, KV Cache Management, and Kernel Optimization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "28-34",
+  "extra_slides": [],
+  "title": "Don't Read the Same Prompt Twice: Prefix Caching",
+  "core_idea": "Many requests share long prefixes (system prompts, few-shot examples, chat history), so SGLang's RadixAttention keeps every request's KV cache in a radix tree with LRU eviction and reuses the longest matching prefix; Mooncake scales the idea into a distributed KV pool across a disaggregated cluster.",
+  "sub_points": [
+   "Sharing patterns: few-shot, self-consistency, multi-turn chat, tree of thought (28).",
+   "A radix tree of KV caches: new nodes, hits, evictions over time (29-31).",
+   "A zero-overhead scheduler: the CPU prepares the next batch while the GPU runs (32).",
+   "vLLM vs SGLang: no fragmentation (nodes hold blocks); vLLM's block hashing; both do chunked prefill and disaggregation (33).",
+   "Mooncake (FAST 2025 best paper): KV-cache-centric disaggregation with a distributed pool (34)."
+  ],
+  "target_min": 5,
+  "hook": "Millions of requests begin with the same system prompt. Why compute it again for every one?",
+  "prereqs": [
+   "L13-03",
+   "L13-02"
+  ],
+  "math": "none",
+  "tape_slides": [
+   28,
+   29,
+   34
+  ],
+  "notes": "Visual: a tree of shared beginnings growing branches, the red pen pruning the least recently used.",
+  "facts_to_check": [
+   "Zheng et al., NeurIPS 2024 (SGLang); Qin et al., FAST 2025 (Mooncake, Best Paper)."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1YxWfKfvfIeir0GRXPoS6BOpYodIpEUea/view",
+   "local": "course/L13.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l13-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-21_L13-04"
+ },
+ {
+  "id": "L13-05",
+  "seq": 48,
+  "day": 47,
+  "planned_date": "2026-11-22",
+  "status": "queued",
+  "lecture": "L13",
+  "lecture_title": "LLM Serving: Scheduling, KV Cache Management, and Kernel Optimization",
+  "speaker": "Prof. Yufei Ding",
+  "guest": false,
+  "slides": "35-46",
+  "extra_slides": [],
+  "title": "One Query, Idle Cores: Kernels for Decoding",
+  "core_idea": "FlashAttention fuses attention and keeps tiles in fast memory, but in decoding there is one query per request, so too few blocks run to fill the GPU; FlashDecoding splits the KV cache across blocks and merges the partial results, LeanAttention balances the split, FlashInfer packages these kernels for serving engines, and POD-Attention runs prefill and decode side by side.",
+  "sub_points": [
+   "FlashAttention: online softmax, tiles in shared memory, far less memory traffic (36).",
+   "Decoding launches 1 x heads x batch blocks, far fewer than the SMs at small batch (37).",
+   "FlashDecoding: split along the KV length and reduce at the end (the split-K idea) (38).",
+   "Wave quantization: 168 blocks on 132 SMs is one full wave plus 36 stragglers; stream-K / LeanAttention evens it out (39, 42-45).",
+   "FlashInfer: one KV format for many systems plus JIT for variants; POD-Attention co-locates compute-bound prefill and memory-bound decode (40-41)."
+  ],
+  "target_min": 7,
+  "hook": "When a model writes one word, a GPU with 132 processors might keep only a handful busy.",
+  "prereqs": [
+   "L13-02",
+   "L09-01"
+  ],
+  "math": "light",
+  "tape_slides": [
+   36,
+   37,
+   38,
+   39
+  ],
+  "notes": "Slides 42-45 are self study, but the 168-on-132 example is a great picture (a bus with 132 seats and 168 passengers).",
+  "facts_to_check": [
+   "Dao et al., NeurIPS 2022; FlashDecoding (Stanford CRFM blog, Oct 2023); Lean Attention (2024); Ye et al., MLSys 2025 (FlashInfer); Kamath et al., ASPLOS 2025 (POD-Attention); H100 SXM has 132 SMs."
+  ],
+  "permissions": {
+   "voice_clips": true,
+   "slides_on_screen": true,
+   "note": "Prof. Ding approved her voice clips and her slides on screen (2026-10-06). Never draw her."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1YxWfKfvfIeir0GRXPoS6BOpYodIpEUea/view",
+   "local": "course/L13.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l13-05",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-22_L13-05"
+ },
+ {
+  "id": "L14-01",
+  "seq": 49,
+  "day": 48,
+  "planned_date": "2026-11-23",
+  "status": "needs-ok",
+  "lecture": "L14",
+  "lecture_title": "MoE and MoE Serving Systems",
+  "speaker": "Zhongkai Yu (PhD student in the lab, course TA)",
+  "guest": true,
+  "slides": "3-11",
+  "extra_slides": [
+   {
+    "lecture": "L14",
+    "slides": "31-32",
+    "why": "MoE review"
+   }
+  ],
+  "title": "Mixture of Experts: A Huge Model That Only Wakes a Few",
+  "core_idea": "A mixture-of-experts model replaces each feed-forward layer with many smaller expert FFNs and a router that sends each token to its top-k; since FFNs hold most of the parameters, capacity multiplies while the parameters used per token barely grow.",
+  "sub_points": [
+   "What MoE is: router plus experts; history from 1991 to Google 2017 to DeepSeek's fine-grained experts in 2024 (4-6).",
+   "Back of the envelope: a dense 70B model uses all 70B per token; Qwen3-235B uses 22B: 3.4x the parameters, 0.3x per token (7).",
+   "Why the FFN: it holds about 80-96% of the parameters (7-8).",
+   "The trend: more experts, more sparsity: DeepSeek-V3 picks 8 of 256, Kimi K2 8 of 384 (9).",
+   "The math: y = sum over top-k of p_i E_i(x), p = softmax(topk(W_g x)) (10)."
+  ],
+  "target_min": 6,
+  "hook": "Qwen3-235B has 3.4 times the parameters of Llama 3 70B, and uses less than a third as many for each word.",
+  "prereqs": [
+   "L02-02",
+   "L01-01"
+  ],
+  "math": "medium",
+  "tape_slides": [],
+  "notes": "Lecturer Zhongkai Yu (PhD student in Prof. Ding's lab, course TA): guest-marked; ask him. Reuse episodes/e01-moe/FACTS.md (safe wording \"37B per token\", \"8 per layer, plus the shared expert\") and the pilot's hospital-triage metaphor.",
+  "facts_to_check": [
+   "Qwen3-235B-A22B and Llama 3 70B parameter splits (slide 7, FP8 sizes).",
+   "The 1991 paper is Jacobs, Jordan, Nowlan & Hinton (slide says \"Hinton proposed\").",
+   "Slide 9 lists DeepSeek-V3 activated 36B: use 37B per the pilot FACTS.",
+   "Expert counts in the slide 9 table from the model cards."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Zhongkai Yu): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Zhongkai Yu's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1NogrgLByydnj6lH7vS82ECxqmEN_7Qlj/view",
+   "local": "course/L14.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l14-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-23_L14-01"
+ },
+ {
+  "id": "L14-02",
+  "seq": 50,
+  "day": 49,
+  "planned_date": "2026-11-24",
+  "status": "needs-ok",
+  "lecture": "L14",
+  "lecture_title": "MoE and MoE Serving Systems",
+  "speaker": "Zhongkai Yu (PhD student in the lab, course TA)",
+  "guest": true,
+  "slides": "12-17",
+  "extra_slides": [],
+  "title": "Training a Router",
+  "core_idea": "Top-k routing is not differentiable, so unselected experts get no gradient and a few experts can hog the tokens while the rest never learn; MoE training adds a load-balancing loss (DeepSeek V1/V2) or, in DeepSeek-V3, a per-expert bias that nudges selection without touching the output weights.",
+  "sub_points": [
+   "Top-k is discontinuous: a tiny change flips which expert is chosen (11, 13).",
+   "Backprop only reaches the selected experts (14).",
+   "Rich get richer: most experts never trained, sensitivity to initialisation (15).",
+   "Fix 1: an auxiliary load-balance loss that penalises uneven use (16).",
+   "Fix 2 (DeepSeek-V3): auxiliary-loss-free balancing, a bias used only for selection, updated during training and frozen at inference (17)."
+  ],
+  "target_min": 5,
+  "hook": "If the router keeps picking the same few experts, the rest never learn anything.",
+  "prereqs": [
+   "L14-01"
+  ],
+  "math": "medium",
+  "tape_slides": [],
+  "notes": "Guest-marked (Zhongkai). Visual: the triage desk sending everyone to two famous doctors, then a queue board that nudges the choice (the bias).",
+  "facts_to_check": [
+   "DeepSeekMoE balance loss; DeepSeek-V3 auxiliary-loss-free balancing (Wang et al. 2024)."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Zhongkai Yu): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Zhongkai Yu's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1NogrgLByydnj6lH7vS82ECxqmEN_7Qlj/view",
+   "local": "course/L14.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l14-02",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-24_L14-02"
+ },
+ {
+  "id": "L14-03",
+  "seq": 51,
+  "day": 50,
+  "planned_date": "2026-11-25",
+  "status": "needs-ok",
+  "lecture": "L14",
+  "lecture_title": "MoE and MoE Serving Systems",
+  "speaker": "Zhongkai Yu (PhD student in the lab, course TA)",
+  "guest": true,
+  "slides": "18-29",
+  "extra_slides": [],
+  "title": "Serving Experts Across 320 GPUs",
+  "core_idea": "Serving MoE spreads the experts across GPUs (expert parallelism, a tensor parallelism with no AllReduce) and pays with two all-to-all exchanges per layer and uneven load; DeepSeek-V3's deployment shows the answers: data/tensor-parallel attention, replicated hot experts, routing limited to 4 nodes, overlapped InfiniBand and NVLink hops.",
+  "sub_points": [
+   "An MoE FFN is a set of isolated experts; EP places them on different GPUs with no AllReduce (20-21).",
+   "The costs: all-to-all dispatch and combine; uneven expert load (22-23).",
+   "Real systems: DP/TP for attention, EP for experts, two all-to-alls (25).",
+   "DeepSeek-V3: prefill on 32 GPUs (EP32), decode on 320 (EP320: 256 for routed experts, 64 for shared and redundant ones) (26).",
+   "Balance: replicate hot experts; limit each token to 4 nodes; two-hop routing over InfiniBand then NVLink, about 3.2 experts per node at no extra cost (27-29)."
+  ],
+  "target_min": 7,
+  "hook": "DeepSeek-V3 decodes on 320 GPUs, and 256 of them each hold a single expert.",
+  "prereqs": [
+   "L14-01",
+   "L04-04"
+  ],
+  "math": "light",
+  "tape_slides": [],
+  "notes": "Guest-marked. Slide 28 cites the lab's own paper (arXiv 2510.05497, \"the square patterns we observed in our paper\").",
+  "facts_to_check": [
+   "DeepSeek-V3 inference deployment (prefill 4 nodes / 32 GPUs; decode 40 nodes / 320 GPUs) from the report; EPLB; the 4-node limit.",
+   "H800 NVLink figure (slide 26: 160 GB/s vs 450 GB/s) and the 3.2 = 160 / 50 estimate."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Zhongkai Yu): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Zhongkai Yu's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1NogrgLByydnj6lH7vS82ECxqmEN_7Qlj/view",
+   "local": "course/L14.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l14-03",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-25_L14-03"
+ },
+ {
+  "id": "L14-04",
+  "seq": 52,
+  "day": 51,
+  "planned_date": "2026-11-26",
+  "status": "needs-ok",
+  "lecture": "L14",
+  "lecture_title": "MoE and MoE Serving Systems",
+  "speaker": "Zhongkai Yu (PhD student in the lab, course TA)",
+  "guest": true,
+  "slides": "30-47",
+  "extra_slides": [],
+  "title": "Experts Have Habits",
+  "core_idea": "Decoding MoE wastes GPUs because attention is memory-bound while experts need big batches, so systems like MegaScale-Infer put attention and experts on separate GPUs with a ping-pong pipeline; and profiling which experts get picked (across layers, tokens, phases, topics and pairs) reveals stable habits that future MoE systems can plan around.",
+  "sub_points": [
+   "The decode problem: attention's memory caps the batch, so the experts starve (31-33).",
+   "Disaggregate attention and FFN: scale each separately, use cheaper hardware where it fits (34).",
+   "MegaScale-Infer: disaggregation, a ping-pong pipeline, M-to-N communication (35).",
+   "Habits in time: layer-level and token-level relations; prefill looks like decode (38-43).",
+   "Habits in space: experts picked unevenly, shifting by subject and language; experts that come in pairs (44-46).",
+   "Takeaways: sparse activation scales capacity, not compute; balance; EP plus all-to-all; habits for smarter systems (47)."
+  ],
+  "target_min": 7,
+  "hook": "Some experts get picked again and again, some always together. A system that knew their habits could seat them side by side.",
+  "prereqs": [
+   "L14-03"
+  ],
+  "math": "light",
+  "tape_slides": [],
+  "notes": "Guest-marked. Slides 38-46 are from the lab's own paper (arXiv 2510.05497, Zhongkai's work): the natural season finale for the lab and the bridge to the e01-moe pilot (trace data and consent pending). Slides 31-35 cite another course's reading list: use the MegaScale-Infer paper as the source.",
+  "facts_to_check": [
+   "MegaScale-Infer (ByteDance 2025).",
+   "Observations Ob1-Ob5 in the words of arXiv 2510.05497."
+  ],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Zhongkai Yu): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Zhongkai Yu's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1NogrgLByydnj6lH7vS82ECxqmEN_7Qlj/view",
+   "local": "course/L14.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l14-04",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-26_L14-04"
+ },
+ {
+  "id": "L15-01",
+  "seq": 53,
+  "day": 52,
+  "planned_date": "2026-11-27",
+  "status": "blocked",
+  "lecture": "L15",
+  "lecture_title": "Invited talk: Triton, Gluon, and the Future of Tile-Based Programming Models",
+  "speaker": "Keren Zhou (invited)",
+  "guest": true,
+  "slides": "none (recording only)",
+  "extra_slides": [],
+  "title": "Triton, Gluon and Tile-Based Programming",
+  "core_idea": "To be written from the recording: where tile-based GPU programming (Triton, Gluon) is heading.",
+  "sub_points": [
+   "To be outlined after transcribing the recording and getting the speaker's OK."
+  ],
+  "target_min": 6,
+  "hook": "To be written.",
+  "prereqs": [
+   "L09-04"
+  ],
+  "math": "unknown",
+  "tape_slides": [],
+  "notes": "Invited talk by Keren Zhou (the course's last lecture). The Drive folder has the recording but no deck. Blocked until a deck or the speaker's OK; if neither comes, drop it and end the season on L14-04.",
+  "facts_to_check": [],
+  "permissions": {
+   "voice_clips": false,
+   "slides_on_screen": false,
+   "note": "Guest lecture (Keren Zhou): no voice clips and no taped slides until the speaker says yes. Until then the episode is narration plus our own drawings that explain the ideas, credited \"from Keren Zhou's talk in CSE 291P\", or it is skipped. The user decides which."
+  },
+  "recording": {
+   "drive": "https://drive.google.com/file/d/1QMNvyP1APlDIxlaN4-vZ91RWYgpzyrLZ/view",
+   "local": "course/L15.mp4",
+   "note": "download into course/ (git-ignored), transcribe with mlx-whisper, find the slide range"
+  },
+  "episode_dir": "episodes/l15-01",
+  "deliver_dir": "~/Downloads/picasso-daily/2026-11-27_L15-01"
+ }
+]

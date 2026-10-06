@@ -4,11 +4,14 @@
 # SKIP_EXISTING=1 keeps an image that is already in src/ (e.g. one drawn by hand in ChatGPT).
 # REFNOTE="..." overrides the sentence that tells the model what the reference images are (default: the felt cat).
 # The prompt goes in on stdin: `codex exec -i` swallows a positional prompt.
+# CODEX=... picks the CLI; default: PATH, else the copy installed in ~/.local/share/picasso-tools.
 cd "$(dirname "$0")"; mkdir -p src logs
+CODEX=${CODEX:-$(command -v codex || echo "$HOME/.local/share/picasso-tools/node_modules/.bin/codex")}
 N=$1; S=$2; shift 2
 if [ "${SKIP_EXISTING:-0}" = 1 ] && [ -f "src/$N.png" ]; then echo "skip src/$N.png (exists)"; exit 0; fi
 REFS=(); for r in "$@"; do REFS+=(-i "$r"); done
 P="Generate ONE image with your image generation tool and save it as src/$N.png in the current directory (copy the generated file there; do not write any code to draw it). $S ${1:+${REFNOTE:-The attached image is the reference for the character design (a white fluffy cat with a red beret and a smug half-closed look): keep the same character, but in the material described.}} When the file is saved, reply with just its path."
-printf "%s" "$P" | codex exec --skip-git-repo-check -s workspace-write -C "$PWD" "${REFS[@]}" > logs/$N.log 2>&1
+[ -x "$CODEX" ] || { echo "codex: command not found ($CODEX)" > "logs/$N.log"; echo "EXIT 127" >> "logs/$N.log"; echo "FAIL $N (no image tool)"; exit 127; }
+printf "%s" "$P" | "$CODEX" exec --skip-git-repo-check -s workspace-write -C "$PWD" "${REFS[@]}" > logs/$N.log 2>&1
 echo "EXIT $?" >> logs/$N.log
 [ -f src/$N.png ] && echo "ok   src/$N.png" || echo "FAIL $N (see logs/$N.log)"

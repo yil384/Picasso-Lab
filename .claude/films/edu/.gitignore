@@ -1,1 +1,3 @@
 course/
+# slide images and crops cut from the decks (course material) never go to git, whatever an episode forgets
+episodes/*/slides/
