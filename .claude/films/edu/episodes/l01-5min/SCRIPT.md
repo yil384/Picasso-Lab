@@ -6,7 +6,7 @@ pen) plus extra colour (watercolour washes), with her original voice and the ori
 
 Sources: `../l01-1-scale/FACTS.md` (every number; its safe wording), `../l01-1-scale/notes/ding_on_background.md`
 (her lecture, timestamped; ASR drafts to be checked by ear), `course/L01.pdf` p9-11 (git-ignored), `course/L01.mp4`.
-Needs Prof. Ding's OK before publishing: her voice clips and her slides on screen.
+Prof. Ding approved her voice clips and her slides on screen (2026-10-06). The X account can post the full length.
 
 Look: warm paper; black ink line drawings drawing themselves; red pen for marks; watercolour washes (pink, blue,
 yellow; painted swatches, multiplied under the ink) as the colour; her slides appear as photographed printouts taped
@@ -38,16 +38,17 @@ marked 译). No drawing of her (a real person): voice only.
 - N5b EN "In 2022, a 70-billion-parameter model trained on four times the data beat a 280-billion one on the same compute." ZH 「2022 年，一个 700 亿参数、多喂了约四倍数据的模型，用同样的算力，赢了 2800 亿参数的大模型。」
 - N6 EN "That's this course: how to make big models cheaper and faster. Compute not included." ZH 「这门课讲的，就是怎么让大模型更便宜、更快。算力嘛，另计。」
 
-## Original voice clips (cut on word times; listen and fix every word before captions are final)
+## Original voice clips (cut on whisper medium.en word times, cleaned and levelled; exact cuts and text: clips.json; audio is
+made from git-ignored course/L01.mp4)
 | id | Recording | Her words (ASR draft, see notes) |
 | --- | --- | --- |
-| C1 | 18:14-18:27 | "I don't know if you still remember the first time you are playing with ChatGPT, how surprised maybe you are, how talented they are in answering questions." |
-| C2 | 17:41-17:50 | "...mostly focusing on the pruning, quantization, design new models. But we feel like its job is kind of limited, okay?" |
-| C3 | 18:47-18:59 | "if you want to do some experiment at larger scale, that means money. No one will give you the money to do larger results until you get the result. So it's a chicken egg problem." |
-| C4 | 20:11-20:17 | "you do not do the experiments, you will never know." |
-| C5 | 22:42-22:55 | "the training cost is also tremendous... and that also makes academia a little bit embarrassing, because we are not having a lot of GPUs." |
-| C6 | 21:38-21:50 | "If you can make it larger, then the idea is how can you efficiently make it larger? If you cannot really get better performance, you will try to compress it." |
-| C7 | 24:11-24:22 | "especially because it's very large, we need to care about its performance. So that's why we want to develop this class." |
+| C1 | 18:16.3-18:24.2 | "I don't know if you still remember the first time you are playing with ChatGPT, how surprised maybe you are, how talented they are in answering questions." |
+| C2 | 17:41.0-17:50.5 | "...mostly focusing on the pruning, quantization, design new models. But we feel like its job is kind of limited, okay?" |
+| C3 | 18:50.2-18:59.0 | "if you want to do some experiment at larger scale, that means money. No one will give you the money to do larger results until you get the result. So it's a chicken egg problem." |
+| C4 | 20:15.0-20:17.1 | "you do not do the experiments, you will never know." |
+| C5 | 22:42.1-22:55.3 | "the training cost is also tremendous... and that also makes academia a little bit embarrassing, because we are not having a lot of GPUs." |
+| C6 | 21:38.0-21:46.6 | "If you can make it larger, then the idea is how can you efficiently make it larger? If you cannot really get better performance, you will try to compress it." |
+| C7 | 24:12.0-24:21.9 | "especially because it's very large, we need to care about its performance. So that's why we want to develop this class." |
 
 ## Facts (all from ../l01-1-scale/FACTS.md)
 Anderson, "More Is Different", Science 1972 (no causal link to his 1977 Nobel on screen); Wei et al. 2022 emergence
