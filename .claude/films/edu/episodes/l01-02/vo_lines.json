@@ -1,0 +1,177 @@
+[
+ {
+  "id": "n0",
+  "en": "Seven Chinese characters. Seven tokens in GPT-4's tokenizer, one in GPT-4o's. What changed?",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "Last time, models got big and expensive. Today, the unit they are counted in. This is Professor Yufei Ding's CSE 291P at UC San Diego, Lecture 1.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "Because a model never reads letters. It never reads words either. It reads numbers.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Picture a library card catalogue: a cabinet of numbered drawers. It is built once, and then it is fixed.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "That is a tokenizer. It turns text into a list of whole numbers, and back. Each number is a token, and points to one entry in a fixed vocabulary.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "Her sample sentence: Hello students! Tokenization is the foundation of LLMs. 55 characters. 13 tokens.",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "Look at the pieces. Token is one. ization is another. Then L, then LM, then s. Sometimes a token is a whole word, sometimes a scrap of one.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "Why count them? Prices are per token. The context window, how much text the model can take in at once, is counted in tokens. And the model does work for every token.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "So fewer tokens is cheaper.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "If every sentence were one token, the model would learn nothing. So the real question is: which drawers does the cabinet get?",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "Her slide gives three answers. One: a drawer for every whole word.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "Easy to read, but the list is huge, and a new word or a typo isn't in it.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "Two: a drawer for every single character. Nothing is ever missing, but the sequences get long.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "Three: subwords, in between. Byte-pair encoding builds them bottom-up. That is Sennrich and colleagues, 2015.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "Unigram goes top-down: start with a huge list and prune what helps least. That is Kudo, 2018.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "And one red-pen note on the Gemini line. SentencePiece, yes. Unigram: not stated.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "Now, how byte-pair encoding chooses its drawers. BPE started in 1994 as a data-compression trick. The recipe has four steps.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "Split into letters. Count every neighbouring pair. Glue the most frequent pair into a new piece. Repeat until the list is big enough.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "Her practice word list. Low, five times. Lower, twice. Newest, six times. Widest, three times. The target is 13.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "Start with letters only. That is ten drawers.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "Round one. Count the pairs. e-s appears 6 plus 3: 9 times.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "So does s-t. A tie. The slide takes e-s; a fixed tie-break rule decides.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "Glue: that is a merge. Every e-s, in every word, becomes one tile. The cabinet gets a new drawer: es.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "Round two. es-t, 9 times: est.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "Round three. l-o, 5 plus 2: 7 times. o-w ties at 7. The slide takes l-o: lo.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "Stop. 10 letters plus 3 merges: 13 entries.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "est got its own tile because it kept showing up. That's the whole idea: what's frequent gets glued.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "You don't do this by hand. Her slide shows tiktoken, OpenAI's tokenizer library, and Hugging Face's tokenizers library, written in Rust.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "The code loads GPT-4's tokenizer, cl100k_base. Our sentence: 13 tokens. Then the flap lifts: the full name of China, the People's Republic of China.",
+  "zh": ""
+ },
+ {
+  "id": "n30",
+  "en": "In GPT-4's tokenizer, that is 7 tokens: one per character.",
+  "zh": ""
+ },
+ {
+  "id": "n31",
+  "en": "In GPT-4o's, 1 token. Same text, a seventh of the tokens.",
+  "zh": ""
+ },
+ {
+  "id": "n32",
+  "en": "So what changed? Both are byte-pair encoding tokenizers. The vocabulary went from about 100,000 entries to about 200,000. The bigger vocabulary has room for the whole name as one entry.",
+  "zh": ""
+ },
+ {
+  "id": "n33",
+  "en": "One honest limit. Tokenizers do not treat every language the same. The same text, translated, can need up to 15 times more tokens in some languages. That is Petrov and colleagues, NeurIPS 2023.",
+  "zh": ""
+ },
+ {
+  "id": "n34",
+  "en": "So: a model sees numbers from a fixed vocabulary. And context, compute and price are all counted in them.",
+  "zh": ""
+ },
+ {
+  "id": "n35",
+  "en": "Next: how the model picks the next token.",
+  "zh": ""
+ }
+]

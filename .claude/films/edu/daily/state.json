@@ -1,5 +1,4 @@
 {
- "about": "Daily-episode state, read and written by next.py (mark). guest_policy: 'skip' (default) or 'narration-only' for guest lectures whose speaker has not said yes; speaker_ok: {'L09': {'voice_clips': true, 'slides_on_screen': true, 'date': 'YYYY-MM-DD', 'note': '...'}}; skip: episode ids the user dropped.",
  "guest_policy": "skip",
  "speaker_ok": {},
  "skip": [],
@@ -11,6 +10,16 @@
    "mp4": "/Users/linyichen/Downloads/picasso-l01-5min/l01_background_en.mp4",
    "folder": "/Users/linyichen/Downloads/picasso-l01-5min",
    "note": "made by hand in the session of 2026-10-06; the reference film for the daily look"
+  },
+  "L01-02": {
+   "status": "delivered",
+   "updated": "2026-10-06 14:04",
+   "episode_dir": "episodes/l01-02",
+   "morning": "2026-10-07",
+   "run": "2026-10-06_131013",
+   "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-07_L01-02/l01-02_tokens_en.mp4",
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-07_L01-02"
   }
- }
+ },
+ "about": "Daily-episode state, read and written by next.py (mark). guest_policy: 'skip' (default) or 'narration-only' for guest lectures whose speaker has not said yes; speaker_ok: {'L09': {'voice_clips': true, 'slides_on_screen': true, 'date': 'YYYY-MM-DD', 'note': '...'}}; skip: episode ids the user dropped."
 }
