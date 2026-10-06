@@ -60,5 +60,6 @@ Do not use: the slide-10 meme and cartoon, OpenAI's finances, the $20/$200 joke,
 
 ## New line art (ChatGPT / Codex; black ink on white; see ~/Downloads/picasso-l01-art/prompts.html)
 line_chat_first, line_lab_2017, line_grow, line_chicken_egg, line_wave, line_receipt, line_tiny_lab, line_two_teams,
-line_balance, line_course_map, line_mic, plus wash_swatches (watercolour, colour) - 12 images.
+line_balance, line_course_map, line_mic, plus wash_swatches (watercolour, colour; the course's accent is blue) and
+tape_strips (real masking tape for the taped slides) - 13 images.
 Reused: line_gpu, line_servers, line_brain, line_paper, line_heap, the chef cast, the logo.
