@@ -27,16 +27,21 @@ marked 译). No drawing of her (a real person): voice only.
 | 7 | 4:58-5:03 | Logo end card (line), "Compute not included" / 「算力另计」. | - |
 
 ## Narration (scratch TTS until a person records; EN and ZH written natively)
-- N0 EN "Remember the first time an AI actually answered you? Our professor does." ZH 「还记得第一次被 AI 认真回答的那一刻吗？丁老师也记得。」
-- N1 EN "Rewind to 2017 to 2020. Models were small, and much of the research was about making them even smaller. Some people wondered if AI was heading into another winter." ZH 「倒回 2017 到 2020 年：模型都不大，很多研究在想办法把它们做得更小。甚至有人担心，AI 又要进入寒冬。」
-- N2 EN "Then came the bet: just make it larger. More data, more parameters. Sounds easy. It isn't." ZH 「然后有人押了一个注：做大。更多数据、更多参数。听起来简单，其实不然。」
-- N3a EN "This is the chart from her slide. On many tasks, small models score almost nothing. Then, past a certain size, the score jumps." ZH 「这是她课件上的图：很多任务上，小模型几乎是零分；模型大到某个程度，分数突然跳起来。」
-- N3b EN "A physicist, Philip Anderson, called this 'More Is Different': one water molecule can't make a wave. Fair warning: a later paper argues many of these jumps look smoother when you score more gently." ZH 「物理学家安德森管这叫『多，就不一样』：一个水分子，掀不起浪。也要说句公道话：后来有论文发现，换一种更宽松的打分，很多『突然』会变成『渐渐』。」
-- N4a EN "Bigger also means pricier. Her slide lists the bill. Two corrections in red: those model sizes were never published, and the hundred thousand GPUs are one company's cluster." ZH 「做大，也意味着更贵。她的课件列了账单。我们用红笔订正两处：那几家模型的大小从没公开过；十万张 GPU 是一家公司一个集群的规模。」
-- N4b EN "An estimated hundred million dollars for one top training run. A five-hundred-billion-dollar plan. And in a university?" ZH 「训一个顶级模型，估计上亿美元；一个计划，五千亿美元。那大学里呢？」
-- N5a EN "So the slide's punchline, borrowed from a Stanford course: accuracy equals efficiency times resources. Scale is not everything; methods that scale are." ZH 「所以这一页的重点，借自斯坦福一门课的口号：准确率等于效率乘资源。规模不是一切，能放大的方法才是。」
-- N5b EN "In 2022, a 70-billion-parameter model trained on four times the data beat a 280-billion one on the same compute." ZH 「2022 年，一个 700 亿参数、多喂了约四倍数据的模型，用同样的算力，赢了 2800 亿参数的大模型。」
-- N6 EN "That's this course: how to make big models cheaper and faster. Compute not included." ZH 「这门课讲的，就是怎么让大模型更便宜、更快。算力嘛，另计。」
+The lines are `vo_lines.json` (17 lines, n0-n7; 165 s EN / 171 s ZH at +4%), every number and phrase from FACTS.md's safe
+columns: N3b G1 (13B), N3c A1/A4 (the 1967 La Jolla lecture at UC San Diego), N3e B1-B5 (90% a digit -> 59% for five),
+N3f the honest framing, N4b C2/C4/C6, N5b D5 (44x vs 11x, they multiply), N5c E2/E3, N5d E4/E6/E9, N6 F5, N7 F6.
+The film's clock is `film/timeline.json` (4:25): each line and clip has its slot, with room for the longer language.
+
+## The film (film/)
+`film/film.html?lang=en|zh` (film.js, strings.js, timeline.json, vo_<lang>.json). Fifteen panels down one sheet: P0
+cover, P1 2017 lab, P2 make it larger, P3 chicken and egg (C3), P4 slide 9 taped, panel A clipped out bigger (13B),
+"Illusion" corrected to "Mirage", P5 the essay and the 1967 lecture, P6 the wave, P7 the Mirage paper (90% x5 = 59%,
+cliff vs slope), P8 slide 10 with a blank sheet taped over the meme and the three corrections on it, P9 the bill, P10
+the university lab (C5), P11 slide 11 with the motto boxed (C6), P12 the balance (x44, x11), P13 DeepMind 2022 (400+
+models, 280B vs 70B, 60.0% vs 67.6%), P14 the course road (C7), then the logo end card.
+Her clips play with a mic tag (top right) and red-bordered captions; the narrator's captions are black.
+Sound: `../l01-1-scale/film/mix.py` with `TL=<this>/film/timeline.json VODIR=<this>/film CLIPDIR=<scratch>/l01c/clips
+SND=<scratch>/snd`; music Investigations (incompetech, looped), Kenney CC0 paper/tape sounds.
 
 ## Original voice clips (cut on whisper medium.en word times, cleaned and levelled; exact cuts and text: clips.json; audio is
 made from git-ignored course/L01.mp4)
