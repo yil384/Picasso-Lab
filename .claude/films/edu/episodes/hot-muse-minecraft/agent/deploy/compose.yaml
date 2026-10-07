@@ -1,0 +1,30 @@
+# play.picasso-lab.com on picasso: `docker compose up -d --build` in the deployed folder (deploy/push.sh does it).
+# Caddy (the FRAS project) proxies https://play.picasso-lab.com to 172.24.0.1:7850.
+name: muse-minecraft
+services:
+  paper:
+    build: { context: .., dockerfile: deploy/Dockerfile.paper }
+    restart: unless-stopped
+    environment: { DIFFICULTY: easy, DAYLIGHT: locked, SEED: "71811045", MEMORY: 6G }
+    volumes: [ "../data:/data", "console:/console" ]
+    networks: { mc: { ipv4_address: 10.77.77.10 } }
+  agent:
+    build: { context: .., dockerfile: deploy/Dockerfile.agent }
+    restart: unless-stopped
+    depends_on: [ paper ]
+    env_file: [ .env ]
+    environment:
+      MC_HOST: 10.77.77.10
+      MC_CONSOLE: /console/console.in
+      WEB_PUBLIC_URL: https://play.picasso-lab.com
+      WEB_TRUST_PROXY: "1"
+      WEB_MAX_SESSIONS: "8"
+      WEB_LEASE_MS: "1800000"
+    volumes: [ "../logs:/logs", "console:/console" ]
+    ports: [ "172.24.0.1:7850:8787" ]
+    networks: { mc: { ipv4_address: 10.77.77.11 } }
+volumes:
+  console: {}
+networks:
+  mc:
+    ipam: { config: [ { subnet: 10.77.77.0/28 } ] }
