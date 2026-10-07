@@ -35,6 +35,8 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/skills/window.js` | window clicks the server confirms: crafting (and the inventory checks around every skill) never trust mineflayer's optimistic window picture |
 | `src/brain.js`, `src/memory.js` | the tool loop, its guards, short-term memory and `notes.json` |
 | `src/web.js` | `/`, `/play`, `/api`, `openapi.json`, `/ask`, `/log`, `/admin/stop` |
+| `src/stream.js`, `src/stream-page.js` | live video of a guest game (off unless `STREAM_ENABLED`): headless Chromium on the bot's first-person view, a smoothed camera, ffmpeg to RTMPS (Facebook Live) or an MP4; the stream service and its client for the container (section "Live video") |
+| `scripts/stream.mjs` | one stream on demand (to a file or an RTMP(S) URL, with its CPU, RAM and frame numbers), a side-by-side camera comparison, or `--serve` (the stream container) |
 | `scripts/probe.mjs` | latency and $ per call: effort x cache on/off x Chat/Responses, CSV per call |
 | `scripts/run-goal.mjs` | one goal from the command line (real server, or the mock and the fake bot), JSONL log, HUD table |
 | `scripts/hud-data.mjs` | the video HUD numbers from one or more run logs (milestones, totals, failures, timeline) |
@@ -50,7 +52,8 @@ folder.
 
 ```sh
 npm install
-npm test          # node --test test/ : every *.test.js (about 3 s)
+npm test          # node --test test/ : every *.test.js (about 15 s)
+npm run test:stream   # the streamer's tests with its end-to-end run: a real headless Chromium and ffmpeg (about 15 s)
 ```
 
 Tests never reach a real API: `createLLM` refuses any non-local URL while running under `node --test`, and the API
@@ -171,6 +174,93 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
 7. After a world reset, delete `notes.json` and `notes-ask.json` (or their `places`): the known crafting tables and
    furnaces belong to the old world. Lessons may stay.
 
+## Live video (Facebook Live)
+
+The muse.ai preview panel loads no page of ours, but it frames Facebook's video plugin, so the bot's first-person view
+goes out as a live video: H.264 + silent AAC over RTMPS to a Facebook Live stream, shown in the panel through
+`https://www.facebook.com/plugins/video.php?href=...`. Off unless `STREAM_ENABLED`; with it off nothing starts and no
+page changes.
+
+How a stream works (`src/stream.js`, `src/stream-page.js`):
+
+- When a guest game's `/eyes/<id>/` view listens, the stream of that game starts; it stops when the game ends. At most
+  `STREAM_MAX` at once, each holding one `STREAM_RTMP_URL` (an ingest key takes one stream) until it is fully down.
+- A headless Chromium (Playwright's headless shell; WebGL on SwiftShader, page composited in software) opens the eyes
+  page on 127.0.0.1. In that page only, prismarine-viewer's client is patched as it is served: the first-person camera
+  is ours, the render loop is capped at `STREAM_FPS`, one mesher worker instead of four (260 MB each), and "fast leaves"
+  (no faces between leaves of a kind: half the triangles in a forest). The view is fogged at `STREAM_FAR` blocks, and
+  sections far below or above the eye are not drawn. Placeholder boxes for entities without a model (dropped items) are
+  hidden. The public `/watch` and `/eyes` pages are unchanged.
+- The camera: the bot's pose updates arrive about 20 a second but irregularly; they are played 300 ms late and
+  interpolated, updates that arrive in a bunch get their 50 ms ticks back, a stand-still holds until a tick before the
+  next update, a move over 8 blocks (spread, respawn) is a cut, and an eased spring smooths the rest, with turns held
+  under 270 degrees a second (pathfinder snaps the bot's look; the viewer showed every snap). Until the first update
+  the page gets the bot's pose from the agent (the viewer sends none while the bot stands still).
+- Frames: the DevTools screencast (JPEG, 640x360 at the default scale), put on a constant 30 fps clock by the time each
+  frame was drawn (a 200 ms jitter buffer; a slow page repeats its last frame). ffmpeg scales 2x (square pixels), draws
+  the caption (plain words from the running skill: "Collecting oak log (3)", "Walking to 12 64 -40"; never chat or
+  viewer text) and encodes 1280x720 H.264 High, CBR 3000 kb/s, keyframe every 2 s, no B-frames, + silent 48 kHz stereo
+  AAC 128 kb/s, FLV to the URL (MP4 to a file). It starts with the first frame.
+- Supervision: a browser that exits, crashes, stalls 15 s or passes `STREAM_MAX_RSS_MB` is restarted while ffmpeg goes
+  on with the last frame (the ingest connection stays); ffmpeg is restarted with a backoff (1-30 s). More than 6
+  failures of either in 5 min end the stream (`stream_failed`). Frames for an ffmpeg more than ~5 s behind are dropped
+  and counted. The browser runs at nice 10 (bots and the game first), ffmpeg at 0 (it must keep real time).
+- Log rows: `stream_start`, `stream_browser`, `stream_live`, `stream_stats` (every minute: page and capture fps, repeats,
+  drops, CPU and RAM of both children), `stream_browser_restart`, `stream_ffmpeg_exit`, `stream_stop`, `stream_failed`,
+  `stream_skipped`, `stream_error`. The URLs are masked (`rtmps://live-api-s.facebook.com:443/rtmp/***`); the log
+  scrubs the keys anyway.
+
+Turn it on with a Facebook stream key (Live Producer, "Streaming software", a persistent key):
+
+```sh
+# locally, the agent streams itself (needs Chromium and ffmpeg on this machine)
+STREAM_ENABLED=1 STREAM_RTMP_URL='rtmps://live-api-s.facebook.com:443/rtmp/<key>' npm start
+# a test without Facebook: every guest game to an MP4 in /tmp/streams
+STREAM_ENABLED=1 STREAM_OUT_DIR=/tmp/streams npm start
+# one stream by hand from a running game (eyes link from /play), with its numbers every 5 s
+node scripts/stream.mjs --source http://127.0.0.1:8787/eyes/<session>/ --out sample.mp4 --seconds 45
+node scripts/stream.mjs --source http://127.0.0.1:8787/eyes/<session>/ --out compare.mp4 --compare --width 1280 --height 360 --scale 0.75
+```
+
+On picasso (`deploy/`): the streamer is its own container (compose profile `stream`, `deploy/Dockerfile.stream`), in
+the agent's network namespace, capped at 8 CPUs and 3 GB together. Put the keys in `deploy/stream.env` (read by that
+container alone; `push.sh` never copies or deletes it):
+
+```sh
+STREAM_ENABLED=1
+STREAM_RTMP_URL=rtmps://live-api-s.facebook.com:443/rtmp/<key>
+```
+
+and tell the agent where it is, in `deploy/.env`: `STREAM_ENABLED=1` and `STREAM_SERVICE_URL=http://127.0.0.1:7861`.
+`deploy/push.sh` builds and starts the stream container whenever `deploy/stream.env` exists. For more streams at once:
+one URL per stream in `STREAM_RTMP_URL`, `STREAM_MAX` in compose.yaml, and the caps raised (about 6 CPUs and 1.5 GB per
+stream). In the muse.ai panel: `https://www.facebook.com/plugins/video.php?href=<the live video's URL>&show_text=false`.
+
+Measured on the M1 here (8 cores; a local model server held 10 GB of the 16 GB as wired memory throughout, so the
+machine was short of RAM and CPU and the numbers are on the slow side), default settings, real games on the local
+Paper server (2026-10-07):
+
+| | |
+| --- | --- |
+| CPU per drawn frame (browser, all processes) | 93-166 ms in five games (birch and dark-oak forest, hills, a hillside tunnel); 230-250 ms on top of a dense dark-oak canopy (measured before software compositing) |
+| browser CPU, RSS | 1.6-2.9 cores on average (peaks 4-4.7) and 0.4-0.7 GB |
+| ffmpeg CPU, RSS | 0.6-0.75 core, 40-250 MB |
+| page frame rate | 16-23 fps (CPU-bound on this machine; the cap is 30); the screencast caught 72-98 % of them, the clock repeats the rest |
+| output | 1280x720, 30.000 fps CFR, 3.0 Mb/s, keyframes at every 2.000 s, AAC; decodes clean |
+| what the settings saved | fast leaves -40 % per frame (234k -> 123k triangles); software compositing -26 %; 1 mesher worker -520 MB; 640x360 instead of 1280x720 -41 %; the viewer as it is at 1280x720 managed 7-9 fps on 4.6-6.7 cores |
+
+Camera, the viewer's own vs smoothed, the same frames side by side (42 s walk and dig, 828 frames at 18 fps): turns of
+more than 170 degrees in one frame at the 99th percentile vs 25; largest turn 268 vs 68 degrees a frame (that one after
+a 0.5 s page stall); 55 vs 4 sudden turns and 36 vs 7 sudden moves (a frame more than 3x its neighbours); 5 vs 0
+frames standing still mid-walk; frame-to-frame speed change 12.8 vs 1.2 blocks/s.
+
+Estimate for picasso (2x EPYC 9534, 256 threads, load 170-230, no GPU for Chromium): SwiftShader's cost grows with
+triangles and pixels and it uses up to 16 threads per browser; a Zen 4 thread whose sibling is busy does perhaps
+0.6-0.8 of an M1 core, so plan 120-300 ms CPU per frame: 3.5-9 threads at 30 fps (3-7 at `STREAM_FPS=24`), plus one
+for ffmpeg and about 1 GB RAM per stream; the compose caps (8 CPUs, 3 GB) fit one stream. With the load at 230 there
+are about 26 threads spare: 2-3 streams at most. UNVERIFIED until measured there (`stream_stats` in the log gives the
+real numbers every minute).
+
 ## Configuration
 
 | Env var | Default | Meaning |
@@ -198,6 +288,14 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
 | `ERROR_CAP`, `LOOP_REPEAT` | `8`, `3` | errors in a row (8 leaves room to explore for ore); same call failing (or changing nothing) before a hint |
 | `NOTES_PATH`, `ASK_NOTES_PATH`, `SHORT_MEMORY` | `notes.json`, `notes-ask.json`, `8` | long-term notes of the filmed runs, of the Ask brain (viewer requests never write `notes.json`), steps kept verbatim |
 | `LOG_DIR` | `logs` | JSONL logs: `run-<time>.jsonl` (run-goal), `run-serve-<time>.jsonl` (`npm start`), `probe-<date>.csv` |
+| `STREAM_ENABLED` | `false` | live video of every guest game (section "Live video"); off: nothing is started and nothing changes |
+| `STREAM_RTMP_URL` | (none) | `rtmps://...` ingest URLs with their stream keys, comma-separated, one per stream that may run at once; never printed or logged |
+| `STREAM_OUT_DIR` | (none) | without an RTMP URL: every stream is an MP4 file here (local tests) |
+| `STREAM_SERVICE_URL` | (none) | the stream container's API (`http://127.0.0.1:7861`); the agent then starts and stops streams there instead of in its own process |
+| `STREAM_MAX` | `1` | streams at once (never more than output URLs or than games) |
+| `STREAM_FPS`, `STREAM_SCALE`, `STREAM_BITRATE_K`, `STREAM_FAR` | `30`, `0.5`, `3000`, `48` | frame rate; the page renders at 1280x720 times the scale; video kb/s (CBR); how far the bot sees (blocks, fogged) |
+| `STREAM_MAX_RSS_MB`, `STREAM_NO_SANDBOX` | `1600`, `false` | the browser is restarted above this RAM; Chromium without its sandbox (in the container) |
+| `STREAM_CHROMIUM`, `STREAM_FFMPEG`, `STREAM_FONT` | (found) | Playwright's headless shell or a system Chromium; ffmpeg; a TTF for the caption |
 
 ## How the brain plays
 
@@ -269,6 +367,11 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
   pathfinder's own digging rules go.
 - The guests' live views run the real prismarine-viewer in tests only for the read-only check (a click from the page
   reaches nothing); the house bot's watch page is tested with a stand-in module.
+- Live video: run on this Mac against the local Paper server only, in-process and through the stream service, to MP4
+  files. Not yet: any RTMP(S) ingest (no stream key exists; Facebook's acceptance of the exact stream, its latency and
+  the video plugin inside the muse.ai panel are open), the stream container (no Docker here: `deploy/Dockerfile.stream`
+  and the compose service are unbuilt), SwiftShader's speed on picasso's EPYC cores, and long streams (the longest run
+  was 4 min).
 
 ## Safety rules
 

@@ -1,7 +1,8 @@
 // src/index.js - starts the agent from config: the viewer channel (src/web.js) with one mineflayer body per guest
 // session, the house bot and its brain for the "Ask our Muse" queue (only when a model is configured), the optional
-// prismarine-viewer watch page on the house bot (loaded only if installed, held to WEB_HOST), and a graceful shutdown
-// on SIGINT/SIGTERM. `npm start`; `npm start -- --fake-bot` puts every bot in the in-memory test world instead of a
+// prismarine-viewer watch page on the house bot (loaded only if installed, held to WEB_HOST), the live-video stream of
+// each guest game when STREAM_ENABLED (src/stream.js; nothing changes when it is off), and a graceful shutdown on
+// SIGINT/SIGTERM. `npm start`; `npm start -- --fake-bot` puts every bot in the in-memory test world instead of a
 // Minecraft server (a local demo with no Java and no server).
 
 import fs from 'node:fs';
@@ -18,6 +19,7 @@ import { createLLM } from './llm.js';
 import { createBody } from './body.js';
 import { createBrain } from './brain.js';
 import { createWeb } from './web.js';
+import { createStreamManager, createRemoteStreamManager, managerConfig } from './stream.js';
 
 const require = createRequire(import.meta.url);
 
@@ -144,9 +146,10 @@ export function viewPorts(first = 3101, count = 64) {
  * mineflayer() call replaces bot.viewer, so each view's close is kept right after it starts).
  * @param {object} body   a body whose bot has joined
  * @param {string} sessionId
- * @param {{log: object, ports: ReturnType<typeof viewPorts>, load?: () => object}} opts
+ * @param {{log: object, ports: ReturnType<typeof viewPorts>, load?: () => object, onEyes?: (port: number) => void}} opts
+ *   onEyes runs once the first-person view listens (the live-video stream starts from it)
  */
-export function startGuestViews(body, sessionId, { log, ports, load = loadViewer }) {
+export function startGuestViews(body, sessionId, { log, ports, load = loadViewer, onEyes = null }) {
   if (body.connected === false) return; // it left before its views started
   let viewer;
   try { viewer = load(); } catch { return; }
@@ -164,7 +167,10 @@ export function startGuestViews(body, sessionId, { log, ports, load = loadViewer
     } catch (err) { onError(err); }
   };
   view(pair.watch, false, `/watch/${sessionId}`, (port) => { body.viewerPort = port; });
-  view(pair.eyes, true, `/eyes/${sessionId}`, (port) => { body.eyesPort = port; });
+  view(pair.eyes, true, `/eyes/${sessionId}`, (port) => {
+    body.eyesPort = port;
+    try { onEyes?.(port); } catch (err) { onError(err); }
+  });
   body.on('end', () => {
     ended = true;
     body.viewerPort = null;
@@ -183,6 +189,7 @@ export function startGuestViews(body, sessionId, { log, ports, load = loadViewer
  * @param {object} [opts.log]            a Logger (default: a JSONL log in LOG_DIR)
  * @param {(line: string) => void} [opts.print]
  * @param {() => object} [opts.loadViewer]   how prismarine-viewer is loaded (tests)
+ * @param {object} [opts.streams]        a stream manager (tests; default: from STREAM_*, null when off)
  */
 export async function startAgent(opts = {}) {
   const config = opts.config ?? loadConfig();
@@ -206,8 +213,16 @@ export async function startAgent(opts = {}) {
     }
   }
 
-  // Guests' bots each get two live 3D views for people to watch (startGuestViews).
+  // Guests' bots each get two live 3D views for people to watch (startGuestViews). With STREAM_ENABLED, the first-person
+  // view of each guest game also goes out as a live video (in this process, or in the stream container when
+  // STREAM_SERVICE_URL is set), from when the view listens until the game ends.
   const ports = viewPorts();
+  const streams = opts.streams !== undefined ? opts.streams : !config.stream.enabled ? null
+    : config.stream.serviceUrl ? createRemoteStreamManager({ url: config.stream.serviceUrl, log })
+      : createStreamManager({ config: managerConfig(config.stream), log });
+  const streamFrom = (body, sessionId) => (streams
+    ? (port) => streams.start(sessionId, { source: `http://127.0.0.1:${port}/eyes/${sessionId}/`, body })
+    : null);
   function newBody(sessionId) {
     const username = usernameFor(config.mc.username, sessionId);
     const cfg = Object.freeze({ ...config, mc: Object.freeze({ ...config.mc, username }) });
@@ -237,7 +252,9 @@ export async function startAgent(opts = {}) {
       });
       body.ready.catch(() => {});
     }
-    if (sessionId !== 'house') body.ready.then(() => startGuestViews(body, sessionId, { log, ports, load: opts.loadViewer }), () => {});
+    if (sessionId !== 'house') {
+      body.ready.then(() => startGuestViews(body, sessionId, { log, ports, load: opts.loadViewer, onEyes: streamFrom(body, sessionId) }), () => {});
+    }
     return body;
   }
 
@@ -285,6 +302,11 @@ export async function startAgent(opts = {}) {
     ? `Ask queue: open, ${llm.model} · ${llm.effort} · ${llm.tier} at ${llm.baseURL}; caps ${config.caps.steps} steps and $${config.caps.usdPerRun} per run, $${config.caps.usdPerHour} per hour`
     : `Ask queue: closed (${askOff})`);
   print(config.web.adminToken ? 'kill switch: POST /admin/stop with "Authorization: Bearer $WEB_ADMIN_TOKEN"' : 'kill switch: set WEB_ADMIN_TOKEN to enable POST /admin/stop');
+  if (streams && config.stream.enabled) {
+    print(config.stream.serviceUrl
+      ? `live video: on, every guest game through the stream service at ${config.stream.serviceUrl}`
+      : `live video: on, up to ${config.stream.max} guest game(s) at once to ${config.stream.outputs.length ? `${config.stream.outputs.length} RTMP URL(s)` : config.stream.outDir}`);
+  }
   if (!isLoopbackHost(config.web.host)) print(`note: WEB_HOST=${config.web.host} is reachable from the network; expose only this port`);
   if (!config.web.publicUrl) {
     print(config.web.trustProxy === 'off'
@@ -311,6 +333,7 @@ export async function startAgent(opts = {}) {
     stopping ??= (async () => {
       log.event('serve_stop', { reason });
       await web.stop(); // closes the Ask queue, ends every session and closes its bot, closes the house bot it used
+      if (streams) await within(streams.stopAll(reason), 12_000);
       for (const brain of brains) { try { brain.close(); } catch { /* notes are best effort */ } }
       if (house && !house.ended) await within(house.body.close().catch(() => {}), 5_000);
       house?.closeViewer?.();
@@ -319,7 +342,7 @@ export async function startAgent(opts = {}) {
     return stopping;
   }
 
-  return { url, publicUrl, log, web, stop };
+  return { url, publicUrl, log, web, streams, stop };
 }
 
 /** The CLI: start, then wait for SIGINT/SIGTERM. Returns an exit code. */
