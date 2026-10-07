@@ -4,6 +4,7 @@
 // on SIGINT/SIGTERM. `npm start`; `npm start -- --fake-bot` puts every bot in the in-memory test world instead of a
 // Minecraft server (a local demo with no Java and no server).
 
+import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -136,6 +137,30 @@ export async function startAgent(opts = {}) {
     const cfg = Object.freeze({ ...config, mc: Object.freeze({ ...config.mc, username }) });
     if (createFakeBot) return createBody({ bot: createFakeBot({ scene: 'forest', username }), config: cfg, log });
     const body = createBody({ config: cfg, log });
+    // Every guest bot starts on fresh ground: the server console (MC_CONSOLE, the FIFO server/start.sh makes) spreads
+    // it to a random dry spot up to SPREAD_RANGE blocks from the world spawn, so earlier guests never leave a new one
+    // at a stripped spawn. The session counts as ready only once the bot has landed and the chunks around it loaded.
+    const consolePath = process.env.MC_CONSOLE;
+    if (sessionId !== 'house' && consolePath) {
+      const range = Number(process.env.SPREAD_RANGE) || 400;
+      const joined = body.ready;
+      body.ready = joined.then(async () => {
+        const bot = body.bot;
+        const sp = bot.spawnPoint ?? bot.entity.position;
+        const landed = new Promise((resolve) => bot.once('forcedMove', resolve));
+        try {
+          await fs.promises.appendFile(consolePath, `spreadplayers ${Math.round(sp.x)} ${Math.round(sp.z)} 16 ${range} false ${username}\n`);
+        } catch (err) {
+          log.event('spread_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) });
+          return;
+        }
+        const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+        await Promise.race([landed, pause(5_000)]);
+        await Promise.race([Promise.resolve(bot.waitForChunksToLoad?.()).catch(() => {}), pause(8_000)]);
+        log.event('spread', { session: sessionId, at: bot.entity.position.floored().toString() });
+      });
+      body.ready.catch(() => {});
+    }
     if (sessionId !== 'house') {
       body.ready.then(() => {
         let viewer;

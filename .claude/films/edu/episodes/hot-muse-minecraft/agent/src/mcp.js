@@ -10,7 +10,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { TOOLS, TOOL_NAMES, validateArgs } from './contracts.js';
 
-const CALL_MS = 85_000; // under the ~100 s a tunnel or proxy keeps a quiet request open
+const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
+const IDLE_MS = 5 * 60_000; // a game nobody has called for 5 minutes (and that runs nothing) is ended, freeing its bot
 const MAX_STEPS = 12;
 
 /** One line per skill: name(args) - what it does. Goes into the tool descriptions so the agent needs no lookup. */
@@ -38,16 +39,39 @@ export function createMcp(hooks) {
   const text = (t) => ({ content: [{ type: 'text', text: t }] });
   const fail = (t) => ({ content: [{ type: 'text', text: t }], isError: true });
 
-  async function runOne(s, tool, args) {
+  const fmt = (tool, args, r) => {
+    const delta = Object.entries(r.delta ?? {}).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k}`).join(', ');
+    return `${tool} ${JSON.stringify(args)}: ${r.ok ? 'ok' : 'FAILED'}: ${r.result}${delta ? ` [${delta}]` : ''}`;
+  };
+
+  /** The result of a skill that outlived its call and has finished since, once: "" when there is none. */
+  function earlier(entry) {
+    const u = entry.unreported;
+    if (!u || !u.result) return '';
+    entry.unreported = null;
+    return `Finished since your last call: ${fmt(u.tool, u.args, u.result)}\n`;
+  }
+
+  /** Run one skill, waiting at most `budget` ms; a skill still running then keeps going and entry.pending tracks it. */
+  async function runOne(entry, s, tool, args, budget = CALL_MS) {
     const check = validateArgs(tool, args ?? {});
     if (!check.ok) return { ok: false, line: `${tool}: not run, bad arguments: ${check.error}` };
     if (tool === 'get_state') return { ok: true, line: 'get_state: ok' };
+    if (entry.pending) {
+      const prev = await hooks.within(entry.pending.promise, budget);
+      if (prev === hooks.TIMEOUT) return { ok: false, running: true, line: `${tool}: not run: ${entry.pending.tool} is still running; call get_state to wait for it, or stop` };
+    }
     const started = hooks.startAction(s, tool, check.args);
     if (!started.ok) return { ok: false, line: `${tool}: not run: ${started.error}` };
-    const r = await hooks.within(started.promise, CALL_MS);
-    if (r === hooks.TIMEOUT) return { ok: false, line: `${tool}: still running after ${CALL_MS / 1000} s; call get_state later or stop`, running: true };
-    const delta = Object.entries(r.delta ?? {}).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k}`).join(', ');
-    return { ok: r.ok, line: `${tool} ${JSON.stringify(check.args)}: ${r.ok ? 'ok' : 'FAILED'}: ${r.result}${delta ? ` [${delta}]` : ''}` };
+    const pending = { tool, args: check.args, promise: started.promise, result: null };
+    entry.pending = pending;
+    started.promise.then((r) => { pending.result = r; }, () => {}).finally(() => { if (entry.pending === pending) entry.pending = null; });
+    const r = await hooks.within(started.promise, budget);
+    if (r === hooks.TIMEOUT) {
+      entry.unreported = pending; // its result goes out with the next call, whichever it is
+      return { ok: false, running: true, line: `${tool} ${JSON.stringify(check.args)}: still running after ${Math.round(budget / 1000)} s (long walks and mining take a while); call get_state to wait for the result` };
+    }
+    return { ok: r.ok, line: fmt(tool, check.args, r) };
   }
 
   function build(entry, req) {
@@ -64,7 +88,7 @@ export function createMcp(hooks) {
     }, async () => {
       let s = game(entry);
       if (!s || s.ended) {
-        try { s = hooks.newSession(req, true); } catch (e) { return fail(`could not start: ${e.message}`); }
+        try { s = hooks.newSession(req, true, `mcp:${entry.transport.sessionId ?? crypto.randomUUID()}`); } catch (e) { return fail(`could not start: ${e.message}`); }
         entry.token = s.token;
       }
       await hooks.within(Promise.resolve(s.ready).catch(() => {}), 30_000);
@@ -78,8 +102,9 @@ export function createMcp(hooks) {
     }, async ({ skill, args }) => {
       let s;
       try { s = need(); } catch (e) { return fail(e.message); }
-      const r = await runOne(s, skill, args);
-      return text(`${r.line}\n\nState:\n${hooks.stateText(s)}`);
+      const before = earlier(entry);
+      const r = await runOne(entry, s, skill, args);
+      return text(`${before}${r.line}\n\nState:\n${hooks.stateText(s)}`);
     });
 
     server.registerTool('play_sequence', {
@@ -88,21 +113,34 @@ export function createMcp(hooks) {
     }, async ({ steps }) => {
       let s;
       try { s = need(); } catch (e) { return fail(e.message); }
-      const t0 = Date.now();
-      const lines = [];
+      const deadline = Date.now() + CALL_MS;
+      const lines = [earlier(entry).trim()].filter(Boolean);
       let i = 0;
       for (; i < steps.length; i++) {
-        if (Date.now() - t0 > CALL_MS - 15_000) break;
-        const r = await runOne(s, steps[i].skill, steps[i].args);
+        const budget = deadline - Date.now();
+        if (budget < 3_000) break;
+        const r = await runOne(entry, s, steps[i].skill, steps[i].args, budget);
         lines.push(`${i + 1}. ${r.line}`);
         if (!r.ok) { i++; break; }
       }
       const left = steps.length - i;
-      return text(`${lines.join('\n')}${left ? `\n(${left} step(s) not run)` : ''}\n\nState:\n${hooks.stateText(s)}`);
+      return text(`${lines.join('\n')}${left ? `\n(${left} step(s) not run yet: send them again)` : ''}\n\nState:\n${hooks.stateText(s)}`);
     });
 
-    server.registerTool('get_state', { description: 'Read the game state as text (no game time).', inputSchema: {} }, async () => {
-      try { return text(hooks.stateText(need())); } catch (e) { return fail(e.message); }
+    server.registerTool('get_state', { description: 'Read the game state as text. If a skill is still running, waits (up to 45 s) for it to finish and reports its result first.', inputSchema: {} }, async () => {
+      let s;
+      try { s = need(); } catch (e) { return fail(e.message); }
+      let head = '';
+      if (entry.pending) {
+        const p = entry.pending;
+        const r = await hooks.within(p.promise, CALL_MS);
+        if (r === hooks.TIMEOUT) head = `${p.tool} is still running; call get_state again to keep waiting, or stop.\n\n`;
+        else { head = `${fmt(p.tool, p.args, r)}\n\n`; if (entry.unreported === p) entry.unreported = null; }
+      } else {
+        const e = earlier(entry);
+        if (e) head = `${e}\n`;
+      }
+      return text(`${head}State:\n${hooks.stateText(s)}`);
     });
 
     server.registerTool('stop', { description: 'Stop the skill that is running now.', inputSchema: {} }, async () => {
@@ -118,12 +156,27 @@ export function createMcp(hooks) {
     return server;
   }
 
+  // the idle reaper: games nobody has called for IDLE_MS, and MCP sessions with no game for an hour
+  const reaper = setInterval(() => {
+    const t = Date.now();
+    for (const [sid, e] of sessions) {
+      const s = game(e);
+      if (s && !s.ended && !e.pending && t - e.lastCall > IDLE_MS) {
+        hooks.endSession(s, 'no calls for 5 minutes');
+        e.token = null;
+        hooks.log.event('mcp_idle_end', { session: sid.slice(0, 8), game: s.id });
+      }
+      if (!game(e) && t - e.lastCall > 60 * 60_000) { sessions.delete(sid); e.transport.close?.().catch?.(() => {}); }
+    }
+  }, 30_000);
+  reaper.unref();
+
   return async function handle(req, res, body) {
     const id = req.headers['mcp-session-id'];
     let entry = id ? sessions.get(String(id)) : null;
     if (!entry) {
       if (id) { res.writeHead(404, { 'content-type': 'application/json' }).end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32001, message: 'unknown session; initialize again' }, id: null })); return; }
-      entry = { token: null };
+      entry = { token: null, pending: null, unreported: null, lastCall: Date.now() };
       entry.transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
         onsessioninitialized: (sid) => { sessions.set(sid, entry); hooks.log.event('mcp_session', { session: sid.slice(0, 8) }); },
@@ -135,6 +188,7 @@ export function createMcp(hooks) {
       };
       await build(entry, req).connect(entry.transport);
     }
+    entry.lastCall = Date.now();
     await entry.transport.handleRequest(req, res, body);
   };
 }

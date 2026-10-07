@@ -852,11 +852,13 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
    * Ask for a session: 18+ confirmed, no live session and no cooldown for this address, a free slot, the hourly
    * per-address limit. Returns the session or throws.
    */
-  function newSession(req, adult) {
+  function newSession(req, adult, keyOverride) {
     if (closing) throw new HttpError(503, 'the server is shutting down');
     if (!adult) throw new HttpError(400, 'please confirm that you are 18 or older');
     sweep();
-    const key = clientKey(req);
+    // MCP games are counted per MCP session, not per address: every connector user arrives from the agent's own
+    // cloud, so one address can stand for many people (the global slot cap still applies)
+    const key = keyOverride ?? clientKey(req);
     const retry = (ms) => ({ 'retry-after': String(Math.max(1, Math.ceil(ms / 1000))) });
     const mine = [...sessions.values()].filter((x) => x.client === key);
     if (mine.length >= sessionsPerAddress) {
