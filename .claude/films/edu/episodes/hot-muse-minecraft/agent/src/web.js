@@ -793,7 +793,7 @@ ${!s.refresh ? html`Auto-refresh is off. <a href="${playPath(s)}?refresh=1">Turn
 ${s.notice ? html`<p class="notice" role="alert">${s.notice}</p>` : ''}<h3 id="h-last">Last result</h3>
 <p>${last}</p>
 <div class="row"><form method="post" action="${playPath(s)}/stop" aria-label="Stop" novalidate><button class="stop" type="submit">Stop the current action</button></form></div></section>
-<p><a href="/watch/${s.id}/" target="_blank" rel="noopener">Watch the bot live in 3D (opens a new tab, for people; the page above is all an agent needs)</a></p>
+<p>For people (an agent needs only this page): <a href="/eyes/${s.id}/" target="_blank" rel="noopener">see through the bot's eyes</a> or <a href="/watch/${s.id}/" target="_blank" rel="noopener">watch it from behind</a>, live in 3D (each opens a new tab).</p>
 <section aria-labelledby="h-state"><h2 id="h-state">Game state</h2>
 <pre>${stateText(s)}</pre></section>
 <section aria-labelledby="h-actions"><h2 id="h-actions">Actions</h2>
@@ -939,8 +939,8 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
   }
 
   /** The local port of a session's live 3D view, by its public session id (not the secret token). */
-  function viewerPort(id) {
-    for (const s of sessions.values()) if (s.id === id && !s.ended) return s.body?.viewerPort ?? null;
+  function viewerPort(id, kind = 'watch') {
+    for (const s of sessions.values()) if (s.id === id && !s.ended) return (kind === 'eyes' ? s.body?.eyesPort : s.body?.viewerPort) ?? null;
     return null;
   }
 
@@ -955,8 +955,8 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
 
   /** WebSocket upgrades for the live view (socket.io under /watch/<id>/socket.io). */
   function proxyUpgrade(req, socket, head) {
-    const m = String(req.url).match(/^\/watch\/([A-Za-z0-9_-]+)\//);
-    const port = m && viewerPort(m[1]);
+    const m = String(req.url).match(/^\/(watch|eyes)\/([A-Za-z0-9_-]+)\//);
+    const port = m && viewerPort(m[2], m[1]);
     if (!port) { socket.destroy(); return; }
     const up = net.connect(port, '127.0.0.1', () => {
       const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
@@ -1003,11 +1003,11 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     }
     if (p === '/admin/stop') { only('POST'); return adminStop(req, res); }
 
-    const w = p.match(/^\/watch\/([A-Za-z0-9_-]+)(\/.*)?$/);
+    const w = p.match(/^\/(watch|eyes)\/([A-Za-z0-9_-]+)(\/.*)?$/);
     if (w) {
-      const port = viewerPort(w[1]);
+      const port = viewerPort(w[2], w[1]);
       if (!port) throw new HttpError(404, 'no live view for this session (it ended, or the bot is still joining)');
-      if (!w[2]) return redirect(res, `/watch/${w[1]}/`);
+      if (!w[3]) return redirect(res, `/${w[1]}/${w[2]}/`);
       return proxyHttp(req, res, port);
     }
 
