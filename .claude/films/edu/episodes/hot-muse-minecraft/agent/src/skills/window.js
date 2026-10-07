@@ -13,6 +13,9 @@
 
 import { requireMc } from '../mc.js';
 
+/** One phase of the skill's time (the body's ctx.phase; see createPhases in src/body.js). */
+const timed = (ctx, name, fn) => (typeof ctx?.phase === 'function' ? ctx.phase(name, fn) : fn());
+
 /** How long the server gets to open a window, and to answer the clicks sent so far. */
 export const OPEN_MS = 5_000;
 export const SETTLE_MS = 4_000;
@@ -89,27 +92,31 @@ export function clicker(ctx, window) {
   return {
     window,
     /** Left (0) or right (1) click on a slot; mode 1 is a shift-click (move to the other part of the window). */
-    click: (slot, button = 0, mode = 0) => send(slot, button, mode),
+    click: (slot, button = 0, mode = 0) => timed(ctx, 'clicks', () => send(slot, button, mode)),
     /** Send a list of [slot, button, mode]. */
-    async clicks(list) {
-      for (const [slot, button = 0, mode = 0] of list) await send(slot, button, mode);
+    clicks(list) {
+      return timed(ctx, 'clicks', async () => {
+        for (const [slot, button = 0, mode = 0] of list) await send(slot, button, mode);
+      });
     },
     /**
      * Wait until the server has answered every click sent so far. With no click pending, ask for a resync (the end
      * of a drag that never started changes nothing). Throws when the server stays silent for SETTLE_MS.
      */
-    async settle() {
-      if (!sent) await send(-999, 2, 5);
-      sent = false;
-      sinceGap = 0;
-      const until = Date.now() + (ctx.timing?.windowMs ?? SETTLE_MS);
-      while ((t.full.get(id) ?? 0) < expect) {
-        if (Date.now() > until) throw new Error('the server did not answer the clicks in time');
-        if (window !== (bot.currentWindow ?? bot.inventory)) throw new Error('the window was closed');
-        await ctx.sleep(20);
-      }
-      while (Date.now() - (t.last.get(id) ?? 0) < QUIET_MS && Date.now() < until) await ctx.sleep(QUIET_MS / 2);
-      expect = Math.max(expect, t.full.get(id) ?? 0);
+    settle() {
+      return timed(ctx, 'clicks', async () => {
+        if (!sent) await send(-999, 2, 5);
+        sent = false;
+        sinceGap = 0;
+        const until = Date.now() + (ctx.timing?.windowMs ?? SETTLE_MS);
+        while ((t.full.get(id) ?? 0) < expect) {
+          if (Date.now() > until) throw new Error('the server did not answer the clicks in time');
+          if (window !== (bot.currentWindow ?? bot.inventory)) throw new Error('the window was closed');
+          await ctx.sleep(20);
+        }
+        while (Date.now() - (t.last.get(id) ?? 0) < QUIET_MS && Date.now() < until) await ctx.sleep(QUIET_MS / 2);
+        expect = Math.max(expect, t.full.get(id) ?? 0);
+      });
     },
   };
 }
@@ -144,7 +151,7 @@ export async function openBlockWindow(ctx, block, typePrefix, what) {
   const opened = eventWithin(bot, 'windowOpen', ms, `the ${what} did not open (no answer from the server within ${ms / 1000} s)`);
   opened.catch(() => {});
   Promise.resolve().then(() => bot.activateBlock(block)).catch(() => {});
-  const [window] = await ctx.wait(opened);
+  const [window] = await timed(ctx, 'open', () => ctx.wait(opened));
   let open = true;
   const close = () => {
     if (!open) return;
@@ -168,7 +175,7 @@ export async function settleInventory(ctx) {
   const { bot } = ctx;
   if (!canClick(bot) || bot.currentWindow) return;
   try {
-    await clicker(ctx, bot.inventory).settle();
+    await timed(ctx, 'sync', () => clicker(ctx, bot.inventory).settle());
   } catch (err) {
     if (err?.name === 'SkillStop') throw err;
     /* best effort: the inventory is reported as the client sees it */

@@ -14,7 +14,7 @@ Not affiliated with or endorsed by Meta or Mojang.
 ```
 viewer's Muse (muse.ai) --HTTPS--> play.<domain>: control page (zero-JS forms) + /api + openapi.json
 viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our key)
-                                  | per-session token, quotas, $ cap, kill switch, public log
+                                  | per-session token, quotas, $ cap, kill switch, operator-only log
                     mc-body (Node, mineflayer 4.39.0): 10 bounded skills + text state
                                   |
                     Paper 1.21.4, online-mode=false, bound to localhost/LAN only
@@ -35,7 +35,8 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/walk-watch.js` | is a walk still getting closer? Ends one that is not (digging by hand, pillaring, going in circles) with what held it up, where the bot is and what to try |
 | `src/skills/window.js` | window clicks the server confirms: crafting (and the inventory checks around every skill) never trust mineflayer's optimistic window picture |
 | `src/brain.js`, `src/memory.js` | the tool loop, its guards, short-term memory and `notes.json` |
-| `src/web.js` | `/`, `/play`, `/api`, `openapi.json`, `/ask`, `/log`, `/admin/stop` |
+| `src/web.js` | `/`, `/play`, `/api`, `openapi.json`, `/ask`, `/log` (operator), `/admin/stop`, the live-view proxy, the queue for a bot, the trusted-proxy check |
+| `src/mcp.js` | `/mcp`: start_game, play, play_sequence, get_state, stop, end_game, live_view; resume handles; the MCP client's protocol version and name in the log |
 | `src/live-view-fx.js` | runs in the live-view pages: eased first-person camera, crack overlay on the block being broken |
 | `src/stream.js`, `src/stream-page.js` | live video of a guest game (off unless `STREAM_ENABLED`): headless Chromium on the bot's first-person view, a smoothed camera, ffmpeg to RTMPS (Facebook Live) or an MP4; the stream service and its client for the container (section "Live video") |
 | `src/camera.js` | the real-client camera (`STREAM_SOURCE=client`): Xvfb + the vanilla Minecraft client as a spectator in the bot's head, ffmpeg x11grab, the same stream interface (section "Real-client camera") |
@@ -48,6 +49,8 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `scripts/hud-data.mjs` | the video HUD numbers from one or more run logs (milestones, totals, failures, timeline) |
 | `scripts/a11y_snapshot.py` | the accessibility tree of a `/play` page, as an agent browser sees it; `--check` asserts it (Python Playwright 1.49+) |
 | `scripts/a11y-chrome.mjs` | the same tree and check through a Chrome that is already installed (DevTools protocol, JavaScript off); no Playwright |
+| `test/e2e/mcp-iron.mjs`, `test/e2e/two-starts.mjs` | the scripted MCP runs against a running agent, no model (section "Scripted runs over MCP") |
+| `deploy/slim-modules.mjs` | run in the agent image after `npm ci`: keeps the game data of one Minecraft version only |
 | `test/mock-llm.js` | local mock of the chat (and Responses) endpoint, also `npm run mock` |
 | `test/fake-bot.js` | in-memory fake of the mineflayer bot surface the body uses (also `--fake-bot`) |
 
@@ -58,7 +61,7 @@ folder.
 
 ```sh
 npm install
-npm test          # node --test test/ : every *.test.js (about 15 s)
+npm test          # node --test test/ : every *.test.js (about 15 s), the e2e harness on the fake world included
 npm run test:stream   # the streamer's tests with its end-to-end run: a real headless Chromium and ffmpeg (about 15 s)
 ```
 
@@ -67,6 +70,25 @@ key is only ever sent to the configured `MODEL_BASE_URL`. The accessibility chec
 (`CHROME_PATH`, or the usual install places; skipped without one) and again through Python Playwright when a
 `python3` with Playwright 1.49+ is found (`A11Y_PYTHON`, `python3`, `/usr/bin/python3`; skipped otherwise, with the
 reason).
+
+## Scripted runs over MCP (no model)
+
+The harness that measures the route drives a running agent's `/mcp` the way a connector does, with no model: the iron
+pickaxe from an empty inventory (logs, planks, sticks, table, wooden pickaxe, stone, stone pickaxe, furnace, iron ore
+with a step 14 blocks down while none is found, coal if needed, smelt, iron pickaxe), and several clients starting at
+once.
+
+```sh
+node test/e2e/mcp-iron.mjs http://127.0.0.1:8787 --out run.json   # strict: one line per step, RESULT line, exit 0 only with the pickaxe and no failed step
+node test/e2e/mcp-iron.mjs http://127.0.0.1:8787 --lenient         # the old harness: each step up to 4 times, fights back when attacked
+node test/e2e/two-starts.mjs http://127.0.0.1:8787 --n 2            # every bot of n simultaneous starts must join
+```
+
+Strict mode is what measurements use (ROADMAP, testing rules): every step is sent once, the harness never fights a mob
+on its own, and every failed step counts. Waiting is not retrying: a step still running is waited for with get_state,
+and a full server's queue is asked again as it says. `--out` has every step with its time; the agent's log has each
+step's phases (`viewer_action.phases`). `npm test` runs both against the agent on the fake world (`test/e2e.test.js`).
+On the real server, give the test bots names of their own: `MC_USERNAME=Tst_<who>` (guests become `Tst_<who>_<game>`).
 
 ## A scripted episode end to end (no key, no Minecraft)
 
@@ -114,24 +136,38 @@ second Ctrl-C exits at once.
 
 | Route | What it does |
 | --- | --- |
-| `GET /` | what this is, 18+, "Get a bot" form, a ready-to-paste agent prompt, the "Ask our Muse" form |
-| `POST /session`, `GET /play/<token>` | start a guest session; the zero-JS control page (state, one form per skill, stop, end) |
-| `POST /api/session` `{"adult":true}` | the same session as JSON; then `GET /api/<token>/state`, `POST /api/<token>/<skill>`, `POST /api/<token>/stop`, `DELETE /api/<token>` |
+| `GET /` | what this is, "NOT AN OFFICIAL MINECRAFT SERVICE", 18+ and why, "Get a bot" form, a ready-to-paste agent prompt, the "Ask our Muse" form, the privacy notice (what the log keeps, who reads it, no cookies, addresses in memory only) |
+| `POST /session`, `GET /play/<token>` | start a guest session; the zero-JS control page (state, one form per skill, stop, end, plain links to the live views) |
+| `POST /api/session` `{"adult":true}` | the same session as JSON; then `GET /api/<token>/state`, `POST /api/<token>/<skill>`, `POST /api/<token>/stop`, `DELETE /api/<token>`. All bots in use: 503 with `queue: {position, waiting, etaSeconds, holdSeconds}` |
 | `GET /openapi.json` | OpenAPI 3.1, one operation per skill (operationId = skill name), for a custom connector |
 | `GET/POST /ask` | the queue for our own brain: 18+, `WEB_ASK_MAX_CHARS`, one waiting or running request and `WEB_ASK_PER_HOUR` per address, closed while the hourly $ cap is spent |
-| `GET /log?n=50` | the public JSONL tail (session tokens and the admin token scrubbed, no IP addresses) |
+| `GET /log?n=50` | the operator's JSONL tail, `Authorization: Bearer $WEB_ADMIN_TOKEN` (404 without one configured; wrong tokens count toward the lock-out); session tokens and the admin token scrubbed, no IP addresses |
 | `POST /admin/stop` | kill switch, `Authorization: Bearer $WEB_ADMIN_TOKEN`; stops every skill and clears the queue, `{"end":true}` also ends every session; 5 wrong tokens lock an address out for the hour |
-| `/mcp` | MCP (streamable HTTP) for a connector such as Muse: `start_game {adult: true}`, `play`, `play_sequence`, `get_state`, `stop`, `end_game` (src/mcp.js) |
-| `GET /watch/<id>/`, `GET /eyes/<id>/` | a guest bot's live 3D views (prismarine-viewer, read-only: clicks from the page are ignored), with src/live-view-fx.js added (`muse-fx.js`): eased first-person turns (the bot is not slowed: the picture turns, at most 360 degrees a second), the game's crack textures on the block being broken (`muse-fx/events`, server-sent), no magenta boxes for dropped items |
+| `/mcp` | MCP (streamable HTTP) for a connector such as Muse: `start_game {adult: true}`, `play`, `play_sequence`, `get_state`, `stop`, `end_game`, `live_view {format}` (src/mcp.js) |
+| `GET /watch/<view id>/`, `GET /eyes/<view id>/` | a guest bot's live 3D views under the game's view id (128 random bits, not the game id; never logged), prismarine-viewer, read-only: clicks from the page are ignored; with src/live-view-fx.js added (`muse-fx.js`): eased first-person turns (the bot is not slowed: the picture turns, at most 360 degrees a second), the game's crack textures on the block being broken (`muse-fx/events`, server-sent), no magenta boxes for dropped items. A view of a game that ended answers 410; an address that asks for 60 views that never existed in an hour gets 429 for every live view until the hour rolls on |
 
 MCP: one game per MCP session (connector users share the agent's egress addresses); per address at most
-`max(2, WEB_MAX_SESSIONS / 2)` live MCP games and 60 MCP game starts an hour, no cooldown. Every reply comes within
-45 s with the result and the state (with the time left); a skill still running then goes on, and a later reply (get_state
-waits for it) reports its result once the client has received it. start_game returns a handle that resumes the game
-from a new MCP session. MCP sessions: 64 KB per request, 20 per address and 200 in all (the one called longest ago
-without a game makes room), 1200 new ones per address an hour, dropped after 10 minutes without a game; a game ends
-after 5 minutes without calls. Live views: per address 4 open WebSockets, 32 requests in flight and 120 new views an
-hour, 12 WebSockets per bot; a WebSocket idle for 90 s, or whose reader lets 8 MB pile up, is dropped.
+`WEB_MCP_GAMES_PER_ADDRESS` live MCP games (default `max(2, WEB_MAX_SESSIONS / 2)`; set it from probe T8, up to
+`WEB_MAX_SESSIONS` if Muse users share a few addresses) and 60 MCP game starts an hour, no cooldown. When every bot is in
+use, start_game (and the web page and API) answers with the caller's place in a first-come queue, how many wait, and an
+estimate (when enough leases end; games often end sooner); asking again within 90 s keeps the place, and a bot that
+frees up goes to the first in line. Every reply comes within 45 s with the result and the state (with the time left); a
+skill still running then goes on, and a later reply (get_state waits for it) reports its result once the client has
+received it. start_game returns a resume handle (22 characters, 128 random bits, never the control token) that resumes
+the game from a new MCP session while the game lives; the game then counts for that session. Replies and the server
+instructions carry no links and never tell the agent to open, show or watch anything. `live_view` (read-only) returns
+data only: `{format: "link"}` (the default) gives `first_person_url` and `behind_url`; `{format: "embed"}` gives, while
+a live video of the game is being broadcast and `STREAM_VIDEO_URL` names it, `live: true`, `embed_url` (Facebook's video
+player, the one player the muse.ai panel frames) and `video_url`, otherwise `live: false`. Each MCP session logs one
+`mcp_client` row: the protocol version the client asked for, the one agreed, and the name and version it reports. MCP
+sessions: 64 KB per request, 20 per address and 200 in all (the one called longest ago without a game makes room),
+1200 new ones per address an hour, dropped after 10 minutes without a game; a game ends after 5 minutes without calls.
+Live views: per address 4 open WebSockets, 32 requests in flight and 120 new views an hour, 12 WebSockets per bot; a
+WebSocket idle for 90 s, or whose reader lets 8 MB pile up, is dropped.
+
+Other players' chat never reaches a guest: not the session's lines, `/play`, the API or MCP replies (strangers' text is
+abuse and prompt injection, and the guest did not ask for it). On `/ask` a request's text is shown only to the address
+that sent it.
 
 Each address (IPv6: each /64) holds one guest bot at a time and waits a minute after its session ends. POSTs that
 another website makes a browser send (`Sec-Fetch-Site: cross-site` or `same-site`, or a foreign `Origin`) get 403;
@@ -174,7 +210,10 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
    set `WEB_PUBLIC_URL` to the tunnel's https URL (it goes into the agent prompt, `openapi.json` and session links),
    and tell the server where client addresses come from: `WEB_TRUST_PROXY=cloudflare` for a Cloudflare Tunnel (the
    `CF-Connecting-IP` header), or the number of proxies that each append to `X-Forwarded-For` for another tunnel that
-   does. Left `off`, every visitor through the tunnel shares one address for the limits.
+   does. Left `off`, every visitor through the tunnel shares one address for the limits. Behind a proxy that is not on
+   this machine (Caddy on picasso), also set `WEB_TRUSTED_PROXIES` to its address or range: forwarded headers then count
+   only on its connections, and any other peer that is not loopback gets 403 (logged once an hour per peer as
+   `proxy_refused`).
 6. Watch page (optional): `npm install prismarine-viewer`, then `npm start` serves the house bot's view on
    `http://WEB_HOST:MC_VIEWER_PORT/` (bound to `WEB_HOST`, like the page). `MC_VIEWER_PORT=0` turns it off.
 7. After a world reset, delete `notes.json` and `notes-ask.json` (or their `places`): the known crafting tables and
@@ -241,6 +280,9 @@ and tell the agent where it is, in `deploy/.env`: `STREAM_ENABLED=1` and `STREAM
 `deploy/push.sh` builds and starts the stream container whenever `deploy/stream.env` exists. For more streams at once:
 one URL per stream in `STREAM_RTMP_URL`, `STREAM_MAX` in compose.yaml, and the caps raised (about 6 CPUs and 1.5 GB per
 stream). In the muse.ai panel: `https://www.facebook.com/plugins/video.php?href=<the live video's URL>&show_text=false`.
+Put the live video's public URL (one per `STREAM_RTMP_URL`, same order) in the agent's `STREAM_VIDEO_URL`, and MCP's
+`live_view {format: "embed"}` returns that embed URL while the game's stream runs. Whether a persistent stream key keeps
+one URL across broadcasts, and which URL the plugin takes for a page's current live video, is UNVERIFIED.
 
 Measured on the M1 here (8 cores; a local model server held 10 GB of the 16 GB as wired memory throughout, so the
 machine was short of RAM and CPU and the numbers are on the slow side), default settings, real games on the local
@@ -357,6 +399,27 @@ machine is crowded (the 340 spike). RAM (1.5 GB each) is no limit. Each camera a
 client under the same name kicks the first (`createCameraPool` names camera 2 `<name>2`, which works only because the
 server is offline-mode; that is the operator's call, not a default).
 
+## Deploy on picasso
+
+`deploy/push.sh` copies the code and runs `docker compose up -d --build` in `~/workspace/muse-minecraft/app/deploy`
+(games in progress end when the agent restarts).
+
+- The agent image keeps the game data of one version (`MC_VERSION` build argument, 1.21.4): `deploy/slim-modules.mjs`
+  runs in the same layer as `npm ci` and removes every other version from minecraft-data (all of bedrock, every
+  `pc/<version>` that 1.21.4's `dataPaths.json` does not name) and from prismarine-viewer's textures and block states.
+  node_modules: 946 MB -> 271 MB on disk (measured here; `npm test` and a live run with real bots and the live views
+  passed on the slimmed copy, 2026-10-07). `openai` stays: src/llm.js (the Ask brain) and scripts/probe.mjs use it.
+- Every Dockerfile here labels its image `org.picasso-lab.app=muse-minecraft`, and push.sh ends with
+  `docker image prune -f --filter label=org.picasso-lab.app=muse-minecraft`: only our dangling images (the ones a
+  rebuild replaced), never another user's, never one a container uses. Images built before the label carry none and
+  stay until removed by hand: list them with `docker images -f dangling=true`, check each is ours with
+  `docker image inspect <id>`, then `docker rmi <id>`.
+- `deploy/.env` on picasso (made by push.sh with `WEB_ADMIN_TOKEN`) should also hold `WEB_TRUSTED_PROXIES`: the Caddy
+  container's address, or its network's range so a Caddy restart with a new address keeps working (`docker inspect -f
+  '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' <caddy container>`). Check it first: while it is unset,
+  the log has a `proxy_peer` row (once an hour per peer) with the address the forwarded requests really come from; a
+  wrong value would refuse every visitor with 403. push.sh prints a note while it is missing. Set `WEB_MCP_GAMES_PER_ADDRESS` there once probe T8 has measured how many Muse users share an address.
+
 ## Configuration
 
 | Env var | Default | Meaning |
@@ -375,6 +438,8 @@ server is offline-mode; that is the operator's call, not a default).
 | `MC_VIEWER_PORT` | `3007` | prismarine-viewer for the house bot, if installed; `0` is off |
 | `WEB_HOST`, `WEB_PORT`, `WEB_PUBLIC_URL` | `127.0.0.1`, `8787`, (none) | the viewer page; the public URL goes into links and `openapi.json` (unset: the forwarded host behind a trusted proxy, else the listen address) |
 | `WEB_TRUST_PROXY` | `off` | where the client address for the limits comes from: `off` (the socket), `cloudflare` (`CF-Connecting-IP`), or 1-5 proxies appending to `X-Forwarded-For` |
+| `WEB_TRUSTED_PROXIES` | (none) | the proxy's addresses or ranges (`172.24.0.5`, `172.24.0.0/16`, comma-separated; needs `WEB_TRUST_PROXY`): forwarded headers count only on its connections, and any other non-loopback peer is refused. Unset: believed from any peer (the agent prints a note) |
+| `WEB_MCP_GAMES_PER_ADDRESS` | `max(2, WEB_MAX_SESSIONS / 2)` | live MCP games one address may hold (probe T8 decides; `WEB_MAX_SESSIONS` caps MCP games only globally) |
 | `WEB_LEASE_MS`, `WEB_MAX_SESSIONS` | `600000`, `4` | one bot per guest for 10 minutes |
 | `WEB_ASK_PER_HOUR`, `WEB_ASK_MAX_CHARS`, `WEB_MAX_BODY` | `3`, `300`, `8192` | `/ask` limits per address, request body cap |
 | `WEB_ASK_ALLOW_CONTRIBUTOR` | `false` | the Ask queue stays closed on the Contributor tier (Meta may train on it) unless this is `true`; the page then says so |
@@ -386,6 +451,7 @@ server is offline-mode; that is the operator's call, not a default).
 | `LOG_DIR` | `logs` | JSONL logs: `run-<time>.jsonl` (run-goal), `run-serve-<time>.jsonl` (`npm start`), `probe-<date>.csv` |
 | `STREAM_ENABLED` | `false` | live video of every guest game (section "Live video"); off: nothing is started and nothing changes |
 | `STREAM_RTMP_URL` | (none) | `rtmps://...` ingest URLs with their stream keys, comma-separated, one per stream that may run at once; never printed or logged |
+| `STREAM_VIDEO_URL` | (none) | the public URLs of the Facebook live videos those ingests feed (same order; one URL serves all): MCP `live_view {format: "embed"}` returns Facebook's player for it while a game's stream runs |
 | `STREAM_OUT_DIR` | (none) | without an RTMP URL: every stream is an MP4 file here (local tests) |
 | `STREAM_SERVICE_URL` | (none) | the stream container's API (`http://127.0.0.1:7861`); the agent then starts and stops streams there instead of in its own process |
 | `STREAM_MAX` | `1` | streams at once (never more than output URLs or than games) |
@@ -427,7 +493,17 @@ server is offline-mode; that is the operator's call, not a default).
   `learned` (`block`, `pos`), `stop`, `model_error`, `usage_missing`, `request_adapted` (`change`, `detail`), the
   web's `session_*`, `viewer_action` and `viewer_stop` (what the guest did: "viewer" is the person or agent driving
   the bot; `viewer_stop` has the `reason`: the /play button, the API or MCP), `view_close` (a live 3D view closed:
-  `view`, `why`, seconds `s`, `mb` sent), `ask_*`, `admin_stop`.
+  `view`, `why`, seconds `s`, `mb` sent), `ask_*`, `admin_stop`, `mcp_client` (`protocolVersion`, `negotiated`,
+  `client` {name, version}), `mcp_game`, `proxy_refused` (`peer`), `proxy_peer` (`peer`: who sends forwarded headers
+  while `WEB_TRUSTED_PROXIES` is unset).
+- Where a skill's time went: every `viewer_action` row and every `decision` row (`skillMs`) has `phases`, in ms: `path`
+  (walking, path search included), `dig`, `drop` (the ticks after a dig for its drops to appear), `sync` (inventory
+  syncs with the server), `place`, `open` (a window opening), `clicks` (window clicks and their answers), `pickup`
+  (walking over drops), `cook` (waiting for a furnace) and `other`; a phase inside another counts toward the outer one
+  (a walk to a drop is pickup), so they add up to the skill's time (src/body.js `createPhases`).
+- `loop_delay` every minute: the event loop's lag beyond its 10 ms sampling interval, `p50Ms`, `p99Ms`, `maxMs`,
+  `meanMs`, and `samples` (well under 6000 when the loop was blocked). A 2026-10-07 strict run on the local server
+  (this Mac, loaded) logged p50 1.3-2 ms, p99 2.6-268 ms per minute, and one stall of 28 s during an underground go_to.
 
 ## What is mocked
 
@@ -452,6 +528,13 @@ server is offline-mode; that is the operator's call, not a default).
 
 ## Not tested yet
 
+- The day-0 fixes (2026-10-07) ran on this Mac only: `npm test`, and against the local Paper server through MCP (two
+  strict iron-pickaxe runs: one PASS in 214 s with 15 calls and no failed step; one FAIL: the crafting table vanished
+  while `craft stone_pickaxe` tried to place it, 15.5 s in `place`, and the run went on without a stone pickaxe; two
+  simultaneous starts; the live views under view ids, recorded through the streamer). Not yet: the agent image build
+  (no Docker here; the slimming was run on a copy of node_modules and the suite and a live game passed on it), the
+  prune in push.sh, and `WEB_TRUSTED_PROXIES` behind the real Caddy (that the agent sees Caddy's container address, not
+  the Docker gateway, on the published port is UNVERIFIED: check the `proxy_refused` rows after setting it).
 - Real server (Paper 1.21.4, 2026-10-06): the body without a model, driven by scripts. Crafting by clicks (2x2 and
   at a table, placed or found, birch / spruce / dark oak / oak), many batches at once, collect (logs, stone, coal and
   iron ore), smelt (coal and planks), go_to (surface trips, spiral descents), a hit by a zombie interrupting a skill,
@@ -499,7 +582,11 @@ server is offline-mode; that is the operator's call, not a default).
   for it).
 - Viewer text never reaches long-term memory: the Ask brain has its own notes file and lessons hold only tool names,
   fixed block and item names and numbers. Viewer text goes to the Standard tier unless the operator opts in.
-- Minecraft stays on localhost/LAN (any other `MC_HOST` is refused); only the web port is meant to be exposed.
+- Minecraft stays on localhost/LAN (any other `MC_HOST` is refused); only the web port is meant to be exposed, and
+  with `WEB_TRUSTED_PROXIES` only the proxy (and this machine) may talk to it.
+- Strangers' text stays out: other players' chat never reaches a page, reply or API, the log is the operator's, and an
+  `/ask` request's text is shown only to its sender. Replies to agents carry no links and no tokens; resume handles and
+  live-view ids are 128-bit and separate from the control token.
 - $ caps per run and per hour, a step cap, a stop button per session and an operator kill switch; every decision is
   logged with its cost.
 - The key lives only in the environment and is only sent to `MODEL_BASE_URL`; logs scrub anything shaped like a key.

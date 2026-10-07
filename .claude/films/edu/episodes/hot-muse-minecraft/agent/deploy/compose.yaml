@@ -8,6 +8,12 @@ services:
     environment: { DIFFICULTY: easy, DAYLIGHT: locked, SEED: "71811045", MEMORY: 6G }
     volumes: [ "../data:/data", "console:/console" ]
     networks: { mc: { ipv4_address: 10.77.77.10 } }
+  # deploy/.env (made by push.sh, kept on picasso) holds WEB_ADMIN_TOKEN and should hold WEB_TRUSTED_PROXIES: the Caddy
+  # container's address (or its network's range), the only peer whose X-Forwarded-For counts; any other peer that is
+  # not loopback is then refused. Find it with
+  #   docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' <the FRAS caddy container>
+  # (a range such as 172.24.0.0/16 survives Caddy getting a new address on a restart). WEB_MCP_GAMES_PER_ADDRESS (live
+  # MCP games per address; probe T8) may go there too.
   agent:
     build: { context: .., dockerfile: deploy/Dockerfile.agent }
     restart: unless-stopped

@@ -4,8 +4,13 @@
 // call keeps running; its result goes out with a later reply (get_state waits for it). A result counts as reported
 // only once a reply carrying it was delivered (not cancelled by the client).
 // One MCP session = at most one guest bot, with the same leases and logging as the web page (src/web.js gives the
-// hooks); games are also capped per address, and MCP sessions themselves are capped in number and body size.
+// hooks); games are also capped per address, and MCP sessions themselves are capped in number and body size. When
+// every bot is in use, start_game answers with the caller's place in the queue and an estimate.
 // The game is for adults: start_game needs adult: true, which the agent sets only after its user has confirmed 18+.
+// Replies and the server instructions carry no links and never ask the agent to open or show anything; where to watch
+// is data that only the read-only live_view tool returns. A game is resumed from a new connection with a separate
+// random handle (never the control token), valid while that game lives. Each MCP client's protocol version and the
+// name and version it reports are logged (mcp_client).
 
 import crypto from 'node:crypto';
 import { z } from 'zod';
@@ -48,16 +53,25 @@ function splitCall({ skill, args, ...rest }) {
 }
 
 const roughly = (ms) => (ms < 60_000 ? 'under 1 min' : `about ${Math.round(ms / 60_000)} min`);
+// eslint-disable-next-line no-control-regex
+const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, ' ').trim().slice(0, max);
 
 /**
  * @param {object} hooks from createWeb: newSession(req, adult, {key, address}), lookup(token), startAction(s, tool,
- *   args), stateText(s), stopSession(s, reason), endSession(s, reason), links(s, base) -> {eyes, watch},
- *   within(promise, ms), TIMEOUT, log, now(), clientKey(req), base(req), leaseMs, initLimiter (take(key)),
- *   limits {sessions, perAddress}, callMs (tests)
+ *   args), stateText(s), stopSession(s, reason), endSession(s, reason), links(s, base) -> {eyes, watch} (live_view
+ *   only), liveVideo(s) -> {videoUrl, embedUrl} | null, leaveQueue(key), within(promise, ms), TIMEOUT, log, now(),
+ *   clientKey(req), base(req), leaseMs, initLimiter (take(key)), limits {sessions, perAddress}, callMs (tests)
  * @returns {(req, res) => Promise<void>} the /mcp handler
  */
 export function createMcp(hooks) {
-  const sessions = new Map(); // MCP session id -> entry {address, base, transport, token, pending, outbox, ...}
+  const sessions = new Map(); // MCP session id -> entry {address, base, transport, token, handle, pending, outbox, ...}
+  const handles = new Map(); // resume handle -> the game's control token, while that game lives
+  /** A new resume handle for a game: 128 random bits, a different shape from the 32-character control token. */
+  const mintHandle = (token) => {
+    const h = crypto.randomBytes(16).toString('base64url');
+    handles.set(h, token);
+    return h;
+  };
   const SKILLS = skillList();
   const now = hooks.now ?? Date.now; // the web's clock (leases, idle); call deadlines run on the real one
   const callMs = hooks.callMs ?? CALL_MS;
@@ -142,7 +156,7 @@ export function createMcp(hooks) {
 
   function build(entry) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
-      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot. People can watch live at the links start_game returns.`,
+      instructions: `Muse plays Minecraft: you control your own bot in a survival Minecraft world. Adults (18+) only: call start_game with adult: true only after your user has confirmed they are 18 or older. Then use play (one skill) or play_sequence (several in a row); each reply carries the results and the new state within ${Math.round(callMs / 1000)} s, and get_state waits for a skill still running. A game lasts ${leaseMin} min, ends after ${IDLE_MS / 60_000} min without calls, and end_game frees the bot.`,
     });
     const sid8 = () => String(entry.transport.sessionId ?? '').slice(0, 8);
     const need = () => {
@@ -151,10 +165,26 @@ export function createMcp(hooks) {
       if (why) throw new Error(`your game ended: ${why}; start_game gives you a NEW bot at a new spot with an empty inventory`);
       throw new Error('no game running: call start_game first');
     };
-    const forget = (why) => { entry.token = null; entry.endedWhy = why; entry.pending = null; entry.outbox = []; };
+    const forget = (why) => {
+      if (entry.handle) handles.delete(entry.handle);
+      Object.assign(entry, { token: null, handle: null, endedWhy: why, pending: null, outbox: [] });
+    };
+
+    // the client's protocol version and what it says it is, once per MCP session (Muse writes its own client)
+    const low = server.server;
+    const init = typeof low._oninitialize === 'function' ? low._oninitialize.bind(low) : null;
+    if (init) {
+      low._oninitialize = async (request) => {
+        const result = await init(request);
+        const p = request?.params ?? {};
+        entry.client = { name: clean(p.clientInfo?.name, 80), version: clean(p.clientInfo?.version, 40) };
+        hooks.log.event('mcp_client', { session: sid8(), protocolVersion: clean(p.protocolVersion, 20), negotiated: result?.protocolVersion ?? null, client: entry.client });
+        return result;
+      };
+    }
 
     server.registerTool('start_game', {
-      description: `Adults (18+) only: set adult to true only after your user has confirmed they are 18 or older. Starts your own Minecraft bot in a survival world (a NEW bot at a fresh spot with an empty inventory), or resumes the game of this connection, or (game set to the handle an earlier start_game reply gave) that game from an earlier connection. A game lasts ${leaseMin} min and ends after ${IDLE_MS / 60_000} min without calls. Returns the skills, the state and links where a person can watch live. Call this first.`,
+      description: `Adults (18+) only: set adult to true only after your user has confirmed they are 18 or older. Starts your own Minecraft bot in a survival world (a NEW bot at a fresh spot with an empty inventory), or resumes the game of this connection, or (game set to the handle an earlier start_game reply gave) that game from an earlier connection. A game lasts ${leaseMin} min and ends after ${IDLE_MS / 60_000} min without calls. When every bot is in use, the reply gives your place in the queue and an estimate. Returns the skills, the state and a handle to resume the game. Call this first.`,
       inputSchema: {
         adult: z.boolean().describe('true only after your user has confirmed they are 18 or older'),
         game: z.string().max(64).optional().describe('the handle of a game to resume (from an earlier start_game reply)'),
@@ -163,30 +193,33 @@ export function createMcp(hooks) {
       if (adult !== true) return fail('This game is for adults (18+) only. Ask your user to confirm they are 18 or older, then call start_game with adult: true.');
       let s = game(entry);
       let resumed = Boolean(s);
-      if (handle && handle !== entry.token) {
+      if (handle && handle !== entry.handle) {
         if (s) return fail(`this connection already plays game ${s.id}; call end_game first to switch games`);
-        try { s = hooks.lookup(handle); } catch (e) { return fail(`could not resume that game: ${e.reason ?? e.message}; call start_game without game for a new one`); }
+        const token = handles.get(handle);
+        if (!token) return fail('could not resume that game: that handle belongs to no running game; call start_game without game for a new one');
+        try { s = hooks.lookup(token); } catch (e) { handles.delete(handle); return fail(`could not resume that game: ${e.reason ?? e.message}; call start_game without game for a new one`); }
         if (!String(s.client ?? '').startsWith('mcp:')) return fail('could not resume that game: it was not started through this connector');
         for (const other of sessions.values()) {
-          if (other === entry || other.token !== handle) continue;
+          if (other === entry || other.token !== token) continue;
           Object.assign(entry, { pending: other.pending, outbox: other.outbox }); // its results come along
-          Object.assign(other, { token: null, endedWhy: 'it moved to another connection', pending: null, outbox: [] });
+          Object.assign(other, { token: null, handle: null, endedWhy: 'it moved to another connection', pending: null, outbox: [] });
         }
-        entry.token = handle;
+        Object.assign(entry, { token, handle, endedWhy: null });
+        s.client = entry.key; // one game per MCP session: the game now counts for this one
         resumed = true;
       }
       if (!s) {
         try {
-          s = hooks.newSession(null, adult, { key: `mcp:${entry.transport.sessionId ?? crypto.randomUUID()}`, address: entry.address });
+          s = hooks.newSession(null, adult, { key: entry.key, address: entry.address });
         } catch (e) { return fail(`could not start: ${e.message}`); }
         forget(null);
         entry.token = s.token;
-        hooks.log.event('mcp_game', { session: sid8(), game: s.id });
+        hooks.log.event('mcp_game', { session: sid8(), game: s.id, client: entry.client ?? null });
       }
+      if (!entry.handle) entry.handle = mintHandle(s.token);
       if (s.status !== 'ready') await wait(Promise.resolve(s.ready), JOIN_WAIT_MS, extra?.signal);
       if (s.ended) { forget(null); return fail(`could not start: ${s.ended}; call start_game again in a moment`); }
-      const l = hooks.links(s, entry.base);
-      return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}. Watch live: ${l.eyes} (bot's eyes), ${l.watch} (from behind).\nTo resume this game from a new connection, call start_game with adult: true and game: "${s.token}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
+      return text(`${resumed ? `Resumed game ${s.id}` : `New game ${s.id}: a new bot at a fresh spot with an empty inventory`}.\nTo resume this game from a new connection, call start_game with adult: true and game: "${entry.handle}".\n${s.status === 'ready' ? '' : 'The bot is still joining the world: call get_state in a few seconds (it waits for the bot).\n'}\nSkills (use play or play_sequence; a skill's arguments go in args):\n${SKILLS}\n\n${stateBlock(s)}`);
     });
 
     server.registerTool('play', {
@@ -270,6 +303,21 @@ export function createMcp(hooks) {
       return text(`${was ? 'Stopped.' : 'Nothing was running.'}\n\n${done.text}${stateBlock(s)}`);
     });
 
+    server.registerTool('live_view', {
+      description: 'Read-only; changes nothing in the game. Returns JSON data about watching this game live. format "link" (the default): first_person_url and behind_url, two read-only 3D views of the bot in a web page. format "embed": while a live video of this game is being broadcast, live is true and embed_url is the Facebook video player URL for it (video_url the video itself); otherwise live is false and both are null.',
+      inputSchema: { format: z.enum(['link', 'embed']).optional().describe('"link" (default): the 3D views; "embed": the live video player') },
+      annotations: { readOnlyHint: true },
+    }, async ({ format = 'link' }) => {
+      let s;
+      try { s = need(); } catch (e) { return fail(e.message); }
+      if (format === 'embed') {
+        const v = hooks.liveVideo?.(s) ?? null;
+        return text(JSON.stringify({ format, game: s.id, live: Boolean(v), player: v ? 'facebook' : null, embed_url: v?.embedUrl ?? null, video_url: v?.videoUrl ?? null }));
+      }
+      const l = hooks.links(s, entry.base);
+      return text(JSON.stringify({ format: 'link', game: s.id, first_person_url: l.eyes, behind_url: l.watch }));
+    });
+
     server.registerTool('end_game', { description: 'End the game and free the bot.', inputSchema: {} }, async () => {
       const s = game(entry);
       if (s) hooks.endSession(s, 'ended through MCP');
@@ -303,15 +351,20 @@ export function createMcp(hooks) {
     return null;
   }
 
-  // the reaper: games nobody has called for IDLE_MS, MCP sessions without a game for IDLE_SESSION_MS
+  // the reaper: games nobody has called for IDLE_MS, MCP sessions without a game for IDLE_SESSION_MS, handles of games
+  // that ended (the lease, the web page, the operator)
   const reaper = setInterval(() => {
     const t = now();
+    for (const [h, token] of handles) {
+      try { if (hooks.lookup(token).ended) handles.delete(h); } catch { handles.delete(h); }
+    }
     for (const [sid, e] of sessions) {
       const s = game(e);
       // a game someone is watching live (a /eyes or /watch socket) is not idle: the lease still ends it
       if (s && !e.pending && t - e.lastCall > IDLE_MS && !(hooks.watching?.(s.id) > 0)) {
         hooks.endSession(s, `no calls for ${IDLE_MS / 60_000} minutes`);
-        Object.assign(e, { token: null, endedWhy: `no calls for ${IDLE_MS / 60_000} minutes`, outbox: [] });
+        if (e.handle) handles.delete(e.handle);
+        Object.assign(e, { token: null, handle: null, endedWhy: `no calls for ${IDLE_MS / 60_000} minutes`, outbox: [] });
         hooks.log.event('mcp_idle_end', { session: sid.slice(0, 8), game: s.id });
       } else if (!s && t - e.lastCall > IDLE_SESSION_MS) {
         drop(sid, e);
@@ -333,16 +386,19 @@ export function createMcp(hooks) {
       const refused = admit(address);
       if (refused) { reply(refused.status, refused.message, refused.headers); return; }
       // only what the session needs later: never the request itself
-      entry = { address, base: hooks.base(req), token: null, pending: null, outbox: [], endedWhy: null, lastCall: now() };
+      entry = { address, base: hooks.base(req), token: null, handle: null, client: null, pending: null, outbox: [], endedWhy: null, lastCall: now() };
+      entry.key = `mcp:${crypto.randomUUID()}`; // the key the game counts under: mcp:<MCP session id> once there is one
       entry.transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
         maxRequestBodySize: MAX_BODY,
         // plain JSON replies, not an SSE stream: simple clients (the HTTP code Muse writes for itself) read them whole
         enableJsonResponse: true,
-        onsessioninitialized: (sid) => { sessions.set(sid, entry); },
+        onsessioninitialized: (sid) => { sessions.set(sid, entry); entry.key = `mcp:${sid}`; },
       });
       entry.transport.onclose = () => {
         for (const [k, v] of sessions) if (v === entry) sessions.delete(k);
+        hooks.leaveQueue?.(entry.key);
+        if (entry.handle) handles.delete(entry.handle);
         const s = game(entry);
         if (s) hooks.endSession(s, 'MCP session closed');
       };

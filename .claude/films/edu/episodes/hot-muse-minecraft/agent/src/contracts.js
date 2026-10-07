@@ -241,6 +241,8 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {string} result     one or two plain sentences for the model and the viewer log
  * @property {InventoryDelta} delta
  * @property {number} [ms]       wall time of the skill
+ * @property {Record<string, number>} [phases]  where that time went, in ms: path, dig, drop, sync, place, open, clicks,
+ *   pickup, cook and other (src/body.js createPhases)
  *
  * @typedef {object} StateSnapshot  the structured form of Body.state(), for /api/.../state and the HUD
  * @property {number} health                 0-20
@@ -430,9 +432,11 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {() => void} close          stop anything running, stop listening to the body, write the notes
  *
  * @typedef {object} Web  src/web.js: export function createWeb(opts): Web
- *   opts = {config: Config, makeBody: (sessionId: string) => Body|Promise<Body>, makeBrain?: (body: Body) => Brain,
- *   log: Logger, meter?: HourMeter, trustProxy?: 'off'|'cloudflare'|number, ...timing and queue options (see web.js)}.
- *   makeBody is called with 'house' for the bot the /ask queue drives and with 'g' + 6 hex digits for each guest.
+ *   opts = {config: Config, makeBody: (sessionId: string, opts?: {viewId: string}) => Body|Promise<Body>,
+ *   makeBrain?: (body: Body) => Brain, log: Logger, meter?: HourMeter, trustProxy?: 'off'|'cloudflare'|number,
+ *   trustedProxies?: string[], liveVideo?: (gameId) => {videoUrl, embedUrl}|null, ...timing and queue options (see web.js)}.
+ *   makeBody is called with 'house' for the bot the /ask queue drives and with 'g' + 6 hex digits for each guest, plus
+ *   the guest's view id (128 random bits, base64url) that its live views listen under.
  *   Without makeBrain the /ask queue is closed. An /ask request ends when the model reports "Done:" (reportedDone),
  *   answers in words without a tool call (web.askAnswered; a failed model call or an invalid call goes on), or after
  *   40 steps.

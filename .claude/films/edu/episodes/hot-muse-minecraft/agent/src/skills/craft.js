@@ -5,7 +5,7 @@
 // the clicks are planned on a window state the server confirmed and checked against it afterwards (window.js), never
 // left to mineflayer's craft(), whose clicks race the server's resyncs (wrong items in the grid, ghost results).
 
-import { done, fail, walkNear, placeNearby, pickUp, pickUpNote, describeError, SkillStop } from './util.js';
+import { done, fail, walkNear, placeNearby, pickUp, pickUpNote, describeError, SkillStop, timed } from './util.js';
 import { canClick, clicker, openBlockWindow, closeCurrent, closeInventory, settleInventory, planPut, countIn, emptySlotIn } from './window.js';
 
 const TABLE_RADIUS = 32;
@@ -130,7 +130,7 @@ export async function craft(ctx, { item, n }) {
     } else {
       // a bot without a protocol client (test/fake-bot.js): its craft() is exact, one batch at a time
       for (let b = 0; b < batches; b++) {
-        await ctx.wait(bot.craft(recipe, 1, recipe.requiresTable ? table : null));
+        await timed(ctx, 'clicks', () => ctx.wait(bot.craft(recipe, 1, recipe.requiresTable ? table : null)));
         made += perBatch(recipe);
       }
     }

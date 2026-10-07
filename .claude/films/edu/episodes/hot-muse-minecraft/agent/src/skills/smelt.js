@@ -7,7 +7,7 @@
 
 import { SMELT, FUEL, PLANKS, LOGS } from '../game.js';
 import { SMELT_PER_CALL } from '../contracts.js';
-import { done, fail, countOf, fmt, walkNear, placeNearby, pickUp, pickUpNote, describeError, SkillStop } from './util.js';
+import { done, fail, countOf, fmt, walkNear, placeNearby, pickUp, pickUpNote, describeError, SkillStop, timed } from './util.js';
 
 const FURNACE_RADIUS = 32;
 // Cheapest fuel first: coal before wood, planks before logs (a log is worth 4 planks).
@@ -77,7 +77,7 @@ export async function smelt(ctx, { item, n }) {
 
   let furnace;
   try {
-    furnace = await ctx.wait(bot.openFurnace(block));
+    furnace = await timed(ctx, 'open', () => ctx.wait(bot.openFurnace(block)));
   } catch (err) {
     if (err instanceof SkillStop) throw err;
     const note = placed ? pickUpNote(await pickUp(ctx, placed), 'furnace', placed.position) : '';
@@ -90,32 +90,33 @@ export async function smelt(ctx, { item, n }) {
   const off = ctx.onCleanup(closeOnce);
   try {
     // Leftovers from an earlier run: take any output; clear input or fuel slots holding something else.
+    const click = (fn) => timed(ctx, 'clicks', () => ctx.wait(fn()));
     const outPrev = furnace.outputItem();
-    if (outPrev) await ctx.wait(furnace.takeOutput());
-    if (furnace.inputItem() && furnace.inputItem().type !== reg[item].id) await ctx.wait(furnace.takeInput());
-    if (furnace.fuelItem() && furnace.fuelItem().type !== reg[fuel.name].id) await ctx.wait(furnace.takeFuel());
+    if (outPrev) await click(() => furnace.takeOutput());
+    if (furnace.inputItem() && furnace.inputItem().type !== reg[item].id) await click(() => furnace.takeInput());
+    if (furnace.fuelItem() && furnace.fuelItem().type !== reg[fuel.name].id) await click(() => furnace.takeFuel());
 
     ctx.stopNote(`some ${item} or ${fuel.name} may still be in the furnace at ${at}`);
-    await ctx.wait(furnace.putFuel(reg[fuel.name].id, null, fuel.units));
-    await ctx.wait(furnace.putInput(reg[item].id, null, want));
+    await click(() => furnace.putFuel(reg[fuel.name].id, null, fuel.units));
+    await click(() => furnace.putInput(reg[item].id, null, want));
 
     let lastChange = Date.now();
     while (got < want) {
       ctx.check();
       const out = furnace.outputItem();
       if (out && out.count > 0) {
-        await ctx.wait(furnace.takeOutput());
+        await click(() => furnace.takeOutput());
         got += out.count;
         lastChange = Date.now();
         continue;
       }
       if (!furnace.inputItem()) break;
       if (Date.now() - lastChange > ctx.timing.stallMs) { error = 'the furnace stopped working (out of fuel?)'; break; }
-      await ctx.sleep(ctx.timing.pollMs);
+      await timed(ctx, 'cook', () => ctx.sleep(ctx.timing.pollMs));
     }
     // Take back what did not get smelted and unburnt fuel.
-    if (furnace.inputItem()) await ctx.wait(furnace.takeInput());
-    if (furnace.fuelItem()) await ctx.wait(furnace.takeFuel());
+    if (furnace.inputItem()) await click(() => furnace.takeInput());
+    if (furnace.fuelItem()) await click(() => furnace.takeFuel());
   } catch (err) {
     if (err instanceof SkillStop) {
       await takeBack(furnace);

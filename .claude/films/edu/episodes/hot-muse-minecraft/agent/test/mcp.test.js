@@ -1,8 +1,10 @@
 // test/mcp.test.js - the MCP endpoint end to end: against the fake world (tools listed with the skills and their
-// arguments, 18+, start_game, play and play_sequence answer with result + state, refusals, one bot per MCP session),
-// and against stub bodies with a short call budget: one deadline per call, results that outlive their call (or a
-// client that gave up) reported once later, join failures, lease ends, resuming a game from a new connection, and the
-// limits on MCP sessions (count, eviction, body size, rate) and on MCP games per address.
+// arguments, 18+, start_game, play and play_sequence answer with result + state, refusals, one bot per MCP session, no
+// link or token in any reply but live_view's, the client's protocol version and name logged), and against stub bodies
+// with a short call budget: one deadline per call, results that outlive their call (or a client that gave up) reported
+// once later, join failures, lease ends, resuming a game from a new connection with a handle that is not the control
+// token, the queue for a bot when all are in use, live_view's link and embed data, and the limits on MCP sessions
+// (count, eviction, body size, rate) and on MCP games per address.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -32,7 +34,15 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
   const b = await connect(agent.url);
   try {
     const { tools } = await a.listTools();
-    assert.deepEqual(tools.map((t) => t.name).sort(), ['end_game', 'get_state', 'play', 'play_sequence', 'start_game', 'stop']);
+    assert.deepEqual(tools.map((t) => t.name).sort(), ['end_game', 'get_state', 'live_view', 'play', 'play_sequence', 'start_game', 'stop']);
+    assert.equal(tools.find((t) => t.name === 'live_view').annotations?.readOnlyHint, true);
+    // no tool description and no server instruction asks the agent to open, show or watch anything
+    for (const t of tools) assert.doesNotMatch(t.description, /https?:|watch live|new tab|open (it|the|a) /i, t.name);
+    assert.doesNotMatch(a.getInstructions(), /https?:|watch|link|new tab/i);
+    const replies = [];
+    const track = (c) => { const call = c.callTool.bind(c); c.callTool = async (...x) => { const r = await call(...x); if (x[0].name !== 'live_view') replies.push(text(r)); return r; }; };
+    track(a);
+    track(b);
     const play = tools.find((t) => t.name === 'play');
     assert.match(play.description, /- place \{block: one of [^}]*, pos: \{x: integer, y: integer -64 to 320, z: integer\}\}/);
     assert.match(play.description, /stone_bricks/, 'every craftable item is listed');
@@ -50,8 +60,21 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
 
     const s = text(await a.callTool({ name: 'start_game', arguments: START }));
     assert.match(s, /^New game g\w+: a new bot at a fresh spot with an empty inventory/);
-    assert.match(s, /\/eyes\/g\w+\//);
-    assert.match(s, /game: "[A-Za-z0-9_-]{32}"/, 'a handle to resume it');
+    assert.doesNotMatch(s, /https?:|\/eyes\/|\/watch\/|watch live/i, 'no links in the reply');
+    const handle = /game: "([A-Za-z0-9_-]{22})"/.exec(s)?.[1];
+    assert.ok(handle, 'a handle to resume it, 128 bits');
+    assert.equal((await fetch(`${agent.url}/play/${handle}`)).status, 404, 'the handle is not the control token');
+    assert.equal((await fetch(`${agent.url}/api/${handle}/state`)).status, 404);
+
+    // where to watch is data that only live_view gives, on request
+    const link = JSON.parse(text(await a.callTool({ name: 'live_view', arguments: { format: 'link' } })));
+    assert.equal(link.format, 'link');
+    assert.match(link.first_person_url, new RegExp(`^${agent.url}/eyes/[A-Za-z0-9_-]{22}/$`), '128-bit view ids');
+    assert.match(link.behind_url, new RegExp(`^${agent.url}/watch/[A-Za-z0-9_-]{22}/$`));
+    assert.ok(!link.first_person_url.includes(link.game), 'the view id is not the game id');
+    assert.deepEqual(JSON.parse(text(await a.callTool({ name: 'live_view', arguments: {} }))), link, 'link is the default');
+    const embed = JSON.parse(text(await a.callTool({ name: 'live_view', arguments: { format: 'embed' } })));
+    assert.deepEqual(embed, { format: 'embed', game: link.game, live: false, player: null, embed_url: null, video_url: null }, 'no live video without a stream');
     assert.match(s, /State \(game g\w+, about 10 min left; it also ends after 5 min without calls\):\n[\s\S]*inventory/);
     assert.match(s, /- collect \{block: one of /);
     assert.match(text(await a.callTool({ name: 'start_game', arguments: START })), /^Resumed game g\w+\./);
@@ -96,6 +119,18 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
     assert.equal(after.isError, true);
     assert.match(text(after), /your game ended: you ended it with end_game; start_game gives you a NEW bot/);
     assert.match(text(await a.callTool({ name: 'start_game', arguments: START })), /^New game/, 'no cooldown for an MCP session');
+
+    // 100 replies of every kind: none carries a link or a session token
+    for (let i = 0; replies.length < 100; i++) {
+      const r = await a.callTool({ name: ['get_state', 'play', 'play_sequence', 'stop'][i % 4], arguments: [{}, { skill: 'collect', args: { block: 'oak_log', n: 1 } }, { steps: [{ skill: 'eat' }] }, {}][i % 4] });
+      replies.push(text(r));
+    }
+    for (const r of replies) assert.doesNotMatch(r, /https?:\/\/|\/play\/|\/eyes\/|\/watch\/|[A-Za-z0-9_-]{32}/, r.slice(0, 200));
+    const rows = agent.log.tail(200);
+    const client = rows.find((r) => r.kind === 'mcp_client');
+    assert.deepEqual(client.client, { name: 'test', version: '1' }, 'the client says what it is');
+    assert.match(client.protocolVersion, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(client.negotiated, client.protocolVersion);
   } finally {
     await a.close();
     await b.close();
@@ -226,7 +261,7 @@ test('mcp: the end of the lease is explained; a game resumes from a new connecti
   const a = await client();
   const s = text(await a.callTool({ name: 'start_game', arguments: START }));
   const id = /game (g\w+)/.exec(s)[1];
-  const handle = /game: "([A-Za-z0-9_-]{32})"/.exec(s)[1];
+  const handle = /game: "([A-Za-z0-9_-]{22})"/.exec(s)[1];
 
   // a new connection (the connector re-initialized) takes the game over with its handle
   const b = await client();
@@ -234,9 +269,17 @@ test('mcp: the end of the lease is explained; a game resumes from a new connecti
   assert.match(resumed, new RegExp(`^Resumed game ${id}\\.`));
   const old = await a.callTool({ name: 'get_state', arguments: {} });
   assert.match(text(old), /your game ended: it moved to another connection/);
-  const wrong = await a.callTool({ name: 'start_game', arguments: { ...START, game: 'x'.repeat(32) } });
+  const wrong = await a.callTool({ name: 'start_game', arguments: { ...START, game: 'x'.repeat(22) } });
   assert.equal(wrong.isError, true);
-  assert.match(text(wrong), /^could not resume that game: /);
+  assert.match(text(wrong), /^could not resume that game: that handle belongs to no running game/);
+  // one game per MCP session: the game moved to b, so a may start another
+  const again = text(await a.callTool({ name: 'start_game', arguments: START }));
+  assert.match(again, /^New game g\w+/);
+  assert.notEqual(/game (g\w+)/.exec(again)[1], id);
+  assert.match(text(await a.callTool({ name: 'end_game', arguments: {} })), /Game ended/);
+  const c = await client();
+  const ended = await c.callTool({ name: 'start_game', arguments: { ...START, game: /game: "([A-Za-z0-9_-]{22})"/.exec(again)[1] } });
+  assert.match(text(ended), /^could not resume that game: that handle belongs to no running game/, 'a handle lives only as long as its game');
 
   clock += 600_001;
   const after = await b.callTool({ name: 'play', arguments: { skill: 'say', args: { text: 'hi' } } });
@@ -274,4 +317,62 @@ test('mcp limits: games per address, sessions per address (oldest idle one evict
   const statuses = [];
   for (let i = 0; i < 4; i++) statuses.push((await initialize(url)).status);
   assert.deepEqual(statuses, [200, 200, 200, 429]);
+});
+
+test('mcp games per address: WEB_MCP_GAMES_PER_ADDRESS (from probe T8), default half the bots and at least 2', async (t) => {
+  assert.equal(loadConfig({}).web.mcpGamesPerAddress, 2);
+  assert.equal(loadConfig({ WEB_MAX_SESSIONS: '8' }).web.mcpGamesPerAddress, 4);
+  assert.equal(loadConfig({ WEB_MAX_SESSIONS: '8', WEB_MCP_GAMES_PER_ADDRESS: '8' }).web.mcpGamesPerAddress, 8, 'up to the global cap');
+  assert.throws(() => loadConfig({ WEB_MCP_GAMES_PER_ADDRESS: '0' }), /WEB_MCP_GAMES_PER_ADDRESS/);
+  const { client } = await serve(t, { env: { WEB_MAX_SESSIONS: '4', WEB_MCP_GAMES_PER_ADDRESS: '1' } });
+  const [a, b] = [await client(), await client()];
+  assert.match(text(await a.callTool({ name: 'start_game', arguments: START })), /^New game/);
+  assert.match(text(await b.callTool({ name: 'start_game', arguments: START })), /already plays 1 game, the most one address may hold/);
+});
+
+test('mcp queue: a full server answers with a place in the queue and an estimate; the first in line gets the next bot', async (t) => {
+  let clock = Date.now();
+  const { client } = await serve(t, { env: { WEB_MAX_SESSIONS: '2', WEB_LEASE_MS: '600000' }, mcpGamesPerAddress: 4, now: () => clock });
+  const [a, b, c, d] = [await client(), await client(), await client(), await client()];
+  assert.match(text(await a.callTool({ name: 'start_game', arguments: START })), /^New game/);
+  clock += 120_000;
+  assert.match(text(await b.callTool({ name: 'start_game', arguments: START })), /^New game/);
+  const third = await c.callTool({ name: 'start_game', arguments: START });
+  assert.equal(third.isError, true);
+  assert.match(text(third), /^could not start: all 2 bots are in use; you are number 1 in the queue \(1 waiting\), and your turn comes in about 8 min at the latest, when enough leases end \(games often end sooner\); call start_game again within 90 s to keep your place/);
+  assert.match(text(await d.callTool({ name: 'start_game', arguments: START })), /you are number 2 in the queue \(2 waiting\), and your turn comes in about 10 min/);
+
+  // a bot frees up: it is c's, not d's, even though d asks first
+  await a.callTool({ name: 'end_game', arguments: {} });
+  assert.match(text(await d.callTool({ name: 'start_game', arguments: START })), /you are number 2 in the queue/);
+  assert.match(text(await c.callTool({ name: 'start_game', arguments: START })), /^New game/);
+  assert.match(text(await d.callTool({ name: 'start_game', arguments: START })), /you are number 1 in the queue \(1 waiting\)/);
+
+  // a place not asked for again within 90 s is given up
+  clock += 91_000;
+  const e = await client();
+  await b.callTool({ name: 'end_game', arguments: {} });
+  assert.match(text(await e.callTool({ name: 'start_game', arguments: START })), /^New game/, 'd let its place go');
+});
+
+test('mcp live_view: the embed data while a live video of the game runs; link data names the 3D views', async (t) => {
+  const live = new Set();
+  const liveVideo = (id) => (live.has(id) ? { videoUrl: 'https://www.facebook.com/picassolab/videos/123/', embedUrl: 'https://www.facebook.com/plugins/video.php?href=x&show_text=false' } : null);
+  const { client, url } = await serve(t, { liveVideo });
+  const c = await client();
+  const none = await c.callTool({ name: 'live_view', arguments: { format: 'embed' } });
+  assert.equal(none.isError, true);
+  assert.match(text(none), /call start_game first/);
+  const s = text(await c.callTool({ name: 'start_game', arguments: START }));
+  const id = /game (g\w+)/.exec(s)[1];
+  assert.equal(JSON.parse(text(await c.callTool({ name: 'live_view', arguments: { format: 'embed' } }))).live, false);
+  live.add(id);
+  assert.deepEqual(JSON.parse(text(await c.callTool({ name: 'live_view', arguments: { format: 'embed' } }))), {
+    format: 'embed', game: id, live: true, player: 'facebook',
+    embed_url: 'https://www.facebook.com/plugins/video.php?href=x&show_text=false', video_url: 'https://www.facebook.com/picassolab/videos/123/',
+  });
+  const link = JSON.parse(text(await c.callTool({ name: 'live_view', arguments: { format: 'link' } })));
+  assert.match(link.first_person_url, new RegExp(`^${url}/eyes/[A-Za-z0-9_-]{22}/$`));
+  const bad = await c.callTool({ name: 'live_view', arguments: { format: 'html' } });
+  assert.equal(bad.isError, true, 'only link and embed for now');
 });

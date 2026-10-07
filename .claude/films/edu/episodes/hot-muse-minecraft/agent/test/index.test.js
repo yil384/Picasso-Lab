@@ -282,3 +282,35 @@ test('npm start --fake-bot: serves the page, then SIGINT shuts down cleanly with
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('startAgent: live_view embed follows the game\'s stream and STREAM_VIDEO_URL; the event loop delay is logged', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'muse-index-'));
+  const VIDEO = 'https://www.facebook.com/picassolab/videos/123/';
+  const config = loadConfig({ WEB_HOST: '127.0.0.1', WEB_PORT: '0', LOG_DIR: dir, MODEL_API_KEY: '', STREAM_VIDEO_URL: VIDEO });
+  const running = new Map();
+  const streams = { enabled: true, start() { return null; }, has: (id) => running.has(id), slot: (id) => running.get(id) ?? null, stopAll: async () => {} };
+  const agent = await startAgent({ config, fakeBot: true, print: () => {}, loadViewer: () => null, streams, loopStatsMs: 50 });
+  const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+  const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
+  const c = new Client({ name: 'index-test', version: '1' });
+  try {
+    await c.connect(new StreamableHTTPClientTransport(new URL(`${agent.url}/mcp`)));
+    const start = (await c.callTool({ name: 'start_game', arguments: { adult: true } })).content[0].text;
+    const game = /game (g\w+)/.exec(start)[1];
+    const embed = async () => JSON.parse((await c.callTool({ name: 'live_view', arguments: { format: 'embed' } })).content[0].text);
+    assert.equal((await embed()).live, false, 'no stream yet');
+    running.set(game, 0);
+    const e = await embed();
+    assert.equal(e.live, true);
+    assert.equal(e.video_url, VIDEO);
+    assert.equal(e.embed_url, `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(VIDEO)}&show_text=false`);
+    await until(() => agent.log.tail(200).some((r) => r.kind === 'loop_delay'));
+    const row = agent.log.tail(200).find((r) => r.kind === 'loop_delay');
+    for (const k of ['p50Ms', 'p99Ms', 'maxMs']) assert.ok(Number.isFinite(row[k]) && row[k] >= 0, `${k} ${row[k]}`);
+    assert.ok(row.p99Ms >= row.p50Ms);
+  } finally {
+    await c.close().catch(() => {});
+    await agent.stop('test over');
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
