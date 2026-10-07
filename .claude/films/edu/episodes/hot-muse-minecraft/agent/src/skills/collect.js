@@ -42,11 +42,33 @@ export async function collect(ctx, { block, n }) {
   }
 
   // what the blocks drop (stone: cobblestone, iron_ore: raw_iron), to count what was really picked up; not for
-  // blocks whose drop is left to chance (gravel may give flint, leaves and grass often nothing)
+  // blocks whose drop is left to chance (gravel may give flint, leaves and grass often nothing). The server reports
+  // each pickup (playerCollect); the inventory change alone can mislead, since the walks may place dirt or cobblestone
+  // as scaffolding on the way.
   const chance = /^(gravel|short_grass|.*_leaves)$/.test(block);
   const dropNames = chance ? [] : [...new Set(defs.flatMap((d) => (d.drops ?? []).map((x) => bot.registry.items[typeof x === 'number' ? x : x?.drop?.id ?? x?.id]?.name)).filter(Boolean))];
   const held = () => dropNames.reduce((s, name) => s + countOf(bot, name), 0);
   const heldBefore = held();
+  let picked = 0;
+  const onCollect = (collector, collected) => {
+    if (collector !== bot.entity) return;
+    let it = null;
+    try { it = collected?.getDroppedItem?.(); } catch { /* not an item */ }
+    if (it && dropNames.includes(it.name)) picked += it.count;
+  };
+  // a bot that does not report pickups (the fake) is counted by its inventory alone
+  const got = () => Math.max(held() - heldBefore, picked);
+  bot.on('playerCollect', onCollect);
+  try {
+    return await mineAndCount(ctx, { block, n, ids, dropNames, got });
+  } finally {
+    bot.removeListener('playerCollect', onCollect);
+  }
+}
+
+/** The mining loop of collect, then the sweep for drops left on the ground; got() counts what was picked up. */
+async function mineAndCount(ctx, { block, n, ids, dropNames, got }) {
+  const { bot } = ctx;
   let mined = 0;
   let misses = 0;
   let lastError = null;
@@ -78,15 +100,14 @@ export async function collect(ctx, { block, n }) {
 
   // drops that rolled away or fell into a hole: one more pass over what lies around
   await settleInventory(ctx);
-  if (mined && dropNames.length && held() - heldBefore < mined) {
+  if (mined && dropNames.length && got() < mined) {
     try { await collectDrops(ctx, dropsNear(bot, 8), SWEEP_MS); } catch (err) { if (err instanceof SkillStop) throw err; }
     await settleInventory(ctx);
   }
   // the server adds a picked-up item to the inventory a few ticks after the bot touches it: give those a moment
-  for (let i = 0; i < 10 && mined && dropNames.length && held() - heldBefore < mined; i++) await ctx.sleep(150);
-  const got = held() - heldBefore;
-  const pickedNote = mined && dropNames.length && got < mined
-    ? `; picked up ${got} ${dropNames.join('/')}, the rest lies on the ground nearby` : '';
+  for (let i = 0; i < 10 && mined && dropNames.length && got() < mined; i++) await ctx.sleep(150);
+  const pickedNote = mined && dropNames.length && got() < mined
+    ? `; picked up ${got()} ${dropNames.join('/')}, the rest lies on the ground nearby` : '';
   if (mined >= n) return done(`mined ${mined} ${block}${pickedNote}`);
   const why = misses >= MAX_MISSES ? `gave up after ${misses} blocks it could not mine${lastError ? `, last: ${lastError}` : ''}`
     : `no more ${block} within ${RADIUS} blocks${skip.size ? ` that you can reach` : ''}${ORE_HINT(block)}`;

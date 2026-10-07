@@ -121,6 +121,18 @@ export function closeCurrent(bot) {
 }
 
 /**
+ * Close the player's own inventory screen, as the vanilla client does: the server puts what is in the 2x2 grid and on
+ * the cursor back into the inventory (or drops it at the bot's feet when the inventory is full). mineflayer never
+ * sends this for window 0, so after a 2x2 craft that was stopped half way the items would stay in the grid, where
+ * nothing counts them. The client forgets its cursor too; the next resync shows where the items went.
+ */
+export function closeInventory(bot) {
+  if (!canClick(bot) || bot.currentWindow) return;
+  try { bot._client.write('close_window', { windowId: 0 }); } catch { return; }
+  if (bot.inventory) bot.inventory.selectedItem = null;
+}
+
+/**
  * Open the window of a block (crafting table, furnace): look at it, use it, wait for the window with a time limit.
  * The window is closed again if the skill is stopped. Returns {window, close}.
  */

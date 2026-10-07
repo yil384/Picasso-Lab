@@ -44,7 +44,7 @@ launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null
 cp "$SRC" "$DST" || exit 1
 launchctl bootstrap "$DOMAIN" "$DST" || { echo "launchctl bootstrap failed"; exit 1; }
 echo
-echo "installed: $DST (every day at 02:00)"
+echo "installed: $DST (02:00 nightly; 12:00 and 19:00 catch up a lost night)"
 launchctl print "$DOMAIN/$LABEL" | grep -E '^\s*(state|last exit code)' | sed 's/^/  /'
 cat <<TXT
 

@@ -9,7 +9,7 @@ server-ip=127.0.0.1
 server-port=25565
 level-seed=${SEED:-forestbot}
 spawn-protection=0
-difficulty=${DIFFICULTY:-peaceful}
+difficulty=${DIFFICULTY:-easy}
 gamemode=survival
 max-players=8
 view-distance=8
@@ -19,4 +19,9 @@ motd=Muse plays Minecraft (local)
 P
 # console commands: echo "op NAME" > console.in (a FIFO opened read-write, so the server never sees end of input)
 rm -f console.in && mkfifo console.in
+# the public demo plays in daylight: once the server is up, stop the day/night cycle at morning (DAYLIGHT=cycle keeps it)
+if [ "${DAYLIGHT:-locked}" = locked ]; then
+  ( until grep -q 'Done (' server.log 2>/dev/null; do sleep 2; done
+    printf 'gamerule doDaylightCycle false\ntime set day\n' > console.in ) &
+fi
 exec ./jdk/Contents/Home/bin/java -Xms1G -Xmx3G -jar paper.jar --nogui <> console.in

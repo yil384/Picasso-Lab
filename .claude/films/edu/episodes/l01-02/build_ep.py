@@ -53,26 +53,37 @@ PANELS.append({'id': 'p0', 'note': 'the cover: the tokenizer as a hand-crank mil
     {'t': 'underline', 'of': 'title2', 'dx': 6, 'dy': 62, 'rise': -8, 'bend': 0.03, 'at': 'title', 'dur': 0.6},
     {'t': 'sans', 'text': key('strip', 'CSE 291P · Lecture 1 · UC San Diego'), 'xy': [86, 616], 'px': 28, 'a': 0.78,
      'align': 'left'},
-    lab('hook', '7 tokens or 1?', [86, 700], 76, color='red', font='latin', align='left', rot=-0.03),
+    lab('hook', 'eucalyptus: 5 tokens or 1?', [86, 700], 70, color='red', font='latin', align='left', rot=-0.03),
 ]})
 
-# ---------------------------------------------------------------- P1 the question: seven clippings vs one
-CH = [(30, 101), (105, 187), (187, 265), (266, 345), (346, 425), (424, 503), (509, 582)]
-V0, VH, ZW = 10 / 115, 95 / 115, 640
-it = [lab('q4', "GPT-4's tokenizer: 7 tokens", [440, 625], 58, at='p1+0.3')]
-for k, (a, b) in enumerate(CH):
-    it.append({'t': 'clipping', 'slide': 'zh', 'crop': [a / ZW, V0, (b - a) / ZW, VH], 'from': [540, 1500],
-               'to': [126 + 138 * k, 790], 'w0': 60, 'w': 118, 'rot0': 0.2, 'rot': 0.02 * ((k % 3) - 1),
-               'at': 'p1+0.6+%.2f' % (0.16 * k), 'fly': 0.5, 'tapes': []})
-it += [lab('q4o', "GPT-4o's tokenizer: 1 token", [540, 1000], 58, color='red', at='n2+2.6'),
-       {'t': 'clipping', 'slide': 'zh', 'crop': [30 / ZW, V0, 552 / ZW, VH], 'from': [540, 1500], 'to': [540, 1140],
-        'w0': 140, 'w': 640, 'rot0': -0.1, 'rot': -0.015, 'at': 'n2+3.0', 'fly': 0.6,
-        'tapes': [{'i': 2, 'dx': -0.46, 'dy': -0.07, 'w': 130, 'rot': -0.4, 'at': 'n2+3.5'},
-                  {'i': 6, 'dx': 0.46, 'dy': -0.07, 'w': 120, 'rot': 0.4, 'at': 'n2+3.6'}]},
+# ---------------------------------------------------------------- P1 the question: five scraps vs one tile
+# " eucalyptus" (the word inside a sentence, with its space): cl100k_base cuts it into 5 pieces, o200k_base keeps
+# it as 1 (FACTS T20, T26; the pieces are the real cl100k_base pieces, shown without the leading space)
+EU = ['e', 'uc', 'aly', 'pt', 'us']
+
+
+def tile_row(keys, words, cy, px, at0, step, gap=22, seed=0, cx0=540, color='ink'):
+    """Lettered tiles centred on cx0 at height cy, widths by letter count. Returns (items, centres)."""
+    ws = [max(round(px * 1.15), round(0.52 * px * len(w) + 0.7 * px)) for w in words]
+    x = cx0 - (sum(ws) + gap * (len(ws) - 1)) / 2
+    its, cs = [], []
+    for k, (kk, w, tw) in enumerate(zip(keys, words, ws)):
+        cs.append(round(x + tw / 2))
+        its += card_tile(kk, w, x + tw / 2, cy, tw, round(px * 1.75), at0 + '+%.2f' % (step * k), px=px,
+                         seed=seed + k, color=color)
+        x += tw + gap
+    return its, cs
+
+
+it = [lab('q4', "GPT-4's tokenizer: 5 tokens", [440, 625], 58, at='p1+0.3')]
+row, _ = tile_row(['qp.%d' % k for k in range(5)], EU, 790, 82, 'p1+0.6', 0.16, seed=500, cx0=485)
+it += row
+whole, _ = tile_row(['qw'], ['eucalyptus'], 1140, 104, 'n2+3.0', 0, seed=510, color='red')
+it += [lab('q4o', "GPT-4o's tokenizer: 1 token", [540, 1000], 58, color='red', at='n2+2.6')] + whole + [
        {'t': 'wash', 'c': 'cobalt', 'xy': [540, 1140], 'w': 700, 'h': 200, 'a': 0.35, 'at': 'n2+3.4'},
        lab('qmark', '?', [960, 1010], 120, color='red', font='latin', at='n2+5'),
        {'t': 'ring', 'xy': [960, 990], 'r': [70, 80], 'seed': 4, 'at': 'n2+5.3', 'dur': 0.5}]
-PANELS.append({'id': 'p1', 'note': 'the puzzle: the seven characters cut out of her slide 19, 7 tokens vs 1 (C1)', 'items': it})
+PANELS.append({'id': 'p1', 'note': 'the puzzle: eucalyptus as 5 cl100k_base tiles vs 1 o200k_base tile (C1)', 'items': it})
 
 # ---------------------------------------------------------------- P2 the cabinet
 PL = {'r': [0.105, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8], 'c': [0.26, 0.38, 0.49, 0.61, 0.72, 0.83]}
@@ -303,44 +314,42 @@ it += [lab('fin13', '10 + 3 = 13', [780, 1232], 60, color='red', font='latin', a
        {'t': 'wash', 'c': 'yellow', 'xy': [780, 1222], 'w': 340, 'h': 120, 'a': 0.5, 'at': 'final13+0.2'}]
 PANELS.append({'id': 'p11', 'note': 'the BPE trace as letter tiles; three rounds, both ties ringed; the vocabulary grows 10 -> 13', 'items': it})
 
-# ---------------------------------------------------------------- P12 her slide 19, the Chinese line under a flap
-it = [{'t': 'group', 'fadeOut': ['n29@lifts', 'n29@lifts+0.4'], 'items': [
-          {'id': 'flap', 't': 'cover', 'xy': ['sl:px', 335, 992], 'size': [310, 46], 'rot': 0.01, 'at': 'tape12+0.3',
-           'dur': 0.3, 'tape': {'i': 3, 'dx': -150, 'dy': 0, 'w': 70, 'rot': 0.6, 'at': 'tape12+0.5'}}]},
-      {'t': 'box', 'on': 'sl:px', 'rect': [104, 362, 1552, 416], 'at': 'n28@tiktoken', 'dur': 0.7, 'lw': 5},
+# ---------------------------------------------------------------- P12 her slide 19 (its last two lines painted out)
+# slides/p19.png is the 150-dpi page with the slide's own second example (its last two lines) painted out in the
+# slide's white (~/picasso-work/daily/L01-02/fix/clean19.py); the red pen writes our own test sentence in that space
+it = [{'t': 'box', 'on': 'sl:px', 'rect': [104, 362, 1552, 416], 'at': 'n28@tiktoken', 'dur': 0.7, 'lw': 5},
       {'t': 'box', 'on': 'sl:px', 'rect': [104, 438, 1552, 492], 'at': 'n28@hugging', 'dur': 0.7, 'lw': 5},
       lab('readme', 'README: vs one older library', ['sl:px', 1320, 330], 34, color='red', at='n28@rust', patch=0.3),
       {'t': 'pen', 'pts': [['sl:px', 503, 688], ['sl:px', 650, 688]], 'at': 'n29@cl100kbase', 'dur': 0.4, 'lw': 5},
       {'t': 'ring', 'xy': ['sl:px', 785, 903], 'r': [34, 26], 'seed': 7, 'at': 'n29@13', 'dur': 0.4, 'lw': 5},
-      {'t': 'ring', 'xy': ['sl:px', 437, 990], 'r': [150, 34], 'seed': 8, 'at': 'n29@china', 'dur': 0.5, 'lw': 5},
-      {'t': 'wash', 'c': 'yellow', 'xy': ['sl:px', 437, 990], 'w': 330, 'h': 90, 'a': 0.5, 'at': 'n29@lifts+0.3'}]
-PANELS.append({'id': 'p12', 'kind': 'slide', 'note': 'her slide 19 taped; the Chinese line under a paper flap until n29',
+      {'t': 'wash', 'c': 'yellow', 'xy': ['sl:px', 560, 1012], 'w': 420, 'h': 80, 'a': 0.5, 'at': 'n29@koalas+0.3'},
+      lab('swap', 'our test: Koalas eat eucalyptus.', ['sl:px', 560, 1022], 34, color='red', at='n29@own',
+          dur=1.6, rot=-0.01, patch=0.3)]
+PANELS.append({'id': 'p12', 'kind': 'slide', 'note': 'her slide 19 taped (last two lines painted out); the pen adds our own test sentence (FACTS T20)',
                'slide': {'src': 's19', 'tape': 'tape12', 'label': key('slide19', 'her slide 19')},
                'camera': [{'at': 'tape12+0.3', 'xy': [540, 960], 'z': 1.0}, {'at': 'tape12+1.2', 'xy': [540, 740], 'z': 1.25},
-                          {'at': 'n29-0.3', 'xy': [540, 740], 'z': 1.25}, {'at': 'n29+0.8', 'xy': [331, 955], 'z': 1.9},
-                          {'at': 'n29.end', 'xy': [331, 955], 'z': 1.9}, {'at': 'n29.end+0.7', 'xy': [540, 960], 'z': 1.0}], 'items': it})
+                          {'at': 'n29@now-1.0', 'xy': [540, 740], 'z': 1.25}, {'at': 'n29@now+0.2', 'xy': [420, 1030], 'z': 1.7},
+                          {'at': 'n29.end', 'xy': [420, 1030], 'z': 1.7}, {'at': 'n29.end+0.7', 'xy': [540, 960], 'z': 1.0}], 'items': it})
 
-# ---------------------------------------------------------------- P13 seven clippings -> one
+# ---------------------------------------------------------------- P13 five scraps -> one tile
 grpA = [lab('z4', "GPT-4's tokenizer", [540, 500], 60, at='p13+0.4')]
-for k, (a, b) in enumerate(CH):
-    grpA.append({'t': 'clipping', 'slide': 'zh', 'crop': [a / ZW, V0, (b - a) / ZW, VH], 'from': [540, 300],
-                 'to': [126 + 138 * k, 740], 'w0': 60, 'w': 118, 'rot0': 0.1, 'rot': 0.02 * ((k % 3) - 1),
-                 'at': 'p13+0.6+%.2f' % (0.12 * k), 'fly': 0.5, 'tapes': []})
-    grpA.append(lab('zn.%d' % k, str(k + 1), [126 + 138 * k, 910], 50, color='red', font='latin',
-                    at='n30@7+%.2f' % (0.14 * k), dur=0.2))
-grpA += [lab('z7', '7 tokens: one per character', [540, 1030], 60, color='red', at='n30@one'),
-         {'t': 'wash', 'c': 'coral', 'xy': [540, 1030], 'w': 640, 'h': 130, 'a': 0.35, 'at': 'n30@one+0.3'}]
-grpB = [lab('z4o', "GPT-4o's tokenizer", [540, 500], 60, at='glue1'),
-        {'t': 'clipping', 'slide': 'zh', 'crop': [30 / ZW, V0, 552 / ZW, VH], 'from': [540, 740], 'to': [540, 750],
-         'w0': 700, 'w': 860, 'rot0': 0, 'rot': -0.012, 'at': 'glue1', 'fly': 0.4,
-         'tapes': [{'i': 2, 'dx': -0.47, 'dy': -0.07, 'w': 150, 'rot': -0.4, 'at': 'glue1+0.4'},
-                   {'i': 6, 'dx': 0.47, 'dy': -0.07, 'w': 140, 'rot': 0.4, 'at': 'glue1+0.5'}]},
+row, cs = tile_row(['zp.%d' % k for k in range(5)], EU, 760, 82, 'p13+0.6', 0.12, seed=520, cx0=485)
+grpA += row
+for k, cx in enumerate(cs):
+    grpA.append(lab('zn.%d' % k, str(k + 1), [cx, 930], 50, color='red', font='latin',
+                    at='n30@5+%.2f' % (0.14 * k), dur=0.2))
+grpA += [lab('z7', '5 tokens, all scraps', [540, 1040], 60, color='red', at='n30@scraps'),
+         {'t': 'wash', 'c': 'coral', 'xy': [540, 1040], 'w': 640, 'h': 130, 'a': 0.35, 'at': 'n30@scraps+0.3'}]
+whole, _ = tile_row(['zw'], ['eucalyptus'], 760, 122, 'glue1', 0, seed=530, cx0=520, color='red')
+grpB = [lab('z4o', "GPT-4o's tokenizer", [540, 500], 60, at='glue1')] + whole + [
         lab('z1', '1 token', [540, 960], 84, color='red', font='latin', at='glue1+0.6'),
         {'t': 'wash', 'c': 'cobalt', 'xy': [540, 760], 'w': 900, 'h': 260, 'a': 0.4, 'at': 'glue1+0.4', 'dur': 1.2},
-        lab('z17', 'a seventh of the tokens', [540, 1090], 60, at='n31@seventh')]
-it = [{'t': 'group', 'at': 'p13+0.4', 'fadeOut': ['glue1-0.25', 'glue1+0.15'], 'items': grpA},
+        lab('z15', 'a fifth of the tokens', [540, 1090], 60, at='n31@fifth'),
+        lab('zs', 'whole sentence: from 11 tokens to 5', [540, 1200], 44, at='n31@whole')]
+it = [lab('zsent', 'Koalas eat eucalyptus.', [540, 380], 56, font='latin', at='p13+0.3'),
+      {'t': 'group', 'at': 'p13+0.4', 'fadeOut': ['glue1-0.25', 'glue1+0.15'], 'items': grpA},
       {'t': 'group', 'at': 'glue1', 'items': grpB}]
-PANELS.append({'id': 'p13', 'note': 'the payoff: seven clippings, one per token, glued into one (C9, C12b)', 'items': it})
+PANELS.append({'id': 'p13', 'note': 'the payoff: five scraps, one per token, glued into one tile (FACTS T20, T22, T26)', 'items': it})
 
 # ---------------------------------------------------------------- P14 the bigger vocabulary
 it = [{'id': 'cs', 't': 'draw', 'd': 'catalog', 'xy': [230, 980], 'w': 300, 'at': 'p14+0.4', 'dur': 1.8},
@@ -351,14 +360,12 @@ it = [{'id': 'cs', 't': 'draw', 'd': 'catalog', 'xy': [230, 980], 'w': 300, 'at'
       lab('v200.1', 'o200k_base', [700, 460], 44, color='red', font='latin', at='n32@200000+0.3'),
       {'t': 'arrow', 'from': [260, 670], 'to': [470, 430], 'bend': -0.3, 'lw': 6, 'at': 'n32@200000+0.5', 'dur': 0.5},
       {'t': 'wash', 'c': 'cobalt', 'xy': ['cb', 0.5, 0.5], 'w': 560, 'a': 0.35, 'at': 'n32@room'},
-      {'t': 'clipping', 'slide': 'zh', 'crop': [30 / ZW, V0, 552 / ZW, VH], 'from': [540, 1150], 'to': [640, 1212],
-       'w0': 120, 'w': 300, 'rot0': 0.1, 'rot': -0.02, 'at': 'n32@whole', 'fly': 0.5,
-       'tapes': [{'i': 1, 'dx': -0.48, 'dy': -0.06, 'w': 70, 'rot': -0.5, 'at': 'n32@whole+0.5'}]},
+      ] + tile_row(['vw'], ['eucalyptus'], 1212, 48, 'n32@whole', 0, seed=540, cx0=640, color='red')[0] + [
       {'t': 'arrow', 'from': [800, 1190], 'to': ['cb', 0.56, 0.52], 'bend': -0.3, 'lw': 6, 'at': 'n32@entry', 'dur': 0.5},
       lab('trend', ['the trend:', 'bigger vocabularies'], [70, 330], 44, color='red', align='left', fit=360, at='c11+0.5',
           rows={'dy': 52, 'dt': 0.5})]
 S['trend'] = ['the trend:', 'bigger vocabularies']
-PANELS.append({'id': 'p14', 'note': 'what changed: about 100,000 -> about 200,000 entries; room for the whole name (C11)', 'items': it})
+PANELS.append({'id': 'p14', 'note': 'what changed: about 100,000 -> about 200,000 entries; room for the whole word (C9, C11)', 'items': it})
 
 # ---------------------------------------------------------------- P15 the honest limit
 it = [lab('lim', 'one honest limit', [80, 380], 84, align='left', at='n33@honest'),
@@ -430,8 +437,7 @@ E['assets'] = {'artDir': '/edu/art/cut', 'slideDir': 'slides',
                             'lost': {'src': 'line_lost_word', 'w': 860}, 'ribbon': {'src': 'line_long_ribbon', 'w': 1030},
                             'glue': {'src': 'line_glue_tiles', 'w': 960}, 'balance': {'src': 'line_balance', 'w': 900},
                             'receipt': {'src': 'line_receipt', 'w': 440}, 'mic': {'src': 'line_mic', 'w': 240, 'boost': 0.3}},
-               'slides': {'s15': {'src': 'p15.png'}, 's17': {'src': 'p17.png'}, 's19': {'src': 'p19.png'},
-                          'zh': {'src': 'p19_zh.png'}}}
+               'slides': {'s15': {'src': 'p15.png'}, 's17': {'src': 'p17.png'}, 's19': {'src': 'p19.png'}}}
 E['mic'] = {'drawing': 'mic'}
 E['end'] = {'at': 'endCard'}
 E['panels'] = PANELS

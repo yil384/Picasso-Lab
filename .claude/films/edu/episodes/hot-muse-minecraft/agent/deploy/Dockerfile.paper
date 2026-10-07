@@ -1,0 +1,8 @@
+# Headless Paper 1.21.4 for the Muse bots: offline mode, reachable only on the compose network, console through a FIFO.
+FROM eclipse-temurin:21-jre
+COPY paper.jar /opt/paper/paper.jar
+COPY plugins /opt/paper/plugins
+COPY deploy/paper-entry.sh /opt/paper/entry.sh
+RUN chmod +x /opt/paper/entry.sh
+WORKDIR /data
+CMD ["/opt/paper/entry.sh"]

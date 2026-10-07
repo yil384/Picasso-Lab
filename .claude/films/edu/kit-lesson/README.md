@@ -186,7 +186,8 @@ at `arrive+0.7` (registered as `sl`), and two strips of tape at `tape` and `tape
 
 ## strings.json
 `{"en": {...}, "zh": {...}}`. Values are strings or arrays of strings, reached as `key` or `key.0`. The kit needs
-`mic` (the mic tag, e.g. "Prof. Ding · lecture 2"), `end` (3 lines: credit, motto, lab), `fine` (small print rows
+`mic` (the mic tag, e.g. "Prof. Ding · lecture 2"; `mic_<voice id>`, e.g. `mic_c13`, overrides it for one clip from
+another lecture), `end` (3 lines: credit, motto, lab), `fine` (small print rows
 on the end card) and `cap`, one caption per voice id of the timeline: `|` splits a line into parts shown one after
 another (timed on the voice's word marks; her clips by letter count), `/` forces a row break, two rows at most. No
 word may appear on screen that is not in strings.json, and none that FACTS.md does not clear.

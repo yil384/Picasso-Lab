@@ -9,12 +9,14 @@
   },
   "scripts": {
     "test": "node --test test/",
+    "test:stream": "STREAM_E2E=1 node --test test/stream.test.js",
     "start": "node src/index.js",
     "mock": "node test/mock-llm.js",
     "probe": "node scripts/probe.mjs",
     "run-goal": "node scripts/run-goal.mjs",
     "hud": "node scripts/hud-data.mjs",
-    "a11y": "node scripts/a11y-chrome.mjs"
+    "a11y": "node scripts/a11y-chrome.mjs",
+    "stream": "node scripts/stream.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",

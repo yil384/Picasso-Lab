@@ -523,18 +523,50 @@ test('a hit from a hostile mob stops a long skill with what to do; a passive one
   const { bot, body } = await setup({ scene: 'flat', moveMsPerBlock: 20 });
   const walk = body.run('go_to', { x: 30, y: 64, z: 0 });
   await new Promise((r) => setTimeout(r, 50));
-  bot.fake.setHealth(18); // no mob near: a fall, say
-  bot.fake.spawnMob('cow', bot.entity.position.offset(1, 0, 0));
-  bot.fake.setHealth(17);
+  const near = bot.fake.spawnMob('zombie', bot.entity.position.offset(0, 0, 5)); // behind a wall, say
+  bot.fake.hurt(2); // a fall: no source, so the zombie nearby is not blamed
+  const cow = bot.fake.spawnMob('cow', bot.entity.position.offset(1, 0, 0));
+  bot.fake.hurt(1, cow);
   assert.equal(body.busy, true, 'still walking');
-  bot.fake.spawnMob('zombie', bot.entity.position.offset(2, 0, 0));
-  bot.fake.setHealth(14);
+  const zombie = bot.fake.spawnMob('zombie', bot.entity.position.offset(2, 0, 0));
+  bot.fake.hurt(3, zombie);
   const r = await walk;
   assert.equal(r.ok, false);
-  assert.match(r.result, /^stopped: a zombie is attacking you \(health 14\/20, 2 blocks away\); fight back with attack zombie, or go_to somewhere safe$/);
-  bot.fake.setHealth(12);
+  assert.match(r.result, /^stopped: a zombie is attacking you \(health 14\/20, 2 blocks away\); fight back with attack zombie, or go_to somewhere safe \(for 10 s its hits will not stop you again unless your health drops to 6\)$/);
+  assert.notEqual(zombie.id, near.id);
+  bot.fake.hurt(2, zombie);
   const fight = await body.run('attack', { target: 'zombie' });
   assert.doesNotMatch(fight.result, /is attacking you/, 'attack is never interrupted by the mob it fights');
+});
+
+test('hits: a skeleton shooting from afar stops a skill; fleeing from the mob that stopped it is not stopped again', async () => {
+  const { bot, body } = await setup({ scene: 'flat', moveMsPerBlock: 20 });
+  const skeleton = bot.fake.spawnMob('skeleton', bot.entity.position.offset(12, 0, 0));
+  const walk = body.run('go_to', { x: 0, y: 64, z: 30 });
+  await new Promise((r) => setTimeout(r, 50));
+  bot.fake.hurt(3, skeleton);
+  assert.match((await walk).result, /^stopped: a skeleton is attacking you \(health 17\/20, 12(\.\d)? blocks away\)/);
+
+  // the advised escape: its next arrows do not stop the walk away from it...
+  const flee = body.run('go_to', { x: -20, y: 64, z: 0 });
+  await new Promise((r) => setTimeout(r, 50));
+  bot.fake.hurt(3, skeleton);
+  assert.equal(body.busy, true, 'still fleeing after a second hit');
+  // ...unless health gets low
+  bot.fake.hurt(8, skeleton);
+  const r = await flee;
+  assert.match(r.result, /^stopped: a skeleton is attacking you \(health 6\/20/);
+
+  // an older server (no damage_event): a hostile mob within 6 blocks when health drops is taken as the attacker
+  const old = createFakeBot({ scene: 'flat', moveMsPerBlock: 20 });
+  old.registry = Object.create(old.registry, { version: { value: { '>=': () => false } } });
+  const legacy = createBody({ bot: old, config, log: createLogger({ dir: null, config }) });
+  await legacy.ready;
+  old.fake.spawnMob('zombie', old.entity.position.offset(3, 0, 0));
+  const w = legacy.run('go_to', { x: 30, y: 64, z: 0 });
+  await new Promise((r) => setTimeout(r, 50));
+  old.fake.setHealth(15);
+  assert.match((await w).result, /^stopped: a zombie is attacking you \(health 15\/20, 3 blocks away\)/);
 });
 
 test('after a death the next skill waits for the respawn', async () => {
@@ -547,6 +579,20 @@ test('after a death the next skill waits for the respawn', async () => {
   const r = await body.run('craft', { item: 'stick', n: 4 });
   assert.equal(r.ok, true, r.result);
   assert.ok(Date.now() - t0 >= 150, 'waited for the respawn');
+});
+
+test('collect: blocks the walk places as scaffolding do not count against the drops picked up', async () => {
+  const { bot, body } = await setup({ scene: 'flat', inventory: { wooden_pickaxe: 1, cobblestone: 10 } });
+  for (const x of [3, 4, 5]) bot.fake.setBlock(new Vec3(x, 64, 0), 'stone');
+  const goto = bot.pathfinder.goto;
+  let walks = 0;
+  bot.pathfinder.goto = (goal) => { if (++walks === 1) bot.fake.take('cobblestone', 4); return goto(goal); }; // a pillar or a bridge
+  const t0 = Date.now();
+  const r = await body.run('collect', { block: 'stone', n: 3 });
+  assert.equal(r.ok, true, r.result);
+  assert.equal(r.result, 'mined 3 stone', 'no "picked up -1", no sweep');
+  assert.ok(Date.now() - t0 < 4_000, 'no 8 s sweep for drops that were picked up');
+  assert.deepEqual(r.delta, { cobblestone: -1 });
 });
 
 test('collect: says how many drops were really picked up when some stay on the ground', async () => {

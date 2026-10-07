@@ -1,5 +1,9 @@
 # L01-02 "How Text Becomes Numbers" - script draft A (story / analogy first)
 
+> Note (2026-10-07): written for the first cut. Its hook used slide 19's second example, which the user's rule
+> (`daily/PROMPT.md`, first of the "Rules for the night") forbids; that example is replaced below by a pointer, and the film now uses our
+> own example "eucalyptus" (see `../SCRIPT.md` and `../FACTS.md` T20).
+
 - Source: CSE 291P "LLM System Optimization", Prof. Yufei Ding, UC San Diego, Lecture 1, slides 12-19 (tokenization),
   recording 24:19-41:05. Facts: `../FACTS.md` only, in its Safe EN wording. Clips: `../clips.json`.
 - Length target: 6:00 (planned 6:01 without the optional clips, 6:11 with all three). Vertical 1080x1920, line look.
@@ -7,7 +11,7 @@
   a fixed cabinet of numbered drawers. Text goes in, drawer numbers come out; that list is all the model sees. The
   three granularities are three ways to decide which drawers the cabinet gets; BPE decides by gluing the most common
   neighbouring tiles, and each glue makes a new drawer. The hook's payoff: the bigger cabinet learned more merges, so
-  the seven paper clippings of the Chinese name end up glued into one drawer.
+  the paper clippings of the slide's second example end up glued into one drawer.
 - Previous episode (L01-01 "More Is Different (and Expensive)"): one callback line only (n2).
 - The cabinet stays on the sheet as a recurring element: every time a new drawer is made (es, est, lo), the pen letters
   a label plate on `line_card_catalog`; the open drawer is "the current token".
@@ -15,7 +19,7 @@
 ## Beats (times planned; the voice decides)
 | # | Time | Panel picture (drawing, what the pen does) | Voice |
 | --- | --- | --- | --- |
-| 0 | 0:00-0:16 | **Hook.** Slide 19 (taped) is shown only as its bottom line; scissors-cut: the seven characters 中华人民共和国 lift off as seven paper clippings in a row. Left of them the pen letters "GPT-4's tokenizer: 7"; seven small tiles drop under the clippings. Right: "GPT-4o's: 1" and one tile, with a red "?" box around the gap between. 3 s hold on the puzzle. | n0, n1 |
+| 0 | 0:00-0:16 | **Hook.** Slide 19 (taped) is shown only as its bottom line; scissors-cut: the slide's second example lifts off as seven paper clippings in a row. Left of them the pen letters "GPT-4's tokenizer: 7"; seven small tiles drop under the clippings. Right: "GPT-4o's: 1" and one tile, with a red "?" box around the gap between. 3 s hold on the puzzle. | n0, n1 |
 | 1 | 0:16-0:32 | **Cover.** `line_token_mill` draws itself: paper ribbon in, blank tiles out into the tray. Title lettering "How Text Becomes Numbers", strip "CSE 291P · Lecture 1 · UC San Diego". Mic tag for C1. | n2, **C1** |
 | 2 | 0:32-1:05 | **The cabinet.** `line_card_catalog` draws itself (y sweep); the pen numbers the label plates (#0, #1 ... a few legible, the rest ticks). A paper ribbon lettered "Hello students! ..." feeds into the mill on the left of the cabinet; out the right comes a strip of drawer numbers. Pen boxes the strip: "this is all the model sees". Note card: "tokenizer: text -> list of whole numbers -> text". | n3, n4, n5, n6 |
 | 3 | 1:05-1:21 | **Her sample sentence as tiles.** The sentence lettered across the page, then cut by red ticks into 13 letter tiles: Hello / students / ! / Token / ization / is / the / foundation / of / L / LM / s / . Counters: "55 characters" (grey), "13 tokens" (red). Pen rings "Token" + "ization" and "L" + "LM" + "s": "not a word". | n7, n8 |
@@ -33,7 +37,7 @@
 ## Narration (720 words; one voice id per line)
 | id | Line | FACTS |
 | --- | --- | --- |
-| n0 | Seven Chinese characters. GPT-4's tokenizer counts them as seven tokens. GPT-4o's counts them as one. | T20 |
+| n0 | [replaced on 2026-10-07: see ../SCRIPT.md] | T20 |
 | n1 | Same text. What changed? By the end of this video, you can answer that yourself. | T20 (hook, no claim) |
 | n2 | Last time, models got big and expensive. Today: the unit they are counted in. This is Professor Yufei Ding's course at UC San Diego, CSE 291P, Lecture 1. | L01 (source key); T1 |
 | n3 | Because a model never reads letters. It never reads words either. It reads numbers. | T2 |
@@ -67,7 +71,7 @@
 | n31 | A real one just keeps going. GPT-4o's tokenizer, o200k_base, has about 200,000 entries. | T10, T21 |
 | n32 | You don't build one by hand. Her slide shows tiktoken, OpenAI's tokenizer library, and Hugging Face's tokenizers library, written in Rust. | T17, T18 |
 | n33 | The code loads GPT-4's tokenizer, cl100k_base: about 100,000 entries. Our sentence comes out as 13 tokens. | T21, T19, T20 (mapping) |
-| n34 | Then she feeds it seven Chinese characters: the full name of China, the People's Republic of China. | T20 |
+| n34 | [replaced on 2026-10-07: see ../SCRIPT.md] | T20 |
 | n35 | In GPT-4's tokenizer: 7 tokens. | T20 |
 | n36 | Now back to the cabinet. The bigger cabinet learned more merges. Somewhere along the way, these seven characters ended up glued into one drawer. | T20, T21, T9 (brief: "a bigger vocabulary learned more merges") |
 | n37 | 1 token in GPT-4o's. Same text, a seventh of the tokens. | T20, T22 |
@@ -90,7 +94,7 @@ ties stated (n24, n28); "about" on both vocabulary sizes; no speed figure in the
 | C11 (4.5 s) | "So that's why sometimes you want to have a larger vocabulary. And that's also the trend." | Beat 11, after n37 | Closes the payoff in her voice; the pen draws the trend arrow. |
 | C5b (1.88 s), if it passes | "So you may have some new words," | Beat 5, after n12, before n13 | Leads into the lost-word librarian. Without it n12 -> n13 reads straight on. |
 | C8b (3.08 s), if it passes | "That is how BPE is working. Any questions?" | Beat 8, after n29 | Her sign-off on the trace; without it n29 -> n30 reads straight on. |
-| C12b (2.84 s), if it passes | "Because it just means the same thing, it's just China," | Beat 11, after n37, before C11 | Her gloss on the seven characters; without it n37 -> C11 still joins. |
+| C12b (2.84 s), if it passes | [replaced on 2026-10-07: see ../SCRIPT.md] | Beat 11, after n37, before C11 | dropped on 2026-10-07 (the user's rule) |
 
 Clip time: 28.5 s required (8% of the runtime), 36.3 s with all three optional (10%); 5 to 8 clips; all well under a
 quarter. Each plays with the `line_mic` tag "Prof. Ding, lecture 1" and red-bordered captions.

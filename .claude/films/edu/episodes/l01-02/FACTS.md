@@ -3,12 +3,14 @@
 The rule for this episode: every number, title, name and quote on screen, in the voice-over or in the post comes from
 this brief, worded the way it is worded here. A line that needs a fact not listed here is not cleared.
 Checked on 2026-10-06. For L01 the PDF page equals the slide number. Recording span 24:19-41:05.
+Revised 2026-10-07: the hook and its payoff use our own neutral example, the word "eucalyptus" (T20, T22, T26, T27),
+per the user's rule in `daily/PROMPT.md` (first of the "Rules for the night"); slide 19's own second example is not shown, said or captioned.
 
 ## Source key
 | Key | Source | Where read |
 | --- | --- | --- |
 | **L01** | CSE 291P "LLM System Optimization", Lecture 1, Yufei Ding, UC San Diego, slides 12-19 and the lecture recording 24:19-41:05 | `course/L01.pdf`, `course/L01.txt`, `course/L01.words.json` (git-ignored) |
-| **TIK** | tiktoken 0.x (pip, run 2026-10-06 in `~/picasso-work/venv`), encodings `cl100k_base`, `o200k_base`; README and `tiktoken/model.py` | github.com/openai/tiktoken (README top line, "Performance"; model.py lines 16-18, 37-39) |
+| **TIK** | tiktoken 0.14.0 (pip, run 2026-10-06 and 2026-10-07 in `~/picasso-work/venv`), encodings `cl100k_base`, `o200k_base`; README and `tiktoken/model.py` | github.com/openai/tiktoken (README top line, "Performance"; model.py lines 16-18, 37-39) |
 | **RUN** | the trace computed by a script (below) | `~/picasso-work/venv/bin/python`, this file |
 | **SEN** | R. Sennrich, B. Haddow, A. Birch, "Neural Machine Translation of Rare Words with Subword Units", arXiv:1508.07909 (31 Aug 2015), ACL 2016, pp. 1715-1725 (P16-1162) | arxiv.org/abs/1508.07909, Sec. 1, 3.2, Algorithm 1 |
 | **GAGE** | P. Gage, "A New Algorithm for Data Compression", C Users Journal 12(2):23-38, Feb 1994 (as cited by SEN Sec. 3.2 and KUDO Sec. 3.4) | SEN reference list |
@@ -26,9 +28,20 @@ venv/bin/python: tiktoken.get_encoding(n).encode(...)
 cl100k_base n_vocab 100277  "Hello students! Tokenization is the foundation of LLMs." -> 13 tokens
    [9906, 4236, 0, 9857, 2065, 374, 279, 16665, 315, 445, 11237, 82, 13]  (= slide 19)  55 characters
    pieces: Hello | students | ! | Token | ization | is | the | foundation | of | L | LM | s | .
-   "中华人民共和国" -> 7 tokens [16325, 86461, 17792, 70821, 55999, 34208, 29504]
 o200k_base  n_vocab 200019  same sentence -> 13 tokens (same pieces), 55 characters
-   "中华人民共和国" -> 1 token [155245]
+
+The replacement example (2026-10-07, ~/picasso-work/daily/L01-02/fix/facts_run.py; search.py and english.py picked it:
+of every o200k_base entry that is an English dictionary word, " eucalyptus" splits most in cl100k_base):
+cl100k_base
+  ' eucalyptus'             ->  5 tokens [384, 1791, 5893, 418, 355]      pieces [' e', 'uc', 'aly', 'pt', 'us']
+  'eucalyptus'              ->  5 tokens [68, 1791, 5893, 418, 355]       pieces ['e', 'uc', 'aly', 'pt', 'us']
+  'Koalas eat eucalyptus.'  -> 11 tokens [42, 78, 278, 300, 8343, 384, 1791, 5893, 418, 355, 13]
+                               pieces ['K', 'o', 'al', 'as', ' eat', ' e', 'uc', 'aly', 'pt', 'us', '.']
+o200k_base
+  ' eucalyptus'             ->  1 token  [163525]                         pieces [' eucalyptus']
+  'eucalyptus'              ->  2 tokens [68, 111188]                     pieces ['e', 'ucalyptus']
+  'Koalas eat eucalyptus.'  ->  5 tokens [33185, 55662, 11237, 163525, 13] pieces ['Ko', 'alas', ' eat', ' eucalyptus', '.']
+tiktoken/model.py: MODEL_TO_ENCODING['gpt-4'] = 'cl100k_base', ['gpt-4o'] = 'o200k_base'
 BPE trace on {low:5, lower:2, newest:6, widest:3}:
    initial symbols 10: d e i l n o r s t w
    round 1: (e,s) 9, (s,t) 9, (w,e) 8, (l,o) 7   -> tie at 9; slide takes (e,s)
@@ -60,13 +73,13 @@ BPE trace on {low:5, lower:2, newest:6, widest:3}:
 | T17 | tiktoken (OpenAI): fast; "3-6x faster than legacy" (slide 19) | TIK README: "between 3-6x faster than a comparable open source tokeniser" (GPT2TokenizerFast, 1 GB, tiktoken 0.2.0) | "tiktoken, OpenAI's tokenizer library" (no speed figure on screen; the taped slide shows it, the pen adds "README: vs one older library") | soften |
 | T18 | tokenizers (Hugging Face): BPE, WordPiece, Unigram; Rust core (slide 19) | HF | "Hugging Face's tokenizers library, written in Rust" | ok |
 | T19 | Sample sentence: 13 tokens in cl100k_base (slide 19); 13 tokens / 55 characters in the web tool (slide 18) | TIK/RUN | "13 tokens, 55 characters" | ok |
-| T20 | "中华人民共和国": 7 tokens in cl100k_base (GPT-4) vs 1 in o200k_base (GPT-4o) (slide 19) | TIK/RUN; model.py mapping | "Seven characters: 7 tokens in GPT-4's tokenizer, 1 token in GPT-4o's." It is the full name of China, "the People's Republic of China". | ok |
+| T20 | Our own example (not on the slides): the word "eucalyptus" inside a sentence (" eucalyptus", the space before it included, as a tokenizer sees every word after the first) is 5 tokens in cl100k_base (GPT-4) and 1 in o200k_base (GPT-4o); the test sentence "Koalas eat eucalyptus." is 11 tokens vs 5 | TIK/RUN (block above); model.py mapping | "One word: eucalyptus. Five tokens in GPT-4's tokenizer, one in GPT-4o's." / "our test: Koalas eat eucalyptus." / "The whole sentence goes from 11 tokens to 5." | ok |
 | T21 | cl100k_base about 100k entries; o200k_base about 200k | TIK (100,277; 200,019) | "about 100,000 ... about 200,000" | ok |
-| T22 | "Seven times cheaper" (the work order's hook) | prices differ per model; token count 7 -> 1 is exact | "a seventh of the tokens" — never "seven times cheaper" as a price claim | soften |
+| T22 | "N times cheaper" (the shape of the work order's hook) | prices differ per model; the count 5 -> 1 for the word is exact | "a fifth of the tokens" (the word) — never "five times cheaper" as a price claim | soften |
 | T23 | Fewer tokens is cheaper and faster, but not always better: generalization (lecture 32:00-33:00) | L01 recording (her clip C3) | "Fewer tokens is cheaper. But if every sentence were one token, the model would learn nothing." | ok |
 | T24 | Honest limit: tokenizers favour some languages | PET abstract: "differences up to 15 times in some cases" | "The same text translated can need up to 15 times more tokens in some languages (Petrov et al., NeurIPS 2023)." | ok |
-| T26 | In cl100k_base each of the seven characters is its own token; in o200k_base the whole name is one entry | RUN: decode_single_token_bytes -> ['中','华','人','民','共','和','国'] vs ['中华人民共和国'] | "One token per character in the old tokenizer; the whole name is a single entry in the new one." | ok |
-| T27 | Why 7 -> 1: o200k_base's larger vocabulary contains the whole name as one entry (learned from more merges in its training) | TIK (the entry exists); that it came from merges follows from BPE (SEN Algorithm 1); her clip C9 (larger vocabulary for many languages) | "The bigger vocabulary has room for the whole name as one entry." Do not claim why OpenAI chose it. | ok |
+| T26 | In cl100k_base " eucalyptus" is five pieces, none of them a word; in o200k_base the whole word is one entry | RUN: decode_single_token_bytes -> [' e', 'uc', 'aly', 'pt', 'us'] vs [' eucalyptus'] | "5 tokens, all scraps" (tiles e / uc / aly / pt / us, the leading space not drawn, as for the sample sentence's pieces); "1 token" | ok |
+| T27 | Why 5 -> 1: o200k_base's larger vocabulary contains the whole word as one entry (learned from more merges in its training) | TIK (the entry exists); that it came from merges follows from BPE (SEN Algorithm 1); her clips C9 (larger vocabulary for many languages) and C11 (the trend) | "The bigger vocabulary has room for the whole word as one entry." Do not claim why OpenAI chose it. | ok |
 | T28 | cl100k_base and o200k_base are BPE tokenizers | TIK README: "tiktoken is a fast BPE tokeniser for use with OpenAI's models" | "Both are byte-pair encoding tokenizers." | ok |
 | T29 | Callback: the previous episode was about models getting bigger and more expensive | L01-01 (`../l01-1-scale/FACTS.md`, its whole brief) | "Last time, models got big and expensive." | ok |
 | T25 | Next lecture part: decoding strategies (temperature, top-p) (slide 12) | L01 s12 | "Next: how the model picks the next token." | ok |
@@ -78,19 +91,26 @@ BPE trace on {low:5, lower:2, newest:6, widest:3}:
 - Lecture: she says the target vocabulary is "11" (slide: 13) and "24 alphabets" (English has 26). Neither is captioned
   or used; no clip contains them.
 - s14's token ids (93447, 9201, ...) match o200k_base, not cl100k_base (RUN); s14 is not shown.
+- s19: its last two lines (the slide's own second example and its two counts) are painted out of the taped copy in the
+  slide's white (`slides/p19.png`, made by `~/picasso-work/daily/L01-02/fix/clean19.py` from the 150-dpi page) and are
+  never shown, said or captioned (the user's rule); the red pen writes our own test sentence in that space (T20).
 
 ## Third-party images on the slides
 - s13: the OpenAI logo and a screenshot of the OpenAI pricing table: not shown (s13 is not taped).
 - s14: the encode/decode figure (from Stanford CS336 lecture 1): not shown.
 - s18: a screenshot of OpenAI's web tokenizer: not taped; its numbers (13 tokens, 55 characters) are redrawn as lettering.
-- s15, s17, s19: text and tables only (s19's library table is text): taped whole.
+- s15, s17, s19: text and tables only (s19's library table is text): s15 and s17 taped whole, s19 with its last two
+  lines painted out (errata above).
 
 ## Real people
 Prof. Yufei Ding: voice clips and slides only, credited by text and the mic tag; never drawn. Authors (Sennrich,
 Haddow, Birch; Kudo; Petrov et al.) by text credit only. The drawn characters are invented.
 
 ## Traps
-- Not "seven times cheaper" (T22); not "Gemini uses Unigram" (T8); not "e-s was the most frequent pair" without the tie.
+- Not "five times cheaper" (T22); not "Gemini uses Unigram" (T8); not "e-s was the most frequent pair" without the tie.
+- Not "eucalyptus is 1 token" for the bare word at the very start of a text: there it is 2 tokens in o200k_base ('e' +
+  'ucalyptus'; still 5 in cl100k_base). The film's 5 vs 1 is the word inside a sentence, and the test sentence shown
+  ("Koalas eat eucalyptus.", 11 vs 5) reproduces as typed. The post says so.
 - Not "a token is a word" (pieces like "ization", "L", "LM", "s").
 - The vocabulary sizes are "about": 100,277 and 200,019 exactly, special tokens included.
 - Don't read model names off the vendor screenshots; only cl100k_base/GPT-4 and o200k_base/GPT-4o as mapped in TIK.

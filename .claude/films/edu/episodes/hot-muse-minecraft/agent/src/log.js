@@ -44,7 +44,9 @@ export function createLogger(opts = {}) {
   const effort = opts.effort ?? cfg.model.effort;
   const tier = opts.tier ?? cfg.model.tier;
   const keep = opts.keep ?? 200;
-  const secrets = [cfg.model.apiKey, cfg.web.adminToken];
+  // stream URLs hold stream keys: the whole URL and the key alone are both secrets
+  const streamKeys = (cfg.stream?.outputs ?? []).flatMap((u) => [u, u.split('/').pop()?.split('?')[0]]);
+  const secrets = [cfg.model.apiKey, cfg.web.adminToken, ...streamKeys];
   const file = dir ? path.join(dir, `run-${runId.replace(/[^A-Za-z0-9_.-]/g, '_')}.jsonl`) : null;
   if (file) fs.mkdirSync(dir, { recursive: true });
 

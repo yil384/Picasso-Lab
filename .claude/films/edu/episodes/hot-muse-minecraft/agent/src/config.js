@@ -1,5 +1,6 @@
-// src/config.js - every setting comes from an env var with a default, is checked once and frozen. The API key and the
-// admin token are non-enumerable, so JSON.stringify(config) and console.log(config) never print them.
+// src/config.js - every setting comes from an env var with a default, is checked once and frozen. The API key, the
+// admin token and the stream URLs (they hold stream keys) are non-enumerable, so JSON.stringify(config) and
+// console.log(config) never print them.
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -195,8 +196,30 @@ export function loadConfig(env = process.env) {
 
   const log = { dir: fromRoot(r.str('LOG_DIR', 'logs')) };
 
+  // Live video of guest games (src/stream.js): off unless STREAM_ENABLED. The output URLs carry stream keys: hidden.
+  const outputs = r.str('STREAM_RTMP_URL', '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (outputs.some((o) => !/^rtmps?:\/\/[^\s/]+\/\S+$/i.test(o))) problems.push('STREAM_RTMP_URL must be rtmp:// or rtmps:// URLs with their stream key, separated by commas');
+  const outDir = r.str('STREAM_OUT_DIR', '');
+  const stream = {
+    enabled: r.bool('STREAM_ENABLED', false),
+    serviceUrl: r.str('STREAM_SERVICE_URL', '').replace(/\/+$/, ''),
+    outDir: outDir ? fromRoot(outDir) : '',
+    max: r.int('STREAM_MAX', 1, 0, 16),
+    fps: r.int('STREAM_FPS', 30, 10, 30),
+    scale: r.num('STREAM_SCALE', 0.5, 0.25, 1),
+    bitrateK: r.int('STREAM_BITRATE_K', 3000, 500, 8000),
+    far: r.int('STREAM_FAR', 48, 16, 256),
+    maxRssMB: r.int('STREAM_MAX_RSS_MB', 1600, 300, 16_000),
+    noSandbox: r.bool('STREAM_NO_SANDBOX', false),
+  };
+  hidden(stream, 'outputs', outputs);
+  if (stream.serviceUrl && !(/^http:/.test(stream.serviceUrl) && isLocalUrl(stream.serviceUrl))) problems.push('STREAM_SERVICE_URL must be an http URL on this machine (loopback)');
+  if (stream.enabled && !stream.serviceUrl && !outputs.length && !stream.outDir) {
+    problems.push('STREAM_ENABLED needs STREAM_RTMP_URL (or STREAM_OUT_DIR to write files, or STREAM_SERVICE_URL for the stream container)');
+  }
+
   if (problems.length) throw new ConfigError(problems);
-  return deepFreeze({ root: ROOT, model, mc, web, body, caps, memory, log });
+  return deepFreeze({ root: ROOT, model, mc, web, body, caps, memory, log, stream });
 }
 
 /** The process-wide config, read from process.env at first import. */

@@ -248,7 +248,14 @@ export function createFakeBot(opts = {}) {
     }).finally(() => { digging = null; bot.targetDigBlock = null; });
     setBlock(b.position, 'air');
     const held = bot.heldItem?.type ?? null;
-    if (!b.harvestTools || b.canHarvest(held)) for (const d of b.drops ?? []) give(typeof d === 'number' ? d : d.drop?.id ?? d.id, 1);
+    if (!b.harvestTools || b.canHarvest(held)) {
+      for (const d of b.drops ?? []) {
+        const id = typeof d === 'number' ? d : d.drop?.id ?? d.id;
+        give(id, 1);
+        // the pickup as the server reports it (mineflayer's playerCollect with the item entity)
+        bot.emit('playerCollect', bot.entity, { name: 'item', getDroppedItem: () => new Item(id, 1) });
+      }
+    }
     bot.emit('diggingCompleted', b);
   };
   bot.stopDigging = () => { if (digging) { record('stopDigging'); digging.abort(); } };
@@ -562,6 +569,13 @@ export function createFakeBot(opts = {}) {
     say: (username, message) => bot.emit('chat', username, message, null, null, null),
     setTime,
     setHealth(h) { bot.health = h; bot.emit('health'); },
+    /** A hit as a 1.19.4+ server reports it: who dealt it (an entity, or null for a fall), then the health update. */
+    hurt(amount, source = null) {
+      bot.emit('entityHurt', bot.entity, source ?? undefined);
+      bot.health = Math.max(0, bot.health - amount);
+      bot.emit('health');
+      if (bot.health <= 0) bot.emit('death');
+    },
     setFood(f) { bot.food = f; bot.emit('health'); },
     kill() { bot.health = 0; bot.emit('health'); bot.emit('death'); },
     moveTo(pos) { bot.entity.position = at(pos.x, pos.y, pos.z); bot.emit('move'); },
@@ -725,6 +739,18 @@ function installClickServer(bot, { registry, Item, windows, reach, record, lagMs
 
   client.write = (name, packet) => {
     record(`packet.${name}`, { slot: packet.slot, button: packet.mouseButton, mode: packet.mode });
+    if (name === 'close_window' && packet.windowId === 0 && !deaf) {
+      // the player closed its own inventory screen: the 2x2 grid and the cursor go back into the inventory
+      const w = invServer();
+      for (let s = 1; s <= 4; s++) {
+        if (!w.slots[s]) continue;
+        const left = insert(w, { ...w.slots[s] }, false);
+        w.slots[s] = left ? { type: w.slots[s].type, count: left } : null; // (vanilla drops what does not fit)
+      }
+      if (w.carried && !insert(w, w.carried, false)) w.carried = null;
+      resync(w);
+      return;
+    }
     if (name !== 'window_click' || deaf) return;
     const w = packet.windowId === 0 ? invServer() : server.get(packet.windowId);
     if (!w || (bot.currentWindow?.id ?? 0) !== packet.windowId) return; // not the open window: ignored

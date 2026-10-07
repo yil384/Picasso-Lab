@@ -1,0 +1,93 @@
+[
+ {
+  "id": "C1",
+  "lecture": "L01",
+  "rec_start": 2491.33,
+  "rec_end": 2501.35,
+  "dur": 10.02,
+  "text": "And usually like the larger vocabulary means that you can encode the same meaning using less number of tokens. And less number of tokens also means like it's cheaper."
+ },
+ {
+  "id": "C2",
+  "lecture": "L01",
+  "rec_start": 2713.13,
+  "rec_end": 2718.67,
+  "dur": 5.54,
+  "text": "So maybe the first question, so why large vocabularies will make a model smarter?"
+ },
+ {
+  "id": "C3",
+  "lecture": "L01",
+  "rec_start": 2519.89,
+  "rec_end": 2524.53,
+  "dur": 4.64,
+  "text": "But they also like could make a model heavier in some perspective."
+ },
+ {
+  "id": "C4",
+  "lecture": "L01",
+  "rec_start": 2539.99,
+  "rec_end": 2549.95,
+  "dur": 9.96,
+  "text": "So I hope you can discuss with your classmates and try to think about what is the strength of large vocabulary and what is the weakness of large vocabulary.",
+  "text_was": "So I hope you can discuss with your classmates and try to think about what is the strength of large vocabulary and what is the weakness of a large vocabulary."
+ },
+ {
+  "id": "C5e",
+  "lecture": "L01",
+  "rec_start": 2871.19,
+  "rec_end": 2874.37,
+  "dur": 3.18,
+  "text": "But is that all? Like do we have trade-offs?"
+ },
+ {
+  "id": "C7",
+  "lecture": "L01",
+  "rec_start": 2955.77,
+  "rec_end": 2963.17,
+  "dur": 7.4,
+  "text": "So that generation, the last layer, the computation cost is proportional to the number of the size of the vocabulary.",
+  "text_was": "So that generation, the last layer, the computation cost is proportional to the number, the size of the vocabulary."
+ },
+ {
+  "id": "C9",
+  "lecture": "L01",
+  "rec_start": 3008.62,
+  "rec_end": 3015.34,
+  "dur": 6.72,
+  "text": "But it's fine today because we have a lot of data. So that is no longer a big issue, but it used to be,",
+  "text_was": "But it's fine today because we have a lot of data. Okay, so that is no longer a big issue, but it used to be,"
+ },
+ {
+  "id": "C11",
+  "lecture": "L01",
+  "rec_start": 3044.0,
+  "rec_end": 3046.21,
+  "dur": 2.21,
+  "text": "it's better to do some cost analysis."
+ },
+ {
+  "id": "C13",
+  "lecture": "L02",
+  "rec_start": 507.25,
+  "rec_end": 512.35,
+  "dur": 5.1,
+  "text": "the cache input is only one-tenth of their uncached input price,"
+ },
+ {
+  "id": "C14c",
+  "lecture": "L02",
+  "rec_start": 586.97,
+  "rec_end": 590.14,
+  "dur": 3.17,
+  "text": "but sometimes one is better, sometimes the other one is better."
+ },
+ {
+  "id": "C15",
+  "lecture": "L02",
+  "rec_start": 640.72,
+  "rec_end": 644.19,
+  "dur": 3.47,
+  "text": "why we need to have a lot of system optimization, because it's quite costly."
+ }
+]

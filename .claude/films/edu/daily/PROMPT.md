@@ -11,6 +11,14 @@ the core idea, sub-points, hook, target length, the facts to check first, the pe
 deadline. Read it first, then everything in "Read before you start".
 
 ## Rules for the night (on top of the repo's house rules)
+- **No politics, nothing about China (the user's rule, 2026-10-07).** Never use countries, governments, flags,
+  elections or any political words, and never use China, Chinese, Chinese characters, Mandarin or Japanese kanji as an
+  example, anywhere: picture, narration, captions, cover, X post, report. This holds even when the lecture slide uses
+  such an example (L01-02 opened with a country's full name in Chinese; that was wrong). Replace it with a neutral
+  example of your own (English words, code, numbers, emoji, invented words) and measure its numbers with the real tool.
+  Before delivery, grep everything you made for these words; a hit blocks delivery until it is replaced.
+- **Operator notes.** If the work folder holds `OPERATOR_NOTE.md`, read it first: it is a correction from the user
+  and overrides earlier work in that folder.
 - **Facts gate.** Nothing goes on screen, into the voice or into the post unless the episode's `FACTS.md` clears it,
   in its safe wording. Every number is checked against its primary source on the web (the paper, the official doc,
   the tool itself), not against the slide. Estimates are labelled estimates, plans are labelled plans. Include one

@@ -1,0 +1,272 @@
+{
+ "_": "voice order for plan.py (~/picasso-work/daily/L01-03/plan.py): panel = the camera arrives 0.6 s before this line; pre = breath before it; extra cues are [voice id, seconds or \"@word\" in its raw take]",
+ "start": 0.2,
+ "lead": 0.6,
+ "afterClip": 0.6,
+ "order": [
+  {
+   "id": "n0",
+   "pre": 0
+  },
+  {
+   "id": "n1",
+   "pre": -0.4
+  },
+  {
+   "id": "n2",
+   "pre": 0.3
+  },
+  {
+   "id": "n3",
+   "pre": 0.8,
+   "panel": 1
+  },
+  {
+   "id": "n4",
+   "pre": 0.3
+  },
+  {
+   "id": "n5",
+   "pre": 0.3
+  },
+  {
+   "id": "c4",
+   "pre": 0.8,
+   "panel": 2,
+   "lead": 1.0
+  },
+  {
+   "id": "n6",
+   "pre": 0.2
+  },
+  {
+   "id": "n7",
+   "pre": 0.8,
+   "panel": 3
+  },
+  {
+   "id": "n8",
+   "pre": 0.3
+  },
+  {
+   "id": "c1",
+   "pre": 0.3
+  },
+  {
+   "id": "n9",
+   "pre": 0.2
+  },
+  {
+   "id": "n10",
+   "pre": 0.9,
+   "panel": 4,
+   "lead": 0.9
+  },
+  {
+   "id": "n11",
+   "pre": 0.3
+  },
+  {
+   "id": "n12",
+   "pre": 0.3
+  },
+  {
+   "id": "n13",
+   "pre": 0.3
+  },
+  {
+   "id": "n14",
+   "pre": 0.8,
+   "panel": 5
+  },
+  {
+   "id": "n15",
+   "pre": 0.3
+  },
+  {
+   "id": "n16",
+   "pre": 0.3
+  },
+  {
+   "id": "n17",
+   "pre": 0.9,
+   "panel": 6,
+   "lead": 0.9
+  },
+  {
+   "id": "n18",
+   "pre": 0.3
+  },
+  {
+   "id": "n19",
+   "pre": 0.3
+  },
+  {
+   "id": "n20",
+   "pre": 0.8
+  },
+  {
+   "id": "n21",
+   "pre": 0.8,
+   "panel": 7
+  },
+  {
+   "id": "n22",
+   "pre": 0.3
+  },
+  {
+   "id": "c7",
+   "pre": 0.3
+  },
+  {
+   "id": "n23",
+   "pre": 0.2
+  },
+  {
+   "id": "n24",
+   "pre": 0.8,
+   "panel": 8
+  },
+  {
+   "id": "n25",
+   "pre": 0.3
+  },
+  {
+   "id": "c9",
+   "pre": 0.3
+  },
+  {
+   "id": "n26",
+   "pre": 0.3
+  },
+  {
+   "id": "n27",
+   "pre": 0.8,
+   "panel": 9
+  },
+  {
+   "id": "n28",
+   "pre": 0.3
+  },
+  {
+   "id": "n29",
+   "pre": 0.9,
+   "panel": 10,
+   "lead": 0.9
+  },
+  {
+   "id": "n30",
+   "pre": 0.3
+  },
+  {
+   "id": "n31",
+   "pre": 0.3
+  },
+  {
+   "id": "c11",
+   "pre": 0.3
+  },
+  {
+   "id": "n32",
+   "pre": 0.8,
+   "panel": 11
+  },
+  {
+   "id": "n33",
+   "pre": 0.3
+  },
+  {
+   "id": "n34",
+   "pre": 0.8,
+   "panel": 12
+  },
+  {
+   "id": "n35",
+   "pre": 0.8,
+   "panel": 13,
+   "lead": 0.9
+  },
+  {
+   "id": "c13",
+   "pre": 0.3
+  },
+  {
+   "id": "n36",
+   "pre": 0.2
+  },
+  {
+   "id": "n37",
+   "pre": 0.8,
+   "panel": 14
+  },
+  {
+   "id": "n39",
+   "pre": 0.8,
+   "panel": 15
+  },
+  {
+   "id": "c14c",
+   "pre": 0.3
+  },
+  {
+   "id": "n40",
+   "pre": 0.8,
+   "panel": 16
+  },
+  {
+   "id": "n41",
+   "pre": 0.3
+  },
+  {
+   "id": "n42",
+   "pre": 0.3
+  }
+ ],
+ "tapes": [
+  1,
+  4,
+  6,
+  10,
+  13
+ ],
+ "impacts": [
+  "hit688",
+  "hitwins",
+  "hitnot3"
+ ],
+ "extra": {
+  "tape1": [
+   "n3",
+   0.5
+  ],
+  "tape4": [
+   "n10",
+   0.3
+  ],
+  "tape6": [
+   "n17",
+   0.3
+  ],
+  "tape10": [
+   "n29",
+   0.3
+  ],
+  "tape13": [
+   "n35",
+   0.3
+  ],
+  "hit688": [
+   "n19",
+   "@688"
+  ],
+  "hitwins": [
+   "n39",
+   "@caching"
+  ],
+  "hitnot3": [
+   "n10",
+   "@not"
+  ]
+ },
+ "tail": 0.5
+}

@@ -72,7 +72,7 @@ function micTag(g, t) {
     K.wash(g, t, 0, 960, 410, 220, r.t - .3, { a: .55, rot: .3 });
     if (S._mic) K.put(g, K.paint(S._mic, seg(t, r.t - .15, r.t + .5)), 960, 405, 120);
     g.restore();
-    K.L(g, t, T.mic, 890, 545, ZH ? 34 : 36, RED, r.t, r.t + r.dur, { align: 'right', patch: .3 });
+    K.L(g, t, T['mic_' + v.id] || T.mic, 890, 545, ZH ? 34 : 36, RED, r.t, r.t + r.dur, { align: 'right', patch: .3 });
   }
 }
 

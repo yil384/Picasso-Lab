@@ -1,7 +1,7 @@
 [
  {
   "id": "n0",
-  "en": "Seven Chinese characters. Seven tokens in GPT-4's tokenizer, one in GPT-4o's. What changed?",
+  "en": "One word: eucalyptus. Five tokens in GPT-4's tokenizer, one in GPT-4o's. What changed?",
   "zh": ""
  },
  {
@@ -141,22 +141,22 @@
  },
  {
   "id": "n29",
-  "en": "The code loads GPT-4's tokenizer, cl100k_base. Our sentence: 13 tokens. Then the flap lifts: the full name of China, the People's Republic of China.",
+  "en": "The code loads GPT-4's tokenizer, cl100k_base. Our sentence: 13 tokens. Now our own test sentence: Koalas eat eucalyptus.",
   "zh": ""
  },
  {
   "id": "n30",
-  "en": "In GPT-4's tokenizer, that is 7 tokens: one per character.",
+  "en": "In GPT-4's tokenizer, eucalyptus is 5 tokens. All scraps, not one whole word.",
   "zh": ""
  },
  {
   "id": "n31",
-  "en": "In GPT-4o's, 1 token. Same text, a seventh of the tokens.",
+  "en": "In GPT-4o's, 1 token. Same word, a fifth of the tokens. The whole sentence goes from 11 tokens to 5.",
   "zh": ""
  },
  {
   "id": "n32",
-  "en": "So what changed? Both are byte-pair encoding tokenizers. The vocabulary went from about 100,000 entries to about 200,000. The bigger vocabulary has room for the whole name as one entry.",
+  "en": "So what changed? Both are byte-pair encoding tokenizers. The vocabulary went from about 100,000 entries to about 200,000. The bigger vocabulary has room for the whole word as one entry.",
   "zh": ""
  },
  {
