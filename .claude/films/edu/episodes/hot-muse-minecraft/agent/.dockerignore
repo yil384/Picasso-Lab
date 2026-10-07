@@ -1,0 +1,11 @@
+node_modules
+logs
+~
+server/jdk
+server/world*
+server/logs
+server/cache
+server/libraries
+server/versions
+server/cloudflared
+test

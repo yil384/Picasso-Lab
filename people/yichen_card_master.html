@@ -1,501 +1,80 @@
-<div class="yc-wrap" style="--avatar-size:200px">
-  <div class="yc-stage">
-    <div class="yc-avatar-frame">
-      <img src="https://yil384.github.io/Picasso-Lab/people/static/yichen.webp"
-           class="avatar yc-avatar" alt="avatar"/>
-    </div>
+<!--
+  yichen_card_master.html — 魔术 Card Master (Google Sites embed for the Team page)
+  ──────────────────────────────────────────────────────────────────────────
+  Default: the plain photo. Click (or Enter / Space): red curtains swing in, a top hat
+  drops onto his head, and he deals: cards flick off the deck in his hand one by one,
+  spinning in an arc to the Michelin man, and land in a fanned royal flush; the Michelin
+  man gets a monocle. Then two moves take turns: his hand glows gold, a card appears at
+  his fingertip, twirls, vanishes in a puff and turns up in the Michelin man's fist; next
+  time one more card is dealt onto the fan.
+  Click again to switch it off.
 
-    <!--
-      魔术师顶帽 — 精确戴在 yichen 真实的头顶上.
-      网格量出: 头顶大约 (140, 40) on 200×200 stage (人物在画面右侧).
-      帽子 SVG 80×80, 帽檐底中点 = (40, 64), 让它落到 (140, 40):
-        left = 140 - 40 = 100,  top = 40 - 64 = -24
-      帽身向上跨出头像顶部, 像真戴上一样.
-    -->
-    <svg class="yc-hat" viewBox="0 0 80 80" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id="ycHatBody" x1="0.2" y1="0" x2="0.8" y2="1">
-          <stop offset="0"    stop-color="#262630"/>
-          <stop offset="0.45" stop-color="#0a0a10"/>
-          <stop offset="1"    stop-color="#1a1a22"/>
-        </linearGradient>
-        <radialGradient id="ycHatTop" cx="0.5" cy="0.4" r="0.6">
-          <stop offset="0"   stop-color="#3a3a48"/>
-          <stop offset="1"   stop-color="#000000"/>
-        </radialGradient>
-        <linearGradient id="ycHatBand" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0"   stop-color="#f8344a"/>
-          <stop offset="0.6" stop-color="#b91c1c"/>
-          <stop offset="1"   stop-color="#6a0a0a"/>
-        </linearGradient>
-      </defs>
-
-      <!-- 帽檐 (扁宽椭圆 + 厚度) -->
-      <ellipse cx="40" cy="66" rx="38" ry="6" fill="#000000"/>
-      <ellipse cx="40" cy="64" rx="38" ry="5.4" fill="url(#ycHatBody)"
-               stroke="#000" stroke-width="0.6"/>
-      <!-- 帽身 (轻微外凸的圆柱) -->
-      <path d="M22 26 C22 24 58 24 58 26 L58 60 C58 64 22 64 22 60 Z"
-            fill="url(#ycHatBody)" stroke="#000" stroke-width="0.6"/>
-      <!-- 帽顶 -->
-      <ellipse cx="40" cy="26" rx="18" ry="4" fill="url(#ycHatTop)"
-               stroke="#000" stroke-width="0.6"/>
-      <!-- 帽顶高光 -->
-      <ellipse cx="35" cy="25" rx="6" ry="1.2" fill="rgba(255,255,255,0.18)"/>
-      <!-- 红丝带 (帽檐之上的装饰带) -->
-      <path d="M22 53 C22 51 58 51 58 53 L58 60 C58 64 22 64 22 60 Z"
-            fill="url(#ycHatBand)" stroke="#3a0408" stroke-width="0.5"/>
-      <!-- 帽檐反光线 -->
-      <ellipse cx="40" cy="62.5" rx="35" ry="2.2"
-               fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="0.7"/>
-      <!-- 帽身左侧高光 -->
-      <path d="M24 28 C23 38 23 50 25 60"
-            fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
-
-      <!-- 魔术金星 (帽身上点缀) -->
-      <g class="yc-hat-stars" fill="#facc15">
-        <path class="yc-hat-star s1" d="M32 36 L33 39 L36 39 L33.5 41 L34.5 44 L32 42 L29.5 44 L30.5 41 L28 39 L31 39 Z"/>
-        <path class="yc-hat-star s2" d="M48 30 L48.5 32 L50.5 32 L49 33.5 L49.5 35.5 L48 34.5 L46.5 35.5 L47 33.5 L45.5 32 L47.5 32 Z"/>
-        <path class="yc-hat-star s3" d="M52 46 L52.5 48 L54.5 48 L53 49.5 L53.5 51 L52 50 L50.5 51 L51 49.5 L49.5 48 L51.5 48 Z"/>
-      </g>
-    </svg>
-
-    <div class="yc-card-layer" aria-hidden="true"></div>
-    <div class="yc-hand-source" aria-hidden="true">
-      <span></span><span></span><span></span>
-    </div>
+  The effect itself lives on GitHub Pages, so it can be changed without re-pasting this:
+    people/fx/yichen.js the scene (three.js hat, cards, monocle + q5 sparkles)
+    people/fx/kit.js    shared runtime for every avatar (layers, tilt, loading, cleanup)
+  Nothing heavy loads until the visitor hovers or touches the photo.
+-->
+<div class="pfx" id="pfx" data-fx="yichen" role="button" tabindex="0" aria-pressed="false"
+     aria-label="Yichen — card master: click for a card trick">
+  <div class="pfx-stage">
+    <div class="pfx-shadow"></div>
+    <img class="avatar pfx-photo" src="https://yil384.github.io/Picasso-Lab/people/static/yichen.webp" alt="avatar">
   </div>
 </div>
 
 <style>
-.yc-wrap {
-  display: inline-block;
-  cursor: pointer;
-  overflow: visible;
-  -webkit-tap-highlight-color: transparent;
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+/* the Team page tiles shrink with the window (to about 150 px wide at 768): the photo is 200 px or
+   whatever fits the tile, and the kit scales the effect with it */
+.pfx {
+  --d: min(200px, calc(100vw - 16px), calc(100vh - 16px));
+  position: absolute; left: 8px; top: 8px; width: var(--d); height: var(--d);
+  border-radius: 50%; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;
 }
-
-.yc-wrap *,
-.yc-wrap *::before,
-.yc-wrap *::after {
-  box-sizing: border-box;
+/* phones: Sites stacks the photo above the name, so sit at the bottom of the tile (next to the name) */
+.pfx.pfx-phone { left: 50%; top: auto; bottom: 10px; margin-left: calc(var(--d) / -2); }
+.pfx-stage { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .4s cubic-bezier(.32, 1.3, .4, 1); }
+.pfx:hover .pfx-stage, .pfx:focus-visible .pfx-stage { transform: translateY(-2px) scale(1.05); }
+.pfx.pfx-on .pfx-stage { transform: scale(1.03); }
+.pfx.pfx-on:hover .pfx-stage { transform: translateY(-2px) scale(1.05); }
+.pfx-shadow { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, .18); }
+/* keyboard focus: a ring on the photo's edge, drawn over the effect canvas too (so it shows on and off) */
+.pfx-stage::after {
+  content: ''; position: absolute; inset: -1px; border: 3px solid #00629b; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .85); opacity: 0; pointer-events: none;
 }
-
-.yc-stage {
-  position: relative;
-  width: var(--avatar-size, 200px);
-  height: var(--avatar-size, 200px);
-  overflow: visible;
-}
-
-.yc-avatar-frame {
-  position: relative;
-  z-index: 3;
-  width: var(--avatar-size, 200px);
-  height: var(--avatar-size, 200px);
-  border: 0;
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow: none;
-  transition: transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
-}
-
-.yc-avatar {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-  transition: filter 0.32s ease;
-}
-
-.yc-wrap:hover .yc-avatar-frame {
-  transform: scale(1.08);
-}
-
-.yc-wrap:hover .yc-avatar {
-  filter: brightness(1.08) contrast(1.03);
-}
-
-.yc-card-layer,
-.yc-hand-source {
-  position: absolute;
-  pointer-events: none;
-}
-
-/*
- * ── 魔术帽 (戴在他真实的头顶) ──
- * yichen 头顶约 (130, 36) on 200×200 stage; 头宽 ~40px, 所以帽子显示宽 ~50px 比较合身.
- * SVG viewBox 是 80×80 (画质用大画布), 但显示尺寸只用 52×52.
- * 比例: 1 SVG px = 0.65 显示 px. brim 中心 SVG(40, 64) → 显示 (26, 41.6).
- *   left = 130 - 26 = 104,  top = 36 - 41.6 ≈ -6
- * 帽子比之前小很多, 不会盖住整个头.
- *
- * 如果还想微调, 改下面 4 个 CSS 变量:
- *   --hat-x : 帽子锚定的 x (默认 130)
- *   --hat-y : 帽子锚定的 y (默认 36)
- *   --hat-w : 帽子显示宽度 (默认 52)
- *   --hat-tilt : 帽子倾角 (默认 -6deg)
- */
-.yc-hat {
-  position: absolute;
-  --hat-x: 134px;
-  --hat-y: 31px;
-  --hat-w: 46px;
-  --hat-tilt: -4deg;
-
-  width:  var(--hat-w);
-  height: var(--hat-w);                /* 帽子 SVG 是方形 80×80 */
-  /* brim 中心 在 SVG (40, 64) → 显示坐标 (40/80, 64/80) * width = (0.5w, 0.8w) */
-  left: calc(var(--hat-x) - var(--hat-w) * 0.5);
-  top:  calc(var(--hat-y) - var(--hat-w) * 0.8);
-  z-index: 8;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(-14px) scale(0.55) rotate(-14deg);
-  transform-origin: 50% 80%;           /* brim 中心 (相对 hat 自身) */
-  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.55));
-  transition:
-    opacity 0.3s ease,
-    transform 0.55s cubic-bezier(0.2,1.4,0.32,1);
-}
-
-
-.yc-wrap.yc-on .yc-hat {
-  opacity: 1;
-  transform: translateY(0) scale(1) rotate(var(--hat-tilt, -6deg));
-  animation: yc-hat-tip 2.6s 0.5s ease-in-out infinite alternate;
-}
-
-/* 帽子微微随魔术节拍倾 — 像变戏法时摆动 */
-@keyframes yc-hat-tip {
-  from { transform: translateY(0)    scale(1)     rotate(var(--hat-tilt, -6deg)); }
-  to   { transform: translateY(-1px) scale(1.012) rotate(calc(var(--hat-tilt, -6deg) + 4deg)); }
-}
-
-/* 帽身金星错落闪 */
-.yc-hat-star {
-  transform-origin: center;
-  opacity: 0;
-}
-
-.yc-wrap.yc-on .yc-hat-star {
-  animation: yc-hat-star-twinkle 1.6s ease-in-out infinite alternate;
-}
-
-.yc-wrap.yc-on .yc-hat-star.s2 { animation-delay: 0.35s; }
-
-.yc-wrap.yc-on .yc-hat-star.s3 { animation-delay: 0.7s; }
-@keyframes yc-hat-star-twinkle {
-  from { opacity: 0.35; transform: scale(0.7); }
-  to   { opacity: 1;    transform: scale(1.2); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .yc-wrap.yc-on .yc-hat,
-  .yc-wrap.yc-on .yc-hat-star { animation: none; }
-}
-
-.yc-card-layer {
-  inset: 0;
-  z-index: 5;
-  overflow: visible;
-}
-
-.yc-card {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 26px;
-  height: 37px;
-  display: block;
-  border-radius: 4px;
-  background: transparent;
-  color: #111827;
-  box-shadow: 0 4px 8px rgba(15,23,42,0.24);
-  transform: translate(146px, 82px) translate(-50%, -50%) rotate(-10deg) scale(0.14);
-  transform-origin: 50% 50%;
-  opacity: 0;
-  will-change: transform, opacity;
-  overflow: hidden;
-  backface-visibility: hidden;
-}
-
-.yc-card-art {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  object-fit: fill;
-  pointer-events: none;
-}
-
-.yc-card.yc-flight {
-  animation: yc-card-flight var(--yc-duration, 900ms) linear forwards;
-}
-
-.yc-card-fallback {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: grid;
-  grid-template-rows: 11px 1fr 11px;
-  padding: 3px;
-  border: 1px solid rgba(20,24,30,0.24);
-  border-radius: inherit;
-  background: #fffdf6;
-  font: 900 8px/1 Arial, sans-serif;
-}
-
-@keyframes yc-card-flight {
-  0% {
-    opacity: 1;
-    transform: translate(var(--yc-sx), var(--yc-sy)) translate(-50%, -50%) rotate(var(--yc-r0)) scale(var(--yc-scale));
-  }
-  94% {
-    opacity: 1;
-    transform: translate(var(--yc-ex), var(--yc-ey)) translate(-50%, -50%) rotate(var(--yc-r1)) scale(var(--yc-scale));
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--yc-ex), var(--yc-ey)) translate(-50%, -50%) rotate(var(--yc-r1)) scale(var(--yc-scale));
-  }
-}
-
-.yc-hand-source {
-  left: 130px;
-  top: 67px;
-  z-index: 6;
-  width: 31px;
-  height: 31px;
-  opacity: 0;
-  transform: scale(0.45);
-}
-
-.yc-hand-source::before {
-  content: "";
-  position: absolute;
-  left: 7px;
-  top: 8px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(250,204,21,0.65) 45%, rgba(250,204,21,0) 72%);
-  filter: blur(0.2px);
-}
-
-.yc-hand-source::after {
-  content: "";
-  position: absolute;
-  left: 13px;
-  top: -2px;
-  width: 5px;
-  height: 35px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(250,204,21,0.95), rgba(255,255,255,0));
-  transform: rotate(52deg);
-}
-
-.yc-hand-source span {
-  position: absolute;
-  left: 14px;
-  top: 14px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #facc15;
-  box-shadow: 0 0 8px rgba(250,204,21,0.9);
-  transform: rotate(var(--r)) translateY(-13px);
-}
-
-.yc-hand-source span:nth-child(1) { --r: 0deg; }
-.yc-hand-source span:nth-child(2) { --r: 120deg; background: #fff7d6; }
-.yc-hand-source span:nth-child(3) { --r: 240deg; background: #ef4444; }
-
-.yc-wrap.yc-on .yc-hand-source {
-  animation: yc-source-in 0.28s ease-out forwards,
-             yc-source-pulse 0.72s 0.28s ease-in-out infinite alternate;
-}
-
-@keyframes yc-source-in {
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes yc-source-pulse {
-  from { filter: drop-shadow(0 0 0 rgba(250,204,21,0.1)); }
-  to { filter: drop-shadow(0 0 9px rgba(250,204,21,0.85)); }
-}
-
+.pfx:focus-visible .pfx-stage::after { opacity: 1; }
+.pfx-photo { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.pfx-loading .pfx-shadow { animation: pfx-wait 1s ease-in-out infinite; }
+@keyframes pfx-wait { 50% { box-shadow: 0 4px 10px rgba(0, 0, 0, .18), 0 0 0 4px rgba(0, 98, 155, .28); } }
+@media (prefers-reduced-motion: reduce) { .pfx-stage { transition: none; } .pfx-loading .pfx-shadow { animation: none; } }
 </style>
 
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <script>
 (function () {
-  const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-  const suits = ['S', 'H', 'C', 'D'];
-  const suitGlyph = { S: '\u2660', H: '\u2665', C: '\u2663', D: '\u2666' };
-  const suitName = { S: 'spades', H: 'hearts', C: 'clubs', D: 'diamonds' };
-  const assetRank = { A: 'ace', J: 'jack', Q: 'queen', K: 'king' };
-  const deck = ranks.map((rank, index) => {
-    const suit = suits[index % suits.length];
-    return { rank, suit, red: suit === 'H' || suit === 'D', joker: '' };
-  }).concat([
-    { rank: '\u5c0f\u738b', suit: '', red: false, joker: 'BJ' },
-    { rank: '\u5927\u738b', suit: '', red: true, joker: 'RJ' }
-  ]);
-
-  const source = { x: 146, y: 82 };
-  const flightBounds = { left: -28, right: 228, top: -28, bottom: 228 };
-  const flightSpeed = 185;
-  const routes = [
-    { dir: { x: -1, y: 0.02 }, spin: -82 },
-    { dir: { x: -1, y: 0.24 }, spin: -92 },
-    { dir: { x: 1, y: -0.03 }, spin: 78 },
-    { dir: { x: 1, y: 0.22 }, spin: 88 },
-    { dir: { x: -0.34, y: 1 }, spin: -74 },
-    { dir: { x: 0.42, y: 1 }, spin: 82 }
-  ];
-
-  document.querySelectorAll('.yc-wrap').forEach((wrap) => {
-    if (wrap.dataset.ycReady === '1') return;
-    wrap.dataset.ycReady = '1';
-    const layer = wrap.querySelector('.yc-card-layer');
-    let queue = [];
-    let timer = null;
-    let motion = null;
-    let current = null;
-
-    wrap.addEventListener('click', () => {
-      if (wrap.classList.contains('yc-on')) {
-        wrap.classList.remove('yc-on');
-        clearTimeout(timer);
-        if (motion && typeof motion.cancel === 'function') motion.cancel();
-        else cancelAnimationFrame(motion);
-        timer = null;
-        motion = null;
-        if (current) current.remove();
-        current = null;
-        if (layer) layer.innerHTML = '';
-        return;
-      }
-      wrap.classList.add('yc-on');
-      queue = shuffle(deck.slice());
-      dealNext(
-        wrap,
-        layer,
-        queue,
-        (nextQueue) => { queue = nextQueue; },
-        (nextTimer) => { timer = nextTimer; },
-        (nextMotion) => { motion = nextMotion; },
-        (nextCurrent) => { current = nextCurrent; }
-      );
-    });
+  var wrap = document.getElementById('pfx');
+  if (!wrap || wrap.dataset.ready) return;
+  wrap.dataset.ready = '1';
+  if (Math.min(screen.width, screen.height) < 600) wrap.classList.add('pfx-phone');
+  var KIT = 'https://yil384.github.io/Picasso-Lab/people/fx/kit.js';
+  var ctl = null;
+  function load() {
+    if (!ctl) ctl = import(KIT).then(function (m) { return m.attach(wrap); });
+    return ctl;
+  }
+  ['pointerenter', 'touchstart', 'focus'].forEach(function (ev) {
+    wrap.addEventListener(ev, function () { load().catch(function () {}); }, { once: true, passive: true });
   });
-
-  function dealNext(wrap, layer, queue, setQueue, setTimer, setRaf, setCurrent) {
-    if (!layer || !wrap.classList.contains('yc-on')) return;
-    layer.innerHTML = '';
-    if (!queue.length) {
-      queue = shuffle(deck.slice());
-      setQueue(queue);
-    }
-
-    const card = queue.shift();
-    const route = routes[Math.floor(Math.random() * routes.length)];
-    const el = makeCard(card);
-    layer.appendChild(el);
-    setCurrent(el);
-
-    let done = false;
-    const scheduleNext = () => {
-      if (done) return;
-      done = true;
-      el.remove();
-      setCurrent(null);
-      const timer = setTimeout(() => dealNext(wrap, layer, queue, setQueue, setTimer, setRaf, setCurrent), 95);
-      setTimer(timer);
-    };
-
-    flyCard(wrap, el, route, scheduleNext, setRaf);
-  }
-
-  function makeCard(card) {
-    const el = document.createElement('span');
-    const img = document.createElement('img');
-    const fallback = document.createElement('span');
-    const label = card.joker ? card.rank : `${card.rank}${suitGlyph[card.suit]}`;
-    el.className = 'yc-card';
-    img.className = 'yc-card-art';
-    img.src = cardAssetPath(card);
-    img.alt = '';
-    img.decoding = 'async';
-    img.loading = 'eager';
-    img.onerror = () => { img.remove(); };
-    fallback.className = 'yc-card-fallback';
-    fallback.innerHTML = `<b>${label}</b><i>${card.joker ? 'JOKER' : suitGlyph[card.suit]}</i><b>${label}</b>`;
-    el.appendChild(fallback);
-    el.appendChild(img);
-    return el;
-  }
-
-  function cardAssetPath(card) {
-    const base = 'https://yil384.github.io/Picasso-Lab/events/static/playing-cards/';
-    if (card.joker) return `${base}${card.joker === 'RJ' ? 'red' : 'black'}_joker.svg`;
-    const rank = assetRank[card.rank] || card.rank;
-    return `${base}${rank}_of_${suitName[card.suit]}.svg`;
-  }
-
-  function flyCard(wrap, el, route, done, setMotion) {
-    const dir = normalize(route.dir);
-    const end = lineExitPoint(source, dir, flightBounds);
-    const distance = Math.hypot(end.x - source.x, end.y - source.y);
-    const duration = (distance / flightSpeed) * 1000;
-    const travelTilt = Math.atan2(dir.y, dir.x) * 180 / Math.PI * 0.14;
-    const startRot = -5 + Math.random() * 10;
-    const spin = route.spin + (Math.random() * 18 - 9);
-    const scale = 0.72;
-    el.style.setProperty('--yc-duration', `${duration.toFixed(0)}ms`);
-    el.style.setProperty('--yc-sx', `${source.x}px`);
-    el.style.setProperty('--yc-sy', `${source.y}px`);
-    el.style.setProperty('--yc-ex', `${end.x.toFixed(1)}px`);
-    el.style.setProperty('--yc-ey', `${end.y.toFixed(1)}px`);
-    el.style.setProperty('--yc-r0', `${(startRot + travelTilt).toFixed(1)}deg`);
-    el.style.setProperty('--yc-r1', `${(startRot + travelTilt + spin * duration / 1000).toFixed(1)}deg`);
-    el.style.setProperty('--yc-scale', scale);
-    el.addEventListener('animationend', () => {
-      if (wrap.classList.contains('yc-on')) done();
-    }, { once: true });
-    el.classList.add('yc-flight');
-    setMotion(null);
-  }
-
-  function easeOutCubic(t) {
-    return 1 - Math.pow(1 - t, 3);
-  }
-
-  function normalize(vector) {
-    const length = Math.hypot(vector.x, vector.y) || 1;
-    return { x: vector.x / length, y: vector.y / length };
-  }
-
-  function lineExitPoint(start, dir, bounds) {
-    const candidates = [];
-    if (dir.x < 0) candidates.push((bounds.left - start.x) / dir.x);
-    if (dir.x > 0) candidates.push((bounds.right - start.x) / dir.x);
-    if (dir.y < 0) candidates.push((bounds.top - start.y) / dir.y);
-    if (dir.y > 0) candidates.push((bounds.bottom - start.y) / dir.y);
-    const t = Math.min(...candidates.filter((value) => value > 0));
-    return { x: start.x + dir.x * t, y: start.y + dir.y * t };
-  }
-
-  function shuffle(items) {
-    for (let i = items.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [items[i], items[j]] = [items[j], items[i]];
-    }
-    return items;
-  }
+  function toggle() { load().then(function (c) { c.toggle(); }).catch(function () {}); }
+  wrap.addEventListener('click', toggle);
+  wrap.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); toggle(); }
+  });
 })();
 </script>

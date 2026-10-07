@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex">
+<title>Picasso Lab navigation</title>
+</head>
+<body>
+<!-- Back/forward carrier for the Google Sites embeds (Research Blog, Projects).
+     Google Sites writes each embed into an about:blank frame with document.write, and Chrome restores
+     any history entry made in that frame as a fresh about:blank, so swiping back from an open article
+     left a blank page. The embeds keep their open view in this frame's fragment instead: opening a view
+     navigates this frame (one history entry), back/forward moves only this frame, and it reports the
+     fragment it lands on to the embed. -->
+<script>
+function report() {
+  try { parent.postMessage({ picassoNav: location.hash.slice(1) }, '*'); } catch (_) {}
+}
+addEventListener('hashchange', report);
+addEventListener('pageshow', report);
+</script>
+</body>
+</html>

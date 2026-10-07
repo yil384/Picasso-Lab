@@ -1,0 +1,84 @@
+<!--
+  parikshit_summit.html — Prince Modi: 3 AM Summit Push (Google Sites embed for the Team page)
+  ──────────────────────────────────────────────────────────────────────────
+  Default: the plain photo (his Himalayan trek). Click (or Enter / Space): the clock moves to 3 a.m. on
+  summit day — night wipes down over the ridge, moonlit Chaukhamba climbs out of the haze, the stars come
+  out; a headlamp drops onto his forehead and CLICKS on; his team's headlamps come online up the
+  switchbacks (four at once, then one by one) and a "3 AM" caption drops in. Calm loop: a heartbeat runs
+  up the trail; every other beat a lamp drops out, his lamp pings it and it relights: BACK UP! (his own
+  words: "Federated Learning Looks Different at 3am When Your Nodes Are Dropping", and Flotilla's
+  recovery from a server failure in under 820 ms). Click again to switch it off.
+
+  Credit (shown as the tooltip): Chaukhamba from Chopta, photo by Mike Prince, CC BY 2.0
+  (Wikimedia Commons / Flickr 45471552942), keyed and graded to moonlight. The headlamp is painted art.
+
+  The effect itself lives on GitHub Pages, so it can be changed without re-pasting this:
+    people/fx/parikshit.js   the scene (three.js layers + q5 comic layer)
+    people/fx/kit.js         shared runtime for every avatar (layers, tilt, loading, cleanup)
+  Nothing heavy loads until the visitor hovers or touches the photo.
+-->
+<div class="pfx" id="pfx" data-fx="parikshit" role="button" tabindex="0" aria-pressed="false"
+     aria-label="Prince Modi — 3 AM summit push: click"
+     title="Chaukhamba from Chopta: photo by Mike Prince, CC BY 2.0">
+  <div class="pfx-stage">
+    <div class="pfx-shadow"></div>
+    <img class="avatar pfx-photo" src="https://yil384.github.io/Picasso-Lab/people/static/parikshit.webp" alt="avatar">
+  </div>
+</div>
+
+<style>
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+/* the Team page tiles shrink with the window (to about 150 px wide at 768): the photo is 200 px or
+   whatever fits the tile, and the kit scales the effect with it */
+.pfx {
+  --d: min(200px, calc(100vw - 16px), calc(100vh - 16px));
+  position: absolute; left: 8px; top: 8px; width: var(--d); height: var(--d);
+  border-radius: 50%; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;
+}
+/* phones: Sites stacks the photo above the name, so sit at the bottom of the tile (next to the name) */
+.pfx.pfx-phone { left: 50%; top: auto; bottom: 10px; margin-left: calc(var(--d) / -2); }
+.pfx-stage { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .4s cubic-bezier(.32, 1.3, .4, 1); }
+.pfx:hover .pfx-stage, .pfx:focus-visible .pfx-stage { transform: translateY(-2px) scale(1.05); }
+.pfx.pfx-on .pfx-stage { transform: scale(1.03); }
+.pfx.pfx-on:hover .pfx-stage { transform: translateY(-2px) scale(1.05); }
+.pfx-shadow { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 4px 10px rgba(0, 0, 0, .18); }
+/* keyboard focus: a ring on the photo's edge, drawn over the effect canvas too (so it shows on and off) */
+.pfx-stage::after {
+  content: ''; position: absolute; inset: -1px; border: 3px solid #00629b; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .85); opacity: 0; pointer-events: none;
+}
+.pfx:focus-visible .pfx-stage::after { opacity: 1; }
+.pfx-photo { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.pfx-loading .pfx-shadow { animation: pfx-wait 1s ease-in-out infinite; }
+@keyframes pfx-wait { 50% { box-shadow: 0 4px 10px rgba(0, 0, 0, .18), 0 0 0 4px rgba(0, 98, 155, .28); } }
+@media (prefers-reduced-motion: reduce) { .pfx-stage { transition: none; } .pfx-loading .pfx-shadow { animation: none; } }
+</style>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script>
+(function () {
+  var wrap = document.getElementById('pfx');
+  if (!wrap || wrap.dataset.ready) return;
+  wrap.dataset.ready = '1';
+  if (Math.min(screen.width, screen.height) < 600) wrap.classList.add('pfx-phone');
+  var KIT = 'https://yil384.github.io/Picasso-Lab/people/fx/kit.js';
+  var ctl = null;
+  function load() {
+    if (!ctl) ctl = import(KIT).then(function (m) { return m.attach(wrap); });
+    return ctl;
+  }
+  ['pointerenter', 'touchstart', 'focus'].forEach(function (ev) {
+    wrap.addEventListener(ev, function () { load().catch(function () {}); }, { once: true, passive: true });
+  });
+  function toggle() { load().then(function (c) { c.toggle(); }).catch(function () {}); }
+  wrap.addEventListener('click', toggle);
+  wrap.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); toggle(); }
+  });
+})();
+</script>

@@ -1,0 +1,635 @@
+<!-- =====================================================================
+     Picasso Lab footer: ONE embed for the Google Sites footer (every page).
+     It replaces the three footer embeds home/ucsd.html + home/address.html +
+     home/visitor-map.html:
+       - the UC San Diego seal (link: ucsd.edu)
+       - PICASSO LAB + the address (link: the 3D lab walk-through, home/address.html), and the lab's X
+         account under it (link: x.com/PicassoLabUCSD; on phone strips only the X mark, after the address)
+       - the visitor map card: it records the visit into Supabase exactly like
+         home/visitor-map.html does, and a click opens the analytics dashboard
+         (home/visitor-map.html) in a new tab.
+     A Sites embed box keeps its aspect ratio and only shrinks on phones, and
+     Sites already frames the box, so this page fills whatever box it gets
+     edge to edge (sizes read from the box):
+       ratio >= 2.2 : one row  seal | title + address | map  (desktop proportions,
+                      turning smoothly into a compact phone row as the box shrinks)
+       ratio <  2.2 : seal + text on top, map below; or, for tall boxes, stacked
+                      (seal, text, map), whichever of the two comes out larger.
+     GENERATED FILE: edit home/footer-src/footer.tpl.html and run
+     python3 home/footer-src/build.py. The visit-recording code is copied from
+     home/visitor-map.html by that script (keep the two in sync through it).
+     ===================================================================== -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+    html, body { margin: 0; padding: 0; background: #000; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    .pf { position: fixed; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; background: #000; color: #fff;
+        font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+    .pf-seal, .pf-addr, .vmap { position: absolute; left: 0; top: 0; visibility: hidden; }
+    .pf.ready .pf-seal, .pf.ready .pf-addr, .pf.ready .vmap { visibility: visible; }
+    .pf-seal { display: block; line-height: 0; text-decoration: none; }
+    .pf-seal img { display: block; width: 100%; height: 100%; border: 0; object-fit: contain; background: transparent; }
+    .pf-addr { display: block; color: #fff; }
+    .pf-home { display: block; color: #fff; text-decoration: none; cursor: pointer; }
+    /* the lab's X account: one quiet line centred under the address, smaller than it (Simple Icons X mark), brighter on hover */
+    .pf-x { display: flex; width: max-content; margin-left: auto; margin-right: auto; align-items: center; gap: .45em; color: rgba(255, 255, 255, .62); text-decoration: none;
+        white-space: nowrap; line-height: 1.2; outline: none; transition: color .2s ease; }
+    .pf-x:hover, .pf-x:focus-visible { color: #fff; }
+    .pf-x svg { width: .92em; height: .92em; fill: currentColor; flex: none; }
+    .pf.xinline .pf-x { position: absolute; margin: 0; padding: .55em; }        /* a bigger tap target than the mark itself */
+    .pf.xinline .pf-x span { display: none; }
+    .pf-title { font-weight: 800; line-height: 0.98; letter-spacing: -0.025em; white-space: nowrap; }
+    .pf-title span { display: inline-block; }
+    .pf-text { font-weight: 400; text-justify: inter-word; }
+
+    /* ---- the visitor map card (2 : 1, as in the old footer) ---- */
+    .vmap { overflow: hidden; cursor: pointer; border-radius: var(--vr, 12px); outline: none;
+        background: radial-gradient(120% 140% at 50% 30%, #081a30 0%, #050d1c 60%, #02060f 100%); }
+    .vmap canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+    .vmap { touch-action: pan-y; cursor: grab; } .vmap:active { cursor: grabbing; }
+    /* the hairline edge sits over the map (the dots never cover it) and lights up on hover / focus */
+    .vmap::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+        box-shadow: inset 0 0 0 1px rgba(130, 200, 255, .16); transition: box-shadow .25s ease; }
+    .vmap:hover::after, .vmap:focus-visible::after { box-shadow: inset 0 0 0 1px rgba(150, 215, 255, .42); }
+    /* the stats pill: the same as the old footer (copied from home/visitor-map.html), scaled with the card */
+    .vmap-stats { position: absolute; left: 12px; bottom: 11px; display: flex; align-items: center; gap: 7px; pointer-events: none; max-width: calc(100% - 24px); padding: 6px 11px; border-radius: 9px; font: 600 10.5px/1 ui-monospace, Menlo, monospace; letter-spacing: .05em; text-transform: uppercase; color: #a9def7; background: rgba(6,22,38,.12); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(120,200,255,.1); }
+    .vmap-stats b { color: #fff; font-variant-numeric: tabular-nums; } .vmap-dim { opacity: .55; } .vmap-sep { opacity: .3; }
+    #vmap-latest { font-size: 9px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; opacity: .9; }
+    .vmap-live { width: 7px; height: 7px; margin-top: -2px; border-radius: 50%; background: #ffc94d; box-shadow: 0 0 9px #ffc94d; animation: vmpulse 2.4s ease-in-out infinite; flex: none; }
+    @keyframes vmpulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.65); } }
+    .pf .vmap { width: auto; aspect-ratio: auto; min-height: 0; max-height: none; margin: 0; border-radius: var(--vr, 14px); }
+    .pf .vmap-stats { left: var(--vx, 12px); bottom: var(--vy, 11px); max-width: calc(100% - 2 * var(--vx, 12px)); gap: var(--vg, 7px);
+        padding: var(--vpy, 6px) var(--vpx, 11px); border-radius: var(--vpr, 9px); font-size: var(--vf, 10.5px); white-space: nowrap; overflow: hidden; }
+    .pf #vmap-latest { font-size: var(--vf2, 9px); }
+    .pf .vmap-live { width: var(--vd, 7px); height: var(--vd, 7px); }
+    .pf .vmap-lt, .pf .vmap-reg { display: flex; align-items: center; gap: var(--vg, 7px); min-width: 0; }
+    .pf .vmap-lt { flex: 0 1 auto; overflow: hidden; } .pf #vmap-latest { min-width: 0; flex: 0 1 auto; }
+    .pf .vmap-stats.no-lt .vmap-lt, .pf .vmap-stats.no-reg .vmap-reg { display: none; }
+    /* "Open analytics" on hover; a small arrow badge stays on touch screens */
+    .vm-open { position: absolute; right: var(--vo, 8px); top: var(--vo, 8px); height: var(--vh, 22px); display: flex; align-items: center; gap: .4em;
+        padding: 0 calc(var(--vh, 22px) * .32) 0 calc(var(--vh, 22px) * .5); border-radius: 999px; pointer-events: none;
+        font: 600 var(--vf2, 11px)/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #eaf7ff; white-space: nowrap;
+        background: rgba(12, 44, 70, .82); box-shadow: inset 0 0 0 1px rgba(150, 215, 255, .3);
+        opacity: 0; transform: translateY(-3px); transition: opacity .2s ease, transform .2s ease; }
+    .vm-open svg { width: calc(var(--vh, 22px) * .5); height: calc(var(--vh, 22px) * .5); flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .vmap:hover .vm-open, .vmap:focus-visible .vm-open { opacity: 1; transform: none; }
+    @media (hover: none) {
+        .vm-open { opacity: .9; transform: none; width: var(--vh, 22px); padding: 0; justify-content: center; }
+        .vm-open span { display: none; }
+    }
+    .vmtip { position: fixed; z-index: 100000; display: none; flex-direction: column; gap: 3px; pointer-events: none; max-width: 240px; padding: 7px 10px 8px;
+        border-radius: 9px; background: rgba(6, 24, 40, .94); border: 1px solid rgba(130, 200, 255, .22); color: #eef8ff;
+        font: 400 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; box-shadow: 0 8px 22px rgba(0, 0, 0, .45); }
+    .vmtip.show { display: flex; }
+    .vmtip b { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .vmtip i { font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; padding: 2px 4px 1px; border-radius: 3px;
+        color: #082236; background: #9fdcff; line-height: 1; }
+    .vmtip span { color: rgba(214, 236, 252, .7); }
+</style>
+
+<div class="pf" id="pf">
+    <a class="pf-seal" id="pf-seal" href="https://ucsd.edu/" target="_blank" rel="noopener" aria-label="UC San Diego">
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Seal_of_the_University_of_California,_San_Diego.svg?width=400"
+             alt="UC San Diego" width="200" height="200">
+    </a>
+    <div class="pf-addr" id="pf-addr">
+        <a class="pf-home" href="https://yil384.github.io/Picasso-Lab/home/address.html" target="_blank" rel="noopener" aria-label="Picasso Lab, step inside the lab in 3D">
+            <div class="pf-title" id="pf-title"><span>PICASSO LAB</span></div>
+            <div class="pf-text" id="pf-text">Computer Science and Engineering Building, 3235 Voigt Dr, La&nbsp;Jolla, CA&nbsp;92093</div>
+        </a>
+        <a class="pf-x" id="pf-x" href="https://x.com/PicassoLabUCSD" target="_blank" rel="noopener" aria-label="Picasso Lab on X: @PicassoLabUCSD">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg><span>@PicassoLabUCSD</span>
+        </a>
+    </div>
+    <div id="vmap" class="vmap" role="link" tabindex="0" aria-label="Visitor map: open the visitor analytics">
+        <canvas id="vmap-c"></canvas>
+        <canvas id="vmap-fx"></canvas>
+        <div class="vmap-stats" aria-hidden="true"><span class="vmap-live"></span><span><b id="vmap-total">0</b>&nbsp;<span class="vmap-dim">visits</span></span><span class="vmap-reg"> <span class="vmap-sep">/</span>
+            <span><b id="vmap-countries">0</b>&nbsp;<span class="vmap-dim">reg.</span></span></span><span class="vmap-lt"> <span class="vmap-sep">/</span> <span id="vmap-latest">—</span></span></div>
+        <div class="vm-open" aria-hidden="true"><span>Open analytics</span><svg viewBox="0 0 12 12"><path d="M3.6 8.4 8.4 3.6M4.6 3.6h3.8v3.8"/></svg></div>
+    </div>
+</div>
+<div id="vmtip" class="vmtip"></div>
+
+<script>
+(function () {
+    /* ════════ visitor data + recording (copied from home/visitor-map.html by build.py) ════════ */
+//@@VM_JS@@
+
+    /* ════════ layout: everything is placed from the box's own size ════════ */
+    var PF = document.getElementById('pf'), SEAL = document.getElementById('pf-seal'), ADDR = document.getElementById('pf-addr'),
+        TTL = document.getElementById('pf-title'), TSP = TTL.firstChild, TXT = document.getElementById('pf-text'), PX = document.getElementById('pf-x'),
+        CARD = document.getElementById('vmap'), STATS = CARD.querySelector('.vmap-stats');
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    /* quirks mode (no doctype in the Sites embed): read the box from the fixed root / body, not documentElement */
+    function boxSize() { var b = document.body;
+        return [PF.clientWidth || (b && b.clientWidth) || window.innerWidth, PF.clientHeight || (b && b.clientHeight) || window.innerHeight]; }
+    /* typeset the title + address at the given sizes; the column is the title's width (or minEm address-ems, if wider) */
+    function typeset(T, A, lh, gap, minEm, align) {
+        TTL.style.fontSize = T + 'px'; TTL.style.marginTop = (-0.11 * T) + 'px';
+        TXT.style.lineHeight = lh; TXT.style.marginTop = gap + 'px';
+        var tw = TSP.getBoundingClientRect().width, C, just = align === 'justify';
+        function lines() { return Math.round(TXT.offsetHeight / (parseFloat(TXT.style.fontSize) * lh)); }
+        /* justified (fills the title's width, like the old footer): sized so it breaks into the same three lines as on
+           desktop; if it can't, or the column is narrow, it is left-aligned instead (narrow justified lines get word gaps) */
+        if (just) { C = Math.ceil(tw + 0.5); var a = Math.min(A, C / 12.45); ADDR.style.width = C + 'px'; TXT.style.textAlign = 'justify';
+            for (var i = 0; i < 5; i++) { TXT.style.fontSize = a + 'px'; if (lines() <= 3) break; a *= 0.96; }
+            if (lines() > 3 || C < 150) just = false; else A = a; }
+        if (!just) { TXT.style.fontSize = A + 'px'; C = Math.ceil(Math.max(tw, A * minEm) + 0.5); ADDR.style.width = C + 'px';
+            TXT.style.textAlign = align === 'center' ? 'center' : 'left'; }
+        /* the X line: the address's size, a little below it; in strip mode (xinline) only the mark, placed by stripLayout */
+        var inl = PF.classList.contains('xinline'), xg = inl ? 0 : A * 0.55;
+        PX.style.fontSize = (inl ? A * 0.95 : A * 0.8) + 'px'; PX.style.marginTop = inl ? '0' : xg + 'px';
+        if (!inl) { PX.style.left = ''; PX.style.top = ''; }
+        var xh = inl ? 0 : PX.offsetHeight + xg;
+        var h = ADDR.offsetHeight - xh, lead = A * (lh - 1) / 2;
+        /* visual box: from the title's cap top (the negative margin crops the leading above it) to the last baseline + descender */
+        return { C: C, tw: tw, A: A, h: h, xh: xh, vis: Math.max(1, h - lead - A * 0.08) };
+    }
+    function put(el, x, y, w, h) { el.style.left = Math.round(x) + 'px'; el.style.top = Math.round(y) + 'px';
+        if (w != null) el.style.width = Math.round(w) + 'px'; if (h != null) el.style.height = Math.round(h) + 'px'; }
+
+    /* one row, laid out like the old three-embed footer: seal | address | map, the address (nearly) centred on
+       the page (up to 5% left of centre, as the old boxes were), and the three of the SAME height: the seal is as
+       tall as the map card, the title + address block nearly so. f runs 0 (phone row, 352 x 107) -> 1 (957 x 290). */
+    function rowLayout(W, H) {
+        if (W < 560) return stripLayout(W, H);
+        PF.classList.remove('xinline');
+        var s = Math.min(W / 957, 1.3), f = clamp((s - 0.368) / 0.632, 0, 1);
+        function L(a, b) { return a + (b - a) * f; }
+        var px = clamp(W * 0.012, 3, 14), py = clamp(H * 0.02, 3, 8), availH = H - 2 * py;
+        var g = W * L(0.035, 0.045), off = W * 0.05, lh = L(1.4, 1.34), ar = L(0.56, 0.5), minEm = 11.5, kH = L(0.7, 0.62);
+        var Hc = availH, t, T, X;
+        function fit(Hc) {   /* the text block is kH x the card height; true when the row fits the width with the address near the centre */
+            T = Hc * 0.3; t = typeset(T, T * ar, lh, T * 0.28, minEm, 'justify');
+            T *= kH * Hc / t.vis; t = typeset(T, T * ar, lh, T * 0.28, minEm, 'justify');
+            var lo = px + Hc + g + t.C / 2, hi = W - px - 2 * Hc - g - t.C / 2;
+            X = clamp(W / 2, lo, hi);
+            return lo <= hi && X >= W / 2 - off;
+        }
+        for (var it = 0; it < 60 && !fit(Hc); it++) Hc *= 0.97;
+        /* a touch smaller than the most that fits: the height saved goes into the gaps (the old footer breathed more) */
+        Hc *= 0.92; fit(Hc);
+        var o = { mode: 'row', f: +f.toFixed(2), T: T, A: t.A, S: Hc, t: t, M: 2 * Hc, cardH: Hc };
+        /* spare width spreads the three parts apart (gaps up to 10% of the box), the address stays near the centre */
+        var g2 = Math.min((W - 2 * px - o.S - t.C - o.M) / 2, W * 0.1, W - px - o.M - t.C / 2 - (W / 2 - off) - 1);
+        if (g2 > g) { g = g2; X = clamp(W / 2, px + o.S + g + t.C / 2, W - px - o.M - g - t.C / 2); }
+        var cy = H / 2, ax = X - t.C / 2;
+        put(ADDR, ax, cy - (t.vis + t.xh) / 2);
+        put(SEAL, ax - g - o.S, cy - o.S / 2, o.S, o.S);
+        put(CARD, ax + t.C + g, cy - o.cardH / 2, o.M, o.cardH);
+        o.x0 = ax - g - o.S; o.G = o.S + g + t.C + g + o.M; o.textCx = Math.round(X - W / 2);
+        return o;
+    }
+
+    /* phones: the wide footer box shrinks to a thin strip (957 x 200 -> 352 x 73, 957 x 290 -> 352 x 107). The address
+       gets the largest size (9-11 px) whose block fits the strip's height, wrapping to more lines if it must; seal and
+       map card share what is left; the seal sits level with the title so the bottom-left corner (Google's (i)) stays free. */
+    function stripLayout(W, H) {
+        PF.classList.add('xinline');
+        var px = clamp(W * 0.03, 6, 14), py = clamp(H * 0.07, 3, 9), availW = W - 2 * px, availH = H - 2 * py, lh = 1.28;
+        var A, T, t, me = 11;
+        for (A = 11; A >= 9; A -= 0.25) { T = A * 1.45; t = typeset(T, A, lh, T * 0.2, me, 'left'); if (t.vis <= availH) break; }
+        while (t.vis > availH && me < 22) { me += 1; t = typeset(T, A, lh, T * 0.2, me, 'left'); }
+        var g = Math.max(8, W * 0.035), ks = 0.86, Hc = Math.min(availH, (availW - t.C - 2 * g) / (ks + 2));
+        var S = Math.min(Hc * ks, availH), M = 2 * Hc, spare = availW - (S + t.C + M + 2 * g);
+        g += spare / 4; var x0 = px + spare / 4, cy = H / 2, ty = cy - t.vis / 2;
+        put(SEAL, x0, Math.max(py, ty), S, S);
+        put(ADDR, x0 + S + g, ty);
+        put(CARD, x0 + S + g + t.C + g, cy - Hc / 2, M, Hc);
+        placeMark(t, T);
+        return { mode: 'strip', f: 0, T: T, A: A, S: S, t: t, M: M, cardH: Hc, x0: x0, G: S + t.C + M + 2 * g, textCx: Math.round(x0 + S + g + t.C / 2 - W / 2) };
+    }
+
+    /* strip mode: the X mark sits after the address's last line, level with it; if that line leaves no room, after the title */
+    function placeMark(t, T) {
+        var r = document.createRange(); r.selectNodeContents(TXT); var rs = r.getClientRects(), ab = ADDR.getBoundingClientRect();
+        var m = parseFloat(PX.style.fontSize) * 0.92, last = rs[rs.length - 1], x, y;
+        if (last && last.right - ab.left + t.A * 0.55 + m <= t.C) { x = last.right - ab.left + t.A * 0.55; y = last.top - ab.top + (last.height - m) / 2; }
+        else { x = t.tw + T * 0.3; y = T * 0.05; }
+        var pad = parseFloat(PX.style.fontSize) * 0.55;
+        PX.style.left = Math.round(x - pad) + 'px'; PX.style.top = Math.round(y - pad) + 'px';
+    }
+
+    /* two tiers (seal + text on top, map below) or stacked (seal, text, map): designed at u = 1, then scaled to fit */
+    function tierLayout(W, H, stacked, dry) {
+        PF.classList.remove('xinline');
+        var px = clamp(W * 0.025, 4, 16), py = clamp(H * 0.025, 4, 14);
+        var T = 34, A = 18, lh = 1.45, gap = 9.5, S = stacked ? 100 : 120, gS = stacked ? 14 : 20, gT = stacked ? 16 : 18;
+        var t = typeset(T, A, lh, gap, 11, stacked ? 'center' : 'justify');
+        var rowW = stacked ? Math.max(S, t.C) : S + gS + t.C, rowH = stacked ? S + gS + (t.vis + t.xh) : Math.max(S, (t.vis + t.xh));
+        var M = Math.max(rowW, 300) * (stacked ? 1.1 : 1), cardH = M / 2;
+        var u = Math.min((W - 2 * px) / Math.max(rowW, M), (H - 2 * py) / (rowH + gT + cardH), 1.8);
+        if (dry) return u;
+        var o = { mode: stacked ? 'stack' : 'tier', u: +u.toFixed(3) };
+        t = typeset(T * u, A * u, lh, gap * u, 11, stacked ? 'center' : 'justify');
+        S *= u; gS *= u; gT *= u; M *= u; cardH *= u;
+        rowW = stacked ? Math.max(S, t.C) : S + gS + t.C; rowH = stacked ? S + gS + (t.vis + t.xh) : Math.max(S, (t.vis + t.xh));
+        var y0 = (H - (rowH + gT + cardH)) / 2, cx = W / 2;
+        if (stacked) { put(SEAL, cx - S / 2, y0, S, S); put(ADDR, cx - t.C / 2, y0 + S + gS); }
+        else { var x0 = cx - rowW / 2; put(SEAL, x0, y0 + (rowH - S) / 2, S, S); put(ADDR, x0 + S + gS, y0 + (rowH - (t.vis + t.xh)) / 2); }
+        put(CARD, cx - M / 2, y0 + rowH + gT, M, cardH);
+        o.T = T * u; o.A = t.A; o.S = S; o.M = M; o.cardH = cardH; o.t = t;
+        return o;
+    }
+
+    /* the stats pill keeps its look and scales with the card (365 px wide in the old footer); it drops the latest
+       place, then the region count, when the card is too narrow for them */
+    function fitCard(M) {
+        var k = clamp(M / 365, 0.3, 1.4), fs = Math.max(7.5, 10.5 * k), st = CARD.style;
+        st.setProperty('--vr', Math.max(8, 14 * k).toFixed(1) + 'px');
+        st.setProperty('--vx', Math.max(6, 12 * k).toFixed(1) + 'px'); st.setProperty('--vy', Math.max(5, 11 * k).toFixed(1) + 'px');
+        st.setProperty('--vf', fs.toFixed(2) + 'px'); st.setProperty('--vf2', Math.max(7, 9 * k).toFixed(2) + 'px');
+        st.setProperty('--vpy', (fs * 0.57).toFixed(1) + 'px'); st.setProperty('--vpx', (fs * 1.05).toFixed(1) + 'px');
+        st.setProperty('--vpr', (fs * 0.86).toFixed(1) + 'px'); st.setProperty('--vg', (fs * 0.67).toFixed(1) + 'px'); st.setProperty('--vd', (fs * 0.67).toFixed(1) + 'px');
+        st.setProperty('--vh', clamp(22 * k, 15, 28).toFixed(1) + 'px'); st.setProperty('--vo', clamp(8 * k, 5, 11).toFixed(1) + 'px');
+        /* tiny cards (phone strips): the globe alone, no pill, no badge */
+        var tiny = M / 2 < 90; STATS.style.display = tiny ? 'none' : ''; CARD.querySelector('.vm-open').style.display = tiny ? 'none' : '';
+        if (tiny) return;
+        var room = CARD.clientWidth - 2 * Math.max(6, 12 * k);
+        STATS.classList.remove('no-reg'); STATS.classList.add('no-lt');
+        if (STATS.scrollWidth > room + 0.5) STATS.classList.add('no-reg');
+        else { var base = STATS.scrollWidth, LT = document.getElementById('vmap-latest'); STATS.classList.remove('no-lt');
+            /* a latest place that only fits as a stub ("SAN DIEGO, UNI...") is left out */
+            if (LT.scrollWidth > LT.clientWidth + 1 && room - base < fs * 14) STATS.classList.add('no-lt'); }
+    }
+
+    var LAST = null;
+    function layout() {
+        var wh = boxSize(), W = wh[0], H = wh[1]; if (!W || !H) return;
+        var r = W / H, o;
+        if (r >= 2.2) o = rowLayout(W, H);
+        else { var uT = tierLayout(W, H, false, true), uS = tierLayout(W, H, true, true); o = tierLayout(W, H, uS >= uT * 0.97); }
+        fitCard(o.M);
+        o.W = W; o.H = H; LAST = o;
+        PF.classList.add('ready');
+    }
+    window.__pf = function () { return LAST && { mode: LAST.mode, f: LAST.f, u: LAST.u, W: LAST.W, H: LAST.H, title: +LAST.T.toFixed(2), addr: +LAST.A.toFixed(2),
+        seal: Math.round(LAST.S), col: LAST.t.C, card: [Math.round(LAST.M), Math.round(LAST.cardH)], align: TXT.style.textAlign,
+        lines: Math.round((TXT.offsetHeight) / (LAST.A * parseFloat(TXT.style.lineHeight))), textCx: LAST.textCx, vis: Math.round(LAST.t.vis) }; };
+
+    /* ════════ the visitor globe: the real Earth (NASA Blue Marble by day, Black Marble city lights by night, a soft
+       terminator, ocean glint, blue atmosphere), the real Moon on its orbit, and - very far away behind them - the
+       M78 Nebula (a real Hubble nebula round the prismatic glare of the Land of Light) and Cybertron, too far
+       for any sky, glimpsed only through a wormhole that bends the starlight round it. One WebGL fragment shader paints the card (no library); a 2D layer on top draws
+       the visitors, the off-world blips and the signals crawling in from the far ones. Drag to turn the Earth (the far
+       objects barely move: parallax); hover a dot for the place; a click that is not a drag opens the analytics. The
+       off-world visits are decoration only: nothing is ever recorded for them. Textures (183 KB) load only once the
+       card is on screen. ════════ */
+    var GL_URL = 'https://yil384.github.io/Picasso-Lab/home/static/globe/';
+    var CV = document.getElementById('vmap-c'), OV = document.getElementById('vmap-fx'), O2 = OV.getContext('2d');
+    var DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1)), CW = 0, CH = 0, GX = 0, GY = 0, GR = 0, K = 1;
+    var ROT = { lon: -100, lat: 20, vlon: 0, vlat: 0, auto: 1 }, PAR = { x: 0, y: 0 }, RAD = Math.PI / 180;
+    var SCR = [], EXTRA = [], BODY = {};
+    var OFFWORLD = {
+        moon: { code: 'LUNA', where: 'Mare Tranquillitatis, the Moon', n: 1, note: '384,400 km away &middot; first footprints July 1969' },
+        m78: { code: 'M78', where: 'Land of Light, M78 Nebula', n: 3, note: '3,000,000 light-years away &middot; arrived at the speed of light' },
+        cyb: { code: 'CYB', where: 'Iacon, Cybertron', n: 2, note: 'distance unknown &middot; only seen through a wormhole &middot; more than meets the eye' }
+    };
+    /* ---------- WebGL ---------- */
+    var gl = null, prog = null, U = {}, TEX = {}, texReady = 0, texOK = {}, texAsked = false;
+    var VS = 'attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }';
+    var FS = [
+        '#ifdef GL_OES_standard_derivatives', '#extension GL_OES_standard_derivatives : enable', '#endif',
+        'precision highp float;',
+        'uniform vec2 uRes; uniform float uT, uReady; uniform vec3 uEarth; uniform mat3 uE; uniform vec4 uMoon; uniform float uMoonRot, uMoonEcl; uniform vec3 uMoonE; uniform vec3 uM78, uCyb; uniform vec2 uPar;',
+        'uniform sampler2D uDay, uNight, uMoonT, uCloud, uNeb; uniform float uNebR;',
+        'const vec3 SUN = vec3(-0.62, 0.36, 0.70);',
+        'float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+        'float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }',
+        'float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * vn(p); p = p * 2.03 + 7.1; a *= 0.5; } return s; }',
+        'vec3 sph(vec2 d, float r) { float q = dot(d, d) / (r * r); return vec3(d / r, sqrt(max(0.0, 1.0 - q))); }',
+        'vec2 llUV(vec3 e) { float lon = atan(e.x, e.z), lat = asin(clamp(e.y, -1.0, 1.0)); return vec2(lon / 6.2831853 + 0.5, 0.5 - lat / 3.1415927); }',
+        'vec4 tex(sampler2D t, vec2 uv) {',
+        '#ifdef GL_OES_standard_derivatives',
+        '  vec2 uv2 = vec2(fract(uv.x + 0.5) - 0.5, uv.y); if (fwidth(uv2.x) < fwidth(uv.x) - 0.001) return texture2D(t, uv2);',
+        '#endif',
+        '  return texture2D(t, uv); }',
+        'void main() {',
+        '  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);',
+        '  float S = uRes.y, t = uT;',
+        // deep space + three star layers (the farther, the less they move with the drag)
+        // gravitational lensing round the wormhole (a point-lens, Einstein radius 1.3 throats): sp is where our sky is read for this pixel.
+        // Just outside the throat the deflection flips the sky over (a mirrored copy of what lies behind), at 1.3 it smears it into the
+        // Einstein ring of tangential arcs; farther out it fades to nothing
+        // The throat is not a perfect circle: like a spinning (Kerr) black hole's shadow (Gargantua in Interstellar) it is
+        // flattened a little on the side whose disc gas comes toward us (the left) and shifted slightly the other way.
+        // wr = distance in throats measured against that outline, so the lensing, the far side and the disc all follow it
+        '  vec2 wd = p - uCyb.xy - vec2(0.05 * uCyb.z, 0.0); float wsn = -wd.x / max(length(wd), 1e-3);',
+        '  float wfl = 0.95 / max(wsn, 1e-3), wre = wsn > 0.0 ? min(1.0, wfl) - pow(max(0.4 - abs(1.0 - wfl), 0.0) / 0.4, 2.0) * 0.1 : 1.0;',
+        '  float wr = length(wd) / (uCyb.z * wre); vec2 wdir = wd / max(length(wd), 1e-3);',
+        '  vec2 sp = p - wdir * uCyb.z * (1.69 / max(wr, 1.0)) * smoothstep(4.5, 2.0, wr) * step(1.0, wr);',
+        '  vec3 col = mix(vec3(0.012, 0.025, 0.06), vec3(0.03, 0.06, 0.13), smoothstep(1.2, 0.0, length((p - uRes * vec2(0.5, 0.4)) / S)));',
+        '  for (int L = 0; L < 3; L++) { float fl = float(L), cell = (5.0 + fl * 4.0) * S / 160.0; vec2 q = (sp + uPar * (0.04 + fl * 0.05)) / cell, id = floor(q);',
+        '    float hh = h21(id + fl * 17.0); if (hh > 0.93 - fl * 0.02) { vec2 c = fract(q) - vec2(h21(id + 3.1), h21(id + 5.7)); float tw = 0.55 + 0.45 * sin(t * (0.7 + hh * 2.0) + hh * 40.0);',
+        '      col += vec3(0.75, 0.82, 1.0) * smoothstep(0.09 + fl * 0.02, 0.0, length(c)) * tw * (0.35 + 0.35 * fl); } }',
+        // a faint band of the Milky Way across the back
+        '  { float band = exp(-pow((p.y - uRes.y * 0.95 + p.x * 0.42) / (S * 0.32), 2.0)); col += vec3(0.10, 0.12, 0.20) * band * smoothstep(0.35, 0.8, fbm(p / S * 3.0 + 4.0)) * 0.9; }',
+        // M78: a real nebula, not noise - the Hubble mosaic of the Orion Nebula (NASA/ESA, public domain; M78 itself sits in the
+        // same Orion cloud complex), edges faded to black in the texture and screened over the sky, so its dust also hides the
+        // stars behind it. A very slow drift keeps it alive. At its heart the Land of Light: a tight cluster of crystalline
+        // points round the Plasma Spark (thin six-rayed spikes with chromatic fringes), a second star, an anamorphic streak
+        '  { vec2 c = uM78.xy, d = (p - c) / uM78.z; float r = length(d);',
+        '    if (r < 1.7) { float z = 1.0 + 0.015 * sin(t * 0.07); vec2 uv = mat2(cos(-0.3), -sin(-0.3), sin(-0.3), cos(-0.3)) * d / (2.7 * z) + vec2(0.45, 0.45);',
+        '      vec3 nb = uNebR > 0.5 ? texture2D(uNeb, clamp(uv, 0.0, 1.0)).rgb : vec3(0.0); nb = pow(nb, vec3(1.2)) * 0.95;',
+        '      col = col * (1.0 - 0.45 * smoothstep(0.02, 0.3, dot(nb, vec3(0.333)))); col = 1.0 - (1.0 - col) * (1.0 - nb);',
+        '      for (int i = 0; i < 8; i++) { float fi = float(i); vec2 o = (vec2(h21(vec2(fi, 1.3)), h21(vec2(fi, 7.1))) - 0.5) * 0.24; float ds = length(d - o);',
+        '        col += mix(vec3(0.7, 0.85, 1.0), vec3(1.0, 0.92, 0.85), h21(vec2(fi, 3.3))) * exp(-ds * ds * 4000.0) * (0.6 + 0.4 * sin(t * (1.5 + fi * 0.37) + fi * 2.0)) * 1.1; }',
+        '      { float ds = length(d - vec2(0.16, 0.12)); col += vec3(0.8, 0.9, 1.0) * (exp(-ds * ds * 2500.0) * 1.3 + exp(-ds * ds * 60.0) * 0.10); }',
+        '      float an = atan(d.y, d.x) + 0.26, ray = pow(abs(cos(an * 3.0)), 260.0), core = exp(-r * r * 420.0);',
+        '      vec3 prism = vec3(exp(-r * 8.0), exp(-r * 9.5), exp(-r * 11.5));',
+        '      col += vec3(1.0, 0.98, 0.95) * core * 2.8 + prism * ray * (0.85 + 0.15 * sin(t * 1.1)) + vec3(0.7, 0.85, 1.0) * exp(-r * r * 30.0) * 0.4; } }',
+        '  col += vec3(0.35, 0.55, 1.0) * exp(-abs(p.y - uM78.y) / (S * 0.004)) * exp(-abs(p.x - uM78.x) / (S * 0.45)) * 0.16;',
+        // the wormhole to Cybertron: a sphere-shaped hole in space, like a crystal ball. There is no glowing rim: its edge is just where
+        // our bent starlight (above) meets the far side. Inside, the whole sky of the other end is squeezed in by the lens, more and
+        // more toward the edge: a violet nebula, a blue-white sun and, close by, part of Cybertron - a dark machined world laced with
+        // energon-blue circuitry, the cities on its night side burning orange
+        // the accretion disc, as Kip Thorne's team computed it for Gargantua (James et al. 2015): a thin hot disc seen almost
+        // edge-on, its near half crossing in front of the throat, its far half hidden behind it - and lensed: the far half's
+        // light bends over the top of the throat into a broad arc and under it into a thin one. The side coming toward us is
+        // brighter and whiter (relativistic beaming), the gas streaks along its orbits. Back parts first; the near half of the
+        // disc is painted after the throat
+        '  vec2 dq = mat2(cos(0.12), -sin(0.12), sin(0.12), cos(0.12)) * (wd / uCyb.z); vec2 dk = vec2(dq.x, dq.y / 0.16); float drd = length(dk);',
+        '  float dbeam = pow(clamp(1.0 - 0.62 * dq.x / max(drd, 0.6), 0.25, 1.7), 3.0) * 0.45, dang = atan(dk.y, dk.x);',
+        '  float dstr = 0.5 + 0.75 * fbm(vec2(cos(dang - t * 0.5 / max(drd, 1.0)), sin(dang - t * 0.5 / max(drd, 1.0))) * drd * 2.4 + drd * 5.0);',
+        '  float demis = smoothstep(1.4, 1.75, drd) * smoothstep(3.0, 2.15, drd) * pow(1.6 / max(drd, 1.0), 1.4) * dstr * dbeam;',
+        '  vec3 dcol = mix(vec3(1.0, 0.42, 0.1), vec3(1.0, 0.88, 0.7), smoothstep(0.2, 1.1, demis)); dcol = mix(dcol, vec3(0.85, 0.9, 1.0), clamp(-dq.x * 0.12, 0.0, 0.3));',
+        '  if (dq.y < 0.0 && wr > 1.0) col += dcol * demis * 1.25;',
+        '  { float ph = atan(wd.y, wd.x), top = max(0.0, -sin(ph)), hb = pow(clamp(1.0 - 0.6 * cos(ph), 0.3, 1.6), 2.5) * 0.5;',
+        '    float hs = 0.5 + 0.7 * fbm(vec2(cos(ph - t * 0.4), sin(ph - t * 0.4)) * 3.0 + wr * 6.0);',
+        '    float halo = smoothstep(1.0, 1.05, wr) * exp(-max(0.0, wr - 1.05) / (0.05 + 0.32 * top)) * (0.35 + 0.95 * top) * hs * hb;',
+        '    col += mix(vec3(1.0, 0.45, 0.12), vec3(1.0, 0.86, 0.66), smoothstep(0.2, 0.9, halo)) * halo * 1.1;',
+        '    col += vec3(1.0, 0.8, 0.55) * exp(-pow((wr - 1.03) / 0.015, 2.0)) * 0.35 * hb; }   // the thin photon ring',
+        '  if (wr < 1.0) { vec2 fp = wdir * wr / sqrt(max(1e-3, 1.0 - 0.6 * wr * wr));',
+        '    vec2 sun = vec2(-0.6, -0.55); float ds = length(fp - sun);',
+        '    vec3 ins = vec3(0.02, 0.018, 0.05) + vec3(0.32, 0.10, 0.42) * smoothstep(0.45, 0.85, fbm(fp * 1.6 + 5.0)) * 0.55 + vec3(0.10, 0.35, 0.45) * smoothstep(0.55, 0.9, fbm(fp * 2.3 - 3.0)) * 0.35;',
+        '    vec2 sq = fp * 11.0 + vec2(t * 0.03, 0.0); ins += vec3(0.85, 0.82, 1.0) * step(0.9, h21(floor(sq))) * smoothstep(0.16, 0.0, length(fract(sq) - 0.5)) * 0.8;',
+        '    ins += vec3(0.8, 0.88, 1.0) * (exp(-ds * 16.0) * 3.0 + exp(-ds * 4.0) * 0.35 + exp(-ds * 1.2) * 0.12);',
+        '    vec2 d = fp - vec2(0.9, 1.3); float q = length(d), r = 1.1;',
+        '    if (q < r) { vec3 n = sph(d * vec2(1.0, -1.0), r); vec3 Ls = normalize(vec3(sun.x - 0.9, -(sun.y - 1.3), 1.6)); float sp = t * 0.05; vec3 e = vec3(n.x * cos(sp) + n.z * sin(sp), n.y, -n.x * sin(sp) + n.z * cos(sp));',
+        '      vec2 uv = vec2(atan(e.x, e.z) * 9.0, asin(e.y) * 9.0); vec2 id = floor(uv), f = fract(uv); float h = h21(id), h2 = h21(id + 4.7);',
+        '      float lat = asin(e.y) * 13.0, trench = smoothstep(0.08, 0.0, abs(fract(lat) - 0.5)) * step(0.55, h21(vec2(floor(lat), 3.0))) * smoothstep(0.35, 0.6, vn(vec2(atan(e.x, e.z) * 4.0, floor(lat))));',
+        '      float trV = smoothstep(0.08, 0.0, abs(f.x - (0.2 + 0.6 * h2))) * step(0.5, h) * smoothstep(0.75, 0.2, abs(f.y - 0.5));',
+        '      float plate = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)), circ = max(trench, trV * 0.85) * (0.6 + 0.4 * vn(uv * 2.0 + t * 0.6));',
+        '      float lam = dot(n, Ls), spec = pow(max(0.0, dot(reflect(-Ls, n), vec3(0, 0, 1))), 18.0);',
+        '      vec3 cc = mix(vec3(0.09, 0.09, 0.11), vec3(0.26, 0.26, 0.30), h * 0.6 + 0.4 * vn(uv * 3.0)) * (0.06 + 1.15 * max(0.0, lam)) * (0.75 + 0.25 * smoothstep(0.0, 0.05, plate)) + vec3(0.8, 0.85, 1.0) * spec * 0.5;',
+        '      cc += vec3(0.2, 0.8, 1.0) * circ * (0.5 + 0.7 * smoothstep(0.3, -0.2, lam)) + vec3(1.0, 0.55, 0.15) * step(0.8, h21(floor(uv * 3.0) + 2.0)) * smoothstep(0.15, -0.25, lam) * 1.2;',
+        '      cc += vec3(0.45, 0.55, 1.0) * pow(1.0 - n.z, 4.0) * max(0.0, lam + 0.3) * 0.9; ins = mix(ins, cc, smoothstep(r, r - 0.015, q)); }',
+        '    ins *= 0.55 + 0.45 * smoothstep(1.0, 0.82, wr); ins.b += 0.03 * smoothstep(0.85, 1.0, wr);',
+        '    col = mix(col, ins, smoothstep(1.0, 0.985, wr)); }',
+        // the near half of the disc, in front of the throat
+        '  if (dq.y >= 0.0) col += dcol * demis * 1.25;',
+        // the Moon behind the Earth (z < 0)
+        '  vec3 moonCol = vec3(0.0); float moonA = 0.0;',
+        '  { vec2 d = p - uMoon.xy; float q = length(d); if (q < uMoon.z + 1.0) { vec3 n = sph(d * vec2(1.0, -1.0), uMoon.z);',
+        '      float a = texture2D(uMoonT, llUV(vec3(n.x * cos(uMoonRot) - n.z * sin(uMoonRot), n.y, n.x * sin(uMoonRot) + n.z * cos(uMoonRot)))).r; float mu0 = max(0.0, dot(n, SUN)), mu = max(0.05, n.z);',
+        // regolith, not plastic: the Lommel-Seeliger law (no limb darkening - a full Moon is an evenly bright disc, the
+        // terminator is sharp, there is no air), earthshine faintly lighting the night side where it faces the Earth, and a
+        // lunar eclipse when the Moon crosses the Earth's shadow (dark, copper red: sunlight bent through our atmosphere)
+        '      float ls = 2.0 * mu0 / (mu0 + mu); moonCol = vec3(0.95, 0.93, 0.88) * a * 1.15 * (0.85 * ls + 0.15 * mu0);',
+        '      moonCol += vec3(0.55, 0.65, 0.85) * a * 0.09 * max(0.0, dot(n, uMoonE)) * (1.0 - smoothstep(0.0, 0.15, mu0));',
+        '      moonCol = mix(moonCol, moonCol * vec3(0.42, 0.13, 0.05) + vec3(0.03, 0.006, 0.0) * a, uMoonEcl);',
+        '      moonA = smoothstep(uMoon.z + 0.8, uMoon.z - 0.8, q); } }',
+        '  if (uMoon.w < 0.0) col = mix(col, moonCol, moonA);',
+        // the Earth: day map lit by the sun, city lights on the night side, ocean glint, atmosphere
+        '  { vec2 d = p - uEarth.xy; float R = uEarth.z, q = length(d);',
+        '    float halo = exp(-max(0.0, q - R) / (R * 0.07)) * step(R - 1.0, q);',
+        '    vec3 nn = sph(d * vec2(1.0, -1.0), R); float lightSide = max(0.0, dot(normalize(vec3(d.x, -d.y, 0.0) + 1e-4), SUN) * 0.8 + 0.2);',
+        '    col += vec3(0.30, 0.58, 1.0) * halo * 0.55 * lightSide;',
+        '    if (q < R + 1.0) { vec3 e = uE * nn; vec2 uv = llUV(e);',
+        '      vec3 day = uReady > 0.5 ? tex(uDay, uv).rgb : vec3(0.05, 0.12, 0.25); float city = uReady > 0.5 ? tex(uNight, uv).r : 0.0;',
+        '      float cl = uReady > 0.5 ? tex(uCloud, uv + vec2(t * 0.0015, 0.0)).r : 0.0; cl = smoothstep(0.08, 0.9, cl);',
+        '      float ocean = smoothstep(0.02, 0.12, day.b - max(day.r, day.g) * 0.95);',
+        '      day = mix(day, day * vec3(0.92, 1.04, 1.1) + vec3(0.0, 0.02, 0.035), ocean);',
+        '      float lam = dot(nn, SUN), dayK = smoothstep(-0.10, 0.22, lam), li = 0.04 + 1.12 * max(0.0, lam);',
+        '      vec3 lit = day * li + vec3(0.85, 0.92, 1.0) * pow(max(0.0, dot(reflect(-SUN, nn), vec3(0, 0, 1))), 70.0) * ocean * (1.0 - cl) * 0.35;',
+        '      lit = mix(lit, vec3(0.95, 0.97, 1.0) * li, cl * 0.72);',
+        '      vec3 night = vec3(1.0, 0.72, 0.38) * pow(city, 1.6) * 1.5 * (1.0 - 0.75 * cl) + day * 0.02 + cl * 0.015;',
+        '      vec3 ec = mix(night, lit, dayK) + vec3(1.0, 0.5, 0.25) * 0.05 * exp(-lam * lam * 160.0) * (0.4 + cl);',
+        '      float fres = pow(1.0 - nn.z, 2.5); ec = mix(ec, vec3(0.45, 0.70, 1.0) * (0.2 + 0.95 * max(0.0, lam + 0.2)), fres * 0.6);',
+        '      float lb = pow(1.0 - nn.z, 4.0); ec += vec3(0.25, 0.5, 1.0) * lb * max(0.0, lam + 0.15) * 0.8 + vec3(1.0, 0.45, 0.18) * lb * exp(-lam * lam * 40.0) * 0.35;',
+        '      col = mix(col, ec, smoothstep(R + 0.8, R - 0.8, q)); } }',
+        '  if (uMoon.w >= 0.0) col = mix(col, moonCol, moonA);',
+        // a film grade: soft highlight roll-off, cool shadows, a vignette, a little moving grain
+        '  col = 1.0 - exp(-col * 1.3); col += vec3(0.0, 0.006, 0.014) * (1.0 - col);',
+        '  vec2 vg = gl_FragCoord.xy / uRes - 0.5; col *= 1.0 - 0.55 * dot(vg * vec2(0.85, 1.1), vg * vec2(0.85, 1.1));',
+        '  col += (h21(gl_FragCoord.xy + fract(t * 7.0) * 91.0) - 0.5) * 0.02;',
+        '  gl_FragColor = vec4(col, 1.0);',
+        '}'].join('\n');
+    function initGL() {
+        try { gl = CV.getContext('webgl', { antialias: false, premultipliedAlpha: false }) || CV.getContext('experimental-webgl'); } catch (e) { gl = null; }
+        if (!gl) return false;
+        gl.getExtension('OES_standard_derivatives');
+        function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; } return s; }
+        var v = sh(gl.VERTEX_SHADER, VS), f = sh(gl.FRAGMENT_SHADER, FS); if (!v || !f) { gl = null; return false; }
+        prog = gl.createProgram(); gl.attachShader(prog, v); gl.attachShader(prog, f); gl.linkProgram(prog); gl.useProgram(prog);
+        var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        ['uRes', 'uT', 'uReady', 'uEarth', 'uE', 'uMoon', 'uMoonRot', 'uMoonEcl', 'uMoonE', 'uM78', 'uCyb', 'uPar', 'uDay', 'uNight', 'uMoonT', 'uCloud', 'uNeb', 'uNebR'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        gl.uniform1i(U.uDay, 0); gl.uniform1i(U.uNight, 1); gl.uniform1i(U.uMoonT, 2); gl.uniform1i(U.uCloud, 3); gl.uniform1i(U.uNeb, 4);
+        ['day', 'night', 'moon', 'cloud', 'neb'].forEach(function (n, i) { var t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([10, 25, 50, 255])); TEX[n] = t; });
+        return true;
+    }
+    function loadTextures() { if (texAsked || !gl) return; texAsked = true; loadSprites();
+        [['day', 'earth_day.jpg'], ['night', 'earth_night.jpg'], ['moon', 'moon.jpg'], ['cloud', 'clouds.jpg'], ['neb', 'nebula.jpg']].forEach(function (d, i) { var im = new Image(); im.crossOrigin = 'anonymous';
+            im.onload = function () { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, TEX[d[0]]); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im); gl.generateMipmap(gl.TEXTURE_2D);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                texReady++; texOK[d[0]] = 1; kick(); };
+            im.src = GL_URL + d[1]; }); }
+    /* earth -> view rotation (and its transpose, view -> earth, for the shader) */
+    var VM = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    function rotMats() { var a = -ROT.lon * RAD, b = ROT.lat * RAD, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+        /* V = Rx(b) * Ry(a): rows */
+        VM = [ca, 0, sa, sb * sa, cb, -sb * ca, -cb * sa, sb, cb * ca]; }
+    function toView(lat, lon) { var cl = Math.cos(lat * RAD), e = [cl * Math.sin(lon * RAD), Math.sin(lat * RAD), cl * Math.cos(lon * RAD)];
+        return [VM[0] * e[0] + VM[1] * e[1] + VM[2] * e[2], VM[3] * e[0] + VM[4] * e[1] + VM[5] * e[2], VM[6] * e[0] + VM[7] * e[1] + VM[8] * e[2]]; }
+    function resize() { var w = CARD.clientWidth, h = CARD.clientHeight; if (!w || !h) return;
+        CW = w; CH = h; K = clamp(h / 160, 0.45, 1.6);
+        CV.width = OV.width = Math.round(w * DPR); CV.height = OV.height = Math.round(h * DPR);
+        GR = h * 0.36; GX = w * 0.5; GY = h * 0.45; draw(performance.now()); }
+
+    /* ---------- one frame ---------- */
+    var lastT = 0, t0 = performance.now();
+    function draw(tNow) {
+        var dt = Math.min(0.1, (tNow - (lastT || tNow)) / 1000); lastT = tNow; var s = (tNow - t0) / 1000;
+        if (!drag) { ROT.lon -= (ROT.vlon + 4 * ROT.auto) * dt; ROT.lat = clamp(ROT.lat + ROT.vlat * dt, -50, 55); ROT.vlon *= Math.pow(0.12, dt); ROT.vlat *= Math.pow(0.12, dt);
+            ROT.auto = Math.min(1, ROT.auto + dt * 0.5); ROT.lat += (20 - ROT.lat) * Math.min(1, dt * 0.15); PAR.x *= Math.pow(0.08, dt); PAR.y *= Math.pow(0.08, dt); }
+        rotMats();
+        // bodies (css px): the Moon on a tilted orbit (behind the Earth on the far half), the far ones in the background
+        var th = s * 0.15 + 0.5, ma = GR * 1.62, mz = Math.sin(th);
+        BODY.moon = { x: GX + Math.cos(th) * ma + PAR.x * 0.35, y: GY - mz * GR * 0.95 + Math.cos(th) * GR * 0.08 + PAR.y * 0.35, r: GR * 0.18 * (1 + 0.12 * mz), z: mz,
+            rot: Math.atan2(-Math.cos(th), -Math.sin(th)) };
+        // the Moon in 3D (Earth radii; x right, y up, z toward us): the direction to the Earth (earthshine) and how deep it
+        // sits in the Earth's shadow cone behind the Earth, away from the sun (lunar eclipse)
+        var mpx = Math.cos(th) * 1.62, mpy = mz * 0.95 - Math.cos(th) * 0.08, mpz = mz * 1.62, mpl = Math.hypot(mpx, mpy, mpz);
+        var SV = [-0.62, 0.36, 0.70], along = -(mpx * SV[0] + mpy * SV[1] + mpz * SV[2]), perp = Math.sqrt(Math.max(0, mpl * mpl - along * along));
+        BODY.moon.ex = -mpx / mpl; BODY.moon.ey = -mpy / mpl; BODY.moon.ez = -mpz / mpl;
+        BODY.moon.ecl = along > 0 ? Math.max(0, Math.min(1, (1.1 - perp) / 0.4)) : 0;   // tidally locked: the near side always turns to the Earth
+        BODY.m78 = { x: CW * 0.14 + PAR.x * 0.06, y: CH * 0.33 + PAR.y * 0.06, r: CH * 0.30 };
+        BODY.cyb = { x: CW * 0.835 + PAR.x * 0.1, y: CH * 0.31 + PAR.y * 0.1, r: CH * 0.1 };
+        if (gl) {
+            gl.viewport(0, 0, CV.width, CV.height);
+            var d = DPR; gl.uniform2f(U.uRes, CV.width, CV.height); gl.uniform1f(U.uT, s); gl.uniform1f(U.uReady, texOK.day && texOK.night && texOK.moon && texOK.cloud ? 1 : 0); gl.uniform1f(U.uNebR, texOK.neb ? 1 : 0);
+            gl.uniform3f(U.uEarth, GX * d, GY * d, GR * d);
+            gl.uniformMatrix3fv(U.uE, false, new Float32Array(VM));   // column-major read of V's rows = V^T (view -> earth)
+            gl.uniform4f(U.uMoon, BODY.moon.x * d, BODY.moon.y * d, BODY.moon.r * d, BODY.moon.z); gl.uniform1f(U.uMoonRot, BODY.moon.rot); gl.uniform1f(U.uMoonEcl, BODY.moon.ecl); gl.uniform3f(U.uMoonE, BODY.moon.ex, BODY.moon.ey, BODY.moon.ez);
+            gl.uniform3f(U.uM78, BODY.m78.x * d, BODY.m78.y * d, BODY.m78.r * d); gl.uniform3f(U.uCyb, BODY.cyb.x * d, BODY.cyb.y * d, BODY.cyb.r * d);
+            gl.uniform2f(U.uPar, 0, 0);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+        }
+        overlay(s);
+    }
+    /* the travellers: painted sprites (home/static/globe/tiga.png, ark.png, keyed and turned nose-right by
+       home/footer-src/sprites.py), loaded with the textures. 'tiga' - Ultraman Tiga flying in from M78; 'ark' - an
+       Autobot warship in Optimus Prime's colours out of the wormhole. Drawn about 22 px long at full size; a sprite
+       heading left is flipped so it never flies upside down */
+    var SPRITE = {};
+    function loadSprites() { ['tiga', 'ark'].forEach(function (n) { var im = new Image(); im.onload = function () { SPRITE[n] = im; }; im.src = GL_URL + n + '.png'; }); }
+    function craft(g, kind, x, y, ang, sc, alpha, t, tt) {
+        var im = SPRITE[kind]; if (!im) return;
+        var L = (kind === 'ark' ? 10 : 12) * sc, H = L * im.height / im.width, i, f, gr;
+        g.save(); g.translate(x, y); g.rotate(ang); if (Math.cos(ang) < 0) g.scale(1, -1); g.globalAlpha = alpha;
+        g.globalCompositeOperation = 'lighter';
+        if (kind === 'tiga') {
+            // a white-gold aura, three tapering speed streaks and a few sparks shed behind
+            gr = g.createRadialGradient(0, 0, 0, 0, 0, L * 0.55); gr.addColorStop(0, 'rgba(255,236,190,0.32)'); gr.addColorStop(1, 'rgba(255,200,150,0)');
+            g.fillStyle = gr; g.beginPath(); g.ellipse(0, 0, L * 0.62, H * 0.9, 0, 0, 6.2832); g.fill();
+            for (i = -1; i <= 1; i++) { var sl = L * (0.9 + 0.35 * Math.sin(t * 9 + i * 2)), sy = i * H * 0.16;
+                gr = g.createLinearGradient(-L * 0.45, 0, -L * 0.45 - sl, 0); gr.addColorStop(0, 'rgba(255,242,215,0.45)'); gr.addColorStop(1, 'rgba(255,200,160,0)');
+                g.strokeStyle = gr; g.lineWidth = Math.max(0.4, H * (i ? 0.045 : 0.08)); g.beginPath(); g.moveTo(-L * 0.45, sy); g.lineTo(-L * 0.45 - sl, sy * 1.6); g.stroke(); }
+            for (i = 0; i < 5; i++) { f = (t * 1.6 + i / 5) % 1; g.fillStyle = 'rgba(255,235,170,' + (0.9 * (1 - f)).toFixed(3) + ')';
+                g.beginPath(); g.arc(-L * 0.5 - f * L * 1.1, Math.sin(i * 2.3 + t * 5) * H * 0.35 * f, Math.max(0.35, L * 0.025) * (1 - f * 0.5), 0, 6.2832); g.fill(); }
+        } else {
+            // engine plumes (flickering white-cyan), heat building at the nose as it nears the Earth: an orange-white plasma
+            // shell and a bow-shock arc, embers peeling off behind
+            var fl = 0.8 + 0.2 * Math.sin(t * 47) * Math.sin(t * 31);
+            for (i = 0; i < 2; i++) { var ey = H * (i ? 0.08 : -0.12), el = L * 0.55 * fl;
+                gr = g.createLinearGradient(-L * 0.5, 0, -L * 0.5 - el, 0); gr.addColorStop(0, 'rgba(225,250,255,0.95)'); gr.addColorStop(0.3, 'rgba(90,200,255,0.7)'); gr.addColorStop(1, 'rgba(60,120,255,0)');
+                g.fillStyle = gr; g.beginPath(); g.ellipse(-L * 0.5 - el / 2, ey, el / 2, H * 0.12, 0, 0, 6.2832); g.fill(); }
+            var heat = Math.max(0, Math.min(1, (tt - 0.45) / 0.45));
+            if (heat > 0) {
+                gr = g.createRadialGradient(L * 0.46, 0, 0, L * 0.46, 0, H * 1.1); gr.addColorStop(0, 'rgba(255,250,220,' + (0.9 * heat).toFixed(3) + ')');
+                gr.addColorStop(0.35, 'rgba(255,150,50,' + (0.6 * heat).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(255,60,10,0)');
+                g.fillStyle = gr; g.beginPath(); g.ellipse(L * 0.42, 0, H * 1.0, H * 1.1, 0, 0, 6.2832); g.fill();
+                g.strokeStyle = 'rgba(255,190,110,' + (0.35 * heat).toFixed(3) + ')'; g.lineWidth = Math.max(0.4, H * 0.045);
+                g.beginPath(); g.ellipse(L * 0.3, 0, L * 0.3, H * 1.05, 0, -1.25, 1.25); g.stroke();
+                for (i = 0; i < 5; i++) { f = (t * 2.2 + i / 5) % 1; g.fillStyle = 'rgba(255,' + (150 + 60 * (1 - f) | 0) + ',60,' + (0.9 * heat * (1 - f)).toFixed(3) + ')';
+                    g.beginPath(); g.arc(L * 0.3 - f * L * 1.3, (i - 2) * H * 0.22 * (0.4 + f), Math.max(0.35, L * 0.02), 0, 6.2832); g.fill(); }
+            }
+        }
+        g.globalCompositeOperation = 'source-over';
+        g.drawImage(im, -L * 0.55, -H / 2, L, H);
+        g.restore();
+    }
+    function overlay(s) {
+        var g = O2; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, OV.width, OV.height); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        // visitors on the visible side: small and calm, the latest three pulse amber
+        SCR = []; var MF = BODY.moon.z >= 0 ? BODY.moon : null;
+        for (var i = 0; i < pings.length; i++) { var p = pings[i], v = toView(p.lat, p.lon); if (v[2] <= 0.08) continue;
+            var x = GX + v[0] * GR, y = GY - v[1] * GR, a = Math.min(1, (v[2] - 0.08) * 4); if (MF && Math.hypot(x - MF.x, y - MF.y) < MF.r + 1) continue; SCR.push([x, y, p]);
+            var r = K * (0.65 + Math.min(1.0, Math.sqrt(p.n) * 0.07)) * (0.6 + 0.4 * v[2]);
+            if (p.live) { var ph = ((s * 1000 + i * 800) % 2400) / 2400; g.strokeStyle = 'rgba(255,201,77,' + (0.55 * (1 - ph) * a).toFixed(3) + ')'; g.lineWidth = 1;
+                g.beginPath(); g.arc(x, y, r * 1.5 + ph * 6 * K, 0, 6.2832); g.stroke(); g.fillStyle = 'rgba(255,205,90,' + a.toFixed(3) + ')'; g.beginPath(); g.arc(x, y, Math.max(r * 1.3, 1.4 * K), 0, 6.2832); g.fill(); continue; }
+            g.fillStyle = 'rgba(150,230,255,' + (0.75 * a).toFixed(3) + ')'; g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill(); }
+        // the off-world visits: a blip on each, and a signal crawling in from each far one (slower the farther)
+        EXTRA = [];
+        var M = BODY.moon, moonVis = M.z >= 0 || Math.hypot(M.x - GX, M.y - GY) > GR + M.r * 0.5;
+        // a point on the part of Cybertron seen through the wormhole (the shader's lens mapping, inverted)
+        var W0 = BODY.cyb, WB = [W0.x + 0.446 * W0.r, W0.y + 0.609 * W0.r];
+        // the Moon's visitor sits in Mare Tranquillitatis (8.5 N, 31.4 E): on the near side, so we only see the blip while
+        // the near side is turned our way (the Moon in front of the Earth shows us its far side)
+        var mla = 8.5 * RAD, mlo = 31.4 * RAD, mex = Math.cos(mla) * Math.sin(mlo), mey = Math.sin(mla), mez = Math.cos(mla) * Math.cos(mlo);
+        var mnx = mex * Math.cos(M.rot) + mez * Math.sin(M.rot), mnz = -mex * Math.sin(M.rot) + mez * Math.cos(M.rot);
+        var MT = { x: M.x + mnx * M.r, y: M.y - mey * M.r, vis: mnz > 0.2 };
+        var spots = [
+            { id: 'm78', x: BODY.m78.x, y: BODY.m78.y, hr: CH * 0.12, period: 14, color: '255,150,140', name: 'M78 NEBULA', dist: '3,000,000 LY', ly: BODY.m78.y + CH * 0.15 },
+            { id: 'cyb', x: WB[0], y: WB[1], hr: BODY.cyb.r * 1.2, period: 9, color: '150,200,255', name: 'CYBERTRON', dist: 'VIA WORMHOLE', ly: BODY.cyb.y + BODY.cyb.r * 1.5 + CH * 0.05, from: 0.95 },
+            { id: 'moon', x: MT.vis ? MT.x : M.x, y: MT.vis ? MT.y : M.y, hr: M.r * 1.3, color: '255,214,120', hidden: !moonVis, noBlip: !MT.vis } ];
+        var showLab = CH >= 110, fs = Math.max(7, 7.4 * K);
+        for (var k = 0; k < spots.length; k++) { var o = spots[k]; if (o.hidden) continue; EXTRA.push({ o: OFFWORLD[o.id], x: o.x, y: o.y, r: o.hr });
+            if (o.noBlip) continue; var bp = ((s + k * 0.7) % 3) / 3; g.strokeStyle = 'rgba(255,205,110,' + (0.5 * (1 - bp)).toFixed(3) + ')'; g.lineWidth = 1; g.beginPath(); g.arc(o.x, o.y, 1.4 * K + bp * 5 * K, 0, 6.2832); g.stroke();
+            g.fillStyle = '#ffd877'; g.beginPath(); g.arc(o.x, o.y, 1.1 * K, 0, 6.2832); g.fill();
+            if (o.id === 'moon') continue;
+            // a tiny survey label under each far object: what it is and how far (the joke is in the units)
+            if (showLab) { g.textAlign = 'center'; g.textBaseline = 'top'; try { g.letterSpacing = (fs * 0.12).toFixed(1) + 'px'; } catch (e) {} g.font = '600 ' + fs.toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace';
+                g.shadowColor = 'rgba(0,0,0,0.85)'; g.shadowBlur = 4 * K; g.fillStyle = 'rgba(225,235,248,0.72)'; var lx = clamp(o.x, g.measureText(o.name).width / 2 + 6, CW - g.measureText(o.name).width / 2 - 6); g.fillText(o.name, lx, o.ly);
+                g.font = '500 ' + (fs * 0.92).toFixed(1) + 'px ui-monospace, Menlo, Consolas, monospace'; g.fillStyle = 'rgba(' + o.color + ',0.75)'; g.fillText(o.dist, lx, o.ly + fs * 1.25); g.shadowBlur = 0; g.shadowColor = 'transparent'; }
+            // the signal comes out of the depth: a path of dots that start tiny and faint (far) and grow toward the Earth (near),
+            // a traveller with a light trail flying along it (Tiga from M78, an Autobot warship out of the wormhole; slower the farther), a ripple where it lands
+            if (o.from) { var C0 = BODY.cyb, aw = Math.atan2(GY - C0.y, GX - C0.x); o = { x: C0.x + Math.cos(aw) * C0.r * 0.85, y: C0.y + Math.sin(aw) * C0.r * 0.85, color: o.color, period: o.period, craft: 'ark' }; } else o.craft = 'tiga';
+            var ang = Math.atan2(o.y - GY, o.x - GX), ex = GX + Math.cos(ang) * GR * 0.72, ey = GY + Math.sin(ang) * GR * 0.72, mx = (o.x + ex) / 2, my = Math.min(o.y, ey) - CH * 0.16;
+            var bz = function (tt) { var u1 = 1 - tt; return [u1 * u1 * o.x + 2 * u1 * tt * mx + tt * tt * ex, u1 * u1 * o.y + 2 * u1 * tt * my + tt * tt * ey]; };
+            for (var j = 1; j < 26; j++) { var tj = Math.pow(j / 26, 0.75), P = bz(tj); g.fillStyle = 'rgba(' + o.color + ',' + (0.05 + 0.3 * tj * tj).toFixed(3) + ')';
+                g.beginPath(); g.arc(P[0], P[1], (0.25 + 0.75 * tj) * K, 0, 6.2832); g.fill(); }
+            var u = ((s + k * 3.1) % o.period) / o.period;
+            if (u < 0.9) { var tt = Math.pow(u / 0.9, 2.2), Q = bz(tt), Q2 = bz(Math.min(1, tt + 0.01)), heading = Math.atan2(Q2[1] - Q[1], Q2[0] - Q[0]);
+                // a faint light trail behind, then the traveller itself, growing as it comes out of the depth
+                for (var m = 6; m >= 1; m--) { var tm = Math.max(0, tt - m * 0.02 * (0.3 + tt)), R2 = bz(tm), al = (1 - m / 7) * (0.15 + 0.5 * tt);
+                    g.fillStyle = 'rgba(' + o.color + ',' + al.toFixed(3) + ')'; g.beginPath(); g.arc(R2[0], R2[1], (0.4 + 1.2 * tm) * K * (1 - m * 0.1), 0, 6.2832); g.fill(); }
+                var grow = Math.min(1, tt / 0.75), sink = tt > 0.75 ? 1 - 0.7 * (tt - 0.75) / 0.25 : 1;   // closer, then down into the atmosphere
+                craft(g, o.craft, Q[0], Q[1], heading, Math.max(0.62, K) * (0.4 + 0.6 * grow) * sink, Math.min(1, u * 12) * (1 - 0.6 * Math.max(0, (tt - 0.85) / 0.15)), s, tt); }
+            else { var w = (u - 0.9) / 0.1, fr = (1.2 + 2.5 * w) * K, fg = g.createRadialGradient(ex, ey, 0, ex, ey, fr);   // touchdown: a small flash and a ripple lying on the globe
+                fg.addColorStop(0, 'rgba(255,245,220,' + (0.9 * (1 - w)).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(' + o.color + ',0)'); g.fillStyle = fg; g.beginPath(); g.arc(ex, ey, fr, 0, 6.2832); g.fill();
+                g.strokeStyle = 'rgba(' + o.color + ',' + (0.6 * (1 - w)).toFixed(3) + ')'; g.lineWidth = 0.8; g.beginPath(); g.ellipse(ex, ey, (1 + 4 * w) * K * 0.69, (1 + 4 * w) * K, ang, 0, 6.2832); g.stroke(); } }
+    }
+    /* ~30 fps, only while the card is on screen and the tab is visible; textures load the first time it shows */
+    var onScreen = false, lastF = 0, ticking = false;
+    if (window.IntersectionObserver) new IntersectionObserver(function (es) { onScreen = es[es.length - 1].isIntersecting; if (onScreen) { loadTextures(); kick(); } }).observe(CARD);
+    else { onScreen = true; }
+    function kick() { if (!ticking) { ticking = true; requestAnimationFrame(tick); } }
+    function tick(t) { ticking = false; if (!onScreen || document.hidden) { lastT = 0; return; } if (t - lastF >= 32) { lastF = t; draw(t); } kick(); }
+    document.addEventListener('visibilitychange', kick);
+
+    function fmtFull(n) { return Math.round(n).toLocaleString('en-US'); }
+    function onData(cc) { kick(); if (LAST) fitCard(LAST.M); }
+    var VA = null; function renderDash() {}
+
+    /* ---------- hover / drag / click ---------- */
+    var tip = document.getElementById('vmtip'), drag = null, tipHold = 0;
+    function hitAt(clientX, clientY) { var rect = CARD.getBoundingClientRect(), x = clientX - rect.left, y = clientY - rect.top, best = null, bd = 12 * Math.max(0.8, K);
+        for (var i = 0; i < SCR.length; i++) { var dd = Math.hypot(SCR[i][0] - x, SCR[i][1] - y); if (dd < bd) { bd = dd; best = { p: SCR[i][2] }; } }
+        if (!best) for (var j = 0; j < EXTRA.length; j++) { if (Math.hypot(EXTRA[j].x - x, EXTRA[j].y - y) < Math.max(EXTRA[j].r, 9)) best = { o: EXTRA[j].o }; }
+        return best; }
+    function showTip(h, clientX, clientY) {
+        if (h.p) { var p = h.p, cc = ISO[p.country]; tip.innerHTML = '<b>' + (cc ? '<i>' + cc + '</i>' : '') + esc(p.where) + '</b><span>' + fmtFull(p.n) + ' visit' + (p.n > 1 ? 's' : '') + (p.t ? ' &middot; ' + fmtAgo(p.t) + ' ago' : '') + '</span>'; }
+        else { var o = h.o; tip.innerHTML = '<b><i>' + o.code + '</i>' + esc(o.where) + '</b><span>' + o.n + ' visit' + (o.n > 1 ? 's' : '') + ' &middot; ' + o.note + '</span>'; }
+        tip.classList.add('show'); var tw = tip.offsetWidth, th = tip.offsetHeight, vw = window.innerWidth || document.body.clientWidth, vh = window.innerHeight || document.body.clientHeight;
+        var tx = clientX + 14, ty = clientY + 14; if (tx + tw > vw - 4) tx = Math.max(4, clientX - 14 - tw); if (ty + th > vh - 4) ty = Math.max(4, clientY - 14 - th);
+        tip.style.left = tx + 'px'; tip.style.top = ty + 'px'; }
+    function hoverMove(e) { if (drag || performance.now() < tipHold) return; var h = hitAt(e.clientX, e.clientY); if (h) showTip(h, e.clientX, e.clientY); else tip.classList.remove('show'); }
+    CARD.addEventListener('pointerdown', function (e) { drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: false }; ROT.vlon = ROT.vlat = 0; try { CARD.setPointerCapture(e.pointerId); } catch (_) {} });
+    CARD.addEventListener('pointermove', function (e) {
+        if (!drag) { if (e.pointerType === 'mouse') hoverMove(e); return; }
+        var dx = e.clientX - drag.lx, dy = e.clientY - drag.ly, now = performance.now(), dtt = Math.max(1, now - drag.t) / 1000;
+        if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 4) { drag.moved = true; tip.classList.remove('show'); }
+        if (drag.moved) { var dg = 57.3 / GR; ROT.lon -= dx * dg; ROT.lat = clamp(ROT.lat + dy * dg, -50, 55); ROT.vlon = -dx * dg / dtt * 0.6; ROT.vlat = dy * dg / dtt * 0.6; ROT.auto = 0;
+            PAR.x = clamp(PAR.x + dx, -GR, GR); PAR.y = clamp(PAR.y + dy, -GR * 0.5, GR * 0.5); kick(); }
+        drag.lx = e.clientX; drag.ly = e.clientY; drag.t = now; });
+    function endDrag(e, cancel) { if (!drag) return; var d0 = drag; drag = null; if (cancel || d0.moved) return;
+        var h = hitAt(e.clientX, e.clientY);
+        if (h && (h.o || e.pointerType !== 'mouse')) { showTip(h, e.clientX, e.clientY); tipHold = performance.now() + 2800; setTimeout(function () { if (performance.now() >= tipHold) tip.classList.remove('show'); }, 2900); return; }
+        openAnalytics(); }
+    CARD.addEventListener('pointerup', function (e) { endDrag(e, false); });
+    CARD.addEventListener('pointercancel', function (e) { endDrag(e, true); });
+    CARD.addEventListener('mouseleave', function () { if (!drag) tip.classList.remove('show'); });
+
+    /* one click = one tab: open without the "noopener" feature (with it, window.open returns null by spec), cut the
+       opener by hand, and fall back to a plain link only if open() throws or returns null */
+    function openAnalytics() { try { var w = window.open(ANALYTICS_URL, '_blank'); if (w) { try { w.opener = null; } catch (e) {} return; } } catch (e) {}
+        try { var a = document.createElement('a'); a.href = ANALYTICS_URL; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {} }
+
+    /* ---------- boot ---------- */
+    initGL(); layout(); resize();
+    if (!window.IntersectionObserver) { loadTextures(); kick(); }
+    CARD.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAnalytics(); } });
+    var rq = 0; function relayout() { if (rq) return; rq = requestAnimationFrame(function () { rq = 0; layout(); resize(); }); }
+    window.addEventListener('resize', relayout); setTimeout(relayout, 250);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+    window.__pfPing = function (city) { var r = CARD.getBoundingClientRect(); for (var i = 0; i < SCR.length; i++) if (SCR[i][2].city === city) return { x: r.left + SCR[i][0], y: r.top + SCR[i][1] }; return null; };
+    window.__pfGlobe = function () { return { lon: ROT.lon, lat: ROT.lat, gl: !!gl, tex: texReady, onGlobe: SCR.length, extra: EXTRA.map(function (e) { return { id: e.o.code, x: Math.round(e.x), y: Math.round(e.y) }; }) }; };
+    loadData();
+})();
+</script>

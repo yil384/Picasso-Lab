@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Submit in Google Search Console under the URL-prefix property https://yil384.github.io/Picasso-Lab/ .
+     List only canonical, standalone pages. The section embeds (home/, people/, pub/, …) are Google Sites
+     embed code, and blogs/reconstructing-a-megakernel-with-pdl/ is a mirror whose canonical is the
+     author's original, so none of those belong here. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://yil384.github.io/Picasso-Lab/blogs/</loc>
+    <lastmod>2026-09-30</lastmod>
+  </url>
+  <url>
+    <loc>https://yil384.github.io/Picasso-Lab/blogs/nvidia-ising/</loc>
+    <lastmod>2026-09-30</lastmod>
+  </url>
+</urlset>

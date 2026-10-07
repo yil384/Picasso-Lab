@@ -43,27 +43,6 @@
             --timeline-node: linear-gradient(135deg, #00629B, #FFCD00);
         }
 
-        [data-theme="dark"] {
-            --bg-primary: #0f0f14;
-            --bg-secondary: #1a1a24;
-            --bg-tertiary: #252532;
-            --text-primary: #e8e6e3;
-            --text-secondary: #b8b5b0;
-            --text-muted: #8a8780;
-            --accent-primary: #4db8e8;
-            --accent-secondary: #FFD633;
-            --accent-tertiary: #34d399;
-            --border-color: #2d2d3a;
-            --shadow: 0 4px 20px rgba(0,0,0,0.3);
-            --shadow-hover: 0 8px 30px rgba(0,0,0,0.4);
-            --gradient-hero: linear-gradient(135deg, #004d7a 0%, #0080b3 100%);
-            --sidebar-bg: #13131c;
-            --glass-bg: rgba(26,26,36,0.75);
-            --glass-border: rgba(255,255,255,0.08);
-            --hero-bg: #08070f;
-            --timeline-line: #2d2d3a;
-        }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -191,29 +170,6 @@
             stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
             flex-shrink: 0;
         }
-
-        .theme-toggle {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            padding: 0.6rem 0.8rem;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.25s ease;
-            width: 100%;
-            text-align: center;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-        .theme-toggle svg {
-            width: 16px; height: 16px;
-            stroke: currentColor; fill: none;
-            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-        }
-        .theme-toggle:hover { background: var(--accent-primary); color: #fff; }
 
         .mobile-menu-btn {
             display: none;
@@ -355,10 +311,9 @@
             font-weight: 700;
             font-size: 0.95rem;
             box-shadow: 0 8px 24px rgba(0,0,0,0.16);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: box-shadow 0.2s ease;
         }
         .hero-action:hover {
-            transform: translateY(-2px);
             box-shadow: 0 10px 28px rgba(0,0,0,0.2);
             text-decoration: none;
         }
@@ -471,7 +426,7 @@
             position: relative;
             background: var(--bg-secondary);
             border: none;
-            overflow: visible;
+            overflow: hidden;
         }
         .announcement::after {
             content: '';
@@ -528,7 +483,6 @@
         .announcement-actions a:hover {
             color: var(--accent-primary);
             background: var(--bg-secondary);
-            transform: translateY(-1px);
             text-decoration: none;
         }
         .announcement-actions a.primary:hover {
@@ -608,7 +562,6 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .timeline-lecture:hover {
-            transform: translateX(4px);
             box-shadow: var(--shadow-hover);
         }
         .lecture-date {
@@ -728,7 +681,6 @@
             transition: transform 0.25s ease, box-shadow 0.25s ease;
         }
         .staff-card:hover {
-            transform: translateY(-4px);
             box-shadow: var(--shadow-hover);
         }
         .staff-avatar {
@@ -867,31 +819,13 @@
         .toc h3 { margin-bottom: 0.75rem; font-size: 1rem; font-weight: 700; }
         .toc ul { list-style: none; padding-left: 0; }
         .toc li { margin-bottom: 0.4rem; }
-        .toc a { color: var(--text-secondary); font-size: 0.95rem; }
+        .toc a { color: var(--text-secondary); font-size: 0.95rem; cursor: pointer; }
         .toc a:hover { color: var(--accent-primary); }
 
         /* ===== Alert boxes ===== */
         .alert { padding: 1rem 1.5rem; border-radius: 12px; margin: 1rem 0; }
         .alert-info { background: rgba(37,99,235,0.08); border: 1px solid var(--accent-primary); }
         .alert-warning { background: rgba(245,158,11,0.08); border: 1px solid var(--label-survey); }
-
-        /* ===== Calendar ===== */
-        .oh-cal { width: 100%; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); background: var(--bg-card); border: 1px solid var(--border); }
-        .oh-cal-head { display: grid; grid-template-columns: 56px repeat(5, 1fr); background: var(--bg-secondary); border-bottom: 1px solid var(--border); }
-        .oh-cal-head span { padding: 10px 6px; text-align: center; font: 600 11px/1 var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); }
-        .oh-cal-body { display: grid; grid-template-columns: 56px repeat(5, 1fr); }
-        .oh-times { display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        .oh-time { height: 48px; display: flex; align-items: flex-start; padding: 4px 8px 0; font: 500 10px/1 var(--font-sans); color: var(--text-secondary); opacity: .6; }
-        .oh-day-col { position: relative; border-right: 1px solid var(--border); min-height: 192px; }
-        .oh-day-col:last-child { border-right: none; }
-        .oh-row-lines { position: absolute; inset: 0; pointer-events: none; }
-        .oh-row-lines div { height: 48px; border-bottom: 1px solid var(--border); opacity: .4; }
-        .oh-event { position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 6px 8px; font: 600 11px/1.35 var(--font-sans); cursor: default; transition: opacity .15s; }
-        .oh-event:hover { opacity: .85; }
-        .oh-event .oh-name { font-size: 11px; font-weight: 700; }
-        .oh-event .oh-loc  { font-size: 10px; opacity: .75; margin-top: 3px; }
-        .oh-event.color-a { background: rgba(99,179,237,.18); border: 1px solid rgba(99,179,237,.45); color: #90cdf4; }
-        .oh-event.color-b { background: rgba(154,117,234,.18); border: 1px solid rgba(154,117,234,.45); color: #c4b5fd; }
 
         /* ===== General ===== */
         a { color: var(--accent-primary); text-decoration: none; }
@@ -908,80 +842,6 @@
         ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
         li { margin-bottom: 0.5rem; }
         .highlight { background: linear-gradient(120deg, #ffeaa7 0%, #fdcb6e 100%); padding: 0 0.2rem; border-radius: 3px; }
-        [data-theme="dark"] .highlight { background: linear-gradient(120deg, #6c5ce7 0%, #a29bfe 100%); }
-
-        /* ===== Floating Quick Links (H) ===== */
-        .floating-links {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            z-index: 999;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0.4rem;
-        }
-        .floating-links-items {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            align-items: flex-end;
-            opacity: 0;
-            transform: translateY(10px);
-            pointer-events: none;
-            transition: all 0.3s ease;
-        }
-        .floating-links.open .floating-links-items {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-        .floating-link-item {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            padding: 0.5rem 0.9rem;
-            border-radius: 24px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-decoration: none;
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-        }
-        .floating-link-item:hover {
-            color: var(--accent-primary);
-            box-shadow: var(--shadow-hover);
-            text-decoration: none;
-        }
-        .floating-link-item svg {
-            width: 14px; height: 14px;
-            stroke: currentColor; fill: none;
-            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-        }
-        .floating-trigger {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            background: var(--gradient-hero);
-            border: none;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 16px rgba(102,126,234,0.4);
-            transition: transform 0.3s ease;
-        }
-        .floating-trigger:hover { transform: scale(1.1); }
-        .floating-links.open .floating-trigger { transform: rotate(45deg); }
-        .floating-trigger svg {
-            width: 22px; height: 22px;
-            stroke: currentColor; fill: none;
-            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-        }
 
         /* ===== Scroll Reveal (G) ===== */
         .reveal {
@@ -1037,7 +897,7 @@
             .nav-right { display: none; }
             main { margin-left: 0; padding: 76px 1rem 2rem; }
             .hero-wrapper { margin: 0 -1rem; border-radius: 16px; }
-            .hero-overlay { padding: 3rem 1rem 2.5rem; }
+            .hero-overlay { padding: 3rem 1rem 3.5rem; }   /* the metric cards overlap the hero's foot by 2rem */
             .hero-overlay h1 { font-size: 1.8rem; }
             .metrics-bar { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
             .metric-number { font-size: 1.6rem; }
@@ -1053,7 +913,6 @@
                 justify-content: flex-start;
                 flex-wrap: wrap;
             }
-            .floating-links { bottom: 1rem; right: 1rem; }
         }
     </style>
 </head>
@@ -1077,10 +936,6 @@
                     <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                     Syllabus
                 </a>
-                <a onclick="showPage('assignments', this)">
-                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                    Assignments
-                </a>
                 <a onclick="showPage('schedule', this)">
                     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     Schedule
@@ -1097,17 +952,9 @@
                     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     Staff
                 </a>
-                <a onclick="showPage('officehours', this)">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    Office Hours
-                </a>
             </nav>
             <div class="nav-right">
                 <div class="external-links">
-                    <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">
-                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Instructor
-                    </a>
                     <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">
                         <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
                         Course Drive
@@ -1121,10 +968,6 @@
                         Gradescope
                     </a>
                 </div>
-                <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
-                    <svg viewBox="0 0 24 24" class="icon-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                    <span>Dark Mode</span>
-                </button>
             </div>
         </div>
     </header>
@@ -1213,33 +1056,158 @@
                 </ul>
             </div>
 
-            <div class="card announcement reveal">
-                <div class="announcement-title">
-                    <h3>Office Hours</h3>
-                    <span class="announcement-date">Weekly</span>
-                </div>
+        </div>
+
+        <!-- ======== SYLLABUS PAGE ======== -->
+        <div id="page-syllabus" class="page">
+            <h1 class="section-header">
+                <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Syllabus
+            </h1>
+
+            <div class="toc reveal">
+                <h3>Table of Contents</h3>
                 <ul>
-                    <li><strong>Zaifeng Pan</strong>: Monday 4:00-5:00pm @ B270A (Email: <a href="mailto:zapan@ucsd.edu">zapan@ucsd.edu</a>)</li>
-                    <li><strong>Zhongkai Yu</strong>: Monday 5:00-6:00pm @ B270A (Email: <a href="mailto:zhy055@ucsd.edu">zhy055@ucsd.edu</a>)</li>
+                    <li><a data-jump="logistics" role="link" tabindex="0">Logistics</a></li>
+                    <li><a data-jump="prerequisites" role="link" tabindex="0">Pre-requisites</a></li>
+                    <li><a data-jump="content" role="link" tabindex="0">Course Content and Format</a></li>
+                    <li><a data-jump="grading" role="link" tabindex="0">Grading</a></li>
+                    <li><a data-jump="rules" role="link" tabindex="0">Classroom Rules</a></li>
                 </ul>
             </div>
 
-            <div class="card announcement reveal">
-                <div class="announcement-title">
-                    <h3>Course Schedule (Tentative)</h3>
-                    <span class="announcement-date">Subject to change</span>
-                </div>
+            <div class="alert alert-info reveal">
+                <strong>This course focuses on systems optimization for LLMs: training/inference bottlenecks (compute, memory, communication) and how key techniques have evolved.</strong>
+            </div>
+
+            <div class="card reveal">
+                <p><strong>Course objectives</strong> (adapted from the slides):</p>
                 <ul>
-                    <li><strong>Lecture materials</strong>: the Drive folder currently includes Lecture 1 through Lecture 15.</li>
-                    <li><strong>Project presentations</strong>: Week 8 through Week 10. Use the <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">project spec</a>, <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">presentation slot sign-up</a>, and <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">candidate topics</a> for presentation instructions and related project links.</li>
-                    <li><strong>Recordings</strong>: available via Canvas Podcast and the course Drive folder.</li>
+                    <li>Understand major systems bottlenecks in LLM training and inference (compute, memory, latency, etc.).</li>
+                    <li>Gain a broad view of key research topics and trends in LLM efficiency, and be able to read and critically evaluate recent papers.</li>
+                    <li>Understand how state-of-the-art techniques evolved over time and the trade-offs behind them.</li>
+                </ul>
+                <p><strong>Course structure (tentative)</strong>: Foundation models (~3 lectures) + Training (~4 lectures) + project preparation and presentations.</p>
+            </div>
+
+            <h2 id="logistics" class="reveal" style="margin-top:1.5rem;">Logistics</h2>
+            <div class="card reveal">
+                <ul>
+                    <li><strong>Course</strong>: CSE 291P -- LLM System Optimization</li>
+                    <li><strong>Instructor</strong>: <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Yufei Ding</a> (Email: <a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a>, by appointment)</li>
+                    <li><strong>Podcast</strong>: <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Canvas Podcast</a></li>
+                    <li><strong>Piazza</strong>: <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Course Q&amp;A / announcements</a></li>
                 </ul>
             </div>
 
-            <h2 class="section-header reveal" style="margin-top: 2.5rem;">
+            <h2 id="prerequisites" class="reveal">Pre-requisites</h2>
+            <div class="card reveal">
+                <p>This class is an interdisciplinary class covering many up-to-date topics and developments in machine learning, data, and systems. If you have never taken any of the following classes (or equivalent), you might need to allocate more time to prepare yourself.</p>
+                <ul>
+                    <li>MATH 18 (Linear Algebra) or equivalent</li>
+                    <li>CSE 151B (Deep Learning) or equivalent</li>
+                    <li>CSE 132C or CSE 120 (Operating Systems) or equivalent</li>
+                    <li>DSC 102 (Systems for Scalable Analytics) or equivalent; or substantial practical experience with scalable data systems and ML algorithms</li>
+                    <li>Proficiency in Python programming</li>
+                    <li>Knowledge of deep learning and frameworks such as Tensor, PyTorch, HuggingFace</li>
+                </ul>
+                <p><strong>Highly preferred (not required):</strong></p>
+                <ul>
+                    <li>DSC 204A (Scalable Data Analytics)</li>
+                    <li>DSC 240 (Machine Learning)</li>
+                </ul>
+            </div>
+
+            <h2 id="content" class="reveal">Course Content and Format</h2>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Lectures</h3>
+            <div class="card reveal">
+                <ul>
+                    <li>Approximately 15 instructor-led or invited lectures, followed by project preparation and student presentations.</li>
+                    <li>Lecture recordings are provided via <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Canvas Podcast</a> and the <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">course Drive folder</a>.</li>
+                    <li>Course announcements and Q&amp;A are handled on <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a>.</li>
+                </ul>
+            </div>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">In-class Worksheets</h3>
+            <div class="card reveal">
+                <ul>
+                    <li>Paper worksheets are distributed in class; upload a photo to Gradescope within 1 hour after each lecture.</li>
+                    <li>Gradescope Entry Code: <code>RV7PED</code></li>
+                    <li>Grading: Participation 20% + Worksheet scores 10% (only the top-5 worksheet scores are counted).</li>
+                    <li>Piazza bonus: A 5% Piazza bonus will be awarded to the top five students with the most active and high-quality question responses.</li>
+                </ul>
+            </div>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Course Project</h3>
+            <div class="card reveal">
+                <ul>
+                    <li><strong>Project spec (Google Doc)</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>.</li>
+                    <li><strong>Team size</strong>: 5-7 students (subject to the latest course announcement).</li>
+                    <li><strong>Project categories</strong>: Survey / Tool Development / Exploration Project; self-proposed topics are allowed with TA approval.</li>
+                    <li><strong>Proposal for self-proposed topics</strong>: up to 2 pages, due <strong>Feb 6</strong>.</li>
+                    <li><strong>Team registration</strong>: <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">Presentation slot sign-up</a>.</li>
+                    <li><strong>Topic list</strong>: <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">Candidate topics</a>.</li>
+                    <li><strong>Final report</strong>: due <strong>March 18</strong>.</li>
+                    <li><strong>Grading</strong>: Presentation 30% (20% of which is from in-class peer evaluation) + Report 30% (10% of which is from within-team peer grading) + 10% participation in peer grading activities.</li>
+                    <li><strong>Survey score cap</strong>: Survey projects can receive at most 60% of the 70% project component.</li>
+                </ul>
+            </div>
+
+            <h2 id="grading" class="reveal">Grading</h2>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Components</h3>
+            <div class="card reveal">
+                <ul>
+                    <li><strong>Course Participation + Worksheet</strong>: 30%</li>
+                    <li><strong>Course Project</strong> (group of 5-7): 70%</li>
+                </ul>
+            </div>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Notes</h3>
+            <div class="card reveal">
+                <ul>
+                    <li>Worksheet: only the top-5 worksheet scores count; all other details follow in-class and Gradescope announcements.</li>
+                    <li>Project: includes in-class presentation, final report, and peer grading (see "Course Project" above).</li>
+                </ul>
+            </div>
+
+            <h2 id="rules" class="reveal">Classroom Rules</h2>
+            <div class="card reveal">
+                <ul>
+                    <li>Students are encouraged to actively participate in class and on <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a>.</li>
+                    <li>Worksheet uploads and project submission policies follow in-class and Gradescope announcements.</li>
+                    <li>Please review UCSD's honor code and policies on <a href="https://academicintegrity.ucsd.edu/" target="_blank">academic integrity</a></li>
+                    <li>Please review UCSD's <a href="https://ucsd.edu/about/principles.html" target="_blank">principles of community</a></li>
+                    <li>Harassment, discrimination, or intimidation of any form will not be tolerated</li>
+                </ul>
+            </div>
+
+            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Academic Integrity</h3>
+            <div class="card reveal">
+                <ul>
+                    <li>It is fine to discuss the project and papers at a conceptual level, but do not share implementation code or post your full solutions publicly.</li>
+                    <li>Do not go searching for any code posted online by other students or prior editions.</li>
+                    <li>We will use advanced program analysis tools to compare your code submissions. These go well beyond basic string or syntactic comparisons to catch plagiarism.</li>
+                    <li>If plagiarism is detected in your code or if any other form of academic integrity violation is identified, you will get zero for that component of your score and get downgraded substantially. I will also notify the University authorities for appropriate disciplinary action to be taken, up to and including expulsion from the University.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ======== SCHEDULE PAGE ======== -->
+        <div id="page-schedule" class="page">
+            <h1 class="section-header">
                 <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                Course Schedule
-            </h2>
+                Tentative Schedule
+            </h1>
+
+            <div class="card reveal">
+                <ul>
+                    <li>This schedule is tentative and subject to change.</li>
+                    <li>Lecture PDFs and shared course files are available in the <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">CSE 291P Google Drive folder</a>.</li>
+                    <li>The Drive folder currently includes Lecture 1 through Lecture 15. Student presentation instructions and related project links are maintained in the <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>, <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">presentation slot sign-up</a>, and <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">candidate topics</a>.</li>
+                </ul>
+            </div>
 
             <!-- Timeline Schedule (F) -->
             <div class="timeline">
@@ -1551,7 +1519,7 @@
                             </div>
                             <div class="presentation-item">
                                 <span class="label label-reading">Team 10</span>
-                                <div class="presentation-topic">Survey of Duffusion LLM and Serving Systems</div>
+                                <div class="presentation-topic">Survey of Diffusion LLM and Serving Systems</div>
                                 <div class="lecture-links presentation-links">
                                     <a href="https://docs.google.com/presentation/d/1bJSRGKbe4A5PK5-d951iia3--MkSmW-2XtonhvrkTWg/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
                                 </div>
@@ -1666,7 +1634,7 @@
                             </div>
                             <div class="presentation-item">
                                 <span class="label label-reading">Team 23</span>
-                                <div class="presentation-topic">Survey of Duffusion LLM and Serving Systems</div>
+                                <div class="presentation-topic">Survey of Diffusion LLM and Serving Systems</div>
                                 <div class="lecture-links presentation-links">
                                     <a href="https://docs.google.com/presentation/d/1EhkkMowSjCqp0Qc768bZyFdKK0LzM2HxYGyeEwkIDt4/edit?usp=sharing" target="_blank"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Slides</a>
                                 </div>
@@ -1712,220 +1680,6 @@
             </div>
         </div>
 
-        <!-- ======== SYLLABUS PAGE ======== -->
-        <div id="page-syllabus" class="page">
-            <h1 class="section-header">
-                <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                Syllabus
-            </h1>
-
-            <div class="toc reveal">
-                <h3>Table of Contents</h3>
-                <ul>
-                    <li><a href="#logistics">Logistics</a></li>
-                    <li><a href="#prerequisites">Pre-requisites</a></li>
-                    <li><a href="#content">Course Content and Format</a></li>
-                    <li><a href="#grading">Grading</a></li>
-                    <li><a href="#rules">Classroom Rules</a></li>
-                </ul>
-            </div>
-
-            <div class="alert alert-info reveal">
-                <strong>This course focuses on systems optimization for LLMs: training/inference bottlenecks (compute, memory, communication) and how key techniques have evolved.</strong>
-            </div>
-
-            <div class="card reveal">
-                <p><strong>Course objectives</strong> (adapted from the slides):</p>
-                <ul>
-                    <li>Understand major systems bottlenecks in LLM training and inference (compute, memory, latency, etc.).</li>
-                    <li>Gain a broad view of key research topics and trends in LLM efficiency, and be able to read and critically evaluate recent papers.</li>
-                    <li>Understand how state-of-the-art techniques evolved over time and the trade-offs behind them.</li>
-                </ul>
-                <p><strong>Course structure (tentative)</strong>: Foundation models (~3 lectures) + Training (~4 lectures) + project preparation and presentations.</p>
-            </div>
-
-            <h2 id="logistics" class="reveal" style="margin-top:1.5rem;">Logistics</h2>
-            <div class="card reveal">
-                <ul>
-                    <li><strong>Course</strong>: CSE 291P -- LLM System Optimization</li>
-                    <li><strong>Instructor</strong>: <a href="https://yufeiding.ucsd.edu/people/prof-yufei-ding" target="_blank">Yufei Ding</a> (Email: <a href="mailto:yufeiding@ucsd.edu">yufeiding@ucsd.edu</a>, by appointment)</li>
-                    <li><strong>Podcast</strong>: <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Canvas Podcast</a></li>
-                    <li><strong>Piazza</strong>: <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Course Q&amp;A / announcements</a></li>
-                </ul>
-            </div>
-
-            <h2 id="prerequisites" class="reveal">Pre-requisites</h2>
-            <div class="card reveal">
-                <p>This class is an interdisciplinary class covering many up-to-date topics and developments in machine learning, data, and systems. If you have never taken any of the following classes (or equivalent), you might need to allocate more time to prepare yourself.</p>
-                <ul>
-                    <li>MATH 18 (Linear Algebra) or equivalent</li>
-                    <li>CSE 151B (Deep Learning) or equivalent</li>
-                    <li>CSE 132C or CSE 120 (Operating Systems) or equivalent</li>
-                    <li>DSC 102 (Systems for Scalable Analytics) or equivalent; or substantial practical experience with scalable data systems and ML algorithms</li>
-                    <li>Proficiency in Python programming</li>
-                    <li>Knowledge of deep learning and frameworks such as Tensor, PyTorch, HuggingFace</li>
-                </ul>
-                <p><strong>Highly preferred (not required):</strong></p>
-                <ul>
-                    <li>DSC 204A (Scalable Data Analytics)</li>
-                    <li>DSC 240 (Machine Learning)</li>
-                </ul>
-            </div>
-
-            <h2 id="content" class="reveal">Course Content and Format</h2>
-
-            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Lectures</h3>
-            <div class="card reveal">
-                <ul>
-                    <li>Approximately 15 instructor-led or invited lectures, followed by project preparation and student presentations.</li>
-                    <li>Lecture recordings are provided via <a href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">Canvas Podcast</a> and the <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">course Drive folder</a>.</li>
-                    <li>Course announcements and Q&amp;A are handled on <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a>.</li>
-                </ul>
-            </div>
-
-            <h3 class="reveal" style="margin:1rem 0 0.5rem;">In-class Worksheets</h3>
-            <div class="card reveal">
-                <ul>
-                    <li>Paper worksheets are distributed in class; upload a photo to Gradescope within 1 hour after each lecture.</li>
-                    <li>Gradescope Entry Code: <code>RV7PED</code></li>
-                    <li>Grading: Participation 20% + Worksheet scores 10% (only the top-5 worksheet scores are counted).</li>
-                    <li>Piazza bonus: A 5% Piazza bonus will be awarded to the top five students with the most active and high-quality question responses.</li>
-                </ul>
-            </div>
-
-            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Course Project</h3>
-            <div class="card reveal">
-                <ul>
-                    <li><strong>Project spec (Google Doc)</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>.</li>
-                    <li><strong>Team size</strong>: 5-7 students (subject to the latest course announcement).</li>
-                    <li><strong>Project categories</strong>: Survey / Tool Development / Exploration Project; self-proposed topics are allowed with TA approval.</li>
-                    <li><strong>Proposal for self-proposed topics</strong>: up to 2 pages, due <strong>Feb 6</strong>.</li>
-                    <li><strong>Grading</strong>: Presentation 30% (20% of which is from in-class peer evaluation) + Report 30% (10% of which is from within-team peer grading) + 10% participation in peer grading activities.</li>
-                    <li><strong>Survey score cap</strong>: Survey projects can receive at most 60% of the 70% project component.</li>
-                </ul>
-            </div>
-
-            <h2 id="grading" class="reveal">Grading</h2>
-
-            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Components</h3>
-            <div class="card reveal">
-                <ul>
-                    <li><strong>Course Participation + Worksheet</strong>: 30%</li>
-                    <li><strong>Course Project</strong> (group of 5-7): 70%</li>
-                </ul>
-            </div>
-
-            <h3 class="reveal" style="margin:1rem 0 0.5rem;">Notes</h3>
-            <div class="card reveal">
-                <ul>
-                    <li>Worksheet: only the top-5 worksheet scores count; all other details follow in-class and Gradescope announcements.</li>
-                    <li>Project: includes in-class presentation, final report, and peer grading (see "Course Project" above).</li>
-                </ul>
-            </div>
-
-            <h2 id="rules" class="reveal">Classroom Rules</h2>
-            <div class="card reveal">
-                <ul>
-                    <li>Students are encouraged to actively participate in class and on <a href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">Piazza</a>.</li>
-                    <li>Worksheet uploads and project submission policies follow in-class and Gradescope announcements.</li>
-                    <li>Please review UCSD's honor code and policies on <a href="https://academicintegrity.ucsd.edu/" target="_blank">academic integrity</a></li>
-                    <li>Please review UCSD's <a href="https://ucsd.edu/about/principles.html" target="_blank">principles of community</a></li>
-                    <li>Harassment, discrimination, or intimidation of any form will not be tolerated</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- ======== ASSIGNMENTS PAGE ======== -->
-        <div id="page-assignments" class="page">
-            <h1 class="section-header">
-                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                Worksheets &amp; Project
-            </h1>
-
-            <div class="card reveal">
-                <h3>In-class Worksheets (30%)</h3>
-                <ul>
-                    <li><strong>Submission</strong>: upload a photo of your worksheet to Gradescope within 1 hour after class.</li>
-                    <li><strong>Entry Code</strong>: <code>RV7PED</code></li>
-                    <li><strong>Scoring</strong>: Participation 20% + Worksheets 10% (only top-5 worksheet scores are counted).</li>
-                    <li><strong>Piazza bonus</strong>: the top 5 most active and helpful students on Piazza receive a 5% bonus (for participation).</li>
-                </ul>
-            </div>
-
-            <div class="card reveal">
-                <h3>Course Project (70%, group of 5-7)</h3>
-                <ul>
-                    <li><strong>Categories</strong>: Paper Survey / Paper Reproduction / Self-proposed topic.</li>
-                    <li><strong>Project Spec</strong>: <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>.</li>
-                    <li><strong>Team size</strong>: 5-7 students.</li>
-                    <li><strong>Proposal (for self-proposed topics)</strong>: up to 2 pages, due <strong>Feb 6</strong>.</li>
-                    <li><strong>Team registration</strong>: <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">Presentation slot sign-up</a>.</li>
-                    <li><strong>Topic list</strong>: <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">Candidate topics</a>.</li>
-                    <li><strong>Presentation</strong>: 30% (20% of the presentation score is based on in-class peer evaluation).</li>
-                    <li><strong>Final report (due March 18)</strong>: 30% (10% of the report score is based on within-team peer grading).</li>
-                    <li><strong>Participation in peer grading</strong>: 10% (for contributing to peer evaluations).</li>
-                </ul>
-            </div>
-
-            <h2 class="reveal">Instructions and Caveats</h2>
-            <div class="card reveal">
-                <h3>Academic Integrity</h3>
-                <ul>
-                    <li>It is fine to discuss the project and papers at a conceptual level, but do not share implementation code or post your full solutions publicly.</li>
-                    <li>Do not go searching for any code posted online by other students or prior editions.</li>
-                    <li>We will use advanced program analysis tools to compare your code submissions. These go well beyond basic string or syntactic comparisons to catch plagiarism.</li>
-                    <li>If plagiarism is detected in your code or if any other form of academic integrity violation is identified, you will get zero for that component of your score and get downgraded substantially. I will also notify the University authorities for appropriate disciplinary action to be taken, up to and including expulsion from the University.</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- ======== SCHEDULE PAGE ======== -->
-        <div id="page-schedule" class="page">
-            <h1 class="section-header">
-                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                Tentative Schedule
-            </h1>
-
-            <div class="card reveal">
-                <ul>
-                    <li>This schedule is tentative and subject to change.</li>
-                    <li>Lecture PDFs and shared course files are available in the <a href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">CSE 291P Google Drive folder</a>.</li>
-                    <li>The Drive folder currently includes Lecture 1 through Lecture 15. Student presentation instructions and related project links are maintained in the <a href="https://docs.google.com/document/d/1nWZ6Jvnxwqw3Dz92U7a4PhQaV8oKlkdcRcoKHbwtkdQ/edit?tab=t.0" target="_blank">CSE291P Project Spec</a>, <a href="https://docs.google.com/spreadsheets/d/1-Er_nHKhsdJwpBaIXbLsLrdJvsr18tp9SoWzrwJyjDE/edit?gid=847391235#gid=847391235" target="_blank">presentation slot sign-up</a>, and <a href="https://docs.google.com/spreadsheets/d/1V6c_2RL8cGeocBMk-oug1TY9O352abAruqFpWTtflZQ/edit?gid=0#gid=0" target="_blank">candidate topics</a>.</li>
-                </ul>
-            </div>
-
-            <div class="card reveal">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Week</th>
-                            <th>Topic</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>L1</td><td>LLM API Usage + Tokenization</td></tr>
-                        <tr><td>L2</td><td>Transformer Model Architecture Variants</td></tr>
-                        <tr><td>L3</td><td>Transformer Model Architecture Variants (Part II)</td></tr>
-                        <tr><td>L4</td><td>Distributed LLM Training: Foundations</td></tr>
-                        <tr><td>L5</td><td>Distributed Training: Data Parallelism (ZeRO-1/2/3)</td></tr>
-                        <tr><td>L6</td><td>Distributed Training: Pipeline Parallelism + Tensor Parallelism</td></tr>
-                        <tr><td>L7</td><td>Distributed Training: Context Parallelism (CP)</td></tr>
-                        <tr><td>L8</td><td>LLM Serving: Speculative Decoding</td></tr>
-                        <tr><td>L9</td><td>Invited Talk: Machine Learning Compiler (Yue Guan)</td></tr>
-                        <tr><td>L10</td><td>Invited Talk: RL Intro for System Designers (Guyue Huang)</td></tr>
-                        <tr><td>L11</td><td>Invited Talk: FlexAttention and CUDAGraph (Boyuan Feng)</td></tr>
-                        <tr><td>L12</td><td>LLM Quantization</td></tr>
-                        <tr><td>L13</td><td>LLM Serving: Scheduling, KV Management, and Kernel Optimization</td></tr>
-                        <tr><td>L14</td><td>MoE and MoE Serving System</td></tr>
-                        <tr><td>L15</td><td>Invited Talk: Triton, Gluon, and the Future of Tile-Based Programming Models (Keren Zhou)</td></tr>
-                        <tr><td>Week 8</td><td>Project resources and student presentations (Feb 26: Teams 1-7)</td></tr>
-                        <tr><td>Week 9</td><td>Student presentations (Mar 3: Teams 8-14; Mar 5: Teams 15-21)</td></tr>
-                        <tr><td>Week 10</td><td>Student presentations (Mar 10: Teams 22-28)</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
         <!-- ======== RESOURCES PAGE ======== -->
         <div id="page-resources" class="page">
             <h1 class="section-header">
@@ -1936,9 +1690,9 @@
             <div class="toc reveal">
                 <h3>Table of Contents</h3>
                 <ul>
-                    <li><a href="#books">Book, Related Documentation, and Courses</a></li>
-                    <li><a href="#materials">Materials</a></li>
-                    <li><a href="#wellness">Wellness Resources</a></li>
+                    <li><a data-jump="books" role="link" tabindex="0">Book, Related Documentation, and Courses</a></li>
+                    <li><a data-jump="materials" role="link" tabindex="0">Materials</a></li>
+                    <li><a data-jump="wellness" role="link" tabindex="0">Wellness Resources</a></li>
                 </ul>
             </div>
 
@@ -2077,30 +1831,10 @@
                     <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </div>
                 <div class="faq-answer">
-                    <p>Grades will be displayed on Gradescope for the written and autograded portions for all assignments (homeworks, reading summaries, and exams).</p>
+                    <p>Grades will be displayed on Gradescope.</p>
                 </div>
             </div>
 
-            <div class="faq-item reveal">
-                <div class="faq-question" onclick="toggleFaq(this)">
-                    Q: I noticed a mistake in the grading of the written portion of my homework. How can I get this fixed?
-                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                </div>
-                <div class="faq-answer">
-                    <p>To get this fixed, you must submit a regrade request via Gradescope before the regrade deadline. This is known as the regrade request window. We unfortunately will not accept any regrades after the window has closed. All regrade deadline dates are posted on the same Ed post that releases the assignment grades and solutions.</p>
-                </div>
-            </div>
-
-            <div class="faq-item reveal">
-                <div class="faq-question" onclick="toggleFaq(this)">
-                    Q: This is my first time being a scribe. I'm not too sure what my role is.
-                    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                </div>
-                <div class="faq-answer">
-                    <p>First off, we're glad that you're taking some time to understand our expectations! The expectations from a scribe are simple: the scribe should faithfully capture the professor's explanations in the lecture. We expect the notes to have the same structure/main sections as the slides, and many similar wordings as well. Additionally, the notes should also have helpful examples given by the professor in the class, additional context for different topics when needed, etc. The TAs will assess your notes based on the contents in the slides.</p>
-                    <p>You should not, however, try to rearrange the content as you see fit, or add in material from the additional readings provided. The scribe notes do not have to be a self-contained document on the topic - we're only looking for you to capture what was taught in class.</p>
-                </div>
-            </div>
         </div>
 
         <!-- ======== STAFF PAGE ======== -->
@@ -2161,85 +1895,6 @@
             </div>
         </div>
 
-        <!-- ======== OFFICE HOURS PAGE ======== -->
-        <div id="page-officehours" class="page">
-            <h1 class="section-header">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Office Hours
-            </h1>
-
-            <div class="card reveal">
-                <p>You are welcome to show up to any office hours. Please see the calendar for office hour times and locations.</p>
-            </div>
-
-            <h2 class="reveal">Office Hours Calendar</h2>
-            <div class="reveal">
-            <div class="oh-cal">
-                <div class="oh-cal-head">
-                    <span></span>
-                    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span>
-                </div>
-                <div class="oh-cal-body">
-                    <div class="oh-times">
-                        <div class="oh-time">3 PM</div>
-                        <div class="oh-time">4 PM</div>
-                        <div class="oh-time">5 PM</div>
-                        <div class="oh-time">6 PM</div>
-                    </div>
-                    <div class="oh-day-col">
-                        <div class="oh-row-lines"><div></div><div></div><div></div><div></div></div>
-                        <div class="oh-event color-a" style="top:48px;height:46px;">
-                            <div class="oh-name">Zaifeng Pan</div>
-                            <div class="oh-loc">4:00–5:00 PM &middot; B270A</div>
-                        </div>
-                        <div class="oh-event color-b" style="top:96px;height:46px;">
-                            <div class="oh-name">Zhongkai Yu</div>
-                            <div class="oh-loc">5:00–6:00 PM &middot; B270A</div>
-                        </div>
-                    </div>
-                    <div class="oh-day-col"><div class="oh-row-lines"><div></div><div></div><div></div><div></div></div></div>
-                    <div class="oh-day-col"><div class="oh-row-lines"><div></div><div></div><div></div><div></div></div></div>
-                    <div class="oh-day-col"><div class="oh-row-lines"><div></div><div></div><div></div><div></div></div></div>
-                    <div class="oh-day-col"><div class="oh-row-lines"><div></div><div></div><div></div><div></div></div></div>
-                </div>
-            </div>
-            </div>
-
-            <h2 class="reveal" style="margin-top: 2rem;">Quick Reference</h2>
-            <div class="card reveal">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Staff</th>
-                            <th>Day/Time</th>
-                            <th>Location</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Yufei Ding (Instructor)</td>
-                            <td>By appointment</td>
-                            <td>--</td>
-                        </tr>
-                        <tr>
-                            <td>Zaifeng Pan</td>
-                            <td>Monday 4:00-5:00 pm</td>
-                            <td>B270A</td>
-                        </tr>
-                        <tr>
-                            <td>Zhongkai Yu</td>
-                            <td>Monday 5:00-6:00 pm</td>
-                            <td>B270A</td>
-                        </tr>
-                        <tr>
-                            <td>Jixuan Ruan</td>
-                            <td>--</td>
-                            <td>--</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </main>
 
     <!-- Footer -->
@@ -2253,31 +1908,6 @@
             <a href="https://www.gradescope.com/courses/1211750" target="_blank">Gradescope (Entry Code: RV7PED)</a>
         </p>
     </footer>
-
-    <!-- Floating Quick Links (H) -->
-    <div class="floating-links" id="floatingLinks">
-        <div class="floating-links-items">
-            <a class="floating-link-item" href="https://drive.google.com/drive/folders/12YyaIhRsSVn0mHIoWen1e9EPJbX-j3Yd?usp=sharing" target="_blank" rel="noopener">
-                <svg viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7v10"/></svg>
-                Course Drive
-            </a>
-            <a class="floating-link-item" href="https://piazza.com/class/mk1r7un7xg85bw" target="_blank">
-                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                Piazza
-            </a>
-            <a class="floating-link-item" href="https://www.gradescope.com/courses/1211750" target="_blank">
-                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                Gradescope
-            </a>
-            <a class="floating-link-item" href="https://podcast.ucsd.edu/watch/wi26/cse291p_b00/" target="_blank">
-                <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Podcast
-            </a>
-        </div>
-        <button class="floating-trigger" onclick="document.getElementById('floatingLinks').classList.toggle('open')">
-            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
-    </div>
 
     <script>
     // Hero is now pure CSS animated mesh gradient -- no canvas JS needed.
@@ -2348,27 +1978,29 @@
         }
     }
 
-    // ===== Theme Toggle =====
-    function toggleTheme() {
-        const body = document.body;
-        const btn = document.getElementById('themeBtn');
-        if (body.getAttribute('data-theme') === 'dark') {
-            body.removeAttribute('data-theme');
-            btn.querySelector('span').textContent = 'Dark Mode';
-            btn.querySelector('svg').innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-            localStorage.setItem('theme', 'light');
-        } else {
-            body.setAttribute('data-theme', 'dark');
-            btn.querySelector('span').textContent = 'Light Mode';
-            btn.querySelector('svg').innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-            localStorage.setItem('theme', 'dark');
-        }
-    }
-
     // ===== Mobile Menu =====
     function toggleMobileMenu() {
         document.getElementById('mainNav').classList.toggle('open');
     }
+
+    // ===== Table of contents =====
+    // Google Sites swallows clicks on href="#..." links, so the entries carry data-jump instead
+    document.addEventListener('click', function(e) {
+        var a = e.target.closest && e.target.closest('[data-jump]');
+        if (!a) return;
+        var t = document.getElementById(a.dataset.jump);
+        if (!t) return;
+        // layout position (a heading still waiting for its reveal is drawn 24px lower), clear of the
+        // fixed top bar on phones
+        var y = 0;
+        for (var n = t; n; n = n.offsetParent) y += n.offsetTop;
+        var bar = document.querySelector('header').getBoundingClientRect();
+        var top = bar.height < 120 ? bar.height : 0;
+        window.scrollTo({ top: Math.max(0, y - top - 16), behavior: 'smooth' });
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.target.dataset && e.target.dataset.jump) e.target.click();
+    });
 
     // ===== FAQ Accordion =====
     function toggleFaq(element) {
@@ -2377,15 +2009,6 @@
 
     // ===== Init =====
     document.addEventListener('DOMContentLoaded', function() {
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            document.body.setAttribute('data-theme', 'dark');
-            const btn = document.getElementById('themeBtn');
-            btn.querySelector('span').textContent = 'Light Mode';
-            btn.querySelector('svg').innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-        }
-
         // Init scroll reveal
         initReveal();
 

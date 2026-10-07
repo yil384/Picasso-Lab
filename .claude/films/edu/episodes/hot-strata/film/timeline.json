@@ -1,0 +1,163 @@
+{
+ "_": "Strata x 'Patterns behind Chaos' hot-topic film, 32 s. Picture cues (film.js), voice, sounds (Kenney CC0), music (Kevin MacLeod, CC BY).",
+ "fps": 30,
+ "dur": 64.0,
+ "cue": {
+  "hookUp": 4.3,
+  "board": 4.45,
+  "gpu": 6.3,
+  "tokens": 8.2,
+  "pcie": 11.9,
+  "boardBack": 20.2,
+  "random": 20.5,
+  "cost": 26.3,
+  "real": 30.5,
+  "times": 36.2,
+  "bars": 37.45,
+  "barsB": 43.8,
+  "paper": 53.05,
+  "curtain": 61.0,
+  "curtainClosed": 61.45,
+  "logo": 61.35,
+  "end": 64.0
+ },
+ "vo": [
+  {
+   "id": "h1",
+   "t": 0.3
+  },
+  {
+   "id": "h2",
+   "t": 4.6
+  },
+  {
+   "id": "h3",
+   "t": 8.2
+  },
+  {
+   "id": "p1",
+   "t": 12.05
+  },
+  {
+   "id": "h4",
+   "t": 20.5
+  },
+  {
+   "id": "p2",
+   "t": 26.3
+  },
+  {
+   "id": "h5",
+   "t": 30.5
+  },
+  {
+   "id": "p3",
+   "t": 37.6
+  },
+  {
+   "id": "p4",
+   "t": 43.8
+  },
+  {
+   "id": "h6",
+   "t": 53.2
+  },
+  {
+   "id": "p5",
+   "t": 58.0
+  }
+ ],
+ "music": {
+  "f": "music/Investigations.mp3",
+  "start": 0.0,
+  "from": 20.0,
+  "gain": 0.3,
+  "duck": 0.45,
+  "fadeOut": [
+   62.5,
+   64.0
+  ]
+ },
+ "sfx": [
+  {
+   "t": 0.0,
+   "f": "rpg/Audio/bookPlace1.ogg",
+   "g": 0.25
+  },
+  {
+   "t": 4.3,
+   "f": "rpg/Audio/creak1.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 4.45,
+   "f": "rpg/Audio/bookOpen.ogg",
+   "g": 0.4
+  },
+  {
+   "t": 6.3,
+   "f": "imp/Audio/impactPlank_medium_000.ogg",
+   "g": 0.25
+  },
+  {
+   "t": 11.9,
+   "f": "rpg/Audio/creak2.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 12.0,
+   "f": "rpg/Audio/bookPlace2.ogg",
+   "g": 0.4
+  },
+  {
+   "t": 20.2,
+   "f": "rpg/Audio/bookPlace1.ogg",
+   "g": 0.4
+  },
+  {
+   "t": 20.5,
+   "f": "rpg/Audio/bookFlip1.ogg",
+   "g": 0.4
+  },
+  {
+   "t": 30.5,
+   "f": "rpg/Audio/bookFlip3.ogg",
+   "g": 0.4
+  },
+  {
+   "t": 36.2,
+   "f": "imp/Audio/impactPlank_medium_004.ogg",
+   "g": 0.5
+  },
+  {
+   "t": 37.45,
+   "f": "rpg/Audio/bookPlace2.ogg",
+   "g": 0.4
+  },
+  {
+   "t": 43.8,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 53.05,
+   "f": "rpg/Audio/bookPlace1.ogg",
+   "g": 0.4
+  },
+  {
+   "t": 60.95,
+   "f": "rpg/Audio/creak2.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 61.0,
+   "f": "rpg/Audio/cloth1.ogg",
+   "g": 0.45
+  },
+  {
+   "t": 61.4,
+   "f": "rpg/Audio/bookPlace2.ogg",
+   "g": 0.4
+  }
+ ]
+}

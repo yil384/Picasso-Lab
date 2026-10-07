@@ -1,0 +1,36 @@
+{
+ "_": "Style cut v2 of L01-1 (B0-B2 + the logo end card), 25 s. Picture cues (film2.js), voice starts, sounds and music (mix.py --tl timeline2.json). Sounds are files (Kenney CC0) or music (Kevin MacLeod, CC BY 4.0).",
+ "fps": 30,
+ "dur": 25.0,
+ "cue": {
+  "titleUp": 1.90, "flip0": 2.80, "flip0End": 4.20, "slump": 4.25,
+  "march1": 4.50, "heroAside": 4.50, "wave1": 5.70, "pad1": 6.20,
+  "march2": 6.85, "wave2": 7.75, "pad2": 8.05,
+  "march3": 8.70, "wave3": 9.60, "pad3": 9.95,
+  "anderson": 10.65, "curve": 13.90, "flatEnd": 17.90, "jumpEnd": 19.20, "label13": 18.45,
+  "antClimb": 15.40, "antSit": 17.60, "x100": 19.30, "drift": 20.20, "footnote": 21.00,
+  "endHoist": 22.35, "curtain": 22.40, "curtainClosed": 22.85, "logo": 22.75, "end": 25.0
+ },
+ "vo": [
+  {"id": "v01", "t": 0.25}, {"id": "v02", "t": 2.35}, {"id": "v03", "t": 5.25}, {"id": "v04", "t": 6.35},
+  {"id": "v05", "t": 7.30}, {"id": "v06", "t": 8.15}, {"id": "v07", "t": 9.20}, {"id": "v08", "t": 10.05},
+  {"id": "v09", "t": 10.75}, {"id": "v10", "t": 14.30}, {"id": "v11", "t": 20.30}
+ ],
+ "music": {"f": "music/Investigations.mp3", "start": 0.0, "from": 0.0, "gain": 0.32, "duck": 0.45, "fadeOut": [23.6, 25.0]},
+ "sfx": [
+  {"t": 1.90, "f": "rpg/Audio/creak1.ogg", "g": 0.35},
+  {"t": 2.80, "f": "rpg/Audio/bookFlip1.ogg", "g": 0.35}, {"t": 3.06, "f": "rpg/Audio/bookFlip2.ogg", "g": 0.3},
+  {"t": 3.27, "f": "rpg/Audio/bookFlip3.ogg", "g": 0.3}, {"t": 3.43, "f": "rpg/Audio/bookFlip1.ogg", "g": 0.28},
+  {"t": 3.57, "f": "rpg/Audio/bookFlip2.ogg", "g": 0.26}, {"t": 3.68, "f": "rpg/Audio/bookFlip3.ogg", "g": 0.24},
+  {"t": 5.70, "f": "rpg/Audio/bookFlip3.ogg", "g": 0.45}, {"t": 5.85, "f": "rpg/Audio/bookFlip1.ogg", "g": 0.35},
+  {"t": 6.20, "f": "imp/Audio/impactPlank_medium_000.ogg", "g": 0.35}, {"t": 6.28, "f": "imp/Audio/impactPlank_medium_001.ogg", "g": 0.3},
+  {"t": 6.36, "f": "imp/Audio/impactPlank_medium_002.ogg", "g": 0.3},
+  {"t": 7.75, "f": "rpg/Audio/bookFlip2.ogg", "g": 0.45}, {"t": 7.90, "f": "rpg/Audio/bookFlip3.ogg", "g": 0.35},
+  {"t": 8.05, "f": "imp/Audio/impactPlank_medium_003.ogg", "g": 0.3},
+  {"t": 9.60, "f": "rpg/Audio/bookFlip1.ogg", "g": 0.5}, {"t": 9.75, "f": "rpg/Audio/bookFlip2.ogg", "g": 0.4},
+  {"t": 9.95, "f": "imp/Audio/impactPlank_medium_004.ogg", "g": 0.45}, {"t": 10.0, "f": "rpg/Audio/cloth3.ogg", "g": 0.4},
+  {"t": 10.65, "f": "rpg/Audio/bookPlace1.ogg", "g": 0.4}, {"t": 13.90, "f": "rpg/Audio/bookOpen.ogg", "g": 0.4},
+  {"t": 22.35, "f": "rpg/Audio/creak2.ogg", "g": 0.3}, {"t": 22.40, "f": "rpg/Audio/cloth1.ogg", "g": 0.45},
+  {"t": 22.80, "f": "rpg/Audio/bookPlace2.ogg", "g": 0.4}
+ ]
+}

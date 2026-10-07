@@ -1,0 +1,9 @@
+# @arthurkatcher - "How a coding agent works" in 40 s + open skill
+URL: https://x.com/arthurkatcher/status/2104198927549604161 · 373 views (2026-10-04) · 40.0 s 1920x1080
+Skill: https://github.com/arthurkatcher/explainer-video (Remotion picture + numpy synth; reference/Video.tsx 40 KB, timeline.json, gen_music.py)
+Evidence: "I asked Opus 5.5 to explain how a coding agent works in 40 seconds. ... one message in Claude Code, 14 minutes." Reply: "here's the skill ... it's remotion for the picture and a small numpy synth for the music."
+Frame viewed (Skillry poster): (session scratchpad)/anim2d/frames2/skillry/arthurkatcher-604161.webp - near-black background, left: "You typed 6 tokens." white, "The model read 273,714." in orange; right: a bar chart of tokens read per turn rising step by step (orange bars, grey bars); tiny HUD labels and a context bar along the bottom. Video not watched.
+Structure (timeline.json): PROMPT 0-4 / CONTEXT 4-10 (system prompt 3,100, tool defs 11,800, CLAUDE.md 2,400, git status 1,100 tokens stack in) / MODEL / HARNESS / LOOP (Grep, Read, Read, Edit, npm test fail, Edit, npm test pass) / COST (re-read counter, cache line) / COMPACTION (bar fills then compacts to a 4,800-token summary) / RECAP. 120 BPM grid, cuts on beats.
+SKILL.md lessons: "One persistent visual thread that accumulates across scenes (the reference uses a context-window bar that fills, then compacts)"; "A number the viewer didn't expect, derived in code from the data so it adds up"; one idea per scene, 4-6 s; hook title in first 2 s; thesis line last.
+Borrow: exactly our subject (context window, tool loop, prompt caching, compaction) and the accumulating-thread + surprise-number devices; timeline.json driving both picture and SFX.
+Avoid: the look - dark background, dot grid, glows, Inter + JetBrains Mono, bar charts: it is the "dashboard" the user rejects.

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sponsors - Picasso Lab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <!--
+    Sponsors page for Google Sites, pasted as a WHOLE-PAGE embed (like Blogs / Projects / Teaching).
+    It replaces the heading + nine separate logo images: on phones Sites stacked those images one
+    per screen at full width (about 3000 px of logos). Here they are one responsive wall.
+    Logos: https://yil384.github.io/Picasso-Lab/sponsors/static/wall/*.webp (trimmed copies of ../static/).
+    --w on each logo = its optical width (wide word marks get more width, square marks less), so
+    all logos read at about the same visual weight.
+  -->
+  <style>
+    :root {
+      --ucsd-blue: #00629B;
+      --ucsd-gold: #FFCD00;
+      --ink: #111827;
+      --text: #24283a;
+      --muted: #66708a;
+      --line: #e5e9f2;
+      --shadow: 0 14px 36px rgba(21, 35, 61, 0.07);
+      --shadow-hover: 0 22px 52px rgba(21, 35, 61, 0.12);
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: #f6f8fb; overflow-x: hidden; }
+    body {
+      min-height: 100%;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--text);
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 52%, #eef4f8 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Hero header: identical in the projects, blogs and teaching pages ── */
+    .hero {
+      background: linear-gradient(135deg, #00629B 0%, #004a76 60%, #003355 100%);
+      padding: 30px 32px 28px;
+      line-height: 1.5;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -60%; right: -8%;
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, rgba(255,205,0,.14), transparent 70%);
+      border-radius: 50%;
+    }
+    .hero::after {
+      content: ''; position: absolute; bottom: -55%; left: 8%;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(255,255,255,.06), transparent 70%);
+      border-radius: 50%;
+    }
+    .hero-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+    .hero-label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .72rem; font-weight: 600; line-height: 1.3;
+      letter-spacing: .06em; text-transform: uppercase;
+      color: #FFCD00; margin-bottom: 8px;
+    }
+    .hero-label svg { width: 14px; height: 14px; stroke: #FFCD00; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .hero h1 { font-size: 2rem; font-weight: 800; line-height: 1.15; color: #fff; letter-spacing: -.03em; margin: 0 0 6px; }
+    .hero p { font-size: .92rem; line-height: 1.55; color: rgba(255,255,255,.72); max-width: 820px; margin: 0; }
+
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 34px 24px 72px; }
+
+    .group + .group { margin-top: 34px; }
+    .group-head {
+      display: flex; align-items: center; gap: 10px;
+      margin: 0 0 14px;
+      font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted);
+    }
+    .group-head::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+    .wall {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin: 0; padding: 0; list-style: none;
+    }
+    .wall li { display: flex; }
+    .wall .logo { flex: 1; }
+    .logo {
+      position: relative;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 132px;
+      padding: 20px 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      transition: box-shadow .22s ease, border-color .2s ease;
+    }
+    .logo:hover, .logo:focus-visible {
+      border-color: rgba(0,98,155,.22);
+      box-shadow: var(--shadow-hover);
+      outline: none;
+    }
+    .logo:focus-visible { box-shadow: 0 0 0 3px rgba(0,98,155,.25), var(--shadow-hover); }
+    .logo { --s: 1.12; }
+    .logo img {
+      display: block;
+      width: calc(var(--w) * var(--s, 1));
+      max-width: 88%;
+      height: auto;
+      flex: none;
+    }
+
+    .thanks {
+      margin: 36px auto 0;
+      max-width: 640px;
+      text-align: center;
+      font-size: .9rem;
+      color: var(--muted);
+      text-wrap: balance;
+    }
+
+    @media (max-width: 760px) {
+      .wall { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .wall li:last-child:nth-child(odd) { grid-column: 1 / -1; }   /* no orphan in a two-column row */
+      .logo { min-height: 112px; padding: 16px 12px; --s: .86; }
+    }
+    @media (max-width: 640px) {
+      .hero {
+        padding:
+          calc(20px + env(safe-area-inset-top))
+          max(20px, calc(env(safe-area-inset-right) + 12px))
+          18px
+          max(20px, calc(env(safe-area-inset-left) + 12px));
+      }
+      .hero h1 { font-size: 1.5rem; }
+      .hero p { font-size: .86rem; }
+      .wrap {
+        padding:
+          24px
+          max(14px, calc(env(safe-area-inset-right) + 8px))
+          calc(84px + env(safe-area-inset-bottom))   /* clears Google's (i) button in the bottom-left corner */
+          max(14px, calc(env(safe-area-inset-left) + 8px));
+      }
+      .group + .group { margin-top: 26px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .logo { transition: none; }
+      .logo:hover { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-label">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+        Picasso Lab
+      </div>
+      <h1>Sponsors</h1>
+      <p>We greatly appreciate the general support from our sponsors.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="group" aria-labelledby="g-gov">
+      <h2 class="group-head" id="g-gov">Government &amp; national laboratories</h2>
+      <ul class="wall">
+        <li><a class="logo" href="https://www.nsf.gov/" target="_blank" rel="noopener" style="--w:68px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/nsf.webp" alt="National Science Foundation" width="280" height="280" loading="lazy"></a></li>
+        <li><a class="logo" href="https://www.energy.gov/" target="_blank" rel="noopener" style="--w:150px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/doe.webp" alt="U.S. Department of Energy" width="375" height="106" loading="lazy"></a></li>
+        <li><a class="logo" href="https://www.pnnl.gov/" target="_blank" rel="noopener" style="--w:132px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/pnnl.webp" alt="Pacific Northwest National Laboratory" width="560" height="245" loading="lazy"></a></li>
+      </ul>
+    </section>
+
+    <section class="group" aria-labelledby="g-ind">
+      <h2 class="group-head" id="g-ind">Industry</h2>
+      <ul class="wall">
+        <li><a class="logo" href="https://www.nvidia.com/" target="_blank" rel="noopener" style="--w:96px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/nvidia.webp" alt="NVIDIA" width="374" height="280" loading="lazy"></a></li>
+        <li><a class="logo" href="https://about.meta.com/" target="_blank" rel="noopener" style="--w:74px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/meta.webp" alt="Meta" width="280" height="279" loading="lazy"></a></li>
+        <li><a class="logo" href="https://www.amazon.science/" target="_blank" rel="noopener" style="--w:136px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/amazon.webp" alt="Amazon" width="560" height="183" loading="lazy"></a></li>
+        <li><a class="logo" href="https://www.samsung.com/" target="_blank" rel="noopener" style="--w:168px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/samsung.webp" alt="Samsung" width="560" height="104" loading="lazy"></a></li>
+        <li><a class="logo" href="https://www.cisco.com/" target="_blank" rel="noopener" style="--w:110px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/cisco.webp" alt="Cisco" width="513" height="280" loading="lazy"></a></li>
+        <li><a class="logo" href="https://www.vmware.com/" target="_blank" rel="noopener" style="--w:100px">
+          <img src="https://yil384.github.io/Picasso-Lab/sponsors/static/wall/vmware.webp" alt="VMware" width="377" height="280" loading="lazy"></a></li>
+      </ul>
+    </section>
+
+    <p class="thanks">Their support makes our work on compilers, ML systems, and quantum computing possible.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# @emollick - recursion explained in nine genre shifts (75 s)
+URL: https://x.com/emollick/status/2103688362960019567 · 70,323 views / 556 likes · 74.9 s 1920x1080 · index: yihui-dev explainers
+Evidence + verbatim prompt: "I had Claude Opus 5.5 make: \"A video explaining recursion, where every explanation about recursion has a radically different video style, make this self-referential & clever & fast moving.\" Nine genre shifts, one prompt..."
+Frames viewed: X poster (session scratchpad)/anim2d/frames2/index-posters/emollick_2103688362960019567.jpg - title card "HOW DO YOU EXPLAIN RECURSION?" condensed white/red type in nested coloured frames. Skillry poster (session scratchpad)/anim2d/frames2/skillry/emollick-019567.webp - a CRT TV with grey static stripes at its sides showing a "kids' tv" segment: rainbow bubble letters "RECURSION TIME!", a pink fluffy googly-eyed puppet and a matryoshka doll on a green hill, a sun with sunglasses holding "6" (DEPTH counter); a genre tab strip at the top: INTRO / CORP / TERM / 8-BIT / DOC / NOIR / kids' tv. Video not watched.
+Borrow: the format idea - each beat of an explanation in a different TV genre, with a persistent depth counter; very fit for comedy; the nested-frame title card reads at phone size.
+Avoid: the genres are pastiches drawn in code (the puppet/doll are flat vector), so craft per genre is shallow.

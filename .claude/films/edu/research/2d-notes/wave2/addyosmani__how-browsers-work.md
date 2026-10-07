@@ -1,0 +1,6 @@
+# @addyosmani - "how browsers work" in 40 s
+URL: https://x.com/addyosmani/status/2103009037164110327 · 215,769 views / 2,404 likes · 40 s 1920x1080 · classifier: education_science, motion_graphics_ui + math_diagram; athemeroy path educational_explainer
+Evidence: "Claude Opus 5.5 drew each frame of this animation in JavaScript." Reply (per athemeroy): most of these demos were one-shot. Prompt not disclosed. A near-copy by @DataChaz got 42k; @kevinle128 and @Hyde_ai3 posted the same topic.
+Frame viewed (athemeroy case thumbnail, mid-video): (session scratchpad)/anim2d/frames2/index-edu/05_2103009037164110327.jpg - pale cream background with soft diagonal yellow stripes; a big retro monitor (blank brown screen) at centre; below it a dark green CPU chip with a cute face (two eyes, blush) wired by circuit traces to floating translucent panels; a stopwatch at left labelled "16.7 ms" (one frame at 60 fps); a small device with coloured tiles at right. Soft, toy-like, rounded.
+Borrow: the hardware-as-character move (the chip has a face), a concrete budget number as a prop (16.7 ms), 40 s length; exactly the length bucket with the best median views.
+Avoid: floating translucent UI panels drift toward "animated web page".

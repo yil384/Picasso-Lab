@@ -51,4 +51,5 @@ The site is hosted via GitHub Pages from the `main` branch. Push to `main` to de
 ## Links
 
 - **Lab website:** [yufeiding.ucsd.edu](https://yufeiding.ucsd.edu)
+- **Research Blog:** [yil384.github.io/Picasso-Lab/blogs/](https://yil384.github.io/Picasso-Lab/blogs/)
 - **GitHub:** [github.com/yil384/Picasso-Lab](https://github.com/yil384/Picasso-Lab)

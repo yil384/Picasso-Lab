@@ -1,0 +1,299 @@
+{
+ "_": "L01 Background 5-min line cut (../SCRIPT.md). vo ids n* = scratch narration (../vo_lines.json, tools/tts.py --rate +4%), c* = Prof. Ding's clips (../clips.json; mix.py CLIPDIR). Each slot >= the longer of EN/ZH + 0.4 s. p* = the camera arrives on panel *.",
+ "fps": 30,
+ "dur": 265.0,
+ "cue": {
+  "title": 14.4,
+  "p1": 16.4,
+  "p2": 38.9,
+  "p3": 47.4,
+  "p4": 56.9,
+  "tape9": 57.9,
+  "trace9": 61.5,
+  "jump9": 64.6,
+  "arith": 68.3,
+  "g13": 72.0,
+  "mirage9": 76.4,
+  "p5": 78.6,
+  "essay": 80.2,
+  "lajolla": 87.4,
+  "ucsd": 91.6,
+  "p6": 98.0,
+  "wave": 98.8,
+  "p7": 104.0,
+  "paper23": 104.8,
+  "digits": 108.6,
+  "x59": 114.6,
+  "partial": 118.4,
+  "slope": 120.4,
+  "either": 123.1,
+  "p8": 129.2,
+  "tape10": 130.2,
+  "fix1": 136.6,
+  "fix2": 140.6,
+  "p9": 144.6,
+  "r1": 145.6,
+  "r2": 149.2,
+  "r3": 152.3,
+  "r4": 155.0,
+  "p10": 157.8,
+  "p11": 171.6,
+  "tape11": 172.5,
+  "box11": 177.4,
+  "right11": 181.4,
+  "p12": 193.7,
+  "alg": 198.3,
+  "hw": 202.0,
+  "times": 204.4,
+  "p13": 206.8,
+  "grid400": 208.6,
+  "rule": 213.0,
+  "teams": 217.1,
+  "books": 222.0,
+  "score": 226.4,
+  "cheap": 231.6,
+  "p14": 235.8,
+  "road": 236.8,
+  "notIncl": 258.3,
+  "endCard": 261.0,
+  "dur": 265.0
+ },
+ "vo": [
+  {
+   "id": "n0",
+   "t": 0.5
+  },
+  {
+   "id": "c1",
+   "t": 6.3
+  },
+  {
+   "id": "n1",
+   "t": 17.2
+  },
+  {
+   "id": "c2",
+   "t": 29.4
+  },
+  {
+   "id": "n2",
+   "t": 39.6
+  },
+  {
+   "id": "c3",
+   "t": 48.0
+  },
+  {
+   "id": "n3a",
+   "t": 59.5
+  },
+  {
+   "id": "n3b",
+   "t": 68.3
+  },
+  {
+   "id": "c4",
+   "t": 76.4
+  },
+  {
+   "id": "n3c",
+   "t": 79.3
+  },
+  {
+   "id": "n3d",
+   "t": 98.5
+  },
+  {
+   "id": "n3e",
+   "t": 104.6
+  },
+  {
+   "id": "n3f",
+   "t": 123.1
+  },
+  {
+   "id": "n4a",
+   "t": 132.0
+  },
+  {
+   "id": "n4b",
+   "t": 145.0
+  },
+  {
+   "id": "c5",
+   "t": 158.3
+  },
+  {
+   "id": "n5a",
+   "t": 174.0
+  },
+  {
+   "id": "c6",
+   "t": 184.9
+  },
+  {
+   "id": "n5b",
+   "t": 194.2
+  },
+  {
+   "id": "n5c",
+   "t": 207.3
+  },
+  {
+   "id": "n5d",
+   "t": 217.1
+  },
+  {
+   "id": "n6",
+   "t": 237.5
+  },
+  {
+   "id": "c7",
+   "t": 247.8
+  },
+  {
+   "id": "n7",
+   "t": 258.3
+  }
+ ],
+ "sfx": [
+  {
+   "t": 16.599999999999998,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 39.1,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 47.6,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 57.1,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 57.9,
+   "f": "rpg/Audio/cloth3.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 64.6,
+   "f": "imp/Audio/impactPlank_medium_002.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 78.8,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 98.2,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 101.2,
+   "f": "rpg/Audio/cloth1.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 104.2,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 114.6,
+   "f": "imp/Audio/impactWood_heavy_000.ogg",
+   "g": 0.25
+  },
+  {
+   "t": 129.39999999999998,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 130.2,
+   "f": "rpg/Audio/cloth3.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 144.79999999999998,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 145.6,
+   "f": "rpg/Audio/bookFlip1.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 158.0,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 171.79999999999998,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 172.5,
+   "f": "rpg/Audio/cloth3.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 193.89999999999998,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 207.0,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 226.4,
+   "f": "imp/Audio/impactPlank_medium_000.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 236.0,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 258.3,
+   "f": "imp/Audio/impactSoft_medium_000.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 261.0,
+   "f": "rpg/Audio/bookPlace1.ogg",
+   "g": 0.3
+  }
+ ],
+ "music": [
+  {
+   "f": "music/Investigations.mp3",
+   "start": 0.0,
+   "from": 0.0,
+   "gain": 0.26,
+   "duck": 0.4,
+   "loop": [
+    22.19,
+    32.3
+   ],
+   "xfade": 2.0,
+   "fadeOut": [
+    262.5,
+    265.0
+   ]
+  }
+ ]
+}

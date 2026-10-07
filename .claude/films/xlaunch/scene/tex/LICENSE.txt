@@ -1,0 +1,2 @@
+Paper textures: ambientCG (https://ambientcg.com), CC0 1.0. Paper001 (fine white paper: colour + normal), Paper003 (creased paper: normal).
+Wood026 (walnut desk: colour + normal + roughness), ambientCG, CC0 1.0.

@@ -1,0 +1,19 @@
+[
+ {"id": "n0", "en": "Remember the first time an AI actually answered you? Our professor does.", "zh": "还记得第一次被 AI 认真回答的那一刻吗？丁老师也记得。"},
+ {"id": "n1", "en": "Rewind to 2017 to 2020. Models were small, and much of the research was about making them even smaller. Some people wondered if AI was heading into another winter.", "zh": "倒回 2017 到 2020 年：模型都不大，很多研究在想办法把它们做得更小。甚至有人担心，AI 又要进入寒冬。"},
+ {"id": "n2", "en": "Then came the bet: just make it larger. More data, more parameters. Sounds easy. It isn't.", "zh": "然后有人押了一个注：做大。更多数据、更多参数。听起来简单，其实不然。"},
+ {"id": "n3a", "en": "This is the chart from her slide. On many tasks, small models score almost nothing. Then, past a certain size, the score jumps.", "zh": "这是她课件上的图：很多任务上，小模型几乎是零分；模型大到某个程度，分数突然跳起来。"},
+ {"id": "n3b", "en": "Take arithmetic. GPT-3 sat near zero, until thirteen billion parameters. Then it jumped.", "zh": "比如算术题：GPT-3 一直几乎零分，到一百三十亿参数，突然跳起来。"},
+ {"id": "n3c", "en": "A physicist had a name for this. In 1972, Philip Anderson published an essay called 'More Is Different.' It started as a lecture he gave in La Jolla in 1967, at UC San Diego, the campus where this course is taught.", "zh": "物理学家早就给这件事起过名字。1972 年，菲利普·安德森发表了一篇文章，题目就叫《More Is Different》，多，就不一样。它最早是 1967 年在拉霍亚的一场讲座，地点就是加州大学圣迭戈分校，也就是开这门课的学校。"},
+ {"id": "n3d", "en": "He was writing about physics, not AI. One water molecule can't make a wave.", "zh": "他写的是物理，不是 AI。一个水分子，掀不起浪。"},
+ {"id": "n3e", "en": "Fair warning: a 2023 paper argues many of these jumps come from all-or-nothing scoring. Get each digit right ninety percent of the time, and a five-digit answer is fully right only fifty-nine percent of the time. Give partial credit, and many jumps turn into slopes.", "zh": "也要说句公道话：2023 年有篇论文认为，很多跳变来自'全对才给分'。每一位数字有 90% 的把握，5 位数整题全对也只有 59%。改成给部分分，很多'突然'就变成了'渐渐'。"},
+ {"id": "n3f", "en": "Either way, you can't fully judge a big model by testing small ones.", "zh": "不管哪种解释，结论都一样：光测小模型，看不全大模型。"},
+ {"id": "n4a", "en": "Bigger also means pricier. Her slide lists the bill. Two corrections in red: those model sizes were never published, and the hundred thousand GPUs are one company's cluster.", "zh": "做大，也意味着更贵。她的课件列了账单。我们用红笔订正两处：那几家模型的大小从没公开过；十万张 GPU 是一家公司一个集群的规模。"},
+ {"id": "n4b", "en": "An estimated hundred million dollars for one top training run. A five-hundred-billion-dollar plan over four years. At that price, saving one percent is a million dollars. And in a university?", "zh": "训一个顶级模型，估计上亿美元；一个计划，四年五千亿美元。这个价位，省 1% 就是一百万美元。那大学里呢？"},
+ {"id": "n5a", "en": "So the slide's punchline, borrowed from a Stanford course: accuracy equals efficiency times resources. Scale is not everything; methods that scale are.", "zh": "所以这一页的重点，借自斯坦福一门课的口号：准确率等于效率乘资源。规模不是一切，能放大的方法才是。"},
+ {"id": "n5b", "en": "Why times, not plus? Over seven years, better algorithms cut the compute for the same image classifier forty-four-fold. Hardware alone gave eleven-fold. And the two multiply.", "zh": "为什么是乘，不是加？七年里，更好的算法让同样水平的图像分类器少用了 44 倍算力；光靠硬件只有 11 倍。两者还能相乘。"},
+ {"id": "n5c", "en": "In 2022, DeepMind trained over four hundred models to find the best split. The rule: double the model, double the data.", "zh": "2022 年，DeepMind 训了 400 多个模型，找最划算的分配。规律是：模型翻一倍，数据也得翻一倍。"},
+ {"id": "n5d", "en": "Same compute as their own 280-billion-parameter giant: a 70-billion model, fed about four times the data. It won on most tests. On a 57-subject exam: about 68 percent, against 60. And a smaller model is cheaper every time someone uses it.", "zh": "和自家 2800 亿参数的大模型同样的算力，改训一个 700 亿的，多喂约四倍数据。结果大多数测试上它赢了：57 科考试，约 68% 对 60%。而且模型小了，之后每一次使用都更省。"},
+ {"id": "n6", "en": "That's this course: where training and serving waste compute, memory and time, and how to win it back. We can teach you the efficiency.", "zh": "这门课讲的，就是训练和推理里，算力、显存、时间浪费在哪，怎么省回来。效率，课上教。"},
+ {"id": "n7", "en": "Compute not included.", "zh": "算力嘛，另计。"}
+]

@@ -1,0 +1,10 @@
+node_modules/
+logs/
+.env
+.env.*
+notes.json
+notes-ask.json
+server/*
+!server/start.sh
+paper.jar
+plugins/

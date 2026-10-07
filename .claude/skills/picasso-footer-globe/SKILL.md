@@ -1,0 +1,105 @@
+---
+name: picasso-footer-globe
+description: The Picasso Lab site footer (home/footer.html, one Google Sites embed on every page) - UCSD seal, PICASSO LAB + address, and the WebGL visitor globe (real Earth, Moon, M78 Nebula, Cybertron through a wormhole) that also records visits into Supabase. Use for any change to the footer's layout, the globe's look, the off-world joke visits, the visit recording, or when the footer looks wrong at some size.
+---
+
+# The footer and its visitor globe
+
+Read `picasso-sites-embed` first: the footer is pasted embed code (re-paste to deploy, absolute URLs, quirks mode).
+
+## Files
+- `home/footer-src/footer.tpl.html` - **edit this**. Layout CSS/JS, the globe (WebGL shader + 2D overlay), hover/drag/click.
+- `home/footer-src/build.py` - `python3 home/footer-src/build.py` writes `home/footer.html`. It copies, verbatim
+  from `home/visitor-map.html`: the Supabase constants, the land mask + projection constants, the country table, the
+  "data + capture" block (geo-IP, insert, select, aggregation). It asserts on those lines; if visitor-map.html moves
+  them, the assertion says which to update. Never hand-edit `home/footer.html`.
+- `home/static/globe/` - textures, loaded only when the card scrolls on screen (IntersectionObserver), ~183 KB total:
+  `earth_day.jpg` (NASA land/ocean/ice 1024x512, 69 KB), `earth_night.jpg` (city lights, grayscale, 28 KB),
+  `clouds.jpg` (512x256 grayscale, 21 KB), `moon.jpg` (512x256, 40 KB), `nebula.jpg` (512x512, 25 KB, see M78 below). Earth/Moon sources: the three.js example textures
+  (`examples/textures/planets/` in mrdoob/three.js). GitHub Pages sends `Access-Control-Allow-Origin: *`, which
+  WebGL needs (`img.crossOrigin = 'anonymous'`).
+- `home/footer-src/test/` - `ft.js` (screenshots), `ft_globe.js` (hover each object, a city, drag), `gen_rows.js`
+  (fake Supabase rows -> `rows.json`); `ft_mac.py` (screenshots on the Mac, where `ft.js`'s `/opt/pw-browsers` does not
+  exist: `python3 home/footer-src/test/ft_mac.py home/footer.html PREFIX 957x200 352x73@phone ...`). Not committed: `rows.json`, `seal.png` (any copy of the UCSD seal PNG), `shots/`.
+
+## Testing (always by screenshots, at all sizes)
+```
+cd home/footer-src/test && node gen_rows.js            # once
+NODE_PATH=$(npm root -g) WAIT=5000 node ft.js ../../footer.html w1 957x200 700x146 352x73@phone 352x107@phone
+NODE_PATH=$(npm root -g) WAIT=5000 node ft_globe.js ../../footer.html g1 957x200 352x73@phone
+NODE_PATH=$(npm root -g) WAIT=6000 node ft.js ../../footer.html big 1800x376   # big render: crop the card to judge detail
+```
+The harness nests the page like Sites does (top page -> sandboxed atari frame -> about:blank + document.write),
+mocks Supabase and geo-IP (it must never reach production), and serves `https://yil384.github.io/Picasso-Lab/**`
+from the checkout with the CORS header. `957x200` is the desktop box (1440-wide window), `352x73` the same box on a
+phone (Sites keeps the aspect ratio and only shrinks it). Look at every shot before you say it works.
+
+## Layout rules (the user's, from many rounds of feedback)
+- Keep the old three-part look: seal | title + address (nearly centred on desktop) | map card. Seal and map about the
+  same height, the address block a bit shorter and slightly lower, minimal vertical padding, generous gaps between the
+  three parts. `rowLayout(W, H)` for W >= 560, `stripLayout(W, H)` below (phones: address 9-11 px, seal level with the
+  title, card 2:1). `fitCard` hides the stats pill under ~90 px card height.
+- It must look right at every size; phones were "一团糟" once because the desktop rule forced 10 px text into a 73 px strip.
+- The lab's X account (Oct 2026): the middle block is a `div` holding the title + address link (`.pf-home`, the 3D
+  walk-through) and a quiet line under it, the X mark + `@PicassoLabUCSD` (`#pf-x`, x.com/PicassoLabUCSD, centred under the address at 0.8x its
+  size, 62% white). `typeset` keeps `vis` = title + address only, so the approved sizing is unchanged, and returns the
+  extra line's height as `xh`; row and tier layouts centre the block with it. Phone strips (`.xinline`) show only the
+  mark, after the address's last line (`placeMark`), with padding as a bigger tap target.
+
+## The globe (one fragment shader, no library)
+- Painted in order: star layers (lensed round the wormhole) -> Milky Way band -> M78 -> wormhole -> Moon behind ->
+  Earth (day texture lit by `SUN`, city lights on the night side, clouds, ocean glint, limb scattering, terminator,
+  atmosphere halo) -> Moon in front -> film grade (`1 - exp(-1.3c)`, cool shadows, vignette, grain).
+- JS draws the overlay on `#vmap-fx`: visitor pings (latest three pulse amber; pings hidden under a Moon in front),
+  blips on the off-world objects, survey labels (`M78 NEBULA / 3,000,000 LY`, `CYBERTRON / VIA WORMHOLE`, hidden when
+  the card is under 110 px tall), and the signals: a dotted path whose dots grow from far to near, a tiny traveller with a
+  light trail flying along it - Ultraman Tiga (Multi Type) from M78, an Autobot warship in Optimus Prime's red and blue
+  out of the wormhole (painted sprites `tiga.png` / `ark.png`, ~14-20 KB each, keyed from the user's ChatGPT art
+  `home/footer-src/{tiga,ark}.png` by `python3 home/footer-src/sprites.py`, nose along +x, small on purpose (Tiga ~12 px, the warship ~10 px at full size: the user wants them unobtrusive),
+  flipped when heading left, growing from far to near; M78 slowest; small additive effects in `craft()`: Tiga's aura,
+  speed streaks and sparks; the warship's flickering engine plumes and, near the Earth, a re-entry plasma shell, bow
+  shock and embers). Code-drawn vector versions were rejected as too crude - and a
+  touchdown: the path ends on the visible disc at 0.72 R toward the source, the traveller grows
+  until 75% of the way, then sinks (shrinks and fades) into the atmosphere, then a tiny flash and a foreshortened ripple
+  lying on the globe.
+- **Moon**: tidally locked - `uMoonRot = atan2(-cos th, -sin th)` turns the texture so the near side always faces the
+  Earth (in front of the Earth it shows us its far side). Its visitor blip sits in Mare Tranquillitatis and is only
+  drawn while that spot faces us. Shading is lunar, not Lambert: the Lommel-Seeliger law `2 mu0 / (mu0 + mu)` (an evenly
+  bright full disc, sharp terminator), earthshine on the night side facing the Earth, and a copper-red lunar eclipse
+  (`uMoonEcl`) when the Moon's 3D position falls in the Earth's shadow cone (once per ~42 s orbit). Distances are not
+  to scale (the real Moon is ~30 Earth diameters away).
+- **Wormhole** (`uCyb` = centre + throat radius): a point lens with Einstein radius 1.3 throats bends the star layers
+  outside (`sp = p - dir * R * 1.69 / r`, faded beyond 2-4.5 R); inside, the far sky is squeezed toward the rim
+  (`fp = dir * r / sqrt(1 - 0.6 r^2)`): violet nebula, a blue-white sun at `(-0.6, -0.55)`, Cybertron's horizon
+  (sphere at `(0.9, 1.3)`, radius 1.1) lit by that sun. No glowing ring (a neon rim looked fake); the edge is a thin
+  Einstein-ring line.
+  The throat is a mild Kerr-like D (flattened to 0.95 on the left, the side whose disc gas comes toward us, rounded
+  corners, shifted 0.05 throats right); `wr` is measured against that outline so everything follows it.
+  Around it the accretion disc as computed for Gargantua in Interstellar (James, von Tunzelmann, Franklin & Thorne 2015):
+  a thin disc seen nearly edge-on (inclination factor 0.16, tilted 0.12 rad, radii 1.4-3.0 throats), its near half
+  painted after the throat (crossing in front of it), its far half only outside the throat, and the far half's lensed
+  image as a broad arc over the top hugging the throat (sharp inner edge, soft outer) and a thin one underneath; the left
+  side brighter and whiter (beaming), orbit streaks, a thin photon ring. Earlier versions (a neon rim, an EHT-style
+  round crescent) read as fake or as a plain circle. The wormhole is r = 0.1 CH at x = 0.835 W so the disc fits the card.
+  The hover blip position `WB` in JS is the inverse of the interior mapping: move the planet, recompute it.
+- **M78** (`uM78` = centre + size): a real image, not noise - `nebula.jpg` (25 KB, 512x512) is the Hubble 2006
+  mosaic of the Orion Nebula (NASA/ESA, public domain, from Wikimedia Commons), cropped, saturation x1.45, edges faded
+  to black in the file itself; the shader screens it over the sky (dimming the stars behind its dust) with a very slow
+  zoom drift, at 2.7 throats per texture unit. On top: the "Land of Light" cluster (8 twinkling points), a second star,
+  the Plasma Spark (core + thin six-rayed chromatic spikes) and a faint anamorphic streak. Procedural versions (fbm
+  fans, dust lanes, filaments) never looked like a nebula to the user ("没有星云那种感觉"); keep it a real image, and
+  keep it small enough that it reads far away and the label stays readable (labels have a dark text shadow).
+- Off-world visits are decoration only (`OFFWORLD`), never recorded. Tooltips: the Moon "384,400 km away", M78
+  "3,000,000 light-years away, arrived at the speed of light", Cybertron "distance unknown, only seen through a wormhole".
+- Interaction: auto-rotate 4 deg/s, drag with inertia (`touch-action: pan-y` keeps page scroll on phones), a click that
+  is not a drag opens the analytics page, tap on an object shows its tip. ~30 fps, only while on screen and visible.
+- `window.__pfGlobe()` / `window.__pfPing(city)` / `window.__pf()` are test hooks (state, a ping's position, the layout).
+
+## What the user wanted from the look
+Real textures over procedural "laser dot" maps ("AI 味太重"); cinematic, physically plausible sci-fi, but small and fast
+to load (shader effects over new images). Each far object needs its own identity and a sense of distance.
+
+## Deploying
+Commit, merge into `main`, push (the user's standing rule). Then the user re-pastes `home/footer.html` into the one
+footer embed (the three old footer embeds, including the old visitor-map one, must be gone or visits count twice).
+Texture changes go live with the push alone.

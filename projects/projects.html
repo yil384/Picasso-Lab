@@ -4,220 +4,160 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Projects – Picasso Lab</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --ink: #0e1120;
+      --text: #1a1d2e;
+      --muted: #5c6280;
+      --faint: #9399b0;
+      --line: rgba(14,17,32,.08);
+      --paper: #efe4cc;          /* the films' cream paper: shown until the poster decodes */
+      --ucsd: #00629B;
+    }
 
     body {
       font-family: 'Inter', -apple-system, sans-serif;
       background: transparent;
-      color: #1a1d2e;
+      color: var(--text);
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Hero ── */
+    /* ── Hero header: identical in the projects, blogs and teaching pages ── */
     .hero {
       background: linear-gradient(135deg, #00629B 0%, #004a76 60%, #003355 100%);
-      padding: 48px 32px 44px;
+      padding: 30px 32px 28px;
+      line-height: 1.5;
       position: relative;
       overflow: hidden;
       touch-action: manipulation;
     }
     .hero::before {
-      content: ''; position: absolute; top: -40%; right: -10%;
-      width: 420px; height: 420px;
+      content: ''; position: absolute; top: -60%; right: -8%;
+      width: 360px; height: 360px;
       background: radial-gradient(circle, rgba(255,205,0,.14), transparent 70%);
       border-radius: 50%;
     }
     .hero::after {
-      content: ''; position: absolute; bottom: -30%; left: 8%;
-      width: 300px; height: 300px;
+      content: ''; position: absolute; bottom: -55%; left: 8%;
+      width: 260px; height: 260px;
       background: radial-gradient(circle, rgba(255,255,255,.06), transparent 70%);
       border-radius: 50%;
     }
     .hero-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
     .hero-label {
       display: inline-flex; align-items: center; gap: 6px;
-      font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-      color: #FFCD00; margin-bottom: 12px;
+      font-size: .72rem; font-weight: 600; line-height: 1.3;
+      letter-spacing: .06em; text-transform: uppercase;
+      color: #FFCD00; margin-bottom: 8px;
     }
     .hero-label svg { width: 14px; height: 14px; stroke: #FFCD00; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .hero h1 { font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -.03em; margin-bottom: 8px; }
-    .hero p { font-size: .92rem; color: rgba(255,255,255,.7); max-width: 500px; }
+    .hero h1 { font-size: 2rem; font-weight: 800; line-height: 1.15; color: #fff; letter-spacing: -.03em; margin: 0 0 6px; }
+    .hero p { font-size: .92rem; line-height: 1.55; color: rgba(255,255,255,.72); max-width: 820px; margin: 0; }
 
     /* ── Grid ── */
     .wrapper { max-width: 1100px; margin: 0 auto; padding: 36px 24px 56px; }
-
     .project-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 22px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
     }
 
-    /* ── Card ── */
+    /* ── Card: the whole card is a link to the demo (opened in the in-page viewer) ── */
     .project-card {
+      display: flex; flex-direction: column;
       background: #fff;
-      border-radius: 18px;
-      border: 1px solid rgba(0,0,0,.07);
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      border: 1px solid var(--line);
+      border-radius: 16px;
       overflow: hidden;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      transition: transform .25s cubic-bezier(.34,1.26,.64,1), box-shadow .25s ease, border-color .2s;
-      position: relative;
+      color: inherit; text-decoration: none;
+      box-shadow: 0 1px 2px rgba(14,17,32,.04), 0 4px 14px rgba(14,17,32,.04);
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      -webkit-tap-highlight-color: transparent;
     }
     .project-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 16px 48px rgba(0,0,0,.12);
-      border-color: rgba(0,0,0,.11);
+      transform: translateY(-3px);
+      border-color: rgba(14,17,32,.14);
+      box-shadow: 0 2px 4px rgba(14,17,32,.05), 0 14px 36px rgba(14,17,32,.10);
+    }
+    .project-card:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
     }
 
-    /* Colored top accent bar */
-    .card-accent-bar {
-      height: 3px;
-      width: 100%;
-      flex-shrink: 0;
-    }
-
-    /* Thumbnail */
-    .card-thumb {
-      width: 100%;
-      height: 195px;
+    /* Film: the loops are 960×528, so the frame keeps that shape and nothing is cropped */
+    .card-media {
       position: relative;
+      aspect-ratio: 960 / 528;
+      background: var(--paper);
       overflow: hidden;
-      flex-shrink: 0;
     }
-    .card-thumb svg.art { width: 100%; height: 100%; display: block; }
-
-    /* Real image or video */
-    .card-thumb .thumb-img {
+    .card-media video,
+    .card-media img {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
-      object-fit: var(--thumb-fit, cover);
-      object-position: center;
+      object-fit: cover;
       display: block;
-      transform: scale(var(--thumb-scale, 1));
-      transform-origin: center center;
-      transition: transform .5s ease;
     }
-    .project-card:hover .thumb-img { transform: scale(calc(var(--thumb-scale, 1) + 0.04)); }
-
-    /* Top mask — kills bad gradients at image top edge */
-    .thumb-top-mask {
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 44px;
-      pointer-events: none; z-index: 2;
+    .card-media img { z-index: 0; }
+    .card-media video { z-index: 1; }
+    .card-media::after {             /* hairline between film and text */
+      content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+      background: var(--line); z-index: 2;
     }
 
-    /* Bottom fade — blends thumbnail into white card body */
-    .card-thumb::after {
-      content: '';
-      position: absolute; bottom: 0; left: 0; right: 0; height: 18px;
-      background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,.6) 60%, rgba(255,255,255,.97) 100%);
-      pointer-events: none; z-index: 2;
-    }
-
-    /* Decorative corner-bracket overlay (viewfinder aesthetic) */
-    .thumb-deco {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      pointer-events: none; z-index: 3;
-      opacity: .55;
-      transition: opacity .3s;
-    }
-    .project-card:hover .thumb-deco { opacity: .85; }
-
-    /* Scanline that sweeps on hover */
-    .thumb-scan {
-      position: absolute; top: -2px; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.55) 40%, rgba(255,255,255,.55) 60%, transparent);
-      pointer-events: none; z-index: 4;
-      opacity: 0;
-      transition: none;
-    }
-    .project-card:hover .thumb-scan {
-      animation: scan-sweep .65s ease-in-out forwards;
-    }
-    @keyframes scan-sweep {
-      0%   { top: -2px;  opacity: 0; }
-      8%   { opacity: 1; }
-      92%  { opacity: .6; }
-      100% { top: calc(100% + 2px); opacity: 0; }
-    }
-
-    /* Live badge */
-    .live-pill {
-      position: absolute; top: 12px; right: 12px; z-index: 3;
-      display: inline-flex; align-items: center; gap: 5px;
-      background: rgba(10,12,24,.55);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,.12);
-      color: #fff; font-size: .65rem; font-weight: 700;
-      letter-spacing: .06em; text-transform: uppercase;
-      padding: 4px 10px; border-radius: 20px;
-    }
-    .live-dot {
-      width: 6px; height: 6px; border-radius: 50%; background: #22d46b;
-      animation: blink 2.2s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
-
-    /* Card body */
     .card-body {
+      flex: 1;
+      display: flex; flex-direction: column;
       padding: 18px 22px 20px;
-      flex: 1; display: flex; flex-direction: column;
     }
-
-    .card-head {
-      display: flex; align-items: center; justify-content: space-between;
+    .card-meta {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
       margin-bottom: 10px;
     }
     .card-category {
-      font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
-      padding: 3px 10px; border-radius: 20px;
+      font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--accent);
+      padding: 3px 9px; border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      white-space: nowrap;
     }
     .card-domain {
-      font-size: .72rem; color: #9399b0;
-      display: flex; align-items: center; gap: 3px;
+      font-size: .74rem; color: var(--faint);
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .card-domain svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
     .card-name {
-      font-size: 1.25rem; font-weight: 800; color: #0e1120;
+      font-size: 1.3rem; font-weight: 800; color: var(--ink);
       letter-spacing: -.02em; line-height: 1.2;
       margin-bottom: 8px;
-      transition: color .15s;
     }
-    .project-card:hover .card-name { color: var(--accent); }
-
     .card-desc {
-      font-size: .875rem; color: #5c6280; line-height: 1.7;
+      font-size: .875rem; color: var(--muted); line-height: 1.65;
       flex: 1; margin-bottom: 16px;
     }
-
     .card-footer {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 10px;
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
     }
     .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
     .tag {
-      font-size: .63rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      font-size: .66rem; font-weight: 600; letter-spacing: .02em;
       padding: 3px 8px; border-radius: 5px;
-      background: #f0f2f9; color: #6470a0;
+      background: #f1f3f8; color: #5d6892;
     }
     .card-launch {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: .8rem; font-weight: 700;
-      white-space: nowrap; flex-shrink: 0;
-      padding: 7px 14px; border-radius: 8px;
-      color: #fff;
-      transition: opacity .15s, transform .15s;
+      display: inline-flex; align-items: center; gap: 6px;
+      flex-shrink: 0; white-space: nowrap;
+      font-size: .8rem; font-weight: 700; color: var(--accent);
     }
-    .card-launch svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
-    .project-card:hover .card-launch { opacity: .88; }
-    .project-card:hover .card-launch svg { transform: translateX(3px); }
+    .card-launch svg {
+      width: 14px; height: 14px; stroke: currentColor; fill: none;
+      stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+      transition: transform .2s ease;
+    }
+    .project-card:hover .card-launch svg,
+    .project-card:focus-visible .card-launch svg { transform: translateX(3px); }
 
     /* ── iframe viewer ── */
     #iframe-view {
@@ -235,7 +175,6 @@
       border-bottom: 1px solid #e6e8f0;
       display: flex; align-items: center; gap: 10px;
       padding: 0 14px;
-      box-shadow: 0 1px 8px rgba(0,0,0,.06);
     }
     .bar-back {
       display: inline-flex; align-items: center; gap: 4px;
@@ -245,28 +184,24 @@
       transition: background .15s, color .15s;
       white-space: nowrap; flex-shrink: 0;
     }
-    .bar-back:hover { background: #f0f2f9; color: #00629B; }
+    .bar-back:hover { background: #f0f2f9; color: var(--ucsd); }
     .bar-back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
     .bar-sep { width: 1px; height: 22px; background: #e0e2ec; flex-shrink: 0; }
-
     .bar-url {
       flex: 1;
       background: #f4f6fb; border: 1px solid #e0e2ec;
       border-radius: 8px; padding: 6px 12px;
-      font-size: .8rem; color: #5c6280; font-family: inherit;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: .8rem; color: var(--muted);
       display: flex; align-items: center; gap: 6px;
       min-width: 0;
     }
-    .bar-url-lock { color: #22c55e; flex-shrink: 0; }
+    .bar-url-lock { color: #22c55e; flex-shrink: 0; display: inline-flex; }
     .bar-url-lock svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
     .bar-url-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
     .bar-ext {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: .78rem; font-weight: 600; color: #fff;
-      background: #00629B; border: none; cursor: pointer; font-family: inherit;
+      background: var(--ucsd);
       padding: 7px 14px; border-radius: 8px;
       text-decoration: none; transition: background .15s;
       white-space: nowrap; flex-shrink: 0;
@@ -276,49 +211,42 @@
 
     .iframe-body { flex: 1; position: relative; background: #fff; }
     #project-iframe { width: 100%; height: 100%; border: none; display: block; }
-
     .iframe-overlay {
       position: absolute; inset: 0;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
       background: #fff;
       transition: opacity .25s;
     }
     .iframe-overlay.hide { opacity: 0; pointer-events: none; }
+    .loading { display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .spin-ring {
-      width: 38px; height: 38px;
-      border: 3px solid #e0e2ec; border-top-color: #00629B;
+      width: 34px; height: 34px;
+      border: 3px solid #e0e2ec; border-top-color: var(--ucsd);
       border-radius: 50%; animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .overlay-text { font-size: .88rem; color: #8690a8; font-weight: 500; }
-
     .iframe-blocked-msg {
       display: none; flex-direction: column; align-items: center; justify-content: center;
-      gap: 14px; text-align: center; padding: 32px;
+      gap: 12px; text-align: center; padding: 32px;
     }
     .iframe-blocked-msg.show { display: flex; }
-    .blocked-icon { font-size: 2.8rem; line-height: 1; }
-    .blocked-title { font-size: 1.05rem; font-weight: 700; color: #1a1d2e; }
-    .blocked-desc { font-size: .85rem; color: #8690a8; max-width: 300px; line-height: 1.6; }
+    .blocked-title { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .blocked-desc { font-size: .85rem; color: #8690a8; max-width: 320px; line-height: 1.6; }
     .blocked-cta {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 4px;
       font-size: .85rem; font-weight: 700; color: #fff;
-      background: #00629B; text-decoration: none;
+      background: var(--ucsd); text-decoration: none;
       padding: 10px 22px; border-radius: 10px;
       transition: background .15s;
     }
     .blocked-cta:hover { background: #005082; }
     .blocked-cta svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
+    @media (max-width: 760px) {
+      .project-grid { grid-template-columns: 1fr; gap: 18px; }
+    }
     @media (max-width: 640px) {
-      .hero {
-        padding:
-          calc(32px + env(safe-area-inset-top))
-          max(20px, calc(env(safe-area-inset-right) + 12px))
-          28px
-          max(20px, calc(env(safe-area-inset-left) + 12px));
-      }
-      .hero h1 { font-size: 1.6rem; }
       .wrapper {
         padding:
           22px
@@ -326,17 +254,7 @@
           calc(40px + env(safe-area-inset-bottom))
           max(14px, calc(env(safe-area-inset-left) + 8px));
       }
-      .project-grid { grid-template-columns: 1fr; gap: 16px; }
-      .card-thumb { height: 165px; }
-      .card-head { align-items: flex-start; gap: 8px; }
-      .card-domain {
-        min-width: 0;
-        max-width: 48%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .card-footer { align-items: flex-end; }
+      .card-body { padding: 16px 18px 18px; }
       .bar-url { display: none; }
       .iframe-bar {
         height: auto;
@@ -352,16 +270,7 @@
       .bar-ext { min-height: 44px; }
       .bar-ext { padding-inline: 10px; }
     }
-
     @media (max-height: 600px) and (pointer: coarse) {
-      .hero {
-        padding:
-          calc(22px + env(safe-area-inset-top))
-          max(20px, calc(env(safe-area-inset-right) + 12px))
-          20px
-          max(20px, calc(env(safe-area-inset-left) + 12px));
-      }
-      .hero h1 { font-size: 1.55rem; }
       .iframe-bar {
         height: auto;
         min-height: calc(52px + env(safe-area-inset-top));
@@ -376,6 +285,24 @@
       .bar-ext { min-height: 44px; }
       .bar-url { display: none; }
     }
+    @media (max-width: 640px), (max-height: 600px) and (pointer: coarse) {
+      .hero {
+        padding:
+          calc(20px + env(safe-area-inset-top))
+          max(20px, calc(env(safe-area-inset-right) + 12px))
+          18px
+          max(20px, calc(env(safe-area-inset-left) + 12px));
+        -webkit-tap-highlight-color: transparent;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .hero h1 { font-size: 1.5rem; }
+      .hero p { font-size: .86rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .project-card, .card-launch svg { transition: none; }
+      .project-card:hover { transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -387,18 +314,18 @@
       Picasso Lab
     </div>
     <h1>Projects &amp; Demos</h1>
-    <p>Live research tools and interactive demos from our work on compilers, ML systems, and quantum computing.</p>
+    <p>Live demos from our work on quantum compilation, GPU kernels, AI for science, and chip design.</p>
   </div>
 </div>
 
-<div class="wrapper" id="project-list">
+<main class="wrapper" id="project-list">
   <div class="project-grid" id="project-grid"></div>
-</div>
+</main>
 
 <!-- iframe viewer -->
-<div id="iframe-view">
+<div id="iframe-view" role="dialog" aria-modal="true" aria-label="Project preview">
   <div class="iframe-bar">
-    <button class="bar-back" onclick="closeProject()">
+    <button class="bar-back" type="button" onclick="closeProject()">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       Projects
     </button>
@@ -415,19 +342,16 @@
   <div class="iframe-body">
     <div class="iframe-overlay" id="iframe-overlay">
       <div class="iframe-blocked-msg" id="iframe-blocked">
-        <div class="blocked-icon">🔒</div>
-        <div class="blocked-title">Can't embed this site</div>
-        <div class="blocked-desc">This site's security policy prevents inline preview. Open it directly instead.</div>
+        <div class="blocked-title">This site can’t be shown here</div>
+        <div class="blocked-desc">Its security settings block embedding. Open it in a new tab instead.</div>
         <a class="blocked-cta" id="blocked-link" href="#" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           Open in new tab
         </a>
       </div>
-      <div id="loading-inner">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
-          <div class="spin-ring"></div>
-          <div class="overlay-text">Loading…</div>
-        </div>
+      <div class="loading" id="loading-inner">
+        <div class="spin-ring"></div>
+        <div class="overlay-text">Loading…</div>
       </div>
     </div>
     <iframe id="project-iframe" title="Project preview"
@@ -437,179 +361,221 @@
 </div>
 
 <script>
+/* This page is pasted into Google Sites as embed code, so it runs on a
+   googleusercontent.com origin: every asset must be an absolute URL. */
+const MEDIA = 'https://yil384.github.io/Picasso-Lab/projects/';
 
 const PROJECTS = [
   {
     id: 'qubrio',
-    name: "Qubrio",
-    url: "https://qubrio.picasso-lab.com/",
-    category: "Quantum Computing",
-    accent: "#7c3aed",
-    accentBg: "rgba(124,58,237,.10)",
-    desc: "A multi-agent LLM compiler for neutral atom quantum computers. Specialized agents handle qubit placement, atom routing, and schedule optimization — achieving 4.7× hardware runtime reduction over state-of-the-art baselines.",
-    tags: ["Quantum Compilation", "Multi-Agent", "LLM"],
-    img: "qubrio/qubrio.webp",
-    video: "https://yil384.github.io/Picasso-Lab/projects/qubrio/qubrio_loop.mp4",
-    thumbBg: "radial-gradient(ellipse at 42% 52%, #1e0b4a 0%, #08001a 100%)",
-    thumbFit: "cover",
-    thumbScale: "1.0",
-    thumbTopMask: null,
-    bracketColor: "rgba(167,139,250,.7)",
+    name: 'Qubrio',
+    url: 'https://qubrio.picasso-lab.com/',
+    category: 'Quantum Computing',
+    accent: '#7c3aed',
+    desc: 'A multi-agent LLM compiler for neutral-atom quantum computers. Placement, routing and optimization agents, checked by deterministic verifiers, move atoms in convoys: 4.7× lower hardware runtime and 1.3× higher fidelity than PowerMove, the state of the art.',
+    tags: ['Quantum Compilation', 'Multi-Agent', 'LLM'],
   },
   {
     id: 'tritongym',
-    name: "TritonGym",
-    url: "https://tritongym.picasso-lab.com",
-    category: "LLM Benchmark",
-    accent: "#059669",
-    accentBg: "rgba(5,150,105,.10)",
-    desc: "An ICML 2026 benchmark evaluating LLMs on generating optimized Triton GPU kernels via agentic workflows. 164 operators, four agent strategies, and a live leaderboard ranking models by correctness and kernel performance.",
-    tags: ["Triton", "LLM", "Benchmark", "ICML 2026"],
-    img: "tritongym/tritongym.webp",
-    video: "https://yil384.github.io/Picasso-Lab/projects/tritongym/tritongym_loop.mp4",
-    thumbBg: "#010c06",
-    thumbFit: "cover",
-    thumbScale: "1.0",
-    thumbTopMask: null,
-    bracketColor: "rgba(52,211,153,.7)",
+    name: 'TritonGym',
+    url: 'https://tritongym.picasso-lab.com',
+    category: 'LLM Benchmark',
+    accent: '#059669',
+    desc: 'An ICML 2026 benchmark for LLMs that write Triton GPU kernels inside agentic workflows. 164 operators, four agent strategies and a live leaderboard that ranks models on correctness and on speed against hand-tuned kernels.',
+    tags: ['Triton', 'LLM', 'Benchmark', 'ICML 2026'],
   },
   {
     id: 'tritondft',
-    name: "TritonDFT",
-    url: "https://tritondft.com/",
-    category: "AI for Science",
-    accent: "#0284c7",
-    accentBg: "rgba(2,132,199,.10)",
-    desc: "A multi-agent AI system that automates Density Functional Theory (DFT) calculations in materials science. Four specialized agents — Planner, Executor, Analyzer, Refiner — reduce per-step time from hours to seconds.",
-    tags: ["DFT", "Materials Science", "Multi-Agent"],
-    img: "tritondft/tritondft.webp",
-    video: "https://yil384.github.io/Picasso-Lab/projects/tritondft/tritondft_loop.mp4",
-    thumbBg: "linear-gradient(155deg, #021828 0%, #030d1c 100%)",
-    thumbFit: "cover",
-    thumbScale: "1.0",
-    thumbTopMask: null,
-    bracketColor: "rgba(56,189,248,.7)",
+    name: 'TritonDFT',
+    url: 'https://tritondft.com/',
+    category: 'AI for Science',
+    accent: '#0284c7',
+    desc: 'A multi-agent system that runs Density Functional Theory end to end, from a plain-language question to a converged result. Planner, Executor, Analyzer and Refiner agents pass 98% of DFTBench, 68× faster than by hand, at an average $0.04 per material.',
+    tags: ['DFT', 'Materials Science', 'Multi-Agent'],
   },
   {
     id: 'chipmate',
-    name: "ChipMate",
-    url: "https://chipmate.picasso-lab.com",
-    category: "Chip Design",
-    accent: "#d97706",
-    accentBg: "rgba(217,119,6,.10)",
-    desc: "A self-trained multi-agent framework for RTL (Verilog) code generation. Two agents cross-verify outputs via waveform comparison — outperforming DeepSeek V3 despite being 20–180× smaller.",
-    tags: ["RTL", "Verilog", "Multi-Agent", "EDA"],
-    img: "chipmate/chipmate.webp",
-    video: "https://yil384.github.io/Picasso-Lab/projects/chipmate/chipmate_loop.mp4",
-    thumbBg: "linear-gradient(135deg, #0d0800 0%, #08080f 60%, #001a1a 100%)",
-    thumbFit: "cover",
-    thumbScale: "1.0",
-    thumbTopMask: null,
-    bracketColor: "rgba(251,191,36,.7)",
+    name: 'ChipMATE',
+    url: 'https://chipmate.picasso-lab.com',
+    category: 'Chip Design',
+    accent: '#d97706',
+    desc: 'A self-trained multi-agent framework for Verilog generation. A Verilog agent and a Python reference-model agent check each other cycle by cycle on random inputs, with no golden testbench. The 9B model scores 80.1% on VerilogEval v2, ahead of DeepSeek V4, a model about 200× larger.',
+    tags: ['RTL', 'Verilog', 'Multi-Agent', 'EDA'],
   },
 ];
 
+const domainOf = url => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
 function renderCards() {
   document.getElementById('project-grid').innerHTML = PROJECTS.map((p, i) => `
-    <div class="project-card" style="--accent:${p.accent};--thumb-fit:${p.thumbFit};--thumb-scale:${p.thumbScale}" onclick="openProject(${i})">
-      <div class="card-accent-bar" style="background:${p.accent}"></div>
-      <div class="card-thumb" style="background:${p.thumbBg}">
-        ${p.video
-          ? `<video class="thumb-img" data-src="${p.video}" poster="${p.img}"
-               preload="none" muted loop playsinline aria-label="${p.name} preview"></video>
-             <img class="thumb-img" src="${p.img}" alt="${p.name}" decoding="async"
-               style="display:none"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
-          : `<img class="thumb-img" src="${p.img}" alt="${p.name}" loading="lazy" decoding="async"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
-        }
-        <svg class="art" style="display:none" viewBox="0 0 480 195" xmlns="http://www.w3.org/2000/svg">
-          <rect width="480" height="195" fill="rgba(255,255,255,.04)"/>
-          <text x="240" y="105" text-anchor="middle" font-family="Inter,sans-serif"
-                font-size="13" fill="rgba(255,255,255,.3)">${p.name}</text>
-        </svg>
-        ${p.thumbTopMask ? `<div class="thumb-top-mask" style="background:${p.thumbTopMask}"></div>` : ''}
-        <!-- Corner bracket decoration -->
-        <svg class="thumb-deco" viewBox="0 0 480 195" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          <g stroke="${p.bracketColor}" stroke-width="1.5" fill="none" stroke-linecap="round">
-            <path d="M14 30 L14 13 L30 13"/>
-            <path d="M450 13 L466 13 L466 30"/>
-            <path d="M14 165 L14 182 L30 182"/>
-            <path d="M450 182 L466 182 L466 165"/>
-          </g>
-          <rect x="13" y="12" width="454" height="171" rx="1"
-                stroke="${p.bracketColor}" stroke-width=".4" fill="none" stroke-dasharray="3 6"/>
-        </svg>
-        <div class="thumb-scan"></div>
-        <div class="live-pill"><div class="live-dot"></div>Live</div>
+    <a class="project-card" href="${p.url}" data-idx="${i}" style="--accent:${p.accent}"
+       aria-label="${p.name}: open the live demo">
+      <div class="card-media">
+        <img src="${MEDIA}${p.id}/${p.id}.webp" alt="" decoding="async" loading="lazy">
+        <video data-src="${MEDIA}${p.id}/${p.id}_loop.mp4" poster="${MEDIA}${p.id}/${p.id}.webp"
+               preload="none" muted loop playsinline disablepictureinpicture aria-hidden="true"></video>
       </div>
       <div class="card-body">
-        <div class="card-head">
-          <span class="card-category" style="color:${p.accent};background:${p.accentBg}">${p.category}</span>
-          <span class="card-domain">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
-            ${p.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-          </span>
+        <div class="card-meta">
+          <span class="card-category">${p.category}</span>
+          <span class="card-domain">${domainOf(p.url)}</span>
         </div>
-        <div class="card-name">${p.name}</div>
-        <div class="card-desc">${p.desc}</div>
+        <h2 class="card-name">${p.name}</h2>
+        <p class="card-desc">${p.desc}</p>
         <div class="card-footer">
           <div class="card-tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
-          <div class="card-launch" style="background:${p.accent}">
-            Launch
-            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </div>
+          <span class="card-launch">Open demo
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </span>
         </div>
       </div>
-    </div>
+    </a>
   `).join('');
 }
 
+/* A plain click opens the in-page viewer; modified clicks keep the browser's
+   own link behaviour (new tab, new window). */
+document.addEventListener('click', event => {
+  const card = event.target.closest('.project-card');
+  if (!card || event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  openProject(Number(card.dataset.idx));
+});
+
 let projectLoadTimer = null;
 
-/* This page gets embedded in a host site (Google Sites). Every history call
-   is wrapped because a sandboxed frame can reject them, and a rejected call
-   must never break the UI. */
-function pushPicassoHistoryState(patch) {
-  try {
-    history.pushState({ ...(history.state || {}), ...patch }, '', window.location.href);
-  } catch (_) {}
+/* Back/forward (the back button, Chrome's two-finger swipe). Google Sites writes
+   this page into an about:blank frame with document.write, and Chrome restores any
+   history entry made in that frame as a fresh about:blank: swiping back from an
+   open article or demo left the page blank. So this document never touches history
+   itself. The open view lives in the fragment of a tiny hidden frame on GitHub
+   Pages: opening a view navigates that frame (one entry), back/forward moves only
+   that frame, and it posts back the fragment it lands on. Until it loads, views add
+   no history. */
+const NAV_FRAME_URL = 'https://yil384.github.io/Picasso-Lab/nav-frame.html';
+
+function createNavHistory(onTraverse) {
+  const frame = document.createElement('iframe');
+  frame.id = 'picasso-nav-frame';
+  frame.src = NAV_FRAME_URL;
+  frame.title = 'Navigation history';
+  frame.tabIndex = -1;
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(frame);
+
+  const run = Math.random().toString(36).slice(2, 7);
+  const pending = new Set();   // fragments we navigated to that have not reported back yet
+  let ready = false;
+  let seq = 0;
+  let depth = 0;               // our own entries stacked above one we can go back to
+  let popping = false;
+  let popTimer = null;
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== frame.contentWindow || typeof event.data?.picassoNav !== 'string') return;
+    const hash = event.data.picassoNav;
+    const first = !ready;
+    ready = true;
+    if (pending.delete(hash) || (first && !hash)) return;
+    if (popping) popping = false;
+    else depth = 0;            // the visitor moved through history: we no longer know what is behind
+    const view = Object.fromEntries(new URLSearchParams(hash));
+    delete view.n;
+    onTraverse(view);
+  });
+
+  function go(view, push) {
+    if (!ready) return;
+    const params = new URLSearchParams();
+    Object.entries(view).forEach(([key, value]) => { if (value != null) params.set(key, value); });
+    params.set('n', run + (++seq));
+    const hash = params.toString();
+    pending.add(hash);
+    try {
+      if (push) frame.contentWindow.location.href = `${NAV_FRAME_URL}#${hash}`;
+      else frame.contentWindow.location.replace(`${NAV_FRAME_URL}#${hash}`);
+      if (push) depth += 1;
+    } catch (_) {
+      pending.delete(hash);
+    }
+  }
+
+  return {
+    push: view => go(view, true),
+    replace: view => go(view, false),
+    /* Leave a view the way the back button would when the entry behind it is ours,
+       so a later swipe back leaves the page instead of landing on a duplicate. Called
+       from this document, not the nav frame: the host sandboxes the embed, and a
+       sandboxed frame may only move history for frames inside its own subtree. */
+    pop(view) {
+      if (!ready || depth === 0) return go(view, false);
+      depth -= 1;
+      popping = true;
+      clearTimeout(popTimer);
+      popTimer = setTimeout(() => { popping = false; }, 1500);   // a back() that moved nothing
+      try { history.back(); } catch (_) {}
+    }
+  };
 }
 
-/* Closing never traverses history via back(). Inside a host frame, back()
-   walks the top-level joint history and can land on the host's pre-embed
-   entry, which blanks the whole frame. Clearing the current entry is safe. */
-function clearPicassoHistoryState(patch) {
-  try {
-    history.replaceState({ ...(history.state || {}), ...patch }, '', window.location.href);
-  } catch (_) {}
+const projectNav = createNavHistory((view) => {
+  const idx = Number(view.p);
+  projectView = { preview: view.p != null && PROJECTS[idx] ? idx : null, lab: view.l === '1' };
+  syncProjectPreviewState(projectView);
+  window.dispatchEvent(new CustomEvent('picasso-nav', { detail: projectView }));
+});
+let projectView = { preview: null, lab: false };   // the view the current history entry holds
+
+function recordProjectView(patch, how) {
+  projectView = { ...projectView, ...patch };
+  projectNav[how]({
+    p: Number.isInteger(projectView.preview) ? String(projectView.preview) : null,
+    l: projectView.lab ? '1' : null
+  });
 }
+
+/* A fresh viewer frame per project: its first navigation replaces the blank
+   frame instead of adding a dead step to the visitor's back history. */
+function freshProjectFrame() {
+  const old = document.getElementById('project-iframe');
+  const frame = old.cloneNode(false);
+  frame.removeAttribute('src');
+  old.replaceWith(frame);
+  return frame;
+}
+
+let lastCard = null;
 
 function openProject(idx, fromHistory = false) {
   const p = PROJECTS[idx];
   if (!p) return;
-  const view     = document.getElementById('iframe-view');
-  const iframe   = document.getElementById('project-iframe');
-  const overlay  = document.getElementById('iframe-overlay');
-  const blocked  = document.getElementById('iframe-blocked');
+  const view      = document.getElementById('iframe-view');
+  const overlay   = document.getElementById('iframe-overlay');
+  const blocked   = document.getElementById('iframe-blocked');
   const loadInner = document.getElementById('loading-inner');
 
-  document.getElementById('bar-url-text').textContent = p.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  document.getElementById('bar-url-text').textContent = domainOf(p.url);
   document.getElementById('external-link').href = p.url;
   document.getElementById('blocked-link').href  = p.url;
 
   overlay.classList.remove('hide');
   blocked.classList.remove('show');
   loadInner.style.display = '';
-  iframe.src = '';
+  const iframe = freshProjectFrame();
 
+  lastCard = document.querySelector(`.project-card[data-idx="${idx}"]`);
   view.classList.add('active');
   document.getElementById('hero-section').style.display = 'none';
   document.getElementById('project-list').style.display = 'none';
   document.body.style.overflow = 'hidden';
-  if (!fromHistory && history.state?.picassoProjectPreview !== idx) {
-    pushPicassoHistoryState({ picassoProjectPreview: idx });
+  pauseAllCardVideos();
+  if (!fromHistory && projectView.preview !== idx) {
+    recordProjectView({ preview: idx }, 'push');
   }
+  view.querySelector('.bar-back').focus({ preventScroll: true });
 
   let done = false;
   clearTimeout(projectLoadTimer);
@@ -629,20 +595,29 @@ function showBlocked() {
 }
 
 function closeProject(fromHistory = false) {
-  if (!fromHistory && Number.isInteger(history.state?.picassoProjectPreview)) {
-    clearPicassoHistoryState({ picassoProjectPreview: null });
+  if (!fromHistory && Number.isInteger(projectView.preview)) {
+    recordProjectView({ preview: null }, 'pop');
   }
   clearTimeout(projectLoadTimer);
   document.getElementById('iframe-view').classList.remove('active');
-  document.getElementById('project-iframe').src = '';
+  freshProjectFrame();
   document.getElementById('hero-section').style.display = '';
   document.getElementById('project-list').style.display = '';
   document.body.style.overflow = '';
+  resumeVisibleCardVideos();
+  lastCard?.focus({ preventScroll: true });
 }
 
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('iframe-view').classList.contains('active')) {
+    closeProject();
+  }
+});
+
+/* Back/forward landed on another view: show it without recording it again. */
 function syncProjectPreviewState(state) {
   const view = document.getElementById('iframe-view');
-  const idx = state?.picassoLab === true ? null : state?.picassoProjectPreview;
+  const idx = state.lab ? null : state.preview;
   if (Number.isInteger(idx) && PROJECTS[idx] && !view.classList.contains('active')) {
     openProject(idx, true);
   } else if ((!Number.isInteger(idx) || !PROJECTS[idx]) && view.classList.contains('active')) {
@@ -650,19 +625,17 @@ function syncProjectPreviewState(state) {
   }
 }
 
-window.addEventListener('popstate', (event) => {
-  syncProjectPreviewState(event.state);
-});
-
 renderCards();
-syncProjectPreviewState(history.state);
+
+/* ── Card films: fetched only near the viewport, played only while visible.
+   With reduced motion they stay on the poster and play on hover or focus. ── */
+const cardVideos = [...document.querySelectorAll('.card-media video[data-src]')];
 
 function loadCardVideo(video) {
-  if (video.dataset.loaded === 'true' || !video.dataset.src) return;
+  if (video.dataset.loaded === 'true') return;
   video.dataset.loaded = 'true';
-  video.preload = 'metadata';
+  video.preload = 'auto';
   video.src = video.dataset.src;
-  video.load();
 }
 
 function playCardVideo(video) {
@@ -671,23 +644,14 @@ function playCardVideo(video) {
   video.play().catch(() => {});
 }
 
-function showCardVideoFallback(video) {
-  video.pause();
-  video.style.display = 'none';
-  const fallback = video.nextElementSibling;
-  if (!fallback) return;
-  if (fallback.complete && fallback.naturalWidth === 0) {
-    fallback.style.display = 'none';
-    fallback.nextElementSibling?.style.setProperty('display', 'block');
-  } else {
-    fallback.style.display = 'block';
-  }
+function shouldAutoplay(video) {
+  return video.dataset.visible === 'true' && !reduceMotion.matches && !document.hidden &&
+    !document.getElementById('iframe-view').classList.contains('active');
 }
 
-const cardVideos = document.querySelectorAll('.card-thumb video[data-src]');
+function pauseAllCardVideos() { cardVideos.forEach(v => v.pause()); }
+function resumeVisibleCardVideos() { cardVideos.forEach(v => { if (shouldAutoplay(v)) playCardVideo(v); }); }
 
-// Assign the source only when a card is close to the viewport. This prevents the
-// four loop videos from downloading while the Projects section is still offscreen.
 const videoLoadObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
     if (!entry.isIntersecting) return;
@@ -696,24 +660,39 @@ const videoLoadObserver = new IntersectionObserver(entries => {
   });
 }, { rootMargin: '320px 0px', threshold: 0 });
 
-// Play only while visible (and retry once enough data arrives for stricter browsers).
 const videoPlaybackObserver = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    e.target.dataset.visible = e.isIntersecting ? 'true' : 'false';
-    if (e.isIntersecting) playCardVideo(e.target);
-    else e.target.pause();
+  entries.forEach(entry => {
+    entry.target.dataset.visible = entry.isIntersecting ? 'true' : 'false';
+    if (shouldAutoplay(entry.target)) playCardVideo(entry.target);
+    else entry.target.pause();
   });
-}, { threshold: 0.1 });
+}, { threshold: 0.15 });
 
 cardVideos.forEach(video => {
-  video.addEventListener('canplay', () => {
-    if (video.dataset.visible === 'true') playCardVideo(video);
-  });
-  video.addEventListener('error', () => showCardVideoFallback(video), { once: true });
+  video.addEventListener('canplay', () => { if (shouldAutoplay(video)) playCardVideo(video); });
+  video.addEventListener('error', () => { video.remove(); }, { once: true });   // the poster <img> stays
+  const card = video.closest('.project-card');
+  const hoverPlay = () => { if (reduceMotion.matches) playCardVideo(video); };
+  const hoverStop = () => { if (reduceMotion.matches) video.pause(); };
+  card.addEventListener('pointerenter', hoverPlay);
+  card.addEventListener('pointerleave', hoverStop);
+  card.addEventListener('focus', hoverPlay);
+  card.addEventListener('blur', hoverStop);
   videoLoadObserver.observe(video);
   videoPlaybackObserver.observe(video);
 });
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseAllCardVideos();
+  else resumeVisibleCardVideos();
+});
+reduceMotion.addEventListener?.('change', () => {
+  if (reduceMotion.matches) pauseAllCardVideos();
+  else resumeVisibleCardVideos();
+});
+
 </script>
+
 
 <!-- ── Picasso Easter Egg: type "picasso" or triple-tap hero to flip ── -->
 <style>
@@ -747,62 +726,96 @@ cardVideos.forEach(video => {
   overflow: hidden;
 }
 #flip-front { overflow-y: scroll; background: #fff; }
-#flip-back  { transform: rotateY(180deg); background: #fff; }
+#flip-back  { transform: rotateY(180deg); background: #f7f6f2; }
+/* WebKit (Safari, every iPhone browser) ignores backface-visibility for the
+   faces' scrolled content, videos and iframes, so the mirrored page showed
+   through the Lab. The face turning away also fades out at the edge-on
+   midpoint of the flip (delay = half the flip duration). */
+#flip-front, #flip-back { transition: opacity 0s linear .575s; }
+#flip-back,
+#flip-card.flipped #flip-front { opacity: 0; }
+#flip-card.flipped #flip-back { opacity: 1; }
 #flip-back iframe { width: 100%; height: 100%; height: 100dvh; border: none; display: block; }
 
+/* The loader on the Lab side of the card, shown until picasso-lab.com has loaded: the Lab's own paper
+   and its three fields (computer science, physics, math) as rings that draw themselves, with members
+   orbiting on them and the lab where all three meet. No button: it simply turns into the Lab. */
 #flip-status {
   position: absolute;
   inset: 0;
   z-index: 2;
   display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
+  place-items: center;
   padding: 28px;
-  background: #fff;
-  color: #5c6280;
+  background: #f7f6f2;
+  color: #6f6c63;
   text-align: center;
-  font: 600 .86rem/1.5 'Inter', sans-serif;
-  transition: opacity .25s ease;
+  transition: opacity .5s ease .15s;
 }
 #flip-back.loaded #flip-status {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity .25s ease, visibility 0s linear .25s;
+  transition: opacity .5s ease .15s, visibility 0s linear .65s;
 }
-.flip-launch-mark {
-  width: 54px;
-  height: 54px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #00629B, #003355);
-  color: #FFCD00;
-  box-shadow: 0 16px 40px rgba(0,98,155,.22);
-  font-size: 1.55rem;
-  font-weight: 900;
+.lab-loader { display: grid; justify-items: center; gap: 0; transform: translateY(-2vh); }
+.lab-rings { width: clamp(156px, 27vmin, 264px); height: auto; overflow: visible; display: block; }
+#flip-back.loaded .lab-rings { transform: scale(1.06); transition: transform .65s cubic-bezier(.2,.7,.2,1); }
+.lab-rings .ring-track { fill: none; stroke: #e7e4db; stroke-width: 1.4; }
+.lab-rings .ring-draw {
+  fill: none; stroke-width: 2.4; stroke-linecap: round;
+  stroke-dasharray: 365; stroke-dashoffset: 365;
 }
-.flip-status-title {
-  color: #172033;
-  font-size: 1.08rem;
-  font-weight: 800;
+.lab-rings .r-cs   { stroke: #5b833d; }
+.lab-rings .r-phys { stroke: #4974a4; }
+.lab-rings .r-math { stroke: #b74c4c; }
+.lab-rings .orbit { transform-box: view-box; opacity: 0; }
+.lab-rings .orbit circle { stroke: #fbfaf7; stroke-width: 2; }
+.lab-rings .o-cs   { transform-origin: 120px 64px; }
+.lab-rings .o-phys { transform-origin: 82px 129px; }
+.lab-rings .o-math { transform-origin: 158px 129px; }
+.lab-rings .o-cs circle   { fill: #5b833d; }
+.lab-rings .o-phys circle { fill: #4974a4; }
+.lab-rings .o-math circle { fill: #b74c4c; }
+.lab-rings .core { fill: #1c1b18; transform-box: view-box; transform-origin: 120px 107px; transform: scale(0); }
+.lab-rings .core-wave { fill: none; stroke: #1c1b18; stroke-width: 1; opacity: 0; transform-box: view-box; transform-origin: 120px 107px; }
+.lab-word {
+  margin-top: clamp(14px, 2.6vmin, 22px);
+  font: 400 clamp(1.6rem, 3.9vmin, 2.35rem)/1 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  letter-spacing: .015em; color: #1c1b18;
+  opacity: 0; transform: translateY(6px);
 }
+.lab-word em { font-style: italic; }
+.lab-line { position: relative; width: 132px; height: 2px; margin-top: 16px; border-radius: 2px; background: #e7e4db; overflow: hidden; opacity: 0; }
+.lab-line i { position: absolute; top: 0; bottom: 0; left: 0; width: 44px; border-radius: 2px;
+  background: linear-gradient(90deg, #5b833d, #4974a4 55%, #b74c4c); transform: translateX(-48px); }
 #flip-status-text {
-  max-width: 330px;
-  font-weight: 500;
+  margin-top: 12px; min-height: 1.4em;
+  font: 500 .84rem/1.4 'Inter', -apple-system, sans-serif; letter-spacing: .02em; color: #77746b;
+  opacity: 0;
 }
-#flip-status a {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 16px;
-  border-radius: 999px;
-  background: #00629B;
-  color: #fff;
-  text-decoration: none;
-  font-size: .8rem;
-}
+#flip-status-text a { color: #1c1b18; text-decoration: underline; text-decoration-color: rgba(28,27,24,.3); text-underline-offset: 3px; }
+#flip-scene { --ld: .5s; }   /* the back face turns into view half-way through the flip */
+#flip-scene.active .ring-draw { animation: ring-draw .95s cubic-bezier(.55,.05,.25,1) var(--ld) forwards; }
+#flip-scene.active .ring-draw.r-phys { animation-delay: calc(var(--ld) + .16s); }
+#flip-scene.active .ring-draw.r-math { animation-delay: calc(var(--ld) + .32s); }
+#flip-scene.active .orbit { animation: orbit-in .4s ease-out forwards, orbit 11s linear infinite; animation-delay: calc(var(--ld) + .75s), calc(var(--ld) + .75s); }
+#flip-scene.active .o-phys { animation-duration: .4s, 14s; animation-delay: calc(var(--ld) + .9s), calc(var(--ld) + .9s); animation-direction: normal, reverse; }
+#flip-scene.active .o-math { animation-duration: .4s, 12.5s; animation-delay: calc(var(--ld) + 1.05s), calc(var(--ld) + 1.05s); }
+#flip-scene.active .core { animation: core-pop .5s cubic-bezier(.3,1.6,.5,1) calc(var(--ld) + 1.05s) forwards; }
+#flip-scene.active .core-wave { animation: core-wave 2.4s ease-out calc(var(--ld) + 1.4s) infinite; }
+#flip-scene.active .lab-word { animation: rise .6s ease-out calc(var(--ld) + .55s) forwards; }
+#flip-scene.active .lab-line { animation: fade-in .4s ease-out calc(var(--ld) + .8s) forwards; }
+#flip-scene.active .lab-line i { animation: line-run 1.5s cubic-bezier(.45,0,.25,1) calc(var(--ld) + .8s) infinite; }
+#flip-scene.active #flip-status-text { animation: fade-in .5s ease-out calc(var(--ld) + .9s) forwards; }
+@keyframes ring-draw { to { stroke-dashoffset: 0; } }
+@keyframes orbit-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes core-pop { to { transform: scale(1); } }
+@keyframes core-wave { 0% { opacity: .55; transform: scale(1); stroke-width: 1.2; } 100% { opacity: 0; transform: scale(5.5); stroke-width: .2; } }
+@keyframes rise { to { opacity: 1; transform: none; } }
+@keyframes fade-in { to { opacity: 1; } }
+@keyframes line-run { 0% { transform: translateX(-48px); } 100% { transform: translateX(136px); } }
 
 /*
  * Shade: sits inside #flip-scene but OUTSIDE the card,
@@ -869,6 +882,8 @@ cardVideos.forEach(video => {
               opacity    0.22s ease .07s;
 }
 #lab-flash.on span { transform: scale(1); opacity: 1; }
+#lab-flash span { display: inline-flex; align-items: center; gap: .45em; }
+#lab-flash svg { width: 1.15em; height: 1.15em; overflow: visible; fill: none; stroke: currentColor; stroke-width: 14; }
 
 @media (hover: none), (pointer: coarse) {
   .hero {
@@ -888,20 +903,22 @@ cardVideos.forEach(video => {
   #flip-card {
     transition-duration: .78s;
   }
+  #flip-front, #flip-back { transition-delay: .39s; }
+  #flip-scene { --ld: .32s; }
   #flip-back {
     --flip-toolbar-h: 58px;
     display: flex;
     flex-direction: column;
     padding-top: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
-    background: #07131f;
+    background: #f7f6f2;
   }
   #flip-back::before {
     content: "";
     position: absolute;
     inset: 0 0 auto;
     height: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
-    border-bottom: 1px solid rgba(255,255,255,.12);
-    background: rgba(4,18,30,.96);
+    border-bottom: 1px solid rgba(28,27,24,.08);
+    background: #f7f6f2;
   }
   #flip-back iframe {
     position: relative;
@@ -911,19 +928,24 @@ cardVideos.forEach(video => {
     height: auto;
   }
   #flip-status {
-    top: calc(var(--flip-toolbar-h) + env(safe-area-inset-top));
+    top: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   #flip-card,
+  #flip-front,
+  #flip-back,
   #flip-shade,
   #lab-flash,
   #lab-flash span,
-  #flip-status {
+  #flip-status,
+  #flip-status * {
     transition-duration: .01ms !important;
     transition-delay: 0s !important;
     animation-duration: .01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
   }
 }
 
@@ -933,19 +955,33 @@ cardVideos.forEach(video => {
   <div id="flip-card">
     <div id="flip-front" aria-hidden="false"><!-- page content moved here on flip --></div>
     <div id="flip-back" aria-hidden="true" tabindex="-1">
-      <div id="flip-status" role="status">
-        <span class="flip-launch-mark" aria-hidden="true">P</span>
-        <strong class="flip-status-title">Picasso Lab</strong>
-        <span id="flip-status-text">Continue to the full Lab experience in a new tab.</span>
-        <a href="https://picasso-lab.com" target="_blank" rel="noopener">Open Picasso Lab</a>
+      <div id="flip-status" role="status" aria-live="polite">
+        <div class="lab-loader">
+          <svg class="lab-rings" viewBox="16 0 208 200" aria-hidden="true">
+            <circle class="ring-track" cx="120" cy="64" r="58"/>
+            <circle class="ring-track" cx="82" cy="129" r="58"/>
+            <circle class="ring-track" cx="158" cy="129" r="58"/>
+            <circle class="ring-draw r-cs" cx="120" cy="64" r="58" transform="rotate(-90 120 64)"/>
+            <circle class="ring-draw r-phys" cx="82" cy="129" r="58" transform="rotate(150 82 129)"/>
+            <circle class="ring-draw r-math" cx="158" cy="129" r="58" transform="rotate(30 158 129)"/>
+            <g class="orbit o-cs"><circle cx="120" cy="6" r="4.6"/><circle cx="170.2" cy="93" r="3.6"/><circle cx="69.8" cy="93" r="4"/></g>
+            <g class="orbit o-phys"><circle cx="24" cy="129" r="4.4"/><circle cx="111" cy="78.8" r="3.6"/><circle cx="111" cy="179.2" r="4"/></g>
+            <g class="orbit o-math"><circle cx="216" cy="129" r="4.4"/><circle cx="129" cy="179.2" r="3.8"/><circle cx="129" cy="78.8" r="3.6"/></g>
+            <circle class="core-wave" cx="120" cy="107" r="5"/>
+            <circle class="core" cx="120" cy="107" r="5"/>
+          </svg>
+          <div class="lab-word">PICASSO <em>LAB</em></div>
+          <div class="lab-line" aria-hidden="true"><i></i></div>
+          <p id="flip-status-text">Stepping into the lab</p>
+        </div>
       </div>
       <iframe id="lab-iframe" src="" title="Picasso Lab" allow="clipboard-read *; clipboard-write *; fullscreen *"></iframe>
     </div>
   </div>
   <div id="flip-shade"></div>
 </div>
-<div id="lab-flash"><span>✨ Picasso Lab</span></div>
-<div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd> ✨</div>
+<div id="lab-flash"><span><svg viewBox="16 0 208 200" aria-hidden="true"><circle cx="120" cy="64" r="58"/><circle cx="82" cy="129" r="58"/><circle cx="158" cy="129" r="58"/></svg>Picasso Lab</span></div>
+<div id="type-hint">try typing <kbd>p</kbd><kbd>i</kbd><kbd>c</kbd><kbd>a</kbd><kbd>s</kbd><kbd>s</kbd><kbd>o</kbd></div>
 
 <script>
 (function () {
@@ -957,10 +993,17 @@ cardVideos.forEach(video => {
   const iframe = document.getElementById('lab-iframe');
   const flash  = document.getElementById('lab-flash');
   const statusText = document.getElementById('flip-status-text');
+  function setStatus(kind) {
+    if (kind === 'away') {
+      statusText.innerHTML = '<a href="https://picasso-lab.com" target="_blank" rel="noopener">Continue at picasso-lab.com</a>';
+    } else {
+      statusText.textContent = kind === 'slow' ? 'Almost there' : 'Stepping into the lab';
+    }
+  }
   let flipped   = false;
   let animating = false;
   let keyboardPrimed = false;
-  let desiredFlipped = history.state?.picassoLab === true;
+  let desiredFlipped = false;
   let previousOverflow = '';
   let previousFocus = null;
   let iframeWaitTimer = null;
@@ -988,13 +1031,20 @@ cardVideos.forEach(video => {
     .test(window.location.hostname);
   const canEmbedLab = labEmbedParents.has(window.location.origin) || isGoogleSitesEmbed;
 
-  const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint']);
+  const SKIP = new Set(['flip-scene', 'lab-flash', 'type-hint', 'picasso-nav-frame']);   // moving an iframe reloads it
+
+  /* Replace, never push: each switch would otherwise be a dead step in the
+     visitor's back history. */
+  function setLabFrame(url) {
+    iframe.dataset.url = url;
+    try { iframe.contentWindow.location.replace(url); } catch (_) { iframe.src = url; }
+  }
 
   iframe.addEventListener('load', () => {
     if (
       !desiredFlipped ||
       !canEmbedLab ||
-      !iframe.getAttribute('src')?.startsWith(LAB_URL)
+      !iframe.dataset.url?.startsWith(LAB_URL)
     ) return;
     clearTimeout(iframeWaitTimer);
     back.classList.add('loaded');
@@ -1002,11 +1052,9 @@ cardVideos.forEach(video => {
 
   function resetLabFrame() {
     clearTimeout(iframeWaitTimer);
-    iframe.src = 'about:blank';
+    setLabFrame('about:blank');
     back.classList.remove('loaded');
-    statusText.textContent = canEmbedLab
-      ? 'Opening the full Lab experience…'
-      : 'Continue to the full Lab experience in a new tab.';
+    setStatus(canEmbedLab ? 'loading' : 'away');
   }
 
   /* ── Typing hint ── */
@@ -1022,8 +1070,8 @@ cardVideos.forEach(video => {
   function hideHint() { clearTimeout(hintTimer); typeHint.classList.remove('show'); }
   function showTapHint(remaining) {
     typeHint.textContent = remaining === 1
-      ? 'One more tap to open Picasso Lab ✨'
-      : 'Tap the header twice more ✨';
+      ? 'One more tap to open Picasso Lab'
+      : 'Tap the header twice more';
     typeHint.classList.add('show');
     clearTimeout(hintTimer);
     hintTimer = setTimeout(() => typeHint.classList.remove('show'), 1100);
@@ -1150,22 +1198,22 @@ cardVideos.forEach(video => {
 
   function requestFlipForward() {
     desiredFlipped = true;
-    if (history.state?.picassoLab !== true) {
-      pushPicassoHistoryState({ picassoLab: true });
+    if (!projectView.lab) {
+      recordProjectView({ lab: true }, 'push');
     }
     reconcileFlipState();
   }
 
   function requestFlipBack() {
     desiredFlipped = false;
-    if (history.state?.picassoLab === true) {
-      clearPicassoHistoryState({ picassoLab: false });
+    if (projectView.lab) {
+      recordProjectView({ lab: false }, 'pop');
     }
     reconcileFlipState();
   }
 
-  window.addEventListener('popstate', (event) => {
-    desiredFlipped = event.state?.picassoLab === true;
+  window.addEventListener('picasso-nav', (event) => {
+    desiredFlipped = event.detail.lab;
     reconcileFlipState();
   });
 
@@ -1184,19 +1232,19 @@ cardVideos.forEach(video => {
     back.classList.remove('loaded');
     clearTimeout(iframeWaitTimer);
     if (canEmbedLab) {
-      statusText.textContent = 'Opening the full Lab experience…';
-      iframe.src = LAB_URL;
+      setStatus('loading');
+      setLabFrame(LAB_URL);
       iframeWaitTimer = setTimeout(() => {
         if (
           token !== flipTransitionToken ||
           !scene.classList.contains('active') ||
           back.classList.contains('loaded')
         ) return;
-        statusText.textContent = 'Still loading — you can open it directly.';
+        setStatus('slow');
       }, 7000);
     } else {
-      iframe.src = 'about:blank';
-      statusText.textContent = 'Continue to the full Lab experience in a new tab.';
+      setLabFrame('about:blank');
+      setStatus('away');
     }
 
     // Show activation flash

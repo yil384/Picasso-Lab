@@ -1,0 +1,6 @@
+# @DotCSV - pixel-art neural network training (56 s) + diffusion / 3D CNN follow-ups
+URLs: https://x.com/DotCSV/status/2102737776219168939 (574,318 views / 9,384 likes) · 3D CNN https://x.com/DotCSV/status/2102747527955050766 (212k) · diffusion https://x.com/DotCSV/status/2102810407928819866 (71k)
+Evidence: "Le he pedido a Opus 5.5 que me haga una animación en pixel art de una red neuronal entrenándose." Self-reply: "de forma proactiva ... Opus se ha entrenado su propia red neuronal con MNIST para hacer la animación 100% rigurosa".
+Frame viewed (athemeroy thumbnail, mid-video): (session scratchpad)/anim2d/frames2/index-edu/03_2102737776219168939.jpg - black ground; a big pixel digit "8" in a box at left; a dense web of red and cyan lines between columns of node circles; output column labelled 0-9 with the "8" row highlighted, and the predicted "8" in blue pixel type at right. 3D CNN poster: dark, green wireframe stack of feature-map slabs narrowing into a node column.
+Borrow: real computation driving the picture (it trained MNIST), the most-viewed ML explainer in the wave; the prediction flipping to correct is a built-in payoff.
+Avoid: neon-on-black, dense lines - the generic "AI" look.

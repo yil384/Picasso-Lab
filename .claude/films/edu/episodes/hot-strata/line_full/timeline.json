@@ -1,0 +1,373 @@
+{
+ "_": "Shared clock of the full line-art Strata film (line_full/SCRIPT.md). vo starts fit the longer of the EN / ZH scratch voices (tools/tts.py --rate +4%) with >= 0.4 s to spare; cue names match SCRIPT.md section 4.",
+ "fps": 30,
+ "dur": 207.0,
+ "cue": {
+  "cover": 0.0,
+  "hookOut": 2.2,
+  "gpu": 2.4,
+  "squeeze": 3.4,
+  "forum": 4.6,
+  "strataName": 4.8,
+  "coders": 7.9,
+  "overflow": 8.6,
+  "heap": 10.8,
+  "decimals": 12.6,
+  "count125": 16.3,
+  "years": 17.8,
+  "fits": 19.8,
+  "card4090": 20.5,
+  "x10": 22.0,
+  "press": 23.6,
+  "pressDown": 24.3,
+  "stillNo": 25.7,
+  "campus": 29.0,
+  "patternSlip": 30.2,
+  "labName": 31.4,
+  "quote": 36.2,
+  "kitchen": 36.9,
+  "goIn": 38.8,
+  "chefs": 43.0,
+  "label128": 44.4,
+  "answerStrip": 46.6,
+  "ticket": 49.0,
+  "eight": 50.0,
+  "seed121": 50.8,
+  "ticket2": 51.3,
+  "experts": 54.4,
+  "titles": 56.0,
+  "strike": 58.7,
+  "learned": 59.6,
+  "building": 62.4,
+  "qAgain": 62.8,
+  "strikeQ": 64.2,
+  "split": 65.6,
+  "upstairs": 68.6,
+  "cardLabel": 72.0,
+  "crowd": 74.6,
+  "ramLabel": 78.1,
+  "stoveCook": 79.4,
+  "flop": 81.9,
+  "slowStove": 83.6,
+  "runner": 85.6,
+  "manyX": 87.6,
+  "crawl": 90.8,
+  "lag": 93.5,
+  "question": 98.6,
+  "grid": 101.6,
+  "quarter": 105.6,
+  "blindfold": 106.6,
+  "ticks1": 107.6,
+  "s25": 108.9,
+  "gradeF": 109.8,
+  "unmask": 110.7,
+  "spike": 113.4,
+  "boxes": 116.4,
+  "called": 119.6,
+  "paper": 121.4,
+  "rosette": 124.4,
+  "qwenBox": 127.0,
+  "pretend": 130.0,
+  "panBack": 132.4,
+  "c121": 134.5,
+  "tally19": 135.9,
+  "random23": 138.3,
+  "rule2": 141.1,
+  "s51": 144.4,
+  "double": 145.7,
+  "closer": 147.6,
+  "streak1": 149.9,
+  "streak2": 150.7,
+  "link": 151.6,
+  "rule3": 154.8,
+  "s77": 157.6,
+  "triple": 158.9,
+  "finePrint": 159.6,
+  "strataOwn": 160.9,
+  "learning": 164.6,
+  "renovate": 166.9,
+  "rebuild": 167.2,
+  "s50": 169.2,
+  "s93": 171.5,
+  "gradeA": 172.5,
+  "seven": 173.6,
+  "answerDone": 177.8,
+  "desk": 179.8,
+  "smarter": 181.2,
+  "cheaper": 183.6,
+  "ownPC": 185.2,
+  "private": 186.8,
+  "sysResearch": 188.0,
+  "public": 189.6,
+  "you": 191.8,
+  "chaos": 194.4,
+  "pattern": 196.0,
+  "nextUp": 199.8,
+  "endCard": 202.8,
+  "loop": 206.5,
+  "end": 207.0
+ },
+ "vo": [
+  {
+   "id": "b01",
+   "t": 0.3
+  },
+  {
+   "id": "b02",
+   "t": 3.7
+  },
+  {
+   "id": "b03",
+   "t": 11.1
+  },
+  {
+   "id": "b04",
+   "t": 18.8
+  },
+  {
+   "id": "b05",
+   "t": 27.6
+  },
+  {
+   "id": "b06",
+   "t": 36.2
+  },
+  {
+   "id": "b07",
+   "t": 40.8
+  },
+  {
+   "id": "b08",
+   "t": 47.3
+  },
+  {
+   "id": "b09",
+   "t": 53.6
+  },
+  {
+   "id": "b10",
+   "t": 62.7
+  },
+  {
+   "id": "b11",
+   "t": 74.5
+  },
+  {
+   "id": "b12",
+   "t": 82.8
+  },
+  {
+   "id": "b13",
+   "t": 90.5
+  },
+  {
+   "id": "b14",
+   "t": 95.6
+  },
+  {
+   "id": "b15",
+   "t": 100.4
+  },
+  {
+   "id": "b16",
+   "t": 110.7
+  },
+  {
+   "id": "b17",
+   "t": 116.4
+  },
+  {
+   "id": "b18",
+   "t": 126.8
+  },
+  {
+   "id": "b19",
+   "t": 134.2
+  },
+  {
+   "id": "b20",
+   "t": 141.1
+  },
+  {
+   "id": "b21",
+   "t": 147.6
+  },
+  {
+   "id": "b22",
+   "t": 154.8
+  },
+  {
+   "id": "b23",
+   "t": 160.9
+  },
+  {
+   "id": "b24",
+   "t": 166.9
+  },
+  {
+   "id": "b25",
+   "t": 173.2
+  },
+  {
+   "id": "b26",
+   "t": 180.0
+  },
+  {
+   "id": "b27",
+   "t": 189.4
+  },
+  {
+   "id": "b28",
+   "t": 194.4
+  }
+ ],
+ "music": [
+  {
+   "f": "music/Investigations.mp3",
+   "start": 0.0,
+   "from": 0.0,
+   "gain": 0.3,
+   "duck": 0.45,
+   "fadeOut": [
+    92.8,
+    93.5
+   ]
+  },
+  {
+   "f": "music/Investigations.mp3",
+   "start": 101.7,
+   "from": 0.0,
+   "gain": 0.3,
+   "duck": 0.45,
+   "fadeIn": 0.4,
+   "loop": [
+    22.19,
+    32.3
+   ],
+   "loops": 1,
+   "xfade": 2.0,
+   "fadeOut": [
+    206.0,
+    207.0
+   ]
+  }
+ ],
+ "_music": "Kevin MacLeod, Investigations (CC BY 4.0), 93.5 s, in two passes. Pass 1 (0-93.5) ends on its own final hit under b13 ('the slower the answer comes out'), so b14's question (95.6) lands in silence. Pass 2 starts with b15's scoring (101.7) and plays the track once more with one 4-bar loop (track 32.30 -> 22.19, both on beats, 2 s equal-power crossfade, +10.11 s), so its final hit (track 91.0) lands on the end card at 202.8; the card rings out to 207. mix.py: 'music' is a list, each entry ducked under the voice.",
+ "sfx": [
+  {
+   "t": 0.0,
+   "f": "rpg/Audio/bookPlace1.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 3.4,
+   "f": "imp/Audio/impactPlank_medium_002.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 4.6,
+   "f": "rpg/Audio/cloth3.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 8.6,
+   "f": "rpg/Audio/bookFlip2.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 23.6,
+   "f": "imp/Audio/impactWood_heavy_000.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 24.3,
+   "f": "rpg/Audio/creak1.ogg",
+   "g": 0.25
+  },
+  {
+   "t": 36.9,
+   "f": "rpg/Audio/metalPot1.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 49.0,
+   "f": "rpg/Audio/bookFlip1.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 50.0,
+   "f": "imp/Audio/impactPlank_medium_000.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 81.9,
+   "f": "imp/Audio/impactSoft_medium_000.ogg",
+   "g": 0.25
+  },
+  {
+   "t": 85.6,
+   "f": "imp/Audio/footstep_wood_000.ogg",
+   "g": 0.22
+  },
+  {
+   "t": 86.4,
+   "f": "imp/Audio/footstep_wood_001.ogg",
+   "g": 0.2
+  },
+  {
+   "t": 106.6,
+   "f": "rpg/Audio/cloth2.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 113.4,
+   "f": "rpg/Audio/dropLeather.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 116.4,
+   "f": "imp/Audio/impactWood_medium_000.ogg",
+   "g": 0.25
+  },
+  {
+   "t": 135.9,
+   "f": "rpg/Audio/bookFlip3.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 144.4,
+   "f": "imp/Audio/impactGeneric_light_000.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 157.6,
+   "f": "imp/Audio/impactPlank_medium_003.ogg",
+   "g": 0.35
+  },
+  {
+   "t": 167.2,
+   "f": "rpg/Audio/creak2.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 171.5,
+   "f": "imp/Audio/impactBell_heavy_000.ogg",
+   "g": 0.15
+  },
+  {
+   "t": 179.8,
+   "f": "rpg/Audio/bookPlace3.ogg",
+   "g": 0.25
+  },
+  {
+   "t": 189.6,
+   "f": "imp/Audio/impactWood_light_000.ogg",
+   "g": 0.3
+  },
+  {
+   "t": 202.8,
+   "f": "rpg/Audio/bookClose.ogg",
+   "g": 0.3
+  }
+ ]
+}

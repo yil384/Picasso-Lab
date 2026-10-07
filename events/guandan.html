@@ -70,7 +70,6 @@
     <main id="root"></main>
 </div>
 
-<div class="return-transition" id="return-transition" aria-hidden="true"></div>
 <div id="return-type-hint">试试输入 <b>picasso</b></div>
 <div class="toast" id="toast"></div>
 
@@ -99,6 +98,12 @@ const app = initializeApp(firebaseConfig, "guandan-app");
 const db = getDatabase(app);
 const EVENTS_URL = "https://yil384.github.io/Picasso-Lab/events/events.html";
 const GUANDAN_URL = "https://yil384.github.io/Picasso-Lab/events/guandan.html";
+const TIGA_FILMS = "https://yil384.github.io/Picasso-Lab/events/static/tiga/";
+// Inside the Events page the table runs in a frame named "gd-portal" (the name survives this page's own
+// reloads, e.g. a new room). Events plays the Tiga films around it and owns the way in and out.
+const IN_EVENTS_PORTAL = window.name === "gd-portal" && window.parent !== window;
+// a fresh lobby reloads this page; in the portal it replaces the entry so Back still leaves the table
+const reloadLobby = () => (IN_EVENTS_PORTAL ? location.replace(GUANDAN_URL) : (location.href = GUANDAN_URL));
 const root = document.getElementById("root");
 const toastEl = document.getElementById("toast");
 const hudStatusEl = document.getElementById("hud-status");
@@ -108,7 +113,6 @@ const backEventsBtn = document.getElementById("back-events-btn");
 const langToggleBtn = document.getElementById("lang-toggle");
 const hudRulesBtn = document.getElementById("hud-rules-btn");
 const hudRecordsBtn = document.getElementById("hud-records-btn");
-const returnTransition = document.getElementById("return-transition");
 const returnTypeHint = document.getElementById("return-type-hint");
 const roomRoot = "guandanRooms";
 const ACE_FAIL_LIMIT = 3;
@@ -414,82 +418,52 @@ function hideReturnTypeHint() {
     returnTypeHint?.classList.remove("show");
 }
 
-function returnShardsHTML() {
-    const PL = (window.GuandanRecords && window.GuandanRecords.PLAYERS) || {};
-    const roster = ["yufei","yue","zhengding","chang","hezi","keyi","xiang","jixuan","zaifeng","zhongkai","zhuo","yichen","xinwei","alon","chenyang","haotian"].filter(k => PL[k] && PL[k].avatar);
-    const spread = [
-        { dx: -156, dy: -94, rot: -40 }, { dx: 148, dy: -104, rot: 38 },
-        { dx: -188, dy: 20, rot: -24 }, { dx: 178, dy: 30, rot: 26 },
-        { dx: -150, dy: 116, rot: -16 }, { dx: 150, dy: 122, rot: 18 },
-        { dx: -70, dy: 158, rot: -8 }, { dx: 78, dy: 162, rot: 10 },
-        { dx: -210, dy: -40, rot: -52 }, { dx: 200, dy: -48, rot: 50 },
-        { dx: -100, dy: -140, rot: -30 }, { dx: 96, dy: -134, rot: 32 },
-        { dx: -240, dy: 80, rot: -62 }, { dx: 230, dy: 88, rot: 58 },
-        { dx: -30, dy: 190, rot: -5 }, { dx: 36, dy: 194, rot: 6 }
-    ];
-    const isRed = (s) => s === "♥" || s === "♦";
-    if (!roster.length) return "";
-    return roster.slice(0, 16).map((k, i) => {
-        const p = PL[k];
-        const sp = spread[i % spread.length];
-        const card = p.card || "A♥";
-        const r = card.slice(0, -1);
-        const s = card.slice(-1);
-        return `<span class="rvx-shard ${isRed(s) ? "red" : ""}" style="--dx:${sp.dx}px;--dy:${sp.dy}px;--rot:${sp.rot}deg;--delay:${(0.5 + i * 0.028).toFixed(3)}s"><span class="rvx-shard-photo" style="background-image:url('${p.avatar}')"></span><span class="rvx-shard-cn">${r}<small>${s}</small></span></span>`;
-    }).join("");
+// Tells the Events portal what is going on: "ready" (first paint), "exit" (play the return film),
+// "left" (the seat is given back, the frame can go) and "layout" (the table turned for a portrait phone).
+let lastTurned = false;
+function postToEvents(msg) {
+    if (!IN_EVENTS_PORTAL) return;
+    lastTurned = !!document.querySelector(".gd-viewport.is-rotated");
+    try { parent.postMessage({ picassoGuandan: msg, turned: lastTurned }, "*"); } catch (_) {}
+}
+function reportTurned() {
+    if (IN_EVENTS_PORTAL && !!document.querySelector(".gd-viewport.is-rotated") !== lastTurned) postToEvents("layout");
 }
 
-function returnCardsHTML() {
-    // A small fanned hand of cards: starts stacked face-down (gold "P" emblem back),
-    // fans open on its own tilt, flips to reveal a suit face (the cards' own suit art), then
-    // scatters off-screen.
-    const cards = [
-        { suit: "S", color: "black", fan: -30, sx: -46, sy: -14, fly: -58, dx: -220, dy: -110, delay: 0.30 },
-        { suit: "H", color: "red",   fan: -14, sx: -24, sy: -30, fly: -28, dx: -104, dy: -186, delay: 0.35 },
-        { suit: "D", color: "red",   fan: 0,   sx: 0,   sy: -36, fly: 0,   dx: 0,    dy: -218, delay: 0.40 },
-        { suit: "C", color: "black", fan: 14,  sx: 24,  sy: -30, fly: 28,  dx: 104,  dy: -186, delay: 0.45 },
-        { suit: "S", color: "black", fan: 30,  sx: 46,  sy: -14, fly: 58,  dx: 220,  dy: -110, delay: 0.50 }
-    ];
-    return cards.map(c => `<span class="rvx-card" style="--fan-rot:${c.fan}deg;--spread-x:${c.sx}px;--spread-y:${c.sy}px;--fly-rot:${c.fly}deg;--dx:${c.dx}px;--dy:${c.dy}px;--delay:${c.delay}s"><span class="rvx-card-inner"><span class="rvx-face back"><span class="rvx-emblem">P</span></span><span class="rvx-face front ${c.color}"><svg class="rvx-pip" viewBox="0 0 100 100"><use href="#gd-suit-${c.suit.toLowerCase()}"/></svg></span></span></span>`).join("");
-}
-
-function returnCoinsHTML() {
-    const coins = [
-        { dx: -128, dy: -96, rot: 210 }, { dx: 122, dy: -102, rot: -190 },
-        { dx: -166, dy: 16, rot: 250 }, { dx: 160, dy: 24, rot: -230 },
-        { dx: -92, dy: 120, rot: 170 }, { dx: 88, dy: 126, rot: -150 },
-        { dx: -38, dy: -156, rot: 270 }, { dx: 42, dy: -160, rot: -250 },
-        { dx: -186, dy: -34, rot: 200 }, { dx: 180, dy: -28, rot: -200 }
-    ];
-    return coins.map((c, i) => `<span class="rvx-coin" style="--dx:${c.dx}px;--dy:${c.dy}px;--rot:${c.rot}deg;--delay:${(0.46 + i * 0.026).toFixed(3)}s"></span>`).join("");
-}
-
+// Leaving plays the Tiga return film: Tiga takes the light of the Guandan cards and wins with a beam of
+// cards. In the Events portal the Events page plays it over this frame; opened on its own, the table
+// plays it here and then goes to Events.
 function startReturnToEvents() {
     if (returnNavigationStarted) return;
     returnNavigationStarted = true;
     hideReturnTypeHint();
     // From the room the seat is given back first (as ↩ does), so nobody waits on a ghost seat.
     const leaving = game?.phase === "lobby" && mySeat() >= 0 ? queueRoomAction(leaveRoom) : null;
-    const go = () => Promise.race([leaving, new Promise(resolve => setTimeout(resolve, 1500))])
-        .then(() => { location.href = `${EVENTS_URL}?from=guandan`; });
-    if (!returnTransition) {
-        go();
+    const settled = Promise.race([leaving, new Promise(resolve => setTimeout(resolve, 1500))]);
+    if (IN_EVENTS_PORTAL) {
+        postToEvents("exit");
+        settled.then(() => postToEvents("left"));
         return;
     }
-    returnTransition.innerHTML = `
-        <div class="rvx-stage" aria-hidden="true">
-            <div class="rvx-title">${L("Table cleared", "牌局结束")}<small>&middot; ${L("Victory", "完胜")} &middot;</small></div>
-            <div class="rvx-ring"></div>
-            <div class="rvx-beam"></div>
-            <div class="rvx-burst">
-                ${returnCardsHTML()}
-                ${returnShardsHTML()}
-                ${returnCoinsHTML()}
-            </div>
-        </div>`;
-    returnTransition.setAttribute("aria-hidden", "false");
-    requestAnimationFrame(() => returnTransition.classList.add("active"));
-    setTimeout(go, 1640);
+    playReturnFilm(() => settled.then(() => { location.href = `${EVENTS_URL}?from=guandan`; }));
+}
+
+function playReturnFilm(done) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return done();
+    const turned = !!document.querySelector(".gd-viewport.is-rotated");
+    const wide = turned || window.innerWidth >= window.innerHeight;
+    const layer = document.createElement("div");
+    layer.className = `return-film${turned ? " is-turned" : ""}`;
+    layer.innerHTML = `<video playsinline muted preload="auto" src="${TIGA_FILMS}light_${wide ? "land" : "port"}.mp4"></video>`;
+    document.body.appendChild(layer);
+    const video = layer.firstElementChild;
+    let finished = false;
+    const finish = () => { if (!finished) { finished = true; done(); } };
+    video.addEventListener("ended", finish);
+    video.addEventListener("error", finish);
+    layer.addEventListener("click", finish);                    // a click skips to Events
+    setTimeout(finish, 9000);                                   // a stalled film never traps the player
+    video.play().catch(finish);
 }
 
 function primeReturnKeyboardCapture() {
@@ -1924,6 +1898,7 @@ function enterScreen(name) {
     if (document.body.dataset.screen === name) return;
     document.body.dataset.screen = name;
     window.scrollTo(0, 0);
+    reportTurned();
 }
 
 function renderLobby() {
@@ -2491,7 +2466,7 @@ async function dissolveRoom() {
         render();
         showToast(L("Dissolving the room…", "正在解散房间…"), 4000);
         await remove(roomRef());
-        location.href = GUANDAN_URL;
+        reloadLobby();
     });
 }
 
@@ -2817,6 +2792,7 @@ function layoutStage() {
     t.viewport.classList.toggle("is-rotated", rotated);
     const changed = Math.abs(w - t.layout.w) > .5 || Math.abs(h - t.layout.h) > .5;
     t.layout = { s, w, h, rotated, left, top, vw };
+    reportTurned();
     return changed;
 }
 
@@ -4159,7 +4135,7 @@ document.getElementById("new-room-btn").addEventListener("click", async () => {
         showToast(L("Leaving the room…", "正在离开房间…"), 4000);
         await Promise.race([queueRoomAction(leaveRoom), new Promise(resolve => setTimeout(resolve, 4000))]);
     }
-    location.href = GUANDAN_URL;
+    reloadLobby();
 });
 
 langToggleBtn.addEventListener("click", () => {
@@ -4179,8 +4155,12 @@ hudStatusEl.addEventListener("change", event => {
 hudStatusEl.addEventListener("keydown", blurNicknameOnEnter);
 document.addEventListener("guandan:music", refreshLobbyRail);
 
-window.addEventListener("load", () => setTimeout(primeReturnKeyboardCapture, 0), { once: true });
-window.addEventListener("pageshow", () => setTimeout(primeReturnKeyboardCapture, 0));
+// In the Events portal, Events focuses this frame when it reveals the table: a frame that focused
+// itself on load would take the keys (Esc to skip) while the attack film still plays over it.
+if (!IN_EVENTS_PORTAL) {
+    window.addEventListener("load", () => setTimeout(primeReturnKeyboardCapture, 0), { once: true });
+    window.addEventListener("pageshow", () => setTimeout(primeReturnKeyboardCapture, 0));
+}
 window.addEventListener("focus", primeReturnKeyboardCapture);
 document.addEventListener("pointerenter", primeReturnKeyboardCapture);
 document.addEventListener("mousemove", () => {
@@ -4207,6 +4187,10 @@ document.addEventListener("keydown", event => {
 
 window.addEventListener("resize", scheduleStageLayout);
 window.addEventListener("orientationchange", scheduleStageLayout);
+
+if (IN_EVENTS_PORTAL) {
+    window.addEventListener("load", () => requestAnimationFrame(() => requestAnimationFrame(() => postToEvents("ready"))), { once: true });
+}
 
 if (roomCode) {
     root.innerHTML = `<div class="gd-boot" role="status">${L("Joining the room…", "正在进入房间…")}</div>`;

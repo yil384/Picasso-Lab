@@ -1,0 +1,32 @@
+{
+  "name": "muse-minecraft-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Muse Spark plays Minecraft: a mineflayer body with 10 whitelisted skills, a tool-calling brain on an OpenAI-compatible API, and a zero-JS viewer page.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "test:stream": "STREAM_E2E=1 node --test test/stream.test.js",
+    "start": "node src/index.js",
+    "mock": "node test/mock-llm.js",
+    "probe": "node scripts/probe.mjs",
+    "run-goal": "node scripts/run-goal.mjs",
+    "hud": "node scripts/hud-data.mjs",
+    "a11y": "node scripts/a11y-chrome.mjs",
+    "stream": "node scripts/stream.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "canvas": "^3.2.3",
+    "minecraft-data": "^3.117.0",
+    "mineflayer": "4.39.0",
+    "mineflayer-collectblock": "^1.6.0",
+    "mineflayer-pathfinder": "^2.4.5",
+    "openai": "^7.28.0",
+    "prismarine-viewer": "^1.33.0",
+    "zod": "^4.6.5"
+  }
+}
