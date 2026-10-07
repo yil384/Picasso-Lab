@@ -25,17 +25,18 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | --- | --- |
 | `src/index.js` | `npm start`: the web page, one bot per guest session, the house bot + brain for `/ask`, the optional watch page, shutdown on Ctrl-C |
 | `src/config.js` | every env var with its default, validated and frozen; the key is never printable |
-| `src/contracts.js` | the 10 tools (`TOOLS`, strict JSON Schemas), `validateArgs` / `parseArgs` / `coerceArgs`, and the JSDoc interfaces of Body, Brain, LLM, Logger, Web |
+| `src/contracts.js` | the 10 tools (`TOOLS`, strict JSON Schemas), the MCP-only `craft_batch` (`MCP_SKILLS`, `SKILL_NAMES`), `validateArgs` / `parseArgs` / `coerceArgs`, the typed result codes of MCP replies (`RESULT_CODES`, `codeOf`), and the JSDoc interfaces of Body, Brain, LLM, Logger, Web and the MCP reply |
 | `src/game.js` | the game vocabulary the tool schemas are built from: minable blocks, craftable items, furnace inputs, fuels, blueprints, attack targets |
 | `src/pricing.js` | Muse Spark prices, `cost(usage, tier)`, the rolling one-hour spend meter |
 | `src/llm.js` | the chat client: clean request, streaming, TTFT and latency, $ per call |
 | `src/log.js` | JSONL decision log with secrets scrubbed |
 | `src/mc.js` | vec3 and the prismarine libraries, resolved through mineflayer (one copy each) |
-| `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills and the plain-text state |
+| `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills (plus `craft_batch` for MCP: `src/skills/craft-batch.js`) and the plain-text state |
 | `src/walk-watch.js` | is a walk still getting closer? Ends one that is not (digging by hand, pillaring, going in circles) with what held it up, where the bot is and what to try |
 | `src/skills/window.js` | window clicks the server confirms: crafting (and the inventory checks around every skill) never trust mineflayer's optimistic window picture |
 | `src/brain.js`, `src/memory.js` | the tool loop, its guards, short-term memory and `notes.json` |
 | `src/web.js` | `/`, `/play`, `/api`, `openapi.json`, `/ask`, `/log`, `/admin/stop` |
+| `src/mcp.js`, `src/mcp-queue.js`, `src/plan.js` | `/mcp`: the tools and their replies (text plus `structuredContent`); the per-game step queue with idempotent calls; the dry-run check that simulates the inventory through a call's steps before it runs (section "MCP calls") |
 | `src/live-view-fx.js` | runs in the live-view pages: eased first-person camera, crack overlay on the block being broken |
 | `src/stream.js`, `src/stream-page.js` | live video of a guest game (off unless `STREAM_ENABLED`): headless Chromium on the bot's first-person view, a smoothed camera, ffmpeg to RTMPS (Facebook Live) or an MP4; the stream service and its client for the container (section "Live video") |
 | `src/camera.js` | the real-client camera (`STREAM_SOURCE=client`): Xvfb + the vanilla Minecraft client as a spectator in the bot's head, ffmpeg x11grab, the same stream interface (section "Real-client camera") |
@@ -50,6 +51,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `scripts/a11y-chrome.mjs` | the same tree and check through a Chrome that is already installed (DevTools protocol, JavaScript off); no Playwright |
 | `test/mock-llm.js` | local mock of the chat (and Responses) endpoint, also `npm run mock` |
 | `test/fake-bot.js` | in-memory fake of the mineflayer bot surface the body uses (also `--fake-bot`) |
+| `test/real-mcp.test.js` | the MCP calls on a real Paper server (skipped unless `MC_REAL=1` and `MC_CONSOLE`): `MC_REAL=1 MC_CONSOLE=server/console.in node --test test/real-mcp.test.js` |
 
 Node 22 or newer (mineflayer 4.39, minecraft-protocol and openai 7 require it). Every command below runs in this
 folder.
@@ -126,9 +128,10 @@ second Ctrl-C exits at once.
 
 MCP: one game per MCP session (connector users share the agent's egress addresses); per address at most
 `max(2, WEB_MAX_SESSIONS / 2)` live MCP games and 60 MCP game starts an hour, no cooldown. Every reply comes within
-45 s with the result and the state (with the time left); a skill still running then goes on, and a later reply (get_state
-waits for it) reports its result once the client has received it. start_game returns a handle that resumes the game
-from a new MCP session. MCP sessions: 64 KB per request, 20 per address and 200 in all (the one called longest ago
+45 s with the result and the state (with the time left); steps still running or queued then go on, and a later reply
+(get_state waits for them) reports their results once the client has received them (section "MCP calls"). start_game
+returns a handle that resumes the game, with its queue, from a new MCP session.
+MCP sessions: 64 KB per request, 20 per address and 200 in all (the one called longest ago
 without a game makes room), 1200 new ones per address an hour, dropped after 10 minutes without a game; a game ends
 after 5 minutes without calls. Live views: per address 4 open WebSockets, 32 requests in flight and 120 new views an
 hour, 12 WebSockets per bot; a WebSocket idle for 90 s, or whose reader lets 8 MB pile up, is dropped.
@@ -138,6 +141,40 @@ another website makes a browser send (`Sec-Fetch-Site: cross-site` or `same-site
 server-side agents send neither header and are not affected. `/play` never reloads while the bot waits for the next
 action (an agent filling a form would lose it); while the bot joins or a skill runs it reloads every 5 or 15 s, and
 "Check again" reloads it by hand.
+
+### MCP calls
+
+`play` (one step) and `play_sequence` (up to 32) go through these stages (ROADMAP M2):
+
+1. Every step's skill and arguments are validated; one bad step refuses the whole call (`BAD_ARGS`), nothing runs.
+2. A repeat of an accepted call returns that call's steps and runs nothing (`DUPLICATE`): the same `request_id`
+   (kept for the game's life, the newest 256), or without one the same call with the same arguments until 60 s after
+   its last step ended (never while it runs). The same `request_id` for a different call is refused. `stop` forgets
+   the calls without a `request_id`, so a deliberate repeat after a stop runs.
+3. The dry-run check (`src/plan.js`) simulates the inventory through the steps, after the steps already queued (taken
+   to work in full): the craft variants of minecraft-data 1.21.4, the smelt skill's fuel order and 24-item cap,
+   collect's drops and harvest tools, place and build materials. When something is missing the call is refused with a
+   list per step (`NEED_ITEMS`, `structuredContent.missing`); planks (from logs, one cut per wood), sticks, a crafting
+   table (none carried or within 32 blocks) and a furnace that can be made are added as craft steps instead, or into
+   a `craft_batch`'s list. `dry_run: true` only returns the plan. If the check itself fails, the call is not refused.
+4. The steps go into the game's queue (`src/mcp-queue.js`, at most 64 waiting, else `QUEUE_FULL`) and run one after
+   another past the reply. Each step is `pending` (waiting or running), `confirmed`, `failed` or `cancelled`; a failed
+   step cancels everything queued after it, in every call; `stop` stops the running step and clears the queue.
+5. The reply (within 45 s) has the text as before plus `structuredContent`: `code` (null, or `NEED_ITEMS`,
+   `HOSTILE_CONTACT`, `RETREATED_LOW_HEALTH`, `INVENTORY_FULL`, `DIED`, `NOT_STARTED`, `DUPLICATE`, `BAD_ARGS`,
+   `QUEUE_FULL`, `TIMED_OUT`, `STOPPED`, `FAILED`), `steps`, `earlier` (steps that finished since the last delivered
+   reply), `queue`, `changed` (the inventory change) and a short `state` (health, food, position, inventory, seconds
+   left; no scan of the blocks around). `get_state {full: true}` adds the whole state as `full`. A step's code comes
+   from its result text (`codeOf` in src/contracts.js): a body that flees on its own should say "retreated" or "fled".
+
+`craft_batch {items: [{item, n}, ...]}` (MCP only; the brain's tools and the web page keep the 10 skills) crafts a
+list in order with one crafting table: the one within reach, or the carried one, placed once and picked up at the end.
+On the local Paper server (2026-10-07, prepared: items from the console, the Mac loaded by other servers), a wooden
+pickaxe, axe and stone pickaxe from 4 logs and 3 cobblestone took 7.5 and 6.9 s of skill time as one craft_batch (one
+table) and 16.5 and 16.7 s as the same 8 crafts in a play_sequence (the table placed and picked up 3 times). Two runs
+(`test/real-mcp.test.js`): a plumbing check, not a benchmark. The check itself costs under 3 ms, plus about 30 ms for
+each station lookup it needs (`findBlock` within 32 blocks in a forest); the state text of every reply costs about
+850 ms there.
 
 ## Run it for real (a machine with Paper 1.21.4 and a key)
 

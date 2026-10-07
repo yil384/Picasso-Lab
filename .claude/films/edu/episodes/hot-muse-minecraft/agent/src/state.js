@@ -132,6 +132,7 @@ export function describeCall(tool, args = {}) {
   if (tool === 'say') return `say "${oneLine(args.text ?? '', 40)}"`;
   if (tool === 'go_to') return `go_to ${xyz(args)}`;
   if (tool === 'place' && args.pos) return `place ${args.block} at ${xyz(args.pos)}`;
+  if (Array.isArray(args.items)) return `${tool} ${args.items.map((i) => `${i?.item} ${i?.n}`).join(', ')}`; // craft_batch
   const parts = Object.values(args).map((v) => (v && typeof v === 'object' ? xyz(v) : String(v)));
   return [tool, ...parts].join(' ');
 }

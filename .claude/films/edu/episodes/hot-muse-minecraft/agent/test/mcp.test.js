@@ -34,6 +34,8 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
     const { tools } = await a.listTools();
     assert.deepEqual(tools.map((t) => t.name).sort(), ['end_game', 'get_state', 'play', 'play_sequence', 'start_game', 'stop']);
     const play = tools.find((t) => t.name === 'play');
+    assert.match(play.description, /- craft_batch \{items: list of 1 to 12 \{item, n\}\}: /);
+    for (const name of ['play', 'play_sequence', 'get_state', 'stop']) assert.ok(tools.find((t) => t.name === name).outputSchema, `${name} declares its structuredContent`);
     assert.match(play.description, /- place \{block: one of [^}]*, pos: \{x: integer, y: integer -64 to 320, z: integer\}\}/);
     assert.match(play.description, /stone_bricks/, 'every craftable item is listed');
     assert.equal(tools.find((t) => t.name === 'get_state').annotations?.readOnlyHint, true);
@@ -68,22 +70,40 @@ test('mcp: start_game, play, play_sequence, refusals, one bot per MCP session', 
     assert.match(text(bad), /not run, bad arguments/);
     assert.equal(bad.isError, true, 'a skill that did not run is an error');
 
-    const seq = text(await a.callTool({ name: 'play_sequence', arguments: { steps: [
+    // the check before running: an iron pickaxe without iron is refused whole, nothing runs
+    const refused = await a.callTool({ name: 'play_sequence', arguments: { steps: [
       { skill: 'craft', args: { item: 'oak_planks', n: 4 } },
       { skill: 'craft', args: { item: 'iron_pickaxe', n: 1 } },
-      { skill: 'craft', args: { item: 'stick', n: 4 } },
-    ] } }));
-    assert.match(seq, /^1\. craft .*: ok/m);
-    assert.match(seq, /^2\. craft .*FAILED/m);
-    assert.match(seq, /^Not run: 3\. craft \{"item":"stick","n":4\}\. Deal with the failure above first/m);
+    ] } });
+    assert.equal(refused.isError, true);
+    assert.equal(refused.structuredContent.code, 'NEED_ITEMS');
+    assert.match(text(refused), /^- step 2 \(craft \{"item":"iron_pickaxe","n":1\}\): missing 3 iron_ingot/m);
+    assert.deepEqual(refused.structuredContent.missing, [{ step: 2, item: 'iron_ingot', need: 3, for: 'iron_pickaxe' }]);
+    assert.deepEqual(refused.structuredContent.state.inventory, { oak_log: 3 }, 'nothing ran');
 
-    const notRun = text(await a.callTool({ name: 'play_sequence', arguments: { steps: [
+    // a step that fails when it runs cancels the steps after it
+    const seq = await a.callTool({ name: 'play_sequence', arguments: { steps: [
+      { skill: 'craft', args: { item: 'oak_planks', n: 4 } },
+      { skill: 'attack', args: { target: 'zombie' } },
+      { skill: 'craft', args: { item: 'stick', n: 4 } },
+    ] } });
+    assert.match(text(seq), /^1\. craft .*: ok/m);
+    assert.match(text(seq), /^2\. attack .*FAILED/m);
+    assert.match(text(seq), /^Not run: 3\. craft \{"item":"stick","n":4\}\. Deal with the failure above first/m);
+    assert.deepEqual(seq.structuredContent.steps.map((x) => x.status), ['confirmed', 'failed', 'cancelled']);
+    assert.equal(seq.structuredContent.code, 'FAILED');
+    assert.deepEqual(seq.structuredContent.changed, { oak_log: -1, oak_planks: 4 });
+
+    // one bad step refuses the whole call
+    const notRun = await a.callTool({ name: 'play_sequence', arguments: { steps: [
       { skill: 'craft', args: { item: 'stick', n: 4 } },
       { skill: 'craft', args: { item: 'stick' } },
       { skill: 'craft', args: { item: 'crafting_table', n: 1 } },
-    ] } }));
-    assert.match(notRun, /^2\. craft: not run, bad arguments/m);
-    assert.match(notRun, /^Not run: 2\. craft \{"item":"stick"\}, 3\. craft \{"item":"crafting_table","n":1\}\. Step 2 could not start/m);
+    ] } });
+    assert.equal(notRun.isError, true);
+    assert.equal(notRun.structuredContent.code, 'BAD_ARGS');
+    assert.match(text(notRun), /^2\. craft: not run, bad arguments: craft\.n is required\nNothing was run/m);
+    assert.deepEqual(notRun.structuredContent.state.inventory, { oak_log: 2, oak_planks: 4 });
 
     // a second MCP session from the same address gets its own bot (connector users share the agent's addresses)
     const sb = text(await b.callTool({ name: 'start_game', arguments: START }));
@@ -182,7 +202,7 @@ test('mcp: one deadline per call; a result that outlives its call goes out once 
 
   let t0 = Date.now();
   let r = text(await c.callTool({ name: 'play', arguments: { skill: 'go_to', args: { x: 6, y: 64, z: 0 } } }));
-  assert.match(r, /^go_to \{"x":6,"y":64,"z":0\}: still running after 0 s/);
+  assert.match(r, /^go_to \{"x":6,"y":64,"z":0\}: still running after \d s/);
   // the next play waits for go_to, then starts collect with what is left of ITS deadline (not a second full one)
   t0 = Date.now();
   r = text(await c.callTool({ name: 'play', arguments: { skill: 'collect', args: { block: 'oak_log', n: 3 } } }));

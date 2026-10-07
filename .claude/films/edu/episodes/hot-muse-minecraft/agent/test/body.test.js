@@ -8,7 +8,7 @@ import { createFakeBot } from './fake-bot.js';
 import { createBody } from '../src/body.js';
 import { layout } from '../src/skills/build.js';
 import { SKILLS } from '../src/skills/index.js';
-import { TOOL_NAMES } from '../src/contracts.js';
+import { SKILL_NAMES } from '../src/contracts.js';
 import { loadConfig } from '../src/config.js';
 import { createLogger } from '../src/log.js';
 import { Vec3 } from '../src/mc.js';
@@ -27,8 +27,8 @@ async function setup(botOpts = {}, bodyOpts = {}) {
 const nameAt = (bot, x, y, z) => bot.blockAt(new Vec3(x, y, z)).name;
 const called = (bot, fn) => bot.fake.calls.filter((c) => c.fn === fn);
 
-test('skills: exactly one skill per tool', () => {
-  assert.deepEqual(Object.keys(SKILLS).sort(), [...TOOL_NAMES].sort());
+test('skills: exactly one skill per tool (and per MCP-only skill)', () => {
+  assert.deepEqual(Object.keys(SKILLS).sort(), [...SKILL_NAMES].sort());
 });
 
 test('run: bad arguments resolve ok:false and never reach the game', async () => {

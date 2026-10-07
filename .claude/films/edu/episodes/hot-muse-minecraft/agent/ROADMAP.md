@@ -349,6 +349,9 @@ zombies, ate 1 bread"):
 - **Typed, compact replies** (moved up from the first draft's M11) [B1]. `structuredContent` with what changed and a short state, plus
   typed codes: `NEED_ITEMS`, `HOSTILE_CONTACT`, `RETREATED_LOW_HEALTH`, `INVENTORY_FULL`, `DIED`, `NOT_STARTED`,
   `DUPLICATE`. The text stays for readers. `get_state {full: true}` gives the rest.
+- Status 2026-10-07: the five MCP items above are built (README, "MCP calls"): `src/mcp-queue.js`, `src/plan.js`,
+  `craft_batch` (`src/skills/craft-batch.js`, MCP only). Tested with stub bodies and the fake world (`npm test`) and
+  once on the local Paper server (`test/real-mcp.test.js`), not yet on staging or with Muse.
 
 **Acceptance, scripted** (strict harness on staging on picasso, iron pickaxe from an empty inventory at 10 fresh
 spots, locked daylight, Easy):
