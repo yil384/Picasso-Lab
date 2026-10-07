@@ -1,4 +1,5 @@
-# play.picasso-lab.com on picasso: `docker compose up -d --build` in the deployed folder (deploy/push.sh does it).
+# play.picasso-lab.com on picasso: `docker compose up -d --build` in the deployed folder (deploy/push.sh --prod does it,
+# after the same code passed its checks on staging, deploy/staging.compose.yaml).
 # Caddy (the FRAS project) proxies https://play.picasso-lab.com to 172.24.0.1:7850.
 name: muse-minecraft
 services:
@@ -23,7 +24,7 @@ services:
     volumes: [ "../logs:/logs", "console:/console" ]
     ports: [ "172.24.0.1:7850:8787" ]
     networks: { mc: { ipv4_address: 10.77.77.11 } }
-  # Live video of guest games (off unless started with the "stream" profile; deploy/push.sh does that when
+  # Live video of guest games (off unless started with the "stream" profile; deploy/push.sh --prod does that when
   # deploy/stream.env exists). It shares the agent's network namespace: the agent's first-person views on 127.0.0.1
   # are local to it, and its control API (127.0.0.1:7861) is reachable from the agent only. The stream keys live in
   # stream.env, read by this container alone. To turn it on: deploy/stream.env with
@@ -48,7 +49,7 @@ services:
     pids_limit: 1024
     shm_size: 256m
     security_opt: [ "no-new-privileges:true" ]
-  # The real-client camera (off unless started with the "camera" profile; deploy/push.sh does that when
+  # The real-client camera (off unless started with the "camera" profile; deploy/push.sh --prod does that when
   # deploy/camera.env exists): a vanilla Minecraft 1.21.4 client on Xvfb that spectates each guest bot in first person,
   # captured by ffmpeg to the output in camera.env (README, "Real-client camera"). Like the stream container it shares
   # the agent's network namespace (control API on 127.0.0.1:7862, Paper at 10.77.77.10), and it puts itself in

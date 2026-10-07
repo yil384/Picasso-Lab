@@ -43,6 +43,8 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `scripts/camera-login.mjs` | signs the camera's Microsoft account in once (device code, no password) and keeps its tokens in the auth folder; `--check` |
 | `deploy/Dockerfile.camera`, `deploy/camera/` | the camera image: Java 21, the 1.21.4 client (`install-client.mjs`, SHA-1 checked, no sounds), `CameraMain.java` (the token from the environment, never the command line), Xvfb, Mesa, VirtualGL, ffmpeg |
 | `deploy/camera-test.compose.yaml` | a separate test project on picasso (`muse-camera-test`: own Paper, agent, camera, network; shares nothing with production) |
+| `deploy/push.sh`, `deploy/staging.compose.yaml` | deploys to picasso: staging first (play-staging.picasso-lab.com), production with `--prod` only after the staging checks pass (section "Staging and deploys") |
+| `scripts/staging-check.mjs` | the staging checks: the page, `openapi.json`, `/mcp`, a scripted game to a wooden pickaxe (strict, no model) |
 | `scripts/probe.mjs` | latency and $ per call: effort x cache on/off x Chat/Responses, CSV per call |
 | `scripts/run-goal.mjs` | one goal from the command line (real server, or the mock and the fake bot), JSONL log, HUD table |
 | `scripts/hud-data.mjs` | the video HUD numbers from one or more run logs (milestones, totals, failures, timeline) |
@@ -180,6 +182,47 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
 7. After a world reset, delete `notes.json` and `notes-ask.json` (or their `places`): the known crafting tables and
    furnaces belong to the old world. Lessons may stay.
 
+## Staging and deploys
+
+Every change runs on staging on picasso before production (ROADMAP M0 item 9). Staging is production's stack under
+its own name and shares nothing with it: compose project `muse-staging` (`deploy/staging.compose.yaml`), code in
+`~/workspace/muse-staging/app`, its own Paper 1.21.4 and world (seed 71811045) in `~/workspace/muse-staging/data`,
+logs in `~/workspace/muse-staging/logs`, network 10.77.79.0/28, the agent on 172.24.0.1:7851, served at
+https://play-staging.picasso-lab.com (its own block in the FRAS Caddyfile, next to `play.`, with `X-Robots-Tag:
+noindex`). It runs no streamer or camera (production runs neither today). Its `deploy/.env` holds its own admin token;
+push.sh writes one the first time and never copies or overwrites it.
+
+```sh
+deploy/push.sh                     # staging, then the staging checks; production is not touched
+deploy/push.sh --prod              # the same, then production exactly as before, only if every check passed
+deploy/push.sh --check             # the staging checks alone, against what staging runs now
+deploy/push.sh --prod --dry-run    # print what would run, run nothing
+node scripts/staging-check.mjs [url] [--no-game]   # the checks by hand (default: the staging URL)
+```
+
+The checks (`scripts/staging-check.mjs`): the page answers; `openapi.json` names the host it was asked on (so
+`WEB_PUBLIC_URL` is staging's, not production's); `/mcp` initializes and lists the game tools; and a scripted game
+with no model goes from an empty inventory to a wooden pickaxe with `play_sequence` (3 logs of the nearest wood, 12
+planks, 4 sticks, a table, the pickaxe). The game is strict: no step is retried and nothing fights back, so a mob hit
+fails the check. It always ends the game, so its bot leaves the server. While a new agent or Paper starts, the checks
+wait (up to 2 minutes for the page, and `start_game` again every 5 s). They refuse play.picasso-lab.com. `--prod`
+goes on only when they pass and the files to deploy did not change while they ran (a hash taken before staging).
+
+Measured on picasso (2026-10-07, n = 2, natural: a fresh world and no console commands; Easy, locked daylight): the
+first push built staging and started a fresh world (Paper ready 14 s after its start; `start_game` refused for 11 s,
+then worked) and passed in 85 s, the wooden pickaxe 60.6 s after the first action (the collect walk outlived its 45 s
+call); a second `--check` passed in 37 s, the pickaxe in 34.1 s. The first push from the Mac also uploads the 51 MB
+paper.jar (a few minutes); later pushes skip it.
+
+`test/deploy.test.js` keeps this honest without picasso: `staging.compose.yaml` must keep production's Paper and
+agent settings (only `MC_HOST` and `WEB_PUBLIC_URL` differ) and every service production always runs; and push.sh,
+run with stand-ins for ssh, rsync and node, must reach production only with `--prod` and only after a passing check,
+with production's commands byte for byte as before staging existed.
+
+Caddy: the block was added to `~/workspace/FRAS/caddy-config/Caddyfile` after a backup
+(`Caddyfile.bak-20261007-222723`), validated as a separate file inside the container, moved into place, then
+`docker exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
+
 ## Live video (Facebook Live)
 
 The muse.ai preview panel loads no page of ours, but it frames Facebook's video plugin, so the bot's first-person view
@@ -238,7 +281,7 @@ STREAM_RTMP_URL=rtmps://live-api-s.facebook.com:443/rtmp/<key>
 ```
 
 and tell the agent where it is, in `deploy/.env`: `STREAM_ENABLED=1` and `STREAM_SERVICE_URL=http://127.0.0.1:7861`.
-`deploy/push.sh` builds and starts the stream container whenever `deploy/stream.env` exists. For more streams at once:
+`deploy/push.sh --prod` builds and starts the stream container whenever `deploy/stream.env` exists. For more streams at once:
 one URL per stream in `STREAM_RTMP_URL`, `STREAM_MAX` in compose.yaml, and the caps raised (about 6 CPUs and 1.5 GB per
 stream). In the muse.ai panel: `https://www.facebook.com/plugins/video.php?href=<the live video's URL>&show_text=false`.
 
@@ -317,7 +360,7 @@ docker run --rm --user "$(id -u):$(id -g)" -v ~/workspace/muse-minecraft/camera/
 
 Turn it on in production: `deploy/camera.env` on picasso with `STREAM_RTMP_URL=rtmps://...` (or
 `STREAM_OUT_DIR=/logs/streams` for files), and in `deploy/.env` `STREAM_ENABLED=1` and
-`STREAM_SERVICE_URL=http://127.0.0.1:7862`; then `deploy/push.sh` builds and starts the `camera` profile. The same
+`STREAM_SERVICE_URL=http://127.0.0.1:7862`; then `deploy/push.sh --prod` builds and starts the `camera` profile. The same
 push also turns Paper's per-address connection throttle off (`deploy/paper-entry.sh`): every bot and the camera join
 from the agent's one address, and the 4 s throttle refused a bot that joined right after the camera (it already
 refused two guests starting within 4 s). It restarts Paper: push when no game runs.
