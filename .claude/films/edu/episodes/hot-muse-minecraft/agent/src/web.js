@@ -13,6 +13,7 @@ import { config as defaultConfig, isLoopbackHost } from './config.js';
 import { TOOLS, TOOL_NAMES, SCHEMAS, validateArgs, coerceArgs } from './contracts.js';
 import { createLogger, scrub } from './log.js';
 import { reportedDone } from './brain.js';
+import { createMcp } from './mcp.js';
 
 const HOUR = 3_600_000;
 const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
@@ -393,7 +394,7 @@ export function createWeb(opts = {}) {
   const trustRaw = opts.trustProxy ?? web.trustProxy ?? 'off';
   const trustProxy = trustRaw === true ? 1 : trustRaw === false ? 'off' : trustRaw;
   const apiWaitMs = opts.apiWaitMs ?? 25_000;
-  const formWaitMs = opts.formWaitMs ?? 1_500;
+  const formWaitMs = opts.formWaitMs ?? 80_000; // a form post waits for the action to end (under a tunnel's ~100 s), so an agent never has to poll
   const startTimeoutMs = opts.startTimeoutMs ?? 60_000;
   const askQueueMax = opts.askQueueMax ?? 20;
   const askSteps = opts.askSteps ?? 40;
@@ -969,9 +970,17 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     socket.on('error', () => up.destroy());
   }
 
+  let mcp = null; // built on first use: the hooks below are defined later in this closure
   async function route(req, res) {
     const u = new URL(req.url, 'http://local');
     const p = u.pathname;
+    if (p === '/mcp') {
+      mcp ??= createMcp({
+        newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log,
+        links: (s, r) => ({ eyes: `${base(r)}/eyes/${s.id}/`, watch: `${base(r)}/watch/${s.id}/` }),
+      });
+      return mcp(req, res);
+    }
     const method = req.method === 'HEAD' ? 'GET' : req.method;
     const only = (m) => { if (method !== m) throw new HttpError(405, `use ${m}`, { allow: m === 'GET' ? 'GET, HEAD' : m }); };
     if (method !== 'GET' && fromOtherSite(req)) {
