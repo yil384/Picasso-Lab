@@ -118,10 +118,22 @@ export async function craft(ctx, { item, n }) {
   let error = null;
   try {
     // one batch at a time: several at once race the server's window updates ("missing ingredient", stray buttons)
+    // and each one checked against the server: a craft at a freshly placed table can come back as a ghost item
+    // the server never confirmed, so count the result after a short settle and retry the batch once if it is missing
+    const count = () => bot.inventory.count(id, null);
+    const settle = (ticks) => (typeof bot.waitForTicks === 'function' ? ctx.wait(bot.waitForTicks(ticks)) : Promise.resolve());
     for (let b = 0; b < batches; b++) {
-      await ctx.wait(bot.craft(recipe, 1, recipe.requiresTable ? table : null));
+      let got = false;
+      for (let attempt = 0; attempt < 2 && !got; attempt++) {
+        const had = count();
+        await ctx.wait(bot.craft(recipe, 1, recipe.requiresTable ? table : null));
+        await settle(6);
+        if (count() <= had) await settle(14);
+        got = count() > had;
+        ctx.check();
+      }
+      if (!got) { error = 'the server did not confirm the craft (no item arrived)'; break; }
       made += perBatch(recipe);
-      ctx.check();
     }
   } catch (err) {
     if (err instanceof SkillStop) throw err;
