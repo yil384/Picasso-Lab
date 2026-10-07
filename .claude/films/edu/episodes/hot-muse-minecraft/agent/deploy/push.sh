@@ -7,7 +7,7 @@ A=$(cd "$(dirname "$0")/.." && pwd)
 R=picasso:workspace/muse-minecraft
 ssh picasso 'mkdir -p ~/workspace/muse-minecraft/{app,data,logs}'
 (cd "$A" && rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --relative src scripts deploy package.json package-lock.json README.md .dockerignore $R/app/)
-(cd "$A/server" && rsync -az paper.jar $R/app/paper.jar && rsync -az --delete --include '*.jar' --exclude '*' plugins/ $R/app/plugins/)
+(cd "$A/server" && rsync -azL paper.jar $R/app/paper.jar && rsync -azL --delete --include '*.jar' --exclude '*' plugins/ $R/app/plugins/)
 ssh picasso 'set -e; cd ~/workspace/muse-minecraft/app
   [ -f deploy/.env ] || printf "WEB_ADMIN_TOKEN=%s\n" "$(openssl rand -base64 24 | tr -d "/+=" | head -c 32)" > deploy/.env
   chmod 600 deploy/.env
