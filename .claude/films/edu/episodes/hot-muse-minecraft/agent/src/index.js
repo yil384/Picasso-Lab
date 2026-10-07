@@ -71,7 +71,7 @@ export function listeningOn(host, fn, onError = () => {}) {
  * @param {object} bot   a real mineflayer bot
  * @param {{config: object, log: object, load?: () => object}} opts
  */
-export function startViewer(bot, { config, log, load = () => require('prismarine-viewer') }) {
+export function startViewer(bot, { config, log, load = () => ({ mineflayer: require('prismarine-viewer/lib/mineflayer') }) }) {
   const port = config.mc.viewerPort;
   if (!port) return null;
   let viewer;
@@ -128,11 +128,27 @@ export async function startAgent(opts = {}) {
     }
   }
 
+  // Guests' bots each get a live 3D view for people to watch (prismarine-viewer, if installed), on a local port that
+  // src/web.js proxies under /watch/<session id>/ (read-only: watching never controls the bot).
+  let nextViewerPort = 3101;
   function newBody(sessionId) {
     const username = usernameFor(config.mc.username, sessionId);
     const cfg = Object.freeze({ ...config, mc: Object.freeze({ ...config.mc, username }) });
     if (createFakeBot) return createBody({ bot: createFakeBot({ scene: 'forest', username }), config: cfg, log });
-    return createBody({ config: cfg, log });
+    const body = createBody({ config: cfg, log });
+    if (sessionId !== 'house') {
+      body.ready.then(() => {
+        let viewer;
+        try { viewer = (opts.loadViewer ?? (() => ({ mineflayer: require('prismarine-viewer/lib/mineflayer') })))(); } catch { return; }
+        const port = nextViewerPort++;
+        if (nextViewerPort > 3164) nextViewerPort = 3101;
+        listeningOn('127.0.0.1', () => viewer.mineflayer(body.bot, { port, firstPerson: false, viewDistance: 4, prefix: `/watch/${sessionId}` }),
+          (err) => log.event('viewer_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) }));
+        body.viewerPort = port;
+        body.on('end', () => { try { body.bot.viewer?.close?.(); } catch { /* closed */ } });
+      }, () => {});
+    }
+    return body;
   }
 
   // The house bot: joins at start when the Ask queue is open, comes back on the next request after a disconnect.

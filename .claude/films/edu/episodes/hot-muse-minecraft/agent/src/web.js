@@ -793,6 +793,7 @@ ${!s.refresh ? html`Auto-refresh is off. <a href="${playPath(s)}?refresh=1">Turn
 ${s.notice ? html`<p class="notice" role="alert">${s.notice}</p>` : ''}<h3 id="h-last">Last result</h3>
 <p>${last}</p>
 <div class="row"><form method="post" action="${playPath(s)}/stop" aria-label="Stop" novalidate><button class="stop" type="submit">Stop the current action</button></form></div></section>
+<p><a href="/watch/${s.id}/" target="_blank" rel="noopener">Watch the bot live in 3D (opens a new tab, for people; the page above is all an agent needs)</a></p>
 <section aria-labelledby="h-state"><h2 id="h-state">Game state</h2>
 <pre>${stateText(s)}</pre></section>
 <section aria-labelledby="h-actions"><h2 id="h-actions">Actions</h2>
@@ -937,6 +938,37 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     return sendJson(res, 200, { stopped, cleared: cleared.length, ended: end ? live.length : 0 });
   }
 
+  /** The local port of a session's live 3D view, by its public session id (not the secret token). */
+  function viewerPort(id) {
+    for (const s of sessions.values()) if (s.id === id && !s.ended) return s.body?.viewerPort ?? null;
+    return null;
+  }
+
+  function proxyHttp(req, res, port) {
+    const up = http.request({ host: '127.0.0.1', port, method: req.method, path: req.url, headers: { ...req.headers, host: `127.0.0.1:${port}` } }, (r) => {
+      res.writeHead(r.statusCode ?? 502, r.headers);
+      r.pipe(res);
+    });
+    up.on('error', () => { if (!res.headersSent) send(res, 502, 'live view unavailable', {}); else res.destroy(); });
+    req.pipe(up);
+  }
+
+  /** WebSocket upgrades for the live view (socket.io under /watch/<id>/socket.io). */
+  function proxyUpgrade(req, socket, head) {
+    const m = String(req.url).match(/^\/watch\/([A-Za-z0-9_-]+)\//);
+    const port = m && viewerPort(m[1]);
+    if (!port) { socket.destroy(); return; }
+    const up = net.connect(port, '127.0.0.1', () => {
+      const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
+      for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
+      up.write(`${lines.join('\r\n')}\r\n\r\n`);
+      if (head?.length) up.write(head);
+      socket.pipe(up).pipe(socket);
+    });
+    up.on('error', () => socket.destroy());
+    socket.on('error', () => up.destroy());
+  }
+
   async function route(req, res) {
     const u = new URL(req.url, 'http://local');
     const p = u.pathname;
@@ -970,6 +1002,14 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       return sendHtml(res, 200, askPage(Number.isInteger(q) ? q : null));
     }
     if (p === '/admin/stop') { only('POST'); return adminStop(req, res); }
+
+    const w = p.match(/^\/watch\/([A-Za-z0-9_-]+)(\/.*)?$/);
+    if (w) {
+      const port = viewerPort(w[1]);
+      if (!port) throw new HttpError(404, 'no live view for this session (it ended, or the bot is still joining)');
+      if (!w[2]) return redirect(res, `/watch/${w[1]}/`);
+      return proxyHttp(req, res, port);
+    }
 
     let m = p.match(/^\/play\/([^/]+)\/?$/);
     if (m) {
@@ -1068,6 +1108,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       if (server) return { url, publicUrl: web.publicUrl || url };
       closing = false;
       server = http.createServer({ maxHeaderSize: 16_384, requestTimeout: 30_000, headersTimeout: 10_000 }, handle);
+      server.on('upgrade', proxyUpgrade);
       await new Promise((resolve, reject) => {
         server.once('error', reject);
         server.listen(web.port, web.host, () => { server.off('error', reject); resolve(); });
