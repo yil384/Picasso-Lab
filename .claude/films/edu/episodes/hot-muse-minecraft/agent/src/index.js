@@ -20,6 +20,7 @@ import { createBody } from './body.js';
 import { createBrain } from './brain.js';
 import { createWeb } from './web.js';
 import { createStreamManager, createRemoteStreamManager, managerConfig } from './stream.js';
+import { createCameraManager } from './camera.js';
 
 const require = createRequire(import.meta.url);
 
@@ -215,13 +216,15 @@ export async function startAgent(opts = {}) {
 
   // Guests' bots each get two live 3D views for people to watch (startGuestViews). With STREAM_ENABLED, the first-person
   // view of each guest game also goes out as a live video (in this process, or in the stream container when
-  // STREAM_SERVICE_URL is set), from when the view listens until the game ends.
+  // STREAM_SERVICE_URL is set), from when the view listens until the game ends. With STREAM_SOURCE=client the video is
+  // the real Minecraft client spectating the bot (src/camera.js), which needs the bot's player name.
   const ports = viewPorts();
   const streams = opts.streams !== undefined ? opts.streams : !config.stream.enabled ? null
     : config.stream.serviceUrl ? createRemoteStreamManager({ url: config.stream.serviceUrl, log })
-      : createStreamManager({ config: managerConfig(config.stream), log });
+      : config.stream.source === 'client' ? createCameraManager({ config, log })
+        : createStreamManager({ config: managerConfig(config.stream), log });
   const streamFrom = (body, sessionId) => (streams
-    ? (port) => streams.start(sessionId, { source: `http://127.0.0.1:${port}/eyes/${sessionId}/`, body })
+    ? (port) => streams.start(sessionId, { source: `http://127.0.0.1:${port}/eyes/${sessionId}/`, body, player: usernameFor(config.mc.username, sessionId) })
     : null);
   function newBody(sessionId) {
     const username = usernameFor(config.mc.username, sessionId);

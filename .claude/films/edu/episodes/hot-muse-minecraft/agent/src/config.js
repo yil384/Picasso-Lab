@@ -2,6 +2,7 @@
 // admin token and the stream URLs (they hold stream keys) are non-enumerable, so JSON.stringify(config) and
 // console.log(config) never print them.
 
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -211,8 +212,35 @@ export function loadConfig(env = process.env) {
     far: r.int('STREAM_FAR', 48, 16, 256),
     maxRssMB: r.int('STREAM_MAX_RSS_MB', 1600, 300, 16_000),
     noSandbox: r.bool('STREAM_NO_SANDBOX', false),
+    // 'viewer': prismarine-viewer in headless Chromium (src/stream.js); 'client': the real Minecraft client as a
+    // spectator in the bot's head (src/camera.js, the camera container)
+    source: r.oneOf('STREAM_SOURCE', 'viewer', ['viewer', 'client']),
+    camera: {
+      mcDir: r.str('CAMERA_MC_DIR', '/opt/mc'),
+      home: path.resolve(r.str('CAMERA_HOME', path.join(os.tmpdir(), 'muse-camera'))),
+      authDir: r.str('CAMERA_AUTH_DIR', '') ? path.resolve(r.str('CAMERA_AUTH_DIR', '')) : '',
+      auth: r.oneOf('CAMERA_AUTH', 'msa', ['msa', 'offline']),
+      name: r.str('CAMERA_NAME', ''),
+      gl: r.oneOf('CAMERA_GL', 'cpu', ['cpu', 'gpu']),
+      glThreads: r.int('CAMERA_GL_THREADS', 8, 1, 64),
+      javaThreads: r.int('CAMERA_JAVA_THREADS', 4, 1, 64),
+      heapMB: r.int('CAMERA_HEAP_MB', 2048, 512, 16_384),
+      maxFps: r.int('CAMERA_MAX_FPS', 30, 10, 120),
+      renderDistance: r.int('CAMERA_RENDER_DISTANCE', 8, 2, 32),
+      graphics: r.oneOf('CAMERA_GRAPHICS', 'fancy', ['fast', 'fancy']),
+      display: r.int('CAMERA_DISPLAY', 99, 1, 900),
+      scale: r.num('CAMERA_SCALE', 1, 0.5, 1),
+      javaNice: r.int('CAMERA_NICE', 5, 0, 19),
+      idleMs: r.int('CAMERA_IDLE_MS', 600_000, 0, 86_400_000),
+      console: r.str('MC_CONSOLE', ''),
+    },
   };
   hidden(stream, 'outputs', outputs);
+  if (stream.camera.name && !/^[A-Za-z0-9_]{3,16}$/.test(stream.camera.name)) problems.push(`CAMERA_NAME must be 3-16 letters, digits or _ (got "${stream.camera.name}")`);
+  if (stream.enabled && stream.source === 'client' && !stream.serviceUrl) {
+    if (!stream.camera.console) problems.push('STREAM_SOURCE=client needs MC_CONSOLE: the camera is put in spectator mode through the server console');
+    if (stream.camera.auth === 'msa' && !stream.camera.authDir) problems.push('STREAM_SOURCE=client needs CAMERA_AUTH_DIR, the folder with the camera account\'s login (scripts/camera-login.mjs)');
+  }
   if (stream.serviceUrl && !(/^http:/.test(stream.serviceUrl) && isLocalUrl(stream.serviceUrl))) problems.push('STREAM_SERVICE_URL must be an http URL on this machine (loopback)');
   if (stream.enabled && !stream.serviceUrl && !outputs.length && !stream.outDir) {
     problems.push('STREAM_ENABLED needs STREAM_RTMP_URL (or STREAM_OUT_DIR to write files, or STREAM_SERVICE_URL for the stream container)');

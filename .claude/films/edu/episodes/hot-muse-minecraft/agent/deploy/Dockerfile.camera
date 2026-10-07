@@ -1,0 +1,46 @@
+# The real-client camera for live video (compose profile "camera"): a vanilla Minecraft Java 1.21.4 client on an X
+# server (Xvfb) that spectates a guest bot in first person, captured by ffmpeg (x11grab) into H.264 + silent AAC, driven
+# by `scripts/stream.mjs --serve` with STREAM_SOURCE=client (src/camera.js). OpenGL runs on the CPU through Mesa
+# llvmpipe (CAMERA_GL=cpu, the default), or on a GPU through VirtualGL's EGL back end (CAMERA_GL=gpu; the NVIDIA
+# runtime with the "graphics" capability, and a GL driver with framebuffer objects: picasso's H100s have none). The
+# account's tokens are never in the image: they live in the camera's auth folder (scripts/camera-login.mjs), mounted
+# at /auth. Build context: agent/.
+
+# 1. the client: version JSON, jar, Linux libraries and natives, assets without sounds (about 140 MB), SHA-1 checked
+FROM node:22-bookworm-slim AS client
+RUN apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY deploy/camera/install-client.mjs /tmp/install-client.mjs
+RUN node /tmp/install-client.mjs /opt/mc 1.21.4
+
+# 2. the launcher class that hands the client its token from the environment, not the command line
+FROM eclipse-temurin:21-jdk AS javac
+COPY deploy/camera/CameraMain.java /src/CameraMain.java
+RUN javac --release 21 -d /out /src/CameraMain.java && test -f /out/muse/camera/CameraMain.class
+
+FROM node:22-bookworm-slim
+ARG VGL_VERSION=3.1.5
+# Xvfb + xdotool (the F1 key), ffmpeg (x11grab, libx264, aac, rtmps), glvnd + Mesa (llvmpipe), the X libraries GLFW
+# loads, VirtualGL (GLX on the GPU through EGL, frames drawn into Xvfb)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      xvfb xdotool x11-utils ffmpeg fonts-dejavu-core ca-certificates procps curl \
+      libgl1 libegl1 libgles2 libopengl0 libglx-mesa0 libegl-mesa0 libgl1-mesa-dri libglu1-mesa \
+      libxtst6 libxv1 libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 libxext6 libxrender1 \
+ && curl -fsSL -o /tmp/vgl.deb "https://github.com/VirtualGL/virtualgl/releases/download/${VGL_VERSION}/virtualgl_${VGL_VERSION}_amd64.deb" \
+ && apt-get install -y --no-install-recommends /tmp/vgl.deb \
+ && rm -f /tmp/vgl.deb && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /usr/share/glvnd/egl_vendor.d /tmp/.X11-unix /camera && chmod 1777 /tmp/.X11-unix /camera \
+ && printf '{"file_format_version":"1.0.0","ICD":{"library_path":"libEGL_nvidia.so.0"}}\n' > /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/openjdk
+ENV JAVA_HOME=/opt/java/openjdk PATH=/opt/java/openjdk/bin:/opt/VirtualGL/bin:$PATH
+COPY --from=client /opt/mc /opt/mc
+COPY --from=javac /out /opt/mc/camera-main
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY src ./src
+COPY scripts ./scripts
+# runs as the operator's own uid (compose `user:`), so the token files in the auth folder stay theirs; HOME is a tmpfs
+ENV LOG_DIR=/logs NODE_ENV=production STREAM_SOURCE=client STREAM_SERVICE_PORT=7862 \
+    CAMERA_MC_DIR=/opt/mc CAMERA_HOME=/camera CAMERA_AUTH_DIR=/auth HOME=/camera \
+    NVIDIA_DRIVER_CAPABILITIES=graphics,utility
+CMD ["node", "scripts/stream.mjs", "--serve"]

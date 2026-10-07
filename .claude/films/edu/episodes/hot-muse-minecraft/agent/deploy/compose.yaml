@@ -48,6 +48,44 @@ services:
     pids_limit: 1024
     shm_size: 256m
     security_opt: [ "no-new-privileges:true" ]
+  # The real-client camera (off unless started with the "camera" profile; deploy/push.sh does that when
+  # deploy/camera.env exists): a vanilla Minecraft 1.21.4 client on Xvfb that spectates each guest bot in first person,
+  # captured by ffmpeg to the output in camera.env (README, "Real-client camera"). Like the stream container it shares
+  # the agent's network namespace (control API on 127.0.0.1:7862, Paper at 10.77.77.10), and it puts itself in
+  # spectator mode through the console FIFO. It runs as the operator's uid so the account's tokens in
+  # ~/workspace/muse-minecraft/camera/auth (scripts/camera-login.mjs) stay theirs. OpenGL on the CPU (Mesa llvmpipe):
+  # picasso's H100s create GL contexts but support no framebuffer objects. To turn it on: deploy/camera.env with
+  #   STREAM_RTMP_URL=rtmps://live-api-s.facebook.com:443/rtmp/<key>     (or STREAM_OUT_DIR=/logs/streams for files)
+  # and in deploy/.env (the agent):
+  #   STREAM_ENABLED=1
+  #   STREAM_SERVICE_URL=http://127.0.0.1:7862
+  # One camera = one client at about 4-5 CPU threads and 1.5 GB while it films (README); STREAM_MAX cameras need as many
+  # accounts (a second client under the same name would kick the first).
+  camera:
+    build: { context: .., dockerfile: deploy/Dockerfile.camera }
+    profiles: [ camera ]
+    restart: unless-stopped
+    depends_on: [ agent ]
+    network_mode: "service:agent"
+    user: "${CAMERA_UID:-1014}:${CAMERA_GID:-1014}"
+    init: true
+    env_file: [ { path: camera.env, required: false } ]
+    environment:
+      STREAM_ENABLED: "1"
+      STREAM_MAX: "1"
+      STREAM_FPS: "30"
+      STREAM_BITRATE_K: "3500"
+      MC_HOST: 10.77.77.10
+      MC_CONSOLE: /console/console.in
+      CAMERA_GL: cpu
+      CAMERA_GL_THREADS: "8"
+    volumes: [ "../logs:/logs", "console:/console", "../../camera/auth:/auth" ]
+    tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
+    cpus: 6
+    mem_limit: 3g
+    pids_limit: 1024
+    shm_size: 256m
+    security_opt: [ "no-new-privileges:true" ]
 volumes:
   console: {}
 networks:

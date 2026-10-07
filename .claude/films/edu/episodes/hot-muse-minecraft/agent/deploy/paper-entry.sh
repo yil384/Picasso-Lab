@@ -18,6 +18,9 @@ simulation-distance=6
 enable-command-block=false
 motd=Muse plays Minecraft
 P
+# every bot (and the camera, compose profile "camera") joins from the agent's one address: Paper's per-address
+# connection throttle (4 s) would refuse the second of two joins within 4 s. The server is private: no throttle.
+if [ -f bukkit.yml ]; then sed -i 's/^\( *connection-throttle:\).*/\1 -1/' bukkit.yml; else printf 'settings:\n  connection-throttle: -1\n' > bukkit.yml; fi
 rm -f /console/console.in && mkfifo /console/console.in && chmod 666 /console/console.in
 if [ "${DAYLIGHT:-locked}" = locked ]; then
   ( until grep -q 'Done (' logs/latest.log 2>/dev/null; do sleep 2; done

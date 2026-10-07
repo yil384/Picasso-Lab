@@ -38,7 +38,11 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/web.js` | `/`, `/play`, `/api`, `openapi.json`, `/ask`, `/log`, `/admin/stop` |
 | `src/live-view-fx.js` | runs in the live-view pages: eased first-person camera, crack overlay on the block being broken |
 | `src/stream.js`, `src/stream-page.js` | live video of a guest game (off unless `STREAM_ENABLED`): headless Chromium on the bot's first-person view, a smoothed camera, ffmpeg to RTMPS (Facebook Live) or an MP4; the stream service and its client for the container (section "Live video") |
-| `scripts/stream.mjs` | one stream on demand (to a file or an RTMP(S) URL, with its CPU, RAM and frame numbers), a side-by-side camera comparison, or `--serve` (the stream container) |
+| `src/camera.js` | the real-client camera (`STREAM_SOURCE=client`): Xvfb + the vanilla Minecraft client as a spectator in the bot's head, ffmpeg x11grab, the same stream interface (section "Real-client camera") |
+| `scripts/stream.mjs` | one stream on demand (to a file or an RTMP(S) URL, with its CPU, RAM and frame numbers), a side-by-side camera comparison, `--camera` (one real-client stream of a player), or `--serve` (the stream or camera container) |
+| `scripts/camera-login.mjs` | signs the camera's Microsoft account in once (device code, no password) and keeps its tokens in the auth folder; `--check` |
+| `deploy/Dockerfile.camera`, `deploy/camera/` | the camera image: Java 21, the 1.21.4 client (`install-client.mjs`, SHA-1 checked, no sounds), `CameraMain.java` (the token from the environment, never the command line), Xvfb, Mesa, VirtualGL, ffmpeg |
+| `deploy/camera-test.compose.yaml` | a separate test project on picasso (`muse-camera-test`: own Paper, agent, camera, network; shares nothing with production) |
 | `scripts/probe.mjs` | latency and $ per call: effort x cache on/off x Chat/Responses, CSV per call |
 | `scripts/run-goal.mjs` | one goal from the command line (real server, or the mock and the fake bot), JSONL log, HUD table |
 | `scripts/hud-data.mjs` | the video HUD numbers from one or more run logs (milestones, totals, failures, timeline) |
@@ -263,6 +267,96 @@ for ffmpeg and about 1 GB RAM per stream; the compose caps (8 CPUs, 3 GB) fit on
 are about 26 threads spare: 2-3 streams at most. UNVERIFIED until measured there (`stream_stats` in the log gives the
 real numbers every minute).
 
+## Real-client camera
+
+The live video can be the game itself instead of prismarine-viewer: a vanilla Minecraft Java 1.21.4 client joins the
+Paper server as a spectator and rides along in the guest bot's head (`/spectate` through the console), so the picture
+has the real block-break cracks, particles, lighting, sky and clouds. It is the same stream manager, service and agent
+hook as above with another frame source (`STREAM_SOURCE=client`, `src/camera.js`), in its own container (compose
+profile `camera`, `deploy/Dockerfile.camera`).
+
+- The rig: Xvfb (`:99`, 1280x720) and the client (Temurin 21, the 1.21.4 jar and libraries from Mojang's manifest,
+  SHA-1 checked, assets without the sounds), started with `--quickPlayMultiplayer` straight into the server. The
+  client's `options.txt` is written before every start: render distance 8, 30 fps cap, fancy graphics, smooth
+  lighting, brightness "Bright", chat hidden, sound off, no first-run or accessibility screens, no pause without focus,
+  never throttled as idle. After it has joined ("Loaded N advancements" in its log) the rig puts it in spectator mode
+  (console) and presses F1 (`xdotool`); a spectator shows no hotbar, hearts or crosshair anyway.
+- One game: `tp <camera> <bot>`, two seconds later `spectate <bot> <camera>` (a client told to spectate an entity it
+  has not loaded yet ignores it, and the server still carries it along: it films from inside the bot's head with its
+  own view; the first test did exactly that). Every 5 s a console line checks that the camera is still at the bot and
+  re-attaches it after a respawn or a long teleport (tagged, so nothing is printed while it rides along); a client
+  that restarted mid-game is put back at once. ffmpeg grabs the display (x11grab, no cursor) and encodes it like the
+  viewer streams: 1280x720 H.264 High, CBR, keyframe every 2 s, no B-frames, silent 48 kHz AAC, the caption, FLV to
+  RTMPS or MP4 to a file. At the end the camera stops riding and floats 250 blocks up looking at the sky.
+- Between games: the client stays in the world (a game goes live 3.5 s after it starts). After `CAMERA_IDLE_MS`
+  (10 min) without a game it quits and Xvfb stays (0 % CPU, 46 MB); the next game starts it again (live after 15 s).
+- Supervision: a client that exits, is disconnected ("Client disconnected with reason", "Couldn't connect to server")
+  or has not joined after 150 s is restarted with a backoff (1-30 s); more than 6 restarts in 10 min rest the camera
+  for 2 min (`camera_failed`). Xvfb is restarted if it dies. ffmpeg as in the viewer streams.
+- The account: `scripts/camera-login.mjs` signs a Microsoft account that owns Java Edition in with the device code flow
+  (prismarine-auth's live.com flow, the one mineflayer uses for Java accounts; nobody types the password anywhere but
+  on Microsoft's own page), and keeps the tokens in `~/workspace/muse-minecraft/camera/auth` (700, files 600, never in
+  the repo or the image). The camera refreshes them silently; it never asks for a code itself. The Minecraft token
+  reaches the client through its environment (`deploy/camera/CameraMain.java`), never its command line, which every
+  user of the machine can read. `CAMERA_AUTH=offline` runs an unauthenticated client under `CAMERA_NAME`, for tests on
+  our own offline-mode server only.
+- Log rows: `camera_client_start`, `camera_connecting`, `camera_joined`, `camera_disconnected`, `camera_restart`,
+  `camera_client_exit`, `camera_failed`, `camera_sleep`, `camera_error`, and the stream rows (`stream_stats` has
+  `clientFps` from Mesa's HUD, `captureFps`, `clientCpu`, `clientMB`, `ffmpegCpu`, ...).
+
+Sign the account in once (on picasso; the code is valid for 15 minutes; the owner opens the link on any device):
+
+```sh
+docker run -d --name muse-camera-login --user "$(id -u):$(id -g)" -v ~/workspace/muse-minecraft/camera/auth:/auth \
+  muse-minecraft-camera node scripts/camera-login.mjs --dir /auth      # or the muse-camera-test-camera image
+cat ~/workspace/muse-minecraft/camera/auth/LOGIN_CODE.txt               # the link and the code
+cat ~/workspace/muse-minecraft/camera/auth/LOGIN_STATUS.txt             # "signed in: <name>" once it worked
+docker run --rm --user "$(id -u):$(id -g)" -v ~/workspace/muse-minecraft/camera/auth:/auth muse-minecraft-camera \
+  node scripts/camera-login.mjs --dir /auth --check
+```
+
+Turn it on in production: `deploy/camera.env` on picasso with `STREAM_RTMP_URL=rtmps://...` (or
+`STREAM_OUT_DIR=/logs/streams` for files), and in `deploy/.env` `STREAM_ENABLED=1` and
+`STREAM_SERVICE_URL=http://127.0.0.1:7862`; then `deploy/push.sh` builds and starts the `camera` profile. The same
+push also turns Paper's per-address connection throttle off (`deploy/paper-entry.sh`): every bot and the camera join
+from the agent's one address, and the 4 s throttle refused a bot that joined right after the camera (it already
+refused two guests starting within 4 s). It restarts Paper: push when no game runs.
+
+Test it next to production: `deploy/camera-test.compose.yaml` (project `muse-camera-test`: its own Paper with the same
+seed, agent and camera on 10.77.78.0/28, no published ports, videos in `~/workspace/muse-camera-test/streams`). Start a
+game with `docker exec muse-camera-test-agent-1 node -e ...` against `http://127.0.0.1:8787/api/session`, or film one
+player by hand inside the camera container: `node scripts/stream.mjs --camera --player Muse_ab12cd --out /streams/x.mp4
+--seconds 45`.
+
+Measured on picasso (2026-10-07; 2x EPYC 9534, load 170-230 most of the day, once 340; CPU rendering, defaults),
+real games on the test server:
+
+| | |
+| --- | --- |
+| client frame rate | 12-30 fps in a birch forest (about 17 typical), 8-27 on another walk, 9-12 on a dense dark-oak lake view; the 30 fps video repeats frames when the client is slower |
+| client CPU, RSS | 3.3-4.4 cores (the render thread one whole core, llvmpipe's 8 threads about 0.3 each) and 1.2-1.35 GB |
+| ffmpeg, Xvfb | 0.5-0.9 core and 100 MB; under 0.1 core and 90 MB |
+| one camera while it films | about 4.5-5 CPU threads and 1.5 GB; parked between games about 2 cores (it still draws the sky), asleep 0 |
+| output | 1280x720, 30.000 fps CFR, 3.5 Mb/s, keyframes at every 2.000 s, AAC 48 kHz stereo; no encoder drops |
+| latency | a bot's head turn to the grabbed frame: 225-293 ms (median 261 ms, 10 turns); the encoder adds about a frame; Facebook's own delay is not measured |
+| start | client to in the world 12-20 s; a game goes live 3.5 s after it starts (warm) or 15 s (asleep) |
+
+Why so few frames: a JFR profile of the client puts 87 % of the render thread in native code, 95 % of that in
+`glDrawElements`, i.e. llvmpipe's vertex processing, which runs on the calling thread. So the frame rate follows the
+vertices on screen and one core's speed (the same on an idle machine: 9.4 fps on the dark-oak scene at load 12).
+Fixed-scene tries: render distance 4 15.7 fps (6: no gain), fast leaves 11.9, drawing at 0.75x / 0.5x and scaling up
+11.2 / 12.7, 16 llvmpipe threads 10.6; Mesa 25 (bookworm-backports), `mesa_glthread` and Zink on lavapipe: no gain.
+The GPU path is wired (`CAMERA_GL=gpu`: VirtualGL's EGL back end) but cannot run on picasso: its H100s create OpenGL
+contexts, yet every framebuffer object is `GL_FRAMEBUFFER_UNSUPPORTED` (on the host and in a container, driver
+580.159.03; Mesa passes the same probe) and Vulkan cannot create a device, and both Minecraft and VirtualGL draw
+into framebuffer objects.
+
+How many cameras picasso can run: by CPU, at 5 threads each and the 26-86 threads the machine has spare at load
+170-230, 5-15 in theory; in practice 2-4, because each camera's frame rate is one core's speed and drops when the
+machine is crowded (the 340 spike). RAM (1.5 GB each) is no limit. Each camera also needs its own account: a second
+client under the same name kicks the first (`createCameraPool` names camera 2 `<name>2`, which works only because the
+server is offline-mode; that is the operator's call, not a default).
+
 ## Configuration
 
 | Env var | Default | Meaning |
@@ -298,6 +392,12 @@ real numbers every minute).
 | `STREAM_FPS`, `STREAM_SCALE`, `STREAM_BITRATE_K`, `STREAM_FAR` | `30`, `0.5`, `3000`, `48` | frame rate; the page renders at 1280x720 times the scale; video kb/s (CBR); how far the bot sees (blocks, fogged) |
 | `STREAM_MAX_RSS_MB`, `STREAM_NO_SANDBOX` | `1600`, `false` | the browser is restarted above this RAM; Chromium without its sandbox (in the container) |
 | `STREAM_CHROMIUM`, `STREAM_FFMPEG`, `STREAM_FONT` | (found) | Playwright's headless shell or a system Chromium; ffmpeg; a TTF for the caption |
+| `STREAM_SOURCE` | `viewer` | `viewer` (prismarine-viewer in Chromium) or `client` (the real-client camera; the camera image sets it) |
+| `CAMERA_AUTH`, `CAMERA_AUTH_DIR`, `CAMERA_NAME` | `msa`, (none), (none) | the camera account: `msa` (the login in the auth folder) or `offline` (tests on our own server only, as `CAMERA_NAME`, default MuseCam) |
+| `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
+| `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `8`, `30`, `fancy`, `1` | the client's video settings; it draws at 1280x720 times the scale and ffmpeg scales up |
+| `CAMERA_IDLE_MS`, `CAMERA_NICE`, `CAMERA_HEAP_MB` | `600000`, `5`, `2048` | quit the client after this long without a game (0: never); its niceness; its heap |
+| `CAMERA_MC_DIR`, `CAMERA_HOME`, `CAMERA_DISPLAY` | `/opt/mc`, tmp, `99` | the installed client; the game folders; the first X display (one per camera) |
 
 ## How the brain plays
 
@@ -382,6 +482,10 @@ real numbers every minute).
   pathfinder's own digging rules go.
 - The guests' live views run the real prismarine-viewer in tests only for the read-only check (a click from the page
   reaches nothing); the house bot's watch page is tested with a stand-in module.
+- Real-client camera: run on picasso against its own test Paper server, through the camera service and the agent,
+  to MP4 files, and with an unauthenticated client (`CAMERA_AUTH=offline`) until the account was signed in. Not yet:
+  RTMPS to Facebook, a long stream, a guest bot dying mid-game (the re-attach is tested with stand-ins only), more than
+  one camera at once.
 - Live video: run on this Mac against the local Paper server only, in-process and through the stream service, to MP4
   files. Not yet: any RTMP(S) ingest (no stream key exists; Facebook's acceptance of the exact stream, its latency and
   the video plugin inside the muse.ai panel are open), the stream container (no Docker here: `deploy/Dockerfile.stream`
