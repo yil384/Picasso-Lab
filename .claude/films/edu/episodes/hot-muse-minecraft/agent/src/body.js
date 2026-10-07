@@ -7,9 +7,11 @@ import { createRequire } from 'node:module';
 import pf from 'mineflayer-pathfinder';
 import { config as defaultConfig, isLanHost } from './config.js';
 import { validateArgs, inventoryDelta, TOOL_TIMEOUTS_MS, BODY_EVENTS } from './contracts.js';
-import { snapshotOf, renderState, inventoryOf, describeCall, describeDelta } from './state.js';
+import { snapshotOf, renderState, inventoryOf, describeCall, describeDelta, nearbyMobs } from './state.js';
 import { SKILLS } from './skills/index.js';
 import { SkillStop, describeError } from './skills/util.js';
+import { syncInventory } from './skills/window.js';
+import { ATTACK_TARGETS } from './game.js';
 
 const require = createRequire(import.meta.url);
 // mineflayer-tool comes with mineflayer-collectblock (not a direct dependency): load the copy collectblock itself uses.
@@ -18,8 +20,22 @@ const require = createRequire(import.meta.url);
 const requireFromCollect = createRequire(require.resolve('mineflayer-collectblock'));
 const { pathfinder, Movements } = pf;
 
-/** pollMs: furnace polling; stallMs: a furnace with no new output this long has stopped; graceMs: how long a stopped skill may take to unwind. */
-export const DEFAULT_TIMING = Object.freeze({ pollMs: 500, stallMs: 15_000, graceMs: 1_500 });
+/**
+ * pollMs: furnace polling; stallMs: a furnace with no new output this long has stopped; graceMs: how long a stopped
+ * skill may take to unwind; openMs / windowMs: how long the server gets to open a window / to answer window clicks;
+ * stillMs: a walk in which the bot stands still this long (not digging or building) has failed.
+ */
+export const DEFAULT_TIMING = Object.freeze({ pollMs: 500, stallMs: 15_000, graceMs: 1_500, openMs: 5_000, windowMs: 4_000, stillMs: 20_000 });
+/** A walk gives up after this many "stuck" path resets in a row that bring the bot no closer. */
+const STUCK_RESETS = 3;
+const STILL_CHECK_MS = 1_000;
+/** How long a skill waits for the respawn after a death before it runs. */
+const RESPAWN_MS = 10_000;
+/** A hostile mob this close when the bot loses health is taken as the attacker. */
+const ATTACKER_RANGE = 6;
+/** Skills a hit does not interrupt (they deal with the mob or the hunger themselves). */
+const KEEP_ON_HIT = new Set(['attack', 'eat', 'get_state', 'say']);
+const safeCall = (fn) => { try { return fn(); } catch { return false; } };
 /** Path search budget per walk (pathfinder's default of 5 s makes long go_to trips fail with "took too long"). */
 const THINK_TIMEOUT_MS = 15_000;
 
@@ -90,6 +106,8 @@ export function createBody(opts = {}) {
   let movements = null;
   let kickReason = null;
   let lastError = null;
+  let dead = false;
+  let lastHealth = null;
 
   function setupMovements() {
     if (movements || !bot.pathfinder) return;
@@ -111,7 +129,9 @@ export function createBody(opts = {}) {
   // ---- bot events ---------------------------------------------------------------------------------------------
   const handlers = {
     spawn() {
-      if (phase !== 'connecting') return;
+      dead = false;
+      lastHealth = bot.health ?? null;
+      if (phase !== 'connecting') return; // a respawn after a death
       phase = 'ready';
       setupMovements();
       resolveReady();
@@ -123,12 +143,29 @@ export function createBody(opts = {}) {
       emit('chat', { username: clip(oneLine(username), 40), message: clip(oneLine(message), 256) });
     },
     death() {
+      dead = true;
       const at = bot.entity?.position;
       const where = at ? `${Math.floor(at.x)} ${Math.floor(at.y)} ${Math.floor(at.z)}` : 'unknown';
       logEvent('death', { position: where });
       emit('death', { position: where });
-      if (current) stop('died').catch(() => {});
-      else lastResult = `you died at ${where} and respawned; your items were dropped there`;
+      const what = `you died at ${where}; your items were dropped there (they vanish after 5 minutes)`;
+      if (current) stop(what).catch(() => {});
+      else lastResult = `${what}; you respawn at the world spawn`;
+    },
+    health() {
+      // a hit from a hostile mob stops a long skill (collect, go_to, craft...) so the player can fight or flee
+      const h = bot.health;
+      const hurt = lastHealth != null && h < lastHealth && h > 0;
+      lastHealth = h;
+      const job = current;
+      if (!hurt || !job || KEEP_ON_HIT.has(job.tool) || job.controller.signal.aborted) return;
+      let attacker = null;
+      try { attacker = nearbyMobs(bot, { radius: ATTACKER_RANGE }).find((m) => m.hostile); } catch { /* no entity data */ }
+      if (!attacker) return;
+      const target = ATTACK_TARGETS.includes(attacker.name) ? attacker.name : 'nearest_hostile';
+      const why = `a ${attacker.name} is attacking you (health ${Math.round(h)}/20, ${attacker.distance} blocks away); fight back with attack ${target}, or go_to somewhere safe`;
+      logEvent('attacked', { mob: attacker.name, health: h, tool: job.tool });
+      stop(why).catch(() => {});
     },
     kicked(reason) { kickReason = clip(oneLine(textOf(reason)), 200); },
     error(err) {
@@ -212,14 +249,45 @@ export function createBody(opts = {}) {
         check();
         if (movements) bot.pathfinder.setMovements(movements);
         let timer;
+        let stuckTimer;
+        let failStuck;
+        const stuck = new Promise((_, reject) => { failStuck = reject; });
+        stuck.catch(() => {});
+        // pathfinder gives up on a path it cannot follow ("stuck") and plans the same one again, forever: count those
+        // resets and give up when the bot gets no closer, and give up when it stands still for long without digging
+        const away = () => {
+          try { return goal.heuristic?.(bot.entity.position.floored()) ?? 0; } catch { return 0; }
+        };
+        let best = away();
+        let resets = 0;
+        const onReset = (why) => {
+          if (why !== 'stuck') return;
+          const d = away();
+          if (d < best - 1) { best = d; resets = 0; return; }
+          if (++resets >= STUCK_RESETS) failStuck(Object.assign(new Error('got stuck on the way (pathfinder could not follow its path)'), { name: 'Stuck' }));
+        };
+        let last = bot.entity.position.clone?.() ?? null;
+        let still = 0;
+        if (last) {
+          stuckTimer = setInterval(() => {
+            const now = bot.entity.position;
+            const busy = safeCall(() => bot.pathfinder.isMining?.()) || safeCall(() => bot.pathfinder.isBuilding?.()) || bot.targetDigBlock;
+            if (busy || now.distanceTo(last) > 0.5) { last = now.clone(); still = 0; return; }
+            still += STILL_CHECK_MS;
+            if (still >= timing.stillMs) failStuck(Object.assign(new Error(`stood still for ${Math.round(timing.stillMs / 1000)} s without getting closer`), { name: 'Stuck' }));
+          }, STILL_CHECK_MS);
+        }
+        bot.on('path_reset', onReset);
         const walk = bot.pathfinder.goto(goal);
         const limit = timeoutMs > 0
           ? new Promise((_, reject) => { timer = setTimeout(() => reject(Object.assign(new Error('the walk took too long'), { name: 'WalkTimeout' })), timeoutMs); })
           : null;
         try {
-          await wait(limit ? Promise.race([walk, limit]) : walk);
+          await wait(Promise.race(limit ? [walk, limit, stuck] : [walk, stuck]));
         } finally {
           clearTimeout(timer);
+          clearInterval(stuckTimer);
+          bot.removeListener('path_reset', onReset);
           if (bot.pathfinder.goal) safe(() => bot.pathfinder.setGoal(null));
         }
       },
@@ -237,10 +305,22 @@ export function createBody(opts = {}) {
     };
   }
 
+  /** Wait (bounded) until a dead bot has respawned. */
+  async function respawned() {
+    const until = Date.now() + RESPAWN_MS;
+    while (dead && phase === 'ready' && Date.now() < until) await new Promise((r) => { setTimeout(r, 100); });
+  }
+
   async function execute(job, args) {
     const { tool, controller } = job;
     const { signal } = controller;
     const started = Date.now();
+    const quick = tool === 'get_state' || tool === 'say';
+    if (!quick) {
+      if (dead) await respawned();
+      // the inventory as the server has it (changes still on their way belong to the previous action)
+      await syncInventory(bot, Math.min(1_500, timing.windowMs));
+    }
     const before = inventoryOf(bot);
     emit('skill', { phase: 'start', tool, args });
     const timer = setTimeout(() => controller.abort({ kind: 'timeout' }), timeouts[tool]);
@@ -272,6 +352,8 @@ export function createBody(opts = {}) {
       try { fn(); } catch { /* best effort */ }
     }
     closeOpenWindow();
+    // items picked up, crafted or put back arrive from the server a moment later: count them in this action
+    if (!quick) await syncInventory(bot, Math.min(1_500, timing.windowMs));
 
     const delta = inventoryDelta(before, inventoryOf(bot));
     const result = {

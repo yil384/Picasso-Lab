@@ -51,20 +51,25 @@ export async function smelt(ctx, { item, n }) {
 
   let block = bot.findBlock({ matching: bot.registry.blocksByName.furnace.id, maxDistance: FURNACE_RADIUS });
   let placed = null;
+  let unreachable = null;
   if (block) {
     try {
       await walkNear(ctx, block.position);
+      block = bot.blockAt(block.position);
     } catch (err) {
       if (err instanceof SkillStop) throw err;
-      return fail(`could not reach the furnace at ${block.position.x} ${block.position.y} ${block.position.z}: ${describeError(err)}`);
+      unreachable = `could not reach the furnace at ${block.position.x} ${block.position.y} ${block.position.z}: ${describeError(err)}`;
+      block = null;
+      if (!countOf(bot, 'furnace')) return fail(unreachable);
     }
-    block = bot.blockAt(block.position);
-  } else if (countOf(bot, 'furnace')) {
+  }
+  if (!block && countOf(bot, 'furnace')) {
+    // none nearby, or the one nearby is out of reach: put down the one carried
     const r = await placeNearby(ctx, 'furnace');
-    if (!r.ok) return fail(`placing a furnace failed: ${r.result}`);
+    if (!r.ok) return fail(`placing a furnace failed: ${r.result}${unreachable ? `; ${unreachable}` : ''}`);
     block = r.block;
     placed = r.block;
-  } else {
+  } else if (!block) {
     return fail(`no furnace within ${FURNACE_RADIUS} blocks and none in your inventory (craft furnace from 8 cobblestone)`);
   }
   const at = fmt(block.position);

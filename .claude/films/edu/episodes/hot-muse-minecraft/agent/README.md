@@ -32,6 +32,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/log.js` | JSONL decision log with secrets scrubbed |
 | `src/mc.js` | vec3 and the prismarine libraries, resolved through mineflayer (one copy each) |
 | `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills and the plain-text state |
+| `src/skills/window.js` | window clicks the server confirms: crafting (and the inventory checks around every skill) never trust mineflayer's optimistic window picture |
 | `src/brain.js`, `src/memory.js` | the tool loop, its guards, short-term memory and `notes.json` |
 | `src/web.js` | `/`, `/play`, `/api`, `openapi.json`, `/ask`, `/log`, `/admin/stop` |
 | `scripts/probe.mjs` | latency and $ per call: effort x cache on/off x Chat/Responses, CSV per call |
@@ -226,21 +227,32 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
   set; drops go straight into the inventory. No Minecraft server, Java or client is used anywhere in the tests.
 - The skills mine with pathfinder and `dig`, then walk over the drops for at most 5 s (collectblock's own collect is
   not used: its pickup can wait forever). Every walk clears the pathfinder goal when it ends, so a walk that settles
-  short never carries on into the next skill; a stop or timeout closes any open crafting or furnace window.
+  short never carries on into the next skill; a walk also ends when pathfinder keeps resetting a path it cannot follow
+  ("stuck") or the bot stands still for `stillMs`; a stop or timeout closes any open crafting or furnace window.
+- `test/fake-bot.js` with `clickServer: {lagMs, deaf, noOpen}` adds a protocol client and the server's side of windows
+  (vanilla click rules, results from the real recipes, a stale-state resync after every click), so crafting goes
+  through the same window clicks as on a real server (`test/craft.test.js`).
 
 ## Not tested yet
 
-- Nothing has run against a real Minecraft server (the EULA is not accepted yet): joining, pathfinding, the skills
-  in real terrain and `run-goal --mock-llm` are covered only by the fake bot. That test comes next, separately.
+- Real server (Paper 1.21.4, 2026-10-06): the body without a model, driven by scripts. Crafting by clicks (2x2 and
+  at a table, placed or found, birch / spruce / dark oak / oak), many batches at once, collect (logs, stone, coal and
+  iron ore), smelt (coal and planks), go_to (surface trips, spiral descents), a hit by a zombie interrupting a skill,
+  and the full route from an empty inventory at a fresh spot to an iron pickaxe with skills only (no console items):
+  195, 202 and 223 s at three spots, 13 calls each, none failed. In other runs (normal difficulty) the scripted
+  player, which always fights back with wooden tools, was killed by zombies or skeletons at night, under dark oak
+  shade and in a cave: the body stopped the skill and said who attacked; fleeing or hiding is the player's choice.
+  Not yet: `run-goal --mock-llm` on the real server, `build`, long sessions.
 - Nothing has run against Meta's API: the request shape is checked against the documented rejections. Run
   `npm run probe -- --live --shape brain` before anything else: the brain-shaped calls (two user messages in a row, a
   replayed tool call and its result, `previous_response_id` with `--api responses`). Unknown until then: strict
   tool schemas with `minimum`/`maximum`/`pattern`/`minLength`, `stream_options`, `max_completion_tokens` 8192 and two
   user messages in a row. Each has an automatic fallback (above); the CSV's `adapted` column and the printed lines
   say which one fired. If `stream` fired, TTFT equals the whole call: say so next to any latency number.
-- The iron step has never met real terrain: caves, lava, water, night mobs and fall damage never happen in the fake
-  bot. Run `iron_pickaxe --mock-llm` on the fixed seed first and watch in spectator; `ERROR_CAP` is 8 to leave room
-  for exploring. A new skill only if the runs show it is needed (whitelisted and validated like the others).
+- Caves, lava, water, night mobs and fall damage never happen in the fake bot. On the real server a hit from a hostile
+  mob within 6 blocks stops the running skill (not attack or eat) with "a zombie is attacking you ...; fight back with
+  attack zombie, or go_to somewhere safe"; after a death the next skill waits for the respawn. Lava is only avoided as
+  far as pathfinder's own digging rules go.
 - prismarine-viewer is not installed; the watch page code is tested with a stand-in module only.
 
 ## Safety rules

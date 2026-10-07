@@ -17,12 +17,14 @@
     "a11y": "node scripts/a11y-chrome.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "canvas": "^3.2.3",
     "minecraft-data": "^3.117.0",
     "mineflayer": "4.39.0",
     "mineflayer-collectblock": "^1.6.0",
     "mineflayer-pathfinder": "^2.4.5",
     "openai": "^7.28.0",
-    "prismarine-viewer": "^1.33.0"
+    "prismarine-viewer": "^1.33.0",
+    "zod": "^4.6.5"
   }
 }

@@ -17,4 +17,6 @@ simulation-distance=6
 enable-command-block=false
 motd=Muse plays Minecraft (local)
 P
-exec ./jdk/Contents/Home/bin/java -Xms1G -Xmx3G -jar paper.jar --nogui
+# console commands: echo "op NAME" > console.in (a FIFO opened read-write, so the server never sees end of input)
+rm -f console.in && mkfifo console.in
+exec ./jdk/Contents/Home/bin/java -Xms1G -Xmx3G -jar paper.jar --nogui <> console.in

@@ -145,6 +145,10 @@ export async function startAgent(opts = {}) {
         listeningOn('127.0.0.1', () => viewer.mineflayer(body.bot, { port, firstPerson: false, viewDistance: 4, prefix: `/watch/${sessionId}` }),
           (err) => log.event('viewer_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) }));
         body.viewerPort = port;
+        // a second view through the bot's own eyes (first person), under /eyes/<session id>/
+        listeningOn('127.0.0.1', () => viewer.mineflayer(body.bot, { port: port + 100, firstPerson: true, viewDistance: 4, prefix: `/eyes/${sessionId}` }),
+          (err) => log.event('viewer_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) }));
+        body.eyesPort = port + 100;
         body.on('end', () => { try { body.bot.viewer?.close?.(); } catch { /* closed */ } });
       }, () => {});
     }

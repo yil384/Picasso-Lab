@@ -306,7 +306,22 @@ test('go_to: arrives, refuses far targets, reports no path', async () => {
   bot.fake.unreachable = () => true;
   const blocked = await body.run('go_to', { x: 0, y: 64, z: 0 });
   assert.equal(blocked.ok, false);
-  assert.match(blocked.result, /could not reach 0 64 0: no path found \(now at 20 64 -5\)/);
+  assert.match(blocked.result, /^could not reach 0 64 0: no path found \(now at 20 64 -5, 21 blocks short\)$/);
+  bot.fake.unreachable = null;
+  // a long trip goes in hops; a deep target in steps down
+  bot.fake.moveTo({ x: 0.5, y: 64, z: 0.5 });
+  const hops = await body.run('go_to', { x: 150, y: 64, z: 0 });
+  assert.equal(hops.ok, true, hops.result);
+  const legs = called(bot, 'goto').slice(-5).map((c) => c.to);
+  assert.ok(legs.length >= 3 && legs[0] !== legs.at(-1), `several legs: ${legs.join(' | ')}`);
+  const n0 = called(bot, 'goto').length;
+  const down = await body.run('go_to', { x: 150, y: 50, z: 0 });
+  assert.equal(down.ok, true, down.result);
+  // a spiral staircase in the 2x2 column at the target: one block down per step, never a straight shaft
+  const steps = called(bot, 'goto').slice(n0, -1).map((c) => c.to.replace(/[()]/g, '').split(', ').map(Number));
+  assert.deepEqual(steps.map(([, y]) => y), [63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50]);
+  assert.ok(steps.every(([sx, , sz]) => (sx === 150 || sx === 151) && (sz === 0 || sz === 1)), 'within the 2x2 column');
+  assert.ok(steps.every(([sx, , sz], k) => k === 0 || sx !== steps[k - 1][0] || sz !== steps[k - 1][2]), 'each step moves sideways');
 });
 
 test('one skill at a time; stop() cancels it and the bot stays connected', async () => {
@@ -363,12 +378,12 @@ test('walks: the pathfinder goal is cleared when goto settles short or fails, so
   pf.goto = async (goal) => { pf.goal = goal; };
   const short = await body.run('go_to', { x: 20, y: 64, z: 0 });
   assert.equal(short.ok, false);
-  assert.match(short.result, /^stopped at 0 64 0, 20 blocks short of 20 64 0$/);
+  assert.match(short.result, /^could not reach 20 64 0 \(now at 0 64 0, 20 blocks short\)$/);
   assert.equal(pf.goal, null, 'goal cleared after an empty path');
   // pathfinder rejects (NoPath on a partial path) and would keep walking that path
   pf.goto = async (goal) => { pf.goal = goal; throw Object.assign(new Error('No path to the goal!'), { name: 'NoPath' }); };
   const none = await body.run('go_to', { x: 20, y: 64, z: 0 });
-  assert.match(none.result, /no path found \(now at 0 64 0\)/);
+  assert.match(none.result, /no path found \(now at 0 64 0, 20 blocks short\)/);
   assert.equal(pf.goal, null, 'goal cleared after NoPath');
   assert.ok(pf.thinkTimeout >= 15_000, 'long trips get a longer path search');
 });
@@ -391,7 +406,7 @@ test('collect: mines with pathfinder and dig (not collectblock); a drop it canno
   const goto = bot.pathfinder.goto;
   const toDrop = [];
   bot.pathfinder.goto = async (goal) => {
-    if (goal?.rangeSq === 1) { toDrop.push(goal); return undefined; } // the walk to the drop settles where it is
+    if (goal?.constructor?.name === 'GoalBlock') { toDrop.push(goal); return undefined; } // the walk onto the drop settles where it is
     return goto(goal);
   };
   const t0 = Date.now();
@@ -471,7 +486,7 @@ test('events: skill start/end, chat from others, death stops the skill, end on c
   await new Promise((r) => setTimeout(r, 20));
   bot.fake.kill();
   const r = await walk;
-  assert.equal(r.result, 'stopped: died');
+  assert.match(r.result, /^stopped: you died at -?\d+ -?\d+ -?\d+; your items were dropped there/);
   assert.equal(seen.death.length, 1);
 
   offs[0]();
@@ -502,4 +517,43 @@ test('a real mineflayer bot: refuses a public host, reports a server that is not
   await ended;
   assert.equal((await body.run('get_state', {})).result, 'not connected to the game');
   await body.close();
+});
+
+test('a hit from a hostile mob stops a long skill with what to do; a passive one or a fall does not', async () => {
+  const { bot, body } = await setup({ scene: 'flat', moveMsPerBlock: 20 });
+  const walk = body.run('go_to', { x: 30, y: 64, z: 0 });
+  await new Promise((r) => setTimeout(r, 50));
+  bot.fake.setHealth(18); // no mob near: a fall, say
+  bot.fake.spawnMob('cow', bot.entity.position.offset(1, 0, 0));
+  bot.fake.setHealth(17);
+  assert.equal(body.busy, true, 'still walking');
+  bot.fake.spawnMob('zombie', bot.entity.position.offset(2, 0, 0));
+  bot.fake.setHealth(14);
+  const r = await walk;
+  assert.equal(r.ok, false);
+  assert.match(r.result, /^stopped: a zombie is attacking you \(health 14\/20, 2 blocks away\); fight back with attack zombie, or go_to somewhere safe$/);
+  bot.fake.setHealth(12);
+  const fight = await body.run('attack', { target: 'zombie' });
+  assert.doesNotMatch(fight.result, /is attacking you/, 'attack is never interrupted by the mob it fights');
+});
+
+test('after a death the next skill waits for the respawn', async () => {
+  const { bot, body } = await setup({ scene: 'flat', inventory: { oak_planks: 2 } });
+  await new Promise((r) => setImmediate(r)); // the fake's own first spawn
+  bot.fake.kill();
+  assert.match(body.state(), /last result: you died at 0 64 0; your items were dropped there .*; you respawn at the world spawn/);
+  setTimeout(() => { bot.health = 20; bot.emit('spawn'); }, 200);
+  const t0 = Date.now();
+  const r = await body.run('craft', { item: 'stick', n: 4 });
+  assert.equal(r.ok, true, r.result);
+  assert.ok(Date.now() - t0 >= 150, 'waited for the respawn');
+});
+
+test('collect: says how many drops were really picked up when some stay on the ground', async () => {
+  const { bot, body } = await setup({ scene: 'forest' });
+  bot.dig = async (block) => { bot.fake.setBlock(block.position, 'air'); }; // the log breaks, its drop never arrives
+  const r = await body.run('collect', { block: 'oak_log', n: 2 });
+  assert.equal(r.ok, true, r.result);
+  assert.equal(r.result, 'mined 2 oak_log; picked up 0 oak_log, the rest lies on the ground nearby');
+  assert.deepEqual(r.delta, {});
 });

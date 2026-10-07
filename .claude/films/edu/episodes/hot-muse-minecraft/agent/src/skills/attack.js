@@ -9,11 +9,23 @@ const ESCAPE_RADIUS = 24;
 const MAX_SWINGS = 40;
 /** Walks toward the mob in a row that end no closer before the bot gives up (it is on a ledge, across water...). */
 const MAX_STUCK_CHASES = 3;
-const WEAPONS = ['netherite_sword', 'diamond_sword', 'iron_sword', 'stone_sword', 'golden_sword', 'wooden_sword',
-  'netherite_axe', 'diamond_axe', 'iron_axe', 'stone_axe', 'golden_axe', 'wooden_axe'];
+// Best first; without a sword or an axe a pickaxe or shovel still hits harder than the hand (2-6 against 1).
+const TIERS = ['netherite', 'diamond', 'iron', 'stone', 'golden', 'wooden'];
+const WEAPONS = ['sword', 'axe', 'pickaxe', 'shovel'].flatMap((kind) => TIERS.map((t) => `${t}_${kind}`));
 
-/** Ticks to wait between swings for a full-strength hit with what is held. */
-const cooldownTicks = (held) => (held?.endsWith('_sword') ? 12 : held?.endsWith('_axe') ? 20 : 5);
+/**
+ * Ticks to wait between swings for a full-strength hit with what is held (20 / attack speed), and never less than
+ * the 10 ticks a hurt mob ignores further hits for: faster swings only hit weaker or not at all.
+ */
+function cooldownTicks(held) {
+  const speed = !held ? 4
+    : held.endsWith('_sword') ? 1.6
+      : held.endsWith('_axe') ? (/^(wooden|stone)_/.test(held) ? 0.8 : held.startsWith('iron_') ? 0.9 : 1)
+        : held.endsWith('_pickaxe') ? 1.2
+          : held.endsWith('_shovel') ? 1
+            : 4;
+  return Math.max(10, Math.ceil(20 / speed));
+}
 
 /** The entity filter for a target name. Only mobs from the registry's mob categories; never players. */
 function matcher(bot, target) {
