@@ -103,16 +103,16 @@ Slides 12-19. 6 min, day 1, 2026-10-07, status queued.
 - Three granularities: word-level (huge vocabulary, unknown words), character-level (no unknowns, very long sequences), subword (today: BPE bottom-up, Unigram top-down) (15).
 - BPE training in four steps: split into characters, count adjacent pairs, merge the most frequent, repeat until the target size (16).
 - The worked trace on {low:5, lower:2, newest:6, widest:3}: es (9), est (9), lo (7), 13 symbols (17).
-- In practice: tiktoken and Hugging Face tokenizers; the sample sentence is 13 tokens; the same seven Chinese characters are 7 tokens in cl100k_base and 1 in o200k_base (18-19).
+- In practice: tiktoken and Hugging Face tokenizers; the sample sentence is 13 tokens; the word " eucalyptus" is 5 tokens in cl100k_base and 1 in o200k_base (18-19).
 
-**Hook.** Seven Chinese characters: 7 tokens in one tokenizer, 1 token in its successor. Same text, seven times cheaper. What changed?
+**Hook.** One word, eucalyptus: 5 tokens in GPT-4's tokenizer, 1 in GPT-4o's. What changed?
 
 **Needs.** L01-01. Math: light. Slides to tape on: 15, 17, 19.
 
 **Notes.** Recording: slide 12 at ~24:30, slide 13 at ~24:43; episodes/l01-1-scale/notes/L01_transcript_35min.txt covers to 35:00 (mid slide 15), transcribe the rest. The BPE trace is the centrepiece: letter tiles merging, the red pen circling the most frequent pair each round. Slide 18 is a screenshot of a vendor web tool: redraw, do not tape. In the lecture she says "24 alphabets" (a slip or ASR error; English has 26): do not caption it.
 
 **Check first.**
-- Run tiktoken: 13 tokens for the slide-19 sample sentence in cl100k_base; the 7 vs 1 token counts for the Chinese phrase in cl100k_base vs o200k_base.
+- Run tiktoken: 13 tokens for the slide-19 sample sentence in cl100k_base; the 5 vs 1 token counts for " eucalyptus" in cl100k_base vs o200k_base (never use the slide's example).
 - BPE trace counts: (e,s)=9 ties with (s,t)=9 in round 1 and (l,o)=7 ties with (o,w)=7 in round 3; say which tie-break rule picks e-s and l-o, or avoid implying they were the unique maximum.
 - Vocabulary of the trace: 10 characters + 3 merges = 13.
 - Sennrich et al. 2015 (BPE for NMT); Kudo 2018 (SentencePiece Unigram); the slide's note on which commercial model family uses Unigram: verify or drop.
@@ -127,7 +127,7 @@ Slides 20-24; + L01 37 (the worksheet question); + L02 4-6 (the worksheet answer
 - Vocabularies grew: 32,000 (Llama 1/2) to 128,000 (Llama 3) to about 200,000 (o200k, 2024) (20).
 - "Smarter": more meaning per step, shorter sequences so more fits in the context window, whole numbers as one token (22).
 - "Heavier": the embedding table is vocab x hidden; at hidden 4096, 32k gives ~131M parameters and 200k ~819M; the final softmax scores every entry; rare tokens need much more data (23).
-- Count locally: APIs take text but bill tokens; estimate before calling, chunk documents by tokens; 1,000 characters is ~250 tokens of English, 500-750 of code, 700-1,100 of Chinese (24).
+- Count locally: APIs take text but bill tokens; estimate before calling, chunk documents by tokens; 1,000 characters is ~250 tokens of English and 500-750 of code (measure both; compare English and code only, no other languages) (24).
 - Worked example from the course worksheet: one 10,000-token paper, 5 questions, 300-token answers: $0.1085 naive, $0.0455 with a cached context, $0.034 with retrieval of three 500-token chunks.
 
 **Hook.** Grow a model's dictionary from 32,000 entries to 200,000 and you add almost 700 million parameters before it has learned a thing.

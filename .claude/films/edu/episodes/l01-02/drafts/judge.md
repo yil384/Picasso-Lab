@@ -1,5 +1,9 @@
 # L01-02 script judgement: A (story first) vs B (worked example first)
 
+> Note (2026-10-07): written for the first cut. Its hook used slide 19's second example, which the user's rule
+> (`daily/PROMPT.md`, first of the "Rules for the night") forbids; that example is replaced below by a pointer, and the film now uses our
+> own example "eucalyptus" (see `../SCRIPT.md` and `../FACTS.md` T20).
+
 Final clips: C1, C2b, C3, C5b, C9, C11, C12b (7, 33.2 s). **C8b failed: both drafts must drop it** (A beat 8, B after n34).
 
 ## Scores (1-5)
@@ -8,7 +12,7 @@ Final clips: C1, C2b, C3, C5b, C9, C11, C12b (7, 33.2 s). **C8b failed: both dra
 | Hook, first 5 s | 4 | 3 | Both open on n0 (~5 s). A holds the 7 -> 1 gap as a red "?" and saves the glue for the payoff. B glues the clippings in the hook (beat 0) and says "a seventh" in n1: the payoff picture is spent at 0:08. |
 | Clarity | 4 | 3 | A defines tokenizer and vocabulary (n4-n6, the cabinet) before slide 15. B says "cl100k_base" at n7 (0:50) before any vocabulary exists, and n10's "The full stop is 13" collides with "13 tokens". Both leave "context window" (A n9, B n4), "corpus" (A n21, B n22) and "merges" (A n29, B n32) undefined. |
 | Accuracy | 4 | 3 | Lists below. No trap triggered in either (ties stated, no "seven times cheaper", no "Gemini uses Unigram"). |
-| Her voice and slides | 4 | 4 | Same clips, sensible slots in both. B's paper flap over slide 19's Chinese line is the better slide device. |
+| Her voice and slides | 4 | 4 | Same clips, sensible slots in both. B's paper flap over slide 19's second example is the better slide device. |
 | Pace | 4 | 4 | A 720 words, ~6:07 with the final clips (118 wpm). B 688 words, ~5:58 (115 wpm). Both in range. |
 | Craft | 4 | 3 | A's cabinet getting labelled drawers es / est / lo is the gag-as-explanation. B beat 5 packs four ideas into one stretch (two drawings, the balance, the correction). A's flaws: the cabinet "small, top corner" in beat 7 reads as a corner element, and beat 11 crams trend + honest limit. |
 | **Total** | **24** | **20** | |
@@ -31,7 +35,7 @@ Final clips: C1, C2b, C3, C5b, C9, C11, C12b (7, 33.2 s). **C8b failed: both dra
 ## Winner: A
 
 ## Graft from B
-1. **The slide 19 flap** (B beats 3/9): when slide 19 is taped whole in A beat 9, fold its Chinese line under a flap. Lift it in A beat 10.
+1. **The slide 19 flap** (B beats 3/9): when slide 19 is taped whole in A beat 9, fold its second example under a flap. Lift it in A beat 10.
 2. **B n42 replaces A n36**: "What changed? The vocabulary went from about 100,000 entries to about 200,000. More merges, and this whole name got glued into one tile." It answers the hook in the hook's words.
 3. **B n34 replaces A n30**: "est got its own tile because it kept showing up. That's the whole idea: what's frequent gets glued."
 4. **B n9's second sentence** goes onto A n8: "Sometimes it's a whole word, sometimes a scrap of one."

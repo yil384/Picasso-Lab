@@ -1,5 +1,9 @@
 # Review: L01-02 "How Text Becomes Numbers" (independent)
 
+> Note (2026-10-07): written for the first cut. Its hook used slide 19's second example, which the user's rule
+> (`daily/PROMPT.md`, first of the "Rules for the night") forbids; that example is replaced below by a pointer, and the film now uses our
+> own example "eucalyptus" (see `../SCRIPT.md` and `../FACTS.md` T20).
+
 Basis: the 22 preview frames (plain and with guides), SCRIPT, vo_lines, clips, strings, FACTS, check.json, x_post.
 I did not see frames for c3, c5b or c12b, so I could not check their mic tag.
 
@@ -54,7 +58,7 @@ are mostly in the taped slides, a few overlaps and broken caption fragments.
 5. **f03330 (balance):** "fewer tokens" and "learns something" are written across the pan chains. Move them under
    the pans.
 6. **f09690 (c11, two cabinets): the panel is crowded.** The mic label "Prof. Ding · lecture 1" collides with the
-   big cabinet's top. The 中华人民共和国 tag covers the cabinet's base, at y about 1270-1330. Shrink the big cabinet
+   big cabinet's top. The example's tag covers the cabinet's base, at y about 1270-1330. Shrink the big cabinet
    about 10 % and move the tag below the cabinet's feet.
 7. **f10140 (n33): the 15-tile row has no label.** Only "one language" is labelled. Add "another language" under the
    15-tile row, so 1 vs 15 reads at a glance.
