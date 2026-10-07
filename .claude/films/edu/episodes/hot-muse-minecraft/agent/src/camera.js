@@ -204,13 +204,14 @@ export function tightenAuthDir(dir) {
  * refreshed silently when it has expired; without a login it fails (a device code is only ever asked for by
  * scripts/camera-login.mjs, where someone waits for it). offline: a name with no token.
  */
-export async function cameraProfile(c, { Authflow } = {}) {
+export async function cameraProfile(c, { Authflow, fetchFn } = {}) {
   if (c.auth === 'offline') {
     const name = c.name || 'MuseCam';
     if (!validName(name)) throw new Error('CAMERA_NAME must be 3-16 letters, digits or _');
     return { name, uuid: offlineUuid(name), token: '', auth: 'offline' };
   }
   if (!c.authDir) throw new Error('no auth folder for the camera account (CAMERA_AUTH_DIR)');
+  if (fs.existsSync(path.join(c.authDir, LAUNCHER_TOKEN_FILE))) return launcherProfile(c.authDir, { fetchFn });
   const Flow = Authflow ?? require('prismarine-auth').Authflow;
   const flow = new Flow(AUTH_CACHE_NAME, c.authDir, { ...AUTH_OPTIONS }, () => { throw new Error('the camera account is not logged in'); });
   const rt = await flow.msa.getRefreshToken?.();
@@ -219,6 +220,109 @@ export async function cameraProfile(c, { Authflow } = {}) {
   tightenAuthDir(c.authDir);
   if (!r?.token || !r.profile?.name || r.profile.error) throw new Error('the camera account has no Minecraft Java profile');
   return { name: r.profile.name, uuid: r.profile.id, token: r.token, auth: 'msa' };
+}
+
+// ----- the account, second way: the Minecraft launcher's own sign-in (authorization code)
+// Microsoft's device-code page refused the device flow for this account on 2026-10-07 ("The application is a first
+// party application ... users are not permitted to consent"). The launcher's documented sign-in works without it: the
+// owner signs in on login.live.com in a browser, lands on a blank page whose address carries a one-time code, and
+// pastes that address once; the code becomes a refresh token kept here (file 600), and every later start refreshes
+// silently. Chain: live.com token -> Xbox user token -> XSTS for Minecraft -> Minecraft token + profile.
+
+export const LAUNCHER = Object.freeze({
+  clientId: '00000000402b5328',
+  redirect: 'https://login.live.com/oauth20_desktop.srf',
+  scope: 'service::user.auth.xboxlive.com::MBI_SSL',
+});
+export const LAUNCHER_TOKEN_FILE = 'launcher-login.json';
+
+/** The address the owner opens to sign in (select_account: never silently reuses another signed-in account). */
+export function launcherSignInUrl() {
+  const q = new URLSearchParams({ client_id: LAUNCHER.clientId, response_type: 'code', scope: LAUNCHER.scope, redirect_uri: LAUNCHER.redirect, prompt: 'select_account' });
+  return `https://login.live.com/oauth20_authorize.srf?${q}`;
+}
+
+/** The one-time code from what the owner pasted: the blank page's whole address, or the bare code; null if neither. */
+export function codeFromPaste(text) {
+  const t = String(text ?? '').trim();
+  try {
+    const u = new URL(t);
+    const err = u.searchParams.get('error');
+    if (err) throw new Error(`Microsoft said: ${err}${u.searchParams.get('error_description') ? ` (${u.searchParams.get('error_description').slice(0, 160)})` : ''}`);
+    return u.searchParams.get('code') || null;
+  } catch (e) {
+    if (/^Microsoft said/.test(e.message)) throw e;
+  }
+  return /^M\.[A-Za-z0-9_.!*$-]{10,}$/.test(t) ? t : null;
+}
+
+async function launcherCall(fetchFn, url, init, what) {
+  const res = await fetchFn(url, { ...init, headers: { accept: 'application/json', ...(init.headers ?? {}) } });
+  const text = await res.text();
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
+  if (!res.ok) {
+    const why = body?.error_description || body?.error || body?.XErr || body?.errorMessage || text.slice(0, 160);
+    throw new Error(`${what} failed (HTTP ${res.status}): ${String(why).replace(/[A-Za-z0-9_\-.]{40,}/g, '***').slice(0, 200)}`);
+  }
+  return body;
+}
+
+const formPost = (fetchFn, url, form, what) => launcherCall(fetchFn, url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(form).toString() }, what);
+const jsonPost = (fetchFn, url, json, what) => launcherCall(fetchFn, url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(json) }, what);
+
+/** A live.com access token -> {token, expiresAt, name, uuid, ownsJava}. */
+export async function launcherChain(msaAccessToken, { fetchFn = globalThis.fetch } = {}) {
+  const user = await jsonPost(fetchFn, 'https://user.auth.xboxlive.com/user/authenticate', {
+    Properties: { AuthMethod: 'RPS', SiteName: 'user.auth.xboxlive.com', RpsTicket: `t=${msaAccessToken}` },
+    RelyingParty: 'http://auth.xboxlive.com', TokenType: 'JWT',
+  }, 'Xbox sign-in');
+  const xsts = await jsonPost(fetchFn, 'https://xsts.auth.xboxlive.com/xsts/authorize', {
+    Properties: { SandboxId: 'RETAIL', UserTokens: [user.Token] }, RelyingParty: 'rp://api.minecraftservices.com/', TokenType: 'JWT',
+  }, 'Xbox authorization (XSTS; 2148916233 means the account has no Xbox profile yet)');
+  const uhs = xsts?.DisplayClaims?.xui?.[0]?.uhs ?? user?.DisplayClaims?.xui?.[0]?.uhs;
+  const mc = await jsonPost(fetchFn, 'https://api.minecraftservices.com/authentication/login_with_xbox', { identityToken: `XBL3.0 x=${uhs};${xsts.Token}` }, 'Minecraft sign-in');
+  const auth = { headers: { authorization: `Bearer ${mc.access_token}` } };
+  const ents = await launcherCall(fetchFn, 'https://api.minecraftservices.com/entitlements/mcstore', auth, 'Minecraft entitlements').catch(() => null);
+  const ownsJava = Array.isArray(ents?.items) ? ents.items.some((i) => /game_minecraft|product_minecraft/.test(i.name)) : null;
+  const profile = await launcherCall(fetchFn, 'https://api.minecraftservices.com/minecraft/profile', auth, 'Minecraft profile (does the account own Java Edition?)');
+  if (!profile?.name || !profile?.id) throw new Error('signed in, but the account has no Minecraft Java profile (does it own Java Edition?)');
+  return { token: mc.access_token, expiresAt: Date.now() + (Number(mc.expires_in) || 86_400) * 1000, name: profile.name, uuid: profile.id, ownsJava };
+}
+
+function saveLauncher(dir, data) {
+  const file = path.join(dir, LAUNCHER_TOKEN_FILE);
+  fs.writeFileSync(`${file}.tmp`, JSON.stringify(data), { mode: 0o600 });
+  fs.renameSync(`${file}.tmp`, file);
+  tightenAuthDir(dir);
+}
+
+/** Turns the pasted blank-page address (or code) into a stored login; returns {name, uuid, ownsJava}. */
+export async function redeemLauncherCode(dir, pasted, { fetchFn = globalThis.fetch } = {}) {
+  const code = codeFromPaste(pasted);
+  if (!code) throw new Error('no sign-in code found: paste the whole address of the blank page you landed on after signing in (it contains "code=M.")');
+  const t = await formPost(fetchFn, 'https://login.live.com/oauth20_token.srf', {
+    client_id: LAUNCHER.clientId, code, grant_type: 'authorization_code', redirect_uri: LAUNCHER.redirect, scope: LAUNCHER.scope,
+  }, 'redeeming the sign-in code (codes work once and only for a few minutes)');
+  const mc = await launcherChain(t.access_token, { fetchFn });
+  saveLauncher(dir, { refresh_token: t.refresh_token, mc });
+  return { name: mc.name, uuid: mc.uuid, ownsJava: mc.ownsJava };
+}
+
+/** The camera's player from the stored launcher login, refreshing the Minecraft token (24 h) when it is near expiry. */
+export async function launcherProfile(dir, { fetchFn = globalThis.fetch } = {}) {
+  const file = path.join(dir, LAUNCHER_TOKEN_FILE);
+  const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+  let mc = saved.mc;
+  if (!mc?.token || !(mc.expiresAt - Date.now() > 10 * 60_000)) {
+    if (!saved.refresh_token) throw new Error('the camera account is not logged in: run scripts/camera-login.mjs --url');
+    const t = await formPost(fetchFn, 'https://login.live.com/oauth20_token.srf', {
+      client_id: LAUNCHER.clientId, grant_type: 'refresh_token', refresh_token: saved.refresh_token, redirect_uri: LAUNCHER.redirect, scope: LAUNCHER.scope,
+    }, 'refreshing the camera login (if this keeps failing, sign in again with scripts/camera-login.mjs --url)');
+    mc = await launcherChain(t.access_token, { fetchFn });
+    saveLauncher(dir, { refresh_token: t.refresh_token || saved.refresh_token, mc });
+  }
+  return { name: mc.name, uuid: mc.uuid, token: mc.token, auth: 'msa' };
 }
 
 // ----- the rig: Xvfb + the client, kept in the world
