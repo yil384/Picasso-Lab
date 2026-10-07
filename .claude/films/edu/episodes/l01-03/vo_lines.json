@@ -1,0 +1,212 @@
+[
+ {
+  "id": "n0",
+  "en": "Grow a model's dictionary, and it gains almost 700 million parameters.",
+  "zh": ""
+ },
+ {
+  "id": "n1",
+  "en": "Before it has learned a thing. From 32,000 entries to 200,000. Where do they all come from?",
+  "zh": ""
+ },
+ {
+  "id": "n2",
+  "en": "That dictionary is the vocabulary: every token the model knows, a word or a piece of a word. Last episode's card catalogue, one drawer per entry.",
+  "zh": ""
+ },
+ {
+  "id": "n3",
+  "en": "This is Lecture 1 of Professor Yufei Ding's CSE 291P at UC San Diego.",
+  "zh": ""
+ },
+ {
+  "id": "n4",
+  "en": "Her slide 20. Llama 1 and 2, 2023: 32,000 entries. Llama 3, 2024: about 128,000.",
+  "zh": ""
+ },
+ {
+  "id": "n5",
+  "en": "GPT-4o's tokenizer, 2024: about 200,000. Different families, one direction: vocabularies keep growing.",
+  "zh": ""
+ },
+ {
+  "id": "n6",
+  "en": "Strength first. Why would a bigger vocabulary make a model smarter?",
+  "zh": ""
+ },
+ {
+  "id": "n7",
+  "en": "A bigger catalogue has room for bigger pieces: more meaning per token.",
+  "zh": ""
+ },
+ {
+  "id": "n8",
+  "en": "Take the word vocabulary. Llama 2 cuts it into 4 pieces. Llama 3 keeps it as 1 token.",
+  "zh": ""
+ },
+ {
+  "id": "n9",
+  "en": "Fewer tokens per page: more pages fit in the context window, the text a model can take in at once.",
+  "zh": ""
+ },
+ {
+  "id": "n10",
+  "en": "Her slide 22 says a book would take three times the space with 32,000 entries. Not three times.",
+  "zh": ""
+ },
+ {
+  "id": "n11",
+  "en": "Same texts, both tokenizers: we measured about 12 percent fewer tokens on English novels, and about 21 percent fewer on Python code.",
+  "zh": ""
+ },
+ {
+  "id": "n12",
+  "en": "Her slide also says a big vocabulary makes 1000 one token. Not quite: Llama 2 splits it into four digits.",
+  "zh": ""
+ },
+ {
+  "id": "n13",
+  "en": "Llama 3 and GPT-4o's tokenizer cut it into 100, then 0. That cut is a design choice, not a matter of size.",
+  "zh": ""
+ },
+ {
+  "id": "n14",
+  "en": "Now, heavier. Reason one: open any drawer, and inside is a long strip of numbers.",
+  "zh": ""
+ },
+ {
+  "id": "n15",
+  "en": "Every entry gets its own row of numbers. The row's length is the model's width, its hidden size. At a width of 4,096, that is 4,096 numbers per entry.",
+  "zh": ""
+ },
+ {
+  "id": "n16",
+  "en": "Together the rows make the embedding matrix, the table at the model's input. Each number in it is a parameter the model must learn.",
+  "zh": ""
+ },
+ {
+  "id": "n17",
+  "en": "Her slide 23 multiplies it out. 32,000 entries times 4,096: about 131 million.",
+  "zh": ""
+ },
+ {
+  "id": "n18",
+  "en": "200,000 entries at the same width: about 819 million.",
+  "zh": ""
+ },
+ {
+  "id": "n19",
+  "en": "688 million more, in the input table alone. Almost 700 million, and every one starts untrained.",
+  "zh": ""
+ },
+ {
+  "id": "n20",
+  "en": "That's where they come from: one long strip for every new drawer.",
+  "zh": ""
+ },
+ {
+  "id": "n21",
+  "en": "Reason two: the output layer, the model's last step. For every token it writes, the model scores every entry in its vocabulary.",
+  "zh": ""
+ },
+ {
+  "id": "n22",
+  "en": "Picture a clerk who must tick every drawer in the wall, for every single token.",
+  "zh": ""
+ },
+ {
+  "id": "n23",
+  "en": "Same two numbers, now as work: about 131 million multiply-adds per token at 32,000 entries, about 819 million at 200,000.",
+  "zh": ""
+ },
+ {
+  "id": "n24",
+  "en": "Reason three: data. A bigger vocabulary has more rare entries, and a rare entry is seen less often in training.",
+  "zh": ""
+ },
+ {
+  "id": "n25",
+  "en": "A drawer that's hardly ever opened gathers dust.",
+  "zh": ""
+ },
+ {
+  "id": "n26",
+  "en": "One honest limit. A 2024 study still found under-trained entries in every model it tested: typically 0.1 to 1 percent of the vocabulary.",
+  "zh": ""
+ },
+ {
+  "id": "n27",
+  "en": "Now the bill. As she said, fewer tokens is cheaper: chat APIs take text, not token IDs, but the bill is counted in tokens.",
+  "zh": ""
+ },
+ {
+  "id": "n28",
+  "en": "It's a post office that charges by weight. So weigh the parcel at home: count the tokens on your own machine first.",
+  "zh": ""
+ },
+ {
+  "id": "n29",
+  "en": "Her slide 24 has rules of thumb for 1,000 characters. English: about 250 tokens.",
+  "zh": ""
+ },
+ {
+  "id": "n30",
+  "en": "Code: not 500 to 750. On today's tokenizers we measured 224 to 340, about the same as English.",
+  "zh": ""
+ },
+ {
+  "id": "n31",
+  "en": "And 1,000 digits: 334 tokens on GPT-4o's tokenizer, about 1,000 on Llama 2's. Rules of thumb vary by tokenizer: count with the real one.",
+  "zh": ""
+ },
+ {
+  "id": "n32",
+  "en": "So the course worksheet does one. A research paper of about 10,000 tokens, five questions, answers of 300 tokens.",
+  "zh": ""
+ },
+ {
+  "id": "n33",
+  "en": "The prices on the course worksheet: $1.75 per million tokens in, $14 per million out.",
+  "zh": ""
+ },
+ {
+  "id": "n34",
+  "en": "The naive way sends the whole paper with every question: about 2 cents a question. Five questions: about 11 cents.",
+  "zh": ""
+ },
+ {
+  "id": "n35",
+  "en": "Or let the post office keep a copy of the paper. That's a cache.",
+  "zh": ""
+ },
+ {
+  "id": "n36",
+  "en": "On this price list, the first question pays full price for the paper, and the next four pay a tenth. Total: about 4.6 cents.",
+  "zh": ""
+ },
+ {
+  "id": "n37",
+  "en": "Or send less: retrieval. Cut the paper into 20 chunks of 500 tokens, and send only the 3 most relevant: 1,500 tokens a question.",
+  "zh": ""
+ },
+ {
+  "id": "n39",
+  "en": "Retrieval, at 3.4 cents, beats the cache. Always? Fetch 6 chunks instead of 3, and caching wins.",
+  "zh": ""
+ },
+ {
+  "id": "n40",
+  "en": "So a bigger dictionary packs more meaning into each token. But it is paid for three times: a strip in every drawer, a score for every drawer at every step, and data for the rare ones.",
+  "zh": ""
+ },
+ {
+  "id": "n41",
+  "en": "And every call is billed in tokens. Count them first.",
+  "zh": ""
+ },
+ {
+  "id": "n42",
+  "en": "Every drawer now has a score. Next: how does the model pick one?",
+  "zh": ""
+ }
+]
