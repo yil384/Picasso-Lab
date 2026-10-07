@@ -24,6 +24,16 @@ const LINES_KEPT = 50;
 const LINES_SHOWN = 20;
 const ENDED_KEPT = 500;
 const HOST_RE = /^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$/;
+// Live views (/watch, /eyes): every new socket.io connection makes the viewer send the world around the bot (MBs) and
+// listen to the bot, in this process. Per address: open WebSockets, requests in flight, new connections per hour; per
+// session: open WebSockets. A WebSocket idle this long, or one whose reader lets this much pile up, is dropped.
+const VIEW_WS_PER_ADDRESS = 4;
+const VIEW_WS_PER_SESSION = 12;
+const VIEW_HTTP_PER_ADDRESS = 32;
+const VIEW_IDLE_MS = 90_000;
+const VIEW_BUFFER_MAX = 8 * 1024 * 1024;
+/** A socket.io request that opens a new connection (a handshake: no sid yet). */
+const opensView = (url) => /\/socket\.io\/?\?/.test(url) && !/[?&]sid=/.test(url);
 
 // ---------------------------------------------------------------------------------------------------------------
 // HTML: html`` escapes every interpolated value unless it is already Html (built by html`` or raw()).
@@ -382,6 +392,12 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
  * @param {string} [opts.askNotice]          a line shown above the Ask form (e.g. a data-use disclosure)
  * @param {number} [opts.askQueueMax]        waiting /ask instructions
  * @param {number} [opts.askSteps]           brain steps one /ask instruction may use
+ * @param {number} [opts.mcpGamesPerAddress] live MCP games one address may hold (default half the slots, at least 2)
+ * @param {number} [opts.mcpStartsPerHour]   MCP game starts per address per hour (default 60)
+ * @param {number} [opts.mcpInitsPerHour]    new MCP sessions per address per hour (default 1200)
+ * @param {{sessions?: number, perAddress?: number}} [opts.mcpLimits]  live MCP sessions in all and per address
+ * @param {number} [opts.mcpCallMs]          how long one MCP call may wait before it answers (tests)
+ * @param {number} [opts.viewsPerHour]       new live-view connections per address per hour (default 120)
  * @returns {import('./contracts.js').Web & {sweep: () => void}}
  */
 export function createWeb(opts = {}) {
@@ -400,6 +416,7 @@ export function createWeb(opts = {}) {
   const askSteps = opts.askSteps ?? 40;
   const sessionsPerAddress = opts.sessionsPerAddress ?? 1;
   const sessionCooldownMs = opts.sessionCooldownMs ?? 60_000;
+  const mcpGamesPerAddress = opts.mcpGamesPerAddress ?? Math.max(2, Math.floor(web.maxSessions / 2));
   const askNotice = opts.askNotice ?? null;
   const adminToken = web.adminToken ?? '';
 
@@ -408,6 +425,11 @@ export function createWeb(opts = {}) {
   const sessionLimiter = createLimiter(opts.sessionsPerHour ?? 30, now);
   const askLimiter = createLimiter(web.askPerHour, now);
   const adminFails = createLimiter(5, now);
+  const mcpStartLimiter = createLimiter(opts.mcpStartsPerHour ?? 60, now);
+  const mcpInitLimiter = createLimiter(opts.mcpInitsPerHour ?? 1_200, now);
+  const viewLimiter = createLimiter(opts.viewsPerHour ?? 120, now);
+  const viewConns = new Map(); // 'ws@address' | 'ws#session' | 'http@address' -> open connections
+  const viewSockets = new Set(); // upgraded live-view sockets (the server does not track them), closed on stop()
   const cooldowns = new Map(); // address key -> when it may start a session again
   const ask = { queue: [], running: null, done: [], nextId: 1, house: null, controller: null };
 
@@ -472,10 +494,11 @@ export function createWeb(opts = {}) {
     if (s.lines.length > LINES_KEPT) s.lines.shift();
   }
 
-  function startSession(client) {
+  function startSession(client, address = client) {
     const s = {
       token: crypto.randomBytes(24).toString('base64url'),
-      client, // address key for the per-address limits; never shown or logged
+      client, // the key for the per-client limits (an address, or mcp:<MCP session>); never shown or logged
+      address, // the address key; never shown or logged
       id: `g${crypto.randomBytes(3).toString('hex')}`,
       created: now(),
       expiresAt: now() + web.leaseMs,
@@ -513,18 +536,22 @@ export function createWeb(opts = {}) {
     })().catch((e) => {
       s.status = 'failed';
       s.error = String(e?.message ?? e);
-      endSession(s, `the bot could not join: ${s.error}`);
+      endSession(s, `the bot could not join: ${s.error}`, { cooldown: false }); // not the guest's doing: no waiting
     });
     return s;
   }
 
-  /** End a session once: free the slot, remember why, close its bot (close() stops the running skill first). */
-  function endSession(s, reason) {
+  /**
+   * End a session once: free the slot, remember why, close its bot (close() stops the running skill first). The
+   * address waits sessionCooldownMs before its next session; not after a failed join, and not for an MCP session's
+   * key (a new MCP session would skip it anyway: MCP starts are limited per address instead).
+   */
+  function endSession(s, reason, { cooldown = true } = {}) {
     if (s.ended) return s.closed;
     s.ended = reason;
     sessions.delete(s.token);
     ended.set(s.token, { reason, at: now() });
-    if (s.client && sessionCooldownMs > 0) cooldowns.set(s.client, now() + sessionCooldownMs);
+    if (cooldown && s.client && !s.client.startsWith('mcp:') && sessionCooldownMs > 0) cooldowns.set(s.client, now() + sessionCooldownMs);
     while (ended.size > ENDED_KEPT) ended.delete(ended.keys().next().value);
     for (const off of s.offs) { try { off?.(); } catch { /* ignore */ } }
     log.event('session_end', { session: s.id, reason });
@@ -542,6 +569,9 @@ export function createWeb(opts = {}) {
     sessionLimiter.prune();
     askLimiter.prune();
     adminFails.prune();
+    mcpStartLimiter.prune();
+    mcpInitLimiter.prune();
+    viewLimiter.prune();
   }
 
   /** The live session for a token, or an HttpError (404 unknown, 410 ended). */
@@ -851,29 +881,37 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
   /**
    * Ask for a session: 18+ confirmed, no live session and no cooldown for this address, a free slot, the hourly
    * per-address limit. Returns the session or throws.
+   * MCP games (mcp = {key, address}) are one per MCP session (key): every connector user arrives from the agent's own
+   * cloud, so one address can stand for many people. Per address they get a looser cap (mcpGamesPerAddress live
+   * games, mcpStartsPerHour starts), so one caller cannot take every bot.
    */
-  function newSession(req, adult, keyOverride) {
+  function newSession(req, adult, mcp = null) {
     if (closing) throw new HttpError(503, 'the server is shutting down');
     if (!adult) throw new HttpError(400, 'please confirm that you are 18 or older');
     sweep();
-    // MCP games are counted per MCP session, not per address: every connector user arrives from the agent's own
-    // cloud, so one address can stand for many people (the global slot cap still applies)
-    const key = keyOverride ?? clientKey(req);
+    const address = mcp ? mcp.address : clientKey(req);
+    const key = mcp ? mcp.key : address;
     const retry = (ms) => ({ 'retry-after': String(Math.max(1, Math.ceil(ms / 1000))) });
+    const soonestOf = (list) => Math.min(...list.map((x) => x.expiresAt)) - now();
     const mine = [...sessions.values()].filter((x) => x.client === key);
     if (mine.length >= sessionsPerAddress) {
-      const soonest = Math.min(...mine.map((x) => x.expiresAt));
-      throw new HttpError(429, `your address already has a bot (one at a time); end that session or wait about ${duration(soonest - now())}`, retry(soonest - now()));
+      throw new HttpError(429, `${mcp ? 'this connection' : 'your address'} already has a bot (one at a time); end that session or wait about ${duration(soonestOf(mine))}`, retry(soonestOf(mine)));
+    }
+    if (mcp) {
+      const fromAddress = [...sessions.values()].filter((x) => x.address === address && x.client.startsWith('mcp:'));
+      if (fromAddress.length >= mcpGamesPerAddress) {
+        throw new HttpError(429, `your connector's address already plays ${mcpGamesPerAddress} games, the most one address may hold; the next one frees up in about ${duration(soonestOf(fromAddress))}`, retry(soonestOf(fromAddress)));
+      }
     }
     const cool = (cooldowns.get(key) ?? 0) - now();
     if (cool > 0) throw new HttpError(429, `your last session just ended; the next guest goes first, try again in about ${duration(cool)}`, retry(cool));
     if (sessions.size >= web.maxSessions) {
-      const soonest = Math.min(...[...sessions.values()].map((x) => x.expiresAt));
-      throw new HttpError(503, `all ${web.maxSessions} bots are in use; the next one frees up in about ${duration(soonest - now())}`, retry(soonest - now()));
+      const all = [...sessions.values()];
+      throw new HttpError(503, `all ${web.maxSessions} bots are in use; the next one frees up in about ${duration(soonestOf(all))}`, retry(soonestOf(all)));
     }
-    const limit = sessionLimiter.take(key);
-    if (!limit.ok) throw new HttpError(429, `too many sessions from your address; try again in ${duration(limit.retryMs)}`, retry(limit.retryMs));
-    return startSession(key);
+    const limit = mcp ? mcpStartLimiter.take(address) : sessionLimiter.take(key);
+    if (!limit.ok) throw new HttpError(429, `too many sessions from your ${mcp ? "connector's " : ''}address; try again in ${duration(limit.retryMs)}`, retry(limit.retryMs));
+    return startSession(key, address);
   }
 
   async function handleAsk(req, res) {
@@ -947,29 +985,71 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     return null;
   }
 
+  /** Count one open live-view connection under each key; returns its release (safe to call twice). */
+  function holdView(keys) {
+    for (const k of keys) viewConns.set(k, (viewConns.get(k) ?? 0) + 1);
+    let held = true;
+    return () => {
+      if (!held) return;
+      held = false;
+      for (const k of keys) { const n = (viewConns.get(k) ?? 1) - 1; if (n > 0) viewConns.set(k, n); else viewConns.delete(k); }
+    };
+  }
+
+  /** Why a live-view request is refused (too many open or new connections), or null. */
+  function viewRefusal(req, kind, id) {
+    const addr = clientKey(req);
+    if (kind === 'ws' && (viewConns.get(`ws@${addr}`) ?? 0) >= VIEW_WS_PER_ADDRESS) return 'too many live views open from your address';
+    if (kind === 'ws' && (viewConns.get(`ws#${id}`) ?? 0) >= VIEW_WS_PER_SESSION) return 'too many people watching this bot right now';
+    if (kind === 'http' && (viewConns.get(`http@${addr}`) ?? 0) >= VIEW_HTTP_PER_ADDRESS) return 'too many live-view requests from your address at once';
+    if (opensView(String(req.url)) && !viewLimiter.take(addr).ok) return 'too many live views opened from your address this hour';
+    return null;
+  }
+
   function proxyHttp(req, res, port) {
+    const why = viewRefusal(req, 'http');
+    if (why) { req.resume(); send(res, 429, why, {}); return; }
+    const release = holdView([`http@${clientKey(req)}`]);
+    res.on('close', release);
     const up = http.request({ host: '127.0.0.1', port, method: req.method, path: req.url, headers: { ...req.headers, host: `127.0.0.1:${port}` } }, (r) => {
       res.writeHead(r.statusCode ?? 502, r.headers);
       r.pipe(res);
     });
+    up.setTimeout(VIEW_IDLE_MS, () => up.destroy(new Error('the live view did not answer')));
     up.on('error', () => { if (!res.headersSent) send(res, 502, 'live view unavailable', {}); else res.destroy(); });
+    res.on('close', () => up.destroy());
     req.pipe(up);
   }
 
-  /** WebSocket upgrades for the live view (socket.io under /watch/<id>/socket.io). */
+  /** WebSocket upgrades for the live view (socket.io under /watch/<id>/socket.io), within the live-view limits. */
   function proxyUpgrade(req, socket, head) {
     const m = String(req.url).match(/^\/(watch|eyes)\/([A-Za-z0-9_-]+)\//);
     const port = m && viewerPort(m[2], m[1]);
     if (!port) { socket.destroy(); return; }
+    socket.on('error', () => {});
+    const why = viewRefusal(req, 'ws', m[2]);
+    if (why) { socket.end(`HTTP/1.1 429 Too Many Requests\r\ncontent-type: text/plain\r\nconnection: close\r\ncontent-length: ${Buffer.byteLength(why)}\r\n\r\n${why}`); return; }
+    const release = holdView([`ws@${clientKey(req)}`, `ws#${m[2]}`]);
+    viewSockets.add(socket);
+    socket.setTimeout(VIEW_IDLE_MS, () => socket.destroy());
     const up = net.connect(port, '127.0.0.1', () => {
       const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
       for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
       up.write(`${lines.join('\r\n')}\r\n\r\n`);
       if (head?.length) up.write(head);
-      socket.pipe(up).pipe(socket);
+      socket.pipe(up);
+      // to the watcher: never buffer more than VIEW_BUFFER_MAX for a reader that does not keep up
+      up.on('data', (chunk) => {
+        if (socket.writableLength > VIEW_BUFFER_MAX) { socket.destroy(); up.destroy(); return; }
+        socket.write(chunk);
+      });
+      up.on('end', () => socket.end());
     });
     up.on('error', () => socket.destroy());
+    up.on('close', () => { socket.destroy(); release(); });
     socket.on('error', () => up.destroy());
+    socket.on('end', () => socket.destroy()); // a watcher that hangs up is gone (the upgraded socket allows half-open)
+    socket.on('close', () => { up.destroy(); release(); viewSockets.delete(socket); });
   }
 
   let mcp = null; // built on first use: the hooks below are defined later in this closure
@@ -978,8 +1058,9 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     const p = u.pathname;
     if (p === '/mcp') {
       mcp ??= createMcp({
-        newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log,
-        links: (s, r) => ({ eyes: `${base(r)}/eyes/${s.id}/`, watch: `${base(r)}/watch/${s.id}/` }),
+        newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
+        leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs,
+        links: (s, b) => ({ eyes: `${b}/eyes/${s.id}/`, watch: `${b}/watch/${s.id}/` }),
       });
       return mcp(req, res);
     }
@@ -1146,6 +1227,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       ask.house = null;
       const closes = [...sessions.values()].map((s) => endSession(s, 'the server stopped'));
       await within(Promise.allSettled(closes), 5_000);
+      for (const socket of viewSockets) socket.destroy();
       if (server) {
         const srv = server;
         server = null;

@@ -112,6 +112,17 @@ second Ctrl-C exits at once.
 | `GET/POST /ask` | the queue for our own brain: 18+, `WEB_ASK_MAX_CHARS`, one waiting or running request and `WEB_ASK_PER_HOUR` per address, closed while the hourly $ cap is spent |
 | `GET /log?n=50` | the public JSONL tail (session tokens and the admin token scrubbed, no IP addresses) |
 | `POST /admin/stop` | kill switch, `Authorization: Bearer $WEB_ADMIN_TOKEN`; stops every skill and clears the queue, `{"end":true}` also ends every session; 5 wrong tokens lock an address out for the hour |
+| `/mcp` | MCP (streamable HTTP) for a connector such as Muse: `start_game {adult: true}`, `play`, `play_sequence`, `get_state`, `stop`, `end_game` (src/mcp.js) |
+| `GET /watch/<id>/`, `GET /eyes/<id>/` | a guest bot's live 3D views (prismarine-viewer, read-only: clicks from the page are ignored) |
+
+MCP: one game per MCP session (connector users share the agent's egress addresses); per address at most
+`max(2, WEB_MAX_SESSIONS / 2)` live MCP games and 60 MCP game starts an hour, no cooldown. Every reply comes within
+45 s with the result and the state (with the time left); a skill still running then goes on, and a later reply (get_state
+waits for it) reports its result once the client has received it. start_game returns a handle that resumes the game
+from a new MCP session. MCP sessions: 64 KB per request, 20 per address and 200 in all (the one called longest ago
+without a game makes room), 1200 new ones per address an hour, dropped after 10 minutes without a game; a game ends
+after 5 minutes without calls. Live views: per address 4 open WebSockets, 32 requests in flight and 120 new views an
+hour, 12 WebSockets per bot; a WebSocket idle for 90 s, or whose reader lets 8 MB pile up, is dropped.
 
 Each address (IPv6: each /64) holds one guest bot at a time and waits a minute after its session ends. POSTs that
 another website makes a browser send (`Sec-Fetch-Site: cross-site` or `same-site`, or a foreign `Origin`) get 403;
@@ -249,11 +260,15 @@ action (an agent filling a form would lose it); while the bot joins or a skill r
   tool schemas with `minimum`/`maximum`/`pattern`/`minLength`, `stream_options`, `max_completion_tokens` 8192 and two
   user messages in a row. Each has an automatic fallback (above); the CSV's `adapted` column and the printed lines
   say which one fired. If `stream` fired, TTFT equals the whole call: say so next to any latency number.
-- Caves, lava, water, night mobs and fall damage never happen in the fake bot. On the real server a hit from a hostile
-  mob within 6 blocks stops the running skill (not attack or eat) with "a zombie is attacking you ...; fight back with
-  attack zombie, or go_to somewhere safe"; after a death the next skill waits for the respawn. Lava is only avoided as
-  far as pathfinder's own digging rules go.
-- prismarine-viewer is not installed; the watch page code is tested with a stand-in module only.
+- Caves, lava, water, night mobs and fall damage never happen in the fake bot (its `hurt(amount, source)` reports a
+  hit the way the server does). On the real server a hit from a hostile mob stops the running skill (not attack or
+  eat) with "a zombie is attacking you ...; fight back with attack zombie, or go_to somewhere safe": the server names
+  who dealt each hit (damage_event, checked on Paper 1.21.4), so a skeleton up to 24 blocks away counts and a fall,
+  drowning or hunger next to a mob does not. For 10 s after that the same mob's hits stop nothing (time to flee or
+  fight) unless health drops to 6. After a death the next skill waits for the respawn. Lava is only avoided as far as
+  pathfinder's own digging rules go.
+- The guests' live views run the real prismarine-viewer in tests only for the read-only check (a click from the page
+  reaches nothing); the house bot's watch page is tested with a stand-in module.
 
 ## Safety rules
 

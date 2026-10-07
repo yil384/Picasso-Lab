@@ -47,14 +47,15 @@ export function usernameFor(base, sessionId) {
 /**
  * Run fn while every http server it starts listens on `host` only. prismarine-viewer calls listen(port, cb) itself and
  * has no host option, which would put the watch page on every network interface. Errors (a port in use) are passed to
- * onError instead of crashing the process.
+ * onError instead of crashing the process; onListening(server) runs once a server really listens.
  */
-export function listeningOn(host, fn, onError = () => {}) {
+export function listeningOn(host, fn, onError = () => {}, onListening = null) {
   const proto = http.Server.prototype;
   const own = Object.hasOwn(proto, 'listen');
   const original = proto.listen;
   proto.listen = function listen(port, ...rest) {
     this.on('error', onError);
+    if (onListening) this.once('listening', () => onListening(this));
     if (typeof port === 'number' && typeof rest[0] !== 'string') return original.call(this, port, host, ...rest);
     return original.call(this, port, ...rest);
   };
@@ -67,12 +68,34 @@ export function listeningOn(host, fn, onError = () => {}) {
 }
 
 /**
- * The prismarine-viewer watch page for a bot, when MC_VIEWER_PORT is not 0 and the package is installed (it is not a
- * dependency: `npm install prismarine-viewer` to use it). Returns a close function, or null.
+ * prismarine-viewer with its live views made read-only. Its WorldView registers an async 'mouseClick' handler on every
+ * viewer's socket that trusts the payload: a missing one is an unhandled rejection (the process exits), a NaN
+ * direction makes the raycast loop forever. Nothing here uses clicks, so that handler is removed before any view
+ * exists (lib/mineflayer takes WorldView from ../viewer when it is first loaded, so the patch goes in first).
+ */
+export function loadViewer() {
+  const viewerLib = require('prismarine-viewer/viewer');
+  if (!viewerLib.WorldView.readOnly) {
+    const Base = viewerLib.WorldView;
+    class ReadOnlyWorldView extends Base {
+      constructor(...args) {
+        super(...args);
+        this.emitter.removeAllListeners('mouseClick');
+      }
+    }
+    ReadOnlyWorldView.readOnly = true;
+    viewerLib.WorldView = ReadOnlyWorldView;
+  }
+  return { mineflayer: require('prismarine-viewer/lib/mineflayer') };
+}
+
+/**
+ * The prismarine-viewer watch page for a bot, when MC_VIEWER_PORT is not 0 and the package is installed. Returns a
+ * close function, or null.
  * @param {object} bot   a real mineflayer bot
  * @param {{config: object, log: object, load?: () => object}} opts
  */
-export function startViewer(bot, { config, log, load = () => ({ mineflayer: require('prismarine-viewer/lib/mineflayer') }) }) {
+export function startViewer(bot, { config, log, load = loadViewer }) {
   const port = config.mc.viewerPort;
   if (!port) return null;
   let viewer;
@@ -95,6 +118,60 @@ export function startViewer(bot, { config, log, load = () => ({ mineflayer: requ
   const url = `http://${host.includes(':') ? `[${host}]` : host}:${port}/`;
   log.event('viewer_start', { url });
   return () => { try { bot.viewer?.close?.(); } catch { /* already closed */ } };
+}
+
+/** Local ports for the guests' live views: {watch, eyes} pairs (3101-3164 and 100 above), each pair once at a time. */
+export function viewPorts(first = 3101, count = 64) {
+  const used = new Set();
+  let next = first;
+  return {
+    take() {
+      for (let i = 0; i < count; i++) {
+        const port = next;
+        next = next + 1 >= first + count ? first : next + 1;
+        if (!used.has(port)) { used.add(port); return { watch: port, eyes: port + 100 }; }
+      }
+      return null;
+    },
+    free(pair) { used.delete(pair.watch); },
+  };
+}
+
+/**
+ * The two live views of a guest bot, for people to watch (read-only): from behind under /watch/<session id>/ and
+ * through its eyes under /eyes/<session id>/, on local ports src/web.js proxies. A port is set on the body (viewerPort,
+ * eyesPort) only once its view really listens; both views close and their ports free up when the bot leaves (each
+ * mineflayer() call replaces bot.viewer, so each view's close is kept right after it starts).
+ * @param {object} body   a body whose bot has joined
+ * @param {string} sessionId
+ * @param {{log: object, ports: ReturnType<typeof viewPorts>, load?: () => object}} opts
+ */
+export function startGuestViews(body, sessionId, { log, ports, load = loadViewer }) {
+  if (body.connected === false) return; // it left before its views started
+  let viewer;
+  try { viewer = load(); } catch { return; }
+  if (!viewer) return;
+  const pair = ports.take();
+  if (!pair) { log.event('viewer_error', { session: sessionId, message: 'no free port for the live views' }); return; }
+  const closes = [];
+  let ended = false;
+  const onError = (err) => log.event('viewer_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) });
+  const view = (port, firstPerson, prefix, set) => {
+    try {
+      listeningOn('127.0.0.1', () => viewer.mineflayer(body.bot, { port, firstPerson, viewDistance: 4, prefix }), onError, () => { if (!ended) set(port); });
+      const close = body.bot.viewer?.close;
+      if (typeof close === 'function') closes.push(close);
+    } catch (err) { onError(err); }
+  };
+  view(pair.watch, false, `/watch/${sessionId}`, (port) => { body.viewerPort = port; });
+  view(pair.eyes, true, `/eyes/${sessionId}`, (port) => { body.eyesPort = port; });
+  body.on('end', () => {
+    ended = true;
+    body.viewerPort = null;
+    body.eyesPort = null;
+    for (const close of closes) { try { close(); } catch { /* closed */ } }
+    ports.free(pair);
+  });
 }
 
 /**
@@ -129,9 +206,8 @@ export async function startAgent(opts = {}) {
     }
   }
 
-  // Guests' bots each get a live 3D view for people to watch (prismarine-viewer, if installed), on a local port that
-  // src/web.js proxies under /watch/<session id>/ (read-only: watching never controls the bot).
-  let nextViewerPort = 3101;
+  // Guests' bots each get two live 3D views for people to watch (startGuestViews).
+  const ports = viewPorts();
   function newBody(sessionId) {
     const username = usernameFor(config.mc.username, sessionId);
     const cfg = Object.freeze({ ...config, mc: Object.freeze({ ...config.mc, username }) });
@@ -161,22 +237,7 @@ export async function startAgent(opts = {}) {
       });
       body.ready.catch(() => {});
     }
-    if (sessionId !== 'house') {
-      body.ready.then(() => {
-        let viewer;
-        try { viewer = (opts.loadViewer ?? (() => ({ mineflayer: require('prismarine-viewer/lib/mineflayer') })))(); } catch { return; }
-        const port = nextViewerPort++;
-        if (nextViewerPort > 3164) nextViewerPort = 3101;
-        listeningOn('127.0.0.1', () => viewer.mineflayer(body.bot, { port, firstPerson: false, viewDistance: 4, prefix: `/watch/${sessionId}` }),
-          (err) => log.event('viewer_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) }));
-        body.viewerPort = port;
-        // a second view through the bot's own eyes (first person), under /eyes/<session id>/
-        listeningOn('127.0.0.1', () => viewer.mineflayer(body.bot, { port: port + 100, firstPerson: true, viewDistance: 4, prefix: `/eyes/${sessionId}` }),
-          (err) => log.event('viewer_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) }));
-        body.eyesPort = port + 100;
-        body.on('end', () => { try { body.bot.viewer?.close?.(); } catch { /* closed */ } });
-      }, () => {});
-    }
+    if (sessionId !== 'house') body.ready.then(() => startGuestViews(body, sessionId, { log, ports, load: opts.loadViewer }), () => {});
     return body;
   }
 
@@ -273,6 +334,12 @@ export async function main(argv = process.argv.slice(2), { print = console.log, 
   if (values.help) { print(USAGE); return 0; }
 
   let agent;
+  // one stray rejection (a library's async handler) must not take down every guest's bot: log it and go on
+  process.on('unhandledRejection', (err) => {
+    const message = String(err?.stack ?? err?.message ?? err).slice(0, 500);
+    try { agent?.log.event('unhandled_rejection', { message }); } catch { /* logging is best effort */ }
+    printErr(`unhandled rejection (the service goes on): ${message}`);
+  });
   try {
     agent = await startAgent({ config: loadConfig(), fakeBot: Boolean(values['fake-bot']), print });
   } catch (err) {

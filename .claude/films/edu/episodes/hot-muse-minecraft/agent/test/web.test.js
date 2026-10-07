@@ -7,6 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import http from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -600,4 +601,65 @@ test('askAnswered: words or a Done report end a request; errors do not', () => {
   assert.equal(askAnswered({ tool: null, result: 'invalid call, nothing ran: unknown tool "x"', error: 'invalid' }), false);
   assert.equal(askAnswered({ tool: 'collect', ok: true, args: { block: 'oak_log', n: 1 } }), false);
   assert.equal(askAnswered(null), false);
+});
+
+test('live views through the proxy: open WebSockets and new views per address are capped; a reader that never reads is dropped', async (t) => {
+  // a stand-in viewer: socket.io polling answers 'ok'; a WebSocket upgrade is accepted (and floods when asked to)
+  const upstream = http.createServer((req, res) => res.end('ok'));
+  upstream.on('upgrade', (req, sock) => {
+    sock.on('error', () => {});
+    sock.write('HTTP/1.1 101 Switching Protocols\r\nupgrade: websocket\r\nconnection: Upgrade\r\n\r\n');
+    if (!req.url.includes('flood')) return;
+    const chunk = Buffer.alloc(1 << 20, 1);
+    let sent = 0;
+    const pump = () => {
+      while (!sock.destroyed && sent < 64 && (sent += 1, sock.write(chunk)));
+      if (!sock.destroyed && sent < 64) sock.once('drain', pump);
+    };
+    pump();
+  });
+  await new Promise((r) => upstream.listen(0, '127.0.0.1', r));
+  t.after(() => { upstream.closeAllConnections?.(); upstream.close(); });
+  const { url, bodies } = await serve(t, { viewsPerHour: 8 });
+  const { token } = await guest(url);
+  const id = (await (await fetch(`${url}/api/${token}/state`)).json()).session.id;
+  assert.equal((await fetch(`${url}/watch/${id}/`)).status, 404, 'no view until it listens');
+  bodies.get(id).viewerPort = upstream.address().port;
+
+  const { port } = new URL(url);
+  const sockets = [];
+  t.after(() => { for (const s of sockets) s.destroy(); });
+  /** A WebSocket upgrade through the proxy: 101 (the socket) or the refusal's status. */
+  const upgrade = (query) => new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port, path: `/watch/${id}/socket.io/?EIO=4&transport=websocket${query}`, headers: { connection: 'Upgrade', upgrade: 'websocket' } });
+    req.on('upgrade', (res, socket) => { sockets.push(socket); resolve({ status: 101, socket }); });
+    req.on('response', (res) => { res.resume(); resolve({ status: res.statusCode }); });
+    req.on('error', reject);
+    req.end();
+  });
+
+  // a watcher that never reads while the view pushes MBs: dropped, its place freed
+  const flood = await upgrade('&flood=1');
+  assert.equal(flood.status, 101);
+  flood.socket.pause();
+  await sleep(500);
+  const closed = new Promise((resolve) => flood.socket.on('close', resolve));
+  flood.socket.on('error', () => {});
+  flood.socket.resume(); // (a paused socket never learns that it was closed)
+  await closed;
+  assert.ok(flood.socket.bytesRead < 32 * (1 << 20), `dropped long before the 64 MB were through (${flood.socket.bytesRead})`);
+
+  const open = [];
+  for (let i = 0; i < 4; i++) open.push((await upgrade('')).status);
+  assert.deepEqual(open, [101, 101, 101, 101]);
+  const fifth = await upgrade('');
+  assert.equal(fifth.status, 429, 'at most 4 open live views per address');
+  sockets.at(-1).destroy();
+  await sleep(50);
+  assert.equal((await upgrade('')).status, 101, 'a closed one frees its place');
+
+  // 6 new views so far; socket.io polling: a handshake (no sid) is a new view, a poll with its sid is not
+  const poll = (q) => fetch(`${url}/watch/${id}/socket.io/?EIO=4&transport=polling${q}`).then((r) => r.status);
+  assert.deepEqual([await poll(''), await poll(''), await poll(''), await poll('&sid=abc')], [200, 200, 429, 200]);
+  for (const s of sockets) s.destroy();
 });

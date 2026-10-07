@@ -6,7 +6,7 @@
 // left to mineflayer's craft(), whose clicks race the server's resyncs (wrong items in the grid, ghost results).
 
 import { done, fail, walkNear, placeNearby, pickUp, pickUpNote, describeError, SkillStop } from './util.js';
-import { canClick, clicker, openBlockWindow, closeCurrent, settleInventory, planPut, countIn, emptySlotIn } from './window.js';
+import { canClick, clicker, openBlockWindow, closeCurrent, closeInventory, settleInventory, planPut, countIn, emptySlotIn } from './window.js';
 
 const TABLE_RADIUS = 32;
 
@@ -252,7 +252,10 @@ async function craftByClicks(ctx, recipe, id, batches, table, item) {
       if (got < k * per) error = emptySlotIn(window) === null || !roomy ? 'your inventory is full' : `the server made only ${got} of ${k * per}`;
     }
   } finally {
-    opened?.close();
+    // also on a stop or an error half way: the table's window, or the 2x2 grid of the player's own inventory, gives
+    // back what is in its grid and on the cursor
+    if (opened) opened.close();
+    else closeInventory(bot);
   }
   await settleInventory(ctx);
   return { made, error };

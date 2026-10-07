@@ -31,8 +31,18 @@ const STUCK_RESETS = 3;
 const STILL_CHECK_MS = 1_000;
 /** How long a skill waits for the respawn after a death before it runs. */
 const RESPAWN_MS = 10_000;
-/** A hostile mob this close when the bot loses health is taken as the attacker. */
+/**
+ * A hit from a hostile mob stops the running skill. Servers from 1.19.4 name who dealt each hit (damage_event, which
+ * mineflayer reports as entityHurt just before the health update it causes): the mob named, up to HIT_RANGE blocks
+ * away (a skeleton shoots from 15), and nothing for damage without a source (a fall, drowning, fire, hunger). Older
+ * servers: a hostile mob within ATTACKER_RANGE when the bot loses health is taken as the attacker.
+ */
+const HIT_RANGE = 24;
+const HIT_MS = 1_500;
 const ATTACKER_RANGE = 6;
+/** After a hit stopped a skill, that mob's hits stop nothing for GRACE_MS (time to flee or to fight), unless health drops to FLEE_HEALTH. */
+const GRACE_MS = 10_000;
+const FLEE_HEALTH = 6;
 /** Skills a hit does not interrupt (they deal with the mob or the hunger themselves). */
 const KEEP_ON_HIT = new Set(['attack', 'eat', 'get_state', 'say']);
 const safeCall = (fn) => { try { return fn(); } catch { return false; } };
@@ -108,6 +118,20 @@ export function createBody(opts = {}) {
   let lastError = null;
   let dead = false;
   let lastHealth = null;
+  let lastHit = null; // {source, at}: the latest hit on the bot the server reported, with who dealt it (or null)
+  let grace = null; // {id, until}: the mob whose hits stop nothing until then
+  const namesSources = safeCall(() => Boolean(bot.registry.version['>=']('1.19.4')));
+
+  /** The hostile mob that dealt the hit that just cost health, or null (a fall, a passive mob, too far, unknown). */
+  function attackerOf(hit) {
+    if (!namesSources) {
+      try { return nearbyMobs(bot, { radius: ATTACKER_RANGE }).find((m) => m.hostile) ?? null; } catch { return null; }
+    }
+    const e = hit && Date.now() - hit.at <= HIT_MS ? hit.source : null;
+    if (!e?.position || bot.registry.entitiesByName[e.name]?.category !== 'Hostile mobs') return null;
+    const distance = Math.round(e.position.distanceTo(bot.entity.position) * 10) / 10;
+    return distance <= HIT_RANGE ? { name: e.name, id: e.id, distance } : null;
+  }
 
   function setupMovements() {
     if (movements || !bot.pathfinder) return;
@@ -152,19 +176,25 @@ export function createBody(opts = {}) {
       if (current) stop(what).catch(() => {});
       else lastResult = `${what}; you respawn at the world spawn`;
     },
+    entityHurt(entity, source) {
+      if (entity === bot.entity) lastHit = { source: source ?? null, at: Date.now() };
+    },
     health() {
       // a hit from a hostile mob stops a long skill (collect, go_to, craft...) so the player can fight or flee
       const h = bot.health;
       const hurt = lastHealth != null && h < lastHealth && h > 0;
       lastHealth = h;
+      const hit = lastHit;
+      if (hurt) lastHit = null;
       const job = current;
       if (!hurt || !job || KEEP_ON_HIT.has(job.tool) || job.controller.signal.aborted) return;
-      let attacker = null;
-      try { attacker = nearbyMobs(bot, { radius: ATTACKER_RANGE }).find((m) => m.hostile); } catch { /* no entity data */ }
+      const attacker = attackerOf(hit);
       if (!attacker) return;
+      if (grace && grace.id === attacker.id && Date.now() < grace.until && h > FLEE_HEALTH) return; // fleeing or fighting it
+      grace = { id: attacker.id, until: Date.now() + GRACE_MS };
       const target = ATTACK_TARGETS.includes(attacker.name) ? attacker.name : 'nearest_hostile';
-      const why = `a ${attacker.name} is attacking you (health ${Math.round(h)}/20, ${attacker.distance} blocks away); fight back with attack ${target}, or go_to somewhere safe`;
-      logEvent('attacked', { mob: attacker.name, health: h, tool: job.tool });
+      const why = `a ${attacker.name} is attacking you (health ${Math.round(h)}/20, ${attacker.distance} blocks away); fight back with attack ${target}, or go_to somewhere safe (for ${GRACE_MS / 1000} s its hits will not stop you again unless your health drops to ${FLEE_HEALTH})`;
+      logEvent('attacked', { mob: attacker.name, health: h, distance: attacker.distance, tool: job.tool });
       stop(why).catch(() => {});
     },
     kicked(reason) { kickReason = clip(oneLine(textOf(reason)), 200); },
@@ -387,7 +417,7 @@ export function createBody(opts = {}) {
 
   /** Kill switch: cancel the running skill and any walking or digging; the bot stays connected. */
   async function stop(reason = 'stop requested') {
-    const why = clip(oneLine(reason), 120) || 'stop requested';
+    const why = clip(oneLine(reason), 240) || 'stop requested';
     const job = current;
     cancelActions(job?.tool);
     logEvent('stop', { reason: why, tool: job?.tool ?? null });

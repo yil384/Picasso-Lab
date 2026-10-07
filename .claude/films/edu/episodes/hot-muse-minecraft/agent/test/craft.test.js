@@ -119,6 +119,27 @@ test('craft by clicks: a stop in the middle closes the table window', async () =
   assert.equal(bot.currentWindow, null);
 });
 
+test('craft by clicks: a stop in the middle of a 2x2 craft gives the grid and the cursor back to the inventory', async () => {
+  const { bot, body } = await setup({ inventory: { spruce_planks: 64 } });
+  let clicks = 0;
+  const write = bot._client.write;
+  bot._client.write = (name, packet) => {
+    if (name === 'window_click' && ++clicks === 12) body.stop('a zombie is attacking you'); // planks in the grid and on the cursor
+    return write(name, packet);
+  };
+  const r = await body.run('craft', { item: 'stick', n: 64 });
+  bot._client.write = write;
+  assert.equal(r.ok, false);
+  assert.match(r.result, /^stopped: a zombie is attacking you/);
+  assert.ok(called(bot, 'packet.close_window').length >= 1, 'the inventory screen was closed');
+  assert.deepEqual(r.delta, {}, 'nothing crafted yet, nothing lost');
+  assert.deepEqual(body.inventory(), { spruce_planks: 64 });
+  assert.ok(bot.inventory.slots.slice(1, 5).every((it) => !it), 'the 2x2 grid is empty');
+  assert.equal(bot.inventory.selectedItem, null, 'nothing on the cursor');
+  const place = await body.run('place', { block: 'spruce_planks', pos: { x: 2, y: 64, z: 0 } });
+  assert.equal(place.ok, true, place.result);
+});
+
 test('a crafting table or furnace nearby that cannot be reached: the one carried is put down instead', async () => {
   const { bot, body } = await setup({ inventory: { oak_planks: 3, stick: 2, crafting_table: 1, raw_iron: 1, coal: 1, furnace: 1 } });
   bot.fake.setBlock(new Vec3(20, 64, 0), 'crafting_table');

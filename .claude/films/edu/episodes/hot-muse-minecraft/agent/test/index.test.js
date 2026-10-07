@@ -14,7 +14,9 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from '../src/config.js';
 import { createLogger, readJsonl } from '../src/log.js';
 import { FORBIDDEN_PARAMS } from '../src/llm.js';
-import { startAgent, usernameFor, listeningOn, startViewer } from '../src/index.js';
+import { EventEmitter } from 'node:events';
+import { createRequire } from 'node:module';
+import { startAgent, usernameFor, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts } from '../src/index.js';
 import { start } from './mock-llm.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -79,6 +81,77 @@ test('viewer: held to WEB_HOST, off when not installed or when MC_VIEWER_PORT=0,
   assert.equal(missing, null);
   assert.equal(log.tail().at(-1).reason, 'prismarine-viewer is not installed');
   assert.equal(startViewer(bot, { config: loadConfig({ MC_VIEWER_PORT: '0' }), log, load: () => fakeViewer }), null);
+});
+
+test('live views are read-only: a watcher\'s mouseClick (no payload, or a NaN ray) reaches nothing', async () => {
+  const require = createRequire(import.meta.url);
+  const { Vec3 } = require('vec3');
+  const { io } = require('socket.io-client');
+  const { mineflayer } = loadViewer();
+  const bot = new EventEmitter();
+  Object.assign(bot, { version: '1.21.4', entity: { position: new Vec3(0, 64, 0), yaw: 0, pitch: 0 }, entities: {}, username: 'Tst_view' });
+  let rays = 0;
+  bot.world = { getColumnAt: async () => null, raycast: () => { rays += 1; return null; } };
+  const rejections = [];
+  const onRejection = (e) => rejections.push(e);
+  process.on('unhandledRejection', onRejection);
+  const port = await new Promise((resolve) => {
+    listeningOn('127.0.0.1', () => mineflayer(bot, { port: 0, prefix: '/eyes/gtest' }), () => {}, (srv) => resolve(srv.address().port));
+  });
+  const socket = io(`http://127.0.0.1:${port}`, { path: '/eyes/gtest/socket.io', transports: ['websocket'] });
+  try {
+    await new Promise((resolve, reject) => { socket.on('connect', resolve); socket.on('connect_error', reject); });
+    socket.emit('mouseClick');
+    socket.emit('mouseClick', { origin: { x: 0, y: 64, z: 0 }, direction: {} });
+    await sleep(300);
+    assert.equal(rays, 0, 'no raycast for a click');
+    assert.deepEqual(rejections, []);
+  } finally {
+    socket.close();
+    bot.viewer.close();
+    process.off('unhandledRejection', onRejection);
+  }
+});
+
+test('guest views: both close and free their ports when the bot leaves; a port in use is never handed to the proxy', async () => {
+  const config = loadConfig({});
+  const log = createLogger({ dir: null, config });
+  const servers = [];
+  const fakeViewer = {
+    // like prismarine-viewer: every call replaces bot.viewer with its own close
+    mineflayer(bot, o) {
+      const server = http.createServer().listen(o.port, () => {});
+      servers.push(server);
+      bot.viewer = new EventEmitter();
+      bot.viewer.close = () => server.close();
+    },
+  };
+  const makeBody = () => Object.assign(new EventEmitter(), { bot: {}, connected: true });
+  const [w, e] = [await freePort(), await freePort()];
+  const ports = { pairs: [{ watch: w, eyes: e }], take() { return this.pairs.shift() ?? null; }, free(pair) { this.pairs.push(pair); } };
+  const body = makeBody();
+  startGuestViews(body, 'g1', { log, ports, load: () => fakeViewer });
+  await until(() => body.viewerPort === w && body.eyesPort === e);
+  body.emit('end');
+  await until(() => servers.every((s) => !s.listening));
+  assert.equal(body.viewerPort, null);
+  assert.deepEqual(ports.pairs, [{ watch: w, eyes: e }], 'the ports are free again');
+
+  // the watch port is taken by another program: the proxy never gets it
+  const other = http.createServer().listen(w, '127.0.0.1');
+  await until(() => other.listening);
+  const next = makeBody();
+  startGuestViews(next, 'g2', { log, ports, load: () => fakeViewer });
+  await until(() => next.eyesPort === e);
+  await until(() => log.tail().some((r) => r.kind === 'viewer_error' && /EADDRINUSE/.test(r.message)));
+  assert.equal(next.viewerPort, undefined, 'no proxy to a port this bot does not own');
+  next.emit('end');
+  other.close();
+
+  const pairs = viewPorts(4000, 2);
+  assert.deepEqual([pairs.take(), pairs.take(), pairs.take()], [{ watch: 4000, eyes: 4100 }, { watch: 4001, eyes: 4101 }, null]);
+  pairs.free({ watch: 4000, eyes: 4100 });
+  assert.deepEqual(pairs.take(), { watch: 4000, eyes: 4100 });
 });
 
 test('startAgent --fake-bot: a guest plays over /api, /ask runs on the house bot through the brain, stop() ends it all', async () => {
