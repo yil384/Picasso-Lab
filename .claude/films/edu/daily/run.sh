@@ -123,6 +123,12 @@ if [ -n "${EP_MISSED:-}" ]; then
   [ "$DRY" = 1 ] || notify "每日视频：今天 ${EP_MISSED} 没有视频（Mac 在 02:00 睡着了，或者昨晚失败了）"
 fi
 if [ -z "${EP_ID:-}" ]; then say "nothing to make tonight: ${EP_WHY:-}"; exit 0; fi
+# Daytime starts (launchd also runs this at 12:00 and 19:00) only catch up a lost night, e.g. a macOS update that
+# rebooted the Mac at 03:00 (2026-10-07): they make an episode only when tomorrow morning still has no video.
+NOWH=$(date +%H); TOMORROW=$(date -v+1d +%Y-%m-%d)
+if [ "${FORCE:-0}" != 1 ] && [ -z "${NOW:-}" ] && [ "$NOWH" -ge 6 ] && [ "${EP_MORNING:-}" != "$TOMORROW" ]; then
+  say "daytime catch-up: tomorrow (${TOMORROW}) already has its video; nothing to do"; exit 0
+fi
 say "tonight: ${EP_ID} \"${EP_TITLE}\" for ${EP_MORNING} (lectures: ${EP_LECTURES}; deadline ${EP_DEADLINE})"
 
 # its recordings and transcripts (normally already made by the background batch; a lock makes us wait for it)

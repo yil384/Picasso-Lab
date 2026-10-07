@@ -11,7 +11,11 @@
     <string>/Users/linyichen/UCSD/Picasso-Lab/.claude/films/edu/daily/run.sh</string>
   </array>
   <key>StartCalendarInterval</key>
-  <dict><key>Hour</key><integer>2</integer><key>Minute</key><integer>0</integer></dict>
+  <array>
+    <dict><key>Hour</key><integer>2</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>19</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
   <key>ProcessType</key><string>Interactive</string>
   <key>StandardOutPath</key><string>/Users/linyichen/picasso-work/logs/daily/launchd.out</string>
   <key>StandardErrorPath</key><string>/Users/linyichen/picasso-work/logs/daily/launchd.err</string>
