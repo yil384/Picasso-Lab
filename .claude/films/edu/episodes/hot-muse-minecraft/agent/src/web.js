@@ -6,9 +6,12 @@
 // is data: every argument is checked against the tool whitelist before a body sees it, every string is HTML-escaped,
 // tokens never reach the log, and state-changing requests from other sites are refused.
 
+import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
+import path from 'node:path';
 import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 import { config as defaultConfig, isLoopbackHost } from './config.js';
 import { TOOLS, TOOL_NAMES, SCHEMAS, validateArgs, coerceArgs } from './contracts.js';
 import { createLogger, scrub } from './log.js';
@@ -34,6 +37,36 @@ const VIEW_IDLE_MS = 90_000;
 const VIEW_BUFFER_MAX = 8 * 1024 * 1024;
 /** A socket.io request that opens a new connection (a handshake: no sid yet). */
 const opensView = (url) => /\/socket\.io\/?\?/.test(url) && !/[?&]sid=/.test(url);
+/** The live-view crack overlay's event stream: a comment this often keeps proxies (and VIEW_IDLE_MS) from closing it. */
+const FX_PING_MS = 20_000;
+
+/**
+ * The live-view page with src/live-view-fx.js added (eased first-person turns, the crack on the block being broken):
+ * prismarine-viewer's own index.html plus one script after its client, the script with its settings in front, and the
+ * folder of the destroy_stage textures for the game version. null when prismarine-viewer is not installed or its page
+ * changed (the page is then served as it is).
+ */
+let viewFxCache;
+export function viewFx(version = '1.21.4') {
+  if (viewFxCache !== undefined) return viewFxCache;
+  viewFxCache = null;
+  try {
+    const req = createRequire(import.meta.url);
+    const pageFile = req.resolve('prismarine-viewer/public/index.html');
+    const page = fs.readFileSync(pageFile, 'utf8');
+    const tag = '<script type="text/javascript" src="index.js"></script>';
+    if (!page.includes(tag)) return null;
+    const textures = path.join(path.dirname(pageFile), 'textures');
+    const has = (v) => fs.existsSync(path.join(textures, v, 'blocks', 'destroy_stage_0.png'));
+    const newest = fs.readdirSync(textures).filter((v) => /^\d+\.\d+(\.\d+)?$/.test(v) && has(v))
+      .sort((a, b) => a.localeCompare(b, 'en', { numeric: true })).at(-1);
+    const folder = has(version) ? version : newest;
+    const settings = { textures: folder ? `textures/${folder}/blocks/` : null, events: 'muse-fx/events' };
+    const script = `window.__museFx = ${JSON.stringify(settings)};\n${fs.readFileSync(new URL('./live-view-fx.js', import.meta.url), 'utf8')}`;
+    viewFxCache = { page: page.replace(tag, `${tag}\n    <script type="text/javascript" src="muse-fx.js"></script>`), script };
+  } catch { /* not installed: the stock page */ }
+  return viewFxCache;
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // HTML: html`` escapes every interpolated value unless it is already Html (built by html`` or raw()).
@@ -617,7 +650,8 @@ export function createWeb(opts = {}) {
     const wasRunning = Boolean(s.running);
     if (s.body) await within(Promise.resolve().then(() => s.body.stop?.(reason)).catch(() => {}), 5_000);
     addLine(s, wasRunning ? `stop pressed: ${reason}` : 'stop pressed (nothing was running)');
-    log.event('viewer_stop', { session: s.id, wasRunning });
+    // a guest (the /play page, the API or an MCP client) pressed stop; the live views are not affected
+    log.event('viewer_stop', { session: s.id, reason, wasRunning });
     return wasRunning;
   }
 
@@ -984,6 +1018,41 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     for (const s of sessions.values()) if (s.id === id && !s.ended) return (kind === 'eyes' ? s.body?.eyesPort : s.body?.viewerPort) ?? null;
     return null;
   }
+  const sessionById = (id) => { for (const s of sessions.values()) if (s.id === id && !s.ended) return s; return null; };
+
+  /**
+   * The live-view overlay's events (server-sent): the block the bot is breaking, {x, y, z, ms, elapsed}, or null when
+   * it stops; one now, then each change, until the watcher leaves or the session ends. Counts as a live-view request.
+   */
+  function fxEvents(req, res, s) {
+    if (!s) throw new HttpError(404, 'no live view for this session (it ended, or the bot is still joining)');
+    const why = viewRefusal(req, 'http');
+    if (why) { send(res, 429, why, {}); return; }
+    const release = holdView([`http@${clientKey(req)}`]);
+    // any origin may read it (the streamer's page comes from the viewer's own port): where a public game digs
+    res.writeHead(200, {
+      ...BASE_HEADERS, 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no',
+      'access-control-allow-origin': '*',
+    });
+    const sendDig = (d) => {
+      const msg = d && Number.isFinite(d.x) ? { x: d.x, y: d.y, z: d.z, ms: Number(d.ms) || 0, elapsed: Number(d.elapsed) || 0 } : null;
+      res.write(`data: ${JSON.stringify(msg)}\n\n`);
+    };
+    let off = null;
+    const ping = setInterval(() => res.write(': ping\n\n'), FX_PING_MS);
+    const end = () => res.end(); // the session ended: so does the stream
+    s.offs.push(end);
+    res.on('close', () => {
+      clearInterval(ping);
+      try { off?.(); } catch { /* gone */ }
+      off = null;
+      const i = s.offs.indexOf(end);
+      if (i >= 0) s.offs.splice(i, 1);
+      release();
+    });
+    try { sendDig(s.body?.digging?.() ?? null); } catch { sendDig(null); }
+    try { off = s.body?.on?.('dig', (d) => sendDig(d ? { ...d, elapsed: 0 } : null)) ?? null; } catch { off = null; }
+  }
 
   /** Count one open live-view connection under each key; returns its release (safe to call twice). */
   function holdView(keys) {
@@ -1032,7 +1101,12 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     const release = holdView([`ws@${clientKey(req)}`, `ws#${m[2]}`]);
     socket.gameId = m[2]; // the MCP reaper keeps a watched game alive (watching(id))
     viewSockets.add(socket);
-    socket.setTimeout(VIEW_IDLE_MS, () => socket.destroy());
+    // why this live view closed, logged once (view_close): the watcher left, a limit dropped it, or the view went away
+    const opened = now();
+    let sent = 0;
+    let closedBy = null;
+    const because = (reason) => { closedBy ??= reason; };
+    socket.setTimeout(VIEW_IDLE_MS, () => { because('idle'); socket.destroy(); });
     const up = net.connect(port, '127.0.0.1', () => {
       const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
       for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
@@ -1041,16 +1115,22 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       socket.pipe(up);
       // to the watcher: never buffer more than VIEW_BUFFER_MAX for a reader that does not keep up
       up.on('data', (chunk) => {
-        if (socket.writableLength > VIEW_BUFFER_MAX) { socket.destroy(); up.destroy(); return; }
+        if (socket.writableLength > VIEW_BUFFER_MAX) { because('slow reader'); socket.destroy(); up.destroy(); return; }
+        sent += chunk.length;
         socket.write(chunk);
       });
-      up.on('end', () => socket.end());
+      up.on('end', () => { because('the view closed (the session ended)'); socket.end(); });
     });
-    up.on('error', () => socket.destroy());
-    up.on('close', () => { socket.destroy(); release(); });
-    socket.on('error', () => up.destroy());
-    socket.on('end', () => socket.destroy()); // a watcher that hangs up is gone (the upgraded socket allows half-open)
-    socket.on('close', () => { up.destroy(); release(); viewSockets.delete(socket); });
+    up.on('error', () => { because('the view is not there'); socket.destroy(); });
+    up.on('close', () => { because('the view closed (the session ended)'); socket.destroy(); release(); });
+    socket.on('error', () => { because('watcher connection error'); up.destroy(); });
+    socket.on('end', () => { because('the watcher left'); socket.destroy(); }); // a watcher that hangs up is gone (the upgraded socket allows half-open)
+    socket.on('close', () => {
+      up.destroy();
+      release();
+      viewSockets.delete(socket);
+      log.event('view_close', { session: m[2], view: m[1], why: closing ? 'the server stopped' : closedBy ?? 'the watcher left', s: Math.round((now() - opened) / 1000), mb: Math.round(sent / 1e5) / 10 });
+    });
   }
 
   let mcp = null; // built on first use: the hooks below are defined later in this closure
@@ -1102,6 +1182,11 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
       const port = viewerPort(w[2], w[1]);
       if (!port) throw new HttpError(404, 'no live view for this session (it ended, or the bot is still joining)');
       if (!w[3]) return redirect(res, `/${w[1]}/${w[2]}/`);
+      // the viewer's page with the crack overlay and eased turns (src/live-view-fx.js); everything else is the viewer's
+      const fx = method === 'GET' ? viewFx(cfg.mc?.version) : null;
+      if (fx && (w[3] === '/' || w[3] === '/index.html')) return send(res, 200, fx.page, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      if (fx && w[3] === '/muse-fx.js') return send(res, 200, fx.script, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
+      if (w[3] === '/muse-fx/events') { only('GET'); return fxEvents(req, res, sessionById(w[2])); }
       return proxyHttp(req, res, port);
     }
 

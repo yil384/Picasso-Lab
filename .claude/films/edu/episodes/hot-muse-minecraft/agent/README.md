@@ -32,9 +32,11 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/log.js` | JSONL decision log with secrets scrubbed |
 | `src/mc.js` | vec3 and the prismarine libraries, resolved through mineflayer (one copy each) |
 | `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills and the plain-text state |
+| `src/walk-watch.js` | is a walk still getting closer? Ends one that is not (digging by hand, pillaring, going in circles) with what held it up, where the bot is and what to try |
 | `src/skills/window.js` | window clicks the server confirms: crafting (and the inventory checks around every skill) never trust mineflayer's optimistic window picture |
 | `src/brain.js`, `src/memory.js` | the tool loop, its guards, short-term memory and `notes.json` |
 | `src/web.js` | `/`, `/play`, `/api`, `openapi.json`, `/ask`, `/log`, `/admin/stop` |
+| `src/live-view-fx.js` | runs in the live-view pages: eased first-person camera, crack overlay on the block being broken |
 | `src/stream.js`, `src/stream-page.js` | live video of a guest game (off unless `STREAM_ENABLED`): headless Chromium on the bot's first-person view, a smoothed camera, ffmpeg to RTMPS (Facebook Live) or an MP4; the stream service and its client for the container (section "Live video") |
 | `scripts/stream.mjs` | one stream on demand (to a file or an RTMP(S) URL, with its CPU, RAM and frame numbers), a side-by-side camera comparison, or `--serve` (the stream container) |
 | `scripts/probe.mjs` | latency and $ per call: effort x cache on/off x Chat/Responses, CSV per call |
@@ -116,7 +118,7 @@ second Ctrl-C exits at once.
 | `GET /log?n=50` | the public JSONL tail (session tokens and the admin token scrubbed, no IP addresses) |
 | `POST /admin/stop` | kill switch, `Authorization: Bearer $WEB_ADMIN_TOKEN`; stops every skill and clears the queue, `{"end":true}` also ends every session; 5 wrong tokens lock an address out for the hour |
 | `/mcp` | MCP (streamable HTTP) for a connector such as Muse: `start_game {adult: true}`, `play`, `play_sequence`, `get_state`, `stop`, `end_game` (src/mcp.js) |
-| `GET /watch/<id>/`, `GET /eyes/<id>/` | a guest bot's live 3D views (prismarine-viewer, read-only: clicks from the page are ignored) |
+| `GET /watch/<id>/`, `GET /eyes/<id>/` | a guest bot's live 3D views (prismarine-viewer, read-only: clicks from the page are ignored), with src/live-view-fx.js added (`muse-fx.js`): eased first-person turns (the bot is not slowed: the picture turns, at most 360 degrees a second), the game's crack textures on the block being broken (`muse-fx/events`, server-sent), no magenta boxes for dropped items |
 
 MCP: one game per MCP session (connector users share the agent's egress addresses); per address at most
 `max(2, WEB_MAX_SESSIONS / 2)` live MCP games and 60 MCP game starts an hour, no cooldown. Every reply comes within
@@ -323,7 +325,9 @@ real numbers every minute).
 - The log: one `decision` row per model call (tokens, cached tokens, TTFT, latency, tool, arguments, result,
   inventory change, $) plus `event` rows: `run_start`, `run_end`, `milestone`, `loop_guard` (`call`, `trigger`),
   `learned` (`block`, `pos`), `stop`, `model_error`, `usage_missing`, `request_adapted` (`change`, `detail`), the
-  web's `session_*`, `viewer_action`, `ask_*`, `admin_stop`.
+  web's `session_*`, `viewer_action` and `viewer_stop` (what the guest did: "viewer" is the person or agent driving
+  the bot; `viewer_stop` has the `reason`: the /play button, the API or MCP), `view_close` (a live 3D view closed:
+  `view`, `why`, seconds `s`, `mb` sent), `ask_*`, `admin_stop`.
 
 ## What is mocked
 
@@ -337,7 +341,11 @@ real numbers every minute).
 - The skills mine with pathfinder and `dig`, then walk over the drops for at most 5 s (collectblock's own collect is
   not used: its pickup can wait forever). Every walk clears the pathfinder goal when it ends, so a walk that settles
   short never carries on into the next skill; a walk also ends when pathfinder keeps resetting a path it cannot follow
-  ("stuck") or the bot stands still for `stillMs`; a stop or timeout closes any open crafting or furnace window.
+  ("stuck"), the bot stands still for `stillMs`, or it gets less than `progressGain` (3) blocks closer in `progressMs`
+  (22 s), digging and building included (src/walk-watch.js; all legs of one go_to share that watch). The result then
+  says what held it up (digging stone by hand, pillaring, no way through), how far underground the bot is and what to
+  try. go_to digs a staircase down only where the target lies below the ground at its own spot; a stop or timeout
+  closes any open crafting or furnace window.
 - `test/fake-bot.js` with `clickServer: {lagMs, deaf, noOpen}` adds a protocol client and the server's side of windows
   (vanilla click rules, results from the real recipes, a stale-state resync after every click), so crafting goes
   through the same window clicks as on a real server (`test/craft.test.js`).
@@ -352,6 +360,13 @@ real numbers every minute).
   player, which always fights back with wooden tools, was killed by zombies or skeletons at night, under dark oak
   shade and in a cave: the body stopped the skill and said who attacked; fleeing or hiding is the player's choice.
   Not yet: `run-goal --mock-llm` on the real server, `build`, long sessions.
+  2026-10-07, go_to on hilly forest ground (seed 71811045): 33 walks of 25-186 blocks up and down hill arrived (2 more
+  were stopped by mobs; one started in a cave failed after 22 s, where the old code wandered for 120 s and failed too);
+  the longest span without 3 blocks of progress in a walk that arrived was 8 s (12 s with the old code on the same
+  routes), well under the 22 s watch. The trap a guest hit (the bottom of a 9-deep shaft, 4 dirt, no pickaxe: two
+  120 s timeouts before) now ends in 22.5 s saying it was digging stone by hand, that the bot is 9 blocks underground
+  and what to do. Live views in headless Chrome: crack stages 0-9 on logs, dirt
+  and leaves; the drawn camera turns at most 360 degrees a second where the bot's look jumps up to 200 in a frame.
 - Nothing has run against Meta's API: the request shape is checked against the documented rejections. Run
   `npm run probe -- --live --shape brain` before anything else: the brain-shaped calls (two user messages in a row, a
   replayed tool call and its result, `previous_response_id` with `--api responses`). Unknown until then: strict

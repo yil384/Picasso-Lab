@@ -32,7 +32,7 @@ const DEFS = [
     'Read your state as text: health, food, position, time of day, inventory, nearby blocks and mobs, current goal and the last result. Takes no game time.',
     obj({})],
   ['go_to',
-    'Walk to a block position with pathfinding (it may dig or bridge small obstacles). A y below your feet makes it dig its way down there (how to reach ore underground). The target must be within 256 blocks. Seconds to a minute.',
+    'Walk to a block position with pathfinding (it may dig or bridge small obstacles). A y below the ground at that spot makes it dig a staircase down there (how to reach ore underground; dig with a pickaxe: stone by hand takes 7.5 s a block). The target must be within 256 blocks. Seconds to a minute; a walk that stops getting closer ends after about 20 s and says why.',
     obj({ ...XYZ })],
   ['collect',
     'Find the nearest blocks of one type (searches 32 blocks around you), walk there, mine n of them with the best tool you carry and pick up the drops. stone drops cobblestone; iron_ore drops raw_iron and needs a stone pickaxe or better.',
@@ -221,7 +221,7 @@ export function inventoryDelta(before = {}, after = {}) {
 }
 
 /** Events a Body emits through on(). */
-export const BODY_EVENTS = Object.freeze(['ready', 'skill', 'chat', 'death', 'end', 'error']);
+export const BODY_EVENTS = Object.freeze(['ready', 'skill', 'chat', 'death', 'end', 'error', 'dig']);
 
 /** Why a brain run ended. */
 export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour_cap', 'errors', 'stopped']);
@@ -293,7 +293,10 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {boolean} connected                          true between spawn and disconnect
  * @property {(event: string, fn: (data: object) => void) => () => void} on   BODY_EVENTS; returns an unsubscribe.
  *   'skill' data = {phase:'start'|'end', tool, args, ...SkillResult}; 'chat' = {username, message} from other
- *   players; 'end' = {reason}; 'error' = {message}.
+ *   players; 'end' = {reason}; 'error' = {message}; 'dig' = {x, y, z, name, ms} when the bot starts breaking a block
+ *   (ms: how long it takes), null when it stops (for the live views' crack overlay).
+ * @property {() => ({x: number, y: number, z: number, name: string, ms: number, elapsed: number}|null)} [digging]
+ *   the block being broken right now, elapsed ms since it started
  *
  * @typedef {object} ToolCall
  * @property {string} id

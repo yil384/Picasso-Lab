@@ -11,6 +11,7 @@ import { snapshotOf, renderState, inventoryOf, describeCall, describeDelta, near
 import { SKILLS } from './skills/index.js';
 import { SkillStop, describeError } from './skills/util.js';
 import { syncInventory } from './skills/window.js';
+import { createWalkWatch } from './walk-watch.js';
 import { ATTACK_TARGETS } from './game.js';
 
 const require = createRequire(import.meta.url);
@@ -23,12 +24,16 @@ const { pathfinder, Movements } = pf;
 /**
  * pollMs: furnace polling; stallMs: a furnace with no new output this long has stopped; graceMs: how long a stopped
  * skill may take to unwind; openMs / windowMs: how long the server gets to open a window / to answer window clicks;
- * stillMs: a walk in which the bot stands still this long (not digging or building) has failed.
+ * stillMs: a walk in which the bot stands still this long (not digging or building) has failed; progressMs /
+ * progressGain: a walk (or a whole go_to) that got less than progressGain blocks closer in the last progressMs has
+ * failed, digging and building included (src/walk-watch.js).
  */
-export const DEFAULT_TIMING = Object.freeze({ pollMs: 500, stallMs: 15_000, graceMs: 1_500, openMs: 5_000, windowMs: 4_000, stillMs: 20_000 });
+export const DEFAULT_TIMING = Object.freeze({
+  pollMs: 500, stallMs: 15_000, graceMs: 1_500, openMs: 5_000, windowMs: 4_000, stillMs: 20_000, progressMs: 22_000, progressGain: 3,
+});
 /** A walk gives up after this many "stuck" path resets in a row that bring the bot no closer. */
 const STUCK_RESETS = 3;
-const STILL_CHECK_MS = 1_000;
+const STILL_CHECK_MS = 500;
 /** How long a skill waits for the respawn after a death before it runs. */
 const RESPAWN_MS = 10_000;
 /**
@@ -216,6 +221,23 @@ export function createBody(opts = {}) {
   };
   for (const [event, fn] of Object.entries(handlers)) bot.on(event, fn);
 
+  // the block being broken (by a skill or by pathfinder on the way), for the live views' crack overlay: mineflayer
+  // sets targetDigBlock once the dig has started (after the turn to look at it) and clears it when the dig ends
+  let dig = null; // {x, y, z, name, ms, at}
+  function watchDig() {
+    const b = bot.targetDigBlock;
+    const p = b?.position;
+    if (!p) {
+      if (dig) { dig = null; emit('dig', null); }
+      return;
+    }
+    if (dig && dig.x === p.x && dig.y === p.y && dig.z === p.z) return;
+    const ms = Number(safeCall(() => bot.digTime(b))) || 0;
+    dig = { x: p.x, y: p.y, z: p.z, name: String(b.name ?? ''), ms: Number.isFinite(ms) ? Math.round(ms) : 0, at: Date.now() };
+    emit('dig', { x: dig.x, y: dig.y, z: dig.z, name: dig.name, ms: dig.ms });
+  }
+  bot.on('physicsTick', watchDig); // every 50 ms on a real bot
+
   if (injected) {
     setupMovements();
     resolveReady();
@@ -271,12 +293,22 @@ export function createBody(opts = {}) {
         return wait(new Promise((r) => { timer = setTimeout(r, ms); })).finally(() => clearTimeout(timer));
       },
       /**
-       * Walk to a pathfinder goal by the body's walking rules. timeoutMs (optional) gives up on a walk that takes too
-       * long. Afterwards the goal is always cleared: pathfinder's goto settles on "no path", a partial path, a search
-       * timeout or an empty path while its goal is still set, and the bot would walk on into the next skill.
+       * A progress watch for a walk of several legs (go_to): pass it to each goto as `watch`, and the legs together
+       * must keep getting closer by distance() (blocks), not each one on its own.
        */
-      async goto(goal, { timeoutMs = 0 } = {}) {
+      walkWatch(distance) {
+        return createWalkWatch(bot, { distance, windowMs: timing.progressMs, gain: timing.progressGain });
+      },
+      /**
+       * Walk to a pathfinder goal by the body's walking rules. timeoutMs (optional) gives up on a walk that takes too
+       * long; watch (optional, from walkWatch) is shared with the other legs of the same trip, otherwise the walk
+       * watches its own progress toward the goal. Afterwards the goal is always cleared: pathfinder's goto settles on
+       * "no path", a partial path, a search timeout or an empty path while its goal is still set, and the bot would
+       * walk on into the next skill.
+       */
+      async goto(goal, { timeoutMs = 0, watch = null } = {}) {
         check();
+        if (watch?.error) throw watch.error;
         if (movements) bot.pathfinder.setMovements(movements);
         let timer;
         let stuckTimer;
@@ -284,27 +316,34 @@ export function createBody(opts = {}) {
         const stuck = new Promise((_, reject) => { failStuck = reject; });
         stuck.catch(() => {});
         // pathfinder gives up on a path it cannot follow ("stuck") and plans the same one again, forever: count those
-        // resets and give up when the bot gets no closer, and give up when it stands still for long without digging
+        // resets and give up when the bot gets no closer, and give up when it stands still for long without digging.
+        // Digging and building are not progress either: the watch gives up when the bot does not get closer.
         const away = () => {
           try { return goal.heuristic?.(bot.entity.position.floored()) ?? 0; } catch { return 0; }
         };
+        const progress = watch ?? createWalkWatch(bot, { distance: away, windowMs: timing.progressMs, gain: timing.progressGain });
+        const early = progress.sample(); // a shared watch may have run out between two legs
+        if (early) throw early;
         let best = away();
         let resets = 0;
         const onReset = (why) => {
+          progress.reset(why);
           if (why !== 'stuck') return;
           const d = away();
           if (d < best - 1) { best = d; resets = 0; return; }
-          if (++resets >= STUCK_RESETS) failStuck(Object.assign(new Error('got stuck on the way (pathfinder could not follow its path)'), { name: 'Stuck' }));
+          if (++resets >= STUCK_RESETS) failStuck(progress.explain('got stuck on the way (pathfinder could not follow its path)'));
         };
         let last = bot.entity.position.clone?.() ?? null;
         let still = 0;
         if (last) {
           stuckTimer = setInterval(() => {
+            const stalled = progress.sample();
+            if (stalled) { failStuck(stalled); return; }
             const now = bot.entity.position;
             const busy = safeCall(() => bot.pathfinder.isMining?.()) || safeCall(() => bot.pathfinder.isBuilding?.()) || bot.targetDigBlock;
             if (busy || now.distanceTo(last) > 0.5) { last = now.clone(); still = 0; return; }
             still += STILL_CHECK_MS;
-            if (still >= timing.stillMs) failStuck(Object.assign(new Error(`stood still for ${Math.round(timing.stillMs / 1000)} s without getting closer`), { name: 'Stuck' }));
+            if (still >= timing.stillMs) failStuck(progress.explain(`stood still for ${Math.round(timing.stillMs / 1000)} s without getting closer`));
           }, STILL_CHECK_MS);
         }
         bot.on('path_reset', onReset);
@@ -315,6 +354,7 @@ export function createBody(opts = {}) {
         try {
           await wait(Promise.race(limit ? [walk, limit, stuck] : [walk, stuck]));
         } finally {
+          progress.sample();
           clearTimeout(timer);
           clearInterval(stuckTimer);
           bot.removeListener('path_reset', onReset);
@@ -457,6 +497,7 @@ export function createBody(opts = {}) {
     state,
     snapshot,
     inventory: () => inventoryOf(bot),
+    digging: () => (dig ? { x: dig.x, y: dig.y, z: dig.z, name: dig.name, ms: dig.ms, elapsed: Date.now() - dig.at } : null),
     setGoal(next) {
       goal = next == null ? null : clip(oneLine(next), 300) || null;
     },
