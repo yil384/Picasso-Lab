@@ -75,6 +75,7 @@ export function describeError(err) {
   if (name === 'Timeout') return 'the path search took too long';
   if (name === 'GoalChanged' || name === 'PathStopped') return 'the walk was interrupted';
   if (name === 'WalkTimeout') return 'the walk took too long';
+  if (name === 'Stuck') return clean(err.message);
   if (name === 'NoChests') return 'the inventory is full';
   if (name === 'NoItem') return 'no tool that can harvest it';
   const msg = clean(err?.message ?? err);
@@ -201,7 +202,25 @@ export async function placeNearby(ctx, name) {
     if (r.ok) return { ...r, block: bot.blockAt(p) };
     last = r.result;
   }
+  // in a tunnel or a cave there may be no air beside the bot: dig one block out of the wall at foot level (never next
+  // to water or lava, never one that holds up nothing but air) and put the block there
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const p = feet.offset(dx, 0, dz);
+    const b = bot.blockAt(p);
+    if (!b || isReplaceable(b) || isPassable(b) || !b.diggable || INTERACTIVE.test(b.name) || nextToLiquid(bot, p)) continue;
+    if (!isSolid(bot.blockAt(p.offset(0, -1, 0)))) continue;
+    const d = await digAt(ctx, p);
+    if (!d.ok) { last = d.result; continue; }
+    const r = await placeAt(ctx, name, p, { move: false });
+    if (r.ok) return { ...r, result: `${r.result} (dug a spot for it)`, block: bot.blockAt(p) };
+    last = r.result;
+  }
   return fail(last);
+}
+
+/** True when water or lava touches the block at pos (digging it would let the liquid in). */
+function nextToLiquid(bot, pos) {
+  return [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, -1]].some(([x, y, z]) => /water|lava/.test(bot.blockAt(pos.offset(x, y, z))?.name ?? ''));
 }
 
 /** Resolves true once the entity is gone (picked up, or despawned), false after ms. */
@@ -220,25 +239,39 @@ function entityGone(bot, entity, ms) {
   });
 }
 
-/** Walk over item drops to pick them up: at most PICKUP_MS in all, so a drop out of reach never holds up a skill. */
-async function collectDrops(ctx, drops) {
+/** Walk over item drops to pick them up: at most `ms` in all, so a drop out of reach never holds up a skill. */
+export async function collectDrops(ctx, drops, ms = PICKUP_MS) {
   const { bot } = ctx;
-  const until = Date.now() + PICKUP_MS;
+  const until = Date.now() + ms;
   for (const e of drops) {
     const left = until - Date.now();
     if (left <= 0) return;
     if (!bot.entities[e.id] || e.isValid === false || !e.position) continue;
     if (e.position.distanceTo(bot.entity.position) > 1) {
+      // stand where the drop lies: next to it is not enough when it fell into the hole the dig left
       const at = vec(e.position);
       try {
-        await ctx.goto(new goals.GoalNear(at.x, at.y, at.z, 1), { timeoutMs: left });
+        await ctx.goto(new goals.GoalBlock(at.x, at.y, at.z), { timeoutMs: left });
       } catch (err) {
         if (err instanceof SkillStop) throw err;
-        continue;
+        try {
+          await ctx.goto(new goals.GoalNear(at.x, at.y, at.z, 1), { timeoutMs: Math.max(0, until - Date.now()) });
+        } catch (err2) {
+          if (err2 instanceof SkillStop) throw err2;
+          continue;
+        }
       }
     }
     await ctx.wait(entityGone(bot, e, Math.max(0, Math.min(1_000, until - Date.now()))));
   }
+}
+
+/** Item entities on the ground within `radius` blocks of the bot, nearest first. */
+export function dropsNear(bot, radius = 8) {
+  const from = bot.entity.position;
+  return Object.values(bot.entities ?? {})
+    .filter((e) => e && e !== bot.entity && e.name === 'item' && e.isValid !== false && e.position && e.position.distanceTo(from) <= radius)
+    .sort((a, b) => a.position.distanceTo(from) - b.position.distanceTo(from));
 }
 
 /**
@@ -247,11 +280,11 @@ async function collectDrops(ctx, drops) {
  * without a limit for a drop it may never reach. Equipping for harvest and waiting a few ticks for the drops follow
  * Mindcraft's collectBlock skill (github.com/mindcraft-bots/mindcraft, MIT License). Returns {ok, result}.
  */
-export async function mineBlock(ctx, block) {
+export async function mineBlock(ctx, block, { walkMs = 0 } = {}) {
   const { bot } = ctx;
   const p = vec(block.position);
   // a block can be within reach but out of sight: let pathfinder settle on a spot that sees it (at once when it does)
-  await ctx.goto(new goals.GoalLookAtBlock(p, bot.world, { reach: REACH }));
+  await ctx.goto(new goals.GoalLookAtBlock(p, bot.world, { reach: REACH }), { timeoutMs: walkMs });
   const b = bot.blockAt(p);
   if (!b || b.type !== block.type) return fail(`the ${block.name} at ${fmt(p)} is gone`);
   if (eyeDistance(bot, p) > REACH + 0.75) return fail(`could not get within reach of ${fmt(p)}`);

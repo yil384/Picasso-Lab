@@ -62,6 +62,8 @@ export const SCENES = {
  * @param {number} [opts.digMs]           time per dig (default instant)
  * @param {number} [opts.moveMsPerBlock]  walking time (default instant)
  * @param {number} [opts.smeltMsPerItem]  furnace time per item (default instant)
+ * @param {{lagMs?: number, deaf?: boolean, noOpen?: boolean}} [opts.clickServer]  a protocol client (bot._client) and a
+ *   server-side model of windows: crafting goes through window clicks the way it does on a real server (see below)
  */
 export function createFakeBot(opts = {}) {
   const version = opts.version ?? '1.21.4';
@@ -542,6 +544,8 @@ export function createFakeBot(opts = {}) {
   };
   bot.end = bot.quit;
 
+  if (opts.clickServer) installClickServer(bot, { registry, Item, windows, reach: inReach, record, ...opts.clickServer });
+
   // ---- test controls -------------------------------------------------------------------------------------------
   const fake = {
     world,
@@ -571,4 +575,203 @@ export function createFakeBot(opts = {}) {
   for (const [name, n] of Object.entries(opts.inventory ?? {})) give(name, n);
   setImmediate(() => { bot.emit('login'); bot.emit('spawn'); });
   return bot;
+}
+
+// ---- a protocol client and the server's side of windows (opts.clickServer) ---------------------------------------
+// Emulates what a 1.21 server does with window clicks: it applies each click to its own copy of the window (vanilla
+// left / right / shift click rules, crafting results from the real recipes, any planks or logs for the wood tags) and
+// answers a click whose stateId is stale with a full resync of the window, after `lagMs`. The client's window only
+// changes through those answers, so a skill that decides on a window it has not settled sees a stale picture, as on a
+// real server. `deaf: true` drops every click (the server never answers); `noOpen: true` never opens a window.
+
+const WOOD_TAG = /^(oak|spruce|birch|jungle|acacia|dark_oak|mangrove|cherry|pale_oak|bamboo|crimson|warped)_(planks|log)$/;
+
+function installClickServer(bot, { registry, Item, windows, reach, record, lagMs = 0, deaf = false, noOpen = false }) {
+  const client = new EventEmitter();
+  const send = (name, packet) => {
+    const fire = () => client.emit(name, packet);
+    if (lagMs > 0) setTimeout(fire, lagMs); else setImmediate(fire);
+  };
+  const stackOf = (type) => registry.items[type]?.stackSize || 64;
+  const canon = (type) => {
+    const name = registry.items[type]?.name ?? '';
+    const m = WOOD_TAG.exec(name);
+    return m ? `oak_${m[2]}` : name;
+  };
+  const copy = (it) => (it ? { type: it.type, count: it.count } : null);
+  let nextId = 1;
+  let stateId = 0;
+  // the server's windows: id -> {id, width, slots: [{type, count}|null], carried, invStart, invEnd}
+  const server = new Map();
+  const invServer = () => {
+    if (!server.has(0)) server.set(0, { id: 0, width: 2, slots: bot.inventory.slots.map(copy), carried: copy(bot.inventory.selectedItem), invStart: 9, invEnd: 45 });
+    return server.get(0);
+  };
+  let pending = 0;
+
+  /**
+   * The result of the grid, from the recipes of the version (shaped, mirrored, shapeless): an exact match first, then
+   * one where any planks or logs stand for the oak ones minecraft-data lists for the wood tags.
+   */
+  function resultOf(w) {
+    return matchGrid(w, (type) => registry.items[type]?.name ?? '') ?? matchGrid(w, canon);
+  }
+  function matchGrid(w, key) {
+    const n = w.width;
+    const cells = [];
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) cells.push({ x, y, it: w.slots[1 + x + n * y] });
+    const used = cells.filter((c) => c.it);
+    if (!used.length) return null;
+    const x0 = Math.min(...used.map((c) => c.x)); const x1 = Math.max(...used.map((c) => c.x));
+    const y0 = Math.min(...used.map((c) => c.y)); const y1 = Math.max(...used.map((c) => c.y));
+    const shape = [];
+    for (let y = y0; y <= y1; y++) {
+      const row = [];
+      for (let x = x0; x <= x1; x++) row.push(w.slots[1 + x + n * y] ? key(w.slots[1 + x + n * y].type) : null);
+      shape.push(row);
+    }
+    const same = (a, b) => a.length === b.length && a.every((row, i) => row.length === b[i].length && row.every((v, j) => v === b[i][j]));
+    const idOf = (v) => (v && typeof v === 'object' ? v.id : v);
+    const bag = used.map((c) => key(c.it.type)).sort().join(',');
+    for (const [resultId, list] of Object.entries(registry.recipes)) {
+      for (const r of list) {
+        if (r.inShape) {
+          const want = r.inShape.map((row) => row.map((v) => (idOf(v) == null || idOf(v) === -1 ? null : key(idOf(v)))));
+          if (same(want, shape) || same(want.map((row) => [...row].reverse()), shape)) return { type: Number(resultId), count: r.result.count };
+        } else if (r.ingredients) {
+          if (r.ingredients.map((v) => key(idOf(v))).sort().join(',') === bag) return { type: Number(resultId), count: r.result.count };
+        }
+      }
+    }
+    return null;
+  }
+  function consume(w) {
+    for (let s = 1; s <= w.width * w.width; s++) {
+      const it = w.slots[s];
+      if (it && --it.count <= 0) w.slots[s] = null;
+    }
+  }
+  /** Move an item into the inventory part (merge first, then empty slots); returns what did not fit. */
+  function insert(w, it, reverse) {
+    const order = [];
+    for (let s = w.invStart; s < w.invEnd; s++) order.push(s);
+    if (reverse) order.reverse();
+    for (const s of order) {
+      const o = w.slots[s];
+      if (it.count && o && o.type === it.type && o.count < stackOf(o.type)) { const mv = Math.min(it.count, stackOf(o.type) - o.count); o.count += mv; it.count -= mv; }
+    }
+    for (const s of order) if (it.count && !w.slots[s]) { w.slots[s] = { type: it.type, count: Math.min(it.count, stackOf(it.type)) }; it.count -= w.slots[s].count; }
+    return it.count;
+  }
+  function roomFor(w, it) {
+    let room = 0;
+    for (let s = w.invStart; s < w.invEnd; s++) {
+      const o = w.slots[s];
+      if (!o) room += stackOf(it.type); else if (o.type === it.type) room += stackOf(o.type) - o.count;
+    }
+    return room >= it.count;
+  }
+  function click(w, slot, button, mode) {
+    if (mode === 5) return; // the end of a drag that never started: nothing happens
+    if (mode === 1) {
+      if (slot === 0) {
+        for (let r = resultOf(w); r && roomFor(w, r); r = resultOf(w)) { consume(w); insert(w, r, true); }
+      } else if (slot >= 1 && slot <= w.width * w.width && w.slots[slot]) {
+        const it = w.slots[slot];
+        const left = insert(w, { ...it }, false);
+        w.slots[slot] = left ? { type: it.type, count: left } : null;
+      }
+      return;
+    }
+    if (mode !== 0) return;
+    if (slot === -999) { if (w.carried) { if (button === 0 || --w.carried.count <= 0) w.carried = null; } return; }
+    if (slot === 0) {
+      const r = resultOf(w);
+      if (!r) return;
+      if (!w.carried) { w.carried = r; consume(w); } else if (w.carried.type === r.type && w.carried.count + r.count <= stackOf(r.type)) { w.carried.count += r.count; consume(w); }
+      return;
+    }
+    const s = w.slots[slot];
+    const c = w.carried;
+    if (button === 0) {
+      if (!c) { w.carried = s; w.slots[slot] = null; } else if (!s) { w.slots[slot] = c; w.carried = null; } else if (s.type === c.type) {
+        const mv = Math.min(stackOf(s.type) - s.count, c.count); s.count += mv; c.count -= mv; if (!c.count) w.carried = null;
+      } else { w.slots[slot] = c; w.carried = s; }
+    } else if (!c) {
+      if (s) { const half = Math.ceil(s.count / 2); w.carried = { type: s.type, count: half }; s.count -= half; if (!s.count) w.slots[slot] = null; }
+    } else if (!s || (s.type === c.type && s.count < stackOf(s.type))) {
+      w.slots[slot] = { type: c.type, count: (s?.count ?? 0) + 1 };
+      if (--c.count <= 0) w.carried = null;
+    } else { w.slots[slot] = c; w.carried = s; }
+  }
+  /** The client side of a resync: what mineflayer does with a window_items packet. */
+  function applyToClient(windowId, slots, carried) {
+    const win = windowId === 0 ? bot.inventory : bot.currentWindow;
+    if (!win || win.id !== windowId) return;
+    slots.forEach((it, i) => { if (i < win.slots.length) win.updateSlot(i, it ? new Item(it.type, it.count) : null); });
+    win.selectedItem = carried ? new Item(carried.type, carried.count) : null;
+    bot.emit(`setWindowItems:${windowId}`);
+    bot.emit('heldItemChanged', bot.heldItem);
+  }
+  function resync(w) {
+    const slots = w.slots.map(copy);
+    slots[0] = resultOf(w); // the result slot shows what the grid makes
+    const carried = copy(w.carried);
+    pending += 1;
+    const packet = { windowId: w.id, stateId: ++stateId, items: slots, carriedItem: carried };
+    const fire = () => { pending -= 1; applyToClient(w.id, slots, carried); client.emit('window_items', packet); };
+    if (lagMs > 0) setTimeout(fire, lagMs); else setImmediate(fire);
+  }
+
+  client.write = (name, packet) => {
+    record(`packet.${name}`, { slot: packet.slot, button: packet.mouseButton, mode: packet.mode });
+    if (name !== 'window_click' || deaf) return;
+    const w = packet.windowId === 0 ? invServer() : server.get(packet.windowId);
+    if (!w || (bot.currentWindow?.id ?? 0) !== packet.windowId) return; // not the open window: ignored
+    click(w, packet.slot, packet.mouseButton, packet.mode);
+    resync(w);
+  };
+  bot._client = client;
+  bot.currentWindow = null;
+  // the player inventory's server copy is rebuilt from the client once nothing is in flight (the fake's give/take
+  // change the client inventory directly)
+  client.on('window_items', (p) => { if (p.windowId === 0 && pending === 0) server.delete(0); });
+
+  bot.activateBlock = async (block) => {
+    record('activateBlock', { block: block?.name });
+    const b = bot.blockAt(block.position);
+    if (noOpen || b.name !== 'crafting_table' || !reach(b.position)) return;
+    const id = nextId++ % 100 + 1;
+    const slots = new Array(46).fill(null);
+    for (let s = 9; s < 45; s++) slots[s + 1] = copy(bot.inventory.slots[s]);
+    server.set(id, { id, width: 3, slots, carried: null, invStart: 10, invEnd: 46 });
+    send('open_window', { windowId: id });
+    const open = () => {
+      const win = windows.createWindow(id, 'minecraft:crafting', 'Crafting');
+      slots.forEach((it, i) => win.updateSlot(i, it ? new Item(it.type, it.count) : null));
+      bot.currentWindow = win;
+      bot.emit('windowOpen', win);
+    };
+    if (lagMs > 0) setTimeout(open, lagMs); else setImmediate(open);
+  };
+  bot.closeWindow = (win) => {
+    record('closeWindow', { id: win?.id });
+    if (!win) return;
+    const w = server.get(win.id);
+    server.delete(win.id);
+    if (bot.currentWindow === win) bot.currentWindow = null;
+    if (win.id === 0) return;
+    // client: like mineflayer, copy the window's inventory part into the player inventory at once
+    for (let s = win.inventoryStart; s < win.inventoryEnd; s++) bot.inventory.updateSlot(s - 1, win.slots[s] ? new Item(win.slots[s].type, win.slots[s].count) : null);
+    bot.emit('windowClose', win);
+    if (!w) return;
+    // server: the grid and the cursor go back into the inventory, then the player inventory is synced
+    for (let s = 1; s <= 9; s++) if (w.slots[s]) { insert(w, { ...w.slots[s] }, false); w.slots[s] = null; }
+    if (w.carried) { insert(w, w.carried, false); w.carried = null; }
+    const inv = new Array(46).fill(null);
+    for (let s = 10; s < 46; s++) inv[s - 1] = copy(w.slots[s]);
+    pending += 1;
+    const fire = () => { pending -= 1; applyToClient(0, inv, null); client.emit('window_items', { windowId: 0, stateId: ++stateId, items: inv }); };
+    if (lagMs > 0) setTimeout(fire, lagMs); else setImmediate(fire);
+  };
 }

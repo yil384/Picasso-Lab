@@ -268,7 +268,7 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  *   With opts.bot (test/fake-bot.js) the body uses that bot as is and does not load plugins it already has; without
  *   it, it creates a mineflayer bot from config.mc (offline auth, username config.mc.username, localhost/LAN only:
  *   any other host throws) and loads mineflayer-pathfinder and mineflayer-tool. The body
- *   logs 'bot_ready', 'stop', 'death', 'disconnect' and 'bot_error' events to opts.log.
+ *   logs 'bot_ready', 'stop', 'death', 'attacked', 'disconnect' and 'bot_error' events to opts.log.
  * @property {Promise<void>} ready                       resolves once the bot has spawned (at once for an injected bot);
  *   rejects with "could not join the Minecraft server: ..." when the connection ends first
  * @property {() => string} state                        plain-text state for the model (src/state.js)
@@ -279,8 +279,12 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {(tool: ToolName, args: object) => Promise<SkillResult>} run
  *   Validates args with validateArgs (bad args resolve ok:false, never throw), runs one skill at a time (a call while
  *   busy resolves ok:false "busy", get_state included: read state()/snapshot() directly instead), enforces
- *   TOOL_TIMEOUTS_MS ("timed out after N s"), computes delta from the inventory before and after. Before spawn it
- *   answers "not in the game yet", after a disconnect "not connected to the game"; a death stops the running skill.
+ *   TOOL_TIMEOUTS_MS ("timed out after N s"), computes delta from the inventory before and after (on a real server
+ *   both read after a resync of the player inventory, so late server updates land in the right call). Before spawn
+ *   it answers "not in the game yet", after a disconnect "not connected to the game"; a death stops the running
+ *   skill ("stopped: you died at x y z; ...") and the next one waits for the respawn; a hit from a hostile mob stops
+ *   any skill but attack and eat ("stopped: a zombie is attacking you (health 14/20, ...); fight back with attack
+ *   zombie, or go_to somewhere safe").
  * @property {(reason?: string) => Promise<void>} stop    kill switch: cancels the running skill (pathfinder goal,
  *   digging, eating, controls, an open crafting or furnace window); the pending run() resolves ok:false
  *   "stopped: <reason>" (plus where a skill left things, e.g. items in a furnace). The bot stays connected.

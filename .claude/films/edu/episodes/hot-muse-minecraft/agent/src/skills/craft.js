@@ -1,9 +1,12 @@
 // src/skills/craft.js - craft: make n of an item from the inventory on the recipes minecraft-data has for the game
 // version, in as many whole batches as the ingredients allow. A recipe that needs a crafting table uses one within 32
 // blocks (walking to it) or places one from the inventory and picks it up again afterwards, as Mindcraft's
-// craftRecipe skill does (github.com/mindcraft-bots/mindcraft, MIT License); rewritten for this body.
+// craftRecipe skill does (github.com/mindcraft-bots/mindcraft, MIT License); rewritten for this body. On a real server
+// the clicks are planned on a window state the server confirmed and checked against it afterwards (window.js), never
+// left to mineflayer's craft(), whose clicks race the server's resyncs (wrong items in the grid, ghost results).
 
 import { done, fail, walkNear, placeNearby, pickUp, pickUpNote, describeError, SkillStop } from './util.js';
+import { canClick, clicker, openBlockWindow, closeCurrent, settleInventory, planPut, countIn, emptySlotIn } from './window.js';
 
 const TABLE_RADIUS = 32;
 
@@ -92,21 +95,26 @@ export async function craft(ctx, { item, n }) {
   if (recipe.requiresTable) {
     const tableId = bot.registry.blocksByName.crafting_table.id;
     const found = bot.findBlock({ matching: tableId, maxDistance: TABLE_RADIUS });
+    const carried = () => bot.inventory.items().some((i) => i.name === 'crafting_table');
+    let unreachable = null;
     if (found) {
       try {
         await walkNear(ctx, found.position);
+        table = bot.blockAt(found.position);
       } catch (err) {
         if (err instanceof SkillStop) throw err;
-        return fail(`could not reach the crafting table at ${found.position.x} ${found.position.y} ${found.position.z}: ${describeError(err)}`);
+        unreachable = `could not reach the crafting table at ${found.position.x} ${found.position.y} ${found.position.z}: ${describeError(err)}`;
+        if (!carried()) return fail(unreachable);
       }
-      table = bot.blockAt(found.position);
-    } else if (bot.inventory.items().some((i) => i.name === 'crafting_table')) {
+    }
+    if (!table && carried()) {
+      // none nearby, or the one nearby is out of reach (behind a wall, in a cave): put down the one carried
       const r = await placeNearby(ctx, 'crafting_table');
-      if (!r.ok) return fail(`${item} needs a crafting table and placing one failed: ${r.result}`);
+      if (!r.ok) return fail(`${item} needs a crafting table and placing one failed: ${r.result}${unreachable ? `; ${unreachable}` : ''}`);
       table = r.block;
       placed = r.block;
       ctx.stopNote(`a crafting table you placed is at ${placed.position.x} ${placed.position.y} ${placed.position.z}`);
-    } else {
+    } else if (!table) {
       return fail(`${item} needs a crafting table: none within ${TABLE_RADIUS} blocks and none in your inventory (craft crafting_table from 4 planks)`);
     }
     // the table is there now; recheck which table recipes the inventory pays for
@@ -117,23 +125,14 @@ export async function craft(ctx, { item, n }) {
   let made = 0;
   let error = null;
   try {
-    // one batch at a time: several at once race the server's window updates ("missing ingredient", stray buttons)
-    // and each one checked against the server: a craft at a freshly placed table can come back as a ghost item
-    // the server never confirmed, so count the result after a short settle and retry the batch once if it is missing
-    const count = () => bot.inventory.count(id, null);
-    const settle = (ticks) => (typeof bot.waitForTicks === 'function' ? ctx.wait(bot.waitForTicks(ticks)) : Promise.resolve());
-    for (let b = 0; b < batches; b++) {
-      let got = false;
-      for (let attempt = 0; attempt < 2 && !got; attempt++) {
-        const had = count();
+    if (canClick(bot)) {
+      ({ made, error } = await craftByClicks(ctx, recipe, id, batches, recipe.requiresTable ? table : null, item));
+    } else {
+      // a bot without a protocol client (test/fake-bot.js): its craft() is exact, one batch at a time
+      for (let b = 0; b < batches; b++) {
         await ctx.wait(bot.craft(recipe, 1, recipe.requiresTable ? table : null));
-        await settle(6);
-        if (count() <= had) await settle(14);
-        got = count() > had;
-        ctx.check();
+        made += perBatch(recipe);
       }
-      if (!got) { error = 'the server did not confirm the craft (no item arrived)'; break; }
-      made += perBatch(recipe);
     }
   } catch (err) {
     if (err instanceof SkillStop) throw err;
@@ -144,8 +143,117 @@ export async function craft(ctx, { item, n }) {
   let tableNote = '';
   if (placed) tableNote = pickUpNote(await pickUp(ctx, placed), 'crafting table', placed.position);
 
-  if (error) return fail(`crafting ${item} failed: ${error}${tableNote}`);
+  if (error) return fail(made ? `crafted ${made} of ${n} ${item}, then it failed: ${error}${tableNote}` : `crafting ${item} failed: ${error}${tableNote}`);
   if (made >= n) return done(`crafted ${made} ${item}${tableNote}`);
   const short = missingFor(bot, recipe, Math.ceil((n - made) / perBatch(recipe)));
   return fail(`crafted ${made} of ${n} ${item}; for the rest you are missing ${listMissing(short)}${tableNote}`);
+}
+
+/** Grid slots per ingredient id for a recipe in a w x w grid (slot 1 is the top left), or null if it does not fit. */
+export function gridOf(recipe, w) {
+  const out = new Map();
+  const add = (id, slot) => out.set(id, [...(out.get(id) ?? []), slot]);
+  if (recipe.inShape) {
+    if (recipe.inShape.length > w || recipe.inShape.some((row) => row.length > w)) return null;
+    recipe.inShape.forEach((row, y) => row.forEach((ing, x) => {
+      if (ing && ing.id != null && ing.id !== -1) add(ing.id, 1 + x + w * y);
+    }));
+  } else {
+    const list = (recipe.ingredients ?? []).filter((ing) => ing && ing.id != null && ing.id !== -1);
+    if (list.length > w * w) return null;
+    list.forEach((ing, i) => add(ing.id, 1 + i));
+  }
+  return out.size ? out : null;
+}
+
+const nameOf = (bot, it) => (it ? bot.registry.items[it.type]?.name ?? String(it.type) : 'nothing');
+
+/**
+ * Put the cursor and the crafting grid back into the inventory (leftovers of an earlier craft, or of this one). Returns
+ * false when something stays in the grid (no room).
+ */
+async function clearGrid(ctx, c, w) {
+  const win = c.window;
+  if (win.selectedItem) {
+    const slot = emptySlotIn(win);
+    if (slot !== null) { await c.click(slot, 0, 0); await c.settle(); }
+  }
+  const busy = [];
+  for (let s = 1; s <= w * w; s++) if (win.slots[s]) busy.push([s, 0, 1]);
+  if (!busy.length) return true;
+  await c.clicks(busy);
+  await c.settle();
+  for (let s = 1; s <= w * w; s++) if (win.slots[s]) return false;
+  return true;
+}
+
+/**
+ * Craft `batches` batches of a recipe by clicking: put k of each ingredient in its grid slots, check that the server
+ * shows the result, shift-click it (the server crafts while the grid holds a full set), then count what arrived. Every
+ * step is planned on a settled window, so the server and the client never disagree about the grid.
+ * @returns {Promise<{made: number, error: string|null}>}
+ */
+async function craftByClicks(ctx, recipe, id, batches, table, item) {
+  const { bot } = ctx;
+  const w = table ? 3 : 2;
+  const grid = gridOf(recipe, w);
+  if (!grid) return { made: 0, error: `the recipe does not fit a ${w}x${w} grid` };
+  const per = recipe.result.count;
+  const maxPerSlot = Math.min(64, ...[...grid.keys()].map((ing) => bot.registry.items[ing]?.stackSize || 64));
+
+  let opened = null;
+  let window;
+  if (table) {
+    try {
+      opened = await openBlockWindow(ctx, table, 'minecraft:crafting', 'crafting table');
+    } catch (err) {
+      if (err instanceof SkillStop) throw err;
+      await ctx.sleep(300); // a table placed a moment ago: try once more
+      opened = await openBlockWindow(ctx, table, 'minecraft:crafting', 'crafting table');
+    }
+    window = opened.window;
+  } else {
+    closeCurrent(bot);
+    window = bot.inventory;
+  }
+
+  let made = 0;
+  let error = null;
+  try {
+    const c = clicker(ctx, window);
+    await c.settle();
+    if (!(await clearGrid(ctx, c, w))) error = 'the crafting grid holds items that do not fit back into your inventory';
+    const start = countIn(window, id);
+    let left = batches;
+    while (left > 0 && !error) {
+      const k = Math.min(left, maxPerSlot);
+      const plan = [];
+      for (const [ing, slots] of grid) {
+        const p = planPut(window, ing, slots, k);
+        if (!p) { error = `ran out of ${bot.registry.items[ing]?.name ?? ing} after ${made} ${item}`; break; }
+        plan.push(...p);
+      }
+      if (error) break;
+      await c.clicks(plan);
+      await c.settle();
+      const shown = window.slots[0];
+      if (!shown || shown.type !== id) {
+        error = `the server shows ${nameOf(bot, shown)} for this arrangement, not ${item}`;
+        await clearGrid(ctx, c, w);
+        break;
+      }
+      await c.click(0, 0, 1); // shift-click the result
+      await c.settle();
+      const got = countIn(window, id) - start - made;
+      const roomy = await clearGrid(ctx, c, w);
+      if (got <= 0) { error = emptySlotIn(window) === null ? 'your inventory is full' : 'the server did not hand over the result'; break; }
+      made += got;
+      left -= Math.ceil(got / per);
+      if (got < k * per) error = emptySlotIn(window) === null || !roomy ? 'your inventory is full' : `the server made only ${got} of ${k * per}`;
+    }
+  } finally {
+    opened?.close();
+  }
+  await settleInventory(ctx);
+  return { made, error };
 }
