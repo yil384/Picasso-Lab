@@ -1,0 +1,17 @@
+{
+  "name": "picasso-holdem-dealer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Picasso Lab games service: authoritative No-Limit Texas Hold'em dealer (play money only) and shared accounts.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "test:slow": "SLOW=1 node --test test/evaluator.slow.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
