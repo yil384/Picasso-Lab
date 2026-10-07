@@ -1030,6 +1030,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     const why = viewRefusal(req, 'ws', m[2]);
     if (why) { socket.end(`HTTP/1.1 429 Too Many Requests\r\ncontent-type: text/plain\r\nconnection: close\r\ncontent-length: ${Buffer.byteLength(why)}\r\n\r\n${why}`); return; }
     const release = holdView([`ws@${clientKey(req)}`, `ws#${m[2]}`]);
+    socket.gameId = m[2]; // the MCP reaper keeps a watched game alive (watching(id))
     viewSockets.add(socket);
     socket.setTimeout(VIEW_IDLE_MS, () => socket.destroy());
     const up = net.connect(port, '127.0.0.1', () => {
@@ -1061,6 +1062,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
         newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
         leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs,
         links: (s, b) => ({ eyes: `${b}/eyes/${s.id}/`, watch: `${b}/watch/${s.id}/` }),
+        watching: (id) => { let n = 0; for (const k of viewSockets) if (k.gameId === id && !k.destroyed) n += 1; return n; },
       });
       return mcp(req, res);
     }

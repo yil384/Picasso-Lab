@@ -308,7 +308,8 @@ export function createMcp(hooks) {
     const t = now();
     for (const [sid, e] of sessions) {
       const s = game(e);
-      if (s && !e.pending && t - e.lastCall > IDLE_MS) {
+      // a game someone is watching live (a /eyes or /watch socket) is not idle: the lease still ends it
+      if (s && !e.pending && t - e.lastCall > IDLE_MS && !(hooks.watching?.(s.id) > 0)) {
         hooks.endSession(s, `no calls for ${IDLE_MS / 60_000} minutes`);
         Object.assign(e, { token: null, endedWhy: `no calls for ${IDLE_MS / 60_000} minutes`, outbox: [] });
         hooks.log.event('mcp_idle_end', { session: sid.slice(0, 8), game: s.id });
@@ -336,6 +337,8 @@ export function createMcp(hooks) {
       entry.transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
         maxRequestBodySize: MAX_BODY,
+        // plain JSON replies, not an SSE stream: simple clients (the HTTP code Muse writes for itself) read them whole
+        enableJsonResponse: true,
         onsessioninitialized: (sid) => { sessions.set(sid, entry); },
       });
       entry.transport.onclose = () => {
@@ -346,6 +349,12 @@ export function createMcp(hooks) {
       await build(entry).connect(entry.transport);
     }
     entry.lastCall = now();
+    // be lenient with hand-written clients: a POST that forgot the Accept types the spec asks for gets them added
+    // (the SDK would answer 406, which Muse's first client hit on 2026-10-07)
+    if (req.method === 'POST') {
+      const accept = String(req.headers.accept ?? '');
+      if (!/application\/json/.test(accept) || !/text\/event-stream/.test(accept)) req.headers.accept = 'application/json, text/event-stream';
+    }
     await entry.transport.handleRequest(req, res);
   }
   /** Live MCP sessions (tests and the operator). */
