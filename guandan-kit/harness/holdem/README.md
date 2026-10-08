@@ -72,3 +72,34 @@ Results of the final run: see the end of this file.
 | `python3 shots.py [vps] --lang=both` | The scripted stand-in's scenes (fake dealer), for states that are hard to reach in play. |
 
 Guandan regression (in `..`): `python3 play.py desk 2`, `python3 play.py phone 2`, `python3 mustkeep.py`.
+
+## Results of the final run (2026-10-08, this sandbox)
+
+`python3 e2e.py` on commit 20b5c1f: **ALL PASS, 110 checks, 0 failures**, 11 minutes.
+
+| Scenario | Checks | Hands played | Showdowns | Side pots | Run-outs | Frames checked (pages) | Console errors |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| checker | 8 | - | - | - | - | 7 planted leaks caught | - |
+| heads | 14 | 10 | 10 | 0 | 0 | 302 (2) | 0 |
+| six | 12 | 10 | 9 | 1 | 3 | 569 (3) | 0 |
+| nine | 6 | 8 | 8 | 2 | 0 | 987 (4) | 0 |
+| sidepots | 14 | 5 | 5 | 2 | 2 | 274 (3) | 0 |
+| timeout | 15 | 5 | 4 | 0 | 0 | 186 (2) | 0 |
+| restart | 21 | 9 | 9 | 3 | 3 | 865 (4) | 0 (36 refused reconnects while down, by design) |
+| accounts | 20 | - | - | - | - | - | 0 (3 provoked refusals logged by Chrome, by design) |
+
+From that run: heads ended 9,840 + 10,160 = 20,000; the leaver in `six` had 4,000 in the bankroll and 1,930 at the
+table, and 5,930 after the hand; side pots 2,400 / 1,200 with stacks 600 / 1,200 / 2,400 after the hand and 30,000
+conserved after leaving; every page back after a restart in 4.1 s (graceful), 3.8 s (kill -9), 4.1 s (kill -9 after
+held writes: pages at rev 161-162, the restored table's first snapshots 156-162).
+
+`python3 shots_live.py --lang=both --par=2` on 20b5c1f: 10 runs, 280 screenshots, no failed step, no console error.
+
+On commit 1ba3f60 (only the dealer button's placement changed after it): `flows.py desk` and `portrait`,
+`restart.py desk` and `phone`, `eggs.py desk` and `ifr`: ALL PASS; `play.py desk 6 practice` (7 hands),
+`play.py portrait 4 practice` (5 hands), `play.py phone 4 room` (5 hands): no console errors (long tasks 51-110 ms,
+at the table's first layout). `../mustkeep.py`: 113 PASS, 0 FAIL.
+
+Dealer (unchanged since 6b081ff): `npm test` 106 tests, 105 pass, 1 skipped (the slow one), 0 fail; `npm run
+test:slow` pass. Guandan on 7ef2bf2: `../play.py desk 2` and `../play.py phone 2`, 2 rounds each, no errors, no long
+tasks.
