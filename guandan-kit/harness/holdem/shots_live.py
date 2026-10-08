@@ -5,7 +5,7 @@ Usage: python3 shots_live.py [desk hd ifr phone portrait] [--lang=zh|en|both] [-
 Writes HD_SHOTS/live-<vp>-<lang>-<step>.jpg (default /tmp/holdem-shots; never commit them) and prints, per run, the
 steps that failed and the console errors of the three pages.
 Steps: lobby board profile room room-seated buyin preflop raise flop turn river showdown allin sidepots busted split
-topup quads last menu hands sitout waiting spectator reconnect heads nine"""
+topup burst quads last menu hands sitout waiting spectator reconnect heads nine"""
 import asyncio, json, os, sys, time
 from live import Service, Player, browser, until, log, station, pusher
 
@@ -103,7 +103,7 @@ class Run:
                     if raise_shot and street == 'preflop':
                         await self.hero.tap('[data-act=raise]')
                         await self.hero.pg.wait_for_selector('.hd-raise-panel', timeout=3000)
-                        await self.hero.tap('[data-preset="0.6666666666666666"]')
+                        await self.hero.tap('[data-preset="p23"]')
                         await self.shot('raise', 400)
                         await self.hero.pg.keyboard.press('Escape')
                         await self.hero.pg.wait_for_timeout(300)
@@ -256,6 +256,14 @@ class Run:
             hid = await self.new_hand(hid)
             await self.play_hand('call')
             await self.hand_done(hid)
+
+            # the quads burst, frozen 300 ms in: rays and sparks behind the board, centred on the word
+            async def burst():
+                await hero.pg.wait_for_selector('.hd-fx-under .gd-fx', timeout=4000, state='attached')
+                await hero.pg.evaluate("document.querySelectorAll('.hd-fx-under *').forEach(e => e.getAnimations().forEach(a => { a.pause(); a.currentTime = 300; }))")
+                await self.shot('burst', 0)
+                await hero.pg.evaluate("document.querySelectorAll('.hd-fx-under *').forEach(e => e.getAnimations().forEach(a => a.play()))")
+            await self.step('burst', burst())
             await self.shot('quads', 1100)
 
             # sitting out from the next hand: the others play on; then the popups while I am away

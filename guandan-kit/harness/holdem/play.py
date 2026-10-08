@@ -61,7 +61,7 @@ async def main():
                     if st['raise'] and decisions % 5 == 2:
                         await s.press('[data-act=raise]')
                         await s.pg.wait_for_timeout(300)
-                        await s.press('[data-preset="0.5"]')
+                        await s.press('[data-preset="p12"]')
                         await s.pg.wait_for_timeout(200)
                         await s.press('[data-act=confirm]')
                     elif st['check']:

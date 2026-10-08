@@ -66,7 +66,7 @@ async def run(vp, lang, only, d):
             if step == 'raise':
                 await s.press('[data-act="raise"]')
                 await s.pg.wait_for_timeout(400)
-                await s.press('[data-preset="0.6666666666666666"]')
+                await s.press('[data-preset="p23"]')
                 await s.pg.wait_for_timeout(300)
             elif step == 'menu':
                 await s.press('[data-menu]')

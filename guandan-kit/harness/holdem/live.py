@@ -387,7 +387,7 @@ def mixed(p, acts):
     p.acted_seen = getattr(p, 'acted_seen', 0) + 1
     k = p.acted_seen
     if 'raise' in acts and k % 6 == 2:
-        return 'raise:0.5'
+        return 'raise:p12'
     if 'call' in acts and k % 9 == 8:
         return 'fold'
     return station(p, acts)
