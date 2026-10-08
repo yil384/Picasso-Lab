@@ -1,7 +1,68 @@
 # Hold'em: report for the lead
 
-Branch `cloud/guandan-holdem`, after review round 3 (see `REVIEW-HOLDEM.md` for all three rounds). Everything
-below was run on this branch; nothing has been deployed and nothing touched production.
+Branch `cloud/guandan-holdem`, after review round 3 (see `REVIEW-HOLDEM.md` for all three rounds). Sections 1-3
+were run on this branch against a local dealer. The dealer is now deployed on picasso and the live suite passed
+against it (section 0). Nothing is merged into main.
+
+## 0. Deployed on picasso (2026-10-08)
+
+Steps 4(a), 4(b) and 4(f) are done; 4(c) merge and 4(d) email are not. `EMAIL_LINK` is off.
+
+| What | Where |
+| --- | --- |
+| Service | `~/workspace/holdem-dealer` (rsync of `events/holdem-dealer` at this branch), compose project `holdem-dealer`, container `holdem-dealer-holdem-dealer-1`, image `picasso/holdem-dealer:latest`, `restart: unless-stopped` |
+| Network | on `fras_default` as `holdem-dealer:8787`; **no host port** (stricter than a loopback or 172.24.0.1 port); `TRUST_PROXY=fras-caddy-1` |
+| Secrets | `./secrets/games_secret`, `./secrets/ip_salt` (made on picasso by `ops/secrets.sh`, folder 700, never printed); `.env` 600 holds no secret; `docker inspect` shows neither |
+| Data | volume `holdem-dealer_holdem-data` = bind of `~/workspace/holdem-dealer/data` (owner uid 1000, mode 700) on the NVMe root disk, not `/ssd2` (below) |
+| Caddy | block `poker.picasso-lab.com` from `events/holdem-dealer/Caddyfile.snippet`, inserted after `play-staging` in `~/workspace/FRAS/caddy-config/Caddyfile` (backup `Caddyfile.bak-20261008-174136`), validated and reloaded in `fras-caddy-1`; Let's Encrypt certificate issued; no other block changed |
+| Cron (user `yichen`) | `10 4 * * * .../ops/backup.sh` and `*/5 * * * * .../ops/watchdog.sh`, both also run by hand under cron's bare environment |
+| Backups | `~/backups/holdem/` (700, files 600); restore tested twice with the documented command (a backup with 47 accounts and 17 tables came back whole and a saved token still signed in; then the empty pre-test backup wiped every test account, table and the IP memory) |
+| State now | healthy, 0 accounts, 0 tables, the IP memory empty; today's backup is that empty state |
+
+Checks after the Caddy reload: `flashevolve`, `tritongym`, `play` and `lab.picasso-lab.com` answer 200; `poker`
+`/v1/health` 200, the socket upgrade 101, a foreign Origin 403. Caddy logged no client address for `poker` (only the
+ACME validators' addresses while it got the certificate). The service keys networks correctly behind Caddy: a name
+recorded from one network is suggested to a fresh browser on that network, not to one on picasso's, a forged
+`X-Forwarded-For` from a client changes nothing, and the host reaching the container directly with a forged header is
+not believed. The backups hold no card except last hands' public cards (board, shown hands, winners' five).
+
+**Found while measuring, fixed in the deploy:** Docker's root on picasso is `/ssd2`. A write + fsync there (what the
+store does on every change, synchronously) took up to 13.6 s in a 150 s probe (median 7 ms, p99 144 ms); on the
+root disk max 101 ms, p99 12 ms. With the data on `/ssd2`, a pinger inside the container saw the service freeze for
+1.1, 1.8 and 2.5 s during play and a player action waited 4.2 s; every table froze with it, and a freeze longer
+than the health timeout could make the watchdog restart the service (calling off hands). The data now lives on the
+root disk (`HOLDEM_DATA_DIR`, `ops/datadir.sh`, compose and README updated); in the same two-minute test afterwards
+the loopback pinger's worst round trip was 1.5 ms. A follow-up worth doing in code: write the files off the event
+loop (async `fs` / a worker), so a slow disk can never stop the tables.
+
+**Live end to end** (`guandan-kit/harness/holdem/prod.py`: the page served from this checkout as
+yil384.github.io, talking to the real `https://poker.picasso-lab.com`; restarts over ssh; final run 2026-10-08
+11:28-11:38 PDT): **ALL PASS, 84 checks, 0 failures.**
+
+| Scenario | Checks | What |
+| --- | --- | --- |
+| checker | 10 | the frame checker without a dealt-cards record (production has no test hooks) catches 9 planted leaks |
+| latency | 3 | 30 socket pings through Caddy; 20 REST calls |
+| heads | 13 | 2 seats, desk + phone; 8 hands, 8 showdowns; reload mid-hand waiting (0.3 s) and on my turn (0.5 s): same hand, same cards, pills back; 20,000 chips conserved |
+| headsai | 5 | 2 seats, one human against one AI; 5 hands; the stack goes back to the bankroll |
+| six | 11 | 6 seats, 3 humans (desk, portrait, ifr) + 3 AI; 8 hands; a player leaves mid-hand and folds at once, his stack back |
+| sidepots | 9 | 2,000 / 1,400 / 800 all in: pots 2,400 + 1,200 paid, 600 uncalled back, pills 主池 / 边池 1, run-outs, 30,000 conserved with rebuys |
+| restart | 30 | 3 humans + 3 AI + a spectator; graceful stop, `docker compose kill -s SIGKILL`, and node killed inside the container (Docker restarted it by itself): every time 重新连接中 on every page, the hand called off and announced everywhere, every chip back on the seats, a new hand finishes, all pages agree |
+| stalls | 3 | two minutes of 6-seat play with pings from a page (through Caddy) and from inside the container (loopback) |
+
+Every received frame of every page (2,506 frames on 16 pages; 106 dealt seats seen by their owners) was checked: no
+page ever got another seat's hole cards outside showdown, an all-in run-out or a voluntary show; no seat's cards
+went to two accounts; shown cards matched what their owner was dealt; no card was in two places. Zero console errors
+(the restart scenario's 32 Chrome lines for refused reconnects inside the deliberate down windows are excluded, as
+in `e2e.py`).
+
+Latency, measured from the Mac that ran the browsers (outside picasso, over the internet): socket ping median 23 ms, p95 31 ms;
+action to the state that answers it median 24 ms, p95 35 ms, max 203 ms over 408 actions; REST `/v1/health` with a
+new TLS connection each time median 77 ms. Restarts: the service answers again 2.5-2.9 s after the start command
+(or the crash), every page is back at the table 3.2-4.9 s after it.
+
+Not tested live: save with email (off), the campus-NAT limits under real load, and Guandan (unchanged by the deploy;
+its harness keeps the games service stubbed).
 
 ## 1. What works
 
@@ -76,7 +137,8 @@ Guandan's own components.
   service's memory, so the deck is safe from players' devtools and from the data volume, not from a host admin. The
   IP hashes can be reversed by someone who also reads the salt; the privacy note says so. Everything is play money.
 - **Guandan records are self-reported** by the page, so they are only as trustworthy as Guandan itself.
-- **One instance.** The service keeps its data in two JSON files on one volume (on `/ssd2`, 96% full when checked),
+- **One instance.** The service keeps its data in two JSON files in `~/workspace/holdem-dealer/data` on picasso's
+  root disk (NVMe; not `/ssd2`, whose fsync stalls froze every table, see section 0),
   with at most 200 open tables. That is fine for the lab, but there is no failover. A failing disk shows as 503 /
   unhealthy and in `~/backups/holdem/watchdog.log`; nothing restarts a service that cannot save.
 - **Merge order.** Once the merge lands on Pages, the lobby shows the Hold'em tiles. Until the dealer is up they
@@ -99,7 +161,9 @@ ssh picasso
 cd ~/workspace/holdem-dealer
 cp .env.example .env               # TRUST_PROXY=fras-caddy-1, HOLDEM_EDGE_NETWORK=fras_default; EMAIL_LINK off until (d)
 ops/secrets.sh                     # makes ./secrets/games_secret and ./secrets/ip_salt once; never overwrites them
-docker compose up -d --build
+docker compose build
+ops/datadir.sh                     # makes ./data (HOLDEM_DATA_DIR, owner uid 1000, mode 700) once; never touches it after
+docker compose up -d
 docker compose ps                  # (healthy) after about 30 s
 docker compose exec -T holdem-dealer node src/health.js       # ok
 ```
@@ -201,8 +265,8 @@ docker compose start
 ```
 
 `ops/watchdog.sh` restarts a service that stops answering; one that answers but cannot save (usually a full
-`/ssd2`) is logged to `~/backups/holdem/watchdog.log` and left running, since its memory holds the only copy. Look
-now and then: `tail ~/backups/holdem/*.log; df -h /ssd2`.
+disk) is logged to `~/backups/holdem/watchdog.log` and left running, since its memory holds the only copy. Look
+now and then: `tail ~/backups/holdem/*.log; df -h ~`.
 
 ## 5. Privacy note (shown in the game; for the owner to approve)
 

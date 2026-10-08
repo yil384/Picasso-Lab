@@ -76,12 +76,19 @@ network. `poker.picasso-lab.com` already resolves to picasso (the `*.picasso-lab
 rsync -a --exclude node_modules --exclude .env --exclude data --exclude secrets events/holdem-dealer/ picasso:workspace/holdem-dealer/
 ssh picasso
 cd ~/workspace/holdem-dealer
-cp .env.example .env              # EMAIL_LINK stays off until "save with email" below
+cp .env.example .env              # EMAIL_LINK stays off until "save with email" below; chmod 600 .env
 ops/secrets.sh                    # ./secrets/games_secret and ./secrets/ip_salt (folder 700), made once, kept after
-docker compose up -d --build
+docker compose build
+ops/datadir.sh                    # ./data (HOLDEM_DATA_DIR): owner uid 1000, mode 700, made once, kept after
+docker compose up -d
 docker compose ps                 # STATUS shows (healthy) after about 30 s
 docker compose exec -T holdem-dealer node src/health.js       # ok
 ```
+
+The data files are not in Docker's own volume folder: on picasso that is `/ssd2`, where a write + fsync was measured
+taking up to 13.6 s (p99 144 ms), and the service writes synchronously, so every table froze for that long. The
+volume `holdem-dealer_holdem-data` is a bind of `HOLDEM_DATA_DIR` (`./data`, on the NVMe root disk: max 101 ms, p99
+12 ms); its name is unchanged for the backup and restore commands.
 
 Then the Caddy block ([`Caddyfile.snippet`](Caddyfile.snippet)): back the Caddyfile up, append the block, validate
 and reload inside the container (there is no `caddy` on the host):
@@ -105,7 +112,8 @@ curl --http1.1 -s -i -N --max-time 3 -H 'Connection: Upgrade' -H 'Upgrade: webso
 Keep the secrets stable: a new `games_secret` breaks the link between saved accounts and their emails; a new
 `ip_salt` only forgets the IP memory. `ops/secrets.sh` never overwrites an existing file.
 
-Update: copy the folder again (same rsync), then `docker compose up -d --build`. The old container gets SIGTERM:
+Update: copy the folder again (same rsync), then `docker compose up -d --build` (`ops/datadir.sh` once before, if
+`./data` does not exist yet). The old container gets SIGTERM:
 sockets close with 1012 and both files are flushed. **A hand in progress is called off** (the deck and the hole cards
 are never written to disk, so no restart can continue it): every chip put in goes back to its seat, nothing is
 recorded, the pages say so and a new hand is dealt with the same button. Deploy between sessions when you can.
@@ -148,14 +156,14 @@ last backup as above; the `.bak` copies in the volume are only the previous writ
 
 Docker restarts a crashed container but not an unhealthy one. `ops/watchdog.sh`, every 5 minutes from cron, asks the
 service how it is: no answer (a stuck process) means a restart; "changes not being saved" (usually a full disk; the
-volume is on `/ssd2`) is logged to `~/backups/holdem/watchdog.log` and **not** restarted, since memory then holds the
+data is in `./data` on the root disk) is logged to `~/backups/holdem/watchdog.log` and **not** restarted, since memory then holds the
 only copy. A container stopped on purpose is left alone.
 
 ```sh
 */5 * * * * /home/yichen/workspace/holdem-dealer/ops/watchdog.sh
 ```
 
-Look now and then: `tail ~/backups/holdem/*.log` and `df -h /ssd2`.
+Look now and then: `tail ~/backups/holdem/*.log` and `df -h ~`.
 
 ## Turn on "save with email" (EMAIL_LINK)
 

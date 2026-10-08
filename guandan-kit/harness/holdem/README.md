@@ -30,6 +30,7 @@ Requirements: `cd events/holdem-dealer && npm ci` (and `npm test` green), Python
 | `layout.py` | Table layout checks for every seat count 2-9 per viewport: each bet nearer its own seat than any other and clear of other seats and my clock, the dealer button never under the button seat's clock, betting controls at least 40 CSS px on phones. |
 | `flows.py`, `restart.py`, `eggs.py`, `play.py` | Older single-page scripts, now against the real dealer. |
 | `accounts.py` | Runs `e2e.py accounts`. |
+| `prod.py` | The live suite against the **deployed** dealer (`https://poker.picasso-lab.com`): the games service is not stubbed or redirected, restarts run on picasso over ssh, and the frame checker works without a dealt-cards record (below). |
 | `shots.py`, `fake-dealer.mjs` | Scripted stand-in dealer and its scene screenshots (kept for rare states only). |
 
 ## The multi-player suite: `python3 e2e.py [scenario ...]`
@@ -72,6 +73,25 @@ Results of the final run: see the end of this file.
 | `python3 eggs.py [desk\|hd\|ifr]` | The picasso hint and return film on the Hold'em lobby, room and table, keyboard shortcuts, BGM, table sounds. |
 | `python3 play.py [vp] [hands] [practice\|room]` | One player plays hands through the UI (人机练习 or a room with AI 补位). |
 | `python3 shots.py [vps] --lang=both` | The scripted stand-in's scenes (fake dealer), for states that are hard to reach in play. |
+
+## The live suite: `python3 prod.py [scenario ...]`
+
+Against the deployed service, so it adds guest accounts and tables there (about 16 accounts a full run; the
+per-network limit is 30 an hour); after a run, restore the last clean backup on picasso (README "Backup and restore"
+in `events/holdem-dealer`) to wipe them. Scenarios: `checker` (the truth-free checker catches 9 planted leaks),
+`latency` (socket pings through Caddy, REST round trips), `heads` (2 humans, reloads mid-hand), `headsai` (1 human
+against 1 AI), `six` (3 humans + 3 AI, a leaver), `sidepots` (2,000 / 1,400 / 800 all in, no rigged deck),
+`restart` (graceful stop, SIGKILL of the container, node killed inside it and restarted by Docker), `stalls` (two
+minutes of play with pings through Caddy and on loopback inside the container, to tell network delays from service
+freezes). Without test hooks the frame checker accepts a card on a page only as the board, its own seat's hole
+cards, or a seat's shown cards (showdown, all-in run-out, voluntary show, last hand), and across pages checks that a
+seat's hole cards go to one account and never change, that a human seat's shown cards match what its owner was dealt,
+that no card is in two places in one hand, and that folded hands are never shown. Env: `HD_PROD_ORIGIN`,
+`HD_PROD_SSH` (default `picasso`), `HD_PROD_DIR`, `HD_STALL_SECS`.
+
+Final run (2026-10-08, data on the root disk): **ALL PASS, 84 checks** (checker 10, latency 3, heads 13, headsai 5,
+six 11, sidepots 9, restart 30, stalls 3); 2,506 frames on 16 pages; socket ping median 23 ms, action to state median
+24 ms / p95 35 ms / max 203 ms; pages back 3.2-4.9 s after a restart; loopback ping max 1.5 ms during play.
 
 Guandan regression (in `..`): `python3 play.py desk 2`, `python3 play.py phone 2`, `python3 mustkeep.py`.
 
