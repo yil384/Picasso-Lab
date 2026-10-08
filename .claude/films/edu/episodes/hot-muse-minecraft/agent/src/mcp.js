@@ -246,6 +246,7 @@ export function createMcp(hooks) {
 
   /** The dry-run check for steps on this game: the plan, or null when the check cannot run (then nothing is refused). */
   function checkSteps(s, steps) {
+    if (typeof s.body?.inventory !== 'function') return null; // a body that cannot say what it carries: nothing to check against
     try {
       const bot = safely(() => s.body.bot);
       const version = bot?.version ?? '1.21.4';
