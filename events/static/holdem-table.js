@@ -11,8 +11,9 @@ const PORT = { w: 720, h: 1280 };
 const ANGLES = {
     land: { 2: [90, 270], 3: [90, 210, 330], 4: [90, 180, 270, 0], 5: [90, 160, 230, 310, 20], 6: [90, 150, 210, 270, 330, 30],
         7: [90, 145, 195, 245, 295, 345, 35], 8: [90, 145, 180, 215, 270, 325, 0, 35], 9: [90, 145, 180, 215, 250, 290, 325, 0, 35] },
-    port: { 2: [90, 270], 3: [90, 215, 325], 4: [90, 180, 270, 0], 5: [90, 160, 230, 310, 20], 6: [90, 150, 210, 270, 330, 30],
-        7: [90, 145, 190, 240, 300, 350, 35], 8: [90, 140, 180, 225, 270, 315, 0, 40], 9: [90, 135, 165, 200, 250, 290, 340, 15, 45] }
+    // portrait: the board spans most of the narrow felt, so no side seat sits within about 30 degrees of its row
+    port: { 2: [90, 270], 3: [90, 215, 325], 4: [90, 212, 270, 328], 5: [90, 145, 230, 310, 35], 6: [90, 140, 215, 270, 325, 40],
+        7: [90, 128, 212, 250, 290, 328, 52], 8: [90, 122, 150, 212, 270, 328, 30, 58], 9: [90, 120, 149, 211, 246, 294, 329, 31, 60] }
 };
 const LABEL_MS = 1500;
 const SFX_URL = "https://yil384.github.io/Picasso-Lab/events/static/holdem-sfx/";
@@ -82,6 +83,7 @@ export function createTable({ ui, S, send, popups }) {
         <div class="hd-stage">
             ${ui.tableDefsHTML}${CHIP_DEFS}
             <div class="hd-felt" aria-hidden="true"><div class="hd-felt-in"></div><div class="hd-mark" data-r="mark"></div></div>
+            <div class="gd-fx-host hd-fx-under" aria-hidden="true"></div>
             <div class="hd-pots" data-r="pots"></div>
             <div class="hd-board" data-r="board"></div>
             <div class="hd-seats"></div>
@@ -103,6 +105,7 @@ export function createTable({ ui, S, send, popups }) {
     const stage = viewport.querySelector(".hd-stage");
     const probe = viewport.querySelector(".gd-safe-probe");
     const fx = stage.querySelector(".hd-fx");
+    const fxUnder = stage.querySelector(".hd-fx-under");
     const dealer = stage.querySelector(".hd-dealer");
     const R = {};
     stage.querySelectorAll("[data-r]").forEach(el => { R[el.dataset.r] = el; });
@@ -172,18 +175,30 @@ export function createTable({ ui, S, send, popups }) {
         const cx = w / 2;
         let cy, rx, ry, heroY;
         if (portrait) {
+            // the felt runs from just under the HUD to just above my seat, which sits a little over the pill row
+            // (the raise panel overlays the lower felt while it is open)
             rx = Math.min(w * .42, 330);
-            heroY = h - 384;
-            cy = h * .45;
-            ry = Math.min(heroY - 40 - cy, 600);
+            heroY = h - 250;
+            const top = 190;
+            const bottom = heroY - 40;
+            cy = (top + bottom) / 2;
+            ry = (bottom - top) / 2;
         } else {
             rx = Math.min(w * .37, 600);
-            cy = h * .46;
             ry = Math.min(h * .36, rx * .62);
+            cy = h * .46;
             heroY = h - 92;
+            // a tall stage (1280 x 800) would leave my seat on the floor under the felt: the oval moves up a little
+            // and my avatar sits on the bottom rail, my cards on the felt above it
+            if (heroY - (cy + ry) > 40) {
+                cy = h * .44;
+                heroY = cy + ry;
+            }
         }
         const angles = (portrait ? ANGLES.port : ANGLES.land)[n] || ANGLES.land[6];
-        const margin = portrait ? 60 : 56;
+        const margin = portrait ? 72 : 56;
+        // portrait: the five board cards' box (design px, with the winners' lift); a side seat's plate never meets it
+        const board = { left: cx - 270, right: cx + 270, top: cy - 92, bottom: cy + 80 };
         const seats = angles.map((deg, k) => {
             const a = deg * Math.PI / 180;
             const cos = Math.cos(a);
@@ -200,10 +215,14 @@ export function createTable({ ui, S, send, popups }) {
             y = Math.max(portrait ? 168 : 78, y);
             // landscape: the lower seats keep their plates clear of the action pills (a wide phone stage pushes them down)
             if (!portrait && k && sin > 0) y = Math.min(y, h - 196);
+            // portrait: a seat whose plate (label above to plate below) would meet the board steps clear of it
+            if (portrait && k && x + 84 > board.left && x - 84 < board.right && y + 100 > board.top && y - 72 < board.bottom) {
+                y = y < cy ? board.top - 100 : board.bottom + 72;
+            }
             const side = k === 0 ? "bottom" : Math.abs(cos) < .35 ? (sin < 0 ? "top" : "bottom") : cos < 0 ? "left" : "right";
             // bets sit on an inner ring toward the centre; the hero's bet over the hole cards
             const bx = k === 0 ? cx : cx + inner * cos;
-            const by = k === 0 ? heroY - (portrait ? 270 : 220) : cy + inner * sin;
+            const by = k === 0 ? heroY - (portrait ? 278 : 228) : cy + inner * sin;
             return { x, y, side, bx, by, cos, sin };
         });
         return { cx, cy, rx, ry, heroY, seats, boardY: cy + (portrait ? 6 : 4) };
@@ -236,9 +255,9 @@ export function createTable({ ui, S, send, popups }) {
             el.className = `hd-seat is-${p.side}${k === 0 ? " is-hero" : ""}`;
             el.style.left = `${p.x.toFixed(1)}px`;
             el.style.top = `${p.y.toFixed(1)}px`;
-            el.innerHTML = `<div class="hd-seat-body"></div><div class="hd-holes"></div><div class="hd-clockslot"></div><div class="hd-label"></div><div class="hd-won"></div>`;
+            el.innerHTML = `<div class="hd-seat-body"></div><div class="hd-holes"></div><div class="hd-clockslot"></div><div class="hd-label"></div>`;
             seatsEl.appendChild(el);
-            V.seats.push({ el, body: el.children[0], holes: el.children[1], clock: el.children[2], label: el.children[3], won: el.children[4] });
+            V.seats.push({ el, body: el.children[0], holes: el.children[1], clock: el.children[2], label: el.children[3] });
             const bet = document.createElement("div");
             bet.className = `hd-bet is-${p.side}`;
             bet.style.left = `${p.bx.toFixed(1)}px`;
@@ -304,9 +323,10 @@ export function createTable({ ui, S, send, popups }) {
         return `<div class="gd-clock hd-clock${bank ? " is-bank" : ""}${timed ? "" : " is-free"}"${timed ? " data-clock" : ""}><svg viewBox="0 0 100 106" aria-hidden="true"><use href="#gd-sym-clock"/></svg><b>${timed ? remaining() : ""}</b>${bank ? `<span class="hd-bank">${L("Time bank", "时间银行")}</span>` : ""}</div>`;
     }
 
-    function stateTag(seat) {
+    function stateTag(seat, h) {
         if (!seat.connected && !seat.bot) return `<span class="hd-tag is-off">${L("Offline", "离线")}</span>`;
-        if (seat.state === "allin") return `<span class="hd-tag is-allin">${L("All-in", "全下")}</span>`;
+        // 全下 only while the hand is live (a winner who was all in has chips again)
+        if (seat.state === "allin" && h && !h.done && !seat.stack) return `<span class="hd-tag is-allin">${L("All-in", "全下")}</span>`;
         if (seat.state === "out") return `<span class="hd-tag is-grey">${L("Away", "暂离")}</span>`;
         if (seat.state === "waiting") return `<span class="hd-tag is-grey">${L("Next hand", "等待")}</span>`;
         if (seat.state === "busted") return `<span class="hd-tag is-grey">${L("Rebuying", "补码中")}</span>`;
@@ -344,10 +364,12 @@ export function createTable({ ui, S, send, popups }) {
             const i = seatAt(k);
             renderSeat(i, k, t.seats[i], { mine, h, winners, winCards, showdown, bb });
         }
-        // bets and the dealer button
+        // bets, and a won pot where the chips land: the seat's bet slot on the felt
         for (let k = 0; k < V.n; k++) {
-            const seat = t.seats[seatAt(k)];
-            put(V.bets[k], seat && seat.bet ? betHTML(seat.bet, bb) : "");
+            const i = seatAt(k);
+            const seat = t.seats[i];
+            const won = seat && h?.done ? (winners || []).filter(w => w.seat === i).reduce((a, w) => a + w.amt, 0) : 0;
+            put(V.bets[k], seat && seat.bet ? betHTML(seat.bet, bb) : won ? `${chipsHTML(won, bb, won >= BIG_POT_BB * bb ? 3 : 2)}<b class="is-won">+${fmt(won)}</b>` : "");
         }
         // board and pots
         renderBoard(h, winCards, showdown);
@@ -405,6 +427,7 @@ export function createTable({ ui, S, send, popups }) {
             }
             dealer.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
             dealer.classList.add("is-on");
+            dealer.classList.toggle("is-mine", k === 0);
         } else {
             dealer.classList.remove("is-on");
         }
@@ -423,20 +446,20 @@ export function createTable({ ui, S, send, popups }) {
         const won = winners?.filter(w => w.seat === i).reduce((a, w) => a + w.amt, 0) || 0;
         v.el.classList.toggle("is-winner", won > 0);
         if (!seat) {
+            // an empty seat shows only while I can take it (seated, the felt stays clean)
             put(v.body, mine == null
                 ? `<button class="hd-sit" type="button" data-sit="${i}" aria-label="${L(`Sit at seat ${i + 1}`, `坐 ${i + 1} 号位`)}"><b>+</b><span>${L("Sit", "入座")}</span></button>`
-                : `<span class="hd-empty" aria-hidden="true"></span>`);
+                : "");
             put(v.holes, "");
             put(v.clock, "");
-            put(v.won, "");
             return;
         }
         const name = seatName(seat, L);
         const tag = seat.bot ? `<span class="gd-avatar-tag">AI</span>` : me && k ? `<span class="gd-avatar-tag">${L("Me", "我")}</span>` : "";
         // my state tag rides in my plate (my cards sit over my avatar); others' hang under theirs
         put(v.body, `<div class="hd-av${me ? "" : " is-opp"}"><span class="hd-face">${faceHTML(seat)}</span>${tag}</div>
-            <div class="hd-plate"><b class="hd-name">${esc(name)}</b><span class="hd-stack">${fmt(seat.stack)}</span>${k === 0 ? stateTag(seat) : ""}</div>
-            ${k === 0 ? "" : stateTag(seat)}`);
+            <div class="hd-plate"><b class="hd-name">${esc(name)}</b><span class="hd-stack">${fmt(seat.stack)}</span>${k === 0 ? stateTag(seat, h) : ""}</div>
+            ${k === 0 ? "" : stateTag(seat, h)}`);
         // cards: mine are the hero's big cards; others show backs while holding, faces when shown
         let holes = "";
         if (seat.shown && !(me && k === 0)) {
@@ -446,7 +469,6 @@ export function createTable({ ui, S, send, popups }) {
         }
         put(v.holes, holes);
         put(v.clock, toAct && !(me && k === 0) ? clockHTML(h.usingBank) : "");
-        put(v.won, won ? `<b>+${fmt(won)}</b>` : "");
     }
 
     function renderBoard(h, winCards, showdown) {
@@ -515,7 +537,9 @@ export function createTable({ ui, S, send, popups }) {
         return { min: lg.minRaiseTo, max: lg.maxRaiseTo, bb: t.settings.bb, bet: seat.bet, call: lg.call, pot: potTotal() };
     }
 
+    const PRESETS = { max: "max", pot: 1, p23: 2 / 3, p12: 1 / 2, min: "min" };
     function presetTo(f, b) {
+        if (f in PRESETS) f = PRESETS[f];
         if (f === "min") return b.min;
         if (f === "max") return b.max;
         const to = b.bet + b.call + f * (b.pot + b.call);
@@ -539,6 +563,7 @@ export function createTable({ ui, S, send, popups }) {
             const opened = (h.currentBet || 0) > 0;
             const raiseLabel = !lg.canRaise ? "" : b.min >= b.max ? L("All-in", "全下") : opened ? L("Raise", "加注") : L("Bet", "下注");
             const open = !!V.raise && !!b;
+            stage.classList.toggle("is-raising", open);
             const value = open ? V.raise.value : 0;
             const third = !lg.canRaise ? ""
                 : open ? pill("primary", "confirm", value >= b.max ? L("All-in", "全下") : opened ? L("Raise to", "加注到") : L("Bet", "下注"), fmt(value))
@@ -553,6 +578,7 @@ export function createTable({ ui, S, send, popups }) {
             return;
         }
         V.raise = null;
+        stage.classList.remove("is-raising");
         region("raise", "");
         // after the hand: show my cards when the rules let me
         if (me?.canShow && h?.done) return region("actions", `<div class="hd-row">${pill("secondary", "show", L("Show cards", "亮牌"))}</div>`);
@@ -562,22 +588,30 @@ export function createTable({ ui, S, send, popups }) {
         if (seat && seat.inHand && h && !h.done && seat.state === "playing" && rivals) {
             const toCall = Math.max(0, (h.currentBet || 0) - seat.bet);
             if (V.pre && V.pre.key !== preKey(h, V.pre.choice)) V.pre = null;
-            const opts = toCall
-                ? [["checkfold", L("Check / Fold", "过牌/弃牌")], ["call", `${L("Call", "跟注")} ${fmt(Math.min(toCall, seat.stack))}`], ["any", L("Call any", "跟任何注")]]
-                : [["checkfold", L("Check / Fold", "过牌/弃牌")], ["check", L("Check", "过牌")], ["any", L("Call any", "跟任何注")]];
+            const opts = [["checkfold", L("Check / Fold", "过牌/弃牌")], ["any", L("Call any", "跟任何注")],
+                toCall ? ["call", `${L("Call", "跟注")} ${fmt(Math.min(toCall, seat.stack))}`] : ["check", L("Check", "过牌")]];
             return region("actions", `<div class="hd-row is-pre">${opts.map(([choice, label]) =>
-                `<button class="hd-pre${V.pre?.choice === choice ? " is-on" : ""}" type="button" data-pre="${choice}" aria-pressed="${V.pre?.choice === choice}"><i aria-hidden="true"></i><span>${label}</span></button>`).join("")}</div>`);
+                `<button class="btn hd-pre${V.pre?.choice === choice ? " is-on" : ""}" type="button" data-pre="${choice}" aria-pressed="${V.pre?.choice === choice}"><i aria-hidden="true"></i><span>${label}</span></button>`).join("")}</div>`);
         }
         region("actions", "");
     }
 
+    // A pot fraction that comes to the same amount as the minimum, the maximum or a bigger fraction is disabled
+    // (two lit presets for one amount read as a bug); only the preset last chosen is lit.
+    function presetList(b) {
+        const seen = new Set();
+        return [["max", L("All-in", "全下")], ["pot", L("Pot", "1 池")], ["p23", L("2/3 pot", "⅔ 池")], ["p12", L("1/2 pot", "½ 池")], ["min", L("Min", "最小")]].map(([key, label]) => {
+            const to = presetTo(key, b);
+            const off = key !== "max" && key !== "min" && (to >= b.max || to <= b.min || seen.has(to));
+            seen.add(to);
+            return { key, label, to, off };
+        });
+    }
+
     function raisePanelHTML(b) {
-        const presets = [["max", L("All-in", "全下")], [1, L("Pot", "1 池")], [2 / 3, L("2/3 pot", "⅔ 池")], [1 / 2, L("1/2 pot", "½ 池")], ["min", L("Min", "最小")]];
         return `<div class="hd-raise-panel" role="group" aria-label="${L("Raise amount", "加注金额")}">
-            <div class="hd-presets">${presets.map(([f, label]) => {
-                const to = presetTo(f, b);
-                return `<button class="hd-preset${V.raise.value === to ? " is-on" : ""}" type="button" data-preset="${f}"${f !== "max" && f !== "min" && to >= b.max ? " disabled" : ""}><span>${label}</span><b>${short(to)}</b></button>`;
-            }).join("")}</div>
+            <div class="hd-presets">${presetList(b).map(({ key, label, to, off }) =>
+                `<button class="hd-preset${V.raise.preset === key ? " is-on" : ""}" type="button" data-preset="${key}"${off ? " disabled" : ""}><span>${label}</span><b>${short(to)}</b></button>`).join("")}</div>
             <div class="hd-slide">
                 <output class="hd-raise-v">${fmt(V.raise.value)}</output>
                 <div class="hd-slider" role="slider" tabindex="0" aria-valuemin="${b.min}" aria-valuemax="${b.max}" aria-valuenow="${V.raise.value}" aria-label="${L("Raise amount", "加注金额")}">
@@ -598,7 +632,7 @@ export function createTable({ ui, S, send, popups }) {
         el.setAttribute("aria-valuenow", V.raise.value);
         const out = R.raise.querySelector(".hd-raise-v");
         if (out) out.textContent = fmt(V.raise.value);
-        R.raise.querySelectorAll(".hd-preset").forEach(p => p.classList.toggle("is-on", presetTo(p.dataset.preset === "min" || p.dataset.preset === "max" ? p.dataset.preset : Number(p.dataset.preset), b) === V.raise.value));
+        R.raise.querySelectorAll(".hd-preset").forEach(p => p.classList.toggle("is-on", p.dataset.preset === V.raise.preset));
         const conf = R.actions.querySelector('[data-act="confirm"]');
         if (conf) {
             conf.querySelector("b").textContent = fmt(V.raise.value);
@@ -606,11 +640,12 @@ export function createTable({ ui, S, send, popups }) {
         }
     }
 
-    function setRaise(value) {
+    function setRaise(value, preset = null) {
         const lg = legal();
         if (!lg || !V.raise) return;
         const b = raiseBounds(lg);
         V.raise.value = Math.min(b.max, Math.max(b.min, Math.round(value)));
+        V.raise.preset = preset;
         syncSlider();
     }
 
@@ -735,7 +770,7 @@ export function createTable({ ui, S, send, popups }) {
             const lg = legal();
             if (!lg) return;
             const f = btn.dataset.preset;
-            return setRaise(presetTo(f === "min" || f === "max" ? f : Number(f), raiseBounds(lg)));
+            return setRaise(presetTo(f, raiseBounds(lg)), f);
         }
         if (btn.dataset.step) {
             const lg = legal();
@@ -754,7 +789,7 @@ export function createTable({ ui, S, send, popups }) {
     function openRaise() {
         const lg = legal();
         if (!lg?.canRaise) return;
-        V.raise = { hand: S.table.hand.id, value: presetTo("min", raiseBounds(lg)) };
+        V.raise = { hand: S.table.hand.id, value: presetTo("min", raiseBounds(lg)), preset: "min" };
         renderActions(S.table, S.me, S.table.hand);
         R.raise.querySelector(".hd-slider")?.focus({ preventScroll: true });
     }
@@ -908,6 +943,9 @@ export function createTable({ ui, S, send, popups }) {
             V.seats.forEach(v => { v.label.innerHTML = ""; v.label.classList.remove("is-on"); });
             if (!reduced() && fresh && h.street === "preflop" && !h.board.length) dealIn(h, deckPt);
         }
+        // once the hand is decided the action labels go (a fold, an all-in, a call are old news by then); only a
+        // muck still says something the table does not show
+        if (h?.done) V.seats.forEach(v => { if (v.label.classList.contains("is-on") && !v.label.querySelector(".is-muck")) v.label.classList.remove("is-on"); });
         // bets going in, labels for the actions just taken
         let betIn = false;
         t.seats.forEach((seat, i) => {
@@ -925,7 +963,7 @@ export function createTable({ ui, S, send, popups }) {
             if (seat.last && V.lastAct.get(i) !== lastKey) {
                 const show = !!prev.table && V.lastAct.has(i) || (!!prev.table && sameHand);
                 V.lastAct.set(i, lastKey);
-                if (show && !["sb", "bb"].includes(seat.last.a)) showLabel(k, seat.last);
+                if (show && !["sb", "bb", "dead"].includes(seat.last.a) && !(h?.done && seat.last.a !== "muck")) showLabel(k, seat.last);
             }
         });
         if (betIn) sound("bet");
@@ -1021,24 +1059,23 @@ export function createTable({ ui, S, send, popups }) {
         h.winners.forEach((w, j) => {
             const k = slotOf(w.seat);
             const p = V.G.seats[k];
-            fly(chipsHTML(w.amt, bb, 3), from, { x: p.x, y: p.y }, { ms: 520, delay: wait + j * 160, fade: true, cls: "is-win" });
+            fly(chipsHTML(w.amt, bb, total >= BIG_POT_BB * bb ? 5 : 3), from, { x: p.bx, y: p.by }, { ms: 520, delay: wait + j * 160, fade: true, cls: "is-win" });
             if (!j) sound("win", wait + 380);
-            V.seats[k].won.animate([{ transform: "translateY(10px) scale(.6)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 300, delay: wait + 420 + j * 160, easing: "cubic-bezier(.34, 1.4, .64, 1)", fill: "backwards" });
+            V.bets[k].animate([{ transform: "translateY(10px) scale(.6)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 300, delay: wait + 420 + j * 160, easing: "cubic-bezier(.34, 1.4, .64, 1)", fill: "backwards" });
         });
         const word = R.word.querySelector(".hd-word-in");
         if (word) word.animate([{ transform: "scale(1.6)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 260, delay: wait - 150, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
+        // quads and better: Guandan's gold rays and sparks only, half the board wide, behind the cards and centred
+        // on the hand's word (a big pot shows through its bigger chip flight instead)
         const top = h.winners.find(w => w.hand);
         const cat = top ? handCat(top.hand) : "";
-        const strong = ["quads", "straight_flush", "royal"].includes(cat);
-        if (total >= BIG_POT_BB * bb || strong) {
-            // Guandan's gold sweep (its 同花顺 burst): the bomb tiers crack the felt, which here would run over
-            // the board's cards
-            const tier = "flush";
-            const text = cat ? catName(cat, L) : L("Big pot", "大底池");
+        if (["quads", "straight_flush", "royal"].includes(cat) && !reduced()) {
+            const wordEl = R.word.querySelector(".hd-word-in");
+            const at = wordEl ? centreOf(wordEl) : { x: V.G.cx, y: V.G.boardY - 120 };
             setTimeout(() => {
                 if (V.destroyed) return;
-                fx.insertAdjacentHTML("beforeend", ui.burstHTML(tier, R.word.querySelector(".gd-word") ? "" : text, V.G.cx, V.G.boardY));
-                const set = fx.lastElementChild;
+                fxUnder.insertAdjacentHTML("beforeend", ui.burstHTML("flush", "", at.x, at.y));
+                const set = fxUnder.lastElementChild;
                 setTimeout(() => set.remove(), 1500);
             }, wait - 100);
         }
