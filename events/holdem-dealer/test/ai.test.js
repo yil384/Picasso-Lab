@@ -48,6 +48,23 @@ function checkLegal(d, L) {
   }
 }
 
+test('raises are tidy: a multiple of the small blind (of the big blind from 20 BB), or the minimum / all-in', () => {
+  let raises = 0;
+  for (const style of STYLES) {
+    const rng = seededRng(3);
+    for (const v of SPOTS) {
+      const d = decide(v, { rng, style, budget: 0.1 });
+      if (d.action !== 'raise') continue;
+      raises++;
+      const { sb, bb } = v.table.settings;
+      const L = v.me.legal;
+      const unit = d.to >= 20 * bb ? bb : sb;
+      assert.ok(d.to % unit === 0 || d.to === L.minRaiseTo || d.to === L.maxRaiseTo, `raise to ${d.to} with blinds ${sb}/${bb}`);
+    }
+  }
+  assert.ok(raises > 200, `${raises} raises`);
+});
+
 test('every decision of every personality is legal', () => {
   for (const style of STYLES) {
     const rng = seededRng(1);

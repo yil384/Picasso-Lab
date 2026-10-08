@@ -315,6 +315,10 @@ function legalize(choice, L, sp) {
       if (!L.canRaise) return call();
       let to = choice.action === 'allin' ? L.maxRaiseTo : Math.round(choice.to || 0);
       if (!Number.isFinite(to)) to = L.minRaiseTo;
+      // tidy amounts, as people bet: small blinds (big blinds from 20 BB up); a 47 reads like a machine
+      const { sb, bb } = sp.t.settings;
+      const unit = to >= 20 * bb ? bb : sb;
+      to = Math.round(to / unit) * unit;
       to = Math.max(L.minRaiseTo, Math.min(L.maxRaiseTo, to));
       // leave no awkward crumbs: within 15% of all-in means all-in
       if (to >= L.maxRaiseTo || L.maxRaiseTo - to <= 0.15 * L.maxRaiseTo) return { action: 'allin', to: L.maxRaiseTo };
