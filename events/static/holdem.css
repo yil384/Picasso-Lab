@@ -347,7 +347,7 @@ html[lang="en"] .hd-room .room-k { width: auto; min-width: calc(96 * var(--ru));
 @media (max-aspect-ratio: 1/1) {
     .hd-room-table { --seat-av: calc(52 * var(--lu)); --plate: calc(42 * var(--lu)); --act-h: calc(72 * var(--lu)); flex: none; height: calc((100vw - 24 * var(--lu) - 120 * var(--lu)) / 1.06 / 1.1 * 1.2 + 52 * var(--lu) + 42 * var(--lu) + 72 * var(--lu) + 36 * var(--lu)); }
     .hd-room-board { --ar: 1.1; --side: calc(120 * var(--lu)); }
-    .hd-room-board.is-crowded { --seat-av: calc(44 * var(--lu)); }
+    .hd-room-board.is-crowded { --seat-av: calc(40 * var(--lu)); }
     .hd-rplate > b { font-size: calc(14 * var(--lu)); }
     .hd-room .room-row.is-pills { flex-direction: column; align-items: flex-start; }
     .hd-room .hd-pills { margin-left: 0; }

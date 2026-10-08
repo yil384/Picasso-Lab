@@ -212,9 +212,12 @@ DOM_JS = """(()=>{const q=s=>document.querySelector(s);
 
 class Player(HSession):
     """One person: a browser context with its own localStorage (account token) and every frame it receives."""
+    alive = []      # every player not yet closed (close_all() between scenarios: an old page would reconnect to
+                    # the next scenario's service on the same port and recreate its account there)
 
     def __init__(self, br, vp, name, svc, client=None, lang='zh', tag=None):
         super().__init__(br, vp, tag or f'{name}-{vp}', svc)
+        Player.alive.append(self)
         self.name, self.lang = name, lang
         self.client = client if client is not None else f'c_{name.lower()}'
         self.frames = []      # [(t, raw text)]
@@ -260,6 +263,15 @@ class Player(HSession):
                 self.pid = (m.get('account') or {}).get('pid')
         ws.on('framereceived', rx)
         ws.on('framesent', lambda p: self.sent.append((time.time(), p)))
+
+    @classmethod
+    async def close_all(cls):
+        for p in cls.alive:
+            with contextlib.suppress(Exception):
+                if p.ctx:
+                    await p.ctx.close()
+            p.ctx = p.pg = None
+        cls.alive = []
 
     # ---- reading
     async def dom(self):

@@ -163,6 +163,19 @@ async def heads(br):
         await reload_mid_hand(True)
         for t in tasks:
             t.cancel()
+        # the language switches at the table (☰ → English) and back, mid-hand
+        await a.tap('[data-menu]')
+        await a.pg.wait_for_timeout(250)
+        await a.tap('[data-m="lang"]')
+        await a.pg.wait_for_timeout(600)
+        en = await a.pg.evaluate("(document.querySelector('.hd-code')||{}).textContent + ' | ' + (document.querySelector('.hd-mark')||{}).textContent")
+        await a.shot('heads-en')
+        await a.tap('[data-menu]')
+        await a.pg.wait_for_timeout(250)
+        await a.tap('[data-m="lang"]')
+        await a.pg.wait_for_timeout(600)
+        zh = await a.pg.evaluate("(document.querySelector('.hd-code')||{}).textContent + ' | ' + (document.querySelector('.hd-mark')||{}).textContent")
+        sc.check('the language switches at the table and back', en.startswith('Table') and 'Blinds' in en and zh.startswith('房间') and '盲注' in zh, f'{en} / {zh}')
         hands = await play([a, b], {'Ann': mixed, 'Bo': station}, 10, svc, extra=lambda: showdowns(done_hands([a, b])) >= 2)
         sc.info['hands_played'] = len(hands)
         sc.check('10+ hands to the end, 2+ showdowns', len(hands) >= 10 and showdowns(hands) >= 2, f'{len(hands)} hands, {showdowns(hands)} showdowns')
@@ -687,6 +700,8 @@ async def main(names):
                 traceback.print_exc()
                 sc = RESULTS.get(n) or Scenario(n)
                 sc.check('scenario ran to the end', False, repr(e))
+            finally:
+                await Player.close_all()
     ok = True
     for n, sc in RESULTS.items():
         print(json.dumps({'scenario': n, 'pass': sc.passes, 'fail': sc.fails, **sc.info}, ensure_ascii=False))
