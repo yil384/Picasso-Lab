@@ -15,7 +15,7 @@ services:
   # is not loopback is refused. The peer address cannot do this job: the published port goes through docker-proxy, so
   # Caddy, other containers and every user on the host all arrive from this network's gateway (10.77.77.1); do not use
   # WEB_TRUSTED_PROXIES here. Turn it on Caddy first, then .env and a restart of the agent: an agent without the secret
-  # ignores the header, while an agent with it refuses everything Caddy sends without it (docs/SWITCH.md, step 4).
+  # ignores the header, while an agent with it refuses everything Caddy sends without it (docs/SWITCH.md, step 3).
   # WEB_MCP_GAMES_PER_ADDRESS (live MCP games per address; probe T8) may go there too.
   # The Paper whitelist (ROADMAP M0 item 7) needs nothing in .env: MC_WHITELIST below and paper-entry.sh (white-list,
   # enforce-whitelist, hide-online-players) go out in the same deploy, so Paper and the agent switch together.

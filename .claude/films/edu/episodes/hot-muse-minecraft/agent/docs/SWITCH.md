@@ -13,12 +13,17 @@ the FRAS Caddy (`~/workspace/FRAS/caddy-config/Caddyfile`, container `fras-caddy
 agent folder; the others on picasso (`ssh picasso`).
 
 The steps go in this order and each one leaves production working. Every step that restarts the agent or Paper ends
-the games in progress, so each starts with the idle check of section 1.
+the games in progress, so each starts with the idle check of section 1. Apart from the deploy itself (`push.sh`), the
+agent is only ever recreated with `deploy/recreate.sh`, which checks again and stops while a bot is in use (it also
+recreates a running stream or camera with the agent: they live in its network namespace, and a bare `docker compose
+up -d --no-deps --force-recreate agent` leaves them in the removed one's, cut off without an error). Each Caddy reload (step 3) closes every WebSocket that
+Caddy proxies on picasso: open live views (`/watch`, `/eyes`) on play and play-staging drop and reconnect, and so do
+other sites' sockets (the web IDEs); reload only while production is idle.
 
 | Step | What changes | Visitors notice |
 | --- | --- | --- |
 | 2. Deploy (gate 1) | the code of this commit, the image with the runtime, an init, the bot data folder, the Paper whitelist; still our body | games in progress end once |
-| 3. Proxy secret | Caddy sends a secret; the agent believes forwarded addresses only with it | nothing |
+| 3. Proxy secret | Caddy sends a secret; the agent believes forwarded addresses only with it | games in progress end once (3b's agent recreate, and its undo); open live views drop at each Caddy reload and reconnect |
 | 4. The switch | `BODY=mineai` in `deploy/.env` | games in progress end once |
 | 5. Rollback (if needed) | `BODY=ours` | games in progress end once |
 
@@ -32,26 +37,33 @@ earlier fixes too; staging has run them since 2026-10-07.
 | Check | Command | Expected |
 | --- | --- | --- |
 | gate 2 passed | the soak's numbers (report, section 1; README, "Gates before the switch") | strict iron route at least 7 of 10 one at a time and 6 of 8 at once with today's build; 0 heartbeat restarts and 0 watchdog stops; a whole 30-minute lease; one Muse run through the gateway that finishes the iron route (2026-10-08: all but the Muse run; 10 of 10, 6 of 8, 0 in 23 games, the lease ended at 30.0 min) |
-| the commit's tests (Mac) | `npm test` | `ℹ pass 250`, `ℹ fail 0` (252 tests, 2 skipped) |
+| the commit's tests (Mac) | `npm test` | `ℹ pass 258`, `ℹ fail 0` (260 tests, 2 skipped) |
 | staging runs this commit (Mac) | `deploy/push.sh` | ends with `push: staging runs this code and passed its checks; deploy/push.sh --prod also puts it in production` |
 | staging's runtime is the pin plus eight patches | `docker exec muse-staging-agent-1 node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --check` | `/opt/mine-ai-mcp: 2fe1306 with 8 patches, dependencies installed` |
 | production is idle (Mac) | `curl -s https://play.picasso-lab.com/ \| grep -o 'Bots in use: [0-9]* of [0-9]*'` | `Bots in use: 0 of 8` |
 | disk | `df -h /ssd2` | at least 5 GB available (96% used, 162 GB free on 2026-10-08) |
+| stream and camera off (picasso) | `ls ~/workspace/muse-minecraft/app/deploy/` | no `stream.env`, no `camera.env` (2026-10-08: neither). With either there, `recreate.sh` recreates it with the agent, but neither has run with `BODY=mineai` yet: try it on staging first |
 
-Backups, once, before step 2 (picasso). The `.env` copies go to a folder of their own, never into `app/deploy`:
-`push.sh` copies `deploy/` with `rsync --delete`, which keeps only `.env`, `stream.env` and `camera.env` there, so a
-backup next to them is gone after the next deploy (on staging one was, 2026-10-08).
+Backups, once, before step 2 (picasso). They go to a folder of their own, never into `app/deploy` (`push.sh` copies
+`deploy/` with `rsync --delete`, which keeps only `.env`, `stream.env` and `camera.env` there, so a backup next to them
+is gone after the next deploy; on staging one was, 2026-10-08) nor into `app/data` (root's: Paper runs as root).
 
 ```sh
 cd ~/workspace/muse-minecraft/app
 T=$(date +%Y%m%d-%H%M%S); B=~/workspace/muse-minecraft/backups; mkdir -p $B && chmod 700 $B
-cp -p deploy/.env $B/env.bak-$T                           # mode 600 stays
-cp -p data/server.properties data/server.properties.bak-$T
-docker tag muse-minecraft-agent:latest muse-minecraft-agent:pre-switch   # the images production runs now
-docker tag muse-minecraft-paper:latest muse-minecraft-paper:pre-switch
+cp -p deploy/.env $B/env.bak-$T                                 # mode 600 stays
+cp data/server.properties $B/server.properties.bak-$T            # a record: the old Paper image rewrites it at start
+# the deployed files (src, scripts, deploy with its .env, server, test, paper.jar, plugins, ...), what the undo of
+# step 2 puts back; not the world, the logs or the bot data. Once: a second run keeps the first archive and tags
+[ -e $B/app-pre-switch.tgz ] || (umask 077; tar -czf $B/app-pre-switch.tgz --exclude=./data --exclude=./logs --exclude=./mineai-data .)
+docker image inspect muse-minecraft-agent:pre-switch >/dev/null 2>&1 || docker tag muse-minecraft-agent:latest muse-minecraft-agent:pre-switch
+docker image inspect muse-minecraft-paper:pre-switch >/dev/null 2>&1 || docker tag muse-minecraft-paper:latest muse-minecraft-paper:pre-switch
+tar -tzf $B/app-pre-switch.tgz ./deploy/compose.yaml ./src/web.js
 ```
 
-Expected: no output. `docker images muse-minecraft-agent` then lists `latest` and `pre-switch` with the same image id.
+Expected: only the last command prints, `./deploy/compose.yaml` and `./src/web.js`. The archive is about 140 MB
+(mode 600; a rehearsal in a scratch folder on 2026-10-08: 138 MB, nothing of `data` or `logs` in it).
+`docker images muse-minecraft-agent` then lists `latest` and `pre-switch` with the same image id.
 
 ## 2. Deploy the production config (gate 1), still with our body
 
@@ -100,18 +112,22 @@ Checks:
 | the data folder | `ls -ld ~/workspace/muse-minecraft/app/mineai-data` | `drwx------ ... yichen yichen ... mineai-data` |
 | still our body | `docker logs muse-minecraft-agent-1 2>&1 \| grep -c 'body: Mine AI MCP'` | `0` |
 
-Undo step 2 (the old code and images): restore the backups and recreate both containers from the `pre-switch` images,
-without building:
+Undo step 2 (after undoing 4 and 3b, if they were done): the `pre-switch` images and the archived files, then both
+containers recreated from those images, without building:
 
 ```sh
 cd ~/workspace/muse-minecraft/app
 docker tag muse-minecraft-agent:pre-switch muse-minecraft-agent:latest
 docker tag muse-minecraft-paper:pre-switch muse-minecraft-paper:latest
-cp -p data/server.properties.bak-<T> data/server.properties
-cd deploy && docker compose up -d --no-build --force-recreate
+tar -tzf ../backups/app-pre-switch.tgz >/dev/null && rm -rf src scripts mineai plugins && tar -xzf ../backups/app-pre-switch.tgz --exclude=./deploy/.env --exclude=./deploy/stream.env --exclude=./deploy/camera.env
+sh deploy/recreate.sh production all
 ```
 
-(then `deploy/push.sh --prod` from the old commit to put the old files back as well).
+The extraction overwrites `deploy/` with the old compose file, Dockerfiles and `push.sh`; the files step 2 added to
+`deploy/` (this runbook's `recreate.sh` among them) stay and do nothing. `data/server.properties` needs nothing: the
+old Paper image rewrites it at every start without the whitelist lines, so the server starts with `white-list=false`
+again (`grep '^white-list=' data/server.properties`). Production then runs exactly what it ran before step 2; the next
+`deploy/push.sh --prod` from the Mac deploys whatever that checkout holds.
 
 ## 3. The proxy secret (ROADMAP M0 item 6), staging first
 
@@ -128,41 +144,66 @@ The secret lives in a file in `caddy-config/priv/` (mode 700, mounted read-only 
 Caddyfile (which is mode 664). Checked on picasso with the FRAS Caddy image (v2.11.2) in a throwaway container
 (2026-10-08): the header carried exactly the file's contents, with or without a trailing newline.
 
+`deploy/caddy-proxy-line.py add|remove staging|production` (python3, on picasso) makes the Caddy change, and only
+that: it adds (or removes) the one line `header_up X-Muse-Proxy {file./etc/caddy/priv/<secret file>}` right after the
+site's `reverse_proxy` line, writes `Caddyfile.new`, prints the diff, has the Caddy container validate it, checks
+that nobody saved the Caddyfile meanwhile, moves it into place and reloads; any stop before the move leaves the live
+Caddyfile as it was. The Caddyfile is shared (FRAS, the lab dashboard, tritongym, poker, lab-publish, the web IDEs;
+another job added poker.picasso-lab.com on 2026-10-08), so the undo is `remove`, never a copy of an older Caddyfile,
+which would drop whatever was added since. The copy the script keeps, `Caddyfile.bak-<time>-<add|remove>-<site>`,
+is a record only.
+
+Both tools were checked on 2026-10-08 (`test/switch.test.js` runs them against stand-ins): `caddy-proxy-line.py` on
+picasso against a copy of the live Caddyfile in a throwaway container of FRAS's Caddy image (`caddy:2-alpine`, no
+network): add for both sites, then a new site block appended, then remove for both, left a file identical to the
+copy plus the new block, and the loaded config carried
+`"X-Muse-Proxy":["{file./etc/caddy/priv/muse-staging-proxy-secret}"]` after the add; a block Caddy refuses stopped it
+with the file untouched. `recreate.sh staging` on staging: idle check, the agent recreated, `Bots in use: 0 of 8`
+and `body: Mine AI MCP` again within seconds.
+
 ### 3a. Staging (the rehearsal)
 
+Caddy first (picasso):
+
 ```sh
-cd ~/workspace/FRAS/caddy-config
-(umask 077; openssl rand -hex 24 | tr -d '\n' > priv/muse-staging-proxy-secret)
-T=$(date +%Y%m%d-%H%M%S); cp -p Caddyfile Caddyfile.bak-$T
-python3 - Caddyfile Caddyfile.new play-staging.picasso-lab.com 7851 muse-staging-proxy-secret <<'PY'
-import sys
-src, dst, host, port, name = sys.argv[1:]
-s = open(src).read()
-head = f"{host} {{\n\treverse_proxy 172.24.0.1:{port} {{\n"
-assert s.count(head) == 1, f"the {host} block is not as expected"
-assert f"priv/{name}" not in s, "already there"
-s = s.replace(head, head + f"\t\theader_up X-Muse-Proxy {{file./etc/caddy/priv/{name}}}\n")
-open(dst, "w").write(s)
-PY
-diff Caddyfile Caddyfile.new
-docker exec fras-caddy-1 caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile 2>&1 | tail -1
-mv Caddyfile.new Caddyfile && chmod 664 Caddyfile
-docker exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+cd ~/workspace/FRAS/caddy-config &&
+{ [ -e priv/muse-staging-proxy-secret ] || (umask 077; openssl rand -hex 24 | tr -d '\n' > priv/muse-staging-proxy-secret); } &&
+python3 ~/workspace/muse-staging/app/deploy/caddy-proxy-line.py add staging &&
 curl -s -o /dev/null -w '%{http_code}\n' https://play-staging.picasso-lab.com/
 ```
 
-Expected: the diff shows one added line,
-`> 		header_up X-Muse-Proxy {file./etc/caddy/priv/muse-staging-proxy-secret}`; then `Valid configuration`; the reload
-prints nothing (or an INFO line); the page `200`.
+Expected (the line numbers vary):
 
-Then the agent:
+```
+--- Caddyfile
++++ Caddyfile.new
+@@ -94,2 +94,3 @@
+ 	reverse_proxy 172.24.0.1:7851 {
++		header_up X-Muse-Proxy {file./etc/caddy/priv/muse-staging-proxy-secret}
+ 		header_up X-Forwarded-Proto {scheme}
+Valid configuration
+caddy: play-staging.picasso-lab.com sends X-Muse-Proxy; reloaded (the file before: Caddyfile.bak-<time>-add-staging, a record only, never copied back)
+200
+```
+
+A line starting `caddy: STOPPED, nothing changed:` says why (the block is not as expected, the secret file is
+missing, `caddy validate` refused, or another session saved the Caddyfile meanwhile: run it again); the Caddyfile is
+untouched. Exit 2 (`the reload failed`) leaves the validated file on disk and Caddy on its old config: run the reload
+it prints again.
+
+Then the agent; the first line makes sure Caddy has the line:
 
 ```sh
-cd ~/workspace/muse-staging/app/deploy
-B=~/workspace/muse-staging/backups; mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S)
-printf 'WEB_PROXY_SECRET=%s\n' "$(cat ~/workspace/FRAS/caddy-config/priv/muse-staging-proxy-secret)" >> .env
-docker compose -p muse-staging -f staging.compose.yaml up -d --no-deps --force-recreate agent
+grep -q 'priv/muse-staging-proxy-secret}' ~/workspace/FRAS/caddy-config/Caddyfile &&
+cd ~/workspace/muse-staging/app/deploy &&
+B=~/workspace/muse-staging/backups && mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S) &&
+{ grep -q '^WEB_PROXY_SECRET=' .env || printf 'WEB_PROXY_SECRET=%s\n' "$(cat ~/workspace/FRAS/caddy-config/priv/muse-staging-proxy-secret)" >> .env; } &&
+sh recreate.sh staging
 ```
+
+Expected: `recreate: staging is idle (Bots in use: 0)`, `recreate: agent`, the four `Container muse-staging-agent-1
+Recreate ... Started` lines and the services' status. If it stops with `recreate: STOPPED, nothing changed: N bot(s)
+in use`, `.env` already has the secret: run `sh recreate.sh staging` again once the games have ended.
 
 Checks:
 
@@ -177,54 +218,84 @@ Checks:
 If the page answers 403 after the agent step, Caddy is not sending the secret: take the agent back first (the undo
 below), then look at the Caddy block.
 
+Undo 3a (the reverse order, the agent first, then Caddy; one chain, so Caddy keeps the line while the agent still
+wants it):
+
+```sh
+cd ~/workspace/muse-staging/app/deploy && sed -i '/^WEB_PROXY_SECRET=/d' .env && sh recreate.sh staging &&
+python3 ~/workspace/muse-staging/app/deploy/caddy-proxy-line.py remove staging
+```
+
+Expected: the recreate lines, then a diff with the one `-		header_up X-Muse-Proxy {file./etc/caddy/priv/muse-staging-proxy-secret}`
+line, `Valid configuration` and `caddy: play-staging.picasso-lab.com no longer sends X-Muse-Proxy; reloaded (...)`.
+Every other site block, including any added after 3a, stays as it is now.
+
 ### 3b. Production
 
-The same, with production's names: secret file `priv/muse-play-proxy-secret`; in the python line
-`play.picasso-lab.com 7850 muse-play-proxy-secret`; the agent:
+Idle check first (section 1): the agent recreate ends the games in progress, and the reload drops production's open
+live views. Then on picasso, Caddy:
 
 ```sh
-cd ~/workspace/muse-minecraft/app/deploy
-B=~/workspace/muse-minecraft/backups; mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S)
-printf 'WEB_PROXY_SECRET=%s\n' "$(cat ~/workspace/FRAS/caddy-config/priv/muse-play-proxy-secret)" >> .env
-docker compose up -d --no-deps --force-recreate agent
+cd ~/workspace/FRAS/caddy-config &&
+{ [ -e priv/muse-play-proxy-secret ] || (umask 077; openssl rand -hex 24 | tr -d '\n' > priv/muse-play-proxy-secret); } &&
+python3 ~/workspace/muse-minecraft/app/deploy/caddy-proxy-line.py add production &&
+curl -s -o /dev/null -w '%{http_code}\n' https://play.picasso-lab.com/
 ```
 
-Expected: the same table with `https://play.picasso-lab.com/` (200, forged header 200) and `http://172.24.0.1:7850/`
-(403); the next `deploy/push.sh --prod` no longer prints the `WEB_PROXY_SECRET` note.
-
-Undo (the reverse order: the agent first, then Caddy):
+Expected: as in 3a, with `reverse_proxy 172.24.0.1:7850`, `priv/muse-play-proxy-secret`, `caddy: play.picasso-lab.com
+sends X-Muse-Proxy; reloaded (...)` and `200`. Then the agent:
 
 ```sh
-cd ~/workspace/muse-minecraft/app/deploy && sed -i '/^WEB_PROXY_SECRET=/d' .env && docker compose up -d --no-deps --force-recreate agent
-cd ~/workspace/FRAS/caddy-config && cp -p Caddyfile.bak-<T> Caddyfile && docker exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+grep -q 'priv/muse-play-proxy-secret}' ~/workspace/FRAS/caddy-config/Caddyfile &&
+cd ~/workspace/muse-minecraft/app/deploy &&
+B=~/workspace/muse-minecraft/backups && mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S) &&
+{ grep -q '^WEB_PROXY_SECRET=' .env || printf 'WEB_PROXY_SECRET=%s\n' "$(cat ~/workspace/FRAS/caddy-config/priv/muse-play-proxy-secret)" >> .env; } &&
+sh recreate.sh production
 ```
 
-(Staging: its `.env` and `-p muse-staging -f staging.compose.yaml`.) `WEB_MCP_GAMES_PER_ADDRESS` can go into the same
-`.env` once probe T8 has measured how many Muse users share an address.
+Expected: `recreate: production is idle (Bots in use: 0)`, `recreate: agent` (`agent stream` / `agent camera` when
+those are on), the `Container muse-minecraft-agent-1 Recreate ... Started` lines and the services' status; then the
+same table as 3a with `https://play.picasso-lab.com/` (200, forged header 200) and `http://172.24.0.1:7850/` (403); the
+next `deploy/push.sh --prod` no longer prints the `WEB_PROXY_SECRET` note.
+
+Undo 3b (idle check first; the agent, then Caddy, in one chain):
+
+```sh
+cd ~/workspace/muse-minecraft/app/deploy && sed -i '/^WEB_PROXY_SECRET=/d' .env && sh recreate.sh production &&
+python3 ~/workspace/muse-minecraft/app/deploy/caddy-proxy-line.py remove production
+```
+
+Expected: as the undo of 3a, for `play.picasso-lab.com`; staging's line stays. `WEB_MCP_GAMES_PER_ADDRESS` can go into
+the same `.env` once probe T8 has measured how many Muse users share an address.
 
 ## 4. The switch
 
 Idle check first (section 1). Then on picasso:
 
 ```sh
-cd ~/workspace/muse-minecraft/app/deploy
-B=~/workspace/muse-minecraft/backups; mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S)
-cat >> .env <<'E'
-BODY=mineai
-MINEAI_DIR=/opt/mine-ai-mcp
-MINEAI_DATA_DIR=/mineai-data
-E
-docker compose up -d --no-deps --force-recreate agent
+cd ~/workspace/muse-minecraft/app/deploy &&
+B=~/workspace/muse-minecraft/backups && mkdir -p $B && chmod 700 $B && cp -p .env $B/env.bak-$(date +%Y%m%d-%H%M%S) &&
+sed -i '/^\(BODY\|MINEAI_DIR\|MINEAI_DATA_DIR\)=/d' .env &&
+printf 'BODY=mineai\nMINEAI_DIR=/opt/mine-ai-mcp\nMINEAI_DATA_DIR=/mineai-data\n' >> .env &&
+sh recreate.sh production
 ```
 
-(`docker compose restart` would keep the old environment; `up --force-recreate` reads `.env` again.) Expected:
+(`docker compose restart` would keep the old environment; `recreate.sh` runs `up --force-recreate`, which reads `.env`
+again.) Expected:
 
 ```
+recreate: production is idle (Bots in use: 0)
+recreate: agent
  Container muse-minecraft-agent-1  Recreate
  Container muse-minecraft-agent-1  Recreated
  Container muse-minecraft-agent-1  Starting
  Container muse-minecraft-agent-1  Started
+agent: Up Less than a second
+paper: Up ...
 ```
+
+If it stops with `recreate: STOPPED, nothing changed: N bot(s) in use`, `.env` already says `BODY=mineai`: run
+`sh recreate.sh production` again once the games have ended.
 
 Smoke checks:
 
@@ -250,14 +321,15 @@ run that cannot finish the iron route) mean the rollback.
 Mac:
 
 ```sh
-ssh picasso 'cd ~/workspace/muse-minecraft/app/deploy && sed -i "s/^BODY=.*/BODY=ours/" .env && docker compose up -d --no-deps --force-recreate agent'
+ssh picasso 'cd ~/workspace/muse-minecraft/app/deploy && sed -i "s/^BODY=.*/BODY=ours/" .env && sh recreate.sh production'
 ```
 
-Expected: the four `Container muse-minecraft-agent-1 Recreate ... Started` lines; then
+Expected: the `recreate:` lines and the four `Container muse-minecraft-agent-1 Recreate ... Started` lines; then
 `docker logs --since 1m muse-minecraft-agent-1 2>&1 | grep -c 'body: Mine AI MCP'` is `0` and
-`node scripts/staging-check.mjs https://play.picasso-lab.com --production` passes with our body. Games in progress end.
-The `MINEAI_*` lines may stay; our body ignores them. To switch again: `sed -i "s/^BODY=.*/BODY=mineai/" .env` and the
-same `up`.
+`node scripts/staging-check.mjs https://play.picasso-lab.com --production` passes with our body. While a bot is in
+use it stops (`.env` already says `ours`); when the rollback cannot wait, `MUSE_NOW=1 sh recreate.sh production` goes
+on and the games in progress end. A running stream or camera is recreated with the agent. The `MINEAI_*` lines may
+stay; our body ignores them. To switch again: `sed -i "s/^BODY=.*/BODY=mineai/" .env && sh recreate.sh production`.
 
 ## 6. After the switch
 

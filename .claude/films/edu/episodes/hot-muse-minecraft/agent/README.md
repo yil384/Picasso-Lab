@@ -49,6 +49,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `deploy/Dockerfile.camera`, `deploy/camera/` | the camera image: Java 21, the 1.21.4 client (`install-client.mjs`, SHA-1 checked, no sounds), `CameraMain.java` (the token from the environment, never the command line), Xvfb, Mesa, VirtualGL, ffmpeg |
 | `deploy/camera-test.compose.yaml` | a separate test project on picasso (`muse-camera-test`: own Paper, agent, camera, network; shares nothing with production) |
 | `deploy/push.sh`, `deploy/staging.compose.yaml` | deploys to picasso: staging first (play-staging.picasso-lab.com), production with `--prod` only after the staging checks pass (section "Staging and deploys") |
+| `deploy/recreate.sh`, `deploy/caddy-proxy-line.py` | the runbook's tools on picasso (`docs/SWITCH.md`): recreate the agent after a `.env` change (idle check first, never a build, a running stream or camera recreated with it); add or remove the one `X-Muse-Proxy` line of a site in the shared FRAS Caddyfile (validated, refused if another session saved the file meanwhile, never a restore of an old copy) |
 | `scripts/staging-check.mjs` | the staging checks: the page, `openapi.json`, `/mcp`, a scripted game to a wooden pickaxe (strict, no model) |
 | `scripts/probe.mjs` | latency and $ per call: effort x cache on/off x Chat/Responses, CSV per call |
 | `scripts/run-goal.mjs` | one goal from the command line (real server, or the mock and the fake bot), JSONL log, HUD table |
@@ -1190,6 +1191,15 @@ Every failure, with its cause:
 - An operations slip, no game affected: a backup of staging's `deploy/.env` made inside `app/deploy` was deleted by
   the next `push.sh`, whose `rsync --delete` keeps only `.env`, `stream.env` and `camera.env` there. `docs/SWITCH.md`
   now keeps its backups in `~/workspace/<project>/backups` (mode 700).
+- A review of the runbook (2026-10-08) found six gaps, each fixed in `docs/SWITCH.md`: the Caddy undo restored a whole
+  older copy of the shared Caddyfile (dropping whatever other projects added since, such as that day's poker block) and
+  did not say which of two backups; the forward edit moved the new file in even when `caddy validate` failed; step 3
+  claimed visitors notice nothing although its agent recreate ends games and every reload drops the live views; two
+  backup commands wrote into Paper's root-owned `data/`; a bare agent recreate leaves a running stream or camera in the
+  old agent's network namespace; and the undo of step 2 named no commit for the old files. Now
+  `deploy/caddy-proxy-line.py` adds or removes only the one header line (validate, a check that nobody saved the file
+  meanwhile, then move and reload), `deploy/recreate.sh` is the only agent recreate (idle check, no build, stream and
+  camera with it), and section 1 archives production's deployed files for the undo (`backups/app-pre-switch.tgz`).
 
 Against the gate (`docs/SWITCH.md`, section 1): at least 7 of 10 one at a time (10 of 10), at least 6 of 8 at once (6 of
 8, at the line), 0 heartbeat restarts and 0 watchdog stops (0 in 23 games), a whole 30-minute lease (yes): the
