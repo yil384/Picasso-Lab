@@ -224,7 +224,9 @@ async def six(br):
         # Cy leaves in the middle of a hand through ☰ -> 返回大厅 (confirm: folds, chips go back)
         stop = playing([a, b], 99, svc, cap=240)
         tasks = [asyncio.ensure_future(p.autoplay(mixed, stop)) for p in (a, b, c)]
-        ok = await until(lambda: c.hand and not c.hand['done'] and seats_of(c)[c.seat]['inHand'] and c.hand['toAct'] != c.seat and c.hand['board'], 120, .05)
+        # betting must still be live for Cy (not all in, no run-out): a leaver with no decision left plays the hand out
+        ok = await until(lambda: c.hand and not c.hand['done'] and seats_of(c)[c.seat]['inHand'] and seats_of(c)[c.seat]['state'] == 'playing'
+                         and c.hand['toAct'] is not None and c.hand['toAct'] != c.seat and c.hand['board'], 120, .05)
         c.paused = True
         sc.check('leave: reached a hand where Cy is in and not to act', bool(ok))
         token_c = await c.token()
