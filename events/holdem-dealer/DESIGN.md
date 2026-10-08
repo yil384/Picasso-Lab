@@ -270,6 +270,9 @@ Times: `deadline` and `serverTime` are server epoch ms; clients compute `offset 
   at once with `postBB` (they post a BB in addition to the blinds; one who lands in the small blind posts the SB live
   plus the rest of a BB dead). At the very first hand of a table all seated players are dealt in, and a brand-new seat
   at a heads-up table is dealt in at once; a player back from sitting out at a heads-up table still waits for the BB.
+  An account that played at the table and stood up less than 15 minutes ago (`recent`, by account) sits back down as
+  a returning player (`returning`): it waits for the BB like one back from sitting out, so standing and re-seating
+  never dodges the big blind or makes someone else post it twice.
 - Betting: pre-flop action starts left of the BB; after the flop, left of the button. Minimum bet = BB. A raise must
   raise by at least the largest bet or raise increment of this street (pre-flop the BB counts as the opening bet).
   All-in for less than a full raise does **not** reopen betting for players who have already acted and face only that

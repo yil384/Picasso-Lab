@@ -45,6 +45,10 @@ export const BLINDS = { '5/10': [5, 10], '10/20': [10, 20], '25/50': [25, 50], '
 export const ACTION_SECS = [15, 20, 30];
 export const BOT_STYLES = ['steady', 'fierce', 'sly', 'veteran'];
 const BOT_NAMES = { steady: 'Stone', fierce: 'Blaze', sly: 'Fox', veteran: 'Sage' };
+// an account that played here and stood up within this long sits back down as a returning player (it waits for
+// the big blind like one back from sitting out), so standing and sitting again never dodges the big blind
+export const REJOIN_MS = 15 * 60_000;
+
 export const TIMING = {
   street: 700, // closed street -> next card(s)
   runout: 1200, // all-in run-out, per street
@@ -232,6 +236,8 @@ export class HoldemTable {
         id: account.id, pid: account.pid ?? null, name: account.name, stack: buyIn, now: st.now,
         bankMs: this._bankStart(), waiting: st.phase === 'running' && st.handNo > 0,
       });
+      const left = st.recent && st.recent[account.id];
+      if (Number.isFinite(left) && st.now - left < REJOIN_MS) st.seats[seat].returning = true;
       st.queue.chips.push({ accountId: account.id, amount: -buyIn, reason: 'buyin' });
       if (!st.host) st.host = { id: account.id, pid: account.pid ?? null };
       else if (st.host.id === account.id && !st.host.pid) st.host.pid = account.pid ?? null;
@@ -717,6 +723,13 @@ export class HoldemTable {
     if (!s.bot) {
       const amount = s.stack + s.pendingTopUp;
       if (amount > 0) this.s.queue.chips.push({ accountId: s.id, amount, reason: 'cashout' });
+      if (s.handsDealt > 0 || s.returning) {
+        const now = this.s.now;
+        const recent = {};
+        for (const [id, at] of Object.entries(this.s.recent || {})) if (now - at < REJOIN_MS) recent[id] = at;
+        recent[s.id] = now;
+        this.s.recent = recent;
+      }
     }
     this.s.seats[seat] = null;
   }
@@ -741,7 +754,7 @@ export class HoldemTable {
     else if (R.length === 2 && W.length) {
       // a brand-new seat at a heads-up table is dealt in at once; a player back from sitting out still waits for
       // the big blind (or posts one)
-      const fresh = W.filter((i) => st.seats[i].handsDealt === 0);
+      const fresh = W.filter((i) => st.seats[i].handsDealt === 0 && !st.seats[i].returning);
       R = [...R, ...fresh].sort((a, b) => a - b);
       W = W.filter((i) => !fresh.includes(i));
     }
@@ -794,6 +807,7 @@ export class HoldemTable {
       s.startStack = s.stack;
       s.waiting = false;
       s.sitOutMissed = false;
+      s.returning = false;
       s.handsDealt++;
       if (s.handsDealt % TIMING.bankEvery === 0) s.bankMs = Math.min(s.bankMs + TIMING.bankStep, TIMING.bankCap);
     }

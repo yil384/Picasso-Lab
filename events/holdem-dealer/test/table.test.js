@@ -1,7 +1,7 @@
 // HoldemTable: rules of DESIGN.md section 7 on rigged decks, driven exactly like the rooms layer will drive it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HoldemTable, TIMING, normalizeSettings } from '../src/engine/table.js';
+import { HoldemTable, TIMING, REJOIN_MS, normalizeSettings } from '../src/engine/table.js';
 import { publicTable, me } from '../src/views.js';
 import { seededRng } from '../src/engine/cards.js';
 import { decide } from '../src/engine/ai.js';
@@ -769,6 +769,40 @@ test('blinds: no dodging the big blind by sitting out three-handed; nobody posts
   assert.ok(t.hand.dealt.includes(dodger));
   assert.equal(t.hand.bbSeat, dodger, 'dealt back in on the big blind');
   assert.equal(t.hand.dealt.length, 3);
+});
+
+for (const seed of [1, 2, 3]) {
+  test(`standing up and sitting straight back down never dodges the big blind (seed ${seed})`, () => {
+    const t = makeTable({ seats: [0, 1, 2], rng: riggedRng(seed) });
+    foldAround(t);
+    assert.equal(t.hand.done, true);
+    const h1bb = t.hand.bbSeat;
+    const dodger = [0, 1, 2].find((i) => i !== h1bb && i !== t.hand.button); // due the big blind next hand
+    assert.equal(t.stand(`u_${dodger}`, t.s.now).ok, true);
+    assert.equal(t.seats[dodger], null);
+    assert.equal(t.sit(acct(dodger), 5, 2000, t.s.now).ok, true);
+    assert.equal(t.seats[5].returning, true);
+    until(t, (x) => x.hand && x.hand.no === 2);
+    assert.ok(!t.hand.dealt.includes(5), 'the re-seated player waits for the big blind');
+    assert.notEqual(t.hand.bbSeat, h1bb, 'nobody posts the big blind twice running');
+    for (let k = 0; k < 4 && !t.hand.dealt.includes(5); k++) { foldAround(t); until(t, (x) => x.hand && !x.hand.done); }
+    assert.ok(t.hand.dealt.includes(5));
+    assert.equal(t.hand.bbSeat, 5, 'dealt back in on the big blind');
+  });
+}
+
+test('a player who never played here, or left long ago, is still dealt in at once at a heads-up table', () => {
+  const t = makeTable({ seats: [0, 1], rng: riggedRng(4) });
+  foldAround(t);
+  assert.equal(t.sit(acct(4), 4, 2000, t.s.now).ok, true);
+  assert.equal(t.seats[4].returning, undefined);
+  until(t, (x) => x.hand && x.hand.no === 2);
+  assert.ok(t.hand.dealt.includes(4));
+  foldAround(t);
+  assert.equal(t.stand('u_4', t.s.now).ok, true);
+  t._clock(t.s.now + REJOIN_MS);
+  assert.equal(t.sit(acct(4), 3, 2000, t.s.now).ok, true);
+  assert.equal(t.seats[3].returning, undefined, 'the window has passed');
 });
 
 test('postBB in the small blind posts a full big blind: the small blind live, the rest dead (in the pot)', () => {
