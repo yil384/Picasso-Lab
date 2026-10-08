@@ -242,9 +242,9 @@ test('mcp: one deadline per call; a result that outlives its call goes out once 
   t0 = Date.now();
   r = text(await c.callTool({ name: 'play', arguments: { skill: 'collect', args: { block: 'oak_log', n: 3 } } }));
   assert.ok(Date.now() - t0 < 600, `the reply came within the call's budget (${Date.now() - t0} ms)`);
-  assert.match(r, /^Finished since your last call:\ngo_to \{"x":6,"y":64,"z":0\}: ok: go_to done\n\ncollect .*: still running/, 'go_to is reported, not lost');
+  assert.match(r, /^Finished since your last call:\nFrom your play #1, sent \d+ s ago:\ngo_to \{"x":6,"y":64,"z":0\}: ok: go_to done\n\ncollect .*: still running/, 'go_to is reported, not lost');
   r = text(await c.callTool({ name: 'get_state', arguments: {} }));
-  assert.match(r, /^Finished since your last call:\ncollect \{"block":"oak_log","n":3\}: ok: collect done \[\+3 oak_log\]\n\nState/);
+  assert.match(r, /^Finished since your last call:\nFrom your play #2, sent \d+ s ago:\ncollect \{"block":"oak_log","n":3\}: ok: collect done \[\+3 oak_log\]\n\nState/);
   r = text(await c.callTool({ name: 'get_state', arguments: {} }));
   assert.match(r, /^State/, 'each result goes out once');
 });
@@ -259,7 +259,7 @@ test('mcp: a client that gives up before the result loses nothing; the next call
   );
   await sleep(400);
   const r = text(await c.callTool({ name: 'get_state', arguments: {} }));
-  assert.match(r, /^Finished since your last call:\ncollect \{"block":"oak_log","n":3\}: ok: collect done \[\+3 oak_log\]/);
+  assert.match(r, /^Finished since your last call:\nFrom your play #1, sent \d+ s ago:\ncollect \{"block":"oak_log","n":3\}: ok: collect done \[\+3 oak_log\]/);
 });
 
 test('mcp: a bot that cannot join says why and the next start_game is not held up', async (t) => {

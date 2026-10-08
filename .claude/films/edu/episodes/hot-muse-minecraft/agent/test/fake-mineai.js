@@ -101,7 +101,10 @@ export async function startFakeMineAi(opts = {}) {
       world.inventory.clear();
       return { status: 'failed', error: '[HUNT_BOT_DIED] the bot died' };
     }
-    if (world.fail[tool]) return { status: 'failed', error: world.fail[tool] };
+    // a failure before anything went into the furnace carries their smelt evidence as the runtime sends it: requested
+    // as asked, nothing inserted, produced or recovered (smelt-item.ts evidence(), and the temporary-workstation wrapper)
+    const unloaded = () => ({ smelt: { furnace: a.temporary_workstation ? null : { x: a.x, y: a.y, z: a.z }, inputItem: a.item_name, fuelItem: a.fuel_item_name, requested: a.count, fuelInserted: 0, outputItem: null, produced: 0, inputInventoryBefore: have(a.item_name), inputInventoryAfter: have(a.item_name), rawRecovered: 0, fuelRecovered: 0 } });
+    if (world.fail[tool]) return { status: 'failed', error: world.fail[tool], ...(tool === 'smelt_item' ? unloaded() : {}) };
     if (cancelled()) return { status: 'cancelled', error: 'cancelled on request' };
     switch (tool) {
       case 'navigate': world.position = { x: a.x + 0.5, y: a.y ?? 64, z: a.z + 0.5 }; return { status: 'succeeded', navigation: { end: world.position, target: { x: a.x, y: a.y ?? null, z: a.z }, remainingDistance: 0 } };
@@ -131,10 +134,10 @@ export async function startFakeMineAi(opts = {}) {
         return { craft: { items, completedSteps: steps.length, plan, ...(placed ? { craftingTablePlaced: placed } : {}) }, ...(a.temporary_workstation ? { workstation: { block: 'crafting_table', position: { x: 11, y: 64, z: -3 }, recovered: true } } : {}), status: 'succeeded' };
       }
       case 'smelt_item': {
-        if (have(a.item_name) < a.count) return { status: 'failed', error: `[SMELT_INPUT_MISSING] carries ${have(a.item_name)} ${a.item_name}` };
-        if (a.temporary_workstation && !have('furnace')) return { status: 'failed', error: '[WORKSTATION_NOT_CARRIED] no furnace carried' };
+        if (have(a.item_name) < a.count) return { status: 'failed', error: `[SMELT_INPUT_MISSING] carries ${have(a.item_name)} ${a.item_name}`, ...unloaded() };
+        if (a.temporary_workstation && !have('furnace')) return { status: 'failed', error: '[WORKSTATION_NOT_CARRIED] no furnace carried', ...unloaded() };
         const fuel = Math.ceil(a.count / (FUELS[a.fuel_item_name] ?? 1));
-        if (have(a.fuel_item_name) < fuel) return { status: 'failed', error: '[SMELT_FUEL_STARVED] the fuel ran out' };
+        if (have(a.fuel_item_name) < fuel) return { status: 'failed', error: '[SMELT_FUEL_MISSING] not enough fuel', ...unloaded() };
         add(a.item_name, -a.count);
         add(a.fuel_item_name, -fuel);
         add(SMELTS[a.item_name] ?? 'stone', a.count);

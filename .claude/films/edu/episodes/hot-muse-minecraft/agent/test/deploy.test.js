@@ -100,13 +100,14 @@ test('BODY=mineai: both images carry the Mine AI MCP runtime, run under an init 
   assert.ok(docker.indexOf('mineai/fetch-and-patch.sh') < docker.indexOf('COPY src '), 'a change to src/ reuses the runtime layer');
   assert.match(docker, /^ARG MINEAI=0$/m);
   assert.match(docker, /^ENV MINEAI_DIR=\/opt\/mine-ai-mcp MINEAI_RUNTIME=bun MINEAI_EXEC=\/usr\/local\/bin\/bun$/m);
-  // the patches the image applies and the start check demands are UPSTREAM.json's, 0007 and 0008 (gate 3) and 0009 (a
-  // mob in the placement cell, the soak) included; the build runs 0009's tests with 0007's (nearby-placement)
+  // the patches the image applies and the start check demands are UPSTREAM.json's, 0007 and 0008 (gate 3), 0009 (a
+  // mob in the placement cell, the soak) and 0010 (a build that stalled the event loop) included; the build runs 0009's
+  // tests with 0007's (nearby-placement) and 0010's (build-process)
   const up = JSON.parse(read('mineai/UPSTREAM.json'));
-  assert.deepEqual(up.patches.map((p) => p.slice(8, 12)), ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009']);
+  assert.deepEqual(up.patches.map((p) => p.slice(8, 12)), ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010']);
   for (const p of up.patches) assert.ok(fs.existsSync(path.join(ROOT, 'mineai', p)), p);
   const fetch = read('mineai/fetch-and-patch.sh');
-  for (const t of ['src/world/block-classification.test.ts', 'src/world/nearby-placement.test.ts', 'src/actions/collect-block', 'src/world/landing.test.ts']) {
+  for (const t of ['src/world/block-classification.test.ts', 'src/world/nearby-placement.test.ts', 'src/actions/collect-block', 'src/world/landing.test.ts', 'src/navigation/processes/building/build-process.test.ts']) {
     assert.ok(fetch.includes(t), `the build runs ${t}`);
   }
 });
@@ -215,16 +216,18 @@ test('staging-check: reads the state and the step lines of a reply', () => {
     ['collect birch_log 3', 'craft birch_planks 12', 'craft stick 4', 'craft crafting_table 1', 'craft wooden_pickaxe 1']);
 
   const seq = [
-    'Finished since your last call:', 'collect {"block":"oak_log","n":3}: ok: mined 3 oak_log [+3 oak_log]', '',
+    'Finished since your last call:', 'From your play #1, sent 3 s ago:', 'collect {"block":"oak_log","n":3}: ok: mined 3 oak_log [+3 oak_log]',
+    'From your play_sequence #2, sent 2 s ago:', '3 (part 2 of 2). craft_batch {"items":[]} (part 2 of 2: with the added items your list is longer than 12, so it runs in 2 parts): ok: crafted 1 chest', '',
     '1. craft {"item":"oak_planks","n":12}: ok: crafted 12 oak_planks [-3 oak_log, +12 oak_planks]',
     '2. craft {"item":"stick","n":4}: FAILED: not enough oak_planks',
     '3. craft: not run: no time was left in this call to start it; send it again',
     '4. collect {"block":"oak_log","n":3}: still running after 44 s (long walks and mining take a while); call get_state to wait for the result',
+    '5 (part 1 of 2). craft_batch {"items":[{"item":"stick","n":4}]} (the check added to your list: 4 stick for ladder; part 1 of 2: with the added items your list is longer than 12, so it runs in 2 parts): queued',
     'Not run: 5. craft {"item":"wooden_pickaxe","n":1}. Deal with the failure above first, then send the steps you still want.',
   ].join('\n');
   assert.deepEqual(stepLines(seq).map((l) => [l.n, l.skill, l.outcome]),
-    [[1, 'craft', 'ok'], [2, 'craft', 'FAILED'], [3, 'craft', 'not run'], [4, 'collect', 'still running']]);
-  assert.deepEqual(finishedLines(seq).map((l) => [l.skill, l.outcome]), [['collect', 'ok']]);
+    [[3, 'craft_batch', 'ok'], [1, 'craft', 'ok'], [2, 'craft', 'FAILED'], [3, 'craft', 'not run'], [4, 'collect', 'still running'], [5, 'craft_batch', 'queued']]);
+  assert.deepEqual(finishedLines(seq).map((l) => [l.skill, l.outcome]), [['collect', 'ok'], ['craft_batch', 'ok']], 'call headers are not results');
   assert.deepEqual(finishedLines('State (game g1):\nfoo'), []);
 });
 

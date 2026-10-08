@@ -393,7 +393,10 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
     let own = null;
     let deathBefore = lastDeath;
     const crashesBefore = crashes;
-    const restartText = (why) => `the body stopped in the middle of it (${why}) and is being started again; send the step again in a few seconds`;
+    // the runtime stopped during this step: the host starts it again once per game, and a second stop ends the game
+    // (src/mineai/host.js). The step may be what stopped it (2026-10-08, before patch 0010: a build around the bot in a pocket in stone
+    // stopped the runtime's event loop every time), so the reply never asks for the same step at the same spot
+    const restartText = (why) => `the body stopped in the middle of this step (${why}) and is being started again (code BODY_RESTARTED). This step may be what stopped it: do not send it again from here${tool === 'build' ? '; build in the open instead (go_to a spot a few blocks away with open sky and flat ground, then build)' : ''}. The body is started again once per game: a second stop ends the game. Call get_state in a few seconds, then go on`;
     try {
       await refresh();
       before = allItems(latest.inventory, latest.equipment);
@@ -415,7 +418,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
             own = null;
             const down = /\[(RUNTIME_EXITED|RUNTIME_UNRESPONSIVE)\]/.exec(out.error)?.[1] ?? (crashes !== crashesBefore ? 'its host crashed' : null);
             const said = down ? restartText(down) : out.said ?? `failed: ${String(out.error).replace(/^MCP error -?\d+: /, '').slice(0, 300)}`;
-            parts.push({ ok: false, result: said, code: down ? 'FAILED' : out.ours ?? (out.code === 'INVALID_ARGUMENTS' ? 'BAD_ARGS' : 'FAILED') });
+            parts.push({ ok: false, result: said, code: down ? 'BODY_RESTARTED' : out.ours ?? (out.code === 'INVALID_ARGUMENTS' ? 'BAD_ARGS' : 'FAILED') });
             break;
           }
           let res = fromTheirs(call.tool, out.output, { stopped: out.stopped, call });
@@ -440,7 +443,7 @@ export function createMineAiBody({ config, log, hosts, gameId, username, viewId 
       }
     } catch (err) {
       own = null;
-      r = { ok: false, result: crashes !== crashesBefore ? restartText('its host crashed') : `error: ${String(err?.message ?? err).slice(0, 300)}`, code: 'FAILED' };
+      r = crashes !== crashesBefore ? { ok: false, result: restartText('its host crashed'), code: 'BODY_RESTARTED' } : { ok: false, result: `error: ${String(err?.message ?? err).slice(0, 300)}`, code: 'FAILED' };
     }
     try { await refresh(); } catch { /* the state stays as it was */ }
     const delta = inventoryDelta(before, allItems(latest.inventory, latest.equipment));

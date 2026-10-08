@@ -1,0 +1,165 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0010: build_structure never stops the runtime's event loop. A 1x1 shelter around the bot (four walls two high and a
+roof) in a 1x2 pocket in stone: every placement read as sealing the bot in, so the build asked for a route out of the
+structure; the route completed where the bot stood (its goal already met) and the loop asked again, forever, with
+nothing real to await, until the supervisor's watchdog ended the runtime (RUNTIME_UNRESPONSIVE; 4 of 4 bench tries
+and once through the gateway, 2026-10-08). Now a bot the world already walls in is not sealed in further by a
+placement, so such a shelter is dug out and built with the bot inside; steps out in a row that change nothing stop
+the build after 3 with the reason ("could not step out of the structure: ..."); and every pass of the loop yields to
+the event loop. With tests (build-process: both new cases hung before the patch).
+
+diff --git a/src/navigation/processes/building/build-process.test.ts b/src/navigation/processes/building/build-process.test.ts
+index 8f8cbc4..b340c33 100644
+--- a/src/navigation/processes/building/build-process.test.ts
++++ b/src/navigation/processes/building/build-process.test.ts
+@@ -101,6 +101,55 @@ test("a sealed box is finished from outside: the bot walks out before the last b
+   assert.ok(finalFeet.x < 0 || finalFeet.x > 2 || finalFeet.z < 0 || finalFeet.z > 2, `ended outside, at ${finalFeet}`);
+ });
+ 
++/**
++ * Patched for Muse plays Minecraft (picasso-lab), 0010. A 1x1 shelter around
++ * the bot (four walls two high and a roof) asked for in a 1x2 pocket in stone,
++ * after mining: every placement read as sealing the bot in, the step-out route
++ * completed where the bot stood, and the loop asked again forever without
++ * yielding, until the supervisor's watchdog ended the runtime. A bot the world
++ * already walls in is not sealed in further by a placement, so it builds.
++ */
++test("a shelter around a bot the world already walls in (a pocket in stone) is dug out and built, the bot inside", async () => {
++  const feet = new Vec3(1, 64, 1);
++  const { bot, put, physics, routes } = structureWorld({ feet });
++  for (let x = -6; x <= 8; x += 1)
++    for (let y = 63; y <= 70; y += 1) for (let z = -6; z <= 8; z += 1) put(new Vec3(x, y, z), "stone");
++  put(new Vec3(1, 64, 1), "air");
++  put(new Vec3(1, 65, 1), "air");
++  const shelter = cells([
++    [0, 64, 1], [2, 64, 1], [1, 64, 0], [1, 64, 2],
++    [0, 65, 1], [2, 65, 1], [1, 65, 0], [1, 65, 2],
++    [1, 66, 0], [1, 66, 1],
++  ]);
++  const inside = cells([[1, 64, 1], [1, 65, 1]], "air");
++  const result = await build(bot, { ...physics, cells: [...shelter, ...inside], removeWrongBlocks: true });
++  assert.equal(result.status, "complete", result.reason ?? "");
++  assert.equal(result.placed, 10);
++  assert.equal(result.dug, 10, "the stone of every cell, replaced");
++  assert.deepEqual(routes, [], "no way out was asked for");
++});
++
++test("routes out that leave the bot held by the structure stop the run with the reason, and the event loop runs meanwhile", async () => {
++  const feet = new Vec3(1, 64, 1);
++  const { bot, physics } = structureWorld({ feet });
++  let routesAsked = 0;
++  // the route's goal is met where the bot stands: it completes without a step
++  const stay: BuildRequest["route"] = async () => {
++    routesAsked += 1;
++    return { status: "completed", elapsedMs: 0 };
++  };
++  let timerRan = false;
++  setImmediate(() => {
++    timerRan = true;
++  });
++  const result = await build(bot, { ...physics, route: stay, cells: cells(hollowBox()), removeWrongBlocks: false });
++  assert.equal(result.status, "stopped");
++  assert.match(result.reason ?? "", /^could not step out of the structure: 3 routes out ended at 1,64,1 with the bot still held by it$/);
++  assert.equal(routesAsked, 3);
++  assert.equal(result.placed, hollowBox().length - 1, "every block but the one that would seal it in");
++  assert.ok(timerRan, "the loop yielded between its passes");
++});
++
+ test("enclosesBot reads a roofed box as sealed and a doorway as open", () => {
+   const { bot, put } = structureWorld({ feet: new Vec3(1, 64, 1) });
+   const filled = new Set(hollowBox().map(([x, y, z]) => packKey(x, y, z)));
+diff --git a/src/navigation/processes/building/build-process.ts b/src/navigation/processes/building/build-process.ts
+index d6c4620..aff331a 100644
+--- a/src/navigation/processes/building/build-process.ts
++++ b/src/navigation/processes/building/build-process.ts
+@@ -76,6 +76,20 @@ const ENCLOSURE_MARGIN = 3;
+  */
+ const IDLE_PASSES = 2;
+ 
++/**
++ * Patched for Muse plays Minecraft (picasso-lab), 0010: steps out of the
++ * structure in a row that changed nothing before the process stops. A step-out
++ * whose route completes where the bot already stands (its goal met, yet the
++ * structure still holds the bot) would otherwise be asked again from the same
++ * place forever; with nothing real to await, that loop never let the event loop
++ * run and the supervisor's watchdog ended the runtime (a shelter in a 1x2
++ * pocket in stone, 4 of 4 tries on 2026-10-08).
++ */
++const STEP_OUT_PASSES = 3;
++
++/** Lets timers and I/O run between passes (0010): no pass of the loop can starve the event loop. */
++const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
++
+ /**
+  * How often the classification actually looks at the world again. The planner
+  * asks for a snapshot far more often than the world changes, and every cell is
+@@ -278,14 +292,23 @@ class BuildTargeting {
+       const block = bot.blockAt(asVec3(cell.position));
+       if (block?.name === cell.blockName) this.protectedCells.add(keyOf(cell.position));
+     }
++    // 0010: a bot the world already walls in (a pocket in stone) is not sealed
++    // in any further by a placement, so none is held back as enclosing
++    const enclosedAlready = enclosesBot(bot, feet, this.protectedCells, this.#bounds);
+     for (const cell of this.request.cells) {
+-      this.#states.set(keyOf(cell.position), this.classify(cell, feet, head, carried));
++      this.#states.set(keyOf(cell.position), this.classify(cell, feet, head, carried, enclosedAlready));
+     }
+     this.#refreshedAtMs = Date.now();
+     return this.#states;
+   }
+ 
+-  private classify(cell: BuildCell, feet: Vec3, head: Vec3, carried: ReadonlyMap<string, number>): BuildCellState {
++  private classify(
++    cell: BuildCell,
++    feet: Vec3,
++    head: Vec3,
++    carried: ReadonlyMap<string, number>,
++    enclosedAlready = false,
++  ): BuildCellState {
+     const position = asVec3(cell.position);
+     const block = this.bot.blockAt(position);
+     if (block === null) return { kind: "unloaded" };
+@@ -305,7 +328,7 @@ class BuildTargeting {
+     if ((carried.get(cell.blockName) ?? 0) === 0) return { kind: "not_carried" };
+     const after = new Set(this.protectedCells);
+     after.add(keyOf(cell.position));
+-    if (enclosesBot(this.bot, feet, after, this.#bounds)) return { kind: "would_enclose" };
++    if (!enclosedAlready && enclosesBot(this.bot, feet, after, this.#bounds)) return { kind: "would_enclose" };
+     return { kind: "placeable", support: placement.support, face: placement.face };
+   }
+ 
+@@ -466,8 +489,10 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
+   const targeting = new BuildTargeting(bot, request);
+   const movements = request.movements(targeting.protectedCells);
+   let idlePasses = 0;
++  let stepOuts = 0;
+ 
+   for (;;) {
++    await yieldToEventLoop();
+     request.signal?.throwIfAborted();
+     if (request.stopSignal?.aborted) return targeting.result("stopped", String(request.stopSignal.reason));
+     targeting.passes += 1;
+@@ -479,12 +504,21 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
+     // would either be refused or wall the bot into a pit, so step out first;
+     // likewise when every remaining placement would seal the bot in.
+     if (targeting.standingInStructure() || targeting.onlyEnclosing()) {
++      if (stepOuts >= STEP_OUT_PASSES) {
++        const at = feetOf(bot);
++        return targeting.result(
++          "stopped",
++          `could not step out of the structure: ${STEP_OUT_PASSES} routes out ended at ${at.x},${at.y},${at.z} with the bot still held by it`,
++        );
++      }
+       const exit = await request.route({ movements, goal: targeting.outsideGoal(), signal: request.signal, stopSignal: request.stopSignal });
+       if (exit.status === "stopped") {
+         return targeting.result("stopped", `could not step out of the structure: ${exit.reason}`);
+       }
++      stepOuts = targeting.progress === progressBefore ? stepOuts + 1 : 0;
+       continue;
+     }
++    stepOuts = 0;
+ 
+     if (await workInReach(bot, request, targeting, movements, request.signal)) {
+       idlePasses = 0;

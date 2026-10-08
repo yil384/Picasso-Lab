@@ -132,12 +132,14 @@ test('queue: steps past the reply keep running in order; the reply says what is 
   assert.equal(r.structuredContent.steps[1].running, true);
   assert.deepEqual(r.structuredContent.queue, { running: 'collect {"block":"oak_log","n":12}', waiting: 2 });
   assert.match(text(r), /^1\. go_to \{"x":2,"y":64,"z":0\}: ok: go_to done\n2\. collect \{"block":"oak_log","n":12\}: still running after \d s/);
-  assert.match(text(r), /^3\. go_to .*: queued\n4\. say .*: queued\nSteps 2, 3, 4 are still running or queued: they go on after this reply/m);
+  assert.match(text(r), /^3\. go_to .*: queued\n4\. say .*: queued\nSteps 2, 3, 4 are still running or queued: they go on after this reply\. Call get_state to wait for them \(it reports their results once, under "From your play_sequence #1"\)/m);
   assert.equal(r.structuredContent.code, null);
+  assert.equal(r.structuredContent.call, 1, 'the call\'s number in the game');
+  assert.deepEqual(r.structuredContent.steps.map((x) => x.call), [1, 1, 1, 1]);
 
   const g = await drain(c);
   // the steps that outlived the call keep the caller's numbers
-  assert.match(text(g.replies[0]), /^Finished since your last call:\n2\. collect \{"block":"oak_log","n":12\}: ok: collect done \[\+12 oak_log\]\n/);
+  assert.match(text(g.replies[0]), /^Finished since your last call:\nFrom your play_sequence #1, sent \d+ s ago:\n2\. collect \{"block":"oak_log","n":12\}: ok: collect done \[\+12 oak_log\]\n/);
   assert.deepEqual(g.earlier.map((x) => [x.skill, x.status]), [['collect', 'confirmed'], ['go_to', 'confirmed'], ['say', 'confirmed']], 'each result once, in order');
   assert.deepEqual(g.replies[0].structuredContent.changed, { oak_log: 12 });
   const last = g.replies.at(-1).structuredContent;
@@ -150,7 +152,7 @@ test('queue: steps past the reply keep running in order; the reply says what is 
   await c.callTool(seq([goTo(40)]));
   const p = await c.callTool({ name: 'play', arguments: { skill: 'say', args: { text: 'after' } } });
   assert.deepEqual(status(p), ['pending']);
-  assert.match(text(p), /^say \{"text":"after"\}: queued\nStep 1 is still running or queued/);
+  assert.match(text(p), /^say \{"text":"after"\}: queued\nStep 1 is still running or queued: .*under "From your play #3"/);
   assert.deepEqual((await drain(c)).earlier.map((x) => x.skill), ['go_to', 'say']);
   assert.deepEqual(bodies[0].runs.slice(-2), ['go_to {"x":40,"y":64,"z":0}', 'say {"text":"after"}']);
 
@@ -172,12 +174,14 @@ test('queue: a failed step cancels what was queued after it, in every call; type
   assert.deepEqual(earlier.map((x) => [x.skill, x.status, x.code ?? null]), [
     ['go_to', 'confirmed', null], ['say', 'failed', 'HOSTILE_CONTACT'], ['collect', 'cancelled', null], ['say', 'cancelled', null],
   ]);
-  assert.equal(earlier[3].why, 'step 2 of your play_sequence (say) failed');
+  assert.equal(earlier[3].why, 'step 2 of your play_sequence #1 (say) failed');
+  assert.deepEqual(earlier.map((x) => x.call), [1, 1, 1, 2], 'each step says which call it came from');
   const all = replies.map(text).join('\n');
   assert.match(all, /^2\. say \{"text":"fail stopped: .*"\}: FAILED: stopped: a zombie is attacking you/m);
-  assert.match(all, /^3\. collect \{"block":"oak_log","n":1\}: cancelled \(step 2 of your play_sequence \(say\) failed\)$/m);
-  assert.match(all, /^say \{"text":"second call"\}: cancelled \(step 2 of your play_sequence \(say\) failed\)$/m);
-  assert.match(all, /^From your play_sequence sent \d+ s ago:\n1\. go_to/m, 'steps of two calls in one block: each call named');
+  assert.match(all, /^3\. collect \{"block":"oak_log","n":1\}: cancelled \(step 2 of your play_sequence #1 \(say\) failed\)$/m);
+  // the second call's own step under its own name, so "step 2" points at the first call's step 2, not at a line above
+  assert.match(all, /^From your play_sequence #2, sent \d+ s ago:\nsay \{"text":"second call"\}: cancelled \(step 2 of your play_sequence #1 \(say\) failed\)$/m);
+  assert.match(all, /^From your play_sequence #1, sent \d+ s ago:\n1\. go_to/m, 'steps of two calls in one block: each call named');
   assert.ok(replies.some((r) => r.structuredContent.code === 'HOSTILE_CONTACT'), 'the reply that carries the failure has its code');
   assert.deepEqual(bodies[0].runs.map((r) => r.split(' ')[0]), ['go_to', 'say'], 'nothing after the failure ran');
 
@@ -212,7 +216,7 @@ test('a craft the check adds keeps the caller\'s step numbers, in the reply and 
   assert.match(text(r), /^Steps 1, 2, 3 \(and 2 crafts the check added\) are still running or queued/m);
   const g = await drain(c);
   const all = g.replies.map(text).join('\n');
-  assert.match(all, /^Finished since your last call:\n1\. collect \{"block":"oak_log","n":8\}: ok: collect done \[\+8 oak_log\]\n\+ craft \{"item":"oak_planks","n":8\} \(added by the check before step 2, for craft wooden_pickaxe 1\): ok: craft done\n\+ craft \{"item":"stick","n":4\} .*\n2\. craft \{"item":"wooden_pickaxe","n":1\}: ok: craft done\n3\. say \{"text":"done"\}: ok: say done$/m);
+  assert.match(all, /^Finished since your last call:\nFrom your play_sequence #1, sent \d+ s ago:\n1\. collect \{"block":"oak_log","n":8\}: ok: collect done \[\+8 oak_log\]\n\+ craft \{"item":"oak_planks","n":8\} \(added by the check before step 2, for craft wooden_pickaxe 1\): ok: craft done\n\+ craft \{"item":"stick","n":4\} .*\n2\. craft \{"item":"wooden_pickaxe","n":1\}: ok: craft done\n3\. say \{"text":"done"\}: ok: say done$/m);
   assert.doesNotMatch(all, /^[45]\. /m, 'no step renumbered');
   assert.deepEqual(g.earlier.map((x) => [x.step, x.before ?? null, x.skill]), [[1, null, 'collect'], [null, 2, 'craft'], [null, 2, 'craft'], [2, null, 'craft'], [3, null, 'say']]);
   assert.equal(bodies[0].runs.length, 5);
@@ -224,7 +228,7 @@ test('stop clears the queue: the running step and the waiting ones end as cancel
   await c.callTool({ name: 'start_game', arguments: START });
   await c.callTool(seq([goTo(20), logs(2), say('never')]));
   const s = await c.callTool({ name: 'stop', arguments: {} });
-  assert.match(text(s), /^Finished since your last call:\n1\. go_to .*: cancelled \(stop cleared the queue\): stopped: stopped through MCP\n2\. collect .*: cancelled \(stop cleared the queue\)\n3\. say .*: cancelled \(stop cleared the queue\)\n\nStopped\. 2 queued steps were cancelled\./);
+  assert.match(text(s), /^Finished since your last call:\nFrom your play_sequence #1, sent \d+ s ago:\n1\. go_to .*: cancelled \(stop cleared the queue\): stopped: stopped through MCP\n2\. collect .*: cancelled \(stop cleared the queue\)\n3\. say .*: cancelled \(stop cleared the queue\)\n\nStopped\. 2 queued steps were cancelled\./);
   assert.equal(s.structuredContent.code, 'STOPPED');
   assert.deepEqual(s.structuredContent.earlier.map((x) => x.status), ['cancelled', 'cancelled', 'cancelled']);
   assert.deepEqual(s.structuredContent.queue, { running: null, waiting: 0 });
@@ -321,7 +325,7 @@ test('idempotency: the same call is a repeat only until its results reached the 
   await cut('get_state', {});
   const st = await raw.call('get_state', {});
   assert.deepEqual(st.structuredContent.earlier.map((x) => [x.skill, x.status]), [['go_to', 'confirmed']], 'the go_to result was not lost with the cut reply');
-  assert.match(text(st), /^Finished since your last call:\ngo_to \{"x":6,"y":64,"z":0\}: ok: go_to done/);
+  assert.match(text(st), /^Finished since your last call:\nFrom your play #8, sent \d+ s ago:\ngo_to \{"x":6,"y":64,"z":0\}: ok: go_to done/);
   assert.equal(bodies[0].runs.length, 8);
 
   // a call whose reply never arrived stays a repeat until 60 s after it ended, then runs
@@ -440,7 +444,7 @@ test('check: refusals before anything runs, crafts added where logs can make the
     // dry_run: the plan, nothing run
     const dry = await c.callTool(seq([logs(3), { skill: 'craft', args: { item: 'wooden_pickaxe', n: 1 } }], { dry_run: true }));
     assert.equal(dry.structuredContent.code, null);
-    assert.match(text(dry), /^The check passed, adding 3 crafts\. Nothing was run \(dry_run\)/);
+    assert.match(text(dry), /^The check passed, adding 3 crafts \(marked \+\)\. Nothing was run \(dry_run\)/);
     assert.deepEqual(dry.structuredContent.plan.map((s) => s.args.item ?? s.args.block), ['oak_log', 'oak_planks', 'crafting_table', 'stick', 'wooden_pickaxe']);
     assert.deepEqual(dry.structuredContent.state.inventory, {});
 
@@ -448,7 +452,7 @@ test('check: refusals before anything runs, crafts added where logs can make the
     const run = await c.callTool(seq([logs(3), { skill: 'craft', args: { item: 'wooden_pickaxe', n: 1 } }]));
     assert.equal(run.structuredContent.code, null, text(run));
     // the caller's steps keep their numbers (1 and 2); the added crafts carry none, only "+" and the step they come before
-    assert.match(text(run), /^The check added 3 crafts your steps need \(marked \+ below, each before the step that needs it; your steps keep their numbers\)\.\n1\. collect/);
+    assert.match(text(run), /^The check added 3 crafts your steps need \(marked \+ below, each just before the step that needs it\)\. Your steps keep their numbers\.\n1\. collect/);
     assert.match(text(run), /^\+ craft \{"item":"oak_planks","n":12\} \(added by the check before step 2, for craft wooden_pickaxe 1\): ok: /m);
     assert.match(text(run), /^2\. craft \{"item":"wooden_pickaxe","n":1\}: ok: /m);
     assert.doesNotMatch(text(run), /^[345]\. /m, 'no step renumbered');
@@ -472,13 +476,75 @@ test('check: refusals before anything runs, crafts added where logs can make the
     assert.equal(batch.structuredContent.steps.length, 1);
     // the axe takes the 3 planks and 2 sticks left from the pickaxe; the shovel gets a log cut and sticks made first
     assert.deepEqual(batch.structuredContent.steps[0].addedItems, [{ item: 'oak_planks', n: 4, for: 'wooden_shovel' }, { item: 'stick', n: 4, for: 'wooden_shovel' }]);
-    // the table the pickaxe craft put down stays, and the whole batch works at it
-    assert.match(text(batch), /^craft_batch \{"items":\[\{"item":"wooden_axe","n":1\},\{"item":"oak_planks","n":4\},\{"item":"stick","n":4\},\{"item":"wooden_shovel","n":1\}\]\}: ok: crafted 1 wooden_axe \(at your crafting table at (-?\d+ \d+ -?\d+)\); crafted 4 oak_planks; crafted 4 stick; crafted 1 wooden_shovel \(at your crafting table at \1\)/m);
+    // the table the pickaxe craft put down stays, and the whole batch works at it; the items the check put into the list
+    // are named on its line, and the lead counts them as such, not as "+" lines that are not there
+    assert.match(text(batch), /^craft_batch \{"items":\[\{"item":"wooden_axe","n":1\},\{"item":"oak_planks","n":4\},\{"item":"stick","n":4\},\{"item":"wooden_shovel","n":1\}\]\} \(the check added to your list: 4 oak_planks, 4 stick for wooden_shovel\): ok: crafted 1 wooden_axe \(at your crafting table at (-?\d+ \d+ -?\d+)\); crafted 4 oak_planks; crafted 4 stick; crafted 1 wooden_shovel \(at your crafting table at \1\)/m);
+    assert.match(text(batch), /^The check put 2 items into the craft_batch list of your step 1 \(named on that line\)\. Your steps keep their numbers\.\n/);
+    assert.doesNotMatch(text(batch), /marked \+/, 'no "+" line, so none is promised');
   } finally {
     await c.close();
     await agent.stop('test over');
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('items the check puts into a craft_batch are named on its line; a batch it makes too long runs in parts that say so (review of the Muse fixes)', async (t) => {
+  const { client, bodies } = await serve(t, { mcpCallMs: 400 });
+  const c = await client();
+  await c.callTool({ name: 'start_game', arguments: START });
+  const twelve = ['wooden_pickaxe', 'wooden_axe', 'wooden_shovel', 'wooden_sword', 'oak_slab', 'oak_stairs', 'oak_fence', 'oak_door', 'ladder', 'bowl', 'chest', 'crafting_table'];
+  const batch = { skill: 'craft_batch', args: { items: twelve.map((item) => ({ item, n: 1 })) } };
+  // dry_run: the batch with what the check put in, in parts numbered by the caller's step
+  const dry = await c.callTool(seq([logs(32), batch], { dry_run: true }));
+  assert.equal(dry.structuredContent.code, null, text(dry));
+  const plan = dry.structuredContent.plan;
+  const parts = plan.filter((st) => st.skill === 'craft_batch');
+  assert.ok(parts.length >= 2, `the added items make the list longer than 12 (${JSON.stringify(plan)})`);
+  assert.ok(parts.every((st) => st.step === 2 && st.parts === parts.length), 'every part keeps the caller\'s step 2');
+  assert.deepEqual(parts.map((st) => st.part), parts.map((_, i) => i + 1));
+  assert.match(text(dry), new RegExp(`^The check passed, putting \\d+ items into your craft_batch list \\(named on its line\\)\\.`));
+  assert.match(text(dry), new RegExp(`^2 \\(part 1 of ${parts.length}\\)\\. craft_batch \\{.*\\} \\(the check added to your list: .*; part 1 of ${parts.length}: with the added items your list is longer than 12, so it runs in ${parts.length} parts\\)$`, 'm'));
+  assert.match(text(dry), new RegExp(`^2 \\(part 2 of ${parts.length}\\)\\. craft_batch \\{.*\\} \\(part 2 of ${parts.length}: `, 'm'));
+  // run behind a failing step: the parts that did not run are told apart in "Not run"
+  const r = await c.callTool(seq([say('fail no zombie within 16 blocks'), logs(32), batch]));
+  assert.equal(r.structuredContent.code, 'FAILED');
+  assert.match(text(r), new RegExp(`^The check put \\d+ items into the craft_batch list of your step 3 \\(named on that line; the list now runs in ${parts.length} parts, numbered 3 \\(part 1 of ${parts.length}\\) and so on\\)\\. Your steps keep their numbers\\.\\n`));
+  assert.match(text(r), new RegExp(`Not run: 2\\. collect \\{"block":"oak_log","n":32\\}, 3 \\(part 1 of ${parts.length}\\)\\. craft_batch \\{.*\\}, 3 \\(part 2 of ${parts.length}\\)\\. craft_batch \\{`));
+  assert.deepEqual(r.structuredContent.steps.filter((st) => st.skill === 'craft_batch').map((st) => [st.step, st.part, st.parts]), parts.map((_, i) => [3, i + 1, parts.length]));
+  assert.equal(bodies[0].runs.length, 1, 'only the failing say ran');
+});
+
+test('eat at a full food bar (NOT_HUNGRY) cancels nothing after it; any other failure still does (review of the Muse fixes)', async (t) => {
+  const { client, bodies } = await serve(t, { mcpCallMs: 2_000 });
+  const c = await client();
+  await c.callTool({ name: 'start_game', arguments: START });
+  const r = await c.callTool(seq([say('a'), say('fail not hungry: food is 20/20, and eat works only below 20. Harmless: nothing was eaten or used'), logs(1), say('b')]));
+  assert.deepEqual(status(r), ['confirmed', 'failed', 'confirmed', 'confirmed'], text(r));
+  assert.equal(r.structuredContent.steps[1].code, 'NOT_HUNGRY');
+  assert.equal(r.structuredContent.code, 'NOT_HUNGRY', 'the call says what happened; nothing was cancelled');
+  assert.doesNotMatch(text(r), /Not run|cancelled/);
+  assert.match(text(r), /^4\. say \{"text":"b"\}: ok: say done$/m);
+  assert.deepEqual(bodies[0].runs.map((x) => x.split(' ')[0]), ['say', 'say', 'collect', 'say']);
+  // a call queued behind it runs too
+  const a = await c.callTool(seq([goTo(5), say('fail not hungry: food is 20/20')]));
+  const b = await c.callTool(seq([say('after')]));
+  const { earlier } = await drain(c);
+  assert.deepEqual([...a.structuredContent.steps, ...b.structuredContent.steps, ...earlier].filter((x) => x.status !== 'pending').map((x) => [x.skill, x.status]), [['go_to', 'confirmed'], ['say', 'failed'], ['say', 'confirmed']]);
+});
+
+test('steps of several calls in one reply: each call under its own header, one-step plays included; call numbers in structuredContent (review of the Muse fixes)', async (t) => {
+  const { client } = await serve(t, { mcpCallMs: 400 });
+  const c = await client();
+  await c.callTool({ name: 'start_game', arguments: START });
+  const a = await c.callTool(seq([goTo(12), say('a')]));
+  assert.equal(a.structuredContent.call, 1);
+  const b = await c.callTool({ name: 'play', arguments: { skill: 'say', args: { text: 'b' } } });
+  assert.equal(b.structuredContent.call, 2);
+  assert.deepEqual(status(b), ['pending'], 'queued behind the go_to');
+  const { replies, earlier } = await drain(c);
+  const all = replies.map(text).join('\n');
+  assert.match(all, /^From your play_sequence #1, sent \d+ s ago:\n1\. go_to \{"x":12,"y":64,"z":0\}: ok: go_to done\n2\. say \{"text":"a"\}: ok: say done\nFrom your play #2, sent \d+ s ago:\nsay \{"text":"b"\}: ok: say done$/m);
+  assert.deepEqual(earlier.map((x) => [x.call, x.n, x.step]), [[1, 1, 1], [1, 2, 2], [2, 1, 1]], 'n repeats across calls; call tells them apart');
 });
 
 test('check: a go_to that leaves the table far behind, with no wood to spare for a new one, passes with a warning', async () => {

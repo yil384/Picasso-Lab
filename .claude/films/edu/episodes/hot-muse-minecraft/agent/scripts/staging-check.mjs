@@ -72,7 +72,7 @@ export function woodNear(text) {
 export function stepLines(text) {
   const out = [];
   for (const line of String(text).split('\n')) {
-    const m = /^(?:(\d+)\.|\+) (\w+)(?: \{.*?\})?(?: \(added by the check.*?\))?: (ok|FAILED|still running|queued|cancelled|not run)\b/.exec(line);
+    const m = /^(?:(\d+)(?: \(part \d+ of \d+\))?\.|\+) (\w+)(?: \{.*?\})?(?: \((?:added by the check|the check added|part \d+ of).*?\))?: (ok|FAILED|still running|queued|cancelled|not run)\b/.exec(line);
     if (m) out.push({ n: m[1] ? Number(m[1]) : null, skill: m[2], outcome: m[3], line });
   }
   return out;
@@ -84,7 +84,7 @@ export function finishedLines(text) {
   if (!block) return [];
   return block[1].split('\n').map((line) => {
     // a step of a call of several steps carries the caller's number ("4. "), a craft the check added "+ "
-    const m = /^(?:\d+\. |\+ )?(\w+)(?: \{.*?\})?(?: \(added by the check.*?\))?: (ok|FAILED)\b/.exec(line);
+    const m = /^(?:\d+(?: \(part \d+ of \d+\))?\. |\+ )?(\w+)(?: \{.*?\})?(?: \((?:added by the check|the check added|part \d+ of).*?\))?: (ok|FAILED)\b/.exec(line);
     return m ? { skill: m[1], outcome: m[2], line } : null;
   }).filter(Boolean);
 }

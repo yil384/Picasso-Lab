@@ -8,7 +8,9 @@
 // soon as a delivered reply has carried every one of its results: the client has seen them, so the same call sent
 // again is a deliberate repeat (a retry after a failure, the same collect after a go_to) and runs. A finished step
 // waits in the outbox until a delivered reply has carried its result. A step cancelled before it ran keeps the code of
-// what cancelled it (the failed step's code, or STOPPED), so a reply made only of cancelled steps still says why.
+// what cancelled it (the failed step's code, or STOPPED), so a reply made only of cancelled steps still says why. eat
+// at a full food bar (NOT_HUNGRY) fails but cancels nothing: it changed nothing the later steps were planned on. Calls are
+// numbered per game (#1, #2, ...), so a reply that carries steps of several calls names each one apart.
 
 import { codeOf } from './contracts.js';
 
@@ -23,11 +25,15 @@ const FINAL = new Set(['confirmed', 'failed', 'cancelled']);
 export const isFinal = (step) => FINAL.has(step.status);
 /** The status a client sees: pending (waiting or running), confirmed, failed or cancelled. */
 export const statusOf = (step) => (isFinal(step) ? step.status : 'pending');
+/** "4" for the caller's step 4, "4 (part 2 of 3)" for a part of a craft_batch the check made too long; null if added. */
+export const stepNumber = (step) => (step.step != null ? `${step.step}${step.parts > 1 ? ` (part ${step.part} of ${step.parts})` : ''}` : null);
 /**
  * A step in words, by the caller's own numbering: "step 4", or for a craft the check added "the craft added before
  * step 4" (the caller's steps keep their numbers; an added step gets none of its own).
  */
-export const stepName = (step) => (step.step != null ? `step ${step.step}` : `the ${step.skill} added before step ${step.before ?? '?'}`);
+export const stepName = (step) => (step.step != null ? `step ${stepNumber(step)}` : `the ${step.skill} added before step ${step.before ?? '?'}`);
+/** Failure codes that cancel nothing after them: the step changed nothing (eat at a full food bar). */
+export const HARMLESS_CODES = new Set(['NOT_HUNGRY']);
 
 /**
  * @param {{start: (skill: string, args: object) => ({ok: true, promise: Promise<object>}|{ok: false, error: string}), now?: () => number}} opts
@@ -39,6 +45,7 @@ export function createQueue({ start, now = Date.now }) {
   let outbox = [];
   const calls = new Map(); // key -> call
   let seq = 0;
+  let callSeq = 0; // calls accepted in this game: #1, #2, ...
 
   function settle(step, status, result, why = null) {
     if (isFinal(step)) return;
@@ -70,7 +77,8 @@ export function createQueue({ start, now = Date.now }) {
       ...(r?.own && typeof r.own === 'object' ? { own: r.own } : {}),
     };
     settle(step, result.ok ? 'confirmed' : step.stopping ? 'cancelled' : 'failed', result, step.stopping ? step.stopping : null);
-    if (!result.ok) cancelWaiting(`${stepName(step)} of ${step.call.label} (${step.skill}) ${step.stopping ? 'was stopped' : 'failed'}`, step.code ?? (step.stopping ? 'STOPPED' : 'FAILED'));
+    // eat at a full food bar changed nothing, so the steps after it still hold: they run (eat's description says so)
+    if (!result.ok && !(step.status === 'failed' && HARMLESS_CODES.has(step.code))) cancelWaiting(`${stepName(step)} of ${step.call.label} (${step.skill}) ${step.stopping ? 'was stopped' : 'failed'}`, step.code ?? (step.stopping ? 'STOPPED' : 'FAILED'));
     pump();
   }
 
@@ -120,18 +128,20 @@ export function createQueue({ start, now = Date.now }) {
     },
 
     /**
-     * Accept a call: remember it under key and queue its steps. planned: [{skill, args, step, before?, added?, addedItems?}]
-     * (step: the caller's number, null for a craft the check added before the caller's step `before`).
-     * @returns {object} the call: {key, sig, requestId, label, at, steps, settled}
+     * Accept a call: remember it under key and queue its steps. planned: [{skill, args, step, before?, added?, addedItems?,
+     * part?, parts?}] (step: the caller's number, null for a craft the check added before the caller's step `before`).
+     * label: the call in words, or a function of the call's number in this game (1, 2, ...) that gives them.
+     * @returns {object} the call: {key, sig, requestId, no, label, at, steps, settled}
      */
     submit(key, { sig, requestId = null, label, planned }) {
-      const call = { key, sig, requestId, label, at: now(), steps: [] };
+      const no = ++callSeq;
+      const call = { key, sig, requestId, no, label: typeof label === 'function' ? label(no) : label, at: now(), steps: [] };
       call.steps = planned.map((p, i) => {
         let resolve;
         const done = new Promise((r) => { resolve = r; });
         return {
           id: ++seq, call, n: i + 1, skill: p.skill, args: p.args, step: p.step ?? null, before: p.before ?? null, added: p.added ?? null,
-          addedItems: p.addedItems ?? null, status: 'queued', result: null, code: null, cause: null, why: null, startedAt: null,
+          addedItems: p.addedItems ?? null, part: p.part ?? null, parts: p.parts ?? null, status: 'queued', result: null, code: null, cause: null, why: null, startedAt: null,
           endedAt: null, delivered: false, stopping: null, done, resolve,
         };
       });

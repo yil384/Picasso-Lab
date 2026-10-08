@@ -7,7 +7,7 @@
 // Their 37 tools, their 1.36 MB tools/list and their required rationales never reach a guest: only these skills do.
 
 import { skillSet, TOOL_TIMEOUTS_MS, SMELT_PER_CALL, CRAFT_BATCH_MAX, SCHEMAS, NOT_HUNGRY_TEXT } from '../contracts.js';
-import { BLUEPRINTS, SMELT, fuelPlan } from '../game.js';
+import { BLUEPRINTS, SMELT, MAX_DROPS, fuelPlan } from '../game.js';
 import { facingOf } from '../state.js';
 import { registryFor, requireMc } from '../mc.js';
 
@@ -323,6 +323,8 @@ const BY_CHANCE = /^(gravel|short_grass|tall_grass|.*_leaves)$/;
 /**
  * What collect_block did, in words that never contradict the counts: their blocksBroken counts only the target blocks
  * their collect broke itself; drops of the same item from blocks dug on the way (or lying there) count toward the gain.
+ * Only what the targets cannot have dropped is put on the way: a block of MAX_DROPS gives up to that many (copper ore
+ * 2-5 raw copper, clay 4 clay balls), any other one at most one, and a block whose drop is left to chance is not judged.
  */
 function describeCollect(c, block) {
   const broken = Number(c.blocksBroken) || 0;
@@ -330,8 +332,13 @@ function describeCollect(c, block) {
   const drop = dropOf(block);
   const picked = Object.entries(c.gainedByItem ?? {}).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${k}`).join(', ') || 'nothing';
   const mined = broken ? `mined ${broken} ${block}${drop ? ` (${block} drops ${drop})` : ''}` : `mined no ${block} as a target`;
+  const most = MAX_DROPS[block] ?? 1;
+  const beyond = gained - broken * most; // the least that came from elsewhere
   let more = '';
-  if (gained > broken && !BY_CHANCE.test(block)) more = broken ? `; ${gained - broken} of them from blocks dug or items picked up on the way` : '; all of them from blocks dug or items picked up on the way';
+  if (beyond > 0 && !BY_CHANCE.test(block)) {
+    more = !broken ? '; all of them from blocks dug or items picked up on the way'
+      : `; ${most > 1 ? 'at least ' : ''}${beyond} of them from blocks dug or items picked up on the way`;
+  }
   return `${mined} and picked up ${picked} (${gained} of ${c.requested ?? '?'} wanted${more})`;
 }
 
@@ -356,7 +363,9 @@ function describe(tool, r, call) {
   }
   if (r?.smelt) {
     const s = r.smelt;
-    return `smelted ${s.produced ?? 0} ${s.outputItem ?? 'items'} from ${s.requested} ${s.inputItem} with ${s.fuelItem} in the furnace at ${xyz(s.furnace)}${r.workstation?.recovered ? ' (the furnace was picked up again)' : ''}`;
+    // a smelt that failed before the furnace was loaded: their evidence says requested, but nothing went in
+    if (!(Number(s.produced) > 0) && !(Number(s.fuelInserted) > 0)) return `nothing was put into a furnace; your ${s.inputItem} and ${s.fuelItem} are still carried`;
+    return `smelted ${s.produced ?? 0} ${s.outputItem ?? 'items'} from ${s.requested} ${s.inputItem} with ${s.fuelItem}${s.furnace ? ` in the furnace at ${xyz(s.furnace)}` : ''}${r.workstation?.recovered ? ' (the furnace was picked up again)' : ''}`;
   }
   if (r?.navigation) {
     const n = r.navigation;
@@ -463,9 +472,15 @@ export function ownChange(tool, output, call = {}) {
     case 'smelt_item': {
       const sm = r.smelt;
       if (!sm) return null;
-      addTo(own, sm.inputItem, -(Number(sm.requested) - (Number(sm.rawRecovered) || 0)));
-      addTo(own, sm.fuelItem, -(Number(sm.fuelInserted) - (Number(sm.fuelRecovered) || 0)));
-      addTo(own, sm.outputItem, Number(sm.produced));
+      const inserted = Number(sm.fuelInserted) || 0;
+      const produced = Number(sm.produced) || 0;
+      // a smelt that failed before the furnace was loaded (no furnace put down, one that held items, the walk to it
+      // stopped, input or fuel short) sends the same evidence with requested as asked and nothing inserted, produced
+      // or recovered: it used nothing
+      if (inserted === 0 && produced === 0) { leftStanding(); return nonZero(own); }
+      addTo(own, sm.inputItem, -Math.max(0, (Number(sm.requested) || 0) - (Number(sm.rawRecovered) || 0)));
+      addTo(own, sm.fuelItem, -Math.max(0, inserted - (Number(sm.fuelRecovered) || 0)));
+      addTo(own, sm.outputItem, produced);
       leftStanding();
       return nonZero(own);
     }

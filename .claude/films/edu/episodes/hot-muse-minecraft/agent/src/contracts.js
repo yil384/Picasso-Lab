@@ -57,7 +57,7 @@ const DEFS = [
     'Fight one mob of this kind (the closest within 16 blocks) until it dies or gets away. nearest_hostile picks the closest hostile mob. Never players.',
     obj({ target: pick('mob to fight', ATTACK_TARGETS) })],
   ['eat',
-    'Eat the best food in your inventory. Only works when your food bar is below 20; at 20/20 it fails with code NOT_HUNGRY, which is harmless (nothing is eaten or lost).',
+    'Eat the best food in your inventory. Only works when your food bar is below 20; at 20/20 it fails with code NOT_HUNGRY, which is harmless: nothing is eaten or lost, and steps queued after it still run.',
     obj({})],
   ['say',
     'Send one chat message to the players on the server (1 to 200 characters, must not start with / or a space, no § sign).',
@@ -65,10 +65,11 @@ const DEFS = [
 ];
 
 /**
- * What eat answers at a full food bar (both bodies; code NOT_HUNGRY): a failure, but a harmless one, and the reply says
- * so, so a model does not take it for a problem to solve (the Muse run on staging, 2026-10-08, tried twice).
+ * What eat answers at a full food bar (both bodies; code NOT_HUNGRY): a failure, but a harmless one that cancels no step
+ * queued after it (src/mcp-queue.js), and the reply says so, so a model does not take it for a problem to solve (the
+ * Muse run on staging, 2026-10-08, tried twice).
  */
-export const NOT_HUNGRY_TEXT = 'not hungry: food is 20/20, and eat works only below 20. Harmless: nothing was eaten or used; eat again once food is below 20 (the body also eats on its own when it gets hungry)';
+export const NOT_HUNGRY_TEXT = 'not hungry: food is 20/20, and eat works only below 20. Harmless: nothing was eaten or used, and the steps queued after it still run; eat again once food is below 20 (the body also eats on its own when it gets hungry)';
 
 /** Items one craft_batch call may make (the MCP check may add planks, sticks or a table to the ones asked for). */
 export const CRAFT_BATCH_MAX = 12;
@@ -305,9 +306,10 @@ export const RESULT_CODES = Object.freeze([
   'RETREATED_LOW_HEALTH', // the body fled on its own because health ran low
   'INVENTORY_FULL',
   'DIED',
-  'NOT_HUNGRY', // eat at a full food bar (20/20): harmless, nothing was eaten or used
   'NOT_STARTED', // no game (start_game first), the game ended, or the bot is not in the world yet
   'DUPLICATE', // a re-sent play / play_sequence: the first call's result (none of its steps failed), nothing run again
+  'NOT_HUNGRY', // eat at a full food bar (20/20): harmless, nothing was eaten or used, the steps after it still run
+  'BODY_RESTARTED', // the bot's body stopped during the step and is being started again (BODY=mineai; once per game)
   'BAD_ARGS', // a step's skill or arguments are not valid: nothing was run
   'QUEUE_FULL', // too many steps waiting: nothing was run
   'TIMED_OUT', // the skill ran into its time limit

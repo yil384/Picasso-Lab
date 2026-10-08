@@ -10,7 +10,7 @@
 // (warnings) instead of refusing: where the bot ends up is only roughly known.
 
 import { registryFor, requireMc } from './mc.js';
-import { SMELT, FUEL, FUEL_ORDER, PLANKS, LOGS, WOODS, blueprintBlockCount, fuelPlan } from './game.js';
+import { SMELT, FUEL, FUEL_ORDER, PLANKS, LOGS, WOODS, MAX_DROPS, blueprintBlockCount, fuelPlan } from './game.js';
 import { SMELT_PER_CALL, CRAFT_BATCH_MAX } from './contracts.js';
 
 // the smelt skill's fuel order is FUEL_ORDER (src/game.js: cheapest first, coal before wood, planks before logs); for
@@ -22,7 +22,7 @@ const COBBLE_PER_FURNACE = 8;
 const WOOD_PLANKS = /^(.+)_planks$/;
 const WOOD_SET = new Set(WOODS);
 /** Blocks that drop more than one item (the most they give: the check is optimistic about what a step brings). */
-const DROP_COUNT = { clay: 4, copper_ore: 5, deepslate_copper_ore: 5 };
+const DROP_COUNT = MAX_DROPS;
 /** Blocks whose drop is left to chance: counted as nothing (collect does the same). */
 const CHANCE = /^(short_grass|.*_leaves)$/;
 // ingredients a missing-items hint should name first, as the craft skill does
@@ -40,10 +40,11 @@ const KNOWN = new Set(['get_state', 'say', 'eat', 'attack', 'equip', 'sleep', 'e
 
 /**
  * @typedef {{skill: string, args: object}} Step
- * @typedef {{skill: string, args: object, step: number|null, before?: number, added?: string, addedItems?: Array<{item: string, n: number}>}} PlannedStep
+ * @typedef {{skill: string, args: object, step: number|null, before?: number, added?: string, addedItems?: Array<{item: string, n: number, for?: string}>, part?: number, parts?: number}} PlannedStep
  *   step: the 1-based index in the caller's list (null for a step the check added); before: for an added step, the
  *   caller's step it was added for (it runs just before it); added: why it was added;
- *   addedItems: items the check put into a craft_batch's list
+ *   addedItems: items the check put into a craft_batch's list; part of parts: a craft_batch the added items made longer
+ *   than CRAFT_BATCH_MAX runs in parts, each with the caller's step number
  * @typedef {{step: number, item: string, need: number, for?: string, anyWood?: true, note?: string}} Missing
  * @typedef {{ok: boolean, steps: PlannedStep[], missing: Missing[], added: number}} Plan
  */
@@ -468,15 +469,22 @@ export function createPlanner({ version = '1.21.4' } = {}) {
       }
       if (replaced) {
         added += replaced.addedItems.length;
-        // a batch the added items make too long is split; each part uses one table session
+        // a batch the added items make too long is split; each part uses one table session. The parts keep the caller's
+        // step number, told apart by part (1-based) of parts; the first part carries the added items
         const items = replaced.args.items;
+        const parts = Math.ceil(items.length / CRAFT_BATCH_MAX);
         for (let k = 0; k < items.length; k += CRAFT_BATCH_MAX) {
-          out.push({ skill: 'craft_batch', args: { items: items.slice(k, k + CRAFT_BATCH_MAX) }, step: i + 1, ...(k ? {} : { addedItems: replaced.addedItems }) });
+          out.push({
+            skill: 'craft_batch', args: { items: items.slice(k, k + CRAFT_BATCH_MAX) }, step: i + 1,
+            ...(parts > 1 ? { part: k / CRAFT_BATCH_MAX + 1, parts } : {}),
+            ...(k ? {} : { addedItems: replaced.addedItems }),
+          });
         }
       } else {
         out.push({ skill: step.skill, args: step.args, step: i + 1 });
       }
     });
+    // added: crafts the check added as steps of their own plus items it put into a craft_batch's list (both kinds)
     return { ok: missing.length === 0, steps: out, missing, added, warnings: st.warnings.map((w) => ({ step: w.step, text: `step ${w.step} ${w.text}` })) };
   }
 

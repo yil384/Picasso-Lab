@@ -23,9 +23,10 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { RESULT_CODES, skillSet } from './contracts.js';
-import { createQueue, isFinal, statusOf, stepName, QUEUE_MAX, REPEAT_MS } from './mcp-queue.js';
+import { RESULT_CODES, CRAFT_BATCH_MAX, skillSet } from './contracts.js';
+import { createQueue, isFinal, statusOf, stepName, stepNumber, QUEUE_MAX, REPEAT_MS } from './mcp-queue.js';
 import { createPlanner, describeMissing } from './plan.js';
+import { registryFor } from './mc.js';
 
 const CALL_MS = 45_000; // every reply within 45 s: MCP clients commonly give up after 60 s (a long skill keeps going)
 /** Of a call's time, what building the reply may take (the state text scans the blocks around: ~850 ms on Paper). */
@@ -82,18 +83,43 @@ export function otherChange(r) {
 }
 
 /**
+ * The rest of a step's change (otherChange) by what can be told from the item alone: a tool or armour piece fewer
+ * (worn out: it has durability), food fewer (eaten meanwhile: the body eats on its own when hungry), and everything else
+ * (blocks dug through, scaffolding placed, items picked up, other drops of a kill, the drops of cells a build dug clear).
+ */
+export function splitOther(other, version = '1.21.4') {
+  const reg = registryFor(version);
+  const worn = {};
+  const eaten = {};
+  const rest = {};
+  for (const [k, v] of Object.entries(other ?? {})) {
+    if (v < 0 && reg.itemsByName[k]?.maxDurability) worn[k] = v;
+    else if (v < 0 && reg.foodsByName[k]) eaten[k] = v;
+    else rest[k] = v;
+  }
+  return { worn, eaten, rest };
+}
+
+/**
  * A step's inventory change as reply text: the whole change, or, when the body can tell what the step itself used and
- * made (r.own), that first and the rest apart ("-3 cobblestone, -2 stick, +1 stone_pickaxe; also on the way (dug
- * through, scaffolding, pickups): +1 cobblestone"), so a recipe never looks wrong for an item picked up meanwhile.
+ * made (r.own), that first and the rest apart, each part named by what it can be ("-3 cobblestone, -2 stick, +1
+ * stone_pickaxe; also changed meanwhile (dug through, scaffolding, pickups, other drops): +1 cobblestone; worn out: -1
+ * wooden_pickaxe; eaten meanwhile: -1 cooked_porkchop"), so a recipe never looks wrong for an item picked up meanwhile
+ * and a tool that broke or a meal is never put down to scaffolding.
  */
 export function changeText(r, skill) {
   if (!r?.own) return fmtDelta(r?.delta);
   // what it used, then what it made
   const mine = fmtDelta(Object.fromEntries(Object.entries(r.own).sort(([, a], [, b]) => Math.sign(a) - Math.sign(b))));
-  const other = fmtDelta(otherChange(r));
-  if (!other) return mine;
-  const label = skill === 'build' ? 'also from digging the site and on the way' : 'also on the way (dug through, scaffolding, pickups)';
-  return `${mine}${mine ? '; ' : ''}${label}: ${other}`;
+  const { worn, eaten, rest } = splitOther(otherChange(r));
+  const label = skill === 'build' ? 'also from digging the site and on the way' : 'also changed meanwhile (dug through, scaffolding, pickups, other drops)';
+  const parts = [
+    mine,
+    fmtDelta(rest) && `${label}: ${fmtDelta(rest)}`,
+    fmtDelta(worn) && `worn out: ${fmtDelta(worn)}`,
+    fmtDelta(eaten) && `eaten meanwhile (the body eats on its own when hungry): ${fmtDelta(eaten)}`,
+  ];
+  return parts.filter(Boolean).join('; ');
 }
 
 /** used / gained / other of a step's result for structuredContent (only what the body could tell apart). */
@@ -106,17 +132,57 @@ function splitOf(r) {
   return { ...(Object.keys(used).length ? { used } : {}), ...(Object.keys(gained).length ? { gained } : {}), ...(Object.keys(other).length ? { other } : {}) };
 }
 
-/** "4. " for the caller's step 4, "+ " for a craft the check added (it has no number of its own). */
-const numberOf = (st) => (st.step != null ? `${st.step}. ` : '+ ');
+/** "4. " for the caller's step 4 ("4 (part 2 of 3). " for a part of a split craft_batch), "+ " for a craft the check added. */
+const numberOf = (st) => (st.step != null ? `${stepNumber(st)}. ` : '+ ');
 /** A step named in a sentence: "4. craft {...}", or "craft {...} (added before step 4)". */
-const refOf = (st, describe) => (st.step != null ? `${st.step}. ${describe(st)}` : `${describe(st)} (added before step ${st.before ?? '?'})`);
+const refOf = (st, describe) => (st.step != null ? `${stepNumber(st)}. ${describe(st)}` : `${describe(st)} (added before step ${st.before ?? '?'})`);
+
+/** "12 oak_planks, 4 stick for wooden_pickaxe; 1 crafting_table for wooden_axe": items the check put into a batch. */
+function addedItemsText(items) {
+  const groups = [];
+  for (const { item, n, for: why } of items ?? []) {
+    const g = groups.find((x) => x.why === (why ?? null));
+    if (g) g.list.push(`${n} ${item}`); else groups.push({ why: why ?? null, list: [`${n} ${item}`] });
+  }
+  return groups.map((g) => `${g.list.join(', ')}${g.why ? ` for ${g.why}` : ''}`).join('; ');
+}
+
+/** A step as the caller should read it: its number, the skill and args, and what the check added or changed in it. */
+function headOf(st, numbered) {
+  const notes = [];
+  if (st.added) notes.push(`added by the check before step ${st.before ?? '?'}, ${st.added}`);
+  if (st.addedItems?.length) notes.push(`the check added to your list: ${addedItemsText(st.addedItems)}`);
+  if (st.parts > 1) notes.push(`part ${st.part} of ${st.parts}: with the added items your list is longer than ${CRAFT_BATCH_MAX}, so it runs in ${st.parts} parts`);
+  return `${numbered ? numberOf(st) : ''}${st.skill} ${JSON.stringify(st.args)}${notes.length ? ` (${notes.join('; ')})` : ''}`;
+}
+
+/**
+ * What the check added, as the lead of a reply: crafts of their own ("+" lines) and items put into a craft_batch's list
+ * (named on that step's line), each counted apart; null when it added nothing.
+ */
+function addedLead(planned) {
+  const crafts = planned.filter((st) => st.added).length;
+  const batches = planned.filter((st) => st.addedItems?.length);
+  const out = [];
+  if (crafts) out.push(`The check added ${crafts} craft${crafts > 1 ? 's' : ''} your steps need (marked + below, each just before the step that needs it).`);
+  for (const st of batches) {
+    const k = st.addedItems.length;
+    out.push(`The check put ${k} item${k > 1 ? 's' : ''} into the craft_batch list of your step ${st.step} (named on that line${st.parts > 1 ? `; the list now runs in ${st.parts} parts, numbered ${st.step} (part 1 of ${st.parts}) and so on` : ''}).`);
+  }
+  if (!out.length) return null;
+  return `${out.join(' ')} Your steps keep their numbers.`;
+}
 
 // structuredContent of play, play_sequence, get_state and stop (declared, so a client can rely on its shape)
 const COUNTS = z.record(z.string(), z.number());
 const STEP_OUT = z.object({
-  n: z.number().describe('the order this call\'s steps run in, added crafts included (a key; your numbering is step)'),
+  n: z.number().describe('the order the steps of one call run in, added crafts included: unique only within its call (your numbering is step)'),
+  call: z.number().optional().describe('which call of this game the step came from: #1, #2, ... (each play and play_sequence that was accepted; its reply says call)'),
   step: z.number().nullable().describe('your step number, as you sent it; null for a craft the check added'),
   before: z.number().optional().describe('for a craft the check added: your step it was added before'),
+  part: z.number().optional().describe('for a craft_batch the check made longer than its limit: which part of your step this is (of parts)'),
+  parts: z.number().optional(),
+  addedItems: z.array(z.object({ item: z.string(), n: z.number(), for: z.string().nullish() }).loose()).optional().describe('items the check put into this craft_batch\'s list, with what they are for'),
   skill: z.string(),
   args: z.record(z.string(), z.any()),
   status: z.enum(['pending', 'confirmed', 'failed', 'cancelled']),
@@ -125,7 +191,7 @@ const STEP_OUT = z.object({
   delta: COUNTS.optional().describe('the whole inventory change while the step ran (+ more, - fewer)'),
   used: COUNTS.optional().describe('what the step itself used, e.g. a recipe\'s ingredients'),
   gained: COUNTS.optional().describe('what the step itself made or collected'),
-  other: COUNTS.optional().describe('the rest of delta: blocks dug through or scaffolding placed on the way, items lying nearby picked up, drops of cells a build dug clear'),
+  other: COUNTS.optional().describe('the rest of delta (delta minus used and gained): blocks dug through or scaffolding placed on the way, items picked up, other drops of a kill, drops of cells a build dug clear, a tool that wore out, food the body ate on its own (the text names the last two apart)'),
   code: z.string().optional(),
   added: z.string().optional(),
   why: z.string().optional(),
@@ -133,6 +199,7 @@ const STEP_OUT = z.object({
 const REPLY_OUT = z.object({
   code: z.enum(RESULT_CODES).nullable().describe('the typed outcome of this call; null when nothing went wrong'),
   game: z.string().nullable(),
+  call: z.number().optional().describe('for play and play_sequence: this call\'s number in the game (#1, #2, ...), as later replies name it'),
   steps: z.array(STEP_OUT).describe("this call's steps"),
   earlier: z.array(STEP_OUT).describe('steps of earlier calls that finished since your last reply'),
   queue: z.object({ running: z.string().nullable(), waiting: z.number() }),
@@ -231,7 +298,7 @@ export function createMcp(hooks) {
    * in front ("4. "), or "+ " for a craft the check added, which takes no number: the caller's steps keep theirs.
    */
   function stepLine(st, numbered) {
-    const head = `${numbered ? numberOf(st) : ''}${st.skill} ${JSON.stringify(st.args)}${st.added ? ` (added by the check before step ${st.before ?? '?'}, ${st.added})` : ''}`;
+    const head = headOf(st, numbered);
     if (st.status === 'confirmed' || st.status === 'failed') return `${head}${outcome(st.result, st.skill)}`;
     if (st.status === 'cancelled') return `${head}: cancelled (${st.why ?? 'stopped'})${st.result ? `: ${st.result.result}${changeText(st.result, st.skill) ? ` [${changeText(st.result, st.skill)}]` : ''}` : ''}`;
     if (st.status === 'running') return `${head}: still running after ${Math.round((now() - st.startedAt) / 1000)} s (long walks and mining take a while); a later reply reports the result`;
@@ -242,8 +309,10 @@ export function createMcp(hooks) {
     const r = st.result;
     return {
       n: st.n,
+      ...(st.call?.no != null ? { call: st.call.no } : {}),
       step: st.step,
       ...(st.step == null && st.before != null ? { before: st.before } : {}),
+      ...(st.parts > 1 ? { part: st.part, parts: st.parts } : {}),
       skill: st.skill,
       args: st.args,
       status: statusOf(st),
@@ -282,8 +351,9 @@ export function createMcp(hooks) {
   const describe = (st) => `${st.skill}${Object.keys(st.args ?? {}).length ? ` ${JSON.stringify(st.args)}` : ''}`;
 
   /**
-   * The steps that outlived earlier calls, by call: each call's steps numbered as the caller numbered them (a call of
-   * one step unnumbered, as before), with a line naming the call when the block holds steps of more than one.
+   * The steps that outlived earlier calls, by call: a line naming each call ("From your play_sequence #2, sent 41 s
+   * ago:"; calls are numbered per game, and the reply to each said its number), then its steps numbered as the caller
+   * numbered them (a call of one step unnumbered).
    */
   function earlierText(earlier) {
     const groups = [];
@@ -294,7 +364,7 @@ export function createMcp(hooks) {
     }
     return groups.map((g) => {
       const numbered = (g.call?.steps?.length ?? 1) > 1;
-      const head = groups.length > 1 && numbered ? `From ${g.call.label} sent ${Math.round((now() - g.call.at) / 1000)} s ago:\n` : '';
+      const head = g.call ? `From ${g.call.label}, sent ${Math.round((now() - g.call.at) / 1000)} s ago:\n` : '';
       return `${head}${g.steps.map((st) => stepLine(st, numbered)).join('\n')}`;
     }).join('\n');
   }
@@ -440,7 +510,7 @@ export function createMcp(hooks) {
         // how the first call went (a failure's code, e.g. HOSTILE_CONTACT or DIED); DUPLICATE when nothing went wrong.
         // structuredContent.duplicate marks the repeat either way.
         code: firstCode(first.steps) ?? cancelledCode(first.steps) ?? 'DUPLICATE',
-        more: { duplicate: { ageS: ago, by: requestId ? 'request_id' : 'same call' } },
+        more: { call: first.no, duplicate: { ageS: ago, by: requestId ? 'request_id' : 'same call' } },
       });
     }
 
@@ -451,9 +521,12 @@ export function createMcp(hooks) {
     const warnText = warnings.length ? `The check warns (it does not know exactly where you will stand):\n${warnings.map((w) => `- ${w.text}`).join('\n')}\n` : '';
     const warnMore = warnings.length ? { warnings } : {};
     if (raw.dry_run) {
-      const lines = planned.map((st) => `${numberOf(st)}${st.skill} ${JSON.stringify(st.args)}${st.added ? ` (added by the check before step ${st.before ?? '?'}, ${st.added})` : ''}`);
+      const lines = planned.map((st) => headOf(st, true));
+      const crafts = planned.filter((st) => st.added).length;
+      const items = planned.reduce((k, st) => k + (st.addedItems?.length ?? 0), 0);
+      const adding = [crafts ? `adding ${crafts} craft${crafts > 1 ? 's' : ''} (marked +)` : '', items ? `putting ${items} item${items > 1 ? 's' : ''} into your craft_batch list (named on its line)` : ''].filter(Boolean).join(' and ');
       const verdict = !plan ? 'The check could not run; nothing was checked.'
-        : plan.ok ? `The check passed${plan.added ? `, adding ${plan.added} craft${plan.added > 1 ? 's' : ''}` : ''}. Nothing was run (dry_run); send it again without dry_run to run it.`
+        : plan.ok ? `The check passed${adding ? `, ${adding}` : ''}. Nothing was run (dry_run); send it again without dry_run to run it.`
           : `The check would refuse this: missing ${plan.missing.map((m) => `${describeMissing(m)} (step ${m.step})`).join('; ')}. Nothing was run (dry_run).`;
       return reply(s, extra, { lead: `${verdict}\n${warnText}The steps as they would run:\n${lines.join('\n')}`, code: plan && !plan.ok ? 'NEED_ITEMS' : null, more: { plan: planned, ...(plan && !plan.ok ? { missing: plan.missing } : {}), ...warnMore } });
     }
@@ -467,15 +540,15 @@ export function createMcp(hooks) {
       return refuse(s, extra, 'QUEUE_FULL', `Not run: ${q.waiting.length} steps are already queued and this call adds ${planned.length}; at most ${QUEUE_MAX} may wait. Call get_state to wait for them, or stop to clear the queue.`);
     }
 
-    const call = q.submit(key, { sig, requestId, label: `your ${tool}`, planned });
+    const call = q.submit(key, { sig, requestId, label: (no) => `your ${tool} #${no}`, planned });
     await wait(call.settled, end - Date.now(), signal);
-    const added = planned.filter((st) => st.added || st.addedItems?.length).length;
+    const added = addedLead(planned);
     return reply(s, extra, {
       steps: call.steps,
       numbered: tool === 'play_sequence' || call.steps.length > 1,
-      lead: `${added ? `The check added ${plan.added} craft${plan.added > 1 ? 's' : ''} your steps need (marked + below, each before the step that needs it; your steps keep their numbers).\n` : ''}${warnText}`,
+      lead: `${added ? `${added}\n` : ''}${warnText}`,
       tail: pendingTail(call.steps),
-      more: warnMore,
+      more: { call: call.no, ...warnMore },
     });
   }
 
@@ -495,7 +568,8 @@ export function createMcp(hooks) {
       const addedText = `${extra} craft${extra > 1 ? 's' : ''} the check added`;
       const what = !nums.length ? (extra > 1 ? `${addedText[0].toUpperCase()}${addedText.slice(1)} are` : `${stepName(open[0])[0].toUpperCase()}${stepName(open[0]).slice(1)} is`)
         : nums.length === 1 && !extra ? `Step ${nums[0]} is` : `Steps ${nums.join(', ')}${extra ? ` (and ${addedText})` : ''} are`;
-      out += `\n${what} still running or queued: they go on after this reply. Call get_state to wait for them (it reports their results once), or stop to clear the queue.`;
+      const label = open[0].call?.label;
+      out += `\n${what} still running or queued: they go on after this reply. Call get_state to wait for them (it reports their results once, under "From ${label ?? 'this call'}"), or stop to clear the queue.`;
     }
     return out;
   }
@@ -509,7 +583,7 @@ export function createMcp(hooks) {
 
   const callShape = { skill: z.enum(skills.names), args: z.record(z.string(), z.any()).optional().describe("the skill's arguments, e.g. {\"block\": \"oak_log\", \"n\": 3} for collect") };
   const requestIdShape = z.string().min(1).max(64).optional().describe(`any id of yours for this call (1 to 64 characters): if the call is sent again with the same request_id (a retry after a broken connection), nothing runs twice and the reply carries the first call's results. Without one, the same call within ${REPEAT_MS / 1000} s counts as a repeat; give a new request_id to repeat a call on purpose`);
-  const queueText = `Steps run in order in a queue: what does not finish within ${Math.round(callMs / 1000)} s keeps running after the reply (a later reply, or get_state, reports it); a step that fails cancels the steps queued after it; stop clears the queue. Before anything runs, a check simulates your inventory through the steps: if an ingredient, fuel, tool or station is missing, the call is refused with the list (code NEED_ITEMS) and nothing runs; planks, sticks, a crafting table or a furnace that can be made from what you carry are added as crafts. Replies carry structuredContent: each step's status (pending, confirmed, failed, cancelled) and code (${RESULT_CODES.join(', ')}), what changed, and a short state.`;
+  const queueText = `Steps run in order in a queue: what does not finish within ${Math.round(callMs / 1000)} s keeps running after the reply (a later reply, or get_state, reports it); a step that fails cancels the steps queued after it (except eat's NOT_HUNGRY, which changes nothing: the steps after it still run); stop clears the queue. Before anything runs, a check simulates your inventory through the steps: if an ingredient, fuel, tool or station is missing, the call is refused with the list (code NEED_ITEMS) and nothing runs; planks, sticks, a crafting table or a furnace that can be made from what you carry are added as crafts. Replies carry structuredContent: each step's status (pending, confirmed, failed, cancelled) and code (${RESULT_CODES.join(', ')}), what changed, and a short state.`;
 
   function build(entry) {
     const server = new McpServer({ name: 'muse-plays-minecraft', version: '1.0.0' }, {
