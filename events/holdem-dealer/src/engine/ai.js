@@ -16,9 +16,11 @@
 // Exports
 //   STYLES
 //   decide(view, { rng, style, budget = 1 }) -> { action: "fold"|"check"|"call"|"raise"|"allin", to: int|null }
-//        always legal for view.me.legal (null when it is not this seat's turn); budget scales Monte Carlo work
+//        always legal for view.me.legal (null when it is not this seat's turn); budget scales Monte Carlo work;
+//        style defaults to the seat's public `bot` field; rng defaults to Math.random (bots need no crypto)
 //   thinkDelay(view, decision, rng) -> ms   recommended pause before acting (700..2400, longer for big decisions)
 //   preflopTable(nOpp) -> { equity: Map(class -> eq), top: Map(class -> percentile 0 best..1 worst) }
+//   warmup()                               builds the pre-flop tables for 1..8 opponents (~1 s; call at startup)
 //   handClass(cardA, cardB) -> "AKs" | "QJo" | "77"
 //   equity(holeInts, boardInts, nOpp, iters, rng) -> 0..1 (ties shared)
 //   draws(holeInts, boardInts) -> { flush, oesd, gut }   flop/turn draws that use a hole card
@@ -95,7 +97,7 @@ export function preflopTable(nOpp) {
   const n = Math.max(1, Math.min(8, nOpp | 0));
   if (PF.has(n)) return PF.get(n);
   const rng = seededRng(0x5eed + n * 7919);
-  const iters = n <= 2 ? 1500 : 900;
+  const iters = n <= 2 ? 3000 : 2000;
   const eq = new Map();
   for (const c of CLASSES) eq.set(c.key, equity(c.cards, [], n, iters, rng));
   const sorted = CLASSES.slice().sort((p, q) => eq.get(q.key) - eq.get(p.key));
@@ -105,6 +107,10 @@ export function preflopTable(nOpp) {
   const t = { equity: eq, top };
   PF.set(n, t);
   return t;
+}
+
+export function warmup() {
+  for (let n = 1; n <= 8; n++) preflopTable(n);
 }
 
 // ---------- reading the view ----------
@@ -320,10 +326,10 @@ function legalize(choice, L, sp) {
   }
 }
 
-export function decide(view, { rng = mathRng, style = 'veteran', budget = 1 } = {}) {
+export function decide(view, { rng = mathRng, style, budget = 1 } = {}) {
   const L = view.me.legal;
   if (!L) return null;
-  const P = PERSONAS[style] || PERSONAS.veteran;
+  const P = PERSONAS[style || view.table.seats[view.me.seat].bot] || PERSONAS.veteran;
   const sp = readSpot(view);
   const choice = sp.h.street === 'preflop' ? preflop(sp, P, rng) : postflop(sp, P, rng, budget);
   return legalize(choice, L, sp);
