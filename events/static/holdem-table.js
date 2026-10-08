@@ -852,7 +852,7 @@ export function createTable({ ui, S, send, popups }) {
             ["rules", icon("rules"), L("Rules", "规则")],
             ["hands", icon("hands"), L("Hand ranking", "牌型")],
             ["lang", icon("lang"), ui.isZH() ? "English" : "中文"],
-            music ? ["music", icon("music"), music.isOn?.() ? L("Music: on", "音乐：开") : L("Music: off", "音乐：关")] : null,
+            music ? ["music", icon("music"), music.isOn?.() && music.current?.() ? esc(L(`Music: ${music.current().short.en}`, `音乐：${music.current().short.zh}`)) : L("Music: off", "音乐：关")] : null,
             ["sfx", icon("sfx"), sfx.on ? L("Sound: on", "音效：开") : L("Sound: off", "音效：关")],
             seat ? ["topup", icon("chips"), L("Top up chips", "补充筹码")] : null,
             seat ? (seat.state === "out" ? ["back", icon("play"), L("I'm back", "回来")] : ["away", icon("pause"), L("Sit out", "暂离")]) : null,
@@ -934,11 +934,7 @@ export function createTable({ ui, S, send, popups }) {
         if (m === "rules") return popups.openRules();
         if (m === "hands") return popups.openRules(3);
         if (m === "lang") return ui.toggleLang();
-        if (m === "music") {
-            const music = window.GuandanMusic;
-            music.setOn(!music.isOn());
-            return ui.showToast(music.isOn() ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
-        }
+        if (m === "music") return ui.openMusic();
         if (m === "sfx") {
             sfx.set(!sfx.on);
             return ui.showToast(sfx.on ? L("Sound on", "音效已开启") : L("Sound off", "音效已关闭"));
