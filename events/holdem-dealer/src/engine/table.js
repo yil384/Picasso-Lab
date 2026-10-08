@@ -49,7 +49,13 @@ import { viewFor as buildView } from '../views.js';
 export const BLINDS = { '5/10': [5, 10], '10/20': [10, 20], '25/50': [25, 50], '50/100': [50, 100] };
 export const ACTION_SECS = [15, 20, 30];
 export const BOT_STYLES = ['steady', 'fierce', 'sly', 'veteran'];
-const BOT_NAMES = { steady: 'Stone', fierce: 'Blaze', sly: 'Fox', veteran: 'Sage' };
+// three names per personality, each with its own first letter (the robot face shows it): a table never repeats one
+export const BOT_NAMES = {
+  steady: ['Stone', 'Oak', 'Rock'],
+  fierce: ['Blaze', 'Tiger', 'Hawk'],
+  sly: ['Fox', 'Lynx', 'Viper'],
+  veteran: ['Ace', 'Duke', 'Grey'],
+};
 // an account that played here and stood up within this long sits back down as a returning player (it waits for
 // the big blind like one back from sitting out), so standing and sitting again never dodges the big blind
 export const REJOIN_MS = 15 * 60_000;
@@ -446,9 +452,11 @@ export class HoldemTable {
             const style = BOT_STYLES.includes(args.style) ? args.style : BOT_STYLES[(offset + st.botSeq) % BOT_STYLES.length];
             const n = ++st.botSeq;
             const id = `b_${n}`;
-            const same = st.seats.filter((s) => s && s.bot && s.name.startsWith(BOT_NAMES[style])).length;
+            const taken = new Set(st.seats.filter((s) => s && s.bot).map((s) => s.name));
+            const pool = BOT_NAMES[style];
+            const name = pool.find((x) => !taken.has(x)) || `${pool[0]} ${n}`;
             st.seats[empty[k]] = newSeat({
-              id, pid: id, name: same ? `${BOT_NAMES[style]} ${same + 1}` : BOT_NAMES[style], bot: style,
+              id, pid: id, name, bot: style,
               stack: st.settings.maxBuyIn, now: st.now, bankMs: this._bankStart(),
               waiting: st.phase === 'running' && st.handNo > 0,
             });

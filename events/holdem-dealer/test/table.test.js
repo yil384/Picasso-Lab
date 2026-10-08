@@ -1022,3 +1022,16 @@ test('blinds when a table drops to two ready players while a third waits: no sma
   assert.ok(!u.hand.dealt.includes(3), 'the new seat waits: the last hand was not heads-up');
   assert.deepEqual(u.hand.dealt, [0, 2]);
 });
+
+test('bots: eight at a 9-seat table carry eight different names with eight different first letters, no numbers', () => {
+  for (const seed of [1, 2, 3, 4]) {
+    const t = new HoldemTable({ code: 'N', settings: { seats: 9 }, host: { id: 'u_0', pid: 'p_0' }, now: 0, rng: seededRng(seed) });
+    t.sit(acct(0), 0, 2000, 0);
+    assert.equal(t.hostOp('u_0', 'fillBots', {}, 0).ok, true);
+    const names = t.seats.filter((s) => s && s.bot).map((s) => s.name);
+    assert.equal(names.length, 8);
+    assert.equal(new Set(names).size, 8, names.join(' '));
+    assert.equal(new Set(names.map((x) => x[0])).size, 8, names.join(' '));
+    assert.ok(names.every((x) => !/\d/.test(x)));
+  }
+});

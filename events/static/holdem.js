@@ -28,6 +28,9 @@ const ERRORS = {
     not_waiting: ["The game has already started", "牌局已经开始"],
     rate_limited: ["Too fast, slow down a little", "操作太快了"],
     too_many_tables: ["You already host 3 open tables", "你已经开了 3 张牌桌，先解散一张"],
+    too_many_tables_net: ["Too many tables are open from this network. Try again later", "这个网络开的牌桌太多了，稍后再试"],
+    too_many_seats: ["You already sit at 4 tables. Leave one first", "你已经坐在 4 张牌桌上了，先离开一张"],
+    too_many_misses: ["Too many wrong table codes from this network today", "这个网络今天输错房间号的次数太多了"],
     restarting: ["The table service is restarting. Try again in a moment", "牌桌服务正在重启，请稍后再试"],
     bad_seat: ["That seat does not exist", "没有这个座位"],
     not_seated: ["You are not seated", "你还没有入座"],
@@ -94,6 +97,12 @@ export function mountHoldem(ui) {
         S.code = t.code;
         S.pending = "";
         if (t.phase === "closed") return close(L("The table closed", "牌桌已关闭"));
+        // the service restarted while this page was in a hand: that hand was called off and every chip went back
+        const was = prev.table?.code === t.code ? prev.table.hand : null;
+        if (t.voided && was && !was.done && was.no === t.voided && S.voidSeen !== `${t.code}:${t.voided}`) {
+            S.voidSeen = `${t.code}:${t.voided}`;
+            ui.showToast(L(`The table service restarted: hand ${t.voided} was called off and every chip went back`, `牌桌服务重启了，第 ${t.voided} 手已取消，下注的筹码已全部退回`), 3600);
+        }
         if (S.starting) {
             const { invite, resolve } = S.starting;
             S.starting = null;
@@ -755,6 +764,8 @@ export function mountHoldem(ui) {
             </div>`;
         };
         const inTop = rows.some(r => r.pid === mePid);
+        const rule = data.rule || { days: 3, hands: 50 };
+        const ruleText = L(`Accounts rank after ${rule.days} days and ${rule.hands} hands`, `注册满 ${rule.days} 天、打满 ${rule.hands} 手即可上榜`);
         const head = `<div class="hd-bhead"><span>${L("Rank", "名次")}</span><span>${L("Player", "玩家")}</span><span>${L("Net", "净胜筹码")}</span><span>${L("Hands", "手数")}</span><span>${L("Won", "胜率")}</span><span>${L("Biggest pot", "最大底池")}</span></div>`;
         // nobody ranked yet: the three empty places on their steps, and (from the lobby) a way to play a first hand
         if (!rows.length) {
@@ -763,13 +774,14 @@ export function mountHoldem(ui) {
                 ? `<button class="btn primary hd-board-play" type="button" data-board-play>${L("Play a hand", "去打一手")}</button>` : "";
             return `<div class="hd-lb is-empty">${head}
                 <div class="hd-podium"><div class="hd-pods">${[1, 0, 2].map(step).join("")}</div>
-                <p class="hd-board-empty">${L("No hands played yet. Play one to take a place.", "还没有人上榜，打一手牌就能上榜")}</p>${play}</div>
+                <p class="hd-board-empty">${L("Nobody ranked yet.", "还没有人上榜。")} ${ruleText}${data.me?.hands ? L(` · you: ${fmt(data.me.hands)} hands so far`, ` · 你已打 ${fmt(data.me.hands)} 手`) : ""}</p>${play}</div>
             </div>`;
         }
-        // my own row below the list only once I have played (an unranked 0 / 0 / - row says nothing)
+        // my own row below the list only once I have played (an unranked 0 / 0 / - row says nothing); unranked, it says
+        // when it will rank
         return `<div class="hd-lb">${head}
             <div class="hd-brows">${rows.map((r, i) => line(r, i, r.pid === mePid)).join("")}</div>
-            ${!inTop && data.me?.hands ? `<div class="hd-bme">${line(data.me, null, true)}</div>` : ""}
+            ${!inTop && data.me?.hands ? `<div class="hd-bme">${line(data.me, null, true)}${data.me.rank ? "" : `<p class="hd-bme-note">${ruleText}</p>`}</div>` : ""}
         </div>`;
     }
 

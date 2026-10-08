@@ -1784,11 +1784,56 @@ function lobbyStatsHTML(st) {
     return (rows || []).map(([mark, glyph, value, label], i) => `<span class="hud-stat s${i}" title="${label}"><i>${isZH() ? mark : glyphHTML(glyph)}</i><b>${value}</b><span class="sr-only">${label}</span></span>`).join("");
 }
 
-function lobbyProfileHTML() {
+// The Hold'em ranking's top three and my place there, for the Hold'em lobby's tier badge and ranking tile: fetched in
+// the background (at most once a minute while that lobby shows), applied in place when it arrives (a code being typed
+// stays). Until then, and offline, the tile shows its empty steps and the badge 新手 / 实验室.
+let holdemBoard = null;        // { top: [{ name }], rank, at }
+let holdemBoardRun = null;
+function refreshHoldemBoard() {
+    if (!account || holdemBoardRun || (holdemBoard && Date.now() - holdemBoard.at < 60_000)) return;
+    holdemBoardRun = account.ready()
+        .then(() => account.request("/leaderboard?game=holdem&limit=3"))
+        .then(d => { holdemBoard = { top: (d.rows || []).slice(0, 3), rank: d.me?.rank || null, at: Date.now() }; },
+            () => { holdemBoard ||= { top: [], rank: null, at: Date.now() - 50_000 }; })
+        .finally(() => {
+            holdemBoardRun = null;
+            if (lobbyGame !== "holdem" || document.body.dataset.screen !== "lobby") return;
+            const tier = document.querySelector(".hud-tier > span");
+            if (tier) tier.textContent = lobbyTierText();
+            const art = root.querySelector(".lobby-tile.is-peak .hd-podium-art");
+            if (art) art.outerHTML = holdemPodiumHTML();
+        });
+}
+
+function lobbyTierText() {
     const key = labPlayerKey(nickname);
     const p = key ? labPlayers()[key] : null;
+    // Hold'em: the Hold'em place once ranked; the Guandan lab board says nothing about it
+    if (lobbyGame === "holdem") {
+        const rank = holdemBoard?.rank;
+        return rank ? L(`Rank ${rank}`, `第 ${rank} 名`) : p ? L("Lab member", "实验室") : L("Rookie", "新手");
+    }
     const st = key ? labStatsFor(key) : null;
-    const tier = st ? L(`Rank ${st.rank}`, `第 ${st.rank} 名`) : p ? L("Lab member", "实验室") : L("Rookie", "新手");
+    return st ? L(`Rank ${st.rank}`, `第 ${st.rank} 名`) : p ? L("Lab member", "实验室") : L("Rookie", "新手");
+}
+
+// the ranking tile's podium: the Hold'em top three (a labmate's portrait, else the default face) on gold, silver and
+// bronze steps; with nobody ranked yet, the empty steps
+function holdemPodiumHTML() {
+    const PL = labPlayers();
+    const top = holdemBoard?.top || [];
+    const face = row => {
+        const photo = PL[labPlayerKey(row.name)]?.avatar;
+        return photo ? `<img src="${encodeHTML(photo)}" alt="" loading="lazy">` : defaultFaceHTML();
+    };
+    return `<span class="tile-art hd-podium-art${top.length ? "" : " is-empty"}">${[1, 0, 2].map(i =>
+        `<span class="hd-podium-p p${i}">${top[i] ? `<span class="gd-avatar is-plain">${face(top[i])}</span>` : ""}<b>${i + 1}</b></span>`).join("")}</span>`;
+}
+
+function lobbyProfileHTML() {
+    const key = labPlayerKey(nickname);
+    const st = key ? labStatsFor(key) : null;
+    const tier = lobbyTierText();
     const stats = lobbyStatsHTML(st);
     return `<div class="hud-profile">
         <button class="hud-avatar" type="button" data-account aria-label="${L("Account", "账号")}">${profileFaceHTML(nickname)}</button>
@@ -2168,9 +2213,8 @@ function holdemTilesHTML() {
     const code = lobbyCodeDraft;
     const card = (c, i) => cardHTML(signatureCard(c, `hv${i}`));
     const royal = ["10♠", "J♠", "Q♠", "K♠", "A♠"].map((c, i) => cardHTML(signatureCard(c, `hr${i}`), true)).join("");
-    const PL = labPlayers();
-    const podium = labStandings()?.board?.slice(0, 3).map(s => PL[s.key]).filter(p => p?.avatar) || [];
-    const robots = [["S", "石"], ["F", "狐"], ["B", "火"]].map(([en, zh], i) => `<span class="gd-avatar is-plain hd-bot-av b${i}">${defaultFaceHTML(L(en, zh))}</span>`).join("");
+    refreshHoldemBoard();
+    const robots = [["S", "石"], ["F", "狐"], ["B", "烈"]].map(([en, zh], i) => `<span class="gd-avatar is-plain hd-bot-av b${i}">${defaultFaceHTML(L(en, zh))}</span>`).join("");
     return `
         <button class="lobby-tile is-classic is-holdem" type="button" data-lobby="h-create" aria-label="${L("Hold'em: open a friends table", "德州扑克：开一张好友桌")}">
             <span class="tile-art hd-hero-art">${card("A♠", 0)}${card("K♥", 1)}${chipStackHTML(4)}</span>
@@ -2182,7 +2226,7 @@ function holdemTilesHTML() {
             <b class="tile-title">${L("vs AI", "人机练习")}</b>
         </button>
         <button class="lobby-tile is-peak" type="button" data-lobby="h-board" aria-label="${L("Hold'em ranking", "德州排行榜")}">
-            <span class="tile-art hd-podium-art">${[1, 0, 2].map(i => podium[i] ? `<span class="hd-podium-p p${i}"><span class="gd-avatar is-plain"><img src="${encodeHTML(podium[i].avatar)}" alt="" loading="lazy"></span><b>${i + 1}</b></span>` : "").join("")}</span>
+            ${holdemPodiumHTML()}
             <b class="tile-title">${L("Ranking", "排行榜")}</b>
         </button>
         <button class="lobby-tile is-lab" type="button" data-lobby="lab" aria-label="${L("Lab deck", "实验室牌组")}">

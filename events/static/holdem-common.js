@@ -73,19 +73,31 @@ export function handLabel(hand, L) {
     return detail ? `${name} · ${detail}` : name;
 }
 
-// The service names its bots by personality (Stone / Blaze / Fox / Sage, numbered when repeated).
-const BOT_NAMES = { steady: ["Stone", "石头"], fierce: ["Blaze", "烈火"], sly: ["Fox", "狐狸"], veteran: ["Sage", "老将"] };
+// The service names its bots by personality, three names each (a table never repeats one); every name has its own
+// first letter / character, which the robot face shows. Older tables may still carry Sage or a numbered name.
+const BOT_NAMES = {
+    steady: [["Stone", "石头"], ["Oak", "橡树"], ["Rock", "磐石"]],
+    fierce: [["Blaze", "烈火"], ["Tiger", "猛虎"], ["Hawk", "雄鹰"]],
+    sly: [["Fox", "狐狸"], ["Lynx", "山猫"], ["Viper", "蝮蛇"]],
+    veteran: [["Ace", "老将"], ["Duke", "公爵"], ["Grey", "灰狼"], ["Sage", "智者"]]
+};
+function botName(seat) {
+    const pool = BOT_NAMES[seat?.bot];
+    if (!pool) return null;
+    const base = String(seat.name || "").replace(/\s+\d+$/, "");
+    return pool.find(n => n[0] === base) || pool[0];
+}
 export function seatName(seat, L) {
     if (!seat) return "";
     if (!seat.bot) return seat.name || "";
-    const n = BOT_NAMES[seat.bot];
+    const n = botName(seat);
     if (!n) return seat.name;
     const num = /\s(\d+)$/.exec(seat.name || "")?.[1];
     return `${L(n[0], n[1])}${num ? ` ${num}` : ""}`;
 }
-// the mark on a bot's robot face
+// the mark on a bot's robot face: its name's first letter (character)
 export function botMark(seat, L) {
-    const n = BOT_NAMES[seat?.bot];
+    const n = botName(seat);
     return n ? L(n[0][0], n[1][0]) : "AI";
 }
 

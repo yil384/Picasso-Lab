@@ -18,8 +18,9 @@ USER node
 VOLUME ["/data"]
 EXPOSE 8787
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/v1/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+# unhealthy when the service does not answer, or answers that its changes are not being written (src/health.js)
+HEALTHCHECK --interval=30s --timeout=12s --start-period=20s --retries=3 \
+  CMD node src/health.js
 
 # node is PID 1 and handles SIGTERM itself (graceful: sockets close with 1012, data files flushed)
 STOPSIGNAL SIGTERM

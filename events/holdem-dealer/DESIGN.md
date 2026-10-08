@@ -52,12 +52,15 @@ today. Keeping Hold'em lobby state out of Firebase avoids two sources of truth f
 | Hold'em client | its own decisions (fold/call/raise), its own display | deck, other players' cards, pot math, timers, chip counts, whose turn it is |
 | Guandan client | the whole Guandan game (unchanged, client-trusted Firebase) | Hold'em anything; other accounts |
 | Firebase Auth | proving control of an email address (ID token) | nothing else |
-| IP address | a hint that "someone here used name X recently" | identity; never signs anyone in |
+| IP address | a hint that "someone here used name X recently" | identity; never signs anyone in, never hands over an account |
 | account-link.html | carrying a Firebase ID token to the service once | it gets no account token itself |
 
 Rules that follow:
-- The deck exists only in server memory and in the server's data directory (`tables.json`, file mode 600). It is
-  shuffled with `crypto.randomInt` (Fisher–Yates). The deck is dealt from the top; burn cards are discarded server-side.
+- The deck exists only in server memory: `tables.json` never holds the deck, the burn cards or a hole card (shown
+  cards and the board are public and are kept), so whoever can read the data volume learns nothing hidden; a restart
+  therefore calls a live hand off (section 9). It is shuffled with `crypto.randomInt` (Fisher–Yates). The deck is
+  dealt from the top; burn cards are discarded server-side. Anyone with root or `docker` on the dealer's host can
+  still read the process's memory: the host must be trusted (it is the lab server; play money only).
 - Every message to a client is built by `views.js` from scratch for that recipient: public table state + that
   recipient's own hole cards. Shown cards appear in the public state only when the rules expose them (showdown, all-in
   run-out, voluntary show). A folded or mucked hand is never sent to anyone, including after the hand.
@@ -109,10 +112,12 @@ service and reverts with a toast) — documented as UI-level.
 - Only when `fresh === true` does `/v1/session` return `suggestions: [{ sid, name }]` (max 3): names recently used from
   the same `ipKey` by guest accounts that are not this one. `sid` is a random id valid for 10 minutes that maps to
   `{ accountId, ipKey }` server-side.
-- The page shows a one-click prompt: "继续以 <name> 的身份？ [继续] [我是新玩家]" with a "隐私说明" link. Only a click on
-  继续 calls `POST /v1/claim { sid }`; the service re-checks that the caller's `ipKey` still matches and that the
-  account is still a guest, then issues a new device token for that account (the fresh, empty guest account the page
-  got in step 3 is deleted if it never played). Nothing is ever done silently by IP.
+- The page shows a one-click prompt: "继续使用昵称「<name>」？ [继续] [我是新玩家]" with a "隐私说明" link. Only a click
+  on 继续 calls `POST /v1/claim { sid }`; the service re-checks that the caller's `ipKey` still matches and that the
+  account is still a guest, then gives **the caller's own account** that name. A suggestion hands over a name, never
+  an account: no token is issued for the other account, whose chips, records, seat and hole cards stay its own
+  (anyone on the same campus network sees the same suggestions). A whole account moves to another device only
+  through "save with email". Nothing is ever done silently by IP.
 
 ### 4.4 Save with email (Firebase Auth email link, behind a flag)
 Flag: the service's env `EMAIL_LINK=on` (reported as `features.emailLink`); default off. The page shows "用邮箱保存"
@@ -169,17 +174,17 @@ email start 5/h, claims 10/h, other calls 600/min. `Authorization: Bearer <token
 | Method & path | Body → Response |
 |---|---|
 | `POST /v1/session` (B optional) | `{ clientId?, name?, fresh? }` → `{ token? (only when a new account was made), account: AccountView, suggestions?: [{sid,name}], features: { emailLink } }` |
-| `POST /v1/claim` (B) | `{ sid }` → `{ token, account }` · 403 `ip_mismatch`, 404 `expired`, 409 `protected` |
+| `POST /v1/claim` (B) | `{ sid }` → `{ account }` (the caller's own account, renamed; no token) · 403 `ip_mismatch`, 404 `expired`, 409 `protected` |
 | `GET /v1/me` (B) | → `{ account }` |
 | `POST /v1/name` (B) | `{ name }` → `{ account }` · 409 `name_protected`, 400 `bad_name` |
 | `POST /v1/refill` (B) | → `{ account }` · 409 `not_needed` (refill only when chips < 2,000 and no chips at any table; sets chips to 10,000, refills += 1) |
-| `GET /v1/leaderboard?game=holdem\|guandan&limit=50` (B optional) | → `{ rows: [{ pid, name, chips, net, hands, won, biggestPot } \| { pid, name, rounds, wins }], me?: row }` |
+| `GET /v1/leaderboard?game=holdem\|guandan&limit=50` (B optional) | → `{ rows: [{ pid, name, chips, net, hands, won, biggestPot } \| { pid, name, rounds, wins }], me?: row, rule?: { days, hands } }` (Hold'em ranks established accounts only) |
 | `POST /v1/guandan/round` (B) | `{ room, round, won, place }` → `{ ok }` |
 | `POST /v1/email/start` (B) | `{ email }` → `{ lid, poll, code }` · 403 `disabled` when the flag is off |
 | `POST /v1/email/complete` | `{ lid, idToken, code }` → `{ ok, name, nameReserved }` · 401 `bad_token`, 404 `expired`, 409 `email_mismatch`, 409 `need_code` / `bad_code` (`merge: bool`), 409 `at_table`, 409 `already_linked` |
 | `POST /v1/email/poll` | `{ lid, poll }` → `{ status: "pending" }` \| `{ status: "done", token, account }` |
 | `POST /v1/signout` (B) | → `{ ok }` (revokes this device token) |
-| `GET /v1/health` | → `{ ok, tables, players, uptime }` |
+| `GET /v1/health` | → `{ ok, tables, players, uptime, limited: { <limit>: refusals } }` · 503 `persist_failing` while changes wait more than 10 s for the disk |
 
 `AccountView = { pid, name, guest: bool, email: masked|null, chips, refills, holdem: {...}, guandan: { rounds, wins },
 protected: bool }`. Additional response fields and error codes of the service as built: section 14.
@@ -245,6 +250,7 @@ PublicTable {
   },
   log: [{ seat, a, amt, street }],        // this hand's public actions, for the history strip and animations
   last: null | { no, board, winners, shown: { [seat]: [c1,c2] }, hands: { [seat]: HandInfo | null } }   // the previous hand, for "上一手"; hands = each shown hand's best five
+  voided: null | int                      // the last hand a restart called off (chips back); pages in it say so
 }
 Me {
   pid, seat: int|null, chips (bankroll),
@@ -265,11 +271,15 @@ Times: `deadline` and `serverTime` are server epoch ms; clients compute `offset 
 - Button moves one dealt-in seat clockwise each hand. SB = next dealt-in seat after the button, BB = next after SB.
   Heads-up: the button posts the SB and acts first pre-flop and last after the flop. If a blind seat is empty or
   sitting out the button still advances one seat (simplified moving button). When play drops to heads-up the big
-  blind moves on from last hand's big blind, so nobody posts it twice running.
+  blind moves on from last hand's big blind, so nobody posts it twice running; when it reaches a waiting player
+  (three dealt) and last hand's big blind has gone (stood up, sitting out), the small blind is dead rather than
+  posted a second time running by the seat before the big blind (the button stays, which keeps the big blinds in
+  turn).
 - New players and players returning from sit-out are `waiting` and are dealt in when the big blind reaches them, or
   at once with `postBB` (they post a BB in addition to the blinds; one who lands in the small blind posts the SB live
   plus the rest of a BB dead). At the very first hand of a table all seated players are dealt in, and a brand-new seat
-  at a heads-up table is dealt in at once; a player back from sitting out at a heads-up table still waits for the BB.
+  at a heads-up table (the last hand was heads-up) is dealt in at once; a player back from sitting out at a heads-up
+  table, and a new seat at a table that is down to two only now, still wait for the BB.
   An account that played at the table and stood up less than 15 minutes ago (`recent`, by account) sits back down as
   a returning player (`returning`): it waits for the BB like one back from sitting out, so standing and re-seating
   never dodges the big blind or makes someone else post it twice.
@@ -297,15 +307,18 @@ Times: `deadline` and `serverTime` are server epoch ms; clients compute `offset 
 - Sit-out: skipped when dealing; a player sitting out for 5 minutes (or busted for 60 s without topping up) is stood
   up and their stack returns to their bankroll. Disconnected players keep their seat and simply time out.
 - Rebuy / top-up: between hands only (a request during a hand is queued and applied before the next deal), from the
-  bankroll, up to max buy-in (in a hand, counted from the stack the hand began with; a queued top-up that would lift
+  bankroll, a rebuy (nothing left) at least the min buy-in, a top-up at least a BB (or exactly what is left to the
+  max), up to max buy-in (in a hand, counted from the stack the hand began with; a queued top-up that would lift
   a winning stack above the max is cut there and the rest goes back to the bankroll). Bankroll below 2,000 ⇒ free
   refill to 10,000 (`/v1/refill`, counted in `refills`), at most once per 24 hours per account and per network. The
   leaderboard ranks by the ranked net `rnet` (shown as its `net` column), so refills never lift the refilled account
   itself. Chips lost on purpose to another account (chip dumping) do not rank either: each hand record carries the
   hand id and `gain` (every chip won in that hand, bots included), and a winner's ranked gain is cut by the share
   that fresh accounts lost (younger than 3 days or under 50 hands; bots count as established). Fresh guests are free
-  (30 an hour per network), so their starting chips can move but never reach the ranking. `holdem.net` keeps the
-  plain sum. No direct chip transfers between accounts, ever.
+  (30 an hour per network), so their starting chips can move but never reach the ranking, and only established
+  accounts rank at all (a throwaway guest's lucky hands against the bots never do; a fresh account sees its own row,
+  unranked). A merge (email link) carries a fresh guest's losses into the saved account, never its gains.
+  `holdem.net` keeps the plain sum. No direct chip transfers between accounts, ever.
 - Pacing (server): 700 ms between a closed street and the next card(s); all-in run-outs 1,200 ms per street; hand end
   hold 3,000 ms (5,000 ms with a showdown) before the next deal; at least 2 eligible players needed to deal.
 
@@ -336,8 +349,12 @@ to apply to accounts). Every mutation returns `{ ok, error? }` and bumps `rev`.
 
 API additions, all backwards compatible with the list above:
 - `constructor({ ..., options: { pauseWithoutHumans = true } })`: `false` lets a bots-only table deal (tests).
-- `fromJSON(obj, { rng, now })`: with `now` it is a restart: the player to act gets a fresh `actionSec` timer; time
-  bank already used before the saved clock stays used (the rooms layer saves the clock at a graceful stop).
+- `toJSON()` is what goes to disk: the whole state without `hand.deck`, `hand.burns` and every `seats[].hole`;
+  `snapshot()` is the whole state (tests). `fromJSON(obj, { rng, now })` with a live hand that has no deck (any
+  restore from disk) calls the hand off (`_voidHand`): every chip put in goes back to its seat, queued top-ups join
+  the stacks, leavers go, a dissolve completes, nothing is recorded, the next deal restores the button and blinds it
+  had, and `PublicTable.voided` carries the called-off hand's number. Time bank already used before the saved clock
+  stays used (the rooms layer saves the clock at a graceful stop). `expire(now)` closes a table that never started.
 - `requestTopUp(accountId, amount, bankroll?)`: `bankroll` (when given) is checked (`insufficient_chips`). The chips
   leave the bankroll at once (settlement `-amount`, reason `topup`) and join the stack at hand end (or at once when
   the seat is not in a live hand), so a queued top-up can never be unfunded. `postBB`, `show`, `requestTopUp` accept
@@ -381,11 +398,13 @@ Rule details fixed by the engine:
 ## 9. Persistence, restart and reconnect
 
 - `DATA_DIR` (Docker volume `/data`): `accounts.json` (accounts, ip memory, pending links) and `tables.json` (every open
-  table including the deck of a live hand). Both are written atomically (temp file, fsync, rename), debounced 200 ms
-  and flushed on `SIGTERM`/`SIGINT`. Files are `chmod 600`. Daily backup copies are the lead's job (Docker volume).
-- Restart: tables are loaded, every live hand resumes where it stopped; the player to act gets a fresh full action
-  timer (`deadline = now + actionSec`), bots re-think. Connected clients see the socket close with code 1012 and
-  reconnect; they resume from the next full snapshot.
+  table, without the deck, burn cards or hole cards). Both are written atomically (temp file, fsync, rename), debounced
+  200 ms and flushed on `SIGTERM`/`SIGINT`. Files are `chmod 600`. Daily backups (`ops/backup.sh`, README): both
+  files from one moment, without the IP memory, kept 14 days in a 700 folder of the deploying user.
+- Restart: tables are loaded; a hand that was live is called off (its deck and hole cards were never on disk), every
+  chip put in goes back to its seat and a new hand is dealt 2 s later with the same button. Connected clients see the
+  socket close with code 1012, reconnect, resume from the next full snapshot and say "the hand was called off, chips
+  returned" when the snapshot's `voided` is the hand they were in.
 - Client reconnect: exponential backoff 0.5 s → 8 s with jitter, forever while the Hold'em screen is open; the table
   shows a small "重新连接中…" pill (no blocking overlay) and disables action buttons until a fresh `state` arrives.
   On reconnect the client sends `hello` then `watch <code>`; its seat was never released.
@@ -397,41 +416,53 @@ Rule details fixed by the engine:
 | Failure | Behaviour |
 |---|---|
 | Service down / not deployed | Guandan unaffected. Lobby Hold'em tiles show "牌桌服务暂不可用" + 重试. Identity stays local (guest). |
-| Service restarts mid-hand | Hand resumes from disk; sockets reconnect; the actor's timer restarts. Losing the last ≤200 ms of actions is possible only on a crash (not on a clean restart). |
+| Service restarts mid-hand | The live hand is called off (chips back, nothing recorded); sockets reconnect; the next hand is dealt. Losing the last ≤200 ms of changes is possible only on a crash (not on a clean restart). |
+| Disk full / data not writable | Play goes on in memory; `/v1/health` answers 503 `persist_failing` after 10 s and the container shows unhealthy; the failure is logged once a minute; `ops/watchdog.sh` logs it and does not restart (memory holds the only copy). |
 | Client drops mid-hand | Seat kept; timer runs; auto check/fold; two timeouts ⇒ sit out; 5 min ⇒ stood up, chips back to bankroll. |
 | Same account in two tabs | Both watch; either may act; the first valid action wins, the other gets `stale_hand`. |
 | Host leaves | Host passes to the longest-seated human; no humans left ⇒ table pauses (bots stop) and closes after 10 min idle. |
 | Clock skew | Clients render deadlines with the server offset; the server alone decides timeouts. |
-| Abuse (spam, floods) | Size and rate limits per socket and per ipKey; max 200 open tables; bots only on tables with a human. |
-| Corrupt data file | The service refuses to start and keeps the file (never overwrites it); the last good copy is `*.bak`. |
+| Abuse (spam, floods) | Size and rate limits per socket and per ipKey (refusals counted and logged once a minute); max 200 open tables, 30 created from one network, 3 created or hosted and 4 seats per account, unstarted tables close after 30 minutes; bots only on tables with a human. |
+| Corrupt data file | The service refuses to start and keeps the file (never overwrites it); restore both files from the same daily backup (README). |
 
 ## 11. Privacy note (shown in the game; owner to approve)
 
-ZH: 隐私说明：为了让你换浏览器时能一键找回昵称，游戏服务会把你的网络地址做加盐哈希（不保存、不记录原始 IP），并记住最近 30 天里
-在这个网络用过的游客昵称，30 天后自动删除。新浏览器只会看到"继续以 X 的身份？"的建议，必须由你点一下才会生效；同一校园网或路由器下的人
-也可能看到同样的建议，所以绑定了邮箱的账号永远不会靠网络地址被推荐或登录。邮箱只用于发送登录链接，我们只保存脱敏地址和一个哈希。所有筹码
-都是虚拟的，不能购买、出售或转让，没有任何价值。
+ZH: 隐私说明：为了让你换浏览器时能一键用回原来的昵称，游戏服务会把你的网络地址做加盐哈希（不保存、不记录原始 IP），并记住最近
+30 天里在这个网络用过的游客昵称，30 天后自动删除，备份里也不保留。新浏览器只会看到"继续使用昵称 X？"的建议，必须由你点一下才会生效，
+而且只换昵称：筹码、战绩和座位都不会跟过来（想在别的设备上用同一个账号，请用邮箱保存）。同一校园网或路由器下的人也可能看到同样的建议，
+所以绑定了邮箱的账号的昵称永远不会这样被推荐。邮箱只用于发送登录链接，我们只保存脱敏地址和一个哈希。能管理这台服务器的人在技术上可以从
+哈希反推出网络地址。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。
 
 EN: Privacy: so you can pick your name up again in a new browser, the game service keeps a salted hash of your network
 address (never the raw IP) together with the guest names used from that network in the last 30 days, and deletes it
-after 30 days. A new browser only sees a "Continue as X?" suggestion and nothing happens until you click it. People on
-the same campus network or router may see the same suggestion, so an email-saved account is never suggested or signed
-in by network address. Your email is used only to send the sign-in link; we keep a masked form and a hash. All chips
-are play money: they cannot be bought, sold or transferred and have no value.
+after 30 days; backups never hold it. A new browser only sees a "Use the name X?" suggestion, nothing happens until you
+click it, and a click only takes the name: chips, records and seats stay with their account (to use one account on
+several devices, save it with an email). People on the same campus network or router may see the same suggestion, so
+the name of an email-saved account is never suggested. Your email is used only to send the sign-in link; we keep a
+masked form and a hash. Whoever administers the server could technically work a network address back out of its hash.
+All chips are play money: they cannot be bought, sold or transferred and have no value.
 
 ## 12. Deployment (lead)
 
-`events/holdem-dealer/compose.yaml` runs the image with `/data` as a named volume and binds `127.0.0.1:8787`. Caddy:
+The lab server runs Caddy in the container `fras-caddy-1` on the Docker network `fras_default`.
+`events/holdem-dealer/compose.yaml` joins that network (alias `holdem-dealer`), publishes no host port, keeps `/data`
+in a named volume, reads the two secrets from files (`./secrets`, folder 700; `docker inspect` never shows them) and
+rotates its logs. Caddy (`Caddyfile.snippet`, appended to the FRAS Caddyfile, reloaded with `docker exec fras-caddy-1
+caddy reload ...`):
 ```
 poker.picasso-lab.com {
     encode zstd gzip
-    reverse_proxy 127.0.0.1:8787
-    log { output discard }          # the service never stores IPs; keep Caddy from logging them too
+    reverse_proxy holdem-dealer:8787 { stream_close_delay 5m }   # a reload keeps open sockets
+    handle_errors { respond `{"error":"unavailable",...}` {err.status_code} }   # its 502s logged at debug only
+    log { output discard }                                        # no access log: Caddy logs no client IP either
 }
 ```
-Env: `GAMES_SECRET` (32+ random bytes, signs nothing public; keys HMACs), `IP_SALT` (32+ random bytes), `EMAIL_LINK`
-(`off`|`on`), `FIREBASE_PROJECT_ID=yichen-5e23e`, `ALLOWED_ORIGINS=https://yil384.github.io`, `TRUST_PROXY=1` (take the
-client IP from the right-most `X-Forwarded-For` entry, which Caddy appends), `DATA_DIR=/data`, `PORT=8787`.
+Env (`.env`): `EMAIL_LINK` (`off`|`on`), `FIREBASE_PROJECT_ID=yichen-5e23e`, `ALLOWED_ORIGINS=https://yil384.github.io`,
+`TRUST_PROXY=fras-caddy-1` (only that container may set `X-Forwarded-For`; the client IP is its right-most entry,
+which Caddy appends; any other peer, e.g. a user on the host reaching the container, is keyed by its own address),
+`DATA_DIR=/data`, `PORT=8787`; compose sets `GAMES_SECRET_FILE` and `IP_SALT_FILE` (32+ random bytes each).
+Operations (README): `ops/secrets.sh`, `ops/backup.sh` (cron, daily), `ops/watchdog.sh` (cron, every 5 minutes:
+restarts a service that does not answer, never one that cannot save), `src/health.js`.
 
 ## 13. Testing
 
@@ -449,7 +480,14 @@ client IP from the right-most `X-Forwarded-For` entry, which Caddy appends), `DA
   bots, every frame scanned for cards the recipient may not see, chips conserved after every step, reconnect,
   refused actions, protocol limits), graceful restart mid-hand and kill -9 restarts (child process).
 - `npm run test:slow`: all 133,784,560 seven-card hands → exact category counts.
-- Browser: `guandan-kit/harness/holdem/` — Playwright against the local service (the page reads
+- Round 3 added: the saved table holds no hidden card (also checked in the views fuzz), a restore calls the live hand
+  off with every chip back, the time bank charged when another seat's stand-up ends the turn, rebuy and top-up
+  minimums, blinds when a table drops to two with a waiting big blind, distinct bot names, name-only claims (also over
+  a real socket: a claimer never gets the seat, cards or turn), established-only ranking and merges, trusted proxies,
+  secrets from files, health 503 on a failing disk, refusal counts, the own-table exemption from the network ban,
+  table caps and the unstarted-table expiry, consistent backups and restores.
+- Browser: `guandan-kit/harness/holdem/` (`layout.py` checks bets, the dealer button and touch sizes at every seat
+  count) — Playwright against the local service (the page reads
   `window.__PICASSO_GAMES_ORIGIN`, set by the harness's init script; production uses `https://poker.picasso-lab.com`).
 
 ## 14. Service layer as built (additions and clarifications)
@@ -469,9 +507,9 @@ Accounts
   browser's new placeholder guest is never recorded. Suggestions use each account's current name and come only with
   a session that creates the account (a fresh browser has no token), so their `sid`s are bounded by the 30/h
   account-creation limit; a request that carries a known token gets `suggestions: []` even with `fresh: true`.
-- Claims: `sid`s live in memory only (a restart forgets them; they last 10 minutes anyway) and are single use. The
-  claiming device's clientIds join the claimed account. The fresh guest is deleted only when pristine: never played
-  Hold'em or Guandan, never refilled, bankroll 10,000, nothing at a table.
+- Claims: `sid`s live in memory only (a restart forgets them; they last 10 minutes anyway) and are single use. A claim
+  renames the caller's own account (409 `protected` when an email account holds the name by now) and records it for
+  the network; suggestions list each name once. No account is ever deleted or handed over by a claim.
 - Email links: `POST /v1/email/start` also answers 400 `bad_email` and 409 `already_linked` (the account already has
   an email). `POST /v1/email/complete` answers `{ ok, name, nameReserved }` (`nameReserved: false` means the name is
   held by another saved account: ask for a new name); it is idempotent for a completed link; 409 `already_linked`
@@ -485,8 +523,9 @@ Accounts
   for 90 days are deleted.
 - `POST /v1/guandan/round` answers `{ ok: true, duplicate: true }` for a round already counted; `round` must be an
   integer, `place` 0-9 or absent.
-- Leaderboards: every row and the `me` row carry `rank` (`me.rank` is null without games). Hold'em ties break by
-  more hands, Guandan ties by fewer rounds.
+- Leaderboards: every row and the `me` row carry `rank` (`me.rank` is null without games, and for Hold'em until the
+  account is established; the response's `rule` says when: 3 days, 50 hands). Hold'em ties break by more hands,
+  Guandan ties by fewer rounds.
 
 HTTP
 - Requests carrying an `Origin` that is not allow-listed are refused with 403 `origin` (not merely left without CORS
@@ -510,12 +549,17 @@ WebSocket
   last socket leaves without a seat hands it on at once (`releaseHost`), a seated host after 60 s without a socket
   (it may be reconnecting), an unseated host found gone after a restart after 15 s. While no hand is live (the
   waiting phase, or a running table that cannot deal, e.g. one human left), where no timers run, a seated human with
-  no socket for 10 minutes is stood up (which lets the idle close run). An account hosts at most 3 open tables.
+  no socket for 10 minutes is stood up (which lets the idle close run). An account creates or hosts at most 3 open
+  tables (a creator who handed the host role on still counts; `too_many_tables`) and sits at most at 4
+  (`too_many_seats`); one network creates at most 30 open tables (`too_many_tables_net`); a table that never started
+  closes as `idle` 30 minutes after it was created (buy-ins back).
 - Table codes are the only gate to a private table: an account that misses (`watch` of an unknown code) more than 30
   times in a minute has its socket closed (1008 `too_many_misses`). Since guests are free, misses also count per
-  network (ipKey): more than 60 in a minute closes the socket, and after 600 in a day that network cannot look any
-  table up by code until the day is over (each `watch` is refused with `too_many_misses`). With 32^5 codes and at
-  most 200 tables, a network finds a given private table with a chance of about 0.4 % a day.
+  network (ipKey): more than 60 in a minute closes the socket, and after 600 in a day that network cannot look a
+  table up by code until the day is over (each `watch` is refused with `too_many_misses`), except its own tables: an
+  account seated at the table, its host or creator, or one that watched it before always gets back in (a Wi-Fi blip
+  never locks a player out of its seat). With 32^5 codes and at most 200 tables, a network finds a given private
+  table with a chance of about 0.4 % a day.
 - Every `state` is built per recipient by `views.js`; the public part is serialized once per change. `{ t:"account" }`
   is pushed after every table step that moved that account's bankroll or records, and after HTTP changes (name,
   refill, Guandan round, email link).
@@ -527,6 +571,9 @@ Persistence
   its complete temp files and an incomplete one is discarded, so `accounts.json` and `tables.json` always describe the
   same moment (a kill -9 never creates or destroys chips; tested). A missing file whose `.bak` exists also refuses
   the start. An uncaught exception exits without writing (the last batch is consistent and at most 200 ms old).
+  `store.health()`: a change that has waited more than 10 s for the disk makes `/v1/health` answer 503; a failing
+  write is logged at once and then once a minute. `src/backup.js` copies both files from one moment (it reads them
+  again when a flush landed in between; the IP memory is left out) and restores both as one batch.
 - Config adds `HOST` (default `127.0.0.1`; the image sets `0.0.0.0`) and `PACE_SCALE` (tests only: scales the
   engine's pacing pauses; action timers are never scaled). Production refuses secrets shorter than 32 characters,
   equal to each other or still holding a placeholder.

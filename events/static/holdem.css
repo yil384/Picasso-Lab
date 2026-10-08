@@ -263,6 +263,8 @@ html[lang="en"] .lobby-tile.is-holdem .tile-title { font-size: calc(54 * var(--t
 .hd-podium-p.p0 b { height: calc(64 * var(--t)); width: calc(72 * var(--t)); background: linear-gradient(180deg, #ffd766, #e09a1c); }
 .hd-podium-p.p1 b { height: calc(46 * var(--t)); background: linear-gradient(180deg, #d5dced, #95a2c0); }
 .hd-podium-p.p2 b { height: calc(34 * var(--t)); background: linear-gradient(180deg, #f2b98c, #c0743a); }
+/* nobody ranked yet: the three steps alone, waiting */
+.hd-podium-art.is-empty .hd-podium-p { opacity: .82; }
 
 @media (max-aspect-ratio: 1/1) {
     .lobby-games { translate: none; margin: 0 0 calc(10 * var(--lu)) calc(6 * var(--lu)); }
@@ -606,6 +608,9 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 /* the clock never covers the seat's card backs: on the inner side past them (the backs sit right of a top seat) */
 .hd-seat.is-right .hd-clock { left: auto; right: 82px; }
 .hd-seat.is-top .hd-clock { left: auto; right: 46px; top: -36px; }
+/* a crowded side seat (8-9 seats, landscape): the clock on its outer side, so its bet keeps the space in front */
+.hd-seat.is-left.is-clock-out .hd-clock { left: auto; right: 82px; }
+.hd-seat.is-right.is-clock-out .hd-clock { right: auto; left: 82px; }
 .hd-clock.is-bank::before {
     content: "";
     position: absolute;
@@ -680,6 +685,24 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-sit span { font: 800 15px/1.2 var(--font-ui); }
 .hd-sit:active { scale: .95; }
 .hd-sit::after { content: ""; position: absolute; inset: calc(min(0px, (76px - 44px / var(--hd-s, 1)) / 2)); }
+/* a free seat while I am seated: a dim disc that keeps the table's shape, like an empty chair (not a control) */
+.hd-vacant {
+    position: absolute;
+    left: -38px;
+    top: -38px;
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 36%, rgba(0, 34, 30, .3), rgba(0, 14, 12, .48));
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .07), inset 0 5px 12px rgba(0, 0, 0, .28);
+    pointer-events: none;
+}
+.hd-vacant span { color: rgba(255, 255, 255, .4); font: 700 17px/1 var(--font-ui); letter-spacing: .08em; white-space: nowrap; }
+html[lang="en"] .hd-vacant span { letter-spacing: .02em; }
+.hd-stage.is-portrait .hd-vacant { left: -44px; top: -44px; width: 88px; height: 88px; }
+.hd-stage.is-portrait .hd-vacant span { font-size: 20px; }
 
 /* the hero: big hole cards over my avatar, the hand under them */
 .hd-seat.is-hero .hd-av { left: -44px; top: -44px; width: 88px; height: 88px; }
@@ -761,8 +784,8 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-row.is-busy .hd-pill-act { opacity: .7; }
 .hd-stage.is-stale .hd-actions, .hd-stage.is-stale .hd-raise { pointer-events: none; opacity: .55; }
 /* pre-actions: dark checkbox pills in the same place */
-.hd-row.is-pre { gap: 10px; }
-.hd-pre.btn { --btn-h: 56px; --btn-fs: 21px; --btn-px: 18px; --btn-minw: 0px; --btn-ls: .04em; gap: 10px; }
+.hd-row.is-pre { gap: max(10px, calc(12px / var(--hd-s, 1))); }
+.hd-pre.btn { --btn-h: max(56px, var(--hd-tap)); --btn-fs: 21px; --btn-px: 18px; --btn-minw: 0px; --btn-ls: .04em; gap: 10px; }
 .hd-pre.btn:not(.is-on) { --btn-bg: var(--off); --btn-edge: var(--off-edge); --btn-stroke: var(--off-stroke); --btn-inset: rgba(60, 66, 80, .25); }
 .hd-pre.btn.is-on { --btn-bg: var(--sec); --btn-edge: var(--sec-edge); --btn-stroke: var(--sec-stroke); --btn-inset: var(--sec-inset); }
 .hd-pre i { position: relative; z-index: 1; flex: none; width: 26px; height: 26px; border-radius: 50%; background: rgba(255, 255, 255, .3); box-shadow: inset 0 0 0 3px #fff, 0 1px 0 rgba(0, 0, 0, .18); }
@@ -770,7 +793,10 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-pre.is-on i::after { content: ""; position: absolute; left: 9px; top: 4px; width: 6px; height: 12px; border: solid var(--sec-stroke); border-width: 0 4px 4px 0; rotate: 40deg; }
 .hd-pre span { position: relative; z-index: 1; }
 
-/* the raise panel above the pills: presets, a vertical slider, the amount, ‹ › steps */
+/* the raise panel above the pills: presets, a vertical slider, the amount, ‹ › steps. On a phone the stage is drawn
+   at about half size, so every control here is sized from the stage scale: at least 44 CSS px to the thumb
+   (--hd-tap), with gaps that keep a thumb on one control at a time */
+.hd-stage { --hd-tap: max(44px, calc(44px / var(--hd-s, 1))); --hd-gap: max(8px, calc(10px / var(--hd-s, 1))); }
 .hd-raise { position: absolute; right: 24px; bottom: 112px; z-index: 21; }
 .hd-raise-panel {
     display: flex;
@@ -783,14 +809,14 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
     animation: hd-raise-in 160ms var(--ease-out) both;
 }
 @keyframes hd-raise-in { from { opacity: 0; translate: 0 12px; } }
-.hd-presets { display: flex; flex-direction: column; gap: 8px; }
+.hd-presets { display: flex; flex-direction: column; gap: var(--hd-gap); }
 .hd-preset {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     width: 156px;
-    height: 46px;
+    height: max(46px, var(--hd-tap));
     padding: 0 14px;
     border: 0;
     border-radius: 10px;
@@ -802,15 +828,16 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-preset.is-on { background: linear-gradient(180deg, #ffe27a, #f6b92a); color: #7a3a00; }
 .hd-preset.is-on b { color: #7a3a00; }
 .hd-preset:disabled { opacity: .4; }
-.hd-slide { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 120px; }
+.hd-slide { display: flex; flex-direction: column; align-items: center; gap: var(--hd-gap); width: max(120px, calc(var(--hd-tap) * 2 + var(--hd-gap) * 2 + 40px)); }
 .hd-raise-v { color: #ffe27a; font: 800 34px/1 var(--font-num); white-space: nowrap; }
 .hd-slider {
     --f: 0;
+    --thumb: max(30px, calc(26px / var(--hd-s, 1)));
     position: relative;
     flex: 1;
-    width: 44px;
+    width: var(--hd-tap);
     min-height: 170px;
-    border-radius: 22px;
+    border-radius: calc(var(--hd-tap) / 2);
     background: rgba(0, 0, 0, .35);
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .12);
     touch-action: none;
@@ -832,26 +859,26 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
     position: absolute;
     left: 50%;
     bottom: 8px;
-    width: 52px;
-    height: 30px;
-    margin-left: -26px;
-    border-radius: 15px;
+    width: calc(var(--hd-tap) + 8px);
+    height: var(--thumb);
+    translate: -50% 0;
+    border-radius: calc(var(--thumb) / 2);
     background: linear-gradient(180deg, #fff, #dde3ee);
     box-shadow: 0 3px 0 #9aa3b3, 0 4px 8px rgba(0, 0, 0, .35);
-    transform: translateY(calc(-1 * var(--f) * (100cqh - 46px)));
+    transform: translateY(calc(-1 * var(--f) * (100cqh - var(--thumb) - 16px)));
 }
 .hd-slider { container-type: size; }
-.hd-steps { display: flex; align-items: center; gap: 6px; color: rgba(255, 255, 255, .6); font: 700 15px/1 var(--font-num); }
+.hd-steps { display: flex; align-items: center; gap: var(--hd-gap); color: rgba(255, 255, 255, .6); font: 700 max(15px, calc(11px / var(--hd-s, 1)))/1 var(--font-num); }
 .hd-step {
-    width: 44px;
-    height: 44px;
+    width: var(--hd-tap);
+    height: var(--hd-tap);
     padding: 0 0 4px;
     border: 0;
     border-radius: 50%;
     background: radial-gradient(circle at 50% 30%, #fff3b0 0%, #fcc83a 60%, #e0a21c 100%);
     box-shadow: inset 0 -3px 0 rgba(160, 90, 0, .35), 0 2px 0 #b87818;
     color: #7a3a00;
-    font: 900 28px/1 var(--font-ui);
+    font: 900 max(28px, calc(var(--hd-tap) * .6))/1 var(--font-ui);
 }
 .hd-step:active { translate: 0 2px; }
 
@@ -905,7 +932,7 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-stage.is-portrait .hd-row { justify-content: center; }
 .hd-stage.is-portrait .hd-pill-act { flex: 1; width: auto; --btn-h: 88px; --btn-fs: 34px; }
 .hd-stage.is-portrait .hd-pill-act b { font-size: 30px; }
-.hd-stage.is-portrait .hd-pre.btn { flex: 1; justify-content: center; --btn-h: 72px; --btn-fs: 22px; --btn-px: 8px; }
+.hd-stage.is-portrait .hd-pre.btn { flex: 1; justify-content: center; --btn-h: max(72px, var(--hd-tap)); --btn-fs: 22px; --btn-px: 8px; }
 .hd-stage.is-portrait .hd-raise { left: 20px; right: 20px; bottom: 136px; }
 /* my clock sits on the felt above my first card's corner, clear of the card faces: beside the cards it met the
    next seat's card backs (9-max), beside my avatar the open raise panel would cover it */
@@ -914,18 +941,20 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-stage.is-portrait .hd-seat.is-hero { transition: opacity 120ms ease; }
 .hd-stage.is-portrait.is-raising .hd-seat.is-hero, .hd-stage.is-portrait.is-raising .hd-dealer.is-mine { opacity: 0; }
 .hd-stage.is-portrait .hd-raise-panel { flex-direction: column; gap: 12px; }
-.hd-stage.is-portrait .hd-presets { flex-direction: row; }
-.hd-stage.is-portrait .hd-preset { flex: 1; width: auto; flex-direction: column; justify-content: center; gap: 4px; height: 60px; padding: 0 4px; font-size: 19px; }
+/* min to all-in, left to right, the way the slider under it runs (the landscape column reads all-in at the top, as
+   its vertical slider does) */
+.hd-stage.is-portrait .hd-presets { flex-direction: row-reverse; }
+.hd-stage.is-portrait .hd-preset { flex: 1; width: auto; flex-direction: column; justify-content: center; gap: 4px; height: max(60px, var(--hd-tap)); padding: 0 4px; font-size: 19px; }
 .hd-stage.is-portrait .hd-raise-panel { padding: 12px; }
 .hd-stage.is-portrait .hd-slide { flex-direction: row; width: auto; gap: 12px; }
 .hd-stage.is-portrait .hd-raise-v { order: 2; min-width: 120px; text-align: center; }
 .hd-stage.is-portrait .hd-steps { display: contents; }
 .hd-stage.is-portrait .hd-steps span { display: none; }
 .hd-stage.is-portrait .hd-step:first-of-type { order: 0; }
-.hd-stage.is-portrait .hd-slider { order: 1; flex: 1; width: auto; min-height: 0; height: 48px; }
+.hd-stage.is-portrait .hd-slider { order: 1; flex: 1; width: auto; min-height: 0; height: max(48px, var(--hd-tap)); --thumb: max(34px, calc(24px / var(--hd-s, 1))); }
 .hd-stage.is-portrait .hd-step:last-of-type { order: 3; }
 .hd-stage.is-portrait .hd-slider-fill { left: 8px; top: 8px; bottom: 8px; width: calc(100% - 16px); height: auto; transform-origin: 0 50%; transform: scaleX(var(--f)); }
-.hd-stage.is-portrait .hd-slider-thumb { left: 8px; bottom: auto; top: 50%; width: 34px; height: 56px; margin: -28px 0 0; transform: translateX(calc(var(--f) * (100cqw - 50px))); }
+.hd-stage.is-portrait .hd-slider-thumb { left: 8px; bottom: auto; top: 50%; width: var(--thumb); height: calc(100% + 8px); translate: 0 -50%; transform: translateX(calc(var(--f) * (100cqw - var(--thumb) - 16px))); }
 .hd-stage.is-portrait .hd-hud { left: 22px; top: 18px; }
 .hd-stage.is-portrait .hd-hud-right { right: 22px; top: 18px; }
 
@@ -1047,6 +1076,7 @@ html[lang="en"] .hd-page-head h2 { letter-spacing: 0; }
 .hd-brow > .hd-bc-num.is-neg:nth-child(3) { color: #c8304e; }
 .hd-bme { flex: none; padding-top: calc(6 * var(--pg)); border-top: 1px solid rgba(255, 255, 255, .15); }
 .hd-bme.is-first { padding-top: calc(8 * var(--pg)); border-top: 0; }
+.hd-bme-note { margin: calc(6 * var(--pg)) 0 0; color: rgba(220, 232, 255, .7); font: 600 max(11px, calc(15 * var(--pg)))/1.4 var(--font-ui); text-align: center; }
 /* empty ranking: the three places on their steps, waiting */
 /* the empty panel ends under its podium (a framed card, not a page-tall void) */
 .hd-lb.is-empty { align-self: flex-start; }

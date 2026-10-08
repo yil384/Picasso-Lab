@@ -1,9 +1,22 @@
-# Add to the lab server's Caddyfile (DESIGN.md section 12), then: caddy reload --config /etc/caddy/Caddyfile
-# Caddy gets the certificate itself; WebSocket upgrades (/v1/ws) pass through reverse_proxy unchanged.
+# Add this block to the lab server's Caddyfile (~/workspace/FRAS/caddy-config/Caddyfile, served by the fras-caddy-1
+# container; README "Deploy"). Copy the file to a dated .bak first, then validate and reload inside the container:
+#   docker exec fras-caddy-1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+#   docker exec fras-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+# poker.picasso-lab.com already resolves to the server (the *.picasso-lab.com record); Caddy gets the certificate.
 poker.picasso-lab.com {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:8787
-	# the service never stores IPs; keep Caddy from logging them too
+	# the service on the shared Docker network (no published port); WebSocket upgrades (/v1/ws) pass through, and a
+	# config reload keeps the open table sockets (up to 5 minutes) instead of dropping every one mid-hand
+	reverse_proxy holdem-dealer:8787 {
+		stream_close_delay 5m
+	}
+	# no IP address in Caddy's logs: no access log, and an error answered here (the service down or restarting, a
+	# 502) is logged at debug level only, which this server does not write
+	handle_errors {
+		header Content-Type "application/json; charset=utf-8"
+		header Cache-Control no-store
+		respond `{"error":"unavailable","message":"The table service is unavailable"}` {err.status_code}
+	}
 	log {
 		output discard
 	}

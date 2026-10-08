@@ -16,6 +16,19 @@ const ANGLES = {
         7: [90, 128, 212, 250, 290, 328, 52], 8: [90, 122, 150, 212, 270, 328, 30, 58], 9: [90, 120, 149, 211, 246, 294, 329, 31, 60] }
 };
 const LABEL_MS = 1500;
+// how far a seat's bet sits from its avatar at most, and at least (design px)
+const BET_REACH = { port: 160, land: 200, min: 104 };
+// the alarm clock beside a seat while it acts (holdem.css .hd-clock), relative to the seat's avatar centre:
+// [left, top, right, bottom]; the dealer button keeps clear of it
+const CLOCK_BOX = {
+    land: { left: [82, -40, 152, 34], right: [-152, -40, -82, 34], top: [-116, -36, -46, 38], bottom: [82, -40, 152, 34] },
+    port: { left: [104, -40, 174, 34], right: [-174, -40, -104, 34], top: [-116, -36, -46, 38], bottom: [82, -40, 152, 34] }
+};
+// a landscape side seat with no room for its bet past its clock (8-9 seats) has the clock on its outer side
+function clockBox(p, portrait) {
+    const c = CLOCK_BOX[portrait ? "port" : "land"][p.side];
+    return c && p.clockOut ? [-c[2], c[1], -c[0], c[3]] : c;
+}
 const SFX_URL = "https://yil384.github.io/Picasso-Lab/events/static/holdem-sfx/";
 const SFX_KEY = "picasso.holdem.sfx";
 const SFX_NAMES = ["deal", "board", "bet", "collect", "win"];
@@ -225,6 +238,60 @@ export function createTable({ ui, S, send, popups }) {
             const low = portrait && k > 0 && (side === "left" || side === "right") && y > heroY - 284;
             return { x, y, side, low, bx, by, cos, sin };
         });
+        // A bet must read as its own seat's: measured from where the seat ended up (after the clamps above), on the
+        // line toward its inner-ring slot, at most BET_REACH away (the tall portrait felt put corner seats' bets next
+        // to their neighbours), and pulled in further while another avatar would be nearer than its own (with room
+        // to spare). The hero's bet stays over its cards.
+        const reach = portrait ? BET_REACH.port : BET_REACH.land;
+        // my cards count as my place too (a bet beside them reads as mine)
+        const heroCy = heroY - (portrait ? 152 : 128);
+        const anchors = seats.map((o, j) => (j ? o : { x: cx, y: heroCy }));
+        const nearest = (p, k) => Math.min(...anchors.filter((o, j) => j !== k).map(o => Math.hypot(o.x - p.bx, o.y - p.by)));
+        const mine = (p, k, m) => Math.hypot(p.x - p.bx, p.y - p.by) * m < nearest(p, k);
+        // my clock beside my cards (holdem.css .hd-hero-clock) and each seat's own clock (shown while it acts, e.g.
+        // facing a raise over its own bet): a bet keeps clear of both
+        const heroClock = portrait ? [cx - 140, heroCy - 137, cx - 70, heroCy - 63] : [cx - 176, heroCy - 37, cx - 106, heroCy + 37];
+        const [hw, hh, pad] = [56, 18, 6]; // half a bet's box (chips and a 5-figure amount), and the room around it
+        const meets = (p, b) => p.bx + hw + pad > b[0] && p.bx - hw - pad < b[2] && p.by + hh + pad > b[1] && p.by - hh - pad < b[3];
+        seats.forEach((p, k) => {
+            if (!k) return;
+            const vx = p.bx - p.x;
+            const vy = p.by - p.y;
+            const d = Math.hypot(vx, vy) || 1;
+            const at = D => { p.bx = p.x + vx / d * D; p.by = p.y + vy / d * D; };
+            let D = Math.min(d, reach);
+            for (; D > BET_REACH.min; D -= 4) {
+                at(D);
+                if (mine(p, k, 1.25)) break;
+            }
+            at(D);
+            const c = clockBox(p, portrait);
+            let own = c ? [p.x + c[0], p.y + c[1], p.x + c[2], p.y + c[3]] : null;
+            const clear = () => !(own && meets(p, own)) && !meets(p, heroClock);
+            if (clear()) return;
+            // in the way of a clock: further in along the same line, else just below or above the clock, whichever
+            // still reads as this seat's
+            const [ox, oy] = [p.bx, p.by];
+            const tries = [];
+            for (let E = D + 4; E <= reach + 80; E += 4) tries.push(() => at(E));
+            for (const b of [own, heroClock].filter(Boolean)) {
+                tries.push(() => { p.bx = ox; p.by = b[3] + hh + pad; });
+                tries.push(() => { p.bx = ox; p.by = b[1] - hh - pad; });
+                tries.push(() => { p.bx = (ox < (b[0] + b[2]) / 2 ? b[0] - hw - pad : b[2] + hw + pad); p.by = oy; });
+            }
+            for (const t of tries) {
+                t();
+                if (clear() && mine(p, k, 1.1)) return;
+            }
+            p.bx = ox;
+            p.by = oy;
+            // a crowded landscape side seat: its clock goes to the outer side (on the rail), its bet stays in front
+            if (!portrait && (p.side === "left" || p.side === "right")) {
+                p.clockOut = true;
+                const f = clockBox(p, portrait);
+                own = [p.x + f[0], p.y + f[1], p.x + f[2], p.y + f[3]];
+            }
+        });
         return { cx, cy, rx, ry, heroY, seats, boardY: cy + (portrait ? 6 : 4) };
     }
 
@@ -252,7 +319,7 @@ export function createTable({ ui, S, send, popups }) {
         for (let k = 0; k < V.n; k++) {
             const p = G.seats[k];
             const el = document.createElement("div");
-            el.className = `hd-seat is-${p.side}${p.low ? " is-low" : ""}${k === 0 ? " is-hero" : ""}`;
+            el.className = `hd-seat is-${p.side}${p.low ? " is-low" : ""}${p.clockOut ? " is-clock-out" : ""}${k === 0 ? " is-hero" : ""}`;
             el.style.left = `${p.x.toFixed(1)}px`;
             el.style.top = `${p.y.toFixed(1)}px`;
             el.innerHTML = `<div class="hd-seat-body"></div><div class="hd-holes"></div><div class="hd-clockslot"></div><div class="hd-label"></div>`;
@@ -437,6 +504,16 @@ export function createTable({ ui, S, send, popups }) {
                     y = p.y < V.G.boardY ? bx.top - 34 : bx.bottom + 26;
                 }
             }
+            // never under the button seat's own clock (it acts first three-handed, exactly when the button matters):
+            // just below the clock, or above it where below would meet the board
+            if (k) {
+                const c = clockBox(p, V.portrait);
+                const R2 = 17 + 6;
+                if (c && x + R2 > p.x + c[0] && x - R2 < p.x + c[2] && y + R2 > p.y + c[1] && y - R2 < p.y + c[3]) {
+                    y = p.y + c[3] + R2;
+                    if (bx && x > bx.left - 22 && x < bx.right + 22 && y > bx.top - 30 && y < bx.bottom + 22) y = p.y + c[1] - R2;
+                }
+            }
             dealer.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
             dealer.classList.add("is-on");
             dealer.classList.toggle("is-mine", k === 0);
@@ -459,10 +536,11 @@ export function createTable({ ui, S, send, popups }) {
         v.el.classList.toggle("is-winner", won > 0);
         v.el.classList.toggle("has-shown", !!seat?.shown && !(me && k === 0));
         if (!seat) {
-            // an empty seat shows only while I can take it (seated, the felt stays clean)
+            // an empty seat: the gold 入座 disc while I can take it; seated, a dim 空位 disc keeps the table's shape
+            // (opponents bunched on one side read as a broken table)
             put(v.body, mine == null
                 ? `<button class="hd-sit" type="button" data-sit="${i}" aria-label="${L(`Sit at seat ${i + 1}`, `坐 ${i + 1} 号位`)}"><b>+</b><span>${L("Sit", "入座")}</span></button>`
-                : "");
+                : `<span class="hd-vacant" aria-hidden="true"><span>${L("Empty", "空位")}</span></span>`);
             put(v.holes, "");
             put(v.clock, "");
             return;
@@ -1035,14 +1113,20 @@ export function createTable({ ui, S, send, popups }) {
             });
             if (potEl) potEl.animate([{ transform: "scale(1)" }, { transform: "scale(1.1)" }, { transform: "scale(1)" }], { duration: 260, delay: 300 });
         }
-        // new board cards turn over in their slots
+        // new board cards turn over in their slots; on the flop the two open slots and the end of the PICASSO print
+        // wait for the first card's turn (outlines alone over the print looked like a glitch)
         const before = ph && h && ph.id === h.id ? ph.board.length : h && h.id !== ph?.id ? 0 : h?.board.length || 0;
         if (motion && h && h.board.length > before) {
+            const lead = ph?.street !== h.street ? 380 : 0;
             [...R.board.querySelectorAll(".hd-slot .card")].slice(before).forEach((el, j) => {
-                sound("board", 120 * j + (ph?.street !== h.street ? 380 : 0));
+                sound("board", 120 * j + lead);
                 el.animate([{ transform: "translateY(-18px) scaleX(0)", opacity: .4 }, { transform: "translateY(-6px) scaleX(.15)", opacity: 1, offset: .35 }, { transform: "none", opacity: 1 }],
-                    { duration: 340, delay: 120 * j + (ph?.street !== h.street ? 380 : 0), easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
+                    { duration: 340, delay: 120 * j + lead, easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
             });
+            if (!before) {
+                R.board.querySelectorAll(".hd-slot.is-open").forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, delay: lead + 120 * h.board.length, easing: "ease-out", fill: "backwards" }));
+                R.mark.animate([{ opacity: 1 }, { opacity: 1, offset: lead / (lead + 350) }, { opacity: 0 }], { duration: lead + 350, easing: "ease-out" });
+            }
         }
         // cards shown at the showdown turn over too
         t.seats.forEach((seat, i) => {

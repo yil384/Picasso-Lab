@@ -1,4 +1,9 @@
-# docker compose up -d --build     (from events/holdem-dealer on the lab server; Caddy proxies to 127.0.0.1:8787)
+# On the lab server, from ~/workspace/holdem-dealer (a copy of this folder; README "Deploy"):
+#   ops/secrets.sh && docker compose up -d --build
+# No port is published on the host: Caddy (the fras-caddy-1 container) reaches the service on its Docker network as
+# holdem-dealer:8787, and the service believes X-Forwarded-For from that container only (TRUST_PROXY in .env), so
+# nobody on the host can pose as another network. The secrets are files (./secrets, folder mode 700), never env
+# values, so `docker inspect` does not show them.
 services:
   holdem-dealer:
     build: .
@@ -6,8 +11,16 @@ services:
     restart: unless-stopped
     init: true
     env_file: .env
-    ports:
-      - "127.0.0.1:8787:8787"
+    environment:
+      GAMES_SECRET_FILE: /run/secrets/games_secret
+      IP_SALT_FILE: /run/secrets/ip_salt
+    secrets:
+      - games_secret
+      - ip_salt
+    networks:
+      edge:
+        aliases:
+          - holdem-dealer
     volumes:
       - holdem-data:/data
     stop_grace_period: 20s
@@ -16,6 +29,22 @@ services:
       - /tmp
     security_opt:
       - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+secrets:
+  games_secret:
+    file: ./secrets/games_secret
+  ip_salt:
+    file: ./secrets/ip_salt
+
+networks:
+  edge:
+    external: true
+    name: ${HOLDEM_EDGE_NETWORK:-fras_default}
 
 volumes:
   holdem-data:

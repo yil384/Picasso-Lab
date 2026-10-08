@@ -1,7 +1,8 @@
 // Picasso Lab games: the account layer shared by Guandan and Hold'em (events/holdem-dealer/DESIGN.md §4).
 // Guest first: the page keeps its local Guandan id and nickname; in the background it opens a session with the
 // games service (never blocking the lobby; 4 s timeout; offline the page works exactly as before), keeps the
-// device token in localStorage, offers "continue as X?" to a fresh browser (one click, never automatic), keeps
+// device token in localStorage, offers "use the name X again?" to a fresh browser (one click, never automatic; it
+// renames this browser's own account, it never hands over another one), keeps
 // the nickname in sync, shows the 账号 popup (bankroll, records, save with email) and reports Guandan rounds.
 // Play money only: chips cannot be bought, sold or transferred.
 const TOKEN_KEY = "picasso.games.token";
@@ -118,7 +119,8 @@ export function createAccount(ctx) {
         }
     }
 
-    // A fresh browser may be offered the names used from the same network: one click on 继续 claims it.
+    // A fresh browser may be offered the names used from the same network: one click on 继续 takes the name (only the
+    // name: this browser keeps its own account, chips and records).
     function whenLobby(fn) {
         if (document.body.dataset.screen === "lobby") return fn();
         const watch = new MutationObserver(() => {
@@ -138,7 +140,7 @@ export function createAccount(ctx) {
             narrow: true,
             html: `<div class="ga-suggest">
                 ${one ? `<span class="ga-suggest-face">${ctx.avatarHTML(suggestions[0].name)}</span>` : ""}
-                <p class="gd-confirm-text">${one ? L(`Continue as ${esc(suggestions[0].name)}?`, `继续以 ${esc(suggestions[0].name)} 的身份？`) : L("Continue as one of these players?", "继续以哪个身份？")}</p>
+                <p class="gd-confirm-text">${one ? L(`Use the name ${esc(suggestions[0].name)} again?`, `继续使用昵称「${esc(suggestions[0].name)}」？`) : L("Use one of these names again?", "用回哪个昵称？")}</p>
                 <div class="gd-confirm-row${one ? "" : " is-names"}"><button class="btn secondary" type="button" data-new>${L("I'm new", "我是新玩家")}</button>${names}</div>
                 <button class="ga-link" type="button" data-privacy>${L("Privacy", "隐私说明")}</button>
             </div>`,
@@ -173,8 +175,8 @@ export function createAccount(ctx) {
             title: L("Privacy", "隐私说明"),
             narrow: true,
             html: `<p class="ga-privacy">${L(
-                "So you can pick your name up again in a new browser, the game service keeps a salted hash of your network address (never the raw IP) together with the guest names used from that network in the last 30 days, and deletes it after 30 days. A new browser only sees a “Continue as X?” suggestion and nothing happens until you click it. People on the same campus network or router may see the same suggestion, so an email-saved account is never suggested or signed in by network address. Your email is used only to send the sign-in link; we keep a masked form and a hash. All chips are play money: they cannot be bought, sold or transferred and have no value.",
-                "为了让你换浏览器时能一键找回昵称，游戏服务会把你的网络地址做加盐哈希（不保存、不记录原始 IP），并记住最近 30 天里在这个网络用过的游客昵称，30 天后自动删除。新浏览器只会看到“继续以 X 的身份？”的建议，必须由你点一下才会生效；同一校园网或路由器下的人也可能看到同样的建议，所以绑定了邮箱的账号永远不会靠网络地址被推荐或登录。邮箱只用于发送登录链接，我们只保存脱敏地址和一个哈希。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。")}</p>`
+                "So you can pick your name up again in a new browser, the game service keeps a salted hash of your network address (never the raw IP) together with the guest names used from that network in the last 30 days, and deletes it after 30 days; backups never hold it. A new browser only sees a “Use the name X?” suggestion, nothing happens until you click it, and a click only takes the name: chips, records and seats stay with their account (to use one account on several devices, save it with an email). People on the same campus network or router may see the same suggestion, so the name of an email-saved account is never suggested. Your email is used only to send the sign-in link; we keep a masked form and a hash. Whoever administers the server could technically work a network address back out of its hash. All chips are play money: they cannot be bought, sold or transferred and have no value.",
+                "为了让你换浏览器时能一键用回原来的昵称，游戏服务会把你的网络地址做加盐哈希（不保存、不记录原始 IP），并记住最近 30 天里在这个网络用过的游客昵称，30 天后自动删除，备份里也不保留。新浏览器只会看到“继续使用昵称 X？”的建议，必须由你点一下才会生效，而且只换昵称：筹码、战绩和座位都不会跟过来（想在别的设备上用同一个账号，请用邮箱保存）。同一校园网或路由器下的人也可能看到同样的建议，所以绑定了邮箱的账号的昵称永远不会这样被推荐。邮箱只用于发送登录链接，我们只保存脱敏地址和一个哈希。能管理这台服务器的人在技术上可以从哈希反推出网络地址。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。")}</p>`
         });
     }
 
