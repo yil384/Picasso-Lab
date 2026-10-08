@@ -437,7 +437,9 @@ Accounts
   its own name (the other must rename to be protected).
 - IP memory records an entry on every authenticated `/v1/session` of a guest, on a successful claim, and when a new
   guest is created with a name the page supplied while `fresh` is not true (a returning Guandan player). A fresh
-  browser's new placeholder guest is never recorded. Suggestions use each account's current name.
+  browser's new placeholder guest is never recorded. Suggestions use each account's current name and come only with
+  a session that creates the account (a fresh browser has no token), so their `sid`s are bounded by the 30/h
+  account-creation limit; a request that carries a known token gets `suggestions: []` even with `fresh: true`.
 - Claims: `sid`s live in memory only (a restart forgets them; they last 10 minutes anyway) and are single use. The
   claiming device's clientIds join the claimed account. The fresh guest is deleted only when pristine: never played
   Hold'em or Guandan, never refilled, bankroll 10,000, nothing at a table.
@@ -466,7 +468,7 @@ HTTP
 
 WebSocket
 - The `Origin` header is required (403 otherwise); at most 100 sockets per ipKey; the server pings every 30 s and
-  drops dead sockets. A failed `hello` answers `{ t:"error", code:"bad_token", re:"hello" }` and closes with 1008 (the
+  drops dead sockets, and drops a socket that stops reading (more than 1 MB waiting to be sent; it reconnects). A failed `hello` answers `{ t:"error", code:"bad_token", re:"hello" }` and closes with 1008 (the
   page reconnects with whatever token it then holds). More error codes: `bad_json`, `bad_message` (any message that
   fails validation; unknown fields are ignored), `no_hello`, `already_hello`, `bad_settings`, `bad_seat`, `not_seated`,
   `too_many_tables`, `no_account`, `restarting`, `server_error`, plus every engine code (section 8).

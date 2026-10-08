@@ -5,6 +5,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import WebSocket from 'ws';
+import { HoldemTable } from '../src/engine/table.js';
+import { MAX_TABLES } from '../src/rooms.js';
 import {
   startTest, newGuest, connect, Client, truthRecorder, chipsTotal, until, autoPlay, checkFrames, floatRng, sleep, ORIGIN,
 } from './service-helpers.js';
@@ -368,6 +370,15 @@ test('host operations, dissolve returns every chip, closed message; codes; at mo
   for (const c of codes) assert.match(c, CODE);
   assert.equal((await sendAndError(ch, { t: 'create', settings: {} })).code, 'too_many_tables');
   for (const c of codes) { await watch(ch, c); ch.send({ t: 'host', op: 'dissolve' }); await ch.next((m) => m.t === 'closed'); }
+  // at most 200 open tables on the service
+  const fillers = [];
+  for (let i = 0; svc.rooms.tables.size < MAX_TABLES; i++) {
+    const t = new HoldemTable({ code: `FILL${i}`, settings: {}, host: null, now: Date.now() });
+    svc.rooms.tables.set(t.code, svc.rooms._entry(t));
+    fillers.push(t.code);
+  }
+  assert.equal((await sendAndError(cg, { t: 'create', settings: {} })).code, 'too_many_tables');
+  for (const c of fillers) svc.rooms.tables.delete(c);
   ch.close(); cg.close();
 });
 

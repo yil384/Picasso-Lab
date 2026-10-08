@@ -15,6 +15,7 @@ const MAX_FRAME = 4096;
 const MSGS_PER_SEC = 40;
 const SOCKETS_PER_IP = 100;
 const PING_MS = 30_000;
+const MAX_BUFFERED = 1 << 20;
 
 function reject(socket, status, text) {
   try {
@@ -52,6 +53,8 @@ export function attachWs(server, { config, accounts, rooms, limiter, ipKeyOf, lo
       watching: null,
       send(obj) {
         if (ws.readyState !== 1) return;
+        // a client that stopped reading is dropped rather than buffered without bound (it reconnects)
+        if (ws.bufferedAmount > MAX_BUFFERED) return ws.terminate();
         ws.send(typeof obj === 'string' ? obj : JSON.stringify(obj));
       },
       close(code, reason) {
