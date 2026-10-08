@@ -372,6 +372,21 @@ class Run:
                 await hero.wait_screen('htable', 12000)
                 await self.my_turn(60)
                 await self.shot('nine', 1300)
+                # layout probe: every opponent's cards face up at nine seats (DOM only, a real nine-way showdown is
+                # rare): side seats' cards must clear their avatars, their bets, the button and my cards
+                await hero.pg.evaluate("""() => {
+                    const mine = [...document.querySelectorAll('.hd-hole .card')];
+                    document.querySelectorAll('.hd-seat:not(.is-hero):not(.is-empty)').forEach(s => {
+                        const holes = s.querySelector('.hd-holes');
+                        if (!holes || !mine.length) return;
+                        const wrap = document.createElement('span');
+                        wrap.className = 'hd-shown';
+                        mine.forEach(c => { const x = c.cloneNode(true); x.classList.add('small'); x.removeAttribute('style'); wrap.appendChild(x); });
+                        holes.replaceChildren(wrap);
+                        s.classList.add('has-shown');
+                    });
+                }""")
+                await self.shot('nine-shown', 250)
             await self.step('nine', nine())
         except Exception as e:
             self.failed.append(f'run: {type(e).__name__} {str(e)[:200]}')
