@@ -6,7 +6,8 @@
 //     Service = { port, url, accounts, rooms, store, ws, stop() }
 //     stop(): graceful - stop accepting, close every socket with 1012, stop the table timers, flush both files.
 // Startup refuses to run on a corrupt data file (store.js) or a bad configuration (config.js).
-// SIGTERM / SIGINT run stop() and exit 0. An uncaught error flushes what it can and exits 1 (Docker restarts it).
+// SIGTERM / SIGINT run stop() and exit 0. An uncaught error exits 1 without writing (Docker restarts it from the
+// last flushed batch, at most 200 ms old).
 
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
@@ -128,9 +129,9 @@ async function main() {
   };
   process.on('SIGTERM', () => quit('SIGTERM'));
   process.on('SIGINT', () => quit('SIGINT'));
+  // no flush here: memory may be half-way through a step; the last flushed batch (<= 200 ms old) is consistent
   process.on('uncaughtException', (e) => {
-    log('uncaught exception', { error: e.message });
-    try { service.store.flush(); } catch (_) { /* nothing more to do */ }
+    log('uncaught exception, exiting without a flush', { error: e.message });
     process.exit(1);
   });
 }

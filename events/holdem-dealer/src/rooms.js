@@ -306,9 +306,19 @@ export class Rooms {
     if (!a || !a.bot) { entry.bot = null; return; }
     const key = this._botKey(t, a);
     if (entry.bot && entry.bot.key === key) return;
-    const view = t.viewFor(a.seat);
-    const decision = decide(view, { rng: this.botRng });
-    const delay = Math.round(thinkDelay(view, decision, this.botRng) * this.botThinkScale);
+    let decision;
+    let delay;
+    try {
+      const view = t.viewFor(a.seat);
+      decision = decide(view, { rng: this.botRng });
+      delay = Math.round(thinkDelay(view, decision, this.botRng) * this.botThinkScale);
+    } catch (e) {
+      // never stall a table on a bot: check or fold after a second
+      this.log('bot decision failed', { error: e.message });
+      const L = t.legalFor(a.seat);
+      decision = { action: L && L.check ? 'check' : 'fold', to: null };
+      delay = 1000;
+    }
     entry.bot = { key, at: now + delay, decision };
   }
 

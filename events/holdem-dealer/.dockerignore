@@ -1,0 +1,12 @@
+node_modules
+data
+test
+.env
+.env.*
+!.env.example
+*.md
+Caddyfile.snippet
+compose.yaml
+Dockerfile
+.dockerignore
+.gitignore

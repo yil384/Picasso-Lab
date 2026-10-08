@@ -1,0 +1,21 @@
+# docker compose up -d --build     (from events/holdem-dealer on the lab server; Caddy proxies to 127.0.0.1:8787)
+services:
+  holdem-dealer:
+    build: .
+    image: picasso/holdem-dealer:latest
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - holdem-data:/data
+    stop_grace_period: 20s
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  holdem-data:

@@ -175,7 +175,7 @@ email start 5/h, claims 10/h, other calls 600/min. `Authorization: Bearer <token
 | `GET /v1/health` | → `{ ok, tables, players, uptime }` |
 
 `AccountView = { pid, name, guest: bool, email: masked|null, chips, refills, holdem: {...}, guandan: { rounds, wins },
-protected: bool }`.
+protected: bool }`. Additional response fields and error codes of the service as built: section 14.
 
 ## 6. Hold'em WebSocket protocol (`wss://poker.picasso-lab.com/v1/ws`)
 
@@ -413,6 +413,83 @@ client IP from the right-most `X-Forwarded-For` entry, which Caddy appends), `DA
   personalities differ), accounts (guest, migration, IP suggestion rules and expiry, claims, name protection, email
   link with a locally signed test JWK, merge rules), views (no hidden card ever appears in another recipient's message
   — fuzzed over thousands of random hands), WS integration (2–9 seats, restart mid-hand).
+- Service (`npm test` too): config and ipKey, store (batches, crash roll-forward, corrupt-file refusal), firebase-token
+  (valid, expired, aud/iss, signature, unverified email, kid rotation), HTTP integration (CORS, auth, suggestions by
+  network, claims, limits, body size), email link end to end with a locally signed token (new link, second-device
+  merge, mismatch, expiry, flag off), WebSocket integration with real clients (2-, 6- and 9-seat tables of humans and
+  bots, every frame scanned for cards the recipient may not see, chips conserved after every step, reconnect,
+  refused actions, protocol limits), graceful restart mid-hand and kill -9 restarts (child process).
 - `npm run test:slow`: all 133,784,560 seven-card hands → exact category counts.
 - Browser: `guandan-kit/harness/holdem/` — Playwright against the local service (the page reads
   `window.__PICASSO_GAMES_ORIGIN`, set by the harness's init script; production uses `https://poker.picasso-lab.com`).
+
+## 14. Service layer as built (additions and clarifications)
+
+Code: `src/config.js`, `src/util.js` (ipKey, rate limits, log), `src/store.js`, `src/accounts.js`,
+`src/firebase-token.js`, `src/rooms.js`, `src/protocol.js`, `src/http.js`, `src/ws.js`, `src/server.js`; operations in
+`README.md`. Each file's header comment is the reference. Everything below is additive to sections 4-6, 9, 10, 12.
+
+Accounts
+- A guest created with no usable name (empty, invalid, or a name protected by an email account) is named
+  `Player <4 digits>`. Name rules: trimmed, inner spaces collapsed, 1-24 characters, no control, private-use or
+  invisible direction characters. Protection compares NFKC, lower case, without spaces. When two email accounts carry
+  the same name, the one linked first holds it; `AccountView.protected` is true only for an email account that holds
+  its own name (the other must rename to be protected).
+- IP memory records an entry on every authenticated `/v1/session` of a guest, on a successful claim, and when a new
+  guest is created with a name the page supplied while `fresh` is not true (a returning Guandan player). A fresh
+  browser's new placeholder guest is never recorded. Suggestions use each account's current name.
+- Claims: `sid`s live in memory only (a restart forgets them; they last 10 minutes anyway) and are single use. The
+  claiming device's clientIds join the claimed account. The fresh guest is deleted only when pristine: never played
+  Hold'em or Guandan, never refilled, bankroll 10,000, nothing at a table.
+- Email links: `POST /v1/email/start` also answers 400 `bad_email` and 409 `already_linked` (the account already has
+  an email). `POST /v1/email/complete` answers `{ ok, name, nameReserved }` (`nameReserved: false` means the name is
+  held by another saved account: ask for a new name); it is idempotent for a completed link; 409 `already_linked`
+  when the guest got another email meanwhile; 409 `at_table` when the guest that would be merged is seated at a
+  Hold'em table (its stack would otherwise be lost; the link stays valid, so completing again after leaving works).
+  `auth_time` must be within the last hour. A done link hands out its token once (the next poll is 404 `expired`);
+  the device token that started the link is retired when the link saved that same account. A wrong `poll` secret
+  answers exactly like an unknown link. With the flag off, complete and poll also answer 403 `disabled`. The raw email
+  is never stored (masked form + HMAC only).
+- Hourly sweep (and at start): IP entries older than 30 days, expired links and claims, and pristine guests not seen
+  for 90 days are deleted.
+- `POST /v1/guandan/round` answers `{ ok: true, duplicate: true }` for a round already counted; `round` must be an
+  integer, `place` 0-9 or absent.
+- Leaderboards: every row and the `me` row carry `rank` (`me.rank` is null without games). Hold'em ties break by
+  more hands, Guandan ties by fewer rounds.
+
+HTTP
+- Requests carrying an `Origin` that is not allow-listed are refused with 403 `origin` (not merely left without CORS
+  headers); requests without `Origin` (health checks, curl) are served. Errors: 400 `bad_json` / `bad_request` /
+  `bad_name` / `bad_email`, 401 `auth` / `bad_token`, 404 `not_found` / `expired`, 405 `method_not_allowed`, 413
+  `too_large`, 429 `rate_limited` (with `Retry-After`), 500 `server_error`. Responses are `Cache-Control: no-store`.
+- `POST /v1/signout` also closes that token's sockets (code 4001).
+
+WebSocket
+- The `Origin` header is required (403 otherwise); at most 100 sockets per ipKey; the server pings every 30 s and
+  drops dead sockets. A failed `hello` answers `{ t:"error", code:"bad_token", re:"hello" }` and closes with 1008 (the
+  page reconnects with whatever token it then holds). More error codes: `bad_json`, `bad_message` (any message that
+  fails validation; unknown fields are ignored), `no_hello`, `already_hello`, `bad_settings`, `bad_seat`, `not_seated`,
+  `too_many_tables`, `no_account`, `restarting`, `server_error`, plus every engine code (section 8).
+- A socket whose account is deleted (merged by an email link, or replaced by a claim) is closed with 4001.
+- `create` sends `created`, then the creating socket watches the table and gets its first `state`. Practice: the
+  table is 6-max whatever `seats` says, the creator sits at seat 0 with the default buy-in (error
+  `insufficient_chips` below the minimum buy-in, `name_protected` for a protected name), 5 bots fill the other seats
+  and the table starts. `{ t:"host", op:"fillBots", count? }` takes an optional count (1-8).
+- Presence (rooms): a host with no socket on the table for 60 s hands the host role on (`releaseHost`). In the
+  waiting phase, where no timers run, a seated human with no socket for 10 minutes is stood up (which lets the idle
+  close run). An account hosts at most 3 open tables.
+- Every `state` is built per recipient by `views.js`; the public part is serialized once per change. `{ t:"account" }`
+  is pushed after every table step that moved that account's bankroll or records, and after HTTP changes (name,
+  refill, Guandan round, email link).
+
+Persistence
+- Each file is an envelope `{ v: 1, gen, batch: [names], savedAt, data }`. A flush writes every dirty file as one
+  batch: all temp files written and fsynced first, then each renamed into place (the previous file hard-linked to
+  `.bak` first), then the directory fsynced. At start, a batch interrupted between its renames is rolled forward from
+  its complete temp files and an incomplete one is discarded, so `accounts.json` and `tables.json` always describe the
+  same moment (a kill -9 never creates or destroys chips; tested). A missing file whose `.bak` exists also refuses
+  the start. An uncaught exception exits without writing (the last batch is consistent and at most 200 ms old).
+- Config adds `HOST` (default `127.0.0.1`; the image sets `0.0.0.0`) and `PACE_SCALE` (tests only: scales the
+  engine's pacing pauses; action timers are never scaled). Production refuses secrets shorter than 32 characters,
+  equal to each other or still holding a placeholder.
+

@@ -1,0 +1,10 @@
+# Add to the lab server's Caddyfile (DESIGN.md section 12), then: caddy reload --config /etc/caddy/Caddyfile
+# Caddy gets the certificate itself; WebSocket upgrades (/v1/ws) pass through reverse_proxy unchanged.
+poker.picasso-lab.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8787
+	# the service never stores IPs; keep Caddy from logging them too
+	log {
+		output discard
+	}
+}

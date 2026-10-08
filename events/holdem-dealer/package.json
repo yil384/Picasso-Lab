@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "start": "node src/server.js",
     "test": "node --test test/*.test.js",
     "test:slow": "SLOW=1 node --test test/evaluator.slow.test.js"
   },
