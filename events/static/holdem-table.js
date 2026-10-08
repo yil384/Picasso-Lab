@@ -461,7 +461,7 @@ export function createTable({ ui, S, send, popups }) {
         if (!h) return region("pots", "");
         const pots = h.pots || [];
         const bets = t.seats.reduce((a, s) => a + (s?.bet || 0), 0);
-        const total = pots.reduce((a, p) => a + p.amt, 0) + bets;
+        const total = pots.reduce((a, p) => a + p.amt, 0) + bets + (h.dead || 0);
         if (!total) return region("pots", "");
         const side = pots.length > 1
             ? `<div class="hd-sidepots">${pots.map((p, j) => `<span class="hd-sidepot">${j ? L(`Side ${j}`, `边池 ${j}`) : L("Main", "主池")} <b>${fmt(p.amt)}</b></span>`).join("")}</div>`

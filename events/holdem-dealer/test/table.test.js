@@ -113,13 +113,13 @@ test('heads-up: button posts the small blind, acts first pre-flop and last after
   foldAround(t);
   h = nextHand(t);
   assert.deepEqual([h.button, h.sbSeat, h.bbSeat, h.toAct], [4, 4, 1, 4]);
-  // from three players to two: the next hand is played heads-up
+  // from three players to two: the next hand is played heads-up, and the big blind moves on (seat 2 had it)
   const t3 = makeTable({ seats: [0, 2, 4], rng: riggedRng(6).queue(2) });
   assert.deepEqual([t3.hand.button, t3.hand.sbSeat, t3.hand.bbSeat], [4, 0, 2]);
   foldAround(t3);
   assert.equal(t3.stand('u_4', t3.s.now).ok, true);
   h = nextHand(t3);
-  assert.deepEqual([h.button, h.sbSeat, h.bbSeat, h.toAct], [0, 0, 2, 0]);
+  assert.deepEqual([h.button, h.sbSeat, h.bbSeat, h.toAct], [2, 2, 0, 2]);
 });
 
 test('min bet and min raise sequences; illegal amounts change nothing', () => {
@@ -527,7 +527,7 @@ test('sit-out for 5 minutes stands the player up and returns the stack', () => {
   assert.deepEqual(t.settlements().chips.filter((c) => c.accountId === 'u_2'), [{ accountId: 'u_2', amount: stack, reason: 'cashout' }]);
 });
 
-test('host hand-off to the longest-seated human (on release, not on standing); host ops; dissolve refunds a live hand', () => {
+test('host hand-off to the longest-seated human (on release, not on standing); host ops; dissolve waits for a live hand to end', () => {
   const t = new HoldemTable({ code: 'H', settings: {}, host: { id: 'u_0', pid: 'p_0' }, now: 0, rng: riggedRng(25).queue(0) });
   t.sit(acct(0), 0, 2000, 0);
   t.sit(acct(2), 2, 2000, 5);
@@ -559,12 +559,17 @@ test('host hand-off to the longest-seated human (on release, not on standing); h
   assert.equal(t.rev, rev + 1);
   t.settlements();
   assert.equal(t.hand.done, false);
+  // dissolving never cancels a live hand (the host could otherwise undo a lost all-in once the board shows)
   assert.equal(t.hostOp('u_2', 'dissolve', {}, 50).ok, true);
+  assert.equal(t.phase, 'running', 'the live hand plays on');
+  foldAround(t);
+  assert.equal(t.hand.done, true);
+  wake(t);
   assert.equal(t.phase, 'closed');
   assert.equal(t.closedReason, 'dissolved');
-  const back = Object.fromEntries(t.settlements().chips.map((c) => [c.accountId, c.amount]));
-  assert.deepEqual(back, { u_0: 2000, u_1: 2000, u_2: 2000 }, 'a cancelled hand refunds every contribution');
-  assert.deepEqual(t.settlements(), { chips: [], records: [] }, 'no records for a cancelled hand');
+  const q = t.settlements();
+  assert.deepEqual(q.chips.filter((c) => c.reason === 'cashout').map((c) => c.accountId).sort(), ['u_0', 'u_1', 'u_2']);
+  assert.equal(q.records.length, 3, 'the hand counts');
   assert.deepEqual(t.sit(acct(5), 5, 2000, 60), { ok: false, error: 'closed' });
   assert.equal(t.nextWakeAt(), null);
 });
@@ -644,7 +649,7 @@ test('a short big blind is all-in from the post; the others still owe the full b
   assert.equal(t.hand.runout, false);
 });
 
-test('standing out of turn can close the street: the leaver\'s uncalled raise goes back to it', () => {
+test('standing out of turn can close the street: the leaver\'s raise is forfeit and stays in the pot', () => {
   const t = makeTable({ seats: [0, 1, 2, 3], rng: riggedRng(29).queue(0) });
   act(t, 'call'); act(t, 'call'); act(t, 'call'); act(t, 'check');
   wake(t);
@@ -658,12 +663,139 @@ test('standing out of turn can close the street: the leaver\'s uncalled raise go
   const before = t.seats[3].stack;
   assert.equal(t.stand('u_3', t.s.now).ok, true);
   assert.equal(t.hand.toAct, null, 'seat 1 already matched everything still live');
-  assert.equal(t.seats[3].stack, before + 150, 'uncalled 150 returned');
+  assert.equal(t.seats[3].stack, before, 'a folded raise is never returned');
+  assert.equal(t.hand.pots.reduce((a, p) => a + p.amt, 0), 20 * 4 + 50 + 50 + 200, 'the dead 150 is in the pot');
   assert.equal(t.hand.runout, true);
   assert.ok(publicTable(t).seats[1].shown && publicTable(t).seats[2].shown);
   for (let i = 0; i < 2; i++) wake(t);
   assert.equal(t.hand.done, true);
+  assert.equal(t.hand.winners.reduce((a, w) => a + w.amt, 0), 380);
   assert.equal(t.seats[3], null);
   const out = t.settlements().chips.find((c) => c.accountId === 'u_3' && c.reason === 'cashout');
-  assert.equal(out.amount, before + 150);
+  assert.equal(out.amount, before);
+});
+
+// ---------- review round 1: leaving, host ops, top-ups, blinds, restarts ----------
+
+// heads-up host (seat 0, 72o) against a deeper bot (seat 1, AA), both all-in pre-flop: a run-out with both hands face up
+function exposedRunout() {
+  const rng = riggedRng(3).queue(1, 0);
+  rng.deck(handDeck(0, 2, { 0: ['2c', '7d'], 1: ['As', 'Ad'] }, ['Kh', 'Qh', '3s', '4d', '9c']));
+  const t = new HoldemTable({ code: 'B', settings: { blinds: '10/20', seats: 2 }, host: { id: 'h', pid: 'ph' }, now: 1000, rng });
+  t.sit({ id: 'h', pid: 'ph', name: 'H', chips: 5000 }, 0, 1500, 1000);
+  t.hostOp('h', 'fillBots', { count: 1 }, 1000);
+  t.hostOp('h', 'start', {}, 1000);
+  act(t, 'allin'); act(t, 'call');
+  assert.equal(t.hand.runout, true);
+  wake(t);
+  assert.equal(t.hand.board.length, 3);
+  return t;
+}
+
+test('a host op never decides a hand: removeBot lets the bot play it out, dissolve waits for the pot', () => {
+  // removing the bot with both hands face up: the bot stays in and wins
+  let t = exposedRunout();
+  assert.equal(t.hostOp('h', 'removeBot', { seat: 1 }, t.s.now).ok, true);
+  assert.equal(t.seats[1].folded, false);
+  until(t, (x) => x.hand && x.hand.done);
+  assert.deepEqual(t.hand.winners.map((w) => w.seat), [1]);
+  assert.equal(t.seats[0].stack, 0);
+  assert.equal(t.seats[1], null, 'the bot leaves at hand end');
+  // removing a bot that bet on the flop: no uncontested pot for the host
+  t = makeTable({ seats: [0], start: false });
+  t.hostOp('u_0', 'fillBots', { count: 1 }, t.s.now);
+  t.hostOp('u_0', 'start', {}, t.s.now);
+  const bot = t.seats.findIndex((s) => s && s.bot);
+  assert.equal(t.hostOp('u_0', 'removeBot', { seat: bot }, t.s.now).ok, true);
+  assert.equal(t.hand.done, false);
+  assert.equal(t.seats[bot].folded, false);
+  // dissolving in a run-out: the hand is played out and recorded, nothing is refunded
+  t = exposedRunout();
+  t.settlements();
+  assert.equal(t.hostOp('h', 'dissolve', {}, t.s.now).ok, true);
+  assert.equal(t.phase, 'running');
+  until(t, (x) => x.phase === 'closed');
+  const q = t.settlements();
+  assert.equal(q.records.length, 1);
+  assert.equal(q.records[0].net, -1500);
+  assert.deepEqual(q.chips, [], 'the host lost everything: nothing to cash out');
+});
+
+test('standing in a run-out does not fold: the hand goes to showdown and the leaver is paid', () => {
+  const rng = riggedRng(4).queue(0);
+  rng.deck(handDeck(0, 2, { 0: ['As', 'Ad'], 1: ['2c', '7d'] }, ['Kh', 'Qh', '3s', '4d', '9c']));
+  const t = makeTable({ seats: [0, 1], stacks: [2000, 1000], rng });
+  act(t, 'raise', 2000); act(t, 'call'); // seat 1 all-in for 1000; seat 0 covers it and is not all-in
+  assert.equal(t.hand.runout, true);
+  assert.equal(t.seats[0].allin, false);
+  assert.equal(t.stand('u_0', t.s.now).ok, true);
+  assert.equal(t.seats[0].folded, false, 'no decision was left');
+  until(t, (x) => x.hand && x.hand.done);
+  assert.deepEqual(t.hand.winners.map((w) => w.seat), [0]);
+  const out = t.settlements().chips.find((c) => c.accountId === 'u_0' && c.reason === 'cashout');
+  assert.equal(out.amount, 3000);
+});
+
+test('a top-up during a hand counts the stack the hand began with, and is cut at the max buy-in at hand end', () => {
+  const rng = riggedRng(1).queue(0);
+  rng.deck(handDeck(0, 6, { 0: ['As', 'Ad'], 1: ['2c', '7d'] }, ['Kh', 'Qh', '3s', '4d', '9c']));
+  const t = makeTable({ seats: [0, 1], stacks: [1500, 2000], rng });
+  act(t, 'raise', 1400); act(t, 'call');
+  assert.deepEqual(t.requestTopUp('u_0', 1000, 1e6, t.s.now), { ok: false, error: 'bad_amount' }, '1500 + 1000 > 2000');
+  t.settlements();
+  assert.equal(t.requestTopUp('u_0', 500, 1e6, t.s.now).ok, true);
+  until(t, (x) => x.hand && x.hand.done);
+  assert.equal(t.seats[0].stack, 2900, 'won 2800 + 100 left: already above the max, the top-up adds nothing');
+  const q = t.settlements();
+  assert.deepEqual(q.chips.filter((c) => c.accountId === 'u_0').map((c) => [c.reason, c.amount]), [['topup', -500], ['topup_back', 500]]);
+  assert.equal(t.seats[0].pendingTopUp, 0);
+});
+
+test('blinds: no dodging the big blind by sitting out three-handed; nobody posts it twice going heads-up', () => {
+  const t = makeTable({ seats: [0, 1, 2], rng: riggedRng(5) });
+  const finish = () => { const no = t.hand.no; foldAround(t); assert.ok(until(t, (x) => x.hand && !x.hand.done && x.hand.no > no)); };
+  const pos = () => [t.hand.button, t.hand.sbSeat, t.hand.bbSeat];
+  const h1 = pos();
+  const dodger = h1[0]; // the button is the next big blind three-handed
+  t.setSitOut(`u_${dodger}`, true, t.s.now);
+  finish();
+  assert.notEqual(t.hand.bbSeat, h1[2], 'heads-up: last hand\'s big blind does not post it again');
+  assert.equal(t.hand.dealt.length, 2);
+  t.setSitOut(`u_${dodger}`, false, t.s.now);
+  assert.equal(t.seats[dodger].waiting, true);
+  // back before the big blind reaches it: it waits (never dealt in on the small blind)
+  for (let k = 0; k < 3 && !t.hand.dealt.includes(dodger); k++) finish();
+  assert.ok(t.hand.dealt.includes(dodger));
+  assert.equal(t.hand.bbSeat, dodger, 'dealt back in on the big blind');
+  assert.equal(t.hand.dealt.length, 3);
+});
+
+test('postBB in the small blind posts a full big blind: the small blind live, the rest dead (in the pot)', () => {
+  const t = makeTable({ seats: [0, 1, 2, 3], rng: riggedRng(7) });
+  const k = (t.hand.button + 2) % 4; // lands in the small blind next hand
+  foldAround(t);
+  t.seats[k].waiting = true;
+  assert.equal(t.postBB(`u_${k}`, t.s.now).ok, true);
+  until(t, (x) => x.hand && x.hand.no === 2);
+  assert.equal(t.hand.sbSeat, k);
+  assert.deepEqual(t.hand.log.filter((e) => e.seat === k).map((e) => `${e.a}:${e.amt}`), ['sb:10', 'dead:10']);
+  assert.equal(t.seats[k].contrib, 20);
+  assert.equal(t.seats[k].bet, 10, 'only the live part counts as its bet');
+  assert.equal(publicTable(t).hand.dead, 10);
+  foldAround(t);
+  const won = t.hand.winners.reduce((a, w) => a + w.amt, 0);
+  assert.equal(won, 10 + 10 + 10, 'small blind + the matched half of the big blind (the rest is uncalled) + the dead part');
+});
+
+test('a restart keeps the time bank already used', () => {
+  const t = makeTable({ seats: [0, 1, 2], rng: riggedRng(27).queue(0) });
+  const seat = t.hand.toAct;
+  const bank = t.seats[seat].bankMs;
+  t.tick(t.hand.deadline); // the action timer runs out: the bank starts
+  assert.equal(t.hand.usingBank, true);
+  t._clock(t.hand.bankStart + 12_000); // 12 s of bank used, then the service stops (rooms.stop saves this clock)
+  const restored = HoldemTable.fromJSON(t.toJSON(), { rng: seededRng(1), now: t.s.now + 60_000 });
+  assert.equal(restored.seats[seat].bankMs, bank - 12_000);
+  assert.equal(restored.hand.usingBank, false);
+  assert.equal(restored.hand.deadline, t.s.now + 60_000 + 20_000);
 });

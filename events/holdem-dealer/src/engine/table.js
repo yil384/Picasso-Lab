@@ -134,10 +134,13 @@ export class HoldemTable {
     t.rng = rng;
     t.s = JSON.parse(JSON.stringify(obj));
     if (now !== null && now !== undefined) {
+      const savedNow = t.s.now;
       t._clock(now);
       const h = t.s.hand;
       if (h && !h.done && h.toAct !== null) {
         const s = t.s.seats[h.toAct];
+        // the time bank already used before the restart stays used
+        if (h.usingBank && h.bankStart !== null) s.bankMs = Math.max(0, s.bankMs - Math.max(0, savedNow - h.bankStart));
         h.usingBank = false;
         h.bankStart = null;
         h.deadline = s.bot ? null : now + t.s.settings.actionSec * 1000;
@@ -329,7 +332,9 @@ export class HoldemTable {
       const s = this.s.seats[seat];
       if (s.bot) return err('is_bot');
       if (!Number.isInteger(amount) || amount <= 0) return err('bad_amount');
-      if (s.stack + s.pendingTopUp + amount > this.s.settings.maxBuyIn) return err('bad_amount');
+      // in a hand the stack has lost its bets: check against what the seat had when the hand began
+      const base = this._inLiveHand(s) ? s.stack + s.contrib : s.stack;
+      if (base + s.pendingTopUp + amount > this.s.settings.maxBuyIn) return err('bad_amount');
       if (bankroll !== null && bankroll !== undefined && amount > bankroll) return err('insufficient_chips');
       this.s.queue.chips.push({ accountId, amount: -amount, reason: 'topup' });
       if (this._inLiveHand(s)) s.pendingTopUp += amount;
@@ -405,10 +410,14 @@ export class HoldemTable {
           const seat = args.seat;
           const s = Number.isInteger(seat) ? st.seats[seat] : null;
           if (!s || !s.bot) return err('not_bot');
-          this._leave(seat, st.now);
+          // a bot in a live hand plays it out and leaves at hand end: a host op never folds a seat
+          if (this._inLiveHand(s)) { s.leaving = true; return OK; }
+          this._removeSeat(seat);
           return OK;
         }
         case 'dissolve':
+          // a live hand is played out first (the pot is awarded), then the table closes
+          if (st.hand && !st.hand.done) { st.dissolving = true; return OK; }
           this._close(st.now, 'dissolved');
           return OK;
         default:
@@ -662,7 +671,8 @@ export class HoldemTable {
     this._setToAct(this._nextToAct(seat), now);
   }
 
-  // A seat leaves: a live hand is folded at once (an all-in hand plays on), the seat is freed at hand end.
+  // A seat leaves: a live hand is folded at once, the seat is freed at hand end. An all-in hand plays on, and so
+  // does any hand once betting is over (a run-out, or no one left who could still bet): no decision is left to fold.
   _leave(seat, now) {
     const st = this.s;
     const s = st.seats[seat];
@@ -670,7 +680,9 @@ export class HoldemTable {
     const h = st.hand;
     if (this._inLiveHand(s)) {
       s.leaving = true;
-      if (!s.folded && !s.allin) {
+      const active = this._live().filter((i) => !st.seats[i].allin);
+      const bettingOver = h.runout || (h.toAct === null && active.length <= 1);
+      if (!s.folded && !s.allin && !bettingOver) {
         if (h.toAct === seat) {
           if (h.usingBank) s.bankMs = Math.max(0, s.bankMs - Math.max(0, now - h.bankStart));
           this._applyAction(seat, 'fold', null, now, false);
@@ -715,24 +727,46 @@ export class HoldemTable {
     if (eligible.length < 2) return false;
     let R = eligible.filter((i) => !st.seats[i].waiting || st.seats[i].postBB);
     let W = eligible.filter((i) => st.seats[i].waiting && !st.seats[i].postBB);
-    if (st.handNo === 0 || R.length < 3) { R = eligible; W = []; }
+    if (st.handNo === 0 || R.length < 2) { R = eligible; W = []; }
+    else if (R.length === 2 && W.length) {
+      // a brand-new seat at a heads-up table is dealt in at once; a player back from sitting out still waits for
+      // the big blind (or posts one)
+      const fresh = W.filter((i) => st.seats[i].handsDealt === 0);
+      R = [...R, ...fresh].sort((a, b) => a - b);
+      W = W.filter((i) => !fresh.includes(i));
+    }
     const n = st.seats.length;
     const nextIn = (list, from) => {
       for (let k = 1; k <= n; k++) { const j = (from + k) % n; if (list.includes(j)) return j; }
       return list[0];
     };
-    const button = st.button === null ? R[this.rng(R.length)] : nextIn(R, st.button);
-    let sb, bb, dealt;
+    const prevIn = (list, from) => {
+      for (let k = 1; k <= n; k++) { const j = (from - k + n) % n; if (list.includes(j)) return j; }
+      return list[0];
+    };
+    let button, sb, bb, dealt;
     if (R.length === 2) {
-      sb = button;
-      bb = nextIn(R, button);
-      dealt = R.slice();
+      // heads-up: the big blind moves on from last hand's big blind, so nobody posts it twice running (also when a
+      // table drops to two); a waiting player it reaches is dealt in as the big blind, three-handed
+      if (st.button === null) { button = R[this.rng(R.length)]; bb = nextIn(R, button); }
+      else bb = nextIn([...R, ...W], Number.isInteger(st.lastBB) ? st.lastBB : st.button);
+      if (W.includes(bb)) {
+        sb = prevIn(R, bb);
+        button = R.find((i) => i !== sb);
+        dealt = [...R, bb].sort((a, b) => a - b);
+      } else {
+        button = R.find((i) => i !== bb);
+        sb = button;
+        dealt = R.slice();
+      }
     } else {
+      button = st.button === null ? R[this.rng(R.length)] : nextIn(R, st.button);
       sb = nextIn(R, button);
       bb = nextIn([...R, ...W], sb);
       dealt = W.includes(bb) ? [...R, bb].sort((a, b) => a - b) : R.slice();
     }
     st.button = button;
+    st.lastBB = bb;
     const no = ++st.handNo;
     const h = {
       id: `${st.code}-${no}`, no, street: 'preflop', board: [], deck: shuffledDeck(this.rng), burns: [],
@@ -760,7 +794,9 @@ export class HoldemTable {
     this._post(bb, st.settings.bb, 'bb');
     for (const i of order) {
       const s = st.seats[i];
-      if (s.postBB && i !== sb && i !== bb) this._post(i, st.settings.bb, 'bb');
+      // a returning player posts a full big blind wherever it sits: in the small blind, the rest goes in dead
+      if (s.postBB && i === sb) this._postDead(i, st.settings.bb - st.settings.sb);
+      else if (s.postBB && i !== bb) this._post(i, st.settings.bb, 'bb');
       s.postBB = false;
     }
     h.currentBet = st.settings.bb;
@@ -777,11 +813,27 @@ export class HoldemTable {
     this.s.hand.log.push({ seat: i, a: kind, amt: s.bet, street: 'preflop' });
   }
 
+  // Only a live top bettor takes back the part nobody matched (folded bets count as matching). A folded seat
+  // forfeits every chip it put in: an uncalled bet of a folder stays in the pot (buildPots adds it to the last pot).
+  // dead money: in the pot (contrib) but not part of the seat's bet, so it calls nothing and is never returned
+  _postDead(i, amount) {
+    const s = this.s.seats[i];
+    const h = this.s.hand;
+    const d = Math.min(amount, s.stack);
+    if (d <= 0) return;
+    s.stack -= d;
+    s.contrib += d;
+    if (s.stack === 0) s.allin = true;
+    h.dead = (h.dead || 0) + d;
+    h.log.push({ seat: i, a: 'dead', amt: d, street: 'preflop' });
+  }
+
   _returnUncalled() {
     const bets = this.s.seats.map((s) => (s && s.inHand ? s.bet : 0));
     const u = uncalledBet(bets);
     if (!u) return;
     const s = this.s.seats[u.seat];
+    if (s.folded) return;
     s.bet -= u.amount;
     s.contrib -= u.amount;
     s.stack += u.amount;
@@ -793,6 +845,7 @@ export class HoldemTable {
     const contrib = this.s.seats.map((s) => (s && s.inHand ? s.contrib : 0));
     const folded = this.s.seats.map((s) => !s || !s.inHand || s.folded);
     h.pots = buildPots(contrib, folded);
+    h.dead = 0;
     this.s.seats.forEach((s) => { if (s && s.inHand) { s.bet = 0; s.acted = false; s.actedBet = null; } });
     h.currentBet = 0;
     h.lastRaise = this.s.settings.bb;
@@ -926,7 +979,14 @@ export class HoldemTable {
     }
     st.seats.forEach((s) => {
       if (!s) return;
-      if (s.pendingTopUp > 0) { s.stack += s.pendingTopUp; s.pendingTopUp = 0; }
+      if (s.pendingTopUp > 0) {
+        // a top-up never lifts the stack above the max buy-in (the seat may have won the hand): the rest goes back
+        const add = Math.max(0, Math.min(s.pendingTopUp, st.settings.maxBuyIn - s.stack));
+        const back = s.pendingTopUp - add;
+        if (back > 0 && !s.bot) st.queue.chips.push({ accountId: s.id, amount: back, reason: 'topup_back' });
+        s.stack += add;
+        s.pendingTopUp = 0;
+      }
       if (s.inHand) s.bustedSince = s.stack === 0 ? now : null;
     });
     st.seats.forEach((s, i) => { if (s && s.leaving) this._removeSeat(i); });
@@ -939,6 +999,7 @@ export class HoldemTable {
     if (h) st.last = { no: h.no, board: h.board.slice(), winners: h.winners || [], shown: { ...h.shown } };
     st.hand = null;
     st.seats.forEach((s) => { if (s) Object.assign(s, handFields()); });
+    if (st.dissolving) return this._close(now, 'dissolved');
     if (st.phase === 'running') this._dealHand(now);
   }
 

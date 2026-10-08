@@ -75,6 +75,7 @@ export function publicTable(table, now) {
       currentBet: h.currentBet,
       minRaiseTo: h.currentBet + h.lastRaise,
       pots: h.pots.map((p) => ({ amt: p.amt, seats: p.seats.slice() })),
+      dead: h.dead || 0,
       winners: h.winners ? winners(h.winners) : null,
       done: !!h.done,
     } : null,

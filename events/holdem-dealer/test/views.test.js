@@ -18,7 +18,7 @@ test('PublicTable and Me have exactly the documented fields', () => {
   assert.deepEqual(keys(pt.settings), ['actionSec', 'bb', 'maxBuyIn', 'minBuyIn', 'sb', 'seats', 'timeBankSec']);
   assert.deepEqual(keys(pt.seats[0]), ['bet', 'bot', 'connected', 'inHand', 'last', 'name', 'pid', 'shown', 'stack', 'state', 'timeBank']);
   assert.equal(pt.seats[1], null);
-  assert.deepEqual(keys(pt.hand), ['bbSeat', 'board', 'button', 'currentBet', 'deadline', 'done', 'id', 'minRaiseTo', 'no', 'pots', 'sbSeat', 'street', 'toAct', 'usingBank', 'winners']);
+  assert.deepEqual(keys(pt.hand), ['bbSeat', 'board', 'button', 'currentBet', 'dead', 'deadline', 'done', 'id', 'minRaiseTo', 'no', 'pots', 'sbSeat', 'street', 'toAct', 'usingBank', 'winners']);
   assert.deepEqual(keys(pt.log[0]), ['a', 'amt', 'seat', 'street']);
   const m = me(t, 'u_0', { pid: 'p_0', chips: 98000 });
   assert.deepEqual(keys(m), ['best', 'canShow', 'chips', 'hole', 'legal', 'pendingTopUp', 'pid', 'seat']);

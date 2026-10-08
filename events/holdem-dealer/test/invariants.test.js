@@ -106,7 +106,7 @@ function fuzzTable({ seats, seed, hands }) {
     if (h && !h.done) {
       const contrib = t.seats.reduce((x, s) => x + (s && s.inHand ? s.contrib : 0), 0);
       const bets = t.seats.reduce((x, s) => x + (s && s.inHand ? s.bet : 0), 0);
-      assert.equal(h.pots.reduce((x, p) => x + p.amt, 0) + bets, contrib, 'pots + bets = contributions');
+      assert.equal(h.pots.reduce((x, p) => x + p.amt, 0) + bets + (h.dead || 0), contrib, 'pots + bets + dead blinds = contributions');
       if (h.toAct !== null) {
         const s = t.seats[h.toAct];
         assert.ok(s && s.inHand && !s.folded && !s.allin && (!s.acted || s.bet < h.currentBet), 'actor must act');

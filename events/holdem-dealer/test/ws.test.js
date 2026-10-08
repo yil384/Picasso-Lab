@@ -186,6 +186,15 @@ test('reconnect mid-hand: the seat is kept, others see it disconnected, the new 
   cp2.close(); cs.close();
 });
 
+// fold for the given seats' sockets whenever they must act, until the table is gone (a dissolve waits for the hand)
+async function foldOut(code, bySeat) {
+  for (let k = 0; k < 200 && svc.rooms.get(code); k++) {
+    const a = svc.rooms.get(code)?.actor();
+    if (a && bySeat[a.seat]) bySeat[a.seat].send({ t: 'act', hand: a.handId, action: 'fold' });
+    await new Promise((r) => setTimeout(r, 25));
+  }
+}
+
 test('illegal, stale and out-of-turn actions are refused and change nothing', async () => {
   const A = await newGuest(svc, 'Ida');
   const B = await newGuest(svc, 'Jon');
@@ -246,6 +255,7 @@ test('illegal, stale and out-of-turn actions are refused and change nothing', as
   checkFrames(cb, truth, B.account.pid);
   checkFrames(cw, truth, W.account.pid);
   ca.send({ t: 'host', op: 'dissolve' });
+  await foldOut(code, { 0: ca, 1: cb });
   await cw.waitFor((m) => m.t === 'closed');
   ca.close(); cb.close(); cw.close();
 });
@@ -327,7 +337,7 @@ test('hello must come within the time limit', async () => {
   }
 });
 
-test('host operations, dissolve returns every chip, closed message; codes; at most 3 hosted tables', async () => {
+test('host operations, dissolve after the live hand returns every chip, closed message; codes; at most 3 hosted tables', async () => {
   const H = await newGuest(svc, 'Host');
   const G = await newGuest(svc, 'Gus');
   const ch = await connect(svc, H.token);
@@ -352,14 +362,18 @@ test('host operations, dissolve returns every chip, closed message; codes; at mo
   ch.send({ t: 'host', op: 'start' });
   await ch.waitFor((m) => m.t === 'state' && m.table.phase === 'running' && m.table.hand);
   assert.equal((await sendAndError(ch, { t: 'host', op: 'settings', settings: { blinds: '5/10' } })).code, 'bad_phase');
+  const table = svc.rooms.get(code);
   ch.send({ t: 'host', op: 'dissolve' });
+  await foldOut(code, { 0: ch, 3: cg });
   const [x1, x2] = await Promise.all([ch.waitFor((m) => m.t === 'closed'), cg.waitFor((m) => m.t === 'closed')]);
   assert.deepEqual([x1.code, x1.reason, x2.reason], [code, 'dissolved', 'dissolved']);
   assert.equal(svc.rooms.get(code), null);
-  assert.equal(svc.accounts.get(H.id).chips, 10_000, 'a cancelled hand gives everything back');
-  assert.equal(svc.accounts.get(G.id).chips, 10_000);
+  assert.equal(table.hand, null);
+  // the hand was played out (not cancelled): the two humans and the bot settled it, every human chip came back
+  const net = svc.accounts.get(H.id).holdem.net + svc.accounts.get(G.id).holdem.net;
+  assert.equal(svc.accounts.get(H.id).chips + svc.accounts.get(G.id).chips, 20_000 + net);
   const pushed = cg.frames.filter((m) => m.t === 'account').pop();
-  assert.equal(pushed.account.chips, 10_000);
+  assert.equal(pushed.account.chips, svc.accounts.get(G.id).chips);
   assert.equal((await sendAndError(cg, { t: 'sit', seat: 1, buyIn: 400 })).code, 'no_table');
   // host limit; a socket watches one table at a time (creating moves it to the new table)
   const codes = [];
