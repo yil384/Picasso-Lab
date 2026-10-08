@@ -664,7 +664,11 @@ export function createTable({ ui, S, send, popups }) {
             seat ? ["stand", icon("stand"), L("Stand up", "站起")] : null,
             ["lobby", icon("exit"), L("Back to lobby", "返回大厅")]
         ].filter(Boolean);
-        return `<div class="gd-scrim"></div><div class="gd-menu" role="menu">${items.map(([act2, ic, label]) => `<button type="button" role="menuitem" data-m="${act2}">${ic}<span>${label}</span></button>`).join("")}</div>`;
+        // a short landscape screen has no room for one long column: two columns then
+        const rowH = Math.max(54, 44 / V.s);
+        const rows = 68 + 16 + items.length * rowH > V.h - 12 ? Math.ceil(items.length / 2) : items.length;
+        return `<div class="gd-scrim"></div><div class="gd-menu${rows < items.length ? " is-cols" : ""}" role="menu" style="--rows: ${rows}">${items.map(([act2, ic, label], j) =>
+            `<button type="button" role="menuitem" data-m="${act2}"${j === rows ? ' class="is-col-top"' : ""}>${ic}<span>${label}</span></button>`).join("")}</div>`;
     }
 
     // ---------- clicks ----------

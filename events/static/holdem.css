@@ -268,8 +268,14 @@ html[lang="en"] .lobby-tile.is-holdem .tile-title { font-size: calc(54 * var(--t
     .is-holdem .hd-hero-art { --card-w: calc(108 * var(--t)); }
 }
 
+/* the ☰ menu on a short landscape screen: two columns */
+.hd-stage .gd-menu.is-cols { display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--rows), auto); width: auto; }
+.hd-stage .gd-menu.is-cols button { min-width: max(250px, calc(180px / var(--gd-s, 1))); }
+.hd-stage .gd-menu.is-cols button.is-col-top { box-shadow: inset 1px 0 0 rgba(255, 255, 255, .09); }
+.hd-stage .gd-menu.is-cols button.is-col-top ~ button { box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .09); }
+
 /* ---------- room (hroom): Guandan's room, a 2-9 seat ring on the mini felt ---------- */
-.hd-room .room-row.is-pills { flex-wrap: wrap; row-gap: calc(8 * var(--ru)); }
+.hd-room .room-row.is-pills { flex-wrap: wrap; row-gap: calc(8 * var(--ru)); max-height: none; }
 .hd-pills { display: flex; flex-wrap: wrap; gap: calc(6 * var(--ru)); margin-left: auto; }
 .hd-pill {
     min-width: max(var(--tap, 0px), calc(54 * var(--ru)));
@@ -312,6 +318,7 @@ html[lang="en"] .lobby-tile.is-holdem .tile-title { font-size: calc(54 * var(--t
     aspect-ratio: var(--ar);
 }
 .hd-room-board .room-felt { border-radius: 50%; }
+html[lang="en"] .hd-room .room-k { width: auto; min-width: calc(96 * var(--ru)); white-space: nowrap; }
 .hd-room .room-row.is-pills .hd-pills { flex-basis: 100%; justify-content: flex-start; margin-left: 0; }
 .hd-room .room-row.is-pills .hd-pill { flex: 1; max-width: calc(76 * var(--ru)); }
 .hd-room-count { color: rgba(255, 255, 255, .75); font: 800 max(var(--fs-min), calc(16 * var(--lu)))/1 var(--font-ui); }
@@ -861,7 +868,8 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-stage.is-portrait .hd-stack { font-size: 26px; }
 .hd-stage.is-portrait .hd-tag { top: 98px; }
 .hd-stage.is-portrait .hd-seat.is-hero .hd-av { left: -50px; top: -50px; width: 100px; height: 100px; }
-.hd-stage.is-portrait .hd-seat.is-hero .hd-plate { top: 36px; }
+.hd-stage.is-portrait .hd-seat.is-hero .hd-plate { top: 36px; max-width: 340px; }
+.hd-stage.is-portrait .hd-seat.is-hero .hd-name { flex: 0 1 auto; min-width: 0; }
 .hd-stage.is-portrait .hd-hole { --card-w: 124px; }
 .hd-stage.is-portrait .hd-hero { top: calc(var(--hero-y) - 152px); }
 .hd-stage.is-portrait .hd-backs { --card-w-small: 40px; left: 34px; top: -44px; }
@@ -956,7 +964,8 @@ html[lang="en"] .gd-rules-row.hd-rank-row { grid-template-columns: calc(176 * va
     padding: env(safe-area-inset-top, 0px) calc(30 * var(--pg)) 0 calc(14 * var(--pg));
 }
 .hd-page-back { width: max(44px, calc(64 * var(--pg))); height: max(44px, calc(64 * var(--pg))); }
-.hd-page-head h2 { margin: 0; font: 900 calc(34 * var(--pg))/1 var(--font-ui); letter-spacing: .04em; text-shadow: 0 calc(2 * var(--pg)) 0 rgba(30, 44, 130, .6); }
+.hd-page-title { display: flex; align-items: baseline; gap: calc(14 * var(--pg)); min-width: 0; }
+.hd-page-head h2 { margin: 0; white-space: nowrap; font: 900 calc(34 * var(--pg))/1 var(--font-ui); letter-spacing: .04em; text-shadow: 0 calc(2 * var(--pg)) 0 rgba(30, 44, 130, .6); }
 .hd-page-head span { color: rgba(220, 232, 255, .6); font: 600 max(12px, calc(18 * var(--pg)))/1 var(--font-ui); }
 html[lang="en"] .hd-page-head h2 { letter-spacing: 0; }
 .hd-page-body { flex: 1; min-height: 0; display: flex; justify-content: center; padding: 0 calc(30 * var(--pg)) calc(20 * var(--pg) + env(safe-area-inset-bottom, 0px)); }
@@ -995,7 +1004,10 @@ html[lang="en"] .hd-page-head h2 { letter-spacing: 0; }
 .hd-board-loading i { width: 1.1em; height: 1.1em; border: .15em solid rgba(255, 255, 255, .28); border-top-color: #fff; border-radius: 50%; animation: gd-busy-turn 800ms linear infinite; }
 @media (max-aspect-ratio: 1/1) {
     .hd-page { --pg: min(calc(100vw / 560), 1.2px); }
-    .hd-lb { --cols: calc(64 * var(--pg)) minmax(0, 1fr) calc(110 * var(--pg)) calc(70 * var(--pg)) calc(70 * var(--pg)); }
+    .hd-lb { --cols: calc(50 * var(--pg)) minmax(0, 1fr) calc(100 * var(--pg)) calc(62 * var(--pg)) calc(62 * var(--pg)); }
+    .hd-bhead, .hd-brow { gap: calc(6 * var(--pg)); padding-left: calc(10 * var(--pg)); padding-right: calc(10 * var(--pg)); }
+    .hd-bc-name { gap: calc(9 * var(--pg)); }
     .hd-bhead span:nth-child(6), .hd-brow > :nth-child(6) { display: none; }
+    .hd-page-title { flex-direction: column; align-items: flex-start; gap: calc(6 * var(--pg)); }
     .hd-page-body { padding: 0 calc(14 * var(--pg)) calc(14 * var(--pg) + env(safe-area-inset-bottom, 0px)); }
 }

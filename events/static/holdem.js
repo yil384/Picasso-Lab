@@ -267,7 +267,7 @@ export function mountHoldem(ui) {
             `<div class="room-row is-pills"><span class="room-k">${L("Blinds", "盲注")}</span>${host ? pills("blinds", BLIND_PRESETS.map(b => [b, b]), blinds) : `<span class="room-v hd-num">${blinds}</span>`}</div>`,
             `<div class="room-row is-level"><span class="room-k">${L("Seats", "座位")}</span>${host ? seats : `<span class="room-v">${seats}</span>`}</div>`,
             row(L("Buy-in", "买入"), "40 – 100 BB", `${fmt(st.minBuyIn)} – ${fmt(st.maxBuyIn)}`),
-            `<div class="room-row is-pills"><span class="room-k">${L("Think time", "思考时间")}</span>${host ? pills("actionSec", [15, 20, 30].map(v => [v, L(`${v} s`, `${v} 秒`)]), st.actionSec) : `<span class="room-v">${L(`${st.actionSec} s`, `${st.actionSec} 秒`)}</span>`}</div>`,
+            `<div class="room-row is-pills"><span class="room-k">${L("Timer", "思考时间")}</span>${host ? pills("actionSec", [15, 20, 30].map(v => [v, L(`${v} s`, `${v} 秒`)]), st.actionSec) : `<span class="room-v">${L(`${st.actionSec} s`, `${st.actionSec} 秒`)}</span>`}</div>`,
             row(L("Time bank", "时间银行"), L(`${st.timeBankSec} s`, `${st.timeBankSec} 秒`), L("+5 s every 10 hands", "每 10 手 +5 秒"))
         ].join("");
     }
@@ -672,7 +672,7 @@ export function mountHoldem(ui) {
         page.setAttribute("aria-label", L("Hold'em ranking", "德州排行榜"));
         page.innerHTML = `<div class="hd-page-head">
                 <button class="gdr-back hd-page-back" type="button" aria-label="${L("Back", "返回")}"><svg class="gdr-back-ic" viewBox="0 0 36 28" aria-hidden="true"><path d="M14 1 1 14l13 13v-8.2c9.6-.4 15.6 2 20.4 8.2-1.2-10-7.4-16.6-20.4-17.6V1Z"/></svg></button>
-                <h2>${L("Hold'em Ranking", "德州排行榜")}</h2><span>${L("Net chips won · play money", "按净胜筹码排名 · 虚拟筹码")}</span>
+                <div class="hd-page-title"><h2>${L("Hold'em Ranking", "德州排行榜")}</h2><span>${L("Net chips won · play money", "按净胜筹码排名 · 虚拟筹码")}</span></div>
             </div>
             <div class="hd-page-body"><div class="hd-board-loading"><i></i>${L("Loading…", "加载中…")}</div></div>`;
         document.body.appendChild(page);
