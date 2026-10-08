@@ -26,7 +26,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import {
   STREAM_DEFAULTS, ffmpegArgs, findFfmpeg, findFont, maskOutput, scrubOutputs, cleanCaption, cleanPose, processTree,
-  spawnNiced, createStreamManager, managerConfig,
+  spawnNiced, createStreamManager, managerConfig, encoderEnv,
 } from './stream.js';
 
 const require = createRequire(import.meta.url);
@@ -41,12 +41,12 @@ export const CAMERA_DEFAULTS = Object.freeze({
   width: 1280,
   height: 720,
   gl: 'cpu', // 'cpu': Mesa llvmpipe; 'gpu': VirtualGL on the first EGL device
-  glThreads: 8, // llvmpipe's rasterizer threads (LP_NUM_THREADS)
+  glThreads: 8, // llvmpipe's rasterizer threads (LP_NUM_THREADS): 8 beat 6 and 16
   javaThreads: 4, // what the JVM believes it has (its worker pools: chunk meshing, IO)
   heapMB: 2048,
   maxFps: 30,
-  renderDistance: 8,
-  graphics: 'fancy', // 'fancy' (see-through leaves, as players see them) or 'fast'
+  renderDistance: 5, // with Sodium, fast leaves and a 960x540 picture: a steady 24-25 fps on llvmpipe (README)
+  graphics: 'fast', // 'fast' (opaque leaves: +45 % frames on llvmpipe) or 'fancy' (see-through leaves)
   gamma: 1.0, // brightness "Bright": caves stay readable on a small player
   server: '127.0.0.1:25565',
   console: '', // the Paper console FIFO (MC_CONSOLE)
@@ -114,12 +114,19 @@ export function readLaunch(mcDir) {
 export function clientLaunch(c, launch, profile) {
   const gameDir = path.join(c.home, 'game');
   const tmp = path.join(c.home, 'tmp');
-  const classpath = [path.join(c.mcDir, 'camera-main'), ...launch.classpath].join(path.delimiter);
+  // client mods (CAMERA_MODS): Fabric's launcher and libraries first, the chosen mods' jars added by path
+  const mods = modJars(c, launch);
+  const fabric = mods.length ? launch.fabric : null;
+  const game0 = fabric ? launch.classpath.filter((p) => !(fabric.replaces ?? []).includes(p)) : launch.classpath;
+  const classpath = [path.join(c.mcDir, 'camera-main'), ...(fabric?.classpath ?? []), ...game0].join(path.delimiter);
+  // CAMERA_JVM_ARGS may name its own collector (two would stop the JVM); G1 otherwise
+  const gc = (c.jvmArgs ?? []).some((a) => /^-XX:\+Use\w*GC$/.test(a)) ? [] : ['-XX:+UseG1GC'];
   const jvm = [
-    '-Xms512m', `-Xmx${c.heapMB}m`, '-XX:+UseG1GC', `-XX:ActiveProcessorCount=${c.javaThreads}`,
+    '-Xms512m', `-Xmx${c.heapMB}m`, ...gc, `-XX:ActiveProcessorCount=${c.javaThreads}`, ...(c.jvmArgs ?? []),
     `-Djava.library.path=${launch.nativesDir}`, `-Dorg.lwjgl.librarypath=${launch.nativesDir}`,
     `-Djna.tmpdir=${tmp}`, `-Dio.netty.native.workdir=${tmp}`, `-Dorg.lwjgl.system.SharedLibraryExtractPath=${tmp}`,
     '-Dminecraft.launcher.brand=muse-camera', '-Dminecraft.launcher.version=1',
+    ...(fabric ? [...fabric.jvmArgs, `-Dmuse.camera.main=${fabric.mainClass}`, `-Dfabric.addMods=${mods.join(path.delimiter)}`] : []),
     '-cp', classpath, 'muse.camera.CameraMain',
   ];
   const game = [
@@ -140,6 +147,37 @@ export function clientLaunch(c, launch, profile) {
     GALLIUM_HUD: 'fps', GALLIUM_HUD_VISIBLE: 'false', GALLIUM_HUD_PERIOD: '1', GALLIUM_HUD_DUMP_DIR: hudDir,
   });
   return { file: java, args: [...jvm, ...game], env, cwd: gameDir, gameDir, tmp, hudDir };
+}
+
+/**
+ * The jars of the client mods CAMERA_MODS names (comma-separated; 'off' or '' for the vanilla client), from the image's
+ * launch.json; a name the image does not have is an error.
+ */
+export function modJars(c, launch) {
+  const names = String(c.mods ?? '').split(',').map((x) => x.trim()).filter((x) => x && x !== 'off');
+  if (!names.length) return [];
+  if (!launch.fabric) throw new Error('CAMERA_MODS needs an image with Fabric (deploy/camera/mods.json)');
+  return names.map((n) => {
+    const m = launch.fabric.mods?.[n];
+    if (!m) throw new Error(`no client mod "${n}" in the image (have: ${Object.keys(launch.fabric.mods ?? {}).join(', ')})`);
+    return m.jar;
+  });
+}
+
+/**
+ * Sodium's options (config/sodium-options.json in the game folder), written before every start: the chunk builder
+ * threads and the culling switches, the rest Sodium's defaults.
+ */
+export function sodiumOptions(c = {}) {
+  return {
+    quality: { weather_quality: 'DEFAULT', leaves_quality: c.graphics === 'fast' ? 'FAST' : 'DEFAULT', enable_vignette: true },
+    advanced: { enable_memory_tracing: false, use_advanced_staging_buffers: true, cpu_render_ahead_limit: 3 },
+    performance: {
+      chunk_builder_threads: c.chunkThreads ?? 0, always_defer_chunk_updates_v2: true, animate_only_visible_textures: true,
+      use_entity_culling: true, use_fog_occlusion: true, use_block_face_culling: true, use_no_error_g_l_context: true,
+    },
+    notifications: { has_cleared_donation_button: true, has_seen_donation_prompt: true },
+  };
 }
 
 /** The x11grab input of a rig's display for ffmpegArgs. */
@@ -404,6 +442,10 @@ export function createCameraRig(o = {}) {
       hudFile = path.join(cmd.hudDir, 'fps');
     }
     fs.writeFileSync(path.join(cmd.gameDir, 'options.txt'), clientOptions(c));
+    if (modJars(c, launch).length) {
+      fs.mkdirSync(path.join(cmd.gameDir, 'config'), { recursive: true });
+      fs.writeFileSync(path.join(cmd.gameDir, 'config', 'sodium-options.json'), `${JSON.stringify(sodiumOptions(c), null, 2)}\n`);
+    }
     const env = { ...process.env, ...cmd.env, MC_ACCESS_TOKEN: profile.token || '' };
     const child = spawnNiced(cmd.file, cmd.args, c.javaNice, { cwd: cmd.cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     const me = { child, startedAt: Date.now(), joined: false, hidden: false, connected: false };
@@ -662,7 +704,7 @@ export function createCameraStream(o) {
   function startEncoder() {
     const ro = rig.options;
     const args = ffmpegArgs({ ...opt, font, captionFile, x11: x11Input(ro), progress: true });
-    const child = spawnNiced(ffmpeg, args, opt.encoderNice, { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, DISPLAY: `:${ro.display}` } });
+    const child = spawnNiced(ffmpeg, args, opt.encoderNice, { stdio: ['ignore', 'pipe', 'pipe'], env: encoderEnv(opt, { DISPLAY: `:${ro.display}` }) });
     const me = { child, startedAt: Date.now(), err: '', progress: {} };
     enc = me;
     let out = '';

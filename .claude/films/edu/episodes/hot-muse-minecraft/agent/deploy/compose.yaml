@@ -82,7 +82,7 @@ services:
   # and in deploy/.env (the agent):
   #   STREAM_ENABLED=1
   #   STREAM_SERVICE_URL=http://127.0.0.1:7862
-  # One camera = one client at about 4-5 CPU threads and 1.5 GB while it films (README); STREAM_MAX cameras need as many
+  # One camera = one client at about 4-4.5 CPU threads and 1.3-1.5 GB while it films (README); STREAM_MAX cameras need as many
   # accounts (a second client under the same name would kick the first).
   camera:
     build: { context: .., dockerfile: deploy/Dockerfile.camera }
@@ -101,7 +101,8 @@ services:
       MC_HOST: 10.77.77.10
       MC_CONSOLE: /console/console.in
       CAMERA_GL: cpu
-      CAMERA_GL_THREADS: "8"
+      # the tuned picture (README "Real-client camera"): Sodium, fast leaves, render distance 5, drawn at 960x540
+      CAMERA_MODS: sodium
     volumes: [ "../logs:/logs", "console:/console", "../../camera/auth:/auth" ]
     tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
     cpus: 6

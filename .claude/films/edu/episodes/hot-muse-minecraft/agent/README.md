@@ -46,7 +46,8 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/camera.js` | the real-client camera (`STREAM_SOURCE=client`): Xvfb + the vanilla Minecraft client as a spectator in the bot's head, ffmpeg x11grab, the same stream interface (section "Real-client camera") |
 | `scripts/stream.mjs` | one stream on demand (to a file or an RTMP(S) URL, with its CPU, RAM and frame numbers), a side-by-side camera comparison, `--camera` (one real-client stream of a player), or `--serve` (the stream or camera container) |
 | `scripts/camera-login.mjs` | signs the camera's Microsoft account in once (device code, no password) and keeps its tokens in the auth folder; `--check` |
-| `deploy/Dockerfile.camera`, `deploy/camera/` | the camera image: Java 21, the 1.21.4 client (`install-client.mjs`, SHA-1 checked, no sounds), `CameraMain.java` (the token from the environment, never the command line), Xvfb, Mesa, VirtualGL, ffmpeg |
+| `deploy/Dockerfile.camera`, `deploy/camera/` | the camera image: Java 21, the 1.21.4 client (`install-client.mjs`, SHA-1 checked, no sounds), Fabric and Sodium (`mods.json`, SHA-512 pinned), `CameraMain.java` (the token from the environment, never the command line), Xvfb, Mesa, VirtualGL, ffmpeg |
+| `deploy/camera-test/` | test-only tools for the camera test stack: `camera-bench.sh` (one measured pass), `route.cjs` (the fixed route bot), `fb-start.sh` / `stop-fb.sh` / `show.mjs` (a live test with a 30-minute hard stop) |
 | `deploy/camera-test.compose.yaml` | a separate test project on picasso (`muse-camera-test`: own Paper, agent, camera, network; shares nothing with production) |
 | `deploy/push.sh`, `deploy/staging.compose.yaml` | deploys to picasso: staging first (play-staging.picasso-lab.com), production with `--prod` only after the staging checks pass (section "Staging and deploys") |
 | `deploy/recreate.sh`, `deploy/caddy-proxy-line.py` | the runbook's tools on picasso (`docs/SWITCH.md`): recreate the agent after a `.env` change (idle check first, never a build, a running stream or camera recreated with it); add or remove the one `X-Muse-Proxy` line of a site in the shared FRAS Caddyfile (validated, refused if another session saved the file meanwhile, never a restore of an old copy) |
@@ -453,11 +454,19 @@ has the real block-break cracks, particles, lighting, sky and clouds. It is the 
 hook as above with another frame source (`STREAM_SOURCE=client`, `src/camera.js`), in its own container (compose
 profile `camera`, `deploy/Dockerfile.camera`).
 
-- The rig: Xvfb (`:99`, 1280x720) and the client (Temurin 21, the 1.21.4 jar and libraries from Mojang's manifest,
-  SHA-1 checked, assets without the sounds), started with `--quickPlayMultiplayer` straight into the server. The
-  client's `options.txt` is written before every start: render distance 8, 30 fps cap, fancy graphics, smooth
-  lighting, brightness "Bright", chat hidden, sound off, no first-run or accessibility screens, no pause without focus,
-  never throttled as idle. After it has joined ("Loaded N advancements" in its log) the rig puts it in spectator mode
+- The rig: Xvfb (`:99`, 960x540: the client draws at 1280x720 times `CAMERA_SCALE`, ffmpeg scales up) and the client
+  (Temurin 21, the 1.21.4 jar and libraries from Mojang's manifest, SHA-1 checked, assets without the sounds), started
+  with `--quickPlayMultiplayer` straight into the server. The client's `options.txt` is written before every start:
+  render distance 5, 30 fps cap, fast leaves and clouds, smooth lighting, brightness "Bright", chat hidden, sound off,
+  no first-run or accessibility screens, no pause without focus, never throttled as idle.
+- Client mods: the Fabric loader 0.19.5 and Sodium 0.6.13 (`CAMERA_MODS=sodium`, the default; `off` runs the vanilla
+  client). `deploy/camera/mods.json` pins every jar with its SHA-512 (the loader's libraries checked against the Fabric
+  Maven `.sha512` files and the Fabric meta profile, the mods against Modrinth); `install-client.mjs` checks them at
+  build time. The game's ASM 9.6 gives way to Fabric's 9.10.1 (two copies stop the loader). Sodium needs no Fabric API
+  (it carries the modules it uses), runs on llvmpipe ("OpenGL Renderer: llvmpipe"), and its options
+  (`config/sodium-options.json`: chunk builder threads, culling) are written before every start. ImmediatelyFast 1.8.7
+  and FerriteCore 7.1.3 are pinned too but off: no gain measured. The first start prepares the remapped game (a few
+  seconds more: in the world after 23 s). After it has joined ("Loaded N advancements" in its log) the rig puts it in spectator mode
   (console) and presses F1 (`xdotool`); a spectator shows no hotbar, hearts or crosshair anyway.
 - One game: `tp <camera> <bot>`, two seconds later `spectate <bot> <camera>` (a client told to spectate an entity it
   has not loaded yet ignores it, and the server still carries it along: it films from inside the bot's head with its
@@ -501,37 +510,61 @@ from the agent's one address, and the 4 s throttle refused a bot that joined rig
 refused two guests starting within 4 s). It restarts Paper: push when no game runs.
 
 Test it next to production: `deploy/camera-test.compose.yaml` (project `muse-camera-test`: its own Paper with the same
-seed, agent and camera on 10.77.78.0/28, no published ports, videos in `~/workspace/muse-camera-test/streams`). Start a
-game with `docker exec muse-camera-test-agent-1 node -e ...` against `http://127.0.0.1:8787/api/session`, or film one
-player by hand inside the camera container: `node scripts/stream.mjs --camera --player Muse_ab12cd --out /streams/x.mp4
---seconds 45`.
+seed, agent and camera on 10.77.78.0/28, no published ports, test bots named `Tst_cam_*`, videos in
+`~/workspace/muse-camera-test/streams`). Start a game with `docker exec muse-camera-test-agent-1 node -e ...` against
+`http://127.0.0.1:8787/api/session`, or film one player by hand inside the camera container:
+`node scripts/stream.mjs --camera --player Muse_ab12cd --out /streams/x.mp4 --seconds 45`. Test-only tools in
+`deploy/camera-test/` (run on picasso from the synced copy; test world only):
 
-Measured on picasso (2026-10-07; 2x EPYC 9534, load 170-230 most of the day, once 340; CPU rendering, defaults),
-real games on the test server:
-
-| | |
+| Tool | What it does |
 | --- | --- |
-| client frame rate | 12-30 fps in a birch forest (about 17 typical), 8-27 on another walk, 9-12 on a dense dark-oak lake view; the 30 fps video repeats frames when the client is slower |
-| client CPU, RSS | 3.3-4.4 cores (the render thread one whole core, llvmpipe's 8 threads about 0.3 each) and 1.2-1.35 GB |
-| ffmpeg, Xvfb | 0.5-0.9 core and 100 MB; under 0.1 core and 90 MB |
-| one camera while it films | about 4.5-5 CPU threads and 1.5 GB; parked between games about 2 cores (it still draws the sky), asleep 0 |
-| output | 1280x720, 30.000 fps CFR, 3.5 Mb/s, keyframes at every 2.000 s, AAC 48 kHz stereo; no encoder drops |
-| latency | a bot's head turn to the grabbed frame: 225-293 ms (median 261 ms, 10 turns); the encoder adds about a frame; Facebook's own delay is not measured |
-| start | client to in the world 12-20 s; a game goes live 3.5 s after it starts (warm) or 15 s (asleep) |
+| `camera-bench.sh` | one measured pass: the camera recreated with the `CAMERA_*` given, the fixed route, a stream to an MP4; prints client fps, picture pacing, ffmpeg drops, CPU, RAM and the busiest client threads (`LABEL=x RUN_S=150 deploy/camera-test/camera-bench.sh`) |
+| `route.cjs` | the fixed route bot (`Tst_cam_route`, whitelisted for the run); `CHOP=1` also chops, mines and digs at each corner |
+| `fb-start.sh`, `stop-fb.sh`, `show.mjs` | a live test to the ingest in `deploy/camera.env` (made on picasso, 600, never printed): the camera with the clock, a hard stop after `FB_MINUTES` (30), a bot that walks, chops, crafts, mines and builds; `stop-fb.sh` stops it early |
 
-Why so few frames: a JFR profile of the client puts 87 % of the render thread in native code, 95 % of that in
-`glDrawElements`, i.e. llvmpipe's vertex processing, which runs on the calling thread. So the frame rate follows the
-vertices on screen and one core's speed (the same on an idle machine: 9.4 fps on the dark-oak scene at load 12).
-Fixed-scene tries: render distance 4 15.7 fps (6: no gain), fast leaves 11.9, drawing at 0.75x / 0.5x and scaling up
-11.2 / 12.7, 16 llvmpipe threads 10.6; Mesa 25 (bookworm-backports), `mesa_glthread` and Zink on lavapipe: no gain.
-The GPU path is wired (`CAMERA_GL=gpu`: VirtualGL's EGL back end) but cannot run on picasso: its H100s create OpenGL
-contexts, yet every framebuffer object is `GL_FRAMEBUFFER_UNSUPPORTED` (on the host and in a container, driver
-580.159.03; Mesa passes the same probe) and Vulkan cannot create a device, and both Minecraft and VirtualGL draw
-into framebuffer objects.
+`STREAM_CLOCK=1` (test only, off by default) burns a large HH:MM:SS clock (`STREAM_CLOCK_TZ`, America/Los_Angeles)
+into the top right of the video, to read the end-to-end delay against a clock on the viewer's screen.
 
-How many cameras picasso can run: by CPU, at 5 threads each and the 26-86 threads the machine has spare at load
-170-230, 5-15 in theory; in practice 2-4, because each camera's frame rate is one core's speed and drops when the
-machine is crowded (the 340 spike). RAM (1.5 GB each) is no limit. Each camera also needs its own account: a second
+Smoothness, measured on picasso (2026-10-08, load 150-215; `deploy/camera-test/camera-bench.sh`): the same 150 s
+route each time (`route.cjs`: a 12-block square in a birch forest, a full turn at every corner, later turning on the
+spot), client frames a second from Mesa's HUD (the first 15 s left out), new pictures a second and the gaps between them
+from a raw 30 fps grab of the display, the camera container's CPU:
+
+| | client fps (mean / p10 / min) | new pictures, longest gap | CPU |
+| --- | --- | --- | --- |
+| vanilla, fancy, distance 8, 1280x720 (before) | 8.1-8.8 / 6.9-7.4 / 5.6-6.3 | 8.3/s, 233 ms | 3.95 cores |
+| + Sodium | 11.7-12.2 / 10.6-10.7 / 8.6-9.8 | 13.1/s, 133-167 ms | 4.5 cores |
+| + 960x540 drawn, scaled up | 12.9 / 11.4 / 8.8 | 14.1/s, 133 ms | 3.7 cores |
+| + 16 llvmpipe threads instead of 8 | 11.5 / 9.9 / 7.8 | 13.4/s, 200 ms | 5.7 cores |
+| + render distance 6 | 12.8 / 11.2 / 10.2 | 12.6/s, 133 ms | 5.6 cores |
+| + fast leaves | 17.8 / 13.5 / 12.0 | 14.4/s, 133 ms | 4.9 cores |
+| fast leaves, distance 6 | 22.6 / 18.8 / 15.9 | 22.3/s, 167 ms | 4.9 cores |
+| fast leaves, distance 6, 960x540 | 24.4 / 21.0 / 17.2 | 22.8/s, 167 ms | 4.0 cores |
+| fast leaves, distance 5 | 24.9 / 22.4 / 19.6 | 24.1/s, 133 ms | 5.2 cores |
+| the same + ImmediatelyFast + FerriteCore (distance 6) | 21.1 / 18.2 / 16.1 | 20.5/s, 133 ms | 4.8 cores |
+| fast leaves, distance 5, 960x540, 6 llvmpipe threads | 24.5 / 22.9 / 21.7 | 24.9/s, 133 ms | 4.3 cores |
+| the same, ZGC (generational) instead of G1 | 22.1 / 11.9 / 9.2 | 20.1/s, 133 ms | 3.9 cores, 2.6 GB |
+| the same, 1 chunk builder thread | 24.1 / 11.1 / 10.1 | 9.0/s, 400 ms (chunks late) | 4.0 cores |
+| **tuned: fast leaves, distance 5, 960x540, 8 llvmpipe threads** | **29.4 / 28.8 / 25.5** | **26.5/s, 133 ms** | **4.1 cores** |
+| the tuned settings again, twice (the defaults now) | 29.1-29.5 / 27.8-28.8 / 24.7-25.0 | 27.0-27.5/s, 67-133 ms | 3.7-4.1 cores, 1.36 GB |
+
+The 30 fps cap is the limit now, at about 4 cores a camera. Runs vary with picasso's load: distance 5 at 960x540 with 8
+threads during a load spike (242) dropped to a p10 of 12 for stretches. ffmpeg dropped and repeated no
+frames in any run (30.000 fps out). Why these knobs: a JFR profile of the client puts 87 % of the render thread in
+native code; without Sodium 95 % of that is `glDrawElements`, with it 84 % is `glMultiDrawElementsBaseVertex`, i.e.
+llvmpipe's vertex processing, which runs on the calling thread. So what counts is the vertices on screen (leaves,
+distance) and one core's speed; Java is about 13 % of the thread, so JVM flags hardly matter; more llvmpipe threads
+only add CPU. Earlier tries without Sodium (2026-10-07): Mesa 25 (bookworm-backports), `mesa_glthread` and Zink on
+lavapipe gave nothing. Other numbers (2026-10-07/08): latency from a bot's head turn to the grabbed frame 200-370 ms
+(median 261-334 ms by load); one camera 1.3-1.5 GB; parked between games about 2 cores (it still draws the sky), asleep
+0. The GPU path is wired (`CAMERA_GL=gpu`: VirtualGL's EGL back end) but cannot run on picasso: its H100s create
+OpenGL contexts, yet every framebuffer object is `GL_FRAMEBUFFER_UNSUPPORTED` (on the host and in a container, driver
+580.159.03; Mesa passes the same probe) and Vulkan cannot create a device, and both Minecraft and VirtualGL draw into
+framebuffer objects.
+
+How many cameras picasso can run: by CPU, at about 4.5 threads each and the 26-86 threads the machine has spare at
+load 170-230, 5-15 in theory; in practice 2-4, because each camera's frame rate is one core's speed and drops when the
+machine is crowded (the spikes to 240-340). RAM (1.5 GB each) is no limit. Each camera also needs its own account: a second
 client under the same name kicks the first (`createCameraPool` names camera 2 `<name>2`, which works only because the
 server is offline-mode; that is the operator's call, not a default).
 
@@ -625,7 +658,9 @@ server is offline-mode; that is the operator's call, not a default).
 | `STREAM_SOURCE` | `viewer` | `viewer` (prismarine-viewer in Chromium) or `client` (the real-client camera; the camera image sets it) |
 | `CAMERA_AUTH`, `CAMERA_AUTH_DIR`, `CAMERA_NAME` | `msa`, (none), (none) | the camera account: `msa` (the login in the auth folder) or `offline` (tests on our own server only, as `CAMERA_NAME`, default MuseCam) |
 | `CAMERA_GL`, `CAMERA_GL_THREADS`, `CAMERA_JAVA_THREADS` | `cpu`, `8`, `4` | Mesa llvmpipe or `gpu` (VirtualGL); llvmpipe's threads; the threads the JVM sees |
-| `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `8`, `30`, `fancy`, `1` | the client's video settings; it draws at 1280x720 times the scale and ffmpeg scales up |
+| `CAMERA_RENDER_DISTANCE`, `CAMERA_MAX_FPS`, `CAMERA_GRAPHICS`, `CAMERA_SCALE` | `5`, `30`, `fast`, `0.75` | the client's video settings (the tuned ones); it draws at 1280x720 times the scale and ffmpeg scales up |
+| `CAMERA_MODS`, `CAMERA_CHUNK_THREADS`, `CAMERA_JVM_ARGS` | `sodium`, `0`, (none) | client mods from the image (`deploy/camera/mods.json`; `off` = vanilla); Sodium's chunk builder threads (0: its own choice); extra JVM flags (a collector given here replaces G1) |
+| `STREAM_CLOCK`, `STREAM_CLOCK_TZ` | `false`, `America/Los_Angeles` | test only: the wall clock burned into the video |
 | `CAMERA_IDLE_MS`, `CAMERA_NICE`, `CAMERA_HEAP_MB` | `600000`, `5`, `2048` | quit the client after this long without a game (0: never); its niceness; its heap |
 | `CAMERA_MC_DIR`, `CAMERA_HOME`, `CAMERA_DISPLAY` | `/opt/mc`, tmp, `99` | the installed client; the game folders; the first X display (one per camera) |
 
