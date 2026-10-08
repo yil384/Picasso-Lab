@@ -9,7 +9,7 @@
 //        host: { id, pid } of the creating account (or null: the first human to sit becomes host)
 //        options: { pauseWithoutHumans = true }  false lets bots-only tables deal (tests, simulations)
 //   static fromJSON(obj, { rng, now })  now given = a restart: the player to act gets a fresh action timer
-//   toJSON()
+//   toJSON(), markStopped(now)  before a clean stop's save (a restore then charges a running bank up to `now` only)
 //   sit(account, seat, buyIn, now)      account = { id, pid, name, chips }; buy-in leaves the bankroll at once
 //   stand(accountId, now)               folds a live hand at once; the stack goes back at hand end (or now)
 //   setSitOut(accountId, on, now)       on: skipped from the next hand; off: back, waits for the big blind
@@ -134,13 +134,16 @@ export class HoldemTable {
     t.rng = rng;
     t.s = JSON.parse(JSON.stringify(obj));
     if (now !== null && now !== undefined) {
-      const savedNow = t.s.now;
+      // a clean stop (markStopped) saved the stop time; after a crash the saved clock can be as old as the moment
+      // the bank started, so the bank is charged up to the restore instead (at most all of it)
+      const usedTo = Number.isFinite(t.s.stoppedAt) ? t.s.stoppedAt : now;
+      delete t.s.stoppedAt;
       t._clock(now);
       const h = t.s.hand;
       if (h && !h.done && h.toAct !== null) {
         const s = t.s.seats[h.toAct];
         // the time bank already used before the restart stays used
-        if (h.usingBank && h.bankStart !== null) s.bankMs = Math.max(0, s.bankMs - Math.max(0, savedNow - h.bankStart));
+        if (h.usingBank && h.bankStart !== null) s.bankMs = Math.max(0, s.bankMs - Math.max(0, usedTo - h.bankStart));
         h.usingBank = false;
         h.bankStart = null;
         h.deadline = s.bot ? null : now + t.s.settings.actionSec * 1000;
@@ -148,6 +151,13 @@ export class HoldemTable {
       t.s.rev++;
     }
     return t;
+  }
+
+  // the service is stopping cleanly at `now`: the saved state remembers it, so a restore charges a running time
+  // bank only up to here (not for the downtime)
+  markStopped(now) {
+    this._clock(now);
+    this.s.stoppedAt = this.s.now;
   }
 
   toJSON() {

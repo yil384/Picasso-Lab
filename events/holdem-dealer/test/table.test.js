@@ -828,9 +828,24 @@ test('a restart keeps the time bank already used', () => {
   const bank = t.seats[seat].bankMs;
   t.tick(t.hand.deadline); // the action timer runs out: the bank starts
   assert.equal(t.hand.usingBank, true);
-  t._clock(t.hand.bankStart + 12_000); // 12 s of bank used, then the service stops (rooms.stop saves this clock)
+  t.markStopped(t.hand.bankStart + 12_000); // 12 s of bank used, then the service stops cleanly (rooms.stop)
   const restored = HoldemTable.fromJSON(t.toJSON(), { rng: seededRng(1), now: t.s.now + 60_000 });
-  assert.equal(restored.seats[seat].bankMs, bank - 12_000);
+  assert.equal(restored.seats[seat].bankMs, bank - 12_000, 'the downtime is not charged');
   assert.equal(restored.hand.usingBank, false);
   assert.equal(restored.hand.deadline, t.s.now + 60_000 + 20_000);
+  assert.equal(restored.toJSON().stoppedAt, undefined);
+});
+
+test('a crash (no clean stop) charges the running time bank up to the restore, at most all of it', () => {
+  const t = makeTable({ seats: [0, 1, 2], rng: riggedRng(27).queue(0) });
+  const seat = t.hand.toAct;
+  const bank = t.seats[seat].bankMs;
+  t.tick(t.hand.deadline);
+  assert.equal(t.hand.usingBank, true);
+  const saved = t.toJSON(); // the last save: the clock is the moment the bank started
+  const quick = HoldemTable.fromJSON(saved, { rng: seededRng(1), now: t.hand.bankStart + 7_000 });
+  assert.equal(quick.seats[seat].bankMs, bank - 7_000);
+  const late = HoldemTable.fromJSON(saved, { rng: seededRng(1), now: t.hand.bankStart + 10 * 60_000 });
+  assert.equal(late.seats[seat].bankMs, 0);
+  assert.equal(late.hand.deadline, t.hand.bankStart + 10 * 60_000 + 20_000, 'a fresh action timer, no bank left');
 });

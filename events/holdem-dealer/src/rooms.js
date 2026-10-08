@@ -473,8 +473,9 @@ export class Rooms {
   stop() {
     this.stopped = true;
     const now = this.now();
-    // the saved clock is the stop time, so a restored actor keeps paying for the time bank used up to now
-    for (const e of this.tables.values()) { clearTimeout(e.timer); e.timer = null; e.table._clock(now); }
+    // the saved stop time lets a restored actor keep paying for the time bank used up to now (after a crash the
+    // restore charges it up to the restore time instead)
+    for (const e of this.tables.values()) { clearTimeout(e.timer); e.timer = null; e.table.markStopped(now); }
     if (this.tables.size) this.store?.markDirty('tables');
   }
 }
