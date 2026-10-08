@@ -19,7 +19,10 @@
 //   requestTopUp(accountId, amount, bankroll?, now?)  chips leave the bankroll at once; join the stack between hands
 //   hostOp(accountId, op, args, now)    op settings (args = settings or { settings }), start, fillBots ({ count? }),
 //                                       removeBot ({ seat }), dissolve
-//   setConnected(accountId, on)         socket presence for the public `connected` flag (no effect on play)
+//   setConnected(accountId, on)         socket presence for the public `connected` flag (true on sit; no effect
+//                                       on play: a disconnected player simply times out)
+//   releaseHost(accountId, now)         the host is gone (rooms decide when): host passes to the longest-seated
+//                                       other human; error no_candidate when there is none (host unchanged)
 //   tick(now) -> bool                   applies due timeouts, street transitions, next deal, stand-ups, idle close
 //   nextWakeAt() -> ms | null           when tick() next has something to do (may be in the past = now)
 //   viewFor(seat) -> { table, me }      what a player in that seat may see (bots decide from this only)
@@ -29,7 +32,7 @@
 //   getters: code, phase, rev, settings, seats, hand, host, last, closedReason, options
 // Error codes: closed, bad_seat, seat_taken, already_seated, bad_amount, insufficient_chips, not_seated,
 //   stale_hand, not_your_turn, illegal_action, bad_action, cannot_show, not_waiting, not_host, bad_phase,
-//   bad_settings, not_enough_players, table_full, not_bot, is_bot, bad_op.
+//   bad_settings, not_enough_players, table_full, not_bot, is_bot, bad_op, no_candidate.
 
 import { shuffledDeck, cryptoRng } from './cards.js';
 import { evaluate } from './evaluator.js';
@@ -83,7 +86,7 @@ const STREETS = ['preflop', 'flop', 'turn', 'river'];
 function newSeat({ id, pid, name, bot = null, stack, now, bankMs, waiting }) {
   return {
     id, pid, name: String(name || '').slice(0, 24), bot, stack, seatedAt: now,
-    connected: !!bot, sitOut: false, sitOutSince: null, sitOutMissed: false, waiting: !!waiting, postBB: false,
+    connected: true, sitOut: false, sitOutSince: null, sitOutMissed: false, waiting: !!waiting, postBB: false,
     bustedSince: null, leaving: false, pendingTopUp: 0, bankMs, handsDealt: 0, timeouts: 0,
     ...handFields(),
   };
@@ -330,6 +333,15 @@ export class HoldemTable {
       if (this._inLiveHand(s)) s.pendingTopUp += amount;
       else { s.stack += amount; s.bustedSince = null; }
       return OK;
+    });
+  }
+
+  releaseHost(accountId, now) {
+    return this._mut(now, () => {
+      if (this.s.phase === 'closed') return err('closed');
+      if (!this.s.host || this.s.host.id !== accountId) return err('not_host');
+      this._handOffHost(accountId);
+      return this.s.host.id === accountId ? err('no_candidate') : OK;
     });
   }
 

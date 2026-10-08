@@ -542,6 +542,19 @@ test('host hand-off to the longest-seated human; host ops; dissolve refunds a li
   assert.equal(t.stand('u_0', 40).ok, true);
   assert.equal(publicTable(t).host, 'p_2', 'seat 2 sat before seat 1');
   assert.deepEqual(t.hostOp('u_0', 'dissolve', {}, 50), { ok: false, error: 'not_host' });
+  // the rooms layer can also pass the host on when the host is gone without standing
+  assert.deepEqual(t.releaseHost('u_1', 45), { ok: false, error: 'not_host' });
+  assert.equal(t.releaseHost('u_2', 45).ok, true);
+  assert.equal(publicTable(t).host, 'p_1');
+  assert.equal(t.releaseHost('u_1', 46).ok, true);
+  assert.equal(publicTable(t).host, 'p_2');
+  // connected flag: on at sit, toggled by the rooms layer, bumps rev only on change
+  assert.equal(publicTable(t).seats[1].connected, true);
+  const rev = t.rev;
+  t.setConnected('u_1', false);
+  assert.equal(publicTable(t).seats[1].connected, false);
+  t.setConnected('u_1', false);
+  assert.equal(t.rev, rev + 1);
   t.settlements();
   assert.equal(t.hand.done, false);
   assert.equal(t.hostOp('u_2', 'dissolve', {}, 50).ok, true);
@@ -610,4 +623,45 @@ test('JSON round-trip after every step reproduces the same game as never round-t
   assert.equal(restored.hand.deadline, t.s.now + 99999 + 20000);
   assert.equal(restored.hand.toAct, t.hand.toAct);
   assert.deepEqual(restored.hand.deck, t.hand.deck);
+});
+
+test('a short big blind is all-in from the post; the others still owe the full big blind; side pot', () => {
+  const t = makeTable({ seats: [0, 1, 2], rng: riggedRng(28).queue(0), start: false });
+  t.seats[2].stack = 15;
+  assert.equal(t.hostOp('u_0', 'start', {}, t.s.now).ok, true);
+  assert.equal(t.seats[2].allin, true);
+  assert.equal(t.seats[2].bet, 15);
+  assert.equal(t.hand.currentBet, 20);
+  assert.equal(t.legalFor(0).call, 20);
+  act(t, 'call'); act(t, 'call');
+  assert.equal(t.hand.toAct, null, 'closed: both live players matched 20');
+  assert.deepEqual(t.hand.pots, [{ amt: 45, seats: [0, 1, 2] }, { amt: 10, seats: [0, 1] }]);
+  wake(t);
+  assert.equal(t.hand.street, 'flop');
+  assert.equal(t.hand.toAct, 1);
+  assert.equal(t.hand.runout, false);
+});
+
+test('standing out of turn can close the street: the leaver\'s uncalled raise goes back to it', () => {
+  const t = makeTable({ seats: [0, 1, 2, 3], rng: riggedRng(29).queue(0) });
+  act(t, 'call'); act(t, 'call'); act(t, 'call'); act(t, 'check');
+  wake(t);
+  t.seats[2].stack = 50;
+  act(t, 'raise', 50); // seat 1 bets 50
+  act(t, 'call'); // seat 2 calls all-in
+  assert.equal(t.seats[2].allin, true);
+  act(t, 'raise', 200); // seat 3
+  act(t, 'fold'); // seat 0
+  assert.equal(t.hand.toAct, 1);
+  const before = t.seats[3].stack;
+  assert.equal(t.stand('u_3', t.s.now).ok, true);
+  assert.equal(t.hand.toAct, null, 'seat 1 already matched everything still live');
+  assert.equal(t.seats[3].stack, before + 150, 'uncalled 150 returned');
+  assert.equal(t.hand.runout, true);
+  assert.ok(publicTable(t).seats[1].shown && publicTable(t).seats[2].shown);
+  for (let i = 0; i < 2; i++) wake(t);
+  assert.equal(t.hand.done, true);
+  assert.equal(t.seats[3], null);
+  const out = t.settlements().chips.find((c) => c.accountId === 'u_3' && c.reason === 'cashout');
+  assert.equal(out.amount, before + 150);
 });
