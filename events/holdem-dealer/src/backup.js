@@ -2,7 +2,8 @@
 // see ops/backup.sh):
 //   node src/backup.js save <dataDir> <out.json.gz>     both files as they were at one moment: read, then checked
 //                                                       unchanged (a flush in between means another try); the IP
-//                                                       memory is left out; written 0600 and, with OWNER=uid:gid,
+//                                                       memory and the per-address email counts are left out;
+//                                                       written 0600 and, with OWNER=uid:gid,
 //                                                       handed to that user
 //   node src/backup.js restore <in.json.gz> <dataDir>   puts both files back from the same backup (never one file
 //                                                       alone: that would mix two moments), mode 600, owned by the
@@ -46,8 +47,10 @@ export async function save(dir, out, { tries = 50, owner = process.env.OWNER || 
     afterRead?.(k); // tests: a flush landing between the reads
     if (fileState(dir) !== before) { await sleep(40); continue; } // a flush landed while reading: again
     const [accounts, tables] = texts.map((t, i) => (t === null ? null : envelope(t, NAMES[i])));
-    // the IP memory (salted network hashes and the names used there) is never kept in a backup
+    // the IP memory (salted network hashes and the names used there) is never kept in a backup, nor which address
+    // hashes asked for sign-in emails in the last day (the per-address email limit; the daily count stays)
     if (accounts?.data) accounts.data.ip = {};
+    if (accounts?.data?.mail) accounts.data.mail = { sent: accounts.data.mail.sent || [], addr: {} };
     const body = zlib.gzipSync(JSON.stringify({ v: 1, kind: 'holdem-backup', savedAt: new Date().toISOString(), files: { accounts, tables } }));
     const tmp = `${out}.tmp`;
     fs.writeFileSync(tmp, body, { mode: 0o600 });

@@ -36,7 +36,8 @@ Non-goals
                                                               ├─ rooms: timers, bots, persistence
                                                               ├─ accounts: tokens, IP memory, email link, records
                                                               └─ /data volume: accounts.json, tables.json (atomic)
- Firebase Auth (email-link sign-in, behind a flag) ── verified by the service with Google's public keys (no admin SDK)
+ Resend (EMAIL_SENDER=resend) ◄── the service sends the sign-in email from noreply@picasso-lab.com (HTTPS API)
+ Firebase Auth (EMAIL_SENDER=firebase) ── its ID tokens verified by the service with Google's public keys (no admin SDK)
 ```
 
 Why Hold'em does not use Firebase: RTDB is client-trusted (any client can read and write any room), so a deck or hole
@@ -51,9 +52,10 @@ today. Keeping Hold'em lobby state out of Firebase avoids two sources of truth f
 | Dealer service | everything in Hold'em; account records; IP hashing | — (it is the root of trust; it never logs IPs, tokens or hole cards) |
 | Hold'em client | its own decisions (fold/call/raise), its own display | deck, other players' cards, pot math, timers, chip counts, whose turn it is |
 | Guandan client | the whole Guandan game (unchanged, client-trusted Firebase) | Hold'em anything; other accounts |
-| Firebase Auth | proving control of an email address (ID token) | nothing else |
+| Firebase Auth | proving control of an email address (ID token; `EMAIL_SENDER=firebase`) | nothing else |
+| Resend | delivering the sign-in email to the address (`EMAIL_SENDER=resend`): it sees the address and the link | storing anything for the service; the link alone does nothing without the device code |
 | IP address | a hint that "someone here used name X recently" | identity; never signs anyone in, never hands over an account |
-| account-link.html | carrying a Firebase ID token to the service once | it gets no account token itself |
+| account-link.html | carrying the emailed token, or a Firebase ID token, to the service once | it gets no account token itself |
 
 Rules that follow:
 - The deck exists only in server memory: `tables.json` never holds the deck, the burn cards or a hole card (shown
@@ -119,9 +121,13 @@ service and reverts with a toast) — documented as UI-level.
   (anyone on the same campus network sees the same suggestions). A whole account moves to another device only
   through "save with email". Nothing is ever done silently by IP.
 
-### 4.4 Save with email (Firebase Auth email link, behind a flag)
+### 4.4 Save with email (behind a flag; the email from Resend or from Firebase Auth)
 Flag: the service's env `EMAIL_LINK=on` (reported as `features.emailLink`); default off. The page shows "用邮箱保存"
-only when the flag is on. Flow (the game runs inside an iframe, so the link completes on a GitHub Pages page):
+only when the flag is on. Sender: `EMAIL_SENDER=resend` (the service sends the email itself, from
+`noreply@picasso-lab.com`; section 4.4.1) or `firebase` (the default and the rollback: the page asks Firebase Auth to
+send its own link, steps 2-4 below), reported as `features.emailSender`. Everything after the proof of the address
+(the device code, binding, merging, polling) is the same for both. Flow with Firebase (the game runs inside an
+iframe, so the link completes on a GitHub Pages page):
 1. Page → `POST /v1/email/start { email }` (Bearer). Service stores a pending link `{ lid, accountId, emailHash,
    pollHash, codeHash, createdAt }` (30 min TTL, max 5 pending per account) and returns `{ lid, poll, code }` (`poll`
    = random secret kept only in the requesting page's memory; `code` = 4 random digits the page shows next to "waiting
@@ -157,6 +163,32 @@ Settings → Authorized domains → add `yil384.github.io` (and `poker.picasso-l
 has HTTP-referrer restrictions in Google Cloud Console, allow `https://yil384.github.io/*`. Then set `EMAIL_LINK=on`
 in the service env and restart it.
 
+### 4.4.1 The email sent by the service (`EMAIL_SENDER=resend`)
+1. Page → `POST /v1/email/start { email, lang }` (Bearer). Limits: 5 an hour per network (as above), and for the
+   emails the service sends, 3 an hour and 10 a day per address (by its HMAC hash) and `EMAIL_DAILY_CAP` (90) in
+   any 24 hours in all (Resend's free tier is 100 a day); these counts are kept in `accounts.json` (times and hashes
+   only), so a restart does not reset them. Refused: 429 `rate_limited` with `Retry-After`, nothing sent.
+2. The service stores the pending link as above plus `tokenHash = sha256(t)` of a new single-use token `t` (32 random
+   bytes, base64url; same 30-minute life as the link), and sends the email through Resend's HTTP API
+   (`POST https://api.resend.com/emails`, `Authorization: Bearer` from `RESEND_API_KEY_FILE`, `Idempotency-Key:
+   picasso-signin-<lid>`, from `EMAIL_FROM`, a text and an HTML part) with the link
+   `https://yil384.github.io/Picasso-Lab/events/account-link.html?lid=<lid>&t=<t>&lang=<zh|en>`. A network error,
+   a timeout or a 5xx is retried once with the same key (Resend sends a key at most once). The plaintext address is
+   used for this request only: never stored, never logged (the link keeps the masked form and the hash).
+3. Answer `{ lid, poll, code, sent: true, from: "noreply@picasso-lab.com" }`; the page skips Firebase, says who the
+   email comes from and to look in spam, shows the code and polls as in step 2 above. Errors: 429 `rate_limited`
+   (Resend said 429; not counted), 502 `send_failed` (Resend refused or could not be reached; a refusal is not
+   counted, an outage is). The failed link is dropped. Logged: Resend's status and error name, never the address.
+4. The user opens the link (any device). `account-link.html` takes `t` out of the address bar (kept in this tab's
+   sessionStorage for a reload), loads no Firebase script and posts `POST /v1/email/redeem { lid, t, code? }`, with
+   the code when it is the device that asked. The service compares `sha256(t)` with `tokenHash` in constant time;
+   a wrong, malformed or expired token answers 404 `expired` like an unknown link; a link already done 409 `used`.
+   Then exactly step 4's rules: `need_code` / `bad_code` (5 tries) / `at_table` / `already_linked` leave the token
+   usable, a success binds or merges and marks the link done (single use), and the waiting page's next poll gets the
+   token (step 5). The email: subject "Picasso Lab 游戏登录 / Sign in to Picasso Lab games", Chinese first for
+   `lang=zh`, one button and the raw link, the expiry, "if you did not ask for this, ignore this email"; table layout
+   with inline styles, at most 520 px wide, no image, no tracking pixel, no emoji (`src/mailer.js`).
+
 ### 4.5 Records attach
 Guandan: at each `roundOver`, the client of every seated human posts `POST /v1/guandan/round { room, round, won,
 place }` once (deduped by `room:round` on both sides). It is self-reported, exactly as trustworthy as Guandan itself.
@@ -169,18 +201,20 @@ All bodies ≤ 8 KB. CORS: `Access-Control-Allow-Origin` echoes an allow-listed 
 `https://yil384.github.io`; tests add `http://127.0.0.1:*`), `Access-Control-Allow-Headers: authorization,
 content-type`, and `Access-Control-Allow-Private-Network: true` on preflight (needed by local tests only; harmless).
 Errors: HTTP 4xx/5xx with `{ error: "<code>", message }`. Rate limits (in memory, per ipKey): session creation 30/h,
-email start 5/h, claims 10/h, other calls 600/min. `Authorization: Bearer <token>` where noted (B).
+email start 5/h, link redeems 60/h, claims 10/h, other calls 600/min (and the per-address and daily email limits of
+4.4.1). `Authorization: Bearer <token>` where noted (B).
 
 | Method & path | Body → Response |
 |---|---|
-| `POST /v1/session` (B optional) | `{ clientId?, name?, fresh? }` → `{ token? (only when a new account was made), account: AccountView, suggestions?: [{sid,name}], features: { emailLink } }` |
+| `POST /v1/session` (B optional) | `{ clientId?, name?, fresh? }` → `{ token? (only when a new account was made), account: AccountView, suggestions?: [{sid,name}], features: { emailLink, emailSender } }` |
 | `POST /v1/claim` (B) | `{ sid }` → `{ account }` (the caller's own account, renamed; no token) · 403 `ip_mismatch`, 404 `expired`, 409 `protected` |
 | `GET /v1/me` (B) | → `{ account }` |
 | `POST /v1/name` (B) | `{ name }` → `{ account }` · 409 `name_protected`, 400 `bad_name` |
 | `POST /v1/refill` (B) | → `{ account }` · 409 `not_needed` (refill only when chips < 2,000 and no chips at any table; sets chips to 10,000, refills += 1) |
 | `GET /v1/leaderboard?game=holdem\|guandan&limit=50` (B optional) | → `{ rows: [{ pid, name, chips, net, hands, won, biggestPot } \| { pid, name, rounds, wins }], me?: row, rule?: { days, hands } }` (Hold'em ranks established accounts only) |
 | `POST /v1/guandan/round` (B) | `{ room, round, won, place }` → `{ ok }` |
-| `POST /v1/email/start` (B) | `{ email }` → `{ lid, poll, code }` · 403 `disabled` when the flag is off |
+| `POST /v1/email/start` (B) | `{ email, lang? }` → `{ lid, poll, code, sent: false }` (Firebase sends) \| `{ lid, poll, code, sent: true, from }` (the service sent it) · 403 `disabled` when the flag is off · 429 `rate_limited` · 502 `send_failed` |
+| `POST /v1/email/redeem` | `{ lid, t, code? }` → `{ ok, name, nameReserved }` · 404 `expired` (also a wrong token), 409 `used`, 409 `need_code` / `bad_code` (`merge: bool`), 409 `at_table`, 409 `already_linked` |
 | `POST /v1/email/complete` | `{ lid, idToken, code }` → `{ ok, name, nameReserved }` · 401 `bad_token`, 404 `expired`, 409 `email_mismatch`, 409 `need_code` / `bad_code` (`merge: bool`), 409 `at_table`, 409 `already_linked` |
 | `POST /v1/email/poll` | `{ lid, poll }` → `{ status: "pending" }` \| `{ status: "done", token, account }` |
 | `POST /v1/signout` (B) | → `{ ok }` (revokes this device token) |
@@ -430,17 +464,18 @@ Rule details fixed by the engine:
 ZH: 隐私说明：为了让你换浏览器时能一键用回原来的昵称，游戏服务会把你的网络地址做加盐哈希（不保存、不记录原始 IP），并记住最近
 30 天里在这个网络用过的游客昵称，30 天后自动删除，备份里也不保留。新浏览器只会看到"继续使用昵称 X？"的建议，必须由你点一下才会生效，
 而且只换昵称：筹码、战绩和座位都不会跟过来（想在别的设备上用同一个账号，请用邮箱保存）。同一校园网或路由器下的人也可能看到同样的建议，
-所以绑定了邮箱的账号的昵称永远不会这样被推荐。邮箱只用于发送登录链接，我们只保存脱敏地址和一个哈希。能管理这台服务器的人在技术上可以从
-哈希反推出网络地址。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。
+所以绑定了邮箱的账号的昵称永远不会这样被推荐。邮箱只用于发送登录链接（通过邮件服务 Resend 发送），
+我们只保存脱敏地址和一个哈希。能管理这台服务器的人在技术上可以从哈希反推出网络地址。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。
 
 EN: Privacy: so you can pick your name up again in a new browser, the game service keeps a salted hash of your network
 address (never the raw IP) together with the guest names used from that network in the last 30 days, and deletes it
 after 30 days; backups never hold it. A new browser only sees a "Use the name X?" suggestion, nothing happens until you
 click it, and a click only takes the name: chips, records and seats stay with their account (to use one account on
 several devices, save it with an email). People on the same campus network or router may see the same suggestion, so
-the name of an email-saved account is never suggested. Your email is used only to send the sign-in link; we keep a
-masked form and a hash. Whoever administers the server could technically work a network address back out of its hash.
-All chips are play money: they cannot be bought, sold or transferred and have no value.
+the name of an email-saved account is never suggested. Your email is used only to send the sign-in link, which goes
+out through the mail service Resend; we keep a masked form and a hash. Whoever administers the server could
+technically work a network address back out of its hash. All chips are play money: they cannot be bought, sold or
+transferred and have no value.
 
 ## 12. Deployment (lead)
 
@@ -457,10 +492,12 @@ poker.picasso-lab.com {
     log { output discard }                                        # no access log: Caddy logs no client IP either
 }
 ```
-Env (`.env`): `EMAIL_LINK` (`off`|`on`), `FIREBASE_PROJECT_ID=yichen-5e23e`, `ALLOWED_ORIGINS=https://yil384.github.io`,
+Env (`.env`): `EMAIL_LINK` (`off`|`on`), `EMAIL_SENDER` (`firebase`|`resend`), `EMAIL_FROM` (default
+`Picasso Lab <noreply@picasso-lab.com>`), `EMAIL_DAILY_CAP` (90), `FIREBASE_PROJECT_ID=yichen-5e23e`, `ALLOWED_ORIGINS=https://yil384.github.io`,
 `TRUST_PROXY=fras-caddy-1` (only that container may set `X-Forwarded-For`; the client IP is its right-most entry,
 which Caddy appends; any other peer, e.g. a user on the host reaching the container, is keyed by its own address),
-`DATA_DIR=/data`, `PORT=8787`; compose sets `GAMES_SECRET_FILE` and `IP_SALT_FILE` (32+ random bytes each).
+`DATA_DIR=/data`, `PORT=8787`; compose sets `GAMES_SECRET_FILE` and `IP_SALT_FILE` (32+ random bytes each) and
+`RESEND_API_KEY_FILE` (`./secrets/resend_api_key`, read only with `EMAIL_SENDER=resend`; the key is never an env value).
 Operations (README): `ops/secrets.sh`, `ops/backup.sh` (cron, daily), `ops/watchdog.sh` (cron, every 5 minutes:
 restarts a service that does not answer, never one that cannot save), `src/health.js`.
 
@@ -476,7 +513,10 @@ restarts a service that does not answer, never one that cannot save), `src/healt
 - Service (`npm test` too): config and ipKey, store (batches, crash roll-forward, corrupt-file refusal), firebase-token
   (valid, expired, aud/iss, signature, unverified email, kid rotation), HTTP integration (CORS, auth, suggestions by
   network, claims, limits, body size), email link end to end with a locally signed token (new link, second-device
-  merge, mismatch, expiry, flag off), WebSocket integration with real clients (2-, 6- and 9-seat tables of humans and
+  merge, mismatch, expiry, flag off), the email sent by the service against a fake Resend (the request's body and
+  headers, idempotency and the one retry, the email itself, the token: wrong, malformed, expired, replayed, single
+  use, the device code, merge and at-table, every limit and the daily cap across a restart, Resend's 429 / 4xx / 5xx
+  / outage, config checks, no address or key in logs, data or a config dump), WebSocket integration with real clients (2-, 6- and 9-seat tables of humans and
   bots, every frame scanned for cards the recipient may not see, chips conserved after every step, reconnect,
   refused actions, protocol limits), graceful restart mid-hand and kill -9 restarts (child process).
 - `npm run test:slow`: all 133,784,560 seven-card hands → exact category counts.
@@ -487,7 +527,8 @@ restarts a service that does not answer, never one that cannot save), `src/healt
   secrets from files, health 503 on a failing disk, refusal counts, the own-table exemption from the network ban,
   table caps and the unstarted-table expiry, consistent backups and restores.
 - Browser: `guandan-kit/harness/holdem/` (`layout.py` checks bets, the dealer button and touch sizes at every seat
-  count) — Playwright against the local service (the page reads
+  count; `e2e.py email` saves with email with the dealer in resend mode against a local fake Resend that captures
+  the link) — Playwright against the local service (the page reads
   `window.__PICASSO_GAMES_ORIGIN`, set by the harness's init script; production uses `https://poker.picasso-lab.com`).
 
 ## 14. Service layer as built (additions and clarifications)
@@ -517,8 +558,10 @@ Accounts
   Hold'em table (its stack would otherwise be lost; the link stays valid, so completing again after leaving works).
   `auth_time` must be within the last hour. A done link hands out its token once (the next poll is 404 `expired`);
   the device token that started the link is retired when the link saved that same account. A wrong `poll` secret
-  answers exactly like an unknown link. With the flag off, complete and poll also answer 403 `disabled`. The raw email
-  is never stored (masked form + HMAC only).
+  answers exactly like an unknown link. With the flag off, complete, redeem and poll also answer 403 `disabled`. The
+  raw email is never stored (masked form + HMAC only). A link sent by the service (4.4.1) can be redeemed whatever
+  the sender is now (a rollback to Firebase leaves emailed links working until they expire); a Firebase link has no
+  token and can only be completed with an ID token. A saved account bound through a token has `email.uid: null`.
 - Hourly sweep (and at start): IP entries older than 30 days, expired links and claims, and pristine guests not seen
   for 90 days are deleted.
 - `POST /v1/guandan/round` answers `{ ok: true, duplicate: true }` for a round already counted; `round` must be an
@@ -582,5 +625,6 @@ Persistence
   the browser suite checks every received frame against) and `POST /__test/deck` rigs the next hand of a table (side
   pots, splits, quads on demand); `POST /__test/hold-writes { ms }` keeps changes off the disk for a while so a
   kill -9 can be tested at its worst. `FIREBASE_JWKS_URL` (hooks only, loopback URL) points the production key fetcher
-  at a local JWK set so the email link can be completed in a browser with a locally signed ID token.
+  at a local JWK set so the email link can be completed in a browser with a locally signed ID token, and
+  `RESEND_API_URL` (hooks only, loopback URL) sends the service's emails to a local fake Resend.
 

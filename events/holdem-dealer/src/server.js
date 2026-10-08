@@ -1,8 +1,9 @@
 // The games service process: one HTTP server for the REST API (http.js) and the Hold'em socket (ws.js), the
 // accounts, the table registry and the data files. `node src/server.js` reads the environment (config.js).
 //
-//   startServer(config, { now, fetchKeys, verifier, log, rng, botRng, onChange, helloMs }) -> Promise<Service>
-//     (everything but config is for tests: injected clock, key fetcher, rngs, a hook after every table change)
+//   startServer(config, { now, fetchKeys, verifier, mailFetch, mailer, log, rng, botRng, onChange, helloMs }) -> Promise<Service>
+//     (everything but config is for tests: injected clock, key fetcher, the fetch the Resend mailer uses (or a whole
+//     mailer), rngs, a hook after every table change)
 //     config.testHooks (HOLDEM_TEST_HOOKS=1, never in production) adds test-hooks.js's /__test/* endpoints.
 //     Service = { port, url, accounts, rooms, store, ws, stop() }
 //     stop(): graceful - stop accepting, close every socket with 1012, stop the table timers, flush both files.
@@ -17,6 +18,7 @@ import { Store, StoreError } from './store.js';
 import { Accounts } from './accounts.js';
 import { Rooms } from './rooms.js';
 import { createVerifier } from './firebase-token.js';
+import { createResendMailer } from './mailer.js';
 import { createHttpHandler } from './http.js';
 import { attachWs } from './ws.js';
 import { RateLimiter, makeIpKey, clientIp, createLog, createProxyTrust } from './util.js';
@@ -43,9 +45,17 @@ export async function startServer(config, opts = {}) {
     log('test hooks on: /__test/* answers loopback callers', {});
   }
   const limiter = new RateLimiter(now);
+  // EMAIL_SENDER=resend: the service sends the sign-in email itself (tests inject a fake fetch, never Resend)
+  const mailer = opts.mailer || (config.emailSender === 'resend'
+    ? createResendMailer({ apiKey: config.resendApiKey, from: config.emailFrom, apiUrl: config.resendApiUrl || undefined, fetch: opts.mailFetch, log })
+    : null);
   const accounts = new Accounts({
     gamesSecret: config.gamesSecret,
     emailLink: config.emailLink,
+    emailSender: config.emailSender,
+    emailFrom: config.emailFromAddress,
+    emailDailyCap: config.emailDailyCap,
+    mailer,
     verifier,
     now,
     log,
@@ -102,7 +112,7 @@ export async function startServer(config, opts = {}) {
       if (Object.keys(r).length) log('rate limited', { refused: r });
     }, LIMIT_LOG_MS),
   ];
-  log('dealer listening', { port, tables: rooms.stats().tables, accounts: accounts.accounts.size, emailLink: config.emailLink });
+  log('dealer listening', { port, tables: rooms.stats().tables, accounts: accounts.accounts.size, emailLink: config.emailLink, emailSender: config.emailSender });
 
   let stopping = null;
   function stop() {

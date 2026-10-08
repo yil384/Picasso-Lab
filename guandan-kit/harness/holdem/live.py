@@ -3,7 +3,7 @@ its own context (phones are is_mobile + has_touch and tap for real). Every WebSo
 kept and checked against the dealer's record of what it really dealt (test hooks, HOLDEM_TEST_HOOKS=1, loopback
 only, never in production).
 
-    from live import Service, KeyServer, Player, browser, check_frames
+    from live import Service, KeyServer, FakeResend, Player, browser, check_frames
     with Service() as svc:                          # PORT 8787, a temp DATA_DIR, BOT_THINK_SCALE=0.2, test hooks on
         async with browser() as br:
             a = Player(br, 'desk', 'Ann', svc); await a.open()
@@ -13,7 +13,7 @@ only, never in production).
 
 The page reads window.__PICASSO_GAMES_ORIGIN (hdh's init script); Firebase RTDB is stubbed in memory and production
 Firebase / Supabase requests are aborted (hdh.route_holdem)."""
-import asyncio, base64, contextlib, json, os, re, signal, subprocess, tempfile, threading, time, urllib.error, urllib.request
+import asyncio, base64, contextlib, json, os, re, signal, subprocess, tempfile, threading, time, urllib.error, urllib.parse, urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from playwright.async_api import async_playwright
 from hdh import HSession, LAUNCH_ARGS, DEALER_DIR, SHOTS
@@ -199,6 +199,79 @@ class KeyServer:
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048) if other_key else self.key
         sig = key.sign(f'{head}.{payload}'.encode(), padding.PKCS1v15(), hashes.SHA256())
         return f'{head}.{payload}.{b64u(sig)}'
+
+
+# ---------------------------------------------------------------- a local stand-in for Resend's HTTP API
+class FakeResend:
+    """POST /emails on loopback, as the dealer calls it with EMAIL_SENDER=resend (RESEND_API_URL, test hooks only):
+    keeps every request (headers + JSON body) and answers like Resend, 200 {id} by default or the next planned
+    failure (fail(status, ...)). The key it expects is a made-up one in a temp file (RESEND_API_KEY_FILE); nothing
+    here reaches the network.
+
+        mail = FakeResend(); svc = Service(email_link=True, env=mail.env())
+        mail.calls        [{'headers': {...}, 'body': {...}}]
+        mail.link(0)      -> ({'url', 'lid', 't', 'lang'}, None) or (None, 'why')"""
+
+    def __init__(self, port=8797):
+        self.port = port
+        self.calls = []
+        self.plan = []
+        self.key = 're_harness_' + b64u(os.urandom(12))
+        fd, self.key_file = tempfile.mkstemp(prefix='hd-resend-key-')
+        with os.fdopen(fd, 'w') as f:
+            f.write(self.key + '\n')
+        outer = self
+
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self):
+                raw = self.rfile.read(int(self.headers.get('content-length') or 0))
+                try:
+                    body = json.loads(raw or b'{}')
+                except ValueError:
+                    body = None
+                outer.calls.append({'path': self.path, 'headers': {k.lower(): v for k, v in self.headers.items()}, 'body': body})
+                status, extra, out = outer.plan.pop(0) if outer.plan else (200, {}, {'id': f'em_{len(outer.calls)}'})
+                data = json.dumps(out).encode()
+                self.send_response(status)
+                self.send_header('content-type', 'application/json')
+                for k, v in extra.items():
+                    self.send_header(k, v)
+                self.send_header('content-length', str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *a):
+                pass
+        self.httpd = ThreadingHTTPServer(('127.0.0.1', port), H)
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.url = f'http://127.0.0.1:{port}'
+
+    def env(self):
+        return {'EMAIL_SENDER': 'resend', 'RESEND_API_URL': self.url, 'RESEND_API_KEY_FILE': self.key_file}
+
+    def fail(self, status, retry_after=None, name='application_error', times=1):
+        extra = {'retry-after': str(retry_after)} if retry_after else {}
+        for _ in range(times):
+            self.plan.append((status, extra, {'statusCode': status, 'name': name, 'message': 'planned failure'}))
+
+    def link(self, i):
+        """The sign-in link of email i, the same in its text and HTML parts."""
+        if i >= len(self.calls) or not isinstance(self.calls[i]['body'], dict):
+            return None, f'no email {i} (got {len(self.calls)})'
+        b = self.calls[i]['body']
+        m = re.search(r'https://\S+account-link\.html\?\S+', b.get('text') or '')
+        if not m:
+            return None, 'no link in the text part'
+        url = m.group(0)
+        if url.replace('&', '&amp;') not in (b.get('html') or ''):
+            return None, 'the HTML part has another link'
+        q = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
+        return {'url': url, 'lid': q.get('lid', ''), 't': q.get('t', ''), 'lang': q.get('lang', '')}, None
+
+    def close(self):
+        self.httpd.shutdown()
+        with contextlib.suppress(OSError):
+            os.unlink(self.key_file)
 
 
 # ---------------------------------------------------------------- players

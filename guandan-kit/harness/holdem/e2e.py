@@ -14,9 +14,13 @@ Usage: python3 e2e.py [scenario ...]        (no argument: all of them, in this o
             goes on with a new hand
   accounts  use-the-name prompt (fresh browsers only, only on click, the name only), save with email through account-link.html with a
             locally signed ID token, a protected name reverted, a Guandan round reported once
+  email     save with email when the dealer sends it itself (EMAIL_SENDER=resend) through a local fake Resend: the
+            email, the link's single-use token on the asking device and on another one (code), a replay, a second
+            device merging in English, Resend failing; no Firebase script anywhere, no address or key in logs or data
 Prints PASS / FAIL lines and a JSON summary per scenario; screenshots in HD_SHOTS (default /tmp/holdem-shots)."""
-import asyncio, json, sys, time
-from live import Service, KeyServer, Player, browser, check_frames, done_hands, until, log, station, mixed, pusher, idle, LINK
+import asyncio, json, os, sys, time
+from live import Service, KeyServer, FakeResend, Player, browser, check_frames, done_hands, until, log, station, mixed, pusher, idle, LINK
+from hdh import SHOTS
 
 RESULTS = {}
 
@@ -681,6 +685,208 @@ async def accounts(br):
     return sc
 
 
+# ---------------------------------------------------------------- save with email, sent by the dealer (Resend)
+BODY_TEXT = "document.getElementById('al-body').textContent.replace(/\\s+/g, ' ').trim()"
+EMAIL_VPS = (('phone', 375, 740, True), ('desk', 1280, 860, False))
+
+
+async def render_email(br, html, tag):
+    """The email's HTML part as a mail client shows it, at a phone and a desktop width, with every request refused.
+    Returns ({vp: metrics}, None) or (None, error); screenshots go to SHOTS/email-<tag>-<vp>.jpg."""
+    out = {}
+    for vp, w, h, mobile in EMAIL_VPS:
+        ctx = await br.new_context(viewport={'width': w, 'height': h}, device_scale_factor=2, is_mobile=mobile, has_touch=mobile)
+        try:
+            asked = []
+            await ctx.route('**/*', lambda r: (asked.append(r.request.url), r.abort())[1])
+            pg = await ctx.new_page()
+            await pg.set_content(html, wait_until='load')
+            m = await pg.evaluate("""(()=>{const a=[...document.querySelectorAll('a')];const btn=a[0].getBoundingClientRect();
+                const card=document.querySelector('td[bgcolor="#ffffff"]').getBoundingClientRect();
+                return {scroll:document.documentElement.scrollWidth, inner:innerWidth, links:a.length, button:[Math.round(btn.width),Math.round(btn.height)],
+                        card:Math.round(card.width), buttonText:a[0].textContent.trim()}})()""")
+            m['requests'] = len(asked)
+            os.makedirs(SHOTS, exist_ok=True)
+            await pg.screenshot(path=os.path.join(SHOTS, f'email-{tag}-{vp}.jpg'), type='jpeg', quality=85, full_page=True)
+            out[vp] = m
+        except Exception as e:
+            return None, f'{vp}: {e!r}'
+        finally:
+            await ctx.close()
+    return out, None
+
+
+async def open_link(ctx, owner, url, wait='.al-mark, #al-code'):
+    """Opens an emailed link in a new tab of ctx; console errors go to owner's list. Returns (page, None) or
+    (None, error); the caller closes the page."""
+    pg = await ctx.new_page()
+    # with the resource's URL, so the refusals a scenario provokes can be told from anything else
+    pg.on('console', lambda m: owner.console.append((time.time(), f"{m.text} @ {(m.location or {}).get('url', '')}")) if m.type == 'error' else None)
+    pg.on('pageerror', lambda x: owner.console.append((time.time(), f'LINK PAGEERROR: {x}')))
+    try:
+        await pg.goto(url, wait_until='load')
+        await pg.wait_for_selector(wait, timeout=8000)
+        await pg.wait_for_function("!document.querySelector('.al-ring')", timeout=8000)
+    except Exception as e:
+        await pg.close()
+        return None, repr(e)
+    return pg, None
+
+
+async def ask_email(p, address):
+    """账号 -> 用邮箱保存 -> address -> send. Returns ('sent' | the form's error text, None) or (None, error)."""
+    if not await p.pg.evaluate("!!document.querySelector('.ga-email-input')"):
+        await p.tap('.hud-avatar')
+        await p.pg.wait_for_selector('.ga-profile', timeout=5000)
+        await p.tap('[data-ga=email]')
+        await p.pg.wait_for_selector('.ga-email-input', timeout=4000)
+    await p.pg.fill('.ga-email-input', address)
+    # the form shows the last error until its answer re-draws it
+    await p.pg.evaluate("document.querySelector('.ga-email-err').textContent = ''")
+    await p.tap('.ga-email [type=submit]')
+    try:
+        await p.pg.wait_for_function("!!document.querySelector('.ga-email.is-sent') || !!(document.querySelector('.ga-email-err')||{}).textContent", timeout=10000)
+    except Exception as e:
+        return None, repr(e)
+    if await p.pg.evaluate("!!document.querySelector('.ga-email.is-sent')"):
+        return 'sent', None
+    return await p.pg.evaluate("document.querySelector('.ga-email-err').textContent"), None
+
+
+async def email(br):
+    sc = Scenario('email')
+    mail = FakeResend()
+    try:
+        with Service(tag='email', email_link=True, env=mail.env()) as svc:
+            sc.check('the dealer reports the sender', svc.post('/v1/session', {}).get('features') == {'emailLink': True, 'emailSender': 'resend'})
+            # 1. the asking device: the dealer sends the email from @picasso-lab.com; Firebase plays no part
+            e = await Player(br, 'desk', 'Wen', svc).open(game='guandan')
+            gstatic = []
+            e.ctx.on('request', lambda q: gstatic.append(q.url) if 'firebase-auth' in q.url else None)
+            got, err = await ask_email(e, 'Wen.Li@ucsd.edu')
+            sc.check('sent: the popup waits for the link', got == 'sent', err or got)
+            note = await e.pg.evaluate("document.querySelector('.ga-email-from').textContent.replace(/\\s+/g,' ').trim()")
+            sc.check('the sent screen names the sender and says to look in spam', 'noreply@picasso-lab.com' in note and '垃圾邮件' in note, note)
+            code = await e.pg.evaluate("document.querySelector('.ga-email-code b').textContent")
+            await e.shot('email-sent')
+            calls = await e.pg.evaluate("(window.__authCalls || []).map(x => x.fn)")
+            sc.check('no Firebase: sendSignInLinkToEmail never called, firebase-auth.js never loaded', 'sendSignInLinkToEmail' not in calls and not gstatic, f'{calls} {gstatic}')
+            c0 = mail.calls[0] if mail.calls else {'headers': {}, 'body': {}, 'path': ''}
+            b0 = c0['body'] or {}
+            sc.check('one email through Resend: path, key, idempotency key, sender, recipient, subject',
+                     len(mail.calls) == 1 and c0['path'] == '/emails' and c0['headers'].get('authorization') == f'Bearer {mail.key}'
+                     and c0['headers'].get('idempotency-key', '').startswith('picasso-signin-') and b0.get('from') == 'Picasso Lab <noreply@picasso-lab.com>'
+                     and b0.get('to') == ['Wen.Li@ucsd.edu'] and b0.get('subject') == 'Picasso Lab 游戏登录 / Sign in to Picasso Lab games',
+                     json.dumps({k: v for k, v in b0.items() if k in ('from', 'to', 'subject')}, ensure_ascii=False))
+            link, err = mail.link(0)
+            sc.check('the link: account-link.html?lid=&t=&lang=zh, Chinese first', not err and link['url'].startswith(LINK + '?lid=') and len(link['t']) == 43
+                     and link['lang'] == 'zh' and b0['text'].index('打开下面的链接') < b0['text'].index('Open the link below'), err or link['url'][:100])
+            shots, err = await render_email(br, b0.get('html', ''), 'zh')
+            sc.check('the email at 375 and 1280 px: no sideways scroll, one button and the raw link, card at most 520 px, no request',
+                     not err and all(m['scroll'] <= m['inner'] and m['links'] == 2 and m['card'] <= 520 and m['requests'] == 0 and m['button'][1] >= 40
+                                     and m['buttonText'] == '登录并保存账号' for m in shots.values()), err or json.dumps(shots, ensure_ascii=False))
+            # 2. opened on another device (no code there): asks for the code, binds nothing on a wrong one
+            o = Player(br, 'portrait', 'Other', svc)
+            await o.new_page(client='c_other', name='Other', lang='zh', game='guandan')
+            o_fb = []
+            o.ctx.on('request', lambda q: o_fb.append(q.url) if 'gstatic.com/firebasejs' in q.url else None)
+            pg, err = await open_link(o.ctx, o, link['url'])
+            text = await pg.evaluate(BODY_TEXT) if pg else ''
+            sc.check('another device: asks for the code (saving, not merging), the token left the address bar, no Firebase script',
+                     pg is not None and await pg.evaluate("!!document.getElementById('al-code')") and 't=' not in pg.url and '绑定到发送链接的那台设备' in text and not o_fb,
+                     err or f'{pg.url if pg else ""} {text[:50]} {o_fb}')
+            if pg:
+                await pg.screenshot(path=os.path.join(SHOTS, 'email-link-code.jpg'), type='jpeg', quality=82)
+                await pg.fill('#al-code', str((int(code) + 1) % 10000).zfill(4))
+                await pg.click('#al-go')
+                await pg.wait_for_function("!document.querySelector('.al-ring')", timeout=8000)
+                text = await pg.evaluate(BODY_TEXT)
+                sc.check('a wrong code binds nothing', '验证码不对' in text and svc.me(await e.token())['guest'], text[:40])
+                await pg.reload(wait_until='load')
+                await pg.wait_for_selector('#al-code', timeout=8000)
+                sc.check('after a reload the tab still holds the token (asks for the code again)', 't=' not in pg.url)
+                await pg.close()
+            # 3. opened on the asking device: its code is filled in, done; the game picks it up by polling
+            pg, err = await open_link(e.ctx, e, link['url'], wait='.al-mark')
+            text = await pg.evaluate(BODY_TEXT) if pg else ''
+            sc.check('the asking device: saved at once', '已完成' in text, err or text[:60])
+            if pg:
+                await pg.screenshot(path=os.path.join(SHOTS, 'email-link-done.jpg'), type='jpeg', quality=82)
+                await pg.close()
+            done = await until(lambda: e.pg.evaluate("!!document.querySelector('.ga-email.is-done')"), 10)
+            eme = svc.me(await e.token())
+            sc.check('the game page picks the saved account up: email masked, name protected', bool(done) and not eme['guest'] and eme['email'] == 'w***@ucsd.edu' and eme['protected'], eme)
+            await e.shot('email-done')
+            pg, err = await open_link(e.ctx, e, link['url'], wait='.al-mark')
+            text = await pg.evaluate(BODY_TEXT) if pg else ''
+            sc.check('the link again: expired or used, nothing changes', '已失效或已经用过了' in text and svc.me(await e.token())['pid'] == eme['pid'], err or text[:60])
+            if pg:
+                await pg.close()
+            # 4. a second device in English saves with the same address: opened on the first device (no code for this
+            # link there) it says a merge and needs the code shown on the phone; the phone is then signed in to it
+            p = await Player(br, 'phone', 'Pho', svc, lang='en').open(game='guandan')
+            got, err = await ask_email(p, 'wen.li@ucsd.edu')
+            note = await p.pg.evaluate("(document.querySelector('.ga-email-from')||{}).textContent||''")
+            sc.check('English: sent, from noreply@picasso-lab.com, check spam', got == 'sent' and 'It comes from noreply@picasso-lab.com' in note and 'spam' in note, err or note)
+            await p.shot('email-sent-en')
+            pcode = await p.pg.evaluate("document.querySelector('.ga-email-code b').textContent")
+            link2, err = mail.link(1)
+            b1 = mail.calls[1]['body'] if len(mail.calls) > 1 else {}
+            sc.check('its email: lang=en, English first', not err and link2['lang'] == 'en' and b1['text'].index('Open the link below') < b1['text'].index('打开下面的链接'), err or '')
+            shots, err = await render_email(br, b1.get('html', ''), 'en')
+            sc.check('the English email at both widths', not err and all(m['scroll'] <= m['inner'] and m['buttonText'] == 'Sign in and save' for m in shots.values()), err or json.dumps(shots))
+            pg, err = await open_link(e.ctx, e, link2['url'] if link2 else LINK)
+            text = await pg.evaluate(BODY_TEXT) if pg else ''
+            sc.check('opened on the first device: a merge, so it asks for the phone\'s code', 'This email already has a saved account' in text, err or text[:60])
+            if pg:
+                await pg.fill('#al-code', pcode)
+                await pg.click('#al-go')
+                await pg.wait_for_selector('.al-mark', timeout=8000)
+                text = await pg.evaluate(BODY_TEXT)
+                sc.check('with the phone\'s code: done', 'Done' in text, text[:60])
+                await pg.close()
+            pdone = await until(lambda: p.pg.evaluate("!!document.querySelector('.ga-email.is-done')"), 10)
+            pme = svc.me(await p.token())
+            sc.check('the phone is signed in to the saved account (its guest merged)', bool(pdone) and pme['pid'] == eme['pid'] and pme['name'] == 'Wen', pme)
+            # 5. Resend fails: a clear message, nothing waits; then it works
+            f = await Player(br, 'portrait', 'Fay', svc).open(game='guandan')
+            mail.fail(500, times=2)
+            got1, err1 = await ask_email(f, 'fay@ucsd.edu')
+            mail.fail(429, retry_after=30, name='rate_limit_exceeded')
+            got2, err2 = await ask_email(f, 'fay@ucsd.edu')
+            got3, err3 = await ask_email(f, 'fay@ucsd.edu')
+            sc.check('Resend down: 邮件没有发出去; Resend busy: 发送太频繁; then sent', '邮件没有发出去' in (got1 or '') and '发送太频繁' in (got2 or '') and got3 == 'sent',
+                     f'{got1 or err1} / {got2 or err2} / {got3 or err3}')
+            sc.check('emails asked of Resend: 1 + 1 + 2 (one retry, same key) + 1 + 1', len(mail.calls) == 6
+                     and mail.calls[2]['headers'].get('idempotency-key') == mail.calls[3]['headers'].get('idempotency-key'), len(mail.calls))
+            # 6. what the dealer wrote: no address, key, token or link in its log or its data
+            await asyncio.sleep(.5)
+            with open(svc.logfile.name) as fh:
+                logged = fh.read()
+            with open(os.path.join(svc.data, 'accounts.json')) as fh:
+                data = fh.read()
+            leaks = [x for x in ('wen.li@', 'Wen.Li@', 'fay@', mail.key, link['t'] if link else '-', 'account-link.html?') for blob in (logged, data) if x and x in blob]
+            sc.check('no address, key, token or link in the dealer\'s log or data', not leaks and 'sign-in email sent' in logged, leaks)
+            ps = [e, o, p, f]
+            # refusals the scenario provokes on purpose: the link pages' need_code / bad_code (409) and the used link
+            # (404) at /v1/email/redeem, and Fay's two sends while Resend was down (502) or busy (429)
+            def provoked(x, m):
+                if 'Failed to load resource' not in m:
+                    return False
+                return '/v1/email/redeem' in m or (x is f and ('502' in m or '429' in m))
+            refused = 0
+            for x in ps:
+                keep = [(t, m) for t, m in x.console if not provoked(x, m)]
+                refused += len(x.console) - len(keep)
+                x.console = keep
+            sc.info['expected_refusals_logged'] = refused
+            sc.info['emails'] = len(mail.calls)
+            sc.console(ps, svc)
+    finally:
+        mail.close()
+    return sc
+
+
 async def checker(br):
     """The frame checker itself: synthetic frames with planted leaks must each be caught (no browser needed)."""
     sc = Scenario('checker')
@@ -726,7 +932,8 @@ async def checker(br):
     return sc
 
 
-SCENARIOS = {'checker': checker, 'heads': heads, 'six': six, 'nine': nine, 'sidepots': sidepots, 'timeout': timeout, 'restart': restart, 'accounts': accounts}
+SCENARIOS = {'checker': checker, 'heads': heads, 'six': six, 'nine': nine, 'sidepots': sidepots, 'timeout': timeout, 'restart': restart, 'accounts': accounts,
+             'email': email}
 
 
 async def main(names):

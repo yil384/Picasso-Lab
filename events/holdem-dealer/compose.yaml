@@ -14,9 +14,12 @@ services:
     environment:
       GAMES_SECRET_FILE: /run/secrets/games_secret
       IP_SALT_FILE: /run/secrets/ip_salt
+      # read only with EMAIL_SENDER=resend (ops/secrets.sh leaves an empty file until the key is put in)
+      RESEND_API_KEY_FILE: /run/secrets/resend_api_key
     secrets:
       - games_secret
       - ip_salt
+      - resend_api_key
     networks:
       edge:
         aliases:
@@ -40,6 +43,8 @@ secrets:
     file: ./secrets/games_secret
   ip_salt:
     file: ./secrets/ip_salt
+  resend_api_key:
+    file: ./secrets/resend_api_key
 
 networks:
   edge:

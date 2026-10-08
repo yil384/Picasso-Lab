@@ -64,6 +64,19 @@ new TLS connection each time median 77 ms. Restarts: the service answers again 2
 Not tested live: save with email (off), the campus-NAT limits under real load, and Guandan (unchanged by the deploy;
 its harness keeps the games service stubbed).
 
+## 0.1 Sign-in email from @picasso-lab.com (Resend), built 2026-10-08, not deployed
+
+With Firebase sending the link, the email comes from `noreply@yichen-5e23e.firebaseapp.com`, not from the lab's
+domain. The dealer can now send it itself through Resend (`EMAIL_SENDER=resend`), from
+`Picasso Lab <noreply@picasso-lab.com>` (`picasso-lab.com` is already verified in Resend). The link carries a
+single-use token (30 minutes) that `account-link.html` redeems at the dealer (`POST /v1/email/redeem`); everything
+after that (the 4-digit code on another device, binding, merging, the waiting page's polling) is unchanged, and the
+page loads no Firebase script for it. The default stays `EMAIL_SENDER=firebase`, so nothing changes until the steps in
+4(d) are done on picasso and the new `account-link.html` / `games-account.js` are on Pages (merge, 4(c)). Rollback:
+`EMAIL_SENDER=firebase` and a restart. Limits on top of today's 5 an hour per network: 3 an hour and 10 a day per
+address, 90 a day in all (`EMAIL_DAILY_CAP`; Resend's free tier is 100 a day and FRAS sends from the same domain).
+Tests: section 2.
+
 ## 1. What works
 
 **Game.** No-Limit Texas Hold'em cash tables for 2 to 9 seats, played on a small dealer service
@@ -83,9 +96,10 @@ table.
 **Accounts.** One identity serves Guandan and Hold'em. Players start as guests, and the service may suggest a guest
 name used before from the same network, which takes effect only when the player clicks it, and then only renames the
 player's own account: chips, records, a seat and its cards are never handed to whoever shares the network (moving a
-whole account to another device takes "save with email"). "Save with email" uses a
-Firebase email link behind the `EMAIL_LINK` flag, and every save needs a 4-digit code from the device that asked
-(the link page fills it in itself on that device). Saved names are protected. There is one free refill a day per
+whole account to another device takes "save with email"). "Save with email" sends a
+one-time link behind the `EMAIL_LINK` flag, either from `noreply@picasso-lab.com` through Resend (`EMAIL_SENDER=resend`)
+or through Firebase Auth (the default), and every save needs a 4-digit code from the device that asked (the link page
+fills it in itself on that device). Saved names are protected. There is one free refill a day per
 account and five a day per network. Chips are play money only.
 
 **Records.** For Hold'em the service records hands, hands won, net, the biggest pot and showdowns for each account.
@@ -102,7 +116,23 @@ next hand is dealt with the same button. Deploy between sessions when you can.
 landscape and portrait, a last-hand popup, rules and the ranking. Everything is in Chinese and English and built from
 Guandan's own components.
 
-## 2. Test results (final runs, review round 3)
+## 2. Test results
+
+After the Resend sender (0.1), 2026-10-08, against a local dealer and a fake Resend on loopback (no email left the
+machine):
+
+| suite | result |
+| --- | --- |
+| `npm test` | 158 tests: 157 pass, 0 fail, 1 skipped (the slow sweep); new `test/email-resend.test.js` 14 tests |
+| `npm run test:slow` | 1 pass |
+| `python3 e2e.py` | ALL PASS: 141 checks, 0 failures (checker 8, heads 14, six 12, nine 6, sidepots 14, timeout 15, restart 27, accounts 22 with the Firebase sender, email 23 with the Resend sender) |
+| Guandan `python3 mustkeep.py` | 113 pass, 0 failed |
+| Guandan `python3 play.py desk 2` / `phone 2` | 2 rounds each to the end, no console error (one 52 ms long task on desk) |
+
+`layout.py` and `shots_live.py` were not run again (the table did not change). Screenshots of the email (zh and en,
+375 and 1280 px), the sent popup and the link page: `email-*.jpg`, `*-email-sent*.jpg` in `HD_SHOTS`.
+
+Review round 3 (before the Resend sender):
 
 | suite | result |
 | --- | --- |
@@ -117,9 +147,15 @@ Guandan's own components.
 
 ## 3. Open issues
 
-- **Google's live keys and a real email link are not tested end to end.** The tests sign tokens with a local key
-  set. The first real "save with email" after the Firebase steps (4d) is the real test: save one account and open
-  the link on another device.
+- **A real email is not tested end to end.** The tests send to a fake Resend on loopback (and sign Firebase tokens
+  with a local key set). The first real "save with email" after 4(d) is the real test: save one account, check the
+  email in Gmail / Outlook / Apple Mail (and the spam folder), and open the link on another device.
+- **Resend's daily quota is shared** with FRAS (same domain, and the same account if FRAS's key is on it). The
+  game stops at 90 emails in any 24 hours (`EMAIL_DAILY_CAP`); lower it if FRAS needs more room.
+- **The daily cap can be used up on purpose.** Someone asking for links to many addresses from many networks (5 an
+  hour each) can reach the 90 a day; saving with email then pauses until the oldest of them is 24 hours old (the page
+  says "try again later"; `email_daily_cap` under `limited` in `/v1/health`). The email's text is fixed, so the
+  service cannot be used to send anything else.
 - **Campus NAT.** The per-network limits apply to everyone behind one public address: 30 new accounts an hour,
   5 refills a day, 5 email links an hour, 600 requests a minute, 100 sockets, 30 open tables, and table-code misses
   of 60 a minute and 600 a day (after that, nobody on that network can open a table by code or invite link until the
@@ -223,19 +259,31 @@ Keep `events/holdem-dealer/` in main. On Pages it is only static source text (no
 
 ### (d) Turn on "save with email"
 
-In the Firebase console of project `yichen-5e23e` (DESIGN 4.4, README "Turn on save with email"):
+**From noreply@picasso-lab.com through Resend (the owner's choice)** (README "Turn on save with email", DESIGN 4.4.1):
 
-1. Authentication → Get started (if it was never opened).
-2. Authentication → Sign-in method → Email/Password → Enable, then also enable "Email link (passwordless sign-in)"
-   → Save.
-3. Authentication → Settings → Authorized domains → Add domain → `yil384.github.io`.
-4. If the Web API key has HTTP-referrer restrictions (Google Cloud Console → APIs & Services → Credentials), allow
-   `https://yil384.github.io/*`.
+1. Resend → API Keys → Create API key: permission **Sending access**, domain `picasso-lab.com`, a key of its own (not
+   FRAS's). Domains → `picasso-lab.com`: open and click tracking off.
+2. On picasso, after the update (same rsync as 4(a)):
+   ```sh
+   cd ~/workspace/holdem-dealer
+   ops/secrets.sh          # keeps the two secrets; makes an empty secrets/resend_api_key if there is none; sets modes
+   ops/resend-key.sh       # paste the key + Enter (not shown); skip if secrets/resend_api_key already holds it
+   ```
+3. `.env`: `EMAIL_LINK=on`, `EMAIL_SENDER=resend` (`EMAIL_FROM` and `EMAIL_DAILY_CAP` have the right defaults).
+4. `docker compose up -d --build --force-recreate` (a hand in progress is called off, chips back).
+5. Check: the `dealer listening` log line says `"emailSender":"resend"`; save once in the game with your own address;
+   the email comes from `noreply@picasso-lab.com`; `docker compose logs | grep 'sign-in email'` says `sent` (with
+   Resend's id) or why not (Resend's status and error name; never the address).
 
-Then, on the server, set `EMAIL_LINK=on` in `.env` and run `docker compose up -d` (this recreates the container
-with the new env; a hand in progress is called off, chips back). The service needs outbound HTTPS to `www.googleapis.com` for Google's keys. Check: the 账号 popup
-in the game now offers 用邮箱保存. Save once with your own address and open the link on a second device; it should
-ask for the code shown on the first.
+The page side (`games-account.js`, `account-link.html`) goes live on Pages with the merge (4(c)); the old page with
+the new dealer in resend mode would still call Firebase, so merge first, then switch `EMAIL_SENDER`.
+
+**Rollback / the Firebase sender:** in the Firebase console of project `yichen-5e23e`: Authentication → Get started
+(if needed) → Sign-in method → Email/Password → Enable, and "Email link (passwordless sign-in)" → Save; Settings →
+Authorized domains → add `yil384.github.io`; if the Web API key has HTTP-referrer restrictions, allow
+`https://yil384.github.io/*`. Then `EMAIL_SENDER=firebase` (or remove the line) and `docker compose up -d`. Links
+already sent by Resend keep working until they expire. The service needs outbound HTTPS to `api.resend.com`
+(Resend) or `www.googleapis.com` (Firebase's keys).
 
 ### (e) Google Sites re-paste list
 
@@ -273,14 +321,15 @@ now and then: `tail ~/backups/holdem/*.log; df -h ~`.
 ZH: 隐私说明：为了让你换浏览器时能一键用回原来的昵称，游戏服务会把你的网络地址做加盐哈希（不保存、不记录原始 IP），并记住最近
 30 天里在这个网络用过的游客昵称，30 天后自动删除，备份里也不保留。新浏览器只会看到"继续使用昵称 X？"的建议，必须由你点一下才会生效，
 而且只换昵称：筹码、战绩和座位都不会跟过来（想在别的设备上用同一个账号，请用邮箱保存）。同一校园网或路由器下的人也可能看到同样的建议，
-所以绑定了邮箱的账号的昵称永远不会这样被推荐。邮箱只用于发送登录链接，我们只保存脱敏地址和一个哈希。能管理这台服务器的人在技术上可以从
-哈希反推出网络地址。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。
+所以绑定了邮箱的账号的昵称永远不会这样被推荐。邮箱只用于发送登录链接（通过邮件服务 Resend 发送），
+我们只保存脱敏地址和一个哈希。能管理这台服务器的人在技术上可以从哈希反推出网络地址。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。
 
 EN: Privacy: so you can pick your name up again in a new browser, the game service keeps a salted hash of your network
 address (never the raw IP) together with the guest names used from that network in the last 30 days, and deletes it
 after 30 days; backups never hold it. A new browser only sees a "Use the name X?" suggestion, nothing happens until you
 click it, and a click only takes the name: chips, records and seats stay with their account (to use one account on
 several devices, save it with an email). People on the same campus network or router may see the same suggestion, so
-the name of an email-saved account is never suggested. Your email is used only to send the sign-in link; we keep a
-masked form and a hash. Whoever administers the server could technically work a network address back out of its hash.
-All chips are play money: they cannot be bought, sold or transferred and have no value.
+the name of an email-saved account is never suggested. Your email is used only to send the sign-in link, which goes
+out through the mail service Resend; we keep a masked form and a hash. Whoever administers the server could
+technically work a network address back out of its hash. All chips are play money: they cannot be bought, sold or
+transferred and have no value.

@@ -14,7 +14,9 @@ The page finds the service through `window.__PICASSO_GAMES_ORIGIN`, set by an in
 the flag with `NODE_ENV=production`): `GET /__test/hands` (what every hand really dealt, the ground truth for the
 frame checker), `POST /__test/deck` (rig the next hand of a table), `POST /__test/hold-writes` (keep changes off the
 disk for a while, the worst case of a kill -9). `FIREBASE_JWKS_URL` (hooks only) points the dealer's Firebase key
-fetcher at a local JWK set, so the email link completes with a locally signed ID token.
+fetcher at a local JWK set, so the email link completes with a locally signed ID token. `RESEND_API_URL` (hooks only)
+sends the dealer's own sign-in emails (`EMAIL_SENDER=resend`) to `FakeResend` on loopback, which keeps them (the link
+is read from there) and never reaches the network; its key is a made-up one in a temp file.
 
 Requirements: `cd events/holdem-dealer && npm ci` (and `npm test` green), Python 3 with `playwright` and
 `cryptography`, Chromium for Playwright. Run everything from this folder.
@@ -23,7 +25,7 @@ Requirements: `cd events/holdem-dealer && npm ci` (and `npm test` green), Python
 
 | File | What it is |
 | --- | --- |
-| `live.py` | Library for the live suite: `Service` (the dealer as a child process: start, graceful stop, kill -9, restart on the same data, polls the dealt-cards record), `KeyServer` (local JWK set + RS256 signer), `Player` (one browser context per person, records every WebSocket frame it receives, acts through real clicks / taps), decision policies, `check_frames` (the leak checker). |
+| `live.py` | Library for the live suite: `Service` (the dealer as a child process: start, graceful stop, kill -9, restart on the same data, polls the dealt-cards record), `KeyServer` (local JWK set + RS256 signer), `FakeResend` (Resend's `POST /emails` on loopback: keeps every email, answers 200 or planned failures), `Player` (one browser context per person, records every WebSocket frame it receives, acts through real clicks / taps), decision policies, `check_frames` (the leak checker). |
 | `hdh.py` | Library for the single-page scripts: `dealer()` (real by default, `HD_DEALER=fake` for the stand-in), `hsession()`. |
 | `e2e.py` | **The multi-player suite** (below). |
 | `shots_live.py` | Screenshots of every key state from real play (rigged decks), five viewports, ZH and EN. |
@@ -58,6 +60,7 @@ checks over all of its pages:
 | `sidepots` | Ann desk 2,000, Bo phone 1,400, Cy portrait 800 | Rigged deck, all three all in: main pot 2,400 to the short stack's aces, side pot 1,200 to the kings, 600 uncalled back; the pot pills show 主池 / 边池 1; stacks after; hand 2 busts two players: the rebuy popup on both pages, rebuy, dealt back in; 30,000 conserved across the bankrolls after leaving. |
 | `timeout` | Ann desk (host), Tim phone (never acts) + 2 AI | 15 s from the room pills; Tim's clock counts down, then 时间银行 on his page and on Ann's; the bank runs out: auto check / fold logged as 超时, bank 0; the next timeout sits him out: 暂离中 · 回来 on his page, 暂离 on Ann's; 回来 → 等待大盲 · 立即补盲 → dealt into the next hand posting a blind. |
 | `restart` | Ann desk, Bo portrait, Cy phone + 3 AI, a spectator (ifr) | Mid-hand with a human to act: graceful SIGTERM, kill -9 right after a human action, and kill -9 after 2.5 s of play held off the disk (`hold-writes`). Each time every page shows 重新连接中… with the pills off and reconnects; the hand in progress was called off on every page (its deck is never on disk), the players in it are told, every chip on the table is back on the seats, that hand never finishes anywhere, a new hand finishes on every page and all pages agree on the table (rev and seats). |
+| `email` | four contexts + two email renders | The dealer in resend mode (`EMAIL_SENDER=resend`) against `FakeResend`. 账号 → 用邮箱保存: one email to Resend (path, key, `Idempotency-Key`, sender `Picasso Lab <noreply@picasso-lab.com>`, recipient, subject), the link `account-link.html?lid=&t=&lang=zh`, Chinese first; the sent screen names noreply@picasso-lab.com and says to look in spam; no `sendSignInLinkToEmail`, no firebase-auth.js. The email's HTML at 375 and 1280 px (no sideways scroll, one button and the raw link, card at most 520 px, no request; `email-<lang>-<vp>.jpg`). The link on another device: asks for the code (saving, not merging), the token gone from the address bar, no Firebase script; a wrong code binds nothing; a reload still holds the token. On the asking device: saved at once; the game picks it up by polling; the link again: expired or used. A phone in English saves with the same address: English email and screen; opened on the first device it is a merge and needs the phone's code; the phone ends up in the saved account. Resend down (502 twice: one retry, same key) and busy (429): clear messages, then sent. The dealer's log and data hold no address, key, token or link. |
 | `accounts` | six contexts | A returning Guandan player's name goes into the IP memory; a fresh browser (no clientId, name or token) is asked "继续使用昵称「Zhuo」？" and stays its own guest until the click, after which it is still its own account (same token) under the name Zhuo, and Zhuo's account is untouched; 我是新玩家 keeps the new guest; a returning player and a reloaded fresh browser are never asked. Save with email: 账号 popup → 用邮箱保存 → the link (Firebase stub) → `account-link.html` with a token signed by another key (refused), for another email (refused), then a good one (done); the dealer fetched the keys from the local JWK set; the game page picks the saved account up by polling. A protected name (' yufei ') is reverted with a toast; a free name reaches the service. A finished Guandan round is posted once and the service ignores a repeat. |
 
 Results of the final run: see the end of this file.
@@ -94,6 +97,13 @@ six 11, sidepots 9, restart 30, stalls 3); 2,506 frames on 16 pages; socket ping
 24 ms / p95 35 ms / max 203 ms; pages back 3.2-4.9 s after a restart; loopback ping max 1.5 ms during play.
 
 Guandan regression (in `..`): `python3 play.py desk 2`, `python3 play.py phone 2`, `python3 mustkeep.py`.
+
+## Results after the Resend sender (2026-10-08)
+
+`python3 e2e.py`: **ALL PASS, 141 checks, 0 failures** (checker 8, heads 14, six 12, nine 6, sidepots 14, timeout 15,
+restart 27, accounts 22, email 23; email: 6 requests to the fake Resend, 7 provoked refusals logged by Chrome, 0
+console errors). Dealer `npm test` 158 tests, 157 pass, 1 skipped; `npm run test:slow` pass. Guandan: `../mustkeep.py`
+113 pass; `../play.py desk 2` and `../play.py phone 2` no errors.
 
 ## Results of the final run (2026-10-08, review round 3)
 

@@ -292,7 +292,7 @@ test('protocol: origin, path, hello (timeout, bad token, order), malformed messa
   const c2 = await connect(svc, G.token);
   const welcome = c2.frames.find((m) => m.t === 'welcome');
   assert.equal(welcome.account.pid, G.account.pid);
-  assert.deepEqual(welcome.features, { emailLink: false });
+  assert.deepEqual(welcome.features, { emailLink: false, emailSender: 'firebase' });
   assert.equal(welcome.account.id, undefined, 'internal id never sent');
   for (const [raw, code] of [
     ['{nope', 'bad_json'],

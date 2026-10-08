@@ -8,7 +8,10 @@
 // an account: claiming one renames the caller's own account (no token for the other account, whose chips, records,
 // seat and cards stay its own).
 //
-//   new Accounts({ gamesSecret, emailLink, verifier, now, tableInfo, onChange, onAccount, onDelete, log })
+//   new Accounts({ gamesSecret, emailLink, emailSender, mailer, emailFrom, emailDailyCap, verifier, now, tableInfo,
+//                  onChange, onAccount, onDelete, log })
+//     emailSender           'firebase' (the page sends the link through Firebase Auth) | 'resend' (this service sends
+//                           it through mailer.send, from emailFrom, at most emailDailyCap in any 24 hours)
 //     tableInfo(accountId) -> { seated: bool, chips: int }   chips the account has at tables (rooms layer)
 //     onChange()            persistence: something changed (mark accounts.json dirty)
 //     onAccount(id)         an account's view changed outside a table step (push { t:"account" } to its sockets)
@@ -21,8 +24,10 @@
 //   get(id), view(account), nameAllowed(account), setName(account, name), refill(account)
 //   guandanRound(account, { room, round, won, place }) -> { ok, duplicate? }
 //   leaderboard(game, limit, account?) -> { rows, me?, rule? }   Hold'em ranks established accounts only
-//   emailStart(account, email, tokenHash) -> { lid, poll }
-//   emailComplete(lid, idToken) -> Promise<{ ok, name, nameReserved }>
+//   emailStart(account, email, tokenHash, { lang }) -> { lid, poll, code, sent: false }     (firebase)
+//                                                -> Promise<{ lid, poll, code, sent: true, from }>   (resend: sent)
+//   emailComplete(lid, idToken, code) -> Promise<{ ok, name, nameReserved }>   Firebase ID token proves the address
+//   emailRedeem(lid, t, code) -> { ok, name, nameReserved }   the single-use token from the emailed link proves it
 //   emailPoll(lid, poll) -> { status: "pending" } | { status: "done", token, account }
 //   signout(token) -> { ok }
 //   applySettlements({ chips, records }) -> Set of account ids changed (table steps; no onAccount call)
@@ -31,6 +36,7 @@
 
 import crypto from 'node:crypto';
 import { ApiError, sha256 } from './util.js';
+import { signInEmail, linkUrl } from './mailer.js';
 
 export const START_CHIPS = 10_000;
 export const REFILL_BELOW = 2_000;
@@ -49,6 +55,10 @@ const SUGGEST_MAX = 3;
 export const SID_TTL = 10 * 60_000;
 export const LINK_TTL = 30 * 60_000;
 export const CODE_TRIES = 5; // wrong device codes before an email link is dropped
+// emails this service sends itself (EMAIL_SENDER=resend), on top of the 5 links an hour per network (http.js)
+export const MAIL_PER_ADDRESS_HOUR = 3;
+export const MAIL_PER_ADDRESS_DAY = 10;
+const HOUR = 3600_000;
 const LINK_DONE_KEEP = 10 * 60_000;
 const LINKS_PER_ACCOUNT = 5;
 const SEEN_MAX = 200;
@@ -58,6 +68,9 @@ const TOUCH_MS = 60_000;
 const B32 = 'abcdefghijklmnopqrstuvwxyz234567';
 const b32 = (n) => Array.from(crypto.randomBytes(n), (b) => B32[b & 31]).join('');
 const newToken = () => crypto.randomBytes(32).toString('base64url');
+const LINK_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, base64url
+const sameHash = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === 64 && b.length === 64
+  && crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
 const secretId = (bytes = 18) => crypto.randomBytes(bytes).toString('base64url');
 
 // ---------- names ----------
@@ -83,6 +96,7 @@ export function maskEmail(email) {
 }
 
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{1,63}$/;
+const SEND_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,63}$/;
 
 function emptyHoldem() {
   return { hands: 0, won: 0, biggestPot: 0, net: 0, showdowns: 0 };
@@ -92,13 +106,19 @@ const rnetOf = (a) => a.holdem.rnet ?? a.holdem.net;
 
 export class Accounts {
   constructor({
-    gamesSecret, emailLink = false, verifier = null, now = Date.now,
+    gamesSecret, emailLink = false, emailSender = 'firebase', mailer = null, emailFrom = '', emailDailyCap = 90,
+    verifier = null, now = Date.now,
     tableInfo = () => ({ seated: false, chips: 0 }),
     onChange = () => {}, onAccount = () => {}, onDelete = () => {}, log = () => {},
   }) {
     if (!gamesSecret) throw new Error('gamesSecret required');
     this.secret = gamesSecret;
     this.emailLink = !!emailLink;
+    this.emailSender = emailSender === 'resend' ? 'resend' : 'firebase';
+    if (this.emailSender === 'resend' && !mailer) throw new Error('mailer required for EMAIL_SENDER=resend');
+    this.mailer = mailer;
+    this.emailFrom = emailFrom;
+    this.emailDailyCap = emailDailyCap;
     this.verifier = verifier;
     this.now = now;
     this.tableInfo = tableInfo;
@@ -114,6 +134,8 @@ export class Accounts {
     this.ip = new Map(); // ipKey -> [{ a, n, at }] newest first
     this.links = new Map(); // lid -> pending email link
     this.sids = new Map(); // sid -> { accountId, ipKey, exp } (memory only)
+    // emails sent by this service in the last 24 hours: all of them (the daily cap) and per address hash (no address)
+    this.mail = { sent: [], addr: new Map() };
   }
 
   // ---------- persistence ----------
@@ -122,6 +144,10 @@ export class Accounts {
     for (const a of data.accounts || []) this.accounts.set(a.id, a);
     for (const [k, list] of Object.entries(data.ip || {})) this.ip.set(k, list);
     for (const l of data.links || []) this.links.set(l.lid, l);
+    if (data.mail) {
+      this.mail.sent = Array.isArray(data.mail.sent) ? data.mail.sent.filter(Number.isFinite) : [];
+      for (const [k, list] of Object.entries(data.mail.addr || {})) if (Array.isArray(list)) this.mail.addr.set(k, list.filter(Number.isFinite));
+    }
     this._reindex();
   }
 
@@ -131,6 +157,7 @@ export class Accounts {
       accounts: [...this.accounts.values()],
       ip: Object.fromEntries(this.ip),
       links: [...this.links.values()],
+      mail: { sent: this.mail.sent, addr: Object.fromEntries(this.mail.addr) },
     };
   }
 
@@ -331,7 +358,7 @@ export class Accounts {
       }
     }
     if (changed) this._changed();
-    const out = { account: this.view(a), features: { emailLink: this.emailLink } };
+    const out = { account: this.view(a), features: this.features() };
     if (token) out.token = token;
     // a fresh browser has no token; suggestions (and their sids) only come with a new account, so they are
     // bounded by the account-creation rate limit
@@ -457,6 +484,10 @@ export class Accounts {
   }
 
   // ---------- email link (DESIGN 4.4) ----------
+  features() {
+    return { emailLink: this.emailLink, emailSender: this.emailSender };
+  }
+
   emailHash(email) {
     return crypto.createHmac('sha256', this.secret).update(String(email).trim().toLowerCase()).digest('hex');
   }
@@ -465,12 +496,18 @@ export class Accounts {
     if (!this.emailLink) throw new ApiError(403, 'disabled', 'Saving with email is not enabled');
   }
 
-  emailStart(a, email, tokenHash = null) {
+  emailStart(a, email, tokenHash = null, { lang = 'zh' } = {}) {
     this._requireEmailLink();
     if (typeof email !== 'string' || email.length > 254 || !EMAIL_RE.test(email.trim())) {
       throw new ApiError(400, 'bad_email', 'Check the email address');
     }
+    const address = email.trim();
+    const resend = this.emailSender === 'resend';
+    // the service writes this address into a mail request itself: a plain address only (no list, name or brackets)
+    if (resend && !SEND_RE.test(address)) throw new ApiError(400, 'bad_email', 'Check the email address');
     if (a.email) throw new ApiError(409, 'already_linked', 'This account is already saved with an email');
+    const emailHash = this.emailHash(address);
+    if (resend) this._mailQuota(emailHash);
     const t = this.now();
     const mine = [...this.links.values()].filter((l) => l.accountId === a.id && l.status === 'pending')
       .sort((x, y) => x.createdAt - y.createdAt);
@@ -481,13 +518,85 @@ export class Accounts {
     // device is signed in to an existing saved one (otherwise anyone could send a link to someone else's address and
     // claim the address, or get their account, when they open it)
     const code = String(crypto.randomInt(0, 10_000)).padStart(4, '0');
-    this.links.set(lid, {
-      lid, accountId: a.id, emailHash: this.emailHash(email), masked: maskEmail(email.trim().toLowerCase()),
+    const link = {
+      lid, accountId: a.id, emailHash, masked: maskEmail(address.toLowerCase()),
       pollHash: sha256(poll), codeHash: sha256(`${lid}:${code}`), codeTries: 0,
       starterToken: tokenHash, createdAt: t, status: 'pending', targetId: null, doneAt: null,
-    });
+    };
+    this.links.set(lid, link);
+    if (!resend) {
+      this._changed();
+      return { lid, poll, code, sent: false };
+    }
+    // the emailed link carries a single-use token; only its hash is kept, for as long as the link lives
+    const token = newToken();
+    link.tokenHash = sha256(token);
+    this._mailCount(emailHash, t);
     this._changed();
-    return { lid, poll, code };
+    return this._mailSend(link, address, token, lang === 'en' ? 'en' : 'zh', t).then(() => ({ lid, poll, code, sent: true, from: this.emailFrom }));
+  }
+
+  // 3 an hour and 10 a day per address, and the daily cap for everything this service sends
+  _mailQuota(hash) {
+    const t = this.now();
+    this._mailPrune(t);
+    const mine = this.mail.addr.get(hash) || [];
+    const hour = mine.filter((x) => t - x < HOUR);
+    const refuse = (bucket, oldest, windowMs) => Object.assign(new ApiError(429, 'rate_limited', 'Too many emails, try again later'),
+      { bucket, retryAfter: Math.max(1, Math.ceil((oldest + windowMs - t) / 1000)) });
+    if (hour.length >= MAIL_PER_ADDRESS_HOUR) throw refuse('email_address', Math.min(...hour), HOUR);
+    if (mine.length >= MAIL_PER_ADDRESS_DAY) throw refuse('email_address', Math.min(...mine), DAY);
+    if (this.mail.sent.length >= this.emailDailyCap) throw refuse('email_daily_cap', Math.min(...this.mail.sent), DAY);
+  }
+
+  _mailPrune(t = this.now()) {
+    let changed = false;
+    const sent = this.mail.sent.filter((x) => t - x < DAY);
+    if (sent.length !== this.mail.sent.length) { this.mail.sent = sent; changed = true; }
+    for (const [k, list] of this.mail.addr) {
+      const kept = list.filter((x) => t - x < DAY);
+      if (kept.length === list.length) continue;
+      changed = true;
+      if (kept.length) this.mail.addr.set(k, kept); else this.mail.addr.delete(k);
+    }
+    return changed;
+  }
+
+  _mailCount(hash, t) {
+    this.mail.sent.push(t);
+    this.mail.addr.set(hash, [...(this.mail.addr.get(hash) || []), t]);
+  }
+
+  // an email Resend refused for sure was never sent: it does not count
+  _mailRefund(hash, t) {
+    const i = this.mail.sent.indexOf(t);
+    if (i >= 0) this.mail.sent.splice(i, 1);
+    const list = this.mail.addr.get(hash) || [];
+    const j = list.indexOf(t);
+    if (j >= 0) list.splice(j, 1);
+    if (!list.length) this.mail.addr.delete(hash);
+  }
+
+  async _mailSend(link, address, token, lang, t) {
+    const { subject, text, html } = signInEmail({ url: linkUrl(link.lid, token, lang), lang, minutes: LINK_TTL / 60_000 });
+    try {
+      // the address goes to Resend and nowhere else; X-Entity-Ref-ID keeps Gmail from threading the emails together
+      const { id } = await this.mailer.send({
+        to: address, subject, text, html, idempotencyKey: `picasso-signin-${link.lid}`,
+        headers: { 'X-Entity-Ref-ID': secretId(12) },
+      });
+      this.log('sign-in email sent', { id, last24h: this.mail.sent.length, cap: this.emailDailyCap });
+    } catch (e) {
+      // the link was never delivered (or may not have been): drop it, so it cannot be redeemed later
+      if (this.links.get(link.lid) === link) this.links.delete(link.lid);
+      if (e.definite !== false) this._mailRefund(link.emailHash, t);
+      this._changed();
+      this.log('sign-in email not sent', { code: e.code || 'error', status: e.status || 0, error: e.provider || '', counted: e.definite === false });
+      if (e.code === 'rate_limited') {
+        throw Object.assign(new ApiError(429, 'rate_limited', 'The email service is busy, try again later'), { bucket: 'email_provider', retryAfter: e.retryAfter || 60 });
+      }
+      throw new ApiError(502, 'send_failed', 'The email could not be sent, try again later');
+    }
   }
 
   _link(lid) {
@@ -522,6 +631,25 @@ export class Accounts {
       const target = this.accounts.get(l.targetId);
       return { ok: true, name: target ? target.name : '', nameReserved: target ? this.view(target).protected : false };
     }
+    return this._finishLink(l, hash, String(claims.uid).slice(0, 128), code);
+  }
+
+  // The emailed link (EMAIL_SENDER=resend): its token proves the address, once. A wrong or malformed token answers
+  // exactly like an unknown link; a used one (the link is done) 409 used. need_code / bad_code / at_table leave the
+  // token valid (the person types the code, or leaves the table, and the page posts again), like a Firebase link.
+  emailRedeem(lid, token, code = null) {
+    this._requireEmailLink();
+    const l = this._link(lid);
+    const ok = !!l && !!l.tokenHash && typeof token === 'string' && LINK_TOKEN_RE.test(token) && sameHash(sha256(token), l.tokenHash);
+    if (!ok) throw new ApiError(404, 'expired', 'This link has expired');
+    if (l.status === 'done') throw new ApiError(409, 'used', 'This link was already used');
+    return this._finishLink(l, l.emailHash, null, code);
+  }
+
+  // What a proven address does (both senders): bind it to the asking account, or sign that device in to the account
+  // already saved under it (merging the asking guest into it). The link becomes done; the next poll hands out the token.
+  _finishLink(l, hash, uid, code) {
+    const lid = l.lid;
     const b = this.accounts.get(l.accountId);
     if (!b) {
       this.links.delete(lid);
@@ -557,7 +685,7 @@ export class Accounts {
     } else if (ownerId === b.id) {
       target = b;
     } else {
-      b.email = { uid: String(claims.uid).slice(0, 128), masked: l.masked, hash, linkedAt: t };
+      b.email = { uid, masked: l.masked, hash, linkedAt: t };
       this.byEmail.set(hash, b.id);
       this._forgetIp(b.id);
       this._reindexNames();
@@ -670,6 +798,7 @@ export class Accounts {
     }
     for (const [sid, s] of this.sids) if (s.exp <= t) this.sids.delete(sid);
     for (const lid of [...this.links.keys()]) if (!this._link(lid)) changed = true;
+    if (this._mailPrune(t)) changed = true;
     for (const a of [...this.accounts.values()]) {
       if (t - a.lastSeen > PRISTINE_TTL && this._pristine(a) && !a.guandan.rounds) {
         this._delete(a);

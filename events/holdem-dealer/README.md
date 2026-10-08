@@ -13,7 +13,7 @@ src/engine/   cards, evaluator, pots, table (pure state machine), ai (bots)     
 src/rooms.js  tables, timers, bots, broadcasts      src/accounts.js  accounts, IP memory, email links, records
 src/http.js   REST /v1/*      src/ws.js  socket /v1/ws      src/protocol.js  message validation
 src/store.js  accounts.json + tables.json (atomic)  src/firebase-token.js  ID token check   src/config.js  env
-src/server.js wiring + process signals
+src/mailer.js the sign-in email and the Resend call   src/server.js wiring + process signals
 ```
 
 ## Run locally
@@ -38,7 +38,8 @@ npm run test:slow   # all 133,784,560 seven-card hands (about 2 s)
 ```
 
 The service tests start real servers on ephemeral ports in temp directories, sign Firebase-style ID tokens with a
-locally generated RSA key (the key fetcher is injected) and never contact Firebase, Google or any production
+locally generated RSA key (the key fetcher is injected), send the sign-in email to a fake Resend (the mailer's
+`fetch` is injected; `test/email-resend.test.js`) and never contact Resend, Firebase, Google or any production
 service. The kill -9 test runs the server as a child process.
 
 ## Configuration (environment)
@@ -47,7 +48,12 @@ service. The kill -9 test runs the server as a child process.
 |---|---|---|
 | `GAMES_SECRET` | dev value | 32+ random characters; keys the email hashes. **Required in production.** |
 | `IP_SALT` | dev value | 32+ random characters, different from `GAMES_SECRET`; keys the ipKey hash. **Required in production.** |
-| `EMAIL_LINK` | `off` | `on` shows "save with email" (after the Firebase steps below). |
+| `EMAIL_LINK` | `off` | `on` shows "save with email" (after the steps below). |
+| `EMAIL_SENDER` | `firebase` | Who sends the sign-in email: `resend` (this service, from `EMAIL_FROM`, through Resend's HTTP API) or `firebase` (the page, through Firebase Auth; also the rollback). Reported as `features.emailSender`. |
+| `EMAIL_FROM` | `Picasso Lab <noreply@picasso-lab.com>` | `resend` only: the sender, `Name <address>` or an address on a domain verified in Resend. |
+| `EMAIL_DAILY_CAP` | `90` | `resend` only: at most this many emails in any 24 hours, kept across restarts (Resend's free tier is 100 a day, shared with the lab's other senders). |
+| `RESEND_API_KEY_FILE` | - | `resend` only, required: a file holding the Resend API key (compose: `./secrets/resend_api_key`). There is no env value for the key; the service reads the file once at startup and never logs or shows it. |
+| `RESEND_API_URL` | Resend's | Browser harness only (needs `HOLDEM_TEST_HOOKS=1`): a loopback URL standing in for `https://api.resend.com`. |
 | `FIREBASE_PROJECT_ID` | `yichen-5e23e` | Expected `aud` / `iss` of ID tokens. |
 | `ALLOWED_ORIGINS` | `https://yil384.github.io` | Comma list; `http://127.0.0.1:*` allows any port. Other origins get 403. |
 | `TRUST_PROXY` | `0` | Who may say who the client is (`X-Forwarded-For`): a comma list of addresses, CIDR ranges or host names (re-resolved every 30 s). Production behind Caddy: `fras-caddy-1`. A request from any other peer is keyed by its socket address. `1` (any peer) is for tests and refused with `NODE_ENV=production`. |
@@ -77,7 +83,8 @@ rsync -a --exclude node_modules --exclude .env --exclude data --exclude secrets 
 ssh picasso
 cd ~/workspace/holdem-dealer
 cp .env.example .env              # EMAIL_LINK stays off until "save with email" below; chmod 600 .env
-ops/secrets.sh                    # ./secrets/games_secret and ./secrets/ip_salt (folder 700), made once, kept after
+ops/secrets.sh                    # ./secrets/games_secret and ./secrets/ip_salt (folder 700), made once, kept after;
+                                  # an empty ./secrets/resend_api_key until the Resend key goes in (save with email below)
 docker compose build
 ops/datadir.sh                    # ./data (HOLDEM_DATA_DIR): owner uid 1000, mode 700, made once, kept after
 docker compose up -d
@@ -113,14 +120,18 @@ Keep the secrets stable: a new `games_secret` breaks the link between saved acco
 `ip_salt` only forgets the IP memory. `ops/secrets.sh` never overwrites an existing file.
 
 Update: copy the folder again (same rsync), then `docker compose up -d --build` (`ops/datadir.sh` once before, if
-`./data` does not exist yet). The old container gets SIGTERM:
+`./data` does not exist yet; `ops/secrets.sh` once before, if `./secrets/resend_api_key` does not exist yet: compose
+mounts it whatever the sender). The old container gets SIGTERM:
 sockets close with 1012 and both files are flushed. **A hand in progress is called off** (the deck and the hole cards
 are never written to disk, so no restart can continue it): every chip put in goes back to its seat, nothing is
 recorded, the pages say so and a new hand is dealt with the same button. Deploy between sessions when you can.
 
 Logs: `docker compose logs -f` (rotated: 3 x 10 MB). One JSON line per lifecycle event, and while any limit refuses
 something, one `rate limited` line a minute saying which limit, how often and from how many networks; the service
-never logs IP addresses, tokens or cards. Caddy logs no IP either for this site (no access log; its own 502s are
+never logs IP addresses, email addresses, tokens, keys or cards. With `EMAIL_SENDER=resend` every email gives one line:
+`sign-in email sent` with Resend's email id (look it up in the Resend dashboard) and the count of the last 24 hours, or
+`sign-in email not sent` with Resend's HTTP status and error name (`invalid_api_key`, `validation_error`,
+`rate_limit_exceeded`, `daily_quota_exceeded`, ...; `network` / `timeout` when Resend did not answer). Caddy logs no IP either for this site (no access log; its own 502s are
 debug-level). The FRAS Caddy container itself has no log rotation: add `logging: { driver: json-file, options:
 { max-size: 10m, max-file: "3" } }` to its compose file when convenient.
 
@@ -167,6 +178,45 @@ Look now and then: `tail ~/backups/holdem/*.log` and `df -h ~`.
 
 ## Turn on "save with email" (EMAIL_LINK)
 
+The page shows "用邮箱保存" only while `/v1/session` reports `features.emailLink: true` (`EMAIL_LINK=on`). Two senders:
+
+### With Resend: the email comes from noreply@picasso-lab.com (`EMAIL_SENDER=resend`)
+
+`picasso-lab.com` is verified in Resend (DKIM `resend._domainkey`, SPF on `send.picasso-lab.com`). The service sends
+the email itself (`POST https://api.resend.com/emails`, from `EMAIL_FROM`, an `Idempotency-Key` per link, one retry
+after a network error or a 5xx) with a single-use token in the link; the page never loads Firebase for it.
+
+1. In Resend: API Keys -> Create API key, permission **Sending access**, domain `picasso-lab.com`. Use a key of its
+   own (not the one FRAS uses), so it can be revoked alone. In Domains -> `picasso-lab.com`, open and click tracking
+   should be off (click tracking would route the sign-in link through Resend's tracking domain).
+2. On picasso, put the key in place without it showing on screen or in the shell history:
+   ```sh
+   cd ~/workspace/holdem-dealer
+   ops/secrets.sh                  # once: makes the empty secrets/resend_api_key if there is none, sets the modes
+   ops/resend-key.sh               # paste the key, Enter (not echoed); or: ops/resend-key.sh < file
+   ```
+   A key file made by hand works too (one line, `re_...`); `ops/secrets.sh` then sets its mode to 444 like the other
+   two secrets (the folder stays 700), which the container's user needs to read it through the bind mount.
+3. In `.env`: `EMAIL_LINK=on`, `EMAIL_SENDER=resend` (and, if they should differ from the defaults, `EMAIL_FROM`,
+   `EMAIL_DAILY_CAP`). Then `docker compose up -d --force-recreate` (the env and the key are read at start; a hand in
+   progress is called off, chips back).
+4. Check: `docker compose logs --since 2m` has no "invalid configuration" and the `dealer listening` line says
+   `"emailSender":"resend"`; `curl -s -X POST -H 'content-type: application/json' -d '{}'
+   https://poker.picasso-lab.com/v1/session | grep -o '"features":{[^}]*}'` shows `"emailSender":"resend"` (this makes
+   one guest account). Save once in the game with your own address: the email comes from
+   `noreply@picasso-lab.com`, and `docker compose logs | grep 'sign-in email'` shows it sent (or why not).
+
+The service needs outbound HTTPS to `api.resend.com`. A wrong or revoked key shows as `sign-in email not sent ...
+"status":401` or `403` and the page says the email could not be sent. A new key: `ops/resend-key.sh` again, then
+`docker compose up -d --force-recreate`.
+
+Limits (on top of 5 links an hour per network): 3 an hour and 10 a day per address (by its hash), and
+`EMAIL_DAILY_CAP` (90) for everything in any 24 hours; the counts survive restarts (`accounts.json`; backups keep the
+day's count, not the address hashes). Refusals show under `limited` in `/v1/health` (`email_address`,
+`email_daily_cap`, `email_provider` when Resend itself says 429).
+
+### With Firebase Auth (`EMAIL_SENDER=firebase`, the default; also the rollback)
+
 In the Firebase console of project `yichen-5e23e`:
 
 1. Authentication → Get started (if it was never opened).
@@ -177,13 +227,19 @@ In the Firebase console of project `yichen-5e23e`:
 4. If the Web API key has HTTP-referrer restrictions (Google Cloud Console → APIs & Services → Credentials), allow
    `https://yil384.github.io/*`.
 
-Then set `EMAIL_LINK=on` in `.env` and `docker compose up -d` (a restart; a hand in progress is called off). The page shows "用邮箱保存" only while
-`/v1/session` reports `features.emailLink: true`. The service verifies each ID token itself (RS256 against
+Then set `EMAIL_LINK=on` in `.env` and `docker compose up -d` (a restart; a hand in progress is called off). The email
+comes from Firebase (`noreply@yichen-5e23e.firebaseapp.com`). The service verifies each ID token itself (RS256 against
 Google's published keys); it needs outbound HTTPS to `www.googleapis.com`.
+
+**Rollback from Resend to Firebase:** the Firebase steps above (once), `EMAIL_SENDER=firebase` in `.env`, `docker
+compose up -d`. The page asks the service on every session which sender is on, so nothing on Pages changes. Links
+already emailed by Resend keep working until they expire (30 minutes): the service redeems a token whatever the
+sender. To turn saving off altogether: `EMAIL_LINK=off`.
 
 ## Limits and housekeeping
 
-Bodies ≤ 8 KB; per network (ipKey): 30 new accounts/h, 5 email links/h, 10 claims/h, 600 requests/min. Sockets:
+Bodies ≤ 8 KB; per network (ipKey): 30 new accounts/h, 5 email links/h, 60 link redeems/h, 10 claims/h, 600
+requests/min; emails the service sends itself: 3/h and 10/day per address, `EMAIL_DAILY_CAP` a day in all. Sockets:
 hello within 10 s, frames ≤ 4 KB, ≤ 40 messages/s, ≤ 100 sockets per network. At most 200 open tables, 30 created
 from one network; an account creates or hosts at most 3 and sits at most at 4; a table that never started closes
 after 30 minutes. Every refusal is counted per limit (`limited` in `/v1/health`, and the minute log line). Hourly:
