@@ -1,0 +1,25 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by scripts/mineai-fetch.mjs; git apply skips these lines.
+0001: their supervisor's event-loop watchdog window from MINEAI_UNRESPONSIVE_MS (5000-120000 ms; 5000 otherwise).
+
+diff --git a/src/server/runtime-liveness.ts b/src/server/runtime-liveness.ts
+index 6c29021..8fc70e3 100644
+--- a/src/server/runtime-liveness.ts
++++ b/src/server/runtime-liveness.ts
+@@ -4,7 +4,14 @@ import { observeExecution, type ExecutionEvent } from "../execution/execution-sc
+ // Four liveness observations per second; five seconds leaves 25 seconds before
+ // the observed Minecraft keepalive timeout. This never limits action duration.
+ export const RUNTIME_HEARTBEAT_MS = 250;
+-export const RUNTIME_UNRESPONSIVE_MS = 5_000;
++// Patched for Muse plays Minecraft (picasso-lab): a loaded machine may widen the
++// window through MINEAI_UNRESPONSIVE_MS (5000 to 120000 ms); 5000 otherwise.
++export const RUNTIME_UNRESPONSIVE_MS = unresponsiveWindow(process.env.MINEAI_UNRESPONSIVE_MS);
++
++function unresponsiveWindow(raw: string | undefined): number {
++  const value = Number(raw);
++  return Number.isInteger(value) && value >= 5_000 && value <= 120_000 ? value : 5_000;
++}
+ 
+ const ownerSchema = z.object({
+   bot: z.string(),

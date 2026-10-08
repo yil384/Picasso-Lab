@@ -12,6 +12,20 @@ RUN npm ci --omit=dev && node deploy/slim-modules.mjs "$MC_VERSION" node_modules
 COPY src ./src
 COPY scripts ./scripts
 COPY README.md ./
+# BODY=mineai (staging first): the Mine AI MCP runtime at the pinned commit with our patches (mineai/), fetched at build
+# time into /opt and run with Bun. Off unless built with --build-arg MINEAI=1, so production's image is unchanged.
+# UNVERIFIED: not built yet (no Docker on the Mac); the same fetch and Bun 1.4.2 ran on the Mac (README, BODY=mineai).
+ARG MINEAI=0
+ARG BUN_VERSION=1.4.2
+COPY mineai ./mineai
+RUN if [ "$MINEAI" = "1" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends git ca-certificates curl unzip \
+      && curl -fsSL "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip" -o /tmp/bun.zip \
+      && unzip -q /tmp/bun.zip -d /tmp && mv /tmp/bun-linux-x64/bun /usr/local/bin/bun && rm -rf /tmp/bun.zip /tmp/bun-linux-x64 \
+      && node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --bun /usr/local/bin/bun \
+      && rm -rf /var/lib/apt/lists/* /root/.bun/install/cache; \
+    fi
+ENV MINEAI_DIR=/opt/mine-ai-mcp MINEAI_RUNTIME=bun MINEAI_EXEC=/usr/local/bin/bun
 ENV WEB_HOST=0.0.0.0 WEB_PORT=8787 LOG_DIR=/logs NODE_ENV=production
 EXPOSE 8787
 CMD ["node", "src/index.js"]

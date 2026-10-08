@@ -59,7 +59,10 @@ export function createQueue({ start, now = Date.now }) {
 
   function finish(step, r) {
     if (current === step) current = null;
-    const result = { ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: r?.delta && typeof r.delta === 'object' ? r.delta : {}, ...(r?.ms != null ? { ms: r.ms } : {}) };
+    const result = {
+      ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: r?.delta && typeof r.delta === 'object' ? r.delta : {},
+      ...(r?.ms != null ? { ms: r.ms } : {}), ...(typeof r?.code === 'string' ? { code: r.code } : {}),
+    };
     settle(step, result.ok ? 'confirmed' : step.stopping ? 'cancelled' : 'failed', result, step.stopping ? step.stopping : null);
     if (!result.ok) cancelWaiting(`step ${step.n} of ${step.call.label} (${step.skill}) ${step.stopping ? 'was stopped' : 'failed'}`, step.code ?? (step.stopping ? 'STOPPED' : 'FAILED'));
     pump();

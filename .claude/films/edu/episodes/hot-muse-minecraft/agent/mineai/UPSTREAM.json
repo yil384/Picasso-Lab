@@ -1,0 +1,10 @@
+{
+  "about": "The Mine AI MCP runtime behind BODY=mineai is not kept in this repo: scripts/mineai-fetch.mjs clones this commit, applies the patches below in order and installs its dependencies. Its MIT notice is in LICENSE-mine-ai-mcp (and in the fetched copy).",
+  "repo": "https://github.com/aibengineering/mine-ai-mcp",
+  "commit": "2fe1306a0ac51efa99154048e65f2caff00a8934",
+  "license": "MIT, Copyright (c) 2026 AI Bengineering",
+  "patches": [
+    "patches/0001-unresponsive-window-from-env.patch",
+    "patches/0002-host-token.patch"
+  ]
+}

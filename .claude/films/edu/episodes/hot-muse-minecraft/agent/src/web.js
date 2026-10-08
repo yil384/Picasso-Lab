@@ -468,6 +468,8 @@ export function openApiSpec(baseUrl, { leaseMs = 600_000 } = {}) {
  * @param {number} [opts.mcpInitsPerHour]    new MCP sessions per address per hour (default 1200)
  * @param {{sessions?: number, perAddress?: number}} [opts.mcpLimits]  live MCP sessions in all and per address
  * @param {number} [opts.mcpCallMs]          how long one MCP call may wait before it answers (tests)
+ * @param {ReturnType<typeof import('./contracts.js').skillSet>} [opts.skills]  the skills MCP's play and play_sequence
+ *   take (default: the 10 tools and craft_batch; BODY=mineai adds its extra skills)
  * @param {number} [opts.viewsPerHour]       new live-view connections per address per hour (default 120)
  * @param {number} [opts.viewMissesPerHour]  requests for live views that do not exist, per address per hour (default 60)
  * @param {(gameId: string) => ({videoUrl: string, embedUrl: string}|null)} [opts.liveVideo]  the live video of a game
@@ -738,7 +740,7 @@ export function createWeb(opts = {}) {
       .then(() => s.body.run(tool, args))
       .then((r) => ({
         ok: Boolean(r?.ok), result: String(r?.result ?? ''), delta: isPlainObject(r?.delta) ? r.delta : {}, ms: r?.ms,
-        ...(isPlainObject(r?.phases) ? { phases: r.phases } : {}),
+        ...(isPlainObject(r?.phases) ? { phases: r.phases } : {}), ...(typeof r?.code === 'string' ? { code: r.code } : {}),
       }), (e) => ({ ok: false, result: `error: ${e?.message ?? e}`, delta: {} }))
       .then((r) => {
         s.running = null;
@@ -1326,7 +1328,7 @@ ${Number.isInteger(queuedId) ? html`<p role="status">${mine >= 0 ? `Queued as #$
     if (p === '/mcp') {
       mcp ??= createMcp({
         newSession, lookup, startAction, stateText, stopSession, endSession, within, TIMEOUT, log, now, clientKey, base,
-        leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs,
+        leaseMs: web.leaseMs, initLimiter: mcpInitLimiter, limits: opts.mcpLimits, callMs: opts.mcpCallMs, skills: opts.skills,
         links: (s, b) => ({ eyes: `${b}/eyes/${s.viewId}/`, watch: `${b}/watch/${s.viewId}/` }),
         liveVideo: (s) => { try { return opts.liveVideo?.(s.id) ?? null; } catch { return null; } },
         leaveQueue: (key) => { const i = waiting.findIndex((w) => w.key === key); if (i >= 0) waiting.splice(i, 1); },

@@ -1,8 +1,9 @@
 // src/index.js - starts the agent from config: the viewer channel (src/web.js) with one mineflayer body per guest
 // session, the house bot and its brain for the "Ask our Muse" queue (only when a model is configured), the optional
 // prismarine-viewer watch page on the house bot (loaded only if installed, held to WEB_HOST), the live-video stream of
-// each guest game when STREAM_ENABLED (src/stream.js; nothing changes when it is off), the event loop's delay in the
-// log every minute (loop_delay: p50, p99, max), and a graceful shutdown on SIGINT/SIGTERM. `npm start`;
+// each guest game when STREAM_ENABLED (src/stream.js; nothing changes when it is off), with BODY=mineai each guest's
+// bot in a Mine AI MCP host of its own instead of in this process (src/mineai/; the house bot stays ours), the event
+// loop's delay in the log every minute (loop_delay: p50, p99, max), and a graceful shutdown on SIGINT/SIGTERM. `npm start`;
 // `npm start -- --fake-bot` puts every bot in the in-memory test world instead of a Minecraft server (a local demo with
 // no Java and no server).
 
@@ -24,6 +25,9 @@ import { createWeb } from './web.js';
 import { createStreamManager, createRemoteStreamManager, managerConfig } from './stream.js';
 import { createCameraManager } from './camera.js';
 import { consoleLine } from './stations.js';
+import { createHostManager } from './mineai/host.js';
+import { createMineAiBody } from './mineai/body.js';
+import { MINEAI_SKILLS } from './mineai/skills.js';
 
 const require = createRequire(import.meta.url);
 
@@ -234,6 +238,7 @@ export function startGuestViews(body, sessionId, { log, ports, load = loadViewer
  * @param {() => object} [opts.loadViewer]   how prismarine-viewer is loaded (tests)
  * @param {object} [opts.streams]        a stream manager (tests; default: from STREAM_*, null when off)
  * @param {number} [opts.loopStatsMs]    how often the event loop's delay is logged (default 60 s; 0: never)
+ * @param {object} [opts.hosts]          the Mine AI host manager for BODY=mineai (tests; default src/mineai/host.js)
  */
 export async function startAgent(opts = {}) {
   const config = opts.config ?? loadConfig();
@@ -241,6 +246,9 @@ export async function startAgent(opts = {}) {
   const log = opts.log ?? createLogger({ config, runId: runId() });
   const meter = createHourMeter({ usdPerHour: config.caps.usdPerHour });
   const createFakeBot = opts.fakeBot ? (await import('../test/fake-bot.js')).createFakeBot : null;
+  // BODY=mineai: every guest bot is a Mine AI MCP host of its own (src/mineai/); the fake world always uses ours
+  const mineai = config.body.kind === 'mineai' && !createFakeBot;
+  const hosts = mineai ? (opts.hosts ?? createHostManager({ config, log })) : null;
 
   // The model is needed only by the Ask queue; guests drive their bots by hand or through their own agent. Viewer text
   // goes to the Standard tier only: on Contributor Meta may train on prompts, so that needs an explicit opt-in.
@@ -314,6 +322,7 @@ export async function startAgent(opts = {}) {
     return joinBody(sessionId, username, cfg, viewId);
   }
   function joinBody(sessionId, username, cfg, viewId) {
+    if (mineai && sessionId !== 'house') return joinMineAi(sessionId, username, viewId);
     const body = createBody({ config: cfg, log });
     // Every guest bot starts on fresh ground: the server console (MC_CONSOLE, the FIFO server/start.sh makes) spreads
     // it to a random dry spot up to SPREAD_RANGE blocks from the world spawn, so earlier guests never leave a new one
@@ -341,6 +350,46 @@ export async function startAgent(opts = {}) {
     }
     if (sessionId !== 'house') {
       body.ready.then(() => startGuestViews(body, sessionId, { log, ports, load: opts.loadViewer, onEyes: streamFrom(body, sessionId), viewId }), () => {});
+    }
+    return body;
+  }
+
+  /**
+   * A guest bot in a Mine AI MCP host of its own: the host starts, the bot joins, then (with MC_CONSOLE) it is spread
+   * to fresh ground like ours, and its live views come from inside the host (src/mineai/preload.mjs).
+   */
+  function joinMineAi(sessionId, username, viewId) {
+    const body = createMineAiBody({
+      config, log, hosts, gameId: sessionId, username, viewId,
+      onEyes: (port, eyesPath) => streamFrom(body, sessionId)?.(port, eyesPath),
+    });
+    const consolePath = process.env.MC_CONSOLE;
+    if (consolePath) {
+      const range = Number(process.env.SPREAD_RANGE) || 400;
+      const joined = body.ready;
+      body.ready = joined.then(async () => {
+        const from = body.bot.entity?.position;
+        if (!from) return;
+        try {
+          await fs.promises.appendFile(consolePath, `spreadplayers ${Math.round(from.x)} ${Math.round(from.z)} 16 ${range} false ${username}\n`);
+        } catch (err) {
+          log.event('spread_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) });
+          return;
+        }
+        const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+        for (let i = 0; i < 20; i++) { // landed: moved away from the spawn (up to 10 s)
+          await pause(500);
+          await body.refresh().catch(() => {});
+          const p = body.bot.entity?.position;
+          if (p && Math.hypot(p.x - from.x, p.z - from.z) > 8) break;
+        }
+        await pause(3_000); // the chunks around the new spot load (their collect searches the loaded ones)
+        await body.refresh().catch(() => {});
+        await Promise.race([body.rescan(), pause(10_000)]); // the blocks around the new spot, for the first state
+        const at = body.bot.entity?.position;
+        log.event('spread', { session: sessionId, at: at ? `${Math.floor(at.x)} ${Math.floor(at.y)} ${Math.floor(at.z)}` : null });
+      });
+      body.ready.catch(() => {});
     }
     return body;
   }
@@ -374,15 +423,18 @@ export async function startAgent(opts = {}) {
 
   const web = createWeb({
     config, log, meter, makeBrain, askNotice, liveVideo,
+    ...(mineai ? { skills: MINEAI_SKILLS, startTimeoutMs: config.mineai.startMs + 30_000 } : {}),
     makeBody: (sessionId, o) => (sessionId === 'house' ? houseBody() : newBody(sessionId, o)),
   });
   const { url, publicUrl } = await web.start();
   const stopLoopWatch = (opts.loopStatsMs ?? 60_000) > 0 ? watchEventLoop(log, { everyMs: opts.loopStatsMs ?? 60_000 }) : () => {};
 
   const world = createFakeBot ? 'the fake world (--fake-bot)' : `Minecraft ${config.mc.version} at ${config.mc.host}:${config.mc.port}`;
+  if (mineai) print(`body: Mine AI MCP from ${config.mineai.dir}, one host per guest game on 127.0.0.1:${config.mineai.portBase}+ (at most ${config.mineai.maxHosts})`);
   log.event('serve_start', {
     url, publicUrl, world, ask: llm ? 'open' : 'closed', model: llm?.model ?? null, effort: llm?.effort ?? null,
     tier: llm?.tier ?? null, caps: { ...config.caps }, maxSessions: config.web.maxSessions, leaseMs: config.web.leaseMs,
+    body: mineai ? 'mineai' : 'ours',
   });
   print(`Muse plays Minecraft: ${url}/${publicUrl && publicUrl !== url ? ` (public: ${publicUrl}/)` : ''}`);
   print(`world: ${world}; guests get up to ${config.web.maxSessions} bots for ${Math.round(config.web.leaseMs / 60_000)} min each`);
@@ -426,6 +478,7 @@ export async function startAgent(opts = {}) {
       stopLoopWatch();
       await web.stop(); // closes the Ask queue, ends every session and closes its bot, closes the house bot it used
       if (streams) await within(streams.stopAll(reason), 12_000);
+      if (hosts) await within(hosts.closeAll(reason), 12_000);
       for (const brain of brains) { try { brain.close(); } catch { /* notes are best effort */ } }
       if (house && !house.ended) await within(house.body.close().catch(() => {}), 5_000);
       house?.closeViewer?.();

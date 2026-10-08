@@ -164,9 +164,11 @@ function check(schema, value, at, errors) {
   if (schema.type === 'object') {
     if (!isPlainObject(value)) { errors.push(`${at} must be an object`); return undefined; }
     const out = {};
+    // every key is required unless the schema lists the required ones (only some MCP-only skills have optional keys)
+    const required = schema.required ?? Object.keys(schema.properties);
     for (const k of Object.keys(value)) if (!Object.hasOwn(schema.properties, k)) errors.push(`${at}.${k} is not allowed`);
     for (const [k, s] of Object.entries(schema.properties)) {
-      if (!Object.hasOwn(value, k)) { errors.push(`${at}.${k} is required`); continue; }
+      if (!Object.hasOwn(value, k)) { if (required.includes(k)) errors.push(`${at}.${k} is required`); continue; }
       out[k] = check(s, value[k], `${at}.${k}`, errors);
     }
     return out;
@@ -174,6 +176,10 @@ function check(schema, value, at, errors) {
   if (schema.type === 'integer') {
     if (!Number.isInteger(value)) { errors.push(`${at} must be an integer`); return undefined; }
     if (value < schema.minimum || value > schema.maximum) errors.push(`${at} must be from ${schema.minimum} to ${schema.maximum}`);
+    return value;
+  }
+  if (schema.type === 'boolean') {
+    if (typeof value !== 'boolean') { errors.push(`${at} must be true or false`); return undefined; }
     return value;
   }
   if (schema.type === 'string') {
@@ -198,12 +204,30 @@ function check(schema, value, at, errors) {
  * @param {unknown} args  a parsed object
  * @returns {ArgCheck}  ok:true with a fresh copy holding only the allowed keys, or ok:false with a readable error
  */
-export function validateArgs(tool, args) {
-  if (!Object.hasOwn(SKILL_SCHEMAS, tool)) return { ok: false, error: `unknown tool "${String(tool).slice(0, 40)}" (allowed: ${TOOL_NAMES.join(', ')})` };
+export function validateArgs(tool, args, schemas = SKILL_SCHEMAS) {
+  if (!Object.hasOwn(schemas, tool)) return { ok: false, error: `unknown tool "${String(tool).slice(0, 40)}" (allowed: ${schemas === SKILL_SCHEMAS ? TOOL_NAMES.join(', ') : Object.keys(schemas).join(', ')})` };
   const errors = [];
-  const clean = check(SKILL_SCHEMAS[tool], args ?? {}, tool, errors);
+  const clean = check(schemas[tool], args ?? {}, tool, errors);
   return errors.length ? { ok: false, error: errors.join('; ') } : { ok: true, args: clean };
 }
+
+/**
+ * The skills the MCP endpoint offers in play and play_sequence: the 10 tools and craft_batch, plus a body's own extra
+ * skills (src/mineai/skills.js for BODY=mineai). The brain's tools, the web page and openapi.json keep the 10.
+ * @param {Array<[string, string, object]>} [extra]  [name, description, parameters JSON Schema] per extra skill
+ * @returns {{names: string[], schemas: Record<string, object>, mcpSkills: object[], validate: (tool: string, args: unknown) => ArgCheck}}
+ */
+export function skillSet(extra = []) {
+  if (!extra.length) return DEFAULT_SKILLS;
+  const schemas = deepFreeze({ ...SKILL_SCHEMAS, ...Object.fromEntries(extra.map(([name, , params]) => [name, params])) });
+  return Object.freeze({
+    names: Object.freeze([...SKILL_NAMES, ...extra.map(([name]) => name)]),
+    schemas,
+    mcpSkills: deepFreeze([...MCP_SKILLS, ...extra.map(([name, description, parameters]) => ({ type: 'function', function: { name, description, parameters } }))]),
+    validate: (tool, args) => validateArgs(tool, args, schemas),
+  });
+}
+const DEFAULT_SKILLS = Object.freeze({ names: SKILL_NAMES, schemas: SKILL_SCHEMAS, mcpSkills: MCP_SKILLS, validate: (tool, args) => validateArgs(tool, args) });
 
 /**
  * Parse the arguments string of a model tool call, then validate. Empty string means {} (some providers send it for
@@ -297,6 +321,7 @@ const CODE_RULES = [
  */
 export function codeOf(r) {
   if (!r || r.ok) return null;
+  if (typeof r.code === 'string' && RESULT_CODES.includes(r.code)) return r.code; // a body that names the code itself
   const text = String(r.result ?? '');
   for (const [code, re] of CODE_RULES) if (re.test(text)) return code;
   return 'FAILED';
@@ -327,6 +352,8 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {Record<string, number>} [phases]  where that time went, in ms: path, dig, drop, sync, place, open, clicks,
  *   pickup, cook, reflex and other (src/body.js createPhases); they add up to ms
  * @property {string[]} [reflexes]  what the body did on its own during or before the skill (src/reflexes.js)
+ * @property {string} [code]     a RESULT_CODES entry the body names itself (BODY=mineai maps the runtime's failure codes);
+ *   without it codeOf reads the code from the result text
  *
  * @typedef {object} StateSnapshot  the structured form of Body.state(), for /api/.../state and the HUD
  * @property {number} health                 0-20
