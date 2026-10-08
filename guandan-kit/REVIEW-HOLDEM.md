@@ -76,3 +76,49 @@ Verification (tree at 9516753):
 
 Left open: ranking on net against distinct opponents (S7, the refill limit only slows chip dumping); the landscape
 hero plate still sits right beside the 弃牌 pill at 1280 x 800 (as before this round, now 2 px apart).
+
+## Round 2
+One reviewer list over the tree at 239f0ff (R2-1 to R2-16): 3 medium rules / cheating / account findings, 1 medium
+UI finding, 12 lows (remnants of round 1 and new ones from its fixes). Every medium and every low is fixed; two
+suggested sub-fixes are answered instead (R2-2, R2-10).
+
+| id | lens | sev | title | outcome |
+| --- | --- | --- | --- | --- |
+| R2-1 | poker rules | medium | Dead big blind became a side pot only its poster could win; a loser recorded as winning | fixed in fa62f7c: dead money is kept out of the side-pot levels (`seat.dead`) and added to the main pot, which every live seat can win (test: "a dead big blind goes to the main pot: the poster calls down and loses", fails without the fix: 2 pots) |
+| R2-2 | cheating / chip creation | medium | Fresh guest accounts are a free chip supply for dumping into one ranked account | fixed in 4232507: the ranking sorts and shows `rnet`, the net won from established accounts only. Each hand record carries its hand id and `gain` (all chips won, bots included); a winner's ranked gain is cut by the share fresh accounts lost (younger than 3 days or under 50 hands; bots count as established). `holdem.net` keeps the plain sum (test: "chips lost by fresh accounts never count"). Not done: holding back a fresh guest's starting chips or charging them to the network's refill budget; once they cannot reach the ranking they buy nothing, and campus NAT would have made new players start with nothing |
+| R2-3 | account security | medium | First save binds the email to the link starter's account with no code | fixed in 1a6c4fe: every completion that changes an account (first save and merge) needs the device code; `need_code` / `bad_code` carry `merge` so `account-link.html` says what confirming does; the asking browser stores `{ lid, code }` (`picasso.games.linkCode`) and the link page sends it itself, so only a link opened elsewhere asks (tests: email-link "the address is not bound without the code", e2e accounts "opened on another device the link asks for the code and binds nothing without it") |
+| R2-4 | UI fidelity | medium | Portrait: shown cards cover the side seat's avatar, the 全下 pill sits on card indices | fixed in 52dd71e: portrait side seats show their cards beside and above the avatar toward the felt (where the backs were, clear of their own bet slot); a low side seat (its cards there would meet mine) holds them up and in; the button goes under a showing side seat's cards, under a low seat's plate end; no action label over face-up cards (`has-shown`), and no 全下 label at all (R2-15). Re-shot portrait allin / showdown / sidepots / split / quads / burst (zh, en) and a new nine-seat face-up probe (`nine-shown`) |
+| R2-5 | poker rules | low | Stand and re-sit dodges the big blind three-handed; someone posts it twice | fixed in 3214fe1: a seat that leaves after being dealt in is remembered by account for 15 minutes (`recent`); sitting back down inside that window makes a `returning` seat that waits for the big blind like one back from sitting out (tests: three seeds of the stand-and-re-sit dodge, fail without the fix; a brand-new or long-gone player is still dealt in at once heads-up) |
+| R2-6 | multiplayer robustness | low | After a crash the time bank in use is refunded | fixed in ed3692e: `rooms.stop()` calls `table.markStopped(now)`, which saves the stop time; a restore without it (a crash) charges the running bank up to the restore time, at most all of it (tests: clean stop charges up to the stop, a crash 7 s later charges 7 s, 10 minutes later the whole bank) |
+| R2-7 | hidden information / rate limits | low | Code-guessing limit per account only; free guests get around it | fixed in 9bbb505: misses also count per network (ipKey): over 60 in a minute closes the socket, 600 in a day shuts that network out of code lookups (every `watch` refused) until the day is over; about a 0.4 % chance a day to find a given private table (rooms test with a new guest every 20 guesses) |
+| R2-8 | UI fidelity | low | English hand names in 上一手 wrap mid-phrase on a phone | fixed in 52dd71e: each row is a grid; the hand's name runs on its own line under the name and the cards, one line, ellipsis if ever needed (re-shot portrait last, zh and en) |
+| R2-9 | UI fidelity | low | Portrait: my clock on my card face; an opponent's clock touches its backs | fixed in 52dd71e: my portrait clock sits on the felt above my first card's corner (clear of the 9-max bottom seats, the bets and the open raise panel); portrait side seats' clocks sit 104 px out, past their backs (re-shot raise, nine, reconnect) |
+| R2-10 | UI fidelity | low | An action label on a bot seat sits on its AI badge | fixed in 52dd71e: while a label shows, the seat's AI / 我 badge fades out (the label takes its place for 1.5 s). Stacking the label higher was not taken: top seats would push it into the HUD (re-shot desk-en, hd, phone nine) |
+| R2-11 | UI fidelity | low | Empty ranking fills half a phone; my 0 / 0 / - row above "nobody ranked" | fixed in 52dd71e: on a phone the empty panel takes the screen with the podium in the middle and a 去打一手 / Play a hand button (from the lobby: closes the page and starts a practice table); my own row shows only once I have played (re-shot board) |
+| R2-12 | UI fidelity | low | Ghost 盖牌 / Muck pills over dimmed seats | fixed in 52dd71e: no muck label (the dimmed seat without cards says it) and no label at all once a hand is decided (re-shot showdown, burst) |
+| R2-13 | UI fidelity | low | Portrait split: a +20 pill runs into the hand title | fixed in 52dd71e: on the portrait felt the title scales down (from layout sizes, anchored at its foot) until it clears every bet slot beside it (re-shot split zh / en, sidepots) |
+| R2-14 | UI fidelity | low | 重新连接中… pill over the board cards | fixed in 52dd71e: the pill sits in the HUD row, top centre (re-shot reconnect) |
+| R2-15 | UI fidelity | low | 全下 2,040 stays after the uncalled part came back; EN tag says "Next hand"; two all-in markers | fixed in 52dd71e: an all-in shows only as the plate's 全下 tag (it pops in), so no stale amount; a seat's unchanged last action is not re-announced on a new street (it re-popped through every run-out street); the EN waiting tag reads "Waiting" |
+| R2-16 | UI fidelity | low | 1280 x 720/800: my plate touches the 弃牌 pill | fixed in 52dd71e: with the action pills up, my seat steps left until its plate is 16 px clear of them (re-shot hd raise / turn) |
+
+Also in this round: `events/holdem-dealer/.gitignore` ignores `.env` (85456bd), so a deploy checkout cannot commit
+its secrets; `shots_live.py` gained the `nine-shown` probe (0df4608, 30 shots per run).
+
+Verification (tree at 85456bd):
+- `npm test`: 125 tests, 124 pass, 0 fail, 1 skipped (the slow sweep); `npm run test:slow`: 1 pass. New tests: dead
+  big blind to the main pot, ranking ignores fresh-account losses, first save needs the code, crash charges the
+  running bank, stand-and-re-sit dodge (3 seeds) and the rejoin window, per-network code guessing.
+- `python3 e2e.py`: **ALL PASS, 111 checks, 0 failures** in 8 scenarios (checker 8, heads 14, six 12, nine 6,
+  sidepots 14, timeout 15, restart 21, accounts 21; accounts gained the other-device code check).
+- `python3 shots_live.py`: all five viewports in both languages (290 shots), then portrait in both languages (60,
+  with `nine-shown`) after the card-height tweak and portrait zh (30) after the button tweak: 380 shots, no failed
+  step, no console error.
+  Looked at: portrait allin / sidepots / showdown / split / raise / nine / nine-shown / reconnect / last / board /
+  burst, desk allin / showdown / nine (en), hd raise / turn / nine, phone allin / nine, ifr waiting (en).
+- Guandan: `python3 play.py desk 1`: round 1 to the end, no console error, no long task over 50 ms.
+  `python3 mustkeep.py`: 113 pass, 0 failed (two runs). The first run missed one timing check ("phone/room: lands
+  on events.html?from=guandan", an 11 s wait for the return film's navigation; this round does not touch
+  guandan.html), as in round 1.
+
+Left open: nothing from this list. Still untested against the real thing: Google's live JWKs and a real Firebase
+email link (unit and e2e tests use a locally signed key set), and how the per-network limits feel behind a campus NAT.
