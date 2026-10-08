@@ -25,13 +25,13 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | --- | --- |
 | `src/index.js` | `npm start`: the web page, one bot per guest session, the house bot + brain for `/ask`, the optional watch page, shutdown on Ctrl-C |
 | `src/config.js` | every env var with its default, validated and frozen; the key is never printable |
-| `src/contracts.js` | the 10 tools (`TOOLS`, strict JSON Schemas), `validateArgs` / `parseArgs` / `coerceArgs`, and the JSDoc interfaces of Body, Brain, LLM, Logger, Web |
+| `src/contracts.js` | the 10 tools (`TOOLS`, strict JSON Schemas), the MCP-only `craft_batch` (`MCP_SKILLS`, `SKILL_NAMES`), `validateArgs` / `parseArgs` / `coerceArgs`, the typed result codes of MCP replies (`RESULT_CODES`, `codeOf`), and the JSDoc interfaces of Body, Brain, LLM, Logger, Web and the MCP reply |
 | `src/game.js` | the game vocabulary the tool schemas are built from: minable blocks, craftable items, furnace inputs, fuels, blueprints, attack targets |
 | `src/pricing.js` | Muse Spark prices, `cost(usage, tier)`, the rolling one-hour spend meter |
 | `src/llm.js` | the chat client: clean request, streaming, TTFT and latency, $ per call |
 | `src/log.js` | JSONL decision log with secrets scrubbed |
 | `src/mc.js` | vec3 and the prismarine libraries, resolved through mineflayer (one copy each) |
-| `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills and the plain-text state (the block scan cached per bot) |
+| `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills (plus `craft_batch` for MCP: `src/skills/craft-batch.js`) and the plain-text state (the block scan cached per bot) |
 | `src/reflexes.js` | what the body does on its own, with no model turn: fight back a mob that hits the bot (run below 8 health, or from a creeper close by), eat at food 14 or less; the body interrupts the skill for it, runs the skill on afterwards and reports it in the next result |
 | `src/stations.js`, `src/skills/station.js` | crafting tables and furnaces stay where a bot put them and belong to it: reused within 24 blocks, never used or mined by another bot, at most 4 per bot, removed (server console) when its game ends |
 | `src/skills/tunnel.js` | collecting stone without walking about: what is in reach and in view first, then a 1x2 passage dug one block into the stone, only into blocks the chunk data shows are safe |
@@ -40,7 +40,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/skills/window.js` | window clicks the server confirms: crafting (and the inventory checks around every skill) never trust mineflayer's optimistic window picture |
 | `src/brain.js`, `src/memory.js` | the tool loop, its guards, short-term memory and `notes.json` |
 | `src/web.js` | `/`, `/play`, `/api`, `openapi.json`, `/ask`, `/log` (operator), `/admin/stop`, the live-view proxy, the queue for a bot, the trusted-proxy check |
-| `src/mcp.js` | `/mcp`: start_game, play, play_sequence, get_state, stop, end_game, live_view; resume handles; the MCP client's protocol version and name in the log |
+| `src/mcp.js`, `src/mcp-queue.js`, `src/plan.js` | `/mcp`: start_game, play, play_sequence, get_state, stop, end_game, live_view and their replies (text plus `structuredContent`); resume handles; the MCP client's protocol version and name in the log; the per-game step queue with idempotent calls; the dry-run check that simulates the inventory through a call's steps before it runs (section "MCP calls") |
 | `src/live-view-fx.js` | runs in the live-view pages: eased first-person camera, crack overlay on the block being broken |
 | `src/stream.js`, `src/stream-page.js` | live video of a guest game (off unless `STREAM_ENABLED`): headless Chromium on the bot's first-person view, a smoothed camera, ffmpeg to RTMPS (Facebook Live) or an MP4; the stream service and its client for the container (section "Live video") |
 | `src/camera.js` | the real-client camera (`STREAM_SOURCE=client`): Xvfb + the vanilla Minecraft client as a spectator in the bot's head, ffmpeg x11grab, the same stream interface (section "Real-client camera") |
@@ -57,6 +57,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `deploy/slim-modules.mjs` | run in the agent image after `npm ci`: keeps the game data of one Minecraft version only |
 | `test/mock-llm.js` | local mock of the chat (and Responses) endpoint, also `npm run mock` |
 | `test/fake-bot.js` | in-memory fake of the mineflayer bot surface the body uses (also `--fake-bot`) |
+| `test/real-mcp.test.js` | the MCP calls on a real Paper server (skipped unless `MC_REAL=1` and `MC_CONSOLE`): `MC_REAL=1 MC_CONSOLE=server/console.in node --test test/real-mcp.test.js` |
 
 Node 22 or newer (mineflayer 4.39, minecraft-protocol and openai 7 require it). Every command below runs in this
 folder.
@@ -155,10 +156,11 @@ MCP: one game per MCP session (connector users share the agent's egress addresse
 `WEB_MAX_SESSIONS` if Muse users share a few addresses) and 60 MCP game starts an hour, no cooldown. When every bot is in
 use, start_game (and the web page and API) answers with the caller's place in a first-come queue, how many wait, and an
 estimate (when enough leases end; games often end sooner); asking again within 90 s keeps the place, and a bot that
-frees up goes to the first in line. Every reply comes within 45 s with the result and the state (with the time left); a
-skill still running then goes on, and a later reply (get_state waits for it) reports its result once the client has
-received it. start_game returns a resume handle (22 characters, 128 random bits, never the control token) that resumes
-the game from a new MCP session while the game lives; the game then counts for that session. Replies and the server
+frees up goes to the first in line. Every reply comes within 45 s with the result and the state (with the time left);
+steps still running or queued then go on, and a later reply (get_state waits for them) reports their results once the
+client has received them (section "MCP calls"). start_game returns a resume handle (22 characters, 128 random bits,
+never the control token) that resumes the game, with its queue, from a new MCP session while the game lives; the game
+then counts for that session. Replies and the server
 instructions carry no links and never tell the agent to open, show or watch anything. `live_view` (read-only) returns
 data only: `{format: "link"}` (the default) gives `first_person_url` and `behind_url`; `{format: "embed"}` gives, while
 a live video of the game is being broadcast and `STREAM_VIDEO_URL` names it, `live: true`, `embed_url` (Facebook's video
@@ -178,6 +180,47 @@ another website makes a browser send (`Sec-Fetch-Site: cross-site` or `same-site
 server-side agents send neither header and are not affected. `/play` never reloads while the bot waits for the next
 action (an agent filling a form would lose it); while the bot joins or a skill runs it reloads every 5 or 15 s, and
 "Check again" reloads it by hand.
+
+### MCP calls
+
+`play` (one step) and `play_sequence` (up to 32) go through these stages (ROADMAP M2):
+
+1. Every step's skill and arguments are validated; one bad step refuses the whole call (`BAD_ARGS`), nothing runs.
+2. A repeat of an accepted call returns that call's steps and runs nothing (`DUPLICATE`): the same `request_id`
+   (kept for the game's life, the newest 256), or without one the same call with the same arguments until 60 s after
+   its last step ended (never while it runs). The same `request_id` for a different call is refused. `stop` forgets
+   the calls without a `request_id`, so a deliberate repeat after a stop runs.
+3. The dry-run check (`src/plan.js`) simulates the inventory through the steps, after the steps already queued (taken
+   to work in full): the craft variants of minecraft-data 1.21.4, the smelt skill as the body runs it (24-item cap,
+   up to 3 furnaces with extra ones made from spare cobblestone, each with its own fuel), collect's drops and harvest
+   tools, place and build materials. A table or furnace a step puts down stays where it is (it leaves the inventory),
+   and what the bot's furnaces are still making counts as carried (a craft that needs it waits for it). When something
+   is missing the call is refused with a list per step (`NEED_ITEMS`, `structuredContent.missing`); planks (from logs,
+   one cut per wood), sticks, a crafting table (none carried, and none of the bot's own or nobody's within 24 blocks)
+   and a furnace that can be made are added as craft steps instead, or into a `craft_batch`'s list. `dry_run: true`
+   only returns the plan. If the check itself fails, the call is not refused.
+4. The steps go into the game's queue (`src/mcp-queue.js`, at most 64 waiting, else `QUEUE_FULL`) and run one after
+   another past the reply. Each step is `pending` (waiting or running), `confirmed`, `failed` or `cancelled`; a failed
+   step cancels everything queued after it, in every call; `stop` stops the running step and clears the queue.
+5. The reply (within 45 s) has the text as before plus `structuredContent`: `code` (null, or `NEED_ITEMS`,
+   `HOSTILE_CONTACT`, `RETREATED_LOW_HEALTH`, `INVENTORY_FULL`, `DIED`, `NOT_STARTED`, `DUPLICATE`, `BAD_ARGS`,
+   `QUEUE_FULL`, `TIMED_OUT`, `STOPPED`, `FAILED`), `steps`, `earlier` (steps that finished since the last delivered
+   reply), `queue`, `changed` (the inventory change) and a short `state` (health, food, position, inventory, seconds
+   left; no scan of the blocks around). `get_state {full: true}` adds the whole state as `full`. A step's code comes
+   from its result text (`codeOf` in src/contracts.js): the body's "retreated: ..." is `RETREATED_LOW_HEALTH`, and
+   "stopped: a zombie hit you ..." or "stopped: mobs kept attacking ..." (a fight it could not go on from) is
+   `HOSTILE_CONTACT`.
+
+`craft_batch {items: [{item, n}, ...]}` (MCP only; the brain's tools and the web page keep the 10 skills) crafts a
+list in order at one crafting table: the bot's own nearby, or the carried one put down once; the table stays (as
+after any craft, section "The body on its own"). After a reflex it goes on from the item it was at. Measured before
+the tables stayed (2026-10-07, local Paper, prepared: items from the console, the Mac loaded by other servers): a
+wooden pickaxe, axe and stone pickaxe from 4 logs and 3 cobblestone took 7.5 and 6.9 s of skill time as one
+craft_batch (one table) and 16.5 and 16.7 s as the same 8 crafts in a play_sequence (the table placed and picked up 3
+times; with tables that stay, separate crafts place it once too). Two runs (`test/real-mcp.test.js`): a plumbing
+check, not a benchmark. The check itself costs under 3 ms, plus about 30 ms for
+each station lookup it needs (the body's `stationNear`, within 24 blocks); the state text of every reply costs about
+850 ms there.
 
 ## Run it for real (a machine with Paper 1.21.4 and a key)
 

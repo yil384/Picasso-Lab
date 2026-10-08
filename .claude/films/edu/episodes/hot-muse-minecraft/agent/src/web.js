@@ -190,6 +190,7 @@ function leaseWords(ms) {
 function fmtArgs(args) {
   return Object.entries(args ?? {}).map(([k, v]) => {
     if (isPlainObject(v)) return `${k}=${Object.values(v).join(',')}`;
+    if (Array.isArray(v)) return `${k}=${v.map((x) => (isPlainObject(x) ? Object.values(x).join(' ') : String(x))).join(', ')}`; // craft_batch items
     return `${k}=${typeof v === 'string' && /\s/.test(v) ? JSON.stringify(v) : v}`;
   }).join(' ');
 }

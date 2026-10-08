@@ -17,6 +17,7 @@ import { SkillStop, describeError, fmt } from './skills/util.js';
 import { syncInventory, inventoryFresh } from './skills/window.js';
 import { fetchSmelted, describeSmelting, smeltJobs } from './skills/smelt.js';
 import { bestSafeFood } from './skills/basic.js';
+import { findStations } from './skills/station.js';
 import { createWalkWatch } from './walk-watch.js';
 import { Vec3 } from './mc.js';
 import { ATTACK_TARGETS } from './game.js';
@@ -189,12 +190,13 @@ function childController(parent) {
 
 /**
  * What is left of a skill after a reflex interrupted it: the arguments to run it on with, or null when nothing is
- * left. collect and craft read what the first try made from ctx.resumed and do only the rest; build goes on from the
- * spot it started at; the others run again (go_to and place end at once when they are already there).
+ * left. collect and craft read what the first try made from ctx.resumed and do only the rest (craft_batch: from the
+ * item it was at); build goes on from the spot it started at; the others run again (go_to and place end at once when
+ * they are already there).
  */
 function resumable(tool, progress) {
   if (tool === 'build' && !progress?.anchor) return false;
-  return ['go_to', 'collect', 'craft', 'smelt', 'place', 'build'].includes(tool);
+  return ['go_to', 'collect', 'craft', 'craft_batch', 'smelt', 'place', 'build'].includes(tool);
 }
 
 /**
@@ -903,6 +905,14 @@ export function createBody(opts = {}) {
     state,
     snapshot,
     inventory: () => inventoryOf(bot),
+    /** What the bot's furnaces are still making for it (a background smelt): {item: count}. */
+    smelting() {
+      const out = {};
+      for (const j of smeltJobs(bot)) out[j.output] = (out[j.output] ?? 0) + j.n;
+      return out;
+    },
+    /** True when a station of this kind the bot may use (its own, or nobody's) stands within REUSE_RADIUS. */
+    stationNear: (name) => (bot.entity?.position ? findStations({ bot, stations }, name).length > 0 : false),
     digging: () => (dig ? { x: dig.x, y: dig.y, z: dig.z, name: dig.name, ms: dig.ms, elapsed: Date.now() - dig.at } : null),
     setGoal(next) {
       goal = next == null ? null : clip(oneLine(next), 300) || null;

@@ -334,7 +334,7 @@ smelt), S6, S8 (2 s search for a view of a block, then dig to it within 7 blocks
 S10, S11, the cached scan, the basic reflexes, and a fix found on the way (mineflayer timed iron ore with a stone
 pickaxe at 4.55 s instead of 1.15 s). Measured on a private copy of the local Paper server on the Mac, not on
 staging: the iron route from an empty inventory at 5 fixed fresh spots, two rounds, 229.7 s before and 148.2 s after
-(medians of 10 runs), 8 and 10 of 10 runs made the pickaxe. Still open: the MCP parts below, staging numbers.
+(medians of 10 runs), 8 and 10 of 10 runs made the pickaxe. Still open: staging numbers (the MCP parts below are built too).
 
 **Build, basic reflexes** (moved up from the first draft's M4) [C8]. They act with no Muse call and are reported afterwards ("fought 2
 zombies, ate 1 bread"):
@@ -357,6 +357,9 @@ zombies, ate 1 bread"):
 - **Typed, compact replies** (moved up from the first draft's M11) [B1]. `structuredContent` with what changed and a short state, plus
   typed codes: `NEED_ITEMS`, `HOSTILE_CONTACT`, `RETREATED_LOW_HEALTH`, `INVENTORY_FULL`, `DIED`, `NOT_STARTED`,
   `DUPLICATE`. The text stays for readers. `get_state {full: true}` gives the rest.
+- Status 2026-10-07: the five MCP items above are built (README, "MCP calls"): `src/mcp-queue.js`, `src/plan.js`,
+  `craft_batch` (`src/skills/craft-batch.js`, MCP only). Tested with stub bodies and the fake world (`npm test`) and
+  once on the local Paper server (`test/real-mcp.test.js`), not yet on staging or with Muse.
 
 **Acceptance, scripted** (strict harness on staging on picasso, iron pickaxe from an empty inventory at 10 fresh
 spots, locked daylight, Easy):

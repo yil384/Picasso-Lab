@@ -1,6 +1,7 @@
 // src/contracts.js - the interfaces between modules: the 10 whitelisted tools with strict JSON Schemas (TOOLS goes to
-// the model as is), the argument validator every caller runs before a skill, and JSDoc types for Body, Brain, LLM,
-// Logger and Web. Nothing here executes model or viewer text: arguments are data, checked against a fixed schema.
+// the model as is), the MCP-only skills (craft_batch), the argument validator every caller runs before a skill, the
+// typed result codes of MCP replies, and JSDoc types for Body, Brain, LLM, Logger, Web and the MCP reply. Nothing here
+// executes model or viewer text: arguments are data, checked against a fixed schema.
 
 import {
   COLLECTABLE_BLOCKS, CRAFTABLE_ITEMS, SMELTABLE_ITEMS, PLACEABLE_BLOCKS, BUILD_MATERIALS, BLUEPRINTS, BLUEPRINT_NAMES,
@@ -38,10 +39,10 @@ const DEFS = [
     'Find the nearest blocks of one type (searches 32 blocks around you), walk there, mine n of them with the best tool you carry and pick up the drops. stone drops cobblestone; iron_ore drops raw_iron and needs a stone pickaxe or better.',
     obj({ block: pick('block to mine', COLLECTABLE_BLOCKS), n: COUNT('blocks to mine') })],
   ['craft',
-    'Craft n of an item from your inventory (rounded up to whole recipe batches). When the recipe needs a crafting table it uses one within reach, or places one from your inventory.',
+    'Craft n of an item from your inventory (rounded up to whole recipe batches). When the recipe needs a crafting table it uses your own table nearby, or puts down the one in your inventory (or makes one from 4 planks); a table you put down stays there for your later crafts.',
     obj({ item: pick('item to make', CRAFTABLE_ITEMS), n: COUNT('items you want') })],
   ['smelt',
-    `Smelt n items in a furnace. item is the INPUT (raw_iron -> iron_ingot, oak_log -> charcoal, cobblestone -> stone). Uses a furnace nearby or places one from your inventory, and fuels it from your inventory (coal, charcoal, planks, logs). About 10 s per item, so one call smelts at most ${SMELT_PER_CALL}; call again for the rest.`,
+    `Smelt n items in furnaces. item is the INPUT (raw_iron -> iron_ingot, oak_log -> charcoal, cobblestone -> stone). Loads up to 3 furnaces (yours nearby, ones you carry, or new ones from spare cobblestone), fuels them from your inventory (coal, charcoal, planks, logs) and returns at once; a furnace takes about 10 s per item. The output comes into your inventory with your next action near the furnaces, or when a craft needs it. One call loads at most ${SMELT_PER_CALL}; call again for the rest.`,
     obj({ item: pick('what to put in the furnace', SMELTABLE_ITEMS), n: COUNT('items to smelt') })],
   ['place',
     'Place one block from your inventory at an exact position: it must be air, next to a solid block and within reach after walking there.',
@@ -60,6 +61,24 @@ const DEFS = [
     obj({ text: { type: 'string', description: 'the message', minLength: 1, maxLength: 200, pattern: SAY_PATTERN } })],
 ];
 
+/** Items one craft_batch call may make (the MCP check may add planks, sticks or a table to the ones asked for). */
+export const CRAFT_BATCH_MAX = 12;
+
+/**
+ * Skills only the MCP endpoint offers (ROADMAP M2, "recursive and batched craft"). They are not in TOOLS: the brain's
+ * tool list (and its prompt cache), the web page's forms and openapi.json stay at the 10 skills above.
+ */
+const MCP_DEFS = [
+  ['craft_batch',
+    `Craft several items in order in ONE skill, all at one crafting table: your own table nearby, or the one in your inventory put down once (it stays there for your later crafts). Each item and n as in craft. Up to ${CRAFT_BATCH_MAX} items; stops at the first item that cannot be made and says what is missing.`,
+    obj({
+      items: {
+        type: 'array', description: 'the items to make, in this order', minItems: 1, maxItems: CRAFT_BATCH_MAX,
+        items: obj({ item: pick('item to make', CRAFTABLE_ITEMS), n: COUNT('items you want') }),
+      },
+    })],
+];
+
 function deepFreeze(o) {
   for (const v of Object.values(o)) if (v && typeof v === 'object' && !Object.isFrozen(v)) deepFreeze(v);
   return Object.freeze(o);
@@ -71,6 +90,12 @@ export const TOOL_NAMES = Object.freeze(DEFS.map(([name]) => name));
 /** name -> parameters JSON Schema. */
 export const SCHEMAS = deepFreeze(Object.fromEntries(DEFS.map(([name, , params]) => [name, params])));
 
+/** Every skill the body runs: the 10 tools, then the MCP-only skills (craft_batch). */
+export const SKILL_NAMES = Object.freeze([...TOOL_NAMES, ...MCP_DEFS.map(([name]) => name)]);
+
+/** name -> parameters JSON Schema for every skill the body runs (SCHEMAS plus the MCP-only skills). */
+export const SKILL_SCHEMAS = deepFreeze({ ...SCHEMAS, ...Object.fromEntries(MCP_DEFS.map(([name, , params]) => [name, params])) });
+
 /**
  * The tool list for chat.completions (OpenAI "function" nesting, strict: every object closes with
  * additionalProperties:false and lists every key in required). Send as is; never let the model or a viewer add tools.
@@ -79,6 +104,12 @@ export const TOOLS = deepFreeze(DEFS.map(([name, description, parameters]) => ({
   type: 'function',
   function: { name, description, parameters, strict: true },
 })));
+
+/** TOOLS plus the MCP-only skills, in the same shape: what the MCP endpoint lists for play and play_sequence. */
+export const MCP_SKILLS = deepFreeze([...TOOLS, ...MCP_DEFS.map(([name, description, parameters]) => ({
+  type: 'function',
+  function: { name, description, parameters, strict: true },
+}))]);
 
 const BOUND_KEYS = ['minimum', 'maximum', 'minLength', 'maxLength', 'pattern'];
 
@@ -113,6 +144,7 @@ export function basicTools(tools) {
 export const TOOL_TIMEOUTS_MS = Object.freeze({
   get_state: 5_000, go_to: 120_000, collect: 180_000, craft: 60_000, smelt: 300_000,
   place: 30_000, build: 300_000, attack: 60_000, eat: 10_000, say: 5_000,
+  craft_batch: 150_000,
 });
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -123,6 +155,12 @@ const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArr
 const CONTROL = new RegExp('[\\u0000-\\u001f\\u007f\\u2028\\u2029]');
 
 function check(schema, value, at, errors) {
+  if (schema.type === 'array') {
+    if (!Array.isArray(value)) { errors.push(`${at} must be a list`); return undefined; }
+    if (schema.minItems !== undefined && value.length < schema.minItems) errors.push(`${at} needs at least ${schema.minItems} entries`);
+    if (schema.maxItems !== undefined && value.length > schema.maxItems) { errors.push(`${at} has more than ${schema.maxItems} entries`); return undefined; }
+    return value.map((v, i) => check(schema.items, v, `${at}[${i}]`, errors));
+  }
   if (schema.type === 'object') {
     if (!isPlainObject(value)) { errors.push(`${at} must be an object`); return undefined; }
     const out = {};
@@ -161,9 +199,9 @@ function check(schema, value, at, errors) {
  * @returns {ArgCheck}  ok:true with a fresh copy holding only the allowed keys, or ok:false with a readable error
  */
 export function validateArgs(tool, args) {
-  if (!Object.hasOwn(SCHEMAS, tool)) return { ok: false, error: `unknown tool "${String(tool).slice(0, 40)}" (allowed: ${TOOL_NAMES.join(', ')})` };
+  if (!Object.hasOwn(SKILL_SCHEMAS, tool)) return { ok: false, error: `unknown tool "${String(tool).slice(0, 40)}" (allowed: ${TOOL_NAMES.join(', ')})` };
   const errors = [];
-  const clean = check(SCHEMAS[tool], args ?? {}, tool, errors);
+  const clean = check(SKILL_SCHEMAS[tool], args ?? {}, tool, errors);
   return errors.length ? { ok: false, error: errors.join('; ') } : { ok: true, args: clean };
 }
 
@@ -220,6 +258,50 @@ export function inventoryDelta(before = {}, after = {}) {
   return delta;
 }
 
+/**
+ * Typed codes in MCP replies (structuredContent.code and each step's code), so a client can react without reading the
+ * text (ROADMAP M2, "typed, compact replies"). The first seven are the roadmap's; the rest name the other ways a step
+ * or a call ends. null means nothing went wrong.
+ */
+export const RESULT_CODES = Object.freeze([
+  'NEED_ITEMS', // an ingredient, fuel, tool, station or block is missing (the dry-run check, or the skill itself)
+  'HOSTILE_CONTACT', // a hostile mob's hit stopped the skill
+  'RETREATED_LOW_HEALTH', // the body fled on its own because health ran low
+  'INVENTORY_FULL',
+  'DIED',
+  'NOT_STARTED', // no game (start_game first), the game ended, or the bot is not in the world yet
+  'DUPLICATE', // a re-sent play / play_sequence: the first call's result, nothing run again
+  'BAD_ARGS', // a step's skill or arguments are not valid: nothing was run
+  'QUEUE_FULL', // too many steps waiting: nothing was run
+  'TIMED_OUT', // the skill ran into its time limit
+  'STOPPED', // stopped on request (stop, or the game ended)
+  'FAILED', // any other failure; the result text says why
+]);
+
+// what the body and the skills say (src/body.js, src/skills/*); the first match wins
+const CODE_RULES = [
+  ['DIED', /\byou died\b/],
+  // reflexes off: "a zombie is attacking you"; on: a fight that cannot resume the skill, or too many fights in one
+  ['HOSTILE_CONTACT', /\bis attacking you\b|^stopped: an? [a-z_]+ hit you\b|^stopped: mobs kept attacking\b/],
+  ['RETREATED_LOW_HEALTH', /\b(retreated|fled)\b/i],
+  ['INVENTORY_FULL', /\binventory is full\b/],
+  ['NEED_ITEMS', /not enough ingredients|you are missing|\bmissing \d|\byou have no\b|you only had|\bno fuel\b|drops nothing without the right tool|\bneeds a crafting table\b|none in your inventory|\bno (safe )?food\b|\bneeds \d+ \w+ here\b/],
+  ['TIMED_OUT', /\btimed out after\b/],
+  ['STOPPED', /^stopped: /],
+];
+
+/**
+ * The typed code of a skill result: null when it worked, else the first matching RESULT_CODES entry (FAILED if none).
+ * @param {{ok: boolean, result?: string}|null|undefined} r
+ * @returns {string|null}
+ */
+export function codeOf(r) {
+  if (!r || r.ok) return null;
+  const text = String(r.result ?? '');
+  for (const [code, re] of CODE_RULES) if (re.test(text)) return code;
+  return 'FAILED';
+}
+
 /** Events a Body emits through on(). */
 export const BODY_EVENTS = Object.freeze(['ready', 'skill', 'chat', 'death', 'end', 'error', 'dig']);
 
@@ -231,6 +313,7 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
 
 /**
  * @typedef {'get_state'|'go_to'|'collect'|'craft'|'smelt'|'place'|'build'|'attack'|'eat'|'say'} ToolName
+ * @typedef {ToolName|'craft_batch'} SkillName   what Body.run accepts: the tools plus the MCP-only skills
  *
  * @typedef {{ok: true, args: object, error?: undefined} | {ok: false, error: string, args?: undefined}} ArgCheck
  *
@@ -283,6 +366,10 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {() => string} state                        plain-text state for the model (src/state.js)
  * @property {() => StateSnapshot} snapshot
  * @property {() => Record<string, number>} inventory    {item name: count}
+ * @property {() => Record<string, number>} [smelting]  what the bot's furnaces are still making for it (a background
+ *   smelt), {item name: count}; the MCP check counts it as carried (a craft that needs it waits for it)
+ * @property {(name: 'crafting_table'|'furnace') => boolean} [stationNear]  a station of that kind the bot may use (its
+ *   own, or nobody's) stands within REUSE_RADIUS (src/stations.js); for the MCP check
  * @property {(goal: string|null) => void} setGoal       shown in the state as the current goal
  * @property {boolean} busy                              true while a skill runs
  * @property {(tool: ToolName, args: object) => Promise<SkillResult>} run
@@ -456,6 +543,34 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {() => Promise<{url: string, publicUrl: string}>} start
  * @property {() => Promise<void>} stop       closes the queue, ends every session (closing its bot) and the server
  * @property {() => void} sweep                ends sessions whose lease is over (also on a timer)
+ *
+ * @typedef {object} McpStepReport  one step in an MCP reply's structuredContent (src/mcp.js)
+ * @property {number} n                  position in the call's steps, crafts added by the check included
+ * @property {number|null} step          the caller's step number; null for a craft the check added
+ * @property {SkillName} skill
+ * @property {object} args
+ * @property {'pending'|'confirmed'|'failed'|'cancelled'} status   pending = waiting in the queue or running
+ * @property {boolean} [running]
+ * @property {string} [result]           the skill's result text, once it ended
+ * @property {InventoryDelta} [delta]
+ * @property {string} [code]             a RESULT_CODES entry for a step that failed or was stopped
+ * @property {string} [added]            why the check added this craft
+ * @property {Array<{item: string, n: number, for?: string}>} [addedItems]   items the check put into a craft_batch
+ * @property {string} [why]              why it was cancelled
+ * @property {number} [ms]
+ *
+ * @typedef {object} McpReply  structuredContent of play, play_sequence, get_state and stop
+ * @property {string|null} code          the typed outcome of the call (RESULT_CODES), null when nothing went wrong
+ * @property {string|null} game          the game id
+ * @property {McpStepReport[]} steps     this call's steps
+ * @property {McpStepReport[]} earlier   steps of earlier calls that finished since the last delivered reply
+ * @property {{running: string|null, waiting: number}} queue
+ * @property {InventoryDelta} changed    inventory change of every finished step this reply carries
+ * @property {{timeLeftS: number, health?: number, food?: number, pos?: {x: number, y: number, z: number}, day?: boolean, inventory?: Record<string, number>, joining?: true}|null} state
+ * @property {Array<{step: number, item: string, need: number, for?: string, anyWood?: true, note?: string}>} [missing]  NEED_ITEMS
+ * @property {{ageS: number, by: 'request_id'|'same call'}} [duplicate]   DUPLICATE
+ * @property {Array<object>} [plan]      dry_run: the steps as they would run
+ * @property {StateSnapshot} [full]      get_state {full: true}
  *
  * src/index.js wires these together: startAgent({config, fakeBot}) -> {url, publicUrl, log, web, stop}.
  *
