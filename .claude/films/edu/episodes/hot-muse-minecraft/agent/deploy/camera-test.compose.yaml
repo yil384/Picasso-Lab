@@ -40,6 +40,9 @@ services:
     network_mode: "service:agent"
     user: "${CAMERA_UID:-1014}:${CAMERA_GID:-1014}"
     init: true
+    # an ingest for a live test (STREAM_RTMP_URL=rtmps://.../<key>, file 600, made on picasso, never in the repo);
+    # without it every game is an MP4 in ../../streams
+    env_file: [ { path: camera.env, required: false } ]
     # every CAMERA_* can be set for one run: CAMERA_GRAPHICS=fast CAMERA_RENDER_DISTANCE=6 docker compose ... up -d camera
     environment:
       STREAM_ENABLED: "1"
