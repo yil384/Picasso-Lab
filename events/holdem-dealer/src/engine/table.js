@@ -96,7 +96,7 @@ function newSeat({ id, pid, name, bot = null, stack, now, bankMs, waiting }) {
 
 function handFields() {
   return {
-    inHand: false, hole: null, shown: null, folded: false, allin: false, mucked: false, bet: 0, contrib: 0,
+    inHand: false, hole: null, shown: null, folded: false, allin: false, mucked: false, bet: 0, contrib: 0, dead: 0,
     acted: false, actedBet: null, last: null, startStack: 0, won: 0, wentToShowdown: false,
   };
 }
@@ -815,7 +815,8 @@ export class HoldemTable {
 
   // Only a live top bettor takes back the part nobody matched (folded bets count as matching). A folded seat
   // forfeits every chip it put in: an uncalled bet of a folder stays in the pot (buildPots adds it to the last pot).
-  // dead money: in the pot (contrib) but not part of the seat's bet, so it calls nothing and is never returned
+  // dead money: in the pot (contrib) but not part of the seat's bet, so it calls nothing and is never returned;
+  // it is kept out of the side-pot levels (s.dead) and goes to the main pot, which any live winner can take
   _postDead(i, amount) {
     const s = this.s.seats[i];
     const h = this.s.hand;
@@ -823,6 +824,7 @@ export class HoldemTable {
     if (d <= 0) return;
     s.stack -= d;
     s.contrib += d;
+    s.dead = (s.dead || 0) + d;
     if (s.stack === 0) s.allin = true;
     h.dead = (h.dead || 0) + d;
     h.log.push({ seat: i, a: 'dead', amt: d, street: 'preflop' });
@@ -842,9 +844,14 @@ export class HoldemTable {
 
   _collect() {
     const h = this.s.hand;
-    const contrib = this.s.seats.map((s) => (s && s.inHand ? s.contrib : 0));
+    const contrib = this.s.seats.map((s) => (s && s.inHand ? s.contrib - (s.dead || 0) : 0));
     const folded = this.s.seats.map((s) => !s || !s.inHand || s.folded);
+    const dead = this.s.seats.reduce((a, s) => a + (s && s.inHand ? s.dead || 0 : 0), 0);
     h.pots = buildPots(contrib, folded);
+    if (dead > 0) {
+      if (h.pots.length) h.pots[0].amt += dead;
+      else h.pots.push({ amt: dead, seats: this._live() });
+    }
     h.dead = 0;
     this.s.seats.forEach((s) => { if (s && s.inHand) { s.bet = 0; s.acted = false; s.actedBet = null; } });
     h.currentBet = 0;

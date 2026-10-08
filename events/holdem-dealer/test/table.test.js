@@ -787,6 +787,40 @@ test('postBB in the small blind posts a full big blind: the small blind live, th
   assert.equal(won, 10 + 10 + 10, 'small blind + the matched half of the big blind (the rest is uncalled) + the dead part');
 });
 
+test('a dead big blind goes to the main pot: the poster calls down and loses, and wins nothing back', () => {
+  const rng = riggedRng(7);
+  const t = makeTable({ seats: [0, 1, 2, 3], rng });
+  const k = (t.hand.button + 2) % 4; // lands in the small blind next hand
+  foldAround(t);
+  t.seats[k].waiting = true;
+  assert.equal(t.postBB(`u_${k}`, t.s.now).ok, true);
+  const w = (k + 1) % 4;
+  const holes = { 0: ['Kc', 'Qd'], 1: ['Kh', 'Qs'], 2: ['Jc', '9d'], 3: ['Js', '9s'] };
+  holes[k] = ['2c', '7d'];
+  holes[w] = ['As', 'Ad'];
+  rng.deck(handDeck((t.hand.button + 1) % 4, 4, holes, ['3h', '8s', 'Th', '4d', '5c']));
+  until(t, (x) => x.hand && x.hand.no === 2);
+  assert.equal(t.hand.sbSeat, k);
+  const before = t.seats[k].stack + t.seats[k].contrib;
+  t.settlements(); // drain hand 1's records
+  for (let i = 0; i < 60 && !t.hand.done; i++) {
+    const a = t.actor();
+    if (!a) { wake(t); continue; }
+    const owe = t.hand.currentBet > t.seats[a.seat].bet;
+    assert.equal(act(t, owe ? 'call' : 'check').ok, true);
+  }
+  assert.equal(t.hand.done, true);
+  assert.equal(t.hand.pots.length, 1, 'no side pot only the poster can win');
+  assert.equal(t.hand.pots[0].amt, 4 * 20 + 10);
+  assert.deepEqual(t.hand.pots[0].seats.slice().sort(), [0, 1, 2, 3]);
+  assert.deepEqual(t.hand.winners.map((x) => [x.seat, x.amt]), [[w, 90]]);
+  assert.equal(t.seats[k].stack, before - 30, 'the poster loses the live big blind and the dead part');
+  const rec = t.settlements().records.find((r) => r.accountId === `u_${k}`);
+  assert.equal(rec.won, 0);
+  assert.equal(rec.biggestPot, 0);
+  assert.equal(rec.net, -30);
+});
+
 test('a restart keeps the time bank already used', () => {
   const t = makeTable({ seats: [0, 1, 2], rng: riggedRng(27).queue(0) });
   const seat = t.hand.toAct;
