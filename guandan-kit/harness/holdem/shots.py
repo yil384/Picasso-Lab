@@ -61,7 +61,8 @@ async def run(vp, lang, only, d):
             if step != 'reconnect':
                 # after the reconnect step the socket may still be backing off: wait for the live table first
                 await s.pg.wait_for_function("!document.querySelector('.hd-stage.is-stale')", timeout=20000)
-            await s.pg.wait_for_timeout(2400 if scene in ('showdown', 'split', 'quads') else 1500)
+            # a new hand is dealt in (up to 1.5 s at 9 seats); a showdown flies chips and words
+            await s.pg.wait_for_timeout(2400 if scene in ('showdown', 'split', 'quads', 'nine') else 1800)
             if step == 'raise':
                 await s.press('[data-act="raise"]')
                 await s.pg.wait_for_timeout(400)

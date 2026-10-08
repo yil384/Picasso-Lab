@@ -974,8 +974,11 @@ export function createTable({ ui, S, send, popups }) {
         const v = V.seats[k];
         const amt = last.amt && ["call", "bet", "raise", "allin"].includes(last.a) ? ` ${short(last.amt)}` : "";
         v.label.innerHTML = `<span class="hd-act is-${last.a}">${actionName(last.a, L)}${amt}</span>`;
-        v.label.classList.remove("is-on");
-        void v.label.offsetWidth;
+        // restart the pop only when a label is already showing (a forced layout otherwise costs a frame)
+        if (v.label.classList.contains("is-on")) {
+            v.label.classList.remove("is-on");
+            void v.label.offsetWidth;
+        }
         v.label.classList.add("is-on");
         clearTimeout(V.labels.get(k));
         V.labels.set(k, setTimeout(() => v.label.classList.remove("is-on"), LABEL_MS));
