@@ -4,17 +4,18 @@
    Units: --lu is one design px of a 1280x720 landscape screen (the smaller of width/1280 and
    height/720), so every landscape screen keeps the same proportions. Short landscape phones
    use a 600-high design (bigger type and controls); portrait phones get a vertical layout with
-   --lu = width/400. Tile interiors use --t (--lu times the tile scale).
+   --lu = width/400. Tile interiors use --t (--lu times the tile scale). Hold'em's room (hroom) shares
+   the room's chrome; holdem.css adds what differs.
    Touch: controls never shrink below --tap (40px on coarse pointers) and small text never
    below --fs-min.
    ========================================================================== */
 
 html[data-gd-boot="lobby"] { background: #2b3c7c; }
 /* once the lobby or room is up, the page behind it (overscroll) is navy, also on a ?room= link */
-html:has(> body[data-screen="lobby"]), html:has(> body[data-screen="room"]) { background: #223066; }
+html:has(> body:is([data-screen="lobby"], [data-screen="room"], [data-screen="hroom"])) { background: #223066; }
 
 body[data-screen="lobby"],
-body[data-screen="room"],
+body:is([data-screen="room"], [data-screen="hroom"]),
 html[data-gd-boot="lobby"] body:not([data-screen]) {
     --lu: min(calc(100vw / 1280), calc(100vh / 720));
     --vh: 100vh;
@@ -37,7 +38,7 @@ html[data-gd-boot="lobby"] body:not([data-screen]) {
 }
 @supports (height: 100dvh) {
     body[data-screen="lobby"],
-    body[data-screen="room"],
+    body:is([data-screen="room"], [data-screen="hroom"]),
     html[data-gd-boot="lobby"] body:not([data-screen]) { --lu: min(calc(100vw / 1280), calc(100dvh / 720)); --vh: 100dvh; }
 }
 /* 16:10 screens (desk, the Google Sites iframe) have height over the 16:9 design: the tile grid keeps its
@@ -52,12 +53,12 @@ html[data-gd-boot="lobby"] body:not([data-screen]) {
 /* landscape phones: a 600-high design so text and controls stay readable */
 @media (min-aspect-ratio: 1/1) and (max-height: 500px) {
     body[data-screen="lobby"],
-    body[data-screen="room"],
+    body:is([data-screen="room"], [data-screen="hroom"]),
     html[data-gd-boot="lobby"] body:not([data-screen]) { --lu: min(calc(100vw / 1280), calc(100dvh / 600)); }
 }
 @media (pointer: coarse) {
     body[data-screen="lobby"],
-    body[data-screen="room"] { --tap: 40px; --fs-min: 11px; }
+    body:is([data-screen="room"], [data-screen="hroom"]) { --tap: 40px; --fs-min: 11px; }
 }
 
 /* ---------- top bar ---------- */
@@ -110,10 +111,14 @@ body[data-screen="lobby"] #lang-toggle { order: 2; margin-left: auto; }
 body[data-screen="lobby"] #back-events-btn { order: 3; }
 
 .hud-profile { display: flex; align-items: center; gap: calc(12 * var(--lu)); min-width: 0; }
-/* profile photo: a rounded square in a gold frame (Tencent's framed head portrait) */
+/* profile photo: a rounded square in a gold frame (Tencent's framed head portrait); it opens 账号 */
 .hud-avatar {
     position: relative;
     flex: none;
+    display: block;
+    border: 0;
+    cursor: pointer;
+    transition: translate var(--dur-fast) var(--ease-out);
     width: calc(62 * var(--lu));
     height: calc(62 * var(--lu));
     padding: calc(3 * var(--lu));
@@ -129,6 +134,7 @@ body[data-screen="lobby"] #back-events-btn { order: 3; }
     object-fit: cover;
 }
 .hud-avatar > .gd-face { border-radius: calc(11 * var(--lu)); }
+.hud-avatar:active { translate: 0 calc(2 * var(--lu)); }
 .hud-id { display: flex; flex-direction: column; align-items: flex-start; gap: calc(5 * var(--lu)); min-width: 0; }
 /* above the 段位 pill, so the field's --tap box is not cut by it */
 .hud-name { position: relative; z-index: 1; display: flex; align-items: center; cursor: text; }
@@ -221,9 +227,9 @@ body[data-screen="lobby"] #back-events-btn { order: 3; }
 
 /* room: a dark header strip with ↩ 好友同玩 房间号 · dark chips 邀请 规则 战绩 · 语言 right (↩ is the
    only exit, as in 好友同玩); the ↩ is a chunky light-blue arrow outlined in navy */
-body[data-screen="room"] .topbar { background: linear-gradient(180deg, rgba(14, 22, 66, .75), rgba(14, 22, 66, .5) 80%, rgba(14, 22, 66, 0)); }
-body[data-screen="room"] #new-room-btn { order: 0; min-width: max(var(--tap), calc(46 * var(--lu))); height: max(var(--tap), calc(56 * var(--lu))); }
-body[data-screen="room"] #new-room-btn .hud-ic {
+body:is([data-screen="room"], [data-screen="hroom"]) .topbar { background: linear-gradient(180deg, rgba(14, 22, 66, .75), rgba(14, 22, 66, .5) 80%, rgba(14, 22, 66, 0)); }
+body:is([data-screen="room"], [data-screen="hroom"]) #new-room-btn { order: 0; min-width: max(var(--tap), calc(46 * var(--lu))); height: max(var(--tap), calc(56 * var(--lu))); }
+body:is([data-screen="room"], [data-screen="hroom"]) #new-room-btn .hud-ic {
     width: calc(46 * var(--lu));
     height: calc(46 * var(--lu));
     fill: #e2eeff;
@@ -234,14 +240,14 @@ body[data-screen="room"] #new-room-btn .hud-ic {
     overflow: visible;
     filter: drop-shadow(0 calc(3 * var(--lu)) 0 rgba(40, 60, 170, .8));
 }
-body[data-screen="room"] #new-room-btn .hud-lb { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-body[data-screen="room"] #copy-link-btn { order: 2; }
-body[data-screen="room"] #hud-rules-btn { order: 3; }
-body[data-screen="room"] #hud-records-btn { order: 4; }
-body[data-screen="room"] #lang-toggle { order: 5; margin-left: auto; }
-body[data-screen="room"] #back-events-btn { display: none; }
+body:is([data-screen="room"], [data-screen="hroom"]) #new-room-btn .hud-lb { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+body:is([data-screen="room"], [data-screen="hroom"]) #copy-link-btn { order: 2; }
+body:is([data-screen="room"], [data-screen="hroom"]) #hud-rules-btn { order: 3; }
+body:is([data-screen="room"], [data-screen="hroom"]) #hud-records-btn { order: 4; }
+body:is([data-screen="room"], [data-screen="hroom"]) #lang-toggle { order: 5; margin-left: auto; }
+body:is([data-screen="room"], [data-screen="hroom"]) #back-events-btn { display: none; }
 /* dark chips drawn at their design height (--chip-h); the button box keeps the --tap target */
-body[data-screen="room"] .hud-chip {
+body:is([data-screen="room"], [data-screen="hroom"]) .hud-chip {
     --chip-h: calc(42 * var(--lu));
     flex-direction: row;
     gap: calc(6 * var(--lu));
@@ -253,7 +259,7 @@ body[data-screen="room"] .hud-chip {
     text-shadow: none;
     isolation: isolate;
 }
-body[data-screen="room"] .hud-chip::before {
+body:is([data-screen="room"], [data-screen="hroom"]) .hud-chip::before {
     content: "";
     position: absolute;
     z-index: -1;
@@ -263,7 +269,7 @@ body[data-screen="room"] .hud-chip::before {
     border-radius: calc(var(--chip-h) / 2);
     background: rgba(10, 18, 60, .45);
 }
-body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height: calc(24 * var(--lu)); filter: none; }
+body:is([data-screen="room"], [data-screen="hroom"]) .hud-chip .hud-ic { width: calc(24 * var(--lu)); height: calc(24 * var(--lu)); filter: none; }
 .hud-title { display: flex; align-items: baseline; gap: calc(16 * var(--lu)); margin-right: calc(10 * var(--lu)); white-space: nowrap; }
 .hud-title b { font: 900 calc(36 * var(--lu))/1 var(--font-ui); letter-spacing: .04em; text-shadow: 0 calc(2 * var(--lu)) 0 rgba(30, 44, 130, .6); }
 .hud-title span { color: rgba(220, 232, 255, .6); font: 500 max(var(--fs-min), calc(20 * var(--lu)))/1 var(--font-ui); }
@@ -271,7 +277,7 @@ body[data-screen="room"] .hud-chip .hud-ic { width: calc(24 * var(--lu)); height
 
 @media (hover: hover) {
     .hud-btn:hover .hud-ic { translate: 0 calc(-1 * var(--lu)); }
-    body[data-screen="room"] .hud-chip:hover::before { background: rgba(10, 18, 60, .6); }
+    body:is([data-screen="room"], [data-screen="hroom"]) .hud-chip:hover::before { background: rgba(10, 18, 60, .6); }
 }
 
 /* ---------- lobby ---------- */
@@ -1252,12 +1258,12 @@ html[lang="en"] .gd-popup-title { letter-spacing: 0; text-indent: 0; }
 
 /* English: no letter-spaced labels */
 html[lang="en"] :is(.hud-title b, .room-panel-head, .room-felt-mark, .roster-invite, .lobby-quick b) { letter-spacing: 0; }
-html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --btn-ls: 0em; }
+html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"], [data-screen="hroom"]) .btn { --btn-ls: 0em; }
 
 /* ---------- portrait phones: vertical layout, same components, no rotation ---------- */
 @media (max-aspect-ratio: 1/1) {
     body[data-screen="lobby"],
-    body[data-screen="room"],
+    body:is([data-screen="room"], [data-screen="hroom"]),
     html[data-gd-boot="lobby"] body:not([data-screen]) { --lu: min(calc(100vw / 400), 1.6px); }
 
     .topbar {
@@ -1283,11 +1289,11 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     body[data-screen="lobby"] .hud-profile { order: 1; flex: 1; }
     .hud-stat { height: calc(30 * var(--lu)); min-width: calc(96 * var(--lu)); padding: 0 calc(12 * var(--lu)) 0 calc(38 * var(--lu)); font-size: calc(20 * var(--lu)); }
     .hud-stat i { width: calc(34 * var(--lu)); height: calc(34 * var(--lu)); font-size: max(var(--fs-min), calc(15 * var(--lu))); }
-    body[data-screen="room"] #new-room-btn .hud-ic { width: calc(34 * var(--lu)); height: calc(34 * var(--lu)); }
-    body[data-screen="room"] .hud-chip { --chip-h: calc(34 * var(--lu)); order: 10; font-size: max(var(--fs-min) * 1.2, calc(15 * var(--lu))); }
-    body[data-screen="room"] #copy-link-btn { order: 10; }
-    body[data-screen="room"] #hud-rules-btn { order: 11; }
-    body[data-screen="room"] #hud-records-btn { order: 12; }
+    body:is([data-screen="room"], [data-screen="hroom"]) #new-room-btn .hud-ic { width: calc(34 * var(--lu)); height: calc(34 * var(--lu)); }
+    body:is([data-screen="room"], [data-screen="hroom"]) .hud-chip { --chip-h: calc(34 * var(--lu)); order: 10; font-size: max(var(--fs-min) * 1.2, calc(15 * var(--lu))); }
+    body:is([data-screen="room"], [data-screen="hroom"]) #copy-link-btn { order: 10; }
+    body:is([data-screen="room"], [data-screen="hroom"]) #hud-rules-btn { order: 11; }
+    body:is([data-screen="room"], [data-screen="hroom"]) #hud-records-btn { order: 12; }
     .hud-title { flex-direction: column; align-items: flex-start; gap: calc(4 * var(--lu)); }
     .hud-title b { font-size: calc(24 * var(--lu)); }
     .hud-title span { font-size: max(var(--fs-min), calc(13 * var(--lu))); }
@@ -1356,7 +1362,7 @@ html[lang="en"] body:is([data-screen="lobby"], [data-screen="room"]) .btn { --bt
     }
     .room { --ru: calc(var(--lu) * .82); }
     /* room toasts (房间已创建 …) over the felt's centre, like Tencent's centre toast */
-    body[data-screen="room"] .toast { top: calc(213 * var(--lu) + max(var(--tap), 34 * var(--lu))); }
+    body:is([data-screen="room"], [data-screen="hroom"]) .toast { top: calc(213 * var(--lu) + max(var(--tap), 34 * var(--lu))); }
     .room-center { order: -1; }
     .room-settings { align-self: stretch; max-height: none; }
     /* the table is as tall as the seat ring and the action row need at the full width */

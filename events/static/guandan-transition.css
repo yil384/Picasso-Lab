@@ -49,4 +49,4 @@
 #return-type-hint.is-turned { --hint-r: 90deg; }
 #return-type-hint b { margin-left: .1em; color: var(--gold-2); font: 700 1.2em/1 var(--font-num); letter-spacing: .08em; }
 body.gdr-modal-open #return-type-hint,
-body:has(.gd-popup-layer, .gd-menu, .gd-intro, .gd-result:not(.is-peek)) #return-type-hint { opacity: 0; }
+body:has(.gd-popup-layer, .gd-menu, .gd-intro, .gd-result:not(.is-peek), .hd-page) #return-type-hint { opacity: 0; }

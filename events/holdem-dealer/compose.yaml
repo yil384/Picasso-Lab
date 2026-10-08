@@ -1,0 +1,60 @@
+# On the lab server, from ~/workspace/holdem-dealer (a copy of this folder; README "Deploy"):
+#   ops/secrets.sh && docker compose build && ops/datadir.sh && docker compose up -d
+# No port is published on the host: Caddy (the fras-caddy-1 container) reaches the service on its Docker network as
+# holdem-dealer:8787, and the service believes X-Forwarded-For from that container only (TRUST_PROXY in .env), so
+# nobody on the host can pose as another network. The secrets are files (./secrets, folder mode 700), never env
+# values, so `docker inspect` does not show them.
+services:
+  holdem-dealer:
+    build: .
+    image: picasso/holdem-dealer:latest
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      GAMES_SECRET_FILE: /run/secrets/games_secret
+      IP_SALT_FILE: /run/secrets/ip_salt
+    secrets:
+      - games_secret
+      - ip_salt
+    networks:
+      edge:
+        aliases:
+          - holdem-dealer
+    volumes:
+      - holdem-data:/data
+    stop_grace_period: 20s
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+secrets:
+  games_secret:
+    file: ./secrets/games_secret
+  ip_salt:
+    file: ./secrets/ip_salt
+
+networks:
+  edge:
+    external: true
+    name: ${HOLDEM_EDGE_NETWORK:-fras_default}
+
+# The data files live in HOLDEM_DATA_DIR on the host (picasso: the NVMe root disk), not in Docker's own volume
+# folder: Docker's root on picasso is /ssd2, where one write + fsync was measured taking up to 13.6 s (p99 144 ms; on
+# the root disk: max 101 ms, p99 12 ms), and the service writes synchronously, so every table froze with it. The volume
+# keeps its name (holdem-dealer_holdem-data), so ops/backup.sh and the restore command are unchanged. ops/datadir.sh
+# makes the folder (owner uid 1000, the image's node user, mode 700).
+volumes:
+  holdem-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOLDEM_DATA_DIR:?set HOLDEM_DATA_DIR in .env (README "Deploy")}

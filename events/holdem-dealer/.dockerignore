@@ -1,0 +1,14 @@
+node_modules
+data
+test
+ops
+secrets
+.env
+.env.*
+!.env.example
+*.md
+Caddyfile.snippet
+compose.yaml
+Dockerfile
+.dockerignore
+.gitignore

@@ -1,0 +1,1108 @@
+/* ==========================================================================
+   Picasso Lab games: Texas Hold'em (holdem*.js) and the shared account popups (games-account.js).
+   Same design system as Guandan (guandan-ui.css tokens, components and motion rules): popups are
+   GuandanUI popups sized in --pu, the lobby and the room reuse guandan-lobby.css, and the table is a
+   design-px stage (holdem-table.js) with the hd- components below.
+   Screens: body[data-screen="hroom"] (the waiting room, styled as Guandan's room) and "htable".
+   ========================================================================== */
+
+/* ---------- account popups (账号, continue as X, save with email, privacy) ---------- */
+.ga-profile { display: flex; flex-direction: column; gap: calc(16 * var(--pu)); }
+.ga-id {
+    display: flex;
+    align-items: center;
+    gap: calc(16 * var(--pu));
+    padding: calc(14 * var(--pu)) calc(16 * var(--pu));
+    border-radius: calc(10 * var(--pu));
+    background: linear-gradient(180deg, #eef3fd, #e2eafa);
+}
+.ga-face {
+    flex: none;
+    width: calc(76 * var(--pu));
+    height: calc(76 * var(--pu));
+    padding: calc(4 * var(--pu));
+    border-radius: calc(16 * var(--pu));
+    background: linear-gradient(180deg, #fff8d8 0%, #f3cc62 55%, #c9871c 100%);
+}
+.ga-face > img, .ga-face > .gd-face { display: block; width: 100%; height: 100%; border-radius: calc(12 * var(--pu)); object-fit: cover; background: #e9eef5; }
+.ga-id-text { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: calc(6 * var(--pu)); }
+.ga-name { max-width: 100%; overflow: hidden; color: var(--ink); font: 900 calc(26 * var(--pu))/1.2 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.ga-status {
+    padding: 0 calc(12 * var(--pu));
+    border-radius: calc(6 * var(--pu));
+    background: #d3dcf2;
+    color: var(--ink-2);
+    font: 800 calc(16 * var(--pu))/calc(28 * var(--pu)) var(--font-ui);
+    white-space: nowrap;
+}
+.ga-status.is-saved { background: linear-gradient(180deg, #33a3ec, #1569b8); color: #fff; }
+.ga-bank { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: calc(6 * var(--pu)); }
+.ga-bank-k { color: var(--ink-3); font: 700 calc(16 * var(--pu))/1 var(--font-ui); }
+.ga-bank-v { display: flex; align-items: center; gap: calc(8 * var(--pu)); color: var(--ink); font: 800 calc(36 * var(--pu))/1 var(--font-num); }
+.ga-coin {
+    width: calc(26 * var(--pu));
+    height: calc(26 * var(--pu));
+    border-radius: 50%;
+    background: radial-gradient(circle at 36% 30%, #fff5bf 0%, #ffcf45 48%, #e39516 100%);
+    box-shadow: inset 0 calc(-2 * var(--pu)) 0 rgba(150, 70, 0, .35), inset 0 0 0 calc(4 * var(--pu)) rgba(255, 255, 255, .25);
+}
+.ga-bank .btn { --btn-h: max(var(--tap, 0px), calc(34 * var(--pu))); --btn-fs: calc(16 * var(--pu)); --btn-px: calc(14 * var(--pu)); }
+.ga-offline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(12 * var(--pu));
+    padding: calc(10 * var(--pu)) calc(16 * var(--pu));
+    border-radius: calc(8 * var(--pu));
+    background: #fdecea;
+    color: #9e2a24;
+    font: 700 calc(17 * var(--pu))/1.3 var(--font-ui);
+}
+.ga-offline .btn { --btn-h: max(var(--tap, 0px), calc(34 * var(--pu))); --btn-fs: calc(16 * var(--pu)); --btn-px: calc(14 * var(--pu)); }
+.ga-games { display: grid; grid-template-columns: 4fr 2.4fr; gap: calc(12 * var(--pu)); }
+.ga-game { min-width: 0; overflow: hidden; border-radius: calc(8 * var(--pu)); background: #fff; box-shadow: inset 0 0 0 1px var(--panel-line); }
+.ga-game h3 {
+    margin: 0;
+    padding: 0 calc(14 * var(--pu));
+    background: linear-gradient(90deg, #8196f4, #6c84ec);
+    color: #fff;
+    font: 900 calc(18 * var(--pu))/calc(36 * var(--pu)) var(--font-ui);
+    letter-spacing: .06em;
+}
+html[lang="en"] .ga-game h3 { letter-spacing: 0; }
+.ga-stats { display: flex; }
+.ga-stat { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(4 * var(--pu)); padding: calc(12 * var(--pu)) calc(4 * var(--pu)); }
+.ga-stat + .ga-stat { box-shadow: inset 1px 0 0 var(--panel-line); }
+.ga-stat b { color: var(--ink); font: 800 calc(30 * var(--pu))/1 var(--font-num); white-space: nowrap; }
+.ga-stat.is-neg b { color: #c8304e; }
+.ga-stat span { color: var(--ink-3); font: 700 calc(15 * var(--pu))/1.2 var(--font-ui); white-space: nowrap; }
+.ga-foot { display: flex; flex-direction: column; align-items: center; gap: calc(10 * var(--pu)); }
+.ga-foot .btn { --btn-h: max(var(--tap, 0px), calc(50 * var(--pu))); --btn-fs: calc(21 * var(--pu)); --btn-px: calc(28 * var(--pu)); --btn-minw: calc(220 * var(--pu)); }
+.ga-note { margin: 0; color: var(--ink-3); font: 500 calc(15 * var(--pu))/1.4 var(--font-ui); text-align: center; }
+/* a quiet text link in the util blue (隐私说明); the box keeps the --tap target */
+.ga-link {
+    display: inline-grid;
+    place-items: center;
+    min-height: var(--tap, 0px);
+    padding: 0 calc(4 * var(--pu));
+    border: 0;
+    background: none;
+    color: var(--util);
+    font: 700 calc(16 * var(--pu))/1.3 var(--font-ui);
+}
+.ga-suggest, .ga-email { display: flex; flex-direction: column; align-items: center; }
+.ga-suggest .gd-confirm-text { margin-top: calc(10 * var(--pu)); margin-bottom: calc(22 * var(--pu)); }
+.ga-suggest-face { width: calc(84 * var(--pu)); height: calc(84 * var(--pu)); padding: calc(4 * var(--pu)); border-radius: calc(18 * var(--pu)); background: linear-gradient(180deg, #fff8d8 0%, #f3cc62 55%, #c9871c 100%); }
+.ga-suggest-face > * { display: block; width: 100%; height: 100%; border-radius: calc(14 * var(--pu)); object-fit: cover; }
+.gd-confirm-row.is-names { flex-wrap: wrap; gap: calc(12 * var(--pu)); }
+.gd-confirm-row.is-names .btn { --btn-minw: calc(120 * var(--pu)); }
+.ga-suggest .ga-link, .ga-email .ga-link { margin-top: calc(10 * var(--pu)); }
+.ga-email-lead { margin: calc(4 * var(--pu)) 0 calc(16 * var(--pu)); color: var(--ink-2); font: 500 calc(18 * var(--pu))/1.55 var(--font-ui); text-align: center; text-wrap: balance; }
+.ga-email-input {
+    width: 100%;
+    height: max(var(--tap, 0px), calc(52 * var(--pu)));
+    padding: 0 calc(16 * var(--pu));
+    border: 0;
+    border-radius: calc(8 * var(--pu));
+    background: #fff;
+    box-shadow: inset 0 0 0 calc(2 * var(--pu)) #b8c8ea, inset 0 calc(2 * var(--pu)) calc(4 * var(--pu)) rgba(20, 40, 100, .1);
+    color: var(--ink);
+    font: 700 max(16px, calc(20 * var(--pu)))/1 var(--font-ui);
+    outline: none;
+}
+.ga-email-input:focus { box-shadow: inset 0 0 0 calc(2 * var(--pu)) var(--util); }
+.ga-email-err { min-height: calc(26 * var(--pu)); margin: calc(6 * var(--pu)) 0 calc(4 * var(--pu)); color: #c8304e; font: 700 calc(16 * var(--pu))/1.4 var(--font-ui); }
+.ga-email.is-sent .gd-confirm-text { margin: calc(12 * var(--pu)) 0 calc(4 * var(--pu)); }
+.ga-email-wait { margin: 0 0 calc(22 * var(--pu)); color: var(--ink-3); font: 600 calc(16 * var(--pu))/1.4 var(--font-ui); }
+.ga-email-code { margin: calc(-10 * var(--pu)) 0 calc(22 * var(--pu)); color: var(--ink-3); font: 600 calc(15 * var(--pu))/1.4 var(--font-ui); }
+.ga-email-code b { margin-left: calc(4 * var(--pu)); color: var(--ink); font: 800 calc(22 * var(--pu))/1 var(--font-num, var(--font-ui)); letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+/* the turning ring of the lobby's loading plate, in ink: waiting for the link to be opened */
+.ga-email-ring {
+    width: calc(40 * var(--pu));
+    height: calc(40 * var(--pu));
+    border: calc(4 * var(--pu)) solid rgba(108, 132, 236, .25);
+    border-top-color: var(--util);
+    border-radius: 50%;
+    animation: gd-busy-turn 900ms linear infinite;
+}
+.ga-privacy { margin: calc(4 * var(--pu)) 0; color: var(--ink-2); font: 500 calc(17 * var(--pu))/1.7 var(--font-ui); }
+@media (max-aspect-ratio: 1/1) {
+    .ga-id { flex-wrap: wrap; }
+    .ga-bank { flex-basis: 100%; flex-direction: row; align-items: center; }
+    .ga-bank-k { margin-right: auto; }
+    .ga-games { grid-template-columns: 1fr; }
+}
+
+/* ---------- lobby: the game switch (掼蛋 | 德州扑克) and the Hold'em tiles ---------- */
+/* Tencent hall tabs: the chosen game in white 900 with a short gold bar under it, the other at 60% white.
+   Landscape: just above the tile grid's left edge; short landscape phones: in the top bar beside 语言;
+   portrait: a strip above the tiles. */
+.lobby-games {
+    grid-area: 1 / 4;
+    align-self: center;
+    justify-self: start;
+    z-index: 1;
+    display: flex;
+    gap: calc(28 * var(--lu));
+    translate: 0 calc(-1 * var(--tiles-h) / 2 - 30 * var(--lu));
+}
+.lobby-game {
+    position: relative;
+    min-height: max(var(--tap), calc(40 * var(--lu)));
+    padding: 0 calc(2 * var(--lu));
+    border: 0;
+    background: none;
+    color: rgba(255, 255, 255, .6);
+    font: 700 calc(26 * var(--lu))/1 var(--font-ui);
+    letter-spacing: .04em;
+    white-space: nowrap;
+    text-shadow: 0 calc(2 * var(--lu)) 0 rgba(20, 30, 90, .45);
+    transition: color var(--dur-fast) ease;
+}
+.lobby-game[aria-selected="true"] { color: #fff; font-weight: 900; }
+.lobby-game[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: calc(-2 * var(--lu));
+    width: calc(34 * var(--lu));
+    height: calc(5 * var(--lu));
+    translate: -50% 0;
+    border-radius: calc(3 * var(--lu));
+    background: linear-gradient(180deg, #ffe27a, #f6b92a);
+    box-shadow: 0 calc(1 * var(--lu)) 0 rgba(120, 60, 0, .4);
+}
+html[lang="en"] .lobby-game { letter-spacing: 0; }
+@media (hover: hover) { .lobby-game:hover { color: #fff; } }
+@media (min-aspect-ratio: 1/1) and (max-height: 500px) {
+    .lobby-games {
+        position: fixed;
+        top: max(0px, calc((var(--hud-h) - max(var(--tap), 40 * var(--lu))) / 2 + env(safe-area-inset-top, 0px)));
+        right: calc(34 * var(--lu) + var(--sr) + 2 * max(var(--tap), 62 * var(--lu)) + 40 * var(--lu));
+        translate: none;
+        z-index: calc(var(--z-topbar) + 1);
+    }
+    .lobby-game { font-size: calc(24 * var(--lu)); }
+}
+
+/* 德州扑克: a warm red tile; A♠ K♥ (the real cards) over a short chip stack */
+.lobby-tile.is-holdem { --t-hot: rgba(236, 84, 84, .92); --t-top: #f9a593; --t-mid: #fddcd0; }
+.lobby-tile.is-holdem .tile-title { font-size: calc(56 * var(--t)); }
+html[lang="en"] .lobby-tile.is-holdem .tile-title { font-size: calc(54 * var(--t)); }
+.hd-hero-art { --card-w: calc(112 * var(--t)); top: calc(46 * var(--t)); bottom: calc(118 * var(--t)); }
+.hd-hero-art .card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin: calc(-82 * var(--t)) 0 0 calc(-56 * var(--t));
+    transform-origin: 50% 100%;
+    box-shadow: var(--card-shadow), calc(-3 * var(--t)) calc(3 * var(--t)) calc(8 * var(--t)) rgba(90, 20, 0, .22);
+}
+.hd-hero-art .card:nth-child(1) { rotate: -11deg; translate: calc(-36 * var(--t)) 0; }
+.hd-hero-art .card:nth-child(2) { rotate: 9deg; translate: calc(34 * var(--t)) calc(6 * var(--t)); }
+.hd-hero-art .hd-chips { position: absolute; left: 50%; bottom: calc(-4 * var(--t)); translate: calc(58 * var(--t)) 0; --c: calc(58 * var(--t)); }
+.tile-plate {
+    position: absolute;
+    top: calc(12 * var(--t));
+    right: calc(12 * var(--t));
+    z-index: 1;
+    padding: calc(4 * var(--t)) calc(12 * var(--t));
+    border-radius: calc(6 * var(--t));
+    background: rgba(10, 18, 60, .72);
+    color: #fff;
+    font: 800 max(var(--fs-min), calc(18 * var(--t)))/1.2 var(--font-ui);
+}
+/* the lobby's chips: discs seen at an angle, each with white edge inserts, stacked */
+.hd-chips { display: block; width: var(--c, 60px); height: calc(var(--c, 60px) * .9); }
+.hd-chips i {
+    position: absolute;
+    left: 0;
+    bottom: calc(var(--k) * var(--c, 60px) * .13);
+    width: var(--c, 60px);
+    height: calc(var(--c, 60px) * .36);
+    border-radius: 50%;
+    background:
+        radial-gradient(closest-side, #e8473c 0 52%, #fff 54% 60%, #e8473c 62% 100%),
+        #e8473c;
+    box-shadow:
+        inset 0 0 0 calc(var(--c, 60px) * .04) #fff,
+        0 calc(var(--c, 60px) * .07) 0 #9e2a24,
+        0 calc(var(--c, 60px) * .1) calc(var(--c, 60px) * .05) rgba(80, 20, 10, .35);
+}
+.hd-chips i:nth-child(2n) { background: radial-gradient(closest-side, #2c3e7c 0 52%, #fff 54% 60%, #2c3e7c 62% 100%), #2c3e7c; box-shadow: inset 0 0 0 calc(var(--c, 60px) * .04) #fff, 0 calc(var(--c, 60px) * .07) 0 #141c40, 0 calc(var(--c, 60px) * .1) calc(var(--c, 60px) * .05) rgba(10, 20, 60, .35); }
+
+/* 人机练习: three robot players and two card backs */
+.hd-bots-art { --card-w: calc(44 * var(--t)); top: calc(30 * var(--t)); }
+.hd-bot-av { position: absolute; left: 50%; top: 50%; z-index: 1; --av-size: calc(58 * var(--t)); border-width: calc(3 * var(--t)); margin: calc(-29 * var(--t)) 0 0 calc(-29 * var(--t)); }
+.hd-bot-av.b0 { translate: calc(-62 * var(--t)) calc(8 * var(--t)); }
+.hd-bot-av.b1 { translate: 0 calc(-14 * var(--t)); z-index: 2; --av-size: calc(66 * var(--t)); margin: calc(-33 * var(--t)) 0 0 calc(-33 * var(--t)); }
+.hd-bot-av.b2 { translate: calc(62 * var(--t)) calc(8 * var(--t)); }
+.hd-bot-av .gd-face text { font-size: 30px; }
+.hd-bots-cards { position: absolute; left: 50%; top: 50%; translate: calc(-26 * var(--t)) calc(-58 * var(--t)); z-index: 0; }
+.hd-bots-cards .card { position: absolute; box-shadow: var(--card-shadow), 0 calc(3 * var(--t)) calc(6 * var(--t)) rgba(0, 60, 50, .25); }
+.hd-bots-cards .card:first-child { rotate: -12deg; }
+.hd-bots-cards .card:last-child { rotate: 10deg; translate: calc(22 * var(--t)) calc(2 * var(--t)); }
+
+/* 排行榜: three lab portraits on a podium (gold in the middle) */
+.hd-podium-art { align-items: flex-end; gap: calc(4 * var(--t)); padding-bottom: calc(4 * var(--t)); }
+.hd-podium-p { display: flex; flex-direction: column; align-items: center; }
+.hd-podium-p .gd-avatar { --av-size: calc(52 * var(--t)); border-width: calc(3 * var(--t)); margin-bottom: calc(-6 * var(--t)); z-index: 1; }
+.hd-podium-p.p0 .gd-avatar { --av-size: calc(62 * var(--t)); --ring: #f4b03a; }
+.hd-podium-p.p1 .gd-avatar { --ring: #b8c4dc; }
+.hd-podium-p.p2 .gd-avatar { --ring: #e19a5c; }
+.hd-podium-p b {
+    display: grid;
+    place-items: start center;
+    width: calc(64 * var(--t));
+    padding-top: calc(10 * var(--t));
+    border-radius: calc(5 * var(--t)) calc(5 * var(--t)) 0 0;
+    color: #fff;
+    font: 800 calc(24 * var(--t))/1 var(--font-num);
+    text-shadow: 0 calc(2 * var(--t)) 0 rgba(0, 0, 0, .25);
+}
+.hd-podium-p.p0 b { height: calc(64 * var(--t)); width: calc(72 * var(--t)); background: linear-gradient(180deg, #ffd766, #e09a1c); }
+.hd-podium-p.p1 b { height: calc(46 * var(--t)); background: linear-gradient(180deg, #d5dced, #95a2c0); }
+.hd-podium-p.p2 b { height: calc(34 * var(--t)); background: linear-gradient(180deg, #f2b98c, #c0743a); }
+/* nobody ranked yet: the three steps alone, waiting */
+.hd-podium-art.is-empty .hd-podium-p { opacity: .82; }
+
+@media (max-aspect-ratio: 1/1) {
+    .lobby-games { translate: none; margin: 0 0 calc(10 * var(--lu)) calc(6 * var(--lu)); }
+    .lobby-game { font-size: calc(21 * var(--lu)); }
+    .is-holdem .hd-hero-art { --card-w: calc(108 * var(--t)); }
+}
+
+/* the ☰ menu on a short landscape screen: two columns */
+.hd-stage .gd-menu.is-cols { display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--rows), auto); width: auto; }
+.hd-stage .gd-menu.is-cols button { min-width: max(250px, calc(180px / var(--gd-s, 1))); }
+.hd-stage .gd-menu.is-cols button.is-col-top { box-shadow: inset 1px 0 0 rgba(255, 255, 255, .09); }
+.hd-stage .gd-menu.is-cols button.is-col-top ~ button { box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .09); }
+
+/* ---------- room (hroom): Guandan's room, a 2-9 seat ring on the mini felt ---------- */
+.hd-room .room-row.is-pills { flex-wrap: wrap; row-gap: calc(8 * var(--ru)); max-height: none; }
+/* the rows share the panel's height with their dividers, as Guandan's do; every two-character key is justified */
+.hd-room .hd-settings { flex: 1 0 auto; display: flex; flex-direction: column; }
+.hd-room .hd-settings .room-row { max-height: none; }
+.hd-room .room-row.is-level .room-k { width: calc(96 * var(--ru)); }
+.hd-pills { display: flex; flex-wrap: wrap; gap: calc(6 * var(--ru)); margin-left: auto; }
+.hd-pill {
+    min-width: max(var(--tap, 0px), calc(54 * var(--ru)));
+    height: max(var(--tap, 0px), calc(36 * var(--ru)));
+    padding: 0 calc(10 * var(--ru));
+    border: 0;
+    border-radius: calc(18 * var(--ru));
+    background: #e3eafb;
+    color: var(--ink-2);
+    font: 800 max(var(--fs-min, 10px), calc(18 * var(--ru)))/1 var(--font-num);
+    white-space: nowrap;
+    transition: translate var(--dur-fast) var(--ease-out);
+}
+.hd-pill:lang(zh-CN), .hd-room .hd-pill { font-family: var(--font-num), var(--font-ui); }
+.hd-pill[aria-checked="true"] {
+    background: linear-gradient(180deg, #ffe27a, #f6b92a);
+    box-shadow: inset 0 calc(-2 * var(--ru)) 0 rgba(160, 90, 0, .3), 0 calc(2 * var(--ru)) 0 #c98a14;
+    color: #7a3a00;
+}
+.hd-pill:active { translate: 0 calc(2 * var(--ru)); }
+.hd-room .room-v.hd-num { font: 800 calc(26 * var(--ru))/1 var(--font-num); }
+.hd-step-v { font-family: var(--font-num); font-stretch: normal; min-width: calc(50 * var(--ru)); }
+/* the table: a wide felt; seats sit on its edge by angle (style left/top in %, from my seat clockwise) */
+/* the seats sit just outside the rail (60% of the felt's half height above and below, 53% to the sides),
+   so the felt is sized for the ring, its plates and the action row */
+.hd-room-table {
+    --seat-av: calc(66 * var(--lu));
+    --plate: calc(50 * var(--lu));
+    --act-h: calc(84 * var(--lu));
+}
+.hd-room-board {
+    --ar: 1.55;
+    --side: calc(170 * var(--lu));
+    --bw: min(calc((100cqw - var(--side)) / 1.06), calc((100cqh - var(--act-h) - var(--seat-av) - var(--plate) - 30 * var(--lu)) / 1.2 * var(--ar)));
+    position: absolute;
+    left: 50%;
+    top: calc((100cqh - var(--act-h) - var(--bw) / var(--ar) * 1.2 - var(--seat-av) - var(--plate)) / 2 + var(--seat-av) / 2 + var(--bw) / var(--ar) * .1);
+    translate: -50% 0;
+    width: var(--bw);
+    aspect-ratio: var(--ar);
+}
+.hd-room-board .room-felt { border-radius: 50%; }
+html[lang="en"] .hd-room .room-k { width: auto; min-width: calc(96 * var(--ru)); white-space: nowrap; }
+.hd-room .room-row.is-pills .hd-pills { flex-basis: 100%; justify-content: flex-start; margin-left: 0; }
+.hd-room .room-row.is-pills .hd-pill { flex: 1; max-width: calc(76 * var(--ru)); }
+.hd-room-count { color: rgba(255, 255, 255, .75); font: 800 max(var(--fs-min), calc(16 * var(--lu)))/1 var(--font-ui); }
+.hd-room .room-actions { top: auto; bottom: 0; }
+.hd-rseat {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(10 * var(--lu));
+    width: max-content;
+    translate: -50% calc(-1 * var(--seat-av) / 2);
+}
+.hd-rseat .room-seat-disc { width: var(--seat-av); height: var(--seat-av); }
+.hd-rseat.is-empty { --ring: rgba(255, 255, 255, .92); }
+.hd-rseat .room-seat-sit b { font-size: calc(38 * var(--lu)); }
+.hd-rplate { flex-direction: column; align-items: center; gap: 0; height: auto; padding: calc(2 * var(--lu)) calc(10 * var(--lu)) calc(3 * var(--lu)); max-width: calc(150 * var(--lu)); }
+.hd-rplate > b { font-size: calc(17 * var(--lu)); }
+.hd-rplate > em { color: var(--gold-2); font: 700 max(var(--fs-min), calc(18 * var(--lu)))/1.1 var(--font-num); font-style: normal; }
+/* eight or nine seats: smaller discs and plates, so the two seats on each side clear each other */
+.hd-room-board.is-crowded { --seat-av: calc(54 * var(--lu)); }
+.hd-room-board.is-crowded .hd-rseat { gap: calc(6 * var(--lu)); }
+.hd-room-board.is-crowded .hd-rplate > b { font-size: calc(15 * var(--lu)); }
+.hd-room-board.is-crowded .hd-rplate > em { font-size: max(var(--fs-min), calc(16 * var(--lu))); }
+.hd-room .roster-name small i { font-family: var(--font-num); }
+@media (max-aspect-ratio: 1/1) {
+    .hd-room-table { --seat-av: calc(52 * var(--lu)); --plate: calc(42 * var(--lu)); --act-h: calc(72 * var(--lu)); flex: none; height: calc((100vw - 24 * var(--lu) - 120 * var(--lu)) / 1.06 / 1.1 * 1.2 + 52 * var(--lu) + 42 * var(--lu) + 72 * var(--lu) + 36 * var(--lu)); }
+    .hd-room-board { --ar: 1.1; --side: calc(120 * var(--lu)); }
+    .hd-room-board.is-crowded { --seat-av: calc(40 * var(--lu)); }
+    .hd-rplate > b { font-size: calc(14 * var(--lu)); }
+    .hd-room .room-row.is-pills { flex-direction: column; align-items: flex-start; }
+    .hd-room .hd-pills { margin-left: 0; }
+}
+
+/* ---------- table (htable): the stage ---------- */
+body[data-screen="htable"] { overflow: hidden; overscroll-behavior: none; }
+body[data-screen="htable"] .topbar { display: none; }
+html:has(> body[data-screen="htable"]) { background: #03302d; }
+.hd-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    /* the room around the table: Guandan's felt darkening to the floor in the corners */
+    background:
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
+        radial-gradient(90% 80% at 50% 44%, #075e57 0%, #054a45 38%, #04403c 58%, #3a2a24 92%, #241a18 100%);
+}
+.hd-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    color: #fff;
+    font: 500 20px/1.3 var(--font-ui);
+    --card-w-small: 76px;
+}
+.hd-stage.is-portrait { --card-w-small: 100px; }
+
+/* the table: a stadium (round ends) with a dark leather rail, the bright felt, a fine inner line and the
+   PICASSO print in the middle */
+.hd-felt {
+    --r: min(var(--rx), var(--ry));
+    position: absolute;
+    left: calc(var(--cx) - var(--rx) - 26px);
+    top: calc(var(--cy) - var(--ry) - 26px);
+    width: calc(2 * var(--rx) + 52px);
+    height: calc(2 * var(--ry) + 52px);
+    border-radius: calc(var(--r) + 26px);
+    background: linear-gradient(180deg, #6a4a3a 0%, #4a3328 45%, #33231b 100%);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .16), inset 0 -4px 0 rgba(0, 0, 0, .3), 0 24px 50px rgba(0, 0, 0, .45);
+}
+.hd-felt-in {
+    position: absolute;
+    inset: 24px;
+    border-radius: calc(var(--r) + 2px);
+    background:
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 3px),
+        radial-gradient(75% 75% at 50% 42%, var(--felt-c) 0%, var(--felt-1) 36%, var(--felt-2) 58%, var(--felt-3) 80%, var(--felt-4) 100%);
+    box-shadow: inset 0 0 0 4px rgba(0, 0, 0, .28), inset 0 10px 30px rgba(0, 0, 0, .25);
+}
+.hd-felt-in::after {
+    content: "";
+    position: absolute;
+    inset: 18px;
+    border: 2px solid rgba(255, 255, 255, .16);
+    border-radius: calc(var(--r) - 16px);
+}
+.hd-mark {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--board-y) - var(--cy) + var(--ry) + 26px);
+    translate: -50% -50%;
+    color: rgba(0, 40, 36, .3);
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.hd-mark b { display: block; font: 400 56px/1 var(--font-display); letter-spacing: .03em; }
+.hd-mark span { display: block; margin-top: 8px; font: 700 21px/1 var(--font-ui); letter-spacing: .04em; }
+.hd-stage.has-board .hd-mark { opacity: 0; transition: opacity var(--dur-slow) ease; }
+html[lang="en"] .hd-mark span { letter-spacing: 0; }
+
+/* board: five slots; open slots show only once the flop is out (pre-flop the PICASSO print shows) */
+.hd-board {
+    position: absolute;
+    left: var(--cx);
+    top: var(--board-y);
+    z-index: 3;
+    translate: -50% -50%;
+    display: flex;
+    gap: 10px;
+}
+.hd-board:not(:has(.card)) { display: none; }
+.hd-slot { width: var(--card-w-small); height: calc(var(--card-w-small) / .74); border-radius: calc(var(--card-w-small) * .075); }
+.hd-slot.is-open { background: rgba(0, 40, 36, .22); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .12); }
+.hd-slot .card { display: block; }
+.hd-stage .card.is-dim { filter: brightness(.55) saturate(.6); transition: filter var(--dur-slow) ease; }
+.hd-stage .card.is-win { translate: 0 -10px; box-shadow: var(--card-shadow), 0 0 0 3px var(--gold-2); transition: translate var(--dur-ui) var(--ease-back); }
+.hd-stage .card.is-soft { opacity: .92; }
+
+/* pots: the total over the board, side pots as small pills under it */
+.hd-pots {
+    position: absolute;
+    left: var(--cx);
+    top: calc(var(--board-y) - var(--card-w-small) / .74 / 2 - 16px);
+    z-index: 4;
+    translate: -50% -100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.hd-pot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 18px 0 6px;
+    border-radius: 19px;
+    background: rgba(0, 24, 22, .62);
+    white-space: nowrap;
+}
+.hd-pot span { color: rgba(255, 255, 255, .78); font: 700 19px/1 var(--font-ui); }
+.hd-pot b { color: #ffe9a6; font: 700 27px/1 var(--font-num); }
+.hd-sidepots { display: flex; gap: 6px; }
+.hd-sidepot { padding: 0 10px; border-radius: 12px; background: rgba(0, 24, 22, .45); color: rgba(255, 255, 255, .8); font: 700 16px/24px var(--font-ui); white-space: nowrap; }
+.hd-sidepot b { color: #fff; font: 700 19px/24px var(--font-num); }
+.hd-pots:has(.hd-sidepots) { gap: 4px; }
+
+/* chips (CHIP_DEFS in holdem-table.js): the colour of the denomination and a darker rim under it */
+.hd-chip { --cc: #e9edf4; --cd: #7c879e; display: block; width: 28px; height: 28px; border-radius: 50%; color: var(--cc); box-shadow: 0 2px 0 var(--cd), 0 3px 3px rgba(0, 0, 0, .3); }
+.hd-chip.c0 { --cc: #4f7ae0; --cd: #26418c; }
+.hd-chip.c1 { --cc: #d8433c; --cd: #7e1f1a; }
+.hd-chip.c2 { --cc: #22a35a; --cd: #10552d; }
+.hd-chip.c3 { --cc: #2b2f45; --cd: #0c0e18; }
+.hd-chip.c4 { --cc: #e8a222; --cd: #85480a; }
+.hd-chipstack { position: relative; display: block; width: 28px; height: 36px; }
+.hd-chipstack .hd-chip { position: absolute; left: 0; bottom: calc(var(--k) * 5px); }
+.hd-pot .hd-chip { width: 26px; height: 26px; }
+
+/* bets in front of the seats */
+.hd-bet {
+    position: absolute;
+    z-index: 5;
+    translate: -50% -50%;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: none;
+}
+.hd-bet:empty { display: none; }
+.hd-bet b { padding: 0 10px; border-radius: 13px; background: rgba(0, 20, 18, .62); color: #fff; font: 700 23px/28px var(--font-num); white-space: nowrap; }
+.hd-bet.is-right { flex-direction: row-reverse; }
+/* a won pot: the chips land at the seat's bet slot, on the felt, with the amount */
+.hd-bet b.is-won { background: rgba(70, 40, 0, .82); box-shadow: inset 0 0 0 2px var(--gold-2); color: #ffe27a; font-size: 26px; line-height: 32px; border-radius: 16px; }
+
+/* dealer button: a white disc with a black D, placed by transform (it slides to the next seat) */
+.hd-dealer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 32%, #fff 0%, #eef1f6 60%, #c9d0dc 100%);
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .18), 0 2px 4px rgba(0, 0, 0, .4);
+    color: #1c2f66;
+    font: 800 21px/1 var(--font-num);
+    opacity: 0;
+    transition: transform 450ms var(--ease-out), opacity var(--dur-ui) ease;
+}
+.hd-dealer.is-on { opacity: 1; }
+
+/* seats: positioned by the avatar centre (style left / top) */
+.hd-seat { position: absolute; z-index: 6; width: 0; height: 0; }
+.hd-seat-body { position: absolute; left: 0; top: 0; }
+.hd-av {
+    --ring: var(--mate); --ring-d: var(--mate-d);
+    position: absolute;
+    left: -42px;
+    top: -42px;
+    width: 84px;
+    height: 84px;
+    border: 4px solid var(--ring);
+    border-radius: 50%;
+    background: #dfe6ee;
+}
+.hd-av.is-opp { --ring: var(--opp); --ring-d: var(--opp-d); }
+.hd-face, .hd-face > * { position: absolute; inset: 0; border-radius: 50%; }
+.hd-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* a robot is a head only here (Guandan hides its shoulders under the seat pill; our plate starts lower) */
+.hd-av .gd-face.is-bot, .hd-rseat .gd-face.is-bot, .hd-last-av .gd-face.is-bot { translate: 0 7%; }
+.hd-av .gd-face.is-bot > path:last-of-type, .hd-rseat .gd-face.is-bot > path:last-of-type, .hd-last-av .gd-face.is-bot > path:last-of-type { display: none; }
+.hd-av .gd-avatar-tag { bottom: auto; top: -11px; height: 22px; padding: 0 9px; border-radius: 11px; font: 800 15px/22px var(--font-ui); }
+.hd-plate {
+    position: absolute;
+    left: 0;
+    top: 30px;
+    translate: -50% 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 112px;
+    max-width: 150px;
+    padding: 3px 12px 4px;
+    border-radius: 10px;
+    background: rgba(0, 16, 14, .72);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.hd-name { max-width: 100%; overflow: hidden; color: #fff; font: 700 19px/1.25 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.hd-stack { color: #ffe9a6; font: 700 23px/1.1 var(--font-num); }
+.hd-seat.is-folded .hd-seat-body, .hd-seat.is-folded .hd-holes { opacity: .55; }
+.hd-seat.is-out .hd-av { opacity: .6; }
+.hd-seat.is-turn .hd-plate { box-shadow: inset 0 0 0 2px var(--gold-2); }
+.hd-seat.is-winner .hd-plate { background: linear-gradient(180deg, rgba(120, 70, 0, .9), rgba(70, 40, 0, .9)); box-shadow: inset 0 0 0 2px var(--gold-2); }
+/* state plates under the stack: 全下 red, 暂离 / 等待 grey, 离线 */
+.hd-tag {
+    position: absolute;
+    left: 0;
+    top: 86px;
+    translate: -50% 0;
+    padding: 0 10px;
+    border-radius: 6px;
+    background: #7c86a6;
+    color: #fff;
+    font: 800 16px/24px var(--font-ui);
+    white-space: nowrap;
+}
+.hd-tag.is-allin { background: linear-gradient(180deg, #ff6b5e, #c8302a); animation: hd-tag-pop var(--dur-ui) var(--ease-back) both; }
+/* the all-in tag is the seat's one all-in marker (no 全下 action label beside it): it pops in when it appears */
+@keyframes hd-tag-pop { from { scale: .6; opacity: 0; } }
+.hd-tag.is-off { background: #4a5168; }
+
+/* cards at a seat: two small backs tucked at the table side, or the shown cards */
+.hd-holes { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; }
+.hd-holes.is-dealing > * { opacity: 0; }
+.hd-backs { --card-w-small: 34px; position: absolute; left: 30px; top: -36px; display: flex; }
+.hd-backs .card + .card { margin-left: -20px; rotate: 10deg; }
+.hd-backs .card:first-child { rotate: -4deg; }
+.hd-seat.is-right .hd-backs { left: auto; right: 30px; }
+.hd-shown { --card-w-small: 58px; position: absolute; left: 0; top: -14px; translate: -50% -50%; display: flex; }
+.hd-shown .card + .card { margin-left: -14px; }
+.hd-seat.is-left .hd-shown { left: 86px; }
+.hd-seat.is-right .hd-shown { left: -86px; }
+.hd-seat.is-top .hd-shown { left: 84px; top: 10px; }
+
+/* the active seat's clock (Guandan's gold alarm clock), on the table side of the avatar */
+.hd-clockslot { position: absolute; left: 0; top: 0; z-index: 2; }
+.hd-clock { position: absolute; top: -40px; width: 70px; height: 74px; left: 82px; }
+.hd-clock b { top: 26px; font-size: 36px; }
+/* the clock never covers the seat's card backs: on the inner side past them (the backs sit right of a top seat) */
+.hd-seat.is-right .hd-clock { left: auto; right: 82px; }
+.hd-seat.is-top .hd-clock { left: auto; right: 46px; top: -36px; }
+/* a crowded side seat (8-9 seats, landscape): the clock on its outer side, so its bet keeps the space in front */
+.hd-seat.is-left.is-clock-out .hd-clock { left: auto; right: 82px; }
+.hd-seat.is-right.is-clock-out .hd-clock { right: auto; left: 82px; }
+.hd-clock.is-bank::before {
+    content: "";
+    position: absolute;
+    left: 17%;
+    top: 22%;
+    width: 66%;
+    height: 63%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 38%, #ff8a70 0%, #e8402a 60%, #b8200e 100%);
+}
+.hd-clock.is-bank::before { z-index: 1; }
+.hd-clock.is-bank b { z-index: 2; -webkit-text-stroke-color: #8a1408; }
+.hd-bank {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 2px);
+    translate: -50% 0;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: #c8302a;
+    color: #fff;
+    font: 800 14px/22px var(--font-ui);
+    white-space: nowrap;
+}
+
+/* the action just taken: a pill over the avatar for 1.5 s */
+.hd-label { position: absolute; left: 0; top: -70px; z-index: 3; translate: -50% 0; opacity: 0; scale: .8; pointer-events: none; transition: opacity 160ms ease, scale var(--dur-ui) var(--ease-back); }
+.hd-label.is-on { opacity: 1; scale: 1; }
+/* an action label takes the AI / 我 badge's place for its moment (the two pills sat on each other) */
+.hd-av .gd-avatar-tag { transition: opacity 120ms ease; }
+.hd-seat:has(> .hd-label.is-on) .hd-av .gd-avatar-tag { opacity: 0; }
+/* face-up cards say the rest: no action label over them */
+.hd-seat.has-shown .hd-label { display: none; }
+.hd-act {
+    display: block;
+    padding: 0 14px;
+    border-radius: 15px;
+    background: linear-gradient(180deg, #8aa2ff, #6484f4);
+    color: #fff;
+    font: 800 20px/30px var(--font-ui);
+    white-space: nowrap;
+    box-shadow: 0 2px 0 var(--util-edge);
+}
+.hd-act.is-fold, .hd-act.is-timeout, .hd-act.is-muck { background: linear-gradient(180deg, #b9c0cf, #8e97aa); box-shadow: 0 2px 0 #5d667a; }
+.hd-act.is-check { background: linear-gradient(180deg, #7ff0a8, #2fb865); box-shadow: 0 2px 0 var(--ok-edge); }
+.hd-act.is-raise, .hd-act.is-bet { background: linear-gradient(180deg, #ffd66b, #f49a1c); color: #7a2a00; box-shadow: 0 2px 0 #b8660c; }
+.hd-act.is-allin { background: linear-gradient(180deg, #ff8a70, #e0402a); box-shadow: 0 2px 0 #8a1408; }
+/* a top seat's label stays above its avatar like the others' (under it, it covered the stack) */
+/* the winnings take the place of the last action's label */
+.hd-seat.is-winner .hd-label { opacity: 0; }
+
+/* empty seats: the gold + disc (I can sit) or a faint ring */
+.hd-sit {
+    position: absolute;
+    left: -38px;
+    top: -38px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    height: 76px;
+    padding: 0;
+    border: 3px solid rgba(255, 255, 255, .9);
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ffe58a, #f2b43c);
+    color: #fff;
+    text-shadow: 0 2px 0 rgba(140, 84, 8, .55);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+}
+.hd-sit b { font: 400 40px/.8 var(--font-ui); }
+.hd-sit span { font: 800 15px/1.2 var(--font-ui); }
+.hd-sit:active { scale: .95; }
+.hd-sit::after { content: ""; position: absolute; inset: calc(min(0px, (76px - 44px / var(--hd-s, 1)) / 2)); }
+/* a free seat while I am seated: a dim disc that keeps the table's shape, like an empty chair (not a control) */
+.hd-vacant {
+    position: absolute;
+    left: -38px;
+    top: -38px;
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 36%, rgba(0, 34, 30, .3), rgba(0, 14, 12, .48));
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .07), inset 0 5px 12px rgba(0, 0, 0, .28);
+    pointer-events: none;
+}
+.hd-vacant span { color: rgba(255, 255, 255, .4); font: 700 17px/1 var(--font-ui); letter-spacing: .08em; white-space: nowrap; }
+html[lang="en"] .hd-vacant span { letter-spacing: .02em; }
+.hd-stage.is-portrait .hd-vacant { left: -44px; top: -44px; width: 88px; height: 88px; }
+.hd-stage.is-portrait .hd-vacant span { font-size: 20px; }
+
+/* the hero: big hole cards over my avatar, the hand under them */
+.hd-seat.is-hero .hd-av { left: -44px; top: -44px; width: 88px; height: 88px; }
+.hd-seat.is-hero .hd-plate { top: 32px; flex-direction: row; gap: 10px; align-items: baseline; max-width: 360px; padding: 3px 14px 4px; }
+.hd-seat.is-hero .hd-tag { position: static; translate: none; align-self: center; }
+.hd-seat.is-hero .hd-backs { left: 34px; top: -64px; }
+.hd-seat.is-hero .hd-shown { left: 0; top: -108px; --card-w-small: 70px; }
+/* my last action: right of my cards, clear of the hand label under them (wide in English) */
+.hd-seat.is-hero .hd-label { top: -84px; translate: 130px 0; }
+.hd-hero {
+    position: absolute;
+    left: var(--cx);
+    top: calc(var(--hero-y) - 128px);
+    z-index: 7;
+    translate: -50% -50%;
+    pointer-events: none;
+}
+.hd-hole { --card-w: 96px; display: flex; }
+.hd-hole .card { box-shadow: var(--card-shadow), 0 6px 14px rgba(0, 0, 0, .35); }
+.hd-hole .card:first-child { rotate: -6deg; translate: 8px 4px; }
+.hd-hole .card:last-child { rotate: 6deg; translate: -8px 4px; }
+.hd-hole .card.is-win { translate: 0 -10px; }
+.hd-best {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    translate: -50% -60%;
+    padding: 0 16px;
+    border-radius: 16px;
+    background: rgba(0, 16, 14, .82);
+    box-shadow: inset 0 0 0 1px rgba(255, 214, 107, .55);
+    color: #ffe27a;
+    font: 800 20px/32px var(--font-ui);
+    white-space: nowrap;
+}
+.hd-hero-clock { position: absolute; right: calc(100% + 10px); top: 50%; translate: 0 -50%; width: 70px; height: 74px; }
+.hd-hero-clock .hd-clock { left: 0; top: 0; }
+/* waiting / away / busted / watching: a slim plate over my seat */
+.hd-mine { position: absolute; left: var(--cx); top: calc(var(--hero-y) - 92px); z-index: 8; translate: -50% -50%; }
+.hd-mineplate {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 8px 6px 18px;
+    border-radius: 24px;
+    background: rgba(0, 16, 14, .78);
+    color: #fff;
+    font: 700 20px/1 var(--font-ui);
+    white-space: nowrap;
+}
+.hd-mineplate .btn { --btn-h: 38px; --btn-fs: 18px; --btn-px: 16px; }
+.hd-mineplate.is-watch { padding: 10px 20px; color: rgba(255, 255, 255, .85); }
+
+/* the hand's word (Guandan's gold display word) over the board */
+.hd-word { position: absolute; left: var(--cx); top: calc(var(--board-y) - var(--card-w-small) / .74 / 2 - 26px); z-index: 9; translate: -50% -100%; transform-origin: 50% 100%; pointer-events: none; }
+.hd-word-in { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.hd-word .gd-word { font-size: 64px; }
+.hd-word small { padding: 0 12px; border-radius: 12px; background: rgba(0, 16, 14, .7); color: #ffe9a6; font: 800 18px/26px var(--font-ui); }
+.hd-stage.is-showdown .hd-pots { opacity: 0; transition: opacity var(--dur-ui) ease 400ms; }
+
+/* ---------- actions: 弃牌 · 过牌/跟注 · 加注/全下 (Guandan 3D pills), bottom right ---------- */
+.hd-actions { position: absolute; right: 24px; bottom: 22px; z-index: 20; }
+.hd-row { display: flex; gap: 14px; }
+.hd-pill-act {
+    --btn-h: 70px; --btn-fs: 30px; --btn-px: 10px; --btn-minw: 0px; --btn-ls: .04em;
+    width: 172px;
+    flex-direction: column;
+    gap: 0;
+    line-height: 1;
+    -webkit-text-stroke: 2px var(--btn-stroke);
+    text-shadow: 0 2px 0 var(--btn-stroke);
+    box-shadow: 0 3px 0 rgba(255, 255, 255, .6) inset, 0 -5px 0 var(--btn-inset) inset, 0 6px 0 var(--btn-edge), 0 10px 14px rgba(0, 0, 0, .28);
+}
+.hd-pill-act b { margin-top: 2px; font: 700 26px/1 var(--font-num); letter-spacing: .02em; -webkit-text-stroke: 1.5px var(--btn-stroke); }
+.hd-pill-act > .gd-hit { position: absolute; left: 0; right: 0; top: 50%; height: max(100%, calc(42px / var(--hd-s, 1))); translate: 0 -50%; z-index: 0; }
+.btn.hd-fold { --btn-bg: var(--off); --btn-edge: var(--off-edge); --btn-stroke: var(--off-stroke); --btn-inset: rgba(60, 66, 80, .25); }
+.hd-pill-act:active { translate: 0 4px; box-shadow: 0 3px 0 rgba(255, 255, 255, .6) inset, 0 -5px 0 var(--btn-inset) inset, 0 2px 0 var(--btn-edge), 0 4px 8px rgba(0, 0, 0, .28); }
+.hd-row.is-busy { pointer-events: none; }
+.hd-row.is-busy .hd-pill-act { opacity: .7; }
+.hd-stage.is-stale .hd-actions, .hd-stage.is-stale .hd-raise { pointer-events: none; opacity: .55; }
+/* pre-actions: dark checkbox pills in the same place */
+.hd-row.is-pre { gap: max(10px, calc(12px / var(--hd-s, 1))); }
+.hd-pre.btn { --btn-h: max(56px, var(--hd-tap)); --btn-fs: 21px; --btn-px: 18px; --btn-minw: 0px; --btn-ls: .04em; gap: 10px; }
+.hd-pre.btn:not(.is-on) { --btn-bg: var(--off); --btn-edge: var(--off-edge); --btn-stroke: var(--off-stroke); --btn-inset: rgba(60, 66, 80, .25); }
+.hd-pre.btn.is-on { --btn-bg: var(--sec); --btn-edge: var(--sec-edge); --btn-stroke: var(--sec-stroke); --btn-inset: var(--sec-inset); }
+.hd-pre i { position: relative; z-index: 1; flex: none; width: 26px; height: 26px; border-radius: 50%; background: rgba(255, 255, 255, .3); box-shadow: inset 0 0 0 3px #fff, 0 1px 0 rgba(0, 0, 0, .18); }
+.hd-pre.is-on i { background: #fff; box-shadow: 0 2px 0 var(--sec-stroke); }
+.hd-pre.is-on i::after { content: ""; position: absolute; left: 9px; top: 4px; width: 6px; height: 12px; border: solid var(--sec-stroke); border-width: 0 4px 4px 0; rotate: 40deg; }
+.hd-pre span { position: relative; z-index: 1; }
+
+/* the raise panel above the pills: presets, a vertical slider, the amount, ‹ › steps. On a phone the stage is drawn
+   at about half size, so every control here is sized from the stage scale: at least 44 CSS px to the thumb
+   (--hd-tap), with gaps that keep a thumb on one control at a time */
+.hd-stage { --hd-tap: max(44px, calc(44px / var(--hd-s, 1))); --hd-gap: max(8px, calc(10px / var(--hd-s, 1))); }
+.hd-raise { position: absolute; right: 24px; bottom: 112px; z-index: 21; }
+.hd-raise-panel {
+    display: flex;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 14px;
+    background: #0b3b3f;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .4);
+    animation: hd-raise-in 160ms var(--ease-out) both;
+}
+@keyframes hd-raise-in { from { opacity: 0; translate: 0 12px; } }
+.hd-presets { display: flex; flex-direction: column; gap: var(--hd-gap); }
+.hd-preset {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 156px;
+    height: max(46px, var(--hd-tap));
+    padding: 0 14px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+    font: 700 19px/1 var(--font-ui);
+}
+.hd-preset b { color: #ffe9a6; font: 700 21px/1 var(--font-num); }
+.hd-preset.is-on { background: linear-gradient(180deg, #ffe27a, #f6b92a); color: #7a3a00; }
+.hd-preset.is-on b { color: #7a3a00; }
+.hd-preset:disabled { opacity: .4; }
+.hd-slide { display: flex; flex-direction: column; align-items: center; gap: var(--hd-gap); width: max(120px, calc(var(--hd-tap) * 2 + var(--hd-gap) * 2 + 40px)); }
+.hd-raise-v { color: #ffe27a; font: 800 34px/1 var(--font-num); white-space: nowrap; }
+.hd-slider {
+    --f: 0;
+    --thumb: max(30px, calc(26px / var(--hd-s, 1)));
+    position: relative;
+    flex: 1;
+    width: var(--hd-tap);
+    min-height: 170px;
+    border-radius: calc(var(--hd-tap) / 2);
+    background: rgba(0, 0, 0, .35);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .12);
+    touch-action: none;
+    cursor: pointer;
+}
+.hd-slider:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 3px; }
+.hd-slider-fill {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    height: calc(100% - 16px);
+    border-radius: 14px;
+    background: linear-gradient(0deg, #f49a1c, #ffe27a);
+    transform-origin: 50% 100%;
+    transform: scaleY(var(--f));
+}
+.hd-slider-thumb {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    width: calc(var(--hd-tap) + 8px);
+    height: var(--thumb);
+    translate: -50% 0;
+    border-radius: calc(var(--thumb) / 2);
+    background: linear-gradient(180deg, #fff, #dde3ee);
+    box-shadow: 0 3px 0 #9aa3b3, 0 4px 8px rgba(0, 0, 0, .35);
+    transform: translateY(calc(-1 * var(--f) * (100cqh - var(--thumb) - 16px)));
+}
+.hd-slider { container-type: size; }
+.hd-steps { display: flex; align-items: center; gap: var(--hd-gap); color: rgba(255, 255, 255, .6); font: 700 max(15px, calc(11px / var(--hd-s, 1)))/1 var(--font-num); }
+.hd-step {
+    width: var(--hd-tap);
+    height: var(--hd-tap);
+    padding: 0 0 4px;
+    border: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 30%, #fff3b0 0%, #fcc83a 60%, #e0a21c 100%);
+    box-shadow: inset 0 -3px 0 rgba(160, 90, 0, .35), 0 2px 0 #b87818;
+    color: #7a3a00;
+    font: 900 max(28px, calc(var(--hd-tap) * .6))/1 var(--font-ui);
+}
+.hd-step:active { translate: 0 2px; }
+
+/* ---------- HUD: ☰ + room code (top left), 上一手 / 规则 (top right), reconnecting pill ---------- */
+.hd-hud { position: absolute; left: 26px; top: 14px; z-index: 25; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.hd-code { padding: 0 12px; border-radius: 14px; background: rgba(0, 16, 14, .45); color: rgba(255, 255, 255, .75); font: 700 17px/28px var(--font-ui); white-space: nowrap; }
+.hd-code b { color: #fff; font: 700 20px/28px var(--font-num); letter-spacing: .06em; }
+.hd-hud-right { position: absolute; right: 26px; top: 14px; z-index: 25; display: flex; gap: 16px; }
+/* reconnecting: over the middle of the felt (at the top it sat on the top seat's avatar) */
+/* in the HUD row, top centre: never over the board's cards */
+.hd-status { position: absolute; left: 50%; top: 22px; z-index: 30; translate: -50% 0; pointer-events: none; }
+.hd-status span { display: block; padding: 0 18px; border-radius: 18px; background: rgba(0, 0, 0, .7); color: #fff; font: 700 19px/36px var(--font-ui); white-space: nowrap; }
+.hd-status:empty { display: none; }
+
+/* flights (deal, bets to the pot, the pot to winners): absolutely placed, the inner centred */
+.hd-fx { z-index: 40; }
+.hd-fx-under { z-index: 2; }
+.hd-fx-under .gd-fx { --k: .6; }
+.hd-fx-under .gd-fx-core, .hd-fx-under .gd-fx-sweep, .hd-fx-under .gd-fx-ring, .hd-fx-under .gd-fx-dome, .hd-fx-under .gd-word { display: none; }
+.hd-fly { position: absolute; width: 0; height: 0; pointer-events: none; }
+.hd-fly > * { position: absolute; left: 0; top: 0; translate: -50% -50%; }
+.hd-fly.is-card { --card-w-small: 40px; }
+.hd-fly.is-win .hd-chipstack { scale: 1.2; }
+
+/* ---------- portrait phones: a vertical oval, the hero at the bottom, the pills in one row ---------- */
+.hd-stage.is-portrait .hd-av { left: -48px; top: -48px; width: 96px; height: 96px; }
+.hd-stage.is-portrait .hd-plate { top: 34px; min-width: 120px; max-width: 168px; }
+.hd-stage.is-portrait .hd-name { font-size: 22px; }
+.hd-stage.is-portrait .hd-stack { font-size: 26px; }
+.hd-stage.is-portrait .hd-tag { top: 98px; }
+.hd-stage.is-portrait .hd-seat.is-hero .hd-av { left: -50px; top: -50px; width: 100px; height: 100px; }
+.hd-stage.is-portrait .hd-seat.is-hero .hd-plate { top: 36px; max-width: 340px; }
+.hd-stage.is-portrait .hd-seat.is-hero .hd-name { flex: 0 1 auto; min-width: 0; }
+.hd-stage.is-portrait .hd-hole { --card-w: 124px; }
+.hd-stage.is-portrait .hd-hero { top: calc(var(--hero-y) - 152px); }
+.hd-stage.is-portrait .hd-backs { --card-w-small: 40px; left: 34px; top: -44px; }
+.hd-stage.is-portrait .hd-seat.is-right .hd-backs { left: auto; right: 34px; }
+.hd-stage.is-portrait .hd-shown { --card-w-small: 66px; }
+/* side seats show their cards beside the avatar and up, toward the felt (where their backs were, clear of their own
+   bet slot), so the face stays visible; a low side seat, whose cards there would meet mine, holds them up and in */
+.hd-stage.is-portrait .hd-seat.is-left .hd-shown { left: 114px; top: -58px; }
+.hd-stage.is-portrait .hd-seat.is-right .hd-shown { left: -114px; top: -58px; }
+.hd-stage.is-portrait .hd-seat.is-left.is-low .hd-shown { --card-w-small: 54px; left: 50px; top: -98px; }
+.hd-stage.is-portrait .hd-seat.is-right.is-low .hd-shown { --card-w-small: 54px; left: -50px; top: -98px; }
+/* a side seat's clock past its card backs */
+.hd-stage.is-portrait .hd-seat.is-left .hd-clock { left: 104px; }
+.hd-stage.is-portrait .hd-seat.is-right .hd-clock { right: 104px; }
+.hd-stage.is-portrait .hd-mark b { font-size: 60px; }
+.hd-stage.is-portrait .hd-board { gap: 8px; }
+.hd-stage.is-portrait .hd-actions { left: 20px; right: 20px; bottom: 30px; }
+.hd-stage.is-portrait .hd-row { justify-content: center; }
+.hd-stage.is-portrait .hd-pill-act { flex: 1; width: auto; --btn-h: 88px; --btn-fs: 34px; }
+.hd-stage.is-portrait .hd-pill-act b { font-size: 30px; }
+.hd-stage.is-portrait .hd-pre.btn { flex: 1; justify-content: center; --btn-h: max(72px, var(--hd-tap)); --btn-fs: 22px; --btn-px: 8px; }
+.hd-stage.is-portrait .hd-raise { left: 20px; right: 20px; bottom: 136px; }
+/* my clock sits on the felt above my first card's corner, clear of the card faces: beside the cards it met the
+   next seat's card backs (9-max), beside my avatar the open raise panel would cover it */
+.hd-stage.is-portrait .hd-hero-clock { right: auto; left: calc(50% - 140px); top: calc(50% - 137px); }
+/* the open raise panel lies over my seat: my avatar and my dealer button step out instead of peeking over its edge */
+.hd-stage.is-portrait .hd-seat.is-hero { transition: opacity 120ms ease; }
+.hd-stage.is-portrait.is-raising .hd-seat.is-hero, .hd-stage.is-portrait.is-raising .hd-dealer.is-mine { opacity: 0; }
+.hd-stage.is-portrait .hd-raise-panel { flex-direction: column; gap: 12px; }
+/* min to all-in, left to right, the way the slider under it runs (the landscape column reads all-in at the top, as
+   its vertical slider does) */
+.hd-stage.is-portrait .hd-presets { flex-direction: row-reverse; }
+.hd-stage.is-portrait .hd-preset { flex: 1; width: auto; flex-direction: column; justify-content: center; gap: 4px; height: max(60px, var(--hd-tap)); padding: 0 4px; font-size: 19px; }
+.hd-stage.is-portrait .hd-raise-panel { padding: 12px; }
+.hd-stage.is-portrait .hd-slide { flex-direction: row; width: auto; gap: 12px; }
+.hd-stage.is-portrait .hd-raise-v { order: 2; min-width: 120px; text-align: center; }
+.hd-stage.is-portrait .hd-steps { display: contents; }
+.hd-stage.is-portrait .hd-steps span { display: none; }
+.hd-stage.is-portrait .hd-step:first-of-type { order: 0; }
+.hd-stage.is-portrait .hd-slider { order: 1; flex: 1; width: auto; min-height: 0; height: max(48px, var(--hd-tap)); --thumb: max(34px, calc(24px / var(--hd-s, 1))); }
+.hd-stage.is-portrait .hd-step:last-of-type { order: 3; }
+.hd-stage.is-portrait .hd-slider-fill { left: 8px; top: 8px; bottom: 8px; width: calc(100% - 16px); height: auto; transform-origin: 0 50%; transform: scaleX(var(--f)); }
+.hd-stage.is-portrait .hd-slider-thumb { left: 8px; bottom: auto; top: 50%; width: var(--thumb); height: calc(100% + 8px); translate: 0 -50%; transform: translateX(calc(var(--f) * (100cqw - var(--thumb) - 16px))); }
+.hd-stage.is-portrait .hd-hud { left: 22px; top: 18px; }
+.hd-stage.is-portrait .hd-hud-right { right: 22px; top: 18px; }
+
+/* ---------- popups: buy-in / top-up, last hand ---------- */
+.hd-amount { display: flex; flex-direction: column; align-items: center; gap: calc(12 * var(--pu)); }
+.hd-amount-bank { align-self: stretch; display: flex; align-items: center; justify-content: space-between; padding: calc(8 * var(--pu)) calc(14 * var(--pu)); border-radius: calc(8 * var(--pu)); background: #eef3fd; color: var(--ink-3); font: 700 calc(17 * var(--pu))/1 var(--font-ui); }
+.hd-amount-bank b { display: flex; align-items: center; gap: calc(8 * var(--pu)); color: var(--ink); font: 800 calc(26 * var(--pu))/1 var(--font-num); }
+.hd-amount-v { color: var(--ink); font: 800 calc(52 * var(--pu))/1 var(--font-num); }
+.hd-range { width: 100%; height: max(var(--tap, 0px), calc(40 * var(--pu))); margin: 0; background: none; appearance: none; -webkit-appearance: none; cursor: pointer; }
+.hd-range::-webkit-slider-runnable-track { height: calc(12 * var(--pu)); border-radius: calc(6 * var(--pu)); background: linear-gradient(90deg, #f6b92a, #ffe27a); box-shadow: inset 0 calc(1 * var(--pu)) calc(2 * var(--pu)) rgba(120, 60, 0, .3); }
+.hd-range::-webkit-slider-thumb { -webkit-appearance: none; width: calc(34 * var(--pu)); height: calc(34 * var(--pu)); margin-top: calc(-11 * var(--pu)); border-radius: 50%; background: radial-gradient(circle at 50% 30%, #fff 0%, #e6ebf3 100%); box-shadow: 0 calc(2 * var(--pu)) 0 #9aa3b3, 0 calc(3 * var(--pu)) calc(6 * var(--pu)) rgba(0, 0, 30, .3); }
+.hd-range::-moz-range-track { height: calc(12 * var(--pu)); border-radius: calc(6 * var(--pu)); background: linear-gradient(90deg, #f6b92a, #ffe27a); }
+.hd-range::-moz-range-thumb { width: calc(34 * var(--pu)); height: calc(34 * var(--pu)); border: 0; border-radius: 50%; background: #fff; box-shadow: 0 calc(2 * var(--pu)) 0 #9aa3b3; }
+.hd-range:focus-visible { outline: 2px solid var(--util); outline-offset: 4px; }
+.hd-amount-presets { display: flex; gap: calc(10 * var(--pu)); }
+.hd-amount-presets .hd-pill { --ru: var(--pu); min-width: calc(96 * var(--pu)); font-family: var(--font-ui); }
+.hd-amount-note { margin: 0 0 calc(8 * var(--pu)); color: var(--ink-3); font: 500 calc(16 * var(--pu))/1.45 var(--font-ui); text-align: center; text-wrap: balance; }
+.gd-rules-row.hd-rank-row { grid-template-columns: calc(124 * var(--pu)) minmax(0, 1fr) auto; }
+html[lang="en"] .gd-rules-row.hd-rank-row { grid-template-columns: calc(176 * var(--pu)) minmax(0, 1fr) auto; }
+@media (max-aspect-ratio: 1/1) {
+    .gd-popup-layer:not(.in-stage) .gd-rules-row.hd-rank-row { grid-template-columns: max-content minmax(0, 1fr); }
+    .gd-popup-layer:not(.in-stage) .gd-rules-row.hd-rank-row .gd-rules-cards { grid-column: 1 / -1; }
+}
+.hd-rank-row > b { text-align-last: auto; white-space: nowrap; }
+.hd-rank-row .gd-rules-cards { --card-w-small: calc(44 * var(--pu)); }
+.hd-rank-row .gd-rules-cards .card + .card { margin-left: calc(-16 * var(--pu)); }
+.hd-last { display: flex; flex-direction: column; gap: calc(10 * var(--pu)); }
+.hd-last-board { --card-w-small: calc(66 * var(--pu)); display: flex; justify-content: center; gap: calc(8 * var(--pu)); padding: calc(14 * var(--pu)); border-radius: calc(10 * var(--pu)); background: radial-gradient(100% 120% at 50% 30%, var(--felt-c), var(--felt-3)); }
+.hd-last-none { color: rgba(255, 255, 255, .85); font: 700 calc(18 * var(--pu))/calc(90 * var(--pu)) var(--font-ui); }
+.hd-last-row { display: flex; align-items: center; gap: calc(12 * var(--pu)); padding: calc(8 * var(--pu)) calc(12 * var(--pu)); border-radius: calc(8 * var(--pu)); background: #fff; box-shadow: inset 0 0 0 1px var(--panel-line); }
+.hd-last-row.is-win { background: #fff8e2; box-shadow: inset 0 0 0 2px #f4c04a; }
+.hd-last-av { --av-size: calc(46 * var(--pu)); }
+/* the hand's name runs under the player's name and the cards on its own line (in the name column alone a long
+   English name wrapped mid-phrase on a phone) */
+.hd-last-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "av name cards amt" "av hand hand hand"; column-gap: calc(12 * var(--pu)); row-gap: 0; }
+.hd-last-av { grid-area: av; }
+.hd-last-name { display: contents; }
+.hd-last-name b { grid-area: name; overflow: hidden; color: var(--ink); font: 800 calc(19 * var(--pu))/1.3 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.hd-last-name small { grid-area: hand; overflow: hidden; color: var(--ink-3); font: 700 calc(15 * var(--pu))/1.3 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.hd-last-name small:empty { display: none; }
+.hd-last-cards { grid-area: cards; }
+.hd-last-amt { grid-area: amt; }
+.hd-last-cards { --card-w-small: calc(44 * var(--pu)); display: flex; gap: calc(4 * var(--pu)); }
+.hd-last-amt { min-width: calc(80 * var(--pu)); color: #c86a00; font: 800 calc(26 * var(--pu))/1 var(--font-num); text-align: right; }
+.gd-popup .card.is-dim { filter: brightness(.55) saturate(.6); }
+
+/* ---------- Hold'em ranking page (巅峰对决's navy board: white rows, winged badges 1-3, Barlow numbers) ---------- */
+.hd-page {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal, 60);
+    display: flex;
+    flex-direction: column;
+    background:
+        linear-gradient(118deg, transparent 0 58%, rgba(255, 255, 255, .045) 58% 66%, transparent 66%),
+        radial-gradient(70% 90% at 100% 0%, rgba(132, 160, 255, .34), transparent 62%),
+        radial-gradient(60% 70% at 0% 100%, rgba(96, 74, 196, .32), transparent 62%),
+        linear-gradient(160deg, #2e4286 0%, #243464 48%, #1b2750 100%);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 150ms ease;
+    --pg: clamp(.62px, min(calc(100vw / 1280), calc(100vh / 720)), 1.2px);
+}
+.hd-page.is-open { opacity: 1; }
+.hd-page-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: calc(12 * var(--pg));
+    height: calc(84 * var(--pg) + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) calc(30 * var(--pg)) 0 calc(14 * var(--pg));
+}
+.hd-page-back { width: max(44px, calc(64 * var(--pg))); height: max(44px, calc(64 * var(--pg))); }
+.hd-page-title { display: flex; align-items: baseline; gap: calc(14 * var(--pg)); min-width: 0; }
+.hd-page-head h2 { margin: 0; white-space: nowrap; font: 900 calc(34 * var(--pg))/1 var(--font-ui); letter-spacing: .04em; text-shadow: 0 calc(2 * var(--pg)) 0 rgba(30, 44, 130, .6); }
+.hd-page-head span { color: rgba(220, 232, 255, .6); font: 600 max(12px, calc(18 * var(--pg)))/1 var(--font-ui); }
+html[lang="en"] .hd-page-head h2 { letter-spacing: 0; }
+.hd-page-body { flex: 1; min-height: 0; display: flex; justify-content: center; padding: 0 calc(30 * var(--pg)) calc(20 * var(--pg) + env(safe-area-inset-bottom, 0px)); }
+.hd-lb {
+    --cols: calc(96 * var(--pg)) minmax(0, 1fr) calc(150 * var(--pg)) calc(100 * var(--pg)) calc(100 * var(--pg)) calc(130 * var(--pg));
+    width: min(100%, calc(1060 * var(--pg)));
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* Guandan's framed records panel */
+    padding: calc(10 * var(--pg)) calc(12 * var(--pg)) calc(12 * var(--pg));
+    border-radius: 10px;
+    background: radial-gradient(40% 30% at 50% 0%, rgba(196, 206, 255, .28), transparent), linear-gradient(180deg, rgba(58, 78, 190, .55), rgba(22, 32, 100, .62));
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .22), 0 4px 0 rgba(8, 14, 48, .35);
+}
+.hd-bhead, .hd-brow { display: grid; grid-template-columns: var(--cols); align-items: center; gap: calc(10 * var(--pg)); }
+.hd-bhead { flex: none; height: calc(44 * var(--pg)); padding: 0 calc(18 * var(--pg)); border-radius: calc(8 * var(--pg)) calc(8 * var(--pg)) 0 0; background: rgba(10, 18, 60, .55); color: rgba(220, 232, 255, .8); font: 800 max(11px, calc(17 * var(--pg)))/1 var(--font-ui); }
+.hd-bhead span:not(:nth-child(2)) { text-align: center; }
+.hd-brows { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .3) transparent; display: flex; flex-direction: column; gap: calc(6 * var(--pg)); padding: calc(8 * var(--pg)) 0; }
+.hd-brow {
+    flex: none;
+    min-height: calc(66 * var(--pg));
+    padding: calc(6 * var(--pg)) calc(18 * var(--pg));
+    border-radius: calc(8 * var(--pg));
+    background: linear-gradient(180deg, #fff, #eef3fd);
+    color: #1c2f66;
+    animation: hd-row-in 260ms var(--ease-out) both;
+    animation-delay: calc(var(--i) * 30ms);
+}
+@keyframes hd-row-in { from { opacity: 0; translate: 0 calc(10 * var(--pg)); } }
+.hd-brow.is-top { background: linear-gradient(180deg, #fffdf2, #fdf0c8); }
+.hd-brow.is-me { box-shadow: inset 0 0 0 calc(2 * var(--pg)) var(--util); }
+.hd-bc-rank { display: grid; place-items: center; }
+.hd-page .gdr-rank { width: calc(48 * var(--pg)); height: calc(40 * var(--pg)); font-size: calc(22 * var(--pg)); }
+.hd-page .gdr-rank.n { width: auto; height: auto; color: #8290b4; font: 800 calc(26 * var(--pg))/1 var(--font-num); }
+.hd-bc-name { display: flex; align-items: center; gap: calc(12 * var(--pg)); min-width: 0; }
+.hd-bc-name .gd-avatar { --av-size: calc(46 * var(--pg)); --ring: #dfe6f4; }
+.hd-bc-name b { overflow: hidden; font: 800 calc(21 * var(--pg))/1.2 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.hd-bc-name em { flex: none; padding: 0 calc(8 * var(--pg)); border-radius: calc(5 * var(--pg)); background: var(--util); color: #fff; font: 800 calc(15 * var(--pg))/calc(24 * var(--pg)) var(--font-ui); font-style: normal; }
+.hd-bc-num { text-align: center; font: 700 calc(26 * var(--pg))/1 var(--font-num); white-space: nowrap; }
+.hd-bc-num.is-neg { color: #c8304e; }
+.hd-brow > .hd-bc-num.is-zero:nth-child(3) { color: #1c2f66; }
+.hd-brow > .hd-bc-num:nth-child(3) { color: #1b8a4c; }
+.hd-brow > .hd-bc-num.is-neg:nth-child(3) { color: #c8304e; }
+.hd-bme { flex: none; padding-top: calc(6 * var(--pg)); border-top: 1px solid rgba(255, 255, 255, .15); }
+.hd-bme.is-first { padding-top: calc(8 * var(--pg)); border-top: 0; }
+.hd-bme-note { margin: calc(6 * var(--pg)) 0 0; color: rgba(220, 232, 255, .7); font: 600 max(11px, calc(15 * var(--pg)))/1.4 var(--font-ui); text-align: center; }
+/* empty ranking: the three places on their steps, waiting */
+/* the empty panel ends under its podium (a framed card, not a page-tall void) */
+.hd-lb.is-empty { align-self: flex-start; }
+.hd-podium { flex: none; display: flex; flex-direction: column; align-items: center; gap: calc(18 * var(--pg)); padding: clamp(24px, 6vh, 64px) 0 clamp(20px, 5vh, 48px); }
+.hd-pods { display: flex; align-items: flex-end; gap: calc(14 * var(--pg)); }
+.hd-pod { display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--pg)); width: calc(130 * var(--pg)); }
+.hd-pod .gdr-rank { opacity: .9; }
+.hd-pod-av { --av-size: calc(70 * var(--pg)); --ring: rgba(220, 232, 255, .55); opacity: .75; }
+.hd-pod-step { display: grid; place-items: start center; width: 100%; padding-top: calc(10 * var(--pg)); border-radius: calc(8 * var(--pg)) calc(8 * var(--pg)) 0 0; background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .06)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35); color: rgba(255, 255, 255, .85); font: 800 calc(30 * var(--pg))/1 var(--font-num); }
+.hd-pod.is-p1 .hd-pod-step { height: calc(120 * var(--pg)); }
+.hd-pod.is-p2 .hd-pod-step { height: calc(86 * var(--pg)); }
+.hd-pod.is-p3 .hd-pod-step { height: calc(62 * var(--pg)); }
+.hd-podium .hd-board-empty { margin: 0; }
+.hd-board-play { --btn-h: max(44px, calc(60 * var(--pg))); --btn-fs: max(16px, calc(24 * var(--pg))); min-width: calc(240 * var(--pg)); }
+.hd-board-loading, .hd-board-empty { margin: auto; color: rgba(220, 232, 255, .8); font: 700 max(13px, calc(20 * var(--pg)))/1.5 var(--font-ui); text-align: center; }
+.hd-board-loading { display: flex; align-items: center; gap: 10px; }
+.hd-board-loading i { width: 1.1em; height: 1.1em; border: .15em solid rgba(255, 255, 255, .28); border-top-color: #fff; border-radius: 50%; animation: gd-busy-turn 800ms linear infinite; }
+@media (max-aspect-ratio: 1/1) {
+    .hd-page { --pg: min(calc(100vw / 560), 1.2px); }
+    .hd-lb { --cols: calc(50 * var(--pg)) minmax(0, 1fr) calc(100 * var(--pg)) calc(62 * var(--pg)) calc(62 * var(--pg)); }
+    .hd-bhead, .hd-brow { gap: calc(6 * var(--pg)); padding-left: calc(10 * var(--pg)); padding-right: calc(10 * var(--pg)); }
+    .hd-bc-name { gap: calc(9 * var(--pg)); }
+    .hd-bhead span:nth-child(6), .hd-brow > :nth-child(6) { display: none; }
+    .hd-page-title { flex-direction: column; align-items: flex-start; gap: calc(6 * var(--pg)); }
+    .hd-page-body { padding: 0 calc(14 * var(--pg)) calc(14 * var(--pg) + env(safe-area-inset-bottom, 0px)); }
+    /* a phone: the empty panel takes the screen, its podium in the middle */
+    .hd-lb.is-empty { align-self: stretch; }
+    .hd-lb.is-empty .hd-podium { flex: 1; justify-content: center; }
+}
