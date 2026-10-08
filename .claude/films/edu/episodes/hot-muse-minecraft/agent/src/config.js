@@ -293,6 +293,10 @@ export function loadConfig(env = process.env) {
     far: r.int('STREAM_FAR', 48, 16, 256),
     maxRssMB: r.int('STREAM_MAX_RSS_MB', 1600, 300, 16_000),
     noSandbox: r.bool('STREAM_NO_SANDBOX', false),
+    // test only: a large wall clock (HH:MM:SS in STREAM_CLOCK_TZ) burned into the top-right corner, to read the
+    // end-to-end delay against a clock on the viewer's screen
+    clock: r.bool('STREAM_CLOCK', false),
+    clockTz: r.str('STREAM_CLOCK_TZ', 'America/Los_Angeles'),
     // 'viewer': prismarine-viewer in headless Chromium (src/stream.js); 'client': the real Minecraft client as a
     // spectator in the bot's head (src/camera.js, the camera container)
     source: r.oneOf('STREAM_SOURCE', 'viewer', ['viewer', 'client']),
@@ -307,12 +311,16 @@ export function loadConfig(env = process.env) {
       javaThreads: r.int('CAMERA_JAVA_THREADS', 4, 1, 64),
       heapMB: r.int('CAMERA_HEAP_MB', 2048, 512, 16_384),
       maxFps: r.int('CAMERA_MAX_FPS', 30, 10, 120),
-      renderDistance: r.int('CAMERA_RENDER_DISTANCE', 8, 2, 32),
-      graphics: r.oneOf('CAMERA_GRAPHICS', 'fancy', ['fast', 'fancy']),
+      renderDistance: r.int('CAMERA_RENDER_DISTANCE', 5, 2, 32),
+      graphics: r.oneOf('CAMERA_GRAPHICS', 'fast', ['fast', 'fancy']),
       display: r.int('CAMERA_DISPLAY', 99, 1, 900),
-      scale: r.num('CAMERA_SCALE', 1, 0.5, 1),
+      scale: r.num('CAMERA_SCALE', 0.75, 0.5, 1),
       javaNice: r.int('CAMERA_NICE', 5, 0, 19),
       idleMs: r.int('CAMERA_IDLE_MS', 600_000, 0, 86_400_000),
+      // client mods from the image (deploy/camera/mods.json), comma-separated; 'off' runs the vanilla client
+      mods: r.str('CAMERA_MODS', 'sodium'),
+      chunkThreads: r.int('CAMERA_CHUNK_THREADS', 0, 0, 32),
+      jvmArgs: r.str('CAMERA_JVM_ARGS', '').split(/\s+/).filter(Boolean),
       console: r.str('MC_CONSOLE', ''),
     },
   };

@@ -14,10 +14,10 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {
-  clientOptions, clientLaunch, offlineUuid, consoleCommand, followCommands, keepFollowingCommands, parkCommands, validName,
+  clientOptions, clientLaunch, modJars, sodiumOptions, offlineUuid, consoleCommand, followCommands, keepFollowingCommands, parkCommands, validName,
   cameraProfile, tightenAuthDir, createCameraRig, createCameraStream, createCameraPool, cameraOptions, x11Input, CAMERA_DEFAULTS,
 } from '../src/camera.js';
-import { ffmpegArgs, createStreamManager, createStreamService, createRemoteStreamManager } from '../src/stream.js';
+import { ffmpegArgs, createStreamManager, createStreamService, createRemoteStreamManager, encoderEnv, managerConfig } from '../src/stream.js';
 import { loadConfig } from '../src/config.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -41,10 +41,10 @@ test('client options: the video settings, no HUD chat, no sound, no first-run sc
   const o = clientOptions({ renderDistance: 8, maxFps: 30 });
   const v = Object.fromEntries(o.trim().split('\n').map((l) => [l.slice(0, l.indexOf(':')), l.slice(l.indexOf(':') + 1)]));
   assert.equal(v.version, '4189');
-  assert.deepEqual([v.renderDistance, v.maxFps, v.enableVsync, v.graphicsMode, v.particles], ['8', '30', 'false', '1', '0']);
+  assert.deepEqual([v.renderDistance, v.maxFps, v.enableVsync, v.graphicsMode, v.particles], ['8', '30', 'false', '0', '0'], 'fast leaves by default');
   assert.deepEqual([v.chatVisibility, v.soundCategory_master, v.pauseOnLostFocus, v.onboardAccessibility, v.tutorialStep], ['2', '0.0', 'false', 'false', 'none']);
   assert.equal(v.inactivityFpsLimit, '"minimized"', 'never throttled as AFK');
-  assert.equal(clientOptions({ graphics: 'fast' }).includes('graphicsMode:0'), true);
+  assert.equal(clientOptions({ graphics: 'fancy' }).includes('graphicsMode:1'), true);
 });
 
 test('offline UUIDs match what Paper gives the name', () => {
@@ -168,7 +168,7 @@ test('rig on stand-in programs: joins, spectator and park on the console, F1 onc
     assert.deepEqual(lines(), ['whitelist add MuseCam', 'gamemode spectator MuseCam', 'execute as MuseCam at @s run tp @s ~ 250 ~ ~ -90']);
     assert.equal(fs.readFileSync(path.join(out, 'token0'), 'utf8'), 'yes\n', 'the client got its token');
     assert.equal(fs.readFileSync(path.join(out, 'args0'), 'utf8').includes(TOKEN), false, 'and not on its command line');
-    assert.match(fs.readFileSync(path.join(dir, 'home', 'game', 'options.txt'), 'utf8'), /renderDistance:8/);
+    assert.match(fs.readFileSync(path.join(dir, 'home', 'game', 'options.txt'), 'utf8'), /renderDistance:5\n/);
     assert.equal(JSON.stringify(rows).includes(TOKEN), false, 'nor in the log rows');
 
     await rig.follow('Muse_g1');
@@ -303,7 +303,7 @@ test('the bot\'s name goes from the agent through the service to the stream; a b
 test('config: STREAM_SOURCE viewer by default; the camera needs the console and its auth folder; CAMERA_* checked', () => {
   const c = loadConfig({});
   assert.equal(c.stream.source, 'viewer');
-  assert.deepEqual([c.stream.camera.auth, c.stream.camera.gl, c.stream.camera.maxFps, c.stream.camera.renderDistance], ['msa', 'cpu', 30, 8]);
+  assert.deepEqual([c.stream.camera.auth, c.stream.camera.gl, c.stream.camera.maxFps, c.stream.camera.renderDistance, c.stream.camera.graphics, c.stream.camera.scale, c.stream.camera.glThreads, c.stream.camera.mods], ['msa', 'cpu', 30, 5, 'fast', 0.75, 8, 'sodium']);
   const base = { STREAM_ENABLED: '1', STREAM_OUT_DIR: '/tmp/streams', STREAM_SOURCE: 'client' };
   assert.throws(() => loadConfig(base), /needs MC_CONSOLE/);
   assert.throws(() => loadConfig({ ...base, MC_CONSOLE: '/console/console.in' }), /needs CAMERA_AUTH_DIR/);
@@ -315,4 +315,47 @@ test('config: STREAM_SOURCE viewer by default; the camera needs the console and 
   assert.throws(() => loadConfig({ CAMERA_NAME: 'no spaces' }), /CAMERA_NAME/);
   assert.throws(() => loadConfig({ CAMERA_GL: 'vulkan' }), /CAMERA_GL/);
   assert.throws(() => loadConfig({ CAMERA_SCALE: '2' }), /CAMERA_SCALE/);
+});
+
+test('test clock (STREAM_CLOCK): off by default; on, a large HH:MM:SS top right in the configured time zone', () => {
+  assert.equal(loadConfig({}).stream.clock, false);
+  const off = ffmpegArgs({ output: 'x.mp4', font: '/f.ttf' });
+  assert.equal(off.join(' ').includes('localtime'), false);
+  const vf = (a) => a[a.indexOf('-vf') + 1];
+  const on = ffmpegArgs({ output: 'x.mp4', font: '/f.ttf', clock: true });
+  assert.match(vf(on), /drawtext=fontfile='\/f\.ttf':text='%\{localtime\\:%T\}':fontsize=65:.*:x=w-tw-30:y=30,format=yuv420p$/);
+  assert.equal(vf(ffmpegArgs({ output: 'x.mp4', font: null, clock: true })).includes('localtime'), false, 'no font, no clock');
+  assert.equal(encoderEnv({ clock: true, clockTz: 'America/Los_Angeles' }).TZ, 'America/Los_Angeles');
+  assert.equal(encoderEnv({}, { DISPLAY: ':99' }).DISPLAY, ':99');
+  const mc = managerConfig(loadConfig({ STREAM_ENABLED: '1', STREAM_OUT_DIR: '/tmp/s', STREAM_CLOCK: '1' }).stream);
+  assert.deepEqual([mc.options.clock, mc.options.clockTz], [true, 'America/Los_Angeles']);
+});
+
+test('client mods: Fabric first on the class path, its ASM instead of the game\'s, the chosen jars by path; vanilla when off', () => {
+  const fabric = {
+    loader: '0.19.5', mainClass: 'net.fabricmc.loader.impl.launch.knot.KnotClient', jvmArgs: ['-DFabricMcEmu=net.minecraft.client.main.Main'],
+    classpath: ['/opt/mc/libraries/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar', '/opt/mc/libraries/net/fabricmc/fabric-loader/0.19.5/fabric-loader-0.19.5.jar'],
+    replaces: ['/opt/mc/libraries/org/ow2/asm/asm/9.6/asm-9.6.jar'],
+    mods: { sodium: { version: 'mc1.21.4-0.6.13-fabric', jar: '/opt/mc/mods/sodium.jar' }, ferritecore: { version: '7.1.3-fabric', jar: '/opt/mc/mods/ferritecore.jar' } },
+  };
+  const launch = { ...LAUNCH, classpath: ['/opt/mc/libraries/org/ow2/asm/asm/9.6/asm-9.6.jar', ...LAUNCH.classpath], fabric };
+  const c = { ...CAMERA_DEFAULTS, home: '/camera/cam0', server: '10.0.0.1:25565', mods: 'sodium, ferritecore', jvmArgs: ['-XX:+AlwaysPreTouch'] };
+  assert.deepEqual(modJars(c, launch), ['/opt/mc/mods/sodium.jar', '/opt/mc/mods/ferritecore.jar']);
+  const cmd = clientLaunch(c, launch, { name: 'MuseCam', uuid: 'u' });
+  const cp = cmd.args[cmd.args.indexOf('-cp') + 1].split(':');
+  assert.deepEqual(cp.slice(0, 3), ['/opt/mc/camera-main', ...fabric.classpath]);
+  assert.equal(cp.includes('/opt/mc/libraries/org/ow2/asm/asm/9.6/asm-9.6.jar'), false, 'one ASM only');
+  assert.ok(cp.includes('/opt/mc/client.jar'));
+  for (const a of ['-Dmuse.camera.main=net.fabricmc.loader.impl.launch.knot.KnotClient', '-Dfabric.addMods=/opt/mc/mods/sodium.jar:/opt/mc/mods/ferritecore.jar', '-DFabricMcEmu=net.minecraft.client.main.Main', '-XX:+AlwaysPreTouch']) {
+    assert.ok(cmd.args.includes(a), a);
+  }
+  const vanilla = clientLaunch({ ...c, mods: 'off' }, launch, { name: 'MuseCam', uuid: 'u' });
+  assert.equal(vanilla.args.some((a) => a.startsWith('-Dmuse.camera.main') || a.includes('fabric-loader')), false);
+  assert.throws(() => modJars({ mods: 'optifine' }, launch), /no client mod "optifine"/);
+  assert.throws(() => modJars({ mods: 'sodium' }, LAUNCH), /needs an image with Fabric/);
+  const so = sodiumOptions({ chunkThreads: 2, graphics: 'fast' });
+  assert.deepEqual([so.performance.chunk_builder_threads, so.quality.leaves_quality, so.performance.use_block_face_culling], [2, 'FAST', true]);
+  const cfg = loadConfig({}).stream.camera;
+  assert.deepEqual([cfg.mods, cfg.chunkThreads, cfg.jvmArgs], ['sodium', 0, []]);
+  assert.deepEqual(loadConfig({ CAMERA_JVM_ARGS: '-XX:+UseZGC  -Xss2m' }).stream.camera.jvmArgs, ['-XX:+UseZGC', '-Xss2m']);
 });

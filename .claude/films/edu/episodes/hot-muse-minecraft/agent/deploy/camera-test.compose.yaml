@@ -43,24 +43,29 @@ services:
     # an ingest for a live test (STREAM_RTMP_URL=rtmps://.../<key>, file 600, made on picasso, never in the repo);
     # without it every game is an MP4 in ../../streams
     env_file: [ { path: camera.env, required: false } ]
-    # every CAMERA_* can be set for one run: CAMERA_GRAPHICS=fast CAMERA_RENDER_DISTANCE=6 docker compose ... up -d camera
+    # every CAMERA_* can be set for one run (the defaults are the tuned ones, README "Real-client camera"):
+    #   CAMERA_MODS=off CAMERA_GRAPHICS=fancy CAMERA_RENDER_DISTANCE=8 CAMERA_SCALE=1 docker compose ... up -d camera
     environment:
       STREAM_ENABLED: "1"
       STREAM_OUT_DIR: /streams
       STREAM_MAX: "1"
       STREAM_BITRATE_K: "${STREAM_BITRATE_K:-3500}"
+      STREAM_CLOCK: "${STREAM_CLOCK:-0}"
       MC_HOST: 10.77.78.10
       MC_CONSOLE: /console/console.in
       CAMERA_AUTH: "${CAMERA_AUTH:-msa}"
       CAMERA_GL: "${CAMERA_GL:-cpu}"
       CAMERA_GL_THREADS: "${CAMERA_GL_THREADS:-8}"
       CAMERA_JAVA_THREADS: "${CAMERA_JAVA_THREADS:-4}"
-      CAMERA_GRAPHICS: "${CAMERA_GRAPHICS:-fancy}"
-      CAMERA_RENDER_DISTANCE: "${CAMERA_RENDER_DISTANCE:-8}"
+      CAMERA_GRAPHICS: "${CAMERA_GRAPHICS:-fast}"
+      CAMERA_RENDER_DISTANCE: "${CAMERA_RENDER_DISTANCE:-5}"
       CAMERA_MAX_FPS: "${CAMERA_MAX_FPS:-30}"
-      CAMERA_SCALE: "${CAMERA_SCALE:-1}"
+      CAMERA_SCALE: "${CAMERA_SCALE:-0.75}"
       CAMERA_NICE: "${CAMERA_NICE:-5}"
       CAMERA_IDLE_MS: "${CAMERA_IDLE_MS:-600000}"
+      CAMERA_MODS: "${CAMERA_MODS:-sodium}"
+      CAMERA_CHUNK_THREADS: "${CAMERA_CHUNK_THREADS:-0}"
+      CAMERA_JVM_ARGS: "${CAMERA_JVM_ARGS:-}"
     volumes: [ "../../logs:/logs", "../../streams:/streams", "console:/console", "${HOME}/workspace/muse-minecraft/camera/auth:/auth" ]
     tmpfs: [ "/camera:size=1g,mode=1777,exec" ]
     cpus: ${CAMERA_CPUS:-12}

@@ -110,6 +110,12 @@ export function ffmpegArgs(o) {
     ? `,drawtext=fontfile=${filterPath(o.font)}:textfile=${filterPath(o.captionFile)}:reload=1:fontsize=${size}:fontcolor=0xF4F1EA`
       + `:box=1:boxcolor=0x0C0E10@0.62:boxborderw=${Math.round(size / 2)}:x=${Math.round(height / 20)}:y=h-th-${Math.round(height / 18)}`
     : '';
+  // test only (STREAM_CLOCK): the wall clock, large, top right; its time zone is ffmpeg's TZ (encoderEnv)
+  const big = Math.round(height / 11);
+  const clock = o.clock && o.font
+    ? `,drawtext=fontfile=${filterPath(o.font)}:text='%{localtime\\:%T}':fontsize=${big}:fontcolor=white`
+      + `:box=1:boxcolor=0x000000@0.7:boxborderw=${Math.round(big / 4)}:x=w-tw-${Math.round(height / 24)}:y=${Math.round(height / 24)}`
+    : '';
   const video = o.x11
     ? ['-thread_queue_size', '64', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', String(fps), '-video_size', `${o.x11.width ?? width}x${o.x11.height ?? height}`, '-i', String(o.x11.display)]
     : ['-thread_queue_size', '64', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', 'pipe:0'];
@@ -118,7 +124,7 @@ export function ffmpegArgs(o) {
     ...video,
     '-re', '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
     '-map', '0:v', '-map', '1:a',
-    '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption},format=yuv420p`,
+    '-vf', `scale=${width}:${height}:flags=${o.scaleFlags ?? 'bicubic'}${caption}${clock},format=yuv420p`,
     '-c:v', 'libx264', '-preset', o.preset ?? STREAM_DEFAULTS.preset, '-tune', 'zerolatency', '-profile:v', 'high',
     '-threads', String(o.threads ?? STREAM_DEFAULTS.threads),
     '-r', String(fps), '-g', String(gop), '-keyint_min', String(gop), '-sc_threshold', '0', '-bf', '0',
@@ -129,6 +135,9 @@ export function ffmpegArgs(o) {
     String(o.output),
   ];
 }
+
+/** ffmpeg's environment: with the test clock on, its time zone (drawtext's localtime reads TZ). */
+export const encoderEnv = (o, extra = {}) => ({ ...process.env, ...extra, ...(o.clock ? { TZ: o.clockTz || 'America/Los_Angeles' } : {}) });
 
 /** Chromium flags: headless, WebGL on SwiftShader (no GPU), software compositing, DevTools over a pipe, no extras. */
 export function chromiumArgs(o = {}) {
@@ -407,7 +416,7 @@ export function createStream(o) {
   // ----- ffmpeg
 
   function startEncoder() {
-    const child = spawnNiced(ffmpeg, ffmpegArgs({ ...opt, font, captionFile }), opt.encoderNice, { stdio: ['pipe', 'ignore', 'pipe'] });
+    const child = spawnNiced(ffmpeg, ffmpegArgs({ ...opt, font, captionFile }), opt.encoderNice, { stdio: ['pipe', 'ignore', 'pipe'], env: encoderEnv(opt) });
     const me = { child, startedAt: Date.now(), err: '' };
     enc = me;
     child.stdin.on('error', () => {});
@@ -747,7 +756,7 @@ export function captionFor(evt) {
 export function managerConfig(c) {
   return {
     enabled: Boolean(c?.enabled), outputs: c?.outputs ?? [], outDir: c?.outDir || '', max: c?.max ?? 0,
-    options: { fps: c?.fps, scale: c?.scale, bitrateK: c?.bitrateK, far: c?.far, maxRssMB: c?.maxRssMB, noSandbox: c?.noSandbox },
+    options: { fps: c?.fps, scale: c?.scale, bitrateK: c?.bitrateK, far: c?.far, maxRssMB: c?.maxRssMB, noSandbox: c?.noSandbox, clock: c?.clock || undefined, clockTz: c?.clockTz },
   };
 }
 

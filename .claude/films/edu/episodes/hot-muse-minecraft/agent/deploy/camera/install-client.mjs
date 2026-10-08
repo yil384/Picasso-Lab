@@ -2,8 +2,11 @@
 // the version JSON from Mojang's manifest, the client jar, the Linux libraries (natives unpacked into one folder), the
 // asset index and every asset except the sounds (the camera plays none). Every file is checked against its SHA-1.
 // Writes <dir>/launch.json: main class, class path, asset index, the folders, for src/camera.js. No account is needed.
+// With a pin file (deploy/camera/mods.json) it also installs the Fabric loader and the pinned client mods (Sodium and
+// friends) into <dir>/mods, every jar checked against its pinned SHA-512; launch.json then has a `fabric` part that
+// src/camera.js uses when CAMERA_MODS names any mod.
 //
-//   node deploy/camera/install-client.mjs /opt/mc 1.21.4
+//   node deploy/camera/install-client.mjs /opt/mc 1.21.4 [deploy/camera/mods.json]
 
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -13,16 +16,17 @@ import path from 'node:path';
 const MANIFEST = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json';
 const RESOURCES = 'https://resources.download.minecraft.net';
 
-const [dir = '/opt/mc', version = '1.21.4'] = process.argv.slice(2);
+const [dir = '/opt/mc', version = '1.21.4', pinFile] = process.argv.slice(2);
 const sha1 = (buf) => crypto.createHash('sha1').update(buf).digest('hex');
+const sha512 = (buf) => crypto.createHash('sha512').update(buf).digest('hex');
 
-async function get(url, want) {
+async function get(url, want, hash = sha1) {
   for (let attempt = 1; ; attempt += 1) {
     try {
       const r = await fetch(url, { signal: AbortSignal.timeout(120_000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const buf = Buffer.from(await r.arrayBuffer());
-      if (want && sha1(buf) !== want) throw new Error(`SHA-1 mismatch (want ${want})`);
+      if (want && hash(buf) !== want) throw new Error(`${hash === sha1 ? 'SHA-1' : 'SHA-512'} mismatch (want ${want})`);
       return buf;
     } catch (err) {
       if (attempt >= 4) throw new Error(`${url}: ${err.message}`);
@@ -31,9 +35,9 @@ async function get(url, want) {
   }
 }
 
-async function save(url, file, want) {
-  try { if (want && sha1(fs.readFileSync(file)) === want) return file; } catch { /* not there yet */ }
-  const buf = await get(url, want);
+async function save(url, file, want, hash = sha1) {
+  try { if (want && hash(fs.readFileSync(file)) === want) return file; } catch { /* not there yet */ }
+  const buf = await get(url, want, hash);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, buf);
   return file;
@@ -107,5 +111,27 @@ const launch = {
   version, mainClass: v.mainClass, classpath, assetsDir, assetIndex: v.assetIndex.id, nativesDir,
   javaMajor: v.javaVersion?.majorVersion ?? 21, installedAt: new Date().toISOString(),
 };
+
+// Fabric and the pinned mods (SHA-512 each); the loader's classes go before the game's on the class path
+if (pinFile) {
+  const pins = JSON.parse(fs.readFileSync(pinFile, 'utf8'));
+  if (pins.minecraft !== version) throw new Error(`${pinFile} pins Minecraft ${pins.minecraft}, not ${version}`);
+  const fabricCp = [];
+  for (const lib of pins.fabric.libraries) {
+    const [g, a, ver] = lib.name.split(':');
+    fabricCp.push(await save(lib.url, path.join(libDir, ...g.split('.'), a, ver, `${a}-${ver}.jar`), lib.sha512, sha512));
+  }
+  const mods = {};
+  for (const [name, m] of Object.entries(pins.mods)) {
+    mods[name] = { version: m.version, jar: await save(m.url, path.join(dir, 'mods', `${name}-${m.version.replace(/[^A-Za-z0-9.+_-]/g, '_')}.jar`), m.sha512, sha512) };
+  }
+  // a library both lists carry (ASM: the game 9.6, Fabric 9.10.1) is loaded once, in Fabric's version, as the
+  // launchers do: two copies on the class path stop the loader ("duplicate ASM classes")
+  const artifact = (p) => path.dirname(path.dirname(p));
+  const theirs = new Set(fabricCp.map(artifact));
+  const replaces = classpath.filter((p) => theirs.has(artifact(p)));
+  launch.fabric = { loader: pins.fabric.loader, mainClass: pins.fabric.mainClass, jvmArgs: pins.fabric.jvmArgs ?? [], classpath: fabricCp, replaces, mods };
+}
 fs.writeFileSync(path.join(dir, 'launch.json'), `${JSON.stringify(launch, null, 2)}\n`);
-console.log(`Minecraft ${version}: ${classpath.length} jars, ${fs.readdirSync(nativesDir).length} natives, ${objects.length} assets (${Math.round(bytes / 1e6)} MB, sounds left out) in ${dir}`);
+console.log(`Minecraft ${version}: ${classpath.length} jars, ${fs.readdirSync(nativesDir).length} natives, ${objects.length} assets (${Math.round(bytes / 1e6)} MB, sounds left out) in ${dir}`
+  + (launch.fabric ? `; Fabric ${launch.fabric.loader} with ${Object.entries(launch.fabric.mods).map(([k, m]) => `${k} ${m.version}`).join(', ')}` : ''));
