@@ -22,6 +22,9 @@ services:
     environment:
       MC_HOST: 10.77.78.10
       MC_CONSOLE: /console/console.in
+      # test bots are Tst_cam_<random>, listed on the whitelist the test Paper enforces (deploy/paper-entry.sh)
+      MC_USERNAME: Tst_cam
+      MC_WHITELIST: "true"
       WEB_HOST: 127.0.0.1
       WEB_LEASE_MS: "1800000"
       SPREAD_RANGE: "200"
