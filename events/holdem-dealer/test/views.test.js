@@ -134,6 +134,10 @@ test('views fuzz: no recipient ever sees a card it may not see (thousands of ran
         if (last) {
           assert.ok(prev && prev.id.endsWith(`-${last.no}`), 'last is the previous hand');
           assertNoLeak(JSON.stringify(last), forbiddenFor(prev, '(nobody)', prev.shown), `last ${prev.id}`);
+          // every shown hand is named for 上一手 (the losers' too), from its own cards and the board only
+          for (const seat of Object.keys(last.shown)) {
+            if (last.board.length >= 3) assert.ok(last.hands[seat]?.name && last.hands[seat].cards.length === 5, `last.hands[${seat}]`);
+          }
         }
         // the AI's view is built by the same functions
         if (rid && t.seatOf(rid) >= 0 && cur) {

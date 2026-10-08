@@ -232,7 +232,8 @@ export function createAccount(ctx) {
             if (!btn || btn.disabled) return;
             const act = btn.dataset.ga;
             if (act === "privacy") return openPrivacy();
-            if (act === "email") return openEmail();
+            // one popup at a time: the email popup takes the account popup's place
+            if (act === "email") { close(); return openEmail(); }
             if (act === "retry") {
                 btn.disabled = true;
                 status = "pending";
@@ -354,7 +355,8 @@ export function createAccount(ctx) {
                     setToken(out.token);
                     setAccount(out.account);
                     ctx.setName(out.account.name);
-                    ctx.showToast(L("Saved with email", "已用邮箱保存"));
+                    // the open email popup already says so; the toast is for when it was closed
+                    if (!emailClose) ctx.showToast(L("Saved with email", "已用邮箱保存"));
                     return onDone();
                 }
             } catch (err) {

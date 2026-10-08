@@ -455,7 +455,9 @@ export function mountHoldem(ui) {
         const chips = bankroll();
         const can = max >= min;
         const value = Math.min(max, Math.max(min, start));
-        const presets = can ? [[L("Min", "最小"), min], ["70 BB", Math.round(Math.min(max, Math.max(min, step * 70)) / step) * step], [L("Max", "最大"), max]] : [];
+        // 最小 / 100 BB / 最大, or 50 BB (25 BB) in the middle when 100 BB is not strictly between the two
+        const mid = [100, 50, 25].find(k => step * k > min && step * k < max);
+        const presets = can ? [[L("Min", "最小"), min], ...(mid ? [[`${mid} BB`, step * mid]] : []), [L("Max", "最大"), max]] : [];
         const close = ui.openPopup({
             title,
             narrow: true,
@@ -463,7 +465,7 @@ export function mountHoldem(ui) {
                 <div class="hd-amount-bank"><span>${L("Your chips", "我的筹码")}</span><b><i class="ga-coin" aria-hidden="true"></i>${fmt(chips)}</b></div>
                 ${can ? `<output class="hd-amount-v">${fmt(value)}</output>
                 <input class="hd-range" type="range" min="${min}" max="${max}" step="${step}" value="${value}" aria-label="${esc(title)}">
-                <div class="hd-amount-presets">${presets.map(([label, v]) => `<button class="hd-pill" type="button" data-v="${v}">${label}</button>`).join("")}</div>
+                <div class="hd-amount-presets" role="radiogroup">${presets.map(([label, v]) => `<button class="hd-pill" type="button" role="radio" data-v="${v}" aria-checked="${v === value}">${label}</button>`).join("")}</div>
                 <p class="hd-amount-note">${note}</p>
                 <div class="gd-confirm-row"><button class="btn secondary" type="button" data-cancel>${L("Cancel", "取消")}</button><button class="btn primary" type="button" data-ok>${ok}</button></div>`
                 : `<p class="gd-confirm-text">${L("Not enough chips for this table.", "筹码不够这张桌的最小买入。")}</p>
@@ -473,7 +475,11 @@ export function mountHoldem(ui) {
         const panel = close.panel;
         const range = panel.querySelector(".hd-range");
         const out = panel.querySelector(".hd-amount-v");
-        const show = () => { if (out) out.textContent = fmt(range.value); };
+        // the preset matching the amount is lit, like the raise presets
+        const show = () => {
+            if (out) out.textContent = fmt(range.value);
+            panel.querySelectorAll(".hd-amount-presets [data-v]").forEach(p => p.setAttribute("aria-checked", String(Number(p.dataset.v) === Number(range.value))));
+        };
         range?.addEventListener("input", show);
         panel.addEventListener("click", async event => {
             const btn = event.target.closest("button");
@@ -658,8 +664,9 @@ export function mountHoldem(ui) {
         const rows = [...lines.entries()].map(([i, info]) => {
             const seat = seats[i];
             const hole = (last.shown || {})[i];
-            const hand = info.hand;
-            const win = new Set(hand?.cards || []);
+            // every shown hand is named (the losers' too), not only the winners'
+            const hand = info.hand || last.hands?.[i] || null;
+            const win = new Set(info.hand?.cards || []);
             return `<div class="hd-last-row${info.won ? " is-win" : ""}">
                 <span class="gd-avatar${S.me?.seat === i ? "" : " is-opp"} hd-last-av">${seat ? faceHTML(seat) : ui.defaultFaceHTML()}</span>
                 <span class="hd-last-name"><b>${esc(seat ? seatName(seat, L) : L(`Seat ${i + 1}`, `${i + 1} 号位`))}</b><small>${hand ? esc(handLabel(hand, L)) : hole ? "" : L("Did not show", "未亮牌")}</small></span>
@@ -737,16 +744,25 @@ export function mountHoldem(ui) {
             return `<div class="hd-brow${i < 3 ? " is-top" : ""}${me ? " is-me" : ""}" style="--i:${Math.min(i, 10)}">
                 <span class="hd-bc-rank">${i == null ? `<span class="gdr-rank n">${r.rank ? r.rank : "-"}</span>` : rankBadge(i)}</span>
                 <span class="hd-bc-name"><span class="gd-avatar is-plain">${face(r.name)}</span><b>${esc(r.name)}</b>${me ? `<em>${L("Me", "我")}</em>` : ""}</span>
-                <b class="hd-bc-num${r.net < 0 ? " is-neg" : ""}">${r.net > 0 ? "+" : ""}${fmt(r.net)}</b>
+                <b class="hd-bc-num${r.net < 0 ? " is-neg" : r.net === 0 ? " is-zero" : ""}">${r.net > 0 ? "+" : ""}${fmt(r.net)}</b>
                 <b class="hd-bc-num">${fmt(r.hands)}</b>
                 <b class="hd-bc-num">${rate}</b>
                 <b class="hd-bc-num">${fmt(r.biggestPot)}</b>
             </div>`;
         };
         const inTop = rows.some(r => r.pid === mePid);
-        return `<div class="hd-lb">
-            <div class="hd-bhead"><span>${L("Rank", "名次")}</span><span>${L("Player", "玩家")}</span><span>${L("Net", "净胜筹码")}</span><span>${L("Hands", "手数")}</span><span>${L("Won", "胜率")}</span><span>${L("Biggest pot", "最大底池")}</span></div>
-            <div class="hd-brows">${rows.length ? rows.map((r, i) => line(r, i, r.pid === mePid)).join("") : `<div class="hd-board-empty">${L("No hands played yet. Be the first!", "还没有人打过，来当第一名吧")}</div>`}</div>
+        const head = `<div class="hd-bhead"><span>${L("Rank", "名次")}</span><span>${L("Player", "玩家")}</span><span>${L("Net", "净胜筹码")}</span><span>${L("Hands", "手数")}</span><span>${L("Won", "胜率")}</span><span>${L("Biggest pot", "最大底池")}</span></div>`;
+        // nobody ranked yet: my row right under the header, then the three empty places on their steps
+        if (!rows.length) {
+            const step = i => `<div class="hd-pod is-p${i + 1}">${rankBadge(i)}<span class="gd-avatar is-plain hd-pod-av">${ui.defaultFaceHTML()}</span><span class="hd-pod-step">${i + 1}</span></div>`;
+            return `<div class="hd-lb is-empty">${head}
+                ${data.me ? `<div class="hd-bme is-first">${line(data.me, null, true)}</div>` : ""}
+                <div class="hd-podium"><div class="hd-pods">${[1, 0, 2].map(step).join("")}</div>
+                <p class="hd-board-empty">${L("No hands played yet. The first three places are open.", "还没有人上榜，前三名虚位以待")}</p></div>
+            </div>`;
+        }
+        return `<div class="hd-lb">${head}
+            <div class="hd-brows">${rows.map((r, i) => line(r, i, r.pid === mePid)).join("")}</div>
             ${!inTop && data.me ? `<div class="hd-bme">${line(data.me, null, true)}</div>` : ""}
         </div>`;
     }

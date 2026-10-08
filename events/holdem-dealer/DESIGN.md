@@ -241,7 +241,7 @@ PublicTable {
     done: bool
   },
   log: [{ seat, a, amt, street }],        // this hand's public actions, for the history strip and animations
-  last: null | { no, board, winners, shown: { [seat]: [c1,c2] } }   // the previous hand, for "上一手"
+  last: null | { no, board, winners, shown: { [seat]: [c1,c2] }, hands: { [seat]: HandInfo | null } }   // the previous hand, for "上一手"; hands = each shown hand's best five
 }
 Me {
   pid, seat: int|null, chips (bankroll),

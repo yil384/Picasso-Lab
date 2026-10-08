@@ -85,6 +85,9 @@ export function publicTable(table, now) {
       board: last.board.slice(),
       winners: winners(last.winners),
       shown: Object.fromEntries(Object.entries(last.shown).map(([seat, c]) => [seat, two(c)])),
+      // the best five of every shown hand (losers' too), once the board has at least three cards
+      hands: Object.fromEntries(Object.entries(last.shown).map(([seat, c]) => [seat,
+        last.board.length >= 3 ? handInfo(evaluate([...two(c), ...last.board])) : null])),
     } : null,
   };
 }

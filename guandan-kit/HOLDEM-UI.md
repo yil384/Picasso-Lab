@@ -28,7 +28,8 @@ Hold'em apps lay out a table — never as a web page or a demo.
 ## 2. Room (waiting) — mirror Guandan's room screen
 Header: ↩ (gives the seat back), title 德州好友桌 + 房间号, chips 邀请 / 规则 / 战绩, 文/EN.
 Left panel 牌桌设置 (host editable, guests read-only): 盲注 (radio pills 5/10 · 10/20 · 25/50 · 50/100), 座位 (2–9 with the
-gold ‹ › stepper), 买入 (40–100 BB → shows the chip range), 思考时间 (15 / 20 / 30 秒), 时间银行 (30 秒). Centre: the mini
+gold ‹ › stepper), 买入 (40–100 BB → shows the chip range; read-only for everyone, the range follows the blinds), 思考时间
+(15 / 20 / 30 秒), 时间银行 (30 秒) (read-only). Centre: the mini
 teal oval with N seat plates (photo / AI badge / + 入座), taking a seat opens the buy-in popup (slider + presets 最小 / 100 BB /
 最大, bankroll shown). Right: 实验室成员 panel with 邀请 (as Guandan). Buttons: AI 补位, 开始游戏 (host; needs ≥2 seated),
 解散房间 (confirm). Guests see 等待房主开始.
