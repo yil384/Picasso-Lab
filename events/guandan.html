@@ -293,7 +293,7 @@ let hudStatusHTML = "";
 function updateTopbarStatus() {
     if (!hudStatusEl) return;
     const screen = document.body.dataset.screen;
-    const html = screen === "lobby" ? lobbyProfileHTML() : screen === "room" && game ? roomTitleHTML() : "";
+    const html = screen === "lobby" ? lobbyProfileHTML() : screen === "room" && game ? roomTitleHTML() : screen === "hroom" ? holdem.titleHTML() : "";
     if (html === hudStatusHTML) return;
     hudStatusHTML = html;
     hudStatusEl.innerHTML = html;
@@ -413,9 +413,9 @@ function placeReturnTypeHint() {
     el.style.top = `${Math.round(at.y + scrollY)}px`;
 }
 
-// Not over a popup, the 巅峰对决 board, the ☰ menu, the match intro or a result (typing picasso
+// Not over a popup, the 巅峰对决 or Hold'em board, the ☰ menu, the match intro or a result (typing picasso
 // still works there); guandan-transition.css hides a showing pill when one of them opens.
-const HINT_BLOCKERS = ".gd-popup-layer, .gd-menu, .gd-intro, .gd-result:not(.is-peek)";
+const HINT_BLOCKERS = ".gd-popup-layer, .gd-menu, .gd-intro, .gd-result:not(.is-peek), .hd-page";
 function showReturnTypeHint() {
     if (!returnTypeHint || document.body.classList.contains("gdr-modal-open") || document.querySelector(HINT_BLOCKERS)) return;
     returnTypeHint.firstChild.nodeValue = L("try typing ", "试试输入 ");
@@ -450,7 +450,7 @@ function startReturnToEvents() {
     returnNavigationStarted = true;
     hideReturnTypeHint();
     // From the room the seat is given back first (as ↩ does), so nobody waits on a ghost seat.
-    const leaving = game?.phase === "lobby" && mySeat() >= 0 ? queueRoomAction(leaveRoom) : null;
+    const leaving = game?.phase === "lobby" && mySeat() >= 0 ? queueRoomAction(leaveRoom) : holdem?.active ? holdem.release() : null;
     const settled = Promise.race([leaving, new Promise(resolve => setTimeout(resolve, 1500))]);
     if (IN_EVENTS_PORTAL) {
         postToEvents("exit");
@@ -1710,7 +1710,8 @@ function maybeRunAI() {
 
 function render() {
     setStaticLabels();
-    if (!roomCode || !game) renderLobby();
+    if (holdem?.active) holdem.render();
+    else if (!roomCode || !game) renderLobby();
     else if (game.phase === "lobby") renderLobbyRoom();
     else renderTable();
     // ==== STAGE HOOKS (owned by stage package) ====
@@ -1901,6 +1902,16 @@ function joinCellsHTML(code) {
     return `<span class="join-cells" aria-hidden="true">${[0, 1, 2, 3, 4].map(i => `<i class="${i === code.length ? "is-next" : ""}">${encodeHTML(code[i] || "")}</i>`).join("")}</span>`;
 }
 
+function joinTileHTML(code) {
+    return `<div class="lobby-tile is-join" data-lobby="join">
+            <span class="tile-art join-art">
+                <label class="join-code">${joinCellsHTML(code)}<input id="room-input" value="${encodeHTML(code)}" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="${L("Room code (5 characters)", "房间码（5 位）")}"></label>
+                <button class="join-go" id="join-room" type="button"><span class="btn sm">${L("Join", "加入")}</span></button>
+            </span>
+            <b class="tile-title">${L("Join Room", "加入房间")}</b>
+        </div>`;
+}
+
 function lobbyTilesHTML() {
     const code = lobbyCodeDraft || roomCode;
     const straight = ["5♥", "6♥", "7♥", "8♥", "9♥"].map((c, i) => cardHTML(signatureCard(c, `pr${i}`), true)).join("");
@@ -1921,13 +1932,7 @@ function lobbyTilesHTML() {
             ${labTileArtHTML()}
             <b class="tile-title">${L("Lab Deck", "实验室")}</b>
         </button>
-        <div class="lobby-tile is-join" data-lobby="join">
-            <span class="tile-art join-art">
-                <label class="join-code">${joinCellsHTML(code)}<input id="room-input" value="${encodeHTML(code)}" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="${L("Room code (5 characters)", "房间码（5 位）")}"></label>
-                <button class="join-go" id="join-room" type="button"><span class="btn sm">${L("Join", "加入")}</span></button>
-            </span>
-            <b class="tile-title">${L("Join Room", "加入房间")}</b>
-        </div>
+        ${joinTileHTML(code)}
         <button class="lobby-tile is-friends" type="button" data-lobby="friends" aria-label="${L("Create a room and copy the invite link", "创建房间并复制邀请链接")}">
             ${friendsTileArtHTML()}
             <b class="tile-title">${L("Friends", "好友房")}</b>
@@ -1952,25 +1957,30 @@ function renderLobby() {
     // joinRoom() reports a missing room through statusText: a short toast and a shake of the code field.
     const joinFailed = !!statusText;
     statusText = "";
+    const poker = lobbyGame === "holdem";
     const nav = [
-        ["invite", `data-lobby="friends"`, L("Invite", "邀请")],
-        ["history", `data-open-records="history"`, L("History", "历史对阵")],
-        ["podium", `data-open-records="board"`, L("Ranking", "排行榜")],
+        ["invite", poker ? `data-lobby="h-friends"` : `data-lobby="friends"`, L("Invite", "邀请")],
+        poker ? ["history", `data-lobby="h-history"`, L("Records", "战绩")] : ["history", `data-open-records="history"`, L("History", "历史对阵")],
+        ["podium", poker ? `data-lobby="h-board"` : `data-open-records="board"`, L("Ranking", "排行榜")],
         ["gear", `data-lobby="settings"`, L("Settings", "设置")]
     ].map(([glyph, attrs, label]) => `<button class="lobby-nav-item" type="button" ${attrs}>${glyphHTML(glyph)}<span>${label}</span></button>`).join("");
+    const games = [["guandan", L("Guandan", "掼蛋")], ["holdem", L("Hold'em", "德州扑克")]].map(([key, label]) =>
+        `<button class="lobby-game" type="button" role="tab" data-game="${key}" aria-selected="${key === lobbyGame}">${label}</button>`).join("");
     root.innerHTML = `
-    <section class="lobby">
+    <section class="lobby${poker ? " is-holdem" : ""}">
         <nav class="lobby-rail" aria-label="${L("Shortcuts", "快捷入口")}">${lobbyRailHTML()}</nav>
         <div class="lobby-main">
-            <div class="lobby-tiles">${lobbyTilesHTML()}</div>
+            <div class="lobby-games" role="tablist" aria-label="${L("Game", "游戏")}">${games}</div>
+            <div class="lobby-tiles">${poker ? holdemTilesHTML() : lobbyTilesHTML()}</div>
             <div class="lobby-dock">
                 <nav class="lobby-nav">${nav}</nav>
-                <button class="lobby-quick" type="button" data-lobby="practice"><small>${L("Classic · vs AI", "经典 · 人机")}</small><b>${L("Quick Start", "快速开始")}</b></button>
+                <button class="lobby-quick" type="button" data-lobby="${poker ? "h-practice" : "practice"}"><small>${poker ? L("Hold'em · vs AI", "德州 · 人机") : L("Classic · vs AI", "经典 · 人机")}</small><b>${L("Quick Start", "快速开始")}</b></button>
             </div>
         </div>
     </section>`;
     const lobby = root.querySelector(".lobby");
     bindLobby(lobby);
+    if (poker) loadHoldem().catch(() => {});
     if (joinFailed) {
         showToast(L("Room not found", "房间不存在"));
         const field = lobby.querySelector(".join-code");
@@ -1986,7 +1996,9 @@ function bindLobby(el) {
         const creating = L("Creating…", "正在创建…");
         if (target.id === "create-room") return runLobbyAction(createRoom, target, creating);
         if (target.id === "join-room") return joinFromLobby(el);
+        if (target.dataset.game) return switchGame(target.dataset.game);
         const action = target.dataset.lobby;
+        if (action?.startsWith("h-")) return holdemLobbyAction(action, target, el);
         if (action === "practice") return runLobbyAction(quickPractice, target, L("Dealing…", "正在开局…"));
         // the nav's 邀请 waits on the 好友房 tile, which shows the caption
         if (action === "friends") return runLobbyAction(createAndInvite, target.closest(".lobby-nav") ? el.querySelector(".lobby-tile.is-friends") : target, creating);
@@ -2015,6 +2027,10 @@ function bindLobby(el) {
 // 加入: the code tile shows 正在加入… while the room is looked up and loaded.
 function joinFromLobby(lobby) {
     const code = lobby.querySelector("#room-input")?.value.trim();
+    if (lobbyGame === "holdem") {
+        if (!code) return showToast(L("Enter a room code", "请输入房间码"));
+        return runLobbyAction(() => holdemStart("join", { code: code.toUpperCase() }), lobby.querySelector(".lobby-tile.is-join"), L("Joining…", "正在加入…"));
+    }
     if (!code) return joinRoom();
     return runLobbyAction(joinRoom, lobby.querySelector(".lobby-tile.is-join"), L("Joining…", "正在加入…"));
 }
@@ -2108,6 +2124,129 @@ function toggleMusic() {
 function refreshLobbyRail() {
     const rail = root.querySelector(".lobby-rail");
     if (rail) rail.innerHTML = lobbyRailHTML();
+}
+
+// ---------- Texas Hold'em: the lobby's second game (events/static/holdem*.js, the games service) ----------
+// The tiles live here; the room and table screens are holdem.js, loaded the first time Hold'em is picked
+// (and prefetched while its tiles show). Hold'em tables are dealt by the service, never by Firebase.
+const HOLDEM_URL = "https://yil384.github.io/Picasso-Lab/events/static/holdem.js";
+let holdemLoad = null;
+function loadHoldem() {
+    holdemLoad ||= import(HOLDEM_URL).then(({ mountHoldem }) => (holdem = mountHoldem(holdemUI())));
+    holdemLoad.catch(() => { holdemLoad = null; });
+    return holdemLoad;
+}
+
+function switchGame(key) {
+    if (key === lobbyGame) return;
+    lobbyGame = key;
+    storageSet("picasso.games.game", key);
+    lobbyCodeDraft = "";
+    render();
+    if (key === "holdem") loadHoldem().catch(() => {});
+}
+
+function holdemOffline() {
+    return account?.status === "offline";
+}
+
+// The 离线 plate on the 德州扑克 tile follows the service without redrawing the lobby (a code being typed stays).
+function refreshHoldemPlate() {
+    const tile = root.querySelector(".lobby-tile.is-holdem");
+    if (!tile) return;
+    tile.querySelector(".tile-plate")?.remove();
+    if (holdemOffline()) tile.querySelector(".tile-title").insertAdjacentHTML("beforebegin", `<span class="tile-plate">${L("Offline", "离线")}</span>`);
+}
+
+// A short stack of the table's chips (holdem.css draws them).
+function chipStackHTML(n = 3) {
+    return `<span class="hd-chips" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<i style="--k:${i}"></i>`).join("")}</span>`;
+}
+
+// 德州扑克 (a friends table): A♠ K♥ from the real card component, each a labmate, over a chip stack.
+function holdemTilesHTML() {
+    const code = lobbyCodeDraft;
+    const card = (c, i) => cardHTML(signatureCard(c, `hv${i}`));
+    const royal = ["10♠", "J♠", "Q♠", "K♠", "A♠"].map((c, i) => cardHTML(signatureCard(c, `hr${i}`), true)).join("");
+    const PL = labPlayers();
+    const podium = labStandings()?.board?.slice(0, 3).map(s => PL[s.key]).filter(p => p?.avatar) || [];
+    const robots = [["S", "石"], ["F", "狐"], ["B", "火"]].map(([en, zh], i) => `<span class="gd-avatar is-plain hd-bot-av b${i}">${defaultFaceHTML(L(en, zh))}</span>`).join("");
+    return `
+        <button class="lobby-tile is-classic is-holdem" type="button" data-lobby="h-create" aria-label="${L("Hold'em: open a friends table", "德州扑克：开一张好友桌")}">
+            <span class="tile-art hd-hero-art">${card("A♠", 0)}${card("K♥", 1)}${chipStackHTML(4)}</span>
+            ${holdemOffline() ? `<span class="tile-plate">${L("Offline", "离线")}</span>` : ""}
+            <b class="tile-title">${L("Hold'em", "德州扑克")}</b>
+        </button>
+        <button class="lobby-tile is-practice" type="button" data-lobby="h-practice" aria-label="${L("Practice against five AI players", "人机练习：和 5 位 AI 打 6 人桌")}">
+            <span class="tile-art hd-bots-art">${robots}<span class="hd-bots-cards">${cardHTML({ back: true })}${cardHTML({ back: true })}</span></span>
+            <b class="tile-title">${L("vs AI", "人机练习")}</b>
+        </button>
+        <button class="lobby-tile is-peak" type="button" data-lobby="h-board" aria-label="${L("Hold'em ranking", "德州排行榜")}">
+            <span class="tile-art hd-podium-art">${[1, 0, 2].map(i => podium[i] ? `<span class="hd-podium-p p${i}"><span class="gd-avatar is-plain"><img src="${encodeHTML(podium[i].avatar)}" alt="" loading="lazy"></span><b>${i + 1}</b></span>` : "").join("")}</span>
+            <b class="tile-title">${L("Ranking", "排行榜")}</b>
+        </button>
+        <button class="lobby-tile is-lab" type="button" data-lobby="lab" aria-label="${L("Lab deck", "实验室牌组")}">
+            ${labTileArtHTML()}
+            <b class="tile-title">${L("Lab Deck", "实验室")}</b>
+        </button>
+        ${joinTileHTML(code)}
+        <button class="lobby-tile is-friends" type="button" data-lobby="h-friends" aria-label="${L("Open a table and copy the invite link", "开一张桌并复制邀请链接")}">
+            ${friendsTileArtHTML()}
+            <b class="tile-title">${L("Friends", "好友桌")}</b>
+        </button>
+        <button class="lobby-tile is-rules" type="button" data-lobby="h-rules" aria-label="${L("Hold'em rules", "德州玩法规则")}">
+            <span class="tile-art rules-art">${royal}</span>
+            <b class="tile-title">${L("Rules", "玩法规则")}</b>
+        </button>`;
+}
+
+async function holdemStart(kind, options = {}) {
+    const down = () => showToast(L("The table service is unavailable. Try again later", "牌桌服务暂不可用，稍后再试"), 2400);
+    if (holdemOffline()) {
+        account.retry();
+        return down();
+    }
+    let h;
+    try {
+        h = await loadHoldem();
+    } catch (_) {
+        return down();
+    }
+    return h.start(kind, options);
+}
+
+function holdemLobbyAction(action, target, lobby) {
+    const opening = L("Opening a table…", "正在开桌…");
+    if (action === "h-create") return runLobbyAction(() => holdemStart("create"), target, opening);
+    if (action === "h-practice") return runLobbyAction(() => holdemStart("practice"), target, L("Dealing…", "正在开局…"));
+    if (action === "h-friends") return runLobbyAction(() => holdemStart("create", { invite: true }), target.closest(".lobby-nav") ? lobby.querySelector(".lobby-tile.is-friends") : target, opening);
+    if (action === "h-history") return account ? account.openProfile() : showToast(L("The game service is unavailable", "游戏服务暂不可用"));
+    loadHoldem().then(h => (action === "h-board" ? h.openBoard() : h.openRules()))
+        .catch(() => showToast(L("The table service is unavailable. Try again later", "牌桌服务暂不可用，稍后再试")));
+}
+
+// What holdem.js borrows from this page: Guandan's real components, lab data and screen plumbing.
+function holdemUI() {
+    return {
+        root, origin: GAMES_ORIGIN, inviteBase: GUANDAN_URL,
+        L, isZH, lang: () => uiLang, encodeHTML, nickname: () => nickname,
+        get account() { return account; },
+        accountReady: async () => (await waitFor(() => account, 6000)) && account.ready(),
+        // poker cards with the lab portraits and the blue P back, never a Guandan level mark
+        cardHTML: (card, small = false, extraClass = "", attrs = "") => atExampleLevel("", () => cardHTML(card, small, false, attrs, extraClass)),
+        openPopup, confirmPopup, showToast, hideToast, openLabDeck, openSettings,
+        defaultFaceHTML, seatMemberPhoto, labPlayers, labMemberKeys, labPlayerKey, firstNameOf, initials, glyphHTML, wordHTML,
+        tableDefsHTML: TABLE_DEFS_HTML, tableIcon, burstHTML, chipStackHTML, prefersReducedMotion,
+        enterScreen, updateTopbarStatus, render,
+        toggleLang: () => langToggleBtn.click(),
+        exitToEvents: startReturnToEvents,
+        // back to the lobby's Hold'em tiles without a reload; the URL drops ?game=&room=
+        showLobby() {
+            history.replaceState(null, "", location.pathname);
+            render();
+        },
+        setRoomURL: code => history.replaceState(null, "", `?game=holdem&room=${encodeURIComponent(code)}`)
+    };
 }
 
 // ---------- shared popup service (window.GuandanUI) ----------
@@ -4161,6 +4300,7 @@ function resultHTML(v) {
 }
 
 document.getElementById("copy-link-btn").addEventListener("click", async () => {
+    if (holdem?.active) return holdem.invite();
     if (!roomCode) return showToast(L("No room yet", "还没有房间"));
     const url = new URL(location.href);
     url.searchParams.set("room", roomCode);
@@ -4176,6 +4316,7 @@ document.getElementById("copy-link-btn").addEventListener("click", async () => {
 // ↩ on the room screen gives the seat back before going to the lobby, so nobody waits on a ghost
 // seat; mid-game it is the table's 新桌 and just opens a fresh lobby.
 document.getElementById("new-room-btn").addEventListener("click", async () => {
+    if (holdem?.active) return holdem.leave();
     if (game?.phase === "lobby" && mySeat() >= 0) {
         showToast(L("Leaving the room…", "正在离开房间…"), 4000);
         await Promise.race([queueRoomAction(leaveRoom), new Promise(resolve => setTimeout(resolve, 4000))]);
@@ -4191,7 +4332,13 @@ langToggleBtn.addEventListener("click", () => {
 });
 
 backEventsBtn.addEventListener("click", startReturnToEvents);
-hudRulesBtn.addEventListener("click", () => openRules());
+hudRulesBtn.addEventListener("click", () => (holdem?.active ? holdem.openRules() : openRules()));
+// In a Hold'em room 战绩 is the Hold'em ranking, not the 巅峰对决 board (its listener is on the document).
+hudRecordsBtn.addEventListener("click", event => {
+    if (!holdem?.active) return;
+    event.stopPropagation();
+    holdem.openBoard();
+});
 
 // The lobby top bar hosts the nickname field (#nick-input); it is saved on change / Enter.
 hudStatusEl.addEventListener("change", event => {
@@ -4212,7 +4359,10 @@ import("https://yil384.github.io/Picasso-Lab/events/static/games-account.js").th
         getName: () => nickname, setName: setNickname, avatarHTML: profileFaceHTML, lang: () => uiLang,
         L, encodeHTML, openPopup, showToast, storageGet, storageSet
     });
-    account.onChange(updateTopbarStatus);
+    account.onChange(() => {
+        updateTopbarStatus();
+        refreshHoldemPlate();
+    });
 }).catch(() => {});
 
 // In the Events portal, Events focuses this frame when it reveals the table: a frame that focused
@@ -4255,6 +4405,13 @@ if (IN_EVENTS_PORTAL) {
 if (roomCode) {
     root.innerHTML = `<div class="gd-boot" role="status">${L("Joining the room…", "正在进入房间…")}</div>`;
     attachRoom(roomCode);
+} else if (bootHoldem && bootQuery.get("room")) {
+    root.innerHTML = `<div class="gd-boot" role="status">${L("Joining the table…", "正在进入牌桌…")}</div>`;
+    holdemStart("join", { code: bootQuery.get("room").toUpperCase() }).finally(() => {
+        if (holdem?.active) return;
+        history.replaceState(null, "", location.pathname);
+        render();
+    });
 } else {
     render();
 }
