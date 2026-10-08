@@ -492,9 +492,10 @@ export function mountHoldem(ui) {
                     ui.account.setAccount((await ui.account.request("/refill", {})).account);
                     close();
                     refill();
-                } catch (_) {
+                } catch (err) {
                     btn.disabled = false;
-                    ui.showToast(L("Available below 2,000 chips with nothing at a table", "筹码低于 2,000 且不在牌桌上时才能领取"), 2400);
+                    ui.showToast(err && err.code === "refill_later" ? L("One refill a day. Try again tomorrow", "每天只能领取一次，明天再来")
+                        : L("Available below 2,000 chips with nothing at a table", "筹码低于 2,000 且不在牌桌上时才能领取"), 2400);
                 }
             }
         });
@@ -598,7 +599,7 @@ export function mountHoldem(ui) {
             [L("Hands", "牌型"), [rankingHTML()]],
             [L("Chips", "筹码"), [
                 row(L("Bankroll", "账户"), L("Everyone starts with 10,000 play chips. Buy in for 40 to 100 big blinds; what you leave with goes back to your bankroll.", "每人起始 10,000 虚拟筹码。买入 40 到 100 个大盲，离桌时剩余筹码回到账户。")),
-                row(L("Refill", "领取"), L("Below 2,000 chips with nothing at a table you can get a free refill to 10,000. The ranking counts net chips, so refills never help it.", "筹码低于 2,000 且不在牌桌上时，可以免费领到 10,000；排行榜按净胜筹码，领取不计入。")),
+                row(L("Refill", "领取"), L("Below 2,000 chips with nothing at a table you can get a free refill to 10,000, once a day. The ranking counts net chips, so refills never help it.", "筹码低于 2,000 且不在牌桌上时，每天可以免费领一次，补到 10,000；排行榜按净胜筹码，领取不计入。")),
                 row(L("Play money", "虚拟"), L("Chips have no value: they cannot be bought, sold or transferred.", "筹码没有任何价值，不能购买、出售或转让。"))
             ]]
         ];

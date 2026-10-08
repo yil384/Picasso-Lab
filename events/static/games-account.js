@@ -249,6 +249,7 @@ export function createAccount(ctx) {
                     btn.disabled = false;
                     ctx.showToast(err.code === "not_needed"
                         ? L("Available below 2,000 chips with nothing at a table", "筹码低于 2,000 且不在牌桌上时才能领取")
+                        : err.code === "refill_later" ? L("One refill a day. Try again tomorrow", "每天只能领取一次，明天再来")
                         : L("The game service is unavailable", "游戏服务暂不可用"), 2400);
                 }
             }
@@ -267,6 +268,7 @@ export function createAccount(ctx) {
                 <span class="ga-email-ring" aria-hidden="true"></span>
                 <p class="gd-confirm-text">${L(`A sign-in link was sent to ${esc(masked(pendingLink.email))}. Open it from the email.`, `登录链接已发送到 ${esc(masked(pendingLink.email))}，请在邮件里点开`)}</p>
                 <p class="ga-email-wait">${L("Waiting for you to open the link…", "等待你点开邮件里的链接…")}</p>
+                ${pendingLink.code ? `<p class="ga-email-code">${L("If the link page asks for a code, enter", "如果链接页要求输入验证码，请填")} <b>${esc(pendingLink.code)}</b></p>` : ""}
                 <div class="gd-confirm-row"><button class="btn secondary" type="button" data-ga="cancel">${L("Cancel", "取消")}</button><button class="btn primary" type="button" data-ga="resend">${L("Resend", "重新发送")}</button></div>
             </div>`;
         }
@@ -303,12 +305,12 @@ export function createAccount(ctx) {
             const btn = body.querySelector("[type=submit], [data-ga=resend]");
             if (btn) btn.disabled = true;
             try {
-                const { lid, poll } = await request("/email/start", { email });
+                const { lid, poll, code } = await request("/email/start", { email });
                 const { getAuth, sendSignInLinkToEmail } = await import(FIREBASE_AUTH);
                 const url = `${LINK_URL}?lid=${encodeURIComponent(lid)}&lang=${ctx.lang() === "en" ? "en" : "zh"}`;
                 await sendSignInLinkToEmail(getAuth(ctx.firebaseApp), email, { url, handleCodeInApp: true });
                 storageSet(LINK_EMAIL_KEY, email);
-                pendingLink = { lid, poll, email, until: Date.now() + POLL_FOR_MS };
+                pendingLink = { lid, poll, code: code || "", email, until: Date.now() + POLL_FOR_MS };
                 show("sent");
                 startPolling(() => show("done"));
             } catch (err) {

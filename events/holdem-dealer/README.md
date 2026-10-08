@@ -50,7 +50,7 @@ service. The kill -9 test runs the server as a child process.
 | `EMAIL_LINK` | `off` | `on` shows "save with email" (after the Firebase steps below). |
 | `FIREBASE_PROJECT_ID` | `yichen-5e23e` | Expected `aud` / `iss` of ID tokens. |
 | `ALLOWED_ORIGINS` | `https://yil384.github.io` | Comma list; `http://127.0.0.1:*` allows any port. Other origins get 403. |
-| `TRUST_PROXY` | `0` | `1` behind Caddy: the client address is the right-most `X-Forwarded-For` entry. |
+| `TRUST_PROXY` | `0` | `1` behind Caddy: the client address is the right-most `X-Forwarded-For` entry. Required (explicit `0` or `1`) with `NODE_ENV=production`. |
 | `PORT` / `HOST` | `8787` / `127.0.0.1` | The image sets `HOST=0.0.0.0`; compose publishes only on `127.0.0.1`. |
 | `DATA_DIR` | `./data` (`/data` in production) | `accounts.json`, `tables.json` and their `.bak` copies, mode 600. |
 | `BOT_THINK_SCALE` | `1` | Multiplies bots' think delays (tests use 0). |

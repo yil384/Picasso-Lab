@@ -118,8 +118,9 @@ service and reverts with a toast) — documented as UI-level.
 Flag: the service's env `EMAIL_LINK=on` (reported as `features.emailLink`); default off. The page shows "用邮箱保存"
 only when the flag is on. Flow (the game runs inside an iframe, so the link completes on a GitHub Pages page):
 1. Page → `POST /v1/email/start { email }` (Bearer). Service stores a pending link `{ lid, accountId, emailHash,
-   pollHash, createdAt }` (30 min TTL, max 5 pending per account) and returns `{ lid, poll }` (`poll` = random secret
-   kept only in the requesting page's memory).
+   pollHash, codeHash, createdAt }` (30 min TTL, max 5 pending per account) and returns `{ lid, poll, code }` (`poll`
+   = random secret kept only in the requesting page's memory; `code` = 4 random digits the page shows next to "waiting
+   for the link").
 2. Page loads `firebase-auth.js` (gstatic 12.8.0, lazily) and calls `sendSignInLinkToEmail(auth, email,
    { url: "https://yil384.github.io/Picasso-Lab/events/account-link.html?lid=<lid>&lang=<zh|en>", handleCodeInApp: true })`.
    The page shows "登录链接已发送到 y***@ucsd.edu，请在邮件里点开" and polls `POST /v1/email/poll { lid, poll }` every
@@ -134,7 +135,10 @@ only when the flag is on. Flow (the game runs inside an iframe, so the link comp
    - Email not yet linked anywhere → link it to the pending link's account (guest becomes protected; its name is now
      reserved unless another email account already holds it — then the user is asked to pick another name).
    - Email already linked to account A (this is a second device, or a guest who already saved) → the requesting
-     device's guest account B is merged into A: B's Hold'em/Guandan counters are added to A (biggestPot = max), B's
+     device will be signed in to A, so `complete` must carry the device's `code` (else `need_code`; a wrong one
+     `bad_code`; 5 wrong ones drop the link). `account-link.html` asks for it and says another device is being signed
+     in ("if you did not ask for this, close this page"): a link someone else started for the owner's address can
+     never hand that person a token for A. Then the requesting device's guest account B is merged into A: B's Hold'em/Guandan counters are added to A (biggestPot = max), B's
      clientIds join A, B's bankroll is dropped (prevents farming starting chips), B is deleted; A keeps its name.
 5. The next poll returns `{ status: "done", token, account }`: a new device token for the linked account. The page
    stores it, keeps `picasso.guandan.client` as is (Guandan), and sets `picasso.guandan.name` to the account name.
@@ -232,6 +236,7 @@ PublicTable {
     toAct: seat|null, deadline: ms|null, usingBank: bool,
     currentBet, minRaiseTo,
     pots: [{ amt, seats:[...] }],          // collected pots (main first), not counting bets in front of seats
+    dead,                                  // dead blind money posted this street (a returning player in the SB)
     winners: null | [{ seat, amt, pot, hand: { cat, name, cards:[5] } | null }],
     done: bool
   },
@@ -256,17 +261,20 @@ Times: `deadline` and `serverTime` are server epoch ms; clients compute `offset 
   max buy-in 100 BB, default buy-in = min(max buy-in, bankroll). Starting bankroll 10,000 virtual chips.
 - Button moves one dealt-in seat clockwise each hand. SB = next dealt-in seat after the button, BB = next after SB.
   Heads-up: the button posts the SB and acts first pre-flop and last after the flop. If a blind seat is empty or
-  sitting out the button still advances one seat (simplified moving button; no dead blinds).
+  sitting out the button still advances one seat (simplified moving button). When play drops to heads-up the big
+  blind moves on from last hand's big blind, so nobody posts it twice running.
 - New players and players returning from sit-out are `waiting` and are dealt in when the big blind reaches them, or
-  at once with `postBB` (they post a BB in addition to the blinds). At the very first hand of a table all seated players
-  are dealt in.
+  at once with `postBB` (they post a BB in addition to the blinds; one who lands in the small blind posts the SB live
+  plus the rest of a BB dead). At the very first hand of a table all seated players are dealt in, and a brand-new seat
+  at a heads-up table is dealt in at once; a player back from sitting out at a heads-up table still waits for the BB.
 - Betting: pre-flop action starts left of the BB; after the flop, left of the button. Minimum bet = BB. A raise must
   raise by at least the largest bet or raise increment of this street (pre-flop the BB counts as the opening bet).
   All-in for less than a full raise does **not** reopen betting for players who have already acted and face only that
   incomplete raise (they may call or fold, not re-raise); players who have not yet acted may raise normally.
   `minRaiseTo`/`maxRaiseTo` in `legal` encode this. No cap on raises.
 - Street ends when all non-folded, non-all-in players have acted since the last full raise and matched the current
-  bet. Uncalled bets return to the bettor before pots are built.
+  bet. An uncalled bet returns to the bettor before pots are built, but only to a bettor still in the hand: a folded
+  seat (also one that stood up) forfeits every chip it put in, and its unmatched bet stays in the pot.
 - Side pots: built from each player's total contribution this hand (folded players' chips stay in the pots they
   reached; folded players are never eligible). Each pot is awarded to the best hand(s) among its eligible players.
 - Showdown: if betting is closed with ≥2 players and at least one all-in (no more decisions possible), all remaining
@@ -283,8 +291,12 @@ Times: `deadline` and `serverTime` are server epoch ms; clients compute `offset 
 - Sit-out: skipped when dealing; a player sitting out for 5 minutes (or busted for 60 s without topping up) is stood
   up and their stack returns to their bankroll. Disconnected players keep their seat and simply time out.
 - Rebuy / top-up: between hands only (a request during a hand is queued and applied before the next deal), from the
-  bankroll, up to max buy-in. Bankroll empty ⇒ free refill to 10,000 (`/v1/refill`, counted in `refills`, and the
-  leaderboard ranks by `net`, so refills never help). No chip transfers between accounts, ever.
+  bankroll, up to max buy-in (in a hand, counted from the stack the hand began with; a queued top-up that would lift
+  a winning stack above the max is cut there and the rest goes back to the bankroll). Bankroll below 2,000 ⇒ free
+  refill to 10,000 (`/v1/refill`, counted in `refills`), at most once per 24 hours per account and per network. The
+  leaderboard ranks by `net`, so refills never lift the refilled account itself; they could still be lost on purpose
+  to another account (chip dumping), which the refill limit slows down but does not stop. No direct chip transfers
+  between accounts, ever.
 - Pacing (server): 700 ms between a closed street and the next card(s); all-in run-outs 1,200 ms per street; hand end
   hold 3,000 ms (5,000 ms with a showdown) before the next deal; at least 2 eligible players needed to deal.
 
@@ -315,7 +327,8 @@ to apply to accounts). Every mutation returns `{ ok, error? }` and bumps `rev`.
 
 API additions, all backwards compatible with the list above:
 - `constructor({ ..., options: { pauseWithoutHumans = true } })`: `false` lets a bots-only table deal (tests).
-- `fromJSON(obj, { rng, now })`: with `now` it is a restart: the player to act gets a fresh `actionSec` timer.
+- `fromJSON(obj, { rng, now })`: with `now` it is a restart: the player to act gets a fresh `actionSec` timer; time
+  bank already used before the saved clock stays used (the rooms layer saves the clock at a graceful stop).
 - `requestTopUp(accountId, amount, bankroll?)`: `bankroll` (when given) is checked (`insufficient_chips`). The chips
   leave the bankroll at once (settlement `-amount`, reason `topup`) and join the stack at hand end (or at once when
   the seat is not in a live hand), so a queued top-up can never be unfunded. `postBB`, `show`, `requestTopUp` accept
@@ -329,7 +342,8 @@ API additions, all backwards compatible with the list above:
 - `views.me(table, accountId, account?)`: `account = { pid, chips }` supplies `Me.chips` (the table never knows
   bankrolls). `views.publicTable(table, now?)`: `now` only refines the time bank shown for a seat using its bank.
 - `settlements()` → `{ chips: [{ accountId, amount, reason: buyin|topup|cashout }], records: [{ accountId, hands,
-  won (0/1), biggestPot (chips won this hand), net, showdowns (0/1) }] }`; bots never appear.
+  won (0/1), biggestPot (chips won this hand), net, showdowns (0/1) }] }`; bots never appear. Reason `topup_back`
+  (positive) returns the part of a queued top-up that the max buy-in cut off at hand end.
 
 Rule details fixed by the engine:
 - Seats not in a hand show `state` `out` (sitting out), `busted` (stack 0), `waiting` (for the big blind) or
@@ -342,11 +356,14 @@ Rule details fixed by the engine:
 - A short big blind (all-in from the post) still makes the others call the full big blind. A short all-in that
   opens the betting below the big blind does not change the minimum raise increment (the big blind).
 - A seat that stands mid-hand stays (folded, or all-in and still live) until hand end, then its stack is cashed
-  out. If the leaver's own bet was the only thing the player to act still faced, the street closes and that bet,
-  uncalled, goes back to the leaver.
+  out. Once betting is over (an all-in run-out, or nobody left who could bet) a leaver is not folded: its hand plays
+  to showdown like an all-in one. A folded leaver forfeits its bets: if its bet was the only thing the player to act
+  still faced, the street closes and that bet stays in the pot.
 - Sitting needs a buy-in within 40-100 BB; a top-up may bring stack + queued top-ups up to 100 BB. Host settings
   change only before the start (existing stacks are kept).
-- `hostOp dissolve` during a live hand cancels it: every contribution goes back, no records. A table with no human
+- `hostOp dissolve` during a live hand waits for it: the hand plays out, the pot is awarded, then the table closes
+  (a host could otherwise undo a lost all-in once the board shows). `hostOp removeBot` on a bot in a live hand lets
+  it play the hand out and removes it at hand end (a host op never folds a seat). A table with no human
   seated (also before the first sit) closes as `idle` 10 minutes later when `pauseWithoutHumans` is on.
 - Bots (`b_<n>`, styles rotate from a random start, names Stone/Blaze/Fox/Sage by style) buy in for the maximum,
   never time out or sit out, and are removed 60 s after busting like anyone else. Their raises are tidy amounts
@@ -482,9 +499,11 @@ WebSocket
   and the table starts. `{ t:"host", op:"fillBots", count? }` takes an optional count (1-8).
 - Presence (rooms): the host keeps the role while any of its sockets is on the table, seated or not. A host whose
   last socket leaves without a seat hands it on at once (`releaseHost`), a seated host after 60 s without a socket
-  (it may be reconnecting), an unseated host found gone after a restart after 15 s. In the
-  waiting phase, where no timers run, a seated human with no socket for 10 minutes is stood up (which lets the idle
-  close run). An account hosts at most 3 open tables.
+  (it may be reconnecting), an unseated host found gone after a restart after 15 s. While no hand is live (the
+  waiting phase, or a running table that cannot deal, e.g. one human left), where no timers run, a seated human with
+  no socket for 10 minutes is stood up (which lets the idle close run). An account hosts at most 3 open tables.
+- Table codes are the only gate to a private table: an account that misses (`watch` of an unknown code) more than 30
+  times in a minute has its socket closed (1008 `too_many_misses`).
 - Every `state` is built per recipient by `views.js`; the public part is serialized once per change. `{ t:"account" }`
   is pushed after every table step that moved that account's bankroll or records, and after HTTP changes (name,
   refill, Guandan round, email link).

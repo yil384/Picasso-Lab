@@ -114,6 +114,8 @@ html[lang="en"] .ga-game h3 { letter-spacing: 0; }
 .ga-email-err { min-height: calc(26 * var(--pu)); margin: calc(6 * var(--pu)) 0 calc(4 * var(--pu)); color: #c8304e; font: 700 calc(16 * var(--pu))/1.4 var(--font-ui); }
 .ga-email.is-sent .gd-confirm-text { margin: calc(12 * var(--pu)) 0 calc(4 * var(--pu)); }
 .ga-email-wait { margin: 0 0 calc(22 * var(--pu)); color: var(--ink-3); font: 600 calc(16 * var(--pu))/1.4 var(--font-ui); }
+.ga-email-code { margin: calc(-10 * var(--pu)) 0 calc(22 * var(--pu)); color: var(--ink-3); font: 600 calc(15 * var(--pu))/1.4 var(--font-ui); }
+.ga-email-code b { margin-left: calc(4 * var(--pu)); color: var(--ink); font: 800 calc(22 * var(--pu))/1 var(--font-num, var(--font-ui)); letter-spacing: .12em; font-variant-numeric: tabular-nums; }
 /* the turning ring of the lobby's loading plate, in ink: waiting for the link to be opened */
 .ga-email-ring {
     width: calc(40 * var(--pu));

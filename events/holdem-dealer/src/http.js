@@ -94,9 +94,9 @@ export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, s
       const body = await readBody(req);
       return accounts.setName(auth(req).account, body.name);
     },
-    'POST /v1/refill': async (req) => {
+    'POST /v1/refill': async (req, ipKey) => {
       await readBody(req);
-      return accounts.refill(auth(req).account);
+      return accounts.refill(auth(req).account, ipKey);
     },
     'GET /v1/leaderboard': async (req, ipKey, url) => {
       const { account } = auth(req, false);
@@ -116,7 +116,7 @@ export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, s
     },
     'POST /v1/email/complete': async (req) => {
       const body = await readBody(req);
-      return accounts.emailComplete(body.lid, body.idToken);
+      return accounts.emailComplete(body.lid, body.idToken, body.code ?? null);
     },
     'POST /v1/email/poll': async (req) => {
       const body = await readBody(req);

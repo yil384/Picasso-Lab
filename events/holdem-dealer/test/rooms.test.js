@@ -3,7 +3,7 @@
 // passes it on; an unseated host found gone (after a restart) after 15 s. Injected clock, fake sockets and accounts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Rooms, HOST_GONE_MS, HOST_UNSEATED_GONE_MS } from '../src/rooms.js';
+import { Rooms, HOST_GONE_MS, HOST_UNSEATED_GONE_MS, WAITING_GONE_MS, WATCH_MISS_MAX } from '../src/rooms.js';
 
 function setup() {
   let clock = 1_000_000;
@@ -98,4 +98,46 @@ test('host: seated and disconnected keeps the role for 60 s, then passes it on; 
   assert.equal(restored.get(code2).host.id, 'u_b');
   restored.stop();
   r2.stop();
+});
+
+test('a running table that cannot deal stands up a player gone for 10 minutes (its chips are not held forever)', () => {
+  const { rooms, conn, tick, accounts } = setup();
+  const a = conn('u_a');
+  const b = conn('u_b');
+  rooms.handle(a, { t: 'create', settings: { seats: 2 } });
+  const code = a.frames.find((m) => m.t === 'created').code;
+  rooms.handle(b, { t: 'watch', code });
+  rooms.handle(a, { t: 'sit', seat: 0, buyIn: 2000 });
+  rooms.handle(b, { t: 'sit', seat: 1, buyIn: 2000 });
+  rooms.handle(a, { t: 'host', op: 'start' });
+  rooms.handle(b, { t: 'stand' });
+  const t = rooms.get(code);
+  assert.equal(t.phase, 'running');
+  assert.ok(!(t.hand && !t.hand.done), 'no live hand, and none can be dealt');
+  rooms.detach(a);
+  rooms.sweep();
+  assert.equal(t.seatOf('u_a'), 0);
+  tick(WAITING_GONE_MS);
+  rooms.sweep();
+  assert.equal(t.seatOf('u_a'), -1, 'stood up');
+  assert.equal(accounts.get('u_a').chips + accounts.get('u_b').chips, 20_000, 'every chip back in the bankrolls');
+  rooms.stop();
+});
+
+test('guessing table codes: an account that misses too often in a minute has its socket closed', () => {
+  const { rooms, conn, tick } = setup();
+  const a = conn('u_a');
+  let closed = null;
+  a.close = (code, reason) => { closed = { code, reason }; };
+  for (let k = 0; k < WATCH_MISS_MAX; k++) rooms.handle(a, { t: 'watch', code: `ZZZ${k}` });
+  assert.equal(closed, null);
+  assert.equal(a.frames.filter((m) => m.t === 'error' && m.code === 'no_table').length, WATCH_MISS_MAX);
+  rooms.handle(a, { t: 'watch', code: 'ZZZZZ' });
+  assert.deepEqual(closed, { code: 1008, reason: 'too_many_misses' });
+  // the count is per account and per minute
+  closed = null;
+  tick(60_000);
+  rooms.handle(a, { t: 'watch', code: 'ZZZZZ' });
+  assert.equal(closed, null);
+  rooms.stop();
 });

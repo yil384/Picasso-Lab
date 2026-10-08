@@ -12,7 +12,7 @@ import { seededRng } from '../src/engine/cards.js';
 import { startTest, newGuest, connect, sleep, makeSigner, idClaims, PROJECT } from './service-helpers.js';
 import { createVerifier } from '../src/firebase-token.js';
 
-const PROD = { NODE_ENV: 'production', GAMES_SECRET: 'a'.repeat(40), IP_SALT: 'b'.repeat(40) };
+const PROD = { NODE_ENV: 'production', GAMES_SECRET: 'a'.repeat(40), IP_SALT: 'b'.repeat(40), TRUST_PROXY: '1' };
 
 test('config: hooks never in production; the key URL needs the hooks and a loopback address', () => {
   assert.equal(loadConfig({}).testHooks, false);

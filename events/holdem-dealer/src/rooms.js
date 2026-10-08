@@ -10,8 +10,10 @@
 // Presence: a seated human is `connected` while any socket of the account watches the table. The host role stays
 // with the host while any of its sockets is on the table, seated or not (standing up to change seats keeps it).
 // A host whose last socket leaves without a seat hands the role on at once (releaseHost); a seated host after 60 s
-// with no socket (it may be reconnecting), an unseated one found gone after a restart after 15 s. In the waiting phase (no hands, so no
-// timeouts) a seated human gone for 10 minutes is stood up, which lets the engine's idle close run. Tables close
+// with no socket (it may be reconnecting), an unseated one found gone after a restart after 15 s. While no hand is
+// live (waiting phase, or a running table that cannot deal: no timeouts) a seated human gone for 10 minutes is stood
+// up, which lets the engine's idle close run. Table codes are the gate to private tables: an account that misses
+// (`watch` of a code that does not exist) 30 times in a minute has its socket closed (1008). Tables close
 // as idle 10 minutes after the last human seat is gone (engine). At most 200 open tables; an account hosts at most 3.
 //
 //   new Rooms({ accounts, store, now, botThinkScale, paceScale, rng, botRng, log, onChange })
@@ -34,6 +36,8 @@ export const MAX_HOSTED = 3;
 export const HOST_GONE_MS = 60_000;
 export const HOST_UNSEATED_GONE_MS = 15_000;
 export const WAITING_GONE_MS = 10 * 60_000;
+export const WATCH_MISS_MAX = 30;
+const WATCH_MISS_WINDOW = 60_000;
 const PRACTICE_BOTS = 5;
 const MAX_DELAY = 2 ** 31 - 1;
 
@@ -119,7 +123,11 @@ export class Rooms {
       case 'create': return this._create(conn, account, msg, fail);
       case 'watch': {
         const entry = this.tables.get(msg.code);
-        if (!entry) return fail('no_table');
+        if (!entry) {
+          fail('no_table');
+          if (this._watchMiss(account.id)) conn.close(1008, 'too_many_misses');
+          return;
+        }
         return this.watch(conn, msg.code);
       }
       case 'unwatch': return this.unwatch(conn);
@@ -153,6 +161,17 @@ export class Rooms {
     }
     if (!r.ok) return fail(r.error);
     this._after(entry, now);
+  }
+
+  // codes cannot be guessed by brute force: count an account's misses in a fixed one-minute window
+  _watchMiss(id) {
+    const now = this.now();
+    if (!this.misses) this.misses = new Map();
+    let m = this.misses.get(id);
+    if (!m || now - m.since >= WATCH_MISS_WINDOW) { m = { n: 0, since: now }; this.misses.set(id, m); }
+    m.n++;
+    if (this.misses.size > 10_000) for (const [k, v] of this.misses) if (now - v.since >= WATCH_MISS_WINDOW) this.misses.delete(k);
+    return m.n > WATCH_MISS_MAX;
   }
 
   _newCode() {
@@ -385,7 +404,9 @@ export class Rooms {
       } else if (t.host && entry.hostGoneSince === null && ![...entry.watchers].some((c) => c.accountId === t.host.id)) {
         entry.hostGoneSince = now;
       }
-      if (t.phase === 'waiting') {
+      // no live hand means no timeouts to sit a gone player out: a running table that cannot deal (one human
+      // left) would otherwise hold that seat and its chips forever
+      if (t.phase === 'waiting' || (t.phase === 'running' && !(t.hand && !t.hand.done))) {
         for (const s of t.seats) {
           if (!s || s.bot || s.connected) continue;
           const since = entry.gone.get(s.id) ?? now;
@@ -451,6 +472,9 @@ export class Rooms {
 
   stop() {
     this.stopped = true;
-    for (const e of this.tables.values()) { clearTimeout(e.timer); e.timer = null; }
+    const now = this.now();
+    // the saved clock is the stop time, so a restored actor keeps paying for the time bank used up to now
+    for (const e of this.tables.values()) { clearTimeout(e.timer); e.timer = null; e.table._clock(now); }
+    if (this.tables.size) this.store?.markDirty('tables');
   }
 }

@@ -17,15 +17,17 @@ test.after(async () => { await svc.stop(); });
 
 const idToken = (email, over = {}) => signer.sign(idClaims(email, over, now()));
 
-async function saveFlow(guest, email, tokenEmail = email) {
+async function saveFlow(guest, email, tokenEmail = email, { withCode = false } = {}) {
   const start = await api(svc, 'POST', '/v1/email/start', { token: guest.token, body: { email }, headers: { 'x-forwarded-for': randomIp() } });
   assert.equal(start.status, 200, JSON.stringify(start.data));
-  const { lid, poll } = start.data;
+  const { lid, poll, code } = start.data;
   assert.match(lid, /^[A-Za-z0-9_-]{20,}$/);
+  assert.match(code, /^\d{4}$/);
   const pending = await api(svc, 'POST', '/v1/email/poll', { body: { lid, poll } });
   assert.deepEqual(pending.data, { status: 'pending' });
-  const complete = await api(svc, 'POST', '/v1/email/complete', { body: { lid, idToken: idToken(tokenEmail) }, origin: 'https://yil384.github.io' });
-  return { lid, poll, complete };
+  const body = withCode ? { lid, idToken: idToken(tokenEmail), code } : { lid, idToken: idToken(tokenEmail) };
+  const complete = await api(svc, 'POST', '/v1/email/complete', { body, origin: 'https://yil384.github.io' });
+  return { lid, poll, code, complete };
 }
 
 test('a new link saves the guest: protected name, masked email, a fresh token once, the old token retired', async () => {
@@ -71,7 +73,7 @@ test('second device: its guest merges into the saved account (counters added, ba
   Object.assign(B.holdem, { hands: 4, won: 2, biggestPot: 900, net: -50, showdowns: 1 });
   B.guandan.rounds = 2; B.guandan.wins = 1; B.guandan.seen['ROOM:1'] = 1;
   B.chips = 25_000;
-  const s2 = await saveFlow(phone, 'MAIN@ucsd.edu', 'main@ucsd.edu');
+  const s2 = await saveFlow(phone, 'MAIN@ucsd.edu', 'main@ucsd.edu', { withCode: true });
   assert.equal(s2.complete.status, 200);
   assert.equal(s2.complete.data.name, 'Main');
   const d2 = await api(svc, 'POST', '/v1/email/poll', { body: { lid: s2.lid, poll: s2.poll } });
@@ -141,12 +143,12 @@ test('merging a guest that is seated at a Hold\'em table is refused until it lea
   const created = await c.waitFor((m) => m.t === 'created');
   c.send({ t: 'sit', seat: 1, buyIn: 1000 });
   await c.waitFor((m) => m.t === 'state' && m.me.seat === 1);
-  const s2 = await saveFlow(g, 'seated@ucsd.edu');
+  const s2 = await saveFlow(g, 'seated@ucsd.edu', 'seated@ucsd.edu', { withCode: true });
   assert.equal(s2.complete.status, 409);
   assert.equal(s2.complete.data.error, 'at_table');
   c.send({ t: 'stand' });
   await c.waitFor((m) => m.t === 'state' && m.me.seat === null);
-  const retry = await api(svc, 'POST', '/v1/email/complete', { body: { lid: s2.lid, idToken: idToken('seated@ucsd.edu') } });
+  const retry = await api(svc, 'POST', '/v1/email/complete', { body: { lid: s2.lid, idToken: idToken('seated@ucsd.edu'), code: s2.code } });
   assert.equal(retry.status, 200);
   // the guest's socket is closed (its account no longer exists)
   const closed = await c.waitClose();
@@ -170,4 +172,23 @@ test('flag off: start, complete and poll answer 403 disabled; features say so', 
   }
   const on = await api(svc, 'POST', '/v1/session', { body: {} });
   assert.deepEqual(on.data.features, { emailLink: true });
+});
+
+test('a link someone else started for my saved email: no merge and no token without the code shown on their device', async () => {
+  const owner = await newGuest(svc, 'Victim');
+  const s1 = await saveFlow(owner, 'victim@ucsd.edu');
+  assert.equal(s1.complete.status, 200);
+  const attacker = await newGuest(svc, 'Mallory');
+  // the victim opens the mail and confirms the address, but does not have the code
+  const s2 = await saveFlow(attacker, 'victim@ucsd.edu');
+  assert.equal(s2.complete.status, 409);
+  assert.equal(s2.complete.data.error, 'need_code');
+  assert.deepEqual((await api(svc, 'POST', '/v1/email/poll', { body: { lid: s2.lid, poll: s2.poll } })).data, { status: 'pending' });
+  const wrong = String((Number(s2.code) + 1) % 10_000).padStart(4, '0');
+  const tryCode = (code) => api(svc, 'POST', '/v1/email/complete', { body: { lid: s2.lid, idToken: idToken('victim@ucsd.edu'), code } });
+  for (let k = 0; k < 4; k++) assert.equal((await tryCode(wrong)).data.error, 'bad_code');
+  assert.equal((await tryCode(wrong)).data.error, 'expired', 'five wrong codes drop the link');
+  assert.equal((await tryCode(s2.code)).data.error, 'expired');
+  assert.equal((await api(svc, 'POST', '/v1/email/poll', { body: { lid: s2.lid, poll: s2.poll } })).status, 404);
+  assert.ok(svc.accounts.get(attacker.id), 'the attacker\'s guest was not merged');
 });

@@ -11,7 +11,9 @@ test('dev defaults start; production refuses without secrets and with placeholde
   assert.equal(c.firebaseProjectId, 'yichen-5e23e');
   assert.equal(c.trustProxy, false);
   assert.equal(c.botThinkScale, 1);
-  assert.throws(() => loadConfig({ NODE_ENV: 'production' }), (e) => e instanceof ConfigError && e.problems.length === 2);
+  assert.throws(() => loadConfig({ NODE_ENV: 'production' }), (e) => e instanceof ConfigError && e.problems.length === 3);
+  assert.throws(() => loadConfig({ NODE_ENV: 'production', GAMES_SECRET: 'a'.repeat(40), IP_SALT: 'b'.repeat(40) }),
+    (e) => e instanceof ConfigError && /TRUST_PROXY/.test(e.message), 'production needs TRUST_PROXY set explicitly');
   assert.throws(() => loadConfig({ NODE_ENV: 'production', GAMES_SECRET: 'short', IP_SALT: 'x'.repeat(40) }), ConfigError);
   assert.throws(() => loadConfig({ NODE_ENV: 'production', GAMES_SECRET: 'replace-with-48-random-bytes-from-openssl-rand', IP_SALT: 'y'.repeat(40) }), ConfigError);
   assert.throws(() => loadConfig({ NODE_ENV: 'production', GAMES_SECRET: 'z'.repeat(40), IP_SALT: 'z'.repeat(40) }), ConfigError);

@@ -30,7 +30,7 @@ body {
     -webkit-user-select: auto;
 }
 .al { width: min(480px, 100%); display: flex; flex-direction: column; align-items: center; gap: 18px; }
-.al-brand { display: flex; align-items: center; gap: 10px; color: rgba(236, 242, 255, .85); font: 900 15px/1 var(--font-ui); letter-spacing: .08em; }
+.al-brand { display: flex; align-items: center; gap: 10px; color: rgba(236, 242, 255, .85); font: 900 15px/1 var(--font-ui); letter-spacing: 0; }
 .al-brand .card { --card-w: 30px; rotate: -8deg; }
 .al-panel {
     width: 100%;
@@ -67,6 +67,7 @@ html[lang="en"] .al-head h1 { letter-spacing: 0; }
     outline: none;
 }
 .al-input:focus { box-shadow: inset 0 0 0 2px var(--util); }
+.al-code { max-width: 180px; text-align: center; font-size: 26px; font-weight: 800; letter-spacing: .3em; font-variant-numeric: tabular-nums; }
 .al-err { min-height: 22px; margin: -4px 0 0; color: #c8304e; font: 700 15px/1.45 var(--font-ui); }
 .al-body .btn { --btn-h: 50px; --btn-fs: 20px; --btn-px: 28px; --btn-minw: 200px; text-decoration: none; }
 html[lang="en"] .al-body .btn { --btn-ls: 0em; }
@@ -166,6 +167,25 @@ function showFailed(text) {
         <p class="al-sub">${L("Open the account popup in the game to send a new link.", "可以在游戏的账号页重新发送登录链接。")}</p>${back}`;
 }
 
+// The email already has a saved account and another device asked: that device will be signed in to it, so the
+// person here types the code that device shows (a link sent by someone else to this address stops here).
+function showCode(idToken, error = "") {
+    body.innerHTML = `<p class="al-text">${L("This email already has a saved account. Opening this link signs another device in to it.", "这个邮箱已经保存过账号，确认后会让另一台设备登录这个账号。")}</p>
+        <p class="al-sub">${L("Enter the 4-digit code shown in the game on the device that sent the link. If you did not ask for this, close this page.", "请输入发送链接的那台设备在游戏里显示的 4 位验证码。如果不是你本人操作，请直接关闭这个页面。")}</p>
+        <input class="al-input al-code" id="al-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="4" spellcheck="false" placeholder="0000" aria-label="${L("Code", "验证码")}">
+        <p class="al-err" role="alert">${esc(error)}</p>
+        <button class="btn primary" id="al-go" type="button">${L("Confirm", "确认")}</button>`;
+    const input = document.getElementById("al-code");
+    const go = () => {
+        const code = input.value.trim();
+        if (!/^\d{4}$/.test(code)) return showCode(idToken, L("Enter the 4 digits", "请输入 4 位数字"));
+        finish(idToken, code);
+    };
+    document.getElementById("al-go").addEventListener("click", go);
+    input.addEventListener("keydown", event => { if (event.key === "Enter") go(); });
+    input.focus();
+}
+
 async function complete(email) {
     showBusy();
     let idToken;
@@ -179,20 +199,27 @@ async function complete(email) {
             ? L("This link has expired or was already used.", "这个链接已失效或已经用过了。")
             : L("Sign-in failed. Please try again.", "登录失败，请稍后再试。"));
     }
+    await signOut(auth).catch(() => {});
+    return finish(idToken, null);
+}
+
+async function finish(idToken, code) {
+    showBusy();
     let res;
     let data = {};
     try {
         res = await fetch(`${GAMES_ORIGIN}/v1/email/complete`, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ lid, idToken }),
+            body: JSON.stringify(code ? { lid, idToken, code } : { lid, idToken }),
             credentials: "omit"
         });
         data = await res.json().catch(() => ({}));
     } catch (_) {
         res = null;
     }
-    await signOut(auth).catch(() => {});
+    if (res && data.error === "need_code") return showCode(idToken);
+    if (res && data.error === "bad_code") return showCode(idToken, L("The code does not match", "验证码不对"));
     if (res?.ok) {
         try { localStorage.removeItem(LINK_EMAIL_KEY); } catch (_) {}
         return showDone(data.name || "", data.nameReserved !== false);

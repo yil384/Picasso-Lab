@@ -32,6 +32,8 @@ import { ApiError, sha256 } from './util.js';
 
 export const START_CHIPS = 10_000;
 export const REFILL_BELOW = 2_000;
+export const REFILL_EVERY = 24 * 60 * 60_000; // one refill per account per day
+export const REFILLS_PER_NET = 5; // and at most this many per network (ipKey) per day
 const DAY = 24 * 3600_000;
 const TOKENS_MAX = 10;
 const CLIENT_IDS_MAX = 20;
@@ -40,6 +42,7 @@ const IP_PER_KEY = 5;
 const SUGGEST_MAX = 3;
 export const SID_TTL = 10 * 60_000;
 export const LINK_TTL = 30 * 60_000;
+export const CODE_TRIES = 5; // wrong device codes before an email link is dropped
 const LINK_DONE_KEEP = 10 * 60_000;
 const LINKS_PER_ACCOUNT = 5;
 const SEEN_MAX = 200;
@@ -366,11 +369,19 @@ export class Accounts {
     return { account: this.view(a) };
   }
 
-  refill(a) {
+  // Rate limited: chips lost on purpose to another account (chip dumping) would otherwise be free to repeat.
+  refill(a, ipKey = null) {
     const info = this.tableInfo(a.id);
     if (a.chips >= REFILL_BELOW || info.chips > 0) {
       throw new ApiError(409, 'not_needed', 'Refills are for bankrolls under 2,000 with no chips at a table');
     }
+    const t = this.now();
+    if (a.refilledAt && t - a.refilledAt < REFILL_EVERY) throw new ApiError(429, 'refill_later', 'One refill per day');
+    if (!this.refillNets) this.refillNets = new Map(); // ipKey -> [times] (memory only)
+    const net = ipKey ? (this.refillNets.get(ipKey) || []).filter((x) => t - x < REFILL_EVERY) : [];
+    if (net.length >= REFILLS_PER_NET) throw new ApiError(429, 'refill_later', 'Too many refills from this network today');
+    if (ipKey) { net.push(t); this.refillNets.set(ipKey, net); }
+    a.refilledAt = t;
     a.chips = START_CHIPS;
     a.refills += 1;
     this._changed();
@@ -443,12 +454,16 @@ export class Accounts {
     while (mine.length >= LINKS_PER_ACCOUNT) this.links.delete(mine.shift().lid);
     const lid = secretId(16);
     const poll = secretId(24);
+    // shown on the device that asked; the link page needs it before that device is signed in to an existing saved
+    // account (otherwise anyone could send a link to someone else's address and get their account when they open it)
+    const code = String(crypto.randomInt(0, 10_000)).padStart(4, '0');
     this.links.set(lid, {
       lid, accountId: a.id, emailHash: this.emailHash(email), masked: maskEmail(email.trim().toLowerCase()),
-      pollHash: sha256(poll), starterToken: tokenHash, createdAt: t, status: 'pending', targetId: null, doneAt: null,
+      pollHash: sha256(poll), codeHash: sha256(`${lid}:${code}`), codeTries: 0,
+      starterToken: tokenHash, createdAt: t, status: 'pending', targetId: null, doneAt: null,
     });
     this._changed();
-    return { lid, poll };
+    return { lid, poll, code };
   }
 
   _link(lid) {
@@ -464,7 +479,7 @@ export class Accounts {
     return l;
   }
 
-  async emailComplete(lid, idToken) {
+  async emailComplete(lid, idToken, code = null) {
     this._requireEmailLink();
     if (!this._link(lid)) throw new ApiError(404, 'expired', 'This link has expired');
     if (typeof idToken !== 'string' || idToken.length > 4096) throw new ApiError(401, 'bad_token', 'Invalid sign-in');
@@ -493,7 +508,20 @@ export class Accounts {
     if (b.email && b.email.hash !== hash) throw new ApiError(409, 'already_linked', 'This account is already saved with another email');
     let target;
     if (ownerId && ownerId !== b.id) {
-      // second device (or a guest who already saved): merge B into A, A keeps its name, B's bankroll is dropped
+      // second device (or a guest who already saved): merge B into A, A keeps its name, B's bankroll is dropped.
+      // B's device will be signed in to A, so the person opening the link must type the code shown on B
+      if (typeof code !== 'string' || !/^\d{4}$/.test(code) || !l.codeHash || sha256(`${lid}:${code}`) !== l.codeHash) {
+        if (code !== null && code !== undefined && code !== '') {
+          l.codeTries = (l.codeTries || 0) + 1;
+          this._changed();
+          if (l.codeTries >= CODE_TRIES) {
+            this.links.delete(lid);
+            throw new ApiError(404, 'expired', 'This link has expired');
+          }
+          throw new ApiError(409, 'bad_code', 'The code does not match');
+        }
+        throw new ApiError(409, 'need_code', 'Enter the code shown on the device that asked');
+      }
       const a = this.accounts.get(ownerId);
       if (this.tableInfo(b.id).seated) throw new ApiError(409, 'at_table', 'Leave the Hold\'em table first, then open the link again');
       this._merge(b, a);

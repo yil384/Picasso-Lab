@@ -1,6 +1,6 @@
 // Service configuration from the environment (DESIGN.md section 12). Dev defaults are safe to run on a laptop;
 // with NODE_ENV=production the service refuses to start unless GAMES_SECRET and IP_SALT are set (32+ characters
-// each, different from each other) and every other value is valid.
+// each, different from each other) and TRUST_PROXY is set explicitly, and every other value is valid.
 //
 //   PORT              8787                 HOST  127.0.0.1 (the Docker image sets 0.0.0.0)
 //   DATA_DIR          ./data (production: /data)
@@ -108,6 +108,9 @@ export function loadConfig(env = process.env) {
   }
   if (!allowedOrigins.length) problems.push('ALLOWED_ORIGINS is empty');
 
+  // production must say whether a proxy is in front: behind Caddy without TRUST_PROXY=1 every client would share
+  // the proxy's ipKey (one suggestion list and one set of per-network limits for the whole site)
+  if (production && (env.TRUST_PROXY === undefined || env.TRUST_PROXY === '')) problems.push('TRUST_PROXY must be set in production (1 behind Caddy)');
   const tp = (env.TRUST_PROXY || '0').toLowerCase();
   if (!['0', '1', 'true', 'false', 'yes', 'no'].includes(tp)) problems.push('TRUST_PROXY must be 0 or 1');
   const trustProxy = tp === '1' || tp === 'true' || tp === 'yes';

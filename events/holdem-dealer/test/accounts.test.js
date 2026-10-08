@@ -227,6 +227,22 @@ test('refill: only below 2,000 with nothing at a table; sets 10,000 and counts',
   assert.throws(() => acc.refill(g.a), (e) => e.code === 'not_needed', '2,000 is not below 2,000');
 });
 
+test('refill: once a day per account and at most 5 a day per network (chip dumping is not free)', () => {
+  const { acc, clock } = setup({ tableInfo: () => ({ seated: false, chips: 0 }) });
+  const g = guest(acc);
+  g.a.chips = 0;
+  acc.refill(g.a, 'net1');
+  g.a.chips = 0;
+  assert.throws(() => acc.refill(g.a, 'net2'), (e) => e.status === 429 && e.code === 'refill_later');
+  clock.t += 24 * 3600_000;
+  assert.equal(acc.refill(g.a, 'net2').account.refills, 2);
+  for (let k = 0; k < 5; k++) { const o = guest(acc, { name: 'N' + k }); o.a.chips = 0; acc.refill(o.a, 'net1'); }
+  const late = guest(acc, { name: 'Late' });
+  late.a.chips = 0;
+  assert.throws(() => acc.refill(late.a, 'net1'), (e) => e.code === 'refill_later', 'a sixth refill from one network in a day');
+  assert.equal(acc.refill(late.a, 'net3').account.chips, 10_000);
+});
+
 test('records: Hold\'em from settlements; Guandan self-reported, deduped by room:round (last 200 keys)', () => {
   const { acc } = setup();
   const g = guest(acc);
