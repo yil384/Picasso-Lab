@@ -387,10 +387,11 @@ export function createTable({ ui, S, send, popups }) {
             let y = k === 0 ? p.y - 28 : p.y + dy * out + py * 84;
             // never on the board's cards (a side seat of the narrow portrait table): step above or below them,
             // with room for the winning cards' lift
-            // (the five slots' box is measured once per layout: no forced layout on every snapshot)
-            if (k && V.boardBox?.key !== V.keys && R.board.firstElementChild) {
+            // (the five slots' box is measured once per layout, no forced layout on every snapshot; before the
+            // flop the board is not shown and measures nothing)
+            if (k && V.boardBox?.key !== V.keys && h.board.length) {
                 const r = R.board.getBoundingClientRect();
-                V.boardBox = { key: V.keys, top: (r.top - V.top) / V.s, bottom: (r.bottom - V.top) / V.s, left: (r.left - V.left) / V.s, right: (r.right - V.left) / V.s };
+                if (r.width) V.boardBox = { key: V.keys, top: (r.top - V.top) / V.s, bottom: (r.bottom - V.top) / V.s, left: (r.left - V.left) / V.s, right: (r.right - V.left) / V.s };
             }
             const bx = V.boardBox?.key === V.keys ? V.boardBox : null;
             if (k && bx && x > bx.left - 22 && x < bx.right + 22 && y > bx.top - 30 && y < bx.bottom + 22) y = p.y < V.G.boardY ? bx.top - 34 : bx.bottom + 26;
