@@ -3,9 +3,11 @@
 // and cached for as long as the response's Cache-Control max-age says. A token with an unknown key id triggers one
 // refetch (key rotation), at most once every 30 s.
 //
-//   createVerifier({ projectId, fetchKeys = fetchGoogleKeys, now = Date.now, skewSec = 60, maxAuthAgeSec = 3600 })
+//   createVerifier({ projectId, jwksUrl, fetchKeys = () => fetchGoogleKeys(jwksUrl), now = Date.now, skewSec = 60,
+//                    maxAuthAgeSec = 3600 })
 //     -> { verify(idToken) -> Promise<{ uid, email, authTime }> }   rejects with TokenError(code)
-//   fetchGoogleKeys() -> Promise<{ keys: [jwk...], maxAgeSec }>     the production key fetcher
+//   fetchGoogleKeys(url = JWKS_URL) -> Promise<{ keys: [jwk...], maxAgeSec }>   the production key fetcher (the
+//     browser harness points it at a local JWK set: FIREBASE_JWKS_URL, test hooks only)
 //   parseMaxAge(cacheControl) -> seconds
 //   TokenError (code: malformed | alg | kid | signature | aud | iss | exp | iat | auth_time | sub | email | keys)
 //
@@ -31,8 +33,8 @@ export function parseMaxAge(cacheControl) {
   return m ? Number(m[1]) : 0;
 }
 
-export async function fetchGoogleKeys() {
-  const res = await fetch(JWKS_URL, { headers: { accept: 'application/json' } });
+export async function fetchGoogleKeys(url = JWKS_URL) {
+  const res = await fetch(url || JWKS_URL, { headers: { accept: 'application/json' } });
   if (!res.ok) throw new TokenError('keys');
   const body = await res.json();
   if (!body || !Array.isArray(body.keys)) throw new TokenError('keys');
@@ -42,7 +44,7 @@ export async function fetchGoogleKeys() {
 const b64json = (part) => JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
 const B64URL = /^[A-Za-z0-9_-]+$/;
 
-export function createVerifier({ projectId, fetchKeys = fetchGoogleKeys, now = Date.now, skewSec = 60, maxAuthAgeSec = 3600 }) {
+export function createVerifier({ projectId, jwksUrl = null, fetchKeys = () => fetchGoogleKeys(jwksUrl), now = Date.now, skewSec = 60, maxAuthAgeSec = 3600 }) {
   if (!projectId) throw new Error('projectId required');
   const cache = { keys: new Map(), expires: 0, fetchedAt: -Infinity };
   let inflight = null;

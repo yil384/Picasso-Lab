@@ -494,4 +494,9 @@ Persistence
 - Config adds `HOST` (default `127.0.0.1`; the image sets `0.0.0.0`) and `PACE_SCALE` (tests only: scales the
   engine's pacing pauses; action timers are never scaled). Production refuses secrets shorter than 32 characters,
   equal to each other or still holding a placeholder.
+- Browser test hooks (`src/test-hooks.js`): only with `HOLDEM_TEST_HOOKS=1`, which production refuses at startup, and
+  only for loopback callers. `GET /__test/hands?code=` returns every recent hand's dealt hole cards (the ground truth
+  the browser suite checks every received frame against) and `POST /__test/deck` rigs the next hand of a table (side
+  pots, splits, quads on demand). `FIREBASE_JWKS_URL` (hooks only, loopback URL) points the production key fetcher
+  at a local JWK set so the email link can be completed in a browser with a locally signed ID token.
 

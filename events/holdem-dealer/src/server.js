@@ -3,6 +3,7 @@
 //
 //   startServer(config, { now, fetchKeys, verifier, log, rng, botRng, onChange, helloMs }) -> Promise<Service>
 //     (everything but config is for tests: injected clock, key fetcher, rngs, a hook after every table change)
+//     config.testHooks (HOLDEM_TEST_HOOKS=1, never in production) adds test-hooks.js's /__test/* endpoints.
 //     Service = { port, url, accounts, rooms, store, ws, stop() }
 //     stop(): graceful - stop accepting, close every socket with 1012, stop the table timers, flush both files.
 // Startup refuses to run on a corrupt data file (store.js) or a bad configuration (config.js).
@@ -32,7 +33,14 @@ export async function startServer(config, opts = {}) {
 
   let rooms = null;
   let wsLayer = null;
-  const verifier = opts.verifier || createVerifier({ projectId: config.firebaseProjectId, fetchKeys: opts.fetchKeys, now });
+  const verifier = opts.verifier || createVerifier({ projectId: config.firebaseProjectId, jwksUrl: config.firebaseJwksUrl, fetchKeys: opts.fetchKeys, now });
+  // HOLDEM_TEST_HOOKS=1 only (refused in production): the browser harness's /__test/* endpoints
+  let hooks = null;
+  if (config.testHooks) {
+    const { createTestHooks } = await import('./test-hooks.js');
+    hooks = createTestHooks({ rooms: { get: (code) => rooms?.get(code) }, log });
+    log('test hooks on: /__test/* answers loopback callers', {});
+  }
   const accounts = new Accounts({
     gamesSecret: config.gamesSecret,
     emailLink: config.emailLink,
@@ -51,7 +59,7 @@ export async function startServer(config, opts = {}) {
     paceScale: config.paceScale,
     rng: opts.rng,
     botRng: opts.botRng,
-    onChange: opts.onChange,
+    onChange: hooks ? (t) => { hooks.onChange(t); opts.onChange?.(t); } : opts.onChange,
   });
   store.register('accounts', () => accounts.toJSON());
   store.register('tables', () => rooms.toJSON());
@@ -66,10 +74,11 @@ export async function startServer(config, opts = {}) {
   const startedAt = Date.now();
 
   const server = http.createServer({ requestTimeout: 15_000, headersTimeout: 10_000 });
-  server.on('request', createHttpHandler({
+  const api = createHttpHandler({
     config, accounts, rooms, limiter, ipKeyOf, startedAt, log,
     closeToken: (hash) => wsLayer?.closeToken(hash),
-  }));
+  });
+  server.on('request', hooks ? (req, res) => (req.url.startsWith('/__test/') ? hooks.handle(req, res) : api(req, res)) : api);
   wsLayer = attachWs(server, { config, accounts, rooms, limiter, ipKeyOf, log, now, helloMs: opts.helloMs });
   server.on('clientError', (err, socket) => { try { socket.destroy(); } catch (_) { /* gone */ } });
 

@@ -55,6 +55,8 @@ service. The kill -9 test runs the server as a child process.
 | `DATA_DIR` | `./data` (`/data` in production) | `accounts.json`, `tables.json` and their `.bak` copies, mode 600. |
 | `BOT_THINK_SCALE` | `1` | Multiplies bots' think delays (tests use 0). |
 | `PACE_SCALE` | `1` | Tests only: shortens the pauses between streets and hands. Action timers are never scaled. |
+| `HOLDEM_TEST_HOOKS` | `0` | Browser harness only: `1` adds loopback-only `/__test/*` endpoints (dealt cards, rigged decks). Refused in production. |
+| `FIREBASE_JWKS_URL` | Google's key set | Browser harness only (needs `HOLDEM_TEST_HOOKS=1`): a loopback URL serving a test JWK set. |
 
 With `NODE_ENV=production` (set in the image) the service refuses to start on a missing, short or placeholder
 secret, or any invalid value, and prints every problem.
