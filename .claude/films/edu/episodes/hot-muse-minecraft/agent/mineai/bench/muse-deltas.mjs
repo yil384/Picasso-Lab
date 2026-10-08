@@ -14,8 +14,9 @@
 // s2: collect_block stone 12 from the same kind of pocket (what collect cobblestone sends now)
 // s3: craft_item stone_pickaxe with a temporary table in the only free cell, where a cobblestone lies that can be picked
 //   up 2 s into the craft
-// s4: build_structure shelter (our blueprint cells) in a 1x2 pocket in stone (2026-10-08: their runtime's event loop
-//   stopped for over 60 s in it, twice: their watchdog ends the runtime, so the scenes after it cannot run; run it last)
+// s4: build_structure shelter (our blueprint cells) in a 1x2 pocket in stone (2026-10-08, before patch 0010: their
+//   runtime's event loop stopped for over 60 s in it every time, their watchdog ended the runtime and the scenes after
+//   it could not run, so it runs last; with 0010 the shelter is built, the bot inside)
 // s4b: the same shelter on open ground
 // s5: collect_block coal_ore 1 inside stone, the ore 6 blocks off, dirt carried
 // bats: craft_item wooden_pickaxe with a temporary table, the 8 cells around the bot held by bats (NoAI): with 0009 the

@@ -1,4 +1,4 @@
-<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token, the player name off the command line, the runtime's exit, no placement into a flower, a collect tried again after a landing, no placement into a mob's cell), how to build it, and what was measured. -->
+<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token, the player name off the command line, the runtime's exit, no placement into a flower, a collect tried again after a landing, no placement into a mob's cell, a build that never stalls the event loop), how to build it, and what was measured. -->
 # Mine AI MCP as the bot body: pinned upstream, our patches
 
 Decision (2026-10-08, after the M0 reuse spike, `../../../../research/muse-reuse-spike.md`): run the Mine AI MCP
@@ -6,8 +6,8 @@ runtime (https://github.com/aibengineering/mine-ai-mcp, MIT) as the body of a gu
 code never enters this repository. We keep a pinned upstream commit and our patch files, and
 `fetch-and-patch.sh` clones that commit into a folder, applies the patches and installs the dependencies at build
 time. How the agent runs it (`BODY=mineai`, one host per guest game) is in `../README.md`, section "The Mine AI MCP
-body"; this folder is the runtime itself: the pin, our nine patches, the build, and the measurements of the crafting
-fix (their crafting failed on Paper, the server we deploy), of the two gate patches and of 0009.
+body"; this folder is the runtime itself: the pin, our ten patches, the build, and the measurements of the crafting
+fix (their crafting failed on Paper, the server we deploy), of the two gate patches, of 0009 and of 0010.
 
 | File | What it is |
 | --- | --- |
@@ -23,8 +23,9 @@ fix (their crafting failed on Paper, the server we deploy), of the two gate patc
 | `patches/0007-no-placement-into-a-flower.patch` | a placed block (a temporary table or furnace, a bed, `place_block`) never goes into a cell the server will not replace: flowers and tulips out of their replaceable set (vanilla's and Paper's `replaceable` tag has none of them), snow only as a single layer; staging spot 7's table went on a poppy and the server refused it. Tests in `src/world/block-classification.test.ts` and `src/world/nearby-placement.test.ts` |
 | `patches/0008-collect-retries-once-after-landing.patch` | `collect_block` whose path search gave up ("no path found", nothing gained or broken) within 30 s of a landing (the server moved the bot more than 16 blocks) is run once more after the chunks around the bot have loaded and a 2 s pause; staging's 8-at-once failure. The runtime owns the landing watch (`src/world/landing.ts`, disposed with the bot's other listeners). Tests in `src/world/landing.test.ts` and `src/actions/collect-block/collect-block.test.ts` |
 | `patches/0009-placement-around-a-mob.patch` | a block put down beside the bot (a temporary table or furnace, a table for a craft, `place_block`'s nearby cell) never goes into a cell a mob or another player is in, and when one moves into the chosen cell before the block goes down, the next cell is tried after a 4-tick pause (3 cells at most); the soak's run 8 of 8 at once ("Placement cell ... overlaps bat"). Tests in `src/world/nearby-placement.test.ts` |
+| `patches/0010-build-never-stalls-the-event-loop.patch` | `build_structure` never stops the runtime's event loop, and builds a shelter around the bot: no placement is held back as enclosing when the bot is meant to be inside (the request asks for the cell its feet stand in to be air, as our `shelter` does) or the world already walls it in (a pocket in stone); steps out of the structure in a row that change nothing end the build after 3 with the reason; every pass of the loop yields to the event loop. A shelter in a pocket in stone stopped their runtime 4 of 4 times (their watchdog, `RUNTIME_UNRESPONSIVE`), and on open ground stopped at 9 of 10. Tests in `src/navigation/processes/building/build-process.test.ts` |
 | `LICENSE-mine-ai-mcp` | their MIT notice, kept with the patches |
-| `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route on their tools; `gateway-iron.mjs`: the strict iron route through our `/mcp` (`../test/e2e/mcp-iron.mjs`), n games in turn or at once, with every host's and runtime's memory and CPU, the agent's event loop and the bots' deaths; `gates.mjs`: the Paper check of patches 0007 and 0008; for the soak of gate 2, `lease-soak.mjs` (one game through its whole lease with a mixed script: memory, heartbeats, restarts and the live view watched throughout) and `muse-session.mjs` (a session in plain HTTP JSON-RPC through the public `/mcp`, with a re-sent `request_id` and a resume by handle); `procs.mjs`: the process sampler both benches share; `muse-deltas.mjs`: the actions behind the Muse run's unclear inventory changes, with their evidence and our reply, and the check of 0009 (bats in the cells around the bot) |
+| `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route on their tools; `gateway-iron.mjs`: the strict iron route through our `/mcp` (`../test/e2e/mcp-iron.mjs`), n games in turn or at once, with every host's and runtime's memory and CPU, the agent's event loop and the bots' deaths; `gates.mjs`: the Paper check of patches 0007 and 0008; for the soak of gate 2, `lease-soak.mjs` (one game through its whole lease with a mixed script: memory, heartbeats, restarts and the live view watched throughout) and `muse-session.mjs` (a session in plain HTTP JSON-RPC through the public `/mcp`, with a re-sent `request_id` and a resume by handle); `procs.mjs`: the process sampler both benches share; `muse-deltas.mjs`: the actions behind the Muse run's unclear inventory changes, with their evidence and our reply, the check of 0009 (bats in the cells around the bot) and the shelters of 0010 (s4, s4b); `muse-replay.mjs`: the Muse run's calls again through the public `/mcp`, every reply checked |
 
 ## Pins
 
@@ -43,7 +44,7 @@ No patch to their mineflayer fork is needed: the fix replaces the one call into 
 
 ```sh
 BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime   # under a minute with a warm Bun cache
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 9 patches, installed
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 10 patches, installed
 BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime MINEAI_RUNTIME=bun npm start   # the agent, one host per game
 cd ~/picasso-work/mineai-runtime && MINEAI_USERNAME=Tst_rv_cp bun src/server/host.ts --minecraft-port 25566 \
   --listen-port 25691 --data-root <dir>                                     # or one host by hand
@@ -177,19 +178,42 @@ last refusal after 3 cells, and a refusal with nobody in the cell is not tried a
 BUN=... node mineai/bench/muse-deltas.mjs ~/picasso-work/mineai-runtime-9 --server <Paper folder with console.in> --only bats --bats 3
 ```
 
+### Patch 0010 on Paper (2026-10-08)
+
+The cause, found in their loop (`build()` in `src/navigation/processes/building/build-process.ts`): when the bot stands
+in a cell the structure needs, or when every placement left would seal it in, the build asks for a route out of the
+structure and goes round again; a route whose goal is already met where the bot stands completes at once, so the loop
+asked again forever with nothing real to await, and the event loop never ran another timer or socket read until their
+supervisor's watchdog ended the runtime. In a 1x2 pocket in stone every placement reads as sealing the bot in (the
+stone already does), and our shelter keeps the bot's own cells as air, so their rule refused its last block anywhere.
+The two new unit tests (a pocket in stone; routes out that leave the bot where it was) hung without the patch: their
+per-test timeout never fired, because the loop starved the event loop. With it: a placement is never held back as
+enclosing when the request asks for the cell the bot's feet stand in to be air or the world already walls the bot in;
+3 step-outs in a row that change nothing end the build ("could not step out of the structure: 3 routes out ended at
+x,y,z with the bot still held by it"); every pass yields to the event loop. `bench/muse-deltas.mjs` on this Mac's
+Paper (25565, bot `Tst_dl_` and random letters), `build_structure` with our shelter's cells:
+
+| Runtime | s4: shelter in a 1x2 pocket in stone | s4b: shelter on open ground |
+| --- | --- | --- |
+| 0001-0009 (`mineai-runtime-9`) | **0 of 4**: the runtime's event loop stopped, their watchdog ended it (`RUNTIME_UNRESPONSIVE`, over 60 s with `MINEAI_UNRESPONSIVE_MS=60000`) | 9 of 10 placed: "could not step out of the structure: no path found" |
+| 0010 without the shelter rule (the first cut, `mineai-runtime-10`) | 3 of 3 without a runtime stop: 1 complete (7.1 s), 2 at 11 of 12 cells (a roof cell refused, 8.6 s) | 9 of 10 placed, as before |
+| 0001-0010 (`fetch-and-patch.sh`, `mineai-runtime-10b`) | **3 of 3 complete**: 10 placed, 10 cells dug, 7.0-7.1 s, the bot inside | **3 of 3 complete**: 10 placed, 1.0 s, the bot inside |
+
+Their whole suite with 0010: 1,585 pass, 0 fail (3 tests new); typecheck clean; the build's own test list (now with
+`build-process.test.ts`): 112 pass. On staging (the first cut), Muse's calls replayed at spot 7015 -4050 ended the
+shelter "could not step out of the structure: 3 routes out ended at 7011,83,-4049 with the bot still held by it": a
+clean failed step where the runtime would have stopped before; with the shelter rule, the replay at spot 8100 0 built
+it (10 placed, 6 cells dug, 11.4 s for the collect and the build).
+
+```sh
+BUN=... node mineai/bench/muse-deltas.mjs ~/picasso-work/mineai-runtime-10b --server <Paper folder with console.in> --only s4b,s4
+```
+
 ## Found along the way (not window clicks)
 
-- **A build around the bot (our `shelter` blueprint) does not finish, and in a pocket in stone it stops their runtime.**
-  Their builder never seals the bot in (`build-process.ts`: it steps out of the structure first). `bench/muse-deltas.mjs`
-  on this Mac's Paper (2026-10-08): on open ground (s4b) `build_structure` stopped at 9 of 10 placed, 11 of 12 cells,
-  "[BUILD_STOPPED] could not step out of the structure: no path found after 0 ms compute"; in a 1x2 pocket in stone
-  (s4) the runtime's event loop stopped for over 5 s, and over 60 s with `MINEAI_UNRESPONSIVE_MS=60000`, so their
-  watchdog ended the runtime (`RUNTIME_UNRESPONSIVE`) in 4 of 4 tries (one with 0001-0008, three with 0009); through our gateway
-  a shelter after the iron route did the same once (the host was started again). Their incident record ends with a walk
-  of the build ("navigation route returned"), then nothing. Likely (UNVERIFIED): `build()`'s step-out branch goes round
-  again (`continue`) without counting an idle pass and without yielding to the event loop, when the walk out ends without
-  leaving the structure. Muse's shelter on staging (game g38e5ef) succeeded in 16.3 s. Not patched yet: a candidate 0010
-  (count the step-out passes, yield between them), or a shelter for this body that leaves the bot a way out.
+- **A build around the bot (our `shelter` blueprint) did not finish, and in a pocket in stone it stopped their
+  runtime: fixed by 0010 (below).** Their builder never sealed the bot in (`build-process.ts`: it steps out of the
+  structure first).
 
 - **Their planner counts carried sticks toward a pickaxe even when sticks are asked for too.** `craft_item
   wooden_pickaxe 1 + stick 4` with 20 sticks carried makes 4 sticks and uses 2 carried ones: a net gain of 2 of 4,

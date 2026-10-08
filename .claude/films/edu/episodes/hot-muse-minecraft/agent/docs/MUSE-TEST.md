@@ -84,15 +84,24 @@ The re-test after those fixes (branch `muse-fix`, deployed to staging with `depl
 show, besides the iron route:
 
 - the steps of a `play_sequence` numbered as Muse sent them, with an added craft as a "+" line "added by the check
-  before step N" (also in `get_state`), and no step renumbered;
-- each step's own change first and the rest apart: `[-3 cobblestone, -2 stick, +1 stone_pickaxe; also on the way
-  (...): +1 cobblestone]`, and `used`, `gained`, `other` in `structuredContent`;
+  before step N" (also in `get_state`), and no step renumbered; items the check puts into a `craft_batch`'s list named
+  on that line ("the check added to your list: ...");
+- steps of an earlier call under a header naming the call: "From your play_sequence #1, sent 129 s ago:";
+- each step's own change first and the rest apart: `[-3 cobblestone, -2 stick, +1 stone_pickaxe; also changed
+  meanwhile (dug through, scaffolding, pickups, other drops): +1 cobblestone]`, and `used`, `gained`, `other` in
+  `structuredContent`;
 - `collect cobblestone` answered "mined N stone (stone drops cobblestone) and picked up N cobblestone";
 - smelt's `n` given as 1 to 24 in the tool description;
 - every skill (hunt included) named in the server instructions and in `play_sequence`'s description;
-- `eat` at 20/20 failing with code `NOT_HUNGRY` and the word "Harmless".
+- `eat` at 20/20 failing with code `NOT_HUNGRY` and the words "Harmless: nothing was eaten or used, and the steps
+  queued after it still run";
+- `build shelter` done with the bot inside ("placed 10 cobblestone ..."), in the open or underground (runtime patch
+  0010).
 
-Known before the re-test: a `build shelter` can stop the bot's runtime (their builder never seals the bot in; in a
-pocket in stone its event loop stops until their watchdog ends it), which our host answers by starting it again once;
-a second crash in the same game ends it. If that happens, the step fails with "the body stopped in the middle of it
-(RUNTIME_UNRESPONSIVE)", and `mineai_host_restart` appears in staging's log: note it with the bot's position.
+The same calls without a model, through the same public `/mcp` (2026-10-08, the `muse-fix` build on staging, two fresh
+spots): `node mineai/bench/muse-replay.mjs https://play-staging.picasso-lab.com --out replay.json` (README, "The review
+of the fixes and the re-check on staging").
+
+If the body's runtime stops during a step anyway, the step fails with code `BODY_RESTARTED` ("This step may be what
+stopped it: do not send it again from here ... a second stop ends the game"), and `mineai_host_restart` appears in
+staging's log: note it with the bot's position and the step.
