@@ -201,7 +201,8 @@ export function createTable({ ui, S, send, popups }) {
             const cos = Math.cos(a);
             const sin = Math.sin(a);
             const out = edge(rx + 8, ry + 10, cos, sin);
-            const inner = edge(rx, ry, cos, sin) * ((portrait ? .6 : .66) - .1 * Math.abs(sin));
+            // landscape: a side seat's bet sits a little further in, clear of its clock (past its card backs)
+            const inner = edge(rx, ry, cos, sin) * (portrait ? .6 - .1 * Math.abs(sin) : .6 - .04 * Math.abs(sin));
             let x = cx + out * cos;
             let y = cy + out * sin;
             if (k === 0) {
