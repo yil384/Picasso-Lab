@@ -28,6 +28,15 @@
    "run": "2026-10-07_105715",
    "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-08_L01-03/L01-03_size_of_the_dictionary_en.mp4",
    "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-08_L01-03"
+  },
+  "L01-04": {
+   "status": "delivered",
+   "updated": "2026-10-08 11:31",
+   "episode_dir": "episodes/l01-04",
+   "morning": "2026-10-09",
+   "run": "2026-10-08_104045",
+   "mp4": "/Users/linyichen/Downloads/picasso-daily/2026-10-09_L01-04/L01-04_temperature_and_top_p_en.mp4",
+   "folder": "/Users/linyichen/Downloads/picasso-daily/2026-10-09_L01-04"
   }
  },
  "about": "Daily-episode state, read and written by next.py (mark). guest_policy: 'skip' (default) or 'narration-only' for guest lectures whose speaker has not said yes; speaker_ok: {'L09': {'voice_clips': true, 'slides_on_screen': true, 'date': 'YYYY-MM-DD', 'note': '...'}}; skip: episode ids the user dropped."

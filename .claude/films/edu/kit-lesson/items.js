@@ -2,8 +2,8 @@
 // expand into items), time expressions, points, and the load-time checks. README.md documents every field.
 import { mix, hs } from '/edu/kit2d/index.js';
 import {
-  F, INK, RED, COLORS, css, seg, eo, spring, draw, put, hand, L, sans, fitPx, textW, pen, ring, curve, arrow, tickPts,
-  noteCard, layer, wash, WASHES, tape, printout,
+  F, INK, RED, PENCIL, COLORS, css, seg, eo, eio, spring, draw, put, hand, L, sans, fitPx, textW, pen, ring, curve, arrow, tickPts,
+  noteCard, cardPts, layer, wash, WASHES, tape, printout,
 } from './ink.js';
 
 // ------------------------------------------------------------------ small helpers
@@ -193,6 +193,71 @@ def('stampGrid', ['stamp', 'n', 'cols', 'xy', 'pitch', 'w', 'at'], (g, t, it, R)
   }
   return null;
 });
+// next-word odds as hand-drawn bars: softmax(logits / T), T eased between `temps` keys ({at, T, dur}); `cuts` keys
+// ({at, p}) apply top-p (the kept bars stay inked, the rest go to pencil, a red bracket spans the kept ones); the
+// percentages show only while T is settled; `needle` turns a red pointer on a knob drawing with T
+const barT = (t, keys) => {
+  let T = keys[0].T, a = -1e9, e = -1e9;
+  for (let i = 1; i < keys.length; i++) {
+    const k = keys[i]; if (!(t > k.at)) break;
+    a = k.at; e = k.at + (k.dur ?? 1.2); T = mix(T, k.T, eio(seg(t, a, e)));
+  }
+  return [T, a, e];
+};
+const barP = (logits, T) => { const m = Math.max(...logits), x = logits.map((l) => Math.exp((l - m) / T)), s = x.reduce((a, b) => a + b, 0); return x.map((v) => v / s); };
+const barCut = (t, it) => {
+  let p = 1; for (const c of it.cuts || []) if (t > c.at) p = c.p;
+  if (p >= 1) return null;
+  const P = barP(it.logits, barT(t, it.temps)[0]), ord = P.map((v, i) => i).sort((i, j) => P[j] - P[i]), keep = new Set();
+  let s = 0; for (const i of ord) { if (s >= p - 1e-9) break; keep.add(i); s += P[i]; }
+  return keep;
+};
+def('bars', ['xy', 'w', 'h', 'logits', 'words', 'temps'], (g, t, it, R) => {
+  const p0 = pt(it.xy, R); if (!p0) return null;
+  const n = it.logits.length, [x0, y0] = p0, slot = it.w / n, bw = slot * (it.bar ?? .62), sc = it.h / (it.scale ?? 1);
+  const k0 = it.at == null ? 1 : seg(t, it.at, it.at + (it.dur ?? 1.2)); if (it.at != null && !(t > it.at)) return null;
+  const [T, ka, ke] = barT(t, it.temps), P = barP(it.logits, T);
+  // kept-ness, averaged over the last .4 s so a change of the cut slides instead of jumping (still a function of t)
+  const kept = new Array(n).fill(0), NS = 8, cut0 = (it.cuts || []).length ? Math.min(...it.cuts.map((c) => c.at)) : 1e9;
+  for (let j = 0; j < NS; j++) {
+    const s = t - .4 * j / (NS - 1), K = barCut(s, it);
+    for (let i = 0; i < n; i++) kept[i] += (K ? (K.has(i) ? 1 : 0) : 1) / NS;
+  }
+  const lab = it.pct === false ? 0 : (t < ke ? 1 - seg(t, ka, ka + .2) : seg(t, ke, ke + .3)) * seg(t, (it.at ?? -9) + (it.dur ?? 1.2), (it.at ?? -9) + (it.dur ?? 1.2) + .3);
+  const [fam, wt] = font(it.font ?? 'latin'), wpx = it.px ?? 40;
+  pen(g, [[x0 - 12, y0], [x0 + it.w + 12, y0]], it.at == null ? 1 : seg(t, it.at, it.at + .5), INK, 4, { alpha: .9 });
+  let bx0 = null, bx1 = null, btop = y0;
+  for (let i = 0; i < n; i++) {
+    const cx = x0 + slot * (i + .5), gr = it.at == null ? 1 : spring(t - it.at - .5 - i * .12, 8, 14);
+    const hgt = Math.max(3, P[i] * sc * gr), kp = kept[i], ink = [0, 1, 2].map((c) => mix(PENCIL[c], INK[c], kp));
+    if (gr > 0) {
+      if (it.wash !== false) wash(g, 99, WASHES[it.c ?? 'cobalt'], cx, y0 - hgt / 2, bw * 1.25, -1, { a: (it.a ?? .55) * mix(.15, 1, kp), h: hgt * 1.12, rot: 0 });
+      pen(g, cardPts(cx - bw / 2, y0 - hgt, cx + bw / 2, y0, Math.min(8, hgt / 2), (it.seed ?? 3) + i * 7), 1, ink, 4, { alpha: mix(.55, .95, kp) });
+    }
+    const ws = R.text(it.words[i]), wp = fitPx(g, ws, wpx, slot * .98, wt, fam);
+    hand(g, ws, cx, y0 + wpx * .8, wp, ink, { fam, w: wt, k: it.at == null ? 1 : seg(t, it.at + .3 + i * .1, it.at + .8 + i * .1) });
+    if (lab > 0) {
+      const v = P[i] * 100, s = v < .5 ? '<1%' : Math.round(v) + '%';
+      hand(g, s, cx, y0 - hgt - wpx * .55, wpx * .85, ink, { fam, w: wt, alpha: lab * mix(.5, 1, kp) });
+    }
+    if (kp > .5) { bx0 = bx0 ?? cx - bw / 2; bx1 = cx + bw / 2; btop = Math.min(btop, y0 - hgt); }
+  }
+  const K = barCut(t, it);
+  if (K && bx0 != null && t > cut0) {
+    const y = btop - wpx * (it.bracketLift ?? 2.0), kk = seg(t, cut0, cut0 + .6);
+    pen(g, [[bx0, y + 22], [bx0 + 6, y + 4], ...curve(bx0 + 14, y, bx1 - 14, y, .02), [bx1 - 6, y + 4], [bx1, y + 22]], kk, RED, 6);
+  }
+  if (it.needle) {
+    const c = pt(it.needle.xy, R);
+    if (c) {
+      const nd = it.needle, f = (T - nd.lo) / (nd.hi - nd.lo), ang = mix(nd.a0, nd.a1, f), r = nd.r;
+      const kk = it.at == null ? 1 : seg(t, it.at, it.at + .5);
+      pen(g, [[c[0] - Math.cos(ang) * r * .12, c[1] - Math.sin(ang) * r * .12], [c[0] + Math.cos(ang) * r, c[1] + Math.sin(ang) * r]], kk, RED, nd.lw ?? 12);
+      if (kk > 0) { g.save(); g.fillStyle = css(RED); g.beginPath(); g.arc(c[0], c[1], (nd.lw ?? 12) * 1.1, 0, 2 * Math.PI); g.fill(); g.restore(); }
+    }
+  }
+  return { at: (u, v) => [x0 + u * it.w, y0 - v * it.h] };
+});
 // items shown from `at`, optionally moved (xy, rot) and faded in/out as ONE layer (fadeIn / fadeOut = [t0, t1])
 def('group', ['items'], (g, t, it, R) => {
   if (it.at != null && !(t > it.at)) return null;
@@ -287,6 +352,13 @@ export function compilePanels(panels, R, time) {
     if (it.until != null) { it.dur = it.until - it.at; delete it.until; }
     if (it.tape) it.tape = { ...it.tape, at: tm(it.tape.at, w + '.tape.at') };
     if (it.tapes) it.tapes = it.tapes.map((tp) => ({ ...tp, at: tm(tp.at, w + '.tapes.at') }));
+    if (it.temps) it.temps = it.temps.map((k, j) => {
+      const o = { ...k, at: tm(k.at ?? null, `${w}.temps[${j}].at`) };
+      if (k.until != null) { o.dur = tm(k.until, `${w}.temps[${j}].until`) - o.at; delete o.until; }
+      return o;
+    });
+    if (it.cuts) it.cuts = it.cuts.map((k, j) => ({ ...k, at: tm(k.at, `${w}.cuts[${j}].at`) }));
+    if (it.words) for (const k of it.words) { try { R.text(k); } catch (x) { errs.push(`${w}: ${x.message}`); } }
     if (it.text != null) { try { R.text(it.text); } catch (x) { errs.push(`${w}: ${x.message}`); } }
     if (it.t === 'draw' && !R.S[it.d]) errs.push(`${w}: drawing "${it.d}" is not in assets.drawings`);
     if ((it.t === 'printout' || it.t === 'clipping') && !R.IMG[it.slide]) errs.push(`${w}: slide "${it.slide}" is not in assets.slides`);
