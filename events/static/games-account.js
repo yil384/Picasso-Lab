@@ -42,7 +42,18 @@ export function createAccount(ctx) {
         if (token) storageSet(TOKEN_KEY, token);
     }
 
-    async function request(path, body, { timeout = 8000, auth = true } = {}) {
+    // A token the service no longer knows (401 auth: its data was reset) gets a fresh session and one retry.
+    async function request(path, body, opts = {}) {
+        try {
+            return await send(path, body, opts);
+        } catch (err) {
+            if (err.code !== "auth" || path === "/session" || opts.retried) throw err;
+            await openSession();
+            return send(path, body, { ...opts, retried: true });
+        }
+    }
+
+    async function send(path, body, { timeout = 8000, auth = true } = {}) {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), timeout);
         try {
@@ -149,7 +160,7 @@ export function createAccount(ctx) {
             } catch (err) {
                 btn.disabled = false;
                 close();
-                ctx.showToast(err.code === "ip_mismatch" || err.code === "expired"
+                ctx.showToast(err.code === "ip_mismatch" || err.code === "expired" || err.code === "protected"
                     ? L("That suggestion has expired", "这个建议已失效")
                     : L("The game service is unavailable", "游戏服务暂不可用"), 2400);
             }
@@ -302,9 +313,12 @@ export function createAccount(ctx) {
                 startPolling(() => show("done"));
             } catch (err) {
                 if (btn) btn.disabled = false;
-                show("form", err.code === "disabled" ? L("Saving with email is not open yet", "邮箱保存暂未开放")
-                    : err.code === "rate_limited" ? L("Too many links. Try again later", "发送太频繁，请稍后再试")
-                        : L("Could not send the link. Try again later", "发送失败，请稍后再试"));
+                show("form", {
+                    disabled: L("Saving with email is not open yet", "邮箱保存暂未开放"),
+                    rate_limited: L("Too many links. Try again later", "发送太频繁，请稍后再试"),
+                    bad_email: L("Check the email address", "邮箱格式不对"),
+                    already_linked: L("This account is already saved with an email", "这个账号已经用邮箱保存过了")
+                }[err.code] || L("Could not send the link. Try again later", "发送失败，请稍后再试"));
             }
         };
         body.addEventListener("submit", event => {

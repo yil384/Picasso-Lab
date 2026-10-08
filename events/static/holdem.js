@@ -108,7 +108,7 @@ export function mountHoldem(ui) {
         S.pending = "";
         if (S.starting && (msg.re === "watch" || msg.re === "create")) return failStart(msg.code);
         if (msg.re === "hello") {
-            ui.account?.retry();
+            ui.account?.retry().then(() => S.net?.reconnect());
             return;
         }
         table?.actionFailed(msg);

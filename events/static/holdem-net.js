@@ -102,6 +102,10 @@ export function createSocket({ origin, token, onMessage, onStatus }) {
             watching = "";
             send({ t: "unwatch" });
         },
+        // a new hello on a fresh socket (the account token changed)
+        reconnect() {
+            ws?.close();
+        },
         close() {
             setStatus("closed");
             clearTimeout(retryTimer);

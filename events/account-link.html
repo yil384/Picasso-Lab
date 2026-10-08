@@ -196,9 +196,12 @@ async function complete(email) {
         return showDone(data.name || "");
     }
     showFailed(!res ? L("The game service is unavailable. Please try again later.", "游戏服务暂不可用，请稍后再试。")
-        : data.error === "email_mismatch" ? L("This email does not match the one you entered in the game.", "这个邮箱和游戏里填写的不一致。")
-            : data.error === "expired" ? L("This link has expired.", "这个链接已过期。")
-                : L("The email could not be verified.", "邮箱验证没有通过。"));
+        : {
+            email_mismatch: L("This email does not match the one you entered in the game.", "这个邮箱和游戏里填写的不一致。"),
+            expired: L("This link has expired.", "这个链接已过期。"),
+            at_table: L("Leave the Hold'em table first, then open the link again.", "请先离开德州牌桌，再重新打开这个链接。"),
+            already_linked: L("This account is already saved with another email.", "这个账号已经绑定了另一个邮箱。")
+        }[data.error] || L("The email could not be verified.", "邮箱验证没有通过。"));
 }
 
 if (!lid || !isSignInWithEmailLink(auth, location.href)) showFailed(L("This sign-in link is not valid.", "这个登录链接无效。"));
