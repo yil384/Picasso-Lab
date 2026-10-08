@@ -976,12 +976,15 @@ export class HoldemTable {
     h.toAct = null;
     h.deadline = null;
     h.usingBank = false;
+    // gain: every chip won this hand by anyone (bots too); the accounts weigh it against what fresh accounts lost
+    let gain = 0;
+    for (const i of h.dealt) { const s = st.seats[i]; if (s) gain += Math.max(0, s.stack - s.startStack); }
     for (const i of h.dealt) {
       const s = st.seats[i];
       if (!s || s.bot) continue;
       st.queue.records.push({
         accountId: s.id, hands: 1, won: s.won > 0 ? 1 : 0, biggestPot: s.won,
-        net: s.stack - s.startStack, showdowns: s.wentToShowdown ? 1 : 0,
+        net: s.stack - s.startStack, showdowns: s.wentToShowdown ? 1 : 0, hand: h.id, gain,
       });
     }
     st.seats.forEach((s) => {

@@ -2,7 +2,7 @@
 // expiry on an injected clock), claims, name rules and protection, refills, records, Guandan dedupe, leaderboards.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Accounts, cleanName, nameKey, START_CHIPS, IP_TTL, SID_TTL, PRISTINE_TTL } from '../src/accounts.js';
+import { Accounts, cleanName, nameKey, START_CHIPS, IP_TTL, SID_TTL, PRISTINE_TTL, ESTABLISHED_AGE, ESTABLISHED_HANDS } from '../src/accounts.js';
 
 const SECRET = 'test-games-secret-0123456789abcdefghij';
 const IP_A = 'a'.repeat(32);
@@ -256,7 +256,7 @@ test('records: Hold\'em from settlements; Guandan self-reported, deduped by room
   });
   assert.deepEqual([...touched], [g.a.id]);
   assert.equal(g.a.chips, 8000);
-  assert.deepEqual(acc.view(g.a).holdem, { hands: 3, won: 2, biggestPot: 900, net: 570, showdowns: 1 });
+  assert.deepEqual(acc.view(g.a).holdem, { hands: 3, won: 2, biggestPot: 900, net: 570, showdowns: 1, rnet: 570 });
 
   assert.deepEqual(acc.guandanRound(g.a, { room: 'ABCD', round: 1, won: true, place: 1 }), { ok: true });
   assert.deepEqual(acc.guandanRound(g.a, { room: 'ABCD', round: 1, won: true, place: 1 }), { ok: true, duplicate: true });
@@ -270,6 +270,30 @@ test('records: Hold\'em from settlements; Guandan self-reported, deduped by room
   assert.equal(Object.keys(g.a.guandan.seen).length, 200);
   assert.ok(!g.a.guandan.seen['ABCD:1'], 'oldest keys dropped');
   assert.equal(g.a.guandan.seen['R:259'], 1);
+});
+
+test('Hold\'em ranking: chips lost by fresh accounts (chip dumping) never count; from established ones they do', () => {
+  const { acc, clock } = setup();
+  const main = guest(acc, { name: 'Main', clientId: 'c-main' }).a;
+  const vet = guest(acc, { name: 'Vet', clientId: 'c-vet' }).a;
+  const dump = guest(acc, { name: 'Dump', clientId: 'c-dump' }).a;
+  clock.t += ESTABLISHED_AGE;
+  vet.holdem.hands = ESTABLISHED_HANDS;
+  const rec = (a, net, hand, gain) => ({ accountId: a.id, hands: 1, won: net > 0 ? 1 : 0, biggestPot: Math.max(0, net), net, showdowns: 0, hand, gain });
+  // a fresh guest dumps 9,000 to the main account: it shows in net but not in the ranked net
+  acc.applySettlements({ records: [rec(main, 9000, 'T-1', 9000), rec(dump, -9000, 'T-1', 9000)] });
+  assert.equal(main.holdem.net, 9000);
+  assert.equal(main.holdem.rnet, 0);
+  // a pot of 3,000 fed half by the fresh guest and half by an established player: half the gain is ranked
+  acc.applySettlements({ records: [rec(main, 3000, 'T-2', 3000), rec(dump, -1500, 'T-2', 3000), rec(vet, -1500, 'T-2', 3000)] });
+  assert.equal(main.holdem.rnet, 1500);
+  // won from bots (no record; the gain comes from chips no fresh account lost): all of it counts
+  acc.applySettlements({ records: [rec(main, 400, 'T-3', 400)] });
+  assert.equal(main.holdem.rnet, 1900);
+  assert.equal(dump.holdem.rnet, -10500, 'losses always count');
+  const h = acc.leaderboard('holdem', 50, main);
+  assert.equal(h.rows.find((r) => r.name === 'Main').net, 1900, 'the ranking shows and sorts by the ranked net');
+  assert.deepEqual(h.rows.map((r) => r.name), ['Main', 'Vet', 'Dump']);
 });
 
 test('leaderboards: Hold\'em by net, Guandan by wins; only players with games; me row with rank', () => {

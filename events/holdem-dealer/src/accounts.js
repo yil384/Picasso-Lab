@@ -34,6 +34,10 @@ export const START_CHIPS = 10_000;
 export const REFILL_BELOW = 2_000;
 export const REFILL_EVERY = 24 * 60 * 60_000; // one refill per account per day
 export const REFILLS_PER_NET = 5; // and at most this many per network (ipKey) per day
+// The Hold'em ranking counts chips won from established accounts only (rnet): a fresh guest's free starting chips,
+// lost on purpose to a main account, never lift it. Bots count as established (their chips are part of the game).
+export const ESTABLISHED_AGE = 3 * 24 * 60 * 60_000;
+export const ESTABLISHED_HANDS = 50;
 const DAY = 24 * 3600_000;
 const TOKENS_MAX = 10;
 const CLIENT_IDS_MAX = 20;
@@ -81,6 +85,8 @@ const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{1,63}$/;
 function emptyHoldem() {
   return { hands: 0, won: 0, biggestPot: 0, net: 0, showdowns: 0 };
 }
+// ranked net (accounts saved before it existed rank by their net)
+const rnetOf = (a) => a.holdem.rnet ?? a.holdem.net;
 
 export class Accounts {
   constructor({
@@ -415,9 +421,9 @@ export class Accounts {
     let rows;
     let rowOf;
     if (game === 'holdem') {
-      rowOf = (a) => ({ pid: a.pid, name: a.name, chips: a.chips, net: a.holdem.net, hands: a.holdem.hands, won: a.holdem.won, biggestPot: a.holdem.biggestPot });
+      rowOf = (a) => ({ pid: a.pid, name: a.name, chips: a.chips, net: rnetOf(a), hands: a.holdem.hands, won: a.holdem.won, biggestPot: a.holdem.biggestPot });
       rows = [...this.accounts.values()].filter((a) => a.holdem.hands > 0)
-        .sort((x, y) => y.holdem.net - x.holdem.net || y.holdem.hands - x.holdem.hands || (x.pid < y.pid ? -1 : 1));
+        .sort((x, y) => rnetOf(y) - rnetOf(x) || y.holdem.hands - x.holdem.hands || (x.pid < y.pid ? -1 : 1));
     } else if (game === 'guandan') {
       rowOf = (a) => ({ pid: a.pid, name: a.name, rounds: a.guandan.rounds, wins: a.guandan.wins });
       rows = [...this.accounts.values()].filter((a) => a.guandan.rounds > 0)
@@ -547,6 +553,7 @@ export class Accounts {
   _merge(b, a) {
     a.holdem.hands += b.holdem.hands;
     a.holdem.won += b.holdem.won;
+    a.holdem.rnet = rnetOf(a) + rnetOf(b);
     a.holdem.net += b.holdem.net;
     a.holdem.showdowns += b.holdem.showdowns;
     a.holdem.biggestPot = Math.max(a.holdem.biggestPot, b.holdem.biggestPot);
@@ -601,10 +608,21 @@ export class Accounts {
       if (a.chips < 0) { this.log('bankroll below zero clamped', { reason: c.reason }); a.chips = 0; }
       touched.add(a.id);
     }
+    // per hand: the chips fresh accounts lost, taken out of every winner's ranked gain in proportion
+    const t = this.now();
+    const fresh = (a) => !a || t - a.createdAt < ESTABLISHED_AGE || a.holdem.hands < ESTABLISHED_HANDS;
+    const freshLoss = new Map();
+    for (const r of records) {
+      if (!r.hand || r.net >= 0 || !fresh(this.accounts.get(r.accountId))) continue;
+      freshLoss.set(r.hand, (freshLoss.get(r.hand) || 0) - r.net);
+    }
     for (const r of records) {
       const a = this.accounts.get(r.accountId);
       if (!a) continue;
       const h = a.holdem;
+      let rn = r.net;
+      if (rn > 0 && r.gain > 0) rn = Math.floor(rn * Math.max(0, 1 - (freshLoss.get(r.hand) || 0) / r.gain));
+      h.rnet = rnetOf(a) + rn;
       h.hands += r.hands;
       h.won += r.won;
       h.net += r.net;

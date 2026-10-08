@@ -294,9 +294,12 @@ Times: `deadline` and `serverTime` are server epoch ms; clients compute `offset 
   bankroll, up to max buy-in (in a hand, counted from the stack the hand began with; a queued top-up that would lift
   a winning stack above the max is cut there and the rest goes back to the bankroll). Bankroll below 2,000 ⇒ free
   refill to 10,000 (`/v1/refill`, counted in `refills`), at most once per 24 hours per account and per network. The
-  leaderboard ranks by `net`, so refills never lift the refilled account itself; they could still be lost on purpose
-  to another account (chip dumping), which the refill limit slows down but does not stop. No direct chip transfers
-  between accounts, ever.
+  leaderboard ranks by the ranked net `rnet` (shown as its `net` column), so refills never lift the refilled account
+  itself. Chips lost on purpose to another account (chip dumping) do not rank either: each hand record carries the
+  hand id and `gain` (every chip won in that hand, bots included), and a winner's ranked gain is cut by the share
+  that fresh accounts lost (younger than 3 days or under 50 hands; bots count as established). Fresh guests are free
+  (30 an hour per network), so their starting chips can move but never reach the ranking. `holdem.net` keeps the
+  plain sum. No direct chip transfers between accounts, ever.
 - Pacing (server): 700 ms between a closed street and the next card(s); all-in run-outs 1,200 ms per street; hand end
   hold 3,000 ms (5,000 ms with a showdown) before the next deal; at least 2 eligible players needed to deal.
 
@@ -342,7 +345,7 @@ API additions, all backwards compatible with the list above:
 - `views.me(table, accountId, account?)`: `account = { pid, chips }` supplies `Me.chips` (the table never knows
   bankrolls). `views.publicTable(table, now?)`: `now` only refines the time bank shown for a seat using its bank.
 - `settlements()` → `{ chips: [{ accountId, amount, reason: buyin|topup|cashout }], records: [{ accountId, hands,
-  won (0/1), biggestPot (chips won this hand), net, showdowns (0/1) }] }`; bots never appear. Reason `topup_back`
+  won (0/1), biggestPot (chips won this hand), net, showdowns (0/1), hand, gain }] }`; bots never appear. Reason `topup_back`
   (positive) returns the part of a queued top-up that the max buy-in cut off at hand end.
 
 Rule details fixed by the engine:

@@ -293,8 +293,9 @@ test('showdown order: last river aggressor first; hands that cannot win are muck
   assert.deepEqual(t.show('u_0'), { ok: false, error: 'cannot_show' });
   // records: showdowns counted for every player who reached it
   const rec = Object.fromEntries(t.settlements().records.map((r) => [r.accountId, r]));
-  assert.deepEqual(rec.u_1, { accountId: 'u_1', hands: 1, won: 1, biggestPot: 180, net: 120, showdowns: 1 });
-  assert.deepEqual(rec.u_0, { accountId: 'u_0', hands: 1, won: 0, biggestPot: 0, net: -60, showdowns: 1 });
+  const hid = rec.u_1.hand;
+  assert.deepEqual(rec.u_1, { accountId: 'u_1', hands: 1, won: 1, biggestPot: 180, net: 120, showdowns: 1, hand: hid, gain: 120 });
+  assert.deepEqual(rec.u_0, { accountId: 'u_0', hands: 1, won: 0, biggestPot: 0, net: -60, showdowns: 1, hand: hid, gain: 120 });
   // next hand: "last" keeps the previous hand's shown cards only
   nextHand(t);
   const last = publicTable(t).last;

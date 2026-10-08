@@ -81,7 +81,7 @@ test('second device: its guest merges into the saved account (counters added, ba
   assert.equal(d2.data.account.pid, first.account.pid);
   assert.equal(d2.data.account.name, 'Main');
   assert.equal(d2.data.account.chips, 7000, "B's bankroll is dropped");
-  assert.deepEqual(d2.data.account.holdem, { hands: 14, won: 5, biggestPot: 900, net: 150, showdowns: 3 });
+  assert.deepEqual(d2.data.account.holdem, { hands: 14, won: 5, biggestPot: 900, net: 150, showdowns: 3, rnet: 150 });
   assert.deepEqual(d2.data.account.guandan, { rounds: 2, wins: 1 });
   assert.equal(svc.accounts.get(phone.id), null, 'B is deleted');
   assert.equal((await api(svc, 'GET', '/v1/me', { token: phone.token })).status, 401);
