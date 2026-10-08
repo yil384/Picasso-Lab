@@ -383,7 +383,7 @@ export function createTable({ ui, S, send, popups }) {
             }
             // a side seat's shown cards lie toward the centre: the button goes past them
             const out = 108 + ((p.side === "left" || p.side === "right") && t.seats[h.button].shown ? 48 : 0);
-            const x = k === 0 ? p.x + (V.portrait ? 86 : 80) : p.x + dx * out + px * 84;
+            let x = k === 0 ? p.x + (V.portrait ? 86 : 80) : p.x + dx * out + px * 84;
             let y = k === 0 ? p.y - 28 : p.y + dy * out + py * 84;
             // never on the board's cards (a side seat of the narrow portrait table): step above or below them,
             // with room for the winning cards' lift
@@ -394,7 +394,15 @@ export function createTable({ ui, S, send, popups }) {
                 if (r.width) V.boardBox = { key: V.keys, top: (r.top - V.top) / V.s, bottom: (r.bottom - V.top) / V.s, left: (r.left - V.left) / V.s, right: (r.right - V.left) / V.s };
             }
             const bx = V.boardBox?.key === V.keys ? V.boardBox : null;
-            if (k && bx && x > bx.left - 22 && x < bx.right + 22 && y > bx.top - 30 && y < bx.bottom + 22) y = p.y < V.G.boardY ? bx.top - 34 : bx.bottom + 26;
+            if (k && bx && x > bx.left - 22 && x < bx.right + 22 && y > bx.top - 30 && y < bx.bottom + 22) {
+                if (V.portrait && (p.side === "left" || p.side === "right")) {
+                    // the narrow portrait table: beside the plate on the inner side, between its cards and its bet
+                    x = p.x + (p.side === "left" ? 104 : -104);
+                    y = p.y + 52;
+                } else {
+                    y = p.y < V.G.boardY ? bx.top - 34 : bx.bottom + 26;
+                }
+            }
             dealer.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
             dealer.classList.add("is-on");
         } else {
