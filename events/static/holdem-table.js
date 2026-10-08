@@ -934,11 +934,7 @@ export function createTable({ ui, S, send, popups }) {
         if (m === "rules") return popups.openRules();
         if (m === "hands") return popups.openRules(3);
         if (m === "lang") return ui.toggleLang();
-        if (m === "music") {
-            const music = window.GuandanMusic;
-            music.setOn(!music.isOn());
-            return ui.showToast(music.isOn() ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
-        }
+        if (m === "music") return ui.openMusic();
         if (m === "sfx") {
             sfx.set(!sfx.on);
             return ui.showToast(sfx.on ? L("Sound on", "音效已开启") : L("Sound off", "音效已关闭"));

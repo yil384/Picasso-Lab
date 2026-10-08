@@ -429,13 +429,14 @@ body[data-screen="lobby"] .topbar { padding-left: calc(var(--fx) + 84 * var(--lu
     color: #fff;
 }
 .rail-share .gd-glyph { width: calc(14 * var(--r)); height: calc(14 * var(--r)); }
-/* 音乐: a record (white rim, grooves, sheen, a big red label) with a gold note; dimmed when off */
+/* 音乐: a record (white rim, grooves, sheen, a big label in the playing track's colour, --rec) with a gold
+   note; dimmed when off */
 .rail-vinyl {
     width: calc(52 * var(--r));
     height: calc(52 * var(--r));
     border-radius: 50%;
     background:
-        radial-gradient(circle closest-side, #fff 0 6%, #e0546e 7% 40%, #fff3 41% 42%, transparent 43%),
+        radial-gradient(circle closest-side, #fff 0 6%, var(--rec, #e0546e) 7% 40%, #fff3 41% 42%, transparent 43%),
         linear-gradient(135deg, transparent 28%, rgba(255, 255, 255, .2) 42%, transparent 54%),
         repeating-radial-gradient(circle closest-side, #252b4d 0 4%, #363e6a 4.5% 6%),
         #252b4d;

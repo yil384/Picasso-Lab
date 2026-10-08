@@ -61,7 +61,8 @@
         <button class="hud-btn" id="back-events-btn" type="button"><svg class="hud-ic"><use href="#gd-g-exit"/></svg><span class="hud-lb"></span></button>
     </header>
 
-    <audio id="guandan-bgm" src="https://yil384.github.io/Picasso-Lab/events/static/guandan_music.mp3" loop preload="auto" style="display:none"></audio>
+    <!-- Background music: games-music.js gives it a src when its track plays (only that file is fetched). -->
+    <audio id="guandan-bgm" loop preload="none" style="display:none"></audio>
 
     <div class="gdr-cardmodal gdr-scope" id="gdr-cardmodal" role="dialog" aria-modal="true" aria-label="Peak Showdown" hidden>
         <div class="gdr-cardmodal-card">
@@ -1716,9 +1717,18 @@ function render() {
     else if (!roomCode || !game) renderLobby();
     else if (game.phase === "lobby") renderLobbyRoom();
     else renderTable();
+    syncMusicScene();
     // ==== STAGE HOOKS (owned by stage package) ====
     // Runs after every screen render; document.body.dataset.screen says which one.
     // ==== END STAGE HOOKS ====
+}
+
+// "Auto" music plays the game on screen (games-music.js): the lobby on its Hold'em tab, the Hold'em room
+// and table are Hold'em's; everything else is Guandan's.
+function syncMusicScene() {
+    const screen = document.body.dataset.screen;
+    if (!screen) return;
+    window.GuandanMusic?.scene?.(screen === "hroom" || screen === "htable" || (screen === "lobby" && lobbyGame === "holdem") ? "holdem" : "guandan");
 }
 
 // ---------- lab personalization data for the lobby / room ----------
@@ -1903,17 +1913,19 @@ function previewCardsHTML() {
 }
 
 // Left rail: 赛季MVP · 分享 · 音乐, free-standing objects with the label over their bottom edge.
-// Every entry point appears once: 巅峰对决, 实验室 and 玩法规则 are tiles.
+// Every entry point appears once: 巅峰对决, 实验室 and 玩法规则 are tiles. 音乐 opens the music popup; its
+// record wears the label colour of the track that plays.
 function lobbyRailHTML() {
     const standings = labStandings();
     const mvp = standings?.mvp ? labPlayers()[standings.mvp.key] : null;
     const musicOn = window.GuandanMusic?.isOn?.() !== false;
+    const musicColor = window.GuandanMusic?.current?.()?.color;
     const item = (cls, attrs, disc, label, extra = "") => `<button class="rail-item ${cls}" type="button" ${attrs}>
             <span class="rail-disc">${disc}</span>${extra}<span class="rail-lb">${label}</span></button>`;
     return [
         mvp?.avatar ? item("is-mvp", `data-open-records="mvp"`, `<img src="${encodeHTML(mvp.avatar)}" alt="">`, encodeHTML(firstNameOf(mvp.name)), `<span class="rail-badge">MVP</span>`).replace(`type="button"`, `type="button" aria-label="${L("Season MVP", "赛季MVP")}"`) : "",
         item("is-share", `data-lobby="share"`, `${cardHTML({ back: true })}<span class="rail-share">${glyphHTML("share")}</span>`, L("Share", "分享")),
-        item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-pressed="${musicOn}"`, `<span class="rail-vinyl"></span>${glyphHTML("note", "rail-note")}`, L("Music", "音乐"),
+        item(`is-music${musicOn ? "" : " is-off"}`, `data-lobby="music" aria-haspopup="dialog"`, `<span class="rail-vinyl"${musicColor ? ` style="--rec: ${musicColor}"` : ""}></span>${glyphHTML("note", "rail-note")}`, L("Music", "音乐"),
             musicOn ? "" : `<span class="rail-badge is-off">${L("Off", "关")}</span>`)
     ].join("");
 }
@@ -1996,6 +2008,7 @@ function enterScreen(name) {
     document.body.dataset.screen = name;
     window.scrollTo(0, 0);
     reportTurned();
+    syncMusicScene();
 }
 
 function renderLobby() {
@@ -2053,7 +2066,7 @@ function bindLobby(el) {
         if (action === "rules") return openRules();
         if (action === "settings") return openSettings();
         if (action === "share") return shareArena();
-        if (action === "music") return toggleMusic();
+        if (action === "music") return openMusic(null, () => root.querySelector('.lobby-rail [data-lobby="music"]')?.focus({ preventScroll: true }));
         if (action === "join" && !event.target.closest("input")) el.querySelector("#room-input")?.focus();
     });
     const codeInput = el.querySelector("#room-input");
@@ -2162,15 +2175,15 @@ async function shareArena() {
     }
 }
 
-function toggleMusic() {
-    const next = window.GuandanMusic?.isOn?.() === false;
-    window.GuandanMusic?.setOn(next);
-    showToast(next ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
-}
-
+// Music events come often (a track starts, Auto changes game): the rail is redrawn only when it changed.
+const lobbyRailDrawn = new WeakMap();
 function refreshLobbyRail() {
     const rail = root.querySelector(".lobby-rail");
-    if (rail) rail.innerHTML = lobbyRailHTML();
+    if (!rail) return;
+    const html = lobbyRailHTML();
+    if (lobbyRailDrawn.get(rail) === html) return;
+    lobbyRailDrawn.set(rail, html);
+    rail.innerHTML = html;
 }
 
 // ---------- Texas Hold'em: the lobby's second game (events/static/holdem*.js, the games service) ----------
@@ -2282,7 +2295,7 @@ function holdemUI() {
         accountReady: async () => (await waitFor(() => account, 6000)) && account.ready(),
         // poker cards with the lab portraits and the blue P back, never a Guandan level mark
         cardHTML: (card, small = false, extraClass = "", attrs = "") => atExampleLevel("", () => cardHTML(card, small, false, attrs, extraClass)),
-        openPopup, confirmPopup, showToast, hideToast, openLabDeck, openSettings,
+        openPopup, confirmPopup, showToast, hideToast, openLabDeck, openSettings, openMusic,
         defaultFaceHTML, seatMemberPhoto, labPlayers, labMemberKeys, labPlayerKey, firstNameOf, initials, glyphHTML, wordHTML,
         tableDefsHTML: TABLE_DEFS_HTML, tableIcon, burstHTML, chipStackHTML, prefersReducedMotion,
         enterScreen, updateTopbarStatus, render,
@@ -2467,7 +2480,7 @@ function openRules(container) {
     return close;
 }
 
-window.GuandanUI = { openPopup, openRules };
+window.GuandanUI = { openPopup, openRules, openMusic };
 
 function openLabDeck() {
     const PL = labPlayers();
@@ -2480,17 +2493,17 @@ function openLabDeck() {
 }
 
 function settingsHTML() {
-    const musicOn = window.GuandanMusic?.isOn?.() !== false;
     const row = (label, name, options) => `<div class="gd-setrow"><span class="gd-setrow-k">${label}</span>${options.map(([value, text, on]) =>
         `<label class="gd-radio"><input type="radio" name="${name}" value="${value}"${on ? " checked" : ""}><i></i>${text}</label>`).join("")}</div>`;
     return `<div class="gd-settings" data-settings>
         ${row(L("Language", "语言"), "gd-set-lang", [["zh", "中文", isZH()], ["en", "English", !isZH()]])}
-        ${row(L("Music", "音乐"), "gd-set-music", [["on", L("On", "开"), musicOn], ["off", L("Off", "关"), !musicOn]])}
+        ${musicSectionHTML()}
     </div>`;
 }
 
 function openSettings() {
-    const close = openPopup({ title: L("Settings", "设置"), html: settingsHTML() });
+    let unbindMusic = () => {};
+    const close = openPopup({ title: L("Settings", "设置"), html: settingsHTML(), onClose: () => unbindMusic() });
     const panel = close.panel;
     panel.addEventListener("change", event => {
         const t = event.target;
@@ -2498,10 +2511,115 @@ function openSettings() {
             langToggleBtn.click();
             panel.querySelector(".gd-popup-title").textContent = L("Settings", "设置");
             panel.querySelector("[data-settings]").outerHTML = settingsHTML();
-        } else if (t.name === "gd-set-music") {
-            window.GuandanMusic?.setOn(t.value === "on");
+            panel.querySelector(`input[name="gd-set-lang"]:checked`)?.focus({ preventScroll: true });
         }
     });
+    unbindMusic = bindMusicControls(panel);
+}
+
+// ---------- music (window.GuandanMusic, events/static/games-music.js) ----------
+// 设置 and the 音乐 popup (the lobby rail's record, the table's ☰) share one section: 开 / 关, then the tracks
+// as one radio group. 自动 lets each game play its own track; every track shows its record (label colour),
+// title, artist and style, and a 播放中 plate on the one playing. Under the list, Credits: one small line per
+// track, the exact attribution its licence asks for. Picking a track while the music is off turns it on.
+function musicText(track, key) {
+    return track?.[key]?.[isZH() ? "zh" : "en"] || "";
+}
+
+// "a · b · c" that wraps after a dot, never before one
+function musicMeta(...parts) {
+    return parts.filter(Boolean).join(" · ").replace(/ · /g, "\u00a0· ");
+}
+
+function musicRecordHTML(color, color2) {
+    return `<span class="gd-rec${color2 ? " is-auto" : ""}" style="--rec: ${color}${color2 ? `; --rec-2: ${color2}` : ""}" aria-hidden="true"><i></i></span>`;
+}
+
+// A track's credit lines in order, joined by " · " (wrapping after a dot, never before one): a line that is a
+// web address links to itself, and the site named in brackets in the first line links to the track's page
+// there (or the site's home).
+function musicCreditHTML(track) {
+    const link = (href, text) => `<a href="${encodeHTML(href)}" target="_blank" rel="noopener">${encodeHTML(text)}</a>`;
+    const lines = track.credit.map((line, i) => {
+        if (/^https?:\/\/\S+$/.test(line)) return link(line, line);
+        const site = i === 0 && /^(.*\()([a-z0-9.-]+\.(?:com|org))(\).*)$/i.exec(line);
+        if (!site) return encodeHTML(line);
+        const href = track.source && new URL(track.source).hostname.endsWith(site[2]) ? track.source : `https://${site[2]}`;
+        return `${encodeHTML(site[1])}${link(href, site[2])}${encodeHTML(site[3])}`;
+    });
+    return `<p>${lines.join("&nbsp;· ")}</p>`;
+}
+
+function musicSectionHTML() {
+    const M = window.GuandanMusic;
+    if (!M) return "";
+    const on = M.isOn();
+    const choice = M.choice();
+    const now = M.current()?.id;
+    const gd = M.track(M.defaults.guandan), hd = M.track(M.defaults.holdem);
+    const row = (id, record, title, meta) => `<label class="gd-track${id === choice ? " is-chosen" : ""}${on && id === now ? " is-playing" : ""}" data-track="${id}">
+            <input type="radio" name="gd-set-track" value="${id}"${id === choice ? " checked" : ""}><i class="gd-track-dot"></i>${record}
+            <span class="gd-track-text"><b>${encodeHTML(title)}</b><small>${encodeHTML(meta)}</small></span>
+            <span class="gd-track-now">${L("Playing", "播放中")}</span>
+        </label>`;
+    const name = t => musicText(t, "title").replace(/ /g, "\u00a0");
+    const auto = row("auto", musicRecordHTML(gd.color, hd.color), L("Auto", "自动"),
+        L(`${name(gd)} at Guandan, ${name(hd)} at Hold'em`, `掼蛋放${name(gd)}，德州放 ${name(hd)}`));
+    const tracks = M.tracks.map(t => row(t.id, musicRecordHTML(t.color), musicText(t, "title"), musicMeta(musicText(t, "artist"), musicText(t, "style")))).join("");
+    const credits = M.tracks.filter(t => t.credit?.length).map(musicCreditHTML).join("");
+    return `<div class="gd-setrow"><span class="gd-setrow-k">${L("Music", "音乐")}</span>
+            <label class="gd-radio"><input type="radio" name="gd-set-music" value="on"${on ? " checked" : ""}><i></i>${L("On", "开")}</label>
+            <label class="gd-radio" data-music-off><input type="radio" name="gd-set-music" value="off"${on ? "" : " checked"}><i></i>${L("Off", "关")}</label>
+        </div>
+        <div class="gd-tracks${on ? "" : " is-off"}" role="radiogroup" aria-label="${L("Track", "曲目")}">${auto}${tracks}</div>
+        ${credits ? `<section class="gd-credits" aria-label="${L("Music credits", "音乐署名")}"><h3>${L("Credits", "署名")}</h3>${credits}</section>` : ""}`;
+}
+
+// Marks follow the music while the popup is open (Auto changing game, a track chosen elsewhere).
+function syncMusicMarks(scope) {
+    const M = window.GuandanMusic;
+    if (!M) return;
+    const on = M.isOn(), choice = M.choice(), now = M.current()?.id;
+    scope.querySelectorAll(`input[name="gd-set-music"]`).forEach(input => { input.checked = (input.value === "on") === on; });
+    scope.querySelector(".gd-tracks")?.classList.toggle("is-off", !on);
+    scope.querySelectorAll(".gd-track").forEach(row => {
+        const id = row.dataset.track;
+        row.classList.toggle("is-chosen", id === choice);
+        row.classList.toggle("is-playing", on && id === now);
+        const input = row.querySelector("input");
+        if (input) input.checked = id === choice;
+    });
+}
+
+// Returns the unbind for the popup's onClose.
+function bindMusicControls(panel) {
+    const M = window.GuandanMusic;
+    if (!M) return () => {};
+    panel.addEventListener("change", event => {
+        const t = event.target;
+        if (t.name === "gd-set-music") M.setOn(t.value === "on");
+        else if (t.name === "gd-set-track") {
+            M.choose(t.value);
+            if (!M.isOn()) M.setOn(true);
+        }
+    });
+    const sync = () => syncMusicMarks(panel);
+    document.addEventListener("guandan:music", sync);
+    return () => document.removeEventListener("guandan:music", sync);
+}
+
+// The 音乐 popup: the lobby rail's record, the Guandan and Hold'em tables' ☰ (`container` as for openPopup).
+function openMusic(container, onClose) {
+    if (!window.GuandanMusic) return null;
+    let unbind = () => {};
+    const close = openPopup({
+        title: L("Music", "音乐"),
+        html: `<div class="gd-settings">${musicSectionHTML()}</div>`,
+        container,
+        onClose: () => { unbind(); onClose?.(); }
+    });
+    unbind = bindMusicControls(close.panel);
+    return close;
 }
 
 // ---------- room (好友同玩): the room is a small table with four seat plates ----------
@@ -3528,13 +3646,7 @@ function onTableClick(event) {
             break;
         case "invite": copyLinkBtn.click(); break;
         case "lang": langToggleBtn.click(); return;
-        case "music": {
-            const music = window.GuandanMusic;
-            if (!music) break;
-            music.setOn(!music.isOn());
-            showToast(music.isOn() ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
-            break;
-        }
+        case "music": openMusic(tableView.ui); break;
         case "newroom":
         case "exit":
             renderTableChrome();
@@ -4533,35 +4645,8 @@ if (roomCode) {
     });
     window.GuandanRecordsUI = { open: open, close: close };
 })();
-
-// BGM + window.GuandanMusic { isOn(), setOn(bool) }: the on/off preference is stored in
-// localStorage "picasso.guandan.music" ('on'|'off'). While on, it autoplays on load and falls back
-// to the first user gesture if the browser blocks autoplay. setOn() fires a "guandan:music" event.
-(function () {
-    var KEY = "picasso.guandan.music";
-    var bgm = document.getElementById("guandan-bgm");
-    var on = true;
-    try { on = localStorage.getItem(KEY) !== "off"; } catch (_) {}
-    function tryPlay() { if (on && bgm) bgm.play().catch(function () {}); }
-    function setOn(value) {
-        on = !!value;
-        try { localStorage.setItem(KEY, on ? "on" : "off"); } catch (_) {}
-        if (on) tryPlay();
-        else if (bgm) bgm.pause();
-        document.dispatchEvent(new CustomEvent("guandan:music", { detail: { on: on } }));
-    }
-    window.GuandanMusic = { isOn: function () { return on; }, setOn: setOn };
-    if (!bgm) return;
-    bgm.volume = 0.45;
-    tryPlay();
-    function onGesture() {
-        tryPlay();
-        document.removeEventListener("click", onGesture, true);
-        document.removeEventListener("keydown", onGesture, true);
-    }
-    document.addEventListener("click", onGesture, true);
-    document.addEventListener("keydown", onGesture, true);
-})();
 </script>
+<!-- window.GuandanMusic: the tracks, on / off, the chosen track, Auto by game, crossfades -->
+<script src="https://yil384.github.io/Picasso-Lab/events/static/games-music.js"></script>
 </body>
 </html>
