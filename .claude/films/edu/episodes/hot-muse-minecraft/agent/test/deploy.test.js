@@ -77,6 +77,21 @@ test('staging compose: production settings, its own project, port, hostname, net
   assert.doesNotMatch(read('deploy/staging.compose.yaml'), /"\.\.\/(data|logs):/);
 });
 
+test('BODY=mineai: staging builds the Mine AI MCP runtime and keeps its bot data; production builds none', () => {
+  const prod = services('deploy/compose.yaml');
+  const stg = services('deploy/staging.compose.yaml');
+  assert.match(stg.agent.text, /build: \{ context: \.\., dockerfile: deploy\/Dockerfile\.agent, args: \{ MINEAI: "1" \} \}/);
+  assert.doesNotMatch(prod.agent.text, /MINEAI/, 'production: no runtime in its image (Dockerfile.agent: MINEAI=0)');
+  assert.match(stg.agent.text, /"\.\.\/\.\.\/mineai-data:\/mineai-data"/, 'their per-bot SQLite outlives the container, next to staging\'s world and logs');
+  // which body plays is deploy/.env's business on picasso, never the compose file's (the settings test compares them)
+  for (const s of [prod, stg]) assert.ok(!('BODY' in s.agent.env) && !('MINEAI_DIR' in s.agent.env));
+  // every image copies mineai/ (the pin and our patches), so both deploys must send it; the fetch comes before src/
+  const docker = read('deploy/Dockerfile.agent');
+  assert.match(docker, /^COPY mineai \.\/mineai$/m);
+  assert.ok(docker.indexOf('mineai/fetch-and-patch.sh') < docker.indexOf('COPY src '), 'a change to src/ reuses the runtime layer');
+  assert.match(docker, /^ARG MINEAI=0$/m);
+});
+
 // push.sh with stand-ins: ssh, rsync and node only write down how they were called. The run uses `zsh -f` (no startup
 // files that could put the real tools first) and checks that the stand-ins are what the script will find.
 const ZSH = ['/bin/zsh', '/usr/bin/zsh'].find((p) => fs.existsSync(p));
@@ -98,11 +113,11 @@ function push(args, { nodeExit = 0 } = {}) {
   return { code: r.status, out: r.stdout, err: r.stderr, calls: lines };
 }
 
-// production's commands exactly as push.sh ran them before staging existed
+// production's commands as push.sh ran them before staging existed, plus mineai/ (its image copies the folder)
 const AGENT = ROOT;
 const PROD_CALLS = [
   `[${AGENT}] ssh picasso mkdir -p ~/workspace/muse-minecraft/{app,data,logs}`,
-  `[${AGENT}] rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy package.json package-lock.json README.md .dockerignore picasso:workspace/muse-minecraft/app/`,
+  `[${AGENT}] rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore picasso:workspace/muse-minecraft/app/`,
   `[${AGENT}/server] rsync -azL paper.jar picasso:workspace/muse-minecraft/app/paper.jar`,
   `[${AGENT}/server] rsync -azL --delete --include *.jar --exclude * plugins/ picasso:workspace/muse-minecraft/app/plugins/`,
   `[${AGENT}] ssh picasso set -e; cd ~/workspace/muse-minecraft/app`,
@@ -112,10 +127,12 @@ test('push.sh: staging by default; production only with --prod and only after th
   const stg = push([]);
   assert.equal(stg.code, 0, stg.err);
   const joined = stg.calls.join('\n');
-  assert.match(joined, /ssh picasso mkdir -p ~\/workspace\/muse-staging\/\{app,data,logs\}/);
-  assert.match(joined, /rsync -az --delete .*--exclude deploy\/compose\.yaml --exclude deploy\/camera-test\.compose\.yaml .* picasso:workspace\/muse-staging\/app\//);
+  assert.match(joined, /ssh picasso mkdir -p ~\/workspace\/muse-staging\/\{app,data,logs,mineai-data\}/);
+  assert.match(joined, /rsync -az --delete .*--exclude deploy\/compose\.yaml --exclude deploy\/camera-test\.compose\.yaml .*--relative src scripts deploy mineai .* picasso:workspace\/muse-staging\/app\//);
   assert.match(joined, /docker compose -p muse-staging -f staging\.compose\.yaml up -d --build/);
-  assert.match(joined, /^ {2}docker image prune -f --filter "label=org\.picasso-lab\.app=muse-minecraft" \| tail -1$/m, 'staging prunes our dangling images too');
+  // staging prunes our dangling images too; picasso's docker wrapper refuses prune to non-root users, and that must not
+  // end the deploy before its checks (the remote script runs with set -eo pipefail): a note instead
+  assert.match(joined, /^ {2}docker image prune -f --filter "label=org\.picasso-lab\.app=muse-minecraft" 2>&1 \| tail -1 \|\| echo "note: the prune was refused[^"]*\$\(docker images -q -f dangling=true -f label=org\.picasso-lab\.app=muse-minecraft \| wc -l\)[^"]*"$/m, 'staging prunes our dangling images too, and goes on when it may not');
   assert.doesNotMatch(joined, /docker (image|system) prune(?![^\n]*label=org\.picasso-lab\.app=muse-minecraft)/, 'never a prune without our label');
   assert.match(stg.calls.at(-1), /node \S+\/scripts\/staging-check\.mjs https:\/\/play-staging\.picasso-lab\.com$/, 'the checks run last');
   assert.doesNotMatch(joined, /workspace\/muse-minecraft/, 'a plain push never reaches production');

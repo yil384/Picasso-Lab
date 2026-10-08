@@ -13,6 +13,10 @@
 # (profile "camera"; its account signed in with scripts/camera-login.mjs). Staging runs neither.
 # After each build it prunes our own dangling images (label org.picasso-lab.app=muse-minecraft, set in every Dockerfile
 # here, staging's images included): the lab shares the Docker root, so it never touches an image without that label.
+# picasso's docker wrapper refuses every prune for a non-root user: staging then prints a note with the number of our
+# dangling images left (remove them by hand, README "Deploy on picasso") and goes on to its checks.
+# mineai/ (the Mine AI MCP pin and our patches) goes out with the code: Dockerfile.agent copies it into every image and
+# builds the runtime from it where MINEAI=1 (staging).
 set -e
 A=$(cd "$(dirname "$0")/.." && pwd)
 PROD=0 CHECK_ONLY=0 DRY=0
@@ -32,21 +36,22 @@ x() { if (( DRY )); then print -r -- "${(j: :)${(q-)@}}"; else "$@"; fi }
 # what goes out: a hash of every file the deploy copies, so production gets exactly the code staging was checked with
 fingerprint() {
   (cd "$A" && { find -L src scripts deploy -type f ! -name .env ! -name stream.env ! -name camera.env ! -path '*/__pycache__/*'
+    find -L mineai -type f
     print -l package.json package-lock.json README.md .dockerignore server/paper.jar server/plugins/*.jar(N); } \
     | LC_ALL=C sort | tr '\n' '\0' | xargs -0 shasum 2>/dev/null | shasum | cut -c1-16)
 }
 
 staging() {
   local S=picasso:workspace/muse-staging
-  x ssh picasso 'mkdir -p ~/workspace/muse-staging/{app,data,logs}'
+  x ssh picasso 'mkdir -p ~/workspace/muse-staging/{app,data,logs,mineai-data}'
   # production's compose files stay out of the staging copy: a bare `docker compose` there must never reach production
-  (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --exclude deploy/compose.yaml --exclude deploy/camera-test.compose.yaml --relative src scripts deploy package.json package-lock.json README.md .dockerignore $S/app/)
+  (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --exclude deploy/compose.yaml --exclude deploy/camera-test.compose.yaml --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore $S/app/)
   (cd "$A/server" && x rsync -azL paper.jar $S/app/paper.jar && x rsync -azL --delete --include '*.jar' --exclude '*' plugins/ $S/app/plugins/)
   x ssh picasso 'set -eo pipefail; cd ~/workspace/muse-staging/app
   [ -f deploy/.env ] || printf "WEB_ADMIN_TOKEN=%s\n" "$(openssl rand -base64 24 | tr -d "/+=" | head -c 32)" > deploy/.env
   chmod 600 deploy/.env
   cd deploy && docker compose -p muse-staging -f staging.compose.yaml up -d --build 2>&1 | tail -4 && docker compose -p muse-staging -f staging.compose.yaml ps --format "staging {{.Service}}: {{.Status}}"
-  docker image prune -f --filter "label=org.picasso-lab.app=muse-minecraft" | tail -1
+  docker image prune -f --filter "label=org.picasso-lab.app=muse-minecraft" 2>&1 | tail -1 || echo "note: the prune was refused (picasso allows it as root only); our dangling images left: $(docker images -q -f dangling=true -f label=org.picasso-lab.app=muse-minecraft | wc -l) (README, Deploy on picasso)"
   grep -q "^WEB_PROXY_SECRET=" .env || echo "note: staging deploy/.env has no WEB_PROXY_SECRET: forwarded headers are believed from any local peer on 7851 (README, Deploy on picasso)"'
 }
 
@@ -54,11 +59,12 @@ check() {
   x node "$A/scripts/staging-check.mjs" https://play-staging.picasso-lab.com
 }
 
-# production, as before staging existed (with the prune of our own dangling images and the trusted-proxy note)
+# production, as before staging existed (with the prune of our own dangling images, the trusted-proxy note, and mineai/,
+# which its image copies too: production's own build has MINEAI=0, so no runtime is fetched and it plays with our body)
 prod() {
   local R=picasso:workspace/muse-minecraft
   x ssh picasso 'mkdir -p ~/workspace/muse-minecraft/{app,data,logs}'
-  (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy package.json package-lock.json README.md .dockerignore $R/app/)
+  (cd "$A" && x rsync -az --delete --exclude deploy/.env --exclude deploy/stream.env --exclude deploy/camera.env --relative src scripts deploy mineai package.json package-lock.json README.md .dockerignore $R/app/)
   (cd "$A/server" && x rsync -azL paper.jar $R/app/paper.jar && x rsync -azL --delete --include '*.jar' --exclude '*' plugins/ $R/app/plugins/)
   x ssh picasso 'set -e; cd ~/workspace/muse-minecraft/app
   [ -f deploy/.env ] || printf "WEB_ADMIN_TOKEN=%s\n" "$(openssl rand -base64 24 | tr -d "/+=" | head -c 32)" > deploy/.env
