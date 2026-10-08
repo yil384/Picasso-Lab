@@ -349,7 +349,8 @@ Rule details fixed by the engine:
 - `hostOp dissolve` during a live hand cancels it: every contribution goes back, no records. A table with no human
   seated (also before the first sit) closes as `idle` 10 minutes later when `pauseWithoutHumans` is on.
 - Bots (`b_<n>`, styles rotate from a random start, names Stone/Blaze/Fox/Sage by style) buy in for the maximum,
-  never time out or sit out, and are removed 60 s after busting like anyone else.
+  never time out or sit out, and are removed 60 s after busting like anyone else. Their raises are tidy amounts
+  (multiples of the small blind, of the big blind from 20 BB up), or the minimum / all-in.
 
 ## 9. Persistence, restart and reconnect
 
