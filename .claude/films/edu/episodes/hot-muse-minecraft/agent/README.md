@@ -1015,8 +1015,9 @@ were scripted), production.
 
 ### After the review (2026-10-08)
 
-A review of this body found eleven defects; each is fixed, with a test in `test/mineai.test.js` (and the fake host
-models what was missing: a body held by one of their reflexes, a hunt whose kill drops nothing, worn stacks):
+A review of this body found twelve defects (the two about stopping hosts share a bullet); each is fixed, with a test
+in `test/mineai.test.js` (and the fake host models what was missing: a body held by one of their reflexes, a hunt
+whose kill drops nothing, worn stacks):
 
 - The private player name was on their host's command line and, inside the bootstrap, on their runtime's (`ps` shows
   every process on picasso, container ones included; the whitelist name is what keeps an offline-mode client from
