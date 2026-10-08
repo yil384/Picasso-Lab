@@ -65,3 +65,21 @@ test('restore: both files from one backup, one generation, the .bak copies gone;
   const gens = ['accounts', 'tables'].map((n) => JSON.parse(fs.readFileSync(path.join(dir, `${n}.json`), 'utf8')).gen);
   assert.equal(gens[0], gens[1]);
 });
+
+test('a service that never opened a table has no tables.json: the backup and the restore keep it absent', async () => {
+  const dir = tmpDir();
+  const store = new Store({ dir });
+  store.load();
+  store.register('accounts', () => ({ v: 1, accounts: [{ id: 'u_9', chips: 10000 }], ip: { k: [] }, links: [] }));
+  store.register('tables', () => ({ v: 1, tables: [] }));
+  store.markDirty('accounts');
+  store.flush();
+  store.close();
+  const out = path.join(tmpDir(), 'b.json.gz');
+  const r = await save(dir, out);
+  assert.deepEqual(r.gens, [1, null]);
+  fs.writeFileSync(path.join(dir, 'tables.json'), '{"v":1,"gen":7,"batch":["tables"],"data":{"v":1,"tables":[]}}');
+  restore(out, dir);
+  assert.ok(!fs.existsSync(path.join(dir, 'tables.json')));
+  assert.equal(new Store({ dir }).load().accounts.accounts[0].id, 'u_9');
+});
