@@ -1111,7 +1111,8 @@ ms (8.00-8.01 s before) with the games' bot data deleted (23 bot folders before 
 The report (`../../../research/muse-reuse-validation.md`) asks for three gates before production plays with this
 body. Gate 3 is two runtime patches for staging's two body failures, gate 1 the production config, gate 2 the soak on
 staging and one Muse run: the scripted soak passed (below), and so did the Muse run (section "The Muse run on staging"
-below). The runbook for the switch itself is `docs/SWITCH.md`.
+below) and, after the fixes it led to, the Muse re-test with the `muse-fix` build (game `g42b738`; section "The review
+of the fixes and the re-check on staging"). The runbook for the switch itself is `docs/SWITCH.md`.
 
 Gate 3, on this Mac's Paper (1.21.4-232 on 25565, seed 71811045), `mineai/bench/gates.mjs` (one host of the runtime,
 their MCP tools, bot `Tst_gate_` and random letters, every placement checked with the server's `execute if block`):
@@ -1359,6 +1360,14 @@ restart or watchdog stop (0 in 23 games), a Muse run that finishes the iron rout
 death (1 in 21 strict games today, 0 in the soak's 23; our body had 3 in 28 in the validation) and the 6-game run are
 the numbers to watch. Staging's `deploy/.env` is back as it was (`MC_USERNAME=Tst_rv`, no `SPREAD_SPOTS`); staging keeps
 running this build.
+
+The owner's Muse re-test on staging with this build (`02ad527`, ten runtime patches; `docs/MUSE-TEST.md`, the same
+prompt), game `g42b738`, 2026-10-08 23:40:26-23:47:41 UTC, Muse's own client (`muse-minecraft-mcp 1.0`): the iron
+pickaxe 3:16 after `start_game` (3:34 in g38e5ef), every step of the iron route ok (13 of 13), no death, 0 heartbeat
+misses, host restarts or downs, the host closed in 172 ms with the data deleted. Of its 21 steps 15 were ok; the other
+six: `build hut_3x3` three times and `build shelter` on rough ground (1-3 cells refused each, their path search for a
+place to stand timed out at 2,000 ms, as in the soak's lease game) and `eat` twice at 20/20 (`NOT_HUNGRY`). Neither is
+part of the gate (`docs/MUSE-TEST.md`): **gate 2 passed with the `muse-fix` build**, the last condition of the switch.
 
 ```sh
 node mineai/bench/muse-replay.mjs https://play-staging.picasso-lab.com --out replay.json      # on the Mac

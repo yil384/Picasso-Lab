@@ -79,6 +79,7 @@ gateway means no switch yet.
 | Date | Game | Result |
 | --- | --- | --- |
 | 2026-10-08 | `g38e5ef` (staging, the image of the soak) | **passed**: the iron pickaxe 3:34 after `start_game`, 12 MCP calls, 0 transport failures, 0 heartbeat misses or host restarts, no death; shelter done, a pig hunted and 2 porkchops cooked, `eat` refused twice at 20/20. Muse's findings and their fixes: README, "The Muse run on staging" |
+| 2026-10-08 | `g42b738` (staging, the `muse-fix` build `02ad527`, 10 runtime patches; the re-test) | **passed**: Muse's own client (`muse-minecraft-mcp 1.0`), 23:40:26-23:47:41 UTC; the iron pickaxe 3:16 after `start_game`, every step of the iron route ok (13 of 13), no death, 0 heartbeat misses, host restarts or downs, the host closed in 172 ms with the data deleted. 21 steps, 15 ok: a pig hunted and 2 porkchops cooked; 4 builds (`hut_3x3` three times, `shelter`) failed on rough ground (cells refused when the path search for a place to stand hit its 2,000 ms limit) and `eat` twice `NOT_HUNGRY` at 20/20, neither part of the gate. Gate 2 passed with the `muse-fix` build, the last condition of the switch (`docs/SWITCH.md`, section 1) |
 
 The re-test after those fixes (branch `muse-fix`, deployed to staging with `deploy/push.sh`; the same prompt) should
 show, besides the iron route:

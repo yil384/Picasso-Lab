@@ -13,7 +13,9 @@ headers, the `craft_batch` notes and patch 0010, a build that stopped the runtim
 again, and then switch. The `muse-fix` build has run on staging since 2026-10-08 (commit `02ad527`): Muse's calls
 replayed through the public `/mcp` at two fresh spots (11 of 11 reply checks each), the strict iron route 5 of 5 one
 at a time and 4 of 6 and 6 of 8 at once, 0 heartbeat misses, restarts or watchdog stops in 23 games, 1 death (a zombie
-in shade); README, "The review of the fixes and the re-check on staging".
+in shade); README, "The review of the fixes and the re-check on staging". The Muse re-test on staging with that build
+passed too (game `g42b738`, 2026-10-08 23:40 UTC: the iron pickaxe 3:16 after `start_game`, every step of the iron
+route ok, no death, 0 heartbeat misses or restarts; `docs/MUSE-TEST.md`, "Runs"): gate 2 passed.
 
 Production is `play.picasso-lab.com` on picasso: compose project `muse-minecraft`, code in
 `~/workspace/muse-minecraft/app`, its world in `app/data`, logs in `app/logs`, the agent on `172.24.0.1:7850` behind
@@ -44,7 +46,7 @@ earlier fixes too; staging has run them since 2026-10-07.
 
 | Check | Command | Expected |
 | --- | --- | --- |
-| gate 2 passed | the soak's numbers (report, section 1; README, "Gates before the switch" and "The Muse run on staging") | strict iron route at least 7 of 10 one at a time and 6 of 8 at once with today's build; 0 heartbeat restarts and 0 watchdog stops; a whole 30-minute lease; one Muse run through the gateway that finishes the iron route (2026-10-08: 10 of 10, 6 of 8, 0 in 23 games, the lease ended at 30.0 min; the Muse run passed; the `muse-fix` build: 5 of 5, 4 of 6 and 6 of 8, 0 in 23 games), and the Muse re-test on staging with the `muse-fix` build done |
+| gate 2 passed | the soak's numbers (report, section 1; README, "Gates before the switch" and "The Muse run on staging") | strict iron route at least 7 of 10 one at a time and 6 of 8 at once with today's build; 0 heartbeat restarts and 0 watchdog stops; a whole 30-minute lease; one Muse run through the gateway that finishes the iron route (2026-10-08: 10 of 10, 6 of 8, 0 in 23 games, the lease ended at 30.0 min; the Muse run passed; the `muse-fix` build: 5 of 5, 4 of 6 and 6 of 8, 0 in 23 games), and the Muse re-test on staging with the `muse-fix` build done (passed: game `g42b738`, 2026-10-08) |
 | the commit's tests (Mac) | `npm test` | `ℹ pass 271`, `ℹ fail 0` (273 tests, 2 skipped) |
 | staging runs this commit (Mac) | `deploy/push.sh` | ends with `push: staging runs this code and passed its checks; deploy/push.sh --prod also puts it in production` |
 | staging's runtime is the pin plus ten patches | `docker exec muse-staging-agent-1 node scripts/mineai-fetch.mjs /opt/mine-ai-mcp --check` | `/opt/mine-ai-mcp: 2fe1306 with 10 patches, dependencies installed` |
