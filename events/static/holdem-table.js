@@ -1043,7 +1043,8 @@ export function createTable({ ui, S, send, popups }) {
         setStatus(status) {
             if (status !== "online") V.stale = true;
             if (S.table) {
-                region("status", status !== "online" ? `<span>${L("Reconnecting…", "重新连接中…")}</span>` : "");
+                // the pill stays until a fresh snapshot clears the stale table (update)
+                region("status", status !== "online" || V.stale ? `<span>${L("Reconnecting…", "重新连接中…")}</span>` : "");
                 stage.classList.toggle("is-stale", status !== "online" || V.stale);
             }
         },

@@ -210,7 +210,8 @@ Server → client
 { t:"closed", code, reason:"dissolved"|"idle" }
 ```
 Snapshots (not diffs) keep reconnect trivial: whatever the client missed, the next `state` is complete. A table
-snapshot is ~2–4 KB. `rev` increases by one per change; clients ignore older revs.
+snapshot is ~2–4 KB. `rev` increases by one per change; clients ignore older revs on the same socket, and take the
+first snapshot after a new `welcome` whatever its rev (a crash can restore a table a few changes behind what a page saw).
 
 ```
 PublicTable {
@@ -497,6 +498,7 @@ Persistence
 - Browser test hooks (`src/test-hooks.js`): only with `HOLDEM_TEST_HOOKS=1`, which production refuses at startup, and
   only for loopback callers. `GET /__test/hands?code=` returns every recent hand's dealt hole cards (the ground truth
   the browser suite checks every received frame against) and `POST /__test/deck` rigs the next hand of a table (side
-  pots, splits, quads on demand). `FIREBASE_JWKS_URL` (hooks only, loopback URL) points the production key fetcher
+  pots, splits, quads on demand); `POST /__test/hold-writes { ms }` keeps changes off the disk for a while so a
+  kill -9 can be tested at its worst. `FIREBASE_JWKS_URL` (hooks only, loopback URL) points the production key fetcher
   at a local JWK set so the email link can be completed in a browser with a locally signed ID token.
 

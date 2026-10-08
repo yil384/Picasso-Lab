@@ -4,11 +4,13 @@
 // a rigged deck for the next hand of a table (side pots, splits, quads on demand). Nothing here is reachable, or
 // even loaded, in a normal run.
 //
-//   createTestHooks({ rooms, log }) -> { onChange(table), handle(req, res) -> bool (true when it answered) }
+//   createTestHooks({ rooms, store, log }) -> { onChange(table), handle(req, res) -> bool (true when it answered) }
 //   GET  /__test/hands?code=CODE   -> { hands: { [handId]: { code, no, holes: { seat: [c1, c2] }, pids: { seat: pid },
 //                                     folded: [seat], mucked: [seat], showed: [seat] } } }   (newest 2,000 hands)
 //   POST /__test/deck { code, holes?: { seat: [c1, c2] }, board?: [c1..c5] }   rig the next hand dealt at the table
 //                                     (cards are swapped into place right after the deal, before anyone sees it)
+//   POST /__test/hold-writes { ms }   the data files are not written for ms (changes stay queued), so a kill -9 in
+//                                     that window loses more than the usual <= 200 ms: the worst case for clients
 
 import { HoldemTable } from './engine/table.js';
 import { isCard } from './engine/cards.js';
@@ -70,8 +72,16 @@ export function applyRig(state, rig) {
   });
 }
 
-export function createTestHooks({ rooms, log = () => {} }) {
+export function createTestHooks({ rooms, store = null, log = () => {} }) {
   const hands = new Map();
+  let holdTimer = null;
+
+  function holdWrites(ms) {
+    store.flush = () => false;
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => { delete store.flush; store.flush(); }, ms);
+    log('test hook: data writes held', { ms });
+  }
 
   function onChange(table) {
     const h = table.hand;
@@ -123,6 +133,12 @@ export function createTestHooks({ rooms, log = () => {} }) {
         const cards = [...Object.values(body.holes || {}).flat(), ...(body.board || [])];
         if (!cards.every(isCard) || new Set(cards).size !== cards.length) { json(res, 400, { error: 'bad_cards' }); return true; }
         rigNext(table, { holes: body.holes || {}, board: body.board || [] });
+        json(res, 200, { ok: true });
+        return true;
+      }
+      if (req.method === 'POST' && url.pathname === '/__test/hold-writes' && store) {
+        const body = await readJson(req);
+        holdWrites(Math.min(Math.max(Number(body.ms) || 0, 0), 60_000));
         json(res, 200, { ok: true });
         return true;
       }

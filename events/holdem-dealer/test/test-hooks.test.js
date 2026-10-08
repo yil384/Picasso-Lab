@@ -1,8 +1,9 @@
 // Test hooks (HOLDEM_TEST_HOOKS=1, browser harness only): refused in production, absent unless switched on, loopback
-// only; the hands record matches what was dealt; a rigged next hand deals exactly the asked cards; the Firebase key
-// fetcher follows FIREBASE_JWKS_URL (and only with the hooks on).
+// only; the hands record matches what was dealt; a rigged next hand deals exactly the asked cards; held writes; the
+// Firebase key fetcher follows FIREBASE_JWKS_URL (and only with the hooks on).
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import http from 'node:http';
 import { loadConfig, ConfigError } from '../src/config.js';
 import { applyRig } from '../src/test-hooks.js';
@@ -108,6 +109,19 @@ test('hooks: loopback only, the hands record, a rigged next hand, keys from FIRE
     assert.deepEqual(end.table.hand.board, ['7c', '7s', '2d', '9c', 'Jh']);
     assert.equal(end.table.hand.winners[0].seat, 0);
     assert.equal(end.table.hand.winners[0].hand.cat, 'quads');
+    // hold-writes: nothing reaches the data files during the hold, everything right after it
+    await sleep(400);
+    const held = await fetch(`${svc.url}/__test/hold-writes`, { method: 'POST', body: JSON.stringify({ ms: 400 }) });
+    assert.equal(held.status, 200);
+    await sleep(250);
+    const tablesFile = `${svc.config.dataDir}/tables.json`;
+    const before = JSON.parse(fs.readFileSync(tablesFile, 'utf8')).gen;
+    ca.send({ t: 'sitOut', on: true });
+    await ca.waitFor((m) => m.t === 'state' && m.table.seats[0]?.state === 'out', { timeout: 4000 });
+    await sleep(100);
+    assert.equal(JSON.parse(fs.readFileSync(tablesFile, 'utf8')).gen, before);
+    await sleep(600);
+    assert.ok(JSON.parse(fs.readFileSync(tablesFile, 'utf8')).gen > before);
     ca.close();
     cb.close();
 

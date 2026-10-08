@@ -38,7 +38,7 @@ export async function startServer(config, opts = {}) {
   let hooks = null;
   if (config.testHooks) {
     const { createTestHooks } = await import('./test-hooks.js');
-    hooks = createTestHooks({ rooms: { get: (code) => rooms?.get(code) }, log });
+    hooks = createTestHooks({ rooms: { get: (code) => rooms?.get(code) }, store, log });
     log('test hooks on: /__test/* answers loopback callers', {});
   }
   const accounts = new Accounts({

@@ -66,6 +66,9 @@ export function mountHoldem(ui) {
     function onMessage(msg) {
         if (msg.t === "welcome" || msg.t === "account") {
             if (msg.account) ui.account?.setAccount(msg.account);
+            // a new socket takes the next snapshot whatever its rev: a service restored after a crash can be a
+            // few changes behind what this page had seen, and its table is the truth
+            if (msg.t === "welcome") S.rev = 0;
             if (S.screen === "hroom") renderRoom();
         } else if (msg.t === "created") {
             S.code = msg.code;
