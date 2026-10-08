@@ -1,16 +1,15 @@
 # Music credits: the games page (events/guandan.html)
 
 Background music for Guandan and Texas Hold'em. The page plays one track at a time and downloads a file only
-when its track plays (`events/static/games-music.js`). "Auto", the default, plays `guandan-theme` on the Guandan
-screens and `bossa-antigua` on the Hold'em ones (the lobby's Hold'em tab, the Hold'em room and table).
+when its track plays (`events/static/games-music.js`). "Auto", the default, plays `bossa-antigua` on the Guandan
+screens and `etirwer` (solo guitar) on the Hold'em ones (the lobby's Hold'em tab, the Hold'em room and table).
 
 Every file here was trimmed to its own ending, loudness-normalised to -20 LUFS (true peak -2.9 dBTP or lower; a
 limiter touches only a few isolated peaks in Bossa Antigua, Cool Vibes and the Aria) and re-encoded to AAC-LC .m4a,
-44.1 kHz stereo, faststart. `guandan-theme` was also cut into a 28 s loop with a 0.6 s crossfade on a bar line.
+44.1 kHz stereo, faststart.
 
 | File | Track | By | Licence | Source |
 | --- | --- | --- | --- | --- |
-| `guandan-theme.m4a` | Guandan Theme | unknown | **unknown** (see below) | the site's earlier `events/static/guandan_music.mp3` |
 | `bossa-antigua.m4a` | Bossa Antigua | Kevin MacLeod | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) | [incompetech.com](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700069) |
 | `backbay-lounge.m4a` | Backbay Lounge | Kevin MacLeod | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) | [incompetech.com](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700068) |
 | `cool-vibes.m4a` | Cool Vibes | Kevin MacLeod | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) | [incompetech.com](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100863) |
@@ -21,34 +20,30 @@ limiter touches only a few isolated peaks in Bossa Antigua, Cool Vibes and the A
 
 ## Attribution shown in the game
 
-The music picker (Settings, and the Music popup from the lobby rail and the tables' menu) shows these lines under
-the track list, word for word:
+The music picker (Settings, and the Music popup from the lobby rail and the tables' menu) shows these blocks under
+the track list (`CREDITS` in `games-music.js`), word for word. The first is the text of incompetech's credit
+generator for several pieces (incompetech.com/music/royalty-free/licenses/):
 
-- "Bossa Antigua" Kevin MacLeod (incompetech.com) · Licensed under Creative Commons: By Attribution 4.0 License ·
-  http://creativecommons.org/licenses/by/4.0/ · Changes: trimmed, loudness-normalised and re-encoded to AAC.
-- "Backbay Lounge" Kevin MacLeod (incompetech.com) · Licensed under Creative Commons: By Attribution 4.0 License ·
-  http://creativecommons.org/licenses/by/4.0/ · Changes: trimmed, loudness-normalised and re-encoded to AAC.
-- "Cool Vibes" Kevin MacLeod (incompetech.com) · Licensed under Creative Commons: By Attribution 4.0 License ·
-  http://creativecommons.org/licenses/by/4.0/ · Changes: trimmed, loudness-normalised and re-encoded to AAC.
-- "Clear Air" Kevin MacLeod (incompetech.com) · Licensed under Creative Commons: By Attribution 4.0 License ·
-  http://creativecommons.org/licenses/by/4.0/ · Changes: trimmed, loudness-normalised and re-encoded to AAC.
+- "Bossa Antigua", "Backbay Lounge", "Cool Vibes", "Clear Air" Kevin MacLeod (incompetech.com) · Licensed under
+  Creative Commons: By Attribution 4.0 · http://creativecommons.org/licenses/by/4.0/
 - "Etirwer" by Kistol (opengameart.org) · CC0 1.0
 - J.S. Bach, Prelude No. 1 in C major, BWV 846. Performed by Kimiko Ishizaka, Open Well-Tempered Clavier
-  (welltemperedclavier.org) · Licensed under CC BY 3.0 · https://creativecommons.org/licenses/by/3.0/ · Changes:
-  trimmed, loudness-normalised and re-encoded to AAC.
+  (welltemperedclavier.org) · Licensed under CC BY 3.0 · https://creativecommons.org/licenses/by/3.0/
 - J.S. Bach, Goldberg Variations BWV 988: Aria. Kimiko Ishizaka, The Open Goldberg Variations
   (opengoldbergvariations.org) · CC0 1.0
+- Changes: each file trimmed, loudness-normalised and re-encoded to AAC.
 
 The CC0 tracks need no credit; it is given anyway.
 
-## Guandan Theme: licence not known
+## Removed: the page's earlier track
 
-`guandan-theme.m4a` is the page's earlier background music (`events/static/guandan_music.mp3`, converted from
-`guandan_music.MOV` in commit 6fa198d; the file carries a phone video editor's export tags). Its composer, source
-and licence are not recorded anywhere in this repository, and a stem separation suggests it may hold a voice or a
-voice-like lead. It is kept because it was already the site's Guandan music. Confirm where it came from and that it
-may be published; if that cannot be shown, remove the file and point `DEFAULTS.guandan` in `games-music.js` at
-another track.
+The games page used to play `events/static/guandan_music.mp3` (converted from `guandan_music.MOV`, commit
+6fa198d). Its composer, source and licence are not recorded anywhere, and the file carries the export tags of a
+ByteDance phone video editor (`com.apple.quicktime.software` {"TEEditor":"2","te_is_reencode":"1",...}), so the
+audio most likely came from that editor's music library or another short video; those terms do not allow hosting
+the file in a public repository. It was removed from the page and the repository (it stays in git history:
+`git show e83406c:events/static/guandan_music.mp3`). Bring it back only with a known source and a licence that
+allows public hosting, and then credit it under its real title and artist.
 
 ## Adding a track
 

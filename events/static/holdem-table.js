@@ -852,7 +852,7 @@ export function createTable({ ui, S, send, popups }) {
             ["rules", icon("rules"), L("Rules", "规则")],
             ["hands", icon("hands"), L("Hand ranking", "牌型")],
             ["lang", icon("lang"), ui.isZH() ? "English" : "中文"],
-            music ? ["music", icon("music"), music.isOn?.() ? L("Music: on", "音乐：开") : L("Music: off", "音乐：关")] : null,
+            music ? ["music", icon("music"), music.isOn?.() && music.current?.() ? esc(L(`Music: ${music.current().short.en}`, `音乐：${music.current().short.zh}`)) : L("Music: off", "音乐：关")] : null,
             ["sfx", icon("sfx"), sfx.on ? L("Sound: on", "音效：开") : L("Sound: off", "音效：关")],
             seat ? ["topup", icon("chips"), L("Top up chips", "补充筹码")] : null,
             seat ? (seat.state === "out" ? ["back", icon("play"), L("I'm back", "回来")] : ["away", icon("pause"), L("Sit out", "暂离")]) : null,

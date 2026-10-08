@@ -729,7 +729,8 @@ html[lang="en"] .gd-rules-row > b { text-align-last: auto; }
 
 /* 音乐: the tracks under 开 / 关 as one radio group on a pale tray. Each row: the gold radio, the track's record
    (its label colour; it turns while it plays), title over artist · style and a 播放中 plate; the chosen row is
-   lifted to white with the gold bar of a selected rules tab. Credits follow in small type, a line per track. */
+   lifted to white with the gold bar of a selected rules tab. Credits follow in small type: one block for
+   Kevin MacLeod's tracks, a line for each other track, one line for the changes. */
 .gd-tracks {
     display: flex;
     flex-direction: column;
@@ -844,7 +845,7 @@ html[lang="en"] .gd-rules-row > b { text-align-last: auto; }
     font: 500 max(11px, calc(13 * var(--pu)))/1.5 var(--font-ui);
 }
 .gd-credits h3 { margin: 0 0 calc(4 * var(--pu)); color: var(--ink-2); font: 900 max(12px, calc(15 * var(--pu)))/1.3 var(--font-ui); }
-.gd-credits p { margin: 0 0 calc(6 * var(--pu)); overflow-wrap: anywhere; }
+.gd-credits p { margin: 0 0 calc(6 * var(--pu)); overflow-wrap: break-word; }
 .gd-credits a { color: inherit; text-decoration: underline; text-decoration-color: rgba(130, 144, 180, .55); text-underline-offset: .18em; }
 @media (hover: hover) { .gd-credits a:hover { color: var(--ink-2); } }
 

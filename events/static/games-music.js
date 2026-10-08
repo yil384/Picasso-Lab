@@ -4,95 +4,109 @@
 //   tracks                 the tracks below (licences and sources: static/music/MUSIC-CREDITS.md)
 //   choice() / choose(id)  "auto" or a track id, stored in "picasso.guandan.musicTrack"
 //   current()              the track that plays (or would play while off): the chosen one, or with "auto" the
-//                          track of the game on screen (Guandan's theme; Hold'em's bossa nova)
+//                          track of the game on screen (Guandan: Bossa Antigua; Hold'em: Etirwer, solo guitar)
 //   scene(name)            the page says which game is on screen: "guandan" | "holdem"
-//   playing()              true while a track actually plays (false while off or while autoplay is blocked)
+//   playing()              true while a track actually plays (false while off, while autoplay is blocked, while
+//                          the tab is hidden, or when its file failed to load)
+//   credits                the attribution blocks shown under the track list ({ source, lines })
 // Every change fires "guandan:music" on document, detail { on, choice, track, scene, playing }.
 //
 // Only the playing track is fetched: the <audio> elements are preload="none" and get a src when their track
 // starts; a track that has faded out is paused and loses its src (its position is kept for its return). A change
 // crossfades over two elements once the new track can play; where scripts cannot set the volume (iOS) one element
 // switches at once. While on, playback starts after the page's first render (so "auto" knows the game); if the
-// browser blocks autoplay it starts on the first click, tap or key press.
+// browser blocks autoplay it starts on the first click, tap or key press. A hidden tab goes quiet (it picks up
+// where it stopped when shown again), and a change made in another tab (on / off, the track) is followed here.
 (function () {
     "use strict";
     var BASE = "https://yil384.github.io/Picasso-Lab/events/static/music/";
     var CC_BY_4 = "http://creativecommons.org/licenses/by/4.0/";
-    var CHANGED = "Changes: trimmed, loudness-normalised and re-encoded to AAC.";
-    function macleod(title, isrc) {
+    var CHANGED = "Changes: each file trimmed, loudness-normalised and re-encoded to AAC.";
+    // Kevin MacLeod's tracks share one credit block (CREDITS below)
+    function macleod(isrc) {
         return {
             artist: { en: "Kevin MacLeod", zh: "Kevin MacLeod" },
-            licence: "CC BY 4.0",
-            source: "https://incompetech.com/music/royalty-free/index.html?isrc=" + isrc,
-            // incompetech's credit text, line for line, then what was changed
-            credit: ["\"" + title + "\" Kevin MacLeod (incompetech.com)", "Licensed under Creative Commons: By Attribution 4.0 License", CC_BY_4, CHANGED]
+            licence: "CC BY 4.0", group: "incompetech",
+            source: "https://incompetech.com/music/royalty-free/index.html?isrc=" + isrc
         };
     }
     function track(id, fields, extra) {
-        var t = { id: id, src: BASE + id + ".m4a", game: null, licence: "", source: "", credit: [] };
+        var t = { id: id, src: BASE + id + ".m4a", game: null, licence: "", source: "", group: "", credit: [] };
         [fields, extra || {}].forEach(function (o) { Object.keys(o).forEach(function (k) { t[k] = o[k]; }); });
+        t.short = t.short || t.title;   // the tables' menu: "Music: <short>"
         return Object.freeze(t);
     }
-    // `color` is the label of the track's record (the picker, the lobby rail)
+    // `color` is the label of the track's record (the picker, the lobby rail); `game` marks Auto's track there.
+    // Every file is public domain, CC0 or CC BY (static/music/MUSIC-CREDITS.md).
     var TRACKS = Object.freeze([
-        track("guandan-theme", {
-            title: { en: "Guandan Theme", zh: "掼蛋主题曲" },
-            artist: { en: "The table's original music", zh: "牌桌原声" },
-            style: { en: "Upbeat and steady", zh: "轻快明亮" },
-            game: "guandan", color: "#e0546e"
-        }),
         track("bossa-antigua", {
             title: { en: "Bossa Antigua", zh: "Bossa Antigua" },
-            style: { en: "Bossa nova: guitar and light drums", zh: "波萨诺瓦 · 吉他与轻鼓" },
-            game: "holdem", color: "#e8963a"
-        }, macleod("Bossa Antigua", "USUAN1700069")),
-        track("backbay-lounge", {
-            title: { en: "Backbay Lounge", zh: "Backbay Lounge" },
-            style: { en: "Lounge jazz led by piano", zh: "酒廊爵士 · 钢琴领奏" },
-            color: "#5b74d8"
-        }, macleod("Backbay Lounge", "USUAN1700068")),
-        track("cool-vibes", {
-            title: { en: "Cool Vibes", zh: "Cool Vibes" },
-            style: { en: "Slow jazz trio with vibraphone", zh: "慢爵士 · 颤音琴三重奏" },
-            color: "#2aa39b"
-        }, macleod("Cool Vibes", "USUAN1100863")),
-        track("clear-air", {
-            title: { en: "Clear Air", zh: "Clear Air" },
-            style: { en: "Acoustic guitar duet, soft piano", zh: "木吉他二重奏 · 轻钢琴" },
-            color: "#6db368"
-        }, macleod("Clear Air", "USUAN1100626")),
+            style: { en: "Bossa nova: guitar and light drums", zh: "波萨诺瓦：吉他与轻鼓" },
+            game: "guandan", color: "#e0546e"
+        }, macleod("USUAN1700069")),
         track("etirwer", {
             title: { en: "Etirwer", zh: "Etirwer" },
             artist: { en: "Kistol", zh: "Kistol" },
             style: { en: "Solo nylon-string guitar", zh: "尼龙弦吉他独奏" },
-            color: "#c9703e", licence: "CC0",
+            game: "holdem", color: "#e8963a", licence: "CC0",
             source: "https://opengameart.org/content/etirwer",
             credit: ["\"Etirwer\" by Kistol (opengameart.org)", "CC0 1.0"]
         }),
+        track("backbay-lounge", {
+            title: { en: "Backbay Lounge", zh: "Backbay Lounge" },
+            style: { en: "Lounge jazz led by piano", zh: "酒廊爵士，钢琴领奏" },
+            color: "#5b74d8"
+        }, macleod("USUAN1700068")),
+        track("cool-vibes", {
+            title: { en: "Cool Vibes", zh: "Cool Vibes" },
+            style: { en: "Slow jazz trio with vibraphone", zh: "慢爵士，颤音琴三重奏" },
+            color: "#2aa39b"
+        }, macleod("USUAN1100863")),
+        track("clear-air", {
+            title: { en: "Clear Air", zh: "Clear Air" },
+            style: { en: "Acoustic guitar duet, soft piano", zh: "木吉他二重奏，轻钢琴" },
+            color: "#6db368"
+        }, macleod("USUAN1100626")),
         track("bach-prelude-c", {
             title: { en: "Prelude in C major, BWV 846", zh: "C 大调前奏曲 BWV 846" },
-            artist: { en: "J.S. Bach · Kimiko Ishizaka", zh: "巴赫 · Kimiko Ishizaka 演奏" },
-            style: { en: "Solo piano, flowing chords", zh: "钢琴独奏 · 流动的和弦" },
+            short: { en: "Prelude in C", zh: "C 大调前奏曲" },
+            artist: { en: "J.S. Bach, played by Kimiko Ishizaka", zh: "巴赫，Kimiko Ishizaka 演奏" },
+            style: { en: "Solo piano, flowing chords", zh: "钢琴独奏，流动的和弦" },
             color: "#d9b44a", licence: "CC BY 3.0",
             source: "https://commons.wikimedia.org/wiki/File:Kimiko_Ishizaka_-_Bach-_Well-Tempered_Clavier,_Book_1_-_01_Prelude_No._1_in_C_major,_BWV_846.flac",
             credit: ["J.S. Bach, Prelude No. 1 in C major, BWV 846. Performed by Kimiko Ishizaka, Open Well-Tempered Clavier (welltemperedclavier.org)",
-                "Licensed under CC BY 3.0", "https://creativecommons.org/licenses/by/3.0/", CHANGED]
+                "Licensed under CC BY 3.0", "https://creativecommons.org/licenses/by/3.0/"]
         }),
         track("bach-goldberg-aria", {
             title: { en: "Goldberg Variations: Aria", zh: "哥德堡变奏曲：咏叹调" },
-            artist: { en: "J.S. Bach · Kimiko Ishizaka", zh: "巴赫 · Kimiko Ishizaka 演奏" },
-            style: { en: "Solo piano, slow and soft", zh: "钢琴独奏 · 缓慢轻柔" },
+            short: { en: "Goldberg Aria", zh: "哥德堡咏叹调" },
+            artist: { en: "J.S. Bach, played by Kimiko Ishizaka", zh: "巴赫，Kimiko Ishizaka 演奏" },
+            style: { en: "Solo piano, slow and soft", zh: "钢琴独奏，缓慢轻柔" },
             color: "#9a6cc8", licence: "CC0",
             source: "https://commons.wikimedia.org/wiki/File:Goldberg_Variations_BWV_988_01_Aria.flac",
             credit: ["J.S. Bach, Goldberg Variations BWV 988: Aria. Kimiko Ishizaka, The Open Goldberg Variations (opengoldbergvariations.org)", "CC0 1.0"]
         })
     ]);
+    // The credits under the track list, as each licence asks: Kevin MacLeod's tracks in one block in the words of
+    // incompetech's credit generator, then each other track's line, then what was changed in the files.
+    var CREDITS = Object.freeze((function () {
+        var km = TRACKS.filter(function (t) { return t.group === "incompetech"; });
+        var blocks = [];
+        if (km.length) blocks.push({
+            source: "https://incompetech.com/",
+            lines: [km.map(function (t) { return "\"" + t.title.en + "\""; }).join(", ") + " Kevin MacLeod (incompetech.com)",
+                "Licensed under Creative Commons: By Attribution 4.0", CC_BY_4]
+        });
+        TRACKS.forEach(function (t) { if (t.credit.length) blocks.push({ source: t.source, lines: t.credit }); });
+        blocks.push({ source: "", lines: [CHANGED] });
+        return blocks;
+    })());
     var BY_ID = {};
     TRACKS.forEach(function (t) { BY_ID[t.id] = t; });
-    var DEFAULTS = Object.freeze({ guandan: "guandan-theme", holdem: "bossa-antigua" });
+    var DEFAULTS = Object.freeze({ guandan: "bossa-antigua", holdem: "etirwer" });
     var KEY_ON = "picasso.guandan.music", KEY_TRACK = "picasso.guandan.musicTrack", KEY_GAME = "picasso.games.game";
     // The files are levelled to -20 LUFS (MUSIC-CREDITS.md); at 0.8 they play near -22 LUFS, under the table's
-    // sound effects. The earlier theme was a -7 LUFS master played at 0.45 (about -14 LUFS).
+    // sound effects. The page's earlier track was a -7 LUFS master played at 0.45 (about -14 LUFS).
     var VOLUME = 0.8, FADE_MS = 1200, QUICK_MS = 450, READY_WAIT_MS = 4000, CHOOSE_WAIT_MS = 180;
 
     function load(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
@@ -143,7 +157,8 @@
     function waiting(v) { return !v.el.paused && !v.el.error; }   // playing, or still loading to play
 
     function resolveId() { return choice === "auto" ? DEFAULTS[sceneName] : choice; }
-    function isPlaying() { return voices.some(function (v) { return v.target === 1 && !v.el.paused; }); }
+    // a file that failed to load leaves its element unpaused: it does not count as playing
+    function isPlaying() { return voices.some(function (v) { return v.target === 1 && !v.el.paused && !v.el.error; }); }
 
     function play(v) {
         var p;
@@ -204,7 +219,7 @@
     // Steer every voice to where it should be: the resolved track up, every other one down.
     function apply(ms) {
         if (!started) return notify();
-        var want = on ? resolveId() : null;
+        var want = on && !document.hidden ? resolveId() : null;
         var have = null;
         voices.forEach(function (v) {
             v.target = v.id === want ? 1 : 0;
@@ -326,7 +341,8 @@
         choose: choose,
         current: function () { return BY_ID[resolveId()]; },
         scene: scene,
-        playing: isPlaying
+        playing: isPlaying,
+        credits: CREDITS
     };
 
     function start() {
@@ -337,13 +353,33 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
     else setTimeout(start, 0);
 
-    // Autoplay refused: the next click, tap or key starts it, inside the gesture as browsers ask. Not on the
-    // control that turns it off ([data-music-off]): that must not start it first.
+    // Autoplay refused: the next click, tap or key starts it. It waits until the page has handled that gesture
+    // (a timer of 0 still counts as inside it), so a click that changes the game or picks a track starts only the
+    // track it leads to, and a click on Off starts nothing. The controls that open the music popup ([data-lobby]
+    // music and settings, the tables' menu item) never start it: a visitor may be opening it to turn music off.
+    var MUSIC_OPENERS = "[data-music-off], [data-lobby=\"music\"], [data-lobby=\"settings\"], [data-m=\"music\"], [data-act=\"m-music\"]";
     function onGesture(event) {
         if (!blocked || !on) return;
         var t = event.target;
-        if (t && t.closest && t.closest("[data-music-off]")) return;
-        voices.forEach(function (v) { if (v.target === 1 && v.el.paused) play(v); });
+        if (t && t.closest && t.closest(MUSIC_OPENERS)) return;
+        setTimeout(function () {
+            if (!blocked || !on || document.hidden) return;
+            if (chooseTimer) applyNow(FADE_MS);   // a pick made by this gesture goes first
+            voices.forEach(function (v) { if (v.target === 1 && v.el.paused) play(v); });
+        }, 0);
     }
     ["click", "keydown", "touchend"].forEach(function (type) { document.addEventListener(type, onGesture, true); });
+
+    // Another tab of the page changed on / off or the track: follow it, so two tabs never play two choices.
+    window.addEventListener("storage", function (event) {
+        if (event.key === KEY_ON && event.newValue) {
+            on = event.newValue !== "off";
+            applyNow(QUICK_MS);
+        } else if (event.key === KEY_TRACK && event.newValue) {
+            choice = BY_ID[event.newValue] ? event.newValue : "auto";
+            applyNow(FADE_MS);
+        }
+    });
+    // A hidden tab goes quiet; shown again, its track comes back where it stopped.
+    document.addEventListener("visibilitychange", function () { applyNow(QUICK_MS); });
 })();

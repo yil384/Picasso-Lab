@@ -228,7 +228,9 @@ body[data-screen="table"] .topbar { display: none; }
 .gd-menu {
     position: absolute;
     left: 20px; top: 68px;
-    width: max(250px, calc(180px / var(--gd-s, 1)));
+    width: max-content;   /* "Music: <track>" may be longer than the other items */
+    min-width: max(250px, calc(180px / var(--gd-s, 1)));
+    max-width: calc(100% - 40px);
     padding: 8px 0;
     border: 1px solid rgba(255, 255, 255, .08);
     border-radius: 12px;
@@ -252,6 +254,7 @@ body[data-screen="table"] .topbar { display: none; }
     text-align: left;
     white-space: nowrap;
 }
+.gd-menu button > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .gd-menu button + button { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .09); }
 .gd-menu .gd-ico { width: max(28px, calc(20px / var(--gd-s, 1))); height: max(28px, calc(20px / var(--gd-s, 1))); }
 .gd-menu button:active { background: rgba(255, 255, 255, .08); }

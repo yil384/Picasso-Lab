@@ -2520,8 +2520,9 @@ function openSettings() {
 // ---------- music (window.GuandanMusic, events/static/games-music.js) ----------
 // 设置 and the 音乐 popup (the lobby rail's record, the table's ☰) share one section: 开 / 关, then the tracks
 // as one radio group. 自动 lets each game play its own track; every track shows its record (label colour),
-// title, artist and style, and a 播放中 plate on the one playing. Under the list, Credits: one small line per
-// track, the exact attribution its licence asks for. Picking a track while the music is off turns it on.
+// title, artist and style, and a 播放中 plate (and a turning record) on the one that actually plays. Under the
+// list, Credits: the exact attribution each licence asks for (GuandanMusic.credits). Picking a track while the
+// music is off turns it on.
 function musicText(track, key) {
     return track?.[key]?.[isZH() ? "zh" : "en"] || "";
 }
@@ -2535,39 +2536,42 @@ function musicRecordHTML(color, color2) {
     return `<span class="gd-rec${color2 ? " is-auto" : ""}" style="--rec: ${color}${color2 ? `; --rec-2: ${color2}` : ""}" aria-hidden="true"><i></i></span>`;
 }
 
-// A track's credit lines in order, joined by " · " (wrapping after a dot, never before one): a line that is a
-// web address links to itself, and the site named in brackets in the first line links to the track's page
-// there (or the site's home).
-function musicCreditHTML(track) {
-    const link = (href, text) => `<a href="${encodeHTML(href)}" target="_blank" rel="noopener">${encodeHTML(text)}</a>`;
-    const lines = track.credit.map((line, i) => {
-        if (/^https?:\/\/\S+$/.test(line)) return link(line, line);
+// A credit block's lines in order, joined by " · " (wrapping after a dot, never before one): a line that is a
+// web address links to itself (and may wrap only after a slash), and the site named in brackets in the first
+// line links to the block's source there (or the site's home).
+function musicCreditHTML(block) {
+    const link = (href, html) => `<a href="${encodeHTML(href)}" target="_blank" rel="noopener">${html}</a>`;
+    const lines = block.lines.map((line, i) => {
+        if (/^https?:\/\/\S+$/.test(line)) return link(line, encodeHTML(line).replace(/\/+/g, "$&<wbr>"));
         const site = i === 0 && /^(.*\()([a-z0-9.-]+\.(?:com|org))(\).*)$/i.exec(line);
         if (!site) return encodeHTML(line);
-        const href = track.source && new URL(track.source).hostname.endsWith(site[2]) ? track.source : `https://${site[2]}`;
-        return `${encodeHTML(site[1])}${link(href, site[2])}${encodeHTML(site[3])}`;
+        const href = block.source && new URL(block.source).hostname.endsWith(site[2]) ? block.source : `https://${site[2]}`;
+        return `${encodeHTML(site[1])}${link(href, encodeHTML(site[2]))}${encodeHTML(site[3])}`;
     });
     return `<p>${lines.join("&nbsp;· ")}</p>`;
 }
 
-function musicSectionHTML() {
+// `withKey`: the 开 / 关 row is labelled 音乐 in 设置; the 音乐 popup's own title says it already.
+function musicSectionHTML(withKey = true) {
     const M = window.GuandanMusic;
     if (!M) return "";
     const on = M.isOn();
     const choice = M.choice();
     const now = M.current()?.id;
+    const playing = M.playing();
     const gd = M.track(M.defaults.guandan), hd = M.track(M.defaults.holdem);
-    const row = (id, record, title, meta) => `<label class="gd-track${id === choice ? " is-chosen" : ""}${on && id === now ? " is-playing" : ""}" data-track="${id}">
+    const row = (id, record, title, meta) => `<label class="gd-track${id === choice ? " is-chosen" : ""}${playing && id === now ? " is-playing" : ""}" data-track="${id}">
             <input type="radio" name="gd-set-track" value="${id}"${id === choice ? " checked" : ""}><i class="gd-track-dot"></i>${record}
             <span class="gd-track-text"><b>${encodeHTML(title)}</b><small>${encodeHTML(meta)}</small></span>
             <span class="gd-track-now">${L("Playing", "播放中")}</span>
         </label>`;
     const name = t => musicText(t, "title").replace(/ /g, "\u00a0");
+    const zhName = t => /^[A-Za-z0-9]/.test(name(t)) ? ` ${name(t)}` : name(t);   // a space before a Latin name
     const auto = row("auto", musicRecordHTML(gd.color, hd.color), L("Auto", "自动"),
-        L(`${name(gd)} at Guandan, ${name(hd)} at Hold'em`, `掼蛋放${name(gd)}，德州放 ${name(hd)}`));
+        L(`${name(gd)} at Guandan, ${name(hd)} at Hold'em`, `掼蛋放${zhName(gd)}，德州放${zhName(hd)}`));
     const tracks = M.tracks.map(t => row(t.id, musicRecordHTML(t.color), musicText(t, "title"), musicMeta(musicText(t, "artist"), musicText(t, "style")))).join("");
-    const credits = M.tracks.filter(t => t.credit?.length).map(musicCreditHTML).join("");
-    return `<div class="gd-setrow"><span class="gd-setrow-k">${L("Music", "音乐")}</span>
+    const credits = (M.credits || []).map(musicCreditHTML).join("");
+    return `<div class="gd-setrow"${withKey ? "" : ` role="group" aria-label="${L("Music", "音乐")}"`}>${withKey ? `<span class="gd-setrow-k">${L("Music", "音乐")}</span>` : ""}
             <label class="gd-radio"><input type="radio" name="gd-set-music" value="on"${on ? " checked" : ""}><i></i>${L("On", "开")}</label>
             <label class="gd-radio" data-music-off><input type="radio" name="gd-set-music" value="off"${on ? "" : " checked"}><i></i>${L("Off", "关")}</label>
         </div>
@@ -2579,13 +2583,13 @@ function musicSectionHTML() {
 function syncMusicMarks(scope) {
     const M = window.GuandanMusic;
     if (!M) return;
-    const on = M.isOn(), choice = M.choice(), now = M.current()?.id;
+    const on = M.isOn(), choice = M.choice(), now = M.current()?.id, playing = M.playing();
     scope.querySelectorAll(`input[name="gd-set-music"]`).forEach(input => { input.checked = (input.value === "on") === on; });
     scope.querySelector(".gd-tracks")?.classList.toggle("is-off", !on);
     scope.querySelectorAll(".gd-track").forEach(row => {
         const id = row.dataset.track;
         row.classList.toggle("is-chosen", id === choice);
-        row.classList.toggle("is-playing", on && id === now);
+        row.classList.toggle("is-playing", playing && id === now);
         const input = row.querySelector("input");
         if (input) input.checked = id === choice;
     });
@@ -2614,7 +2618,7 @@ function openMusic(container, onClose) {
     let unbind = () => {};
     const close = openPopup({
         title: L("Music", "音乐"),
-        html: `<div class="gd-settings">${musicSectionHTML()}</div>`,
+        html: `<div class="gd-settings">${musicSectionHTML(false)}</div>`,
         container,
         onClose: () => { unbind(); onClose?.(); }
     });
@@ -3756,7 +3760,7 @@ function menuHTML() {
         ["rules", tableIcon("rules"), L("Rules", "规则")],
         ["tracker", tableIcon("tracker"), jipaiOpen ? L("Hide tracker", "收起记牌") : L("Card tracker", "记牌")],
         ["lang", tableIcon("lang"), isZH() ? "English" : "中文"],
-        music ? ["music", tableIcon("music"), music.isOn?.() ? L("Music: on", "音乐：开") : L("Music: off", "音乐：关")] : null,
+        music ? ["music", tableIcon("music"), music.isOn?.() && music.current?.() ? encodeHTML(L(`Music: ${music.current().short.en}`, `音乐：${music.current().short.zh}`)) : L("Music: off", "音乐：关")] : null,
         ["newroom", tableIcon("table"), L("New table", "新桌")],
         ["exit", tableIcon("exit"), L("Back to events", "返回活动")]
     ].filter(Boolean);
