@@ -175,8 +175,8 @@ email start 5/h, claims 10/h, other calls 600/min. `Authorization: Bearer <token
 | `POST /v1/refill` (B) | → `{ account }` · 409 `not_needed` (refill only when chips < 2,000 and no chips at any table; sets chips to 10,000, refills += 1) |
 | `GET /v1/leaderboard?game=holdem\|guandan&limit=50` (B optional) | → `{ rows: [{ pid, name, chips, net, hands, won, biggestPot } \| { pid, name, rounds, wins }], me?: row }` |
 | `POST /v1/guandan/round` (B) | `{ room, round, won, place }` → `{ ok }` |
-| `POST /v1/email/start` (B) | `{ email }` → `{ lid, poll }` · 403 `disabled` when the flag is off |
-| `POST /v1/email/complete` | `{ lid, idToken }` → `{ ok, name }` · 401 `bad_token`, 404 `expired`, 409 `email_mismatch` |
+| `POST /v1/email/start` (B) | `{ email }` → `{ lid, poll, code }` · 403 `disabled` when the flag is off |
+| `POST /v1/email/complete` | `{ lid, idToken, code }` → `{ ok, name, nameReserved }` · 401 `bad_token`, 404 `expired`, 409 `email_mismatch`, 409 `need_code` / `bad_code` (`merge: bool`), 409 `at_table`, 409 `already_linked` |
 | `POST /v1/email/poll` | `{ lid, poll }` → `{ status: "pending" }` \| `{ status: "done", token, account }` |
 | `POST /v1/signout` (B) | → `{ ok }` (revokes this device token) |
 | `GET /v1/health` | → `{ ok, tables, players, uptime }` |
