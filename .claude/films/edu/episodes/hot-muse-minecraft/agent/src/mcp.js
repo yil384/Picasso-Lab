@@ -23,7 +23,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { MCP_SKILLS, SKILL_NAMES, validateArgs, RESULT_CODES } from './contracts.js';
+import { RESULT_CODES, skillSet } from './contracts.js';
 import { createQueue, isFinal, statusOf, QUEUE_MAX, REPEAT_MS } from './mcp-queue.js';
 import { createPlanner, describeMissing } from './plan.js';
 
@@ -43,14 +43,16 @@ function argText(k, v) {
   if (v.type === 'array') return `${k}: list of ${v.minItems ?? 0} to ${v.maxItems} {${Object.keys(v.items?.properties ?? {}).join(', ')}}`;
   if (v.type === 'object') return `${k}: {${Object.entries(v.properties ?? {}).map(([pk, pv]) => argText(pk, pv)).join(', ')}}`;
   if (v.type === 'integer') return `${k}: integer${v.maximum - v.minimum <= 1000 ? ` ${v.minimum} to ${v.maximum}` : ''}`;
+  if (v.type === 'boolean') return `${k}: true|false`;
   if (v.type === 'string') return `${k}: text${v.maxLength ? ` (1 to ${v.maxLength} characters)` : ''}`;
   return `${k}: ${v.type}`;
 }
 
 /** One line per skill: name {args} - what it does. Goes into play's description so the agent needs no lookup. */
-export function skillList() {
-  return MCP_SKILLS.map(({ function: f }) => {
-    const args = Object.entries(f.parameters.properties ?? {}).map(([k, v]) => argText(k, v)).join(', ');
+export function skillList(skills = skillSet().mcpSkills) {
+  return skills.map(({ function: f }) => {
+    const required = f.parameters.required ?? Object.keys(f.parameters.properties ?? {});
+    const args = Object.entries(f.parameters.properties ?? {}).map(([k, v]) => `${argText(k, v)}${required.includes(k) ? '' : ' (optional)'}`).join(', ');
     return `- ${f.name} {${args}}: ${f.description}`;
   }).join('\n');
 }
@@ -96,7 +98,8 @@ const REPLY_OUT = z.object({
  * @param {object} hooks from createWeb: newSession(req, adult, {key, address}), lookup(token), startAction(s, tool,
  *   args), stateText(s), stopSession(s, reason), endSession(s, reason), links(s, base) -> {eyes, watch} (live_view
  *   only), liveVideo(s) -> {videoUrl, embedUrl} | null, leaveQueue(key), within(promise, ms), TIMEOUT, log, now(),
- *   clientKey(req), base(req), leaseMs, initLimiter (take(key)), limits {sessions, perAddress}, callMs (tests)
+ *   clientKey(req), base(req), leaseMs, initLimiter (take(key)), limits {sessions, perAddress}, callMs (tests),
+ *   skills (contracts.skillSet(): the skills play and play_sequence take; default the 10 tools and craft_batch)
  * @returns {(req, res) => Promise<void>} the /mcp handler
  */
 export function createMcp(hooks) {
@@ -108,7 +111,9 @@ export function createMcp(hooks) {
     handles.set(h, token);
     return h;
   };
-  const SKILLS = skillList();
+  // the skills play and play_sequence take: the 10 tools and craft_batch, plus a body's extra ones (BODY=mineai)
+  const skills = hooks.skills ?? skillSet();
+  const SKILLS = skillList(skills.mcpSkills);
   const now = hooks.now ?? Date.now; // the web's clock (leases, idle, repeats); call deadlines run on the real one
   const callMs = hooks.callMs ?? CALL_MS;
   /** How long a call waits for its steps: callMs less the time its reply takes to build, so the reply leaves within callMs. */
@@ -302,6 +307,8 @@ export function createMcp(hooks) {
         table: near('crafting_table'),
         furnace: near('furnace'),
         before: queueOf(s).open.map((st) => ({ skill: st.skill, args: st.args })),
+        // a body whose crafts and smelts put the station back into the inventory afterwards (BODY=mineai)
+        temporaryStations: Boolean(s.body?.temporaryStations),
       });
     } catch (e) {
       hooks.log.event('mcp_check_error', { game: s.id, message: String(e?.message ?? e).slice(0, 300) });
@@ -323,7 +330,7 @@ export function createMcp(hooks) {
     const steps = raw.steps.map((call, i) => {
       const p = splitCall(call);
       if (p.error) { bad.push(`${i + 1}. ${p.skill}: not run: ${p.error}`); return null; }
-      const v = validateArgs(p.skill, p.args ?? {});
+      const v = skills.validate(p.skill, p.args ?? {});
       if (!v.ok) { bad.push(`${i + 1}. ${p.skill}: not run, bad arguments: ${v.error}`); return null; }
       return { skill: p.skill, args: v.args };
     });
@@ -421,7 +428,7 @@ export function createMcp(hooks) {
     throw new Error('no game running: call start_game first');
   };
 
-  const callShape = { skill: z.enum(SKILL_NAMES), args: z.record(z.string(), z.any()).optional().describe("the skill's arguments, e.g. {\"block\": \"oak_log\", \"n\": 3} for collect") };
+  const callShape = { skill: z.enum(skills.names), args: z.record(z.string(), z.any()).optional().describe("the skill's arguments, e.g. {\"block\": \"oak_log\", \"n\": 3} for collect") };
   const requestIdShape = z.string().min(1).max(64).optional().describe(`any id of yours for this call (1 to 64 characters): if the call is sent again with the same request_id (a retry after a broken connection), nothing runs twice and the reply carries the first call's results. Without one, the same call within ${REPEAT_MS / 1000} s counts as a repeat; give a new request_id to repeat a call on purpose`);
   const queueText = `Steps run in order in a queue: what does not finish within ${Math.round(callMs / 1000)} s keeps running after the reply (a later reply, or get_state, reports it); a step that fails cancels the steps queued after it; stop clears the queue. Before anything runs, a check simulates your inventory through the steps: if an ingredient, fuel, tool or station is missing, the call is refused with the list (code NEED_ITEMS) and nothing runs; planks, sticks, a crafting table or a furnace that can be made from what you carry are added as crafts. Replies carry structuredContent: each step's status (pending, confirmed, failed, cancelled) and code (${RESULT_CODES.join(', ')}), what changed, and a short state.`;
 

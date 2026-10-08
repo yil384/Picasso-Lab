@@ -1,26 +1,31 @@
-<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper), how to build it, and what was measured. -->
+<!-- mineai/README.md - Mine AI MCP as the Muse bot body: the pinned upstream commit, our patches (crafting on Paper, the watchdog window, the host token), how to build it, and what was measured. -->
 # Mine AI MCP as the bot body: pinned upstream, our patches
 
 Decision (2026-10-08, after the M0 reuse spike, `../../../../research/muse-reuse-spike.md`): run the Mine AI MCP
 runtime (https://github.com/aibengineering/mine-ai-mcp, MIT) as the body of a guest bot, behind our gateway. Their
 code never enters this repository. We keep a pinned upstream commit and our patch files, and
 `fetch-and-patch.sh` clones that commit into a folder, applies the patches and installs the dependencies at build
-time. This folder is the first piece of that work: their crafting failed on Paper, the server we deploy, and the
-patches here fix it.
+time. How the agent runs it (`BODY=mineai`, one host per guest game) is in `../README.md`, section "The Mine AI MCP
+body"; this folder is the runtime itself: the pin, our four patches, the build, and the measurements of the crafting
+fix (their crafting failed on Paper, the server we deploy).
 
 | File | What it is |
 | --- | --- |
-| `fetch-and-patch.sh` | `mineai/fetch-and-patch.sh <new folder>`: clone the pinned commit, `git apply` our patches in order, `bun install --frozen-lockfile`, check that `node_modules/mineflayer` is their pinned fork, typecheck, run the crafting tests. `--no-install`, `--no-check` |
-| `patches/mine-ai-mcp/0001-craft-by-confirmed-window-clicks.patch` | the fix: crafting by confirmed window clicks (below) |
-| `patches/mine-ai-mcp/0002-confirmed-crafting-tests.patch` | its tests: a bot double with a server's side of windows that also sends Paper's result burst |
-| `LICENSE-mine-ai-mcp.txt` | their MIT notice, kept with the patches |
-| `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route |
+| `UPSTREAM.json` | the one place the pin is written down: their repository, the commit, their mineflayer fork's commit, and our patches in the order they apply |
+| `fetch-and-patch.sh` | the build: `mineai/fetch-and-patch.sh <new folder>`: clone the pinned commit, `git apply` our patches in order, `bun install --frozen-lockfile`, check that `node_modules/mineflayer` is their pinned fork, stamp the folder (`.muse-mineai.json`: the commit and each patch's sha-256), typecheck, run the crafting tests. `--no-install`, `--no-check`. The agent image runs it too (`deploy/Dockerfile.agent`, `--build-arg MINEAI=1`) |
+| `../scripts/mineai-fetch.mjs` | the same fetch in Node, which can also update a folder in place; `--check <dir>` says whether a folder is exactly the pin plus these patches (either script's stamp) |
+| `patches/0001-craft-by-confirmed-window-clicks.patch` | the fix: crafting by confirmed window clicks (below) |
+| `patches/0002-confirmed-crafting-tests.patch` | its tests: a bot double with a server's side of windows that also sends Paper's result burst |
+| `patches/0003-unresponsive-window-from-env.patch` | their supervisor's 5 s event-loop watchdog widened by `MINEAI_UNRESPONSIVE_MS` (5-120 s) for a loaded machine |
+| `patches/0004-host-token.patch` | with `MINEAI_HOST_TOKEN` set (from the agent, per host, environment only), their host and its runtime refuse requests without `Authorization: Bearer <token>` (their host had no authentication) |
+| `LICENSE-mine-ai-mcp` | their MIT notice, kept with the patches |
+| `bench/` | the scripted checks behind the numbers below (no model): crafting, smelting, chests, equip and drop against the server's own record, and the strict iron route on their tools; `gateway-iron.mjs`: the strict iron route through our `/mcp` (`../test/e2e/mcp-iron.mjs`), n games in turn or at once, with every host's and runtime's memory and CPU, the agent's event loop and the bots' deaths |
 
 ## Pins
 
 | What | Pinned at | From |
 | --- | --- | --- |
-| Mine AI MCP | `2fe1306a0ac51efa99154048e65f2caff00a8934` (upstream `main` on 2026-10-08) | `fetch-and-patch.sh` |
+| Mine AI MCP | `2fe1306a0ac51efa99154048e65f2caff00a8934` (upstream `main` on 2026-10-08) | `UPSTREAM.json` |
 | their mineflayer fork | `9fa1140b90877a084efd988905df0c0eceaa78d0` (mineflayer 4.39.0 + their fixes) | their `package.json` and `bun.lock` |
 | prismarine-physics, prismarine-recipe forks | `56a6794611069272653b14eb078a1454633f4eb3`, `542f0600f5ddf07bb16df67fa1ac06e603bd28e0` | their overrides |
 | minecraft-data | 3.116.0 from their release `mine-ai-c932f743` | their overrides |
@@ -32,9 +37,11 @@ No patch to their mineflayer fork is needed: the fix replaces the one call into 
 ## Build: Bun
 
 ```sh
-BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/rv-craft/mineai-build   # under a minute with a warm Bun cache
-cd ~/picasso-work/rv-craft/mineai-build
-bun src/server/host.ts --minecraft-port 25566 --username Tst_rv_cp --listen-port 25691 --data-root <dir>
+BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime   # under a minute with a warm Bun cache
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime --check        # the pin plus our 4 patches, installed
+BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime MINEAI_RUNTIME=bun npm start   # the agent, one host per game
+cd ~/picasso-work/mineai-runtime && bun src/server/host.ts --minecraft-port 25566 --username Tst_rv_cp \
+  --listen-port 25691 --data-root <dir>                                     # or one host by hand
 ```
 
 Install and run with **Bun** (1.4.2 here; their `package.json` asks for Bun >= 1.4 or Node >= 24.15). The install
@@ -168,7 +175,7 @@ the Paper jar and whose `runtimes/1.21.4/` holds Paper's `libraries` and `versio
 ## License
 
 Mine AI MCP, Mine Labs and the block highlighter are MIT, "Copyright (c) 2026 AI Bengineering"
-(`LICENSE-mine-ai-mcp.txt`). Their forks keep the upstream MIT licenses (mineflayer: Copyright (c) 2015 Andrew Kelley;
+(`LICENSE-mine-ai-mcp`). Their forks keep the upstream MIT licenses (mineflayer: Copyright (c) 2015 Andrew Kelley;
 prismarine-physics: Copyright (c) 2020 PrismarineJS; prismarine-recipe and minecraft-data: MIT, PrismarineJS). The
 patches modify their MIT code and add files ported from this agent; the built tree keeps their `LICENSE`, and any
 image that ships it keeps that notice. Whether to offer patch 0001 upstream (and under which terms for our part) is

@@ -222,9 +222,33 @@ export function loadConfig(env = process.env) {
   if (proxySecret && trustProxy === 'off') problems.push('WEB_PROXY_SECRET needs WEB_TRUST_PROXY (cloudflare, or the number of proxies that append to X-Forwarded-For)');
   hidden(web, 'proxySecret', proxySecret);
 
+  // Which body plays a guest game: ours (mineflayer in this process, src/body.js) or mineai (one Mine AI MCP host per
+  // game in its own process, src/mineai/). Production keeps ours until the switch is flipped.
   const body = {
+    kind: r.oneOf('BODY', 'ours', ['ours', 'mineai']),
     maxTravel: r.int('BODY_MAX_TRAVEL', 256, 8, 10_000),
   };
+  // BODY=mineai: the Mine AI MCP runtime (built by mineai/fetch-and-patch.sh), one host per guest game on
+  // a loopback port of a private range, with a random token per host (never on a command line)
+  const mineaiDir = r.str('MINEAI_DIR', '');
+  const mineaiData = r.str('MINEAI_DATA_DIR', '');
+  const mineai = {
+    dir: mineaiDir ? path.resolve(ROOT, mineaiDir) : '',
+    runtime: r.oneOf('MINEAI_RUNTIME', 'node', ['node', 'bun']),
+    exec: r.str('MINEAI_EXEC', ''), // the node (24.15 or newer) or bun binary; default: this node, or "bun" on the PATH
+    portBase: r.int('MINEAI_PORT_BASE', 27100, 1024, 65_000),
+    ports: r.int('MINEAI_PORTS', 64, 1, 512),
+    maxHosts: r.int('MINEAI_MAX_HOSTS', maxSessions, 1, 64),
+    startMs: r.int('MINEAI_START_MS', 90_000, 5_000, 600_000),
+    heartbeatMs: r.int('MINEAI_HEARTBEAT_MS', 5_000, 200, 60_000),
+    heartbeatMisses: r.int('MINEAI_HEARTBEAT_MISSES', 3, 1, 100),
+    // the runtime's own watchdog (its child's event loop), patched to read this: 5 s upstream, more for a loaded host
+    unresponsiveMs: r.int('MINEAI_UNRESPONSIVE_MS', 5_000, 5_000, 120_000),
+    dataDir: mineaiData ? path.resolve(ROOT, mineaiData) : '', // per-bot SQLite; empty: temporary, gone with the host
+    views: r.bool('MINEAI_VIEWS', true), // the live views (/eyes, /watch) from a viewer inside the host's bot process
+  };
+  if (body.kind === 'mineai' && !mineai.dir) problems.push('BODY=mineai needs MINEAI_DIR, the folder with the Mine AI MCP runtime (mineai/fetch-and-patch.sh <dir>)');
+  if (mineai.portBase + 3 * mineai.ports > 65_535) problems.push('MINEAI_PORT_BASE + 3 x MINEAI_PORTS must stay under 65536 (each host takes a port and its two live views two more)');
 
   const caps = {
     steps: r.int('STEP_CAP', 300, 1, 100_000),
@@ -300,7 +324,7 @@ export function loadConfig(env = process.env) {
   }
 
   if (problems.length) throw new ConfigError(problems);
-  return deepFreeze({ root: ROOT, model, mc, web, body, caps, memory, log, stream });
+  return deepFreeze({ root: ROOT, model, mc, web, body, mineai, caps, memory, log, stream });
 }
 
 /** The process-wide config, read from process.env at first import. */

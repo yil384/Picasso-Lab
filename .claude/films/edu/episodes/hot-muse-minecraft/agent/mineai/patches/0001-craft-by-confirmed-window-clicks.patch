@@ -1,8 +1,8 @@
 Subject: Craft by confirmed window clicks, so crafting works on Paper
 
 Applies to: https://github.com/aibengineering/mine-ai-mcp at 2fe1306a0ac51efa99154048e65f2caff00a8934 (MIT,
-Copyright (c) 2026 AI Bengineering; see ../../LICENSE-mine-ai-mcp.txt). Kept by Picasso Lab (UC San Diego) for
-"Muse plays Minecraft"; applied by ../../fetch-and-patch.sh with `git apply`.
+Copyright (c) 2026 AI Bengineering; see mineai/LICENSE-mine-ai-mcp). Patched for Muse plays Minecraft: kept by
+Picasso Lab (UC San Diego), applied in order (mineai/UPSTREAM.json) by mineai/fetch-and-patch.sh with `git apply`.
 
 Why: on Paper 1.21.4 their fork of mineflayer (9fa1140) fails most crafts. After the click that completes a recipe,
 Paper answers with a burst (the clicked slot, the result slot empty and then filled, the grid, a full resync) where

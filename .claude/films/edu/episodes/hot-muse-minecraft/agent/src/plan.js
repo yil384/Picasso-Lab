@@ -36,6 +36,8 @@ const WALK_BACK = 16;
 const CLIMB = 4;
 const REUSE_RADIUS = 24;
 const FETCH_RADIUS = 28;
+/** Skills whose inventory effect the check knows (or knows to be none); after any other, missing items only warn. */
+const KNOWN = new Set(['get_state', 'say', 'eat', 'attack', 'equip', 'sleep', 'explore', 'policy']);
 
 /**
  * @typedef {{skill: string, args: object}} Step
@@ -136,6 +138,7 @@ export function createPlanner({ version = '1.21.4' } = {}) {
    * carried is put down and stays there (src/stations.js), so it leaves the inventory and stands nearby from then on.
    */
   function useStation(st, name, key) {
+    if (st.keep && have(st, name) > 0) return; // put down for the step and picked up again (temporaryStations)
     if (have(st, name) <= 0 || (st[key]() !== false && !leftBehind(st, key))) return;
     add(st, name, -1);
     st[key] = () => true;
@@ -276,6 +279,15 @@ export function createPlanner({ version = '1.21.4' } = {}) {
     const lack = want - have(st, item);
     if (lack > 0) { miss({ item, need: lack }); add(st, item, lack); }
     if (!hasFurnace(st)) simCraft(st, 'furnace', 1, ops, (x) => miss({ ...x, for: 'a furnace' }), 'a furnace', true);
+    if (st.keep) { // one furnace, put down and picked up again within the step, one fuel; the output comes at once
+      const fuel = chooseFuel(st, item, want);
+      if (fuel) add(st, fuel.name, -fuel.units);
+      const left = want - (fuel?.covers ?? 0);
+      if (left > 0) miss({ item: 'coal', need: Math.ceil(left / FUEL.coal), note: `fuel for ${left} more ${item}: coal or charcoal (1 per 8 items), or planks or logs (2 per 3 items)` });
+      add(st, item, -want);
+      add(st, SMELT[item], want);
+      return;
+    }
     const pieces = SMALL_ORDER.filter((name) => name !== item).reduce((k, name) => k + have(st, name), 0);
     const target = Math.max(1, Math.min(want, MAX_PARALLEL, pieces));
     // a furnace a go_to left behind is used only when the bot can put down or make none (and finds it within 24)
@@ -361,6 +373,15 @@ export function createPlanner({ version = '1.21.4' } = {}) {
       else if (have(st, args.material) > 0) add(st, args.material, -Math.min(need, have(st, args.material))); // part of it may stand already
       else miss({ item: args.material, need, for: args.blueprint });
     }
+    // the extra skills of BODY=mineai (src/mineai/skills.js): what they bring or take, where it is known
+    else if (skill === 'hunt') add(st, args.drop, args.n);
+    else if (skill === 'drop') add(st, args.item, -Math.min(args.n, have(st, args.item)));
+    else if (skill === 'chest') {
+      if (args.action !== 'inspect') for (const { item, n } of args.items ?? []) add(st, item, args.action === 'withdraw' ? n : -Math.min(n, have(st, item)));
+    } else if (skill === 'bucket') {
+      const full = `${args.liquid ?? 'water'}_bucket`;
+      if (args.action === 'fill') { if (have(st, 'bucket') > 0) { add(st, 'bucket', -1); add(st, full, 1); } } else if (have(st, full) > 0) { add(st, full, -1); add(st, 'bucket', 1); }
+    } else if (!KNOWN.has(skill)) st.unknown ??= st.label; // pick_up and the like: what it brings is not known
     return null;
   }
 
@@ -407,13 +428,16 @@ export function createPlanner({ version = '1.21.4' } = {}) {
   /**
    * position: the bot's block position (optional; without it go_to steps are not followed); smelting: what the bot's
    * furnaces are still making ({item: n}, already counted in inventory), taken to be near that position.
+   * temporaryStations: the body puts a carried table or furnace down for one step and picks it up again, and smelts in
+   * one furnace with one fuel, the output coming at once (BODY=mineai); otherwise stations stay where they were put.
    */
-  function check(steps, { inventory = {}, table = null, furnace = null, before = [], position = null, smelting = {} } = {}) {
+  function check(steps, { inventory = {}, table = null, furnace = null, before = [], position = null, smelting = {}, temporaryStations = false } = {}) {
     const start = position && [position.x, position.y, position.z].every(Number.isFinite)
       ? { x: Math.floor(position.x), y: Math.floor(position.y), z: Math.floor(position.z) } : null;
     const st = {
       inv: new Map(Object.entries(inventory).filter(([, v]) => v > 0)), table: once(table), furnace: once(furnace),
       start, pos: start, at: {}, moved: null, oven: new Map(), warnings: [], step: null, label: null,
+      keep: Boolean(temporaryStations), unknown: null,
     };
     for (const [k, v] of Object.entries(smelting ?? {})) if (v > 0) st.oven.set(k, { at: start });
     // steps queued or running already: assumed to work in full (never a reason to refuse the new ones)
@@ -431,8 +455,11 @@ export function createPlanner({ version = '1.21.4' } = {}) {
       const label = `step ${i + 1} (${describeStep(step)})`;
       st.step = i + 1;
       st.label = label;
+      const unknownBefore = st.unknown;
       const replaced = simStep(st, step, ops, (m) => lacking.push(m));
-      missing.push(...sumUp(lacking).map((m) => ({ step: i + 1, ...m })));
+      // after a step whose gains are unknown (pick_up, ...), what seems missing may come from it: a warning, not a refusal
+      if (unknownBefore) for (const m of sumUp(lacking)) warn(st, `may lack ${describeMissing(m)}, unless ${unknownBefore} brings it`);
+      else missing.push(...sumUp(lacking).map((m) => ({ step: i + 1, ...m })));
       for (const o of tidy(ops)) {
         const serves = o.why && o.why !== step.args?.item ? `for ${o.why} in ${label}` : `for ${label}`;
         out.push({ skill: 'craft', args: { item: o.item, n: o.n }, step: null, added: serves });

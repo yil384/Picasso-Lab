@@ -1,0 +1,13 @@
+{
+  "about": "The Mine AI MCP runtime behind BODY=mineai is not kept in this repo: mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs) clones this commit, applies the patches below in order and installs its dependencies from its own lockfile. Its MIT notice is in LICENSE-mine-ai-mcp (and in the fetched copy).",
+  "repo": "https://github.com/aibengineering/mine-ai-mcp",
+  "commit": "2fe1306a0ac51efa99154048e65f2caff00a8934",
+  "mineflayerFork": "9fa1140b90877a084efd988905df0c0eceaa78d0",
+  "license": "MIT, Copyright (c) 2026 AI Bengineering",
+  "patches": [
+    "patches/0001-craft-by-confirmed-window-clicks.patch",
+    "patches/0002-confirmed-crafting-tests.patch",
+    "patches/0003-unresponsive-window-from-env.patch",
+    "patches/0004-host-token.patch"
+  ]
+}

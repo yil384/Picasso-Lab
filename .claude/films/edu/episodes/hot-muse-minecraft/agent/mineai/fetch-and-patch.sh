@@ -1,19 +1,28 @@
 #!/usr/bin/env bash
-# fetch-and-patch.sh - build the Mine AI MCP runtime we use as the bot body: clone the pinned upstream commit into a
-# target folder, apply our patches (patches/mine-ai-mcp/*.patch, in order), install its dependencies with Bun from
-# its own lockfile (frozen: the forks of mineflayer, prismarine-physics and prismarine-recipe stay at the commits it
-# pins), then typecheck and run the crafting tests. Their code never enters this repository; see README.md.
+# fetch-and-patch.sh - build the Mine AI MCP runtime we use as the bot body (BODY=mineai, MINEAI_DIR): clone the
+# pinned upstream commit (UPSTREAM.json) into a target folder, apply our patches (UPSTREAM.json's list, in order),
+# install its dependencies with Bun from its own lockfile (frozen: the forks of mineflayer, prismarine-physics and
+# prismarine-recipe stay at the commits it pins), stamp the folder (.muse-mineai.json, which
+# `node scripts/mineai-fetch.mjs <dir> --check` reads), then typecheck and run the crafting tests. Their code never
+# enters this repository; see README.md.
 #
 #   mineai/fetch-and-patch.sh <target dir> [--no-install] [--no-check]
 #
-# Needs git and Bun >= 1.4 (BUN=/path/to/bun if it is not on PATH). The target must not exist or be empty.
+# Needs git, Node (to read UPSTREAM.json) and Bun >= 1.4 (BUN=/path/to/bun if it is not on PATH). The target must not
+# exist or be empty.
 set -euo pipefail
 
-REPO=https://github.com/aibengineering/mine-ai-mcp.git
-COMMIT=2fe1306a0ac51efa99154048e65f2caff00a8934   # upstream main on 2026-10-08 ("Acknowledge first-time End credits ...")
-MINEFLAYER_FORK=9fa1140b90877a084efd988905df0c0eceaa78d0   # what their package.json pins; checked after install
-
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NODE="${NODE:-$(command -v node || true)}"
+[ -x "$NODE" ] || { echo "Node is needed to read $HERE/UPSTREAM.json (set NODE=/path/to/node)" >&2; exit 2; }
+# the pin and the patch list: UPSTREAM.json is the one place they are written down
+pin() { "$NODE" -e 'const u = require(process.argv[1]); const k = process.argv[2]; console.log(k === "patches" ? u.patches.join("\n") : u[k]);' "$HERE/UPSTREAM.json" "$1"; }
+REPO="$(pin repo).git"
+COMMIT="$(pin commit)"
+MINEFLAYER_FORK="$(pin mineflayerFork)"   # what their package.json pins; checked after install
+PATCHES=()
+while IFS= read -r p; do [ -n "$p" ] && PATCHES+=("$HERE/$p"); done < <(pin patches)
+[ "${#PATCHES[@]}" -gt 0 ] || { echo "UPSTREAM.json lists no patches" >&2; exit 1; }
 TARGET="" INSTALL=1 CHECK=1
 for arg in "$@"; do
   case "$arg" in
@@ -45,17 +54,11 @@ git -C "$TARGET" checkout -q --detach FETCH_HEAD
 [ "$(git -C "$TARGET" rev-parse HEAD)" = "$COMMIT" ] || { echo "fetched the wrong commit" >&2; exit 1; }
 
 echo "== apply our patches"
-for patch in "$HERE"/patches/mine-ai-mcp/*.patch; do
+for patch in "${PATCHES[@]}"; do
   git -C "$TARGET" apply --check "$patch"
   git -C "$TARGET" apply "$patch"
   echo "   $(basename "$patch")"
 done
-{
-  echo "mine-ai-mcp $COMMIT"
-  for patch in "$HERE"/patches/mine-ai-mcp/*.patch; do
-    echo "patch $(basename "$patch") $(git hash-object "$patch")"
-  done
-} > "$TARGET/.picasso-patched"
 
 if [ "$INSTALL" = 1 ]; then
   echo "== bun install --frozen-lockfile (Bun $("$BUN" --version))"
@@ -67,6 +70,10 @@ if [ "$INSTALL" = 1 ]; then
     *) echo "node_modules/mineflayer is not the pinned fork ${MINEFLAYER_FORK:0:7} ($fork)" >&2; exit 1 ;;
   esac
 fi
+
+# the stamp: this commit and these patch files (their sha-256), as scripts/mineai-fetch.mjs writes and checks it
+"$NODE" "$HERE/../scripts/mineai-fetch.mjs" "$TARGET" --stamp
+if [ "$INSTALL" = 1 ]; then "$NODE" "$HERE/../scripts/mineai-fetch.mjs" "$TARGET" --check; fi
 
 if [ "$CHECK" = 1 ]; then
   echo "== typecheck and crafting tests"

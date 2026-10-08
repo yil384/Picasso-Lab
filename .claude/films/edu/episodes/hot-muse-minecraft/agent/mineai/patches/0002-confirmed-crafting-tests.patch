@@ -2,7 +2,7 @@ Subject: Tests for crafting by confirmed window clicks, with Paper's result burs
 
 Applies to: https://github.com/aibengineering/mine-ai-mcp at 2fe1306a0ac51efa99154048e65f2caff00a8934 plus
 0001-craft-by-confirmed-window-clicks.patch (MIT, Copyright (c) 2026 AI Bengineering; see
-../../LICENSE-mine-ai-mcp.txt). Kept by Picasso Lab (UC San Diego) for "Muse plays Minecraft".
+mineai/LICENSE-mine-ai-mcp). Patched for Muse plays Minecraft: kept by Picasso Lab (UC San Diego).
 
 src/test-support/click-server.ts is a bot double with a server's side of windows (ported from the agent's
 test/fake-bot.js): it applies each window_click to its own copy of the window with vanilla's click rules and the

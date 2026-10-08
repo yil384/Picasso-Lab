@@ -1,0 +1,81 @@
+Mine AI MCP (https://github.com/aibengineering/mine-ai-mcp): MIT License, Copyright (c) 2026 AI Bengineering.
+The full notice is in mineai/LICENSE-mine-ai-mcp. This patch (a change for Muse plays Minecraft, picasso-lab) is
+applied to the pinned commit by mineai/fetch-and-patch.sh (or scripts/mineai-fetch.mjs); git apply skips these lines.
+0004: with MINEAI_HOST_TOKEN set, the host and its runtime answer only requests with Authorization: Bearer <token>.
+
+diff --git a/src/server/host-token.ts b/src/server/host-token.ts
+new file mode 100644
+index 0000000..dbdf4c6
+--- /dev/null
++++ b/src/server/host-token.ts
+@@ -0,0 +1,30 @@
++/**
++ * Patched for Muse plays Minecraft (picasso-lab): when MINEAI_HOST_TOKEN is set,
++ * every HTTP request to the host and to its runtime must carry
++ * "Authorization: Bearer <token>". The token comes from the environment only,
++ * never the command line. Unset, nothing changes.
++ */
++import { timingSafeEqual } from "node:crypto";
++
++interface GateRequest {
++  readonly headers: { readonly authorization?: string | readonly string[] };
++}
++interface GateResponse {
++  status(code: number): { json(body: unknown): unknown };
++}
++
++export function hostTokenGate(token: string | undefined = process.env.MINEAI_HOST_TOKEN) {
++  const expected = token ? Buffer.from(`Bearer ${token}`) : null;
++  return (request: GateRequest, response: GateResponse, next: () => void) => {
++    if (!expected) {
++      next();
++      return;
++    }
++    const given = Buffer.from(String(request.headers.authorization ?? ""));
++    if (given.length === expected.length && timingSafeEqual(given, expected)) {
++      next();
++      return;
++    }
++    response.status(401).json({ error: "This Minecraft MCP host needs its token." });
++  };
++}
+diff --git a/src/server/http.ts b/src/server/http.ts
+index 2b165f4..5be1c9b 100644
+--- a/src/server/http.ts
++++ b/src/server/http.ts
+@@ -9,6 +9,7 @@ import { StreamableHTTPServerTransport } from
+   "@modelcontextprotocol/sdk/server/streamableHttp.js";
+ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
++import { hostTokenGate } from "./host-token.js";
+ 
+ /** The transport host needs lifecycle operations, not one SDK build's nominal server class. */
+ export interface MinecraftMcpHostedServer {
+@@ -67,6 +68,7 @@ export function createMinecraftMcpHttpApplication(
+   }, Math.min(60_000, clientIdleTimeoutMs));
+   idleReaper.unref();
+ 
++  app.use(hostTokenGate());
+   app.use((request, response, next) => {
+     const origin = request.headers.origin;
+     if (!origin) {
+diff --git a/src/server/runtime-supervisor.ts b/src/server/runtime-supervisor.ts
+index b4a92c9..41c0752 100644
+--- a/src/server/runtime-supervisor.ts
++++ b/src/server/runtime-supervisor.ts
+@@ -4,6 +4,7 @@ import { createServer, request as httpRequest, type ClientRequest, type ServerRe
+ import { z } from "zod";
+ import { writeIncidentArtifact, type IncidentReference, type IncidentRetention } from "../bot-data/incident-log.js";
+ import { IncidentRecorder, type SourceIdentity } from "../diagnostics/incident-recorder.js";
++import { hostTokenGate } from "./host-token.js";
+ import {
+   RUNTIME_HEARTBEAT_MS,
+   RUNTIME_UNRESPONSIVE_MS,
+@@ -146,6 +147,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
+   };
+ 
+   const app = createMcpExpressApp({ host: options.host, allowedHosts: ["127.0.0.1", "localhost", "[::1]"] });
++  app.use(hostTokenGate());
+   app.use((request, response) => {
+     if (request.method === "GET" && request.path === "/diagnostics/runtime") {
+       response.json({ state: state.kind, heartbeatAgeMs: performance.now() - lastHeartbeat, activity, heartbeat });
