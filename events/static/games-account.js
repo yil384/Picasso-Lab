@@ -13,6 +13,8 @@ const LINK_CODE_KEY = "picasso.games.linkCode"; // { lid, code }: the link page 
 const LINK_URL = "https://yil384.github.io/Picasso-Lab/events/account-link.html";
 const FIREBASE_AUTH = "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 const SESSION_TIMEOUT_MS = 4000;
+// the dealer answers /email/start only once Resend has (its whole send is at most 9 s: SEND_BUDGET_MS in mailer.js)
+const EMAIL_START_TIMEOUT_MS = 20000;
 const POLL_MS = 2500;
 const POLL_FOR_MS = 30 * 60 * 1000;
 const REFILL_BELOW = 2000;
@@ -24,10 +26,10 @@ export function createAccount(ctx) {
     const api = `${ctx.origin.replace(/\/+$/, "")}/v1`;
     const listeners = new Set();
     let account = readCache();
-    let features = { emailLink: false };
+    let features = { emailLink: false, emailSender: "firebase" };
     let status = "pending";            // pending | online | offline
     let suggestions = [];
-    let pendingLink = null;            // { lid, poll, email, until } while an email link waits to be opened
+    let pendingLink = null;            // { lid, poll, code, email, from, until } while an email link waits to be opened
     let pollTimer = 0;
     const attempted = new Set();       // Guandan rounds tried this page load
 
@@ -175,8 +177,8 @@ export function createAccount(ctx) {
             title: L("Privacy", "隐私说明"),
             narrow: true,
             html: `<p class="ga-privacy">${L(
-                "So you can pick your name up again in a new browser, the game service keeps a salted hash of your network address (never the raw IP) together with the guest names used from that network in the last 30 days, and deletes it after 30 days; backups never hold it. A new browser only sees a “Use the name X?” suggestion, nothing happens until you click it, and a click only takes the name: chips, records and seats stay with their account (to use one account on several devices, save it with an email). People on the same campus network or router may see the same suggestion, so the name of an email-saved account is never suggested. Your email is used only to send the sign-in link; we keep a masked form and a hash. Whoever administers the server could technically work a network address back out of its hash. All chips are play money: they cannot be bought, sold or transferred and have no value.",
-                "为了让你换浏览器时能一键用回原来的昵称，游戏服务会把你的网络地址做加盐哈希（不保存、不记录原始 IP），并记住最近 30 天里在这个网络用过的游客昵称，30 天后自动删除，备份里也不保留。新浏览器只会看到“继续使用昵称 X？”的建议，必须由你点一下才会生效，而且只换昵称：筹码、战绩和座位都不会跟过来（想在别的设备上用同一个账号，请用邮箱保存）。同一校园网或路由器下的人也可能看到同样的建议，所以绑定了邮箱的账号的昵称永远不会这样被推荐。邮箱只用于发送登录链接，我们只保存脱敏地址和一个哈希。能管理这台服务器的人在技术上可以从哈希反推出网络地址。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。")}</p>`
+                "So you can pick your name up again in a new browser, the game service keeps a salted hash of your network address (never the raw IP) together with the guest names used from that network in the last 30 days, and deletes it after 30 days; backups never hold it. A new browser only sees a “Use the name X?” suggestion, nothing happens until you click it, and a click only takes the name: chips, records and seats stay with their account (to use one account on several devices, save it with an email). People on the same campus network or router may see the same suggestion, so the name of an email-saved account is never suggested. Your email is used only to send the sign-in link, which goes out through the mail service Resend; we keep a masked form and a hash. Whoever administers the server could technically work a network address back out of its hash. All chips are play money: they cannot be bought, sold or transferred and have no value.",
+                "为了让你换浏览器时能一键用回原来的昵称，游戏服务会把你的网络地址做加盐哈希（不保存、不记录原始 IP），并记住最近 30 天里在这个网络用过的游客昵称，30 天后自动删除，备份里也不保留。新浏览器只会看到“继续使用昵称 X？”的建议，必须由你点一下才会生效，而且只换昵称：筹码、战绩和座位都不会跟过来（想在别的设备上用同一个账号，请用邮箱保存）。同一校园网或路由器下的人也可能看到同样的建议，所以绑定了邮箱的账号的昵称永远不会这样被推荐。邮箱只用于发送登录链接（通过邮件服务 Resend 发送），我们只保存脱敏地址和一个哈希。能管理这台服务器的人在技术上可以从哈希反推出网络地址。所有筹码都是虚拟的，不能购买、出售或转让，没有任何价值。")}</p>`
         });
     }
 
@@ -261,7 +263,9 @@ export function createAccount(ctx) {
         return close;
     }
 
-    // ---------- save with email (Firebase email link, completed on account-link.html) ----------
+    // ---------- save with email (completed on account-link.html) ----------
+    // The games service either sends the email itself from @picasso-lab.com (it answers sent: true; the link carries a
+    // single-use token) or leaves it to Firebase Auth (sent: false: this page asks Firebase to send its own link).
     const masked = email => {
         const [user, domain] = String(email).split("@");
         return `${(user || "").slice(0, 1)}***@${domain || ""}`;
@@ -271,6 +275,9 @@ export function createAccount(ctx) {
             return `<div class="ga-email is-sent">
                 <span class="ga-email-ring" aria-hidden="true"></span>
                 <p class="gd-confirm-text">${L(`A sign-in link was sent to ${esc(masked(pendingLink.email))}. Open it from the email.`, `登录链接已发送到 ${esc(masked(pendingLink.email))}，请在邮件里点开`)}</p>
+                <p class="ga-email-from">${pendingLink.from
+                    ? L(`It comes from <b>${esc(pendingLink.from)}</b>. Not in your inbox? Check spam or junk.`, `发件人是 <b>${esc(pendingLink.from)}</b>。收件箱里没有的话，请看看垃圾邮件。`)
+                    : L("Not in your inbox? Check spam or junk.", "收件箱里没有的话，请看看垃圾邮件。")}</p>
                 <p class="ga-email-wait">${L("Waiting for you to open the link…", "等待你点开邮件里的链接…")}</p>
                 ${pendingLink.code ? `<p class="ga-email-code">${L("If the link page asks for a code, enter", "如果链接页要求输入验证码，请填")} <b>${esc(pendingLink.code)}</b></p>` : ""}
                 <div class="gd-confirm-row"><button class="btn secondary" type="button" data-ga="cancel">${L("Cancel", "取消")}</button><button class="btn primary" type="button" data-ga="resend">${L("Resend", "重新发送")}</button></div>
@@ -309,13 +316,19 @@ export function createAccount(ctx) {
             const btn = body.querySelector("[type=submit], [data-ga=resend]");
             if (btn) btn.disabled = true;
             try {
-                const { lid, poll, code } = await request("/email/start", { email });
-                const { getAuth, sendSignInLinkToEmail } = await import(FIREBASE_AUTH);
-                const url = `${LINK_URL}?lid=${encodeURIComponent(lid)}&lang=${ctx.lang() === "en" ? "en" : "zh"}`;
-                await sendSignInLinkToEmail(getAuth(ctx.firebaseApp), email, { url, handleCodeInApp: true });
+                const lang = ctx.lang() === "en" ? "en" : "zh";
+                const out = await request("/email/start", { email, lang }, { timeout: EMAIL_START_TIMEOUT_MS });
+                const { lid, poll, code } = out;
+                const sent = out.sent === true;
+                if (!sent) {
+                    const { getAuth, sendSignInLinkToEmail } = await import(FIREBASE_AUTH);
+                    const url = `${LINK_URL}?lid=${encodeURIComponent(lid)}&lang=${lang}`;
+                    await sendSignInLinkToEmail(getAuth(ctx.firebaseApp), email, { url, handleCodeInApp: true });
+                }
                 storageSet(LINK_EMAIL_KEY, email);
                 if (code) storageSet(LINK_CODE_KEY, JSON.stringify({ lid, code }));
-                pendingLink = { lid, poll, code: code || "", email, until: Date.now() + POLL_FOR_MS };
+                const from = sent && /^[^\s@<>"]+@[^\s@<>"]+$/.test(out.from || "") ? out.from : "";
+                pendingLink = { lid, poll, code: code || "", email, from, until: Date.now() + POLL_FOR_MS };
                 show("sent");
                 startPolling(() => show("done"));
             } catch (err) {
@@ -323,6 +336,7 @@ export function createAccount(ctx) {
                 show("form", {
                     disabled: L("Saving with email is not open yet", "邮箱保存暂未开放"),
                     rate_limited: L("Too many links. Try again later", "发送太频繁，请稍后再试"),
+                    send_failed: L("The email could not be sent. Try again later", "邮件没有发出去，请稍后再试"),
                     bad_email: L("Check the email address", "邮箱格式不对"),
                     already_linked: L("This account is already saved with an email", "这个账号已经用邮箱保存过了")
                 }[err.code] || L("Could not send the link. Try again later", "发送失败，请稍后再试"));

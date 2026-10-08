@@ -41,7 +41,7 @@ test('guest: new account with token, bankroll 10,000, view shape; only the token
   assert.equal(g.account.protected, false);
   assert.match(g.a.id, /^u_[a-z2-7]{16}$/);
   assert.match(g.account.pid, /^p_[a-z2-7]{10}$/);
-  assert.deepEqual(g.features, { emailLink: false });
+  assert.deepEqual(g.features, { emailLink: false, emailSender: 'firebase' });
   assert.equal(g.suggestions, undefined, 'suggestions only when fresh');
   const saved = JSON.stringify(acc.toJSON());
   assert.ok(!saved.includes(g.token), 'raw token never stored');

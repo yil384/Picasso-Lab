@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
 <title>保存账号 · Picasso Lab</title>
 <meta name="theme-color" content="#1b2750">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,8 +13,9 @@
 <link rel="stylesheet" href="https://yil384.github.io/Picasso-Lab/events/static/guandan-ui.css">
 <style>
 /* The email-link landing page of the games account (games-account.js "save with email"): the lobby's navy
-   room and a Tencent popup panel. It confirms the email, signs in with the link, hands the ID token to the
-   games service once, signs out and says so. It never holds an account token. */
+   room and a Tencent popup panel. It redeems the emailed link's token at the games service (or, for a Firebase
+   link, confirms the email, signs in, hands the ID token over once and signs out) and says so. It never holds an
+   account token. */
 html, body { background: #223066; }
 body {
     min-height: 100vh;
@@ -99,9 +101,13 @@ html[lang="en"] .al-body .btn { --btn-ls: 0em; }
     <p class="al-note" id="al-note"></p>
 </main>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getAuth, isSignInWithEmailLink, signInWithEmailLink, signOut } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-
+// Two kinds of link land here. With ?t= the games service sent the email itself (from @picasso-lab.com): the token
+// in the link proves the address and is redeemed once at the service; no Firebase script is loaded. Without it the
+// link came from Firebase Auth (EMAIL_SENDER=firebase, also the rollback): the page signs in with the link and hands
+// the ID token to the service. Either way every change needs the 4-digit code of the device that asked (filled in
+// here when this is that device), and the page never holds an account token.
+const FIREBASE_APP = "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+const FIREBASE_AUTH = "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 const firebaseConfig = {
     apiKey: "AIzaSyBYob1aOjuudVyeO692_qfN9ocUTizUHlk",
     authDomain: "yichen-5e23e.firebaseapp.com",
@@ -113,6 +119,7 @@ const GAMES_ORIGIN = window.__PICASSO_GAMES_ORIGIN || "https://poker.picasso-lab
 const GAME_URL = "https://yil384.github.io/Picasso-Lab/events/guandan.html";
 const LINK_EMAIL_KEY = "picasso.games.linkEmail";
 const LINK_CODE_KEY = "picasso.games.linkCode";
+const LINK_TOKEN_KEY = "picasso.games.linkToken"; // sessionStorage { lid, t }: the token after it left the address bar
 const query = new URLSearchParams(location.search);
 const lid = query.get("lid") || "";
 const en = query.get("lang") === "en";
@@ -128,7 +135,21 @@ document.title = `${L("Save your account", "保存账号")} · Picasso Lab`;
 document.getElementById("al-title").textContent = L("Save with email", "用邮箱保存");
 document.getElementById("al-note").textContent = L("All chips are play money: they cannot be bought, sold or transferred.", "所有筹码都是虚拟的，不能购买、出售或转让。");
 
-const auth = getAuth(initializeApp(firebaseConfig, "account-link"));
+// The emailed token leaves the address bar at once (history, a shared screenshot); this tab keeps it for a reload.
+function takeToken() {
+    const t = query.get("t");
+    if (t) {
+        try { sessionStorage.setItem(LINK_TOKEN_KEY, JSON.stringify({ lid, t })); } catch (_) {}
+        query.delete("t");
+        try { history.replaceState(history.state, "", `${location.pathname}?${query}${location.hash}`); } catch (_) {}
+        return t;
+    }
+    try {
+        const v = JSON.parse(sessionStorage.getItem(LINK_TOKEN_KEY) || "null");
+        return v && v.lid === lid && typeof v.t === "string" ? v.t : "";
+    } catch (_) { return ""; }
+}
+const token = takeToken();
 
 // the device that asked keeps its code here: opened on that device, the page sends it without asking
 function readCode() {
@@ -179,7 +200,7 @@ function showFailed(text) {
 // Opened away from the device that asked: the person here types the code that device shows (a link sent by someone
 // else to this address stops here). merge: the email already has a saved account and that device will be signed in
 // to it; otherwise the email is about to be bound to the account on that device.
-function showCode(idToken, error = "", merge = false) {
+function showCode(error = "", merge = false) {
     body.innerHTML = `<p class="al-text">${merge
         ? L("This email already has a saved account. Opening this link signs another device in to it.", "这个邮箱已经保存过账号，确认后会让另一台设备登录这个账号。")
         : L("Confirming saves the game account on the device that sent the link with this email.", "确认后，这个邮箱会绑定到发送链接的那台设备上的游戏账号。")}</p>
@@ -190,19 +211,62 @@ function showCode(idToken, error = "", merge = false) {
     const input = document.getElementById("al-code");
     const go = () => {
         const code = input.value.trim();
-        if (!/^\d{4}$/.test(code)) return showCode(idToken, L("Enter the 4 digits", "请输入 4 位数字"), merge);
-        finish(idToken, code);
+        if (!/^\d{4}$/.test(code)) return showCode(L("Enter the 4 digits", "请输入 4 位数字"), merge);
+        finish(code);
     };
     document.getElementById("al-go").addEventListener("click", go);
     input.addEventListener("keydown", event => { if (event.key === "Enter") go(); });
     input.focus();
 }
 
+// What the service is sent: the emailed token (redeem) or the Firebase ID token (complete), plus the code if any
+let proof = null;
+
+async function finish(code) {
+    showBusy();
+    let res;
+    let data = {};
+    try {
+        const { path, fields } = proof;
+        res = await fetch(`${GAMES_ORIGIN}/v1/email/${path}`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(code ? { lid, ...fields, code } : { lid, ...fields }),
+            credentials: "omit"
+        });
+        data = await res.json().catch(() => ({}));
+    } catch (_) {
+        res = null;
+    }
+    if (res && data.error === "need_code") return showCode("", data.merge === true);
+    if (res && data.error === "bad_code") return showCode(L("The code does not match", "验证码不对"), data.merge === true);
+    if (res?.ok) {
+        try { localStorage.removeItem(LINK_EMAIL_KEY); localStorage.removeItem(LINK_CODE_KEY); } catch (_) {}
+        try { sessionStorage.removeItem(LINK_TOKEN_KEY); } catch (_) {}
+        return showDone(data.name || "", data.nameReserved !== false);
+    }
+    const gone = proof.path === "redeem"
+        ? L("This link has expired or was already used.", "这个链接已失效或已经用过了。")
+        : L("This link has expired.", "这个链接已过期。");
+    showFailed(!res ? L("The game service is unavailable. Please try again later.", "游戏服务暂不可用，请稍后再试。")
+        : {
+            email_mismatch: L("This email does not match the one you entered in the game.", "这个邮箱和游戏里填写的不一致。"),
+            expired: gone,
+            used: gone,
+            rate_limited: L("Too many tries. Please try again later.", "尝试次数太多，请稍后再试。"),
+            at_table: L("Leave the Hold'em table first, then open the link again.", "请先离开德州牌桌，再重新打开这个链接。"),
+            already_linked: L("This account is already saved with another email.", "这个账号已经绑定了另一个邮箱。")
+        }[data.error] || L("The email could not be verified.", "邮箱验证没有通过。"));
+}
+
+// ---------- a Firebase link (no ?t=) ----------
+let firebase = null;
+
 async function complete(email) {
     showBusy();
     let idToken;
     try {
-        const { user } = await signInWithEmailLink(auth, email, location.href);
+        const { user } = await firebase.signInWithEmailLink(firebase.auth, email, location.href);
         idToken = await user.getIdToken();
     } catch (err) {
         const code = String(err?.code || "");
@@ -211,42 +275,28 @@ async function complete(email) {
             ? L("This link has expired or was already used.", "这个链接已失效或已经用过了。")
             : L("Sign-in failed. Please try again.", "登录失败，请稍后再试。"));
     }
-    await signOut(auth).catch(() => {});
-    return finish(idToken, readCode());
+    await firebase.signOut(firebase.auth).catch(() => {});
+    proof = { path: "complete", fields: { idToken } };
+    return finish(readCode());
 }
 
-async function finish(idToken, code) {
-    showBusy();
-    let res;
-    let data = {};
+async function startFirebase() {
     try {
-        res = await fetch(`${GAMES_ORIGIN}/v1/email/complete`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(code ? { lid, idToken, code } : { lid, idToken }),
-            credentials: "omit"
-        });
-        data = await res.json().catch(() => ({}));
+        const [{ initializeApp }, auth] = await Promise.all([import(FIREBASE_APP), import(FIREBASE_AUTH)]);
+        firebase = { ...auth, auth: auth.getAuth(initializeApp(firebaseConfig, "account-link")) };
     } catch (_) {
-        res = null;
+        return showFailed(L("Sign-in failed. Please try again.", "登录失败，请稍后再试。"));
     }
-    if (res && data.error === "need_code") return showCode(idToken, "", data.merge === true);
-    if (res && data.error === "bad_code") return showCode(idToken, L("The code does not match", "验证码不对"), data.merge === true);
-    if (res?.ok) {
-        try { localStorage.removeItem(LINK_EMAIL_KEY); localStorage.removeItem(LINK_CODE_KEY); } catch (_) {}
-        return showDone(data.name || "", data.nameReserved !== false);
-    }
-    showFailed(!res ? L("The game service is unavailable. Please try again later.", "游戏服务暂不可用，请稍后再试。")
-        : {
-            email_mismatch: L("This email does not match the one you entered in the game.", "这个邮箱和游戏里填写的不一致。"),
-            expired: L("This link has expired.", "这个链接已过期。"),
-            at_table: L("Leave the Hold'em table first, then open the link again.", "请先离开德州牌桌，再重新打开这个链接。"),
-            already_linked: L("This account is already saved with another email.", "这个账号已经绑定了另一个邮箱。")
-        }[data.error] || L("The email could not be verified.", "邮箱验证没有通过。"));
+    if (!lid || !firebase.isSignInWithEmailLink(firebase.auth, location.href)) showFailed(L("This sign-in link is not valid.", "这个登录链接无效。"));
+    else showForm();
 }
 
-if (!lid || !isSignInWithEmailLink(auth, location.href)) showFailed(L("This sign-in link is not valid.", "这个登录链接无效。"));
-else showForm();
+if (lid && token) {
+    proof = { path: "redeem", fields: { t: token } };
+    finish(readCode());
+} else {
+    startFirebase();
+}
 </script>
 </body>
 </html>

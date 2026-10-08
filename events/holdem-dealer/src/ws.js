@@ -92,7 +92,7 @@ export function attachWs(server, { config, accounts, rooms, limiter, ipKeyOf, lo
         conn.accountId = a.id;
         conn.tokenHash = accounts.tokenHash(msg.token);
         rooms.attach(conn);
-        return conn.send({ t: 'welcome', account: accounts.view(a), serverTime: now(), features: { emailLink: config.emailLink } });
+        return conn.send({ t: 'welcome', account: accounts.view(a), serverTime: now(), features: accounts.features() });
       }
       if (!conn.accountId) return conn.send({ t: 'error', code: 'no_hello', re: msg.t });
       try {

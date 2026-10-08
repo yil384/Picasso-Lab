@@ -1,7 +1,9 @@
 // REST API (DESIGN.md section 5). JSON in and out, bodies <= 8 KB, CORS for allow-listed origins only (a request
 // with a foreign Origin is refused with 403 and gets no CORS headers), preflight with
 // Access-Control-Allow-Private-Network: true. Rate limits per ipKey (in memory): new accounts 30/h, email start 5/h,
-// claims 10/h, everything 600/min. Errors are { error, message } with a 4xx/5xx status. Never logs IPs or tokens.
+// claims 10/h, link redeems 60/h, everything 600/min (and, when the service sends the email itself, per network,
+// account and address a day, and the daily and monthly caps: accounts.js). Errors are { error, message } with a
+// 4xx/5xx status. Never logs IPs or tokens.
 //
 // GET /v1/health answers 503 { error: "persist_failing" } while changes cannot be written to disk (store.health()),
 // so `docker compose ps` and the watchdog see it, and counts every refusal per limit since the start (`limited`).
@@ -115,11 +117,17 @@ export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, s
       const { account, token } = auth(req);
       if (!config.emailLink) throw new ApiError(403, 'disabled', 'Saving with email is not enabled');
       limit('email', ipKey, 5, HOUR);
-      return accounts.emailStart(account, body.email, accounts.tokenHash(token));
+      return accounts.emailStart(account, body.email, accounts.tokenHash(token), { lang: body.lang, ipKey });
     },
     'POST /v1/email/complete': async (req) => {
       const body = await readBody(req);
       return accounts.emailComplete(body.lid, body.idToken, body.code ?? null);
+    },
+    // the emailed link's single-use token (EMAIL_SENDER=resend); the page that redeems it never gets an account token
+    'POST /v1/email/redeem': async (req, ipKey) => {
+      const body = await readBody(req);
+      limit('redeem', ipKey, 60, HOUR);
+      return accounts.emailRedeem(body.lid, body.t, body.code ?? null);
     },
     'POST /v1/email/poll': async (req) => {
       const body = await readBody(req);
@@ -190,7 +198,8 @@ export function createHttpHandler({ config, accounts, rooms, limiter, ipKeyOf, s
       send(res, 200, out, cors);
     } catch (e) {
       if (e instanceof ApiError) {
-        if (e.status === 429 && e.code !== 'rate_limited') limiter.note(e.code, ipKey); // e.g. refill_later
+        // limits kept elsewhere are counted too: refill_later, the per-address and daily email limits (e.bucket)
+        if (e.status === 429 && (e.code !== 'rate_limited' || e.bucket)) limiter.note(e.bucket || e.code, ipKey);
         const extra = { ...cors };
         if (e.retryAfter) extra['retry-after'] = String(e.retryAfter);
         if (e.status === 413) extra.connection = 'close';

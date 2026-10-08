@@ -161,7 +161,7 @@ test('flag off: start, complete and poll answer 403 disabled; features say so', 
   try {
     const g = await newGuest(off, 'Off');
     const s = await api(off, 'POST', '/v1/session', { token: g.token, body: {} });
-    assert.deepEqual(s.data.features, { emailLink: false });
+    assert.deepEqual(s.data.features, { emailLink: false, emailSender: 'firebase' });
     const start = await api(off, 'POST', '/v1/email/start', { token: g.token, body: { email: 'a@b.edu' } });
     assert.equal(start.status, 403);
     assert.equal(start.data.error, 'disabled');
@@ -171,7 +171,7 @@ test('flag off: start, complete and poll answer 403 disabled; features say so', 
     await off.stop();
   }
   const on = await api(svc, 'POST', '/v1/session', { body: {} });
-  assert.deepEqual(on.data.features, { emailLink: true });
+  assert.deepEqual(on.data.features, { emailLink: true, emailSender: 'firebase' });
 });
 
 test('a link someone else started for my saved email: no merge and no token without the code shown on their device', async () => {

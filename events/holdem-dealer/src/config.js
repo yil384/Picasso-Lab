@@ -8,6 +8,18 @@
 //                     deploy uses files, so `docker inspect` does not show the secrets)
 //   IP_SALT           keys the ipKey HMAC; or IP_SALT_FILE
 //   EMAIL_LINK        off | on             reported to clients as features.emailLink
+//   EMAIL_SENDER      firebase | resend    who sends the sign-in email (features.emailSender): the page through
+//                                          Firebase Auth (the default, also the rollback), or the service itself
+//                                          through Resend's HTTP API from EMAIL_FROM (mailer.js)
+//   EMAIL_FROM        Picasso Lab <noreply@picasso-lab.com>   resend only: the sender ("Name <address>" or an address)
+//   EMAIL_DAILY_CAP   90                   resend only: at most this many emails in any 24 hours (Resend's free tier
+//                                          is 100 a day, shared with the lab's other senders); a third of them is
+//                                          kept for addresses already saved
+//   EMAIL_MONTHLY_CAP 1500                 resend only: at most this many in any 30 days (Resend's free tier is 3000
+//                                          a month for the whole account: leave the lab's other senders their share)
+//   RESEND_API_KEY_FILE  resend only, required: a file holding the Resend API key (sending access is enough). Never
+//                     an env value; read once at startup; the key is never logged or shown (not even in errors)
+//   RESEND_API_URL    (Resend's)           test hooks only: a loopback URL standing in for https://api.resend.com
 //   FIREBASE_PROJECT_ID  yichen-5e23e
 //   ALLOWED_ORIGINS   comma list, default https://yil384.github.io; "http://127.0.0.1:*" allows any port
 //   TRUST_PROXY       0 | a comma list of the proxies that may set X-Forwarded-For: addresses, CIDR ranges or host
@@ -22,7 +34,7 @@
 //   FIREBASE_JWKS_URL (Google's)           test hooks only: fetch the ID-token keys from a local JWK set instead
 //
 // Exports: loadConfig(env) -> frozen config (throws ConfigError listing every problem), originAllowed(config, origin),
-//          ConfigError.
+//          ConfigError, senderAddress(from), DEFAULT_FROM. config.resendApiKey is not enumerable.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,6 +42,17 @@ import { parseTrustEntry } from './util.js';
 
 const DEV_GAMES_SECRET = 'dev-only-games-secret-do-not-use-in-production';
 const DEV_IP_SALT = 'dev-only-ip-salt-do-not-use-in-production-000';
+export const DEFAULT_FROM = 'Picasso Lab <noreply@picasso-lab.com>';
+
+const ADDRESS_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,63}$/;
+// the address part of an EMAIL_FROM value ("Name <a@b.c>" or "a@b.c"), or null; no line breaks, quotes or brackets
+// in the name (it goes into a mail header)
+export function senderAddress(from) {
+  if (typeof from !== 'string' || from.length > 200 || /[\r\n]/.test(from)) return null;
+  const m = /^([^<>"\\]{1,64}) <([^<>\s]+)>$/.exec(from);
+  const addr = m ? m[2] : from;
+  return ADDRESS_RE.test(addr) ? addr.toLowerCase() : null;
+}
 
 export class ConfigError extends Error {
   constructor(problems) {
@@ -112,6 +135,33 @@ export function loadConfig(env = process.env) {
   if (emailRaw !== 'on' && emailRaw !== 'off') problems.push(`EMAIL_LINK must be "on" or "off" (got "${env.EMAIL_LINK}")`);
   const emailLink = emailRaw === 'on';
 
+  const senderRaw = (env.EMAIL_SENDER || 'firebase').toLowerCase();
+  if (senderRaw !== 'firebase' && senderRaw !== 'resend') problems.push(`EMAIL_SENDER must be "firebase" or "resend" (got "${env.EMAIL_SENDER}")`);
+  const emailSender = senderRaw === 'resend' ? 'resend' : 'firebase';
+  const emailFrom = (env.EMAIL_FROM || DEFAULT_FROM).trim();
+  const fromAddress = senderAddress(emailFrom);
+  if (!fromAddress) problems.push(`EMAIL_FROM must be "Name <address@domain>" or an address (got "${env.EMAIL_FROM}")`);
+  const emailDailyCap = num(env.EMAIL_DAILY_CAP, 90, { min: 1, max: 100_000, int: true }, 'EMAIL_DAILY_CAP', problems);
+  const emailMonthlyCap = num(env.EMAIL_MONTHLY_CAP, 1500, { min: 1, max: 1_000_000, int: true }, 'EMAIL_MONTHLY_CAP', problems);
+  // the key is read only when it is used, and never appears in a message (the path and the error code do)
+  let resendApiKey = null;
+  if (emailSender === 'resend') {
+    const file = env.RESEND_API_KEY_FILE;
+    if (env.RESEND_API_KEY) problems.push('RESEND_API_KEY is not read: put the key in a file and set RESEND_API_KEY_FILE');
+    if (!file) {
+      problems.push('EMAIL_SENDER=resend needs RESEND_API_KEY_FILE (a file holding the Resend API key)');
+    } else {
+      try {
+        const v = fs.readFileSync(file, 'utf8').trim();
+        if (!v) problems.push(`RESEND_API_KEY_FILE: ${file} is empty (put the Resend API key in it)`);
+        else if (!/^re_[A-Za-z0-9_-]{8,200}$/.test(v)) problems.push(`RESEND_API_KEY_FILE: the content of ${file} does not look like a Resend API key (re_...)`);
+        else resendApiKey = v;
+      } catch (e) {
+        problems.push(`RESEND_API_KEY_FILE: cannot read ${file} (${e.code || 'error'})`);
+      }
+    }
+  }
+
   const firebaseProjectId = env.FIREBASE_PROJECT_ID || 'yichen-5e23e';
   if (!/^[a-z0-9-]{4,40}$/.test(firebaseProjectId)) problems.push('FIREBASE_PROJECT_ID looks wrong');
 
@@ -155,9 +205,19 @@ export function loadConfig(env = process.env) {
     if (!/^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d{1,5})?\//.test(firebaseJwksUrl)) problems.push('FIREBASE_JWKS_URL must be a loopback http URL');
   }
 
+  const resendApiUrl = env.RESEND_API_URL || null;
+  if (resendApiUrl) {
+    if (!testHooks) problems.push('RESEND_API_URL is a test setting: it needs HOLDEM_TEST_HOOKS=1');
+    if (!/^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d{1,5})?(\/[^\s]*)?$/.test(resendApiUrl)) problems.push('RESEND_API_URL must be a loopback http URL');
+  }
+
   if (problems.length) throw new ConfigError(problems);
-  return Object.freeze({
-    production, port, host, dataDir, gamesSecret, ipSalt, emailLink, firebaseProjectId,
+  const config = {
+    production, port, host, dataDir, gamesSecret, ipSalt, emailLink, emailSender, emailFrom, emailFromAddress: fromAddress,
+    emailDailyCap, emailMonthlyCap, resendApiUrl, firebaseProjectId,
     allowedOrigins: Object.freeze(allowedOrigins), trustProxy, botThinkScale, paceScale, testHooks, firebaseJwksUrl,
-  });
+  };
+  // not enumerable: JSON.stringify, console.log and util.inspect of the config never show the key
+  Object.defineProperty(config, 'resendApiKey', { value: resendApiKey, enumerable: false });
+  return Object.freeze(config);
 }
