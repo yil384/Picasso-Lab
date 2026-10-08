@@ -193,6 +193,7 @@ export class Rooms {
       if (bad) this.log('practice table setup step failed', { error: bad.error });
     }
     this.tables.set(code, entry);
+    this.unwatch(conn);
     conn.send({ t: 'created', code });
     this._addWatcher(entry, conn, now);
     this.log('table created', { code, practice, tables: this.tables.size });

@@ -161,9 +161,10 @@ export function truthRecorder() {
   const holes = new Map(); // handId -> Map(seat -> [c1, c2])
   const done = new Map(); // code -> Set(handId)
   const stats = { sidePots: 0, showdowns: 0, runouts: 0 };
+  const showdowns = new Map(); // code -> hands that went to showdown
   const checks = new Set();
   return {
-    holes, done, stats, checks,
+    holes, done, stats, checks, showdowns,
     hook(table) {
       const h = table.hand;
       if (h) {
@@ -176,7 +177,10 @@ export function truthRecorder() {
           if (!set.has(h.id)) {
             set.add(h.id);
             if (h.pots.length > 1) stats.sidePots++;
-            if (h.street === 'showdown') stats.showdowns++;
+            if (h.street === 'showdown') {
+              stats.showdowns++;
+              showdowns.set(table.code, (showdowns.get(table.code) || 0) + 1);
+            }
             if (h.runout) stats.runouts++;
           }
         }

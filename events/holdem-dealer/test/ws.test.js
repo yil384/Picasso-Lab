@@ -74,6 +74,7 @@ test('heads-up: two humans play 25 hands; chips conserved; everyone sees only th
   ca.playing = cb.playing = false;
   cons.stop();
   assert.deepEqual(cons.bad, [], 'chips conserved after every step');
+  assert.ok(truth.showdowns.get(code) >= 1, 'hands went to showdown');
   assert.ok(checkFrames(ca, truth, A.account.pid) > 50);
   assert.ok(checkFrames(cb, truth, B.account.pid) > 50);
   assert.deepEqual([...ca.errors, ...cb.errors].filter((e) => e.re === 'act'), [], 'no action of a correct client was refused');
@@ -100,7 +101,7 @@ test('practice table: 6-max, 5 bots, started at once; a spectator watches; 20 ha
   assert.equal(first.table.phase, 'running');
   assert.equal(first.me.seat, 0);
   assert.equal(first.table.seats.filter((s) => s && s.bot).length, 5);
-  assert.equal(first.table.seats[0].stack, 5000, 'default buy-in: the max buy-in');
+  assert.equal(first.table.seats[0].stack + first.table.seats[0].bet, 5000, 'default buy-in: the max buy-in (a blind may be posted)');
   assert.equal(first.me.chips, 5000, 'bankroll after the buy-in');
   const cs = await connect(svc, S.token);
   await watch(cs, code);
@@ -111,6 +112,7 @@ test('practice table: 6-max, 5 bots, started at once; a spectator watches; 20 ha
   cp.playing = false;
   cons.stop();
   assert.deepEqual(cons.bad, []);
+  assert.ok(truth.showdowns.get(code) >= 1, 'hands went to showdown');
   checkFrames(cp, truth, P.account.pid);
   assert.ok(checkFrames(cs, truth, S.account.pid) > 20);
   assert.ok(cs.frames.filter((m) => m.t === 'state').every((m) => m.me.seat === null && m.me.hole === null));
@@ -141,7 +143,7 @@ test('9 seats: 4 humans and 5 bots, uneven stacks, all-in side pots and showdown
   assert.deepEqual(cons.bad, []);
   assert.ok(truth.stats.sidePots > before, 'side pots happened');
   assert.ok(clients.some((c) => c.frames.some((m) => m.t === 'state' && m.table.hand && m.table.hand.pots.length >= 2)), 'side pots reached the clients');
-  assert.ok(truth.stats.showdowns > 0);
+  assert.ok(truth.showdowns.get(code) >= 1, 'hands went to showdown');
   clients.forEach((c, k) => checkFrames(c, truth, humans[k].account.pid));
   assert.deepEqual(clients.flatMap((c) => c.errors).filter((e) => e.re === 'act'), []);
   for (const c of clients) c.close();
@@ -357,10 +359,12 @@ test('host operations, dissolve returns every chip, closed message; codes; at mo
   const pushed = cg.frames.filter((m) => m.t === 'account').pop();
   assert.equal(pushed.account.chips, 10_000);
   assert.equal((await sendAndError(cg, { t: 'sit', seat: 1, buyIn: 400 })).code, 'no_table');
-  // host limit
+  // host limit; a socket watches one table at a time (creating moves it to the new table)
   const codes = [];
   for (let i = 0; i < 3; i++) codes.push(await createTable(ch, {}));
   assert.equal(new Set(codes).size, 3);
+  const watchersOf = (c) => [...svc.rooms.tables.get(c).watchers].filter((x) => x.accountId === H.id).length;
+  assert.deepEqual(codes.map(watchersOf), [0, 0, 1]);
   for (const c of codes) assert.match(c, CODE);
   assert.equal((await sendAndError(ch, { t: 'create', settings: {} })).code, 'too_many_tables');
   for (const c of codes) { await watch(ch, c); ch.send({ t: 'host', op: 'dissolve' }); await ch.next((m) => m.t === 'closed'); }

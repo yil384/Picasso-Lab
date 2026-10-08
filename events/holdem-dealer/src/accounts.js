@@ -317,7 +317,9 @@ export class Accounts {
     if (changed) this._changed();
     const out = { account: this.view(a), features: { emailLink: this.emailLink } };
     if (token) out.token = token;
-    if (fresh === true) out.suggestions = this._suggestions(ipKey, a);
+    // a fresh browser has no token; suggestions (and their sids) only come with a new account, so they are
+    // bounded by the account-creation rate limit
+    if (fresh === true) out.suggestions = token ? this._suggestions(ipKey, a) : [];
     return out;
   }
 

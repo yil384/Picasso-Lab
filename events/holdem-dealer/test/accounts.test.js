@@ -101,6 +101,8 @@ test('IP suggestions: only for fresh browsers, only guests, only the same ipKey,
   // nothing in the saved data looks like an IP address
   const saved = JSON.stringify(acc.toJSON());
   assert.doesNotMatch(saved, /\d+\.\d+\.\d+\.\d+/);
+  // a device that already has a token gets no suggestions, even if it says fresh
+  assert.deepEqual(visit(acc, players[0].token, { fresh: true }).suggestions, []);
 });
 
 test('IP memory expires after 30 days (sweep) and suggestions skip stale entries', () => {
