@@ -774,7 +774,7 @@ export function mountHoldem(ui) {
                 ? `<button class="btn primary hd-board-play" type="button" data-board-play>${L("Play a hand", "去打一手")}</button>` : "";
             return `<div class="hd-lb is-empty">${head}
                 <div class="hd-podium"><div class="hd-pods">${[1, 0, 2].map(step).join("")}</div>
-                <p class="hd-board-empty">${L("Nobody ranked yet.", "还没有人上榜。")} ${ruleText}${data.me?.hands ? L(` · you: ${fmt(data.me.hands)} hands so far`, ` · 你已打 ${fmt(data.me.hands)} 手`) : ""}</p>${play}</div>
+                <p class="hd-board-empty">${L("Nobody ranked yet. ", "还没有人上榜。")}${ruleText}${data.me?.hands ? L(` · you: ${fmt(data.me.hands)} hands so far`, ` · 你已打 ${fmt(data.me.hands)} 手`) : ""}</p>${play}</div>
             </div>`;
         }
         // my own row below the list only once I have played (an unranked 0 / 0 / - row says nothing); unranked, it says

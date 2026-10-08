@@ -75,7 +75,16 @@ Results of the final run: see the end of this file.
 
 Guandan regression (in `..`): `python3 play.py desk 2`, `python3 play.py phone 2`, `python3 mustkeep.py`.
 
-## Results of the final run (2026-10-08, this sandbox)
+## Results of the final run (2026-10-08, review round 3)
+
+`python3 e2e.py`: **ALL PASS, 118 checks, 0 failures** (checker 8, heads 14, six 12, nine 6, sidepots 14, timeout 15,
+restart 27, accounts 22). `python3 layout.py`: **ALL PASS, 110 checks**. `python3 shots_live.py --lang=both --par=3`:
+10 runs, 300 shots, no failed step, no console error. `python3 restart.py phone`: ALL PASS. Dealer: `npm test` 144
+tests, 143 pass, 1 skipped; `npm run test:slow` pass. Guandan: `../play.py desk 1` no errors, no long tasks;
+`../mustkeep.py` 113 pass.
+
+## Results of the round-2 run (2026-10-08, this sandbox)
+
 
 `python3 e2e.py` on commit 20b5c1f: **ALL PASS, 110 checks, 0 failures**, 11 minutes.
 

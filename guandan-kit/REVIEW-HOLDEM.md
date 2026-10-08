@@ -122,3 +122,57 @@ Verification (tree at 85456bd):
 
 Left open: nothing from this list. Still untested against the real thing: Google's live JWKs and a real Firebase
 email link (unit and e2e tests use a locally signed key set), and how the per-network limits feel behind a campus NAT.
+
+## Round 3
+A third review (rules, security, ops and UI lenses, each finding verified against the code and, where it mattered,
+on picasso read-only) found 25 defects: 4 high, 11 medium, 10 low (severities as verified). All are fixed except
+where noted; the dealer tests, the browser scenarios, the layout checks and the Guandan regression were run again.
+
+| id | lens | sev | title | outcome |
+| --- | --- | --- | --- | --- |
+| R3-1 | security | high | A same-network suggestion handed the clicker a token for someone else's guest account (its seat, hole cards and turn, bankroll, name, email binding) | fixed: `/v1/claim` renames the caller's own account and never issues a token for another; suggestions list each name once; prompt reads 继续使用昵称「X」？; privacy note says a click only takes the name (tests: accounts claims, a WebSocket claimer never gets the seat, cards or turn; e2e accounts) |
+| R3-2 | security | medium | `TRUST_PROXY=1` believed `X-Forwarded-For` from any peer: a host user could pose as any network (claims, limits) | fixed: `TRUST_PROXY` is a list of addresses, CIDR ranges or host names (re-resolved every 30 s; `fras-caddy-1` in production), `1` refused in production; the deploy joins Caddy's Docker network with no published port (tests: config, an untrusted peer is keyed by its socket address and cannot escape the account limit) |
+| R3-3 | security | medium | `tables.json` held the deck and every hole card (readable by the ~40 docker-group users); secrets visible in `docker inspect` | fixed: the saved form leaves out deck, burns and hole cards; a restore calls the live hand off (chips back, nothing recorded, same button, pages told); secrets come from files (`GAMES_SECRET_FILE`, `IP_SALT_FILE`, `ops/secrets.sh`). Host root / docker can still read memory: said in README and the report (tests: table, views fuzz, restart graceful and kill -9, e2e restart, restart.py) |
+| R3-4 | ops | medium | The runbook could not work on picasso: Caddy in a container (127.0.0.1 upstream = 502), no host `caddy`, `/srv` not writable, needless DNS step | fixed: compose joins `fras_default` (alias `holdem-dealer`), Caddy block `reverse_proxy holdem-dealer:8787`, `docker exec fras-caddy-1 caddy validate/reload`, deploy to `~/workspace/holdem-dealer`, DNS step dropped, WebSocket 101 check added; README, DESIGN 12, report 4a/4b, compose and snippet together (the block was validated and run locally with Caddy 2.11.2: health 200, WebSocket 101) |
+| R3-5 | security | medium | Caddy's per-site error logger still wrote client IPs; world-readable backups outliving 30 days; salt in `docker inspect` | fixed: `handle_errors` answers the 502 itself, so it is logged at debug only (checked with Caddy 2.11.2: no `remote_ip` line, also when the upstream dies mid-socket); backups leave the IP memory out and go to `~/backups/holdem` (700 / 600); salt is a file; the note says a server admin can reverse the hash. FRAS Caddy log rotation is the owner's call (its own compose) |
+| R3-6 | security | medium | The ranking listed brand-new accounts: throwaway guests free-rolled against bots into the top places; a merge carried a fresh guest's gains | fixed: only established accounts (3 days, 50 hands) rank, fresh ones see their own row unranked with the rule; a merge carries a fresh guest's losses only (tests: accounts) |
+| R3-7 | security | medium | One person could trigger the network-wide code ban and lock seated players out of their own tables | fixed: a player seated at the table, its host or creator, or anyone who watched it before always gets back in; the ban still stops strangers (test: rooms) |
+| R3-8 | robustness | medium | 9 free accounts could fill the 200-table cap for hours (host hand-off reset the 3-table limit; seated tables never closed) | fixed: an account creates or hosts at most 3 (creators keep counting), sits at most at 4, a network opens at most 30, an unstarted table closes after 30 minutes (buy-ins back) (tests: rooms) |
+| R3-9 | ui | medium | Portrait 7-9 seats: corner bets sat next to the neighbour seat | fixed: bets are placed from the seat's final position, at most 160 / 200 design px from it, pulled in while another avatar is nearer, and step aside from my clock (`layout.py`: every seat count 2-9, portrait, phone, desk, hd) |
+| R3-10 | ui | medium | Betting controls 8-30 CSS px on phones (presets, steps, slider, pre-actions) | fixed: sized from the stage scale (at least 44 CSS px, wider gaps), the ±20 label grows with them (`layout.py` touch checks; the old build fails them) |
+| R3-11 | ops | medium | The backup recipe could not run from cron (%), wrote root-owned 0644 files nobody could prune | fixed: `ops/backup.sh` (no % in the crontab line, 700 folder, 600 files owned by the user, 14 days, a log) with `src/backup.js` (tests: backup) |
+| R3-12 | ops | medium | Health could not see a failing disk; nothing acted on an unhealthy container | fixed: 503 `persist_failing` after 10 s unsaved, failures logged once a minute, `src/health.js` for the healthcheck, `ops/watchdog.sh` restarts a hung service and never one that cannot save (tests: http) |
+| R3-13 | ops | low | No rate-limit refusal was ever logged; container logs unrotated | fixed: every refusal counted per limit, one `rate limited` line a minute (no keys), totals in `/v1/health`; compose rotates logs (tests: config, http) |
+| R3-14 | rules | low | A seat standing up refunded the actor's running time bank | fixed: the bank is charged whenever the turn moves on (`_chargeBank`) (test: table, both the hand-ending and street-closing stand-ups) |
+| R3-15 | rules | low | A 1-chip rebuy was accepted | fixed: a rebuy is at least the minimum buy-in, a top-up at least a big blind or exactly the room left (test: table) |
+| R3-16 | rules | low | Dropping to two ready seats with a waiting big blind: SB posted twice; a new seat dealt in at once at a table that was three-handed | fixed: a new seat is dealt in at once only when the last hand was heads-up; when last hand's big blind has gone, the small blind is dead (the button stays, which keeps the big blinds in turn; moving it skipped a big blind in simulation) (test: table) |
+| R3-17 | ops | low | Backups could mix two moments; the `.bak` advice mixed them too | fixed: `src/backup.js` re-reads until no flush landed in between and restores both files as one batch; the advice is "both files from one backup" (test: backup) |
+| R3-18 | ops | low | A Caddy reload dropped every table socket mid-hand | fixed: `stream_close_delay 5m` in the block |
+| R3-19 | security | low | (duplicate of R3-2 from the ops lens) | fixed with R3-2 |
+| R3-20 | ui | low | The button seat's clock covered its own dealer button | fixed: the button steps below (or above) the clock box (`layout.py` dealer check over several hands per seat count) |
+| R3-21 | ui | low | Portrait presets ran all-in to min against a min-to-max slider | fixed: the portrait row reads 最小 · ½ 池 · ⅔ 池 · 1 池 · 全下 |
+| R3-22 | ui | low | Empty seats vanished once seated: opponents bunched on one side | fixed: a dim 空位 disc (no dashed ring, no gold, not a control) keeps the table's shape |
+| R3-23 | ui | low | Bots numbered (狐狸 2); Stone and Sage shared the S mark | fixed: three names per personality, each with its own first letter and character (石头 橡树 磐石 / 烈火 猛虎 雄鹰 / 狐狸 山猫 蝮蛇 / 老将 公爵 灰狼), never repeated at a table (test: table) |
+| R3-24 | ui | low | Hold'em lobby showed the Guandan rank badge and Guandan's podium | fixed: the badge and the ranking tile read the Hold'em ranking (fetched in the background, applied in place); with nobody ranked the tile shows its empty steps |
+| R3-25 | ui | low | The flop showed two open outlines over the print for half a second | fixed: the open slots and the end of the print wait for the first flop card's turn |
+
+Verification (tree at the round-3 commits on `cloud/guandan-holdem`):
+- `npm test`: 144 tests, 143 pass, 0 fail, 1 skipped (the slow sweep); `npm run test:slow`: 1 pass.
+- `python3 e2e.py`: **ALL PASS, 118 checks, 0 failures** (checker 8, heads 14, six 12, nine 6, sidepots 14,
+  timeout 15, restart 27, accounts 22; restart now checks the called-off hand, the notice and that every chip is back;
+  accounts checks that a claim keeps the caller's own account).
+- `python3 layout.py`: **ALL PASS, 110 checks** over portrait, phone, desk and hd at 2-9 seats. Run against the
+  pre-round-3 client it fails the bets, touch and dealer checks (portrait 9: four bets nearer a neighbour; presets
+  25-33 CSS px, steps 24 px; the button under its seat's clock in 2 of 8 hands).
+- `python3 shots_live.py --lang=both --par=3`: 10 runs, 300 shots, no failed step, no console error. Looked at:
+  desk / hd / phone / portrait preflop (empty seats), raise panels (phone en, portrait zh), the flop in an all-in run-out
+  (no open outlines before the cards), sidepots and nine-shown (portrait), the lobby (Hold'em badge and empty podium)
+  and the ranking page; plus `layout.py` shots of every seat count with every bet filled in and every clock shown.
+- `python3 restart.py phone`: ALL PASS. Guandan: `python3 play.py desk 1` (round 1 to the end, no console error, no
+  long task over 50 ms) and `python3 mustkeep.py` (113 pass, 0 failed).
+- Caddy 2.11.2 (the version on picasso), locally: the block adapts; with the dealer behind it `/v1/health` is 200 and
+  `/v1/ws` answers 101; with the dealer down the 502 is answered by `handle_errors` and no line carries a client IP.
+
+Not done here: the deploy itself (picasso was only read: the Caddy container's networks and DNS names, the Caddyfile's
+layout, home folder modes). Still untested against the real thing: Google's live JWKs and a real email link, and the
+per-network limits behind a campus NAT (now visible in the logs and `/v1/health`).
