@@ -1,0 +1,12 @@
+Hold'em table sounds (deal, board, bet, collect, win)
+
+Source: "Casino Audio" 1.1 by Kenney Vleugels (www.kenney.nl), https://kenney.nl/assets/casino-audio
+License: Creative Commons Zero (CC0), http://creativecommons.org/publicdomain/zero/1.0/
+
+  deal.mp3     card-slide-1.ogg
+  board.mp3    card-place-1.ogg
+  bet.mp3      chip-lay-1.ogg
+  collect.mp3  chips-collide-1.ogg
+  win.mp3      chips-handle-1.ogg
+
+Converted to mono 64 kbps MP3 (ffmpeg); otherwise unchanged.

@@ -15,6 +15,9 @@ const ANGLES = {
         7: [90, 145, 190, 240, 300, 350, 35], 8: [90, 140, 180, 225, 270, 315, 0, 40], 9: [90, 135, 165, 200, 250, 290, 340, 15, 45] }
 };
 const LABEL_MS = 1500;
+const SFX_URL = "https://yil384.github.io/Picasso-Lab/events/static/holdem-sfx/";
+const SFX_KEY = "picasso.holdem.sfx";
+const SFX_NAMES = ["deal", "board", "bet", "collect", "win"];
 // a chip seen from above: the denomination colour (currentColor), six white edge inserts, a dashed inner ring
 const CHIP_DEFS = `<svg class="gd-defs" aria-hidden="true" focusable="false"><symbol id="hd-sym-chip" viewBox="0 0 40 40">
     <circle cx="20" cy="20" r="19" fill="currentColor"/>
@@ -34,7 +37,32 @@ const ICONS = {
     chips: `<ellipse cx="16" cy="22" rx="11" ry="5" fill="#cfe7e3"/><ellipse cx="16" cy="17" rx="11" ry="5" fill="#fff"/><ellipse cx="16" cy="12" rx="11" ry="5" fill="#ffd66b"/><ellipse cx="16" cy="12" rx="5" ry="2.2" fill="#b8660c"/>`,
     pause: `<circle cx="16" cy="16" r="13" fill="#fff"/><path fill="#0b6b62" d="M11.5 10h3.4v12h-3.4zm5.6 0h3.4v12h-3.4z"/>`,
     play: `<circle cx="16" cy="16" r="13" fill="#fff"/><path fill="#0b6b62" d="M12.5 9.8 22.5 16l-10 6.2Z"/>`,
-    stand: `<circle cx="13" cy="9" r="5" fill="#fff"/><path fill="#fff" d="M5 28c0-6 3.6-10 8-10s8 4 8 10Z"/><path fill="#ffd66b" d="M21 13.5h7v3h-7z"/>`
+    stand: `<circle cx="13" cy="9" r="5" fill="#fff"/><path fill="#fff" d="M5 28c0-6 3.6-10 8-10s8 4 8 10Z"/><path fill="#ffd66b" d="M21 13.5h7v3h-7z"/>`,
+    sfx: `<path fill="#fff" d="M4 12h5.5L17 5.5v21L9.5 20H4Z"/><path fill="#ffd66b" d="M20.5 10.5c1.9 1.4 3 3.3 3 5.5s-1.1 4.1-3 5.5l-1.7-2.1c1.2-.9 1.9-2.1 1.9-3.4s-.7-2.5-1.9-3.4Zm3.3-4.2C27 8.6 29 12.1 29 16s-2 7.4-5.2 9.7l-1.7-2.1c2.5-1.8 4.1-4.6 4.1-7.6s-1.6-5.8-4.1-7.6Z"/>`
+};
+
+// Table sounds: real CC0 casino recordings (holdem-sfx/LICENSE.txt), quiet, behind the 音效 switch in the ☰ menu.
+const sfx = {
+    on: (() => { try { return localStorage.getItem(SFX_KEY) !== "off"; } catch (_) { return true; } })(),
+    bank: {},
+    load() {
+        if (this.on) SFX_NAMES.forEach(name => { this.bank[name] ||= Object.assign(new Audio(`${SFX_URL}${name}.mp3`), { preload: "auto" }); });
+    },
+    play(name, delay = 0) {
+        if (!this.on) return;
+        setTimeout(() => {
+            this.load();
+            const base = this.bank[name];
+            const a = base.paused ? base : base.cloneNode();
+            a.volume = .35;
+            a.play().catch(() => {});
+        }, delay);
+    },
+    set(on) {
+        this.on = on;
+        try { localStorage.setItem(SFX_KEY, on ? "on" : "off"); } catch (_) {}
+        this.load();
+    }
 };
 
 export function createTable({ ui, S, send, popups }) {
@@ -270,8 +298,10 @@ export function createTable({ ui, S, send, popups }) {
         return Math.max(0, Math.ceil((h.deadline - (Date.now() + S.offset)) / 1000));
     }
 
+    // A seat without a deadline (a bot thinking) shows the clock's hands instead of seconds.
     function clockHTML(bank) {
-        return `<div class="gd-clock hd-clock${bank ? " is-bank" : ""}" data-clock><svg viewBox="0 0 100 106" aria-hidden="true"><use href="#gd-sym-clock"/></svg><b>${remaining()}</b>${bank ? `<span class="hd-bank">${L("Time bank", "时间银行")}</span>` : ""}</div>`;
+        const timed = !!S.table?.hand?.deadline;
+        return `<div class="gd-clock hd-clock${bank ? " is-bank" : ""}${timed ? "" : " is-free"}"${timed ? " data-clock" : ""}><svg viewBox="0 0 100 106" aria-hidden="true"><use href="#gd-sym-clock"/></svg><b>${timed ? remaining() : ""}</b>${bank ? `<span class="hd-bank">${L("Time bank", "时间银行")}</span>` : ""}</div>`;
     }
 
     function stateTag(seat) {
@@ -628,6 +658,7 @@ export function createTable({ ui, S, send, popups }) {
             ["hands", icon("hands"), L("Hand ranking", "牌型")],
             ["lang", icon("lang"), ui.isZH() ? "English" : "中文"],
             music ? ["music", icon("music"), music.isOn?.() ? L("Music: on", "音乐：开") : L("Music: off", "音乐：关")] : null,
+            ["sfx", icon("sfx"), sfx.on ? L("Sound: on", "音效：开") : L("Sound: off", "音效：关")],
             seat ? ["topup", icon("chips"), L("Top up chips", "补充筹码")] : null,
             seat ? (seat.state === "out" ? ["back", icon("play"), L("I'm back", "回来")] : ["away", icon("pause"), L("Sit out", "暂离")]) : null,
             seat ? ["stand", icon("stand"), L("Stand up", "站起")] : null,
@@ -708,6 +739,10 @@ export function createTable({ ui, S, send, popups }) {
             const music = window.GuandanMusic;
             music.setOn(!music.isOn());
             return ui.showToast(music.isOn() ? L("Music on", "音乐已开启") : L("Music off", "音乐已关闭"));
+        }
+        if (m === "sfx") {
+            sfx.set(!sfx.on);
+            return ui.showToast(sfx.on ? L("Sound on", "音效已开启") : L("Sound off", "音效已关闭"));
         }
         if (m === "topup") return popups.openTopUp(false);
         if (m === "away") return send({ t: "sitOut", on: true });
@@ -830,22 +865,26 @@ export function createTable({ ui, S, send, popups }) {
         const deckPt = { x: V.G.cx, y: V.G.boardY - 30 };
         // a new hand: card backs from the dealer to every seat dealt in, my two cards turn over
         if (h && h.id !== V.dealt) {
-            const fresh = !!ph && ph.id !== h.id;
+            // dealt while I am looking; on arrival only a hand that has just begun with me in it (a practice table)
+            const fresh = prev.table ? ph?.id !== h.id
+                : !!S.me?.hole && t.seats.every(seat => !seat?.last || ["sb", "bb"].includes(seat.last.a));
             V.dealt = h.id;
             V.shownWin = "";
             V.lastAct.clear();
             V.labels.forEach(clearTimeout);
             V.labels.clear();
             V.seats.forEach(v => { v.label.innerHTML = ""; v.label.classList.remove("is-on"); });
-            if (motion && fresh && h.street === "preflop" && !h.board.length) dealIn(h, deckPt);
+            if (!reduced() && fresh && h.street === "preflop" && !h.board.length) dealIn(h, deckPt);
         }
         // bets going in, labels for the actions just taken
+        let betIn = false;
         t.seats.forEach((seat, i) => {
             if (!seat) return;
             const k = slotOf(i);
             const before = prev.table?.seats?.[i];
             const sameHand = ph && h && ph.id === h.id;
             if (motion && sameHand && ph.street === h.street && seat.bet > (before?.bet || 0)) {
+                betIn = true;
                 const bet = V.bets[k];
                 bet.animate([{ transform: `translate(${(V.G.seats[k].x - V.G.seats[k].bx).toFixed(1)}px, ${(V.G.seats[k].y - V.G.seats[k].by).toFixed(1)}px) scale(.5)`, opacity: .2 }, { transform: "none", opacity: 1 }],
                     { duration: 240, easing: "cubic-bezier(.2, .8, .2, 1)" });
@@ -857,8 +896,10 @@ export function createTable({ ui, S, send, popups }) {
                 if (show && !["sb", "bb"].includes(seat.last.a)) showLabel(k, seat.last);
             }
         });
+        if (betIn) sfx.play("bet");
         // a street ends: the bets slide into the pot
         if (motion && ph && h && ph.id === h.id && (ph.street !== h.street || (!ph.done && h.done))) {
+            if (prev.table.seats.some(seat => seat?.bet)) sfx.play("collect", 120);
             const potEl = R.pots.querySelector("[data-pot]");
             const to = potEl ? centreOf(potEl) : { x: V.G.cx, y: V.G.boardY - 90 };
             prev.table.seats.forEach((seat, i) => {
@@ -873,6 +914,7 @@ export function createTable({ ui, S, send, popups }) {
         const before = ph && h && ph.id === h.id ? ph.board.length : h && h.id !== ph?.id ? 0 : h?.board.length || 0;
         if (motion && h && h.board.length > before) {
             [...R.board.querySelectorAll(".hd-slot .card")].slice(before).forEach((el, j) => {
+                sfx.play("board", 120 * j + (ph?.street !== h.street ? 380 : 0));
                 el.animate([{ transform: "translateY(-18px) scaleX(0)", opacity: .4 }, { transform: "translateY(-6px) scaleX(.15)", opacity: 1, offset: .35 }, { transform: "none", opacity: 1 }],
                     { duration: 340, delay: 120 * j + (ph?.street !== h.street ? 380 : 0), easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
             });
@@ -899,6 +941,8 @@ export function createTable({ ui, S, send, popups }) {
             if (t.seats[i]?.inHand || (S.me?.seat === i && S.me.hole)) order.push(i);
         }
         const step = Math.min(70, 900 / Math.max(1, order.length * 2));
+        sfx.play("deal");
+        sfx.play("deal", step * order.length);
         const heroCards = [...R.hero.querySelectorAll(".hd-hole .card")];
         heroCards.forEach(el => { el.style.opacity = "0"; });
         V.seats.forEach(v => v.holes.classList.add("is-dealing"));
@@ -907,7 +951,8 @@ export function createTable({ ui, S, send, popups }) {
             const k = slotOf(i);
             const delay = (round * order.length + j) * step;
             last = delay;
-            const target = k === 0 && heroCards[round] ? heroCards[round] : V.seats[k].holes;
+            const backs = V.seats[k].holes.querySelectorAll(".hd-backs .card");
+            const target = k === 0 && heroCards[round] ? heroCards[round] : backs[round] || V.seats[k].holes;
             const to = centreOf(target);
             fly(ui.cardHTML({ back: true }, true), deckPt, to, { ms: 300, delay, scale: .7, cls: "is-card" });
         }));
@@ -942,6 +987,7 @@ export function createTable({ ui, S, send, popups }) {
             const k = slotOf(w.seat);
             const p = V.G.seats[k];
             fly(chipsHTML(w.amt, bb, 3), from, { x: p.x, y: p.y }, { ms: 520, delay: wait + j * 160, fade: true, cls: "is-win" });
+            if (!j) sfx.play("win", wait + 380);
             V.seats[k].won.animate([{ transform: "translateY(10px) scale(.6)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 300, delay: wait + 420 + j * 160, easing: "cubic-bezier(.34, 1.4, .64, 1)", fill: "backwards" });
         });
         const word = R.word.querySelector(".hd-word-in");
@@ -950,7 +996,7 @@ export function createTable({ ui, S, send, popups }) {
         const cat = top ? handCat(top.hand) : "";
         const strong = ["quads", "straight_flush", "royal"].includes(cat);
         if (total >= BIG_POT_BB * bb || strong) {
-            const tier = cat === "royal" || cat === "straight_flush" ? "flush" : strong ? "big" : "bomb";
+            const tier = cat === "royal" || cat === "straight_flush" ? "big" : "flush";
             const text = cat ? catName(cat, L) : L("Big pot", "大底池");
             setTimeout(() => {
                 if (V.destroyed) return;
@@ -972,6 +1018,7 @@ export function createTable({ ui, S, send, popups }) {
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
     layout();
+    sfx.load();
 
     return {
         update(prev) {
