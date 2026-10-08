@@ -310,6 +310,45 @@ src/http.js, src/ws.js   transport; src/server.js wires everything; src/config.j
 whether state changed), `nextWakeAt()`, `viewFor(seat)` (for bots), `settlements()` (drains chip movements and records
 to apply to accounts). Every mutation returns `{ ok, error? }` and bumps `rev`.
 
+### 8.1 Engine as built (additions and clarifications; the header comment of each file is the reference)
+
+API additions, all backwards compatible with the list above:
+- `constructor({ ..., options: { pauseWithoutHumans = true } })`: `false` lets a bots-only table deal (tests).
+- `fromJSON(obj, { rng, now })`: with `now` it is a restart: the player to act gets a fresh `actionSec` timer.
+- `requestTopUp(accountId, amount, bankroll?)`: `bankroll` (when given) is checked (`insufficient_chips`). The chips
+  leave the bankroll at once (settlement `-amount`, reason `topup`) and join the stack at hand end (or at once when
+  the seat is not in a live hand), so a queued top-up can never be unfunded. `postBB`, `show`, `requestTopUp` accept
+  an optional trailing `now`; without it the table uses the latest time it has seen.
+- `setConnected(accountId, on)` feeds `PublicTable.seats[].connected` (true on sit; no effect on play).
+- `releaseHost(accountId, now)`: for the rooms layer when a host is gone without standing (host passes to the
+  longest-seated other human; `no_candidate` when there is none). Standing up / being stood up hands off by itself.
+- Read helpers: `seatOf(accountId)`, `actor()` → `{ seat, id, bot, handId } | null` (who must act; bots: the rooms
+  layer asks `ai.decide(table.viewFor(seat))` and acts after `ai.thinkDelay(...)`), `legalFor(seat)`, `canShow(seat)`.
+- `views.me(table, accountId, account?)`: `account = { pid, chips }` supplies `Me.chips` (the table never knows
+  bankrolls). `views.publicTable(table, now?)`: `now` only refines the time bank shown for a seat using its bank.
+- `settlements()` → `{ chips: [{ accountId, amount, reason: buyin|topup|cashout }], records: [{ accountId, hands,
+  won (0/1), biggestPot (chips won this hand), net, showdowns (0/1) }] }`; bots never appear.
+
+Rule details fixed by the engine:
+- Seats not in a hand show `state` `out` (sitting out), `busted` (stack 0), `waiting` (for the big blind) or
+  `playing` (ready). A mucked hand shows as `folded` with `last.a = "muck"`. `last.amt` (and `log[].amt`) is the
+  seat's total bet on the street after the action; an automatic check/fold is logged as `timeout`.
+- `Me.hole` is `null` once the recipient's own hand is folded or mucked (DESIGN 3: such a hand is sent to nobody).
+- `hand.winners` has one entry per pot per winner (`pot` = pot index, main pot 0); `hand: null` when uncontested.
+- Exposure at an all-in run-out happens only when cards remain to be dealt; betting that closes on the river with an
+  all-in goes to the ordinary showdown order (aggressor first, automatic mucks).
+- A short big blind (all-in from the post) still makes the others call the full big blind. A short all-in that
+  opens the betting below the big blind does not change the minimum raise increment (the big blind).
+- A seat that stands mid-hand stays (folded, or all-in and still live) until hand end, then its stack is cashed
+  out. If the leaver's own bet was the only thing the player to act still faced, the street closes and that bet,
+  uncalled, goes back to the leaver.
+- Sitting needs a buy-in within 40-100 BB; a top-up may bring stack + queued top-ups up to 100 BB. Host settings
+  change only before the start (existing stacks are kept).
+- `hostOp dissolve` during a live hand cancels it: every contribution goes back, no records. A table with no human
+  seated (also before the first sit) closes as `idle` 10 minutes later when `pauseWithoutHumans` is on.
+- Bots (`b_<n>`, styles rotate from a random start, names Stone/Blaze/Fox/Sage by style) buy in for the maximum,
+  never time out or sit out, and are removed 60 s after busting like anyone else.
+
 ## 9. Persistence, restart and reconnect
 
 - `DATA_DIR` (Docker volume `/data`): `accounts.json` (accounts, ip memory, pending links) and `tables.json` (every open

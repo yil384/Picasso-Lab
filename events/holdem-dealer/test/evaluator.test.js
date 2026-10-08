@@ -51,9 +51,7 @@ test('distinct 5-card rank values: 7,462 equivalence classes', () => {
     if (k === 5) { seen.add(rankInts(ints, 5)); return; }
     for (let i = start; i < 52; i++) { ints[k] = i; rec(i + 1, k + 1); }
   };
-  // suits never matter except for flushes, so two suits suffice to visit every class
-  // (all clubs/spades combos cover flush classes; mixed covers the rest). Enumerate fully, it is quick enough.
-  rec(0, 0);
+  rec(0, 0); // all 2,598,960 hands again, through the array entry point this time
   assert.equal(seen.size, 7462);
 });
 
