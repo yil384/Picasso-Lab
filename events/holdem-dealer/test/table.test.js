@@ -527,7 +527,7 @@ test('sit-out for 5 minutes stands the player up and returns the stack', () => {
   assert.deepEqual(t.settlements().chips.filter((c) => c.accountId === 'u_2'), [{ accountId: 'u_2', amount: stack, reason: 'cashout' }]);
 });
 
-test('host hand-off to the longest-seated human; host ops; dissolve refunds a live hand', () => {
+test('host hand-off to the longest-seated human (on release, not on standing); host ops; dissolve refunds a live hand', () => {
   const t = new HoldemTable({ code: 'H', settings: {}, host: { id: 'u_0', pid: 'p_0' }, now: 0, rng: riggedRng(25).queue(0) });
   t.sit(acct(0), 0, 2000, 0);
   t.sit(acct(2), 2, 2000, 5);
@@ -540,6 +540,8 @@ test('host hand-off to the longest-seated human; host ops; dissolve refunds a li
   assert.equal(t.seats[botSeat], null);
   assert.equal(t.hostOp('u_0', 'start', {}, 30).ok, true);
   assert.equal(t.stand('u_0', 40).ok, true);
+  assert.equal(publicTable(t).host, 'p_0', 'standing up keeps the host (the rooms layer passes it on when the host is gone)');
+  assert.equal(t.releaseHost('u_0', 41).ok, true);
   assert.equal(publicTable(t).host, 'p_2', 'seat 2 sat before seat 1');
   assert.deepEqual(t.hostOp('u_0', 'dissolve', {}, 50), { ok: false, error: 'not_host' });
   // the rooms layer can also pass the host on when the host is gone without standing

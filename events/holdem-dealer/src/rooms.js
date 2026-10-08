@@ -7,8 +7,10 @@
 // its own snapshot built by views.js (public table + that recipient's Me). Nothing else ever serializes a table for
 // a client.
 //
-// Presence: a seated human is `connected` while any socket of the account watches the table. A host that has no
-// socket on the table for 60 s hands the host role on (releaseHost). In the waiting phase (no hands, so no
+// Presence: a seated human is `connected` while any socket of the account watches the table. The host role stays
+// with the host while any of its sockets is on the table, seated or not (standing up to change seats keeps it).
+// A host whose last socket leaves without a seat hands the role on at once (releaseHost); a seated host after 60 s
+// with no socket (it may be reconnecting), an unseated one found gone after a restart after 15 s. In the waiting phase (no hands, so no
 // timeouts) a seated human gone for 10 minutes is stood up, which lets the engine's idle close run. Tables close
 // as idle 10 minutes after the last human seat is gone (engine). At most 200 open tables; an account hosts at most 3.
 //
@@ -30,6 +32,7 @@ export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const MAX_TABLES = 200;
 export const MAX_HOSTED = 3;
 export const HOST_GONE_MS = 60_000;
+export const HOST_UNSEATED_GONE_MS = 15_000;
 export const WAITING_GONE_MS = 10 * 60_000;
 const PRACTICE_BOTS = 5;
 const MAX_DELAY = 2 ** 31 - 1;
@@ -242,11 +245,20 @@ export class Rooms {
     if (still) return;
     const now = this.now();
     entry.gone.set(id, now);
-    if (entry.table.host && entry.table.host.id === id) entry.hostGoneSince = now;
+    let changed = false;
+    if (entry.table.host && entry.table.host.id === id) {
+      entry.hostGoneSince = now;
+      // a host who left without a seat is gone: the table passes on at once (a seated host may be reconnecting)
+      if (entry.table.seatOf(id) < 0 && entry.table.releaseHost(id, now).ok) {
+        entry.hostGoneSince = null;
+        changed = true;
+      }
+    }
     if (entry.table.seatOf(id) >= 0) {
       entry.table.setConnected(id, false);
-      this._after(entry, now);
+      changed = true;
     }
+    if (changed) this._after(entry, now);
   }
 
   // ---------- the one place a table change becomes durable and visible ----------
@@ -366,7 +378,8 @@ export class Rooms {
     for (const entry of [...this.tables.values()]) {
       const t = entry.table;
       let changed = false;
-      if (t.host && entry.hostGoneSince !== null && now - entry.hostGoneSince >= HOST_GONE_MS) {
+      const hostSeated = !!t.host && t.seatOf(t.host.id) >= 0;
+      if (t.host && entry.hostGoneSince !== null && now - entry.hostGoneSince >= (hostSeated ? HOST_GONE_MS : HOST_UNSEATED_GONE_MS)) {
         const r = t.releaseHost(t.host.id, now);
         if (r.ok) { changed = true; entry.hostGoneSince = null; }
       } else if (t.host && entry.hostGoneSince === null && ![...entry.watchers].some((c) => c.accountId === t.host.id)) {

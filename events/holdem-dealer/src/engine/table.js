@@ -22,7 +22,9 @@
 //   setConnected(accountId, on)         socket presence for the public `connected` flag (true on sit; no effect
 //                                       on play: a disconnected player simply times out)
 //   releaseHost(accountId, now)         the host is gone (rooms decide when): host passes to the longest-seated
-//                                       other human; error no_candidate when there is none (host unchanged)
+//                                       other human; error no_candidate when there is none (host unchanged).
+//                                       Standing up never passes the host on by itself: a host who stands (to
+//                                       change seats, to watch) still runs the table while at it
 //   tick(now) -> bool                   applies due timeouts, street transitions, next deal, stand-ups, idle close
 //   nextWakeAt() -> ms | null           when tick() next has something to do (may be in the past = now)
 //   viewFor(seat) -> { table, me }      what a player in that seat may see (bots decide from this only)
@@ -685,7 +687,6 @@ export class HoldemTable {
     } else {
       this._removeSeat(seat);
     }
-    if (st.host && st.host.id === s.id) this._handOffHost(s.id);
   }
 
   _removeSeat(seat) {
@@ -696,7 +697,6 @@ export class HoldemTable {
       if (amount > 0) this.s.queue.chips.push({ accountId: s.id, amount, reason: 'cashout' });
     }
     this.s.seats[seat] = null;
-    if (this.s.host && this.s.host.id === s.id) this._handOffHost(s.id);
   }
 
   _handOffHost(oldId) {

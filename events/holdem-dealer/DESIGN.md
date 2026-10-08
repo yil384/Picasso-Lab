@@ -322,7 +322,8 @@ API additions, all backwards compatible with the list above:
   an optional trailing `now`; without it the table uses the latest time it has seen.
 - `setConnected(accountId, on)` feeds `PublicTable.seats[].connected` (true on sit; no effect on play).
 - `releaseHost(accountId, now)`: for the rooms layer when a host is gone without standing (host passes to the
-  longest-seated other human; `no_candidate` when there is none). Standing up / being stood up hands off by itself.
+  longest-seated other human; `no_candidate` when there is none). Standing up never hands off by itself (changed
+  in the integration pass: a host who stood to change seats lost the table to a guest); the rooms layer decides.
 - Read helpers: `seatOf(accountId)`, `actor()` → `{ seat, id, bot, handId } | null` (who must act; bots: the rooms
   layer asks `ai.decide(table.viewFor(seat))` and acts after `ai.thinkDelay(...)`), `legalFor(seat)`, `canShow(seat)`.
 - `views.me(table, accountId, account?)`: `account = { pid, chips }` supplies `Me.chips` (the table never knows
@@ -478,7 +479,9 @@ WebSocket
   table is 6-max whatever `seats` says, the creator sits at seat 0 with the default buy-in (error
   `insufficient_chips` below the minimum buy-in, `name_protected` for a protected name), 5 bots fill the other seats
   and the table starts. `{ t:"host", op:"fillBots", count? }` takes an optional count (1-8).
-- Presence (rooms): a host with no socket on the table for 60 s hands the host role on (`releaseHost`). In the
+- Presence (rooms): the host keeps the role while any of its sockets is on the table, seated or not. A host whose
+  last socket leaves without a seat hands it on at once (`releaseHost`), a seated host after 60 s without a socket
+  (it may be reconnecting), an unseated host found gone after a restart after 15 s. In the
   waiting phase, where no timers run, a seated human with no socket for 10 minutes is stood up (which lets the idle
   close run). An account hosts at most 3 open tables.
 - Every `state` is built per recipient by `views.js`; the public part is serialized once per change. `{ t:"account" }`
