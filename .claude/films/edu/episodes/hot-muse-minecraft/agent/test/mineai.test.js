@@ -6,7 +6,7 @@
 // (the queue, request_id, typed codes and 45 s replies on top; extra skills listed in compact form; no rationale and
 // nothing of their 1.36 MB tools/list), the dry-run check with temporary stations, the config switch and the fetch
 // script's pin.
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -31,7 +31,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const text = (r) => r.content.map((x) => x.text).join('\n');
-const tmp = (p) => fs.mkdtempSync(path.join(os.tmpdir(), p));
+// temporary folders of this file, removed when it is done
+const made = [];
+const tmp = (p) => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), p)); made.push(dir); return dir; };
+after(() => { for (const dir of made) fs.rmSync(dir, { recursive: true, force: true }); });
 const config = loadConfig({ MODEL_API_KEY: '', LOG_DIR: tmp('mineai-log-') });
 const log = createLogger({ dir: null, config });
 
@@ -122,6 +125,15 @@ test('mineai skills: their results become our text and typed codes', () => {
   const partial = fromTheirs('collect_block', { result: { status: 'partial', error: '[COLLECTION_INCOMPLETE] 2 of 3', collected: { requested: 3, gained: 2, gainedByItem: { stone: 2 }, blocksBroken: 2 } } });
   assert.equal(partial.ok, false, 'partial is not done: the steps after it were planned on all of it');
   assert.match(partial.result, /only partly done: 2 of 3/);
+  // done in full, only the temporary furnace (or table) was not picked up again: ok, and the result says where it is
+  const lostFurnace = { status: 'partial', error: '[WORKSTATION_NOT_RECOVERED] furnace at (4459, 58, -23): [NO_REACHABLE_MATCHING_TARGETS] none could be reached', smelt: { requested: 3, produced: 3, inputItem: 'raw_iron', outputItem: 'iron_ingot', fuelItem: 'coal', furnace: { x: 4459, y: 58, z: -23 } }, workstation: { block: 'furnace', position: { x: 4459, y: 58, z: -23 }, recovered: false } };
+  const smelted = fromTheirs('smelt_item', { result: lostFurnace });
+  assert.equal(smelted.ok, true, 'the smelt was done; sending it again would smelt twice');
+  assert.match(smelted.result, /^smelted 3 iron_ingot .*; the furnace put down at 4459 58 -23 could not be picked up again/);
+  assert.equal(fromTheirs('smelt_item', { result: { ...lostFurnace, smelt: { ...lostFurnace.smelt, produced: 2 } } }).ok, false, 'a short smelt stays a failure');
+  const lostTable = { status: 'partial', error: '[WORKSTATION_NOT_RECOVERED] crafting_table at (1, 2, 3): no path', craft: { items: [{ item: 'stone_pickaxe', requested: 1, gained: 1 }], craftingTablePlaced: { x: 1, y: 2, z: 3 } }, workstation: { block: 'crafting_table', position: { x: 1, y: 2, z: 3 }, recovered: false } };
+  assert.equal(fromTheirs('craft_item', { result: lostTable }).ok, true);
+  assert.equal(fromTheirs('craft_item', { result: { ...lostTable, craft: { items: [{ item: 'stone_pickaxe', requested: 1, gained: 0 }] } } }).ok, false);
   assert.deepEqual(fromTheirs('navigate', { result: { status: 'cancelled' } }, { stopped: 'stop pressed' }), { ok: false, result: 'stopped: stop pressed', code: 'STOPPED', theirs: null });
   assert.equal(fromTheirs('navigate', { result: { status: 'succeeded', navigation: { end: { x: 3.5, y: 64, z: -2.2 }, target: { x: 3, y: 64, z: -3 }, remainingDistance: 0.4 } } }).result, 'walked to 3 64 -3');
   assert.equal(fromTheirs('collect_mob_drop', { result: { status: 'succeeded', hunt: { mob: 'sheep', drop: 'white_wool', requested: 2, gained: 2, targetDeathsObserved: 2 } } }).result, 'hunted sheep: 2 killed, 2 white_wool picked up (2 wanted)');

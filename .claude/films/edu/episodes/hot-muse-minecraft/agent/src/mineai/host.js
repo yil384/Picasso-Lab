@@ -175,6 +175,7 @@ export function createHostManager({ config, log, spawnFn = spawn, fetchFn = glob
         if (connected(h)) { misses = 0; host.lastHealth = h; host.emit('health', h); beat(); return; }
         if (failed(h)) { crashed(h?.runtime?.failure ? `its runtime stopped (${String(h.runtime.failure.code ?? 'failed')})` : 'its bot lost the connection to the server'); return; }
         misses += 1;
+        event('mineai_heartbeat_miss', { misses, of: m.heartbeatMisses });
         if (misses >= m.heartbeatMisses) { crashed(`no answer to ${misses} heartbeats in a row`); return; }
         beat();
       }, m.heartbeatMs);

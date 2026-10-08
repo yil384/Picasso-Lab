@@ -54,6 +54,22 @@ export function usernameFor(base, sessionId) {
   return `${base.slice(0, 16 - id.length - 1)}_${id}`;
 }
 
+/**
+ * SPREAD_SPOTS ("x z; x z; ..." or "x,z x,z ...") as [{x, z}]: the fixed spots new guest bots land at in turn. Empty
+ * or unset: none (the random spread). Throws on anything that is not pairs of whole block coordinates.
+ */
+export function spreadSpots(raw) {
+  const text = String(raw ?? '').trim();
+  if (!text) return [];
+  const nums = text.split(/[\s,;]+/).filter(Boolean).map(Number);
+  if (nums.length % 2 || nums.some((n) => !Number.isInteger(n) || Math.abs(n) > 29_999_984)) {
+    throw new Error(`SPREAD_SPOTS must be pairs of whole x z block coordinates ("x z; x z"), got "${text.slice(0, 80)}"`);
+  }
+  const out = [];
+  for (let i = 0; i < nums.length; i += 2) out.push({ x: nums[i], z: nums[i + 1] });
+  return out;
+}
+
 const NAME_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 /**
  * A guest bot's name on a server that lets in only listed players (MC_WHITELIST): MC_USERNAME (its first 8
@@ -290,6 +306,19 @@ export async function startAgent(opts = {}) {
       log.event('whitelist_error', { how, name, message: String(err?.message ?? err).slice(0, 200) });
     }
   };
+  // Where a new guest bot lands (MC_CONSOLE): a random dry spot up to SPREAD_RANGE blocks from the world spawn, or with
+  // SPREAD_SPOTS ("x z; x z; ...", for measurements) the next spot of that list in turn, within a block of it, so every
+  // body can be measured at the same fresh spots.
+  const spots = spreadSpots(process.env.SPREAD_SPOTS);
+  let spotsUsed = 0;
+  const spreadLine = (from, username) => {
+    if (spots.length) {
+      const at = spots[spotsUsed++ % spots.length];
+      return `spreadplayers ${at.x} ${at.z} 0 1 false ${username}`;
+    }
+    const range = Number(process.env.SPREAD_RANGE) || 400;
+    return `spreadplayers ${Math.round(from.x)} ${Math.round(from.z)} 16 ${range} false ${username}`;
+  };
   // the house bot (only with the Ask queue open: it needs the model) keeps MC_USERNAME and stays on the list
   if (llm && config.mc.whitelist && consolePath && !createFakeBot) await listPlayer('add', config.mc.username);
   const streamFrom = (body, sessionId) => (streams
@@ -327,16 +356,14 @@ export async function startAgent(opts = {}) {
     // Every guest bot starts on fresh ground: the server console (MC_CONSOLE, the FIFO server/start.sh makes) spreads
     // it to a random dry spot up to SPREAD_RANGE blocks from the world spawn, so earlier guests never leave a new one
     // at a stripped spawn. The session counts as ready only once the bot has landed and the chunks around it loaded.
-    const consolePath = process.env.MC_CONSOLE;
     if (sessionId !== 'house' && consolePath) {
-      const range = Number(process.env.SPREAD_RANGE) || 400;
       const joined = body.ready;
       body.ready = joined.then(async () => {
         const bot = body.bot;
         const sp = bot.spawnPoint ?? bot.entity.position;
         const landed = new Promise((resolve) => bot.once('forcedMove', resolve));
         try {
-          await fs.promises.appendFile(consolePath, `spreadplayers ${Math.round(sp.x)} ${Math.round(sp.z)} 16 ${range} false ${username}\n`);
+          await fs.promises.appendFile(consolePath, `${spreadLine(sp, username)}\n`);
         } catch (err) {
           log.event('spread_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) });
           return;
@@ -363,15 +390,13 @@ export async function startAgent(opts = {}) {
       config, log, hosts, gameId: sessionId, username, viewId,
       onEyes: (port, eyesPath) => streamFrom(body, sessionId)?.(port, eyesPath),
     });
-    const consolePath = process.env.MC_CONSOLE;
     if (consolePath) {
-      const range = Number(process.env.SPREAD_RANGE) || 400;
       const joined = body.ready;
       body.ready = joined.then(async () => {
         const from = body.bot.entity?.position;
         if (!from) return;
         try {
-          await fs.promises.appendFile(consolePath, `spreadplayers ${Math.round(from.x)} ${Math.round(from.z)} 16 ${range} false ${username}\n`);
+          await fs.promises.appendFile(consolePath, `${spreadLine(from, username)}\n`);
         } catch (err) {
           log.event('spread_error', { session: sessionId, message: String(err?.message ?? err).slice(0, 200) });
           return;

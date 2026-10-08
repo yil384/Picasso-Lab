@@ -299,6 +299,14 @@ function describe(tool, r) {
   return null;
 }
 
+/** Did a craft or smelt make everything it was asked for (whatever became of its temporary station)? */
+function doneInFull(r) {
+  if (r.smelt) return Number(r.smelt.produced) >= Number(r.smelt.requested) && Number(r.smelt.requested) > 0;
+  const items = r.craft?.items;
+  if (Array.isArray(items) && items.length) return items.every((i) => Number(i.gained) >= Number(i.requested ?? i.count ?? Infinity));
+  return false;
+}
+
 /**
  * A settled action's output (their {action, durationMs, result, interruptions}) as our SkillResult parts.
  * @param {string} tool their action
@@ -314,6 +322,14 @@ export function fromTheirs(tool, output, { stopped = null } = {}) {
   const extra = (output?.interruptions ?? []).length ? ` [on its own: ${output.interruptions.map((x) => clean(String(x).replace(/^\s*\[[A-Z_]+\]\s*/, ''), 80)).join(', ')}]` : '';
   if (status === 'succeeded') return { ok: true, result: `${said ?? 'done'}${extra}`, code: null, theirs: null };
   if (status === 'cancelled' && stopped) return { ok: false, result: `stopped: ${stopped}${said ? `; ${said}` : ''}${extra}`, code: /timed out after/.test(stopped) ? 'TIMED_OUT' : 'STOPPED', theirs };
+  // the craft or smelt was done in full and only the table or furnace put down for it was not picked up again (their
+  // WORKSTATION_NOT_RECOVERED, e.g. no path back to it): the step did what was asked, so it is ok (sending it again
+  // would craft or smelt twice); the station stays where it was, as our own body leaves its stations, and the result
+  // says so
+  if (status === 'partial' && theirs === 'WORKSTATION_NOT_RECOVERED' && r.workstation && !r.workstation.recovered && doneInFull(r)) {
+    const w = r.workstation;
+    return { ok: true, result: `${said ?? 'done'}; the ${w.block} put down at ${xyz(w.position)} could not be picked up again (it stays there, or lies there as an item)${extra}`, code: null, theirs };
+  }
   const why = clean(text || (status === 'partial' ? 'only part of it was done' : 'it did not work'));
   // a failure their code does not type, but whose words say something is not carried, is NEED_ITEMS
   let code = codeFor(theirs) ?? 'FAILED';

@@ -16,7 +16,7 @@ import { createLogger, readJsonl } from '../src/log.js';
 import { FORBIDDEN_PARAMS } from '../src/llm.js';
 import { EventEmitter } from 'node:events';
 import { createRequire } from 'node:module';
-import { startAgent, usernameFor, privateName, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts } from '../src/index.js';
+import { startAgent, usernameFor, privateName, listeningOn, startViewer, loadViewer, startGuestViews, viewPorts, spreadSpots } from '../src/index.js';
 import { consoleLine } from '../src/stations.js';
 import { start } from './mock-llm.js';
 
@@ -34,6 +34,16 @@ const json = (url, method = 'GET', body) => fetch(url, {
 });
 const freePort = () => new Promise((resolve) => {
   const s = http.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => resolve(port)); });
+});
+
+test('SPREAD_SPOTS: pairs of whole block coordinates, in order; anything else is refused', () => {
+  assert.deepEqual(spreadSpots(undefined), []);
+  assert.deepEqual(spreadSpots('  '), []);
+  assert.deepEqual(spreadSpots('1800 0; -1263 3049'), [{ x: 1800, z: 0 }, { x: -1263, z: 3049 }]);
+  assert.deepEqual(spreadSpots('1800,0 -1263,3049'), [{ x: 1800, z: 0 }, { x: -1263, z: 3049 }]);
+  assert.throws(() => spreadSpots('1800 0; 5'), /pairs of whole/);
+  assert.throws(() => spreadSpots('1800.5 0'), /pairs of whole/);
+  assert.throws(() => spreadSpots('a b'), /pairs of whole/);
 });
 
 test('usernames: the house bot keeps MC_USERNAME, guests get a valid name of their own', () => {

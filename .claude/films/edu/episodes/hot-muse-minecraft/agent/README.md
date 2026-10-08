@@ -569,6 +569,7 @@ server is offline-mode; that is the operator's call, not a default).
 | `MC_VIEWER_PORT` | `3007` | prismarine-viewer for the house bot, if installed; `0` is off |
 | `MC_WHITELIST` | `false` | the server lets in only listed players (the Paper container on picasso: `white-list`, `enforce-whitelist` and `hide-online-players` on): each guest bot gets a name nobody can guess (`MC_USERNAME`, at most 8 characters of it, and random letters and digits up to 16: `Muse_` and 11; not the game id; the log's `bot_name` row maps it to the game) and goes on the list through `MC_CONSOLE` just before it joins, off when it leaves; the house bot `MC_USERNAME` stays on it while the Ask queue is open, and the real-client camera lists itself |
 | `MC_CONSOLE`, `SPREAD_RANGE` | (none), `400` | the server console FIFO (`server/start.sh` and the Paper container make one): a new guest bot is spread to a fresh spot up to `SPREAD_RANGE` blocks from spawn, the real-client camera is put in place, and a bot's crafting tables and furnaces are removed when its game ends (without it they stay in the world) |
+| `SPREAD_SPOTS` | (none) | for measurements: `"x z; x z; ..."`, the spots new guest bots land at in turn (within a block, on the top block; a spot in water cannot be spread to), instead of the random spread, so both bodies can be run at the same fresh spots |
 | `WEB_HOST`, `WEB_PORT`, `WEB_PUBLIC_URL` | `127.0.0.1`, `8787`, (none) | the viewer page; the public URL goes into links and `openapi.json` (unset: the forwarded host behind a trusted proxy, else the listen address) |
 | `WEB_TRUST_PROXY` | `off` | where the client address for the limits comes from: `off` (the socket), `cloudflare` (`CF-Connecting-IP`), or 1-5 proxies appending to `X-Forwarded-For` |
 | `WEB_PROXY_SECRET` | (none) | a secret of at least 24 characters the proxy sends in `X-Muse-Proxy` (Caddy: `header_up`; needs `WEB_TRUST_PROXY`): forwarded headers count only on requests that carry it, and any other non-loopback request is refused. Use it on picasso, where every peer is the Docker gateway. Never logged or printed |
@@ -790,9 +791,9 @@ How a host runs (`src/mineai/host.js`): one per guest game, their `src/server/ho
 dev dependency; Node 24.15 or newer) or Bun (`MINEAI_RUNTIME=bun`, `MINEAI_EXEC`), with `--listen-host 127.0.0.1` on
 `MINEAI_PORT_BASE` + slot (never 0.0.0.0), the server, port and player name on its command line and a random token per
 host in its environment only; none of our keys, tokens or stream URLs reach it. Ready when its `/health` says the bot
-is connected (`MINEAI_START_MS`). Then a heartbeat (`MINEAI_HEARTBEAT_MS`): `MINEAI_HEARTBEAT_MISSES` unanswered in a
-row, a runtime their supervisor gave up on (`RUNTIME_UNRESPONSIVE`, `RUNTIME_EXITED`), a bot that lost its connection or
-a process that exited is a crash: the host is started again once (the bot rejoins where it was), a second crash ends the
+is connected (`MINEAI_START_MS`). Then a heartbeat (`MINEAI_HEARTBEAT_MS`; each unanswered one is logged as
+`mineai_heartbeat_miss`): `MINEAI_HEARTBEAT_MISSES` unanswered in a row, a runtime their supervisor gave up on
+(`RUNTIME_UNRESPONSIVE`, `RUNTIME_EXITED`), a bot that lost its connection or a process that exited is a crash: the host is started again once (the bot rejoins where it was), a second crash ends the
 game ("the body could not go on"). It is killed when its game ends (end_game, the lease, the operator's `{"end": true}`,
 an agent stop) and with the agent even when the agent is killed (`src/mineai/preload.mjs` watches the stdin pipe). At
 most `MINEAI_MAX_HOSTS` at once. Bot data is temporary unless `MINEAI_DATA_DIR` is set.
@@ -827,7 +828,9 @@ timeout, and always reads the final result before the next call (their result ga
 is read first). Results come back in our words with the inventory change from their status before and after; their
 codes become ours (`CRAFT_MATERIALS_MISSING`, `SMELT_FUEL_STARVED`, `TARGET_UNMINEABLE`, `BED_NOT_FOUND`... `NEED_ITEMS`;
 `HOSTILE_CONTACT`; `*_DIED` or a new death in their status `DIED`; `INVENTORY_FULL`; unknown names `BAD_ARGS`; a
-partial result is a failure, since the steps after it were planned on all of it). Their reflexes (combat, fire,
+partial result is a failure, since the steps after it were planned on all of it; except a craft or smelt done in full
+whose temporary table or furnace could not be picked up again: that is ok, and the result says where the station was
+left, as our own body leaves its stations; sending it again would craft or smelt twice). Their reflexes (combat, fire,
 breath, footing, hunger) act on their own and are listed in the result ("on its own: ..."). The dry-run check knows the
 stations come back (`temporaryStations`) and what `hunt`, `chest`, `drop` and `bucket` bring or take; after `pick_up`
 what seems missing only warns.
@@ -855,9 +858,54 @@ no console items, a fresh spot per game via `spreadplayers`; the Mac loaded by o
 | crash | the bot's runtime process killed mid-game: the running step failed, a new runtime in about 9 s, the next step ok; killed again: the game ended with the reason |
 | agent killed (`kill -9`) | the host and its runtime gone and the bot off the server within 1-2 s (Node and Bun) |
 
-Not yet: Paper (their crafting fails there until the craft fix of the parallel track lands), staging (the image
-builds the runtime with `--build-arg MINEAI=1`, UNVERIFIED: no Docker here; staging also needs `BODY=mineai` in its
-environment), picasso's load (`MINEAI_UNRESPONSIVE_MS`, the heartbeat), several hosts at once, a whole lease.
+On Paper, the server we deploy (2026-10-08, this Mac, our local Paper 1.21.4-232 on 25565, seed 71811045, Easy,
+daylight locked, natural: no console items). The runtime built by `mineai/fetch-and-patch.sh` (all four patches), run
+with Bun 1.4.2 (`MINEAI_RUNTIME=bun`, as in the image), heartbeat and watchdog at their defaults (5 s, 3 misses; 5 s).
+Each game lands at a fresh spot of its own: `SPREAD_SPOTS`, spots no earlier game had touched (regions never
+generated before a spectator probe looked at them; spots in water left out, nothing else picked). Every number is the
+strict harness `test/e2e/mcp-iron.mjs` (iron pickaxe from an empty inventory, every step once, no fights by the
+harness), driven by `mineai/bench/gateway-iron.mjs`, which also samples every process under the agent every 3-5 s and
+reads the agent's `loop_delay` rows and host events and the server's death messages. Our body ran the same 10 spots on
+an untouched copy of the same world (snapshot taken before any of these games, port 25569). Times are from the
+harness's start, `start_game` included (about 5 s with this body, 3 s with ours).
+
+| | `BODY=mineai`, 10 spots one at a time | `BODY=mineai`, 8 more spots, 8 games at once | `BODY=ours`, the same 10 spots |
+| --- | --- | --- | --- |
+| strict passes (iron pickaxe, no failed step) | **8 of 10** (9 of 10 counting the lost furnace as ok, as the body now does) | **8 of 8** | **8 of 10** |
+| iron pickaxe made | 10 of 10 | 8 of 8 | 8 of 10 |
+| time, median / max (passes) | 154.0 / 173.9 s (all 10 made: median 158.3 s, one 300.1 s) | 156.5 / 179.8 s | 134.4 / 157.3 s |
+| deaths | 0 | 0 | 0 |
+| failed steps | 3 (spot 1: `collect oak_log 6` got 3 in its 180 s, then the planks check; spot 9: the smelt was done, the temporary furnace was not picked up again) | 0 | 34 (spot 3: 6 spruce logs mined, 2 picked up, then every step after it; spot 7: no oak log within 32 blocks, then every step after it) |
+| MCP calls per game, median | 14 | 14 | 14 |
+| where the time goes (median s): logs, all crafts, stone, iron and coal, smelt | 37.5, 22.3, 26.8, 32.2, 32.2 | 28.8, 23.1, 26.4, 43.9, 32.2 | 35.3, 19.6 (the last craft waits 15.6 for the ingots), 23.5, 43.9, 3.6 |
+| agent event loop (60 s windows) | p50 2.0 ms, p99 2.2-2.4 ms, max 43 ms | p50 2.0 ms, p99 2.4-7.5 ms, max 18 ms | p50 2.0 ms, p99 41-153 ms, max 3.1 s (15 of 22 windows had a stall over 1 s, 5 over 2 s): the bot runs in the agent's process |
+| hosts | 10 started, ready in 1.0 s (median), 0 heartbeats missed, 0 restarts | 8 at once, ready in 1.1 s, 0 heartbeats missed, 0 restarts, 0 watchdog stops | - |
+| memory | agent 143-156 MB; each host 70 MB; each runtime (the bot, with its live views) 446 MB median, 689 MB max | agent 146-168 MB; hosts 548 MB together; runtimes 428-548 MB each, 3.8 GB together at most | agent 394 MB after the 10 games |
+| CPU (one core = 100%) | agent 0.4% median; a runtime 18% median, 35% p90, 97% max | agent 1.3% median, 6.5% max; a runtime 9% median, 45% p90; all runtimes together 337% at most; Paper 153% mean, 494% max (8 fresh areas generating); load average up to 5.5 on 8 cores | agent 36% of a core on average over the games |
+
+Spot 1's slow log collect did not come back: the same spot on another untouched copy (port 25570, with
+`MINEAI_DATA_DIR` set so their SQLite kept every action) collected its 6 logs in 28.7 s and passed in 159.7 s. With
+temporary bot data nothing of the slow run was left to read: staging should set `MINEAI_DATA_DIR` (and prune it). Their
+4 table crafts take 4.6-5.7 s each because the table is put down and dug up again every time (ours: 0.15 s at a table
+that stays), and their smelt waits for the whole load (ours returns at once and smelts in up to 2 furnaces): crafting
+and smelting cost theirs about 31 s more per route (median 54.5 s against 23.2 s), more than the whole 20 s gap in the
+median; theirs gets some back at the ore (32.2 s against 43.9 s). Keeping a placed table and furnace for the game, as
+ours does, is the obvious next speed-up (estimate: 10-15 s a route). Their log search over every loaded chunk is why spot 7 (no tree within 32 blocks) passed with
+theirs and failed with ours.
+
+Reproduce (the servers and the world copies are outside the repo, in `~/picasso-work/rv-int/`):
+
+```sh
+SPREAD_SPOTS="1800 0; 1273 1273; -1800 0; 0 -1800; 3049 1263; -1263 3049; -3049 -1263; 3049 -1263; 4500 0; -4500 0" \
+  BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime MINEAI_RUNTIME=bun MINEAI_EXEC=<bun> MC_CONSOLE=server/console.in \
+  MC_USERNAME=Tst_rv WEB_PORT=8791 WEB_MAX_SESSIONS=8 WEB_MCP_GAMES_PER_ADDRESS=8 WEB_LEASE_MS=960000 npm start
+node mineai/bench/gateway-iron.mjs http://127.0.0.1:8791 --agent-pid <agent pid> --agent-log logs/run-serve-<...>.jsonl \
+  --server-log server/logs/latest.log --label a-mineai-paper --n 10            # --parallel --n 8: all at once
+```
+
+Not yet: staging (the image builds the runtime with `--build-arg MINEAI=1`, UNVERIFIED: no Docker here; staging also
+needs `BODY=mineai`, `MINEAI_DATA_DIR` on a volume and the build arg in its compose file), picasso's load
+(`MINEAI_UNRESPONSIVE_MS`, the heartbeat), a whole lease, more than 8 games at once.
 
 ## What is mocked
 
