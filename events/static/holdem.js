@@ -85,6 +85,18 @@ export function mountHoldem(ui) {
         }
     }
 
+    // Who sat where in the last few hands. The service's last hand names seats only, so 上一手 takes each row's name
+    // and face from here: whoever played that hand, not whoever has taken or left the seat since.
+    const handSeats = new Map();   // "CODE:no" -> { done, seats: [{ bot, name } | null] }
+    function noteHandSeats(t) {
+        const h = t.hand;
+        if (!h) return;
+        const key = `${t.code}:${h.no}`;
+        if (handSeats.get(key)?.done) return;   // kept as the hand ended
+        handSeats.set(key, { done: !!h.done, seats: t.seats.map(s => (s ? { bot: s.bot || null, name: s.name || "" } : null)) });
+        while (handSeats.size > 4) handSeats.delete(handSeats.keys().next().value);
+    }
+
     function onState(msg) {
         const t = msg.table;
         if (!t || (S.code && t.code !== S.code)) return;
@@ -93,6 +105,7 @@ export function mountHoldem(ui) {
         S.rev = msg.rev;
         S.offset = (msg.serverTime || Date.now()) - Date.now();
         S.table = t;
+        noteHandSeats(t);
         S.me = msg.me;
         S.code = t.code;
         S.pending = "";
@@ -300,8 +313,8 @@ export function mountHoldem(ui) {
         return { x: 50 + 53 * Math.cos(a), y: 50 + 60 * Math.sin(a) };
     }
 
-    function faceHTML(seat) {
-        if (seat.bot) return ui.defaultFaceHTML(botMark(seat, L));
+    function faceHTML(seat, i) {
+        if (seat.bot) return ui.defaultFaceHTML(botMark(i));
         const photo = ui.seatMemberPhoto(seat.name);
         return photo ? `<img src="${esc(photo)}" alt="">` : ui.defaultFaceHTML();
     }
@@ -316,7 +329,7 @@ export function mountHoldem(ui) {
             return `<div class="hd-rseat is-empty" ${style}><span class="room-seat-disc"><button class="room-seat-sit" type="button" data-sit="${i}"${busy} aria-label="${L(`Sit at seat ${i + 1}`, `坐 ${i + 1} 号位`)}"><b>+</b><span>${L("Sit", "入座")}</span></button></span></div>`;
         }
         const me = mine === i;
-        const name = seatName(seat, L);
+        const name = seatName(seat, i);
         const tag = seat.bot ? "AI" : me ? L("Me", "我") : "";
         const host = S.table.host === seat.pid;
         const clear = seat.bot && isHost()
@@ -324,7 +337,7 @@ export function mountHoldem(ui) {
             : me ? `<button class="room-badge is-leave" type="button" data-stand${busy} aria-label="${L("Leave the seat", "离开座位")}">${ui.glyphHTML("close")}</button>` : "";
         return `<div class="hd-rseat${me ? " is-me" : ""}${seat.bot ? " is-ai" : ""}" ${style}>
             <span class="room-seat-disc">
-                <span class="gd-avatar room-seat-av${me ? "" : " is-opp"}">${faceHTML(seat)}${tag ? `<span class="gd-avatar-tag">${tag}</span>` : ""}</span>
+                <span class="gd-avatar room-seat-av${me ? "" : " is-opp"}">${faceHTML(seat, i)}${tag ? `<span class="gd-avatar-tag">${tag}</span>` : ""}</span>
                 ${host ? `<span class="room-seat-host">${L("Host", "房主")}</span>` : ""}${clear}
             </span>
             <span class="room-seat-plate hd-rplate"><b>${esc(name)}</b><em>${fmt(seat.stack)}</em></span>
@@ -664,7 +677,8 @@ export function mountHoldem(ui) {
         const last = S.table?.last;
         if (!last) return ui.showToast(L("No finished hand yet", "还没有打完的牌"));
         const board = last.board?.length ? last.board : [];
-        const seats = S.table.seats;
+        // the players of that hand when this page saw it, else (a page that joined later) the seats as they are now
+        const seats = handSeats.get(`${S.table.code}:${last.no}`)?.seats || S.table.seats;
         const shown = Object.entries(last.shown || {}).map(([i, hole]) => [Number(i), hole]);
         const winners = last.winners || [];
         const lines = new Map();
@@ -677,8 +691,8 @@ export function mountHoldem(ui) {
             const hand = info.hand || last.hands?.[i] || null;
             const win = new Set(info.hand?.cards || []);
             return `<div class="hd-last-row${info.won ? " is-win" : ""}">
-                <span class="gd-avatar${S.me?.seat === i ? "" : " is-opp"} hd-last-av">${seat ? faceHTML(seat) : ui.defaultFaceHTML()}</span>
-                <span class="hd-last-name"><b>${esc(seat ? seatName(seat, L) : L(`Seat ${i + 1}`, `${i + 1} 号位`))}</b><small>${hand ? esc(handLabel(hand, L)) : hole ? "" : L("Did not show", "未亮牌")}</small></span>
+                <span class="gd-avatar${S.me?.seat === i ? "" : " is-opp"} hd-last-av">${seat ? faceHTML(seat, i) : ui.defaultFaceHTML()}</span>
+                <span class="hd-last-name"><b>${esc(seat ? seatName(seat, i) : L(`Seat ${i + 1}`, `${i + 1} 号位`))}</b><small>${hand ? esc(handLabel(hand, L)) : hole ? "" : L("Did not show", "未亮牌")}</small></span>
                 <span class="hd-last-cards">${(hole || []).map((c, k) => ui.cardHTML(toCard(c, `lh${i}${k}`), true, win.size && !win.has(c) ? "is-dim" : "")).join("")}</span>
                 <b class="hd-last-amt">${info.won ? `+${fmt(info.won)}` : ""}</b>
             </div>`;
