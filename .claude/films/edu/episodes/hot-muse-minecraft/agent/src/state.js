@@ -1,6 +1,8 @@
 // src/state.js - the game state as data (StateSnapshot) and as the plain text the model reads: health, food,
 // position, facing, time of day, inventory, notable blocks within SCAN_RADIUS (default 32) blocks (count and nearest), nearby mobs, the
-// current goal and the last result. Reads the bot only; never changes the game.
+// current goal and the last result. Reads the bot only; never changes the game. The block scan (about 30 searches of
+// the chunks around the bot) is kept per bot and done again only after SCAN_MOVE blocks of movement, a change to a
+// notable block in range, or SCAN_MS (roadmap M2: every reply reads the state).
 
 import { LOGS } from './game.js';
 
@@ -14,6 +16,9 @@ export const NOTABLE_BLOCKS = Object.freeze([
 ]);
 
 const RADIUS = Number(process.env.SCAN_RADIUS) || 32;
+/** The cached block scan is redone after the bot moved this far, or after this long. */
+export const SCAN_MOVE = 4;
+export const SCAN_MS = 5_000;
 const CAP = 64; // per block type; more shows as "64+"
 const MAX_MOBS = 10;
 const HOSTILE = 'Hostile mobs';
@@ -82,6 +87,44 @@ export function nearbyBlocks(bot, { radius = RADIUS, cap = CAP, names = NOTABLE_
   return out.sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name));
 }
 
+const scans = new WeakMap(); // bot -> {rows, pos, at, radius, dirty, ids}
+
+/**
+ * nearbyBlocks, from the per-bot cache when it still holds: the bot moved less than SCAN_MOVE blocks, no notable
+ * block within the radius changed (the bot's blockUpdate events) and the scan is under SCAN_MS old. Distances are
+ * measured again from where the bot stands now.
+ */
+export function cachedNearbyBlocks(bot, { radius = RADIUS } = {}) {
+  let c = scans.get(bot);
+  if (!c) {
+    const ids = new Set(NOTABLE_BLOCKS.map((n) => bot.registry.blocksByName[n]?.id).filter((id) => id !== undefined));
+    c = { rows: null, pos: null, at: 0, radius, dirty: true, ids, scans: 0 };
+    scans.set(bot, c);
+    bot.on?.('blockUpdate', (oldBlock, newBlock) => {
+      if (c.dirty || !c.pos) return;
+      const b = newBlock ?? oldBlock;
+      if (!b?.position || (!c.ids.has(oldBlock?.type) && !c.ids.has(newBlock?.type))) return;
+      if (b.position.distanceTo(c.pos) <= c.radius + 1) c.dirty = true;
+    });
+  }
+  const from = bot.entity.position;
+  if (c.dirty || !c.rows || c.radius !== radius || Date.now() - c.at >= SCAN_MS || from.distanceTo(c.pos) >= SCAN_MOVE) {
+    c.rows = nearbyBlocks(bot, { radius });
+    c.pos = from.clone();
+    c.at = Date.now();
+    c.radius = radius;
+    c.dirty = false;
+    c.scans += 1;
+    return c.rows.map((r) => ({ ...r, nearest: { ...r.nearest } }));
+  }
+  return c.rows
+    .map((r) => ({ ...r, nearest: { ...r.nearest }, distance: round1(Math.hypot(r.nearest.x + 0.5 - from.x, r.nearest.y + 0.5 - from.y, r.nearest.z + 0.5 - from.z)) }))
+    .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name));
+}
+
+/** How many full block scans the cache has done for this bot (tests, measurements). */
+export const scanCount = (bot) => scans.get(bot)?.scans ?? 0;
+
 /** Mobs (never players, items or projectiles) within radius, closest first. */
 export function nearbyMobs(bot, { radius = RADIUS, max = MAX_MOBS } = {}) {
   const from = bot.entity.position;
@@ -117,7 +160,7 @@ export function snapshotOf(bot, extra = {}) {
     isDay: bot.time?.isDay ?? (t < 13000 || t >= 23000),
     inventory: inventoryOf(bot),
     held: bot.heldItem?.name ?? null,
-    nearbyBlocks: nearbyBlocks(bot, { radius: extra.radius }),
+    nearbyBlocks: cachedNearbyBlocks(bot, { radius: extra.radius }),
     mobs: nearbyMobs(bot, { radius: extra.radius }).map(({ id, ...m }) => m),
     goal: extra.goal ?? null,
     busy: Boolean(extra.busy),
@@ -159,6 +202,8 @@ export function renderState(s) {
   lines.push(`nearby mobs: ${s.mobs.length
     ? s.mobs.map((m) => `${m.name}${m.hostile ? ' (hostile)' : ''} ${m.distance} away at ${xyz(m.position)}`).join('; ')
     : 'none'}`);
+  if (s.smelting) lines.push(`furnaces: ${s.smelting}`);
+  if (s.stations?.length) lines.push(`your stations: ${s.stations.map((st) => `${st.name} at ${xyz(st)}`).join(', ')}`);
   lines.push(`goal: ${s.goal ?? 'none'}`);
   if (s.busy) lines.push(`doing now: ${s.doing ?? 'a skill'}`);
   lines.push(`last result: ${s.lastResult ?? 'none yet'}`);

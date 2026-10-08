@@ -23,7 +23,9 @@ export const SETTLE_MS = 4_000;
 const BURST = 24;
 const BURST_GAP_MS = 60;
 /** After the expected answers are in: a short quiet spell in which nothing more for this window arrives. */
-const QUIET_MS = 100;
+const QUIET_MS = 50;
+/** A window the server confirmed this recently, with nothing changed since, needs no new sync (roadmap M2, S10). */
+export const FRESH_MS = 1_000;
 
 const trackers = new WeakMap();
 const items = new WeakMap();
@@ -36,10 +38,13 @@ function itemLib(bot) {
   return items.get(bot);
 }
 
-/** Per bot: how many full resyncs each window id has received, and when the server last touched it. */
+/**
+ * Per bot: how many full resyncs each window id has received, when the server last touched it, and when a settle last
+ * found it settled.
+ */
 function tracker(bot) {
   if (trackers.has(bot)) return trackers.get(bot);
-  const t = { full: new Map(), last: new Map() };
+  const t = { full: new Map(), last: new Map(), synced: new Map() };
   const touch = (id) => t.last.set(id, Date.now());
   bot._client.on('window_items', (p) => { t.full.set(p.windowId, (t.full.get(p.windowId) ?? 0) + 1); touch(p.windowId); });
   bot._client.on('set_slot', (p) => touch(p.windowId));
@@ -116,9 +121,23 @@ export function clicker(ctx, window) {
         }
         while (Date.now() - (t.last.get(id) ?? 0) < QUIET_MS && Date.now() < until) await ctx.sleep(QUIET_MS / 2);
         expect = Math.max(expect, t.full.get(id) ?? 0);
+        t.synced.set(id, Date.now());
       });
     },
+    /** True when the client's picture of this window is one the server confirmed under FRESH_MS ago, untouched since. */
+    fresh: () => !sent && isFresh(t, id),
   };
+}
+
+const isFresh = (t, id) => {
+  const at = t.synced.get(id) ?? 0;
+  return Date.now() - at < FRESH_MS && (t.last.get(id) ?? 0) <= at;
+};
+
+/** True when the player inventory was synced with the server under FRESH_MS ago and nothing touched it since. */
+export function inventoryFresh(bot) {
+  if (!canClick(bot) || bot.currentWindow) return false;
+  return isFresh(tracker(bot), 0);
 }
 
 /** Close whatever window is open (crafting table, furnace) so clicks go to the player's own inventory. */
@@ -201,6 +220,7 @@ export async function syncInventory(bot, ms = 1_500) {
       await nap(20);
     }
     while (Date.now() - (t.last.get(0) ?? 0) < QUIET_MS && Date.now() < until) await nap(QUIET_MS / 2);
+    t.synced.set(0, Date.now());
     return true;
   } catch {
     return false;

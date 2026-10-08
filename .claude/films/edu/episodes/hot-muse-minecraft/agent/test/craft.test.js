@@ -52,9 +52,9 @@ test('craft by clicks on a laggy server: birch logs to a wooden pickaxe at a tab
 
   const pick = await body.run('craft', { item: 'wooden_pickaxe', n: 1 });
   assert.equal(pick.ok, true, pick.result);
-  assert.match(pick.result, /^crafted 1 wooden_pickaxe \(placed a crafting table and took it back\)$/);
-  assert.deepEqual(pick.delta, { birch_planks: -3, stick: -2, wooden_pickaxe: 1 });
-  assert.deepEqual(body.inventory(), { birch_planks: 5, stick: 6, crafting_table: 1, wooden_pickaxe: 1 });
+  assert.match(pick.result, /^crafted 1 wooden_pickaxe \(placed a crafting table at -?\d+ 64 -?\d+; it stays there for your next crafts\)$/);
+  assert.deepEqual(pick.delta, { birch_planks: -3, stick: -2, crafting_table: -1, wooden_pickaxe: 1 });
+  assert.deepEqual(body.inventory(), { birch_planks: 5, stick: 6, wooden_pickaxe: 1 });
   assert.equal(bot.currentWindow, null, 'the table window is closed');
   assert.equal(called(bot, 'craft').length, 0, "mineflayer's craft() is never used");
   assert.ok(called(bot, 'packet.window_click').length > 10);
@@ -141,17 +141,20 @@ test('craft by clicks: a stop in the middle of a 2x2 craft gives the grid and th
 });
 
 test('a crafting table or furnace nearby that cannot be reached: the one carried is put down instead', async () => {
-  const { bot, body } = await setup({ inventory: { oak_planks: 3, stick: 2, crafting_table: 1, raw_iron: 1, coal: 1, furnace: 1 } });
+  const { bot, body } = await setup({ inventory: { oak_planks: 3, stick: 2, crafting_table: 1, raw_iron: 1, coal: 1, furnace: 1 } }, { timing: { smeltMs: 20 } });
   bot.fake.setBlock(new Vec3(20, 64, 0), 'crafting_table');
   bot.fake.setBlock(new Vec3(-20, 64, 0), 'furnace');
   bot.fake.unreachable = (dest) => Math.abs(dest.x) >= 15; // both behind a wall
   const pick = await body.run('craft', { item: 'wooden_pickaxe', n: 1 });
   assert.equal(pick.ok, true, pick.result);
-  assert.match(pick.result, /^crafted 1 wooden_pickaxe \(placed a crafting table and took it back\)$/);
+  assert.match(pick.result, /^crafted 1 wooden_pickaxe \(placed a crafting table at -?\d+ 64 -?\d+; it stays there for your next crafts\)$/);
   const iron = await body.run('smelt', { item: 'raw_iron', n: 1 });
   assert.equal(iron.ok, true, iron.result);
-  assert.match(iron.result, /\(placed a furnace and took it back\)$/);
-  assert.deepEqual(body.inventory(), { crafting_table: 1, wooden_pickaxe: 1, furnace: 1, iron_ingot: 1 });
+  assert.match(iron.result, /^smelting 1 raw_iron in 1 furnace at (?!-20 )-?\d+ 64 -?\d+, burning 1 coal/);
+  const got = await body.run('smelt', { item: 'raw_iron', n: 1 });
+  assert.equal(got.ok, true, got.result);
+  assert.equal(got.result, 'waited for your furnaces (took 1 iron_ingot from your furnace)');
+  assert.deepEqual(body.inventory(), { wooden_pickaxe: 1, iron_ingot: 1 });
 });
 
 test('in a tunnel with no air beside the bot, a spot is dug out of the wall for the table', async () => {
@@ -160,7 +163,7 @@ test('in a tunnel with no air beside the bot, a spot is dug out of the wall for 
   bot.fake.setBlock(new Vec3(0, 56, 0), 'air'); // a 1x2 pocket in solid stone
   const r = await body.run('craft', { item: 'wooden_pickaxe', n: 1 });
   assert.equal(r.ok, true, r.result);
-  assert.match(r.result, /^crafted 1 wooden_pickaxe \(placed a crafting table and took it back\)$/);
+  assert.match(r.result, /^crafted 1 wooden_pickaxe \(placed a crafting table at -?\d+ 5[56] -?\d+; it stays there for your next crafts\)$/);
   assert.ok(called(bot, 'dig').some((c) => c.block === 'stone'), 'dug a spot');
-  assert.deepEqual(body.inventory(), { crafting_table: 1, wooden_pickaxe: 1 });
+  assert.deepEqual(body.inventory(), { wooden_pickaxe: 1 });
 });

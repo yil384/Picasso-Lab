@@ -7,7 +7,9 @@
 // straight shaft (what pathfinder digs on its own, slowly, as one search through solid stone) is a trap afterwards,
 // the bot can only climb out by pillaring, which often fails.
 // All legs share one progress watch (src/walk-watch.js): the trip ends, with what held it up, as soon as the bot
-// stops getting closer, instead of digging by hand or pillaring in circles until the time limit.
+// stops getting closer, instead of digging by hand or pillaring in circles until the time limit. A step of the
+// staircase is one block away: its path search is kept short and near (roadmap M2, S8), so a step that cannot be dug
+// fails at once and the descent goes on a few blocks at a time instead.
 
 import { Vec3 } from '../mc.js';
 import { goals, done, fail, fmt, describeError, SkillStop } from './util.js';
@@ -20,6 +22,8 @@ const SPIRAL = [[0, 0], [1, 0], [1, 1], [0, 1]];
 const GROWTH = /(_leaves|_log|_wood|_stem|mushroom_block|vine)$/;
 
 const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+/** Path search for one step of the staircase (S8). */
+const STEP_SEARCH = { thinkMs: 4_000, searchRadius: 16 };
 
 /**
  * Feet height on the ground at column (x, z): one above the highest solid block that is not part of a tree, scanning
@@ -47,11 +51,11 @@ export async function goTo(ctx, { x, y, z }) {
 
   const watch = ctx.walkWatch?.(() => bot.entity.position.distanceTo(centre)) ?? null;
   let lastError = null;
-  const leg = async (goal) => {
+  const leg = async (goal, search = {}) => {
     if (watch?.error) return false;
     const before = bot.entity.position.distanceTo(centre);
     try {
-      await ctx.goto(goal, { watch });
+      await ctx.goto(goal, { watch, ...search });
     } catch (err) {
       if (err instanceof SkillStop) throw err;
       lastError = err;
@@ -81,7 +85,7 @@ export async function goTo(ctx, { x, y, z }) {
       const feet = feetY();
       i = (i + 1) % SPIRAL.length;
       const [dx, dz] = SPIRAL[i];
-      await leg(new goals.GoalBlock(x + dx, feet - 1, z + dz));
+      await leg(new goals.GoalBlock(x + dx, feet - 1, z + dz), STEP_SEARCH);
       if (feetY() >= feet) break; // that step did not go down
     }
     for (let k = 0; k < 40 && bot.entity.position.y - y > DESCEND + 1; k++) {

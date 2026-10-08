@@ -2,6 +2,7 @@
 // say (one chat line; never a command, never a character the server kicks for).
 
 import { done, fail, equip } from './util.js';
+import { pendingFor, fetchSmelted } from './smelt.js';
 
 // Foods that hurt (poison, hunger, nausea) or teleport the bot; never picked automatically.
 const UNSAFE_FOOD = new Set(['rotten_flesh', 'spider_eye', 'poisonous_potato', 'pufferfish', 'chicken', 'suspicious_stew', 'chorus_fruit']);
@@ -11,12 +12,27 @@ export async function getState(ctx) {
   return done(ctx.state());
 }
 
+/** The safe food carried with the best food value + saturation, or null. */
+export function bestSafeFood(bot) {
+  const foods = bot.registry.foodsByName;
+  const safe = bot.inventory.items().filter((i) => foods[i.name] && !UNSAFE_FOOD.has(i.name));
+  if (!safe.length) return null;
+  const score = (name) => foods[name].effectiveQuality ?? foods[name].foodPoints + foods[name].saturation;
+  return safe.reduce((a, b) => (score(b.name) > score(a.name) ? b : a));
+}
+
 /** eat {}: the safe food with the best food value + saturation, only when the food bar is below 20. */
 export async function eat(ctx) {
   const { bot } = ctx;
   const before = bot.food;
   if (before >= 20) return fail('not hungry: food is 20/20');
   const foods = bot.registry.foodsByName;
+  // food still cooking in the bot's furnaces (a background smelt) is fetched when nothing else is carried
+  let fetched = '';
+  if (!bestSafeFood(bot)) {
+    const cooked = new Set(Object.keys(foods).filter((n) => !UNSAFE_FOOD.has(n)));
+    if (pendingFor(ctx, cooked)) fetched = await fetchSmelted(ctx, { only: cooked, wait: true });
+  }
   const carried = bot.inventory.items().filter((i) => foods[i.name]);
   const safe = carried.filter((i) => !UNSAFE_FOOD.has(i.name));
   if (!safe.length) {
@@ -30,7 +46,7 @@ export async function eat(ctx) {
   await equip(ctx, best.name);
   await ctx.wait(bot.consume());
   ctx.check();
-  return done(`ate ${best.name}: food ${before} -> ${bot.food}`);
+  return done(`ate ${best.name}: food ${before} -> ${bot.food}${fetched}`);
 }
 
 /**

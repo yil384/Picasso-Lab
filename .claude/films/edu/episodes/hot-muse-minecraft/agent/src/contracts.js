@@ -242,7 +242,8 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {InventoryDelta} delta
  * @property {number} [ms]       wall time of the skill
  * @property {Record<string, number>} [phases]  where that time went, in ms: path, dig, drop, sync, place, open, clicks,
- *   pickup, cook and other (src/body.js createPhases)
+ *   pickup, cook, reflex and other (src/body.js createPhases); they add up to ms
+ * @property {string[]} [reflexes]  what the body did on its own during or before the skill (src/reflexes.js)
  *
  * @typedef {object} StateSnapshot  the structured form of Body.state(), for /api/.../state and the HUD
  * @property {number} health                 0-20
@@ -264,13 +265,19 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {string|null} doing             the running call, e.g. "collect oak_log 4" (null when idle)
  * @property {string|null} lastResult        "<call> -> ok|failed: <result> (inventory: oak_log +4)"
  * @property {boolean} connected             false before spawn and after a disconnect
+ * @property {string} [smelting]             what the bot's furnaces are working on (a background smelt), e.g.
+ *   "3 iron_ingot ready in about 7 s in your furnaces at 1 64 2, 1 64 3"
+ * @property {Array<{name: string, x: number, y: number, z: number}>} [stations]  crafting tables and furnaces the
+ *   bot placed and owns (src/stations.js)
  *
  * @typedef {object} Body  src/body.js: export function createBody(opts): Body
- *   opts = { bot?: object, config?: Config, log?: Logger, timeouts?: Partial<TOOL_TIMEOUTS_MS>, timing?: object }.
+ *   opts = { bot?: object, config?: Config, log?: Logger, timeouts?: Partial<TOOL_TIMEOUTS_MS>, timing?: object,
+ *   reflexes?: boolean (default true), stations?: a registry from src/stations.js, console?: the server console FIFO }.
  *   With opts.bot (test/fake-bot.js) the body uses that bot as is and does not load plugins it already has; without
  *   it, it creates a mineflayer bot from config.mc (offline auth, username config.mc.username, localhost/LAN only:
  *   any other host throws) and loads mineflayer-pathfinder and mineflayer-tool. The body
- *   logs 'bot_ready', 'stop', 'death', 'attacked', 'disconnect' and 'bot_error' events to opts.log.
+ *   logs 'bot_ready', 'stop', 'death', 'attacked', 'reflex', 'reflex_idle', 'stations_retired', 'stations_removed',
+ *   'disconnect' and 'bot_error' events to opts.log.
  * @property {Promise<void>} ready                       resolves once the bot has spawned (at once for an injected bot);
  *   rejects with "could not join the Minecraft server: ..." when the connection ends first
  * @property {() => string} state                        plain-text state for the model (src/state.js)
@@ -284,9 +291,14 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  *   TOOL_TIMEOUTS_MS ("timed out after N s"), computes delta from the inventory before and after (on a real server
  *   both read after a resync of the player inventory, so late server updates land in the right call). Before spawn
  *   it answers "not in the game yet", after a disconnect "not connected to the game"; a death stops the running
- *   skill ("stopped: you died at x y z; ...") and the next one waits for the respawn; a hit from a hostile mob stops
- *   any skill but attack and eat ("stopped: a zombie is attacking you (health 14/20, ...); fight back with attack
- *   zombie, or go_to somewhere safe").
+ *   skill ("stopped: you died at x y z; ...") and the next one waits for the respawn. Reflexes (src/reflexes.js):
+ *   a hit from a hostile mob during a skill (not attack, eat, get_state, say) or between skills is fought back, or run
+ *   from below 8 health (the skill then ends "retreated: ..."), the bot eats at food 14 or less with no hostile mob
+ *   near, and the interrupted skill goes on from where it was; what the reflexes did is appended to the next result
+ *   (" [on its own: fought back a zombie and killed it (3 swings); ate bread (food 12 -> 17)]") and listed in
+ *   SkillResult.reflexes. With reflexes off a hit stops the skill: "stopped: a zombie is attacking you (health
+ *   14/20, ...); fight back with attack zombie, or go_to somewhere safe". SkillResult.phases: ms per part of the work
+ *   (path, dig, pickup, sync, reflex...; see SkillResult).
  * @property {(reason?: string) => Promise<void>} stop    kill switch: cancels the running skill (pathfinder goal,
  *   digging, eating, controls, an open crafting or furnace window); the pending run() resolves ok:false
  *   "stopped: <reason>" (plus where a skill left things, e.g. items in a furnace). The bot stays connected.
@@ -294,7 +306,8 @@ export const STOP_REASONS = Object.freeze(['goal', 'step_cap', 'cost_cap', 'hour
  * @property {object} bot                                 the raw mineflayer (or fake) bot, e.g. for prismarine-viewer
  * @property {boolean} connected                          true between spawn and disconnect
  * @property {(event: string, fn: (data: object) => void) => () => void} on   BODY_EVENTS; returns an unsubscribe.
- *   'skill' data = {phase:'start'|'end', tool, args, ...SkillResult}; 'chat' = {username, message} from other
+ *   'skill' data = {phase:'start'|'end', tool, args, ...SkillResult} (a reflex starts with reflex: true and tool
+ *   attack, eat or flee; the skill it interrupted starts again with resumed: true); 'chat' = {username, message} from other
  *   players; 'end' = {reason}; 'error' = {message}; 'dig' = {x, y, z, name, ms} when the bot starts breaking a block
  *   (ms: how long it takes), null when it stops (for the live views' crack overlay).
  * @property {() => ({x: number, y: number, z: number, name: string, ms: number, elapsed: number}|null)} [digging]
