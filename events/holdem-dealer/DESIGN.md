@@ -512,7 +512,10 @@ WebSocket
   waiting phase, or a running table that cannot deal, e.g. one human left), where no timers run, a seated human with
   no socket for 10 minutes is stood up (which lets the idle close run). An account hosts at most 3 open tables.
 - Table codes are the only gate to a private table: an account that misses (`watch` of an unknown code) more than 30
-  times in a minute has its socket closed (1008 `too_many_misses`).
+  times in a minute has its socket closed (1008 `too_many_misses`). Since guests are free, misses also count per
+  network (ipKey): more than 60 in a minute closes the socket, and after 600 in a day that network cannot look any
+  table up by code until the day is over (each `watch` is refused with `too_many_misses`). With 32^5 codes and at
+  most 200 tables, a network finds a given private table with a chance of about 0.4 % a day.
 - Every `state` is built per recipient by `views.js`; the public part is serialized once per change. `{ t:"account" }`
   is pushed after every table step that moved that account's bankroll or records, and after HTTP changes (name,
   refill, Guandan round, email link).

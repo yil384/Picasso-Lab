@@ -38,6 +38,11 @@ export const HOST_UNSEATED_GONE_MS = 15_000;
 export const WAITING_GONE_MS = 10 * 60_000;
 export const WATCH_MISS_MAX = 30;
 const WATCH_MISS_WINDOW = 60_000;
+// and per network (ipKey), since new guest accounts are free: a minute ceiling, and a daily one after which that
+// network cannot look tables up by code until the day is over
+export const WATCH_MISS_NET_MAX = 60;
+export const WATCH_MISS_NET_DAY = 600;
+const DAY_MS = 24 * 3600_000;
 const PRACTICE_BOTS = 5;
 const MAX_DELAY = 2 ** 31 - 1;
 
@@ -122,10 +127,14 @@ export class Rooms {
     switch (msg.t) {
       case 'create': return this._create(conn, account, msg, fail);
       case 'watch': {
+        if (this._netBlocked(conn.ipKey)) {
+          fail('too_many_misses');
+          return conn.close(1008, 'too_many_misses');
+        }
         const entry = this.tables.get(msg.code);
         if (!entry) {
           fail('no_table');
-          if (this._watchMiss(account.id)) conn.close(1008, 'too_many_misses');
+          if (this._watchMiss(account.id, conn.ipKey)) conn.close(1008, 'too_many_misses');
           return;
         }
         return this.watch(conn, msg.code);
@@ -164,14 +173,31 @@ export class Rooms {
   }
 
   // codes cannot be guessed by brute force: count an account's misses in a fixed one-minute window
-  _watchMiss(id) {
+  _watchMiss(id, ipKey = null) {
     const now = this.now();
     if (!this.misses) this.misses = new Map();
     let m = this.misses.get(id);
     if (!m || now - m.since >= WATCH_MISS_WINDOW) { m = { n: 0, since: now }; this.misses.set(id, m); }
     m.n++;
     if (this.misses.size > 10_000) for (const [k, v] of this.misses) if (now - v.since >= WATCH_MISS_WINDOW) this.misses.delete(k);
-    return m.n > WATCH_MISS_MAX;
+    let net = false;
+    if (ipKey) {
+      if (!this.netMisses) this.netMisses = new Map(); // ipKey -> { n, since, d, day } (memory only)
+      let e = this.netMisses.get(ipKey);
+      if (!e) { e = { n: 0, since: now, d: 0, day: now }; this.netMisses.set(ipKey, e); }
+      if (now - e.since >= WATCH_MISS_WINDOW) { e.n = 0; e.since = now; }
+      if (now - e.day >= DAY_MS) { e.d = 0; e.day = now; }
+      e.n++;
+      e.d++;
+      if (this.netMisses.size > 10_000) for (const [k, v] of this.netMisses) if (now - v.day >= DAY_MS) this.netMisses.delete(k);
+      net = e.n > WATCH_MISS_NET_MAX || e.d >= WATCH_MISS_NET_DAY;
+    }
+    return m.n > WATCH_MISS_MAX || net;
+  }
+
+  _netBlocked(ipKey) {
+    const e = ipKey && this.netMisses ? this.netMisses.get(ipKey) : null;
+    return !!e && e.d >= WATCH_MISS_NET_DAY && this.now() - e.day < DAY_MS;
   }
 
   _newCode() {

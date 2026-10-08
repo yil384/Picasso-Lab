@@ -3,7 +3,7 @@
 // passes it on; an unseated host found gone (after a restart) after 15 s. Injected clock, fake sockets and accounts.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Rooms, HOST_GONE_MS, HOST_UNSEATED_GONE_MS, WAITING_GONE_MS, WATCH_MISS_MAX } from '../src/rooms.js';
+import { Rooms, HOST_GONE_MS, HOST_UNSEATED_GONE_MS, WAITING_GONE_MS, WATCH_MISS_MAX, WATCH_MISS_NET_MAX, WATCH_MISS_NET_DAY } from '../src/rooms.js';
 
 function setup() {
   let clock = 1_000_000;
@@ -139,5 +139,50 @@ test('guessing table codes: an account that misses too often in a minute has its
   tick(60_000);
   rooms.handle(a, { t: 'watch', code: 'ZZZZZ' });
   assert.equal(closed, null);
+  rooms.stop();
+});
+
+test('guessing table codes from many fresh accounts on one network: a minute and a daily ceiling per network', () => {
+  const { rooms, conn, tick, accounts } = setup();
+  const host = conn('u_a');
+  rooms.handle(host, { t: 'create', settings: { blinds: '10/20', seats: 6 } });
+  const code = host.frames.find((m) => m.t === 'created').code;
+  let n = 0;
+  const guesser = () => {
+    const id = `u_g${n++}`; // a new guest for every few guesses
+    accounts.set(id, { id, pid: `p_g${n}`, name: 'G', chips: 10_000 });
+    const c = conn(id);
+    c.ipKey = 'net-1';
+    c.closed = null;
+    c.close = (code2, reason) => { c.closed = reason; };
+    return c;
+  };
+  let c = guesser();
+  for (let k = 0; k < WATCH_MISS_NET_MAX; k++) {
+    if (k % 20 === 0) c = guesser();
+    rooms.handle(c, { t: 'watch', code: `QQQ${k}` });
+  }
+  assert.equal(c.closed, null, 'each account stays under its own limit');
+  rooms.handle(c, { t: 'watch', code: 'QQQQQ' });
+  assert.equal(c.closed, 'too_many_misses', 'the network went over its minute ceiling');
+  // a day's worth of slow guessing: the network is shut out of code lookups, even of a real code
+  let misses = WATCH_MISS_NET_MAX + 1;
+  while (misses < WATCH_MISS_NET_DAY) {
+    tick(60_000);
+    c = guesser();
+    for (let k = 0; k < 20 && misses < WATCH_MISS_NET_DAY; k++, misses++) rooms.handle(c, { t: 'watch', code: `RRR${k}` });
+  }
+  c = guesser();
+  rooms.handle(c, { t: 'watch', code });
+  assert.equal(c.closed, 'too_many_misses');
+  assert.equal(c.watching ?? null, null);
+  const other = conn('u_b');
+  other.ipKey = 'net-2';
+  rooms.handle(other, { t: 'watch', code });
+  assert.ok(other.frames.some((m) => m.t === 'state'), 'another network still finds the table');
+  tick(24 * 3600_000);
+  c = guesser();
+  rooms.handle(c, { t: 'watch', code });
+  assert.equal(c.closed, null, 'the next day the network may look tables up again');
   rooms.stop();
 });

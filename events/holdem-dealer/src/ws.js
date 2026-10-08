@@ -48,6 +48,7 @@ export function attachWs(server, { config, accounts, rooms, limiter, ipKeyOf, lo
     let windowCount = 0;
     const conn = {
       id: ++seq,
+      ipKey,
       accountId: null,
       tokenHash: null,
       watching: null,
