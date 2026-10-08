@@ -49,6 +49,7 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `deploy/Dockerfile.camera`, `deploy/camera/` | the camera image: Java 21, the 1.21.4 client (`install-client.mjs`, SHA-1 checked, no sounds), `CameraMain.java` (the token from the environment, never the command line), Xvfb, Mesa, VirtualGL, ffmpeg |
 | `deploy/camera-test.compose.yaml` | a separate test project on picasso (`muse-camera-test`: own Paper, agent, camera, network; shares nothing with production) |
 | `deploy/push.sh`, `deploy/staging.compose.yaml` | deploys to picasso: staging first (play-staging.picasso-lab.com), production with `--prod` only after the staging checks pass (section "Staging and deploys") |
+| `deploy/recreate.sh`, `deploy/caddy-proxy-line.py` | the runbook's tools on picasso (`docs/SWITCH.md`): recreate the agent after a `.env` change (idle check first, never a build, a running stream or camera recreated with it); add or remove the one `X-Muse-Proxy` line of a site in the shared FRAS Caddyfile (validated, refused if another session saved the file meanwhile, never a restore of an old copy) |
 | `scripts/staging-check.mjs` | the staging checks: the page, `openapi.json`, `/mcp`, a scripted game to a wooden pickaxe (strict, no model) |
 | `scripts/probe.mjs` | latency and $ per call: effort x cache on/off x Chat/Responses, CSV per call |
 | `scripts/run-goal.mjs` | one goal from the command line (real server, or the mock and the fake bot), JSONL log, HUD table |
@@ -331,9 +332,11 @@ paper.jar (a few minutes); later pushes skip it.
 `test/deploy.test.js` keeps this honest without picasso: `staging.compose.yaml` must keep production's Paper and
 agent settings (only `MC_HOST` and `WEB_PUBLIC_URL` differ) and every service production always runs; and push.sh,
 run with stand-ins for ssh, rsync and node, must reach production only with `--prod` and only after a passing check,
-with production's commands as before staging existed (plus, after the build, the prune of our own dangling images and
-the note while `WEB_PROXY_SECRET` is unset, ROADMAP M0 items 8 and 6; staging prunes the same way; and `mineai/` in the
-copy, which every agent image copies).
+with production's commands as before staging existed (plus the bots' data folder, mode 700; after the build, the prune
+of our own dangling images with a note when picasso refuses it, the body `deploy/.env` picks, and the note while
+`WEB_PROXY_SECRET` is unset, ROADMAP M0 items 8 and 6; staging prunes the same way; and `mineai/` in the copy, which
+every agent image copies); and both compose files must build the runtime, run the agent under an init, mount the
+data folder and leave `BODY` to `deploy/.env`.
 
 Staging plays with `BODY=mineai` (section "The Mine AI MCP body"): `staging.compose.yaml` builds its agent image with
 `--build-arg MINEAI=1` (the runtime fetched and patched at build time, 163 MB in `/opt/mine-ai-mcp`; the image 794 MB
@@ -343,7 +346,10 @@ bots' private names are in it) at `/mineai-data` for their per-bot SQLite; the a
 Which body plays is set in staging's `deploy/.env` only, next to its admin token: `BODY=mineai`,
 `MINEAI_DIR=/opt/mine-ai-mcp`, `MINEAI_DATA_DIR=/mineai-data`, and `MC_USERNAME=Tst_rv` (staging's bots are test
 bots: `Tst_rv_` and random letters). Remove the `BODY` line (and `docker compose -p muse-staging -f staging.compose.yaml
-up -d` in its deploy folder) to go back to our body. Production's compose file and image have none of it.
+up -d` in its deploy folder) to go back to our body. Production's compose file builds, runs and mounts the same way
+since gate 1 of the switch (its data folder: `~/workspace/muse-minecraft/app/mineai-data`, next to its world and
+logs), and its own `deploy/.env` decides its body: without a `BODY` line it plays ours, as before. The switch, the
+proxy secret, the whitelist, the smoke checks and the one-line rollback: `docs/SWITCH.md`.
 
 Caddy: the block was added to `~/workspace/FRAS/caddy-config/Caddyfile` after a backup
 (`Caddyfile.bak-20261007-222723`), validated as a separate file inside the container, moved into place, then
@@ -786,15 +792,16 @@ craft (12).
 MIT, "Copyright (c) 2026 AI Bengineering") instead of in this process, after the reuse spike
 (`../../../research/muse-reuse-spike.md`). Everything a guest talks to stays ours: `/mcp` (the queue, `request_id`,
 45 s replies, typed codes, the dry-run check), `/play`, `/api`, quotas, leases, the kill switch, the live views and the
-stream. The house bot of the Ask queue stays on our body. Production runs `ours` until the switch is flipped.
+stream. The house bot of the Ask queue stays on our body. Production runs `ours` until the switch is flipped
+(`docs/SWITCH.md`).
 
 Their code stays out of this repo: `mineai/UPSTREAM.json` pins the commit and lists our patches, `mineai/patches/` holds
 them, and `mineai/fetch-and-patch.sh` puts the two together in a folder of its own at build time (`mineai/README.md`):
 
 ```sh
-BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-6   # clone 2fe1306, the 6 patches, bun install, fork check, typecheck, crafting tests
-node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-6 --check
-BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-6 MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
+BUN=/path/to/bun mineai/fetch-and-patch.sh ~/picasso-work/mineai-runtime-8   # clone 2fe1306, the 8 patches, bun install, fork check, typecheck, the patches' tests
+node scripts/mineai-fetch.mjs ~/picasso-work/mineai-runtime-8 --check
+BODY=mineai MINEAI_DIR=~/picasso-work/mineai-runtime-8 MINEAI_RUNTIME=bun MINEAI_EXEC=/path/to/bun MC_USERNAME=Tst_rv npm start
 ```
 
 The agent runs that same check when it starts with `BODY=mineai`: a folder that is not exactly the pin plus every patch
@@ -806,7 +813,12 @@ slot before Paper's burst of slot updates had settled; `mineai/README.md`), `000
 their host and its runtime refuse any request without `Authorization: Bearer $MINEAI_HOST_TOKEN` (their host had no
 authentication); `0005` takes the player name from `MINEAI_USERNAME` and hands their runtime its bootstrap (which holds
 the name) through its environment instead of its command line, so the name is on no command line at all; `0006` lets
-their runtime exit once a stop is done (its IPC channel kept it alive until their supervisor's SIGKILL).
+their runtime exit once a stop is done (its IPC channel kept it alive until their supervisor's SIGKILL); `0007` never
+puts a placed block (a temporary table or furnace, a bed, `place_block`) into a cell the server will not replace: no
+flowers (their rule counted them as replaceable, so a table went on a poppy and the server refused it) and snow only as
+a single layer; `0008` tries a collect once more when its path search gave up ("no path found", nothing gained or
+broken) within 30 s of a landing (the server moved the bot more than 16 blocks: our spread, a teleport, a respawn),
+after the chunks around the bot have loaded and a 2 s pause.
 
 How a host runs (`src/mineai/host.js`): one per guest game, their `src/server/host.ts` under Node with tsx (their own
 dev dependency; Node 24.15 or newer) or Bun (`MINEAI_RUNTIME=bun`, `MINEAI_EXEC`), with `--listen-host 127.0.0.1` on
@@ -1010,8 +1022,8 @@ docker run --rm --network host --pid host --user $(id -u):$(id -g) -v $PWD/accep
   --out rv/runs                                                       # --parallel --n 8: all at once
 ```
 
-Not yet: a whole 30-minute lease, more than 8 games at once, the End lab, Muse itself as the client (the sessions above
-were scripted), production.
+Not yet: more than 8 games at once, the End lab, Muse itself as the client (the sessions above and the soak's were
+scripted), production. A whole 30-minute lease ran in the soak of gate 2 (section "Gates before the switch").
 
 ### After the review (2026-10-08)
 
@@ -1064,6 +1076,150 @@ pickaxe in 19.4 s, 3 MCP calls), `ps` on picasso showed both of their processes 
 player name and no bootstrap on either command line, staging failure 4's sequence passed (birch, 22.4 s, the table
 carried at the end) with both live views at 200 through Caddy, and the two game ends closed their hosts in 150 and 245
 ms (8.00-8.01 s before) with the games' bot data deleted (23 bot folders before and after).
+
+### Gates before the switch (2026-10-08)
+
+The report (`../../../research/muse-reuse-validation.md`) asks for three gates before production plays with this
+body. Gate 3 is two runtime patches for staging's two body failures, gate 1 the production config, gate 2 the soak on
+staging and one Muse run: the scripted soak passed (below); the Muse run is the owner's and still open. The runbook for
+the switch itself is `docs/SWITCH.md`.
+
+Gate 3, on this Mac's Paper (1.21.4-232 on 25565, seed 71811045), `mineai/bench/gates.mjs` (one host of the runtime,
+their MCP tools, bot `Tst_gate_` and random letters, every placement checked with the server's `execute if block`):
+
+| Check | Runtime with patches 0001-0006 | With 0007 and 0008 (built by `fetch-and-patch.sh`) |
+| --- | --- | --- |
+| `craft_item wooden_pickaxe` with a temporary table, the 8 cells around the bot holding flowers (poppy, dandelion, cornflower, oxeye daisy, red tulip) | **0 of 5**: "Server processed placement, but block at ... is still poppy" (and the other four), staging spot 7's failure | **10 of 10**: the table 2 blocks away on clear ground, all 8 flowers standing, the pickaxe in the server's inventory, the table picked up again; 2.8-2.9 s a craft |
+| `collect_block oak_log 1` from inside a closed barrier box with logs outside, 1 s after a 100-block teleport, and again 35 s after it | no second try either time | **3 of 3**: tried once more right after the landing (the result says so; 2.2-4.4 s instead of 0.9 s), not after 35 s |
+
+Their whole suite with both patches: 1,579 pass, 0 fail (6 of the tests new); typecheck clean. Through our
+gateway on the same Paper (`BODY=mineai`, the runtime built with all eight patches): `scripts/staging-check.mjs`
+PASS (wooden pickaxe in 21.4 s, 3 MCP calls) and the strict iron route `test/e2e/mcp-iron.mjs` PASS (141.1 s, 14 MCP
+calls, 0 failed steps). Staging was redeployed with `deploy/push.sh`: the image (794 MB) built the runtime with all
+eight patches, the agent passed its start check, the staging check passed (wooden pickaxe in 22.7 s, 3 MCP calls),
+the host was ready in 1.25 s and closed in 222 ms with the game's data deleted. The landing retry itself has not met a
+real "no path" after a spread on staging: the soak's 8 games landing at once had none, and a retry that works leaves no
+trace once the game's data is deleted.
+
+Gate 1 (`deploy/compose.yaml`, `deploy/push.sh`): production's agent image is built with `MINEAI=1` (the runtime at
+the pin and its patches, fetched, built and tested at build time), runs under an init, and mounts
+`~/workspace/muse-minecraft/app/mineai-data` (made mode 700 by `push.sh --prod`) at `/mineai-data`; which body plays
+comes from production's `deploy/.env` (`BODY`, `MINEAI_DIR`, `MINEAI_DATA_DIR`), and without a `BODY` line it is ours,
+so the next deploy changes no game. `push.sh --prod` prints the body, and goes on with a note when picasso refuses the
+prune (its remote script now runs with `pipefail`, as staging's). Checked: `npm test`; `docker compose config` of the
+production file on picasso in a scratch folder (valid; build args `MINEAI=1`, init, the data folder next to `app/logs`,
+no `BODY`); `deploy/push.sh --prod --dry-run`. Production was not deployed. The proxy secret (M0 item 6) and the Paper
+whitelist (item 7) are in the runbook: the whitelist goes out with that deploy, the secret in Caddy first and the
+agent's `.env` second. Caddy's `{file.*}` placeholder (v2.11.2, FRAS's image, in a throwaway container) sends exactly
+a secret file's contents, so the secret stays in `caddy-config/priv/` (mode 700) and out of the Caddyfile (mode 664).
+
+Gate 2, the soak on staging (2026-10-08, the image of commit `109c882` deployed with `deploy/push.sh`: the runtime at
+the pin with all eight patches, Bun 1.4.2, under `docker-init`; Paper 1.21.4, seed 71811045, Easy, daylight locked,
+natural; heartbeat and watchdog at their defaults; picasso's 1-minute load 160-194, median 175-184 over the runs).
+Bots `Tst_gate_` and random letters (`MC_USERNAME=Tst_gate`), 18 fresh spots of staging's world (`SPREAD_SPOTS`, 5,400
+to 6,300 blocks from spawn, never generated before; on a same-seed copy on the Mac a spectator probe left out the
+spots `spreadplayers` refuses and the ocean ones, nothing else picked), the strict harness and bench of the validation
+(`mineai/bench/gateway-iron.mjs`), then two new benches: `mineai/bench/lease-soak.mjs` (one game through its whole
+lease with a mixed script, the process tree, the agent's log and the first-person view watched throughout) and
+`mineai/bench/muse-session.mjs` (a session in plain HTTP JSON-RPC through the public `/mcp`, as the code Muse writes
+for itself). No model; staging only; production was not touched.
+
+| | Validation (staging, the image of `6e87498`) | Soak (staging, the image of `109c882`) |
+| --- | --- | --- |
+| strict iron route, 10 spots one at a time | 8 of 10 | **10 of 10**, 0 failed steps |
+| the same, 8 games at once | 7 of 8 | **6 of 8** (the no-go line is below 6) |
+| deaths | 0 | 0 (18 strict games, the lease game, the session, 2 eat probes) |
+| median / max time (passes), one at a time | 161.1 / 166.5 s | 168.0 / 179.4 s |
+| median / max time (passes), 8 at once | 160.8 / 184.0 s | 166.0 / 209.7 s |
+| where the time goes, one at a time (median s): first action, logs, crafts, stone, iron and coal, smelt | 6.3, 32.5, 23.7, 27.8, 35.8, 32.1 | 5.8, 33.3, 23.4, 27.5, 41.2, 32.2 |
+| MCP calls per game, median | 14 | 14 (8 at once: 14.5) |
+| hosts: heartbeats missed, restarts, downs, watchdog stops | 0 | 0 in all 23 games (ready in 1.2 s one at a time, 1.5 s at once) |
+| game end (host closed, data) | 150-245 ms | 115-220 ms, every game's bot data deleted (the data folder keeps the 23 older bot folders it had) |
+| agent event loop (60 s windows) | p99 0.5 ms median, 2.0 max; 8 at once 1.4, 3.6 | p99 0.27 ms median, 0.41 max, longest stall 31 ms; 8 at once 0.75, 1.34, 6 ms |
+| memory (RSS): agent; a runtime median, max | 116-120 MB; 305 MB, 1,023 MB; 8 at once 126-137 MB; 310 MB, 601 MB (3.0 GB together) | 96-119 MB; 319 MB, 741 MB; 8 at once 113-132 MB; 313 MB, 1,332 MB (3.7 GB together) |
+| a whole 30-minute lease | not run | **ended by the lease at 30.0 min**; 0 misses, restarts or deaths; memory flat; `/eyes` up throughout (below) |
+| a Muse-like session through `https://play-staging.picasso-lab.com/mcp` | 1 (before the review fixes) | **13 of 13 checks** (below) |
+
+The lease game (`lease-soak.mjs`, run on picasso in a container of the agent image, `/mcp` direct, the live view
+through Caddy; spot -3174 -4369, a forest): logs, planks, sticks, a table and a wooden pickaxe; 40 stone; a stone
+pickaxe, a stone sword and a furnace; 200 s without calls; `hunt pig porkchop 2` (3 pigs, 4 porkchops); `smelt porkchop
+2`; `build hut_3x3 cobblestone`; `say`; 240 s without calls; then six rounds of 3 logs, 4 planks and 120 s without calls
+until the lease ended it at 30.0 minutes (`session_end`: "the lease ended"). 40 MCP calls, 25 steps, 24 ok, 1,160 s of
+idle stretches (each under the 5-minute idle rule). Its host: ready, 0 heartbeats missed, 0 restarts, closed in 172 ms
+with its data deleted. Memory over the 30 minutes did not grow: the agent 132 to 136 MB, the host 68 to 71 MB (75 at
+most), the bot's runtime 300 to 310 MB (median 312 MB in minutes 5-10, 310 MB in the last 5; 405 MB at most; CPU median
+10.5% of a core, p90 24%, max 61%); the agent's loop p99 at most 0.88 ms, longest stall 5.9 ms. The first-person view:
+one socket.io WebSocket through Caddy held from the start to the end, connected once, 0 drops while the game ran, events
+in every minute (19,000-28,000 a minute; 704,000 in all, 128 chunk loads), and the page fetched every minute through
+Caddy: 29 of 29 answered 200, then 410 once the game had ended.
+
+The session (`muse-session.mjs`, from the Mac through Caddy, while the lease game ran; spot 7200 0): initialize,
+`tools/list` (7 tools, 25.0 KB), `start_game` (5.9 s), `live_view` (both views 200 through Caddy), a `play_sequence`
+of `collect spruce_log 4` and `craft_batch [spruce_planks 12, stick 4, crafting_table 1, wooden_pickaxe 1]` with a
+`request_id` (21.3 s), the same call again 5 s later while it ran ("Already received", `DUPLICATE`, answered when the
+first finished; one pickaxe made), the same `request_id` with other steps (`BAD_ARGS`, nothing run), `get_state`, a
+second `play_sequence` to a stone pickaxe (17.4 s), a new connection that resumed the game by its handle (the old one
+then answered "your game ended: it moved to another connection"), `end_game`, and a call after the end (`NOT_STARTED`).
+13 of 13 checks, 15 HTTP calls, the slowest reply 21.3 s, 45 s in all.
+
+Every failure, with its cause:
+- 8 at once, run 7 (spot 4455 4455, snowy plains): `collect oak_log 6` ran out its 180 s with no log (8 dirt dug), and
+  the strict harness went on without a pickaxe (18 more steps failed or were refused by the dry-run check). The state
+  showed no wood nearby, so the harness asked for oak, its default; the nearest oak was about 190 blocks away (the
+  nearest spruce 49): on a same-seed copy, a spectator at the spot found no oak within its loaded chunks, and one 2
+  blocks from where the bot stood at the end, 186 blocks from its landing. Their collect, which searches every loaded
+  chunk, walked to that oak and our time limit ran out as it got there. The spot and the harness's choice of wood, not
+  the load: a collect of the nearest wood of any kind would have found the spruce. Not a body defect.
+- 8 at once, run 8 (spot 0 6300): every step passed (smelt done 183.6 s after the start) until the last, `craft
+  iron_pickaxe`, which failed in 1.3 s: "crafting_table: Placement cell (3, 51, 6322) overlaps bat #44444". In a cave a
+  bat flew into the cell their planner had picked for the temporary table; the placement re-checks the cell
+  (`occupiedCell` in `src/world/placement.ts`) and fails instead of picking another one. A runtime bug of the same kind
+  as the flower (patch 0007): a candidate patch 0009 would take the next free cell, or wait a moment and check again,
+  when a mob is in the way.
+- The lease game: `build hut_3x3 cobblestone` placed 21 of its 23 blocks; 2 cells (one at -3205 77 -4381, two above
+  where the bot stood) were refused when their path search for a place to stand gave up at its 2,000 ms compute limit
+  ("no path or usable partial route found; visited 7792 nodes"). Uneven ground at that spot; the game went on.
+- The lease game never ate: its food bar stayed at 20 of 20 for the whole 30 minutes (Easy, the saturation of a fed
+  start, and work that tires little), so the script's eat waited for a drop that never came (the skill refuses a full
+  bar: "not hungry: food is 20/20"). Two short probe games afterwards (not natural: the operator gave the bot a hunger
+  effect through the console): with the effect over before the call, `hunt cow beef 2` then `eat` ate one beef, food 13
+  to 16; the first probe sent `eat` while a stronger effect still drained the bar, and their eat ate 2 porkchops and
+  reported a failure ("eat porkchop at hunger 3") because the bar kept falling: the probe's doing, not the body's.
+- Not on staging: one of five plumbing runs of `muse-session.mjs` on the Mac (a scratch Paper with the same seed) had
+  `craft stone_pickaxe` fail after `collect stone 3` (which had used one plank); the reason was not kept (the script
+  printed only the first line then; it prints every failed step's reason now). The other four, and staging's, passed.
+- An operations slip, no game affected: a backup of staging's `deploy/.env` made inside `app/deploy` was deleted by
+  the next `push.sh`, whose `rsync --delete` keeps only `.env`, `stream.env` and `camera.env` there. `docs/SWITCH.md`
+  now keeps its backups in `~/workspace/<project>/backups` (mode 700).
+- A review of the runbook (2026-10-08) found six gaps, each fixed in `docs/SWITCH.md`: the Caddy undo restored a whole
+  older copy of the shared Caddyfile (dropping whatever other projects added since, such as that day's poker block) and
+  did not say which of two backups; the forward edit moved the new file in even when `caddy validate` failed; step 3
+  claimed visitors notice nothing although its agent recreate ends games and every reload drops the live views; two
+  backup commands wrote into Paper's root-owned `data/`; a bare agent recreate leaves a running stream or camera in the
+  old agent's network namespace; and the undo of step 2 named no commit for the old files. Now
+  `deploy/caddy-proxy-line.py` adds or removes only the one header line (validate, a check that nobody saved the file
+  meanwhile, then move and reload), `deploy/recreate.sh` is the only agent recreate (idle check, no build, stream and
+  camera with it), and section 1 archives production's deployed files for the undo (`backups/app-pre-switch.tgz`).
+
+Against the gate (`docs/SWITCH.md`, section 1): at least 7 of 10 one at a time (10 of 10), at least 6 of 8 at once (6 of
+8, at the line), 0 heartbeat restarts and 0 watchdog stops (0 in 23 games), a whole 30-minute lease (yes): the
+scripted soak passes. Still open: the Muse run, which is the owner's (ROADMAP appendix A; the Muse-like session above is
+a script). Staging's `deploy/.env` is back as it was (`MC_USERNAME=Tst_rv`, no `SPREAD_SPOTS`).
+
+Reproduce on picasso (`rsync -az --relative test/e2e mineai/bench picasso:workspace/muse-staging/accept-gate2/`;
+`MC_USERNAME=Tst_gate`, `SPREAD_SPOTS` and `WEB_MCP_GAMES_PER_ADDRESS=8` in staging's `deploy/.env` for the soak only,
+then `docker compose -p muse-staging -f staging.compose.yaml up -d` in its deploy folder; the runs, their JSON and the
+load log are in `~/workspace/muse-staging/accept-gate2/runs`):
+
+```sh
+cd ~/workspace/muse-staging; L=$(ls -t logs | grep run-serve | head -1); P=$(docker inspect -f '{{.State.Pid}}' muse-staging-agent-1)
+R="docker run --rm --network host --pid host --user $(id -u):$(id -g) -v $PWD/accept-gate2:/app/rv -v $PWD/logs:/staging-logs:ro -v $PWD/data/logs:/paper-logs:ro muse-staging-agent"
+$R node rv/mineai/bench/gateway-iron.mjs http://172.24.0.1:7851 --agent-pid $P --agent-log /staging-logs/$L \
+  --server-log /paper-logs/latest.log --label gate2-seq10 --n 10 --out rv/runs --base Tst_gate      # --parallel --n 8
+$R node rv/mineai/bench/lease-soak.mjs http://172.24.0.1:7851 --agent-pid $P --agent-log /staging-logs/$L \
+  --server-log /paper-logs/latest.log --label gate2-lease30 --public https://play-staging.picasso-lab.com --out rv/runs
+node mineai/bench/muse-session.mjs https://play-staging.picasso-lab.com --out session.json   # on the Mac
+```
 
 ## What is mocked
 

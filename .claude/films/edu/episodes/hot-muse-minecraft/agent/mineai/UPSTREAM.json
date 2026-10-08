@@ -10,6 +10,8 @@
     "patches/0003-unresponsive-window-from-env.patch",
     "patches/0004-host-token.patch",
     "patches/0005-player-name-off-the-command-line.patch",
-    "patches/0006-runtime-exits-once-stopped.patch"
+    "patches/0006-runtime-exits-once-stopped.patch",
+    "patches/0007-no-placement-into-a-flower.patch",
+    "patches/0008-collect-retries-once-after-landing.patch"
   ]
 }

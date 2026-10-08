@@ -20,6 +20,26 @@ and keep `BODY=ours` in the same image as the rollback (one line in `deploy/.env
 | 2. A soak with today's build on staging: the strict 10 spots and 8 at once again, one whole 30-minute lease, and one Muse run through the gateway (ROADMAP appendix A) | the strict numbers in section 2 are from the builds before the review fixes; nothing has run a full lease or with Muse as the client | 1 day (the Muse run is the user's) |
 | 3. Two small runtime patches: never put a temporary table on a flower (staging spot 7), and one retry of a log collect that found no path right after landing (8-at-once run 6) | 2 of the 18 staging games failed this way; both are cheap, and the third failure (a shoreline wander) needs a stall stop that can come after | 0.5-1 day |
 
+Status (2026-10-08, later the same day): gates 1 and 3 are done on branch `muse-gates` and checked on the Mac's Paper
+and on staging (the agent's README, "Gates before the switch"); production is unchanged. The switch, the proxy secret,
+the whitelist, the smoke checks and the one-line rollback are the agent's `docs/SWITCH.md`. Gate 2's scripted soak ran
+on staging with the gates' build (measured; bots `Tst_gate_*`, 18 fresh spots, load median 175-184) and passes every
+scripted condition; the Muse run is the owner's and still open:
+
+| Gate 2 condition | Validation (before the review fixes) | Soak (build `109c882`, 8 patches) |
+| --- | --- | --- |
+| strict, 10 one at a time (at least 7) | 8 of 10, median 161.1 s | **10 of 10**, median 168.0 s, max 179.4 s |
+| strict, 8 at once (at least 6) | 7 of 8, median 160.8 s | **6 of 8**, median 166.0 s, max 209.7 s |
+| deaths | 0 | 0 |
+| heartbeat restarts, watchdog stops (none) | 0 in 23 hosts | 0 in 23 hosts |
+| a whole 30-minute lease | not run | ended by the lease at 30.0 min; memory flat (runtime 300 to 310 MB); `/eyes` up throughout |
+| a Muse run through the gateway | not run | open (the owner's); a scripted Muse-like session through the public `/mcp` passed 13 of 13 checks |
+
+The two failures at once: a spot with no oak within about 190 blocks (the harness asks for oak when it sees no wood;
+their collect walked to the far oak and our 180 s limit ran out: the spot, not the body), and a temporary table refused
+because a bat flew into its cell in a cave (their placement fails instead of taking another cell: a runtime bug, a
+candidate patch 0009). The lease game's hut lost 2 of 23 blocks to a path search's 2 s limit on uneven ground.
+
 Why go:
 
 | | Our body (in the agent's process) | Mine AI MCP body (one process per bot) |
@@ -224,7 +244,7 @@ Paper failed in the sequencing, not the primitives.
 | Risk | Likelihood, impact | Mitigation |
 | --- | --- | --- |
 | **We own 58,500 lines of their TypeScript through a pin.** Upstream moves; every pin bump means rebasing six patches and re-running the Paper checks | certain, medium | the pin only moves on purpose; `fetch-and-patch.sh` fails loudly when a patch does not apply; the agent refuses a folder that is not the pin plus every patch; offer 0001, 0004 and 0005 upstream |
-| **Their bugs are now ours.** Found so far: a table on a flower, a collect that wanders with no stall stop, a path search that gives up while chunks load, a planner that keeps every listed item, sticks counted twice in one craft | likely, low to medium each | each found bug becomes a patch or a gateway rule with a test; failed games keep their SQLite for diagnosis |
+| **Their bugs are now ours.** Found so far: a table on a flower, a collect that wanders with no stall stop, a path search that gives up while chunks load, a planner that keeps every listed item, sticks counted twice in one craft, a table refused when a mob moves into its cell | likely, low to medium each | each found bug becomes a patch or a gateway rule with a test; failed games keep their SQLite for diagnosis |
 | **Paper is only checked for the overworld.** Their portals, the Nether and the End have never run on Paper | unknown, high for M8-M11 | the Paper sweep is the first task of M8; the End lab can run first |
 | **Slower route.** About 20-28 s more per iron route than our body | certain, low | keep stations for the game (1-1.5 days); still inside the 3.5-minute target |
 | **Shared world isolation is weaker than with our body.** The extra skills act on a world every guest shares; today's rules stop lava, pours near spawn or players, and opening another game's chest, but a guest could still wall in another bot with `place` (as before) | low (bots land up to 400 blocks apart; nothing tells a guest where others are) | private worlds (M3) remove the class; until then the rules above and the per-game data deletion |

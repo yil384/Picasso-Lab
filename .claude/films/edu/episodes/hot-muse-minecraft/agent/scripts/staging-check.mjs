@@ -8,9 +8,12 @@
 //   node scripts/staging-check.mjs                                    # https://play-staging.picasso-lab.com
 //   node scripts/staging-check.mjs https://play-staging.picasso-lab.com --no-game   # page, openapi.json, /mcp only
 //   node scripts/staging-check.mjs http://127.0.0.1:8787              # a local agent (npm start -- --fake-bot)
+//   node scripts/staging-check.mjs https://play.picasso-lab.com --production   # the smoke check after a production
+//                                                                     # deploy (docs/SWITCH.md): one guest game, ended at once
 //
 // Exit 0: every check passed; 1: one failed (the reason is printed); 2: refused (bad arguments, the production host).
-// Production (play.picasso-lab.com) is refused: its bots belong to real users.
+// Production (play.picasso-lab.com) is refused unless --production says so: its bots belong to real users, so a check
+// there is the operator's decision (it takes one of production's guest places for about half a minute).
 
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
@@ -91,14 +94,15 @@ const short = (s, n = 170) => (s.length > n ? `${s.slice(0, n - 3)}...` : s);
 
 /**
  * Run the checks against `base`. Returns the exit code: 0 passed, 1 a check failed (said through `print`), 2 refused.
- * @param {{base?: string, game?: boolean, minutes?: number, print?: (line: string) => void}} [opts]
+ * @param {{base?: string, game?: boolean, minutes?: number, production?: boolean, print?: (line: string) => void}} [opts]
+ *   production: allow the production host (the smoke check after a production deploy; never from push.sh's staging step)
  */
-export async function runCheck({ base = STAGING_URL, game: playGame = true, minutes = 8, print = console.log } = {}) {
+export async function runCheck({ base = STAGING_URL, game: playGame = true, minutes = 8, production = false, print = console.log } = {}) {
   base = String(base).replace(/\/+$/, '');
   let url;
   try { url = new URL(base); } catch { print(`refused: not a URL: ${base}`); return 2; }
-  if (PRODUCTION_HOSTS.includes(url.hostname)) {
-    print(`refused: ${url.hostname} is production; these checks start a test bot and belong on staging`);
+  if (PRODUCTION_HOSTS.includes(url.hostname) && !production) {
+    print(`refused: ${url.hostname} is production; these checks start a test bot and belong on staging (--production: the smoke check after a production deploy)`);
     return 2;
   }
   if (!(minutes > 0 && minutes <= 30)) { print('refused: minutes must be more than 0 and at most 30'); return 2; }
@@ -227,10 +231,13 @@ async function checks(base, playGame, minutes, print) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
-    options: { 'no-game': { type: 'boolean', default: false }, minutes: { type: 'string', default: '8' } },
+    options: {
+      'no-game': { type: 'boolean', default: false }, minutes: { type: 'string', default: '8' },
+      production: { type: 'boolean', default: false },
+    },
   });
   const minutes = Number(values.minutes);
   // a call that never comes back must not keep a deploy waiting: give up a minute and a half after the time limit
   setTimeout(() => { console.error('staging-check: FAIL: hung past its time limit'); process.exit(1); }, (minutes || 8) * 60_000 + 90_000).unref();
-  process.exitCode = await runCheck({ base: positionals[0] ?? STAGING_URL, game: !values['no-game'], minutes });
+  process.exitCode = await runCheck({ base: positionals[0] ?? STAGING_URL, game: !values['no-game'], minutes, production: values.production });
 }

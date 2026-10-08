@@ -9,12 +9,13 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY deploy/slim-modules.mjs ./deploy/slim-modules.mjs
 RUN npm ci --omit=dev && node deploy/slim-modules.mjs "$MC_VERSION" node_modules && npm cache clean --force
-# BODY=mineai (staging builds it: staging.compose.yaml passes MINEAI=1): the Mine AI MCP runtime at the pinned commit
-# with our patches (mineai/), fetched at build time into /opt and run with Bun (mineai/fetch-and-patch.sh: the patches
-# in order, the frozen lockfile, the mineflayer fork checked, typecheck and the crafting tests), then slimmed to the
-# game data of MC_VERSION like ours (their minecraft-data: 446 MB of every version). Off unless built with
-# --build-arg MINEAI=1, so production's image has no runtime. Before src/ is copied, so a change to our code reuses
-# this layer and only a change of the pin or the patches fetches again.
+# BODY=mineai (both compose files pass MINEAI=1): the Mine AI MCP runtime at the pinned commit with our patches
+# (mineai/), fetched at build time into /opt and run with Bun (mineai/fetch-and-patch.sh: the patches in order, the
+# frozen lockfile, the mineflayer fork checked, typecheck and the tests of our patches), then slimmed to the game data
+# of MC_VERSION like ours (their minecraft-data: 446 MB of every version). Off unless built with --build-arg MINEAI=1.
+# The runtime only runs when deploy/.env says BODY=mineai; the agent refuses a folder that is not the pin plus every
+# patch. Before src/ is copied, so a change to our code reuses this layer and only a change of the pin or the patches
+# fetches again.
 ARG MINEAI=0
 ARG BUN_VERSION=1.4.2
 COPY mineai ./mineai

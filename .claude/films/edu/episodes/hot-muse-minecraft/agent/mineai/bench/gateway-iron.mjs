@@ -1,9 +1,9 @@
 // mineai/bench/gateway-iron.mjs - the strict iron route (test/e2e/mcp-iron.mjs, unchanged) through a running agent's
 // /mcp, n games one after another or all at once, with what the machine did meanwhile: every process under the agent
-// (BODY=mineai: each host and its runtime child) sampled every few seconds (RSS, CPU from the cumulative CPU time), the
-// agent's own loop_delay rows and Mine AI host events from its JSONL log, and each bot's deaths from the server log.
-// No model. The agent must run with MC_CONSOLE and SPREAD_SPOTS (one fresh spot per game, in order), so the bodies can
-// be compared at the same spots on untouched copies of one world.
+// (BODY=mineai: each host and its runtime child) sampled every few seconds (procs.mjs), the agent's own loop_delay
+// rows and Mine AI host events from its JSONL log, and each bot's deaths from the server log. No model. The agent must
+// run with MC_CONSOLE and SPREAD_SPOTS (one fresh spot per game, in order), so the bodies can be compared at the same
+// spots on untouched copies of one world.
 //
 //   node mineai/bench/gateway-iron.mjs <agent URL> --agent-pid <pid> --agent-log <run-serve-*.jsonl>
 //        --server-log <logs/latest.log> --label <name> [--n 10] [--parallel] [--stagger-ms 3000] [--out <dir>]
@@ -15,11 +15,11 @@
 // --network host), so it sees the agent's processes by their host pids; without `ps` there (the slim Node image has
 // none) it reads /proc.
 
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { runIronRoute } from '../../test/e2e/mcp-iron.mjs';
+import { startSampler } from './procs.mjs';
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -41,77 +41,10 @@ const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 const pct = (xs, p) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor((p / 100) * s.length))]; };
 const median = (xs) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
-// --- processes under the agent --------------------------------------------------------------------------------------
-const cpuSeconds = (t) => { // ps time: [[dd-]hh:]mm:ss.cc
-  const [d, rest] = t.includes('-') ? t.split('-') : ['0', t];
-  const parts = rest.split(':').map(Number);
-  while (parts.length < 3) parts.unshift(0);
-  return Number(d) * 86_400 + parts[0] * 3600 + parts[1] * 60 + parts[2];
-};
-let hasPs = true;
-/** Every process from /proc (Linux without ps): pid, ppid, RSS, CPU seconds (user + system), command line. */
-function procRows() {
-  const TICK = 100; // USER_HZ on Linux
-  const out = [];
-  for (const d of fs.readdirSync('/proc')) {
-    if (!/^\d+$/.test(d)) continue;
-    try {
-      const stat = fs.readFileSync(`/proc/${d}/stat`, 'utf8');
-      const f = stat.slice(stat.lastIndexOf(')') + 2).split(' '); // fields from 3 (state) on
-      const cmd = fs.readFileSync(`/proc/${d}/cmdline`, 'utf8').replace(/\0+$/, '').replace(/\0/g, ' ');
-      out.push({ pid: Number(d), ppid: Number(f[1]), rssMb: (Number(f[21]) * 4096) / 1048576, cpuS: (Number(f[11]) + Number(f[12])) / TICK, cmd });
-    } catch { /* gone meanwhile */ }
-  }
-  return out;
-}
-function processTree() {
-  let rows = null;
-  if (hasPs) {
-    try {
-      rows = execFileSync('ps', ['-axo', 'pid=,ppid=,rss=,time=,command='], { encoding: 'utf8' }).trim().split('\n').map((l) => {
-        const m = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/.exec(l);
-        return m ? { pid: Number(m[1]), ppid: Number(m[2]), rssMb: Number(m[3]) / 1024, cpuS: cpuSeconds(m[4]), cmd: m[5] } : null;
-      }).filter(Boolean);
-    } catch (err) {
-      if (err?.code !== 'ENOENT') throw err;
-      hasPs = false;
-    }
-  }
-  rows ??= procRows();
-  // under an init (compose init: true, docker inspect gives its pid) the agent is its node child
-  const self = rows.find((r) => r.pid === agentPid);
-  const agent = self && !/src\/index\.js/.test(self.cmd) ? rows.find((r) => r.ppid === agentPid && /src\/index\.js/.test(r.cmd))?.pid ?? agentPid : agentPid;
-  const under = new Set([agent]);
-  let grew = true;
-  // the hosts run in process groups of their own, but stay the agent's children
-  while (grew) { grew = false; for (const r of rows) if (!under.has(r.pid) && under.has(r.ppid)) { under.add(r.pid); grew = true; } }
-  return rows.filter((r) => under.has(r.pid)).map((r) => ({
-    ...r,
-    role: r.pid === agent ? 'agent' : /host\.ts/.test(r.cmd) ? 'host' : r.ppid !== agent && /bun|node/.test(r.cmd) ? 'runtime' : 'other',
-  }));
-}
-const samples = [];
-const lastCpu = new Map();
-let sampling = true;
-async function sampler() {
-  const every = Number(values['sample-ms']);
-  while (sampling) {
-    const t = Date.now();
-    try {
-      for (const p of processTree()) {
-        const prev = lastCpu.get(p.pid);
-        lastCpu.set(p.pid, { t, cpuS: p.cpuS });
-        const cpuPct = prev ? Math.round(((p.cpuS - prev.cpuS) / ((t - prev.t) / 1000)) * 1000) / 10 : null;
-        samples.push({ t, pid: p.pid, ppid: p.ppid, role: p.role, rssMb: Math.round(p.rssMb), cpuPct, cmd: p.cmd.slice(0, 120) });
-      }
-    } catch { /* ps hiccup */ }
-    await sleep(every);
-  }
-}
-
 // --- the runs -------------------------------------------------------------------------------------------------------
 const t0 = Date.now();
-const samplerDone = sampler();
+const sampler = startSampler({ agentPid, everyMs: Number(values['sample-ms']) });
+const { samples } = sampler;
 const runs = [];
 async function one(i) {
   const lines = [];
@@ -133,8 +66,7 @@ if (values.parallel) {
 } else {
   for (let i = 0; i < n; i++) await one(i);
 }
-sampling = false;
-await samplerDone;
+await sampler.stop();
 const t1 = Date.now();
 
 // --- the agent's log and the server log over the window ---------------------------------------------------------------
