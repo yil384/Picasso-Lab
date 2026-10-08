@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createVerifier, parseMaxAge, TokenError } from '../src/firebase-token.js';
-import { makeSigner, idClaims, PROJECT } from './jwt-helpers.js';
+import { makeSigner, idClaims, uidOf, PROJECT } from './jwt-helpers.js';
 
 function setup({ maxAgeSec = 3600 } = {}) {
   const clock = { t: Date.now() };
@@ -24,7 +24,7 @@ test('a valid token gives uid, email and auth time', async () => {
   const { v, k1, clock } = setup();
   const out = await v.verify(k1.sign(idClaims('yufei@ucsd.edu', {}, clock.t)));
   assert.equal(out.email, 'yufei@ucsd.edu');
-  assert.equal(out.uid, 'uid-yufei@ucsd.edu');
+  assert.equal(out.uid, uidOf('yufei@ucsd.edu'));
   assert.equal(typeof out.authTime, 'number');
 });
 
