@@ -416,8 +416,9 @@ async def timeout(br):
             hid = t.hand and t.hand['id']
             await t.tap('[data-do="postBB"]')
         dealt = await until(lambda: t.hand and not t.hand['done'] and t.hand['id'] != hid and (t.snap['me'] or {}).get('hole'), 60, .2)
-        posted = dealt and any(e['seat'] == t.seat and e['a'] == 'bb' for e in t.snap['table']['log'])
-        sc.check('立即补盲: dealt into the next hand, posting a big blind', bool(dealt) and posted, t.snap['table']['log'][:4] if dealt else '')
+        # he posts a big blind, or the blind his seat owes anyway when the rotation puts him in the blinds
+        posted = dealt and any(e['seat'] == t.seat and e['a'] in ('bb', 'sb') for e in t.snap['table']['log'])
+        sc.check('立即补盲: dealt into the next hand, posting a blind', bool(dealt) and posted, t.snap['table']['log'][:4] if dealt else '')
         task.cancel()
         hands = await play(players, {'Ann': station, 'Tim': station}, len(done_hands(players)) + 2, svc, cap=120)
         sc.info['hands_played'] = len(hands)

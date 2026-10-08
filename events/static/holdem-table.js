@@ -73,7 +73,7 @@ export function createTable({ ui, S, send, popups }) {
         html: new Map(), seats: [], bets: [],
         menuOpen: false, raise: null, pre: null,
         labels: new Map(), shownWin: "", dealt: "", collected: "", lastAct: new Map(),
-        stale: false, busy: false, timer: 0, frame: 0, destroyed: false, keys: ""
+        stale: false, busy: false, timer: 0, frame: 0, destroyed: false, keys: "", boardBox: null
     };
     const reduced = () => ui.prefersReducedMotion();
 
@@ -387,14 +387,13 @@ export function createTable({ ui, S, send, popups }) {
             let y = k === 0 ? p.y - 6 : p.y + dy * out + py * 84;
             // never on the board's cards (a side seat of the narrow portrait table): step above or below them,
             // with room for the winning cards' lift
-            const br = h.board.length || R.board.firstElementChild ? R.board.getBoundingClientRect() : null;
-            if (k && br?.width) {
-                const top = (br.top - V.top) / V.s;
-                const bottom = (br.bottom - V.top) / V.s;
-                const left = (br.left - V.left) / V.s;
-                const right = (br.right - V.left) / V.s;
-                if (x > left - 22 && x < right + 22 && y > top - 30 && y < bottom + 22) y = p.y < V.G.boardY ? top - 34 : bottom + 26;
+            // (the five slots' box is measured once per layout: no forced layout on every snapshot)
+            if (k && V.boardBox?.key !== V.keys && R.board.firstElementChild) {
+                const r = R.board.getBoundingClientRect();
+                V.boardBox = { key: V.keys, top: (r.top - V.top) / V.s, bottom: (r.bottom - V.top) / V.s, left: (r.left - V.left) / V.s, right: (r.right - V.left) / V.s };
             }
+            const bx = V.boardBox?.key === V.keys ? V.boardBox : null;
+            if (k && bx && x > bx.left - 22 && x < bx.right + 22 && y > bx.top - 30 && y < bx.bottom + 22) y = p.y < V.G.boardY ? bx.top - 34 : bx.bottom + 26;
             dealer.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
             dealer.classList.add("is-on");
         } else {
