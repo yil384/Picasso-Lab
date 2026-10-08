@@ -293,7 +293,7 @@ export function mountHoldem(ui) {
         const mine = S.me?.seat;
         const busy = S.pending ? " disabled" : "";
         if (!seat) {
-            return `<div class="hd-rseat is-empty" ${style}><button class="room-seat-sit" type="button" data-sit="${i}"${busy} aria-label="${L(`Sit at seat ${i + 1}`, `坐 ${i + 1} 号位`)}"><b>+</b><span>${L("Sit", "入座")}</span></button></div>`;
+            return `<div class="hd-rseat is-empty" ${style}><span class="room-seat-disc"><button class="room-seat-sit" type="button" data-sit="${i}"${busy} aria-label="${L(`Sit at seat ${i + 1}`, `坐 ${i + 1} 号位`)}"><b>+</b><span>${L("Sit", "入座")}</span></button></span></div>`;
         }
         const me = mine === i;
         const name = seatName(seat, L);

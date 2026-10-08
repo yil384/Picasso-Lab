@@ -4406,6 +4406,7 @@ if (roomCode) {
     root.innerHTML = `<div class="gd-boot" role="status">${L("Joining the room…", "正在进入房间…")}</div>`;
     attachRoom(roomCode);
 } else if (bootHoldem && bootQuery.get("room")) {
+    setStaticLabels();
     root.innerHTML = `<div class="gd-boot" role="status">${L("Joining the table…", "正在进入牌桌…")}</div>`;
     holdemStart("join", { code: bootQuery.get("room").toUpperCase() }).finally(() => {
         if (holdem?.active) return;

@@ -326,6 +326,7 @@ html[lang="en"] .lobby-tile.is-holdem .tile-title { font-size: calc(54 * var(--t
     translate: -50% calc(-1 * var(--seat-av) / 2);
 }
 .hd-rseat .room-seat-disc { width: var(--seat-av); height: var(--seat-av); }
+.hd-rseat.is-empty { --ring: rgba(255, 255, 255, .92); }
 .hd-rseat .room-seat-sit b { font-size: calc(38 * var(--lu)); }
 .hd-rplate { flex-direction: column; align-items: center; gap: 0; height: auto; padding: calc(2 * var(--lu)) calc(10 * var(--lu)) calc(3 * var(--lu)); max-width: calc(150 * var(--lu)); }
 .hd-rplate > b { font-size: calc(17 * var(--lu)); }
@@ -654,7 +655,7 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 
 /* the hero: big hole cards over my avatar, the hand under them */
 .hd-seat.is-hero .hd-av { left: -44px; top: -44px; width: 88px; height: 88px; }
-.hd-seat.is-hero .hd-plate { top: 32px; flex-direction: row; gap: 10px; align-items: baseline; max-width: 260px; padding: 3px 14px 4px; }
+.hd-seat.is-hero .hd-plate { top: 32px; flex-direction: row; gap: 10px; align-items: baseline; max-width: 360px; padding: 3px 14px 4px; }
 .hd-seat.is-hero .hd-tag { position: static; translate: none; align-self: center; }
 .hd-seat.is-hero .hd-backs { left: 34px; top: -64px; }
 .hd-seat.is-hero .hd-shown { left: 0; top: -108px; --card-w-small: 70px; }
@@ -878,13 +879,14 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-stage.is-portrait .hd-raise { left: 20px; right: 20px; bottom: 136px; }
 .hd-stage.is-portrait .hd-raise-panel { flex-direction: column; gap: 12px; }
 .hd-stage.is-portrait .hd-presets { flex-direction: row; }
-.hd-stage.is-portrait .hd-preset { flex: 1; width: auto; flex-direction: column; justify-content: center; gap: 4px; height: 66px; padding: 0 4px; font-size: 19px; }
+.hd-stage.is-portrait .hd-preset { flex: 1; width: auto; flex-direction: column; justify-content: center; gap: 4px; height: 60px; padding: 0 4px; font-size: 19px; }
+.hd-stage.is-portrait .hd-raise-panel { padding: 12px; }
 .hd-stage.is-portrait .hd-slide { flex-direction: row; width: auto; gap: 12px; }
 .hd-stage.is-portrait .hd-raise-v { order: 2; min-width: 120px; text-align: center; }
 .hd-stage.is-portrait .hd-steps { display: contents; }
 .hd-stage.is-portrait .hd-steps span { display: none; }
 .hd-stage.is-portrait .hd-step:first-of-type { order: 0; }
-.hd-stage.is-portrait .hd-slider { order: 1; flex: 1; width: auto; min-height: 0; height: 52px; }
+.hd-stage.is-portrait .hd-slider { order: 1; flex: 1; width: auto; min-height: 0; height: 48px; }
 .hd-stage.is-portrait .hd-step:last-of-type { order: 3; }
 .hd-stage.is-portrait .hd-slider-fill { left: 8px; top: 8px; bottom: 8px; width: calc(100% - 16px); height: auto; transform-origin: 0 50%; transform: scaleX(var(--f)); }
 .hd-stage.is-portrait .hd-slider-thumb { left: 8px; bottom: auto; top: 50%; width: 34px; height: 56px; margin: -28px 0 0; transform: translateX(calc(var(--f) * (100cqw - 50px))); }
@@ -906,6 +908,11 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-amount-presets .hd-pill { --ru: var(--pu); min-width: calc(96 * var(--pu)); font-family: var(--font-ui); }
 .hd-amount-note { margin: 0 0 calc(8 * var(--pu)); color: var(--ink-3); font: 500 calc(16 * var(--pu))/1.45 var(--font-ui); text-align: center; text-wrap: balance; }
 .gd-rules-row.hd-rank-row { grid-template-columns: calc(124 * var(--pu)) minmax(0, 1fr) auto; }
+html[lang="en"] .gd-rules-row.hd-rank-row { grid-template-columns: calc(176 * var(--pu)) minmax(0, 1fr) auto; }
+@media (max-aspect-ratio: 1/1) {
+    .gd-popup-layer:not(.in-stage) .gd-rules-row.hd-rank-row { grid-template-columns: max-content minmax(0, 1fr); }
+    .gd-popup-layer:not(.in-stage) .gd-rules-row.hd-rank-row .gd-rules-cards { grid-column: 1 / -1; }
+}
 .hd-rank-row > b { text-align-last: auto; white-space: nowrap; }
 .hd-rank-row .gd-rules-cards { --card-w-small: calc(44 * var(--pu)); }
 .hd-rank-row .gd-rules-cards .card + .card { margin-left: calc(-16 * var(--pu)); }

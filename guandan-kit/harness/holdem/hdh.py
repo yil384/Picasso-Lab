@@ -40,11 +40,12 @@ class Dealer:
 
 
 @contextlib.contextmanager
-def dealer(kind=None):
+def dealer(kind=None, data_dir=None):
+    """data_dir (real dealer): reuse a data directory, e.g. to restart the service over its saved tables."""
     kind = kind or os.environ.get('HD_DEALER', 'fake')
     if kind == 'real':
         d = Dealer('real', 8787)
-        env = dict(os.environ, PORT='8787', DATA_DIR=tempfile.mkdtemp(prefix='hd-data-'), ALLOWED_ORIGINS='https://yil384.github.io',
+        env = dict(os.environ, PORT='8787', DATA_DIR=data_dir or tempfile.mkdtemp(prefix='hd-data-'), ALLOWED_ORIGINS='https://yil384.github.io',
                    BOT_THINK_SCALE='0.3', EMAIL_LINK='on')
         cmd, cwd = ['node', 'src/server.js'], DEALER_DIR
     else:

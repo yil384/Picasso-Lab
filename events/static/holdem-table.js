@@ -147,7 +147,7 @@ export function createTable({ ui, S, send, popups }) {
         let cy, rx, ry, heroY;
         if (portrait) {
             rx = Math.min(w * .42, 330);
-            heroY = h - 336;
+            heroY = h - 384;
             cy = h * .45;
             ry = Math.min(heroY - 40 - cy, 600);
         } else {
@@ -321,19 +321,19 @@ export function createTable({ ui, S, send, popups }) {
         }
         if (h && h.button != null && t.seats[h.button]) {
             // on the felt just past the button seat's plate, beside its bet: below it on the sides, left of
-            // it at the top, right of my cards
+            // it at the top; mine sits by my avatar, clear of my cards
             const k = slotOf(h.button);
             const p = V.G.seats[k];
             const dx = (V.G.cx - p.x) / (Math.hypot(V.G.cx - p.x, V.G.boardY - p.y) || 1);
             const dy = (V.G.boardY - p.y) / (Math.hypot(V.G.cx - p.x, V.G.boardY - p.y) || 1);
             let px = -dy;
             let py = dx;
-            if (k === 0 ? px < 0 : py < 0 || (Math.abs(py) < .01 && px > 0)) {
+            if (py < 0 || (Math.abs(py) < .01 && px > 0)) {
                 px = -px;
                 py = -py;
             }
-            const x = p.x + dx * 108 + px * 84;
-            const y = p.y + dy * 108 + py * 84;
+            const x = k === 0 ? p.x + 118 : p.x + dx * 108 + px * 84;
+            const y = k === 0 ? p.y - 66 : p.y + dy * 108 + py * 84;
             dealer.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
             dealer.classList.add("is-on");
         } else {
