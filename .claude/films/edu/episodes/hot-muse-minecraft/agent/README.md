@@ -332,7 +332,16 @@ paper.jar (a few minutes); later pushes skip it.
 agent settings (only `MC_HOST` and `WEB_PUBLIC_URL` differ) and every service production always runs; and push.sh,
 run with stand-ins for ssh, rsync and node, must reach production only with `--prod` and only after a passing check,
 with production's commands as before staging existed (plus, after the build, the prune of our own dangling images and
-the note while `WEB_PROXY_SECRET` is unset, ROADMAP M0 items 8 and 6; staging prunes the same way).
+the note while `WEB_PROXY_SECRET` is unset, ROADMAP M0 items 8 and 6; staging prunes the same way; and `mineai/` in the
+copy, which every agent image copies).
+
+Staging plays with `BODY=mineai` (section "The Mine AI MCP body"): `staging.compose.yaml` builds its agent image with
+`--build-arg MINEAI=1` (the runtime fetched and patched at build time, 163 MB in `/opt/mine-ai-mcp`; the image 794 MB
+against 470 MB without it) and mounts `~/workspace/muse-staging/mineai-data` at `/mineai-data` for their per-bot SQLite.
+Which body plays is set in staging's `deploy/.env` only, next to its admin token: `BODY=mineai`,
+`MINEAI_DIR=/opt/mine-ai-mcp`, `MINEAI_DATA_DIR=/mineai-data`, and `MC_USERNAME=Tst_rv` (staging's bots are test
+bots: `Tst_rv_` and random letters). Remove the `BODY` line (and `docker compose -p muse-staging -f staging.compose.yaml
+up -d` in its deploy folder) to go back to our body. Production's compose file and image have none of it.
 
 Caddy: the block was added to `~/workspace/FRAS/caddy-config/Caddyfile` after a backup
 (`Caddyfile.bak-20261007-222723`), validated as a separate file inside the container, moved into place, then
@@ -532,7 +541,11 @@ server is offline-mode; that is the operator's call, not a default).
   `docker image prune -f --filter label=org.picasso-lab.app=muse-minecraft`: only our dangling images (the ones a
   rebuild replaced), never another user's, never one a container uses. Images built before the label carry none and
   stay until removed by hand: list them with `docker images -f dangling=true`, check each is ours with
-  `docker image inspect <id>`, then `docker rmi <id>`.
+  `docker image inspect <id>`, then `docker rmi <id>`. picasso's `docker` is a wrapper that refuses every `prune` to a
+  user who is not root (it says prune needs sudo and exits 1; checked 2026-10-08): staging's push then prints a note with
+  the number of our dangling images left and goes on to its checks (it used to stop there under `set -o pipefail`);
+  remove them one at a time with `docker images -q -f dangling=true -f label=org.picasso-lab.app=muse-minecraft` and
+  `docker rmi <id>`, or ask the lab admin for the prune.
 - `deploy/.env` on picasso (made by push.sh with `WEB_ADMIN_TOKEN`) should also hold `WEB_PROXY_SECRET` (ROADMAP M0
   item 6): a secret Caddy adds to every request it forwards, so the agent can tell Caddy's requests from anyone
   else's. The peer address cannot: the published ports go through docker-proxy, so Caddy, other containers and every
@@ -903,9 +916,79 @@ node mineai/bench/gateway-iron.mjs http://127.0.0.1:8791 --agent-pid <agent pid>
   --server-log server/logs/latest.log --label a-mineai-paper --n 10            # --parallel --n 8: all at once
 ```
 
-Not yet: staging (the image builds the runtime with `--build-arg MINEAI=1`, UNVERIFIED: no Docker here; staging also
-needs `BODY=mineai`, `MINEAI_DATA_DIR` on a volume and the build arg in its compose file), picasso's load
-(`MINEAI_UNRESPONSIVE_MS`, the heartbeat), a whole lease, more than 8 games at once.
+On staging on picasso (2026-10-08, play-staging.picasso-lab.com, the image of commit 6e87498 built by
+`deploy/push.sh` with the runtime fetched and patched at build time and run with Bun 1.4.2; Paper 1.21.4, seed
+71811045, Easy, daylight locked, natural; heartbeat and watchdog at their defaults: 5 s, 3 misses, 5 s; picasso's
+1-minute load average 181-237, median 221, over the runs). The same strict harness and bench as above
+(`mineai/bench/gateway-iron.mjs`, run in a container of the agent image with `--pid host --network host`, so it reads
+the agent's processes from /proc), at the same 10 spots and then the same 8 spots at once, all fresh in staging's world
+(it had only been generated within 1,024 blocks of spawn). Bots `Tst_rv_` and random letters. The last column is the
+staging run of our own body a few hours earlier (2026-10-08, 02:48-03:41; its spots: the random spread up to 400
+blocks from spawn, so not the same spots).
+
+| | `BODY=mineai`, 10 spots one at a time | `BODY=mineai`, 8 games at once | `BODY=ours`, staging, earlier |
+| --- | --- | --- | --- |
+| strict passes | **8 of 10** | **7 of 8** | 5 of 10; 8 at once: 1 of 8 |
+| iron pickaxe made | 8 of 10 | 7 of 8 | 7 of 10; 8 at once: 5 of 8 |
+| time, median / max (passes) | 161.1 / 166.5 s | 160.8 / 184.0 s | 132.7 / 157.0 s; 8 at once: 325.5 s (the one pass) |
+| deaths | 0 | 0 | 3 |
+| MCP calls per game, median | 14 | 14 | 15 |
+| where the time goes (median s): first action, logs, all crafts, stone, iron and coal, smelt | 6.3, 32.5, 23.7, 27.8, 35.8, 32.1 | 6.7, 28.2, 24.5, 26.6, 45.9, 32.3 | |
+| agent event loop (60 s windows) | p50 0.09 ms, p99 0.5 ms median, 2.0 ms max; longest stall 29 ms | p99 1.4 ms median, 3.6 ms max; longest stall 198 ms | 8 at once: p99 1.0-3.2 s, p50 up to 515 ms, stalls up to 7.0 s |
+| hosts | 10 started, ready in 1.6 s (median), 0 heartbeats missed, 0 restarts, 0 watchdog stops | 8 at once, ready in 1.6 s, 0 missed, 0 restarts, 0 watchdog stops | - |
+| memory (RSS) | agent 116-120 MB; a host 79 MB at most; a runtime 305 MB median, 321-417 MB at its peak (two outliers: 679 MB in spot 1's 11-minute run, 1,023 MB in spot 7's long path searches) | agent 126-137 MB; hosts 569 MB together; runtimes 310 MB median, 601 MB max, 3.0 GB together at most | |
+| CPU (one core = 100%) | agent 0.6% median; a runtime 18% median, 44% p90, 137% max | agent 1.6% median, 12% max; a runtime 17% median, 53% p90, 163% max; all runtimes together 443% at most | |
+
+23 hosts in all on staging that day (the deploy's check, the 18 games above, one re-run, three sessions): 0 heartbeats
+missed, 0 restarts, 0 runtimes stopped by their watchdog, so the defaults hold at this load; picasso's load is mostly
+niced batch work, and our containers run at normal priority. Their per-bot SQLite took 108 MB for the 23 bots
+(`~/workspace/muse-staging/mineai-data`; nothing prunes it yet).
+
+Every failure, with its cause:
+- Spot 1 (1800 0), one at a time: `collect oak_log 6` got 1 log in its 180 s; their SQLite shows the bot travelled 118
+  blocks without ever getting more than 11 from where it started, the last minute at (1805, 62.5, -9), in shallow water
+  by the shore: their collect's walk going back and forth with nothing to stop it but our time limit. The strict
+  harness then went on without a pickaxe, and each `go_to` down (digging stone by hand) ran out its 120 s. The same
+  spot was slow on the Mac too (3 logs in 180 s once, 28.7 s on another copy): this spot, not the load.
+- Spot 7 (-3049 -1263), one at a time: `craft wooden_pickaxe` failed in 81 ms: "crafting_table: Server processed
+  placement, but block at (-3056, 104, -1322) is still poppy". Their `isReplaceableForPlacement`
+  (`src/world/block-classification.ts`) counts poppy, dandelion and every other flower as replaceable, so their
+  temporary table was put on a flower; the server replaces grass, ferns or vines with a placed block, but not a flower
+  (vanilla and Paper alike). A bug in their runtime, hit by chance (the Mac run of this spot put its table elsewhere);
+  a patch can drop the flowers from that set. The rest of the route went on without a pickaxe (path searches up to
+  their 2 s limit; the runtime's 1,023 MB).
+- Spot 6 of the 8 at once (-3825 761): `collect oak_log 6` failed after 2.2 s: "no path found after 234 ms compute;
+  visited 5097 nodes", and their collect did not try another tree. The same spot alone afterwards passed (logs in
+  30.6 s, the route in 181.1 s), as it did in the Mac's 8-at-once run (30.7 s). Likely (UNVERIFIED): the search ran
+  2.3 s after the bot landed in one of 8 fresh regions being generated at once, before the chunks around it had
+  arrived, so the region looked closed. Waiting for the chunks around a new spot (we wait a fixed 3 s), or trying a
+  collect that found no path once more, would cover it.
+- A scripted session through https://play-staging.picasso-lab.com/mcp (start_game, `play_sequence` with a
+  `request_id`, the same call again, the same `request_id` with other steps, get_state, `live_view`, end_game):
+  `craft_batch {items: [oak_planks 12, stick 4, crafting_table 1, wooden_pickaxe 1]}` after 4 oak logs failed both
+  times with their "Missing leaf materials: pale_oak_log x2". We send the whole list as one `craft_item`, and their
+  planner treats every listed item as a gain to keep ("one shared inventory plan"): the 12 planks stay, and the stick,
+  table and pickaxe need 9 more planks from the 1 log left, so it asks for 2 logs of the first wood it knows. Our
+  dry-run check simulates the list in order, each item using what the earlier ones made (as our body crafts it), and
+  let the call through. Not fixed yet: `craft_batch` should become one `craft_item` per item, in order. The same session
+  with separate crafts worked: a stone pickaxe in 72 s, 10 MCP calls, no reply over 34 s; the repeat came back as
+  `DUPLICATE` with the first call's steps and ran nothing; the other steps under the same `request_id` were refused
+  (`BAD_ARGS`); both live views answered 200 through Caddy; `tools/list` 25.4 KB.
+
+Reproduce on picasso (the runs, their JSON and the load log are in `~/workspace/muse-staging/accept-mineai/runs`;
+`SPREAD_SPOTS` and `WEB_MCP_GAMES_PER_ADDRESS=8` go into staging's `deploy/.env` for the measurement only, then out
+again; `rsync -az --relative test/e2e mineai/bench picasso:workspace/muse-staging/accept-mineai/` first):
+
+```sh
+cd ~/workspace/muse-staging; L=$(ls -t logs | grep run-serve | head -1); P=$(docker inspect -f '{{.State.Pid}}' muse-staging-agent-1)
+docker run --rm --network host --pid host --user $(id -u):$(id -g) -v $PWD/accept-mineai:/app/rv -v $PWD/logs:/staging-logs:ro \
+  -v $PWD/data/logs:/paper-logs:ro muse-staging-agent node rv/mineai/bench/gateway-iron.mjs http://172.24.0.1:7851 \
+  --agent-pid $P --agent-log /staging-logs/$L --server-log /paper-logs/latest.log --label staging-mineai-seq10 --n 10 \
+  --out rv/runs                                                       # --parallel --n 8: all at once
+```
+
+Not yet: a whole 30-minute lease, more than 8 games at once, the End lab, Muse itself as the client (the sessions above
+were scripted), production.
 
 ## What is mocked
 
@@ -933,9 +1016,9 @@ needs `BODY=mineai`, `MINEAI_DATA_DIR` on a volume and the build arg in its comp
 - The day-0 fixes (2026-10-07) ran on this Mac only: `npm test`, and against the local Paper server through MCP (two
   strict iron-pickaxe runs: one PASS in 214 s with 15 calls and no failed step; one FAIL: the crafting table vanished
   while `craft stone_pickaxe` tried to place it, 15.5 s in `place`, and the run went on without a stone pickaxe; two
-  simultaneous starts; the live views under view ids, recorded through the streamer). Not yet: the agent image build
-  (no Docker here; the slimming was run on a copy of node_modules and the suite and a live game passed on it), the
-  prune in push.sh, and the proxy secret behind the real Caddy (the agent sees the Docker gateway, not Caddy's
+  simultaneous starts; the live views under view ids, recorded through the streamer). The agent image has since been
+  built on picasso (staging, with and without the Mine AI MCP runtime) and the prune in push.sh run there: picasso
+  refuses it to non-root users (section "Deploy on picasso"). Not yet: the proxy secret behind the real Caddy (the agent sees the Docker gateway, not Caddy's
   container address, on the published port: checked read-only on picasso; `WEB_PROXY_SECRET` and Caddy's `header_up`
   are not deployed yet).
 - Real server (Paper 1.21.4, 2026-10-06): the body without a model, driven by scripts. Crafting by clicks (2x2 and
