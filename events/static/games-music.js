@@ -37,12 +37,18 @@
         return Object.freeze(t);
     }
     // `color` is the label of the track's record (the picker, the lobby rail); `game` marks Auto's track there.
-    // Every file is public domain, CC0 or CC BY (static/music/MUSIC-CREDITS.md).
+    // Every file is the lab's own (the Guandan theme), public domain, CC0 or CC BY (static/music/MUSIC-CREDITS.md).
     var TRACKS = Object.freeze([
+        track("guandan-theme", {
+            title: { en: "Guandan Theme", zh: "掼蛋主题曲" },
+            artist: { en: "Picasso Lab", zh: "Picasso Lab" },
+            style: { en: "Upbeat and steady, the table's own music", zh: "轻快明亮，牌桌原声" },
+            game: "guandan", color: "#e0546e"
+        }),
         track("bossa-antigua", {
             title: { en: "Bossa Antigua", zh: "Bossa Antigua" },
             style: { en: "Bossa nova: guitar and light drums", zh: "波萨诺瓦：吉他与轻鼓" },
-            game: "guandan", color: "#e0546e"
+            color: "#d0603c"
         }, macleod("USUAN1700069")),
         track("etirwer", {
             title: { en: "Etirwer", zh: "Etirwer" },
@@ -103,7 +109,7 @@
     })());
     var BY_ID = {};
     TRACKS.forEach(function (t) { BY_ID[t.id] = t; });
-    var DEFAULTS = Object.freeze({ guandan: "bossa-antigua", holdem: "etirwer" });
+    var DEFAULTS = Object.freeze({ guandan: "guandan-theme", holdem: "etirwer" });
     var KEY_ON = "picasso.guandan.music", KEY_TRACK = "picasso.guandan.musicTrack", KEY_GAME = "picasso.games.game";
     // The files are levelled to -20 LUFS (MUSIC-CREDITS.md); at 0.8 they play near -22 LUFS, under the table's
     // sound effects. The page's earlier track was a -7 LUFS master played at 0.45 (about -14 LUFS).

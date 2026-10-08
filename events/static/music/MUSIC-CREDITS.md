@@ -1,7 +1,7 @@
 # Music credits: the games page (events/guandan.html)
 
 Background music for Guandan and Texas Hold'em. The page plays one track at a time and downloads a file only
-when its track plays (`events/static/games-music.js`). "Auto", the default, plays `bossa-antigua` on the Guandan
+when its track plays (`events/static/games-music.js`). "Auto", the default, plays `guandan-theme` on the Guandan
 screens and `etirwer` (solo guitar) on the Hold'em ones (the lobby's Hold'em tab, the Hold'em room and table).
 
 Every file here was trimmed to its own ending, loudness-normalised to -20 LUFS (true peak -2.9 dBTP or lower; a
@@ -35,15 +35,12 @@ generator for several pieces (incompetech.com/music/royalty-free/licenses/):
 
 The CC0 tracks need no credit; it is given anyway.
 
-## Removed: the page's earlier track
+## The Guandan theme
 
-The games page used to play `events/static/guandan_music.mp3` (converted from `guandan_music.MOV`, commit
-6fa198d). Its composer, source and licence are not recorded anywhere, and the file carries the export tags of a
-ByteDance phone video editor (`com.apple.quicktime.software` {"TEEditor":"2","te_is_reencode":"1",...}), so the
-audio most likely came from that editor's music library or another short video; those terms do not allow hosting
-the file in a public repository. It was removed from the page and the repository (it stays in git history:
-`git show e83406c:events/static/guandan_music.mp3`). Bring it back only with a known source and a licence that
-allows public hosting, and then credit it under its real title and artist.
+`guandan-theme.m4a` is the table's own music, made by the site's owner for this page (confirmed 2026-10-08), so it
+needs no licence or credit line. It was cut from the earlier `guandan_music.mp3` into a 14-bar loop at 120 bpm with a
+0.6 s equal-power crossfade on a bar line (the mp3 looped with a hard cut and a 60 ms dropout), then levelled like
+the other files.
 
 ## Adding a track
 
