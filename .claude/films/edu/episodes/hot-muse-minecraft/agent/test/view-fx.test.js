@@ -87,8 +87,9 @@ test('web: the live views get the fx script, the dig stream, and a log line when
   t.after(() => web.stop());
   const s = await (await fetch(`${url}/api/session`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"adult":true}' })).json();
   for (let i = 0; i < 100 && (await (await fetch(`${url}/api/${s.token}/state`)).json()).session.status !== 'ready'; i++) await sleep(5);
-  const id = s.session;
-  const body = bodies.get(id);
+  const game = s.session;
+  const body = bodies.get(game);
+  const id = /href="\/eyes\/([A-Za-z0-9_-]{22})\/"/.exec(await (await fetch(s.playUrl)).text())[1]; // the view id
 
   // the page: the viewer's own, with the script after its client; the script with its settings in front
   const page = await (await fetch(`${url}/eyes/${id}/`)).text();
@@ -135,7 +136,8 @@ test('web: the live views get the fx script, the dig stream, and a log line when
   ws.end();
   for (let i = 0; i < 100 && !log.tail(50).some((r) => r.kind === 'view_close'); i++) await sleep(10);
   const closed = log.tail(50).find((r) => r.kind === 'view_close');
-  assert.equal(closed.session, id);
+  assert.equal(closed.session, game, 'the log names the game, never the view id');
+  assert.ok(!JSON.stringify(log.tail(200)).includes(id), 'the view id is not logged');
   assert.equal(closed.view, 'eyes');
   assert.equal(closed.why, 'the watcher left');
 

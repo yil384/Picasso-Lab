@@ -4,7 +4,7 @@
 // blocks it cannot reach follow Mindcraft's collectBlock skill (github.com/mindcraft-bots/mindcraft, MIT License),
 // rewritten for this body.
 
-import { done, fail, keyOf, fmt, describeError, mineBlock, collectDrops, dropsNear, countOf, SkillStop } from './util.js';
+import { done, fail, keyOf, fmt, describeError, mineBlock, collectDrops, dropsNear, countOf, SkillStop, timed } from './util.js';
 import { settleInventory } from './window.js';
 
 const RADIUS = Number(process.env.SCAN_RADIUS) || 32;
@@ -101,11 +101,11 @@ async function mineAndCount(ctx, { block, n, ids, dropNames, got }) {
   // drops that rolled away or fell into a hole: one more pass over what lies around
   await settleInventory(ctx);
   if (mined && dropNames.length && got() < mined) {
-    try { await collectDrops(ctx, dropsNear(bot, 8), SWEEP_MS); } catch (err) { if (err instanceof SkillStop) throw err; }
+    try { await timed(ctx, 'pickup', () => collectDrops(ctx, dropsNear(bot, 8), SWEEP_MS)); } catch (err) { if (err instanceof SkillStop) throw err; }
     await settleInventory(ctx);
   }
   // the server adds a picked-up item to the inventory a few ticks after the bot touches it: give those a moment
-  for (let i = 0; i < 10 && mined && dropNames.length && got() < mined; i++) await ctx.sleep(150);
+  for (let i = 0; i < 10 && mined && dropNames.length && got() < mined; i++) await timed(ctx, 'pickup', () => ctx.sleep(150));
   const pickedNote = mined && dropNames.length && got() < mined
     ? `; picked up ${got()} ${dropNames.join('/')}, the rest lies on the ground nearby` : '';
   if (mined >= n) return done(`mined ${mined} ${block}${pickedNote}`);

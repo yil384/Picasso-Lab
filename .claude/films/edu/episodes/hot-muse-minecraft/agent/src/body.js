@@ -1,7 +1,7 @@
 // src/body.js - the bot body: a mineflayer bot (or an injected stand-in such as test/fake-bot.js) driven only through
 // the 10 whitelisted skills in src/skills. run() validates arguments against the tool schemas, runs one skill at a time
-// under its timeout and reports the inventory change; stop() is the kill switch. Minecraft is reached on localhost or
-// the LAN only, with offline auth.
+// under its timeout and reports the inventory change and where the time went (phases); stop() is the kill switch.
+// Minecraft is reached on localhost or the LAN only, with offline auth.
 
 import { createRequire } from 'node:module';
 import pf from 'mineflayer-pathfinder';
@@ -31,6 +31,40 @@ const { pathfinder, Movements } = pf;
 export const DEFAULT_TIMING = Object.freeze({
   pollMs: 500, stallMs: 15_000, graceMs: 1_500, openMs: 5_000, windowMs: 4_000, stillMs: 20_000, progressMs: 22_000, progressGain: 3,
 });
+/**
+ * Where one skill's time goes. run(name, fn) runs fn and adds its wall time to `name`; a phase started inside another
+ * counts toward the outer one (the walk to a drop is pickup, not path), so the phases never overlap. totals(ms) gives
+ * whole ms per phase plus `other` for the rest of ms (thinking, equipping, waits between steps). The names: path
+ * (walking, path search included), dig, drop (the ticks after a dig for its drops to appear), sync (inventory syncs with
+ * the server), place, open (a window opening), clicks (window clicks and their answers), pickup (walking over drops),
+ * cook (waiting for a furnace).
+ */
+export function createPhases(clock = Date.now) {
+  const sums = {};
+  let open = null;
+  return {
+    async run(name, fn) {
+      if (open) return fn();
+      open = name;
+      const t0 = clock();
+      try {
+        return await fn();
+      } finally {
+        sums[name] = (sums[name] ?? 0) + (clock() - t0);
+        open = null;
+      }
+    },
+    totals(ms) {
+      const out = {};
+      let used = 0;
+      for (const [k, v] of Object.entries(sums)) { out[k] = Math.round(v); used += v; }
+      const other = Math.round((ms ?? used) - used);
+      if (other > 0) out.other = other;
+      return out;
+    },
+  };
+}
+
 /** A walk gives up after this many "stuck" path resets in a row that bring the bot no closer. */
 const STUCK_RESETS = 3;
 const STILL_CHECK_MS = 500;
@@ -281,13 +315,15 @@ export function createBody(opts = {}) {
       check();
       return value;
     };
-    return {
+    const ctx = {
       bot,
       config: cfg,
       timing,
       signal,
       check,
       wait,
+      /** Run fn as one phase of this skill's time (createPhases); the result row reports the sums. */
+      phase: (name, fn) => job.phases.run(name, fn),
       sleep(ms) {
         let timer;
         return wait(new Promise((r) => { timer = setTimeout(r, ms); })).finally(() => clearTimeout(timer));
@@ -306,7 +342,10 @@ export function createBody(opts = {}) {
        * "no path", a partial path, a search timeout or an empty path while its goal is still set, and the bot would
        * walk on into the next skill.
        */
-      async goto(goal, { timeoutMs = 0, watch = null } = {}) {
+      goto(goal, opts) {
+        return job.phases.run('path', () => ctx.walk(goal, opts));
+      },
+      async walk(goal, { timeoutMs = 0, watch = null } = {}) {
         check();
         if (watch?.error) throw watch.error;
         if (movements) bot.pathfinder.setMovements(movements);
@@ -373,6 +412,7 @@ export function createBody(opts = {}) {
       },
       state: () => state(),
     };
+    return ctx;
   }
 
   /** Wait (bounded) until a dead bot has respawned. */
@@ -389,7 +429,7 @@ export function createBody(opts = {}) {
     if (!quick) {
       if (dead) await respawned();
       // the inventory as the server has it (changes still on their way belong to the previous action)
-      await syncInventory(bot, Math.min(1_500, timing.windowMs));
+      await job.phases.run('sync', () => syncInventory(bot, Math.min(1_500, timing.windowMs)));
     }
     const before = inventoryOf(bot);
     emit('skill', { phase: 'start', tool, args });
@@ -423,14 +463,16 @@ export function createBody(opts = {}) {
     }
     closeOpenWindow();
     // items picked up, crafted or put back arrive from the server a moment later: count them in this action
-    if (!quick) await syncInventory(bot, Math.min(1_500, timing.windowMs));
+    if (!quick) await job.phases.run('sync', () => syncInventory(bot, Math.min(1_500, timing.windowMs)));
 
     const delta = inventoryDelta(before, inventoryOf(bot));
+    const ms = Date.now() - started;
     const result = {
       ok: Boolean(out?.ok),
       result: clip(String(out?.result ?? 'the skill returned nothing'), 4_000),
       delta,
-      ms: Date.now() - started,
+      ms,
+      phases: job.phases.totals(ms),
     };
     if (tool !== 'get_state') {
       const change = Object.keys(delta).length ? ` (inventory: ${describeDelta(delta)})` : '';
@@ -449,7 +491,7 @@ export function createBody(opts = {}) {
       return Promise.resolve({ ok: false, result: phase === 'ended' ? 'not connected to the game' : 'not in the game yet', delta: {}, ms: 0 });
     }
     if (current) return Promise.resolve({ ok: false, result: `busy: ${current.call} is still running`, delta: {}, ms: 0 });
-    const job = { tool, call: describeCall(tool, checked.args), controller: new AbortController(), cleanups: new Set(), done: null, stopNote: null };
+    const job = { tool, call: describeCall(tool, checked.args), controller: new AbortController(), cleanups: new Set(), done: null, stopNote: null, phases: createPhases() };
     current = job;
     job.done = execute(job, checked.args);
     return job.done;

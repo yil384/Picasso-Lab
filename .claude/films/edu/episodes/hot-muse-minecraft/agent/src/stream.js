@@ -831,6 +831,13 @@ export function createStreamManager({ config, log, create = createStream } = {})
       e.stream.caption(text);
     },
     has: (id) => Boolean(streams.get(id) && !streams.get(id).stopping),
+    /** Which output URL (its index in STREAM_RTMP_URL) a game's running stream holds; null for files or no stream. */
+    slot(id) {
+      const e = streams.get(id);
+      if (!e || e.stopping || !outputs.length) return null;
+      const i = outputs.indexOf(e.output);
+      return i >= 0 ? i : null;
+    },
     get size() { return streams.size; },
     list: () => [...streams.entries()].map(([id, e]) => ({ id, state: e.stream.state, output: maskOutput(e.output) })),
     stats: (id) => streams.get(id)?.stream.stats({ resources: true }) ?? null,
@@ -848,17 +855,27 @@ export function createStreamManager({ config, log, create = createStream } = {})
 
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
-/** A source the service accepts: a local eyes page of that session, and nothing else. */
-export function validSource(source, id) {
+/**
+ * A source the service accepts: a local eyes page of that game (under its view id, `view`, or its session id), and
+ * nothing else.
+ */
+export function validSource(source, view) {
+  if (!ID_RE.test(String(view ?? ''))) return false;
   try {
     const u = new URL(source);
-    return u.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) && u.pathname === `/eyes/${id}/` && !u.search && !u.username;
+    return u.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) && u.pathname === `/eyes/${view}/` && !u.search && !u.username;
   } catch { return false; }
 }
 
+/** The view id in a local eyes page's path (http://127.0.0.1:<port>/eyes/<view id>/), or null. */
+export const viewOf = (source) => {
+  try { return new URL(source).pathname.match(/^\/eyes\/([A-Za-z0-9_-]{1,40})\/$/)?.[1] ?? null; } catch { return null; }
+};
+
 /**
- * The control API around a manager: PUT /streams/<id> {source, pose?, player?} starts, DELETE /streams/<id> stops,
- * POST /streams/<id>/caption {text}, GET /streams lists, GET /streams/<id> gives the numbers.
+ * The control API around a manager: PUT /streams/<id> {source, view?, pose?, player?} starts (and answers with the
+ * output slot it holds), DELETE /streams/<id> stops, POST /streams/<id>/caption {text}, GET /streams lists,
+ * GET /streams/<id> gives the numbers.
  */
 export function createStreamService({ manager, log } = {}) {
   const json = (res, status, body) => {
@@ -888,10 +905,10 @@ export function createStreamService({ manager, log } = {}) {
       }
       if (req.method === 'PUT') {
         const body = await readJson(req);
-        if (!body || !validSource(body.source, id)) return json(res, 400, { error: 'source must be http://127.0.0.1:<port>/eyes/<id>/' });
+        if (!body || !validSource(body.source, body.view ?? id)) return json(res, 400, { error: 'source must be http://127.0.0.1:<port>/eyes/<view>/' });
         if (body.player !== undefined && !/^[A-Za-z0-9_]{3,16}$/.test(String(body.player))) return json(res, 400, { error: 'player must be a Minecraft name' });
         const s = manager.start(id, { source: body.source, pose: cleanPose(body.pose), player: body.player });
-        return json(res, s ? 200 : 409, s ? { started: true } : { started: false, error: 'not started (off, or every slot in use)' });
+        return json(res, s ? 200 : 409, s ? { started: true, slot: manager.slot?.(id) ?? null } : { started: false, error: 'not started (off, or every slot in use)' });
       }
       if (req.method === 'DELETE') {
         // ffmpeg may take seconds to close the file or the ingest: answer now, the slot frees up once it has
@@ -914,6 +931,7 @@ export function createStreamService({ manager, log } = {}) {
 export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) {
   const base = String(url).replace(/\/+$/, '');
   const live = new Map(); // id -> offs
+  const slots = new Map(); // id -> the output slot the service gave its stream
   const event = (kind, data) => { try { log?.event(kind, data); } catch { /* best effort */ } };
   const call = (method, p, body) => fetch(`${base}${p}`, {
     method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs),
@@ -924,8 +942,10 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) 
       if (!source || live.has(id)) return null;
       const offs = [];
       live.set(id, offs);
-      call('PUT', `/streams/${encodeURIComponent(id)}`, { source, pose: poseOf(body), ...(player ? { player } : {}) }).then((r) => {
-        if (r.status !== 200) { event('stream_skipped', { session: id, reason: clip(r.body?.error ?? `HTTP ${r.status}`) }); api.forget(id); }
+      const view = viewOf(source);
+      call('PUT', `/streams/${encodeURIComponent(id)}`, { source, ...(view && view !== id ? { view } : {}), pose: poseOf(body), ...(player ? { player } : {}) }).then((r) => {
+        if (r.status !== 200) { event('stream_skipped', { session: id, reason: clip(r.body?.error ?? `HTTP ${r.status}`) }); api.forget(id); return; }
+        if (live.has(id) && Number.isInteger(r.body?.slot)) slots.set(id, r.body.slot);
       }, (err) => { event('stream_error', { session: id, message: `stream service: ${clip(err?.message ?? err)}` }); api.forget(id); });
       if (typeof body?.on === 'function') {
         try {
@@ -938,6 +958,7 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) 
     forget(id) {
       for (const off of live.get(id) ?? []) { try { off?.(); } catch { /* ignore */ } }
       live.delete(id);
+      slots.delete(id);
     },
     async stop(id) {
       if (!live.has(id)) return;
@@ -948,6 +969,7 @@ export function createRemoteStreamManager({ url, log, timeoutMs = 5_000 } = {}) 
       if (live.has(id)) call('POST', `/streams/${encodeURIComponent(id)}/caption`, { text: cleanCaption(text), pose }).catch(() => {});
     },
     has: (id) => live.has(id),
+    slot: (id) => (live.has(id) ? slots.get(id) ?? null : null),
     get size() { return live.size; },
     list: () => [...live.keys()].map((id) => ({ id })),
     stats: (id) => call('GET', `/streams/${encodeURIComponent(id)}`).then((r) => r.body, () => null),

@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createFakeBot } from './fake-bot.js';
-import { createBody } from '../src/body.js';
+import { createBody, createPhases } from '../src/body.js';
 import { layout } from '../src/skills/build.js';
 import { SKILLS } from '../src/skills/index.js';
 import { TOOL_NAMES } from '../src/contracts.js';
@@ -466,6 +466,25 @@ test('timeouts: a skill past its limit is cancelled', async () => {
   assert.equal(body.busy, false);
 });
 
+test('phases: every result says where its time went; a phase inside another counts toward the outer one', async () => {
+  let t = 0;
+  const ph = createPhases(() => t);
+  await ph.run('pickup', async () => { t += 30; await ph.run('path', async () => { t += 20; }); });
+  await ph.run('dig', async () => { t += 5; });
+  await assert.rejects(ph.run('place', async () => { t += 7; throw new Error('no'); }), /no/);
+  assert.deepEqual(ph.totals(100), { pickup: 50, dig: 5, place: 7, other: 38 }, 'the walk to a drop is pickup; a failed phase still counts');
+
+  const { body } = await setup({ scene: 'forest', moveMsPerBlock: 10, digMs: 40 });
+  const r = await body.run('collect', { block: 'oak_log', n: 2 });
+  assert.equal(r.ok, true, r.result);
+  for (const k of ['path', 'dig', 'drop']) assert.ok(r.phases[k] > 0 || k === 'drop', `${k} in ${JSON.stringify(r.phases)}`);
+  assert.ok(r.phases.dig >= 70, `two digs of 40 ms (${r.phases.dig})`);
+  const sum = Object.values(r.phases).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum - r.ms) <= 3, `the phases add up to the skill's time (${sum} vs ${r.ms})`);
+  const craft = await body.run('craft', { item: 'oak_planks', n: 4 });
+  assert.ok(craft.phases.clicks >= 0 && !('dig' in craft.phases), JSON.stringify(craft.phases));
+});
+
 test('events: skill start/end, chat from others, death stops the skill, end on close', async () => {
   const { bot, body } = await setup({ scene: 'flat', moveMsPerBlock: 100 });
   const seen = { skill: [], chat: [], death: [], end: [], ready: [] };
@@ -476,7 +495,8 @@ test('events: skill start/end, chat from others, death stops the skill, end on c
 
   await body.run('say', { text: 'hi' });
   assert.deepEqual(seen.skill.map((s) => s.phase), ['start', 'end']);
-  assert.deepEqual(seen.skill[1], { phase: 'end', tool: 'say', args: { text: 'hi' }, ok: true, result: 'said: hi', delta: {}, ms: seen.skill[1].ms });
+  assert.deepEqual(seen.skill[1], { phase: 'end', tool: 'say', args: { text: 'hi' }, ok: true, result: 'said: hi', delta: {}, ms: seen.skill[1].ms, phases: seen.skill[1].phases });
+  assert.ok(!('path' in seen.skill[1].phases) && !('sync' in seen.skill[1].phases), 'say neither walks nor syncs');
 
   bot.fake.say('Steve', 'come here');
   bot.fake.say(bot.username, 'my own echo');

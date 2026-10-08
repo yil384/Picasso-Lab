@@ -31,6 +31,9 @@ export class SkillStop extends Error {
   constructor(reason) { super(`stopped: ${reason}`); this.name = 'SkillStop'; }
 }
 
+/** Run fn as one phase of the skill's time (the body's ctx.phase); a plain call where there is none (tests). */
+export const timed = (ctx, name, fn) => (typeof ctx?.phase === 'function' ? ctx.phase(name, fn) : fn());
+
 export const done = (result) => ({ ok: true, result });
 export const fail = (result) => ({ ok: false, result });
 
@@ -164,7 +167,7 @@ export async function placeAt(ctx, name, pos, { move = true, avoid = null } = {}
       if (eyeDistance(bot, p) > REACH + 0.75) return fail(`could not get close enough to ${fmt(p)}`);
     }
     await equip(ctx, name);
-    await ctx.wait(bot.placeBlock(ref.block, ref.face));
+    await timed(ctx, 'place', () => ctx.wait(bot.placeBlock(ref.block, ref.face)));
     ctx.check();
     const now = bot.blockAt(p);
     if (!now || now.name === target.name) return fail(`${name} did not appear at ${fmt(p)}`);
@@ -295,12 +298,12 @@ export async function mineBlock(ctx, block, { walkMs = 0 } = {}) {
   const onDrop = (e) => { if (e?.position && e.position.distanceTo(middle) <= 1.5) drops.push(e); };
   bot.on('itemDrop', onDrop);
   try {
-    await ctx.wait(bot.dig(b));
-    await ctx.wait(bot.waitForTicks(DROP_TICKS));
+    await timed(ctx, 'dig', () => ctx.wait(bot.dig(b)));
+    await timed(ctx, 'drop', () => ctx.wait(bot.waitForTicks(DROP_TICKS)));
   } finally {
     bot.removeListener('itemDrop', onDrop);
   }
-  await collectDrops(ctx, drops);
+  await timed(ctx, 'pickup', () => collectDrops(ctx, drops));
   return done(`mined ${b.name} at ${fmt(p)}`);
 }
 
@@ -337,7 +340,7 @@ export async function digAt(ctx, pos) {
     if (!b.diggable) return fail(`${b.name} at ${fmt(p)} cannot be dug`);
     await walkNear(ctx, p);
     if (bot.tool?.equipForBlock) await ctx.wait(bot.tool.equipForBlock(b, {}));
-    await ctx.wait(bot.dig(bot.blockAt(p)));
+    await timed(ctx, 'dig', () => ctx.wait(bot.dig(bot.blockAt(p))));
     ctx.check();
     return done(`dug ${b.name} at ${fmt(p)}`);
   } catch (err) {

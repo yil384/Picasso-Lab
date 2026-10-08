@@ -1,9 +1,10 @@
 // src/index.js - starts the agent from config: the viewer channel (src/web.js) with one mineflayer body per guest
 // session, the house bot and its brain for the "Ask our Muse" queue (only when a model is configured), the optional
 // prismarine-viewer watch page on the house bot (loaded only if installed, held to WEB_HOST), the live-video stream of
-// each guest game when STREAM_ENABLED (src/stream.js; nothing changes when it is off), and a graceful shutdown on
-// SIGINT/SIGTERM. `npm start`; `npm start -- --fake-bot` puts every bot in the in-memory test world instead of a
-// Minecraft server (a local demo with no Java and no server).
+// each guest game when STREAM_ENABLED (src/stream.js; nothing changes when it is off), the event loop's delay in the
+// log every minute (loop_delay: p50, p99, max), and a graceful shutdown on SIGINT/SIGTERM. `npm start`;
+// `npm start -- --fake-bot` puts every bot in the in-memory test world instead of a Minecraft server (a local demo with
+// no Java and no server).
 
 import fs from 'node:fs';
 import http from 'node:http';
@@ -12,7 +13,8 @@ import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
-import { loadConfig, isLoopbackHost } from './config.js';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
+import { loadConfig, isLoopbackHost, facebookEmbedUrl } from './config.js';
 import { createLogger } from './log.js';
 import { createHourMeter } from './pricing.js';
 import { createLLM } from './llm.js';
@@ -123,6 +125,27 @@ export function startViewer(bot, { config, log, load = loadViewer }) {
   return () => { try { bot.viewer?.close?.(); } catch { /* already closed */ } };
 }
 
+/**
+ * The event loop's delay, logged every `everyMs` as a loop_delay row: p50, p99, max and mean in ms over that window, how
+ * late the loop was beyond the histogram's sampling interval (resolutionMs, taken off: Node records whole intervals),
+ * and samples (fewer than everyMs / resolutionMs when the loop was blocked). One stalled loop holds up every bot's
+ * physics and every reply. Returns stop().
+ */
+export function watchEventLoop(log, { everyMs = 60_000, resolutionMs = 10 } = {}) {
+  const h = monitorEventLoopDelay({ resolution: resolutionMs });
+  h.enable();
+  const ms = (ns) => Math.max(0, Math.round(ns / 1e4) / 100 - resolutionMs);
+  const timer = setInterval(() => {
+    if (!h.count) return;
+    try {
+      log.event('loop_delay', { p50Ms: ms(h.percentile(50)), p99Ms: ms(h.percentile(99)), maxMs: ms(h.max), meanMs: ms(h.mean), samples: h.count, windowS: Math.round(everyMs / 1000) });
+    } catch { /* logging is best effort */ }
+    h.reset();
+  }, everyMs);
+  timer.unref();
+  return () => { clearInterval(timer); h.disable(); };
+}
+
 /** Local ports for the guests' live views: {watch, eyes} pairs (3101-3164 and 100 above), each pair once at a time. */
 export function viewPorts(first = 3101, count = 64) {
   const used = new Set();
@@ -141,16 +164,17 @@ export function viewPorts(first = 3101, count = 64) {
 }
 
 /**
- * The two live views of a guest bot, for people to watch (read-only): from behind under /watch/<session id>/ and
- * through its eyes under /eyes/<session id>/, on local ports src/web.js proxies. A port is set on the body (viewerPort,
- * eyesPort) only once its view really listens; both views close and their ports free up when the bot leaves (each
- * mineflayer() call replaces bot.viewer, so each view's close is kept right after it starts).
+ * The two live views of a guest bot, for people to watch (read-only): from behind under /watch/<view id>/ and
+ * through its eyes under /eyes/<view id>/ (the game's unguessable view id; the session id without one), on local ports
+ * src/web.js proxies. A port is set on the body (viewerPort, eyesPort) only once its view really listens; both views
+ * close and their ports free up when the bot leaves (each mineflayer() call replaces bot.viewer, so each view's close is
+ * kept right after it starts).
  * @param {object} body   a body whose bot has joined
  * @param {string} sessionId
- * @param {{log: object, ports: ReturnType<typeof viewPorts>, load?: () => object, onEyes?: (port: number) => void}} opts
- *   onEyes runs once the first-person view listens (the live-video stream starts from it)
+ * @param {{log: object, ports: ReturnType<typeof viewPorts>, load?: () => object, onEyes?: (port: number, path: string) => void, viewId?: string}} opts
+ *   onEyes runs once the first-person view listens (the live-video stream starts from it), with the view's path
  */
-export function startGuestViews(body, sessionId, { log, ports, load = loadViewer, onEyes = null }) {
+export function startGuestViews(body, sessionId, { log, ports, load = loadViewer, onEyes = null, viewId = null }) {
   if (body.connected === false) return; // it left before its views started
   let viewer;
   try { viewer = load(); } catch { return; }
@@ -167,10 +191,11 @@ export function startGuestViews(body, sessionId, { log, ports, load = loadViewer
       if (typeof close === 'function') closes.push(close);
     } catch (err) { onError(err); }
   };
-  view(pair.watch, false, `/watch/${sessionId}`, (port) => { body.viewerPort = port; });
-  view(pair.eyes, true, `/eyes/${sessionId}`, (port) => {
+  const id = viewId ?? sessionId;
+  view(pair.watch, false, `/watch/${id}`, (port) => { body.viewerPort = port; });
+  view(pair.eyes, true, `/eyes/${id}`, (port) => {
     body.eyesPort = port;
-    try { onEyes?.(port); } catch (err) { onError(err); }
+    try { onEyes?.(port, `/eyes/${id}/`); } catch (err) { onError(err); }
   });
   body.on('end', () => {
     ended = true;
@@ -191,6 +216,7 @@ export function startGuestViews(body, sessionId, { log, ports, load = loadViewer
  * @param {(line: string) => void} [opts.print]
  * @param {() => object} [opts.loadViewer]   how prismarine-viewer is loaded (tests)
  * @param {object} [opts.streams]        a stream manager (tests; default: from STREAM_*, null when off)
+ * @param {number} [opts.loopStatsMs]    how often the event loop's delay is logged (default 60 s; 0: never)
  */
 export async function startAgent(opts = {}) {
   const config = opts.config ?? loadConfig();
@@ -224,9 +250,18 @@ export async function startAgent(opts = {}) {
       : config.stream.source === 'client' ? createCameraManager({ config, log })
         : createStreamManager({ config: managerConfig(config.stream), log });
   const streamFrom = (body, sessionId) => (streams
-    ? (port) => streams.start(sessionId, { source: `http://127.0.0.1:${port}/eyes/${sessionId}/`, body, player: usernameFor(config.mc.username, sessionId) })
+    ? (port, eyesPath) => streams.start(sessionId, { source: `http://127.0.0.1:${port}${eyesPath}`, body, player: usernameFor(config.mc.username, sessionId) })
     : null);
-  function newBody(sessionId) {
+  // live_view {format: "embed"}: the Facebook player of the live video a game's stream feeds (STREAM_VIDEO_URL, in the
+  // order of the output URLs), while that stream runs
+  const videoUrls = config.stream.videoUrls ?? [];
+  const liveVideo = (sessionId) => {
+    if (!streams?.has?.(sessionId) || !videoUrls.length) return null;
+    const slot = streams.slot?.(sessionId);
+    const videoUrl = videoUrls.length === 1 ? videoUrls[0] : Number.isInteger(slot) ? videoUrls[slot] : null;
+    return videoUrl ? { videoUrl, embedUrl: facebookEmbedUrl(videoUrl) } : null;
+  };
+  function newBody(sessionId, { viewId = null } = {}) {
     const username = usernameFor(config.mc.username, sessionId);
     const cfg = Object.freeze({ ...config, mc: Object.freeze({ ...config.mc, username }) });
     if (createFakeBot) return createBody({ bot: createFakeBot({ scene: 'forest', username }), config: cfg, log });
@@ -256,7 +291,7 @@ export async function startAgent(opts = {}) {
       body.ready.catch(() => {});
     }
     if (sessionId !== 'house') {
-      body.ready.then(() => startGuestViews(body, sessionId, { log, ports, load: opts.loadViewer, onEyes: streamFrom(body, sessionId) }), () => {});
+      body.ready.then(() => startGuestViews(body, sessionId, { log, ports, load: opts.loadViewer, onEyes: streamFrom(body, sessionId), viewId }), () => {});
     }
     return body;
   }
@@ -289,10 +324,11 @@ export async function startAgent(opts = {}) {
   } : undefined;
 
   const web = createWeb({
-    config, log, meter, makeBrain, askNotice,
-    makeBody: (sessionId) => (sessionId === 'house' ? houseBody() : newBody(sessionId)),
+    config, log, meter, makeBrain, askNotice, liveVideo,
+    makeBody: (sessionId, o) => (sessionId === 'house' ? houseBody() : newBody(sessionId, o)),
   });
   const { url, publicUrl } = await web.start();
+  const stopLoopWatch = (opts.loopStatsMs ?? 60_000) > 0 ? watchEventLoop(log, { everyMs: opts.loopStatsMs ?? 60_000 }) : () => {};
 
   const world = createFakeBot ? 'the fake world (--fake-bot)' : `Minecraft ${config.mc.version} at ${config.mc.host}:${config.mc.port}`;
   log.event('serve_start', {
@@ -319,6 +355,9 @@ export async function startAgent(opts = {}) {
   if (config.web.trustProxy === 'off' && isLoopbackHost(config.web.host)) {
     print('note: WEB_TRUST_PROXY=off, so behind a tunnel every visitor shares one address for the limits; set it to cloudflare or the number of proxies');
   }
+  if (config.web.trustProxy !== 'off' && !config.web.trustedProxies.length) {
+    print('note: WEB_TRUSTED_PROXIES is not set, so forwarded headers are believed from any peer that reaches this port; set it to the proxy\'s address');
+  }
   if (log.path) {
     const rel = path.relative(process.cwd(), log.path);
     print(`log: ${rel && !rel.startsWith('..') ? rel : log.path}`);
@@ -335,6 +374,7 @@ export async function startAgent(opts = {}) {
   function stop(reason = 'shutdown') {
     stopping ??= (async () => {
       log.event('serve_stop', { reason });
+      stopLoopWatch();
       await web.stop(); // closes the Ask queue, ends every session and closes its bot, closes the house bot it used
       if (streams) await within(streams.stopAll(reason), 12_000);
       for (const brain of brains) { try { brain.close(); } catch { /* notes are best effort */ } }

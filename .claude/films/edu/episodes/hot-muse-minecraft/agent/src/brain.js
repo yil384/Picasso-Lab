@@ -275,7 +275,8 @@ export function createBrain(opts = {}) {
     try {
       const sr = await body.run(tool, args);
       const delta = sr?.delta && typeof sr.delta === 'object' ? { ...sr.delta } : {};
-      return { ok: sr?.ok === true, result: clipBlock(sr?.result, RESULT_MAX), delta };
+      const phases = sr?.phases && typeof sr.phases === 'object' ? { ...sr.phases } : null;
+      return { ok: sr?.ok === true, result: clipBlock(sr?.result, RESULT_MAX), delta, ...(phases ? { phases, skillMs: sr.ms } : {}) };
     } catch (err) {
       return { ok: false, result: `the skill crashed: ${cleanText(err?.message ?? err, 200)}`, delta: {} };
     }
@@ -437,7 +438,7 @@ export function createBrain(opts = {}) {
     log.decision({
       step: n, goal, usage: reply.usage, usageEstimated: reply.usageEstimated, costUsd: reply.usd,
       ttftMs: reply.ttftMs, latencyMs: reply.latencyMs, tool: out.tool, args: out.args, ok: out.ok, result: out.result,
-      delta: out.delta, note: remarks.length ? remarks.join(' | ') : undefined,
+      delta: out.delta, note: remarks.length ? remarks.join(' | ') : undefined, phases: out.phases, skillMs: out.skillMs,
     });
     const saved = notes.flush();
     if (!saved.ok) log.event('notes_error', { message: saved.error });
