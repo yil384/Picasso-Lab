@@ -349,30 +349,10 @@ export function createTable({ ui, S, send, popups }) {
             const seat = t.seats[seatAt(k)];
             put(V.bets[k], seat && seat.bet ? betHTML(seat.bet, bb) : "");
         }
-        if (h && h.button != null && t.seats[h.button]) {
-            // on the felt just past the button seat's plate, beside its bet: below it on the sides, left of
-            // it at the top; mine sits by my avatar, clear of my cards
-            const k = slotOf(h.button);
-            const p = V.G.seats[k];
-            const dx = (V.G.cx - p.x) / (Math.hypot(V.G.cx - p.x, V.G.boardY - p.y) || 1);
-            const dy = (V.G.boardY - p.y) / (Math.hypot(V.G.cx - p.x, V.G.boardY - p.y) || 1);
-            let px = -dy;
-            let py = dx;
-            if (py < 0 || (Math.abs(py) < .01 && px > 0)) {
-                px = -px;
-                py = -py;
-            }
-            const x = k === 0 ? p.x + 118 : p.x + dx * 108 + px * 84;
-            const y = k === 0 ? p.y - 66 : p.y + dy * 108 + py * 84;
-            dealer.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-            dealer.classList.add("is-on");
-        } else {
-            dealer.classList.remove("is-on");
-        }
-
         // board and pots
         renderBoard(h, winCards, showdown);
         renderPots(h, t);
+        placeDealer(h, t);
         renderHero(t, me, h, winCards, showdown);
         renderMine(t, me);
         renderActions(t, me, h);
@@ -385,6 +365,41 @@ export function createTable({ ui, S, send, popups }) {
         tick();
         clearInterval(V.timer);
         if (h && !h.done && h.toAct != null) V.timer = setInterval(tick, TICK_MS);
+    }
+
+    // The dealer button: on the felt just past the button seat's plate, beside its bet (below it on the sides,
+    // left of it at the top); mine right beside my avatar, clear of the hand label under my cards and my winnings.
+    function placeDealer(h, t) {
+        if (h && h.button != null && t.seats[h.button]) {
+            const k = slotOf(h.button);
+            const p = V.G.seats[k];
+            const dx = (V.G.cx - p.x) / (Math.hypot(V.G.cx - p.x, V.G.boardY - p.y) || 1);
+            const dy = (V.G.boardY - p.y) / (Math.hypot(V.G.cx - p.x, V.G.boardY - p.y) || 1);
+            let px = -dy;
+            let py = dx;
+            if (py < 0 || (Math.abs(py) < .01 && px > 0)) {
+                px = -px;
+                py = -py;
+            }
+            // a side seat's shown cards lie toward the centre: the button goes past them
+            const out = 108 + ((p.side === "left" || p.side === "right") && t.seats[h.button].shown ? 48 : 0);
+            const x = k === 0 ? p.x + (V.portrait ? 86 : 80) : p.x + dx * out + px * 84;
+            let y = k === 0 ? p.y - 6 : p.y + dy * out + py * 84;
+            // never on the board's cards (a side seat of the narrow portrait table): step above or below them,
+            // with room for the winning cards' lift
+            const br = h.board.length || R.board.firstElementChild ? R.board.getBoundingClientRect() : null;
+            if (k && br?.width) {
+                const top = (br.top - V.top) / V.s;
+                const bottom = (br.bottom - V.top) / V.s;
+                const left = (br.left - V.left) / V.s;
+                const right = (br.right - V.left) / V.s;
+                if (x > left - 22 && x < right + 22 && y > top - 30 && y < bottom + 22) y = p.y < V.G.boardY ? top - 34 : bottom + 26;
+            }
+            dealer.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+            dealer.classList.add("is-on");
+        } else {
+            dealer.classList.remove("is-on");
+        }
     }
 
     function renderSeat(i, k, seat, ctx) {
@@ -512,11 +527,13 @@ export function createTable({ ui, S, send, popups }) {
             const b = lg.canRaise ? raiseBounds(lg) : null;
             const facing = lg.call > 0;
             const callAll = facing && lg.call >= seat.stack;
-            const raiseLabel = !lg.canRaise ? "" : b.min >= b.max ? L("All-in", "全下") : facing ? L("Raise", "加注") : L("Bet", "下注");
+            // a bet opens the street; over a bet already made (the big blind's option too) it is a raise
+            const opened = (h.currentBet || 0) > 0;
+            const raiseLabel = !lg.canRaise ? "" : b.min >= b.max ? L("All-in", "全下") : opened ? L("Raise", "加注") : L("Bet", "下注");
             const open = !!V.raise && !!b;
             const value = open ? V.raise.value : 0;
             const third = !lg.canRaise ? ""
-                : open ? pill("primary", "confirm", value >= b.max ? L("All-in", "全下") : facing ? L("Raise to", "加注到") : L("Bet", "下注"), fmt(value))
+                : open ? pill("primary", "confirm", value >= b.max ? L("All-in", "全下") : opened ? L("Raise to", "加注到") : L("Bet", "下注"), fmt(value))
                     : pill("primary", b.min >= b.max ? "allin" : "raise", raiseLabel, b.min >= b.max ? fmt(b.max) : "");
             region("actions", `<div class="hd-row${V.busy ? " is-busy" : ""}">
                 ${pill("hd-fold", "fold", L("Fold", "弃牌"))}
@@ -531,8 +548,10 @@ export function createTable({ ui, S, send, popups }) {
         region("raise", "");
         // after the hand: show my cards when the rules let me
         if (me?.canShow && h?.done) return region("actions", `<div class="hd-row">${pill("secondary", "show", L("Show cards", "亮牌"))}</div>`);
-        // in the hand, not my turn: pre-action toggles, cleared whenever the bet to me changes
-        if (seat && seat.inHand && h && !h.done && seat.state === "playing") {
+        // in the hand, not my turn: pre-action toggles, cleared whenever the bet to me changes; none once
+        // everyone else is all in (the board is only run out)
+        const rivals = !!seat && t.seats.some((s, i) => s && i !== me.seat && s.inHand && s.state === "playing");
+        if (seat && seat.inHand && h && !h.done && seat.state === "playing" && rivals) {
             const toCall = Math.max(0, (h.currentBet || 0) - seat.bet);
             if (V.pre && V.pre.key !== preKey(h, V.pre.choice)) V.pre = null;
             const opts = toCall
@@ -575,7 +594,7 @@ export function createTable({ ui, S, send, popups }) {
         const conf = R.actions.querySelector('[data-act="confirm"]');
         if (conf) {
             conf.querySelector("b").textContent = fmt(V.raise.value);
-            conf.querySelector("span").textContent = V.raise.value >= b.max ? L("All-in", "全下") : lg.call > 0 ? L("Raise to", "加注到") : L("Bet", "下注");
+            conf.querySelector("span").textContent = V.raise.value >= b.max ? L("All-in", "全下") : (S.table.hand?.currentBet || 0) > 0 ? L("Raise to", "加注到") : L("Bet", "下注");
         }
     }
 
@@ -637,7 +656,8 @@ export function createTable({ ui, S, send, popups }) {
         const top = winners.find(w => w.hand) || null;
         const cat = top ? handCat(top.hand) : "";
         const word = cat ? catName(cat, L) : "";
-        const split = new Set(winners.map(w => w.seat)).size > 1;
+        // a split pot is one pot shared; a main pot and a side pot won by different players is not
+        const split = winners.some(w => winners.some(x => x.pot === w.pot && x.seat !== w.seat));
         region("word", word || split ? `<div class="hd-word-in">${word ? ui.wordHTML(word) : ""}${split ? `<small>${L("Split pot", "平分底池")}</small>` : ""}</div>` : "");
     }
 
@@ -1003,7 +1023,9 @@ export function createTable({ ui, S, send, popups }) {
         const cat = top ? handCat(top.hand) : "";
         const strong = ["quads", "straight_flush", "royal"].includes(cat);
         if (total >= BIG_POT_BB * bb || strong) {
-            const tier = cat === "royal" || cat === "straight_flush" ? "big" : "flush";
+            // Guandan's gold sweep (its 同花顺 burst): the bomb tiers crack the felt, which here would run over
+            // the board's cards
+            const tier = "flush";
             const text = cat ? catName(cat, L) : L("Big pot", "大底池");
             setTimeout(() => {
                 if (V.destroyed) return;

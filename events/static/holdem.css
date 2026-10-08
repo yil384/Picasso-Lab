@@ -338,10 +338,16 @@ html[lang="en"] .hd-room .room-k { width: auto; min-width: calc(96 * var(--ru));
 .hd-rplate { flex-direction: column; align-items: center; gap: 0; height: auto; padding: calc(2 * var(--lu)) calc(10 * var(--lu)) calc(3 * var(--lu)); max-width: calc(150 * var(--lu)); }
 .hd-rplate > b { font-size: calc(17 * var(--lu)); }
 .hd-rplate > em { color: var(--gold-2); font: 700 max(var(--fs-min), calc(18 * var(--lu)))/1.1 var(--font-num); font-style: normal; }
+/* eight or nine seats: smaller discs and plates, so the two seats on each side clear each other */
+.hd-room-board.is-crowded { --seat-av: calc(54 * var(--lu)); }
+.hd-room-board.is-crowded .hd-rseat { gap: calc(6 * var(--lu)); }
+.hd-room-board.is-crowded .hd-rplate > b { font-size: calc(15 * var(--lu)); }
+.hd-room-board.is-crowded .hd-rplate > em { font-size: max(var(--fs-min), calc(16 * var(--lu))); }
 .hd-room .roster-name small i { font-family: var(--font-num); }
 @media (max-aspect-ratio: 1/1) {
     .hd-room-table { --seat-av: calc(52 * var(--lu)); --plate: calc(42 * var(--lu)); --act-h: calc(72 * var(--lu)); flex: none; height: calc((100vw - 24 * var(--lu) - 120 * var(--lu)) / 1.06 / 1.1 * 1.2 + 52 * var(--lu) + 42 * var(--lu) + 72 * var(--lu) + 36 * var(--lu)); }
     .hd-room-board { --ar: 1.1; --side: calc(120 * var(--lu)); }
+    .hd-room-board.is-crowded { --seat-av: calc(44 * var(--lu)); }
     .hd-rplate > b { font-size: calc(14 * var(--lu)); }
     .hd-room .room-row.is-pills { flex-direction: column; align-items: flex-start; }
     .hd-room .hd-pills { margin-left: 0; }
@@ -634,6 +640,8 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-won { position: absolute; left: 0; top: -84px; z-index: 3; translate: -50% 0; pointer-events: none; }
 .hd-won b { color: #ffe27a; font: 800 32px/1 var(--font-num); -webkit-text-stroke: 4px #6a3a00; paint-order: stroke fill; white-space: nowrap; }
 .hd-seat.is-top .hd-won { top: 92px; }
+/* the winnings take the place of the last action's label */
+.hd-seat.is-winner .hd-label { opacity: 0; }
 
 /* empty seats: the gold + disc (I can sit) or a faint ring */
 .hd-sit {
@@ -666,7 +674,8 @@ html[lang="en"] .hd-mark span { letter-spacing: 0; }
 .hd-seat.is-hero .hd-tag { position: static; translate: none; align-self: center; }
 .hd-seat.is-hero .hd-backs { left: 34px; top: -64px; }
 .hd-seat.is-hero .hd-shown { left: 0; top: -108px; --card-w-small: 70px; }
-.hd-seat.is-hero .hd-label { top: -84px; translate: 90px 0; }
+/* my last action: right of my cards, clear of the hand label under them (wide in English) */
+.hd-seat.is-hero .hd-label { top: -84px; translate: 130px 0; }
 .hd-seat.is-hero .hd-won { z-index: 9; top: 6px; left: 120px; translate: 0 -50%; }
 .hd-hero {
     position: absolute;

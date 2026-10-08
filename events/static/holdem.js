@@ -387,7 +387,9 @@ export function mountHoldem(ui) {
         patch("admin", isHost() ? `<button class="room-dissolve" type="button" data-host="dissolve"${S.pending ? " disabled" : ""}><span class="btn danger">${L("Dissolve table", "解散牌桌")}</span></button>` : "");
         patch("board", `<div class="room-felt"><div class="room-felt-mark">PICASSO ${L("Hold'em", "德州")} · ${blindsKey(st)}</div><div class="hd-room-count">${L(`${S.table.seats.filter(Boolean).length} / ${st.seats} seated`, `${S.table.seats.filter(Boolean).length} / ${st.seats} 人入座`)}</div></div>
             ${S.table.seats.map(roomSeatHTML).join("")}`);
-        roomEl.querySelector(".hd-room-board").style.setProperty("--n", st.seats);
+        const board = roomEl.querySelector(".hd-room-board");
+        board.style.setProperty("--n", st.seats);
+        board.classList.toggle("is-crowded", st.seats >= 8);
         patch("actions", roomActionsHTML());
         patch("roster", rosterHTML());
     }
