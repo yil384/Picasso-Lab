@@ -48,15 +48,13 @@ const sfx = {
     load() {
         if (this.on) SFX_NAMES.forEach(name => { this.bank[name] ||= Object.assign(new Audio(`${SFX_URL}${name}.mp3`), { preload: "auto" }); });
     },
-    play(name, delay = 0) {
+    play(name) {
         if (!this.on) return;
-        setTimeout(() => {
-            this.load();
-            const base = this.bank[name];
-            const a = base.paused ? base : base.cloneNode();
-            a.volume = .35;
-            a.play().catch(() => {});
-        }, delay);
+        this.load();
+        const base = this.bank[name];
+        const a = base.paused ? base : base.cloneNode();
+        a.volume = .35;
+        a.play().catch(() => {});
     },
     set(on) {
         this.on = on;
@@ -200,6 +198,8 @@ export function createTable({ ui, S, send, popups }) {
             }
             x = Math.min(w - margin, Math.max(margin, x));
             y = Math.max(portrait ? 168 : 78, y);
+            // landscape: the lower seats keep their plates clear of the action pills (a wide phone stage pushes them down)
+            if (!portrait && k && sin > 0) y = Math.min(y, h - 196);
             const side = k === 0 ? "bottom" : Math.abs(cos) < .35 ? (sin < 0 ? "top" : "bottom") : cos < 0 ? "left" : "right";
             // bets sit on an inner ring toward the centre; the hero's bet over the hole cards
             const bx = k === 0 ? cx : cx + inner * cos;
@@ -900,10 +900,10 @@ export function createTable({ ui, S, send, popups }) {
                 if (show && !["sb", "bb"].includes(seat.last.a)) showLabel(k, seat.last);
             }
         });
-        if (betIn) sfx.play("bet");
+        if (betIn) sound("bet");
         // a street ends: the bets slide into the pot
         if (motion && ph && h && ph.id === h.id && (ph.street !== h.street || (!ph.done && h.done))) {
-            if (prev.table.seats.some(seat => seat?.bet)) sfx.play("collect", 120);
+            if (prev.table.seats.some(seat => seat?.bet)) sound("collect", 120);
             const potEl = R.pots.querySelector("[data-pot]");
             const to = potEl ? centreOf(potEl) : { x: V.G.cx, y: V.G.boardY - 90 };
             prev.table.seats.forEach((seat, i) => {
@@ -918,7 +918,7 @@ export function createTable({ ui, S, send, popups }) {
         const before = ph && h && ph.id === h.id ? ph.board.length : h && h.id !== ph?.id ? 0 : h?.board.length || 0;
         if (motion && h && h.board.length > before) {
             [...R.board.querySelectorAll(".hd-slot .card")].slice(before).forEach((el, j) => {
-                sfx.play("board", 120 * j + (ph?.street !== h.street ? 380 : 0));
+                sound("board", 120 * j + (ph?.street !== h.street ? 380 : 0));
                 el.animate([{ transform: "translateY(-18px) scaleX(0)", opacity: .4 }, { transform: "translateY(-6px) scaleX(.15)", opacity: 1, offset: .35 }, { transform: "none", opacity: 1 }],
                     { duration: 340, delay: 120 * j + (ph?.street !== h.street ? 380 : 0), easing: "cubic-bezier(.2, .8, .2, 1)", fill: "backwards" });
             });
@@ -945,8 +945,8 @@ export function createTable({ ui, S, send, popups }) {
             if (t.seats[i]?.inHand || (S.me?.seat === i && S.me.hole)) order.push(i);
         }
         const step = Math.min(70, 900 / Math.max(1, order.length * 2));
-        sfx.play("deal");
-        sfx.play("deal", step * order.length);
+        sound("deal");
+        sound("deal", step * order.length);
         const heroCards = [...R.hero.querySelectorAll(".hd-hole .card")];
         heroCards.forEach(el => { el.style.opacity = "0"; });
         V.seats.forEach(v => v.holes.classList.add("is-dealing"));
@@ -994,7 +994,7 @@ export function createTable({ ui, S, send, popups }) {
             const k = slotOf(w.seat);
             const p = V.G.seats[k];
             fly(chipsHTML(w.amt, bb, 3), from, { x: p.x, y: p.y }, { ms: 520, delay: wait + j * 160, fade: true, cls: "is-win" });
-            if (!j) sfx.play("win", wait + 380);
+            if (!j) sound("win", wait + 380);
             V.seats[k].won.animate([{ transform: "translateY(10px) scale(.6)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 300, delay: wait + 420 + j * 160, easing: "cubic-bezier(.34, 1.4, .64, 1)", fill: "backwards" });
         });
         const word = R.word.querySelector(".hd-word-in");
@@ -1015,6 +1015,12 @@ export function createTable({ ui, S, send, popups }) {
     }
 
     // ---------- lifecycle ----------
+    // a sound for this table, later by delay ms (not once the table is gone)
+    function sound(name, delay = 0) {
+        if (delay) return setTimeout(() => { if (!V.destroyed) sfx.play(name); }, delay);
+        if (!V.destroyed) sfx.play(name);
+    }
+
     function onResize() {
         cancelAnimationFrame(V.frame);
         V.frame = requestAnimationFrame(() => {
