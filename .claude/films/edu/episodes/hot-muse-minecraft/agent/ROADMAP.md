@@ -328,6 +328,14 @@ a connection drops.
 | S11 | Bot view distance 6 instead of mineflayer's `'far'` | About 40% less chunk traffic per bot |
 | — | Cache the nearby-block scan: recompute only after 4 blocks of movement, a block change in range, or 5 s | — |
 
+**Status 2026-10-07 (body work done, branch `muse-body`; README, "The body on its own"):** S1, S2 (stone family,
+safe blocks only), S3 (an axe carried is used; nothing crafts one on its own), S4, S5 (up to 3 furnaces, background
+smelt), S6, S8 (2 s search for a view of a block, then dig to it within 7 blocks; staircase steps 4 s, radius 16),
+S10, S11, the cached scan, the basic reflexes, and a fix found on the way (mineflayer timed iron ore with a stone
+pickaxe at 4.55 s instead of 1.15 s). Measured on a private copy of the local Paper server on the Mac, not on
+staging: the iron route from an empty inventory at 5 fixed fresh spots, two rounds, 229.7 s before and 148.2 s after
+(medians of 10 runs), 8 and 10 of 10 runs made the pickaxe. Still open: the MCP parts below, staging numbers.
+
 **Build, basic reflexes** (moved up from the first draft's M4) [C8]. They act with no Muse call and are reported afterwards ("fought 2
 zombies, ate 1 bread"):
 - fight back or flee by a simple policy (flee below 8 health), instead of stopping to ask;

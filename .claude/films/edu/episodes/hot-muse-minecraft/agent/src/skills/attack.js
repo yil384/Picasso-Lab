@@ -43,6 +43,15 @@ export async function attack(ctx, { target }) {
   const { bot } = ctx;
   const mob = bot.nearestEntity(matcher(bot, target));
   if (!mob) return fail(target === 'nearest_hostile' ? `no hostile mob within ${FIND_RADIUS} blocks` : `no ${target} within ${FIND_RADIUS} blocks`);
+  return fightEntity(ctx, mob);
+}
+
+/**
+ * Fight one mob (an entity the caller picked: attack's target, or the mob a reflex fights back) with the best weapon
+ * carried until it dies, gets away or maxSwings is reached; then walk over its drops. Returns {ok, result}.
+ */
+export async function fightEntity(ctx, mob, { maxSwings = MAX_SWINGS, loot = true, stopIf = null } = {}) {
+  const { bot } = ctx;
   const name = mob.name;
 
   const weapon = WEAPONS.map((w) => bot.inventory.items().find((i) => i.name === w)).find(Boolean);
@@ -58,7 +67,8 @@ export async function attack(ctx, { target }) {
   try {
     while (!gone()) {
       ctx.check();
-      if (swings >= MAX_SWINGS) return fail(`the ${name} is still alive after ${swings} swings`);
+      if (stopIf?.()) return fail(`stopped fighting the ${name} after ${swings} swing${swings === 1 ? '' : 's'}: health is low`);
+      if (swings >= maxSwings) return fail(`the ${name} is still alive after ${swings} swings`);
       lastPos = mob.position.clone();
       const d = mob.position.distanceTo(bot.entity.position);
       if (d > ESCAPE_RADIUS) return fail(`the ${name} got away`);
@@ -85,6 +95,7 @@ export async function attack(ctx, { target }) {
     bot.removeListener('entityDead', onDead);
   }
   ctx.check();
+  if (!loot) return done(`killed the ${name} in ${swings} swing${swings === 1 ? '' : 's'}`);
 
   // Walk over the spot to pick up the drops (best effort).
   try {

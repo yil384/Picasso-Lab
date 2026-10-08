@@ -433,6 +433,16 @@ export function createFakeBot(opts = {}) {
   let moving = null;
   function destinationOf(goal) {
     if (!goal) return null;
+    if (goal.goal && Number.isFinite(goal.goal.x) && Number.isFinite(goal.goal.rangeSq)) {
+      // GoalInvert(GoalNear): straight away from the centre to just out of its range
+      const c = at(goal.goal.x + 0.5, goal.goal.y, goal.goal.z + 0.5);
+      const p = bot.entity.position;
+      const r = Math.sqrt(goal.goal.rangeSq) + 1;
+      const dx = p.x - c.x;
+      const dz = p.z - c.z;
+      const len = Math.hypot(dx, dz) || 1;
+      return at(c.x + (dx / len) * r, p.y, c.z + (dz / len) * r);
+    }
     if (goal.pos) return goal.pos;
     if (goal.entity?.position) return goal.entity.position;
     if (Array.isArray(goal.goals) && goal.goals.length) return destinationOf(goal.goals[0]);
@@ -796,6 +806,9 @@ function installClickServer(bot, { registry, Item, windows, reach, record, lagMs
     if (w.carried) { insert(w, w.carried, false); w.carried = null; }
     const inv = new Array(46).fill(null);
     for (let s = 10; s < 46; s++) inv[s - 1] = copy(w.slots[s]);
+    // the server's player inventory is now what the table's window held: a click on window 0 that arrives before the
+    // client has applied this sync works on the server's state, not on the client's stale copy
+    server.set(0, { id: 0, width: 2, slots: inv.map(copy), carried: null, invStart: 9, invEnd: 45 });
     pending += 1;
     const fire = () => { pending -= 1; applyToClient(0, inv, null); client.emit('window_items', { windowId: 0, stateId: ++stateId, items: inv }); };
     if (lagMs > 0) setTimeout(fire, lagMs); else setImmediate(fire);

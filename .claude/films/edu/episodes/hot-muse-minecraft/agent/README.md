@@ -31,7 +31,11 @@ viewer (our page / X replies via operator) --> /ask queue --> muse-brain (our ke
 | `src/llm.js` | the chat client: clean request, streaming, TTFT and latency, $ per call |
 | `src/log.js` | JSONL decision log with secrets scrubbed |
 | `src/mc.js` | vec3 and the prismarine libraries, resolved through mineflayer (one copy each) |
-| `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills and the plain-text state |
+| `src/body.js`, `src/skills/`, `src/state.js` | the mineflayer body, the 10 skills and the plain-text state (the block scan cached per bot) |
+| `src/reflexes.js` | what the body does on its own, with no model turn: fight back a mob that hits the bot (run below 8 health, or from a creeper close by), eat at food 14 or less; the body interrupts the skill for it, runs the skill on afterwards and reports it in the next result |
+| `src/stations.js`, `src/skills/station.js` | crafting tables and furnaces stay where a bot put them and belong to it: reused within 24 blocks, never used or mined by another bot, at most 4 per bot, removed (server console) when its game ends |
+| `src/skills/tunnel.js` | collecting stone without walking about: what is in reach and in view first, then a 1x2 passage dug one block into the stone, only into blocks the chunk data shows are safe |
+| `scripts/bench-body.mjs` | the body's speed on a real server with no model: one bot per run at a fixed spot (console), the iron route from an empty inventory or a list of calls; every call's time, result and phases (walk, dig, pickup, sync, reflex), and every block broken (the game's dig time, how long it took), as JSONL |
 | `src/walk-watch.js` | is a walk still getting closer? Ends one that is not (digging by hand, pillaring, going in circles) with what held it up, where the bot is and what to try |
 | `src/skills/window.js` | window clicks the server confirms: crafting (and the inventory checks around every skill) never trust mineflayer's optimistic window picture |
 | `src/brain.js`, `src/memory.js` | the tool loop, its guards, short-term memory and `notes.json` |
@@ -373,6 +377,7 @@ server is offline-mode; that is the operator's call, not a default).
 | `MODEL_TIMEOUT_MS`, `MODEL_MAX_RETRIES` | `120000`, `2` | deadline for one whole call, stream included (retries inside it); retries of HTTP errors |
 | `MC_HOST`, `MC_PORT`, `MC_VERSION`, `MC_USERNAME` | `127.0.0.1`, `25565`, `1.21.4`, `Muse` | the server; a public host is refused |
 | `MC_VIEWER_PORT` | `3007` | prismarine-viewer for the house bot, if installed; `0` is off |
+| `MC_CONSOLE`, `SPREAD_RANGE` | (none), `400` | the server console FIFO (`server/start.sh` and the Paper container make one): a new guest bot is spread to a fresh spot up to `SPREAD_RANGE` blocks from spawn, the real-client camera is put in place, and a bot's crafting tables and furnaces are removed when its game ends (without it they stay in the world) |
 | `WEB_HOST`, `WEB_PORT`, `WEB_PUBLIC_URL` | `127.0.0.1`, `8787`, (none) | the viewer page; the public URL goes into links and `openapi.json` (unset: the forwarded host behind a trusted proxy, else the listen address) |
 | `WEB_TRUST_PROXY` | `off` | where the client address for the limits comes from: `off` (the socket), `cloudflare` (`CF-Connecting-IP`), or 1-5 proxies appending to `X-Forwarded-For` |
 | `WEB_LEASE_MS`, `WEB_MAX_SESSIONS` | `600000`, `4` | one bot per guest for 10 minutes |
@@ -429,6 +434,108 @@ server is offline-mode; that is the operator's call, not a default).
   the bot; `viewer_stop` has the `reason`: the /play button, the API or MCP), `view_close` (a live 3D view closed:
   `view`, `why`, seconds `s`, `mb` sent), `ask_*`, `admin_stop`.
 
+## The body on its own (roadmap M2)
+
+What the body does without a model turn, and how it saves time (roadmap M2, the S-items named):
+
+- Reflexes (`src/reflexes.js`). A hit from a hostile mob (the server names who dealt it) during a skill, or between
+  skills, is fought back with the best weapon carried (up to 24 swings); below 8 health, or for a creeper, the bot runs
+  16 blocks instead, eats if it can, and the skill ends with "retreated: ...". A creeper within 4 blocks is run from
+  before it blows. At food 14 or less with no hostile mob within 12 blocks the bot eats before the next skill, while
+  it waits, or by interrupting a go_to, collect or build. The interrupted skill goes on afterwards from where it was
+  (collect and craft only do what is left, build keeps its spot, go_to and place are simply called again); at most 4
+  fights or runs (and 8 meals) per skill, then the hit stops it as before. The skill's time limit stops while a reflex runs. The next result
+  says what happened: `mined 5 oak_log [on its own: fought back a zombie and killed it (2 swings)]`, and lists it in
+  `reflexes`; the log has `attacked`, `reflex` (what it did, health before and after, ms) and `reflex_idle` rows.
+  `createBody({reflexes: false})` keeps the old behaviour (a hit stops the skill and says what to do).
+- Stations (S4, `src/stations.js`, `src/skills/station.js`). A crafting table or furnace a bot puts down (craft,
+  smelt, or place) stays where it is and belongs to that bot. A craft walks back to a table that is close (within 16
+  blocks and 4 up or down), else puts down the one carried, else makes one from 4 planks when the planks pay for it
+  and the recipe, else walks to one up to 24 blocks away. Other bots never use, open or mine a bot's stations (craft,
+  smelt and `collect crafting_table` / `collect furnace` skip them; pathfinder never breaks stations). A bot owns at
+  most 4; a fifth retires the oldest. When the game ends (`close()`, or the bot leaves) its stations are removed
+  through the server console (`MC_CONSOLE`): `execute if block X Y Z minecraft:furnace run setblock X Y Z air`, which
+  drops nothing and leaves any other block alone. The state lists `your stations: ...`.
+- Background smelting (S5). `smelt` loads the furnaces and returns at once ("... ready in about 10 s"); the output is
+  taken by the next skill that starts within reach of a finished furnace, or by a craft, eat, place or build that
+  needs it (waiting for it), or by calling smelt again. Up to 3 furnaces share one load: the bot's (or nobody's)
+  furnaces close by, the ones it carries, and extra ones crafted from spare cobblestone (8 each) when a table is close
+  or the planks pay for one. Each furnace of a split load burns planks first (one plank is 1.5 items, so no coal burns
+  for one item), never sticks. A furnace nobody owns is held for the bot while its items are in it. The state shows
+  `furnaces: 3 iron_ingot ready in about 7 s in your furnaces at ...`.
+- Mining (S1, S2, S6, S8). No 10-tick wait after a dig and no detour to each drop: `collect` sweeps its drops up once
+  at the end, nearest first, only the wanted items, within 8 s. Targets go by an approximate path cost, not by
+  straight-line distance: an open block before a buried one, climbing at 1.5 a block. A walk to a block gets a 2 s
+  path search and a search radius of its distance + 64; a block no spot can see (buried) is then dug to, if it is
+  within 7 blocks (4 s search, 12 s walk). Stone (and deepslate, andesite, ...) is tunnelled: what is in reach and in
+  view first, then a 1x2 passage one block into the stone, at most 10 steps a collect; a block is dug only when no
+  water or lava touches it and no sand or gravel rests on it, the floor ahead is solid, and never the floor under the
+  bot. The staircase steps of go_to get a 4 s, radius-16 search. The bot waits to stand on the ground before it digs
+  (in the air the game digs 5 times slower).
+- Dig times. minecraft-data 1.21.4 files the blocks that need a stone pickaxe or better (iron, copper, lapis, gold,
+  diamond ore, obsidian) under a material whose speed table has wooden tools only, so mineflayer timed every
+  pickaxe on them at hand speed and waited that long before it told the server the block was broken: iron ore with a
+  stone pickaxe 4.55 s instead of 1.15 s. The body times such a block as the pickaxe block it is.
+- Clicks and syncs (S10). An inventory sync under a second old with nothing changed since is not repeated (before or
+  after a skill); a 2x2 craft right after another sends no sync of its own; a table window that just opened needs no
+  settle; after the last shift-click the window is closed at once and one settle counts the result. The quiet spell
+  after a settle is 50 ms (was 100).
+- Chunks (S11): the bot asks for 6 chunks around it (mineflayer's default asks for 12; the server sends at most its
+  own view distance, 8 here).
+- The state's block scan (about 30 searches of the chunks around the bot) is kept per bot and done again only after 4
+  blocks of movement, a change to a notable block within the radius, or 5 s; distances are taken from where the bot
+  stands now.
+- Every result has `phases`: ms per part of the work (walk, dig, pickup, sync, reflex).
+- Axes (S3): an axe carried is used for logs, planks, tables (mineflayer-tool picks the fastest tool), and a table
+  is no longer mined back after each craft, so crafting an axe at the table right after the pickaxe costs one craft
+  (0.4 s here). A log takes 3.0 s by hand, 0.74 s with a stone axe (lab test below).
+
+### Speed, measured
+
+Measured 2026-10-07 on this Mac (M1, 8 cores, shared with other work), no model, no MCP:
+`scripts/bench-body.mjs` drives the body directly. The server is a private copy of the local Paper 1.21.4 (same jar
+and settings as `server/start.sh`: Easy, daylight locked at morning, view 8, simulation 6; port 25571) with a world
+generated from seed 71811045 and restored from the same snapshot before each phase, so before and after play the
+same terrain. Five fixed fresh spots (`spreadplayers X Z 0 2`: 450,60 birch hills; -520,-330 birch; 900,-200
+spruce; -380,420 snowy spruce; 700,-700 birch), one new bot with an empty inventory per run, natural world (no
+console items). The route is the scripted MCP player's: collect 6 logs, planks 20, sticks 8, a table, wooden
+pickaxe, collect 12 stone, stone pickaxe, furnace, collect 3 iron ore (on a failure go_to 14 blocks lower and try
+again, up to 6 times), 2 coal if none, smelt 3 raw iron, iron pickaxe. Strict: a failed call counts and is not
+repeated, except one stopped by a mob (then the route attacks it and calls again). Before = commit cced072, after
+= this body. Two rounds, each phase on a freshly restored world: round 1 before, then after; round 2 before, then
+after.
+
+| | before | after |
+| --- | --- | --- |
+| iron route from an empty inventory, median of 10 runs | 229.7 s | 148.2 s (-35 %) |
+| median per round (5 runs each) | 268.5 s, 229.6 s | 140.0 s, 156.3 s |
+| fastest / slowest run | 176.3 s / 285.2 s | 96.5 s / 177.5 s |
+| runs that made the iron pickaxe | 8 of 10 | 10 of 10 |
+| failed calls in all 10 runs | 18 (2 runs lost the crafting table: mined back, its drop never picked up) | 1 |
+| collect 6 logs by hand, s per log (median) | 6.14 s | 4.83 s |
+| collect 12 stone with a wooden pickaxe, whole call (median, range) | 46.0 s (39.2-50.3) | 26.2 s (22.3-33.1) |
+| the same, s per stone (median) | 3.84 s | 2.18 s |
+| dig one iron ore with a stone pickaxe (median of every dig) | 4.53 s | 1.16 s |
+| 2x2 craft (planks, sticks, table), median | 0.76 s | 0.15 s |
+| table craft (pickaxes, furnace), median / p95 | 6.08 s / 15.17 s | 0.44 s / 3.54 s |
+| smelt call | 33.2 s | 3.1 s (returns once loaded; 3 furnaces in 9 of 10 runs) |
+| smelt 3 iron, through the iron pickaxe craft | 38.7 s | 14.4 s |
+
+Reading it: the table crafts gain the most (no table placed and mined back each time), then the smelt (three furnaces
+at once, the call returns at once and the iron pickaxe craft waits for the ingots), stone (no 10-tick waits, no detour
+per drop, tunnelling, digging on the ground) and iron ore (the dig time fix). The route's remaining time is mostly
+the search for iron underground (the go_to 14 lower and the walks to ore), which varies most between runs. The
+roadmap's M2 checks, here on the Mac rather than on staging: median 148 s (target 170), slowest 177.5 s (210), no
+deaths, 1 failed call in 10 runs (0), table craft p95 3.5 s (3), 12 stone 26 s (15), 3 iron 14.4 s with the pickaxe
+craft (12).
+
+| Lab test (prepared with console commands) | Result |
+| --- | --- |
+| A zombie summoned 2 blocks from the bot 5 s into `collect stone 12`, at night (more mobs come on their own), a stone pickaxe as the only weapon; 10 runs at the 5 spots | the zombie hit the bot in 6 runs: 4 times the bot fought back (1 to 4 zombies), finished the collect and said so in the result; twice it died (once worn down by three zombies, its run at health under 8 caught; once knocked off a cliff edge mid-fight). In the other 4 runs no hit came. The roadmap's "10 of 10" is not met |
+| The Hunger effect (level 101, 40 s: about 2.5 food a second) during `collect stone 12`, 4 bread carried; 3 runs | it ate all 4 bread on the way (each at food 14 or less) and the collect finished, in 27-28 s. (A first version stopped the collect after 4 meals as if mobs kept attacking, and reported meals the server had not taken; both fixed) |
+| `collect <log> 6` by hand vs with a stone axe (S3), same spot one after the other | one log 2.99 s by hand, 0.74 s with the axe; 6 spruce logs 34.0 s vs 20.9 s (mangrove with the axe: 19.4 s) |
+| The route once on the shared local server (127.0.0.1:25565, spot -520,-330) | 129.7 s, 12 calls, none failed; 3 furnaces; the bot's 6 stations: 2 retired on the way (cap 4), the other 4 removed through the console when it left |
+
 ## What is mocked
 
 - The model: `test/mock-llm.js` speaks Chat Completions and the Responses API (streamed and not), replays scripted tool
@@ -438,8 +545,8 @@ server is offline-mode; that is the operator's call, not a default).
 - The game: `test/fake-bot.js` fakes the mineflayer surface (blocks, inventory, real recipes and drops from
   minecraft-data 1.21.4, furnaces, pathfinder, combat). No physics, no mob AI, instant movement unless timings are
   set; drops go straight into the inventory. No Minecraft server, Java or client is used anywhere in the tests.
-- The skills mine with pathfinder and `dig`, then walk over the drops for at most 5 s (collectblock's own collect is
-  not used: its pickup can wait forever). Every walk clears the pathfinder goal when it ends, so a walk that settles
+- The skills mine with pathfinder and `dig` (collectblock's own collect is not used: its pickup can wait forever);
+  `collect` goes straight on to the next block and sweeps the drops up once at the end, nearest first, within 8 s. Every walk clears the pathfinder goal when it ends, so a walk that settles
   short never carries on into the next skill; a walk also ends when pathfinder keeps resetting a path it cannot follow
   ("stuck"), the bot stands still for `stillMs`, or it gets less than `progressGain` (3) blocks closer in `progressMs`
   (22 s), digging and building included (src/walk-watch.js; all legs of one go_to share that watch). The result then
@@ -474,12 +581,13 @@ server is offline-mode; that is the operator's call, not a default).
   user messages in a row. Each has an automatic fallback (above); the CSV's `adapted` column and the printed lines
   say which one fired. If `stream` fired, TTFT equals the whole call: say so next to any latency number.
 - Caves, lava, water, night mobs and fall damage never happen in the fake bot (its `hurt(amount, source)` reports a
-  hit the way the server does). On the real server a hit from a hostile mob stops the running skill (not attack or
-  eat) with "a zombie is attacking you ...; fight back with attack zombie, or go_to somewhere safe": the server names
-  who dealt each hit (damage_event, checked on Paper 1.21.4), so a skeleton up to 24 blocks away counts and a fall,
-  drowning or hunger next to a mob does not. For 10 s after that the same mob's hits stop nothing (time to flee or
-  fight) unless health drops to 6. After a death the next skill waits for the respawn. Lava is only avoided as far as
-  pathfinder's own digging rules go.
+  hit the way the server does; its mobs never move or hit back). On the real server the server names who dealt each
+  hit (damage_event, checked on Paper 1.21.4), so a skeleton up to 24 blocks away counts and a fall, drowning or
+  hunger next to a mob does not. A hit from a hostile mob is a reflex (section "The body on its own"); with
+  `reflexes: false` it stops the running skill (not attack or eat) with "a zombie is attacking you ...; fight back
+  with attack zombie, or go_to somewhere safe", and for 10 s the same mob's hits stop nothing unless health drops to
+  6. After a death the next skill waits for the respawn. Lava is only avoided as far as pathfinder's own digging
+  rules go, and by the tunnel's checks.
 - The guests' live views run the real prismarine-viewer in tests only for the read-only check (a click from the page
   reaches nothing); the house bot's watch page is tested with a stand-in module.
 - Real-client camera: run on picasso against its own test Paper server, through the camera service and the agent,
